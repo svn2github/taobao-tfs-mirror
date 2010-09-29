@@ -5,8 +5,8 @@ http://code.taobao.org/trac/tfs/wiki/ZhWikiStart
 
 Overview
 --------
-TFS (Taobao File System) , a distribution file system with high available, high performance and low cost. It provides high reliability and high concurrency access by redundancy, backup and load balance technology, while running on ordinary linux hardware.
-TFS is not designed for storing enormous amounts of big files but small ones, which size is less than 1M. The data using a flat organizational structure, abandoning the traditional file system directory structure. After the data stored, the system will generate a filename with 18 bytes for users, and uses can get the file by the filename. Except append operation, tfs can provide the operation of read, write, update, delete, rename and so on.
+Aiming at a distributed file system with high availability, high performance and low cost, TFS is a linux-based file system which provides high reliability and concurrent access by redundancy, backup and load balance technology.
+TFS is mainly designed for small files less than 1MB in size. It adopts flat structure instead of the traditional directory structure. TFS will generate a 18 byte length filename after storing data uploaded by users. Users can access their data by the uniqle filename.
 
 Contribution
 ------------
