@@ -1,0 +1,194 @@
+/*
+ * (C) 2007-2010 Alibaba Group Holding Limited.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+ *
+ *
+ * Version: $Id$
+ *
+ * Authors:
+ *   duolong <duolong@taobao.com>
+ *      - initial release
+ *
+ */
+#include <tbsys.h>
+#include <string.h>
+#include "fsname.h"
+
+using namespace tfs::common;
+using namespace tbsys;
+
+namespace tfs
+{
+namespace client
+{
+    static const char* KEY_MASK = "Taobao-inc";
+    static const int32_t KEY_MASK_LEN = strlen(KEY_MASK);
+    static const char enc_table[] = "0JoU8EaN3xf19hIS2d.6pZRFBYurMDGw7K5m4CyXsbQjg_vTOAkcHVtzqWilnLPe";
+    static const char dec_table[] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,18,0,0,11,16,8,36,34,19,32,4,12,0,0,0,0,0,0,0,49,24,37,29,5,23,30,52,14,1,33,61,28,7,48,62,42,22,15,47,3,53,57,39,25,21,0,0,0,0,45,0,6,41,51,17,63,10,44,13,58,43,50,59,35,60,2,20,56,27,40,54,26,46,31,9,38,55,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+    static int xor_encode(const char* source, const int32_t len, char* target)
+    {
+      if (source == NULL || len <= 0 || target == NULL)
+        return TFS_ERROR;
+
+      int32_t i = 0;
+      int32_t j = 0;
+      for (i = 0; i < len; ++i)
+      {
+        target[i] = source[i] ^ KEY_MASK[j];
+        if ((++j) >= KEY_MASK_LEN)
+        {
+          j = 0;
+        }
+      }
+      return TFS_SUCCESS;
+    }
+
+    static int xor_decode(const char* source, const int32_t len, char* target)
+    {
+      if (source == NULL || len <= 0 || target == NULL)
+        return TFS_ERROR;
+
+      int32_t i = 0;
+      int32_t j = 0;
+      for (i = 0; i < len; ++i)
+      {
+        target[i] = KEY_MASK[j] ^ source[i];
+        if ((++j) >= KEY_MASK_LEN)
+        {
+          j = 0;
+        }
+      }
+      return TFS_SUCCESS;
+    }
+
+    static int32_t hash(const char *str)
+    {
+      if (str == NULL)
+      {
+        return 0;
+      }
+      int32_t len = strlen(str);
+      int32_t h = 0;
+      int32_t i = 0;
+      for (i = 0; i < len; ++i)
+      {
+        h += str[i];
+        h *= 7;
+      }
+      return (h | 0x80000000);
+    }
+
+    FSName::FSName()
+    {
+      file_name_[0] = '\0';
+      memset(&file_, 0, sizeof(FileBits));
+      cluster_id_ = 0x01;
+    }
+
+    FSName::FSName(uint32_t block_id, int32_t seq_id, int32_t prefix, int32_t cluster_id)
+    {
+      file_.block_id_ = block_id;
+      file_.seq_id_ = seq_id;
+      file_.prefix_ = prefix;
+      file_name_[0] = '\0';
+      cluster_id_ = cluster_id;
+    }
+
+    FSName::FSName(const char *file_name, const char *prefix, int32_t cluster_id)
+    {
+      set_name(file_name, prefix, cluster_id);
+    }
+
+    int FSName::set_name(const char *file_name, const char *prefix, const int32_t cluster_id)
+    {
+      file_name_[0] = '\0';
+      cluster_id_ = cluster_id;
+      memset(&file_, 0, sizeof(FileBits));
+      int32_t len = strlen(file_name);
+      if ((file_name == NULL) || len <= 0)
+      {
+        TBSYS_LOG(ERROR, "invalid file name(%s)", file_name);
+        return TFS_ERROR;
+      }
+      decode(file_name + 2, (char*) &file_);
+      set_prefix(prefix);
+      return TFS_SUCCESS;
+    }
+
+    void FSName::set_prefix(const char *prefix)
+    {
+      if ((prefix != NULL) && (prefix[0] != '\0'))
+      {
+        file_.prefix_ = hash(prefix);
+      }
+    }
+
+    FSName::~FSName()
+    {
+
+    }
+
+    const char* FSName::get_name()
+    {
+      if (file_name_[0] != '\0')
+      {
+        return file_name_;
+      }
+      encode((char*) &file_, file_name_ + 2);
+      file_name_[0] = 'T';
+      file_name_[1] = static_cast<char> ('0' + cluster_id_);
+      file_name_[FILE_NAME_LEN] = '\0';
+      return file_name_;
+    }
+
+    void FSName::encode(const char *input, char *output)
+    {
+      char buffer[FILE_NAME_EXCEPT_SUFFIX_LEN];
+      xor_encode(input, FILE_NAME_EXCEPT_SUFFIX_LEN, buffer);
+
+      int32_t i = 0;
+      int32_t k = 0;
+      uint32_t value = 0;
+      for (i = 0; i < FILE_NAME_EXCEPT_SUFFIX_LEN; i += 3)
+      {
+        value = ((buffer[i] << 16) & 0xff0000) + ((buffer[i + 1] << 8) & 0xff00) + (buffer[i + 2] & 0xff);
+        output[k++] = enc_table[value >> 18];
+        output[k++] = enc_table[(value >> 12) & 0x3f];
+        output[k++] = enc_table[(value >> 6) & 0x3f];
+        output[k++] = enc_table[value & 0x3f];
+      }
+    }
+
+    void FSName::decode(const char *input, char *output)
+    {
+      int32_t i = 0;
+      int32_t k = 0;
+      uint32_t value = 0;
+      char buffer[FILE_NAME_EXCEPT_SUFFIX_LEN];
+      for (i = 0; i < FILE_NAME_LEN - 2; i += 4)
+      {
+        value = (dec_table[input[i] & 0xff] << 18) + (dec_table[input[i + 1] & 0xff] << 12) + (dec_table[input[i + 2]
+            & 0xff] << 6) + dec_table[input[i + 3] & 0xff];
+        buffer[k++] = static_cast<char> ((value >> 16) & 0xff);
+        buffer[k++] = static_cast<char> ((value >> 8) & 0xff);
+        buffer[k++] = static_cast<char> (value & 0xff);
+      }
+      xor_decode(buffer, FILE_NAME_EXCEPT_SUFFIX_LEN, output);
+    }
+
+    string FSName::to_string()
+    {
+      char buffer[256];
+      snprintf(buffer, 256, "block_id(%u) seq_id(%u) prefix(%u) name(%s)", file_.block_id_, file_.seq_id_,
+          file_.prefix_, get_name());
+      return string(buffer);
+    }
+
+  }
+
+}
+
+
