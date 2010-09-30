@@ -170,9 +170,22 @@ namespace tfs
           const int32_t current_block_ds_size = static_cast<int32_t> (ds_list->size());
 
           const BlockInfo *block_info = block_collect->get_block_info();
-
-          if ((lease_mgr_.has_valid_lease(new_block_info.block_id_))
-							|| ((current_block_ds_size >= SYSPARAM_NAMESERVER.min_replication_) 
+          if ((current_block_ds_size > SYSPARAM_NAMESERVER.min_replication_)
+							&& (find(ds_list->begin(), ds_list->end(), ds_id) == ds_list->end()))
+          {
+            if ((block_info->file_count_ > new_block_info.file_count_)
+								|| (block_info->file_count_ <= new_block_info.file_count_
+										&& block_info->size_ != new_block_info.size_))
+						{
+							TBSYS_LOG(WARN, "block info not match");
+            	if (ngi->owner_role_ == NS_ROLE_MASTER)
+            	  register_expire_block(expires, ds_id, block_info->block_id_);
+            	continue;
+						}
+          }
+          /*if (((lease_mgr_.has_valid_lease(new_block_info.block_id_))
+								&& (find(ds_list->begin(), ds_list->end(), ds_id) == ds_list->end())) 
+							|| ((current_block_ds_size > SYSPARAM_NAMESERVER.min_replication_) 
 									&& ((block_info->file_count_ > new_block_info.file_count_)
               			||(block_info->file_count_ <= new_block_info.file_count_ 
 											&& block_info->size_ != new_block_info.size_))))
@@ -181,7 +194,7 @@ namespace tfs
             if (ngi->owner_role_ == NS_ROLE_MASTER)
               register_expire_block(expires, ds_id, block_info->block_id_);
             continue;
-          }
+          }*/
 
           if (__gnu_cxx::abs(block_info->version_ - new_block_info.version_) > 2)
           {
