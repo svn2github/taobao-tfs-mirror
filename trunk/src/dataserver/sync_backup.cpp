@@ -89,7 +89,12 @@ namespace tfs
         sprintf(remove_path_, "%s/removed", nfs_path);
         sprintf(tmpstr, "%s:%d", CONFIG.get_string_value(CONFIG_NAMESERVER, CONF_IP_ADDR), CONFIG.get_int_value(
             CONFIG_NAMESERVER, CONF_PORT));
-        source_client_ = new TfsClient(tmpstr, DEFAULT_BLOCK_CACHE_TIME, DEFAULT_BLOCK_CACHE_ITEMS);
+        source_client_ = new TfsClient();
+				int iret = source_client_->initialize(tmpstr);
+				if (iret != TFS_SUCCESS)
+				{
+					return false;
+				}
         return true;
       }
       return false;
@@ -414,14 +419,29 @@ namespace tfs
           SYSPARAM_DATASERVER.slave_ns_ip_ ? SYSPARAM_DATASERVER.slave_ns_ip_ : "none");
       if (SYSPARAM_DATASERVER.slave_ns_ip_ != NULL && strlen(SYSPARAM_DATASERVER.slave_ns_ip_) > 0)
       {
-        tfs_client_ = new TfsClient(SYSPARAM_DATASERVER.slave_ns_ip_, DEFAULT_BLOCK_CACHE_TIME, DEFAULT_BLOCK_CACHE_ITEMS);
+        tfs_client_ = new TfsClient();
+				int iret = tfs_client_->initialize(SYSPARAM_DATASERVER.slave_ns_ip_);
+				if (iret != TFS_SUCCESS)
+				{
+					return false;
+				}
         tfs_client_->set_option_flag(TFS_FILE_NO_SYNC_LOG);
 
-        second_tfs_client_ = new TfsClient(SYSPARAM_DATASERVER.slave_ns_ip_, DEFAULT_BLOCK_CACHE_TIME, DEFAULT_BLOCK_CACHE_ITEMS);
+        second_tfs_client_ = new TfsClient();
+				iret = second_tfs_client_->initialize(SYSPARAM_DATASERVER.slave_ns_ip_);
+				if (iret != TFS_SUCCESS)
+				{
+					return false;
+				}
         second_tfs_client_->set_option_flag(TFS_FILE_NO_SYNC_LOG);
 
         sprintf(tmpstr, "%s:%d", SYSPARAM_DATASERVER.local_ns_ip_, SYSPARAM_DATASERVER.local_ns_port_);
-        source_client_ = new TfsClient(tmpstr, DEFAULT_BLOCK_CACHE_TIME, DEFAULT_BLOCK_CACHE_ITEMS);
+        source_client_ = new TfsClient();
+				iret = source_client_->initialize(tmpstr);
+				if (iret != TFS_SUCCESS)
+				{
+					return false;
+				}
 
         TBSYS_LOG(INFO, "tfs mirror init slave ns ip: %s, local ns ip: %s, ns port: %d, source ip: %s\n",
             SYSPARAM_DATASERVER.slave_ns_ip_, SYSPARAM_DATASERVER.local_ns_ip_, SYSPARAM_DATASERVER.local_ns_port_, tmpstr);

@@ -401,7 +401,12 @@ int parse_args(int argc, char *argv[])
     return TFS_ERROR;
   }
 
-  TfsIoApiTest::tfs_client_ = new TfsClient(nsip);
+  TfsIoApiTest::tfs_client_ = new TfsClient();
+	int iret = TfsIoApiTest::tfs_client_->initialize(nsip);
+	if (iret != TFS_SUCCESS)
+	{
+		return TFS_ERROR;
+	}
 
   return TFS_SUCCESS;
 }

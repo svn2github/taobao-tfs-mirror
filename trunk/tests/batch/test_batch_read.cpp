@@ -60,7 +60,12 @@ void* read_worker(void* arg)
   tfs_file.set_session(&session);
 */
   printf("init connection to nameserver:%s\n", param.ns_ip_port_.c_str());
-  TfsClient tfsclient(param.ns_ip_port_, 5, 1000);
+  TfsClient tfsclient;
+	int iret = tfsclient.initialize(param.ns_ip_port_);
+	if (iret != TFS_ERROR)
+	{
+		return NULL;
+	}
   Timer timer;
   Stater stater("read");
   const int32_t BUFLEN = 32;

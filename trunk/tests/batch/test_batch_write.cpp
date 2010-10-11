@@ -57,7 +57,12 @@ void* write_worker(void* arg)
   }
 */
   printf("init connection to nameserver:%s\n", param.ns_ip_port_.c_str());
-  TfsClient tfsclient(param.ns_ip_port_, 5, 1000);
+  TfsClient tfsclient;
+	int iret = tfsclient.initialize(param.ns_ip_port_);
+	if (iret != TFS_SUCCESS)
+	{
+		return NULL;
+	}
   set<std::string> file_name_set;
 
   char* data = new char[param.max_size_];

@@ -32,9 +32,10 @@ namespace tfs
     class TfsClient
     {
     public:
-      TfsClient(const std::string& ns_ip_port, int32_t cache_time = common::DEFAULT_BLOCK_CACHE_TIME,
-          int32_t cache_items = common::DEFAULT_BLOCK_CACHE_ITEMS);
+      TfsClient();
       virtual ~TfsClient();
+      int initialize(const std::string& ns_ip_port, int32_t cache_time = common::DEFAULT_BLOCK_CACHE_TIME,
+          int32_t cache_items = common::DEFAULT_BLOCK_CACHE_ITEMS);
       bool is_eof() const;
       int stat(const char *filename, const char *suffix, common::FileInfo *file_info);
       int save_file(const char *filename, const char *tfsname, const char *suffix);
@@ -70,7 +71,6 @@ namespace tfs
 
 			static uint32_t crc(uint32_t crc, const char* data, const int32_t len);
     private:
-      TfsClient();
       DISALLOW_COPY_AND_ASSIGN( TfsClient);
       TfsFile* tfs_file_;
     };

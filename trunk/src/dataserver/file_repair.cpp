@@ -48,7 +48,12 @@ namespace tfs
         TBSYS_LOG(INFO, "file repair init ns address: %s:%d tmpstr: %s\n", SYSPARAM_DATASERVER.local_ns_ip_,
             SYSPARAM_DATASERVER.local_ns_port_, tmpstr);
 
-        tfs_client_ = new TfsClient(tmpstr, DEFAULT_BLOCK_CACHE_TIME, DEFAULT_BLOCK_CACHE_ITEMS);
+        tfs_client_ = new TfsClient();
+				int iret = tfs_client_->initialize(tmpstr);
+				if (iret != TFS_SUCCESS)
+				{
+					return false;
+				}
         tfs_client_->set_option_flag(TFS_FILE_NO_SYNC_LOG);
         init_status_ = true;
         return true;

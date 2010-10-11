@@ -28,11 +28,22 @@ namespace tfs
 {
   namespace client
   {
-    TfsClient::TfsClient(const std::string& ns_ip_port, int32_t cache_time, int32_t cache_items) :
-      tfs_file_(new TfsFile())
+		TfsClient::TfsClient():
+			tfs_file_(new TfsFile())
+		{
+
+		}
+
+    int TfsClient::initialize(const std::string& ns_ip_port, int32_t cache_time, int32_t cache_items)
     {
       TfsSession* session = TfsSessionPool::get_instance().get(ns_ip_port, cache_time, cache_items);
+			if (session == NULL)
+			{
+				TBSYS_LOG(ERROR, "tfs cleint initialize failed, must be exit");
+				return TFS_ERROR;
+			}
       tfs_file_->set_session(session);
+			return TFS_SUCCESS;
     }
 
     TfsClient::~TfsClient()

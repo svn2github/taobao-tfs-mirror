@@ -241,7 +241,13 @@ int main(int argc, char* argv[])
 
   init();
 
-  TfsClient tfs_client(nsip);
+  TfsClient tfs_client;
+	int iret = tfs_client.initialize(nsip);
+	if (iret != TFS_SUCCESS)
+	{
+		return TFS_ERROR;
+	}
+	
   local_server_ip = tbsys::CNetUtil::getLocalAddr(dev_name.c_str());
   if (optind >= argc)
   {
