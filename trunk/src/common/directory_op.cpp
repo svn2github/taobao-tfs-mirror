@@ -106,7 +106,7 @@ namespace tfs
         ret = false;
       }
 
-      while (!readdir_r(dir, &dirent, &result) && result && ret)
+      while (ret && !readdir_r(dir, &dirent, &result) && result)
       {
         char* name = result->d_name;
         if (strcmp(name, ".") == 0 || strcmp(name, "..") == 0 || strcmp(name, "lost+found") == 0)

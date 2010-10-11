@@ -67,7 +67,7 @@ static void load_last_ds()
   int32_t fd = open(path, O_RDONLY);
 	if (fd < 0)
 	{
-		TBSYS_LOG(ERROR, "open file(%s) fail,errors(%s)", path, strerror(errno)); 
+		TBSYS_LOG(ERROR, "open file(%s) fail,errors(%s)", path, strerror(errno));
 		return;
 	}
   int32_t size = 0;
@@ -99,7 +99,7 @@ static void save_last_ds()
   int32_t fd = open(path, O_WRONLY | O_CREAT | O_TRUNC, 0600);
   if (fd < 0)
   {
-		TBSYS_LOG(ERROR, "open file(%s) fail,errors(%s)", path, strerror(errno)); 
+		TBSYS_LOG(ERROR, "open file(%s) fail,errors(%s)", path, strerror(errno));
     return;
   }
   int32_t size = ds_map_.size();
@@ -280,10 +280,10 @@ void print_server_map(SERVER_MAP* ds_map)
   int64_t use_capacity = 1;
   Throughput global_tp;
   Throughput global_ltp;
-  DataServerStatInfo tmp_ds;
+  DataServerStatInfo* tmp_ds = new DataServerStatInfo();
   memset(&global_tp, 0, sizeof(Throughput));
   memset(&global_ltp, 0, sizeof(Throughput));
-  time_t nowTime = time(NULL);
+  int32_t nowTime = time(NULL);
   vector<ServerCollect*> ds_list;
   for (SERVER_MAP_ITER it = ds_map->begin(); it != ds_map->end(); it++)
   {
@@ -291,16 +291,16 @@ void print_server_map(SERVER_MAP* ds_map)
   }
   sort(ds_list.begin(), ds_list.end(), ipaddr_sort());
   printf(
-      "SERVER_ADDR           UCAP  / TCAP =  UR  BLKCNT LOAD LA TOTAL_WRITE  TOTAL_READ   LAST_WRITE   LAST_READ    STARTUP_TIME\n");
+    "SERVER_ADDR           UCAP  / TCAP =  UR  BLKCNT LOAD LA TOTAL_WRITE  TOTAL_READ   LAST_WRITE   LAST_READ    STARTUP_TIME\n");
   printf(
-      "--------------------- ------------------- ------ ---- -- ------------ ------------ ------------ ------------ -------------------\n");
+    "--------------------- ------------------- ------ ---- -- ------------ ------------ ------------ ------------ -------------------\n");
   int32_t i = 0;
-  int32_t list_size = ds_list.size(); 
+  int32_t list_size = ds_list.size();
   for (i = 0; i <list_size; i++)
   {
     ServerCollect* ser_vcol = ds_list[i];
     DataServerStatInfo* ds = ser_vcol->get_ds();
-    memcpy(&tmp_ds, ds, sizeof(DataServerStatInfo));
+    memcpy(tmp_ds, ds, sizeof(DataServerStatInfo));
     DATASERVER_MAP_ITER ds_sit = ds_map_.find(ds->id_);
     DataServerStatInfo* old_ds = NULL;
     if (ds_sit == ds_map_.end())
@@ -313,55 +313,59 @@ void print_server_map(SERVER_MAP* ds_map)
     {
       old_ds = ds_sit->second;
     }
-    add_tp(&(old_ds->total_tp_), &(ds->total_tp_), -1); // encount the diff 
-    compute_tp(&(old_ds->total_tp_), ds->current_time_ - old_ds->current_time_);
-    compute_tp(&(ds->total_tp_), ds->current_time_ - ds->startup_time_);
-    add_tp(&global_tp, &(ds->total_tp_), 1);
+    add_tp(&(old_ds->total_tp_), &(tmp_ds->total_tp_), -1); // compute the diff
+    compute_tp(&(old_ds->total_tp_), tmp_ds->current_time_ - old_ds->current_time_);
+    compute_tp(&(tmp_ds->total_tp_), tmp_ds->current_time_ - tmp_ds->startup_time_);
+    add_tp(&global_tp, &(tmp_ds->total_tp_), 1);
     add_tp(&global_ltp, &(old_ds->total_tp_), 1);
-    t_load += ds->current_load_;
-    total_capacity += ds->total_capacity_;
-    use_capacity += ds->use_capacity_;
+    t_load += tmp_ds->current_load_;
+    total_capacity += tmp_ds->total_capacity_;
+    use_capacity += tmp_ds->use_capacity_;
 
-    fprintf(stdout, "%-21s %7s %7s %2d%% %6d %4d %2"PRI64_PREFIX"d %6s %5"PRI64_PREFIX"d %6s %5"PRI64_PREFIX"d %6s %5"PRI64_PREFIX"d %6s %5"PRI64_PREFIX"d %-19s\n",
-				get_addr_string(ds->id_),
-        Func::format_size(ds->use_capacity_).c_str(),
-				Func::format_size(ds->total_capacity_).c_str(),
-        static_cast<int32_t> (ds->use_capacity_ * 100 / ds->total_capacity_),
-				ds->block_count_,
-				ds->current_load_,
-				nowTime - ds->last_update_time_,
-				Func::format_size(ds->total_tp_.write_byte_).c_str(),
-				ds->total_tp_.write_file_count_,
-        Func::format_size(ds->total_tp_.read_byte_).c_str(),
-				ds->total_tp_.read_file_count_,
-				Func::format_size(old_ds->total_tp_.write_byte_).c_str(),
-				old_ds->total_tp_.write_file_count_,
-				Func::format_size(old_ds->total_tp_.read_byte_).c_str(),
-				old_ds->total_tp_.read_file_count_,
-        Func::time_to_str(ds->startup_time_).c_str());
-    memcpy(old_ds, &tmp_ds, sizeof(DataServerStatInfo));
+    fprintf(stdout, "%-21s %7s %7s %2d%% %6d %4d %2d %6s %5"PRI64_PREFIX"d %6s %5"PRI64_PREFIX"d %6s %5"PRI64_PREFIX"d %6s %5"PRI64_PREFIX"d %-19s\n",
+            get_addr_string(tmp_ds->id_),
+            Func::format_size(tmp_ds->use_capacity_).c_str(),
+            Func::format_size(tmp_ds->total_capacity_).c_str(),
+            static_cast<int32_t> (tmp_ds->use_capacity_ * 100 / tmp_ds->total_capacity_),
+            tmp_ds->block_count_,
+            tmp_ds->current_load_,
+            nowTime - tmp_ds->last_update_time_,
+            Func::format_size(tmp_ds->total_tp_.write_byte_).c_str(),
+            tmp_ds->total_tp_.write_file_count_,
+            Func::format_size(tmp_ds->total_tp_.read_byte_).c_str(),
+            tmp_ds->total_tp_.read_file_count_,
+            Func::format_size(old_ds->total_tp_.write_byte_).c_str(),
+            old_ds->total_tp_.write_file_count_,
+            Func::format_size(old_ds->total_tp_.read_byte_).c_str(),
+            old_ds->total_tp_.read_file_count_,
+            Func::time_to_str(tmp_ds->startup_time_).c_str());
+    memcpy(old_ds, ds, sizeof(DataServerStatInfo));
   }
   if (ds_map->size() > 0)
   {
     t_load /= ds_map->size();
   }
+
   fprintf(stdout, "TOTAL %5Zd %9s %7s %7s %2d%% %6s %4d %2s %6s %5"PRI64_PREFIX"d %6s %5"PRI64_PREFIX"d %6s %5"PRI64_PREFIX"d %6s %5"PRI64_PREFIX"d\n\n",
-		ds_map->size(),
-		"",
-    Func::format_size(use_capacity).c_str(),
-		Func::format_size(total_capacity).c_str(),
-		static_cast<int32_t>(use_capacity * 100 / total_capacity),
-		"",
-		t_load,
-		"",
-		Func::format_size(global_tp.write_byte_).c_str(),
-		global_tp.write_file_count_,
-		Func::format_size(global_tp.read_byte_).c_str(),
-		global_tp.read_file_count_,
-		Func::format_size(global_ltp.write_byte_).c_str(),
-		global_ltp.write_file_count_,
-		Func::format_size(global_ltp.read_byte_).c_str(),
-		global_ltp.read_file_count_);
+          ds_map->size(),
+          "",
+          Func::format_size(use_capacity).c_str(),
+          Func::format_size(total_capacity).c_str(),
+          static_cast<int32_t>(use_capacity * 100 / total_capacity),
+          "",
+          t_load,
+          "",
+          Func::format_size(global_tp.write_byte_).c_str(),
+          global_tp.write_file_count_,
+          Func::format_size(global_tp.read_byte_).c_str(),
+          global_tp.read_file_count_,
+          Func::format_size(global_ltp.write_byte_).c_str(),
+          global_ltp.write_file_count_,
+          Func::format_size(global_ltp.read_byte_).c_str(),
+          global_ltp.read_file_count_);
+
+  delete tmp_ds;
+  tmp_ds = NULL;
 }
 
 void print_machine(SERVER_MAP* ds_map, int32_t flag)
@@ -370,7 +374,7 @@ void print_machine(SERVER_MAP* ds_map, int32_t flag)
   char tmp_ip[64] = {'\0'};
   char tmp_ip_next[64] = {'\0'};
 
-  DataServerStatInfo tmp_ds;
+  DataServerStatInfo* tmp_ds = new DataServerStatInfo();
   vector<ServerCollect*> ds_list;
   for (SERVER_MAP_ITER it = ds_map->begin(); it != ds_map->end(); it++)
   {
@@ -384,16 +388,16 @@ void print_machine(SERVER_MAP* ds_map, int32_t flag)
   if (1 == flag)
   {
     printf(
-        "SERVER_IP     NUMS UCAP  / TCAP =  UR  BLKCNT  LOAD TOTAL_WRITE  TOTAL_READ  LAST_WRITE  LAST_READ  MAX_WRITE  MAX_READ\n");
+      "SERVER_IP     NUMS UCAP  / TCAP =  UR  BLKCNT  LOAD TOTAL_WRITE  TOTAL_READ  LAST_WRITE  LAST_READ  MAX_WRITE  MAX_READ\n");
     printf(
-        "------------- ---- ------------------ -------- ---- -----------  ----------  ----------  ---------  --------  ---------\n");
+      "------------- ---- ------------------ -------- ---- -----------  ----------  ----------  ---------  --------  ---------\n");
   }
   else
   {
     printf(
-        "SERVER_IP     NUMS UCAP  / TCAP =  UR  BLKCNT  LOAD LAST_WRITE  LAST_READ  MAX_WRITE  MAX_READ STARTUP_TIME\n");
+      "SERVER_IP     NUMS UCAP  / TCAP =  UR  BLKCNT  LOAD LAST_WRITE  LAST_READ  MAX_WRITE  MAX_READ STARTUP_TIME\n");
     printf(
-        "------------- ---- ------------------ -------- ---- ----------  ---------  ---------  -------- ------------\n");
+      "------------- ---- ------------------ -------- ---- ----------  ---------  ---------  -------- ------------\n");
   }
   int32_t index_ip = 0;
 	int32_t total_machine = 0;
@@ -425,7 +429,7 @@ void print_machine(SERVER_MAP* ds_map, int32_t flag)
   {
     ServerCollect* ser_vcol = ds_list[i];
     DataServerStatInfo* ds = ser_vcol->get_ds();
-    memcpy(&tmp_ds, ds, sizeof(DataServerStatInfo));
+    memcpy(tmp_ds, ds, sizeof(DataServerStatInfo));
 
     DATASERVER_MAP_ITER ds_sit = ds_map_.find(ds->id_);
     DataServerStatInfo* old_ds = NULL;
@@ -440,27 +444,27 @@ void print_machine(SERVER_MAP* ds_map, int32_t flag)
       old_ds = ds_sit->second;
     }
 
-    add_tp(&(old_ds->total_tp_), &(ds->total_tp_), -1); // ¼ÆËã²îÖµ
+    add_tp(&(old_ds->total_tp_), &(tmp_ds->total_tp_), -1); // compute the diff
 
     memcpy(&old_ds_copy, &(old_ds->total_tp_), sizeof(Throughput));
-    time_interval_tmp = ds->current_time_ - old_ds->current_time_;
+    time_interval_tmp = tmp_ds->current_time_ - old_ds->current_time_;
 
-    compute_tp(&(old_ds->total_tp_), ds->current_time_ - old_ds->current_time_);
-    compute_tp(&(ds->total_tp_), ds->current_time_ - ds->startup_time_);
+    compute_tp(&(old_ds->total_tp_), tmp_ds->current_time_ - old_ds->current_time_);
+    compute_tp(&(tmp_ds->total_tp_), tmp_ds->current_time_ - tmp_ds->startup_time_);
 
-    add_tp(&(cluster_tp), &(ds->total_tp_), 1);
+    add_tp(&(cluster_tp), &(tmp_ds->total_tp_), 1);
     //  add_tp(&(cluster_ltp), &(old_ds->total_tp_),1);
 
-    use_cluster_cap += ds->use_capacity_;
-    total_cluster_cap += ds->total_capacity_;
-    total_blk_count += ds->block_count_;
+    use_cluster_cap += tmp_ds->use_capacity_;
+    total_cluster_cap += tmp_ds->total_capacity_;
+    total_blk_count += tmp_ds->block_count_;
 
-    strncpy(tmp_ipport, tbsys::CNetUtil::addrToString(ds->id_).c_str(), 32);
+    strncpy(tmp_ipport, tbsys::CNetUtil::addrToString(tmp_ds->id_).c_str(), 32);
     if (0 == strlen(tmp_ip))
     {
       memcpy(&max_read_ltp, &(old_ds->total_tp_), sizeof(Throughput));
       memcpy(&max_write_ltp, &(old_ds->total_tp_), sizeof(Throughput));
-      latest_startup_time = ds->startup_time_;
+      latest_startup_time = tmp_ds->startup_time_;
       strncpy(tmp_ip, tmp_ipport, strchr(tmp_ipport, ':') - tmp_ipport);
       strncpy(tmp_ip_next, tmp_ipport, strchr(tmp_ipport, ':') - tmp_ipport);
     }
@@ -470,11 +474,11 @@ void print_machine(SERVER_MAP* ds_map, int32_t flag)
     if (0 == strncmp(tmp_ip, tmp_ip_next, strlen(tmp_ip_next)))
     {
       ++index_ip;
-      use_machine_cap += ds->use_capacity_;
-      total_machine_cap += ds->total_capacity_;
-      machine_blk_count += ds->block_count_;
-      machine_load = ds->current_load_;
-      add_tp(&(machine_tp), &(ds->total_tp_), 1);
+      use_machine_cap += tmp_ds->use_capacity_;
+      total_machine_cap += tmp_ds->total_capacity_;
+      machine_blk_count += tmp_ds->block_count_;
+      machine_load = tmp_ds->current_load_;
+      add_tp(&(machine_tp), &(tmp_ds->total_tp_), 1);
 
       if ((max_read_ltp.read_byte_) <= (old_ds->total_tp_.read_byte_))
       {
@@ -486,8 +490,8 @@ void print_machine(SERVER_MAP* ds_map, int32_t flag)
         max_write_ltp.write_file_count_ = old_ds->total_tp_.write_file_count_;
         max_write_ltp.write_byte_ = old_ds->total_tp_.write_byte_;
       }
-      if (latest_startup_time < ds->startup_time_)
-        latest_startup_time = ds->startup_time_;
+      if (latest_startup_time < tmp_ds->startup_time_)
+        latest_startup_time = tmp_ds->startup_time_;
 
       add_tp(&machine_ltp_total, &old_ds_copy, 1);
       time_interval_total += time_interval_tmp;
@@ -501,60 +505,60 @@ void print_machine(SERVER_MAP* ds_map, int32_t flag)
       if (flag == 1)
       {
         fprintf(stdout,"%-15s %-2d %6s %7s  %2d%%  %"PRI64_PREFIX"u   %u %6s %5"PRI64_PREFIX"d %6s %"PRI64_PREFIX"d %3s %"PRI64_PREFIX"d %5s %"PRI64_PREFIX"d %3s %"PRI64_PREFIX"d %5s %5"PRI64_PREFIX"d\n",
-						tmp_ip,
-            index_ip,
-						Func::format_size(use_machine_cap).c_str(),
-						Func::format_size(total_machine_cap).c_str(),
-            static_cast<int32_t> (use_machine_cap * 100 / total_machine_cap),
-						machine_blk_count,
-						machine_load,
-						Func::format_size(machine_tp.write_byte_).c_str(),
-						machine_tp.write_file_count_,
-            Func::format_size(machine_tp.read_byte_).c_str(),
-						machine_tp.read_file_count_,
-						Func::format_size(machine_ltp_total.write_byte_).c_str(),
-						machine_ltp_total.write_file_count_,
-						Func::format_size(machine_ltp_total.read_byte_).c_str(),
-						machine_ltp_total.read_file_count_,
-						Func::format_size(max_write_ltp.write_byte_).c_str(),
-						max_write_ltp.write_file_count_,
-						Func::format_size(max_read_ltp.read_byte_).c_str(),
-						max_read_ltp.read_file_count_
-        );
+                tmp_ip,
+                index_ip,
+                Func::format_size(use_machine_cap).c_str(),
+                Func::format_size(total_machine_cap).c_str(),
+                static_cast<int32_t> (use_machine_cap * 100 / total_machine_cap),
+                machine_blk_count,
+                machine_load,
+                Func::format_size(machine_tp.write_byte_).c_str(),
+                machine_tp.write_file_count_,
+                Func::format_size(machine_tp.read_byte_).c_str(),
+                machine_tp.read_file_count_,
+                Func::format_size(machine_ltp_total.write_byte_).c_str(),
+                machine_ltp_total.write_file_count_,
+                Func::format_size(machine_ltp_total.read_byte_).c_str(),
+                machine_ltp_total.read_file_count_,
+                Func::format_size(max_write_ltp.write_byte_).c_str(),
+                max_write_ltp.write_file_count_,
+                Func::format_size(max_read_ltp.read_byte_).c_str(),
+                max_read_ltp.read_file_count_
+          );
       }
       else
       {
         fprintf(stdout, "%-15s %-2d %6s %7s  %2d%%  %"PRI64_PREFIX"u   %u %3s %"PRI64_PREFIX"d %5s %5"PRI64_PREFIX"d %3s %5"PRI64_PREFIX"d %5s %5"PRI64_PREFIX"d %-19s\n",
-					tmp_ip,
-					index_ip,
-          Func::format_size(use_machine_cap).c_str(),
-					Func::format_size(total_machine_cap).c_str(),
-          static_cast<int32_t>(use_machine_cap * 100 / total_machine_cap),
-					machine_blk_count,
-					machine_load, Func::format_size(machine_ltp_total.write_byte_).c_str(),
-					machine_ltp_total.write_file_count_,
-					Func::format_size(machine_ltp_total.read_byte_).c_str(),
-					machine_ltp_total.read_file_count_,
-					Func::format_size(max_write_ltp.write_byte_).c_str(),
-					max_write_ltp.write_file_count_,
-					Func::format_size(max_read_ltp.read_byte_).c_str(),
-					max_read_ltp.read_file_count_,
-         	Func::time_to_str(latest_startup_time).c_str());
+                tmp_ip,
+                index_ip,
+                Func::format_size(use_machine_cap).c_str(),
+                Func::format_size(total_machine_cap).c_str(),
+                static_cast<int32_t>(use_machine_cap * 100 / total_machine_cap),
+                machine_blk_count,
+                machine_load, Func::format_size(machine_ltp_total.write_byte_).c_str(),
+                machine_ltp_total.write_file_count_,
+                Func::format_size(machine_ltp_total.read_byte_).c_str(),
+                machine_ltp_total.read_file_count_,
+                Func::format_size(max_write_ltp.write_byte_).c_str(),
+                max_write_ltp.write_file_count_,
+                Func::format_size(max_read_ltp.read_byte_).c_str(),
+                max_read_ltp.read_file_count_,
+                Func::time_to_str(latest_startup_time).c_str());
       }
       ++total_machine;
       cluster_load += machine_load;
       index_ip = 1;
-      use_machine_cap = ds->use_capacity_;
-      total_machine_cap = ds->total_capacity_;
-      machine_blk_count = ds->block_count_;
-      memcpy(&machine_tp, &(ds->total_tp_), sizeof(struct Throughput));
+      use_machine_cap = tmp_ds->use_capacity_;
+      total_machine_cap = tmp_ds->total_capacity_;
+      machine_blk_count = tmp_ds->block_count_;
+      memcpy(&machine_tp, &(tmp_ds->total_tp_), sizeof(struct Throughput));
       memcpy(&old_ds_copy, &(old_ds->total_tp_), sizeof(Throughput));
       memset(&machine_ltp_total, 0, sizeof(Throughput));
       memcpy(&max_read_ltp, &(old_ds->total_tp_), sizeof(Throughput));
       memcpy(&max_write_ltp, &(old_ds->total_tp_), sizeof(Throughput));
       memset(tmp_ip, '\0', 32);
       strncpy(tmp_ip, tmp_ip_next, strlen(tmp_ip_next));
-      latest_startup_time = ds->startup_time_;
+      latest_startup_time = tmp_ds->startup_time_;
     }
 
     if (i == static_cast<int32_t>(ds_list.size()) - 1)
@@ -564,95 +568,97 @@ void print_machine(SERVER_MAP* ds_map, int32_t flag)
       if (flag == 1)
       {
         fprintf(stdout, "%-15s %-2d %6s %7s  %2d%%  %"PRI64_PREFIX"u   %u %6s %5"PRI64_PREFIX"d %6s %5"PRI64_PREFIX"d %3s %5"PRI64_PREFIX"d %5s %5"PRI64_PREFIX"d %3s %5"PRI64_PREFIX"d %5s %5"PRI64_PREFIX"d\n",
-					tmp_ip,
-					index_ip,
-					Func::format_size(use_machine_cap).c_str(),
-					Func::format_size(total_machine_cap).c_str(),
-         	static_cast<int32_t>(use_machine_cap * 100 / total_machine_cap),
-					machine_blk_count,
-					machine_load,
-					Func::format_size(machine_tp.write_byte_).c_str(),
-					machine_tp.write_file_count_,
-          Func::format_size(machine_tp.read_byte_).c_str(),
-					machine_tp.read_file_count_,
-					Func::format_size(machine_ltp_total.write_byte_).c_str(),
-					machine_ltp_total.write_file_count_,
-					Func::format_size(machine_ltp_total.read_byte_).c_str(),
-					machine_ltp_total.read_file_count_,
-					Func::format_size(max_write_ltp.write_byte_).c_str(),
-					max_write_ltp.write_file_count_,
-					Func::format_size(max_read_ltp.read_byte_).c_str(),
-					max_read_ltp.read_file_count_);
+                tmp_ip,
+                index_ip,
+                Func::format_size(use_machine_cap).c_str(),
+                Func::format_size(total_machine_cap).c_str(),
+                static_cast<int32_t>(use_machine_cap * 100 / total_machine_cap),
+                machine_blk_count,
+                machine_load,
+                Func::format_size(machine_tp.write_byte_).c_str(),
+                machine_tp.write_file_count_,
+                Func::format_size(machine_tp.read_byte_).c_str(),
+                machine_tp.read_file_count_,
+                Func::format_size(machine_ltp_total.write_byte_).c_str(),
+                machine_ltp_total.write_file_count_,
+                Func::format_size(machine_ltp_total.read_byte_).c_str(),
+                machine_ltp_total.read_file_count_,
+                Func::format_size(max_write_ltp.write_byte_).c_str(),
+                max_write_ltp.write_file_count_,
+                Func::format_size(max_read_ltp.read_byte_).c_str(),
+                max_read_ltp.read_file_count_);
       }
       else
       {
 
         fprintf(stdout, "%-15s %-2d %6s %7s  %2d%%  %"PRI64_PREFIX"u   %u %3s %5"PRI64_PREFIX"d %5s %5"PRI64_PREFIX"d %3s %5"PRI64_PREFIX"d %5s %5"PRI64_PREFIX"d %-19s\n",
-					tmp_ip,
-					index_ip,
-         	Func::format_size(use_machine_cap).c_str(),
-					Func::format_size(total_machine_cap).c_str(),
-         	static_cast<int32_t>(use_machine_cap * 100 / total_machine_cap),
-					machine_blk_count,
-					machine_load,
-					Func::format_size(machine_ltp_total.write_byte_).c_str(),
-					machine_ltp_total.write_file_count_,
-					Func::format_size(machine_ltp_total.read_byte_).c_str(),
-					machine_ltp_total.read_file_count_,
-					Func::format_size(max_write_ltp.write_byte_).c_str(),
-					max_write_ltp.write_file_count_,
-					Func::format_size(max_read_ltp.read_byte_).c_str(),
-					max_read_ltp.read_file_count_,
-          Func::time_to_str(latest_startup_time).c_str());
+                tmp_ip,
+                index_ip,
+                Func::format_size(use_machine_cap).c_str(),
+                Func::format_size(total_machine_cap).c_str(),
+                static_cast<int32_t>(use_machine_cap * 100 / total_machine_cap),
+                machine_blk_count,
+                machine_load,
+                Func::format_size(machine_ltp_total.write_byte_).c_str(),
+                machine_ltp_total.write_file_count_,
+                Func::format_size(machine_ltp_total.read_byte_).c_str(),
+                machine_ltp_total.read_file_count_,
+                Func::format_size(max_write_ltp.write_byte_).c_str(),
+                max_write_ltp.write_file_count_,
+                Func::format_size(max_read_ltp.read_byte_).c_str(),
+                max_read_ltp.read_file_count_,
+                Func::time_to_str(latest_startup_time).c_str());
       }
       ++total_machine;
       cluster_load += machine_load;
     }
-    memcpy(old_ds, &tmp_ds, sizeof(DataServerStatInfo));
+    memcpy(old_ds, ds, sizeof(DataServerStatInfo));
 
   }
   if (1 == flag)
   {
     fprintf(stdout, "Total : %-5d %-2Zd %6s %7s  %2d%%  %"PRI64_PREFIX"u   %u %6s %5"PRI64_PREFIX"d %6s %5"PRI64_PREFIX"d %6s %5"PRI64_PREFIX"d %6s %5"PRI64_PREFIX"d\n",
-				total_machine,
-        ds_list.size(),
-				Func::format_size(use_cluster_cap).c_str(),
-				Func::format_size(total_cluster_cap).c_str(),
-        static_cast<int32_t>(use_cluster_cap * 100 / total_cluster_cap),
-				total_blk_count,
-				(cluster_load / total_machine),
-        Func::format_size(cluster_tp.write_byte_).c_str(),
-				cluster_tp.write_file_count_,
-				Func::format_size(cluster_tp.read_byte_).c_str(),
-				cluster_tp.read_file_count_,
-        Func::format_size(cluster_ltp.write_byte_).c_str(),
-				cluster_ltp.write_file_count_,
-				Func::format_size(cluster_ltp.read_byte_).c_str(),
-				cluster_ltp.read_file_count_);
+            total_machine,
+            ds_list.size(),
+            Func::format_size(use_cluster_cap).c_str(),
+            Func::format_size(total_cluster_cap).c_str(),
+            static_cast<int32_t>(use_cluster_cap * 100 / total_cluster_cap),
+            total_blk_count,
+            (cluster_load / total_machine),
+            Func::format_size(cluster_tp.write_byte_).c_str(),
+            cluster_tp.write_file_count_,
+            Func::format_size(cluster_tp.read_byte_).c_str(),
+            cluster_tp.read_file_count_,
+            Func::format_size(cluster_ltp.write_byte_).c_str(),
+            cluster_ltp.write_file_count_,
+            Func::format_size(cluster_ltp.read_byte_).c_str(),
+            cluster_ltp.read_file_count_);
     printf(
-        "------------- ---- ------------------ -------- ---- -----------  ----------  ----------  ---------  --------  ---------\n");
+      "------------- ---- ------------------ -------- ---- -----------  ----------  ----------  ---------  --------  ---------\n");
     printf(
-        "SERVER_IP     NUMS UCAP  / TCAP =  UR  BLKCNT  LOAD TOTAL_WRITE  TOTAL_READ  LAST_WRITE  LAST_READ  MAX_WRITE  MAX_READ\n");
+      "SERVER_IP     NUMS UCAP  / TCAP =  UR  BLKCNT  LOAD TOTAL_WRITE  TOTAL_READ  LAST_WRITE  LAST_READ  MAX_WRITE  MAX_READ\n");
 
   }
   else
   {
     fprintf(stdout, "Total : %-5d %-2Zd %6s %7s  %2d%%  %"PRI64_PREFIX"u   %u %6s %5"PRI64_PREFIX"d %6s %5"PRI64_PREFIX"d\n",
-			total_machine,
-			ds_list.size(),
-      Func::format_size(use_cluster_cap).c_str(),
-			Func::format_size(total_cluster_cap).c_str(),
-			static_cast<int32_t> (use_cluster_cap * 100 / total_cluster_cap),
-			total_blk_count,
-			(cluster_load / total_machine),
-			Func::format_size(cluster_ltp.write_byte_).c_str(),
-			cluster_ltp.write_file_count_,
-      Func::format_size(cluster_ltp.read_byte_).c_str(),
-			cluster_ltp.read_file_count_);
+            total_machine,
+            ds_list.size(),
+            Func::format_size(use_cluster_cap).c_str(),
+            Func::format_size(total_cluster_cap).c_str(),
+            static_cast<int32_t> (use_cluster_cap * 100 / total_cluster_cap),
+            total_blk_count,
+            (cluster_load / total_machine),
+            Func::format_size(cluster_ltp.write_byte_).c_str(),
+            cluster_ltp.write_file_count_,
+            Func::format_size(cluster_ltp.read_byte_).c_str(),
+            cluster_ltp.read_file_count_);
     printf("------------- ---- ------------------ -------- ---- ----------  ---------  --------  ---------\n");
     printf("SERVER_IP     NUMS UCAP  / TCAP =  UR  BLKCNT  LOAD LAST_WRITE  LAST_READ  MAX_WRITE  MAX_READ\n");
   }
 
+  delete tmp_ds;
+  tmp_ds = NULL;
 }
 
 void print_server_map_ex(SERVER_MAP* ds_map)

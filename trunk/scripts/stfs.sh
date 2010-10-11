@@ -6,20 +6,21 @@ TFS_CONF=${TFS_HOME}/conf/tfs.conf
 BIN_DIR=${TFS_HOME}/bin
 CLEAR_BIN=${BIN_DIR}/clear_file_system
 FORMAT_BIN=${BIN_DIR}/format_file_system
+DS_CMD="${BIN_DIR}/dataserver -f ${TFS_CONF} -d -i"
 
 warn_echo()
 {
-    echo -e "\033[36m $@ \033[0m"
+    printf "\033[36m $* \033[0m\n"
 }
 
 fail_echo()
 {
-    echo  -e "\033[31m $@ \033[0m"
+    printf "\033[31m $* ... CHECK IT\033[0m\n"
 }
 
 succ_echo()
 {
-    echo  -e "\033[32m  $@ \033[0m"
+    printf "\033[32m $* \033[0m\n"
 }
 
 print_usage()
@@ -28,24 +29,23 @@ print_usage()
     warn_echo "ds_index format : 2-4 OR 2,4,3 OR 2-4,5,7 OR '2-4 5,6'"
 }
 
-check_run() 
+check_run()
 {
-    case $1 in 
+    case $1 in
 	ds)
-	    run_pid=`ps -ef | egrep "dataserver.*?-i +$2\b" | egrep -v 'egrep' | awk '{print $2}'` 
-	    ;;
-	ns)
-	    run_pid=`ps -C "nameserver" -o pid=`
+	    run_pid=`ps -ef | egrep "${DS_CMD} +$2\b" | egrep -v 'egrep' | awk '{print $2}'`
 	    ;;
 	*)
-	    warn_echo "wrong argument for check_run"
 	    exit 1
     esac
 
-    if [ -z "$run_pid" ] 
+    if [ `echo "$run_pid" | wc -l` -gt 1 ]
+    then
+	echo -1
+    elif [ -z "$run_pid" ]
     then
 	echo 0
-    else 
+    else
 	echo $run_pid
     fi
 }
@@ -81,7 +81,7 @@ get_index()
 
 do_ds()
 {
-    case "$1" in 
+    case "$1" in
 	format)
 	    cmd="$FORMAT_BIN -f $TFS_CONF -i"
 	    name="format ds"
@@ -91,7 +91,7 @@ do_ds()
 	    name="clear ds"
 	    ;;
 	*)
-	    warn_echo "wrong argument for do_ds" 
+	    warn_echo "wrong argument for do_ds"
     esac
 
 
@@ -106,28 +106,31 @@ do_ds()
     local run_index=""
     local ready_index=""
     for i in $ds_index
-    do 
+    do
 	ret_pid=`check_run ds $i`
 	if [ $ret_pid -gt 0 ]
-	then 
+	then
 	    kill -15 $ret_pid
 	    warn_echo "dataserver $i is running, kill first ... "
 	    run_index="$run_index $i"
-	else 
+	elif [ $ret_pid -eq 0 ]
+	then
 	    ready_index="$ready_index $i"
+	else
+	    fail_echo "more than one same dataserver $i is running"
 	fi
     done
 
     if [ "$run_index" ]
     then
 	sleep 5
-	for i in $run_index 
+	for i in $run_index
 	do
 	    ret_pid=`check_run "ds" $i`
-	    if [ $ret_pid -gt 0 ] 
-	    then 
-		fail_echo "dataserver $i is still RUNNING, FAIL to $name $i  ... CHECK IT"
-	    else 
+	    if [ $ret_pid -gt 0 ]
+	    then
+		fail_echo "dataserver $i is still RUNNING, FAIL to $name $i"
+	    else
 		ready_index="$ready_index $i"
 	    fi
 	done
@@ -137,20 +140,20 @@ do_ds()
     do
 	ret=`$cmd $i 2>&1`
 	if [ $? -eq 0 ] && [ -z "`echo $ret | egrep -i ERROR`" ]
-	then 
+	then
 	    succ_echo "$name $i SUCCESSFULLY"
-	else 
-	    fail_echo "$name $i FAIL  ... CHECK IT"
+	else
+	    fail_echo "$name $i FAIL"
 	fi
 	warn_echo "$ret"
-    done 
+    done
 
     exit 0
 }
 
 ############
 
-case "$1" in 
+case "$1" in
     clear)
 	do_ds "clear"  "$2"
 	;;

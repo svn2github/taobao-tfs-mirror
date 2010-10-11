@@ -7,20 +7,23 @@ BIN_DIR=${TFS_HOME}/bin
 NS_BIN=${BIN_DIR}/nameserver
 DS_BIN=${BIN_DIR}/dataserver
 ADMIN_BIN=${BIN_DIR}/adminserver
+NS_CMD="${NS_BIN} -f ${TFS_CONF} -d"
+DS_CMD="${DS_BIN} -f ${TFS_CONF} -d -i"
+ADMIN_CMD="${ADMIN_BIN} -f ${TFS_CONF} -d -s"
 
 warn_echo()
 {
-  echo -e "\033[36m $@ \033[0m"
+    printf  "\033[36m $* \033[0m\n"
 }
 
 fail_echo()
 {
-    echo  -e "\033[31m $@ \033[0m"
+    printf "\033[31m $* ... CHECK IT\033[0m\n"
 }
 
 succ_echo()
 {
-    echo  -e "\033[32m $@ \033[0m"
+    printf "\033[32m $* \033[0m\n"
 }
 
 print_usage()
@@ -29,6 +32,7 @@ print_usage()
     warn_echo "ds_index format : 2-4 OR 2,4,3 OR 2-4,6,7 OR '2-4 5,7,8'"
 }
 
+# get command or name infomation dynamically
 # get_info bin type index
 get_info()
 {
@@ -36,7 +40,7 @@ get_info()
 	ds)
 	    if [ $2 -gt 0 ]
 	    then
-		echo "${DS_BIN} -f ${TFS_CONF} -d -i $3"
+		echo "${DS_CMD} $3"
 	    else
 		echo "dataserver $3"
 	    fi
@@ -44,7 +48,7 @@ get_info()
 	ns)
 	    if [ $2 -gt 0 ]
 	    then
-		echo "$NS_BIN -f $TFS_CONF -d"
+		echo "${NS_CMD}"
 	    else
 		echo "nameserver"
 	    fi
@@ -60,7 +64,7 @@ get_info()
 
 	    if [ $2 -gt 0 ]
 	    then
-		echo "$ADMIN_BIN -f $TFS_CONF -d -s $service"
+		echo "${ADMIN_CMD} $service"
 	    else
 		run_service=`ps -C adminserver -o cmd |egrep -o ' -s +(ns|ds)' |awk '{print $2}'`
 		if [ "$run_service" ]
@@ -71,10 +75,11 @@ get_info()
 	    fi
 	    ;;
 	*)
-	    warn_echo "wrong argument for get_name"
+	    exit 1
     esac
 }
 
+# get specified index
 get_index()
 {
     local ds_index=""
@@ -104,24 +109,27 @@ get_index()
     fi
 }
 
+# check if only one instance is running
 check_run()
 {
     case $1 in
 	ds)
-	    run_pid=`ps -ef | egrep "dataserver.*?-i +$2\b" | egrep -v 'egrep' | awk '{print $2}'`
+	    run_pid=`ps -ef | egrep "${DS_CMD} +$2\b" | egrep -v 'egrep' | awk '{print $2}'`
 	    ;;
 	ns)
-	    run_pid=`ps -C "nameserver" -o pid=`
+	    run_pid=`ps -ef | egrep "${NS_CMD}" | egrep -v 'egrep' | awk '{print $2}'`
 	    ;;
 	admin)
-	    run_pid=`ps -C "adminserver" -o pid=`
+	    run_pid=`ps -ef | egrep "${ADMIN_CMD}" | egrep -v 'egrep' | awk '{print $2}'`
 	    ;;
 	*)
-	    warn_echo "wrong argument for check_run"
 	    exit 1
     esac
 
-    if [ -z "$run_pid" ]
+    if [ `echo "$run_pid" | wc -l` -gt 1 ]
+    then
+	echo -1
+    elif [ -z "$run_pid" ]
     then
 	echo 0
     else
@@ -131,7 +139,7 @@ check_run()
 
 do_start()
 {
-    if [ $1 == "ds" ] &&  [ -z "$2" ]
+    if [ $1 = "ds" ] &&  [ -z "$2" ]
     then
 	warn_echo "invalid range"
 	print_usage
@@ -143,15 +151,18 @@ do_start()
 	# a little ugly
 	start_name=`get_info $1 0 $i`
 	cmd=`get_info $1 1 $i`
-	
+
 	ret_pid=`check_run $1 $i`
 
 	if [ $ret_pid -gt 0 ]
 	then
-	    fail_echo "$start_name is already running pid: $ret_pid ... CHECK IT"
-	else
+	    fail_echo "$start_name is already running pid: $ret_pid"
+	elif [ $ret_pid -eq 0 ]
+	then
 	    $cmd &
 	    start_index="$start_index $i"
+	else
+	    fail_echo "more than one same $start_name is running"
 	fi
     done
 
@@ -169,15 +180,18 @@ do_start()
 	if [ $ret_pid -gt 0 ]
 	then
 	    succ_echo "$start_name is up SUCCESSFULLY pid: $ret_pid"
+	elif [ $ret_pid -eq 0 ]
+	then
+	    fail_echo "$start_name FAIL to up"
 	else
-	    fail_echo "$start_name FAIL to up  ... CHECK IT"
+	    fail_echo "more than one same $start_name is running"
 	fi
     done
 }
 
 do_stop()
 {
-    if [ $1 == "ds" ] && [ -z "$2" ]
+    if [ $1 = "ds" ] && [ -z "$2" ]
     then
 	warn_echo "invalid range"
 	print_usage
@@ -194,8 +208,11 @@ do_stop()
 	then
 	    kill -15 $ret_pid
 	    stop_index="$stop_index $i"
+	elif [ $ret_pid -eq 0 ]
+	then
+	    fail_echo "$stop_name is NOT running"
 	else
-	    fail_echo "$stop_name is NOT running ... CHECK IT"
+	    fail_echo "more than one same $stop_name is running"
 	fi
     done
 
@@ -204,7 +221,7 @@ do_stop()
 	sleep 5
     fi
 
-    # check if ns/ds is down . necessary ?
+    # check if ns/ds is down
     for i in $stop_index
     do
 	stop_name=`get_info $1 0 $i`
@@ -212,9 +229,12 @@ do_stop()
 
 	if [ $ret_pid -gt 0 ]
 	then
-	    fail_echo "$stop_name FAIL to stop pid: $ret_pid ... CHECK IT"
-	else
+	    fail_echo "$stop_name FAIL to stop pid: $ret_pid"
+	elif [ $ret_pid -eq 0 ]
+	then
 	    succ_echo "$stop_name exit SUCCESSFULLY"
+	else
+	    fail_echo "more than one same $stop_name is running"
 	fi
     done
 }
@@ -236,7 +256,6 @@ start_ds()
 
 stop_ds()
 {
-    # can't exit from ` `
     do_stop "ds" "`get_index "$1"`"
 }
 
@@ -252,30 +271,24 @@ stop_admin()
 
 stop_ds_all()
 {
-    run_index=`ps -C dataserver -o cmd= |egrep -o " -i +[0-9]+" | awk '{print $2}' | sort -n`
+    run_index=`ps -ef | egrep "${DS_CMD}" | egrep -o " -i +[0-9]+" | awk '{print $2}' | sort -n`
     if [ -z "$run_index" ]
     then
-	fail_echo "NO dataserver is running ... CHECK IT"
+	fail_echo "NO dataserver is running"
 	exit 1
     fi
 
-    killall -15 "dataserver"
+    dup_run_index=`echo "$run_index" | uniq -d`
+    uniq_run_index=`echo "$run_index" | uniq -u`
 
-  # check if all is down. necessary ?
-    sleep 5
-    pid=`ps -C dataserver -o pid=`
-    index=`ps -C dataserver -o cmd= |egrep -o " -i +[0-9]+" | awk '{print $2}'`
-
-    if [ "$index" ]
+    if [ "$dup_run_index" ]
     then
-	k=1
-	for i in $pid
-	do
-	    fail_echo "dataserver `echo $index | awk '{print $'$k'}'` FAIL to stop pid: $i ... CHECK IT"
-	    k=`expr $k + 1`
-	done
-    else
-	succ_echo "all dataservers [ "$run_index" ] stop SUCCESSFULLY"
+	fail_echo "more than one same dataserver [ "$dup_run_index" ] is running"
+    fi
+
+    if [ "$uniq_run_index" ]
+    then
+	stop_ds "`echo $uniq_run_index`"
     fi
 }
 
@@ -285,19 +298,34 @@ check_ns()
     if [ $ret_pid -gt 0 ]
     then
 	succ_echo "nameserver is running pid: $ret_pid"
+    elif [ $ret_pid -eq 0 ]
+    then
+	fail_echo "nameserver is NOT running"
     else
-	fail_echo "nameserver is NOT running ... CHECK IT"
+	fail_echo "more than one same nameserver is running"
     fi
 }
 
 check_ds()
 {
-    run_index=`ps -C dataserver -o cmd= |egrep -o " -i +[0-9]+" | awk '{print $2}' | sort -n`
+    run_index=`ps -ef | egrep "${DS_CMD}" | egrep -o " -i +[0-9]+" | awk '{print $2}' | sort -n`
+
     if [ -z "$run_index" ]
     then
-	fail_echo "NO dataserver is running ... CHECK IT"
-    else
-	succ_echo "dataserver [ "$run_index" ] is running"
+	fail_echo "NO dataserver is running"
+	exit 1
+    fi
+
+    dup_run_index=`echo "$run_index" | uniq -d`
+    uniq_run_index=`echo "$run_index" | uniq -u`
+
+    if [ "$dup_run_index" ]
+    then
+	fail_echo "more than one same dataserver [ "$dup_run_index" ] is running"
+    fi
+    if [ "$uniq_run_index" ]
+    then
+	succ_echo "dataserver [ "$uniq_run_index" ] is running"
     fi
 }
 
@@ -307,8 +335,11 @@ check_admin()
     if [ $ret_pid -gt 0 ]
     then
 	succ_echo "adminserver [ `ps -p $ret_pid -o cmd=| egrep -o ' -s +(ns|ds)' |awk '{print $2}'` ] is running pid: $ret_pid"
+    elif [ $ret_pid -eq 0 ]
+    then
+	fail_echo "NO adminserver is running"
     else
-	fail_echo "NO adminserver is running ... CHECK IT"
+	fail_echo "more than one same adminserver is running"
     fi
 }
 
@@ -346,7 +377,7 @@ case "$1" in
 	if [ -z "$run_service" ]
 	then
 	    stop_admin 0
-	elif [ $run_service == "ns" ]
+	elif [ $run_service = "ns" ]
 	then
 	    stop_admin 1
 	else
