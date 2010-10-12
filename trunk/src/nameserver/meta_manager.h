@@ -55,9 +55,11 @@ namespace tfs
       }
 
     public:
+      // handle ds
       int join_ds(const common::DataServerStatInfo& ds_stat_info, bool& isnew);
       int leave_ds(const uint64_t ds_id);
 
+      // handle blocks
       int report_blocks(const uint64_t ds_id, const std::vector<common::BlockInfo>& blocks, EXPIRE_BLOCK_LIST& expires);
 
       BlockCollect* add_new_block(uint32_t& block_id, const uint64_t ds_id = 0);
@@ -66,8 +68,7 @@ namespace tfs
       int write_block_info(uint32_t& block_id, int32_t mode, uint32_t& lease_id, int32_t& version,
           common::VUINT64& ds_list);
       int update_block_info(const common::BlockInfo& block_info, const uint64_t ds_id, bool addnew);
-      int
-          write_commit(const common::BlockInfo& block_info, const uint64_t ds_id, const uint32_t lease_id,
+      int write_commit(const common::BlockInfo& block_info, const uint64_t ds_id, const uint32_t lease_id,
               const common::UnlinkFlag unlink_flag, const common::WriteCompleteStatus status, bool& neednew,
               string& errmsg);
 
@@ -78,6 +79,7 @@ namespace tfs
       int check_primary_writable_block(const uint64_t ds_id, const int32_t add_block_count, bool promote = false);
       int promote_primary_write_block(const ServerCollect* srvcol, int32_t& need);
 
+      // sync log
       const OpLogSyncManager* get_oplog_sync_mgr() const
       {
         return &oplog_sync_mgr_;

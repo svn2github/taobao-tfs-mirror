@@ -28,6 +28,7 @@ namespace tfs
 {
   namespace nameserver
   {
+    // a class for recording the ds info, as well as the blocks info of it
     class ServerCollect
     {
       typedef std::set<uint32_t> BLOCK_SET;

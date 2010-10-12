@@ -41,6 +41,7 @@ namespace tfs
       init(chunk_num);
     }
 
+    // construct blocks
     int LayoutManager::init(int32_t chunk_num)
     {
       block_chunk_num_ = chunk_num;
@@ -455,6 +456,7 @@ namespace tfs
       return false;
     }
 
+    // if block collect is writable, add to the list
     bool LayoutManager::block_writable(const BlockCollect* block_collect)
     {
       if (block_collect == NULL)
@@ -482,6 +484,7 @@ namespace tfs
       return true;
     }
 
+    // update ds status info
     int32_t LayoutManager::join_ds(const DataServerStatInfo & ds_info, bool & isnew)
     {
       ScopedRWLock scoped_lock(server_mutex_, WRITE_LOCKER);
@@ -502,6 +505,7 @@ namespace tfs
       return TFS_SUCCESS;
     }
 
+    // update ds status info
     void LayoutManager::update_global_info(const DataServerStatInfo & ds_info, bool isnew)
     {
       ScopedRWLock scoped_lock(global_mutex_, WRITE_LOCKER);
@@ -520,6 +524,7 @@ namespace tfs
         global_info_.max_block_count_ = ds_info.block_count_;
     }
 
+    // get dead ds list and writable ds list
     int32_t LayoutManager::check_ds(const time_t ds_dead_time, VUINT64 &dead_ds_list, VUINT64 &writable_ds_list)
     {
       dead_ds_list.clear();
@@ -543,6 +548,8 @@ namespace tfs
             continue;
 
           ds_stat_info = server_collect->get_ds();
+          // if last update time was too early, treat as dead ds
+          // else treat as writable ds
           if (ds_stat_info->last_update_time_ < now)
           {
             dead_ds_list.push_back(ds_stat_info->id_);
@@ -575,10 +582,12 @@ namespace tfs
       return dead_ds_list.size();
     }
 
+    // calculate the max block id
     uint32_t LayoutManager::calc_max_block_id()
     {
       max_block_id_ = 0;
       uint32_t current = 0;
+      // get the current max block id
       for (int32_t i = 0; i < block_chunk_num_; ++i)
       {
         current = block_map_array_[i]->calc_max_block_id();
@@ -645,6 +654,7 @@ namespace tfs
       return ptr->insert(block_collect, overwrite);
     }
 
+    // sort by block id
     void LayoutManager::sort()
     {
       ScopedRWLock scoped_lock(writable_mutex_, WRITE_LOCKER);

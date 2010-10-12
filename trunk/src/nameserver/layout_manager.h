@@ -44,8 +44,8 @@ namespace tfs
     struct GetAliveDataServerList
     {
     public:
-      GetAliveDataServerList(common::VUINT64& dsList) :
-        m_dsList(dsList)
+      GetAliveDataServerList(common::VUINT64& ds_list) :
+        m_dsList(ds_list)
       {
 
       }
