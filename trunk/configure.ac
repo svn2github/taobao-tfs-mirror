@@ -57,11 +57,7 @@ AC_CACHE_CHECK(if fallocate is implemented, ac_cv_func_fallocate,
       {
         exit(1);
       }
-      if (fallocate(fd, 0, 0, 512))
-      {
-        perror("fallocate:");
-        exit(1);
-      }
+      fallocate(fd, 0, 0, 512);
       close(fd);
       unlink(file);
       exit(0);
