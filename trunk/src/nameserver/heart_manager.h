@@ -31,6 +31,7 @@ namespace tfs
   namespace nameserver
   {
 
+    // a class for handling the heartbeat from ds
     class HeartManagement: public ProactorDataPipe<std::deque<message::Message*>, HeartManagement>
     {
     public:
@@ -52,6 +53,7 @@ namespace tfs
       int32_t max_queue_size_;
     };
 
+    // a class for checking whether it is master.
     class CheckOwnerIsMasterTimerTask: public tbutil::TimerTask
     {
     public:
@@ -95,6 +97,7 @@ namespace tfs
     };
     typedef tbutil::Handle<SlaveHeartTimerTask> SlaveHeartTimerTaskPtr;
 
+    // a class for handling the heartbeat from the other ns.
     class MasterAndSlaveHeartManager: public ProactorDataPipe<std::deque<message::Message*>, MasterAndSlaveHeartManager>
     {
       template<typename Container, typename Executor> friend class ProactorDataPipe;

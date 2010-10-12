@@ -44,6 +44,8 @@ namespace tfs
   namespace nameserver
   {
     class NameServer;
+
+    // a timer class for itself
     class OwnerCheckTimerTask: public tbutil::TimerTask
     {
     public:
@@ -60,6 +62,7 @@ namespace tfs
     };
     typedef tbutil::Handle<OwnerCheckTimerTask> OwnerCheckTimerTaskPtr;
 
+    // the main class for run timer, start threads and handle packets.
     class NameServer: public tbnet::IServerAdapter, public tbnet::IPacketQueueHandler, public tbsys::Runnable
     {
     public:

@@ -111,6 +111,7 @@ namespace tfs
 
       bool isnew = false;
 
+      // get the latest ds status info
       meta_mgr_.join_ds(*ds_stat_info, isnew);
       if (isnew)
       {
@@ -123,6 +124,8 @@ namespace tfs
         }
       }
 
+      // if the ds has blocks
+      // mark the expire blocks in this ds and remove the expire blocks in other ds
       if (message->get_has_block() == HAS_BLOCK_FLAG_YES)
       {
         meta_mgr_.report_blocks(server_id, *message->get_blocks(), expire_list);
@@ -154,6 +157,7 @@ namespace tfs
             tbsys::CNetUtil::addrToString(server_id).c_str(), ds_stat_info->use_capacity_,
             ds_stat_info->total_capacity_, message->get_blocks()->size());
       }
+      // ns has no block info, reply the ds to send block info.
       else
       {
         ServerCollect* servre_collect = meta_mgr_.get_block_ds_mgr().get_ds_collect(server_id);
@@ -227,29 +231,32 @@ namespace tfs
         return;
       }
 
-      //vip == local ip
-      if (ngi->owner_role_ == NS_ROLE_MASTER)//master
+      //owner is master
+      if (ngi->owner_role_ == NS_ROLE_MASTER)
       {
+        // owner role == master and otherside role == slave, do nothing
         if (ngi->other_side_role_ != NS_ROLE_MASTER)
         {
           return;
         }
         // owner role == master and otherside role == master
-        if (tbsys::CNetUtil::isLocalAddr(ngi->vip_)) // make sure owner role master,set otherside role == NS_ROLE_SLAVE
+        // make sure owner role master,set otherside role == NS_ROLE_SLAVE
+        if (tbsys::CNetUtil::isLocalAddr(ngi->vip_))
         {
           goto ns_force_modify_other_side;
         }
         return;
       }
-      //slave
+
+      //owner is slave
       mashm.set_ip_port(ngi->owner_ip_port_);
       mashm.set_role(ngi->owner_role_);
       mashm.set_status(ngi->owner_status_);
       mashm.set_flags(HEART_GET_DATASERVER_LIST_FLAGS_NO);
       ngi->dump(TBSYS_LOG_LEVEL(DEBUG));
-
       iret = send_message_to_server(ngi->other_side_ip_port_, &mashm, &rmsg);
-      if ((iret != TFS_SUCCESS) || (rmsg == NULL)) // otherSide dead
+      // if master is dead, switch roles
+      if ((iret != TFS_SUCCESS) || (rmsg == NULL))
       {
         goto ns_switch;
       }
@@ -304,7 +311,8 @@ namespace tfs
         TBSYS_LOG(INFO, "notify all oplog thread");
       }
       return;
-      ns_force_modify_other_side: mashm.set_ip_port(ngi->owner_ip_port_);
+      ns_force_modify_other_side:
+      mashm.set_ip_port(ngi->owner_ip_port_);
       mashm.set_role(NS_ROLE_SLAVE);
       mashm.set_status(ngi->other_side_status_);
       mashm.set_flags(HEART_GET_DATASERVER_LIST_FLAGS_NO);
@@ -347,6 +355,8 @@ namespace tfs
 
     }
 
+    // when owner is master, and the status is initailzied.
+    // check whether the salve is dead, update otherside status
     void MasterHeartTimerTask::runTimerTask()
     {
       NsRuntimeGlobalInformation* ngi = meta_mgr_->get_fs_name_system()->get_ns_global_info();
@@ -421,6 +431,8 @@ namespace tfs
 
     }
 
+    // when owner is slave, and the status is initailzied.
+    // check whether master is dead, if it is, turn itself to master
     void SlaveHeartTimerTask::runTimerTask()
     {
       NsRuntimeGlobalInformation* ngi = meta_mgr_->get_fs_name_system()->get_ns_global_info();
@@ -665,6 +677,7 @@ namespace tfs
       return TFS_SUCCESS;
     }
 
+    // handle the HeartBeatAndNSHeartMessage, if the flag is switch, do it
     int MasterAndSlaveHeartManager::do_heartbeat_and_ns_msg(Message* message, void*)
     {
       if (message->getPCode() != HEARTBEAT_AND_NS_HEART_MESSAGE)

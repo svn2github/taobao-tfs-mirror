@@ -70,7 +70,7 @@ TBSYS_LOG    (INFO, "ownerchecktime(%"PRI64_PREFIX"d)(us), maxownerchecktime(%"P
             ngi->last_push_owner_check_packet_time_.toMicroSeconds(),
             (ngi->last_owner_check_time_ + max_owner_check_time_).toMicroSeconds());
         tbutil::Mutex::Lock lock(*ngi);
-        ngi->owner_status_ = NS_STATUS_UNINITIALIZE;//modif owner status
+        ngi->owner_status_ = NS_STATUS_UNINITIALIZE;//modify owner status
         return;
       }
 
@@ -111,6 +111,7 @@ TBSYS_LOG    (INFO, "ownerchecktime(%"PRI64_PREFIX"d)(us), maxownerchecktime(%"P
   {
   }
 
+  // run threads
   void NameServer::run(tbsys::CThread *thread, void *)
   {
     if (thread == &check_block_thread_)
@@ -123,6 +124,7 @@ TBSYS_LOG    (INFO, "ownerchecktime(%"PRI64_PREFIX"d)(us), maxownerchecktime(%"P
     do_time_out();
   }
 
+  // start nameserver service
   int NameServer::start()
   {
     int ret = TFS_SUCCESS;
@@ -131,7 +133,7 @@ TBSYS_LOG    (INFO, "ownerchecktime(%"PRI64_PREFIX"d)(us), maxownerchecktime(%"P
     if (initialize_ns_global_info() != TFS_SUCCESS)
     return EXIT_GENERAL_ERROR;
 
-    //start ns' heartbeat
+    // listen to the port, get packets
     streamer_.set_packet_factory(&msg_factory_);
     CLIENT_POOL.init_with_transport(&transport_);
 
@@ -143,6 +145,7 @@ TBSYS_LOG    (INFO, "ownerchecktime(%"PRI64_PREFIX"d)(us), maxownerchecktime(%"P
       TBSYS_LOG(ERROR, "listen port failed(%d)", server_port);
       return EXIT_NETWORK_ERROR;
     }
+    //start thread for handling heartbeat from the other ns
     master_slave_heart_mgr_.initialize();
 
     transport_.start();
@@ -165,6 +168,8 @@ TBSYS_LOG    (INFO, "ownerchecktime(%"PRI64_PREFIX"d)(us), maxownerchecktime(%"P
     if ((ret = meta_mgr_.initialize(block_chunk_num)) != TFS_SUCCESS)
     return ret;
 
+    // start thread for handling main task
+    // start threads for handling heartbeat from ds.
     initialize_handle_task_and_heart_threads();
 
     //if we're the master ns,we can start service now.change status to INITIALIZED.
@@ -181,6 +186,7 @@ TBSYS_LOG    (INFO, "ownerchecktime(%"PRI64_PREFIX"d)(us), maxownerchecktime(%"P
       ns_global_info_.owner_status_ = NS_STATUS_INITIALIZED;
     }
 
+    // start threads
     initialize_handle_threads();
 
     //start heartbeat loop
@@ -207,6 +213,7 @@ TBSYS_LOG    (INFO, "ownerchecktime(%"PRI64_PREFIX"d)(us), maxownerchecktime(%"P
     return TFS_SUCCESS;
   }
 
+  // stop service
   int NameServer::stop()
   {
     if (ns_global_info_.destroy_flag_ == NS_DESTROY_FLAGS_YES)
@@ -241,6 +248,8 @@ TBSYS_LOG    (INFO, "ownerchecktime(%"PRI64_PREFIX"d)(us), maxownerchecktime(%"P
     heart_mgr_.wait();
     master_slave_heart_mgr_.wait_for_shut_down();
     meta_mgr_.wait_for_shut_down();
+
+    // join thread
     check_ds_thread_.join();
     check_block_thread_.join();
     balance_thread_.join();
@@ -259,12 +268,17 @@ TBSYS_LOG    (INFO, "ownerchecktime(%"PRI64_PREFIX"d)(us), maxownerchecktime(%"P
     return ret;
   }
 
+  // check the dead ds list and the writable ds list
   int NameServer::check_ds(const time_t now)
   {
     VUINT64 dead_ds_list, write_ds_list;
     int32_t expire_time = now - SYSPARAM_NAMESERVER.ds_dead_time_ * 4;
+    // get the list of the dead ds and available ds.
     meta_mgr_.get_block_ds_mgr().check_ds(SYSPARAM_NAMESERVER.ds_dead_time_, dead_ds_list, write_ds_list);
 
+    // check the status of the dead ds
+    // if the info is null or ds is still alive, then skip
+    // else mark the ds and exclude it from the balance
     const uint32_t dead_ds_list_size = dead_ds_list.size();
     uint64_t ds_id = 0;
     ServerCollect* server_collect = NULL;
@@ -297,6 +311,7 @@ TBSYS_LOG    (INFO, "ownerchecktime(%"PRI64_PREFIX"d)(us), maxownerchecktime(%"P
     if (write_ds_list.size() == 0)
     return TFS_SUCCESS;
 
+    // select a writable ds randomly, and check its available blocks which were used for write primary.
     srand(now);
     const uint32_t write_ds_list_size = write_ds_list.size();
     int32_t start_index = rand() % write_ds_list_size;
@@ -344,6 +359,7 @@ TBSYS_LOG    (INFO, "ownerchecktime(%"PRI64_PREFIX"d)(us), maxownerchecktime(%"P
     return TFS_SUCCESS;
   }
 
+  // check whether it's the time to do task
   static bool check_task_interval(time_t now_time, time_t& last_check_time, time_t interval)
   {
     if (now_time - last_check_time >= interval)
@@ -354,19 +370,14 @@ TBSYS_LOG    (INFO, "ownerchecktime(%"PRI64_PREFIX"d)(us), maxownerchecktime(%"P
     return false;
   }
 
+  // check whether the blocks need to be replicate, compact or redundant
   int NameServer::do_check_blocks()
   {
     Func::sleep(SYSPARAM_NAMESERVER.safe_mode_time_ * 10, reinterpret_cast<int32_t*> (&ns_global_info_.destroy_flag_));
 
     const int32_t CHECK_TASK = 4;
-    time_t last_check_time[CHECK_TASK] =
-    {
-      time(NULL)
-    };
-    bool need_check[CHECK_TASK] =
-    {
-      false
-    };
+    time_t last_check_time[CHECK_TASK] = { time(NULL) };
+    bool need_check[CHECK_TASK] = { false };
     int32_t check_interval[CHECK_TASK] =
     {
       SYSPARAM_NAMESERVER.heart_interval_,
@@ -414,9 +425,9 @@ TBSYS_LOG    (INFO, "ownerchecktime(%"PRI64_PREFIX"d)(us), maxownerchecktime(%"P
       {
         need_check[i] = check_task_interval(now_time, last_check_time[i], check_interval[i]);
         if (i != 0 && need_check[i])
-				{
-        	need_check_replica = true;
-				}
+        {
+          need_check_replica = true;
+        }
       }
 
       // check all dead servers lost heartbeat
@@ -429,8 +440,9 @@ TBSYS_LOG    (INFO, "ownerchecktime(%"PRI64_PREFIX"d)(us), maxownerchecktime(%"P
 
       lose_blocks.clear();
       compact_blocks.clear();
-			redundant_blocks.clear();
+      redundant_blocks.clear();
 
+      // start scanner
       ScannerManager::Scanner
       replicate_scanner(need_check[1], max_repl_plan_blocks, replicate_thread_, lose_blocks);
       ScannerManager::Scanner compact_scanner(need_check[2] && compact_thread_.is_compacting_time(), server_size,
@@ -453,6 +465,7 @@ TBSYS_LOG    (INFO, "ownerchecktime(%"PRI64_PREFIX"d)(us), maxownerchecktime(%"P
     return TFS_SUCCESS;
   }
 
+  // do balance
   int NameServer::do_balance()
   {
     Func::sleep(SYSPARAM_NAMESERVER.safe_mode_time_ * 20, reinterpret_cast<int32_t*> (&ns_global_info_.destroy_flag_));
@@ -480,6 +493,8 @@ TBSYS_LOG    (INFO, "ownerchecktime(%"PRI64_PREFIX"d)(us), maxownerchecktime(%"P
 
   tbnet::IPacketHandler::HPRetCode NameServer::handlePacket(tbnet::Connection *connection, tbnet::Packet *packet)
   {
+
+    // parser packet
     if (!packet->isRegularPacket())
     {
       TBSYS_LOG(ERROR, "controlpacket, cmd(%d)", ((tbnet::ControlPacket*) packet)->getCommand());
@@ -492,7 +507,7 @@ TBSYS_LOG    (INFO, "ownerchecktime(%"PRI64_PREFIX"d)(us), maxownerchecktime(%"P
 
     int32_t pcode = bp->getPCode();
 
-    //need a lock ?
+    // packets filter, check the packet is allowed or not.
     // is master & status == INITIALIZED ,all msg is allowed.
     // is master & status != INITIALIZED ,ns' heart msg is allowed.
     // is slave & status == INITIALIZED || ACCEPT_DS_INFO, ns & ds' heart msg are allowed.
@@ -538,6 +553,8 @@ TBSYS_LOG    (INFO, "ownerchecktime(%"PRI64_PREFIX"d)(us), maxownerchecktime(%"P
     TBSYS_LOG(DEBUG, "the msg(%d) will be ignored", pcode);
     bp->free();
     return tbnet::IPacketHandler::FREE_CHANNEL;
+
+    // push the packet to the right threads.
     PASS:
     switch (pcode)
     {
@@ -565,6 +582,7 @@ TBSYS_LOG    (INFO, "ownerchecktime(%"PRI64_PREFIX"d)(us), maxownerchecktime(%"P
     return tbnet::IPacketHandler::KEEP_CHANNEL;
   }
 
+  // handle the main task queue
   bool NameServer::handlePacketQueue(tbnet::Packet *packet, void *)
   {
     Message *message = dynamic_cast<Message*> (packet);
@@ -637,16 +655,16 @@ TBSYS_LOG    (INFO, "ownerchecktime(%"PRI64_PREFIX"d)(us), maxownerchecktime(%"P
     uint32_t block_id = message->get_block_id();
     int32_t mode = message->get_mode();
 
-    VUINT64 dsList;
+    VUINT64 ds_list;
     uint32_t lease_id = 0;
     int32_t version = 0;
     int32_t ret = TFS_SUCCESS;
     if (mode & BLOCK_READ)
     {
       TBSYS_LOG(DEBUG, "read block info, block(%u), mode(%d)", block_id, mode);
-      ret = meta_mgr_.read_block_info(block_id, dsList);
+      ret = meta_mgr_.read_block_info(block_id, ds_list);
       if (ret == TFS_SUCCESS)
-      result_msg->set_read_block_ds(block_id, &dsList);
+      result_msg->set_read_block_ds(block_id, &ds_list);
     }
     else
     {
@@ -664,11 +682,11 @@ TBSYS_LOG    (INFO, "ownerchecktime(%"PRI64_PREFIX"d)(us), maxownerchecktime(%"P
           goto out;
         }
       }
-      ret = meta_mgr_.write_block_info(block_id, mode, lease_id, version, dsList);
+      ret = meta_mgr_.write_block_info(block_id, mode, lease_id, version, ds_list);
       TBSYS_LOG(DEBUG, "get block info: block(%u) mode(%d) lease(%u), version(%d), dataserver size(%u), result(%d)",
-          block_id, mode, lease_id, version, dsList.size(), ret);
+          block_id, mode, lease_id, version, ds_list.size(), ret);
       if (ret == TFS_SUCCESS)
-      result_msg->set_write_block_ds(block_id, &dsList, version, lease_id);
+      result_msg->set_write_block_ds(block_id, &ds_list, version, lease_id);
     }
 
     out:
@@ -708,7 +726,7 @@ TBSYS_LOG    (INFO, "ownerchecktime(%"PRI64_PREFIX"d)(us), maxownerchecktime(%"P
     int ret = meta_mgr_.write_commit(*blk, ds_id, lease_id, unlink_flag, status, need_add_new_block, errmsg);
     message->reply_message(new StatusMessage(ret, const_cast<char*> (errmsg.c_str())));
 
-    // add new block , when block filled complete
+    // add new block, when block filled complete
     if (need_add_new_block)
     {
       int need_add_new_block_count = meta_mgr_.check_primary_writable_block(ds_id, 1, true);
@@ -1137,8 +1155,10 @@ TBSYS_LOG    (INFO, "ownerchecktime(%"PRI64_PREFIX"d)(us), maxownerchecktime(%"P
     return TFS_SUCCESS;
   }
 
+  //initalize nameserver infomation
   int NameServer::initialize_ns_global_info()
   {
+    // get namesever ip list and port from CONF FILE
     const char* ns_ip = CONFIG.get_string_value(CONFIG_NAMESERVER, CONF_IP_ADDR_LIST);
     int32_t ns_port = CONFIG.get_int_value(CONFIG_NAMESERVER, CONF_PORT);
     if (ns_ip == NULL || ns_port <= 0)
@@ -1162,6 +1182,7 @@ TBSYS_LOG    (INFO, "ownerchecktime(%"PRI64_PREFIX"d)(us), maxownerchecktime(%"P
       return EXIT_GENERAL_ERROR;
     }
 
+    // get local ip from CONF FILE
     const char *dev_name = CONFIG.get_string_value(CONFIG_NAMESERVER, CONF_DEV_NAME);
     uint32_t local_ip = Func::get_local_addr(dev_name);
     if (dev_name == NULL || local_ip == 0)
@@ -1182,6 +1203,7 @@ TBSYS_LOG    (INFO, "ownerchecktime(%"PRI64_PREFIX"d)(us), maxownerchecktime(%"P
       return EXIT_GENERAL_ERROR;
     }
 
+    // set ns_global_info
     for (vector<uint64_t>::iterator it = ns_ip_list.begin(); it != ns_ip_list.end(); ++it)
     {
       if (local_ns_id == *it)
@@ -1192,6 +1214,7 @@ TBSYS_LOG    (INFO, "ownerchecktime(%"PRI64_PREFIX"d)(us), maxownerchecktime(%"P
 
     ns_global_info_.switch_time_ = 0;
     ns_global_info_.owner_status_ = NS_STATUS_UNINITIALIZE;
+
     const char *ip = CONFIG.get_string_value(CONFIG_NAMESERVER, CONF_IP_ADDR);
     ns_global_info_.vip_ = Func::get_addr(ip);
 
@@ -1207,8 +1230,11 @@ TBSYS_LOG    (INFO, "ownerchecktime(%"PRI64_PREFIX"d)(us), maxownerchecktime(%"P
 
   }
 
+  // send the message to the other side nameserver
+  // check the other side role, update ns_global_info
   int NameServer::get_peer_role()
   {
+    // set the MasterAndSlaveHeartMessage
     MasterAndSlaveHeartMessage master_slave_msg;
     master_slave_msg.set_ip_port(ns_global_info_.owner_ip_port_);
     master_slave_msg.set_role(ns_global_info_.owner_role_);
@@ -1223,6 +1249,7 @@ TBSYS_LOG    (INFO, "ownerchecktime(%"PRI64_PREFIX"d)(us), maxownerchecktime(%"P
               ns_global_info_.other_side_ip_port_).c_str(), ns_global_info_.owner_role_ == NS_ROLE_MASTER ? "master"
           : "slave", ns_global_info_.other_side_role_ == NS_ROLE_MASTER ? "master" : "slave");
 
+      // send message
       ret = send_message_to_server(ns_global_info_.other_side_ip_port_, &master_slave_msg, &ret_msg);
       if (ret != TFS_SUCCESS)
       {
@@ -1235,6 +1262,8 @@ TBSYS_LOG    (INFO, "ownerchecktime(%"PRI64_PREFIX"d)(us), maxownerchecktime(%"P
         tbsys::gDelete(ret_msg);
         goto out;
       }
+
+      //check whether the address of the other ns is corresponding with the conf.
       response = NULL;
       response = dynamic_cast<MasterAndSlaveHeartResponseMessage *> (ret_msg);
       ns_global_info_.other_side_role_ = static_cast<NsRole> (response->get_role());
@@ -1244,6 +1273,7 @@ TBSYS_LOG    (INFO, "ownerchecktime(%"PRI64_PREFIX"d)(us), maxownerchecktime(%"P
         ns_global_info_.other_side_ip_port_ = response->get_ip_port();
       }
 
+      // if we are the master, and the other ns is ready, then mark the Sync data flag.
       {
         tbutil::Mutex::Lock lock(ns_global_info_);
         ns_global_info_.other_side_status_ = static_cast<NsStatus> (response->get_status());
@@ -1289,6 +1319,7 @@ TBSYS_LOG    (INFO, "ownerchecktime(%"PRI64_PREFIX"d)(us), maxownerchecktime(%"P
     return ret;
   }
 
+  // start threads
   void NameServer::initialize_handle_threads()
   {
     check_ds_thread_.start(this, NULL);
@@ -1301,10 +1332,12 @@ TBSYS_LOG    (INFO, "ownerchecktime(%"PRI64_PREFIX"d)(us), maxownerchecktime(%"P
 
   void NameServer::initialize_handle_task_and_heart_threads()
   {
+    // start thread for main task queue
     int32_t thead_count = CONFIG.get_int_value(CONFIG_NAMESERVER, CONF_THREAD_COUNT, 1);
     main_task_queue_thread_.setThreadParameter(thead_count, this, NULL);
     main_task_queue_thread_.start();
 
+    // start thread for handling heartbeat from ds
     int32_t heart_thread_count = CONFIG.get_int_value(CONFIG_NAMESERVER, CONF_HEART_THREAD_COUNT, 2);
     int32_t heart_max_queue_size = CONFIG.get_int_value(CONFIG_NAMESERVER, CONF_HEART_MAX_QUEUE_SIZE, 10);
     heart_mgr_.initialize(heart_thread_count, heart_max_queue_size);
@@ -1313,6 +1346,7 @@ TBSYS_LOG    (INFO, "ownerchecktime(%"PRI64_PREFIX"d)(us), maxownerchecktime(%"P
     TBSYS_LOG(INFO, "fsnamesystem::start: %s", tbsys::CNetUtil::addrToString(ns_global_info_.owner_ip_port_).c_str());
   }
 
+  // check the ds list in each ns
   int NameServer::wait_for_ds_report()
   {
     MasterAndSlaveHeartMessage master_slave_msg;

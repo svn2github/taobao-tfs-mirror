@@ -32,6 +32,8 @@ using namespace tfs::nameserver;
 
 static void signal_handler(int32_t sig);
 static Service* g_tfs_ns_service_ = NULL;
+
+// check whether the local ip is in the ip list.
 static int in_ip_list(uint64_t local_ip)
 {
   const char *ip_list = CONFIG.get_string_value(CONFIG_NAMESERVER, CONF_IP_ADDR_LIST);
@@ -57,10 +59,11 @@ static int in_ip_list(uint64_t local_ip)
 int main(int argc, char *argv[])
 {
   int32_t i;
-  bool is_deamon = false;
+  bool is_daemon = false;
   bool is_help = false;
   std::string conf_file_path;
 
+  // get input argument
   while ((i = getopt(argc, argv, "f:dh")) != EOF)
   {
     switch (i)
@@ -69,7 +72,7 @@ int main(int argc, char *argv[])
       conf_file_path = optarg;
       break;
     case 'd':
-      is_deamon = true;
+      is_daemon = true;
       break;
     case 'h':
     default:
@@ -88,6 +91,7 @@ int main(int argc, char *argv[])
     return EXIT_GENERAL_ERROR;
   }
 
+  // load config file
   int ret = TFS_SUCCESS;
   if ((ret = SysParam::instance().load(conf_file_path.c_str())) != TFS_SUCCESS)
   {
@@ -134,12 +138,14 @@ int main(int argc, char *argv[])
     rename(log_file_path, dest_log_file_path);
   }
 
+  // start daemon process
   pid = 0;
-  if (is_deamon)
+  if (is_daemon)
   {
     pid = tbsys::CProcess::startDaemon(pid_file_path, log_file_path);
   }
 
+  // start service
   if (pid == 0)
   {
     signal(SIGPIPE, SIG_IGN);
@@ -202,10 +208,12 @@ namespace tfs
     {
     }
 
+    // start nameserver service
     int Service::start()
     {
       TBSYS_LOGGER.setMaxFileSize();
       TBSYS_LOGGER.setMaxFileIndex();
+      // when service started over, service should wait
       if (fs_name_system_.start() == TFS_SUCCESS)
       {
         signal(SIGINT, signal_handler);
