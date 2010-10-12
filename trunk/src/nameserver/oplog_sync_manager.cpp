@@ -11,9 +11,9 @@
  * Authors:
  *   duolong <duolong@taobao.com>
  *      - initial release
- *   qushan<qushan@taobao.com> 
+ *   qushan<qushan@taobao.com>
  *      - modify 2009-03-27
- *   duanfei <duanfei@taobao.com> 
+ *   duanfei <duanfei@taobao.com>
  *      - modify 2010-04-23
  *
  */
@@ -83,10 +83,13 @@ namespace tfs
     {
       int iret = TFS_SUCCESS;
       //initializeation filequeue, filequeuethread
-      char path[0xff];
+      char path[MAX_PATH_LENGTH];
       std::string file_queue_name = "oplogsync";
-      const char* work_dir = CONFIG.get_string_value(CONFIG_NAMESERVER, CONF_WORK_DIR);
-      snprintf(path, 0xff, "%s/filequeue", work_dir);
+
+      char default_work_dir[MAX_PATH_LENGTH];
+      snprintf(default_work_dir, MAX_PATH_LENGTH,  "%s/nameserver",  CONFIG.get_string_value(CONFIG_PUBLIC, CONF_WORK_DIR));
+      const char* work_dir = CONFIG.get_string_value(CONFIG_NAMESERVER, CONF_WORK_DIR, default_work_dir);
+      snprintf(path, MAX_PATH_LENGTH, "%s/filequeue", work_dir);
       std::string file_path(path);
       ARG_NEW(file_queue_, FileQueue, file_path, file_queue_name, FILE_QUEUE_MAX_FILE_SIZE);
       ARG_NEW(file_queue_thread_, FileQueueThread, file_queue_, this);

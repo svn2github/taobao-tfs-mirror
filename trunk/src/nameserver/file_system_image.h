@@ -11,9 +11,9 @@
  * Authors:
  *   duolong <duolong@taobao.com>
  *      - initial release
- *   qushan<qushan@taobao.com> 
+ *   qushan<qushan@taobao.com>
  *      - modify 2009-03-27
- *   duanfei <duanfei@taobao.com> 
+ *   duanfei <duanfei@taobao.com>
  *      - modify 2010-04-23
  *
  */
@@ -60,9 +60,8 @@ namespace tfs
 
     private:
       static const int64_t IMAGE_FLAG = 0x49534654; //TFSI
-      static const int MAX_IMAGE_FILE_PATH_LENGTH = 256;
-      char image_file_path_[MAX_IMAGE_FILE_PATH_LENGTH];
-      char image_file_new_path_[MAX_IMAGE_FILE_PATH_LENGTH];
+      char image_file_path_[common::MAX_PATH_LENGTH];
+      char image_file_new_path_[common::MAX_PATH_LENGTH];
       mutable int32_t fd_;
       mutable ImageHeader header_;
       MetaManager* meta_;

@@ -13,6 +13,7 @@
  *      - initial release
  *
  */
+#include <libgen.h>
 #include "directory_op.h"
 #include <dirent.h>
 #include <sys/types.h>
@@ -50,11 +51,11 @@ namespace tfs
         return false;
 
       int len = strlen(filename);
-      if (len > MAX_PATH || len <= 0)
+      if (len > MAX_PATH_LENGTH || len <= 0)
         return false;
 
       struct stat64 file_info;
-      char path[MAX_PATH + 1];
+      char path[MAX_PATH_LENGTH + 1];
       strncpy(path, filename, len);
       path[len] = '\0';
       char* copy = strip_tail_dir_slashes(path, len);
@@ -114,8 +115,8 @@ namespace tfs
           continue;
         }
 
-        char path[MAX_PATH];
-        snprintf(path, MAX_PATH, "%s%c%s", directory, '/', name);
+        char path[MAX_PATH_LENGTH];
+        snprintf(path, MAX_PATH_LENGTH, "%s%c%s", directory, '/', name);
         if (is_directory(path))
         {
           if (!delete_directory_recursively(path, true))
@@ -153,11 +154,11 @@ namespace tfs
         return false;
 
       int dir_len = strlen(dirname);
-      if (dir_len > MAX_PATH || dir_len <= 0)
+      if (dir_len > MAX_PATH_LENGTH || dir_len <= 0)
         return false;
 
       struct stat64 file_info;
-      char path[MAX_PATH + 1];
+      char path[MAX_PATH_LENGTH + 1];
       strncpy(path, dirname, dir_len);
       path[dir_len] = '\0';
       char* copy = strip_tail_dir_slashes(path, dir_len);
@@ -190,7 +191,7 @@ namespace tfs
       return !isexist ? true : ret;
     }
 
-    //create the give dirname, return true on success or dirname exists 
+    //create the give dirname, return true on success or dirname exists
     bool DirectoryOp::create_directory(const char* dirname)
     {
       if (dirname == NULL)
@@ -212,28 +213,30 @@ namespace tfs
     }
 
     //creates the full path of fullpath, return true on success
-    bool DirectoryOp::create_full_path(const char* fullpath)
+    bool DirectoryOp::create_full_path(const char* fullpath, bool with_file)
     {
       if (fullpath == NULL)
         return false;
 
       int32_t iLen = strlen(fullpath);
-      if (iLen > MAX_PATH || iLen <= 0x01)
+      if (iLen > MAX_PATH_LENGTH || iLen <= 0x01)
         return false;
+
+      // a little waste
+      char dirpath[MAX_PATH_LENGTH];
+      strncpy(dirpath, fullpath, iLen);
+      dirpath[iLen] = '\0';
+      char* path = dirpath;
+
+      if (with_file)
+      {
+        path = dirname(dirpath);
+      }
 
       bool ret = true;
       struct stat stats;
-      if (lstat(fullpath, &stats) == 0 && S_ISDIR(stats.st_mode))
+      if ((lstat(path, &stats) != 0) || !S_ISDIR(stats.st_mode))
       {
-
-      }
-      else
-      {
-        char dirpath[MAX_PATH + 1];
-        strncpy(dirpath, fullpath, iLen);
-        dirpath[iLen] = '\0';
-
-        char *path = dirpath;
         if (ret)
         {
           while (*path == '/')
@@ -288,7 +291,7 @@ namespace tfs
       return ret;
     }
 
-    //return the size of filename 
+    //return the size of filename
     int64_t DirectoryOp::get_size(const char *filename)
     {
       if (filename == NULL)

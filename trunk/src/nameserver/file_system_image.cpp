@@ -11,9 +11,9 @@
  * Authors:
  *   duolong <duolong@taobao.com>
  *      - initial release
- *   qushan<qushan@taobao.com> 
+ *   qushan<qushan@taobao.com>
  *      - modify 2009-03-27
- *   duanfei <duanfei@taobao.com> 
+ *   duanfei <duanfei@taobao.com>
  *      - modify 2010-04-23
  *
  */
@@ -47,9 +47,11 @@ namespace tfs
 
     int FileSystemImage::initialize(LayoutManager & block_ds_map, const OpLogRotateHeader& head, FileQueue* file_queue)
     {
-      const char *work_dir = CONFIG.get_string_value(CONFIG_NAMESERVER, CONF_WORK_DIR);
-      snprintf(image_file_path_, MAX_IMAGE_FILE_PATH_LENGTH, "%s/fs_image", work_dir);
-      snprintf(image_file_new_path_, MAX_IMAGE_FILE_PATH_LENGTH, "%s/fs_image.new", work_dir);
+      char default_work_dir[MAX_PATH_LENGTH];
+      snprintf(default_work_dir, MAX_PATH_LENGTH, "%s/nameserver",  CONFIG.get_string_value(CONFIG_PUBLIC, CONF_WORK_DIR));
+      const char *work_dir = CONFIG.get_string_value(CONFIG_NAMESERVER, CONF_WORK_DIR, default_work_dir);
+      snprintf(image_file_path_, MAX_PATH_LENGTH, "%s/fs_image", work_dir);
+      snprintf(image_file_new_path_, MAX_PATH_LENGTH, "%s/fs_image.new", work_dir);
 
       bool has_log = false;
       file_queue->set_delete_file_flag(true);
@@ -151,7 +153,7 @@ namespace tfs
         if (header_.total_bytes_ != total_byte || header_.total_file_count_ != total_file_count)
         {
           TBSYS_LOG(ERROR, "total_byte(%"PRI64_PREFIX"d) , (%"PRI64_PREFIX"d), total_file_count(%"PRI64_PREFIX"d), (%"PRI64_PREFIX"d)", header_.total_bytes_, total_byte,
-              header_.total_file_count_, total_file_count);
+                    header_.total_file_count_, total_file_count);
           return EXIT_RECORD_SIZE_ERROR;
         }
       }
@@ -202,13 +204,14 @@ namespace tfs
               break;
             }
           }
-          while ((ilength > static_cast<int64_t> (sizeof(OpLogHeader))) && (ilength > offset) && (ngi->destroy_flag_
-              != NS_DESTROY_FLAGS_YES));
+          while ((ilength > static_cast<int64_t> (sizeof(OpLogHeader))) && (ilength > offset) &&
+                 (ngi->destroy_flag_!= NS_DESTROY_FLAGS_YES));
           free(item);
           item = NULL;
         }
-        while ((qhead->read_seqno_ != qhead->write_seqno_) || ((qhead->read_seqno_ == qhead->write_seqno_)
-            && (qhead->read_offset_ != qhead->write_filesize_)) && (ngi->destroy_flag_ != NS_DESTROY_FLAGS_YES));
+        while ((qhead->read_seqno_ != qhead->write_seqno_) ||
+               (((qhead->read_seqno_ == qhead->write_seqno_) && (qhead->read_offset_ != qhead->write_filesize_)) &&
+                (ngi->destroy_flag_ != NS_DESTROY_FLAGS_YES)));
         save(block_ds_map);
       }
       return TFS_SUCCESS;

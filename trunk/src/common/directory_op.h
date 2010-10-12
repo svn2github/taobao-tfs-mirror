@@ -34,11 +34,9 @@ namespace tfs
       static bool delete_directory(const char *dirname);
       static bool delete_directory_recursively(const char* directory, bool delete_flag = false);
       static bool create_directory(const char* dirname);
-      static bool create_full_path(const char* fullpath);
+      static bool create_full_path(const char* fullpath, bool with_file = false);
       static bool rename(const char* srcfilename, const char* destfilename);
       static int64_t get_size(const char* filename);
-    private:
-      static const int MAX_PATH = 512;
     };
 
   }

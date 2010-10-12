@@ -108,6 +108,7 @@ namespace tfs
 
     static const int32_t INT_SIZE = 4;
     static const int32_t INT64_SIZE = 8;
+    static const int32_t MAX_PATH_LENGTH = 256;
     static const int32_t FILEINFO_SIZE = sizeof(FileInfo);
     static const int64_t TFS_MALLOC_MAX_SIZE = 0x00A00000;//10M
 

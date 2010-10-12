@@ -83,7 +83,7 @@ namespace tfs
         char data_[WRITE_DATA_TMPBUF_SIZE];
         uint32_t crc_;
         int fd_;
-        char tmp_file_name_[common::MAX_FILE_NAME_LEN];
+        char tmp_file_name_[common::MAX_PATH_LENGTH];
         atomic_t ref_count_;
 
       private:

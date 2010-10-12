@@ -128,7 +128,7 @@ namespace tfs
 
         inline bool is_server() const
         {
-          return unlink_file_info_.is_server_ & 0x1 != 0;
+          return (unlink_file_info_.is_server_ & 0x1) != 0;
         }
 
         inline bool get_has_lease() const

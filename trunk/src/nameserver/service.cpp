@@ -11,9 +11,9 @@
  * Authors:
  *   duolong <duolong@taobao.com>
  *      - initial release
- *   qushan<qushan@taobao.com> 
+ *   qushan<qushan@taobao.com>
  *      - modify 2009-03-27
- *   duanfei <duanfei@taobao.com> 
+ *   duanfei <duanfei@taobao.com>
  *      - modify 2010-04-23
  *
  */
@@ -77,15 +77,15 @@ int main(int argc, char *argv[])
     case 'h':
     default:
       is_help = true;
-      break;
+    break;
     }
   }
 
-  if (conf_file_path.empty() || conf_file_path.c_str() == " " || is_help)
+  if (conf_file_path.empty() || conf_file_path == " " || is_help)
   {
     fprintf(stderr, "\nUsage: %s -f conf_file -d -h\n", argv[0]);
     fprintf(stderr, "  -f conf_file   config file path\n");
-    fprintf(stderr, "  -d             run deamon\n");
+    fprintf(stderr, "  -d             run daemon\n");
     fprintf(stderr, "  -h             help\n");
     fprintf(stderr, "\n");
     return EXIT_GENERAL_ERROR;
@@ -110,32 +110,50 @@ int main(int argc, char *argv[])
     return EXIT_GENERAL_ERROR;
   }
 
-  const char *work_dir = CONFIG.get_string_value(CONFIG_NAMESERVER, CONF_WORK_DIR);
-  if (work_dir == NULL)
+  // get top work directory
+  const char *top_work_dir = CONFIG.get_string_value(CONFIG_PUBLIC, CONF_WORK_DIR);
+  if (top_work_dir == NULL)
   {
-    TBSYS_LOG(ERROR, "directory not found");
+    TBSYS_LOG(ERROR, "work directory config not found");
     return EXIT_CONFIG_ERROR;
   }
+
+  // get nameserver work directory, ignore tail / in top_work_dir
+  char default_work_dir[MAX_PATH_LENGTH];
+  snprintf(default_work_dir, MAX_PATH_LENGTH, "%s/nameserver", top_work_dir);
+  const char *work_dir = CONFIG.get_string_value(CONFIG_NAMESERVER, CONF_WORK_DIR, default_work_dir);
   if (!DirectoryOp::create_full_path(work_dir))
   {
     TBSYS_LOG(ERROR, "create directory(%s) failed", work_dir);
-    return ret;
+    return EXIT_GENERAL_ERROR;
   }
 
-  char *pid_file_path = CONFIG.get_string_value(CONFIG_NAMESERVER, CONF_LOCK_FILE);
+  char default_pid_file_path[MAX_PATH_LENGTH];
+  snprintf(default_pid_file_path, MAX_PATH_LENGTH, "%s/logs/nameserver.pid", top_work_dir);
+  char *pid_file_path = CONFIG.get_string_value(CONFIG_NAMESERVER, CONF_LOCK_FILE, default_pid_file_path);
   int32_t pid = 0;
   if ((pid = tbsys::CProcess::existPid(pid_file_path)))
   {
-    fprintf(stderr, "Program has been running: pid(%d)", pid);
+    TBSYS_LOG(ERROR, "nameserver has already run. Pid: %d", pid);
     return EXIT_SYSTEM_ERROR;
   }
+  if (!DirectoryOp::create_full_path(pid_file_path, true))
+  {
+    TBSYS_LOG(ERROR, "create file(%s)'s directory failed", pid_file_path);
+    return EXIT_GENERAL_ERROR;
+  }
 
-  const char *log_file_path = CONFIG.get_string_value(CONFIG_NAMESERVER, CONF_LOG_FILE);
+  char default_log_file_path[MAX_PATH_LENGTH];
+  snprintf(default_log_file_path, MAX_PATH_LENGTH, "%s/logs/nameserver.log", top_work_dir);
+  const char *log_file_path = CONFIG.get_string_value(CONFIG_NAMESERVER, CONF_LOG_FILE, default_log_file_path);
   if (access(log_file_path, R_OK) == 0)
   {
-    char dest_log_file_path[256];
-    sprintf(dest_log_file_path, "%s.%s", log_file_path, Func::time_to_str(time(NULL), 1).c_str());
-    rename(log_file_path, dest_log_file_path);
+    TBSYS_LOGGER.rotateLog(log_file_path);
+  }
+  else if (!DirectoryOp::create_full_path(log_file_path, true))
+  {
+    TBSYS_LOG(ERROR, "create file(%s)'s directory failed", log_file_path);
+    return EXIT_GENERAL_ERROR;
   }
 
   // start daemon process
@@ -208,12 +226,10 @@ namespace tfs
     {
     }
 
-    // start nameserver service
     int Service::start()
     {
       TBSYS_LOGGER.setMaxFileSize();
       TBSYS_LOGGER.setMaxFileIndex();
-      // when service started over, service should wait
       if (fs_name_system_.start() == TFS_SUCCESS)
       {
         signal(SIGINT, signal_handler);

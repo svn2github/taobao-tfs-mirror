@@ -145,13 +145,24 @@ namespace tfs
 
       std::string server_index;
       server_index.replace(0, server_index.size(), "_" + index);
+      char* top_work_dir = CONFIG.get_string_value(CONFIG_PUBLIC, CONF_WORK_DIR);
+      if (NULL == top_work_dir)
+      {
+        TBSYS_LOG(ERROR, "work directory config not found");
+        return TFS_ERROR;
+      }
 
-      dataserver_.work_dir_ = change_index(CONFIG.get_string_value(CONFIG_DATASERVER, CONF_WORK_DIR), string(""),
-          server_index);
-      dataserver_.log_file_ = change_index(CONFIG.get_string_value(CONFIG_DATASERVER, CONF_LOG_FILE), string(".log"),
-          server_index);
-      dataserver_.pid_file_ = change_index(CONFIG.get_string_value(CONFIG_DATASERVER, CONF_LOCK_FILE), string(".pid"),
-          server_index);
+      char default_work_dir[MAX_PATH_LENGTH], default_log_file[MAX_PATH_LENGTH], default_pid_file[MAX_PATH_LENGTH];
+      snprintf(default_work_dir, MAX_PATH_LENGTH, "%s/dataserver", top_work_dir);
+      snprintf(default_log_file, MAX_PATH_LENGTH, "%s/logs/dataserver.log", top_work_dir);
+      snprintf(default_pid_file, MAX_PATH_LENGTH, "%s/logs/dataserver.pid", top_work_dir);
+
+      dataserver_.work_dir_ = change_index(CONFIG.get_string_value(CONFIG_DATASERVER, CONF_WORK_DIR, default_work_dir),
+                                           string(""), server_index);
+      dataserver_.log_file_ = change_index(CONFIG.get_string_value(CONFIG_DATASERVER, CONF_LOG_FILE, default_log_file),
+                                           string(".log"), server_index);
+      dataserver_.pid_file_ = change_index(CONFIG.get_string_value(CONFIG_DATASERVER, CONF_LOCK_FILE, default_pid_file),
+                                           string(".pid"), server_index);
 
       int base_port = CONFIG.get_int_value(CONFIG_DATASERVER, CONF_PORT);
       dataserver_.local_ds_port_ = base_port + atoi(index.c_str()) * PORT_PER_PROCESS - PORT_PER_PROCESS;
@@ -161,7 +172,7 @@ namespace tfs
       dataserver_.check_interval_ = CONFIG.get_int_value(CONFIG_DATASERVER, CONF_CHECK_INTERVAL, 2);
       dataserver_.expire_data_file_time_ = CONFIG.get_int_value(CONFIG_DATASERVER, CONF_EXPIRE_DATAFILE_TIME, 20);
       dataserver_.expire_cloned_block_time_
-          = CONFIG.get_int_value(CONFIG_DATASERVER, CONF_EXPIRE_CLONEDBLOCK_TIME, 300);
+        = CONFIG.get_int_value(CONFIG_DATASERVER, CONF_EXPIRE_CLONEDBLOCK_TIME, 300);
       dataserver_.expire_compact_time_ = CONFIG.get_int_value(CONFIG_DATASERVER, CONF_EXPIRE_COMPACTBLOCK_TIME, 86400);
       dataserver_.replicate_thread_count_ = CONFIG.get_int_value(CONFIG_DATASERVER, CONF_REPLICATE_THREADCOUNT, 3);
       //default use O_SYNC
@@ -187,7 +198,7 @@ namespace tfs
       dataserver_.max_crc_error_nums_ = CONFIG.get_int_value(CONFIG_DATASERVER, CONF_MAX_CRCERROR_NUMS, 4);
       dataserver_.max_eio_error_nums_ = CONFIG.get_int_value(CONFIG_DATASERVER, CONF_MAX_EIOERROR_NUMS, 6);
       dataserver_.expire_check_block_time_
-          = CONFIG.get_int_value(CONFIG_DATASERVER, CONF_EXPIRE_CHECKBLOCK_TIME, 86400);
+        = CONFIG.get_int_value(CONFIG_DATASERVER, CONF_EXPIRE_CHECKBLOCK_TIME, 86400);
       dataserver_.max_cpu_usage_ = CONFIG.get_int_value(CONFIG_DATASERVER, CONF_MAX_CPU_USAGE, 60);
       return load_filesystem_param(index);
     }

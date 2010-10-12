@@ -11,9 +11,9 @@
  * Authors:
  *   duolong <duolong@taobao.com>
  *      - initial release
- *   qushan<qushan@taobao.com> 
+ *   qushan<qushan@taobao.com>
  *      - modify 2009-03-27
- *   zongdai <zongdai@taobao.com> 
+ *   zongdai <zongdai@taobao.com>
  *      - modify 2010-04-23
  *
  */
@@ -154,7 +154,7 @@ namespace tfs
         return ds_requester_->req_update_block_info(check_file.block_id_, UPDATE_BLOCK_REPAIR);
       }
 
-      char tmp_file[MAX_FILE_NAME_LEN];
+      char tmp_file[MAX_PATH_LENGTH];
       ret = file_repair_.fetch_file(check_file, tmp_file);
       if (TFS_SUCCESS != ret)
       {

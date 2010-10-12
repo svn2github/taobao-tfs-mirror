@@ -11,11 +11,12 @@
  * Authors:
  *   duolong <duolong@taobao.com>
  *      - initial release
- *   nayan<nayan@taobao.com> 
+ *   nayan<nayan@taobao.com>
  *      - modify 2009-03-27
  *
  */
 #include "adminserver.h"
+#include "common/directory_op.h"
 #include "message/client.h"
 #include "message/client_pool.h"
 
@@ -77,9 +78,6 @@ int main(int argc, char *argv[])
 
   // set log level
   TBSYS_LOGGER.setLogLevel(CONFIG.get_string_value(CONFIG_PUBLIC, CONF_LOG_LEVEL));
-
-  char* log_file = CONFIG.get_string_value(CONFIG_ADMINSERVER, CONF_LOG_FILE);
-  TBSYS_LOGGER.rotateLog(log_file);
 
   AdminServer* adminserver = new AdminServer();
   int ret = adminserver->main(conf_file, service_name, is_daemon);
@@ -150,16 +148,42 @@ namespace tfs
       vector<MonitorParam*> param_ns_list;
       vector<MonitorParam*> param_ds_list;
 
-      char *pid_file = CONFIG.get_string_value(CONFIG_ADMINSERVER, CONF_LOCK_FILE);
+      char* top_work_dir = CONFIG.get_string_value(CONFIG_PUBLIC, CONF_WORK_DIR);
+      if (NULL == top_work_dir)
+      {
+        TBSYS_LOG(ERROR, "work directory config not found");
+        return TFS_ERROR;
+      }
+
+      char default_pid_file[MAX_PATH_LENGTH];
+      snprintf(default_pid_file, MAX_PATH_LENGTH, "%s/logs/adminserver.pid", top_work_dir);
+      char *pid_file = CONFIG.get_string_value(CONFIG_ADMINSERVER, CONF_LOCK_FILE, default_pid_file);
       if ((i = tbsys::CProcess::existPid(pid_file)) > 0)
       {
-        fprintf(stderr, "the process is running: PID=%d\n", i);
+        TBSYS_LOG(ERROR, "adminserver has already run. Pid: %d", i);
+        return TFS_ERROR;
+      }
+      if (!DirectoryOp::create_full_path(pid_file, true))
+      {
+        TBSYS_LOG(ERROR, "create file(%s)'s directory failed", pid_file);
+        return TFS_ERROR;
+      }
+
+      char default_log_file[MAX_PATH_LENGTH];
+      snprintf(default_log_file, MAX_PATH_LENGTH, "%s/logs/adminserver.log", top_work_dir);
+      const char *log_file = CONFIG.get_string_value(CONFIG_ADMINSERVER, CONF_LOG_FILE, default_log_file);
+      if (access(log_file, R_OK) == 0)
+      {
+        TBSYS_LOGGER.rotateLog(log_file);
+      }
+      else if (!DirectoryOp::create_full_path(log_file, true))
+      {
+        TBSYS_LOG(ERROR, "create file(%s)'s directory failed", log_file);
         return TFS_ERROR;
       }
 
       if (is_daemon)
       {
-        char *log_file = CONFIG.get_string_value(CONFIG_ADMINSERVER, CONF_LOG_FILE);
         if (tbsys::CProcess::startDaemon(pid_file, log_file) > 0)
         {
           return TFS_SUCCESS;
@@ -225,8 +249,8 @@ namespace tfs
 
           param_ds->isds_ = 1;
           fprintf(stderr, "load dataserver %s, desc : %s, lock_file : %s, port : %d, script : %s, waittime: %d\n",
-              ds_index[i].c_str(), param_ds->description_, param_ds->lock_file_, param_ds->port_, param_ds->script_,
-              param_ds->fkill_waittime_);
+                  ds_index[i].c_str(), param_ds->description_, param_ds->lock_file_, param_ds->port_, param_ds->script_,
+                  param_ds->fkill_waittime_);
 
           param_ds_list.push_back(param_ds);
         }
@@ -433,7 +457,7 @@ namespace tfs
                     tbsys::CNetUtil::addrToString(ip_address).c_str(), vms[i].failure_);
                 vms[i].failure_++;
               }
-              else // do not ad failure num if the process is restarting status 
+              else // do not ad failure num if the process is restarting status
               {
                 TBSYS_LOG(ERROR, "restarting, desc : %s ip: %s", (*vmp)[i]->description_,
                     tbsys::CNetUtil::addrToString(ip_address).c_str());

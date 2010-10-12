@@ -11,7 +11,7 @@
  * Authors:
  *   duolong <duolong@taobao.com>
  *      - initial release
- *   zongdai <zongdai@taobao.com> 
+ *   zongdai <zongdai@taobao.com>
  *      - modify 2010-04-23
  *
  */
@@ -19,6 +19,8 @@
 #include <string>
 #include "dataserver.h"
 #include "version.h"
+#include "common/directory_op.h"
+#include "common/error_msg.h"
 #include <Memory.hpp>
 
 using namespace std;
@@ -39,22 +41,22 @@ int main(int argc, char *argv[])
   {
     switch (i)
     {
-      case 'f':
-        file_name = optarg;
-        break;
-      case 'i':
-        server_index = optarg;
-        break;
-      case 'd':
-        is_daemon = 1;
-        break;
-      case 'v':
-        cout << "dataserver: " << Version::get_build_description() << endl;
-        return TFS_SUCCESS;
-      case 'h':
-      default:
-        help = 1;
-        break;
+    case 'f':
+      file_name = optarg;
+      break;
+    case 'i':
+      server_index = optarg;
+      break;
+    case 'd':
+      is_daemon = 1;
+      break;
+    case 'v':
+      cout << "dataserver: " << Version::get_build_description() << endl;
+      return TFS_SUCCESS;
+    case 'h':
+    default:
+      help = 1;
+    break;
     }
   }
 
@@ -80,45 +82,13 @@ int main(int argc, char *argv[])
   TBSYS_LOGGER.setLogLevel(CONFIG.get_string_value(CONFIG_PUBLIC, CONF_LOG_LEVEL));
   TBSYS_LOGGER.setMaxFileSize(CONFIG.get_int_value(CONFIG_PUBLIC, CONF_LOG_SIZE, 1024 * 1024 * 1024));
   TBSYS_LOGGER.setMaxFileIndex(CONFIG.get_int_value(CONFIG_PUBLIC, CONF_LOG_NUM, 10));
+
   //check directory
   string work_dir = SYSPARAM_DATASERVER.work_dir_;
   if (work_dir.size() == 0)
   {
-    TBSYS_LOG(ERROR, "Directory %s.%s is undefined\n", CONFIG_DATASERVER, CONF_WORK_DIR);
-    return TFS_ERROR;
-  }
-
-  string storage_dir;
-  storage_dir.assign(work_dir);
-  storage_dir.append("/storage");
-  if (Func::make_directory(const_cast<char *>(storage_dir.c_str())) == TFS_ERROR)
-  {
-    TBSYS_LOG(ERROR, "Can not create directory: %s.\n", storage_dir.c_str());
-    return TFS_ERROR;
-  }
-
-  storage_dir.assign(work_dir);
-  storage_dir.append("/tmp");
-  if (Func::make_directory(const_cast<char *>(storage_dir.c_str())) == TFS_ERROR)
-  {
-    TBSYS_LOG(ERROR, "Can not create directory: %s.\n", storage_dir.c_str());
-    return TFS_ERROR;
-  }
-
-  storage_dir.assign(work_dir);
-  storage_dir.append("/mirror");
-  if (Func::make_directory(const_cast<char *>(storage_dir.c_str())) == TFS_ERROR)
-  {
-    TBSYS_LOG(ERROR, "Can not create directory: %s.\n", storage_dir.c_str());
-    return TFS_ERROR;
-  }
-
-  string log_file = SYSPARAM_DATASERVER.log_file_;
-  if (log_file.size() != 0 && access(log_file.c_str(), R_OK) == 0)
-  {
-    char dest_log_file[PATH_MAX];
-    sprintf(dest_log_file, "%s.%s", log_file.c_str(), Func::time_to_str(time(NULL), 1).c_str());
-    rename(log_file.c_str(), dest_log_file);
+    TBSYS_LOG(ERROR, "Directory %s.%s is undefined\n", CONFIG_PUBLIC, CONF_WORK_DIR);
+    return EXIT_CONFIG_ERROR;
   }
 
   string pid_file = SYSPARAM_DATASERVER.pid_file_;
@@ -126,8 +96,50 @@ int main(int argc, char *argv[])
   int pid = 0;
   if ((pid = tbsys::CProcess::existPid(pid_file.c_str())))
   {
-    cerr << "dataserver " << server_index << " has already run. Pid: " << pid << endl;
-    return TFS_ERROR;
+    TBSYS_LOG(ERROR, "dataserver %s has already run. Pid: %d", server_index.c_str(), pid);
+    return EXIT_SYSTEM_ERROR;
+  }
+  if (!DirectoryOp::create_full_path(pid_file.c_str(), true))
+  {
+    TBSYS_LOG(ERROR, "create file(%s)'s directory failed", pid_file.c_str());
+    return EXIT_GENERAL_ERROR;
+  }
+
+  string log_file = SYSPARAM_DATASERVER.log_file_;
+  if (log_file.size() != 0 && access(log_file.c_str(), R_OK) == 0)
+  {
+    TBSYS_LOGGER.rotateLog(log_file.c_str());
+  }
+  else if (!DirectoryOp::create_full_path(log_file.c_str(), true))
+  {
+    TBSYS_LOG(ERROR, "create file(%s)'s directory failed", log_file.c_str());
+    return EXIT_GENERAL_ERROR;
+  }
+
+  string storage_dir;
+  storage_dir.assign(work_dir);
+  storage_dir.append("/storage");
+  if (!DirectoryOp::create_full_path(storage_dir.c_str()))
+  {
+    TBSYS_LOG(ERROR, "create directory(%s) failed", storage_dir.c_str());
+    return EXIT_GENERAL_ERROR;
+  }
+
+  storage_dir.assign(work_dir);
+  storage_dir.append("/tmp");
+
+  if (!DirectoryOp::create_full_path(storage_dir.c_str()))
+  {
+    TBSYS_LOG(ERROR, "create directory(%s) failed", storage_dir.c_str());
+    return EXIT_GENERAL_ERROR;
+  }
+
+  storage_dir.assign(work_dir);
+  storage_dir.append("/mirror");
+  if (!DirectoryOp::create_full_path(storage_dir.c_str()))
+  {
+    TBSYS_LOG(ERROR, "create directory(%s) failed", storage_dir.c_str());
+    return EXIT_GENERAL_ERROR;
   }
 
   //start daemon
@@ -137,7 +149,7 @@ int main(int argc, char *argv[])
     pid = tbsys::CProcess::startDaemon(pid_file.c_str(), log_file.c_str());
   }
 
-  //child 
+  //child
   if (pid == 0)
   {
     signal(SIGPIPE, SIG_IGN);
@@ -213,7 +225,7 @@ namespace tfs
 
       data_service_.init(server_index_);
       VINT pids;
-      //init data service 
+      //init data service
       if (data_service_.start(&pids) != TFS_SUCCESS)
       {
         return TFS_ERROR;
@@ -247,7 +259,7 @@ namespace tfs
       TBSYS_LOG(INFO, "========== DataServer Start Run ========== PID: %d, Listen Port: %d %d", getpid(), server_port - 1,
           server_port);
 
-      //wait 
+      //wait
       tran_sport_.wait();
       for (uint32_t i = 0; i < pids.size(); ++i)
       {
