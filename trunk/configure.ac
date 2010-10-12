@@ -29,6 +29,68 @@ AC_CHECK_LIB([rt], [main])
 # FIXME: Replace `main' with a function in `-lz':
 AC_CHECK_LIB([z], [main])
 
+AC_ARG_WITH([tblib-root],
+           AS_HELP_STRING([--with-tblib-root],
+           [tbnet installation path]),
+           TBLIB_ROOT=${withval})
+if  test -z "${TBLIB_ROOT}/include"; then
+   dnl tbnet include path supplied
+   TBLIB_ROOT="/usr/local"
+fi
+if ! test -d "${TBLIB_ROOT}/include"; then
+	AC_MSG_ERROR([tblib_root is not work])
+	exit 1;
+fi
+AC_SUBST([TBLIB_ROOT])
+
+AC_CACHE_CHECK(if fallocate is implemented, ac_cv_func_fallocate,
+  AC_TRY_RUN([
+    #include <fcntl.h>
+    #include <sys/types.h>
+    #include <sys/stat.h>
+    #include <unistd.h>
+    int main()
+    {
+      char* file = "./test_fallocate";
+      int fd = open(file, O_RDWR | O_CREAT, 0666);
+      if (fd < 0)
+      {
+        exit(1);
+      }
+      if (fallocate(fd, 0, 0, 512))
+      {
+        perror("fallocate:");
+        exit(1);
+      }
+      close(fd);
+      unlink(file);
+      exit(0);
+    }
+  ],ac_cv_func_fallocate="yes",ac_cv_func_fallocate="no")
+)
+if test "$ac_cv_func_fallocate" = "yes" ; then
+  AC_DEFINE_UNQUOTED(TFS_DS_FALLOCATE, 1, [ac_cv_func_fallocate])
+else
+  AC_DEFINE_UNQUOTED(TFS_DS_FALLOCATE, 0, [ac_cv_func_fallocate])
+fi
+
+if test "$ac_cv_set_fallocate" = "no" ; then
+  AC_MSG_ERROR([fallocate does not work.])
+	exit 1;
+fi
+
+AC_ARG_WITH([release],
+  AS_HELP_STRING([--with-release],
+    [use optimize (default is NO)]),
+    [
+      if test "$withval" = "yes"; then
+        CXXFLAGS="-O2 -finline-functions -fno-strict-aliasing -Wall -fPIC -D__STDC_LIMIT_MACROS"
+      fi
+    ],
+    [CXXFLAGS="-g -Wall -fPIC -D__STDC_LIMIT_MACROS"]
+)
+
+ac_default_prefix=${HOME}/tfs_bin
 # Checks for header files.
 AC_HEADER_DIRENT
 AC_HEADER_STDC
