@@ -22,44 +22,18 @@ using namespace tbsys;
 
 namespace tfs
 {
-namespace client
-{
+  namespace client
+  {
     static const char* KEY_MASK = "Taobao-inc";
     static const int32_t KEY_MASK_LEN = strlen(KEY_MASK);
     static const char enc_table[] = "0JoU8EaN3xf19hIS2d.6pZRFBYurMDGw7K5m4CyXsbQjg_vTOAkcHVtzqWilnLPe";
     static const char dec_table[] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,18,0,0,11,16,8,36,34,19,32,4,12,0,0,0,0,0,0,0,49,24,37,29,5,23,30,52,14,1,33,61,28,7,48,62,42,22,15,47,3,53,57,39,25,21,0,0,0,0,45,0,6,41,51,17,63,10,44,13,58,43,50,59,35,60,2,20,56,27,40,54,26,46,31,9,38,55,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
-    static int xor_encode(const char* source, const int32_t len, char* target)
+
+    static int xor_mask(const char* source, const int32_t len, char* target)
     {
-      if (source == NULL || len <= 0 || target == NULL)
-        return TFS_ERROR;
-
-      int32_t i = 0;
-      int32_t j = 0;
-      for (i = 0; i < len; ++i)
+      for (int32_t i = 0; i < len; i++)
       {
-        target[i] = source[i] ^ KEY_MASK[j];
-        if ((++j) >= KEY_MASK_LEN)
-        {
-          j = 0;
-        }
-      }
-      return TFS_SUCCESS;
-    }
-
-    static int xor_decode(const char* source, const int32_t len, char* target)
-    {
-      if (source == NULL || len <= 0 || target == NULL)
-        return TFS_ERROR;
-
-      int32_t i = 0;
-      int32_t j = 0;
-      for (i = 0; i < len; ++i)
-      {
-        target[i] = KEY_MASK[j] ^ source[i];
-        if ((++j) >= KEY_MASK_LEN)
-        {
-          j = 0;
-        }
+        target[i] = source[i] ^ KEY_MASK[i % KEY_MASK_LEN];
       }
       return TFS_SUCCESS;
     }
@@ -96,7 +70,6 @@ namespace client
       file_name_[0] = '\0';
       cluster_id_ = cluster_id;
     }
-
     FSName::FSName(const char *file_name, const char *prefix, int32_t cluster_id)
     {
       set_name(file_name, prefix, cluster_id);
@@ -146,44 +119,50 @@ namespace client
 
     void FSName::encode(const char *input, char *output)
     {
-      char buffer[FILE_NAME_EXCEPT_SUFFIX_LEN];
-      xor_encode(input, FILE_NAME_EXCEPT_SUFFIX_LEN, buffer);
-
-      int32_t i = 0;
-      int32_t k = 0;
-      uint32_t value = 0;
-      for (i = 0; i < FILE_NAME_EXCEPT_SUFFIX_LEN; i += 3)
+      if (input != NULL && output != NULL)
       {
-        value = ((buffer[i] << 16) & 0xff0000) + ((buffer[i + 1] << 8) & 0xff00) + (buffer[i + 2] & 0xff);
-        output[k++] = enc_table[value >> 18];
-        output[k++] = enc_table[(value >> 12) & 0x3f];
-        output[k++] = enc_table[(value >> 6) & 0x3f];
-        output[k++] = enc_table[value & 0x3f];
+        char buffer[FILE_NAME_EXCEPT_SUFFIX_LEN];
+        xor_mask(input, FILE_NAME_EXCEPT_SUFFIX_LEN, buffer);
+
+        int32_t i = 0;
+        int32_t k = 0;
+        uint32_t value = 0;
+        for (i = 0; i < FILE_NAME_EXCEPT_SUFFIX_LEN; i += 3)
+        {
+          value = ((buffer[i] << 16) & 0xff0000) + ((buffer[i + 1] << 8) & 0xff00) + (buffer[i + 2] & 0xff);
+          output[k++] = enc_table[value >> 18];
+          output[k++] = enc_table[(value >> 12) & 0x3f];
+          output[k++] = enc_table[(value >> 6) & 0x3f];
+          output[k++] = enc_table[value & 0x3f];
+        }
       }
     }
 
     void FSName::decode(const char *input, char *output)
     {
-      int32_t i = 0;
-      int32_t k = 0;
-      uint32_t value = 0;
-      char buffer[FILE_NAME_EXCEPT_SUFFIX_LEN];
-      for (i = 0; i < FILE_NAME_LEN - 2; i += 4)
+      if (input != NULL && output != NULL)
       {
-        value = (dec_table[input[i] & 0xff] << 18) + (dec_table[input[i + 1] & 0xff] << 12) + (dec_table[input[i + 2]
-            & 0xff] << 6) + dec_table[input[i + 3] & 0xff];
-        buffer[k++] = static_cast<char> ((value >> 16) & 0xff);
-        buffer[k++] = static_cast<char> ((value >> 8) & 0xff);
-        buffer[k++] = static_cast<char> (value & 0xff);
+        int32_t i = 0;
+        int32_t k = 0;
+        uint32_t value = 0;
+        char buffer[FILE_NAME_EXCEPT_SUFFIX_LEN];
+        for (i = 0; i < FILE_NAME_LEN - 2; i += 4)
+        {
+          value = (dec_table[input[i] & 0xff] << 18) + (dec_table[input[i + 1] & 0xff] << 12) +
+            (dec_table[input[i + 2] & 0xff] << 6) + dec_table[input[i + 3] & 0xff];
+          buffer[k++] = static_cast<char> ((value >> 16) & 0xff);
+          buffer[k++] = static_cast<char> ((value >> 8) & 0xff);
+          buffer[k++] = static_cast<char> (value & 0xff);
+        }
+        xor_mask(buffer, FILE_NAME_EXCEPT_SUFFIX_LEN, output);
       }
-      xor_decode(buffer, FILE_NAME_EXCEPT_SUFFIX_LEN, output);
     }
 
     string FSName::to_string()
     {
       char buffer[256];
       snprintf(buffer, 256, "block_id(%u) seq_id(%u) prefix(%u) name(%s)", file_.block_id_, file_.seq_id_,
-          file_.prefix_, get_name());
+               file_.prefix_, get_name());
       return string(buffer);
     }
 

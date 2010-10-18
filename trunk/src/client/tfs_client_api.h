@@ -64,8 +64,7 @@ namespace tfs
       int tfs_reset_read();
       uint64_t get_last_elect_ds_id() const;
       uint64_t get_ns_ip_port() const;
-      int
-          create_block_info(uint32_t& block_id, common::VUINT64 &rds, const int32_t flag, common::VUINT64& fail_servers);
+      int create_block_info(uint32_t& block_id, common::VUINT64 &rds, const int32_t flag, common::VUINT64& fail_servers);
       int get_block_info(uint32_t& block_id, common::VUINT64 &rds);
       int get_unlink_block_info(uint32_t& block_id, common::VUINT64 &rds);
 

@@ -32,7 +32,7 @@ ClientMetrics TfsFile::close_metrics_;
 
 TfsFile::TfsFile() :
   session_(NULL), client_(NULL), file_number_(0), file_id_(0), last_elect_ds_id_(0), block_id_(0), crc_(0), mode_(0),
-      offset_(0), pri_ds_index_(0), is_open_flag_(TFS_FILE_OPEN_FLAG_NO), option_flag_(0), eof_(TFS_FILE_EOF_FLAG_NO)
+  offset_(0), pri_ds_index_(0), is_open_flag_(TFS_FILE_OPEN_FLAG_NO), option_flag_(0), eof_(TFS_FILE_EOF_FLAG_NO)
 {
   ds_list_.clear();
   file_name_[0] = '\0';
@@ -90,7 +90,7 @@ int TfsFile::tfs_open(const uint32_t block_id, const uint64_t file_id, const int
   if ((block_id == 0) && (mode == READ_MODE || mode == UNLINK_MODE))
   {
     snprintf(error_message_, ERR_MSG_SIZE, "%s no block, block_id(%u) file_id(%" PRI64_PREFIX "u)",
-        file_name_, block_id, file_id);
+             file_name_, block_id, file_id);
     return TFS_ERROR;
   }
 
@@ -147,7 +147,7 @@ int TfsFile::tfs_open(const uint32_t block_id, const uint64_t file_id, const int
   if (block_id_ == 0 || ds_list_.size() == 0)
   {
     snprintf(error_message_, ERR_MSG_SIZE, "block(%u),is invalid, dataserver size(%u)", block_id_,
-        static_cast<uint32_t> (ds_list_.size()));
+             static_cast<uint32_t> (ds_list_.size()));
     return TFS_ERROR;
   }
 
@@ -275,7 +275,7 @@ int TfsFile::create_filename()
     {
       StatusMessage* msg = dynamic_cast<StatusMessage*> (message);
       snprintf(error_message_, ERR_MSG_SIZE, "create file name fail, get error msg(%s), status(%d) from(%s)",
-          msg->get_error(), msg->get_status(), tbsys::CNetUtil::addrToString(client_->get_mip()).c_str());
+               msg->get_error(), msg->get_status(), tbsys::CNetUtil::addrToString(client_->get_mip()).c_str());
     }
     else
     {
@@ -325,55 +325,78 @@ int TfsFile::tfs_read_v2(char *data, const int32_t len, FileInfo *file_info)
     time_t now2 = Func::curr_time();
     if (now2 - now1 > 500000)
     {
-TBSYS_LOG    (WARN, "filename(%s), read file low (%" PRI64_PREFIX
-        "u)(ns), block_id(%u), file_id(%" PRI64_PREFIX "u), offset(%d),len(%d), from dataserver(%s), msg(%p)",
-        file_name_, now2 - now1, block_id_, file_id_, offset_,
-        len, tbsys::CNetUtil::addrToString(client_->get_mip()).c_str(), message);
-  }
+      TBSYS_LOG    (WARN, "filename(%s), read file low (%" PRI64_PREFIX
+                    "u)(ns), block_id(%u), file_id(%" PRI64_PREFIX "u), offset(%d),len(%d), from dataserver(%s), msg(%p)",
+                    file_name_, now2 - now1, block_id_, file_id_, offset_,
+                    len, tbsys::CNetUtil::addrToString(client_->get_mip()).c_str(), message);
+    }
 
 #ifdef __CLIENT_METRICS__
-  read_metrics_.stat("tfsRead", now2 - now1, 1, 5000);
+    read_metrics_.stat("tfsRead", now2 - now1, 1, 5000);
 #endif
 
-  if (message != NULL)
-  {
-    if (message->get_message_type() == RESP_READ_DATA_MESSAGE_V2)
+    if (message != NULL)
     {
-      RespReadDataMessageV2 *msg = dynamic_cast<RespReadDataMessageV2*>(message);
-      if (offset_ == 0 && msg->get_file_info() == NULL)
+      if (message->get_message_type() == RESP_READ_DATA_MESSAGE_V2)
       {
-        TBSYS_LOG(WARN, "tfs read, get file info error, filename(%s), fileid(%"PRI64_PREFIX"u), form dataserver(%s)",
-            file_name_, file_id_, tbsys::CNetUtil::addrToString(client_->get_mip()).c_str());
-        tbsys::gDelete(message);
-        continue;
-      }
-      else
-      {
-        if (msg->get_file_info() != NULL)
+        RespReadDataMessageV2 *msg = dynamic_cast<RespReadDataMessageV2*>(message);
+        if (offset_ == 0 && msg->get_file_info() == NULL)
         {
-          memcpy(file_info, msg->get_file_info(), FILEINFO_SIZE);
-        }
-        if (file_info->id_ != file_id_)
-        {
-          TBSYS_LOG(WARN, "tfs read, file(%s  : %"PRI64_PREFIX"u  :%"PRI64_PREFIX"u) not match, from dataserver(%s)",
-              file_name_, file_info->id_, file_id_, tbsys::CNetUtil::addrToString(client_->get_mip()).c_str());
+          TBSYS_LOG(WARN, "tfs read, get file info error, filename(%s), fileid(%"PRI64_PREFIX"u), form dataserver(%s)",
+                    file_name_, file_id_, tbsys::CNetUtil::addrToString(client_->get_mip()).c_str());
           tbsys::gDelete(message);
           continue;
         }
-      }
-
-      ret_len = msg->get_length();
-
-      if (ret_len >= 0)
-      {
-        if (ret_len < len)
+        else
         {
-          eof_ = TFS_FILE_EOF_FLAG_YES;
+          if (msg->get_file_info() != NULL)
+          {
+            memcpy(file_info, msg->get_file_info(), FILEINFO_SIZE);
+          }
+          if (file_info->id_ != file_id_)
+          {
+            TBSYS_LOG(WARN, "tfs read, file(%s  : %"PRI64_PREFIX"u  :%"PRI64_PREFIX"u) not match, from dataserver(%s)",
+                      file_name_, file_info->id_, file_id_, tbsys::CNetUtil::addrToString(client_->get_mip()).c_str());
+            tbsys::gDelete(message);
+            continue;
+          }
         }
-        if (ret_len > 0)
+
+        ret_len = msg->get_length();
+
+        if (ret_len >= 0)
         {
-          memcpy(data, msg->get_data(), ret_len);
-          offset_ += ret_len;
+          if (ret_len < len)
+          {
+            eof_ = TFS_FILE_EOF_FLAG_YES;
+          }
+          if (ret_len > 0)
+          {
+            memcpy(data, msg->get_data(), ret_len);
+            offset_ += ret_len;
+          }
+        }
+        else
+        {
+#ifdef __CLIENT_METRICS__
+          read_metrics_.incr_failed_count();
+#endif
+          snprintf(error_message_, ERR_MSG_SIZE, "tfs read read fail from dataserver(%s)ret_len(%d)",
+                   tbsys::CNetUtil::addrToString(client_->get_mip()).c_str(), ret_len);
+        }
+      }
+      else if (message->get_message_type() == STATUS_MESSAGE)
+      {
+#ifdef __CLIENT_METRICS__
+        read_metrics_.incr_failed_count();
+#endif
+        StatusMessage* msg = dynamic_cast<StatusMessage*>(message);
+        snprintf(error_message_, ERR_MSG_SIZE, "tfs read, get status msg(%s)", msg->get_error());
+        if (msg->get_status() == STATUS_MESSAGE_ACCESS_DENIED)
+        {
+          // if access denied, return directly
+          tbsys::gDelete(message);
+          return ret_len;
         }
       }
       else
@@ -381,50 +404,27 @@ TBSYS_LOG    (WARN, "filename(%s), read file low (%" PRI64_PREFIX
 #ifdef __CLIENT_METRICS__
         read_metrics_.incr_failed_count();
 #endif
-        snprintf(error_message_, ERR_MSG_SIZE, "tfs read read fail from dataserver(%s)ret_len(%d)",
-            tbsys::CNetUtil::addrToString(client_->get_mip()).c_str(), ret_len);
+        snprintf(error_message_, ERR_MSG_SIZE, "message type is error.");
       }
-    }
-    else if (message->get_message_type() == STATUS_MESSAGE)
-    {
-#ifdef __CLIENT_METRICS__
-      read_metrics_.incr_failed_count();
-#endif
-      StatusMessage* msg = dynamic_cast<StatusMessage*>(message);
-      snprintf(error_message_, ERR_MSG_SIZE, "tfs read, get status msg(%s)", msg->get_error());
-      if (msg->get_status() == STATUS_MESSAGE_ACCESS_DENIED)
-      {
-        // if access denied, return directly
-        tbsys::gDelete(message);
-        return ret_len;
-      }
+      tbsys::gDelete(message);
     }
     else
     {
 #ifdef __CLIENT_METRICS__
-      read_metrics_.incr_failed_count();
+      read_metrics_.incr_timeout_count();
 #endif
-      snprintf(error_message_, ERR_MSG_SIZE, "message type is error.");
+      snprintf(error_message_, ERR_MSG_SIZE, "read, send to dataserver fail.");
     }
-    tbsys::gDelete(message);
+    if (ret_len != -1)
+      break;
+    if (connect_next_ds() == TFS_SUCCESS)
+      break;
   }
-  else
-  {
-#ifdef __CLIENT_METRICS__
-    read_metrics_.incr_timeout_count();
-#endif
-    snprintf(error_message_, ERR_MSG_SIZE, "read, send to dataserver fail.");
-  }
-  if (ret_len != -1)
-  break;
-  if (connect_next_ds() == TFS_SUCCESS)
-  break;
-}
-return ret_len;
+  return ret_len;
 }
 
 int TfsFile::tfs_read_scale_image(char *data, const int32_t len, const int32_t width, const int32_t height,
-    FileInfo *finfo)
+                                  FileInfo *finfo)
 {
   if (eof_ == TFS_FILE_EOF_FLAG_YES)
   {
@@ -474,52 +474,77 @@ int TfsFile::tfs_read_scale_image(char *data, const int32_t len, const int32_t w
     time_t now2 = Func::curr_time();
     if (now2 - now1 > 500000)
     {
-TBSYS_LOG    (WARN, "tfs file(%s), read file low (%" PRI64_PREFIX
-        "u)(ns), block_id(%u), file_id(%" PRI64_PREFIX "u), offset(%d), len(%d), dataserfer(%s),msg(%p)",
-        file_name_, now2-now1, block_id_, file_id_, offset_,
-        len, tbsys::CNetUtil::addrToString(client_->get_mip()).c_str(), message);
-  }
+      TBSYS_LOG    (WARN, "tfs file(%s), read file low (%" PRI64_PREFIX
+                    "u)(ns), block_id(%u), file_id(%" PRI64_PREFIX "u), offset(%d), len(%d), dataserfer(%s),msg(%p)",
+                    file_name_, now2-now1, block_id_, file_id_, offset_,
+                    len, tbsys::CNetUtil::addrToString(client_->get_mip()).c_str(), message);
+    }
 
 #ifdef __CLIENT_METRICS__
-  read_metrics_.stat("tfsRead", now2 - now1, 1, 5000);
+    read_metrics_.stat("tfsRead", now2 - now1, 1, 5000);
 #endif
 
-  if (message != NULL)
-  {
-    if (message->get_message_type() == RESP_READ_DATA_MESSAGE_V2)
+    if (message != NULL)
     {
-      RespReadDataMessageV2* msg = dynamic_cast<RespReadDataMessageV2*>(message);
-      if (offset_ == 0 && msg->get_file_info() == NULL)
+      if (message->get_message_type() == RESP_READ_DATA_MESSAGE_V2)
       {
-        TBSYS_LOG(WARN, "tfs_read_scale_image, get file info error, filename(%s), fileid(%"PRI64_PREFIX"u) from dataserer(%s)",
-            file_name_, file_id_, tbsys::CNetUtil::addrToString(client_->get_mip()).c_str());
-        tbsys::gDelete(message);
-        continue;
-      }
-      else
-      {
-        memcpy(finfo, msg->get_file_info(), FILEINFO_SIZE);
-        if (finfo->id_ != file_id_)
+        RespReadDataMessageV2* msg = dynamic_cast<RespReadDataMessageV2*>(message);
+        if (offset_ == 0 && msg->get_file_info() == NULL)
         {
-          TBSYS_LOG(WARN, "tfs_read_scale_image, fileid(%s  %"PRI64_PREFIX"u :%"PRI64_PREFIX"u) not match, from dataserver(%s)",
-              file_name_, finfo->id_, file_id_, tbsys::CNetUtil::addrToString(client_->get_mip()).c_str());
+          TBSYS_LOG(WARN, "tfs_read_scale_image, get file info error, filename(%s), fileid(%"PRI64_PREFIX"u) from dataserer(%s)",
+                    file_name_, file_id_, tbsys::CNetUtil::addrToString(client_->get_mip()).c_str());
           tbsys::gDelete(message);
           continue;
         }
-      }
-
-      ret_len = msg->get_length();
-
-      if (ret_len >= 0)
-      {
-        if (ret_len < len)
+        else
         {
-          eof_ = TFS_FILE_EOF_FLAG_YES;
+          memcpy(finfo, msg->get_file_info(), FILEINFO_SIZE);
+          if (finfo->id_ != file_id_)
+          {
+            TBSYS_LOG(WARN, "tfs_read_scale_image, fileid(%s  %"PRI64_PREFIX"u :%"PRI64_PREFIX"u) not match, from dataserver(%s)",
+                      file_name_, finfo->id_, file_id_, tbsys::CNetUtil::addrToString(client_->get_mip()).c_str());
+            tbsys::gDelete(message);
+            continue;
+          }
         }
-        if (ret_len > 0)
+
+        ret_len = msg->get_length();
+
+        if (ret_len >= 0)
         {
-          memcpy(data, msg->get_data(), ret_len);
-          offset_ += ret_len;
+          if (ret_len < len)
+          {
+            eof_ = TFS_FILE_EOF_FLAG_YES;
+          }
+          if (ret_len > 0)
+          {
+            memcpy(data, msg->get_data(), ret_len);
+            offset_ += ret_len;
+          }
+        }
+        else
+        {
+#ifdef __CLIENT_METRICS__
+          read_metrics_.incr_failed_count();
+#endif
+          snprintf(error_message_, ERR_MSG_SIZE, "tfs_read_scale_image, read fail from dataserver(%s), ret len(%d)",
+                   tbsys::CNetUtil::addrToString(client_->get_mip()).c_str(), ret_len);
+        }
+      }
+      else if (message->get_message_type() == STATUS_MESSAGE)
+      {
+
+#ifdef __CLIENT_METRICS__
+        read_metrics_.incr_failed_count();
+#endif
+
+        StatusMessage* msg = dynamic_cast<StatusMessage*>(message);
+        snprintf(error_message_, ERR_MSG_SIZE, "tfs_read_scale_image, get status msg(%s)", msg->get_error());
+        if (msg->get_status() == STATUS_MESSAGE_ACCESS_DENIED)
+        {
+          // if access denied, return directly
+          tbsys::gDelete(message);
+          return ret_len;
         }
       }
       else
@@ -527,49 +552,24 @@ TBSYS_LOG    (WARN, "tfs file(%s), read file low (%" PRI64_PREFIX
 #ifdef __CLIENT_METRICS__
         read_metrics_.incr_failed_count();
 #endif
-        snprintf(error_message_, ERR_MSG_SIZE, "tfs_read_scale_image, read fail from dataserver(%s), ret len(%d)",
-            tbsys::CNetUtil::addrToString(client_->get_mip()).c_str(), ret_len);
+        snprintf(error_message_, ERR_MSG_SIZE, "tfs_read_scale_image: message type is error.");
       }
-    }
-    else if (message->get_message_type() == STATUS_MESSAGE)
-    {
-
-#ifdef __CLIENT_METRICS__
-      read_metrics_.incr_failed_count();
-#endif
-
-      StatusMessage* msg = dynamic_cast<StatusMessage*>(message);
-      snprintf(error_message_, ERR_MSG_SIZE, "tfs_read_scale_image, get status msg(%s)", msg->get_error());
-      if (msg->get_status() == STATUS_MESSAGE_ACCESS_DENIED)
-      {
-        // if access denied, return directly
-        tbsys::gDelete(message);
-        return ret_len;
-      }
+      tbsys::gDelete(message);
     }
     else
     {
 #ifdef __CLIENT_METRICS__
-      read_metrics_.incr_failed_count();
+      read_metrics_.incr_timeout_count();
 #endif
-      snprintf(error_message_, ERR_MSG_SIZE, "tfs_read_scale_image: message type is error.");
+      snprintf(error_message_, ERR_MSG_SIZE, "tfs_read_scale_image: send msg to dataserver fail");
     }
-    tbsys::gDelete(message);
-  }
-  else
-  {
-#ifdef __CLIENT_METRICS__
-    read_metrics_.incr_timeout_count();
-#endif
-    snprintf(error_message_, ERR_MSG_SIZE, "tfs_read_scale_image: send msg to dataserver fail");
-  }
-  if (ret_len != -1)
-  break;
+    if (ret_len != -1)
+      break;
 
-  if (connect_next_ds() == TFS_SUCCESS)
-  break;
-}
-return ret_len;
+    if (connect_next_ds() == TFS_SUCCESS)
+      break;
+  }
+  return ret_len;
 }
 
 int64_t TfsFile::tfs_lseek(const int64_t offset, const int32_t whence)
@@ -635,32 +635,55 @@ int TfsFile::tfs_read(char *data, const int32_t len)
 
     if (now2 - now1 > 500000)
     {
-TBSYS_LOG    (WARN, "filename(%s) read file low (%" PRI64_PREFIX
-        "u)(ns), block_id(%u),file_id(%" PRI64_PREFIX "u), offset(%d), len(%d) from dataserver(%s)",
-        file_name_, now2 - now1, block_id_, file_id_, offset_,
-        len, tbsys::CNetUtil::addrToString(client_->get_mip()).c_str());
-  }
+      TBSYS_LOG    (WARN, "filename(%s) read file low (%" PRI64_PREFIX
+                    "u)(ns), block_id(%u),file_id(%" PRI64_PREFIX "u), offset(%d), len(%d) from dataserver(%s)",
+                    file_name_, now2 - now1, block_id_, file_id_, offset_,
+                    len, tbsys::CNetUtil::addrToString(client_->get_mip()).c_str());
+    }
 
 #ifdef __CLIENT_METRICS__
-  read_metrics_.stat("tfsRead", now2 - now1, 1, 5000);
+    read_metrics_.stat("tfsRead", now2 - now1, 1, 5000);
 #endif
 
-  if (message != NULL)
-  {
-    if (message->get_message_type() == RESP_READ_DATA_MESSAGE)
+    if (message != NULL)
     {
-      RespReadDataMessage *msg = dynamic_cast<RespReadDataMessage*>(message);
-      ret_len = msg->get_length();
-      if (ret_len >= 0)
+      if (message->get_message_type() == RESP_READ_DATA_MESSAGE)
       {
-        if (ret_len < len)
+        RespReadDataMessage *msg = dynamic_cast<RespReadDataMessage*>(message);
+        ret_len = msg->get_length();
+        if (ret_len >= 0)
         {
-          eof_ = TFS_FILE_EOF_FLAG_YES;
+          if (ret_len < len)
+          {
+            eof_ = TFS_FILE_EOF_FLAG_YES;
+          }
+          if (ret_len > 0)
+          {
+            memcpy(data, msg->get_data(), ret_len);
+            offset_ += ret_len;
+          }
         }
-        if (ret_len > 0)
+        else
         {
-          memcpy(data, msg->get_data(), ret_len);
-          offset_ += ret_len;
+#ifdef __CLIENT_METRICS__
+          read_metrics_.incr_failed_count();
+#endif
+          snprintf(error_message_, ERR_MSG_SIZE, "read fail from dataserver(%s): ret_len:%d",
+                   tbsys::CNetUtil::addrToString(client_->get_mip()).c_str(), ret_len);
+        }
+      }
+      else if (message->get_message_type() == STATUS_MESSAGE)
+      {
+#ifdef __CLIENT_METRICS__
+        read_metrics_.incr_failed_count();
+#endif
+        StatusMessage* msg = dynamic_cast<StatusMessage*>(message);
+        snprintf(error_message_, ERR_MSG_SIZE, "tfs read, get errorm msg(%s)", msg->get_error());
+        if (msg->get_status() == STATUS_MESSAGE_ACCESS_DENIED)
+        {
+          // if access denied, return directly
+          tbsys::gDelete(message);
+          return ret_len;
         }
       }
       else
@@ -668,47 +691,24 @@ TBSYS_LOG    (WARN, "filename(%s) read file low (%" PRI64_PREFIX
 #ifdef __CLIENT_METRICS__
         read_metrics_.incr_failed_count();
 #endif
-        snprintf(error_message_, ERR_MSG_SIZE, "read fail from dataserver(%s): ret_len:%d",
-            tbsys::CNetUtil::addrToString(client_->get_mip()).c_str(), ret_len);
+        snprintf(error_message_, ERR_MSG_SIZE, "tfs read message type is error.");
       }
-    }
-    else if (message->get_message_type() == STATUS_MESSAGE)
-    {
-#ifdef __CLIENT_METRICS__
-      read_metrics_.incr_failed_count();
-#endif
-      StatusMessage* msg = dynamic_cast<StatusMessage*>(message);
-      snprintf(error_message_, ERR_MSG_SIZE, "tfs read, get errorm msg(%s)", msg->get_error());
-      if (msg->get_status() == STATUS_MESSAGE_ACCESS_DENIED)
-      {
-        // if access denied, return directly
-        tbsys::gDelete(message);
-        return ret_len;
-      }
+      tbsys::gDelete(message);
     }
     else
     {
 #ifdef __CLIENT_METRICS__
-      read_metrics_.incr_failed_count();
+      read_metrics_.incr_timeout_count();
 #endif
-      snprintf(error_message_, ERR_MSG_SIZE, "tfs read message type is error.");
+      snprintf(error_message_, ERR_MSG_SIZE, "read, send msg to dataserver fail.");
     }
-    tbsys::gDelete(message);
-  }
-  else
-  {
-#ifdef __CLIENT_METRICS__
-    read_metrics_.incr_timeout_count();
-#endif
-    snprintf(error_message_, ERR_MSG_SIZE, "read, send msg to dataserver fail.");
-  }
 
-  if (ret_len != -1)
-  break;
-  if (connect_next_ds() == TFS_SUCCESS)
-  break;
-}
-return ret_len;
+    if (ret_len != -1)
+      break;
+    if (connect_next_ds() == TFS_SUCCESS)
+      break;
+  }
+  return ret_len;
 }
 
 int TfsFile::tfs_stat(FileInfo *file_info, const int32_t mode)
@@ -746,7 +746,7 @@ int TfsFile::tfs_stat(FileInfo *file_info, const int32_t mode)
       if (message->get_message_type() == STATUS_MESSAGE)
       {
         snprintf(error_message_, ERR_MSG_SIZE, "tfs stat, get error msg(%s)",
-            dynamic_cast<StatusMessage*> (message)->get_error());
+                 dynamic_cast<StatusMessage*> (message)->get_error());
       }
       else
       {
@@ -769,13 +769,13 @@ int TfsFile::tfs_stat(FileInfo *file_info, const int32_t mode)
     }
     else
     {
-snprintf    (error_message_, ERR_MSG_SIZE, "%s not exist, block_id:%u, file_id:%" PRI64_PREFIX "u, server: %s",
-        file_name_, block_id_, file_id_, tbsys::CNetUtil::addrToString(client_->get_mip()).c_str());
+      snprintf    (error_message_, ERR_MSG_SIZE, "%s not exist, block_id:%u, file_id:%" PRI64_PREFIX "u, server: %s",
+                   file_name_, block_id_, file_id_, tbsys::CNetUtil::addrToString(client_->get_mip()).c_str());
+    }
+    tbsys::gDelete(message);
+    break;
   }
-  tbsys::gDelete(message);
-  break;
-}
-return ret;
+  return ret;
 }
 
 int TfsFile::tfs_write(char *data, const int32_t len)
@@ -844,7 +844,7 @@ int TfsFile::tfs_write(char *data, const int32_t len)
   if (iret != TFS_SUCCESS)
   {
     snprintf(error_message_, ERR_MSG_SIZE, "tfs write, get error msg from dataserver(%s)",
-        tbsys::CNetUtil::addrToString(client_->get_mip()).c_str());
+             tbsys::CNetUtil::addrToString(client_->get_mip()).c_str());
     client_->disconnect();
     is_open_flag_ = TFS_FILE_OPEN_FLAG_NO;
     CLIENT_POOL.release_client(client_);
@@ -938,23 +938,23 @@ int TfsFile::tfs_close()
   }
   else
   {
-snprintf  (error_message_, ERR_MSG_SIZE, "tfs file close,send msg to dataserver fail, errors(time out, blockid(%u) fileid(%" PRI64_PREFIX "u)",
-      block_id_, file_id_);
+    snprintf  (error_message_, ERR_MSG_SIZE, "tfs file close,send msg to dataserver fail, errors(time out, blockid(%u) fileid(%" PRI64_PREFIX "u)",
+               block_id_, file_id_);
 #ifdef __CLIENT_METRICS__
-  close_metrics_.incr_failed_count();
+    close_metrics_.incr_failed_count();
 #endif
-}
+  }
 
 #ifdef __CLIENT_METRICS__
-if (close_metrics_.total_count % 50 == 0)
-{
-  TBSYS_LOG(DEBUG, "write file (%s) on server(%s)", file_name_, tbsys::CNetUtil::addrToString(last_elect_ds_id_).c_str());
-}
+  if (close_metrics_.total_count % 50 == 0)
+  {
+    TBSYS_LOG(DEBUG, "write file (%s) on server(%s)", file_name_, tbsys::CNetUtil::addrToString(last_elect_ds_id_).c_str());
+  }
 #endif
 
-is_open_flag_ = TFS_FILE_OPEN_FLAG_NO;
-CLIENT_POOL.release_client(client_);
-return iret;
+  is_open_flag_ = TFS_FILE_OPEN_FLAG_NO;
+  CLIENT_POOL.release_client(client_);
+  return iret;
 }
 
 // session
@@ -999,6 +999,12 @@ int TfsFile::get_file_crc_size(const char *filename, uint32_t& crc, int32_t& siz
 
 const char *TfsFile::get_file_name()
 {
+  if (NULL == session_)
+  {
+    snprintf(error_message_, ERR_MSG_SIZE, "not set session, session is null");
+    return NULL;
+  }
+
   FSName fsname;
   fsname.set_cluster_id(session_->get_cluster_id());
   fsname.set_block_id(block_id_);
