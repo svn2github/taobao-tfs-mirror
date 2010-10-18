@@ -1,28 +1,28 @@
 AM_CPPFLAGS=-I$(top_srcdir)/src\
-	-I$(TBLIB_ROOT)/include/tbsys\
-	-I$(TBLIB_ROOT)/include/tbnet
+	    -I$(TBLIB_ROOT)/include/tbsys\
+	    -I$(TBLIB_ROOT)/include/tbnet
 
-AM_LDFLAGS=-lz -lrt -lpthread -ldl
+AM_LDFLAGS=-lrt -lpthread -ldl
 
 bin_PROGRAMS = clear_file_system \
-               ds_client \
-               format_file_system
+	       ds_client \
+	       format_file_system
 
 noinst_PROGRAMS = convert_name \
-									reloadconfig \
-									read_index_tool \
-									reverse_name \
-									modify_super_block \
-									replblk \
-									tfsping \
-									read_super_block
+		  reloadconfig \
+		  read_index_tool \
+		  reverse_name \
+		  modify_super_block \
+		  replblk \
+		  tfsping \
+		  read_super_block
 
 LDADD = $(top_builddir)/src/client/.libs/libtfsclient.a\
 	$(top_builddir)/src/message/libtfsmessage.a\
 	$(top_builddir)/src/dataserver/libdataserver.a\
 	$(top_builddir)/src/common/libtfscommon.a\
 	$(TBLIB_ROOT)/lib/libtbnet.a\
-	$(TBLIB_ROOT)/lib/libtbsys.a 
+	$(TBLIB_ROOT)/lib/libtbsys.a
 
 clear_file_system_SOURCES = clear_file_system.cpp
 

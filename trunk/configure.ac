@@ -26,8 +26,6 @@ AC_CHECK_LIB([m], [main])
 AC_CHECK_LIB([pthread], [main])
 # FIXME: Replace `main' with a function in `-lrt':
 AC_CHECK_LIB([rt], [main])
-# FIXME: Replace `main' with a function in `-lz':
-AC_CHECK_LIB([z], [main])
 
 AC_ARG_WITH([tblib-root],
            AS_HELP_STRING([--with-tblib-root],

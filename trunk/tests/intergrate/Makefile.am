@@ -2,14 +2,14 @@ AM_CPPFLAGS=-I${top_srcdir}/src \
             -I$(TBLIB_ROOT)/include/tbsys \
             -I$(TBLIB_ROOT)/include/tbnet
 
-AM_LDFLAGS=-lpthread -lz -lrt 
+AM_LDFLAGS=-lpthread -lrt
 
 LDADD=$(top_builddir)/src/dataserver/libdataserver.a \
       $(top_builddir)/src/client/.libs/libtfsclient.a \
       $(top_builddir)/src/message/libtfsmessage.a \
       $(top_builddir)/src/common/libtfscommon.a\
       $(TBLIB_ROOT)/lib/libtbnet.a \
-      $(TBLIB_ROOT)/lib/libtbsys.a 
+      $(TBLIB_ROOT)/lib/libtbsys.a
 
 noinst_PROGRAMS=tfs_ioapi_cases
 
