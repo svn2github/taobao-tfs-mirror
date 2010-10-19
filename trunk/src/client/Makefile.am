@@ -43,4 +43,4 @@ install-exec-hook:
 
 # installed dirctory differ from original src dirctory hierarchy, hardcode to change
 install-data-hook:
-	cd $(includedir) && sed -i 's/common\/\(.*\.h\)/\1/g' $(include_HEADERS)
+	cd $(DESTDIR)/$(includedir) && sed -i 's/common\/\(.*\.h\)/\1/g' $(include_HEADERS)
