@@ -10,6 +10,8 @@ ADMIN_BIN=${BIN_DIR}/adminserver
 NS_CMD="${NS_BIN} -f ${TFS_CONF} -d"
 DS_CMD="${DS_BIN} -f ${TFS_CONF} -d -i"
 ADMIN_CMD="${ADMIN_BIN} -f ${TFS_CONF} -d -s"
+UP_TIME=4
+DOWN_TIME=8
 
 warn_echo()
 {
@@ -169,7 +171,7 @@ do_start()
     # check if ns/ds is up
     if [ "$start_index" ]
     then
-	sleep 1
+	sleep ${UP_TIME}
     fi
 
     for i in $start_index
@@ -218,7 +220,7 @@ do_stop()
 
     if [ "$stop_index" ]
     then
-	sleep 5
+	sleep ${DOWN_TIME}
     fi
 
     # check if ns/ds is down

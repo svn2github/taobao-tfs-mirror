@@ -522,7 +522,7 @@ int main_loop()
   char buffer[CMD_MAX_LEN];
   while (1)
   {
-    fprintf(stderr, "DataServer>");
+    fprintf(stderr, "DataServer> ");
     if (fgets(buffer, CMD_MAX_LEN, stdin) == NULL)
     {
       continue;

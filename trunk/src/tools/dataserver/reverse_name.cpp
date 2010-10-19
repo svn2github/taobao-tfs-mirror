@@ -26,6 +26,6 @@ int main(int argc, char** argv)
     return -1;
   }
   FSName name(argv[1]);
-  printf("%d,%lu,%u\n", name.get_block_id(), name.get_file_id(), name.get_seq_id());
+  printf("blockid: %u, fileid: %" PRI64_PREFIX "u, seqid: %u\n", name.get_block_id(), name.get_file_id(), name.get_seq_id());
   return 0;
 }

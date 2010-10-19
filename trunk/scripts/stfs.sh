@@ -7,6 +7,7 @@ BIN_DIR=${TFS_HOME}/bin
 CLEAR_BIN=${BIN_DIR}/clear_file_system
 FORMAT_BIN=${BIN_DIR}/format_file_system
 DS_CMD="${BIN_DIR}/dataserver -f ${TFS_CONF} -d -i"
+WAIT_TIME=5
 
 warn_echo()
 {
@@ -123,7 +124,7 @@ do_ds()
 
     if [ "$run_index" ]
     then
-	sleep 5
+	sleep ${WAIT_TIME}
 	for i in $run_index
 	do
 	    ret_pid=`check_run "ds" $i`

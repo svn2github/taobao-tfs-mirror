@@ -474,7 +474,7 @@ int DsLib::read_file_data(DsTask* ds_task)
 
     if (len_tmp < 0)
     {
-      fprintf(stderr, "read file(id: %lu) data error. ret: %d\n", file_id, len_tmp);
+      fprintf(stderr, "read file(id: %" PRI64_PREFIX "u) data error. ret: %d\n", file_id, len_tmp);
       ret_status = TFS_ERROR;
       delete ret_msg;
       break;
@@ -509,7 +509,7 @@ int DsLib::read_file_data(DsTask* ds_task)
 
   if (ret_status == TFS_SUCCESS)
   {
-    printf("read file successful, block: %u, file: %lu\n", block_id, file_id);
+    printf("read file successful, block: %u, file: %" PRI64_PREFIX "u\n", block_id, file_id);
   }
   close(fd);
   return ret_status;
@@ -722,7 +722,7 @@ int DsLib::list_file(DsTask* ds_task)
         tfs::client::FSName fsname;
         fsname.set_block_id(block_id);
         fsname.set_file_id(file_info->id_);
-        printf("%s %20lu %10u %10u %10u %s %s %02d %10u\n", fsname.get_name(), file_info->id_, file_info->offset_,
+        printf("%s %20" PRI64_PREFIX "u %10u %10u %10u %s %s %02d %10u\n", fsname.get_name(), file_info->id_, file_info->offset_,
             file_info->size_, file_info->usize_, Func::time_to_str(file_info->modify_time_).c_str(), Func::time_to_str(
                 file_info->create_time_).c_str(), file_info->flag_, file_info->crc_);
 
@@ -768,7 +768,7 @@ int DsLib::rename_file(DsTask* ds_task)
   std::string err_msg;
   Message* ret_msg = NULL;
   ret_status = this->send_message_to_ds(server_id, &req_rf_msg, err_msg, &ret_msg);
-  if (ret_status == TFS_SUCCESS) 
+  if (ret_status == TFS_SUCCESS)
   {
     printf("Rename file succeed\n");
   }
@@ -1006,12 +1006,12 @@ int DsLib::send_crc_error(DsTask* ds_task)
     else if (s_msg->get_status() == STATUS_MESSAGE_OK)
     {
       printf("send crc error success\n");
-      printf("labeled file %lu on block %u as crc error(crc: %u)\n", file_id, block_id, crc);
+      printf("labeled file %" PRI64_PREFIX "u on block %u as crc error(crc: %u)\n", file_id, block_id, crc);
       printf("related ds servers: ");
       VUINT64::iterator it = failed_servers.begin();
       for (; it != failed_servers.end(); it++)
       {
-        printf("%ld ", *it);
+        printf("%" PRI64_PREFIX "u", *it);
       }
       printf("\n");
     }
