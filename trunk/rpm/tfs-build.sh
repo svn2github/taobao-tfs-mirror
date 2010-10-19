@@ -1,7 +1,18 @@
 #!/bin/bash
-##for check
-export temppath=$1
+#for taobao abs
+temppath=$1
+cd $temppath/packages
+if [ `cat /etc/redhat-release|cut -d " " -f 7|cut -d "." -f 1` = 4 ]
+then
+sed -i  "s/^Release:.*$/Release: "$4".el4/" $2.spec
+else
+sed -i  "s/^Release:.*$/Release: "$4".el5/" $2.spec
+fi
+sed -i  "s/^Version:.*$/Version: "$3"/" $2.spec
 cd $temppath
-#make
-cd rpm
-/usr/local/bin/rpm_create -p /home/admin -v $3 -r $4 $2.spec
+chmod +x build.sh
+./build.sh init
+export TBLIB_ROOT=/opt/csr/common
+./configure
+make PREFIX=/home/admin/tfs rpms
+mv *.rpm rpm/
