@@ -141,15 +141,15 @@ namespace tfs
 
       if (0 == bucket_size() || 0 == block_info()->block_id_)
       {
-        TBSYS_LOG(ERROR, "Index configure error. blockid: %u, bucket size: %d", bucket_size(), 
-            block_info()->block_id_);
+        TBSYS_LOG(ERROR, "Index configure error. blockid: %u, bucket size: %d", block_info()->block_id_,
+            bucket_size());
         return EXIT_BLOCKID_ZERO_ERROR;
       }
 
       // check bucket_size
       if (cfg_bucket_size != bucket_size())
       {
-        TBSYS_LOG(ERROR, "Index configure error. old bucket size: %u, new bucket size: %d", bucket_size(),
+        TBSYS_LOG(ERROR, "Index configure error. old bucket size: %d, new bucket size: %d", bucket_size(),
             cfg_bucket_size);
         return EXIT_BUCKET_CONFIGURE_ERROR;
       }
@@ -157,7 +157,7 @@ namespace tfs
       // check block_id
       if (logic_block_id != block_info()->block_id_)
       {
-        TBSYS_LOG(ERROR, "block id conflict. blockid: %d, index blockid: %d", logic_block_id, block_info()->block_id_);
+        TBSYS_LOG(ERROR, "block id conflict. blockid: %u, index blockid: %u", logic_block_id, block_info()->block_id_);
         return EXIT_BLOCKID_CONFLICT_ERROR;
       }
 
@@ -165,7 +165,7 @@ namespace tfs
       if (C_DATA_COMPACT == index_header()->flag_)
       {
         //unfinish compact block
-        TBSYS_LOG(ERROR, "It is a unfinish compact block. blockid: %d", logic_block_id);
+        TBSYS_LOG(ERROR, "It is a unfinish compact block. blockid: %u", logic_block_id);
         return EXIT_COMPACT_BLOCK_ERROR;
       }
 
