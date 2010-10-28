@@ -85,6 +85,10 @@ namespace tfs
         init_data = NULL;
         if (TFS_SUCCESS != ret)
           return ret;
+
+        ret = file_op_->flush_file();
+        if (TFS_SUCCESS != ret)
+          return ret;
       }
       else //file size > 0, index already exist
       {
@@ -134,6 +138,13 @@ namespace tfs
       ret = file_op_->mmap_file(tmp_map_option);
       if (TFS_SUCCESS != ret)
         return ret;
+
+      if (0 == bucket_size() || 0 == block_info()->block_id_)
+      {
+        TBSYS_LOG(ERROR, "Index configure error. blockid: %u, bucket size: %d", bucket_size(), 
+            block_info()->block_id_);
+        return EXIT_BLOCKID_ZERO_ERROR;
+      }
 
       // check bucket_size
       if (cfg_bucket_size != bucket_size())
@@ -625,7 +636,7 @@ namespace tfs
         if (TFS_SUCCESS != ret)
           return ret;
       }
-      else //the first elem in bucket slot, set slot  
+      else //the first elem in bucket slot, set slot
       {
         bucket_slot()[slot] = current_offset;
       }

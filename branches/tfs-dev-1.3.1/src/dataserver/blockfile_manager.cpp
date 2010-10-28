@@ -11,7 +11,7 @@
  * Authors:
  *   duolong <duolong@taobao.com>
  *      - initial release
- *   qushan<qushan@taobao.com> 
+ *   qushan<qushan@taobao.com>
  *      - modify 2009-03-27
  *
  */
@@ -138,7 +138,7 @@ namespace tfs
         assert(false);
       }
 
-      //set bitmap: have not serialize to disk 
+      //set bitmap: have not serialize to disk
       normal_bit_map_->set(physical_block_id);
 
       PhysicalBlock* t_physical_block = new PhysicalBlock(physical_block_id, super_block_.mount_point_,
@@ -794,7 +794,7 @@ namespace tfs
               break;
             }
 
-            PhysicalBlock* ext_physical_block = new PhysicalBlock(ext_pos, super_block_.mount_point_,
+            ext_physical_block = new PhysicalBlock(ext_pos, super_block_.mount_point_,
                 super_block_.extend_block_size_, C_EXT_BLOCK);
             ret = ext_physical_block->load_block_prefix();
             if (TFS_SUCCESS != ret)
@@ -810,7 +810,7 @@ namespace tfs
             {
               TBSYS_LOG(ERROR, "read prev blockid conflict! prev blockid: %u. block prefix's physic prev blockid: %u",
                   prev_block_id, block_prefix.prev_physic_blockid_);
-              //release 
+              //release
               normal_bit_map_->reset(pos);
               super_block_impl_->write_bit_map(normal_bit_map_, error_bit_map_);
               conflict_flag = true;
@@ -857,7 +857,7 @@ namespace tfs
           else if (TFS_SUCCESS != ret) // ret == EXIT_COMPACT_BLOCK_ERROR || ret == EXIT_BLOCKID_ZERO_ERROR
           {
             //roll back
-            //can not make sure the type of this block, so add to confuse type 
+            //can not make sure the type of this block, so add to confuse type
             del_block(logic_block_id, C_CONFUSE_BLOCK);
             ret = TFS_SUCCESS;
           }
@@ -866,12 +866,6 @@ namespace tfs
         conflict_flag = false;
       }
 
-      if (TFS_SUCCESS != ret)
-      {
-        tbsys::gDelete(t_physical_block);
-        tbsys::gDelete(t_logic_block);
-        tbsys::gDelete(ext_physical_block);
-      }
       return ret;
     }
 
@@ -964,7 +958,7 @@ namespace tfs
       super_block_.used_extend_block_count_ = 0;
       super_block_.hash_slot_ratio_ = fs_param.hash_slot_ratio_;
 
-      //add for configure file	
+      //add for configure file
       int32_t per_block_file_num = static_cast<int32_t> ((super_block_.main_block_size_
           + static_cast<float> (super_block_.extend_block_size_) / fs_param.block_type_ratio_)
           / super_block_.avg_segment_size_);
