@@ -13,6 +13,8 @@ ADMIN_CMD="${ADMIN_BIN} -f ${TFS_CONF} -d -s"
 UP_TIME=4
 DOWN_TIME=8
 
+ulimit -c unlimited
+
 warn_echo()
 {
     printf  "\033[36m $* \033[0m\n"
