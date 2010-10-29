@@ -51,7 +51,7 @@ namespace tfs
         const DirtyFlag dirty_flag)
     {
       TBSYS_LOG(
-          DEBUG,
+          INFO,
           "index create block: %u index. bucket size: %d, max mmap size: %d, first mmap size: %d, per mmap size: %d, dirty flag: %d",
           logic_block_id, cfg_bucket_size, map_option.max_mmap_size_, map_option.first_mmap_size_,
           map_option.per_mmap_size_, dirty_flag);
@@ -124,7 +124,7 @@ namespace tfs
       }
       else if (file_size == 0) // empty file
       {
-        return EXIT_INDEX_EMPTY_ERROR;
+        return EXIT_INDEX_CORRUPT_ERROR;
       }
 
       //resize mmap size
@@ -141,9 +141,19 @@ namespace tfs
 
       if (0 == bucket_size() || 0 == block_info()->block_id_)
       {
-        TBSYS_LOG(ERROR, "Index configure error. blockid: %u, bucket size: %d", block_info()->block_id_,
+        TBSYS_LOG(ERROR, "Index corrupt error. blockid: %u, bucket size: %d", block_info()->block_id_,
             bucket_size());
-        return EXIT_BLOCKID_ZERO_ERROR;
+        return EXIT_INDEX_CORRUPT_ERROR;
+      }
+
+      //check file size
+      int32_t index_file_size = sizeof(IndexHeader) + bucket_size() * sizeof(int32_t);
+      // get file size before mmap file
+      if (file_size < index_file_size)
+      {
+        TBSYS_LOG(ERROR, "Index corrupt error. blockid: %u, bucket size: %d, file size: %d, index file size: %d",
+            block_info()->block_id_, bucket_size(), file_size, index_file_size);
+        return EXIT_INDEX_CORRUPT_ERROR;
       }
 
       // check bucket_size

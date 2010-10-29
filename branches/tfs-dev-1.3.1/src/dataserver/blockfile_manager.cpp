@@ -849,15 +849,17 @@ namespace tfs
 
           ret = t_logic_block->load_block_file(super_block_.hash_slot_size_, super_block_.mmap_option_);
           //if these error happened when load block, program should exit
-          if (TFS_SUCCESS != ret && EXIT_COMPACT_BLOCK_ERROR != ret && EXIT_BLOCKID_ZERO_ERROR != ret)
+          if (TFS_SUCCESS != ret && EXIT_COMPACT_BLOCK_ERROR != ret && EXIT_BLOCKID_ZERO_ERROR != ret
+                && EXIT_INDEX_CORRUPT_ERROR != ret)
           {
             TBSYS_LOG(ERROR, "logicblock load error! logic blockid: %u. ret: %d", logic_block_id, ret);
             break;
           }
-          else if (TFS_SUCCESS != ret) // ret == EXIT_COMPACT_BLOCK_ERROR || ret == EXIT_BLOCKID_ZERO_ERROR
+          else if (TFS_SUCCESS != ret) // ret == EXIT_COMPACT_BLOCK_ERROR || ret == EXIT_BLOCKID_ZERO_ERROR || EXIT_INDEX_CORRUPT_ERROR
           {
             //roll back
             //can not make sure the type of this block, so add to confuse type
+            TBSYS_LOG(WARN, "logicblock status abnormal, need delete! logic blockid: %u. ret: %d", logic_block_id, ret);
             del_block(logic_block_id, C_CONFUSE_BLOCK);
             ret = TFS_SUCCESS;
           }

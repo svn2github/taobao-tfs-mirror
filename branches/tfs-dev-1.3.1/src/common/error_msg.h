@@ -85,7 +85,7 @@ namespace tfs
     const int32_t EXIT_META_OFFSET_ERROR = -8027; // require offset is out of index size
     const int32_t EXIT_BUCKET_CONFIGURE_ERROR = -8028; // bucket size is conflict with before
     const int32_t EXIT_INDEX_UNEXPECT_EXIST_ERROR = -8029; // index already exist when create index
-    const int32_t EXIT_INDEX_EMPTY_ERROR = -8030; // index is empty , but index is created
+    const int32_t EXIT_INDEX_CORRUPT_ERROR = -8030; // index is corrupted, and index is created
     const int32_t EXIT_BLOCK_DS_VERSION_ERROR = -8031; // ds version error
     const int32_t EXIT_BLOCK_NS_VERSION_ERROR = -8332; // ns version error
     const int32_t EXIT_PHYSIC_BLOCK_OFFSET_ERROR = -8033; // offset is out of physical block size
