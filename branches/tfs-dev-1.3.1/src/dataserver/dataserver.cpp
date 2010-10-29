@@ -220,7 +220,6 @@ namespace tfs
     int DataServer::start()
     {
       packet_streamer_.set_packet_factory(&msg_factory_);
-      tran_sport_.start();
       CLIENT_POOL.init_with_transport(&tran_sport_);
 
       data_service_.init(server_index_);
@@ -256,6 +255,7 @@ namespace tfs
         return TFS_ERROR;
       }
 
+      tran_sport_.start();
       TBSYS_LOG(INFO, "========== DataServer Start Run ========== PID: %d, Listen Port: %d %d", getpid(), server_port - 1,
           server_port);
 
