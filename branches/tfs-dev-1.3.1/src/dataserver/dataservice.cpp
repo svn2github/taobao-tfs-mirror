@@ -11,13 +11,13 @@
  * Authors:
  *   duolong <duolong@taobao.com>
  *      - initial release
- *   qushan<qushan@taobao.com> 
+ *   qushan<qushan@taobao.com>
  *      - modify 2009-03-27
  *
  */
 #include "dataservice.h"
 #include "common/func.h"
-#include <Memory.hpp> 
+#include <Memory.hpp>
 
 namespace tfs
 {
@@ -776,7 +776,7 @@ namespace tfs
       }
 
       // if master ds, write data to other slave ds
-      // == Write_Master_Server is master    
+      // == Write_Master_Server is master
       if (Master_Server_Role == write_info.is_server_)
       {
         message->set_server(Slave_Server_Role);
@@ -906,8 +906,8 @@ namespace tfs
           if (TFS_SUCCESS == ret_code)
           {
             message->reply_message(new StatusMessage(STATUS_MESSAGE_OK));
-            TBSYS_LOG(INFO, "write successful. blockid: %u, fileid: %" PRI64_PREFIX "u\n", close_file_info.block_id_,
-                close_file_info.file_id_);
+            TBSYS_LOG(INFO, "master write successful. blockid: %u, fileid: %" PRI64_PREFIX "u, peerip: %s\n",
+                close_file_info.block_id_, close_file_info.file_id_, tbsys::CNetUtil::addrToString(peer_id).c_str());
           }
           else
           {
@@ -943,7 +943,7 @@ namespace tfs
       int32_t read_offset = message->get_offset();
       uint64_t peer_id = message->get_connection()->getPeerId();
 
-      TBSYS_LOG(DEBUG, ", blockid: %u, fileid: %" PRI64_PREFIX "u, read len: %d, read offset: %d, resp: %p", block_id,
+      TBSYS_LOG(DEBUG, "blockid: %u, fileid: %" PRI64_PREFIX "u, read len: %d, read offset: %d, resp: %p", block_id,
           file_id, read_len, read_offset, resp_rd_v2_msg);
       //add FileInfo size if the first fragment
       int32_t real_read_len = 0;
@@ -1005,6 +1005,8 @@ namespace tfs
 
       do_stat(peer_id, visit_file_size, real_read_len, read_offset, AccessStat::READ_BYTES);
 
+      TBSYS_LOG(DEBUG, "blockid: %u, fileid: %" PRI64_PREFIX "u, read len: %d, peer ip: %s",
+          block_id, file_id, real_read_len, tbsys::CNetUtil::addrToString(peer_id).c_str());
       return TFS_SUCCESS;
     }
 
@@ -1073,6 +1075,8 @@ namespace tfs
       tbsys::gDeleteA(tmp_data_buffer);
 
       do_stat(peer_id, visit_file_size, real_read_len, read_offset, AccessStat::READ_BYTES);
+      TBSYS_LOG(DEBUG, "blockid: %u, fileid: %" PRI64_PREFIX "u, read len: %d, peer ip: %s",
+          block_id, file_id, real_read_len, tbsys::CNetUtil::addrToString(peer_id).c_str());
       return TFS_SUCCESS;
     }
 
@@ -1127,7 +1131,8 @@ namespace tfs
       uint64_t file_id = message->get_file_id();
       int32_t mode = message->get_mode();
 
-      TBSYS_LOG(DEBUG, "read file info, blockid: %u, fileid: %" PRI64_PREFIX "u, mode: %d", block_id, file_id, mode);
+      TBSYS_LOG(DEBUG, "read file info, blockid: %u, fileid: %" PRI64_PREFIX "u, mode: %d",
+          block_id, file_id, mode);
       FileInfo finfo;
       int ret = data_management_.read_file_info(block_id, file_id, mode, finfo);
       if (TFS_SUCCESS != ret)
@@ -1198,6 +1203,7 @@ namespace tfs
       uint64_t file_id = message->get_file_id();
       int32_t option_flag = message->get_option_flag();
       int32_t action = message->get_unlink_type();
+      uint64_t peer_id = message->get_connection()->getPeerId();
       //is master
       bool is_master = false;
       if ((message->get_server() & 1) == 0)
@@ -1243,8 +1249,8 @@ namespace tfs
           sync_mirror_->write_sync_log(OPLOG_REMOVE, block_id, file_id, action);
         }
 
-        TBSYS_LOG(INFO, "%s unlinkfile successful. blockid: %d, fileid: %" PRI64_PREFIX "u, action: %d\n",
-            is_master ? "master" : "slave", block_id, file_id, action);
+        TBSYS_LOG(INFO, "%s unlinkfile successful. blockid: %d, fileid: %" PRI64_PREFIX "u, action: %d, peer ip: %s\n",
+            is_master ? "master" : "slave", block_id, file_id, action, tbsys::CNetUtil::addrToString(peer_id).c_str());
       }
 
       if (is_master && message->get_lease_id())
