@@ -11,7 +11,7 @@
  * Authors:
  *   duolong <duolong@taobao.com>
  *      - initial release
- *   qushan<qushan@taobao.com> 
+ *   qushan<qushan@taobao.com>
  *      - modify 2009-03-27
  *
  */
@@ -106,17 +106,16 @@ namespace tfs
         typedef std::map<uint32_t, PhysicalBlock*> PhysicalBlockMap;
         typedef PhysicalBlockMap::iterator PhysicalBlockMapIter;
 
-        LogicBlockMap logic_blocks_;
-        LogicBlockMap compact_logic_blocks_;
-        PhysicalBlockMap physcial_blocks_;
+        LogicBlockMap logic_blocks_; // logic blocks
+        LogicBlockMap compact_logic_blocks_; // compact logic blocks
+        PhysicalBlockMap physcial_blocks_;   // physcial blocks
 
-        std::string base_path_;
-        int bit_map_size_;
-        BitMap* normal_bit_map_;
-        BitMap* error_bit_map_;
-        SuperBlock super_block_;
-        SuperBlockImpl* super_block_impl_;
-        common::RWLock rw_lock_;
+        int bit_map_size_;      // bitmap size
+        BitMap* normal_bit_map_; // normal bitmap
+        BitMap* error_bit_map_;  // error bitmap
+        SuperBlock super_block_; // super block
+        SuperBlockImpl* super_block_impl_; // super block implementation handle
+        common::RWLock rw_lock_;           // read-write lock
     };
   }
 }

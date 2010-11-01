@@ -11,9 +11,9 @@
  * Authors:
  *   duolong <duolong@taobao.com>
  *      - initial release
- *   qushan<qushan@taobao.com> 
+ *   qushan<qushan@taobao.com>
  *      - modify 2009-03-27
- *   zongdai <zongdai@taobao.com> 
+ *   zongdai <zongdai@taobao.com>
  *      - modify 2010-04-23
  *
  */
@@ -49,6 +49,7 @@ namespace tfs
     {
       int64_t time_start = tbsys::CTimeUtil::getTime();
       TBSYS_LOG(INFO, "block file load blocks begin. start time: %" PRI64_PREFIX "d\n", time_start);
+      // just start up
       int ret = BlockFileManager::get_instance()->bootstrap(fs_param);
       if (TFS_SUCCESS != ret)
       {
@@ -127,7 +128,7 @@ namespace tfs
         }
       }
 
-      //find datafile in memory
+      // write data to DataFile first
       data_file_mutex_.lock();
       DataFileMapIter bit = data_file_map_.find(write_info.file_number_);
       DataFile* datafile = NULL;
@@ -135,9 +136,9 @@ namespace tfs
       {
         datafile = bit->second;
       }
-      else
+      else                      // not fount
       {
-        //control datafile size
+        // control datafile size
         if (data_file_map_.size() >= static_cast<uint32_t> (SYSPARAM_DATASERVER.max_datafile_nums_))
         {
           TBSYS_LOG(ERROR, "blockid: %u, datafile nums: %u is large than default.", write_info.block_id_,
@@ -168,6 +169,7 @@ namespace tfs
             ERROR,
             "Datafile write error. blockid: %u, fileid: %" PRI64_PREFIX "u, filenumber: %" PRI64_PREFIX "u, req writelen: %d, actual writelen: %d",
             write_info.block_id_, write_info.file_id_, write_info.file_number_, write_info.length_, write_len);
+        // clean dirty data
         erase_data_file(write_info.file_number_);
         return EXIT_DATA_FILE_ERROR;
       }
@@ -247,7 +249,7 @@ namespace tfs
       }
 
       // success, gc datafile
-      // close tmp file, release opened file handle 
+      // close tmp file, release opened file handle
       // datafile , bit->second point to same thing, once delete
       // bit->second, datafile will be obseleted immediately.
       datafile->sub_ref();
@@ -337,6 +339,7 @@ namespace tfs
         return ret;
       }
 
+      // if mode is 0 and file is not in nomal status, return error.
       if (0 == finfo.id_ || finfo.id_ != file_id || ((finfo.flag_ & (FI_DELETED | FI_INVALID | FI_CONCEAL)) != 0 && 0
           == mode))
       {
@@ -346,7 +349,7 @@ namespace tfs
         return EXIT_FILE_STATUS_ERROR;
       }
 
-      //minus the header(FileInfo)
+      // minus the header(FileInfo)
       finfo.size_ -= sizeof(FileInfo);
       return TFS_SUCCESS;
     }
@@ -452,7 +455,7 @@ namespace tfs
     int DataManagement::query_bit_map(const int32_t query_type, char** tmp_data_buffer, int32_t& bit_map_len,
         int32_t& set_count)
     {
-      //the caller should release the memory
+      // the caller should release the tmp_data_buffer memory
       if (NORMAL_BIT_MAP == query_type)
       {
         BlockFileManager::get_instance()->query_bit_map(tmp_data_buffer, bit_map_len, set_count, C_ALLOCATE_BLOCK);
@@ -474,7 +477,7 @@ namespace tfs
       BlockFileManager::get_instance()->get_logic_block_ids(block_ids);
       BlockFileManager::get_instance()->get_all_logic_block(logic_blocks);
 
-      if (query_type & LB_PAIRS)
+      if (query_type & LB_PAIRS) // logick block ==> physic block list
       {
         std::list<PhysicalBlock*>* phy_blocks;
         std::list<PhysicalBlock*>::iterator pit;
@@ -498,7 +501,7 @@ namespace tfs
         }
       }
 
-      if (query_type & LB_INFOS)
+      if (query_type & LB_INFOS) // logic block info
       {
         for (lit = logic_blocks.begin(); lit != logic_blocks.end(); ++lit)
         {
@@ -588,7 +591,7 @@ namespace tfs
     int DataManagement::new_single_block(const uint32_t block_id)
     {
       int ret = TFS_SUCCESS;
-      //delete if exist
+      // delete if exist
       LogicBlock* logic_block = BlockFileManager::get_instance()->get_logic_block(block_id);
       if (NULL != logic_block)
       {
@@ -678,7 +681,7 @@ namespace tfs
 
     int DataManagement::add_new_expire_block(const VUINT32* expire_block_ids, const VUINT32* remove_block_ids, const VUINT32* new_block_ids)
     {
-      //delete expire block
+      // delete expire block
       if (NULL != expire_block_ids)
       {
         TBSYS_LOG(INFO, "expire block list size: %u\n", static_cast<uint32_t>(expire_block_ids->size()));
@@ -689,7 +692,7 @@ namespace tfs
         }
       }
 
-      //delete
+      // delete remove block
       if (NULL != remove_block_ids)
       {
         TBSYS_LOG(INFO, "remove block list size: %u\n", static_cast<uint32_t>(remove_block_ids->size()));
@@ -700,7 +703,7 @@ namespace tfs
         }
       }
 
-      //new 
+      // new
       if (NULL != new_block_ids)
       {
         TBSYS_LOG(INFO, "new block list size: %u\n", static_cast<uint32_t>(new_block_ids->size()));
@@ -715,7 +718,7 @@ namespace tfs
       return EXIT_SUCCESS;
     }
 
-    //gc
+    // gc expired and no referenced datafile
     int DataManagement::gc_data_file()
     {
       int32_t current_time = time(NULL);
@@ -727,6 +730,7 @@ namespace tfs
         int32_t old_data_file_size = data_file_map_.size();
         for (DataFileMapIter it = data_file_map_.begin(); it != data_file_map_.end();)
         {
+          // no reference and expire
           if (it->second && it->second->get_ref() <= 0 && it->second->get_last_update() < diff_time)
           {
             tbsys::gDelete(it->second);
@@ -748,6 +752,7 @@ namespace tfs
       return TFS_SUCCESS;
     }
 
+    // remove all datafile
     int DataManagement::remove_data_file()
     {
       data_file_mutex_.lock();

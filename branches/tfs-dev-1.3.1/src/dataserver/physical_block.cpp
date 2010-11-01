@@ -24,19 +24,26 @@ namespace tfs
   {
 
     using namespace common;
-    //|Head|Data|
+    // physical block initialization, inner format:
+    // --------------------------------------------------------------------------------------------
+    // |       block meta info prefix       |           file data(current stored data)            |
+    // --------------------------------------------------------------------------------------------
+    // | BlockPrefix(BLOCK_RESERVER_LENGTH) | FileInfo+data | FileInfo+data | ... | FileInfo+data |
+    // --------------------------------------------------------------------------------------------
     PhysicalBlock::PhysicalBlock(const uint32_t physical_block_id, const std::string& mount_path,
         const int32_t block_length, const BlockType block_type) :
       physical_block_id_(physical_block_id)
     {
       int32_t head_len = sizeof(BlockPrefix);
+      // assure not out of BLOCK_RESERVER_LENGTH range
       assert(head_len <= BLOCK_RESERVER_LENGTH);
 
       data_start_ = BLOCK_RESERVER_LENGTH;
-      total_data_len_ = block_length - data_start_; //data area
+      total_data_len_ = block_length - data_start_; // data area
       assert(total_data_len_ > 0);
 
       std::stringstream tmp_stream;
+      // get main or extend block file path
       if (C_MAIN_BLOCK == block_type)
       {
         tmp_stream << mount_path << MAINBLOCK_DIR_PREFIX << physical_block_id;
@@ -66,6 +73,7 @@ namespace tfs
       {
         return EXIT_PHYSIC_BLOCK_OFFSET_ERROR;
       }
+      // converse reletive data offset to absolute offset in block
       return file_op_->pread_file(buf, nbytes, data_start_ + offset);
     }
 

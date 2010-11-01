@@ -60,7 +60,7 @@ namespace tfs
 
         int open_write_file(uint64_t& inner_file_id);
         int check_block_version(int32_t& remote_version, common::UpdateBlockType &repair);
-        int close_write_file(const uint64_t inner_file_id, DataFile* datafile, const uint32_t crc); //offset = 0
+        int close_write_file(const uint64_t inner_file_id, DataFile* datafile, const uint32_t crc);
 
         int read_file(const uint64_t inner_file_id, char* buf, int32_t& nbytes, const int32_t offset);
         int read_file_info(const uint64_t inner_file_id, common::FileInfo& finfo);
@@ -186,22 +186,23 @@ namespace tfs
         static const int32_t MAX_EXTEND_TIMES = 30;
 
       protected:
-        uint32_t logic_block_id_;
+        uint32_t logic_block_id_; // logic block id
 
         int32_t avail_data_size_; // the data space of this logic block
-        int32_t visit_count_;
-        time_t last_update_;
-        time_t last_abnorm_time_;
-        BlockStatus block_health_status;
+        int32_t visit_count_;     // accumlating visit count
+        time_t last_update_;      // last update time
+        time_t last_abnorm_time_; // last abnormal time
+        BlockStatus block_health_status; // block status info
 
-        DataHandle* data_handle_;
-        IndexHandle* index_handle_;
-        std::list<PhysicalBlock*> physical_block_list_; // the physical block of this logic block
-        common::RWLock rw_lock_;
+        DataHandle* data_handle_;   // data operation handle
+        IndexHandle* index_handle_; // associate index handle
+        std::list<PhysicalBlock*> physical_block_list_; // the physical block list of this logic block
+        common::RWLock rw_lock_;   // read-write lock
 
         friend class FileIterator;
     };
 
+    // simulated iterator of logic block file
     class FileIterator
     {
       public:
@@ -217,14 +218,14 @@ namespace tfs
         int fill_buffer();
 
       private:
-        char* buf_;
-        int32_t data_len_, data_offset_;
-        int32_t read_offset_, buf_len_;
-        common::FileInfo cur_fileinfo_;
-        LogicBlock* logic_block_;
-        bool is_big_file_;
-        common::RawMetaVec meta_infos_;
-        common::RawMetaVecIter meta_it_;
+        char* buf_;             // inner buffer
+        int32_t data_len_, data_offset_; // data length, offset
+        int32_t read_offset_, buf_len_;  // read offset, buffer length
+        common::FileInfo cur_fileinfo_;  // current file meta info
+        LogicBlock* logic_block_;        // associate logic block
+        bool is_big_file_;               // big file or not
+        common::RawMetaVec meta_infos_;  // meta info vector
+        common::RawMetaVecIter meta_it_; // meta info vector iterator
     };
 
   }

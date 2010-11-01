@@ -20,7 +20,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <string>
-#include "common/interval.h" 
+#include "common/interval.h"
 
 namespace tfs
 {
@@ -64,9 +64,9 @@ namespace tfs
         static const mode_t OPEN_MODE = 0644;
 
       protected:
-        int fd_;
-        int open_flags_;
-        char* file_name_;
+        int fd_;                // file handle
+        int open_flags_;        // open flags
+        char* file_name_;       // file path name
     };
   }
 }

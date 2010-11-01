@@ -29,31 +29,31 @@ namespace tfs
   {
     struct SuperBlock
     {
-        char mount_tag_[MAX_DEV_TAG_LEN];
-        int32_t time_;
-        char mount_point_[common::MAX_DEV_NAME_LEN]; //name of mount point
-        int64_t mount_point_use_space_; //the max space of the mount point
-        BaseFsType base_fs_type_; //ext4, ext3...
+        char mount_tag_[MAX_DEV_TAG_LEN]; // magic tag
+        int32_t time_;                    // mount time
+        char mount_point_[common::MAX_DEV_NAME_LEN]; // name of mount point
+        int64_t mount_point_use_space_; // the max space of the mount point
+        BaseFsType base_fs_type_; // ext4, ext3...
 
-        int32_t superblock_reserve_offset_; //super block start offset. not used
-        int32_t bitmap_start_offset_; //bitmap start offset
+        int32_t superblock_reserve_offset_; // super block start offset. not used
+        int32_t bitmap_start_offset_; // bitmap start offset
 
-        int32_t avg_segment_size_; //avg file size in block file
+        int32_t avg_segment_size_; // avg file size in block file
 
-        float block_type_ratio_; //block type ration
-        int32_t main_block_count_; //total count of main block
-        int32_t main_block_size_; //per size of main block
+        float block_type_ratio_; // block type ration
+        int32_t main_block_count_; // total count of main block
+        int32_t main_block_size_; // per size of main block
 
-        int32_t extend_block_count_; //total count of ext block
-        int32_t extend_block_size_; //per size of ext block
+        int32_t extend_block_count_; // total count of ext block
+        int32_t extend_block_size_; // per size of ext block
 
-        int32_t used_block_count_; //used main block count
-        int32_t used_extend_block_count_; //used ext block count
+        int32_t used_block_count_; // used main block count
+        int32_t used_extend_block_count_; // used ext block count
 
-        float hash_slot_ratio_;
-        int32_t hash_slot_size_;
-        MMapOption mmap_option_;
-        int32_t version_; //version
+        float hash_slot_ratio_; // hash slot count / file count ratio
+        int32_t hash_slot_size_; // number of hash bucket slot
+        MMapOption mmap_option_; // mmap option
+        int32_t version_; // version
 
         SuperBlock()
         {
@@ -66,7 +66,7 @@ namespace tfs
           superblock_reserve_offset_ = 0;
           bitmap_start_offset_ = 0;
           avg_segment_size_ = 0;
-          block_type_ratio_ = 0; //block type ration
+          block_type_ratio_ = 0;
           main_block_count_ = 0;
           main_block_size_ = 0;
           extend_block_count_ = 0;

@@ -24,10 +24,17 @@ namespace tfs
   {
     using namespace common;
 
+    // super block file implementation, inner format:
+    // ------------------------------------------------------------------------------------------
+    // |    not used     |     double superblock   |not used |  double normal  |  double error  |
+    // |                 |                         |         |   bitmap        |  bitmap        |
+    // ------------------------------------------------------------------------------------------
+    // | reserver offset | SuperBlock | SuperBlock | int32_t | BitMap | BitMap | BitMap | BitMap|
+    // ------------------------------------------------------------------------------------------
     SuperBlockImpl::SuperBlockImpl(const std::string& mount_name, const int32_t super_start_offset, const bool flag) :
       super_reserve_offset_(super_start_offset)
     {
-      //dir
+      // dir
       if (true == flag)
       {
         super_block_file_ = mount_name + SUPERBLOCK_NAME;
@@ -36,10 +43,10 @@ namespace tfs
       {
         super_block_file_ = mount_name;
       }
-      //left sizeof(int)
-      bitmap_start_offset_ = super_reserve_offset_ + 2 * sizeof(SuperBlock) + sizeof(int);
-      //superblock file is already exist
+      // bitmap start offset
+      bitmap_start_offset_ = super_reserve_offset_ + 2 * sizeof(SuperBlock) + sizeof(int32_t);
       file_op_ = new FileOperation(super_block_file_, O_RDWR | O_SYNC);
+      // superblock file is already exist, should not happen
       if (NULL == file_op_)
       {
         assert(false);
@@ -74,6 +81,7 @@ namespace tfs
 
     bool SuperBlockImpl::check_status(const char* block_tag, const SuperBlock& super_block) const
     {
+      // check magic tag
       if (memcmp(block_tag, super_block.mount_tag_, strlen(block_tag) + 1) != 0)
       {
         return false;

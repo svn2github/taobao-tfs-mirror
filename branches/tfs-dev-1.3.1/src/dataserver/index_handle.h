@@ -33,12 +33,12 @@ namespace tfs
           memset(this, 0, sizeof(IndexHeader));
         }
 
-        common::BlockInfo block_info_;
-        DirtyFlag flag_;
-        int32_t bucket_size_;
-        int32_t data_file_offset_;
+        common::BlockInfo block_info_; // meta block info
+        DirtyFlag flag_;               // dirty status flag
+        int32_t bucket_size_;   // hash bucket size
+        int32_t data_file_offset_; // offset to write next data in block(total data size of block)
         int32_t index_file_size_; // offset after: index_header + all buckets
-        int32_t free_head_offset_;
+        int32_t free_head_offset_; // free node list, for reuse
 
       private:
         DISALLOW_COPY_AND_ASSIGN(IndexHeader);
@@ -70,7 +70,7 @@ namespace tfs
 
         // find the next available key greater than key
         int find_avail_key(uint64_t& key);
-        // merge the version info from ns and local 
+        // merge the version info from ns and local
         int check_block_version(int32_t& remote_version);
         int reset_block_version();
 
