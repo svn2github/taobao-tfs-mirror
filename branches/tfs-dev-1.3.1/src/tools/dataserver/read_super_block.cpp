@@ -53,7 +53,7 @@ int main(int argc,char* argv[])
 
   if (NULL == conf_file || 0 == server_index.size() || help_info)
   {
-    fprintf(stderr, "\nUsage: %s -f conf_file -h -v\n", argv[0]);
+    fprintf(stderr, "\nUsage: %s -f conf_file -i index -h -v\n", argv[0]);
     fprintf(stderr, "  -f configure file\n");
     fprintf(stderr, "  -i server_index  dataserver index number\n");
     fprintf(stderr, "  -v show version info\n");

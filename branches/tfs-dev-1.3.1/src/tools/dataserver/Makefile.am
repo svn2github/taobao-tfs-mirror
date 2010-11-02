@@ -1,22 +1,22 @@
 AM_CPPFLAGS=-I$(top_srcdir)/src\
-	    -I$(TBLIB_ROOT)/include/tbsys\
-	    -I$(TBLIB_ROOT)/include/tbnet\
-             $(READLINE_INCLUDE)
+            -I$(TBLIB_ROOT)/include/tbsys\
+            -I$(TBLIB_ROOT)/include/tbnet\
+            $(READLINE_INCLUDE)
 
 AM_LDFLAGS=-lrt -lpthread -ldl $(READLINE_LIB)
 
-bin_PROGRAMS = clear_file_system \
-	       ds_client \
-	       format_file_system
+bin_PROGRAMS = clear_file_system\
+               ds_client\
+               format_file_system\
+               read_super_block
 
-noinst_PROGRAMS = convert_name \
-		  reloadconfig \
-		  read_index_tool \
-		  reverse_name \
-		  modify_super_block \
-		  replblk \
-		  tfsping \
-		  read_super_block
+noinst_PROGRAMS = convert_name\
+                  reloadconfig\
+                  read_index_tool\
+                  reverse_name\
+                  modify_super_block\
+                  replblk\
+                  tfsping
 
 LDADD = $(top_builddir)/src/client/.libs/libtfsclient.a\
 	$(top_builddir)/src/message/libtfsmessage.a\
