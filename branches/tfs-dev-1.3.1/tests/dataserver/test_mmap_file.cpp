@@ -21,7 +21,7 @@ using namespace tfs::dataserver;
 const char* MMAP_FILE_NAME = "file_mmap.test";
 
 class MMapFileTest: public ::testing::Test
-{  
+{
   protected:
     static void SetUpTestCase()
     {
@@ -159,9 +159,8 @@ TEST_F(MMapFileTest, testMapFileData)
   {
     buf[j] = 'a' + (j % 26);
   }
-  buf[j] = 0;
 
-  write(fd, buf, strlen(buf));
+  write(fd, buf, file_size);
 
   if (mmap_file->get_data() == NULL)
   {
@@ -208,10 +207,8 @@ TEST_F(MMapFileTest, testRemapFileData)
   {
     buf[j] = 'a' + (j % 26);
   }
-  buf[j] = 0;
 
-  write(fd ,buf , strlen(buf));
-
+  write(fd ,buf , file_size);
   if (mmap_file->get_data() == NULL)
   {
     ADD_FAILURE();
@@ -283,13 +280,13 @@ TEST_F(MMapFileTest, testMultiFile)
   char test_file_name[100];
   char* buf;
 
-  MMapFile* mmap_file[total_file_num]; 
+  MMapFile* mmap_file[total_file_num];
 
   mkdir("./data", 0775);
   for (int32_t i = 1; i <= total_file_num; i++)
   {
     sprintf(test_file_name, "./data/test_mmap_data_%d", i);
-    fd = open(test_file_name, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR); 
+    fd = open(test_file_name, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
     EXPECT_LE(0, fd);
 
     mmap_file[i] = new MMapFile(mmap_option, fd);
@@ -306,9 +303,8 @@ TEST_F(MMapFileTest, testMultiFile)
     {
       buf[j] = 'a' + (j % 26);
     }
-    buf[j] = 0;
 
-    write(fd, buf, strlen(buf));
+    write(fd, buf, file_size);
 
     close(fd);
     fd = 0;

@@ -72,6 +72,44 @@ int no_operation();
 STR_INT_MAP cmd_map;
 uint64_t ds_ip = 0;
 
+
+#ifdef _WITH_READ_LINE
+#include "readline/readline.h"
+#include "readline/history.h"
+
+char* match_cmd(const char* text, int state)
+{
+  static STR_INT_MAP_ITER it;
+  static int len = 0;
+  const char* cmd = NULL;
+
+  if (!state)
+  {
+    it = cmd_map.begin();
+    len = strlen(text);
+  }
+
+  while(it != cmd_map.end())
+  {
+    cmd = it->first.c_str();
+    it++;
+    if (strncmp(cmd, text, len) == 0)
+    {
+      int32_t cmd_len = strlen(cmd) + 1;
+      // memory will be freed by readline
+      return strncpy(new char[cmd_len], cmd, cmd_len);
+    }
+  }
+  return NULL;
+}
+
+char** dscmd_completion (const char* text, int start, int end)
+{
+  // at the start of line, then it's a cmd completion
+  return (0 == start) ? rl_completion_matches(text, match_cmd) : (char**)NULL;
+}
+#endif
+
 int main(int argc, char* argv[])
 {
   int i = 0;
@@ -167,8 +205,8 @@ void init()
   cmd_map["list_bitmap"] = CMD_LIST_BITMAP;
 }
 
-//no return.
-//show the prompt of command.
+// no return.
+// show the prompt of command.
 void usage(const char* name)
 {
   printf("Usage: %s -d ip:port \n", name);
@@ -203,6 +241,12 @@ int parse_cmd(char* key, VSTRING & param)
   {
     return cmd;
   }
+
+#ifdef _WITH_READ_LINE
+  // not blank line, add to history
+  add_history(key);
+#endif
+
   token = strchr(key, ' ');
   if (token != NULL)
   {
@@ -519,15 +563,31 @@ int switch_cmd(const int cmd, VSTRING & param)
 int main_loop()
 {
   VSTRING param;
-  char buffer[CMD_MAX_LEN];
+#ifdef _WITH_READ_LINE
+  char* cmd_line = NULL;
+  rl_attempted_completion_function = dscmd_completion;
+#else
+  char cmd_line[CMD_MAX_LEN];
+#endif
+
   while (1)
   {
+#ifdef _WITH_READ_LINE
+    cmd_line = readline("DataServer> ");
+    if (!cmd_line)
+#else
     fprintf(stderr, "DataServer> ");
-    if (fgets(buffer, CMD_MAX_LEN, stdin) == NULL)
+    if (NULL == fgets(cmd_line, CMD_MAX_LEN, stdin))
+#endif
     {
       continue;
     }
-    int cmd = parse_cmd(buffer, param);
+
+    int cmd = parse_cmd(cmd_line, param);
+#ifdef _WITH_READ_LINE
+    delete cmd_line;
+    cmd_line = NULL;
+#endif
     if (cmd == CMD_QUIT)
     {
       break;

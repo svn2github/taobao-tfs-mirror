@@ -1,8 +1,9 @@
 AM_CPPFLAGS=-I$(top_srcdir)/src\
 	    -I$(TBLIB_ROOT)/include/tbsys\
-	    -I$(TBLIB_ROOT)/include/tbnet
+	    -I$(TBLIB_ROOT)/include/tbnet\
+             $(READLINE_INCLUDE)
 
-AM_LDFLAGS=-lrt -lpthread -ldl
+AM_LDFLAGS=-lrt -lpthread -ldl $(READLINE_LIB)
 
 bin_PROGRAMS = clear_file_system \
 	       ds_client \
@@ -45,4 +46,3 @@ reverse_name_SOURCES = reverse_name.cpp
 format_file_system_SOURCES = format_file_system.cpp
 
 read_index_tool_SOURCES = read_index_tool.cpp
-

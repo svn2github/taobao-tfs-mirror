@@ -1,8 +1,9 @@
 AM_CPPFLAGS=-I$(top_srcdir)/src\
 	    -I$(TBLIB_ROOT)/include/tbsys\
-	    -I$(TBLIB_ROOT)/include/tbnet
+	    -I$(TBLIB_ROOT)/include/tbnet\
+            $(READLINE_INCLUDE)
 
-AM_LDFLAGS=-lrt -lpthread -ldl
+AM_LDFLAGS=-lrt -lpthread -ldl $(READLINE_LIB)
 
 bin_PROGRAMS = showsyncoplog tfstool showssm
 
@@ -18,4 +19,3 @@ showsyncoplog_SOURCES = showsyncoplog.cpp
 tfstool_SOURCES =  tfstool.cpp
 
 showssm_SOURCES =  showssm.cpp
-

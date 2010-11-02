@@ -29,17 +29,29 @@ AC_CHECK_LIB([rt], [main])
 
 AC_ARG_WITH([tblib-root],
            AS_HELP_STRING([--with-tblib-root],
-           [tbnet installation path]),
+           [tblib installation path]),
            TBLIB_ROOT=${withval})
-if  test -z "${TBLIB_ROOT}/include"; then
+if  test -z "${TBLIB_ROOT}"; then
    dnl tbnet include path supplied
    TBLIB_ROOT="/usr/local"
 fi
-if ! test -d "${TBLIB_ROOT}/include"; then
-	AC_MSG_ERROR([tblib_root is not work])
-	exit 1;
+if ! test -d "${TBLIB_ROOT}/include" -a -d "${TBLIB_ROOT}/lib"; then
+        AC_MSG_ERROR([tblib_root is not work! expect tblib_root/include and tblib_root/lib directory])
+        exit 1;
 fi
 AC_SUBST([TBLIB_ROOT])
+
+AC_ARG_ENABLE([readline],
+           AS_HELP_STRING([--disable-readline],
+           [disable tfstool autocomplete & history feature (default enable,need gnu readline and ncurses surpport)]),
+           [enable_readline=${enableval}],
+           [enable_readline="yes"])
+if test "${enable_readline}" = "yes"; then
+  READLINE_INCLUDE="-D_WITH_READ_LINE"
+  READLINE_LIB="-lreadline -ltermcap"
+fi
+AC_SUBST([READLINE_INCLUDE])
+AC_SUBST([READLINE_LIB])
 
 AC_CACHE_CHECK(if fallocate is implemented, ac_cv_func_fallocate,
   AC_TRY_RUN([
@@ -70,7 +82,7 @@ fi
 
 if test "$ac_cv_set_fallocate" = "no" ; then
   AC_MSG_ERROR([fallocate does not work.])
-	exit 1;
+        exit 1;
 fi
 
 AC_ARG_WITH([release],
