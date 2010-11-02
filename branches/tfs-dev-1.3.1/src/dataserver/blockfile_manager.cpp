@@ -149,10 +149,7 @@ namespace tfs
         assert(false);
       }
 
-      // 4. set normal bitmap: have not serialize to disk
-      normal_bit_map_->set(physical_block_id);
-
-      // 5. create physical block
+      // 4. create physical block
       PhysicalBlock* t_physical_block = new PhysicalBlock(physical_block_id, super_block_.mount_point_,
           super_block_.main_block_size_, C_MAIN_BLOCK);
       t_physical_block->set_block_prefix(logic_block_id, 0, 0);
@@ -165,34 +162,39 @@ namespace tfs
         return ret;
       }
 
-      // 6. create logic block
+      // 5. create logic block
       LogicBlock* t_logic_block = new LogicBlock(logic_block_id, physical_block_id, super_block_.mount_point_);
       t_logic_block->add_physic_block(t_physical_block);
 
-      TBSYS_LOG(DEBUG,
+      TBSYS_LOG(INFO,
           "new block. logic blockid: %u, physical blockid: %u, physci prev blockid: %u, physci next blockid: %u",
           logic_block_id, physical_block_id, 0, 0);
 
+      bool block_count_modify_flag = false;
       do
       {
-        // 7. init logic block (create index handle file, etc stuff)
-        ret = t_logic_block->init_block_file(super_block_.hash_slot_size_, super_block_.mmap_option_, block_type);
+        // 6. set normal bitmap: have not serialize to disk
+        normal_bit_map_->set(physical_block_id);
+
+        // 7. write normal bitmap
+        ret = super_block_impl_->write_bit_map(normal_bit_map_, error_bit_map_);
         if (TFS_SUCCESS != ret)
           break;
 
         // 8. update and write super block info
         ++super_block_.used_block_count_;
+        block_count_modify_flag = true;
         ret = super_block_impl_->write_super_blk(super_block_);
         if (TFS_SUCCESS != ret)
           break;
 
-        // 9. write normal bitmap
-        ret = super_block_impl_->write_bit_map(normal_bit_map_, error_bit_map_);
+        // 9. sync to disk
+        ret = super_block_impl_->flush_file();
         if (TFS_SUCCESS != ret)
           break;
 
-        // 10. sync to disk
-        ret = super_block_impl_->flush_file();
+        // 10. init logic block (create index handle file, etc stuff)
+        ret = t_logic_block->init_block_file(super_block_.hash_slot_size_, super_block_.mmap_option_, block_type);
         if (TFS_SUCCESS != ret)
           break;
 
@@ -210,6 +212,10 @@ namespace tfs
       if (ret)
       {
         TBSYS_LOG(ERROR, "new block fail. logic blockid: %u. ret: %d", logic_block_id, ret);
+
+        rollback_superblock(physical_block_id, block_count_modify_flag);
+        t_logic_block->delete_block_file();
+
         tbsys::gDelete(t_logic_block);
         tbsys::gDelete(t_physical_block);
       }
@@ -361,46 +367,48 @@ namespace tfs
         assert(false);
       }
 
-      // 5. bitmap set
-      normal_bit_map_->set(ext_physical_block_id);
-
-      // 6. create new physic block
+      // 5. create new physic block
       PhysicalBlock* tmp_physical_block = new PhysicalBlock(ext_physical_block_id, super_block_.mount_point_,
                                                             super_block_.extend_block_size_, C_EXT_BLOCK);
 
-      tmp_physical_block->set_block_prefix(logic_block_id, physical_block_id, 0);
       TBSYS_LOG(INFO, "new ext block. logic blockid: %u, prev physical blockid: %u, now physical blockid: %u",
                 logic_block_id, physical_block_id, ext_physical_block_id);
 
+      bool block_count_modify_flag = false;
       do
       {
-        // 7. write physical block info to disk
+        // 6. bitmap set
+        normal_bit_map_->set(ext_physical_block_id);
+
+        // 7. write bitmap
+        ret = super_block_impl_->write_bit_map(normal_bit_map_, error_bit_map_);
+        if (TFS_SUCCESS != ret)
+          break;
+
+        // 8. update & write superblock info
+        ++super_block_.used_extend_block_count_;
+        block_count_modify_flag = true;
+        ret = super_block_impl_->write_super_blk(super_block_);
+        if (TFS_SUCCESS != ret)
+          break;
+
+        // 9. sync to disk
+        ret = super_block_impl_->flush_file();
+        if (TFS_SUCCESS != ret)
+          break;
+
+        // 10. write physical block info to disk
+        tmp_physical_block->set_block_prefix(logic_block_id, physical_block_id, 0);
         ret = tmp_physical_block->dump_block_prefix();
         if (TFS_SUCCESS != ret)
           break;
 
-        // 8. add to extend block list
+        // 11. add to extend block list
         // get previous physcial block and record the next block
         PhysicalBlock* prev_physic_block = pmit->second;
         prev_physic_block->set_next_block(ext_physical_block_id);
         // write prev block info to disk
         ret = prev_physic_block->dump_block_prefix();
-        if (TFS_SUCCESS != ret)
-          break;
-
-        // 9. write bitmap
-        ret = super_block_impl_->write_bit_map(normal_bit_map_, error_bit_map_);
-        if (TFS_SUCCESS != ret)
-          break;
-
-        // 10. update & write superblock info
-        ++super_block_.used_extend_block_count_;
-        ret = super_block_impl_->write_super_blk(super_block_);
-        if (TFS_SUCCESS != ret)
-          break;
-
-        // 11. sync to disk
-        ret = super_block_impl_->flush_file();
         if (TFS_SUCCESS != ret)
           break;
 
@@ -413,6 +421,7 @@ namespace tfs
       if (TFS_SUCCESS != ret)   // not arrive step 12
       {
         TBSYS_LOG(ERROR, "new ext block error! logic blockid: %u. ret: %d", logic_block_id, ret);
+        rollback_superblock(ext_physical_block_id, block_count_modify_flag);
         tbsys::gDelete(tmp_physical_block);
       }
       return ret;
@@ -781,9 +790,9 @@ namespace tfs
           // record physical block id
           uint32_t logic_block_id = block_prefix.logic_blockid_;
           TBSYS_LOG(
-            DEBUG,
-            "load logic block. per block size: %u, logic block id: %u, physic prev blockid: %u, physic next blockid: %u, physical blockid: %u.",
-            super_block_.main_block_size_, logic_block_id, block_prefix.prev_physic_blockid_,
+            INFO,
+            "load logic block. logic block id: %u, physic prev blockid: %u, physic next blockid: %u, physical blockid: %u.",
+            logic_block_id, block_prefix.prev_physic_blockid_,
             block_prefix.next_physic_blockid_, pos);
 
           // 5. make sure this physical block hasn't been loaded
@@ -871,7 +880,7 @@ namespace tfs
             }
 
             TBSYS_LOG(
-              DEBUG,
+              INFO,
               "read blockprefix! ext physical blockid pos: %u. prev blockid: %u. blockprefix's physic prev blockid: %u, next physic blockid: %u, logic blockid :%u",
               ext_pos, prev_block_id, block_prefix.prev_physic_blockid_, block_prefix.next_physic_blockid_,
               block_prefix.logic_blockid_);
@@ -1267,5 +1276,28 @@ namespace tfs
       return TFS_SUCCESS;
     }
 
+    void BlockFileManager::rollback_superblock(const uint32_t physical_block_id, const bool modify_flag)
+    {
+      if (normal_bit_map_->test(physical_block_id))
+      {
+        normal_bit_map_->reset(physical_block_id);
+        int ret = super_block_impl_->write_bit_map(normal_bit_map_, error_bit_map_);
+        if (TFS_SUCCESS != ret)
+          TBSYS_LOG(ERROR, "write bit map fail. ret: %d, physical block id: %u", ret, physical_block_id);
+
+        if (modify_flag)
+        {
+          --super_block_.used_extend_block_count_;
+          ret = super_block_impl_->write_super_blk(super_block_);
+          if (TFS_SUCCESS != ret)
+            TBSYS_LOG(ERROR, "write super block fail. ret: %d", ret);
+        }
+
+        ret = super_block_impl_->flush_file();
+        if (TFS_SUCCESS != ret)
+          TBSYS_LOG(ERROR, "flush super block fail. ret: %d", ret);
+      }
+      return;
+    }
   }
 }

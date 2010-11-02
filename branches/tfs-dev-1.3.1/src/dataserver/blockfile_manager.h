@@ -97,6 +97,8 @@ namespace tfs
         void destruct_logic_blocks(const BlockType block_type);
         void destruct_physic_blocks();
 
+        void rollback_superblock(const uint32_t physical_block_id, const bool modify_flag);
+
       private:
         static const int32_t INDEXFILE_SAFE_MULT = 4;
         static const int32_t INNERFILE_MAX_MULTIPE = 30;
