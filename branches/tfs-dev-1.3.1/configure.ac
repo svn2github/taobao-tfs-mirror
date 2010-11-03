@@ -50,15 +50,15 @@ if test "${enable_readline}" = "yes"; then
     AC_CHECK_HEADERS(readline/readline.h readline/history.h,
                      [READLINE_INCLUDE="-D_WITH_READ_LINE"],
                      [AC_MSG_ERROR([readline header files not found, --disable-readline or install gnu readline library.
-                     --help for more information.]),exit 1],)
+                      --help for more information.])],)
+    AC_CHECK_LIB(termcap,main,
+                 [READLINE_LIB="${READLINE_LIB} -ltermcap"],
+                 [AC_MSG_ERROR([termcap libarary not found,--disable-readline or install libncurses library.
+                  --help for more information.])],)
     AC_CHECK_LIB(readline,main,
                  [READLINE_LIB="${READLINE_LIB} -lreadline"],
                  [AC_MSG_ERROR([readline library not found, --disable-readline or install gnu readline library.
-                 --help for more information.]),exit 1],)
-    AC_CHECK_LIB(termcap,main,
-                 [READLINE_LIB="${READLINE_LIB} -ltermcap"],
-                 [AC_MSG_ERROR([termcap libarary not found,--disable-readline or install libncurses library,
-                 --help for more information.]),exit 1],)
+                  --help for more information.])],[-ltermcap])
 fi
 AC_SUBST([READLINE_INCLUDE])
 AC_SUBST([READLINE_LIB])
