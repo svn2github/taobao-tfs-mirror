@@ -156,8 +156,8 @@ namespace tfs
       ret = t_physical_block->dump_block_prefix();
       if (ret)
       {
-        TBSYS_LOG(ERROR, "dump physical block fail. fatal error! pos: %u, file: %s", physical_block_id,
-            super_block_.mount_point_);
+        TBSYS_LOG(ERROR, "dump physical block fail. fatal error! pos: %u, file: %s, ret: %d", physical_block_id,
+            super_block_.mount_point_, ret);
         tbsys::gDelete(t_physical_block);
         return ret;
       }

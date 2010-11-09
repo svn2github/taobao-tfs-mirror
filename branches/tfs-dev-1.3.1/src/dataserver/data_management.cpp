@@ -20,6 +20,7 @@
 #include "data_management.h"
 #include "blockfile_manager.h"
 #include "dataserver_define.h"
+#include "visit_stat.h"
 #include <Memory.hpp>
 
 namespace tfs
@@ -136,7 +137,7 @@ namespace tfs
       {
         datafile = bit->second;
       }
-      else                      // not fount
+      else                      // not found
       {
         // control datafile size
         if (data_file_map_.size() >= static_cast<uint32_t> (SYSPARAM_DATASERVER.max_datafile_nums_))
@@ -232,7 +233,7 @@ namespace tfs
         return EXIT_NO_LOGICBLOCK_ERROR;
       }
 
-      int64_t time_start = tbsys::CTimeUtil::getTime();
+      TIMER_START();
       int ret = logic_block->close_write_file(file_id, datafile, datafile_crc);
       if (TFS_SUCCESS != ret)
       {
@@ -241,11 +242,11 @@ namespace tfs
         return ret;
       }
 
-      int64_t time_end = tbsys::CTimeUtil::getTime();
-      if (time_end - time_start > SYSPARAM_DATASERVER.max_io_warn_time_)
+      TIMER_END();
+      if (TIMER_DURATION() > SYSPARAM_DATASERVER.max_io_warn_time_)
       {
         TBSYS_LOG(WARN, "write file cost time: blockid: %u, fileid: %" PRI64_PREFIX "u, cost time: %" PRI64_PREFIX "d",
-            block_id, file_id, time_end - time_start);
+            block_id, file_id, TIMER_DURATION());
       }
 
       // success, gc datafile

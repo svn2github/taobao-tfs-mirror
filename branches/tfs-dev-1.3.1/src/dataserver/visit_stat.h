@@ -17,7 +17,7 @@
 #define TFS_DATASERVER_VISITSTAT_H_
 
 #include "common/interval.h"
-
+#include <tbtimeutil.h>
 #include <set>
 #include <vector>
 #include <string>
@@ -144,6 +144,43 @@ namespace tfs
         std::set<uint32_t> ipset_;
       private:
         static int read_file_ip_list(const char* filename, std::set<uint32_t>& hosts);
+    };
+
+#define TIMER_START()\
+    TimeStat time_stat;\
+    time_stat.start()
+
+#define TIMER_END() time_stat.end()
+#define TIMER_DURATION() time_stat.duration()
+
+    class TimeStat
+    {
+      public:
+        TimeStat() : start_(0), end_(0)
+        {
+        }
+        ~TimeStat()
+        {
+        }
+
+        inline void start()
+        {
+          start_ = tbsys::CTimeUtil::getTime();
+        }
+
+        inline void end()
+        {
+          end_ = tbsys::CTimeUtil::getTime();
+        }
+
+        inline int64_t duration()
+        {
+          return end_ - start_;
+        }
+
+      private:
+        int64_t start_;
+        int64_t end_;
     };
   }
 }
