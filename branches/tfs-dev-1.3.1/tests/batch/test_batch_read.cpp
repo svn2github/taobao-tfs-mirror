@@ -30,9 +30,9 @@ void sign_handler(int32_t sig)
 {
   switch (sig)
   {
-  case SIGINT:
-    m_stop = 1;
-    break;
+    case SIGINT:
+      m_stop = 1;
+      break;
   }
 }
 
@@ -51,21 +51,21 @@ void* read_worker(void* arg)
     return NULL;
   }
 
- /*
-  param.locker_->lock();
-  TfsSession session;
-  session.init((char*) param.conf_.c_str());
-  param.locker_->unlock();
-  TfsFile tfs_file;
-  tfs_file.set_session(&session);
-*/
+  /*
+     param.locker_->lock();
+     TfsSession session;
+     session.init((char*) param.conf_.c_str());
+     param.locker_->unlock();
+     TfsFile tfs_file;
+     tfs_file.set_session(&session);
+     */
   printf("init connection to nameserver:%s\n", param.ns_ip_port_.c_str());
   TfsClient tfsclient;
-	int iret = tfsclient.initialize(param.ns_ip_port_);
-	if (iret != TFS_ERROR)
-	{
-		return NULL;
-	}
+  int iret = tfsclient.initialize(param.ns_ip_port_);
+  if (iret == TFS_ERROR)
+  {
+    return NULL;
+  }
   Timer timer;
   Stater stater("read");
   const int32_t BUFLEN = 32;
@@ -127,7 +127,7 @@ void* read_worker(void* arg)
     {
       if (image_scale_random)
       {
-	srand(time(NULL) + rand() + pthread_self());
+        srand(time(NULL) + rand() + pthread_self());
         int32_t min_width = (param.max_size_ / 6);
         int32_t min_height = (param.min_size_ / 6);
         int32_t scale_width = rand() % (param.max_size_ - min_width) + min_width;
@@ -185,7 +185,7 @@ void* read_worker(void* arg)
   double arate = static_cast<double> (accumlate_time_consumed) / total_succ_count;
 
   printf("thread index:%5d   count:%5d  failed:%5d, zoomed:%5d, filesize:%6d  iops:%10.3f  rate:%10.3f ,"
-    " min:%" PRI64_PREFIX "d, max:%" PRI64_PREFIX "d,avg:%" PRI64_PREFIX "d aiops:%10.3f, arate:%10.3f \n", param.index_, total_count, failed_count, zoomed_count,
+      " min:%" PRI64_PREFIX "d, max:%" PRI64_PREFIX "d,avg:%" PRI64_PREFIX "d aiops:%10.3f, arate:%10.3f \n", param.index_, total_count, failed_count, zoomed_count,
       param.file_size_, iops, rate, min_time_consumed, max_time_consumed, accumlate_time_consumed / total_succ_count,
       aiops, arate);
   stater.dump_time_stat();
