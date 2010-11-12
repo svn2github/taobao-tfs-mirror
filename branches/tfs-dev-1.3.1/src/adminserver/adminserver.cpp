@@ -624,7 +624,6 @@ namespace tfs
               kill_process(m_status, m_param->fkill_waittime_);
             }
           }
-          m_status->dump();
         }
         // sleep
         Func::sleep(check_interval_, &stop_);
