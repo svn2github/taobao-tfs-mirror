@@ -1169,7 +1169,7 @@ namespace tfs
       resp_fi_msg->set_file_info(&finfo);
       message->reply_message(resp_fi_msg);
       TIMER_END();
-      TBSYS_LOG(DEBUG, "read fileinfo %s. blockid: %u, fileid: %" PRI64_PREFIX "u, mode: %d, cost time: %" PRI64_PREFIX "d",
+      TBSYS_LOG(INFO, "read fileinfo %s. blockid: %u, fileid: %" PRI64_PREFIX "u, mode: %d, cost time: %" PRI64_PREFIX "d",
           TFS_SUCCESS == ret ? "success" : "fail", block_id, file_id, mode, TIMER_DURATION());
       return TFS_SUCCESS;
     }
@@ -1225,6 +1225,7 @@ namespace tfs
 
     int DataService::unlink_file(UnlinkFileMessage* message)
     {
+      TIMER_START();
       uint32_t block_id = message->get_block_id();
       uint64_t file_id = message->get_file_id();
       int32_t option_flag = message->get_option_flag();
@@ -1237,15 +1238,12 @@ namespace tfs
         is_master = true;
       }
 
-      TBSYS_LOG(INFO, "unlink_file: blockid: %u, fileid: %" PRI64_PREFIX "u, action:%d, server:%d, %s\n", block_id,
-          file_id, action, message->get_server(), is_master ? "master" : "slave");
-
       int ret = data_management_.unlink_file(block_id, file_id, action);
       if (TFS_SUCCESS != ret)
       {
         if (EXIT_NO_LOGICBLOCK_ERROR == ret)
         {
-          return MessageFactory::send_error_message(message, TBSYS_LOG_LEVEL(ERROR), data_server_info_.id_,
+          MessageFactory::send_error_message(message, TBSYS_LOG_LEVEL(ERROR), data_server_info_.id_,
               "block not exist, blockid: %u", block_id);
         }
         else
@@ -1255,8 +1253,7 @@ namespace tfs
               "file unlink fail, blockid: %u, fileid: %" PRI64_PREFIX "u, ret: %d", block_id, file_id, ret);
         }
       }
-
-      if (TFS_SUCCESS == ret)
+      else
       {
         if (is_master)
         {
@@ -1274,15 +1271,18 @@ namespace tfs
               block_id, file_id, action);
           sync_mirror_->write_sync_log(OPLOG_REMOVE, block_id, file_id, action);
         }
-
-        TBSYS_LOG(INFO, "%s unlinkfile successful. blockid: %d, fileid: %" PRI64_PREFIX "u, action: %d, peer ip: %s\n",
-            is_master ? "master" : "slave", block_id, file_id, action, tbsys::CNetUtil::addrToString(peer_id).c_str());
       }
 
       if (is_master && message->get_lease_id())
       {
         ds_requester_.req_block_write_complete(block_id, message->get_lease_id(), ret, UNLINK_FLAG_YES);
       }
+
+      TIMER_END();
+      TBSYS_LOG(INFO, "unlink file %s. blockid: %d, fileid: %" PRI64_PREFIX "u, action: %d, isserver: %s, peer ip: %s, cost time: %" PRI64_PREFIX "d",
+          TFS_SUCCESS == ret ? "success" : "fail", block_id, file_id, action, is_master ? "master" : "slave",
+          tbsys::CNetUtil::addrToString(peer_id).c_str(), TIMER_DURATION());
+
       return TFS_SUCCESS;
     }
 
