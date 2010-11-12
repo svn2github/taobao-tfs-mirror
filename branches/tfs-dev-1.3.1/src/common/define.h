@@ -61,6 +61,7 @@ namespace tfs
     typedef std::vector<uint32_t> VUINT32;
     typedef std::vector<int32_t> VINT;
     typedef std::vector<uint32_t> VUINT;
+    typedef std::vector<std::string> VSTRING;
 
 #pragma pack(4)
     struct FileInfo
@@ -112,6 +113,7 @@ namespace tfs
     static const int32_t FILEINFO_SIZE = sizeof(FileInfo);
     static const int64_t TFS_MALLOC_MAX_SIZE = 0x00A00000;//10M
 
+    static const int32_t SPEC_LEN = 32;
     static const int32_t MAX_RESPONSE_TIME = 30000;
     //fsname
     static const int32_t FILE_NAME_LEN = 18;
@@ -123,6 +125,8 @@ namespace tfs
 
     static const int32_t DEFAULT_BLOCK_CACHE_TIME = 5;
     static const int32_t DEFAULT_BLOCK_CACHE_ITEMS = 10000;
+
+    static const int32_t ADMIN_WARN_DEAD_COUNT = 1;
 
     typedef std::vector<FileInfo*> FILE_INFO_LIST;
   }

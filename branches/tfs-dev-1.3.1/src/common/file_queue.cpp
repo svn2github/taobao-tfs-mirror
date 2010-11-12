@@ -404,9 +404,9 @@ int FileQueue::open_write_file()
     close( write_fd_);
     write_fd_ = -1;
   }
-  char tmp[MAX_FILE_PATH_LENGTH];
-  memset(tmp, 0, sizeof(tmp));
-  snprintf(tmp, MAX_FILE_PATH_LENGTH, "%s/%08d.dat", queue_path_.c_str(), queue_information_header_.write_seqno_);
+  char tmp[MAX_PATH_LENGTH+1];
+  tmp[MAX_PATH_LENGTH] = '\0';
+  snprintf(tmp, MAX_PATH_LENGTH, "%s/%08d.dat", queue_path_.c_str(), queue_information_header_.write_seqno_);
   write_fd_ = open(tmp, O_WRONLY | O_CREAT | O_APPEND, 0600);
   if (write_fd_ == -1)
   {
@@ -427,9 +427,9 @@ int FileQueue::delete_read_file()
     close( read_fd_);
     read_fd_ = -1;
   }
-  char tmp[MAX_FILE_PATH_LENGTH];
-  memset(tmp, 0, sizeof(tmp));
-  snprintf(tmp, MAX_FILE_PATH_LENGTH, "%s/%08d.dat", queue_path_.c_str(), queue_information_header_.read_seqno_ - 1);
+  char tmp[MAX_PATH_LENGTH+1];
+  tmp[MAX_PATH_LENGTH] = '\0';
+  snprintf(tmp, MAX_PATH_LENGTH, "%s/%08d.dat", queue_path_.c_str(), queue_information_header_.read_seqno_ - 1);
   unlink(tmp);
   return TFS_SUCCESS;
 }
@@ -441,9 +441,9 @@ int FileQueue::open_read_file()
     close( read_fd_);
     read_fd_ = -1;
   }
-  char tmp[MAX_FILE_PATH_LENGTH];
-  memset(tmp, 0, sizeof(tmp));
-  snprintf(tmp, MAX_FILE_PATH_LENGTH, "%s/%08d.dat", queue_path_.c_str(), queue_information_header_.read_seqno_);
+  char tmp[MAX_PATH_LENGTH+1];
+  tmp[MAX_PATH_LENGTH] = '\0';
+  snprintf(tmp, MAX_PATH_LENGTH, "%s/%08d.dat", queue_path_.c_str(), queue_information_header_.read_seqno_);
   read_fd_ = open(tmp, O_RDONLY, 0600);
   if (read_fd_ == -1)
   {
@@ -477,8 +477,9 @@ int FileQueue::write_header()
           errno));
       ::close( information_fd_);
       information_fd_ = -1;
-      char tmp[MAX_FILE_PATH_LENGTH];
-      snprintf(tmp, MAX_FILE_PATH_LENGTH, "%s/header.dat", queue_path_.c_str());
+      char tmp[MAX_PATH_LENGTH+1];
+      tmp[MAX_PATH_LENGTH] = '\0';
+      snprintf(tmp, MAX_PATH_LENGTH, "%s/header.dat", queue_path_.c_str());
       information_fd_ = open(tmp, O_RDWR | O_CREAT, 0600);
       if (information_fd_ == -1)
       {
@@ -498,7 +499,7 @@ int FileQueue::recover_record()
   int32_t fd = -1;
   int32_t size = 0;
   int32_t count = 0;
-  char tmp[MAX_FILE_PATH_LENGTH];
+  char tmp[MAX_PATH_LENGTH+1];
 
   for (int32_t i = 0; i < FILE_QUEUE_MAX_THREAD_SIZE; ++i)
   {
@@ -510,8 +511,8 @@ int FileQueue::recover_record()
     if (pos_->offset_ >= queue_information_header_.read_offset_)
       continue;
 
-    memset(tmp, 0, sizeof(tmp));
-    snprintf(tmp, MAX_FILE_PATH_LENGTH, "%s/%08d.dat", queue_path_.c_str(), pos_->seqno_);
+    tmp[MAX_PATH_LENGTH] = '\0';
+    snprintf(tmp, MAX_PATH_LENGTH, "%s/%08d.dat", queue_path_.c_str(), pos_->seqno_);
     fd = ::open(tmp, O_RDONLY, 0600);
     if (fd == -1)
       continue;

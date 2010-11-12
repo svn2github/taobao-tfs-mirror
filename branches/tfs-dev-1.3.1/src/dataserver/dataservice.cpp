@@ -592,15 +592,14 @@ namespace tfs
 
     bool DataService::handlePacketQueue(tbnet::Packet* packet, void* )
     {
-      int ret;
       Message* message = dynamic_cast<Message*>(packet);
       if (NULL == message)
       {
-        TBSYS_LOG(ERROR, "process packet can convert to message\n");
+        TBSYS_LOG(ERROR, "process packet can not convert to message\n");
         return true;
       }
 
-      ret = TFS_SUCCESS;
+      int ret = TFS_SUCCESS;
       switch (message->get_message_type())
       {
       case CREATE_FILENAME_MESSAGE:

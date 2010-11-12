@@ -53,9 +53,6 @@ namespace tfs
     const int32_t EXIT_NO_REPLICATE = -5009;
     const int32_t EXIT_BLOCK_BUSY = -5010;
 
-    const int32_t MYSQL_ERROR_BASE = -6000;
-    const int32_t MYSQL_CONNECT_ERROR = -6001;
-
     const int32_t EXIT_WRITE_OFFSET_ERROR = -8001; // write offset error
     const int32_t EXIT_READ_OFFSET_ERROR = -8002; // read offset error
     const int32_t EXIT_BLOCKID_ZERO_ERROR = -8003; // block id is zero, fatal error

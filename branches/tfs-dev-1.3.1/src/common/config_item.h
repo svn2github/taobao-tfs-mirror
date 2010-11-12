@@ -55,6 +55,7 @@ namespace tfs
 #define CONF_DS_FKILL_WAITTIME                        "ds_fkill_waittime"
 #define CONF_CHECK_COUNT                              "check_count"
 #define CONF_DS_INDEX_LIST                            "ds_index_list"
+#define CONF_WARN_DEAD_COUNT                          "warn_dead_count"
 
   //nameserver
 #define CONF_IP_ADDR_LIST                             "ip_addr_list"

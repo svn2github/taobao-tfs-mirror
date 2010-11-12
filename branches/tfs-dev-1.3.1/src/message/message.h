@@ -119,7 +119,8 @@ namespace tfs
       HEARTBEAT_AND_NS_HEART_MESSAGE,
       OWNER_CHECK_MESSAGE,
       GET_BLOCK_LIST_MESSAGE,
-      CRC_ERROR_MESSAGE
+      CRC_ERROR_MESSAGE,
+      ADMIN_CMD_MESSAGE
     };
     //Define Message Type End
 

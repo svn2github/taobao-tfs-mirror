@@ -33,7 +33,6 @@
 
 using namespace tfs::common;
 
-typedef vector<string> VSTRING;
 typedef map<string, int> STR_INT_MAP;
 typedef STR_INT_MAP::iterator STR_INT_MAP_ITER;
 enum CmdSet

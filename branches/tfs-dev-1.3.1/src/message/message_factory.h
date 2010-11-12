@@ -43,6 +43,7 @@
 #include "server_meta_info_message.h"
 #include "oplog_sync_message.h"
 #include "crc_error_message.h"
+#include "admin_cmd_message.h"
 
 namespace tfs
 {
