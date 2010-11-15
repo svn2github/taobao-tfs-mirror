@@ -274,17 +274,19 @@ namespace tfs
 
     int DataService::stop()
     {
+      stop_mutex_.lock();
       if (stop_)
       {
+        stop_mutex_.unlock();
         return TFS_SUCCESS;
       }
+      stop_ = 1;
+      stop_mutex_.unlock();
       TBSYS_LOG(INFO, "Dataserver stopping...");
       //stop task queue
       task_queue_thread_.stop();
       ds_task_queue_thread_.stop();
-
       sleep(1);
-      stop_ = 1;
 
       if (NULL != sync_mirror_)
       {

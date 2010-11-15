@@ -213,8 +213,8 @@ namespace tfs
 
     void DataServer::stop()
     {
-      data_service_.stop();
       tran_sport_.stop();
+      data_service_.stop();
     }
 
     int DataServer::start()
