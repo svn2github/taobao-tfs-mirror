@@ -690,6 +690,16 @@ namespace tfs
         return EXIT_FS_NOTINIT_ERROR;
       }
 
+      if (fs_param.mount_name_.compare(super_block_.mount_point_) != 0)
+      {
+        TBSYS_LOG(WARN, "mount point conflict, rewrite mount point. former: %s, now: %s.\n",
+            super_block_.mount_point_, fs_param.mount_name_.c_str());
+        strncpy(super_block_.mount_point_, fs_param.mount_name_.c_str(), MAX_DEV_NAME_LEN - 1);
+        TBSYS_LOG(INFO, "super block mount point: %s.", super_block_.mount_point_);
+        super_block_impl_->write_super_blk(super_block_);
+        super_block_impl_->flush_file();
+      }
+
       unsigned item_count = super_block_.main_block_count_ + super_block_.extend_block_count_ + 1;
       TBSYS_LOG(INFO, "file system bitmap size: %u\n", item_count);
       normal_bit_map_ = new BitMap(item_count);
@@ -725,7 +735,7 @@ namespace tfs
       //load bitmap
       normal_bit_map_->copy(bit_map_size_, tmp_bit_map_buf);
       error_bit_map_->copy(bit_map_size_, tmp_bit_map_buf + 2 * bit_map_size_);
-      TBSYS_LOG(DEBUG, "bitmap used count: %u, error: %u", normal_bit_map_->get_set_count(),
+      TBSYS_LOG(INFO, "bitmap used count: %u, error: %u", normal_bit_map_->get_set_count(),
                 error_bit_map_->get_set_count());
       tbsys::gDeleteA(tmp_bit_map_buf);
 
@@ -978,7 +988,7 @@ namespace tfs
       memset((void *) &super_block_, 0, sizeof(SuperBlock));
       memcpy(super_block_.mount_tag_, DEV_TAG, sizeof(super_block_.mount_tag_));
       super_block_.time_ = time(NULL);
-      strncpy(super_block_.mount_point_, fs_param.mount_name_.c_str(), MAX_DEV_NAME_LEN);
+      strncpy(super_block_.mount_point_, fs_param.mount_name_.c_str(), MAX_DEV_NAME_LEN - 1);
       TBSYS_LOG(INFO, "super block mount point: %s.", super_block_.mount_point_);
       int32_t scale = 1024;
       super_block_.mount_point_use_space_ = fs_param.max_mount_size_ * scale;
