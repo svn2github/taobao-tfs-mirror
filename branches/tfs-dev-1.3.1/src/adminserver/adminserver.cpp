@@ -105,8 +105,10 @@ int main(int argc, char *argv[])
     return TFS_ERROR;
   }
 
-  // set log level
+  // set log
   TBSYS_LOGGER.setLogLevel(CONFIG.get_string_value(CONFIG_PUBLIC, CONF_LOG_LEVEL));
+  TBSYS_LOGGER.setMaxFileSize(CONFIG.get_int_value(CONFIG_PUBLIC, CONF_LOG_SIZE, 1024 * 1024 * 1024));
+  TBSYS_LOGGER.setMaxFileIndex(CONFIG.get_int_value(CONFIG_PUBLIC, CONF_LOG_NUM, 10));
 
   char* top_work_dir = CONFIG.get_string_value(CONFIG_PUBLIC, CONF_WORK_DIR);
   if (NULL == top_work_dir)
@@ -468,6 +470,7 @@ namespace tfs
       // wait for last monitor stop, there is always only one monitor running...
       while (running_)
       {
+        usleep(100000);         // sleep 100 ms
       }
 
       int ret = TFS_SUCCESS;
@@ -569,7 +572,7 @@ namespace tfs
           {
             if ((m_status->pid_ = tbsys::CProcess::existPid(m_param->lock_file_.c_str())) == 0)
             {
-              TBSYS_LOG(ERROR, "start %s", m_param->description_.c_str());
+              TBSYS_LOG(INFO, "start %s", m_param->description_.c_str());
               if (system(m_param->script_.c_str()) == -1)
               {
                 TBSYS_LOG(ERROR, "start %s fail.", m_param->script_.c_str());

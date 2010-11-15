@@ -26,23 +26,24 @@ namespace tfs
   namespace message
   {
     enum AdminCmd
-      {
-        ADMIN_CMD_NONE = 0,
-        ADMIN_CMD_CHECK,
-        ADMIN_CMD_GET_STATUS,
-        ADMIN_CMD_START_MONITOR,
-        ADMIN_CMD_RESTART_MONITOR,
-        ADMIN_CMD_STOP_MONITOR,
-        ADMIN_CMD_START_INDEX,
-        ADMIN_CMD_RESTART_INDEX,
-        ADMIN_CMD_STOP_INDEX,
-        ADMIN_CMD_KILL_ADMINSERVER,
-        ADMIN_CMD_RESP
-      };
+    {
+      ADMIN_CMD_NONE = 0,
+      ADMIN_CMD_CHECK,
+      ADMIN_CMD_GET_STATUS,
+      ADMIN_CMD_START_MONITOR,
+      ADMIN_CMD_RESTART_MONITOR,
+      ADMIN_CMD_STOP_MONITOR,
+      ADMIN_CMD_START_INDEX,
+      ADMIN_CMD_RESTART_INDEX,
+      ADMIN_CMD_STOP_INDEX,
+      ADMIN_CMD_KILL_ADMINSERVER,
+      ADMIN_CMD_RESP
+    };
 
+    const int32_t ADMIN_MAX_INDEX_LENGTH = 127;
     struct MonitorStatus
     {
-      char index_[128];
+      char index_[ADMIN_MAX_INDEX_LENGTH+1];
       int32_t restarting_;
       int32_t failure_;
       int32_t pid_;
@@ -51,24 +52,24 @@ namespace tfs
       int32_t dead_time_;
 
       MonitorStatus(string& index)
-        {
-          memset(this, 0, sizeof(MonitorStatus));
-          strncpy(index_, index.c_str(), 128);
-        }
+      {
+        memset(this, 0, sizeof(MonitorStatus));
+        strncpy(index_, index.c_str(), ADMIN_MAX_INDEX_LENGTH);
+      }
 
       inline string convert_time(int32_t time)
-        {
-          return time ? common::Func::time_to_str(time, 0) : "NON";
-        }
+      {
+        return time ? common::Func::time_to_str(time, 0) : "NON";
+      }
 
       inline void dump()
-        {
-          bool warn = (0 == pid_) || (dead_count_ > common::ADMIN_WARN_DEAD_COUNT);
-          fprintf(stderr, "%s%7s%7d%7d%7d%8d%23s%23s%s\n", warn ? "\033[31m" : "",
-                  index_, pid_, restarting_, failure_, dead_count_,
-                  convert_time(start_time_).c_str(), convert_time(dead_time_).c_str(),
-                  warn ? "\033[0m" : "");
-        }
+      {
+        bool warn = (0 == pid_) || (dead_count_ > common::ADMIN_WARN_DEAD_COUNT);
+        fprintf(stderr, "%s%7s%7d%7d%7d%8d%23s%23s%s\n", warn ? "\033[31m" : "",
+                index_, pid_, restarting_, failure_, dead_count_,
+                convert_time(start_time_).c_str(), convert_time(dead_time_).c_str(),
+                warn ? "\033[0m" : "");
+      }
     };
 
     class AdminCmdMessage : public Message

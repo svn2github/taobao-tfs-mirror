@@ -395,6 +395,10 @@ int main(int argc, char* argv[])
       do_cmd(argv[i]);
     }
   }
+  else
+  {
+    usage(argv[0]);
+  }
 
   for (MCLIENT_ITER it = g_client_map.begin(); it != g_client_map.end(); it++)
   {
