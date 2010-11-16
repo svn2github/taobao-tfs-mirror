@@ -1,4 +1,5 @@
 /*
+        tran_sport_.wait();
  * (C) 2007-2010 Alibaba Group Holding Limited.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -222,11 +223,13 @@ namespace tfs
       packet_streamer_.set_packet_factory(&msg_factory_);
       CLIENT_POOL.init_with_transport(&tran_sport_);
 
+      tran_sport_.start();
       data_service_.init(server_index_);
       VINT pids;
       //init data service
       if (data_service_.start(&pids) != TFS_SUCCESS)
       {
+        tran_sport_.stop();
         return TFS_ERROR;
       }
 
@@ -251,11 +254,11 @@ namespace tfs
       }
       if (ret == false)
       {
+        tran_sport_.stop();
         data_service_.stop();
         return TFS_ERROR;
       }
 
-      tran_sport_.start();
       TBSYS_LOG(INFO, "========== DataServer Start Run ========== PID: %d, Listen Port: %d %d", getpid(), server_port - 1,
           server_port);
 

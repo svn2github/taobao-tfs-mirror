@@ -28,22 +28,22 @@ namespace tfs
 {
   namespace client
   {
-		TfsClient::TfsClient():
-			tfs_file_(new TfsFile())
-		{
+    TfsClient::TfsClient():
+      tfs_file_(new TfsFile())
+    {
 
-		}
+    }
 
     int TfsClient::initialize(const std::string& ns_ip_port, int32_t cache_time, int32_t cache_items)
     {
       TfsSession* session = TfsSessionPool::get_instance().get(ns_ip_port, cache_time, cache_items);
-			if (session == NULL)
-			{
-				TBSYS_LOG(ERROR, "tfs cleint initialize failed, must be exit");
-				return TFS_ERROR;
-			}
+      if (session == NULL)
+      {
+        TBSYS_LOG(ERROR, "tfs client initialize failed, must be exit");
+        return TFS_ERROR;
+      }
       tfs_file_->set_session(session);
-			return TFS_SUCCESS;
+      return TFS_SUCCESS;
     }
 
     TfsClient::~TfsClient()
@@ -195,10 +195,10 @@ namespace tfs
     {
       return tfs_file_->get_session()->get_unlink_block_info(block_id, rds);
     }
-		
-		uint32_t TfsClient::crc(uint32_t crc, const char* data, const int32_t len)
-		{
-			return Func::crc(crc, data, len);
-		}
+
+    uint32_t TfsClient::crc(uint32_t crc, const char* data, const int32_t len)
+    {
+      return Func::crc(crc, data, len);
+    }
   }
 }

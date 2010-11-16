@@ -41,15 +41,15 @@ namespace tfs
       int ret = TFS_ERROR;
       switch (sf->cmd_)
       {
-      case OPLOG_INSERT:
-        ret = copy_file(sf->block_id_, sf->file_id_);
-        break;
-      case OPLOG_REMOVE:
-        ret = remove_file(sf->block_id_, sf->file_id_, sf->old_file_id_);
-        break;
-      case OPLOG_RENAME:
-        ret = rename_file(sf->block_id_, sf->file_id_, sf->old_file_id_);
-        break;
+        case OPLOG_INSERT:
+          ret = copy_file(sf->block_id_, sf->file_id_);
+          break;
+        case OPLOG_REMOVE:
+          ret = remove_file(sf->block_id_, sf->file_id_, sf->old_file_id_);
+          break;
+        case OPLOG_RENAME:
+          ret = rename_file(sf->block_id_, sf->file_id_, sf->old_file_id_);
+          break;
       }
       return ret;
     }
@@ -88,13 +88,13 @@ namespace tfs
         sprintf(backup_path_, "%s/storage", nfs_path);
         sprintf(remove_path_, "%s/removed", nfs_path);
         sprintf(tmpstr, "%s:%d", CONFIG.get_string_value(CONFIG_NAMESERVER, CONF_IP_ADDR), CONFIG.get_int_value(
-            CONFIG_NAMESERVER, CONF_PORT));
+              CONFIG_NAMESERVER, CONF_PORT));
         source_client_ = new TfsClient();
-				int iret = source_client_->initialize(tmpstr);
-				if (iret != TFS_SUCCESS)
-				{
-					return false;
-				}
+        int iret = source_client_->initialize(tmpstr);
+        if (iret != TFS_SUCCESS)
+        {
+          return false;
+        }
         return true;
       }
       return false;
@@ -420,28 +420,30 @@ namespace tfs
       if (SYSPARAM_DATASERVER.slave_ns_ip_ != NULL && strlen(SYSPARAM_DATASERVER.slave_ns_ip_) > 0)
       {
         tfs_client_ = new TfsClient();
-				int iret = tfs_client_->initialize(SYSPARAM_DATASERVER.slave_ns_ip_);
-				if (iret != TFS_SUCCESS)
-				{
-					return false;
-				}
+        int iret = tfs_client_->initialize(SYSPARAM_DATASERVER.slave_ns_ip_);
+        if (iret != TFS_SUCCESS)
+        {
+          TBSYS_LOG(ERROR, "slave tfsclient init fail. slave ns ip: %s\n", SYSPARAM_DATASERVER.slave_ns_ip_);
+          return false;
+        }
         tfs_client_->set_option_flag(TFS_FILE_NO_SYNC_LOG);
 
         second_tfs_client_ = new TfsClient();
-				iret = second_tfs_client_->initialize(SYSPARAM_DATASERVER.slave_ns_ip_);
-				if (iret != TFS_SUCCESS)
-				{
-					return false;
-				}
+        iret = second_tfs_client_->initialize(SYSPARAM_DATASERVER.slave_ns_ip_);
+        if (iret != TFS_SUCCESS)
+        {
+          TBSYS_LOG(ERROR, "second slave tfsclient init fail. slave ns ip: %s\n", SYSPARAM_DATASERVER.slave_ns_ip_);
+          return false;
+        }
         second_tfs_client_->set_option_flag(TFS_FILE_NO_SYNC_LOG);
 
         sprintf(tmpstr, "%s:%d", SYSPARAM_DATASERVER.local_ns_ip_, SYSPARAM_DATASERVER.local_ns_port_);
         source_client_ = new TfsClient();
-				iret = source_client_->initialize(tmpstr);
-				if (iret != TFS_SUCCESS)
-				{
-					return false;
-				}
+        iret = source_client_->initialize(tmpstr);
+        if (iret != TFS_SUCCESS)
+        {
+          return false;
+        }
 
         TBSYS_LOG(INFO, "tfs mirror init slave ns ip: %s, local ns ip: %s, ns port: %d, source ip: %s\n",
             SYSPARAM_DATASERVER.slave_ns_ip_, SYSPARAM_DATASERVER.local_ns_ip_, SYSPARAM_DATASERVER.local_ns_port_, tmpstr);
@@ -466,15 +468,15 @@ namespace tfs
       int ret = TFS_ERROR;
       switch (sf->cmd_)
       {
-      case OPLOG_INSERT:
-        ret = copy_file(tfs_client, sf->block_id_, sf->file_id_);
-        break;
-      case OPLOG_REMOVE:
-        ret = remove_file(tfs_client, sf->block_id_, sf->file_id_, sf->old_file_id_);
-        break;
-      case OPLOG_RENAME:
-        ret = rename_file(tfs_client, sf->block_id_, sf->file_id_, sf->old_file_id_);
-        break;
+        case OPLOG_INSERT:
+          ret = copy_file(tfs_client, sf->block_id_, sf->file_id_);
+          break;
+        case OPLOG_REMOVE:
+          ret = remove_file(tfs_client, sf->block_id_, sf->file_id_, sf->old_file_id_);
+          break;
+        case OPLOG_RENAME:
+          ret = rename_file(tfs_client, sf->block_id_, sf->file_id_, sf->old_file_id_);
+          break;
       }
       return ret;
     }

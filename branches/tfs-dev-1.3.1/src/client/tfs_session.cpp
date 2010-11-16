@@ -103,7 +103,7 @@ int TfsSession::initialize()
   int32_t iret = get_cluster_id_from_ns();
   if (iret != TFS_SUCCESS || cluster_id_ <= 0)
   {
-    TBSYS_LOG(ERROR, "cluster id(%d) invalid", cluster_id_);
+    TBSYS_LOG(ERROR, "cluster id: %d invalid, ret: %d", cluster_id_, iret);
     return TFS_ERROR;
   }
   return TFS_SUCCESS;
