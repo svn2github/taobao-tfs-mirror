@@ -13,6 +13,8 @@
  *      - initial release
  *
  */
+#include <sys/resource.h>
+
 #include "func.h"
 #include "error_msg.h"
 #include <tbsys.h>
@@ -303,7 +305,7 @@ namespace tfs
       return ipport;
     }
 
-    //  port + inc 
+    //  port + inc
     uint64_t Func::addr_inc_port(const uint64_t ipport, const int32_t inc)
     {
       IpAddr* adr = (IpAddr *) (&ipport);
@@ -380,167 +382,216 @@ namespace tfs
       }
       else
       {
-snprintf      (s, 128, "%" PRI64_PREFIX "d", c);
-    }
-    return s;
-  }
-
-  int64_t Func::curr_time()
-  {
-    struct timeval t;
-    gettimeofday(&t, NULL);
-    return (t.tv_sec * 1000000LL + t.tv_usec);
-  }
-
-  string Func::time_to_str(time_t t, int f)
-  {
-    char s[128];
-    struct tm *tm = localtime((const time_t*) &t);
-    if (f == 1)
-    {
-      snprintf(s, 128, "%04d%02d%02d%02d%02d%02d", tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday, tm->tm_hour,
-          tm->tm_min, tm->tm_sec);
-    }
-    else
-    {
-      snprintf(s, 128, "%04d-%02d-%02d %02d:%02d:%02d", tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday, tm->tm_hour,
-          tm->tm_min, tm->tm_sec);
-    }
-    return s;
-  }
-
-  char* Func::safe_malloc(const int32_t len, char* data)
-  {
-    if (len <= 0 || len > TFS_MALLOC_MAX_SIZE)
-    {
-      TBSYS_LOG(ERROR, "allocate to large memory: len(%u) > maxlen(%u)", len, TFS_MALLOC_MAX_SIZE);
-      return NULL;
-    }
-    if (data == NULL)
-    {
-      return (char*) malloc(len);
-    }
-    else
-    {
-      return (char*) realloc(data, len);
-    }
-  }
-
-  // sleep
-  void Func::sleep(const float f_heart_interval, const int32_t* stop)
-  {
-    int32_t heart_interval = static_cast<int32_t>(((f_heart_interval + 0.01) * 10));
-    while ((*stop) == 0 && heart_interval > 0)
-    {
-      usleep(100000);
-      heart_interval--;
-    }
-  }
-
-  char* Func::subright(char* dst, char* src, int32_t n)
-  {
-    if (dst == NULL || src == NULL)
-    {
-      return NULL;
-    }
-
-    char* p = src;
-    char* q = dst;
-    int len = strlen(src);
-    if (n > len)
-    n = len;
-    p += (len - n);
-    while ((*q++ = *p++) != 0)
-    ;
-
-    return dst;
-  }
-
-  int Func::check_pid(const char* lock_file)
-  {
-    char buffer[64], *p;
-    int otherpid = 0, lfp;
-    lfp = open(lock_file, O_RDONLY, 0);
-    if (lfp > 0)
-    {
-      read(lfp, buffer, 64);
-      close(lfp);
-      buffer[63] = '\0';
-      p = strchr(buffer, '\n');
-      if (p != NULL)
-      *p = '\0';
-      otherpid = atoi(buffer);
-    }
-    if (otherpid > 0)
-    {
-      if (kill(otherpid, 0) != 0)
-      {
-        otherpid = 0;
+        snprintf      (s, 128, "%" PRI64_PREFIX "d", c);
       }
-    }
-    return otherpid;
-  }
-
-  int Func::write_pid(const char* lock_file)
-  {
-    int lfp = open(lock_file, O_WRONLY | O_CREAT | O_TRUNC, 0600);
-    if (lfp < 0)
-    exit(1);
-    if (lockf(lfp, F_TLOCK, 0) < 0)
-    {
-      fprintf(stderr, "already run.\n");
-      exit(0);
+      return s;
     }
 
-    char str[32];
-    int pid = getpid();
-    sprintf(str, "%d\n", getpid());
-    write(lfp, str, strlen(str));
-    close(lfp);
-    return pid;
-  }
-
-  bool Func::hour_range(int min, int max)
-  {
-    time_t t = time(NULL);
-    struct tm *tm = localtime((const time_t*) &t);
-    bool reverse = false;
-    if (min > max)
+    int64_t Func::curr_time()
     {
-      std::swap(min, max);
-      reverse = true;
+      struct timeval t;
+      gettimeofday(&t, NULL);
+      return (t.tv_sec * 1000000LL + t.tv_usec);
     }
-    bool inrange = tm->tm_hour >= min && tm->tm_hour <= max;
-    return reverse ? !inrange : inrange;
-  }
 
-  int32_t Func::split_string(const char* line, const char del, std::vector<std::string>& fields)
-  {
-    const char* start = line;
-    const char* p = NULL;
-    char buffer[BUFSIZ];
-    while (start != NULL)
+    string Func::time_to_str(time_t t, int f)
     {
-      p = strchr(start, del);
-      if (p != NULL)
+      char s[128];
+      struct tm *tm = localtime((const time_t*) &t);
+      if (f == 1)
       {
-        memset(buffer, 0, BUFSIZ);
-        strncpy(buffer, start, p - start);
-        if (strlen(buffer) > 0)
-        fields.push_back(buffer);
-        start = p + 1;
+        snprintf(s, 128, "%04d%02d%02d%02d%02d%02d", tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday, tm->tm_hour,
+                 tm->tm_min, tm->tm_sec);
       }
       else
       {
-        memset(buffer, 0, BUFSIZ);
-        strcpy(buffer, start);
-        if (strlen(buffer) > 0)
-        fields.push_back(buffer);
-        break;
+        snprintf(s, 128, "%04d-%02d-%02d %02d:%02d:%02d", tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday, tm->tm_hour,
+                 tm->tm_min, tm->tm_sec);
+      }
+      return s;
+    }
+
+    char* Func::safe_malloc(const int32_t len, char* data)
+    {
+      if (len <= 0 || len > TFS_MALLOC_MAX_SIZE)
+      {
+        TBSYS_LOG(ERROR, "allocate to large memory: len(%u) > maxlen(%u)", len, TFS_MALLOC_MAX_SIZE);
+        return NULL;
+      }
+      if (data == NULL)
+      {
+        return (char*) malloc(len);
+      }
+      else
+      {
+        return (char*) realloc(data, len);
       }
     }
-    return fields.size();
-  }
 
-}
+    // sleep
+    void Func::sleep(const float f_heart_interval, const int32_t* stop)
+    {
+      int32_t heart_interval = static_cast<int32_t>(((f_heart_interval + 0.01) * 10));
+      while ((*stop) == 0 && heart_interval > 0)
+      {
+        usleep(100000);
+        heart_interval--;
+      }
+    }
+
+    char* Func::subright(char* dst, char* src, int32_t n)
+    {
+      if (dst == NULL || src == NULL)
+      {
+        return NULL;
+      }
+
+      char* p = src;
+      char* q = dst;
+      int len = strlen(src);
+      if (n > len)
+        n = len;
+      p += (len - n);
+      while ((*q++ = *p++) != 0)
+        ;
+
+      return dst;
+    }
+
+    int Func::check_pid(const char* lock_file)
+    {
+      char buffer[64], *p;
+      int otherpid = 0, lfp;
+      lfp = open(lock_file, O_RDONLY, 0);
+      if (lfp > 0)
+      {
+        read(lfp, buffer, 64);
+        close(lfp);
+        buffer[63] = '\0';
+        p = strchr(buffer, '\n');
+        if (p != NULL)
+          *p = '\0';
+        otherpid = atoi(buffer);
+      }
+      if (otherpid > 0)
+      {
+        if (kill(otherpid, 0) != 0)
+        {
+          otherpid = 0;
+        }
+      }
+      return otherpid;
+    }
+
+    int Func::write_pid(const char* lock_file)
+    {
+      int lfp = open(lock_file, O_WRONLY | O_CREAT | O_TRUNC, 0600);
+      if (lfp < 0)
+        exit(1);
+      if (lockf(lfp, F_TLOCK, 0) < 0)
+      {
+        fprintf(stderr, "already run.\n");
+        exit(0);
+      }
+
+      char str[32];
+      int pid = getpid();
+      sprintf(str, "%d\n", getpid());
+      write(lfp, str, strlen(str));
+      close(lfp);
+      return pid;
+    }
+
+    bool Func::hour_range(int min, int max)
+    {
+      time_t t = time(NULL);
+      struct tm *tm = localtime((const time_t*) &t);
+      bool reverse = false;
+      if (min > max)
+      {
+        std::swap(min, max);
+        reverse = true;
+      }
+      bool inrange = tm->tm_hour >= min && tm->tm_hour <= max;
+      return reverse ? !inrange : inrange;
+    }
+
+    int32_t Func::split_string(const char* line, const char del, std::vector<std::string>& fields)
+    {
+      const char* start = line;
+      const char* p = NULL;
+      char buffer[BUFSIZ];
+      while (start != NULL)
+      {
+        p = strchr(start, del);
+        if (p != NULL)
+        {
+          memset(buffer, 0, BUFSIZ);
+          strncpy(buffer, start, p - start);
+          if (strlen(buffer) > 0)
+            fields.push_back(buffer);
+          start = p + 1;
+        }
+        else
+        {
+          memset(buffer, 0, BUFSIZ);
+          strcpy(buffer, start);
+          if (strlen(buffer) > 0)
+            fields.push_back(buffer);
+          break;
+        }
+      }
+      return fields.size();
+    }
+
+    // just modify tbsys::CProcess::startDaemon
+    // close all opened file descriptor inherited
+    int Func::start_daemon(const char *pid_file, const char *log_file)
+    {
+      if (getppid() == 1)
+      {
+        return 0;
+      }
+
+      int pid = fork();
+      if (pid < 0)
+      {
+        exit(1);
+      }
+
+      if (pid > 0)
+      {
+        return pid;
+      }
+
+      tbsys::CProcess::writePidFile(pid_file);
+
+      // close all opened file descriptor inherited from parent
+      struct rlimit rl;
+      int ret = TFS_SUCCESS;
+      if ((ret = getrlimit(RLIMIT_NOFILE, &rl)) < 0)
+      {
+        fprintf(stderr, "can not get open file limit, ret %d : %s", ret, strerror(errno));
+        return ret;
+      }
+      // maybe get open fd from /proc/xxx/fd ?
+      int32_t file_limit = (RLIM_INFINITY == rl.rlim_max) ? 1024 : rl.rlim_max;
+      for (int32_t i = 0; i < file_limit; i++) // maybe break when close return EBADF ?
+      {
+        close(i);
+      }
+
+      int fd =open("/dev/null", 0);
+      if (fd != -1)
+      {
+        dup2(fd, 0);
+        close(fd);
+      }
+
+      TBSYS_LOGGER.setFileName(log_file);
+
+      return pid;
+    }
+
+  }
 }

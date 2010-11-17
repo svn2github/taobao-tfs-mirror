@@ -27,6 +27,9 @@ namespace tfs
     public:
       struct NameServer
       {
+        std::string work_dir_;
+        std::string log_file_;
+        std::string pid_file_;
         int32_t min_replication_;
         int32_t max_replication_;
         int32_t max_block_size_;
@@ -55,7 +58,6 @@ namespace tfs
         int32_t cleanup_lease_count_;
         int32_t add_primary_block_count_;
         int32_t safe_mode_time_;
-        char* config_log_file_;
       };
 
       struct FileSystemParam

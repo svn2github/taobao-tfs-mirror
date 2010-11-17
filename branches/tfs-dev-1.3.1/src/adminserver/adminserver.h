@@ -34,9 +34,9 @@ namespace tfs
   {
     enum ServiceName
     {
-      SERVICE_NS = 0,
-      SERVICE_DS,
-      SERVICE_NONE
+      SERVICE_NONE = 0,
+      SERVICE_NS,
+      SERVICE_DS
     };
 
     struct MonitorParam

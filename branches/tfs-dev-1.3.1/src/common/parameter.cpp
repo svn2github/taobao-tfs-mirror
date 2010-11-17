@@ -16,6 +16,7 @@
 #include "parameter.h"
 #include "config.h"
 #include "config_item.h"
+#include "error_msg.h"
 #include <tbsys.h>
 
 namespace tfs
@@ -75,6 +76,23 @@ namespace tfs
       int32_t ret = CONFIG.load(tfsfile.c_str());
       if (ret != TFS_SUCCESS)
         return ret;
+
+      // get top work directory
+      const char *top_work_dir = CONFIG.get_string_value(CONFIG_PUBLIC, CONF_WORK_DIR);
+      if (top_work_dir == NULL)
+      {
+        TBSYS_LOG(ERROR, "work directory config not found");
+        return EXIT_CONFIG_ERROR;
+      }
+
+      char default_work_dir[MAX_PATH_LENGTH], default_log_file[MAX_PATH_LENGTH], default_pid_file[MAX_PATH_LENGTH];
+      snprintf(default_work_dir, MAX_PATH_LENGTH-1, "%s/nameserver", top_work_dir);
+      snprintf(default_log_file, MAX_PATH_LENGTH-1, "%s/logs/nameserver.log", top_work_dir);
+      snprintf(default_pid_file, MAX_PATH_LENGTH-1, "%s/logs/nameserver.pid", top_work_dir);
+      nameserver_.work_dir_ = CONFIG.get_string_value(CONFIG_NAMESERVER, CONF_WORK_DIR, default_work_dir);
+      nameserver_.log_file_ = CONFIG.get_string_value(CONFIG_NAMESERVER, CONF_LOG_FILE, default_log_file);
+      nameserver_.pid_file_ = CONFIG.get_string_value(CONFIG_NAMESERVER, CONF_LOCK_FILE, default_pid_file);
+
       nameserver_.min_replication_ = CONFIG.get_int_value(CONFIG_PUBLIC, CONF_MIN_REPLICATION);
       nameserver_.max_replication_ = CONFIG.get_int_value(CONFIG_PUBLIC, CONF_MAX_REPLICATION);
       int32_t block_use_ratio = CONFIG.get_int_value(CONFIG_PUBLIC, CONF_BLOCK_USE_RATIO, 95);
@@ -91,9 +109,9 @@ namespace tfs
       nameserver_.max_use_capacity_ratio_ = CONFIG.get_int_value(CONFIG_PUBLIC, CONF_USE_CAPACITY_RATIO);
 
       TBSYS_LOG(INFO, "load configure::max_block_size_:%u, min_replication_:%u,"
-        "max_replication_:%u,max_write_file_count_:%u,max_use_capacity_ratio_:%u", nameserver_.max_block_size_,
-          nameserver_.min_replication_, nameserver_.max_replication_, nameserver_.max_write_file_count_,
-          nameserver_.max_use_capacity_ratio_);
+                "max_replication_:%u,max_write_file_count_:%u,max_use_capacity_ratio_:%u", nameserver_.max_block_size_,
+                nameserver_.min_replication_, nameserver_.max_replication_, nameserver_.max_write_file_count_,
+                nameserver_.max_use_capacity_ratio_);
 
       char* group_mask_str = CONFIG.get_string_value(CONFIG_NAMESERVER, CONF_GROUP_MASK);
       if (group_mask_str != NULL)
@@ -106,11 +124,11 @@ namespace tfs
       }
       nameserver_.heart_interval_ = CONFIG.get_int_value(CONFIG_DATASERVER, CONF_HEART_INTERVAL, 2);
       nameserver_.ds_dead_time_ = CONFIG.get_int_value(CONFIG_NAMESERVER, CONF_DS_DEAD_TIME)
-          + nameserver_.heart_interval_;
-      nameserver_.config_log_file_ = CONFIG.get_string_value(CONFIG_NAMESERVER, CONF_LOG_FILE);
+        + nameserver_.heart_interval_;
+
       nameserver_.replicate_check_interval_ = CONFIG.get_int_value(CONFIG_NAMESERVER, CONF_REPL_CHECK_INTERVAL, 15);
       nameserver_.redundant_check_interval_
-          = CONFIG.get_int_value(CONFIG_NAMESERVER, CONF_REDUNDANT_CHECK_INTERVAL, 30);
+        = CONFIG.get_int_value(CONFIG_NAMESERVER, CONF_REDUNDANT_CHECK_INTERVAL, 30);
       nameserver_.balance_check_interval_ = CONFIG.get_int_value(CONFIG_NAMESERVER, CONF_BALANCE_CHECK_INTERVAL, 300);
       nameserver_.replicate_max_time_ = CONFIG.get_int_value(CONFIG_NAMESERVER, CONF_REPL_MAX_TIME, 180);
       nameserver_.replicate_wait_time_ = CONFIG.get_int_value(CONFIG_NAMESERVER, CONF_REPL_WAIT_TIME, 240);
@@ -131,7 +149,7 @@ namespace tfs
       set_hour_range(hour_range, nameserver_.cleanup_lease_time_lower_, nameserver_.cleanup_lease_time_upper_);
       nameserver_.cleanup_lease_count_ = CONFIG.get_int_value(CONFIG_NAMESERVER, CONF_CLEANUP_LEASE_COUNT, 100);
       nameserver_.cleanup_lease_threshold_
-          = CONFIG.get_int_value(CONFIG_NAMESERVER, CONF_CLEANUP_LEASE_THRESHOLD, 5000);
+        = CONFIG.get_int_value(CONFIG_NAMESERVER, CONF_CLEANUP_LEASE_THRESHOLD, 5000);
       nameserver_.add_primary_block_count_ = CONFIG.get_int_value(CONFIG_NAMESERVER, CONF_ADD_PRIMARY_BLOCK_COUNT, 3);
       nameserver_.safe_mode_time_ = CONFIG.get_int_value(CONFIG_NAMESERVER, CONF_SAFE_MODE_TIME, 60);
       return TFS_SUCCESS;
@@ -153,9 +171,9 @@ namespace tfs
       }
 
       char default_work_dir[MAX_PATH_LENGTH], default_log_file[MAX_PATH_LENGTH], default_pid_file[MAX_PATH_LENGTH];
-      snprintf(default_work_dir, MAX_PATH_LENGTH, "%s/dataserver", top_work_dir);
-      snprintf(default_log_file, MAX_PATH_LENGTH, "%s/logs/dataserver.log", top_work_dir);
-      snprintf(default_pid_file, MAX_PATH_LENGTH, "%s/logs/dataserver.pid", top_work_dir);
+      snprintf(default_work_dir, MAX_PATH_LENGTH-1, "%s/dataserver", top_work_dir);
+      snprintf(default_log_file, MAX_PATH_LENGTH-1, "%s/logs/dataserver.log", top_work_dir);
+      snprintf(default_pid_file, MAX_PATH_LENGTH-1, "%s/logs/dataserver.pid", top_work_dir);
 
       dataserver_.work_dir_ = change_index(CONFIG.get_string_value(CONFIG_DATASERVER, CONF_WORK_DIR, default_work_dir),
                                            string(""), server_index);

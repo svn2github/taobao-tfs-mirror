@@ -11,9 +11,9 @@
  * Authors:
  *   duolong <duolong@taobao.com>
  *      - initial release
- *   qushan<qushan@taobao.com> 
+ *   qushan<qushan@taobao.com>
  *      - modify 2009-03-27
- *   duanfei <duanfei@taobao.com> 
+ *   duanfei <duanfei@taobao.com>
  *      - modify 2010-04-23
  *
  */
@@ -78,7 +78,7 @@ namespace tfs
         {
           TBSYS_LOG(ERROR, "slave fsimage success");
         }
-        TBSYS_LOGGER.rotateLog(SYSPARAM_NAMESERVER.config_log_file_);
+        TBSYS_LOGGER.rotateLog(SYSPARAM_NAMESERVER.log_file_.c_str());
       }
       return TFS_SUCCESS;
     }
@@ -173,7 +173,7 @@ namespace tfs
           BlockCollect *block_collect = ptr->find(new_block_info.block_id_);
           if (block_collect == NULL)
           {
-            TBSYS_LOG(INFO, "block(%u) not found in dataserver(%s), must be create", 
+            TBSYS_LOG(INFO, "block(%u) not found in dataserver(%s), must be create",
                 new_block_info.block_id_, tbsys::CNetUtil::addrToString(ds_id).c_str());
             block_collect = ptr->create(new_block_info.block_id_);
             first = true;
@@ -199,10 +199,10 @@ namespace tfs
             }
           }
           /*if (((lease_mgr_.has_valid_lease(new_block_info.block_id_))
-            && (find(ds_list->begin(), ds_list->end(), ds_id) == ds_list->end())) 
-            || ((current_block_ds_size > SYSPARAM_NAMESERVER.min_replication_) 
+            && (find(ds_list->begin(), ds_list->end(), ds_id) == ds_list->end()))
+            || ((current_block_ds_size > SYSPARAM_NAMESERVER.min_replication_)
             && ((block_info->file_count_ > new_block_info.file_count_)
-            ||(block_info->file_count_ <= new_block_info.file_count_ 
+            ||(block_info->file_count_ <= new_block_info.file_count_
             && block_info->size_ != new_block_info.size_))))
             {
             TBSYS_LOG(WARN, "block info not match");
@@ -263,8 +263,8 @@ namespace tfs
           }
 
           if ((block_collect != NULL)
-              && (block_collect->is_full()) 
-              && (ds_list_size > 0) 
+              && (block_collect->is_full())
+              && (ds_list_size > 0)
               && (new_block_info.block_id_ % ds_list_size == ds_list_size - 1))
           {
             force_be_master = true;
@@ -291,7 +291,7 @@ namespace tfs
         TBSYS_LOG(DEBUG, "dataserver(%s) report: block(%u),version(%d),filecount(%d),"
             "size(%d), delete_file_count(%d), delete_size(%d), seqno(%u), dataserver count(%u), "
             "block count(%u), writable blocks(%u), primary write block count(%u), total writable block count(%u)",
-            tbsys::CNetUtil::addrToString(ds_id).c_str(), 
+            tbsys::CNetUtil::addrToString(ds_id).c_str(),
             new_block_info.block_id_, new_block_info.version_, new_block_info.file_count_,
             new_block_info.size_, new_block_info.del_file_count_, new_block_info.del_size_,
             new_block_info.seq_no_, ptr->find(new_block_info.block_id_)->get_ds()->size(),
@@ -474,7 +474,7 @@ namespace tfs
      * client write: get new block and location of DataServerStatInfo
      *
      * Parameters:
-     * @param [in] block_id: query block id, in write mode 
+     * @param [in] block_id: query block id, in write mode
      * can be set to zero for assign a new write block id.
      * @param [in] mode: read | write
      * @param [out] lease_id: write transaction id only for write mode.

@@ -147,7 +147,7 @@ int main(int argc, char *argv[])
   pid = 0;
   if (is_daemon)
   {
-    pid = tbsys::CProcess::startDaemon(pid_file.c_str(), log_file.c_str());
+    pid = Func::start_daemon(pid_file.c_str(), log_file.c_str());
   }
 
   //child

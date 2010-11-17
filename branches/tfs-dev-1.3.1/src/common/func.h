@@ -74,6 +74,9 @@ namespace tfs
       static void sleep(const float f_heart_interval, const int32_t* stop);
       static bool hour_range(int min, int max);
       static int32_t split_string(const char* line, const char del, std::vector<std::string>& fields);
+
+      static int start_daemon(const char *pid_file, const char *log_file);
+
 #ifdef _syscall0
       static _syscall0(pid_t,gettid)
 #else

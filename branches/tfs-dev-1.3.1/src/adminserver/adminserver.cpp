@@ -151,7 +151,7 @@ int main(int argc, char *argv[])
 
   if (is_daemon)
   {
-    if (tbsys::CProcess::startDaemon(pid_file, log_file) > 0)
+    if (Func::start_daemon(pid_file, log_file) > 0)
     {
       return TFS_SUCCESS;
     }
@@ -344,7 +344,13 @@ namespace tfs
       }
       else                      // ns
       {
-        param->lock_file_ = CONFIG.get_string_value(CONFIG_NAMESERVER, CONF_LOCK_FILE);
+        if ( SysParam::instance().load(conf_file_)!= TFS_SUCCESS)
+        {
+          TBSYS_LOG(ERROR, "load config file %s fail : %s", conf_file_, strerror(errno));
+          return TFS_ERROR;
+        }
+
+        param->lock_file_ = SYSPARAM_NAMESERVER.pid_file_;
         param->adr_.ip_ = Func::get_addr("127.0.0.1");
         param->adr_.port_ = CONFIG.get_int_value(CONFIG_NAMESERVER, CONF_PORT);
         param->script_ = CONFIG.get_string_value(CONFIG_ADMINSERVER, CONF_NS_SCRIPT);
@@ -355,13 +361,13 @@ namespace tfs
       }
 
       monitor_param_.insert(MSTR_PARA::value_type(index, param));
-      TBSYS_LOG(DEBUG, "get index %s paramter", index.empty() ? "ns" : index.c_str());
+      TBSYS_LOG(DEBUG, "get %s paramter", index.empty() ? "ns" : ("index " + index).c_str());
       return ret;
     }
 
     void AdminServer::add_index(string& index, bool add_conf)
     {
-      TBSYS_LOG(DEBUG, "add new index %s to monitor", index.c_str());
+      TBSYS_LOG(DEBUG, "add %s to monitor", index.empty() ? "ns" : ("index " + index).c_str());
       // paramter
       get_param(index);
 
@@ -470,19 +476,13 @@ namespace tfs
       // wait for last monitor stop, there is always only one monitor running...
       while (running_)
       {
-        usleep(100000);         // sleep 100 ms
+        usleep(10000);         // sleep 10 ms
       }
 
       int ret = TFS_SUCCESS;
 
       // clean old parameters and status, reread config file to construct parameter
       destruct();
-
-      if (CONFIG.load(conf_file_) != TFS_SUCCESS)
-      {
-        TBSYS_LOG(ERROR, "load config file %s fail : %s", conf_file_, strerror(errno));
-        return TFS_ERROR;
-      }
 
       if (service_name_ & SERVICE_NS)
       {
@@ -491,6 +491,11 @@ namespace tfs
       }
       else if (service_name_ & SERVICE_DS)
       {
+        if (CONFIG.load(conf_file_) != TFS_SUCCESS)
+        {
+          TBSYS_LOG(ERROR, "load config file %s fail : %s", conf_file_, strerror(errno));
+          return TFS_ERROR;
+        }
         char *index_range = CONFIG.get_string_value(CONFIG_ADMINSERVER, CONF_DS_INDEX_LIST, NULL);
         if (!index_range)
         {
