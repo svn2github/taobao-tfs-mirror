@@ -789,7 +789,12 @@ namespace tfs
           message->set_lease_id(lease_id);
           message->set_block_version(version);
           ret = post_message_to_server(message, message->get_ds_list());
-          if (ret < 0)
+          if (0 == ret)
+          {
+            //no slave
+            message->reply_message(new StatusMessage(STATUS_MESSAGE_OK));
+          }
+          else if (ret < 0)
           {
             ds_requester_.req_block_write_complete(write_info.block_id_, lease_id, EXIT_SENDMSG_ERROR);
             MessageFactory::send_error_message(message, TBSYS_LOG_LEVEL(ERROR), data_server_info_.id_,
@@ -797,8 +802,10 @@ namespace tfs
                 write_info.block_id_, write_info.file_id_, write_info.length_);
           }
         }
-
-        message->reply_message(new StatusMessage(STATUS_MESSAGE_OK));
+        else
+        {
+          message->reply_message(new StatusMessage(STATUS_MESSAGE_OK));
+        }
       }
 
       TIMER_END();
@@ -1170,7 +1177,7 @@ namespace tfs
       resp_fi_msg->set_file_info(&finfo);
       message->reply_message(resp_fi_msg);
       TIMER_END();
-      TBSYS_LOG(INFO, "read fileinfo %s. blockid: %u, fileid: %" PRI64_PREFIX "u, mode: %d, cost time: %" PRI64_PREFIX "d",
+      TBSYS_LOG(DEBUG, "read fileinfo %s. blockid: %u, fileid: %" PRI64_PREFIX "u, mode: %d, cost time: %" PRI64_PREFIX "d",
           TFS_SUCCESS == ret ? "success" : "fail", block_id, file_id, mode, TIMER_DURATION());
       return TFS_SUCCESS;
     }
