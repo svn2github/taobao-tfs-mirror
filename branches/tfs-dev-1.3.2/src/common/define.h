@@ -102,10 +102,31 @@ namespace tfs
       REVEAL = 6
     };
 
+    enum 
+    {
+      T_SEEK_SET = 0,
+      T_SEEK_CUR,
+      T_SEEK_END
+    };
 
+    enum                      // open flags
+    {
+      T_O_RDONLY = 0x000,
+      T_O_WRONLY = 0x0001,
+      T_O_RDWR = 0x0002,
+      T_O_NONBLOCK = 0x0004,
+      T_O_APPEND = 0x0008,
+      T_O_NOCTTY = 0x0100,
+      T_O_CREAT = 0x0200,
+      T_O_TRUNC = 0x0400,
+      T_O_EXCL = 0x08000,
+      T_O_LARGE = 0x10000
+    };
 
     static const int TFS_SUCCESS = EXIT_SUCCESS;
     static const int TFS_ERROR = EXIT_FAILURE;
+
+    static const int EXIT_INVALIDFD_ERROR = -1;
 
     static const int32_t INT_SIZE = 4;
     static const int32_t INT64_SIZE = 8;
