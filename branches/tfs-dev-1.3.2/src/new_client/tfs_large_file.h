@@ -25,7 +25,18 @@ namespace tfs
       virtual int close();
 
     private:
+      static const int64_t SEGMENT_SIZE = 1 << 10;
+      static const int64_t BATCH_COUNT = 10;
+      static const int64_t BATCH_SIZE = SEGMENT_SIZE * BATCH_COUNT;
+
+      int batch_open(const int64_t count, std::multimap<uint32_t, common::VUINT64>& segments);
+      int process(const InnerFilePhase file_phase);
+
+      //int do_async_request(const InnerFilePhase file_phase, const int64_t wait_id);
+      //int do_async_response(const InnerFilePhase file_phase, /*response*/);
+    private:
       LocalKey local_key_;
+      std::vector<TfsFile*> current_files_;
     };
   }
 }

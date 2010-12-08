@@ -14,11 +14,19 @@ namespace tfs
 {
   namespace client
   {
+    enum InnerFilePhase
+    {
+      FILE_PHASE_CREATE_FILE = 1,
+      FILE_PHASE_WRITE_DATA,
+      FILE_PHASE_CLOSE_FILE
+    };
+
     class TfsSession;
     class TfsFile
     {
     public:
       TfsFile();
+      TfsFile(uint32_t block_id, common::VUINT64& ds_list);
       virtual ~TfsFile();
 
       // virtual level operation
@@ -44,10 +52,15 @@ namespace tfs
       int close_ex();
       
     protected:
+      static const int64_t WAIT_TIME_OUT = 5000;
+
+    protected:
       FSName fsname_;
       TfsSession* tfs_session_;
       int32_t flag_;
       int32_t offset_;
+      common::VUINT64 ds_list_;
+      const char* write_buf;
     };
   }
 }

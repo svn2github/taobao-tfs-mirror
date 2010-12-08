@@ -26,6 +26,7 @@ namespace tfs
     {
     public:
       TfsSmallFile();
+      TfsSmallFile(uint32_t block_id, common::VUINT64& ds_list, const char* write_buf, const int64_t count);
       virtual ~TfsSmallFile();
 
       virtual int open(const char* file_name, const char *suffix, int flags, ... );
@@ -35,6 +36,19 @@ namespace tfs
       virtual ssize_t pread(void *buf, size_t count, off_t offset);
       virtual ssize_t pwrite(const void *buf, size_t count, off_t offset);
       virtual int close();
+
+      int do_async_request(const InnerFilePhase file_phase, const int64_t wait_id);
+      int do_async_response(const InnerFilePhase file_phase, /*response*/);
+
+    private:
+      int async_req_create_file();
+      int async_rsp_create_file();
+
+      int async_req_write_data();
+      int async_rsp_write_data();
+
+      int async_req_close_file();
+      int async_rsp_close_file();
     };
   }
 }
