@@ -23,6 +23,8 @@
 #include <errno.h>
 #include "message.h"
 #include "common/interval.h"
+#include "common/define.h"
+#include "common/error_msg.h"
 
 namespace tfs
 {
@@ -39,6 +41,22 @@ namespace tfs
       int32_t overflow_count_;
       int32_t page_count_;
       int32_t item_count_;
+    };
+
+    struct BlockInfoSeg
+    {
+      common::VUINT64 ds_;
+      bool has_lease_;
+      int32_t lease_;
+      int32_t version_;
+      BlockInfoSeg() : has_lease_(false), lease_(0), version_(0)
+      {
+      }
+      BlockInfoSeg(const common::VUINT64& ds, const bool has_lease = false,
+                   const int32_t lease = 0, const int32_t version = 0) :
+        ds_(ds), has_lease_(has_lease), lease_(lease), version_(version)
+      {
+      }
     };
 #pragma pack()
     // get the block information in the common::DataServerStatInfo
@@ -128,6 +146,112 @@ namespace tfs
         int32_t version_;
         int32_t lease_;
         bool has_lease_;
+    };
+
+    // batch get the block information in the common::DataServerStatInfo
+    // input argument: mode, count, block_id
+    class BatchGetBlockInfoMessage: public Message
+    {
+    public:
+      BatchGetBlockInfoMessage(int32_t mode = common::BLOCK_READ);
+      virtual ~BatchGetBlockInfoMessage();
+      virtual int parse(char* data, int32_t len);
+      virtual int build(char* data, int32_t len);
+      virtual int32_t message_length();
+      virtual char* get_name();
+
+      inline int32_t get_block_count()
+      {
+        return (mode_ & common::T_READ) ? block_ids_.size() : block_count_;
+      }
+
+      inline void set_block_count(int32_t count)
+      {
+        block_count_ = count;
+      }
+
+      inline void add_block_id(const uint32_t block_id)
+      {
+        block_ids_.push_back(block_id);
+      }
+
+      inline void set_block_id(const common::VUINT32& block_ids)
+      {
+        block_ids_ = block_ids;
+      }
+
+      inline common::VUINT32& get_block_id()
+      {
+        return block_ids_;
+      }
+
+      inline int32_t get_mode() const
+      {
+        return mode_;
+      }
+
+      static Message* create(const int32_t type);
+
+    protected:
+      int32_t mode_;
+      int32_t block_count_;
+      common::VUINT32 block_ids_;
+    };
+
+    // batch set the block information in the common::DataServerStatInfo
+    // input argument: block_id, server_count, server_id1, server_id2, ..., filename
+    class BatchSetBlockInfoMessage: public Message
+    {
+    public:
+      BatchSetBlockInfoMessage();
+      virtual ~BatchSetBlockInfoMessage();
+      virtual int parse(char* data, int32_t len);
+      virtual int32_t message_length();
+      virtual int build(char* data, int32_t len);
+      virtual char* get_name();
+
+      void set_read_block_ds(const uint32_t block_id, common::VUINT64& ds);
+      void set_write_block_ds(const uint32_t block_id, common::VUINT64& ds,
+                              const int32_t version, const int32_t lease_id);
+      inline int32_t get_block_count()
+      {
+        return block_infos_.size();
+      }
+
+      inline const map<uint32_t, BlockInfoSeg>* get_infos() const
+      {
+        return &block_infos_;
+      }
+
+      inline common::VUINT64* get_block_ds(const uint32_t block_id)
+      {
+        std::map<uint32_t, BlockInfoSeg>::iterator it = block_infos_.find(block_id);
+        return it == block_infos_.end() ? NULL : &(it->second.ds_);
+      }
+
+      inline int32_t get_block_version(const uint32_t block_id)
+      {
+        std::map<uint32_t, BlockInfoSeg>::iterator it = block_infos_.find(block_id);
+        return it == block_infos_.end() ? common::EXIT_INVALID_ARGU : it->second.version_;
+      }
+
+      inline int32_t get_lease_id(uint32_t block_id)
+      {
+        std::map<uint32_t, BlockInfoSeg>::iterator it = block_infos_.find(block_id);
+        return it == block_infos_.end() ? common::EXIT_INVALID_ARGU : it->second.lease_;
+      }
+
+      inline bool get_has_lease(const uint32_t block_id)
+      {
+        std::map<uint32_t, BlockInfoSeg>::iterator it = block_infos_.find(block_id);
+        // false ?
+        return it == block_infos_.end() ?  false : it->second.has_lease_;
+      }
+
+      static Message* create(const int32_t type);
+
+    private:
+      std::map<uint32_t, BlockInfoSeg> block_infos_;
     };
 
     // block_count, block_id, .....

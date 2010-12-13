@@ -164,7 +164,7 @@ namespace tfs
     }
 
     void SetBlockInfoMessage::set_write_block_ds(const uint32_t block_id, VUINT64* ds, const int32_t version,
-        const int32_t lease)
+                                                 const int32_t lease)
     {
       block_id_ = block_id;
       if (ds != NULL)
@@ -174,6 +174,200 @@ namespace tfs
       version_ = version;
       lease_ = lease;
       has_lease_ = true;
+    }
+
+    BatchGetBlockInfoMessage::BatchGetBlockInfoMessage(int32_t mode) :
+      mode_(mode), block_count_(0)
+    {
+      _packetHeader._pcode = BATCH_GET_BLOCK_INFO_MESSAGE;
+      block_ids_.clear();
+    }
+
+    BatchGetBlockInfoMessage::~BatchGetBlockInfoMessage()
+    {
+    }
+
+    int BatchGetBlockInfoMessage::parse(char* data, int32_t len)
+    {
+      if (get_int32(&data, &len, &mode_) == TFS_ERROR)
+      {
+        return TFS_ERROR;
+      }
+      if (mode_ & common::T_READ)
+      {
+        if (get_vint32(&data, &len, block_ids_) == TFS_ERROR)
+        {
+          return TFS_ERROR;
+        }
+      }
+      else if (get_int32(&data, &len, &block_count_) == TFS_ERROR)
+      {
+        return TFS_ERROR;
+      }
+
+      return TFS_SUCCESS;
+    }
+
+    int32_t BatchGetBlockInfoMessage::message_length()
+    {
+      int32_t len = INT_SIZE;
+      return (mode_ & common::T_READ) ? len + get_vint_len(block_ids_) : len + INT_SIZE;
+    }
+
+    int BatchGetBlockInfoMessage::build(char* data, int32_t len)
+    {
+      if (set_int32(&data, &len, mode_) == TFS_ERROR)
+      {
+        return TFS_ERROR;
+      }
+
+      if (mode_ & common::T_READ)
+      {
+        if (set_vint32(&data, &len, block_ids_) == TFS_ERROR)
+        {
+          return TFS_ERROR;
+        }
+      }
+      else if (set_int32(&data, &len, block_count_) == TFS_ERROR)
+      {
+        return TFS_ERROR;
+      }
+
+      return TFS_SUCCESS;
+    }
+
+    char* BatchGetBlockInfoMessage::get_name()
+    {
+      return "batchgetblockinfomessage";
+    }
+
+    Message* BatchGetBlockInfoMessage::create(const int32_t type)
+    {
+      BatchGetBlockInfoMessage* req_gbi_msg = new BatchGetBlockInfoMessage();
+      req_gbi_msg->set_message_type(type);
+      return req_gbi_msg;
+    }
+
+    BatchSetBlockInfoMessage::BatchSetBlockInfoMessage()
+    {
+      _packetHeader._pcode = BATCH_SET_BLOCK_INFO_MESSAGE;
+    }
+
+    BatchSetBlockInfoMessage::~BatchSetBlockInfoMessage()
+    {
+    }
+
+    // count, blockid, server_count, server_id1, server_id2, ..., blockid, server_count, server_id1 ...
+    int BatchSetBlockInfoMessage::parse(char* data, int32_t len)
+    {
+      int32_t count = 0;
+      if (get_int32(&data, &len, &count) == TFS_ERROR)
+      {
+        return TFS_ERROR;
+      }
+
+      uint32_t block_id;
+      BlockInfoSeg block_info;
+      for (int32_t i = 0; i < count; i++)
+      {
+        if (get_int32(&data, &len, reinterpret_cast<int32_t*>(&block_id)) == TFS_ERROR)
+        {
+          return TFS_ERROR;
+        }
+        if (get_vint64(&data, &len, block_info.ds_) == TFS_ERROR)
+        {
+          return TFS_ERROR;
+        }
+        block_info.has_lease_ = parse_special_ds(block_info.ds_, block_info.version_, block_info.lease_);
+        block_infos_[block_id] = block_info;
+      }
+      return TFS_SUCCESS;
+    }
+
+    int32_t BatchSetBlockInfoMessage::message_length()
+    {
+      int32_t count = block_infos_.size();
+      // count + blockids
+      int32_t len = INT_SIZE + count * INT_SIZE;
+
+      // just test first has lease, then all has lease, maybe add mode test
+      if (count > 0)
+      {
+        // ds
+        std::map<uint32_t, BlockInfoSeg>::iterator it = block_infos_.begin();
+        for (; it != block_infos_.end(); it++)
+        {
+          len += get_vint64_len(it->second.ds_);
+        }
+
+        if (block_infos_.begin()->second.has_lease_)
+        {
+          // has_lease + lease + version
+          len += INT64_SIZE * 3 * count;
+        }
+      }
+
+      return len;
+    }
+
+    int BatchSetBlockInfoMessage::build(char* data, int32_t len)
+    {
+      // count
+      if (set_int32(&data, &len, block_infos_.size()) == TFS_ERROR)
+      {
+        return TFS_ERROR;
+      }
+
+      std::map<uint32_t, BlockInfoSeg>::iterator it = block_infos_.begin();
+      BlockInfoSeg* block_info = NULL;
+      for (; it != block_infos_.end(); it++)
+      {
+        block_info = &it->second;
+        if ((block_info->has_lease_ == true) && (block_info->ds_.size() > 0))
+        {
+          block_info->ds_.push_back(ULONG_LONG_MAX);
+          block_info->ds_.push_back(static_cast<uint64_t> (block_info->version_));
+          block_info->ds_.push_back(static_cast<uint64_t> (block_info->lease_));
+        }
+
+        // blockid
+        if (set_int32(&data, &len, it->first) == TFS_ERROR)
+        {
+          return TFS_ERROR;
+        }
+        // ds
+        if (set_vint64(&data, &len, block_info->ds_) == TFS_ERROR)
+        {
+          return TFS_ERROR;
+        }
+
+        // reparse, avoid push verion&lease again when clone twice;
+        block_info->has_lease_ = parse_special_ds(block_info->ds_, block_info->version_, block_info->lease_);
+      }
+      return TFS_SUCCESS;
+    }
+
+    char* BatchSetBlockInfoMessage::get_name()
+    {
+      return "batchsetblockinfomessage";
+    }
+
+    Message* BatchSetBlockInfoMessage::create(const int32_t type)
+    {
+      BatchSetBlockInfoMessage* req_sbi_msg = new BatchSetBlockInfoMessage();
+      req_sbi_msg->set_message_type(type);
+      return req_sbi_msg;
+    }
+
+    void BatchSetBlockInfoMessage::set_read_block_ds(const uint32_t block_id, VUINT64& ds)
+    {
+        block_infos_[block_id] = BlockInfoSeg(ds);
+    }
+
+    void BatchSetBlockInfoMessage::set_write_block_ds(const uint32_t block_id, VUINT64& ds,
+                                                      const int32_t version, const int32_t lease)
+    {
+        block_infos_[block_id] = BlockInfoSeg(ds, true, lease, version);
     }
 
     CarryBlockMessage::CarryBlockMessage()

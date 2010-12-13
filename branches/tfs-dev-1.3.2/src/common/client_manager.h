@@ -33,6 +33,7 @@ namespace tfs
         WaitObjectManager* waitmgr_;
     };
 
+    static ClientManager global_client_manager;
   }
 }
 #endif

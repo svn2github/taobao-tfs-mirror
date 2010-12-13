@@ -113,7 +113,7 @@ namespace tfs
     {
       // free
       tbsys::CThreadGuard guard(&mutex_);
-      __gnu_cxx::hash_map<int64_t, WaitObject*>::iterator iter;
+      INT_WAITOBJ_MAP_ITER iter;
       for (iter = wait_objects_map_.begin(); iter != wait_objects_map_.end(); ++iter)
       {
         tbsys::gDelete(iter->second);
@@ -130,7 +130,7 @@ namespace tfs
     WaitObject* WaitObjectManager::get_wait_object(const int64_t wait_id)
     {
       tbsys::CThreadGuard guard(&mutex_);
-      __gnu_cxx::hash_map<int64_t, WaitObject*>::iterator it = wait_objects_map_.find(wait_id);
+      INT_WAITOBJ_MAP_ITER it = wait_objects_map_.find(wait_id);
       if (it == wait_objects_map_.end())
       {
         TBSYS_LOG(INFO, "wait object not found, id: %"PRI64_PREFIX"d", wait_id);
@@ -152,7 +152,7 @@ namespace tfs
     void WaitObjectManager::wakeup_wait_object(const WaitId& id, tbnet::Packet* response)
     {
       tbsys::CThreadGuard guard(&mutex_);
-      __gnu_cxx::hash_map<int64_t, WaitObject*>::iterator it = wait_objects_map_.find(id.seq_id_);
+      INT_WAITOBJ_MAP_ITER it = wait_objects_map_.find(id.seq_id_);
       if (it == wait_objects_map_.end())
       {
         TBSYS_LOG(INFO, "wait object not found, id: %"PRI64_PREFIX"d", id.seq_id_);

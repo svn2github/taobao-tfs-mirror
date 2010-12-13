@@ -26,6 +26,8 @@ namespace tfs
       create_message_map_[STATUS_MESSAGE] = StatusMessage::create;
       create_message_map_[GET_BLOCK_INFO_MESSAGE] = GetBlockInfoMessage::create;
       create_message_map_[SET_BLOCK_INFO_MESSAGE] = SetBlockInfoMessage::create;
+      create_message_map_[BATCH_GET_BLOCK_INFO_MESSAGE] = BatchGetBlockInfoMessage::create;
+      create_message_map_[BATCH_SET_BLOCK_INFO_MESSAGE] = BatchSetBlockInfoMessage::create;
       create_message_map_[CARRY_BLOCK_MESSAGE] = CarryBlockMessage::create;
       create_message_map_[SET_DATASERVER_MESSAGE] = SetDataserverMessage::create;
       create_message_map_[UPDATE_BLOCK_INFO_MESSAGE] = UpdateBlockInfoMessage::create;

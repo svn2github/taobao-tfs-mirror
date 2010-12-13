@@ -88,7 +88,6 @@ namespace tfs
     {
       READ_MODE = 1,
       WRITE_MODE = 2,
-      APPEND_MODE = 4,
       UNLINK_MODE = 8,
       NEWBLK_MODE = 16,
       NOLEASE_MODE = 32
@@ -102,25 +101,21 @@ namespace tfs
       REVEAL = 6
     };
 
-    enum 
+    enum
     {
       T_SEEK_SET = 0,
       T_SEEK_CUR,
       T_SEEK_END
     };
 
-    enum                      // open flags
+    enum OpenFlag
     {
-      T_O_RDONLY = 0x000,
-      T_O_WRONLY = 0x0001,
-      T_O_RDWR = 0x0002,
-      T_O_NONBLOCK = 0x0004,
-      T_O_APPEND = 0x0008,
-      T_O_NOCTTY = 0x0100,
-      T_O_CREAT = 0x0200,
-      T_O_TRUNC = 0x0400,
-      T_O_EXCL = 0x08000,
-      T_O_LARGE = 0x10000
+      T_READ = 1,
+      T_WRITE = 2,
+      T_CREATE = 4,
+      T_NEWBLK = 8,
+      T_NOLEASE = 16,
+      T_LARGE = 32
     };
 
     static const int TFS_SUCCESS = EXIT_SUCCESS;

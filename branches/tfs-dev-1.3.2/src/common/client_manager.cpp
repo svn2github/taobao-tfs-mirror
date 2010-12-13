@@ -7,7 +7,6 @@ namespace tfs
 {
   namespace common
   {
-
     ClientManager::ClientManager()
       : inited_(false), connmgr_(NULL), waitmgr_(NULL)
     {

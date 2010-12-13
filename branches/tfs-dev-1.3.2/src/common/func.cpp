@@ -313,6 +313,24 @@ namespace tfs
       return ipport;
     }
 
+    uint64_t Func::get_host_ip(const char *s)
+    {
+     char addr[100];
+     strncpy(addr, s, strlen(s)+1);
+     char* pos = strchr(addr, ':');
+
+     if (pos)
+     {
+         *pos++ = '\0';
+     }
+     else
+     {
+       return 0;
+     }
+
+     return Func::str_to_addr(addr, atoi(pos));
+    }
+
     // convert to lower
     char* Func::str_to_lower(char* psz_buf)
     {

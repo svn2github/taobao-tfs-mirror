@@ -36,19 +36,6 @@ namespace tfs
       virtual ssize_t pread(void *buf, size_t count, off_t offset);
       virtual ssize_t pwrite(const void *buf, size_t count, off_t offset);
       virtual int close();
-
-      int do_async_request(const InnerFilePhase file_phase, const int64_t wait_id);
-      int do_async_response(const InnerFilePhase file_phase, /*response*/);
-
-    private:
-      int async_req_create_file();
-      int async_rsp_create_file();
-
-      int async_req_write_data();
-      int async_rsp_write_data();
-
-      int async_req_close_file();
-      int async_rsp_close_file();
     };
   }
 }

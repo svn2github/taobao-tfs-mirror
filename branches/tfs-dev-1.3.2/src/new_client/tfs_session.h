@@ -19,6 +19,7 @@
 #include <Mutex.h>
 #include "lru.h"
 #include "common/define.h"
+#include "local_key.h"
 
 namespace tfs
 {
@@ -44,15 +45,22 @@ namespace tfs
       virtual ~TfsSession();
 
       int initialize();
-      void destroy();
-      inline const std::string& get_ns_ip_port_str() const
+      int get_block_info(uint32_t& block_id, common::VUINT64 &rds, const int32_t flag);
+      int batch_get_block_info(std::vector<SegmentData*>& seg_list, const int32_t flag);
+
+      inline int32_t get_cluster_id() const
       {
-        return ns_ip_port_str_;
+        return cluster_id_;
       }
 
-      inline const uint64_t get_ns_ip_port() const
+      inline const std::string& get_ns_addr_str() const
       {
-        return ns_ip_port_;
+        return ns_addr_str_;
+      }
+
+      inline const uint64_t get_ns_addr() const
+      {
+        return ns_addr_;
       }
 
       inline const int32_t get_cache_time() const
@@ -65,34 +73,27 @@ namespace tfs
         return block_cache_items_;
       }
 
-      int create_block_info(uint32_t& block_id, common::VUINT64 &rds, const int32_t flag, common::VUINT64& fail_servers);
-      int get_block_info(uint32_t& block_id, common::VUINT64 &rds);
-      int get_unlink_block_info(uint32_t& block_id, common::VUINT64 &rds);
-
-      inline void set_use_cache(UseCacheFlag use_cache_flag = USE_CACHE_FLAG_NO)
+      inline void set_use_cache(UseCacheFlag flag = USE_CACHE_FLAG_YES)
       {
-        use_cache_ = use_cache_flag;
+        use_cache_ = flag;
       }
 
-      inline int32_t get_cluster_id() const
-      {
-        return cluster_id_;
-      }
+    private:
+      TfsSession();
+      DISALLOW_COPY_AND_ASSIGN( TfsSession);
+      int get_block_info_ex(uint32_t& block_id, common::VUINT64 &rds, const int32_t flag);
+      int batch_get_block_info_ex(std::vector<SegmentData*>& seg_list, const int32_t flag);
+      int get_cluster_id_from_ns();
+
     private:
       tbutil::Mutex mutex_;
-      uint64_t ns_ip_port_;
-      std::string ns_ip_port_str_;
+      uint64_t ns_addr_;
+      std::string ns_addr_str_;
       const int32_t block_cache_time_;
       const int32_t block_cache_items_;
       int32_t cluster_id_;
       UseCacheFlag use_cache_;
       BLOCK_CACHE_MAP block_cache_map_;
-
-    private:
-      TfsSession();
-      DISALLOW_COPY_AND_ASSIGN( TfsSession);
-      int get_block_info_ex(uint32_t& block_id, common::VUINT64 &rds, const int32_t mode, common::VUINT64& fail_ds);
-      int get_cluster_id_from_ns();
     };
   }
 }

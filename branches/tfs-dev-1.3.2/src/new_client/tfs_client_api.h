@@ -52,7 +52,7 @@ namespace tfs
           return common::EXIT_INVALIDFD_ERROR;
         }
 
-        if (flags & common::T_O_LARGE)
+        if (flags & common::T_LARGE)
         {
           if (__va_arg_pack_len() != 1)
           {

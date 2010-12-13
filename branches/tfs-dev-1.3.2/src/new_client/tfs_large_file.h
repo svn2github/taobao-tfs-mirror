@@ -17,11 +17,11 @@ namespace tfs
       virtual ~TfsLargeFile();
 
       virtual int open(const char* file_name, const char* suffix, int flags, ... );
-      virtual int read(void* buf, size_t count);
-      virtual int write(const void* buf, size_t count);
-      virtual off_t lseek(off_t offset, int whence);
-      virtual ssize_t pread(void* buf, size_t count, off_t offset);
-      virtual ssize_t pwrite(const void* buf, size_t count, off_t offset);
+      virtual int64_t read(void* buf, int64_t count);
+      virtual int64_t write(const void* buf, int64_t count);
+      virtual int64_t lseek(int64_t offset, int whence);
+      virtual int64_t pread(void* buf, int64_t count, int64_t offset);
+      virtual int64_t pwrite(const void* buf, int64_t count, int64_t offset);
       virtual int close();
 
     private:
@@ -29,14 +29,8 @@ namespace tfs
       static const int64_t BATCH_COUNT = 10;
       static const int64_t BATCH_SIZE = SEGMENT_SIZE * BATCH_COUNT;
 
-      int batch_open(const int64_t count, std::multimap<uint32_t, common::VUINT64>& segments);
-      int process(const InnerFilePhase file_phase);
-
-      //int do_async_request(const InnerFilePhase file_phase, const int64_t wait_id);
-      //int do_async_response(const InnerFilePhase file_phase, /*response*/);
     private:
       LocalKey local_key_;
-      std::vector<TfsFile*> current_files_;
     };
   }
 }

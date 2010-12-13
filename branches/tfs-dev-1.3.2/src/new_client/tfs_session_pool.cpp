@@ -60,7 +60,7 @@ void TfsSessionPool::release(TfsSession* session)
   tbutil::Mutex::Lock lock(mutex_);
   if (session)
   {
-    pool_.erase(session->get_ns_ip_port_str());
+    pool_.erase(session->get_ns_addr_str());
     tbsys::gDelete(session);
   }
 }

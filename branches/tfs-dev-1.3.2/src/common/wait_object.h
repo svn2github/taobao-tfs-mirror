@@ -22,35 +22,44 @@ namespace tfs
     class WaitObject
     {
       friend class WaitObjectManager;
-      public:
-        static const int64_t WAIT_RESPONSE_ARRAY_SIZE = 100;
-        WaitObject();
-        virtual ~WaitObject();
+    public:
+      static const int64_t WAIT_RESPONSE_ARRAY_SIZE = 100;
+      WaitObject();
+      virtual ~WaitObject();
 
-        int64_t get_id() const;
-        void set_id(const int64_t id);
-        void add_send_id();
-        WaitId* get_wait_key();
-        void set_no_free();
+      int64_t get_id() const;
+      void set_id(const int64_t id);
+      void add_send_id();
+      WaitId* get_wait_key();
+      void set_no_free();
 
-        /** wait for response, timeout (us) */
-        bool wait(const int32_t wait_count, const int64_t timeout_in_us);
-        bool wait(const int64_t timeout_in_us = 0);
-        void wakeup();
-        void push_response(const int64_t send_id, tbnet::Packet* packet);
-        int64_t get_response_count();
-        std::map<int64_t, tbnet::Packet*>& get_response();
+      /** wait for response, timeout (us) */
+      bool wait(const int32_t wait_count, const int64_t timeout_in_us);
+      bool wait(const int64_t timeout_in_us = 0);
+      void wakeup();
+      void push_response(const int64_t send_id, tbnet::Packet* packet);
+      int64_t get_response_count();
+      std::map<int64_t, tbnet::Packet*>& get_response();
 
-      private:
-        bool free_;
-        WaitId wait_key_;
-        int32_t done_count_;
-        tbsys::CThreadCond cond_;
-        std::map<int64_t, tbnet::Packet*> responses_;
+    private:
+      bool free_;
+      WaitId wait_key_;
+      int32_t done_count_;
+      tbsys::CThreadCond cond_;
+      std::map<int64_t, tbnet::Packet*> responses_;
     };
 
     class WaitObjectManager
     {
+      struct hash_int64
+      {
+        size_t
+        operator()(int64_t __x) const
+          { return __x; }
+      };
+      typedef __gnu_cxx::hash_map<int64_t, WaitObject*, hash_int64> INT_WAITOBJ_MAP;
+      typedef __gnu_cxx::hash_map<int64_t, WaitObject*, hash_int64>::iterator INT_WAITOBJ_MAP_ITER;
+
       public:
         WaitObjectManager();
         virtual ~WaitObjectManager();
@@ -66,7 +75,7 @@ namespace tfs
       private:
         int64_t seq_id_;
         tbsys::CThreadMutex mutex_;
-        __gnu_cxx::hash_map<int64_t, WaitObject*> wait_objects_map_;
+        INT_WAITOBJ_MAP wait_objects_map_;
     };
   } /* client */
 } /* tfs */

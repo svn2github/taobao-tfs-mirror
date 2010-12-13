@@ -120,7 +120,9 @@ namespace tfs
       OWNER_CHECK_MESSAGE,
       GET_BLOCK_LIST_MESSAGE,
       CRC_ERROR_MESSAGE,
-      ADMIN_CMD_MESSAGE
+      ADMIN_CMD_MESSAGE,
+      BATCH_GET_BLOCK_INFO_MESSAGE,
+      BATCH_SET_BLOCK_INFO_MESSAGE
     };
     //Define Message Type End
 
