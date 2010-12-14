@@ -89,7 +89,7 @@ TEST_F(DataHandleTest, testReadWrite)
   {
     buf[i] = 'a' + (i % 26);
   }
-  buf[data_len] = '\0';
+  buf[data_len - 1] = '\0';
   char* read_buf = new char[strlen(buf) + 1];
 
   DataHandle* m_data_handle = new DataHandle(logic_block);

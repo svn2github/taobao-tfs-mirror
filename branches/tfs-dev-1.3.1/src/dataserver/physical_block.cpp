@@ -118,7 +118,12 @@ namespace tfs
     {
       TBSYS_LOG(DEBUG, "dump block prefix. logic blockid: %u, prev physical blockid: %u, next physical blockid: %u",
           block_prefix_.logic_blockid_, block_prefix_.prev_physic_blockid_, block_prefix_.next_physic_blockid_);
-      return file_op_->pwrite_file((const char*) (&block_prefix_), sizeof(BlockPrefix), 0);
+      int ret = file_op_->pwrite_file((const char*) (&block_prefix_), sizeof(BlockPrefix), 0);
+      if (TFS_SUCCESS == ret)
+      {
+        ret = file_op_->flush_file();
+      }
+      return ret;
     }
 
     void PhysicalBlock::get_block_prefix(BlockPrefix& block_prefix)
