@@ -10,18 +10,23 @@ namespace tfs
   namespace client
   {
     const static char* g_tmp_path = "/tmp";
+    const static int64_t SEGMENT_SIZE = 1 << 10;
 
     struct SegmentInfo
     {
-      int32_t block_id_;        // block id
+      uint32_t block_id_;        // block id
       uint64_t file_id_;        // file id
-      int32_t offset_;          // offset in current file
+      int64_t offset_;          // offset in current file
       int32_t size_;            // size of segment
       int32_t crc_;             // crc checksum of segment
 
       SegmentInfo()
       {
         memset(this, 0, sizeof(*this));
+      }
+      bool operator < (const SegmentInfo& si) const
+      {
+        return offset_ < si.offset_;
       }
     };
 
@@ -41,15 +46,8 @@ namespace tfs
     class LocalKey
     {
     public:
-      struct SegmentComp
-      {
-        bool operator() (const SegmentInfo& lhs, const SegmentInfo& rhs) const
-        {
-          return lhs.offset_ < rhs.offset_;
-        }
-      };
-      typedef std::set<SegmentInfo, SegmentComp> SEG_SET;
-      typedef std::set<SegmentInfo, SegmentComp>::iterator SEG_SET_ITER;
+      typedef std::set<SegmentInfo> SEG_SET;
+      typedef std::set<SegmentInfo>::iterator SEG_SET_ITER;
 
       LocalKey();
       LocalKey(const char* local_key, const uint64_t addr);
@@ -70,7 +68,7 @@ namespace tfs
 
     private:
       void insert_seg(const int64_t start, const int64_t end,
-                      const char* buf, int64_t& size, std::vector<SegmentData>& seg_list);
+                      const char* buf, int64_t& size, std::vector<SegmentData*>& seg_list);
     private:
       common::FileOperation* file_op_;
       SEG_SET seg_info_;

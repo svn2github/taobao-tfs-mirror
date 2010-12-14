@@ -7,9 +7,9 @@ AM_LDFLAGS=-lrt -lpthread -ldl
 lib_LTLIBRARIES= libtfsclient.la
 
 libtfsclient_la_SOURCES = tfs_file.cpp tfs_large_file.cpp tfs_small_file.cpp tfs_session.cpp fsname.cpp \
-                          tfs_session_pool.cpp tfs_client_api.cpp \
+                          tfs_session_pool.cpp tfs_client_api.cpp local_key.cpp \
                           tfs_file.h tfs_large_file.h tfs_small_file.h tfs_session.h fsname.h \
-                          tfs_session_pool.h tfs_client_api.h
+                          tfs_session_pool.h tfs_client_api.h local_key.h
 
 libtfsclient_la_LDFLAGS=$(AM_LDFLAGS) \
 			$(top_srcdir)/src/message/libtfsmessage.a \

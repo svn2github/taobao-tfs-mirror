@@ -1,5 +1,7 @@
 #include "local_key.h"
 #include "common/error_msg.h"
+#include "tbsys.h"
+#include "Memory.hpp"
 
 using namespace tfs::client;
 using namespace tfs::common;
@@ -15,7 +17,7 @@ LocalKey::LocalKey(const char* local_key, const uint64_t addr)
 
 LocalKey::~LocalKey()
 {
-  // tbsys::gDelete(file_op_);
+  tbsys::gDelete(file_op_);
 }
 
 void LocalKey::destroy_info()
@@ -51,43 +53,52 @@ int LocalKey::initialize(const char* local_key, const uint64_t addr)
 
 int LocalKey::load()
 {
-  // int ret = TFS_ERROR;
+  int ret = TFS_ERROR;
 
-  // int32_t count;
-  // TBSYS_LOG(DEBUG, "before load count %d", count);
-  // if ((ret = file_op_->pread_file(static_cast<char*>(&count), sizof(int32_t), 0)) != TFS_SUCCESS)
-  // {
-  //   TBSYS_LOG(ERROR, "load segment count fail, ret: %d", ret);
-  //   return ret;
-  // }
-  // TBSYS_LOG(DEBUG, "load count %d", count);
+  int32_t count;
+  if (!file_op_)
+  {
+    TBSYS_LOG(ERROR, "local key file path not initialize");
+    return TFS_ERROR;
+  }
 
-  // char* buf = new char[sizeof(SegmentInfo)*count];
-  // if ((ret = file_op_->pread_file(buf, sizeof(SegmentInfo)*count, sizeof(int32_t))) != TFS_SUCCESS)
-  // {
-  //   TBSYS_LOG(ERROR, "load segment info fail, ret: %d", ret);
-  //   return ret;
-  // }
+  TBSYS_LOG(DEBUG, "before load count %d", count);
+  // bit endian ?
+  if ((ret = file_op_->pread_file(reinterpret_cast<char*>(&count), sizeof(int32_t), 0)) != TFS_SUCCESS)
+  {
+    TBSYS_LOG(ERROR, "load segment count fail, ret: %d", ret);
+    return ret;
+  }
+  TBSYS_LOG(DEBUG, "load count %d", count);
 
-  // ret = load(buf, count);
-  // return ret;
+  char* buf = new char[sizeof(SegmentInfo)*count];
+  if ((ret = file_op_->pread_file(buf, sizeof(SegmentInfo)*count, sizeof(int32_t))) != TFS_SUCCESS)
+  {
+    TBSYS_LOG(ERROR, "load segment info fail, ret: %d", ret);
+    return ret;
+  }
+
+  ret = load(buf, count);
+  return ret;
 }
 
 int LocalKey::load(const char* buf)
 {
-  int32_t count = atoi(buf);
+  int32_t count = *(reinterpret_cast<const int32_t*>(buf));    // bit endian ?
   return load(buf+sizeof(int32_t), count);
 }
 
 int LocalKey::load(const char* buf, const int32_t count)
 {
   int ret = TFS_SUCCESS;
-   // clear last segment info
+  // clear last segment info ?
   destroy_info();
 
   const SegmentInfo* segment = reinterpret_cast<const SegmentInfo*>(buf);
   for (int32_t i = 0; i < count; i++)
   {
+    TBSYS_LOG(DEBUG, "load segment info, offset:%"PRI64_PREFIX"d, blockid:%u, fileid%"PRI64_PREFIX"u",
+              segment[i].offset_, segment[i].block_id_, segment[i].file_id_);
     if (!seg_info_.insert(*(segment+i)).second)
     {
       TBSYS_LOG(ERROR, "load segment info fail, count:%d, failno:%d", count, i+1);
@@ -107,6 +118,7 @@ int LocalKey::save()
 {
   int ret = TFS_ERROR;
   int32_t count = seg_info_.size();
+
   TBSYS_LOG(DEBUG, "save count %d", count);
   if (!file_op_)
   {
@@ -114,33 +126,33 @@ int LocalKey::save()
     return ret;
   }
 
-  // if ((ret = file_op_.pwrite_file(static_cast<const char*>(&count), sizeof(int32_t), 0)) != TFS_SUCCESS)
-  // {
-  //   TBSYS_LOG(ERROR, "save segment count fail, ret: %d", ret);
-  //   return ret;
-  // }
+  char* buf = new char[sizeof(int32_t) + sizeof(SegmentInfo)*count];
 
-  // io several times ?
-  int32_t offset = sizeof(int32_t);
-  for (int32_t i = 0; i < count; i++)
+  strncpy(buf, reinterpret_cast<const char*>(&count), sizeof(int32_t));
+  char* pos = buf + sizeof(int32_t);
+  SEG_SET_ITER it;
+  for (it = seg_info_.begin(); it != seg_info_.end(); it++)
   {
-    // if ((ret = file_op_.pwrite_file(static_cast<const char*>(seq_info_[i]), sizeof(SegmentInfo), offset))
-    //     != TFS_SUCCESS)
-    // {
-    //   TBSYS_LOG(ERROR, "save segment info fail, count:%d failno:%d", count);
-    //   ret = TFS_ERROR;
-    //   break;
-    // }
-    // offset += sizeof(SegmentInfo);
+    strncpy(pos, reinterpret_cast<const char*>(&(*it)), sizeof(SegmentInfo));
   }
-  file_op_->flush_file();
 
+  if ((ret = file_op_->pwrite_file(buf, sizeof(int32_t)+sizeof(SegmentInfo)*count, 0))
+      != TFS_SUCCESS)
+  {
+    TBSYS_LOG(ERROR, "save segment info fail, count:%d", count);
+    ret = TFS_ERROR;
+  }
+
+  file_op_->flush_file();
+  tbsys::gDelete(buf);
   return ret;
 }
 
 int LocalKey::get_segment_for_write(const int64_t offset, const char* buf,
                                     int64_t size, std::vector<SegmentData*>& seg_list)
 {
+  seg_list.clear();
+
   int64_t cur_offset = offset, next_offset = offset, remain_size = size, last_remain_size = size;
   const char* cur_buf = buf;
   SegmentInfo seg_info;
@@ -187,6 +199,7 @@ int LocalKey::get_segment_for_write(const int64_t offset, const char* buf,
     cur_buf += last_remain_size - remain_size;
     cur_offset += last_remain_size - remain_size;
   }
+  return TFS_SUCCESS;
 }
 
 int LocalKey::get_segment_for_read(const int64_t offset, const char* buf,
@@ -204,7 +217,7 @@ int LocalKey::get_segment_for_read(const int64_t offset, const char* buf,
 
   int64_t check_size = 0, cur_size = 0;
   SegmentData* seg_data = NULL;
-  bool not_end = true;
+
   if (it->offset_ != offset)
   {
     if (seg_info_.begin() == it) // should never happen
@@ -214,14 +227,15 @@ int LocalKey::get_segment_for_read(const int64_t offset, const char* buf,
     }
     else
     {
-      SEG_SET_ITER pre_it = it - 1;
-      check_size += pre_it->size - (offset - pre_it->offset_);
+      SEG_SET_ITER pre_it = it;
+      it--;
+      check_size += pre_it->size_ - (offset - pre_it->offset_);
       seg_data = new SegmentData();
-      seg_data->buf = buf;
+      seg_data->buf_ = const_cast<char*>(buf);
       seg_list.push_back(seg_data);
     }
   }
-  while (it != seg_info_.end && check_size < size)
+  while (it != seg_info_.end() && check_size < size)
   {
     if (check_size + it->size_ > size)
     {
@@ -233,9 +247,9 @@ int LocalKey::get_segment_for_read(const int64_t offset, const char* buf,
     }
 
     seg_data = new SegmentData();
-    seg_data->seg_info = *it;
-    seg_data->seg_info.size_ = cur_size;
-    seg_data->buf = buf + check_size;
+    seg_data->seg_info_ = *it;
+    seg_data->seg_info_.size_ = cur_size;
+    seg_data->buf_ = const_cast<char*>(buf) + check_size;
 
     check_size += cur_size;
   }
@@ -244,7 +258,7 @@ int LocalKey::get_segment_for_read(const int64_t offset, const char* buf,
 }
 
 void LocalKey::insert_seg(const int64_t start, const int64_t end,
-                         const char* buf, int64_t& size, std::vector<SegmentData>& seg_list)
+                         const char* buf, int64_t& size, std::vector<SegmentData*>& seg_list)
 {
   if (start < end)
   {
@@ -266,9 +280,9 @@ void LocalKey::insert_seg(const int64_t start, const int64_t end,
       }
 
       seg_data = new SegmentData();
-      seg_data->seg_info.offset_ = offset;
-      seg_data->seg_info.size_ = cur_size;
-      seg_data->buf_ = buf + check_size;
+      seg_data->seg_info_.offset_ = offset;
+      seg_data->seg_info_.size_ = cur_size;
+      seg_data->buf_ = const_cast<char*>(buf) + check_size;
       seg_list.push_back(seg_data);
       check_size += cur_size;
     }
