@@ -43,6 +43,7 @@ namespace tfs
     {
     public:
       TfsFile();
+      TfsFile(std::vector<SegmentData*>& seg_list);
       TfsFile(uint32_t block_id, common::VUINT64& ds_list);
       virtual ~TfsFile();
 
@@ -73,39 +74,40 @@ namespace tfs
       int create_filename();
 
     private:
-      int do_async_request(const InnerFilePhase file_phase, const int64_t wait_id, SegmentData& seg_data);
-      int do_async_response(const InnerFilePhase file_phase, tbnet::Packet* packet);
-      int async_req_create_file(const int64_t wait_id, SegmentData& seg_data);
-      int async_rsp_create_file(const int64_t wait_id, SegmentData& seg_data);
+      int do_async_request(const InnerFilePhase file_phase, const int64_t wait_id, const int32_t index);
+      int do_async_response(const InnerFilePhase file_phase, tbnet::Packet* packet, const int32_t index);
 
-      int async_req_read_file(const int64_t wait_id, SegmentData& seg_data);
-      int async_rsp_read_file(const int64_t wait_id, SegmentData& seg_data);
+      int async_req_create_file(const int64_t wait_id, const int32_t index);
+      int async_rsp_create_file(tbnet::Packet* packet, const int32_t index);
 
-      int async_req_write_data(const int64_t wait_id, SegmentData& seg_data);
-      int async_rsp_write_data(const int64_t wait_id, SegmentData& seg_data);
+      int async_req_read_file(const int64_t wait_id, const int32_t index);
+      int async_rsp_read_file(tbnet::Packet* packet, const int32_t index);
 
-      int async_req_close_file(const int64_t wait_id, SegmentData& seg_data);
-      int async_rsp_close_file(const int64_t wait_id, SegmentData& seg_data);
+      int async_req_write_data(const int64_t wait_id, const int32_t index);
+      int async_rsp_write_data(tbnet::Packet* packet, const int32_t index);
+
+      int async_req_close_file(const int64_t wait_id, const int32_t index);
+      int async_rsp_close_file(tbnet::Packet* packet, const int32_t index);
 
     protected:
       static const int64_t WAIT_TIME_OUT = 5000;
 
     protected:
       FSName fsname_;
-      uint64_t file_number_;
       int32_t flags_;
       int32_t is_open_;
       int32_t eof_;
       int64_t offset_;
-      int32_t crc_;
-      int32_t pri_ds_index_;
-      int32_t last_elect_ds_id_;
+      //sync flag
+      int32_t option_flag_;
+      //uint64_t file_number_;
+      //int32_t pri_ds_index_;
+      //int32_t last_elect_ds_id_;
+      //message::Client* client_;
+      //common::VUINT64 ds_list_;
       TfsSession* tfs_session_;
-      message::Client *client_;
-      common::VUINT64 ds_list_;
       char error_message_[common::ERR_MSG_SIZE];
-      const char* write_buf;
-      std::vector<SegmentData*> seg_list_;
+      std::vector<SegmentData*> processing_seg_list_;
     };
   }
 }

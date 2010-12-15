@@ -16,6 +16,11 @@
 #ifndef TFS_CLIENT_TFSCLIENTAPI_H_
 #define TFS_CLIENT_TFSCLIENTAPI_H_
 
+//#if __GNUC_PREREQ (4,3)
+#define __va_arg_pack() __builtin_va_arg_pack ()
+#define __va_arg_pack_len() __builtin_va_arg_pack_len ()
+//#endif
+
 #include <string>
 
 #include "common/define.h"

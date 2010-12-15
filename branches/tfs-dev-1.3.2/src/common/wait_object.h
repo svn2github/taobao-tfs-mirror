@@ -11,7 +11,7 @@ namespace tfs
   {
     struct WaitId
     {
-      WaitId() : seq_id_(0), send_id_(0)
+      WaitId() : seq_id_(0), send_id_(-1)
       {
       }
 

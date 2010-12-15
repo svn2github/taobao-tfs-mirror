@@ -42,6 +42,7 @@ namespace tfs
     const int32_t EXIT_CONNECT_ERROR = -3002;
     const int32_t EXIT_SENDMSG_ERROR = -3003;
     const int32_t EXIT_RECVMSG_ERROR = -3004;
+    const int32_t EXIT_TIMEOUT_ERROR = -3005;
 
     const int32_t EXIT_TFS_ERROR = -5000;
     const int32_t EXIT_NO_BLOCK = -5001;

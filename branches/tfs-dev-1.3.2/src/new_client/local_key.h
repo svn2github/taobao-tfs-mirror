@@ -12,6 +12,21 @@ namespace tfs
     const static char* g_tmp_path = "/tmp";
     const static int64_t SEGMENT_SIZE = 1 << 10;
 
+    enum SegmentStatus
+    {
+      SEG_STATUS_UNINIT = 0,
+      SEG_STATUS_RUNNING,
+      SEG_STATUS_SUCCESS,
+      SEG_STATUS_FAIL,
+      SEG_STATUS_TIMEOUT
+    };
+
+    enum TfsFileEofFlag
+    {
+      TFS_FILE_EOF_FLAG_NO = 0x00,
+      TFS_FILE_EOF_FLAG_YES
+    };
+
     struct SegmentInfo
     {
       uint32_t block_id_;        // block id
@@ -34,11 +49,18 @@ namespace tfs
     {
       SegmentInfo seg_info_;
       char* buf_;                   // buffer start
-      int64_t file_number_;
+      common::FileInfo* file_info_;
+      int64_t cur_offset_;
+      int32_t cur_size_;
+      uint64_t file_number_;
       common::VUINT64 ds_;
+      int32_t pri_ds_index_;
+      int32_t last_elect_ds_id_;
       int32_t status_;
+      TfsFileEofFlag eof_;
 
-      SegmentData() : buf_(NULL), file_number_(0)
+      SegmentData() : buf_(NULL), file_info_(NULL), cur_offset_(0), cur_size_(0), file_number_(0), pri_ds_index_(-1),
+        last_elect_ds_id_(0), status_(0), eof_(TFS_FILE_EOF_FLAG_NO)
       {
       }
     };
