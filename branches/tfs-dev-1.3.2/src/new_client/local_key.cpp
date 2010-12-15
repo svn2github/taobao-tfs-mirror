@@ -18,6 +18,7 @@ LocalKey::LocalKey(const char* local_key, const uint64_t addr)
 LocalKey::~LocalKey()
 {
   tbsys::gDelete(file_op_);
+  destroy_info();
 }
 
 void LocalKey::destroy_info()
@@ -117,42 +118,57 @@ int LocalKey::add_segment(SegmentInfo& seg_info)
 int LocalKey::save()
 {
   int ret = TFS_ERROR;
-  int32_t count = seg_info_.size();
 
-  TBSYS_LOG(DEBUG, "save count %d", count);
   if (!file_op_)
   {
     TBSYS_LOG(ERROR, "local save file path not initialize");
     return ret;
   }
 
-  char* buf = new char[sizeof(int32_t) + sizeof(SegmentInfo)*count];
+  int32_t size = get_data_size();
+  char* buf = new char[size];
+  dump_data(buf);
 
-  strncpy(buf, reinterpret_cast<const char*>(&count), sizeof(int32_t));
+  if ((ret = file_op_->pwrite_file(buf, size, 0)) != TFS_SUCCESS)
+  {
+    TBSYS_LOG(ERROR, "save segment info fail, count:%d, size:%d, ret:%d", seg_info_.size(), size, ret);
+  }
+  else
+  {
+    TBSYS_LOG(INFO, "save segment info successful, count:%d, size:%d", seg_info_.size(), size);
+    file_op_->flush_file();
+  }
+
+  tbsys::gDelete(buf);
+  return ret;
+}
+
+int LocalKey::remove()
+{
+  return file_op_->unlink_file();
+}
+
+int32_t LocalKey::get_data_size()
+{
+  return sizeof(int32_t) + seg_info_.size() * sizeof(SegmentInfo);
+}
+
+int LocalKey::dump_data(char* buf)
+{
+  int32_t count = seg_info_.size();
+  strncpy(buf, reinterpret_cast<const char*>(&count), sizeof(int32_t)); // bit endian ?
   char* pos = buf + sizeof(int32_t);
   SEG_SET_ITER it;
   for (it = seg_info_.begin(); it != seg_info_.end(); it++)
   {
     strncpy(pos, reinterpret_cast<const char*>(&(*it)), sizeof(SegmentInfo));
   }
-
-  if ((ret = file_op_->pwrite_file(buf, sizeof(int32_t)+sizeof(SegmentInfo)*count, 0))
-      != TFS_SUCCESS)
-  {
-    TBSYS_LOG(ERROR, "save segment info fail, count:%d", count);
-    ret = TFS_ERROR;
-  }
-
-  file_op_->flush_file();
-  tbsys::gDelete(buf);
-  return ret;
+  return TFS_SUCCESS;
 }
 
 int LocalKey::get_segment_for_write(const int64_t offset, const char* buf,
                                     int64_t size, std::vector<SegmentData*>& seg_list)
 {
-  seg_list.clear();
-
   int64_t cur_offset = offset, next_offset = offset, remain_size = size, last_remain_size = size;
   const char* cur_buf = buf;
   SegmentInfo seg_info;

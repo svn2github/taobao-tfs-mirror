@@ -23,6 +23,7 @@ using namespace tfs::client;
 using namespace tfs::common;
 using namespace tfs::message;
 
+
 TfsSession::TfsSession(const std::string& nsip, const int32_t cache_time, const int32_t cache_items)
   :ns_addr_(0), ns_addr_str_(nsip), block_cache_time_(cache_time), block_cache_items_(cache_items),
 		cluster_id_(0), use_cache_(USE_CACHE_FLAG_YES)
@@ -190,20 +191,21 @@ int TfsSession::get_block_info_ex(uint32_t& block_id, VUINT64 &rds, const int32_
   return ret;
 }
 
-int TfsSession::batch_get_block_info(vector<SegmentData*>& seg_list, const int32_t flag)
+int TfsSession::get_block_info(vector<SegmentData*>& seg_list, const int32_t flag)
 {
   // insert to cache ?
   if (flag & T_WRITE)
   {
-    return batch_get_block_info_ex(seg_list, flag);
+    return get_block_info_ex(seg_list, flag);
   }
 
   // search in the local cache
   if (use_cache_ == USE_CACHE_FLAG_YES)
   {
-    for (int32_t i = 0; i < seg_list.size(); i++)
+    size_t block_count = 0;
+    for (size_t i = 0; i < seg_list.size(); i++)
     {
-      int32_t block_id = seg_list[i]->seg_info_.block_id_;
+      uint32_t block_id = seg_list[i]->seg_info_.block_id_;
 
       if (!block_id)
       {
@@ -217,15 +219,21 @@ int TfsSession::batch_get_block_info(vector<SegmentData*>& seg_list, const int32
           (block_cache->last_time_ >= time(NULL) - block_cache_time_))
       {
         seg_list[i]->ds_ = block_cache->ds_;
+        block_count++;
       }
+    }
+    if (block_count == seg_list.size())
+    {
+      TBSYS_LOG(DEBUG, "all block id cached");
+      return TFS_SUCCESS;
     }
   }
 
   BlockCache block_cache;
   int ret = TFS_SUCCESS;
-  if ((ret = batch_get_block_info_ex(seg_list, T_READ)) == TFS_SUCCESS)
+  if ((ret = get_block_info_ex(seg_list, T_READ)) == TFS_SUCCESS)
   {
-    for (int32_t i = 0; i < seg_list.size(); i++)
+    for (size_t i = 0; i < seg_list.size(); i++)
     {
       if (seg_list[i]->ds_.size() <= 0)
       {
@@ -243,10 +251,14 @@ int TfsSession::batch_get_block_info(vector<SegmentData*>& seg_list, const int32
       }
     }
   }
+  else
+  {
+    TBSYS_LOG(ERROR, "batch get block info fail, ret:%d", ret);
+  }
   return ret;
 }
 
-int TfsSession::batch_get_block_info_ex(vector<SegmentData*>& seg_list, const int32_t flag)
+int TfsSession::get_block_info_ex(vector<SegmentData*>& seg_list, const int32_t flag)
 {
   Client *client = CLIENT_POOL.get_client(ns_addr_);
   if (client == NULL)
@@ -261,7 +273,7 @@ int TfsSession::batch_get_block_info_ex(vector<SegmentData*>& seg_list, const in
     return TFS_ERROR;
   }
 
-  int32_t block_count = 0;
+  size_t block_count = 0;
 
   BatchGetBlockInfoMessage dsmessage(flag);
   if (flag & T_WRITE)
@@ -271,7 +283,7 @@ int TfsSession::batch_get_block_info_ex(vector<SegmentData*>& seg_list, const in
   }
   else
   {
-    for (int32_t i = 0; i < seg_list.size(); i++)
+    for (size_t i = 0; i < seg_list.size(); i++)
     {
       if (seg_list[i]->ds_.size() == 0)
       {
@@ -291,7 +303,6 @@ int TfsSession::batch_get_block_info_ex(vector<SegmentData*>& seg_list, const in
   {
     if (message->get_message_type() == STATUS_MESSAGE)
     {
-      // TFS_ERROR ?
       ret = dynamic_cast<StatusMessage*>(message)->get_status();
       TBSYS_LOG(ERROR, "batch get block info fail, ret: %d, error: %s",
                 ret, dynamic_cast<StatusMessage*>(message)->get_error());
@@ -300,49 +311,49 @@ int TfsSession::batch_get_block_info_ex(vector<SegmentData*>& seg_list, const in
   else
   {
     BatchSetBlockInfoMessage* block_info_msg = dynamic_cast<BatchSetBlockInfoMessage*>(message);
-    const map<uint32_t, BlockInfoSeg>* block_info = block_info_msg->get_infos();
+    map<uint32_t, BlockInfoSeg>* block_info = block_info_msg->get_infos();
     if (block_info->size() != block_count)
     {
-      TBSYS_LOG(ERROR, "batch get block info fail, get count conflict, request:%d, response:%d",
+      TBSYS_LOG(ERROR, "batch get block info fail, get count conflict, request:%d, response:%u",
                 block_count, block_info->size());
       return TFS_ERROR;
     }
 
-  //   std::map<uint32_t, BlockInfoSeg>::iterator it;
+    std::map<uint32_t, BlockInfoSeg>::iterator it;
 
-  //   if (flag & T_READ)
-  //   {
-  //     for (int32_t i = 0; i < seg_list.size(); i++)
-  //     {
-  //       if ((it = block_info->find(seg_list[i]->seg_info_.block_id_)) == block_info->end())
-  //       {
-  //         // retry ?
-  //         TBSYS_LOG(ERROR, "get block %d info fail", seg_list[i]->seg_info_.block_id_);
-  //         return TFS_ERROR;
-  //       }
-  //       seg_list[i]->ds_ = it->second.ds_;
-  //     }
-  //   }
-  //   else if (flag & T_WRITE)
-  //   {
-  //     it = block_info->begin();
-  //     for (int32_t i = 0; i < seg_list.size(); i++, it++)
-  //     {
-  //       seg_list[i]->seg_info_.block_id_ = it->first;
-  //       seg_list[i]->ds_ = it->second.ds_;
-  //       if (it->second.has_lease_) // should have
-  //       {
-  //         seg_list[i]->ds_.push_back(ULONG_LONG_MAX);
-  //         seg_list[i]->ds_.push_back(it->second.version_);
-  //         seg_list[i]->ds_.push_back(it->second.lease_);
-  //       }
-  //     }
-  //   }
-  //   else
-  //   {
-  //     TBSYS_LOG(ERROR, "unknown flag %d", flag);
-  //     return TFS_ERROR;
-  //   }
+    if (flag & T_READ)
+    {
+      for (size_t i = 0; i < seg_list.size(); i++)
+      {
+        if ((it = block_info->find(seg_list[i]->seg_info_.block_id_)) == block_info->end())
+        {
+          // retry ?
+          TBSYS_LOG(ERROR, "get block %d info fail", seg_list[i]->seg_info_.block_id_);
+          return TFS_ERROR;
+        }
+        seg_list[i]->ds_ = it->second.ds_;
+      }
+    }
+    else if (flag & T_WRITE)
+    {
+      it = block_info->begin();
+      for (size_t i = 0; i < seg_list.size(); i++, it++)
+      {
+        seg_list[i]->seg_info_.block_id_ = it->first;
+        seg_list[i]->ds_ = it->second.ds_;
+        if (it->second.has_lease_) // should have
+        {
+          seg_list[i]->ds_.push_back(ULONG_LONG_MAX);
+          seg_list[i]->ds_.push_back(it->second.version_);
+          seg_list[i]->ds_.push_back(it->second.lease_);
+        }
+      }
+    }
+    else
+    {
+      TBSYS_LOG(ERROR, "unknown flag %d", flag);
+      return TFS_ERROR;
+    }
   }
 
   tbsys::gDelete(message);

@@ -46,7 +46,7 @@ namespace tfs
 
       int initialize();
       int get_block_info(uint32_t& block_id, common::VUINT64 &rds, const int32_t flag);
-      int batch_get_block_info(std::vector<SegmentData*>& seg_list, const int32_t flag);
+      int get_block_info(std::vector<SegmentData*>& seg_list, const int32_t flag);
 
       inline int32_t get_cluster_id() const
       {
@@ -82,7 +82,7 @@ namespace tfs
       TfsSession();
       DISALLOW_COPY_AND_ASSIGN( TfsSession);
       int get_block_info_ex(uint32_t& block_id, common::VUINT64 &rds, const int32_t flag);
-      int batch_get_block_info_ex(std::vector<SegmentData*>& seg_list, const int32_t flag);
+      int get_block_info_ex(std::vector<SegmentData*>& seg_list, const int32_t flag);
       int get_cluster_id_from_ns();
 
     private:

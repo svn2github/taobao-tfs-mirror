@@ -30,12 +30,19 @@ namespace tfs
       virtual ~TfsSmallFile();
 
       virtual int open(const char* file_name, const char *suffix, int flags, ... );
-      virtual int read(void* buf, size_t count);
-      virtual int write(const void* buf, size_t count);
-      virtual off_t lseek(off_t offset, int whence);
-      virtual ssize_t pread(void *buf, size_t count, off_t offset);
-      virtual ssize_t pwrite(const void *buf, size_t count, off_t offset);
+      virtual int64_t read(void* buf, int64_t count);
+      virtual int64_t write(const void* buf, int64_t count);
+      virtual int64_t lseek(int64_t offset, int whence);
+      virtual int64_t pread(void *buf, int64_t count, int64_t offset);
+      virtual int64_t pwrite(const void *buf, int64_t count, int64_t offset);
       virtual int close();
+
+    protected:
+      virtual int get_segment_for_read(int64_t offset, char* buf, int64_t count);
+      virtual int get_segment_for_write(int64_t offset, const char* buf, int64_t count);
+      virtual int read_process();
+      virtual int write_process();
+      virtual int close_process();
     };
   }
 }

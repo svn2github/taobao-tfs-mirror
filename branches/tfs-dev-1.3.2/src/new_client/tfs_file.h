@@ -49,25 +49,34 @@ namespace tfs
 
       // virtual level operation
       virtual int open(const char* file_name, const char *suffix, int flags, ... );
-      virtual int read(void* buf, size_t count);
-      virtual int write(const void* buf, size_t count);
-      virtual off_t lseek(off_t offset, int whence);
-      virtual ssize_t pread(void* buf, size_t count, off_t offset);
-      virtual ssize_t pwrite(const void* buf, size_t count, off_t offset);
+      virtual int64_t read(void* buf, int64_t count);
+      virtual int64_t write(const void* buf, int64_t count);
+      virtual int64_t lseek(int64_t offset, int whence);
+      virtual int64_t pread(void* buf, int64_t count, int64_t offset);
+      virtual int64_t pwrite(const void* buf, int64_t count, int64_t offset);
       virtual int close();
-
       const char* get_file_name();
       void set_session(TfsSession* tfs_session);
+
+    protected:
+      virtual int get_segment_for_read(int64_t offset, char* buf, int64_t count);
+      virtual int get_segment_for_write(int64_t offset, const char* buf, int64_t count);
+      virtual int read_process();
+      virtual int write_process();
+      virtual int close_process();
+
       int process(const InnerFilePhase file_phase);
 
     protected:
       // common operation
+      void destroy_seg();
       int open_ex(const char* file_name, const char *suffix, const int32_t mode);
-      ssize_t read_ex(void* buf, size_t count);
-      ssize_t write_ex(const void* buf, size_t count);
-      off_t lseek_ex(off_t offset, int whence);
-      ssize_t pread_ex(void* buf, size_t count, off_t offset);
-      ssize_t pwrite_ex(const void* buf, size_t count, off_t offset);
+      int64_t read_ex(void* buf, int64_t count, int64_t offset, bool modify = true);
+      int64_t write_ex(const void* buf, int64_t count, int64_t offset, bool modify = true);
+      int64_t lseek_ex(int64_t offset, int whence);
+      int64_t pread_ex(void* buf, int64_t count, int64_t offset);
+      int64_t pwrite_ex(const void* buf, int64_t count, int64_t offset);
+      int stat_ex(common::FileInfo* file_info, int32_t mode);
       int close_ex();
 
       int connect_ds();
@@ -98,13 +107,9 @@ namespace tfs
       int32_t is_open_;
       int32_t eof_;
       int64_t offset_;
+      SegmentData* meta_seg_;
       //sync flag
       int32_t option_flag_;
-      //uint64_t file_number_;
-      //int32_t pri_ds_index_;
-      //int32_t last_elect_ds_id_;
-      //message::Client* client_;
-      //common::VUINT64 ds_list_;
       TfsSession* tfs_session_;
       char error_message_[common::ERR_MSG_SIZE];
       std::vector<SegmentData*> processing_seg_list_;

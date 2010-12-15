@@ -22,47 +22,101 @@ using namespace tfs::message;
 
 TfsSmallFile::TfsSmallFile()
 {
-
 }
 
 TfsSmallFile::~TfsSmallFile()
 {
-
 }
 
 int TfsSmallFile::open(const char *file_name, const char *suffix, int flags, ... )
 {
-  flags_ = flags;
-  return TFS_SUCCESS;
+  return open_ex(file_name, suffix, flags);
 }
 
-int TfsSmallFile::read(void* buf, size_t count)
+int64_t TfsSmallFile::read(void* buf, int64_t count)
 {
-
+  return read_ex(buf, count, offset_, false);
 }
 
-int TfsSmallFile::write(const void* buf, size_t count)
+int64_t TfsSmallFile::write(const void* buf, int64_t count)
 {
-
+  return write_ex(buf, count, offset_, false);
 }
 
-off_t TfsSmallFile::lseek(off_t offset, int whence)
+int64_t TfsSmallFile::lseek(int64_t offset, int whence)
 {
-
+  return lseek_ex(offset, whence);
 }
 
-ssize_t TfsSmallFile::pread(void *buf, size_t count, off_t offset)
+int64_t TfsSmallFile::pread(void *buf, int64_t count, int64_t offset)
 {
-
+  return pread_ex(buf, count, offset);
 }
 
-ssize_t TfsSmallFile::pwrite(const void *buf, size_t count, off_t offset)
+int64_t TfsSmallFile::pwrite(const void *buf, int64_t count, int64_t offset)
 {
-
+  return pwrite(buf, count, offset);
 }
 
 
 int TfsSmallFile::close()
 {
+  return close_ex();
+}
 
+int TfsSmallFile::get_segment_for_read(int64_t offset, char* buf, int64_t count)
+{
+  return get_segment_for_write(offset, buf, count);
+}
+
+int TfsSmallFile::get_segment_for_write(int64_t offset, const char* buf, int64_t count)
+{
+  // TODO ... cut segment piece
+  destroy_seg();
+  meta_seg_->buf_ = const_cast<char*>(buf);
+  meta_seg_->seg_info_.offset_ = offset;
+  meta_seg_->seg_info_.size_ = count;
+  processing_seg_list_.push_back(meta_seg_);
+  return TFS_SUCCESS;
+}
+
+int TfsSmallFile::read_process()
+{
+  int ret = TFS_ERROR;
+  if ((ret = process(FILE_PHASE_READ_FILE)) != TFS_SUCCESS)
+  {
+    TBSYS_LOG(ERROR, "read data fail, ret:%d", ret);
+  }
+  return ret;
+}
+
+int TfsSmallFile::write_process()
+{
+  int ret = TFS_ERROR;
+   // write data
+  if ((ret = process(FILE_PHASE_WRITE_DATA)) != TFS_SUCCESS)
+  {
+    TBSYS_LOG(ERROR, "write data fail, ret:%d", ret);
+    return ret;
+  }
+
+  // close file
+  if ((ret = process(FILE_PHASE_CLOSE_FILE)) != TFS_SUCCESS)
+  {
+    TBSYS_LOG(ERROR, "close tfs file fail, ret:%d", ret);
+    return ret;
+  }
+  return ret;
+}
+
+int TfsSmallFile::close_process()
+{
+  int ret = TFS_ERROR;
+  get_segment_for_read(0, NULL, 0);       // TODO .. cancle here
+  if ((ret = process(FILE_PHASE_CLOSE_FILE)) != TFS_SUCCESS)
+  {
+    TBSYS_LOG(ERROR, "close tfs file fail, ret:%d", ret);
+    return ret;
+  }
+  return ret;
 }

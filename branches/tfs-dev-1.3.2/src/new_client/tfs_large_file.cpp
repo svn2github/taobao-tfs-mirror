@@ -20,22 +20,49 @@ int TfsLargeFile::open(const char* file_name, const char *suffix, int flags, ...
   flags_ = flags;
   if (!(flags_ & T_WRITE))       // not write
   {
-    return open_ex(file_name, suffix, flags);
-  }
+    if ((ret = open_ex(file_name, suffix, flags)) != TFS_SUCCESS)
+    {
+      TBSYS_LOG(ERROR, "open file fail, ret:%d", ret);
+      return ret;
+    }
 
-  // write flag
-  va_list args;
-  va_start(args, flags);
-  char* local_key = va_arg(args, char*);
-  if (!local_key)
-  {
-    snprintf(error_message_, ERR_MSG_SIZE, "open with T_LARGE|T_WRITE flag occur null key");
-    return ret;
+    FileInfo file_info;
+    if ((ret = stat_ex(&file_info, 0)) != TFS_SUCCESS) // TODO
+    {
+      TBSYS_LOG(ERROR, "stat file %s fail, ret:%d", fsname_.get_name(), ret);
+      return ret;
+    }
+
+    int32_t size = file_info.size_;
+    char* seg_buf = new char[size];
+    if ((ret = read_ex(seg_buf, size, 0, false)) != size)
+    {
+      TBSYS_LOG(ERROR, "read meta file fail, size:%d, retsize:%d", size, ret);
+      return ret;
+    }
+
+    if ((ret = local_key_.load(seg_buf)) != TFS_SUCCESS)
+    {
+      TBSYS_LOG(ERROR, "construct meta file info fail, ret:%d", ret);
+      return ret;
+    }
+    tbsys::gDelete(seg_buf);
   }
-  if ((ret = local_key_.initialize(local_key, tfs_session_->get_ns_addr())) != TFS_SUCCESS)
+  else  // write flag
   {
-    snprintf(error_message_, ERR_MSG_SIZE, "initialize local key fail, ret(%d)", ret);
-    return ret;
+    va_list args;
+    va_start(args, flags);
+    char* local_key = va_arg(args, char*);
+    if (!local_key)
+    {
+      snprintf(error_message_, ERR_MSG_SIZE, "open with T_LARGE|T_WRITE flag occur null key");
+      return ret;
+    }
+    if ((ret = local_key_.initialize(local_key, tfs_session_->get_ns_addr())) != TFS_SUCCESS)
+    {
+      snprintf(error_message_, ERR_MSG_SIZE, "initialize local key fail, ret(%d)", ret);
+      return ret;
+    }
   }
   is_open_ = TFS_FILE_OPEN_YES;
   return ret;
@@ -43,39 +70,50 @@ int TfsLargeFile::open(const char* file_name, const char *suffix, int flags, ...
 
 int64_t TfsLargeFile::read(void* buf, int64_t count)
 {
+  return read_ex(buf, count, offset_, true);
+}
+
+int64_t TfsLargeFile::write(const void* buf, int64_t count)
+{
+  return write_ex(buf, count, offset_, true);
+}
+
+int64_t TfsLargeFile::lseek(int64_t offset, int whence)
+{
+  return lseek_ex(offset, whence);
+}
+
+int64_t TfsLargeFile::pread(void* buf, int64_t count, int64_t offset)
+{
+  return pread_ex(buf, count, offset);
+}
+
+int64_t TfsLargeFile::pwrite(const void* buf, int64_t count, int64_t offset)
+{
+  return pwrite_ex(buf, count, offset);
+}
+
+int TfsLargeFile::close()
+{
+  return close_ex();
+}
+
+int TfsLargeFile::get_segment_for_read(int64_t offset, char* buf, int64_t count)
+{
+  destroy_seg();
+  return local_key_.get_segment_for_read(offset_, buf, count, processing_seg_list_);
+}
+
+int TfsLargeFile::get_segment_for_write(int64_t offset, const char* buf, int64_t count)
+{
+  destroy_seg();
+  return local_key_.get_segment_for_write(offset_, buf, count, processing_seg_list_);
+}
+
+int TfsLargeFile::read_process()
+{
   int ret = TFS_ERROR;
-  if (flags_ & T_WRITE)
-  {
-    TBSYS_LOG(ERROR, "file open without read flag");
-    return ret;
-  }
-
-  if (is_open_ != TFS_FILE_OPEN_YES)
-  {
-    TBSYS_LOG(ERROR, "file not open");
-    return ret;
-  }
-
-  char* seg_buf = new char[1024]; // TODO ...
-  if ((ret = read_ex(seg_buf, 1024)) != TFS_SUCCESS)
-  {
-    TBSYS_LOG(ERROR, "read meta file fail, ret:%d", ret);
-    return ret;
-  }
-
-  if ((ret = local_key_.load(seg_buf)) != TFS_SUCCESS)
-  {
-    TBSYS_LOG(ERROR, "construct meta file info fail, ret:%d", ret);
-    return ret;
-  }
-
-  if ((ret = local_key_.get_segment_for_read(offset_, reinterpret_cast<const char*>(buf), count, seg_list_)) != TFS_SUCCESS)
-  {
-    TBSYS_LOG(ERROR, "get segment for read fail, ret:%d", ret);
-    return ret;
-  }
-
-  if ((ret = tfs_session_->batch_get_block_info(seg_list_, flags_)) != TFS_SUCCESS)
+  if ((ret = tfs_session_->get_block_info(processing_seg_list_, flags_)) != TFS_SUCCESS)
   {
     TBSYS_LOG(ERROR, "get block info fail, ret:%d", ret);
     return ret;
@@ -89,80 +127,14 @@ int64_t TfsLargeFile::read(void* buf, int64_t count)
   return ret;
 }
 
-int64_t TfsLargeFile::write(const void* buf, int64_t count)
+int TfsLargeFile::write_process()
 {
-  //do not consider the update operation now
   int ret = TFS_ERROR;
-  if (!(flags_ & T_WRITE))
+  if ((ret = tfs_session_->get_block_info(processing_seg_list_, flags_)) != TFS_SUCCESS)
   {
-    TBSYS_LOG(ERROR, "file open without write flag");
+    TBSYS_LOG(ERROR, "batch get block info error, count:%d, flag:%d", processing_seg_list_.size(), flags_);
     return ret;
   }
-
-  if (is_open_ != TFS_FILE_OPEN_YES)
-  {
-    TBSYS_LOG(ERROR, "file not open");
-    return ret;
-  }
-
-  if ((ret = local_key_.get_segment_for_write(offset_, reinterpret_cast<const char*>(buf), count, seg_list_)) != TFS_SUCCESS)
-  {
-    TBSYS_LOG(ERROR, "get segment error, ret: %d", ret);
-    return ret;
-  }
-
-  int32_t seg_count = seg_list_.size();
-  if (!seg_count)
-  {
-    TBSYS_LOG(DEBUG, "data already written, offset:%d, size: %d", offset_, count);
-    return ret;
-  }
-
-  if ((ret = tfs_session_->batch_get_block_info(seg_list_, flags_)) != TFS_SUCCESS)
-  {
-    TBSYS_LOG(ERROR, "batch get block info error, count:%d, flag:%d", seg_count, flags_);
-    return ret;
-  }
-
-  // int64_t current_count = 0;
-  // int64_t remain_count = count;
-  // while (remain_count > 0)
-  // {
-  //   if (remain_count < BATCH_SIZE)
-  //   {
-  //     current_count = remain_count;
-  //   }
-  //   else
-  //   {
-  //     current_count = BATCH_SIZE;
-  //   }
-
-  //   int64_t remainder = current_count % SEGMENT_SIZE;
-  //   int64_t block_count = ((0 == remainder) ? current_count / SEGMENT_SIZE : current_count / SEGMENT_SIZE + 1);
-
-  //   // open
-  //   std::multimap<uint32_t, VUINT64> segments;
-  //   int ret = batch_open(block_count, segments);
-  //   if (TFS_SUCCESS != ret)
-  //   {
-  //     //do retry?
-  //   }
-  //   else
-  //   {
-  //     //create tfs file
-  //     int index = 0;
-  //     std::multimap<uint32_t, VUINT64>::iterator mit = segments.begin();
-  //     current_files_.clear();
-  //     int64_t current_remain_size = current_count;
-  //     for ( ; mit != segments.end() && current_remain_size > 0; ++mit)
-  //     {
-  //       int64_t local_block_size = (current_remain_size >= SEGMENT_SIZE) ? SEGMENT_SIZE : current_remain_size;
-  //       TfsSmallFile* small_file = new TfsSmallFile(mit->first, mit->second, buf + index * SEGMENT_SIZE, local_block_size);
-  //       current_files_.push_back(small_file);
-  //       ++index;
-  //       current_remain_size -= local_block_size;
-  //     }
-  //   }
 
   // create file
   if ((ret = process(FILE_PHASE_CREATE_FILE)) != TFS_SUCCESS)
@@ -185,34 +157,89 @@ int64_t TfsLargeFile::write(const void* buf, int64_t count)
     return ret;
   }
 
-  for (int32_t i = 0; i < seg_list_.size(); i++)
+  if ((ret = update_key()) != TFS_SUCCESS)
   {
-    if (seg_list_[i]->status_)
-    {
-      local_key_.add_segment(seg_list_[i]->seg_info_);
-    }
+    TBSYS_LOG(ERROR, "update key fail, ret:%d", ret);
+    return ret;
   }
 
-  local_key_.save();
+  if ((ret = flush_key()) != TFS_SUCCESS)
+  {
+    TBSYS_LOG(ERROR, "flush key fail, ret:%d", ret);
+    return ret;
+  }
   return ret;
 }
 
-int64_t TfsLargeFile::lseek(int64_t offset, int whence)
+int TfsLargeFile::close_process()
 {
-
+  int ret = TFS_ERROR;
+  if ((ret = upload_key()) != TFS_SUCCESS) // upload key data
+  {
+    TBSYS_LOG(ERROR, "close tfs file fail: upload key fail, ret:%d");
+  }
+  if (remove_key() != TFS_SUCCESS) // ignore local key fail ?
+  {
+    TBSYS_LOG(ERROR, "remove key fail, ret:%d", ret);
+  }
+  return ret;
 }
 
-int64_t TfsLargeFile::pread(void* buf, int64_t count, int64_t offset)
+int TfsLargeFile::update_key()
 {
-
+  for (vector<SegmentData*>::iterator it = processing_seg_list_.begin();
+       it != processing_seg_list_.end(); it++)
+  {
+    if ((*it)->status_)
+    {
+      local_key_.add_segment((*it)->seg_info_);
+      // erase success
+      tbsys::gDelete(*it);
+      processing_seg_list_.erase(it);
+    }
+  }
+  return TFS_SUCCESS;
 }
 
-int64_t TfsLargeFile::pwrite(const void* buf, int64_t count, int64_t offset)
+int TfsLargeFile::flush_key()
 {
-
+  return local_key_.save();
 }
 
-int TfsLargeFile::close()
+int TfsLargeFile::upload_key()
 {
+  int32_t size = local_key_.get_data_size();
+  char* buf = new char[size];
+  local_key_.dump_data(buf);
+  int ret = TFS_ERROR;
+  if ((ret = open_ex(NULL, NULL, T_WRITE)) != TFS_SUCCESS)
+  {
+    TBSYS_LOG(ERROR, "upload key fail, open file fail, ret:%d");
+  }
+  else
+  {
+    destroy_seg();
+    SegmentData* seg_data = new SegmentData();
+    seg_data->buf_ = buf;
+    seg_data->seg_info_.offset_ = 0;
+    seg_data->seg_info_.size_ = size;
+    processing_seg_list_.push_back(seg_data);
 
+    if ((ret = process(FILE_PHASE_WRITE_DATA)) != TFS_SUCCESS)
+    {
+      TBSYS_LOG(ERROR, "upload key fail, write data fail, ret:%d", ret);
+    }
+    else if ((ret = process(FILE_PHASE_CLOSE_FILE)) != TFS_SUCCESS)
+    {
+      TBSYS_LOG(ERROR, "upload key fail, close file fail, ret:%d", ret);
+    }
+  }
+
+  tbsys::gDelete(buf);
+  return ret;
+}
+
+int TfsLargeFile::remove_key()
+{
+  return local_key_.remove();
 }

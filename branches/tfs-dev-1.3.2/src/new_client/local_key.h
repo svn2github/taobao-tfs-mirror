@@ -82,11 +82,14 @@ namespace tfs
       int load(const char* buf);
       int load(const char* buf, const int32_t count);
       int save();
+      int remove();
       int get_segment_for_write(const int64_t offset, const char* buf,
                                 int64_t size, std::vector<SegmentData*>& seg_list);
       int get_segment_for_read(const int64_t offset, const char* buf,
                                const int64_t size, std::vector<SegmentData*>& seg_list);
       int add_segment(SegmentInfo& seg_info);
+      int32_t get_data_size();
+      int dump_data(char* buf);
 
     private:
       void insert_seg(const int64_t start, const int64_t end,
