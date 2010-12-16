@@ -18,11 +18,13 @@ namespace tfs
       public:
         int initialize(tbnet::Transport *transport, tbnet::IPacketStreamer* streamer);
 
+        tbnet::IPacketHandler::HPRetCode handlePacket(tbnet::Packet* packet, void* args);
         int get_wait_id(int64_t& wait_id) const;
         int post_request(const int64_t server, tbnet::Packet* packet, const int64_t wait_id) const;
         int get_response(const int64_t wait_id, const int64_t wait_count,
               const int64_t wait_timeout, std::map<int64_t, tbnet::Packet*>& packets);
-        tbnet::IPacketHandler::HPRetCode handlePacket(tbnet::Packet* packet, void * args);
+
+        int call(const int64_t server, tbnet::Packet* packet, const int64_t timeout, tbnet::Packet*& response);
 
       private:
         void destroy();

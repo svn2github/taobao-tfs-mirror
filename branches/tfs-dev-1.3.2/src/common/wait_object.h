@@ -40,6 +40,7 @@ namespace tfs
       void push_response(const int64_t send_id, tbnet::Packet* packet);
       int64_t get_response_count();
       std::map<int64_t, tbnet::Packet*>& get_response();
+      tbnet::Packet* get_single_response();
 
     private:
       bool free_;

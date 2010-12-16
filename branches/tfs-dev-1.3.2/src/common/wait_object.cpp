@@ -104,6 +104,16 @@ namespace tfs
       return responses_;
     }
 
+    tbnet::Packet* WaitObject::get_single_response()
+    {
+      tbnet::Packet* ret_pkt = NULL;
+      if (!responses_.empty())
+      {
+        ret_pkt = responses_.begin()->second;
+      }
+      return ret_pkt;
+    }
+
     // WaitObjectManager
     WaitObjectManager::WaitObjectManager() : seq_id_(1)
     {

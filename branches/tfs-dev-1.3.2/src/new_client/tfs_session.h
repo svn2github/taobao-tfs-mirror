@@ -80,14 +80,17 @@ namespace tfs
 
     private:
       TfsSession();
-      DISALLOW_COPY_AND_ASSIGN( TfsSession);
+      DISALLOW_COPY_AND_ASSIGN(TfsSession);
       int get_block_info_ex(uint32_t& block_id, common::VUINT64 &rds, const int32_t flag);
       int get_block_info_ex(std::vector<SegmentData*>& seg_list, const int32_t flag);
       int get_cluster_id_from_ns();
 
     private:
+      static const int64_t WAIT_TIME_OUT = 3000;
+
+    private:
       tbutil::Mutex mutex_;
-      uint64_t ns_addr_;
+      int64_t ns_addr_;
       std::string ns_addr_str_;
       const int32_t block_cache_time_;
       const int32_t block_cache_items_;

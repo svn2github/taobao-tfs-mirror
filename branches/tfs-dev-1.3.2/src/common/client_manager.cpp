@@ -181,5 +181,69 @@ namespace tfs
 
       return rc;
     }
+
+    int ClientManager::call(const int64_t server, tbnet::Packet* packet, 
+        const int64_t timeout, tbnet::Packet* &response) const
+    {
+      response = NULL;
+      int rc = TFS_SUCCESS;
+      if (NULL == packet) 
+      {
+        rc = EXIT_INVALID_ARGU;
+      }
+      else if (!inited_) 
+      {
+        rc = EXIT_NOT_INIT;
+        TBSYS_LOG(ERROR, "cannot send packet, ClientManager not initialized.");
+        packet->free();
+        packet = NULL;
+      }
+
+      WaitObject* wait_object = NULL;
+      if (TFS_SUCCESS == rc)
+      {
+        wait_object = waitmgr_->create_wait_object();
+        if (NULL == wait_object)
+        {
+          TBSYS_LOG(ERROR, "cannot send packet, cannot create wait object");
+          rc = TFS_ERROR;
+        }
+      }
+
+      if (TFS_SUCCESS == rc) 
+      {
+        // caution! wait_object set no free, it means response packet
+        // not be free by wait_object, must be handled by user who call send_packet.
+        wait_object->set_no_free();
+        wait_object->add_send_id();
+        bool send_ok = connmgr_->sendPacket(server, packet, NULL, 
+            reinterpret_cast<void*>(wait_object->get_id()));
+        if (send_ok)
+        {
+          send_ok = wait_object->wait(timeout);
+          if (!send_ok)
+          {
+            TBSYS_LOG(ERROR, "wait response timeout.");
+            rc = EXIT_TIMEOUT_ERROR;
+          }
+          else
+          {
+            response = wait_object->get_single_response();
+            rc = (NULL != response) ? TFS_SUCCESS : TFS_ERROR;
+          }
+        }
+        else
+        {
+          packet->free();
+          rc = EXIT_SENDMSG_ERROR;
+          TBSYS_LOG(ERROR, "cannot send packet, maybe send queue is full or disconnect.");
+        }
+
+        // do not free the response packet.
+        waitmgr_->destroy_wait_object(wait_object);
+        wait_object = NULL;
+      } 
+      return rc;
+    }
   }
 }

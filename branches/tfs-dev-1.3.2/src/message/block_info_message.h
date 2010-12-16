@@ -218,7 +218,7 @@ namespace tfs
         return block_infos_.size();
       }
 
-      inline const map<uint32_t, BlockInfoSeg>* get_infos() const
+      inline map<uint32_t, BlockInfoSeg>* get_infos()
       {
         return &block_infos_;
       }
