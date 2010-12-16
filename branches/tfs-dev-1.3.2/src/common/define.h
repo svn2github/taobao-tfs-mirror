@@ -118,10 +118,16 @@ namespace tfs
       T_LARGE = 32
     };
 
+    enum StatFlag
+    {
+      NORMAL_STAT = 0,
+      FORCE_STAT
+    };
+
     static const int TFS_SUCCESS = EXIT_SUCCESS;
     static const int TFS_ERROR = EXIT_FAILURE;
 
-    static const int EXIT_INVALIDFD_ERROR = -1;
+    static const int EXIT_INVALIDFD_ERROR = -1; // temporary use
 
     static const int32_t INT_SIZE = 4;
     static const int32_t INT64_SIZE = 8;
