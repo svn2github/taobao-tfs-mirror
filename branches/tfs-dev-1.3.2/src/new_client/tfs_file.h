@@ -24,7 +24,7 @@ namespace tfs
       FILE_PHASE_WRITE_DATA,
       FILE_PHASE_CLOSE_FILE,
       FILE_PHASE_READ_FILE,
-      FILE_PHASE_STAT_FILE
+      FILE_PHASE_STAT_FILE,
     };
 
     enum
@@ -39,49 +39,49 @@ namespace tfs
       TFS_FILE_EOF_NO
     };
 
-    class TfsSession;
     class TfsFile
     {
     public:
       TfsFile();
-      TfsFile(std::vector<SegmentData*>& seg_list);
-      TfsFile(uint32_t block_id, common::VUINT64& ds_list);
       virtual ~TfsFile();
 
-      // virtual level operation
-      virtual int open(const char* file_name, const char *suffix, int flags, ... );
-      virtual int64_t read(void* buf, int64_t count);
-      virtual int64_t write(const void* buf, int64_t count);
-      virtual int64_t lseek(int64_t offset, int whence);
-      virtual int64_t pread(void* buf, int64_t count, int64_t offset);
-      virtual int64_t pwrite(const void* buf, int64_t count, int64_t offset);
-      virtual int close();
+      // virtual interface
+      virtual int open(const char* file_name, const char *suffix, int flags, ... ) = 0;
+      virtual int64_t read(void* buf, int64_t count) = 0;
+      virtual int64_t write(const void* buf, int64_t count) = 0;
+      virtual int64_t lseek(int64_t offset, int whence) = 0;
+      virtual int64_t pread(void* buf, int64_t count, int64_t offset) = 0;
+      virtual int64_t pwrite(const void* buf, int64_t count, int64_t offset) = 0;
+      virtual int fstat(common::FileInfo* file_info, int32_t mode = common::NORMAL_STAT) = 0;
+      virtual int close() = 0;
+
       const char* get_file_name();
       void set_session(TfsSession* tfs_session);
 
     protected:
+      // virtual level operation
       virtual int get_segment_for_read(int64_t offset, char* buf, int64_t count);
       virtual int get_segment_for_write(int64_t offset, const char* buf, int64_t count);
       virtual int read_process();
       virtual int write_process();
+      virtual int finish_write_process();
+      virtual int stat_process();
       virtual int close_process();
-
-      int process(const InnerFilePhase file_phase);
 
     protected:
       // common operation
       void destroy_seg();
-      int open_ex(const char* file_name, const char *suffix, const int32_t mode);
+      int get_meta_segment(int64_t offset, char* buf, int64_t count);
+      int process(const InnerFilePhase file_phase);
+
+      int open_ex(const char* file_name, const char *suffix, const int32_t flags);
       int64_t read_ex(void* buf, int64_t count, int64_t offset, bool modify = true);
       int64_t write_ex(const void* buf, int64_t count, int64_t offset, bool modify = true);
       int64_t lseek_ex(int64_t offset, int whence);
       int64_t pread_ex(void* buf, int64_t count, int64_t offset);
       int64_t pwrite_ex(const void* buf, int64_t count, int64_t offset);
-      int stat_ex(common::FileInfo* file_info, int32_t mode);
+      int fstat_ex(common::FileInfo* file_info, int32_t mode);
       int close_ex();
-
-      int connect_ds();
-      int create_filename();
 
     private:
       int do_async_request(const InnerFilePhase file_phase, const int64_t wait_id, const int32_t index);
@@ -104,6 +104,7 @@ namespace tfs
 
     protected:
       static const int64_t WAIT_TIME_OUT = 5000;
+      static const int64_t CLIENT_TRY_COUNT = 3;
 
     protected:
       FSName fsname_;
@@ -115,8 +116,7 @@ namespace tfs
       //sync flag
       int32_t option_flag_;
       TfsSession* tfs_session_;
-      char error_message_[common::ERR_MSG_SIZE];
-      std::vector<SegmentData*> processing_seg_list_;
+      SEG_DATA_LIST processing_seg_list_;
     };
   }
 }

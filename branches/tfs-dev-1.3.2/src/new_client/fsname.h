@@ -37,6 +37,7 @@ namespace tfs
       FSName(uint32_t block_id, int32_t seq_id, int32_t prefix = 0, int32_t cluster_id = 0);
       FSName(const char *file_name, const char *prefix = NULL, int32_t cluster_id = 0);
       virtual ~FSName();
+
       const char* get_name();
       int set_name(const char *file_name, const char *prefix = NULL, const int32_t cluster_id = 0);
       void set_prefix(const char* prefix);
@@ -47,9 +48,19 @@ namespace tfs
         file_.block_id_ = id;
       }
 
+      inline uint32_t get_block_id() const
+      {
+        return file_.block_id_;
+      }
+
       inline void set_seq_id(const int32_t id)
       {
         file_.seq_id_ = id;
+      }
+
+      inline int32_t get_seq_id() const
+      {
+        return file_.seq_id_;
       }
 
       inline void set_prefix(const int32_t id)
@@ -57,9 +68,19 @@ namespace tfs
         file_.prefix_ = id;
       }
 
+      inline int32_t get_prefix() const
+      {
+        return file_.prefix_;
+      }
+
       inline void set_file_id(const uint64_t id)
       {
         *(reinterpret_cast<uint64_t*> (const_cast<int32_t*> (&file_.seq_id_))) = id;
+      }
+
+      inline uint64_t get_file_id() const
+      {
+        return *(reinterpret_cast<uint64_t*> (const_cast<int32_t*> (&file_.seq_id_)));
       }
 
       inline void set_cluster_id(const int32_t cluster_id)
@@ -72,32 +93,14 @@ namespace tfs
         return cluster_id_;
       }
 
-      inline uint32_t get_block_id() const
-      {
-        return file_.block_id_;
-      }
-
-      inline int32_t get_seq_id() const
-      {
-        return file_.seq_id_;
-      }
-
-      inline int32_t get_prefix() const
-      {
-        return file_.prefix_;
-      }
-
-      inline uint64_t get_file_id() const
-      {
-        return *(reinterpret_cast<uint64_t*> (const_cast<int32_t*> (&file_.seq_id_)));
-      }
+    private:
+      void encode(const char * input, char *output);
+      void decode(const char * input, char *output);
 
     private:
       FileBits file_;
       int32_t cluster_id_;
       char file_name_[common::TFS_FILE_LEN];
-      void encode(const char * input, char *output);
-      void decode(const char * input, char *output);
     };
   }
 }

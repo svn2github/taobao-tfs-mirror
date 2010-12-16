@@ -58,6 +58,10 @@ int64_t TfsSmallFile::pwrite(const void *buf, int64_t count, int64_t offset)
   return pwrite(buf, count, offset);
 }
 
+int TfsSmallFile::fstat(FileInfo* file_info, int32_t mode)
+{
+  return fstat_ex(file_info, mode);
+}
 
 int TfsSmallFile::close()
 {
@@ -71,13 +75,8 @@ int TfsSmallFile::get_segment_for_read(int64_t offset, char* buf, int64_t count)
 
 int TfsSmallFile::get_segment_for_write(int64_t offset, const char* buf, int64_t count)
 {
-  // TODO ... cut segment piece
   destroy_seg();
-  meta_seg_->buf_ = const_cast<char*>(buf);
-  meta_seg_->seg_info_.offset_ = offset;
-  meta_seg_->seg_info_.size_ = count;
-  processing_seg_list_.push_back(meta_seg_);
-  return TFS_SUCCESS;
+  return get_meta_segment(offset, const_cast<char*>(buf), count);
 }
 
 int TfsSmallFile::read_process()
@@ -85,7 +84,7 @@ int TfsSmallFile::read_process()
   int ret = TFS_ERROR;
   if ((ret = process(FILE_PHASE_READ_FILE)) != TFS_SUCCESS)
   {
-    TBSYS_LOG(ERROR, "read data fail, ret:%d", ret);
+    TBSYS_LOG(ERROR, "read data fail, ret: %d", ret);
   }
   return ret;
 }
@@ -93,29 +92,36 @@ int TfsSmallFile::read_process()
 int TfsSmallFile::write_process()
 {
   int ret = TFS_ERROR;
-   // write data
+  // write data
   if ((ret = process(FILE_PHASE_WRITE_DATA)) != TFS_SUCCESS)
   {
-    TBSYS_LOG(ERROR, "write data fail, ret:%d", ret);
-    return ret;
-  }
-
-  // close file
-  if ((ret = process(FILE_PHASE_CLOSE_FILE)) != TFS_SUCCESS)
-  {
-    TBSYS_LOG(ERROR, "close tfs file fail, ret:%d", ret);
+    TBSYS_LOG(ERROR, "write data fail, ret: %d", ret);
     return ret;
   }
   return ret;
 }
 
+int32_t TfsSmallFile::finish_write_process()
+{
+  int32_t count = 0;
+  SEG_DATA_LIST_ITER it = processing_seg_list_.begin();
+  while (it != processing_seg_list_.end())
+  {
+    if (SEG_STATUS_SUCCESS == (*it)->status_)
+    {
+      count++;
+    }
+  }
+  return count;
+}
+
 int TfsSmallFile::close_process()
 {
   int ret = TFS_ERROR;
-  get_segment_for_read(0, NULL, 0);       // TODO .. cancle here
+  get_meta_segment(0, NULL, 0);
   if ((ret = process(FILE_PHASE_CLOSE_FILE)) != TFS_SUCCESS)
   {
-    TBSYS_LOG(ERROR, "close tfs file fail, ret:%d", ret);
+    TBSYS_LOG(ERROR, "close tfs file fail, ret: %d", ret);
     return ret;
   }
   return ret;

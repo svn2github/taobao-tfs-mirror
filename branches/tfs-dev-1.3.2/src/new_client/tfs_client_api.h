@@ -79,6 +79,7 @@ namespace tfs
       off_t lseek(int fd, off_t offset, int whence);
       ssize_t pread(int fd, void* buf, size_t count, off_t offset);
       ssize_t pwrite(int fd, const void* buf, size_t count, off_t offset);
+      int fstat(int fd, common::FileInfo* buf, int mode = common::NORMAL_STAT);
       int close(int fd);
       const char* get_file_name(int fd);
 

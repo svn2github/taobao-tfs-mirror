@@ -70,9 +70,15 @@ namespace tfs
       file_name_[0] = '\0';
       cluster_id_ = cluster_id;
     }
+
     FSName::FSName(const char *file_name, const char *prefix, int32_t cluster_id)
     {
       set_name(file_name, prefix, cluster_id);
+    }
+
+    FSName::~FSName()
+    {
+
     }
 
     int FSName::set_name(const char *file_name, const char *prefix, const int32_t cluster_id)
@@ -83,25 +89,12 @@ namespace tfs
       int32_t len = strlen(file_name);
       if ((file_name == NULL) || len <= 0)
       {
-        TBSYS_LOG(ERROR, "invalid file name(%s)", file_name);
+        TBSYS_LOG(ERROR, "invalid file name: %s", file_name);
         return TFS_ERROR;
       }
       decode(file_name + 2, (char*) &file_);
       set_prefix(prefix);
       return TFS_SUCCESS;
-    }
-
-    void FSName::set_prefix(const char *prefix)
-    {
-      if ((prefix != NULL) && (prefix[0] != '\0'))
-      {
-        file_.prefix_ = hash(prefix);
-      }
-    }
-
-    FSName::~FSName()
-    {
-
     }
 
     const char* FSName::get_name()
@@ -115,6 +108,22 @@ namespace tfs
       file_name_[1] = static_cast<char> ('0' + cluster_id_);
       file_name_[FILE_NAME_LEN] = '\0';
       return file_name_;
+    }
+
+    void FSName::set_prefix(const char *prefix)
+    {
+      if ((prefix != NULL) && (prefix[0] != '\0'))
+      {
+        file_.prefix_ = hash(prefix);
+      }
+    }
+
+    string FSName::to_string()
+    {
+      char buffer[256];
+      snprintf(buffer, 256, "block_id: %u, file_id: %"PRI64_PREFIX"u, seq_id: %u, prefix:%u, name: %s",
+               file_.block_id_, get_file_id(), file_.seq_id_, file_.prefix_, get_name());
+      return string(buffer);
     }
 
     void FSName::encode(const char *input, char *output)
@@ -158,16 +167,7 @@ namespace tfs
       }
     }
 
-    string FSName::to_string()
-    {
-      char buffer[256];
-      snprintf(buffer, 256, "block_id(%u) seq_id(%u) prefix(%u) name(%s)", file_.block_id_, file_.seq_id_,
-               file_.prefix_, get_name());
-      return string(buffer);
-    }
-
   }
-
 }
 
 

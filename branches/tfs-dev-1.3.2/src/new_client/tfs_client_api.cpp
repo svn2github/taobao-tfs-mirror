@@ -96,7 +96,7 @@ int TfsClient::open_ex(const char* file_name, const char* suffix, const char* ns
     TBSYS_LOG(ERROR, "open tfsfile fail, filename: %s suffix: %s flags: %d ret %d", file_name, suffix, flags, ret);
     return EXIT_INVALIDFD_ERROR;
   }
-  
+
   ret = EXIT_INVALIDFD_ERROR;
   tbutil::Mutex::Lock lock(mutex_);
   if (tfs_file_map_.find(fd_) != tfs_file_map_.end()) // should never happen
@@ -143,6 +143,12 @@ ssize_t TfsClient::pwrite(int fd, const void* buf, size_t count, off_t offset)
 {
   TfsFile* tfs_file = get_file(fd);
   return tfs_file ? tfs_file->pwrite(buf, count, offset) : EXIT_INVALIDFD_ERROR;
+}
+
+int TfsClient::fstat(int fd, FileInfo* buf, int mode)
+{
+  TfsFile* tfs_file = get_file(fd);
+  return tfs_file ? tfs_file->fstat(buf, static_cast<int32_t>(mode)) : EXIT_INVALIDFD_ERROR;
 }
 
 int TfsClient::close(int fd)
