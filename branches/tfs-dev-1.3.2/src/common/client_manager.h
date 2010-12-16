@@ -24,7 +24,7 @@ namespace tfs
         int get_response(const int64_t wait_id, const int64_t wait_count,
               const int64_t wait_timeout, std::map<int64_t, tbnet::Packet*>& packets);
 
-        int call(const int64_t server, tbnet::Packet* packet, const int64_t timeout, tbnet::Packet*& response);
+        int call(const int64_t server, tbnet::Packet* packet, const int64_t timeout, tbnet::Packet*& response) const;
 
       private:
         void destroy();
