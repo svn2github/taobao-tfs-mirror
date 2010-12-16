@@ -176,10 +176,11 @@ int TfsSession::get_block_info(vector<SegmentData*>& seg_list, const int32_t fla
           }
           else
           {
+            //Todo use segmentdata status
             block_cache.last_time_ = time(NULL);
             block_cache.ds_ = seg_list[i]->ds_; // TODO, check already have
             tbutil::Mutex::Lock lock(mutex_);
-            // already have? use operator maybe more better
+            // already have? use operator = maybe more better
             block_cache_map_.insert(seg_list[i]->seg_info_.block_id_, block_cache);
           }
         }
@@ -266,7 +267,7 @@ int TfsSession::get_block_info_ex(vector<SegmentData*>& seg_list, const int32_t 
   Message* rsp = dynamic_cast<Message*>(pkt_rsp);
   if (TFS_SUCCESS != ret)
   {
-    TBSYS_LOG(ERROR, "get cluster id from ns failed, ret: %d", ret);
+    TBSYS_LOG(ERROR, "get blockinfo failed, ret: %d", ret);
   }
   else if (BATCH_SET_BLOCK_INFO_MESSAGE == rsp->get_message_type())
   {
@@ -346,9 +347,9 @@ int TfsSession::get_cluster_id_from_ns()
   tbnet::Packet* pkt_rsp = NULL;
   int ret = global_client_manager.call(ns_addr_, &cc_message, WAIT_TIME_OUT, pkt_rsp);
   Message* rsp = dynamic_cast<Message*>(pkt_rsp);
-  if (TFS_SUCCESS != ret || NULL == rsp)
+  if (TFS_SUCCESS != ret)
   {
-    TBSYS_LOG(ERROR, "get cluster id from ns failed, ret: %d", ret);
+    TBSYS_LOG(ERROR, "get block info failed, ret: %d", ret);
   }
   else if (STATUS_MESSAGE == rsp->get_message_type())
   {

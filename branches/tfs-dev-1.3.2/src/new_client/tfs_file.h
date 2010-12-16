@@ -23,7 +23,8 @@ namespace tfs
       FILE_PHASE_CREATE_FILE = 1,
       FILE_PHASE_WRITE_DATA,
       FILE_PHASE_CLOSE_FILE,
-      FILE_PHASE_READ_FILE
+      FILE_PHASE_READ_FILE,
+      FILE_PHASE_STAT_FILE
     };
 
     enum
@@ -97,6 +98,9 @@ namespace tfs
 
       int async_req_close_file(const int64_t wait_id, const int32_t index);
       int async_rsp_close_file(tbnet::Packet* packet, const int32_t index);
+
+      int async_req_stat_file(const int64_t wait_id, const int32_t index);
+      int async_rsp_stat_file(tbnet::Packet* packet, const int32_t index);
 
     protected:
       static const int64_t WAIT_TIME_OUT = 5000;
