@@ -88,6 +88,7 @@ namespace tfs
     {
       READ_MODE = 1,
       WRITE_MODE = 2,
+      APPEND_MODE = 4,
       UNLINK_MODE = 8,
       NEWBLK_MODE = 16,
       NOLEASE_MODE = 32
