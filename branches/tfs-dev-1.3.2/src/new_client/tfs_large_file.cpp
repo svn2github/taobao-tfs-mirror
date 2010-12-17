@@ -13,9 +13,9 @@ TfsLargeFile::~TfsLargeFile()
 {
 }
 
-int TfsLargeFile::open(const char* file_name, const char *suffix, int flags, ... )
+int TfsLargeFile::open(const char* file_name, const char *suffix, const int flags, ... )
 {
-  int ret = TFS_ERROR;
+  int ret = TFS_SUCCESS;
 
   flags_ = flags;
   if (!(flags_ & T_WRITE))       // not write
@@ -23,48 +23,61 @@ int TfsLargeFile::open(const char* file_name, const char *suffix, int flags, ...
     if ((ret = open_ex(file_name, suffix, flags)) != TFS_SUCCESS)
     {
       TBSYS_LOG(ERROR, "open file fail, ret: %d", ret);
-      return ret;
     }
 
-    FileInfo file_info;
-    if ((ret = fstat_ex(&file_info, 0)) != TFS_SUCCESS)
+    if (TFS_SUCCESS == ret)
     {
-      TBSYS_LOG(ERROR, "stat file %s fail, ret: %d", fsname_.get_name(), ret);
-      return ret;
-    }
+      FileInfo file_info;
+      if ((ret = fstat_ex(&file_info, 0)) != TFS_SUCCESS)
+      {
+        TBSYS_LOG(ERROR, "stat file %s fail, ret: %d", fsname_.get_name(), ret);
+      }
 
-    int32_t size = file_info.size_;
-    char* seg_buf = new char[size];
-    if ((ret = read_ex(seg_buf, size, 0, false)) != size)
-    {
-      TBSYS_LOG(ERROR, "read meta file fail, size: %d, retsize: %d", size, ret);
-      return ret;
-    }
+      if (TFS_SUCCESS == ret)
+      {
+        int32_t size = file_info.size_;
+        char* seg_buf = new char[size];
+        if ((ret = read_ex(seg_buf, size, 0, false)) != size)
+        {
+          TBSYS_LOG(ERROR, "read meta file fail, size: %d, retsize: %d", size, ret);
+          ret = TFS_ERROR;
+        }
 
-    if ((ret = local_key_.load(seg_buf)) != TFS_SUCCESS)
-    {
-      TBSYS_LOG(ERROR, "construct meta file info fail, ret: %d", ret);
-      return ret;
+        if (TFS_SUCCESS == ret)
+        {
+          if ((ret = local_key_.load(seg_buf)) != TFS_SUCCESS)
+          {
+            TBSYS_LOG(ERROR, "construct meta file info fail, ret: %d", ret);
+          }
+        }
+        tbsys::gDelete(seg_buf);
+      }
     }
-    tbsys::gDelete(seg_buf);
   }
   else  // write flag
   {
     va_list args;
     va_start(args, flags);
     char* local_key = va_arg(args, char*);
-    if (!local_key)
+    if (NULL == local_key)
     {
       TBSYS_LOG(ERROR, "open with T_LARGE|T_WRITE flag occur null key");
-      return ret;
+      ret = TFS_ERROR;
     }
-    if ((ret = local_key_.initialize(local_key, tfs_session_->get_ns_addr())) != TFS_SUCCESS)
+
+    if (TFS_SUCCESS != ret)
     {
-      TBSYS_LOG(ERROR, "initialize local key fail, ret: %d", ret);
-      return ret;
+      if ((ret = local_key_.initialize(local_key, tfs_session_->get_ns_addr())) != TFS_SUCCESS)
+      {
+        TBSYS_LOG(ERROR, "initialize local key fail, ret: %d", ret);
+      }
     }
   }
-  is_open_ = TFS_FILE_OPEN_YES;
+
+  if (TFS_SUCCESS == ret)
+  {
+    is_open_ = TFS_FILE_OPEN_YES;
+  }
   return ret;
 }
 

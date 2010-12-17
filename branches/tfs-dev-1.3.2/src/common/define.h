@@ -146,7 +146,7 @@ namespace tfs
     static const int32_t STANDARD_SUFFIX_LEN = 4;
 
     static const int32_t DEFAULT_BLOCK_CACHE_TIME = 5;
-    static const int32_t DEFAULT_BLOCK_CACHE_ITEMS = 10000;
+    static const int32_t DEFAULT_BLOCK_CACHE_ITEMS = 500000;
 
     static const int32_t ADMIN_WARN_DEAD_COUNT = 1;
 

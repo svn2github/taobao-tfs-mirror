@@ -40,20 +40,20 @@ namespace tfs
     public:
       static TfsClient* Instance();
 
-      int initialize(const char* ns_addr, int32_t cache_time = common::DEFAULT_BLOCK_CACHE_TIME,
-                     int32_t cache_items = common::DEFAULT_BLOCK_CACHE_ITEMS);
+      int initialize(const char* ns_addr, const int32_t cache_time = common::DEFAULT_BLOCK_CACHE_TIME,
+                     const int32_t cache_items = common::DEFAULT_BLOCK_CACHE_ITEMS);
 
-      inline int open(const char* file_name, const char* suffix, int flags, ... )
+      inline int open(const char* file_name, const char* suffix, const int flags, ... )
       {
         return open(file_name, suffix, (const char*)NULL, flags, __va_arg_pack());
       }
 
-      inline int open(const char* file_name, const char* suffix, const char* ns_addr, int flags, ... )
+      inline int open(const char* file_name, const char* suffix, const char* ns_addr, const int flags, ... )
       {
         // just run time check
         if (__va_arg_pack_len() > 1)
         {
-          TBSYS_LOG(ERROR, "tfs_open can be called with either 3 or 4 or 5 arguments, no more permitted\n"); // __errordecl ?
+          TBSYS_LOG(ERROR, "tfs_open can be called with either 3 or 4 or 5 arguments, no more permitted"); // __errordecl ?
           return common::EXIT_INVALIDFD_ERROR;
         }
 
@@ -61,11 +61,11 @@ namespace tfs
         {
           if (__va_arg_pack_len() != 1)
           {
-            TBSYS_LOG(ERROR, "tfs_open with O_LARGE flag needs additional argument\n"); // __errordecl ?
+            TBSYS_LOG(ERROR, "tfs_open with O_LARGE flag needs additional argument"); // __errordecl ?
             return common::EXIT_INVALIDFD_ERROR;
           }
         }
-        else if (__va_arg_pack_len() > 1)
+        else if (__va_arg_pack_len() > 0)
         {
           TBSYS_LOG(ERROR, "tfs_open without O_LARGE need no additional argument\n"); // __errordecl ?
           return common::EXIT_INVALIDFD_ERROR;
@@ -84,7 +84,8 @@ namespace tfs
       const char* get_file_name(int fd);
 
     private:
-      int open_ex(const char* file_name, const char* suffix, const char* ns_addr, int flags, int32_t arg_cnt, ... );
+      int open_ex(const char* file_name, const char* suffix, const char* ns_addr,
+             const int flags, const int32_t arg_cnt, ... );
 
       TfsFile* get_file(int fd);
       int erase_file(int fd);

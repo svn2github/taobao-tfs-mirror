@@ -16,7 +16,7 @@ namespace tfs
       TfsLargeFile();
       virtual ~TfsLargeFile();
 
-      virtual int open(const char* file_name, const char* suffix, int flags, ... );
+      virtual int open(const char* file_name, const char* suffix, const int flags, ... );
       virtual int64_t read(void* buf, int64_t count);
       virtual int64_t write(const void* buf, int64_t count);
       virtual int64_t lseek(int64_t offset, int whence);

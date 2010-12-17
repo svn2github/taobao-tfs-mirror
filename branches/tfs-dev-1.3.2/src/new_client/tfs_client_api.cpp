@@ -33,7 +33,7 @@ TfsClient::TfsClient() : default_tfs_session_(NULL), fd_(0)
 
 TfsClient::~TfsClient()
 {
-  for (FILE_MAP::iterator it = tfs_file_map_.begin(); it != tfs_file_map_.end(); it++)
+  for (FILE_MAP::iterator it = tfs_file_map_.begin(); it != tfs_file_map_.end(); ++it)
   {
     tbsys::gDelete(it->second);
   }
@@ -46,29 +46,33 @@ TfsClient* TfsClient::Instance()
   return &tfs_client;
 }
 
-int TfsClient::initialize(const char* ns_addr, int32_t cache_time, int32_t cache_items)
+int TfsClient::initialize(const char* ns_addr, const int32_t cache_time, const int32_t cache_items)
 {
-  if (!ns_addr)
+  int ret = TFS_SUCCESS;
+  if (NULL == ns_addr)
   {
     TBSYS_LOG(ERROR, "tfsclient initialize need ns ip");
-    return TFS_ERROR;
-  }
-  if (!(default_tfs_session_ = SESSION_POOL.get(ns_addr, cache_time, cache_items)))
-  {
-    TBSYS_LOG(ERROR, "tfsclient initialize to ns %s failed. must exit", ns_addr);
-    return TFS_ERROR;
+    ret = TFS_ERROR;
   }
 
-  // is_init_ = true;
-  return TFS_SUCCESS;
+  if (TFS_SUCCESS == ret)
+  {
+    if (NULL == (default_tfs_session_ = SESSION_POOL.get(ns_addr, cache_time, cache_items)))
+    {
+      TBSYS_LOG(ERROR, "tfsclient initialize to ns %s failed. must exit", ns_addr);
+      ret = TFS_ERROR;
+    }
+  }
+
+  return ret;
 }
 
-int TfsClient::open_ex(const char* file_name, const char* suffix, const char* ns_addr, int flags, int32_t arg_cnt, ... )
+int TfsClient::open_ex(const char* file_name, const char* suffix, const char* ns_addr, const int flags, const int32_t arg_cnt, ... )
 {
   TfsSession* tfs_session = (NULL == ns_addr) ? default_tfs_session_ :
     SESSION_POOL.get(ns_addr, default_tfs_session_->get_cache_time(), default_tfs_session_->get_cache_items());
 
-  if (!tfs_session)
+  if (NULL == tfs_session)
   {
     TBSYS_LOG(ERROR, "can not get tfs session : %s.", ns_addr);
     return TFS_ERROR;
@@ -93,7 +97,7 @@ int TfsClient::open_ex(const char* file_name, const char* suffix, const char* ns
 
   if (ret != TFS_SUCCESS)
   {
-    TBSYS_LOG(ERROR, "open tfsfile fail, filename: %s suffix: %s flags: %d ret %d", file_name, suffix, flags, ret);
+    TBSYS_LOG(ERROR, "open tfsfile fail, filename: %s, suffix: %s, flags: %d, ret: %d", file_name, suffix, flags, ret);
     return EXIT_INVALIDFD_ERROR;
   }
 
@@ -101,15 +105,15 @@ int TfsClient::open_ex(const char* file_name, const char* suffix, const char* ns
   tbutil::Mutex::Lock lock(mutex_);
   if (tfs_file_map_.find(fd_) != tfs_file_map_.end()) // should never happen
   {
-    TBSYS_LOG(ERROR, "create new fd fail : fd %d already exist in map", fd_);
+    TBSYS_LOG(ERROR, "create new fd fail. fd: %d already exist in map", fd_);
   }
   else if (!(tfs_file_map_.insert(std::map<int, TfsFile*>::value_type(fd_, tfs_file))).second)
   {
-    TBSYS_LOG(ERROR, "insert fd %d to global file map fail", fd_);
+    TBSYS_LOG(ERROR, "insert fd: %d to global file map fail", fd_);
   }
   else
   {
-    ret = fd_++;
+    ret = ++fd_;
   }
 
   return ret;
