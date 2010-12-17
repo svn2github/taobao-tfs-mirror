@@ -143,6 +143,7 @@ AC_CONFIG_FILES([Makefile
                  src/Makefile
                  src/adminserver/Makefile
                  src/client/Makefile
+                 src/new_client/Makefile
                  src/common/Makefile
                  src/dataserver/Makefile
                  src/message/Makefile
@@ -152,6 +153,7 @@ AC_CONFIG_FILES([Makefile
                  src/tools/dataserver/Makefile
                  src/tools/nameserver/Makefile
                  src/tools/adminserver/Makefile
+                 src/tools/mock/Makefile
                  tests/Makefile
                  tests/batch/Makefile
                  tests/client/Makefile

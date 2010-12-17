@@ -74,6 +74,14 @@ namespace tfs
         float hash_slot_ratio_; // 0.5
       };
 
+      struct MockDataServer
+      {
+        int32_t port_;
+        std::string work_dir_;
+        std::string log_file_;
+        std::string dev_name_;
+      };
+
       struct DataServer
       {
         std::string work_dir_;
@@ -131,6 +139,10 @@ namespace tfs
       {
         return filesystem_param_;
       }
+      MockDataServer& mock_dataserver()
+      {
+        return mock_dataserver_;
+      }
       static SysParam& instance()
       {
         return instance_;
@@ -138,6 +150,7 @@ namespace tfs
 
       int load(const std::string& tfsfile);
       int load_data_server(const std::string& tfsfile, const std::string& index);
+      int load_mock_dataserver(const std::string& conf);
 
     private:
       static const int32_t PARAM_BUF_LEN = 64;
@@ -148,6 +161,7 @@ namespace tfs
       NameServer nameserver_;
       DataServer dataserver_;
       FileSystemParam filesystem_param_;
+      MockDataServer mock_dataserver_;
       static SysParam instance_;
 
       SysParam();
@@ -157,7 +171,7 @@ namespace tfs
 #define SYSPARAM_NAMESERVER SysParam::instance().nameserver()
 #define SYSPARAM_DATASERVER SysParam::instance().dataserver()
 #define SYSPARAM_FILESYSPARAM SysParam::instance().filesystem_param()
-
+#define SYSPARAM_MOCK_DATASERVER SysParam::instance().mock_dataserver()
   }
 }
 #endif //TFS_COMMON_SYSPARAM_H_

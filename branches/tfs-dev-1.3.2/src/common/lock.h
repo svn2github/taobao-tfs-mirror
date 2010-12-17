@@ -30,9 +30,11 @@ namespace tfs
       READ_PRIORITY
     }; 
 
+    class ScopedRWLock;
     class RWLock
     {
       public:
+        typedef ScopedRWLock Lock;
         RWLock(ELockMode lockMode = NO_PRIORITY);
         ~RWLock();
 

@@ -1,3 +1,3 @@
 AUTOMAKE_OPTIONS=foreign
 
-SUBDIRS = dataserver nameserver adminserver
+SUBDIRS = dataserver nameserver adminserver mock

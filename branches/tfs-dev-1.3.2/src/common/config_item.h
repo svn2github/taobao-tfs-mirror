@@ -26,6 +26,7 @@ namespace tfs
 #define CONF_SN_DATASERVER                            "[dataserver]"
 #define CONF_SN_TFSCLIENT                             "[tfsclient]"
 #define CONF_SN_ADMINSERVER                           "[adminserver]"
+#define CONF_SN_MOCK_DATASERVER                       "[mockdataserver]"
 
 #define CONF_CLUSTER_ID                               "cluster_id"
 #define CONF_LOCK_FILE                                "lock_file"

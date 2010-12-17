@@ -279,5 +279,30 @@ namespace tfs
       return TFS_SUCCESS;
     }
 
+    int SysParam::load_mock_dataserver(const std::string& conf)
+    {
+      int32_t ret = CONFIG.load(conf.c_str());
+      if (ret != TFS_SUCCESS)
+        return ret;
+
+      mock_dataserver_.port_ = CONFIG.get_int_value(CONFIG_MOCK_DATASERVER, CONF_PORT, 3200);
+
+      // get top work directory
+      const char *top_work_dir = CONFIG.get_string_value(CONFIG_PUBLIC, CONF_WORK_DIR);
+      if (top_work_dir == NULL)
+      {
+        TBSYS_LOG(ERROR, "work directory config not found");
+        return EXIT_CONFIG_ERROR;
+      }
+      char default_work_dir[MAX_PATH_LENGTH], default_log_file[MAX_PATH_LENGTH];
+      snprintf(default_work_dir, MAX_PATH_LENGTH-1, "%s/mock_dataserver", top_work_dir);
+      snprintf(default_log_file, MAX_PATH_LENGTH-1, "%s/logs/mock_dataserver.log", top_work_dir);
+      mock_dataserver_.work_dir_ = CONFIG.get_string_value(CONFIG_MOCK_DATASERVER, CONF_WORK_DIR, default_work_dir);
+      mock_dataserver_.log_file_ = CONFIG.get_string_value(CONFIG_MOCK_DATASERVER, CONF_LOG_FILE, default_log_file);
+
+      mock_dataserver_.dev_name_ = CONFIG.get_string_value(CONFIG_MOCK_DATASERVER, CONF_DEV_NAME);
+      return TFS_SUCCESS;
+    }
+
   }
 }

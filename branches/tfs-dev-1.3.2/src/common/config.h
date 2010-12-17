@@ -32,7 +32,8 @@ namespace tfs
       CONFIG_DATASERVER,
       CONFIG_TFSCLIENT,
       CONFIG_ADMINSERVER,
-      CONFIG_MYSQLSYNC
+      CONFIG_MYSQLSYNC,
+      CONFIG_MOCK_DATASERVER
     };
 
     class Configure
@@ -70,6 +71,7 @@ namespace tfs
       STRING_MAP data_config_map_;
       STRING_MAP client_config_map_;
       STRING_MAP admin_config_map_;
+      STRING_MAP mock_dataserver_config_map_;
       bool is_load_;
       std::string config_file_name_;
     };

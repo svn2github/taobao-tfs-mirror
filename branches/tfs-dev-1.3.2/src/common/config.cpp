@@ -145,6 +145,11 @@ namespace tfs
           m = &admin_config_map_;
           continue;
         }
+        else if (strncmp(CONF_SN_MOCK_DATASERVER, data, strlen(CONF_SN_MOCK_DATASERVER)) == 0)
+        {
+          m = &mock_dataserver_config_map_;
+          continue;
+        }
         ret = parse_value(data, key, value);
         if (ret == -2)
         {
@@ -176,6 +181,7 @@ namespace tfs
       data_config_map_.clear();
       client_config_map_.clear();
       admin_config_map_.clear();
+      mock_dataserver_config_map_.clear();
     }
 
     int Configure::check_load()
@@ -211,6 +217,9 @@ namespace tfs
         break;
       case CONFIG_ADMINSERVER:
         m = &admin_config_map_;
+        break;
+      case CONFIG_MOCK_DATASERVER:
+        m = &mock_dataserver_config_map_;
         break;
       default:
         return d;
@@ -280,6 +289,12 @@ namespace tfs
         result += "    " + it->first + " = " + it->second + "\n";
       }
       result += "\n";
+      it = mock_dataserver_config_map_.begin();
+      for (;it != mock_dataserver_config_map_.end(); ++it)
+      {
+        result += "    " + it->first + " = " + it->second + "\n";
+      }
+      result += "\n";
       return result;
     }
 
@@ -304,6 +319,10 @@ namespace tfs
         smap.insert(STRING_MAP::value_type(it->first, "1"));
       }
       for (it = admin_config_map_.begin(); it != admin_config_map_.end(); ++it)
+      {
+        smap.insert(STRING_MAP::value_type(it->first, "1"));
+      }
+      for (it = mock_dataserver_config_map_.begin(); it != mock_dataserver_config_map_.end(); ++it)
       {
         smap.insert(STRING_MAP::value_type(it->first, "1"));
       }
