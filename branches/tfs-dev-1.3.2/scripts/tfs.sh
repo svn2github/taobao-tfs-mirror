@@ -83,7 +83,7 @@ get_info()
         mock_ds)
             if [ $2 -gt 0 ]
             then
-                echo "${MOCK_DS_CMD} $3 -c $4"
+                echo "${MOCK_DS_CMD} $3 -c $4 -s $5"
             else
                 echo "mock ds $3"
             fi
@@ -181,6 +181,12 @@ do_start()
             print_usage
             exit 1
         fi
+	if [ -z "$4" ]
+	then
+	    warn_echo "invalid size for mock ds"
+	    print_usage
+	    exit 1
+	fi
     fi
 
     local start_index=""
@@ -188,7 +194,7 @@ do_start()
     do
         # a little ugly
         start_name=`get_info $1 0 $i`
-        cmd=`get_info $1 1 $i $3` # only mock_ds use $3 as capacity
+        cmd=`get_info $1 1 $i $3 $4` # only mock_ds use $3 as capacity, $4 as size
 
         ret_pid=`check_run $1 $i`
 
@@ -384,7 +390,7 @@ check_admin()
 #### for test mock ####
 start_mock_ds()
 {
-    do_start "mock_ds" "`get_index "$1"`" "`get_index "$2"`"
+    do_start "mock_ds" "`get_index "$1"`" "`get_index "$2"`" "`get_index "$3"`"
 }
 
 stop_mock_ds()
@@ -439,7 +445,7 @@ case "$1" in
         ;;
     # for test mock
     start_mock_ds)
-        start_mock_ds "$2" "$3"                 # start_mock_ds index capacity
+        start_mock_ds "$2" "$3" "$4"                 # start_mock_ds index capacity size
         ;;
     stop_mock_ds)
         stop_mock_ds "$2"
