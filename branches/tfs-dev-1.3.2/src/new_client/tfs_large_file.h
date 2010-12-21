@@ -40,6 +40,7 @@ namespace tfs
     private:
       static const int64_t BATCH_COUNT = 10;
       static const int64_t BATCH_SIZE = SEGMENT_SIZE * BATCH_COUNT;
+      static const int64_t MAX_META_SIZE = 1 << 22;
 
     private:
       LocalKey local_key_;

@@ -16,10 +16,8 @@
 #ifndef TFS_CLIENT_TFSCLIENTAPI_H_
 #define TFS_CLIENT_TFSCLIENTAPI_H_
 
-//#if __GNUC_PREREQ (4,3)
-#define __va_arg_pack() __builtin_va_arg_pack ()
-#define __va_arg_pack_len() __builtin_va_arg_pack_len ()
-//#endif
+#define __builtin_va_arg_pack() __builtin_va_arg_pack()
+#define __builtin_va_arg_pack_len() __builtin_va_arg_pack_len()
 
 #include <string>
 
@@ -43,15 +41,17 @@ namespace tfs
       int initialize(const char* ns_addr, const int32_t cache_time = common::DEFAULT_BLOCK_CACHE_TIME,
                      const int32_t cache_items = common::DEFAULT_BLOCK_CACHE_ITEMS);
 
-      inline int open(const char* file_name, const char* suffix, const int flags, ... )
+      inline int __attribute__ ((__gnu_inline__)) 
+        open(const char* file_name, const char* suffix, const int flags, ... )
       {
-        return open(file_name, suffix, (const char*)NULL, flags, __va_arg_pack());
+        return open(file_name, suffix, (const char*)NULL, flags, __builtin_va_arg_pack());
       }
 
-      inline int open(const char* file_name, const char* suffix, const char* ns_addr, const int flags, ... )
+      inline int __attribute__ ((__gnu_inline__)) 
+        open(const char* file_name, const char* suffix, const char* ns_addr, const int flags, ... )
       {
         // just run time check
-        if (__va_arg_pack_len() > 1)
+        if (__builtin_va_arg_pack_len() > 1)
         {
           TBSYS_LOG(ERROR, "tfs_open can be called with either 3 or 4 or 5 arguments, no more permitted"); // __errordecl ?
           return common::EXIT_INVALIDFD_ERROR;
@@ -59,29 +59,28 @@ namespace tfs
 
         if (flags & common::T_LARGE)
         {
-          if (__va_arg_pack_len() != 1)
+          if (__builtin_va_arg_pack_len() != 1)
           {
             TBSYS_LOG(ERROR, "tfs_open with O_LARGE flag needs additional argument"); // __errordecl ?
             return common::EXIT_INVALIDFD_ERROR;
           }
         }
-        else if (__va_arg_pack_len() > 0)
+        else if (__builtin_va_arg_pack_len() > 0)
         {
           TBSYS_LOG(ERROR, "tfs_open without O_LARGE need no additional argument\n"); // __errordecl ?
           return common::EXIT_INVALIDFD_ERROR;
         }
 
-        return open_ex(file_name, suffix, ns_addr, flags, __va_arg_pack_len(), __va_arg_pack());
+        return open_ex(file_name, suffix, ns_addr, flags, __builtin_va_arg_pack_len(), __builtin_va_arg_pack());
       }
 
-      ssize_t read(int fd, void* buf, size_t count);
-      ssize_t write(int fd, const void* buf, size_t count);
-      off_t lseek(int fd, off_t offset, int whence);
-      ssize_t pread(int fd, void* buf, size_t count, off_t offset);
-      ssize_t pwrite(int fd, const void* buf, size_t count, off_t offset);
-      int fstat(int fd, common::FileInfo* buf, int mode = common::NORMAL_STAT);
-      int close(int fd);
-      const char* get_file_name(int fd);
+      int32_t read(const int fd, void* buf, const int32_t count);
+      int32_t write(const int fd, const void* buf, const int32_t count);
+      int64_t lseek(const int fd, const int64_t offset, const int whence);
+      int32_t pread(const int fd, void* buf, const int32_t count, const int64_t offset);
+      int32_t pwrite(const int fd, const void* buf, const int32_t count, const int64_t offset);
+      int fstat(const int fd, common::FileInfo* buf, const int mode = common::NORMAL_STAT);
+      int close(const int fd, char* tfs_name, const int32_t len);
 
     private:
       int open_ex(const char* file_name, const char* suffix, const char* ns_addr,

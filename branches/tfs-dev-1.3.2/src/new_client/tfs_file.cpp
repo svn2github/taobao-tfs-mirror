@@ -24,40 +24,48 @@ void TfsFile::destroy_seg()
 
 int TfsFile::open_ex(const char* file_name, const char* suffix, int32_t flags)
 {
-  if (tfs_session_ == NULL)
+  int ret = TFS_SUCCESS;
+  if (NULL == tfs_session_)
   {
     TBSYS_LOG(ERROR, "session is not initialized");
-    return TFS_ERROR;
+    ret = TFS_ERROR;
   }
-
-  flags_ = flags;
-  fsname_.set_name(file_name, suffix);
-  fsname_.set_cluster_id(tfs_session_->get_cluster_id());
-  uint32_t block_id = fsname_.get_block_id();
-  uint64_t file_id = fsname_.get_file_id();
-  int ret = TFS_ERROR;
-
-  meta_seg_ = new SegmentData();
-  if ((ret = tfs_session_->get_block_info(block_id, meta_seg_->ds_, flags_)) != TFS_SUCCESS)
+  
+  if (TFS_SUCCESS == ret)
   {
-    TBSYS_LOG(ERROR, "tfs open fail: get block info fail, blockid: %u, fileid: %"
-              PRI64_PREFIX "u, mode: %d, ret: %d", block_id, file_id, flags, ret);
-    return ret;
-  }
+    flags_ = flags;
+    fsname_.set_name(file_name, suffix);
+    fsname_.set_cluster_id(tfs_session_->get_cluster_id());
+    uint32_t block_id = fsname_.get_block_id();
+    uint64_t file_id = fsname_.get_file_id();
 
-  if ((flags_ & T_WRITE))
-  {
-    get_meta_segment(0, NULL, 0);
-    if ((ret = process(FILE_PHASE_CREATE_FILE)) != TFS_SUCCESS)
+    meta_seg_ = new SegmentData();
+    if ((ret = tfs_session_->get_block_info(block_id, meta_seg_->ds_, flags_)) != TFS_SUCCESS)
     {
-      TBSYS_LOG(ERROR, "create file name fail, fileid: %"PRI64_PREFIX"u, ret: %d", file_id, ret);
-      return ret;
+      TBSYS_LOG(ERROR, "tfs open fail: get block info fail, blockid: %u, fileid: %"
+          PRI64_PREFIX "u, mode: %d, ret: %d", block_id, file_id, flags, ret);
     }
   }
 
-  offset_ = 0;
-  eof_ = TFS_FILE_EOF_NO;
-  is_open_ = TFS_FILE_OPEN_YES;
+  if (TFS_SUCCESS == ret)
+  {
+    if ((flags_ & T_WRITE))
+    {
+      get_meta_segment(0, NULL, 0);
+      if ((ret = process(FILE_PHASE_CREATE_FILE)) != TFS_SUCCESS)
+      {
+        TBSYS_LOG(ERROR, "create file name fail, ret: %d", ret);
+      }
+    }
+  }
+
+  if (TFS_SUCCESS == ret)
+  {
+    offset_ = 0;
+    eof_ = TFS_FILE_EOF_NO;
+    is_open_ = TFS_FILE_OPEN_YES;
+  }
+
   return ret;
 }
 
@@ -197,7 +205,7 @@ int64_t TfsFile::pwrite_ex(const void* buf, int64_t count, int64_t offset)
 int TfsFile::fstat_ex(FileInfo* file_info, int32_t mode)
 {
   int ret = TFS_ERROR;
-  if (is_open_ == TFS_FILE_OPEN_NO)
+  if (TFS_FILE_OPEN_NO == is_open_)
   {
     TBSYS_LOG(ERROR, "stat fail: file not open");
     return ret;
@@ -207,13 +215,11 @@ int TfsFile::fstat_ex(FileInfo* file_info, int32_t mode)
     TBSYS_LOG(ERROR, "stat fail: file open without read flag");
     return ret;
   }
-  if (!file_info)
+  if (NULL == file_info)
   {
     TBSYS_LOG(ERROR, "stat fail: output file info null");
     return ret;
   }
-
-  int32_t retry_count = CLIENT_TRY_COUNT; // need ?
 
   // trick, use meta_seg_ directly, backup orignal value. absolutely no thread safe
   int32_t save_flags = flags_;
@@ -221,10 +227,7 @@ int TfsFile::fstat_ex(FileInfo* file_info, int32_t mode)
   meta_seg_->file_info_ = file_info;
   flags_ = mode;
   get_meta_segment(0, NULL, 0);  // just stat
-  do
-  {
-    ret = process(FILE_PHASE_STAT_FILE);
-  } while (ret != TFS_SUCCESS && retry_count--);
+  ret = process(FILE_PHASE_STAT_FILE);
 
   // recovery backup
   meta_seg_->file_info_ = save_file_info;
@@ -272,11 +275,11 @@ const char* TfsFile::get_file_name()
   return fsname_.get_name();
 }
 
-int TfsFile::get_meta_segment(int64_t offset, char* buf, int64_t count)
+int TfsFile::get_meta_segment(const int64_t offset, char* buf, const int64_t count)
 {
   int ret = TFS_SUCCESS;
   destroy_seg();
-  if (!meta_seg_)
+  if (NULL == meta_seg_)
   {
     TBSYS_LOG(ERROR, "meta segment null error");
     ret = TFS_ERROR;
@@ -345,6 +348,8 @@ int TfsFile::process(const InnerFilePhase file_phase)
         (ret = do_async_request(file_phase, wait_id, i)) != TFS_SUCCESS)
     {
       TBSYS_LOG(ERROR, "request %d fail", i);
+      // --size;
+      // continue;
       return ret;
     }
   }

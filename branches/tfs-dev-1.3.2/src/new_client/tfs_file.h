@@ -71,7 +71,7 @@ namespace tfs
     protected:
       // common operation
       void destroy_seg();
-      int get_meta_segment(int64_t offset, char* buf, int64_t count);
+      int get_meta_segment(const int64_t offset, char* buf, const int64_t count);
       int process(const InnerFilePhase file_phase);
 
       int open_ex(const char* file_name, const char *suffix, const int32_t flags);

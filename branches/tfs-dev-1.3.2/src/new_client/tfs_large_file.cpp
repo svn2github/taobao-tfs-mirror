@@ -36,6 +36,7 @@ int TfsLargeFile::open(const char* file_name, const char *suffix, const int flag
       if (TFS_SUCCESS == ret)
       {
         int32_t size = file_info.size_;
+        assert (size <= MAX_META_SIZE);
         char* seg_buf = new char[size];
         if ((ret = read_ex(seg_buf, size, 0, false)) != size)
         {

@@ -67,6 +67,68 @@ int TfsClient::initialize(const char* ns_addr, const int32_t cache_time, const i
   return ret;
 }
 
+int32_t TfsClient::read(const int fd, void* buf, const int32_t count)
+{
+  TfsFile* tfs_file = get_file(fd);
+  return tfs_file ? tfs_file->read(buf, count) : EXIT_INVALIDFD_ERROR;
+}
+
+int32_t TfsClient::write(const int fd, const void* buf, const int32_t count)
+{
+  TfsFile* tfs_file = get_file(fd);
+  return tfs_file ? tfs_file->write(buf, count) : EXIT_INVALIDFD_ERROR;
+}
+
+int64_t TfsClient::lseek(const int fd, const int64_t offset, const int whence)
+{
+  TfsFile* tfs_file = get_file(fd);
+  return tfs_file ? tfs_file->lseek(offset, whence) : EXIT_INVALIDFD_ERROR;
+}
+
+int32_t TfsClient::pread(const int fd, void* buf, const int32_t count, const int64_t offset)
+{
+  TfsFile* tfs_file = get_file(fd);
+  return tfs_file ? tfs_file->pread(buf, count, offset) : EXIT_INVALIDFD_ERROR;
+}
+
+int32_t TfsClient::pwrite(const int fd, const void* buf, const int32_t count, const int64_t offset)
+{
+  TfsFile* tfs_file = get_file(fd);
+  return tfs_file ? tfs_file->pwrite(buf, count, offset) : EXIT_INVALIDFD_ERROR;
+}
+
+int TfsClient::fstat(const int fd, common::FileInfo* buf, const int mode)
+{
+  TfsFile* tfs_file = get_file(fd);
+  return tfs_file ? tfs_file->fstat(buf, static_cast<int32_t>(mode)) : EXIT_INVALIDFD_ERROR;
+}
+
+int TfsClient::close(const int fd, char* tfs_name, const int32_t len)
+{
+  int ret = TFS_SUCCESS;
+  if (NULL == tfs_name || len < TFS_FILE_LEN)
+  {
+    ret = TFS_ERROR;
+  }
+
+  if (TFS_SUCCESS == ret)
+  {
+    TfsFile* tfs_file = get_file(fd);
+    if (NULL == tfs_file)
+    {
+      ret = EXIT_INVALIDFD_ERROR;
+    }
+
+    if (TFS_SUCCESS == ret)
+    {
+      memcpy(tfs_name, tfs_file->get_file_name(), TFS_FILE_LEN);
+    }
+  }
+  // erase tfsfile from map
+  erase_file(fd);
+  return ret;
+}
+
 int TfsClient::open_ex(const char* file_name, const char* suffix, const char* ns_addr, const int flags, const int32_t arg_cnt, ... )
 {
   TfsSession* tfs_session = (NULL == ns_addr) ? default_tfs_session_ :
@@ -113,61 +175,10 @@ int TfsClient::open_ex(const char* file_name, const char* suffix, const char* ns
   }
   else
   {
-    ret = ++fd_;
+    ret = fd_++;
   }
 
   return ret;
-}
-
-ssize_t TfsClient::read(int fd, void* buf, size_t count)
-{
-  TfsFile* tfs_file = get_file(fd);
-  return tfs_file ? tfs_file->read(buf, count) : EXIT_INVALIDFD_ERROR;
-}
-
-ssize_t TfsClient::write(int fd, const void* buf, size_t count)
-{
-  TfsFile* tfs_file = get_file(fd);
-  return tfs_file ? tfs_file->write(buf, count) : EXIT_INVALIDFD_ERROR;
-}
-
-off_t TfsClient::lseek(int fd, off_t offset, int whence)
-{
-  TfsFile* tfs_file = get_file(fd);
-  return tfs_file ? tfs_file->lseek(offset, whence) : EXIT_INVALIDFD_ERROR;
-}
-
-ssize_t TfsClient::pread(int fd, void* buf, size_t count, off_t offset)
-{
-  TfsFile* tfs_file = get_file(fd);
-  return tfs_file ? tfs_file->pread(buf, count, offset) : EXIT_INVALIDFD_ERROR;
-}
-
-ssize_t TfsClient::pwrite(int fd, const void* buf, size_t count, off_t offset)
-{
-  TfsFile* tfs_file = get_file(fd);
-  return tfs_file ? tfs_file->pwrite(buf, count, offset) : EXIT_INVALIDFD_ERROR;
-}
-
-int TfsClient::fstat(int fd, FileInfo* buf, int mode)
-{
-  TfsFile* tfs_file = get_file(fd);
-  return tfs_file ? tfs_file->fstat(buf, static_cast<int32_t>(mode)) : EXIT_INVALIDFD_ERROR;
-}
-
-int TfsClient::close(int fd)
-{
-  TfsFile* tfs_file = get_file(fd);
-  int ret = tfs_file ? tfs_file->close() : EXIT_INVALIDFD_ERROR;
-  // erase tfsfile from map
-  erase_file(fd);
-  return ret;
-}
-
-const char* TfsClient::get_file_name(int fd)
-{
-  TfsFile* tfs_file = get_file(fd);
-  return tfs_file ? tfs_file->get_file_name() : NULL;
 }
 
 TfsFile* TfsClient::get_file(int fd)

@@ -4,20 +4,26 @@ AM_CPPFLAGS=-fPIC -I${top_srcdir}/src\
 
 AM_LDFLAGS=-lrt -lpthread -ldl
 
-lib_LTLIBRARIES= libtfsclient.la
+lib_LTLIBRARIES= libtfsclient.la libtfsclient_c.la
 
-libtfsclient_la_SOURCES = tfs_file.cpp tfs_large_file.cpp tfs_small_file.cpp tfs_session.cpp fsname.cpp \
-                          tfs_session_pool.cpp tfs_client_api.cpp local_key.cpp \
-                          tfs_file.h tfs_large_file.h tfs_small_file.h tfs_session.h fsname.h \
-                          tfs_session_pool.h tfs_client_api.h local_key.h
+api_source_list = tfs_file.cpp tfs_large_file.cpp tfs_small_file.cpp tfs_session.cpp fsname.cpp \
+                  tfs_session_pool.cpp tfs_client_api.cpp local_key.cpp \
+                  tfs_file.h tfs_large_file.h tfs_small_file.h tfs_session.h fsname.h \
+                  tfs_session_pool.h tfs_client_api.h local_key.h
+ld_fg = $(AM_LDFLAGS) \
+        $(top_srcdir)/src/message/libtfsmessage.a \
+        $(top_srcdir)/src/common/libtfscommon.a \
+        $(TBLIB_ROOT)/lib/libtbnet.a \
+        $(TBLIB_ROOT)/lib/libtbsys.a
 
-libtfsclient_la_LDFLAGS=$(AM_LDFLAGS) \
-			$(top_srcdir)/src/message/libtfsmessage.a \
-			$(top_srcdir)/src/common/libtfscommon.a \
-			$(TBLIB_ROOT)/lib/libtbnet.a \
-			$(TBLIB_ROOT)/lib/libtbsys.a
+libtfsclient_la_SOURCES = ${api_source_list}
 
-include_HEADERS = tfs_client_api.h
+libtfsclient_la_LDFLAGS = ${ld_fg}
+
+libtfsclient_c_la_SOURCES = ${api_source_list} tfs_client_capi.cpp tfs_client_capi.h
+libtfsclient_c_la_LDFLAGS = ${ld_fg}
+
+include_HEADERS = tfs_client_api.h tfs_client_capi.h
 
 # hardcode to extract static library in destinate static library
 # consider libtool compatibility,do change in destinate directory
