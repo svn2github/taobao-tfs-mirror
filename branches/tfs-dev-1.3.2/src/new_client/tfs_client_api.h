@@ -16,11 +16,7 @@
 #ifndef TFS_CLIENT_TFSCLIENTAPI_H_
 #define TFS_CLIENT_TFSCLIENTAPI_H_
 
-#define __builtin_va_arg_pack() __builtin_va_arg_pack()
-#define __builtin_va_arg_pack_len() __builtin_va_arg_pack_len()
-
 #include <string>
-
 #include "common/define.h"
 #include "Mutex.h"
 
@@ -74,11 +70,11 @@ namespace tfs
         return open_ex(file_name, suffix, ns_addr, flags, __builtin_va_arg_pack_len(), __builtin_va_arg_pack());
       }
 
-      int32_t read(const int fd, void* buf, const int32_t count);
-      int32_t write(const int fd, const void* buf, const int32_t count);
+      int64_t read(const int fd, void* buf, const int64_t count);
+      int64_t write(const int fd, const void* buf, const int64_t count);
       int64_t lseek(const int fd, const int64_t offset, const int whence);
-      int32_t pread(const int fd, void* buf, const int32_t count, const int64_t offset);
-      int32_t pwrite(const int fd, const void* buf, const int32_t count, const int64_t offset);
+      int64_t pread(const int fd, void* buf, const int64_t count, const int64_t offset);
+      int64_t pwrite(const int fd, const void* buf, const int64_t count, const int64_t offset);
       int fstat(const int fd, common::FileInfo* buf, const int mode = common::NORMAL_STAT);
       int close(const int fd, char* tfs_name, const int32_t len);
 
@@ -86,8 +82,8 @@ namespace tfs
       int open_ex(const char* file_name, const char* suffix, const char* ns_addr,
              const int flags, const int32_t arg_cnt, ... );
 
-      TfsFile* get_file(int fd);
-      int erase_file(int fd);
+      TfsFile* get_file(const int fd);
+      int erase_file(const int fd);
 
     private:
       TfsClient();

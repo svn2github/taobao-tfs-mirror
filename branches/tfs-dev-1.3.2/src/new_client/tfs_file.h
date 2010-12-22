@@ -7,8 +7,6 @@
 #include "common/error_msg.h"
 #include "common/func.h"
 #include "common/client_manager.h"
-#include "message/client.h"
-#include "message/client_pool.h"
 
 #include "tfs_session.h"
 #include "fsname.h"
@@ -60,13 +58,13 @@ namespace tfs
 
     protected:
       // virtual level operation
-      virtual int get_segment_for_read(int64_t offset, char* buf, int64_t count);
-      virtual int get_segment_for_write(int64_t offset, const char* buf, int64_t count);
-      virtual int read_process();
-      virtual int write_process();
-      virtual int finish_write_process();
-      virtual int stat_process();
-      virtual int close_process();
+      virtual int get_segment_for_read(int64_t offset, char* buf, int64_t count) = 0;
+      virtual int get_segment_for_write(int64_t offset, const char* buf, int64_t count) = 0;
+      virtual int read_process() = 0;
+      virtual int write_process() = 0;
+      virtual int finish_write_process() = 0;
+      virtual int close_process() = 0;
+      //virtual int stat_process() = 0;
 
     protected:
       // common operation
@@ -75,7 +73,7 @@ namespace tfs
       int process(const InnerFilePhase file_phase);
 
       int open_ex(const char* file_name, const char *suffix, const int32_t flags);
-      int64_t read_ex(void* buf, int64_t count, int64_t offset, bool modify = true);
+      int64_t read_ex(void* buf, const int64_t count, const int64_t offset, const bool modify = true);
       int64_t write_ex(const void* buf, int64_t count, int64_t offset, bool modify = true);
       int64_t lseek_ex(int64_t offset, int whence);
       int64_t pread_ex(void* buf, int64_t count, int64_t offset);
@@ -105,6 +103,9 @@ namespace tfs
     protected:
       static const int64_t WAIT_TIME_OUT = 5000;
       static const int64_t CLIENT_TRY_COUNT = 3;
+
+      static const int64_t BATCH_COUNT = 8;
+      static const int64_t BATCH_SIZE = common::SEGMENT_SIZE * BATCH_COUNT;
 
     protected:
       FSName fsname_;

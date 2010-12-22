@@ -2,7 +2,7 @@
 #define TFS_CLIENT_TFSLARGEFILE_H_
 
 #include <stdint.h>
-
+#include "common/interval.h"
 #include "tfs_file.h"
 #include "local_key.h"
 
@@ -38,8 +38,6 @@ namespace tfs
       int remove_key();
 
     private:
-      static const int64_t BATCH_COUNT = 10;
-      static const int64_t BATCH_SIZE = SEGMENT_SIZE * BATCH_COUNT;
       static const int64_t MAX_META_SIZE = 1 << 22;
 
     private:

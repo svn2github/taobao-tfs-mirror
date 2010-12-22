@@ -1,4 +1,5 @@
 #include "tfs_file.h"
+#include "message/message_factory.h"
 
 using namespace tfs::client;
 using namespace tfs::common;
@@ -69,125 +70,153 @@ int TfsFile::open_ex(const char* file_name, const char* suffix, int32_t flags)
   return ret;
 }
 
-int64_t TfsFile::read_ex(void* buf, int64_t count, int64_t offset, bool modify)
+int64_t TfsFile::read_ex(void* buf, const int64_t count, const int64_t offset, const bool modify)
 {
-  // TODO .. negative error code needed ..
-  int ret = TFS_ERROR;
+  int ret = TFS_SUCCESS;
   if (is_open_ != TFS_FILE_OPEN_YES)
   {
     TBSYS_LOG(ERROR, "read fail: file not open");
-    return ret;
+    ret = EXIT_GENERAL_ERROR;
   }
-  if (flags_ & T_WRITE)
+  else if (flags_ & T_WRITE)
   {
     TBSYS_LOG(ERROR, "read fail: file open without read flag");
-    return ret;
+    ret = EXIT_GENERAL_ERROR;
   }
-
-  if ((ret = get_segment_for_read(offset, reinterpret_cast<char*>(buf), count)) != TFS_SUCCESS)
+  else
   {
-    TBSYS_LOG(ERROR, "get segment for read fail, ret: %d", ret);
-    return ret;
-  }
+    int64_t remain_size = count;
+    int64_t cur_size = 0;
+    while (remain_size > 0)
+    {
+      cur_size = (remain_size >= BATCH_SIZE) ? BATCH_SIZE : remain_size;
+      if ((ret = get_segment_for_read(offset + count - remain_size,
+              reinterpret_cast<char*>(buf) + count - remain_size, cur_size)) != TFS_SUCCESS)
+      {
+        TBSYS_LOG(ERROR, "get segment for read fail, ret: %d", ret);
+        ret = EXIT_GENERAL_ERROR;
+        break;
+      }
+      else
+      {
+        int32_t seg_count = processing_seg_list_.size(), retry_count = CLIENT_TRY_COUNT;
+        do
+        {
+          ret = read_process();
+        } while (ret != TFS_SUCCESS && retry_count--);
 
-  int32_t seg_count = processing_seg_list_.size(), retry_count = CLIENT_TRY_COUNT;
-  do
-  {
-    ret = read_process();
-  } while (ret != TFS_SUCCESS && retry_count--);
-
-  if (ret != TFS_SUCCESS)
-  {
-    TBSYS_LOG(ERROR, "read data fail, ret: %d, segment count success: %d, fail: %d",
+        if (ret != TFS_SUCCESS)
+        {
+          TBSYS_LOG(ERROR, "read data fail, ret: %d, segment count success: %d, fail: %d",
               ret, seg_count, processing_seg_list_.size());
-    return ret;
+          ret = EXIT_GENERAL_ERROR;
+          break;
+        }
+
+        if (modify)
+        {
+          offset_ += count;
+        }
+      }
+
+      remain_size -= cur_size;
+    }
   }
 
-  if (modify)
-  {
-    offset_ += count;
-  }
-
-  return ret;
+  return (TFS_SUCCESS == ret) ? count : ret;
 }
 
 int64_t TfsFile::write_ex(const void* buf, int64_t count, int64_t offset, bool modify)
 {
   //do not consider the update operation now
-  int ret = TFS_ERROR;
+  int ret = TFS_SUCCESS;
   if (is_open_ != TFS_FILE_OPEN_YES)
   {
     TBSYS_LOG(ERROR, "write fail: file not open");
-    return ret;
+    ret = EXIT_GENERAL_ERROR;
   }
-  if (!(flags_ & T_WRITE))
+  else if (!(flags_ & T_WRITE))
   {
     TBSYS_LOG(ERROR, "write fail: file open without write flag");
-    return ret;
+    ret = EXIT_GENERAL_ERROR;
+  }
+  else
+  {
+    int64_t remain_size = count;
+    int64_t cur_size = 0;
+    while (remain_size > 0)
+    {
+      cur_size = (remain_size >= BATCH_SIZE) ? BATCH_SIZE : remain_size;
+      if ((ret = get_segment_for_write(offset + count - remain_size,
+              reinterpret_cast<const char*>(buf) + count - remain_size, cur_size)) != TFS_SUCCESS)
+      {
+        TBSYS_LOG(ERROR, "get segment error, ret: %d", ret);
+        ret = EXIT_GENERAL_ERROR;
+        break;
+      }
+
+      int32_t seg_count = processing_seg_list_.size();
+      if (0 == seg_count)
+      {
+        TBSYS_LOG(DEBUG, "data already written, offset: %d, size: %d", offset, count);
+        break;
+      }
+
+      int32_t retry_count = CLIENT_TRY_COUNT;
+      do
+      {
+        ret = write_process();
+      } while (ret != TFS_SUCCESS && retry_count--);
+
+      int32_t suc_count = finish_write_process();
+      if (ret != TFS_SUCCESS)
+      {
+        TBSYS_LOG(ERROR, "write fail, ret: %d, segment count success: %d, fail: %d",
+            ret, seg_count, suc_count);
+        ret = EXIT_GENERAL_ERROR;
+        break;
+      }
+
+      if (modify)
+      {
+        offset_ += count;
+      }
+      remain_size -= cur_size;
+    }
   }
 
-  if ((ret = get_segment_for_write(offset, reinterpret_cast<const char*>(buf), count)) != TFS_SUCCESS)
-  {
-    TBSYS_LOG(ERROR, "get segment error, ret: %d", ret);
-    return ret;
-  }
-
-  int32_t seg_count = processing_seg_list_.size();
-  if (!seg_count)
-  {
-    TBSYS_LOG(DEBUG, "data already written, offset: %d, size: %d", offset, count);
-    return count;
-  }
-
-  int32_t retry_count = CLIENT_TRY_COUNT;
-  do
-  {
-    ret = write_process();
-  } while (ret != TFS_SUCCESS && retry_count--);
-
-  int32_t suc_count = finish_write_process();
-  if (ret != TFS_SUCCESS)
-  {
-    TBSYS_LOG(ERROR, "write fail, ret: %d, segment count success: %d, fail: %d",
-              ret, seg_count, suc_count);
-    return ret;
-  }
-
-  if (modify)
-  {
-    offset_ += count;
-  }
-
-  return ret;
+  return (TFS_SUCCESS == ret) ? count : ret;
 }
 
 int64_t TfsFile::lseek_ex(int64_t offset, int whence)
 {
-  int ret = -1;                 // new negative error code
+  int64_t ret = TFS_SUCCESS;
   if (is_open_ == TFS_FILE_OPEN_NO)
   {
     TBSYS_LOG(ERROR, "lseek fail: file not open");
-    return ret;
+    ret = EXIT_GENERAL_ERROR;
   }
-  if (!(flags_ & READ_MODE))
+  else if (!(flags_ & READ_MODE))
   {
     TBSYS_LOG(ERROR, "lseek fail: file open without read flag");
-    return ret;
+    ret = EXIT_GENERAL_ERROR;
   }
-
-  switch (whence)
+  else
   {
-  case T_SEEK_SET:
-    offset_ = offset;
-    ret = offset_;
-    break;
-  case T_SEEK_CUR:
-    offset_ += offset;
-    ret = offset_;
-    break;
-  default:
-    TBSYS_LOG(ERROR, "unknown seek flag: %d", whence);
-    break;
+    switch (whence)
+    {
+      case T_SEEK_SET:
+        offset_ = offset;
+        ret = offset_;
+        break;
+      case T_SEEK_CUR:
+        offset_ += offset;
+        ret = offset_;
+        break;
+      default:
+        TBSYS_LOG(ERROR, "unknown seek flag: %d", whence);
+        break;
+    }
   }
   return ret;
 }
@@ -204,53 +233,55 @@ int64_t TfsFile::pwrite_ex(const void* buf, int64_t count, int64_t offset)
 
 int TfsFile::fstat_ex(FileInfo* file_info, int32_t mode)
 {
-  int ret = TFS_ERROR;
+  int ret = TFS_SUCCESS;
   if (TFS_FILE_OPEN_NO == is_open_)
   {
     TBSYS_LOG(ERROR, "stat fail: file not open");
-    return ret;
+    ret = EXIT_GENERAL_ERROR;
   }
-  if (!(flags_ & READ_MODE))
+  else if (!(flags_ & READ_MODE))
   {
     TBSYS_LOG(ERROR, "stat fail: file open without read flag");
-    return ret;
+    ret = EXIT_GENERAL_ERROR;
   }
-  if (NULL == file_info)
+  else if (NULL == file_info)
   {
     TBSYS_LOG(ERROR, "stat fail: output file info null");
-    return ret;
+    ret = EXIT_GENERAL_ERROR;
   }
-
-  // trick, use meta_seg_ directly, backup orignal value. absolutely no thread safe
-  int32_t save_flags = flags_;
-  FileInfo* save_file_info = meta_seg_->file_info_;
-  meta_seg_->file_info_ = file_info;
-  flags_ = mode;
-  get_meta_segment(0, NULL, 0);  // just stat
-  ret = process(FILE_PHASE_STAT_FILE);
-
-  // recovery backup
-  meta_seg_->file_info_ = save_file_info;
-  flags_ = save_flags;
-
-  if (ret != TFS_SUCCESS)
+  else
   {
-    TBSYS_LOG(ERROR, "stat fail, ret: %d", ret);
+    // trick, use meta_seg_ directly, backup orignal value. absolutely no thread safe
+    int32_t save_flags = flags_;
+    FileInfo* save_file_info = meta_seg_->file_info_;
+    meta_seg_->file_info_ = file_info;
+    flags_ = mode;
+    get_meta_segment(0, NULL, 0);  // just stat
+    ret = process(FILE_PHASE_STAT_FILE);
+
+    // recovery backup
+    meta_seg_->file_info_ = save_file_info;
+    flags_ = save_flags;
+
+    if (TFS_SUCCESS != ret)
+    {
+      TBSYS_LOG(ERROR, "stat fail, ret: %d", ret);
+    }
   }
+
   return ret;
 }
 
 int TfsFile::close_ex()
 {
   int ret = TFS_SUCCESS;
-  if (is_open_ == TFS_FILE_OPEN_NO) // TODO
+  if (is_open_ == TFS_FILE_OPEN_NO) // TODO: what happened
   {
     TBSYS_LOG(INFO, "close tfs file successful , buf tfs file not open");
   }
-  else if (!((flags_ & WRITE_MODE) && offset_))
+  else if (!((flags_ & WRITE_MODE) && (0 != offset_)))
   {
     TBSYS_LOG(INFO, "close tfs file successful");
-    ret = TFS_ERROR;
   }
   else if ((ret = close_process()) != TFS_SUCCESS) // write mode
   {
@@ -265,14 +296,14 @@ int TfsFile::close_ex()
   return ret;
 }
 
-void TfsFile::set_session(TfsSession* tfs_session)
-{
-  tfs_session_ = tfs_session;
-}
-
 const char* TfsFile::get_file_name()
 {
   return fsname_.get_name();
+}
+
+void TfsFile::set_session(TfsSession* tfs_session)
+{
+  tfs_session_ = tfs_session;
 }
 
 int TfsFile::get_meta_segment(const int64_t offset, char* buf, const int64_t count)
@@ -318,23 +349,23 @@ int TfsFile::get_meta_segment(const int64_t offset, char* buf, const int64_t cou
   return ret;
 }
 
-int TfsFile::finish_write_process()
-{
-  SEG_DATA_LIST_ITER it = processing_seg_list_.begin();
-  while (it != processing_seg_list_.end())
-  {
-    if ((*it)->status_ != SEG_STATUS_SUCCESS)
-    {
-      tbsys::gDelete(*it);
-      it = processing_seg_list_.erase(it);
-    }
-    else
-    {
-      it++;
-    }
-  }
-  return TFS_SUCCESS;
-}
+//int TfsFile::finish_write_process()
+//{
+//  SEG_DATA_LIST_ITER it = processing_seg_list_.begin();
+//  while (it != processing_seg_list_.end())
+//  {
+//    if ((*it)->status_ != SEG_STATUS_SUCCESS)
+//    {
+//      tbsys::gDelete(*it);
+//      it = processing_seg_list_.erase(it);
+//    }
+//    else
+//    {
+//      it++;
+//    }
+//  }
+//  return TFS_SUCCESS;
+//}
 
 int TfsFile::process(const InnerFilePhase file_phase)
 {

@@ -1,5 +1,6 @@
 #include "local_key.h"
 #include "common/error_msg.h"
+#include <unistd.h>
 
 using namespace tfs::client;
 using namespace tfs::common;
@@ -8,10 +9,10 @@ LocalKey::LocalKey()
 {
 }
 
-LocalKey::LocalKey(const char* local_key, const uint64_t addr)
-{
-  initialize(local_key, addr);
-}
+//LocalKey::LocalKey(const char* local_key, const uint64_t addr)
+//{
+//  initialize(local_key, addr);
+//}
 
 LocalKey::~LocalKey()
 {
@@ -19,97 +20,86 @@ LocalKey::~LocalKey()
   destroy_info();
 }
 
-void LocalKey::destroy_info()
-{
-  seg_info_.clear();
-}
-
 int LocalKey::initialize(const char* local_key, const uint64_t addr)
 {
+  const static char* g_tmp_path = "/tmp";
   char name[MAX_PATH_LENGTH];
-  strncpy(name, g_tmp_path, MAX_PATH_LENGTH-1);
+  strncpy(name, g_tmp_path, MAX_PATH_LENGTH - 1);
   char* tmp_file = name + strlen(g_tmp_path);
 
+  int ret = TFS_SUCCESS;
   if (!realpath(local_key, tmp_file))
   {
     TBSYS_LOG(ERROR, "initialize local key %s fail: %s", local_key, strerror(errno));
-    return TFS_ERROR;
+    ret = TFS_ERROR;
   }
 
-  // convert tmp file name
-  char* pos = NULL;
-  while((pos = strchr(tmp_file, '/')))
+  if (TFS_SUCCESS == ret)
   {
-    tmp_file = pos;
-    *pos = '!';
+    // convert tmp file name
+    char* pos = NULL;
+    while ((pos = strchr(tmp_file, '/')))
+    {
+      tmp_file = pos;
+      *pos = '!';
+    }
+    snprintf(name + strlen(name), MAX_PATH_LENGTH - strlen(name), "%" PRI64_PREFIX "u", addr);
+
+    memset(&seg_head_, 0, sizeof(SegmentHead));
+    seg_info_.clear();
+    int is_exist = access(name, F_OK);    
+    if (0 != is_exist) //not exist
+    {
+      file_op_ = new FileOperation(name, O_RDWR|O_CREAT);
+    }
+    else
+    {
+      file_op_ = new FileOperation(name, O_RDWR);
+      ret = load();
+    }
   }
-  snprintf(name+strlen(name), MAX_PATH_LENGTH-strlen(name), "%" PRI64_PREFIX "u", addr);
 
-  file_op_ = new FileOperation(name, O_RDWR|O_CREAT);
-
-  return TFS_SUCCESS;
+  return ret;
 }
 
 int LocalKey::load()
 {
-  int ret = TFS_ERROR;
-  if (!file_op_)
+  int ret = TFS_SUCCESS;
+  if (NULL == file_op_)
   {
     TBSYS_LOG(ERROR, "local key file path not initialize");
-    return ret;
+    ret = TFS_ERROR;
   }
 
-  if ((ret = file_op_->pread_file(reinterpret_cast<char*>(&seg_head_), sizeof(SegmentHead), 0)) != TFS_SUCCESS)
+  if (TFS_SUCCESS == ret)
   {
-    TBSYS_LOG(ERROR, "load segment head fail, ret: %d", ret);
-    return ret;
-  }
-  TBSYS_LOG(DEBUG, "load segment count %d, size: %"PRI64_PREFIX"d", seg_head_.count_, seg_head_.size_);
+    if ((ret = file_op_->pread_file(reinterpret_cast<char*>(&seg_head_), sizeof(SegmentHead), 0)) != TFS_SUCCESS)
+    {
+      TBSYS_LOG(ERROR, "load segment head fail, ret: %d", ret);
+    }
+    else
+    {
+      TBSYS_LOG(INFO, "load segment count %d, size: %"PRI64_PREFIX"d", seg_head_.count_, seg_head_.size_);
 
-  char* buf = new char[sizeof(SegmentInfo)*seg_head_.count_];
-  if ((ret = file_op_->pread_file(buf, sizeof(SegmentInfo)*seg_head_.count_, sizeof(SegmentHead))) != TFS_SUCCESS)
-  {
-    TBSYS_LOG(ERROR, "load segment info fail, ret: %d", ret);
-    return ret;
+      char* buf = new char[sizeof(SegmentInfo)*seg_head_.count_];
+      if ((ret = file_op_->pread_file(buf, sizeof(SegmentInfo) * seg_head_.count_, sizeof(SegmentHead))) != TFS_SUCCESS)
+      {
+        TBSYS_LOG(ERROR, "load segment info fail, ret: %d", ret);
+      }
+      else
+      {
+        ret = load_segment(buf);
+      }
+      tbsys::gDelete(buf);
+    }
   }
-
-  ret = load_segment(buf);
   return ret;
 }
 
 int LocalKey::load(const char* buf)
 {
   load_head(buf);
-  return load_segment(buf+sizeof(SegmentHead));
-}
-
-int LocalKey::load_head(const char* buf)
-{
-  memcpy(&seg_head_, buf, sizeof(SegmentHead));
-  TBSYS_LOG(DEBUG, "load segment head, count %d, size: %"PRI64_PREFIX"d", seg_head_.count_, seg_head_.size_);
-  return TFS_SUCCESS;
-}
-
-int LocalKey::load_segment(const char* buf)
-{
-  int ret = TFS_SUCCESS;
-  // clear last segment info ?
-  destroy_info();
-
-  int32_t count = seg_head_.count_;
-  const SegmentInfo* segment = reinterpret_cast<const SegmentInfo*>(buf);
-  for (int32_t i = 0; i < count; i++)
-  {
-    TBSYS_LOG(DEBUG, "load segment info, offset: %"PRI64_PREFIX"d, blockid: %u, fileid: %"PRI64_PREFIX"u",
-              segment[i].offset_, segment[i].block_id_, segment[i].file_id_);
-    if (!seg_info_.insert(*(segment+i)).second)
-    {
-      TBSYS_LOG(ERROR, "load segment info fail, count: %d, failno: %d", count, i+1);
-      ret = TFS_ERROR;
-      break;
-    }
-  }
-  return ret;
+  return load_segment(buf + sizeof(SegmentHead));
 }
 
 int LocalKey::add_segment(SegmentInfo& seg_info)
@@ -125,29 +115,31 @@ int LocalKey::add_segment(SegmentInfo& seg_info)
 
 int LocalKey::save()
 {
-  int ret = TFS_ERROR;
+  int ret = TFS_SUCCESS;
 
-  if (!file_op_)
+  if (NULL == file_op_)
   {
     TBSYS_LOG(ERROR, "local save file path not initialize");
-    return ret;
-  }
-
-  int32_t size = get_data_size();
-  char* buf = new char[size];
-  dump_data(buf);
-
-  if ((ret = file_op_->pwrite_file(buf, size, 0)) != TFS_SUCCESS)
-  {
-    TBSYS_LOG(ERROR, "save segment info fail, count: %d, size: %d, ret: %d", seg_info_.size(), size, ret);
+    ret = TFS_ERROR;
   }
   else
   {
-    TBSYS_LOG(INFO, "save segment info successful, count: %d, size: %d", seg_info_.size(), size);
-    file_op_->flush_file();
-  }
+    int32_t size = get_data_size();
+    char* buf = new char[size];
+    dump_data(buf);
 
-  tbsys::gDelete(buf);
+    if ((ret = file_op_->pwrite_file(buf, size, 0)) != TFS_SUCCESS)
+    {
+      TBSYS_LOG(ERROR, "save segment info fail, count: %d, size: %d, ret: %d", seg_info_.size(), size, ret);
+    }
+    else
+    {
+      TBSYS_LOG(INFO, "save segment info successful, count: %d, size: %d", seg_info_.size(), size);
+      file_op_->flush_file();
+    }
+
+    tbsys::gDelete(buf);
+  }
   return ret;
 }
 
@@ -171,9 +163,10 @@ int LocalKey::dump_data(char* buf)
   memcpy(buf, &seg_head_, sizeof(SegmentHead));
   char* pos = buf + sizeof(SegmentHead);
   SEG_SET_ITER it;
-  for (it = seg_info_.begin(); it != seg_info_.end(); it++)
+  for (it = seg_info_.begin(); it != seg_info_.end(); ++it)
   {
     memcpy(pos, &(*it), sizeof(SegmentInfo));
+    pos += sizeof(SegmentInfo);
   }
   return TFS_SUCCESS;
 }
@@ -319,3 +312,36 @@ void LocalKey::get_segment(const int64_t start, const int64_t end,
   }
 }
 
+int LocalKey::load_head(const char* buf)
+{
+  memcpy(&seg_head_, buf, sizeof(SegmentHead));
+  TBSYS_LOG(DEBUG, "load segment head, count %d, size: %"PRI64_PREFIX"d", seg_head_.count_, seg_head_.size_);
+  return TFS_SUCCESS;
+}
+
+int LocalKey::load_segment(const char* buf)
+{
+  int ret = TFS_SUCCESS;
+  // clear last segment info ?
+  destroy_info();
+
+  int32_t count = seg_head_.count_;
+  const SegmentInfo* segment = reinterpret_cast<const SegmentInfo*>(buf);
+  for (int32_t i = 0; i < count; ++i)
+  {
+    TBSYS_LOG(DEBUG, "load segment info, offset: %"PRI64_PREFIX"d, blockid: %u, fileid: %"PRI64_PREFIX"u",
+              segment[i].offset_, segment[i].block_id_, segment[i].file_id_);
+    if (!seg_info_.insert(*(segment + i)).second)
+    {
+      TBSYS_LOG(ERROR, "load segment info fail, count: %d, failno: %d", count, i + 1);
+      ret = TFS_ERROR;
+      break;
+    }
+  }
+  return ret;
+}
+
+void LocalKey::destroy_info()
+{
+  seg_info_.clear();
+}

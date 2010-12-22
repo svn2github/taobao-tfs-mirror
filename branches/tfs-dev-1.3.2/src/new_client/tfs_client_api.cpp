@@ -67,13 +67,13 @@ int TfsClient::initialize(const char* ns_addr, const int32_t cache_time, const i
   return ret;
 }
 
-int32_t TfsClient::read(const int fd, void* buf, const int32_t count)
+int64_t TfsClient::read(const int fd, void* buf, const int64_t count)
 {
   TfsFile* tfs_file = get_file(fd);
   return tfs_file ? tfs_file->read(buf, count) : EXIT_INVALIDFD_ERROR;
 }
 
-int32_t TfsClient::write(const int fd, const void* buf, const int32_t count)
+int64_t TfsClient::write(const int fd, const void* buf, const int64_t count)
 {
   TfsFile* tfs_file = get_file(fd);
   return tfs_file ? tfs_file->write(buf, count) : EXIT_INVALIDFD_ERROR;
@@ -85,13 +85,13 @@ int64_t TfsClient::lseek(const int fd, const int64_t offset, const int whence)
   return tfs_file ? tfs_file->lseek(offset, whence) : EXIT_INVALIDFD_ERROR;
 }
 
-int32_t TfsClient::pread(const int fd, void* buf, const int32_t count, const int64_t offset)
+int64_t TfsClient::pread(const int fd, void* buf, const int64_t count, const int64_t offset)
 {
   TfsFile* tfs_file = get_file(fd);
   return tfs_file ? tfs_file->pread(buf, count, offset) : EXIT_INVALIDFD_ERROR;
 }
 
-int32_t TfsClient::pwrite(const int fd, const void* buf, const int32_t count, const int64_t offset)
+int64_t TfsClient::pwrite(const int fd, const void* buf, const int64_t count, const int64_t offset)
 {
   TfsFile* tfs_file = get_file(fd);
   return tfs_file ? tfs_file->pwrite(buf, count, offset) : EXIT_INVALIDFD_ERROR;
@@ -181,7 +181,7 @@ int TfsClient::open_ex(const char* file_name, const char* suffix, const char* ns
   return ret;
 }
 
-TfsFile* TfsClient::get_file(int fd)
+TfsFile* TfsClient::get_file(const int fd)
 {
   tbutil::Mutex::Lock lock(mutex_);
   FILE_MAP::iterator it = tfs_file_map_.find(fd);
@@ -193,7 +193,7 @@ TfsFile* TfsClient::get_file(int fd)
   return it->second;
 }
 
-int TfsClient::erase_file(int fd)
+int TfsClient::erase_file(const int fd)
 {
   tbutil::Mutex::Lock lock(mutex_);
   FILE_MAP::iterator it = tfs_file_map_.find(fd);

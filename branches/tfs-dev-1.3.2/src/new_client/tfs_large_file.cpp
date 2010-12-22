@@ -2,8 +2,6 @@
 
 using namespace tfs::client;
 using namespace tfs::common;
-using namespace tfs::message;
-
 
 TfsLargeFile::TfsLargeFile()
 {
@@ -65,20 +63,22 @@ int TfsLargeFile::open(const char* file_name, const char *suffix, const int flag
       TBSYS_LOG(ERROR, "open with T_LARGE|T_WRITE flag occur null key");
       ret = TFS_ERROR;
     }
-
-    if (TFS_SUCCESS != ret)
+    else
     {
       if ((ret = local_key_.initialize(local_key, tfs_session_->get_ns_addr())) != TFS_SUCCESS)
       {
         TBSYS_LOG(ERROR, "initialize local key fail, ret: %d", ret);
       }
     }
+
+    if (TFS_SUCCESS == ret)
+    {
+      offset_ = 0;
+      eof_ = TFS_FILE_EOF_NO;
+      is_open_ = TFS_FILE_OPEN_YES;
+    }
   }
 
-  if (TFS_SUCCESS == ret)
-  {
-    is_open_ = TFS_FILE_OPEN_YES;
-  }
   return ret;
 }
 

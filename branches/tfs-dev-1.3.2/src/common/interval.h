@@ -356,6 +356,8 @@ namespace tfs
     static const int32_t MAX_DEV_NAME_LEN = 64;
     static const int32_t MAX_READ_SIZE = 1048576;
 
+    static const int64_t SEGMENT_SIZE = 1 << 10;
+
     // typedef
     typedef std::map<std::string, std::string> STRING_MAP; // string => string
     typedef STRING_MAP::iterator STRING_MAP_ITER;

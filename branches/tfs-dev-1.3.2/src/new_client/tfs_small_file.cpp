@@ -17,8 +17,6 @@
 
 using namespace tfs::client;
 using namespace tfs::common;
-using namespace tfs::message;
-
 
 TfsSmallFile::TfsSmallFile()
 {
@@ -96,7 +94,6 @@ int TfsSmallFile::write_process()
   if ((ret = process(FILE_PHASE_WRITE_DATA)) != TFS_SUCCESS)
   {
     TBSYS_LOG(ERROR, "write data fail, ret: %d", ret);
-    return ret;
   }
   return ret;
 }

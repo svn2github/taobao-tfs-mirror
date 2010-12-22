@@ -1,26 +1,20 @@
 #ifndef TFS_CLIENT_LOCALKEY_H_
 #define TFS_CLIENT_LOCALKEY_H_
 
-#include "tbsys.h"
-#include "tbsys.h"
-#include "Memory.hpp"
-
+#include <tbsys.h>
+#include <Memory.hpp>
 #include "common/file_op.h"
+#include "common/interval.h"
 
 namespace tfs
 {
   namespace client
   {
-    const static char* g_tmp_path = "/tmp";
-    const static int64_t SEGMENT_SIZE = 1 << 10;
-
     enum SegmentStatus
     {
       SEG_STATUS_UNINIT = 0,
-      SEG_STATUS_RUNNING,
       SEG_STATUS_SUCCESS,
-      SEG_STATUS_FAIL,
-      SEG_STATUS_TIMEOUT
+      SEG_STATUS_FAIL
     };
 
     enum TfsFileEofFlag
@@ -37,7 +31,7 @@ namespace tfs
 
     struct SegmentInfo
     {
-      uint32_t block_id_;        // block id
+      uint32_t block_id_;       // block id
       uint64_t file_id_;        // file id
       int64_t offset_;          // offset in current file
       int32_t size_;            // size of segment
@@ -102,11 +96,10 @@ namespace tfs
       typedef std::set<SegmentInfo>::iterator SEG_SET_ITER;
 
       LocalKey();
-      LocalKey(const char* local_key, const uint64_t addr);
+      //LocalKey(const char* local_key, const uint64_t addr);
       ~LocalKey();
 
       int initialize(const char* local_key, const uint64_t addr);
-      void destroy_info();
 
       int load();
       int load(const char* buf);
@@ -117,16 +110,20 @@ namespace tfs
                                 int64_t size, SEG_DATA_LIST& seg_list);
       int get_segment_for_read(const int64_t offset, const char* buf,
                                const int64_t size, SEG_DATA_LIST& seg_list);
+
       int add_segment(SegmentInfo& seg_info);
-      int64_t get_file_size();  // get size that segments contain
+
       int32_t get_data_size();  // get segment data size
+      int64_t get_file_size();  // get size that segments contain
       int dump_data(char* buf);
 
     private:
+      void destroy_info();
       int load_head(const char* buf);
       int load_segment(const char* buf);
       void get_segment(const int64_t start, const int64_t end,
                       const char* buf, int64_t& size, SEG_DATA_LIST& seg_list);
+
     private:
       SegmentHead seg_head_;
       common::FileOperation* file_op_;
