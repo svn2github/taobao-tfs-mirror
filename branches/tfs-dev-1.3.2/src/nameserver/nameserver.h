@@ -134,6 +134,7 @@ namespace tfs
 
       // message handler functions
       int get_block_info(message::Message* msg);
+      int batch_get_block_info(message::Message* msg);
       int write_complete(message::Message* msg);
       int update_block_info(message::Message* msg);
       int do_control_cmd(message::Message* msg);
@@ -152,6 +153,9 @@ namespace tfs
       void initialize_handle_threads();
       void initialize_handle_task_and_heart_threads();
       int wait_for_ds_report();
+
+    private:
+      static const int8_t BATCH_GET_BLOCK_NUM_MAX;
     };
 
   }

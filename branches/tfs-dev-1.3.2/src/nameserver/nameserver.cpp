@@ -22,6 +22,7 @@
 #include "nameserver.h"
 #include "common/config_item.h"
 #include "message/client_pool.h"
+#include "message/block_info_message.h"
 #include <iterator>
 
 using namespace tfs::common;
@@ -32,6 +33,7 @@ namespace tfs
   namespace nameserver
   {
 
+    const int8_t NameServer::BATCH_GET_BLOCK_NUM_MAX = 0x08;
     OwnerCheckTimerTask::OwnerCheckTimerTask(NameServer* fsnm) :
       fs_name_system_(fsnm)
     {
@@ -592,6 +594,9 @@ TBSYS_LOG    (INFO, "ownerchecktime(%"PRI64_PREFIX"d)(us), maxownerchecktime(%"P
       case GET_BLOCK_INFO_MESSAGE:
       ret = get_block_info(message);
       break;
+      case BATCH_GET_BLOCK_INFO_MESSAGE:
+      ret = batch_get_block_info(message);
+      break;
       case BLOCK_WRITE_COMPLETE_MESSAGE:
       ret = write_complete(message);
       break;
@@ -701,6 +706,93 @@ TBSYS_LOG    (INFO, "ownerchecktime(%"PRI64_PREFIX"d)(us), maxownerchecktime(%"P
 
     return TFS_SUCCESS;
   }
+
+  int NameServer::batch_get_block_info(Message* msg)
+  {
+    BatchGetBlockInfoMessage* message = dynamic_cast<BatchGetBlockInfoMessage*>(msg);
+    int32_t block_count = message->get_block_count();
+    int32_t mode = message->get_mode();
+    int32_t iret = TFS_ERROR;
+    VUINT32& blocks = message->get_block_id();
+    
+    BatchSetBlockInfoMessage* result = new BatchSetBlockInfoMessage();
+    if (mode  & BLOCK_READ)
+    {
+      VUINT64 servers;
+      uint32_t block_id = 0;
+      VUINT32::iterator iter = blocks.begin();
+      for (; iter != blocks.end(); ++iter)
+      {
+        block_id = (*iter);
+        iret = meta_mgr_.read_block_info(block_id, servers);
+        if (iret == TFS_SUCCESS)
+        {
+          result->set_read_block_ds(block_id, servers); 
+        }
+      }
+    }
+    else
+    {
+      if (ns_global_info_.owner_role_ == NS_ROLE_SLAVE)
+      {
+        tbsys::gDelete(result);
+        return MessageFactory::send_error_message(message, TBSYS_LOG_LEVEL(ERROR), iret, ns_global_info_.owner_ip_port_,
+            "got error, when batch get block mode(%d), result(%d) information", mode, iret);
+      }
+      const int8_t RETRY_COUNT = 0x03;
+      uint32_t block_id = 0;
+      uint32_t lease_id = 0;
+      int32_t  version = 0;
+      int32_t  index = 0;
+      int32_t  count = 0;
+      VUINT64  servers;
+      block_count = block_count <= 0 ? BATCH_GET_BLOCK_NUM_MAX : block_count > BATCH_GET_BLOCK_NUM_MAX ? BATCH_GET_BLOCK_NUM_MAX : block_count;
+      while (index < block_count)
+      {
+        block_id = 0;
+        version  = 0;
+        lease_id = 0;
+        count    = 0;
+        servers.clear();
+        do
+        {
+          iret = meta_mgr_.write_block_info(block_id, mode, lease_id, version, servers);
+          if (iret == TFS_SUCCESS)
+          {
+            result->set_write_block_ds(block_id, servers, version, lease_id);
+          }
+        }
+        while (count < RETRY_COUNT);//retry
+
+        if (count >= RETRY_COUNT)//retry fail, we will done
+        {
+          break;
+        }
+        ++index;
+      }
+
+      if (index != block_count)
+      {
+        uint64_t server_id = 0;
+        bool need_add_new_block = false;
+        std::string errmsg;
+        BlockInfo block;
+        std::map<uint32_t, BlockInfoSeg>& infos = result->get_infos();
+        std::map<uint32_t, BlockInfoSeg>::iterator iter = infos.begin();
+        for (; iter != infos.end(); ++iter)
+        {
+          memset(&block, 0, sizeof(block));
+          block.block_id_ = iter->first;
+          iret = meta_mgr_.write_commit(block, server_id, iter->second.lease_, UNLINK_FLAG_NO, WRITE_COMPLETE_STATUS_NO, need_add_new_block, errmsg);
+        }
+        tbsys::gDelete(result);
+        return MessageFactory::send_error_message(message, TBSYS_LOG_LEVEL(ERROR), iret, ns_global_info_.owner_ip_port_,
+            "got error, when batch get block mode(%d), result(%d) information", mode, iret);
+      }
+    }
+    message->reply_message(result);
+    return TFS_SUCCESS;
+ }
 
   /**
    * a write operation completed, commit to nameserver and update block's verion
