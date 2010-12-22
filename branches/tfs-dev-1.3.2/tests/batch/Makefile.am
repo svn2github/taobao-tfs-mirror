@@ -19,7 +19,7 @@ test: check
 TESTS=
 check_PROGRAMS=
 
-noinst_PROGRAMS= test_batch_mix test_batch_read test_batch_write
+noinst_PROGRAMS= test_batch_mix test_batch_read test_batch_write test_performance
 
 TESTS+=test_batch_mix
 check_PROGRAMS+=test_batch_mix
@@ -35,5 +35,10 @@ TESTS+=test_batch_write
 check_PROGRAMS+=test_batch_write
 test_batch_write_SOURCES=test_batch_write.cpp util.cpp util.h thread.h
 test_batch_write_LDFLAGS=${AM_LDFLAGS} -static-libgcc
+
+TESTS+=test_performance
+check_PROGRAMS+=test_performance
+test_performance_SOURCES= test_performance.cpp util.cpp
+t_performance_LDFLAGS=${AM_LDFLAGS} -static-libgcc
 
 
