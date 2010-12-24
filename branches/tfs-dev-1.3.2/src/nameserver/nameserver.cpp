@@ -761,6 +761,7 @@ TBSYS_LOG    (INFO, "ownerchecktime(%"PRI64_PREFIX"d)(us), maxownerchecktime(%"P
           {
             result->set_write_block_ds(block_id, servers, version, lease_id);
           }
+          ++count;
         }
         while (count < RETRY_COUNT);//retry
 
