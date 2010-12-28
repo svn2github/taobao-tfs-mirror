@@ -1,5 +1,4 @@
 /*
-        tran_sport_.wait();
  * (C) 2007-2010 Alibaba Group Holding Limited.
  *
  * This program is free software; you can redistribute it and/or modify

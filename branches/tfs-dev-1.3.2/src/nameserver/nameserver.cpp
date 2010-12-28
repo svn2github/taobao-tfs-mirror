@@ -714,6 +714,7 @@ TBSYS_LOG    (INFO, "ownerchecktime(%"PRI64_PREFIX"d)(us), maxownerchecktime(%"P
     int32_t mode = message->get_mode();
     int32_t iret = TFS_ERROR;
     VUINT32& blocks = message->get_block_id();
+    TBSYS_LOG(INFO, "batch getblock info, block count: %d, mode: %d, blocksize: %d", block_count, mode, blocks.size());
     
     BatchSetBlockInfoMessage* result = new BatchSetBlockInfoMessage();
     if (mode  & BLOCK_READ)
@@ -760,6 +761,7 @@ TBSYS_LOG    (INFO, "ownerchecktime(%"PRI64_PREFIX"d)(us), maxownerchecktime(%"P
           if (iret == TFS_SUCCESS)
           {
             result->set_write_block_ds(block_id, servers, version, lease_id);
+            break;
           }
           ++count;
         }
@@ -771,6 +773,7 @@ TBSYS_LOG    (INFO, "ownerchecktime(%"PRI64_PREFIX"d)(us), maxownerchecktime(%"P
         }
         ++index;
       }
+      TBSYS_LOG(DEBUG, "index(%d), block_count(%d)", index, block_count);
 
       if (index != block_count)
       {

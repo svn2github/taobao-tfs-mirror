@@ -86,10 +86,9 @@ namespace tfs
       file_name_[0] = '\0';
       cluster_id_ = cluster_id;
       memset(&file_, 0, sizeof(FileBits));
-      int32_t len = strlen(file_name);
-      if ((file_name == NULL) || len <= 0)
+      if ((NULL == file_name) || strlen(file_name) <= 0)
       {
-        TBSYS_LOG(ERROR, "invalid file name: %s", file_name);
+        TBSYS_LOG(ERROR, "invalid file name: %s", NULL == file_name ? "NULL" : file_name);
         return TFS_ERROR;
       }
       decode(file_name + 2, (char*) &file_);

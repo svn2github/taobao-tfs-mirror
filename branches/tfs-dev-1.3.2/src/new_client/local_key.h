@@ -23,6 +23,7 @@ namespace tfs
       TFS_FILE_EOF_FLAG_YES
     };
 
+#pragma pack(4)
     struct SegmentHead
     {
       int32_t count_;           // segment count
@@ -46,6 +47,7 @@ namespace tfs
         return offset_ < si.offset_;
       }
     };
+#pragma pack()
 
     struct SegmentData
     {
@@ -86,6 +88,7 @@ namespace tfs
         tbsys::gDelete(file_info_);
       }
     };
+
     typedef std::vector<SegmentData*> SEG_DATA_LIST;
     typedef std::vector<SegmentData*>::iterator SEG_DATA_LIST_ITER;
 

@@ -17,8 +17,22 @@
 #define TFS_CLIENT_TFSCLIENTAPI_H_
 
 #include <string>
+#include <Mutex.h>
 #include "common/define.h"
-#include "Mutex.h"
+#include "message/message_factory.h"
+#include "message/tfs_packet_streamer.h"
+
+#include <stdio.h>
+
+#ifdef __OPTIMIZE__
+extern int error_open_missing_mode (void)
+    __attribute__((__error__ ("open with T_LARGE flag needs 1 additional argument")));
+extern int warn_open_too_many_arguments (void)
+    __attribute__((__error__ ("open can be called with either 3 or 4 arguments, no more permitted")));
+#define log_error() warn_open_too_many_arguments()
+#else 
+#define log_error() TBSYS_LOG(ERROR, "open argument illegal");
+#endif
 
 namespace tfs
 {
@@ -32,24 +46,21 @@ namespace tfs
     class TfsClient
     {
     public:
-      static TfsClient* Instance();
+      static TfsClient* Instance()
+      {
+        static TfsClient tfs_client;
+        return &tfs_client;
+      }
 
       int initialize(const char* ns_addr, const int32_t cache_time = common::DEFAULT_BLOCK_CACHE_TIME,
                      const int32_t cache_items = common::DEFAULT_BLOCK_CACHE_ITEMS);
 
-      inline int __attribute__ ((__gnu_inline__)) 
+      __always_inline __attribute__ ((__gnu_inline__)) int
         open(const char* file_name, const char* suffix, const int flags, ... )
       {
-        return open(file_name, suffix, (const char*)NULL, flags, __builtin_va_arg_pack());
-      }
-
-      inline int __attribute__ ((__gnu_inline__)) 
-        open(const char* file_name, const char* suffix, const char* ns_addr, const int flags, ... )
-      {
-        // just run time check
         if (__builtin_va_arg_pack_len() > 1)
         {
-          TBSYS_LOG(ERROR, "tfs_open can be called with either 3 or 4 or 5 arguments, no more permitted"); // __errordecl ?
+          log_error();
           return common::EXIT_INVALIDFD_ERROR;
         }
 
@@ -57,17 +68,43 @@ namespace tfs
         {
           if (__builtin_va_arg_pack_len() != 1)
           {
-            TBSYS_LOG(ERROR, "tfs_open with O_LARGE flag needs additional argument"); // __errordecl ?
+            log_error();
             return common::EXIT_INVALIDFD_ERROR;
           }
         }
         else if (__builtin_va_arg_pack_len() > 0)
         {
-          TBSYS_LOG(ERROR, "tfs_open without O_LARGE need no additional argument\n"); // __errordecl ?
+          log_error();
           return common::EXIT_INVALIDFD_ERROR;
         }
 
-        return open_ex(file_name, suffix, ns_addr, flags, __builtin_va_arg_pack_len(), __builtin_va_arg_pack());
+        return open_ex(file_name, suffix, (const char*)NULL, flags, __builtin_va_arg_pack());
+      }
+
+      __always_inline __attribute__ ((__gnu_inline__)) int
+        open(const char* file_name, const char* suffix, const char* ns_addr, const int flags, ... )
+      {
+        TBSYS_LOG(DEBUG, "open argument: %d", __builtin_va_arg_pack_len());
+        if (__builtin_va_arg_pack_len() > 1)
+        {
+          log_error();
+          return common::EXIT_INVALIDFD_ERROR;
+        }
+
+        if (flags & common::T_LARGE)
+        {
+          if (__builtin_va_arg_pack_len() != 1)
+          {
+            log_error();
+            return common::EXIT_INVALIDFD_ERROR;
+          }
+        }
+        else if (__builtin_va_arg_pack_len() > 0)
+        {
+          log_error();
+          return common::EXIT_INVALIDFD_ERROR;
+        }
+        return open_ex(file_name, suffix, ns_addr, flags, __builtin_va_arg_pack());
       }
 
       int64_t read(const int fd, void* buf, const int64_t count);
@@ -80,7 +117,7 @@ namespace tfs
 
     private:
       int open_ex(const char* file_name, const char* suffix, const char* ns_addr,
-             const int flags, const int32_t arg_cnt, ... );
+             const int flags, ...);
 
       TfsFile* get_file(const int fd);
       int erase_file(const int fd);
@@ -94,6 +131,10 @@ namespace tfs
       int fd_;
       FILE_MAP tfs_file_map_;
       tbutil::Mutex mutex_;
+
+      tbnet::Transport transport_;
+      message::MessageFactory factory_;
+      message::TfsPacketStreamer streamer_;
     };
   }
 }

@@ -77,6 +77,7 @@ int TfsLargeFile::open(const char* file_name, const char *suffix, const int flag
       eof_ = TFS_FILE_EOF_NO;
       is_open_ = TFS_FILE_OPEN_YES;
     }
+    va_end(args);
   }
 
   return ret;
@@ -168,6 +169,10 @@ int TfsLargeFile::write_process()
     TBSYS_LOG(ERROR, "create file name fail, ret: %d", ret);
     return ret;
   }
+  else
+  {
+    TBSYS_LOG(DEBUG, "create file success, ret: %d", ret);
+  }
 
   // write data
   if ((ret = process(FILE_PHASE_WRITE_DATA)) != TFS_SUCCESS)
@@ -175,12 +180,20 @@ int TfsLargeFile::write_process()
     TBSYS_LOG(ERROR, "write data fail, ret: %d", ret);
     return ret;
   }
+  else
+  {
+    TBSYS_LOG(DEBUG, "write data success, ret: %d", ret);
+  }
 
   // close file
   if ((ret = process(FILE_PHASE_CLOSE_FILE)) != TFS_SUCCESS)
   {
     TBSYS_LOG(ERROR, "close tfs file fail, ret: %d", ret);
     return ret;
+  }
+  else
+  {
+    TBSYS_LOG(DEBUG, "close file success, ret: %d", ret);
   }
 
   return ret;
@@ -219,7 +232,13 @@ int TfsLargeFile::close_process()
   }
   if (remove_key() != TFS_SUCCESS) // TODO .. ignore local key fail ?
   {
-    TBSYS_LOG(ERROR, "remove key fail, ret: %d", ret);
+    TBSYS_LOG(ERROR, "remove key fail, desc: %s", strerror(errno));
+  }
+
+  if (TFS_SUCCESS == ret)
+  {
+    fsname_.set_file_id(meta_seg_->seg_info_.file_id_);
+    fsname_.set_block_id(meta_seg_->seg_info_.block_id_);
   }
   return ret;
 }
@@ -237,7 +256,10 @@ int TfsLargeFile::upload_key()
   else
   {
     destroy_seg();
-    // TODO .. meta_seg_ stuff
+    meta_seg_->buf_ = buf;
+    meta_seg_->cur_offset_ = 0;
+    meta_seg_->cur_size_ = size;
+
     processing_seg_list_.push_back(meta_seg_);
 
     if ((ret = process(FILE_PHASE_WRITE_DATA)) != TFS_SUCCESS)
@@ -250,7 +272,7 @@ int TfsLargeFile::upload_key()
     }
   }
 
-  tbsys::gDelete(buf);
+  tbsys::gDeleteA(buf);
   return ret;
 }
 

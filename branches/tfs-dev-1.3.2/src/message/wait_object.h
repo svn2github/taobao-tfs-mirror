@@ -4,10 +4,11 @@
 #include <tbnet.h>
 #include <map>
 #include <ext/hash_map>
+#include "message.h"
 
 namespace tfs
 {
-  namespace common
+  namespace message 
   {
     struct WaitId
     {
@@ -31,23 +32,23 @@ namespace tfs
       void set_id(const int64_t id);
       void add_send_id();
       WaitId* get_wait_key();
-      void set_no_free();
+      void set_free();
 
       /** wait for response, timeout (us) */
       bool wait(const int32_t wait_count, const int64_t timeout_in_us);
       bool wait(const int64_t timeout_in_us = 0);
       void wakeup();
-      void push_response(const int64_t send_id, tbnet::Packet* packet);
+      void push_response(const int64_t send_id, Message* packet);
       int64_t get_response_count();
-      std::map<int64_t, tbnet::Packet*>& get_response();
-      tbnet::Packet* get_single_response();
+      std::map<int64_t, Message*>& get_response();
+      Message* get_single_response();
 
     private:
       bool free_;
       WaitId wait_key_;
       int32_t done_count_;
       tbsys::CThreadCond cond_;
-      std::map<int64_t, tbnet::Packet*> responses_;
+      std::map<int64_t, Message*> responses_;
     };
 
     class WaitObjectManager
@@ -68,6 +69,7 @@ namespace tfs
         WaitObject* create_wait_object();
         WaitObject* get_wait_object(const int64_t wait_id);
         void destroy_wait_object(WaitObject*& wait_object);
+        void destroy_wait_object(const int64_t wait_id);
         void wakeup_wait_object(const WaitId& id, tbnet::Packet* response);
 
       private:

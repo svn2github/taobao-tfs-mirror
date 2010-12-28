@@ -156,6 +156,7 @@ namespace tfs
     {
       IS_SERVER = 1
     };
+
     // common data structure
 #pragma pack(4)
     struct BlockInfo
@@ -347,6 +348,23 @@ namespace tfs
       int32_t capacity_;
       int32_t available_;
     };
+
+    //struct BlockInfoSeg
+    //{
+    //  VUINT64 ds_;
+    //  bool has_lease_;
+    //  int32_t lease_;
+    //  int32_t version_;
+    //  BlockInfoSeg() : has_lease_(false), lease_(0), version_(0)
+    //  {
+    //    ds_.clear();
+    //  }
+    //  BlockInfoSeg(const VUINT64& ds, const bool has_lease = false,
+    //               const int32_t lease = 0, const int32_t version = 0) :
+    //    ds_(ds), has_lease_(has_lease), lease_(lease), version_(version)
+    //  {
+    //  }
+    //};
 #pragma pack()
 
     static const int32_t BLOCKINFO_SIZE = sizeof(BlockInfo);
@@ -356,7 +374,7 @@ namespace tfs
     static const int32_t MAX_DEV_NAME_LEN = 64;
     static const int32_t MAX_READ_SIZE = 1048576;
 
-    static const int64_t SEGMENT_SIZE = 1 << 10;
+    static const int64_t SEGMENT_SIZE = 1 << 20;
 
     // typedef
     typedef std::map<std::string, std::string> STRING_MAP; // string => string

@@ -21,9 +21,8 @@
 #include <fcntl.h>
 #include <vector>
 #include <errno.h>
-#include "message.h"
 #include "common/interval.h"
-#include "common/define.h"
+#include "message.h"
 #include "common/error_msg.h"
 
 namespace tfs
@@ -51,6 +50,7 @@ namespace tfs
       int32_t version_;
       BlockInfoSeg() : has_lease_(false), lease_(0), version_(0)
       {
+        ds_.clear();
       }
       BlockInfoSeg(const common::VUINT64& ds, const bool has_lease = false,
                    const int32_t lease = 0, const int32_t version = 0) :
@@ -58,7 +58,9 @@ namespace tfs
       {
       }
     };
+
 #pragma pack()
+
     // get the block information in the common::DataServerStatInfo
     // input argument: mode, block_id
     class GetBlockInfoMessage: public Message
@@ -130,7 +132,7 @@ namespace tfs
         {
           return version_;
         }
-        inline int32_t get_lease_id() const
+        inline uint32_t get_lease_id() const
         {
           return lease_;
         }
@@ -218,9 +220,9 @@ namespace tfs
         return block_infos_.size();
       }
 
-      inline map<uint32_t, BlockInfoSeg>* get_infos()
+      inline map<uint32_t, BlockInfoSeg>& get_infos()
       {
-        return &block_infos_;
+        return block_infos_;
       }
 
       inline common::VUINT64* get_block_ds(const uint32_t block_id)

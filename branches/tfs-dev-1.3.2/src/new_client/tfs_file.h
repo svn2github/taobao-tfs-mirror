@@ -6,7 +6,7 @@
 
 #include "common/error_msg.h"
 #include "common/func.h"
-#include "common/client_manager.h"
+#include "message/client_manager.h"
 
 #include "tfs_session.h"
 #include "fsname.h"

@@ -16,18 +16,19 @@
 #include <stdarg.h>
 #include <string>
 
-#include "Memory.hpp"
+#include <Memory.hpp>
 
 #include "tfs_client_api.h"
 #include "tfs_session_pool.h"
 #include "tfs_large_file.h"
 #include "tfs_small_file.h"
 
-using namespace tfs::client;
 using namespace tfs::common;
+using namespace tfs::message;
+using namespace tfs::client;
 using namespace std;
 
-TfsClient::TfsClient() : default_tfs_session_(NULL), fd_(0)
+TfsClient::TfsClient() : default_tfs_session_(NULL), fd_(1)
 {
 }
 
@@ -40,12 +41,6 @@ TfsClient::~TfsClient()
   tfs_file_map_.clear();
 }
 
-TfsClient* TfsClient::Instance()
-{
-  static TfsClient tfs_client;
-  return &tfs_client;
-}
-
 int TfsClient::initialize(const char* ns_addr, const int32_t cache_time, const int32_t cache_items)
 {
   int ret = TFS_SUCCESS;
@@ -54,9 +49,9 @@ int TfsClient::initialize(const char* ns_addr, const int32_t cache_time, const i
     TBSYS_LOG(ERROR, "tfsclient initialize need ns ip");
     ret = TFS_ERROR;
   }
-
-  if (TFS_SUCCESS == ret)
+  else
   {
+    tbutil::Mutex::Lock lock(mutex_);
     if (NULL == (default_tfs_session_ = SESSION_POOL.get(ns_addr, cache_time, cache_items)))
     {
       TBSYS_LOG(ERROR, "tfsclient initialize to ns %s failed. must exit", ns_addr);
@@ -118,10 +113,17 @@ int TfsClient::close(const int fd, char* tfs_name, const int32_t len)
     {
       ret = EXIT_INVALIDFD_ERROR;
     }
-
-    if (TFS_SUCCESS == ret)
+    else
     {
-      memcpy(tfs_name, tfs_file->get_file_name(), TFS_FILE_LEN);
+      ret = tfs_file->close();
+      if (TFS_SUCCESS != ret)
+      {
+        TBSYS_LOG(ERROR, "tfs close failed. fd: %d, ret: %d", fd, ret);
+      }
+      else
+      {
+        memcpy(tfs_name, tfs_file->get_file_name(), TFS_FILE_LEN);
+      }
     }
   }
   // erase tfsfile from map
@@ -129,7 +131,7 @@ int TfsClient::close(const int fd, char* tfs_name, const int32_t len)
   return ret;
 }
 
-int TfsClient::open_ex(const char* file_name, const char* suffix, const char* ns_addr, const int flags, const int32_t arg_cnt, ... )
+int TfsClient::open_ex(const char* file_name, const char* suffix, const char* ns_addr, const int flags, ...)
 {
   TfsSession* tfs_session = (NULL == ns_addr) ? default_tfs_session_ :
     SESSION_POOL.get(ns_addr, default_tfs_session_->get_cache_time(), default_tfs_session_->get_cache_items());
@@ -142,7 +144,7 @@ int TfsClient::open_ex(const char* file_name, const char* suffix, const char* ns
 
   TfsFile* tfs_file = NULL;
   int ret = TFS_SUCCESS;
-  if (arg_cnt < 1)
+  if (!(flags & common::T_LARGE))
   {
     tfs_file = new TfsSmallFile();
     tfs_file->set_session(tfs_session);
@@ -151,10 +153,11 @@ int TfsClient::open_ex(const char* file_name, const char* suffix, const char* ns
   else
   {
     va_list args;
-    va_start(args, arg_cnt);
+    va_start(args, flags);
     tfs_file = new TfsLargeFile();
     tfs_file->set_session(tfs_session);
     ret = tfs_file->open(file_name, suffix, flags, va_arg(args, char*));
+    va_end(args);
   }
 
   if (ret != TFS_SUCCESS)

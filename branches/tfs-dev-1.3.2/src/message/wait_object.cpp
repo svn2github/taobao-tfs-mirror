@@ -1,14 +1,15 @@
 #include "wait_object.h"
-#include "define.h"
+#include "common/define.h"
 #include <Memory.hpp>
 
 namespace tfs
 {
-  namespace common
+  namespace message 
   {
+    using namespace common;
     const int64_t WaitObject::WAIT_RESPONSE_ARRAY_SIZE;
 
-    WaitObject::WaitObject() : free_(true), done_count_(0)
+    WaitObject::WaitObject() : free_(false), done_count_(0)
     {
       responses_.clear();
     }
@@ -17,7 +18,7 @@ namespace tfs
     {
       if (free_)
       {
-        std::map<int64_t, tbnet::Packet*>::iterator it = responses_.begin();
+        std::map<int64_t, Message*>::iterator it = responses_.begin();
         for ( ; it != responses_.end(); ++it)
         {
           tbsys::gDelete(it->second);
@@ -63,9 +64,9 @@ namespace tfs
       cond_.unlock();
     }
 
-    void WaitObject::set_no_free()
+    void WaitObject::set_free()
     {
-      free_ = false;
+      free_ = true;
     }
 
     int64_t WaitObject::get_id() const
@@ -93,20 +94,20 @@ namespace tfs
       return responses_.size();
     }
 
-    void WaitObject::push_response(const int64_t send_id, tbnet::Packet* packet)
+    void WaitObject::push_response(const int64_t send_id, Message* packet)
     {
       responses_[send_id] = packet;
       return;
     }
 
-    std::map<int64_t, tbnet::Packet*>& WaitObject::get_response()
+    std::map<int64_t, Message*>& WaitObject::get_response()
     {
       return responses_;
     }
 
-    tbnet::Packet* WaitObject::get_single_response()
+    Message* WaitObject::get_single_response()
     {
-      tbnet::Packet* ret_pkt = NULL;
+      Message* ret_pkt = NULL;
       if (!responses_.empty())
       {
         ret_pkt = responses_.begin()->second;
@@ -159,6 +160,12 @@ namespace tfs
       }
     }
 
+    void WaitObjectManager::destroy_wait_object(const int64_t wait_id)
+    {
+      WaitObject* wait_obj = get_wait_object(wait_id);
+      destroy_wait_object(wait_obj);
+    }
+
     void WaitObjectManager::wakeup_wait_object(const WaitId& id, tbnet::Packet* response)
     {
       tbsys::CThreadGuard guard(&mutex_);
@@ -175,7 +182,7 @@ namespace tfs
       {
         if (response != NULL && response->isRegularPacket())
         {
-          it->second->push_response(id.send_id_, response);
+          it->second->push_response(id.send_id_, dynamic_cast<Message*>(response));
         }
 
         // if got control packet or NULL, we will still add the done counter

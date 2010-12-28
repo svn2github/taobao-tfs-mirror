@@ -16,9 +16,10 @@
 #include <tbsys.h>
 #include <Memory.hpp>
 #include "tfs_session.h"
-#include "message/client_cmd_message.h"
-#include "message/message_factory.h"
-#include "common/client_manager.h"
+#include "message/client_manager.h"
+
+#include "message/client.h"
+#include "message/client_pool.h"
 
 
 using namespace tfs::client;
@@ -63,12 +64,13 @@ int TfsSession::initialize()
   return ret; 
 }
 
-int TfsSession::get_block_info(uint32_t& block_id, VUINT64 &rds, const int32_t flag)
+int TfsSession::get_block_info(uint32_t& block_id, VUINT64 &rds, int32_t flag)
 {
   int ret = TFS_SUCCESS;
   // insert to cache 
   if (flag & T_WRITE)
   {
+    flag |= T_CREATE;
     ret = get_block_info_ex(block_id, rds, flag);
   }
   else // read || unlink
@@ -119,11 +121,12 @@ int TfsSession::get_block_info(uint32_t& block_id, VUINT64 &rds, const int32_t f
   return ret;
 }
 
-int TfsSession::get_block_info(vector<SegmentData*>& seg_list, const int32_t flag)
+int TfsSession::get_block_info(SEG_DATA_LIST& seg_list, int32_t flag)
 {
   int ret = TFS_SUCCESS;
   if (flag & T_WRITE)
   {
+    flag |= T_CREATE;
     ret = get_block_info_ex(seg_list, flag);
   }
   else
@@ -196,12 +199,16 @@ int TfsSession::get_block_info(vector<SegmentData*>& seg_list, const int32_t fla
 
 int TfsSession::get_block_info_ex(uint32_t& block_id, VUINT64 &rds, const int32_t flag)
 {
+  // for test
+  //SetBlockInfoMessage gbi_message;
+  //VUINT64 tds = gbi_message.get_block_ds();
+
   GetBlockInfoMessage gbi_message(flag);
   gbi_message.set_block_id(block_id);
 
-  tbnet::Packet* pkt_rsp = NULL;
-  int ret = global_client_manager.call(ns_addr_, &gbi_message, WAIT_TIME_OUT, pkt_rsp);
-  Message* rsp = dynamic_cast<Message*>(pkt_rsp);
+  Message* rsp = NULL;
+  int ret = NewClientManager::get_instance()->call(ns_addr_, &gbi_message, WAIT_TIME_OUT, rsp);
+
   if (TFS_SUCCESS != ret)
   {
     TBSYS_LOG(ERROR, "get cluster id from ns failed, ret: %d", ret);
@@ -210,6 +217,8 @@ int TfsSession::get_block_info_ex(uint32_t& block_id, VUINT64 &rds, const int32_
   {
     ret = TFS_ERROR;
     SetBlockInfoMessage* block_info_msg = dynamic_cast<SetBlockInfoMessage*>(rsp);
+    //TBSYS_LOG(DEBUG, "message size: %d, block info message size: %d", sizeof(Message), sizeof(SetBlockInfoMessage));
+    TBSYS_LOG(DEBUG, "get block ds list size: %ld, rds size: %d", block_info_msg->get_block_ds().size(), rds.size());
     rds = block_info_msg->get_block_ds();
     block_id = block_info_msg->get_block_id();
     if (rds.size() && block_id > 0)
@@ -241,7 +250,7 @@ int TfsSession::get_block_info_ex(uint32_t& block_id, VUINT64 &rds, const int32_
   return ret;
 }
 
-int TfsSession::get_block_info_ex(vector<SegmentData*>& seg_list, const int32_t flag)
+int TfsSession::get_block_info_ex(SEG_DATA_LIST& seg_list, const int32_t flag)
 {
   size_t block_count = 0;
   BatchGetBlockInfoMessage bgbi_message(flag);
@@ -262,9 +271,8 @@ int TfsSession::get_block_info_ex(vector<SegmentData*>& seg_list, const int32_t 
     }
   }
 
-  tbnet::Packet* pkt_rsp = NULL;
-  int ret = global_client_manager.call(ns_addr_, &bgbi_message, WAIT_TIME_OUT, pkt_rsp);
-  Message* rsp = dynamic_cast<Message*>(pkt_rsp);
+  Message* rsp = NULL;
+  int ret = NewClientManager::get_instance()->call(ns_addr_, &bgbi_message, WAIT_TIME_OUT, rsp);
   if (TFS_SUCCESS != ret)
   {
     TBSYS_LOG(ERROR, "get blockinfo failed, ret: %d", ret);
@@ -272,22 +280,21 @@ int TfsSession::get_block_info_ex(vector<SegmentData*>& seg_list, const int32_t 
   else if (BATCH_SET_BLOCK_INFO_MESSAGE == rsp->get_message_type())
   {
     BatchSetBlockInfoMessage* block_info_msg = dynamic_cast<BatchSetBlockInfoMessage*>(rsp);
-    map<uint32_t, BlockInfoSeg>* block_info = block_info_msg->get_infos();
-    if (block_info->size() != block_count)
+    map<uint32_t, BlockInfoSeg>& block_info = block_info_msg->get_infos();
+    if (block_info.size() != block_count)
     {
       TBSYS_LOG(ERROR, "batch get block info fail, get count conflict, request: %d, response: %u",
-                block_count, block_info->size());
+                block_count, block_info.size());
       ret = TFS_ERROR;
     }
-
-    if (TFS_SUCCESS != ret)
+    else
     {
       std::map<uint32_t, BlockInfoSeg>::iterator it;
       if (flag & T_READ)
       {
         for (size_t i = 0; i < seg_list.size(); i++)
         {
-          if ((it = block_info->find(seg_list[i]->seg_info_.block_id_)) == block_info->end())
+          if ((it = block_info.find(seg_list[i]->seg_info_.block_id_)) == block_info.end())
           {
             // retry ?
             TBSYS_LOG(ERROR, "get block %d info fail", seg_list[i]->seg_info_.block_id_);
@@ -299,16 +306,22 @@ int TfsSession::get_block_info_ex(vector<SegmentData*>& seg_list, const int32_t 
       }
       else if (flag & T_WRITE)
       {
-        it = block_info->begin();
+        it = block_info.begin();
+        TBSYS_LOG(DEBUG, "get write block block count: %d, seg list size: %d", block_info.size(), seg_list.size());
+
         for (size_t i = 0; i < seg_list.size(); i++, it++)
         {
           seg_list[i]->seg_info_.block_id_ = it->first;
           seg_list[i]->ds_ = it->second.ds_;
+          TBSYS_LOG(DEBUG, "get write block %u success, ds list size: %d", seg_list[i]->seg_info_.block_id_, seg_list[i]->ds_.size());
           if (it->second.has_lease_) // should have
           {
             seg_list[i]->ds_.push_back(ULONG_LONG_MAX);
             seg_list[i]->ds_.push_back(it->second.version_);
             seg_list[i]->ds_.push_back(it->second.lease_);
+            TBSYS_LOG(DEBUG, "get write block %u success, ds list size: %d, version: %d, lease: %d",
+                seg_list[i]->seg_info_.block_id_, seg_list[i]->ds_.size(),
+                it->second.version_, it->second.lease_);
           }
         }
       }
@@ -344,9 +357,8 @@ int TfsSession::get_cluster_id_from_ns()
   cc_message.set_type(CLIENT_CMD_SET_PARAM);
   cc_message.set_block_id(20);
 
-  tbnet::Packet* pkt_rsp = NULL;
-  int ret = global_client_manager.call(ns_addr_, &cc_message, WAIT_TIME_OUT, pkt_rsp);
-  Message* rsp = dynamic_cast<Message*>(pkt_rsp);
+  Message* rsp = NULL;
+  int ret = NewClientManager::get_instance()->call(ns_addr_, &cc_message, WAIT_TIME_OUT, rsp);
   if (TFS_SUCCESS != ret)
   {
     TBSYS_LOG(ERROR, "get block info failed, ret: %d", ret);
@@ -358,15 +370,16 @@ int TfsSession::get_cluster_id_from_ns()
     if (status_msg->get_status() == STATUS_MESSAGE_OK &&
         strlen(status_msg->get_error()) > 0)
     {
-      int cluster_id = atoi(status_msg->get_error());
-      if (cluster_id <= 0)
-      {
-        TBSYS_LOG(ERROR, "get cluster id from nameserver fail cluster id: %d", cluster_id);
-        ret = TFS_ERROR;
+      char cluster_id = static_cast<char> (atoi(status_msg->get_error()));
+      if (isdigit(cluster_id) || isalpha(cluster_id))
+      {   
+        cluster_id_ = cluster_id - '0';
+        TBSYS_LOG(INFO, "get cluster id from nameserver success. cluster id: %d", cluster_id_);
       }
       else
       {
-        cluster_id_ = cluster_id;
+        TBSYS_LOG(ERROR, "get cluster id from nameserver fail. cluster id: %c", cluster_id);
+        ret = TFS_ERROR;
       }
     }
   }
