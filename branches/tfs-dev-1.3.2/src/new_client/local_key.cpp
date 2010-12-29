@@ -5,7 +5,7 @@
 using namespace tfs::client;
 using namespace tfs::common;
 
-LocalKey::LocalKey()
+LocalKey::LocalKey() : file_op_(NULL)
 {
 }
 
@@ -22,19 +22,18 @@ LocalKey::~LocalKey()
 
 int LocalKey::initialize(const char* local_key, const uint64_t addr)
 {
-  const static char* g_tmp_path = "/tmp";
+  const static char* g_tmp_path = "/tmp/";
   char name[MAX_PATH_LENGTH];
   strncpy(name, g_tmp_path, MAX_PATH_LENGTH - 1);
   char* tmp_file = name + strlen(g_tmp_path);
 
   int ret = TFS_SUCCESS;
-  if (!realpath(local_key, tmp_file))
+  if (NULL == realpath(local_key, tmp_file))
   {
     TBSYS_LOG(ERROR, "initialize local key %s fail: %s", local_key, strerror(errno));
     ret = TFS_ERROR;
   }
-
-  if (TFS_SUCCESS == ret)
+  else
   {
     // convert tmp file name
     char* pos = NULL;
@@ -47,7 +46,7 @@ int LocalKey::initialize(const char* local_key, const uint64_t addr)
 
     memset(&seg_head_, 0, sizeof(SegmentHead));
     seg_info_.clear();
-    int is_exist = access(name, F_OK);    
+    int is_exist = access(name, F_OK);
     if (0 != is_exist) //not exist
     {
       file_op_ = new FileOperation(name, O_RDWR|O_CREAT);
@@ -110,6 +109,11 @@ int LocalKey::add_segment(SegmentInfo& seg_info)
     seg_head_.count_++;         // TODO .. lock ?
     seg_head_.size_ += seg_info.size_;
   }
+  else
+  {
+    TBSYS_LOG(ERROR, "add segment fail. blockid: %u, fileid: %"PRI64_PREFIX"u, offset: %"PRI64_PREFIX"d, size: %d, crc: %u",
+              seg_info.block_id_, seg_info.file_id_, seg_info.offset_, seg_info.size_, seg_info.crc_);
+  }
   return ret;
 }
 
@@ -146,6 +150,11 @@ int LocalKey::save()
 int LocalKey::remove()
 {
   return file_op_->unlink_file();
+}
+
+int32_t LocalKey::get_segment_size()
+{
+  return seg_head_.count_;
 }
 
 int64_t LocalKey::get_file_size()
@@ -239,28 +248,37 @@ int LocalKey::get_segment_for_read(const int64_t offset, const char* buf,
   int64_t check_size = 0, cur_size = 0;
   SegmentData* seg_data = NULL;
 
-  if (it->offset_ != offset)
+  // To read, segment info SHOULD and MUST be adjacent and completed
+  // but not check here ...
+
+  if (it->offset_ != offset)    // offset found in previous segment middle
   {
-    if (seg_info_.begin() == it) // should never happen
+    if (seg_info_.begin() == it) // should never happen: queried offset less than least offset in stored segment info
     {
       TBSYS_LOG(ERROR, "can not find meta info for offset: %"PRI64_PREFIX"d", offset);
       return TFS_ERROR;
     }
-    else
+    else                        // found previous segment middle, get info
     {
       SEG_SET_ITER pre_it = it;
-      it--;
+      --pre_it;
       check_size += pre_it->size_ - (offset - pre_it->offset_);
       seg_data = new SegmentData();
       seg_data->buf_ = const_cast<char*>(buf);
+      seg_data->seg_info_ = *pre_it;
+      seg_data->seg_info_.size_ = check_size; // real size
+      seg_data->seg_info_.offset_ = offset; // real offset
+
       seg_list.push_back(seg_data);
     }
   }
-  while (it != seg_info_.end() && check_size < size)
+
+  // get following adjacent segment info
+  for (; it != seg_info_.end() && check_size < size; check_size += cur_size, ++it)
   {
     if (check_size + it->size_ > size)
     {
-      cur_size = it->size_ - check_size;
+      cur_size = size - check_size;
     }
     else
     {
@@ -272,7 +290,7 @@ int LocalKey::get_segment_for_read(const int64_t offset, const char* buf,
     seg_data->seg_info_.size_ = cur_size;
     seg_data->buf_ = const_cast<char*>(buf) + check_size;
 
-    check_size += cur_size;
+    seg_list.push_back(seg_data);
   }
 
   return TFS_SUCCESS;
@@ -333,8 +351,8 @@ int LocalKey::load_segment(const char* buf)
   const SegmentInfo* segment = reinterpret_cast<const SegmentInfo*>(buf);
   for (int32_t i = 0; i < count; ++i)
   {
-    TBSYS_LOG(DEBUG, "load segment info, offset: %"PRI64_PREFIX"d, blockid: %u, fileid: %"PRI64_PREFIX"u",
-              segment[i].offset_, segment[i].block_id_, segment[i].file_id_);
+    TBSYS_LOG(DEBUG, "load segment info, offset: %"PRI64_PREFIX"d, blockid: %u, fileid: %"PRI64_PREFIX"u, size: %d",
+              segment[i].offset_, segment[i].block_id_, segment[i].file_id_, segment[i].size_);
     if (!seg_info_.insert(*(segment + i)).second)
     {
       TBSYS_LOG(ERROR, "load segment info fail, count: %d, failno: %d", count, i + 1);

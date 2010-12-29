@@ -28,6 +28,9 @@ namespace tfs
     {
       int32_t count_;           // segment count
       int64_t size_;            // total size that segments contain
+      SegmentHead() : count_(0), size_(0)
+      {
+      }
     };
 
     struct SegmentInfo
@@ -116,9 +119,16 @@ namespace tfs
 
       int add_segment(SegmentInfo& seg_info);
 
-      int32_t get_data_size();  // get segment data size
       int64_t get_file_size();  // get size that segments contain
+      int32_t get_data_size();  // get raw data size of segment head and data
       int dump_data(char* buf);
+
+      // for unit test
+      int32_t get_segment_size(); // get segment count
+      SEG_SET& get_seg_info()
+      {
+        return seg_info_;
+      }
 
     private:
       void destroy_info();
