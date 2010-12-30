@@ -16,8 +16,6 @@
 #include <gtest/gtest.h>
 #include "logic_block.h"
 #include "dataserver_define.h"
-//#include "common/sysparam.h"
-//#include "common/configure.h"
 
 const std::string BASE_PATH = ".";
 const std::string MOUNT_PATH = "./mount";
@@ -110,7 +108,7 @@ TEST_F(LogicBlockTest, testLoadBlockFile)
 
   // illegal: empty file
   logic_block = new LogicBlock(logic_block_id, main_blk_key, BASE_PATH);
-  EXPECT_EQ(logic_block->load_block_file(bucket_size, mmap_option), EXIT_INDEX_EMPTY_ERROR);
+  EXPECT_EQ(logic_block->load_block_file(bucket_size, mmap_option), EXIT_INDEX_CORRUPT_ERROR);
 
   // illegal: already loaded
   EXPECT_EQ(logic_block->init_block_file(bucket_size, mmap_option, block_type), 0);

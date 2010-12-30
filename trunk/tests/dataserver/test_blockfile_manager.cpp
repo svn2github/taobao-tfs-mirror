@@ -19,6 +19,7 @@
 
 using namespace tfs::dataserver;
 using namespace tfs::common;
+using namespace std;
 
 // delete test files and folders
 int clearfile(SuperBlock super_block)

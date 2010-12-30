@@ -119,9 +119,8 @@ namespace tfs
       QueueInformationHeader queue_information_header_;
       int32_t max_file_size_;
       bool delete_file_flag_;
-      static const int32_t MAX_FILE_PATH_LENGTH = 256;
       std::string queue_path_;
     };
   }//end namespace common
 }// end namesapce tfs
-#endif
+#endif  // TFS_COMMON_FILE_QUEUE_H_

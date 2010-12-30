@@ -121,6 +121,7 @@ namespace tfs
       while (left > 0)
       {
         ++i;
+        // disk io time over
         if (i >= MAX_DISK_TIMES)
         {
           break;

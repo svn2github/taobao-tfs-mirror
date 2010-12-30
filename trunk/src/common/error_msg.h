@@ -53,9 +53,6 @@ namespace tfs
     const int32_t EXIT_NO_REPLICATE = -5009;
     const int32_t EXIT_BLOCK_BUSY = -5010;
 
-    const int32_t MYSQL_ERROR_BASE = -6000;
-    const int32_t MYSQL_CONNECT_ERROR = -6001;
-
     const int32_t EXIT_WRITE_OFFSET_ERROR = -8001; // write offset error
     const int32_t EXIT_READ_OFFSET_ERROR = -8002; // read offset error
     const int32_t EXIT_BLOCKID_ZERO_ERROR = -8003; // block id is zero, fatal error
@@ -85,7 +82,7 @@ namespace tfs
     const int32_t EXIT_META_OFFSET_ERROR = -8027; // require offset is out of index size
     const int32_t EXIT_BUCKET_CONFIGURE_ERROR = -8028; // bucket size is conflict with before
     const int32_t EXIT_INDEX_UNEXPECT_EXIST_ERROR = -8029; // index already exist when create index
-    const int32_t EXIT_INDEX_EMPTY_ERROR = -8030; // index is empty , but index is created
+    const int32_t EXIT_INDEX_CORRUPT_ERROR = -8030; // index is corrupted, and index is created
     const int32_t EXIT_BLOCK_DS_VERSION_ERROR = -8031; // ds version error
     const int32_t EXIT_BLOCK_NS_VERSION_ERROR = -8332; // ns version error
     const int32_t EXIT_PHYSIC_BLOCK_OFFSET_ERROR = -8033; // offset is out of physical block size
@@ -93,6 +90,7 @@ namespace tfs
     const int32_t EXIT_DS_CONNECT_ERROR = -8035; // connect to ds fail
     const int32_t EXIT_BLOCK_CHECKER_OVERLOAD = -8036; // too much block checker
     const int32_t EXIT_FALLOCATE_NOT_IMPLEMENT = -8037; // fallocate is not implement
+    const int32_t EXIT_META_CONFLICT_ERROR = -8038; // file meta conflict between index and disk
 
     const int32_t EXIT_SYSTEM_ERROR = -10000;
     const int32_t EXIT_REGISTER_OPLOG_SYNC_ERROR = -12000;

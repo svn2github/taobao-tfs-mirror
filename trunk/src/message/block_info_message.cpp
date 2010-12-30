@@ -452,9 +452,9 @@ namespace tfs
             return TFS_ERROR;
           }
           //stack or heap?
-          vector < uint32_t > tmpVector;
+          std::vector < uint32_t > tmpVector;
           get_vint32(&data, &len, tmpVector);
-          block_pairs_.insert(map<uint32_t, vector<uint32_t> >::value_type(block_id, tmpVector));
+          block_pairs_.insert(std::map<uint32_t, std::vector<uint32_t> >::value_type(block_id, tmpVector));
         }
       }
       // wblock_list_
@@ -471,7 +471,7 @@ namespace tfs
           {
             return TFS_ERROR;
           }
-          block_infos_.insert(map<uint32_t, BlockInfo*>::value_type(block_info->block_id_, block_info));
+          block_infos_.insert(std::map<uint32_t, BlockInfo*>::value_type(block_info->block_id_, block_info));
         }
       }
 
@@ -493,7 +493,7 @@ namespace tfs
       if (status_type_ & LB_PAIRS)
       {
         len += INT_SIZE;
-        map<uint32_t, vector<uint32_t> >::iterator mit = block_pairs_.begin();
+        std::map<uint32_t, std::vector<uint32_t> >::iterator mit = block_pairs_.begin();
         for (; mit != block_pairs_.end(); mit++)
         {
           len += INT_SIZE;
@@ -529,7 +529,7 @@ namespace tfs
 
       if (status_type_ & LB_PAIRS)
       {
-        map<uint32_t, vector<uint32_t> >::iterator mit;
+        std::map<uint32_t, std::vector<uint32_t> >::iterator mit;
         size = block_pairs_.size();
         if (set_int32(&data, &len, size) == TFS_ERROR)
         {
@@ -551,7 +551,7 @@ namespace tfs
 
       if (status_type_ & LB_INFOS)
       {
-        map<uint32_t, BlockInfo*>::iterator mit;
+        std::map<uint32_t, BlockInfo*>::iterator mit;
         size = block_infos_.size();
         if (set_int32(&data, &len, size) == TFS_ERROR)
         {

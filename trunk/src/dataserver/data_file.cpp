@@ -49,6 +49,7 @@ namespace tfs
       set_over();
     }
 
+    // clean over
     void DataFile::set_over()
     {
       length_ = 0;
@@ -67,9 +68,10 @@ namespace tfs
         return TFS_SUCCESS;
       }
       int32_t length = offset + len;
-      if (length > WRITE_DATA_TMPBUF_SIZE) // write to file if length is large then max_read_size
+
+      if (length > WRITE_DATA_TMPBUF_SIZE)      // write to file if length is large then max_read_size
       {
-        if (fd_ == -1)
+        if (fd_ == -1)          // first write to file
         {
           fd_ = open(tmp_file_name_, O_RDWR | O_CREAT | O_TRUNC, 0600);
           if (fd_ == -1)
@@ -77,7 +79,7 @@ namespace tfs
             TBSYS_LOG(ERROR, "open file fail: %s, %s", tmp_file_name_, strerror(errno));
             return TFS_ERROR;
           }
-          // write the content in the memory
+          // write memory content to file
           if (write(fd_, data_, length_) != length_)
           {
             TBSYS_LOG(ERROR, "write file fail: %s, length_: %d, error:%s", tmp_file_name_, length_, strerror(errno));
@@ -89,13 +91,14 @@ namespace tfs
           TBSYS_LOG(ERROR, "lseek file fail: %s, offset: %d", tmp_file_name_, offset);
           return TFS_ERROR;
         }
+        // no append, just write
         if (write(fd_, data, len) != len)
         {
           TBSYS_LOG(ERROR, "write file fail: %s, len: %d", tmp_file_name_, len);
           return TFS_ERROR;
         }
       }
-      else
+      else                      // length ok
       {
         memcpy(data_ + offset, data, len);
       }
@@ -136,7 +139,7 @@ namespace tfs
         int rlen;
         if ((rlen = read(fd_, data, *len)) < 0)
         {
-          TBSYS_LOG(ERROR, "write file fail: %s, len: %d", tmp_file_name_, *len);
+          TBSYS_LOG(ERROR, "read file fail: %s, len: %d", tmp_file_name_, *len);
           *len = -1;
           return NULL;
         }
@@ -144,7 +147,7 @@ namespace tfs
       }
       else
       {
-        if (data == NULL)
+        if (data == NULL)       // just use inner buffer
         {
           data = data_;
           *len = length_;

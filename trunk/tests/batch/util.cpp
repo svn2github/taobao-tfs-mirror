@@ -19,6 +19,7 @@
 
 using namespace tfs::client;
 using namespace tfs::common;
+using namespace std;
 
 int fetch_input_opt(int argc, char** argv, ThreadParam& param, int& thread_count)
 {

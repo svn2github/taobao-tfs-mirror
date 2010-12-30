@@ -16,20 +16,22 @@
 #include "parameter.h"
 #include "config.h"
 #include "config_item.h"
+#include "error_msg.h"
 #include <tbsys.h>
+#include <string.h>
 
 namespace tfs
 {
   namespace common
   {
-    inline string change_index(char* base, const std::string& suffix, const std::string& index)
+    inline std::string change_index(char* base, const std::string& suffix, const std::string& index)
     {
       if (base == NULL)
       {
         return NULL;
       }
 
-      string name(base);
+      std::string name(base);
       if (suffix.size() == 0)
       {
         name.append(index);
@@ -37,7 +39,7 @@ namespace tfs
       }
 
       size_t pos = name.rfind(suffix);
-      if (pos == string::npos)
+      if (pos == std::string::npos)
       {
         return NULL; // too rough
       }
@@ -70,11 +72,28 @@ namespace tfs
       }
     }
 
-    int SysParam::load(const string& tfsfile)
+    int SysParam::load(const std::string& tfsfile)
     {
       int32_t ret = CONFIG.load(tfsfile.c_str());
       if (ret != TFS_SUCCESS)
         return ret;
+
+      // get top work directory
+      const char *top_work_dir = CONFIG.get_string_value(CONFIG_PUBLIC, CONF_WORK_DIR);
+      if (top_work_dir == NULL)
+      {
+        TBSYS_LOG(ERROR, "work directory config not found");
+        return EXIT_CONFIG_ERROR;
+      }
+
+      char default_work_dir[MAX_PATH_LENGTH], default_log_file[MAX_PATH_LENGTH], default_pid_file[MAX_PATH_LENGTH];
+      snprintf(default_work_dir, MAX_PATH_LENGTH-1, "%s/nameserver", top_work_dir);
+      snprintf(default_log_file, MAX_PATH_LENGTH-1, "%s/logs/nameserver.log", top_work_dir);
+      snprintf(default_pid_file, MAX_PATH_LENGTH-1, "%s/logs/nameserver.pid", top_work_dir);
+      nameserver_.work_dir_ = CONFIG.get_string_value(CONFIG_NAMESERVER, CONF_WORK_DIR, default_work_dir);
+      nameserver_.log_file_ = CONFIG.get_string_value(CONFIG_NAMESERVER, CONF_LOG_FILE, default_log_file);
+      nameserver_.pid_file_ = CONFIG.get_string_value(CONFIG_NAMESERVER, CONF_LOCK_FILE, default_pid_file);
+
       nameserver_.min_replication_ = CONFIG.get_int_value(CONFIG_PUBLIC, CONF_MIN_REPLICATION);
       nameserver_.max_replication_ = CONFIG.get_int_value(CONFIG_PUBLIC, CONF_MAX_REPLICATION);
       int32_t block_use_ratio = CONFIG.get_int_value(CONFIG_PUBLIC, CONF_BLOCK_USE_RATIO, 95);
@@ -91,9 +110,9 @@ namespace tfs
       nameserver_.max_use_capacity_ratio_ = CONFIG.get_int_value(CONFIG_PUBLIC, CONF_USE_CAPACITY_RATIO);
 
       TBSYS_LOG(INFO, "load configure::max_block_size_:%u, min_replication_:%u,"
-        "max_replication_:%u,max_write_file_count_:%u,max_use_capacity_ratio_:%u", nameserver_.max_block_size_,
-          nameserver_.min_replication_, nameserver_.max_replication_, nameserver_.max_write_file_count_,
-          nameserver_.max_use_capacity_ratio_);
+                "max_replication_:%u,max_write_file_count_:%u,max_use_capacity_ratio_:%u", nameserver_.max_block_size_,
+                nameserver_.min_replication_, nameserver_.max_replication_, nameserver_.max_write_file_count_,
+                nameserver_.max_use_capacity_ratio_);
 
       char* group_mask_str = CONFIG.get_string_value(CONFIG_NAMESERVER, CONF_GROUP_MASK);
       if (group_mask_str != NULL)
@@ -106,11 +125,11 @@ namespace tfs
       }
       nameserver_.heart_interval_ = CONFIG.get_int_value(CONFIG_DATASERVER, CONF_HEART_INTERVAL, 2);
       nameserver_.ds_dead_time_ = CONFIG.get_int_value(CONFIG_NAMESERVER, CONF_DS_DEAD_TIME)
-          + nameserver_.heart_interval_;
-      nameserver_.config_log_file_ = CONFIG.get_string_value(CONFIG_NAMESERVER, CONF_LOG_FILE);
+        + nameserver_.heart_interval_;
+
       nameserver_.replicate_check_interval_ = CONFIG.get_int_value(CONFIG_NAMESERVER, CONF_REPL_CHECK_INTERVAL, 15);
       nameserver_.redundant_check_interval_
-          = CONFIG.get_int_value(CONFIG_NAMESERVER, CONF_REDUNDANT_CHECK_INTERVAL, 30);
+        = CONFIG.get_int_value(CONFIG_NAMESERVER, CONF_REDUNDANT_CHECK_INTERVAL, 30);
       nameserver_.balance_check_interval_ = CONFIG.get_int_value(CONFIG_NAMESERVER, CONF_BALANCE_CHECK_INTERVAL, 300);
       nameserver_.replicate_max_time_ = CONFIG.get_int_value(CONFIG_NAMESERVER, CONF_REPL_MAX_TIME, 180);
       nameserver_.replicate_wait_time_ = CONFIG.get_int_value(CONFIG_NAMESERVER, CONF_REPL_WAIT_TIME, 240);
@@ -131,13 +150,13 @@ namespace tfs
       set_hour_range(hour_range, nameserver_.cleanup_lease_time_lower_, nameserver_.cleanup_lease_time_upper_);
       nameserver_.cleanup_lease_count_ = CONFIG.get_int_value(CONFIG_NAMESERVER, CONF_CLEANUP_LEASE_COUNT, 100);
       nameserver_.cleanup_lease_threshold_
-          = CONFIG.get_int_value(CONFIG_NAMESERVER, CONF_CLEANUP_LEASE_THRESHOLD, 5000);
+        = CONFIG.get_int_value(CONFIG_NAMESERVER, CONF_CLEANUP_LEASE_THRESHOLD, 5000);
       nameserver_.add_primary_block_count_ = CONFIG.get_int_value(CONFIG_NAMESERVER, CONF_ADD_PRIMARY_BLOCK_COUNT, 3);
       nameserver_.safe_mode_time_ = CONFIG.get_int_value(CONFIG_NAMESERVER, CONF_SAFE_MODE_TIME, 60);
       return TFS_SUCCESS;
     }
 
-    int SysParam::load_data_server(const string& tfsfile, const string& index)
+    int SysParam::load_data_server(const std::string& tfsfile, const std::string& index)
     {
       int32_t ret = CONFIG.load(tfsfile.c_str());
       if (ret != TFS_SUCCESS)
@@ -153,16 +172,16 @@ namespace tfs
       }
 
       char default_work_dir[MAX_PATH_LENGTH], default_log_file[MAX_PATH_LENGTH], default_pid_file[MAX_PATH_LENGTH];
-      snprintf(default_work_dir, MAX_PATH_LENGTH, "%s/dataserver", top_work_dir);
-      snprintf(default_log_file, MAX_PATH_LENGTH, "%s/logs/dataserver.log", top_work_dir);
-      snprintf(default_pid_file, MAX_PATH_LENGTH, "%s/logs/dataserver.pid", top_work_dir);
+      snprintf(default_work_dir, MAX_PATH_LENGTH-1, "%s/dataserver", top_work_dir);
+      snprintf(default_log_file, MAX_PATH_LENGTH-1, "%s/logs/dataserver.log", top_work_dir);
+      snprintf(default_pid_file, MAX_PATH_LENGTH-1, "%s/logs/dataserver.pid", top_work_dir);
 
       dataserver_.work_dir_ = change_index(CONFIG.get_string_value(CONFIG_DATASERVER, CONF_WORK_DIR, default_work_dir),
-                                           string(""), server_index);
+                                           std::string(""), server_index);
       dataserver_.log_file_ = change_index(CONFIG.get_string_value(CONFIG_DATASERVER, CONF_LOG_FILE, default_log_file),
-                                           string(".log"), server_index);
+                                           std::string(".log"), server_index);
       dataserver_.pid_file_ = change_index(CONFIG.get_string_value(CONFIG_DATASERVER, CONF_LOCK_FILE, default_pid_file),
-                                           string(".pid"), server_index);
+                                           std::string(".pid"), server_index);
 
       int base_port = CONFIG.get_int_value(CONFIG_DATASERVER, CONF_PORT);
       dataserver_.local_ds_port_ = base_port + atoi(index.c_str()) * PORT_PER_PROCESS - PORT_PER_PROCESS;
@@ -203,7 +222,7 @@ namespace tfs
       return load_filesystem_param(index);
     }
 
-    int SysParam::load_filesystem_param(const string& index)
+    int SysParam::load_filesystem_param(const std::string& index)
     {
       if (CONFIG.get_string_value(CONFIG_DATASERVER, CONF_MOUNT_POINT_NAME) == NULL || strlen(CONFIG.get_string_value(
           CONFIG_DATASERVER, CONF_MOUNT_POINT_NAME)) >= static_cast<uint32_t> (MAX_DEV_NAME_LEN))
@@ -211,7 +230,7 @@ namespace tfs
         std::cerr << "mount name is invalid" << std::endl;
         return TFS_ERROR;
       }
-      filesystem_param_.mount_name_ = string(CONFIG.get_string_value(CONFIG_DATASERVER, CONF_MOUNT_POINT_NAME)).append(
+      filesystem_param_.mount_name_ = std::string(CONFIG.get_string_value(CONFIG_DATASERVER, CONF_MOUNT_POINT_NAME)).append(
           index);
 
       char* tmp_max_size = CONFIG.get_string_value(CONFIG_DATASERVER, CONF_MOUNT_MAX_USESIZE);

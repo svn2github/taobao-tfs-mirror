@@ -134,6 +134,7 @@ namespace tfs
         message::Client* client_; //update
         message::Client* compact_client_;
 
+        tbutil::Mutex stop_mutex_;
         tbutil::Mutex client_mutex_;
         tbutil::Mutex compact_mutext_;
         tbutil::Mutex count_mutex_;

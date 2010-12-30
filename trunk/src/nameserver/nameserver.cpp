@@ -11,9 +11,9 @@
  * Authors:
  *   duolong <duolong@taobao.com>
  *      - initial release
- *   qushan<qushan@taobao.com> 
+ *   qushan<qushan@taobao.com>
  *      - modify 2009-03-27
- *   duanfei <duanfei@taobao.com> 
+ *   duanfei <duanfei@taobao.com>
  *      - modify 2010-04-23
  *
  */
@@ -26,6 +26,7 @@
 
 using namespace tfs::common;
 using namespace tfs::message;
+using namespace std;
 
 namespace tfs
 {
@@ -138,7 +139,7 @@ TBSYS_LOG    (INFO, "ownerchecktime(%"PRI64_PREFIX"d)(us), maxownerchecktime(%"P
     CLIENT_POOL.init_with_transport(&transport_);
 
     int32_t server_port = CONFIG.get_int_value(CONFIG_NAMESERVER, CONF_PORT);
-    char spec[32];
+    char spec[SPEC_LEN];
     sprintf(spec, "tcp::%d", server_port);
     if (transport_.listen(spec, &streamer_, this) == NULL)
     {

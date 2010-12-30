@@ -61,6 +61,7 @@ namespace tfs
     typedef std::vector<uint32_t> VUINT32;
     typedef std::vector<int32_t> VINT;
     typedef std::vector<uint32_t> VUINT;
+    typedef std::vector<std::string> VSTRING;
 
 #pragma pack(4)
     struct FileInfo
@@ -101,10 +102,31 @@ namespace tfs
       REVEAL = 6
     };
 
+    enum 
+    {
+      T_SEEK_SET = 0,
+      T_SEEK_CUR,
+      T_SEEK_END
+    };
 
+    enum                      // open flags
+    {
+      T_O_RDONLY = 0x000,
+      T_O_WRONLY = 0x0001,
+      T_O_RDWR = 0x0002,
+      T_O_NONBLOCK = 0x0004,
+      T_O_APPEND = 0x0008,
+      T_O_NOCTTY = 0x0100,
+      T_O_CREAT = 0x0200,
+      T_O_TRUNC = 0x0400,
+      T_O_EXCL = 0x08000,
+      T_O_LARGE = 0x10000
+    };
 
     static const int TFS_SUCCESS = EXIT_SUCCESS;
     static const int TFS_ERROR = EXIT_FAILURE;
+
+    static const int EXIT_INVALIDFD_ERROR = -1;
 
     static const int32_t INT_SIZE = 4;
     static const int32_t INT64_SIZE = 8;
@@ -112,6 +134,7 @@ namespace tfs
     static const int32_t FILEINFO_SIZE = sizeof(FileInfo);
     static const int64_t TFS_MALLOC_MAX_SIZE = 0x00A00000;//10M
 
+    static const int32_t SPEC_LEN = 32;
     static const int32_t MAX_RESPONSE_TIME = 30000;
     //fsname
     static const int32_t FILE_NAME_LEN = 18;
@@ -123,6 +146,8 @@ namespace tfs
 
     static const int32_t DEFAULT_BLOCK_CACHE_TIME = 5;
     static const int32_t DEFAULT_BLOCK_CACHE_ITEMS = 10000;
+
+    static const int32_t ADMIN_WARN_DEAD_COUNT = 1;
 
     typedef std::vector<FileInfo*> FILE_INFO_LIST;
   }

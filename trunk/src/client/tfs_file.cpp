@@ -417,7 +417,7 @@ int TfsFile::tfs_read_v2(char *data, const int32_t len, FileInfo *file_info)
     }
     if (ret_len != -1)
       break;
-    if (connect_next_ds() == TFS_SUCCESS)
+    if (connect_next_ds() != TFS_SUCCESS)
       break;
   }
   return ret_len;
@@ -566,7 +566,7 @@ int TfsFile::tfs_read_scale_image(char *data, const int32_t len, const int32_t w
     if (ret_len != -1)
       break;
 
-    if (connect_next_ds() == TFS_SUCCESS)
+    if (connect_next_ds() != TFS_SUCCESS)
       break;
   }
   return ret_len;
@@ -705,7 +705,7 @@ int TfsFile::tfs_read(char *data, const int32_t len)
 
     if (ret_len != -1)
       break;
-    if (connect_next_ds() == TFS_SUCCESS)
+    if (connect_next_ds() != TFS_SUCCESS)
       break;
   }
   return ret_len;
@@ -737,7 +737,7 @@ int TfsFile::tfs_stat(FileInfo *file_info, const int32_t mode)
     if (message == NULL)
     {
       snprintf(error_message_, ERR_MSG_SIZE, "fstat, send msg to dataserver fail");
-      if (connect_next_ds() == TFS_SUCCESS)
+      if (connect_next_ds() != TFS_SUCCESS)
         break;
       continue;
     }

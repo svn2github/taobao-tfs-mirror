@@ -79,6 +79,7 @@ namespace tfs
       create_message_map_[MASTER_AND_SLAVE_HEART_RESPONSE_MESSAGE] = MasterAndSlaveHeartResponseMessage::create;
       create_message_map_[HEARTBEAT_AND_NS_HEART_MESSAGE] = HeartBeatAndNSHeartMessage::create;
       create_message_map_[GET_BLOCK_LIST_MESSAGE] = GetBlockListMessage::create;
+      create_message_map_[ADMIN_CMD_MESSAGE] = AdminCmdMessage::create;
     }
 
     MessageFactory::~MessageFactory()

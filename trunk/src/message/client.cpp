@@ -71,7 +71,7 @@ namespace tfs
       }
       send_msg->set_auto_free(true);
       // donot call the Message::buildMessage(), because cloneMessage already do that.
-      if (!ClientManager::gClientManager.connmgr_->sendPacket(ip_, send_msg, NULL, reinterpret_cast<void*> (static_cast<long> (call_id_))))
+      if (!ClientManager::gClientManager.connmgr_->sendPacket(ip_, send_msg, NULL, reinterpret_cast<void*> (static_cast<long>(call_id_))))
       {
         TBSYS_LOG(ERROR, "client(%d) send message cid(%d) to (%s) failure, pcode:%d", call_id_,
             send_msg->getChannelId(), tbsys::CNetUtil::addrToString(ip_).c_str(), send_msg->getPCode());

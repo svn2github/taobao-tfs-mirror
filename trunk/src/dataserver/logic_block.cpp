@@ -17,6 +17,7 @@
  */
 #include "logic_block.h"
 #include "blockfile_manager.h"
+using namespace std;
 
 namespace tfs
 {
@@ -67,6 +68,7 @@ namespace tfs
         dirty_flag = C_DATA_COMPACT;
       }
 
+      // create index handle
       return index_handle_->create(logic_block_id_, bucket_size, mmap_option, dirty_flag);
     }
 
@@ -77,15 +79,18 @@ namespace tfs
         return EXIT_BLOCKID_ZERO_ERROR;
       }
 
+      // startup, mmap index file
       return index_handle_->load(logic_block_id_, bucket_size, mmap_option);
     }
 
     int LogicBlock::delete_block_file()
     {
+      // 1. remove index file
       int ret = index_handle_->remove(logic_block_id_);
       if (TFS_SUCCESS != ret)
         return ret;
 
+      // 2. clear physical block list
       list<PhysicalBlock*>::iterator lit = physical_block_list_.begin();
       for (; lit != physical_block_list_.end(); ++lit)
       {
@@ -105,7 +110,7 @@ namespace tfs
     {
       ScopedRWLock scoped_lock(rw_lock_, WRITE_LOCKER);
 
-      //compare the low 32bit. (high 32bit: prefix, low 32bit: seq).
+      //compare the low 32bit. (high 32bit: suffix, low 32bit: seq no).
       return index_handle_->find_avail_key(inner_file_id);
     }
 
@@ -125,13 +130,14 @@ namespace tfs
       ScopedRWLock scoped_lock(rw_lock_, WRITE_LOCKER);
 
       RawMeta file_meta;
-      //check if exist
+      // check if exist
       int ret = index_handle_->read_segment_meta(inner_file_id, file_meta);
       if (TFS_SUCCESS == ret)
       {
         TBSYS_LOG(INFO, "file exist, update! blockid: %u, fileid: %" PRI64_PREFIX "u", logic_block_id_, inner_file_id);
       }
 
+      // save backup for roll back if update meta fail
       RawMeta bak_file_meta(file_meta);
 
       int32_t file_size = datafile->get_length();
@@ -144,10 +150,11 @@ namespace tfs
       tfs_file_info.crc_ = crc;
 
       bool need_update_meta = true, commit_offset = true;
-      //commit
+      // commit
       OperType oper_type = C_OPER_UPDATE;
       int32_t old_size = 0, block_offset = 0;
 
+      // already exist
       if (file_meta.get_file_id() == inner_file_id)
       {
         TBSYS_LOG(INFO, "write file. fileid equal. blockid: %u, fileid: %" PRI64_PREFIX "u", logic_block_id_,
@@ -159,11 +166,11 @@ namespace tfs
           TBSYS_LOG(ERROR, "read FileInfo fail, blockid: %u, fileid: %" PRI64_PREFIX "u, ret: %d", logic_block_id_,
               inner_file_id, ret);
         }
-        else //read successful
+        else // read successful
         {
-          //use old time
+          // use old time
           tfs_file_info.create_time_ = old_file_info.create_time_;
-          //reallocate if require space is larger then origin space
+          // reallocate if require space is larger then origin space
           int32_t require_size = file_size + sizeof(FileInfo);
           if (require_size > old_file_info.usize_)
           {
@@ -181,17 +188,18 @@ namespace tfs
           }
           else
           {
+            // original space ok, just update, no need to commit block total data offset
             commit_offset = false;
             tfs_file_info.offset_ = file_meta.get_offset();
             tfs_file_info.usize_ = old_file_info.usize_;
           }
-          //modify meta size
+          // modify meta size
           file_meta.set_size(require_size);
           index_handle_->update_segment_meta(file_meta.get_key(), file_meta);
         }
       }
 
-      //first allocate space & create meta
+      // first allocate space or read fail
       if (file_meta.get_file_id() != inner_file_id || ret)
       {
         need_update_meta = false;
@@ -215,13 +223,14 @@ namespace tfs
       int32_t read_len = 0, read_offset = 0;
       int32_t write_len = 0, write_offset = 0;
 
-      //if extend block
+      // if extend block
       do
       {
         ret = extend_block(file_meta.get_size(), file_meta.get_offset());
         if (TFS_SUCCESS != ret)
           break;
 
+        // write data from datafile to block
         while ((tmp_data_buffer = datafile->get_data(NULL, &read_len, read_offset)) != NULL)
         {
           if (read_len < 0 || (read_len + read_offset) > file_size)
@@ -232,25 +241,27 @@ namespace tfs
             break;
           }
 
-          //read finish
+          // read finish
           if (0 == read_len)
           {
             break;
           }
 
           write_len = read_len;
+          // first read, write fileinfo
           if (0 == read_offset)
           {
             write_len += sizeof(FileInfo);
           }
 
+          // write length corrupt
           if (write_offset + write_len > file_meta.get_size())
           {
             ret = EXIT_WRITE_OFFSET_ERROR;
             break;
           }
 
-          //set FileInfo to the head at the first fragment
+          // write fileinfo
           if (0 == read_offset)
           {
             char* tmp_write_buffer = new char[write_len];
@@ -260,12 +271,12 @@ namespace tfs
             ret = data_handle_->write_segment_data(tmp_write_buffer, write_len, file_meta.get_offset() + write_offset);
             delete[] tmp_write_buffer;
           }
-          else
+          else                  // write real file data
           {
             ret = data_handle_->write_segment_data(tmp_data_buffer, write_len, file_meta.get_offset() + write_offset);
           }
 
-          //check ret(if disk error)
+          // check ret(if disk error)
           if (TFS_SUCCESS != ret)
           {
             TBSYS_LOG(
@@ -282,6 +293,7 @@ namespace tfs
         if (TFS_SUCCESS != ret)
           break;
 
+        // update index handle statistics
         if (oper_type == C_OPER_INSERT)
         {
           ret = index_handle_->update_block_info(C_OPER_INSERT, file_meta.get_size());
@@ -311,11 +323,11 @@ namespace tfs
 
       TBSYS_LOG(DEBUG, "close write file, blockid: %u, fileid: %" PRI64_PREFIX "u, ret: %d", logic_block_id_,
           inner_file_id, ret);
-      if (TFS_SUCCESS != ret) //error occur
+      if (TFS_SUCCESS != ret) // error occur
       {
         if (need_update_meta)
         {
-          //rollback
+          // rollback
           index_handle_->update_segment_meta(bak_file_meta.get_key(), bak_file_meta);
         }
       }
@@ -326,7 +338,7 @@ namespace tfs
           index_handle_->commit_block_data_offset(file_size + sizeof(FileInfo));
         }
       }
-      //flush index 
+      //flush index
       index_handle_->flush();
       return ret;
     }
@@ -334,6 +346,7 @@ namespace tfs
     int LogicBlock::read_file(const uint64_t inner_file_id, char* buf, int32_t& nbytes, const int32_t offset)
     {
       RawMeta file_meta;
+      // 1. get file meta info(offset)
       int ret = index_handle_->read_segment_meta(inner_file_id, file_meta);
       if (TFS_SUCCESS != ret)
       {
@@ -342,6 +355,7 @@ namespace tfs
         return ret;
       }
 
+      // truncate to right read length
       if (offset + nbytes > file_meta.get_size())
       {
         nbytes = file_meta.get_size() - offset;
@@ -353,6 +367,7 @@ namespace tfs
         return EXIT_READ_OFFSET_ERROR;
       }
 
+      // 2. get file data
       ret = data_handle_->read_segment_data(buf, nbytes, file_meta.get_offset() + offset);
       if (TFS_SUCCESS != ret)
       {
@@ -364,7 +379,7 @@ namespace tfs
       TBSYS_LOG(DEBUG, "blockid: %u read data, fileid: %" PRI64_PREFIX "u, read size: %d, offset: %d, ret: %d",
           logic_block_id_, inner_file_id, nbytes, offset, ret);
 
-      //the first fragment, check flag
+      // 3. the first fragment, check fileinfo
       if (0 == offset)
       {
         if ((((FileInfo *) buf)->id_ != inner_file_id) || (((((FileInfo *) buf)->flag_) & (FI_DELETED | FI_INVALID
@@ -383,11 +398,13 @@ namespace tfs
     int LogicBlock::read_file_info(const uint64_t inner_file_id, FileInfo& finfo)
     {
       RawMeta file_meta;
+      // 1. get file meta info
       int ret = index_handle_->read_segment_meta(inner_file_id, file_meta);
       if (TFS_SUCCESS != ret)
       {
         return ret;
       }
+      // 2. get fileinfo data
       ret = data_handle_->read_segment_info(&finfo, file_meta.get_offset());
       if (TFS_SUCCESS != ret)
       {
@@ -404,14 +421,17 @@ namespace tfs
 
     int LogicBlock::rename_file(const uint64_t old_inner_file_id, const uint64_t new_inner_file_id)
     {
+      // 1. write lock
       ScopedRWLock scoped_lock(rw_lock_, WRITE_LOCKER);
       RawMeta file_meta;
+      // 2. check if new file id exist
       int ret = index_handle_->read_segment_meta(new_inner_file_id, file_meta);
-      if (TFS_SUCCESS == ret)
+      if (TFS_SUCCESS == ret)   // exist
       {
         return EXIT_META_UNEXPECT_FOUND_ERROR;
       }
 
+      // 3. read old file meta info
       ret = index_handle_->read_segment_meta(old_inner_file_id, file_meta);
       if (TFS_SUCCESS != ret)
       {
@@ -419,6 +439,7 @@ namespace tfs
       }
 
       FileInfo finfo;
+      // 4. read old fileinfo
       ret = data_handle_->read_segment_info(&finfo, file_meta.get_offset());
       if (TFS_SUCCESS != ret)
       {
@@ -426,33 +447,38 @@ namespace tfs
             old_inner_file_id, ret);
         return ret;
       }
+      // 5. update old fileinfo
       finfo.modify_time_ = time(NULL);
       finfo.id_ = new_inner_file_id;
 
       RawMeta old_file_meta(file_meta);
       file_meta.set_file_id(new_inner_file_id);
 
+      // 6. write new fileinfo
       ret = data_handle_->write_segment_info(&finfo, file_meta.get_offset());
       if (TFS_SUCCESS != ret)
         return ret;
 
+      // 7. write new file meta info
       ret = index_handle_->override_segment_meta(file_meta.get_key(), file_meta);
       if (TFS_SUCCESS != ret)
         return ret;
 
-      //delete old
+      // 8. delete old file meta info
       ret = index_handle_->delete_segment_meta(old_inner_file_id);
       if (TFS_SUCCESS != ret)
         return ret;
 
-      //flush
+      // 9. flush
       return index_handle_->flush();
     }
 
     int LogicBlock::unlink_file(const uint64_t inner_file_id, const int32_t action)
     {
+      // 1. ...
       ScopedRWLock scoped_lock(rw_lock_, WRITE_LOCKER);
       RawMeta file_meta;
+      // 2. ...
       int ret = index_handle_->read_segment_meta(inner_file_id, file_meta);
       if (TFS_SUCCESS != ret)
       {
@@ -462,6 +488,7 @@ namespace tfs
       }
 
       FileInfo finfo;
+      // 3. ...
       ret = data_handle_->read_segment_info(&finfo, file_meta.get_offset());
       if (TFS_SUCCESS != ret)
       {
@@ -471,6 +498,7 @@ namespace tfs
       }
 
       int32_t oper_type = 0;
+      // 4. dispatch action
       switch (action)
       {
       case DELETE:
@@ -522,7 +550,8 @@ namespace tfs
 
       finfo.modify_time_ = time(NULL);
 
-      //do not delete index immediately, delete it when compact
+      // 5. write updated fileinfo
+      // do not delete index immediately, delete it when compact
       ret = data_handle_->write_segment_info((const FileInfo*) &finfo, file_meta.get_offset());
       if (TFS_SUCCESS != ret)
       {
@@ -531,6 +560,7 @@ namespace tfs
         return ret;
       }
 
+      // 6. update index meta statistics
       switch (oper_type)
       {
       case C_OPER_DELETE:
@@ -549,9 +579,11 @@ namespace tfs
         return ret;
       }
 
+      // 7. flush
       return index_handle_->flush();
     }
 
+    // just read data, consider no data type
     int LogicBlock::read_raw_data(char* buf, int32_t& nbytes, const int32_t offset)
     {
       ScopedRWLock scoped_lock(rw_lock_, READ_LOCKER);
@@ -585,6 +617,7 @@ namespace tfs
       return index_handle_->flush();
     }
 
+    // just write data, consider no data type
     int LogicBlock::write_raw_data(const char* buf, const int32_t nbytes, const int32_t offset)
     {
       if (NULL == buf)
@@ -602,6 +635,7 @@ namespace tfs
       if (TFS_SUCCESS != ret)
         return ret;
 
+      // update block total data offset(size)
       index_handle_->commit_block_data_offset(nbytes);
       return index_handle_->flush();
     }
@@ -612,14 +646,17 @@ namespace tfs
       {
         return EXIT_POINTER_NULL;
       }
+      // 1. ...
       ScopedRWLock scoped_lock(rw_lock_, WRITE_LOCKER);
       int ret = TFS_SUCCESS;
+      // 2. update index block info
       ret = copy_block_info(blk_info);
       if (TFS_SUCCESS != ret && EXIT_POINTER_NULL != ret)
       {
         return ret;
       }
       TBSYS_LOG(DEBUG, "batch write meta list, blockid: %u, meta size: %d", logic_block_id_, meta_list->size());
+      // 3. write file meta info
       ret = index_handle_->batch_override_segment_meta(*meta_list);
       if (TFS_SUCCESS != ret)
       {
@@ -627,6 +664,7 @@ namespace tfs
         return ret;
       }
 
+      // 4. flush
       return index_handle_->flush();
     }
 
@@ -637,7 +675,7 @@ namespace tfs
         return EXIT_POINTER_NULL;
       }
 
-      //first one
+      // just copy update
       int ret = index_handle_->copy_block_info(blk_info);
       if (TFS_SUCCESS != ret)
       {
@@ -669,10 +707,11 @@ namespace tfs
     {
       fileinfos.clear();
       FileIterator* fit = new FileIterator(this);
+      // traverse all file info
       while (fit->has_next())
       {
         int ret = fit->next();
-        if (TFS_SUCCESS != ret)
+        if (TFS_SUCCESS != ret && EXIT_META_CONFLICT_ERROR != ret)
           return ret;
 
         const FileInfo* pfi = fit->current_file_info();
@@ -685,10 +724,10 @@ namespace tfs
     int LogicBlock::extend_block(const int32_t size, const int32_t offset)
     {
       int32_t retry_times = MAX_EXTEND_TIMES;
-      //extend retry_times extend block in one call
+      // extend retry_times extend block in one call
       while (retry_times)
       {
-        if (offset + size > avail_data_size_) //need extend block
+        if (offset + size > avail_data_size_) // need extend block
         {
           TBSYS_LOG(INFO,
               "blockid: %u need ext block. offset: %d, datalen: %d, availsize: %d, data curr offset: %d, retry: %d",
@@ -712,11 +751,11 @@ namespace tfs
           if (TFS_SUCCESS != ret)
             return ret;
 
-          //update avail size(extend size)
+          // update avail size(extend size)
           physical_block_list_.push_back(tmp_physic_block);
           avail_data_size_ += tmp_physic_block->get_total_data_len();
         }
-        else
+        else                    // no extend block need
         {
           break;
         }
@@ -756,6 +795,7 @@ namespace tfs
 
     bool FileIterator::has_next() const
     {
+      // not arrive end of block data and file meta infos
       return read_offset_ < logic_block_->index_handle_->data_file_size() && meta_it_ != meta_infos_.end();
     }
 
@@ -777,9 +817,10 @@ namespace tfs
 
       int32_t file_size = meta_it_->get_size();
       int32_t file_offset = meta_it_->get_offset();
+      //relative offset: the file offset in buf_
       int32_t relative_offset = file_offset - read_offset_;
 
-      //skip hole
+      // skip hole
       while (relative_offset > buf_len_)
       {
         TBSYS_LOG(
@@ -794,9 +835,11 @@ namespace tfs
         relative_offset = file_offset - read_offset_;
       }
 
+      // uncomplete file left in buffer
       if (file_size + relative_offset > buf_len_)
       {
         read_offset_ += buf_len_;
+        // big file
         if (file_size > MAX_COMPACT_READ_SIZE)
         {
           is_big_file_ = true;
@@ -813,6 +856,7 @@ namespace tfs
           }
           cur_fileinfo_.size_ -= sizeof(FileInfo);
           read_offset_ = file_size + file_offset;
+          // already get file info, no left data
           data_len_ = 0;
           ++meta_it_;
         }
@@ -829,18 +873,23 @@ namespace tfs
           "read one file, blockid: %u, relative offset: %d, file offset: %d, leftsize: %d, filesize: %d\n",
           logic_block_->logic_block_id_, relative_offset, file_offset, left_size, file_size);
       memcpy(&cur_fileinfo_, buf_ + relative_offset, sizeof(FileInfo));
+      bool meta_conflict = true;
       if (cur_fileinfo_.id_ != meta_it_->get_file_id() || cur_fileinfo_.size_ != file_size)
       {
         TBSYS_LOG(
             ERROR,
-            "FileInfo error. blockid: %u, disk file id: %" PRI64_PREFIX "u, size: %d, index file id: %" PRI64_PREFIX "u, size: %d\n",
-            logic_block_->logic_block_id_, cur_fileinfo_.id_, cur_fileinfo_.size_, meta_it_->get_file_id(), file_size);
+            "FileInfo error. blockid: %u, disk file id: %" PRI64_PREFIX "u, size: %d, offset: %d, index file id: %" PRI64_PREFIX "u, size: %d, offset: %d\n",
+            logic_block_->logic_block_id_, cur_fileinfo_.id_, cur_fileinfo_.size_, cur_fileinfo_.offset_,
+            meta_it_->get_file_id(), file_size, meta_it_->get_offset());
+        meta_conflict = false;
       }
       data_offset_ = relative_offset + file_size;
       data_len_ = left_size;
       cur_fileinfo_.size_ -= sizeof(FileInfo);
       ++meta_it_;
 
+      if (!meta_conflict)
+        return EXIT_META_CONFLICT_ERROR;
       TBSYS_LOG(DEBUG, "read one file end, blockid: %u, read offset: %u, leftlen: %d\n", logic_block_->logic_block_id_,
           read_offset_, data_len_);
 
@@ -863,19 +912,30 @@ namespace tfs
         return TFS_ERROR;
 
       int32_t relative_offset = cur_fileinfo_.offset_ - read_offset_;
+      if (relative_offset + static_cast<int32_t>(sizeof(FileInfo)) + cur_fileinfo_.size_ > MAX_COMPACT_READ_SIZE
+          || relative_offset < 0)
+      {
+        TBSYS_LOG(ERROR, "read_buffer fail, blockid: %u, relative offset: %d, fileinfo size: %d\n",
+            logic_block_->logic_block_id_, relative_offset, cur_fileinfo_.size_);
+        return TFS_ERROR;
+      }
+      // cur_fileinfo_.size_ is just only file data size
       memcpy(buf, buf_ + relative_offset + sizeof(FileInfo), cur_fileinfo_.size_);
       nbytes = cur_fileinfo_.size_;
       return TFS_SUCCESS;
     }
 
-    //	before the call of fill_buffer, read_offset_ must be set to correct place
+    // before the call of fill_buffer, read_offset_ must be set to correct place
     int FileIterator::fill_buffer()
     {
+      // previous left data, copy to buffer start to handle
       if (0 != data_len_)
       {
-        memcpy(buf_, buf_ + data_offset_, data_len_);
+        // avoid overlap
+        memmove(buf_, buf_ + data_offset_, data_len_);
       }
 
+      //data_len_: remain in buffer
       int32_t read_len = MAX_COMPACT_READ_SIZE - data_len_;
       int ret = logic_block_->read_raw_data(buf_ + data_len_, read_len, read_offset_);
       if (TFS_SUCCESS != ret)
@@ -885,6 +945,7 @@ namespace tfs
         return ret;
       }
       buf_len_ = data_len_ + read_len;
+      //rollback read offset
       read_offset_ -= data_len_;
       data_len_ = buf_len_;
       data_offset_ = 0;

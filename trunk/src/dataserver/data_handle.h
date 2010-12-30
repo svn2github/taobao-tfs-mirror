@@ -11,7 +11,7 @@
  * Authors:
  *   duolong <duolong@taobao.com>
  *      - initial release
- *   zongdai <zongdai@taobao.com> 
+ *   zongdai <zongdai@taobao.com>
  *      - modify 2010-04-23
  *
  */
@@ -53,7 +53,7 @@ namespace tfs
         DataHandle();
         DISALLOW_COPY_AND_ASSIGN(DataHandle);
 
-        LogicBlock* logic_block_;
+        LogicBlock* logic_block_; // associate logic block id
     };
 
   }

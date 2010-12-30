@@ -74,12 +74,12 @@ namespace tfs
         PhysicalBlock();
         DISALLOW_COPY_AND_ASSIGN(PhysicalBlock);
 
-        uint32_t physical_block_id_;
+        uint32_t physical_block_id_; // physical block id
 
-        int32_t data_start_; // the data start offset(relative offset) of this block file
-        int32_t total_data_len_;
-        BlockPrefix block_prefix_;
-        FileOperation* file_op_;
+        int32_t data_start_; // the data start offset of this block file
+        int32_t total_data_len_; // total data size
+        BlockPrefix block_prefix_; // block meta info prefix
+        FileOperation* file_op_;   // file operation handle
     };
 
   }

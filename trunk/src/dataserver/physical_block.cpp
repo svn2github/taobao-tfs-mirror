@@ -24,19 +24,26 @@ namespace tfs
   {
 
     using namespace common;
-    //|Head|Data|
+    // physical block initialization, inner format:
+    // --------------------------------------------------------------------------------------------
+    // |       block meta info prefix       |           file data(current stored data)            |
+    // --------------------------------------------------------------------------------------------
+    // | BlockPrefix(BLOCK_RESERVER_LENGTH) | FileInfo+data | FileInfo+data | ... | FileInfo+data |
+    // --------------------------------------------------------------------------------------------
     PhysicalBlock::PhysicalBlock(const uint32_t physical_block_id, const std::string& mount_path,
         const int32_t block_length, const BlockType block_type) :
       physical_block_id_(physical_block_id)
     {
       int32_t head_len = sizeof(BlockPrefix);
+      // assure not out of BLOCK_RESERVER_LENGTH range
       assert(head_len <= BLOCK_RESERVER_LENGTH);
 
       data_start_ = BLOCK_RESERVER_LENGTH;
-      total_data_len_ = block_length - data_start_; //data area
+      total_data_len_ = block_length - data_start_; // data area
       assert(total_data_len_ > 0);
 
       std::stringstream tmp_stream;
+      // get main or extend block file path
       if (C_MAIN_BLOCK == block_type)
       {
         tmp_stream << mount_path << MAINBLOCK_DIR_PREFIX << physical_block_id;
@@ -66,6 +73,7 @@ namespace tfs
       {
         return EXIT_PHYSIC_BLOCK_OFFSET_ERROR;
       }
+      // converse reletive data offset to absolute offset in block
       return file_op_->pread_file(buf, nbytes, data_start_ + offset);
     }
 
@@ -110,7 +118,12 @@ namespace tfs
     {
       TBSYS_LOG(DEBUG, "dump block prefix. logic blockid: %u, prev physical blockid: %u, next physical blockid: %u",
           block_prefix_.logic_blockid_, block_prefix_.prev_physic_blockid_, block_prefix_.next_physic_blockid_);
-      return file_op_->pwrite_file((const char*) (&block_prefix_), sizeof(BlockPrefix), 0);
+      int ret = file_op_->pwrite_file((const char*) (&block_prefix_), sizeof(BlockPrefix), 0);
+      if (TFS_SUCCESS == ret)
+      {
+        ret = file_op_->flush_file();
+      }
+      return ret;
     }
 
     void PhysicalBlock::get_block_prefix(BlockPrefix& block_prefix)

@@ -11,7 +11,7 @@
  * Authors:
  *   duolong <duolong@taobao.com>
  *      - initial release
- *   zongdai <zongdai@taobao.com> 
+ *   zongdai <zongdai@taobao.com>
  *      - modify 2010-04-23
  *
  */
@@ -99,6 +99,7 @@ namespace tfs
       return ret;
     }
 
+    // choose physic block base on offset
     int DataHandle::choose_physic_block(PhysicalBlock** tmp_physical_block, const int32_t offset,
         int32_t& inner_offset, int32_t& inner_len)
     {
@@ -113,10 +114,11 @@ namespace tfs
         data_len = (*lit)->get_total_data_len();
         sum_offset += data_len;
 
-        //bingo:find
+        // offset is in current physic block's range, bingo find.
         if (offset < sum_offset)
         {
           *tmp_physical_block = (*lit);
+          // convert absolute offset to relative offset in current block
           inner_offset = offset - prev_sum_offset;
 
           if ((offset + inner_len) > sum_offset)
@@ -128,7 +130,8 @@ namespace tfs
         }
         prev_sum_offset += data_len;
       }
-      //can not find
+
+      // oops,can not find
       if (lit == physic_block_list->end())
       {
         return EXIT_PHYSIC_BLOCK_OFFSET_ERROR;

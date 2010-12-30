@@ -64,8 +64,8 @@ namespace tfs
     {
     public:
       typedef ProactorDataPipe<PipeDataAdaptor<uint32_t> , CompactLauncher> base_type;
-      typedef hash_map<uint64_t, DsCompacting*, hash<uint64_t> > COMPACTING_SERVER_MAP;
-      typedef hash_map<uint32_t, vector<pair<uint64_t, int32_t> > > COMPACTING_BLOCK_MAP;
+      typedef __gnu_cxx::hash_map<uint64_t, DsCompacting*, __gnu_cxx::hash<uint64_t> > COMPACTING_SERVER_MAP;
+      typedef __gnu_cxx::hash_map<uint32_t, std::vector<std::pair<uint64_t, int32_t> > > COMPACTING_BLOCK_MAP;
 
       enum CompactStatus
       {
@@ -81,16 +81,16 @@ namespace tfs
       bool check(const BlockCollect* block_collect);
       int check_time_out();
       int build_plan(const common::VUINT32& compactBlocks);
-      int execute(vector<uint32_t>& compactBlocks, void* args);
+      int execute(std::vector<uint32_t>& compactBlocks, void* args);
       int handle_complete_msg(message::CompactBlockCompleteMessage* message);
-      int send_compact_cmd(const vector<uint64_t>& servers, uint32_t block_id);
+      int send_compact_cmd(const std::vector<uint64_t>& servers, uint32_t block_id);
       bool is_compacting_time();
       bool is_compacting_block(const uint32_t block_id);
       void clean();
 
     private:
       DISALLOW_COPY_AND_ASSIGN( CompactLauncher);
-      int check_compact_ds(const vector<uint64_t>& servers);
+      int check_compact_ds(const std::vector<uint64_t>& servers);
       int send_compact_cmd(const uint64_t server_id, const uint32_t block_id, int owner);
       int register_compact_block(const uint64_t server_id, const uint32_t block_id);
       int check_compact_status(const uint64_t server_id, const uint32_t block_id, const bool complete,

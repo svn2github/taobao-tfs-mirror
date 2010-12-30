@@ -78,20 +78,20 @@ namespace tfs
         static const int WRITE_DATA_TMPBUF_SIZE = 2 * 1024 * 1024;
 
       private:
-        int32_t last_update_;
-        int32_t length_;
-        char data_[WRITE_DATA_TMPBUF_SIZE];
-        uint32_t crc_;
-        int fd_;
-        char tmp_file_name_[common::MAX_PATH_LENGTH];
-        atomic_t ref_count_;
+        int32_t last_update_;   // last update time
+        int32_t length_;        // current max buffer write length
+        char data_[WRITE_DATA_TMPBUF_SIZE]; // data buffer
+        uint32_t crc_;          // crc checksum
+        int fd_;                // temporary file fd
+        char tmp_file_name_[common::MAX_PATH_LENGTH]; // temporary file name
+        atomic_t ref_count_;                          // reference count
 
       private:
         DataFile();
         DISALLOW_COPY_AND_ASSIGN(DataFile);
     };
 
-    typedef __gnu_cxx ::hash_map<uint64_t, DataFile*, __gnu_cxx ::hash<int> > DataFileMap; // fileid_ => DataFile
+    typedef __gnu_cxx::hash_map<uint64_t, DataFile*, __gnu_cxx::hash<int> > DataFileMap; // fileid_ => DataFile
     typedef DataFileMap::iterator DataFileMapIter;
 
   }

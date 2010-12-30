@@ -27,6 +27,7 @@
 using namespace tfs::common;
 using namespace tfs::message;
 using namespace tbsys;
+using namespace std;
 
 namespace tfs
 {

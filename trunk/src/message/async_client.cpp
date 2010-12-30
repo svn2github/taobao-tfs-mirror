@@ -19,6 +19,7 @@
 #include "client_pool.h"
 
 using namespace tfs::common;
+using namespace std;
 
 namespace tfs
 {
@@ -108,7 +109,7 @@ namespace tfs
         send_msg->set_auto_free(true);
 
         mutex_.lock();
-        if (!ClientManager::gClientManager.connmgr_->sendPacket(dsip, send_msg, NULL, (void*) ((long) call_id_)))
+        if (!ClientManager::gClientManager.connmgr_->sendPacket(dsip, send_msg, NULL, (void*) (static_cast<long>(call_id_))))
         {
           TBSYS_LOG(ERROR, "client(%d) send message cid(%d) to server(%s) failure, pcode:%d", call_id_,
               send_msg->getChannelId(), tbsys::CNetUtil::addrToString(dsip).c_str(), send_msg->getPCode());

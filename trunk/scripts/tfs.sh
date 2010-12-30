@@ -1,7 +1,6 @@
 #!/bin/sh
 
-cd ../
-TFS_HOME="`pwd`"
+TFS_HOME="`cd ..;pwd`"
 TFS_CONF=${TFS_HOME}/conf/tfs.conf
 BIN_DIR=${TFS_HOME}/bin
 NS_BIN=${BIN_DIR}/nameserver
@@ -12,6 +11,8 @@ DS_CMD="${DS_BIN} -f ${TFS_CONF} -d -i"
 ADMIN_CMD="${ADMIN_BIN} -f ${TFS_CONF} -d -s"
 UP_TIME=4
 DOWN_TIME=8
+
+ulimit -c unlimited
 
 warn_echo()
 {

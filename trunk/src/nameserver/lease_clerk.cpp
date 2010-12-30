@@ -25,6 +25,7 @@
 
 using namespace tfs::common;
 using namespace tbutil;
+using namespace std;
 namespace tfs
 {
   namespace nameserver

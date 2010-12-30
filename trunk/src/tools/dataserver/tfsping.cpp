@@ -49,31 +49,15 @@ int main(int argc, char* argv[])
 {
   if (argc != 3)
   {
-    printf("%s ns|ds ip\n\n", argv[0]);
-    printf("   ns - nameserver \n");
-    printf("   ds - dataserver \n\n");
+    printf("%s ip port\n\n", argv[0]);
     return TFS_ERROR;
   }
-  int32_t type = 0;
-  if (0 == strcmp(argv[1], "ns"))
-  {
-    type = 1;
-  }
-  else if (0 == strcmp(argv[1], "ds"))
-  {
-    type = 2;
-  }
+
+  int32_t port = strtoul(argv[2], NULL, 10);
   uint64_t ip;
   IpAddr* adr = reinterpret_cast<IpAddr*>(&ip);
-  adr->ip_ = Func::get_addr(argv[2]);
-  if (2 == type)
-  {
-    adr->port_ = 3200;
-  }
-  else
-  {
-    adr->port_ = 3100;
-  }
+  adr->ip_ = Func::get_addr(argv[1]);
+  adr->port_ = port;
 
   int ret = ping(ip);
   if (TFS_SUCCESS == ret)

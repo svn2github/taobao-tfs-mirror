@@ -17,6 +17,7 @@
  */
 #include "compact_block.h"
 #include <Memory.hpp>
+using namespace std;
 
 namespace tfs
 {
@@ -316,6 +317,10 @@ namespace tfs
         ret = fit->next();
         if (TFS_SUCCESS != ret)
         {
+          if (EXIT_META_CONFLICT_ERROR == ret)
+          {
+            continue;
+          }
           tbsys::gDeleteA(dest_buf);
           tbsys::gDelete(fit);
           return ret;

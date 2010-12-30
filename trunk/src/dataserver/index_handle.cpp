@@ -47,11 +47,18 @@ namespace tfs
       }
     }
 
+    // create index file. inner format:
+    // ------------------------------------------------------------------------------------------
+    // | index header|   hash bucket: each slot hold     |           file meta info             |
+    // |             |   offset of file's MetaInfo       |                                      |
+    // ------------------------------------------------------------------------------------------
+    // | IndexHeader | int32_t | int32_t | ... | int32_t | MetaInfo | MetaInfo | ... | MetaInfo |
+    // ------------------------------------------------------------------------------------------
     int IndexHandle::create(const uint32_t logic_block_id, const int32_t cfg_bucket_size, const MMapOption map_option,
         const DirtyFlag dirty_flag)
     {
       TBSYS_LOG(
-          DEBUG,
+          INFO,
           "index create block: %u index. bucket size: %d, max mmap size: %d, first mmap size: %d, per mmap size: %d, dirty flag: %d",
           logic_block_id, cfg_bucket_size, map_option.max_mmap_size_, map_option.first_mmap_size_,
           map_option.per_mmap_size_, dirty_flag);
@@ -61,6 +68,7 @@ namespace tfs
       }
       int ret = TFS_SUCCESS;
       int64_t file_size = file_op_->get_file_size();
+      // file size corrupt
       if (file_size < 0)
       {
         return TFS_ERROR;
@@ -83,6 +91,11 @@ namespace tfs
         ret = file_op_->pwrite_file(init_data, i_header.index_file_size_, 0);
         delete[] init_data;
         init_data = NULL;
+        if (TFS_SUCCESS != ret)
+          return ret;
+
+        // write to disk as immediately as possible
+        ret = file_op_->flush_file();
         if (TFS_SUCCESS != ret)
           return ret;
       }
@@ -120,7 +133,7 @@ namespace tfs
       }
       else if (file_size == 0) // empty file
       {
-        return EXIT_INDEX_EMPTY_ERROR;
+        return EXIT_INDEX_CORRUPT_ERROR;
       }
 
       //resize mmap size
@@ -135,10 +148,29 @@ namespace tfs
       if (TFS_SUCCESS != ret)
         return ret;
 
+      // check stored logic block id and bucket size
+      // meta info corrupt, may be destroyed when created by unexpect interrupt
+      if (0 == bucket_size() || 0 == block_info()->block_id_)
+      {
+        TBSYS_LOG(ERROR, "Index corrupt error. blockid: %u, bucket size: %d", block_info()->block_id_,
+            bucket_size());
+        return EXIT_INDEX_CORRUPT_ERROR;
+      }
+
+      //check file size
+      int32_t index_file_size = sizeof(IndexHeader) + bucket_size() * sizeof(int32_t);
+      // uncomplete index file
+      if (file_size < index_file_size)
+      {
+        TBSYS_LOG(ERROR, "Index corrupt error. blockid: %u, bucket size: %d, file size: %d, index file size: %d",
+            block_info()->block_id_, bucket_size(), file_size, index_file_size);
+        return EXIT_INDEX_CORRUPT_ERROR;
+      }
+
       // check bucket_size
       if (cfg_bucket_size != bucket_size())
       {
-        TBSYS_LOG(ERROR, "Index configure error. old bucket size: %u, new bucket size: %d", bucket_size(),
+        TBSYS_LOG(ERROR, "Index configure error. old bucket size: %d, new bucket size: %d", bucket_size(),
             cfg_bucket_size);
         return EXIT_BUCKET_CONFIGURE_ERROR;
       }
@@ -146,7 +178,7 @@ namespace tfs
       // check block_id
       if (logic_block_id != block_info()->block_id_)
       {
-        TBSYS_LOG(ERROR, "block id conflict. blockid: %d, index blockid: %d", logic_block_id, block_info()->block_id_);
+        TBSYS_LOG(ERROR, "block id conflict. blockid: %u, index blockid: %u", logic_block_id, block_info()->block_id_);
         return EXIT_BLOCKID_CONFLICT_ERROR;
       }
 
@@ -154,7 +186,7 @@ namespace tfs
       if (C_DATA_COMPACT == index_header()->flag_)
       {
         //unfinish compact block
-        TBSYS_LOG(ERROR, "It is a unfinish compact block. blockid: %d", logic_block_id);
+        TBSYS_LOG(ERROR, "It is a unfinish compact block. blockid: %u", logic_block_id);
         return EXIT_COMPACT_BLOCK_ERROR;
       }
 
@@ -173,6 +205,7 @@ namespace tfs
       return TFS_SUCCESS;
     }
 
+    // remove index: unmmap and unlink file
     int IndexHandle::remove(const uint32_t logic_block_id)
     {
       if (is_load_)
@@ -210,7 +243,7 @@ namespace tfs
 
     int IndexHandle::find_avail_key(uint64_t& key)
     {
-      // for write
+      // for write, get next sequence number
       if (0 == key)
       {
         key = block_info()->seq_no_;
@@ -234,7 +267,7 @@ namespace tfs
           break;
         }
 
-        //find in the list
+        // hash corrupt, find in the list
         for (; offset != 0;)
         {
           ret = file_op_->pread_file(reinterpret_cast<char*> (&meta_info), META_INFO_SIZE, offset);
@@ -340,8 +373,8 @@ namespace tfs
 
     int IndexHandle::read_segment_meta(const uint64_t key, RawMeta& meta)
     {
-      //find
       int32_t current_offset = 0, previous_offset = 0;
+      // find
       int ret = hash_find(key, current_offset, previous_offset);
       if (TFS_SUCCESS == ret) //exist
       {
@@ -359,7 +392,7 @@ namespace tfs
 
     int IndexHandle::override_segment_meta(const uint64_t key, const RawMeta& meta)
     {
-      //find
+      // find
       int32_t current_offset = 0, previous_offset = 0;
       int ret = hash_find(key, current_offset, previous_offset);
       //exist, update
@@ -382,7 +415,7 @@ namespace tfs
       }
       else if (EXIT_META_NOT_FOUND_ERROR == ret) // nonexists, insert
       {
-        //insert
+        // insert
         int32_t slot = static_cast<uint32_t> (key) % bucket_size();
         ret = hash_insert(slot, previous_offset, meta);
         if (TFS_SUCCESS != ret)
@@ -407,10 +440,10 @@ namespace tfs
 
     int IndexHandle::update_segment_meta(const uint64_t key, const RawMeta& meta)
     {
-      //find
+      // find
       int32_t current_offset = 0, previous_offset = 0;
       int ret = hash_find(key, current_offset, previous_offset);
-      if (TFS_SUCCESS == ret) //exist
+      if (TFS_SUCCESS == ret) // exist
       {
         MetaInfo tmp_meta;
         ret = file_op_->pread_file(reinterpret_cast<char*> (&tmp_meta), META_INFO_SIZE, current_offset);
@@ -432,7 +465,7 @@ namespace tfs
 
     int IndexHandle::delete_segment_meta(const uint64_t key)
     {
-      //find
+      // find
       int32_t current_offset = 0, previous_offset = 0;
       int ret = hash_find(key, current_offset, previous_offset);
       if (TFS_SUCCESS != ret)
@@ -446,12 +479,12 @@ namespace tfs
       int32_t tmp_pos = meta_info.get_next_meta_offset();
 
       int32_t slot = static_cast<uint32_t> (key) % bucket_size();
-      //the header of the list
+      // the header of the list
       if (0 == previous_offset)
       {
         bucket_slot()[slot] = tmp_pos;
       }
-      else // modify previous
+      else // delete from list, modify previous
       {
         MetaInfo pre_meta_info;
         ret = file_op_->pread_file(reinterpret_cast<char*> (&pre_meta_info), META_INFO_SIZE, previous_offset);
@@ -464,12 +497,12 @@ namespace tfs
           return ret;
       }
 
-      //modify header
+      // get free head list, be head.
       meta_info.set_next_meta_offset(index_header()->free_head_offset_);
       ret = file_op_->pwrite_file(reinterpret_cast<const char*> (&meta_info), META_INFO_SIZE, current_offset);
       if (TFS_SUCCESS != ret)
         return ret;
-      //if bread down at this time, current offset will not be used for ever
+      // add to free head list, if bread down at this time, current offset will not be used for ever
       index_header()->free_head_offset_ = current_offset;
 
       return TFS_SUCCESS;
@@ -478,8 +511,10 @@ namespace tfs
     int IndexHandle::traverse_segment_meta(RawMetaVec& raw_metas)
     {
       int ret = TFS_SUCCESS;
+      // traverse hash bucket
       for (int32_t slot = 0; slot < bucket_size(); ++slot)
       {
+        // to each hash bucket slot, traverse list
         for (int32_t current_offset = bucket_slot()[slot]; current_offset != 0;)
         {
           if (current_offset >= index_header()->index_file_size_)
@@ -516,6 +551,7 @@ namespace tfs
         return EXIT_BLOCKID_ZERO_ERROR;
       }
 
+      // to each operate type, update statistics eg, version count size stuff etc
       if (C_OPER_INSERT == oper_type)
       {
         ++block_info()->version_;
@@ -602,7 +638,7 @@ namespace tfs
         current_offset = index_header()->free_head_offset_;
         index_header()->free_head_offset_ = tmp_meta_info.get_next_meta_offset();
       }
-      else //expand index file
+      else // expand index file
       {
         current_offset = index_header()->index_file_size_;
         index_header()->index_file_size_ += META_INFO_SIZE;
@@ -613,7 +649,7 @@ namespace tfs
       if (TFS_SUCCESS != ret)
         return ret;
 
-      //previous_offset the last elem in the list
+      // previous_offset the last elem in the list, modify node
       if (0 != previous_offset)
       {
         ret = file_op_->pread_file(reinterpret_cast<char*> (&tmp_meta_info), META_INFO_SIZE, previous_offset);
@@ -625,7 +661,7 @@ namespace tfs
         if (TFS_SUCCESS != ret)
           return ret;
       }
-      else //the first elem in bucket slot, set slot  
+      else //the first elem in bucket slot, set slot
       {
         bucket_slot()[slot] = current_offset;
       }

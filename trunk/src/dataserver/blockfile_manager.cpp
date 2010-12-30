@@ -11,7 +11,7 @@
  * Authors:
  *   duolong <duolong@taobao.com>
  *      - initial release
- *   qushan<qushan@taobao.com> 
+ *   qushan<qushan@taobao.com>
  *      - modify 2009-03-27
  *
  */
@@ -20,6 +20,7 @@
 #include "common/directory_op.h"
 #include <string.h>
 #include <Memory.hpp>
+using namespace std;
 
 namespace tfs
 {
@@ -33,8 +34,8 @@ namespace tfs
       tbsys::gDelete(error_bit_map_);
       tbsys::gDelete(super_block_impl_);
 
-      destruct_logic_blocks( C_COMPACT_BLOCK);
-      destruct_logic_blocks( C_MAIN_BLOCK);
+      destruct_logic_blocks(C_COMPACT_BLOCK);
+      destruct_logic_blocks(C_MAIN_BLOCK);
       destruct_physic_blocks();
     }
 
@@ -45,7 +46,7 @@ namespace tfs
       {
         selected_logic_blocks = &compact_logic_blocks_;
       }
-      else //main Block
+      else // base on current types, main Block
       {
         selected_logic_blocks = &logic_blocks_;
       }
@@ -66,22 +67,27 @@ namespace tfs
 
     int BlockFileManager::format_block_file_system(const SysParam::FileSystemParam& fs_param)
     {
+      // 1. initialize super block parameter
       int ret = init_super_blk_param(fs_param);
       if (TFS_SUCCESS != ret)
         return ret;
 
+      // 2. create mount directory
       ret = create_fs_dir();
       if (TFS_SUCCESS != ret)
         return ret;
 
+      // 3. create super block file
       ret = create_fs_super_blk();
       if (TFS_SUCCESS != ret)
         return ret;
 
+      // 4. pre-allocate create main block
       ret = create_block(C_MAIN_BLOCK);
       if (TFS_SUCCESS != ret)
         return ret;
 
+      // 5. pre-allocate create extend block
       ret = create_block(C_EXT_BLOCK);
       if (TFS_SUCCESS != ret)
         return ret;
@@ -98,18 +104,23 @@ namespace tfs
 
     int BlockFileManager::bootstrap(const SysParam::FileSystemParam& fs_param)
     {
+      // 1. load super block
       int ret = load_super_blk(fs_param);
       if (TFS_SUCCESS != ret)
         return ret;
 
+      // 2. load block file, create logic block map associate stuff
       return load_block_file();
     }
 
     int BlockFileManager::new_block(const uint32_t logic_block_id, uint32_t& physical_block_id,
         const BlockType block_type)
     {
+      // 1. write block
       ScopedRWLock scoped_lock(rw_lock_, WRITE_LOCKER);
       LogicBlockMap* selected_logic_blocks = NULL;
+
+      // 2. get right logic block id handle
       if (C_COMPACT_BLOCK == block_type)
       {
         selected_logic_blocks = &compact_logic_blocks_;
@@ -126,73 +137,86 @@ namespace tfs
         return EXIT_BLOCK_EXIST_ERROR;
       }
 
-      int ret = TFS_SUCCESS;
-      ret = find_avail_block(physical_block_id, C_MAIN_BLOCK);
+      // 3. find avial physical block
+      int ret = find_avail_block(physical_block_id, C_MAIN_BLOCK);
       if (TFS_SUCCESS != ret)
         return ret;
 
       PhysicalBlockMapIter pmit = physcial_blocks_.find(physical_block_id);
+      // oops, same physical block id found
       if (pmit != physcial_blocks_.end())
       {
         TBSYS_LOG(ERROR, "bitmap and physical blocks conflict. fatal error! physical block id: %u", physical_block_id);
         assert(false);
       }
 
-      //set bitmap: have not serialize to disk 
-      normal_bit_map_->set(physical_block_id);
-
+      // 4. create physical block
       PhysicalBlock* t_physical_block = new PhysicalBlock(physical_block_id, super_block_.mount_point_,
           super_block_.main_block_size_, C_MAIN_BLOCK);
       t_physical_block->set_block_prefix(logic_block_id, 0, 0);
       ret = t_physical_block->dump_block_prefix();
       if (ret)
       {
-        TBSYS_LOG(ERROR, "dump physical block fail. fatal error! pos: %u, file: %s", physical_block_id,
-            super_block_.mount_point_);
+        TBSYS_LOG(ERROR, "dump physical block fail. fatal error! pos: %u, file: %s, ret: %d", physical_block_id,
+            super_block_.mount_point_, ret);
         tbsys::gDelete(t_physical_block);
         return ret;
       }
 
+      // 5. create logic block
       LogicBlock* t_logic_block = new LogicBlock(logic_block_id, physical_block_id, super_block_.mount_point_);
       t_logic_block->add_physic_block(t_physical_block);
 
-      TBSYS_LOG(DEBUG,
+      TBSYS_LOG(INFO,
           "new block. logic blockid: %u, physical blockid: %u, physci prev blockid: %u, physci next blockid: %u",
           logic_block_id, physical_block_id, 0, 0);
 
+      bool block_count_modify_flag = false;
       do
       {
-        ret = t_logic_block->init_block_file(super_block_.hash_slot_size_, super_block_.mmap_option_, block_type);
-        if (TFS_SUCCESS != ret)
-          break;
+        // 6. set normal bitmap: have not serialize to disk
+        normal_bit_map_->set(physical_block_id);
 
-        //update super block info
-        ++super_block_.used_block_count_;
-        ret = super_block_impl_->write_super_blk(super_block_);
-        if (TFS_SUCCESS != ret)
-          break;
-
+        // 7. write normal bitmap
         ret = super_block_impl_->write_bit_map(normal_bit_map_, error_bit_map_);
         if (TFS_SUCCESS != ret)
           break;
 
-        //sync to disk
+        // 8. update and write super block info
+        ++super_block_.used_block_count_;
+        block_count_modify_flag = true;
+        ret = super_block_impl_->write_super_blk(super_block_);
+        if (TFS_SUCCESS != ret)
+          break;
+
+        // 9. sync to disk
         ret = super_block_impl_->flush_file();
         if (TFS_SUCCESS != ret)
           break;
 
-        // insert to map
+        // 10. init logic block (create index handle file, etc stuff)
+        ret = t_logic_block->init_block_file(super_block_.hash_slot_size_, super_block_.mmap_option_, block_type);
+        if (TFS_SUCCESS != ret)
+          break;
+
+        // 11. insert to associate map
         physcial_blocks_.insert(PhysicalBlockMap::value_type(physical_block_id, t_physical_block));
         selected_logic_blocks->insert(LogicBlockMapIter::value_type(logic_block_id, t_logic_block));
 
         TBSYS_LOG(INFO, "new block success! logic blockid: %u, physical blockid: %u.", logic_block_id,
-            physical_block_id);
+                  physical_block_id);
       }
       while (0);
 
+      // oops,new block fail,clean.
+      // at this point, step 11 has not arrived. must delete here
       if (ret)
       {
         TBSYS_LOG(ERROR, "new block fail. logic blockid: %u. ret: %d", logic_block_id, ret);
+
+        rollback_superblock(physical_block_id, block_count_modify_flag);
+        t_logic_block->delete_block_file();
+
         tbsys::gDelete(t_logic_block);
         tbsys::gDelete(t_physical_block);
       }
@@ -202,19 +226,22 @@ namespace tfs
     int BlockFileManager::del_block(const uint32_t logic_block_id, const BlockType block_type)
     {
       TBSYS_LOG(INFO, "delete block! logic blockid: %u. blocktype: %d", logic_block_id, block_type);
+      // 1. ...
       ScopedRWLock scoped_lock(rw_lock_, WRITE_LOCKER);
       LogicBlock* delete_block = NULL;
       BlockType tmp_block_type = block_type;
+      // 2. choose right type block to delete
       delete_block = choose_del_block(logic_block_id, tmp_block_type);
       if (NULL == delete_block)
       {
         TBSYS_LOG(ERROR, "can not find logic blockid: %u. blocktype: %d when delete block", logic_block_id,
-            tmp_block_type);
+                  tmp_block_type);
         return EXIT_NO_LOGICBLOCK_ERROR;
       }
 
+      // 3. logic block layer lock
       delete_block->wlock(); //lock this block
-      //get physical block list
+      // 4. get physical block list
       list<PhysicalBlock*>* physic_block_list = delete_block->get_physic_block_list();
       int size = physic_block_list->size();
       if (0 == size)
@@ -223,16 +250,11 @@ namespace tfs
         return EXIT_PHYSICALBLOCK_NUM_ERROR;
       }
 
-      // delete physic block
       list<PhysicalBlock*>::iterator lit = physic_block_list->begin();
       list<PhysicalBlock*> tmp_physic_block;
       tmp_physic_block.clear();
 
-      // delete from physic map
-      // erase from bitmap
-      // delete logic block
-      // modify superblock info
-      // dumpbitmap& superblock
+      // 5. erase(but not clean) physic block from physic map
       for (; lit != physic_block_list->end(); ++lit)
       {
         uint32_t physic_id = (*lit)->get_physic_block_id();
@@ -252,30 +274,36 @@ namespace tfs
           }
           physcial_blocks_.erase(mpit);
         }
+        // normal bitmap clear reset
         normal_bit_map_->reset(physic_id);
       }
 
+      // 7. delete logic block from logic block map
       erase_logic_block(logic_block_id, tmp_block_type);
 
       int ret = TFS_SUCCESS;
       do
       {
+        // 8. write bitmap
         ret = super_block_impl_->write_bit_map(normal_bit_map_, error_bit_map_);
         if (TFS_SUCCESS != ret)
           break;
-        //update superblock info
+        // 9. update and write superblock info
         super_block_.used_block_count_ -= 1;
         super_block_.used_extend_block_count_ -= (size - 1);
         ret = super_block_impl_->write_super_blk(super_block_);
         if (TFS_SUCCESS != ret)
           break;
 
+        // 10. flush suplerblock
         ret = super_block_impl_->flush_file();
       }
       while (0);
 
       TBSYS_LOG(INFO, "logicblock delete %s! logic blockid: %u. physical block size: %d, blocktype: %d, ret: %d",
-          ret ? "fail" : "success", logic_block_id, size, tmp_block_type, ret);
+                ret ? "fail" : "success", logic_block_id, size, tmp_block_type, ret);
+
+      // 11. clean logic block associate stuff(index handle, physic block) & unlock
       if (delete_block)
       {
         delete_block->delete_block_file();
@@ -283,6 +311,7 @@ namespace tfs
       }
       tbsys::gDelete(delete_block);
 
+      // 12. clean physic block
       for (list<PhysicalBlock*>::iterator lit = tmp_physic_block.begin(); lit != tmp_physic_block.end(); ++lit)
       {
         tbsys::gDelete(*lit);
@@ -291,8 +320,9 @@ namespace tfs
     }
 
     int BlockFileManager::new_ext_block(const uint32_t logic_block_id, const uint32_t physical_block_id,
-        uint32_t& ext_physical_block_id, PhysicalBlock **physic_block)
+                                        uint32_t& ext_physical_block_id, PhysicalBlock **physic_block)
     {
+      // 1. ...
       ScopedRWLock scoped_lock(rw_lock_, WRITE_LOCKER);
       int ret = TFS_SUCCESS;
       BlockType block_type;
@@ -305,12 +335,14 @@ namespace tfs
         return EXIT_NO_LOGICBLOCK_ERROR;
       }
 
+      // 2. ...
       LogicBlockMapIter mit = logic_blocks_.find(logic_block_id);
       if (mit == logic_blocks_.end())
       {
         return EXIT_NO_LOGICBLOCK_ERROR;
       }
 
+      // 3. get available extend physic block
       ret = find_avail_block(ext_physical_block_id, block_type);
       if (TFS_SUCCESS != ret)
         return ret;
@@ -322,7 +354,7 @@ namespace tfs
         assert(false);
       }
 
-      //make sure physical_block_id is exist
+      // 4. make sure physical_block_id exist
       pmit = physcial_blocks_.find(physical_block_id);
       if (pmit == physcial_blocks_.end())
       {
@@ -336,53 +368,61 @@ namespace tfs
         assert(false);
       }
 
-      normal_bit_map_->set(ext_physical_block_id);
-
+      // 5. create new physic block
       PhysicalBlock* tmp_physical_block = new PhysicalBlock(ext_physical_block_id, super_block_.mount_point_,
-          super_block_.extend_block_size_, C_EXT_BLOCK);
+                                                            super_block_.extend_block_size_, C_EXT_BLOCK);
 
-      tmp_physical_block->set_block_prefix(logic_block_id, physical_block_id, 0);
       TBSYS_LOG(INFO, "new ext block. logic blockid: %u, prev physical blockid: %u, now physical blockid: %u",
-          logic_block_id, physical_block_id, ext_physical_block_id);
+                logic_block_id, physical_block_id, ext_physical_block_id);
 
+      bool block_count_modify_flag = false;
       do
       {
-        //write physical block info to disk
-        ret = tmp_physical_block->dump_block_prefix();
-        if (TFS_SUCCESS != ret)
-          break;
+        // 6. bitmap set
+        normal_bit_map_->set(ext_physical_block_id);
 
-        //get previous physcial block and record the next block
-        PhysicalBlock* prev_physic_block = pmit->second;
-        prev_physic_block->set_next_block(ext_physical_block_id);
-        //write prev block info to disk
-        ret = prev_physic_block->dump_block_prefix();
-        if (TFS_SUCCESS != ret)
-          break;
-
+        // 7. write bitmap
         ret = super_block_impl_->write_bit_map(normal_bit_map_, error_bit_map_);
         if (TFS_SUCCESS != ret)
           break;
 
-        //update superblock info
+        // 8. update & write superblock info
         ++super_block_.used_extend_block_count_;
+        block_count_modify_flag = true;
         ret = super_block_impl_->write_super_blk(super_block_);
         if (TFS_SUCCESS != ret)
           break;
 
-        //sync to disk
+        // 9. sync to disk
         ret = super_block_impl_->flush_file();
         if (TFS_SUCCESS != ret)
           break;
 
+        // 10. write physical block info to disk
+        tmp_physical_block->set_block_prefix(logic_block_id, physical_block_id, 0);
+        ret = tmp_physical_block->dump_block_prefix();
+        if (TFS_SUCCESS != ret)
+          break;
+
+        // 11. add to extend block list
+        // get previous physcial block and record the next block
+        PhysicalBlock* prev_physic_block = pmit->second;
+        prev_physic_block->set_next_block(ext_physical_block_id);
+        // write prev block info to disk
+        ret = prev_physic_block->dump_block_prefix();
+        if (TFS_SUCCESS != ret)
+          break;
+
+        // 12. insert to physic block map
         physcial_blocks_.insert(PhysicalBlockMap::value_type(ext_physical_block_id, tmp_physical_block));
         (*physic_block) = tmp_physical_block;
       }
       while (0);
 
-      if (TFS_SUCCESS != ret)
+      if (TFS_SUCCESS != ret)   // not arrive step 12
       {
         TBSYS_LOG(ERROR, "new ext block error! logic blockid: %u. ret: %d", logic_block_id, ret);
+        rollback_superblock(ext_physical_block_id, block_count_modify_flag);
         tbsys::gDelete(tmp_physical_block);
       }
       return ret;
@@ -406,6 +446,7 @@ namespace tfs
       LogicBlock *cpt_logic_block = mit->second;
       LogicBlock *old_logic_block = fit->second;
 
+      // switch
       logic_blocks_[block_id] = cpt_logic_block;
       compact_logic_blocks_[block_id] = old_logic_block;
 
@@ -422,11 +463,12 @@ namespace tfs
         if (time < 0)
           break;
 
-        //get last update
+        // get last update
         if ((mit->second) && (mit->second->get_last_update() < time))
         {
           TBSYS_LOG(INFO, "compact block is expired. blockid: %u, now: %ld, last update: %ld", mit->first, time,
-              mit->second->get_last_update());
+                    mit->second->get_last_update());
+          // add to erase block
           erase_blocks.insert(mit->first);
         }
 
@@ -441,6 +483,7 @@ namespace tfs
     int BlockFileManager::set_error_bitmap(const std::set<uint32_t>& error_blocks)
     {
       ScopedRWLock scoped_lock(rw_lock_, WRITE_LOCKER);
+      // batch set error block bitmap
       for (std::set<uint32_t>::iterator sit = error_blocks.begin(); sit != error_blocks.end(); ++sit)
       {
         TBSYS_LOG(INFO, "set error bitmap, pos: %d", *sit);
@@ -452,6 +495,7 @@ namespace tfs
     int BlockFileManager::reset_error_bitmap(const std::set<uint32_t>& reset_error_blocks)
     {
       ScopedRWLock scoped_lock(rw_lock_, WRITE_LOCKER);
+      // batch reset error block bitmap
       for (std::set<uint32_t>::iterator sit = reset_error_blocks.begin(); sit != reset_error_blocks.end(); ++sit)
       {
         TBSYS_LOG(INFO, "reset error bitmap, pos: %d", *sit);
@@ -473,7 +517,7 @@ namespace tfs
           return NULL;
         }
       }
-      else
+      else                      // main block
       {
         mit = logic_blocks_.find(logic_block_id);
         if (mit == logic_blocks_.end())
@@ -482,6 +526,7 @@ namespace tfs
         }
       }
 
+      // update visit count
       mit->second->add_visit_count();
       return mit->second;
     }
@@ -497,7 +542,7 @@ namespace tfs
           logic_block_list.push_back(mit->second);
         }
       }
-      else
+      else                      // compact logic blocks
       {
         for (LogicBlockMapIter mit = compact_logic_blocks_.begin(); mit != compact_logic_blocks_.end(); ++mit)
         {
@@ -547,7 +592,7 @@ namespace tfs
     }
 
     int BlockFileManager::query_bit_map(char** bit_map_buffer, int32_t& bit_map_len, int32_t& set_count,
-        const BitMapType bitmap_type)
+                                        const BitMapType bitmap_type)
     {
       ScopedRWLock scoped_lock(rw_lock_, READ_LOCKER);
       bit_map_len = bit_map_size_;
@@ -567,20 +612,22 @@ namespace tfs
 
     int BlockFileManager::query_approx_block_count(int32_t& block_count) const
     {
+      // use super block recorded count, just log confict
       if (super_block_.used_block_count_ != static_cast<int32_t> (logic_blocks_.size()))
       {
         TBSYS_LOG(WARN, "conflict! used main block: %u, super main block: %u", logic_blocks_.size(),
-            super_block_.used_block_count_);
+                  super_block_.used_block_count_);
       }
 
-      //modify ratio
+      // modify ratio
       int32_t approx_block_count = static_cast<int32_t> (super_block_.used_extend_block_count_
-          * super_block_.block_type_ratio_);
+                                                         * super_block_.block_type_ratio_);
 
+      // hardcode 1.1 approx radio
       if (super_block_.used_block_count_ * 1.1 < approx_block_count)
       {
         TBSYS_LOG(DEBUG, "used mainblock: %u, used approx block: %u", super_block_.used_block_count_,
-            approx_block_count);
+                  approx_block_count);
         block_count = approx_block_count;
         return TFS_SUCCESS;
       }
@@ -592,29 +639,29 @@ namespace tfs
     int BlockFileManager::query_space(int64_t& used_bytes, int64_t& total_bytes) const
     {
       int64_t used_main_bytes = static_cast<int64_t> (super_block_.used_block_count_)
-          * static_cast<int64_t> (super_block_.main_block_size_) + static_cast<int64_t> (super_block_.used_block_count_
-          / super_block_.block_type_ratio_) * static_cast<int64_t> (super_block_.extend_block_size_);
+        * static_cast<int64_t> (super_block_.main_block_size_) + static_cast<int64_t> (super_block_.used_block_count_
+                                                                                       / super_block_.block_type_ratio_) * static_cast<int64_t> (super_block_.extend_block_size_);
 
       int64_t used_ext_bytes = static_cast<int64_t> (super_block_.used_extend_block_count_)
-          * static_cast<int64_t> (super_block_.extend_block_size_)
-          + static_cast<int64_t> (super_block_.used_extend_block_count_ * super_block_.block_type_ratio_)
-              * static_cast<int64_t> (super_block_.main_block_size_);
+        * static_cast<int64_t> (super_block_.extend_block_size_)
+        + static_cast<int64_t> (super_block_.used_extend_block_count_ * super_block_.block_type_ratio_)
+        * static_cast<int64_t> (super_block_.main_block_size_);
 
       if (static_cast<int64_t> (used_main_bytes * 1.1) < used_ext_bytes)
       {
         TBSYS_LOG(DEBUG, "used main block: %d, used ext block: %d\n", super_block_.used_block_count_,
-            super_block_.used_extend_block_count_);
+                  super_block_.used_extend_block_count_);
         used_bytes = used_ext_bytes;
       }
-      else
+      else                      // just consider used main bytes
       {
         used_bytes = used_main_bytes;
       }
 
       total_bytes = static_cast<int64_t> (super_block_.main_block_count_)
-          * static_cast<int64_t> (super_block_.main_block_size_)
-          + static_cast<int64_t> (super_block_.extend_block_count_)
-              * static_cast<int64_t> (super_block_.extend_block_size_);
+        * static_cast<int64_t> (super_block_.main_block_size_)
+        + static_cast<int64_t> (super_block_.extend_block_count_)
+        * static_cast<int64_t> (super_block_.extend_block_size_);
       return TFS_SUCCESS;
     }
 
@@ -623,7 +670,7 @@ namespace tfs
       bool fs_init_status = true;
 
       TBSYS_LOG(INFO, "read super block. mount name: %s, offset: %d\n", fs_param.mount_name_.c_str(),
-          fs_param.super_block_reserve_offset_);
+                fs_param.super_block_reserve_offset_);
       super_block_impl_ = new SuperBlockImpl(fs_param.mount_name_, fs_param.super_block_reserve_offset_);
       int ret = super_block_impl_->read_super_blk(super_block_);
       if (TFS_SUCCESS != ret)
@@ -632,7 +679,7 @@ namespace tfs
         return ret;
       }
 
-      //return false
+      // return false
       if (!super_block_impl_->check_status(DEV_TAG, super_block_))
       {
         fs_init_status = false;
@@ -644,12 +691,22 @@ namespace tfs
         return EXIT_FS_NOTINIT_ERROR;
       }
 
+      if (fs_param.mount_name_.compare(super_block_.mount_point_) != 0)
+      {
+        TBSYS_LOG(WARN, "mount point conflict, rewrite mount point. former: %s, now: %s.\n",
+            super_block_.mount_point_, fs_param.mount_name_.c_str());
+        strncpy(super_block_.mount_point_, fs_param.mount_name_.c_str(), MAX_DEV_NAME_LEN - 1);
+        TBSYS_LOG(INFO, "super block mount point: %s.", super_block_.mount_point_);
+        super_block_impl_->write_super_blk(super_block_);
+        super_block_impl_->flush_file();
+      }
+
       unsigned item_count = super_block_.main_block_count_ + super_block_.extend_block_count_ + 1;
       TBSYS_LOG(INFO, "file system bitmap size: %u\n", item_count);
       normal_bit_map_ = new BitMap(item_count);
       error_bit_map_ = new BitMap(item_count);
 
-      //load bitmap
+      // load bitmap
       bit_map_size_ = normal_bit_map_->get_slot_count();
       char* tmp_bit_map_buf = new char[4 * bit_map_size_];
       memset(tmp_bit_map_buf, 0, 4 * bit_map_size_);
@@ -679,8 +736,8 @@ namespace tfs
       //load bitmap
       normal_bit_map_->copy(bit_map_size_, tmp_bit_map_buf);
       error_bit_map_->copy(bit_map_size_, tmp_bit_map_buf + 2 * bit_map_size_);
-      TBSYS_LOG(DEBUG, "bitmap used count: %u, error: %u", normal_bit_map_->get_set_count(),
-          error_bit_map_->get_set_count());
+      TBSYS_LOG(INFO, "bitmap used count: %u, error: %u", normal_bit_map_->get_set_count(),
+                error_bit_map_->get_set_count());
       tbsys::gDeleteA(tmp_bit_map_buf);
 
       return TFS_SUCCESS;
@@ -688,26 +745,28 @@ namespace tfs
 
     int BlockFileManager::load_block_file()
     {
-      //construct logic block and corresponding physicblock list according to bitmap
+      // construct logic block and corresponding physicblock list according to bitmap
       PhysicalBlockMapIter pit;
       bool conflict_flag = false;
       PhysicalBlock* t_physical_block = NULL;
       PhysicalBlock* ext_physical_block = NULL;
       LogicBlock* t_logic_block = NULL;
       int ret = TFS_SUCCESS;
+      // traverse bitmap
       for (uint32_t pos = 1; pos <= static_cast<uint32_t> (super_block_.main_block_count_); ++pos)
       {
-        //init every loop
+        // init every loop
         t_physical_block = NULL;
         t_logic_block = NULL;
         ext_physical_block = NULL;
 
-        //find
+        // 1. test bitmap find
         if (normal_bit_map_->test(pos))
         {
+          // 2. construct new physic block
           t_physical_block = new PhysicalBlock(pos, super_block_.mount_point_, super_block_.main_block_size_,
-              C_MAIN_BLOCK);
-          // read physical block's head
+                                               C_MAIN_BLOCK);
+          // 3. read physical block's head,check prefix
           ret = t_physical_block->load_block_prefix();
           if (TFS_SUCCESS != ret)
           {
@@ -722,36 +781,43 @@ namespace tfs
           {
             tbsys::gDelete(t_physical_block);
             TBSYS_LOG(ERROR, "block prefix illegal! logic blockid: %u, physical pos: %u.", block_prefix.logic_blockid_,
-                pos);
+                      pos);
             normal_bit_map_->reset(pos);
-            //don not care fail or success
-            super_block_impl_->write_bit_map(normal_bit_map_, error_bit_map_);
+
+            // write or flush fail, just log, not exit. not dirty global ret value
+            int tmp_ret;
+            if ((tmp_ret = super_block_impl_->write_bit_map(normal_bit_map_, error_bit_map_)) != TFS_SUCCESS)
+              TBSYS_LOG(ERROR, "write bit map fail %d", tmp_ret);
+            if ((tmp_ret = super_block_impl_->flush_file()) != TFS_SUCCESS)
+              TBSYS_LOG(ERROR, "flush super block fail %d", tmp_ret);
+
             continue;
           }
 
+          // 4. construct logic block, add physic block
           t_logic_block = new LogicBlock(block_prefix.logic_blockid_, pos, super_block_.mount_point_);
           t_logic_block->add_physic_block(t_physical_block);
 
-          //record physical block id
+          // record physical block id
           uint32_t logic_block_id = block_prefix.logic_blockid_;
           TBSYS_LOG(
-              DEBUG,
-              "load logic block. per block size: %u, logic block id: %u, physic prev blockid: %u, physic next blockid: %u, physical blockid: %u.",
-              super_block_.main_block_size_, logic_block_id, block_prefix.prev_physic_blockid_,
-              block_prefix.next_physic_blockid_, pos);
+            INFO,
+            "load logic block. logic block id: %u, physic prev blockid: %u, physic next blockid: %u, physical blockid: %u.",
+            logic_block_id, block_prefix.prev_physic_blockid_,
+            block_prefix.next_physic_blockid_, pos);
 
-          //make sure this physical block is not exist in fs
+          // 5. make sure this physical block hasn't been loaded
           pit = physcial_blocks_.find(pos);
           if (pit != physcial_blocks_.end())
           {
             ret = EXIT_PHYSIC_UNEXPECT_FOUND_ERROR;
             TBSYS_LOG(ERROR, "logic blockid: %u, physical blockid: %u is repetitive. fatal error! ret: %d",
-                logic_block_id, pos, EXIT_PHYSIC_UNEXPECT_FOUND_ERROR);
+                      logic_block_id, pos, EXIT_PHYSIC_UNEXPECT_FOUND_ERROR);
             break;
           }
 
-          // find if it is a exist logic block.
-          // if exist, delete the exist one(this scene is appear in the compact process: server down after set clean)
+          // 6. find if it is a existed logic block.
+          // if exist, delete the exist one(this scene is appear in the compact process: server down after set clean),
           LogicBlockMapIter mit = logic_blocks_.find(logic_block_id);
           if (mit != logic_blocks_.end())
           {
@@ -768,16 +834,16 @@ namespace tfs
             }
             compact_logic_blocks_.insert(LogicBlockMap::value_type(logic_block_id, t_logic_block));
           }
-          else
+          else                  // not exist, insert
           {
             logic_blocks_.insert(LogicBlockMap::value_type(logic_block_id, t_logic_block));
           }
 
-          //push
+          // 7. insert physic block to physic map
           physcial_blocks_.insert(PhysicalBlockMap::value_type(pos, t_physical_block));
 
           uint32_t ext_pos = pos;
-          //add extend physical block
+          // 8. add extend physical block
           while (0 != block_prefix.next_physic_blockid_)
           {
             ext_physical_block = NULL;
@@ -789,18 +855,18 @@ namespace tfs
             if (!normal_bit_map_->test(ext_pos))
             {
               TBSYS_LOG(ERROR, "ext next physicblock and bitmap conflicted! logic blockid: %u, physical blockid: %u.",
-                  logic_block_id, ext_pos);
+                        logic_block_id, ext_pos);
               ret = EXIT_BLOCKID_CONFLICT_ERROR;
               break;
             }
 
-            PhysicalBlock* ext_physical_block = new PhysicalBlock(ext_pos, super_block_.mount_point_,
-                super_block_.extend_block_size_, C_EXT_BLOCK);
+            ext_physical_block = new PhysicalBlock(ext_pos, super_block_.mount_point_,
+                                                   super_block_.extend_block_size_, C_EXT_BLOCK);
             ret = ext_physical_block->load_block_prefix();
             if (TFS_SUCCESS != ret)
             {
               TBSYS_LOG(ERROR, "init physical block fail. fatal error! pos: %u, mount point: %s", pos,
-                  super_block_.mount_point_);
+                        super_block_.mount_point_);
               break;
             }
 
@@ -809,25 +875,32 @@ namespace tfs
             if (prev_block_id != block_prefix.prev_physic_blockid_)
             {
               TBSYS_LOG(ERROR, "read prev blockid conflict! prev blockid: %u. block prefix's physic prev blockid: %u",
-                  prev_block_id, block_prefix.prev_physic_blockid_);
-              //release 
+                        prev_block_id, block_prefix.prev_physic_blockid_);
+              //release
               normal_bit_map_->reset(pos);
-              super_block_impl_->write_bit_map(normal_bit_map_, error_bit_map_);
+
+
+            // write or flush fail, just log, not exit. not dirty global ret value
+              int tmp_ret;
+              if ((tmp_ret = super_block_impl_->write_bit_map(normal_bit_map_, error_bit_map_)) != TFS_SUCCESS)
+                TBSYS_LOG(ERROR, "write bit map fail %d", tmp_ret);
+              if ((tmp_ret = super_block_impl_->flush_file()) != TFS_SUCCESS)
+                TBSYS_LOG(ERROR, "flush super block fail %d", tmp_ret);
               conflict_flag = true;
               break;
             }
 
             TBSYS_LOG(
-                DEBUG,
-                "read blockprefix! ext physical blockid pos: %u. prev blockid: %u. blockprefix's physic prev blockid: %u, next physic blockid: %u, logic blockid :%u",
-                ext_pos, prev_block_id, block_prefix.prev_physic_blockid_, block_prefix.next_physic_blockid_,
-                block_prefix.logic_blockid_);
+              INFO,
+              "read blockprefix! ext physical blockid pos: %u. prev blockid: %u. blockprefix's physic prev blockid: %u, next physic blockid: %u, logic blockid :%u",
+              ext_pos, prev_block_id, block_prefix.prev_physic_blockid_, block_prefix.next_physic_blockid_,
+              block_prefix.logic_blockid_);
             pit = physcial_blocks_.find(ext_pos);
             if (pit != physcial_blocks_.end())
             {
               ret = EXIT_PHYSIC_UNEXPECT_FOUND_ERROR;
               TBSYS_LOG(ERROR, "logic blockid: %u, physical blockid: %u is repetitive. fatal error!", logic_block_id,
-                  ext_pos);
+                        ext_pos);
               break;
             }
 
@@ -847,17 +920,20 @@ namespace tfs
             continue;
           }
 
+          // 9. load logic block
           ret = t_logic_block->load_block_file(super_block_.hash_slot_size_, super_block_.mmap_option_);
-          //if these error happened when load block, program should exit
-          if (TFS_SUCCESS != ret && EXIT_COMPACT_BLOCK_ERROR != ret && EXIT_BLOCKID_ZERO_ERROR != ret)
+          // if these error happened when load block, program should exit
+          if (TFS_SUCCESS != ret && EXIT_COMPACT_BLOCK_ERROR != ret && EXIT_BLOCKID_ZERO_ERROR != ret
+              && EXIT_INDEX_CORRUPT_ERROR != ret)
           {
             TBSYS_LOG(ERROR, "logicblock load error! logic blockid: %u. ret: %d", logic_block_id, ret);
             break;
           }
-          else if (TFS_SUCCESS != ret) // ret == EXIT_COMPACT_BLOCK_ERROR || ret == EXIT_BLOCKID_ZERO_ERROR
+          else if (TFS_SUCCESS != ret) // ret == EXIT_COMPACT_BLOCK_ERROR || ret == EXIT_BLOCKID_CONFLICT_ERROR || EXIT_INDEX_CORRUPT_ERROR
           {
-            //roll back
-            //can not make sure the type of this block, so add to confuse type 
+            // roll back
+            // can not make sure the type of this block, so add to confuse type
+            TBSYS_LOG(WARN, "logicblock status abnormal, need delete! logic blockid: %u. ret: %d", logic_block_id, ret);
             del_block(logic_block_id, C_CONFUSE_BLOCK);
             ret = TFS_SUCCESS;
           }
@@ -866,12 +942,6 @@ namespace tfs
         conflict_flag = false;
       }
 
-      if (TFS_SUCCESS != ret)
-      {
-        tbsys::gDelete(t_physical_block);
-        tbsys::gDelete(t_logic_block);
-        tbsys::gDelete(ext_physical_block);
-      }
       return ret;
     }
 
@@ -919,7 +989,7 @@ namespace tfs
       memset((void *) &super_block_, 0, sizeof(SuperBlock));
       memcpy(super_block_.mount_tag_, DEV_TAG, sizeof(super_block_.mount_tag_));
       super_block_.time_ = time(NULL);
-      strncpy(super_block_.mount_point_, fs_param.mount_name_.c_str(), MAX_DEV_NAME_LEN);
+      strncpy(super_block_.mount_point_, fs_param.mount_name_.c_str(), MAX_DEV_NAME_LEN - 1);
       TBSYS_LOG(INFO, "super block mount point: %s.", super_block_.mount_point_);
       int32_t scale = 1024;
       super_block_.mount_point_use_space_ = fs_param.max_mount_size_ * scale;
@@ -964,11 +1034,11 @@ namespace tfs
       super_block_.used_extend_block_count_ = 0;
       super_block_.hash_slot_ratio_ = fs_param.hash_slot_ratio_;
 
-      //add for configure file	
+      //add for configure file
       int32_t per_block_file_num = static_cast<int32_t> ((super_block_.main_block_size_
           + static_cast<float> (super_block_.extend_block_size_) / fs_param.block_type_ratio_)
           / super_block_.avg_segment_size_);
-      //bucket : file =  hash_slot_ratio_
+      // bucket / file =  hash_slot_ratio_
       int32_t hash_bucket_size = static_cast<int32_t> (super_block_.hash_slot_ratio_
           * static_cast<float> (per_block_file_num));
       int32_t hash_bucket_mem_size = hash_bucket_size * sizeof(int32_t);
@@ -976,6 +1046,7 @@ namespace tfs
       int32_t need_mmap_size = hash_bucket_mem_size + meta_info_size;
       super_block_.hash_slot_size_ = hash_bucket_size;
 
+      // mmap page size
       int32_t sz = getpagesize();
       int32_t count = need_mmap_size / sz;
       int32_t remainder = need_mmap_size % sz;
@@ -1013,6 +1084,7 @@ namespace tfs
         return TFS_ERROR;
       }
 
+      // extend block directory
       std::string extend_dir = super_block_.mount_point_;
       extend_dir += EXTENDBLOCK_DIR_PREFIX;
       ret = mkdir(extend_dir.c_str(), DIR_MODE);
@@ -1022,6 +1094,7 @@ namespace tfs
         return TFS_ERROR;
       }
 
+      // index file directory
       std::string index_dir = super_block_.mount_point_;
       index_dir += INDEX_DIR_PREFIX;
       ret = mkdir(index_dir.c_str(), DIR_MODE);
@@ -1172,7 +1245,7 @@ namespace tfs
           return NULL;
         }
       }
-      else if (C_CONFUSE_BLOCK == block_type)
+      else if (C_CONFUSE_BLOCK == block_type) // confuse,then try to find in main and compact block map
       {
         mit = compact_logic_blocks_.find(logic_block_id);
         if (mit == compact_logic_blocks_.end())
@@ -1214,5 +1287,28 @@ namespace tfs
       return TFS_SUCCESS;
     }
 
+    void BlockFileManager::rollback_superblock(const uint32_t physical_block_id, const bool modify_flag)
+    {
+      if (normal_bit_map_->test(physical_block_id))
+      {
+        normal_bit_map_->reset(physical_block_id);
+        int ret = super_block_impl_->write_bit_map(normal_bit_map_, error_bit_map_);
+        if (TFS_SUCCESS != ret)
+          TBSYS_LOG(ERROR, "write bit map fail. ret: %d, physical block id: %u", ret, physical_block_id);
+
+        if (modify_flag)
+        {
+          --super_block_.used_extend_block_count_;
+          ret = super_block_impl_->write_super_blk(super_block_);
+          if (TFS_SUCCESS != ret)
+            TBSYS_LOG(ERROR, "write super block fail. ret: %d", ret);
+        }
+
+        ret = super_block_impl_->flush_file();
+        if (TFS_SUCCESS != ret)
+          TBSYS_LOG(ERROR, "flush super block fail. ret: %d", ret);
+      }
+      return;
+    }
   }
 }

@@ -18,6 +18,7 @@
 #include "common/parameter.h"
 #include <tbsys.h>
 
+using namespace std;
 namespace tfs
 {
   namespace dataserver

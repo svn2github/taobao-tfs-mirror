@@ -47,10 +47,10 @@ struct ThreadParam
 
   tbsys::CThreadMutex* locker_;
   //add 
-  string conf_;
-  string oper_ratio_;
-  string sample_file_;
-  string ns_ip_port_;
+  std::string conf_;
+  std::string oper_ratio_;
+  std::string sample_file_;
+  std::string ns_ip_port_;
   ThreadParam() :
     index_(0), file_count_(0), succ_count_(0), file_size_(0), min_size_(0),
     max_size_(0), profile_(false), random_(false), succ_time_consumed_(0), 
@@ -69,8 +69,8 @@ struct TimeConsumed
 
   uint32 total_count_;
   uint32 fail_count_;
-  const string consume_name_;
-  TimeConsumed(const string& name) :
+  const std::string consume_name_;
+  TimeConsumed(const std::string& name) :
     time_consumed_(0), min_time_consumed_(LONG_LONG_MAX), max_time_consumed_(0), accumlate_time_consumed_(0),
         total_count_(0), fail_count_(0), consume_name_(name)
   {
@@ -125,7 +125,7 @@ private:
 class Stater
 {
 public:
-  Stater(const string& name) :
+  Stater(const std::string& name) :
     stat_name_(name)
   {
   }
@@ -133,8 +133,8 @@ public:
   void dump_time_stat();
 private:
   uint32_t time_category(uint64_t cost_time);
-  string time_category_desc(uint32_t category);
+  std::string time_category_desc(uint32_t category);
 private:
-  map<uint32_t, uint64_t> time_stat_map_;
-  const string stat_name_;
+  std::map<uint32_t, uint64_t> time_stat_map_;
+  const std::string stat_name_;
 };

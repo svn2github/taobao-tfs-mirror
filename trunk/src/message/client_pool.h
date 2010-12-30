@@ -24,7 +24,7 @@
 #include "async_client.h"
 #include "client.h"
 
-typedef hash_map<int32_t, tfs::message::Callee*> CLIENTS_MAP;
+typedef __gnu_cxx::hash_map<int32_t, tfs::message::Callee*> CLIENTS_MAP;
 namespace tfs
 {
   namespace message

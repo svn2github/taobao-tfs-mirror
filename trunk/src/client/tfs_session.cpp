@@ -22,6 +22,7 @@
 using namespace tfs::client;
 using namespace tfs::common;
 using namespace tfs::message;
+using namespace std;
 
 TfsSession::TfsSession(const std::string& nsip, const int32_t cache_time, const int32_t cache_items)
   :ns_ip_port_(0), ns_ip_port_str_(nsip), block_cache_time_(cache_time), block_cache_items_(cache_items),
@@ -103,7 +104,7 @@ int TfsSession::initialize()
   int32_t iret = get_cluster_id_from_ns();
   if (iret != TFS_SUCCESS || cluster_id_ <= 0)
   {
-    TBSYS_LOG(ERROR, "cluster id(%d) invalid", cluster_id_);
+    TBSYS_LOG(ERROR, "cluster id: %d invalid, ret: %d", cluster_id_, iret);
     return TFS_ERROR;
   }
   return TFS_SUCCESS;

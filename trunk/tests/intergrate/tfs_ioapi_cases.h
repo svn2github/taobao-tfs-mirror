@@ -41,10 +41,10 @@ class TfsIoApiTest : public testing::Test
     }
 
   private:
-    static int read_exist_file(const string& tfs_file_name, char* buffer, int32_t& length);
+    static int read_exist_file(const std::string& tfs_file_name, char* buffer, int32_t& length);
     static int stat_exist_file(char* tfs_file_name, tfs::common::FileInfo& file_info);
     static int write_new_file(const char* buffer, int32_t length) ;
-    static int write_update_file(const char* buffer, int32_t length, const string& tfs_file_name);
+    static int write_update_file(const char* buffer, int32_t length, const std::string& tfs_file_name);
     static int generate_data(char* buffer, const int32_t length);
     static int write_data(const char* buffer, const int32_t length);
   public:

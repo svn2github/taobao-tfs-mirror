@@ -11,9 +11,9 @@
  * Authors:
  *   duolong <duolong@taobao.com>
  *      - initial release
- *   qushan<qushan@taobao.com> 
+ *   qushan<qushan@taobao.com>
  *      - modify 2009-03-27
- *   zongdai <zongdai@taobao.com> 
+ *   zongdai <zongdai@taobao.com>
  *      - modify 2010-04-23
  *
  */
@@ -92,13 +92,13 @@ namespace tfs
       private:
         DISALLOW_COPY_AND_ASSIGN(DataManagement);
 
-        uint64_t file_number_;
-        tbutil::Mutex data_file_mutex_; //dataFile
-        DataFileMap data_file_map_; //tmp file map
+        uint64_t file_number_;          // file id
+        tbutil::Mutex data_file_mutex_; // datafile mutex
+        DataFileMap data_file_map_; // datafile map
 
         //gc datafile
-        int32_t last_gc_data_file_time_;
-        common::RWLock block_rw_lock_;
+        int32_t last_gc_data_file_time_; // last datafile gc time
+        common::RWLock block_rw_lock_;   // block layer read-write lock
     };
 
     struct visit_count_sort

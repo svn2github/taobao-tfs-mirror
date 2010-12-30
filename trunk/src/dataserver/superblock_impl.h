@@ -52,9 +52,9 @@ namespace tfs
         SuperBlockImpl();
         DISALLOW_COPY_AND_ASSIGN(SuperBlockImpl);
 
-        std::string super_block_file_;
-        int32_t super_reserve_offset_;
-        int32_t bitmap_start_offset_;
+        std::string super_block_file_; // associate super block file
+        int32_t super_reserve_offset_; // super block reserved offset
+        int32_t bitmap_start_offset_;  // super block bitmap offset
         FileOperation* file_op_;
     };
 

@@ -1,4 +1,5 @@
 /*
+        tran_sport_.wait();
  * (C) 2007-2010 Alibaba Group Holding Limited.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -146,7 +147,7 @@ int main(int argc, char *argv[])
   pid = 0;
   if (is_daemon)
   {
-    pid = tbsys::CProcess::startDaemon(pid_file.c_str(), log_file.c_str());
+    pid = Func::start_daemon(pid_file.c_str(), log_file.c_str());
   }
 
   //child
@@ -213,21 +214,22 @@ namespace tfs
 
     void DataServer::stop()
     {
-      data_service_.stop();
       tran_sport_.stop();
+      data_service_.stop();
     }
 
     int DataServer::start()
     {
       packet_streamer_.set_packet_factory(&msg_factory_);
-      tran_sport_.start();
       CLIENT_POOL.init_with_transport(&tran_sport_);
 
+      tran_sport_.start();
       data_service_.init(server_index_);
       VINT pids;
       //init data service
       if (data_service_.start(&pids) != TFS_SUCCESS)
       {
+        tran_sport_.stop();
         return TFS_ERROR;
       }
 
@@ -252,6 +254,7 @@ namespace tfs
       }
       if (ret == false)
       {
+        tran_sport_.stop();
         data_service_.stop();
         return TFS_ERROR;
       }

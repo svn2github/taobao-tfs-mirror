@@ -110,49 +110,34 @@ int main(int argc, char *argv[])
     return EXIT_GENERAL_ERROR;
   }
 
-  // get top work directory
-  const char *top_work_dir = CONFIG.get_string_value(CONFIG_PUBLIC, CONF_WORK_DIR);
-  if (top_work_dir == NULL)
-  {
-    TBSYS_LOG(ERROR, "work directory config not found");
-    return EXIT_CONFIG_ERROR;
-  }
-
-  // get nameserver work directory, ignore tail / in top_work_dir
-  char default_work_dir[MAX_PATH_LENGTH];
-  snprintf(default_work_dir, MAX_PATH_LENGTH, "%s/nameserver", top_work_dir);
-  const char *work_dir = CONFIG.get_string_value(CONFIG_NAMESERVER, CONF_WORK_DIR, default_work_dir);
+  const char *work_dir = SYSPARAM_NAMESERVER.work_dir_.c_str();
   if (!DirectoryOp::create_full_path(work_dir))
   {
     TBSYS_LOG(ERROR, "create directory(%s) failed", work_dir);
     return EXIT_GENERAL_ERROR;
   }
 
-  char default_pid_file_path[MAX_PATH_LENGTH];
-  snprintf(default_pid_file_path, MAX_PATH_LENGTH, "%s/logs/nameserver.pid", top_work_dir);
-  char *pid_file_path = CONFIG.get_string_value(CONFIG_NAMESERVER, CONF_LOCK_FILE, default_pid_file_path);
+  const char *pid_file = SYSPARAM_NAMESERVER.pid_file_.c_str();
   int32_t pid = 0;
-  if ((pid = tbsys::CProcess::existPid(pid_file_path)))
+  if ((pid = tbsys::CProcess::existPid(pid_file)))
   {
     TBSYS_LOG(ERROR, "nameserver has already run. Pid: %d", pid);
     return EXIT_SYSTEM_ERROR;
   }
-  if (!DirectoryOp::create_full_path(pid_file_path, true))
+  if (!DirectoryOp::create_full_path(pid_file, true))
   {
-    TBSYS_LOG(ERROR, "create file(%s)'s directory failed", pid_file_path);
+    TBSYS_LOG(ERROR, "create file(%s)'s directory failed", pid_file);
     return EXIT_GENERAL_ERROR;
   }
 
-  char default_log_file_path[MAX_PATH_LENGTH];
-  snprintf(default_log_file_path, MAX_PATH_LENGTH, "%s/logs/nameserver.log", top_work_dir);
-  const char *log_file_path = CONFIG.get_string_value(CONFIG_NAMESERVER, CONF_LOG_FILE, default_log_file_path);
-  if (access(log_file_path, R_OK) == 0)
+  const char *log_file = SYSPARAM_NAMESERVER.log_file_.c_str();
+  if (access(log_file, R_OK) == 0)
   {
-    TBSYS_LOGGER.rotateLog(log_file_path);
+    TBSYS_LOGGER.rotateLog(log_file);
   }
-  else if (!DirectoryOp::create_full_path(log_file_path, true))
+  else if (!DirectoryOp::create_full_path(log_file, true))
   {
-    TBSYS_LOG(ERROR, "create file(%s)'s directory failed", log_file_path);
+    TBSYS_LOG(ERROR, "create file(%s)'s directory failed", log_file);
     return EXIT_GENERAL_ERROR;
   }
 
@@ -160,7 +145,7 @@ int main(int argc, char *argv[])
   pid = 0;
   if (is_daemon)
   {
-    pid = tbsys::CProcess::startDaemon(pid_file_path, log_file_path);
+    pid = Func::start_daemon(pid_file, log_file);
   }
 
   // start service

@@ -78,7 +78,7 @@ namespace tfs
       bool handlePacketQueue(tbnet::Packet *packet, void *args);
 
       static int rm_block_from_ds(const uint64_t server_id, const uint32_t block_id);
-      static int rm_block_from_ds(const uint64_t server_id, const vector<uint32_t>& block_ids);
+      static int rm_block_from_ds(const uint64_t server_id, const std::vector<uint32_t>& block_ids);
 
       MetaManager* get_meta_mgr()
       {

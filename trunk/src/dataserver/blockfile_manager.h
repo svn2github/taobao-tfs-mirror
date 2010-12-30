@@ -11,7 +11,7 @@
  * Authors:
  *   duolong <duolong@taobao.com>
  *      - initial release
- *   qushan<qushan@taobao.com> 
+ *   qushan<qushan@taobao.com>
  *      - modify 2009-03-27
  *
  */
@@ -57,7 +57,7 @@ namespace tfs
         LogicBlock* get_logic_block(const uint32_t logic_block_id, const BlockType block_type = C_MAIN_BLOCK);
         int get_all_logic_block(std::list<LogicBlock*>& logic_block_list, const BlockType block_type = C_MAIN_BLOCK);
         int get_logic_block_ids(common::VUINT& logic_block_ids, const BlockType block_type = C_MAIN_BLOCK);
-        int get_all_physic_block(list<PhysicalBlock*>& physic_block_list);
+        int get_all_physic_block(std::list<PhysicalBlock*>& physic_block_list);
 
         //status info
         int query_super_block(SuperBlock& super_block_info);
@@ -97,6 +97,8 @@ namespace tfs
         void destruct_logic_blocks(const BlockType block_type);
         void destruct_physic_blocks();
 
+        void rollback_superblock(const uint32_t physical_block_id, const bool modify_flag);
+
       private:
         static const int32_t INDEXFILE_SAFE_MULT = 4;
         static const int32_t INNERFILE_MAX_MULTIPE = 30;
@@ -106,17 +108,16 @@ namespace tfs
         typedef std::map<uint32_t, PhysicalBlock*> PhysicalBlockMap;
         typedef PhysicalBlockMap::iterator PhysicalBlockMapIter;
 
-        LogicBlockMap logic_blocks_;
-        LogicBlockMap compact_logic_blocks_;
-        PhysicalBlockMap physcial_blocks_;
+        LogicBlockMap logic_blocks_; // logic blocks
+        LogicBlockMap compact_logic_blocks_; // compact logic blocks
+        PhysicalBlockMap physcial_blocks_;   // physcial blocks
 
-        std::string base_path_;
-        int bit_map_size_;
-        BitMap* normal_bit_map_;
-        BitMap* error_bit_map_;
-        SuperBlock super_block_;
-        SuperBlockImpl* super_block_impl_;
-        common::RWLock rw_lock_;
+        int bit_map_size_;      // bitmap size
+        BitMap* normal_bit_map_; // normal bitmap
+        BitMap* error_bit_map_;  // error bitmap
+        SuperBlock super_block_; // super block
+        SuperBlockImpl* super_block_impl_; // super block implementation handle
+        common::RWLock rw_lock_;           // read-write lock
     };
   }
 }

@@ -37,7 +37,7 @@ namespace tfs
     class ReplicateExecutor
     {
       friend class ReplicateLauncher;
-      typedef hash_map<uint32_t, common::ReplBlock*> REPL_BLOCK_MAP;
+      typedef __gnu_cxx::hash_map<uint32_t, common::ReplBlock*> REPL_BLOCK_MAP;
       typedef REPL_BLOCK_MAP::iterator REPL_BLOCK_MAP_ITER;
 
     public:
@@ -49,7 +49,7 @@ namespace tfs
 
     public:
       int execute(const uint32_t block_id, void* args);
-      int execute(vector<common::ReplBlock*> replPlan, void* args);
+      int execute(std::vector<common::ReplBlock*> replPlan, void* args);
       int complete(const common::ReplBlock* cmd, bool success);
       int send_replicate_cmd(const uint64_t source_id, const uint64_t destination_id, const uint32_t block_id,
           const int32_t is_move);
