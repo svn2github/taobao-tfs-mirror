@@ -79,7 +79,7 @@ namespace tfs
       void *args_;
       FileQueue *file_queue_;
       QueueThreadParam *queue_thread_param_;
-      vector<pthread_t> pids_;
+      std::vector<pthread_t> pids_;
       deal_func deal_func_;
       DESTROY_FLAG destroy_;
       tbutil::Monitor<tbutil::Mutex> monitor_;

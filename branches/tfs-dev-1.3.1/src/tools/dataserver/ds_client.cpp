@@ -32,6 +32,7 @@
 #define CMD_MAX_LEN 4096
 
 using namespace tfs::common;
+using namespace std;
 
 typedef map<string, int> STR_INT_MAP;
 typedef STR_INT_MAP::iterator STR_INT_MAP_ITER;

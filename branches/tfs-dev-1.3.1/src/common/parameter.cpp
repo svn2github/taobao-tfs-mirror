@@ -18,19 +18,20 @@
 #include "config_item.h"
 #include "error_msg.h"
 #include <tbsys.h>
+#include <string.h>
 
 namespace tfs
 {
   namespace common
   {
-    inline string change_index(char* base, const std::string& suffix, const std::string& index)
+    inline std::string change_index(char* base, const std::string& suffix, const std::string& index)
     {
       if (base == NULL)
       {
         return NULL;
       }
 
-      string name(base);
+      std::string name(base);
       if (suffix.size() == 0)
       {
         name.append(index);
@@ -38,7 +39,7 @@ namespace tfs
       }
 
       size_t pos = name.rfind(suffix);
-      if (pos == string::npos)
+      if (pos == std::string::npos)
       {
         return NULL; // too rough
       }
@@ -71,7 +72,7 @@ namespace tfs
       }
     }
 
-    int SysParam::load(const string& tfsfile)
+    int SysParam::load(const std::string& tfsfile)
     {
       int32_t ret = CONFIG.load(tfsfile.c_str());
       if (ret != TFS_SUCCESS)
@@ -155,7 +156,7 @@ namespace tfs
       return TFS_SUCCESS;
     }
 
-    int SysParam::load_data_server(const string& tfsfile, const string& index)
+    int SysParam::load_data_server(const std::string& tfsfile, const std::string& index)
     {
       int32_t ret = CONFIG.load(tfsfile.c_str());
       if (ret != TFS_SUCCESS)
@@ -176,11 +177,11 @@ namespace tfs
       snprintf(default_pid_file, MAX_PATH_LENGTH-1, "%s/logs/dataserver.pid", top_work_dir);
 
       dataserver_.work_dir_ = change_index(CONFIG.get_string_value(CONFIG_DATASERVER, CONF_WORK_DIR, default_work_dir),
-                                           string(""), server_index);
+                                           std::string(""), server_index);
       dataserver_.log_file_ = change_index(CONFIG.get_string_value(CONFIG_DATASERVER, CONF_LOG_FILE, default_log_file),
-                                           string(".log"), server_index);
+                                           std::string(".log"), server_index);
       dataserver_.pid_file_ = change_index(CONFIG.get_string_value(CONFIG_DATASERVER, CONF_LOCK_FILE, default_pid_file),
-                                           string(".pid"), server_index);
+                                           std::string(".pid"), server_index);
 
       int base_port = CONFIG.get_int_value(CONFIG_DATASERVER, CONF_PORT);
       dataserver_.local_ds_port_ = base_port + atoi(index.c_str()) * PORT_PER_PROCESS - PORT_PER_PROCESS;
@@ -221,7 +222,7 @@ namespace tfs
       return load_filesystem_param(index);
     }
 
-    int SysParam::load_filesystem_param(const string& index)
+    int SysParam::load_filesystem_param(const std::string& index)
     {
       if (CONFIG.get_string_value(CONFIG_DATASERVER, CONF_MOUNT_POINT_NAME) == NULL || strlen(CONFIG.get_string_value(
           CONFIG_DATASERVER, CONF_MOUNT_POINT_NAME)) >= static_cast<uint32_t> (MAX_DEV_NAME_LEN))
@@ -229,7 +230,7 @@ namespace tfs
         std::cerr << "mount name is invalid" << std::endl;
         return TFS_ERROR;
       }
-      filesystem_param_.mount_name_ = string(CONFIG.get_string_value(CONFIG_DATASERVER, CONF_MOUNT_POINT_NAME)).append(
+      filesystem_param_.mount_name_ = std::string(CONFIG.get_string_value(CONFIG_DATASERVER, CONF_MOUNT_POINT_NAME)).append(
           index);
 
       char* tmp_max_size = CONFIG.get_string_value(CONFIG_DATASERVER, CONF_MOUNT_MAX_USESIZE);

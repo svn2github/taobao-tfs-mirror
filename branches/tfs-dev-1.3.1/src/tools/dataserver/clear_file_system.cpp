@@ -64,7 +64,7 @@ int main(int argc, char* argv[])
   int ret = 0;
   if ((ret = SysParam::instance().load_data_server(conf_file, server_index)) != TFS_SUCCESS)
   {
-    cerr << "SysParam::load file system param failed:" << conf_file << endl;
+    fprintf(stderr, "SysParam::load file system param failed: %s\n", conf_file);
     return ret;
   }
 

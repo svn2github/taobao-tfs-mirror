@@ -360,7 +360,7 @@ namespace tfs
       return (crc);
     }
 
-    string Func::format_size(const int64_t c)
+    std::string Func::format_size(const int64_t c)
     {
       char s[128];
       double x = c;
@@ -394,7 +394,7 @@ namespace tfs
       return (t.tv_sec * 1000000LL + t.tv_usec);
     }
 
-    string Func::time_to_str(time_t t, int f)
+    std::string Func::time_to_str(time_t t, int f)
     {
       char s[128];
       struct tm *tm = localtime((const time_t*) &t);

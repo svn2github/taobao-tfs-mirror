@@ -21,6 +21,7 @@
 #include "blockfile_manager.h"
 #include <Memory.hpp>
 
+using namespace std;
 namespace tfs
 {
   namespace dataserver

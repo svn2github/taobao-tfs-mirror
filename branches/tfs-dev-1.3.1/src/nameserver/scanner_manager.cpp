@@ -21,6 +21,7 @@
 #include "scanner_manager.h"
 
 using namespace tfs::common;
+using namespace std;
 
 namespace tfs
 {

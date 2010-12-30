@@ -23,6 +23,7 @@
 
 using namespace tfs::dataserver;
 using namespace tfs::common;
+using namespace std;
 
 int main(int argc,char* argv[])
 {

@@ -57,7 +57,7 @@ namespace tfs
         LogicBlock* get_logic_block(const uint32_t logic_block_id, const BlockType block_type = C_MAIN_BLOCK);
         int get_all_logic_block(std::list<LogicBlock*>& logic_block_list, const BlockType block_type = C_MAIN_BLOCK);
         int get_logic_block_ids(common::VUINT& logic_block_ids, const BlockType block_type = C_MAIN_BLOCK);
-        int get_all_physic_block(list<PhysicalBlock*>& physic_block_list);
+        int get_all_physic_block(std::list<PhysicalBlock*>& physic_block_list);
 
         //status info
         int query_super_block(SuperBlock& super_block_info);

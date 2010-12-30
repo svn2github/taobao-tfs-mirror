@@ -21,6 +21,7 @@
 #include <fcntl.h>
 #include <string>
 #include <errno.h>
+#include <ext/hash_map>
 
 #include "common/interval.h"
 #include "common/func.h"
@@ -190,7 +191,7 @@ namespace tfs
     class ReplicateInfoMessage: public Message
     {
       public:
-        typedef hash_map<uint32_t, common::ReplBlock> REPL_BLOCK_MAP;
+        typedef __gnu_cxx::hash_map<uint32_t, common::ReplBlock> REPL_BLOCK_MAP;
         typedef std::map<uint64_t, uint32_t> COUNTER_TYPE;
 
         ReplicateInfoMessage();
@@ -215,7 +216,7 @@ namespace tfs
           return dest_ds_counter_;
         }
 
-        void set_replicating_map(const hash_map<uint32_t, common::ReplBlock*>& src);
+        void set_replicating_map(const __gnu_cxx::hash_map<uint32_t, common::ReplBlock*>& src);
         inline void set_source_ds_counter(const COUNTER_TYPE & src)
         {
           source_ds_counter_ = src;
@@ -238,7 +239,7 @@ namespace tfs
     class AccessStatInfoMessage: public Message
     {
       public:
-        typedef __gnu_cxx ::hash_map<uint32_t, common::Throughput> COUNTER_TYPE;
+        typedef __gnu_cxx::hash_map<uint32_t, common::Throughput> COUNTER_TYPE;
 
         AccessStatInfoMessage();
         virtual ~AccessStatInfoMessage();

@@ -20,6 +20,7 @@
 #include "common/directory_op.h"
 #include <string.h>
 #include <Memory.hpp>
+using namespace std;
 
 namespace tfs
 {

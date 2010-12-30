@@ -363,11 +363,11 @@ namespace tfs
           {
             wsize = MAX_WBLOCK;
           }
-          if (set_int_map(&data, &len, const_cast<set<uint32_t>*>(servcol->get_writable_block_list()), wsize) == TFS_ERROR)
+          if (set_int_map(&data, &len, const_cast<std::set<uint32_t>*>(servcol->get_writable_block_list()), wsize) == TFS_ERROR)
           {
             return TFS_ERROR;
           }
-          if (set_int_map(&data, &len, const_cast<set<uint32_t>*>(servcol->get_primary_writable_block_list()), servcol->get_primary_writable_block_list()->size()) == TFS_ERROR)
+          if (set_int_map(&data, &len, const_cast<std::set<uint32_t>*>(servcol->get_primary_writable_block_list()), servcol->get_primary_writable_block_list()->size()) == TFS_ERROR)
           {
             return TFS_ERROR;
           }
@@ -544,9 +544,9 @@ namespace tfs
       return length;
     }
 
-    void ReplicateInfoMessage::set_replicating_map(const hash_map<uint32_t, ReplBlock*>& src)
+    void ReplicateInfoMessage::set_replicating_map(const __gnu_cxx::hash_map<uint32_t, ReplBlock*>& src)
     {
-      hash_map<uint32_t, ReplBlock*>::const_iterator it = src.begin();
+      __gnu_cxx::hash_map<uint32_t, ReplBlock*>::const_iterator it = src.begin();
       for (; it != src.end(); ++it)
       {
         replicating_map_.insert(REPL_BLOCK_MAP::value_type(it->first, *(it->second)));

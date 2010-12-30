@@ -219,8 +219,8 @@ namespace tfs
 
       private:
         char* buf_;             // inner buffer
-        int32_t data_len_, data_offset_; // data length, offset
-        int32_t read_offset_, buf_len_;  // read offset, buffer length
+        int32_t data_len_, data_offset_; // data length, valid offset in buf_
+        int32_t read_offset_, buf_len_;  // read offset in block, buffer length
         common::FileInfo cur_fileinfo_;  // current file meta info
         LogicBlock* logic_block_;        // associate logic block
         bool is_big_file_;               // big file or not

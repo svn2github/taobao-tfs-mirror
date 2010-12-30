@@ -272,7 +272,7 @@ namespace tfs
         {
           return &blocks_;
         }
-        inline void set_pairs(const int32_t type, map<uint32_t, vector<uint32_t> >* pairs_)
+        inline void set_pairs(const int32_t type, std::map<uint32_t, std::vector<uint32_t> >* pairs_)
         {
           if (type & common::LB_PAIRS)
           {
@@ -280,11 +280,11 @@ namespace tfs
             block_pairs_ = (*pairs_);
           }
         }
-        inline const map<uint32_t, vector<uint32_t> >* get_pairs() const
+        inline const std::map<uint32_t, std::vector<uint32_t> >* get_pairs() const
         {
           return &block_pairs_;
         }
-        inline void set_infos(const int32_t type, const map<uint32_t, common::BlockInfo*>* v_infos)
+        inline void set_infos(const int32_t type, const std::map<uint32_t, common::BlockInfo*>* v_infos)
         {
           if (type & common::LB_INFOS)
           {
@@ -292,7 +292,7 @@ namespace tfs
             block_infos_ = (*v_infos);
           }
         }
-        inline const map<uint32_t, common::BlockInfo*>* get_infos() const
+        inline const std::map<uint32_t, common::BlockInfo*>* get_infos() const
         {
           return &block_infos_;
         }
@@ -304,8 +304,8 @@ namespace tfs
         int32_t need_free_;
 
         common::VUINT32 blocks_;
-        map<uint32_t, vector<uint32_t> > block_pairs_;
-        map<uint32_t, common::BlockInfo*> block_infos_;
+        std::map<uint32_t, std::vector<uint32_t> > block_pairs_;
+        std::map<uint32_t, common::BlockInfo*> block_infos_;
     };
 
     // block_count, block_id, .....

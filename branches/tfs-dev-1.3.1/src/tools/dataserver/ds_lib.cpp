@@ -27,6 +27,7 @@
 using namespace tfs::common;
 using namespace tfs::message;
 using namespace tfs::dataserver;
+using namespace std;
 
 int DsLib::get_server_status(DsTask* ds_task)
 {

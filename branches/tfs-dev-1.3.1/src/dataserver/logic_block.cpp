@@ -17,6 +17,7 @@
  */
 #include "logic_block.h"
 #include "blockfile_manager.h"
+using namespace std;
 
 namespace tfs
 {
@@ -710,7 +711,7 @@ namespace tfs
       while (fit->has_next())
       {
         int ret = fit->next();
-        if (TFS_SUCCESS != ret)
+        if (TFS_SUCCESS != ret && EXIT_META_CONFLICT_ERROR != ret)
           return ret;
 
         const FileInfo* pfi = fit->current_file_info();
@@ -816,6 +817,7 @@ namespace tfs
 
       int32_t file_size = meta_it_->get_size();
       int32_t file_offset = meta_it_->get_offset();
+      //relative offset: the file offset in buf_
       int32_t relative_offset = file_offset - read_offset_;
 
       // skip hole
@@ -871,18 +873,23 @@ namespace tfs
           "read one file, blockid: %u, relative offset: %d, file offset: %d, leftsize: %d, filesize: %d\n",
           logic_block_->logic_block_id_, relative_offset, file_offset, left_size, file_size);
       memcpy(&cur_fileinfo_, buf_ + relative_offset, sizeof(FileInfo));
+      bool meta_conflict = true;
       if (cur_fileinfo_.id_ != meta_it_->get_file_id() || cur_fileinfo_.size_ != file_size)
       {
         TBSYS_LOG(
             ERROR,
-            "FileInfo error. blockid: %u, disk file id: %" PRI64_PREFIX "u, size: %d, index file id: %" PRI64_PREFIX "u, size: %d\n",
-            logic_block_->logic_block_id_, cur_fileinfo_.id_, cur_fileinfo_.size_, meta_it_->get_file_id(), file_size);
+            "FileInfo error. blockid: %u, disk file id: %" PRI64_PREFIX "u, size: %d, offset: %d, index file id: %" PRI64_PREFIX "u, size: %d, offset: %d\n",
+            logic_block_->logic_block_id_, cur_fileinfo_.id_, cur_fileinfo_.size_, cur_fileinfo_.offset_,
+            meta_it_->get_file_id(), file_size, meta_it_->get_offset());
+        meta_conflict = false;
       }
       data_offset_ = relative_offset + file_size;
       data_len_ = left_size;
       cur_fileinfo_.size_ -= sizeof(FileInfo);
       ++meta_it_;
 
+      if (!meta_conflict)
+        return EXIT_META_CONFLICT_ERROR;
       TBSYS_LOG(DEBUG, "read one file end, blockid: %u, read offset: %u, leftlen: %d\n", logic_block_->logic_block_id_,
           read_offset_, data_len_);
 
@@ -905,6 +912,13 @@ namespace tfs
         return TFS_ERROR;
 
       int32_t relative_offset = cur_fileinfo_.offset_ - read_offset_;
+      if (relative_offset + static_cast<int32_t>(sizeof(FileInfo)) + cur_fileinfo_.size_ > MAX_COMPACT_READ_SIZE
+          || relative_offset < 0)
+      {
+        TBSYS_LOG(ERROR, "read_buffer fail, blockid: %u, relative offset: %d, fileinfo size: %d\n",
+            logic_block_->logic_block_id_, relative_offset, cur_fileinfo_.size_);
+        return TFS_ERROR;
+      }
       // cur_fileinfo_.size_ is just only file data size
       memcpy(buf, buf_ + relative_offset + sizeof(FileInfo), cur_fileinfo_.size_);
       nbytes = cur_fileinfo_.size_;
@@ -921,6 +935,7 @@ namespace tfs
         memmove(buf_, buf_ + data_offset_, data_len_);
       }
 
+      //data_len_: remain in buffer
       int32_t read_len = MAX_COMPACT_READ_SIZE - data_len_;
       int ret = logic_block_->read_raw_data(buf_ + data_len_, read_len, read_offset_);
       if (TFS_SUCCESS != ret)
@@ -930,6 +945,7 @@ namespace tfs
         return ret;
       }
       buf_len_ = data_len_ + read_len;
+      //rollback read offset
       read_offset_ -= data_len_;
       data_len_ = buf_len_;
       data_offset_ = 0;

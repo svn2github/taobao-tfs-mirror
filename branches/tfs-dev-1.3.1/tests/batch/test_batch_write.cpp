@@ -63,7 +63,7 @@ void* write_worker(void* arg)
 	{
 		return NULL;
 	}
-  set<std::string> file_name_set;
+  std::set<std::string> file_name_set;
 
   char* data = new char[param.max_size_];
   memset(data, 0, param.max_size_);

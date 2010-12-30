@@ -102,8 +102,8 @@ namespace tfs
      */
     int RedundantLauncher::cacl_max_capacity_ds(const VUINT64& ds, int32_t count, VUINT64& result_ds_list)
     {
-      vector<DataServerStatInfo*> middle_result;
-      vector<DataServerStatInfo*> result;
+      std::vector<DataServerStatInfo*> middle_result;
+      std::vector<DataServerStatInfo*> result;
       uint32_t i = 0;
       uint32_t ds_list_size = ds.size();
       ServerCollect* server_collect = NULL;

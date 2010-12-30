@@ -41,19 +41,19 @@ namespace tfs
 
     struct MonitorParam
     {
-      string index_;
+      std::string index_;
       common::IpAddr adr_;
-      string lock_file_;
-      string script_;
-      string description_;
+      std::string lock_file_;
+      std::string script_;
+      std::string description_;
       int32_t fkill_waittime_;
       int32_t active_;
     };
 
-    typedef map<string, MonitorParam*> MSTR_PARA;
-    typedef map<string, MonitorParam*>::iterator MSTR_PARA_ITER;
-    typedef map<string, message::MonitorStatus*> MSTR_STAT;
-    typedef map<string, message::MonitorStatus*>::iterator MSTR_STAT_ITER;
+    typedef std::map<std::string, MonitorParam*> MSTR_PARA;
+    typedef std::map<std::string, MonitorParam*>::iterator MSTR_PARA_ITER;
+    typedef std::map<std::string, message::MonitorStatus*> MSTR_STAT;
+    typedef std::map<std::string, message::MonitorStatus*>::iterator MSTR_STAT_ITER;
 
     class AdminServer : public tbnet::IServerAdapter, public tbnet::IPacketQueueHandler
     {
@@ -87,11 +87,11 @@ namespace tfs
       int cmd_exit(message::AdminCmdMessage* message);
 
     private:
-      void add_index(string& index, bool add_conf = false);
-      void clear_index(string& index, bool del_conf = true);
-      void modify_conf(string& index, int32_t type);
+      void add_index(std::string& index, bool add_conf = false);
+      void clear_index(std::string& index, bool del_conf = true);
+      void modify_conf(std::string& index, int32_t type);
       void set_ds_list(char* index_range, std::vector<std::string>& ds_index);
-      int get_param(string& index);
+      int get_param(std::string& index);
       int ping(const uint64_t ip, message::Client *client = NULL);
       int ping_nameserver(const int status);
       int kill_process(message::MonitorStatus* status, int32_t wait_time, bool clear = false);

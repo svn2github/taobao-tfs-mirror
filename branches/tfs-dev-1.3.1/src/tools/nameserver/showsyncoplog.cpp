@@ -30,6 +30,7 @@
 
 using namespace tfs::common;
 using namespace tfs::nameserver;
+using namespace std;
 
 int32_t global_stop = 0x00;
 

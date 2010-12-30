@@ -22,6 +22,7 @@
 using namespace tfs::client;
 using namespace tfs::common;
 using namespace tfs::message;
+using namespace std;
 
 TfsSession::TfsSession(const std::string& nsip, const int32_t cache_time, const int32_t cache_items)
   :ns_ip_port_(0), ns_ip_port_str_(nsip), block_cache_time_(cache_time), block_cache_items_(cache_items),

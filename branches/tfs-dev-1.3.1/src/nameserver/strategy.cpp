@@ -23,6 +23,7 @@
 
 using namespace tfs::common;
 using namespace tbsys;
+using namespace std;
 namespace tfs
 {
   namespace nameserver

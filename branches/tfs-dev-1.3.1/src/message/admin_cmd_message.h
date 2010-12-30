@@ -51,13 +51,13 @@ namespace tfs
       int32_t start_time_;
       int32_t dead_time_;
 
-      MonitorStatus(string& index)
+      MonitorStatus(std::string& index)
       {
         memset(this, 0, sizeof(MonitorStatus));
         strncpy(index_, index.c_str(), ADMIN_MAX_INDEX_LENGTH);
       }
 
-      inline string convert_time(int32_t time)
+      inline std::string convert_time(int32_t time)
       {
         return time ? common::Func::time_to_str(time, 0) : "NON";
       }
@@ -96,7 +96,7 @@ namespace tfs
         return type_;
       }
 
-      inline void set_index(string& index)
+      inline void set_index(std::string& index)
       {
         index_.push_back(index);
       }
@@ -111,7 +111,7 @@ namespace tfs
         return &index_;
       }
 
-      inline vector<MonitorStatus*>* get_status()
+      inline std::vector<MonitorStatus*>* get_status()
       {
         return &monitor_status_;
       }
@@ -121,7 +121,7 @@ namespace tfs
         monitor_status_.push_back(monitor_status);
       }
 
-      inline void set_status(vector<MonitorStatus*>* monitor_status)
+      inline void set_status(std::vector<MonitorStatus*>* monitor_status)
       {
         monitor_status_ = *monitor_status;
       }
@@ -129,7 +129,7 @@ namespace tfs
     private:
       int32_t type_;
       common::VSTRING index_;
-      vector<MonitorStatus*> monitor_status_;
+      std::vector<MonitorStatus*> monitor_status_;
     };
   }
 }

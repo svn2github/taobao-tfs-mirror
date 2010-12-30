@@ -28,6 +28,7 @@
 #include <Memory.hpp>
 #include "common/interval.h"
 #include "common/func.h"
+#include <ext/hash_map>
 
 namespace tfs
 {
@@ -35,7 +36,7 @@ namespace tfs
   {
     class Message;
     typedef Message* (*create_message_handler_t)(int32_t);
-    typedef hash_map<int32_t, create_message_handler_t> CREATE_MESSAGE_MAP;
+    typedef __gnu_cxx::hash_map<int32_t, create_message_handler_t> CREATE_MESSAGE_MAP;
     typedef CREATE_MESSAGE_MAP::iterator CREATE_MESSAGE_MAP_ITER;
 
 #pragma pack(4)

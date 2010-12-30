@@ -90,6 +90,7 @@ namespace tfs
     const int32_t EXIT_DS_CONNECT_ERROR = -8035; // connect to ds fail
     const int32_t EXIT_BLOCK_CHECKER_OVERLOAD = -8036; // too much block checker
     const int32_t EXIT_FALLOCATE_NOT_IMPLEMENT = -8037; // fallocate is not implement
+    const int32_t EXIT_META_CONFLICT_ERROR = -8038; // file meta conflict between index and disk
 
     const int32_t EXIT_SYSTEM_ERROR = -10000;
     const int32_t EXIT_REGISTER_OPLOG_SYNC_ERROR = -12000;
