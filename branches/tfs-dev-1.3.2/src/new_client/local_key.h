@@ -100,7 +100,6 @@ namespace tfs
       typedef std::set<SegmentInfo>::iterator SEG_SET_ITER;
 
       LocalKey();
-      //LocalKey(const char* local_key, const uint64_t addr);
       ~LocalKey();
 
       int initialize(const char* local_key, const uint64_t addr);

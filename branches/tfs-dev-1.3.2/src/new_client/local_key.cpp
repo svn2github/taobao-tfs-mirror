@@ -9,11 +9,6 @@ LocalKey::LocalKey() : file_op_(NULL)
 {
 }
 
-//LocalKey::LocalKey(const char* local_key, const uint64_t addr)
-//{
-//  initialize(local_key, addr);
-//}
-
 LocalKey::~LocalKey()
 {
   tbsys::gDelete(file_op_);
@@ -47,7 +42,6 @@ int LocalKey::initialize(const char* local_key, const uint64_t addr)
     memset(&seg_head_, 0, sizeof(SegmentHead));
     seg_info_.clear();
     int is_exist = access(name, F_OK);
-    TBSYS_LOG(DEBUG, "local tmp file %s is exist: %d", name, is_exist);
     if (0 != is_exist) //not exist
     {
       file_op_ = new FileOperation(name, O_RDWR|O_CREAT);
@@ -192,22 +186,21 @@ int LocalKey::get_segment_for_write(const int64_t offset, const char* buf,
   while (remain_size > 0)
   {
     last_remain_size = remain_size;
-    next_offset = cur_offset;
-    seg_info.offset_ = cur_offset;
+    seg_info.offset_ = next_offset = cur_offset;
 
-    if ((it = seg_info_.lower_bound(seg_info)) == seg_info_.end())
+    if ((it = seg_info_.lower_bound(seg_info)) == seg_info_.end()) // cur_offset ~ end hasn't been written
     {
       next_offset = cur_offset + remain_size;
     }
     else
     {
-      if (it->offset_ == cur_offset)
+      if (it->offset_ == cur_offset) // current segment's offset+size has written
       {
         remain_size -= it->size_;
       }
       else
       {
-        if (seg_info_.begin() == it)
+        if (seg_info_.begin() == it) // offset ~ least_offset hasn't written. actually only first loop may occur
         {
           next_offset = it->offset_;
         }
@@ -219,16 +212,19 @@ int LocalKey::get_segment_for_write(const int64_t offset, const char* buf,
           {
             remain_size -= pre_it->size_ - (cur_offset - pre_it->offset_);
           }
-          else
+          else                  // cutover
           {
             next_offset = it->offset_;
           }
         }
       }
     }
-    get_segment(cur_offset, next_offset, cur_buf, remain_size, seg_list);
-    cur_buf += last_remain_size - remain_size;
-    cur_offset += last_remain_size - remain_size;
+    if (remain_size > 0)
+    {
+      get_segment(cur_offset, next_offset, cur_buf, remain_size, seg_list);
+      cur_buf += last_remain_size - remain_size;
+      cur_offset += last_remain_size - remain_size;
+    }
   }
   return TFS_SUCCESS;
 }
@@ -328,7 +324,9 @@ void LocalKey::get_segment(const int64_t start, const int64_t end,
       seg_data->seg_info_.size_ = cur_size;
       seg_data->buf_ = const_cast<char*>(buf) + check_size;
       seg_list.push_back(seg_data);
+
       check_size += cur_size;
+      offset += cur_size;
     }
     size -= check_size;
   }
