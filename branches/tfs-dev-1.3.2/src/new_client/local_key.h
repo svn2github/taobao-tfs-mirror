@@ -106,6 +106,7 @@ namespace tfs
 
       int load();
       int load(const char* buf);
+      int validate();
       int save();
       int remove();
 
