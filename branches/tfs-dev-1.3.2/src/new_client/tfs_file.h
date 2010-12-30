@@ -101,7 +101,7 @@ namespace tfs
       int async_rsp_stat_file(tbnet::Packet* packet, const int32_t index);
 
     protected:
-      static const int64_t WAIT_TIME_OUT = 5000;
+      static const int64_t WAIT_TIME_OUT = 3000000;
       static const int64_t CLIENT_TRY_COUNT = 3;
 
       static const int64_t BATCH_COUNT = 8;

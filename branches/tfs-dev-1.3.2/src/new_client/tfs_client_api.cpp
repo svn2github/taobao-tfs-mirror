@@ -105,8 +105,7 @@ int TfsClient::close(const int fd, char* tfs_name, const int32_t len)
   {
     ret = TFS_ERROR;
   }
-
-  if (TFS_SUCCESS == ret)
+  else
   {
     TfsFile* tfs_file = get_file(fd);
     if (NULL == tfs_file)

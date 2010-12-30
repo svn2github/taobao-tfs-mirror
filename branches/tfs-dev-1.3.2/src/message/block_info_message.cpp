@@ -270,6 +270,7 @@ namespace tfs
       BlockInfoSeg block_info;
       for (int32_t i = 0; i < count; i++)
       {
+        memset(&block_info, 0, sizeof(BlockInfoSeg));
         if (get_int32(&data, &len, reinterpret_cast<int32_t*>(&block_id)) == TFS_ERROR)
         {
           return TFS_ERROR;

@@ -12,8 +12,7 @@ namespace tfs
   {
     enum SegmentStatus
     {
-      SEG_STATUS_UNINIT = 0,
-      SEG_STATUS_SUCCESS,
+      SEG_STATUS_SUCCESS = 0,
       SEG_STATUS_FAIL
     };
 
@@ -54,34 +53,33 @@ namespace tfs
 
     struct SegmentData
     {
+      bool delete_flag_;  // delete flag
+      bool whole_file_flag_;
       SegmentInfo seg_info_;
       char* buf_;                   // buffer start
       common::FileInfo* file_info_;
-      int64_t cur_offset_;
-      int32_t cur_size_;
       uint64_t file_number_;
       common::VUINT64 ds_;
       int32_t pri_ds_index_;
-      int32_t last_elect_ds_id_;
       int32_t status_;
       TfsFileEofFlag eof_;
 
-      SegmentData() : buf_(NULL), file_info_(NULL), cur_offset_(0), cur_size_(0), file_number_(0), pri_ds_index_(-1),
-                      last_elect_ds_id_(0), status_(SEG_STATUS_UNINIT), eof_(TFS_FILE_EOF_FLAG_NO)
+      SegmentData() : delete_flag_(true), whole_file_flag_(false), buf_(NULL), file_info_(NULL),
+                      file_number_(0), pri_ds_index_(-1),
+                      status_(SEG_STATUS_SUCCESS), eof_(TFS_FILE_EOF_FLAG_NO)
       {
       }
 
       SegmentData(SegmentData& seg_data)
       {
+        delete_flag_ = false;
+        whole_file_flag_ = seg_data.whole_file_flag_;
         memcpy(&seg_info_, &seg_data.seg_info_, sizeof(seg_info_));
         buf_ = seg_data.buf_;
-        file_info_ = seg_data.file_info_;   // copy ?
-        cur_offset_ = seg_data.cur_offset_;
-        cur_size_ = seg_data.cur_size_;
+        file_info_ = seg_data.file_info_;
         file_number_ = seg_data.file_number_;
         ds_ = seg_data.ds_;
         pri_ds_index_ = seg_data.pri_ds_index_;
-        last_elect_ds_id_ = seg_data.last_elect_ds_id_;
         status_ = seg_data.status_;
         eof_ = seg_data.eof_;
       }

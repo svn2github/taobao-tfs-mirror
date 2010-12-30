@@ -64,7 +64,7 @@ namespace tfs
           return common::EXIT_INVALIDFD_ERROR;
         }
 
-        if (flags & common::T_LARGE)
+        if (flags & common::T_WRITE && flags & common::T_LARGE)
         {
           if (__builtin_va_arg_pack_len() != 1)
           {
@@ -113,7 +113,7 @@ namespace tfs
       int64_t pread(const int fd, void* buf, const int64_t count, const int64_t offset);
       int64_t pwrite(const int fd, const void* buf, const int64_t count, const int64_t offset);
       int fstat(const int fd, common::FileInfo* buf, const int mode = common::NORMAL_STAT);
-      int close(const int fd, char* tfs_name, const int32_t len);
+      int close(const int fd, char* tfs_name = NULL, const int32_t len = 0);
 
     private:
       int open_ex(const char* file_name, const char* suffix, const char* ns_addr,

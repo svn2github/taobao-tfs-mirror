@@ -47,6 +47,7 @@ int LocalKey::initialize(const char* local_key, const uint64_t addr)
     memset(&seg_head_, 0, sizeof(SegmentHead));
     seg_info_.clear();
     int is_exist = access(name, F_OK);
+    TBSYS_LOG(DEBUG, "local tmp file %s is exist: %d", name, is_exist);
     if (0 != is_exist) //not exist
     {
       file_op_ = new FileOperation(name, O_RDWR|O_CREAT);
@@ -326,7 +327,6 @@ void LocalKey::get_segment(const int64_t start, const int64_t end,
       seg_data->seg_info_.offset_ = offset;
       seg_data->seg_info_.size_ = cur_size;
       seg_data->buf_ = const_cast<char*>(buf) + check_size;
-      seg_data->cur_size_ = cur_size; // cur_offset = 0
       seg_list.push_back(seg_data);
       check_size += cur_size;
     }

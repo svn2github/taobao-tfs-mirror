@@ -170,6 +170,7 @@ namespace tfs
     {
       tbsys::CThreadGuard guard(&mutex_);
       INT_WAITOBJ_MAP_ITER it = wait_objects_map_.find(id.seq_id_);
+      TBSYS_LOG(DEBUG, "get packet. wait object id: %"PRI64_PREFIX"d", id.seq_id_);
       if (it == wait_objects_map_.end())
       {
         TBSYS_LOG(INFO, "wait object not found, id: %"PRI64_PREFIX"d", id.seq_id_);

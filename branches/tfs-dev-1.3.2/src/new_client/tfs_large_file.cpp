@@ -234,12 +234,7 @@ int TfsLargeFile::close_process()
   {
     TBSYS_LOG(ERROR, "remove key fail, desc: %s", strerror(errno));
   }
-
-  if (TFS_SUCCESS == ret)
-  {
-    fsname_.set_file_id(meta_seg_->seg_info_.file_id_);
-    fsname_.set_block_id(meta_seg_->seg_info_.block_id_);
-  }
+ 
   return ret;
 }
 
@@ -257,9 +252,8 @@ int TfsLargeFile::upload_key()
   {
     destroy_seg();
     meta_seg_->buf_ = buf;
-    meta_seg_->cur_offset_ = 0;
-    meta_seg_->cur_size_ = size;
-
+    meta_seg_->seg_info_.offset_ = 0;
+    meta_seg_->seg_info_.size_ = size;
     processing_seg_list_.push_back(meta_seg_);
 
     if ((ret = process(FILE_PHASE_WRITE_DATA)) != TFS_SUCCESS)
@@ -272,6 +266,11 @@ int TfsLargeFile::upload_key()
     }
   }
 
+  if (TFS_SUCCESS == ret)
+  {
+    fsname_.set_file_id(meta_seg_->seg_info_.file_id_);
+    fsname_.set_block_id(meta_seg_->seg_info_.block_id_);
+  }
   tbsys::gDeleteA(buf);
   return ret;
 }

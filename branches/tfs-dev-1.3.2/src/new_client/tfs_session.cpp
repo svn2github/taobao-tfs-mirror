@@ -217,8 +217,6 @@ int TfsSession::get_block_info_ex(uint32_t& block_id, VUINT64 &rds, const int32_
   {
     ret = TFS_ERROR;
     SetBlockInfoMessage* block_info_msg = dynamic_cast<SetBlockInfoMessage*>(rsp);
-    //TBSYS_LOG(DEBUG, "message size: %d, block info message size: %d", sizeof(Message), sizeof(SetBlockInfoMessage));
-    TBSYS_LOG(DEBUG, "get block ds list size: %ld, rds size: %d", block_info_msg->get_block_ds().size(), rds.size());
     rds = block_info_msg->get_block_ds();
     block_id = block_info_msg->get_block_id();
     if (rds.size() && block_id > 0)
