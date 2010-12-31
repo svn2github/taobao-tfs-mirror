@@ -724,6 +724,7 @@ TBSYS_LOG    (INFO, "ownerchecktime(%"PRI64_PREFIX"d)(us), maxownerchecktime(%"P
       VUINT32::iterator iter = blocks.begin();
       for (; iter != blocks.end(); ++iter)
       {
+        servers.clear();
         block_id = (*iter);
         iret = meta_mgr_.read_block_info(block_id, servers);
         if (iret == TFS_SUCCESS)
