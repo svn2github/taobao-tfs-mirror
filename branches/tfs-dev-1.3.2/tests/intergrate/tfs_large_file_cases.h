@@ -29,8 +29,8 @@ class TfsLargeFileTest : public testing::Test
     static void SetUpTestCase();
     static void TearDownTestCase();
   public:
-    static int64_t write_new_file(const int64_t length);
-    //static int write_read_file(const int64_t length);
+    static int64_t write_new_file(const int64_t length, uint32_t& crc, char* tfsname = NULL, const int32_t name_len = 0);
+    static int write_read_file(const int64_t length);
     //static int write_update_file(const int32_t length) ;
     //static int unlink_file(const int32_t length);
     //static int rename_file(const int32_t length);
