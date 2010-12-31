@@ -141,7 +141,8 @@ namespace tfs
       }
       inline int64_t get_elect_seq() const
       {
-        return elect_seq_;
+        //return elect_seq_;
+        return writable_block_list_.size() + 1;
       }
       inline uint32_t get_max_block_id() const
       {
