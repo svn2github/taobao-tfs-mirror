@@ -12,7 +12,12 @@ namespace tfs
   {
     struct WaitId
     {
-      WaitId() : seq_id_(0), send_id_(-1)
+      WaitId() : seq_id_(0), send_id_(0)
+      {
+      }
+
+      WaitId(const int64_t seq_id, const int64_t send_id)
+        : seq_id_(seq_id), send_id_(send_id)
       {
       }
 
@@ -45,6 +50,8 @@ namespace tfs
 
     private:
       bool free_;
+      int64_t wait_id_;
+      std::vector<WaitId*> wait_id_sign_;
       WaitId wait_key_;
       int32_t done_count_;
       tbsys::CThreadCond cond_;

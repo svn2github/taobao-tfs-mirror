@@ -131,6 +131,7 @@ int TfsSession::get_block_info(SEG_DATA_LIST& seg_list, int32_t flag)
   }
   else
   {
+    TBSYS_LOG(DEBUG, "get block info for read. seg size: %d", seg_list.size());
     bool found = false;
     // search in the local cache
     if (USE_CACHE_FLAG_YES == use_cache_)
@@ -179,23 +180,28 @@ int TfsSession::get_block_info(SEG_DATA_LIST& seg_list, int32_t flag)
           }
           else
           {
-            //Todo use segmentdata status
-            block_cache.last_time_ = time(NULL);
-            block_cache.ds_ = seg_list[i]->ds_; // TODO, check already have
-            tbutil::Mutex::Lock lock(mutex_);
-            // already have? use operator = maybe more better
-            block_cache_map_.insert(seg_list[i]->seg_info_.block_id_, block_cache);
+            if (SEG_STATUS_SUCCESS == seg_list[i]->status_ && !seg_list[i]->ds_.empty()) 
+            {
+              block_cache.last_time_ = time(NULL);
+              block_cache.ds_ = seg_list[i]->ds_;
+              tbutil::Mutex::Lock lock(mutex_);
+              block_cache_map_.insert(seg_list[i]->seg_info_.block_id_, block_cache);
+            }
+            else
+            {
+              ret = TFS_ERROR;
+              TBSYS_LOG(ERROR, "batch get block info fail seg index: %d, status: %d, ds size: %d",
+                  i, seg_list[i]->status_, seg_list[i]->ds_.size());
+            }
           }
         }
       }
-      else
-      {
-        TBSYS_LOG(ERROR, "batch get block info fail, ret:%d", ret);
-      }
     }
   }
+  TBSYS_LOG(DEBUG, "batch get block info end, ret: %d", ret);
   return ret;
 }
+
 
 int TfsSession::get_block_info_ex(uint32_t& block_id, VUINT64 &rds, const int32_t flag)
 {
@@ -265,6 +271,7 @@ int TfsSession::get_block_info_ex(SEG_DATA_LIST& seg_list, const int32_t flag)
       {
         bgbi_message.add_block_id(seg_list[i]->seg_info_.block_id_);
         block_count++;
+        TBSYS_LOG(DEBUG, "get blockinfo add getblock message, blockid: %d, count: %d", seg_list[i]->seg_info_.block_id_, block_count);
       }
     }
   }
@@ -290,16 +297,21 @@ int TfsSession::get_block_info_ex(SEG_DATA_LIST& seg_list, const int32_t flag)
       std::map<uint32_t, BlockInfoSeg>::iterator it;
       if (flag & T_READ)
       {
-        for (size_t i = 0; i < seg_list.size(); i++)
+        for (size_t i = 0; i < seg_list.size(); ++i)
         {
-          if ((it = block_info.find(seg_list[i]->seg_info_.block_id_)) == block_info.end())
+          if ((it = block_info.find(seg_list[i]->seg_info_.block_id_)) == block_info.end() && seg_list[i]->ds_.empty())
           {
-            // retry ?
-            TBSYS_LOG(ERROR, "get block %d info fail", seg_list[i]->seg_info_.block_id_);
+            TBSYS_LOG(ERROR, "get block %d info fail, blockinfo size: %d", seg_list[i]->seg_info_.block_id_, block_info.size());
             ret = TFS_ERROR;
             break;
           }
-          seg_list[i]->ds_ = it->second.ds_;
+
+          if (it != block_info.end())
+          {
+            seg_list[i]->ds_ = it->second.ds_;
+            TBSYS_LOG(DEBUG, "get block %d info, ds size: %d, return size: %d",
+                seg_list[i]->seg_info_.block_id_, seg_list[i]->ds_.size(), it->second.ds_.size());
+          }
         }
       }
       else if (flag & T_WRITE)

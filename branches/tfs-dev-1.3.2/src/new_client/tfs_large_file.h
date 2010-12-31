@@ -42,6 +42,7 @@ namespace tfs
 
     private:
       LocalKey local_key_;
+      bool read_meta_flag_;
     };
   }
 }

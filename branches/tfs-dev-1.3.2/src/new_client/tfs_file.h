@@ -83,22 +83,22 @@ namespace tfs
 
     private:
       int do_async_request(const InnerFilePhase file_phase, const int64_t wait_id, const int32_t index);
-      int do_async_response(const InnerFilePhase file_phase, tbnet::Packet* packet, const int32_t index);
+      int do_async_response(const InnerFilePhase file_phase, message::Message* packet, const int32_t index);
 
       int async_req_create_file(const int64_t wait_id, const int32_t index);
-      int async_rsp_create_file(tbnet::Packet* packet, const int32_t index);
+      int async_rsp_create_file(message::Message* packet, const int32_t index);
 
       int async_req_read_file(const int64_t wait_id, const int32_t index);
-      int async_rsp_read_file(tbnet::Packet* packet, const int32_t index);
+      int async_rsp_read_file(message::Message* packet, const int32_t index);
 
       int async_req_write_data(const int64_t wait_id, const int32_t index);
-      int async_rsp_write_data(tbnet::Packet* packet, const int32_t index);
+      int async_rsp_write_data(message::Message* packet, const int32_t index);
 
       int async_req_close_file(const int64_t wait_id, const int32_t index);
-      int async_rsp_close_file(tbnet::Packet* packet, const int32_t index);
+      int async_rsp_close_file(message::Message* packet, const int32_t index);
 
       int async_req_stat_file(const int64_t wait_id, const int32_t index);
-      int async_rsp_stat_file(tbnet::Packet* packet, const int32_t index);
+      int async_rsp_stat_file(message::Message* packet, const int32_t index);
 
     protected:
       static const int64_t WAIT_TIME_OUT = 3000000;

@@ -3,7 +3,7 @@
 using namespace tfs::client;
 using namespace tfs::common;
 
-TfsLargeFile::TfsLargeFile()
+TfsLargeFile::TfsLargeFile() : TfsFile(), read_meta_flag_(true)
 {
 }
 
@@ -22,34 +22,42 @@ int TfsLargeFile::open(const char* file_name, const char *suffix, const int flag
     {
       TBSYS_LOG(ERROR, "open file fail, ret: %d", ret);
     }
-
-    if (TFS_SUCCESS == ret)
+    else
     {
       FileInfo file_info;
       if ((ret = fstat_ex(&file_info, 0)) != TFS_SUCCESS)
       {
         TBSYS_LOG(ERROR, "stat file %s fail, ret: %d", fsname_.get_name(), ret);
       }
-
-      if (TFS_SUCCESS == ret)
+      else
       {
         int32_t size = file_info.size_;
         assert (size <= MAX_META_SIZE);
         char* seg_buf = new char[size];
+
+        //set meta_seg
+        meta_seg_->seg_info_.offset_ = 0;
+        meta_seg_->seg_info_.size_ = size;
+        meta_seg_->buf_ = seg_buf;
+
         if ((ret = read_ex(seg_buf, size, 0, false)) != size)
         {
           TBSYS_LOG(ERROR, "read meta file fail, size: %d, retsize: %d", size, ret);
           ret = TFS_ERROR;
         }
-
-        if (TFS_SUCCESS == ret)
+        else
         {
           if ((ret = local_key_.load(seg_buf)) != TFS_SUCCESS)
           {
             TBSYS_LOG(ERROR, "construct meta file info fail, ret: %d", ret);
           }
+          else if ((ret = local_key_.validate()) != TFS_SUCCESS)
+          {
+            TBSYS_LOG(ERROR, "local key validate fail when read file, ret: %d", ret);
+          }
         }
-        tbsys::gDelete(seg_buf);
+        read_meta_flag_ = false;
+        tbsys::gDeleteA(seg_buf);
       }
     }
   }
@@ -128,7 +136,16 @@ int TfsLargeFile::close()
 int TfsLargeFile::get_segment_for_read(int64_t offset, char* buf, int64_t count)
 {
   destroy_seg();
-  return local_key_.get_segment_for_read(offset_, buf, count, processing_seg_list_);
+  int ret = TFS_SUCCESS;
+  if (read_meta_flag_)
+  {
+    ret = get_meta_segment(offset, buf, count);
+  }
+  else
+  {
+    ret = local_key_.get_segment_for_read(offset_, buf, count, processing_seg_list_);
+  }
+  return ret;
 }
 
 int TfsLargeFile::get_segment_for_write(int64_t offset, const char* buf, int64_t count)
@@ -240,38 +257,45 @@ int TfsLargeFile::close_process()
 
 int TfsLargeFile::upload_key()
 {
-  int32_t size = local_key_.get_data_size();
-  char* buf = new char[size];
-  local_key_.dump_data(buf);
-  int ret = TFS_ERROR;
-  if ((ret = open_ex(NULL, NULL, T_WRITE)) != TFS_SUCCESS)
+  int ret = TFS_SUCCESS;
+  if ((ret = local_key_.validate()) != TFS_SUCCESS)
   {
-    TBSYS_LOG(ERROR, "upload key fail, open file fail, ret: %d");
+    TBSYS_LOG(ERROR, "local key validate fail, ret: %d");
   }
   else
   {
-    destroy_seg();
-    meta_seg_->buf_ = buf;
-    meta_seg_->seg_info_.offset_ = 0;
-    meta_seg_->seg_info_.size_ = size;
-    processing_seg_list_.push_back(meta_seg_);
-
-    if ((ret = process(FILE_PHASE_WRITE_DATA)) != TFS_SUCCESS)
+    int32_t size = local_key_.get_data_size();
+    char* buf = new char[size];
+    local_key_.dump_data(buf);
+    if ((ret = open_ex(NULL, NULL, T_WRITE)) != TFS_SUCCESS)
     {
-      TBSYS_LOG(ERROR, "upload key fail, write data fail, ret: %d", ret);
+      TBSYS_LOG(ERROR, "upload key fail, open file fail, ret: %d");
     }
-    else if ((ret = process(FILE_PHASE_CLOSE_FILE)) != TFS_SUCCESS)
+    else
     {
-      TBSYS_LOG(ERROR, "upload key fail, close file fail, ret: %d", ret);
-    }
-  }
+      destroy_seg();
+      meta_seg_->buf_ = buf;
+      meta_seg_->seg_info_.offset_ = 0;
+      meta_seg_->seg_info_.size_ = size;
+      processing_seg_list_.push_back(meta_seg_);
 
-  if (TFS_SUCCESS == ret)
-  {
-    fsname_.set_file_id(meta_seg_->seg_info_.file_id_);
-    fsname_.set_block_id(meta_seg_->seg_info_.block_id_);
+      if ((ret = process(FILE_PHASE_WRITE_DATA)) != TFS_SUCCESS)
+      {
+        TBSYS_LOG(ERROR, "upload key fail, write data fail, ret: %d", ret);
+      }
+      else if ((ret = process(FILE_PHASE_CLOSE_FILE)) != TFS_SUCCESS)
+      {
+        TBSYS_LOG(ERROR, "upload key fail, close file fail, ret: %d", ret);
+      }
+    }
+
+    if (TFS_SUCCESS == ret)
+    {
+      fsname_.set_file_id(meta_seg_->seg_info_.file_id_);
+      fsname_.set_block_id(meta_seg_->seg_info_.block_id_);
+    }
+    tbsys::gDeleteA(buf);
   }
-  tbsys::gDeleteA(buf);
   return ret;
 }
 

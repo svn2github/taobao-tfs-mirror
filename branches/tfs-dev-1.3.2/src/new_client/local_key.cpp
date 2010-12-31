@@ -258,11 +258,11 @@ int LocalKey::get_segment_for_write(const int64_t offset, const char* buf,
         {
           SEG_SET_ITER pre_it = it;
           pre_it--;
-          if (pre_it->offset_ + pre_it->size_ > cur_offset)
+          if (pre_it->offset_ + pre_it->size_ > cur_offset) // overlap
           {
             remain_size -= pre_it->size_ - (cur_offset - pre_it->offset_);
           }
-          else                  // cutover
+          else                  // cutover. hole in pre and cur
           {
             next_offset = it->offset_;
           }
@@ -375,6 +375,7 @@ void LocalKey::get_segment(const int64_t start, const int64_t end,
       seg_data->buf_ = const_cast<char*>(buf) + check_size;
       seg_list.push_back(seg_data);
 
+      TBSYS_LOG(DEBUG, "get segment, seg info size: %d, offset: %"PRI64_PREFIX"d", seg_data->seg_info_.size_, seg_data->seg_info_.offset_);
       check_size += cur_size;
       offset += cur_size;
     }

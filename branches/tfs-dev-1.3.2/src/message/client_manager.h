@@ -33,7 +33,6 @@ namespace tfs
         int get_response(const int64_t wait_id, const int64_t wait_count,
               const int64_t wait_timeout, std::map<int64_t, Message*>& packets);
 
-        //int call(const int64_t server, Message* packet, const int64_t timeout, tbnet::Packet*& response);
         int call(const int64_t server, Message* packet, const int64_t timeout, Message*& response);
 
       private:

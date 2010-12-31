@@ -7,7 +7,6 @@ namespace tfs
   namespace message 
   {
     using namespace common;
-    const int64_t WaitObject::WAIT_RESPONSE_ARRAY_SIZE;
 
     WaitObject::WaitObject() : free_(false), done_count_(0)
     {
@@ -23,6 +22,11 @@ namespace tfs
         {
           tbsys::gDelete(it->second);
         }
+      }
+
+      for (size_t i = 0; i < wait_id_sign_.size(); ++i)
+      {
+        tbsys::gDelete(wait_id_sign_[i]);
       }
     }
 
@@ -71,22 +75,24 @@ namespace tfs
 
     int64_t WaitObject::get_id() const
     {
-      return wait_key_.seq_id_;
+      return wait_id_;
     }
 
     void WaitObject::set_id(const int64_t id)
     {
-      wait_key_.seq_id_ = id;
+      wait_id_ = id;
     }
 
     WaitId* WaitObject::get_wait_key()
     {
-      return &wait_key_;
+      return wait_id_sign_.back();
     }
 
     void WaitObject::add_send_id()
     {
-      ++wait_key_.send_id_;
+      int64_t cur_send_id = wait_id_sign_.size();
+      WaitId* cur_wait_id = new WaitId(wait_id_, cur_send_id);
+      wait_id_sign_.push_back(cur_wait_id);
     }
 
     int64_t WaitObject::get_response_count()
@@ -170,7 +176,7 @@ namespace tfs
     {
       tbsys::CThreadGuard guard(&mutex_);
       INT_WAITOBJ_MAP_ITER it = wait_objects_map_.find(id.seq_id_);
-      TBSYS_LOG(DEBUG, "get packet. wait object id: %"PRI64_PREFIX"d", id.seq_id_);
+      TBSYS_LOG(DEBUG, "get packet. wait object id: %"PRI64_PREFIX"d, send id: %"PRI64_PREFIX"d", id.seq_id_, id.send_id_);
       if (it == wait_objects_map_.end())
       {
         TBSYS_LOG(INFO, "wait object not found, id: %"PRI64_PREFIX"d", id.seq_id_);

@@ -64,7 +64,7 @@ namespace tfs
       int32_t status_;
       TfsFileEofFlag eof_;
 
-      SegmentData() : delete_flag_(true), whole_file_flag_(false), buf_(NULL), file_info_(NULL),
+      SegmentData() : delete_flag_(true), whole_file_flag_(true), buf_(NULL), file_info_(NULL),
                       file_number_(0), pri_ds_index_(-1),
                       status_(SEG_STATUS_SUCCESS), eof_(TFS_FILE_EOF_FLAG_NO)
       {
