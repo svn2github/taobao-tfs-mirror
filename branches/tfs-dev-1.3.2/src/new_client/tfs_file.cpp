@@ -36,7 +36,7 @@ int TfsFile::open_ex(const char* file_name, const char* suffix, int32_t flags)
     TBSYS_LOG(ERROR, "session is not initialized");
     ret = TFS_ERROR;
   }
-  
+
   if (TFS_SUCCESS == ret)
   {
     flags_ = flags;
@@ -100,16 +100,29 @@ int64_t TfsFile::read_ex(void* buf, const int64_t count, const int64_t offset, c
   }
   else
   {
-    int64_t remain_size = count;
-    int64_t cur_size = 0;
-    while (remain_size > 0)
+    int64_t check_size = 0;
+    int32_t cur_size = 0;
+    bool not_end = true;
+    while (not_end)
     {
-      cur_size = (remain_size >= BATCH_SIZE) ? BATCH_SIZE : remain_size;
-      if ((ret = get_segment_for_read(offset + count - remain_size,
-              reinterpret_cast<char*>(buf) + count - remain_size, cur_size)) != TFS_SUCCESS)
+      if (check_size + BATCH_SIZE >= count)
       {
-        TBSYS_LOG(ERROR, "get segment for read fail, ret: %d", ret);
+        cur_size = count - check_size;
+        not_end = false;
+      }
+      else
+      {
+        cur_size = BATCH_SIZE;
+      }
+
+      if ((ret = get_segment_for_read(offset + check_size, reinterpret_cast<char*>(buf) + check_size,
+                                      cur_size)) != TFS_SUCCESS
+          || 0 == processing_seg_list_.size())
+      {
+        TBSYS_LOG(ERROR, "get segment for read fail, ret: %d, offset: %"PRI64_PREFIX"d, size: %d",
+                  ret, offset + check_size, cur_size);
         ret = EXIT_GENERAL_ERROR;
+        // get read segment fail, must exit
         break;
       }
       else
@@ -122,19 +135,20 @@ int64_t TfsFile::read_ex(void* buf, const int64_t count, const int64_t offset, c
 
         if (ret != TFS_SUCCESS)
         {
-          TBSYS_LOG(ERROR, "read data fail, ret: %d, segment count success: %d, fail: %d",
-              ret, seg_count, processing_seg_list_.size());
+          TBSYS_LOG(ERROR, "read data fail, ret: %d, offset: %"PRI64_PREFIX"d, size: %d, segment count: %d",
+                    ret, offset + check_size, cur_size, seg_count);
           ret = EXIT_GENERAL_ERROR;
+          // read fail, must exit
           break;
-        }
-
-        if (modify)
-        {
-          offset_ += count;
         }
       }
 
-      remain_size -= cur_size;
+      check_size += cur_size;
+    }
+
+    if (TFS_SUCCESS == ret && modify)
+    {
+      offset_ += count;
     }
   }
 
@@ -157,13 +171,23 @@ int64_t TfsFile::write_ex(const void* buf, int64_t count, int64_t offset, bool m
   }
   else
   {
-    int64_t remain_size = count;
-    int64_t cur_size = 0;
-    while (remain_size > 0)
+    int64_t check_size = 0;
+    int32_t cur_size = 0;
+    bool not_end = true;
+    while (not_end)
     {
-      cur_size = (remain_size >= BATCH_SIZE) ? BATCH_SIZE : remain_size;
-      if ((ret = get_segment_for_write(offset + count - remain_size,
-              reinterpret_cast<const char*>(buf) + count - remain_size, cur_size)) != TFS_SUCCESS)
+      if (check_size + BATCH_SIZE >= count)
+      {
+        cur_size = count - check_size;
+        not_end = false;
+      }
+      else
+      {
+        cur_size = BATCH_SIZE;
+      }
+
+      if ((ret = get_segment_for_write(offset + check_size,
+                                       reinterpret_cast<const char*>(buf) + check_size, cur_size)) != TFS_SUCCESS)
       {
         TBSYS_LOG(ERROR, "get segment error, ret: %d", ret);
         ret = EXIT_GENERAL_ERROR;
@@ -173,30 +197,37 @@ int64_t TfsFile::write_ex(const void* buf, int64_t count, int64_t offset, bool m
       int32_t seg_count = processing_seg_list_.size();
       if (0 == seg_count)
       {
-        TBSYS_LOG(DEBUG, "data already written, offset: %"PRI64_PREFIX"d, size: %d", offset, count);
-        break;
+        TBSYS_LOG(INFO, "data already written, offset: %"PRI64_PREFIX"d, size: %d", offset + check_size, cur_size);
+      }
+      else
+      {
+        int32_t retry_count = CLIENT_TRY_COUNT;
+        do
+        {
+          ret = write_process();
+        } while (ret != TFS_SUCCESS && --retry_count);
+
+        int32_t suc_count = finish_write_process();
+        if (ret != TFS_SUCCESS)
+        {
+          TBSYS_LOG(ERROR, "write fail, offset: %"PRI64_PREFIX"d, size: %d, segment count total: %d, success: %d, ret: %d",
+                    offset + check_size, cur_size, seg_count, suc_count, ret);
+          ret = EXIT_GENERAL_ERROR;
+          break;
+        }
+        else
+        {
+          TBSYS_LOG(DEBUG, "write success, offset: %"PRI64_PREFIX"d, size: %d, segment count: %d",
+                    offset + check_size, cur_size, seg_count);
+        }
       }
 
-      int32_t retry_count = CLIENT_TRY_COUNT;
-      do
-      {
-        ret = write_process();
-      } while (ret != TFS_SUCCESS && --retry_count);
+      check_size += cur_size;
+    }
 
-      int32_t suc_count = finish_write_process();
-      if (ret != TFS_SUCCESS)
-      {
-        TBSYS_LOG(ERROR, "write fail, ret: %d, segment count success: %d, fail: %d",
-            ret, seg_count, suc_count);
-        ret = EXIT_GENERAL_ERROR;
-        break;
-      }
-
-      if (modify)
-      {
-        offset_ += count;
-      }
-      remain_size -= cur_size;
+    if (TFS_SUCCESS == ret && modify)
+    {
+      offset_ += count;
     }
   }
 
@@ -698,7 +729,7 @@ int TfsFile::async_rsp_close_file(message::Message* rsp, const int32_t index)
 //    TBSYS_LOG(DEBUG, "write file (%s) on server(%s)", file_name_, tbsys::CNetUtil::addrToString(last_elect_ds_id_).c_str());
 //  }
 //#endif
-  
+
   if (TFS_SUCCESS != ret)
   {
     seg_data->status_ = SEG_STATUS_FAIL;

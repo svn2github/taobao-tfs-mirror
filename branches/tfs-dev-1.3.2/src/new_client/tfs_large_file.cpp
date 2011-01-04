@@ -143,7 +143,7 @@ int TfsLargeFile::get_segment_for_read(int64_t offset, char* buf, int64_t count)
   }
   else
   {
-    ret = local_key_.get_segment_for_read(offset_, buf, count, processing_seg_list_);
+    ret = local_key_.get_segment_for_read(offset, buf, count, processing_seg_list_);
   }
   return ret;
 }
@@ -151,7 +151,7 @@ int TfsLargeFile::get_segment_for_read(int64_t offset, char* buf, int64_t count)
 int TfsLargeFile::get_segment_for_write(int64_t offset, const char* buf, int64_t count)
 {
   destroy_seg();
-  return local_key_.get_segment_for_write(offset_, buf, count, processing_seg_list_);
+  return local_key_.get_segment_for_write(offset, buf, count, processing_seg_list_);
 }
 
 int TfsLargeFile::read_process()
@@ -247,11 +247,13 @@ int TfsLargeFile::close_process()
   {
     TBSYS_LOG(ERROR, "close tfs file fail: upload key fail, ret: %d");
   }
-  if (remove_key() != TFS_SUCCESS) // TODO .. ignore local key fail ?
+  else if (remove_key() != TFS_SUCCESS)
+  // upload success, then remove local key.
+  // TODO.. remove fail, then gc may collect data actually write success
   {
     TBSYS_LOG(ERROR, "remove key fail, desc: %s", strerror(errno));
   }
- 
+
   return ret;
 }
 

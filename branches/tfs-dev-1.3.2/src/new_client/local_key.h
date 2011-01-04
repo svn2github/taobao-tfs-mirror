@@ -76,7 +76,8 @@ namespace tfs
         whole_file_flag_ = seg_data.whole_file_flag_;
         memcpy(&seg_info_, &seg_data.seg_info_, sizeof(seg_info_));
         buf_ = seg_data.buf_;
-        file_info_ = seg_data.file_info_;
+        // file_info_ = seg_data.file_info_;
+        file_info_ = NULL;      // not copy
         file_number_ = seg_data.file_number_;
         ds_ = seg_data.ds_;
         pri_ds_index_ = seg_data.pri_ds_index_;
