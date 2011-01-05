@@ -37,6 +37,7 @@ namespace tfs
       virtual int64_t pwrite(const void *buf, int64_t count, int64_t offset);
       virtual int fstat(common::FileInfo* file_info, int32_t mode = common::NORMAL_STAT);
       virtual int close();
+      virtual int unlink(const char* file_name, const char* suffix, const int action);
 
     protected:
       virtual int get_segment_for_read(int64_t offset, char* buf, int64_t count);
@@ -45,6 +46,7 @@ namespace tfs
       virtual int write_process();
       virtual int32_t finish_write_process();
       virtual int close_process();
+      virtual int unlink_process();
     };
   }
 }

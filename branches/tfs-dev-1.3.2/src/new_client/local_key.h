@@ -76,7 +76,6 @@ namespace tfs
         whole_file_flag_ = seg_data.whole_file_flag_;
         memcpy(&seg_info_, &seg_data.seg_info_, sizeof(seg_info_));
         buf_ = seg_data.buf_;
-        // file_info_ = seg_data.file_info_;
         file_info_ = NULL;      // not copy
         file_number_ = seg_data.file_number_;
         ds_ = seg_data.ds_;
@@ -94,11 +93,12 @@ namespace tfs
     typedef std::vector<SegmentData*> SEG_DATA_LIST;
     typedef std::vector<SegmentData*>::iterator SEG_DATA_LIST_ITER;
 
+    typedef std::set<SegmentInfo> SEG_SET;
+    typedef std::set<SegmentInfo>::iterator SEG_SET_ITER;
+
     class LocalKey
     {
     public:
-      typedef std::set<SegmentInfo> SEG_SET;
-      typedef std::set<SegmentInfo>::iterator SEG_SET_ITER;
 
       LocalKey();
       ~LocalKey();
@@ -115,6 +115,9 @@ namespace tfs
                                 int64_t size, SEG_DATA_LIST& seg_list);
       int get_segment_for_read(const int64_t offset, const char* buf,
                                const int64_t size, SEG_DATA_LIST& seg_list);
+
+      //int get_segment_for_unlink(const int64_t offset, const int64_t count,
+      //                           const int32_t action, SEG_DATA_LIST& seg_list);
 
       int add_segment(SegmentInfo& seg_info);
 

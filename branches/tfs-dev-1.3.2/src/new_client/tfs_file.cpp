@@ -36,10 +36,12 @@ int TfsFile::open_ex(const char* file_name, const char* suffix, int32_t flags)
     TBSYS_LOG(ERROR, "session is not initialized");
     ret = TFS_ERROR;
   }
-
-  if (TFS_SUCCESS == ret)
+  else
   {
-    flags_ = flags;
+    if (-1 == flags_)
+    {
+      flags_ = flags;
+    }
     if (NULL != file_name)
     {
       fsname_.set_name(file_name, suffix);
@@ -51,7 +53,7 @@ int TfsFile::open_ex(const char* file_name, const char* suffix, int32_t flags)
     meta_seg_->seg_info_.block_id_ = fsname_.get_block_id();
     meta_seg_->seg_info_.file_id_ = fsname_.get_file_id();
 
-    if ((ret = tfs_session_->get_block_info(meta_seg_->seg_info_.block_id_, meta_seg_->ds_, flags_)) != TFS_SUCCESS)
+    if ((ret = tfs_session_->get_block_info(meta_seg_->seg_info_.block_id_, meta_seg_->ds_, flags)) != TFS_SUCCESS)
     {
       TBSYS_LOG(ERROR, "tfs open fail: get block info fail, blockid: %u, fileid: %"
           PRI64_PREFIX "u, mode: %d, ret: %d", meta_seg_->seg_info_.block_id_, meta_seg_->seg_info_.file_id_, flags, ret);
@@ -65,7 +67,7 @@ int TfsFile::open_ex(const char* file_name, const char* suffix, int32_t flags)
 
   if (TFS_SUCCESS == ret)
   {
-    if ((flags_ & T_WRITE))
+    if ((flags_ & T_WRITE) && !(flags_ & T_NOLEASE)) // write, no unlink
     {
       get_meta_segment(0, NULL, 0);
       if ((ret = process(FILE_PHASE_CREATE_FILE)) != TFS_SUCCESS)
@@ -302,6 +304,7 @@ int TfsFile::fstat_ex(FileInfo* file_info, int32_t mode)
     FileInfo* save_file_info = meta_seg_->file_info_;
     meta_seg_->file_info_ = file_info;
     flags_ = mode;
+    TBSYS_LOG(DEBUG, "fstat_ex mode: %d, flags_: %d", mode, flags_);
     get_meta_segment(0, NULL, 0);  // just stat
     ret = process(FILE_PHASE_STAT_FILE);
 
@@ -342,8 +345,30 @@ int TfsFile::close_ex()
   return ret;
 }
 
+int TfsFile::unlink_process()
+{
+  int ret = TFS_SUCCESS;
+  if ((ret = tfs_session_->get_block_info(processing_seg_list_, T_WRITE | T_NOLEASE)) != TFS_SUCCESS)
+  {
+    TBSYS_LOG(ERROR, "unlink get block info fail, ret: %d", ret);
+  }
+  else
+  {
+    if ((ret = process(FILE_PHASE_UNLINK_FILE)) != TFS_SUCCESS)
+    {
+      TBSYS_LOG(ERROR, "unlink file fail, ret: %d", ret);
+    }
+  }
+  return ret;
+}
+
+
 const char* TfsFile::get_file_name()
 {
+  if (flags_ & T_LARGE)
+  {
+    return fsname_.get_name(true);
+  }
   return fsname_.get_name();
 }
 
@@ -404,8 +429,6 @@ int TfsFile::process(const InnerFilePhase file_phase)
         (ret = do_async_request(file_phase, wait_id, i)) != TFS_SUCCESS)
     {
       TBSYS_LOG(ERROR, "request %d fail", i);
-      // --size;
-      // continue;
       return ret;
     }
   }
@@ -456,6 +479,9 @@ int TfsFile::do_async_request(const InnerFilePhase file_phase, const int64_t wai
   case FILE_PHASE_STAT_FILE:
     ret = async_req_stat_file(wait_id, index);
     break;
+  case FILE_PHASE_UNLINK_FILE:
+    ret = async_req_unlink_file(wait_id, index);
+    break;
   default:
     TBSYS_LOG(ERROR, "unknow file phase, phase: %d", file_phase);
     ret = TFS_ERROR;
@@ -483,6 +509,9 @@ int TfsFile::do_async_response(const InnerFilePhase file_phase, message::Message
     break;
   case FILE_PHASE_STAT_FILE:
     ret = async_rsp_stat_file(packet, index);
+    break;
+  case FILE_PHASE_UNLINK_FILE:
+    ret = async_rsp_unlink_file(packet, index);
     break;
   default:
     TBSYS_LOG(ERROR, "unknow file phase, phase: %d", file_phase);
@@ -550,10 +579,6 @@ int TfsFile::async_rsp_create_file(message::Message* rsp, const int32_t index)
   else
   {
     RespCreateFilenameMessage* msg = dynamic_cast<RespCreateFilenameMessage*>(rsp);
-    //do set fsname at upper level
-    //fsname_.set_file_id(msg->get_file_id());
-    //file_number_ = msg->get_file_number();
-
     if (0 == msg->get_file_id())
     {
       TBSYS_LOG(ERROR, "create file name fail. fileid: 0");
@@ -910,6 +935,7 @@ int TfsFile::async_req_stat_file(const int64_t wait_id, const int32_t index)
   FileInfoMessage stat_message;
   stat_message.set_block_id(seg_data->seg_info_.block_id_);
   stat_message.set_file_id(seg_data->seg_info_.file_id_);
+  TBSYS_LOG(DEBUG, "req stat file flag: %d", flags_);
   stat_message.set_mode(flags_);
 
   int32_t ds_size = seg_data->ds_.size();
@@ -971,7 +997,7 @@ int TfsFile::async_rsp_stat_file(message::Message* rsp, const int32_t index)
     if (RESP_FILE_INFO_MESSAGE != rsp->get_message_type())
     {
       ret = EXIT_UNKNOWN_MSGTYPE;
-      if (STATUS_MESSAGE != rsp->get_message_type())
+      if (STATUS_MESSAGE == rsp->get_message_type())
       {
         TBSYS_LOG(ERROR, "stat file fail. blockid: %u, fileid: %" PRI64_PREFIX "u, ret: %d, erorr msg: %s",
             seg_data->seg_info_.block_id_, seg_data->seg_info_.file_id_, ret, dynamic_cast<StatusMessage*>(rsp)->get_error());
@@ -1009,6 +1035,70 @@ int TfsFile::async_rsp_stat_file(message::Message* rsp, const int32_t index)
             tbsys::CNetUtil::addrToString(seg_data->ds_[seg_data->pri_ds_index_]).c_str());
         ret = TFS_ERROR;
       }
+    }
+  }
+
+  if (TFS_SUCCESS != ret)
+  {
+    seg_data->status_ = SEG_STATUS_FAIL;
+  }
+  tbsys::gDelete(rsp);
+  return ret;
+}
+
+int TfsFile::async_req_unlink_file(const int64_t wait_id, const int32_t index)
+{
+  SegmentData* seg_data = processing_seg_list_[index];
+  UnlinkFileMessage uf_message;
+  uf_message.set_block_id(seg_data->seg_info_.block_id_);
+  uf_message.set_file_id(seg_data->seg_info_.file_id_);
+  uf_message.set_ds_list(seg_data->ds_);
+  uf_message.set_unlink_type(static_cast<int32_t>(seg_data->file_number_)); // action
+  uf_message.set_option_flag(option_flag_);
+
+  // no not need to estimate the ds number is zero
+  int ret = NewClientManager::get_instance()->post_request(seg_data->ds_[0], &uf_message, wait_id);
+  if (TFS_SUCCESS != ret)
+  {
+    TBSYS_LOG(ERROR, "unlink file post request fail. ret: %d, waitid: %d, blockid: %u, fileid: %" PRI64_PREFIX "u, dsip: %s",
+              ret, wait_id, seg_data->seg_info_.block_id_, seg_data->seg_info_.file_id_,
+              tbsys::CNetUtil::addrToString(seg_data->ds_[0]).c_str());
+    seg_data->status_ = SEG_STATUS_FAIL;
+  }
+
+  return ret;
+}
+
+int TfsFile::async_rsp_unlink_file(message::Message* rsp, const int32_t index)
+{
+  int ret = TFS_SUCCESS;
+  SegmentData* seg_data = processing_seg_list_[index];
+
+  if (NULL == rsp)
+  {
+    TBSYS_LOG(ERROR, "tfs file unlink file fail, send msg to dataserver time out, blockid: %u, fileid: %"
+        PRI64_PREFIX "u, dsip: %s",
+        seg_data->seg_info_.block_id_, seg_data->seg_info_.file_id_,
+        tbsys::CNetUtil::addrToString(seg_data->ds_[0]).c_str());
+    ret = EXIT_TIMEOUT_ERROR;
+  }
+  else
+  {
+    if (STATUS_MESSAGE == rsp->get_message_type())
+    {
+      StatusMessage* msg = dynamic_cast<StatusMessage*>(rsp);
+      if (STATUS_MESSAGE_OK != msg->get_status())
+      {
+        ret = msg->get_status();
+        TBSYS_LOG(WARN, "block_id: %u, file_id: %"PRI64_PREFIX"u, error: %s, status: %d",
+            seg_data->seg_info_.block_id_, seg_data->seg_info_.file_id_, msg->get_error(), msg->get_status());
+      }
+    }
+    else // unknow msg type
+    {
+      ret = EXIT_UNKNOWN_MSGTYPE;
+      TBSYS_LOG(ERROR, "unlink file fail. blockid: %u, fileid: %" PRI64_PREFIX "u, erorr msg: %s, msg type: %d",
+          seg_data->seg_info_.block_id_, seg_data->seg_info_.file_id_, "msg type error", rsp->get_message_type());
     }
   }
 

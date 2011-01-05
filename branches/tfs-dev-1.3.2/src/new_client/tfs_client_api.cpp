@@ -101,32 +101,36 @@ int TfsClient::fstat(const int fd, common::FileInfo* buf, const int mode)
 int TfsClient::close(const int fd, char* tfs_name, const int32_t len)
 {
   int ret = TFS_SUCCESS;
-  if (NULL == tfs_name || len < TFS_FILE_LEN)
+  TfsFile* tfs_file = get_file(fd);
+  if (NULL == tfs_file)
   {
-    ret = TFS_ERROR;
+    ret = EXIT_INVALIDFD_ERROR;
   }
   else
   {
-    TfsFile* tfs_file = get_file(fd);
-    if (NULL == tfs_file)
+    ret = tfs_file->close();
+    if (TFS_SUCCESS != ret)
     {
-      ret = EXIT_INVALIDFD_ERROR;
+      TBSYS_LOG(ERROR, "tfs close failed. fd: %d, ret: %d", fd, ret);
     }
     else
     {
-      ret = tfs_file->close();
-      if (TFS_SUCCESS != ret)
+      if (NULL == tfs_name || len < TFS_FILE_LEN)
       {
-        TBSYS_LOG(ERROR, "tfs close failed. fd: %d, ret: %d", fd, ret);
+        //Todo
+        //if (tfs_file->get_flag() & T_LARGE && tfs_file->get_flag() & T_WRITE)
+        //{
+        //  ret = TFS_ERROR;
+        //}
       }
       else
       {
         memcpy(tfs_name, tfs_file->get_file_name(), TFS_FILE_LEN);
       }
     }
+    erase_file(fd);
   }
-  // erase tfsfile from map
-  erase_file(fd);
+
   return ret;
 }
 
@@ -178,6 +182,50 @@ int TfsClient::open_ex(const char* file_name, const char* suffix, const char* ns
   else
   {
     ret = fd_++;
+  }
+
+  return ret;
+}
+
+int TfsClient::unlink(const char* file_name, const char* suffix, const char* ns_addr, const int action)
+{
+  int ret = TFS_SUCCESS;
+  TfsSession* tfs_session = (NULL == ns_addr) ? default_tfs_session_ :
+    SESSION_POOL.get(ns_addr, default_tfs_session_->get_cache_time(), default_tfs_session_->get_cache_items());
+
+  if (NULL == tfs_session)
+  {
+    TBSYS_LOG(ERROR, "can not get tfs session : %s.", ns_addr);
+    ret = TFS_ERROR;
+  }
+  else
+  {
+    TfsFile* tfs_file = NULL;
+    if (file_name[0] == 'T')
+    {
+      tfs_file = new TfsSmallFile();
+      tfs_file->set_session(tfs_session);
+      ret = tfs_file->unlink(file_name, suffix, action);
+    }
+    else if (file_name[0] == 'L')
+    {
+      // action ~= common::T_LARGE;
+      if (0 != action)
+      {
+        TBSYS_LOG(ERROR, "can not unlink large file with action: %d", action);
+        ret = TFS_ERROR;
+      }
+      else
+      {
+        tfs_file = new TfsLargeFile();
+        tfs_file->set_session(tfs_session);
+        ret = tfs_file->unlink(file_name, suffix, action);
+      }
+    }
+    else
+    {
+      TBSYS_LOG(ERROR, "tfs file name illegal: %s", file_name);
+    }
   }
 
   return ret;

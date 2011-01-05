@@ -70,18 +70,20 @@ int TfsSession::get_block_info(uint32_t& block_id, VUINT64 &rds, int32_t flag)
   // insert to cache 
   if (flag & T_WRITE)
   {
-    flag |= T_CREATE;
+    if (!(flag & T_NOLEASE)) // write, no unlink 
+    {
+      flag |= T_CREATE;
+    }
     ret = get_block_info_ex(block_id, rds, flag);
   }
-  else // read || unlink
+  else // read
   {
     if (0 == block_id)
     {
-      TBSYS_LOG(ERROR, "blockid zero error for mode: %d", block_id, flag);
+      TBSYS_LOG(ERROR, "blockid zero error for blockid: %d, mode: %d", block_id, flag);
       ret = TFS_ERROR;
     }
-
-    if (TFS_SUCCESS == ret)
+    else
     {
       // search in the local cache
       bool flag = false;  
@@ -126,7 +128,10 @@ int TfsSession::get_block_info(SEG_DATA_LIST& seg_list, int32_t flag)
   int ret = TFS_SUCCESS;
   if (flag & T_WRITE)
   {
-    flag |= T_CREATE;
+    if (!(flag & T_NOLEASE)) // write, no unlink 
+    {
+      flag |= T_CREATE;
+    }
     ret = get_block_info_ex(seg_list, flag);
   }
   else
@@ -202,13 +207,8 @@ int TfsSession::get_block_info(SEG_DATA_LIST& seg_list, int32_t flag)
   return ret;
 }
 
-
 int TfsSession::get_block_info_ex(uint32_t& block_id, VUINT64 &rds, const int32_t flag)
 {
-  // for test
-  //SetBlockInfoMessage gbi_message;
-  //VUINT64 tds = gbi_message.get_block_ds();
-
   GetBlockInfoMessage gbi_message(flag);
   gbi_message.set_block_id(block_id);
 

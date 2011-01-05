@@ -78,9 +78,6 @@ namespace tfs
         use_cache_ = flag;
       }
 
-      //TfsSession() : block_cache_time_(0), block_cache_items_(0)
-      //{}
-      //int get_block_info_ex(uint32_t& block_id, common::VUINT64 &rds, const int32_t flag);
     private:
       TfsSession();
       DISALLOW_COPY_AND_ASSIGN(TfsSession);

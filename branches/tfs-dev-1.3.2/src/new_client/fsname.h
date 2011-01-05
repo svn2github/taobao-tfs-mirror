@@ -38,7 +38,7 @@ namespace tfs
       FSName(const char *file_name, const char *prefix = NULL, int32_t cluster_id = 0);
       virtual ~FSName();
 
-      const char* get_name();
+      const char* get_name(bool large_flag = false);
       int set_name(const char *file_name, const char *prefix = NULL, const int32_t cluster_id = 0);
       void set_prefix(const char* prefix);
       std::string to_string();

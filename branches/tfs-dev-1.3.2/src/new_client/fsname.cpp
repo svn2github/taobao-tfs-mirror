@@ -96,14 +96,21 @@ namespace tfs
       return TFS_SUCCESS;
     }
 
-    const char* FSName::get_name()
+    const char* FSName::get_name(bool large_flag)
     {
       if (file_name_[0] != '\0')
       {
         return file_name_;
       }
       encode((char*) &file_, file_name_ + 2);
-      file_name_[0] = 'T';
+      if (large_flag)
+      {
+        file_name_[0] = 'L';
+      }
+      else
+      {
+        file_name_[0] = 'T';
+      }
       file_name_[1] = static_cast<char> ('0' + cluster_id_);
       file_name_[FILE_NAME_LEN] = '\0';
       return file_name_;

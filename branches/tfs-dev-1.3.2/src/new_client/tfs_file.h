@@ -23,6 +23,7 @@ namespace tfs
       FILE_PHASE_CLOSE_FILE,
       FILE_PHASE_READ_FILE,
       FILE_PHASE_STAT_FILE,
+      FILE_PHASE_UNLINK_FILE
     };
 
     enum
@@ -44,7 +45,7 @@ namespace tfs
       virtual ~TfsFile();
 
       // virtual interface
-      virtual int open(const char* file_name, const char *suffix, int flags, ... ) = 0;
+      virtual int open(const char* file_name, const char* suffix, const int flags, ... ) = 0;
       virtual int64_t read(void* buf, int64_t count) = 0;
       virtual int64_t write(const void* buf, int64_t count) = 0;
       virtual int64_t lseek(int64_t offset, int whence) = 0;
@@ -52,6 +53,7 @@ namespace tfs
       virtual int64_t pwrite(const void* buf, int64_t count, int64_t offset) = 0;
       virtual int fstat(common::FileInfo* file_info, int32_t mode = common::NORMAL_STAT) = 0;
       virtual int close() = 0;
+      virtual int unlink(const char* file_name, const char* suffix, const int action) = 0;
 
       const char* get_file_name();
       void set_session(TfsSession* tfs_session);
@@ -64,7 +66,7 @@ namespace tfs
       virtual int write_process() = 0;
       virtual int finish_write_process() = 0;
       virtual int close_process() = 0;
-      //virtual int stat_process() = 0;
+      virtual int unlink_process() = 0;
 
     protected:
       // common operation
@@ -99,6 +101,9 @@ namespace tfs
 
       int async_req_stat_file(const int64_t wait_id, const int32_t index);
       int async_rsp_stat_file(message::Message* packet, const int32_t index);
+
+      int async_req_unlink_file(const int64_t wait_id, const int32_t index);
+      int async_rsp_unlink_file(message::Message* packet, const int32_t index);
 
     protected:
       static const int64_t WAIT_TIME_OUT = 3000000;

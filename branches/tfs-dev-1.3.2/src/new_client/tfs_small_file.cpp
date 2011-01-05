@@ -66,6 +66,21 @@ int TfsSmallFile::close()
   return close_ex();
 }
 
+int TfsSmallFile::unlink(const char* file_name, const char* suffix, const int action)
+{
+  int ret = open_ex(file_name, suffix, T_WRITE | T_NOLEASE);
+  if (TFS_SUCCESS != ret)
+  {
+    TBSYS_LOG(DEBUG, "tfs unlink fail, file_name: %s, action: %d", (file_name == NULL) ? file_name : "NULL", action);
+  }
+  else
+  {
+    meta_seg_->file_number_ = action;
+    ret = unlink_process();
+  }
+  return ret;
+}
+
 int TfsSmallFile::get_segment_for_read(int64_t offset, char* buf, int64_t count)
 {
   return get_segment_for_write(offset, buf, count);
@@ -79,7 +94,7 @@ int TfsSmallFile::get_segment_for_write(int64_t offset, const char* buf, int64_t
 
 int TfsSmallFile::read_process()
 {
-  int ret = TFS_ERROR;
+  int ret = TFS_SUCCESS;
   if ((ret = process(FILE_PHASE_READ_FILE)) != TFS_SUCCESS)
   {
     TBSYS_LOG(ERROR, "read data fail, ret: %d", ret);
@@ -89,7 +104,7 @@ int TfsSmallFile::read_process()
 
 int TfsSmallFile::write_process()
 {
-  int ret = TFS_ERROR;
+  int ret = TFS_SUCCESS;
   // write data
   if ((ret = process(FILE_PHASE_WRITE_DATA)) != TFS_SUCCESS)
   {
@@ -114,12 +129,22 @@ int32_t TfsSmallFile::finish_write_process()
 
 int TfsSmallFile::close_process()
 {
-  int ret = TFS_ERROR;
+  int ret = TFS_SUCCESS;
   get_meta_segment(0, NULL, 0);
   if ((ret = process(FILE_PHASE_CLOSE_FILE)) != TFS_SUCCESS)
   {
     TBSYS_LOG(ERROR, "close tfs file fail, ret: %d", ret);
-    return ret;
+  }
+  return ret;
+}
+
+int TfsSmallFile::unlink_process()
+{
+  int ret = TFS_SUCCESS;
+  get_meta_segment(0, NULL, 0);
+  if ((ret = process(FILE_PHASE_UNLINK_FILE)) != TFS_SUCCESS)
+  {
+    TBSYS_LOG(ERROR, "unlink file fail, ret: %d", ret);
   }
   return ret;
 }

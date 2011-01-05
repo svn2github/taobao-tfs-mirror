@@ -115,6 +115,13 @@ namespace tfs
       int fstat(const int fd, common::FileInfo* buf, const int mode = common::NORMAL_STAT);
       int close(const int fd, char* tfs_name = NULL, const int32_t len = 0);
 
+      // LargeFile's name will be start with L
+      int unlink(const char* file_name, const char* suffix = NULL, const int action = 0)
+      {
+        return unlink(file_name, suffix, NULL, action);
+      }
+      int unlink(const char* file_name, const char* suffix, const char* ns_addr, const int action = 0);
+
     private:
       int open_ex(const char* file_name, const char* suffix, const char* ns_addr,
              const int flags, ...);
