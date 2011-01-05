@@ -26,12 +26,18 @@
 
 #ifdef __OPTIMIZE__
 extern int error_open_missing_mode (void)
-    __attribute__((__error__ ("open with T_LARGE flag needs 1 additional argument")));
-extern int warn_open_too_many_arguments (void)
-    __attribute__((__error__ ("open can be called with either 3 or 4 arguments, no more permitted")));
-#define log_error() warn_open_too_many_arguments()
+    __attribute__((__error__ ("open with (T_LARGE & T_WRITE) flag needs 1 additional argument")));
+extern int error_no_addition_mode (void)
+    __attribute__((__error__ ("open without (T_LARGE & T_WRITE) flag needs no more additional argument")));
+extern int error_open_too_many_arguments (void)
+    __attribute__((__error__ ("open can be called with either 3 or 4 or 5 arguments, no more permitted")));
+#define missing_log_error() error_open_missing_mode()
+#define noadditional_log_error() error_no_addition_mode()
+#define overmany_log_error() warn_open_too_many_arguments()
 #else 
-#define log_error() TBSYS_LOG(ERROR, "open argument illegal");
+#define missing_log_error() TBSYS_LOG(ERROR, "open with (T_LARGE & T_WRITE) flag needs 1 additional argument")
+#define noadditional_log_error() TBSYS_LOG(ERROR, "open without (T_LARGE & T_WRITE) flag needs no more additional argument")
+#define overmany_log_error() TBSYS_LOG(ERROR, "open can be called with either 3 or 4 or 5 arguments, no more permitted")
 #endif
 
 namespace tfs
@@ -60,7 +66,7 @@ namespace tfs
       {
         if (__builtin_va_arg_pack_len() > 1)
         {
-          log_error();
+          overmany_log_error();
           return common::EXIT_INVALIDFD_ERROR;
         }
 
@@ -68,13 +74,13 @@ namespace tfs
         {
           if (__builtin_va_arg_pack_len() != 1)
           {
-            log_error();
+            missing_log_error();
             return common::EXIT_INVALIDFD_ERROR;
           }
         }
         else if (__builtin_va_arg_pack_len() > 0)
         {
-          log_error();
+          noadditional_log_error();
           return common::EXIT_INVALIDFD_ERROR;
         }
 
@@ -84,24 +90,23 @@ namespace tfs
       __always_inline __attribute__ ((__gnu_inline__)) int
         open(const char* file_name, const char* suffix, const char* ns_addr, const int flags, ... )
       {
-        TBSYS_LOG(DEBUG, "open argument: %d", __builtin_va_arg_pack_len());
         if (__builtin_va_arg_pack_len() > 1)
         {
-          log_error();
+          overmany_log_error();
           return common::EXIT_INVALIDFD_ERROR;
         }
 
-        if (flags & common::T_LARGE)
+        if (flags & common::T_WRITE && flags & common::T_LARGE)
         {
           if (__builtin_va_arg_pack_len() != 1)
           {
-            log_error();
+            missing_log_error();
             return common::EXIT_INVALIDFD_ERROR;
           }
         }
         else if (__builtin_va_arg_pack_len() > 0)
         {
-          log_error();
+          noadditional_log_error();
           return common::EXIT_INVALIDFD_ERROR;
         }
         return open_ex(file_name, suffix, ns_addr, flags, __builtin_va_arg_pack());

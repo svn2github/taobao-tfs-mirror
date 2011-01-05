@@ -347,38 +347,6 @@ int LocalKey::get_segment_for_read(const int64_t offset, const char* buf,
   return TFS_SUCCESS;
 }
 
-//int LocalKey::get_segment_for_unlink(const int64_t offset, const int64_t count,
-//                                     const int32_t action, SEG_DATA_LIST& seg_list)
-//{
-//  SegmentInfo seg_info;
-//  seg_info.offset_ = offset;
-//  SEG_SET_ITER it;
-//  if (0 == offset)
-//  {
-//    it = seg_info_.lower_bound(seg_info);
-//  }
-//  else
-//  {
-//    it = seg_info_.upper_bound(seg_info);
-//  }
-//
-//  SegmentData* seg_data = NULL;
-//  int get_count = 0;
-//  for (; it != seg_info_.end(); ++it, ++get_count)
-//  {
-//    if (get_count >= count)
-//    {
-//      break;
-//    }
-//    seg_data = new SegmentData();
-//    seg_data->seg_info_ = *it;
-//    seg_data->file_number_ = action;
-//    seg_list.push_back(seg_data);
-//  }
-//
-//  return TFS_SUCCESS;
-//}
-
 void LocalKey::get_segment(const int64_t start, const int64_t end,
                          const char* buf, int64_t& size, SEG_DATA_LIST& seg_list)
 {

@@ -38,14 +38,16 @@ namespace tfs
     private:
       int upload_key();
       int remove_key();
-      int load_meta(const char* file_name, const char* suffix, const int flags);
+      int load_meta(common::FileInfo& file_info);
 
     private:
       static const int64_t MAX_META_SIZE = 1 << 22;
+      static const int64_t INVALID_FILE_SIZE = -1;
 
     private:
       LocalKey local_key_;
       bool read_meta_flag_;
+      char* meta_suffix_;
     };
   }
 }

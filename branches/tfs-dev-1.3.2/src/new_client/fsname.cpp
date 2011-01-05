@@ -88,10 +88,13 @@ namespace tfs
       memset(&file_, 0, sizeof(FileBits));
       if ((NULL == file_name) || strlen(file_name) <= 0)
       {
-        TBSYS_LOG(ERROR, "invalid file name: %s", NULL == file_name ? "NULL" : file_name);
-        return TFS_ERROR;
+        //TBSYS_LOG(ERROR, "invalid file name: %s", NULL == file_name ? "NULL" : file_name);
+        //return TFS_ERROR;
       }
-      decode(file_name + 2, (char*) &file_);
+      else
+      {
+        decode(file_name + 2, (char*) &file_);
+      }
       set_prefix(prefix);
       return TFS_SUCCESS;
     }

@@ -116,9 +116,6 @@ namespace tfs
       int get_segment_for_read(const int64_t offset, const char* buf,
                                const int64_t size, SEG_DATA_LIST& seg_list);
 
-      //int get_segment_for_unlink(const int64_t offset, const int64_t count,
-      //                           const int32_t action, SEG_DATA_LIST& seg_list);
-
       int add_segment(SegmentInfo& seg_info);
 
       int64_t get_file_size();  // get size that segments contain

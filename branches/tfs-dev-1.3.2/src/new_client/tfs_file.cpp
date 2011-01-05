@@ -42,7 +42,7 @@ int TfsFile::open_ex(const char* file_name, const char* suffix, int32_t flags)
     {
       flags_ = flags;
     }
-    if (NULL != file_name)
+    if (NULL != file_name || NULL != suffix)
     {
       fsname_.set_name(file_name, suffix);
     }
@@ -287,7 +287,7 @@ int TfsFile::fstat_ex(FileInfo* file_info, int32_t mode)
     TBSYS_LOG(ERROR, "stat fail: file not open");
     ret = EXIT_GENERAL_ERROR;
   }
-  else if (!(flags_ & READ_MODE))
+  else if (!((flags_ & T_READ) || (flags_ & T_STAT)))
   {
     TBSYS_LOG(ERROR, "stat fail: file open without read flag");
     ret = EXIT_GENERAL_ERROR;

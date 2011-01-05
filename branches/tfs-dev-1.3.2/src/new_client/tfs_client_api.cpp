@@ -117,11 +117,6 @@ int TfsClient::close(const int fd, char* tfs_name, const int32_t len)
     {
       if (NULL == tfs_name || len < TFS_FILE_LEN)
       {
-        //Todo
-        //if (tfs_file->get_flag() & T_LARGE && tfs_file->get_flag() & T_WRITE)
-        //{
-        //  ret = TFS_ERROR;
-        //}
       }
       else
       {
@@ -209,10 +204,9 @@ int TfsClient::unlink(const char* file_name, const char* suffix, const char* ns_
     }
     else if (file_name[0] == 'L')
     {
-      // action ~= common::T_LARGE;
-      if (0 != action)
+      if (DELETE != action && CONCEAL != action && REVEAL != action)
       {
-        TBSYS_LOG(ERROR, "can not unlink large file with action: %d", action);
+        TBSYS_LOG(ERROR, "now can not unlink large file with action: %d", action);
         ret = TFS_ERROR;
       }
       else
