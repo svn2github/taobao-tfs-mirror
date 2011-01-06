@@ -10,16 +10,16 @@ namespace tfs
 {
   namespace client
   {
-    enum SegmentStatus
-    {
-      SEG_STATUS_SUCCESS = 0,
-      SEG_STATUS_FAIL
-    };
-
     enum TfsFileEofFlag
     {
       TFS_FILE_EOF_FLAG_NO = 0x00,
       TFS_FILE_EOF_FLAG_YES
+    };
+
+    enum LocalKeyStatus
+    {
+      LOCAL_KEY_NOT_OVER = 0,
+      LOCAL_KEY_OVER
     };
 
 #pragma pack(4)
@@ -27,7 +27,8 @@ namespace tfs
     {
       int32_t count_;           // segment count
       int64_t size_;            // total size that segments contain
-      SegmentHead() : count_(0), size_(0)
+      int32_t over_;            // for local gc identify
+      SegmentHead() : count_(0), size_(0), over_(LOCAL_KEY_NOT_OVER)
       {
       }
     };
@@ -51,6 +52,15 @@ namespace tfs
     };
 #pragma pack()
 
+    enum SegmentStatus
+    {
+      SEG_STATUS_NOT_INIT = 0,      // not initialized
+      SEG_STATUS_OPEN_OVER,         // all is completed
+      SEG_STATUS_CREATE_OVER,       // create file is completed
+      SEG_STATUS_BEFORE_CLOSE_OVER, // all before final close is completed
+      SEG_STATUS_ALL_OVER           // all is completed
+    };
+
     struct SegmentData
     {
       bool delete_flag_;  // delete flag
@@ -66,7 +76,7 @@ namespace tfs
 
       SegmentData() : delete_flag_(true), whole_file_flag_(true), buf_(NULL), file_info_(NULL),
                       file_number_(0), pri_ds_index_(-1),
-                      status_(SEG_STATUS_SUCCESS), eof_(TFS_FILE_EOF_FLAG_NO)
+                      status_(SEG_STATUS_NOT_INIT), eof_(TFS_FILE_EOF_FLAG_NO)
       {
       }
 
@@ -109,6 +119,7 @@ namespace tfs
       int load(const char* buf);
       int validate();
       int save();
+      int over();
       int remove();
 
       int get_segment_for_write(const int64_t offset, const char* buf,

@@ -110,7 +110,7 @@ int TfsLargeFile::fstat(FileInfo* file_info, int32_t mode)
     if (0 == file_info->flag_)
     {
       // load meta
-      if ((ret = load_meta(*file_info)) == TFS_SUCCESS) 
+      if ((ret = load_meta(*file_info)) == TFS_SUCCESS)
       {
         // dangerous .. length crash
         file_info->size_ = static_cast<int32_t>(local_key_.get_file_size());
@@ -140,7 +140,7 @@ int TfsLargeFile::close()
 int TfsLargeFile::unlink(const char* file_name, const char* suffix, const int action)
 {
   // read meta first
-  int ret = TFS_SUCCESS; 
+  int ret = TFS_SUCCESS;
   if ((ret = open_ex(file_name, suffix, T_READ)) != TFS_SUCCESS)
   {
     TBSYS_LOG(ERROR, "open meta file fail, ret: %d", ret);
@@ -234,6 +234,7 @@ int TfsLargeFile::read_process()
 int TfsLargeFile::write_process()
 {
   int ret = TFS_SUCCESS;
+  // get block info fail, must exit.
   if ((ret = tfs_session_->get_block_info(processing_seg_list_, flags_)) != TFS_SUCCESS)
   {
     TBSYS_LOG(ERROR, "batch get block info error, count: %d, flag: %d", processing_seg_list_.size(), flags_);
@@ -241,7 +242,7 @@ int TfsLargeFile::write_process()
   else
   {
     // create file
-    if ((ret = process(FILE_PHASE_CREATE_FILE)) != TFS_SUCCESS)
+    if (EXIT_ALL_SEGMENT_ERROR == (ret = process(FILE_PHASE_CREATE_FILE)))
     {
       TBSYS_LOG(ERROR, "create file name fail, ret: %d", ret);
     }
@@ -249,7 +250,7 @@ int TfsLargeFile::write_process()
     {
       TBSYS_LOG(DEBUG, "create file success, ret: %d", ret);
       // write data
-      if ((ret = process(FILE_PHASE_WRITE_DATA)) != TFS_SUCCESS)
+      if (EXIT_ALL_SEGMENT_ERROR == (ret = process(FILE_PHASE_WRITE_DATA)))
       {
         TBSYS_LOG(ERROR, "write data fail, ret: %d", ret);
       }
@@ -257,7 +258,7 @@ int TfsLargeFile::write_process()
       {
         TBSYS_LOG(DEBUG, "write data success, ret: %d", ret);
         // close file
-        if ((ret = process(FILE_PHASE_CLOSE_FILE)) != TFS_SUCCESS)
+        if (EXIT_ALL_SEGMENT_ERROR == (ret = process(FILE_PHASE_CLOSE_FILE)))
         {
           TBSYS_LOG(ERROR, "close tfs file fail, ret: %d", ret);
         }
@@ -272,23 +273,53 @@ int TfsLargeFile::write_process()
   return ret;
 }
 
-int32_t TfsLargeFile::finish_write_process()
+int32_t TfsLargeFile::finish_write_process(int status)
 {
   int32_t count = 0;
   int ret = TFS_ERROR;
   SEG_DATA_LIST_ITER it = processing_seg_list_.begin();
-  for (; it != processing_seg_list_.end(); it++)
+
+  // just for unnecessary iteration and vector erase operation, cope with different status.
+  // a little duplicated code
+
+  if (TFS_SUCCESS == status)
   {
-    if (SEG_STATUS_SUCCESS == (*it)->status_)
+    count = processing_seg_list_.size();
+    for (; it != processing_seg_list_.end(); it++)
     {
-      if ((ret = local_key_.add_segment((*it)->seg_info_)) != TFS_SUCCESS)
+      if ((ret = local_key_.add_segment((*it)->seg_info_)) != TFS_SUCCESS) // should never happen
       {
         break;
       }
-      count++;
+      else
+      {
+        tbsys::gDelete(*it);
+      }
+    }
+    processing_seg_list_.clear();
+  }
+  else if (status != EXIT_ALL_SEGMENT_ERROR)
+  {
+    for (; it != processing_seg_list_.end(); it++)
+    {
+      if (SEG_STATUS_ALL_OVER == (*it)->status_) // all over
+      {
+        if ((ret = local_key_.add_segment((*it)->seg_info_)) != TFS_SUCCESS)
+        {
+          break;
+        }
+        else
+        {
+          tbsys::gDelete(*it);
+          processing_seg_list_.erase(it);
+          count++;
+        }
+      }
     }
   }
-  if (TFS_SUCCESS == ret)
+
+  // maybe move from here
+  if (TFS_SUCCESS == ret && count > 0)
   {
     ret = local_key_.save();
   }
@@ -303,9 +334,11 @@ int TfsLargeFile::close_process()
   {
     TBSYS_LOG(ERROR, "close tfs file fail: upload key fail, ret: %d");
   }
-  else if (remove_key() != TFS_SUCCESS)
+  // upload fail, NOT remove local key, for later endpoint resume.
   // upload success, then remove local key.
-  // TODO.. remove fail, then gc may collect data actually write success
+  // ignore remove fail, because local key's over identify is already set,
+  // gc should not collect data actually write success and will remove local key file.
+  else if (remove_key() != TFS_SUCCESS)
   {
     TBSYS_LOG(ERROR, "remove key fail, desc: %s", strerror(errno));
   }
@@ -358,7 +391,9 @@ int TfsLargeFile::upload_key()
   {
     int32_t size = local_key_.get_data_size();
     char* buf = new char[size];
+    // local key over is still NOT OVER, that's ok
     local_key_.dump_data(buf);
+    // TODO .. open large with mainname
     if ((ret = open_ex(NULL, meta_suffix_, T_WRITE)) != TFS_SUCCESS)
     {
       TBSYS_LOG(ERROR, "upload key fail, open file fail, ret: %d");
@@ -385,6 +420,10 @@ int TfsLargeFile::upload_key()
     {
       fsname_.set_file_id(meta_seg_->seg_info_.file_id_);
       fsname_.set_block_id(meta_seg_->seg_info_.block_id_);
+      if ((ret = local_key_.over()) != TFS_SUCCESS)
+      {
+        TBSYS_LOG(ERROR, "upload key fail, done over fail, ret: %d", ret);
+      }
     }
     tbsys::gDeleteA(buf);
   }

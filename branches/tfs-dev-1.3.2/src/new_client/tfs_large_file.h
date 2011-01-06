@@ -31,7 +31,7 @@ namespace tfs
       virtual int get_segment_for_write(int64_t offset, const char* buf, int64_t count);
       virtual int read_process();
       virtual int write_process();
-      virtual int32_t finish_write_process();
+      virtual int32_t finish_write_process(int status);
       virtual int close_process();
       virtual int unlink_process();
 

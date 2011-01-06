@@ -34,7 +34,7 @@ extern int error_open_too_many_arguments (void)
 #define missing_log_error() error_open_missing_mode()
 #define noadditional_log_error() error_no_addition_mode()
 #define overmany_log_error() warn_open_too_many_arguments()
-#else 
+#else
 #define missing_log_error() TBSYS_LOG(ERROR, "open with (T_LARGE & T_WRITE) flag needs 1 additional argument")
 #define noadditional_log_error() TBSYS_LOG(ERROR, "open without (T_LARGE & T_WRITE) flag needs no more additional argument")
 #define overmany_log_error() TBSYS_LOG(ERROR, "open can be called with either 3 or 4 or 5 arguments, no more permitted")
@@ -139,6 +139,7 @@ namespace tfs
       DISALLOW_COPY_AND_ASSIGN(TfsClient);
       ~TfsClient();
 
+      bool is_init_;
       TfsSession* default_tfs_session_;
       int fd_;
       FILE_MAP tfs_file_map_;

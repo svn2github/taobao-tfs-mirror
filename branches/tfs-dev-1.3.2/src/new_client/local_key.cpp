@@ -1,4 +1,5 @@
 #include "local_key.h"
+#include "common/directory_op.h"
 #include "common/error_msg.h"
 #include <unistd.h>
 
@@ -17,42 +18,51 @@ LocalKey::~LocalKey()
 
 int LocalKey::initialize(const char* local_key, const uint64_t addr)
 {
-  const static char* g_tmp_path = "/tmp/";
-  char name[MAX_PATH_LENGTH];
-  strncpy(name, g_tmp_path, MAX_PATH_LENGTH - 1);
-  char* tmp_file = name + strlen(g_tmp_path);
-
+  const static char* g_tmp_path = "/tmp/TFSlocalkeyDIR/";
   int ret = TFS_SUCCESS;
-  if (NULL == realpath(local_key, tmp_file))
+
+  if (!DirectoryOp::create_full_path(g_tmp_path))
   {
-    TBSYS_LOG(ERROR, "initialize local key %s fail: %s", local_key, strerror(errno));
-    ret = TFS_ERROR;
+    TBSYS_LOG(ERROR, "initialize local key fail, create directory %s failed, error: %d",
+              g_tmp_path, strerror(errno));
+    ret = EXIT_GENERAL_ERROR;
   }
   else
   {
-    // convert tmp file name
-    char* pos = NULL;
-    while ((pos = strchr(tmp_file, '/')))
-    {
-      tmp_file = pos;
-      *pos = '!';
-    }
-    snprintf(name + strlen(name), MAX_PATH_LENGTH - strlen(name), "%" PRI64_PREFIX "u", addr);
+    char name[MAX_PATH_LENGTH];
+    strncpy(name, g_tmp_path, MAX_PATH_LENGTH - 1);
+    char* tmp_file = name + strlen(g_tmp_path);
 
-    memset(&seg_head_, 0, sizeof(SegmentHead));
-    seg_info_.clear();
-    int is_exist = access(name, F_OK);
-    if (0 != is_exist) //not exist
+    if (NULL == realpath(local_key, tmp_file))
     {
-      file_op_ = new FileOperation(name, O_RDWR|O_CREAT);
+      TBSYS_LOG(ERROR, "initialize local key %s fail: %s", local_key, strerror(errno));
+      ret = TFS_ERROR;
     }
     else
     {
-      file_op_ = new FileOperation(name, O_RDWR);
-      ret = load();
+      // convert tmp file name
+      char* pos = NULL;
+      while ((pos = strchr(tmp_file, '/')))
+      {
+        tmp_file = pos;
+        *pos = '!';
+      }
+      snprintf(name + strlen(name), MAX_PATH_LENGTH - strlen(name), "%" PRI64_PREFIX "u", addr);
+
+      memset(&seg_head_, 0, sizeof(SegmentHead));
+      seg_info_.clear();
+      int is_exist = access(name, F_OK);
+      if (0 != is_exist) //not exist
+      {
+        file_op_ = new FileOperation(name, O_RDWR|O_CREAT);
+      }
+      else
+      {
+        file_op_ = new FileOperation(name, O_RDWR);
+        ret = load();
+      }
     }
   }
-
   return ret;
 }
 
@@ -192,6 +202,22 @@ int LocalKey::save()
     }
 
     tbsys::gDelete(buf);
+  }
+  return ret;
+}
+
+int LocalKey::over()
+{
+  seg_head_.over_ = LOCAL_KEY_OVER;
+  int ret = TFS_SUCCESS;
+  if ((ret = file_op_->pwrite_file(reinterpret_cast<const char*>(&seg_head_), sizeof(SegmentHead), 0)) != TFS_SUCCESS)
+  {
+    TBSYS_LOG(ERROR, "done over fail, ret: %d", ret);
+  }
+  else
+  {
+    TBSYS_LOG(INFO, "done over success, ret: %d", ret);
+    file_op_->flush_file();
   }
   return ret;
 }

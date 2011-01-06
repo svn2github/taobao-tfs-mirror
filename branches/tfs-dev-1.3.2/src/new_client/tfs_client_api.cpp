@@ -28,7 +28,7 @@ using namespace tfs::message;
 using namespace tfs::client;
 using namespace std;
 
-TfsClient::TfsClient() : default_tfs_session_(NULL), fd_(1)
+TfsClient::TfsClient() : is_init_(false), default_tfs_session_(NULL), fd_(1)
 {
 }
 
@@ -43,22 +43,34 @@ TfsClient::~TfsClient()
 
 int TfsClient::initialize(const char* ns_addr, const int32_t cache_time, const int32_t cache_items)
 {
+
   int ret = TFS_SUCCESS;
-  if (NULL == ns_addr)
+  tbutil::Mutex::Lock lock(mutex_);
+  if (is_init_)
   {
-    TBSYS_LOG(ERROR, "tfsclient initialize need ns ip");
-    ret = TFS_ERROR;
+    TBSYS_LOG(ERROR, "tfsclient already initialized");
+    ret = TFS_ERROR;            // TFS_SUCCESS ?
   }
   else
   {
-    tbutil::Mutex::Lock lock(mutex_);
-    if (NULL == (default_tfs_session_ = SESSION_POOL.get(ns_addr, cache_time, cache_items)))
+    if (NULL == ns_addr)
     {
-      TBSYS_LOG(ERROR, "tfsclient initialize to ns %s failed. must exit", ns_addr);
+      TBSYS_LOG(ERROR, "tfsclient initialize need ns ip");
       ret = TFS_ERROR;
     }
+    else
+    {
+      if (NULL == (default_tfs_session_ = SESSION_POOL.get(ns_addr, cache_time, cache_items)))
+      {
+        TBSYS_LOG(ERROR, "tfsclient initialize to ns %s failed. must exit", ns_addr);
+        ret = TFS_ERROR;
+      }
+      else
+      {
+        is_init_ = true;
+      }
+    }
   }
-
   return ret;
 }
 

@@ -113,15 +113,32 @@ int TfsSmallFile::write_process()
   return ret;
 }
 
-int32_t TfsSmallFile::finish_write_process()
+int32_t TfsSmallFile::finish_write_process(int status)
 {
   int32_t count = 0;
-  SEG_DATA_LIST_ITER it = processing_seg_list_.begin();
-  while (it != processing_seg_list_.end())
+
+  // for small file, once fail,
+  if (status != TFS_SUCCESS)
   {
-    if (SEG_STATUS_SUCCESS == (*it)->status_)
+    // open without filename, get new block and retry
+    if (0 == fsname_.get_block_id())
     {
-      count++;
+      // open(NULL, meta_suffix_, flags_);
+    }
+    // open with filename, just retry this block
+    else if (status != EXIT_ALL_SEGMENT_ERROR)
+    {
+      for (SEG_DATA_LIST_ITER it = processing_seg_list_.begin();
+           it != processing_seg_list_.end(); it++)
+      {
+        // for small file, segment just write, not close
+        if (SEG_STATUS_BEFORE_CLOSE_OVER == (*it)->status_)
+        {
+          tbsys::gDelete(*it);
+          processing_seg_list_.erase(it);
+          count++;
+        }
+      }
     }
   }
   return count;

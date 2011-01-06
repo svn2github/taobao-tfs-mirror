@@ -18,12 +18,30 @@ namespace tfs
   {
     enum InnerFilePhase
     {
-      FILE_PHASE_CREATE_FILE = 1,
+      FILE_PHASE_OPEN_FILE = 0,
+      FILE_PHASE_CREATE_FILE,
       FILE_PHASE_WRITE_DATA,
       FILE_PHASE_CLOSE_FILE,
       FILE_PHASE_READ_FILE,
       FILE_PHASE_STAT_FILE,
       FILE_PHASE_UNLINK_FILE
+    };
+
+    struct PhaseStatus
+    {
+      InnerFilePhase pre_phase_;
+      SegmentStatus status_;
+    };
+
+    // CAUTION: depend on InnerFilePhase member sequence, maybe change to map
+    const static PhaseStatus phase_status[] = {
+      {FILE_PHASE_OPEN_FILE, SEG_STATUS_OPEN_OVER}, // dummy open.
+      {FILE_PHASE_OPEN_FILE, SEG_STATUS_CREATE_OVER}, // create.
+      {FILE_PHASE_CREATE_FILE, SEG_STATUS_BEFORE_CLOSE_OVER}, // write
+      {FILE_PHASE_WRITE_DATA, SEG_STATUS_ALL_OVER}, // close. just read write stat unlink is same previous phase
+      {FILE_PHASE_OPEN_FILE, SEG_STATUS_ALL_OVER}, // read.
+      {FILE_PHASE_OPEN_FILE, SEG_STATUS_ALL_OVER}, // stat.
+      {FILE_PHASE_OPEN_FILE, SEG_STATUS_ALL_OVER} // unlink.
     };
 
     enum
@@ -64,7 +82,7 @@ namespace tfs
       virtual int get_segment_for_write(int64_t offset, const char* buf, int64_t count) = 0;
       virtual int read_process() = 0;
       virtual int write_process() = 0;
-      virtual int finish_write_process() = 0;
+      virtual int finish_write_process(int status) = 0;
       virtual int close_process() = 0;
       virtual int unlink_process() = 0;
 

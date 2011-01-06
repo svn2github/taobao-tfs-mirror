@@ -61,16 +61,16 @@ int TfsSession::initialize()
     }
   }
 
-  return ret; 
+  return ret;
 }
 
 int TfsSession::get_block_info(uint32_t& block_id, VUINT64 &rds, int32_t flag)
 {
   int ret = TFS_SUCCESS;
-  // insert to cache 
+  // insert to cache
   if (flag & T_WRITE)
   {
-    if (!(flag & T_NOLEASE)) // write, no unlink 
+    if (!(flag & T_NOLEASE)) // write, no unlink
     {
       flag |= T_CREATE;
     }
@@ -86,7 +86,7 @@ int TfsSession::get_block_info(uint32_t& block_id, VUINT64 &rds, int32_t flag)
     else
     {
       // search in the local cache
-      bool flag = false;  
+      bool flag = false;
       if (USE_CACHE_FLAG_YES == use_cache_)
       {
         tbutil::Mutex::Lock lock(mutex_);
@@ -128,7 +128,7 @@ int TfsSession::get_block_info(SEG_DATA_LIST& seg_list, int32_t flag)
   int ret = TFS_SUCCESS;
   if (flag & T_WRITE)
   {
-    if (!(flag & T_NOLEASE)) // write, no unlink 
+    if (!(flag & T_NOLEASE)) // write, no unlink
     {
       flag |= T_CREATE;
     }
@@ -185,19 +185,10 @@ int TfsSession::get_block_info(SEG_DATA_LIST& seg_list, int32_t flag)
           }
           else
           {
-            if (SEG_STATUS_SUCCESS == seg_list[i]->status_ && !seg_list[i]->ds_.empty()) 
-            {
-              block_cache.last_time_ = time(NULL);
-              block_cache.ds_ = seg_list[i]->ds_;
-              tbutil::Mutex::Lock lock(mutex_);
-              block_cache_map_.insert(seg_list[i]->seg_info_.block_id_, block_cache);
-            }
-            else
-            {
-              ret = TFS_ERROR;
-              TBSYS_LOG(ERROR, "batch get block info fail seg index: %d, status: %d, ds size: %d",
-                  i, seg_list[i]->status_, seg_list[i]->ds_.size());
-            }
+            block_cache.last_time_ = time(NULL);
+            block_cache.ds_ = seg_list[i]->ds_;
+            tbutil::Mutex::Lock lock(mutex_);
+            block_cache_map_.insert(seg_list[i]->seg_info_.block_id_, block_cache);
           }
         }
       }
@@ -309,6 +300,7 @@ int TfsSession::get_block_info_ex(SEG_DATA_LIST& seg_list, const int32_t flag)
           if (it != block_info.end())
           {
             seg_list[i]->ds_ = it->second.ds_;
+            seg_list[i]->status_ = SEG_STATUS_OPEN_OVER;
             TBSYS_LOG(DEBUG, "get block %d info, ds size: %d, return size: %d",
                 seg_list[i]->seg_info_.block_id_, seg_list[i]->ds_.size(), it->second.ds_.size());
           }
@@ -323,6 +315,7 @@ int TfsSession::get_block_info_ex(SEG_DATA_LIST& seg_list, const int32_t flag)
         {
           seg_list[i]->seg_info_.block_id_ = it->first;
           seg_list[i]->ds_ = it->second.ds_;
+          seg_list[i]->status_ = SEG_STATUS_OPEN_OVER;
           TBSYS_LOG(DEBUG, "get write block %u success, ds list size: %d", seg_list[i]->seg_info_.block_id_, seg_list[i]->ds_.size());
           if (it->second.has_lease_) // should have
           {
@@ -376,13 +369,13 @@ int TfsSession::get_cluster_id_from_ns()
   else if (STATUS_MESSAGE == rsp->get_message_type())
   {
     StatusMessage* status_msg = dynamic_cast<StatusMessage*>(rsp);
-    //ugly use error msg 
+    //ugly use error msg
     if (status_msg->get_status() == STATUS_MESSAGE_OK &&
         strlen(status_msg->get_error()) > 0)
     {
       char cluster_id = static_cast<char> (atoi(status_msg->get_error()));
       if (isdigit(cluster_id) || isalpha(cluster_id))
-      {   
+      {
         cluster_id_ = cluster_id - '0';
         TBSYS_LOG(INFO, "get cluster id from nameserver success. cluster id: %d", cluster_id_);
       }
