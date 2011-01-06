@@ -49,7 +49,7 @@ int TfsClient::initialize(const char* ns_addr, const int32_t cache_time, const i
   if (is_init_)
   {
     TBSYS_LOG(ERROR, "tfsclient already initialized");
-    ret = TFS_ERROR;            // TFS_SUCCESS ?
+    ret = TFS_ERROR;
   }
   else
   {

@@ -431,8 +431,8 @@ int LocalKey::load_segment(const char* buf)
   const SegmentInfo* segment = reinterpret_cast<const SegmentInfo*>(buf);
   for (int32_t i = 0; i < count; ++i)
   {
-    TBSYS_LOG(DEBUG, "load segment info, offset: %"PRI64_PREFIX"d, blockid: %u, fileid: %"PRI64_PREFIX"u, size: %d",
-              segment[i].offset_, segment[i].block_id_, segment[i].file_id_, segment[i].size_);
+    TBSYS_LOG(DEBUG, "load segment info, offset: %"PRI64_PREFIX"d, blockid: %u, fileid: %"PRI64_PREFIX"u, size: %d, crc: %u",
+              segment[i].offset_, segment[i].block_id_, segment[i].file_id_, segment[i].size_, segment[i].crc_);
 
     if (!seg_info_.insert(segment[i]).second)
     {

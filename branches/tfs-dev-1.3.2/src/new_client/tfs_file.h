@@ -7,7 +7,6 @@
 #include "common/error_msg.h"
 #include "common/func.h"
 #include "message/client_manager.h"
-
 #include "tfs_session.h"
 #include "fsname.h"
 #include "local_key.h"
@@ -44,13 +43,13 @@ namespace tfs
       {FILE_PHASE_OPEN_FILE, SEG_STATUS_ALL_OVER} // unlink.
     };
 
-    enum
+    enum TfsFileOpenFlag
     {
       TFS_FILE_OPEN_YES = 0,
       TFS_FILE_OPEN_NO
     };
 
-    enum
+    enum TfsFileEofFlag
     {
       TFS_FILE_EOF_YES = 0,
       TFS_FILE_EOF_NO
@@ -137,8 +136,7 @@ namespace tfs
       int32_t eof_;
       int64_t offset_;
       SegmentData* meta_seg_;
-      //sync flag
-      int32_t option_flag_;
+      int32_t option_flag_; //sync flag
       TfsSession* tfs_session_;
       SEG_DATA_LIST processing_seg_list_;
     };

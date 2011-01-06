@@ -446,6 +446,7 @@ int TfsLargeFile::load_meta(FileInfo& file_info)
   meta_seg_->seg_info_.offset_ = 0;
   meta_seg_->seg_info_.size_ = size;
   meta_seg_->buf_ = seg_buf;
+  meta_seg_->status_ = SEG_STATUS_OPEN_OVER;
   read_meta_flag_ = true;
 
   if ((ret = read_ex(seg_buf, size, 0, false)) != size)

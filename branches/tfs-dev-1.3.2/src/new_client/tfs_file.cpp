@@ -6,7 +6,7 @@ using namespace tfs::common;
 using namespace tfs::message;
 
 TfsFile::TfsFile() : flags_(-1), is_open_(TFS_FILE_OPEN_NO), eof_(TFS_FILE_EOF_NO),
-                     offset_(0), tfs_session_(NULL)
+                     offset_(0), meta_seg_(NULL), option_flag_(0), tfs_session_(NULL)
 {
 }
 
@@ -48,10 +48,7 @@ int TfsFile::open_ex(const char* file_name, const char* suffix, int32_t flags)
     }
     fsname_.set_cluster_id(tfs_session_->get_cluster_id());
 
-    if (meta_seg_ != NULL)
-    {
-      tbsys::gDelete(meta_seg_);
-    }
+    tbsys::gDelete(meta_seg_);
     meta_seg_ = new SegmentData();
     meta_seg_->delete_flag_ = false;
     meta_seg_->seg_info_.block_id_ = fsname_.get_block_id();
@@ -221,8 +218,6 @@ int64_t TfsFile::write_ex(const void* buf, int64_t count, int64_t offset, bool m
 
         if (ret != TFS_SUCCESS)
         {
-          // TBSYS_LOG(ERROR, "write fail, offset: %"PRI64_PREFIX"d, size: %d, segment count total: %d, success: %d, ret: %d",
-          //           offset + check_size, cur_size, seg_count, suc_count, ret);
           TBSYS_LOG(ERROR, "write fail, offset: %"PRI64_PREFIX"d, size: %d, segment count total: %d, ret: %d",
                     offset + check_size, cur_size, seg_count, ret);
           ret = EXIT_GENERAL_ERROR;
@@ -315,7 +310,8 @@ int TfsFile::fstat_ex(FileInfo* file_info, int32_t mode)
     FileInfo* save_file_info = meta_seg_->file_info_;
     meta_seg_->file_info_ = file_info;
     flags_ = mode;
-    TBSYS_LOG(DEBUG, "fstat_ex mode: %d, flags_: %d", mode, flags_);
+    meta_seg_->status_ = SEG_STATUS_OPEN_OVER;
+    TBSYS_LOG(DEBUG, "fstat_ex mode: %d, flags_: %d, meta status: %d", mode, flags_, meta_seg_->status_);
     get_meta_segment(0, NULL, 0);  // just stat
     ret = process(FILE_PHASE_STAT_FILE);
 
@@ -424,7 +420,7 @@ int TfsFile::process(const InnerFilePhase file_phase)
         || (ret = do_async_request(file_phase, wait_id, i)) != TFS_SUCCESS)
     {
       // just continue
-      TBSYS_LOG(ERROR, "request %d fail", i);
+      TBSYS_LOG(ERROR, "request %d fail, status: %d", i, processing_seg_list_[i]->status_);
       req_size--;
     }
   }

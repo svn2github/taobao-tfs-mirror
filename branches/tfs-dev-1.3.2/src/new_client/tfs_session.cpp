@@ -159,6 +159,7 @@ int TfsSession::get_block_info(SEG_DATA_LIST& seg_list, int32_t flag)
             (block_cache->last_time_ >= time(NULL) - block_cache_time_))
         {
           seg_list[i]->ds_ = block_cache->ds_;
+          seg_list[i]->status_ = SEG_STATUS_OPEN_OVER;
           block_count++;
         }
       }
