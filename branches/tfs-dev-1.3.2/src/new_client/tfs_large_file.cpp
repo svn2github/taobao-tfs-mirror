@@ -66,7 +66,7 @@ int TfsLargeFile::open(const char* file_name, const char* suffix, const int flag
       {
         meta_suffix_ = const_cast<char*>(suffix);
         offset_ = 0;
-        eof_ = TFS_FILE_EOF_NO;
+        eof_ = TFS_FILE_EOF_FLAG_NO;
         is_open_ = TFS_FILE_OPEN_YES;
       }
       va_end(args);
@@ -101,31 +101,38 @@ int64_t TfsLargeFile::pwrite(const void* buf, int64_t count, int64_t offset)
   return pwrite_ex(buf, count, offset);
 }
 
-int TfsLargeFile::fstat(FileInfo* file_info, int32_t mode)
+int TfsLargeFile::fstat(FileStat* file_stat, int32_t mode)
 {
   TBSYS_LOG(DEBUG, "stat file start, mode: %d", mode);
-  int ret = fstat_ex(file_info, mode);
+  FileInfo file_info;
+  int ret = fstat_ex(&file_info, mode);
   if (TFS_SUCCESS == ret)
   {
-    if (0 == file_info->flag_)
+    if (0 == file_info.flag_)
     {
       // load meta
-      if ((ret = load_meta(*file_info)) == TFS_SUCCESS)
+      if ((ret = load_meta(file_info)) == TFS_SUCCESS)
       {
-        // dangerous .. length crash
-        file_info->size_ = static_cast<int32_t>(local_key_.get_file_size());
-        file_info->usize_ = static_cast<int32_t>(local_key_.get_file_size());
+        file_stat->file_id_ = file_info.id_;
+        file_stat->offset_ = file_info.offset_;
+        file_stat->size_ = local_key_.get_file_size();
+        file_stat->usize_ = local_key_.get_file_size();
+        file_stat->modify_time_ = file_info.modify_time_;
+        file_stat->create_time_ = file_info.create_time_;
+        file_stat->flag_ = file_info.flag_;
+        file_stat->crc_ = file_info.crc_;
       }
     }
     else // file is delete or conceal
     {
-      file_info->id_ = meta_seg_->seg_info_.file_id_;
-      file_info->offset_ = static_cast<int32_t>(INVALID_FILE_SIZE);
-      file_info->size_ = static_cast<int32_t>(INVALID_FILE_SIZE);
-      file_info->usize_ = static_cast<int32_t>(INVALID_FILE_SIZE);
-      file_info->crc_ = static_cast<int32_t>(INVALID_FILE_SIZE);
-      file_info->modify_time_ = static_cast<int32_t>(INVALID_FILE_SIZE);
-      file_info->create_time_ = static_cast<int32_t>(INVALID_FILE_SIZE);
+      file_stat->file_id_ = meta_seg_->seg_info_.file_id_;
+      file_stat->offset_ = static_cast<int32_t>(INVALID_FILE_SIZE);
+      file_stat->size_ = INVALID_FILE_SIZE;
+      file_stat->usize_ = INVALID_FILE_SIZE;
+      file_stat->modify_time_ = static_cast<time_t>(INVALID_FILE_SIZE);
+      file_stat->create_time_ = static_cast<time_t>(INVALID_FILE_SIZE);
+      file_stat->flag_ = file_info.flag_;
+      file_stat->crc_ = static_cast<uint32_t>(INVALID_FILE_SIZE);
     }
   }
 
@@ -300,7 +307,7 @@ int32_t TfsLargeFile::finish_write_process(int status)
   }
   else if (status != EXIT_ALL_SEGMENT_ERROR)
   {
-    for (; it != processing_seg_list_.end(); it++)
+    for (; it != processing_seg_list_.end();)
     {
       if (SEG_STATUS_ALL_OVER == (*it)->status_) // all over
       {
@@ -311,9 +318,13 @@ int32_t TfsLargeFile::finish_write_process(int status)
         else
         {
           tbsys::gDelete(*it);
-          processing_seg_list_.erase(it);
+          it = processing_seg_list_.erase(it);
           count++;
         }
+      }
+      else
+      {
+        it++;
       }
     }
   }

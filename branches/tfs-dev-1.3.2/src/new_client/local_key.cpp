@@ -312,6 +312,12 @@ int LocalKey::get_segment_for_write(const int64_t offset, const char* buf,
 int LocalKey::get_segment_for_read(const int64_t offset, const char* buf,
                                    const int64_t size, SEG_DATA_LIST& seg_list)
 {
+  if (offset >= seg_head_.size_)
+  {
+    TBSYS_LOG(DEBUG, "read file offset: %"PRI64_PREFIX"d, size: %"PRI64_PREFIX"d", offset, seg_head_.size_);
+    return TFS_SUCCESS;
+  }
+
   SegmentInfo seg_info;
   seg_info.offset_ = offset;
   SEG_SET_ITER it = seg_info_.lower_bound(seg_info);

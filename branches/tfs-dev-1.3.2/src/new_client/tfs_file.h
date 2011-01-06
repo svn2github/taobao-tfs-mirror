@@ -43,16 +43,10 @@ namespace tfs
       {FILE_PHASE_OPEN_FILE, SEG_STATUS_ALL_OVER} // unlink.
     };
 
-    enum TfsFileOpenFlag
+    enum
     {
       TFS_FILE_OPEN_YES = 0,
       TFS_FILE_OPEN_NO
-    };
-
-    enum TfsFileEofFlag
-    {
-      TFS_FILE_EOF_YES = 0,
-      TFS_FILE_EOF_NO
     };
 
     class TfsFile
@@ -68,7 +62,7 @@ namespace tfs
       virtual int64_t lseek(int64_t offset, int whence) = 0;
       virtual int64_t pread(void* buf, int64_t count, int64_t offset) = 0;
       virtual int64_t pwrite(const void* buf, int64_t count, int64_t offset) = 0;
-      virtual int fstat(common::FileInfo* file_info, int32_t mode = common::NORMAL_STAT) = 0;
+      virtual int fstat(common::FileStat* file_info, int32_t mode = common::NORMAL_STAT) = 0;
       virtual int close() = 0;
       virtual int unlink(const char* file_name, const char* suffix, const int action) = 0;
 
@@ -90,6 +84,7 @@ namespace tfs
       void destroy_seg();
       int get_meta_segment(const int64_t offset, char* buf, const int64_t count);
       int process(const InnerFilePhase file_phase);
+      int32_t finish_read_process(int status, int64_t& read_size);
 
       int open_ex(const char* file_name, const char *suffix, const int32_t flags);
       int64_t read_ex(void* buf, const int64_t count, const int64_t offset, const bool modify = true);

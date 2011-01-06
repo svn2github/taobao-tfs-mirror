@@ -64,6 +64,18 @@ namespace tfs
     typedef std::vector<std::string> VSTRING;
 
 #pragma pack(4)
+    struct FileStat
+    {
+      uint64_t file_id_;
+      int32_t offset_; // offset in block file
+      int64_t size_; // file size
+      int64_t usize_; // hold space
+      time_t modify_time_; // modify time
+      time_t create_time_; // create time
+      int32_t flag_; // deleta flag
+      uint32_t crc_; // crc value
+    };
+
     struct FileInfo
     {
       uint64_t id_; // file id

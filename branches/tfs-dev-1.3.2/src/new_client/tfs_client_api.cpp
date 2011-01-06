@@ -104,7 +104,7 @@ int64_t TfsClient::pwrite(const int fd, const void* buf, const int64_t count, co
   return tfs_file ? tfs_file->pwrite(buf, count, offset) : EXIT_INVALIDFD_ERROR;
 }
 
-int TfsClient::fstat(const int fd, common::FileInfo* buf, const int mode)
+int TfsClient::fstat(const int fd, common::FileStat* buf, const int mode)
 {
   TfsFile* tfs_file = get_file(fd);
   return tfs_file ? tfs_file->fstat(buf, static_cast<int32_t>(mode)) : EXIT_INVALIDFD_ERROR;
@@ -259,6 +259,6 @@ int TfsClient::erase_file(const int fd)
     return EXIT_INVALIDFD_ERROR;
   }
   tbsys::gDelete(it->second);
-  tfs_file_map_.erase(fd);
+  tfs_file_map_.erase(it);
   return TFS_SUCCESS;
 }

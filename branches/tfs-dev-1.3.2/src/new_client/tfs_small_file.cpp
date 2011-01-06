@@ -56,9 +56,22 @@ int64_t TfsSmallFile::pwrite(const void *buf, int64_t count, int64_t offset)
   return pwrite(buf, count, offset);
 }
 
-int TfsSmallFile::fstat(FileInfo* file_info, int32_t mode)
+int TfsSmallFile::fstat(FileStat* file_stat, int32_t mode)
 {
-  return fstat_ex(file_info, mode);
+  FileInfo file_info;
+  int ret = fstat_ex(&file_info, mode);
+  if (TFS_SUCCESS == ret)
+  {
+    file_stat->file_id_ = file_info.id_;
+    file_stat->offset_ = file_info.offset_;
+    file_stat->size_ = file_info.size_;
+    file_stat->usize_ = file_info.usize_;
+    file_stat->modify_time_ = file_info.modify_time_;
+    file_stat->create_time_ = file_info.create_time_;
+    file_stat->flag_ = file_info.flag_;
+    file_stat->crc_ = file_info.crc_;
+  }
+  return ret;
 }
 
 int TfsSmallFile::close()

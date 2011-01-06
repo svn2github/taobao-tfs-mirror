@@ -5,7 +5,7 @@ using namespace tfs::client;
 using namespace tfs::common;
 using namespace tfs::message;
 
-TfsFile::TfsFile() : flags_(-1), is_open_(TFS_FILE_OPEN_NO), eof_(TFS_FILE_EOF_NO),
+TfsFile::TfsFile() : flags_(-1), is_open_(TFS_FILE_OPEN_NO), eof_(TFS_FILE_EOF_FLAG_NO),
                      offset_(0), meta_seg_(NULL), option_flag_(0), tfs_session_(NULL)
 {
 }
@@ -82,7 +82,7 @@ int TfsFile::open_ex(const char* file_name, const char* suffix, int32_t flags)
   if (TFS_SUCCESS == ret)
   {
     offset_ = 0;
-    eof_ = TFS_FILE_EOF_NO;
+    eof_ = TFS_FILE_EOF_FLAG_NO;
     is_open_ = TFS_FILE_OPEN_YES;
   }
 
@@ -92,10 +92,16 @@ int TfsFile::open_ex(const char* file_name, const char* suffix, int32_t flags)
 int64_t TfsFile::read_ex(void* buf, const int64_t count, const int64_t offset, const bool modify)
 {
   int ret = TFS_SUCCESS;
+  int64_t read_size = 0;
   if (is_open_ != TFS_FILE_OPEN_YES)
   {
     TBSYS_LOG(ERROR, "read fail: file not open");
     ret = EXIT_GENERAL_ERROR;
+  }
+  else if (TFS_FILE_EOF_FLAG_YES == eof_)
+  {
+    TBSYS_LOG(DEBUG, "read file reach end");
+    return TFS_SUCCESS;
   }
   else if (flags_ & T_WRITE)
   {
@@ -121,13 +127,17 @@ int64_t TfsFile::read_ex(void* buf, const int64_t count, const int64_t offset, c
       }
 
       if ((ret = get_segment_for_read(offset + check_size, reinterpret_cast<char*>(buf) + check_size,
-                                      cur_size)) != TFS_SUCCESS
-          || 0 == processing_seg_list_.size())
+                                      cur_size)) != TFS_SUCCESS)
       {
         TBSYS_LOG(ERROR, "get segment for read fail, ret: %d, offset: %"PRI64_PREFIX"d, size: %d",
                   ret, offset + check_size, cur_size);
         ret = EXIT_GENERAL_ERROR;
-        // get read segment fail, must exit
+        break;
+      }
+      else if (0 == processing_seg_list_.size())
+      {
+        TBSYS_LOG(DEBUG, "large file read reach end, offset: %"PRI64_PREFIX"d, size: %d", offset + check_size, cur_size);
+        eof_ = TFS_FILE_EOF_FLAG_YES;
         break;
       }
       else
@@ -136,8 +146,8 @@ int64_t TfsFile::read_ex(void* buf, const int64_t count, const int64_t offset, c
         retry_count = CLIENT_TRY_COUNT;
         do
         {
-          // TODO ... read should retry? , add finish_read_process ...
           ret = read_process();
+          finish_read_process(ret, read_size);
         } while (ret != TFS_SUCCESS && retry_count--);
 
         if (ret != TFS_SUCCESS)
@@ -148,24 +158,30 @@ int64_t TfsFile::read_ex(void* buf, const int64_t count, const int64_t offset, c
           // read fail, must exit
           break;
         }
+        else if (TFS_FILE_EOF_FLAG_YES == eof_) //reach end
+        {
+          TBSYS_LOG(DEBUG, "file read reach end, offset: %"PRI64_PREFIX"d, size: %d", offset + check_size, cur_size);
+          break;
+        }
       }
 
-      check_size += cur_size;
+      check_size = read_size;
     }
 
     if (TFS_SUCCESS == ret && modify)
     {
-      offset_ += count;
+      offset_ += read_size;
     }
   }
 
-  return (TFS_SUCCESS == ret) ? count : ret;
+  return (TFS_SUCCESS == ret) ? read_size : ret;
 }
 
 int64_t TfsFile::write_ex(const void* buf, int64_t count, int64_t offset, bool modify)
 {
   //do not consider the update operation now
   int ret = TFS_SUCCESS;
+  int64_t check_size = 0;
   if (is_open_ != TFS_FILE_OPEN_YES)
   {
     TBSYS_LOG(ERROR, "write fail: file not open");
@@ -178,7 +194,6 @@ int64_t TfsFile::write_ex(const void* buf, int64_t count, int64_t offset, bool m
   }
   else
   {
-    int64_t check_size = 0;
     int32_t cur_size = 0, seg_count = 0, retry_count = 0;
     bool not_end = true;
 
@@ -235,11 +250,11 @@ int64_t TfsFile::write_ex(const void* buf, int64_t count, int64_t offset, bool m
 
     if (TFS_SUCCESS == ret && modify)
     {
-      offset_ += count;
+      offset_ += check_size;
     }
   }
 
-  return (TFS_SUCCESS == ret) ? count : ret;
+  return (TFS_SUCCESS == ret) ? check_size : ret;
 }
 
 int64_t TfsFile::lseek_ex(int64_t offset, int whence)
@@ -870,7 +885,8 @@ int TfsFile::async_rsp_read_file(message::Message* rsp, const int32_t index)
         {
           if (ret_len < seg_data->seg_info_.size_)
           {
-            seg_data->eof_ = TFS_FILE_EOF_FLAG_YES;
+            //seg_data->eof_ = TFS_FILE_EOF_FLAG_YES;
+            eof_ = TFS_FILE_EOF_FLAG_YES;
           }
 
           if (ret_len > 0)
@@ -878,7 +894,14 @@ int TfsFile::async_rsp_read_file(message::Message* rsp, const int32_t index)
             memcpy(seg_data->buf_, msg->get_data(), ret_len);
           }
 
+          seg_data->seg_info_.size_ = ret_len; //use seg_info_.size as return len
           ret = TFS_SUCCESS;
+
+          uint32_t crc = 0;
+          crc = Func::crc(crc, seg_data->buf_, ret_len);
+          TBSYS_LOG(DEBUG, "rsp read file, blockid: %u, fileid: %"PRI64_PREFIX"u, offset: %"PRI64_PREFIX"d, size: %d, crc: %u",
+              seg_data->seg_info_.block_id_, seg_data->seg_info_.file_id_,
+              seg_data->seg_info_.offset_, seg_data->seg_info_.size_, crc);
         }
         else
         {
@@ -1087,4 +1110,47 @@ int TfsFile::async_rsp_unlink_file(message::Message* rsp, const int32_t index)
 
   tbsys::gDelete(rsp);
   return ret;
+}
+
+//calculate the size of read process and delete the success one from processing seg list
+int32_t TfsFile::finish_read_process(int status, int64_t& read_size)
+{
+  int32_t count = 0;
+  SEG_DATA_LIST_ITER it = processing_seg_list_.begin();
+
+  if (TFS_SUCCESS == status)
+  {
+    count = processing_seg_list_.size();
+    for ( ; it != processing_seg_list_.end(); ++it)
+    {
+      read_size += (*it)->seg_info_.size_;
+      if ((*it)->delete_flag_)
+      {
+        tbsys::gDelete(*it);
+      }
+    }
+    processing_seg_list_.clear();
+  }
+  else if (status != EXIT_ALL_SEGMENT_ERROR)
+  {
+    for ( ; it != processing_seg_list_.end(); )
+    {
+      if (SEG_STATUS_ALL_OVER == (*it)->status_) // all over
+      {
+        read_size += (*it)->seg_info_.size_;
+        if ((*it)->delete_flag_)
+        {
+          tbsys::gDelete(*it);
+        }
+        it = processing_seg_list_.erase(it);
+        count++;
+      }
+      else
+      {
+        it++;
+      }
+    }
+  }
+
+  return count;
 }

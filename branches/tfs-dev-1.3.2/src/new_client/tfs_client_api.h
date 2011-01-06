@@ -117,7 +117,7 @@ namespace tfs
       int64_t lseek(const int fd, const int64_t offset, const int whence);
       int64_t pread(const int fd, void* buf, const int64_t count, const int64_t offset);
       int64_t pwrite(const int fd, const void* buf, const int64_t count, const int64_t offset);
-      int fstat(const int fd, common::FileInfo* buf, const int mode = common::NORMAL_STAT);
+      int fstat(const int fd, common::FileStat* buf, const int mode = common::NORMAL_STAT);
       int close(const int fd, char* tfs_name = NULL, const int32_t len = 0);
 
       // LargeFile's name will be start with L
