@@ -37,7 +37,6 @@ namespace tfs
 
     private:
       int upload_key();
-      int remove_key();
       int load_meta(common::FileInfo& file_info);
 
     private:

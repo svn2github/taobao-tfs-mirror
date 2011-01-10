@@ -133,27 +133,38 @@ int32_t TfsSmallFile::finish_write_process(int status)
   // for small file, once fail,
   if (status != TFS_SUCCESS)
   {
-    // open without filename, get new block and retry
-    if (0 == fsname_.get_block_id())
-    {
-      // open(NULL, meta_suffix_, flags_);
-    }
+    // TODO ... open without filename, get new block and retry
+    // if (0 == fsname_.get_block_id())
+    // {
+    // }
+
     // open with filename, just retry this block
-    else if (status != EXIT_ALL_SEGMENT_ERROR)
+    for (SEG_DATA_LIST_ITER it = processing_seg_list_.begin();
+         it != processing_seg_list_.end(); it++)
     {
-      for (SEG_DATA_LIST_ITER it = processing_seg_list_.begin();
-           it != processing_seg_list_.end(); it++)
+      // for small file, segment just write, not close
+      if (SEG_STATUS_BEFORE_CLOSE_OVER == (*it)->status_)
       {
-        // for small file, segment just write, not close
-        if (SEG_STATUS_BEFORE_CLOSE_OVER == (*it)->status_)
+        if ((*it)->delete_flag_)
         {
           tbsys::gDelete(*it);
-          processing_seg_list_.erase(it);
-          count++;
         }
+        processing_seg_list_.erase(it);
+        count++;
+      }
+      else
+      {
+        // restart from beginning
+        (*it)->status_ = SEG_STATUS_OPEN_OVER;
       }
     }
   }
+  else
+  {
+    count = processing_seg_list_.size();
+    // do nothing, clear by following process
+  }
+
   return count;
 }
 

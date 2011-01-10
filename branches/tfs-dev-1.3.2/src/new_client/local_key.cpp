@@ -1,6 +1,7 @@
 #include "local_key.h"
 #include "common/directory_op.h"
 #include "common/error_msg.h"
+#include "common/func.h"
 #include <unistd.h>
 
 using namespace tfs::client;
@@ -47,7 +48,7 @@ int LocalKey::initialize(const char* local_key, const uint64_t addr)
         tmp_file = pos;
         *pos = '!';
       }
-      snprintf(name + strlen(name), MAX_PATH_LENGTH - strlen(name), "%" PRI64_PREFIX "u", addr);
+      snprintf(name + strlen(name), MAX_PATH_LENGTH - strlen(name), "!%" PRI64_PREFIX "u", addr);
 
       memset(&seg_head_, 0, sizeof(SegmentHead));
       seg_info_.clear();
@@ -74,28 +75,24 @@ int LocalKey::load()
     TBSYS_LOG(ERROR, "local key file path not initialize");
     ret = TFS_ERROR;
   }
-
-  if (TFS_SUCCESS == ret)
+  else if ((ret = file_op_->pread_file(reinterpret_cast<char*>(&seg_head_), sizeof(SegmentHead), 0)) != TFS_SUCCESS)
   {
-    if ((ret = file_op_->pread_file(reinterpret_cast<char*>(&seg_head_), sizeof(SegmentHead), 0)) != TFS_SUCCESS)
+    TBSYS_LOG(ERROR, "load segment head fail, ret: %d", ret);
+  }
+  else
+  {
+    TBSYS_LOG(INFO, "load segment count %d, size: %"PRI64_PREFIX"d", seg_head_.count_, seg_head_.size_);
+
+    char* buf = new char[sizeof(SegmentInfo)*seg_head_.count_];
+    if ((ret = file_op_->pread_file(buf, sizeof(SegmentInfo) * seg_head_.count_, sizeof(SegmentHead))) != TFS_SUCCESS)
     {
-      TBSYS_LOG(ERROR, "load segment head fail, ret: %d", ret);
+      TBSYS_LOG(ERROR, "load segment info fail, ret: %d", ret);
     }
     else
     {
-      TBSYS_LOG(INFO, "load segment count %d, size: %"PRI64_PREFIX"d", seg_head_.count_, seg_head_.size_);
-
-      char* buf = new char[sizeof(SegmentInfo)*seg_head_.count_];
-      if ((ret = file_op_->pread_file(buf, sizeof(SegmentInfo) * seg_head_.count_, sizeof(SegmentHead))) != TFS_SUCCESS)
-      {
-        TBSYS_LOG(ERROR, "load segment info fail, ret: %d", ret);
-      }
-      else
-      {
-        ret = load_segment(buf);
-      }
-      tbsys::gDelete(buf);
+      ret = load_segment(buf);
     }
+    tbsys::gDelete(buf);
   }
   return ret;
 }
@@ -124,51 +121,66 @@ int LocalKey::add_segment(SegmentInfo& seg_info)
   return ret;
 }
 
-// check segment info sequencial and completed
-int LocalKey::validate()
+// check segment info sequencial and completed from offset 0 to offset
+// default validate to end
+int LocalKey::validate(int64_t total_size)
 {
   int ret = TFS_SUCCESS;
-  if (static_cast<size_t>(seg_head_.count_) != seg_info_.size())
+
+  // specifid validate size
+  if (total_size != 0 && seg_head_.size_ < total_size)
+  {
+    TBSYS_LOG(ERROR, "segment containing size less than required size: %"PRI64_PREFIX"d < %"PRI64_PREFIX"d",
+              seg_head_.size_, total_size);
+    ret = TFS_ERROR;
+  }
+  else if (static_cast<size_t>(seg_head_.count_) != seg_info_.size())
   {
     TBSYS_LOG(ERROR, "segment count conflict with head meta info count: %d <> %d",
               seg_head_.count_, seg_info_.size());
     ret = TFS_ERROR;
   }
-  else
+  else if (seg_info_.size() > 0)   // not empty
   {
-    int64_t size = 0;
-    if (seg_info_.size() > 0)   // not empty
+    int64_t size = 0, check_size = total_size != 0 ? total_size : seg_head_.size_;
+    SEG_SET_ITER it = seg_info_.begin();
+    if (it->offset_ != 0)
     {
-      SEG_SET_ITER it = seg_info_.begin();
-      if (it->offset_ != 0)
-      {
-        TBSYS_LOG(ERROR, "segment info offset not start with 0: %"PRI64_PREFIX"d", it->offset_);
-        ret = TFS_ERROR;
-      }
-      else
-      {
-        SEG_SET_ITER nit = it;
-        nit++;
-        size += it->size_;
+      TBSYS_LOG(ERROR, "segment info offset not start with 0: %"PRI64_PREFIX"d", it->offset_);
+      ret = TFS_ERROR;
+    }
+    else
+    {
+      SEG_SET_ITER nit = it;
+      nit++;
+      size += it->size_;
 
-        for (; nit != seg_info_.end(); ++it, ++nit)
+      for (; nit != seg_info_.end() && size < check_size; ++it, ++nit)
+      {
+        if (it->offset_ + it->size_ != nit->offset_)
         {
-          if (it->offset_ + it->size_ != nit->offset_)
-          {
-            TBSYS_LOG(ERROR, "segment info conflict: (offset + size != next_offset) %"PRI64_PREFIX"d + %d != %"PRI64_PREFIX"d", it->offset_, it->size_, nit->offset_);
-            ret = TFS_ERROR;
-            break;
-          }
-          size += nit->size_;
+          TBSYS_LOG(ERROR, "segment info conflict: (offset + size != next_offset) %"PRI64_PREFIX"d + %d != %"PRI64_PREFIX"d", it->offset_, it->size_, nit->offset_);
+          ret = TFS_ERROR;
+          break;
+        }
+        size += nit->size_;
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        // should have no overlap segment
+        if (size != check_size)
+        {
+          TBSYS_LOG(ERROR, "segment info conflict: segment size conflict required size: %"PRI64_PREFIX"d, < %"PRI64_PREFIX"d", size, check_size);
+          ret = TFS_ERROR;
+        }
+        else if (total_size != 0 && nit != seg_info_.end()) // not all segment used
+        {
+          gc_segment(nit, seg_info_.end());
+          seg_head_.size_ = total_size;
+          seg_head_.count_ = seg_info_.size();
         }
       }
-    }
-
-    if (TFS_SUCCESS == ret && size != seg_head_.size_)
-    {
-      TBSYS_LOG(ERROR, "segment size conflict with head meta info size: %"PRI64_PREFIX"d <> %"PRI64_PREFIX"d",
-                size, seg_head_.size_);
-      ret = TFS_ERROR;
     }
   }
   return ret;
@@ -206,25 +218,50 @@ int LocalKey::save()
   return ret;
 }
 
-int LocalKey::over()
+int LocalKey::remove()
 {
-  seg_head_.over_ = LOCAL_KEY_OVER;
   int ret = TFS_SUCCESS;
-  if ((ret = file_op_->pwrite_file(reinterpret_cast<const char*>(&seg_head_), sizeof(SegmentHead), 0)) != TFS_SUCCESS)
+  // has gc segment info, rewrite.
+  if (gc_seg_info_.size() != 0)
   {
-    TBSYS_LOG(ERROR, "done over fail, ret: %d", ret);
+    TBSYS_LOG(DEBUG, "segment has back segmentinfo, rewrite");
+    SegmentHead seg_head;
+    seg_head.count_ = gc_seg_info_.size();
+
+    int32_t raw_size = seg_head.count_ * sizeof(SegmentInfo) + sizeof(SegmentHead);
+    char* buf = new char[raw_size];
+    // dump data
+    char* pos = buf + sizeof(SegmentHead);
+    for (SEG_SET_ITER it = gc_seg_info_.begin(); it != gc_seg_info_.end(); ++it)
+    {
+      memcpy(pos, &(*it), sizeof(SegmentInfo));
+      pos += sizeof(SegmentInfo);
+      seg_head.size_ += it->size_;
+    }
+    memcpy(buf, &seg_head, sizeof(SegmentHead));
+
+    // data already write success, ok to overwrite(truncate first ?)
+    if ((ret = file_op_->pwrite_file(buf, raw_size, 0)) != TFS_SUCCESS)
+    {
+      TBSYS_LOG(ERROR, "over fail, rewrite remaining segment info fail. ret: %d", ret);
+    }
+    else                        // fail here, IO unexpect...
+    {
+      TBSYS_LOG(DEBUG, "over success, rewrite segment info, count: %d, raw_size: %d, size: %"PRI64_PREFIX"d",
+                seg_head.count_, raw_size, seg_head.size_);
+      file_op_->flush_file();
+    }
+    tbsys::gDeleteA(buf);
+  }
+  else if ((ret = file_op_->unlink_file()) != TFS_SUCCESS)
+  {
+    TBSYS_LOG(ERROR, "remove local key fail, ret: %d", ret);
   }
   else
   {
-    TBSYS_LOG(INFO, "done over success, ret: %d", ret);
-    file_op_->flush_file();
+    TBSYS_LOG(DEBUG, "no gc segment info, remove local key success");
   }
   return ret;
-}
-
-int LocalKey::remove()
-{
-  return file_op_->unlink_file();
 }
 
 int32_t LocalKey::get_segment_size()
@@ -276,35 +313,38 @@ int LocalKey::get_segment_for_write(const int64_t offset, const char* buf,
     {
       if (it->offset_ == cur_offset) // current segment's offset+size has written
       {
-        remain_size -= it->size_;
+        int32_t tmp_crc = 0;
+        if (remain_size >= it->size_ && (tmp_crc = Func::crc(0, cur_buf, it->size_)) == it->crc_)
+        {
+          TBSYS_LOG(INFO, "segment data written: offset: %"PRI64_PREFIX"d, blockid: %u, fileid: %"PRI64_PREFIX"u, size: %d, crc: %u", it->offset_, it->block_id_, it->file_id_, it->size_, it->crc_);
+          remain_size -= it->size_; // only if whole segment check pass, use it
+        }
+        else
+        {
+          TBSYS_LOG(ERROR, "segment crc fail: %u <> %u, size: %"PRI64_PREFIX"d <> %"PRI64_PREFIX"d",
+                    it->crc_, tmp_crc, it->size_, remain_size);
+          next_offset = it->offset_ + it->size_;
+          gc_segment(it);
+        }
       }
       else
       {
-        if (seg_info_.begin() == it) // offset ~ least_offset hasn't written. actually only first loop may occur
-        {
-          next_offset = it->offset_;
-        }
-        else
+        next_offset = it->offset_;
+        if (it != seg_info_.begin()) // offset ~ least_offset hasn't written. actually only first loop may occur
         {
           SEG_SET_ITER pre_it = it;
           pre_it--;
           if (pre_it->offset_ + pre_it->size_ > cur_offset) // overlap
           {
-            remain_size -= pre_it->size_ - (cur_offset - pre_it->offset_);
-          }
-          else                  // cutover. hole in pre and cur
-          {
-            next_offset = it->offset_;
+            gc_segment(pre_it);
           }
         }
       }
     }
-    if (remain_size > 0)
-    {
-      get_segment(cur_offset, next_offset, cur_buf, remain_size, seg_list);
-      cur_buf += last_remain_size - remain_size;
-      cur_offset += last_remain_size - remain_size;
-    }
+    // remain size should not be negtive
+    get_segment(cur_offset, next_offset, cur_buf, remain_size, seg_list);
+    cur_buf += last_remain_size - remain_size;
+    cur_offset += last_remain_size - remain_size;
   }
   return TFS_SUCCESS;
 }
@@ -382,7 +422,7 @@ int LocalKey::get_segment_for_read(const int64_t offset, const char* buf,
 void LocalKey::get_segment(const int64_t start, const int64_t end,
                          const char* buf, int64_t& size, SEG_DATA_LIST& seg_list)
 {
-  if (start < end)
+  if (start < end && size > 0)
   {
     int64_t offset = start, cur_size = 0, check_size = 0;
     SegmentData* seg_data = NULL;
@@ -459,7 +499,40 @@ int LocalKey::load_segment(const char* buf)
   return ret;
 }
 
+int LocalKey::gc_segment(SEG_SET_ITER it)
+{
+  int ret = TFS_SUCCESS;
+  // consider no thread safe
+  if (!gc_seg_info_.insert(*it).second)
+  {
+    TBSYS_LOG(ERROR, "insert segment info to gc fail. blockid: %u, fileid: %"PRI64_PREFIX"u, offset: %"PRI64_PREFIX"d, size: %"PRI64_PREFIX"d",
+              it->block_id_, it->file_id_, it->offset_, it->size_);
+    ret = TFS_ERROR;
+  }
+  else
+  {
+    TBSYS_LOG(DEBUG, "erase segment info: blockid: %u, fileid: %"PRI64_PREFIX"u, offset: %"PRI64_PREFIX"d, size: %"PRI64_PREFIX"d",
+              it->block_id_, it->file_id_, it->offset_, it->size_);
+
+    seg_head_.count_--;
+    seg_head_.size_ -= it->size_;
+    seg_info_.erase(it);
+  }
+  return ret;
+}
+
+int LocalKey::gc_segment(SEG_SET_ITER first, SEG_SET_ITER last)
+{
+  // update head info.
+  if (first != last && first != seg_info_.end())
+  {
+    gc_seg_info_.insert(first, last);
+    seg_info_.erase(first, last);
+  }
+}
+
 void LocalKey::destroy_info()
 {
   seg_info_.clear();
+  gc_seg_info_.clear();
 }

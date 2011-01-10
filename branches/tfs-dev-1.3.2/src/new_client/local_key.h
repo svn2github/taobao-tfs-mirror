@@ -16,19 +16,12 @@ namespace tfs
       TFS_FILE_EOF_FLAG_YES
     };
 
-    enum LocalKeyStatus
-    {
-      LOCAL_KEY_NOT_OVER = 0,
-      LOCAL_KEY_OVER
-    };
-
 #pragma pack(4)
     struct SegmentHead
     {
       int32_t count_;           // segment count
       int64_t size_;            // total size that segments contain
-      int32_t over_;            // for local gc identify
-      SegmentHead() : count_(0), size_(0), over_(LOCAL_KEY_NOT_OVER)
+      SegmentHead() : count_(0), size_(0)
       {
       }
     };
@@ -44,6 +37,10 @@ namespace tfs
       SegmentInfo()
       {
         memset(this, 0, sizeof(*this));
+      }
+      SegmentInfo(const SegmentInfo& seg_info)
+      {
+        memcpy(this, &seg_info, sizeof(SegmentInfo));
       }
       bool operator < (const SegmentInfo& si) const
       {
@@ -77,27 +74,27 @@ namespace tfs
       SegmentData() : delete_flag_(true), whole_file_flag_(true), buf_(NULL), file_info_(NULL),
                       file_number_(0), pri_ds_index_(-1),
                       status_(SEG_STATUS_NOT_INIT), eof_(TFS_FILE_EOF_FLAG_NO)
-      {
-      }
+        {
+        }
 
       SegmentData(SegmentData& seg_data)
-      {
-        delete_flag_ = false;
-        whole_file_flag_ = seg_data.whole_file_flag_;
-        memcpy(&seg_info_, &seg_data.seg_info_, sizeof(seg_info_));
-        buf_ = seg_data.buf_;
-        file_info_ = NULL;      // not copy
-        file_number_ = seg_data.file_number_;
-        ds_ = seg_data.ds_;
-        pri_ds_index_ = seg_data.pri_ds_index_;
-        status_ = seg_data.status_;
-        eof_ = seg_data.eof_;
-      }
+        {
+          delete_flag_ = false;
+          whole_file_flag_ = seg_data.whole_file_flag_;
+          memcpy(&seg_info_, &seg_data.seg_info_, sizeof(seg_info_));
+          buf_ = seg_data.buf_;
+          file_info_ = NULL;      // not copy
+          file_number_ = seg_data.file_number_;
+          ds_ = seg_data.ds_;
+          pri_ds_index_ = seg_data.pri_ds_index_;
+          status_ = seg_data.status_;
+          eof_ = seg_data.eof_;
+        }
 
       ~SegmentData()
-      {
-        tbsys::gDelete(file_info_);
-      }
+        {
+          tbsys::gDelete(file_info_);
+        }
     };
 
     typedef std::vector<SegmentData*> SEG_DATA_LIST;
@@ -117,9 +114,8 @@ namespace tfs
 
       int load();
       int load(const char* buf);
-      int validate();
+      int validate(int64_t total_size = 0);
       int save();
-      int over();
       int remove();
 
       int get_segment_for_write(const int64_t offset, const char* buf,
@@ -146,11 +142,14 @@ namespace tfs
       int load_segment(const char* buf);
       void get_segment(const int64_t start, const int64_t end,
                       const char* buf, int64_t& size, SEG_DATA_LIST& seg_list);
+      int gc_segment(SEG_SET_ITER it);
+      int gc_segment(SEG_SET_ITER first, SEG_SET_ITER last);
 
     private:
       SegmentHead seg_head_;
       common::FileOperation* file_op_;
       SEG_SET seg_info_;
+      SEG_SET gc_seg_info_;
     };
   }
 }

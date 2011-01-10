@@ -298,7 +298,7 @@ int32_t TfsLargeFile::finish_write_process(int status)
       {
         break;
       }
-      else
+      else if ((*it)->delete_flag_)
       {
         tbsys::gDelete(*it);
       }
@@ -317,7 +317,10 @@ int32_t TfsLargeFile::finish_write_process(int status)
         }
         else
         {
-          tbsys::gDelete(*it);
+          if ((*it)->delete_flag_)
+          {
+            tbsys::gDelete(*it);
+          }
           it = processing_seg_list_.erase(it);
           count++;
         }
@@ -345,15 +348,6 @@ int TfsLargeFile::close_process()
   {
     TBSYS_LOG(ERROR, "close tfs file fail: upload key fail, ret: %d");
   }
-  // upload fail, NOT remove local key, for later endpoint resume.
-  // upload success, then remove local key.
-  // ignore remove fail, because local key's over identify is already set,
-  // gc should not collect data actually write success and will remove local key file.
-  else if (remove_key() != TFS_SUCCESS)
-  {
-    TBSYS_LOG(ERROR, "remove key fail, desc: %s", strerror(errno));
-  }
-
   return ret;
 }
 
@@ -394,7 +388,7 @@ int TfsLargeFile::unlink_process()
 int TfsLargeFile::upload_key()
 {
   int ret = TFS_SUCCESS;
-  if ((ret = local_key_.validate()) != TFS_SUCCESS)
+  if ((ret = local_key_.validate(offset_)) != TFS_SUCCESS)
   {
     TBSYS_LOG(ERROR, "local key validate fail, ret: %d");
   }
@@ -402,7 +396,6 @@ int TfsLargeFile::upload_key()
   {
     int32_t size = local_key_.get_data_size();
     char* buf = new char[size];
-    // local key over is still NOT OVER, that's ok
     local_key_.dump_data(buf);
     // TODO .. open large with mainname
     if ((ret = open_ex(NULL, meta_suffix_, T_WRITE)) != TFS_SUCCESS)
@@ -431,19 +424,15 @@ int TfsLargeFile::upload_key()
     {
       fsname_.set_file_id(meta_seg_->seg_info_.file_id_);
       fsname_.set_block_id(meta_seg_->seg_info_.block_id_);
-      if ((ret = local_key_.over()) != TFS_SUCCESS)
+      // remove fail, then data can be gc
+      if ((ret = local_key_.remove()) != TFS_SUCCESS)
       {
-        TBSYS_LOG(ERROR, "upload key fail, done over fail, ret: %d", ret);
+        TBSYS_LOG(ERROR, "upload key fail, remove local key fail, ret: %d", ret);
       }
     }
     tbsys::gDeleteA(buf);
   }
   return ret;
-}
-
-int TfsLargeFile::remove_key()
-{
-  return local_key_.remove();
 }
 
 int TfsLargeFile::load_meta(FileInfo& file_info)
