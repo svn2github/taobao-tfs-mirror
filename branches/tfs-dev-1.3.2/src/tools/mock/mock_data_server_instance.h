@@ -43,7 +43,6 @@ struct BlockEntry
     memset(&info_, 0, sizeof(info_));
   }
   common::BlockInfo info_;
-  std::map<int64_t, common::FileInfo> files_;
   int64_t file_id_factory_;
 };
 
@@ -54,7 +53,7 @@ class MockDataServerInstance:
 
 {
 public:
-  MockDataServerInstance();
+  MockDataServerInstance(int32_t max_write_file_size);
   virtual ~MockDataServerInstance();
 
   tbnet::IPacketHandler::HPRetCode handlePacket(tbnet::Connection* conn, tbnet::Packet* packet);
@@ -93,8 +92,8 @@ private:
   common::RWLock infor_mutex_;
 
   uint64_t ns_ip_port_;
-
   common::HasBlockFlag need_send_block_to_ns_;
+  const int32_t MAX_WRITE_FILE_SIZE;
 };
 
 class KeepaliveTimerTask: public tbutil::TimerTask

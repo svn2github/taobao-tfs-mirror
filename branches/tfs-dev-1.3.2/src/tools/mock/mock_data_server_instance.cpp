@@ -28,13 +28,22 @@ using namespace tfs::common;
 using namespace tbnet;
 using namespace tbsys;
 using namespace tbutil;
+static FileInfo gfile_info;
+static const int8_t BUF_LEN = 32;
+static char BUF[BUF_LEN] = {'1'};
 
-MockDataServerInstance::MockDataServerInstance():
+MockDataServerInstance::MockDataServerInstance(int32_t max_write_file_size):
   timer_(0),
   ns_ip_port_(0),
-  need_send_block_to_ns_(HAS_BLOCK_FLAG_YES)
+  need_send_block_to_ns_(HAS_BLOCK_FLAG_YES),
+  MAX_WRITE_FILE_SIZE(max_write_file_size)
 {
   memset(&information_, 0, sizeof(information_));
+  memset(&gfile_info, 0, sizeof(gfile_info));
+  gfile_info.size_ = BUF_LEN;
+  gfile_info.crc_  = 0;
+  gfile_info.id_ = 0xff;
+  gfile_info.crc_  = Func::crc(gfile_info.crc_, BUF, BUF_LEN);
 }
 
 MockDataServerInstance::~MockDataServerInstance()
@@ -239,6 +248,7 @@ int MockDataServerInstance::write(message::Message* msg)
     WriteDataInfo write_info = message->get_write_info();
     uint32_t lease_id = message->get_lease_id();
     int32_t version = message->get_block_version();
+    write_info.length_  = MAX_WRITE_FILE_SIZE != 0 ? MAX_WRITE_FILE_SIZE : write_info.length_;
     {
       RWLock::Lock lock(blocks_mutex_, WRITE_LOCKER);
       std::map<uint32_t, BlockEntry>::iterator iter = blocks_.find(write_info.block_id_);
@@ -248,16 +258,7 @@ int MockDataServerInstance::write(message::Message* msg)
               "create file failed. blockid: %u, fileid: %" PRI64_PREFIX "u.", write_info.block_id_, write_info.file_id_); 
         return TFS_SUCCESS;
       }
-      std::map<int64_t, FileInfo>::iterator riter = iter->second.files_.find(write_info.file_id_);
-      if (riter != iter->second.files_.end())
-      {
-        riter->second.size_ += write_info.length_;
-        riter->second.modify_time_ = time(NULL);
-      }
-      else
-      {
-        TBSYS_LOG(WARN, "'FileInfo' object not found by (%"PRI64_PREFIX"d)", write_info.file_id_);
-      }
+      iter->second.info_.size_ += write_info.length_;
     }
 
     {
@@ -297,8 +298,11 @@ int MockDataServerInstance::read(message::Message* msg)
   {
     ReadDataMessage* message = dynamic_cast<ReadDataMessage*>(msg);
     RespReadDataMessage* rmsg = new RespReadDataMessage();
-    rmsg->set_length(0);
+    char* data = rmsg->alloc_data(BUF_LEN);
+    memcpy(data, BUF, BUF_LEN);
+    rmsg->set_length(BUF_LEN);
     message->reply_message(rmsg);
+    TBSYS_LOG(DEBUG, "read msg");
   }
   return !bret ? TFS_ERROR : TFS_SUCCESS;
 }
@@ -310,7 +314,6 @@ int MockDataServerInstance::readv2(message::Message* msg)
   {
     ReadDataMessageV2* message = dynamic_cast<ReadDataMessageV2*>(msg);
     uint32_t block_id = message->get_block_id();
-    uint64_t file_id  = message->get_file_id();
     RespReadDataMessageV2* rmsg = new RespReadDataMessageV2();
     RWLock::Lock lock(blocks_mutex_, READ_LOCKER);
     std::map<uint32_t, BlockEntry>::iterator iter = blocks_.find(block_id);
@@ -321,22 +324,10 @@ int MockDataServerInstance::readv2(message::Message* msg)
       return TFS_SUCCESS;
     }
 
-    std::map<int64_t, FileInfo>::iterator riter = iter->second.files_.find(file_id);
-    if (riter == iter->second.files_.end())
-    {
-      rmsg->set_length(0);
-      message->reply_message(rmsg);
-      return TFS_SUCCESS;
-    }
-    const int32_t BUF_LEN = 32;
-    riter->second.size_ = BUF_LEN;
-    riter->second.crc_  = 0;
-    char buf[BUF_LEN] = {'1'};
     char* data = rmsg->alloc_data(BUF_LEN);
-    memcpy(data, buf, BUF_LEN);
+    memcpy(data, BUF, BUF_LEN);
     rmsg->set_length(BUF_LEN);
-    rmsg->set_file_info(&riter->second);
-    riter->second.crc_ = Func::crc(riter->second.crc_, data, BUF_LEN);
+    rmsg->set_file_info(&gfile_info);
     message->reply_message(rmsg);
   }
   return !bret ? TFS_ERROR : TFS_SUCCESS;
@@ -417,20 +408,6 @@ int MockDataServerInstance::create_file_number(message::Message* msg)
       return TFS_SUCCESS;
     }
     file_id = ++iter->second.file_id_factory_;
-    FileInfo info;
-    memset(&info, 0, sizeof(info));
-    info.id_  = file_id;
-    info.modify_time_ = time(NULL);
-    info.create_time_ = info.modify_time_;
-    
-    std::pair<std::map<int64_t, common::FileInfo>::iterator, bool> res = 
-      iter->second.files_.insert(std::map<int64_t, FileInfo>::value_type(file_id, info)); 
-    if (!res.second)
-    {
-      MessageFactory::send_error_message(message, TBSYS_LOG_LEVEL(ERROR), information_.id_,
-            "create file failed. blockid: %u, fileid: %" PRI64_PREFIX "u.", block_id, file_id); 
-      return TFS_SUCCESS;
-    }
     RespCreateFilenameMessage* rmsg = new RespCreateFilenameMessage();
     rmsg->set_block_id(block_id);
     rmsg->set_file_id(file_id);
@@ -472,26 +449,8 @@ int MockDataServerInstance::get_file_info(Message* msg)
   if (bret)
   {
     FileInfoMessage* message = dynamic_cast<FileInfoMessage*>(msg);
-    uint32_t block_id = message->get_block_id();
-    uint64_t file_id  =  message->get_file_id();
-    RWLock::Lock lock(blocks_mutex_, READ_LOCKER);
-    std::map<uint32_t, BlockEntry>::iterator iter = blocks_.find(block_id);
-    if (iter == blocks_.end())
-    {
-      MessageFactory::send_error_message(message, TBSYS_LOG_LEVEL(ERROR), information_.id_,
-            "get file info failed. blockid: %u, fileid: %" PRI64_PREFIX "u.", block_id, file_id); 
-      return TFS_SUCCESS;
-    }
-
-    std::map<int64_t, FileInfo>::iterator riter = iter->second.files_.find(file_id);
-    if (riter == iter->second.files_.end())
-    {
-      MessageFactory::send_error_message(message, TBSYS_LOG_LEVEL(ERROR), information_.id_,
-            "get file info failed. blockid: %u, fileid: %" PRI64_PREFIX "u.", block_id, file_id); 
-      return TFS_SUCCESS;
-    }
     RespFileInfoMessage* rmsg = new RespFileInfoMessage();
-    rmsg->set_file_info(&riter->second);
+    rmsg->set_file_info(&gfile_info);
     message->reply_message(rmsg);
   }
   return !bret ? TFS_ERROR : TFS_SUCCESS;

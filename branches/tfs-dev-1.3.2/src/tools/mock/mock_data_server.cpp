@@ -46,7 +46,7 @@ namespace mock
 class MockDataService 
 {
 public:
-  MockDataService();
+  MockDataService(int32_t max_write_file_size);
   virtual ~MockDataService();
   virtual int run(int32_t port, int64_t capacity, const std::string& work_index, const std::string& config);
   virtual bool destroy();
@@ -55,7 +55,8 @@ private:
   MockDataServerInstance instance_;
 };
 
-MockDataService::MockDataService()
+MockDataService::MockDataService(int32_t max_write_file_size):
+  instance_(max_write_file_size)
 {
 
 }
@@ -92,6 +93,7 @@ void helper()
     "-i INDEX           Work directory index...\n"
     "-f FILE            Configure files...\n"
     "-c CAPACITY        Disk capacity(GB)...\n"
+    "-s FILE SIZE       write file size(byte)...\n"
     "-d                 Run as a daemon...\n"
     "-h                 Show this message...\n"
     "-v                 Show porgram version...\n";
@@ -118,11 +120,12 @@ int main(int argc, char* argv[])
   std::string conf;
   std::string work_index;
   int64_t capacity = 1024;//GB
+  int64_t max_write_file_size = 0;
   int32_t index = 0;
   bool daemon = false;
   bool help   = false;
   bool version= false;
-  while ((index = getopt(argc, argv, "f:i:c:dvh")) != EOF)
+  while ((index = getopt(argc, argv, "f:i:c:s:dvh")) != EOF)
   {
     switch (index)
     {
@@ -137,6 +140,9 @@ int main(int argc, char* argv[])
     break;
     case 'd':
       daemon = true;
+      break;
+    case 's':
+      max_write_file_size = atoll(optarg);
       break;
     case 'v':
       version = true;
@@ -210,7 +216,7 @@ int main(int argc, char* argv[])
     signal(SIGUSR1, SIG_IGN);
     try
     {
-      gmock_data_service = new MockDataService();
+      gmock_data_service = new MockDataService(max_write_file_size);
       iret = gmock_data_service->run(port, capacity, work_index, conf);
       if (iret != TFS_SUCCESS)
       {
