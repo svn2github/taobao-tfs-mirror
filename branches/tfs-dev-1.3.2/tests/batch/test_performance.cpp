@@ -36,12 +36,12 @@ using namespace tfs::client;
 #define FILE_NAME_LEN 18
 struct StatParam
 {
-  int32_t write_success_count_;
-  int32_t write_fail_count_;
-  int32_t write_response_;
-  int32_t read_success_count_;
-  int32_t read_fail_count_;
-  int32_t read_response_;
+  int64_t write_success_count_;
+  int64_t write_fail_count_;
+  int64_t write_response_;
+  int64_t read_success_count_;
+  int64_t read_fail_count_;
+  int64_t read_response_;
   StatParam()
   {
     memset(this, 0, sizeof(StatParam));
@@ -51,6 +51,8 @@ struct StatParam
 tbutil::Mutex mutex_;
 StatParam gstat_;
 StatParam gtotal_stat_;
+static FILE* gdump_file = NULL;
+static const int32_t READ_MAX_SIZE = 32;
 
 enum ModeType
 {
@@ -72,10 +74,11 @@ class StatTimerTask : public tbutil::TimerTask
     {
       tbutil::Mutex::Lock lock(mutex_);
       TBSYS_LOG(INFO, "[read] success: %"PRI64_PREFIX"d fail: %"PRI64_PREFIX"d, [write] success: %"PRI64_PREFIX"d fail : %"PRI64_PREFIX"d",
-          gstat_.read_success_count_/ interval_,
-          gstat_.read_fail_count_/ interval_, 
-          gstat_.write_success_count_/ interval_,
-          gstat_.write_fail_count_/ interval_); 
+          (gstat_.read_success_count_/ interval_) * 1000,
+          (gstat_.read_fail_count_/ interval_) *1000, 
+          (gstat_.write_success_count_/ interval_) * 1000,
+          (gstat_.write_fail_count_/ interval_) * 1000); 
+      TBSYS_LOG(DEBUG, "gstat_.read_success_count_(%ld), gstat_.read_success_count_(%ld)", gstat_.read_success_count_, gstat_.write_success_count_);
       gtotal_stat_.read_success_count_ += gstat_.read_success_count_;
       gtotal_stat_.write_success_count_ += gstat_.write_success_count_;
       gtotal_stat_.read_fail_count_ += gstat_.read_fail_count_;
@@ -88,7 +91,7 @@ class StatTimerTask : public tbutil::TimerTask
 };
 typedef tbutil::Handle<StatTimerTask> StatTimerTaskPtr;
 
-int get_read_list(std::string& file_name, vector<std::string>& list)
+/*int get_read_list(std::string& file_name, int32_t index, vector<std::string>& list)
 {
   FILE* input_fd = fopen(file_name.c_str(), "rb");
   if (NULL == input_fd)
@@ -100,12 +103,15 @@ int get_read_list(std::string& file_name, vector<std::string>& list)
   char name_buf[BUFLEN];
   while (fgets(name_buf, BUFLEN, input_fd))
   {
-    name_buf[FILE_NAME_LEN] = '\0';
-    list.push_back(static_cast<std::string> (name_buf));
+    if(count % thread == index)
+    {
+      name_buf[FILE_NAME_LEN] = '\0';
+      list.push_back(static_cast<std::string> (name_buf));
+    }
   }
   fclose(input_fd);
   return TFS_SUCCESS;
-}
+}*/
 
 int read_file(TfsClient& tfs_file, char* tfs_name, StatParam& stat_param)
 {
@@ -123,7 +129,7 @@ int read_file(TfsClient& tfs_file, char* tfs_name, StatParam& stat_param)
   if (tfs_file.tfs_open(tfs_name, prefix, READ_MODE) != EXIT_SUCCESS)
   {
     fprintf(stderr, "open tfsfile fail: %s\n", tfs_file.get_error_message());
-    stat_param.write_fail_count_++;
+    stat_param.read_fail_count_++;
     return EXIT_FAILURE;
   }
 
@@ -132,20 +138,21 @@ int read_file(TfsClient& tfs_file, char* tfs_name, StatParam& stat_param)
   {
     tfs_file.tfs_close();
     fprintf(stderr, "fstat tfsfile fail: %s\n", tfs_file.get_error_message());
-    stat_param.write_fail_count_++;
+    stat_param.read_fail_count_++;
     return EXIT_FAILURE;
   }
 
-  char data[MAX_READ_SIZE];
+  char data[READ_MAX_SIZE];
   int total_size = 0;
+  int rlen = 0;
   for (;;)
   {
-    int rlen = tfs_file.tfs_read(data, MAX_READ_SIZE);
+    rlen = tfs_file.tfs_read(data, READ_MAX_SIZE);
     if (rlen < 0)
     {
       fprintf(stderr, "read tfsfile fail: %s\n", tfs_file.get_error_message());
       tfs_file.tfs_close();
-      stat_param.write_fail_count_++;
+      stat_param.read_fail_count_++;
       return EXIT_FAILURE;
     }
     if (rlen == 0)
@@ -153,8 +160,15 @@ int read_file(TfsClient& tfs_file, char* tfs_name, StatParam& stat_param)
       break;
     }
     total_size += rlen;
-    if (rlen != (int32_t) MAX_READ_SIZE)
+    //if (rlen != READ_MAX_SIZE)
       break;
+  }
+  if (total_size == 0)
+  {
+    tfs_file.tfs_close();
+    stat_param.read_fail_count_++;
+    fprintf(stderr, "read tfsfile fail(%s), total len(%d)\n", tfs_file.get_error_message(), total_size);
+    return EXIT_FAILURE;
   }
 
   tfs_file.tfs_close();
@@ -237,24 +251,28 @@ class WorkThread : public tbutil::Thread
       destroy_ = true;
     }
 
-    void dump(int32_t fd)
+    void dump(FILE* file)
     {
-      vector<std::string>::iterator iter = write_request_queue_.begin();
-      const int32_t BUFLEN = 32;
-      char name_buf[BUFLEN];
-      for(; iter != write_request_queue_.end(); iter++)
+      bool bret = file == NULL ? false : true;
+      if (bret)
       {
-        strncpy(name_buf, (*iter).c_str(), FILE_NAME_LEN);
-        name_buf[FILE_NAME_LEN] = '\n';
-        name_buf[FILE_NAME_LEN + 1] = '\0';
-        write(fd, name_buf, strlen(name_buf));
+        vector<std::string>::iterator iter = write_request_queue_.begin();
+        const int32_t BUFLEN = 32;
+        char name_buf[BUFLEN];
+        for(; iter != write_request_queue_.end(); iter++)
+        {
+          strncpy(name_buf, (*iter).c_str(), FILE_NAME_LEN);
+          name_buf[FILE_NAME_LEN] = '\n';
+          name_buf[FILE_NAME_LEN + 1] = '\0';
+          fwrite(name_buf, strlen(name_buf), 1, file);
+        }
       }
     }
 
     virtual void run()
     {
       TfsClient tfsclient;
-      int iret = tfsclient.initialize(ns_ip_port_);
+      int iret = tfsclient.initialize(ns_ip_port_, 0, 0);
       if (iret != TFS_SUCCESS)
       {
         TBSYS_LOG(ERROR, "tfsclient initialize failed: %s", tfsclient.get_error_message());
@@ -270,7 +288,6 @@ class WorkThread : public tbutil::Thread
       {
         if (mode_ & WRITE_TYPE)
         {
-          TBSYS_LOG(DEBUG, "*********write mode********");
           if (write_file(tfsclient, data, DATA_MAX_SIZE, stat_) != TFS_SUCCESS)
           {
             TBSYS_LOG(ERROR, "write file(%s) fail", file_path_.c_str());
@@ -280,7 +297,7 @@ class WorkThread : public tbutil::Thread
             write_request_queue_.push_back(tfsclient.get_file_name());
           }
           ++loop;
-          if (loop >= 100)
+          if (loop >= LOOP_MAX)
           {
             loop = 0;
             {
@@ -290,12 +307,18 @@ class WorkThread : public tbutil::Thread
               gstat_.write_response_ += stat_.write_response_;
               memset(&stat_, 0, sizeof(stat_));
             }
+            dump(gdump_file);
+            write_request_queue_.clear();
           }
         }
         else if (mode_ & READ_TYPE)
         {
-          get_read_list(file_path_, read_request_queue_);
           int64_t queue_size = read_request_queue_.size();
+          if(queue_size <= 0)
+          {
+            TBSYS_LOG(ERROR, "%s", "get file list fail");
+            return;
+          }
           srand(time(NULL));
           int32_t index = rand() % queue_size;
           std::string file_name = read_request_queue_[index];
@@ -304,7 +327,7 @@ class WorkThread : public tbutil::Thread
             TBSYS_LOG(ERROR, "read file(%s) fail", file_name.c_str());
           }
           ++loop;
-          if (loop >= 100)
+          if (loop >= LOOP_MAX)
           {
             loop = 0;
             {
@@ -323,14 +346,14 @@ class WorkThread : public tbutil::Thread
           {
             if (write_file(tfsclient, data, DATA_MAX_SIZE, stat_) != TFS_SUCCESS)
             {
-              TBSYS_LOG(ERROR, "read file(%s) fail", file_path_.c_str());
+              TBSYS_LOG(ERROR, "write file(%s) fail", file_path_.c_str());
             }
             else
             {
               write_request_queue_.push_back(tfsclient.get_file_name());
             }
             ++loop;
-            if (loop >= 100)
+            if (loop >= LOOP_MAX)
             {
               loop = 0;
               {
@@ -346,24 +369,34 @@ class WorkThread : public tbutil::Thread
             ++i;
           }
 
-          read_request_queue_ = write_request_queue_;
+          {
+             tbutil::Mutex::Lock lock(mutex_);
+             gstat_.write_success_count_ += stat_.write_success_count_;
+             gstat_.write_fail_count_ += stat_.write_fail_count_;
+             gstat_.write_response_ += stat_.write_response_;
+             stat_.write_success_count_ = 0;
+             stat_.write_fail_count_ = 0;
+             stat_.write_response_ = 0;
+          }
+          loop = 0;
           i = 0;
+
           while (i < MAX_READ_COUNT)
           {
-            int64_t queue_size = read_request_queue_.size();
+            int64_t queue_size = write_request_queue_.size();
             srand(time(NULL));
             if(queue_size <= 0)
             {
               break;
             }
             int32_t index = rand() % queue_size;
-            std::string file_name = read_request_queue_[index];
+            std::string file_name = write_request_queue_[index];
             if (read_file(tfsclient, const_cast<char*>(file_name.c_str()), stat_) != TFS_SUCCESS)
             {
               TBSYS_LOG(ERROR, "read file(%s) fail", file_name.c_str());
             }
             ++loop;
-            if (loop >= 100)
+            if (loop >= LOOP_MAX)
             {
               loop = 0;
               {
@@ -378,8 +411,13 @@ class WorkThread : public tbutil::Thread
             }
             ++i;
           }
+          write_request_queue_.clear();
         }
       }
+    }
+    void push_back(const char* name)
+    {
+      read_request_queue_.push_back(name);
     }
   private:
     WorkThread(const WorkThread&);
@@ -402,12 +440,19 @@ void helper()
 {
   std::string options=
     "Options:\n"
-    "-s                 \n"
-    "-f FILE            Configure files...\n"
-    "-c CAPACITY        Disk capacity(GB)...\n"
-    "-d                 Run as a daemon...\n"
-    "-h                 Show this message...\n"
-    "-v                 Show porgram version...\n";
+    "-s                 ip:port\n"
+    "-t                 thread count\n"
+    "-m                 mode. read:1, write:2, mix:4\n"
+    "-o                 the ratio of write and read(read:write), default is 5:1\n"
+    "-l                 loop times\n"
+    "-b                 base file count\n"
+    "-i                 the interval of print\n"
+    "-f                 the filename of tfsname list\n"
+    "-p                 pid file name\n"
+    "-g                 log file name\n"
+    "-d                 Run as a daemon\n"
+    "-h                 Show this message\n"
+    "-v                 Show porgram version\n";
   fprintf(stderr,"Usage:\n%s" ,options.c_str());
 }
 
@@ -449,7 +494,7 @@ int main(int argc, char* argv[])
   int32_t index = 0;
   int8_t mode  = 1;
   bool help = false;
-  bool deamon = false;
+  bool daemon = false;
   while ((index = getopt(argc, argv, "s:t:m:o:l:b:i:f:p:g:dvh")) != EOF)
   {
     switch (index)
@@ -486,7 +531,7 @@ int main(int argc, char* argv[])
         file_path = optarg;
         break;
       case 'd':
-        deamon = true;
+        daemon = true;
         break;
       case 'p':
         pid_file = optarg;
@@ -518,7 +563,7 @@ int main(int argc, char* argv[])
   }
 
   pid = 0;
-  if (deamon)
+  if (daemon)
   {
     pid = tbsys::CProcess::startDaemon(pid_file.c_str(), log_file.c_str());
   }
@@ -558,7 +603,35 @@ int main(int argc, char* argv[])
     for (; i < thread_count; ++i)
     {
       gworks[i] = new WorkThread(ns_ip_port, mode, loop_max, read_ratio, write_ratio, base_max_count, file_path);
-      gworks[i]->start();
+    }
+
+    FILE* file = fopen(file_path.c_str(), "rb");
+    if (file == NULL)
+    {
+      fprintf(stderr, "open read file(%s) failed, exit\n", file_path.c_str());
+      timer->cancel(stat_timer_task_);
+      timer->destroy();
+      tbsys::gDeleteA(gworks);
+      return TFS_ERROR;
+    }
+    else
+    {
+      int32_t index = 0;
+      int64_t count = 0;
+      const int32_t BUF_LEN = 32;
+      char name[BUF_LEN] = {'\0'};
+      while (fgets(name, BUF_LEN, file))
+      {
+        index = count % thread_count;
+        gworks[index]->push_back(name);
+        ++count;
+      }
+
+      fclose(file);
+      for (i = 0; i < thread_count; ++i)
+      {
+        gworks[i]->start();
+      }
     }
 
     signal(SIGHUP, interruptcallback);
@@ -566,27 +639,37 @@ int main(int argc, char* argv[])
     signal(SIGTERM, interruptcallback);
     signal(SIGUSR1, interruptcallback);
 
-    int fd = open(file_path.c_str(), O_CREAT | O_RDWR | O_TRUNC, 0660);
-    if (-1 == fd)
+    gdump_file = fopen(file_path.c_str(), "w+");
+    if (gdump_file == NULL)
     {
-      fprintf(stderr, "open write file(%s) failed, exit\n", file_path.c_str());
+      fprintf(stderr, "open read file(%s) failed, exit\n", file_path.c_str());
+      for (i = 0; i < thread_count; ++i)
+      {
+        gworks[i]->destroy();
+      }
     }
 
     for (i = 0; i < thread_count; ++i)
     {
       gworks[i]->wait_for_shut_down();
-      gworks[i]->dump(fd);
+      gworks[i]->dump(gdump_file);
     }
 
     timer->cancel(stat_timer_task_);
     timer->destroy();
 
     tbsys::gDeleteA(gworks);
-    close(fd);
 
-    TBSYS_LOG(DEBUG, "**************************"); 
-    //dump();
-    TBSYS_LOG(DEBUG, "**************************"); 
+    TBSYS_LOG(INFO, "[read] success: %"PRI64_PREFIX"d fail: %"PRI64_PREFIX"d, [write] success: %"PRI64_PREFIX"d fail : %"PRI64_PREFIX"d",
+          gtotal_stat_.read_success_count_,
+          gtotal_stat_.read_fail_count_, 
+          gtotal_stat_.write_success_count_,
+          gtotal_stat_.write_fail_count_); 
+    if (gdump_file != NULL)
+    {
+      fclose(gdump_file);
+    }
+    unlink(pid_file.c_str());
   }
   return TFS_SUCCESS;
 }
