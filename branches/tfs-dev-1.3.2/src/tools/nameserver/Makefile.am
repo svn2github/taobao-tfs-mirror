@@ -5,7 +5,7 @@ AM_CPPFLAGS=-I$(top_srcdir)/src\
 
 AM_LDFLAGS=-lrt -lpthread -ldl $(READLINE_LIB)
 
-bin_PROGRAMS = showsyncoplog tfstool showssm
+bin_PROGRAMS = showsyncoplog tfstool showssm performance
 
 LDADD = $(top_builddir)/src/client/.libs/libtfsclient.a\
 	$(top_builddir)/src/message/libtfsmessage.a\
@@ -19,3 +19,5 @@ showsyncoplog_SOURCES = showsyncoplog.cpp
 tfstool_SOURCES =  tfstool.cpp
 
 showssm_SOURCES =  showssm.cpp
+
+performance_SOURCES = performance.cpp util.cpp
