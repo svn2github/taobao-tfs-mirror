@@ -271,16 +271,16 @@ int MockDataServerInstance::write(message::Message* msg)
       message->set_server(Slave_Server_Role);
       message->set_lease_id(lease_id);
       message->set_block_version(version);
-      iret = post_message_to_server(message, message->get_ds_list());
-      if (iret == 0)
+      iret = this->post_message_to_server(message, message->get_ds_list());
+      if ( 0x01 == iret)
       {
         message->reply_message(new StatusMessage(STATUS_MESSAGE_OK));
       }
       else
       {
         MessageFactory::send_error_message(message, TBSYS_LOG_LEVEL(ERROR), information_.id_,
-          "write data fail to other dataserver (send): blockid: %u, fileid: %" PRI64_PREFIX "u, datalen: %d",
-          write_info.block_id_, write_info.file_id_, write_info.length_);                                    
+          "write data fail to other dataserver (send): blockid: %u, fileid: %" PRI64_PREFIX "u, datalen: %d, ret: %d",
+          write_info.block_id_, write_info.file_id_, write_info.length_, iret);                                    
       }
     }
     else
@@ -403,6 +403,7 @@ int MockDataServerInstance::create_file_number(message::Message* msg)
     std::map<uint32_t, BlockEntry>::iterator iter = blocks_.find(block_id);
     if (iter == blocks_.end())
     {
+      TBSYS_LOG(DEBUG, "create file number failed, block id : %u", block_id);
       MessageFactory::send_error_message(message, TBSYS_LOG_LEVEL(ERROR), information_.id_,
             "create file failed. blockid: %u, fileid: %" PRI64_PREFIX "u.", block_id, file_id); 
       return TFS_SUCCESS;
