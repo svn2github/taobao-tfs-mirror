@@ -52,6 +52,7 @@ tbutil::Mutex mutex_;
 StatParam gstat_;
 StatParam gtotal_stat_;
 static FILE* gdump_file = NULL;
+static const int32_t READ_MAX_SIZE = 32;
 
 enum ModeType
 {
@@ -77,6 +78,7 @@ class StatTimerTask : public tbutil::TimerTask
           (gstat_.read_fail_count_/ interval_) *1000, 
           (gstat_.write_success_count_/ interval_) * 1000,
           (gstat_.write_fail_count_/ interval_) * 1000); 
+      TBSYS_LOG(DEBUG, "gstat_.read_success_count_(%ld), gstat_.read_success_count_(%ld)", gstat_.read_success_count_, gstat_.write_success_count_);
       gtotal_stat_.read_success_count_ += gstat_.read_success_count_;
       gtotal_stat_.write_success_count_ += gstat_.write_success_count_;
       gtotal_stat_.read_fail_count_ += gstat_.read_fail_count_;
@@ -127,7 +129,7 @@ int read_file(TfsClient& tfs_file, char* tfs_name, StatParam& stat_param)
   if (tfs_file.tfs_open(tfs_name, prefix, READ_MODE) != EXIT_SUCCESS)
   {
     fprintf(stderr, "open tfsfile fail: %s\n", tfs_file.get_error_message());
-    stat_param.write_fail_count_++;
+    stat_param.read_fail_count_++;
     return EXIT_FAILURE;
   }
 
@@ -136,20 +138,21 @@ int read_file(TfsClient& tfs_file, char* tfs_name, StatParam& stat_param)
   {
     tfs_file.tfs_close();
     fprintf(stderr, "fstat tfsfile fail: %s\n", tfs_file.get_error_message());
-    stat_param.write_fail_count_++;
+    stat_param.read_fail_count_++;
     return EXIT_FAILURE;
   }
 
-  char data[MAX_READ_SIZE];
+  char data[READ_MAX_SIZE];
   int total_size = 0;
+  int rlen = 0;
   for (;;)
   {
-    int rlen = tfs_file.tfs_read(data, MAX_READ_SIZE);
+    rlen = tfs_file.tfs_read(data, READ_MAX_SIZE);
     if (rlen < 0)
     {
       fprintf(stderr, "read tfsfile fail: %s\n", tfs_file.get_error_message());
       tfs_file.tfs_close();
-      stat_param.write_fail_count_++;
+      stat_param.read_fail_count_++;
       return EXIT_FAILURE;
     }
     if (rlen == 0)
@@ -157,8 +160,15 @@ int read_file(TfsClient& tfs_file, char* tfs_name, StatParam& stat_param)
       break;
     }
     total_size += rlen;
-    if (rlen != (int32_t) MAX_READ_SIZE)
+    //if (rlen != READ_MAX_SIZE)
       break;
+  }
+  if (total_size == 0)
+  {
+    tfs_file.tfs_close();
+    stat_param.read_fail_count_++;
+    fprintf(stderr, "read tfsfile fail(%s), total len(%d)\n", tfs_file.get_error_message(), total_size);
+    return EXIT_FAILURE;
   }
 
   tfs_file.tfs_close();
@@ -262,7 +272,7 @@ class WorkThread : public tbutil::Thread
     virtual void run()
     {
       TfsClient tfsclient;
-      int iret = tfsclient.initialize(ns_ip_port_);
+      int iret = tfsclient.initialize(ns_ip_port_, 0, 0);
       if (iret != TFS_SUCCESS)
       {
         TBSYS_LOG(ERROR, "tfsclient initialize failed: %s", tfsclient.get_error_message());
@@ -359,7 +369,18 @@ class WorkThread : public tbutil::Thread
             ++i;
           }
 
+          {
+             tbutil::Mutex::Lock lock(mutex_);
+             gstat_.write_success_count_ += stat_.write_success_count_;
+             gstat_.write_fail_count_ += stat_.write_fail_count_;
+             gstat_.write_response_ += stat_.write_response_;
+             stat_.write_success_count_ = 0;
+             stat_.write_fail_count_ = 0;
+             stat_.write_response_ = 0;
+          }
+          loop = 0;
           i = 0;
+
           while (i < MAX_READ_COUNT)
           {
             int64_t queue_size = write_request_queue_.size();
