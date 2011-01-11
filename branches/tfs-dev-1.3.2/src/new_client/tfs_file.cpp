@@ -673,6 +673,7 @@ int TfsFile::async_rsp_write_data(message::Message* rsp, const int32_t index)
       StatusMessage* msg = dynamic_cast<StatusMessage*>(rsp);
       if (STATUS_MESSAGE_OK == msg->get_status())
       {
+        // crc will be calculated once
         int32_t& crc_ref = seg_data->seg_info_.crc_;
         crc_ref = Func::crc(crc_ref, seg_data->buf_, seg_data->seg_info_.size_);
         ret = TFS_SUCCESS;

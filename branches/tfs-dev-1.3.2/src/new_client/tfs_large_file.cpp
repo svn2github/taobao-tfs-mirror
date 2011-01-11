@@ -305,7 +305,7 @@ int32_t TfsLargeFile::finish_write_process(int status)
     }
     processing_seg_list_.clear();
   }
-  else if (status != EXIT_ALL_SEGMENT_ERROR)
+  else
   {
     for (; it != processing_seg_list_.end();)
     {
@@ -327,6 +327,8 @@ int32_t TfsLargeFile::finish_write_process(int status)
       }
       else
       {
+        // reset crc here
+        (*it)->seg_info_.crc_ = 0;
         it++;
       }
     }
