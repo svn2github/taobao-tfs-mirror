@@ -519,8 +519,8 @@ namespace tfs
         if (sub_flag == PRINT_ALL)
         {
         printf("Total : %-10d %-1d %3s %7s  %2d%%  %6"PRI64_PREFIX"u   %2u %6s %5"PRI64_PREFIX"d %5s %5"PRI64_PREFIX"d %5s %5"PRI64_PREFIX"d %4s %5"PRI64_PREFIX"d\n",
-            server_count_,
             machine_count_,
+            server_count_,
             Func::format_size(use_capacity_).c_str(),
             Func::format_size(total_capacity_).c_str(),
             static_cast<int32_t> (use_capacity_ * 100 / total_capacity_),
@@ -539,8 +539,8 @@ namespace tfs
         else
         {
         printf("Total : %-7d %-4d %2s %7s  %2d%%  %6"PRI64_PREFIX"u   %2u %6s %5"PRI64_PREFIX"d %5s %5"PRI64_PREFIX"d\n",
-            server_count_,
             machine_count_,
+            server_count_,
             Func::format_size(use_capacity_).c_str(),
             Func::format_size(total_capacity_).c_str(),
             static_cast<int32_t> (use_capacity_ * 100 / total_capacity_),

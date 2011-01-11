@@ -372,11 +372,13 @@ namespace tfs
     }
     uint64_t ShowInfo::get_machine_id(uint64_t server_id)
     {
-      char ipport[64] = {'\0'};
-      char ip[64] = {'\0'};
-      strncpy(ipport, tbsys::CNetUtil::addrToString(server_id).c_str(), 32);
-      strncpy(ip, ipport, strchr(ipport, ':') - ipport);
-      return tbsys::CNetUtil::getAddr(ip);
+      IpAddr* adr = (IpAddr *) (&server_id);
+      return adr->ip_;
+      //char ipport[64] = {'\0'};
+      //char ip[64] = {'\0'};
+      //strncpy(ipport, tbsys::CNetUtil::addrToString(server_id).c_str(), 32);
+      //strncpy(ip, ipport, strchr(ipport, ':') - ipport);
+      //return tbsys::CNetUtil::getAddr(ip);
     }
     
     void ShowInfo::print_header(int8_t print_type, int32_t flag)
