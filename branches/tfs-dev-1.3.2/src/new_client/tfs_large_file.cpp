@@ -78,12 +78,12 @@ int TfsLargeFile::open(const char* file_name, const char* suffix, const int flag
 
 int64_t TfsLargeFile::read(void* buf, int64_t count)
 {
-  return read_ex(buf, count, offset_, true);
+  return read_ex(buf, count, offset_);
 }
 
 int64_t TfsLargeFile::write(const void* buf, int64_t count)
 {
-  return write_ex(buf, count, offset_, true);
+  return write_ex(buf, count, offset_);
 }
 
 int64_t TfsLargeFile::lseek(int64_t offset, int whence)
@@ -219,6 +219,11 @@ int TfsLargeFile::get_segment_for_write(int64_t offset, const char* buf, int64_t
 {
   destroy_seg();
   return local_key_.get_segment_for_write(offset, buf, count, processing_seg_list_);
+}
+
+int TfsLargeFile::get_size_for_rw(const int64_t check_size, const int64_t count, int64_t& cur_size, bool& not_end)
+{
+  return get_size_for_rw_ex(check_size, count, cur_size, not_end, BATCH_SIZE);
 }
 
 int TfsLargeFile::read_process()
@@ -424,8 +429,6 @@ int TfsLargeFile::upload_key()
 
     if (TFS_SUCCESS == ret)
     {
-      fsname_.set_file_id(meta_seg_->seg_info_.file_id_);
-      fsname_.set_block_id(meta_seg_->seg_info_.block_id_);
       // remove fail, then data can be gc
       if ((ret = local_key_.remove()) != TFS_SUCCESS)
       {

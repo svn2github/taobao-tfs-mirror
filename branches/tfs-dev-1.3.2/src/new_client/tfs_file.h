@@ -73,6 +73,7 @@ namespace tfs
       // virtual level operation
       virtual int get_segment_for_read(int64_t offset, char* buf, int64_t count) = 0;
       virtual int get_segment_for_write(int64_t offset, const char* buf, int64_t count) = 0;
+      virtual int get_size_for_rw(const int64_t check_size, const int64_t count, int64_t& cur_size, bool& not_end) = 0;
       virtual int read_process() = 0;
       virtual int write_process() = 0;
       virtual int finish_write_process(int status) = 0;
@@ -94,6 +95,7 @@ namespace tfs
       int64_t pwrite_ex(const void* buf, int64_t count, int64_t offset);
       int fstat_ex(common::FileInfo* file_info, int32_t mode);
       int close_ex();
+      int get_size_for_rw_ex(const int64_t check_size, const int64_t count, int64_t& cur_size, bool& not_end, const int64_t per_size);
 
     private:
       int do_async_request(const InnerFilePhase file_phase, const int64_t wait_id, const int32_t index);

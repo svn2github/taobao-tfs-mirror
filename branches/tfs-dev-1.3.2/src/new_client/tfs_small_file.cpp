@@ -33,12 +33,12 @@ int TfsSmallFile::open(const char *file_name, const char *suffix, int flags, ...
 
 int64_t TfsSmallFile::read(void* buf, int64_t count)
 {
-  return read_ex(buf, count, offset_, false);
+  return read_ex(buf, count, offset_);
 }
 
 int64_t TfsSmallFile::write(const void* buf, int64_t count)
 {
-  return write_ex(buf, count, offset_, false);
+  return write_ex(buf, count, offset_);
 }
 
 int64_t TfsSmallFile::lseek(int64_t offset, int whence)
@@ -105,9 +105,17 @@ int TfsSmallFile::get_segment_for_write(int64_t offset, const char* buf, int64_t
   return get_meta_segment(offset, const_cast<char*>(buf), count);
 }
 
+int TfsSmallFile::get_size_for_rw(const int64_t check_size, const int64_t count, int64_t& cur_size, bool& not_end)
+{
+  return get_size_for_rw_ex(check_size, count, cur_size, not_end, SEGMENT_SIZE);
+}
+
 int TfsSmallFile::read_process()
 {
   int ret = TFS_SUCCESS;
+  //set status
+  processing_seg_list_[0]->status_ = SEG_STATUS_OPEN_OVER; 
+
   if ((ret = process(FILE_PHASE_READ_FILE)) != TFS_SUCCESS)
   {
     TBSYS_LOG(ERROR, "read data fail, ret: %d", ret);
@@ -118,6 +126,8 @@ int TfsSmallFile::read_process()
 int TfsSmallFile::write_process()
 {
   int ret = TFS_SUCCESS;
+  // set status
+  processing_seg_list_[0]->status_ = SEG_STATUS_CREATE_OVER; 
   // write data
   if ((ret = process(FILE_PHASE_WRITE_DATA)) != TFS_SUCCESS)
   {
@@ -133,11 +143,6 @@ int32_t TfsSmallFile::finish_write_process(int status)
   // for small file, once fail,
   if (status != TFS_SUCCESS)
   {
-    // TODO ... open without filename, get new block and retry
-    // if (0 == fsname_.get_block_id())
-    // {
-    // }
-
     // open with filename, just retry this block
     for (SEG_DATA_LIST_ITER it = processing_seg_list_.begin();
          it != processing_seg_list_.end(); it++)
@@ -154,6 +159,7 @@ int32_t TfsSmallFile::finish_write_process(int status)
       }
       else
       {
+        (*it)->seg_info_.crc_ = 0;
         // restart from beginning
         (*it)->status_ = SEG_STATUS_OPEN_OVER;
       }

@@ -111,32 +111,30 @@ int64_t TfsFile::read_ex(void* buf, const int64_t count, const int64_t offset, c
   else
   {
     int64_t check_size = 0;
-    int32_t cur_size = 0, seg_count = 0, retry_count = 0;
+    int64_t cur_size = 0, seg_count = 0, retry_count = 0;
     bool not_end = true;
 
     while (not_end)
     {
-      if (check_size + BATCH_SIZE >= count)
+      if ((ret = get_size_for_rw(check_size, count, cur_size, not_end)) != TFS_SUCCESS)
       {
-        cur_size = count - check_size;
-        not_end = false;
-      }
-      else
-      {
-        cur_size = BATCH_SIZE;
+        TBSYS_LOG(ERROR, "get size of read error, ret: %d", ret);
+        ret = EXIT_GENERAL_ERROR;
+        break;
       }
 
       if ((ret = get_segment_for_read(offset + check_size, reinterpret_cast<char*>(buf) + check_size,
                                       cur_size)) != TFS_SUCCESS)
       {
-        TBSYS_LOG(ERROR, "get segment for read fail, ret: %d, offset: %"PRI64_PREFIX"d, size: %d",
+        TBSYS_LOG(ERROR, "get segment for read fail, ret: %d, offset: %"PRI64_PREFIX"d, size: %"PRI64_PREFIX"d",
                   ret, offset + check_size, cur_size);
         ret = EXIT_GENERAL_ERROR;
         break;
       }
       else if (0 == processing_seg_list_.size())
       {
-        TBSYS_LOG(DEBUG, "large file read reach end, offset: %"PRI64_PREFIX"d, size: %d", offset + check_size, cur_size);
+        TBSYS_LOG(DEBUG, "large file read reach end, offset: %"PRI64_PREFIX"d, size: %"PRI64_PREFIX"d",
+            offset + check_size, cur_size);
         eof_ = TFS_FILE_EOF_FLAG_YES;
         break;
       }
@@ -152,7 +150,7 @@ int64_t TfsFile::read_ex(void* buf, const int64_t count, const int64_t offset, c
 
         if (ret != TFS_SUCCESS)
         {
-          TBSYS_LOG(ERROR, "read data fail, ret: %d, offset: %"PRI64_PREFIX"d, size: %d, segment count: %d",
+          TBSYS_LOG(ERROR, "read data fail, ret: %d, offset: %"PRI64_PREFIX"d, size: %"PRI64_PREFIX"d, segment count: %"PRI64_PREFIX"d",
                     ret, offset + check_size, cur_size, seg_count);
           ret = EXIT_GENERAL_ERROR;
           // read fail, must exit
@@ -160,7 +158,7 @@ int64_t TfsFile::read_ex(void* buf, const int64_t count, const int64_t offset, c
         }
         else if (TFS_FILE_EOF_FLAG_YES == eof_) //reach end
         {
-          TBSYS_LOG(DEBUG, "file read reach end, offset: %"PRI64_PREFIX"d, size: %d", offset + check_size, cur_size);
+          TBSYS_LOG(DEBUG, "file read reach end, offset: %"PRI64_PREFIX"d, size: %"PRI64_PREFIX"d", offset + check_size, cur_size);
           break;
         }
       }
@@ -194,19 +192,16 @@ int64_t TfsFile::write_ex(const void* buf, int64_t count, int64_t offset, bool m
   }
   else
   {
-    int32_t cur_size = 0, seg_count = 0, retry_count = 0;
+    int64_t cur_size = 0, seg_count = 0, retry_count = 0;
     bool not_end = true;
 
     while (not_end)
     {
-      if (check_size + BATCH_SIZE >= count)
+      if ((ret = get_size_for_rw(check_size, count, cur_size, not_end)) != TFS_SUCCESS)
       {
-        cur_size = count - check_size;
-        not_end = false;
-      }
-      else
-      {
-        cur_size = BATCH_SIZE;
+        TBSYS_LOG(ERROR, "get size of write error, ret: %d", ret);
+        ret = EXIT_GENERAL_ERROR;
+        break;
       }
 
       if ((ret = get_segment_for_write(offset + check_size,
@@ -220,7 +215,7 @@ int64_t TfsFile::write_ex(const void* buf, int64_t count, int64_t offset, bool m
       seg_count = processing_seg_list_.size();
       if (0 == seg_count)
       {
-        TBSYS_LOG(INFO, "data already written, offset: %"PRI64_PREFIX"d, size: %d", offset + check_size, cur_size);
+        TBSYS_LOG(INFO, "data already written, offset: %"PRI64_PREFIX"d, size: %"PRI64_PREFIX"d", offset + check_size, cur_size);
       }
       else
       {
@@ -233,14 +228,14 @@ int64_t TfsFile::write_ex(const void* buf, int64_t count, int64_t offset, bool m
 
         if (ret != TFS_SUCCESS)
         {
-          TBSYS_LOG(ERROR, "write fail, offset: %"PRI64_PREFIX"d, size: %d, segment count total: %d, ret: %d",
+          TBSYS_LOG(ERROR, "write fail, offset: %"PRI64_PREFIX"d, size: %"PRI64_PREFIX"d, segment count total: %"PRI64_PREFIX"d, ret: %d",
                     offset + check_size, cur_size, seg_count, ret);
           ret = EXIT_GENERAL_ERROR;
           break;
         }
         else
         {
-          TBSYS_LOG(DEBUG, "write success, offset: %"PRI64_PREFIX"d, size: %d, segment count: %d",
+          TBSYS_LOG(DEBUG, "write success, offset: %"PRI64_PREFIX"d, size: %"PRI64_PREFIX"d, segment count: %"PRI64_PREFIX"d",
                     offset + check_size, cur_size, seg_count);
         }
       }
@@ -361,8 +356,37 @@ int TfsFile::close_ex()
 
   if (TFS_SUCCESS == ret)
   {
+    if (flags_ & WRITE_MODE)
+    {
+      fsname_.set_file_id(meta_seg_->seg_info_.file_id_);
+      fsname_.set_block_id(meta_seg_->seg_info_.block_id_);
+    }
+
     is_open_ = TFS_FILE_OPEN_NO;
     offset_ = 0;
+  }
+  return ret;
+}
+
+int TfsFile::get_size_for_rw_ex(const int64_t check_size,
+        const int64_t count, int64_t& cur_size, bool& not_end, const int64_t per_size)
+{
+  int ret = TFS_SUCCESS;
+  if (check_size > count)
+  {
+    ret = TFS_ERROR;
+  }
+  else
+  {
+    if (check_size + per_size >= count)
+    {
+      cur_size = count - check_size;
+      not_end = false;
+    }
+    else
+    {
+      cur_size = per_size;
+    }
   }
   return ret;
 }
@@ -390,7 +414,7 @@ int TfsFile::get_meta_segment(const int64_t offset, char* buf, const int64_t cou
     TBSYS_LOG(ERROR, "meta segment null error");
     ret = TFS_ERROR;
   }
-  else if (count > SEGMENT_SIZE) // run in small file
+  else if (count > SEGMENT_SIZE) // run in small file, only one piece each loop
   {
     int64_t cur_size = SEGMENT_SIZE, check_size = 0;
     while (check_size < count)
@@ -416,6 +440,10 @@ int TfsFile::get_meta_segment(const int64_t offset, char* buf, const int64_t cou
   }
   else
   {
+    meta_seg_->seg_info_.offset_ = offset;
+    meta_seg_->seg_info_.size_ = count;
+    meta_seg_->buf_ = buf;
+    meta_seg_->whole_file_flag_ = false;
     processing_seg_list_.push_back(meta_seg_);
   }
   return ret;
@@ -435,7 +463,8 @@ int TfsFile::process(const InnerFilePhase file_phase)
         || (ret = do_async_request(file_phase, wait_id, i)) != TFS_SUCCESS)
     {
       // just continue
-      TBSYS_LOG(ERROR, "request %d fail, status: %d", i, processing_seg_list_[i]->status_);
+      TBSYS_LOG(ERROR, "request %d fail, status: %d, define status: %d",
+          i, processing_seg_list_[i]->status_, phase_status[phase_status[file_phase].pre_phase_].status_);
       req_size--;
     }
   }

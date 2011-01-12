@@ -529,6 +529,7 @@ int LocalKey::gc_segment(SEG_SET_ITER first, SEG_SET_ITER last)
     gc_seg_info_.insert(first, last);
     seg_info_.erase(first, last);
   }
+  return TFS_SUCCESS;
 }
 
 void LocalKey::destroy_info()
