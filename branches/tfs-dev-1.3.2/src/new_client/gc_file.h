@@ -9,7 +9,7 @@ namespace tfs
   namespace client
   {
     const int32_t GC_BATCH_WIRTE_COUNT = 10;
-    static const char* GC_FILE_PATH = "/tmp/TFSlocalkeyDIR/gc/";
+    extern const char* GC_FILE_PATH;
 
     class GcFile
     {

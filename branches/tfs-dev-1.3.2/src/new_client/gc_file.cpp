@@ -7,6 +7,7 @@
 using namespace tfs::client;
 using namespace tfs::common;
 
+const char* tfs::client::GC_FILE_PATH = "/tmp/TFSlocalkeyDIR/gc/";
 
 GcFile::GcFile() : is_load_(false), file_op_(NULL)
 {
@@ -35,7 +36,7 @@ int GcFile::initialize(const char* name)
   char file_path[MAX_PATH_LENGTH];
   strncpy(file_path, GC_FILE_PATH, MAX_PATH_LENGTH - 1);
   strncpy(file_path + strlen(GC_FILE_PATH), name, strlen(name));
-  int flag = 0, ret = TFS_SUCCESS;
+  int ret = TFS_SUCCESS;
 
   if (!DirectoryOp::create_full_path(GC_FILE_PATH))
   {
@@ -76,7 +77,7 @@ int GcFile::add_segment(const SegmentInfo& seg_info)
 
   TBSYS_LOG(DEBUG, "add gc segment. blockid: %u, fileid: %"PRI64_PREFIX"u, offset: %"PRI64_PREFIX"d, size: %d, crc: %u",
             seg_info.block_id_, seg_info.file_id_, seg_info.offset_, seg_info.size_, seg_info.crc_);
-  if (seg_info_.size() > GC_BATCH_WIRTE_COUNT)
+  if (static_cast<int32_t>(seg_info_.size()) > GC_BATCH_WIRTE_COUNT)
   {
     ret = save();
   }
@@ -177,6 +178,7 @@ int GcFile::load()
     }
     tbsys::gDeleteA(buf);
   }
+  return ret;
 }
 
 int GcFile::load_head()

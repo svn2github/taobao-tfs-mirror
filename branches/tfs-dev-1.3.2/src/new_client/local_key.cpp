@@ -7,6 +7,7 @@
 using namespace tfs::client;
 using namespace tfs::common;
 
+const char* tfs::client::LOCAL_KEY_PATH = "/tmp/TFSlocalkeyDIR/";
 
 LocalKey::LocalKey() : file_op_(NULL)
 {

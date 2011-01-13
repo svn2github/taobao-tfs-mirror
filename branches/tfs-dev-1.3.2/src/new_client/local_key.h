@@ -64,7 +64,7 @@ namespace tfs
       }
     };
 
-    static const char* LOCAL_KEY_PATH = "/tmp/TFSlocalkeyDIR/";
+    extern const char* LOCAL_KEY_PATH;
 
     typedef std::vector<SegmentData*> SEG_DATA_LIST;
     typedef std::vector<SegmentData*>::iterator SEG_DATA_LIST_ITER;
