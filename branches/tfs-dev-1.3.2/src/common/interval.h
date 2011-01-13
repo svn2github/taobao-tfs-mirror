@@ -112,7 +112,7 @@ namespace tfs
       CHECK_BLOCK_EIO
     };
 
-    // write data info 
+    // write data info
     enum ServerRole
     {
       Master_Server_Role = 0,
@@ -365,6 +365,36 @@ namespace tfs
     //  {
     //  }
     //};
+    struct SegmentHead
+    {
+      int32_t count_;           // segment count
+      int64_t size_;            // total size that segments contain
+      SegmentHead() : count_(0), size_(0)
+      {
+      }
+    };
+
+    struct SegmentInfo
+    {
+      uint32_t block_id_;       // block id
+      uint64_t file_id_;        // file id
+      int64_t offset_;          // offset in current file
+      int32_t size_;            // size of segment
+      int32_t crc_;             // crc checksum of segment
+
+      SegmentInfo()
+      {
+        memset(this, 0, sizeof(*this));
+      }
+      SegmentInfo(const SegmentInfo& seg_info)
+      {
+        memcpy(this, &seg_info, sizeof(SegmentInfo));
+      }
+      bool operator < (const SegmentInfo& si) const
+      {
+        return offset_ < si.offset_;
+      }
+    };
 #pragma pack()
 
     static const int32_t BLOCKINFO_SIZE = sizeof(BlockInfo);

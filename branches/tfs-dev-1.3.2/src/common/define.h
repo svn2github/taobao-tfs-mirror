@@ -141,7 +141,8 @@ namespace tfs
     static const int TFS_SUCCESS = EXIT_SUCCESS;
     static const int TFS_ERROR = EXIT_FAILURE;
 
-    static const int EXIT_INVALIDFD_ERROR = -1; // temporary use
+    static const int EXIT_INVALIDFD_ERROR = -1005;
+    static const int EXIT_NOT_INIT_ERROR = -1006;
 
     static const int32_t INT_SIZE = 4;
     static const int32_t INT64_SIZE = 8;
