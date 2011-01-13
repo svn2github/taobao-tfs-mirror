@@ -5,6 +5,7 @@
 #include <Memory.hpp>
 #include "common/file_op.h"
 #include "common/interval.h"
+#include "gc_file.h"
 
 namespace tfs
 {
@@ -15,40 +16,6 @@ namespace tfs
       TFS_FILE_EOF_FLAG_NO = 0x00,
       TFS_FILE_EOF_FLAG_YES
     };
-
-#pragma pack(4)
-    struct SegmentHead
-    {
-      int32_t count_;           // segment count
-      int64_t size_;            // total size that segments contain
-      SegmentHead() : count_(0), size_(0)
-      {
-      }
-    };
-
-    struct SegmentInfo
-    {
-      uint32_t block_id_;       // block id
-      uint64_t file_id_;        // file id
-      int64_t offset_;          // offset in current file
-      int32_t size_;            // size of segment
-      int32_t crc_;             // crc checksum of segment
-
-      SegmentInfo()
-      {
-        memset(this, 0, sizeof(*this));
-      }
-      SegmentInfo(const SegmentInfo& seg_info)
-      {
-        memcpy(this, &seg_info, sizeof(SegmentInfo));
-      }
-      bool operator < (const SegmentInfo& si) const
-      {
-        return offset_ < si.offset_;
-      }
-    };
-#pragma pack()
-
     enum SegmentStatus
     {
       SEG_STATUS_NOT_INIT = 0,      // not initialized
@@ -62,7 +29,7 @@ namespace tfs
     {
       bool delete_flag_;  // delete flag
       bool whole_file_flag_;
-      SegmentInfo seg_info_;
+      common::SegmentInfo seg_info_;
       char* buf_;                   // buffer start
       common::FileInfo* file_info_;
       uint64_t file_number_;
@@ -74,34 +41,36 @@ namespace tfs
       SegmentData() : delete_flag_(true), whole_file_flag_(true), buf_(NULL), file_info_(NULL),
                       file_number_(0), pri_ds_index_(-1),
                       status_(SEG_STATUS_NOT_INIT), eof_(TFS_FILE_EOF_FLAG_NO)
-        {
-        }
+      {
+      }
 
       SegmentData(SegmentData& seg_data)
-        {
-          delete_flag_ = false;
-          whole_file_flag_ = seg_data.whole_file_flag_;
-          memcpy(&seg_info_, &seg_data.seg_info_, sizeof(seg_info_));
-          buf_ = seg_data.buf_;
-          file_info_ = NULL;      // not copy
-          file_number_ = seg_data.file_number_;
-          ds_ = seg_data.ds_;
-          pri_ds_index_ = seg_data.pri_ds_index_;
-          status_ = seg_data.status_;
-          eof_ = seg_data.eof_;
-        }
+      {
+        delete_flag_ = false;
+        whole_file_flag_ = seg_data.whole_file_flag_;
+        memcpy(&seg_info_, &seg_data.seg_info_, sizeof(seg_info_));
+        buf_ = seg_data.buf_;
+        file_info_ = NULL;      // not copy
+        file_number_ = seg_data.file_number_;
+        ds_ = seg_data.ds_;
+        pri_ds_index_ = seg_data.pri_ds_index_;
+        status_ = seg_data.status_;
+        eof_ = seg_data.eof_;
+      }
 
       ~SegmentData()
-        {
-          tbsys::gDelete(file_info_);
-        }
+      {
+        tbsys::gDelete(file_info_);
+      }
     };
+
+    static const char* LOCAL_KEY_PATH = "/tmp/TFSlocalkeyDIR/";
 
     typedef std::vector<SegmentData*> SEG_DATA_LIST;
     typedef std::vector<SegmentData*>::iterator SEG_DATA_LIST_ITER;
 
-    typedef std::set<SegmentInfo> SEG_SET;
-    typedef std::set<SegmentInfo>::iterator SEG_SET_ITER;
+    typedef std::set<common::SegmentInfo> SEG_SET;
+    typedef std::set<common::SegmentInfo>::iterator SEG_SET_ITER;
 
     class LocalKey
     {
@@ -114,6 +83,7 @@ namespace tfs
 
       int load();
       int load(const char* buf);
+      int load_file(const char* name);
       int validate(int64_t total_size = 0);
       int save();
       int remove();
@@ -123,7 +93,7 @@ namespace tfs
       int get_segment_for_read(const int64_t offset, const char* buf,
                                const int64_t size, SEG_DATA_LIST& seg_list);
 
-      int add_segment(SegmentInfo& seg_info);
+      int add_segment(common::SegmentInfo& seg_info);
 
       int64_t get_file_size();  // get size that segments contain
       int32_t get_data_size();  // get raw data size of segment head and data
@@ -141,15 +111,15 @@ namespace tfs
       int load_head(const char* buf);
       int load_segment(const char* buf);
       void get_segment(const int64_t start, const int64_t end,
-                      const char* buf, int64_t& size, SEG_DATA_LIST& seg_list);
-      int gc_segment(SEG_SET_ITER it);
-      int gc_segment(SEG_SET_ITER first, SEG_SET_ITER last);
+                       const char* buf, int64_t& size, SEG_DATA_LIST& seg_list);
+      void gc_segment(SEG_SET_ITER it);
+      void gc_segment(SEG_SET_ITER first, SEG_SET_ITER last);
 
     private:
-      SegmentHead seg_head_;
+      common::SegmentHead seg_head_;
       common::FileOperation* file_op_;
+      GcFile gc_file_;
       SEG_SET seg_info_;
-      SEG_SET gc_seg_info_;
     };
   }
 }

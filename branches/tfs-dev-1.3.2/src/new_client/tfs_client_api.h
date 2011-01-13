@@ -64,6 +64,11 @@ namespace tfs
       __always_inline __attribute__ ((__gnu_inline__)) int
         open(const char* file_name, const char* suffix, const int flags, ... )
       {
+        if (!check_init())
+        {
+          return common::EXIT_NOT_INIT_ERROR;
+        }
+
         if (__builtin_va_arg_pack_len() > 1)
         {
           overmany_log_error();
@@ -90,6 +95,12 @@ namespace tfs
       __always_inline __attribute__ ((__gnu_inline__)) int
         open(const char* file_name, const char* suffix, const char* ns_addr, const int flags, ... )
       {
+        // not specify ns address and not init, then exit
+        if (NULL == ns_addr && !check_init())
+        {
+          return common::EXIT_NOT_INIT_ERROR;
+        }
+
         if (__builtin_va_arg_pack_len() > 1)
         {
           overmany_log_error();
@@ -128,9 +139,9 @@ namespace tfs
       int unlink(const char* file_name, const char* suffix, const char* ns_addr, const int action = 0);
 
     private:
+      bool check_init();
       int open_ex(const char* file_name, const char* suffix, const char* ns_addr,
-             const int flags, ...);
-
+                  const int flags, ...);
       TfsFile* get_file(const int fd);
       int erase_file(const int fd);
 

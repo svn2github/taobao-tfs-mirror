@@ -43,8 +43,8 @@ TfsClient::~TfsClient()
 
 int TfsClient::initialize(const char* ns_addr, const int32_t cache_time, const int32_t cache_items)
 {
-
   int ret = TFS_SUCCESS;
+
   tbutil::Mutex::Lock lock(mutex_);
   if (is_init_)
   {
@@ -197,44 +197,66 @@ int TfsClient::open_ex(const char* file_name, const char* suffix, const char* ns
 int TfsClient::unlink(const char* file_name, const char* suffix, const char* ns_addr, const int action)
 {
   int ret = TFS_SUCCESS;
-  TfsSession* tfs_session = (NULL == ns_addr) ? default_tfs_session_ :
-    SESSION_POOL.get(ns_addr, default_tfs_session_->get_cache_time(), default_tfs_session_->get_cache_items());
 
-  if (NULL == tfs_session)
+  if (NULL == ns_addr && !check_init())
   {
-    TBSYS_LOG(ERROR, "can not get tfs session : %s.", ns_addr);
-    ret = TFS_ERROR;
+    ret = EXIT_NOT_INIT_ERROR;
   }
   else
   {
-    TfsFile* tfs_file = NULL;
-    if (file_name[0] == 'T')
+    TfsSession* tfs_session = (NULL == ns_addr) ? default_tfs_session_ :
+      SESSION_POOL.get(ns_addr, default_tfs_session_->get_cache_time(), default_tfs_session_->get_cache_items());
+
+    if (NULL == tfs_session)
     {
-      tfs_file = new TfsSmallFile();
-      tfs_file->set_session(tfs_session);
-      ret = tfs_file->unlink(file_name, suffix, action);
-    }
-    else if (file_name[0] == 'L')
-    {
-      if (DELETE != action && CONCEAL != action && REVEAL != action)
-      {
-        TBSYS_LOG(ERROR, "now can not unlink large file with action: %d", action);
-        ret = TFS_ERROR;
-      }
-      else
-      {
-        tfs_file = new TfsLargeFile();
-        tfs_file->set_session(tfs_session);
-        ret = tfs_file->unlink(file_name, suffix, action);
-      }
+      TBSYS_LOG(ERROR, "can not get tfs session : %s.", ns_addr);
+      ret = TFS_ERROR;
     }
     else
     {
-      TBSYS_LOG(ERROR, "tfs file name illegal: %s", file_name);
+      TfsFile* tfs_file = NULL;
+      if (file_name[0] == 'T')
+      {
+        tfs_file = new TfsSmallFile();
+        tfs_file->set_session(tfs_session);
+        ret = tfs_file->unlink(file_name, suffix, action);
+      }
+      else if (file_name[0] == 'L')
+      {
+        if (DELETE != action && CONCEAL != action && REVEAL != action)
+        {
+          TBSYS_LOG(ERROR, "now can not unlink large file with action: %d", action);
+          ret = TFS_ERROR;
+        }
+        else
+        {
+          tfs_file = new TfsLargeFile();
+          tfs_file->set_session(tfs_session);
+          ret = tfs_file->unlink(file_name, suffix, action);
+        }
+      }
+      else
+      {
+        TBSYS_LOG(ERROR, "tfs file name illegal: %s", file_name);
+      }
     }
   }
-
   return ret;
+}
+
+// check if tfsclient is already initialized.
+// read and write and stuffs that need open first,
+// need no init check cause open already does it,
+// and they will check if file is open.
+bool TfsClient::check_init()
+{
+  tbutil::Mutex::Lock lock(mutex_);
+  if (!is_init_)
+  {
+    TBSYS_LOG(ERROR, "tfsclient not initialized");
+  }
+
+  return is_init_;
 }
 
 TfsFile* TfsClient::get_file(const int fd)

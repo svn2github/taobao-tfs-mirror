@@ -7,9 +7,10 @@ AM_LDFLAGS=-lrt -lpthread -ldl
 lib_LTLIBRARIES= libtfsclient.la
 
 api_source_list = tfs_file.cpp tfs_large_file.cpp tfs_small_file.cpp tfs_session.cpp fsname.cpp \
-                  tfs_session_pool.cpp tfs_client_api.cpp local_key.cpp \
+                  tfs_session_pool.cpp tfs_client_api.cpp local_key.cpp gc_file.cpp gc_worker.cpp \
                   tfs_file.h tfs_large_file.h tfs_small_file.h tfs_session.h fsname.h \
-                  tfs_session_pool.h tfs_client_api.h local_key.h
+                  tfs_session_pool.h tfs_client_api.h local_key.h gc_file.h gc_worker.h
+
 ld_fg = $(AM_LDFLAGS) \
         $(top_srcdir)/src/message/libtfsmessage.a \
         $(top_srcdir)/src/common/libtfscommon.a \
@@ -29,7 +30,7 @@ include_HEADERS = tfs_client_api.h
 #	                     $(top_builddir)/src/message/libtfsmessage.a \
 #											 $(top_builddir)/src/common/libtfscommon.a \
 #											 $(TBLIB_ROOT)/lib/libtbnet.a \
-#											 $(TBLIB_ROOT)/lib/libtbsys.a 
+#											 $(TBLIB_ROOT)/lib/libtbsys.a
 # hardcode to extract static library in destinate static library
 # consider libtool compatibility,do change in destinate directory
 install-exec-hook:
