@@ -154,7 +154,7 @@ int TfsLargeFile::unlink(const char* file_name, const char* suffix, const int ac
   }
   else
   {
-    if (action & DELETE) // if DELETE, need load meta. CONCEAL or REVEAL, skip it
+    if (DELETE == action) // if DELETE, need load meta. CONCEAL or REVEAL, skip it
     {
       FileInfo file_info;
       if ((ret = fstat_ex(&file_info, 0)) != TFS_SUCCESS)
@@ -166,12 +166,23 @@ int TfsLargeFile::unlink(const char* file_name, const char* suffix, const int ac
         ret = load_meta(file_info);
       }
     }
+    else if (UNDELETE == action)
+    {
+      TBSYS_LOG(ERROR, "tfs not support undelete large file now");
+      ret = EXIT_NOT_PERM_OPER;
+      //Todo
+      //1. undelete meta file
+      //2. load meta file
+      //3. undelete all seg file
+    }
   }
 
   if (TFS_SUCCESS == ret)
   {
     // unlink meta
     meta_seg_->file_number_ = action;
+    meta_seg_->status_ = SEG_STATUS_OPEN_OVER;
+
     get_meta_segment(0, NULL, 0);
     if ((ret = unlink_process()) != TFS_SUCCESS)
     {
