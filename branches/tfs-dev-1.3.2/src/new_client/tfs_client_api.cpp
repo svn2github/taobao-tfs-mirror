@@ -22,13 +22,14 @@
 #include "tfs_session_pool.h"
 #include "tfs_large_file.h"
 #include "tfs_small_file.h"
+#include "gc_worker.h"
 
 using namespace tfs::common;
 using namespace tfs::message;
 using namespace tfs::client;
 using namespace std;
 
-TfsClient::TfsClient() : is_init_(false), default_tfs_session_(NULL), fd_(1)
+TfsClient::TfsClient() : is_init_(false), default_tfs_session_(NULL), fd_(1), gc_worker_(NULL)
 {
 }
 
@@ -39,6 +40,10 @@ TfsClient::~TfsClient()
     tbsys::gDelete(it->second);
   }
   tfs_file_map_.clear();
+
+  // wait for gc end?
+  pthread_join(gc_tid_, NULL);
+  tbsys::gDelete(gc_worker_);
 }
 
 int TfsClient::initialize(const char* ns_addr, const int32_t cache_time, const int32_t cache_items)
@@ -64,6 +69,10 @@ int TfsClient::initialize(const char* ns_addr, const int32_t cache_time, const i
       {
         TBSYS_LOG(ERROR, "tfsclient initialize to ns %s failed. must exit", ns_addr);
         ret = TFS_ERROR;
+      }
+      else if ((ret = start_gc()) != TFS_SUCCESS)
+      {
+        TBSYS_LOG(ERROR, "start gc thread fail, ret: %d", ret);
       }
       else
       {
@@ -113,7 +122,7 @@ int64_t TfsClient::lseek(const int fd, const int64_t offset, const int whence)
 }
 
 int64_t TfsClient::pread(const int fd, void* buf, const int64_t count, const int64_t offset)
-{  
+{
   int64_t ret = EXIT_INVALIDFD_ERROR;
   TfsFile* tfs_file = get_file(fd);
   if (NULL != tfs_file)
@@ -125,7 +134,7 @@ int64_t TfsClient::pread(const int fd, void* buf, const int64_t count, const int
 }
 
 int64_t TfsClient::pwrite(const int fd, const void* buf, const int64_t count, const int64_t offset)
-{  
+{
   int64_t ret = EXIT_INVALIDFD_ERROR;
   TfsFile* tfs_file = get_file(fd);
   if (NULL != tfs_file)
@@ -137,7 +146,7 @@ int64_t TfsClient::pwrite(const int fd, const void* buf, const int64_t count, co
 }
 
 int TfsClient::fstat(const int fd, common::FileStat* buf, const int mode)
-{  
+{
   int ret = EXIT_INVALIDFD_ERROR;
   TfsFile* tfs_file = get_file(fd);
   if (NULL != tfs_file)
@@ -235,14 +244,13 @@ int TfsClient::unlink(const char* file_name, const char* suffix, const char* ns_
 {
   int ret = TFS_SUCCESS;
 
-  if (NULL == ns_addr && !check_init())
+  if (!check_init())
   {
     ret = EXIT_NOT_INIT_ERROR;
   }
   else
   {
     TfsSession* tfs_session = (NULL == ns_addr) ? default_tfs_session_ :
-      NULL == default_tfs_session_ ? SESSION_POOL.get(ns_addr) :
       SESSION_POOL.get(ns_addr, default_tfs_session_->get_cache_time(), default_tfs_session_->get_cache_items());
 
     if (NULL == tfs_session)
@@ -321,4 +329,20 @@ int TfsClient::erase_file(const int fd)
   tbsys::gDelete(it->second);
   tfs_file_map_.erase(it);
   return TFS_SUCCESS;
+}
+
+int TfsClient::start_gc()
+{
+  gc_worker_ = new GcWorker();
+  int ret = pthread_create(&gc_tid_, NULL, GcWorker::start, gc_worker_);
+  if (0 == ret)
+  {
+    TBSYS_LOG(INFO, "start gc thread successful, tid: %u", gc_tid_);
+    ret = TFS_SUCCESS;
+  }
+  else
+  {
+    ret = TFS_ERROR;
+  }
+  return ret;
 }

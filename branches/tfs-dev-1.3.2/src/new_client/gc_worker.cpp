@@ -20,13 +20,19 @@ GcWorker::~GcWorker()
 {
 }
 
-int GcWorker::start()
+void* GcWorker::start(void* arg)
+{
+  reinterpret_cast<GcWorker*>(arg)->do_start();
+  return NULL;
+}
+
+int GcWorker::do_start()
 {
   int ret = TFS_SUCCESS;
 
   // gc expired local key and garbage gc file sequencially, maybe use thread
 
-  // no need to init
+  // no need to init.
   tfs_client_ = TfsClient::Instance();
 
   // gc expired local key
@@ -140,7 +146,7 @@ int GcWorker::check_file(const char* path, const char* file, time_t now)
   }
   else
   {
-    TBSYS_LOG(INFO, "file no need to gc: %s, last modify time: %s",
+    TBSYS_LOG(DEBUG, "file no need to gc: %s, last modify time: %s",
               file_path, Func::time_to_str(file_info.st_mtime).c_str());
   }
   return ret;
@@ -227,7 +233,6 @@ template<class T> int GcWorker::do_unlink(T& seg_info, const char* addr)
     FSName fsname;
     fsname.set_block_id(it->block_id_);
     fsname.set_file_id(it->file_id_);
-    TBSYS_LOG(DEBUG, "unlink file : %s", fsname.get_name());
     if ((ret = tfs_client_->unlink(fsname.get_name(), NULL, addr))
         != TFS_SUCCESS)
     {

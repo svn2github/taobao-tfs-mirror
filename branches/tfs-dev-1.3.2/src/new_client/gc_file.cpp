@@ -108,7 +108,8 @@ int GcFile::save()
     dump(buf);
     // to avoid the info conflict caused when fail between writing segment info and flushing segment head,
     // use pwrite innstead of write with append
-    if ((ret = file_op_->pwrite_file(buf, size, size + sizeof(SegmentHead))) != TFS_SUCCESS)
+    if ((ret = file_op_->pwrite_file(buf, size, (seg_head_.count_ - seg_info_.size()) * sizeof(SegmentInfo) +
+                                     sizeof(SegmentHead))) != TFS_SUCCESS)
     {
       TBSYS_LOG(ERROR, "gc save fail, write file error, ret: %d", ret);
     }
@@ -171,9 +172,11 @@ int GcFile::load()
     else
     {
       seg_info_.clear();
+      SegmentInfo* seg_info = reinterpret_cast<SegmentInfo*>(buf);
       for (int32_t i = 0; i < seg_head_.count_; i++)
       {
-        seg_info_.push_back(*(reinterpret_cast<SegmentInfo*>(buf + i * sizeof(SegmentInfo))));
+        seg_info_.push_back(seg_info[i]);
+        TBSYS_LOG(DEBUG, "load segment info, offset: %"PRI64_PREFIX"d, blockid: %u, fileid: %"PRI64_PREFIX"u, size: %d, crc: %u", seg_info[i].offset_, seg_info[i].block_id_, seg_info[i].file_id_, seg_info[i].size_, seg_info[i].crc_);
       }
     }
     tbsys::gDeleteA(buf);

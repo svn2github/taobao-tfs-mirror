@@ -19,10 +19,9 @@
 #include <string>
 #include <Mutex.h>
 #include "common/define.h"
-#include "message/message_factory.h"
-#include "message/tfs_packet_streamer.h"
 
 #include <stdio.h>
+#include <pthread.h>
 
 #ifdef __OPTIMIZE__
 extern int error_open_missing_mode (void)
@@ -47,6 +46,7 @@ namespace tfs
     class tbutil::Mutex;
     class TfsFile;
     class TfsSession;
+    class GcWorker;
     typedef std::map<int, TfsFile*> FILE_MAP;
 
     class TfsClient
@@ -95,8 +95,7 @@ namespace tfs
       __always_inline __attribute__ ((__gnu_inline__)) int
         open(const char* file_name, const char* suffix, const char* ns_addr, const int flags, ... )
       {
-        // not specify ns address and not init, then exit
-        if (NULL == ns_addr && !check_init())
+        if (!check_init())
         {
           return common::EXIT_NOT_INIT_ERROR;
         }
@@ -144,6 +143,7 @@ namespace tfs
                   const int flags, ...);
       TfsFile* get_file(const int fd);
       int erase_file(const int fd);
+      int start_gc();
 
     private:
       TfsClient();
@@ -155,10 +155,8 @@ namespace tfs
       int fd_;
       FILE_MAP tfs_file_map_;
       tbutil::Mutex mutex_;
-
-      tbnet::Transport transport_;
-      message::MessageFactory factory_;
-      message::TfsPacketStreamer streamer_;
+      GcWorker* gc_worker_;
+      pthread_t gc_tid_;
     };
   }
 }

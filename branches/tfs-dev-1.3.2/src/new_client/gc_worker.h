@@ -15,8 +15,7 @@ namespace tfs
       GC_GARBAGE_FILE
     };
 
-    // config .. ?
-    const int32_t GC_EXPIRED_TIME = 1000;
+    const int32_t GC_EXPIRED_TIME = 86400; // 10 days
 
     class GcWorker
     {
@@ -24,7 +23,8 @@ namespace tfs
       GcWorker();
       ~GcWorker();
 
-      int start();
+      static void* start(void* arg);
+      int do_start();
 
     private:
       int start_gc(GcType gc_type);

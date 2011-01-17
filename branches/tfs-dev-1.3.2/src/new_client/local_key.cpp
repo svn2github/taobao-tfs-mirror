@@ -305,7 +305,7 @@ int LocalKey::get_segment_for_write(const int64_t offset, const char* buf,
         }
         else
         {
-          TBSYS_LOG(ERROR, "segment crc fail: %u <> %u, size: %"PRI64_PREFIX"d <> %"PRI64_PREFIX"d",
+          TBSYS_LOG(WARN, "segment crc fail: %u <> %u, size: %"PRI64_PREFIX"d <> %"PRI64_PREFIX"d",
                     it->crc_, tmp_crc, it->size_, remain_size);
           next_offset = it->offset_ + it->size_;
           gc_segment(it);
