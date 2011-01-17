@@ -205,6 +205,7 @@ int TfsClient::unlink(const char* file_name, const char* suffix, const char* ns_
   else
   {
     TfsSession* tfs_session = (NULL == ns_addr) ? default_tfs_session_ :
+      NULL == default_tfs_session_ ? SESSION_POOL.get(ns_addr) :
       SESSION_POOL.get(ns_addr, default_tfs_session_->get_cache_time(), default_tfs_session_->get_cache_items());
 
     if (NULL == tfs_session)

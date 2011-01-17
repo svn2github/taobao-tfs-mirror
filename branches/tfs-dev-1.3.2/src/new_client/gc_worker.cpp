@@ -105,6 +105,7 @@ int GcWorker::get_expired_file(const char* path)
   }
   else
   {
+    file_.clear();
     struct dirent* dir_entry = readdir(dir);
     time_t now = time(NULL);
     while(dir_entry != NULL)
@@ -147,14 +148,14 @@ int GcWorker::check_file(const char* path, const char* file, time_t now)
 
 int GcWorker::do_gc(GcType gc_type)
 {
-  int ret = TFS_SUCCESS;
+  int ret = TFS_SUCCESS, fd = -1;
   string::size_type id_pos = 0;
-  int fd = -1;
 
+  TBSYS_LOG(DEBUG, "gc file count: %d", file_.size());
   for (size_t i = 0; i < file_.size(); i++)
   {
     string& file_name = file_[i];
-    if ((id_pos = file_name.rfind('!')) != string::npos)
+    if (string::npos == (id_pos = file_name.rfind('!')))
     {
       TBSYS_LOG(ERROR, "file name is not valid, no server id: %s", file_name.c_str());
     }
@@ -164,7 +165,9 @@ int GcWorker::do_gc(GcType gc_type)
     }
     else
     {
-      string addr = tbsys::CNetUtil::addrToString(atoll(file_[i].substr(id_pos).c_str()));
+      string addr = tbsys::CNetUtil::addrToString(atoll(file_name.substr(id_pos+1).c_str()));
+      TBSYS_LOG(DEBUG, "id : %s , %"PRI64_PREFIX"u, server address %s",
+                file_name.substr(id_pos).c_str(), atoll(file_name.substr(id_pos+1).c_str()), addr.c_str());
       // expired local key
       if (GC_EXPIRED_LOCAL_KEY == gc_type)
       {
@@ -191,7 +194,7 @@ int GcWorker::do_gc(GcType gc_type)
   return ret;
 }
 
-template<class T> int GcWorker::do_gc_ex(T meta, const char* file_name, const char* addr)
+template<class T> int GcWorker::do_gc_ex(T& meta, const char* file_name, const char* addr)
 {
   int ret = TFS_SUCCESS;
   if ((ret = meta.load_file(file_name)) != TFS_SUCCESS)
@@ -212,17 +215,19 @@ template<class T> int GcWorker::do_gc_ex(T meta, const char* file_name, const ch
   return ret;
 }
 
-template<class T> int GcWorker::do_unlink(T seg_info, const char* addr)
+template<class T> int GcWorker::do_unlink(T& seg_info, const char* addr)
 {
   int ret = TFS_SUCCESS;
-  FSName fsname;
 
   for (typename T::iterator it = seg_info.begin(); it != seg_info.end(); it++)
   {
     // just not to depend on inner module, use TfsCliet directely
     // little dummy
+    // FSName reuse name, so every varible each loop
+    FSName fsname;
     fsname.set_block_id(it->block_id_);
     fsname.set_file_id(it->file_id_);
+    TBSYS_LOG(DEBUG, "unlink file : %s", fsname.get_name());
     if ((ret = tfs_client_->unlink(fsname.get_name(), NULL, addr))
         != TFS_SUCCESS)
     {

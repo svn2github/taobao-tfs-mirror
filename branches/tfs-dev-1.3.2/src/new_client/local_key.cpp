@@ -54,8 +54,7 @@ int LocalKey::initialize(const char* local_key, const uint64_t addr)
 
       memset(&seg_head_, 0, sizeof(SegmentHead));
       seg_info_.clear();
-      int is_exist = access(name, F_OK);
-      if (0 != is_exist) //not exist
+      if (0 != access(name, F_OK)) //not exist
       {
         file_op_ = new FileOperation(name, O_RDWR|O_CREAT);
       }

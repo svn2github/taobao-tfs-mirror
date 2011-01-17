@@ -15,7 +15,8 @@ namespace tfs
       GC_GARBAGE_FILE
     };
 
-    const int32_t GC_EXPIRED_TIME = 100;
+    // config .. ?
+    const int32_t GC_EXPIRED_TIME = 1000;
 
     class GcWorker
     {
@@ -32,8 +33,8 @@ namespace tfs
       int check_lock(const char* file);
       int do_gc(GcType gc_type);
 
-      template<class T> int do_gc_ex(T meta, const char* file_name, const char* addr);
-      template<class T> int do_unlink(T seg_info, const char* addr);
+      template<class T> int do_gc_ex(T& meta, const char* file_name, const char* addr);
+      template<class T> int do_unlink(T& seg_info, const char* addr);
 
     private:
       TfsClient* tfs_client_;
