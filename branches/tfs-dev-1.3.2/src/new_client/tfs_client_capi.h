@@ -17,7 +17,7 @@ extern "C"
    int64_t t_lseek(const int fd, const int64_t offset, const int whence);
    int64_t t_pread(const int fd, void* buf, const int64_t count, const int64_t offset);
    int64_t t_pwrite(const int fd, const void* buf, const int64_t count, const int64_t offset);
-   int t_fstat(const int fd, tfs::common::FileInfo* buf, const int mode = tfs::common::NORMAL_STAT);
+   int t_fstat(const int fd, tfs::common::FileStat* buf, const int mode = tfs::common::NORMAL_STAT);
    int t_close(const int fd, char* tfs_name, const int32_t len);
 
 #if __cplusplus

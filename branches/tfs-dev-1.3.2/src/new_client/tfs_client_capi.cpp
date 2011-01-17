@@ -43,7 +43,7 @@ int64_t t_pwrite(const int fd, const void* buf, const int64_t count, const int64
   return TfsClient::Instance()->pwrite(fd, buf, count, offset);
 }
 
-int t_fstat(const int fd, tfs::common::FileInfo* buf, const int mode)
+int t_fstat(const int fd, tfs::common::FileStat* buf, const int mode)
 {
   return TfsClient::Instance()->fstat(fd, buf, mode);
 }

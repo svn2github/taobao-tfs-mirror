@@ -6,6 +6,7 @@
 
 #include "common/error_msg.h"
 #include "common/func.h"
+#include "common/lock.h"
 #include "message/client_manager.h"
 #include "tfs_session.h"
 #include "fsname.h"
@@ -118,6 +119,9 @@ namespace tfs
 
       int async_req_unlink_file(const int64_t wait_id, const int32_t index);
       int async_rsp_unlink_file(message::Message* packet, const int32_t index);
+
+    public:
+      common::RWLock rw_lock_;
 
     protected:
       static const int64_t WAIT_TIME_OUT = 3000000;

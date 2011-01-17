@@ -39,9 +39,9 @@ int TfsLargeFile::open(const char* file_name, const char* suffix, const int flag
   }
   else  // write flag
   {
-    if (NULL != file_name)
+    if (NULL != file_name && file_name[0] != '\0')
     {
-      TBSYS_LOG(ERROR, "write large file fail, not support update now. file_name: %d", file_name);
+      TBSYS_LOG(ERROR, "write large file fail, not support update now. file_name: %s", file_name ? file_name : "NULL");
       ret = TFS_ERROR;
     }
     else

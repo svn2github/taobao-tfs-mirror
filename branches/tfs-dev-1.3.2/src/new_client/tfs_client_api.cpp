@@ -76,63 +76,100 @@ int TfsClient::initialize(const char* ns_addr, const int32_t cache_time, const i
 
 int64_t TfsClient::read(const int fd, void* buf, const int64_t count)
 {
+  int64_t ret = EXIT_INVALIDFD_ERROR;
   TfsFile* tfs_file = get_file(fd);
-  return tfs_file ? tfs_file->read(buf, count) : EXIT_INVALIDFD_ERROR;
+  if (NULL != tfs_file)
+  {
+    // modify offset_: use write locker
+    ScopedRWLock scoped_lock(tfs_file->rw_lock_, WRITE_LOCKER);
+    ret = tfs_file->read(buf, count);
+  }
+  return ret;
 }
 
 int64_t TfsClient::write(const int fd, const void* buf, const int64_t count)
 {
+  int64_t ret = EXIT_INVALIDFD_ERROR;
   TfsFile* tfs_file = get_file(fd);
-  return tfs_file ? tfs_file->write(buf, count) : EXIT_INVALIDFD_ERROR;
+  if (NULL != tfs_file)
+  {
+    ScopedRWLock scoped_lock(tfs_file->rw_lock_, WRITE_LOCKER);
+    ret = tfs_file->write(buf, count);
+  }
+  return ret;
 }
 
 int64_t TfsClient::lseek(const int fd, const int64_t offset, const int whence)
 {
+  int64_t ret = EXIT_INVALIDFD_ERROR;
   TfsFile* tfs_file = get_file(fd);
-  return tfs_file ? tfs_file->lseek(offset, whence) : EXIT_INVALIDFD_ERROR;
+  if (NULL != tfs_file)
+  {
+    // modify offset_: use write locker
+    ScopedRWLock scoped_lock(tfs_file->rw_lock_, WRITE_LOCKER);
+    ret = tfs_file->lseek(offset, whence);
+  }
+  return ret;
 }
 
 int64_t TfsClient::pread(const int fd, void* buf, const int64_t count, const int64_t offset)
-{
+{  
+  int64_t ret = EXIT_INVALIDFD_ERROR;
   TfsFile* tfs_file = get_file(fd);
-  return tfs_file ? tfs_file->pread(buf, count, offset) : EXIT_INVALIDFD_ERROR;
+  if (NULL != tfs_file)
+  {
+    ScopedRWLock scoped_lock(tfs_file->rw_lock_, READ_LOCKER);
+    ret = tfs_file->pread(buf, count, offset);
+  }
+  return ret;
 }
 
 int64_t TfsClient::pwrite(const int fd, const void* buf, const int64_t count, const int64_t offset)
-{
+{  
+  int64_t ret = EXIT_INVALIDFD_ERROR;
   TfsFile* tfs_file = get_file(fd);
-  return tfs_file ? tfs_file->pwrite(buf, count, offset) : EXIT_INVALIDFD_ERROR;
+  if (NULL != tfs_file)
+  {
+    ScopedRWLock scoped_lock(tfs_file->rw_lock_, WRITE_LOCKER);
+    ret = tfs_file->pwrite(buf, count, offset);
+  }
+  return ret;
 }
 
 int TfsClient::fstat(const int fd, common::FileStat* buf, const int mode)
-{
+{  
+  int ret = EXIT_INVALIDFD_ERROR;
   TfsFile* tfs_file = get_file(fd);
-  return tfs_file ? tfs_file->fstat(buf, static_cast<int32_t>(mode)) : EXIT_INVALIDFD_ERROR;
+  if (NULL != tfs_file)
+  {
+    ScopedRWLock scoped_lock(tfs_file->rw_lock_, WRITE_LOCKER);
+    ret = tfs_file->fstat(buf, static_cast<int32_t>(mode));
+  }
+  return ret;
 }
 
 int TfsClient::close(const int fd, char* tfs_name, const int32_t len)
 {
-  int ret = TFS_SUCCESS;
+  int ret = EXIT_INVALIDFD_ERROR;
   TfsFile* tfs_file = get_file(fd);
-  if (NULL == tfs_file)
+  if (NULL != tfs_file)
   {
-    ret = EXIT_INVALIDFD_ERROR;
-  }
-  else
-  {
-    ret = tfs_file->close();
-    if (TFS_SUCCESS != ret)
     {
-      TBSYS_LOG(ERROR, "tfs close failed. fd: %d, ret: %d", fd, ret);
-    }
-    else
-    {
-      if (NULL == tfs_name || len < TFS_FILE_LEN)
+      ScopedRWLock scoped_lock(tfs_file->rw_lock_, WRITE_LOCKER);
+      ret = tfs_file->close();
+      if (TFS_SUCCESS != ret)
       {
+        TBSYS_LOG(ERROR, "tfs close failed. fd: %d, ret: %d", fd, ret);
       }
       else
       {
-        memcpy(tfs_name, tfs_file->get_file_name(), TFS_FILE_LEN);
+        if (NULL == tfs_name || len < TFS_FILE_LEN)
+        {
+        }
+        else
+        {
+          memcpy(tfs_name, tfs_file->get_file_name(), TFS_FILE_LEN);
+        }
       }
     }
     erase_file(fd);

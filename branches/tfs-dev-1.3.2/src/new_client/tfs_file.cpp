@@ -270,16 +270,16 @@ int64_t TfsFile::lseek_ex(int64_t offset, int whence)
     switch (whence)
     {
       case T_SEEK_SET:
-        offset_ = offset;
-        ret = offset_;
-        break;
+      offset_ = offset;
+      ret = offset_;
+      break;
       case T_SEEK_CUR:
-        offset_ += offset;
-        ret = offset_;
-        break;
+      offset_ += offset;
+      ret = offset_;
+      break;
       default:
-        TBSYS_LOG(ERROR, "unknown seek flag: %d", whence);
-        break;
+      TBSYS_LOG(ERROR, "unknown seek flag: %d", whence);
+      break;
     }
   }
   return ret;
