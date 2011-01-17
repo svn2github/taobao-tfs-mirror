@@ -14,10 +14,12 @@
  *
  */
 #include "common/func.h"
+#include "common/define.h"
 #include "tfs_large_file_cases.h"
 #include <stdlib.h>
 #include <tbsys.h>
 #include <iostream>
+#include <vector>
 
 using namespace tfs::common;
 using namespace tfs::message;
@@ -69,13 +71,14 @@ int64_t TfsLargeFileTest::write_new_file(const bool large_flag, const int64_t le
     }
     close(local_fd);
     start_time = CTimeUtil::getTime();
-    fd = tfs_client_->open(NULL, suffix, T_WRITE | T_LARGE, key);
+    // do not support update now
+    fd = tfs_client_->open(tfsname, suffix, T_WRITE | T_LARGE, key);
     end_time = CTimeUtil::getTime();
   }
   else
   {
     start_time = CTimeUtil::getTime();
-    fd = tfs_client_->open(NULL, suffix, T_WRITE);
+    fd = tfs_client_->open(tfsname, suffix, T_WRITE);
     end_time = CTimeUtil::getTime();
   }
   cost_time += (end_time - start_time);
@@ -267,6 +270,219 @@ void TfsLargeFileTest::test_read(const bool large_flag, int64_t base, const char
   ASSERT_EQ(write_crc, read_crc);
 }
 
+void TfsLargeFileTest::unlink_process(const bool large_flag)
+{
+  vector<const char*> suffixs;
+  const char* a = NULL; 
+  const char* b = ".jpg"; 
+  const char* c = ".bmp";
+  suffixs.push_back(a);
+  suffixs.push_back(b);
+  suffixs.push_back(c);
+
+  const int32_t INVALID_FILE_SIZE = -1;
+
+  for (size_t i = 0; i < suffixs.size(); ++i)
+  {
+    int64_t length = 0;
+    if (large_flag)
+    {
+      // 20M
+      length = rand() % 40960000;
+    }
+    else
+    {
+      length = rand() % 3072000;
+    }
+    // write
+    uint32_t crc = 0;
+    char tfs_name[TFS_FILE_LEN];
+    memset(tfs_name, 0, TFS_FILE_LEN);
+
+    ASSERT_EQ(length, TfsLargeFileTest::write_new_file(large_flag, length, crc, tfs_name, suffixs[i], TFS_FILE_LEN));
+
+    // stat normal file
+    FileStat finfo;
+    memset(&finfo, 0, sizeof(FileStat));
+    ASSERT_EQ(TFS_SUCCESS, TfsLargeFileTest::stat_exist_file(large_flag, tfs_name, finfo));
+    ASSERT_EQ(0, finfo.flag_);
+    if (large_flag)
+    {
+      ASSERT_EQ(length, finfo.size_);
+      ASSERT_EQ(length, finfo.usize_);
+    }
+    else
+      ASSERT_EQ(length , finfo.size_);
+
+    // do conceal
+    ASSERT_EQ(TFS_SUCCESS, TfsLargeFileTest::unlink_file(tfs_name, NULL, CONCEAL));
+    usleep(100 * 1000);
+    cout << "conceal success" << endl;
+
+    // stat
+    memset(&finfo, 0, sizeof(FileStat));
+    ASSERT_EQ(TFS_SUCCESS, TfsLargeFileTest::stat_exist_file(large_flag, tfs_name, finfo));
+    ASSERT_EQ(4, finfo.flag_);
+    if (large_flag)
+    {
+      ASSERT_EQ(INVALID_FILE_SIZE, finfo.size_);
+      ASSERT_EQ(INVALID_FILE_SIZE, finfo.usize_);
+    }
+    else
+      ASSERT_EQ(length , finfo.size_);
+
+    // do conceal again, return false
+    ASSERT_NE(TFS_SUCCESS, TfsLargeFileTest::unlink_file(tfs_name, NULL, CONCEAL));
+    usleep(100 * 1000);
+    cout << "conceal again success" << endl;
+
+    // reveal
+    ASSERT_EQ(TFS_SUCCESS, TfsLargeFileTest::unlink_file(tfs_name, NULL, REVEAL));
+    usleep(100 * 1000);
+    cout << "reveal success" << endl;
+
+    // stat
+    memset(&finfo, 0, sizeof(FileStat));
+    ASSERT_EQ(TFS_SUCCESS, TfsLargeFileTest::stat_exist_file(large_flag, tfs_name, finfo));
+    ASSERT_EQ(0, finfo.flag_);
+    if (large_flag)
+    {
+      ASSERT_EQ(length, finfo.size_);
+      ASSERT_EQ(length, finfo.usize_);
+    }
+    else
+      ASSERT_EQ(length , finfo.size_);
+
+    // reveal again, return false
+    ASSERT_NE(TFS_SUCCESS, TfsLargeFileTest::unlink_file(tfs_name, NULL, REVEAL));
+    usleep(100 * 1000);
+    cout << "reveal again success" << endl;
+
+    // do unlink
+    ASSERT_EQ(TFS_SUCCESS, TfsLargeFileTest::unlink_file(tfs_name));
+    usleep(100 * 1000);
+    cout << "delete success" << endl;
+
+    // stat deleted file
+    memset(&finfo, 0, sizeof(FileStat));
+    ASSERT_EQ(TFS_SUCCESS, TfsLargeFileTest::stat_exist_file(large_flag, tfs_name, finfo));
+    ASSERT_EQ(1, finfo.flag_);
+    if (large_flag)
+    {
+      ASSERT_EQ(INVALID_FILE_SIZE, finfo.size_);
+      ASSERT_EQ(INVALID_FILE_SIZE, finfo.usize_);
+    }
+    else
+      ASSERT_EQ(length , finfo.size_);
+
+    // do unlink again, fail
+    ASSERT_NE(TFS_SUCCESS, TfsLargeFileTest::unlink_file(tfs_name));
+    usleep(100 * 1000);
+    cout << "delete again success" << endl;
+
+    // stat deleted file again
+    memset(&finfo, 0, sizeof(FileStat));
+    ASSERT_EQ(TFS_SUCCESS, TfsLargeFileTest::stat_exist_file(large_flag, tfs_name, finfo));
+    ASSERT_EQ(1, finfo.flag_);
+    if (large_flag)
+    {
+      ASSERT_EQ(INVALID_FILE_SIZE, finfo.size_);
+      ASSERT_EQ(INVALID_FILE_SIZE, finfo.usize_);
+    }
+    else
+      ASSERT_EQ(length , finfo.size_);
+
+    if (!large_flag)
+    {
+      // do undelete
+      ASSERT_EQ(TFS_SUCCESS, TfsLargeFileTest::unlink_file(tfs_name, NULL, UNDELETE));
+      usleep(100 * 1000);
+      cout << "undelete success" << endl;
+
+      // stat
+      memset(&finfo, 0, sizeof(FileStat));
+      ASSERT_EQ(TFS_SUCCESS, TfsLargeFileTest::stat_exist_file(large_flag, tfs_name, finfo));
+      ASSERT_EQ(0, finfo.flag_);
+      ASSERT_EQ(length , finfo.size_);
+
+      // do undelete again
+      ASSERT_NE(TFS_SUCCESS, TfsLargeFileTest::unlink_file(tfs_name, NULL, UNDELETE));
+      usleep(100 * 1000);
+      cout << "undelete again success" << endl;
+
+      // stat
+      memset(&finfo, 0, sizeof(FileStat));
+      ASSERT_EQ(TFS_SUCCESS, TfsLargeFileTest::stat_exist_file(large_flag, tfs_name, finfo));
+      ASSERT_EQ(0, finfo.flag_);
+      ASSERT_EQ(length , finfo.size_);
+    }
+    else
+    {
+      // do undelete
+      ASSERT_NE(TFS_SUCCESS, TfsLargeFileTest::unlink_file(tfs_name, NULL, UNDELETE));
+      usleep(100 * 1000);
+      cout << "undelete success" << endl;
+    }
+  }
+}
+
+void TfsLargeFileTest::test_update(const bool large_flag, int64_t base, const char* suffix)
+{
+  char tfs_name[TFS_FILE_LEN];
+  memset(tfs_name, 0, TFS_FILE_LEN);
+  int64_t length = 0;
+  generate_length(length, base);  
+  cout << "generate length: " << length << endl;
+
+  uint32_t write_crc = 0;
+  uint32_t read_crc = 0;
+  ASSERT_EQ(length, write_new_file(large_flag, length, write_crc, tfs_name, suffix, TFS_FILE_LEN));
+  ASSERT_EQ(TFS_SUCCESS, read_exist_file(large_flag, tfs_name, suffix, read_crc));
+  cout << "write crc: " << write_crc << " read crc: " << read_crc << endl;
+  ASSERT_EQ(write_crc, read_crc);
+
+  if (!large_flag)
+  {
+    // update: file is same length
+    write_crc = 0;
+    read_crc = 0;
+    ASSERT_EQ(length, write_new_file(large_flag, length, write_crc, tfs_name, suffix, TFS_FILE_LEN));
+    ASSERT_EQ(TFS_SUCCESS, read_exist_file(large_flag, tfs_name, suffix, read_crc));
+    cout << "write crc: " << write_crc << " read crc: " << read_crc << endl;
+    ASSERT_EQ(write_crc, read_crc);
+
+    // update: re generate length
+    generate_length(length, base);  
+    cout << "generate length: " << length << endl;
+    write_crc = 0;
+    read_crc = 0;
+    ASSERT_EQ(length, write_new_file(large_flag, length, write_crc, tfs_name, suffix, TFS_FILE_LEN));
+    ASSERT_EQ(TFS_SUCCESS, read_exist_file(large_flag, tfs_name, suffix, read_crc));
+    cout << "write crc: " << write_crc << " read crc: " << read_crc << endl;
+    ASSERT_EQ(write_crc, read_crc);
+  }
+  else
+  {
+    // update is not support now
+    read_crc = 0;
+    cout << "tfs name: " << tfs_name << endl;
+    uint32_t tmp_write_crc = 0;
+
+    ASSERT_NE(length, write_new_file(large_flag, length, tmp_write_crc, tfs_name, suffix, TFS_FILE_LEN));
+    ASSERT_EQ(TFS_SUCCESS, read_exist_file(large_flag, tfs_name, suffix, read_crc));
+    ASSERT_EQ(write_crc, read_crc);
+
+    // update: re generate length
+    generate_length(length, base);  
+    cout << "generate length: " << length << endl;
+    read_crc = 0;
+    tmp_write_crc = 0;
+    ASSERT_NE(length, write_new_file(large_flag, length, tmp_write_crc, tfs_name, suffix, TFS_FILE_LEN));
+    ASSERT_EQ(TFS_SUCCESS, read_exist_file(large_flag, tfs_name, suffix, read_crc));
+    ASSERT_EQ(write_crc, read_crc);
+  }
+}
+
 TEST_F(TfsLargeFileTest, write_small_file)
 {
   int64_t length = 0;
@@ -285,6 +501,20 @@ TEST_F(TfsLargeFileTest, write_small_file)
   ASSERT_EQ(length, TfsLargeFileTest::write_new_file(false, length, crc));
 }
 
+TEST_F(TfsLargeFileTest, update_small_file)
+{
+  const int max_loop = 2;
+  // 512K ~ 1M
+  for (int i = 0; i < max_loop; ++i) 
+    test_update(false, 1024 * 512);
+  // 1~2M
+  for (int i = 0; i < max_loop; ++i) 
+    test_update(false, 1024 * 1024, ".jpg");
+  // 2~4M
+  for (int i = 0; i < max_loop; ++i) 
+    test_update(false, 1024 * 1024, ".jpg");
+}
+
 TEST_F(TfsLargeFileTest, read_small_file)
 {
   //const int max_loop = 20;
@@ -300,7 +530,31 @@ TEST_F(TfsLargeFileTest, read_small_file)
     test_read(false, 1024 * 1024, ".jpg");
 }  
 
-/*
+TEST_F(TfsLargeFileTest, stat_exist_small_file)
+{
+  int64_t length = 607200;
+  uint32_t crc = 0;
+  char tfs_name[TFS_FILE_LEN];
+  FileStat finfo;
+
+  memset(tfs_name, 0, TFS_FILE_LEN);
+  memset(&finfo, 0 ,sizeof(FileStat));
+  ASSERT_EQ(length, TfsLargeFileTest::write_new_file(false, length, crc, tfs_name, NULL, TFS_FILE_LEN));
+  ASSERT_EQ(TFS_SUCCESS, TfsLargeFileTest::stat_exist_file(false, tfs_name, finfo));
+
+  crc = 0;
+  length = 1024343;
+  memset(tfs_name, 0, TFS_FILE_LEN);
+  memset(&finfo, 0 ,sizeof(FileStat));
+  ASSERT_EQ(length, TfsLargeFileTest::write_new_file(false, length, crc, tfs_name, ".jpg" , TFS_FILE_LEN));
+  ASSERT_EQ(TFS_SUCCESS, TfsLargeFileTest::stat_exist_file(false, tfs_name, finfo));
+}
+
+TEST_F(TfsLargeFileTest, unlink_small_file)
+{
+  unlink_process(false);
+}
+
 TEST_F(TfsLargeFileTest, write_large_file)
 {
   int64_t length = 0;
@@ -335,33 +589,46 @@ TEST_F(TfsLargeFileTest, write_large_file)
   generate_length(length, base);  
   ASSERT_EQ(length, TfsLargeFileTest::write_new_file(true, length, crc));
 }
-*/
 
 TEST_F(TfsLargeFileTest, read_large_file)
 {
   //const int max_loop = 20;
   const int max_loop = 3;
   // 512K ~ 1M
-  //for (int i = 0; i < max_loop; ++i) 
-  //  test_read(true, 1024 * 512);
-  //// 1~2M
-  //for (int i = 0; i < max_loop; ++i) 
-  //  test_read(true, 1024 * 1024, ".jpg");
-  //// 2~4M
-  //for (int i = 0; i < max_loop; ++i) 
-  //  test_read(true, 2 * 1024 * 1024);
-  //// 5~10M
-  //for (int i = 0; i < max_loop; ++i) 
-  //  test_read(true, 5 * 1024 * 1024, ".gif");
-  //// 40~80M
-  //for (int i = 0; i < max_loop; ++i) 
-  //  test_read(true, 40 * 1024 * 1024);
+  for (int i = 0; i < max_loop; ++i) 
+    test_read(true, 1024 * 512);
+  // 1~2M
+  for (int i = 0; i < max_loop; ++i) 
+    test_read(true, 1024 * 1024, ".jpg");
+  // 2~4M
+  for (int i = 0; i < max_loop; ++i) 
+    test_read(true, 2 * 1024 * 1024);
+  // 5~10M
+  for (int i = 0; i < max_loop; ++i) 
+    test_read(true, 5 * 1024 * 1024, ".gif");
+  // 40~80M
+  for (int i = 0; i < max_loop; ++i) 
+    test_read(true, 40 * 1024 * 1024);
   // 1G ~ 2G
   for (int i = 0; i < max_loop; ++i) 
     test_read(true, 1024 * 1024 * 1024, ".bmp");
   // 3G ~ 6G
   for (int i = 0; i < max_loop; ++i) 
     test_read(true, 3 * 1024 * 1024 * 1024L);
+}
+
+TEST_F(TfsLargeFileTest, update_large_file)
+{
+  const int max_loop = 2;
+  // 512K ~ 1M
+  for (int i = 0; i < max_loop; ++i) 
+    test_update(true, 1024 * 512);
+  // 10~20M
+  for (int i = 0; i < max_loop; ++i) 
+    test_update(true, 10 * 1024 * 1024, ".jpg");
+  // 200~400M
+  for (int i = 0; i < max_loop; ++i) 
+    test_update(true, 200 * 1024 * 1024, ".jpg");
 }
 
 TEST_F(TfsLargeFileTest, stat_exist_large_file)
@@ -378,61 +645,7 @@ TEST_F(TfsLargeFileTest, stat_exist_large_file)
 
 TEST_F(TfsLargeFileTest, unlink_large_file)
 {
-  int64_t length = 6072000;
-  uint32_t crc = 0;
-  char tfs_name[TFS_FILE_LEN];
-  memset(tfs_name, 0, TFS_FILE_LEN);
-  ASSERT_EQ(length, TfsLargeFileTest::write_new_file(true, length, crc, tfs_name, NULL, TFS_FILE_LEN));
-
-  FileStat finfo;
-  memset(&finfo, 0, sizeof(FileStat));
-  ASSERT_EQ(TFS_SUCCESS, TfsLargeFileTest::stat_exist_file(true, tfs_name, finfo));
-  ASSERT_EQ(0, finfo.flag_);
-  ASSERT_EQ(length, finfo.size_);
-  ASSERT_EQ(length, finfo.usize_);
-
-  ASSERT_EQ(TFS_SUCCESS, TfsLargeFileTest::unlink_file(tfs_name));
-  usleep(100 * 1000);
-
-  cout << "unlink success" << endl;
-  memset(&finfo, 0, sizeof(FileStat));
-  ASSERT_EQ(TFS_SUCCESS, TfsLargeFileTest::stat_exist_file(true, tfs_name, finfo));
-  ASSERT_EQ(1, finfo.flag_);
-  const int32_t INVALID_FILE_SIZE = -1;
-  ASSERT_EQ(INVALID_FILE_SIZE, finfo.size_);
-  ASSERT_EQ(INVALID_FILE_SIZE, finfo.usize_);
-
-  //write new file
-  length = 18000000;
-  memset(tfs_name, 0, TFS_FILE_LEN);
-  crc = 0;
-  ASSERT_EQ(length, TfsLargeFileTest::write_new_file(true, length, crc, tfs_name, NULL, TFS_FILE_LEN));
-
-  memset(&finfo, 0, sizeof(FileStat));
-  ASSERT_EQ(TFS_SUCCESS, TfsLargeFileTest::stat_exist_file(true, tfs_name, finfo));
-  ASSERT_EQ(0, finfo.flag_);
-  ASSERT_EQ(length, finfo.size_);
-  ASSERT_EQ(length, finfo.usize_);
-
-  ASSERT_EQ(TFS_SUCCESS, TfsLargeFileTest::unlink_file(tfs_name, NULL, CONCEAL));
-  usleep(100 * 1000);
-  cout << "conceal success" << endl;
-
-  memset(&finfo, 0, sizeof(FileStat));
-  ASSERT_EQ(TFS_SUCCESS, TfsLargeFileTest::stat_exist_file(true, tfs_name, finfo));
-  ASSERT_EQ(4, finfo.flag_);
-  ASSERT_EQ(INVALID_FILE_SIZE, finfo.size_);
-  ASSERT_EQ(INVALID_FILE_SIZE, finfo.usize_);
-
-  ASSERT_EQ(TFS_SUCCESS, TfsLargeFileTest::unlink_file(tfs_name, NULL, REVEAL));
-  usleep(100 * 1000);
-  cout << "reveal success" << endl;
-
-  memset(&finfo, 0, sizeof(FileStat));
-  ASSERT_EQ(TFS_SUCCESS, TfsLargeFileTest::stat_exist_file(true, tfs_name, finfo));
-  ASSERT_EQ(0, finfo.flag_);
-  ASSERT_EQ(length, finfo.size_);
-  ASSERT_EQ(length, finfo.usize_);
+  unlink_process(true);
 }
 
 void usage(char* name)

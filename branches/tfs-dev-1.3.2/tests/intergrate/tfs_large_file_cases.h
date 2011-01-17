@@ -38,6 +38,8 @@ class TfsLargeFileTest : public testing::Test
     static int stat_exist_file(const bool large_flag, char* tfsname, tfs::common::FileStat& file_info);
 
     static void test_read(const bool large_flag, int64_t base, const char* suffix = NULL);
+    static void unlink_process(const bool large_flag);
+    static void test_update(const bool large_flag, int64_t base, const char* suffix = NULL);
   private:
     static int generate_data(char* buffer, const int32_t length);
 
