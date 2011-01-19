@@ -35,9 +35,9 @@ namespace tfs
       virtual int64_t lseek(int64_t offset, int whence);
       virtual int64_t pread(void *buf, int64_t count, int64_t offset);
       virtual int64_t pwrite(const void *buf, int64_t count, int64_t offset);
-      virtual int fstat(common::FileStat* file_info, int32_t mode = common::NORMAL_STAT);
+      virtual int fstat(TfsFileStat* file_info, const TfsStatFlag mode = NORMAL_STAT);
       virtual int close();
-      virtual int unlink(const char* file_name, const char* suffix, const int action);
+      virtual int unlink(const char* file_name, const char* suffix, const TfsUnlinkType action);
 
     protected:
       virtual int get_segment_for_read(int64_t offset, char* buf, int64_t count);

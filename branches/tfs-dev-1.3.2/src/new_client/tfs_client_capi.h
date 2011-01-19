@@ -1,24 +1,64 @@
 #ifndef TFS_CLIENT_C_API_H_
 #define TFS_CLIENT_C_API_H_
 
-#include "common/define.h"
+#include "common/client_define.h"
 
 #if __cplusplus
 extern "C"
 {
 #endif
 
-   int t_initialize(const char* ns_addr, const int32_t cache_time = tfs::common::DEFAULT_BLOCK_CACHE_TIME,
-                      const int32_t cache_items = tfs::common::DEFAULT_BLOCK_CACHE_ITEMS);
 
-   int t_open(const char* file_name, const char* suffix, const int flags, const char* key = NULL);
-   int64_t t_read(const int fd, void* buf, const int64_t count);
-   int64_t t_write(const int fd, const void* buf, const int64_t count);
-   int64_t t_lseek(const int fd, const int64_t offset, const int whence);
-   int64_t t_pread(const int fd, void* buf, const int64_t count, const int64_t offset);
-   int64_t t_pwrite(const int fd, const void* buf, const int64_t count, const int64_t offset);
-   int t_fstat(const int fd, tfs::common::FileStat* buf, const int mode = tfs::common::NORMAL_STAT);
-   int t_close(const int fd, char* tfs_name, const int32_t len);
+  /**
+   * init tfs client
+   * @param ns_addr  which cluster will be used
+   * @param cache_time  the time which cache will be expired
+   * @param cache_items  how many cache items in client block cache
+   *
+   * @return tfs client init success or fail
+   */
+  int t_initialize(const char* ns_addr, const int32_t cache_time, const int32_t cache_items);
+
+  /**
+   * open tfs file
+   * @param file_name  tfs file name
+   * @param suffix  tfs file suffix
+   * @param flags  open flags
+   * @param local_key  set NULL if not use
+   * @param ns_addr  set NULL if not use
+   *
+   * @return open tfs file success or fail
+   */
+  int t_open(const char* file_name, const char* suffix, const char* ns_addr, const int flags, const char* local_key);
+
+
+  int64_t t_read(const int fd, void* buf, const int64_t count);
+  int64_t t_write(const int fd, const void* buf, const int64_t count);
+  int64_t t_lseek(const int fd, const int64_t offset, const int whence);
+  int64_t t_pread(const int fd, void* buf, const int64_t count, const int64_t offset);
+  int64_t t_pwrite(const int fd, const void* buf, const int64_t count, const int64_t offset);
+  int t_fstat(const int fd, TfsFileStat* buf, const TfsStatFlag mode);
+
+  /**
+   * close tfs file
+   * @param fd  file descriptor
+   * @param tfs_name  used in T_WRITE mode, tfs name buffer. if the mode is not T_WRITE, set to NULL
+   * @param len  used in T_WRITE mode, indicate the buffer length of tfs_name. if the mode is not T_WRITE, set to 0
+   *
+   * @return close tfs file success or fail
+   */
+  int t_close(const int fd, char* tfs_name, const int32_t len);
+
+  /**
+   * unlink tfs file
+   * @param fd  file descriptor
+   * @param tfs_name  tfs file name
+   * @param suffix  tfs file suffix
+   * @param action  unlink action.
+   *
+   * @return unlink tfs file success or fail
+   */
+  int t_unlink(const char* file_name, const char* suffix, const TfsUnlinkType action);
 
 #if __cplusplus
 }

@@ -29,7 +29,7 @@ namespace tfs
     // defined in define.h for outside use
     // static const int EXIT_INVALIDFD_ERROR = -1005;
     // static const int EXIT_NOT_INIT_ERROR = -1006;
-    static const int32_t EXIT_NOT_PERM_OPER = -1007;
+    //static const int32_t EXIT_NOT_PERM_OPER = -1007;
 
     const int32_t EXIT_FILE_OP_ERROR = -2000;
     const int32_t EXIT_OPEN_FILE_ERROR = -2001;

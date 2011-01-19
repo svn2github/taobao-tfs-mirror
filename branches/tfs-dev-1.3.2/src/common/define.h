@@ -23,6 +23,7 @@
 #include <ext/hash_map>
 #include <string.h>
 #include <stdint.h>
+#include "client_define.h"
 
 #if __WORDSIZE == 32
 namespace __gnu_cxx
@@ -64,18 +65,6 @@ namespace tfs
     typedef std::vector<std::string> VSTRING;
 
 #pragma pack(4)
-    struct FileStat
-    {
-      uint64_t file_id_;
-      int32_t offset_; // offset in block file
-      int64_t size_; // file size
-      int64_t usize_; // hold space
-      time_t modify_time_; // modify time
-      time_t create_time_; // create time
-      int32_t flag_; // deleta flag
-      uint32_t crc_; // crc value
-    };
-
     struct FileInfo
     {
       uint64_t id_; // file id
@@ -106,13 +95,13 @@ namespace tfs
       NOLEASE_MODE = 32
     };
 
-		enum UnlinkType
-    {
-      DELETE = 0,
-      UNDELETE = 2,
-      CONCEAL = 4,
-      REVEAL = 6
-    };
+		//enum UnlinkType
+    //{
+    //  DELETE = 0,
+    //  UNDELETE = 2,
+    //  CONCEAL = 4,
+    //  REVEAL = 6
+    //};
 
     enum
     {
@@ -132,17 +121,19 @@ namespace tfs
       T_LARGE = 64
     };
 
-    enum StatFlag
-    {
-      NORMAL_STAT = 0,
-      FORCE_STAT
-    };
+    //enum StatFlag
+    //{
+    //  NORMAL_STAT = 0,
+    //  FORCE_STAT
+    //};
 
     static const int TFS_SUCCESS = EXIT_SUCCESS;
     static const int TFS_ERROR = EXIT_FAILURE;
 
     static const int EXIT_INVALIDFD_ERROR = -1005;
     static const int EXIT_NOT_INIT_ERROR = -1006;
+    static const int EXIT_INVALID_ARGU_ERROR = -1007;
+    static const int32_t EXIT_NOT_PERM_OPER = -1008;
 
     static const int32_t INT_SIZE = 4;
     static const int32_t INT64_SIZE = 8;

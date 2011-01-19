@@ -18,22 +18,30 @@ int TfsLargeFile::open(const char* file_name, const char* suffix, const int flag
   flags_ = flags;
   if (!(flags_ & T_WRITE))       // not write, load meta first
   {
-    if ((ret = open_ex(file_name, suffix, flags)) != TFS_SUCCESS)
+    if (NULL == file_name || file_name[0] != 'L')
     {
-      TBSYS_LOG(ERROR, "open meta file fail, ret: %d", ret);
+      TBSYS_LOG(ERROR, "open large file fail, illegal file name: %s", file_name ? file_name : "NULL");
+      ret = TFS_ERROR;
     }
-
-    // if T_STAT is set, do not load meta here
-    if (TFS_SUCCESS == ret && !(flags & T_STAT))
+    else
     {
-      FileInfo file_info;
-      if ((ret = fstat_ex(&file_info, 0)) != TFS_SUCCESS)
+      if ((ret = open_ex(file_name, suffix, flags)) != TFS_SUCCESS)
       {
-        TBSYS_LOG(ERROR, "stat meta file %s fail, ret: %d", fsname_.get_name(true), ret);
+        TBSYS_LOG(ERROR, "open meta file fail, ret: %d", ret);
       }
-      else
+
+      // if T_STAT is set, do not load meta here
+      if (TFS_SUCCESS == ret && !(flags & T_STAT))
       {
-        ret = load_meta(file_info);
+        FileInfo file_info;
+        if ((ret = fstat_ex(&file_info, NORMAL_STAT)) != TFS_SUCCESS)
+        {
+          TBSYS_LOG(ERROR, "stat meta file %s fail, ret: %d", fsname_.get_name(true), ret);
+        }
+        else
+        {
+          ret = load_meta(file_info);
+        }
       }
     }
   }
@@ -101,7 +109,7 @@ int64_t TfsLargeFile::pwrite(const void* buf, int64_t count, int64_t offset)
   return pwrite_ex(buf, count, offset);
 }
 
-int TfsLargeFile::fstat(FileStat* file_stat, int32_t mode)
+int TfsLargeFile::fstat(TfsFileStat* file_stat, const TfsStatFlag mode)
 {
   TBSYS_LOG(DEBUG, "stat file start, mode: %d", mode);
   FileInfo file_info;
@@ -144,7 +152,7 @@ int TfsLargeFile::close()
   return close_ex();
 }
 
-int TfsLargeFile::unlink(const char* file_name, const char* suffix, const int action)
+int TfsLargeFile::unlink(const char* file_name, const char* suffix, const TfsUnlinkType action)
 {
   // read meta first
   int ret = TFS_SUCCESS;
@@ -157,7 +165,7 @@ int TfsLargeFile::unlink(const char* file_name, const char* suffix, const int ac
     if (DELETE == action) // if DELETE, need load meta. CONCEAL or REVEAL, skip it
     {
       FileInfo file_info;
-      if ((ret = fstat_ex(&file_info, 0)) != TFS_SUCCESS)
+      if ((ret = fstat_ex(&file_info, NORMAL_STAT)) != TFS_SUCCESS)
       {
         TBSYS_LOG(ERROR, "stat meta file %s fail, ret: %d", fsname_.get_name(true), ret);
       }

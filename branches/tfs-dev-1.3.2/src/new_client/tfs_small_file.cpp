@@ -56,7 +56,7 @@ int64_t TfsSmallFile::pwrite(const void *buf, int64_t count, int64_t offset)
   return pwrite(buf, count, offset);
 }
 
-int TfsSmallFile::fstat(FileStat* file_stat, int32_t mode)
+int TfsSmallFile::fstat(TfsFileStat* file_stat, const TfsStatFlag mode)
 {
   FileInfo file_info;
   int ret = fstat_ex(&file_info, mode);
@@ -79,7 +79,7 @@ int TfsSmallFile::close()
   return close_ex();
 }
 
-int TfsSmallFile::unlink(const char* file_name, const char* suffix, const int action)
+int TfsSmallFile::unlink(const char* file_name, const char* suffix, const TfsUnlinkType action)
 {
   int ret = open_ex(file_name, suffix, T_WRITE | T_NOLEASE);
   if (TFS_SUCCESS != ret)

@@ -16,39 +16,30 @@
 #ifndef TFS_CLIENT_TFSCLIENTAPI_H_
 #define TFS_CLIENT_TFSCLIENTAPI_H_
 
-#include <string>
-#include <Mutex.h>
-#include "common/define.h"
-
 #include <stdio.h>
-#include <pthread.h>
+#include "common/define.h"
+#include "common/client_define.h"
 
 #ifdef __OPTIMIZE__
 extern int error_open_missing_mode (void)
-    __attribute__((__error__ ("open with (T_LARGE & T_WRITE) flag needs 1 additional argument")));
+    __attribute__((__error__ ("open with (T_LARGE & T_WRITE) flag needs 1 additional not-NULL argument")));
 extern int error_no_addition_mode (void)
     __attribute__((__error__ ("open without (T_LARGE & T_WRITE) flag needs no more additional argument")));
 extern int error_open_too_many_arguments (void)
     __attribute__((__error__ ("open can be called with either 3 or 4 or 5 arguments, no more permitted")));
 #define missing_log_error() error_open_missing_mode()
 #define noadditional_log_error() error_no_addition_mode()
-#define overmany_log_error() warn_open_too_many_arguments()
+#define overmany_log_error() error_open_too_many_arguments()
 #else
-#define missing_log_error() TBSYS_LOG(ERROR, "open with (T_LARGE & T_WRITE) flag needs 1 additional argument")
-#define noadditional_log_error() TBSYS_LOG(ERROR, "open without (T_LARGE & T_WRITE) flag needs no more additional argument")
-#define overmany_log_error() TBSYS_LOG(ERROR, "open can be called with either 3 or 4 or 5 arguments, no more permitted")
+#define missing_log_error() fprintf(stderr, "%s", "open with (T_LARGE & T_WRITE) flag needs 1 additional not-NULL argument")
+#define noadditional_log_error() fprintf(stderr, "%s", "open without (T_LARGE & T_WRITE) flag needs no more additional argument")
+#define overmany_log_error() fprintf(stderr, "%s", "open can be called with either 3 or 4 or 5 arguments, no more permitted")
 #endif
 
 namespace tfs
 {
   namespace client
   {
-    class tbutil::Mutex;
-    class TfsFile;
-    class TfsSession;
-    class GcWorker;
-    typedef std::map<int, TfsFile*> FILE_MAP;
-
     class TfsClient
     {
     public:
@@ -64,62 +55,69 @@ namespace tfs
       __always_inline __attribute__ ((__gnu_inline__)) int
         open(const char* file_name, const char* suffix, const int flags, ... )
       {
-        if (!check_init())
-        {
-          return common::EXIT_NOT_INIT_ERROR;
-        }
-
+        int ret = common::EXIT_INVALIDFD_ERROR;
         if (__builtin_va_arg_pack_len() > 1)
         {
           overmany_log_error();
-          return common::EXIT_INVALIDFD_ERROR;
         }
-
-        if (flags & common::T_WRITE && flags & common::T_LARGE)
+        else if (flags & common::T_WRITE && flags & common::T_LARGE)
         {
           if (__builtin_va_arg_pack_len() != 1)
           {
             missing_log_error();
-            return common::EXIT_INVALIDFD_ERROR;
+          }
+          else
+          {
+            ret = open_ex_with_arg(file_name, suffix, (const char*)NULL, flags, __builtin_va_arg_pack());
           }
         }
-        else if (__builtin_va_arg_pack_len() > 0)
+        else
         {
-          noadditional_log_error();
-          return common::EXIT_INVALIDFD_ERROR;
+          if (__builtin_va_arg_pack_len() > 0)
+          {
+            noadditional_log_error();
+          }
+          else
+          {
+            ret = open_ex(file_name, suffix, (const char*)NULL, flags);
+          }
         }
 
-        return open_ex(file_name, suffix, (const char*)NULL, flags, __builtin_va_arg_pack());
+        return ret;
       }
 
       __always_inline __attribute__ ((__gnu_inline__)) int
         open(const char* file_name, const char* suffix, const char* ns_addr, const int flags, ... )
       {
-        if (!check_init())
-        {
-          return common::EXIT_NOT_INIT_ERROR;
-        }
-
+        int ret = common::EXIT_INVALIDFD_ERROR;
         if (__builtin_va_arg_pack_len() > 1)
         {
           overmany_log_error();
-          return common::EXIT_INVALIDFD_ERROR;
         }
-
-        if (flags & common::T_WRITE && flags & common::T_LARGE)
+        else if (flags & common::T_WRITE && flags & common::T_LARGE)
         {
           if (__builtin_va_arg_pack_len() != 1)
           {
             missing_log_error();
-            return common::EXIT_INVALIDFD_ERROR;
+          }
+          else
+          {
+            ret = open_ex_with_arg(file_name, suffix, ns_addr, flags, __builtin_va_arg_pack());
           }
         }
-        else if (__builtin_va_arg_pack_len() > 0)
+        else
         {
-          noadditional_log_error();
-          return common::EXIT_INVALIDFD_ERROR;
+          if (__builtin_va_arg_pack_len() > 0)
+          {
+            noadditional_log_error();
+          }
+          else
+          {
+            ret = open_ex(file_name, suffix, ns_addr, flags);
+          }
         }
-        return open_ex(file_name, suffix, ns_addr, flags, __builtin_va_arg_pack());
+
+        return ret;
       }
 
       int64_t read(const int fd, void* buf, const int64_t count);
@@ -127,36 +125,22 @@ namespace tfs
       int64_t lseek(const int fd, const int64_t offset, const int whence);
       int64_t pread(const int fd, void* buf, const int64_t count, const int64_t offset);
       int64_t pwrite(const int fd, const void* buf, const int64_t count, const int64_t offset);
-      int fstat(const int fd, common::FileStat* buf, const int mode = common::NORMAL_STAT);
+      int fstat(const int fd, TfsFileStat* buf, const TfsStatFlag mode = NORMAL_STAT);
       int close(const int fd, char* tfs_name = NULL, const int32_t len = 0);
 
       // LargeFile's name will be start with L
-      int unlink(const char* file_name, const char* suffix = NULL, const int action = 0)
+      int unlink(const char* file_name, const char* suffix = NULL, const TfsUnlinkType action = DELETE)
       {
         return unlink(file_name, suffix, NULL, action);
       }
-      int unlink(const char* file_name, const char* suffix, const char* ns_addr, const int action = 0);
-
-    private:
-      bool check_init();
-      int open_ex(const char* file_name, const char* suffix, const char* ns_addr,
-                  const int flags, ...);
-      TfsFile* get_file(const int fd);
-      int erase_file(const int fd);
-      int start_gc();
+      int unlink(const char* file_name, const char* suffix, const char* ns_addr, const TfsUnlinkType action = DELETE);
 
     private:
       TfsClient();
       DISALLOW_COPY_AND_ASSIGN(TfsClient);
       ~TfsClient();
-
-      bool is_init_;
-      TfsSession* default_tfs_session_;
-      int fd_;
-      FILE_MAP tfs_file_map_;
-      tbutil::Mutex mutex_;
-      GcWorker* gc_worker_;
-      pthread_t gc_tid_;
+      int open_ex(const char* file_name, const char* suffix, const char* ns_addr, const int flags);
+      int open_ex_with_arg(const char* file_name, const char* suffix, const char* ns_addr, const int flags, ...);
     };
   }
 }

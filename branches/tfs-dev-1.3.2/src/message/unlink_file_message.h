@@ -91,7 +91,7 @@ namespace tfs
 
         inline int get_unlink_type() const
         {
-          return unlink_file_info_.is_server_ & common::REVEAL;
+          return unlink_file_info_.is_server_ & REVEAL;
         }
 
         inline void set_option_flag(const int32_t flag)
@@ -138,22 +138,22 @@ namespace tfs
 
         inline void set_del()
         {
-          unlink_file_info_.is_server_ |= common::DELETE;
+          unlink_file_info_.is_server_ |= DELETE;
         }
 
         inline void set_undel()
         {
-          unlink_file_info_.is_server_ |= common::UNDELETE;
+          unlink_file_info_.is_server_ |= UNDELETE;
         }
 
         inline void set_conceal()
         {
-          unlink_file_info_.is_server_ |= common::CONCEAL;
+          unlink_file_info_.is_server_ |= CONCEAL;
         }
 
         inline void set_reveal()
         {
-          unlink_file_info_.is_server_ |= common::REVEAL;
+          unlink_file_info_.is_server_ |= REVEAL;
         }
 
         virtual int parse(char* data, int32_t len);

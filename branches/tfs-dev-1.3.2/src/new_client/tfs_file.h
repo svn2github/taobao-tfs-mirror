@@ -7,6 +7,7 @@
 #include "common/error_msg.h"
 #include "common/func.h"
 #include "common/lock.h"
+#include "common/client_define.h"
 #include "message/client_manager.h"
 #include "tfs_session.h"
 #include "fsname.h"
@@ -63,9 +64,9 @@ namespace tfs
       virtual int64_t lseek(int64_t offset, int whence) = 0;
       virtual int64_t pread(void* buf, int64_t count, int64_t offset) = 0;
       virtual int64_t pwrite(const void* buf, int64_t count, int64_t offset) = 0;
-      virtual int fstat(common::FileStat* file_info, int32_t mode = common::NORMAL_STAT) = 0;
+      virtual int fstat(TfsFileStat* file_info, const TfsStatFlag mode = NORMAL_STAT) = 0;
       virtual int close() = 0;
-      virtual int unlink(const char* file_name, const char* suffix, const int action) = 0;
+      virtual int unlink(const char* file_name, const char* suffix, const TfsUnlinkType action) = 0;
 
       const char* get_file_name();
       void set_session(TfsSession* tfs_session);
@@ -94,7 +95,7 @@ namespace tfs
       int64_t lseek_ex(int64_t offset, int whence);
       int64_t pread_ex(void* buf, int64_t count, int64_t offset);
       int64_t pwrite_ex(const void* buf, int64_t count, int64_t offset);
-      int fstat_ex(common::FileInfo* file_info, int32_t mode);
+      int fstat_ex(common::FileInfo* file_info, const TfsStatFlag mode);
       int close_ex();
       int get_size_for_rw_ex(const int64_t check_size, const int64_t count, int64_t& cur_size, bool& not_end, const int64_t per_size);
 

@@ -295,7 +295,7 @@ int64_t TfsFile::pwrite_ex(const void* buf, int64_t count, int64_t offset)
   return write_ex(buf, count, offset, false);
 }
 
-int TfsFile::fstat_ex(FileInfo* file_info, int32_t mode)
+int TfsFile::fstat_ex(FileInfo* file_info, const TfsStatFlag mode)
 {
   int ret = TFS_SUCCESS;
   if (TFS_FILE_OPEN_NO == is_open_)
@@ -319,7 +319,7 @@ int TfsFile::fstat_ex(FileInfo* file_info, int32_t mode)
     int32_t save_flags = flags_;
     FileInfo* save_file_info = meta_seg_->file_info_;
     meta_seg_->file_info_ = file_info;
-    flags_ = mode;
+    flags_ = static_cast<int32_t>(mode);
     meta_seg_->status_ = SEG_STATUS_OPEN_OVER;
     TBSYS_LOG(DEBUG, "fstat_ex mode: %d, flags_: %d, meta status: %d", mode, flags_, meta_seg_->status_);
     get_meta_segment(0, NULL, 0);  // just stat
