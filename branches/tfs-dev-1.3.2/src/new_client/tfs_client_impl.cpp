@@ -40,10 +40,6 @@ TfsClientImpl::~TfsClientImpl()
     tbsys::gDelete(it->second);
   }
   tfs_file_map_.clear();
-
-  // wait for gc end?
-  pthread_join(gc_tid_, NULL);
-  tbsys::gDelete(gc_worker_);
 }
 
 int TfsClientImpl::initialize(const char* ns_addr, const int32_t cache_time, const int32_t cache_items)
@@ -81,6 +77,13 @@ int TfsClientImpl::initialize(const char* ns_addr, const int32_t cache_time, con
     }
   }
   return ret;
+}
+
+int TfsClientImpl::destory()
+{
+  pthread_join(gc_tid_, NULL);
+  tbsys::gDelete(gc_worker_);
+  return TFS_SUCCESS;
 }
 
 int64_t TfsClientImpl::read(const int fd, void* buf, const int64_t count)

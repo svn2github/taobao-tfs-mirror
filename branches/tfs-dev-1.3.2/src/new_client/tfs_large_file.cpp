@@ -353,6 +353,8 @@ int32_t TfsLargeFile::finish_write_process(int status)
       {
         // reset crc here
         (*it)->seg_info_.crc_ = 0;
+        // Todo: set file_id_ to zero depend on update flag
+        (*it)->seg_info_.file_id_= 0;
         it++;
       }
     }

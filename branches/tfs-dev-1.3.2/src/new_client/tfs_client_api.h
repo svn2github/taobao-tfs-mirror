@@ -51,6 +51,7 @@ namespace tfs
 
       int initialize(const char* ns_addr, const int32_t cache_time = common::DEFAULT_BLOCK_CACHE_TIME,
                      const int32_t cache_items = common::DEFAULT_BLOCK_CACHE_ITEMS);
+      int destory();
 
       __always_inline __attribute__ ((__gnu_inline__)) int
         open(const char* file_name, const char* suffix, const int flags, ... )

@@ -15,7 +15,7 @@ namespace tfs
       GC_GARBAGE_FILE
     };
 
-    const int32_t GC_EXPIRED_TIME = 86400; // 10 days
+    const int32_t GC_EXPIRED_TIME = 864000; // 10 days
 
     class GcWorker
     {
