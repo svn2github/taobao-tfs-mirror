@@ -13,6 +13,7 @@
  *      - initial release
  *
  */
+
 #include <vector>
 #include <algorithm>
 #include <functional>
@@ -140,7 +141,7 @@ class WorkThread : public tbutil::Thread
         memset(&src_file_info, 0, sizeof(src_file_info));
         memset(&target_file_info, 0, sizeof(target_file_info));
 
-        const char* prefix = file.c_str() + FILE_NAME_LEN;
+        const char* prefix = NULL;//file.c_str() + FILE_NAME_LEN;
         iret = src_tfsclient.tfs_open(file.c_str(), prefix, READ_MODE);
         if (iret != TFS_SUCCESS)
         {
@@ -156,6 +157,7 @@ class WorkThread : public tbutil::Thread
           fprintf(stderr, "stat tfsfile error: %s\n", src_tfsclient.get_error_message());
           errors_.push_back(file);
           atomic_inc(&gstat.copy_failure_);
+          src_tfsclient.tfs_close();
           continue;
         }
 
@@ -165,6 +167,8 @@ class WorkThread : public tbutil::Thread
           fprintf(stderr, "open tfsfile(target) error: %s\n", target_tfsclient.get_error_message());
           errors_.push_back(file);
           atomic_inc(&gstat.copy_failure_);
+          src_tfsclient.tfs_close();
+          continue;
           continue;
         }
 
@@ -180,7 +184,6 @@ class WorkThread : public tbutil::Thread
         {
           fprintf(stderr, "[INFO]: %s is new file\n", file.c_str());
           atomic_inc(&gstat.copy_none_);
-          continue;
         }
         else if (src_file_info.flag_ == 0
                 && (target_file_info.id_ == 0 || src_file_info.size_ != target_file_info.size_
@@ -192,7 +195,7 @@ class WorkThread : public tbutil::Thread
           int32_t len = 0;
           int32_t offset = 0;
           uint32_t crc = 0;
-          while ((len = src_tfsclient.tfs_read((data+offset), MAX_READ_SIZE) > 0))
+          while ((len = src_tfsclient.tfs_read((data+offset), MAX_READ_SIZE)) > 0)
           {
             crc = Func::crc(crc, (data+offset), len);
             offset += len;
@@ -206,6 +209,8 @@ class WorkThread : public tbutil::Thread
             tbsys::gDeleteA(data);
             errors_.push_back(file);
             atomic_inc(&gstat.copy_failure_);
+            src_tfsclient.tfs_close();
+            target_tfsclient.tfs_close();
             continue;
           }
 
@@ -218,6 +223,7 @@ class WorkThread : public tbutil::Thread
             tbsys::gDeleteA(data);
             errors_.push_back(file);
             atomic_inc(&gstat.copy_failure_);
+            src_tfsclient.tfs_close();
             continue;
           }
           int32_t write_len = 0;
@@ -244,13 +250,13 @@ class WorkThread : public tbutil::Thread
           {
             atomic_inc(&gstat.copy_success_);
           }
-          src_tfsclient.tfs_close();
-          target_tfsclient.tfs_close();
         }
         else
         {
           atomic_inc(&gstat.copy_none_);
         }
+        src_tfsclient.tfs_close();
+        target_tfsclient.tfs_close();
       }
     }
 
