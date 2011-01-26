@@ -402,7 +402,7 @@ namespace tfs
       }
       if (length_ > 0)
       {
-        if (get_object(&data, &len, reinterpret_cast<void**> (&data), length_) == TFS_ERROR)
+        if (get_object(&data, &len, reinterpret_cast<void**> (&data_), length_) == TFS_ERROR)
         {
           return TFS_ERROR;
         }
