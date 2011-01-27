@@ -19,6 +19,7 @@
 #include "message/client_manager.h"
 #include "client/tfs_client_api.h"
 #include "dataserver/dataserver_define.h"
+#include "dataserver/visit_stat.h"
 #include <tbsys.h>
 #include <Memory.hpp>
 #include <algorithm>
@@ -29,8 +30,9 @@ using namespace tfs::message;
 using namespace tfs::client;
 using namespace tfs::dataserver;
 
-const int64_t TranBlock::TRAN_BUFFER_SIZE = 4 * 1024 * 1024;
+const int64_t TranBlock::TRAN_BUFFER_SIZE = 8 * 1024 * 1024;
 const int64_t TranBlock::WAIT_TIME_OUT = 5000000;
+const int64_t TranBlock::RETRY_TIMES = 2;
 
 BlockConsole::BlockConsole() :
   input_file_ptr_(NULL), succ_file_ptr_(NULL), fail_file_ptr_(NULL)
@@ -246,9 +248,9 @@ int BlockConsole::locate_cur_pos()
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 TranBlock::TranBlock(const uint32_t blockid, const std::string& dest_ns_addr,
-    const uint64_t dest_ds_addr, TfsSession* src_session) :
+    const uint64_t dest_ds_addr, const int64_t traffic, TfsSession* src_session) :
     block_id_(blockid), dest_ns_addr_(dest_ns_addr), dest_ds_id_(dest_ds_addr),
-    cur_offset_(0), total_tran_size_(0), src_session_(src_session)
+    cur_offset_(0), total_tran_size_(0), traffic_(traffic), src_session_(src_session)
 {
   rds_.clear();
   file_set_.clear();
@@ -361,65 +363,95 @@ int TranBlock::read_data()
   int index = 0;
   bool eof_flag = false;
   int ret = TFS_SUCCESS;
+  int64_t read_size = std::min(traffic_, TRAN_BUFFER_SIZE);
+  int64_t micro_sec = 1000 * 1000;
 
   while (!eof_flag)
   {
-    ReadRawDataMessage rrd_msg;
-    rrd_msg.set_block_id(block_id_);
-    rrd_msg.set_offset(cur_offset_);
-    rrd_msg.set_length(TRAN_BUFFER_SIZE);
+    int64_t remainder_retrys = RETRY_TIMES;
+    TIMER_START();
+    while (remainder_retrys > 0)
+    {
+      ReadRawDataMessage rrd_msg;
+      rrd_msg.set_block_id(block_id_);
+      rrd_msg.set_offset(cur_offset_);
+      rrd_msg.set_length(read_size);
 
-    // fetch data from the first ds
-    Message* rsp = NULL;
-    ret = NewClientManager::get_instance()->call(rds_[index], &rrd_msg, WAIT_TIME_OUT, rsp);
-    if (TFS_SUCCESS != ret)
-    {
-      TBSYS_LOG(ERROR, "read raw data from ds: %s failed, blockid: %u, offset: %d, ret: %d",
-          tbsys::CNetUtil::addrToString(rds_[index]).c_str(), block_id_, cur_offset_, ret);
-    }
-    else if (NULL == rsp) // will not enter this path
-    {
-      TBSYS_LOG(ERROR, "read raw data from ds: %s failed, blockid: %u, offset: %d, rsp msg is NULL",
-          tbsys::CNetUtil::addrToString(rds_[index]).c_str(), block_id_, cur_offset_);
-      ret = TFS_ERROR;
-    }
-    else if (RESP_READ_RAW_DATA_MESSAGE == rsp->get_message_type())
-    {
-      RespReadRawDataMessage* rsp_rrd_msg = dynamic_cast<RespReadRawDataMessage*>(rsp);
-      int len = rsp_rrd_msg->get_length();
-      if (len >= 0)
+      // fetch data from the first ds
+      Message* rsp = NULL;
+      ret = NewClientManager::get_instance()->call(rds_[index], &rrd_msg, WAIT_TIME_OUT, rsp);
+      if (TFS_SUCCESS != ret)
       {
-        if (len < TRAN_BUFFER_SIZE)
+        TBSYS_LOG(ERROR, "read raw data from ds: %s failed, blockid: %u, offset: %d, remainder_retrys: %"PRI64_PREFIX"d, ret: %d",
+            tbsys::CNetUtil::addrToString(rds_[index]).c_str(), block_id_, cur_offset_, remainder_retrys, ret);
+      }
+      else if (NULL == rsp) // will not enter this path
+      {
+        TBSYS_LOG(ERROR, "read raw data from ds: %s failed, blockid: %u, offset: %d, remainder_retrys: %"PRI64_PREFIX"d, rsp msg is NULL",
+            tbsys::CNetUtil::addrToString(rds_[index]).c_str(), block_id_, remainder_retrys, cur_offset_);
+        ret = TFS_ERROR;
+      }
+      else if (RESP_READ_RAW_DATA_MESSAGE == rsp->get_message_type())
+      {
+        RespReadRawDataMessage* rsp_rrd_msg = dynamic_cast<RespReadRawDataMessage*>(rsp);
+        int len = rsp_rrd_msg->get_length();
+        if (len >= 0)
         {
-          eof_flag = true;
+          if (len < TRAN_BUFFER_SIZE)
+          {
+            eof_flag = true;
+          }
+          if (len > 0)
+          {
+            TBSYS_LOG(DEBUG, "read raw data from ds: %s succ, blockid: %u, offset: %d, len: %d, data: %p",
+                tbsys::CNetUtil::addrToString(rds_[index]).c_str(), block_id_, cur_offset_, len, rsp_rrd_msg->get_data());
+            src_content_buf_.writeBytes(rsp_rrd_msg->get_data(), len);
+            cur_offset_ += len;
+          }
         }
-        if (len > 0)
+        else
         {
-          TBSYS_LOG(DEBUG, "read raw data from ds: %s succ, blockid: %u, offset: %d, len: %d, data: %p",
-              tbsys::CNetUtil::addrToString(rds_[index]).c_str(), block_id_, cur_offset_, len, rsp_rrd_msg->get_data());
-          src_content_buf_.writeBytes(rsp_rrd_msg->get_data(), len);
-          cur_offset_ += len;
+          TBSYS_LOG(ERROR, "read raw data from ds: %s failed, blockid: %u, offset: %d, remainder_retrys: %"PRI64_PREFIX"d, ret: %d",
+              tbsys::CNetUtil::addrToString(rds_[index]).c_str(), block_id_, cur_offset_, remainder_retrys, len);
+          ret = len;
         }
+      }
+      else //unknow type
+      {
+        TBSYS_LOG(ERROR, "read raw data from ds: %s failed, blockid: %u, offset: %d, remainder_retrys: %"PRI64_PREFIX"d, unknow msg type: %d",
+            tbsys::CNetUtil::addrToString(rds_[index]).c_str(), block_id_, cur_offset_, remainder_retrys, rsp->get_message_type());
+        ret = TFS_ERROR;
+      }
+
+      tbsys::gDelete(rsp);
+      if (TFS_SUCCESS != ret)
+      {
+        --remainder_retrys;
+        continue;
       }
       else
       {
-        TBSYS_LOG(ERROR, "read raw data from ds: %s failed, blockid: %u, offset: %d, ret: %d",
-            tbsys::CNetUtil::addrToString(rds_[index]).c_str(), block_id_, cur_offset_, len);
-        ret = len;
+        break;
       }
     }
-    else //unknow type
-    {
-      TBSYS_LOG(ERROR, "read raw data from ds: %s failed, blockid: %u, offset: %d, unknow msg type: %d",
-          tbsys::CNetUtil::addrToString(rds_[index]).c_str(), block_id_, cur_offset_, rsp->get_message_type());
-      ret = TFS_ERROR;
-    }
+    TIMER_END();
 
-    tbsys::gDelete(rsp);
     if (TFS_SUCCESS != ret)
     {
       break;
     }
+
+    // restrict speed
+    int64_t speed = 0;
+    int64_t d_value = micro_sec - TIMER_DURATION();
+    if (d_value > 0)
+    {
+      usleep(d_value);
+      speed = read_size * 1000 * 1000 / TIMER_DURATION();
+    }
+
+    TBSYS_LOG(DEBUG, "read data, cost time: %"PRI64_PREFIX"d, read size: %d, speed: %"PRI64_PREFIX"d, need sleep time: %"PRI64_PREFIX"d",
+        TIMER_DURATION(), read_size, speed, d_value);
   }
 
   total_tran_size_ += src_content_buf_.getDataLen();
@@ -446,7 +478,7 @@ int TranBlock::recombine_data()
       // skip deleted file
       if (0 != (finfo.flag_ & (FI_DELETED | FI_INVALID)))
       {
-        TBSYS_LOG(ERROR, "file deleted, skip it. blockid: %u, fileid: %"PRI64_PREFIX"u, flag: %d",
+        TBSYS_LOG(INFO, "file deleted, skip it. blockid: %u, fileid: %"PRI64_PREFIX"u, flag: %d",
             block_id_, finfo.id_, finfo.flag_);
         continue;
       }
@@ -547,58 +579,74 @@ int TranBlock::write_data()
 
   while (block_len > 0)
   {
-    cur_len = std::min(static_cast<int64_t>(block_len), TRAN_BUFFER_SIZE);
-    WriteRawDataMessage req_wrd_msg;
-    req_wrd_msg.set_block_id(block_id_);
-    req_wrd_msg.set_offset(cur_write_offset);
-    req_wrd_msg.set_length(cur_len);
-    req_wrd_msg.set_data(dest_content_buf_.getData());
+    int64_t remainder_retrys = RETRY_TIMES;
+    while (remainder_retrys > 0)
+    {
+      cur_len = std::min(static_cast<int64_t>(block_len), TRAN_BUFFER_SIZE);
 
-    //new block
-    if (0 == cur_write_offset)
-    {
-      req_wrd_msg.set_new_block(1);
-    }
+      WriteRawDataMessage req_wrd_msg;
+      req_wrd_msg.set_block_id(block_id_);
+      req_wrd_msg.set_offset(cur_write_offset);
+      req_wrd_msg.set_length(cur_len);
+      req_wrd_msg.set_data(dest_content_buf_.getData());
 
-    Message* rsp = NULL;
-    ret = NewClientManager::get_instance()->call(dest_ds_id_, &req_wrd_msg, WAIT_TIME_OUT, rsp);
-    if (TFS_SUCCESS != ret)
-    {
-      TBSYS_LOG(ERROR, "write raw data to ds: %s failed, blockid: %u, offset: %d, ret: %d",
-          tbsys::CNetUtil::addrToString(dest_ds_id_).c_str(), block_id_, cur_write_offset, ret);
-      ret = TFS_ERROR;
-    }
-    else if (STATUS_MESSAGE == rsp->get_message_type())
-    {
-      StatusMessage* sm = dynamic_cast<StatusMessage*>(rsp);
-      if (STATUS_MESSAGE_OK != sm->get_status())
+      //new block
+      if (0 == cur_write_offset)
       {
-        TBSYS_LOG(ERROR, "write raw data to ds: %s fail, blockid: %u, offset: %d, ret: %d",
-            tbsys::CNetUtil::addrToString(dest_ds_id_).c_str(), block_id_, cur_write_offset, sm->get_status());
+        req_wrd_msg.set_new_block(1);
+      }
+
+      Message* rsp = NULL;
+      ret = NewClientManager::get_instance()->call(dest_ds_id_, &req_wrd_msg, WAIT_TIME_OUT, rsp);
+      if (TFS_SUCCESS != ret)
+      {
+        TBSYS_LOG(ERROR, "write raw data to ds: %s failed, blockid: %u, offset: %d, ret: %d",
+            tbsys::CNetUtil::addrToString(dest_ds_id_).c_str(), block_id_, cur_write_offset, ret);
         ret = TFS_ERROR;
       }
-    }
-    else
-    {
-      TBSYS_LOG(ERROR, "write raw data to ds: %s fail, blockid: %u, offset: %d, unkonw msg type",
-          tbsys::CNetUtil::addrToString(dest_ds_id_).c_str(), block_id_, cur_write_offset);
-      ret = TFS_ERROR;
+      else if (STATUS_MESSAGE == rsp->get_message_type())
+      {
+        StatusMessage* sm = dynamic_cast<StatusMessage*>(rsp);
+        if (STATUS_MESSAGE_OK != sm->get_status())
+        {
+          TBSYS_LOG(ERROR, "write raw data to ds: %s fail, blockid: %u, offset: %d, ret: %d",
+              tbsys::CNetUtil::addrToString(dest_ds_id_).c_str(), block_id_, cur_write_offset, sm->get_status());
+          ret = TFS_ERROR;
+        }
+      }
+      else
+      {
+        TBSYS_LOG(ERROR, "write raw data to ds: %s fail, blockid: %u, offset: %d, unkonw msg type",
+            tbsys::CNetUtil::addrToString(dest_ds_id_).c_str(), block_id_, cur_write_offset);
+        ret = TFS_ERROR;
+      }
+
+      dest_content_buf_.drainData(cur_len);
+      block_len = dest_content_buf_.getDataLen();
+      cur_write_offset += cur_len;
+
+      tbsys::gDelete(rsp);
+
+      if (TFS_SUCCESS != ret)
+      {
+        --remainder_retrys;
+        continue;
+      }
+      else 
+      {
+        if (cur_len != TRAN_BUFFER_SIZE)
+        {
+          // quit
+          block_len = 0;
+        }
+        TBSYS_LOG(INFO, "write raw data to ds: %s successful, blockid: %u",
+            tbsys::CNetUtil::addrToString(dest_ds_id_).c_str(), block_id_);
+        break;
+      }
     }
 
-    dest_content_buf_.drainData(cur_len);
-    block_len = dest_content_buf_.getDataLen();
-    cur_write_offset += cur_len;
-
-    tbsys::gDelete(rsp);
     if (TFS_SUCCESS != ret)
     {
-      break;
-    }
-
-    if (cur_len != TRAN_BUFFER_SIZE)
-    {
-      TBSYS_LOG(INFO, "write raw data to ds: %s successful, blockid: %u",
-          tbsys::CNetUtil::addrToString(dest_ds_id_).c_str(), block_id_);
       break;
     }
   }

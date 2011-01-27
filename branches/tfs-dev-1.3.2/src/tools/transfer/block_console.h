@@ -90,7 +90,7 @@ class TranBlock
 {
   public:
     TranBlock(const uint32_t blockid, const std::string& dest_ns_addr,
-        const uint64_t dest_ds_addr, tfs::client::TfsSession* src_session);
+        const uint64_t dest_ds_addr, const int64_t traffic, tfs::client::TfsSession* src_session);
     ~TranBlock();
 
     int run();
@@ -111,6 +111,7 @@ class TranBlock
   private:
     static const int64_t WAIT_TIME_OUT;
     static const int64_t TRAN_BUFFER_SIZE;
+    static const int64_t RETRY_TIMES;
 
   private:
     uint32_t block_id_;
@@ -118,6 +119,7 @@ class TranBlock
     uint64_t dest_ds_id_;
     int32_t cur_offset_;
     int64_t total_tran_size_;
+    int64_t traffic_;
     tfs::client::TfsSession* src_session_;
     tfs::common::VUINT64 rds_;
     FileInfoSet file_set_;

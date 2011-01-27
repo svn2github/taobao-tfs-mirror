@@ -92,7 +92,7 @@ class WorkThread : public tbutil::Thread
         {
           TBSYS_LOG(INFO, "get transfer param succ, blockid: %u, ds: %s, thread id: %"PRI64_PREFIX"d",
               block_id, tbsys::CNetUtil::addrToString(ds_id).c_str(), id());
-          TranBlock tran_block(block_id, dest_ns_addr_, ds_id, src_session_);
+          TranBlock tran_block(block_id, dest_ns_addr_, ds_id, traffic_, src_session_);
           if ((ret = tran_block.run()) != TFS_SUCCESS)
           {
             TBSYS_LOG(ERROR, "tran block run fail, ret: %d, thread id: %"PRI64_PREFIX"d", ret, id());
@@ -101,28 +101,27 @@ class WorkThread : public tbutil::Thread
 
           TIMER_END();
           // flow control
-          int64_t d_value = 0;
-          int64_t expect_time = 0;
-          if (traffic_ > 0)
-          {
-            expect_time = (static_cast<int64_t>(tran_block.get_tran_size()) * 1000 * 1000 ) / (traffic_ * 1024);
-            d_value = expect_time - TIMER_DURATION();
-            // us
-            if (d_value > 0)
-            {
-              usleep(d_value);
-            }
-          }
+          //int64_t d_value = 0;
+          //int64_t expect_time = 0;
+          //if (traffic_ > 0)
+          //{
+          //  expect_time = (static_cast<int64_t>(tran_block.get_tran_size()) * 1000 * 1000 ) / (traffic_ * 1024);
+          //  d_value = expect_time - TIMER_DURATION();
+          //  // us
+          //  if (d_value > 0)
+          //  {
+          //    usleep(d_value);
+          //  }
+          //}
 
-          int64_t speed = 0;
-          if (TIMER_DURATION() > 0)
-          {
-            speed = static_cast<int64_t>(tran_block.get_tran_size()) * 1000 * 1000 / TIMER_DURATION(); //kb
-          }
-          TBSYS_LOG(INFO, "get transfer param %s, ret: %d, cost time: %"PRI64_PREFIX"d, expect time: %"PRI64_PREFIX"d, tran size: %d, speed: %"PRI64_PREFIX"d, need sleep time: %"PRI64_PREFIX"d",
+          //int64_t speed = 0;
+          //if (TIMER_DURATION() > 0)
+          //{
+          //  speed = static_cast<int64_t>(tran_block.get_tran_size()) * 1000 * 1000 / TIMER_DURATION(); //kb
+          //}
+          TBSYS_LOG(INFO, "get transfer param %s, ret: %d, cost time: %"PRI64_PREFIX"d, tran size: %d",
               TFS_SUCCESS == ret ? "succ" : "fail", ret,
-              TIMER_DURATION(), expect_time, tran_block.get_tran_size(),
-              speed, d_value);
+              TIMER_DURATION(), tran_block.get_tran_size());
         }
       }
     }
