@@ -126,12 +126,13 @@ class TranBlock
     tfs::common::RawMetaVec dest_raw_meta_;
     tfs::common::BlockInfo dest_block_info_;
     StatParam stat_param_;
+    std::set<uint64_t> concealed_files_;
 };
 
 class FindFileId
 {
   public:
-    FindFileId(const int64_t file_id) : file_id_(file_id)
+    FindFileId(const uint64_t file_id) : file_id_(file_id)
     {
     }
     bool operator()(const tfs::common::FileInfo& finfo)

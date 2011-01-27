@@ -252,12 +252,14 @@ TranBlock::TranBlock(const uint32_t blockid, const std::string& dest_ns_addr,
 {
   rds_.clear();
   file_set_.clear();
+  concealed_files_.clear();
 }
 
 TranBlock::~TranBlock()
 {
   rds_.clear();
   file_set_.clear();
+  concealed_files_.clear();
 }
 
 int TranBlock::run()
@@ -442,12 +444,17 @@ int TranBlock::recombine_data()
       //TBSYS_LOG(DEBUG, "file info. blockid: %u, fileid: %"PRI64_PREFIX"u, flag: %d, size: %d, usize: %d, offset: %d",
       //    block_id_, finfo.id_, finfo.flag_, finfo.size_, finfo.usize_, finfo.offset_);
       // skip deleted file
-      if (0 != (finfo.flag_ & DELETE))
+      if (0 != (finfo.flag_ & (FI_DELETED | FI_INVALID)))
       {
         TBSYS_LOG(ERROR, "file deleted, skip it. blockid: %u, fileid: %"PRI64_PREFIX"u, flag: %d",
             block_id_, finfo.id_, finfo.flag_);
-        //Todo: record in deleted file
         continue;
+      }
+      else if (0 != (finfo.flag_ & FI_CONCEAL)) // record conceal file
+      {
+        TBSYS_LOG(INFO, "file concealed. blockid: %u, fileid: %"PRI64_PREFIX"u, flag: %d",
+            block_id_, finfo.id_, finfo.flag_);
+        concealed_files_.insert(finfo.id_);
       }
 
       // skip illegal file
@@ -646,6 +653,12 @@ int TranBlock::check_integrity()
   RawMetaVecIter vit = dest_raw_meta_.begin();
   for ( ; vit != dest_raw_meta_.end(); ++vit)
   {
+    if (concealed_files_.find(vit->get_file_id()) != concealed_files_.end())
+    {
+      TBSYS_LOG(INFO, "file concealed, check integrity skip it. blockid: %u, fileid: %"PRI64_PREFIX"u",
+          block_id_, vit->get_file_id());
+      continue;
+    }
     TfsClient tfs_client;
     if ((ret = tfs_client.initialize(dest_ns_addr_)) != TFS_SUCCESS)
     {
