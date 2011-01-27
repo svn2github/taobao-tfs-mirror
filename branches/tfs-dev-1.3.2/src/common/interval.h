@@ -274,25 +274,6 @@ namespace tfs
       int32_t server_count_;
     };
 
-    struct CrcCheckFile
-    {
-      uint32_t block_id_;
-      uint64_t file_id_;
-      uint32_t crc_;
-      CheckDsBlockType flag_;
-      VUINT64 fail_servers_;
-
-      CrcCheckFile() :
-        block_id_(0), file_id_(0), crc_(0), flag_(CRC_DS_PATIAL_ERROR)
-      {
-      }
-
-      CrcCheckFile(const uint32_t block_id, const CheckDsBlockType flag) :
-        block_id_(block_id), file_id_(0), crc_(0), flag_(flag)
-      {
-      }
-    };
-
     struct Throughput
     {
       int64_t write_byte_;
@@ -349,22 +330,6 @@ namespace tfs
       int32_t available_;
     };
 
-    //struct BlockInfoSeg
-    //{
-    //  VUINT64 ds_;
-    //  bool has_lease_;
-    //  int32_t lease_;
-    //  int32_t version_;
-    //  BlockInfoSeg() : has_lease_(false), lease_(0), version_(0)
-    //  {
-    //    ds_.clear();
-    //  }
-    //  BlockInfoSeg(const VUINT64& ds, const bool has_lease = false,
-    //               const int32_t lease = 0, const int32_t version = 0) :
-    //    ds_(ds), has_lease_(has_lease), lease_(lease), version_(version)
-    //  {
-    //  }
-    //};
     struct SegmentHead
     {
       int32_t count_;           // segment count
@@ -396,6 +361,27 @@ namespace tfs
       }
     };
 #pragma pack()
+
+    struct CrcCheckFile
+    {
+      uint32_t block_id_;
+      uint64_t file_id_;
+      uint32_t crc_;
+      CheckDsBlockType flag_;
+      VUINT64 fail_servers_;
+
+      CrcCheckFile() :
+        block_id_(0), file_id_(0), crc_(0), flag_(CRC_DS_PATIAL_ERROR)
+      {
+        fail_servers_.clear();
+      }
+
+      CrcCheckFile(const uint32_t block_id, const CheckDsBlockType flag) :
+        block_id_(block_id), file_id_(0), crc_(0), flag_(flag)
+      {
+        fail_servers_.clear();
+      }
+    };
 
     static const int32_t BLOCKINFO_SIZE = sizeof(BlockInfo);
     static const int32_t RAW_META_SIZE = sizeof(RawMeta);

@@ -80,7 +80,7 @@ int TfsSession::get_block_info(uint32_t& block_id, VUINT64 &rds, int32_t flag)
   {
     if (0 == block_id)
     {
-      TBSYS_LOG(ERROR, "blockid zero error for blockid: %d, mode: %d", block_id, flag);
+      TBSYS_LOG(ERROR, "blockid zero error for blockid: %u, mode: %d", block_id, flag);
       ret = TFS_ERROR;
     }
     else
