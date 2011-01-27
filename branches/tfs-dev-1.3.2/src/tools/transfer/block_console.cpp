@@ -397,7 +397,7 @@ int TranBlock::read_data()
         int len = rsp_rrd_msg->get_length();
         if (len >= 0)
         {
-          if (len < TRAN_BUFFER_SIZE)
+          if (len < read_size)
           {
             eof_flag = true;
           }

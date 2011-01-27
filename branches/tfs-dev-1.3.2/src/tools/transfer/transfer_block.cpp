@@ -38,7 +38,7 @@ class WorkThread : public tbutil::Thread
     WorkThread(BlockConsole* blk_console, tfs::client::TfsSession* src_session,
         const std::string& dest_ns_addr, const int64_t max_traffic) :
       blk_console_(blk_console), src_session_(src_session),
-      dest_ns_addr_(dest_ns_addr), traffic_(max_traffic), destroy_(false)
+      dest_ns_addr_(dest_ns_addr), traffic_(max_traffic * 1024), destroy_(false)
     {
     }
 
