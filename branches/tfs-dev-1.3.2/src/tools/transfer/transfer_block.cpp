@@ -63,10 +63,10 @@ class WorkThread : public tbutil::Thread
         case -1:
           traffic_ = traffic_ / 2;
           break;
-        case 0:
+        case 1:
           traffic_ = traffic_ * 2;
           break;
-        case 1:
+        case 0:
           traffic_ = traffic_ * 3;
           break;
       }
