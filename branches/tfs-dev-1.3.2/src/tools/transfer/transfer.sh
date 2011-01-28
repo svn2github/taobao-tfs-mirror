@@ -4,17 +4,13 @@ USER=admin
 
 BLK_ID_FILE=input_block
 DEST_DS_FILE=dest_ds
-IO_THRESHOLD=512
+IO_THRESHOLD=4096
 THREAD_CNT=4
 
-# maybe argument
-SOURCE_NS_IP=172.23.90.230:3100
-DEST_NS_IP=172.26.90.230:3100
-
-SIG_STOP=15
-SIG_SLOW=16
-SIG_HIGH=17
-SIG_KILL=9
+SIG_STOP=SIGTERM
+SIG_SLOW=SIGUSR2
+SIG_HIGH=SIGUSR1
+SIG_KILL=SIGKILL
 
 # main server
 CMD_HOME=`dirname $(readlink -f $0)`
@@ -25,13 +21,14 @@ SAVE_BLK_FILE=$SAVE_FILE_PATH/${BLK_ID_FILE}
 SAVE_DEST_DS_FILE=${SAVE_FILE_PATH}/${DEST_DS_FILE}
 
 # dispatch server
-DEST_CMD_HOME=/home/admin/transfer
+DEST_CMD_HOME=/home/$USER/transfer
 BIN_NAME=transfer_block
-MIN_PORT=3200
-DS_PROCESS_COUNT=12
 TRANSFER_BIN=${DEST_CMD_HOME}/${BIN_NAME}
 INPUT_BLK_ID=${DEST_CMD_HOME}/${BLK_ID_FILE}
 INPUT_DEST_DS=${DEST_CMD_HOME}/${DEST_DS_FILE}
+DEST_LOG_PATH=${DEST_CMD_HOME}/logs
+LOG_FILE=${DEST_LOG_PATH}/tranblk.log
+PID_FILE=${DEST_LOG_PATH}/tranblk.pid
 SUC_BLK_ID=${INPUT_BLK_ID}.succ
 FAIl_BLK_ID=${INPUT_BLK_ID}.fail
 
@@ -43,7 +40,7 @@ op_log ()
 
 print_usage ()
 {
-    echo "Usage: $0 [dispatch | start | slow | check | stop ]"
+    echo "Usage: $0 [ dispatch blk_list_file ds_min_port ds_cnt | start source_ns_addr dest_ns_addr [ thread_cnt io_threshold ] | slow | high | check_suc | check_fail | check_speed | stop ]"
 }
 
 get_status ()
@@ -56,77 +53,85 @@ get_status ()
     fi
 }
 
+# $0 dispatch blk_list_file ds_min_port ds_cnt
 dispatch ()
 {
-    if [ -n "$1" ] && [ -f $1 ]
+    if ! [ -f $1 ]
     then
-        blk_file=$1
-        ds_cnt=`wc -l $DISPATCH_DS_FILE | awk '{print $1}'`
-        blk_cnt=`wc -l $blk_file | awk '{print $1}'`
-
-        rm -rf ${SAVE_FILE_PATH}
-        mkdir -p ${SAVE_FILE_PATH}
-
-        start_line=1
-        for ds in `cat $DISPATCH_DS_FILE`
-        do
-            rm ${SAVE_BLK_FILE}_${ds}
-            # a little waste io
-            for line in `seq $start_line $ds_cnt $blk_cnt`
-            do
-                sed -n "${line}p" $blk_file >> ${SAVE_BLK_FILE}_${ds}
-            done
-            start_line=$(($start_line+1))
-
-            for port in `seq $MIN_PORT 2 $(($MIN_PORT+$DS_PROCESS_COUNT*2))`
-            do
-                echo "$ds:$port" >> ${SAVE_DEST_DS_FILE}_$ds
-            done
-
-            ssh $USER@$ds "if ! [ -e $DEST_CMD_HOME ];then mkdir -p $DEST_CMD_HOME;fi"
-            scp ${SAVE_BLK_FILE}_${ds} $USER@$ds:${DEST_CMD_HOME}/${BLK_ID_FILE} && \
-                scp ${SAVE_DEST_DS_FILE}_${ds} $USER@$ds:${DEST_CMD_HOME}/${DEST_DS_FILE}
-
-            op_log "dispatch block id to server $ds `get_status $?`, block count: `wc -l ${SAVE_BLK_FILE}_$ds | awk '{print $1}'`"
-        done
-    else
-        echo "invalid dipatch block list file"
-    fi
-}
-
-# $0 start thread_cnt io
-start_transfer()
-{
-    if [ -n "$1" ] && [ $1 -gt 1 ] >/dev/null
-    then
-        THREAD_CNT=$1
+        echo "block list file not exist"
+        exit 1
     fi
 
-    if [ -n "$2" ] &&  [ $2 -gt 1 ] >/dev/null
-    then
-        IO_THRESHOLD=$2
-    fi
+    blk_file=$1
+    ds_cnt=`wc -l $DISPATCH_DS_FILE | awk '{print $1}'`
+    blk_cnt=`wc -l $blk_file | awk '{print $1}'`
 
+    rm -rf ${SAVE_FILE_PATH}
+    mkdir -p ${SAVE_FILE_PATH}
+
+    start_line=1
     for ds in `cat $DISPATCH_DS_FILE`
     do
-        ssh -o ConnectTimeout=3 $USER@$ds \
-            "$TRANSFER_BIN -s $SOURCE_NS_IP -n $DEST_NS_IP -f $INPUT_DEST_DS -b $INPUT_BLK_ID -w $IO_THRESHOLD -t $THREAD_CNT -d && ps -C $TRANSFER_BIN -o pid="
-        op_log "start transfer on server $ds `get_status $?`"
+        rm -f ${SAVE_BLK_FILE}_${ds}
+        # a little waste io
+        for line in `seq $start_line $ds_cnt $blk_cnt`
+        do
+            sed -n "${line}p" $blk_file >> ${SAVE_BLK_FILE}_${ds}
+        done
+        start_line=$(($start_line+1))
+
+        for port in `seq $2 2 $(($2+$3*2-2))`
+        do
+            echo "$ds:$port" >> ${SAVE_DEST_DS_FILE}_$ds
+        done
+
+        ssh $USER@$ds "if ! [ -e $DEST_CMD_HOME ];then mkdir -p $DEST_CMD_HOME;fi; if ! [ -e $DEST_LOG_PATH ]; then mkdir -p $DEST_LOG_PATH;fi"
+        scp ${SAVE_BLK_FILE}_${ds} $USER@$ds:${DEST_CMD_HOME}/${BLK_ID_FILE} && \
+            scp ${SAVE_DEST_DS_FILE}_${ds} $USER@$ds:${DEST_CMD_HOME}/${DEST_DS_FILE}
+
+        op_log "dispatch block id to server $ds `get_status $?`, block count: `wc -l ${SAVE_BLK_FILE}_$ds | awk '{print $1}'`, ds count: $3, ds port start from: $2"
     done
 }
 
-slow_transfer()
+# $0 start source_ns dest_ns [ thread_cnt io ]
+start_transfer()
 {
-    if [ -n "$1" ]
+    if [ -n "$3" ] && [ $3 -gt 0 ] >/dev/null
     then
-        sig=SIG_HIGH
-    else
-        sig=SIG_SLOW
+        THREAD_CNT=$3
     fi
+
+    if [ -n "$4" ] &&  [ $4 -gt 1 ] >/dev/null
+    then
+        IO_THRESHOLD=$4
+    fi
+
+    for ds in `cat $DISPATCH_DS_FILE`
+    do
+        echo -n "$ds: "
+        ssh -o ConnectTimeout=3 $USER@$ds \
+            "$TRANSFER_BIN -s $1 -n $2 -f $INPUT_DEST_DS -b $INPUT_BLK_ID -w $IO_THRESHOLD -t $THREAD_CNT -l $LOG_FILE -p $PID_FILE -d && ps -C $BIN_NAME -o pid="
+        op_log "start transfer on server $ds `get_status $?`, source ns: $1, dest ns: $2, thread count: $THREAD_CNT, io threshold: $IO_THRESHOLD"
+    done
+}
+
+change()
+{
+    case $1 in
+        high)
+            sig=$SIG_HIGH
+            op="HIGH"
+            ;;
+        slow)
+            sig=$SIG_SLOW
+            op="SLOW"
+            ;;
+    esac
+
     for ds in `cat $DISPATCH_DS_FILE`
     do
         ssh -o ConnectTimeout=3 $USER@$ds 'kill -s '$sig' `ps -C '${BIN_NAME}' -o pid=` 2>/dev/null'
-        op_log "$sig transfer on $ds `get_status $?`"
+        op_log "$op transfer on $ds `get_status $?`"
     done
 }
 
@@ -139,14 +144,39 @@ stop_transfer()
     done
 }
 
-check_transfer()
+check()
 {
+    case $1 in
+        suc)
+            check_file=$SUC_BLK_ID
+            ;;
+        fail)
+            check_file=$FAIl_BLK_ID
+            ;;
+        speed)
+            check_file=$LOG_FILE
+            ;;
+    esac
+
     for ds in `cat $DISPATCH_DS_FILE`
     do
         pid=`ssh -o ConnectTimeout=3 $USER@$ds "ps -C $BIN_NAME -o pid="`
-        pid_ret=$?
-        block_id=`ssh -o ConnectTimeout=3 $USER@$ds "tail -1 $SUC_BLK_ID"`
-        op_log "check transfer on $ds `get_status $pid_ret`, current success block id: $block_id"
+        if [ $? -eq 0 ]
+        then
+            msg="RUNNING"
+        else
+            msg="NOT RUNNING"
+        fi
+        if [ $1 = "speed" ]
+        then
+            status="$ds tranfer is $msg, "`ssh -o ConnectTimeout=3 $USER@$ds 'grep speed '$check_file' | tail -1 | awk -F "read data," '\''{print $2 }'\'`
+        else
+            block_id=`ssh -o ConnectTimeout=3 $USER@$ds "tail -1 $check_file"`
+            block_cnt=`ssh -o ConnectTimeout=3 $USER@$ds 'wc -l '$check_file' | awk '\''{print $1}'\'`
+            status="$ds transfer is $msg, current $1 block id: $block_id, count: $block_cnt"
+        fi
+        echo $status
+        op_log $status
     done
 }
 
@@ -160,16 +190,35 @@ fi
 
 case "$1" in
     dispatch)
-        dispatch $2
-        ;;
+    if [ $# -lt 4 ]
+    then
+        print_usage
+    else
+        dispatch $2 $3 $4
+    fi
+    ;;
     start)
-        start_transfer $2 $3
+        if [ $# -lt 3 ]
+        then
+            print_usage
+        else
+            start_transfer $2 $3 $4 $5
+        fi
         ;;
     slow)
-        slow_transfer $2
+        change slow
         ;;
-    check)
-        check_transfer
+    high)
+        change high
+        ;;
+    check_suc)
+        check suc
+        ;;
+    check_fail)
+        check fail
+        ;;
+    check_speed)
+        check speed
         ;;
     stop)
         stop_transfer
