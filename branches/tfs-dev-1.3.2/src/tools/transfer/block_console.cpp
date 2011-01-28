@@ -217,6 +217,8 @@ int BlockConsole::finish_transfer_block(const uint32_t blockid, const int32_t tr
     ret = TFS_ERROR;
   }
 
+  fflush();
+
   return ret;
 }
 
