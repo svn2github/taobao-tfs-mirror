@@ -233,6 +233,12 @@ int BlockConsole::locate_cur_pos()
     --sit;
     last_blockid = *(sit);
     cur_sit_ = input_blockids_.find(last_blockid);
+
+    // move to next one
+    if (cur_sit_ != input_blockids_.end())
+    {
+      ++cur_sit_;
+    }
   }
   else // brand-new
   {
