@@ -230,6 +230,7 @@ namespace tfs
       if (data_service_.start(&pids) != TFS_SUCCESS)
       {
         tran_sport_.stop();
+        data_service_.stop();
         return TFS_ERROR;
       }
 
