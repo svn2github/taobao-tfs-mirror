@@ -1,5 +1,5 @@
-#ifndef TFS_COMMON_CLIENT_MANAGER_H_
-#define TFS_COMMON_CLIENT_MANAGER_H_
+#ifndef TFS_MESSAGE_CLIENT_MANAGER_H_
+#define TFS_MESSAGE_CLIENT_MANAGER_H_
 
 #include <tbnet.h>
 #include <Mutex.h>
@@ -28,10 +28,10 @@ namespace tfs
         void initialize_with_transport(tbnet::Transport* transport);
 
         tbnet::IPacketHandler::HPRetCode handlePacket(tbnet::Packet* packet, void* args);
-        int get_wait_id(int64_t& wait_id) const;
-        int post_request(const int64_t server, Message* packet, const int64_t wait_id);
-        int get_response(const int64_t wait_id, const int64_t wait_count,
-              const int64_t wait_timeout, std::map<int64_t, Message*>& packets);
+        int get_wait_id(uint16_t& wait_id) const;
+        int post_request(const int64_t server, Message* packet, const uint16_t wait_id);
+        int get_response(const uint16_t wait_id, const int64_t wait_count,
+              const int64_t wait_timeout, std::map<uint16_t, Message*>& packets);
 
         int call(const int64_t server, Message* packet, const int64_t timeout, Message*& response);
 

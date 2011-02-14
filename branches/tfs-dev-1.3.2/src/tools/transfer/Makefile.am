@@ -1,6 +1,7 @@
 AM_CPPFLAGS=-I$(top_srcdir)/src\
 	    -I$(TBLIB_ROOT)/include/tbsys\
-	    -I$(TBLIB_ROOT)/include/tbnet
+	    -I$(TBLIB_ROOT)/include/tbnet\
+			-DUSE_NEW_CLIENT
 
 AM_LDFLAGS=-lrt -lpthread -ldl
 

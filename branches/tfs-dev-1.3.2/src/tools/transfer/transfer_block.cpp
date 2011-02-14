@@ -100,25 +100,6 @@ class WorkThread : public tbutil::Thread
           blk_console_->finish_transfer_block(block_id, ret);
 
           TIMER_END();
-          // flow control
-          //int64_t d_value = 0;
-          //int64_t expect_time = 0;
-          //if (traffic_ > 0)
-          //{
-          //  expect_time = (static_cast<int64_t>(tran_block.get_tran_size()) * 1000 * 1000 ) / (traffic_ * 1024);
-          //  d_value = expect_time - TIMER_DURATION();
-          //  // us
-          //  if (d_value > 0)
-          //  {
-          //    usleep(d_value);
-          //  }
-          //}
-
-          //int64_t speed = 0;
-          //if (TIMER_DURATION() > 0)
-          //{
-          //  speed = static_cast<int64_t>(tran_block.get_tran_size()) * 1000 * 1000 / TIMER_DURATION(); //kb
-          //}
           TBSYS_LOG(INFO, "get transfer param %s, ret: %d, cost time: %"PRI64_PREFIX"d, tran size: %d",
               TFS_SUCCESS == ret ? "succ" : "fail", ret,
               TIMER_DURATION(), tran_block.get_tran_size());

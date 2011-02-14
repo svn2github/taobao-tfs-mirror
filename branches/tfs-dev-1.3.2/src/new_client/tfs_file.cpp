@@ -452,65 +452,73 @@ int TfsFile::get_meta_segment(const int64_t offset, char* buf, const int64_t cou
 int TfsFile::process(const InnerFilePhase file_phase)
 {
   int ret = TFS_SUCCESS;
-  int64_t wait_id = 0;
+  uint16_t wait_id = 0;
   int32_t size = processing_seg_list_.size();
-  int32_t req_size = size;
-
-  NewClientManager::get_instance()->get_wait_id(wait_id);
-  for (int32_t i = 0; i < size; ++i)
+  if (UINT16_MAX < static_cast<uint32_t>(size))
   {
-    if (processing_seg_list_[i]->status_ != phase_status[phase_status[file_phase].pre_phase_].status_
-        || (ret = do_async_request(file_phase, wait_id, i)) != TFS_SUCCESS)
-    {
-      // just continue
-      TBSYS_LOG(ERROR, "request %d fail, status: %d, define status: %d",
-          i, processing_seg_list_[i]->status_, phase_status[phase_status[file_phase].pre_phase_].status_);
-      req_size--;
-    }
-  }
-
-  TBSYS_LOG(DEBUG, "send packet. wait object id: %"PRI64_PREFIX"d, request size: %d, successful request size: %d",
-            wait_id, size, req_size);
-  // all request fail
-  if (0 == req_size)
-  {
-    ret = EXIT_ALL_SEGMENT_ERROR;
+    TBSYS_LOG(ERROR, "cannot process more than %hu process seq, your request %d", UINT16_MAX, size);
+    ret = TFS_ERROR;
   }
   else
   {
-    std::map<int64_t, Message*> packets;
-    if ((ret = NewClientManager::get_instance()->get_response(wait_id, req_size, WAIT_TIME_OUT, packets)) != TFS_SUCCESS)
+    int32_t req_size = size;
+
+    NewClientManager::get_instance()->get_wait_id(wait_id);
+    for (int32_t i = 0; i < size; ++i)
     {
-      // get response fail, must exit.
-      TBSYS_LOG(ERROR, "get respose fail, ret: %d", ret);
+      if (processing_seg_list_[i]->status_ != phase_status[phase_status[file_phase].pre_phase_].status_
+          || (ret = do_async_request(file_phase, wait_id, i)) != TFS_SUCCESS)
+      {
+        // just continue
+        TBSYS_LOG(ERROR, "request %d fail, status: %d, define status: %d",
+            i, processing_seg_list_[i]->status_, phase_status[phase_status[file_phase].pre_phase_].status_);
+        req_size--;
+      }
+    }
+
+    TBSYS_LOG(DEBUG, "send packet. wait object id: %hu, request size: %d, successful request size: %d",
+        wait_id, size, req_size);
+    // all request fail
+    if (0 == req_size)
+    {
+      ret = EXIT_ALL_SEGMENT_ERROR;
     }
     else
     {
-      int32_t resp_size = packets.size();
-      TBSYS_LOG(DEBUG, "get response. wait object id: %"PRI64_PREFIX"d, request size: %d, successful request size: %d, get response size: %d",
-                wait_id, size, req_size, resp_size);
-
-      std::map<int64_t, Message*>::iterator mit = packets.begin();
-      for ( ; mit != packets.end(); ++mit)
+      std::map<uint16_t, Message*> packets;
+      if ((ret = NewClientManager::get_instance()->get_response(wait_id, req_size, WAIT_TIME_OUT, packets)) != TFS_SUCCESS)
       {
-        ret = do_async_response(file_phase, mit->second, mit->first);
-        if (TFS_SUCCESS != ret)
-        {
-          // just continue next one
-          TBSYS_LOG(ERROR, "response fail, ret: %d", ret);
-          resp_size--;
-        }
+        // get response fail, must exit.
+        TBSYS_LOG(ERROR, "get respose fail, ret: %d", ret);
       }
+      else
+      {
+        int32_t resp_size = packets.size();
+        TBSYS_LOG(DEBUG, "get response. wait object id: %hu, request size: %d, successful request size: %d, get response size: %d",
+            wait_id, size, req_size, resp_size);
 
-      ret = (0 == resp_size) ? EXIT_ALL_SEGMENT_ERROR :
-        (resp_size != size) ? EXIT_GENERAL_ERROR : ret;
+        std::map<uint16_t, Message*>::iterator mit = packets.begin();
+        for ( ; mit != packets.end(); ++mit)
+        {
+          ret = do_async_response(file_phase, mit->second, mit->first);
+          if (TFS_SUCCESS != ret)
+          {
+            // just continue next one
+            TBSYS_LOG(ERROR, "response fail, ret: %d", ret);
+            resp_size--;
+          }
+        }
+
+        ret = (0 == resp_size) ? EXIT_ALL_SEGMENT_ERROR :
+          (resp_size != size) ? EXIT_GENERAL_ERROR : ret;
+      }
     }
   }
 
   return ret;
 }
 
-int TfsFile::do_async_request(const InnerFilePhase file_phase, const int64_t wait_id, const int32_t index)
+int TfsFile::do_async_request(const InnerFilePhase file_phase, const uint16_t wait_id, const int32_t index)
 {
   int ret = TFS_SUCCESS;
   switch (file_phase)
@@ -577,7 +585,7 @@ int TfsFile::do_async_response(const InnerFilePhase file_phase, message::Message
   return ret;
 }
 
-int TfsFile::async_req_create_file(const int64_t wait_id, const int32_t index)
+int TfsFile::async_req_create_file(const uint16_t wait_id, const int32_t index)
 {
   int ret = TFS_ERROR;
   SegmentData* seg_data = processing_seg_list_[index];
@@ -649,7 +657,7 @@ int TfsFile::async_rsp_create_file(message::Message* rsp, const int32_t index)
   return ret;
 }
 
-int TfsFile::async_req_write_data(const int64_t wait_id, const int32_t index)
+int TfsFile::async_req_write_data(const uint16_t wait_id, const int32_t index)
 {
   SegmentData* seg_data = processing_seg_list_[index];
 
@@ -730,7 +738,7 @@ int TfsFile::async_rsp_write_data(message::Message* rsp, const int32_t index)
 }
 
 //close file for write
-int TfsFile::async_req_close_file(const int64_t wait_id, const int32_t index)
+int TfsFile::async_req_close_file(const uint16_t wait_id, const int32_t index)
 {
   SegmentData* seg_data = processing_seg_list_[index];
   CloseFileMessage cf_message;
@@ -801,7 +809,7 @@ int TfsFile::async_rsp_close_file(message::Message* rsp, const int32_t index)
   return ret;
 }
 
-int TfsFile::async_req_read_file(const int64_t wait_id, const int32_t index)
+int TfsFile::async_req_read_file(const uint16_t wait_id, const int32_t index)
 {
   int ret = TFS_ERROR;
   SegmentData* seg_data = processing_seg_list_[index];
@@ -970,7 +978,7 @@ int TfsFile::async_rsp_read_file(message::Message* rsp, const int32_t index)
   return ret;
 }
 
-int TfsFile::async_req_stat_file(const int64_t wait_id, const int32_t index)
+int TfsFile::async_req_stat_file(const uint16_t wait_id, const int32_t index)
 {
   int ret = TFS_ERROR;
   SegmentData* seg_data = processing_seg_list_[index];
@@ -1083,7 +1091,7 @@ int TfsFile::async_rsp_stat_file(message::Message* rsp, const int32_t index)
   return ret;
 }
 
-int TfsFile::async_req_unlink_file(const int64_t wait_id, const int32_t index)
+int TfsFile::async_req_unlink_file(const uint16_t wait_id, const int32_t index)
 {
   SegmentData* seg_data = processing_seg_list_[index];
   UnlinkFileMessage uf_message;

@@ -73,8 +73,8 @@ namespace tfs
     {
       if (NULL != args && NULL != packet && packet->isRegularPacket())
       {
-        WaitId* id = reinterpret_cast<WaitId*>(args);
-        waitmgr_->wakeup_wait_object(*id, packet);
+        WaitId id = *(reinterpret_cast<WaitId*>(&args));
+        waitmgr_->wakeup_wait_object(id, packet);
       }
       else
       {
@@ -89,24 +89,26 @@ namespace tfs
           }
           else if (NULL != args)
           {
-            TBSYS_LOG(WARN, "packet (pcode=%d) is not regular packet, discard anyway. args:%ld",
-                packet->getPCode(), reinterpret_cast<int64_t>(args));
+            WaitId id = *(reinterpret_cast<WaitId*>(&args));
+            TBSYS_LOG(WARN, "packet pcode: %d is not regular packet, command: %d, discard anyway. args: %x, waitid: %hu, sendid: %hu",
+                packet->getPCode(), dynamic_cast<tbnet::ControlPacket*>(packet)->getCommand(), args, id.seq_id_, id.send_id_);
           }
           else
           {
-            TBSYS_LOG(DEBUG, "packet (pcode=%d) is not regular packet, discard anyway. "
-                "args is NULL, maybe post channel timeout packet ", packet->getPCode());
+            TBSYS_LOG(DEBUG, "packet pcode: %d is not regular packet, command: %d, discard anyway. "
+                "args is NULL, maybe post channel timeout packet ",
+                packet->getPCode(), dynamic_cast<tbnet::ControlPacket*>(packet)->getCommand());
           }
         }
         else
         {
-          TBSYS_LOG(WARN, "packet is NULL, unknown error. args:%ld", reinterpret_cast<int64_t>(args));
+          TBSYS_LOG(WARN, "packet is NULL, unknown error. args: %x", args);
         }
       }
       return tbnet::IPacketHandler::FREE_CHANNEL;
     }
 
-    int NewClientManager::get_wait_id(int64_t& wait_id) const
+    int NewClientManager::get_wait_id(uint16_t& wait_id) const
     {
       int rc = TFS_SUCCESS;
       WaitObject* wait_object = waitmgr_->create_wait_object();
@@ -125,7 +127,7 @@ namespace tfs
     /**
      * post_packet is async version of send_packet. donot wait for response packet.
      */
-    int NewClientManager::post_request(const int64_t server_id, Message* packet, const int64_t wait_id)
+    int NewClientManager::post_request(const int64_t server_id, Message* packet, const uint16_t wait_id)
     {
       initialize();
       int rc = TFS_SUCCESS;
@@ -138,7 +140,7 @@ namespace tfs
         WaitObject* wait_object = waitmgr_->get_wait_object(wait_id);
         if (NULL == wait_object)
         {
-          TBSYS_LOG(ERROR, "cannot send packet, cannot get wait object");
+          TBSYS_LOG(ERROR, "cannot send packet, cannot get wait object, wait id: %hu", wait_id);
           rc = TFS_ERROR;
         }
 
@@ -155,7 +157,9 @@ namespace tfs
           else
           {
             send_msg->set_auto_free(true);
-            bool send_ok = connmgr_->sendPacket(server_id, send_msg, NULL, reinterpret_cast<void*>(wait_object->get_wait_key()));
+            WaitId send_args = wait_object->get_wait_key();
+            bool send_ok = connmgr_->sendPacket(server_id, send_msg,
+               NULL, reinterpret_cast<void*>(*(reinterpret_cast<long*>(&send_args))));
             if (!send_ok)
             {
               rc = EXIT_SENDMSG_ERROR;
@@ -169,8 +173,8 @@ namespace tfs
       return rc;
     }
 
-    int NewClientManager::get_response(const int64_t wait_id, const int64_t wait_count,
-        const int64_t wait_timeout, std::map<int64_t, Message*>& packets)
+    int NewClientManager::get_response(const uint16_t wait_id, const int64_t wait_count,
+        const int64_t wait_timeout, std::map<uint16_t, Message*>& packets)
     {
       int rc = TFS_SUCCESS;
       WaitObject* wait_object = NULL;
@@ -242,14 +246,16 @@ namespace tfs
         else
         {
           send_msg->set_auto_free(true);
-          bool send_ok = connmgr_->sendPacket(server, send_msg, NULL, 
-              reinterpret_cast<void*>(wait_object->get_wait_key()));
+          WaitId send_args = wait_object->get_wait_key();
+          bool send_ok = connmgr_->sendPacket(server, send_msg,
+              NULL, reinterpret_cast<void*>(*(reinterpret_cast<long*>(&send_args))));
           if (send_ok)
           {
             send_ok = wait_object->wait(timeout);
             if (!send_ok)
             {
-              TBSYS_LOG(ERROR, "wait response timeout.");
+              TBSYS_LOG(ERROR, "wait response timeout, wait id: %hu, timeout: %d",
+                  wait_object->get_id(), timeout);
               rc = EXIT_TIMEOUT_ERROR;
             }
             else

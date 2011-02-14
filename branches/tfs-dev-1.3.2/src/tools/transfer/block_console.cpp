@@ -17,6 +17,7 @@
 #include "common/func.h"
 #include "message/message_factory.h"
 #include "message/client_manager.h"
+#include "message/client.h"
 #include "client/tfs_client_api.h"
 #include "dataserver/dataserver_define.h"
 #include "dataserver/visit_stat.h"
@@ -331,7 +332,11 @@ int TranBlock::read_index()
   // fetch data from the first ds
   int index = 0;
   Message* rsp = NULL;
+#ifdef USE_NEW_CLIENT
   int ret = NewClientManager::get_instance()->call(rds_[index], &gfl_msg, WAIT_TIME_OUT, rsp);
+#else
+  int ret = send_message_to_server(rds_[index], &gfl_msg, &rsp);
+#endif
   if (TFS_SUCCESS != ret)
   {
     TBSYS_LOG(ERROR, "get index from ds: %s failed, blockid: %u, ret: %d",
@@ -387,7 +392,11 @@ int TranBlock::read_data()
 
       // fetch data from the first ds
       Message* rsp = NULL;
-      ret = NewClientManager::get_instance()->call(rds_[index], &rrd_msg, WAIT_TIME_OUT, rsp);
+#ifdef USE_NEW_CLIENT
+  ret = NewClientManager::get_instance()->call(rds_[index], &rrd_msg, WAIT_TIME_OUT, rsp);
+#else
+  ret = send_message_to_server(rds_[index], &rrd_msg, &rsp);
+#endif
       if (TFS_SUCCESS != ret)
       {
         TBSYS_LOG(ERROR, "read raw data from ds: %s failed, blockid: %u, offset: %d, remainder_retrys: %"PRI64_PREFIX"d, ret: %d",
@@ -605,7 +614,11 @@ int TranBlock::write_data()
       }
 
       Message* rsp = NULL;
-      ret = NewClientManager::get_instance()->call(dest_ds_id_, &req_wrd_msg, WAIT_TIME_OUT, rsp);
+#ifdef USE_NEW_CLIENT
+  ret = NewClientManager::get_instance()->call(dest_ds_id_, &req_wrd_msg, WAIT_TIME_OUT, rsp);
+#else
+  ret = send_message_to_server(dest_ds_id_, &req_wrd_msg, &rsp);
+#endif
       if (TFS_SUCCESS != ret)
       {
         TBSYS_LOG(ERROR, "write raw data to ds: %s failed, blockid: %u, offset: %d, ret: %d",
@@ -674,7 +687,11 @@ int TranBlock::write_index()
   req_wib_msg.set_cluster(COPY_BETWEEN_CLUSTER);
 
   Message* rsp = NULL;
+#ifdef USE_NEW_CLIENT
   ret = NewClientManager::get_instance()->call(dest_ds_id_, &req_wib_msg, WAIT_TIME_OUT, rsp);
+#else
+  ret = send_message_to_server(dest_ds_id_, &req_wib_msg, &rsp);
+#endif
   if (TFS_SUCCESS != ret)
   {
     TBSYS_LOG(ERROR, "write raw index to ds: %s failed, blockid: %u, file count: %d, ret: %d",

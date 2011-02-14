@@ -8,7 +8,7 @@ namespace tfs
   {
     using namespace common;
 
-    WaitObject::WaitObject() : free_(false), done_count_(0)
+    WaitObject::WaitObject() : free_(false), wait_over_(false), done_count_(0)
     {
       responses_.clear();
     }
@@ -17,16 +17,11 @@ namespace tfs
     {
       if (free_)
       {
-        std::map<int64_t, Message*>::iterator it = responses_.begin();
+        std::map<uint16_t, Message*>::iterator it = responses_.begin();
         for ( ; it != responses_.end(); ++it)
         {
           tbsys::gDelete(it->second);
         }
-      }
-
-      for (size_t i = 0; i < wait_id_sign_.size(); ++i)
-      {
-        tbsys::gDelete(wait_id_sign_[i]);
       }
     }
 
@@ -44,9 +39,10 @@ namespace tfs
         ret = false;
         TBSYS_LOG(ERROR, "cannot wait more than %d responses, you request %d", WAIT_RESPONSE_ARRAY_SIZE, wait_count);
       }
+
+      cond_.lock();
       if (ret)
       {
-        cond_.lock();
         while (done_count_ < wait_count)
         {
           if (cond_.wait(timeout_in_ms) == false)
@@ -55,17 +51,32 @@ namespace tfs
             break;
           }
         }
-        cond_.unlock();
       }
+      wait_over_ = true;
+      cond_.unlock();
       return ret;
     }
 
-    void WaitObject::wakeup()
+    bool WaitObject::wakeup(const uint16_t send_id, Message* packet)
     {
+      bool ret = true;
       cond_.lock();
+      if (wait_over_) //wait has return before wakeup. maybe timeout or has reach the wait count
+      {
+        ret = false;
+        TBSYS_LOG(ERROR, "waitobject has returned before wakeup, waitid: %hu, send id: %hu", wait_id_, send_id);
+      }
+
+      if (packet != NULL && packet->isRegularPacket())
+      {
+        push_response(send_id, packet);
+      }
+
       done_count_++;
       cond_.signal();
       cond_.unlock();
+
+      return ret;
     }
 
     void WaitObject::set_free()
@@ -73,25 +84,27 @@ namespace tfs
       free_ = true;
     }
 
-    int64_t WaitObject::get_id() const
+    uint16_t WaitObject::get_id() const
     {
       return wait_id_;
     }
 
-    void WaitObject::set_id(const int64_t id)
+    void WaitObject::set_id(const int16_t id)
     {
       wait_id_ = id;
     }
 
-    WaitId* WaitObject::get_wait_key()
+    WaitId WaitObject::get_wait_key()
     {
       return wait_id_sign_.back();
     }
 
     void WaitObject::add_send_id()
     {
-      int64_t cur_send_id = wait_id_sign_.size();
-      WaitId* cur_wait_id = new WaitId(wait_id_, cur_send_id);
+      uint16_t cur_send_id = static_cast<uint16_t>(wait_id_sign_.size());
+      WaitId cur_wait_id; 
+      cur_wait_id.seq_id_ = wait_id_;
+      cur_wait_id.send_id_ = cur_send_id;
       wait_id_sign_.push_back(cur_wait_id);
     }
 
@@ -100,13 +113,16 @@ namespace tfs
       return responses_.size();
     }
 
-    void WaitObject::push_response(const int64_t send_id, Message* packet)
+    void WaitObject::push_response(const uint16_t send_id, Message* packet)
     {
-      responses_[send_id] = packet;
+      if (!(responses_.insert(pair<uint16_t, Message*>(send_id, packet))).second) //insert false
+      {
+        TBSYS_LOG(ERROR, "insert responses fail, waitid: %hu, send id: %hu", wait_id_, send_id);
+      }
       return;
     }
 
-    std::map<int64_t, Message*>& WaitObject::get_response()
+    std::map<uint16_t, Message*>& WaitObject::get_response()
     {
       return responses_;
     }
@@ -144,19 +160,19 @@ namespace tfs
       return wo;
     }
 
-    WaitObject* WaitObjectManager::get_wait_object(const int64_t wait_id)
+    WaitObject* WaitObjectManager::get_wait_object(const uint16_t wait_id)
     {
       tbsys::CThreadGuard guard(&mutex_);
       INT_WAITOBJ_MAP_ITER it = wait_objects_map_.find(wait_id);
       if (it == wait_objects_map_.end())
       {
-        TBSYS_LOG(INFO, "wait object not found, id: %"PRI64_PREFIX"d", wait_id);
+        TBSYS_LOG(INFO, "wait object not found, id: %hu", wait_id);
         return NULL;
       }
       return it->second;
     }
 
-    void WaitObjectManager::destroy_wait_object(WaitObject*& wait_object)
+    void WaitObjectManager::destroy_wait_object(WaitObject* wait_object)
     {
       if (wait_object != NULL)
       {
@@ -166,7 +182,7 @@ namespace tfs
       }
     }
 
-    void WaitObjectManager::destroy_wait_object(const int64_t wait_id)
+    void WaitObjectManager::destroy_wait_object(const uint16_t wait_id)
     {
       WaitObject* wait_obj = get_wait_object(wait_id);
       destroy_wait_object(wait_obj);
@@ -175,25 +191,23 @@ namespace tfs
     void WaitObjectManager::wakeup_wait_object(const WaitId& id, tbnet::Packet* response)
     {
       tbsys::CThreadGuard guard(&mutex_);
+      bool ret = true;
       INT_WAITOBJ_MAP_ITER it = wait_objects_map_.find(id.seq_id_);
-      TBSYS_LOG(DEBUG, "get packet. wait object id: %"PRI64_PREFIX"d, send id: %"PRI64_PREFIX"d", id.seq_id_, id.send_id_);
       if (it == wait_objects_map_.end())
       {
-        TBSYS_LOG(INFO, "wait object not found, id: %"PRI64_PREFIX"d", id.seq_id_);
-        if (response != NULL && response->isRegularPacket())
-        {
-          tbsys::gDelete(response);
-        }
+        TBSYS_LOG(INFO, "wait object not found, id: %hu", id.seq_id_);
+        ret = false;
       }
       else
       {
-        if (response != NULL && response->isRegularPacket())
-        {
-          it->second->push_response(id.send_id_, dynamic_cast<Message*>(response));
-        }
-
         // if got control packet or NULL, we will still add the done counter
-        it->second->wakeup();
+        ret = it->second->wakeup(id.send_id_, dynamic_cast<Message*>(response));
+      }
+      
+      if (!ret && response != NULL && response->isRegularPacket())
+      {
+        TBSYS_LOG(DEBUG, "delete rsp wait object, id: %hu", id.seq_id_);
+        tbsys::gDelete(response);
       }
 
       return;
@@ -205,7 +219,7 @@ namespace tfs
       {
         tbsys::CThreadGuard guard(&mutex_);
         ++seq_id_;
-        if (seq_id_ <= 0)
+        if (seq_id_ == UINT16_MAX) 
           seq_id_ = 1;
         wait_object->set_id(seq_id_);
         wait_objects_map_[seq_id_] = wait_object;
