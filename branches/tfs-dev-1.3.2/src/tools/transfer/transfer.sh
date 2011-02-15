@@ -19,10 +19,12 @@ DISPATCH_DS_FILE=$CMD_HOME/ds_list
 SAVE_FILE_PATH=${CMD_HOME}/save
 SAVE_BLK_FILE=$SAVE_FILE_PATH/${BLK_ID_FILE}
 SAVE_DEST_DS_FILE=${SAVE_FILE_PATH}/${DEST_DS_FILE}
+SPLIT_TOOL=${CMD_HOME}/split_block_tool
+BIN_NAME=transfer_block
+SRC_TRANSFER_BIN=${CMD_HOME}/${BIN_NAME}
 
 # dispatch server
 DEST_CMD_HOME=/home/$USER/transfer
-BIN_NAME=transfer_block
 TRANSFER_BIN=${DEST_CMD_HOME}/${BIN_NAME}
 INPUT_BLK_ID=${DEST_CMD_HOME}/${BLK_ID_FILE}
 INPUT_DEST_DS=${DEST_CMD_HOME}/${DEST_DS_FILE}
@@ -69,16 +71,10 @@ dispatch ()
     rm -rf ${SAVE_FILE_PATH}
     mkdir -p ${SAVE_FILE_PATH}
 
-    start_line=1
+    rm -f ${SAVE_BLK_FILE}_${ds}
+    ${SPLIT_TOOL} ${DISPATCH_DS_FILE} ${blk_file} ${SAVE_FILE_PATH} "${BLK_ID_FILE}_"
     for ds in `cat $DISPATCH_DS_FILE`
     do
-        rm -f ${SAVE_BLK_FILE}_${ds}
-        # a little waste io
-        for line in `seq $start_line $ds_cnt $blk_cnt`
-        do
-            sed -n "${line}p" $blk_file >> ${SAVE_BLK_FILE}_${ds}
-        done
-        start_line=$(($start_line+1))
 
         for port in `seq $2 2 $(($2+$3*2-2))`
         do
@@ -87,7 +83,8 @@ dispatch ()
 
         ssh $USER@$ds "if ! [ -e $DEST_CMD_HOME ];then mkdir -p $DEST_CMD_HOME;fi; if ! [ -e $DEST_LOG_PATH ]; then mkdir -p $DEST_LOG_PATH;fi"
         scp ${SAVE_BLK_FILE}_${ds} $USER@$ds:${DEST_CMD_HOME}/${BLK_ID_FILE} && \
-            scp ${SAVE_DEST_DS_FILE}_${ds} $USER@$ds:${DEST_CMD_HOME}/${DEST_DS_FILE}
+            scp ${SAVE_DEST_DS_FILE}_${ds} $USER@$ds:${DEST_CMD_HOME}/${DEST_DS_FILE} && \
+        	scp ${SRC_TRANSFER_BIN} $USER@$ds:${TRANSFER_BIN}
 
         op_log "dispatch block id to server $ds `get_status $?`, block count: `wc -l ${SAVE_BLK_FILE}_$ds | awk '{print $1}'`, ds count: $3, ds port start from: $2"
     done
