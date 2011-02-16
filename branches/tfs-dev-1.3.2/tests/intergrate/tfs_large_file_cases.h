@@ -17,7 +17,11 @@
 #include <gtest/gtest.h>
 #include "message/message_factory.h"
 #include "common/define.h"
+#ifdef USE_CPP_CLIENT
 #include "new_client/tfs_client_api.h"
+#else
+#include "new_client/tfs_client_capi.h"
+#endif
 
 #define EXIT_FILENAME_MATCH_ERROR1 -100
 #define EXIT_FILENAME_MATCH_ERROR2 -101
@@ -34,8 +38,8 @@ class TfsLargeFileTest : public testing::Test
     static int64_t write_new_file(const bool large_flag, const int64_t length, uint32_t& crc,
                    char* tfsname = NULL, const char* suffix = NULL, const int32_t name_len = 0);
     static int read_exist_file(const bool large_flag, const char* tfs_name, const char* suffix, uint32_t& read_crc);
-    static int unlink_file(const char* tfsname, const char* suffix = NULL, const int action = 0);
-    static int stat_exist_file(const bool large_flag, char* tfsname, tfs::common::FileStat& file_info);
+    static int unlink_file(const char* tfsname, const char* suffix = NULL, const TfsUnlinkType action = DELETE);
+    static int stat_exist_file(const bool large_flag, char* tfsname, TfsFileStat& file_info);
 
     static void test_read(const bool large_flag, int64_t base, const char* suffix = NULL);
     static void unlink_process(const bool large_flag);
@@ -51,5 +55,7 @@ class TfsLargeFileTest : public testing::Test
     static const int64_t SEG_SIZE = PER_SIZE;
 
   public:
+#ifdef USE_CPP_CLIENT
     static tfs::client::TfsClient* tfs_client_;
+#endif
 };
