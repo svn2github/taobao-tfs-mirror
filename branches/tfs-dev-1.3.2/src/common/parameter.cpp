@@ -171,9 +171,12 @@ namespace tfs
       }
 
       char default_work_dir[MAX_PATH_LENGTH], default_log_file[MAX_PATH_LENGTH], default_pid_file[MAX_PATH_LENGTH];
+      char default_read_log_file[MAX_PATH_LENGTH], default_write_log_file[MAX_PATH_LENGTH];
       snprintf(default_work_dir, MAX_PATH_LENGTH-1, "%s/dataserver", top_work_dir);
       snprintf(default_log_file, MAX_PATH_LENGTH-1, "%s/logs/dataserver.log", top_work_dir);
       snprintf(default_pid_file, MAX_PATH_LENGTH-1, "%s/logs/dataserver.pid", top_work_dir);
+      snprintf(default_read_log_file, MAX_PATH_LENGTH-1, "%s/logs/dataserver_read_stat.log", top_work_dir);
+      snprintf(default_write_log_file, MAX_PATH_LENGTH-1, "%s/logs/dataserver_write_stat.log", top_work_dir);
 
       dataserver_.work_dir_ = change_index(CONFIG.get_string_value(CONFIG_DATASERVER, CONF_WORK_DIR, default_work_dir),
                                            string(""), server_index);
@@ -181,6 +184,8 @@ namespace tfs
                                            string(".log"), server_index);
       dataserver_.pid_file_ = change_index(CONFIG.get_string_value(CONFIG_DATASERVER, CONF_LOCK_FILE, default_pid_file),
                                            string(".pid"), server_index);
+      dataserver_.read_stat_log_file_ = change_index(CONFIG.get_string_value(CONFIG_DATASERVER, CONF_READ_LOG_FILE, default_read_log_file), string("_read_stat.log"), server_index);
+      dataserver_.write_stat_log_file_ = change_index(CONFIG.get_string_value(CONFIG_DATASERVER, CONF_WRITE_LOG_FILE, default_write_log_file), string("_write_stat.log"), server_index);
 
       int base_port = CONFIG.get_int_value(CONFIG_DATASERVER, CONF_PORT);
       dataserver_.local_ds_port_ = base_port + atoi(index.c_str()) * PORT_PER_PROCESS - PORT_PER_PROCESS;
@@ -306,3 +311,4 @@ namespace tfs
 
   }
 }
+

@@ -11,7 +11,7 @@
  * Authors:
  *   duolong <duolong@taobao.com>
  *      - initial release
- *   qushan<qushan@taobao.com> 
+ *   qushan<qushan@taobao.com>
  *      - modify 2009-03-27
  *
  */
@@ -37,6 +37,13 @@ namespace tfs
 {
   namespace dataserver
   {
+#define WRITE_STAT_LOGGER write_stat_log_
+#define WRITE_STAT_PRINT(level, ...) WRITE_STAT_LOGGER.logMessage(TBSYS_LOG_LEVEL(level), __VA_ARGS__)
+#define WRITE_STAT_LOG(level, ...) (TBSYS_LOG_LEVEL_##level>WRITE_STAT_LOGGER._level) ? (void)0 : WRITE_STAT_PRINT(level, __VA_ARGS__)
+
+#define READ_STAT_LOGGER read_stat_log_
+#define READ_STAT_PRINT(level, ...) READ_STAT_LOGGER.logMessage(TBSYS_LOG_LEVEL(level), __VA_ARGS__)
+#define READ_STAT_LOG(level, ...) (TBSYS_LOG_LEVEL_##level>READ_STAT_LOGGER._level) ? (void)0 : READ_STAT_PRINT(level, __VA_ARGS__)
     class DataService: public tbnet::IServerAdapter, public tbnet::IPacketQueueHandler, public message::DefaultAsyncCallback
     {
       public:
@@ -108,6 +115,7 @@ namespace tfs
             const int32_t visit_file_size, const int32_t real_len, const int32_t offset, const int32_t mode);
         int set_ns_ip();
         void try_add_repair_task(const uint32_t block_id, const int ret);
+        int init_log_file(tbsys::CLogger& LOGGER, const std::string& log_file);
 
       private:
         DISALLOW_COPY_AND_ASSIGN(DataService);
@@ -138,6 +146,7 @@ namespace tfs
         tbutil::Mutex client_mutex_;
         tbutil::Mutex compact_mutext_;
         tbutil::Mutex count_mutex_;
+        tbutil::Mutex read_stat_mutex_;
 
         common::VINT* thread_pids_;
 
@@ -150,6 +159,12 @@ namespace tfs
         //task queue
         tbnet::PacketQueueThread task_queue_thread_;
         tbnet::PacketQueueThread ds_task_queue_thread_;
+
+        //write and read log
+        tbsys::CLogger write_stat_log_;
+        tbsys::CLogger read_stat_log_;
+        std::vector<std::pair<uint32_t, uint64_t> > read_stat_buffer_;
+        static const unsigned READ_STAT_LOG_BUFFER_LEN = 100;
     };
   }
 }

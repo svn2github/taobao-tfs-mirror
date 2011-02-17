@@ -86,6 +86,8 @@ namespace tfs
       {
         std::string work_dir_;
         std::string log_file_;
+        std::string write_stat_log_file_;
+        std::string read_stat_log_file_;
         std::string pid_file_;
         int32_t local_ds_port_;
         char* dev_name_;

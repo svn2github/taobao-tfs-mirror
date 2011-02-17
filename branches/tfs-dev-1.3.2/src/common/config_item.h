@@ -31,6 +31,8 @@ namespace tfs
 #define CONF_CLUSTER_ID                               "cluster_id"
 #define CONF_LOCK_FILE                                "lock_file"
 #define CONF_LOG_FILE                                 "log_file"
+#define CONF_READ_LOG_FILE                            "read_log_file"
+#define CONF_WRITE_LOG_FILE                           "write_log_file"
 #define CONF_LOG_SIZE                                 "log_size"
 #define CONF_LOG_NUM                                  "log_num"
 #define CONF_LOG_LEVEL                                "log_level"

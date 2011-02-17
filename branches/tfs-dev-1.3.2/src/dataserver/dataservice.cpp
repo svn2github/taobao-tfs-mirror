@@ -17,6 +17,8 @@
  */
 #include "dataservice.h"
 #include "common/func.h"
+#include "common/directory_op.h"
+#include "client/fsname.h"
 #include <Memory.hpp>
 
 namespace tfs
@@ -24,6 +26,7 @@ namespace tfs
   namespace dataserver
   {
     using namespace common;
+    using namespace client;
     using namespace message;
 
     DataService::DataService()
@@ -268,7 +271,12 @@ namespace tfs
       ds_task_queue_thread_.setThreadParameter(thread_count, this, NULL);
       ds_task_queue_thread_.start();
 
+      //set write and read log
+      init_log_file(READ_STAT_LOGGER, SYSPARAM_DATASERVER.read_stat_log_file_);
+      init_log_file(WRITE_STAT_LOGGER, SYSPARAM_DATASERVER.write_stat_log_file_);
+
       TBSYS_LOG(INFO, "dataservice start");
+
       return TFS_SUCCESS;
     }
 
@@ -408,6 +416,8 @@ namespace tfs
         {
           last_rlog = current_time;
           TBSYS_LOGGER.rotateLog(SYSPARAM_DATASERVER.log_file_.c_str());
+          READ_STAT_LOGGER.rotateLog(SYSPARAM_DATASERVER.read_stat_log_file_.c_str());
+          WRITE_STAT_LOGGER.rotateLog(SYSPARAM_DATASERVER.write_stat_log_file_.c_str());
 
           // expire error block
           block_checker_.expire_error_block();
@@ -421,6 +431,50 @@ namespace tfs
         count_mutex_.unlock();
         if (stop_)
           break;
+
+        if (read_stat_buffer_.size() >= READ_STAT_LOG_BUFFER_LEN)
+        {
+          int64_t time_start = tbsys::CTimeUtil::getTime();
+          TBSYS_LOG(INFO, "---->START DUMP READ INFO. buffer size: %u, start time: %" PRI64_PREFIX "d", read_stat_buffer_.size(), time_start);
+          read_stat_mutex_.lock();
+          int per_log_size = FILE_NAME_LEN + 2; //two space
+          char read_log_buffer[READ_STAT_LOG_BUFFER_LEN * per_log_size + 1];
+          int32_t loops = read_stat_buffer_.size() / READ_STAT_LOG_BUFFER_LEN;
+          int32_t remain = read_stat_buffer_.size() % READ_STAT_LOG_BUFFER_LEN;
+          int32_t index = 0, offset;
+          int32_t inner_loop = 0;
+          //flush all record to log
+          for (int32_t i = 0; i <= loops; ++i)
+          {
+            memset(read_log_buffer, 0, READ_STAT_LOG_BUFFER_LEN * per_log_size + 1);
+            offset = 0;
+            if (i == loops)
+            {
+              inner_loop = remain;
+            }
+            else
+            {
+              inner_loop = READ_STAT_LOG_BUFFER_LEN;
+            }
+
+            for (int32_t j = 0; j < inner_loop; ++j)
+            {
+              index = i * READ_STAT_LOG_BUFFER_LEN + j;
+              FSName fs_name;
+              fs_name.set_block_id(read_stat_buffer_[index].first);
+              fs_name.set_file_id(read_stat_buffer_[index].second);
+              /* per_log_size + 1: add null */
+              snprintf(read_log_buffer + offset, per_log_size + 1, "  %s", fs_name.get_name());
+              offset += per_log_size;
+            }
+            read_log_buffer[offset] = '\0';
+            READ_STAT_LOG(INFO, "%s", read_log_buffer);
+          }
+          read_stat_buffer_.clear();
+          read_stat_mutex_.unlock();
+          int64_t time_end = tbsys::CTimeUtil::getTime();
+          TBSYS_LOG(INFO, "Dump read info.end time: %" PRI64_PREFIX "d. Cost Time: %" PRI64_PREFIX "d\n", time_end, time_end - time_start);
+        }
 
         Func::sleep(SYSPARAM_DATASERVER.check_interval_, &stop_);
       }
@@ -942,6 +996,8 @@ namespace tfs
           TFS_SUCCESS == ret ? "success" : "fail", close_file_info.file_number_, close_file_info.block_id_,
           close_file_info.file_id_, tbsys::CNetUtil::addrToString(peer_id).c_str(),
           CLOSE_FILE_SLAVER != close_file_info.mode_ ? "master" : "slave", TIMER_DURATION());
+      WRITE_STAT_LOG(INFO, "blockid: %u, fileid: %" PRI64_PREFIX "u, peerip: %s",
+          close_file_info.block_id_, close_file_info.file_id_, tbsys::CNetUtil::addrToString(peer_id).c_str());
       return TFS_SUCCESS;
     }
 
@@ -1027,6 +1083,10 @@ namespace tfs
       TBSYS_LOG(INFO, "read v2 %s. blockid: %u, fileid: %" PRI64_PREFIX "u, read len: %d, read offset: %d, peer ip: %s, cost time: %" PRI64_PREFIX "d",
           TFS_SUCCESS == ret ? "success" : "fail", block_id, file_id, real_read_len, read_offset,
           tbsys::CNetUtil::addrToString(peer_id).c_str(), TIMER_DURATION());
+
+      read_stat_mutex_.lock();
+      read_stat_buffer_.push_back(make_pair(block_id, file_id));
+      read_stat_mutex_.unlock();
       return ret;
     }
 
@@ -1107,6 +1167,11 @@ namespace tfs
       TBSYS_LOG(INFO, "read %s. blockid: %u, fileid: %" PRI64_PREFIX "u, read len: %d, read offset: %d, peer ip: %s, cost time: %" PRI64_PREFIX "d",
           TFS_SUCCESS == ret ? "success" : "fail", block_id, file_id, real_read_len, read_offset,
           tbsys::CNetUtil::addrToString(peer_id).c_str(), TIMER_DURATION());
+
+      read_stat_mutex_.lock();
+      read_stat_buffer_.push_back(make_pair(block_id, file_id));
+      read_stat_mutex_.unlock();
+
       return ret;
     }
 
@@ -1842,6 +1907,22 @@ namespace tfs
         block_checker_.add_repair_task(check_file_item);
       }
       return;
+    }
+
+    int DataService::init_log_file(tbsys::CLogger& LOGGER, const std::string& log_file)
+    {
+      LOGGER.setLogLevel(CONFIG.get_string_value(CONFIG_PUBLIC, CONF_LOG_LEVEL));
+      LOGGER.setFileName(log_file.c_str(), true);
+      if (log_file.size() != 0 && access(log_file.c_str(), R_OK) == 0)
+      {
+        LOGGER.rotateLog(log_file.c_str());
+      }
+      else if (!DirectoryOp::create_full_path(log_file.c_str(), true))
+      {
+        TBSYS_LOG(ERROR, "create file(%s)'s directory failed", log_file.c_str());
+        return EXIT_GENERAL_ERROR;
+      }
+      return TFS_SUCCESS;
     }
   }
 }
