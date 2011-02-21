@@ -1912,16 +1912,16 @@ namespace tfs
     int DataService::init_log_file(tbsys::CLogger& LOGGER, const std::string& log_file)
     {
       LOGGER.setLogLevel(CONFIG.get_string_value(CONFIG_PUBLIC, CONF_LOG_LEVEL));
-      LOGGER.setFileName(log_file.c_str(), true);
+
       if (log_file.size() != 0 && access(log_file.c_str(), R_OK) == 0)
       {
-        LOGGER.rotateLog(log_file.c_str());
+        char old_log_file[256];
+        sprintf(old_log_file, "%s.%s", log_file.c_str(), Func::time_to_str(time(NULL), 1).c_str());
+        rename(log_file.c_str(), old_log_file);
       }
-      else if (!DirectoryOp::create_full_path(log_file.c_str(), true))
-      {
-        TBSYS_LOG(ERROR, "create file(%s)'s directory failed", log_file.c_str());
-        return EXIT_GENERAL_ERROR;
-      }
+      LOGGER.setFileName(log_file.c_str(), true);
+      LOGGER.setMaxFileSize(CONFIG.get_int_value(CONFIG_PUBLIC, CONF_LOG_SIZE, 1024 * 1024 * 1024));
+      LOGGER.setMaxFileIndex(CONFIG.get_int_value(CONFIG_PUBLIC, CONF_LOG_NUM, 30));
       return TFS_SUCCESS;
     }
   }
