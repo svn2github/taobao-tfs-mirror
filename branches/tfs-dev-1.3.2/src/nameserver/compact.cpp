@@ -27,6 +27,7 @@
 using namespace tfs::common;
 using namespace tfs::message;
 using namespace tbsys;
+using namespace std;
 
 namespace tfs
 {
@@ -73,7 +74,7 @@ namespace tfs
       }
 
       bool is_complete = true;
-      vector < pair<uint64_t, int32_t> > &ds_status_list = iter->second;
+      std::vector < pair<uint64_t, int32_t> > &ds_status_list = iter->second;
       uint32_t ds_status_list_size = ds_status_list.size();
       for (uint32_t i = 0; i < ds_status_list_size; ++i)
       {
@@ -116,7 +117,7 @@ namespace tfs
       return COMPACT_STATUS_NOT_EXIST;
     }
 
-    int CompactLauncher::check_compact_ds(const vector<uint64_t>& ds_list)
+    int CompactLauncher::check_compact_ds(const std::vector<uint64_t>& ds_list)
     {
       LayoutManager & block_ds_map = meta_mgr_.get_block_ds_mgr();
       uint32_t ds_size = ds_list.size();
@@ -186,10 +187,10 @@ namespace tfs
       return TFS_SUCCESS;
     }
 
-    int CompactLauncher::execute(vector<uint32_t>& compact_block_list, void*)
+    int CompactLauncher::execute(std::vector<uint32_t>& compact_block_list, void*)
     {
       LayoutManager & block_ds_map = meta_mgr_.get_block_ds_mgr();
-      vector < uint64_t > ds_list;
+      std::vector < uint64_t > ds_list;
       ds_list.reserve(SYSPARAM_NAMESERVER.min_replication_);
 
       uint32_t block_size = compact_block_list.size();
@@ -225,13 +226,13 @@ namespace tfs
       {
         pair < uint64_t, int32_t > v(server_id, COMPACT_COMPLETE_STATUS_START);
         compacting_block_map_.insert(
-            COMPACTING_BLOCK_MAP::value_type(block_id, vector<pair<uint64_t, int32_t> > (1, v)));
+            COMPACTING_BLOCK_MAP::value_type(block_id, std::vector<pair<uint64_t, int32_t> > (1, v)));
       }
 
       return TFS_SUCCESS;
     }
 
-    int CompactLauncher::send_compact_cmd(const vector<uint64_t>& servers, uint32_t block_id)
+    int CompactLauncher::send_compact_cmd(const std::vector<uint64_t>& servers, uint32_t block_id)
     {
       uint32_t ds_size = servers.size();
       for (uint32_t i = 0; i < ds_size; ++i)
@@ -336,7 +337,7 @@ namespace tfs
         return EXIT_GENERAL_ERROR;
       }
 
-      vector < pair<uint64_t, int32_t> > &ds_status_list = iter->second;
+      std::vector < pair<uint64_t, int32_t> > &ds_status_list = iter->second;
       for (uint32_t i = 0; i < ds_status_list.size(); ++i)
       {
         pair < uint64_t, int32_t > &status = ds_status_list[i];
@@ -463,7 +464,7 @@ namespace tfs
       {
         block_id = it->first;
 
-        vector < pair<uint64_t, int32_t> > &ds_status_list = it->second;
+        std::vector < pair<uint64_t, int32_t> > &ds_status_list = it->second;
         ds_list_size = ds_status_list.size();
         for (i = 0; i < ds_list_size; ++i)
         {

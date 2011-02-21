@@ -176,7 +176,7 @@ namespace tfs
         int64_t weight = strategy_.calc(server_collect);
         TBSYS_LOG(DEBUG, "weight(%"PRI64_PREFIX"d)", weight);
         if (weight > 0)
-          weights_.insert(make_pair(weight, const_cast<ServerCollect*> (server_collect)));
+          weights_.insert(std::make_pair(weight, const_cast<ServerCollect*> (server_collect)));
       }
       const DS_WEIGHT& get_weight() const
       {
@@ -212,7 +212,7 @@ namespace tfs
     };
 
     template<typename Strategy, typename ElectType>
-    int32_t elect_ds(Strategy& strategy, ElectType op, const vector<ServerCollect*>& ds_list,
+    int32_t elect_ds(Strategy& strategy, ElectType op, const std::vector<ServerCollect*>& ds_list,
         const int32_t elect_count, int64_t & elect_seq, common::VUINT64& elect_ds_list)
     {
       DS_WEIGHT weights;
@@ -260,13 +260,13 @@ namespace tfs
 
     int32_t elect_write_ds(const LayoutManager& meta, const int32_t elect_count, common::VUINT64& elect_ds_list);
 
-    int32_t elect_replicate_source_ds(const vector<ServerCollect*>& ds_list,
+    int32_t elect_replicate_source_ds(const std::vector<ServerCollect*>& ds_list,
         const ReplicateStrategy::counter_type& src_counter, const int32_t elect_count, common::VUINT64& elect_ds_list);
 
     int32_t elect_replicate_dest_ds(const LayoutManager& meta, const ReplicateStrategy::counter_type& dest_counter,
         const int32_t elect_count, common::VUINT64& elect_ds_list);
 
-    bool elect_move_dest_ds(const vector<ServerCollect*>& ds_list, const ReplicateStrategy::counter_type& dest_counter,
+    bool elect_move_dest_ds(const std::vector<ServerCollect*>& ds_list, const ReplicateStrategy::counter_type& dest_counter,
         const common::VUINT64& elect_ds_list, const uint64_t src_ds, uint64_t & dest_ds);
 
   }

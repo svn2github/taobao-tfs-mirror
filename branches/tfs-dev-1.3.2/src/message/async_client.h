@@ -59,7 +59,7 @@ namespace tfs
         virtual ~AsyncCallback()
         {
         }
-        virtual int32_t command_done(Message* send_message, bool status, const string& error) = 0;
+        virtual int32_t command_done(Message* send_message, bool status, const std::string& error) = 0;
     };
 
     class DefaultAsyncCallback: public AsyncCallback
@@ -68,7 +68,7 @@ namespace tfs
         virtual ~DefaultAsyncCallback()
         {
         }
-        virtual int32_t command_done(Message* send_message, bool status, const string& error);
+        virtual int32_t command_done(Message* send_message, bool status, const std::string& error);
     };
 
     class AsyncClient: public Callee

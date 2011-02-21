@@ -70,7 +70,7 @@ namespace tfs
       int update_block_info(const common::BlockInfo& block_info, const uint64_t ds_id, bool addnew);
       int write_commit(const common::BlockInfo& block_info, const uint64_t ds_id, const uint32_t lease_id,
               const common::UnlinkFlag unlink_flag, const common::WriteCompleteStatus status, bool& neednew,
-              string& errmsg);
+              std::string& errmsg);
 
       int initialize(const int32_t chunk_num);
       int save();

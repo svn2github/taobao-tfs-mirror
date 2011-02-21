@@ -58,7 +58,7 @@ public:
 
   tbnet::IPacketHandler::HPRetCode handlePacket(tbnet::Connection* conn, tbnet::Packet* packet);
   bool handlePacketQueue(tbnet::Packet *packet, void *args);
-  int command_done(message::Message* msg, bool status, const string& error);
+  int command_done(message::Message* msg, bool status, const std::string& error);
   int initialize(int32_t port, int64_t capacity, const std::string& work_index, const std::string& conf);
   int wait_for_shut_down();
   bool destroy();

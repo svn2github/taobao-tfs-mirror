@@ -27,6 +27,7 @@ namespace tfs
   {
     using namespace common;
     using namespace tbutil;
+    using namespace std;
 
     BlockChecker::~BlockChecker()
     {

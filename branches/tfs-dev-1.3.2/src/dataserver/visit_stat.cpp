@@ -110,7 +110,7 @@ namespace tfs
       return ret;
     }
 
-    string VisitStat::filesize_category_desc(int32_t category)
+    std::string VisitStat::filesize_category_desc(int32_t category)
     {
       char buf[STAT_BUF_LEN];
       int32_t i = 1;
@@ -126,7 +126,7 @@ namespace tfs
         i = 10;
       int32_t base = category / (i / 10);
       sprintf(buf, "%dk~%dk", category, (base + 1) * (i / 10));
-      return string(buf);
+      return std::string(buf);
     }
 
     // -- AccessStatByClientIp

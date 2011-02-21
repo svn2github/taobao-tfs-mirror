@@ -65,7 +65,7 @@ TBSYS_LOG      (DEBUG, "block id(%u) last wirte time(%"PRI64_PREFIX"d), expire t
 
   class LeaseClerk
   {
-    typedef __gnu_cxx ::hash_map<uint32_t, WriteLease*, hash<uint32_t> > LEASE_MAP;
+    typedef __gnu_cxx::hash_map<uint32_t, WriteLease*, __gnu_cxx::hash<uint32_t> > LEASE_MAP;
     typedef LEASE_MAP::iterator LEASE_MAP_ITER;
     typedef LEASE_MAP::const_iterator LEASE_MAP_CONST_ITER;
   public:

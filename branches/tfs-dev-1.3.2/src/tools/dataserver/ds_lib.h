@@ -57,7 +57,7 @@ public:
   int send_crc_error(DsTask* ds_task);
 
 private:
-  int send_message_to_ds(const uint64_t server_id, const tfs::message::Message *ds_msg, string &err_msg, tfs::message::Message** ret_msg);
+  int send_message_to_ds(const uint64_t server_id, const tfs::message::Message *ds_msg, std::string &err_msg, tfs::message::Message** ret_msg);
   int write_data(const uint64_t server_id, const uint32_t block_id, const char* data, const int32_t length,
       const int32_t offset, const uint64_t file_id, const uint64_t file_num);
   int create_file_num(const uint64_t server_id, const uint32_t block_id, const uint64_t file_id, uint64_t& new_file_id,

@@ -28,6 +28,7 @@ namespace tfs
     using namespace common;
     using namespace client;
     using namespace message;
+    using namespace std;
 
     DataService::DataService()
     {

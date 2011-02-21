@@ -26,6 +26,7 @@
 using namespace KFS;
 using namespace tfs::client;
 using namespace tfs::common;
+using namespace std;
 
 char global_write_buf[BUFFER_SIZE];
 

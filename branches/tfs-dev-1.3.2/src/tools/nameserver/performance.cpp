@@ -30,6 +30,7 @@
 
 using namespace tfs::common;
 using namespace tfs::client;
+using namespace std;
 
 #define FILE_NAME_LEN 18
 struct StatParam

@@ -26,6 +26,7 @@ namespace tfs
   namespace dataserver
   {
     using namespace common;
+    using namespace std;
 
     BlockFileManager::~BlockFileManager()
     {

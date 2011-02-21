@@ -18,6 +18,7 @@
 #include "config_item.h"
 #include "error_msg.h"
 #include <tbsys.h>
+using namespace std;
 
 namespace tfs
 {

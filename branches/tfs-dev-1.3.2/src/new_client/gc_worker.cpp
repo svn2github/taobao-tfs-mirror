@@ -11,6 +11,7 @@
 
 using namespace tfs::common;
 using namespace tfs::client;
+using namespace std;
 
 GcWorker::GcWorker() : tfs_client_(NULL)
 {

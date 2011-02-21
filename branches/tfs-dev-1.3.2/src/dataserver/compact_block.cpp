@@ -25,6 +25,7 @@ namespace tfs
     using namespace common;
     using namespace message;
     using namespace tbutil;
+    using namespace std;
 
     CompactBlock::CompactBlock()
     {

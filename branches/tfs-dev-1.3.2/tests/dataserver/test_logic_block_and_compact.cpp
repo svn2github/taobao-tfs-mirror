@@ -36,6 +36,7 @@
 static const int32_t INSERT_FILE_NUM = 1000;
 using namespace tfs::dataserver;
 using namespace tfs::common;
+using namespace std;
 
 // need one more test for some exception, with TEST instead
 class TestLogicBlock: public ::testing::Test

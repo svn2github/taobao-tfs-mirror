@@ -24,6 +24,7 @@
 using namespace KFS;
 using namespace tfs::client;
 using namespace tfs::common;
+using namespace std;
 
 static int32_t m_stop = 0;
 void sign_handler(int32_t sig)

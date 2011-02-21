@@ -23,6 +23,7 @@ namespace tfs
   namespace dataserver
   {
     using namespace common;
+    using namespace std;
 
     LogicBlock::LogicBlock(const uint32_t logic_block_id, const uint32_t main_blk_key, const std::string& base_path) :
       logic_block_id_(logic_block_id), avail_data_size_(0), visit_count_(0), last_update_(time(NULL)),

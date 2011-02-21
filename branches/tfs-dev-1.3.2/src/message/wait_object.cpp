@@ -1,6 +1,7 @@
 #include "wait_object.h"
 #include "common/define.h"
 #include <Memory.hpp>
+using namespace std;
 
 namespace tfs
 {

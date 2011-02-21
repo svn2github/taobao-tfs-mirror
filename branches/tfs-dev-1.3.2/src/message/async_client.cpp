@@ -19,6 +19,7 @@
 #include "client_pool.h"
 
 using namespace tfs::common;
+using namespace std;
 
 namespace tfs
 {

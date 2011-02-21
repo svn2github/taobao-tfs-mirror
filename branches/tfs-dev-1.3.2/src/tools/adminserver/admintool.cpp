@@ -24,6 +24,7 @@
 
 using namespace tfs::message;
 using namespace tfs::common;
+using namespace std;
 
 typedef int (*cmd_function)(VSTRING&);
 struct CmdNode

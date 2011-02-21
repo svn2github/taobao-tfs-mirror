@@ -417,7 +417,7 @@ void LocalKey::get_segment(const int64_t start, const int64_t end,
       if (offset + SEGMENT_SIZE > end || // reach file offset end
           check_size + SEGMENT_SIZE > size) // reach buffer offset end
       {
-        cur_size = min(end - offset, size - check_size);
+        cur_size = std::min(end - offset, size - check_size);
         not_end = false;
         if (0 == cur_size)
         {

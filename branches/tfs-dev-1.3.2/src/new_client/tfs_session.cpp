@@ -17,14 +17,13 @@
 #include <Memory.hpp>
 #include "tfs_session.h"
 #include "message/client_manager.h"
-
 #include "message/client.h"
 #include "message/client_pool.h"
-
 
 using namespace tfs::client;
 using namespace tfs::common;
 using namespace tfs::message;
+using namespace std;
 
 TfsSession::TfsSession(const std::string& nsip, const int32_t cache_time, const int32_t cache_items)
   :ns_addr_(0), ns_addr_str_(nsip), block_cache_time_(cache_time), block_cache_items_(cache_items),

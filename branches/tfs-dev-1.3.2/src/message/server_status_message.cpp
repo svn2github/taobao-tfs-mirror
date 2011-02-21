@@ -18,6 +18,8 @@
 
 using namespace tfs::common;
 using namespace tfs::nameserver;
+using namespace std;
+using namespace __gnu_cxx;
 
 namespace tfs
 {
