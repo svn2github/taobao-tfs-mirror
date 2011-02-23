@@ -635,7 +635,7 @@ namespace tfs
         }
         else
         {
-          MessageFactory::send_error_message(bp, TBSYS_LOG_LEVEL(DEBUG), STATUS_MESSAGE_ACCESS_DENIED,
+          MessageFactory::send_error_message(bp, TBSYS_LOG_LEVEL(WARN), STATUS_MESSAGE_ACCESS_DENIED,
               data_server_info_.id_, "you client %s access been denied. msgtype: %d", tbsys::CNetUtil::addrToString(
                   connection->getPeerId()).c_str(), bp->get_message_type());
           // packet denied, must free
@@ -1367,7 +1367,7 @@ namespace tfs
       int ret = data_management_.batch_new_block(new_blocks);
       if (TFS_SUCCESS != ret)
       {
-        return MessageFactory::send_error_message(message, TBSYS_LOG_LEVEL(DEBUG), ret, data_server_info_.id_,
+        return MessageFactory::send_error_message(message, TBSYS_LOG_LEVEL(ERROR), ret, data_server_info_.id_,
             "newblock error, ret: %d", ret);
       }
 
@@ -1385,7 +1385,7 @@ namespace tfs
       int ret = data_management_.batch_remove_block(remove_blocks);
       if (TFS_SUCCESS != ret)
       {
-        return MessageFactory::send_error_message(message, TBSYS_LOG_LEVEL(DEBUG), ret, data_server_info_.id_,
+        return MessageFactory::send_error_message(message, TBSYS_LOG_LEVEL(ERROR), ret, data_server_info_.id_,
             "removeblock error, ret: %d", ret);
       }
 

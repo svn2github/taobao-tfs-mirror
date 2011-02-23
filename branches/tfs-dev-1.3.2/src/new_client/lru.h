@@ -30,7 +30,7 @@ namespace tfs
     public:
       typedef std::list<std::pair<T1, T2> > List;
       typedef typename List::iterator iterator;
-      typedef __gnu_cxx ::hash_map<T1, iterator> Map;
+      typedef __gnu_cxx::hash_map<T1, iterator> Map;
 
       lru()
       {
@@ -51,7 +51,7 @@ namespace tfs
         list_.resize(size_);
       }
 
-      T2 *find(const T1 &first)
+      T2* find(const T1& first)
       {
         typename Map::iterator i = index_.find(first);
 
@@ -67,7 +67,18 @@ namespace tfs
         }
       }
 
-      void insert(const T1 &first, const T2 &second)
+      void remove(const T1& first)
+      {
+        typename Map::iterator i = index_.find(first);
+        if (i != index_.end())
+        {
+          typename List::iterator n = i->second;
+          list_.erase(n);
+          index_.erase(i);
+        }
+      }
+
+      void insert(const T1& first, const T2& second)
       {
         typename Map::iterator i = index_.find(first);
         if (i != index_.end())
@@ -113,7 +124,7 @@ namespace tfs
         return index_.size();
       }
 
-      /// Clear cache
+      // Clear cache
       void clear()
       {
         index_.clear();
@@ -125,9 +136,7 @@ namespace tfs
       List list_;
       Map index_;
     };
-
   }
-
 }
 #endif
 

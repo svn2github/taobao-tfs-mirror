@@ -819,6 +819,18 @@ namespace tfs
       int32_t file_offset = meta_it_->get_offset();
       int32_t relative_offset = file_offset - read_offset_;
 
+      TBSYS_LOG(DEBUG,
+          "get next file, blockid: %u, id: %"PRI64_PREFIX"u, file size: %d, file offset: %d, relative offset: %d, read offset: %d, buf len: %d\n",
+          logic_block_->logic_block_id_, meta_it_->get_file_id(), file_size, file_offset, relative_offset, read_offset_, buf_len_);
+
+      if (relative_offset < 0)
+      {
+        TBSYS_LOG(ERROR,
+            "get next file fail, blockid: %u, id: %"PRI64_PREFIX"u, file size: %d, file offset: %d, relative offset: %d, read offset: %d, buf len: %d\n",
+            logic_block_->logic_block_id_, meta_it_->get_file_id(), file_size, file_offset, relative_offset, read_offset_, buf_len_);
+        return EXIT_META_OFFSET_ERROR;
+      }
+
       // skip hole
       while (relative_offset > buf_len_)
       {
