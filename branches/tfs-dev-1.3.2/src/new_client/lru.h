@@ -102,7 +102,7 @@ namespace tfs
         }
         else
         {
-          list_.push_front(make_pair(first, second));
+          list_.push_front(std::make_pair(first, second));
           typename List::iterator n = list_.begin();
           index_[first] = n;
         }
