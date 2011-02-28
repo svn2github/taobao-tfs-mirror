@@ -295,7 +295,9 @@ namespace tfs
       //stop task queue
       task_queue_thread_.stop();
       ds_task_queue_thread_.stop();
-      sleep(1);
+      task_queue_thread_.wait();
+      ds_task_queue_thread_.wait();
+      //sleep(1);
 
       if (NULL != sync_mirror_)
       {

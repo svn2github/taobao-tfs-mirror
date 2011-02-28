@@ -831,7 +831,7 @@ namespace tfs
         return EXIT_META_OFFSET_ERROR;
       }
 
-      // skip hole
+      // case: skip hole
       while (relative_offset > buf_len_)
       {
         TBSYS_LOG(
@@ -846,11 +846,11 @@ namespace tfs
         relative_offset = file_offset - read_offset_;
       }
 
-      // uncomplete file left in buffer
+      // case: uncomplete file left in buffer
       if (file_size + relative_offset > buf_len_)
       {
         read_offset_ += buf_len_;
-        // big file
+        // file size is large the max compact read size
         if (file_size > MAX_COMPACT_READ_SIZE)
         {
           is_big_file_ = true;
@@ -871,6 +871,11 @@ namespace tfs
           data_len_ = 0;
           ++meta_it_;
         }
+        else // if two fileinfo at the same offset, recompute data offset and data len
+        {
+          data_offset_ = relative_offset;
+          data_len_ = buf_len_ - relative_offset;
+        }
         ret = fill_buffer();
         if (TFS_SUCCESS != ret)
           return ret;
@@ -890,9 +895,13 @@ namespace tfs
             ERROR,
             "FileInfo error. blockid: %u, disk file id: %" PRI64_PREFIX "u, size: %d, index file id: %" PRI64_PREFIX "u, size: %d\n",
             logic_block_->logic_block_id_, cur_fileinfo_.id_, cur_fileinfo_.size_, meta_it_->get_file_id(), file_size);
+        cur_fileinfo_.flag_ = FI_INVALID;
       }
-      data_offset_ = relative_offset + file_size;
-      data_len_ = left_size;
+      else // valid file will update data offset and datalen
+      {
+        data_offset_ = relative_offset + file_size;
+        data_len_ = left_size;
+      }
       cur_fileinfo_.size_ -= sizeof(FileInfo);
       ++meta_it_;
 
