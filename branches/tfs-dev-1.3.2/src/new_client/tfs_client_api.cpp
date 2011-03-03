@@ -33,9 +33,9 @@ int TfsClient::initialize(const char* ns_addr, const int32_t cache_time, const i
   return TfsClientImpl::Instance()->initialize(ns_addr, cache_items, cache_items);
 }
 
-int destory()
+int TfsClient::destroy()
 {
-  return TfsClientImpl::Instance()->destory();
+  return TfsClientImpl::Instance()->destroy();
 }
 
 int64_t TfsClient::read(const int fd, void* buf, const int64_t count)

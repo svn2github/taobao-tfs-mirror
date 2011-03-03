@@ -53,23 +53,27 @@ int64_t TfsSmallFile::pread(void *buf, int64_t count, int64_t offset)
 
 int64_t TfsSmallFile::pwrite(const void *buf, int64_t count, int64_t offset)
 {
-  return pwrite(buf, count, offset);
+  return pwrite_ex(buf, count, offset);
 }
 
 int TfsSmallFile::fstat(TfsFileStat* file_stat, const TfsStatFlag mode)
 {
-  FileInfo file_info;
-  int ret = fstat_ex(&file_info, mode);
-  if (TFS_SUCCESS == ret)
+  int ret = TFS_ERROR;
+  if (file_stat != NULL)
   {
-    file_stat->file_id_ = file_info.id_;
-    file_stat->offset_ = file_info.offset_;
-    file_stat->size_ = file_info.size_;
-    file_stat->usize_ = file_info.usize_;
-    file_stat->modify_time_ = file_info.modify_time_;
-    file_stat->create_time_ = file_info.create_time_;
-    file_stat->flag_ = file_info.flag_;
-    file_stat->crc_ = file_info.crc_;
+    FileInfo file_info;
+    ret = fstat_ex(&file_info, mode);
+    if (TFS_SUCCESS == ret)
+    {
+      file_stat->file_id_ = file_info.id_;
+      file_stat->offset_ = file_info.offset_;
+      file_stat->size_ = file_info.size_;
+      file_stat->usize_ = file_info.usize_;
+      file_stat->modify_time_ = file_info.modify_time_;
+      file_stat->create_time_ = file_info.create_time_;
+      file_stat->flag_ = file_info.flag_;
+      file_stat->crc_ = file_info.crc_;
+    }
   }
   return ret;
 }
@@ -114,7 +118,7 @@ int TfsSmallFile::read_process()
 {
   int ret = TFS_SUCCESS;
   //set status
-  processing_seg_list_[0]->status_ = SEG_STATUS_OPEN_OVER; 
+  processing_seg_list_[0]->status_ = SEG_STATUS_OPEN_OVER;
 
   if ((ret = process(FILE_PHASE_READ_FILE)) != TFS_SUCCESS)
   {
@@ -127,7 +131,7 @@ int TfsSmallFile::write_process()
 {
   int ret = TFS_SUCCESS;
   // set status
-  processing_seg_list_[0]->status_ = SEG_STATUS_CREATE_OVER; 
+  processing_seg_list_[0]->status_ = SEG_STATUS_CREATE_OVER;
   // write data
   if ((ret = process(FILE_PHASE_WRITE_DATA)) != TFS_SUCCESS)
   {

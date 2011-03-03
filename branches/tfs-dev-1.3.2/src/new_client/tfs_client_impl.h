@@ -41,7 +41,7 @@ namespace tfs
       }
 
       int initialize(const char* ns_addr, const int32_t cache_time, const int32_t cache_items);
-      int destory();
+      int destroy();
 
       int open(const char* file_name, const char* suffix, const char* ns_addr, const int flags, ...);
       int64_t read(const int fd, void* buf, const int64_t count);

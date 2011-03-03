@@ -79,7 +79,7 @@ int TfsClientImpl::initialize(const char* ns_addr, const int32_t cache_time, con
   return ret;
 }
 
-int TfsClientImpl::destory()
+int TfsClientImpl::destroy()
 {
   pthread_join(gc_tid_, NULL);
   tbsys::gDelete(gc_worker_);
