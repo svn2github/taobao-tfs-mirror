@@ -818,6 +818,13 @@ namespace tfs
       int32_t file_size = meta_it_->get_size();
       int32_t file_offset = meta_it_->get_offset();
       int32_t relative_offset = file_offset - read_offset_;
+      if (file_offset >= logic_block_->index_handle_->data_file_size())
+      {
+        TBSYS_LOG(ERROR, "get next file, blockid: %u, id: %"PRI64_PREFIX"u, file size: %d, file offset: %d, block size: %d, read offset: %d, relative offset: %d",
+            logic_block_->logic_block_id_, meta_it_->get_file_id(), file_size,
+            file_offset, logic_block_->index_handle_->data_file_size(), read_offset_, relative_offset);
+        return EXIT_META_OFFSET_ERROR;
+      }
 
       TBSYS_LOG(DEBUG,
           "get next file, blockid: %u, id: %"PRI64_PREFIX"u, file size: %d, file offset: %d, relative offset: %d, read offset: %d, buf len: %d\n",
@@ -826,8 +833,9 @@ namespace tfs
       if (relative_offset < 0)
       {
         TBSYS_LOG(ERROR,
-            "get next file fail, blockid: %u, id: %"PRI64_PREFIX"u, file size: %d, file offset: %d, relative offset: %d, read offset: %d, buf len: %d\n",
-            logic_block_->logic_block_id_, meta_it_->get_file_id(), file_size, file_offset, relative_offset, read_offset_, buf_len_);
+            "get next file fail, blockid: %u, id: %"PRI64_PREFIX"u, file size: %d, file offset: %d, relative offset: %d, read offset: %d, buf len: %d, total size: %d\n",
+            logic_block_->logic_block_id_, meta_it_->get_file_id(), file_size,
+            file_offset, relative_offset, read_offset_, buf_len_, logic_block_->index_handle_->data_file_size());
         return EXIT_META_OFFSET_ERROR;
       }
 
@@ -836,8 +844,8 @@ namespace tfs
       {
         TBSYS_LOG(
             WARN,
-            "blockid: %u, file offset skip a max compact size. relative offset: %d, file offset: %d, read offset: %d\n",
-            logic_block_->logic_block_id_, relative_offset, file_offset, read_offset_);
+            "blockid: %u, file offset skip a max compact size. relative offset: %d, file offset: %d, read offset: %d, buf len: %d, total size: %d\n",
+            logic_block_->logic_block_id_, relative_offset, file_offset, read_offset_, buf_len_, logic_block_->index_handle_->data_file_size());
         data_len_ = 0;
         read_offset_ += buf_len_;
         ret = fill_buffer();

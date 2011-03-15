@@ -199,6 +199,7 @@ namespace tfs
       if (TFS_SUCCESS != ret)
       {
         TBSYS_LOG(ERROR, "inner real compact blockid: %u fail. ret: %d\n", block_id, ret);
+        return ret;
       }
       TBSYS_LOG(DEBUG, "compact blockid : %u, switch compact blk\n", block_id);
 
