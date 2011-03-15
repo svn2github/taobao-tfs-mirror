@@ -103,7 +103,7 @@ AC_ARG_WITH([release],
         CXXFLAGS="-O2 -finline-functions -fno-strict-aliasing -Wall -fPIC -D__STDC_LIMIT_MACROS"
       fi
     ],
-    [CXXFLAGS="-g -Wall -fPIC -D__STDC_LIMIT_MACROS"]
+    [CXXFLAGS="-g -Wall -fPIC -D__STDC_LIMIT_MACROS -DTFS_TEST"]
 )
 
 ac_default_prefix=${HOME}/tfs_bin

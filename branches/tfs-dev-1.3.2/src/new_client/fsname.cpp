@@ -62,18 +62,18 @@ namespace tfs
       cluster_id_ = 0x01;
     }
 
-    FSName::FSName(uint32_t block_id, int32_t seq_id, int32_t prefix, int32_t cluster_id)
+    FSName::FSName(uint32_t block_id, int32_t seq_id, int32_t suffix, int32_t cluster_id)
     {
       file_.block_id_ = block_id;
       file_.seq_id_ = seq_id;
-      file_.prefix_ = prefix;
+      file_.suffix_ = suffix;
       file_name_[0] = '\0';
       cluster_id_ = cluster_id;
     }
 
-    FSName::FSName(const char *file_name, const char *prefix, int32_t cluster_id)
+    FSName::FSName(const char* file_name, const char* suffix, int32_t cluster_id)
     {
-      set_name(file_name, prefix, cluster_id);
+      set_name(file_name, suffix, cluster_id);
     }
 
     FSName::~FSName()
@@ -81,22 +81,22 @@ namespace tfs
 
     }
 
-    int FSName::set_name(const char *file_name, const char *prefix, const int32_t cluster_id)
+    void FSName::set_name(const char* file_name, const char* suffix, const int32_t cluster_id)
     {
       file_name_[0] = '\0';
       cluster_id_ = cluster_id;
       memset(&file_, 0, sizeof(FileBits));
-      if ((NULL == file_name) || strlen(file_name) <= 0)
+      if ((NULL == file_name) || static_cast<int32_t>(strlen(file_name)) < FILE_NAME_LEN)
       {
-        //TBSYS_LOG(ERROR, "invalid file name: %s", NULL == file_name ? "NULL" : file_name);
-        //return TFS_ERROR;
+        return;
       }
-      else
+      decode(file_name + 2, (char*) &file_);
+      if (NULL == suffix && static_cast<int32_t>(strlen(file_name)) > FILE_NAME_LEN)
       {
-        decode(file_name + 2, (char*) &file_);
+        suffix = file_name + FILE_NAME_LEN;
       }
-      set_prefix(prefix);
-      return TFS_SUCCESS;
+      set_suffix(suffix);
+      return;
     }
 
     const char* FSName::get_name(bool large_flag)
@@ -119,19 +119,19 @@ namespace tfs
       return file_name_;
     }
 
-    void FSName::set_prefix(const char *prefix)
+    void FSName::set_suffix(const char *suffix)
     {
-      if ((prefix != NULL) && (prefix[0] != '\0'))
+      if ((suffix != NULL) && (suffix[0] != '\0'))
       {
-        file_.prefix_ = hash(prefix);
+        file_.suffix_ = hash(suffix);
       }
     }
 
     string FSName::to_string()
     {
       char buffer[256];
-      snprintf(buffer, 256, "block_id: %u, file_id: %"PRI64_PREFIX"u, seq_id: %u, prefix:%u, name: %s",
-               file_.block_id_, get_file_id(), file_.seq_id_, file_.prefix_, get_name());
+      snprintf(buffer, 256, "block_id: %u, file_id: %"PRI64_PREFIX"u, seq_id: %u, suffix: %u, name: %s",
+               file_.block_id_, get_file_id(), file_.seq_id_, file_.suffix_, get_name());
       return string(buffer);
     }
 

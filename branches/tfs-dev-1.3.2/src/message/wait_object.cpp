@@ -90,7 +90,7 @@ namespace tfs
       return wait_id_;
     }
 
-    void WaitObject::set_id(const int16_t id)
+    void WaitObject::set_id(const uint16_t id)
     {
       wait_id_ = id;
     }
@@ -103,6 +103,15 @@ namespace tfs
     void WaitObject::add_send_id()
     {
       uint16_t cur_send_id = static_cast<uint16_t>(wait_id_sign_.size());
+      WaitId cur_wait_id; 
+      cur_wait_id.seq_id_ = wait_id_;
+      cur_wait_id.send_id_ = cur_send_id;
+      wait_id_sign_.push_back(cur_wait_id);
+    }
+
+    void WaitObject::set_send_id(const uint16_t index_id)
+    {
+      uint16_t cur_send_id = index_id;
       WaitId cur_wait_id; 
       cur_wait_id.seq_id_ = wait_id_;
       cur_wait_id.send_id_ = cur_send_id;

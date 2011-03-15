@@ -38,6 +38,9 @@ namespace tfs
 
     class TfsSession
     {
+#ifdef TFS_TEST
+    public:
+#endif
       typedef lru<uint32_t, BlockCache> BLOCK_CACHE_MAP;
       typedef BLOCK_CACHE_MAP::iterator BLOCK_CACHE_MAP_ITER;
     public:
@@ -45,8 +48,10 @@ namespace tfs
       virtual ~TfsSession();
 
       int initialize();
-      int get_block_info(uint32_t& block_id, common::VUINT64 &rds, int32_t flag);
+      int get_block_info(uint32_t& block_id, common::VUINT64& rds, int32_t flag);
       int get_block_info(SEG_DATA_LIST& seg_list, int32_t flag);
+
+      void remove_block_cache(const uint32_t block_id);
 
       inline int32_t get_cluster_id() const
       {
@@ -78,12 +83,20 @@ namespace tfs
         use_cache_ = flag;
       }
 
+#ifdef TFS_TEST
+      BLOCK_CACHE_MAP* get_block_cache_map()
+      {
+        return &block_cache_map_;
+      }
+#endif
+
     private:
       TfsSession();
       DISALLOW_COPY_AND_ASSIGN(TfsSession);
       int get_block_info_ex(SEG_DATA_LIST& seg_list, const int32_t flag);
-      int get_block_info_ex(uint32_t& block_id, common::VUINT64 &rds, const int32_t flag);
+      int get_block_info_ex(uint32_t& block_id, common::VUINT64& rds, const int32_t flag);
       int get_cluster_id_from_ns();
+      void insert_block_cache(const uint32_t block_id, const common::VUINT64& rds);
 
     private:
       static const int64_t WAIT_TIME_OUT = 3000000;

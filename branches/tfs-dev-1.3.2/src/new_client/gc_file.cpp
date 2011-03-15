@@ -40,8 +40,8 @@ int GcFile::initialize(const char* name)
 
   if (!DirectoryOp::create_full_path(GC_FILE_PATH))
   {
-    TBSYS_LOG(ERROR, "initialize local gc fail, create directory %s failed, error: %d",
-              GC_FILE_PATH, strerror(errno));
+    TBSYS_LOG(ERROR, "initialize local gc fail, create directory %s failed, error: %d, desc: %s",
+              GC_FILE_PATH, errno, strerror(errno));
     ret = TFS_ERROR;
   }
   else

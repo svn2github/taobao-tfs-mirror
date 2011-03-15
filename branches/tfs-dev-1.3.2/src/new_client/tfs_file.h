@@ -48,7 +48,8 @@ namespace tfs
     enum
     {
       TFS_FILE_OPEN_YES = 0,
-      TFS_FILE_OPEN_NO
+      TFS_FILE_OPEN_NO,
+      TFS_FILE_WRITE_ERROR
     };
 
     class TfsFile
@@ -100,26 +101,26 @@ namespace tfs
       int get_size_for_rw_ex(const int64_t check_size, const int64_t count, int64_t& cur_size, bool& not_end, const int64_t per_size);
 
     private:
-      int do_async_request(const InnerFilePhase file_phase, const uint16_t wait_id, const int32_t index);
-      int do_async_response(const InnerFilePhase file_phase, message::Message* packet, const int32_t index);
+      int do_async_request(const InnerFilePhase file_phase, const uint16_t wait_id, const uint16_t index);
+      int do_async_response(const InnerFilePhase file_phase, message::Message* packet, const uint16_t index);
 
-      int async_req_create_file(const uint16_t wait_id, const int32_t index);
-      int async_rsp_create_file(message::Message* packet, const int32_t index);
+      int async_req_create_file(const uint16_t wait_id, const uint16_t index);
+      int async_rsp_create_file(message::Message* packet, const uint16_t index);
 
-      int async_req_read_file(const uint16_t wait_id, const int32_t index);
-      int async_rsp_read_file(message::Message* packet, const int32_t index);
+      int async_req_read_file(const uint16_t wait_id, const uint16_t index);
+      int async_rsp_read_file(message::Message* packet, const uint16_t index);
 
-      int async_req_write_data(const uint16_t wait_id, const int32_t index);
-      int async_rsp_write_data(message::Message* packet, const int32_t index);
+      int async_req_write_data(const uint16_t wait_id, const uint16_t index);
+      int async_rsp_write_data(message::Message* packet, const uint16_t index);
 
-      int async_req_close_file(const uint16_t wait_id, const int32_t index);
-      int async_rsp_close_file(message::Message* packet, const int32_t index);
+      int async_req_close_file(const uint16_t wait_id, const uint16_t index);
+      int async_rsp_close_file(message::Message* packet, const uint16_t index);
 
-      int async_req_stat_file(const uint16_t wait_id, const int32_t index);
-      int async_rsp_stat_file(message::Message* packet, const int32_t index);
+      int async_req_stat_file(const uint16_t wait_id, const uint16_t index);
+      int async_rsp_stat_file(message::Message* packet, const uint16_t index);
 
-      int async_req_unlink_file(const uint16_t wait_id, const int32_t index);
-      int async_rsp_unlink_file(message::Message* packet, const int32_t index);
+      int async_req_unlink_file(const uint16_t wait_id, const uint16_t index);
+      int async_rsp_unlink_file(message::Message* packet, const uint16_t index);
 
     public:
       common::RWLock rw_lock_;
@@ -128,13 +129,10 @@ namespace tfs
       static const int64_t WAIT_TIME_OUT = 3000000;
       static const int64_t CLIENT_TRY_COUNT = 3;
 
-      static const int64_t BATCH_COUNT = 8;
-      static const int64_t BATCH_SIZE = common::SEGMENT_SIZE * BATCH_COUNT;
-
     protected:
       FSName fsname_;
       int32_t flags_;
-      int32_t is_open_;
+      int32_t file_status_;
       int32_t eof_;
       int64_t offset_;
       SegmentData* meta_seg_;

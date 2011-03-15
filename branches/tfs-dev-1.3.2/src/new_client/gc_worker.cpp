@@ -5,13 +5,67 @@
 
 #include "common/directory_op.h"
 #include "common/func.h"
-
 #include "gc_worker.h"
 #include "fsname.h"
+#include "client_config.h"
 
 using namespace tfs::common;
 using namespace tfs::client;
 using namespace std;
+
+GcManager::GcManager()
+   : destroy_(false),
+     timer_(0),
+     gc_worker_(0)
+{
+}
+
+GcManager::~GcManager()
+{
+}
+
+int GcManager::initialize(tbutil::TimerPtr timer, int64_t schedule_interval_s)
+{
+  int ret = TFS_ERROR;
+  if (0 != timer)
+  {
+    timer_ = timer;
+    gc_worker_ = new GcWorker();
+    timer_->scheduleRepeated(gc_worker_, tbutil::Time::seconds(schedule_interval_s));
+    ret = TFS_SUCCESS;
+  }
+  return ret;
+}
+
+int GcManager::wait_for_shut_down()
+{
+  if (0 != timer_ && 0 != gc_worker_)
+  {
+    timer_->cancel(gc_worker_);
+  }
+  return TFS_SUCCESS;
+}
+
+int GcManager::destroy()
+{
+  if (0 != gc_worker_)
+  {
+    gc_worker_->destroy();
+  }
+  return TFS_SUCCESS;
+}
+
+int GcManager::reset_schedule_interval(const int64_t schedule_interval_s)
+{
+  int ret = TFS_ERROR;
+  if (0 != timer_ && 0 != gc_worker_)
+  {
+    ret = TFS_SUCCESS;
+    timer_->cancel(gc_worker_);
+    timer_->scheduleRepeated(gc_worker_, tbutil::Time::seconds(schedule_interval_s));
+  }
+  return ret;
+}
 
 GcWorker::GcWorker() : tfs_client_(NULL)
 {
@@ -21,21 +75,13 @@ GcWorker::~GcWorker()
 {
 }
 
-void* GcWorker::start(void* arg)
+void GcWorker::runTimerTask()
 {
-  reinterpret_cast<GcWorker*>(arg)->do_start();
-  return NULL;
-}
-
-int GcWorker::do_start()
-{
+  TBSYS_LOG(DEBUG, "gc start");
   int ret = TFS_SUCCESS;
-
   // gc expired local key and garbage gc file sequencially, maybe use thread
-
-  // no need to init.
+  
   tfs_client_ = TfsClient::Instance();
-
   // gc expired local key
   if ((ret = start_gc(GC_EXPIRED_LOCAL_KEY)) != TFS_SUCCESS)
   {
@@ -55,51 +101,58 @@ int GcWorker::do_start()
   {
     TBSYS_LOG(INFO, "gc garbage file success");
   }
-  return ret;
+  return;
+}
+
+int GcWorker::destroy()
+{
+  destroy_ = true;
+  return TFS_SUCCESS;
 }
 
 int GcWorker::start_gc(GcType gc_type)
 {
-  const char* gc_path = NULL;
   int ret = TFS_SUCCESS;
-
-  if (GC_EXPIRED_LOCAL_KEY == gc_type)
+  if (!destroy_)
   {
-    gc_path = LOCAL_KEY_PATH;
-  }
-  else if (GC_GARBAGE_FILE == gc_type)
-  {
-    gc_path = GC_FILE_PATH;
-  }
-
-  // private use, gc_type is valid
-  if (!DirectoryOp::is_directory(gc_path))
-  {
-    TBSYS_LOG(ERROR, "gc path doesn't exist: %s");
-    ret = TFS_ERROR;            // TFS_SUCCESS ?
-  }
-  else
-  {
-    // gc expired file
-    if ((ret = get_expired_file(gc_path)) != TFS_SUCCESS)
+    const char* gc_path = NULL;
+    if (GC_EXPIRED_LOCAL_KEY == gc_type)
     {
-      TBSYS_LOG(ERROR, "get expired file fail, ret: %d", ret);
+      gc_path = LOCAL_KEY_PATH;
     }
-    else if (0 == file_.size())
+    else if (GC_GARBAGE_FILE == gc_type)
     {
-      TBSYS_LOG(INFO, "no expired file, no gc");
+      gc_path = GC_FILE_PATH;
+    }
+
+    // private use, gc_type is valid
+    if (!DirectoryOp::is_directory(gc_path))
+    {
+      TBSYS_LOG(ERROR, "gc path doesn't exist: %s", gc_path);
+      ret = TFS_ERROR;            // TFS_SUCCESS ?
     }
     else
     {
-      if ((ret = do_gc(gc_type)) != TFS_SUCCESS)
+      // gc expired file
+      if ((ret = get_expired_file(gc_path)) != TFS_SUCCESS)
       {
-        TBSYS_LOG(ERROR, "gc fail, ret: %d");
+        TBSYS_LOG(ERROR, "get expired file fail, ret: %d", ret);
+      }
+      else if (0 == file_.size())
+      {
+        TBSYS_LOG(INFO, "no expired file, no gc");
+      }
+      else
+      {
+        if ((ret = do_gc(gc_type)) != TFS_SUCCESS)
+        {
+          TBSYS_LOG(ERROR, "gc fail, ret: %d", ret);
+        }
       }
     }
   }
   return ret;
 }
-
 
 int GcWorker::get_expired_file(const char* path)
 {
@@ -139,7 +192,7 @@ int GcWorker::check_file(const char* path, const char* file, time_t now)
     TBSYS_LOG(ERROR, "stat file fail: %s, error: %s", file_path, strerror(errno));
     ret = TFS_ERROR;
   }
-  else if (S_ISREG(file_info.st_mode) && now - file_info.st_mtime > GC_EXPIRED_TIME)
+  else if (S_ISREG(file_info.st_mode) && now - file_info.st_mtime > ClientConfig::expired_time_)
   {
     TBSYS_LOG(INFO, "file need gc: %s, last modify time: %s",
               file_path, Func::time_to_str(file_info.st_mtime).c_str());
@@ -168,13 +221,13 @@ int GcWorker::do_gc(GcType gc_type)
     }
     else if ((fd = check_lock(file_name.c_str())) < 0)
     {
-      TBSYS_LOG(INFO, "file is locked, maybe other gc process is master it");
+      TBSYS_LOG(WARN, "file is locked, maybe other gc process is master it");
     }
     else
     {
-      string addr = tbsys::CNetUtil::addrToString(atoll(file_name.substr(id_pos+1).c_str()));
-      TBSYS_LOG(DEBUG, "id : %s , %"PRI64_PREFIX"u, server address %s",
-                file_name.substr(id_pos).c_str(), atoll(file_name.substr(id_pos+1).c_str()), addr.c_str());
+      string addr = tbsys::CNetUtil::addrToString(atoll(file_name.substr(id_pos + 1).c_str()));
+      TBSYS_LOG(DEBUG, "id: %s, %"PRI64_PREFIX"u, server address %s",
+                file_name.substr(id_pos).c_str(), atoll(file_name.substr(id_pos + 1).c_str()), addr.c_str());
       // expired local key
       if (GC_EXPIRED_LOCAL_KEY == gc_type)
       {
@@ -226,7 +279,7 @@ template<class T> int GcWorker::do_unlink(T& seg_info, const char* addr)
 {
   int ret = TFS_SUCCESS;
 
-  for (typename T::iterator it = seg_info.begin(); it != seg_info.end(); it++)
+  for (typename T::iterator it = seg_info.begin(); it != seg_info.end(); ++it)
   {
     // just not to depend on inner module, use TfsCliet directely
     // little dummy
@@ -237,8 +290,8 @@ template<class T> int GcWorker::do_unlink(T& seg_info, const char* addr)
     if ((ret = tfs_client_->unlink(fsname.get_name(), NULL, addr))
         != TFS_SUCCESS)
     {
-      TBSYS_LOG(ERROR, "gc segment fail, block id: %u, fileid: %"PRI64_PREFIX"u",
-                it->block_id_, it->file_id_);
+      TBSYS_LOG(ERROR, "gc segment fail, block id: %u, fileid: %"PRI64_PREFIX"u, ret: %d",
+                it->block_id_, it->file_id_, ret);
     }
     else
     {
@@ -246,7 +299,6 @@ template<class T> int GcWorker::do_unlink(T& seg_info, const char* addr)
                 it->block_id_, it->file_id_);
     }
   }
-  // just ignore return code
   return ret;
 }
 

@@ -49,6 +49,7 @@ TfsSession* TfsSessionPool::get(const char* ns_addr, const int32_t cache_time, c
   if (ret != TFS_SUCCESS)
   {
     TBSYS_LOG(ERROR, "initialize tfs session failed, ret: %d", ret);
+    tbsys::gDelete(session);
     return NULL;
   }
   pool_[ns_addr] = session;

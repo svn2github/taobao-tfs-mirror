@@ -38,8 +38,9 @@ namespace tfs
       virtual ~WaitObject();
 
       uint16_t get_id() const;
-      void set_id(const int16_t id);
+      void set_id(const uint16_t id);
       void add_send_id();
+      void set_send_id(const uint16_t index_id);
       WaitId get_wait_key();
       void set_free();
 

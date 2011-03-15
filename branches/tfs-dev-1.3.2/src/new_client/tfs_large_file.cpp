@@ -75,7 +75,7 @@ int TfsLargeFile::open(const char* file_name, const char* suffix, const int flag
         meta_suffix_ = const_cast<char*>(suffix);
         offset_ = 0;
         eof_ = TFS_FILE_EOF_FLAG_NO;
-        is_open_ = TFS_FILE_OPEN_YES;
+        file_status_ = TFS_FILE_OPEN_YES;
       }
       va_end(args);
     }
@@ -242,7 +242,7 @@ int TfsLargeFile::get_segment_for_write(int64_t offset, const char* buf, int64_t
 
 int TfsLargeFile::get_size_for_rw(const int64_t check_size, const int64_t count, int64_t& cur_size, bool& not_end)
 {
-  return get_size_for_rw_ex(check_size, count, cur_size, not_end, BATCH_SIZE);
+  return get_size_for_rw_ex(check_size, count, cur_size, not_end, ClientConfig::batch_size_);
 }
 
 int TfsLargeFile::read_process()

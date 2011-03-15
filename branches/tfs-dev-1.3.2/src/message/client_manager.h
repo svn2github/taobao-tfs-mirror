@@ -29,7 +29,7 @@ namespace tfs
 
         tbnet::IPacketHandler::HPRetCode handlePacket(tbnet::Packet* packet, void* args);
         int get_wait_id(uint16_t& wait_id) const;
-        int post_request(const int64_t server, Message* packet, const uint16_t wait_id);
+        int post_request(const int64_t server, Message* packet, const uint16_t wait_id, const uint16_t index_id = 0);
         int get_response(const uint16_t wait_id, const int64_t wait_count,
               const int64_t wait_timeout, std::map<uint16_t, Message*>& packets);
 

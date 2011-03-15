@@ -27,20 +27,20 @@ namespace tfs
     {
       uint32_t block_id_;
       int32_t seq_id_;
-      int32_t prefix_;
+      int32_t suffix_;
     };
 
     class FSName
     {
     public:
       FSName();
-      FSName(uint32_t block_id, int32_t seq_id, int32_t prefix = 0, int32_t cluster_id = 0);
-      FSName(const char *file_name, const char *prefix = NULL, int32_t cluster_id = 0);
+      FSName(uint32_t block_id, int32_t seq_id, int32_t suffix = 0, int32_t cluster_id = 0);
+      FSName(const char *file_name, const char* suffix = NULL, int32_t cluster_id = 0);
       virtual ~FSName();
 
       const char* get_name(bool large_flag = false);
-      int set_name(const char *file_name, const char *prefix = NULL, const int32_t cluster_id = 0);
-      void set_prefix(const char* prefix);
+      void set_name(const char* file_name, const char* suffix = NULL, const int32_t cluster_id = 0);
+      void set_suffix(const char* suffix);
       std::string to_string();
 
       inline void set_block_id(const uint32_t id)
@@ -63,14 +63,14 @@ namespace tfs
         return file_.seq_id_;
       }
 
-      inline void set_prefix(const int32_t id)
+      inline void set_suffix(const int32_t id)
       {
-        file_.prefix_ = id;
+        file_.suffix_ = id;
       }
 
-      inline int32_t get_prefix() const
+      inline int32_t get_suffix() const
       {
-        return file_.prefix_;
+        return file_.suffix_;
       }
 
       inline void set_file_id(const uint64_t id)

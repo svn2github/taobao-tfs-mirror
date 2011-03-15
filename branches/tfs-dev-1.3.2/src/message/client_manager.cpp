@@ -127,7 +127,7 @@ namespace tfs
     /**
      * post_packet is async version of send_packet. donot wait for response packet.
      */
-    int NewClientManager::post_request(const int64_t server_id, Message* packet, const uint16_t wait_id)
+    int NewClientManager::post_request(const int64_t server_id, Message* packet, const uint16_t wait_id, const uint16_t index_id)
     {
       initialize();
       int rc = TFS_SUCCESS;
@@ -144,7 +144,7 @@ namespace tfs
           rc = TFS_ERROR;
         }
 
-        wait_object->add_send_id();
+        wait_object->set_send_id(index_id);
 
         if (TFS_SUCCESS == rc)
         {

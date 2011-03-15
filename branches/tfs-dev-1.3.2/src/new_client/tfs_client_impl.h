@@ -20,6 +20,7 @@
 #include <stdio.h>
 #include <pthread.h>
 #include "common/define.h"
+#include "tfs_session_pool.h"
 
 namespace tfs
 {
@@ -59,13 +60,34 @@ namespace tfs
       }
       int unlink(const char* file_name, const char* suffix, const char* ns_addr, const TfsUnlinkType action = DELETE);
 
+      void set_segment_size(const int64_t segment_size);
+      int64_t get_segment_size();
+
+      void set_batch_count(const int64_t batch_count);
+      int64_t get_batch_count();
+
+      void set_gc_interval(const int64_t gc_interval_s);
+      int64_t get_gc_interval();
+
+      void set_gc_expired_time(const int64_t gc_expired_time_s);
+      int64_t get_gc_expired_time();
+
+      void set_batch_time_out(const int64_t time_out_us);
+      int64_t get_batch_time_out();
+
+      void set_log_level(const char* level);
+
+#ifdef TFS_TEST
+      TfsSession* get_tfs_session(const char* ns_addr)
+      {
+        return SESSION_POOL.get(ns_addr);
+      }
+#endif
+
     private:
-      //int open_ex(const char* file_name, const char* suffix, const char* ns_addr,
-      //            const int flags, ...);
       bool check_init();
       TfsFile* get_file(const int fd);
       int erase_file(const int fd);
-      int start_gc();
 
     private:
       TfsClientImpl();
@@ -77,8 +99,6 @@ namespace tfs
       int fd_;
       FILE_MAP tfs_file_map_;
       tbutil::Mutex mutex_;
-      GcWorker* gc_worker_;
-      pthread_t gc_tid_;
     };
   }
 }

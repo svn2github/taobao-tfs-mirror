@@ -63,7 +63,7 @@ int TfsSession::initialize()
   return ret;
 }
 
-int TfsSession::get_block_info(uint32_t& block_id, VUINT64 &rds, int32_t flag)
+int TfsSession::get_block_info(uint32_t& block_id, VUINT64& rds, int32_t flag)
 {
   int ret = TFS_SUCCESS;
   // insert to cache
@@ -93,6 +93,7 @@ int TfsSession::get_block_info(uint32_t& block_id, VUINT64 &rds, int32_t flag)
         if (block_cache &&
             (block_cache->last_time_ >= time(NULL) - block_cache_time_))
         {
+          TBSYS_LOG(DEBUG, "cache hit, blockid: %u", block_id);
           rds = block_cache->ds_;
           flag = true;
         }
@@ -100,20 +101,17 @@ int TfsSession::get_block_info(uint32_t& block_id, VUINT64 &rds, int32_t flag)
 
       if (!flag)
       {
-        BlockCache block_cache;
-        if ((ret = get_block_info_ex(block_id, block_cache.ds_, T_READ)) == TFS_SUCCESS)
+        TBSYS_LOG(DEBUG, "cache miss, blockid: %u", block_id);
+        if ((ret = get_block_info_ex(block_id, rds, T_READ)) == TFS_SUCCESS)
         {
-          if (block_cache.ds_.size() <= 0)
+          if (rds.size() <= 0)
           {
             TBSYS_LOG(ERROR, "get block %u info failed, dataserver size %u <= 0", block_id, rds.size());
             ret = TFS_ERROR;
           }
           else
           {
-            block_cache.last_time_ = time(NULL);
-            rds = block_cache.ds_;
-            tbutil::Mutex::Lock lock(mutex_);
-            block_cache_map_.insert(block_id, block_cache);
+            insert_block_cache(block_id, rds);
           }
         }
       }
@@ -171,7 +169,7 @@ int TfsSession::get_block_info(SEG_DATA_LIST& seg_list, int32_t flag)
 
     if (TFS_SUCCESS == ret && !found)
     {
-      BlockCache block_cache;
+      //BlockCache block_cache;
       if ((ret = get_block_info_ex(seg_list, T_READ)) == TFS_SUCCESS)
       {
         for (size_t i = 0; i < seg_list.size(); i++)
@@ -185,10 +183,7 @@ int TfsSession::get_block_info(SEG_DATA_LIST& seg_list, int32_t flag)
           }
           else
           {
-            block_cache.last_time_ = time(NULL);
-            block_cache.ds_ = seg_list[i]->ds_;
-            tbutil::Mutex::Lock lock(mutex_);
-            block_cache_map_.insert(seg_list[i]->seg_info_.block_id_, block_cache);
+            insert_block_cache(seg_list[i]->seg_info_.block_id_, seg_list[i]->ds_);
           }
         }
       }
@@ -198,7 +193,7 @@ int TfsSession::get_block_info(SEG_DATA_LIST& seg_list, int32_t flag)
   return ret;
 }
 
-int TfsSession::get_block_info_ex(uint32_t& block_id, VUINT64 &rds, const int32_t flag)
+int TfsSession::get_block_info_ex(uint32_t& block_id, VUINT64& rds, const int32_t flag)
 {
   GetBlockInfoMessage gbi_message(flag);
   gbi_message.set_block_id(block_id);
@@ -299,9 +294,10 @@ int TfsSession::get_block_info_ex(SEG_DATA_LIST& seg_list, const int32_t flag)
 
           if (it != block_info.end())
           {
+            // ds_ will not be empty
             seg_list[i]->ds_ = it->second.ds_;
             seg_list[i]->status_ = SEG_STATUS_OPEN_OVER;
-            TBSYS_LOG(DEBUG, "get block %d info, ds size: %d, return size: %d",
+            TBSYS_LOG(DEBUG, "get block %u info, ds size: %d, return size: %d",
                 seg_list[i]->seg_info_.block_id_, seg_list[i]->ds_.size(), it->second.ds_.size());
           }
         }
@@ -316,6 +312,7 @@ int TfsSession::get_block_info_ex(SEG_DATA_LIST& seg_list, const int32_t flag)
           seg_list[i]->seg_info_.block_id_ = it->first;
           seg_list[i]->ds_ = it->second.ds_;
           seg_list[i]->status_ = SEG_STATUS_OPEN_OVER;
+
           TBSYS_LOG(DEBUG, "get write block %u success, ds list size: %d", seg_list[i]->seg_info_.block_id_, seg_list[i]->ds_.size());
           if (it->second.has_lease_) // should have
           {
@@ -394,4 +391,27 @@ int TfsSession::get_cluster_id_from_ns()
 
   tbsys::gDelete(rsp);
   return ret;
+}
+
+void TfsSession::insert_block_cache(const uint32_t block_id, const VUINT64& rds)
+{
+  if (USE_CACHE_FLAG_YES == use_cache_)
+  {
+    TBSYS_LOG(DEBUG, "cache insert, blockid: %u", block_id);
+    BlockCache block_cache;
+    block_cache.last_time_ = time(NULL);
+    block_cache.ds_ = rds;
+    tbutil::Mutex::Lock lock(mutex_);
+    block_cache_map_.insert(block_id, block_cache);
+  }
+}
+
+void TfsSession::remove_block_cache(const uint32_t block_id)
+{
+  if (USE_CACHE_FLAG_YES == use_cache_)
+  {
+    TBSYS_LOG(DEBUG, "cache remove, blockid: %u", block_id);
+    tbutil::Mutex::Lock lock(mutex_);
+    block_cache_map_.remove(block_id);
+  }
 }

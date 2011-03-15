@@ -19,7 +19,6 @@
 #include <Memory.hpp>
 
 #include "tfs_client_impl.h"
-#include "tfs_session_pool.h"
 #include "tfs_large_file.h"
 #include "tfs_small_file.h"
 #include "gc_worker.h"
@@ -29,7 +28,7 @@ using namespace tfs::message;
 using namespace tfs::client;
 using namespace std;
 
-TfsClientImpl::TfsClientImpl() : is_init_(false), default_tfs_session_(NULL), fd_(1), gc_worker_(NULL)
+TfsClientImpl::TfsClientImpl() : is_init_(false), default_tfs_session_(NULL), fd_(1)
 {
 }
 
@@ -66,9 +65,9 @@ int TfsClientImpl::initialize(const char* ns_addr, const int32_t cache_time, con
         TBSYS_LOG(ERROR, "tfsclient initialize to ns %s failed. must exit", ns_addr);
         ret = TFS_ERROR;
       }
-      else if ((ret = start_gc()) != TFS_SUCCESS)
+      else if ((ret = BgTask::initialize()) != TFS_SUCCESS)
       {
-        TBSYS_LOG(ERROR, "start gc thread fail, ret: %d", ret);
+        TBSYS_LOG(ERROR, "start bg task fail, ret: %d", ret);
       }
       else
       {
@@ -81,8 +80,8 @@ int TfsClientImpl::initialize(const char* ns_addr, const int32_t cache_time, con
 
 int TfsClientImpl::destroy()
 {
-  pthread_join(gc_tid_, NULL);
-  tbsys::gDelete(gc_worker_);
+  BgTask::destroy();
+  BgTask::wait_for_shut_down();
   return TFS_SUCCESS;
 }
 
@@ -298,6 +297,72 @@ int TfsClientImpl::unlink(const char* file_name, const char* suffix, const char*
   return ret;
 }
 
+void TfsClientImpl::set_segment_size(const int64_t segment_size)
+{
+  ClientConfig::segment_size_ = segment_size;
+  ClientConfig::batch_size_ = ClientConfig::segment_size_ * ClientConfig::batch_count_;
+  TBSYS_LOG(INFO, "set segment size: %" PRI64_PREFIX "d, batch count: %" PRI64_PREFIX "d, batch size: %" PRI64_PREFIX "d",
+      ClientConfig::segment_size_, ClientConfig::batch_count_, ClientConfig::batch_size_);
+}
+
+int64_t TfsClientImpl::get_segment_size()
+{
+  return ClientConfig::segment_size_;
+}
+
+void TfsClientImpl::set_batch_count(const int64_t batch_count)
+{
+  ClientConfig::batch_count_ = batch_count;
+  ClientConfig::batch_size_ = ClientConfig::segment_size_ * ClientConfig::batch_count_;
+  TBSYS_LOG(INFO, "set batch count: %" PRI64_PREFIX "d, segment size: %" PRI64_PREFIX "d, batch size: %" PRI64_PREFIX "d",
+      ClientConfig::batch_count_, ClientConfig::segment_size_, ClientConfig::batch_size_);
+}
+
+int64_t TfsClientImpl::get_batch_count()
+{
+  return ClientConfig::batch_count_;
+}
+
+void TfsClientImpl::set_gc_expired_time(const int64_t gc_expired_time_s)
+{
+  ClientConfig::expired_time_ = gc_expired_time_s;
+  TBSYS_LOG(INFO, "set gc expired time: %" PRI64_PREFIX "d", ClientConfig::expired_time_);
+}
+
+int64_t TfsClientImpl::get_gc_expired_time()
+{
+  return ClientConfig::expired_time_;
+}
+
+void TfsClientImpl::set_gc_interval(const int64_t gc_interval_s)
+{
+  ClientConfig::gc_interval_ = gc_interval_s;
+  BgTask::get_gc_mgr().reset_schedule_interval(gc_interval_s);
+  TBSYS_LOG(INFO, "set gc interval: %" PRI64_PREFIX "d", ClientConfig::gc_interval_);
+}
+
+int64_t TfsClientImpl::get_gc_interval()
+{
+  return ClientConfig::gc_interval_;
+}
+
+void TfsClientImpl::set_batch_time_out(const int64_t time_out_us)
+{
+  ClientConfig::batch_time_out_ = time_out_us;
+  TBSYS_LOG(INFO, "set batch time out: %" PRI64_PREFIX "d", ClientConfig::batch_time_out_);
+}
+
+int64_t TfsClientImpl::get_batch_time_out()
+{
+  return ClientConfig::batch_time_out_;
+}
+
+void TfsClientImpl::set_log_level(const char* level)
+{
+  TBSYS_LOG(INFO, "set log level: %s", level);
+  TBSYS_LOGGER.setLogLevel(level);
+}
+
 // check if tfsclient is already initialized.
 // read and write and stuffs that need open first,
 // need no init check cause open already does it,
@@ -337,20 +402,4 @@ int TfsClientImpl::erase_file(const int fd)
   tbsys::gDelete(it->second);
   tfs_file_map_.erase(it);
   return TFS_SUCCESS;
-}
-
-int TfsClientImpl::start_gc()
-{
-  gc_worker_ = new GcWorker();
-  int ret = pthread_create(&gc_tid_, NULL, GcWorker::start, gc_worker_);
-  if (0 == ret)
-  {
-    TBSYS_LOG(INFO, "start gc thread successful, tid: %u", gc_tid_);
-    ret = TFS_SUCCESS;
-  }
-  else
-  {
-    ret = TFS_ERROR;
-  }
-  return ret;
 }

@@ -134,6 +134,7 @@ namespace tfs
     static const int EXIT_NOT_INIT_ERROR = -1006;
     static const int EXIT_INVALID_ARGU_ERROR = -1007;
     static const int32_t EXIT_NOT_PERM_OPER = -1008;
+    static const int32_t EXIT_NOT_OPEN_ERROR = -1009;
 
     static const int32_t INT_SIZE = 4;
     static const int32_t INT64_SIZE = 8;

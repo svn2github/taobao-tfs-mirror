@@ -9,7 +9,6 @@
  * Version: $Id: tfs_client_api.h 19 2010-10-18 05:48:09Z nayan@taobao.com $
  *
  * Authors:
- *   zhuhui <zhuhui_a.pt@taobao.com>
  *      - initial release
  *
  */
@@ -135,6 +134,23 @@ namespace tfs
         return unlink(file_name, suffix, NULL, action);
       }
       int unlink(const char* file_name, const char* suffix, const char* ns_addr, const TfsUnlinkType action = DELETE);
+
+      void set_segment_size(const int64_t segment_size);
+      int64_t get_segment_size();
+
+      void set_batch_count(const int64_t batch_count);
+      int64_t get_batch_count();
+
+      void set_gc_interval(const int64_t gc_interval_s);
+      int64_t get_gc_interval();
+
+      void set_gc_expired_time(const int64_t gc_expired_time_s);
+      int64_t get_gc_expired_time();
+
+      void set_batch_time_out(const int64_t time_out_us);
+      int64_t get_batch_time_out();
+
+      void set_log_level(const char* level);
 
     private:
       TfsClient();

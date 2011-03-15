@@ -4,6 +4,7 @@
 #include "tfs_client_api.h"
 #include "local_key.h"
 #include "gc_file.h"
+#include <Timer.h>
 
 namespace tfs
 {
@@ -15,16 +16,15 @@ namespace tfs
       GC_GARBAGE_FILE
     };
 
-    const int32_t GC_EXPIRED_TIME = 864000; // 10 days
-
-    class GcWorker
+    class GcWorker : public tbutil::TimerTask
     {
     public:
       GcWorker();
       ~GcWorker();
 
-      static void* start(void* arg);
-      int do_start();
+    public:
+      virtual void runTimerTask();
+      int destroy();
 
     private:
       int start_gc(GcType gc_type);
@@ -37,11 +37,35 @@ namespace tfs
       template<class T> int do_unlink(T& seg_info, const char* addr);
 
     private:
+      DISALLOW_COPY_AND_ASSIGN(GcWorker);
+      bool destroy_;
       TfsClient* tfs_client_;
       LocalKey local_key_;
       GcFile gc_file_;
       std::vector<std::string> file_;
     };
+    typedef tbutil::Handle<GcWorker> GcWorkerPtr;
+
+    class GcManager
+    {
+      public:
+        GcManager();
+        ~GcManager();
+
+      public:
+        int initialize(tbutil::TimerPtr timer, const int64_t schedule_interval_s);
+        int wait_for_shut_down();
+        int destroy();
+        int reset_schedule_interval(const int64_t schedule_interval_s);
+
+      private:
+        DISALLOW_COPY_AND_ASSIGN(GcManager);
+      private:
+        bool destroy_;
+        tbutil::TimerPtr timer_;
+        GcWorkerPtr gc_worker_;
+    };
+
   }
 }
 

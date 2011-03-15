@@ -9,12 +9,12 @@
  * Version: $Id: tfs_client_api.cpp 49 2010-11-16 09:58:57Z zongdai@taobao.com $
  *
  * Authors:
- *   zhuhui <zhuhui_a.pt@taobao.com>
  *      - initial release
  *
  */
 #include "tfs_client_api.h"
 #include "tfs_client_impl.h"
+#include "client_config.h"
 
 using namespace tfs::common;
 using namespace tfs::client;
@@ -76,6 +76,61 @@ int TfsClient::close(const int fd, char* tfs_name, const int32_t len)
 int TfsClient::unlink(const char* file_name, const char* suffix, const char* ns_addr, const TfsUnlinkType action)
 {
   return TfsClientImpl::Instance()->unlink(file_name, suffix, ns_addr, action);
+}
+
+void TfsClient::set_segment_size(const int64_t segment_size)
+{
+  return TfsClientImpl::Instance()->set_segment_size(segment_size);
+}
+
+int64_t TfsClient::get_segment_size()
+{
+  return TfsClientImpl::Instance()->get_segment_size();
+}
+
+void TfsClient::set_batch_count(const int64_t batch_count)
+{
+  return TfsClientImpl::Instance()->set_batch_count(batch_count);
+}
+
+int64_t TfsClient::get_batch_count()
+{
+  return TfsClientImpl::Instance()->get_batch_count();
+}
+
+void TfsClient::set_gc_expired_time(const int64_t gc_expired_time_s)
+{
+  return TfsClientImpl::Instance()->set_gc_expired_time(gc_expired_time_s);
+}
+
+int64_t TfsClient::get_gc_expired_time()
+{
+  return TfsClientImpl::Instance()->get_gc_expired_time();
+}
+
+void TfsClient::set_gc_interval(const int64_t gc_interval_s)
+{
+  return TfsClientImpl::Instance()->set_gc_interval(gc_interval_s);
+}
+
+int64_t TfsClient::get_gc_interval()
+{
+  return TfsClientImpl::Instance()->get_gc_interval();
+}
+
+void TfsClient::set_batch_time_out(const int64_t time_out_us)
+{
+  return TfsClientImpl::Instance()->set_batch_time_out(time_out_us);
+}
+
+int64_t TfsClient::get_batch_time_out()
+{
+  return TfsClientImpl::Instance()->get_batch_time_out();
+}
+
+void TfsClient::set_log_level(const char* level)
+{
+  return TfsClientImpl::Instance()->set_log_level(level);
 }
 
 int TfsClient::open_ex(const char* file_name, const char* suffix, const char* ns_addr, const int flags)

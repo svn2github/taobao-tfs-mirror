@@ -1,4 +1,5 @@
 #include "local_key.h"
+#include "client_config.h"
 #include "common/directory_op.h"
 #include "common/error_msg.h"
 #include "common/func.h"
@@ -414,8 +415,8 @@ void LocalKey::get_segment(const int64_t start, const int64_t end,
 
     while (not_end)
     {
-      if (offset + SEGMENT_SIZE > end || // reach file offset end
-          check_size + SEGMENT_SIZE > size) // reach buffer offset end
+      if (offset + ClientConfig::segment_size_ > end || // reach file offset end
+          check_size + ClientConfig::segment_size_ > size) // reach buffer offset end
       {
         cur_size = std::min(end - offset, size - check_size);
         not_end = false;
@@ -426,7 +427,7 @@ void LocalKey::get_segment(const int64_t start, const int64_t end,
       }
       else
       {
-        cur_size = SEGMENT_SIZE;
+        cur_size = ClientConfig::segment_size_;
       }
 
       seg_data = new SegmentData();

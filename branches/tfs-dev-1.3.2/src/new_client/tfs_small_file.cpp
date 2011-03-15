@@ -111,7 +111,7 @@ int TfsSmallFile::get_segment_for_write(int64_t offset, const char* buf, int64_t
 
 int TfsSmallFile::get_size_for_rw(const int64_t check_size, const int64_t count, int64_t& cur_size, bool& not_end)
 {
-  return get_size_for_rw_ex(check_size, count, cur_size, not_end, SEGMENT_SIZE);
+  return get_size_for_rw_ex(check_size, count, cur_size, not_end, ClientConfig::segment_size_);
 }
 
 int TfsSmallFile::read_process()
