@@ -3,6 +3,7 @@
 
 #include <string>
 #include <vector>
+#include <libgen.h>
 #include "common/define.h"
 #include "common/statistics.h"
 #include "common/directory_op.h"

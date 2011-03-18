@@ -9,19 +9,23 @@ FILE *g_succ_file = NULL, *g_fail_file = NULL, *g_error_file = NULL, *g_unsync_f
 
 struct log_file g_log_fp[] =
 {
-  {&g_succ_file, "./cmp_log/succ_file"},
-  {&g_fail_file, "./cmp_log/fail_file"},
-  {&g_error_file, "./cmp_log/error_file"},
-  {&g_unsync_file, "./cmp_log/unsync_file"},
+  {&g_succ_file, "/succ_file"},
+  {&g_fail_file, "/fail_file"},
+  {&g_error_file, "/error_file"},
+  {&g_unsync_file, "/unsync_file"},
   {NULL, NULL}
 };
 
-int init_log_file()
+int init_log_file(char* dir_path)
 {
-  DirectoryOp::create_directory("cmp_log");
+  char log_path[256]; 
+  snprintf(log_path, 256, "%s%s", dirname(dir_path), "/cmp_log"); 
+  DirectoryOp::create_directory(log_path);
   for (int i = 0; g_log_fp[i].file_; i++)
   {
-    *g_log_fp[i].fp_ = fopen(g_log_fp[i].file_, "w");
+    char file_path[256];
+    snprintf(file_path, 256, "%s%s", log_path, g_log_fp[i].file_); 
+    *g_log_fp[i].fp_ = fopen(file_path, "w");
     if (!*g_log_fp[i].fp_)
     {
       printf("open file fail %s : %s\n:", g_log_fp[i].file_, strerror(errno));
@@ -253,7 +257,7 @@ int get_crc_from_block_list(TfsClient& old_tfs_client, TfsClient& new_tfs_client
             FSName fsname;
             fsname.set_block_id(block_id);
             fsname.set_file_id(fi->id_);
-            //printf("fileList at %d:%llu",i,fi->id);
+            printf("gene file i: %d, blockid: %u, fileid: %"PRI64_PREFIX"u, %s\n",i, block_id, fi->id_, fsname.get_name());
             get_crc_from_filename(old_tfs_client, new_tfs_client, fsname.get_name(), modify_time);
           }
           file_list.clear();
@@ -333,7 +337,7 @@ int main(int argc, char** argv)
 
   memset(&cmp_stat_, 0, sizeof(cmp_stat_));
 
-  if (init_log_file() != TFS_SUCCESS)
+  if (init_log_file(argv[0]) != TFS_SUCCESS)
   {
     printf("init log file fail\n");
     return TFS_ERROR;
