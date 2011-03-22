@@ -20,6 +20,7 @@ struct StatStruct
   int64_t fail_count_;
   int64_t error_count_;
   int64_t unsync_count_;
+  int64_t skip_count_;
 };
 
 struct log_file
@@ -28,8 +29,10 @@ struct log_file
   const char* file_;
 };
 
-int get_crc_from_tfsname_list(tfs::client::TfsClient& old_tfs_client, tfs::client::TfsClient& new_tfs_client, const char* filename_list, string& modify_time);
-int get_crc_from_blockid(tfs::client::TfsClient& old_tfs_client, tfs::client::TfsClient& new_tfs_client, const char* block_list, string& modify_time);
+int get_crc_from_tfsname_list(tfs::client::TfsClient& old_tfs_client, tfs::client::TfsClient& new_tfs_client,
+    const char* filename_list, std::string& modify_time);
+int get_crc_from_blockid(tfs::client::TfsClient& old_tfs_client, tfs::client::TfsClient& new_tfs_client,
+    const char* block_list, std::string& modify_time);
 
 static StatStruct cmp_stat_;
 
