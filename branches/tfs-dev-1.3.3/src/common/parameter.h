@@ -36,28 +36,25 @@ namespace tfs
         int32_t max_write_file_count_;
         int32_t max_use_capacity_ratio_;
         uint32_t group_mask_;
-        int32_t ds_dead_time_;
         int32_t heart_interval_;
-        int32_t replicate_max_time_;
+        int32_t replicate_ratio_;
         int32_t replicate_wait_time_;
-        int32_t replicate_check_interval_;
-        int32_t replicate_max_count_per_server_;
-        int32_t redundant_check_interval_;
-        int32_t balance_check_interval_;
-        int32_t compact_time_lower_;
-        int32_t compact_time_upper_;
         int32_t compact_delete_ratio_;
         int32_t compact_max_load_;
-        int32_t compact_preserve_time_;
-        int32_t compact_check_interval_;
         int32_t cluster_index_;
         int32_t max_wait_write_lease_;
-        int32_t cleanup_lease_time_lower_;
-        int32_t cleanup_lease_time_upper_;
         int32_t cleanup_lease_threshold_;
-        int32_t cleanup_lease_count_;
         int32_t add_primary_block_count_;
         int32_t safe_mode_time_;
+        int32_t build_plan_interval_;
+        int32_t run_plan_expire_interval_;
+        int32_t object_dead_max_time_;
+        int32_t object_clear_max_time_;
+        int32_t run_plan_ratio_;
+        int32_t dump_stat_info_interval_;
+        int32_t build_plan_default_wait_time_;
+        int32_t balance_max_diff_block_num_;
+        char* config_log_file_;
       };
 
       struct FileSystemParam

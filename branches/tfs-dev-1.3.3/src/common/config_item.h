@@ -37,6 +37,8 @@ namespace tfs
 #define CONF_LOG_NUM                                  "log_num"
 #define CONF_LOG_LEVEL                                "log_level"
 #define CONF_WORK_DIR                                 "work_dir"
+#define CONF_OBJECT_DEAD_MAX_TIME                     "object_dead_max_time"
+#define CONF_OBJECT_CLEAR_MAX_TIME                    "object_clear_max_time"
 
 #define CONF_PORT                                     "port"
 #define CONF_THREAD_COUNT                             "thread_count"
@@ -50,6 +52,7 @@ namespace tfs
 #define CONF_MAX_REPLICATION                          "max_replication"
 #define CONF_MIN_REPLICATION                          "min_replication"
 #define CONF_USE_CAPACITY_RATIO                       "use_capacity_ratio"
+
 
   //adminserver
 #define CONF_NS_SCRIPT                                "ns_script"
@@ -69,29 +72,25 @@ namespace tfs
 #define CONF_TASK_PRECENT_SEC_SIZE                    "task_percent_sec_size"
 #define CONF_MAX_WRITE_FILECOUNT                      "max_write_filecount"
 #define CONF_ADD_PRIMARY_BLOCK_COUNT                  "add_primary_block_count"
-#define CONF_BALANCE_CHECK_INTERVAL                   "balance_check_interval"
-#define CONF_REDUNDANT_CHECK_INTERVAL                 "redundant_check_interval"
 #define CONF_SAFE_MODE_TIME														"safe_mode_time"
-
+#define CONF_BUILD_PLAN_INTERVAL                      "build_plan_interval"
+#define CONF_RUN_PLAN_EXPIRE_INTERVAL                 "run_plan_expire_interval"
+#define CONF_RUN_PLAN_RATIO                           "run_plan_ratio"
 #define CONF_COMPACT_DELETE_RATIO                     "compact_delete_ratio"
-#define CONF_COMPACT_PRESERVE_TIME                    "compact_preserve_time"
-#define CONF_COMPACT_HOUR_RANGE                       "compact_hour_range"
-#define CONF_COMPACT_CHECK_INTERVAL                   "compact_check_interval"
 #define CONF_COMPACT_MAX_LOAD                         "compact_max_load"
-
-#define CONF_REPL_CHECK_INTERVAL                      "repl_check_interval"
-#define CONF_REPL_MAX_COUNT                           "repl_max_count_per_server"
-#define CONF_REPL_MAX_TIME                            "repl_max_time"
+#define CONF_REPLICATE_RATIO                          "replicate_ratio"
 #define CONF_REPL_WAIT_TIME                           "repl_wait_time"
-#define CONF_REPLICATE_THREADCOUNT                    "replicate_threadcount"
 
 #define CONF_OPLOG_SYSNC_MAX_SLOTS_NUM                "oplog_sync_max_slots_num"
 #define CONF_OPLOGSYNC_THREAD_NUM                     "oplog_sync_thread_num"
 
 #define CONF_MAX_WAIT_WRITE_LEASE                     "max_wait_write_lease"
-#define CONF_CLEANUP_LEASE_HOUR_RANGE                 "cleanup_lease_hour_range"
+#define CONF_MAX_LEASE_TIMEOUT                        "max_lease_timeout"
+#define CONF_LEASE_EXPIRED_TIME                       "lease_expired_time"//hour_
 #define CONF_CLEANUP_LEASE_THRESHOLD                  "cleanup_lease_threshold"
-#define CONF_CLEANUP_LEASE_COUNT                      "cleanup_lease_count"
+#define CONF_DUMP_STAT_INFO_INTERVAL                  "dump_stat_info_interval"
+#define CONF_BUILD_PLAN_DEFAULT_WAIT_TIME             "build_plan_default_wait_time"
+#define CONF_BALANCE_MAX_DIFF_BLOCK_NUM               "balance_max_diff_block_num"
 
   //dataserver
 #define CONF_CHECK_INTERVAL                           "check_interval"
@@ -126,6 +125,7 @@ namespace tfs
 #define CONF_BACKUP_TYPE                              "backup_type"
 #define CONF_EXPIRE_CHECKBLOCK_TIME                   "expire_checkblock_time"
 #define CONF_MAX_CPU_USAGE                            "max_cpu_usage"
+#define CONF_REPLICATE_THREADCOUNT                    "replicate_threadcount"
   }
 }
 #endif //TFS_COMMON_CONFDEFINE_H_

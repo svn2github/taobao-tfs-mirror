@@ -19,11 +19,13 @@
 #include <string>
 #include <map>
 #include <vector>
+#include <list>
 #include <set>
 #include <ext/hash_map>
 #include <string.h>
 #include <stdint.h>
 #include "define.h"
+#include <databuffer.h>
 
 namespace tfs
 {
@@ -39,18 +41,19 @@ namespace tfs
       OPLOG_INSERT = 1,
       OPLOG_UPDATE,
       OPLOG_REMOVE,
-      OPLOG_RENAME
+      OPLOG_RENAME,
+      OPLOG_RELIEVE_RELATION
     };
 
     // GetBlockInfoMessage
-    enum GetBlockType
+    /*enum GetBlockType
     {
       BLOCK_READ = 1,
       BLOCK_WRITE = 2,
       BLOCK_CREATE = 4,
       BLOCK_NEWBLK = 8,
       BLOCK_NOLEASE = 16
-    };
+    };*/
 
     enum DataServerLiveStatus
     {
@@ -131,12 +134,12 @@ namespace tfs
       WRITE_COMPLETE_STATUS_NO
     };
 
-    enum CompactCompleteStatus
+    /*enum CompactCompleteStatus
     {
       COMPACT_COMPLETE_STATUS_SUCCESS = 0x00,
       COMPACT_COMPLETE_STATUS_FAILED,
       COMPACT_COMPLETE_STATUS_START
-    };
+    };*/
 
     // close write file msg
     enum CloseFileServer
@@ -157,6 +160,144 @@ namespace tfs
       IS_SERVER = 1
     };
 
+    enum PlanInterruptFlag
+    {
+      INTERRUPT_NONE= 0x00,
+      INTERRUPT_ALL = 0x01
+    };
+
+    enum PlanType
+    {
+      PLAN_TYPE_REPLICATE = 0x00,
+      PLAN_TYPE_MOVE,
+      PLAN_TYPE_COMPACT,
+      PLAN_TYPE_DELETE
+    };
+
+    enum PlanStatus
+    {
+      PLAN_STATUS_NONE = 0x00,
+      PLAN_STATUS_BEGIN,
+      PLAN_STATUS_TIMEOUT,
+      PLAN_STATUS_FAILURE,
+      PLAN_STATUS_END
+    };
+
+    enum PlanPriority
+    {
+      PLAN_PRIORITY_NONE = -1,
+      PLAN_PRIORITY_NORMAL = 0,
+      PLAN_PRIORITY_EMERGENCY = 1 
+    };
+
+    enum PlanRunFlag
+    {
+      PLAN_RUN_FLAG_NONE = 0,
+      PLAN_RUN_FLAG_REPLICATE = 1,
+      PLAN_RUN_FLAG_MOVE = 1 << 1,
+      PLAN_RUN_FLAG_COMPACT = 1 << 2,
+      PLAN_RUN_FLAG_DELETE = 1 << 3
+    };
+
+    enum DeleteExcessBackupStrategy
+    {
+      DELETE_EXCESS_BACKUP_STRATEGY_NORMAL = 1,
+      DELETE_EXCESS_BACKUP_STRATEGY_BY_GROUP =  1 << 1
+    };
+
+    enum SSMType
+    {
+      SSM_TYPE_BLOCK = 0x01,
+      SSM_TYPE_SERVER = 0x02
+    };
+    enum SSMChildBlockType
+    {
+      SSM_CHILD_BLOCK_TYPE_INFO   = 0x01,
+      SSM_CHILD_BLOCK_TYPE_SERVER = 0x02,
+      SSM_CHILD_BLOCK_TYPE_FULL = 0x04
+    };
+
+    enum SSMChildServerType
+    {
+      SSM_CHILD_SERVER_TYPE_ALL = 0x01,
+      SSM_CHILD_SERVER_TYPE_HOLD = 0x02,
+      SSM_CHILD_SERVER_TYPE_WRITABLE = 0x04,
+      SSM_CHILD_SERVER_TYPE_MASTER = 0x08,
+      SSM_CHILD_SERVER_TYPE_INFO = 0x10
+    };
+
+    enum SSMPacketType
+    {
+      SSM_PACKET_TYPE_REQUEST = 0x01,
+      SSM_PACKET_TYPE_REPLAY  = 0x02
+    };
+    enum SSMScanEndFlag
+    {
+      SSM_SCAN_END_FLAG_YES = 0x01,
+      SSM_SCAN_END_FLAG_NO  = 0x02
+    };
+    enum SSMScanCutoverFlag
+    {
+      SSM_SCAN_CUTOVER_FLAG_YES = 0x01,
+      SSM_SCAN_CUTOVER_FLAG_NO  = 0x02
+    };
+
+
+    struct SSMScanParameter
+    {
+      tbnet::DataBuffer data_;
+      uint32_t addition_param1_;
+      uint32_t addition_param2_;
+      uint32_t  start_next_position_;//16~32 bit: start, 0~15 bit: next
+      uint32_t  should_actual_count_;//16~32 bit: should_count 0~15: actual_count
+      int16_t  child_type_;
+      int8_t   type_;
+      int8_t   end_flag_;
+      int serialize(char*data, int32_t length)
+      {
+        if (length < get_serialize_size())
+        {
+          return TFS_ERROR;
+        }
+        tbnet::DataBuffer output;
+        output.writeInt32(addition_param1_);
+        output.writeInt32(addition_param2_);
+        output.writeInt32(start_next_position_);
+        output.writeInt32(should_actual_count_);
+        output.writeInt16(child_type_);
+        output.writeInt8(type_);
+        output.writeInt8(end_flag_);
+        output.writeInt32(data_.getDataLen());
+        memcpy(data, output.getData(), output.getDataLen());
+        data += output.getDataLen();
+        length -= output.getDataLen();
+        memcpy(data, data_.getData(), data_.getDataLen());
+        data += data_.getDataLen();
+        length -= data_.getDataLen();
+        return TFS_SUCCESS;
+      }
+      int deserialize(char* data, int32_t length)
+      {
+        tbnet::DataBuffer input;
+        input.writeBytes(data, length);
+        addition_param1_ = input.readInt32();
+        addition_param2_ = input.readInt32();
+        start_next_position_ = input.readInt32();
+        should_actual_count_ = input.readInt32();
+        child_type_ = input.readInt16();
+        type_ = input.readInt8();
+        end_flag_ = input.readInt8();
+        int32_t data_len = input.readInt32();
+        data_.ensureFree(data_len);
+        data_.pourData(data_len);
+        input.readBytes(data_.getData(), data_len);
+        return TFS_SUCCESS;
+      }
+      int64_t get_serialize_size()
+      {
+        return sizeof(int32_t) * 5 + sizeof(int16_t)  + sizeof(int8_t) * 2 + data_.getDataLen();
+      }
+    };
     // common data structure
 #pragma pack(4)
     struct BlockInfo
@@ -179,6 +320,29 @@ namespace tfs
         return block_id_ == rhs.block_id_ && version_ == rhs.version_ && file_count_ == rhs.file_count_ && size_
             == rhs.size_ && del_file_count_ == rhs.del_file_count_ && del_size_ == rhs.del_size_ && seq_no_
             == rhs.seq_no_;
+      }
+
+      int serialize(tbnet::DataBuffer& output)
+      {
+        output.writeInt32(block_id_);
+        output.writeInt32(version_);
+        output.writeInt32(file_count_);
+        output.writeInt32(size_);
+        output.writeInt32(del_file_count_);
+        output.writeInt32(del_size_);
+        output.writeInt32(seq_no_);
+        return output.getDataLen();
+      }
+      int deserialize(tbnet::DataBuffer& input)
+      {
+        block_id_ = input.readInt32();
+        version_  = input.readInt32();
+        file_count_ = input.readInt32();
+        size_ = input.readInt32();
+        del_file_count_ = input.readInt32();
+        del_size_ = input.readInt32();
+        seq_no_ = input.readInt32();
+        return input.getDataLen();
       }
     };
 
@@ -295,6 +459,41 @@ namespace tfs
       Throughput total_tp_;
       int32_t current_time_;
       DataServerLiveStatus status_;
+
+      int serialize(tbnet::DataBuffer& output)
+      {
+        output.writeInt64(id_);
+        output.writeInt64(use_capacity_);
+        output.writeInt64(total_capacity_);
+        output.writeInt32(current_load_);
+        output.writeInt32(block_count_);
+        output.writeInt32(last_update_time_);
+        output.writeInt32(startup_time_);
+        output.writeInt64(total_tp_.write_byte_);
+        output.writeInt64(total_tp_.write_file_count_);
+        output.writeInt64(total_tp_.read_byte_);
+        output.writeInt64(total_tp_.read_file_count_);
+        output.writeInt32(current_time_);
+        output.writeInt32(status_);
+        return output.getDataLen();
+      }
+      int deserialize(tbnet::DataBuffer& input)
+      {
+        id_ = input.readInt64();
+        use_capacity_ = input.readInt64();
+        total_capacity_ = input.readInt64();
+        current_load_ = input.readInt32();
+        block_count_  = input.readInt32();
+        last_update_time_ = input.readInt32();
+        startup_time_ = input.readInt32();
+        total_tp_.write_byte_ = input.readInt64();
+        total_tp_.write_file_count_ = input.readInt64();
+        total_tp_.read_byte_ = input.readInt64();
+        total_tp_.read_file_count_ = input.readInt64();
+        current_time_ = input.readInt32();
+        status_ = (DataServerLiveStatus)input.readInt32();
+        return input.getDataLen();
+      }
     };
 
     struct WriteDataInfo
@@ -380,6 +579,23 @@ namespace tfs
         block_id_(block_id), file_id_(0), crc_(0), flag_(flag)
       {
         fail_servers_.clear();
+      }
+    };
+
+    struct BlockInfoSeg
+    {
+      common::VUINT64 ds_;
+      bool has_lease_;
+      uint32_t lease_;
+      int32_t version_;
+      BlockInfoSeg() : has_lease_(false), lease_(0), version_(0)
+      {
+        ds_.clear();
+      }
+      BlockInfoSeg(const common::VUINT64& ds, const bool has_lease = false,
+                   const uint32_t lease = 0, const int32_t version = 0) :
+        ds_(ds), has_lease_(has_lease), lease_(lease), version_(version)
+      {
       }
     };
 

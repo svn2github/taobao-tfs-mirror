@@ -18,7 +18,7 @@
 
 #include <string>
 #include <map>
-#include "interval.h"
+#include "internal.h"
 #include "func.h"
 
 namespace tfs
@@ -54,8 +54,8 @@ namespace tfs
       }
 
       static Configure& get_configure();
-      static int32_t get_cluster_id();
-      static void set_cluster_id(const int32_t cluster_id);
+      //static int32_t get_cluster_id();
+      //static void set_cluster_id(const int32_t cluster_id);
 
     protected:
       static const int32_t CFG_KEY_LEN = 128;

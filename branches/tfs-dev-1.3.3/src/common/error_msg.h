@@ -31,6 +31,12 @@ namespace tfs
     // static const int EXIT_NOT_INIT_ERROR = -1006;
     //static const int32_t EXIT_NOT_PERM_OPER = -1007;
 
+    const int32_t EXIT_CHECK_CRC_ERROR = -1008;
+    const int32_t EXIT_DESERIALIZE_ERROR = -1009;
+    const int32_t EXIT_SERIALIZE_ERROR = -1010;
+    const int32_t EXIT_ACCESS_PERMISSION_ERROR = -1011; //access permission error
+    const int32_t EXIT_SYSTEM_PARAMETER_ERROR = -1012; //system parameter error
+
     const int32_t EXIT_FILE_OP_ERROR = -2000;
     const int32_t EXIT_OPEN_FILE_ERROR = -2001;
     const int32_t EXIT_INVALID_FD = -2002;
@@ -47,6 +53,9 @@ namespace tfs
     const int32_t EXIT_SENDMSG_ERROR = -3003;
     const int32_t EXIT_RECVMSG_ERROR = -3004;
     const int32_t EXIT_TIMEOUT_ERROR = -3005;
+    const int32_t EXIT_WAITID_EXIST_ERROR = -3006;//waitid exist error
+    const int32_t EXIT_WAITID_NOT_FOUND_ERROR = -3007;//waitid not found in waitid set
+    const int32_t EXIT_SOCKET_NOT_FOUND_ERROR = -3008;//socket nof found in socket map
 
     const int32_t EXIT_TFS_ERROR = -5000;
     const int32_t EXIT_NO_BLOCK = -5001;
@@ -59,6 +68,10 @@ namespace tfs
     const int32_t EXIT_BINLOG_ERROR = -5008;
     const int32_t EXIT_NO_REPLICATE = -5009;
     const int32_t EXIT_BLOCK_BUSY = -5010;
+    const int32_t EXIT_UPDATE_BLOCK_INFO_VERSION_ERROR = -5011;//update block information version error
+    const int32_t EXIT_ACCESS_MODE_ERROR = -5012;//access mode error
+    const int32_t EXIT_PLAY_LOG_ERROR = -5013;//play log error
+    const int32_t EXIT_NAMESERVER_ONLY_READ = -5014;//current nameserver only read
 
     const int32_t EXIT_WRITE_OFFSET_ERROR = -8001; // write offset error
     const int32_t EXIT_READ_OFFSET_ERROR = -8002; // read offset error

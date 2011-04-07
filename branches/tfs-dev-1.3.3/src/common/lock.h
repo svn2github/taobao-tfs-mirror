@@ -36,7 +36,7 @@ namespace tfs
       public:
         typedef ScopedRWLock Lock;
         RWLock(ELockMode lockMode = NO_PRIORITY);
-        ~RWLock();
+        virtual ~RWLock();
 
         int rdlock();
         int wrlock();

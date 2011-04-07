@@ -78,81 +78,113 @@ namespace tfs
       if (ret != TFS_SUCCESS)
         return ret;
 
-      // get top work directory
-      const char *top_work_dir = CONFIG.get_string_value(CONFIG_PUBLIC, CONF_WORK_DIR);
-      if (top_work_dir == NULL)
+      char* index = CONFIG.get_string_value(CONFIG_PUBLIC, CONF_CLUSTER_ID);
+      if (index == NULL 
+          || strlen(index) < 1
+          || !isdigit(index[0]))
       {
-        TBSYS_LOG(ERROR, "work directory config not found");
-        return EXIT_CONFIG_ERROR;
+        fprintf(stderr, "%s(%s) is invalid\n", CONF_CLUSTER_ID, index == NULL ? "null" : index);
+        return EXIT_SYSTEM_PARAMETER_ERROR; 
       }
+      nameserver_.cluster_index_ = index[0];
 
-      char default_work_dir[MAX_PATH_LENGTH], default_log_file[MAX_PATH_LENGTH], default_pid_file[MAX_PATH_LENGTH];
-      snprintf(default_work_dir, MAX_PATH_LENGTH-1, "%s/nameserver", top_work_dir);
-      snprintf(default_log_file, MAX_PATH_LENGTH-1, "%s/logs/nameserver.log", top_work_dir);
-      snprintf(default_pid_file, MAX_PATH_LENGTH-1, "%s/logs/nameserver.pid", top_work_dir);
-      nameserver_.work_dir_ = CONFIG.get_string_value(CONFIG_NAMESERVER, CONF_WORK_DIR, default_work_dir);
-      nameserver_.log_file_ = CONFIG.get_string_value(CONFIG_NAMESERVER, CONF_LOG_FILE, default_log_file);
-      nameserver_.pid_file_ = CONFIG.get_string_value(CONFIG_NAMESERVER, CONF_LOCK_FILE, default_pid_file);
-
-      nameserver_.min_replication_ = CONFIG.get_int_value(CONFIG_PUBLIC, CONF_MIN_REPLICATION);
-      nameserver_.max_replication_ = CONFIG.get_int_value(CONFIG_PUBLIC, CONF_MAX_REPLICATION);
       int32_t block_use_ratio = CONFIG.get_int_value(CONFIG_PUBLIC, CONF_BLOCK_USE_RATIO, 95);
-      if (block_use_ratio > 100)
-        block_use_ratio = 100;
+      if (block_use_ratio <= 0)
+        block_use_ratio = 95;
+      block_use_ratio = std::min(100, block_use_ratio);
       int32_t max_block_size = CONFIG.get_int_value(CONFIG_PUBLIC, CONF_BLOCK_MAX_SIZE);
-      int32_t writeBlockSize = (int32_t)(((double) max_block_size * block_use_ratio) / 100);
+      if (max_block_size <= 0)
+      {
+        fprintf(stderr, "%s(%d) is invalid\n", CONF_BLOCK_MAX_SIZE, max_block_size);
+        return EXIT_SYSTEM_PARAMETER_ERROR; 
+      }
       // roundup to 1M
+      int32_t writeBlockSize = (int32_t)(((double) max_block_size * block_use_ratio) / 100);
       nameserver_.max_block_size_ = (writeBlockSize & 0xFFF00000) + 1024 * 1024;
-      if (nameserver_.max_block_size_ > max_block_size)
-        nameserver_.max_block_size_ = max_block_size;
+      nameserver_.max_block_size_ = std::max(nameserver_.max_block_size_, max_block_size);
 
-      nameserver_.max_write_file_count_ = CONFIG.get_int_value(CONFIG_NAMESERVER, CONF_MAX_WRITE_FILECOUNT);
-      nameserver_.max_use_capacity_ratio_ = CONFIG.get_int_value(CONFIG_PUBLIC, CONF_USE_CAPACITY_RATIO);
+
+      nameserver_.min_replication_ = CONFIG.get_int_value(CONFIG_PUBLIC, CONF_MIN_REPLICATION, 2);
+      nameserver_.max_replication_ = CONFIG.get_int_value(CONFIG_PUBLIC, CONF_MAX_REPLICATION, 2);
+      if (nameserver_.min_replication_ <= 0)
+         nameserver_.min_replication_ = 2;
+      nameserver_.max_replication_ = std::max(nameserver_.min_replication_, nameserver_.max_replication_);
+
+      nameserver_.replicate_ratio_ = CONFIG.get_int_value(CONFIG_NAMESERVER, CONF_REPLICATE_RATIO, 50);
+      if (nameserver_.replicate_ratio_ <= 0)
+        nameserver_.replicate_ratio_ = 50;
+      nameserver_.replicate_ratio_ = std::min(nameserver_.replicate_ratio_, 100);
+
+      nameserver_.max_write_file_count_ = CONFIG.get_int_value(CONFIG_NAMESERVER, CONF_MAX_WRITE_FILECOUNT, 16);
+      nameserver_.max_write_file_count_ = std::min(nameserver_.max_write_file_count_, 128);
+
+      nameserver_.max_use_capacity_ratio_ = CONFIG.get_int_value(CONFIG_PUBLIC, CONF_USE_CAPACITY_RATIO, 98);
+      nameserver_.max_use_capacity_ratio_ = std::min(nameserver_.max_use_capacity_ratio_, 100);
 
       TBSYS_LOG(INFO, "load configure::max_block_size_:%u, min_replication_:%u,"
-                "max_replication_:%u,max_write_file_count_:%u,max_use_capacity_ratio_:%u", nameserver_.max_block_size_,
-                nameserver_.min_replication_, nameserver_.max_replication_, nameserver_.max_write_file_count_,
-                nameserver_.max_use_capacity_ratio_);
+        "max_replication_:%u,max_write_file_count_:%u,max_use_capacity_ratio_:%u\n", nameserver_.max_block_size_,
+          nameserver_.min_replication_, nameserver_.max_replication_, nameserver_.max_write_file_count_,
+          nameserver_.max_use_capacity_ratio_);
 
-      char* group_mask_str = CONFIG.get_string_value(CONFIG_NAMESERVER, CONF_GROUP_MASK);
-      if (group_mask_str != NULL)
-      {
-        nameserver_.group_mask_ = Func::get_addr(group_mask_str);
-      }
-      else
-      {
-        nameserver_.group_mask_ = Func::get_addr("255.255.255.255");
-      }
+      char* group_mask_str = CONFIG.get_string_value(CONFIG_NAMESERVER, CONF_GROUP_MASK, "255.255.255.255");
+      if (group_mask_str == NULL)
+          group_mask_str = "255.255.255.255";
+      nameserver_.group_mask_ = Func::get_addr(group_mask_str);
+
       nameserver_.heart_interval_ = CONFIG.get_int_value(CONFIG_DATASERVER, CONF_HEART_INTERVAL, 2);
-      nameserver_.ds_dead_time_ = CONFIG.get_int_value(CONFIG_NAMESERVER, CONF_DS_DEAD_TIME)
-        + nameserver_.heart_interval_;
+      if (nameserver_.heart_interval_ <= 0)
+        nameserver_.heart_interval_ = 2;
 
-      nameserver_.replicate_check_interval_ = CONFIG.get_int_value(CONFIG_NAMESERVER, CONF_REPL_CHECK_INTERVAL, 15);
-      nameserver_.redundant_check_interval_
-        = CONFIG.get_int_value(CONFIG_NAMESERVER, CONF_REDUNDANT_CHECK_INTERVAL, 30);
-      nameserver_.balance_check_interval_ = CONFIG.get_int_value(CONFIG_NAMESERVER, CONF_BALANCE_CHECK_INTERVAL, 300);
-      nameserver_.replicate_max_time_ = CONFIG.get_int_value(CONFIG_NAMESERVER, CONF_REPL_MAX_TIME, 180);
+      nameserver_.config_log_file_ = CONFIG.get_string_value(CONFIG_NAMESERVER, CONF_LOG_FILE);
       nameserver_.replicate_wait_time_ = CONFIG.get_int_value(CONFIG_NAMESERVER, CONF_REPL_WAIT_TIME, 240);
-      nameserver_.replicate_max_count_per_server_ = CONFIG.get_int_value(CONFIG_NAMESERVER, CONF_REPL_MAX_COUNT, 3);
-      nameserver_.compact_check_interval_ = CONFIG.get_int_value(CONFIG_NAMESERVER, CONF_COMPACT_CHECK_INTERVAL, 600);
+      if (nameserver_.replicate_wait_time_ <= 0)
+        nameserver_.replicate_wait_time_ = 240;
       nameserver_.compact_delete_ratio_ = CONFIG.get_int_value(CONFIG_NAMESERVER, CONF_COMPACT_DELETE_RATIO, 15);
-      char* hour_range = CONFIG.get_string_value(CONFIG_NAMESERVER, CONF_COMPACT_HOUR_RANGE, "2~7");
-      set_hour_range(hour_range, nameserver_.compact_time_lower_, nameserver_.compact_time_upper_);
+      if (nameserver_.compact_delete_ratio_ <= 0)
+        nameserver_.compact_delete_ratio_ = 15;
+      nameserver_.compact_delete_ratio_ = std::min(nameserver_.compact_delete_ratio_, 100);
+
       nameserver_.compact_max_load_ = CONFIG.get_int_value(CONFIG_NAMESERVER, CONF_COMPACT_MAX_LOAD, 100);
-      nameserver_.compact_preserve_time_ = CONFIG.get_int_value(CONFIG_NAMESERVER, CONF_COMPACT_PRESERVE_TIME, 300);
+      nameserver_.object_dead_max_time_ = CONFIG.get_int_value(CONFIG_NAMESERVER, CONF_OBJECT_DEAD_MAX_TIME, 86400);
+      if (nameserver_.object_dead_max_time_ <=  0)
+        nameserver_.object_dead_max_time_ = 86400;
+      nameserver_.object_clear_max_time_ = CONFIG.get_int_value(CONFIG_NAMESERVER, CONF_OBJECT_CLEAR_MAX_TIME, 300);
+      if (nameserver_.object_clear_max_time_ <= 0)
+        nameserver_.object_clear_max_time_ = 300;
 
-      char* index = CONFIG.get_string_value(CONFIG_PUBLIC, CONF_CLUSTER_ID, "1");
-      if (index && strlen(index) >= 1)
-        nameserver_.cluster_index_ = index[0];
-
-      nameserver_.max_wait_write_lease_ = CONFIG.get_int_value(CONFIG_NAMESERVER, CONF_MAX_WAIT_WRITE_LEASE, 10);
-      hour_range = CONFIG.get_string_value(CONFIG_NAMESERVER, CONF_CLEANUP_LEASE_HOUR_RANGE, "2~5");
-      set_hour_range(hour_range, nameserver_.cleanup_lease_time_lower_, nameserver_.cleanup_lease_time_upper_);
-      nameserver_.cleanup_lease_count_ = CONFIG.get_int_value(CONFIG_NAMESERVER, CONF_CLEANUP_LEASE_COUNT, 100);
-      nameserver_.cleanup_lease_threshold_
-        = CONFIG.get_int_value(CONFIG_NAMESERVER, CONF_CLEANUP_LEASE_THRESHOLD, 5000);
+     int32_t thread_count = CONFIG.get_int_value(CONFIG_NAMESERVER, CONF_THREAD_COUNT, 1);
+      nameserver_.max_wait_write_lease_ = CONFIG.get_int_value(CONFIG_NAMESERVER, CONF_MAX_WAIT_WRITE_LEASE, 5);
+      if (nameserver_.max_wait_write_lease_ >= thread_count)
+        nameserver_.max_wait_write_lease_ = thread_count / 2;
+        
       nameserver_.add_primary_block_count_ = CONFIG.get_int_value(CONFIG_NAMESERVER, CONF_ADD_PRIMARY_BLOCK_COUNT, 3);
-      nameserver_.safe_mode_time_ = CONFIG.get_int_value(CONFIG_NAMESERVER, CONF_SAFE_MODE_TIME, 60);
+      if (nameserver_.add_primary_block_count_ <= 0)
+        nameserver_.add_primary_block_count_ = 3;
+      nameserver_.add_primary_block_count_ = std::min(nameserver_.add_primary_block_count_, nameserver_.max_write_file_count_);
+
+      nameserver_.safe_mode_time_ = CONFIG.get_int_value(CONFIG_NAMESERVER, CONF_SAFE_MODE_TIME, 300);
+      if (nameserver_.safe_mode_time_ <= 0)
+        nameserver_.safe_mode_time_ = 300;
+
+      nameserver_.build_plan_interval_ = CONFIG.get_int_value(CONFIG_NAMESERVER, CONF_BUILD_PLAN_INTERVAL, 30);
+      if (nameserver_.build_plan_interval_ <= 30)
+        nameserver_.build_plan_interval_ = 30;
+      nameserver_.run_plan_expire_interval_ = CONFIG.get_int_value(CONFIG_NAMESERVER, CONF_RUN_PLAN_EXPIRE_INTERVAL, 120);
+      if (nameserver_.run_plan_expire_interval_ <= 0)
+        nameserver_.run_plan_expire_interval_ = 120;
+      nameserver_.run_plan_ratio_ = CONFIG.get_int_value(CONFIG_NAMESERVER, CONF_RUN_PLAN_RATIO,25);
+      if (nameserver_.run_plan_ratio_ <= 25)
+        nameserver_.run_plan_ratio_ = 25;
+      nameserver_.run_plan_ratio_ = std::min(nameserver_.run_plan_ratio_, 100);
+      nameserver_.dump_stat_info_interval_ = CONFIG.get_int_value(CONFIG_NAMESERVER, CONF_DUMP_STAT_INFO_INTERVAL, 10000000);
+      if (nameserver_.dump_stat_info_interval_ <= 60000000)
+        nameserver_.dump_stat_info_interval_ = 60000000;
+      nameserver_.build_plan_default_wait_time_ = CONFIG.get_int_value(CONFIG_NAMESERVER, CONF_BUILD_PLAN_DEFAULT_WAIT_TIME, 2);//s
+      if (nameserver_.build_plan_default_wait_time_ <= 0)
+        nameserver_.build_plan_default_wait_time_ = 2;
+      nameserver_.balance_max_diff_block_num_ = CONFIG.get_int_value(CONFIG_NAMESERVER, CONF_BALANCE_MAX_DIFF_BLOCK_NUM, 5);//s
+      if (nameserver_.balance_max_diff_block_num_ <= 0)
+        nameserver_.balance_max_diff_block_num_ = 5;
       return TFS_SUCCESS;
     }
 

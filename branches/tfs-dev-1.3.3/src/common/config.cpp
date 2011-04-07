@@ -23,7 +23,7 @@ namespace tfs
   namespace common
   {
     static Configure configure;
-    static char g_cluster_id = '1';
+    //static char g_cluster_id = '1';
 
     Configure::Configure()
     {
@@ -50,7 +50,7 @@ namespace tfs
       return configure;
     }
 
-    int32_t Configure::get_cluster_id()
+    /*int32_t Configure::get_cluster_id()
     {
       configure.check_load();
       return g_cluster_id;
@@ -59,7 +59,7 @@ namespace tfs
     void Configure::set_cluster_id(const int32_t cluster_id)
     {
       g_cluster_id = cluster_id;
-    }
+    }*/
 
     int Configure::parse_value(char* str, char* key, char* val)
     {
@@ -167,8 +167,8 @@ namespace tfs
         m->insert(STRING_MAP::value_type(Func::str_to_lower(key), value));
       }
       fclose(fp);
-      char* tarea = get_string_value(CONFIG_PUBLIC, CONF_CLUSTER_ID, "1");
-      g_cluster_id = tarea[0];
+      //char* tarea = get_string_value(CONFIG_PUBLIC, CONF_CLUSTER_ID, "1");
+      //g_cluster_id = tarea[0];
       is_load_ = true;
       config_file_name_ = filename;
       return TFS_SUCCESS;

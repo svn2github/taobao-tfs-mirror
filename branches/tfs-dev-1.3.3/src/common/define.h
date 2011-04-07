@@ -23,6 +23,7 @@
 #include <ext/hash_map>
 #include <string.h>
 #include <stdint.h>
+#include <assert.h>
 #include "client_define.h"
 
 #if __WORDSIZE == 32
@@ -37,6 +38,12 @@ namespace __gnu_cxx
   };
 }
 #endif
+
+
+//#define TFS_MOCK
+//#define TFS_NS_GTEST 
+//#define TFS_NS_INTEGRATION
+//#define TFS_NS_DEBUG
 
 namespace tfs
 {
@@ -156,6 +163,8 @@ namespace tfs
     static const int32_t DEFAULT_BLOCK_CACHE_ITEMS = 500000;
 
     static const int32_t ADMIN_WARN_DEAD_COUNT = 1;
+
+    static const int64_t DEFAULT_NETWORK_CALL_TIMEOUT  = 3000000;//3s
 
     typedef std::vector<FileInfo*> FILE_INFO_LIST;
   }
