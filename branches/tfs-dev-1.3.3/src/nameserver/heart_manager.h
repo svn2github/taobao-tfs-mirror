@@ -21,103 +21,99 @@
 #define TFS_NAMESERVER_HEART_MANAGEMENT_
 
 #include <Timer.h>
-#include "replicate.h"
-#include "meta_manager.h"
-#include "proactor_data_pipe.h"
+#include "layout_manager.h"
 #include "message/message_factory.h"
 
 namespace tfs
 {
   namespace nameserver
   {
-
-    // a class for handling the heartbeat from ds
-    class HeartManagement: public ProactorDataPipe<std::deque<message::Message*>, HeartManagement>
+    class HeartManagement : public tbnet::IPacketQueueHandler
     {
     public:
-      typedef ProactorDataPipe<std::deque<message::Message*>, HeartManagement> base_type;
-    public:
-      HeartManagement(MetaManager& m, ReplicateLauncher& l);
+      HeartManagement(LayoutManager& manager);
       virtual ~HeartManagement();
-      int initialize(const int32_t thread_count, const int32_t max_queue_size);
-      int execute(message::Message* msg, void* args);
+      int initialize(int32_t thread_count, int32_t max_queue_size);
+      void wait_for_shut_down();
+      void destroy();
       int push(message::Message* msg);
-
-    private:
+      virtual bool handlePacketQueue(tbnet::Packet *packet, void *args);
       DISALLOW_COPY_AND_ASSIGN( HeartManagement);
-      int join_ds(message::Message* msg);
-
     private:
-      MetaManager& meta_mgr_;
-      ReplicateLauncher & replicate_lancher_;
+      int keepalive(tbnet::Packet* packet);
+      LayoutManager& meta_mgr_;
       int32_t max_queue_size_;
+      tbnet::PacketQueueThread work_thread_;
     };
 
-    // a class for checking whether it is master.
     class CheckOwnerIsMasterTimerTask: public tbutil::TimerTask
     {
     public:
-      CheckOwnerIsMasterTimerTask(MetaManager* mm);
+      CheckOwnerIsMasterTimerTask(LayoutManager* mm);
       virtual ~CheckOwnerIsMasterTimerTask()
       {
       }
       virtual void runTimerTask();
     private:
       DISALLOW_COPY_AND_ASSIGN( CheckOwnerIsMasterTimerTask);
-      MetaManager* meta_mgr_;
+      void master_lost_vip(NsRuntimeGlobalInformation& ngi);
+      void check_when_slave_hold_vip(NsRuntimeGlobalInformation& ngi);
+      void ns_force_modify_other_side();
+      void ns_switch(const NsStatus& other_side_status, const NsSyncDataFlag& ns_sync_flag);
+      LayoutManager* meta_mgr_;
     };
     typedef tbutil::Handle<CheckOwnerIsMasterTimerTask> CheckOwnerIsMasterTimerTaskPtr;
 
     class MasterHeartTimerTask: public tbutil::TimerTask
     {
     public:
-      MasterHeartTimerTask(MetaManager* mm);
+      MasterHeartTimerTask(LayoutManager* mm);
       virtual ~MasterHeartTimerTask()
       {
       }
       virtual void runTimerTask();
     private:
       DISALLOW_COPY_AND_ASSIGN( MasterHeartTimerTask);
-      MetaManager* meta_mgr_;
+      LayoutManager* meta_mgr_;
     };
     typedef tbutil::Handle<MasterHeartTimerTask> MasterHeartTimerTaskPtr;
 
     class SlaveHeartTimerTask: public tbutil::TimerTask
     {
     public:
-      SlaveHeartTimerTask(MetaManager* mm, tbutil::TimerPtr& timer);
+      SlaveHeartTimerTask(LayoutManager* mm, tbutil::TimerPtr& timer);
       virtual ~SlaveHeartTimerTask()
       {
       }
       virtual void runTimerTask();
     private:
       DISALLOW_COPY_AND_ASSIGN( SlaveHeartTimerTask);
-      MetaManager* meta_mgr_;
+      LayoutManager* meta_mgr_;
       tbutil::TimerPtr& timer_;
     };
     typedef tbutil::Handle<SlaveHeartTimerTask> SlaveHeartTimerTaskPtr;
 
-    // a class for handling the heartbeat from the other ns.
-    class MasterAndSlaveHeartManager: public ProactorDataPipe<std::deque<message::Message*>, MasterAndSlaveHeartManager>
+    class MasterAndSlaveHeartManager: public tbnet::IPacketQueueHandler
     {
-      template<typename Container, typename Executor> friend class ProactorDataPipe;
     public:
-      MasterAndSlaveHeartManager(MetaManager* mm, tbutil::TimerPtr& timer);
+      MasterAndSlaveHeartManager(LayoutManager* mm, tbutil::TimerPtr& timer);
       ~MasterAndSlaveHeartManager();
 
     public:
       int initialize();
       int wait_for_shut_down();
       int destroy();
+      int push(message::Message* message, int32_t max_queue_size = 0, bool block = false);
     private:
-      int execute(message::Message* message, void* args);
+      virtual bool handlePacketQueue(tbnet::Packet *packet, void *args);
       int do_master_msg(message::Message* message, void* args);
       int do_slave_msg(message::Message* message, void* args);
       int do_heartbeat_and_ns_msg(message::Message* message, void* args);
     private:
       DISALLOW_COPY_AND_ASSIGN( MasterAndSlaveHeartManager);
-      MetaManager* meta_mgr_;
+      LayoutManager* meta_mgr_;
       tbutil::TimerPtr& timer_;
+      tbnet::PacketQueueThread work_thread_;
     };
   }
 }

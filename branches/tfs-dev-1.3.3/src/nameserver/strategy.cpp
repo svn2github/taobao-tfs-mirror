@@ -19,7 +19,10 @@
  */
 #include <tbsys.h>
 #include "strategy.h"
+#include "block_collect.h"
+#include "global_factory.h"
 #include <numeric>
+#include <set>
 
 using namespace tfs::common;
 using namespace tbsys;
@@ -28,13 +31,13 @@ namespace tfs
 {
   namespace nameserver
   {
-
+    static const int8_t BASE_MULTIPLE = 2;
     template<typename T1, typename T2>
     int32_t percent(T1 v, T2 total)
     {
       if (total == 0)
-        total = v;
-      return std::min(static_cast<int32_t> (100 * (static_cast<double> (v) / total)), 100);
+        total = v == 0 ? 1 : v;
+      return std::min(static_cast<int32_t> (10000 * (static_cast<double> (v) / total)), 10000);
     }
 
     bool check_average(int32_t current_load, int32_t total_load, int64_t use_capacity, int64_t total_use_capacity,
@@ -42,159 +45,131 @@ namespace tfs
     {
       if (alive_ds_count == 0)
       {
+        #if defined(TFS_NS_GTEST) || defined(TFS_NS_INTEGRATION) || defined(TFS_NS_DEBUG)
         TBSYS_LOG(DEBUG, "alive dataserver not found alive_ds_count(%"PRI64_PREFIX"d)", alive_ds_count);
-        return 0;
+        #endif
+        return false;
       }
       int64_t average_load = total_load / alive_ds_count;
       int64_t average_use = total_use_capacity / alive_ds_count;
+      #if defined(TFS_NS_GTEST) || defined(TFS_NS_INTEGRATION) || defined(TFS_NS_DEBUG)
+      TBSYS_LOG(DEBUG, "alive_ds_count: %"PRI64_PREFIX"d, total_load: %d, average_load: %"PRI64_PREFIX"d current_load: %d, total_use_capacity: %"PRI64_PREFIX"d,average_use: %"PRI64_PREFIX"d",
+        alive_ds_count, total_load, average_load, current_load, total_use_capacity, average_use); 
+      #endif
 
-      return (((current_load < average_load * 2) || (total_load == 0)) && ((use_capacity <= average_use * 2)
+      return (((current_load < average_load * BASE_MULTIPLE) || (total_load == 0)) && ((use_capacity <= average_use * BASE_MULTIPLE)
           || (total_use_capacity == 0)));
     }
 
-    int BaseStrategy::check(const ServerCollect* server_collect) const
+    bool BaseStrategy::check(const ServerCollect* server) const
     {
-      if (!server_collect->is_alive())
+      if (!server->is_alive())
       {
+        #if defined(TFS_NS_GTEST) || defined(TFS_NS_INTEGRATION) || defined(TFS_NS_DEBUG)
         TBSYS_LOG(DEBUG, "dataserver(%s) is dead, can't join ",
-            CNetUtil::addrToString(server_collect->get_ds()->id_).c_str());
-        return 0;
+            CNetUtil::addrToString(server->id()).c_str());
+        #endif
+        return false;
       }
-      const DataServerStatInfo* ds_stat_info = server_collect->get_ds();
 
-      return check_average(ds_stat_info->current_load_, global_info_.total_load_, ds_stat_info->use_capacity_,
+      #if defined(TFS_NS_GTEST) || defined(TFS_NS_INTEGRATION) || defined(TFS_NS_DEBUG)
+      TBSYS_LOG(DEBUG, "server(%s),elect_seq_num(%"PRI64_PREFIX"d)",
+        tbsys::CNetUtil::addrToString(server->id()).c_str(), server->get_elect_num());
+      #endif
+      return check_average(server->load(), global_info_.total_load_, server->use_capacity(),
           global_info_.total_capacity_, global_info_.alive_server_count_);
     }
 
-    void BaseStrategy::normalize(const ServerCollect* server_collect) const
+    void BaseStrategy::normalize(const ServerCollect* server) const
     {
-      int32_t primary_writable_block_count =
-          static_cast<int32_t> (server_collect->get_primary_writable_block_list()->size());
-
-      const DataServerStatInfo* ds_stat_info = server_collect->get_ds();
+      int32_t primary_writable_block_count = server->get_hold_master_size();
 
       primary_writable_block_count_ = percent(primary_writable_block_count, SYSPARAM_NAMESERVER.max_write_file_count_);
 
-      seqno_ = percent(server_collect->get_elect_seq(), elect_seqno_);
+      //seqno_average_num_ = percent(server->get_elect_seq(), total_elect_num_);
+      elect_average_num_ = percent(server->get_elect_num(), total_elect_num_);
 
       if (global_info_.max_block_count_ == 0)
-        use_ = percent(ds_stat_info->use_capacity_, ds_stat_info->total_capacity_);
+        use_ = percent(server->use_capacity(), server->total_capacity());
       else
-        use_ = percent(ds_stat_info->block_count_, global_info_.max_block_count_);
+        use_ = percent(server->block_count(), global_info_.max_block_count_);
 
       if (global_info_.max_load_ < 10)
-        load_ = percent(ds_stat_info->current_load_, 3000);
+        load_ = percent(server->load(), 3000);
       else
-        load_ = percent(ds_stat_info->current_load_, global_info_.max_load_);
+        load_ = percent(server->load(), global_info_.max_load_);
+      #if defined(TFS_NS_GTEST) || defined(TFS_NS_INTEGRATION) || defined(TFS_NS_DEBUG)
+      TBSYS_LOG(DEBUG, "server(%s), elect_seq_num(%"PRI64_PREFIX"d), load(%d), use_(%d), elect_average_num_(%"PRI64_PREFIX"d), seqno_average_num_(%"PRI64_PREFIX"d)",
+        tbsys::CNetUtil::addrToString(server->id()).c_str(), server->get_elect_num(), load_, use_,elect_average_num_, seqno_average_num_);
+      #endif
     }
 
     //---------------------------------------------------------
     // WriteStrategy 
     //---------------------------------------------------------
-    int64_t WriteStrategy::calc(const ServerCollect* server_collect) const
+    int64_t WriteStrategy::calc(const ServerCollect* server) const
     {
-      if (server_collect->is_disk_full())
+      if (server->is_full())
       {
-        TBSYS_LOG(DEBUG, "dataserver(%s) is full , can't join elect list", CNetUtil::addrToString(
-            server_collect->get_ds()->id_).c_str());
+        #if defined(TFS_NS_GTEST) || defined(TFS_NS_INTEGRATION) || defined(TFS_NS_DEBUG)
+        TBSYS_LOG(INFO, "dataserver(%s) is full , can't join elect list", CNetUtil::addrToString(
+            server->id()).c_str());
+        #endif
         return 0;
       }
-      if (BaseStrategy::check(server_collect) == 0)
+      if (!BaseStrategy::check(server))
       {
-        TBSYS_LOG(DEBUG, "BaseStrategy::check == 0 , can't join elect list");
+        #if defined(TFS_NS_GTEST) || defined(TFS_NS_INTEGRATION) || defined(TFS_NS_DEBUG)
+        TBSYS_LOG(INFO, "server(%s) can't join elect list", CNetUtil::addrToString(server->id()).c_str());
+        #endif
         return 0;
       }
-      return server_collect->get_elect_seq();
+      return server->get_elect_num();
     }
 
-    //---------------------------------------------------------
-    // ReplicateStrategy
-    //---------------------------------------------------------
-    int ReplicateStrategy::check(const ServerCollect* server_collect) const
-    {
-      int64_t count = get_ds_count(counter_, server_collect->get_ds()->id_);
-
-      copy_count_ = percent(count, SYSPARAM_NAMESERVER.replicate_max_count_per_server_);
-      if (count >= SYSPARAM_NAMESERVER.replicate_max_count_per_server_)
-        return 0x00;
-      return 0x01;
-    }
-
-    uint32_t ReplicateStrategy::get_ds_ip(const uint64_t ds_id)
-    {
-      return reinterpret_cast<IpAddr*> (const_cast<uint64_t*> (&ds_id))->ip_;
-    }
-
-    int64_t ReplicateStrategy::inc_ds_count(counter_type& counter, const uint64_t ds_id)
-    {
-      counter_type::iterator iter = counter.find(ds_id);
-      if (iter == counter.end())
-      {
-        counter[ds_id] = 1;
-        return 1;
-      }
-      ++iter->second;
-      return iter->second;
-    }
-
-    int64_t ReplicateStrategy::dec_ds_count(counter_type& counter, const uint64_t ds_id)
-    {
-      counter_type::iterator iter = counter.find(ds_id);
-      if (iter == counter.end())
-        return 0;
-      --iter->second;
-      if (iter->second <= 0)
-      {
-        counter.erase(iter);
-        return 0;
-      }
-      return iter->second;
-    }
-
-    int64_t ReplicateStrategy::get_ds_count(const counter_type& counter, const uint64_t ds_id)
-    {
-      counter_type::const_iterator iter = counter.find(ds_id);
-      if (iter == counter.end())
-        return 0;
-      return iter->second;
-    }
-
-    //---------------------------------------------------------
     // ReplicateDestStrategy
     //---------------------------------------------------------
-    int64_t ReplicateDestStrategy::calc(const ServerCollect* server_collect) const
+    int64_t ReplicateDestStrategy::calc(const ServerCollect* server) const
     {
-      if (server_collect->is_disk_full())
+      if (server->is_full())
+      {
+        #if defined(TFS_NS_GTEST) || defined(TFS_NS_INTEGRATION) || defined(TFS_NS_DEBUG)
+        TBSYS_LOG(INFO, "dataserver(%s) is full , can't join elect list", CNetUtil::addrToString(
+            server->id()).c_str());
+        #endif
         return 0;
-      if (!BaseStrategy::check(server_collect))
+      }
+      if (!BaseStrategy::check(server))
+      {
+        #if defined(TFS_NS_GTEST) || defined(TFS_NS_INTEGRATION) || defined(TFS_NS_DEBUG)
+        TBSYS_LOG(INFO, "server(%s) can't join elect list", CNetUtil::addrToString(server->id()).c_str());
+        #endif
         return 0;
-      if (!ReplicateStrategy::check(server_collect))
-        return 0;
-      BaseStrategy::normalize(server_collect);
-      return seqno_ * 60 + copy_count_ * 20 + use_ * 15 + load_ * 5;
+      }
+      BaseStrategy::normalize(server);
+      return elect_average_num_ * 80 + use_ * 15 + load_ * 5;
     }
 
     //---------------------------------------------------------
     // ReplicateSourceStrategy
     //---------------------------------------------------------
-    int64_t ReplicateSourceStrategy::calc(const ServerCollect* server_collect) const
+    int64_t ReplicateSourceStrategy::calc(const ServerCollect* server) const
     {
-      if (!ReplicateStrategy::check(server_collect))
-        return 0;
-      BaseStrategy::normalize(server_collect);
-      return copy_count_ * 70 + load_ * 30;
+      BaseStrategy::normalize(server);
+      return load_;
     }
 
-    void dump_weigths(const multimap<int32_t, ServerCollect*>& weights)
+    void dump_weigths(const DS_WEIGHT& weights)
     {
-      printf("-----------------------dump_weigths(%"PRI64_PREFIX"u)----------------------\n", weights.size());
-      multimap<int32_t, ServerCollect*>::const_iterator it = weights.begin();
+      TBSYS_LOG(INFO,"-----------------------dump_weigths(%"PRI64_PREFIX"u)----------------------\n", weights.size());
+      DS_WEIGHT::const_iterator it = weights.begin();
       while (it != weights.end())
       {
-        printf("server(%s), weight(%d)", tbsys::CNetUtil::addrToString(it->second->get_ds()->id_).c_str(), it->first);
+        TBSYS_LOG(DEBUG,"server(%s), weight(%"PRI64_PREFIX"d), elect_seq_num(%"PRI64_PREFIX"d), total elect_seq_num(%"PRI64_PREFIX"d)\n", tbsys::CNetUtil::addrToString(it->second->id()).c_str(),
+              it->first, it->second->get_elect_num(), GFactory::get_global_info().elect_seq_num_);
         ++it;
       }
-      printf("-----------------------dump_weigths end----------------------\n");
+      TBSYS_LOG(DEBUG, "%s", "-----------------------dump_weigths end----------------------\n");
     }
 
     //---------------------------------------------------------
@@ -204,16 +179,15 @@ namespace tfs
      * elect_ds_exclude_group
      *
      *
-     * @param [in] weights: choose DataServerStatInfo weights, min to max
-     * @param [in] elect_count: need DataServerStatInfo count
+     * @param [in] weights: choose dataserver weights, min to max
+     * @param [in] elect_count: need dataserver count
      * @param [in] elect_seq: >0, set elect seq
-     * [in,out] elect_ds_list: DataServerStatInfos elected
+     * [in,out] result: dataserver elected
      *
      * @return  elected count
      */
     //
-    int32_t elect_ds_exclude_group(const DS_WEIGHT& weights, const int32_t elect_count, int64_t& elect_seq,
-        VUINT64& elect_ds_list)
+    int32_t elect_ds_exclude_group(const DS_WEIGHT& weights, const int32_t elect_count, vector<ServerCollect*> & result)
     {
       if (elect_count == 0)
       {
@@ -222,29 +196,32 @@ namespace tfs
       }
 
       std::set < uint32_t > existlan;
-      for (uint32_t i = 0; i < elect_ds_list.size(); ++i)
+      std::vector<ServerCollect*>::iterator it = result.begin();
+      for (; it!= result.end(); ++it)
       {
-        uint32_t lan = Func::get_lan(elect_ds_list[i], SYSPARAM_NAMESERVER.group_mask_);
+        uint32_t lan = Func::get_lan((*it)->id(), SYSPARAM_NAMESERVER.group_mask_);
         existlan.insert(lan);
+        (*it)->elect_num_inc();
       }
 
-      //dump_weigths(weights);
+      dump_weigths(weights);
 
       DS_WEIGHT::const_iterator iter = weights.begin();
       int32_t need_elect_count = elect_count;
       TBSYS_LOG(DEBUG, "weights.size(%u), need_elect_count(%d)", weights.size(), need_elect_count);
-      DataServerStatInfo* ds_stat_info = NULL;
       while (iter != weights.end() && need_elect_count > 0)
       {
-        ds_stat_info = iter->second->get_ds();
-        uint32_t dlan = Func::get_lan(ds_stat_info->id_, SYSPARAM_NAMESERVER.group_mask_);
+        uint32_t dlan = Func::get_lan(iter->second->id(), SYSPARAM_NAMESERVER.group_mask_);
         if (existlan.find(dlan) == existlan.end())
         {
-          existlan.insert(dlan);
-          elect_ds_list.push_back(ds_stat_info->id_);
-          if (elect_seq > 0)
-            iter->second->elect(++elect_seq);
           --need_elect_count;
+          existlan.insert(dlan);
+          result.push_back(iter->second);
+          iter->second->elect_num_inc();
+          {
+            common::RWLock::Lock lock(GFactory::get_global_info(), common::WRITE_LOCKER);
+            ++GFactory::get_global_info().elect_seq_num_;
+          }
         }
         ++iter;
       }
@@ -252,8 +229,7 @@ namespace tfs
       return elect_count - need_elect_count;
     }
 
-    int32_t elect_ds_normal(const DS_WEIGHT& weights, const int32_t elect_count, int64_t& elect_seq,
-        VUINT64& elect_ds_list)
+    int32_t elect_ds_normal(const DS_WEIGHT& weights, const int32_t elect_count, vector<ServerCollect*> & result)
     {
       if (elect_count == 0)
         return 0;
@@ -263,115 +239,175 @@ namespace tfs
       DS_WEIGHT::const_iterator iter = weights.begin();
       while (iter != weights.end() && need_elect_count > 0)
       {
-        elect_ds_list.push_back(iter->second->get_ds()->id_);
-        if (elect_seq > 0)
-          iter->second->elect(++elect_seq);
         --need_elect_count;
+        result.push_back(iter->second);
+        //common::RWLock::Lock lock(GFactory::get_global_info(), common::WRITE_LOCKER);
+        //++GFactory::get_global_info().elect_seq_num_;
+        //iter->second->elect_num_inc();
+        //iter->second->elect_seq_inc(GFactory::get_global_info().elect_seq_num_);
         ++iter;
       }
       return elect_count - need_elect_count;
     }
 
-    int32_t elect_write_ds(const LayoutManager& meta, const int32_t elect_count, VUINT64& elect_ds_list)
+    int elect_write_server(LayoutManager& meta, const int32_t elect_count, vector<ServerCollect*> & result)
     {
-      WriteStrategy strategy(meta.get_elect_seq(), *meta.get_ns_global_info());
-      int64_t elect_seq = meta.get_elect_seq();
-      int32_t ret = elect_ds(strategy, ExcludeGroupElectOperation(), meta, elect_count, elect_seq, elect_ds_list);
-      meta.set_elect_seq(elect_seq);
-      return ret;
+      std::vector<ServerCollect*> except;
+      WriteStrategy strategy(GFactory::get_global_info().get_elect_seq_num(), GFactory::get_global_info());
+      return elect_ds(strategy, ExcludeGroupElectOperation(), meta, except, elect_count,false, result);
     }
 
-    int32_t elect_replicate_source_ds(const vector<ServerCollect*>& ds_list,
-        const ReplicateStrategy::counter_type& src_counter, const int32_t elect_count, VUINT64& elect_ds_list)
+    int elect_replicate_source_ds(LayoutManager& meta, vector<ServerCollect*>& source, vector<ServerCollect*>& except, int32_t elect_count, vector<ServerCollect*>& result)
     {
-      vector<ServerCollect*>::const_iterator maxit = std::max_element(ds_list.begin(), ds_list.end(), CompareLoad());
+      vector<ServerCollect*>::const_iterator maxit = std::max_element(source.begin(), source.end(), CompareLoad());
 
       int32_t max_load = 1;
-      if (maxit != ds_list.end())
-        max_load = (*maxit)->get_ds()->current_load_;
+      if (maxit != source.end())
+        max_load = (*maxit)->load();
 
       NsGlobalInfo info;
       info.max_load_ = max_load; // only max_load & alive_server_count could be useful, calc.
-      info.alive_server_count_ = ds_list.size();
+      info.alive_server_count_ = source.size();
       // elect seq not used in this case;
-      ReplicateSourceStrategy strategy(1, info, src_counter);
+      ReplicateSourceStrategy strategy(NsGlobalInfo::ELECT_SEQ_NO_INITIALIZE, info);
 
-      int64_t seq = 0;
-      return elect_ds(strategy, NormalElectOperation(), ds_list, elect_count, seq, elect_ds_list);
+      return elect_ds(strategy, NormalElectOperation(), meta, source, except, elect_count, true, result);
     }
 
-    int32_t elect_replicate_dest_ds(const LayoutManager& meta,
-        const ReplicateSourceStrategy::counter_type& dest_counter, const int32_t elect_count, VUINT64& elect_ds_list)
+    int elect_replicate_dest_ds(LayoutManager& meta, vector<ServerCollect*>& except, int32_t elect_count, vector<ServerCollect*> & result) 
     {
-      ReplicateDestStrategy strategy(meta.get_elect_seq(), *meta.get_ns_global_info(), dest_counter);
-      int64_t elect_seq = meta.get_elect_seq();
-      int32_t ret = elect_ds(strategy, ExcludeGroupElectOperation(), meta, elect_count, elect_seq, elect_ds_list);
-      meta.set_elect_seq(elect_seq);
-      return ret;
+      ReplicateDestStrategy strategy(GFactory::get_global_info().get_elect_seq_num(), GFactory::get_global_info());
+      return elect_ds(strategy, ExcludeGroupElectOperation(), meta, except, elect_count,true, result);
     }
 
-    bool elect_move_dest_ds(const vector<ServerCollect*>& ds_list,
-        const ReplicateDestStrategy::counter_type& dest_counter, const VUINT64& elect_ds_list, const uint64_t src_ds,
-        uint64_t & dest_ds)
+    static uint32_t get_ip(uint64_t id)
     {
-      vector<ServerCollect*>::const_iterator maxit = std::max_element(ds_list.begin(), ds_list.end(), CompareLoad());
+      return (reinterpret_cast<IpAddr*>(&id))->ip_;
+    }
 
+    bool elect_move_dest_ds(const std::set<ServerCollect*>& targets, const vector<ServerCollect*> & source, const ServerCollect* mover, ServerCollect** result)
+    {
+			uint64_t id = 0;
+      uint32_t lan = 0;
       int32_t max_load = 1;
-      if (maxit != ds_list.end())
-        max_load = (*maxit)->get_ds()->current_load_;
+      *result = NULL;
+
+      std::set<ServerCollect*>::const_iterator maxit = std::max_element(targets.begin(), targets.end(), CompareLoad());
+      if (maxit != targets.end())
+        max_load = (*maxit)->load();
 
       NsGlobalInfo ginfo;
       ginfo.max_load_ = max_load; // only max_load & alive_server_count could be useful, calc.
-      ginfo.alive_server_count_ = ds_list.size();
+      ginfo.alive_server_count_ = targets.size();
       // elect seq not used in this case;
-      ReplicateSourceStrategy strategy(1, ginfo, dest_counter);
+      ReplicateSourceStrategy strategy(NsGlobalInfo::ELECT_SEQ_NO_INITIALIZE, ginfo);
 
       DS_WEIGHT weights;
       StoreWeight < ReplicateSourceStrategy > store(strategy, weights);
-      std::for_each(ds_list.begin(), ds_list.end(), store);
+      std::for_each(targets.begin(), targets.end(), store);
 
       std::set < uint32_t > existlan;
-      uint32_t elect_ds_list_size = elect_ds_list.size();
-      for (uint32_t i = 0; i < elect_ds_list_size; ++i)
+      //std::set < ServerCollect*> exist_server;
+      std::vector<ServerCollect*>::const_iterator s_iter = source.begin();
+      for (; s_iter != source.end(); ++s_iter)
       {
-        uint32_t lan = Func::get_lan(elect_ds_list[i], SYSPARAM_NAMESERVER.group_mask_);
+        lan = Func::get_lan((*s_iter)->id(), SYSPARAM_NAMESERVER.group_mask_);
         existlan.insert(lan);
+        TBSYS_LOG(DEBUG, "exist server(%s)", tbsys::CNetUtil::addrToString((*s_iter)->id()).c_str());
+        //exist_server.insert((*s_iter));
       }
 
-      dest_ds = 0;
-      uint64_t first_elect_ds = 0;
-      uint32_t dlan = 0;
-      DataServerStatInfo* ds_stat_info = NULL;
+      ServerCollect* first_result = NULL;
       DS_WEIGHT::const_iterator iter = weights.begin();
       while (iter != weights.end())
       {
-        ds_stat_info = iter->second->get_ds();
-
-        dlan = Func::get_lan(ds_stat_info->id_, SYSPARAM_NAMESERVER.group_mask_);
-
-        if ((first_elect_ds == 0) && (existlan.find(dlan) == existlan.end()))
+				id = iter->second->id();
+        lan = Func::get_lan(id, SYSPARAM_NAMESERVER.group_mask_);
+        TBSYS_LOG(DEBUG, "server(%s) find(%d)", tbsys::CNetUtil::addrToString(id).c_str(),
+          existlan.find(lan) == existlan.end()/*, exist_server.find(iter->second) == exist_server.end()*/);
+        if ((first_result == NULL) 
+            && (existlan.find(lan) == existlan.end()))
+            //&& (exist_server.find(iter->second) == exist_server.end()))
         {
-          first_elect_ds = ds_stat_info->id_;
+          first_result = iter->second;
         }
 
-        if ((dest_ds == 0) && (existlan.find(dlan) == existlan.end()) && (ReplicateStrategy::get_ds_ip(src_ds)
-            == ReplicateStrategy::get_ds_ip(ds_stat_info->id_)))
+        if ((*result == NULL)
+            && (existlan.find(lan) == existlan.end())
+            && (get_ip(id) == get_ip(mover->id())))
+            //&& (exist_server.find(iter->second) == exist_server.end()))
         {
-          dest_ds = ds_stat_info->id_;
+          *result = iter->second;
         }
 
-        if ((first_elect_ds != 0) && (dest_ds != 0))
+        if ((first_result != NULL) && (*result != NULL))
         {
           break;
         }
         ++iter;
       }
 
-      if (dest_ds == 0)
+      if (*result == NULL)
       {
-        dest_ds = first_elect_ds;
+        *result = first_result;
       }
-      return (dest_ds != 0);
+      return (*result != NULL);
+    }
+
+    int delete_excess_backup(const std::vector<ServerCollect*> & source, int32_t count, std::vector<ServerCollect*> & result, DeleteExcessBackupStrategy flag)
+    {
+      bool bret = flag == DELETE_EXCESS_BACKUP_STRATEGY_BY_GROUP ? SYSPARAM_NAMESERVER.group_mask_ == 0 ? false : true : true; 
+      if (bret)
+      {
+        if (flag == DELETE_EXCESS_BACKUP_STRATEGY_BY_GROUP)
+        {
+          count = 0;
+        }
+
+        std::multimap<int32_t, ServerCollect*> tmp;
+        std::multimap<int32_t, ServerCollect*> middle_result;
+
+        std::vector<ServerCollect*>::const_iterator r_iter = source.begin();
+        for (; r_iter != source.end(); ++r_iter)
+        {
+          tmp.insert(std::multimap<int32_t, ServerCollect*>::value_type((*r_iter)->block_count(), (*r_iter)));
+        }
+
+        if (SYSPARAM_NAMESERVER.group_mask_ == 0)
+        {
+          middle_result.insert(tmp.rbegin(), tmp.rend());
+        }
+        else
+        {
+          uint32_t lanip = 0;
+          std::set<uint32_t> groups;
+          std::multimap<int32_t, ServerCollect*>::const_reverse_iterator iter = tmp.rbegin();
+          for (; iter != tmp.rend(); ++iter)
+          {
+            lanip = Func::get_lan(iter->second->id(), SYSPARAM_NAMESERVER.group_mask_);
+            std::pair<std::set<uint32_t>::iterator, bool> res = groups.insert(lanip);
+            if (!res.second)
+            {
+              result.push_back(iter->second);
+            }
+            else
+            {
+              middle_result.insert(std::multimap<int32_t, ServerCollect*>::value_type(iter->second->block_count(), iter->second));
+            }
+          }
+        }
+
+        count -= result.size();
+        if (count <= 0)
+          return result.size();;
+
+        std::multimap<int32_t, ServerCollect*>::const_reverse_iterator iter = middle_result.rbegin();
+        for (; iter != middle_result.rend() && count > 0; ++iter, count--)
+        {
+          result.push_back(iter->second);
+        }
+      }
+      return result.size();;
     }
   }
 }

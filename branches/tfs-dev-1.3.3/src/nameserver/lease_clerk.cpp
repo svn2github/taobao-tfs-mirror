@@ -17,314 +17,521 @@
  *      - modify 2010-04-23
  *
  */
+#include <stdint.h>
 #include <limits.h>
+#include <Handle.h>
 #include <Memory.hpp>
 #include "common/func.h"
 #include "lease_clerk.h"
-#include "block_collect.h"
+#include "global_factory.h"
+#include "common/parameter.h"
+#include "common/config.h"
+#include "common/config_item.h"
 
+#ifndef UINT32_MAX 
+#define UINT32_MAX 4294967295U
+#endif
+
+using namespace std;
 using namespace tfs::common;
 using namespace tbutil;
-using namespace std;
 
 namespace tfs
 {
   namespace nameserver
   {
+    volatile uint32_t LeaseFactory::lease_id_factory_ = 0;
+    volatile uint16_t LeaseFactory::gwait_count_ = 0;
+    int16_t LeaseEntry::LEASE_EXPIRE_DEFAULT_TIME_MS = 3000;//ms
+    int32_t LeaseEntry::LEASE_EXPIRE_TIME_MS = LeaseEntry::LEASE_EXPIRE_DEFAULT_TIME_MS;
+    int64_t LeaseEntry::LEASE_EXPIRE_REMOVE_TIME_MS = 1 * LeaseEntry::LEASE_EXPIRE_TIME_MS * 3600;
+    const uint8_t LeaseClerk::INVALID_LEASE = 0;
+    LeaseFactory LeaseFactory::instance_;
 
-    atomic_t WriteLease::global_lease_id_ =
-      {
-      1
-      };
-
-    uint32_t WriteLease::get_new_lease_id()
+    LeaseEntry::LeaseEntry(LeaseClerkPtr clerk, uint32_t lease_id, int64_t client, LeaseType type):
+      clerk_(clerk),
+      last_update_time_(tbutil::Time::now()),
+      expire_time_(last_update_time_ + tbutil::Time::milliSeconds(LEASE_EXPIRE_TIME_MS)),
+      client_(client),
+      lease_id_(lease_id),
+      type_(type),
+      status_(LEASE_STATUS_RUNNING)
     {
-      uint32_t lease_id = atomic_add_return(1, &global_lease_id_);
-      /*if (lease_id > UINT32_MAX - 1)
-       {
-       atomic_set(global_lease_id_, 1);
-       lease_id = atomic_add_return(1, &global_lease_id_);
-       }*/
-      return lease_id;
+
     }
 
-    LeaseClerk::LeaseClerk() :
-      wait_count_(0)
+    LeaseEntry::~LeaseEntry()
+    {
+
+    }
+
+    uint32_t LeaseEntry::id() const
+    {
+      return lease_id_;
+    }
+  
+    int64_t LeaseEntry::client() const
+    {
+      return client_;
+    }
+    
+    LeaseType LeaseEntry::type() const
+    {
+      return static_cast<LeaseType>(type_);
+    }
+    
+    LeaseStatus LeaseEntry::status() const
+    {
+      return static_cast<LeaseStatus>(status_);
+    }
+
+    void LeaseEntry::runTimerTask()
+    {
+      TBSYS_LOG(DEBUG, "lease id(%u) client id(%"PRI64_PREFIX"d) exipired", lease_id_, client_);
+      clerk_->expire(client_);
+    }
+
+    void LeaseEntry::reset(uint32_t lease_id, LeaseType type)
+    {
+      lease_id_ = lease_id;
+      last_update_time_ = tbutil::Time::now();
+      expire_time_ = last_update_time_ + tbutil::Time::milliSeconds(LEASE_EXPIRE_TIME_MS);
+      type_ = type;
+      status_ = LEASE_STATUS_RUNNING;
+    }
+
+    bool LeaseEntry::is_valid_lease() const
+    {
+      tbutil::Time now = tbutil::Time::now();
+      TBSYS_LOG(DEBUG, "is valid lease status(%d:%s) time(%s)" , status_, status_ == LEASE_STATUS_RUNNING ? "true" : "false",
+         now < expire_time_ ? "true" : "false");
+      return (status_ == LEASE_STATUS_RUNNING
+          && now < expire_time_);
+    }
+
+    bool LeaseEntry::wait_for_expire() const
+    {
+      if (status_ > LEASE_STATUS_RUNNING)
+        return true;
+      Time time_out = expire_time_ - tbutil::Time::now();
+      tbutil::Monitor<tbutil::Mutex>::Lock lock(*this);
+      return timedWait(time_out);
+    }
+
+    void LeaseEntry::change(LeaseStatus status)
+    {
+      status_ = status;
+    }
+
+    bool LeaseEntry::is_remove(tbutil::Time& now, bool check_time) const
+    {
+      if (check_time)
+      {
+        TBSYS_LOG(DEBUG, "%"PRI64_PREFIX"d, %d %d", LEASE_EXPIRE_REMOVE_TIME_MS, LEASE_EXPIRE_DEFAULT_TIME_MS, LEASE_EXPIRE_TIME_MS);
+        return ((status_ >= LEASE_STATUS_FINISH)
+            && (now.toMilliSeconds() >= (expire_time_.toMilliSeconds() + LEASE_EXPIRE_REMOVE_TIME_MS)));
+      }
+      return (status_ >= LEASE_STATUS_FINISH);
+    }
+
+    void LeaseEntry::dump(int64_t id, bool is_valid, int64_t current_wait_count, int64_t max_wait_count) const
+    {
+      TBSYS_LOG(DEBUG, "id(%"PRI64_PREFIX"d),last update time(%"PRI64_PREFIX"d), expire time(%"PRI64_PREFIX"d),"
+          "now time(%"PRI64_PREFIX"d), lease id(%u), is valid(%s), current wait count(%"PRI64_PREFIX"d),"
+          "max wait count(%"PRI64_PREFIX"d) status(%s)",
+          id, last_update_time_.toMicroSeconds(), expire_time_.toMicroSeconds(),
+          tbutil::Time::now().toMicroSeconds(), lease_id_, is_valid ? "true" : "false",
+          current_wait_count, max_wait_count,
+          status_ == LEASE_STATUS_RUNNING? "runing" : status_ == LEASE_STATUS_FINISH? "finsih" 
+          : status_ == LEASE_STATUS_FAILED ? "failed" : status_ == LEASE_STATUS_EXPIRED ? "expired"
+          : status_ == LEASE_STATUS_CANCELED ? "canceled" : status_ == LEASE_STATUS_OBSOLETE ? "obsolet" : "unkown" );
+    }
+
+    LeaseClerk::LeaseClerk(int32_t remove_threshold) :
+      remove_threshold_(remove_threshold)
     {
 
     }
 
     LeaseClerk::~LeaseClerk()
     {
-      destroy();
-    }
-
-    void LeaseClerk::destroy()
-    {
-      tbutil::Mutex::Lock lock(mutex_);
-      LEASE_MAP_ITER it = lease_map_.begin();
-      while (it != lease_map_.end())
+      RWLock::Lock lock(mutex_, WRITE_LOCKER);
+      LEASE_MAP_ITER iter = leases_.begin();
+      while (iter != leases_.end())
       {
-        tbsys::gDelete(it->second);
-        ++it;
+        iter->second->notify();
+        leases_.erase(iter++);
       }
-      lease_map_.clear();
+      leases_.clear();
     }
 
-    bool LeaseClerk::if_need_clear() const
+    void LeaseClerk::clear(bool check_time, bool force)
     {
-      return ((Func::hour_range(SYSPARAM_NAMESERVER.cleanup_lease_time_lower_,
-          SYSPARAM_NAMESERVER.cleanup_lease_time_upper_)) && (lease_map_.size()
-          > static_cast<uint32_t> (SYSPARAM_NAMESERVER.cleanup_lease_threshold_)));
-    }
-
-    void LeaseClerk::clear()
-    {
-      vector < uint32_t > blocks;
-      time_t now = tbsys::CTimeUtil::getTime();
-      TBSYS_LOG(INFO, "prepare to cleanup lease, current lease map size(%u)", lease_map_.size());
-
-      tbutil::Mutex::Lock lock(mutex_);
-      LEASE_MAP_ITER iter = lease_map_.begin();
-      while (iter != lease_map_.end())
+      RWLock::Lock lock(mutex_, WRITE_LOCKER);
+      int32_t size = static_cast<int32_t>(leases_.size());
+      TBSYS_LOG(INFO, "prepare to cleanup lease, current lease map size(%u)", size);
+      tbutil::Time now = tbutil::Time::now();
+      bool remove = true;
+      while (remove)
       {
-        if (iter->second != NULL)
+        remove = ((size >= remove_threshold_) || (force && size > 0));
+        if (remove)
         {
-          if ((iter->second->status_ >= WriteLease::DONE) && (now - iter->second->expire_time_
-              > static_cast<time_t> (WriteLease::LEASE_EXPIRE_TIME * 1000 * 3600)))
+          LEASE_MAP_ITER iter = leases_.begin();
+          while (iter != leases_.end())
           {
-            blocks.push_back(iter->first);
+            if ((iter->second->is_remove(now, check_time))
+                || (force))
+            {
+              iter->second->notify();
+              leases_.erase(iter++);
+            }
+            else
+            {
+              ++iter;
+            }
           }
         }
-        if (static_cast<int32_t> (blocks.size()) > SYSPARAM_NAMESERVER.cleanup_lease_count_)
-          break;
-
-        ++iter;
-      }
-
-      TBSYS_LOG(INFO, "found obselete lease size(%u)", blocks.size());
-
-      for (uint32_t i = 0; i < blocks.size(); ++i)
-      {
-        iter = lease_map_.find(blocks[i]);
-        if (iter != lease_map_.end())
-        {
-          tbsys::gDelete(iter->second);
-          lease_map_.erase(iter);
-        }
-      }
-
-      time_t end = tbsys::CTimeUtil::getTime();
-      TBSYS_LOG(INFO, "cleanup lease complete, current lease map size(%u), consume(%" PRI64_PREFIX "u)", lease_map_.size(), end - now);
+        size = leases_.size();
+     }
+      tbutil::Time end = tbutil::Time::now();
+      TBSYS_LOG(INFO, "cleanup lease complete, current lease map size(%u), consume(%" PRI64_PREFIX "d)",
+          leases_.size(), (end - now).toMicroSeconds());
     }
 
-    WriteLease* LeaseClerk::get_lease(const uint32_t block_id) const
+    bool LeaseClerk::has_valid_lease(int64_t id)
     {
-      LEASE_MAP_CONST_ITER iter = lease_map_.find(block_id);
-      if (iter != lease_map_.end())
-        return iter->second;
-      return NULL;
-    }
-
-    bool LeaseClerk::is_valid_lease(const WriteLease* lease) const
-    {
-      if (lease == NULL)
+      RWLock::Lock lock(mutex_, READ_LOCKER);
+      LeaseEntryPtr lease = find(id);
+      if (lease == 0)
       {
-        TBSYS_LOG(ERROR, "lease not found");
+        //TBSYS_LOG(WARN, "lease not found by id(%"PRI64_PREFIX"d)", id);
         return false;
       }
-      return (lease->status_ == WriteLease::WRITING && tbsys::CTimeUtil::getTime() < lease->expire_time_);
+      return lease->is_valid_lease();
     }
 
-    bool LeaseClerk::has_valid_lease(const uint32_t block_id) const
+    bool LeaseClerk::exist(int64_t id)
     {
-      const WriteLease* lease = get_lease(block_id);
-      if (lease == NULL)
+      RWLock::Lock lock(mutex_, READ_LOCKER);
+      LeaseEntryPtr lease = find(id);
+      return lease != 0;
+    }
+
+    uint32_t LeaseClerk::add(int64_t id)
+    {
+      TBSYS_LOG(DEBUG, "client(%"PRI64_PREFIX"d) register lease", id);
+      NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
+      if (ngi.destroy_flag_ == NS_DESTROY_FLAGS_YES)
       {
-        TBSYS_LOG(WARN, "lease not found by block id(%u)", block_id);
-        return false;
+        TBSYS_LOG(WARN, "%s", "add lease fail because nameserver destroyed");
+        return INVALID_LEASE;
       }
-      return is_valid_lease(lease);
-    }
 
-    bool LeaseClerk::reset(WriteLease& lease)
-    {
-      lease.lease_id_ = WriteLease::get_new_lease_id();
-      lease.last_write_time_ = tbsys::CTimeUtil::getTime();
-      lease.expire_time_ = lease.last_write_time_ + WriteLease::LEASE_EXPIRE_TIME * 1000;
-      lease.status_ = WriteLease::WRITING;
-      return true;
-    }
-
-    void LeaseClerk::inc_wait_count()
-    {
-      tbutil::Mutex::Lock lock(mutex_);
-      ++wait_count_;
-    }
-
-    void LeaseClerk::dec_wait_count()
-    {
-      tbutil::Mutex::Lock lock(mutex_);
-      --wait_count_;
-    }
-
-    uint32_t LeaseClerk::register_lease(const uint32_t block_id)
-    {
-      mutex_.lock();
-      int64_t wait_count = wait_count_;
-      WriteLease* lease = get_lease(block_id);
-      if (lease == NULL)
+      mutex_.rdlock();
+      uint32_t lease_id = INVALID_LEASE;
+      LeaseEntryPtr lease = 0;
+      LEASE_MAP_ITER iter = leases_.find(id);
+      if ((iter == leases_.end())
+          || ( iter != leases_.end() && iter->second == 0))
       {
-        lease = new WriteLease();
-        reset(*lease);
-        lease_map_.insert(LEASE_MAP::value_type(block_id, lease));
         mutex_.unlock();
-        return lease->lease_id_;
+        goto Next;
       }
-
+      lease = iter->second;
       mutex_.unlock();
-      Monitor<Mutex>::Lock lock(lease->monitor_);
-      lease->dump(block_id, is_valid_lease(lease), wait_count, SYSPARAM_NAMESERVER.max_wait_write_lease_);
-      if (!is_valid_lease(lease))
+
+      if (!lease->is_valid_lease())
       {
-        reset(*lease);
-        lease->monitor_.notifyAll();
-        return lease->lease_id_;
+        goto Renew;
       }
 
-      if (wait_count > SYSPARAM_NAMESERVER.max_wait_write_lease_)
+      if (LeaseFactory::gwait_count_ > SYSPARAM_NAMESERVER.max_wait_write_lease_)
       {
-        TBSYS_LOG(WARN, "lease(%u), current wait thread(%"PRI64_PREFIX"d) beyond max_wait(%d)", lease->lease_id_, wait_count,
+        TBSYS_LOG(WARN, "lease(%u), current wait thread(%d) beyond max_wait(%d)", lease->id(), LeaseFactory::gwait_count_,
             SYSPARAM_NAMESERVER.max_wait_write_lease_);
-        return WriteLease::INVALID_LEASE;
+        return INVALID_LEASE;
       }
 
-      inc_wait_count();
+      atomic_inc(&LeaseFactory::gwait_count_);
 
-      Time time_out = Time::milliSeconds(WriteLease::LEASE_EXPIRE_TIME);
-      bool ret = lease->monitor_.timedWait(time_out);
+      //lease was found by id, we must be wait
+      lease->wait_for_expire();
 
-      dec_wait_count();
+      atomic_dec(&LeaseFactory::gwait_count_);
 
-      TBSYS_LOG(DEBUG, "register_lease block(%u) wait end ret(%d), valid(%d)", block_id, ret, is_valid_lease(lease));
-
-      if (!is_valid_lease(lease))
+      if (!lease->is_valid_lease())
       {
-        reset(*lease);
-        lease->monitor_.notifyAll();
-        return lease->lease_id_;
+        goto Renew; 
       }
-      return WriteLease::INVALID_LEASE;
-    }
-
-    bool LeaseClerk::unregister_lease(const uint32_t block_id)
-    {
-      return change(block_id, WriteLease::OBSOLETE);
-    }
-
-    bool LeaseClerk::cancel_lease(const uint32_t block_id)
-    {
-      return change(block_id, WriteLease::CANCELED);
-    }
-
-    bool LeaseClerk::change(const uint32_t block_id, const WriteLease::LeaseStatus status)
-    {
-      Mutex::Lock lock(mutex_);
-      WriteLease* lease = get_lease(block_id);
-      if (lease == NULL)
+      return INVALID_LEASE;
+  Next:
       {
-        TBSYS_LOG(ERROR, "lease not found by block id(%u)", block_id);
-        return false;
-      }
+        if (ngi.destroy_flag_ == NS_DESTROY_FLAGS_YES)
+        {
+          TBSYS_LOG(WARN, "%s", "add lease fail because nameserver destroyed");
+          return INVALID_LEASE;
+        }
 
-      Monitor<Mutex>::Lock lease_lock(lease->monitor_);
-      lease->status_ = status;
-      lease->monitor_.notifyAll();
+        RWLock::Lock lock(mutex_, WRITE_LOCKER);
+        lease_id = LeaseFactory::new_lease_id();
+        lease = new LeaseEntry(tbutil::Handle<LeaseClerk>::dynamicCast(this), lease_id, id);
+        std::pair<LEASE_MAP_ITER, bool> res =
+          leases_.insert(LEASE_MAP_ITER::value_type(id, lease));
+        if (!res.second)
+        {
+          lease = 0;
+          TBSYS_LOG(WARN, "id(%"PRI64_PREFIX"d) has been lease" , id);
+          return INVALID_LEASE;
+        }
+        GFactory::get_timer()->schedule(lease, tbutil::Time::milliSeconds(LeaseEntry::LEASE_EXPIRE_TIME_MS));
+        return lease_id;
+      }
+  Renew:
+      {
+        if (ngi.destroy_flag_ == NS_DESTROY_FLAGS_YES)
+        {
+          TBSYS_LOG(WARN, "%s", "add lease fail because nameserver destroyed");
+          return INVALID_LEASE;
+        }
+
+        tbutil::Monitor<tbutil::Mutex>::Lock lock(*lease);
+        if (lease->is_valid_lease())
+        {
+          TBSYS_LOG(WARN, "id(%"PRI64_PREFIX"d) has been lease" , id);
+          return INVALID_LEASE;
+        }
+        lease_id = LeaseFactory::new_lease_id();
+        lease->reset(lease_id);
+        lease->notifyAll();
+        GFactory::get_timer()->cancel(lease);
+        GFactory::get_timer()->schedule(lease, tbutil::Time::milliSeconds(LeaseEntry::LEASE_EXPIRE_TIME_MS));
+        return lease_id;
+      }
+      return INVALID_LEASE;
+    }
+
+    bool LeaseClerk::remove(int64_t id)
+    {
+      RWLock::Lock lock(mutex_, WRITE_LOCKER);
+      LEASE_MAP_ITER iter = leases_.find(id);
+      if (iter != leases_.end())
+      {
+        GFactory::get_timer()->cancel(iter->second);
+        iter->second = 0;
+        leases_.erase(iter);
+      }
       return true;
     }
 
-    bool LeaseClerk::write_commit(uint32_t block_id, uint32_t lease_id, WriteLease::LeaseStatus status)
+    bool LeaseClerk::obsolete(int64_t id)
     {
-      mutex_.lock();
-      WriteLease* lease = get_lease(block_id);
-      mutex_.unlock();
+      return change(id, LEASE_STATUS_OBSOLETE);
+    }
 
-      if (lease == NULL)
+    bool LeaseClerk::finish(int64_t id)
+    {
+      return change(id, LEASE_STATUS_FINISH);
+    }
+
+    bool LeaseClerk::failed(int64_t id)
+    {
+      return change(id, LEASE_STATUS_FAILED);
+    }
+
+    bool LeaseClerk::cancel(int64_t id)
+    {
+      return change(id, LEASE_STATUS_CANCELED);
+    }
+
+    bool LeaseClerk::expire(int64_t id)
+    {
+      return change(id, LEASE_STATUS_EXPIRED);
+    }
+
+    bool LeaseClerk::change(int64_t id, LeaseStatus status)
+    {
+      RWLock::Lock r_lock(mutex_, READ_LOCKER);
+      LeaseEntryPtr lease = find(id);
+      if (lease == 0)
       {
-        TBSYS_LOG(ERROR, "lease not found by block id(%u)", block_id);
+        TBSYS_LOG(ERROR, "lease not found by block id(%u)", id);
         return false;
       }
-
-      Monitor<Mutex>::Lock lock(lease->monitor_);
-      if (lease->lease_id_ != lease_id)
-      {
-        lease->monitor_.notifyAll();
-        TBSYS_LOG(ERROR, "block(%u) lease id not match (%u,%u)", block_id, lease->lease_id_, lease_id);
-        return false;
-      }
-
-      if (!is_valid_lease(lease))
-      {
-        TBSYS_LOG(ERROR, "block(%u) lease(%u) expired", block_id, lease->lease_id_);
-        lease->dump(block_id, is_valid_lease(lease), wait_count_, SYSPARAM_NAMESERVER.max_wait_write_lease_);
-        lease->status_ = WriteLease::EXPIRED;
-        lease->monitor_.notifyAll();
-        return false;
-      }
-      lease->status_ = status;
-      lease->monitor_.notifyAll();
+      tbutil::Monitor<tbutil::Mutex>::Lock lock(*lease);
+      lease->change(status);
+      lease->notifyAll();
+      GFactory::get_timer()->cancel(lease);
       return true;
     }
 
-    bool LeaseClerk::write_commit(BlockInfo* block_info, BlockInfo* new_block_info, const uint32_t lease_id)
+    LeaseEntryPtr LeaseClerk::find(int64_t id) const
     {
-      if ((block_info == NULL) || (new_block_info == NULL) || (lease_id == WriteLease::INVALID_LEASE)
-          || (block_info->block_id_ != new_block_info->block_id_))
+      LEASE_MAP_CONST_ITER iter = leases_.find(id);
+      if (iter != leases_.end())
+        return iter->second;
+      return 0;
+    }
+
+    bool LeaseClerk::commit(int64_t id, uint32_t lease_id, LeaseStatus status)
+    {
+      LeaseEntryPtr lease = 0;
       {
+        RWLock::Lock r_lock(mutex_, READ_LOCKER);
+        lease = find(id);
+        if (lease == 0)
+        {
+          TBSYS_LOG(WARN, "lease not found by id(%"PRI64_PREFIX"d)", id);
+          return false;
+        }
+      }
+
+      TBSYS_LOG(DEBUG,"commit (%"PRI64_PREFIX"d), status: %d", id, status);
+
+      Monitor<Mutex>::Lock lock(*lease);
+      if (lease->id() != lease_id)
+      {
+        lease->notifyAll();
+        TBSYS_LOG(ERROR, "id(%"PRI64_PREFIX"d) lease id not match (%u,%u)", id, lease->id(), lease_id);
         return false;
       }
 
-      mutex_.lock();
-      WriteLease* lease = get_lease(block_info->block_id_);
-      mutex_.unlock();
-
-      if (lease == NULL)
+      if (!lease->is_valid_lease())
       {
-        TBSYS_LOG(ERROR, "lease not found by block id(%u)", block_info->block_id_);
+        TBSYS_LOG(WARN, "id(%"PRI64_PREFIX"d) has lease, but it(%u) was invalid", id, lease_id);
+        lease->change(LEASE_STATUS_EXPIRED);
+        lease->notifyAll();
         return false;
       }
 
-      Monitor<Mutex>::Lock lock(lease->monitor_);
+      lease->change(status);
+      lease->notifyAll();
+      TBSYS_LOG(DEBUG, "cancel ---------(%ld)", lease->id());
+      GFactory::get_timer()->cancel(lease);
+      return true;
+    }
 
-      bool ret = false;
-      if ((lease->lease_id_ == lease_id) && (block_info->version_ + 1 == new_block_info->version_))
+    LeaseFactory::LeaseFactory():
+      clerk_num_(32),
+      clerk_(NULL)
+    {
+
+    }
+
+    LeaseFactory::~LeaseFactory()
+    {
+
+    }
+
+    int LeaseFactory::initialize(int32_t clerk_num)
+    {
+      clerk_num_ =  clerk_num <= 0 ? 32 : clerk_num > 1024 ? 1024 : clerk_num;
+      int32_t total = CONFIG.get_int_value(CONFIG_NAMESERVER, CONF_CLEANUP_LEASE_THRESHOLD, 0xFA000);//102400
+      int32_t remove_threshold = total / clerk_num_;
+      tbsys::gDeleteA(clerk_);
+      clerk_ = new LeaseClerkPtr[clerk_num_];
+      for (int32_t i = 0; i < clerk_num_; i++)
       {
-        if (is_valid_lease(lease))
-        {
-          memcpy(block_info, new_block_info, BLOCKINFO_SIZE);
-          lease->status_ = WriteLease::DONE;
-          if (BlockCollect::is_full(new_block_info->size_))
-          {
-            lease->status_ = WriteLease::OBSOLETE;
-          }
-          ret = true;
-        }
-        else
-        {
-          TBSYS_LOG(ERROR, "block(%u) lease(%u) expired", block_info->block_id_, lease->lease_id_);
-          lease->dump(block_info->block_id_, is_valid_lease(lease), wait_count_,
-              SYSPARAM_NAMESERVER.max_wait_write_lease_);
-          lease->status_ = WriteLease::EXPIRED;
-        }
-        lease->monitor_.notifyAll();
+        clerk_[i] = new LeaseClerk(remove_threshold);
       }
-      else
+      LeaseEntry::LEASE_EXPIRE_DEFAULT_TIME_MS = CONFIG.get_int_value(CONFIG_NAMESERVER, CONF_MAX_LEASE_TIMEOUT, LeaseEntry::LEASE_EXPIRE_DEFAULT_TIME_MS);
+      LeaseEntry::LEASE_EXPIRE_TIME_MS = LeaseEntry::LEASE_EXPIRE_DEFAULT_TIME_MS;
+      int32_t expired = CONFIG.get_int_value(CONFIG_NAMESERVER, CONF_LEASE_EXPIRED_TIME, 1);
+      LeaseEntry::LEASE_EXPIRE_REMOVE_TIME_MS = expired * 3600 * 1000 + LeaseEntry::LEASE_EXPIRE_DEFAULT_TIME_MS;
+      return TFS_SUCCESS;
+    }
+
+    int LeaseFactory::wait_for_shut_down()
+    {
+      for (int32_t i = 0; i < clerk_num_; i++)
       {
-        TBSYS_LOG(ERROR, "block(%u) lease id not match(%u, %u) or version not match(%d, %d)", lease->lease_id_,
-            lease_id, block_info->version_, new_block_info->version_);
-        lease->monitor_.notifyAll();
+        clerk_[i] = 0;
       }
-      return ret;
+      tbsys::gDeleteA(clerk_);
+      return TFS_SUCCESS;
+    }
+
+    void LeaseFactory::destroy()
+    {
+      if (clerk_ != NULL)
+      {
+        bool check_time = false;
+        bool force = true;
+        for (int32_t i = 0; i < clerk_num_; i++)
+        {
+          clerk_[i]->clear(check_time, force);
+        }
+      }
+    }
+
+    uint32_t LeaseFactory::add(int64_t id)
+    {
+      return clerk_[id % clerk_num_]->add(id);
+    }
+
+    bool LeaseFactory::remove(int64_t id)
+    {
+      return clerk_[id % clerk_num_]->remove(id);
+    }
+
+    bool LeaseFactory::obsolete(int64_t id)
+    {
+      return clerk_[id % clerk_num_]->obsolete(id);
+    }
+
+    bool LeaseFactory::finish(int64_t id)
+    {
+      return clerk_[id % clerk_num_]->finish(id);
+    }
+
+    bool LeaseFactory::failed(int64_t id)
+    {
+      return clerk_[id % clerk_num_]->failed(id);
+    }
+      
+    bool LeaseFactory::cancel(int64_t id)
+    {
+      return clerk_[id % clerk_num_]->cancel(id);
+    }
+
+    bool LeaseFactory::expire(int64_t id)
+    {
+      return clerk_[id % clerk_num_]->expire(id);
+    }
+
+    bool LeaseFactory::commit(int64_t id, uint32_t lease_id, LeaseStatus status)
+    {
+      return clerk_[id % clerk_num_]->commit(id, lease_id, status);
+    }
+
+    bool LeaseFactory::has_valid_lease(int64_t id) const
+    {
+      return clerk_[id % clerk_num_]->has_valid_lease(id);
+    }
+
+    bool LeaseFactory::exist(int64_t id) const
+    {
+      return clerk_[id % clerk_num_]->exist(id);
+    }
+
+    void LeaseFactory::clear()
+    {
+      bool check_time = false;
+      bool force = true;
+      for (int32_t i = 0; i < clerk_num_; ++i)
+      {
+        clerk_[i]->clear(check_time, force);
+      }
+    }
+
+    uint32_t LeaseFactory::new_lease_id()
+    {
+      uint32_t lease_id = atomic_inc(&lease_id_factory_);
+      if (lease_id > UINT32_MAX - 1)
+      {
+        lease_id = atomic_exchange(&lease_id_factory_, 1);
+      }
+      return lease_id;
     }
   }
 }

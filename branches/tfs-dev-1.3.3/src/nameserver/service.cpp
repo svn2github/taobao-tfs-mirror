@@ -11,9 +11,9 @@
  * Authors:
  *   duolong <duolong@taobao.com>
  *      - initial release
- *   qushan<qushan@taobao.com>
+ *   qushan<qushan@taobao.com> 
  *      - modify 2009-03-27
- *   duanfei <duanfei@taobao.com>
+ *   duanfei <duanfei@taobao.com> 
  *      - modify 2010-04-23
  *
  */
@@ -21,7 +21,6 @@
 #include <tbsys.h>
 #include <Memory.hpp>
 #include "service.h"
-#include "message/client_pool.h"
 #include "common/config_item.h"
 #include "common/directory_op.h"
 #include "common/error_msg.h"
@@ -32,8 +31,6 @@ using namespace tfs::nameserver;
 
 static void signal_handler(int32_t sig);
 static Service* g_tfs_ns_service_ = NULL;
-
-// check whether the local ip is in the ip list.
 static int in_ip_list(uint64_t local_ip)
 {
   const char *ip_list = CONFIG.get_string_value(CONFIG_NAMESERVER, CONF_IP_ADDR_LIST);
@@ -59,11 +56,10 @@ static int in_ip_list(uint64_t local_ip)
 int main(int argc, char *argv[])
 {
   int32_t i;
-  bool is_daemon = false;
+  bool is_deamon = false;
   bool is_help = false;
   std::string conf_file_path;
 
-  // get input argument
   while ((i = getopt(argc, argv, "f:dh")) != EOF)
   {
     switch (i)
@@ -72,30 +68,29 @@ int main(int argc, char *argv[])
       conf_file_path = optarg;
       break;
     case 'd':
-      is_daemon = true;
+      is_deamon = true;
       break;
     case 'h':
     default:
       is_help = true;
-    break;
+      break;
     }
   }
 
-  if (conf_file_path.empty() || conf_file_path == " " || is_help)
+  if (conf_file_path.empty() || conf_file_path.c_str() == " " || is_help)
   {
     fprintf(stderr, "\nUsage: %s -f conf_file -d -h\n", argv[0]);
     fprintf(stderr, "  -f conf_file   config file path\n");
-    fprintf(stderr, "  -d             run daemon\n");
+    fprintf(stderr, "  -d             run deamon\n");
     fprintf(stderr, "  -h             help\n");
     fprintf(stderr, "\n");
     return EXIT_GENERAL_ERROR;
   }
 
-  // load config file
   int ret = TFS_SUCCESS;
   if ((ret = SysParam::instance().load(conf_file_path.c_str())) != TFS_SUCCESS)
   {
-    fprintf(stderr, "SysParam::load failed:%s", conf_file_path.c_str());
+    fprintf(stderr, "load confiure file(%s) fail\n", conf_file_path.c_str());
     return ret;
   }
   TBSYS_LOGGER.setLogLevel(CONFIG.get_string_value(CONFIG_PUBLIC, CONF_LOG_LEVEL, "debug"));
@@ -110,45 +105,40 @@ int main(int argc, char *argv[])
     return EXIT_GENERAL_ERROR;
   }
 
-  const char *work_dir = SYSPARAM_NAMESERVER.work_dir_.c_str();
+  const char *work_dir = CONFIG.get_string_value(CONFIG_NAMESERVER, CONF_WORK_DIR);
+  if (work_dir == NULL)
+  {
+    TBSYS_LOG(ERROR, "%s", "directory not found");
+    return EXIT_CONFIG_ERROR;
+  }
   if (!DirectoryOp::create_full_path(work_dir))
   {
     TBSYS_LOG(ERROR, "create directory(%s) failed", work_dir);
-    return EXIT_GENERAL_ERROR;
+    return ret;
   }
 
-  const char *pid_file = SYSPARAM_NAMESERVER.pid_file_.c_str();
+  char *pid_file_path = CONFIG.get_string_value(CONFIG_NAMESERVER, CONF_LOCK_FILE);
   int32_t pid = 0;
-  if ((pid = tbsys::CProcess::existPid(pid_file)))
+  if ((pid = tbsys::CProcess::existPid(pid_file_path)))
   {
-    TBSYS_LOG(ERROR, "nameserver has already run. Pid: %d", pid);
+    TBSYS_LOG(ERROR, "program has been running: pid(%d)", pid);
     return EXIT_SYSTEM_ERROR;
   }
-  if (!DirectoryOp::create_full_path(pid_file, true))
+
+  const char *log_file_path = CONFIG.get_string_value(CONFIG_NAMESERVER, CONF_LOG_FILE);
+  if (access(log_file_path, R_OK) == 0)
   {
-    TBSYS_LOG(ERROR, "create file(%s)'s directory failed", pid_file);
-    return EXIT_GENERAL_ERROR;
+    char dest_log_file_path[256];
+    sprintf(dest_log_file_path, "%s.%s", log_file_path, Func::time_to_str(time(NULL), 1).c_str());
+    rename(log_file_path, dest_log_file_path);
   }
 
-  const char *log_file = SYSPARAM_NAMESERVER.log_file_.c_str();
-  if (access(log_file, R_OK) == 0)
-  {
-    TBSYS_LOGGER.rotateLog(log_file);
-  }
-  else if (!DirectoryOp::create_full_path(log_file, true))
-  {
-    TBSYS_LOG(ERROR, "create file(%s)'s directory failed", log_file);
-    return EXIT_GENERAL_ERROR;
-  }
-
-  // start daemon process
   pid = 0;
-  if (is_daemon)
+  if (is_deamon)
   {
-    pid = Func::start_daemon(pid_file, log_file);
+    pid = tbsys::CProcess::startDaemon(pid_file_path, log_file_path);
   }
 
-  // start service
   if (pid == 0)
   {
     signal(SIGPIPE, SIG_IGN);
@@ -170,7 +160,7 @@ int main(int argc, char *argv[])
     }
     catch (...)
     {
-      TBSYS_LOG(WARN, "Catch unknow execption, must be exit...");
+      TBSYS_LOG(WARN, "%s", "Catch unknow execption, must be exit...");
       g_tfs_ns_service_->stop();
     }
     tbsys::gDelete(g_tfs_ns_service_);
@@ -225,7 +215,7 @@ namespace tfs
       }
       const char *pid_file_path = CONFIG.get_string_value(CONFIG_NAMESERVER, CONF_LOCK_FILE);
       unlink(pid_file_path);
-      TBSYS_LOG(INFO, "nameserver exit");
+      TBSYS_LOG(INFO, "%s", "nameserver exit");
       return TFS_SUCCESS;
     }
 

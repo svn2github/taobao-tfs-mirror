@@ -1,157 +1,87 @@
 /*
- * (C) 2007-2010 Alibaba Group Holding Limited.
+ * BlockCollect.h
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- *
- * Version: $Id$
- *
- * Authors:
- *   duolong <duolong@taobao.com>
- *      - initial release
- *   qushan<qushan@taobao.com> 
- *      - modify 2009-03-27
- *   duanfei <duanfei@taobao.com> 
- *      - modify 2010-04-23
- *
+ *  Created on: 2010-11-5
+ *      Author: duanfei
  */
+
 #ifndef TFS_NAMESERVER_BLOCK_COLLECT_H_
 #define TFS_NAMESERVER_BLOCK_COLLECT_H_
 
+#include <stdint.h>
+#include <time.h>
+#include <vector>
 #include "ns_define.h"
 #include "common/parameter.h"
 
 namespace tfs
 {
-  namespace nameserver
+namespace nameserver
+{
+  class ServerCollect;
+  class BlockCollect;
+  typedef std::map<ServerCollect*, std::vector<BlockCollect*> > EXPIRE_BLOCK_LIST;
+  class BlockCollect : public virtual GCObject
   {
-    class BlockCollect
-    {
-    public:
-      enum BLOCK_CREATE_FLAG
-      {
-        BLOCK_CREATE_FLAG_NO = 0x00,
-        BLOCK_CREATE_FLAG_YES
-      };
-    public:
-      BlockCollect() :
-        master_ds_(0), last_leave_time_(0), last_join_time_(0), load_error_(0), creating_flag_(BLOCK_CREATE_FLAG_NO)
-      {
-        memset(&block_info_, 0, sizeof(common::BlockInfo));
-      }
+ public:
+    BlockCollect(uint32_t block_id, time_t now);
+    bool add(ServerCollect* server, time_t now, bool force, bool& writable);
+    bool remove(ServerCollect* server, time_t now, bool remove = true);
+    bool exist(const ServerCollect* const server) const;
+    ServerCollect* find_master();
+    bool is_master(const ServerCollect* const server) const;
+    bool is_need_master();
+    bool is_writable() const;
 
-      virtual ~BlockCollect()
-      {
+    bool check_version(ServerCollect* server, int32_t alive_server_size, NsRole role, bool is_new,
+          const common::BlockInfo& block_info, EXPIRE_BLOCK_LIST& expires, bool& force_be_master, time_t now);
 
-      }
+    common::PlanPriority check_replicate(time_t now) const;
+    bool check_balance() const;
+    bool check_compact() const;
+    int check_redundant() const;
+    bool is_relieve_writable_relation();
+    bool relieve_relation(bool remove = true);
 
-      inline const common::BlockInfo* get_block_info() const
-      {
-        return &block_info_;
-      }
+    inline int32_t size() const { return info_.size_;}
+    inline std::vector<ServerCollect*>& get_hold() { return hold_;}
+    inline int32_t get_hold_size() const { return hold_.size();}
+    inline void update(const common::BlockInfo& info) { memcpy(&info_,&info, sizeof(info_));} 
+    inline bool is_full() const { return info_.size_ >= common::SYSPARAM_NAMESERVER.max_block_size_; }
+    static bool is_full(int64_t size) { return size >= common::SYSPARAM_NAMESERVER.max_block_size_;} 
+    inline uint32_t id() const { return info_.block_id_;}
+    inline int32_t version() const { return info_.version_;}
+    inline void set_create_flag(int8_t flag = BLOCK_CREATE_FLAG_NO) { create_flag_ = flag;}
+    inline int8_t get_creating_flag() const { return create_flag_;}
 
-      inline const common::VUINT64* get_ds() const
-      {
-        return &ds_list_;
-      }
+    int scan(common::SSMScanParameter& param);
+    void dump() const;
 
-      inline uint64_t get_master_ds() const
-      {
-        return master_ds_;
-      }
+    static const int8_t HOLD_MASTER_FLAG_NO;
+    static const int8_t HOLD_MASTER_FLAG_YES;
+    static const int8_t BLOCK_CREATE_FLAG_NO;
+    static const int8_t BLOCK_CREATE_FLAG_YES;
+    static const int8_t VERSION_AGREED_MASK;
+  private:
+    static uint32_t register_expire_block(EXPIRE_BLOCK_LIST& result, ServerCollect* server, BlockCollect* block);
 
-      inline void set_master_ds(const uint64_t id)
-      {
-        master_ds_ = id;
-        if (id > 0 && ds_list_.size() > 0 && ds_list_[0] != id)
-        {
-          leave(id);
-          ds_list_.insert(ds_list_.begin(), id);
-        }
-      }
+  private:
+    BlockCollect();
+    DISALLOW_COPY_AND_ASSIGN(BlockCollect);
 
-      inline bool join(const uint64_t id, const bool before = false)
-      {
-        if (find(ds_list_.begin(), ds_list_.end(), id) == ds_list_.end())
-        {
-          if (before)
-          {
-            ds_list_.insert(ds_list_.begin(), id);
-          }
-          else
-          {
-            ds_list_.push_back(id);
-          }
-          last_join_time_ = time(NULL);
-          return true;
-        }
-        return false;
-      }
-
-      inline bool leave(const uint64_t id)
-      {
-        common::VUINT64::iterator where = find(ds_list_.begin(), ds_list_.end(), id);
-        if (where != ds_list_.end())
-        {
-          ds_list_.erase(where);
-          last_leave_time_ = time(NULL);
-          return true;
-        }
-        else
-        {
-          return false;
-        }
-      }
-
-      inline time_t get_last_leave_time() const
-      {
-        return last_leave_time_;
-      }
-
-      inline void set_creating_flag(BLOCK_CREATE_FLAG flag = BLOCK_CREATE_FLAG_NO)
-      {
-        creating_flag_ = flag;
-      }
-
-      inline BLOCK_CREATE_FLAG get_creating_flag() const
-      {
-        return creating_flag_;
-      }
-
-      inline int32_t get_load_error() const
-      {
-        return load_error_;
-      }
-
-      inline void set_load_error(const int32_t error_no)
-      {
-        load_error_ = error_no;
-      }
-
-      inline bool is_full() const
-      {
-        return is_full(block_info_.size_);
-      }
-
-      static bool is_full(const int64_t size)
-      {
-        return size > common::SYSPARAM_NAMESERVER.max_block_size_;
-      }
-    private:
-
-      DISALLOW_COPY_AND_ASSIGN( BlockCollect);
-
-      common::VUINT64 ds_list_;
-      uint64_t master_ds_;
-      time_t last_leave_time_;
-      time_t last_join_time_;
-      int32_t load_error_;
-      BLOCK_CREATE_FLAG creating_flag_;
-      common::BlockInfo block_info_;
-    };
-  }
+#if defined(TFS_NS_GTEST) || defined(TFS_NS_INTEGRATION)
+  public:
+#else
+  private:
+#endif
+    std::vector<ServerCollect*> hold_;
+    common::BlockInfo info_;
+    time_t last_update_time_;
+    int8_t hold_master_;
+    int8_t create_flag_;
+    int8_t reserve[6];
+  };
+}
 }
 
-#endif
+#endif /* BLOCKCOLLECT_H_ */

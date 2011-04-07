@@ -1,5 +1,4 @@
-/*
- * (C) 2007-2010 Alibaba Group Holding Limited.
+/* * (C) 2007-2010 Alibaba Group Holding Limited.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -23,82 +22,142 @@
 #include <tbsys.h>
 #include <Monitor.h>
 #include <Mutex.h>
+#include <Timer.h>
+#include <Shared.h>
+#include <Handle.h>
 #include "ns_define.h"
+#include "common/lock.h"
 
 namespace tfs
 {
   namespace nameserver
   {
-    struct WriteLease
+    enum LeaseType
     {
-      enum LeaseStatus
-      {
-        WRITING = 0x00,
-        DONE,
-        FAILED,
-        EXPIRED,
-        CANCELED,
-        OBSOLETE
-      };
-      int64_t last_write_time_;
-      int64_t expire_time_;
-      uint32_t lease_id_;
-      LeaseStatus status_;
+      LEASE_TYPE_WRITE = 0x00       //write lease
+    };
 
-      tbutil::Monitor<tbutil::Mutex> monitor_;
+    enum LeaseStatus
+    {
+      LEASE_STATUS_RUNNING= 0x00,    //running
+      LEASE_STATUS_FINISH,         //finish
+      LEASE_STATUS_FAILED,          //failed
+      LEASE_STATUS_EXPIRED,         //expired
+      LEASE_STATUS_CANCELED,        //canceled
+      LEASE_STATUS_OBSOLETE         //obsolete
+    };
 
-      void dump(const uint32_t block_id, const bool is_valid, const int64_t current_wait_count,
-          const int64_t max_wait_count) const
-      {
-TBSYS_LOG      (DEBUG, "block id(%u) last wirte time(%"PRI64_PREFIX"d), expire time(%"PRI64_PREFIX"d),"
-          "now time(%"PRI64_PREFIX"d), lease id(%u), is valid(%s), current wait count(%"PRI64_PREFIX"d),"
-          "max wait count(%"PRI64_PREFIX"d) status(%s)",
-          block_id, last_write_time_, expire_time_, tbsys::CTimeUtil::getTime(), lease_id_, is_valid ? "true" : "false", current_wait_count, max_wait_count,
-          status_ == WRITING ? "writing" : status_ == DONE ? "done" : status_ == FAILED ? "failed" :
-          status_ == EXPIRED ? "expired" : status_ == CANCELED ? "canceled" : status_ == OBSOLETE ? "obsolet" : "unkown" );
-    }
-    static atomic_t global_lease_id_;
-    static uint32_t get_new_lease_id();
-    static const uint32_t LEASE_EXPIRE_TIME = 3000;
-    static const uint32_t INVALID_LEASE = 0;
-  };
+    class LeaseClerk;
+    typedef tbutil::Handle<LeaseClerk> LeaseClerkPtr;
+    class LeaseEntry : public virtual tbutil::Monitor<tbutil::Mutex>,
+                       public virtual tbutil::TimerTask
+    {
+      public:
+        LeaseEntry(LeaseClerkPtr clerk, uint32_t lease_id, int64_t client, LeaseType type = LEASE_TYPE_WRITE);
+        virtual ~LeaseEntry();
+        uint32_t id() const;
+        int64_t client() const;
+        LeaseType type() const;
+        LeaseStatus status() const;
+        void runTimerTask();
+        void reset(uint32_t lease_id, LeaseType type = LEASE_TYPE_WRITE);
+        bool is_valid_lease() const;
+        bool wait_for_expire() const;
+        void change(LeaseStatus status);
+        bool is_remove(tbutil::Time& now, bool check_time = true) const;
+        void dump(int64_t id, bool is_valid, int64_t current_wait_count, int64_t max_wait_count) const;
+      private:
+        DISALLOW_COPY_AND_ASSIGN(LeaseEntry);
+        LeaseEntry();
+        LeaseClerkPtr clerk_;
+        tbutil::Time last_update_time_;
+        tbutil::Time expire_time_;
+        int64_t client_;
+        uint32_t lease_id_;
+        int8_t type_; // lease type
+        int8_t status_;//lease status
+      public:
+        static int16_t LEASE_EXPIRE_DEFAULT_TIME_MS;
+        static int32_t LEASE_EXPIRE_TIME_MS;
+        static int64_t LEASE_EXPIRE_REMOVE_TIME_MS;
+    };
+    typedef tbutil::Handle<LeaseEntry> LeaseEntryPtr;
 
-  class LeaseClerk
-  {
-    typedef __gnu_cxx::hash_map<uint32_t, WriteLease*, __gnu_cxx::hash<uint32_t> > LEASE_MAP;
-    typedef LEASE_MAP::iterator LEASE_MAP_ITER;
-    typedef LEASE_MAP::const_iterator LEASE_MAP_CONST_ITER;
+    class LeaseClerk : public virtual tbutil::Shared
+    {
+      typedef __gnu_cxx::hash_map<int64_t, LeaseEntryPtr, __gnu_cxx::hash<int64_t> > LEASE_MAP;
+      typedef LEASE_MAP::iterator LEASE_MAP_ITER;
+      typedef LEASE_MAP::const_iterator LEASE_MAP_CONST_ITER;
+    public:
+      LeaseClerk(int32_t remove_threshold);
+      virtual ~LeaseClerk();
+
+      uint32_t add(int64_t client);
+      bool remove(int64_t client);
+      bool obsolete(int64_t client);
+      bool finish(int64_t client);
+      bool failed(int64_t client);
+      bool cancel(int64_t client);
+      bool expire(int64_t client);
+      bool commit(int64_t client, uint32_t lease_id, LeaseStatus status);
+      bool has_valid_lease(int64_t client);
+      bool exist(int64_t client);
+      void clear(bool check_time = true, bool force = false);
+      LeaseEntryPtr find( int64_t id) const;
+
+      static const uint8_t INVALID_LEASE;
+
+    private:
+      bool change(int64_t id, LeaseStatus status);
+#if defined(TFS_NS_GTEST) || defined(TFS_NS_INTEGRATION)
   public:
-    LeaseClerk();
-    virtual ~LeaseClerk();
-
-  public:
-    uint32_t register_lease(const uint32_t block_id);
-    bool unregister_lease(const uint32_t block_id);
-    bool cancel_lease(const uint32_t block_id);
-    bool write_commit(const uint32_t block_id, const uint32_t lease_id, const WriteLease::LeaseStatus status);
-    bool write_commit(common::BlockInfo* block_info, common::BlockInfo* new_block_info, const uint32_t lease_id);
-    bool has_valid_lease(const uint32_t block_id) const;
-    bool if_need_clear() const;
-    void clear();
-
+#else
   private:
-    bool is_valid_lease(const WriteLease* lease) const;
-    bool reset(WriteLease& lease);
-    bool change(const uint32_t block_id, const WriteLease::LeaseStatus status);
-    void destroy();
-    void inc_wait_count();
-    void dec_wait_count();
+#endif
+      DISALLOW_COPY_AND_ASSIGN( LeaseClerk);
+      LeaseClerk();
+      LEASE_MAP leases_;
+      common::RWLock mutex_;
+      int32_t remove_threshold_;
+    };
 
-    WriteLease* get_lease(const uint32_t block_id) const;
+    class LeaseFactory
+    {
+    public:
+      LeaseFactory();
+      ~LeaseFactory();
+      int initialize(int32_t clerk_num = 32); 
+      int wait_for_shut_down();
+      void destroy();
+      static uint32_t new_lease_id();
+      uint32_t add(int64_t client);
+      bool remove(int64_t client);
+      bool obsolete(int64_t client);
+      bool finish(int64_t client);
+      bool failed(int64_t client);
+      bool cancel(int64_t client);
+      bool expire(int64_t client);
+      bool commit(int64_t client, uint32_t lease_id, LeaseStatus status);
+      bool has_valid_lease(int64_t client) const;
+      bool exist(int64_t client) const;
+      void clear();
 
-  private:
-    DISALLOW_COPY_AND_ASSIGN( LeaseClerk);
-    LEASE_MAP lease_map_;
-    tbutil::Mutex mutex_;
-    int64_t wait_count_;
-  };
-}
+      static LeaseFactory& instance() { return instance_;}
+    public:
+      static volatile uint16_t gwait_count_;
+
+    #if defined(TFS_NS_GTEST) || defined(TFS_NS_INTEGRATION)
+    public:
+    #else
+    private:
+    #endif
+      DISALLOW_COPY_AND_ASSIGN(LeaseFactory);
+      static volatile uint32_t lease_id_factory_;
+      int32_t clerk_num_;
+      LeaseClerkPtr* clerk_;
+      static LeaseFactory instance_;
+    };
+  }
 }
 
 #endif 

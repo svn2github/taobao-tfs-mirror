@@ -36,14 +36,22 @@ namespace tfs
 {
   namespace nameserver
   {
+    enum OpLogType
+    {
+      OPLOG_TYPE_BLOCK_OP = 0x00,
+      OPLOG_TYPE_REPLICATE_MSG,
+      OPLOG_TYPE_COMPACT_MSG
+    };
 #pragma pack(1)
     struct OpLogHeader
     {
-      uint64_t seqno_;
-      time_t time_;
-      uint8_t cmd_;
-      uint8_t length_;
-      char data_[0];
+      uint32_t seqno_;
+      uint32_t time_;
+      uint32_t crc_;
+      uint16_t length_;
+      int8_t  type_;
+      int8_t  reserve_;
+      char  data_[0];
     };
     struct OpLogRotateHeader
     {
@@ -51,7 +59,20 @@ namespace tfs
       int32_t rotate_offset_;
     };
 #pragma pack()
-    class OpLog
+ 
+    struct BlockOpLog
+    {
+      common::BlockInfo info_;
+      common::VUINT32 blocks_;
+      common::VUINT64 servers_;
+      int8_t cmd_;
+      int serialize(char* buf, const int64_t buf_len, int64_t& pos) const;
+      int deserialize(const char* buf, const int64_t data_len, int64_t& pos);
+      int64_t get_serialize_size(void) const;
+      void dump(void) const;
+    };
+
+   class OpLog
     {
     public:
       explicit OpLog(const std::string& path, int maxLogSlotsSize = 0x400);
@@ -59,7 +80,7 @@ namespace tfs
       int initialize();
       int update_oplog_rotate_header(const OpLogRotateHeader& head);
       bool finish(time_t now, bool force = false) const;
-      int write(int32_t cmd, const common::BlockInfo* const blk, const common::VUINT64& dsList);
+      int write(uint8_t type, const char* const data, const int32_t length);
       inline void reset(time_t t = time(NULL))
       {
         last_flush_time_ = t;

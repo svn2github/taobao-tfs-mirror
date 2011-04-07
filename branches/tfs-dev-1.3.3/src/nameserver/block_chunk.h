@@ -1,68 +1,55 @@
 /*
- * (C) 2007-2010 Alibaba Group Holding Limited.
+ * BlockChunk.h
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- *
- * Version: $Id$
- *
- * Authors:
- *   duolong <duolong@taobao.com>
- *      - initial release
- *   qushan<qushan@taobao.com> 
- *      - modify 2009-03-27
- *   duanfei <duanfei@taobao.com> 
- *      - modify 2010-04-23
- *
+ *  Created on: 2010-11-5
+ *      Author: duanfei
  */
-#ifndef TFS_NAMESERVER_BLOCK_CHUNK_H_
-#define TFS_NAMESERVER_BLOCK_CHUNK_H_ 
 
+#ifndef BLOCKCHUNK_H_
+#define BLOCKCHUNK_H_
+
+#include <stdint.h>
 #include <Shared.h>
 #include <Handle.h>
 #include "common/lock.h"
-#include "common/define.h"
-#include "block_collect.h"
+#include "common/internal.h"
 
 namespace tfs
 {
-  namespace nameserver
+namespace nameserver
+{
+  class BlockCollect;
+  class ServerCollect;
+  class BlockChunk : public virtual common::RWLock,
+                     public virtual tbutil::Shared
   {
-    class BlockChunk: public tbutil::Shared
-    {
-    public:
-      BlockChunk();
-      virtual ~BlockChunk();
+    friend class LayoutManager;
+  public:
+    BlockChunk();
+    virtual ~BlockChunk();
+    BlockCollect* add(uint32_t block_id, time_t now);
+    bool connect(BlockCollect* block, ServerCollect* server, time_t now, bool force, bool& writable);
 
-      BlockCollect* find(const uint32_t block_id) const;
-      BlockCollect* create(const uint32_t block_id);
+    bool remove(uint32_t block_id);
 
-      bool exist(const uint32_t block_id) const;
-      bool remove(const uint32_t block_id);
-      bool connect(const uint32_t block_id, const uint64_t server_id, const bool master = false);
-      bool release(const uint32_t block_id, const uint64_t server_id);
-      bool insert(const BlockCollect* blkcol, const bool overwrite);
+    BlockCollect* find(uint32_t block_id);
 
-      uint32_t calc_max_block_id() const;
-      int64_t calc_all_block_bytes() const;
+    bool exist(uint32_t block_id) const;
 
-      inline const common::BLOCK_MAP & get_block_map() const
-      {
-        return block_map_;
-      }
+    uint32_t calc_max_block_id() const;
+    int64_t  calc_all_block_bytes() const;
+    uint32_t calc_size() const;
+    int scan(common::SSMScanParameter& param, int32_t& actual, bool& end, int32_t should, bool cutover_chunk);
 
-    private:
-      DISALLOW_COPY_AND_ASSIGN( BlockChunk);
-      void remove_all();
-      common::BLOCK_MAP block_map_;
-
-    public:
-      common::RWLock mutex_;
-    };
-    typedef tbutil::Handle<BlockChunk> BlockChunkPtr;
-  }
+#if defined(TFS_NS_GTEST) || defined(TFS_NS_INTEGRATION)
+  public:
+#else
+  private:
+#endif
+    common::BLOCK_MAP block_map_;
+  };
+  typedef tbutil::Handle<BlockChunk> BlockChunkPtr;
+}
 }
 
-#endif
+#endif /* BLOCKCHUNK_H_ */

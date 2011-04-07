@@ -1,26 +1,14 @@
 /*
- * (C) 2007-2010 Alibaba Group Holding Limited.
+ * BlockChunk.cpp
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- *
- * Version: $Id$
- *
- * Authors:
- *   duolong <duolong@taobao.com>
- *      - initial release
- *   qushan<qushan@taobao.com> 
- *      - modify 2009-03-27
- *   duanfei <duanfei@taobao.com> 
- *      - modify 2010-04-23
- *
+ *  Created on: 2010-11-5
+ *      Author: duanfei
  */
-#include <Lock.h>
-#include <Memory.hpp>
-#include "block_chunk.h"
 
+#include "block_chunk.h"
+#include "block_collect.h"
+#include "global_factory.h"
+#include <Memory.hpp>
 using namespace tfs::common;
 
 namespace tfs
@@ -29,134 +17,85 @@ namespace tfs
   {
     BlockChunk::BlockChunk()
     {
+
     }
 
     BlockChunk::~BlockChunk()
     {
-      remove_all();
+      RWLock::Lock lock(*this, WRITE_LOCKER);
+      BLOCK_MAP::iterator iter = block_map_.begin();
+      for (; iter != block_map_.end(); ++iter)
+      {
+        tbsys::gDelete(iter->second);
+      }
+      block_map_.clear();
+    }
+    /**
+     * create new BlockCollect object 
+     * @param[in] block_id : block id
+     * @return NULL if failed 
+     */
+    BlockCollect* BlockChunk::add(const uint32_t block_id, time_t now)
+    {
+      BlockCollect* block = new BlockCollect(block_id, now);
+      std::pair<BLOCK_MAP_ITER, bool> res = 
+        block_map_.insert(BLOCK_MAP::value_type(block_id, block));
+      if (!res.second)
+      {
+        tbsys::gDelete(block);
+        return NULL;
+      }
+      return block;
     }
 
     /**
-     * @param block_collect : BlockCollect object
-     * @param overwrite : if true then replace BlockCollect object already exist.
-     * @return true if success
+     * add new BlockCollect
+     * @param[in] block_id: block id
+     * @return NULL if add failed or block exist
      */
-    bool BlockChunk::insert(const BlockCollect* block_collect, const bool overwrite)
+    bool BlockChunk::connect(BlockCollect* block, ServerCollect* server, time_t now, bool force, bool& writable)
     {
-      uint32_t block_id = (block_collect->get_block_info()->block_id_);
-      if (block_id == 0)
-        return false;
-      BLOCK_MAP::iterator it = block_map_.find(block_id);
-      if (it != block_map_.end())
+      bool bret = (block != NULL && server != NULL);
+      if (bret)
       {
-        if (overwrite)
-        {
-          tbsys::gDelete(it->second);
-          block_map_.erase(it);
-        }
-        else
-        {
-          return false;
-        }
+        bret = block->add(server, now, force, writable);
       }
+      return bret;
+    }
 
-      block_map_.insert(BLOCK_MAP::value_type(block_id, const_cast<BlockCollect*> (block_collect))).second;
+    bool BlockChunk::remove(uint32_t block_id)
+    {
+      BLOCK_MAP::iterator iter = block_map_.find(block_id);
+      if (iter != block_map_.end())
+      {
+        iter->second->set_dead_time();
+        GFactory::get_gc_manager().add(iter->second);
+        block_map_.erase(iter);
+      }
       return true;
     }
 
-    bool BlockChunk::exist(const uint32_t block_id) const
+    BlockCollect* BlockChunk::find(uint32_t block_id)
     {
-      BLOCK_MAP::const_iterator it = block_map_.find(block_id);
-      return it != block_map_.end();
+      BLOCK_MAP::iterator iter = block_map_.find(block_id);
+      return iter == block_map_.end() ? NULL : iter->second;
     }
 
-    BlockCollect* BlockChunk::find(const uint32_t block_id) const
+    bool BlockChunk::exist(uint32_t block_id) const
     {
-      BLOCK_MAP::const_iterator it = block_map_.find(block_id);
-      if (it == block_map_.end())
-      {
-        return NULL;
-      }
-      return it->second;
-    }
-
-    BlockCollect *BlockChunk::create(const uint32_t block_id)
-    {
-      BlockCollect *block_collect = new BlockCollect();
-      BlockInfo* blk = const_cast<BlockInfo*> (block_collect->get_block_info());
-      memset(blk, 0, sizeof(BlockInfo));
-      blk->block_id_ = block_id;
-      blk->version_ = 0;
-
-      block_map_.insert(BLOCK_MAP::value_type(blk->block_id_, block_collect));
-      return block_collect;
-    }
-
-    bool BlockChunk::remove(const uint32_t block_id)
-    {
-      BLOCK_MAP_ITER it = block_map_.find(block_id);
-      if (it == block_map_.end())
-        return false;
-      BlockCollect* block_collect = it->second;
-      // now remove from hashtable.
-      block_map_.erase(it);
-      // this object is allocated by create(block_id),
-      // so remove must delete it.
-      tbsys::gDelete(block_collect);
-      return true;
-    }
-
-    bool BlockChunk::connect(const uint32_t block_id, const uint64_t server_id, const bool master /*= false*/)
-    {
-      TBSYS_LOG(DEBUG, "master(%s)", master ? "true" : "false");
-      BLOCK_MAP_ITER it = block_map_.find(block_id);
-      if (it == block_map_.end())
-      {
-        TBSYS_LOG(DEBUG, "block(%u) not found in blockchunk", block_id);
-        return false;
-      }
-      bool before = false;
-      if (master)
-        before = true;
-
-      if (!it->second->join(server_id, before))
-      {
-        TBSYS_LOG(DEBUG, "block(%u) join failed", block_id);
-        return false;
-      }
-      TBSYS_LOG(DEBUG, "ds size(%u)", it->second->get_ds()->size());
-      if (master)
-        it->second->set_master_ds(server_id);
-      return true;
-    }
-
-    bool BlockChunk::release(const uint32_t block_id, const uint64_t server_id)
-    {
-      BLOCK_MAP_ITER it = block_map_.find(block_id);
-      if (it == block_map_.end())
-        return false;
-      if (it->second->get_master_ds() == server_id)
-        it->second->set_master_ds(0);
-      return it->second->leave(server_id);
-    }
-
-    void BlockChunk::remove_all()
-    {
-      for (BLOCK_MAP_ITER it = block_map_.begin(); it != block_map_.end(); it++)
-      {
-        tbsys::gDelete(it->second);
-      }
-      block_map_.clear();
+      BLOCK_MAP::const_iterator iter = block_map_.find(block_id);
+      return (iter != block_map_.end());
     }
 
     uint32_t BlockChunk::calc_max_block_id() const
     {
       uint32_t block_id = 0;
-      for (BLOCK_MAP::const_iterator bit = block_map_.begin(); bit != block_map_.end(); bit++)
+      BLOCK_MAP::const_iterator iter = block_map_.begin();
+      for (; iter != block_map_.end(); ++iter)
       {
-        if (block_id < bit->first && bit->first < 100000000)
+        if (block_id < iter->first && iter->first < UINT_MAX)
         {
-          block_id = bit->first;
+          block_id = iter->first;
         }
       }
       return block_id;
@@ -165,12 +104,62 @@ namespace tfs
     int64_t BlockChunk::calc_all_block_bytes() const
     {
       int64_t total_bytes = 0;
-      for (BLOCK_MAP::const_iterator it = block_map_.begin(); it != block_map_.end(); ++it)
+      BLOCK_MAP::const_iterator iter = block_map_.begin();
+      for (; iter != block_map_.end(); ++iter)
       {
-        total_bytes += it->second->get_block_info()->size_;
+        total_bytes += iter->second->size();
       }
       return total_bytes;
     }
+
+    uint32_t BlockChunk::calc_size() const
+    {
+      return block_map_.size();
+    }
+
+    int BlockChunk::scan(SSMScanParameter& param, int32_t& actual,bool& end,int32_t should, bool cutover_chunk)
+    {
+      RWLock::Lock lock(*this,  READ_LOCKER);
+      int32_t jump_count = 0;
+      BLOCK_MAP::iterator iter; 
+      if (cutover_chunk)
+      {
+        iter = block_map_.begin();
+        if (iter != block_map_.end())
+        {
+          param.addition_param1_ = iter->second->id();
+        }
+      }
+      else
+      {
+        iter = block_map_.find(param.addition_param1_);
+      }
+
+      TBSYS_LOG(DEBUG, "block_map_size: (%u)", block_map_.size());
+      bool has_block = iter != block_map_.end();
+      if (has_block)
+      {
+        for (; iter != block_map_.end(); ++iter, ++jump_count)
+        {
+          if (iter->second->scan(param) == TFS_SUCCESS)
+          {
+            TBSYS_LOG(DEBUG, "BlockChunk scan block(%u)", iter->second->id());
+            ++actual;
+            if (actual == should)
+            {
+              ++iter;
+              ++jump_count;
+              break;
+            }
+          }
+        }
+        end = iter == block_map_.end();
+        if (!end)
+        {
+          param.addition_param2_ = iter->second->id();
+        }
+      }
+      return jump_count;
+    }
   }
 }
-
