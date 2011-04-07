@@ -13,8 +13,8 @@
  *      - initial release
  *
  */
-#ifndef TFS_MESSAGE_CLIENT_MANAGER_H_
-#define TFS_MESSAGE_CLIENT_MANAGER_H_
+#ifndef TFS_MESSAGE_CLIENT_POOL_H_
+#define TFS_MESSAGE_CLIENT_POOL_H_
 
 #include <tbsys.h>
 #include <tbnet.h>

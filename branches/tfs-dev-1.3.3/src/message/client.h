@@ -47,7 +47,7 @@ namespace tfs
 
     int send_message_to_server(const uint64_t server_id, Message* ds_message, Message** ret_message);
     int post_message_to_server(const uint64_t server_id, Message* message);
-    int test_server_alive(const uint64_t server_id);
+    //int test_server_alive(const uint64_t server_id);
   }
 }
 #endif

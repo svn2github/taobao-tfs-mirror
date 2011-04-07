@@ -47,7 +47,7 @@ namespace tfs
       /** wait for response, timeout (us) */
       bool wait(const int32_t wait_count, const int64_t timeout_in_us);
       bool wait(const int64_t timeout_in_us = 0);
-      bool wakeup(const uint16_t send_id, Message* packet);
+      bool wakeup(const uint16_t send_id, tbnet::Packet* packet);
       int64_t get_response_count();
       std::map<uint16_t, Message*>& get_response();
       Message* get_single_response();

@@ -73,6 +73,50 @@ namespace tfs
       return TFS_SUCCESS;
     }
 
+    int ReplicateBlockMessage::serialize(char* buf, const int64_t buf_len, int64_t& pos) const
+    {
+      if ((buf == NULL)
+          || (pos + get_serialize_size() > buf_len))
+      {
+        return -1;
+      }
+      memcpy((buf+pos), &command_, INT_SIZE);
+      pos += INT_SIZE;
+      memcpy((buf+pos), &expire_, INT_SIZE);
+      pos += INT_SIZE;
+      memcpy((buf+pos), &repl_block_, sizeof(ReplBlock));
+      pos += sizeof(ReplBlock);
+      return 0;
+    }
+    
+    int ReplicateBlockMessage::deserialize(const char* buf, const int64_t data_len, int64_t& pos)
+    {
+      if ((buf == NULL)
+          || (pos + get_serialize_size() > data_len))
+      {
+        return -1;
+      }
+      memcpy(&command_, (buf+pos), INT_SIZE);
+      pos += INT_SIZE;
+      memcpy(&expire_, (buf+pos), INT_SIZE);
+      pos += INT_SIZE;
+      memcpy(&repl_block_, (buf+pos), sizeof(ReplBlock));
+      pos += sizeof(ReplBlock);
+      return 0; 
+    }
+    
+    int64_t ReplicateBlockMessage::get_serialize_size(void) const
+    {
+      return sizeof(int32_t) + sizeof(int32_t) + sizeof(ReplBlock);
+    }
+    
+    void ReplicateBlockMessage::dump(void) const
+    {
+      TBSYS_LOG(DEBUG, "command(%d) expire(%u) id(%u) source_id(%llu) dest_id(%llu) start_time(%d) is_move(%d) server_count(%d)",
+          command_, expire_, repl_block_.block_id_, repl_block_.source_id_, repl_block_.destination_id_,
+          repl_block_.start_time_, repl_block_.is_move_, repl_block_.server_count_);
+    }
+
     char* ReplicateBlockMessage::get_name()
     {
       return "replicateblockmessage";

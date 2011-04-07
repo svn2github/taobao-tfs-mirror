@@ -25,16 +25,17 @@ namespace tfs
     ClientCmdMessage::ClientCmdMessage()
     {
       _packetHeader._pcode = CLIENT_CMD_MESSAGE;
-      memset(&client_cmd_info_, 0, sizeof(ClientCmdInfo));
+      memset(&info_, 0, sizeof(ClientCmdInformation));
     }
 
     ClientCmdMessage::~ClientCmdMessage()
     {
+
     }
 
     int ClientCmdMessage::parse(char *data, int32_t len)
     {
-      if (get_object_copy(&data, &len, reinterpret_cast<void*> (&client_cmd_info_), sizeof(ClientCmdInfo)) == TFS_ERROR)
+      if (get_object_copy(&data, &len, reinterpret_cast<void*> (&info_), sizeof(ClientCmdInformation)) == TFS_ERROR)
       {
         return TFS_ERROR;
       }
@@ -43,17 +44,15 @@ namespace tfs
 
     int32_t ClientCmdMessage::message_length()
     {
-      int32_t len = sizeof(ClientCmdInfo);
-      return len;
+      return sizeof(ClientCmdInformation);
     }
 
     int ClientCmdMessage::build(char *data, int32_t len)
     {
-      if (set_object(&data, &len, &client_cmd_info_, sizeof(ClientCmdInfo)) == TFS_ERROR)
+      if (set_object(&data, &len, &info_, sizeof(ClientCmdInformation)) == TFS_ERROR)
       {
         return TFS_ERROR;
       }
-
       return TFS_SUCCESS;
     }
 

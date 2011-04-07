@@ -22,7 +22,6 @@
 #include <string>
 #include <errno.h>
 
-#include "common/interval.h"
 #include "message.h"
 
 namespace tfs
@@ -33,8 +32,8 @@ namespace tfs
     {
       public:
         StatusMessage();
-        StatusMessage(const int32_t status, char* const str = NULL);
-        void set_message(const int32_t status, char* const str = NULL);
+        StatusMessage(const int32_t status, const char* const str = NULL);
+        void set_message(const int32_t status, const char* const str = NULL);
         virtual ~StatusMessage();
         virtual int parse(char* data, int32_t len);
         virtual int build(char* data, int32_t len);

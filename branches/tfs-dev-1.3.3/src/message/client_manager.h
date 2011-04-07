@@ -7,7 +7,7 @@
 #include "message_factory.h"
 #include "tfs_packet_streamer.h"
 #include "wait_object.h"
-#include "common/interval.h"
+#include "common/define.h"
 
 namespace tfs
 {
@@ -17,10 +17,15 @@ namespace tfs
     class NewClientManager : public tbnet::IPacketHandler
     {
       public:
-        static NewClientManager* get_instance()
+        /*static NewClientManager* get_instance()
         {
           static NewClientManager client_manager;
           return &client_manager;
+        }*/
+        static NewClientManager& get_instance()
+        {
+          static NewClientManager client_manager;
+          return client_manager;
         }
 
       public:
@@ -34,6 +39,11 @@ namespace tfs
               const int64_t wait_timeout, std::map<uint16_t, Message*>& packets);
 
         int call(const int64_t server, Message* packet, const int64_t timeout, Message*& response);
+
+        MessageFactory& get_msg_factory()
+        {
+          return factory_;
+        }
 
       private:
         NewClientManager();
@@ -54,6 +64,9 @@ namespace tfs
 
         WaitObjectManager* waitmgr_;
     };
+
+    int test_server_alive(const uint64_t server_id, const int64_t timeout = common::DEFAULT_NETWORK_CALL_TIMEOUT/*us*/);
+    int send_message_to_server(const uint64_t server_id, Message* msg, Message*& ret_msg, const int64_t timeout = common::DEFAULT_NETWORK_CALL_TIMEOUT/*us*/);
   }
 }
 #endif

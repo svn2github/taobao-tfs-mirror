@@ -22,7 +22,6 @@
 #include <string>
 #include <errno.h>
 
-#include "common/interval.h"
 #include "message.h"
 
 namespace tfs
@@ -30,13 +29,13 @@ namespace tfs
   namespace message
   {
     // ReplicateBlock
-    enum CommandStatus
+    /*enum CommandStatus
     {
       COMMAND_REPLICATE = 1,
       COMMAND_REPL_COMPLETE,
       COMMAND_REPL_FAILURE,
       COMMAND_CLIENT_REPL = 100
-    };
+    };*/
 
     class ReplicateBlockMessage: public Message
     {
@@ -59,6 +58,11 @@ namespace tfs
         return command_;
       }
 
+      inline common::ReplicateBlockMoveFlag get_move_flag() const
+      {
+        return static_cast<common::ReplicateBlockMoveFlag>(repl_block_.is_move_);
+      }
+
       inline void set_expire(const int32_t expire)
       {
         expire_ = expire;
@@ -78,6 +82,11 @@ namespace tfs
       {
         return &repl_block_;
       }
+
+    int serialize(char* buf, const int64_t buf_len, int64_t& pos) const;
+    int deserialize(const char* buf, const int64_t data_len, int64_t& pos);
+    int64_t get_serialize_size(void) const;
+    void dump(void) const;
 
     protected:
       int32_t command_;

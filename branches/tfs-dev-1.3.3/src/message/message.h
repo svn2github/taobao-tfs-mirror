@@ -26,7 +26,7 @@
 #include <tbsys.h>
 #include <tbnet.h>
 #include <Memory.hpp>
-#include "common/interval.h"
+#include "common/internal.h"
 #include "common/func.h"
 
 namespace tfs
@@ -77,7 +77,8 @@ namespace tfs
       REPLICATE_BLOCK_MESSAGE,
       COMPACT_BLOCK_MESSAGE,
       GET_SERVER_STATUS_MESSAGE,
-      SET_SERVER_STATUS_MESSAGE,
+      //SET_SERVER_STATUS_MESSAGE,
+      SHOW_SERVER_INFORMATION_MESSAGE,
       SUSPECT_DATASERVER_MESSAGE,
       FILE_INFO_MESSAGE,
       RESP_FILE_INFO_MESSAGE,
@@ -122,7 +123,10 @@ namespace tfs
       CRC_ERROR_MESSAGE,
       ADMIN_CMD_MESSAGE,
       BATCH_GET_BLOCK_INFO_MESSAGE,
-      BATCH_SET_BLOCK_INFO_MESSAGE
+      BATCH_SET_BLOCK_INFO_MESSAGE,
+      REMOVE_BLOCK_RESPONSE_MESSAGE,
+      DUMP_PLAN_MESSAGE,
+      DUMP_PLAN_RESPONSE_MESSAGE
     };
     //Define Message Type End
 
@@ -681,7 +685,7 @@ namespace tfs
 
         // parse for version & lease
         // ds_: ds1 ds2 ds3 [flag=-1] [version] [leaseid]
-        static bool parse_special_ds(common::VUINT64& ds, int32_t& version, int32_t& lease)
+        static bool parse_special_ds(common::VUINT64& ds, int32_t& version, uint32_t& lease)
         {
           common::VUINT64::iterator it = find(ds.begin(), ds.end(), static_cast<uint64_t> (ULONG_LONG_MAX));
           common::VUINT64::iterator start = it;

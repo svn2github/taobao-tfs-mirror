@@ -42,7 +42,7 @@ namespace tfs
       create_message_map_[REPLICATE_BLOCK_MESSAGE] = ReplicateBlockMessage::create;
       create_message_map_[COMPACT_BLOCK_MESSAGE] = CompactBlockMessage::create;
       create_message_map_[GET_SERVER_STATUS_MESSAGE] = GetServerStatusMessage::create;
-      create_message_map_[SET_SERVER_STATUS_MESSAGE] = SetServerStatusMessage::create;
+      //create_message_map_[SET_SERVER_STATUS_MESSAGE] = SetServerStatusMessage::create;
       create_message_map_[SUSPECT_DATASERVER_MESSAGE] = SuspectDataserverMessage::create;
       create_message_map_[RENAME_FILE_MESSAGE] = RenameFileMessage::create;
       create_message_map_[CLIENT_CMD_MESSAGE] = ClientCmdMessage::create;
@@ -80,8 +80,12 @@ namespace tfs
       create_message_map_[MASTER_AND_SLAVE_HEART_MESSAGE] = MasterAndSlaveHeartMessage::create;
       create_message_map_[MASTER_AND_SLAVE_HEART_RESPONSE_MESSAGE] = MasterAndSlaveHeartResponseMessage::create;
       create_message_map_[HEARTBEAT_AND_NS_HEART_MESSAGE] = HeartBeatAndNSHeartMessage::create;
-      create_message_map_[GET_BLOCK_LIST_MESSAGE] = GetBlockListMessage::create;
+      //create_message_map_[GET_BLOCK_LIST_MESSAGE] = GetBlockListMessage::create;
       create_message_map_[ADMIN_CMD_MESSAGE] = AdminCmdMessage::create;
+      create_message_map_[REMOVE_BLOCK_RESPONSE_MESSAGE] = RemoveBlockResponseMessage::create;
+      create_message_map_[DUMP_PLAN_MESSAGE] = DumpPlanMessage::create;
+      create_message_map_[DUMP_PLAN_RESPONSE_MESSAGE] = DumpPlanResponseMessage::create;
+      create_message_map_[SHOW_SERVER_INFORMATION_MESSAGE] = ShowServerInformationMessage::create;
     }
 
     MessageFactory::~MessageFactory()

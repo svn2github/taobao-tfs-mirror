@@ -22,7 +22,6 @@
 #include <string>
 #include <errno.h>
 
-#include "common/interval.h"
 #include "message.h"
 
 namespace tfs
@@ -107,7 +106,7 @@ namespace tfs
         int32_t option_flag_;
         common::VUINT64 ds_;
         int32_t version_;
-        int32_t lease_id_;
+        uint32_t lease_id_;
         bool has_lease_;
     };
   }

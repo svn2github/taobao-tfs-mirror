@@ -185,7 +185,12 @@ namespace tfs
 
     int32_t MasterAndSlaveHeartResponseMessage::message_length()
     {
-      return sizeof(ns_identity_) + get_vint64_len(ds_list_);
+      int32_t length = sizeof(ns_identity_);
+      if (ns_identity_.flags_ == HEART_GET_DATASERVER_LIST_FLAGS_YES)
+      {
+        length += get_vint64_len(ds_list_);
+      }
+      return length;
     }
 
     char* MasterAndSlaveHeartResponseMessage::get_name()

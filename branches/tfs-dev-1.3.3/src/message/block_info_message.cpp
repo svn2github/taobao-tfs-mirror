@@ -270,7 +270,7 @@ namespace tfs
       uint32_t block_id;
       for (int32_t i = 0; i < count; i++)
       {
-        BlockInfoSeg block_info;
+        common::BlockInfoSeg block_info;
         if (get_int32(&data, &len, reinterpret_cast<int32_t*>(&block_id)) == TFS_ERROR)
         {
           return TFS_ERROR;
@@ -295,7 +295,7 @@ namespace tfs
       if (count > 0)
       {
         // ds
-        std::map<uint32_t, BlockInfoSeg>::iterator it = block_infos_.begin();
+        std::map<uint32_t, common::BlockInfoSeg>::iterator it = block_infos_.begin();
         for (; it != block_infos_.end(); it++)
         {
           len += get_vint64_len(it->second.ds_);
@@ -319,8 +319,8 @@ namespace tfs
         return TFS_ERROR;
       }
 
-      std::map<uint32_t, BlockInfoSeg>::iterator it = block_infos_.begin();
-      BlockInfoSeg* block_info = NULL;
+      std::map<uint32_t, common::BlockInfoSeg>::iterator it = block_infos_.begin();
+      common::BlockInfoSeg* block_info = NULL;
       for (; it != block_infos_.end(); it++)
       {
         block_info = &it->second;
@@ -362,13 +362,13 @@ namespace tfs
 
     void BatchSetBlockInfoMessage::set_read_block_ds(const uint32_t block_id, VUINT64& ds)
     {
-        block_infos_[block_id] = BlockInfoSeg(ds);
+        block_infos_[block_id] = common::BlockInfoSeg(ds);
     }
 
     void BatchSetBlockInfoMessage::set_write_block_ds(const uint32_t block_id, VUINT64& ds,
                                                       const int32_t version, const int32_t lease)
     {
-        block_infos_[block_id] = BlockInfoSeg(ds, true, lease, version);
+        block_infos_[block_id] = common::BlockInfoSeg(ds, true, lease, version);
     }
 
     CarryBlockMessage::CarryBlockMessage()
@@ -554,6 +554,52 @@ namespace tfs
     void RemoveBlockMessage::add_remove_id(const uint32_t block_id)
     {
       remove_blocks_.push_back(block_id);
+    }
+
+    RemoveBlockResponseMessage::RemoveBlockResponseMessage():
+      block_id_(0)
+    {
+      _packetHeader._pcode = REMOVE_BLOCK_RESPONSE_MESSAGE;
+    }
+
+    RemoveBlockResponseMessage::~RemoveBlockResponseMessage()
+    {
+
+    }
+
+    int RemoveBlockResponseMessage::parse(char* data, int32_t len)
+    {
+      if (get_uint32(&data, &len, &block_id_) == TFS_ERROR)
+      {
+        return TFS_ERROR;
+      }
+      return TFS_SUCCESS;
+    }
+
+    int32_t RemoveBlockResponseMessage::message_length()
+    {
+      return sizeof(uint32_t);
+    }
+
+    int RemoveBlockResponseMessage::build(char* data, int32_t len)
+    {
+      if (set_int32(&data, &len, block_id_) == TFS_ERROR)
+      {
+        return TFS_ERROR;
+      }
+      return TFS_SUCCESS;
+    }
+
+    char* RemoveBlockResponseMessage::get_name()
+    {
+      return "RemoveBlockResponseMessage";
+    }
+
+    Message* RemoveBlockResponseMessage::create(const int32_t type)
+    {
+      RemoveBlockResponseMessage* req_rb_msg = new RemoveBlockResponseMessage();
+      req_rb_msg->set_message_type(type);
+      return req_rb_msg;
     }
 
     ListBlockMessage::ListBlockMessage() :

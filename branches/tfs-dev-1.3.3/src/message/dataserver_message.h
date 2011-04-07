@@ -22,7 +22,6 @@
 #include <vector>
 #include <errno.h>
 #include "message.h"
-#include "common/interval.h"
 
 // the common::DataServerStatInfo information of block
 // format:
@@ -51,13 +50,13 @@ namespace tfs
         {
           return has_block_;
         }
-        inline common::DataServerStatInfo* get_ds() const
+        inline common::DataServerStatInfo& get_ds()
         {
-          return ds_;
+          return *ds_;
         }
-        inline const common::BLOCK_INFO_LIST* get_blocks() const
+        inline common::BLOCK_INFO_LIST& get_blocks()
         {
-          return &blocks_;
+          return blocks_;
         }
 
         static Message* create(const int32_t type);

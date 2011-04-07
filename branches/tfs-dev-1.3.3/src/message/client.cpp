@@ -16,6 +16,7 @@
 #include "client.h"
 #include "client_pool.h"
 #include "common/error_msg.h"
+#include "client_manager.h"
 
 using namespace tfs::common;
 
@@ -26,6 +27,7 @@ namespace tfs
     Client::Client(const uint64_t ip) :
       ip_(ip), ret_msg_(NULL)
     {
+      NewClientManager* manager = NULL;
     }
 
     Client::~Client()
@@ -204,7 +206,7 @@ namespace tfs
     // test whether the DataServerStatInfo is still alive.  
     // @param server_id
     // @return TFS_SUCCESS
-    int test_server_alive(const uint64_t server_id)
+    /*int test_server_alive(const uint64_t server_id)
     {
       Message* ret_msg = NULL;
       StatusMessage send_msg(STATUS_MESSAGE_PING);
@@ -238,6 +240,6 @@ namespace tfs
       }
 
       return EXIT_GENERAL_ERROR;
-    }
+    }*/
   }
 }

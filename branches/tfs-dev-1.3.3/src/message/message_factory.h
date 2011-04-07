@@ -44,6 +44,7 @@
 #include "oplog_sync_message.h"
 #include "crc_error_message.h"
 #include "admin_cmd_message.h"
+#include "dump_plan_message.h"
 
 namespace tfs
 {

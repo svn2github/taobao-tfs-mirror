@@ -21,8 +21,8 @@
 #include <fcntl.h>
 #include <string>
 #include <errno.h>
-#include "common/interval.h"
 #include "message.h"
+#include "common/internal.h"
 
 namespace tfs
 {
@@ -100,17 +100,17 @@ namespace tfs
           return server_id_;
         }
 
-        inline void set_block_info(common::BlockInfo* const block_info)
+        inline void set_block_info(const common::BlockInfo& block_info)
         {
           block_info_ = block_info;
         }
 
-        inline common::BlockInfo* get_block_info() const
+        inline common::BlockInfo& get_block_info()
         {
           return block_info_;
         }
 
-        inline void set_success(const common::CompactCompleteStatus success)
+        inline void set_success(const common::PlanStatus success)
         {
           success_ = success;
         }
@@ -139,14 +139,17 @@ namespace tfs
         {
           return ds_list_;
         }
-
+        int serialize(char* buf, const int64_t buf_len, int64_t& pos) const;
+        int deserialize(const char* buf, const int64_t data_len, int64_t& pos);
+        int64_t get_serialize_size(void) const;
+        void dump(void) const;
         static Message* create(const int32_t type);
 
       protected:
         uint32_t block_id_;
         int32_t success_;
         uint64_t server_id_;
-        common::BlockInfo* block_info_;
+        common::BlockInfo block_info_;
         uint32_t flag_;
         common::VUINT64 ds_list_;
 

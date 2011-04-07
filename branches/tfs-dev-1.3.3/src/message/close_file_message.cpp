@@ -13,7 +13,6 @@
  *      - initial release
  *
  */
-#include "common/interval.h"
 #include "close_file_message.h"
 
 using namespace tfs::common;

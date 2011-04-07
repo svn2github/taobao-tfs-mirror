@@ -27,16 +27,16 @@ namespace tfs
       _packetHeader._pcode = STATUS_MESSAGE;
     }
 
-    StatusMessage::StatusMessage(const int32_t status, char* const str)
+    StatusMessage::StatusMessage(const int32_t status, const char* const str)
     {
       _packetHeader._pcode = STATUS_MESSAGE;
       set_message(status, str);
     }
 
-    void StatusMessage::set_message(const int32_t status, char* const str)
+    void StatusMessage::set_message(const int32_t status, const char* const str)
     {
       status_ = status;
-      str_ = str;
+      str_ = const_cast<char*>(str);
     }
 
     StatusMessage::~StatusMessage()

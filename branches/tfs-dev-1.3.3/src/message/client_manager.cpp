@@ -71,7 +71,37 @@ namespace tfs
     tbnet::IPacketHandler::HPRetCode NewClientManager::handlePacket(
         tbnet::Packet* packet, void* args)
     {
-      if (NULL != args && NULL != packet && packet->isRegularPacket())
+      bool call_wakeup = NULL != args;
+      if (call_wakeup)
+      {
+        bool is_disconntion_packet = (NULL != packet)
+                      && (!packet->isRegularPacket()) //disconntion packet
+                      && (packet->getPCode() == tbnet::ControlPacket::CMD_DISCONN_PACKET);
+        call_wakeup = !is_disconntion_packet;
+        if (call_wakeup)
+        {
+          WaitId id = *(reinterpret_cast<WaitId*>(&args));
+          waitmgr_->wakeup_wait_object(id, packet);
+        }
+      }
+      else
+      {
+        if (NULL != packet)
+        {
+          if (packet->isRegularPacket())//data packet
+          {
+            TBSYS_LOG(INFO, "no client waiting this packet.code: %d", packet->getPCode());
+            packet->free();
+          }
+          else
+          {
+            TBSYS_LOG(DEBUG, "packet pcode: %d is not regular packet, command: %d, discard anyway. "
+                "args is NULL, maybe post channel timeout packet ",
+                packet->getPCode(), dynamic_cast<tbnet::ControlPacket*>(packet)->getCommand());
+          }
+        }
+      }
+      /*if (NULL != args && NULL != packet && packet->isRegularPacket())
       {
         WaitId id = *(reinterpret_cast<WaitId*>(&args));
         waitmgr_->wakeup_wait_object(id, packet);
@@ -104,7 +134,7 @@ namespace tfs
         {
           TBSYS_LOG(WARN, "packet is NULL, unknown error. args: %x", args);
         }
-      }
+      }*/
       return tbnet::IPacketHandler::FREE_CHANNEL;
     }
 
@@ -277,6 +307,73 @@ namespace tfs
         wait_object = NULL;
       } 
       return rc;
+    }
+
+    // test whether the DataServerStatInfo is still alive.  
+    int test_server_alive(const uint64_t server_id, const int64_t timeout)
+    {
+      Message* ret_msg = NULL;
+      StatusMessage send_msg(STATUS_MESSAGE_PING);
+      int iret = NewClientManager::get_instance().call(server_id, &send_msg, timeout, ret_msg);
+      if (iret != TFS_SUCCESS)
+      {
+        tbsys::gDelete(ret_msg);
+        TBSYS_LOG(ERROR, "test server alive ping server(%s) error, server is down",
+          tbsys::CNetUtil::addrToString(server_id).c_str());
+      }
+      else
+      {
+        if (NULL == ret_msg)
+        {
+          iret = TFS_ERROR;
+          TBSYS_LOG(ERROR, "test server alive ping server(%s) error, server mybe down",
+            tbsys::CNetUtil::addrToString(server_id).c_str());
+        }
+        else
+        {
+          iret = ret_msg->getPCode() == STATUS_MESSAGE
+                  ? TFS_SUCCESS : TFS_ERROR;
+        tbsys::gDelete(ret_msg);
+        }
+      }
+      return iret;
+    }
+
+    //send message to server
+    int send_message_to_server(const uint64_t server_id, Message* msg, Message** response, const int64_t timeout)
+    {
+      Message* ret_msg = NULL;
+      int iret = NewClientManager::get_instance().call(server_id, msg, timeout, ret_msg);
+      if (TFS_SUCCESS == iret 
+          && NULL != ret_msg)
+      {
+        if (NULL != response)
+        {
+          *response = ret_msg; 
+        }
+        else
+        {
+          if (ret_msg->getPCode() == STATUS_MESSAGE)
+          {
+            StatusMessage* s_msg = dynamic_cast<StatusMessage*>(ret_msg);
+            iret = STATUS_MESSAGE_OK == s_msg->get_status()
+                    ? TFS_SUCCESS :  s_msg->get_status();
+          }
+          else
+          {
+            iret = TFS_ERROR;
+            TBSYS_LOG(ERROR, "send message to server(%s) error, message(%d:%d) is invalid",
+                tbsys::CNetUtil::addrToString(server_id).c_str(), msg->getPCode(), ret_msg->getPCode());
+          }
+        }
+      }
+      else
+      {
+        iret = TFS_ERROR;
+        TBSYS_LOG(ERROR, "send message to server(%s) error: receive message error or timeout",
+          tbsys::CNetUtil::addrToString(server_id).c_str());
+      }
+      return iret;
     }
   }
 }

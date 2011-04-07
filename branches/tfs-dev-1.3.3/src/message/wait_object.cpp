@@ -34,23 +34,16 @@ namespace tfs
     bool WaitObject::wait(const int32_t wait_count, const int64_t timeout_in_us)
     {
       bool ret = true;
-      int64_t timeout_in_ms = timeout_in_us / 1000;
-      if (wait_count > WAIT_RESPONSE_ARRAY_SIZE)
-      {
-        ret = false;
-        TBSYS_LOG(ERROR, "cannot wait more than %d responses, you request %d", WAIT_RESPONSE_ARRAY_SIZE, wait_count);
-      }
+      int64_t timeout_in_ms = timeout_in_us <= 0 ? 
+        DEFAULT_NETWORK_CALL_TIMEOUT / 1000 : timeout_in_us / 1000;
 
       cond_.lock();
-      if (ret)
+      while (done_count_ < wait_count)
       {
-        while (done_count_ < wait_count)
+        if (cond_.wait(timeout_in_ms) == false)
         {
-          if (cond_.wait(timeout_in_ms) == false)
-          {
-            ret = false;
-            break;
-          }
+          ret = false;
+          break;
         }
       }
       wait_over_ = true;
@@ -58,7 +51,7 @@ namespace tfs
       return ret;
     }
 
-    bool WaitObject::wakeup(const uint16_t send_id, Message* packet)
+    bool WaitObject::wakeup(const uint16_t send_id, tbnet::Packet* packet)
     {
       bool ret = true;
       cond_.lock();
@@ -70,7 +63,7 @@ namespace tfs
 
       if (packet != NULL && packet->isRegularPacket())
       {
-        push_response(send_id, packet);
+        push_response(send_id, dynamic_cast<Message*>(packet));
       }
 
       done_count_++;
@@ -211,7 +204,7 @@ namespace tfs
       else
       {
         // if got control packet or NULL, we will still add the done counter
-        ret = it->second->wakeup(id.send_id_, dynamic_cast<Message*>(response));
+        ret = it->second->wakeup(id.send_id_, response);
       }
       
       if (!ret && response != NULL && response->isRegularPacket())

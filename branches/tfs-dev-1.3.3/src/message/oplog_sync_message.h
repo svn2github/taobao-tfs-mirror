@@ -21,7 +21,6 @@
 #include <fcntl.h>
 #include <string>
 #include <errno.h>
-#include "common/interval.h"
 #include "message.h"
 
 namespace tfs

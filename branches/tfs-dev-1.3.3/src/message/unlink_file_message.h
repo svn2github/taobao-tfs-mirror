@@ -22,7 +22,6 @@
 #include <string>
 #include <errno.h>
 
-#include "common/interval.h"
 #include "message.h"
 
 namespace tfs
@@ -115,13 +114,13 @@ namespace tfs
           return version_;
         }
 
-        inline void set_lease_id(const int32_t lease)
+        inline void set_lease_id(const uint32_t lease)
         {
           lease_ = lease;
           has_lease_ = true;
         }
 
-        inline int32_t get_lease_id() const
+        inline uint32_t get_lease_id() const
         {
           return lease_;
         }
@@ -167,7 +166,7 @@ namespace tfs
         int32_t option_flag_;
         common::VUINT64 dataservers_;
         int32_t version_;
-        int32_t lease_;
+        uint32_t lease_;
         bool has_lease_;
     };
 
