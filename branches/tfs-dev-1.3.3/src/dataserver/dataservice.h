@@ -26,7 +26,7 @@
 #include "data_management.h"
 #include "requester.h"
 #include "block_checker.h"
-#include "common/interval.h"
+#include "common/internal.h"
 #include "common/config.h"
 #include "message/message.h"
 #include "message/message_factory.h"

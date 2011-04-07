@@ -18,7 +18,7 @@
 #ifndef TFS_DATASERVER_SYNCBACKUP_H_
 #define TFS_DATASERVER_SYNCBACKUP_H_
 
-#include "common/interval.h"
+#include "common/internal.h"
 #include "client/tfs_client_api.h"
 #include <Memory.hpp>
 

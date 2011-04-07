@@ -1391,13 +1391,22 @@ namespace tfs
             "removeblock error, ret: %d", ret);
       }
 
-      message->reply_message(new StatusMessage(STATUS_MESSAGE_OK));
+      if (remove_blocks->size() == 1U)
+      {
+        RemoveBlockResponseMessage* msg = new RemoveBlockResponseMessage();
+        msg->set_block_id(*remove_blocks->begin());
+        message->reply_message(msg); 
+      }
+      else
+      {
+        message->reply_message(new StatusMessage(STATUS_MESSAGE_OK));
+      }
       return TFS_SUCCESS;
     }
 
     int DataService::replicate_block_cmd(ReplicateBlockMessage* message)
     {
-      if (message->get_command() != COMMAND_REPLICATE)
+      if (message->get_command() != PLAN_STATUS_BEGIN)
       {
         return TFS_ERROR;
       }
@@ -1610,15 +1619,15 @@ namespace tfs
     int32_t DataService::client_command(ClientCmdMessage* message)
     {
       StatusMessage* resp = new StatusMessage(STATUS_MESSAGE_ERROR, "unknown client cmd.");
-      int32_t type = message->get_type();
-      uint64_t from_server_id = message->get_from_server_id();
+      int32_t type = message->get_cmd();
+      uint64_t from_server_id = message->get_value2();
       do
       {
         // load a lost block
         if (CLIENT_CMD_SET_PARAM == type)
         {
-          uint32_t block_id = message->get_block_id();
-          uint64_t server_id = message->get_server_id();
+          uint32_t block_id = message->get_value3();
+          uint64_t server_id = message->get_value1();
           TBSYS_LOG(DEBUG, "set run param block_id: %u, server: %" PRI64_PREFIX "u, from: %s", block_id, server_id,
               tbsys::CNetUtil::addrToString(from_server_id).c_str());
           // block_id as param type,

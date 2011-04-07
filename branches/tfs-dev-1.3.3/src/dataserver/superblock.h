@@ -20,7 +20,6 @@
 #include <string.h>
 #include <iostream>
 #include "dataserver_define.h"
-#include "common/interval.h"
 #include "common/error_msg.h"
 
 namespace tfs

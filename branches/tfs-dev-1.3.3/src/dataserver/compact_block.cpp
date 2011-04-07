@@ -234,15 +234,15 @@ namespace tfs
 
       CompactBlockCompleteMessage req_cbc_msg;
       req_cbc_msg.set_block_id(block_id);
-      CompactCompleteStatus compact_status = COMPACT_COMPLETE_STATUS_SUCCESS;
+      PlanStatus compact_status = PLAN_STATUS_END;
       if (TFS_SUCCESS != success)
       {
-        compact_status = COMPACT_COMPLETE_STATUS_FAILED;
+        compact_status = PLAN_STATUS_FAILURE;
       }
       req_cbc_msg.set_success(compact_status);
       req_cbc_msg.set_server_id(dataserver_id_);
       BlockInfo* blk = LogicBlock->get_block_info();
-      req_cbc_msg.set_block_info(blk);
+      req_cbc_msg.set_block_info(*blk);
 
       client_mutex_->lock();
       Message* rsp_msg = client_->call(&req_cbc_msg);

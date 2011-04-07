@@ -21,7 +21,6 @@
 #define TFS_DATASERVER_FILEREPAIR_H_
 
 #include "dataserver_define.h"
-#include "common/interval.h"
 #include "client/tfs_client_api.h"
 
 namespace tfs

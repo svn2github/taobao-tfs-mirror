@@ -134,11 +134,11 @@ namespace tfs
       req_rb_msg.set_repl_block(b);
       if (TFS_SUCCESS == status)
       {
-        req_rb_msg.set_command(COMMAND_REPL_COMPLETE);
+        req_rb_msg.set_command(PLAN_STATUS_END);
       }
       else
       {
-        req_rb_msg.set_command(COMMAND_REPL_FAILURE);
+        req_rb_msg.set_command(PLAN_STATUS_FAILURE);
       }
 
       int32_t need_remove = 0;

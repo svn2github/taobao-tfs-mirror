@@ -19,7 +19,7 @@
 #define TFS_DATASERVER_DATAHANDLE_H_
 
 #include "physical_block.h"
-#include "common/interval.h"
+#include "common/internal.h"
 
 namespace tfs
 {

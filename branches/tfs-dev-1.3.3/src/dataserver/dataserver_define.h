@@ -18,7 +18,7 @@
 
 #include <string>
 #include <assert.h>
-#include "common/interval.h"
+#include "common/internal.h"
 
 namespace tfs
 {
