@@ -189,7 +189,6 @@ int TfsSession::get_block_info(SEG_DATA_LIST& seg_list, int32_t flag)
       }
     }
   }
-  TBSYS_LOG(DEBUG, "batch get block info end, ret: %d", ret);
   return ret;
 }
 

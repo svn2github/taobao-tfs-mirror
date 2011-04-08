@@ -110,8 +110,8 @@ namespace tfs
       void destroy_info();
       int load_head(const char* buf);
       int load_segment(const char* buf);
-      void get_segment(const int64_t start, const int64_t end,
-                       const char* buf, int64_t& size, SEG_DATA_LIST& seg_list);
+      void get_segment(const int64_t offset, const char* buf,
+                       int64_t size, SEG_DATA_LIST& seg_list);
       void gc_segment(SEG_SET_ITER it);
       void gc_segment(SEG_SET_ITER first, SEG_SET_ITER last);
 

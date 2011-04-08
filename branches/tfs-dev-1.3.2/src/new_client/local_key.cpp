@@ -194,8 +194,6 @@ int LocalKey::validate(int64_t total_size)
         else if (total_size != 0 && nit != seg_info_.end()) // not all segment used
         {
           gc_segment(nit, seg_info_.end());
-          seg_head_.size_ = total_size;
-          seg_head_.count_ = seg_info_.size();
         }
       }
     }
@@ -228,6 +226,11 @@ int LocalKey::save()
       TBSYS_LOG(INFO, "save segment info successful, count: %d, raw size: %d, file size: %"PRI64_PREFIX"d",
                 seg_info_.size(), size, seg_head_.size_, ret);
       file_op_->flush_file();
+
+      if ((ret = gc_file_.save()) != TFS_SUCCESS)
+      {
+        TBSYS_LOG(ERROR, "save gc file fail, ret: %d", ret);
+      }
     }
 
     tbsys::gDeleteA(buf);
@@ -280,56 +283,82 @@ int LocalKey::dump_data(char* buf)
 int LocalKey::get_segment_for_write(const int64_t offset, const char* buf,
                                     int64_t size, SEG_DATA_LIST& seg_list)
 {
-  int64_t cur_offset = offset, next_offset = offset, remain_size = size, last_remain_size = size;
+  int64_t cur_offset = offset, remain_size = size,
+    last_remain_size = 0, need_write_size = 0;
+  int32_t tmp_crc = 0;
   const char* cur_buf = buf;
   SegmentInfo seg_info;
-  SEG_SET_ITER it;
+  SEG_SET_ITER it, first_it;
 
   while (remain_size > 0)
   {
     last_remain_size = remain_size;
-    seg_info.offset_ = next_offset = cur_offset;
+    need_write_size = 0;
+    seg_info.offset_ = cur_offset;
 
-    if ((it = seg_info_.lower_bound(seg_info)) == seg_info_.end()) // cur_offset ~ end hasn't been written
+    // cur_offset ~ end hasn't been written
+    if ((first_it = it = seg_info_.lower_bound(seg_info)) == seg_info_.end())
     {
-      next_offset = cur_offset + remain_size;
+      need_write_size += remain_size;
+      remain_size = 0;
     }
     else
     {
-      if (it->offset_ == cur_offset) // current segment's offset+size has written
+      if (first_it->offset_ != cur_offset)
       {
-        int32_t tmp_crc = 0;
-        if (remain_size >= it->size_ && (tmp_crc = Func::crc(0, cur_buf, it->size_)) == it->crc_)
+        need_write_size += first_it->offset_ - cur_offset;
+
+        // actually only first loop may occur
+        if (first_it != seg_info_.begin())
         {
-          TBSYS_LOG(INFO, "segment data written: offset: %"PRI64_PREFIX"d, blockid: %u, fileid: %"PRI64_PREFIX"u, size: %d, crc: %u", it->offset_, it->block_id_, it->file_id_, it->size_, it->crc_);
-          remain_size -= it->size_; // only if whole segment check pass, use it
-        }
-        else
-        {
-          TBSYS_LOG(WARN, "segment crc fail: %u <> %u, size: %"PRI64_PREFIX"d <> %"PRI64_PREFIX"d",
-                    it->crc_, tmp_crc, it->size_, remain_size);
-          next_offset = it->offset_ + it->size_;
-          gc_segment(it);
-        }
-      }
-      else
-      {
-        next_offset = it->offset_;
-        if (it != seg_info_.begin()) // offset ~ least_offset hasn't written. actually only first loop may occur
-        {
-          SEG_SET_ITER pre_it = it;
-          pre_it--;
-          if (pre_it->offset_ + pre_it->size_ > cur_offset) // overlap
+          first_it--;
+          // no overlap, no gc
+          if (first_it->offset_ + first_it->size_ <= cur_offset)
           {
-            gc_segment(pre_it);
+            first_it++;
           }
         }
       }
+
+      remain_size -= need_write_size;
+      // combine adjacent conflicted segments
+      // until reach the segment that can be reused.
+      while (remain_size > 0 && it != seg_info_.end())
+      {
+        tmp_crc = 0;
+        if (remain_size < it->size_)
+        {
+          TBSYS_LOG(INFO, "segment size conflict: %d <> %"PRI64_PREFIX"d", it->size_, remain_size);
+          need_write_size += remain_size;
+          remain_size = 0;
+        }
+        else if ((tmp_crc = Func::crc(0, cur_buf + need_write_size, it->size_)) != it->crc_)
+        {
+          TBSYS_LOG(INFO, "segment crc conflict: %d <> %d", it->crc_, tmp_crc);
+          need_write_size += it->size_;
+          remain_size -= it->size_;
+        }
+        else // full segment crc is correct, use it
+        {
+          TBSYS_LOG(INFO, "segment data written: offset: %"PRI64_PREFIX"d, blockid: %u, fileid: %"PRI64_PREFIX"u, size: %d, crc: %u", it->offset_, it->block_id_, it->file_id_, it->size_, it->crc_);
+          remain_size -= it->size_;
+          break;
+        }
+        it++;
+      }
     }
-    // remain size should not be negtive
-    get_segment(cur_offset, next_offset, cur_buf, remain_size, seg_list);
+
+    // all ramainning size need write
+    if (it == seg_info_.end())
+    {
+      need_write_size += remain_size;
+      remain_size = 0;
+    }
+
+    get_segment(cur_offset, cur_buf, need_write_size, seg_list);
     cur_buf += last_remain_size - remain_size;
     cur_offset += last_remain_size - remain_size;
+    gc_segment(first_it, it);
   }
   return TFS_SUCCESS;
 }
@@ -404,26 +433,19 @@ int LocalKey::get_segment_for_read(const int64_t offset, const char* buf,
   return TFS_SUCCESS;
 }
 
-void LocalKey::get_segment(const int64_t start, const int64_t end,
-                           const char* buf, int64_t& size, SEG_DATA_LIST& seg_list)
+void LocalKey::get_segment(const int64_t offset, const char* buf,
+                           int64_t size, SEG_DATA_LIST& seg_list)
 {
-  if (start < end && size > 0)
+  if (size > 0)
   {
-    int64_t offset = start, cur_size = 0, check_size = 0;
+    int64_t cur_size = 0, check_size = 0;
     SegmentData* seg_data = NULL;
-    bool not_end = true;
 
-    while (not_end)
+    while (check_size < size)
     {
-      if (offset + ClientConfig::segment_size_ > end || // reach file offset end
-          check_size + ClientConfig::segment_size_ > size) // reach buffer offset end
+      if (check_size + ClientConfig::segment_size_ > size)
       {
-        cur_size = std::min(end - offset, size - check_size);
-        not_end = false;
-        if (0 == cur_size)
-        {
-          break;
-        }
+        cur_size = size - check_size;
       }
       else
       {
@@ -431,16 +453,15 @@ void LocalKey::get_segment(const int64_t start, const int64_t end,
       }
 
       seg_data = new SegmentData();
-      seg_data->seg_info_.offset_ = offset;
+      seg_data->seg_info_.offset_ = offset + check_size;
       seg_data->seg_info_.size_ = cur_size;
       seg_data->buf_ = const_cast<char*>(buf) + check_size;
       seg_list.push_back(seg_data);
 
-      TBSYS_LOG(DEBUG, "get segment, seg info size: %d, offset: %"PRI64_PREFIX"d", seg_data->seg_info_.size_, seg_data->seg_info_.offset_);
+      TBSYS_LOG(DEBUG, "get segment, seg info size: %d, offset: %"PRI64_PREFIX"d",
+                seg_data->seg_info_.size_, seg_data->seg_info_.offset_);
       check_size += cur_size;
-      offset += cur_size;
     }
-    size -= check_size;
   }
 }
 
@@ -499,11 +520,15 @@ void LocalKey::gc_segment(SEG_SET_ITER first, SEG_SET_ITER last)
   // not update head info
   if (first != last && first != seg_info_.end())
   {
+    int64_t total_size = 0;
     for (SEG_SET_ITER it = first; it != last && it != seg_info_.end(); it++)
     {
       gc_file_.add_segment(*it);
+      total_size += it->size_;
     }
     seg_info_.erase(first, last);
+    seg_head_.size_ -= total_size;
+    seg_head_.count_ = seg_info_.size();
   }
 }
 

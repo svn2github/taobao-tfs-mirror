@@ -29,12 +29,14 @@ namespace tfs
       }
 
     private:
+      int save_gc();
       int load();
       int load_head();
       void dump(char* buf);
 
     private:
       bool is_load_;
+      int file_pos_;
       common::FileOperation* file_op_;
       common::SegmentHead seg_head_;
       std::vector<common::SegmentInfo> seg_info_;

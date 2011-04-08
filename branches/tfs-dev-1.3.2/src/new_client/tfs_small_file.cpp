@@ -100,12 +100,11 @@ int TfsSmallFile::unlink(const char* file_name, const char* suffix, const TfsUnl
 
 int TfsSmallFile::get_segment_for_read(int64_t offset, char* buf, int64_t count)
 {
-  return get_segment_for_write(offset, buf, count);
+  return get_meta_segment(offset, buf, count);
 }
 
 int TfsSmallFile::get_segment_for_write(int64_t offset, const char* buf, int64_t count)
 {
-  destroy_seg();
   return get_meta_segment(offset, const_cast<char*>(buf), count);
 }
 

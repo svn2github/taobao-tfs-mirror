@@ -376,7 +376,7 @@ int TfsFile::close_ex()
     TBSYS_LOG(ERROR, "close tfs file fail, ret: %d", ret);
   }
 
-  if (TFS_SUCCESS == ret)
+  if (TFS_SUCCESS == ret && 0 != offset_)
   {
     if (flags_ & WRITE_MODE)
     {
