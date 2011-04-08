@@ -1660,6 +1660,11 @@ namespace tfs
             ret = STATUS_MESSAGE_OK;
           resp->set_message(ret, "cannot set acl, flag not 0");
         }
+        else if (CLIENT_CMD_FORCE_DATASERVER_REPORT == type)
+        {
+          need_send_blockinfo_[0] = 1;
+          need_send_blockinfo_[1] = 1;
+        }
       }
       while (0);
       message->reply_message(resp);
@@ -1800,10 +1805,12 @@ namespace tfs
       if (!set_flag_[who])
         return;
 
+      bool reset_need_send_blockinfo_flag = data_management_.get_all_logic_block_size() <= 0;
       SetDataserverMessage req_sds_msg;
       req_sds_msg.set_ds(&data_server_info_);
       if (need_send_blockinfo_[who])
       {
+        reset_need_send_blockinfo_flag = true;
         req_sds_msg.set_has_block(HAS_BLOCK_FLAG_YES);
 
         list<LogicBlock*> logic_block_list;
@@ -1821,7 +1828,11 @@ namespace tfs
         if (RESP_HEART_MESSAGE == message->get_message_type())
         {
           RespHeartMessage* resp_hb_msg = dynamic_cast<RespHeartMessage*>(message);
-          need_send_blockinfo_[who] = 0;
+          if (reset_need_send_blockinfo_flag
+             && need_send_blockinfo_[who])
+          {
+            need_send_blockinfo_[who] = 0;
+          }
           if (resp_hb_msg->get_status() == HEART_NEED_SEND_BLOCK_INFO)
           {
             TBSYS_LOG(DEBUG, "nameserver %d ask for send block\n", who + 1);
