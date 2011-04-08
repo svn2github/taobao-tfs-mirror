@@ -552,6 +552,12 @@ namespace tfs
       return TFS_SUCCESS;
     }
 
+    int64_t BlockFileManager::get_all_logic_block_size(const BlockType block_type)
+    {
+      ScopedRWLock scoped_lock(rw_lock_, READ_LOCKER);
+      return C_MAIN_BLOCK == block_type ? logic_blocks_.size() : compact_logic_blocks_.size();
+    }
+
     int BlockFileManager::get_logic_block_ids(VUINT& logic_block_ids, const BlockType block_type)
     {
       ScopedRWLock scoped_lock(rw_lock_, READ_LOCKER);

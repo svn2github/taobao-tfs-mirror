@@ -49,7 +49,8 @@ namespace tfs
       CLIENT_CMD_SET_PARAM,
       CLIENT_CMD_UNLOADBLK,
       CLIENT_CMD_GET_REPL_INFO,
-      CLIENT_CMD_CLEAR_REPL_INFO
+      CLIENT_CMD_CLEAR_REPL_INFO,
+      CLIENT_CMD_FORCE_DATASERVER_REPORT
     };
 
     class ClientCmdMessage: public Message

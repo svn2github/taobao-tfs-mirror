@@ -75,6 +75,11 @@ namespace tfs
       return BlockFileManager::get_instance()->get_all_logic_block(logic_block_list);
     }
 
+    int64_t DataManagement::get_all_logic_block_size()
+    {
+      return BlockFileManager::get_instance()->get_all_logic_block_size();
+    }
+
     int DataManagement::create_file(const uint32_t block_id, uint64_t& file_id, uint64_t& file_number)
     {
       LogicBlock* logic_block = BlockFileManager::get_instance()->get_logic_block(block_id);
