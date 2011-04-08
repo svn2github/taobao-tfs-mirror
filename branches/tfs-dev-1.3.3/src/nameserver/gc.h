@@ -61,7 +61,7 @@ namespace nameserver
     class ExpireTimerTask: public tbutil::TimerTask
     {
     public:
-      ExpireTimerTask(GCObjectManager& manager)
+      explicit ExpireTimerTask(GCObjectManager& manager)
         :manager_(manager)
       {
 
