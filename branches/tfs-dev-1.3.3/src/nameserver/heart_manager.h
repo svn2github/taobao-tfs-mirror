@@ -31,7 +31,7 @@ namespace tfs
     class HeartManagement : public tbnet::IPacketQueueHandler
     {
     public:
-      HeartManagement(LayoutManager& manager);
+      explicit HeartManagement(LayoutManager& manager);
       virtual ~HeartManagement();
       int initialize(int32_t thread_count, int32_t max_queue_size);
       void wait_for_shut_down();
@@ -49,7 +49,7 @@ namespace tfs
     class CheckOwnerIsMasterTimerTask: public tbutil::TimerTask
     {
     public:
-      CheckOwnerIsMasterTimerTask(LayoutManager* mm);
+      explicit CheckOwnerIsMasterTimerTask(LayoutManager* mm);
       virtual ~CheckOwnerIsMasterTimerTask()
       {
       }
@@ -67,7 +67,7 @@ namespace tfs
     class MasterHeartTimerTask: public tbutil::TimerTask
     {
     public:
-      MasterHeartTimerTask(LayoutManager* mm);
+      explicit MasterHeartTimerTask(LayoutManager* mm);
       virtual ~MasterHeartTimerTask()
       {
       }
@@ -97,7 +97,7 @@ namespace tfs
     {
     public:
       MasterAndSlaveHeartManager(LayoutManager* mm, tbutil::TimerPtr& timer);
-      ~MasterAndSlaveHeartManager();
+      virtual ~MasterAndSlaveHeartManager();
 
     public:
       int initialize();

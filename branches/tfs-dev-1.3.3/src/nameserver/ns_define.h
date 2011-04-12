@@ -35,7 +35,7 @@ namespace tfs
     class GCObject
     {
     public:
-      GCObject(time_t now):
+      explicit GCObject(time_t now):
         dead_time_(now) {}
       virtual ~GCObject() {}
       virtual void callback(LayoutManager* manager){}

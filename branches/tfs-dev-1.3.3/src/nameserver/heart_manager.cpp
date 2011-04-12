@@ -220,9 +220,9 @@ namespace tfs
       }
       else
       {
-        MasterAndSlaveHeartResponseMessage* tmsg = dynamic_cast<MasterAndSlaveHeartResponseMessage*> (rmsg);
-        if (tmsg->getPCode() == MASTER_AND_SLAVE_HEART_RESPONSE_MESSAGE)
+        if (rmsg->getPCode() == MASTER_AND_SLAVE_HEART_RESPONSE_MESSAGE)
         {
+          MasterAndSlaveHeartResponseMessage* tmsg = dynamic_cast<MasterAndSlaveHeartResponseMessage*> (rmsg);
           if (tmsg->get_role() == NS_ROLE_SLAVE)
           {
             if (ngi.other_side_status_ != tmsg->get_status()) // update otherside status
@@ -381,21 +381,24 @@ namespace tfs
         int32_t iret = message::NewClientManager::get_instance().call(ngi.other_side_ip_port_, &mashm, DEFAULT_NETWORK_CALL_TIMEOUT, rmsg);
         if ((iret == TFS_SUCCESS) && (rmsg != NULL))
         {
-          MasterAndSlaveHeartResponseMessage* tmsg = dynamic_cast<MasterAndSlaveHeartResponseMessage*> (rmsg);
-          if (tmsg->getPCode() == MASTER_AND_SLAVE_HEART_RESPONSE_MESSAGE)
+          if (rmsg->getPCode() == MASTER_AND_SLAVE_HEART_RESPONSE_MESSAGE)
           {
+            MasterAndSlaveHeartResponseMessage* tmsg = dynamic_cast<MasterAndSlaveHeartResponseMessage*> (rmsg);
             if (tmsg->get_role() == NS_ROLE_SLAVE)
             {
               if (ngi.other_side_status_ != tmsg->get_status()) // update otherside status
               {
                 tbutil::Mutex::Lock lock(ngi);
-                ngi.other_side_status_ = static_cast<NsStatus> (tmsg->get_status());
-                if ((ngi.other_side_status_ == NS_STATUS_INITIALIZED) && (ngi.sync_oplog_flag_
-                    < NS_SYNC_DATA_FLAG_YES))
+                if (ngi.other_side_status_ != tmsg->get_status())
                 {
-                  ngi.sync_oplog_flag_ = NS_SYNC_DATA_FLAG_YES;
-                  meta_mgr_->get_oplog_sync_mgr()->notify_all();
-                  TBSYS_LOG(INFO, "%s", "notify all oplog thread");
+                  ngi.other_side_status_ = static_cast<NsStatus> (tmsg->get_status());
+                  if ((ngi.other_side_status_ == NS_STATUS_INITIALIZED) && (ngi.sync_oplog_flag_
+                        < NS_SYNC_DATA_FLAG_YES))
+                  {
+                    ngi.sync_oplog_flag_ = NS_SYNC_DATA_FLAG_YES;
+                    meta_mgr_->get_oplog_sync_mgr()->notify_all();
+                    TBSYS_LOG(INFO, "%s", "notify all oplog thread");
+                  }
                 }
               }
               else
@@ -404,9 +407,13 @@ namespace tfs
                     < NS_SYNC_DATA_FLAG_YES))
                 {
                   tbutil::Mutex::Lock lock(ngi);
-                  ngi.sync_oplog_flag_ = NS_SYNC_DATA_FLAG_YES;
-                  meta_mgr_->get_oplog_sync_mgr()->notify_all();
-                  TBSYS_LOG(INFO, "%s", "notify all oplog thread");
+                  if ((ngi.other_side_status_ == NS_STATUS_INITIALIZED) && (ngi.sync_oplog_flag_
+                        < NS_SYNC_DATA_FLAG_YES))
+                  {
+                    ngi.sync_oplog_flag_ = NS_SYNC_DATA_FLAG_YES;
+                    meta_mgr_->get_oplog_sync_mgr()->notify_all();
+                    TBSYS_LOG(INFO, "%s", "notify all oplog thread");
+                  }
                 }
               }
               tbsys::gDelete(rmsg);
@@ -454,9 +461,9 @@ namespace tfs
         const int32_t iret = message::NewClientManager::get_instance().call(ngi.other_side_ip_port_, &mashm, DEFAULT_NETWORK_CALL_TIMEOUT, rmsg);
         if ((iret == TFS_SUCCESS) && (rmsg != NULL))
         {
-          MasterAndSlaveHeartResponseMessage* tmsg = dynamic_cast<MasterAndSlaveHeartResponseMessage*> (rmsg);
-          if (tmsg->getPCode() == MASTER_AND_SLAVE_HEART_RESPONSE_MESSAGE)
+          if (rmsg->getPCode() == MASTER_AND_SLAVE_HEART_RESPONSE_MESSAGE)
           {
+            MasterAndSlaveHeartResponseMessage* tmsg = dynamic_cast<MasterAndSlaveHeartResponseMessage*> (rmsg);
             if (tmsg->get_role() == NS_ROLE_MASTER) //i am slave
             {
               if (ngi.other_side_status_ != tmsg->get_status()) // update otherside status
