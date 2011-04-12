@@ -288,7 +288,7 @@ namespace tfs
         return iret;
       }
 
-      if (ngi.owner_role_ == NS_ROLE_MASTER)//i'm master, we're going expire blocks
+      if (ngi.owner_role_ == NS_ROLE_MASTER)//i'm master, we're going to expire blocks
       {
         std::vector<uint32_t> rm_list;
         EXPIRE_BLOCK_LIST::iterator iter = current_expires.begin();
@@ -311,7 +311,7 @@ namespace tfs
           {
             for (; r_iter != expires_blocks.end(); ++r_iter)
             {
-            //TODO rm_list will case ds core for now
+            //TODO rm_list will cause ds core for now
               rm_list.push_back((*r_iter)->id());     
             }
           }
@@ -409,7 +409,7 @@ namespace tfs
       {
         if (!GFactory::get_lease_factory().commit(block_id, parameter.lease_id_, commit_status))
         {
-          snprintf(parameter.error_msg_, 0xff, "close block(%u) successful,but lease(%u) commit fail", block_id, parameter.lease_id_); 
+          snprintf(parameter.error_msg_, 256, "close block(%u) successful,but lease(%u) commit fail", block_id, parameter.lease_id_); 
           TBSYS_LOG(ERROR, "%s", parameter.error_msg_);
           iret = EXIT_COMMIT_ERROR;
         }
@@ -425,7 +425,7 @@ namespace tfs
           TBSYS_LOG(WARN, "close block(%u) successful, but cleint write operation error,lease(%u) commit begin", block_id, parameter.lease_id_);
           if (!GFactory::get_lease_factory().commit(block_id, parameter.lease_id_, commit_status))
           {
-            snprintf(parameter.error_msg_, 0xff, "close block(%u) successful,but lease(%u) commit fail", block_id, parameter.lease_id_); 
+            snprintf(parameter.error_msg_, 256, "close block(%u) successful,but lease(%u) commit fail", block_id, parameter.lease_id_); 
             TBSYS_LOG(ERROR, "%s", parameter.error_msg_);
             return EXIT_COMMIT_ERROR;
           }
@@ -441,7 +441,7 @@ namespace tfs
             block = ptr->find(block_id);
             if (block == NULL)
             {
-              snprintf(parameter.error_msg_, 0xff, "close block(%u) fail, block not exist", block_id);
+              snprintf(parameter.error_msg_, 256, "close block(%u) fail, block not exist", block_id);
               TBSYS_LOG(ERROR, "%s", parameter.error_msg_);
               return EXIT_BLOCK_NOT_FOUND;
             }
@@ -453,7 +453,7 @@ namespace tfs
           {//version errro
             if (!GFactory::get_lease_factory().commit(block_id, parameter.lease_id_, LEASE_STATUS_FAILED))
             {
-              snprintf(parameter.error_msg_, 0xff, "close block(%u) successful,but lease(%u) commit fail", block_id, parameter.lease_id_); 
+              snprintf(parameter.error_msg_, 256, "close block(%u) successful,but lease(%u) commit fail", block_id, parameter.lease_id_); 
               TBSYS_LOG(ERROR, "%s", parameter.error_msg_);
             }
             return EXIT_COMMIT_ERROR;
@@ -469,7 +469,7 @@ namespace tfs
           //commit lease
           if (!GFactory::get_lease_factory().commit(block_id, parameter.lease_id_, commit_status))
           {
-            snprintf(parameter.error_msg_, 0xff, "close block(%u) successful,but lease(%u) commit fail", block_id, parameter.lease_id_); 
+            snprintf(parameter.error_msg_, 256, "close block(%u) successful,but lease(%u) commit fail", block_id, parameter.lease_id_); 
             TBSYS_LOG(ERROR, "%s", parameter.error_msg_);
             return EXIT_COMMIT_ERROR;
           }
@@ -1037,7 +1037,7 @@ namespace tfs
               }
               break;
             default:
-
+              TBSYS_LOG(WARN, "unkonw message PCode = %d", msg->getPCode());
               break;
           }
 
@@ -1078,6 +1078,7 @@ namespace tfs
             RWLock::Lock tlock(maping_mutex_, WRITE_LOCKER);
             for (; iter != complete.end(); ++iter)//relieve reliation
             {
+              task = *iter;
               block_to_task_.erase(task->block_id_);
               std::vector<ServerCollect*>::iterator r_iter = task->runer_.begin();
               for (; r_iter != task->runer_.end(); ++r_iter)
@@ -1119,6 +1120,7 @@ namespace tfs
               break;
             }
             default:
+              TBSYS_LOG(WARN, "unkonw message PCode = %d", msg->getPCode());
               break;
           }
           if (task != 0)
@@ -1240,6 +1242,7 @@ namespace tfs
                 std::vector<ServerCollect*> runer;
                 runer.push_back(server);
                 RedundantTaskPtr task = new RedundantTask(this, PLAN_PRIORITY_NORMAL, block_id, now, now, runer);
+                //TODO change RedundantTask to other name
                 if (!add_task(task))
                 {
                   task = 0;
@@ -1277,9 +1280,9 @@ namespace tfs
                 rmsg->set_message(STATUS_MESSAGE_OK);
                 break;
               }
-            case CLIENT_CMD_IMMEDIATELY_REPL:
+            case CLIENT_CMD_IMMEDIATELY_REPL:  //immediately replicate
               {
-                char buf[0xff];
+                char buf[256];
                 uint64_t source = message->get_value1();
                 uint64_t target = message->get_value2();
                 uint32_t block_id = message->get_value3();
@@ -1290,7 +1293,7 @@ namespace tfs
                 BlockCollect* block = ptr->find(block_id); 
                 if (block == NULL)
                 {
-                  snprintf(buf, 0xff, "immediately %s block(%u) fail, block(%u) not exist",
+                  snprintf(buf, 256, "immediately %s block(%u) fail, block(%u) not exist",
                       flag == REPLICATE_BLOCK_MOVE_FLAG_NO ? "replicate" : "move",
                       block_id, block_id);
                   rmsg->set_message(STATUS_MESSAGE_ERROR, buf);
@@ -1300,10 +1303,12 @@ namespace tfs
 
                 bool bret = flag == REPLICATE_BLOCK_MOVE_FLAG_YES ? (source != 0 && target != 0 && block_id != 0 && target != source) ? true : false :
                       block_id != 0  && ((source != target) || (source == target && source == 0 && target == 0)) ? true : false;
+                //TODO what is this? I can not understand it
+                
 
                 if (!bret)
                 {
-                  snprintf(buf, 0xff, "immediately %s block(%u) fail, parameter is illegal, flag(%s), source(%s), target(%s)",
+                  snprintf(buf, 256, "immediately %s block(%u) fail, parameter is illegal, flag(%s), source(%s), target(%s)",
                       flag == REPLICATE_BLOCK_MOVE_FLAG_NO ? "replicate" : "move",
                       block_id, flag == REPLICATE_BLOCK_MOVE_FLAG_NO ? "no" : "yes",
                       CNetUtil::addrToString(source).c_str(), CNetUtil::addrToString(target).c_str());
@@ -1328,7 +1333,7 @@ namespace tfs
                   int32_t iret = elect_replicate_source_ds(*this, source, except,1, result);
                   if (iret != 1)
                   {
-                    snprintf(buf, 0xff, "immediately %s block(%u) fail, cannot found source dataserver",
+                    snprintf(buf, 256, "immediately %s block(%u) fail, cannot found source dataserver",
                         flag == REPLICATE_BLOCK_MOVE_FLAG_NO ? "replicate" : "move", block_id);
                     TBSYS_LOG(ERROR, "%s", buf);
                     rmsg->set_message(STATUS_MESSAGE_ERROR, buf);
@@ -1350,7 +1355,7 @@ namespace tfs
                   int32_t iret = elect_replicate_dest_ds(*this, except, 1, target_servers);
                   if (iret != 1)
                   {
-                    snprintf(buf, 0xff, "immediately %s block(%u) fail, cannot found target dataserver",
+                    snprintf(buf, 256, "immediately %s block(%u) fail, cannot found target dataserver",
                         flag == REPLICATE_BLOCK_MOVE_FLAG_NO ? "replicate" : "move", block_id);
                     TBSYS_LOG(ERROR, "%s", buf);
                     rmsg->set_message(STATUS_MESSAGE_ERROR, "immediately replicate or move block fail");
@@ -1362,7 +1367,7 @@ namespace tfs
                 if ((source_collect == NULL)
                     || (target_collect == NULL))
                 {
-                  snprintf(buf, 0xff, "immediately %s block(%u) fail, parameter is illegal, flag(%s), source(%s), target(%s)",
+                  snprintf(buf, 256, "immediately %s block(%u) fail, parameter is illegal, flag(%s), source(%s), target(%s)",
                       flag == REPLICATE_BLOCK_MOVE_FLAG_NO ? "replicate" : "move",
                       block_id, flag == REPLICATE_BLOCK_MOVE_FLAG_NO ? "no" : "yes",
                       CNetUtil::addrToString(source).c_str(), CNetUtil::addrToString(target).c_str());
@@ -1380,7 +1385,7 @@ namespace tfs
                 if (!add_task(task))
                 {
                   task = 0;
-                  snprintf(buf, 0xff, "add task %s fail block(%u)",
+                  snprintf(buf, 256, "add task %s fail block(%u)",
                       flag == REPLICATE_BLOCK_MOVE_FLAG_NO ? "replicate" : "move", block_id);
                   TBSYS_LOG(ERROR, "%s", buf);
                   rmsg->set_message(STATUS_MESSAGE_ERROR, buf);
@@ -1396,7 +1401,7 @@ namespace tfs
               {
                 uint32_t index = message->get_value3();
                 uint32_t value = message->get_value4();
-                char error_msg[0xff];
+                char error_msg[256];
                 set_runtime_param(index, value, error_msg);
                 rmsg->set_message(STATUS_MESSAGE_OK, error_msg);
                 break;
@@ -1426,6 +1431,7 @@ namespace tfs
         iret = handle_task_complete(msg);
         break;
         default:
+              TBSYS_LOG(WARN, "unkonw message PCode = %d", pcode);
         break;
         }
       }
@@ -2211,7 +2217,7 @@ rollback:
         int32_t size = sizeof(param) / sizeof(int32_t*);
         if (index < 0x01 || index > size)
         {
-          snprintf(retstr, 0xff, "index (%d) invalid.", index);
+          snprintf(retstr, 256, "index (%d) invalid.", index);
           TBSYS_LOG(ERROR, "index(%d) invalid.", index);
           return TFS_SUCCESS;
          }
@@ -2222,7 +2228,7 @@ rollback:
         }
         else
         {
-          snprintf(retstr, 0xff, "%d", *current_value);
+          snprintf(retstr, 256, "%d", *current_value);
         }
         TBSYS_LOG(INFO, "index(%d) set(%d) name(%s) value(%d)", index, set, dynamic_parameter_str[index - 1].c_str(), *current_value);
       }

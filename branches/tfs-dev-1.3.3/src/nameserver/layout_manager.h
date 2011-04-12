@@ -30,7 +30,7 @@ namespace nameserver
     common::UnlinkFlag unlink_flag_;
     common::WriteCompleteStatus status_;
     bool need_new_;
-    char error_msg_[0xff];
+    char error_msg_[256];
   };
   class LayoutManager
   {
@@ -45,6 +45,7 @@ namespace nameserver
     {
       int32_t operator()(const int32_t acc, const ServerCollect* const server) const
       {
+        assert(server != NULL);
         return acc + server->load();
       }
     };
@@ -175,10 +176,16 @@ namespace nameserver
      {
        if (priority_ < task.priority_)
          return true;
+       if (priority_ > task.priority_)
+         return false;
        if (type_ < task.type_)
          return true;
+       if (type_ > task.type_)
+         return false;
        if (block_id_ < task.block_id_)
          return true;
+       if (block_id_ > task.block_id_)
+         return false;
        return (begin_time_ < task.begin_time_);
      }
   #if defined(TFS_NS_GTEST) || defined(TFS_NS_INTEGRATION)
@@ -203,7 +210,8 @@ namespace nameserver
    {
      bool operator()(const TaskPtr& lhs, const TaskPtr& rhs) const
      {
-        return lhs < rhs;
+        //return lhs < rhs;
+        return (*lhs) < (*rhs);
      }
    };
    class CompactTask: public virtual Task 
