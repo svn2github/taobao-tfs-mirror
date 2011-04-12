@@ -33,7 +33,6 @@ using namespace __gnu_cxx;
 using namespace tfs::message;
 using namespace tfs::nameserver;
 using namespace tfs::common;
-using namespace std;
 
 static int32_t stop = 0;
 static int32_t report = 0;

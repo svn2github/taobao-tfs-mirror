@@ -3,7 +3,8 @@
 
 #include <stdio.h>
 #include <vector>
-#include "common.h"
+#include "show_factory.h"
+#include "common/directory_op.h"
 
 namespace tfs
 {
@@ -12,24 +13,25 @@ namespace tfs
     class ShowInfo
     {
       public:
-        ShowInfo();
-        virtual ~ShowInfo();
-    
-        int set_ns_ip(std::string ns_ip_port);
-        int show_server(int8_t flag, int32_t num);
-        int show_machine(int8_t flag, int32_t num);
-        int show_block(int8_t flag, int32_t num, uint32_t block_id);
-    
+        ShowInfo(){}
+        ~ShowInfo(){}
+
+        int set_ns_ip(const std::string& ns_ip_port);
+        void clean_last_file();
+        int show_server(const int8_t flag, const int32_t num, const std::string& server_ip_port, int32_t count, const int32_t interval, const std::string& filename);
+        int show_machine(const int8_t flag, const int32_t num, int32_t count, const int32_t interval, const std::string& filename);
+        int show_block(const int8_t flag, const int32_t num, const uint32_t block_id, int32_t count, const int32_t interval, const std::string& filename);
+        bool is_loop_;
+        bool interrupt_;
+
       private:
         void load_last_ds();
         void save_last_ds();
-        uint64_t get_machine_id(uint64_t server_id);
-        void print_header(int8_t print_type, int32_t flag);
-        uint64_t get_addr(std::string ns_ip_port);
-        map<uint64_t, ServerStruct> last_server_map_;
-        map<uint64_t, ServerStruct> server_map_;
-        map<uint64_t, BlockStruct> block_map_;
-        map<uint64_t, MachineStruct> machine_map_;
+        int get_file_handle(const std::string& filename, FILE** fp);
+        uint64_t get_machine_id(const uint64_t server_id);
+        std::map<uint64_t, ServerShow> last_server_map_;
+        std::map<uint64_t, ServerShow> server_map_;
+        std::map<uint64_t, MachineShow> machine_map_;
         uint64_t ns_ip_;
     };
   }
