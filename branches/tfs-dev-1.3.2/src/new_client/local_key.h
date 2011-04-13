@@ -27,10 +27,10 @@ namespace tfs
 
     struct SegmentData
     {
-      bool delete_flag_;  // delete flag
-      bool whole_file_flag_;
+      bool delete_flag_;        // delete flag
       common::SegmentInfo seg_info_;
       char* buf_;                   // buffer start
+      int32_t inner_offset_;        // offset of this segment to operate
       common::FileInfo* file_info_;
       uint64_t file_number_;
       common::VUINT64 ds_;
@@ -38,7 +38,7 @@ namespace tfs
       int32_t status_;
       TfsFileEofFlag eof_;
 
-      SegmentData() : delete_flag_(true), whole_file_flag_(true), buf_(NULL), file_info_(NULL),
+      SegmentData() : delete_flag_(true), buf_(NULL), inner_offset_(0), file_info_(NULL),
                       file_number_(0), pri_ds_index_(-1),
                       status_(SEG_STATUS_NOT_INIT), eof_(TFS_FILE_EOF_FLAG_NO)
       {
@@ -47,9 +47,9 @@ namespace tfs
       SegmentData(SegmentData& seg_data)
       {
         delete_flag_ = false;
-        whole_file_flag_ = seg_data.whole_file_flag_;
         memcpy(&seg_info_, &seg_data.seg_info_, sizeof(seg_info_));
         buf_ = seg_data.buf_;
+        inner_offset_ = seg_data.inner_offset_;
         file_info_ = NULL;      // not copy
         file_number_ = seg_data.file_number_;
         ds_ = seg_data.ds_;
@@ -88,9 +88,9 @@ namespace tfs
       int save();
       int remove();
 
-      int get_segment_for_write(const int64_t offset, const char* buf,
+      int64_t get_segment_for_write(const int64_t offset, const char* buf,
                                 int64_t size, SEG_DATA_LIST& seg_list);
-      int get_segment_for_read(const int64_t offset, const char* buf,
+      int64_t get_segment_for_read(const int64_t offset, const char* buf,
                                const int64_t size, SEG_DATA_LIST& seg_list);
 
       int add_segment(common::SegmentInfo& seg_info);
@@ -112,6 +112,8 @@ namespace tfs
       int load_segment(const char* buf);
       void get_segment(const int64_t offset, const char* buf,
                        int64_t size, SEG_DATA_LIST& seg_list);
+      void check_overlap(const int64_t offset, SEG_SET_ITER& it);
+
       void gc_segment(SEG_SET_ITER it);
       void gc_segment(SEG_SET_ITER first, SEG_SET_ITER last);
 

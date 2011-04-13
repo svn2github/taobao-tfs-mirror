@@ -74,9 +74,8 @@ namespace tfs
 
     protected:
       // virtual level operation
-      virtual int get_segment_for_read(int64_t offset, char* buf, int64_t count) = 0;
-      virtual int get_segment_for_write(int64_t offset, const char* buf, int64_t count) = 0;
-      virtual int get_size_for_rw(const int64_t check_size, const int64_t count, int64_t& cur_size, bool& not_end) = 0;
+      virtual int64_t get_segment_for_read(int64_t offset, char* buf, int64_t count) = 0;
+      virtual int64_t get_segment_for_write(int64_t offset, const char* buf, int64_t count) = 0;
       virtual int read_process() = 0;
       virtual int write_process() = 0;
       virtual int finish_write_process(int status) = 0;
@@ -86,7 +85,7 @@ namespace tfs
     protected:
       // common operation
       void destroy_seg();
-      int get_meta_segment(const int64_t offset, char* buf, const int64_t count);
+      int64_t get_meta_segment(const int64_t offset, char* buf, const int64_t count);
       int process(const InnerFilePhase file_phase);
       int32_t finish_read_process(int status, int64_t& read_size);
 

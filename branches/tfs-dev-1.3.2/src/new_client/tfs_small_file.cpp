@@ -98,19 +98,16 @@ int TfsSmallFile::unlink(const char* file_name, const char* suffix, const TfsUnl
   return ret;
 }
 
-int TfsSmallFile::get_segment_for_read(int64_t offset, char* buf, int64_t count)
+int64_t TfsSmallFile::get_segment_for_read(int64_t offset, char* buf, int64_t count)
 {
-  return get_meta_segment(offset, buf, count);
+  return get_meta_segment(offset, buf,
+                          count > ClientConfig::segment_size_ ? ClientConfig::segment_size_ : count);
 }
 
-int TfsSmallFile::get_segment_for_write(int64_t offset, const char* buf, int64_t count)
+int64_t TfsSmallFile::get_segment_for_write(int64_t offset, const char* buf, int64_t count)
 {
-  return get_meta_segment(offset, const_cast<char*>(buf), count);
-}
-
-int TfsSmallFile::get_size_for_rw(const int64_t check_size, const int64_t count, int64_t& cur_size, bool& not_end)
-{
-  return get_size_for_rw_ex(check_size, count, cur_size, not_end, ClientConfig::segment_size_);
+  return get_meta_segment(offset, const_cast<char*>(buf),
+                          count > ClientConfig::segment_size_ ? ClientConfig::segment_size_ : count);
 }
 
 int TfsSmallFile::read_process()

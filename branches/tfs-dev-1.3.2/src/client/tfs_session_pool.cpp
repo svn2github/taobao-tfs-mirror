@@ -48,6 +48,7 @@ TfsSession* TfsSessionPool::get(const std::string& ns_ip_port, const int32_t cac
   if (iret != TFS_SUCCESS)
   {
     TBSYS_LOG(ERROR, "initialize tfs session failed");
+    tbsys::gDelete(session);
     return NULL;
   }
   pool_[ns_ip_port] = session;

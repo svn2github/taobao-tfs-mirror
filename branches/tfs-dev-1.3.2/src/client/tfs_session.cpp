@@ -129,13 +129,11 @@ int TfsSession::get_block_info(uint32_t& block_id, VUINT64 &rds)
   {
     tbutil::Mutex::Lock lock(mutex_);
     BlockCache* block_cache = block_cache_map_.find(block_id);
-    if (block_cache != NULL)
+    if (block_cache != NULL &&
+        block_cache->last_time_ >= time(NULL) - block_cache_time_)
     {
       rds = block_cache->ds_;
-      if (block_cache->last_time_ >= time(NULL) - block_cache_time_)
-      {
-        return TFS_SUCCESS;
-      }
+      return TFS_SUCCESS;
     }
   }
 

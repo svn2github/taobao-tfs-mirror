@@ -219,9 +219,9 @@ int TfsLargeFile::unlink(const char* file_name, const char* suffix, const TfsUnl
   return ret;
 }
 
-int TfsLargeFile::get_segment_for_read(int64_t offset, char* buf, int64_t count)
+int64_t TfsLargeFile::get_segment_for_read(int64_t offset, char* buf, int64_t count)
 {
-  int ret = TFS_SUCCESS;
+  int64_t ret = count;
   destroy_seg();
   if (read_meta_flag_)
   {
@@ -234,15 +234,10 @@ int TfsLargeFile::get_segment_for_read(int64_t offset, char* buf, int64_t count)
   return ret;
 }
 
-int TfsLargeFile::get_segment_for_write(int64_t offset, const char* buf, int64_t count)
+int64_t TfsLargeFile::get_segment_for_write(int64_t offset, const char* buf, int64_t count)
 {
   destroy_seg();
   return local_key_.get_segment_for_write(offset, buf, count, processing_seg_list_);
-}
-
-int TfsLargeFile::get_size_for_rw(const int64_t check_size, const int64_t count, int64_t& cur_size, bool& not_end)
-{
-  return get_size_for_rw_ex(check_size, count, cur_size, not_end, ClientConfig::batch_size_);
 }
 
 int TfsLargeFile::read_process()

@@ -280,138 +280,149 @@ int LocalKey::dump_data(char* buf)
   return TFS_SUCCESS;
 }
 
-int LocalKey::get_segment_for_write(const int64_t offset, const char* buf,
-                                    int64_t size, SEG_DATA_LIST& seg_list)
+int64_t LocalKey::get_segment_for_write(const int64_t offset, const char* buf,
+                                        int64_t size, SEG_DATA_LIST& seg_list)
 {
-  int64_t cur_offset = offset, remain_size = size,
-    last_remain_size = 0, need_write_size = 0;
+  int64_t cur_offset = offset, remain_size = size, written_size = 0,
+    need_write_size = 0, remain_nw_size = 0, // remain_need_write_size
+    total_size = 0;
   int32_t tmp_crc = 0;
   const char* cur_buf = buf;
   SegmentInfo seg_info;
   SEG_SET_ITER it, first_it;
 
-  while (remain_size > 0)
+  while (seg_list.size() < ClientConfig::batch_count_ &&
+         remain_size > 0)
   {
-    last_remain_size = remain_size;
-    need_write_size = 0;
-    seg_info.offset_ = cur_offset;
-
-    // cur_offset ~ end hasn't been written
-    if ((first_it = it = seg_info_.lower_bound(seg_info)) == seg_info_.end())
+    written_size = need_write_size = 0;
+    // current remain max need write size
+    remain_nw_size = (ClientConfig::batch_count_ - seg_list.size()) * ClientConfig::segment_size_;
+    if (remain_nw_size > remain_size)
     {
-      need_write_size += remain_size;
-      remain_size = 0;
+      remain_nw_size = remain_size;
+    }
+
+    seg_info.offset_ = cur_offset;
+    // cur_offset ~ end() or cur_offset ~ it->offset_ hasn't been written
+    first_it = it = seg_info_.lower_bound(seg_info);
+
+    if (seg_info_.end() == first_it)
+    {
+      need_write_size = remain_nw_size;
+      check_overlap(cur_offset, first_it);
     }
     else
     {
-      if (first_it->offset_ != cur_offset)
+      if (it->offset_ != cur_offset)
       {
-        need_write_size += first_it->offset_ - cur_offset;
+        need_write_size = it->offset_ - cur_offset;
+        check_overlap(cur_offset, first_it);
+      }
 
-        // actually only first loop may occur
-        if (first_it != seg_info_.begin())
+      if (need_write_size > remain_nw_size)
+      {
+        need_write_size = remain_nw_size;
+      }
+      else
+      {
+        remain_nw_size -= need_write_size;
+        // combine adjacent conflicted segments
+        // until reach the segment that can be reused.
+        while (remain_nw_size > 0 && it != seg_info_.end())
         {
-          first_it--;
-          // no overlap, no gc
-          if (first_it->offset_ + first_it->size_ <= cur_offset)
+          tmp_crc = 0;
+          if (remain_nw_size < it->size_)
           {
-            first_it++;
+            TBSYS_LOG(INFO, "segment size conflict: %d <> %"PRI64_PREFIX"d", it->size_, remain_nw_size);
+            need_write_size += remain_nw_size;
+            remain_nw_size = 0;
           }
+          else if ((tmp_crc = Func::crc(0, cur_buf + need_write_size, it->size_)) != it->crc_)
+          {
+            TBSYS_LOG(INFO, "segment crc conflict: %d <> %d", it->crc_, tmp_crc);
+            need_write_size += it->size_;
+            remain_nw_size -= it->size_;
+          }
+          else // full segment crc is correct, use it
+          {
+            TBSYS_LOG(INFO, "segment data written: offset: %"PRI64_PREFIX"d, blockid: %u, fileid: %"PRI64_PREFIX"u, size: %d, crc: %u", it->offset_, it->block_id_, it->file_id_, it->size_, it->crc_);
+            written_size += it->size_;
+            break;
+          }
+          it++;
+        }
+        // all ramainning size need write
+        if (it == seg_info_.end())
+        {
+          need_write_size += remain_nw_size;
         }
       }
-
-      remain_size -= need_write_size;
-      // combine adjacent conflicted segments
-      // until reach the segment that can be reused.
-      while (remain_size > 0 && it != seg_info_.end())
-      {
-        tmp_crc = 0;
-        if (remain_size < it->size_)
-        {
-          TBSYS_LOG(INFO, "segment size conflict: %d <> %"PRI64_PREFIX"d", it->size_, remain_size);
-          need_write_size += remain_size;
-          remain_size = 0;
-        }
-        else if ((tmp_crc = Func::crc(0, cur_buf + need_write_size, it->size_)) != it->crc_)
-        {
-          TBSYS_LOG(INFO, "segment crc conflict: %d <> %d", it->crc_, tmp_crc);
-          need_write_size += it->size_;
-          remain_size -= it->size_;
-        }
-        else // full segment crc is correct, use it
-        {
-          TBSYS_LOG(INFO, "segment data written: offset: %"PRI64_PREFIX"d, blockid: %u, fileid: %"PRI64_PREFIX"u, size: %d, crc: %u", it->offset_, it->block_id_, it->file_id_, it->size_, it->crc_);
-          remain_size -= it->size_;
-          break;
-        }
-        it++;
-      }
-    }
-
-    // all ramainning size need write
-    if (it == seg_info_.end())
-    {
-      need_write_size += remain_size;
-      remain_size = 0;
     }
 
     get_segment(cur_offset, cur_buf, need_write_size, seg_list);
-    cur_buf += last_remain_size - remain_size;
-    cur_offset += last_remain_size - remain_size;
+    total_size = need_write_size + written_size;
+    remain_size -= total_size;
+    cur_buf += total_size;
+    cur_offset += total_size;
     gc_segment(first_it, it);
   }
-  return TFS_SUCCESS;
+
+  return (size - remain_size);
 }
 
-int LocalKey::get_segment_for_read(const int64_t offset, const char* buf,
-                                   const int64_t size, SEG_DATA_LIST& seg_list)
+int64_t LocalKey::get_segment_for_read(const int64_t offset, const char* buf,
+                                       const int64_t size, SEG_DATA_LIST& seg_list)
 {
   if (offset >= seg_head_.size_)
   {
-    TBSYS_LOG(DEBUG, "read file offset: %"PRI64_PREFIX"d, size: %"PRI64_PREFIX"d", offset, seg_head_.size_);
-    return TFS_SUCCESS;
+    TBSYS_LOG(ERROR, "read file offset: %"PRI64_PREFIX"d larger than size: %"PRI64_PREFIX"d", offset, seg_head_.size_);
+    return 0;
   }
+
+  // To read, segment info SHOULD and MUST be adjacent and completed
+  // but not check here ...
+
+  SegmentData* seg_data = NULL;
+  int64_t check_size = 0, cur_size = 0;
 
   SegmentInfo seg_info;
   seg_info.offset_ = offset;
   SEG_SET_ITER it = seg_info_.lower_bound(seg_info);
 
-  if (seg_info_.end() == it)
+  if (seg_info_.end() == it || it->offset_ != offset)
   {
-    TBSYS_LOG(ERROR, "can not find meta info for offset: %"PRI64_PREFIX"d", offset);
-    return TFS_ERROR;
-  }
-
-  int64_t check_size = 0, cur_size = 0;
-  SegmentData* seg_data = NULL;
-
-  // To read, segment info SHOULD and MUST be adjacent and completed
-  // but not check here ...
-
-  if (it->offset_ != offset)    // offset found in previous segment middle
-  {
-    if (seg_info_.begin() == it) // should never happen: queried offset less than least offset in stored segment info
+    // should NEVER happen: queried offset less than least offset(0) in stored segment info
+    if (seg_info_.begin() == it)
     {
       TBSYS_LOG(ERROR, "can not find meta info for offset: %"PRI64_PREFIX"d", offset);
-      return TFS_ERROR;
+      check_size = EXIT_GENERAL_ERROR;
     }
     else                        // found previous segment middle, get info
     {
       SEG_SET_ITER pre_it = it;
       --pre_it;
-      check_size += pre_it->size_ - (offset - pre_it->offset_);
-      seg_data = new SegmentData();
-      seg_data->buf_ = const_cast<char*>(buf);
-      seg_data->seg_info_ = *pre_it;
-      seg_data->seg_info_.size_ = check_size; // real size
-      seg_data->seg_info_.offset_ = offset; // real offset
+      // actually SHOULD always occur, cause adjacent and completed read segment info
+      if (pre_it->offset_ + pre_it->size_ > offset)
+      {
+        check_size = pre_it->offset_ + pre_it->size_ - offset;
+        if (check_size > size)
+        {
+          check_size = size;
+        }
+        seg_data = new SegmentData();
+        seg_data->buf_ = const_cast<char*>(buf);
+        seg_data->seg_info_ = *pre_it;
+        seg_data->seg_info_.size_ = check_size; // real size
+        seg_data->inner_offset_ = offset - pre_it->offset_; // real segment offset
 
-      seg_list.push_back(seg_data);
+        seg_list.push_back(seg_data);
+      }
     }
   }
 
   // get following adjacent segment info
-  for (; it != seg_info_.end() && check_size < size; check_size += cur_size, ++it)
+  for (; seg_list.size() < ClientConfig::batch_count_ && it != seg_info_.end() && check_size < size;
+       check_size += cur_size, ++it)
   {
     if (check_size + it->size_ > size)
     {
@@ -430,7 +441,20 @@ int LocalKey::get_segment_for_read(const int64_t offset, const char* buf,
     seg_list.push_back(seg_data);
   }
 
-  return TFS_SUCCESS;
+  return check_size;
+}
+
+void LocalKey::check_overlap(const int64_t offset, SEG_SET_ITER& it)
+{
+  if (it != seg_info_.begin())
+  {
+    it--;
+    // no overlap, no gc
+    if (it->offset_ + it->size_ <= offset)
+    {
+      it++;
+    }
+  }
 }
 
 void LocalKey::get_segment(const int64_t offset, const char* buf,
