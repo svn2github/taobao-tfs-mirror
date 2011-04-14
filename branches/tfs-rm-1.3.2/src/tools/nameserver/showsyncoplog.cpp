@@ -30,6 +30,7 @@
 
 using namespace tfs::common;
 using namespace tfs::nameserver;
+using namespace std;
 
 int32_t global_stop = 0x00;
 
@@ -91,7 +92,7 @@ int print_information(std::string& dir_name, int32_t type = 0x00)
   fprintf(stderr, "QueueSize: %d\n", q_head.queue_size_);
   if (type == 0x00)
   {
-    std::ostringstream current;
+    ostringstream current;
     int i = 0;
     for (i = 0; i < FILE_QUEUE_MAX_THREAD_SIZE; i++)
     {
