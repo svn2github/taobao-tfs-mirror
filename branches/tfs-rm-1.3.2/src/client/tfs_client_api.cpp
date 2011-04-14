@@ -152,7 +152,7 @@ namespace tfs
       return tfs_file_->tfs_lseek(offset, whence);
     }
 
-    int TfsClient::tfs_write(char *data, const int32_t len)
+    int TfsClient::tfs_write(const char *data, const int32_t len)
     {
       return tfs_file_->tfs_write(data, len);
     }

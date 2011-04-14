@@ -58,7 +58,7 @@ namespace tfs
       int tfs_read_scale_image(char *data, const int32_t len, const int32_t width, const int32_t height,
           common::FileInfo *file_info);
       int64_t tfs_lseek(const int64_t offset, const int32_t whence);
-      int tfs_write(char *data, const int32_t len);
+      int tfs_write(const char *data, const int32_t len);
       int tfs_stat(common::FileInfo *file_info, const int32_t mode = 0);
       int tfs_close();
       int tfs_reset_read();

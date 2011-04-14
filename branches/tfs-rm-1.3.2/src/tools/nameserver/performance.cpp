@@ -24,6 +24,7 @@
 #include <Memory.hpp>
 #include <curses.h>
 #include "common/func.h"
+#include "common/define.h"
 #include "common/error_msg.h"
 #include "client/tfs_client_api.h"
 #include "util.h"
@@ -484,7 +485,7 @@ int main(int argc, char* argv[])
 {
   std::string ns_ip_port;
   std::string file_path;
-  std::string ratio("5:1");
+  std::string ratio("10:1");
   std::string pid_file;
   std::string log_file;
   int32_t loop_max = 100;
@@ -567,6 +568,8 @@ int main(int argc, char* argv[])
     pid = tbsys::CProcess::startDaemon(pid_file.c_str(), log_file.c_str());
   }
 
+  TBSYS_LOGGER.setLogLevel("info");
+
   if (pid == 0)
   {
     signal(SIGPIPE, SIG_IGN);
@@ -604,33 +607,37 @@ int main(int argc, char* argv[])
       gworks[i] = new WorkThread(ns_ip_port, mode, loop_max, read_ratio, write_ratio, base_max_count, file_path);
     }
 
-    FILE* file = fopen(file_path.c_str(), "rb");
-    if (file == NULL)
+    if (mode & READ_TYPE)
     {
-      fprintf(stderr, "open read file(%s) failed, exit\n", file_path.c_str());
-      timer->cancel(stat_timer_task_);
-      timer->destroy();
-      tbsys::gDeleteA(gworks);
-      return TFS_ERROR;
-    }
-    else
-    {
-      int32_t index = 0;
-      int64_t count = 0;
-      const int32_t BUF_LEN = 32;
-      char name[BUF_LEN] = {'\0'};
-      while (fgets(name, BUF_LEN, file))
+      FILE* file = fopen(file_path.c_str(), "rb");
+      if (file == NULL)
       {
-        index = count % thread_count;
-        gworks[index]->push_back(name);
-        ++count;
+        fprintf(stderr, "open read file(%s) failed, exit\n", file_path.c_str());
+        timer->cancel(stat_timer_task_);
+        timer->destroy();
+        tbsys::gDeleteA(gworks);
+        return TFS_ERROR;
       }
+      else
+      {
+        int32_t index = 0;
+        int64_t count = 0;
+        const int32_t BUF_LEN = 32;
+        char name[BUF_LEN] = {'\0'};
+        while (fgets(name, BUF_LEN, file))
+        {
+          index = count % thread_count;
+          gworks[index]->push_back(name);
+          ++count;
+        }
 
-      fclose(file);
-      for (i = 0; i < thread_count; ++i)
-      {
-        gworks[i]->start();
+        fclose(file);
       }
+    }
+
+    for (i = 0; i < thread_count; ++i)
+    {
+      gworks[i]->start();
     }
 
     signal(SIGHUP, interruptcallback);

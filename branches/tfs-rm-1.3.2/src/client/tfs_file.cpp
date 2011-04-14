@@ -778,7 +778,7 @@ int TfsFile::tfs_stat(FileInfo *file_info, const int32_t mode)
   return ret;
 }
 
-int TfsFile::tfs_write(char *data, const int32_t len)
+int TfsFile::tfs_write(const char *data, const int32_t len)
 {
   if (is_open_flag_ == TFS_FILE_OPEN_FLAG_NO)
   {
@@ -798,7 +798,7 @@ int TfsFile::tfs_write(char *data, const int32_t len)
   dsmessage.set_offset(offset_);
   dsmessage.set_length(len);
   dsmessage.set_ds_list(ds_list_);
-  dsmessage.set_data(data);
+  dsmessage.set_data(const_cast<char*>(data));
 
 #ifdef __CLIENT_METRICS__
   time_t now1 = Func::curr_time();

@@ -16,6 +16,7 @@
 #define TFS_CLIENT_CONFIG_H_
 
 #include <string>
+#include <stdint.h>
 
 namespace tfs
 {

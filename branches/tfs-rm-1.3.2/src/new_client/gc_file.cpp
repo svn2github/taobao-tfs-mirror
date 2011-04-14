@@ -9,7 +9,7 @@ using namespace tfs::common;
 
 const char* tfs::client::GC_FILE_PATH = "/tmp/TFSlocalkeyDIR/gc/";
 
-GcFile::GcFile() : is_load_(false), file_op_(NULL)
+GcFile::GcFile() : is_load_(false), file_pos_(sizeof(SegmentHead)), file_op_(NULL)
 {
 }
 
@@ -25,7 +25,7 @@ GcFile::~GcFile()
     }
     else if (!is_load_) // not load, save remaining segment infos
     {
-      save();
+      save_gc();
     }
   }
   tbsys::gDelete(file_op_);
@@ -77,10 +77,6 @@ int GcFile::add_segment(const SegmentInfo& seg_info)
 
   TBSYS_LOG(DEBUG, "add gc segment. blockid: %u, fileid: %"PRI64_PREFIX"u, offset: %"PRI64_PREFIX"d, size: %d, crc: %u",
             seg_info.block_id_, seg_info.file_id_, seg_info.offset_, seg_info.size_, seg_info.crc_);
-  if (static_cast<int32_t>(seg_info_.size()) > GC_BATCH_WIRTE_COUNT)
-  {
-    ret = save();
-  }
   return ret;
 }
 
@@ -96,35 +92,15 @@ void GcFile::dump(char* buf)
 int GcFile::save()
 {
   int ret = TFS_SUCCESS;
+
   if (NULL == file_op_)
   {
     TBSYS_LOG(ERROR, "save fail, file not initialized");
     ret = TFS_ERROR;
   }
-  else
+  else if (static_cast<int>(seg_info_.size()) > GC_BATCH_WIRTE_COUNT)
   {
-    int32_t size = seg_info_.size() * sizeof(SegmentInfo);
-    char* buf = new char[size];
-    dump(buf);
-    // to avoid the info conflict caused when fail between writing segment info and flushing segment head,
-    // use pwrite innstead of write with append
-    if ((ret = file_op_->pwrite_file(buf, size, (seg_head_.count_ - seg_info_.size()) * sizeof(SegmentInfo) +
-                                     sizeof(SegmentHead))) != TFS_SUCCESS)
-    {
-      TBSYS_LOG(ERROR, "gc save fail, write file error, ret: %d", ret);
-    }
-    else if ((ret = file_op_->pwrite_file(reinterpret_cast<char*>(&seg_head_), sizeof(SegmentHead), 0)) != TFS_SUCCESS)
-    {
-      TBSYS_LOG(ERROR, "gc flush head fail, ret: %d", ret);
-    }
-    else                        // write fail, not clear, wait for next chance
-    {
-      TBSYS_LOG(DEBUG, "gc save segment success, count: %d, raw size: %d, need gc segment count: %d, size: %"PRI64_PREFIX"d",
-                seg_info_.size(), size, seg_head_.count_, seg_head_.size_);
-      file_op_->flush_file();
-      seg_info_.clear();
-    }
-    tbsys::gDeleteA(buf);
+    ret = save_gc();
   }
   return ret;
 }
@@ -145,6 +121,36 @@ int GcFile::remove()
   {
     TBSYS_LOG(INFO, "remove gc file success");
   }
+  return ret;
+}
+
+
+int GcFile::save_gc()
+{
+  int ret = TFS_SUCCESS;
+  int32_t size = seg_info_.size() * sizeof(SegmentInfo);
+  char* buf = new char[size];
+  dump(buf);
+  // to avoid the info conflict caused when fail between writing segment info and flushing segment head,
+  // use pwrite innstead of write with append
+  if ((ret = file_op_->pwrite_file(buf, size, file_pos_)) != TFS_SUCCESS)
+  {
+    TBSYS_LOG(ERROR, "gc save fail, write file error, ret: %d", ret);
+  }
+  else if ((ret = file_op_->pwrite_file(reinterpret_cast<char*>(&seg_head_), sizeof(SegmentHead), 0)) != TFS_SUCCESS)
+  {
+    TBSYS_LOG(ERROR, "gc flush head fail, ret: %d", ret);
+  }
+  else                        // write fail, not clear, wait for next chance
+  {
+    TBSYS_LOG(DEBUG, "gc save segment success, count: %d, raw size: %d, need gc segment count: %d, size: %"PRI64_PREFIX"d",
+              seg_info_.size(), size, seg_head_.count_, seg_head_.size_);
+    file_op_->flush_file();
+    file_pos_ += seg_info_.size() * sizeof(SegmentInfo);
+    seg_info_.clear();
+  }
+  tbsys::gDeleteA(buf);
+
   return ret;
 }
 

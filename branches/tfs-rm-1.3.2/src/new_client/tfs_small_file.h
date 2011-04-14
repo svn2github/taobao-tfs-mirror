@@ -40,9 +40,8 @@ namespace tfs
       virtual int unlink(const char* file_name, const char* suffix, const TfsUnlinkType action);
 
     protected:
-      virtual int get_segment_for_read(int64_t offset, char* buf, int64_t count);
-      virtual int get_segment_for_write(int64_t offset, const char* buf, int64_t count);
-      virtual int get_size_for_rw(const int64_t check_size, const int64_t count, int64_t& cur_size, bool& not_end);
+      virtual int64_t get_segment_for_read(int64_t offset, char* buf, int64_t count);
+      virtual int64_t get_segment_for_write(int64_t offset, const char* buf, int64_t count);
       virtual int read_process();
       virtual int write_process();
       virtual int32_t finish_write_process(int status);

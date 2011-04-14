@@ -10,16 +10,17 @@
 #include <signal.h>
 #include <Memory.hpp>
 #include "show.h"
+#include "metacmp.h"
 
 using namespace tfs::common;
 using namespace tfs::message;
 using namespace tfs::tools;
+using namespace std;
 
-typedef vector<std::string> VSTRING;
 typedef int (*cmd_function)(VSTRING&);
 struct CmdNode
 {
-  const char* info_;
+  //const char* info_;
   int32_t min_param_count_;
   int32_t max_param_count_;
   cmd_function func_;
@@ -28,8 +29,8 @@ struct CmdNode
   {
   }
 
-  CmdNode(const char* info, int32_t min_param_count, int32_t max_param_count, cmd_function func) :
-    info_(info), min_param_count_(min_param_count), max_param_count_(max_param_count), func_(func)
+  CmdNode(int32_t min_param_count, int32_t max_param_count, cmd_function func) :
+    min_param_count_(min_param_count), max_param_count_(max_param_count), func_(func)
   {
   }
 };
@@ -42,18 +43,19 @@ static const int32_t CMD_MAX_LEN = 4096;
 static MSTR_FUNC g_cmd_map;
 static char* g_cur_cmd;
 static ShowInfo g_show_info;
+static CmpInfo g_cmp_info;
+static bool g_need_cmp = false;
 
 int main_loop();
 int do_cmd(char*);
-int parse_block_param(VSTRING&, int8_t&, int32_t&, uint32_t&);
-int parse_server_param(VSTRING&, int8_t& , int32_t& );
+void print_help();
 int cmd_show_help(VSTRING&);
 int cmd_quit(VSTRING&);
 int cmd_show_block(VSTRING&);
 int cmd_show_server(VSTRING& param);
 int cmd_show_machine(VSTRING& param);
 
-typedef map<std::string, int32_t> STR_INT_MAP;
+typedef map<std::string, CmdInfo> STR_INT_MAP;
 typedef STR_INT_MAP::iterator STR_INT_MAP_ITER;
 static STR_INT_MAP g_sub_cmd_map;
 
@@ -109,197 +111,326 @@ char** admin_cmd_completion (const char* text, int start, int end)
 }
 
 #endif
-
-int parse_block_param(VSTRING& param, int8_t& flag, int32_t& num, uint32_t& block_id)
+int get_cmd(char* key, int32_t& cmd, bool& has_value)
 {
-  flag = CMD_NOP;
-  VSTRING::iterator iter = param.begin();
+  STR_INT_MAP_ITER it = g_sub_cmd_map.find(Func::str_to_lower(key));
+
+  if (it == g_sub_cmd_map.end())
+  {
+    return CMD_UNKNOWN;
+  }
+  else
+  {
+    cmd = it->second.cmd_;
+    has_value = it->second.has_value_;
+    return TFS_SUCCESS;
+  }
+}
+int get_value(const char* data, std::string& value)
+{
+  return ((value = data) != "");
+}
+int get_value(const char* data, int32_t& value)
+{
+  int base = 10;
+  char *endptr;
+  long val;
+
+  errno = 0;    // To distinguish success/failure after call
+  val = (strtol(data, &endptr, base));
+  //TBSYS_LOG(DEBUG, "val: %d", val);
+
+  // Check for various possible errors
+  if ((errno == ERANGE && (val == LONG_MAX || val == LONG_MIN))
+      || (errno != 0 && val == 0)) {
+    perror("strtol");
+    return TFS_ERROR;
+  }
+
+  if (endptr == data) {
+    fprintf(stderr, "No digits were found\n");
+    return TFS_ERROR;
+  }
+
+  if (*endptr != '\0')       // Not necessarily an error...
+  {
+    printf("Further characters after number: %s\n", endptr);
+    return TFS_ERROR;
+  }
+  value = static_cast<int32_t> (val);
+  return TFS_SUCCESS;
+}
+int parse_param(const VSTRING& param, ComType com_type, ParamInfo& ret_param)
+{
+  VSTRING::const_iterator iter = param.begin();
   for (; iter != param.end(); iter++)
   {
-    char* key = const_cast<char*>((*iter).c_str());
-    STR_INT_MAP_ITER it = g_sub_cmd_map.find(Func::str_to_lower(key));
-
-    if (it == g_sub_cmd_map.end())
+    int32_t cmd = -1;
+    int ret = TFS_SUCCESS;
+    bool has_value = false;
+    if (TFS_SUCCESS == get_cmd(const_cast<char*>((*iter).c_str()), cmd, has_value))
     {
-      return CMD_UNKNOWN;
-    }
-    else
-    {
-      int32_t cmd = it->second;
+      if (has_value)
+      {
+        if ((++iter) == param.end())
+        {
+          TBSYS_LOG(ERROR, "please input param value...");
+          return TFS_ERROR;
+        }
+      }
+      bool is_common = true;
       switch (cmd)
       {
         case CMD_NUM:
-          num = static_cast<int32_t>(atoi((*(++iter)).c_str()));
-          if (num == 0 || num == INT_MAX || num == INT_MIN)
-          {
-            TBSYS_LOG(ERROR, "unvalid param (cmd---%d)", cmd);
-            exit(TFS_ERROR);
-          }
+          ret = get_value((*iter).c_str(), ret_param.num_);
           break;
-        case CMD_BLOCK_ID:
-          block_id = static_cast<uint32_t>(atoi((*(++iter)).c_str()));
-          if (block_id == 0 || block_id == INT_MAX || block_id == INT_MIN)
-          {
-            TBSYS_LOG(ERROR, "unvalid param (cmd---%d)", cmd);
-            exit(TFS_ERROR);
-          }
+        case CMD_COUNT:
+          ret = get_value((*iter).c_str(), ret_param.count_);
           break;
-        case CMD_SERVER:
-          flag = CMD_SERVER;
+        case CMD_INTERVAL:
+          ret = get_value((*iter).c_str(), ret_param.interval_);
+          break;
+        case CMD_REDIRECT:
+          ret = get_value((*iter).c_str(), ret_param.filename_);
           break;
         default:
+          is_common = false;
           break;
       }
-    }
-  }
-}
-int parse_server_param(VSTRING& param, int8_t& flag, int32_t& num)
-{
-  flag = CMD_NOP;
-  VSTRING::iterator iter = param.begin();
-  for (; iter != param.end(); iter++)
-  {
-    STR_INT_MAP_ITER it = g_sub_cmd_map.find(Func::str_to_lower(const_cast<char*>((*iter).c_str())));
-
-    if (it == g_sub_cmd_map.end())
-    {
-      return CMD_UNKNOWN;
+      if (is_common) continue;
+      if (com_type & SERVER_TYPE)
+      {
+        switch (cmd)
+        {
+          case CMD_SERVER_ID:
+            if (get_value((*iter).c_str(), ret_param.server_ip_port_) == TFS_SUCCESS)
+            {
+              if (ret_param.server_ip_port_.find_first_of(":") == std::string::npos)
+              {
+                ret = TFS_ERROR;
+              }
+            }
+            break;
+          case CMD_BLOCK_LIST:
+            ret_param.type_ = SERVER_TYPE_BLOCK_LIST;
+            break;
+          case CMD_BLOCK_WRITABLE:
+            ret_param.type_ = SERVER_TYPE_BLOCK_WRITABLE;
+            break;
+          case CMD_BLOCK_MASTER:
+            ret_param.type_ = SERVER_TYPE_BLOCK_MASTER;
+            break;
+          default:
+            ret = CMD_UNKNOWN;
+            break;
+        }
+      }
+      if (com_type & BLOCK_TYPE)
+      {
+        int32_t tmp = -1;
+        switch (cmd)
+        {
+          case CMD_BLOCK_ID:
+            if ((ret = get_value((*iter).c_str(), tmp)) == TFS_SUCCESS)
+            {
+              ret_param.block_id_ = static_cast< uint32_t > (tmp);
+            }
+            break;
+          case CMD_SERVER_LIST:
+            g_need_cmp ? (ret_param.type_ = BLOCK_CMP_SERVER) : (ret_param.type_ = BLOCK_TYPE_SERVER_LIST);
+            break;
+          case CMD_ALL:
+            ret_param.type_ = BLOCK_CMP_ALL_INFO;
+            break;
+          case CMD_PART:
+            ret_param.type_ = BLOCK_CMP_PART_INFO;
+            break;
+          default:
+            ret = CMD_UNKNOWN;
+            break;
+        }
+      }
+      if (com_type & MACHINE_TYPE)
+      {
+        switch (cmd)
+        {
+          case CMD_ALL:
+            ret_param.type_ = MACHINE_TYPE_ALL;
+            break;
+          case CMD_PART:
+            ret_param.type_ = MACHINE_TYPE_PART;
+            break;
+          default:
+            ret = CMD_UNKNOWN;
+            break;
+        }
+      }
     }
     else
     {
-      int32_t cmd = it->second;
-      switch (cmd)
-      {
-        case CMD_NUM:
-          num = static_cast<int32_t>(atoi((*(++iter)).c_str()));
-          if (num == 0 || num == INT_MAX || num == INT_MIN)
-          {
-            TBSYS_LOG(ERROR, "unvalid param (cmd---%d)", cmd);
-            exit(TFS_ERROR);
-          }
-          break;
-        case CMD_BLOCK_LIST:
-          flag = CMD_BLOCK_LIST;
-          break;
-        case CMD_BLOCK_WRITABLE:
-          flag = CMD_BLOCK_WRITABLE;
-          break;
-        case CMD_BLOCK_MASTER:
-          flag = CMD_BLOCK_MASTER;
-          break;
-        default:
-          break;
-      }
+      TBSYS_LOG(ERROR, "unknown param......");
+      ret = CMD_UNKNOWN;
+    }
+    if (ret != TFS_SUCCESS)
+    {
+      TBSYS_LOG(ERROR, "unvalid value...");
+      print_help();
+      return ret;
     }
   }
 }
-int parse_machine_param(VSTRING& param, int8_t& flag)
-{
-  flag = PRINT_ALL;
-  VSTRING::iterator iter = param.begin();
-  for (; iter != param.end(); iter++)
-  {
-    STR_INT_MAP_ITER it = g_sub_cmd_map.find(Func::str_to_lower(const_cast<char*>((*iter).c_str())));
-
-    if (it == g_sub_cmd_map.end())
-    {
-      return CMD_UNKNOWN;
-    }
-    else
-    {
-      int32_t cmd = it->second;
-      switch (cmd)
-      {
-        case CMD_ALL:
-          flag = PRINT_ALL;
-          break;
-        case CMD_PART:
-          flag = PRINT_PART;
-          break;
-        default:
-          break;
-      }
-    }
-  }
-
-}
-
 
 void init()
 {
-  g_cmd_map["help"] = CmdNode("help                 [show help info]", 0, 0, cmd_show_help);
-  g_cmd_map["quit"] = CmdNode("quit                 [quit]", 0, 0, cmd_quit);
-  g_cmd_map["exit"] = CmdNode("exit                 [exit]", 0, 0, cmd_quit);
-  g_cmd_map["block"] = CmdNode("block  [-n num] [-id block_id] [-s]   show block info\n -s print server list ", 0, 3, cmd_show_block);
-  g_cmd_map["server"] = CmdNode("server [-n num] [-b] [-w] [-m]    show server info\n -b print block list \n -w print writable block list \n -m print master block list", 0, 3, cmd_show_server);
-  g_cmd_map["machine"] = CmdNode("machine [-a] [-p]    show machine info \n -a print all info \n -p print part of infos ", 0, 3, cmd_show_machine);
+  g_cmd_map["help"] = CmdNode(0, 0, cmd_show_help);
+  g_cmd_map["h"] = CmdNode(0, 0, cmd_show_help);
+  g_cmd_map["quit"] = CmdNode(0, 0, cmd_quit);
+  g_cmd_map["q"] = CmdNode(0, 0, cmd_quit);
+  g_cmd_map["exit"] = CmdNode(0, 0, cmd_quit);
+  g_cmd_map["block"] = CmdNode(0, 13, cmd_show_block);
+  g_cmd_map["server"] = CmdNode(0, 11, cmd_show_server);
+  g_cmd_map["machine"] = CmdNode(0, 9, cmd_show_machine);
 
-  g_sub_cmd_map["-num"] = CMD_NUM;
-  g_sub_cmd_map["-bid"] = CMD_BLOCK_ID;
-  g_sub_cmd_map["-block"] = CMD_BLOCK_LIST;
-  g_sub_cmd_map["-writable"] = CMD_BLOCK_WRITABLE;
-  g_sub_cmd_map["-master"] = CMD_BLOCK_MASTER;
-  g_sub_cmd_map["-server"] = CMD_SERVER;
-  g_sub_cmd_map["-all"] = CMD_ALL;
-  g_sub_cmd_map["-part"] = CMD_PART;
+  g_sub_cmd_map["-num"] = CmdInfo(CMD_NUM, true);
+  g_sub_cmd_map["-bid"] = CmdInfo(CMD_BLOCK_ID, true);
+  g_sub_cmd_map["-sid"] = CmdInfo(CMD_SERVER_ID, true);
+  g_sub_cmd_map["-block"] = CmdInfo(CMD_BLOCK_LIST, false);
+  g_sub_cmd_map["-writable"] = CmdInfo(CMD_BLOCK_WRITABLE, false);
+  g_sub_cmd_map["-master"] = CmdInfo(CMD_BLOCK_MASTER, false);
+  g_sub_cmd_map["-server"] = CmdInfo(CMD_SERVER_LIST, false);
+  g_sub_cmd_map["-all"] = CmdInfo(CMD_ALL, false);
+  g_sub_cmd_map["-part"] = CmdInfo(CMD_PART, false);
+  g_sub_cmd_map["-count"] = CmdInfo(CMD_COUNT, true);
+  g_sub_cmd_map["-interval"] = CmdInfo(CMD_INTERVAL, true);
 
-  g_sub_cmd_map["-n"] = CMD_NUM;
-  g_sub_cmd_map["-id"] = CMD_BLOCK_ID;
-  g_sub_cmd_map["-b"] = CMD_BLOCK_LIST;
-  g_sub_cmd_map["-w"] = CMD_BLOCK_WRITABLE;
-  g_sub_cmd_map["-m"] = CMD_BLOCK_MASTER;
-  g_sub_cmd_map["-s"] = CMD_SERVER;
-  g_sub_cmd_map["-a"] = CMD_ALL;
-  g_sub_cmd_map["-p"] = CMD_PART;
+  g_sub_cmd_map["-n"] = CmdInfo(CMD_NUM, true);
+  g_sub_cmd_map["-d"] = CmdInfo(CMD_BLOCK_ID, true);
+  g_sub_cmd_map["-b"] = CmdInfo(CMD_BLOCK_LIST, false);
+  g_sub_cmd_map["-r"] = CmdInfo(CMD_SERVER_ID, true);
+  g_sub_cmd_map["-w"] = CmdInfo(CMD_BLOCK_WRITABLE, false);
+  g_sub_cmd_map["-m"] = CmdInfo(CMD_BLOCK_MASTER, false);
+  g_sub_cmd_map["-s"] = CmdInfo(CMD_SERVER_LIST, false);
+  g_sub_cmd_map["-a"] = CmdInfo(CMD_ALL, false);
+  g_sub_cmd_map["-p"] = CmdInfo(CMD_PART, false);
+  g_sub_cmd_map["-c"] = CmdInfo(CMD_COUNT, true);
+  g_sub_cmd_map["-i"] = CmdInfo(CMD_INTERVAL, true);
+  g_sub_cmd_map[">"] = CmdInfo(CMD_REDIRECT, true);
+}
+void print_help()
+{
+  fprintf(stderr, "\nsupported command:\n");
+  if (!g_need_cmp)
+  {
+    fprintf(stderr, "block [-n num] [-d block_id] [-s] [-c] [-i] [> filename]   show block info.\n"
+        "  -n the number of one fetch, default 1024, optional.\n"
+        "  -s print server list, optional.\n"
+        "  -c execute times, default 1, optional.\n"
+        "  -i interval time, default 2, optional.\n"
+        "  > redirect to file, optional.\n");
+    fprintf(stderr, "server [-n num] [-r server_ip] [-b] [-w] [-m] [-c] [-i] [> filename]  show server info.\n"
+        "  -n the number of one fetch, default 1024, optional.\n"
+        "  -r server ip string, when parameter -n is invalid.\n"
+        "  -b print block list, optional.\n"
+        "  -w print writable block list, optional.\n"
+        "  -m print master block list, optional.\n"
+        "  -c execute times, optional.\n"
+        "  -i interval time, optional.\n"
+        "  > redirect to file, optional.\n");
+    fprintf(stderr, "machine [-a] [-p] [-c] [-i] [> filename]   show machine info.\n"
+        "  -a print all info, optional.\n"
+        "  -p print part of infos, optional.\n"
+        "  -c execute times, optional.\n"
+        "  -i interval\n"
+        "  > redirect to file, optional.\n");
+  }
+  else
+  {
+    fprintf(stderr, "block [-a] [-p] [-s]  compare block info\n"
+        "  -a compare all block info\n"
+        "  -p compare some block info\n"
+        "  -s compare server list.\n"
+        "  default compare part of block info\n");
+    fprintf(stderr, "server [-b] [-w] [-m]  compare server info\n"
+        "  -b compare block list \n"
+        "  -w compare writable block list \n"
+        "  -m compare master block list\n"
+        "  default compare server info\n");
+  }
+
+  fprintf(stderr, "quit(q)      quit\n");
+  fprintf(stderr, "exit      exit\n");
+  fprintf(stderr, "help(h)      show help info\n");
 }
 
 int cmd_show_help(VSTRING&)
 {
-  fprintf(stderr, "\nsupported command:");
-  for (MSTR_FUNC_ITER it = g_cmd_map.begin(); it != g_cmd_map.end(); it++)
-  {
-    fprintf(stderr, "\n%s", it->second.info_);
-  }
-  fprintf(stderr, "\n\n");
+  print_help();
   return TFS_SUCCESS;
 }
 
 int cmd_quit(VSTRING&)
 {
+  g_show_info.clean_last_file();
   return TFS_CLIENT_QUIT;
 }
 
 int cmd_show_block(VSTRING& param)
 {
-  int8_t flag = CMD_NOP;
-  int32_t num = MAX_READ_NUM;
-  uint32_t block_id = -1;
-  parse_block_param(param, flag, num, block_id);
-  g_show_info.show_block(flag, num, block_id);
-  return TFS_SUCCESS;
+  int ret = TFS_ERROR;
+  int8_t type = CMD_NOP;
+  g_need_cmp ? (type = BLOCK_CMP_ALL_INFO) : (type = BLOCK_TYPE_BLOCK_INFO);
+  ParamInfo ret_param(type);
+  if ((ret = parse_param(param, BLOCK_TYPE, ret_param)) != TFS_ERROR)
+  {
+    if (!g_need_cmp)
+    {
+      g_show_info.show_block(ret_param.type_, ret_param.num_, ret_param.block_id_, ret_param.count_, ret_param.interval_, ret_param.filename_);
+    }
+    else
+    {
+      g_cmp_info.compare(BLOCK_TYPE, ret_param.type_, ret_param.num_);
+    }
+  }
+  return ret;
 }
 
 int cmd_show_server(VSTRING& param)
 {
-  int8_t flag = CMD_NOP;
-  int32_t num = MAX_READ_NUM;
-  parse_server_param(param, flag, num);
-  g_show_info.show_server(flag, num);
-  return TFS_SUCCESS;
+  int ret = TFS_ERROR;
+  ParamInfo ret_param(SERVER_TYPE_SERVER_INFO);
+  if ((ret = parse_param(param, SERVER_TYPE, ret_param)) != TFS_ERROR)
+  {
+    if (!g_need_cmp)
+    {
+      g_show_info.show_server(ret_param.type_, ret_param.num_, ret_param.server_ip_port_, ret_param.count_, ret_param.interval_, ret_param.filename_);
+    }
+    else
+    {
+      g_cmp_info.compare(SERVER_TYPE, ret_param.type_, ret_param.num_);
+    }
+  }
+  return ret;
 }
 
 int cmd_show_machine(VSTRING& param)
 {
-  int8_t flag = CMD_ALL;
-  int32_t num = MAX_READ_NUM;
-  parse_machine_param(param, flag);
-  g_show_info.show_machine(flag, num);
-  return TFS_SUCCESS;
+  int ret = TFS_ERROR;
+  ParamInfo ret_param(MACHINE_TYPE_ALL);
+  if ((ret = parse_param(param, MACHINE_TYPE, ret_param)) != TFS_ERROR)
+  {
+    g_show_info.show_machine(ret_param.type_, ret_param.num_, ret_param.count_, ret_param.interval_, ret_param.filename_);
+  }
+  return ret;
 }
 
 int usage(const char *name)
 {
-  fprintf(stderr, "Usage: %s -s ns_ip_port\n", name);
+  fprintf(stderr, "\n****************************************************************************** \n");
+  fprintf(stderr, "You can both get and compare cluster info by this tool.\n");
+  fprintf(stderr, "Usage: \n", name);
+  fprintf(stderr, "  %s -s ns_ip_port                        show server, block and machine info.\n", name);
+  fprintf(stderr, "  %s -m master_ip_port -s slave_ip_port   compare server, block info.\n", name);
+  fprintf(stderr, "****************************************************************************** \n");
   fprintf(stderr, "\n");
   exit(TFS_ERROR);
 }
@@ -308,9 +439,18 @@ static void sign_handler(int32_t sig)
   switch (sig)
   {
     case SIGINT:
+      if (g_show_info.is_loop_)
+      {
+        g_show_info.interrupt_ = true;
+        g_show_info.is_loop_ = false;
+        break;
+      }
     case SIGTERM:
       fprintf(stderr, "showssm tool exit.\n");
+      g_show_info.clean_last_file();
       exit(TFS_ERROR);
+      break;
+    default:
       break;
   }
 }
@@ -337,13 +477,22 @@ int main(int argc,char** argv)
 {
   //TODO readline
   int32_t i;
-  std::string ns_ip_port;
-  while ((i = getopt(argc, argv, "s:lh:")) != EOF)
+  std::string ns_ip_port_1;
+  std::string ns_ip_port_2;
+  bool directly = false;
+  while ((i = getopt(argc, argv, "s:m:ih")) != EOF)
   {
     switch (i)
     {
       case 's':
-        ns_ip_port = optarg;
+        ns_ip_port_2 = optarg;
+        break;
+      case 'm':
+        ns_ip_port_1 = optarg;
+        g_need_cmp = true;
+        break;
+      case 'i':
+        directly = true;
         break;
       case 'h':
       default:
@@ -351,14 +500,22 @@ int main(int argc,char** argv)
     }
   }
 
-  if (ns_ip_port.empty())
+  if (ns_ip_port_2.empty() || (g_need_cmp && ns_ip_port_1.empty()))
   {
     fprintf(stderr, "please input nameserver ip and port.\n");
     usage(argv[0]);
   }
 
   init();
-  g_show_info.set_ns_ip(ns_ip_port);
+
+  if (!g_need_cmp)
+  {
+    g_show_info.set_ns_ip(ns_ip_port_2);
+  }
+  else
+  {
+    g_cmp_info.set_ns_ip(ns_ip_port_1, ns_ip_port_2);
+  }
 
   if (optind >= argc)
   {
@@ -368,7 +525,17 @@ int main(int argc,char** argv)
   }
   else
   {
-    usage(argv[0]);
+    if (directly)
+    {
+      for (i = optind; i < argc; i++)
+      {
+        do_cmd(argv[i]);
+      }
+    }
+    else
+    {
+      usage(argv[0]);
+    }
   }
 }
 int main_loop()
@@ -382,18 +549,29 @@ int main_loop()
   int ret = TFS_ERROR;
   while (1)
   {
+    std::string tips = "";
+    if (!g_need_cmp)
+    {
+      tips = "show > ";
+    }
+    else
+    {
+      tips = "cmp > ";
+    }
 #ifdef _WITH_READ_LINE
-    cmd_line = readline("show > ");
+    cmd_line = readline(tips.c_str());
     if (!cmd_line)
 #else
-    fprintf(stderr, "show > ");
+    fprintf(stderr, tips.c_str());
+
     if (NULL == fgets(cmd_line, CMD_MAX_LEN, stdin))
 #endif
     {
-      continue;
+      break;
     }
     ret = do_cmd(cmd_line);
 #ifdef _WITH_READ_LINE
+
     delete cmd_line;
     cmd_line = NULL;
 #endif
@@ -449,7 +627,7 @@ int32_t do_cmd(char* key)
   {
     if ('\0' == token[0])
     {
-      continue;
+      break;
     }
     param.push_back(token);
   }
@@ -460,7 +638,9 @@ int32_t do_cmd(char* key)
   int32_t param_size = static_cast<int32_t>(param.size());
   if ((param_size < min_param_count) || (param_size) > max_param_count)
   {
-    fprintf(stderr, "%s\n\n", g_cmd_map[g_cur_cmd].info_);
+    //fprintf(stderr, "%s\n\n", g_cmd_map[g_cur_cmd].info_);
+    fprintf(stderr, "bad param...");
+    print_help();
     return TFS_ERROR;
   }
 
