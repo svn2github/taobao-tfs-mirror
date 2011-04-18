@@ -3,70 +3,57 @@
 
 #include <tbnet.h>
 #include <Mutex.h>
+#include <ext/hash_map>
 #include "message.h"
 #include "message_factory.h"
 #include "tfs_packet_streamer.h"
-#include "wait_object.h"
+#include "new_client.h"
 #include "common/define.h"
 
 namespace tfs
 {
   namespace message 
   {
-    class WaitObjectManager;
     class NewClientManager : public tbnet::IPacketHandler
     {
+        friend int NewClient::post_request(const uint64_t server, Message* packet, uint8_t& send_id);
+        typedef __gnu_cxx::hash_map<uint32_t, NewClient*> NEWCLIENT_MAP;
+        typedef NEWCLIENT_MAP::iterator NEWCLIENT_MAP_ITER;
       public:
-        /*static NewClientManager* get_instance()
-        {
-          static NewClientManager client_manager;
-          return &client_manager;
-        }*/
+        NewClientManager();
+        virtual ~NewClientManager();
         static NewClientManager& get_instance()
         {
           static NewClientManager client_manager;
           return client_manager;
         }
-
-      public:
         void initialize();
         void initialize_with_transport(tbnet::Transport* transport);
-
-        tbnet::IPacketHandler::HPRetCode handlePacket(tbnet::Packet* packet, void* args);
-        int get_wait_id(uint16_t& wait_id) const;
-        int post_request(const int64_t server, Message* packet, const uint16_t wait_id, const uint16_t index_id = 0);
-        int get_response(const uint16_t wait_id, const int64_t wait_count,
-              const int64_t wait_timeout, std::map<uint16_t, Message*>& packets);
-
-        int call(const int64_t server, Message* packet, const int64_t timeout, Message*& response);
-
-        MessageFactory& get_msg_factory()
-        {
-          return factory_;
-        }
-
-      private:
-        NewClientManager();
-        ~NewClientManager();
-        DISALLOW_COPY_AND_ASSIGN(NewClientManager);
-
         void destroy();
+        tbnet::IPacketHandler::HPRetCode handlePacket(tbnet::Packet* packet, void* args);
+        NewClient* create_client();
+        bool destroy_client(NewClient* client);
 
       private:
-        bool inited_;
-        bool own_transport_;
-        tbutil::Mutex mutex_;
+        bool handlePacket(const WaitId& id, tbnet::Packet* response);
 
-        MessageFactory factory_;
+      private:
+        DISALLOW_COPY_AND_ASSIGN(NewClientManager);
+        NEWCLIENT_MAP new_clients_;
+        MessageFactory factory_;                                                                   
         TfsPacketStreamer streamer_;
         tbnet::Transport* transport_;
-        tbnet::ConnectionManager* connmgr_;
+        tbnet::ConnectionManager* connmgr_; 
 
-        WaitObjectManager* waitmgr_;
+        tbutil::Mutex mutex_;
+        static const uint32_t MAX_SEQ_ID = 0xFFFFFF - 1;
+        uint32_t seq_id_;
+
+        bool initialize_;
+        bool own_transport_;
     };
-
-    int test_server_alive(const uint64_t server_id, const int64_t timeout = common::DEFAULT_NETWORK_CALL_TIMEOUT/*us*/);
-    int send_message_to_server(const uint64_t server_id, Message* msg, Message*& ret_msg, const int64_t timeout = common::DEFAULT_NETWORK_CALL_TIMEOUT/*us*/);
-  }
-}
+    int test_server_alive(const uint64_t server_id, const int64_t timeout = common::DEFAULT_NETWORK_CALL_TIMEOUT/*ms*/);
+    //int send_message_to_server(const uint64_t server_id, Message* msg, Message** response, const int64_t timeout = common::DEFAULT_NETWORK_CALL_TIMEOUT/*ms*/);
+  }/* message */
+}/* tfs */
 #endif
