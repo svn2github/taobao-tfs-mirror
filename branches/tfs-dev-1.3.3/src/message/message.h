@@ -461,6 +461,19 @@ namespace tfs
           return common::TFS_SUCCESS;
         }
 
+        inline int get_uint64(char** data, int32_t* len, uint64_t* value)
+        {
+          if ((*len) < common::INT64_SIZE || (*len) > common::TFS_MALLOC_MAX_SIZE || data == NULL || (*data) == NULL)
+          {
+            return common::TFS_ERROR;
+          }
+          (*value) = *(*data);
+          (*len) -= common::INT64_SIZE;
+          (*data) += common::INT64_SIZE;
+          assert(*len >= 0);
+          return common::TFS_SUCCESS;
+        }
+
         inline int get_string(char** data, int32_t* len, char** value)
         {
           if ((*len) < common::INT_SIZE || (*len) > common::TFS_MALLOC_MAX_SIZE || data == NULL || (*data) == NULL)
@@ -607,6 +620,8 @@ namespace tfs
           assert(*len >= 0);
           return common::TFS_SUCCESS;
         }
+
+
 
         inline int set_string(char** data, int32_t* len, char* str_)
         {

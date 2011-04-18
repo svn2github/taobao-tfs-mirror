@@ -35,25 +35,59 @@ namespace tfs
 
     int ClientCmdMessage::parse(char *data, int32_t len)
     {
-      if (get_object_copy(&data, &len, reinterpret_cast<void*> (&info_), sizeof(ClientCmdInformation)) == TFS_ERROR)
+      int32_t iret = NULL != data ? TFS_SUCCESS : TFS_ERROR;
+      if (TFS_SUCCESS == iret)
       {
-        return TFS_ERROR;
+        iret = get_int32(&data, &len, &info_.cmd_);
       }
-      return TFS_SUCCESS;
+      if (TFS_SUCCESS == iret)
+      {
+        iret = get_uint64(&data, &len, &info_.value1_);
+      }
+      if (TFS_SUCCESS == iret)
+      {
+        iret = get_uint32(&data, &len, &info_.value3_);
+      }
+      if (TFS_SUCCESS == iret)
+      {
+        iret = get_uint32(&data, &len, &info_.value4_);
+      }
+      if (TFS_SUCCESS == iret)
+      {
+        iret = get_uint64(&data, &len, &info_.value2_);
+      }
+      return iret;
     }
 
     int32_t ClientCmdMessage::message_length()
     {
-      return sizeof(ClientCmdInformation);
+      return INT_SIZE * 3 + INT64_SIZE * 2;
     }
 
     int ClientCmdMessage::build(char *data, int32_t len)
     {
-      if (set_object(&data, &len, &info_, sizeof(ClientCmdInformation)) == TFS_ERROR)
+      int32_t iret = NULL != data ? TFS_SUCCESS : TFS_ERROR;
+      if (TFS_SUCCESS == iret)
       {
-        return TFS_ERROR;
+        iret = set_int32(&data, &len, info_.cmd_);
       }
-      return TFS_SUCCESS;
+      if (TFS_SUCCESS == iret)
+      {
+        iret = set_int64(&data, &len, info_.value1_);
+      }
+      if (TFS_SUCCESS == iret)
+      {
+        iret = set_int32(&data, &len, info_.value3_);
+      }
+      if (TFS_SUCCESS == iret)
+      {
+        iret = set_int32(&data, &len, info_.value4_);
+      }
+      if (TFS_SUCCESS == iret)
+      {
+        iret = set_int64(&data, &len, info_.value2_);
+      }
+      return iret;
     }
 
     char *ClientCmdMessage::get_name()
