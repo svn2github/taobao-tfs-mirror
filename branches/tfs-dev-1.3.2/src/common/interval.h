@@ -157,6 +157,8 @@ namespace tfs
       IS_SERVER = 1
     };
 
+    static const int32_t SEGMENT_HEAD_RESERVE_SIZE = 64;
+
     // common data structure
 #pragma pack(4)
     struct BlockInfo
@@ -334,8 +336,10 @@ namespace tfs
     {
       int32_t count_;           // segment count
       int64_t size_;            // total size that segments contain
+      char reserve_[SEGMENT_HEAD_RESERVE_SIZE]; // reserve
       SegmentHead() : count_(0), size_(0)
       {
+        // memset(reserve_, 0, SEGMENT_HEAD_RESERVE_SIZE);
       }
     };
 
@@ -389,8 +393,6 @@ namespace tfs
     static const int32_t PORT_PER_PROCESS = 2;
     static const int32_t MAX_DEV_NAME_LEN = 64;
     static const int32_t MAX_READ_SIZE = 1048576;
-
-    //static const int64_t SEGMENT_SIZE = 1 << 20;
 
     // typedef
     typedef std::map<std::string, std::string> STRING_MAP; // string => string

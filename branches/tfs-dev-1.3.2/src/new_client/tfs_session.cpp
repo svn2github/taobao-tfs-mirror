@@ -145,7 +145,7 @@ int TfsSession::get_block_info(SEG_DATA_LIST& seg_list, int32_t flag)
 
         if (0 == block_id)
         {
-          TBSYS_LOG(ERROR, "block zero error for mode: %d", block_id, flag);
+          TBSYS_LOG(ERROR, "blockid: %d zero error for mode: %d", block_id, flag);
           ret = TFS_ERROR;
           break;
         }
@@ -271,37 +271,38 @@ int TfsSession::get_block_info_ex(SEG_DATA_LIST& seg_list, const int32_t flag)
   {
     BatchSetBlockInfoMessage* block_info_msg = dynamic_cast<BatchSetBlockInfoMessage*>(rsp);
     map<uint32_t, BlockInfoSeg>& block_info = block_info_msg->get_infos();
-    if (block_info.size() != block_count)
-    {
-      TBSYS_LOG(ERROR, "batch get block info fail, get count conflict, request: %d, response: %u",
-                block_count, block_info.size());
-      ret = TFS_ERROR;
-    }
-    else
-    {
-      std::map<uint32_t, BlockInfoSeg>::iterator it;
-      if (flag & T_READ)
-      {
-        for (size_t i = 0; i < seg_list.size(); ++i)
-        {
-          if ((it = block_info.find(seg_list[i]->seg_info_.block_id_)) == block_info.end() && seg_list[i]->ds_.empty())
-          {
-            TBSYS_LOG(ERROR, "get block %d info fail, blockinfo size: %d", seg_list[i]->seg_info_.block_id_, block_info.size());
-            ret = TFS_ERROR;
-            break;
-          }
+    std::map<uint32_t, BlockInfoSeg>::iterator it;
 
-          if (it != block_info.end())
-          {
-            // ds_ will not be empty
-            seg_list[i]->ds_ = it->second.ds_;
-            seg_list[i]->status_ = SEG_STATUS_OPEN_OVER;
-            TBSYS_LOG(DEBUG, "get block %u info, ds size: %d, return size: %d",
-                seg_list[i]->seg_info_.block_id_, seg_list[i]->ds_.size(), it->second.ds_.size());
-          }
+    if (flag & T_READ)
+    {
+      for (size_t i = 0; i < seg_list.size(); ++i)
+      {
+        if ((it = block_info.find(seg_list[i]->seg_info_.block_id_)) == block_info.end() && seg_list[i]->ds_.empty())
+        {
+          TBSYS_LOG(ERROR, "get block %d info fail, blockinfo size: %d", seg_list[i]->seg_info_.block_id_, block_info.size());
+          ret = TFS_ERROR;
+          break;
+        }
+
+        if (it != block_info.end())
+        {
+          // ds_ will not be empty
+          seg_list[i]->ds_ = it->second.ds_;
+          seg_list[i]->status_ = SEG_STATUS_OPEN_OVER;
+          TBSYS_LOG(DEBUG, "get block %u info, ds size: %d, return size: %d",
+                    seg_list[i]->seg_info_.block_id_, seg_list[i]->ds_.size(), it->second.ds_.size());
         }
       }
-      else if (flag & T_WRITE)
+    }
+    else if (flag & T_WRITE)
+    {
+      if (block_info.size() != block_count)
+      {
+        TBSYS_LOG(ERROR, "batch get write block info fail, get count conflict, request: %d, response: %u",
+                  block_count, block_info.size());
+        ret = TFS_ERROR;
+      }
+      else
       {
         it = block_info.begin();
         TBSYS_LOG(DEBUG, "get write block block count: %d, seg list size: %d", block_info.size(), seg_list.size());
@@ -319,16 +320,16 @@ int TfsSession::get_block_info_ex(SEG_DATA_LIST& seg_list, const int32_t flag)
             seg_list[i]->ds_.push_back(it->second.version_);
             seg_list[i]->ds_.push_back(it->second.lease_);
             TBSYS_LOG(DEBUG, "get write block %u success, ds list size: %d, version: %d, lease: %d",
-                seg_list[i]->seg_info_.block_id_, seg_list[i]->ds_.size(),
-                it->second.version_, it->second.lease_);
+                      seg_list[i]->seg_info_.block_id_, seg_list[i]->ds_.size(),
+                      it->second.version_, it->second.lease_);
           }
         }
       }
-      else
-      {
-        TBSYS_LOG(ERROR, "unknown flag %d", flag);
-        ret = TFS_ERROR;
-      }
+    }
+    else
+    {
+      TBSYS_LOG(ERROR, "unknown flag %d", flag);
+      ret = TFS_ERROR;
     }
   }
   else

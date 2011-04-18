@@ -109,6 +109,9 @@ namespace tfs
       int async_req_read_file(const uint16_t wait_id, const uint16_t index);
       int async_rsp_read_file(message::Message* packet, const uint16_t index);
 
+      int async_req_read_fileV2(const uint16_t wait_id, const uint16_t index);
+      int async_rsp_read_fileV2(message::Message* packet, const uint16_t index);
+
       int async_req_write_data(const uint16_t wait_id, const uint16_t index);
       int async_rsp_write_data(message::Message* packet, const uint16_t index);
 
