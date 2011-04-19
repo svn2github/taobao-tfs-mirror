@@ -11,7 +11,7 @@ DISPATCH_DS_FILE=$CMD_HOME/ds_list
 
 print_usage()
 {
-  echo "$0 source_ns_ip dest_ns_ip log_path [sync day] [modify time]"
+  echo "$0 source_ns_ip dest_ns_ip log_path [thread_count] [sync day] [modify time]"
 }
 
 start_sync()
@@ -19,13 +19,14 @@ start_sync()
   for ds in `cat $DISPATCH_DS_FILE`
   do
     echo -n "$ds: "
-    scp ${SOURCE_SYNC_LOG} $USER@$ds:${DEST_SYNC_LOG}
-    scp ${SOURCE_SYNC_SCRIPT} $USER@$ds:${DEST_SYNC_SCRIPT}
-    ssh -o ConnectTimeout=3 $USER@$ds \
-    "cd $5;" \
+    scp -oStrictHostKeyChecking=no ${SOURCE_SYNC_LOG} $USER@$ds:${DEST_SYNC_LOG}
+    scp -oStrictHostKeyChecking=no ${SOURCE_SYNC_SCRIPT} $USER@$ds:${DEST_SYNC_SCRIPT}
+    ssh -o ConnectTimeout=3 -oStrictHostKeyChecking=no $USER@$ds \
+    "cd $6;" \
     "chmod +x ${DEST_SYNC_LOG};" \
     "chmod +x ${DEST_SYNC_SCRIPT};" \
-    "sh $DEST_SYNC_SCRIPT $1 $2 $3 $4"
+    "nohup sh $DEST_SYNC_SCRIPT $1 $2 $3 $4 $5 >tmp_start_log 2>&1 &"
+    echo "start sync done"
   done
 }
 
@@ -46,16 +47,24 @@ DEST_SYNC_SCRIPT=$3/${SCRIPT_NAME}
 
 if [ -z $4 ]
 then
-  DAY=`date -d yesterday +%Y%m%d`
+  THREAD_COUNT=2
 else
-  DAY=$4
+  THREAD_COUNT=$4
 fi
 
 if [ -z $5 ]
 then
-  MODIFY=`date +%Y%m%d`
+  DAY=`date -d yesterday +%Y%m%d`
 else
-  MODIFY=$5
+  DAY=$5
 fi
 
-start_sync $1 $2 $DAY $MODIFY $3
+if [ -z $6 ]
+then
+  MODIFY=`date +%Y%m%d`
+else
+  MODIFY=$6
+fi
+
+echo "start_sync $1 $2 $THREAD_COUNT $DAY $MODIFY $3"
+start_sync $1 $2 $THREAD_COUNT $DAY $MODIFY $3

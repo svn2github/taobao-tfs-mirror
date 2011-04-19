@@ -34,14 +34,31 @@ using namespace std;
 using namespace tfs::client;
 using namespace tfs::common;
 
-struct SyncFileInfo
+typedef set<string> FILE_SET;
+typedef set<string>::iterator FILE_SET_ITER;
+typedef map<uint32_t, FILE_SET> SYNC_FILE_MAP;
+typedef map<uint32_t, FILE_SET>::iterator SYNC_FILE_MAP_ITER;
+typedef vector<int32_t> ACTION_VEC;
+typedef vector<int32_t>::const_iterator ACTION_VEC_ITER;
+struct ActionOp
 {
-  string file_name_;
-  int32_t action_;
+  ACTION_VEC action_;
+  int32_t trigger_index_;
+  int32_t force_index_;
+  ActionOp() :
+    trigger_index_(-1), force_index_(-1)
+  {
+    action_.clear();
+  }
+  void push_back(int32_t action)
+  {
+    action_.push_back(action);
+  }
 };
 struct SyncStat
 {
   int64_t total_count_;
+  int64_t actual_count_;
   int64_t success_count_;
   int64_t fail_count_;
 };
@@ -50,28 +67,28 @@ struct LogFile
   FILE** fp_;
   const char* file_;
 };
-enum CmpFlag
-{
-  SKIP_FLAG = 1,
-  SYNC_FLAG = 2,
-  ERROR_FLAG = 4
-};
 enum OpAction
 {
   WRITE_ACTION = 1,
-  CONCEAL_ACTION = 2,
-  REVERT_ACTION = 4
+  HIDE_SOURCE = 2,
+  HIDE_DEST = 4,
+  UNHIDE_SOURCE = 8,
+  UNHIDE_DEST = 16,
+  UNDELE_DEST = 32,
+  DELETE_DEST = 64
 };
-typedef vector<SyncFileInfo> FILE_VEC;
-typedef vector<SyncFileInfo>::iterator FILE_VEC_ITER;
-typedef map<uint32_t, FILE_VEC> SYNC_FILE_MAP;
-typedef map<uint32_t, FILE_VEC>::iterator SYNC_FILE_MAP_ITER;
+
 tbutil::Mutex g_mutex_;
 SyncStat g_sync_stat_;
 int get_file_list(const string& log_file, SYNC_FILE_MAP& sync_file_map);
-void get_revert_action(int32_t source_flag, int32_t dest_flag, VINT& action_set);
-int sync_file(TfsClient& source_tfs_client, TfsClient& dest_tfs_client, FILE_VEC& name_vec, const string& modify_time);
-int cmp_file_info(TfsClient& source_tfs_client, TfsClient& dest_tfs_client, SyncFileInfo& sync_finfo, const string& modify_time, VINT& action_set);
+
+int sync_file(TfsClient& source_tfs_client, TfsClient& dest_tfs_client, FILE_SET& name_set, const string& modify_time);
+int cmp_file_info(TfsClient& source_tfs_client, TfsClient& dest_tfs_client, string& file_name, const string& modify_time, ActionOp& action_op);
+int do_action(TfsClient& source_tfs_client, TfsClient& dest_tfs_client, const string& file_name, const ActionOp& action_op);
+int do_action_ex(TfsClient& source_tfs_client, TfsClient& dest_tfs_client, const string& file_name, int32_t action);
+int copy_file(TfsClient& source_tfs_client, TfsClient& dest_tfs_client, const string& file_name);
+int get_file_info(TfsClient& tfs_client, string& file_name, FileInfo& buf);
+void change_stat(int32_t source_flag, int32_t dest_flag, ActionOp& action_op);
 char* str_match(char* data, const char* prefix);
 
 class WorkThread : public tbutil::Thread
@@ -100,12 +117,12 @@ class WorkThread : public tbutil::Thread
 
     virtual void run()
     {
-      sync_file(source_tfs_client_, dest_tfs_client_, name_vec_, modify_time_);
+      sync_file(source_tfs_client_, dest_tfs_client_, name_set_, modify_time_);
     }
 
-    void push_back(FILE_VEC name_vec)
+    void push_back(FILE_SET name_set)
     {
-      name_vec_.insert(name_vec_.end(), name_vec.begin(), name_vec.end());
+      name_set_.insert(name_set.begin(), name_set.end());
     }
 
   private:
@@ -113,7 +130,7 @@ class WorkThread : public tbutil::Thread
     WorkThread& operator=(const WorkThread&);
     TfsClient source_tfs_client_;
     TfsClient dest_tfs_client_;
-    FILE_VEC name_vec_;
+    FILE_SET name_set_;
     string modify_time_;
     bool destroy_;
 };
@@ -222,12 +239,9 @@ int main(int argc, char* argv[])
     }
   }
 
-  if ((source_ns_ip.empty())
-      || (source_ns_ip.compare(" ") == 0)
-      || dest_ns_ip.empty()
-      || (dest_ns_ip.compare(" ") == 0)
-      || file_name.empty()
-      || (file_name.compare(" ") == 0)
+  if ((source_ns_ip.empty()) || (source_ns_ip.compare(" ") == 0)
+      || dest_ns_ip.empty() || (dest_ns_ip.compare(" ") == 0)
+      || file_name.empty() || (file_name.compare(" ") == 0)
       || modify_time.length() < 8)
   {
     usage(argv[0]);
@@ -263,7 +277,6 @@ int main(int argc, char* argv[])
   TBSYS_LOGGER.setFileName(log_path, true);
   TBSYS_LOGGER.setMaxFileSize(1024 * 1024 * 1024);
   TBSYS_LOGGER.setLogLevel(level.c_str());
-
 
   memset(&g_sync_stat_, 0, sizeof(g_sync_stat_));
   SYNC_FILE_MAP sync_file_map;
@@ -309,9 +322,8 @@ int main(int argc, char* argv[])
     fclose(*g_log_fp[i].fp_);
   }
 
-
-  fprintf(stdout, "TOTAL COUNT: %"PRI64_PREFIX"d, SUCCESS COUNT: %"PRI64_PREFIX"d, FAIL COUNT: %"PRI64_PREFIX"d\n",
-      g_sync_stat_.total_count_, g_sync_stat_.success_count_, g_sync_stat_.fail_count_);
+  fprintf(stdout, "TOTAL COUNT: %"PRI64_PREFIX"d, ACTUAL_COUNT: %"PRI64_PREFIX"d, SUCCESS COUNT: %"PRI64_PREFIX"d, FAIL COUNT: %"PRI64_PREFIX"d\n",
+      g_sync_stat_.total_count_, g_sync_stat_.actual_count_, g_sync_stat_.success_count_, g_sync_stat_.fail_count_);
   fprintf(stdout, "LOG FILE: %s\n", log_path);
 
   return TFS_SUCCESS;
@@ -337,32 +349,23 @@ int get_file_list(const string& log_file, SYNC_FILE_MAP& sync_file_map)
         uint32_t block_id = static_cast<uint32_t>(atoi(block));
         char* file = str_match(block + strlen(block) + 1, "fileid: ");
         uint64_t file_id = strtoull(file, NULL, 10);
-        char* a = str_match(file + strlen(file) + 1, "action: ");
-        int32_t action = -1;
-        if (a != NULL)
-        {
-          action = atoi(a);
-        }
         FSName fs;
         fs.set_block_id(block_id);
         fs.set_file_id(file_id);
-        SyncFileInfo sync_finfo;
-        sync_finfo.file_name_ = string(fs.get_name());
-        sync_finfo.action_ = action;
+        string file_name = string(fs.get_name());
         SYNC_FILE_MAP_ITER iter = sync_file_map.find(block_id);
         if (iter != sync_file_map.end())
         {
-          iter->second.push_back(sync_finfo);
+          iter->second.insert(file_name);
         }
         else
         {
-          FILE_VEC name_vec;
-          name_vec.push_back(sync_finfo);
-          sync_file_map.insert(make_pair(block_id, name_vec));
+          FILE_SET name_set;
+          name_set.insert(file_name);
+          sync_file_map.insert(make_pair(block_id, name_set));
         }
 
-        g_sync_stat_.total_count_++;
-        TBSYS_LOG(INFO, "block_id: %u, file_id: %"PRI64_PREFIX"u, action:%d, name: %s\n", block_id, file_id, action, fs.get_name());
+        TBSYS_LOG(INFO, "block_id: %u, file_id: %"PRI64_PREFIX"u, name: %s\n", block_id, file_id, fs.get_name());
       }
     }
     fclose (fp);
@@ -370,145 +373,92 @@ int get_file_list(const string& log_file, SYNC_FILE_MAP& sync_file_map)
   }
   return ret;
 }
-
-int sync_file(TfsClient& source_tfs_client, TfsClient& dest_tfs_client, FILE_VEC& name_vec, const string& modify_time)
+int do_action(TfsClient& source_tfs_client, TfsClient& dest_tfs_client, const string& file_name, const ActionOp& action_op)
 {
-  int iret = TFS_SUCCESS;
-  FILE_VEC::iterator iter = name_vec.begin();
-  for (; iter != name_vec.end(); iter++)
+  int ret = TFS_SUCCESS;
+  const ACTION_VEC& action_vec = action_op.action_;
+  ACTION_VEC_ITER iter = action_vec.begin();
+  int32_t index = 0;
+  for (; iter != action_vec.end(); iter++)
   {
-    string file_name = (*iter).file_name_;
-    VINT action_set;
+    int32_t action = (*iter);
+    ret = do_action_ex(source_tfs_client, dest_tfs_client, file_name, action);
+    if (ret == TFS_SUCCESS)
+    {
+      TBSYS_LOG(INFO, "tfs file(%s) do (%d)th action(%d) success", file_name.c_str(), index, action);
+      index++;
+    }
+    else
+    {
+      TBSYS_LOG(ERROR, "tfs file(%s) do (%d)th action(%d) failed, ret: %d", file_name.c_str(), index, action, ret);
+      break;
+    }
+  }
+  if ((index > action_op.trigger_index_) && (index <= action_op.force_index_))
+  {
+    int tmp_ret = do_action_ex(source_tfs_client, dest_tfs_client, file_name, action_vec[action_op.force_index_]);
+    TBSYS_LOG(ERROR, "former operation error occures, file(%s) must do force action(%d), ret: %d", file_name.c_str(), action_vec[action_op.force_index_], tmp_ret);
+    ret = TFS_ERROR;
+  }
+  return ret;
+}
+int do_action_ex(TfsClient& source_tfs_client, TfsClient& dest_tfs_client, const string& file_name, int32_t action)
+{
+  int ret = TFS_SUCCESS;
+  switch (action)
+  {
+    case WRITE_ACTION:
+      ret = copy_file(source_tfs_client, dest_tfs_client, file_name);
+      break;
+    case HIDE_SOURCE:
+      ret = source_tfs_client.unlink(file_name.c_str(), NULL, CONCEAL);
+      usleep(20000);
+      break;
+    case HIDE_DEST:
+      ret = dest_tfs_client.unlink(file_name.c_str(), NULL, CONCEAL);
+      usleep(20000);
+      break;
+    case UNHIDE_SOURCE:
+      ret = source_tfs_client.unlink(file_name.c_str(), NULL, REVEAL);
+      usleep(20000);
+      break;
+    case UNHIDE_DEST:
+      ret = dest_tfs_client.unlink(file_name.c_str(), NULL, REVEAL);
+      usleep(20000);
+      break;
+    case UNDELE_DEST:
+      ret = dest_tfs_client.unlink(file_name.c_str(), NULL, UNDELETE);
+      usleep(20000);
+      break;
+    case DELETE_DEST:
+      ret = dest_tfs_client.unlink(file_name.c_str(), NULL, DELETE);
+      usleep(20000);
+      break;
+    default:
+      break;
+  }
+  return ret;
+}
+
+int sync_file(TfsClient& source_tfs_client, TfsClient& dest_tfs_client, FILE_SET& name_set, const string& modify_time)
+{
+  int ret = TFS_SUCCESS;
+  FILE_SET_ITER iter = name_set.begin();
+  for (; iter != name_set.end(); iter++)
+  {
+    string file_name = (*iter);
+    ActionOp action_op;
+
     // compare file info
-    int cmp_stat = SYNC_FLAG;
-    cmp_stat = cmp_file_info(source_tfs_client, dest_tfs_client, (*iter), modify_time, action_set);
-    // need do sync file
-    if (cmp_stat & SYNC_FLAG)
+    ret = cmp_file_info(source_tfs_client, dest_tfs_client, file_name, modify_time, action_op);
+    // do sync file
+    if (ret != TFS_ERROR)
     {
-      int action = iter->action_;
-      if (action & WRITE_ACTION)
-      {
-        if (action & CONCEAL_ACTION)
-        {
-          source_tfs_client.unlink(file_name.c_str(), NULL, REVEAL);
-          usleep(20000);
-        }
-
-        bool first_flag = true;
-        char data[MAX_READ_SIZE];
-        int32_t rlen = 0;
-
-        FileInfo file_info;
-        int ret = source_tfs_client.tfs_open(file_name.c_str(), NULL, READ_MODE);
-        if (ret != TFS_SUCCESS)
-        {
-          TBSYS_LOG(ERROR, "open source tfsfile fail, filename: %s, ret: %d", file_name.c_str(), ret);
-        }
-        else
-        {
-          for (;;)
-          {
-            rlen = source_tfs_client.tfs_read_v2(data, MAX_READ_SIZE, &file_info);
-            if (rlen < 0)
-            {
-              TBSYS_LOG(ERROR, "read tfsfile fail, filename: %s, datalen: %d", file_name.c_str(), rlen);
-              ret = TFS_ERROR;
-              break;
-            }
-            if (rlen == 0)
-            {
-              break;
-            }
-
-            if (first_flag)
-            {
-              ret = dest_tfs_client.tfs_open(file_name.c_str(), NULL, WRITE_MODE | NEWBLK_MODE);
-              if (ret != TFS_SUCCESS)
-              {
-                TBSYS_LOG(ERROR, "open dest tfsfile fail, filename: %s, ret: %d", file_name.c_str(), ret);
-                break;
-              }
-              first_flag = false;
-            }
-
-            if (dest_tfs_client.tfs_write(data, rlen) != rlen)
-            {
-              TBSYS_LOG(ERROR, "write tfsfile fail, filename: %s, datalen: %d", file_name.c_str(), rlen);
-              ret = TFS_ERROR;
-              break;
-            }
-
-            if (rlen < MAX_READ_SIZE)
-            {
-              break;
-            }
-          }
-        }
-
-        source_tfs_client.tfs_close();
-
-        if (ret == TFS_SUCCESS)
-        {
-          if ((ret = dest_tfs_client.tfs_close()) != TFS_SUCCESS)
-          {
-            TBSYS_LOG(ERROR, "close dest tfsfile fail, filename: %s, ret: %d", file_name.c_str(), ret);
-            iret = TFS_ERROR;
-          }
-        }
-        else
-        {
-          iret = TFS_ERROR;
-        }
-
-        if (action & CONCEAL_ACTION)
-        {
-          if ((source_tfs_client.unlink(file_name.c_str(), NULL, CONCEAL) != TFS_SUCCESS))
-          {
-            TBSYS_LOG(ERROR, "source file(%s) hide failed", file_name.c_str());
-            iret = TFS_ERROR;
-          }
-
-          if (ret == TFS_SUCCESS)
-          {
-            if ((dest_tfs_client.unlink(file_name.c_str(), NULL, CONCEAL) != TFS_SUCCESS))
-            {
-              TBSYS_LOG(ERROR, "dest file(%s) hide failed", file_name.c_str());
-              iret = TFS_ERROR;
-            }
-          }
-        }
-      }
-      if (action & REVERT_ACTION)
-      {
-        iret = TFS_SUCCESS;
-        int32_t size = static_cast<int32_t>(action_set.size());
-        for (int32_t i = 0; i < size; i++)
-        {
-          if ((dest_tfs_client.unlink(file_name.c_str(), NULL, action_set[i]) != TFS_SUCCESS))
-          {
-            TBSYS_LOG(ERROR, "dest file(%s) unlink(%d) failed", file_name.c_str(), action_set[i]);
-            iret = TFS_ERROR;
-          }
-          if (i < (size - 1))
-          {
-            usleep(20000);
-          }
-        }
-      }
+      ret = do_action(source_tfs_client, dest_tfs_client, file_name, action_op);
     }
-    else if (cmp_stat & SKIP_FLAG)
+    if (ret == TFS_SUCCESS)
     {
-      iret = TFS_SUCCESS;
-    }
-    else if (cmp_stat & ERROR_FLAG)
-    {
-      iret = TFS_ERROR;
-    }
-
-    if (iret == TFS_SUCCESS)
-    {
-      TBSYS_LOG(ERROR, "sync file(%s) from(%s) to dest(%s) succeed.", file_name.c_str(),
-          source_ns_ip_.c_str(), dest_ns_ip_.c_str());
+      TBSYS_LOG(INFO, "sync file(%s) succeed.", file_name.c_str());
       {
         tbutil::Mutex::Lock lock(g_mutex_);
         g_sync_stat_.success_count_++;
@@ -517,151 +467,179 @@ int sync_file(TfsClient& source_tfs_client, TfsClient& dest_tfs_client, FILE_VEC
     }
     else
     {
-      TBSYS_LOG(ERROR, "sync file(%s) from(%s) to dest(%s) failed.", file_name.c_str(),
-          source_ns_ip_.c_str(), dest_ns_ip_.c_str());
+      TBSYS_LOG(INFO, "sync file(%s) failed.", file_name.c_str());
       {
         tbutil::Mutex::Lock lock(g_mutex_);
         g_sync_stat_.fail_count_++;
       }
       fprintf(g_sync_fail, "%s\n", file_name.c_str());
     }
-
+    g_sync_stat_.actual_count_++;
   }
-  return iret;
+  return ret;
 }
-
-int cmp_file_info(TfsClient& source_tfs_client, TfsClient& dest_tfs_client, SyncFileInfo& sync_finfo, const string& modify_time, VINT& action_set)
+int copy_file(TfsClient& source_tfs_client, TfsClient& dest_tfs_client, const string& file_name)
 {
-  int ret = SYNC_FLAG;
-  FileInfo source_buf;
-  FileInfo dest_buf;
-  string file_name = sync_finfo.file_name_;
-  int iret = source_tfs_client.tfs_open(file_name.c_str(), NULL, READ_MODE);
-  if (iret == TFS_SUCCESS)
+  int ret = TFS_SUCCESS;
+  int tmp_ret = TFS_SUCCESS;
+  bool first_flag = true;
+  char data[MAX_READ_SIZE];
+  int32_t rlen = 0;
+
+  FileInfo file_info;
+  ret = source_tfs_client.tfs_open(file_name.c_str(), NULL, READ_MODE);
+  if (ret != TFS_SUCCESS)
   {
-    iret = source_tfs_client.tfs_stat(&source_buf, READ_MODE);
-    if (iret == TFS_SUCCESS)
-    {
-      TBSYS_LOG(DEBUG, "source stat(%s) success: %d", file_name.c_str(), source_buf.flag_);
-      // source file not been delete
-      if ((source_buf.flag_ != 1) && (source_buf.flag_ != 5))
-      {
-        iret = dest_tfs_client.tfs_open(file_name.c_str(), NULL, READ_MODE);
-        if (iret == TFS_SUCCESS)
-        {
-          TBSYS_LOG(DEBUG, "dest open(%s) success", file_name.c_str());
-          iret = dest_tfs_client.tfs_stat(&dest_buf, READ_MODE);
-          if (iret == TFS_SUCCESS) // dest file exist
-          {
-            TBSYS_LOG(DEBUG, "dest stat(%s) success: %d", file_name.c_str(), dest_buf.flag_);
-            if (((dest_buf.id_ == source_buf.id_)
-                  && (dest_buf.size_ == source_buf.size_)
-                  && (dest_buf.crc_ == source_buf.crc_))
-                || dest_buf.modify_time_ >= tbsys::CTimeUtil::strToTime(const_cast<char*>(modify_time.c_str())))
-            {
-              if (dest_buf.flag_ == source_buf.flag_)
-              {
-                TBSYS_LOG(INFO, "tfs dest file(%s) exists or modify time(%s) more than(%s)",
-                    file_name.c_str(), Func::time_to_str(dest_buf.modify_time_).c_str(), modify_time.c_str());
-                ret = SKIP_FLAG;
-              }
-              else
-              {
-                TBSYS_LOG(INFO, "tfs dest file(%s) exists, but in diff status(source:%d -> dest:%d)",
-                    file_name.c_str(), source_buf.flag_, dest_buf.flag_);
-                get_revert_action(source_buf.flag_, dest_buf.flag_, action_set);
-                sync_finfo.action_ = REVERT_ACTION;
-                ret = SYNC_FLAG;
-              }
-            }
-            else // dest file is diff
-            {
-              if (source_buf.flag_ == 0)
-              {
-                sync_finfo.action_ = WRITE_ACTION;
-              }
-              else if (source_buf.flag_ == 4)
-              {
-                sync_finfo.action_ = WRITE_ACTION | CONCEAL_ACTION;
-              }
-              TBSYS_LOG(INFO, "dest file(%s) is diff from source file, source file stat(%d), do action(%d)", file_name.c_str(), source_buf.flag_, sync_finfo.action_);
-            }
-          }
-          else // dest file not exist
-          {
-            TBSYS_LOG(DEBUG, "dest file(%s) not exist : %d", file_name.c_str(), iret);
-            if (source_buf.flag_ == 0)
-            {
-              sync_finfo.action_ = WRITE_ACTION;
-            }
-            else if (source_buf.flag_ == 4)
-            {
-              sync_finfo.action_ = WRITE_ACTION | CONCEAL_ACTION;
-            }
-            TBSYS_LOG(INFO, "tfs file(%s) not exists, source file stat(%d), do action(%d)", file_name.c_str(), source_buf.flag_, sync_finfo.action_);
-            ret = SYNC_FLAG;
-          }
-          dest_tfs_client.tfs_close();
-        }
-        else
-        {
-          if (source_buf.flag_ == 0)
-          {
-            sync_finfo.action_ = WRITE_ACTION;
-          }
-          else if (source_buf.flag_ == 4)
-          {
-            sync_finfo.action_ = WRITE_ACTION | CONCEAL_ACTION;
-          }
-          TBSYS_LOG(INFO, "open dest tfs file(%s) fail, ret(%d)", file_name.c_str(), iret);
-          ret = SYNC_FLAG;
-        }
-      }
-      else
-      {
-        TBSYS_LOG(INFO, "source tfsfile(%s) has been deleted", file_name.c_str());
-        ret = SKIP_FLAG;
-      }
-    }
-    else
-    {
-      TBSYS_LOG(ERROR, "stat source tfsfile(%s) error, ret: %d", file_name.c_str(), iret);
-      ret = ERROR_FLAG;
-    }
-    source_tfs_client.tfs_close();
+    TBSYS_LOG(ERROR, "open source tfsfile fail when copy file, filename: %s, ret: %d", file_name.c_str(), ret);
   }
   else
   {
-    TBSYS_LOG(ERROR, "open source tfsfile(%s) error", file_name.c_str());
-    ret = ERROR_FLAG;
+    for (;;)
+    {
+      rlen = source_tfs_client.tfs_read_v2(data, MAX_READ_SIZE, &file_info);
+      if (rlen < 0)
+      {
+        TBSYS_LOG(ERROR, "read tfsfile fail, filename: %s, datalen: %d", file_name.c_str(), rlen);
+        ret = TFS_ERROR;
+        break;
+      }
+      if (rlen == 0)
+      {
+        break;
+      }
+
+      if (first_flag)
+      {
+        tmp_ret = dest_tfs_client.tfs_open(file_name.c_str(), NULL, WRITE_MODE | NEWBLK_MODE);
+        if (tmp_ret != TFS_SUCCESS)
+        {
+          ret = TFS_ERROR;
+          TBSYS_LOG(ERROR, "open dest tfsfile fail when copy file, filename: %s, ret: %d, %s", file_name.c_str(), tmp_ret, dest_tfs_client.get_error_message());
+          break;
+        }
+        first_flag = false;
+      }
+
+      if (dest_tfs_client.tfs_write(data, rlen) != rlen)
+      {
+        TBSYS_LOG(ERROR, "write tfsfile fail, filename: %s, datalen: %d", file_name.c_str(), rlen);
+        ret = TFS_ERROR;
+        break;
+      }
+
+      if (rlen < MAX_READ_SIZE)
+      {
+        break;
+      }
+    }
+    source_tfs_client.tfs_close();
+    if ((tmp_ret = dest_tfs_client.tfs_close()) != TFS_SUCCESS)
+    {
+      ret = TFS_ERROR;
+      TBSYS_LOG(ERROR, "close dest tfsfile fail, filename: %s, ret: %d, %s", file_name.c_str(), tmp_ret, dest_tfs_client.get_error_message());
+    }
   }
-  TBSYS_LOG(DEBUG, "cmp file (%s): ret: %d, action: %d, action_set: %d", file_name.c_str(), ret, sync_finfo.action_, action_set.size());
   return ret;
 }
-void get_revert_action(int32_t source_flag, int32_t dest_flag, VINT& action_set)
+
+int cmp_file_info(TfsClient& source_tfs_client, TfsClient& dest_tfs_client, string& file_name, const string& modify_time, ActionOp& action_op)
 {
-  if (source_flag == 0)
+  int ret = TFS_SUCCESS;
+  int tmp_ret = TFS_SUCCESS;
+  FileInfo source_buf, dest_buf;
+  memset(&source_buf, 0, sizeof(source_buf));
+  memset(&dest_buf, 0, sizeof(dest_buf));
+  tmp_ret = get_file_info(source_tfs_client, file_name, source_buf);
+  if (tmp_ret != TFS_SUCCESS)
   {
-    if (dest_flag == 1)
+    TBSYS_LOG(ERROR, "get source file info (%s) failed, ret: %d", file_name.c_str(), tmp_ret);
+    ret = TFS_ERROR;
+  }
+  else
+  {
+    tmp_ret = get_file_info(dest_tfs_client, file_name, dest_buf);
+    TBSYS_LOG(INFO, "file(%s): flag--(%d -> %d), crc--(%d -> %d), size--(%d -> %d), ret: %d", file_name.c_str(), source_buf.flag_, dest_buf.flag_, source_buf.crc_, dest_buf.crc_, source_buf.size_, dest_buf.size_, tmp_ret);
+    // 1. source file exists, dest file is not exist or diff from source, rewrite file.
+    if (((source_buf.flag_ & 1) == 0) && ((tmp_ret != TFS_SUCCESS) || ((dest_buf.size_ != source_buf.size_) || (dest_buf.crc_ != source_buf.crc_)))) // dest file exist
     {
-      action_set.push_back(UNDELETE);
+      // if source file is normal, just rewrite it
+      if (source_buf.flag_ == 0)
+      {
+        action_op.push_back(WRITE_ACTION);
+      }
+      // if source file has been hided, reveal it and then rewrite
+      else if (source_buf.flag_ == 4)
+      {
+        action_op.push_back(UNHIDE_SOURCE);
+        action_op.push_back(WRITE_ACTION);
+        action_op.push_back(HIDE_SOURCE);
+        action_op.push_back(HIDE_DEST);
+        action_op.trigger_index_ = 0;
+        action_op.force_index_ = 2;
+      }
     }
-    else if (dest_flag == 4)
+    // 2. source file is the same to dest file, but in diff stat
+    else if ((tmp_ret == TFS_SUCCESS) && (source_buf.flag_ != dest_buf.flag_) && (((source_buf.flag_ & 1) != 0) || ((dest_buf.crc_ == source_buf.crc_) && (dest_buf.size_ == source_buf.size_))))
     {
-      action_set.push_back(REVEAL);
+      TBSYS_LOG(WARN, "file in diff stat(%d -> %d) or source file(%s) has been deleted(%d)", dest_buf.crc_, source_buf.crc_, file_name.c_str(), source_buf.flag_);
+      change_stat(source_buf.flag_, dest_buf.flag_, action_op);
     }
   }
-  else if (source_flag == 4)
+  TBSYS_LOG(INFO, "cmp file (%s): ret: %d, source_flag: %d, dest_flag: %d, action_set: %d", file_name.c_str(), ret,
+      ((ret == TFS_SUCCESS) ? source_buf.flag_:-1), ((tmp_ret == TFS_SUCCESS)? dest_buf.flag_:-1), action_op.action_.size());
+  return ret;
+}
+
+int get_file_info(TfsClient& tfs_client, string& file_name, FileInfo& buf)
+{
+  int ret = TFS_SUCCESS;
+  ret = tfs_client.tfs_open(file_name.c_str(), NULL, READ_MODE);
+  if (ret != TFS_SUCCESS)
   {
-    if (dest_flag == 1)
+    TBSYS_LOG(ERROR, "open file(%s) failed, ret: %d", file_name.c_str(), ret);
+  }
+  else
+  {
+    ret = tfs_client.tfs_stat(&buf, READ_MODE);
+  }
+  tfs_client.tfs_close();
+  return ret;
+}
+void change_stat(int32_t source_flag, int32_t dest_flag, ActionOp& action_op)
+{
+  ACTION_VEC action;
+  if (source_flag == 0)
+  {
+    if (dest_flag & 1)
     {
-      action_set.push_back(UNDELETE);
-      action_set.push_back(CONCEAL);
+      action_op.push_back(UNDELE_DEST);
     }
-    else if (dest_flag == 0)
+    if (dest_flag & 4)
     {
-      action_set.push_back(CONCEAL);
+      action_op.push_back(UNHIDE_DEST);
     }
+  }
+  if ((source_flag & 4) != 0)
+  {
+    if (dest_flag == 0)
+    {
+      action_op.push_back(HIDE_DEST);
+    }
+    else if ((source_flag & 1) == 0)
+    {
+      if ((dest_flag & 1) != 0)
+      {
+        action_op.push_back(UNDELE_DEST);
+      }
+      if ((dest_flag & 4) == 0)
+      {
+        action_op.push_back(HIDE_DEST);
+      }
+    }
+  }
+  if (((source_flag & 1) != 0) && ((dest_flag & 1) == 0))
+  {
+    action_op.push_back(DELETE_DEST);
   }
 }
 char* str_match(char* data, const char* prefix)
