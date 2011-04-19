@@ -660,8 +660,8 @@ namespace tfs
         TBSYS_LOG(ERROR, "unlink failure: %s\n", tfs_client->get_error_message());
       }
 
-      TBSYS_LOG(INFO, "tfs mirror remove file. blockid: %d, fileid: %" PRI64_PREFIX "u, ret: %d\n", block_id, file_id,
-          undel);
+      TBSYS_LOG(INFO, "tfs mirror remove file. blockid: %d, fileid: %" PRI64_PREFIX "u, undel: %d, ret: %d\n",
+          block_id, file_id, undel, ret);
       return ret;
     }
 

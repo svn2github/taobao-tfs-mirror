@@ -1237,7 +1237,7 @@ namespace tfs
       if (TFS_SUCCESS != ret)
       {
         try_add_repair_task(block_id, ret);
-        MessageFactory::send_error_message(message, TBSYS_LOG_LEVEL(ERROR), ret, data_server_info_.id_,
+        return MessageFactory::send_error_message(message, TBSYS_LOG_LEVEL(ERROR), ret, data_server_info_.id_,
             "readfileinfo fail, blockid: %u, fileid: %" PRI64_PREFIX "u, ret: %d", block_id, file_id, ret);
       }
 
