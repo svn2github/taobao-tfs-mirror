@@ -467,7 +467,7 @@ namespace tfs
           {
             return common::TFS_ERROR;
           }
-          (*value) = *(*data);
+          (*value) = *(reinterpret_cast<uint64_t*> (*data));
           (*len) -= common::INT64_SIZE;
           (*data) += common::INT64_SIZE;
           assert(*len >= 0);
@@ -621,7 +621,18 @@ namespace tfs
           return common::TFS_SUCCESS;
         }
 
-
+        inline int set_uint64(char** data, int32_t* len, uint64_t value)
+        {
+          if ((*len) < common::INT64_SIZE)
+          {
+            return common::TFS_ERROR;
+          }
+          memcpy(*data, &value, common::INT64_SIZE);
+          (*data) += common::INT64_SIZE;
+          (*len) -= common::INT64_SIZE;
+          assert(*len >= 0);
+          return common::TFS_SUCCESS;
+        }
 
         inline int set_string(char** data, int32_t* len, char* str_)
         {
