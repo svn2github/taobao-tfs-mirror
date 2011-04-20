@@ -780,25 +780,12 @@ namespace tfs
         }
       }
 
-      BlockOpLog oplog;
-      memset(&oplog, 0, sizeof(oplog));
-      oplog.info_ = new_block_info;
-      oplog.cmd_ = isnew ? OPLOG_INSERT : OPLOG_UPDATE;
-      oplog.servers_.push_back(id);
-      int64_t size = oplog.get_serialize_size();
-      int64_t pos = 0;
-      char buf[size];
-      if (oplog.serialize(buf, size, pos) < 0)
-      {
-        TBSYS_LOG(ERROR, "%s", "oplog serialize error");
-      }
-      else
-      {
-        if (oplog_sync_mgr_.log(OPLOG_TYPE_BLOCK_OP, buf, size) != TFS_SUCCESS)
-        {
-          TBSYS_LOG(ERROR, "write oplog failed, block(%u), isnew(%s)", new_block_info.block_id_, isnew == OPLOG_INSERT ? "insert" : isnew == OPLOG_UPDATE ? "update" : "unknow");
-        }
-      }
+      //write oplog
+      std::vector<uint32_t> blocks;
+      std::vector<uint64_t> servers;
+      blocks.push_back(new_block_info.block_id_);
+      servers.push_back(id);
+      block_oplog_write_helper(isnew ? OPLOG_INSERT : OPLOG_UPDATE, new_block_info, blocks, servers);
       return TFS_SUCCESS;
     }
 
@@ -1188,8 +1175,7 @@ namespace tfs
                   break;
                 }
                 #if !defined(TFS_NS_GTEST) && !defined(TFS_NS_INTEGRATION)
-                Message* ret_msg = NULL;
-                if (message::NewClientManager::get_instance().call(id, message, DEFAULT_NETWORK_CALL_TIMEOUT, ret_msg) != TFS_SUCCESS)
+                if (send_msg_to_server(id, message) != STATUS_MESSAGE_OK)
                 {
                   rmsg->set_message(STATUS_MESSAGE_ERROR, "send messge to dataserver fail");
                   break;
@@ -1469,57 +1455,48 @@ namespace tfs
       #if !defined(TFS_NS_GTEST) && !defined(TFS_NS_INTEGRATION)
       RemoveBlockMessage rbmsg;
       rbmsg.add_remove_id(block_id);
-      BlockOpLog log;
-      memset(&log, 0, sizeof(log));
-      log.info_.block_id_ = block_id;
-      log.blocks_.push_back(block_id);
-      log.cmd_ = OPLOG_RELIEVE_RELATION;
-      log.servers_.push_back(ds_id);
-      int64_t size = log.get_serialize_size();
-      int64_t pos  = 0;
-      char buf[size];
-      if (log.serialize(buf, size, pos) < 0)
+
+      BlockInfo info;
+      memset(&info, 0, sizeof(info));
+      info.block_id_ = block_id;
+      std::vector<uint32_t> blocks;
+      std::vector<uint64_t> servers;
+      blocks.push_back(block_id);
+      servers.push_back(ds_id);
+      block_oplog_write_helper(OPLOG_RELIEVE_RELATION, info, blocks, servers);
+
+      NewClient* client = NewClientManager::get_instance().create_client();
+      int32_t iret = NULL != client ? TFS_SUCCESS : TFS_ERROR;
+      if (TFS_SUCCESS == iret)
       {
-        TBSYS_LOG(ERROR, "%s", "serialize error");
+        client->async_post_request(servers, &rbmsg, global_callback_func, false);
       }
-      else
-      {
-        oplog_sync_mgr_.log(OPLOG_TYPE_BLOCK_OP, buf, size);
-      }
-      uint16_t wait_id = 0;
-      NewClientManager::get_instance().get_wait_id(wait_id);
-      return NewClientManager::get_instance().post_request(ds_id, &rbmsg, wait_id);
+      return iret;
       #else
       return TFS_SUCCESS;
       #endif
     }
 
-    int LayoutManager::rm_block_from_ds(const uint64_t ds_id, const std::vector<uint32_t>& block_ids)
+    int LayoutManager::rm_block_from_ds(const uint64_t ds_id, const std::vector<uint32_t>& blocks)
     {
-      TBSYS_LOG(INFO, "remove  block count (%u) on server (%s)", block_ids.size(),
+      TBSYS_LOG(INFO, "remove  block count (%u) on server (%s)", blocks.size(),
           tbsys::CNetUtil::addrToString(ds_id).c_str());
       #if !defined(TFS_NS_GTEST) && !defined(TFS_NS_INTEGRATION)
       RemoveBlockMessage rbmsg;
-      rbmsg.set_remove_list(block_ids);
-      BlockOpLog log;
-      memset(&log, 0, sizeof(log));
-      log.blocks_ = block_ids;
-      log.cmd_ = OPLOG_RELIEVE_RELATION;
-      log.servers_.push_back(ds_id);
-      int64_t size = log.get_serialize_size();
-      int64_t pos  = 0;
-      char buf[size];
-      if (log.serialize(buf, size, pos) < 0)
+      rbmsg.set_remove_list(blocks);
+      BlockInfo info;
+      memset(&info, 0, sizeof(info));
+      std::vector<uint64_t> servers;
+      servers.push_back(ds_id);
+      block_oplog_write_helper(OPLOG_RELIEVE_RELATION, info, blocks, servers);
+
+      NewClient* client = NewClientManager::get_instance().create_client();
+      int32_t iret = NULL != client ? TFS_SUCCESS : TFS_ERROR;
+      if (TFS_SUCCESS == iret)
       {
-        TBSYS_LOG(ERROR, "%s", "serialize error");
+        client->async_post_request(servers, &rbmsg, global_callback_func, false);
       }
-      else
-      {
-        oplog_sync_mgr_.log(OPLOG_TYPE_BLOCK_OP, buf, size);
-      }
-      uint16_t wait_id = 0;
-      NewClientManager::get_instance().get_wait_id(wait_id);
-      return NewClientManager::get_instance().post_request(ds_id, &rbmsg, wait_id);
+      return iret;
       #else
       return TFS_SUCCESS;
       #endif
@@ -1633,216 +1610,323 @@ namespace tfs
       return ptr->add(block_id, time(NULL));
     }
 
+    int LayoutManager::add_new_block_helper_rm_block(const uint32_t block_id, std::vector<ServerCollect*>& servers)
+    {
+      int32_t iret = !servers.empty() && 0 != block_id ? TFS_SUCCESS : TFS_ERROR;
+      NewClient* client = NewClientManager::get_instance().create_client();
+      iret = NULL != client ? TFS_SUCCESS : TFS_ERROR;
+      if (TFS_SUCCESS == iret)
+      {
+        int8_t count = 0;
+        uint8_t send_id = 0;
+        std::vector<uint64_t> success;
+        std::vector<uint64_t> fail;
+        std::vector<ServerCollect*>::iterator iter = servers.begin();
+        RemoveBlockMessage rbmsg;
+        rbmsg.add_remove_id(block_id);
+        for (; iter != servers.end(); ++iter)
+        {
+          do
+          {
+            iret = client->post_request((*iter)->id(), &rbmsg, send_id);
+          }
+          while (count < 3 && TFS_SUCCESS != iret);
+        }
+      }
+      NewClientManager::get_instance().destroy_client(client);
+      return TFS_SUCCESS;
+    }
+
+    ServerCollect* LayoutManager::find_server_in_vec(const std::vector<ServerCollect*>& servers, const uint64_t server_id)
+    {
+      ServerCollect* object = NULL;
+      std::vector<ServerCollect*>::const_iterator iter = servers.begin();
+      for (; iter != servers.end(); ++iter)
+      {
+        if ((*iter)->id() == server_id)
+        {
+          object = (*iter);
+          break;
+        }
+      }
+      return object;
+    }
+
+    int LayoutManager::add_new_block_helper_write_log(const uint32_t block_id, const std::vector<ServerCollect*>& servers)
+    {
+      int32_t iret = block_id != 0 && !servers.empty() ?  TFS_SUCCESS : TFS_ERROR;
+      if (TFS_SUCCESS == iret)
+      {
+        BlockInfo info;
+        memset(&info, 0, sizeof(info));
+        info.block_id_ = block_id;
+        std::vector<uint32_t> blocks;
+        std::vector<uint64_t> tmp;
+        blocks.push_back(block_id);
+        std::vector<ServerCollect*>::const_iterator iter = servers.begin();
+        for (; iter != servers.end(); ++iter)
+        {
+          tmp.push_back((*iter)->id());
+        }
+        block_oplog_write_helper(OPLOG_INSERT, info, blocks, tmp);
+      }
+      return iret;
+    }
+
+    int LayoutManager::add_new_block_helper_send_msg(const uint32_t block_id, const std::vector<ServerCollect*>& servers)
+    {
+      int32_t iret = !servers.empty() && block_id != 0 ? TFS_SUCCESS : TFS_ERROR;
+      if (TFS_SUCCESS == iret)
+      {
+        #if defined(TFS_NS_GTEST) || defined(TFS_NS_INTEGRATION)
+          iret = TFS_SUCCESS; 
+        #else
+          NewClient* client = NewClientManager::get_instance().create_client();
+          iret = NULL != client ? TFS_SUCCESS : TFS_ERROR;
+        #endif
+        if (TFS_SUCCESS == iret)
+        {
+          NewBlockMessage msg;
+          msg.add_new_id(block_id);
+          uint8_t send_id = 0;
+          std::vector<ServerCollect*> send_msg_success;
+          std::vector<ServerCollect*> send_msg_fail;
+          std::vector<ServerCollect*>::const_iterator iter = servers.begin();
+          for (; iter != servers.end(); ++iter)
+          {
+            #if defined(TFS_NS_GTEST) || defined(TFS_NS_INTEGRATION)
+              send_msg_success.push_back((*iter));
+            #else
+              //send add new block message to dataserver
+              iret = client->post_request((*iter)->id(), &msg, send_id);
+              if (TFS_SUCCESS != iret)
+              {
+                send_msg_fail.push_back((*iter));
+                TBSYS_LOG(ERROR, "add block(%u) on server(%s) fail",
+                    block_id, CNetUtil::addrToString((*iter)->id()).c_str());
+                break;
+              }
+              else
+              {
+                send_msg_success.push_back((*iter));
+              }
+            #endif
+          }
+
+          #if !defined(TFS_NS_GTEST) && !defined(TFS_NS_INTEGRATION)
+          if (!send_msg_success.empty())
+          {
+            std::vector<ServerCollect*> success;
+            client->wait();
+            NewClient::RESPONSE_MSG_MAP* sresponse = client->get_success_response();
+            NewClient::RESPONSE_MSG_MAP* fresponse = client->get_fail_response();
+            if (TFS_SUCCESS == iret
+                && send_msg_success.size() == servers.size())//post all message successful
+            {
+              iret = NULL != sresponse && NULL != fresponse ? TFS_SUCCESS : TFS_ERROR;
+              if (TFS_SUCCESS == iret)
+              {
+                ServerCollect* object = NULL;
+                NewClient::RESPONSE_MSG_MAP_ITER iter = sresponse->begin();
+                StatusMessage* message = NULL;
+                for (; iter != sresponse->begin(); ++iter)
+                {
+                  message =  dynamic_cast<StatusMessage*>((iter->second.second));
+                  if (STATUS_MESSAGE_OK == message->get_status())
+                  {
+                    object = find_server_in_vec(send_msg_success, iter->second.first);
+                    if (NULL != object)
+                    {
+                      success.push_back(object);
+                    }
+                  } 
+                }
+                if (success.size() != servers.size())//add block fail, rollback
+                {
+                  iret = TFS_ERROR;
+                  add_new_block_helper_rm_block(block_id, success);
+                }
+              }
+            }
+            else // post message fail, rollback
+            {
+              iret = NULL != sresponse && NULL != fresponse ? TFS_SUCCESS : TFS_ERROR;
+              if (TFS_SUCCESS == iret)
+              {
+                iret = NULL != sresponse && NULL != fresponse ? TFS_SUCCESS : TFS_ERROR;
+                if (TFS_SUCCESS == iret)
+                {
+                  ServerCollect* object = NULL;
+                  NewClient::RESPONSE_MSG_MAP_ITER iter = sresponse->begin();
+                  StatusMessage* message = NULL;
+                  for (; iter != sresponse->begin(); ++iter)
+                  {
+                    message =  dynamic_cast<StatusMessage*>((iter->second.second));
+                    if (STATUS_MESSAGE_OK == message->get_status())
+                    {
+                      object = find_server_in_vec(send_msg_success, iter->second.first);
+                      if (NULL != object)
+                      {
+                        success.push_back(object);
+                      }
+                    } 
+                  }
+                  iret = TFS_ERROR;
+                  add_new_block_helper_rm_block(block_id, success);
+                }
+              }
+            }
+          }
+          NewClientManager::get_instance().destroy_client(client);
+          #endif
+        }
+      }
+      return iret;
+    }
+
+    BlockCollect* LayoutManager::add_new_block_helper_create_by_id(uint32_t block_id, time_t now)
+    {
+      BlockCollect* block = NULL;
+      int32_t iret = block_id != 0 ? TFS_SUCCESS : TFS_ERROR;
+      if (TFS_SUCCESS == iret)
+      {
+        if (alive_server_size_ > 0)
+        {
+          BlockChunkPtr ptr = 0;
+          std::vector<ServerCollect*> need;
+          std::vector<ServerCollect*> exist;
+          bool new_create_block_collect = false;
+          {
+            ptr = get_chunk(block_id);
+            RWLock::Lock lock(*ptr, WRITE_LOCKER);
+            block = ptr->find(block_id);
+            if (NULL == block)//block not found in nameserver meta
+            {
+              block = ptr->add(block_id, now);//create block && insert block map
+              if (NULL != block)
+              {
+                new_create_block_collect = true;
+                block->set_create_flag(BlockCollect::BLOCK_CREATE_FLAG_YES);
+              }
+            }
+            iret = NULL != block ? TFS_SUCCESS : TFS_ERROR;
+            if (NULL != block && block->get_hold_size() > 0)
+            {
+              need.assign(block->get_hold().begin(), block->get_hold().end());
+              exist.assign(block->get_hold().begin(), block->get_hold().end());
+            }
+          }
+          
+          if (TFS_SUCCESS == iret)//find or create block successful
+          {
+            int32_t count = SYSPARAM_NAMESERVER.min_replication_ - need.size();
+            if (count > 0)
+            {
+              {
+                RWLock::Lock lock(server_mutex_, READ_LOCKER);
+                elect_write_server(*this, count, need);
+              }
+
+              if (static_cast<int32_t>(need.size()) < SYSPARAM_NAMESERVER.min_replication_)
+              {
+                iret = TFS_ERROR;
+                TBSYS_LOG(ERROR, "create block(%u) by block id fail, dataserver is not enough", block_id);
+                if (new_create_block_collect)
+                {
+                  RWLock::Lock lock(*ptr, WRITE_LOCKER);
+                  ptr->remove(block_id);
+                }
+              }
+              else//elect dataserver successful
+              {
+                std::vector<ServerCollect*> servers;
+                std::set_difference(need.begin(), need.end(), exist.begin(), exist.end(), servers.begin(), ServerSetDifferencHelper());
+                iret = servers.empty() ? TFS_ERROR : TFS_SUCCESS;
+                if (TFS_SUCCESS == iret)
+                {
+                  iret = add_new_block_helper_send_msg(block_id, servers);
+                  if (TFS_SUCCESS == iret)
+                  {
+                    add_new_block_helper_write_log(block_id, servers);
+                  }//end send message to dataserver successful
+                } 
+              }//end elect dataserver successful
+            }//end if (count >0)
+          }//end find or create block successful
+        }//end if(alive_server_size> 0)
+      }//end if (bret)
+      return iret == TFS_SUCCESS ? block : NULL;
+    }
+
+    BlockCollect* LayoutManager::add_new_block_helper_create_by_system(uint32_t& block_id, ServerCollect* server, time_t now)
+    {
+      BlockCollect* block = NULL;
+      int32_t iret = block_id != 0 ? TFS_ERROR : TFS_SUCCESS;
+      if (TFS_SUCCESS == iret)
+      {
+        if (alive_server_size_ > 0)
+        {
+          BlockChunkPtr ptr = 0;
+          std::vector<ServerCollect*> need;
+          block_id = get_alive_block_id();
+          {
+            //add block collect object
+            ptr = get_chunk(block_id);
+            RWLock::Lock lock(*ptr, WRITE_LOCKER);
+            block = ptr->add(block_id, now);
+            iret = NULL != block ? TFS_SUCCESS : TFS_ERROR;
+            if (TFS_SUCCESS == iret)
+            {
+              block->set_create_flag(BlockCollect::BLOCK_CREATE_FLAG_YES);
+            }
+            else
+            {
+              TBSYS_LOG(ERROR, "add new block(%u) fail", block_id);
+            }
+          }
+
+          if (TFS_SUCCESS == iret)//add block collect object successful
+          {
+            if (server != NULL)
+            {
+              int64_t use_capacity = GFactory::get_global_info().use_capacity_ <= 0 ? alive_server_size_ : GFactory::get_global_info().use_capacity_;
+              if (server->is_writable(use_capacity/alive_server_size_))
+              {
+                need.push_back(server);
+              }
+            }
+            int32_t count = SYSPARAM_NAMESERVER.max_replication_ - need.size();
+            if (count > 0)
+            {
+              RWLock::Lock lock(server_mutex_, READ_LOCKER);
+              elect_write_server(*this, count, need);
+            } 
+            
+            if (need.empty())
+            {
+              iret = TFS_ERROR;
+              TBSYS_LOG(ERROR, "create new block(%u) fail, dataserver is not enough", block_id);
+              RWLock::Lock lock(*ptr, WRITE_LOCKER);
+              ptr->remove(block_id);
+            }
+            else
+            {
+              iret = add_new_block_helper_send_msg(block_id, need);
+              if (TFS_SUCCESS == iret)
+              {
+                add_new_block_helper_write_log(block_id, need);
+              }//end send message to dataserver successful
+            }
+          }//end if(TFS_SUCCESS == iret), add block collect object successful
+        }//end if(alive_server_size > 0) check alive server size
+      }//end if (TFS_SUCCESS == iret) check parameter
+      return TFS_SUCCESS == iret ? block : NULL;
+    }
+
     BlockCollect* LayoutManager::add_new_block(uint32_t& block_id, ServerCollect* server, time_t now)
     {
-      std::vector<ServerCollect*> need;
-      BlockChunkPtr ptr = 0;
-      BlockCollect* block = NULL;
-      std::vector<ServerCollect*> success;
-      std::vector<ServerCollect*> failed;
-      std::vector<ServerCollect*>::iterator iter;
-      int64_t size = 0;
-      int64_t pos = 0;
-      BlockOpLog oplog;
-      memset(&oplog, 0, sizeof(oplog));
-
-      #if defined(TFS_NS_GTEST) || defined(TFS_NS_INTEGRATION) || defined(TFS_NS_DEBUG)
-      std::string result;
-      #endif
-
-      if (alive_server_size_ <= 0)
-        goto rollback;
-
-      //find a usable block id, TODO lock
-      if (block_id == 0)
-      {
-        block_id = get_alive_block_id();
-        ptr = get_chunk(block_id);
-        RWLock::Lock lock(*ptr, WRITE_LOCKER);
-        block = ptr->add(block_id, now);
-        if (block == NULL)
-        {
-          TBSYS_LOG(ERROR, "failed when add new block(%u)", block_id);
-          goto rollback;
-        }
-        block->set_create_flag(BlockCollect::BLOCK_CREATE_FLAG_YES);
-      }
-      else
-      {
-        ptr = get_chunk(block_id);
-        RWLock::Lock lock(*ptr, WRITE_LOCKER);
-        block = ptr->find(block_id);
-        if (block == NULL)
-        {
-          block = ptr->add(block_id, now);
-          if (block != NULL)
-          {
-            block->set_create_flag(BlockCollect::BLOCK_CREATE_FLAG_YES);
-          }
-        }
-        if (block == NULL)
-        {
-          TBSYS_LOG(ERROR, "failed when add new block(%u)", block_id);
-          goto rollback;
-        }
-        if (block->get_hold_size() > 0)
-        {
-          need.assign(block->get_hold().begin(), block->get_hold().end());
-        }
-      }
-
-      {
-        RWLock::Lock lock(server_mutex_, READ_LOCKER);
-        int32_t count = SYSPARAM_NAMESERVER.max_replication_ - need.size();
-        TBSYS_LOG(DEBUG, "begin count: %d, need size: %u", count, need.size());
-        if (server != NULL)
-        {
-          int64_t use_capacity = GFactory::get_global_info().use_capacity_ <= 0 ? alive_server_size_ : GFactory::get_global_info().use_capacity_;
-          if (server->is_writable(use_capacity/alive_server_size_))
-          {
-            need.push_back(server);
-            --count;
-          }
-        }
-        if (count > 0)
-        {
-          elect_write_server(*this, count, need);
-          TBSYS_LOG(DEBUG, "end count: %d, need size: %u", count, need.size());
-        } 
-    
-        if (need.empty())
-        {
-          TBSYS_LOG(ERROR, "add block(%u) failed,rollback", block_id);
-          goto rollback;
-        }
-      }
-
-      oplog.blocks_.push_back(block_id);
-      oplog.info_.block_id_ = block_id;
-      oplog.cmd_ = OPLOG_INSERT;
-      iter = need.begin();
-      for (; iter != need.end(); ++iter)
-      {
-        oplog.servers_.push_back((*iter)->id());
-      }
-
-      size = oplog.get_serialize_size();
-      pos = 0;
-
-      {
-        char buf[size];
-        if (oplog.serialize(buf, size, pos) < 0)
-        {
-          TBSYS_LOG(ERROR, "%s", "oplog serialize error");
-        }
-        else
-        {
-          //insert a new block, write op log.
-          if (oplog_sync_mgr_.log(OPLOG_TYPE_BLOCK_OP, buf, size) != TFS_SUCCESS)
-          {
-            // treat log operation as a trivial thing..
-            // don't rollback the insert operation, cause block meta info
-            // build from all dataserver, log info not been very serious.
-            TBSYS_LOG(ERROR, "write oplog failed, block(%u)", block_id);
-          }
-        }
-      }
-
-      #if defined(TFS_NS_DEBUG)
-      print_servers(need, result);
-      TBSYS_LOG(DEBUG, "need dataserver size: %u, %s", need.size(), result.c_str());
-      #endif
-
-      //send add new block message to dataserver
-      iter = need.begin();
-      for (; iter != need.end(); ++iter)
-      {
-      #if defined(TFS_NS_GTEST) || defined(TFS_NS_INTEGRATION)
-        success.push_back((*iter));
-      #else
-        Message* ret_msg = NULL;
-        NewBlockMessage msg;
-        msg.add_new_id(block_id);
-        if (message::NewClientManager::get_instance().call((*iter)->id(), &msg, DEFAULT_NETWORK_CALL_TIMEOUT, ret_msg) != TFS_SUCCESS)
-        {
-          success.push_back((*iter));
-          TBSYS_LOG(INFO, "add block(%u) on server(%s) successful",
-              block_id, CNetUtil::addrToString((*iter)->id()).c_str());
-        }
-        else
-        {
-          failed.push_back((*iter));
-          TBSYS_LOG(INFO, "add block(%u) on server(%s) failed",
-              block_id, CNetUtil::addrToString((*iter)->id()).c_str());
-        }
-      #endif
-      }
-
-      if (success.empty() || !failed.empty())
-      {
-        TBSYS_LOG(ERROR, "add block(%u) failed, successful size(%u), failed size(%u), rollback",
-          block_id, success.size(), failed.size()); 
-        goto rollback;
-      }
-
-      {
-        RWLock::Lock lock(*ptr, WRITE_LOCKER);
-        iter = success.begin();
-        for (; iter != success.end(); ++iter)
-        {
-          if (build_relation(block, (*iter), now) != TFS_SUCCESS)
-          {
-            TBSYS_LOG(WARN, "it's failed that build relation between block(%u) and server(%s)",
-                block_id, CNetUtil::addrToString((*iter)->id()).c_str());
-          }
-        }
-        block->set_create_flag();
-        std::vector<int64_t> stat(1,success.size());
-        GFactory::get_stat_mgr().update_entry(GFactory::tfs_ns_stat_block_count_, stat);
-        TBSYS_LOG(INFO, "add new block(%u) successful", block->id());
-      }
-      return block;
-rollback:
-      if (block != NULL)
-      {
-        {
-          RWLock::Lock lock(*ptr, WRITE_LOCKER);
-          ptr->remove(block_id);
-        }
-
-        if (!need.empty())
-        {
-          oplog.cmd_ = OPLOG_REMOVE;
-          size = oplog.get_serialize_size();
-          if (!failed.empty())
-          {
-            oplog.servers_.clear();
-            iter = failed.begin();
-            for (; iter != failed.end(); ++iter)
-            {
-              oplog.servers_.push_back((*iter)->id());
-            }
-          }
-          pos = 0;
-          char buf[size];
-          if (oplog.serialize(buf, size, pos) < 0)
-          {
-            TBSYS_LOG(ERROR, "%s", "oplog serialize error");
-          }
-          else
-          {
-            //insert a new block, write op log.
-            if (oplog_sync_mgr_.log(OPLOG_TYPE_BLOCK_OP, buf, size) != TFS_SUCCESS)
-            {
-              // treat log operation as a trivial thing..
-              // don't rollback the insert operation, cause block meta info
-              // build from all dataserver, log info not been very serious.
-              TBSYS_LOG(ERROR, "write oplog failed, block(%u)", block_id);
-            }
-          }
-        }
-      }
-      return NULL;
+      return block_id == 0 ? add_new_block_helper_create_by_id(block_id, now)
+                           : add_new_block_helper_create_by_system(block_id, server, now);
     }
     /**
      * dsataserver start, send heartbeat message to nameserver.
@@ -2183,6 +2267,35 @@ rollback:
         check_server_monitor_.timedWait(tbutil::Time::seconds(SYSPARAM_NAMESERVER.heart_interval_));
       }
     }
+
+    int LayoutManager::block_oplog_write_helper(const int32_t cmd, const BlockInfo& info, const std::vector<uint32_t>& blocks, const std::vector<uint64_t>& servers)
+    {
+      BlockOpLog oplog;
+      memset(&oplog, 0, sizeof(oplog));
+      oplog.info_ = info;
+      oplog.cmd_ = cmd;
+      oplog.blocks_ = blocks;
+      oplog.servers_ = servers;
+      int64_t size = oplog.get_serialize_size();
+      int64_t pos = 0;
+      char buf[size];
+      if (oplog.serialize(buf, size, pos) < 0)
+      {
+        TBSYS_LOG(ERROR, "%s", "oplog serialize error");
+      }
+      else
+      {
+        // treat log operation as a trivial thing..
+        // don't rollback the insert operation, cause block meta info
+        // build from all dataserver, log info not been very serious.
+        if (oplog_sync_mgr_.log(OPLOG_TYPE_BLOCK_OP, buf, size) != TFS_SUCCESS)
+        {
+          TBSYS_LOG(ERROR, "write oplog failed, block(%u)", info.block_id_);
+        }
+      }
+      return TFS_SUCCESS;
+    }
+
     int LayoutManager::set_runtime_param(uint32_t value1, uint32_t value2, char *retstr)
     {
       bool bret = retstr != NULL;
@@ -2672,12 +2785,12 @@ rollback:
         {
           total_block_count += iter->second->block_count();
           total_capacity += (iter->second->total_capacity() * SYSPARAM_NAMESERVER.max_use_capacity_ratio_) / 100;
-          total_capacity -= iter->second->use_capacity();
+          //total_capacity -= iter->second->use_capacity();
           total_load     += iter->second->load();
           ++alive_server_size;
         }
       }
-      total_capacity += total_block_count * average_block_size;
+      //total_capacity += total_block_count * average_block_size;
     }
 
     void LayoutManager::split_servers(const int64_t need,
@@ -2709,9 +2822,9 @@ rollback:
         if (has_move)
         {
           current_block_count = iter->second->block_count();
-          current_total_capacity = current_block_count * average_block_size +
-            iter->second->total_capacity() * SYSPARAM_NAMESERVER.max_use_capacity_ratio_ / 100;
+          current_total_capacity = iter->second->total_capacity() * SYSPARAM_NAMESERVER.max_use_capacity_ratio_ / 100;
           should_block_count = static_cast<int64_t>((current_total_capacity / total_capacity) * total_block_count);
+
           #if defined(TFS_NS_GTEST) || defined(TFS_NS_INTEGRATION) || defined(TFS_NS_DEBUG)
           TBSYS_LOG(DEBUG, "server(%s), current_block_count(%"PRI64_PREFIX"d) should_block_count(%"PRI64_PREFIX"d)", CNetUtil::addrToString(iter->first).c_str(), current_block_count, should_block_count);
           #endif

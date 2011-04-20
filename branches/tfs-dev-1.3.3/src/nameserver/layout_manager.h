@@ -74,6 +74,13 @@ namespace nameserver
       }
       common::VUINT64& servers_;
     };
+    struct ServerSetDifferencHelper
+    {
+      bool operator()(const ServerCollect* lrh, const ServerCollect* rrh)
+      {
+        return lrh->id() < rrh->id();
+      }
+    };
   public:
     LayoutManager();
     virtual ~LayoutManager();
@@ -131,6 +138,12 @@ namespace nameserver
     int remove_server(uint64_t id, time_t now);
     BlockCollect* add_block(uint32_t& block_id);
     BlockCollect* add_new_block(uint32_t& block_id, ServerCollect* server = NULL, time_t now = time(NULL));
+    BlockCollect* add_new_block_helper_create_by_id(uint32_t block_id, time_t now);
+    BlockCollect* add_new_block_helper_create_by_system(uint32_t& block_id, ServerCollect* server, time_t now);
+    int add_new_block_helper_send_msg(const uint32_t block_id, const std::vector<ServerCollect*>& servers);
+    int add_new_block_helper_write_log(const uint32_t block_id, const std::vector<ServerCollect*>& server);
+    int add_new_block_helper_rm_block(const uint32_t block_id, std::vector<ServerCollect*>& servers);
+    ServerCollect* find_server_in_vec(const std::vector<ServerCollect*>& servers, const uint64_t server_id);
 
     int update_relation(ServerCollect* server, const std::vector<common::BlockInfo>& blocks, EXPIRE_BLOCK_LIST& expires, time_t now);
     int build_relation(BlockCollect* block, ServerCollect* server, time_t now, bool force = false);
@@ -156,6 +169,7 @@ namespace nameserver
     void check_server();
 
     int set_runtime_param(uint32_t index, uint32_t value, char *retstr);
+    int block_oplog_write_helper(const int32_t cmd, const common::BlockInfo& info, const std::vector<uint32_t>& blocks, const std::vector<uint64_t>& servers);
 #if defined(TFS_NS_GTEST) || defined(TFS_NS_INTEGRATION)
   public:
 #else
