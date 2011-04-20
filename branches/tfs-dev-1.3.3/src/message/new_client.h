@@ -31,9 +31,11 @@ namespace tfs
         virtual ~NewClient();
         bool wait(const int64_t timeout_in_ms = common::DEFAULT_NETWORK_CALL_TIMEOUT);
         int post_request(const uint64_t server, Message* packet, uint8_t& send_id);
-        int async_post_request(const std::vector<uint64_t>& servers, Message* packet, callback_func func);
+        int async_post_request(const std::vector<uint64_t>& servers, Message* packet, callback_func func, bool save_source_msg = true);
         inline RESPONSE_MSG_MAP* get_success_response() { return complete_ ? &success_response_ : NULL;}
         inline RESPONSE_MSG_MAP* get_fail_response() { return complete_ ? &fail_response_ : NULL;}
+        inline Message* get_source_msg() { return source_msg_;}
+        inline std::vector<SEND_SIGN_PAIR>& get_send_id_sign() { return send_id_sign_;}
 
       private:
         NewClient();
@@ -43,6 +45,7 @@ namespace tfs
         RESPONSE_MSG_MAP fail_response_;
         std::vector<SEND_SIGN_PAIR> send_id_sign_;
         callback_func callback_;
+        Message* source_msg_;
         const uint32_t seq_id_;
         uint8_t generate_send_id_;
         static const uint8_t MAX_SEND_ID = 0xFF - 1;

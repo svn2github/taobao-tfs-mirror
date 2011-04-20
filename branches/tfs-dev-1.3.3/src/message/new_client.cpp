@@ -11,6 +11,7 @@ namespace tfs
   {
     NewClient::NewClient(const uint32_t& seq_id) 
     : callback_(NULL),
+      source_msg_(NULL),
       seq_id_(seq_id),
       generate_send_id_(0),
       complete_(false),
@@ -21,6 +22,7 @@ namespace tfs
 
     NewClient::~NewClient()
     {
+      tbsys::gDelete(source_msg_);
       RESPONSE_MSG_MAP::iterator iter = success_response_.begin();
       for (; iter != success_response_.end(); ++iter)
       {
@@ -77,7 +79,7 @@ namespace tfs
           WaitId id;
           id.seq_id_ = seq_id_;
           id.send_id_= send_id;
-          Message* send_msg = NewClientManager::get_instance().factory_.clone_message(packet, 2, false);
+          Message* send_msg = NewClientManager::get_instance().clone_message(packet, 2, false);
           if (NULL == send_msg)
           {
             TBSYS_LOG(ERROR, "clone message failure, pcode:%d", packet->getPCode());
@@ -103,13 +105,20 @@ namespace tfs
     }
 
     //post_packet is async version of send_packet. donot wait for response packet.
-    int NewClient::async_post_request(const std::vector<uint64_t>& servers, Message* packet, callback_func func)
+    int NewClient::async_post_request(const std::vector<uint64_t>& servers, Message* packet, callback_func func, bool save_source_msg)
     {
       int32_t ret = !servers.empty() && NULL != packet &&  NULL != func ? common::TFS_SUCCESS : common::EXIT_INVALID_ARGU;
       if (common::TFS_SUCCESS == ret)
       {
         if (NULL == callback_)
+        {
           callback_ = func;
+        }
+
+        if (save_source_msg && NULL == source_msg_ )
+        {
+          source_msg_ = NewClientManager::get_instance().clone_message(packet, 2, false);
+        }
 
         std::vector<uint64_t>::const_iterator iter = servers.begin();
         for (; iter != servers.end(); ++iter)

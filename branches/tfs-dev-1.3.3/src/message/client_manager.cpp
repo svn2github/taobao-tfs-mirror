@@ -18,7 +18,8 @@ namespace tfs
 
     void NewClientManager::destroy()
     {
-      if (own_transport_ && transport_)
+      tbutil::Mutex::Lock lock(mutex_);
+      if (own_transport_ && NULL != transport_)
       {
         transport_->stop();
         transport_->wait();
@@ -26,11 +27,10 @@ namespace tfs
       }
 
       tbsys::gDelete(connmgr_);
-
       initialize_ = false;
     }
 
-    void NewClientManager::initialize()
+    int NewClientManager::initialize(tbnet::Transport* transport)
     {
       if (!initialize_)
       {
@@ -38,37 +38,21 @@ namespace tfs
         if (!initialize_)
         {
           streamer_.set_packet_factory(&factory_);
-          transport_ = new tbnet::Transport();
+          transport_ = NULL == transport ? new tbnet::Transport() : transport;
           connmgr_ = new tbnet::ConnectionManager(transport_, &streamer_, this);
           transport_->start();
-          own_transport_ = true;
+          own_transport_ = NULL == transport;
           initialize_ = true;
           new_clients_.clear();
         }
       }
-    }
-
-    void NewClientManager::initialize_with_transport(tbnet::Transport* transport)
-    {
-      if (!initialize_)
-      {
-        tbutil::Mutex::Lock lock(mutex_);
-        if (!initialize_)
-        {
-          streamer_.set_packet_factory(&factory_);
-          transport_ = transport;
-          connmgr_ = new tbnet::ConnectionManager(transport_, &streamer_, this);
-          own_transport_ = false;
-          initialize_ = true;
-          new_clients_.clear();
-        }
-      }
+      return common::TFS_SUCCESS;
     }
 
     tbnet::IPacketHandler::HPRetCode NewClientManager::handlePacket(
         tbnet::Packet* packet, void* args)
     {
-      bool call_wakeup = NULL != args;
+      bool call_wakeup = NULL != args && initialize_;
       if (call_wakeup)
       {
         bool is_disconntion_packet = (NULL != packet)
@@ -103,23 +87,29 @@ namespace tfs
 
     NewClient* NewClientManager::create_client()
     {
-      initialize();
-      tbutil::Mutex::Lock lock(mutex_);
-      ++seq_id_;
-      if (seq_id_ >= MAX_SEQ_ID)
-      {
-        seq_id_ = 0;
-      }
       NewClient* client = NULL;
-      NEWCLIENT_MAP_ITER iter = new_clients_.find(seq_id_);
-      if (iter != new_clients_.end())
+      if (initialize_)
       {
-        client = new NewClient(seq_id_);
-        new_clients_.insert(std::make_pair(seq_id_, client));
+        tbutil::Mutex::Lock lock(mutex_);
+        ++seq_id_;
+        if (seq_id_ >= MAX_SEQ_ID)
+        {
+          seq_id_ = 0;
+        }
+        NEWCLIENT_MAP_ITER iter = new_clients_.find(seq_id_);
+        if (iter != new_clients_.end())
+        {
+          client = new NewClient(seq_id_);
+          new_clients_.insert(std::make_pair(seq_id_, client));
+        }
+        else
+        {
+          TBSYS_LOG(ERROR, "client id(%u) was existed", seq_id_);
+        }
       }
       else
       {
-        TBSYS_LOG(ERROR, "client id(%u) was existed", seq_id_);
+        TBSYS_LOG(ERROR, "%s", "NewClientManager not initilaize");
       }
       return client;
     }
@@ -172,6 +162,11 @@ namespace tfs
         tbsys::gDelete(response);
       }
       return ret;
+    }
+
+    Message* NewClientManager::clone_message(Message* message, int32_t version, bool deserialize)
+    {
+      return factory_.clone_message(message, version, deserialize);
     }
 
     // test whether the DataServerStatInfo is still alive.  

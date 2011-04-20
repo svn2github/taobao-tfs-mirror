@@ -27,12 +27,13 @@ namespace tfs
           static NewClientManager client_manager;
           return client_manager;
         }
-        void initialize();
-        void initialize_with_transport(tbnet::Transport* transport);
+        int initialize(tbnet::Transport* transport = NULL);
         void destroy();
         tbnet::IPacketHandler::HPRetCode handlePacket(tbnet::Packet* packet, void* args);
         NewClient* create_client();
         bool destroy_client(NewClient* client);
+
+        Message* clone_message(Message* message, int32_t version = 2, bool deserialize = false);
 
       private:
         bool handlePacket(const WaitId& id, tbnet::Packet* response);
