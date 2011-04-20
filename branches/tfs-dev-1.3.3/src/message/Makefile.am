@@ -18,7 +18,7 @@ libtfsmessage_a_SOURCES = block_info_message.cpp create_filename_message.cpp\
 			  tfs_packet_streamer.cpp client.cpp client_pool.cpp\
 			  async_client.cpp server_meta_info_message.cpp\
 			  oplog_sync_message.cpp crc_error_message.cpp\
-				client_manager.cpp wait_object.cpp dump_plan_message.cpp\
+				client_manager.cpp new_client.cpp dump_plan_message.cpp\
 			  block_info_message.h client_cmd_message.h create_filename_message.h\
 			  message_factory.h client_cmd_message.h\
 			  dataserver_message.h unlink_file_message.h\
@@ -31,7 +31,7 @@ libtfsmessage_a_SOURCES = block_info_message.cpp create_filename_message.cpp\
 			  tfs_packet_streamer.h client.h client_pool.h\
 			  async_client.h server_meta_info_message.h\
 			  oplog_sync_message.h crc_error_message.h\
-				client_manager.h wait_object.h\
+				client_manager.h new_client.h\
 			  message.h
 
 
