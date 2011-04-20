@@ -40,6 +40,7 @@ namespace tfs
       virtual ~Service();
       int start();
       void stop();
+      int callback(message::NewClient* client);
     private:
       DISALLOW_COPY_AND_ASSIGN( Service);
       NameServer fs_name_system_;

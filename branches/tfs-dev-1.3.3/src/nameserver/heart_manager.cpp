@@ -213,8 +213,9 @@ namespace tfs
       mashm.set_flags(HEART_GET_DATASERVER_LIST_FLAGS_NO);
       ngi.dump(TBSYS_LOG_LEVEL(DEBUG));
 
-      iret = message::NewClientManager::get_instance().call(ngi.other_side_ip_port_, &mashm, DEFAULT_NETWORK_CALL_TIMEOUT, rmsg);
-      if ((iret != TFS_SUCCESS) || (rmsg == NULL)) // otherSide dead
+      NewClient* client = NewClientManager::get_instance().create_client();
+      iret = send_msg_to_server(ngi.other_side_ip_port_,client, &mashm, rmsg);
+      if (TFS_SUCCESS != iret) // otherSide dead
       {
         ns_switch(NS_STATUS_OTHERSIDEDEAD, NS_SYNC_DATA_FLAG_NO);
       }
@@ -252,7 +253,7 @@ namespace tfs
           }
         }
       }
-      tbsys::gDelete(rmsg);
+      NewClientManager::get_instance().destroy_client(client);
       return;
     }
 
@@ -323,9 +324,10 @@ namespace tfs
       do
       {
         count++;
-
-        iret = message::NewClientManager::get_instance().call(ngi.other_side_ip_port_, &mashm, DEFAULT_NETWORK_CALL_TIMEOUT, rmsg);
-        if ((iret == TFS_SUCCESS) && (rmsg != NULL))
+        rmsg = NULL;
+        NewClient* client = NewClientManager::get_instance().create_client();
+        iret = send_msg_to_server(ngi.other_side_ip_port_, client, &mashm, rmsg);
+        if (TFS_SUCCESS == iret)
         {
           MasterAndSlaveHeartResponseMessage* tmsg = dynamic_cast<MasterAndSlaveHeartResponseMessage*> (rmsg);
           if (tmsg->getPCode() == MASTER_AND_SLAVE_HEART_RESPONSE_MESSAGE)
@@ -346,10 +348,9 @@ namespace tfs
             }
           }
         }
-        tbsys::gDelete(rmsg);
+        NewClientManager::get_instance().destroy_client(client);
       }
       while (count < 3);
-      tbsys::gDelete(rmsg);
       return;
     }
 
@@ -378,8 +379,10 @@ namespace tfs
       do
       {
         ++count;
-        int32_t iret = message::NewClientManager::get_instance().call(ngi.other_side_ip_port_, &mashm, DEFAULT_NETWORK_CALL_TIMEOUT, rmsg);
-        if ((iret == TFS_SUCCESS) && (rmsg != NULL))
+        rmsg = NULL;
+        NewClient* client = NewClientManager::get_instance().create_client();
+        int32_t iret = send_msg_to_server(ngi.other_side_ip_port_,client, &mashm, rmsg);
+        if (TFS_SUCCESS == iret)
         {
           if (rmsg->getPCode() == MASTER_AND_SLAVE_HEART_RESPONSE_MESSAGE)
           {
@@ -416,14 +419,14 @@ namespace tfs
                   }
                 }
               }
-              tbsys::gDelete(rmsg);
+              NewClientManager::get_instance().destroy_client(client);
               return;
             }
             TBSYS_LOG(WARN, "do master and slave heart fail: owner role(%s), other side role(%s)", ngi.owner_role_
                 == NS_ROLE_MASTER ? "master" : "slave", tmsg->get_role() == NS_ROLE_MASTER ? "master" : "slave");
           }
         }
-        tbsys::gDelete(rmsg);
+        NewClientManager::get_instance().destroy_client(client);
       }
       while (count < 0x03);
 
@@ -458,8 +461,10 @@ namespace tfs
       do
       {
         ++count;
-        const int32_t iret = message::NewClientManager::get_instance().call(ngi.other_side_ip_port_, &mashm, DEFAULT_NETWORK_CALL_TIMEOUT, rmsg);
-        if ((iret == TFS_SUCCESS) && (rmsg != NULL))
+        rmsg = NULL;
+        NewClient* client = NewClientManager::get_instance().create_client();
+        int32_t iret = send_msg_to_server(ngi.other_side_ip_port_,client, &mashm, rmsg);
+        if (TFS_SUCCESS == iret)
         {
           if (rmsg->getPCode() == MASTER_AND_SLAVE_HEART_RESPONSE_MESSAGE)
           {
@@ -471,13 +476,14 @@ namespace tfs
                 tbutil::Mutex::Lock lock(ngi);
                 ngi.other_side_status_ = static_cast<NsStatus> (tmsg->get_status());
               }
-              tbsys::gDelete(rmsg);
+              NewClientManager::get_instance().destroy_client(client);
               return;
             }
             TBSYS_LOG(WARN, "do master and slave heart fail: owner role(%s), other side role(%s)", ngi.owner_role_
                 == NS_ROLE_MASTER ? "master" : "slave", tmsg->get_role() == NS_ROLE_MASTER ? "master" : "slave");
           }
         }
+        NewClientManager::get_instance().destroy_client(client);
         if (tbsys::CNetUtil::isLocalAddr(ngi.vip_)) // vip == local ip
         {
           TBSYS_LOG(WARN, "%s", "the master ns is dead,i'm going to be the master ns");
@@ -488,13 +494,10 @@ namespace tfs
           meta_mgr_->calc_max_block_id();
           ngi.switch_time_ = time(NULL) + SYSPARAM_NAMESERVER.safe_mode_time_;
           meta_mgr_->destroy_plan();
-          tbsys::gDelete(rmsg);
           return;
         }
-        tbsys::gDelete(rmsg);
       }
       while (count < 0x03);
-      tbsys::gDelete(rmsg);
 
       //make sure master dead
       {

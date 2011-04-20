@@ -186,7 +186,7 @@ namespace tfs
         return EXIT_REGISTER_OPLOG_SYNC_ERROR;
       }
 
-      Message* smsg = NewClientManager::get_instance().get_msg_factory().clone_message(const_cast<Message*> (msg), 2, true);
+      Message* smsg = NULL;//NewClientManager::get_instance().get_msg_factory().clone_message(const_cast<Message*> (msg), 2, true);
       if (smsg != NULL)
         push(smsg);
       return TFS_SUCCESS;
@@ -317,26 +317,36 @@ namespace tfs
       OpLogSyncMessage msg;
       msg.set_data(data, length);
       Message* rmsg = NULL;
-      int32_t count = 0x00;
+      int32_t count = 0;
+      int32_t iret = TFS_ERROR;
       do
       {
         ++count;
-        const int32_t iret = message::NewClientManager::get_instance().call(ngi.other_side_ip_port_, &msg, DEFAULT_NETWORK_CALL_TIMEOUT, rmsg);
-        if ((iret == TFS_SUCCESS) && (rmsg != NULL)) //success
+        rmsg = NULL;
+        NewClient* client = NewClientManager::get_instance().create_client();
+        iret = send_msg_to_server(ngi.other_side_ip_port_, client, &msg, rmsg);
+        if (TFS_SUCCESS == iret)
         {
-          OpLogSyncResponeMessage* tmsg = dynamic_cast<OpLogSyncResponeMessage*> (rmsg);
-          if (tmsg->getPCode() == OPLOG_SYNC_RESPONSE_MESSAGE && tmsg->get_complete_flag()
-              == OPLOG_SYNC_MSG_COMPLETE_YES)
+          iret = rmsg->getPCode() == OPLOG_SYNC_RESPONSE_MESSAGE ? TFS_SUCCESS : TFS_ERROR;
+          if (TFS_SUCCESS == iret)
           {
-            tbsys::gDelete(rmsg);
-            return TFS_SUCCESS;
+            OpLogSyncResponeMessage* tmsg = dynamic_cast<OpLogSyncResponeMessage*> (rmsg);
+            iret = tmsg->get_complete_flag() == OPLOG_SYNC_MSG_COMPLETE_YES ? TFS_SUCCESS : TFS_ERROR;
+            if (TFS_SUCCESS == iret)
+            {
+              NewClientManager::get_instance().destroy_client(client);
+              break;
+            }
           }
         }
-        tbsys::gDelete(rmsg);
+        NewClientManager::get_instance().destroy_client(client);
       }
       while (count < 0x03);
-      ngi.sync_oplog_flag_ = NS_SYNC_DATA_FLAG_NO;
-      TBSYS_LOG(WARN, "synchronization oplog(%s) message failed, count(%d)", data, count);
+      if (TFS_ERROR == iret)
+      {
+        ngi.sync_oplog_flag_ = NS_SYNC_DATA_FLAG_NO;
+        TBSYS_LOG(WARN, "synchronization oplog(%s) message failed, count(%d)", data, count);
+      }
       return TFS_SUCCESS;
     }
 
@@ -401,24 +411,24 @@ namespace tfs
         tbutil::Monitor<tbutil::Mutex>::Lock lock(monitor_);
         monitor_.wait();
       }
+      int32_t iret = TFS_ERROR;
       int32_t count(0);
       do
       {
         ++count;
-        uint16_t wait_id = 0;
-        int32_t iret = message::NewClientManager::get_instance().get_wait_id(wait_id);
-        if (iret == TFS_SUCCESS)
+        iret = send_msg_to_server(ngi.other_side_ip_port_, const_cast<Message*>(msg));
+        if (STATUS_MESSAGE_OK == iret)
         {
-          iret = message::NewClientManager::get_instance().post_request(ngi.other_side_ip_port_, const_cast<Message*>(msg), wait_id);
-          if (iret == TFS_SUCCESS)
-          {
-            return TFS_SUCCESS;
-          }
+          iret = TFS_SUCCESS;
+          break;
         }
       }
       while (count < 0x03);
-      ngi.sync_oplog_flag_ = NS_SYNC_DATA_FLAG_NO;
-      TBSYS_LOG(WARN, "synchronization operation(%s) message failed, count(%d)", NULL, count);
+      if (TFS_ERROR == iret)
+      {
+        ngi.sync_oplog_flag_ = NS_SYNC_DATA_FLAG_NO;
+        TBSYS_LOG(WARN, "synchronization operation(%s) message failed, count(%d)", NULL, count);
+      }
       return TFS_SUCCESS;
     }
 

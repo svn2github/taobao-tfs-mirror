@@ -24,10 +24,12 @@
 #include "common/config_item.h"
 #include "common/directory_op.h"
 #include "common/error_msg.h"
+#include "message/new_client.h"
 
 using namespace tbsys;
 using namespace tfs::common;
 using namespace tfs::nameserver;
+using namespace tfs::message;
 
 static void signal_handler(int32_t sig);
 static Service* g_tfs_ns_service_ = NULL;
@@ -193,6 +195,17 @@ namespace tfs
   namespace nameserver
   {
 
+    int global_callback_func(tfs::message::NewClient* client)
+    {
+      int32_t iret = NULL != g_tfs_ns_service_ ? TFS_SUCCESS : TFS_ERROR;
+      if (TFS_SUCCESS == iret)
+      {
+        return g_tfs_ns_service_->callback(client); 
+      }
+      return iret;
+    }
+
+
     Service::Service()
     {
     }
@@ -222,6 +235,11 @@ namespace tfs
     void Service::stop()
     {
       fs_name_system_.stop();
+    }
+    
+    int Service::callback(message::NewClient* client)
+    {
+      return fs_name_system_.callback(client);
     }
   }
 }

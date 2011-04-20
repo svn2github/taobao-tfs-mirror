@@ -212,7 +212,6 @@ namespace tfs
     {
       int32_t iret = TFS_SUCCESS;
       int32_t index = 0;
-      Message* ret_msg = NULL;
       CompactBlockMessage msg;
       msg.set_block_id(block_id_);
       msg.set_preserve_time(SYSPARAM_NAMESERVER.run_plan_expire_interval_);
@@ -224,7 +223,7 @@ namespace tfs
         res.second = PLAN_STATUS_BEGIN;
         msg.set_owner( index == 0 ? 1 : 0);
         #if !defined(TFS_NS_GTEST) && !defined(TFS_NS_INTEGRATION)
-        if ((iret = message::NewClientManager::get_instance().call(res.first, &msg, DEFAULT_NETWORK_CALL_TIMEOUT, ret_msg)) != TFS_SUCCESS)
+        if (send_msg_to_server(res.first, &msg) != STATUS_MESSAGE_OK)
         {
           res.second = PLAN_STATUS_TIMEOUT;
           TBSYS_LOG(INFO, "send compact message filed; block (%u) owner(%d) to server(%s), ret(%d)",
@@ -449,7 +448,6 @@ namespace tfs
         TBSYS_LOG(WARN, "task(block: %u, type:%d, priority: %d, runer size: %u) is invalid", block_id_, type_, priority_, runer_.size());
         return TFS_ERROR;
       }
-      Message* ret_msg = NULL;
       ReplicateBlockMessage msg;
       ReplBlock block;
       memset(&block, 0, sizeof(block));
@@ -462,8 +460,8 @@ namespace tfs
       msg.set_repl_block(&block);
       msg.set_command(PLAN_STATUS_BEGIN);
       #if !defined(TFS_NS_GTEST) && !defined(TFS_NS_INTEGRATION)
-      int32_t iret = message::NewClientManager::get_instance().call(block.source_id_, &msg, DEFAULT_NETWORK_CALL_TIMEOUT, ret_msg);
-      if (iret != TFS_SUCCESS)
+      int32_t iret = send_msg_to_server(block.source_id_, &msg);
+      if (STATUS_MESSAGE_OK != iret)
       {
         TBSYS_LOG(ERROR, "send %s command faild, block(%u), %s===>%s",
           flag_ == REPLICATE_BLOCK_MOVE_FLAG_NO ? "replicate" : "move",
@@ -472,7 +470,6 @@ namespace tfs
       }
       else
       {
-
         TBSYS_LOG(INFO, "send %s command successful, block(%u), (%s)===>(%s)",
           flag_ == REPLICATE_BLOCK_MOVE_FLAG_NO ? "replicate" : "move",
           block_id_, tbsys::CNetUtil::addrToString(block.source_id_).c_str(),
