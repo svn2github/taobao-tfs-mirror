@@ -26,6 +26,7 @@
 #include "common/func.h"
 #include "common/lock.h"
 #include "common/parameter.h"
+#include "message/new_client.h"
 
 namespace tfs
 {
@@ -244,8 +245,9 @@ namespace tfs
 
       static NsRuntimeGlobalInformation instance_;
     };
-
-    //static void print_servers(std::vector<ServerCollect*>& servers, std::string& result);
+    extern int global_callback_func(message::NewClient* client);
+    extern int send_msg_to_server(uint64_t server, message::Message* msg);
+    extern int send_msg_to_server(uint64_t server, message::NewClient* client, message::Message* msg, message::Message*& output/*not free*/);
   }
 }
 

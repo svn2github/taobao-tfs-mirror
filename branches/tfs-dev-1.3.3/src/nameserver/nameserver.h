@@ -33,6 +33,7 @@
 #include "layout_manager.h"
 #include "heart_manager.h"
 #include "message/tfs_packet_streamer.h"
+#include "message/new_client.h"
 
 namespace tfs
 {
@@ -78,6 +79,8 @@ namespace tfs
       tbnet::IPacketHandler::HPRetCode handlePacket(tbnet::Connection *connection, tbnet::Packet *packet);
 
       bool handlePacketQueue(tbnet::Packet *packet, void *args);
+
+      int callback(message::NewClient* client);
 
    private:
       DISALLOW_COPY_AND_ASSIGN(NameServer);
