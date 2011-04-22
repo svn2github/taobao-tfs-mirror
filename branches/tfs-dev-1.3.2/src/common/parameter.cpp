@@ -224,6 +224,7 @@ namespace tfs
       dataserver_.expire_check_block_time_
         = CONFIG.get_int_value(CONFIG_DATASERVER, CONF_EXPIRE_CHECKBLOCK_TIME, 86400);
       dataserver_.max_cpu_usage_ = CONFIG.get_int_value(CONFIG_DATASERVER, CONF_MAX_CPU_USAGE, 60);
+      dataserver_.dump_stat_info_interval_ = CONFIG.get_int_value(CONFIG_DATASERVER, CONF_DUMP_STAT_INFO_INTERVAL, 60000000);
       return load_filesystem_param(index);
     }
 

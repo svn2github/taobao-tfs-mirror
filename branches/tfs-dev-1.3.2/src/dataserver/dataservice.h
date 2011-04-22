@@ -28,8 +28,10 @@
 #include "block_checker.h"
 #include "common/interval.h"
 #include "common/config.h"
+#include "common/statistics.h"
 #include "message/message.h"
 #include "message/message_factory.h"
+#include <Timer.h>
 #include <Mutex.h>
 #include <string>
 
@@ -165,6 +167,11 @@ namespace tfs
         tbsys::CLogger read_stat_log_;
         std::vector<std::pair<uint32_t, uint64_t> > read_stat_buffer_;
         static const unsigned READ_STAT_LOG_BUFFER_LEN = 100;
+
+        //global stat
+        tbutil::TimerPtr timer_;
+        common::StatManager<std::string, std::string, common::StatEntry > stat_mgr_;
+        std::string tfs_ds_stat_;
     };
   }
 }
