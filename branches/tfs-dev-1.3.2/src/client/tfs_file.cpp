@@ -155,7 +155,7 @@ int TfsFile::tfs_open(const uint32_t block_id, const uint64_t file_id, const int
   {
     if (file_id_ == 0)
     {
-      //TBSYS_LOG(WARN, "blockId(%u) read fileid is 0.", block_id_);
+      //TBSYS_LOG(WARN, "blockid: %u read fileid is 0.", block_id_);
     }
     pri_ds_index_ = static_cast<int32_t> (file_id_ % ds_list_.size());
   }

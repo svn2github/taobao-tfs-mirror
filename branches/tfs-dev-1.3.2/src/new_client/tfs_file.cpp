@@ -133,7 +133,7 @@ int64_t TfsFile::read_ex(void* buf, const int64_t count, const int64_t offset, c
       else if (0 == cur_size)
       {
         TBSYS_LOG(INFO, "large file read reach end, offset: %"PRI64_PREFIX"d, size: %"PRI64_PREFIX"d",
-            offset + check_size, cur_size);
+                  offset + check_size, cur_size);
         eof_ = TFS_FILE_EOF_FLAG_YES;
         break;
       }
@@ -143,9 +143,8 @@ int64_t TfsFile::read_ex(void* buf, const int64_t count, const int64_t offset, c
         retry_count = CLIENT_TRY_COUNT;
         do
         {
-          ret = read_process();
-          finish_read_process(ret, read_size);
-        } while (ret != TFS_SUCCESS && retry_count--);
+          ret = read_process(read_size);
+        } while (ret != TFS_SUCCESS && --retry_count);
 
         if (ret != TFS_SUCCESS)
         {
@@ -442,18 +441,24 @@ int TfsFile::process(const InnerFilePhase file_phase)
   }
   else
   {
-    int32_t req_size = size;
+    int32_t req_size = 0;
 
     NewClientManager::get_instance()->get_wait_id(wait_id);
     for (uint16_t i = 0; i < static_cast<uint16_t>(size); ++i)
     {
-      if (processing_seg_list_[i]->status_ != phase_status[phase_status[file_phase].pre_phase_].status_
-          || (ret = do_async_request(file_phase, wait_id, i)) != TFS_SUCCESS)
+      if (processing_seg_list_[i]->status_ == phase_status[file_phase].pre_status_)
       {
-        // just continue
-        TBSYS_LOG(ERROR, "request %hu fail, status: %d, define status: %d",
-                  i, processing_seg_list_[i]->status_, phase_status[phase_status[file_phase].pre_phase_].status_);
-        req_size--;
+        if ((ret = do_async_request(file_phase, wait_id, i)) != TFS_SUCCESS)
+        {
+          // just continue
+          TBSYS_LOG(ERROR, "request %hu fail, status: %d, define status: %d",
+                    i, processing_seg_list_[i]->status_, phase_status[file_phase].pre_status_);
+          tfs_session_->remove_block_cache(processing_seg_list_[i]->seg_info_.block_id_);
+        }
+        else
+        {
+          req_size++;
+        }
       }
     }
 
@@ -474,6 +479,7 @@ int TfsFile::process(const InnerFilePhase file_phase)
       }
       else
       {
+        // TODO. use new client manager, get_fail_ids, then remove cache etc.
         int32_t resp_size = packets.size();
         TBSYS_LOG(DEBUG, "get response. wait object id: %hu, request size: %d, successful request size: %d, get response size: %d",
                   wait_id, size, req_size, resp_size);
@@ -822,9 +828,63 @@ int TfsFile::async_rsp_close_file(message::Message* rsp, const uint16_t index)
   return ret;
 }
 
-int TfsFile::async_req_read_file(const uint16_t wait_id, const uint16_t index)
+int TfsFile::async_req_read_file(const uint16_t wait_id, const uint16_t index,
+                                SegmentData& seg_data, Message& rd_message)
 {
   int ret = TFS_ERROR;
+
+  if (seg_data.pri_ds_index_ >= 0)
+  {
+    int32_t ds_size = seg_data.ds_.size();
+    TBSYS_LOG(DEBUG, "req read file, blockid: %u, fileid: %"PRI64_PREFIX"u, offset: %"PRI64_PREFIX"d, size: %d, ds size: %d",
+              seg_data.seg_info_.block_id_, seg_data.seg_info_.file_id_,
+              seg_data.seg_info_.offset_, seg_data.seg_info_.size_, ds_size);
+
+    // need check ?
+    if (0 != seg_data.seg_info_.file_id_ && 0 != ds_size)
+    {
+      int32_t retry_count = seg_data.seg_info_.file_id_ % ds_size - seg_data.pri_ds_index_;
+      retry_count = retry_count <= 0 ? ds_size + retry_count : retry_count;
+
+      bool remove_cache = false;
+      // try until post success
+      while (retry_count-- > 0 &&
+             (ret = NewClientManager::get_instance()->
+              post_request(seg_data.ds_[seg_data.pri_ds_index_],
+                           &rd_message, wait_id, index)) != TFS_SUCCESS)
+      {
+        if (ret != EXIT_SENDMSG_ERROR)
+        {
+          break;
+        }
+
+        TBSYS_LOG(ERROR, "post read file req fail. blockid: %u, fileid: %" PRI64_PREFIX "u, dsip: %s. try: %d",
+                  seg_data.seg_info_.block_id_, seg_data.seg_info_.file_id_,
+                  tbsys::CNetUtil::addrToString(seg_data.ds_[seg_data.pri_ds_index_]).c_str(), retry_count);
+        seg_data.pri_ds_index_ = (seg_data.pri_ds_index_ + 1) % ds_size;
+        remove_cache = true;
+      }
+
+      if (remove_cache)
+      {
+        tfs_session_->remove_block_cache(seg_data.seg_info_.block_id_);
+      }
+
+      if (0 == retry_count) // try last ds
+      {
+        seg_data.pri_ds_index_ = -1;
+      }
+      else
+      {
+        seg_data.pri_ds_index_ = (seg_data.pri_ds_index_ + 1) % ds_size;
+      }
+    }
+  }
+  return ret;
+}
+
+int TfsFile::async_req_read_file(const uint16_t wait_id, const uint16_t index)
+{
   SegmentData* seg_data = processing_seg_list_[index];
   ReadDataMessage rd_message;
   rd_message.set_block_id(seg_data->seg_info_.block_id_);
@@ -832,44 +892,14 @@ int TfsFile::async_req_read_file(const uint16_t wait_id, const uint16_t index)
   rd_message.set_offset(seg_data->inner_offset_);
   rd_message.set_length(seg_data->seg_info_.size_);
 
-  int32_t ds_size = seg_data->ds_.size();
-  TBSYS_LOG(DEBUG, "req read file, blockid: %u, fileid: %"PRI64_PREFIX"u, offset: %"PRI64_PREFIX"d, size: %d, ds size: %d",
-            seg_data->seg_info_.block_id_, seg_data->seg_info_.file_id_,
-            seg_data->seg_info_.offset_, seg_data->seg_info_.size_, ds_size);
-  if (0 != seg_data->seg_info_.file_id_ && 0 != ds_size)
-  {
-    if (-1 == seg_data->pri_ds_index_)
-    {
-      seg_data->pri_ds_index_ = static_cast<int32_t>(seg_data->seg_info_.file_id_ % ds_size);
-    }
-
-    int32_t retry_count = ds_size;
-    while (retry_count > 0)
-    {
-      int32_t selected_ds_index = seg_data->pri_ds_index_;
-      ret = NewClientManager::get_instance()->post_request(seg_data->ds_[selected_ds_index], &rd_message, wait_id, index);
-      if (EXIT_SENDMSG_ERROR == ret)
-      {
-        TBSYS_LOG(ERROR, "post read file req fail. blockid: %u, fileid: %" PRI64_PREFIX "u, dsip: %s",
-                  seg_data->seg_info_.block_id_, seg_data->seg_info_.file_id_,
-                  tbsys::CNetUtil::addrToString(seg_data->ds_[selected_ds_index]).c_str());
-        tfs_session_->remove_block_cache(seg_data->seg_info_.block_id_);
-        seg_data->pri_ds_index_ = (seg_data->pri_ds_index_ + 1) % ds_size;
-        --retry_count;
-      }
-      else
-      {
-        break;
-      }
-    }
-  }
-
+  int ret = async_req_read_file(wait_id, index, *seg_data, rd_message);
   if (TFS_SUCCESS != ret)
   {
     TBSYS_LOG(ERROR, "req read file fail. blockid: %u, fileid: %" PRI64_PREFIX "u, ds size: %d, ret: %d",
-              seg_data->seg_info_.block_id_, seg_data->seg_info_.file_id_, ds_size, ret);
+              seg_data->seg_info_.block_id_, seg_data->seg_info_.file_id_, seg_data->ds_.size(), ret);
     BgTask::get_stat_mgr().update_entry(StatItem::client_access_stat_, StatItem::read_fail_, 1);
   }
+
   return ret;
 }
 
@@ -961,7 +991,6 @@ int TfsFile::async_rsp_read_file(message::Message* rsp, const uint16_t index)
 
 int TfsFile::async_req_read_fileV2(const uint16_t wait_id, const uint16_t index)
 {
-  int ret = TFS_ERROR;
   SegmentData* seg_data = processing_seg_list_[index];
   ReadDataMessageV2 rd_message;
   rd_message.set_block_id(seg_data->seg_info_.block_id_);
@@ -969,45 +998,11 @@ int TfsFile::async_req_read_fileV2(const uint16_t wait_id, const uint16_t index)
   rd_message.set_offset(seg_data->inner_offset_);
   rd_message.set_length(seg_data->seg_info_.size_);
 
-  int32_t ds_size = seg_data->ds_.size();
-  TBSYS_LOG(DEBUG, "req read file, blockid: %u, fileid: %"PRI64_PREFIX"u, offset: %"PRI64_PREFIX"d, size: %d, ds size: %d",
-            seg_data->seg_info_.block_id_, seg_data->seg_info_.file_id_,
-            seg_data->seg_info_.offset_, seg_data->seg_info_.size_, ds_size);
-  if (0 == seg_data->seg_info_.file_id_ || 0 == ds_size)
-  {
-  }
-  else
-  {
-    if (-1 == seg_data->pri_ds_index_)
-    {
-      seg_data->pri_ds_index_ = static_cast<int32_t>(seg_data->seg_info_.file_id_ % ds_size);
-    }
-
-    int32_t retry_count = ds_size;
-    while (retry_count > 0)
-    {
-      int32_t selected_ds_index = seg_data->pri_ds_index_;
-      ret = NewClientManager::get_instance()->post_request(seg_data->ds_[selected_ds_index], &rd_message, wait_id, index);
-      if (EXIT_SENDMSG_ERROR == ret)
-      {
-        TBSYS_LOG(ERROR, "post read file req fail. blockid: %u, fileid: %" PRI64_PREFIX "u, dsip: %s",
-                  seg_data->seg_info_.block_id_, seg_data->seg_info_.file_id_,
-                  tbsys::CNetUtil::addrToString(seg_data->ds_[selected_ds_index]).c_str());
-        tfs_session_->remove_block_cache(seg_data->seg_info_.block_id_);
-        seg_data->pri_ds_index_ = (seg_data->pri_ds_index_ + 1) % ds_size;
-        --retry_count;
-      }
-      else
-      {
-        break;
-      }
-    }
-  }
-
+  int ret = async_req_read_file(wait_id, index, *seg_data, rd_message);
   if (TFS_SUCCESS != ret)
   {
-    TBSYS_LOG(ERROR, "req read file fail. blockid: %u, fileid: %" PRI64_PREFIX "u, ds size: %d, ret: %d",
-              seg_data->seg_info_.block_id_, seg_data->seg_info_.file_id_, ds_size, ret);
+    TBSYS_LOG(ERROR, "req read file V2 fail. blockid: %u, fileid: %" PRI64_PREFIX "u, ds size: %d, ret: %d",
+              seg_data->seg_info_.block_id_, seg_data->seg_info_.file_id_, seg_data->ds_.size(), ret);
     BgTask::get_stat_mgr().update_entry(StatItem::client_access_stat_, StatItem::read_fail_, 1);
   }
   return ret;
@@ -1368,7 +1363,7 @@ int32_t TfsFile::finish_read_process(int status, int64_t& read_size)
   }
   else if (status != EXIT_ALL_SEGMENT_ERROR)
   {
-    for ( ; it != processing_seg_list_.end(); )
+    while (it != processing_seg_list_.end())
     {
       if (SEG_STATUS_ALL_OVER == (*it)->status_) // all over
       {
@@ -1386,6 +1381,5 @@ int32_t TfsFile::finish_read_process(int status, int64_t& read_size)
       }
     }
   }
-
   return count;
 }

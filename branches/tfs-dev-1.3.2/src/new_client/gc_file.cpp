@@ -124,6 +124,20 @@ int GcFile::remove()
   return ret;
 }
 
+int32_t GcFile::get_data_size()
+{
+  return sizeof(SegmentHead) + seg_head_.count_ * sizeof(SegmentInfo);
+}
+
+int64_t GcFile::get_file_size()
+{
+  return seg_head_.size_;
+}
+
+int32_t GcFile::get_segment_size()
+{
+  return seg_head_.count_;
+}
 
 int GcFile::save_gc()
 {

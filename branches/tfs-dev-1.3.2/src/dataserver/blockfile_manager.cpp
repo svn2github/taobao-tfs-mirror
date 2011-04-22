@@ -146,7 +146,7 @@ namespace tfs
       // oops, same physical block id found
       if (pmit != physcial_blocks_.end())
       {
-        TBSYS_LOG(ERROR, "bitmap and physical blocks conflict. fatal error! physical block id: %u", physical_block_id);
+        TBSYS_LOG(ERROR, "bitmap and physical blocks conflict. fatal error! physical blockid: %u", physical_block_id);
         assert(false);
       }
 
@@ -802,7 +802,7 @@ namespace tfs
           uint32_t logic_block_id = block_prefix.logic_blockid_;
           TBSYS_LOG(
             INFO,
-            "load logic block. logic block id: %u, physic prev blockid: %u, physic next blockid: %u, physical blockid: %u.",
+            "load logic block. logic blockid: %u, physic prev blockid: %u, physic next blockid: %u, physical blockid: %u.",
             logic_block_id, block_prefix.prev_physic_blockid_,
             block_prefix.next_physic_blockid_, pos);
 
@@ -1215,7 +1215,7 @@ namespace tfs
         ret = file_op->pwrite_file(block_prefix, prefix_size, 0);
         if (TFS_SUCCESS != ret)
         {
-          TBSYS_LOG(ERROR, "write block file error. physcial block id: %d, block type: %d, ret: %d.", i, block_type,
+          TBSYS_LOG(ERROR, "write block file error. physcial blockid: %d, block type: %d, ret: %d.", i, block_type,
               ret);
           return ret;
         }
@@ -1294,7 +1294,7 @@ namespace tfs
         normal_bit_map_->reset(physical_block_id);
         int ret = super_block_impl_->write_bit_map(normal_bit_map_, error_bit_map_);
         if (TFS_SUCCESS != ret)
-          TBSYS_LOG(ERROR, "write bit map fail. ret: %d, physical block id: %u", ret, physical_block_id);
+          TBSYS_LOG(ERROR, "write bit map fail. ret: %d, physical blockid: %u", ret, physical_block_id);
 
         if (modify_flag)
         {

@@ -39,7 +39,7 @@ namespace tfs
       TfsFileEofFlag eof_;
 
       SegmentData() : delete_flag_(true), buf_(NULL), inner_offset_(0), file_info_(NULL),
-                      file_number_(0), pri_ds_index_(-1),
+                      file_number_(0), pri_ds_index_(0),
                       status_(SEG_STATUS_NOT_INIT), eof_(TFS_FILE_EOF_FLAG_NO)
       {
       }
@@ -94,12 +94,10 @@ namespace tfs
                                const int64_t size, SEG_DATA_LIST& seg_list);
 
       int add_segment(common::SegmentInfo& seg_info);
-
-      int64_t get_file_size();  // get size that segments contain
-      int32_t get_data_size();  // get raw data size of segment head and data
       int dump_data(char* buf);
 
-      // for unit test
+      int32_t get_data_size();    // get raw data size of segment head and data
+      int64_t get_file_size();    // get size that segments contain
       int32_t get_segment_size(); // get segment count
       SEG_SET& get_seg_info()
       {

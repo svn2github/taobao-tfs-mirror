@@ -252,9 +252,9 @@ int LocalKey::remove()
   return ret;
 }
 
-int32_t LocalKey::get_segment_size()
+int32_t LocalKey::get_data_size()
 {
-  return seg_head_.count_;
+  return sizeof(SegmentHead) + seg_head_.count_ * sizeof(SegmentInfo);
 }
 
 int64_t LocalKey::get_file_size()
@@ -262,9 +262,9 @@ int64_t LocalKey::get_file_size()
   return seg_head_.size_;
 }
 
-int32_t LocalKey::get_data_size()
+int32_t LocalKey::get_segment_size()
 {
-  return sizeof(SegmentHead) + seg_info_.size() * sizeof(SegmentInfo);
+  return seg_head_.count_;
 }
 
 int LocalKey::dump_data(char* buf)
@@ -291,7 +291,7 @@ int64_t LocalKey::get_segment_for_write(const int64_t offset, const char* buf,
   SegmentInfo seg_info;
   SEG_SET_ITER it, first_it;
 
-  while (seg_list.size() < ClientConfig::batch_count_ &&
+  while (static_cast<int32_t>(seg_list.size()) < ClientConfig::batch_count_ &&
          remain_size > 0)
   {
     written_size = need_write_size = 0;
@@ -421,7 +421,8 @@ int64_t LocalKey::get_segment_for_read(const int64_t offset, const char* buf,
   }
 
   // get following adjacent segment info
-  for (; seg_list.size() < ClientConfig::batch_count_ && it != seg_info_.end() && check_size < size;
+  for (; static_cast<int32_t>(seg_list.size()) < ClientConfig::batch_count_ &&
+         it != seg_info_.end() && check_size < size;
        check_size += cur_size, ++it)
   {
     if (check_size + it->size_ > size)
