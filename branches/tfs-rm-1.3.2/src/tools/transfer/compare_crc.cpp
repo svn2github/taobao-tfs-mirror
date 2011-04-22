@@ -369,7 +369,7 @@ int get_crc_from_block_list(TfsClient& old_tfs_client, TfsClient& new_tfs_client
       }
       else
       {
-        TBSYS_LOG(ERROR,"get block info for block id :%u failure",block_id);
+        TBSYS_LOG(ERROR,"get block info for blockid: %u failure.",block_id);
       }
     }
     fclose(fp);

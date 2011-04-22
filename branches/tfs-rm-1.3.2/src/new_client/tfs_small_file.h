@@ -42,7 +42,7 @@ namespace tfs
     protected:
       virtual int64_t get_segment_for_read(int64_t offset, char* buf, int64_t count);
       virtual int64_t get_segment_for_write(int64_t offset, const char* buf, int64_t count);
-      virtual int read_process();
+      virtual int read_process(int64_t& read_size);
       virtual int write_process();
       virtual int32_t finish_write_process(int status);
       virtual int close_process();

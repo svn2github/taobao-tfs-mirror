@@ -290,12 +290,12 @@ template<class T> int GcWorker::do_unlink(T& seg_info, const char* addr)
     if ((ret = tfs_client_->unlink(fsname.get_name(), NULL, addr))
         != TFS_SUCCESS)
     {
-      TBSYS_LOG(ERROR, "gc segment fail, block id: %u, fileid: %"PRI64_PREFIX"u, ret: %d",
+      TBSYS_LOG(ERROR, "gc segment fail, blockid: %u, fileid: %"PRI64_PREFIX"u, ret: %d",
                 it->block_id_, it->file_id_, ret);
     }
     else
     {
-      TBSYS_LOG(DEBUG, "gc segment success, block id: %u, fileid: %"PRI64_PREFIX"u",
+      TBSYS_LOG(DEBUG, "gc segment success, blockid: %u, fileid: %"PRI64_PREFIX"u",
                 it->block_id_, it->file_id_);
     }
   }

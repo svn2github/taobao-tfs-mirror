@@ -126,6 +126,7 @@ namespace tfs
 #define CONF_BACKUP_TYPE                              "backup_type"
 #define CONF_EXPIRE_CHECKBLOCK_TIME                   "expire_checkblock_time"
 #define CONF_MAX_CPU_USAGE                            "max_cpu_usage"
+#define CONF_DUMP_STAT_INFO_INTERVAL                  "dump_stat_info_interval"
   }
 }
 #endif //TFS_COMMON_CONFDEFINE_H_

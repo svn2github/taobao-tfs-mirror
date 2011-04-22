@@ -23,6 +23,13 @@ namespace tfs
       int save();
       int remove();
 
+      int validate(int64_t total_size = 0)
+      {
+        return common::TFS_SUCCESS;
+      }
+      int32_t get_data_size();    // get raw data size of segment head and data
+      int64_t get_file_size();    // get size that segments contain
+      int32_t get_segment_size(); // get segment count
       std::vector<common::SegmentInfo>& get_seg_info()
       {
         return seg_info_;

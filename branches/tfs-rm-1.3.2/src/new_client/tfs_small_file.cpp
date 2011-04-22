@@ -110,16 +110,19 @@ int64_t TfsSmallFile::get_segment_for_write(int64_t offset, const char* buf, int
                           count > ClientConfig::segment_size_ ? ClientConfig::segment_size_ : count);
 }
 
-int TfsSmallFile::read_process()
+int TfsSmallFile::read_process(int64_t& read_size)
 {
   int ret = TFS_SUCCESS;
   //set status
   processing_seg_list_[0]->status_ = SEG_STATUS_OPEN_OVER;
+  processing_seg_list_[0]->pri_ds_index_ = processing_seg_list_[0]->seg_info_.file_id_ %
+    processing_seg_list_[0]->ds_.size();
 
   if ((ret = process(FILE_PHASE_READ_FILE)) != TFS_SUCCESS)
   {
     TBSYS_LOG(ERROR, "read data fail, ret: %d", ret);
   }
+  finish_read_process(ret, read_size);
   return ret;
 }
 
