@@ -134,6 +134,7 @@ namespace tfs
     //	add one logic block compact
     int CompactBlock::add_cpt_task(CompactBlkInfo* cpt_blk)
     {
+      CompactBlkInfo t_cpt_blk = *cpt_blk;
       int32_t cpt_exist = 0;
       compact_block_monitor_.lock();
       // check whether requested block existed
@@ -160,8 +161,8 @@ namespace tfs
       compact_block_monitor_.notify();
       compact_block_monitor_.unlock();
 
-      TBSYS_LOG(INFO, "add compact block. blockid: %u, owner: %d, preserve_time: %d\n",
-          cpt_blk->block_id_, cpt_blk->owner_, cpt_blk->preserve_time_);
+      TBSYS_LOG(INFO, "add compact block. cpt_exist: %d, blockid: %u, owner: %d, preserve_time: %d\n",
+          cpt_exist, t_cpt_blk.block_id_, t_cpt_blk.owner_, t_cpt_blk.preserve_time_);
       return cpt_exist;
     }
 
