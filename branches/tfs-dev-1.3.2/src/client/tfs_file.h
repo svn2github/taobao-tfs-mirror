@@ -42,7 +42,7 @@ namespace tfs
       TfsFile();
       virtual ~TfsFile();
 
-      inline const char *get_error_message()
+      inline const char* get_error_message()
       {
         return error_message_;
       }
@@ -76,26 +76,28 @@ namespace tfs
       }
 
       void set_session(TfsSession *session);
-      int stat(const char *filename, const char *suffix, common::FileInfo *file_info);
-      int save_file(const char *filename, const char *tfsname, const char *suffix);
-      int save_file(const char* tfsname, const char* suffix, char* data, const int32_t length);
+      int stat(const char* filename, const char* suffix, common::FileInfo *file_info);
+      int save_file(const char* filename, const char* tfsname,
+          const char* suffix, const int32_t mode = common::WRITE_MODE);
+      int save_buffer(const char* tfsname, const char* suffix, const char* data,
+          const int32_t length, const int32_t mode = common::WRITE_MODE);
       int get_file_list(const uint32_t block_id, common::FILE_INFO_LIST &l);
-      int unlink(const char *filename, const char *suffix = NULL, const int32_t action = 0);
+      int unlink(const char* filename, const char* suffix = NULL, const int32_t action = 0);
       int unlink(const uint32_t block_id, const uint64_t file_id, const int32_t action);
-      int rename(const char *filename, const char *old_prefix, const char *new_prefix);
+      int rename(const char* filename, const char* old_suffix, const char* new_suffix);
       int rename(const uint32_t block_id, const uint64_t file_id, const uint64_t new_file_id);
-      const char *get_file_name();
+      const char* get_file_name();
       int new_filename();
 
       //tfs interface
-      int tfs_open(const char *file_name, const char *suffix, const int32_t mode);
+      int tfs_open(const char* file_name, const char* suffix, const int32_t mode);
       int tfs_open(const uint32_t block_id, const uint64_t file_id, const int32_t mode);
-      int tfs_read(char *data, const int32_t len);
-      int tfs_read_v2(char *data, const int32_t len, common::FileInfo *file_info);
-      int tfs_read_scale_image(char *data, const int32_t len, const int32_t width, const int32_t height,
+      int tfs_read(char* data, const int32_t len);
+      int tfs_read_v2(char* data, const int32_t len, common::FileInfo *file_info);
+      int tfs_read_scale_image(char* data, const int32_t len, const int32_t width, const int32_t height,
           common::FileInfo *file_info);
       int64_t tfs_lseek(const int64_t offset, const int32_t whence);
-      int tfs_write(const char *data, const int32_t len);
+      int tfs_write(const char* data, const int32_t len);
       int tfs_stat(common::FileInfo *file_info, const int32_t mode = 0);
       int tfs_close();
       int tfs_reset_read();
@@ -105,8 +107,8 @@ namespace tfs
       int connect_next_ds();
       int connect_ds();
       int create_filename();
-      void conv_name(const char *fileName, const char *suffix);
-      int get_file_crc_size(const char *filename, uint32_t& crc, int32_t& size);
+      void conv_name(const char* fileName, const char* suffix);
+      int get_file_crc_size(const char* filename, uint32_t& crc, int32_t& size);
 
     private:
       common::VUINT64 ds_list_;
