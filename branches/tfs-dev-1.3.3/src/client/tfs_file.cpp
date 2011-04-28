@@ -121,14 +121,14 @@ int TfsFile::tfs_open(const uint32_t block_id, const uint64_t file_id, const int
   else
   {
     uint32_t current_block_id = block_id_;
-    int32_t flag = BLOCK_WRITE | BLOCK_CREATE;
+    int32_t flag = T_WRITE | T_CREATE;
     if ((mode_ & NEWBLK_MODE))
     {
-      flag |= BLOCK_NEWBLK;
+      flag |= T_NEWBLK;
     }
     if ((mode_ & NOLEASE_MODE))
     {
-      flag |= BLOCK_NOLEASE;
+      flag |= T_NOLEASE;
     }
     if (session_->create_block_info(current_block_id, ds_list_, flag, fail_servers_) != TFS_SUCCESS)
     {

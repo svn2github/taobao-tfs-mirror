@@ -39,8 +39,8 @@ TfsSession::~TfsSession()
 int TfsSession::get_cluster_id_from_ns()
 {
   ClientCmdMessage ccmessage;
-  ccmessage.set_type(CLIENT_CMD_SET_PARAM);
-  ccmessage.set_block_id(20);
+  ccmessage.set_cmd(CLIENT_CMD_SET_PARAM);
+  ccmessage.set_value3(20);
 
   Message* ret_msg = NULL;
   int32_t iret = send_message_to_server(ns_ip_port_, &ccmessage, &ret_msg);
@@ -141,7 +141,7 @@ int TfsSession::get_block_info(uint32_t& block_id, VUINT64 &rds)
 
   BlockCache block_cache;
   VUINT64 fail_ds_list;
-  if (get_block_info_ex(block_id, block_cache.ds_, BLOCK_READ, fail_ds_list) == TFS_SUCCESS)
+  if (get_block_info_ex(block_id, block_cache.ds_,T_READ, fail_ds_list) == TFS_SUCCESS)
   {
     block_cache.last_time_ = time(NULL);
     rds = block_cache.ds_;
@@ -166,7 +166,7 @@ int TfsSession::create_block_info(uint32_t& block_id, VUINT64 &rds, const int32_
 int TfsSession::get_unlink_block_info(uint32_t& block_id, VUINT64 &rds)
 {
   VUINT64 fail_ds_list;
-  return get_block_info_ex(block_id, rds, BLOCK_WRITE | BLOCK_NOLEASE, fail_ds_list);
+  return get_block_info_ex(block_id, rds, T_WRITE | T_NOLEASE, fail_ds_list);
 }
 
 int TfsSession::get_block_info_ex(uint32_t& block_id, VUINT64 &rds, const int32_t mode, VUINT64& fail_ds_list)
