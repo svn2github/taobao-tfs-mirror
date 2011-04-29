@@ -252,17 +252,17 @@ int LocalKey::remove()
   return ret;
 }
 
-int32_t LocalKey::get_data_size()
+int32_t LocalKey::get_data_size() const
 {
   return sizeof(SegmentHead) + seg_head_.count_ * sizeof(SegmentInfo);
 }
 
-int64_t LocalKey::get_file_size()
+int64_t LocalKey::get_file_size() const
 {
   return seg_head_.size_;
 }
 
-int32_t LocalKey::get_segment_size()
+int32_t LocalKey::get_segment_size() const
 {
   return seg_head_.count_;
 }

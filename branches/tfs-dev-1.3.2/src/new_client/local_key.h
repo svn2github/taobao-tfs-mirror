@@ -96,9 +96,9 @@ namespace tfs
       int add_segment(common::SegmentInfo& seg_info);
       int dump_data(char* buf);
 
-      int32_t get_data_size();    // get raw data size of segment head and data
-      int64_t get_file_size();    // get size that segments contain
-      int32_t get_segment_size(); // get segment count
+      int32_t get_data_size() const;    // get raw data size of segment head and data
+      int64_t get_file_size() const;    // get size that segments contain
+      int32_t get_segment_size() const; // get segment count
       SEG_SET& get_seg_info()
       {
         return seg_info_;

@@ -73,6 +73,11 @@ int TfsClient::close(const int fd, char* tfs_name, const int32_t len)
   return TfsClientImpl::Instance()->close(fd, tfs_name, len);
 }
 
+int64_t TfsClient::get_file_length(const int fd)
+{
+  return TfsClientImpl::Instance()->get_file_length(fd);
+}
+
 int TfsClient::unlink(const char* file_name, const char* suffix, const char* ns_addr, const TfsUnlinkType action)
 {
   return TfsClientImpl::Instance()->unlink(file_name, suffix, ns_addr, action);

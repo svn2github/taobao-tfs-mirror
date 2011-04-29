@@ -157,6 +157,11 @@ int TfsLargeFile::close()
   return close_ex();
 }
 
+int64_t TfsLargeFile::get_file_length() const
+{
+  return local_key_.get_file_size();
+}
+
 int TfsLargeFile::unlink(const char* file_name, const char* suffix, const TfsUnlinkType action)
 {
   // read meta first

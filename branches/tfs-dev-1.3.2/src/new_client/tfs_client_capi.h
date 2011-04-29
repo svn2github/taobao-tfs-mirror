@@ -7,8 +7,6 @@
 extern "C"
 {
 #endif
-
-
   /**
    * init tfs client
    * @param ns_addr  which cluster will be used
@@ -40,6 +38,7 @@ extern "C"
   int64_t t_pread(const int fd, void* buf, const int64_t count, const int64_t offset);
   int64_t t_pwrite(const int fd, const void* buf, const int64_t count, const int64_t offset);
   int t_fstat(const int fd, TfsFileStat* buf, const TfsStatFlag mode);
+  int64_t t_get_file_length(const int fd);
 
   /**
    * close tfs file
