@@ -347,6 +347,7 @@ int64_t LocalKey::get_segment_for_write(const int64_t offset, const char* buf,
           {
             TBSYS_LOG(INFO, "segment data written: offset: %"PRI64_PREFIX"d, blockid: %u, fileid: %"PRI64_PREFIX"u, size: %d, crc: %u", it->offset_, it->block_id_, it->file_id_, it->size_, it->crc_);
             written_size += it->size_;
+            remain_nw_size = 0;
             break;
           }
           it++;
