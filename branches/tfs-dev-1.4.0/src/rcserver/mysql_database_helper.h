@@ -15,6 +15,8 @@
 */
 #ifndef TFS_RCSERVER_MYSQL_DATABASE_HELPER_H_
 #define TFS_RCSERVER_MYSQL_DATABASE_HELPER_H_
+#include <tbsys.h>
+#include <Mutex.h>
 #include "database_helper.h"
 namespace tfs
 {
@@ -22,14 +24,24 @@ namespace tfs
   {
     class MysqlDatabaseHelper :public DatabaseHelper
     {
-      virtual int connect();
-      virtual int close();
+      public:
+        virtual ~MysqlDatabaseHelper();
+        virtual int connect();
+        virtual int close();
 
-      //ResourceServerInfo 
-      virtual int select(const ResourceServerInfo& inparam, ResourceServerInfo& outparam);
-      virtual int update(const ResourceServerInfo& inparam);
-      virtual int remove(const ResourceServerInfo& inparam);
-      virtual int scan(const ResourceServerInfo& inparam, VResourceServerInfo& outparam);
+        //ResourceServerInfo 
+        virtual int select(const ResourceServerInfo& inparam, ResourceServerInfo& outparam);
+        virtual int update(const ResourceServerInfo& inparam);
+        virtual int remove(const ResourceServerInfo& inparam);
+        virtual int scan(VResourceServerInfo& outparam);
+
+        //AppInfo
+        virtual int select(const AppInfo& inparam, AppInfo& outparam);
+        virtual int update(const AppInfo& inparam);
+        virtual int remove(const AppInfo& inparam);
+        virtual int scan(MIdAppInfo& outparam);
+      private:
+        tbutil::Mutex mutex_;
 
     };
 

@@ -18,6 +18,7 @@
 #include "common/define.h"
 namespace tfs
 {
+  using namespace common;
   namespace rcserver
   {
     DatabaseHelper::DatabaseHelper()
@@ -30,10 +31,6 @@ namespace tfs
 
     DatabaseHelper::~DatabaseHelper()
     {
-      if (is_connected_)
-      {
-        close();
-      }
     }
 
     int DatabaseHelper::set_conn_param(const char* conn_str, const char* user_name, const char* passwd)

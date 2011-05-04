@@ -17,6 +17,7 @@
 #ifndef TFS_RCSERVER_DATABASE_HELPER_H_
 #define TFS_RCSERVER_DATABASE_HELPER_H_
 #include "resource_server_data.h"
+#include "common/define.h"
 namespace tfs
 {
   namespace rcserver
@@ -37,16 +38,18 @@ namespace tfs
         virtual int select(const ResourceServerInfo& inparam, ResourceServerInfo& outparam) = 0;
         virtual int update(const ResourceServerInfo& inparam) = 0;
         virtual int remove(const ResourceServerInfo& inparam) = 0;
-        virtual int scan(const ResourceServerInfo& inparam, VResourceServerInfo& outparam) = 0;
+        virtual int scan(VResourceServerInfo& outparam) = 0;
 
         //AppInfo
         virtual int select(const AppInfo& inparam, AppInfo& outparam) = 0;
         virtual int update(const AppInfo& inparam) = 0;
         virtual int remove(const AppInfo& inparam) = 0;
-        virtual int scan(const AppInfo& inparam, MIdAppInfo& outparam) = 0;
+        virtual int scan(MIdAppInfo& outparam) = 0;
 
       protected:
-        const int CONN_STR_LEN = 256;
+        enum {
+          CONN_STR_LEN = 256,
+        };
         char conn_str_[CONN_STR_LEN];
         char user_name_[CONN_STR_LEN];
         char passwd_[CONN_STR_LEN];

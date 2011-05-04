@@ -17,6 +17,8 @@
 #define TFS_RCSERVER_RESOURCE_SERVER_DATA_H_
 #include <stdint.h>
 #include <vector>
+#include <map>
+#include <string>
 namespace tfs
 {
   namespace rcserver
@@ -38,7 +40,7 @@ namespace tfs
       {
         stat_ = -1;
         addr_info_[0] = '\0';
-        rem[0] = '\0';
+        rem_[0] = '\0';
       }
     };
     typedef std::vector<ResourceServerInfo> VResourceServerInfo;
@@ -143,39 +145,39 @@ namespace tfs
     };
     typedef std::map<int32_t, AppInfo> MIdAppInfo;  //map<id, appinfo>
 
-    struct SessionInfo
-    {
-      int64_t cache_size_;
-      int64_t logout_time_;
-      char session_id_[SESSION_ID_LEN];
-      char client_version_[CLIENT_VERSION_LEN];
-      SessionInfo()
-      {
-        cache_size_ = -1;
-        logout_time_ = -1;
-        session_id_[0] = '\0';
-        client_version_[0] = '\0';
-      }
-    };
-    typedef std::map<std::string, SessionInfo> MIdSessionInfo;
+    //struct SessionInfo
+    //{
+    //  int64_t cache_size_;
+    //  int64_t logout_time_;
+    //  char session_id_[SESSION_ID_LEN];
+    //  char client_version_[CLIENT_VERSION_LEN];
+    //  SessionInfo()
+    //  {
+    //    cache_size_ = -1;
+    //    logout_time_ = -1;
+    //    session_id_[0] = '\0';
+    //    client_version_[0] = '\0';
+    //  }
+    //};
+    //typedef std::map<std::string, SessionInfo> MIdSessionInfo;
 
-    struct SessionStat
-    {
-      int32_t oper_type_;
-      int32_t response_time_;
-      int64_t oper_times_;
-      int64_t file_size_;
-      char session_id_[SESSION_ID_LEN];
-      SessionStat()
-      {
-        oper_type_ = -1;
-        response_time_ = -1;
-        oper_times_ = -1;
-        file_size_ = -1;
-        session_id_[0] ='\0';
-      }
-    };
-    typedef std::map<std::string, SessionStat> MIdSessionStat;
+    //struct SessionStat
+    //{
+    //  int32_t oper_type_;
+    //  int32_t response_time_;
+    //  int64_t oper_times_;
+    //  int64_t file_size_;
+    //  char session_id_[SESSION_ID_LEN];
+    //  SessionStat()
+    //  {
+    //    oper_type_ = -1;
+    //    response_time_ = -1;
+    //    oper_times_ = -1;
+    //    file_size_ = -1;
+    //    session_id_[0] ='\0';
+    //  }
+    //};
+    //typedef std::map<std::string, map<int32_t, SessionStat> > MIdSessionStat;
 
     struct AppStat
     {
