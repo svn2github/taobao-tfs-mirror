@@ -24,31 +24,14 @@ namespace tfs
     int BaseResource::load()
     {
       //Todo
+      //set base_last_update_time_
       return TFS_SUCCESS;
     }
 
-    int BaseResource::load_rc_server()
+    bool BaseResource::need_reload(const int64_t update_time_in_db) const
     {
-      //Todo
-      return TFS_SUCCESS;
+      return update_time_in_db > base_last_update_time_;
     }
 
-    int BaseResource::load_cluster_rack()
-    {
-      //Todo
-      return TFS_SUCCESS;
-    }
-
-    int BaseResource::load_app_group()
-    {
-      //Todo
-      return TFS_SUCCESS;
-    }
-
-    int BaseResource::load_duplicate_server()
-    {
-      //Todo
-      return TFS_SUCCESS;
-    }
   }
 }

@@ -26,23 +26,12 @@ namespace tfs
 {
   namespace rcserver
   {
-    struct ClusterInfo
-    {
-      std::string cluster_id_;
-      uint64_t ns_vip_;
-      uint64_t cluster_stat_;
-    };
-
-    struct AppRackInfo
-    {
-      uint64_t cluster_rack_id_;
-      uint64_t rack_access_type_;
-    };
-
     class BaseResource : public IResource
     {
       public:
-        BaseResource(MysqlConn* mysql_conn) : IResource(mysql_conn)
+        
+        BaseResource(DatabaseHelper& database_helper) : 
+          IResource(database_helper), base_last_update_time_(-1)
         {
         }
         virtual ~BaseResource()
@@ -51,25 +40,17 @@ namespace tfs
 
       public:
         virtual int load();
+        bool need_reload(const int64_t update_time_in_db) const;
+        int get_resource_servers(std::set<uint64_t>& resource_servers) const;
+        int get_cluster_infos(const int32_t cluster_group_id, 
+            std::set<ClusterRackData>& cluster_rack_datas);
 
       private:
-        int load_rc_server();
-        int load_cluster_rack();
-        int load_app_group();
-        int load_duplicate_server();
-
-      private:
-        BaseResource();
-        DISALLOW_COPY_AND_ASSIGN(BaseResource);
-
-        // server_id <-> status
-        std::map<uint64_t, uint64_t> rc_server_info_;
-        // cluster_rack_id <-> set<ClusterInfo>
-        std::map<uint64_t, std::set<ClusterInfo> > cluster_rack_info_;
-        // app_group_id <-> set<AppRackInfo>
-        std::map<uint64_t, std::set<AppRackInfo> > app_group_info_;
-        // cluster_rack_id <-> config_server_ids
-        std::map<uint64_t, std::set<uint64_t> > rack_dup_info_;
+        int64_t base_last_update_time_;
+        VResourceServerInfo v_resource_server_info_;
+        VClusterRackInfo v_cluster_rack_info_;
+        VClusterRackGroup v_cluster_rack_group_;
+        VClusterRackDuplicateServer v_cluster_rack_duplicate_server_;
     };
   }
 }

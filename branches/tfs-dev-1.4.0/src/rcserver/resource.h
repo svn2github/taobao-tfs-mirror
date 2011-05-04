@@ -15,19 +15,16 @@
  */
 #ifndef TFS_RCSERVER_RESOURCE_H_
 #define TFS_RCSERVER_RESOURCE_H_
-
-#include "common/define.h"
-#include "mysql_conn.h"
+#include "database_helper.h"
 
 namespace tfs
 {
   namespace rcserver
   {
-    class MysqlConn;
     class IResource
     {
       public:
-        IResource(MysqlConn* mysql_conn) : mysql_conn_(mysql_conn)
+        explicit IResource(DatabaseHelper& database_helper) : database_helper_(database_helper)
         {
         }
         virtual ~IResource()
@@ -37,12 +34,11 @@ namespace tfs
       public:
         virtual int load() = 0;
 
-      private:
-        IResource();
-        DISALLOW_COPY_AND_ASSIGN(IResource);
-
       protected:
-        MysqlConn* mysql_conn_;
+        DatabaseHelper& database_helper_;
+
+      private:
+        DISALLOW_COPY_AND_ASSIGN(IResource);
     };
   }
 }

@@ -19,11 +19,8 @@
 #include <map>
 #include <set>
 #include <string>
-#include "mysql_conn.h"
-#include "base_resource.h"
-#include "app_resource.h"
-#include "update_resource.h"
 #include "common/define.h"
+#include "mysql_database_helper.h"
 
 namespace tfs
 {
@@ -31,11 +28,9 @@ namespace tfs
   {
     struct BaseInfo
     {
-      std::set<uint64_t> rc_server_info_;
-      std::set<ClusterInfo> cluster_info_;
-      bool duplicate_flag_;
-      std::set<uint64_t> duplicate_config_server_id_;
-      uint64_t report_interval_;
+      std::set<int64_t> rc_server_infos_;
+      std::set<ClusterRackData> cluster_infos_;
+      int32_t report_interval_;
     };
 
     //enum LoadFlag
@@ -45,12 +40,14 @@ namespace tfs
     //  LOAD_BASE,
     //  LOAD_APP
     //};
+    class AppResource;
+    class BaseResource;
 
     class ResourceManager
     {
       public:
         ResourceManager() :
-          mysql_conn_(NULL), update_resource_(NULL), base_resource_(NULL), app_resource_(NULL)
+          app_resource_manager_(NULL)
         {
         }
         ~ResourceManager()
@@ -68,11 +65,10 @@ namespace tfs
 
       private:
         DISALLOW_COPY_AND_ASSIGN(ResourceManager);
+        MysqlDatabaseHelper database_helper_;
+        AppResource* app_resource_manager_;
+        BaseResource* base_resource_manager_;
 
-        MysqlConn* mysql_conn_;
-        IResource* update_resource_;
-        IResource* base_resource_;
-        IResource* app_resource_;
     };
   }
 }
