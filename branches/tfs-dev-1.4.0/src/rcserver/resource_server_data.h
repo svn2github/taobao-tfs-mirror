@@ -47,14 +47,12 @@ namespace tfs
     {
       int32_t cluster_stat_;
       int32_t access_type_;
-      char cluster_id_[CLUSTER_ID_LEN];
-      char ns_vip_[CLUSTER_ID_LEN];
+      std::string cluster_id_;
+      std::string ns_vip_;
       ClusterData()
       {
         cluster_stat_ = -1;
         access_type_ = -1;
-        cluster_id_[0] = '\0';
-        ns_vip_[0] = '\0';
       }
     };
 
