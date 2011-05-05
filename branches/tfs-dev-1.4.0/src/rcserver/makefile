@@ -3,4 +3,4 @@ all:
 		database_helper.cpp mysql_database_helper.cpp data_test.cpp \
 		`mysql_config --libs` \
       $(TBLIB_ROOT)/lib/libtbnet.a \
-      $(TBLIB_ROOT)/lib/libtbsys.a -lpthread
+      $(TBLIB_ROOT)/lib/libtbsys.a -lpthread -lrt
