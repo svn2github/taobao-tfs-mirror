@@ -31,6 +31,21 @@ namespace tfs
       public:
         int initialize()
         {
+          apps_["pic"] = "10001";
+          apps_["ic"] = "10002";
+          apps_["uc"] = "10003";
+          apps_["dc"] = "10004";
+          apps_["cc"] = "10005";
+
+          old_info_.report_interval_ = 10;
+          new_info_.report_interval_ = 20;
+
+          id_2_mtimes_[10001] = 100000;
+          id_2_mtimes_[10002] = 200000;
+          id_2_mtimes_[10003] = 300000;
+          id_2_mtimes_[10004] = 400000;
+          id_2_mtimes_[10005] = 500000;
+
           return common::TFS_SUCCESS;
         }
 
@@ -39,23 +54,57 @@ namespace tfs
           return common::TFS_SUCCESS;
         }
 
-        int login(const std::string& app_key, const uint64_t session_ip, BaseInfo& base_info)
+        int login(const std::string& app_key, int32_t& app_id, BaseInfo& base_info)
         {
-          return common::TFS_SUCCESS;
+          int ret = common::TFS_SUCCESS;
+          std::map<std::string, int32_t>::iterator mit = apps_.find(app_key);
+          if (mit == apps_.end())
+          {
+            ret = common::EXIT_APP_NOTEXIST_ERROR;
+          }
+          else
+          {
+            app_id = mit->second;
+            base_info = old_info_;
+          }
+          return ret;
         }
 
-        int keep_alive(const std::string& session_id, const uint64_t modify_time, BaseInfo& base_info)
+        int check_update_info(const int32_t app_id, const uint64_t modify_time, bool& update_flag, BaseInfo& base_info)
         {
-          return common::TFS_SUCCESS;
+          int ret = common::TFS_SUCCESS;
+          std::map<int32_t, int64_t>::iterator mit = id_2_mtimes_.find(app_id);
+          if (mit == apps_.end())
+          {
+            ret = common::EXIT_APP_NOTEXIST_ERROR;
+          }
+          else
+          {
+            if (modify_time < mit->second) //need update
+            {
+              update_flag = true;
+              base_info = new_info_; //copy info
+            }
+            else // >= 
+            {
+              update_flag = false;
+            }
+          }
+
+          return ret;
         }
 
         int logout(const std::string& session_id)
         {
-          return common::TFS_SUCCESS;
+          int ret = common::TFS_SUCCESS;
+          return ret;
         }
 
       private:
         DISALLOW_COPY_AND_ASSIGN(MockedResourceManager);
+        std::map<std::string, int32_t> apps_;
+        std::map<int32_t, int64_t> id_2_mtimes_;
+        BaseInfo old_info_, new_info_;
     };
   }
 }

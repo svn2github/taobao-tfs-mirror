@@ -55,6 +55,7 @@ namespace tfs
 
       KeepAliveInfo& operator +=(const KeepAliveInfo& right)
       {
+        //Todo
         return *this;
       }
     };
@@ -72,13 +73,14 @@ namespace tfs
         }
 
       public:
-        int initialize();
+        int initialize(bool reload_flag = false);
         int wait_for_shut_down();
         void destroy();
 
         int login(const std::string& app_key, const int64_t session_ip,
             std::string& session_id, BaseInfo& base_info);
-        int keep_alive(const std::string& session_id, const KeepAliveInfo& keep_alive_info, BaseInfo& base_info);
+        int keep_alive(const std::string& session_id, const KeepAliveInfo& keep_alive_info,
+            bool& update_flag, BaseInfo& base_info);
         int logout(const std::string& session_id, const KeepAliveInfo& keep_alive_info);
 
         // write session info to data source
@@ -151,6 +153,8 @@ namespace tfs
         SessionStatTaskPtr stat_monitor_task_;
         SessionExpireTaskPtr expire_task_;
 
+        bool is_init_;
+        tbutil::Mutex mutex_;
     };
   }
 }

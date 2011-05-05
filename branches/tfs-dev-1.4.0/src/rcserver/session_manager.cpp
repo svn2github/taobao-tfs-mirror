@@ -24,29 +24,52 @@ namespace tfs
     using namespace common;
     using namespace std;
 
-    int SessionManager::initialize()
+    int SessionManager::initialize(bool reload_flag)
     {
       int ret = TFS_SUCCESS;
-      if (NULL == resource_manager_ || 0 == timer_)
+      if (NULL == resource_manager_ || 0 == timer_ || (!is_init_ && reload_flag) || (is_init_ && !reload_flag))
       {
         ret = EXIT_INVALID_ARGU;
+        TBSYS_LOG(ERROR, "call ResourceManager::initialize failed, is_init_: %d, reload_flag: %d, ret: %d",
+            is_init_, reload_flag, ret);
       }
       else
       {
-        stat_db_task_ = new SessionStatTask(*this, STAT_DB);
-        stat_monitor_task_ = new SessionStatTask(*this, STAT_MONITOR);
-        expire_task_ = new SessionExpireTask(*this);
-
-        int64_t db_interval, monitor_interval, expire_interval; // read this from config file
-        //scheduleRepeated return 0 if succ
-        if (((ret = timer_->scheduleRepeated(stat_db_task_, tbutil::Time::seconds(db_interval))) != 0)
-            || ((ret = timer_->scheduleRepeated(stat_monitor_task_, tbutil::Time::seconds(monitor_interval))) != 0)
-            || ((ret = timer_->scheduleRepeated(expire_task_, tbutil::Time::seconds(expire_interval))) != 0)
-            )
+        if ((!is_init_ && !reload_flag) || (is_init_ && reload_flag))
         {
-          TBSYS_LOG(ERROR, "call scheduleRepeated failed, db_interval_: %"PRI64_PREFIX"d, monitor_interval_: %"PRI64_PREFIX"d,"
-              " expire_interval_: %"PRI64_PREFIX"d, ret: %d",
-              db_interval, monitor_interval, expire_interval, ret);
+          tbutil::Mutex::Lock lock(mutex_);
+          if ((!is_init_ && !reload_flag) || (is_init_ && reload_flag))
+          {
+            if (is_init_ && reload_flag)
+            {
+              destroy_ = true;
+              wait_for_shut_down();
+            }
+
+            destroy_ = false;
+            int64_t db_interval = 10, monitor_interval = 10, expire_interval = 10; // read this from config file
+
+            //scheduleRepeated return 0 if succ
+            if (((ret = timer_->scheduleRepeated(stat_db_task_, tbutil::Time::seconds(db_interval))) != 0)
+                || ((ret = timer_->scheduleRepeated(stat_monitor_task_, tbutil::Time::seconds(monitor_interval))) != 0)
+                || ((ret = timer_->scheduleRepeated(expire_task_, tbutil::Time::seconds(expire_interval))) != 0)
+               )
+            {
+              TBSYS_LOG(ERROR, "call scheduleRepeated failed, db_interval_: %"PRI64_PREFIX"d, monitor_interval_: %"PRI64_PREFIX"d,"
+                  " expire_interval_: %"PRI64_PREFIX"d, ret: %d",
+                  db_interval, monitor_interval, expire_interval, ret);
+
+              destroy_ = true;
+              wait_for_shut_down();
+
+              ret = TFS_ERROR;
+            }
+            else
+            {
+              is_init_ = true;
+              ret = TFS_SUCCESS;
+            }
+          }
         }
       }
 
@@ -60,14 +83,17 @@ namespace tfs
         if (0 != stat_db_task_)
         {
           timer_->cancel(stat_db_task_);
+          stat_db_task_ = 0;
         }
         if (0 != stat_monitor_task_)
         {
           timer_->cancel(stat_monitor_task_);
+          stat_monitor_task_ = 0;
         }
         if (0 != expire_task_)
         {
           timer_->cancel(expire_task_);
+          expire_task_ = 0;
         }
       }
 
@@ -76,7 +102,9 @@ namespace tfs
 
     void SessionManager::destroy()
     {
+      tbutil::Mutex::Lock lock(mutex_);
       destroy_ = true;
+      is_init_ = false;
     }
 
     int SessionManager::login(const std::string& app_key, const int64_t session_ip,
@@ -105,7 +133,8 @@ namespace tfs
       return ret;
     }
 
-    int SessionManager::keep_alive(const std::string& session_id, const KeepAliveInfo& keep_alive_info, BaseInfo& base_info)
+    int SessionManager::keep_alive(const std::string& session_id, const KeepAliveInfo& keep_alive_info,
+        bool& update_flag, BaseInfo& base_info)
     {
       int ret = TFS_SUCCESS;
       // get app_id from session_id
@@ -119,18 +148,17 @@ namespace tfs
               " session_id: %s, modify time: %"PRI64_PREFIX"d, ret: %d",
               session_id.c_str(), keep_alive_info.s_base_info_.modify_time_, ret);
         }
+        else if ((ret = resource_manager_->check_update_info(app_id, keep_alive_info.s_base_info_.modify_time_,
+                update_flag, base_info)) != TFS_SUCCESS)
+        {
+          TBSYS_LOG(ERROR, "call IResourceManager::check_update_info failed. app_id: %d, modify_time: %"PRI64_PREFIX"d, ret: %d",
+              app_id, keep_alive_info.s_base_info_.modify_time_, ret);
+        }
       }
       else
       {
         TBSYS_LOG(ERROR, "call SessionManager::parse_session_id failed, session_id: %s, modify time: %"PRI64_PREFIX"d, ret: %d",
             session_id.c_str(), keep_alive_info.s_base_info_.modify_time_, ret);
-      }
-      
-      if (TFS_SUCCESS == ret)
-      {
-        // get update info
-        ret = resource_manager_->keep_alive(session_id, keep_alive_info.s_base_info_.modify_time_, base_info);
-        // Todo
       }
       return ret;
     }
@@ -158,9 +186,7 @@ namespace tfs
 
       if (TFS_SUCCESS == ret)
       {
-        // get update info
-        ret = resource_manager_->logout(session_id);
-        // Todo
+        resource_manager_->logout(session_id); //don't care the retcode of logout
       }
 
       return ret;
