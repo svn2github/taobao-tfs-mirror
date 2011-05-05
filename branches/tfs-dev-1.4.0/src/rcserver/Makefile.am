@@ -10,10 +10,12 @@ LDADD=$(top_builddir)/src/message/libtfsmessage.a \
       $(TBLIB_ROOT)/lib/libtbsys.a
 
 noinst_LIBRARIES=librcserver.a
-librcserver_a_SOURCES=resource_manager.cpp mysql_conn.cpp update_resource.cpp \
-                      app_resource.cpp base_resource.cpp \
-                      resource_manager.h uuid.h resource.h mysql_conn.h \
-                      update_resource.h base_resource.h app_resource.h
+#librcserver_a_SOURCES=resource_manager.cpp mysql_conn.cpp update_resource.cpp \
+#                      app_resource.cpp base_resource.cpp session_manager.cpp\
+#                      resource_manager.h uuid.h resource.h mysql_conn.h \
+#                      update_resource.h base_resource.h app_resource.h session_manager.h
 
+librcserver_a_SOURCES=session_manager.cpp
+											
 #bin_PROGRAMS = rcserver
 #rcserver_SOURCES=$(librcserver_a_SOURCES) service.cpp 

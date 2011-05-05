@@ -6,9 +6,9 @@
  * published by the Free Software Foundation.
  *
  *
- * Version: $Id 
+ * Version: $Id
  *
- *   
+ *
  *   Authors:
  *          daoan(daoan@taobao.com)
  *
@@ -32,7 +32,7 @@ namespace tfs
     const int SESSION_ID_LEN = 256;
     const int CLIENT_VERSION_LEN = 64;
 
-    struct ResourceServerInfo 
+    struct ResourceServerInfo
     {
       int32_t stat_;
       char addr_info_[ADDR_INFO_LEN];
@@ -88,7 +88,7 @@ namespace tfs
     };
     typedef std::vector<ClusterRackGroup> VClusterRackGroup;
 
-    struct ClusterRackDate
+    struct ClusterRackData
     {
       bool need_duplicate_;
       std::string dupliate_server_addr_;
@@ -155,7 +155,7 @@ namespace tfs
       // need extend?
     };
 
-    enum OperType 
+    enum OperType
     {
       OPER_READ = 1,
       OPER_WRITE,

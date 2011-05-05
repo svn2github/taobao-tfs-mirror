@@ -14,7 +14,7 @@ namespace tfs
       uuid_generate(uu);
       char buf[37];
       uuid_unparse(uu, buf);
-      return string(buf);
+      return std::string(buf);
     }
   }
 }

@@ -26,12 +26,6 @@ namespace tfs
 {
   namespace rcserver
   {
-    struct BaseInfo
-    {
-      std::set<int64_t> rc_server_infos_;
-      std::set<ClusterRackData> cluster_infos_;
-      int32_t report_interval_;
-    };
 
     //enum LoadFlag
     //{
@@ -58,8 +52,7 @@ namespace tfs
         int initialize();
         int load();
 
-        int login(const std::string& app_key, const uint64_t session_ip,
-            /*std::string& session_id, */BaseInfo& base_info);
+        int login(const std::string& app_key, const uint64_t session_ip, BaseInfo& base_info);
         int keep_alive(const std::string& session_id, const uint64_t modify_time, BaseInfo& base_info);
         int logout(const std::string& session_id);
 
