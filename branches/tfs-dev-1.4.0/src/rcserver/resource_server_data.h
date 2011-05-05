@@ -91,8 +91,13 @@ namespace tfs
     struct ClusterRackData
     {
       bool need_duplicate_;
-      std::string dupliate_server_addr_;
+      uint64_t dupliate_server_addr_;
       std::vector<ClusterData> cluster_data_;
+      ClusterRackData()
+      {
+        need_duplicate_ = false;
+        dupliate_server_addr_ = 0;
+      }
     };
 
     struct ClusterRackDuplicateServer

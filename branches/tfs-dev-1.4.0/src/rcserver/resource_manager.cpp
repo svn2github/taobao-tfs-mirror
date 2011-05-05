@@ -53,8 +53,7 @@ namespace tfs
       return ret;
     }
 
-    int ResourceManager::login(const std::string& app_key, const uint64_t session_ip,
-        /*std::string& session_id, */BaseInfo& base_info)
+    int ResourceManager::login(const std::string& app_key, /*std::string& session_id, */BaseInfo& base_info)
     {
       int ret = TFS_SUCCESS;
       AppInfo app_info;

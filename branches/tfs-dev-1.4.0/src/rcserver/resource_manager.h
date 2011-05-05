@@ -52,7 +52,7 @@ namespace tfs
         int initialize();
         int load();
 
-        int login(const std::string& app_key, const uint64_t session_ip, BaseInfo& base_info);
+        int login(const std::string& app_key, BaseInfo& base_info);
         int keep_alive(const std::string& session_id, const uint64_t modify_time, BaseInfo& base_info);
         int logout(const std::string& session_id);
 
