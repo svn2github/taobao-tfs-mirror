@@ -19,6 +19,7 @@
 #include <vector>
 #include <map>
 #include <string>
+#include <set>
 namespace tfs
 {
   namespace rcserver
@@ -144,6 +145,39 @@ namespace tfs
       }
     };
     typedef std::map<int32_t, AppInfo> MIdAppInfo;  //map<id, appinfo>
+
+    struct SessionBaseInfo
+    {
+      std::string session_id_;
+      std::string client_version_;
+      uint64_t cache_size_;
+      uint64_t modify_time_;
+      // need extend?
+    };
+
+    enum OperType 
+    {
+      OPER_READ = 1,
+      OPER_WRITE,
+      OPER_UNIQUE_WRITE,
+      OPER_UNLINK,
+      OPER_UNIQUE_UNLINK
+    };
+
+    struct AppOperInfo
+    {
+      OperType oper_type_;
+      uint64_t oper_times_;  //total
+      uint64_t oper_size_;   //succ
+      uint64_t oper_rt_;     //succ ¿€º”÷µ
+      uint64_t oper_succ_;
+    };
+
+    struct SessionStat
+    {
+      std::set<AppOperInfo> app_oper_info_;
+      uint64_t cache_hit_ratio;
+    };
 
     //struct SessionInfo
     //{
