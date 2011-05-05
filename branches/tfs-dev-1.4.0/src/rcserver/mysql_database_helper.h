@@ -35,11 +35,27 @@ namespace tfs
         virtual int remove(const ResourceServerInfo& inparam);
         virtual int scan(VResourceServerInfo& outparam);
 
+        //ClusterRackInfo
+        virtual int select(const ClusterRackInfo& inparam, ClusterRackInfo& outparam);
+        virtual int update(const ClusterRackInfo& inparam);
+        virtual int remove(const ClusterRackInfo& inparam);
+        virtual int scan(VClusterRackInfo& outparam);
+
+        //ClusterRackGroup
+        virtual int scan(VClusterRackGroup& outparam);
+
+        //ClusterRackDuplicateServer
+        virtual int scan(VClusterRackDuplicateServer& outparam);
+
+        //BaseInfoUpdateTime
+        virtual int select(BaseInfoUpdateTime& outparam);
+
         //AppInfo
         virtual int select(const AppInfo& inparam, AppInfo& outparam);
         virtual int update(const AppInfo& inparam);
         virtual int remove(const AppInfo& inparam);
         virtual int scan(MIdAppInfo& outparam);
+
       private:
         tbutil::Mutex mutex_;
 

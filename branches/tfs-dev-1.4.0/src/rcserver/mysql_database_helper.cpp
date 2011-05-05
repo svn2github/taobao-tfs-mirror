@@ -147,6 +147,7 @@ namespace tfs
     {
       close_mysql();
       is_connected_ = false;
+      return TFS_SUCCESS;
     }
 
     int MysqlDatabaseHelper::select(const ResourceServerInfo& inparam, ResourceServerInfo& outparam)
@@ -201,12 +202,210 @@ namespace tfs
           goto error;
         }
 
-        while(row = mysql_fetch_row(mysql_ret))
+        while(NULL != (row = mysql_fetch_row(mysql_ret)))
         {
           snprintf(tmp.addr_info_, ADDR_INFO_LEN, "%s", row[0]);
           tmp.stat_ = atoi(row[1]);
           snprintf(tmp.rem_, REM_LEN, "%s", row[2]);
           outparam.push_back(tmp);
+        }
+
+error:
+        mysql_free_result(mysql_ret);
+      }
+      return ret;
+    }
+
+    int MysqlDatabaseHelper::select(const ClusterRackInfo& inparam, ClusterRackInfo& outparam)
+    {
+      tbutil::Mutex::Lock lock(mutex_);
+      int ret = TFS_ERROR;
+      return ret;
+    }
+
+    int MysqlDatabaseHelper::update(const ClusterRackInfo& inparam)
+    {
+      tbutil::Mutex::Lock lock(mutex_);
+      int ret = TFS_ERROR;
+      return ret;
+    }
+
+    int MysqlDatabaseHelper::remove(const ClusterRackInfo& inparam)
+    {
+      tbutil::Mutex::Lock lock(mutex_);
+      int ret = TFS_ERROR;
+      return ret;
+    }
+
+    int MysqlDatabaseHelper::scan(VClusterRackInfo& outparam)
+    {
+      outparam.clear();
+      tbutil::Mutex::Lock lock(mutex_);
+      int ret = TFS_ERROR;
+      if (is_connected_)
+      {
+        char sql[1024];
+        char table[256];
+        snprintf(table, 256, "%s", "T_CLUSTER_RACK_INFO");
+        snprintf(sql, 1024, "select cluster_rack_id, cluster_id, ns_vip, "
+            "cluster_stat, rem from %s", table);
+        ret = mysql_query(&mysql_.mysql, sql);
+        if (ret) {
+          TBSYS_LOG(WARN, "query (%s) failure: %s %s", sql,  mysql_.host.c_str(), mysql_error(&mysql_.mysql));
+          close();
+          return TFS_ERROR;
+        }
+
+        MYSQL_ROW row;
+        ClusterRackInfo tmp;
+
+        MYSQL_RES *mysql_ret = mysql_store_result(&mysql_.mysql);
+        if (mysql_ret == NULL) {
+          TBSYS_LOG(WARN, "mysql_store_result failure: %s %s", mysql_.host.c_str(), mysql_error(&mysql_.mysql));
+          close();
+          ret = TFS_ERROR;
+          goto error;
+        }
+
+        while(NULL != (row = mysql_fetch_row(mysql_ret)))
+        {
+          tmp.cluster_rack_id_ = atoi(row[0]);
+          tmp.cluster_data_.cluster_id_ = row[1];
+          tmp.cluster_data_.ns_vip_ = row[2];
+          tmp.cluster_data_.cluster_stat_ = atoi(row[3]);
+          tmp.cluster_data_.access_type_ = -1;
+          snprintf(tmp.rem_, REM_LEN, "%s", row[4]);
+          outparam.push_back(tmp);
+        }
+
+error:
+        mysql_free_result(mysql_ret);
+      }
+      return ret;
+    }
+    int MysqlDatabaseHelper::scan(VClusterRackGroup& outparam)
+    {
+      outparam.clear();
+      tbutil::Mutex::Lock lock(mutex_);
+      int ret = TFS_ERROR;
+      if (is_connected_)
+      {
+        char sql[1024];
+        char table[256];
+        snprintf(table, 256, "%s", "T_CLUSTER_RACK_GROUP");
+        snprintf(sql, 1024, "select cluster_group_id, cluster_rack_id, cluster_rack_access_type, "
+            "rem from %s", table);
+        ret = mysql_query(&mysql_.mysql, sql);
+        if (ret) {
+          TBSYS_LOG(WARN, "query (%s) failure: %s %s", sql,  mysql_.host.c_str(), mysql_error(&mysql_.mysql));
+          close();
+          return TFS_ERROR;
+        }
+
+        MYSQL_ROW row;
+        ClusterRackGroup tmp;
+
+        MYSQL_RES *mysql_ret = mysql_store_result(&mysql_.mysql);
+        if (mysql_ret == NULL) {
+          TBSYS_LOG(WARN, "mysql_store_result failure: %s %s", mysql_.host.c_str(), mysql_error(&mysql_.mysql));
+          close();
+          ret = TFS_ERROR;
+          goto error;
+        }
+
+        while(NULL != (row = mysql_fetch_row(mysql_ret)))
+        {
+          tmp.cluster_group_id_ = atoi(row[0]);
+          tmp.cluster_rack_id_ = atoi(row[1]);
+          tmp.cluster_rack_access_type_ = atoi(row[2]);
+          snprintf(tmp.rem_, REM_LEN, "%s", row[3]);
+          outparam.push_back(tmp);
+        }
+
+error:
+        mysql_free_result(mysql_ret);
+      }
+      return ret;
+    }
+
+    int MysqlDatabaseHelper::scan(VClusterRackDuplicateServer& outparam)
+    {
+      outparam.clear();
+      tbutil::Mutex::Lock lock(mutex_);
+      int ret = TFS_ERROR;
+      if (is_connected_)
+      {
+        char sql[1024];
+        char table[256];
+        snprintf(table, 256, "%s", "T_CLUSTER_RACK_DUPLICATE_SERVER");
+        snprintf(sql, 1024, "select cluster_rack_id, dupliate_server_addr from %s", table);
+        ret = mysql_query(&mysql_.mysql, sql);
+        if (ret) {
+          TBSYS_LOG(WARN, "query (%s) failure: %s %s", sql,  mysql_.host.c_str(), mysql_error(&mysql_.mysql));
+          close();
+          return TFS_ERROR;
+        }
+
+        MYSQL_ROW row;
+        ClusterRackDuplicateServer tmp;
+
+        MYSQL_RES *mysql_ret = mysql_store_result(&mysql_.mysql);
+        if (mysql_ret == NULL) {
+          TBSYS_LOG(WARN, "mysql_store_result failure: %s %s", mysql_.host.c_str(), mysql_error(&mysql_.mysql));
+          close();
+          ret = TFS_ERROR;
+          goto error;
+        }
+
+        while(NULL != (row = mysql_fetch_row(mysql_ret)))
+        {
+          tmp.cluster_rack_id_ = atoi(row[0]);
+          snprintf(tmp.dupliate_server_addr_, ADDR_INFO_LEN, "%s", row[1]);
+          outparam.push_back(tmp);
+        }
+
+error:
+        mysql_free_result(mysql_ret);
+      }
+      return ret;
+    }
+
+    int MysqlDatabaseHelper::select(BaseInfoUpdateTime& outparam)
+    {
+      tbutil::Mutex::Lock lock(mutex_);
+      int ret = TFS_ERROR;
+      if (is_connected_)
+      {
+        char sql[1024];
+        char table[256];
+        snprintf(table, 256, "%s", "T_BASE_INFO_UPDATE_TIME");
+        snprintf(sql, 1024, "select UNIX_TIMESTAMP(base_last_update_time), UNIX_TIMESTAMP(app_last_update_time) from %s", table);
+        ret = mysql_query(&mysql_.mysql, sql);
+        if (ret) {
+          TBSYS_LOG(WARN, "query (%s) failure: %s %s", sql,  mysql_.host.c_str(), mysql_error(&mysql_.mysql));
+          close();
+          return TFS_ERROR;
+        }
+
+        MYSQL_ROW row;
+
+        MYSQL_RES *mysql_ret = mysql_store_result(&mysql_.mysql);
+        if (mysql_ret == NULL) {
+          TBSYS_LOG(WARN, "mysql_store_result failure: %s %s", mysql_.host.c_str(), mysql_error(&mysql_.mysql));
+          close();
+          ret = TFS_ERROR;
+          goto error;
+        }
+        ret = TFS_ERROR;
+
+        while(NULL != (row = mysql_fetch_row(mysql_ret) ))
+        {
+          outparam.base_last_update_time_ = atoi(row[0]);
+          outparam.base_last_update_time_ *= 1000 * 1000;
+          outparam.app_last_update_time_ = atoi(row[0]);
+          outparam.app_last_update_time_ *= 1000 * 1000;
+          ret = TFS_SUCCESS;
+          break;
         }
 
 error:
@@ -221,7 +420,7 @@ error:
       int ret = TFS_ERROR;
       return ret;
     }
-    
+
     int MysqlDatabaseHelper::update(const AppInfo& inparam)
     {
       tbutil::Mutex::Lock lock(mutex_);
@@ -238,8 +437,55 @@ error:
 
     int MysqlDatabaseHelper::scan(MIdAppInfo& outparam)
     {
+      outparam.clear();
       tbutil::Mutex::Lock lock(mutex_);
       int ret = TFS_ERROR;
+      if (is_connected_)
+      {
+        char sql[1024];
+        char table[256];
+        snprintf(table, 256, "%s", "T_APP_INFO");
+        snprintf(sql, 1024, "select app_key, id, quto, cluster_group_id, "
+            "app_name, app_owner, report_interval, "
+            "need_duplicate, rem, UNIX_TIMESTAMP(modify_time) from %s", table);
+        ret = mysql_query(&mysql_.mysql, sql);
+        if (ret) {
+          TBSYS_LOG(WARN, "query (%s) failure: %s %s", sql,  mysql_.host.c_str(), mysql_error(&mysql_.mysql));
+          close();
+          return TFS_ERROR;
+        }
+
+        MYSQL_ROW row;
+        AppInfo tmp;
+
+        MYSQL_RES *mysql_ret = mysql_store_result(&mysql_.mysql);
+        if (mysql_ret == NULL) {
+          TBSYS_LOG(WARN, "mysql_store_result failure: %s %s", mysql_.host.c_str(), mysql_error(&mysql_.mysql));
+          close();
+          ret = TFS_ERROR;
+          goto error;
+        }
+
+        while(NULL != (row = mysql_fetch_row(mysql_ret)))
+        {
+          snprintf(tmp.key_, APP_KEY_LEN, "%s", row[0]);
+          tmp.id_ = atoi(row[1]);
+          tmp.quto_ = strtoll(row[2], NULL, 10);
+          tmp.cluster_group_id_ = atoi(row[3]);
+          snprintf(tmp.app_name_, REM_LEN, "%s", row[4]);
+          snprintf(tmp.app_owner_, REM_LEN, "%s", row[5]);
+          tmp.report_interval_ = atoi(row[6]);
+          tmp.need_duplicate_ = atoi(row[7]);
+          snprintf(tmp.rem_, REM_LEN, "%s", row[8]);
+          tmp.modify_time_ = atoi(row[9]);
+          tmp.modify_time_ *= 1000 * 1000;
+
+          outparam[tmp.id_] = tmp;
+        }
+
+error:
+        mysql_free_result(mysql_ret);
+      }
       return ret;
     }
   }
