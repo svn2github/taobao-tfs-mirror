@@ -45,7 +45,7 @@ TfsFile::~TfsFile()
 
 }
 
-void TfsFile::conv_name(const char *file_name, const char *suffix)
+void TfsFile::conv_name(const char* file_name, const char* suffix)
 {
   block_id_ = 0;
   file_id_ = 0;
@@ -59,7 +59,7 @@ void TfsFile::conv_name(const char *file_name, const char *suffix)
   }
 }
 
-int TfsFile::tfs_open(const char *file_name, const char *suffix, const int32_t mode)
+int TfsFile::tfs_open(const char* file_name, const char* suffix, const int32_t mode)
 {
   mode_ = mode;
   conv_name(file_name, suffix);
@@ -291,7 +291,7 @@ int TfsFile::create_filename()
   return TFS_SUCCESS;
 }
 
-int TfsFile::tfs_read_v2(char *data, const int32_t len, FileInfo *file_info)
+int TfsFile::tfs_read_v2(char* data, const int32_t len, FileInfo *file_info)
 {
   if (eof_ == TFS_FILE_EOF_FLAG_YES)
   {
@@ -417,13 +417,13 @@ int TfsFile::tfs_read_v2(char *data, const int32_t len, FileInfo *file_info)
     }
     if (ret_len != -1)
       break;
-    if (connect_next_ds() == TFS_SUCCESS)
+    if (connect_next_ds() != TFS_SUCCESS)
       break;
   }
   return ret_len;
 }
 
-int TfsFile::tfs_read_scale_image(char *data, const int32_t len, const int32_t width, const int32_t height,
+int TfsFile::tfs_read_scale_image(char* data, const int32_t len, const int32_t width, const int32_t height,
                                   FileInfo *finfo)
 {
   if (eof_ == TFS_FILE_EOF_FLAG_YES)
@@ -566,7 +566,7 @@ int TfsFile::tfs_read_scale_image(char *data, const int32_t len, const int32_t w
     if (ret_len != -1)
       break;
 
-    if (connect_next_ds() == TFS_SUCCESS)
+    if (connect_next_ds() != TFS_SUCCESS)
       break;
   }
   return ret_len;
@@ -599,7 +599,7 @@ int64_t TfsFile::tfs_lseek(const int64_t offset, const int32_t whence)
   return -1;
 }
 
-int TfsFile::tfs_read(char *data, const int32_t len)
+int TfsFile::tfs_read(char* data, const int32_t len)
 {
   if (eof_ == TFS_FILE_EOF_FLAG_YES)
   {
@@ -705,7 +705,7 @@ int TfsFile::tfs_read(char *data, const int32_t len)
 
     if (ret_len != -1)
       break;
-    if (connect_next_ds() == TFS_SUCCESS)
+    if (connect_next_ds() != TFS_SUCCESS)
       break;
   }
   return ret_len;
@@ -737,7 +737,7 @@ int TfsFile::tfs_stat(FileInfo *file_info, const int32_t mode)
     if (message == NULL)
     {
       snprintf(error_message_, ERR_MSG_SIZE, "fstat, send msg to dataserver fail");
-      if (connect_next_ds() == TFS_SUCCESS)
+      if (connect_next_ds() != TFS_SUCCESS)
         break;
       continue;
     }
@@ -778,7 +778,7 @@ int TfsFile::tfs_stat(FileInfo *file_info, const int32_t mode)
   return ret;
 }
 
-int TfsFile::tfs_write(const char *data, const int32_t len)
+int TfsFile::tfs_write(const char* data, const int32_t len)
 {
   if (is_open_flag_ == TFS_FILE_OPEN_FLAG_NO)
   {
@@ -963,7 +963,7 @@ void TfsFile::set_session(TfsSession *session)
   session_ = session;
 }
 
-int TfsFile::get_file_crc_size(const char *filename, uint32_t& crc, int32_t& size)
+int TfsFile::get_file_crc_size(const char* filename, uint32_t& crc, int32_t& size)
 {
   if (filename == NULL)
   {
@@ -997,7 +997,7 @@ int TfsFile::get_file_crc_size(const char *filename, uint32_t& crc, int32_t& siz
   return TFS_SUCCESS;
 }
 
-const char *TfsFile::get_file_name()
+const char* TfsFile::get_file_name()
 {
   if (NULL == session_)
   {
@@ -1013,7 +1013,7 @@ const char *TfsFile::get_file_name()
   return file_name_;
 }
 
-int TfsFile::stat(const char *filename, const char *suffix, FileInfo *file_info)
+int TfsFile::stat(const char* filename, const char* suffix, FileInfo *file_info)
 {
   int32_t iret = tfs_open(filename, suffix, READ_MODE);
   if (iret != TFS_SUCCESS)
@@ -1048,7 +1048,7 @@ int TfsFile::new_filename()
   return ret;
 }
 
-int TfsFile::unlink(const char *fileName, const char *suffix, int action /*=0x0(CloseFileMessage::DELETE)*/)
+int TfsFile::unlink(const char* fileName, const char* suffix, int action /*=0x0(CloseFileMessage::DELETE)*/)
 {
   conv_name(fileName, suffix);
   return unlink(block_id_, file_id_, action);
@@ -1091,12 +1091,12 @@ int TfsFile::unlink(const uint32_t block_id, const uint64_t file_id, const int32
   return iret;
 }
 
-int TfsFile::rename(const char *filename, const char *old_prefix, const char *new_prefix)
+int TfsFile::rename(const char* filename, const char* old_suffix, const char* new_suffix)
 {
-  conv_name(filename, old_prefix);
-  FSName nfname(filename, new_prefix, session_->get_cluster_id());
+  conv_name(filename, old_suffix);
+  FSName nfname(filename, new_suffix, session_->get_cluster_id());
   nfname.set_cluster_id(session_->get_cluster_id());
-  if (new_prefix == NULL)
+  if (new_suffix == NULL)
   {
     nfname.set_prefix(0);
   }
@@ -1185,7 +1185,7 @@ int TfsFile::get_file_list(const uint32_t block_id, FILE_INFO_LIST &l)
   return iret;
 }
 
-int TfsFile::save_file(const char *filename, const char *tfsname, const char *suffix)
+int TfsFile::save_file(const char* filename, const char* tfsname, const char* suffix, const int32_t mode)
 {
   int fd = open(filename, O_RDONLY);
   if (fd == -1)
@@ -1197,7 +1197,7 @@ int TfsFile::save_file(const char *filename, const char *tfsname, const char *su
   int32_t retry = 2;
   while (retry--)
   {
-    ret = tfs_open(tfsname, suffix, WRITE_MODE);
+    ret = tfs_open(tfsname, suffix, mode);
     if (ret == TFS_SUCCESS)
     {
       break;
@@ -1237,13 +1237,13 @@ int TfsFile::save_file(const char *filename, const char *tfsname, const char *su
   return ret;
 }
 
-int TfsFile::save_file(const char* tfsname, const char* suffix, char* data, const int32_t length)
+int TfsFile::save_buffer(const char* tfsname, const char* suffix, const char* data, const int32_t length, const int32_t mode)
 {
   int32_t ret = TFS_SUCCESS;
   int32_t retry = 0x02;
   while (retry--)
   {
-    ret = tfs_open(tfsname, suffix, WRITE_MODE);
+    ret = tfs_open(tfsname, suffix, mode);
     if (ret == TFS_SUCCESS)
     {
       break;

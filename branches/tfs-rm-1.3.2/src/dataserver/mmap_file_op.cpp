@@ -45,6 +45,7 @@ namespace tfs
 
       if (!is_mapped_)
       {
+        tbsys::gDelete(map_file_);
         map_file_ = new MMapFile(mmap_option, fd);
         is_mapped_ = map_file_->map_file(true);
       }

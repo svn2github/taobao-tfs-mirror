@@ -166,7 +166,7 @@ namespace tfs
           memcpy(this, &meta_info, sizeof(MetaInfo));
         }
 
-        MetaInfo(const common::RawMeta& raw_meta)
+        explicit MetaInfo(const common::RawMeta& raw_meta)
         {
           raw_meta_ = raw_meta;
           next_meta_offset_ = 0;

@@ -71,7 +71,7 @@ namespace tfs
       return true;
     }
 
-    bool MMapFile::map_file(bool write)
+    bool MMapFile::map_file(const bool write)
     {
       int flags = PROT_READ;
 

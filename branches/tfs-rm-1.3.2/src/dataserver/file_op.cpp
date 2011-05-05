@@ -55,6 +55,7 @@ namespace tfs
         return;
       }
       ::close(fd_);
+      fd_ = -1;
     }
 
     int FileOperation::pread_file(char* buf, const int32_t nbytes, const int64_t offset)

@@ -52,6 +52,7 @@ namespace tfs
       int64_t pwrite(const int fd, const void* buf, const int64_t count, const int64_t offset);
       int fstat(const int fd, TfsFileStat* buf, const TfsStatFlag mode = NORMAL_STAT);
       int close(const int fd, char* tfs_name = NULL, const int32_t len = 0);
+      int64_t get_file_length(const int fd);
 
       // LargeFile's name will be start with L
       int unlink(const char* file_name, const char* suffix = NULL, const TfsUnlinkType action = DELETE)

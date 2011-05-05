@@ -252,17 +252,17 @@ int LocalKey::remove()
   return ret;
 }
 
-int32_t LocalKey::get_data_size()
+int32_t LocalKey::get_data_size() const
 {
   return sizeof(SegmentHead) + seg_head_.count_ * sizeof(SegmentInfo);
 }
 
-int64_t LocalKey::get_file_size()
+int64_t LocalKey::get_file_size() const
 {
   return seg_head_.size_;
 }
 
-int32_t LocalKey::get_segment_size()
+int32_t LocalKey::get_segment_size() const
 {
   return seg_head_.count_;
 }
@@ -347,6 +347,7 @@ int64_t LocalKey::get_segment_for_write(const int64_t offset, const char* buf,
           {
             TBSYS_LOG(INFO, "segment data written: offset: %"PRI64_PREFIX"d, blockid: %u, fileid: %"PRI64_PREFIX"u, size: %d, crc: %u", it->offset_, it->block_id_, it->file_id_, it->size_, it->crc_);
             written_size += it->size_;
+            remain_nw_size = 0;
             break;
           }
           it++;
