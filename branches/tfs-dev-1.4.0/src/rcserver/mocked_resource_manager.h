@@ -17,6 +17,7 @@
 #define TFS_RCSERVER_MOCKEDRESOURCEMANAGER_H_
 
 #include "i_resource_manager.h"
+#include "common/error_msg.h"
 
 namespace tfs
 {
@@ -31,11 +32,11 @@ namespace tfs
       public:
         int initialize()
         {
-          apps_["pic"] = "10001";
-          apps_["ic"] = "10002";
-          apps_["uc"] = "10003";
-          apps_["dc"] = "10004";
-          apps_["cc"] = "10005";
+          apps_["pic"] = 10001;
+          apps_["ic"] = 10002;
+          apps_["uc"] = 10003;
+          apps_["dc"] = 10004;
+          apps_["cc"] = 10005;
 
           old_info_.report_interval_ = 10;
           new_info_.report_interval_ = 20;
@@ -70,11 +71,11 @@ namespace tfs
           return ret;
         }
 
-        int check_update_info(const int32_t app_id, const uint64_t modify_time, bool& update_flag, BaseInfo& base_info)
+        int check_update_info(const int32_t app_id, const int64_t modify_time, bool& update_flag, BaseInfo& base_info)
         {
           int ret = common::TFS_SUCCESS;
           std::map<int32_t, int64_t>::iterator mit = id_2_mtimes_.find(app_id);
-          if (mit == apps_.end())
+          if (mit == id_2_mtimes_.end())
           {
             ret = common::EXIT_APP_NOTEXIST_ERROR;
           }

@@ -42,7 +42,7 @@ namespace tfs
         virtual int load() = 0;
 
         virtual int login(const std::string& app_key, int32_t& app_id, BaseInfo& base_info) = 0;
-        virtual int check_update_info(const int32_t app_id, const uint64_t modify_time, bool& update_flag, BaseInfo& base_info) = 0;
+        virtual int check_update_info(const int32_t app_id, const int64_t modify_time, bool& update_flag, BaseInfo& base_info) = 0;
         virtual int logout(const std::string& session_id) = 0;
     };
   }
