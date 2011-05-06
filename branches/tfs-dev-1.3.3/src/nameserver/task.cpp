@@ -562,13 +562,13 @@ namespace tfs
       return (iret == STATUS_MESSAGE_OK || iret == STATUS_MESSAGE_REMOVE) ? TFS_SUCCESS : iret;
     }
 
-    LayoutManager::RedundantTask::RedundantTask(LayoutManager* manager, PlanPriority priority, uint32_t block_id, time_t begin, time_t end, const std::vector<ServerCollect*> & runer):
+    LayoutManager::DeleteBlockTask::DeleteBlockTask(LayoutManager* manager, PlanPriority priority, uint32_t block_id, time_t begin, time_t end, const std::vector<ServerCollect*> & runer):
       Task(manager, PLAN_TYPE_DELETE, priority, block_id, begin, end, runer)
     {
 
     }
 
-    int LayoutManager::RedundantTask::handle()
+    int LayoutManager::DeleteBlockTask::handle()
     {
       std::vector<ServerCollect*>::iterator iter = runer_.begin();
       for (; iter != runer_.end(); ++iter)
@@ -584,7 +584,7 @@ namespace tfs
       return TFS_SUCCESS;
     }
 
-    int LayoutManager::RedundantTask::handle_complete(message::Message* msg, bool& all_complete_flag)
+    int LayoutManager::DeleteBlockTask::handle_complete(message::Message* msg, bool& all_complete_flag)
     {
       all_complete_flag = true;
       RemoveBlockResponseMessage* message = dynamic_cast<RemoveBlockResponseMessage*>(msg);

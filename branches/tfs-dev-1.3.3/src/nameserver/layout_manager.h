@@ -294,17 +294,17 @@ namespace nameserver
    };
    typedef tbutil::Handle<ReplicateTask> ReplicateTaskPtr;
 
-   class RedundantTask : public virtual Task 
+   class DeleteBlockTask : public virtual Task 
    {
    public:
-     RedundantTask(LayoutManager* manager, common::PlanPriority priority, uint32_t block_id, time_t begin, time_t end, const std::vector<ServerCollect*>& runer);
-     virtual ~RedundantTask(){}
+     DeleteBlockTask(LayoutManager* manager, common::PlanPriority priority, uint32_t block_id, time_t begin, time_t end, const std::vector<ServerCollect*>& runer);
+     virtual ~DeleteBlockTask(){}
      virtual int handle();
      virtual int handle_complete(message::Message* msg, bool& all_complete_flag);
    private:
-    DISALLOW_COPY_AND_ASSIGN(RedundantTask);
+    DISALLOW_COPY_AND_ASSIGN(DeleteBlockTask);
    };
-   typedef tbutil::Handle<RedundantTask> RedundantTaskPtr;
+   typedef tbutil::Handle<DeleteBlockTask> DeleteBlockTaskPtr;
 
    class MoveTask : public virtual ReplicateTask
    {

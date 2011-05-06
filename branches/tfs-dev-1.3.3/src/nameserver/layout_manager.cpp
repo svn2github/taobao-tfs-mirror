@@ -1227,8 +1227,7 @@ namespace tfs
                 
                 std::vector<ServerCollect*> runer;
                 runer.push_back(server);
-                RedundantTaskPtr task = new RedundantTask(this, PLAN_PRIORITY_NORMAL, block_id, now, now, runer);
-                //TODO change RedundantTask to other name
+                DeleteBlockTaskPtr task = new DeleteBlockTask(this, PLAN_PRIORITY_NORMAL, block_id, now, now, runer);
                 if (!add_task(task))
                 {
                   task = 0;
@@ -1286,11 +1285,27 @@ namespace tfs
                   TBSYS_LOG(ERROR, "%s", buf);
                   break; 
                 }
-
-                bool bret = flag == REPLICATE_BLOCK_MOVE_FLAG_YES ? (source != 0 && target != 0 && block_id != 0 && target != source) ? true : false :
-                      block_id != 0  && ((source != target) || (source == target && source == 0 && target == 0)) ? true : false;
-                //TODO what is this? I can not understand it
-                
+                bool bret = false;
+                if (REPLICATE_BLOCK_MOVE_FLAG_YES == flag)
+                {
+                  if ( 0 != source
+                      && 0 != target
+                      && 0 != block_id 
+                      && target != source)
+                  {
+                    bret = true;
+                  }
+                } 
+                else
+                {
+                  if ((0 != block_id)
+                      && ((source != target)
+                          || ((source == target)
+                             && (0 == target))))
+                  {
+                    bret = true;
+                  }
+                }
 
                 if (!bret)
                 {
@@ -2882,7 +2897,6 @@ namespace tfs
       uint32_t block_id = 0;
       std::vector<ServerCollect*> except;
       std::vector<ServerCollect*> servers;
-      std::set<uint32_t> need_move_block_list;
       std::set<ServerCollect*>::const_iterator it = source.begin();
       for (; it != source.end() && !(interrupt_ & INTERRUPT_ALL) && need > 0 && !target.empty(); ++it)
       {
@@ -2902,7 +2916,6 @@ namespace tfs
             has_move = ((block_collect != NULL)
                 && (block_collect->check_balance())
                 && (!find_server_in_plan((*it)))
-                && (need_move_block_list.find(block_collect->id()) == need_move_block_list.end())
                 && (!find_block_in_plan(block_collect->id())));
             #if defined(TFS_NS_GTEST) || defined(TFS_NS_INTEGRATION) || defined(TFS_NS_DEBUG)
             TBSYS_LOG(DEBUG, "block(%u) check balance has_move(%s)", block_collect->id(), has_move ? "true" : "false");
@@ -2954,7 +2967,6 @@ namespace tfs
             #endif
 
             --need;
-            need_move_block_list.insert(block_collect->id());
             std::set<ServerCollect*>::iterator tmp = target.find((*it));
             if (tmp != target.end())
             {
@@ -3013,7 +3025,7 @@ namespace tfs
                 && (!result.empty()))
             {
               TBSYS_LOG(INFO, "we will need delete less than block(%u)", iter->second->id());
-              RedundantTaskPtr task = new RedundantTask(this, PLAN_PRIORITY_NORMAL, iter->second->id(), now, now, result);
+              DeleteBlockTaskPtr task = new DeleteBlockTask(this, PLAN_PRIORITY_NORMAL, iter->second->id(), now, now, result);
               if (!add_task(task))
               {
                 task = 0;
