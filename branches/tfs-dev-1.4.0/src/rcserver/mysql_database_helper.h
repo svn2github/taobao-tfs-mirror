@@ -18,6 +18,7 @@
 #include <tbsys.h>
 #include <Mutex.h>
 #include "database_helper.h"
+#include "mysql_database_helper.h"
 namespace tfs
 {
   namespace rcserver

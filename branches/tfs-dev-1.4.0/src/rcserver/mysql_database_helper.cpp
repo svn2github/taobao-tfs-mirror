@@ -38,25 +38,24 @@ static int split_string(const char* line, const char del, vector<string> & field
     const char* start = line;
     const char* p = NULL;
     char buffer[256];
-    while (start != NULL) {
+    while (start != NULL) 
+    {
         p = strchr(start, del);
-        if (p != NULL) {
+        if (p != NULL) 
+        {
             memset(buffer, 0, 256);
             strncpy(buffer, start, p - start);
             if (strlen(buffer) > 0) fields.push_back(buffer);
             start = p + 1;
-        } else {
+        } 
+        else 
+        {
             memset(buffer, 0, 256);
             strcpy(buffer, start);
             if (strlen(buffer) > 0) fields.push_back(buffer);
             break;
         }
     }
-    /*
-    for (int i = 0; i < fields.size(); ++i) {
-        printf("i:%d, fds:(%s)\n", i, fields[i].c_str());
-    }
-    */
     return fields.size();
 }
 static bool init_mysql(const char* mysqlconn, const char* user_name, const char* passwd) 
@@ -92,7 +91,8 @@ static bool open_mysql()
             mysql_.pass.c_str(),
             mysql_.database.c_str(),
             mysql_.port, NULL, 0);
-    if (!conn) {
+    if (!conn) 
+    {
         TBSYS_LOG(ERROR, "connect mysql database (%s:%s:%s) error(%s)",
                 mysql_.host.c_str(), mysql_.user.c_str(), mysql_.database.c_str(),
                 mysql_error(&mysql_.mysql));
@@ -104,7 +104,8 @@ static bool open_mysql()
 
 static int close_mysql()
 {
-    if (mysql_.isopen) {
+    if (mysql_.isopen) 
+    {
         mysql_close(&mysql_.mysql);
     }
     return 0;
@@ -186,8 +187,9 @@ namespace tfs
         snprintf(table, 256, "%s", "T_RESOURCE_SERVER_INFO");
         snprintf(sql, 1024, "select ADDR_INFO, STAT, REM from %s", table);
         ret = mysql_query(&mysql_.mysql, sql);
-        if (ret) {
-          TBSYS_LOG(WARN, "query (%s) failure: %s %s", sql,  mysql_.host.c_str(), mysql_error(&mysql_.mysql));
+        if (ret) 
+        {
+          TBSYS_LOG(ERROR, "query (%s) failure: %s %s", sql,  mysql_.host.c_str(), mysql_error(&mysql_.mysql));
           close();
           return TFS_ERROR;
         }
@@ -195,8 +197,9 @@ namespace tfs
         MYSQL_ROW row;
         ResourceServerInfo tmp;
         MYSQL_RES *mysql_ret = mysql_store_result(&mysql_.mysql);
-        if (mysql_ret == NULL) {
-          TBSYS_LOG(WARN, "mysql_store_result failure: %s %s", mysql_.host.c_str(), mysql_error(&mysql_.mysql));
+        if (mysql_ret == NULL) 
+        {
+          TBSYS_LOG(ERROR, "mysql_store_result failure: %s %s", mysql_.host.c_str(), mysql_error(&mysql_.mysql));
           close();
           ret = TFS_ERROR;
           goto error;
@@ -250,8 +253,9 @@ error:
         snprintf(sql, 1024, "select cluster_rack_id, cluster_id, ns_vip, "
             "cluster_stat, rem from %s", table);
         ret = mysql_query(&mysql_.mysql, sql);
-        if (ret) {
-          TBSYS_LOG(WARN, "query (%s) failure: %s %s", sql,  mysql_.host.c_str(), mysql_error(&mysql_.mysql));
+        if (ret) 
+        {
+          TBSYS_LOG(ERROR, "query (%s) failure: %s %s", sql,  mysql_.host.c_str(), mysql_error(&mysql_.mysql));
           close();
           return TFS_ERROR;
         }
@@ -260,8 +264,9 @@ error:
         ClusterRackInfo tmp;
 
         MYSQL_RES *mysql_ret = mysql_store_result(&mysql_.mysql);
-        if (mysql_ret == NULL) {
-          TBSYS_LOG(WARN, "mysql_store_result failure: %s %s", mysql_.host.c_str(), mysql_error(&mysql_.mysql));
+        if (mysql_ret == NULL) 
+        {
+          TBSYS_LOG(ERROR, "mysql_store_result failure: %s %s", mysql_.host.c_str(), mysql_error(&mysql_.mysql));
           close();
           ret = TFS_ERROR;
           goto error;
@@ -296,8 +301,9 @@ error:
         snprintf(sql, 1024, "select cluster_group_id, cluster_rack_id, cluster_rack_access_type, "
             "rem from %s", table);
         ret = mysql_query(&mysql_.mysql, sql);
-        if (ret) {
-          TBSYS_LOG(WARN, "query (%s) failure: %s %s", sql,  mysql_.host.c_str(), mysql_error(&mysql_.mysql));
+        if (ret) 
+        {
+          TBSYS_LOG(ERROR, "query (%s) failure: %s %s", sql,  mysql_.host.c_str(), mysql_error(&mysql_.mysql));
           close();
           return TFS_ERROR;
         }
@@ -306,8 +312,9 @@ error:
         ClusterRackGroup tmp;
 
         MYSQL_RES *mysql_ret = mysql_store_result(&mysql_.mysql);
-        if (mysql_ret == NULL) {
-          TBSYS_LOG(WARN, "mysql_store_result failure: %s %s", mysql_.host.c_str(), mysql_error(&mysql_.mysql));
+        if (mysql_ret == NULL) 
+        {
+          TBSYS_LOG(ERROR, "mysql_store_result failure: %s %s", mysql_.host.c_str(), mysql_error(&mysql_.mysql));
           close();
           ret = TFS_ERROR;
           goto error;
@@ -340,8 +347,9 @@ error:
         snprintf(table, 256, "%s", "T_CLUSTER_RACK_DUPLICATE_SERVER");
         snprintf(sql, 1024, "select cluster_rack_id, dupliate_server_addr from %s", table);
         ret = mysql_query(&mysql_.mysql, sql);
-        if (ret) {
-          TBSYS_LOG(WARN, "query (%s) failure: %s %s", sql,  mysql_.host.c_str(), mysql_error(&mysql_.mysql));
+        if (ret) 
+        {
+          TBSYS_LOG(ERROR, "query (%s) failure: %s %s", sql,  mysql_.host.c_str(), mysql_error(&mysql_.mysql));
           close();
           return TFS_ERROR;
         }
@@ -350,8 +358,9 @@ error:
         ClusterRackDuplicateServer tmp;
 
         MYSQL_RES *mysql_ret = mysql_store_result(&mysql_.mysql);
-        if (mysql_ret == NULL) {
-          TBSYS_LOG(WARN, "mysql_store_result failure: %s %s", mysql_.host.c_str(), mysql_error(&mysql_.mysql));
+        if (mysql_ret == NULL) 
+        {
+          TBSYS_LOG(ERROR, "mysql_store_result failure: %s %s", mysql_.host.c_str(), mysql_error(&mysql_.mysql));
           close();
           ret = TFS_ERROR;
           goto error;
@@ -381,8 +390,9 @@ error:
         snprintf(table, 256, "%s", "T_BASE_INFO_UPDATE_TIME");
         snprintf(sql, 1024, "select UNIX_TIMESTAMP(base_last_update_time), UNIX_TIMESTAMP(app_last_update_time) from %s", table);
         ret = mysql_query(&mysql_.mysql, sql);
-        if (ret) {
-          TBSYS_LOG(WARN, "query (%s) failure: %s %s", sql,  mysql_.host.c_str(), mysql_error(&mysql_.mysql));
+        if (ret) 
+        {
+          TBSYS_LOG(ERROR, "query (%s) failure: %s %s", sql,  mysql_.host.c_str(), mysql_error(&mysql_.mysql));
           close();
           return TFS_ERROR;
         }
@@ -390,8 +400,9 @@ error:
         MYSQL_ROW row;
 
         MYSQL_RES *mysql_ret = mysql_store_result(&mysql_.mysql);
-        if (mysql_ret == NULL) {
-          TBSYS_LOG(WARN, "mysql_store_result failure: %s %s", mysql_.host.c_str(), mysql_error(&mysql_.mysql));
+        if (mysql_ret == NULL) 
+        {
+          TBSYS_LOG(ERROR, "mysql_store_result failure: %s %s", mysql_.host.c_str(), mysql_error(&mysql_.mysql));
           close();
           ret = TFS_ERROR;
           goto error;
@@ -449,8 +460,9 @@ error:
             "app_name, app_owner, report_interval, "
             "need_duplicate, rem, UNIX_TIMESTAMP(modify_time) from %s", table);
         ret = mysql_query(&mysql_.mysql, sql);
-        if (ret) {
-          TBSYS_LOG(WARN, "query (%s) failure: %s %s", sql,  mysql_.host.c_str(), mysql_error(&mysql_.mysql));
+        if (ret) 
+        {
+          TBSYS_LOG(ERROR, "query (%s) failure: %s %s", sql,  mysql_.host.c_str(), mysql_error(&mysql_.mysql));
           close();
           return TFS_ERROR;
         }
@@ -459,8 +471,9 @@ error:
         AppInfo tmp;
 
         MYSQL_RES *mysql_ret = mysql_store_result(&mysql_.mysql);
-        if (mysql_ret == NULL) {
-          TBSYS_LOG(WARN, "mysql_store_result failure: %s %s", mysql_.host.c_str(), mysql_error(&mysql_.mysql));
+        if (mysql_ret == NULL) 
+        {
+          TBSYS_LOG(ERROR, "mysql_store_result failure: %s %s", mysql_.host.c_str(), mysql_error(&mysql_.mysql));
           close();
           ret = TFS_ERROR;
           goto error;

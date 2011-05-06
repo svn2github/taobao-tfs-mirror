@@ -13,7 +13,9 @@
  *      - initial release
  *
  */
+#include <tbsys.h>
 #include "app_resource.h"
+#include "mysql_database_helper.h"
 
 namespace tfs
 {
@@ -23,12 +25,41 @@ namespace tfs
    
     int AppResource::load()
     {
-      //TODO 
-      //set app_last_update_time_
-      return TFS_SUCCESS;
+      int ret = TFS_SUCCESS;
+      m_id_appinfo_.clear();
+      ret = database_helper_.scan(m_id_appinfo_);
+      if (TFS_SUCCESS != ret)
+      {
+        TBSYS_LOG(ERROR, "load app_info error ret is %d", ret);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        BaseInfoUpdateTime outparam;
+        ret = database_helper_.select(outparam);
+        if (TFS_SUCCESS != ret)
+        {
+          TBSYS_LOG(ERROR, "load base_info_update_time error ret is %d", ret);
+        }
+        else
+        {
+          app_last_update_time_ = outparam.app_last_update_time_;
+        }
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        app_ids_.clear();
+        MIdAppInfo::const_iterator it = m_id_appinfo_.begin();
+        for (; it != m_id_appinfo_.end(); it++)
+        {
+          app_ids_[it->second.key_] = it->first;
+        }
+
+      }
+      return ret;
     }
 
-    int AppResource::get_app_info(const std::string& app_key, AppInfo& app_info) const
+    int AppResource::get_app_id(const std::string& app_key, int32_t& app_id) const
     {
       int ret = TFS_SUCCESS;
       std::map<std::string, int32_t>::const_iterator it = app_ids_.find(app_key);
@@ -38,9 +69,9 @@ namespace tfs
       }
       else
       {
-        ret = get_app_info(it->second, app_info);
+        app_id = it->second;
       }
-
+      return ret;
     }
 
     int AppResource::get_app_info(const int32_t app_id, AppInfo& app_info) const
@@ -73,10 +104,9 @@ namespace tfs
       return ret;
     }
 
-    bool need_reload(const int64_t update_time_in_db) const
+    bool AppResource::need_reload(const int64_t update_time_in_db) const
     {
       return update_time_in_db > app_last_update_time_;
     }
-
   }
 }

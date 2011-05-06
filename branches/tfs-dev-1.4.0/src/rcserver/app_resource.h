@@ -20,6 +20,7 @@
 #include <string>
 #include "common/define.h"
 #include "resource.h"
+#include "resource_server_data.h"
 
 namespace tfs
 {
@@ -28,7 +29,7 @@ namespace tfs
     class AppResource : public IResource
     {
       public:
-        AppResource(DatabaseHelper& database_helper) : 
+        explicit AppResource(DatabaseHelper& database_helper) : 
           IResource(database_helper), app_last_update_time_(-1)
         {
         }
@@ -39,7 +40,7 @@ namespace tfs
       public:
         virtual int load();
 
-        int get_app_info(const std::string& app_key, AppInfo& app_info) const;
+        int get_app_id(const std::string& app_key, int32_t& app_id) const;
         int get_app_info(const int32_t app_id, AppInfo& app_info) const;
         int get_last_modify_time(const int32_t app_id, int64_t& last_modify_time) const;
         bool need_reload(const int64_t update_time_in_db) const;
@@ -47,9 +48,9 @@ namespace tfs
       private:
         int64_t app_last_update_time_;
         // app_id <-> AppInfo
-        MIdAppInfo m_id_appinfo_
+        MIdAppInfo m_id_appinfo_;
         // app_key <-> app_id
-        std::map<app_ids_, int32_t> app_ids_;
+        std::map<std::string, int32_t> app_ids_;
     };
   }
 }
