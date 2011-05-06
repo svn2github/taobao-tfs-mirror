@@ -15,13 +15,14 @@
  */
 #ifndef TFS_RCSERVER_RESOURCE_H_
 #define TFS_RCSERVER_RESOURCE_H_
-#include "database_helper.h"
-
+#include <tbsys.h>
+#include <Shared.h>
 namespace tfs
 {
   namespace rcserver
   {
-    class IResource
+    class DatabaseHelper;
+    class IResource 
     {
       public:
         explicit IResource(DatabaseHelper& database_helper) : database_helper_(database_helper)

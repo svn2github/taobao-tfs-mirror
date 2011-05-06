@@ -27,7 +27,7 @@ namespace tfs
   {
     struct BaseInfo
     {
-      std::set<int64_t> rc_server_infos_;
+      std::set<uint64_t> rc_server_infos_;
       std::vector<ClusterRackData> cluster_infos_;
       int32_t report_interval_;
     };
@@ -35,6 +35,7 @@ namespace tfs
     class IResourceManager
     {
       public:
+        IResourceManager(){}
         virtual ~IResourceManager() {}
 
       public:
@@ -43,7 +44,7 @@ namespace tfs
 
         virtual int login(const std::string& app_key, int32_t& app_id, BaseInfo& base_info) = 0;
         virtual int check_update_info(const int32_t app_id, const int64_t modify_time, bool& update_flag, BaseInfo& base_info) = 0;
-        virtual int logout(const std::string& session_id) = 0;
+        //virtual int logout(const std::string& session_id) = 0;
     };
   }
 }

@@ -19,50 +19,71 @@
 #include <map>
 #include <set>
 #include <string>
+#include <tbsys.h>
+#include <Timer.h>
 #include "common/define.h"
-#include "mysql_database_helper.h"
+#include "i_resource_manager.h"
 
 namespace tfs
 {
   namespace rcserver
   {
 
-    //enum LoadFlag
-    //{
-    //  LOAD_NONE = 0,
-    //  LOAD_ALL,
-    //  LOAD_BASE,
-    //  LOAD_APP
-    //};
     class AppResource;
     class BaseResource;
-
-    class ResourceManager
+    class DatabaseHelper;
+    class ResourceManager;
+    class ResourceUpdateTask : public tbutil::TimerTask
     {
       public:
-        ResourceManager() :
-          app_resource_manager_(NULL)
+        ResourceUpdateTask(ResourceManager& resource_manager)
+          : manager_(resource_manager)
         {
         }
-        ~ResourceManager()
+        virtual ~ResourceUpdateTask()
         {
         }
+
+        virtual void runTimerTask();
+      private:
+        ResourceManager& manager_;
+    };
+    typedef tbutil::Handle<ResourceUpdateTask> ResourceUpdateTaskPtr;
+
+    class ResourceManager :public IResourceManager
+    {
+      public:
+        ResourceManager();
+        virtual ~ResourceManager();
 
       public:
-        int initialize();
-        int load();
+        virtual int initialize();
+        virtual int load();
 
-        int login(const std::string& app_key, BaseInfo& base_info);
-        int keep_alive(const std::string& session_id, const uint64_t modify_time, BaseInfo& base_info);
-        int logout(const std::string& session_id);
+        virtual int login(const std::string& app_key, int32_t& app_id, BaseInfo& base_info);
+        virtual int check_update_info(const int32_t app_id, 
+            const int64_t modify_time, bool& update_flag, BaseInfo& base_info);
+        //virtual int logout(const std::string& session_id);
+
+        bool need_reload();
 
       private:
+        int get_base_info(const int32_t app_id, BaseInfo& base_info);
+        void clean_resource();
+
+      protected:
         DISALLOW_COPY_AND_ASSIGN(ResourceManager);
-        MysqlDatabaseHelper database_helper_;
+        DatabaseHelper* database_helper_;
+        tbsys::CRWLock resorce_mutex_;
         AppResource* app_resource_manager_;
         BaseResource* base_resource_manager_;
+        bool have_inited_;
+
+        tbutil::TimerPtr timer_;
+        ResourceUpdateTaskPtr resource_update_task_;
 
     };
+
   }
 }
 #endif //TFS_RCSERVER_RESOURCEMANAGER_H_
