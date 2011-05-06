@@ -44,7 +44,7 @@ TEST_F(BaseResourceTest, get_resource_servers)
   std::set<uint64_t> resource_servers;
   EXPECT_EQ(TFS_SUCCESS, tester.get_resource_servers(resource_servers));
   EXPECT_EQ(1, resource_servers.size());
-  EXPECT_EQ(tbsys::CNetUtil::strToAddr("10.232.35.41", 2123), *(resource_servers.begin()));
+  EXPECT_EQ(tbsys::CNetUtil::strToAddr("10.232.35.41:2123",0), *(resource_servers.begin()));
 
 }
 
@@ -57,8 +57,8 @@ TEST_F(BaseResourceTest, get_cluster_infos)
   EXPECT_EQ(TFS_SUCCESS, tester.get_cluster_infos(1, cluster_rack_datas));
   EXPECT_EQ(2, cluster_rack_datas.size());
 
-  EXPECT_EQ(tbsys::CNetUtil::strToAddr("1.1.1.1",1010), cluster_rack_datas[0].dupliate_server_addr_);
-  EXPECT_EQ(tbsys::CNetUtil::strToAddr("2.1.1.1",1010), cluster_rack_datas[1].dupliate_server_addr_);
+  EXPECT_STREQ("1.1.1.1:1010", cluster_rack_datas[0].dupliate_server_addr_.c_str());
+  EXPECT_STREQ("2.1.1.1:1010", cluster_rack_datas[1].dupliate_server_addr_.c_str());
 
   EXPECT_EQ(2, cluster_rack_datas[0].cluster_data_.size());
   EXPECT_EQ(3, cluster_rack_datas[1].cluster_data_.size());
