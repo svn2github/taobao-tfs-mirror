@@ -54,6 +54,11 @@ namespace tfs
           return fd_;
         }
 
+        char* get_file_name() const
+        {
+          return file_name_;
+        }
+
       protected:
         FileOperation();
         DISALLOW_COPY_AND_ASSIGN(FileOperation);

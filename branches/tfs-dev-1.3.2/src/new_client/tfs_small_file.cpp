@@ -83,9 +83,16 @@ int TfsSmallFile::close()
   return close_ex();
 }
 
-int64_t TfsSmallFile::get_file_length() const
+int64_t TfsSmallFile::get_file_length()
 {
-  return 0;                     // TODO
+  int64_t ret_len = 0;
+  FileInfo file_info;
+  int ret = fstat_ex(&file_info, NORMAL_STAT);
+  if (TFS_SUCCESS == ret)
+  {
+    ret_len = file_info.size_;
+  }
+  return ret_len;
 }
 
 int TfsSmallFile::unlink(const char* file_name, const char* suffix, const TfsUnlinkType action)

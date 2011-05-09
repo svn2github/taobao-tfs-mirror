@@ -17,7 +17,7 @@ LocalKey::LocalKey() : file_op_(NULL)
 LocalKey::~LocalKey()
 {
   tbsys::gDelete(file_op_);
-  destroy_info();
+  clear_info();
 }
 
 int LocalKey::initialize(const char* local_key, const uint64_t addr)
@@ -53,16 +53,26 @@ int LocalKey::initialize(const char* local_key, const uint64_t addr)
       int len = strlen(name);
       snprintf(name + len, MAX_PATH_LENGTH - len, "!%" PRI64_PREFIX "u", addr);
 
-      memset(&seg_head_, 0, sizeof(SegmentHead));
-      seg_info_.clear();
+      clear();
       if (0 != access(name, F_OK)) //not exist
       {
+        TBSYS_LOG(DEBUG, "create new localkey file: %s", name);
         file_op_ = new FileOperation(name, O_RDWR|O_CREAT);
       }
       else
       {
         file_op_ = new FileOperation(name, O_RDWR);
         ret = load();
+        // load fail. localkey is invalid, just delete
+        if (ret != TFS_SUCCESS)
+        {
+          TBSYS_LOG(WARN, "load local key fail, file is invalid, create new localkey file: %s", name);
+          file_op_->unlink_file();
+          tbsys::gDelete(file_op_);
+          file_op_ = new FileOperation(name, O_RDWR|O_CREAT);
+          clear();
+          ret = TFS_SUCCESS;
+        }
       }
 
       if (TFS_SUCCESS == ret)
@@ -85,7 +95,7 @@ int LocalKey::load()
   }
   else if ((ret = file_op_->pread_file(reinterpret_cast<char*>(&seg_head_), sizeof(SegmentHead), 0)) != TFS_SUCCESS)
   {
-    TBSYS_LOG(ERROR, "load segment head fail, ret: %d", ret);
+    TBSYS_LOG(ERROR, "load segment head fail, %s, ret: %d", file_op_->get_file_name(), ret);
   }
   else
   {
@@ -94,7 +104,7 @@ int LocalKey::load()
     char* buf = new char[sizeof(SegmentInfo) * seg_head_.count_];
     if ((ret = file_op_->pread_file(buf, sizeof(SegmentInfo) * seg_head_.count_, sizeof(SegmentHead))) != TFS_SUCCESS)
     {
-      TBSYS_LOG(ERROR, "load segment info fail, ret: %d", ret);
+      TBSYS_LOG(ERROR, "load segment info fail, %s, ret: %d", file_op_->get_file_name(), ret);
     }
     else
     {
@@ -502,7 +512,7 @@ int LocalKey::load_segment(const char* buf)
 {
   int ret = TFS_SUCCESS;
   // clear last segment info ?
-  destroy_info();
+  clear_info();
 
   int64_t size = 0;
   int32_t count = seg_head_.count_;
@@ -558,7 +568,13 @@ void LocalKey::gc_segment(SEG_SET_ITER first, SEG_SET_ITER last)
   }
 }
 
-void LocalKey::destroy_info()
+void LocalKey::clear()
+{
+  memset(&seg_head_, 0, sizeof(SegmentHead));
+  clear_info();
+}
+
+void LocalKey::clear_info()
 {
   seg_info_.clear();
 }
