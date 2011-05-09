@@ -105,7 +105,8 @@ namespace tfs
       }
 
     private:
-      void destroy_info();
+      void clear();
+      void clear_info();
       int load_head(const char* buf);
       int load_segment(const char* buf);
       void get_segment(const int64_t offset, const char* buf,

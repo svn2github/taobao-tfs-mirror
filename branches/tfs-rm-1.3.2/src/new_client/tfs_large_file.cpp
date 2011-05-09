@@ -157,7 +157,7 @@ int TfsLargeFile::close()
   return close_ex();
 }
 
-int64_t TfsLargeFile::get_file_length() const
+int64_t TfsLargeFile::get_file_length()
 {
   return local_key_.get_file_size();
 }
@@ -443,7 +443,7 @@ int TfsLargeFile::upload_key()
     // TODO .. open large with mainname
     if ((ret = open_ex(NULL, meta_suffix_, T_WRITE)) != TFS_SUCCESS)
     {
-      TBSYS_LOG(ERROR, "upload key fail, open file fail, ret: %d");
+      TBSYS_LOG(ERROR, "upload key fail, open file fail, ret: %d", ret);
     }
     else
     {

@@ -61,22 +61,22 @@ extern "C"
    */
   int t_unlink(const char* file_name, const char* suffix, const TfsUnlinkType action);
 
-  void set_segment_size(const int64_t segment_size);
-  int64_t get_segment_size();
+  void t_set_segment_size(const int64_t segment_size);
+  int64_t t_get_segment_size();
 
-  void set_batch_count(const int64_t batch_count);
-  int64_t get_batch_count();
+  void t_set_batch_count(const int64_t batch_count);
+  int64_t t_get_batch_count();
 
-  void set_gc_interval(const int64_t gc_interval_s);
-  int64_t get_gc_interval();
+  void t_set_gc_interval(const int64_t gc_interval_s);
+  int64_t t_get_gc_interval();
 
-  void set_gc_expired_time(const int64_t gc_expired_time_s);
-  int64_t get_gc_expired_time();
+  void t_set_gc_expired_time(const int64_t gc_expired_time_s);
+  int64_t t_get_gc_expired_time();
 
-  void set_batch_time_out(const int64_t time_out_us);
-  int64_t get_batch_time_out();
+  void t_set_batch_time_out(const int64_t time_out_us);
+  int64_t t_get_batch_time_out();
 
-  void set_log_level(const char* level);
+  void t_set_log_level(const char* level);
 
 #if __cplusplus
 }
