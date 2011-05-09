@@ -34,11 +34,11 @@ namespace tfs
     {
     public:
       FSName();
-      FSName(uint32_t block_id, int32_t seq_id, int32_t suffix = 0, int32_t cluster_id = 0);
-      FSName(const char *file_name, const char* suffix = NULL, int32_t cluster_id = 0);
+      FSName(const uint32_t block_id, const int32_t seq_id, const int32_t suffix = 0, const int32_t cluster_id = 0);
+      FSName(const char *file_name, const char* suffix = NULL, const int32_t cluster_id = 0);
       virtual ~FSName();
 
-      const char* get_name(bool large_flag = false);
+      const char* get_name(const bool large_flag = false);
       void set_name(const char* file_name, const char* suffix = NULL, const int32_t cluster_id = 0);
       void set_suffix(const char* suffix);
       std::string to_string();
