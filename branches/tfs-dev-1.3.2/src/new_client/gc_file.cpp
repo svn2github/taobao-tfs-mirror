@@ -1,3 +1,18 @@
+/*
+ * (C) 2007-2010 Alibaba Group Holding Limited.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+ *
+ *
+ * Version: $Id
+ *
+ * Authors:
+ *   nayan <nayan@taobao.com>
+ *      - initial release
+ *
+ */
 #include <Memory.hpp>
 #include "tbsys.h"
 
@@ -9,7 +24,8 @@ using namespace tfs::common;
 
 const char* tfs::client::GC_FILE_PATH = "/tmp/TFSlocalkeyDIR/gc/";
 
-GcFile::GcFile() :need_save_seg_infos_(need_save_seg_infos), file_pos_(sizeof(SegmentHead)), file_op_(NULL)
+GcFile::GcFile(const bool need_save_seg_infos) 
+  :need_save_seg_infos_(need_save_seg_infos), file_pos_(sizeof(SegmentHead)), file_op_(NULL)
 {
 }
 

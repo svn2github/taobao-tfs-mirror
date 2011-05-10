@@ -1,3 +1,18 @@
+/*
+ * (C) 2007-2010 Alibaba Group Holding Limited.
+ *
+ * This program is free software_; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+ *
+ *
+ * Version: $Id
+ *
+ * Authors:
+ *   nayan <nayan@taobao.com>
+ *      - initial release
+ *
+ */
 #include "client_config.h"
 
 using namespace tfs::client;
