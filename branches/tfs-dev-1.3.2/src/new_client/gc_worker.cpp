@@ -67,7 +67,7 @@ int GcManager::reset_schedule_interval(const int64_t schedule_interval_s)
   return ret;
 }
 
-GcWorker::GcWorker() : tfs_client_(NULL)
+GcWorker::GcWorker() : tfs_client_(NULL), gc_file_(false)
 {
 }
 
