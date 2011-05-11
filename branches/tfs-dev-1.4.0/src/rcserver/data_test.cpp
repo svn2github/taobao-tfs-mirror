@@ -45,6 +45,7 @@ int main()
           it->second.rem_, tbutil::Time(it->second.modify_time_).toDateTime().c_str()
           );
     }
+    hl.close();
   }
   {
     VResourceServerInfo outparam;
@@ -54,6 +55,7 @@ int main()
     {
       printf("%s %d %s\n", outparam[i].addr_info_, outparam[i].stat_, outparam[i].rem_);
     }
+    hl.close();
   }
   {
     VClusterRackDuplicateServer outparam;

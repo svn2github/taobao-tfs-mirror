@@ -180,6 +180,10 @@ namespace tfs
       outparam.clear();
       tbutil::Mutex::Lock lock(mutex_);
       int ret = TFS_ERROR;
+      if (!is_connected_)
+      {
+        connect();
+      }
       if (is_connected_)
       {
         char sql[1024];
@@ -245,6 +249,10 @@ error:
       outparam.clear();
       tbutil::Mutex::Lock lock(mutex_);
       int ret = TFS_ERROR;
+      if (!is_connected_)
+      {
+        connect();
+      }
       if (is_connected_)
       {
         char sql[1024];
@@ -293,6 +301,10 @@ error:
       outparam.clear();
       tbutil::Mutex::Lock lock(mutex_);
       int ret = TFS_ERROR;
+      if (!is_connected_)
+      {
+        connect();
+      }
       if (is_connected_)
       {
         char sql[1024];
@@ -340,6 +352,10 @@ error:
       outparam.clear();
       tbutil::Mutex::Lock lock(mutex_);
       int ret = TFS_ERROR;
+      if (!is_connected_)
+      {
+        connect();
+      }
       if (is_connected_)
       {
         char sql[1024];
@@ -383,6 +399,10 @@ error:
     {
       tbutil::Mutex::Lock lock(mutex_);
       int ret = TFS_ERROR;
+      if (!is_connected_)
+      {
+        connect();
+      }
       if (is_connected_)
       {
         char sql[1024];
@@ -451,6 +471,10 @@ error:
       outparam.clear();
       tbutil::Mutex::Lock lock(mutex_);
       int ret = TFS_ERROR;
+      if (!is_connected_)
+      {
+        connect();
+      }
       if (is_connected_)
       {
         char sql[1024];
@@ -612,6 +636,10 @@ error:
     {
       int ret = TFS_ERROR;
       tbutil::Mutex::Lock lock(mutex_);
+      if (!is_connected_)
+      {
+        connect();
+      }
       if (is_connected_)
       {
         ret = mysql_query(&mysql_.mysql, sql);
