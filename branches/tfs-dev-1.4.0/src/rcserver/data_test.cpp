@@ -91,7 +91,8 @@ int main()
           outparam[i].cluster_data_.ns_vip_.c_str());
     }
   }
-  
-
+  hl.update_session_info();
+  hl.update_session_stat();
+  hl.update_app_stat();
   return 0;
 }

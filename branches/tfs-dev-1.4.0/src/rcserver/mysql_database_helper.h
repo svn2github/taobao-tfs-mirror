@@ -57,6 +57,14 @@ namespace tfs
         virtual int remove(const AppInfo& inparam);
         virtual int scan(MIdAppInfo& outparam);
 
+        //update 
+        virtual int update_session_info();
+        virtual int update_session_stat();
+        virtual int update_app_stat();
+
+      private:
+        int exect_update_sql(const char* sql);
+
       private:
         tbutil::Mutex mutex_;
 

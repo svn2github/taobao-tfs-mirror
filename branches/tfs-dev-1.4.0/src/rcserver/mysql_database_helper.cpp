@@ -90,7 +90,7 @@ static bool open_mysql()
             mysql_.user.c_str(),
             mysql_.pass.c_str(),
             mysql_.database.c_str(),
-            mysql_.port, NULL, 0);
+            mysql_.port, NULL, CLIENT_MULTI_STATEMENTS);
     if (!conn) 
     {
         TBSYS_LOG(ERROR, "connect mysql database (%s:%s:%s) error(%s)",
@@ -501,5 +501,134 @@ error:
       }
       return ret;
     }
+
+    int MysqlDatabaseHelper::update_session_info()
+    {
+      int ret = TFS_SUCCESS;
+      const int SQLS_IN_STR = 100;
+      char* sql = new char[(1024 + 64) * SQLS_IN_STR];
+      int session_size = 150; //TODO
+      int done = 0;
+      int pos = 0;
+      bool is_log_out = false;
+      while (done < session_size)
+      {
+        pos = 0;
+        for (int i = 0 ; i < SQLS_IN_STR && done < session_size; i++)
+        {
+          int64_t fff = i;
+          pos += snprintf(sql + pos, 1024, "insert into t_session_info "
+              "(session_id,cache_size,client_version,create_time,modify_time) "
+              "values ('%s',%"PRI64_PREFIX"d,'%s',now(),now())", 
+              "test1", fff, "testclient");
+          if (is_log_out)
+          {
+            pos += snprintf(sql + pos, 64, " on duplicate key update log_out_time=now(),modify_time=now();");
+          }
+          else
+          {
+            pos += snprintf(sql + pos, 64, " on duplicate key update modify_time=now();");
+          }
+          done++;
+        }
+        is_log_out = true;
+        ret = exect_update_sql(sql);
+        if (TFS_SUCCESS != ret)
+        {
+          break;
+        }
+      }
+      delete []sql;
+      return ret;
+    }
+    int MysqlDatabaseHelper::update_session_stat()
+    {
+      int ret = TFS_SUCCESS;
+      const int SQLS_IN_STR = 100;
+      char* sql = new char[(1024 + 1024) * SQLS_IN_STR];
+      int session_size = 150; //TODO
+      int done = 0;
+      int pos = 0;
+      while (done < session_size)
+      {
+        pos = 0;
+        for (int i = 0 ; i < SQLS_IN_STR && done < session_size; i++)
+        {
+          int64_t fff=20;
+          pos += snprintf(sql + pos, 1024, "insert into t_session_stat "
+              "(session_id,oper_type,oper_times,file_size,response_time,create_time,modify_time) "
+              "values ('%s',%d,%"PRI64_PREFIX"d,%"PRI64_PREFIX"d,%d,now(),now())", 
+              "test1", i%5, fff, fff, 5);
+          pos += snprintf(sql + pos, 1024, " on duplicate key update "
+              "oper_times=oper_times+%"PRI64_PREFIX"d,file_size=file_size+%"PRI64_PREFIX"d,"
+              "response_time=response_time+%d,modify_time=now();", 
+              fff, fff, 5);
+          done++;
+        }
+        ret = exect_update_sql(sql);
+        if (TFS_SUCCESS != ret)
+        {
+          break;
+        }
+      }
+      delete []sql;
+      return ret;
+    }
+
+    int MysqlDatabaseHelper::update_app_stat()
+    {
+      int ret = TFS_SUCCESS;
+      const int SQLS_IN_STR = 100;
+      char* sql = new char[(512 + 512 ) * SQLS_IN_STR];
+      int session_size = 150; //TODO
+      int done = 0;
+      int pos = 0;
+      while (done < session_size)
+      {
+        pos = 0;
+        for (int i = 0 ; i < SQLS_IN_STR && done < session_size; i++)
+        {
+          int64_t fff = i;
+          pos += snprintf(sql + pos, 512, "insert into t_app_stat"
+              "(app_id, used_capacity, file_count, create_time, modify_time) "
+              "values (%d,%"PRI64_PREFIX"d,%d,now(),now())", 
+              i, fff, 1);
+          pos += snprintf(sql + pos, 512, " on duplicate key update "
+              "used_capacity=used_capacity+%"PRI64_PREFIX"d,file_count=file_count+%d, modify_time=now();",
+              fff, 1);
+          done++;
+        }
+        ret = exect_update_sql(sql);
+        if (TFS_SUCCESS != ret)
+        {
+          break;
+        }
+      }
+      delete []sql;
+      return ret;
+    }
+
+    int MysqlDatabaseHelper::exect_update_sql(const char* sql)
+    {
+      int ret = TFS_ERROR;
+      tbutil::Mutex::Lock lock(mutex_);
+      if (is_connected_)
+      {
+        ret = mysql_query(&mysql_.mysql, sql);
+        do
+        {
+          MYSQL_RES *mysql_ret = mysql_store_result(&mysql_.mysql);
+          mysql_free_result(mysql_ret);
+          if (ret) 
+          {
+            TBSYS_LOG(ERROR, "error is %s sql is ",  mysql_error(&mysql_.mysql), sql);
+            close();
+            ret = TFS_ERROR;
+          }
+        } while (!mysql_next_result(&mysql_.mysql));
+      }
+      return ret;
+    }
+
   }
 }
