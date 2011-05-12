@@ -21,7 +21,8 @@ namespace tfs
 {
   namespace message
   {
-    DumpPlanMessage::DumpPlanMessage()
+    DumpPlanMessage::DumpPlanMessage():
+      reserve_(0)
     {
       _packetHeader._pcode = DUMP_PLAN_MESSAGE;
     }
@@ -32,17 +33,27 @@ namespace tfs
 
     int DumpPlanMessage::parse(char* data, int32_t len)
     {
-      return TFS_SUCCESS;
+      int32_t iret = (NULL != data && len >= message_length()) ? TFS_SUCCESS : TFS_ERROR;
+      if (TFS_SUCCESS == iret)
+      {
+        iret = get_int32(&data, &len, &reserve_);
+      }
+      return iret;
     }
 
     int32_t DumpPlanMessage::message_length()
     {
-      return 1;
+      return INT_SIZE;
     }
 
     int DumpPlanMessage::build(char* data, int32_t len)
     {
-      return TFS_SUCCESS;
+      int32_t iret = (NULL != data && len >= message_length()) ? TFS_SUCCESS : TFS_ERROR;
+      if (TFS_SUCCESS == iret)
+      {
+        iret = set_int32(&data, &len, reserve_);
+      }
+      return iret;
     }
 
     char* DumpPlanMessage::get_name()

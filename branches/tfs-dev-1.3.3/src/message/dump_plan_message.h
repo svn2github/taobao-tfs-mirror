@@ -37,6 +37,8 @@ namespace tfs
         virtual int32_t message_length();
         virtual char* get_name();
         static Message* create(const int32_t type);
+      private:
+        int32_t reserve_;
     };
     class DumpPlanResponseMessage: public Message
     {

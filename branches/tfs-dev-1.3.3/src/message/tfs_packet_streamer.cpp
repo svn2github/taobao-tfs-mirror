@@ -61,7 +61,7 @@ namespace tfs
       header->_dataLen = tfs_packet_header.length_;
       header->_pcode = tfs_packet_header.type_;
       header->_chid = 1;
-      TBSYS_LOG(INFO, "pcode: %d, dataLen: %d, flag: %x, all_data_len: %d", header->_pcode, header->_dataLen, TFS_PACKET_FLAG_V1, input->getDataLen());
+      TBSYS_LOG(DEBUG, "pcode: %d, dataLen: %d, flag: %x, all_data_len: %d", header->_pcode, header->_dataLen, TFS_PACKET_FLAG_V1, input->getDataLen());
 
       int64_t channel_id = 0;
 

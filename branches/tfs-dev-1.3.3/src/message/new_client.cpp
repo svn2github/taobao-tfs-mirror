@@ -264,7 +264,7 @@ namespace tfs
       return bret;
     }
 
-    int send_msg_to_server(uint64_t server, Message* message)
+    int send_msg_to_server(uint64_t server, Message* message, const int64_t timeout)
     {
       NewClient* client = NewClientManager::get_instance().create_client();
       int32_t iret = NULL != client ? common::TFS_SUCCESS : common::TFS_ERROR;
@@ -274,7 +274,7 @@ namespace tfs
         iret = client->post_request(server, message, send_id);  
         if (common::TFS_SUCCESS == iret)
         {
-          client->wait();
+          client->wait(timeout);
           NewClient::RESPONSE_MSG_MAP* sresponse = client->get_success_response();
           NewClient::RESPONSE_MSG_MAP* fresponse = client->get_fail_response();
           iret = NULL != sresponse && NULL != fresponse ? common::TFS_SUCCESS : common::TFS_ERROR;
@@ -299,7 +299,7 @@ namespace tfs
       return iret;
     }
 
-    int send_msg_to_server(uint64_t server, NewClient* client, Message* msg, Message*& output/*not free*/)
+    int send_msg_to_server(uint64_t server, NewClient* client, Message* msg, Message*& output/*not free*/, const int64_t timeout)
     {
       int32_t iret = NULL != client && server > 0 && NULL != msg && NULL == output ? common::TFS_SUCCESS : common::TFS_ERROR;
       if (common::TFS_SUCCESS == iret)
@@ -308,7 +308,7 @@ namespace tfs
         iret = client->post_request(server, msg, send_id);  
         if (common::TFS_SUCCESS == iret)
         {
-          client->wait();
+          client->wait(timeout);
           NewClient::RESPONSE_MSG_MAP* sresponse = client->get_success_response();
           NewClient::RESPONSE_MSG_MAP* fresponse = client->get_fail_response();
           iret = NULL != sresponse && NULL != fresponse ? common::TFS_SUCCESS : common::TFS_ERROR;

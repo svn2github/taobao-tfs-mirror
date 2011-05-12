@@ -1423,7 +1423,7 @@ namespace tfs
         {
           DumpPlanResponseMessage* rmsg = new DumpPlanResponseMessage();
           dump_plan(rmsg->get_data());
-          msg->reply_message(msg);
+          msg->reply_message(rmsg);
           iret = TFS_SUCCESS;
         }
         break;

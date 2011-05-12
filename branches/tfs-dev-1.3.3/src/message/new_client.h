@@ -64,8 +64,10 @@ namespace tfs
 
         bool async_wait();
     };
-    int send_msg_to_server(uint64_t server, Message* message);
-    int send_msg_to_server(uint64_t server, NewClient* client, Message* msg, Message*& output/*not free*/);
+    int send_msg_to_server(uint64_t server, Message* message, 
+                          const int64_t timeout = common::DEFAULT_NETWORK_CALL_TIMEOUT);
+    int send_msg_to_server(uint64_t server, NewClient* client, Message* msg, Message*& output/*not free*/,
+                          const int64_t timeout = common::DEFAULT_NETWORK_CALL_TIMEOUT);
   } /* message */
 } /* tfs */
 

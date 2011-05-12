@@ -632,7 +632,7 @@ PASS:
         meta_mgr_.scan(param);
         message->reply_message(resp);
       }
-      return TFS_ERROR;
+      return bret ? TFS_SUCCESS : TFS_ERROR;
     }
 
     int NameServer::owner_check(Message*)
