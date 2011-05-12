@@ -333,7 +333,8 @@ int TranBlock::read_index()
   int index = 0;
   Message* rsp = NULL;
 #ifdef USE_NEW_CLIENT
-  int ret = NewClientManager::get_instance()->call(rds_[index], &gfl_msg, WAIT_TIME_OUT, rsp);
+  NewClient* client = NewClientManager::get_instance().create_client();
+  int ret = send_msg_to_server(rds_[index], client, &gfl_msg, rsp);
 #else
   int ret = send_message_to_server(rds_[index], &gfl_msg, &rsp);
 #endif
@@ -367,7 +368,7 @@ int TranBlock::read_index()
     ret = TFS_ERROR;
   }
 
-  tbsys::gDelete(rsp);
+  NewClientManager::get_instance().destroy_client(client); 
   return ret;
 }
 
@@ -393,7 +394,8 @@ int TranBlock::read_data()
       // fetch data from the first ds
       Message* rsp = NULL;
 #ifdef USE_NEW_CLIENT
-  ret = NewClientManager::get_instance()->call(rds_[index], &rrd_msg, WAIT_TIME_OUT, rsp);
+  NewClient* client = NewClientManager::get_instance().create_client();
+  ret = send_msg_to_server(rds_[index], client, &rrd_msg, rsp);
 #else
   ret = send_message_to_server(rds_[index], &rrd_msg, &rsp);
 #endif
@@ -440,7 +442,7 @@ int TranBlock::read_data()
         ret = TFS_ERROR;
       }
 
-      tbsys::gDelete(rsp);
+      NewClientManager::get_instance().destroy_client(client); 
       if (TFS_SUCCESS != ret)
       {
         --remainder_retrys;
@@ -615,9 +617,10 @@ int TranBlock::write_data()
 
       Message* rsp = NULL;
 #ifdef USE_NEW_CLIENT
-  ret = NewClientManager::get_instance()->call(dest_ds_id_, &req_wrd_msg, WAIT_TIME_OUT, rsp);
+      NewClient* client = NewClientManager::get_instance().create_client();
+      int ret = send_msg_to_server(dest_ds_id_, client, &req_wrd_msg, rsp);
 #else
-  ret = send_message_to_server(dest_ds_id_, &req_wrd_msg, &rsp);
+      ret = send_message_to_server(dest_ds_id_, &req_wrd_msg, &rsp);
 #endif
       if (TFS_SUCCESS != ret)
       {
@@ -646,7 +649,7 @@ int TranBlock::write_data()
       block_len = dest_content_buf_.getDataLen();
       cur_write_offset += cur_len;
 
-      tbsys::gDelete(rsp);
+      NewClientManager::get_instance().destroy_client(client); 
 
       if (TFS_SUCCESS != ret)
       {
@@ -688,7 +691,8 @@ int TranBlock::write_index()
 
   Message* rsp = NULL;
 #ifdef USE_NEW_CLIENT
-  ret = NewClientManager::get_instance()->call(dest_ds_id_, &req_wib_msg, WAIT_TIME_OUT, rsp);
+  NewClient* client = NewClientManager::get_instance().create_client();
+  ret = send_msg_to_server(dest_ds_id_, client, &req_wib_msg, rsp);
 #else
   ret = send_message_to_server(dest_ds_id_, &req_wib_msg, &rsp);
 #endif
@@ -715,7 +719,7 @@ int TranBlock::write_index()
     ret = TFS_ERROR;
   }
 
-  tbsys::gDelete(rsp);
+  NewClientManager::get_instance().destroy_client(client); 
   return ret;
 }
 

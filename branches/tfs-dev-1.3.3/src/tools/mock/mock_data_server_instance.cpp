@@ -14,7 +14,7 @@
  *
  */
 #include "common/define.h"
-#include "common/interval.h"
+#include "common/internal.h"
 #include "mock_data_server_instance.h"
 #include "message/client_pool.h"
 #include "common/config.h"

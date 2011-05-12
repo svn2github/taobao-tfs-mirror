@@ -97,7 +97,7 @@ namespace tfs
           seq_id_ = 0;
         }
         NEWCLIENT_MAP_ITER iter = new_clients_.find(seq_id_);
-        if (iter != new_clients_.end())
+        if (iter == new_clients_.end())
         {
           client = new NewClient(seq_id_);
           new_clients_.insert(std::make_pair(seq_id_, client));

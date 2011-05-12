@@ -64,6 +64,8 @@ namespace tfs
 
         bool async_wait();
     };
+    int send_msg_to_server(uint64_t server, Message* message);
+    int send_msg_to_server(uint64_t server, NewClient* client, Message* msg, Message*& output/*not free*/);
   } /* message */
 } /* tfs */
 

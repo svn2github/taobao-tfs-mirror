@@ -262,5 +262,71 @@ namespace tfs
       }
       return bret;
     }
+
+    int send_msg_to_server(uint64_t server, Message* message)
+    {
+      NewClient* client = NewClientManager::get_instance().create_client();
+      int32_t iret = NULL != client ? common::TFS_SUCCESS : common::TFS_ERROR;
+      if (common::TFS_SUCCESS == iret)
+      {
+        uint8_t send_id = 0;
+        iret = client->post_request(server, message, send_id);  
+        if (common::TFS_SUCCESS == iret)
+        {
+          client->wait();
+          NewClient::RESPONSE_MSG_MAP* sresponse = client->get_success_response();
+          NewClient::RESPONSE_MSG_MAP* fresponse = client->get_fail_response();
+          iret = NULL != sresponse && NULL != fresponse ? common::TFS_SUCCESS : common::TFS_ERROR;
+          if (common::TFS_SUCCESS == iret)
+          {
+            iret = sresponse->empty() ? common::EXIT_TIMEOUT_ERROR : common::TFS_SUCCESS;
+            if (common::TFS_SUCCESS == iret)
+            {
+              NewClient::RESPONSE_MSG_MAP_ITER  iter = sresponse->begin();
+              Message* rmsg = iter->second.second;
+              iret = rmsg->getPCode() == STATUS_MESSAGE ? common::TFS_SUCCESS : common::TFS_ERROR;
+              if (common::TFS_SUCCESS == iret)
+              {
+                StatusMessage* smsg = dynamic_cast<StatusMessage*>(rmsg);
+                iret = smsg->get_status();
+              }
+            }
+          }
+        }
+      }
+      NewClientManager::get_instance().destroy_client(client);
+      return iret;
+    }
+
+    int send_msg_to_server(uint64_t server, NewClient* client, Message* msg, Message*& output/*not free*/)
+    {
+      int32_t iret = NULL != client && server > 0 && NULL != msg && NULL == output ? common::TFS_SUCCESS : common::TFS_ERROR;
+      if (common::TFS_SUCCESS == iret)
+      {
+        uint8_t send_id = 0;
+        iret = client->post_request(server, msg, send_id);  
+        if (common::TFS_SUCCESS == iret)
+        {
+          client->wait();
+          NewClient::RESPONSE_MSG_MAP* sresponse = client->get_success_response();
+          NewClient::RESPONSE_MSG_MAP* fresponse = client->get_fail_response();
+          iret = NULL != sresponse && NULL != fresponse ? common::TFS_SUCCESS : common::TFS_ERROR;
+          if (common::TFS_SUCCESS == iret)
+          {
+            iret = sresponse->empty() ? common::EXIT_TIMEOUT_ERROR : common::TFS_SUCCESS;
+            if (common::TFS_SUCCESS == iret)
+            {
+              NewClient::RESPONSE_MSG_MAP_ITER  iter = sresponse->begin();
+              iret = NULL != iter->second.second? common::TFS_SUCCESS : common::TFS_ERROR;
+              if (common::TFS_SUCCESS == iret)
+              {
+                output = iter->second.second;
+              }
+            }
+          }
+        }
+      }
+      return iret;
+    }
   }
 }

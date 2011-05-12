@@ -29,6 +29,8 @@
 #include "message/message_factory.h"
 #include "message/tfs_packet_streamer.h"
 #include "message/async_client.h"
+#include "common/lock.h"
+#include "common/parameter.h"
 
 namespace tfs
 {

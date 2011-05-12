@@ -81,12 +81,11 @@ enum
   CMD_LIST_BLOCK,
   CMD_REMOVE_BLOCK,
   CMD_HIDE,
-  CMD_CLEAR_REPL_INFO,
-  CMD_GET_REPL_INFO,
   CMD_ACCESS_STAT_INFO,
   CMD_SET_ACL_FLAG,
   CMD_GET_SCALE_IMAGE,
-  CMD_FORCE_ALL_DATASERVER_REPORT
+  CMD_FORCE_ALL_DATASERVER_REPORT,
+  CMD_DUMP_PLAN
 };
 
 void init()
@@ -105,27 +104,28 @@ void init()
   cmd_map["vcblk"] = CMD_VISIT_COUNT_BLK;
   cmd_map["batch"] = CMD_BATCH;
   cmd_map["@"] = CMD_BATCH;
-  cmd_map["expblk"] = CMD_EXPBLK;
-  cmd_map["ueblk"] = CMD_UNEXPBLK;
+  //cmd_map["expblk"] = CMD_EXPBLK;
+  //cmd_map["ueblk"] = CMD_UNEXPBLK;
   cmd_map["compact"] = CMD_COMPACTBLK;
   cmd_map["newfilename"] = CMD_NEWFILENAME;
-  cmd_map["repairblk"] = CMD_REPAIR_LOSEBLOCK;
-  cmd_map["repairgrp"] = CMD_REPAIR_GROUP;
+  //cmd_map["repairblk"] = CMD_REPAIR_LOSEBLOCK;
+  //cmd_map["repairgrp"] = CMD_REPAIR_GROUP;
   cmd_map["param"] = CMD_SET_RUN_PARAM;
-  cmd_map["unloadblk"] = CMD_UNLOADBLK;
+  //cmd_map["unloadblk"] = CMD_UNLOADBLK;
   cmd_map["lsf"] = CMD_LIST_FILE;
-  cmd_map["addblk"] = CMD_ADDBLK;
+  //cmd_map["addblk"] = CMD_ADDBLK;
   cmd_map["cfi"] = CMD_CHECK_FILEINFO;
-  cmd_map["repaircrc"] = CMD_REPAIR_CRC;
+  //cmd_map["repaircrc"] = CMD_REPAIR_CRC;
   cmd_map["listblock"] = CMD_LIST_BLOCK;
   cmd_map["removeblock"] = CMD_REMOVE_BLOCK;
   cmd_map["hide"] = CMD_HIDE;
-  cmd_map["getri"] = CMD_GET_REPL_INFO;
-  cmd_map["clri"] = CMD_CLEAR_REPL_INFO;
-  cmd_map["aci"] = CMD_ACCESS_STAT_INFO;
-  cmd_map["setacl"] = CMD_SET_ACL_FLAG;
-  cmd_map["getx"] = CMD_GET_SCALE_IMAGE;
+  ////cmd_map["getri"] = CMD_GET_REPL_INFO;
+  ////cmd_map["clri"] = CMD_CLEAR_REPL_INFO;
+  //cmd_map["aci"] = CMD_ACCESS_STAT_INFO;
+  //cmd_map["setacl"] = CMD_SET_ACL_FLAG;
+  //cmd_map["getx"] = CMD_GET_SCALE_IMAGE;
   cmd_map["forcereport"] = CMD_FORCE_ALL_DATASERVER_REPORT;
+  cmd_map["dumpplan"] = CMD_DUMP_PLAN;
 }
 
 int parse_cmd(char* buffer, VEC_STRING& param);
@@ -145,7 +145,7 @@ int list_file_info(TfsClient* tfs_client, VEC_STRING& param);
 int batch_file(TfsClient* tfs_client, VEC_STRING& param);
 int unexpire_blk(TfsClient* tfs_client, VEC_STRING& param);
 int expire_block(TfsClient* tfs_client, VEC_STRING& param);
-int send_message_to_server(uint64_t server_id, Message* ds_message, string& err_msg, Message** retmessage = NULL, const int64_t timeout = 3000/*3s*/);
+int send_message_to_server(uint64_t server, NewClient* client, Message* msg, string& err_msg, Message** output = NULL);
 int compact_block(TfsClient* tfs_client, VEC_STRING& param);
 int new_file_name(TfsClient* tfs_client, VEC_STRING& param);
 int repair_lose_block(TfsClient* tfs_client, VEC_STRING& param);
@@ -157,12 +157,13 @@ int check_file_info(TfsClient* tfs_client, VEC_STRING& param);
 int repair_crc(TfsClient* tfs_client, VEC_STRING& param);
 int list_block(TfsClient* tfs_client, VEC_STRING& param);
 int remove_block(TfsClient* tfs_client, VEC_STRING& param);
-int get_repl_info(TfsClient* tfs_client);
-int clear_repl_info(TfsClient* tfs_client);
+//int get_repl_info(TfsClient* tfs_client);
+//int clear_repl_info(TfsClient* tfs_client);
 int access_stat_info(VEC_STRING& param);
 int access_control_flag(VEC_STRING& param);
 int get_scale_image(TfsClient* tfs_client, VEC_STRING &param);
 int force_all_dataserver_report(TfsClient* tfs_client, VEC_STRING& param);
+int dump_plan(TfsClient* tfs_client, VEC_STRING &param);
 
 // transfer "ip:port" to server_id (64bit)
 uint64_t trans_to_server_id(char* ipport)
@@ -251,17 +252,18 @@ int main(int argc, char* argv[])
   init();
 
   TfsClient tfs_client;
-	int iret = tfs_client.initialize(nsip);
-	if (iret != TFS_SUCCESS)
-	{
-		return TFS_ERROR;
-	}
+  int iret = tfs_client.initialize(nsip);
+  if (iret != TFS_SUCCESS)
+  {
+    return TFS_ERROR;
+  }
 	
+  NewClientManager::get_instance().initialize(); //XXX:is it OK to put it here?
   local_server_ip = tbsys::CNetUtil::getLocalAddr(dev_name.c_str());
   if (optind >= argc)
   {
     signal(SIGINT, sign_handler);
-		signal(SIGTERM, sign_handler);
+    signal(SIGTERM, sign_handler);
     main_loop(&tfs_client);
   }
   else // has other params
@@ -432,13 +434,7 @@ int switch_cmd(int32_t cmd, TfsClient* tfs_client, VEC_STRING& param)
   case CMD_REMOVE_BLOCK:
     ret = remove_block(tfs_client, param);
     break;
-  case CMD_CLEAR_REPL_INFO:
-    ret = clear_repl_info(tfs_client);
-    break;
-  case CMD_GET_REPL_INFO:
-    ret = get_repl_info(tfs_client);
-    break;
-  case CMD_ACCESS_STAT_INFO:
+  case CMD_ACCESS_STAT_INFO: 
     ret = access_stat_info(param);
     break;
   case CMD_SET_ACL_FLAG:
@@ -449,6 +445,9 @@ int switch_cmd(int32_t cmd, TfsClient* tfs_client, VEC_STRING& param)
     break;
   case CMD_FORCE_ALL_DATASERVER_REPORT:
     ret = force_all_dataserver_report(tfs_client, param);
+    break;
+  case CMD_DUMP_PLAN:
+    ret = dump_plan(tfs_client, param);
     break;
   default:
     break;
@@ -470,6 +469,7 @@ int main_loop(TfsClient* tfs_client)
     int32_t cmd = parse_cmd(buffer, param);
     if (cmd == CMD_QUIT)
     {
+      NewClientManager::get_instance().destroy(); //XXX:is it OK to put it here?
       break;
     }
     switch_cmd(cmd, tfs_client, param);
@@ -501,7 +501,7 @@ int show_help()
     "\nrepairgrp                      repair the group of a block"
     "\nremoveblock                    [Attention!] remove a block(includes the meta infos)"
     "\nlistblock                      list the dataservers the block allocated on"
-
+    "\ndumpplan                       dump plan"
     "\nhelp                           show help info\n\n");
   return TFS_SUCCESS;
 }
@@ -834,14 +834,15 @@ int force_all_dataserver_report(TfsClient* tfs_client, VEC_STRING& parameter)
     do
     {
       ++count;
-      iret = tfs::message::send_message_to_server(nsip_port, msg, &ret_msg);
+      NewClient* client = NewClientManager::get_instance().create_client();
+      iret = send_msg_to_server(nsip_port, client, msg, ret_msg);
       if (TFS_SUCCESS == iret
         && ret_msg != NULL
         && ret_msg->getPCode() == SHOW_SERVER_INFORMATION_MESSAGE)
       {
         break;
       }
-      tbsys::gDelete(ret_msg);
+      NewClientManager::get_instance().destroy_client(client);
     }
     while(count > 0);
 
@@ -875,7 +876,10 @@ int force_all_dataserver_report(TfsClient* tfs_client, VEC_STRING& parameter)
           send_msg.set_cmd(CLIENT_CMD_FORCE_DATASERVER_REPORT);
           do
           {
-            iret = tfs::message::send_message_to_server(info.id_, &send_msg, NULL);
+            
+            NewClient* client = NewClientManager::get_instance().create_client();
+            Message* ret_msg = NULL;
+            iret = send_msg_to_server(info.id_, client, &send_msg, ret_msg);
             if (iret == TFS_SUCCESS)
             {
               TBSYS_LOG(INFO, "send force report command to server(%s) successful",
@@ -887,6 +891,7 @@ int force_all_dataserver_report(TfsClient* tfs_client, VEC_STRING& parameter)
               TBSYS_LOG(INFO, "send force report command to server(%s) fail",
                 tbsys::CNetUtil::addrToString(info.id_).c_str());
             }
+            NewClientManager::get_instance().destroy_client(client); 
           }
           while (count > 0);
         }
@@ -1120,29 +1125,27 @@ int batch_file(TfsClient* tfs_client, VEC_STRING& param)
   return TFS_SUCCESS;
 }
 
-int send_message_to_server(uint64_t server_id, Message* msg, string& err_msg, Message** response, const int64_t timeout)
+int send_message_to_server(uint64_t server, NewClient* client, Message* msg, string& err_msg, Message** output/*not free*/)
 {
   Message* ret_msg = NULL;
-  int iret = NewClientManager::get_instance().call(server_id, msg, timeout, ret_msg);
-  if (TFS_SUCCESS == iret 
-      && NULL != ret_msg)
+  int32_t iret = tfs::message::send_msg_to_server(server, client, msg, ret_msg);
+  if (iret == TFS_SUCCESS)
   {
-    if (NULL != response)
+    if (output != NULL)
     {
-      *response = ret_msg; 
+      *output = ret_msg;
     }
-    else
+    else 
     {
       if (ret_msg->getPCode() == STATUS_MESSAGE)
       {
         StatusMessage* s_msg = dynamic_cast<StatusMessage*>(ret_msg);
-        if (STATUS_MESSAGE_OK == s_msg->get_status())
+        if (s_msg->get_status() != STATUS_MESSAGE_OK)
         {
-          iret = TFS_SUCCESS;
+          iret = TFS_ERROR;
         }
-        else
+        if (s_msg->get_error() != NULL)
         {
-          iret = s_msg->get_status();
           err_msg = s_msg->get_error();
         }
       }
@@ -1150,20 +1153,19 @@ int send_message_to_server(uint64_t server_id, Message* msg, string& err_msg, Me
       {
         iret = TFS_ERROR;
         TBSYS_LOG(ERROR, "send message to server(%s) error, message(%d:%d) is invalid",
-            tbsys::CNetUtil::addrToString(server_id).c_str(), msg->getPCode(), ret_msg->getPCode());
+          tbsys::CNetUtil::addrToString(server).c_str(), msg->getPCode(), ret_msg->getPCode());
       }
     }
   }
   else
   {
-    iret = TFS_ERROR;
     TBSYS_LOG(ERROR, "send message to server(%s) error: receive message error or timeout",
-        tbsys::CNetUtil::addrToString(server_id).c_str());
+        tbsys::CNetUtil::addrToString(server).c_str());
+
   }
   return iret;
-
 }
-
+      
 int unexpire_blk(TfsClient* tfs_client, VEC_STRING& param)
 {
   int32_t size = param.size();
@@ -1192,11 +1194,14 @@ int unexpire_blk(TfsClient* tfs_client, VEC_STRING& param)
   req_cc_msg.set_value4(0);
   req_cc_msg.set_value2(local_server_ip);
   string err_msg;
-  if (send_message_to_server(nsip_port, &req_cc_msg, err_msg) == TFS_ERROR)
+  NewClient* client = NewClientManager::get_instance().create_client();
+  if (send_message_to_server(nsip_port, client, &req_cc_msg, err_msg) == TFS_ERROR)
   {
     fprintf(stderr, "%s\n\n", err_msg.c_str());
+    NewClientManager::get_instance().destroy_client(client);
     return TFS_ERROR;
   }
+  NewClientManager::get_instance().destroy_client(client); 
 
   return TFS_SUCCESS;
 }
@@ -1259,11 +1264,14 @@ int expire_block(TfsClient* tfs_client, VEC_STRING& param)
   req_cc_msg.set_value4(0);
   req_cc_msg.set_value2(local_server_ip);
   string err_msg;
-  if (send_message_to_server(nsip_port, &req_cc_msg, err_msg) == TFS_ERROR)
+  NewClient* client = NewClientManager::get_instance().create_client();
+  if (send_message_to_server(nsip_port, client, &req_cc_msg, err_msg) == TFS_ERROR)
   {
     fprintf(stderr, "%s\n\n", err_msg.c_str());
+    NewClientManager::get_instance().destroy_client(client);
     return TFS_ERROR;
   }
+  NewClientManager::get_instance().destroy_client(client);
 
   return TFS_SUCCESS;
 }
@@ -1286,11 +1294,14 @@ int compact_block(TfsClient* tfs_client, VEC_STRING& param)
   req_cc_msg.set_value4(0);
   req_cc_msg.set_value2(local_server_ip);
   string err_msg;
-  if (send_message_to_server(nsip_port, &req_cc_msg, err_msg) == TFS_ERROR)
+  NewClient* client = NewClientManager::get_instance().create_client();
+  if (send_message_to_server(nsip_port, client, &req_cc_msg, err_msg) == TFS_ERROR)
   {
     fprintf(stderr, "%s\n\n", err_msg.c_str());
+    NewClientManager::get_instance().destroy_client(client);
     return TFS_ERROR;
   }
+  NewClientManager::get_instance().destroy_client(client);
 
   return TFS_SUCCESS;
 }
@@ -1322,18 +1333,21 @@ int repair_lose_block(TfsClient* tfs_client, VEC_STRING& param)
   req_cc_msg.set_value1(src_server_id);
   req_cc_msg.set_value2(dest_server_id);
   string err_msg;
-  if (send_message_to_server(nsip_port, &req_cc_msg, err_msg) == TFS_ERROR)
+  NewClient* client = NewClientManager::get_instance().create_client();
+  if (send_message_to_server(nsip_port, client, &req_cc_msg, err_msg) == TFS_ERROR)
   {
     fprintf(stderr, "%s\n\n", err_msg.c_str());
+    NewClientManager::get_instance().destroy_client(client);
     return TFS_ERROR;
   }
+  NewClientManager::get_instance().destroy_client(client);
 
   return TFS_SUCCESS;
 }
 
 int repair_group_block(TfsClient* tfs_client, VEC_STRING& param)
 {
-  /*int32_t size = param.size();
+  int32_t size = param.size();
   if (size != 1)
   {
     fprintf(stderr, "repairgrp block_id\n\n");
@@ -1343,16 +1357,19 @@ int repair_group_block(TfsClient* tfs_client, VEC_STRING& param)
   uint64_t nsip_port = tfs_client->get_ns_ip_port();
 
   ClientCmdMessage req_cc_msg;
-  req_cc_msg.set_type(CLIENT_CMD_REPAIR_GROUP);
-  req_cc_msg.set_block_id(block_id);
-  req_cc_msg.set_version(0);
-  req_cc_msg.set_from_server_id(local_server_ip);
+  req_cc_msg.set_cmd(CLIENT_CMD_REPAIR_GROUP);
+  req_cc_msg.set_value3(block_id);
+  req_cc_msg.set_value4(0);
+  req_cc_msg.set_value2(local_server_ip);
   string err_msg;
-  if (send_message_to_server(nsip_port, &req_cc_msg, err_msg) == TFS_ERROR)
+  NewClient* client = NewClientManager::get_instance().create_client();
+  if (send_message_to_server(nsip_port, client, &req_cc_msg, err_msg) == TFS_ERROR)
   {
     fprintf(stderr, "%s\n\n", err_msg.c_str());
+    NewClientManager::get_instance().destroy_client(client);
     return TFS_ERROR;
-  }*/
+  }
+  NewClientManager::get_instance().destroy_client(client);
 
   return TFS_SUCCESS;
 }
@@ -1449,23 +1466,26 @@ int set_run_param(TfsClient* tfs_client, VEC_STRING& param)
   ClientCmdMessage req_cc_msg;
   req_cc_msg.set_cmd(CLIENT_CMD_SET_PARAM);
   req_cc_msg.set_value3(index);
-  req_cc_msg.set_value4(value);
+  req_cc_msg.set_value1(value);
   string err_msg;
 
   uint64_t nsip_port = tfs_client->get_ns_ip_port();
-  if (send_message_to_server(nsip_port, &req_cc_msg, err_msg) == TFS_ERROR)
+  NewClient* client = NewClientManager::get_instance().create_client();
+  if (send_message_to_server(nsip_port, client, &req_cc_msg, err_msg) == TFS_ERROR)
   {
     fprintf(stderr, "%s\n\n", err_msg.c_str());
+    NewClientManager::get_instance().destroy_client(client);
     return TFS_ERROR;
   }
   fprintf(stderr, "%s\n\n", err_msg.c_str());
+  NewClientManager::get_instance().destroy_client(client);
 
   return TFS_SUCCESS;
 }
 
 int unload_block(VEC_STRING &param)
 {
-  /*int32_t size = param.size();
+  int32_t size = param.size();
   if (size != 2)
   {
     fprintf(stderr, "unloadblk ip:port block_id\n\n");
@@ -1484,17 +1504,20 @@ int unload_block(VEC_STRING &param)
   uint32_t block_id = strtoul(param[1].c_str(), reinterpret_cast<char**> (NULL), 10);
 
   ClientCmdMessage req_cc_msg;
-  req_cc_msg.set_type(CLIENT_CMD_UNLOADBLK);
-  req_cc_msg.set_server_id(server_id);
-  req_cc_msg.set_block_id(block_id);
-  req_cc_msg.set_version(0);
-  req_cc_msg.set_from_server_id(local_server_ip);
+  req_cc_msg.set_cmd(CLIENT_CMD_UNLOADBLK);
+  req_cc_msg.set_value1(server_id);
+  req_cc_msg.set_value3(block_id);
+  req_cc_msg.set_value4(0);
+  req_cc_msg.set_value2(local_server_ip);
   string err_msg;
-  if (send_message_to_server(server_id, &req_cc_msg, err_msg) == TFS_ERROR)
+  NewClient* client = NewClientManager::get_instance().create_client();
+  if (send_message_to_server(server_id, client, &req_cc_msg, err_msg) == TFS_ERROR)
   {
     fprintf(stderr, "%s\n\n", err_msg.c_str());
+    NewClientManager::get_instance().destroy_client(client);
     return TFS_ERROR;
-  }*/
+  }
+  NewClientManager::get_instance().destroy_client(client);
 
   return TFS_SUCCESS;
 }
@@ -1523,9 +1546,11 @@ int stat_blk(VEC_STRING& param)
   req_gbi_msg.set_block_id(block_id);
   string err_msg;
   Message* ret_message = NULL;
-  send_message_to_server(server_id, &req_gbi_msg, err_msg, &ret_message);
+  NewClient* client = NewClientManager::get_instance().create_client();
+  send_message_to_server(server_id, client, &req_gbi_msg, err_msg, &ret_message);
   if (ret_message == NULL)
   {
+    NewClientManager::get_instance().destroy_client(client);
     return TFS_ERROR;
   }
   if (ret_message->get_message_type() == UPDATE_BLOCK_INFO_MESSAGE)
@@ -1566,14 +1591,14 @@ int stat_blk(VEC_STRING& param)
       printf("%s\n", s_msg->get_error());
     }
   }
-  delete ret_message;
+  NewClientManager::get_instance().destroy_client(client);
 
   return TFS_SUCCESS;
 }
 
 int visit_count_blk(VEC_STRING& param)
 {
-/*  int32_t size = param.size();
+  int32_t size = param.size();
   if (size != 2)
   {
     fprintf(stderr, "vcblk ip:port count\n\n");
@@ -1596,9 +1621,11 @@ int visit_count_blk(VEC_STRING& param)
   req_gss_msg.set_return_row(count);
   string err_msg;
   Message* ret_message = NULL;
-  send_message_to_server(server_id, &req_gss_msg, err_msg, &ret_message);
+  NewClient* client = NewClientManager::get_instance().create_client();
+  send_message_to_server(server_id, client, &req_gss_msg, err_msg, &ret_message);
   if (NULL == ret_message)
   {
+    NewClientManager::get_instance().destroy_client(client);
     return TFS_ERROR;
   }
   if (CARRY_BLOCK_MESSAGE == ret_message->get_message_type())
@@ -1608,7 +1635,7 @@ int visit_count_blk(VEC_STRING& param)
     const VUINT32* vcs = req_cb_msg->get_new_blocks();
     if (ids->size() != vcs->size())
     {
-      delete ret_message;
+      NewClientManager::get_instance().destroy_client(client);
       return TFS_ERROR;
     }
     for (int32_t i = 0; i < static_cast<int32_t> (ids->size()); i++)
@@ -1624,14 +1651,14 @@ int visit_count_blk(VEC_STRING& param)
       printf("%s\n", s_msg->get_error());
     }
   }
-  delete ret_message;*/
+  NewClientManager::get_instance().destroy_client(client);
 
   return TFS_SUCCESS;
 }
 
 int access_control_flag(VEC_STRING& param)
 {
-  /*int32_t size = param.size();
+  int32_t size = param.size();
   if (size < 2)
   {
     fprintf(stderr, "setacl ip:port type [v1 v2]\n\n");
@@ -1708,24 +1735,27 @@ int access_control_flag(VEC_STRING& param)
   }
 
   ClientCmdMessage req_cc_msg;
-  req_cc_msg.set_type(CLIENT_CMD_SET_PARAM);
-  req_cc_msg.set_block_id(op_type); // param type == 1 as set acl flag.
-  req_cc_msg.set_server_id(v1); // server_id as flag
-  req_cc_msg.set_version(v2);
-  req_cc_msg.set_from_server_id(local_server_ip);
+  req_cc_msg.set_cmd(CLIENT_CMD_SET_PARAM);
+  req_cc_msg.set_value3(op_type); // param type == 1 as set acl flag.
+  req_cc_msg.set_value1(v1); // server_id as flag
+  req_cc_msg.set_value4(v2);
+  req_cc_msg.set_value2(local_server_ip);
   string err_msg;
-  if (send_message_to_server(server_id, &req_cc_msg, err_msg) == TFS_ERROR)
+  NewClient* client = NewClientManager::get_instance().create_client();
+  if (send_message_to_server(server_id, client, &req_cc_msg, err_msg) == TFS_ERROR)
   {
     fprintf(stderr, "%s\n\n", err_msg.c_str());
+    NewClientManager::get_instance().destroy_client(client);
     return TFS_ERROR;
-  }*/
+  } 
+  NewClientManager::get_instance().destroy_client(client);
 
   return TFS_SUCCESS;
 }
 
 int access_stat_info(VEC_STRING& param)
 {
-/*  int32_t size = param.size();
+  int32_t size = param.size();
   if (size < 1)
   {
     fprintf(stderr, "aci ip:port [startrow returnrow]\n\n");
@@ -1769,9 +1799,11 @@ int access_stat_info(VEC_STRING& param)
     req_gss_msg.set_return_row(return_row);
     string err_msg;
     Message* ret_message = NULL;
-    send_message_to_server(server_id, &req_gss_msg, err_msg, &ret_message);
+    NewClient* client = NewClientManager::get_instance().create_client();
+    send_message_to_server(server_id, client, &req_gss_msg, err_msg, &ret_message);
     if (ret_message == NULL)
     {
+      NewClientManager::get_instance().destroy_client(client);
       return TFS_ERROR;
     }
     if (ret_message->get_message_type() == ACCESS_STAT_INFO_MESSAGE)
@@ -1797,7 +1829,7 @@ printf      ("%15s : %14" PRI64_PREFIX "u %14s %14" PRI64_PREFIX "u %14s\n", tbs
     }
     break;
   }
-  delete ret_message;
+  NewClientManager::get_instance().destroy_client(client);
 
   if (get_all)
   {
@@ -1813,7 +1845,7 @@ printf      ("%15s : %14" PRI64_PREFIX "u %14s %14" PRI64_PREFIX "u %14s\n", tbs
     break;
   }
 
-}*/
+}
 
 return TFS_SUCCESS;
 }
@@ -1844,7 +1876,7 @@ else
 
 int list_file_info(TfsClient* tfs_client, VEC_STRING& param)
 {
-/*  int32_t size = param.size();
+  int32_t size = param.size();
   if (size < 1 || size > 3)
   {
     fprintf(stderr, "lsf block_id ip:port [detail]\n\n");
@@ -1883,9 +1915,11 @@ int list_file_info(TfsClient* tfs_client, VEC_STRING& param)
     req_gss_msg.set_return_row(block_id);
     string err_msg;
     Message* ret_message = NULL;
-    send_message_to_server(server_id, &req_gss_msg, err_msg, &ret_message);
+    NewClient* client = NewClientManager::get_instance().create_client();
+    send_message_to_server(server_id, client, &req_gss_msg, err_msg, &ret_message);
     if (ret_message == NULL)
     {
+      NewClientManager::get_instance().destroy_client(client);
       return TFS_ERROR;
     }
     if (ret_message->get_message_type() == BLOCK_FILE_INFO_MESSAGE)
@@ -1909,7 +1943,7 @@ int list_file_info(TfsClient* tfs_client, VEC_STRING& param)
         printf("%s\n", s_msg->get_error());
       }
     }
-    delete ret_message;
+    NewClientManager::get_instance().destroy_client(client);
   }
   for (int32_t i = 0; i < static_cast<int32_t> (file_list.size()); i++)
   {
@@ -1920,7 +1954,7 @@ int list_file_info(TfsClient* tfs_client, VEC_STRING& param)
     }
   }
   printf("total file: %d.\n", static_cast<int32_t> (file_list.size()));
-  file_list.clear();*/
+  file_list.clear();
 
   return TFS_SUCCESS;
 }
@@ -1952,7 +1986,7 @@ int list_block(TfsClient* tfs_client, VEC_STRING& param)
 
 int remove_block(TfsClient* tfs_client, VEC_STRING& param)
 {
-  /*int32_t size = param.size();
+  int32_t size = param.size();
   if (size != 1)
   {
     fprintf(stderr, "removeblock block_id\n\n");
@@ -1981,24 +2015,27 @@ int remove_block(TfsClient* tfs_client, VEC_STRING& param)
     uint64_t nsip_port = tfs_client->get_ns_ip_port();
 
     ClientCmdMessage req_cc_msg;
-    req_cc_msg.set_type(CLIENT_CMD_EXPBLK);
-    req_cc_msg.set_server_id(dsList[i]);
-    req_cc_msg.set_block_id(block_id);
-    req_cc_msg.set_version(0);
-    req_cc_msg.set_from_server_id(local_server_ip);
+    req_cc_msg.set_cmd(CLIENT_CMD_EXPBLK);
+    req_cc_msg.set_value1(dsList[i]);
+    req_cc_msg.set_value3(block_id);
+    req_cc_msg.set_value4(0);
+    req_cc_msg.set_value2(local_server_ip);
     string err_msg;
-    if (send_message_to_server(nsip_port, &req_cc_msg, err_msg) == TFS_ERROR)
+    NewClient* client = NewClientManager::get_instance().create_client();
+    if (send_message_to_server(nsip_port, client, &req_cc_msg, err_msg) == TFS_ERROR)
     {
       fprintf(stderr, "%s\n\n", err_msg.c_str());
+      NewClientManager::get_instance().destroy_client(client);
       return TFS_ERROR;
     }
-  }*/
+    NewClientManager::get_instance().destroy_client(client);
+  }
   return TFS_SUCCESS;
 }
 
 int check_file_info(TfsClient* tfs_client, VEC_STRING& param)
 {
- /* int32_t size = param.size();
+  int32_t size = param.size();
   if (size != 1)
   {
     fprintf(stderr, "cfi filename\n\n");
@@ -2027,9 +2064,11 @@ int check_file_info(TfsClient* tfs_client, VEC_STRING& param)
     req_gss_msg.set_return_row(block_id);
     string err_msg;
     Message* ret_message = NULL;
-    send_message_to_server(server_id, &req_gss_msg, err_msg, &ret_message);
+    NewClient* client = NewClientManager::get_instance().create_client();
+    send_message_to_server(server_id, client, &req_gss_msg, err_msg, &ret_message);
     if (ret_message == NULL)
     {
+      NewClientManager::get_instance().destroy_client(client);
       return TFS_ERROR;
     }
     if (ret_message->get_message_type() == BLOCK_FILE_INFO_MESSAGE)
@@ -2053,9 +2092,9 @@ int check_file_info(TfsClient* tfs_client, VEC_STRING& param)
         printf("%s\n", s_msg->get_error());
       }
     }
-    delete ret_message;
+    NewClientManager::get_instance().destroy_client(client);
   }
-  printf("\n");*/
+  printf("\n");
 
   return TFS_SUCCESS;
 }
@@ -2183,13 +2222,14 @@ int repair_crc(TfsClient* tfs_client, VEC_STRING& param)
   return ret;
 }
 
-int get_repl_info(TfsClient* tfs_client)
+/*int get_repl_info(TfsClient* tfs_client)
 {
   char time_str[256];
   uint64_t nsip_port = tfs_client->get_ns_ip_port();
   ReplicateInfoMessage rep_i_msg;
   Message* ret_msg = NULL;
-  if (TFS_SUCCESS == send_message_to_server(nsip_port, &rep_i_msg, &ret_msg))
+  NewClient* client = NewClientManager::get_instance().create_client();
+  if (TFS_SUCCESS == send_msg_to_server(nsip_port, client, &rep_i_msg, ret_msg))
   {
     if (ret_msg->get_message_type() == REPLICATE_INFO_MESSAGE)
     {
@@ -2222,18 +2262,18 @@ int get_repl_info(TfsClient* tfs_client)
     {
       fprintf(stderr, "getreplinfo error, return type not match:%d\n", ret_msg->get_message_type());
     }
-    delete ret_msg;
   }
   else
   {
     fprintf(stderr, "getreplinfo error, return msg is null\n");
   }
+  NewClientManager::get_instance().destroy_client(client);
   return TFS_SUCCESS;
-}
+} */
 
-int clear_repl_info(TfsClient* tfs_client)
+/* int clear_repl_info(TfsClient* tfs_client)
 {
-  /*uint64_t nsip_port = tfs_client->get_ns_ip_port();
+  uint64_t nsip_port = tfs_client->get_ns_ip_port();
 
   ClientCmdMessage req_cc_msg;
   req_cc_msg.set_type(CLIENT_CMD_CLEAR_REPL_INFO);
@@ -2246,6 +2286,112 @@ int clear_repl_info(TfsClient* tfs_client)
   {
     fprintf(stderr, "%s\n\n", err_msg.c_str());
     return TFS_ERROR;
-  }*/
+  }
+  return TFS_SUCCESS;
+} */
+
+int dump_plan(TfsClient* tfs_client, VEC_STRING& param)
+{
+  int32_t size = param.size();
+  int32_t action = 0;
+  if (size != 1 && size != 2)
+  {
+    fprintf(stderr, "dumpplan ip:port [action]\n\n");
+    return TFS_ERROR;
+  }
+  uint64_t server_id = 0;
+  server_id = trans_to_server_id(const_cast<char*> (param[0].c_str())); 
+ 
+  if (2 == size)
+  {
+    action = atoi(param[1].c_str());
+  }
+
+  DumpPlanMessage req_dp_msg;
+  Message* ret_message = NULL;
+  string err_msg;
+  NewClient* client = NewClientManager::get_instance().create_client();
+  if (send_message_to_server(server_id, client, &req_dp_msg, err_msg, &ret_message) == TFS_ERROR)
+  {
+    fprintf(stderr, "%s\n\n", err_msg.c_str());
+    NewClientManager::get_instance().destroy_client(client);
+    return TFS_ERROR;
+  }
+  if (ret_message == NULL)
+  {
+    NewClientManager::get_instance().destroy_client(client);
+    return TFS_ERROR;
+  }
+  if (ret_message->get_message_type() == DUMP_PLAN_RESPONSE_MESSAGE)
+  {
+    DumpPlanResponseMessage* req_dpr_msg = dynamic_cast<DumpPlanResponseMessage*>(ret_message);
+    tbnet::DataBuffer data_buff = req_dpr_msg->get_data();//XXX
+    uint32_t plan_num = data_buff.readInt32();
+    //uint32_t plan_num = 5;
+    uint8_t plan_type;
+    uint8_t plan_status;
+    uint8_t plan_priority;
+    uint32_t block_id;
+    uint64_t plan_begin_time;
+    uint64_t plan_end_time;
+    uint8_t server_num;
+    std::vector<uint64_t> server_id_vec;
+    uint8_t plan_complete_status_num;
+    std::vector< std::pair <uint64_t, PlanStatus> > plan_compact_status_vec;
+    std::pair<uint64_t, PlanStatus> plan_compact_status_pair;
+
+    printf("Plan Number(running + pending):%d\n", plan_num);
+    printf("type       status     priority   block_id   begin        end           servers\n");
+    printf("---------  -------    ---------  --------   -----------  ------------  -------\n");
+
+    for (uint32_t i=0; i<plan_num; i++)
+    {
+      plan_type = data_buff.readInt8(); 
+      plan_status = data_buff.readInt8();
+      plan_priority = data_buff.readInt8();
+      block_id = data_buff.readInt32();
+      plan_begin_time = data_buff.readInt64();
+      plan_end_time = data_buff.readInt64();
+      server_num = data_buff.readInt8();
+
+      //plan_type = i%4; 
+      //plan_status = i%5;
+      //plan_priority = i%2;
+      //block_id = i+100;
+      //plan_begin_time = time(NULL);//201105101840+i;
+      //plan_end_time = time(NULL);//201105101840+i;
+      //server_num = 0;
+
+      server_id_vec.clear();
+      for (uint32_t j=0; j<server_num; j++)
+      {
+        server_id_vec.push_back(data_buff.readInt64());
+      }
+
+      if (plan_type == PLAN_TYPE_COMPACT)
+      {
+        plan_complete_status_num = data_buff.readInt8();
+        plan_complete_status_num = 0;
+        plan_compact_status_vec.clear();
+        for (uint32_t k=0; k<plan_complete_status_num; k++)
+        {
+          plan_compact_status_pair.first = data_buff.readInt64();
+          data_buff.readInt8();
+          plan_compact_status_vec.push_back(plan_compact_status_pair);
+        }
+      }
+     
+      //display plan info 
+      printf("%-10s %-10s %-10s %-10u %-12"PRI64_PREFIX"d %-12"PRI64_PREFIX"d\n", 
+              plan_type == PLAN_TYPE_REPLICATE ? "replicate" : plan_type == PLAN_TYPE_MOVE ? "move" : plan_type == PLAN_TYPE_COMPACT ? "compact" : plan_type == PLAN_TYPE_DELETE ? "delete" : "unknow",
+              plan_status == PLAN_STATUS_BEGIN ? "begin" : plan_status == PLAN_STATUS_TIMEOUT ? "timeout" : plan_status == PLAN_STATUS_END ? "finish" : plan_status == PLAN_STATUS_FAILURE ? "failure": "unknow",
+              plan_priority == PLAN_PRIORITY_NORMAL ? "normal" : plan_priority == PLAN_PRIORITY_EMERGENCY ? "emergency": "unknow",
+              block_id, plan_begin_time, plan_end_time); 
+    }
+  }
+  NewClientManager::get_instance().destroy_client(client);
+
   return TFS_SUCCESS;
 }
+
+

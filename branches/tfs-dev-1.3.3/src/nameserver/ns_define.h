@@ -246,8 +246,6 @@ namespace tfs
       static NsRuntimeGlobalInformation instance_;
     };
     extern int global_callback_func(message::NewClient* client);
-    extern int send_msg_to_server(uint64_t server, message::Message* msg);
-    extern int send_msg_to_server(uint64_t server, message::NewClient* client, message::Message* msg, message::Message*& output/*not free*/);
   }
 }
 

@@ -48,7 +48,7 @@ int replicate_block(uint64_t server_ip, uint64_t dest_ip, uint32_t block_id)
   printf("server_ip: %s, descip: %s, block_id: %u\n", tbsys::CNetUtil::addrToString(repl_block.source_id_).c_str(),
       tbsys::CNetUtil::addrToString(repl_block.destination_id_).c_str(), repl_block.block_id_);
 
-  req_rb_msg.set_command(COMMAND_REPLICATE);
+  req_rb_msg.set_command(PLAN_STATUS_BEGIN);
   req_rb_msg.set_repl_block(&repl_block);
   Message* message = client->call(&req_rb_msg);
   if (message != NULL)
