@@ -143,7 +143,6 @@ AC_CONFIG_FILES([Makefile
                  src/Makefile
                  src/adminserver/Makefile
                  src/client/Makefile
-                 src/new_client/Makefile
                  src/common/Makefile
                  src/dataserver/Makefile
                  src/message/Makefile
@@ -159,7 +158,8 @@ AC_CONFIG_FILES([Makefile
                  tests/Makefile
                  tests/batch/Makefile
                  tests/client/Makefile
-                 tests/new_client/Makefile
                  tests/dataserver/Makefile
+                 tests/nameserver/Makefile
+                 tests/common/Makefile
                  tests/intergrate/Makefile])
 AC_OUTPUT
