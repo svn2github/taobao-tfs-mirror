@@ -17,8 +17,8 @@
 #include <Memory.hpp>
 
 #include "common/func.h"
-#include "message/client.h"
-#include "message/client_pool.h"
+#include "message/client_manager.h"
+#include "message/new_client.h"
 #include "nameserver/ns_define.h"
 
 using namespace tfs::message;
@@ -30,26 +30,31 @@ namespace tfs
   {
     static NsStatus get_name_server_running_status(const uint64_t ip_port, const int32_t switch_flag)
     {
-      Client *client = CLIENT_POOL.get_client(ip_port);
-      if (client->connect() == EXIT_FAILURE)
-      {
-        CLIENT_POOL.release_client(client);
-        TBSYS_LOG(ERROR, "connect nameserver(%s) failed", tbsys::CNetUtil::addrToString(ip_port).c_str());
-        return NS_STATUS_NONE;
-      }
+      const int64_t NETWORK_PACKET_TIMEOUT = 500;//500ms
+      int iCount = 0;
       NsStatus status = NS_STATUS_NONE;
-      HeartBeatAndNSHeartMessage heart_msg;
-      heart_msg.set_ns_switch_flag_and_status(switch_flag, 0);
-      Message *ret_msg = client->call(&heart_msg);
-      if (ret_msg != NULL)
+      do
       {
-        if (ret_msg->get_message_type() == HEARTBEAT_AND_NS_HEART_MESSAGE)
+        Message* rmsg = NULL;
+        HeartBeatAndNSHeartMessage heartMessage;    
+        heartMessage.set_ns_switch_flag_and_status(switch_flag, 0);
+        tfs::message::NewClient* client = NewClientManager::get_instance().create_client();
+        int32_t iret = send_msg_to_server(ip_port, client, &heartMessage, rmsg, NETWORK_PACKET_TIMEOUT);
+        if (TFS_SUCCESS == iret)
         {
-          status = static_cast<NsStatus> (dynamic_cast<HeartBeatAndNSHeartMessage*> (ret_msg)->get_ns_status());
+          assert(NULL != rmsg);
+          if (rmsg->get_message_type() == HEARTBEAT_AND_NS_HEART_MESSAGE)
+          {
+            HeartBeatAndNSHeartMessage* msg = dynamic_cast<HeartBeatAndNSHeartMessage*>(rmsg);
+            status = static_cast<NsStatus>(msg->get_ns_status());
+            break;
+          }
         }
-        tbsys::gDelete(ret_msg);
+        ++iCount;
+        TBSYS_LOG(ERROR, "call nameserver(%s) fail, count(%d)", tbsys::CNetUtil::addrToString(ip_port).c_str(), iCount);
+        NewClientManager::get_instance().destroy_client(client);
       }
-      CLIENT_POOL.release_client(client);
+      while (iCount < 0x03);
       return status;
     }
   }

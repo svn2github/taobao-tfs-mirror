@@ -25,6 +25,8 @@
 #include <tbsys.h>
 #include <tbnet.h>
 #include <Timer.h>
+#include "common/internal.h"
+#include "common/lock.h"
 #include "message/message.h"
 #include "message/message_factory.h"
 #include "message/tfs_packet_streamer.h"

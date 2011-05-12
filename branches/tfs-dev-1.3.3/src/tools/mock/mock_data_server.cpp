@@ -27,6 +27,7 @@
 #include <Service.h>
 
 #include "common/config.h"
+#include "common/parameter.h"
 #include "common/config_item.h"
 #include "common/directory_op.h"
 #include "common/error_msg.h"
@@ -40,7 +41,6 @@ using namespace tbutil;
 
 namespace tfs
 {
-
 namespace mock
 {
 class MockDataService 

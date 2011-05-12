@@ -2325,7 +2325,7 @@ int dump_plan(TfsClient* tfs_client, VEC_STRING& param)
   if (ret_message->get_message_type() == DUMP_PLAN_RESPONSE_MESSAGE)
   {
     DumpPlanResponseMessage* req_dpr_msg = dynamic_cast<DumpPlanResponseMessage*>(ret_message);
-    tbnet::DataBuffer data_buff = req_dpr_msg->get_data();//XXX
+    tbnet::DataBuffer& data_buff = req_dpr_msg->get_data();//XXX
     uint32_t plan_num = data_buff.readInt32();
     //uint32_t plan_num = 5;
     uint8_t plan_type;
