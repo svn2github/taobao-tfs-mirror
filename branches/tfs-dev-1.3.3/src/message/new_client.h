@@ -60,7 +60,7 @@ namespace tfs
         uint8_t create_send_id(const uint64_t server);
         bool destroy_send_id(const WaitId& id);
 
-        inline const uint32_t& get_seq_id() const { return seq_id_;}
+        inline const uint32_t get_seq_id() const { return seq_id_;}
 
         bool async_wait();
     };

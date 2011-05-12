@@ -27,7 +27,6 @@ namespace tfs
     Client::Client(const uint64_t ip) :
       ip_(ip), ret_msg_(NULL)
     {
-      NewClientManager* manager = NULL;
     }
 
     Client::~Client()

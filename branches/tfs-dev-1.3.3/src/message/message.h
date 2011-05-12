@@ -77,7 +77,6 @@ namespace tfs
       REPLICATE_BLOCK_MESSAGE,
       COMPACT_BLOCK_MESSAGE,
       GET_SERVER_STATUS_MESSAGE,
-      //SET_SERVER_STATUS_MESSAGE,
       SHOW_SERVER_INFORMATION_MESSAGE,
       SUSPECT_DATASERVER_MESSAGE,
       FILE_INFO_MESSAGE,
@@ -297,7 +296,7 @@ namespace tfs
             uint32_t crc = common::Func::crc(TFS_PACKET_FLAG_V1, input->getData(), size);
             if (crc != crc_)
             {
-              TBSYS_LOG(ERROR, "decode packet crc check error, header crc(%u), calc crc(%u)\n", crc_, crc);
+              TBSYS_LOG(ERROR, "decode packet(pcode: %d) crc check error, header crc(%u), calc crc(%u), size: %d\n", header->_pcode, crc_, crc, size);
               return false;
             }
           }
@@ -435,6 +434,7 @@ namespace tfs
           assert(*len >= 0);
           return common::TFS_SUCCESS;
         }
+
         inline int get_uint32(char** data, int32_t* len, uint32_t* value)
         {
           if ((*len) < common::INT_SIZE || (*len) > common::TFS_MALLOC_MAX_SIZE || data == NULL || (*data) == NULL)

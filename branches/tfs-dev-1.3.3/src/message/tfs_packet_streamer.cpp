@@ -61,14 +61,15 @@ namespace tfs
       header->_dataLen = tfs_packet_header.length_;
       header->_pcode = tfs_packet_header.type_;
       header->_chid = 1;
+      TBSYS_LOG(INFO, "pcode: %d, dataLen: %d, flag: %x, all_data_len: %d", header->_pcode, header->_dataLen, TFS_PACKET_FLAG_V1, input->getDataLen());
 
       int64_t channel_id = 0;
 
       if (((tfs_packet_header.flag_ != TFS_PACKET_FLAG_V0) && (tfs_packet_header.flag_ != TFS_PACKET_FLAG_V1))
           || header->_dataLen < 0 || header->_dataLen > 0x4000000)
       { // 64M
-        TBSYS_LOG(ERROR, "stream error: %x<>%x, dataLen: %d", tfs_packet_header.flag_, TFS_PACKET_FLAG_V1,
-            header->_dataLen);
+        TBSYS_LOG(ERROR, "stream error: %x<>%x, dataLen: %d, pcode: %d", tfs_packet_header.flag_, TFS_PACKET_FLAG_V1,
+            header->_dataLen, header->_pcode);
         *broken = true;
       }
       if (tfs_packet_header.flag_ == TFS_PACKET_FLAG_V1)

@@ -40,7 +40,8 @@ namespace tfs
           streamer_.set_packet_factory(&factory_);
           transport_ = NULL == transport ? new tbnet::Transport() : transport;
           connmgr_ = new tbnet::ConnectionManager(transport_, &streamer_, this);
-          transport_->start();
+          if (NULL == transport)// new transport
+            transport_->start();
           own_transport_ = NULL == transport;
           initialize_ = true;
           new_clients_.clear();
@@ -57,11 +58,12 @@ namespace tfs
       {
         bool is_disconntion_packet = (NULL != packet)
                       && (!packet->isRegularPacket()) //disconntion packet
-                      && (packet->getPCode() == tbnet::ControlPacket::CMD_DISCONN_PACKET);
+                      && (dynamic_cast<tbnet::ControlPacket*>(packet)->getCommand() == tbnet::ControlPacket::CMD_DISCONN_PACKET);
         call_wakeup = !is_disconntion_packet;
         if (call_wakeup)
         {
-          WaitId id = *(reinterpret_cast<WaitId*>(&args));
+          WaitId id = (*(reinterpret_cast<WaitId*>(&args)));
+          TBSYS_LOG(DEBUG, "seq_id: %u, send_id: %d", id.seq_id_, id.send_id_);
           handlePacket(id, packet);
         }
       }
@@ -100,6 +102,7 @@ namespace tfs
         if (iter == new_clients_.end())
         {
           client = new NewClient(seq_id_);
+          TBSYS_LOG(DEBUG, "add client id(%u)", seq_id_);
           new_clients_.insert(std::make_pair(seq_id_, client));
         }
         else
@@ -119,12 +122,13 @@ namespace tfs
       bool bret =  NULL != client;
       if (bret)
       {
-        const uint32_t& id = client->get_seq_id();
+        const uint32_t id = client->get_seq_id();
         tbutil::Mutex::Lock lock(mutex_);
         NEWCLIENT_MAP_ITER iter = new_clients_.find(id);
         if (iter != new_clients_.end())
         {
           tbsys::gDelete(client);
+          TBSYS_LOG(DEBUG, "erase client id(%u)", seq_id_);
           new_clients_.erase(iter);
         }
         else
@@ -147,7 +151,7 @@ namespace tfs
       NEWCLIENT_MAP_ITER iter = new_clients_.find(id.seq_id_);
       if (iter == new_clients_.end())
       {
-        TBSYS_LOG(INFO, "client not found, id: %u", id.seq_id_);
+        TBSYS_LOG(INFO, "client not found, id: %u, pcode: %d", id.seq_id_, response->getPCode());
         ret = false;
       }
       else
