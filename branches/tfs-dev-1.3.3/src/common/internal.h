@@ -26,6 +26,14 @@
 #include <stdint.h>
 #include "define.h"
 #include <databuffer.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <errno.h>
+#include <assert.h>
+#include <limits.h>
+#include <tbnet.h>
+
 
 namespace tfs
 {

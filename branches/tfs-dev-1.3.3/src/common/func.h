@@ -36,8 +36,10 @@
 #include <fcntl.h>
 #include <errno.h>
 #include <string>
+#include <tbsys.h>
 
 #include "define.h"
+
 
 namespace tfs
 {
@@ -77,6 +79,9 @@ namespace tfs
       static int32_t split_string(const char* line, const char del, std::vector<std::string>& fields);
 
       static int start_daemon(const char *pid_file, const char *log_file);
+
+      static void hex_dump(const void* data, const int32_t size, 
+        const bool char_type = true, const int32_t log_level = TBSYS_LOG_LEVEL_DEBUG);
 
 #ifdef _syscall0
       static _syscall0(pid_t,gettid)
