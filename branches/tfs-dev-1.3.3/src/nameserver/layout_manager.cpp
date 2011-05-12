@@ -44,17 +44,18 @@ namespace tfs
       "compact_delete_ratio",
       "compact_max_load",
       "plan_run_flag",
-      "run_plan_expire_interval"
+      "run_plan_expire_interval",
       "run_plan_ratio",
       "object_dead_max_time",
       "balance_max_diff_block_num",
       "log_level",
       "add_primary_block_count",
-      "build_plan_interval"
+      "build_plan_interval",
       "replicate_ratio",
       "max_wait_write_lease",
+      "tmp",
       "cluster_index",
-      "build_plan_default_wait_time",
+      "build_plan_default_wait_time"
   };
 
   static void print_servers(std::vector<ServerCollect*>& servers, std::string& result)
@@ -1724,6 +1725,8 @@ namespace tfs
               else
               {
                 send_msg_success.push_back((*iter));
+                TBSYS_LOG(INFO, "add block(%u) on server(%s) successful",
+                    block_id, CNetUtil::addrToString((*iter)->id()).c_str());
               }
             #endif
           }
@@ -1792,9 +1795,11 @@ namespace tfs
               }
             }
           }
-          NewClientManager::get_instance().destroy_client(client);
           #endif
         }
+        #if !defined(TFS_NS_GTEST) && !defined(TFS_NS_INTEGRATION)
+        NewClientManager::get_instance().destroy_client(client);
+        #endif
       }
       return iret;
     }
@@ -1940,7 +1945,7 @@ namespace tfs
 
     BlockCollect* LayoutManager::add_new_block(uint32_t& block_id, ServerCollect* server, time_t now)
     {
-      return block_id == 0 ? add_new_block_helper_create_by_id(block_id, now)
+      return block_id != 0 ? add_new_block_helper_create_by_id(block_id, now)
                            : add_new_block_helper_create_by_system(block_id, server, now);
     }
     /**
@@ -2192,6 +2197,7 @@ namespace tfs
         if (GFactory::get_runtime_info().owner_role_ != NS_ROLE_MASTER)
           return TFS_SUCCESS;
 
+        TBSYS_LOG(DEBUG, "need add new block count: %d", count);
         uint32_t new_block_id = 0;
         for (int32_t i = 0; i < count; i++, new_block_id = 0)
         {
@@ -2319,6 +2325,7 @@ namespace tfs
         retstr[0] = '\0';
         int32_t index = (value1 & 0x0FFFFFFF);
         int32_t set = (value1& 0xF0000000);
+        int32_t tmp = 0;
         int32_t* param[] =
         {
           &SYSPARAM_NAMESERVER.min_replication_,
@@ -2339,6 +2346,7 @@ namespace tfs
           &SYSPARAM_NAMESERVER.build_plan_interval_,
           &SYSPARAM_NAMESERVER.replicate_ratio_,
           &SYSPARAM_NAMESERVER.max_wait_write_lease_,
+          &tmp,
           &SYSPARAM_NAMESERVER.cluster_index_,
           &SYSPARAM_NAMESERVER.build_plan_default_wait_time_,
         };
@@ -2721,7 +2729,7 @@ namespace tfs
           #endif
           --need;
           --emergency_replicate_count;
-          #if defined(TFS_NS_GTEST) || defined(TFS_NS_INTEGRATION) || defined(TFS_NS_DEBUG)
+          #if defined(TFS_NS_GTEST) || defined(TFS_NS_INTEGRATION)
           blocks.push_back(task->block_id_);
           #endif
         }
@@ -2765,7 +2773,7 @@ namespace tfs
             TBSYS_LOG(DEBUG, "add task, type(%d)", task->type_);
             #endif
             --need;
-            #if defined(TFS_NS_GTEST) || defined(TFS_NS_INTEGRATION) || defined(TFS_NS_DEBUG)
+            #if defined(TFS_NS_GTEST) || defined(TFS_NS_INTEGRATION)
             plans.push_back(task->block_id_);
             #endif
           }
@@ -2977,7 +2985,7 @@ namespace tfs
             {
               target.erase(tmp);
             }
-            #if defined(TFS_NS_GTEST) || defined(TFS_NS_INTEGRATION) || defined(TFS_NS_DEBUG)
+            #if defined(TFS_NS_GTEST) || defined(TFS_NS_INTEGRATION) 
             plans.push_back(task->block_id_);
             #endif
             break;
@@ -3036,7 +3044,7 @@ namespace tfs
               #if defined(TFS_NS_GTEST) || defined(TFS_NS_INTEGRATION) || defined(TFS_NS_DEBUG)
               TBSYS_LOG(DEBUG, "add task, type(%d)", task->type_);
               #endif 
-              #if defined(TFS_NS_GTEST) || defined(TFS_NS_INTEGRATION) || defined(TFS_NS_DEBUG)
+              #if defined(TFS_NS_GTEST) || defined(TFS_NS_INTEGRATION)
               plans.push_back(task->block_id_);
               #endif
             } 

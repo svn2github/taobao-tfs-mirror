@@ -234,8 +234,8 @@ namespace tfs
                     : other_side_status_ == NS_STATUS_INITIALIZED ? "initialize" : "unknow", sync_oplog_flag_
                 == NS_SYNC_DATA_FLAG_NONE ? "none" : sync_oplog_flag_ == NS_SYNC_DATA_FLAG_NO ? "no" : sync_oplog_flag_
                 == NS_SYNC_DATA_FLAG_READY ? "ready" : sync_oplog_flag_ == NS_SYNC_DATA_FLAG_YES ? "yes" : "unknow",
-                common::Func::time_to_str(last_owner_check_time_.toMicroSeconds()).c_str(),
-                common::Func::time_to_str(last_push_owner_check_packet_time_.toMicroSeconds()).c_str());
+                common::Func::time_to_str(last_owner_check_time_.toSeconds()).c_str(),
+                common::Func::time_to_str(last_push_owner_check_packet_time_.toSeconds()).c_str());
       }
 
       static NsRuntimeGlobalInformation& instance()

@@ -127,7 +127,6 @@ namespace tfs
 
       //start ns' heartbeat
       streamer_.set_packet_factory(&msg_factory_);
-      NewClientManager::get_instance().initialize(&transport_);
 
       int32_t server_port = CONFIG.get_int_value(CONFIG_NAMESERVER, CONF_PORT);
       char spec[32];
@@ -140,6 +139,8 @@ namespace tfs
       master_slave_heart_mgr_.initialize();
 
       transport_.start();
+
+      NewClientManager::get_instance().initialize(&transport_);
 
       NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
       //send msg to peer
@@ -782,6 +783,7 @@ PASS:
         }
         if (complete)
         {
+          iret = TFS_SUCCESS;
           break;
         }
       }

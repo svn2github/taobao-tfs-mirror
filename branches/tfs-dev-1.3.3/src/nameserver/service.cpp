@@ -131,7 +131,7 @@ int main(int argc, char *argv[])
   if (access(log_file_path, R_OK) == 0)
   {
     char dest_log_file_path[256];
-    sprintf(dest_log_file_path, "%s.%s", log_file_path, Func::time_to_str(time(NULL), 1).c_str());
+    snprintf(dest_log_file_path, 256,"%s.%s", log_file_path, Func::time_to_str(time(NULL), 1).c_str());
     rename(log_file_path, dest_log_file_path);
   }
 
