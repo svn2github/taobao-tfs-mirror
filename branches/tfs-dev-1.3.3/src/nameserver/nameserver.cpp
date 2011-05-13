@@ -11,9 +11,9 @@
  * Authors:
  *   duolong <duolong@taobao.com>
  *      - initial release
- *   qushan<qushan@taobao.com> 
+ *   qushan<qushan@taobao.com>
  *      - modify 2009-03-27
- *   duanfei <duanfei@taobao.com> 
+ *   duanfei <duanfei@taobao.com>
  *      - modify 2010-04-23
  *
  */
@@ -92,7 +92,7 @@ namespace tfs
           TBSYS_LOG(INFO,"last push owner check packet time(%"PRI64_PREFIX"d)(us) > max owner check time(%"PRI64_PREFIX"d)(us), nameserver dead, modify owner status(uninitialize)",
               ngi.last_push_owner_check_packet_time_.toMicroSeconds(),now.toMicroSeconds());
           ngi.owner_status_ = NS_STATUS_UNINITIALIZE;//modif owner status
-        } 
+        }
       }
     }
 
@@ -318,7 +318,7 @@ namespace tfs
         {
           if (pcode == MASTER_AND_SLAVE_HEART_MESSAGE || pcode == SET_DATASERVER_MESSAGE || pcode == OPLOG_SYNC_MESSAGE
               || pcode == REPLICATE_BLOCK_MESSAGE || pcode == BLOCK_COMPACT_COMPLETE_MESSAGE || pcode
-              == GET_BLOCK_LIST_MESSAGE || pcode == HEARTBEAT_AND_NS_HEART_MESSAGE)
+              == GET_BLOCK_LIST_MESSAGE || pcode == HEARTBEAT_AND_NS_HEART_MESSAGE || pcode == SHOW_SERVER_INFORMATION_MESSAGE)
           {
             goto PASS;
           }
@@ -603,7 +603,7 @@ PASS:
             message->reply_message(new StatusMessage(iret, "new block info version lower than meta, cannot update"));
           }
           return iret;
-        } 
+        }
         else
         {
           std::string error_msg;
@@ -772,10 +772,12 @@ PASS:
               {
                 //send failed or recv msg error
                 //if we're the slave ns,retry
-                if (iret != TFS_SUCCESS)
+                complete = TFS_SUCCESS == iret;
+                if (!complete)
                 {
                   TBSYS_LOG(ERROR, "%s", "wait master done, retry...");
                   usleep(500000); //500ms
+                  continue;
                 }
               }
             }
@@ -827,7 +829,7 @@ PASS:
           iret = send_msg_to_server(ngi.other_side_ip_port_, client, &master_slave_msg, ret_msg);
           if (TFS_SUCCESS == iret)
           {
-            iret = ret_msg->getPCode() == MASTER_AND_SLAVE_HEART_RESPONSE_MESSAGE ? TFS_SUCCESS : TFS_ERROR;  
+            iret = ret_msg->getPCode() == MASTER_AND_SLAVE_HEART_RESPONSE_MESSAGE ? TFS_SUCCESS : TFS_ERROR;
             if (TFS_SUCCESS == iret)
             {
               MasterAndSlaveHeartResponseMessage *response = NULL;
@@ -850,7 +852,7 @@ PASS:
         {
           complete = true;
         }
-        
+
         if (!complete)
         {
           complete = time(NULL) > end_report_time;
