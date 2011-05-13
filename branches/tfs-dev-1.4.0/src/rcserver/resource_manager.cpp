@@ -215,6 +215,20 @@ EXIT:
       }
       return ret;
     }
+    int ResourceManager::update_session_info(const std::vector<SessionBaseInfo>& session_infos)
+    {
+      return database_helper_->update_session_info(session_infos);
+    }
+
+    int ResourceManager::update_session_stat(const std::map<std::string, SessionStat>& session_stats)
+    {
+      return database_helper_->update_session_stat(session_stats);
+    }
+
+    int ResourceManager::update_app_stat(const MIdAppStat& app_stats)
+    {
+      return database_helper_->update_app_stat(app_stats);
+    }
 
     bool ResourceManager::need_reload()
     {

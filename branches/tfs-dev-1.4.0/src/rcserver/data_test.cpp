@@ -93,8 +93,54 @@ int main()
           outparam[i].cluster_data_.ns_vip_.c_str());
     }
   }
-  hl.update_session_info();
-  hl.update_session_stat();
-  hl.update_app_stat();
+  {
+    std::vector<SessionBaseInfo> session_infos;
+    SessionBaseInfo tmp;
+    tmp.session_id_ = "session_t_1";
+    tmp.client_version_ = "clinet_v1";
+    tmp.cache_time_ = 1; //TODO ???
+    tmp.cache_size_ = 1000;
+    tmp.is_logout_ = false;
+    session_infos.push_back(tmp);
+    tmp.session_id_="session_t_2";
+    tmp.is_logout_ = true;
+    session_infos.push_back(tmp);
+
+    for (int i =0; i < 180; i++)
+    {
+      char buff[50];
+      snprintf(buff, 50, "set_%d", i);
+      tmp.session_id_ = buff;
+      session_infos.push_back(tmp);
+    }
+
+    hl.update_session_info(session_infos);
+  }
+  {
+    std::map<std::string, SessionStat> session_stat;
+    SessionStat tmp;
+    AppOperInfo toi;
+    toi.oper_type_ = OPER_READ;
+    toi.oper_times_ = 10;
+    toi.oper_size_ = 100;
+    tmp.app_oper_info_[toi.oper_type_] = toi;
+    session_stat["session_1"] = tmp;
+    for (int i =0; i < 180; i++)
+    {
+      char buff[50];
+      snprintf(buff, 50, "session%d", i);
+      session_stat[buff] = tmp;
+    }
+    hl.update_session_stat(session_stat);
+  }
+  {
+    MIdAppStat app_stat;
+    AppStat tmp;
+    tmp.id_ = 5;
+    tmp.file_count_ = 10;
+    tmp.used_capacity_ =1000;
+    app_stat[tmp.id_] = tmp;
+    hl.update_app_stat(app_stat);
+  }
   return 0;
 }

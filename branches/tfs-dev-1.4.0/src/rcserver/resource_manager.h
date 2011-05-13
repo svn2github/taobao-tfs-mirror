@@ -63,7 +63,10 @@ namespace tfs
         virtual int login(const std::string& app_key, int32_t& app_id, BaseInfo& base_info);
         virtual int check_update_info(const int32_t app_id, 
             const int64_t modify_time, bool& update_flag, BaseInfo& base_info);
-        //virtual int logout(const std::string& session_id);
+
+        virtual int update_session_info(const std::vector<SessionBaseInfo>& session_infos);
+        virtual int update_session_stat(const std::map<std::string, SessionStat>& session_stats);
+        virtual int update_app_stat(const MIdAppStat& app_stats);
 
         bool need_reload();
 

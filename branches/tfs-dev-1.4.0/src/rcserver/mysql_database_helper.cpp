@@ -526,26 +526,33 @@ error:
       return ret;
     }
 
-    int MysqlDatabaseHelper::update_session_info()
+    int MysqlDatabaseHelper::update_session_info(const std::vector<SessionBaseInfo>& session_infos)
     {
       int ret = TFS_SUCCESS;
       const int SQLS_IN_STR = 100;
       char* sql = new char[(1024 + 64) * SQLS_IN_STR];
-      int session_size = 150; //TODO
+      int session_size = session_infos.size();
       int done = 0;
       int pos = 0;
-      bool is_log_out = false;
+      static const char* S_NOW = "now()";
+      static const char* s_NULL = "NULL";
       while (done < session_size)
       {
         pos = 0;
         for (int i = 0 ; i < SQLS_IN_STR && done < session_size; i++)
         {
-          int64_t fff = i;
+          const SessionBaseInfo& session = session_infos[done];
+          const char* log_out_time = s_NULL;
+          if (session.is_logout_)
+          {
+            log_out_time = S_NOW;
+          }
+
           pos += snprintf(sql + pos, 1024, "insert into t_session_info "
-              "(session_id,cache_size,client_version,create_time,modify_time) "
-              "values ('%s',%"PRI64_PREFIX"d,'%s',now(),now())", 
-              "test1", fff, "testclient");
-          if (is_log_out)
+              "(session_id,cache_size,client_version,log_out_time,create_time,modify_time) "
+              "values ('%s',%"PRI64_PREFIX"d,'%s',%s,now(),now())", 
+              session.session_id_.c_str(), session.cache_size_, session.client_version_.c_str(), log_out_time);
+          if (session.is_logout_)
           {
             pos += snprintf(sql + pos, 64, " on duplicate key update log_out_time=now(),modify_time=now();");
           }
@@ -555,7 +562,6 @@ error:
           }
           done++;
         }
-        is_log_out = true;
         ret = exect_update_sql(sql);
         if (TFS_SUCCESS != ret)
         {
@@ -565,62 +571,75 @@ error:
       delete []sql;
       return ret;
     }
-    int MysqlDatabaseHelper::update_session_stat()
+    int MysqlDatabaseHelper::update_session_stat(const std::map<std::string, SessionStat>& session_stats)
     {
       int ret = TFS_SUCCESS;
       const int SQLS_IN_STR = 100;
       char* sql = new char[(1024 + 1024) * SQLS_IN_STR];
-      int session_size = 150; //TODO
-      int done = 0;
+      std::map<std::string, SessionStat>::const_iterator it = session_stats.begin();
       int pos = 0;
-      while (done < session_size)
+      int done = 0;
+      while (it != session_stats.end() && TFS_SUCCESS == ret)
       {
-        pos = 0;
-        for (int i = 0 ; i < SQLS_IN_STR && done < session_size; i++)
+        std::map<OperType, AppOperInfo>::const_iterator inner_it = it->second.app_oper_info_.begin();
+        for (; inner_it != it->second.app_oper_info_.end() && TFS_SUCCESS == ret; inner_it++)
         {
-          int64_t fff=20;
+
           pos += snprintf(sql + pos, 1024, "insert into t_session_stat "
-              "(session_id,oper_type,oper_times,file_size,response_time,create_time,modify_time) "
-              "values ('%s',%d,%"PRI64_PREFIX"d,%"PRI64_PREFIX"d,%d,now(),now())", 
-              "test1", i%5, fff, fff, 5);
+              "(session_id,oper_type,oper_times,file_size,response_time,succ_times,create_time,modify_time) "
+              "values ('%s',%d,%"PRI64_PREFIX"d,%"PRI64_PREFIX"d,%"PRI64_PREFIX"d,%"PRI64_PREFIX"d,now(),now())", 
+              it->first.c_str(), inner_it->first, 
+              inner_it->second.oper_times_, inner_it->second.oper_size_, 
+              inner_it->second.oper_rt_, inner_it->second.oper_succ_);
+
           pos += snprintf(sql + pos, 1024, " on duplicate key update "
               "oper_times=oper_times+%"PRI64_PREFIX"d,file_size=file_size+%"PRI64_PREFIX"d,"
-              "response_time=response_time+%d,modify_time=now();", 
-              fff, fff, 5);
+              "response_time=response_time+%"PRI64_PREFIX"d,succ_times=succ_times+%"PRI64_PREFIX"d,"
+              "modify_time=now();", 
+              inner_it->second.oper_times_, inner_it->second.oper_size_, 
+              inner_it->second.oper_rt_, inner_it->second.oper_succ_);
           done++;
+          if (done >= SQLS_IN_STR)
+          {
+            done = 0;
+            pos = 0;
+            ret = exect_update_sql(sql);
+            if (TFS_SUCCESS != ret)
+            {
+              break;
+            }
+          }
         }
+        it++;
+      }
+      if (TFS_SUCCESS == ret && done > 0)
+      {
         ret = exect_update_sql(sql);
-        if (TFS_SUCCESS != ret)
-        {
-          break;
-        }
       }
       delete []sql;
       return ret;
     }
 
-    int MysqlDatabaseHelper::update_app_stat()
+    int MysqlDatabaseHelper::update_app_stat(const MIdAppStat& app_stats)
     {
       int ret = TFS_SUCCESS;
       const int SQLS_IN_STR = 100;
       char* sql = new char[(512 + 512 ) * SQLS_IN_STR];
-      int session_size = 150; //TODO
-      int done = 0;
+      MIdAppStat::const_iterator it = app_stats.begin();
       int pos = 0;
-      while (done < session_size)
+      while (it != app_stats.end())
       {
         pos = 0;
-        for (int i = 0 ; i < SQLS_IN_STR && done < session_size; i++)
+        for (int i = 0 ; i < SQLS_IN_STR && it != app_stats.end(); i++)
         {
-          int64_t fff = i;
           pos += snprintf(sql + pos, 512, "insert into t_app_stat"
               "(app_id, used_capacity, file_count, create_time, modify_time) "
               "values (%d,%"PRI64_PREFIX"d,%d,now(),now())", 
-              i, fff, 1);
+              it->first, it->second.used_capacity_, it->second.file_count_);
           pos += snprintf(sql + pos, 512, " on duplicate key update "
               "used_capacity=used_capacity+%"PRI64_PREFIX"d,file_count=file_count+%d, modify_time=now();",
-              fff, 1);
-          done++;
+              it->second.used_capacity_, it->second.file_count_);
+          it++;
         }
         ret = exect_update_sql(sql);
         if (TFS_SUCCESS != ret)

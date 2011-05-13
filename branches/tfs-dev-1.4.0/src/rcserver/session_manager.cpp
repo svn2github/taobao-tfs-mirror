@@ -373,16 +373,24 @@ namespace tfs
           m_app_stat[mit->first] = app_stat;
         }
 
-        //we only care the result of update app stat
+        int ret = TFS_SUCCESS;
         //update session info
-        resource_manager_->update_session_info(v_session_infos);
-        //update session stat
-        resource_manager_->update_session_stat(m_session_stats);
-        //update app stat
-        if (resource_manager_->update_app_stat(m_app_stat) != TFS_SUCCESS)
+        ret = resource_manager_->update_session_info(v_session_infos);
+        if (TFS_SUCCESS == ret)
+        {
+          //update session stat
+          ret = resource_manager_->update_session_stat(m_session_stats);
+        }
+        if (TFS_SUCCESS == ret)
+        {
+          //update app stat
+          ret = resource_manager_->update_app_stat(m_app_stat);
+        }
+        if (TFS_SUCCESS != ret)
         {
           //Todo
           //add log
+          //add tmp_sessions to appsessions
         }
       }
     }

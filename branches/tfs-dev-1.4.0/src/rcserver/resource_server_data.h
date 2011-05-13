@@ -21,6 +21,7 @@
 #include <string>
 #include <set>
 #include <algorithm>
+#include <assert.h>
 
 namespace tfs
 {

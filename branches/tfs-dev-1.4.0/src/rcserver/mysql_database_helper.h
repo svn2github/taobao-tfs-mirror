@@ -58,9 +58,9 @@ namespace tfs
         virtual int scan(MIdAppInfo& outparam);
 
         //update
-        virtual int update_session_info();
-        virtual int update_session_stat();
-        virtual int update_app_stat();
+        virtual int update_session_info(const std::vector<SessionBaseInfo>& session_infos);
+        virtual int update_session_stat(const std::map<std::string, SessionStat>& session_stats);
+        virtual int update_app_stat(const MIdAppStat& app_stats);
 
       private:
         int exect_update_sql(const char* sql);

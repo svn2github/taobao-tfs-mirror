@@ -61,9 +61,10 @@ namespace tfs
         virtual int remove(const AppInfo& inparam) = 0;
         virtual int scan(MIdAppInfo& outparam) = 0;
 
-        //update TODO add parameters
-        virtual int update_session_info() = 0;
-        virtual int update_app_stat() = 0;
+        virtual int update_session_info(const std::vector<SessionBaseInfo>& session_infos) = 0;
+        virtual int update_session_stat(const std::map<std::string, SessionStat>& session_stats) = 0;
+        virtual int update_app_stat(const MIdAppStat& app_stats) = 0;
+
 
       protected:
         enum {

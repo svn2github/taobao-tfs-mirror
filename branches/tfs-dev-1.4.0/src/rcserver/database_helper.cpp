@@ -46,7 +46,7 @@ namespace tfs
         snprintf(user_name_, CONN_STR_LEN, "%s", user_name);
         snprintf(passwd_, CONN_STR_LEN, "%s", passwd);
       }
-
+      return ret;
     }
 
     bool DatabaseHelper::is_connected() const
