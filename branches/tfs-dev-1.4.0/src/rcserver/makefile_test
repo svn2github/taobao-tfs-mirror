@@ -1,6 +1,0 @@
-all:
-	g++ `mysql_config --include` -I ../ -I$(TBLIB_ROOT)/include/tbsys \
-		data_test.cpp librcserver.a \
-		`mysql_config --libs` \
-      $(TBLIB_ROOT)/lib/libtbnet.a \
-      $(TBLIB_ROOT)/lib/libtbsys.a -lpthread -lrt
