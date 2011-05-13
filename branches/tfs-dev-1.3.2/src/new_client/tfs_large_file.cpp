@@ -439,7 +439,7 @@ int TfsLargeFile::upload_key()
   {
     int32_t size = local_key_.get_data_size();
     char* buf = new char[size];
-    local_key_.dump_data(buf);
+    local_key_.dump_data(buf, size);
     // TODO .. open large with mainname
     if ((ret = open_ex(NULL, meta_suffix_, T_WRITE)) != TFS_SUCCESS)
     {
