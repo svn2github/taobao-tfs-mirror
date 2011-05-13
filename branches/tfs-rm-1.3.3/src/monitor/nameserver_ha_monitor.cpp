@@ -110,15 +110,21 @@ int main(int argc, char *argv[])
   {
     TBSYS_LOGGER.setLogLevel("ERROR");
   }
-  uint64_t hostid = tbsys::CNetUtil::strToAddr(const_cast<char*> (ip.c_str()), port);
-  NsStatus status = get_name_server_running_status(hostid, switch_flag);
-  if ((status > NS_STATUS_UNINITIALIZE) && (status <= NS_STATUS_INITIALIZED))
+  int32_t iret = NewClientManager::get_instance().initialize();
+  if (TFS_SUCCESS == iret)
   {
-    return 0;
+    uint64_t hostid = tbsys::CNetUtil::strToAddr(const_cast<char*> (ip.c_str()), port);
+    NsStatus status = get_name_server_running_status(hostid, switch_flag);
+    iret = (status > NS_STATUS_UNINITIALIZE) && (status <= NS_STATUS_INITIALIZED)
+          ? 0 : status;
+    if (0 != iret)
+    {
+      TBSYS_LOG(ERROR, "ping nameserver failed, get status(none)");
+    }
   }
   else
   {
-    TBSYS_LOG(ERROR, "ping nameserver failed, get status(none)");
-    return status;
+    TBSYS_LOG(ERROR, "initialize client manager fail");
   }
+  return iret;
 }
