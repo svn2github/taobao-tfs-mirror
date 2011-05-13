@@ -160,6 +160,5 @@ AC_CONFIG_FILES([Makefile
                  tests/client/Makefile
                  tests/dataserver/Makefile
                  tests/nameserver/Makefile
-                 tests/common/Makefile
                  tests/intergrate/Makefile])
 AC_OUTPUT
