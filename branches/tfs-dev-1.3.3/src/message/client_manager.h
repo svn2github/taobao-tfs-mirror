@@ -2,7 +2,7 @@
 #define TFS_MESSAGE_CLIENT_MANAGER_H_
 
 #include <tbnet.h>
-#include <Mutex.h>
+#include <RecMutex.h>
 #include <ext/hash_map>
 #include "message.h"
 #include "message_factory.h"
@@ -46,7 +46,7 @@ namespace tfs
         tbnet::Transport* transport_;
         tbnet::ConnectionManager* connmgr_; 
 
-        tbutil::Mutex mutex_;
+        tbutil::RecMutex mutex_;
         static const uint32_t MAX_SEQ_ID = 0xFFFFFF - 1;
         uint32_t seq_id_;
 

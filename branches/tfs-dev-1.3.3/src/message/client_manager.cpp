@@ -18,7 +18,7 @@ namespace tfs
 
     void NewClientManager::destroy()
     {
-      tbutil::Mutex::Lock lock(mutex_);
+      tbutil::RecMutex::Lock lock(mutex_);
       if (own_transport_ && NULL != transport_)
       {
         transport_->stop();
@@ -34,7 +34,7 @@ namespace tfs
     {
       if (!initialize_)
       {
-        tbutil::Mutex::Lock lock(mutex_);
+        tbutil::RecMutex::Lock lock(mutex_);
         if (!initialize_)
         {
           streamer_.set_packet_factory(&factory_);
@@ -92,7 +92,7 @@ namespace tfs
       NewClient* client = NULL;
       if (initialize_)
       {
-        tbutil::Mutex::Lock lock(mutex_);
+        tbutil::RecMutex::Lock lock(mutex_);
         ++seq_id_;
         if (seq_id_ >= MAX_SEQ_ID)
         {
@@ -123,7 +123,7 @@ namespace tfs
       if (bret)
       {
         const uint32_t id = client->get_seq_id();
-        tbutil::Mutex::Lock lock(mutex_);
+        tbutil::RecMutex::Lock lock(mutex_);
         NEWCLIENT_MAP_ITER iter = new_clients_.find(id);
         if (iter != new_clients_.end())
         {
@@ -147,7 +147,7 @@ namespace tfs
     bool NewClientManager::handlePacket(const WaitId& id, tbnet::Packet* response)
     {
       bool ret = true;
-      tbutil::Mutex::Lock lock(mutex_);
+      tbutil::RecMutex::Lock lock(mutex_);
       NEWCLIENT_MAP_ITER iter = new_clients_.find(id.seq_id_);
       if (iter == new_clients_.end())
       {
