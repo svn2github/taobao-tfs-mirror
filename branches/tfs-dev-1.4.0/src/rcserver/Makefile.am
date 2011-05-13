@@ -16,7 +16,7 @@ noinst_LIBRARIES=librcserver.a
 #                      resource_manager.h uuid.h resource.h mysql_conn.h \
 #                      update_resource.h base_resource.h app_resource.h session_manager.h
 
-librcserver_a_SOURCES=session_manager.cpp
+librcserver_a_SOURCES=session_manager.cpp uuid.cpp
 #librcserver_a_SOURCES=database_helper.cpp mysql_database_helper.cpp
 											
 #bin_PROGRAMS = rcserver

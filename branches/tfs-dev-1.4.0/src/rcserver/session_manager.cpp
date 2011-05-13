@@ -24,6 +24,8 @@ namespace tfs
     using namespace common;
     using namespace std;
 
+    map<OperType, string> ISessionTask::key_map_;
+
     int SessionManager::initialize(bool reload_flag)
     {
       int ret = TFS_SUCCESS;
@@ -42,24 +44,23 @@ namespace tfs
           {
             if (is_init_ && reload_flag)
             {
-              destroy_ = true;
+              destroy();
               wait_for_shut_down();
             }
 
-            destroy_ = false;
-            int64_t db_interval = 10, monitor_interval = 10, expire_interval = 10; // read this from config file
+            int64_t monitor_interval = 5, stat_interval = 10;
+            monitor_task_ = new SessionMonitorTask(*this);
+            stat_task_ = new SessionStatTask(*this, resource_manager_);
 
-            //scheduleRepeated return 0 if succ
-            if (((ret = timer_->scheduleRepeated(stat_db_task_, tbutil::Time::seconds(db_interval))) != 0)
-                || ((ret = timer_->scheduleRepeated(stat_monitor_task_, tbutil::Time::seconds(monitor_interval))) != 0)
-                || ((ret = timer_->scheduleRepeated(expire_task_, tbutil::Time::seconds(expire_interval))) != 0)
+            if (((ret = timer_->scheduleRepeated(monitor_task_, tbutil::Time::seconds(monitor_interval))) != 0)
+                || ((ret = timer_->scheduleRepeated(stat_task_, tbutil::Time::seconds(stat_interval))) != 0)
                )
             {
-              TBSYS_LOG(ERROR, "call scheduleRepeated failed, db_interval_: %"PRI64_PREFIX"d, monitor_interval_: %"PRI64_PREFIX"d,"
-                  " expire_interval_: %"PRI64_PREFIX"d, ret: %d",
-                  db_interval, monitor_interval, expire_interval, ret);
+              TBSYS_LOG(ERROR, "call scheduleRepeated failed, stat_interval_: %"PRI64_PREFIX"d, monitor_interval_: %"PRI64_PREFIX"d,"
+                  " ret: %d",
+                  stat_interval, monitor_interval, ret);
 
-              destroy_ = true;
+              destroy();
               wait_for_shut_down();
 
               ret = TFS_ERROR;
@@ -80,20 +81,15 @@ namespace tfs
     {
       if (0 != timer_)
       {
-        if (0 != stat_db_task_)
+        if (0 != monitor_task_)
         {
-          timer_->cancel(stat_db_task_);
-          stat_db_task_ = 0;
+          timer_->cancel(monitor_task_);
+          monitor_task_ = 0;
         }
-        if (0 != stat_monitor_task_)
+        if (0 != stat_task_)
         {
-          timer_->cancel(stat_monitor_task_);
-          stat_monitor_task_ = 0;
-        }
-        if (0 != expire_task_)
-        {
-          timer_->cancel(expire_task_);
-          expire_task_ = 0;
+          timer_->cancel(stat_task_);
+          stat_task_ = 0;
         }
       }
 
@@ -102,8 +98,14 @@ namespace tfs
 
     void SessionManager::destroy()
     {
-      tbutil::Mutex::Lock lock(mutex_);
-      destroy_ = true;
+      if (0 != monitor_task_)
+      {
+        monitor_task_->destroy();
+      }
+      if (0 != stat_task_)
+      {
+        stat_task_->destroy();
+      }
       is_init_ = false;
     }
 
@@ -117,12 +119,13 @@ namespace tfs
         // gene session id
         gene_session_id(app_id, session_ip, session_id);
 
-        KeepAliveInfo keep_alive_info;
+        KeepAliveInfo keep_alive_info(session_id);
+        //keep_alive_info.s_base_info_.session_id_ = session_id;
         if ((ret = update_session_info(app_id, session_id, keep_alive_info, LOGIN_FLAG)) != TFS_SUCCESS)
         {
-          TBSYS_LOG(ERROR, "call SessionManager::update_session_info failed,"
-              " session_id: %s, modify time: %"PRI64_PREFIX"d, ret: %d",
-              session_id.c_str(), keep_alive_info.s_base_info_.modify_time_, ret);
+          TBSYS_LOG(ERROR, "call SessionMonitorTask::update_session_info failed,"
+              " session_id: %s, modify time: %"PRI64_PREFIX"d, update_flag: %d, ret: %d",
+              session_id.c_str(), keep_alive_info.s_base_info_.modify_time_, LOGIN_FLAG, ret);
         }
       }
       else
@@ -140,19 +143,23 @@ namespace tfs
       // get app_id from session_id
       int32_t app_id = 0;
       int64_t session_ip = 0;
-      if ((ret = parse_session_id(session_id, app_id, session_ip) == TFS_SUCCESS))
+      if ((ret = parse_session_id(session_id, app_id, session_ip)) == TFS_SUCCESS)
       {
-        if ((ret = update_session_info(app_id, session_id, keep_alive_info, KA_FLAG)) != TFS_SUCCESS)
-        {
-          TBSYS_LOG(ERROR, "call SessionManager::update_session_info failed, this will not be happen!"
-              " session_id: %s, modify time: %"PRI64_PREFIX"d, ret: %d",
-              session_id.c_str(), keep_alive_info.s_base_info_.modify_time_, ret);
-        }
-        else if ((ret = resource_manager_->check_update_info(app_id, keep_alive_info.s_base_info_.modify_time_,
+        // first check update info, then update session info
+        if ((ret = resource_manager_->check_update_info(app_id, keep_alive_info.s_base_info_.modify_time_,
                 update_flag, base_info)) != TFS_SUCCESS)
         {
           TBSYS_LOG(ERROR, "call IResourceManager::check_update_info failed. app_id: %d, modify_time: %"PRI64_PREFIX"d, ret: %d",
               app_id, keep_alive_info.s_base_info_.modify_time_, ret);
+        }
+        else
+        {
+          if ((ret = update_session_info(app_id, session_id, keep_alive_info, KA_FLAG)) != TFS_SUCCESS)
+          {
+            TBSYS_LOG(ERROR, "call SessionMonitorTask::update_session_info failed, this will not be happen!"
+                " session_id: %s, modify time: %"PRI64_PREFIX"d, update_flag: %d, ret: %d",
+                session_id.c_str(), keep_alive_info.s_base_info_.modify_time_, KA_FLAG, ret);
+          }
         }
       }
       else
@@ -174,8 +181,8 @@ namespace tfs
         if ((ret = update_session_info(app_id, session_id, keep_alive_info, LOGOUT_FLAG)) != TFS_SUCCESS)
         {
           TBSYS_LOG(ERROR, "call SessionManager::update_session_info failed, this will not be happen!"
-              " session_id: %s, modify time: %"PRI64_PREFIX"d, ret: %d",
-              session_id.c_str(), keep_alive_info.s_base_info_.modify_time_, ret);
+              " session_id: %s, modify time: %"PRI64_PREFIX"d, update_flag, ret: %d",
+              session_id.c_str(), keep_alive_info.s_base_info_.modify_time_, LOGOUT_FLAG, ret);
         }
       }
       else
@@ -184,35 +191,6 @@ namespace tfs
             session_id.c_str(), keep_alive_info.s_base_info_.modify_time_, ret);
       }
 
-      if (TFS_SUCCESS == ret)
-      {
-        resource_manager_->logout(session_id); //don't care the retcode of logout
-      }
-
-      return ret;
-    }
-
-    int SessionManager::dump(const StatFlag stat_flag)
-    {
-      int ret = TFS_SUCCESS;
-      if (stat_flag == STAT_DB)
-      {
-        ret = dump_to_db();
-      }
-      else if (stat_flag == STAT_MONITOR)
-      {
-        ret = dump_to_monitor();
-      }
-      else
-      {
-        ret = EXIT_INVALID_ARGU;
-      }
-      return ret;
-    }
-
-    int SessionManager::expire_session()
-    {
-      int ret = TFS_SUCCESS;
       return ret;
     }
 
@@ -220,53 +198,25 @@ namespace tfs
         const KeepAliveInfo& keep_alive_info, UpdateFlag update_flag)
     {
       int ret = TFS_SUCCESS;
-      AppSessionMapIter mit = app_sessions_.find(app_id);
-      if (mit == app_sessions_.end()) // keep_alive accept this scene: client maybe change rc when run
+      if ((ret = monitor_task_->update_session_info(app_id, session_id, keep_alive_info, update_flag)) != TFS_SUCCESS)
       {
-        SessionCollectMap sc;
-        sc.insert(pair<string, KeepAliveInfo>(session_id, keep_alive_info));
-        app_sessions_.insert(pair<int32_t, SessionCollectMap>(app_id, sc));
+        TBSYS_LOG(ERROR, "call SessionMonitorTask::update_session_info failed."
+            " session_id: %s, modify time: %"PRI64_PREFIX"d, update_flag: %d, ret: %d",
+            session_id.c_str(), keep_alive_info.s_base_info_.modify_time_, update_flag, ret);
       }
-      else //find
+      else if ((ret = stat_task_->update_session_info(app_id, session_id, keep_alive_info, update_flag)) != TFS_SUCCESS)
       {
-        SessionCollectMapIter scit = mit->second.find(session_id); 
-        if (scit == mit->second.end()) //new session
-        {
-          mit->second.insert(pair<string, KeepAliveInfo>(session_id, keep_alive_info));
-        }
-        else //session exist. Login will failed, others will accumulate keep alive stat info
-        {
-          if (LOGIN_FLAG == update_flag)
-          {
-            ret = EXIT_SESSION_EXIST_ERROR;
-          }
-          else
-          {
-            scit->second += keep_alive_info;
-          }
-        }
+        TBSYS_LOG(ERROR, "call SessionStatTask::update_session_info failed."
+            " session_id: %s, modify time: %"PRI64_PREFIX"d, update_flag: %d, ret: %d",
+            session_id.c_str(), keep_alive_info.s_base_info_.modify_time_, update_flag, ret);
       }
-      return ret;
-    }
 
-    int SessionManager::dump_to_db()
-    {
-      int ret = TFS_SUCCESS;
-      // dump session stat
-      // dump app stat
-      // if write to db failed, write to local file
-      return ret;
-    }
-
-    int SessionManager::dump_to_monitor()
-    {
-      int ret = TFS_SUCCESS;
       return ret;
     }
 
     void SessionManager::gene_session_id(const int32_t app_id, const int64_t session_ip, std::string& session_id)
     {
-      std::stringstream tmp_stream; 
+      std::stringstream tmp_stream;
       tmp_stream << app_id << SEPARATOR_KEY << session_ip << SEPARATOR_KEY << gene_uuid_str();
       tmp_stream >> session_id;
     }
@@ -295,23 +245,146 @@ namespace tfs
 
       if (TFS_SUCCESS != ret)
       {
-        TBSYS_LOG(ERROR, "SessionManager::parse_session_id failed, session_id: %s", session_id.c_str());
+        TBSYS_LOG(ERROR, "SessionManager::parse_session_id failed, session_id: %s, ret: %d", session_id.c_str(), ret);
       }
 
       return ret;
     }
 
-
-    void SessionManager::SessionStatTask::runTimerTask()
+    ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    int ISessionTask::update_session_info(const int32_t app_id, const std::string& session_id,
+        const KeepAliveInfo& keep_alive_info, UpdateFlag update_flag)
     {
-      manager_.dump(stat_flag_);
+      ScopedRWLock scoped_lock(rw_lock_, WRITE_LOCKER);
+      int ret = TFS_SUCCESS;
+      AppSessionMapIter mit = app_sessions_.find(app_id);
+      if (mit == app_sessions_.end()) // keep_alive accept this scene: client maybe change rc when run
+      {
+        SessionCollectMap sc;
+        sc.insert(pair<string, KeepAliveInfo>(session_id, keep_alive_info));
+        app_sessions_.insert(pair<int32_t, SessionCollectMap>(app_id, sc));
+      }
+      else //find
+      {
+        SessionCollectMapIter scit = mit->second.find(session_id);
+        if (scit == mit->second.end()) //new session
+        {
+          mit->second.insert(pair<string, KeepAliveInfo>(session_id, keep_alive_info));
+        }
+        else //session exist. Login will failed, others will accumulate keep alive stat info
+        {
+          if (LOGIN_FLAG == update_flag)
+          {
+            TBSYS_LOG(INFO, "session id exist when login, session id: %s, flag: %d", session_id.c_str(), update_flag);
+            ret = EXIT_SESSION_EXIST_ERROR;
+          }
+          else
+          {
+            scit->second += keep_alive_info;
+
+            if (LOGOUT_FLAG == update_flag)
+            {
+              scit->second.s_base_info_.is_logout_ = true;
+            }
+            else
+            {
+              scit->second.s_base_info_.is_logout_ = false;
+            }
+          }
+        }
+      }
+      return ret;
+    }
+
+    void ISessionTask::display(const int32_t app_id, const SessionStat& s_stat)
+    {
+      //Todo: replace app id with app name
+      TBSYS_LOG(INFO, "monitor app: %d, cache_hit_ratio: %"PRI64_PREFIX"d", app_id, s_stat.cache_hit_ratio_);
+      std::map<OperType, AppOperInfo>::const_iterator mit = s_stat.app_oper_info_.begin();
+      for ( ; mit != s_stat.app_oper_info_.end(); ++mit)
+      {
+        TBSYS_LOG(INFO, "monitor app: %d, oper_type: %s, oper_times: %"PRI64_PREFIX"d, oper_size: %"PRI64_PREFIX"d,"
+            " oper_rt: %"PRI64_PREFIX"d, oper_succ: %"PRI64_PREFIX"d",
+            app_id, key_map_[mit->first].c_str(), mit->second.oper_times_,
+            mit->second.oper_size_, mit->second.oper_rt_, mit->second.oper_succ_);
+      }
       return;
     }
 
-    void SessionManager::SessionExpireTask::runTimerTask()
+    void SessionMonitorTask::runTimerTask()
     {
-      manager_.expire_session();
-      return;
+      if (!destroy_)
+      {
+        AppSessionMap tmp_sessions;
+        {
+          ScopedRWLock scoped_lock(rw_lock_, WRITE_LOCKER);
+          tmp_sessions.swap(app_sessions_);
+          assert(app_sessions_.size() == 0);
+        }
+
+        typedef std::map<std::string, KeepAliveInfo> SessionCollectMap;
+        typedef std::map<int32_t, SessionCollectMap> AppSessionMap;
+        // dump session stat
+        // use app id now. should replace it with app name
+        AppSessionMapConstIter mit = tmp_sessions.begin();
+        for ( ; mit != tmp_sessions.end(); ++mit)
+        {
+          SessionStat merge_stat;
+          SessionCollectMapConstIter sit = mit->second.begin();
+          for ( ; sit != mit->second.end(); ++sit)
+          {
+            merge_stat += sit->second.s_stat_;
+          }
+          display(mit->first, merge_stat);
+        }
+      }
+    }
+
+    ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    void SessionStatTask::runTimerTask()
+    {
+      if (!destroy_)
+      {
+        AppSessionMap tmp_sessions;
+        {
+          ScopedRWLock scoped_lock(rw_lock_, WRITE_LOCKER);
+          tmp_sessions.swap(app_sessions_);
+          assert(app_sessions_.size() == 0);
+        }
+
+        vector<SessionBaseInfo> v_session_infos;
+        map<string, SessionStat> m_session_stats;
+        MIdAppStat m_app_stat;
+        //Todo:
+        //load app stat log
+
+        AppSessionMapConstIter mit = tmp_sessions.begin();
+        for ( ; mit != tmp_sessions.end(); ++mit)
+        {
+          AppStat app_stat(mit->first);
+          SessionCollectMapConstIter sit = mit->second.begin();
+          for ( ; sit != mit->second.end(); ++sit)
+          {
+            v_session_infos.push_back(sit->second.s_base_info_);
+            // assign
+            m_session_stats[sit->first] = sit->second.s_stat_;
+            app_stat.add(sit->second.s_stat_);
+          }
+          m_app_stat[mit->first] = app_stat;
+        }
+
+        //we only care the result of update app stat
+        //update session info
+        resource_manager_->update_session_info(v_session_infos);
+        //update session stat
+        resource_manager_->update_session_stat(m_session_stats);
+        //update app stat
+        if (resource_manager_->update_app_stat(m_app_stat) != TFS_SUCCESS)
+        {
+          //Todo
+          //add log
+        }
+      }
     }
   }
 }

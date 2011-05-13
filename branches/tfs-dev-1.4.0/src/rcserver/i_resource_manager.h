@@ -17,6 +17,7 @@
 #define TFS_RCSERVER_IRESOURCEMANAGER_H_
 
 #include <set>
+#include <vector>
 #include <string>
 #include "common/define.h"
 #include "resource_server_data.h"
@@ -44,7 +45,11 @@ namespace tfs
 
         virtual int login(const std::string& app_key, int32_t& app_id, BaseInfo& base_info) = 0;
         virtual int check_update_info(const int32_t app_id, const int64_t modify_time, bool& update_flag, BaseInfo& base_info) = 0;
-        //virtual int logout(const std::string& session_id) = 0;
+
+        virtual int update_session_info(const std::vector<SessionBaseInfo>& session_infos) = 0;
+        virtual int update_session_stat(const std::map<std::string, SessionStat>& session_stats) = 0;
+        virtual int update_app_stat(const MIdAppStat& app_stats) = 0;
+
     };
   }
 }

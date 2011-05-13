@@ -6,16 +6,9 @@
 
 namespace tfs
 {
-  namespace common
+  namespace rcserver 
   {
-    std::string gene_uuid_str()
-    {
-      uuid_t uu; 
-      uuid_generate(uu);
-      char buf[37];
-      uuid_unparse(uu, buf);
-      return std::string(buf);
-    }
+    std::string gene_uuid_str();
   }
 }
 #endif //TFS_RCSERVER_UUID_H_

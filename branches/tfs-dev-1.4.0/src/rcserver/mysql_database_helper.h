@@ -30,7 +30,7 @@ namespace tfs
         virtual int connect();
         virtual int close();
 
-        //ResourceServerInfo 
+        //ResourceServerInfo
         virtual int select(const ResourceServerInfo& inparam, ResourceServerInfo& outparam);
         virtual int update(const ResourceServerInfo& inparam);
         virtual int remove(const ResourceServerInfo& inparam);
@@ -57,7 +57,7 @@ namespace tfs
         virtual int remove(const AppInfo& inparam);
         virtual int scan(MIdAppInfo& outparam);
 
-        //update 
+        //update
         virtual int update_session_info();
         virtual int update_session_stat();
         virtual int update_app_stat();

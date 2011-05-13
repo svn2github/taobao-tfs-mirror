@@ -37,6 +37,8 @@ namespace tfs
           apps_["uc"] = 10003;
           apps_["dc"] = 10004;
           apps_["cc"] = 10005;
+          apps_["fc"] = 10006;
+          apps_["gc"] = 10007;
 
           old_info_.report_interval_ = 10;
           new_info_.report_interval_ = 20;
@@ -46,6 +48,8 @@ namespace tfs
           id_2_mtimes_[10003] = 300000;
           id_2_mtimes_[10004] = 400000;
           id_2_mtimes_[10005] = 500000;
+          id_2_mtimes_[10006] = 600000;
+          id_2_mtimes_[10007] = 700000;
 
           return common::TFS_SUCCESS;
         }
@@ -86,7 +90,7 @@ namespace tfs
               update_flag = true;
               base_info = new_info_; //copy info
             }
-            else // >= 
+            else // >=
             {
               update_flag = false;
             }
@@ -101,6 +105,20 @@ namespace tfs
           return ret;
         }
 
+        int update_session_info(const std::vector<SessionBaseInfo>& session_infos)
+        {
+          return common::TFS_SUCCESS;
+        }
+
+        int update_session_stat(const std::map<std::string, SessionStat>& session_stats)
+        {
+          return common::TFS_SUCCESS;
+        }
+
+        int update_app_stat(const MIdAppStat& app_stats)
+        {
+          return common::TFS_SUCCESS;
+        }
       private:
         DISALLOW_COPY_AND_ASSIGN(MockedResourceManager);
         std::map<std::string, int32_t> apps_;

@@ -18,10 +18,12 @@
 
 #include <map>
 #include <string>
+#include <time.h>
 #include <Timer.h>
 #include <Shared.h>
 #include <Handle.h>
 #include "common/define.h"
+#include "common/lock.h"
 #include "i_resource_manager.h"
 #include "resource_server_data.h"
 
@@ -30,11 +32,6 @@ namespace tfs
   namespace rcserver
   {
     static const char SEPARATOR_KEY = '-';
-    enum StatFlag
-    {
-      STAT_DB = 1,
-      STAT_MONITOR
-    };
 
     enum UpdateFlag
     {
@@ -43,29 +40,85 @@ namespace tfs
       LOGOUT_FLAG
     };
 
-    struct KeepAliveInfo
+    class SessionManager;
+    class ISessionTask : public tbutil::TimerTask
     {
-      KeepAliveInfo()
-      {
-        //init to 0
-      }
-      SessionBaseInfo s_base_info_;
-      SessionStat s_stat_;
-      uint64_t last_report_time_;
+      public:
+        explicit ISessionTask(SessionManager& manager)
+          : manager_(manager), destroy_(false)
+        {
+          key_map_[OPER_INVALID] = "invalid";
+          key_map_[OPER_READ] = "read";
+          key_map_[OPER_WRITE] = "write";
+          key_map_[OPER_UNIQUE_WRITE] = "unique_write";
+          key_map_[OPER_UNLINK] = "unlink";
+          key_map_[OPER_UNIQUE_UNLINK] = "unique_unlink";
+        }
 
-      KeepAliveInfo& operator +=(const KeepAliveInfo& right)
-      {
-        //Todo
-        return *this;
-      }
+        virtual ~ISessionTask()
+        {
+        }
+
+        virtual void runTimerTask() = 0;
+        void destroy()
+        {
+          destroy_ = true;
+        }
+        int update_session_info(const int32_t app_id, const std::string& session_id,
+            const KeepAliveInfo& keep_alive_info, UpdateFlag update_flag);
+
+      protected:
+        static void display(const int32_t app_id, const SessionStat& s_stat);
+
+      protected:
+        SessionManager& manager_;
+        bool destroy_;
+        AppSessionMap app_sessions_;
+        common::RWLock rw_lock_;
+        static std::map<OperType, std::string> key_map_;
     };
 
+    class SessionMonitorTask : public ISessionTask
+    {
+      public:
+        explicit SessionMonitorTask(SessionManager& manager)
+          : ISessionTask(manager)
+        {
+        }
+
+        virtual ~SessionMonitorTask()
+        {
+        }
+
+        virtual void runTimerTask();
+
+      private:
+        IResourceManager* resource_manager_;
+    };
+    typedef tbutil::Handle<SessionMonitorTask> SessionMonitorTaskPtr;
+
+    class SessionStatTask : public ISessionTask
+    {
+      public:
+        SessionStatTask(SessionManager& manager, IResourceManager* resource_manager)
+          : ISessionTask(manager), resource_manager_(resource_manager)
+        {
+        }
+        virtual ~SessionStatTask()
+        {
+        }
+
+        virtual void runTimerTask();
+      private:
+        IResourceManager* resource_manager_;
+    };
+    typedef tbutil::Handle<SessionStatTask> SessionStatTaskPtr;
     class SessionManager
     {
       public:
         SessionManager(IResourceManager* resource_manager, tbutil::TimerPtr timer)
-          : resource_manager_(resource_manager), timer_(timer), destroy_(false),
-            stat_db_task_(0), stat_monitor_task_(0), expire_task_(0)
+          : resource_manager_(resource_manager), timer_(timer),
+            monitor_task_(0), stat_task_(0)
         {
         }
         ~SessionManager()
@@ -73,7 +126,7 @@ namespace tfs
         }
 
       public:
-        int initialize(bool reload_flag = false);
+        int initialize(const bool reload_flag = false);
         int wait_for_shut_down();
         void destroy();
 
@@ -83,79 +136,26 @@ namespace tfs
             bool& update_flag, BaseInfo& base_info);
         int logout(const std::string& session_id, const KeepAliveInfo& keep_alive_info);
 
-        // write session info to data source
-        int dump(const StatFlag stat_flag);
-        // expire session who not report for a expire time interval
-        int expire_session();
-
       private:
         int update_session_info(const int32_t app_id, const std::string& session_id,
             const KeepAliveInfo& keep_alive_info, UpdateFlag update_flag);
-        int dump_to_db();
-        int dump_to_monitor();
 
         void gene_session_id(const int32_t app_id, const int64_t session_ip, std::string& session_id);
         int parse_session_id(const std::string& session_id, int32_t& app_id, int64_t& session_ip);
 
       private:
-        class SessionStatTask : public tbutil::TimerTask
-        {
-          public:
-            SessionStatTask(SessionManager& manager, const StatFlag stat_flag)
-              : manager_(manager), stat_flag_(stat_flag)
-            {
-            }
-            virtual ~SessionStatTask()
-            {
-            }
-
-            virtual void runTimerTask();
-          private:
-            SessionManager& manager_;
-            StatFlag stat_flag_;
-        };
-        typedef tbutil::Handle<SessionStatTask> SessionStatTaskPtr;
-
-        class SessionExpireTask : public tbutil::TimerTask
-        {
-          public:
-            SessionExpireTask(SessionManager& manager)
-              : manager_(manager)
-            {
-            }
-            virtual ~SessionExpireTask()
-            {
-            }
-
-            virtual void runTimerTask();
-          private:
-            SessionManager& manager_;
-        };
-        typedef tbutil::Handle<SessionExpireTask> SessionExpireTaskPtr;
-
-      private:
         DISALLOW_COPY_AND_ASSIGN(SessionManager);
 
-        typedef std::map<std::string, KeepAliveInfo> SessionCollectMap;
-        typedef SessionCollectMap::const_iterator SessionCollectMapConstIter;
-        typedef SessionCollectMap::iterator SessionCollectMapIter;
-
-        typedef std::map<int32_t, SessionCollectMap> AppSessionMap;
-        typedef AppSessionMap::iterator AppSessionMapIter;
-
-        AppSessionMap app_sessions_;
         IResourceManager* resource_manager_;
-
         tbutil::TimerPtr timer_;
-        bool destroy_;
 
-        SessionStatTaskPtr stat_db_task_;
-        SessionStatTaskPtr stat_monitor_task_;
-        SessionExpireTaskPtr expire_task_;
+        SessionMonitorTaskPtr monitor_task_;
+        SessionStatTaskPtr stat_task_;
 
         bool is_init_;
         tbutil::Mutex mutex_;
     };
+
   }
 }
 #endif //TFS_RCSERVER_SESSIONMANAGER_H_

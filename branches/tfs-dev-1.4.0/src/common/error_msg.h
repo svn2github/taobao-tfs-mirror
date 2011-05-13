@@ -111,6 +111,10 @@ namespace tfs
     const int32_t EXIT_BLOCK_CHECKER_OVERLOAD = -8036; // too much block checker
     const int32_t EXIT_FALLOCATE_NOT_IMPLEMENT = -8037; // fallocate is not implement
 
+    const int32_t EXIT_SESSION_EXIST_ERROR = -9001;
+    const int32_t EXIT_SESSIONID_INVALID_ERROR = -9002;
+    const int32_t EXIT_APP_NOTEXIST_ERROR = -9010;
+
     const int32_t EXIT_SYSTEM_ERROR = -10000;
     const int32_t EXIT_REGISTER_OPLOG_SYNC_ERROR = -12000;
     const int32_t EXIT_MAKEDIR_ERROR = -13000;
