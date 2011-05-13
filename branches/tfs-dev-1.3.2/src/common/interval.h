@@ -157,6 +157,12 @@ namespace tfs
       IS_SERVER = 1
     };
 
+    enum ReadDataVersion
+    {
+      READ_VERSION_2 = 2,
+      READ_VERSION_3 = 3
+    };
+
     static const int32_t SEGMENT_HEAD_RESERVE_SIZE = 64;
 
     // common data structure

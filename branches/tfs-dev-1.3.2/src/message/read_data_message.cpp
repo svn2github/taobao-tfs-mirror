@@ -169,32 +169,6 @@ namespace tfs
     {
     }
 
-    int ReadDataMessageV2::parse(char* data, int32_t len)
-    {
-      if (get_object_copy(&data, &len, reinterpret_cast<void*> (&read_data_info_), sizeof(ReadDataInfo)) == TFS_ERROR)
-      {
-        return TFS_ERROR;
-      }
-
-      return TFS_SUCCESS;
-    }
-
-    int32_t ReadDataMessageV2::message_length()
-    {
-      int32_t len = sizeof(ReadDataInfo);
-      return len;
-    }
-
-    int ReadDataMessageV2::build(char* data, int32_t len)
-    {
-      if (set_object(&data, &len, reinterpret_cast<void*> (&read_data_info_), sizeof(ReadDataInfo)) == TFS_ERROR)
-      {
-        return TFS_ERROR;
-      }
-
-      return TFS_SUCCESS;
-    }
-
     char* ReadDataMessageV2::get_name()
     {
       return "readdatamessagev2";
@@ -207,41 +181,13 @@ namespace tfs
       return req_rdv2_msg;
     }
 
-    RespReadDataMessageV2::RespReadDataMessageV2() :
-      data_(NULL), length_(-1), alloc_(false), file_info_(NULL)
+    RespReadDataMessageV2::RespReadDataMessageV2() : file_info_(NULL)
     {
       _packetHeader._pcode = RESP_READ_DATA_MESSAGE_V2;
     }
 
     RespReadDataMessageV2::~RespReadDataMessageV2()
     {
-      if ((data_ != NULL) && (alloc_ == true))
-      {
-        ::free(data_);
-        data_ = NULL;
-      }
-    }
-
-    char* RespReadDataMessageV2::alloc_data(int32_t len)
-    {
-      if (len < 0)
-      {
-        return NULL;
-      }
-      if (len == 0)
-      {
-        length_ = len;
-        return NULL;
-      }
-      if (data_ != NULL)
-      {
-        ::free(data_);
-        data_ = NULL;
-      }
-      length_ = len;
-      data_ = (char*) malloc(len);
-      alloc_ = true;
-      return data_;
     }
 
     int RespReadDataMessageV2::parse(char* data, int32_t len)
@@ -329,6 +275,113 @@ namespace tfs
       RespReadDataMessageV2* resp_rdv2_msg = new RespReadDataMessageV2();
       resp_rdv2_msg->set_message_type(type);
       return resp_rdv2_msg;
+    }
+
+
+    ReadDataMessageV3::ReadDataMessageV3()
+    {
+      _packetHeader._pcode = READ_DATA_MESSAGE_V3;
+    }
+
+    ReadDataMessageV3::~ReadDataMessageV3()
+    {
+    }
+
+    char* ReadDataMessageV3::get_name()
+    {
+      return "readdatamessagev3";
+    }
+
+    Message* ReadDataMessageV3::create(const int32_t type)
+    {
+      ReadDataMessageV3* req_rdv3_msg = new ReadDataMessageV3();
+      req_rdv3_msg->set_message_type(type);
+      return req_rdv3_msg;
+    }
+
+    RespReadDataMessageV3::RespReadDataMessageV3()
+    {
+      _packetHeader._pcode = RESP_READ_DATA_MESSAGE_V3;
+    }
+
+    RespReadDataMessageV3::~RespReadDataMessageV3()
+    {
+    }
+
+    int RespReadDataMessageV3::parse(char* data, int32_t len)
+    {
+      // readdatamessagev3: fileinfo is in the head of message body
+      int32_t size;
+      if (get_int32(&data, &len, &size) == TFS_ERROR)
+      {
+        return TFS_ERROR;
+      }
+      if (size > 0)
+      {
+        if (get_object(&data, &len, reinterpret_cast<void**> (&file_info_), FILEINFO_SIZE) == TFS_ERROR)
+        {
+          return TFS_ERROR;
+        }
+      }
+
+      if (get_int32(&data, &len, &length_) == TFS_ERROR)
+      {
+        return TFS_ERROR;
+      }
+      if (length_ > 0)
+      {
+        if (get_object(&data, &len, reinterpret_cast<void**> (&data_), length_) == TFS_ERROR)
+        {
+          return TFS_ERROR;
+        }
+      }
+      return TFS_SUCCESS;
+    }
+
+    int RespReadDataMessageV3::build(char* data, int32_t len)
+    {
+      // readdatamessagev3: fileinfo is in the head of message body
+      int32_t size = 0;
+      if (file_info_ != NULL)
+      {
+        size = FILEINFO_SIZE;
+      }
+      if (set_int32(&data, &len, size) == TFS_ERROR)
+      {
+        return TFS_ERROR;
+      }
+      if (size > 0)
+      {
+        if (set_object(&data, &len, file_info_, size) == TFS_ERROR)
+        {
+          return TFS_ERROR;
+        }
+      }
+
+      if (set_int32(&data, &len, length_) == TFS_ERROR)
+      {
+        return TFS_ERROR;
+      }
+      if ((length_ > 0) && (data_ != NULL))
+      {
+        if (set_object(&data, &len, data_, length_) == TFS_ERROR)
+        {
+          return TFS_ERROR;
+        }
+      }
+      return TFS_SUCCESS;
+    }
+
+    char* RespReadDataMessageV3::get_name()
+    {
+      return "respreaddatamessagev3";
+    }
+
+    Message* RespReadDataMessageV3::create(const int32_t type)
+    {
+      RespReadDataMessageV3* resp_rdv3_msg = new RespReadDataMessageV3();
+      resp_rdv3_msg->set_message_type(type);
+      return resp_rdv3_msg;
     }
 
     ReadRawDataMessage::ReadRawDataMessage()

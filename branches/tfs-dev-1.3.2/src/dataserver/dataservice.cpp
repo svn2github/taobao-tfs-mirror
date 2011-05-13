@@ -634,7 +634,8 @@ namespace tfs
         return false;
       uint64_t peer_id = conn->getPeerId();
       int32_t type = message->get_message_type();
-      if (type == READ_DATA_MESSAGE || type == READ_DATA_MESSAGE_V2)
+      if (type == READ_DATA_MESSAGE || type == READ_DATA_MESSAGE_V2 ||
+          type == READ_DATA_MESSAGE_V3)
         return acl_.deny(peer_id, AccessControl::READ);
       if (type == WRITE_DATA_MESSAGE || type == CLOSE_FILE_MESSAGE)
         return acl_.deny(peer_id, AccessControl::WRITE);
@@ -715,7 +716,10 @@ namespace tfs
         ret = batch_write_info(dynamic_cast<WriteInfoBatchMessage*>(message));
         break;
       case READ_DATA_MESSAGE_V2:
-        ret = read_data_v2(dynamic_cast<ReadDataMessageV2*>(message));
+        ret = read_data_extra(dynamic_cast<ReadDataMessageV2*>(message), READ_VERSION_2);
+        break;
+      case READ_DATA_MESSAGE_V3:
+        ret = read_data_extra(dynamic_cast<ReadDataMessageV3*>(message), READ_VERSION_3);
         break;
       case READ_DATA_MESSAGE:
         ret = read_data(dynamic_cast<ReadDataMessage*>(message));
@@ -1058,10 +1062,24 @@ namespace tfs
       return TFS_SUCCESS;
     }
 
-    int DataService::read_data_v2(ReadDataMessageV2* message)
+    int DataService::read_data_extra(ReadDataMessageV2* message, int32_t version)
     {
       TIMER_START();
-      RespReadDataMessageV2* resp_rd_v2_msg = new RespReadDataMessageV2();
+      RespReadDataMessageV2* resp_rd_v2_msg = NULL;
+      if (READ_VERSION_2 == version)
+      {
+        resp_rd_v2_msg = new RespReadDataMessageV2();
+      }
+      else if (READ_VERSION_3 == version)
+      {
+        resp_rd_v2_msg = new RespReadDataMessageV3();
+      }
+      else
+      {
+        TBSYS_LOG(ERROR, "unknown read version type %d", version);
+        return TFS_ERROR;
+      }
+
       uint32_t block_id = message->get_block_id();
       uint64_t file_id = message->get_file_id();
       int32_t read_len = message->get_length();
@@ -1069,7 +1087,7 @@ namespace tfs
       uint64_t peer_id = message->get_connection()->getPeerId();
 
       TBSYS_LOG(DEBUG, "blockid: %u, fileid: %" PRI64_PREFIX "u, read len: %d, read offset: %d, resp: %p", block_id,
-          file_id, read_len, read_offset, resp_rd_v2_msg);
+                file_id, read_len, read_offset, resp_rd_v2_msg);
       //add FileInfo size if the first fragment
       int32_t real_read_len = 0;
       if (0 == read_offset)
@@ -1107,7 +1125,7 @@ namespace tfs
             tbsys::gDelete(resp_rd_v2_msg);
             tbsys::gDeleteA(tmp_data_buffer);
             TBSYS_LOG(ERROR, "alloc data failed, blockid: %u, fileid: %" PRI64_PREFIX "u, real len: %d", block_id,
-                file_id, real_read_len);
+                      file_id, real_read_len);
             ret = TFS_ERROR;
           }
 
@@ -1137,9 +1155,10 @@ namespace tfs
       }
 
       TIMER_END();
-      TBSYS_LOG(INFO, "read v2 %s. blockid: %u, fileid: %" PRI64_PREFIX "u, read len: %d, read offset: %d, peer ip: %s, cost time: %" PRI64_PREFIX "d",
-          TFS_SUCCESS == ret ? "success" : "fail", block_id, file_id, real_read_len, read_offset,
-          tbsys::CNetUtil::addrToString(peer_id).c_str(), TIMER_DURATION());
+      TBSYS_LOG(INFO, "read v%d %s. blockid: %u, fileid: %" PRI64_PREFIX "u, read len: %d, read offset: %d, peer ip: %s, cost time: %" PRI64_PREFIX "d",
+                version, TFS_SUCCESS == ret ? "success" : "fail",
+                block_id, file_id, real_read_len, read_offset,
+                tbsys::CNetUtil::addrToString(peer_id).c_str(), TIMER_DURATION());
 
       string sub_key = "";
       TFS_SUCCESS == ret ? sub_key = "read-success": sub_key = "read-failed";

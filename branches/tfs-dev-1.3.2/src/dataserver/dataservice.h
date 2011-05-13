@@ -80,7 +80,7 @@ namespace tfs
         int batch_write_info(message::WriteInfoBatchMessage* message);
 
         int read_data(message::ReadDataMessage* message);
-        int read_data_v2(message::ReadDataMessageV2* message);
+        int read_data_extra(message::ReadDataMessageV2* message, int32_t version);
         int read_raw_data(message::ReadRawDataMessage* message);
         int read_file_info(message::FileInfoMessage* message);
 
