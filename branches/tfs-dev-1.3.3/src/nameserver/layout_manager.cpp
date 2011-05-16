@@ -1813,6 +1813,28 @@ namespace tfs
       return iret;
     }
 
+    int LayoutManager::add_new_block_helper_build_relation(const uint32_t block_id, const std::vector<ServerCollect*>& servers)
+    {
+      //build relation
+      std::vector<ServerCollect*>::const_iterator iter = servers.begin();
+      time_t now = time(NULL);
+      BlockChunkPtr ptr = get_chunk(block_id);
+      RWLock::Lock lock(*ptr, WRITE_LOCKER);
+      BlockCollect* block = get_block(block_id);
+      int32_t iret = TFS_SUCCESS;
+      for (; iter != servers.end(); ++iter)
+      {
+        iret = build_relation(block, (*iter), now);
+        if (iret != TFS_SUCCESS)
+        {
+          TBSYS_LOG(WARN, "build relation fail between dataserver(%s) and block(%u)", CNetUtil::addrToString((*iter)->id()).c_str(), block->id());
+        }   
+      }
+      //create new block complete 
+      block->set_create_flag();
+      return TFS_SUCCESS;
+    }
+
     BlockCollect* LayoutManager::add_new_block_helper_create_by_id(uint32_t block_id, time_t now)
     {
       BlockCollect* block = NULL;
@@ -1876,7 +1898,12 @@ namespace tfs
                   iret = add_new_block_helper_send_msg(block_id, servers);
                   if (TFS_SUCCESS == iret)
                   {
-                    add_new_block_helper_write_log(block_id, servers);
+                    //build relation
+                    iret = add_new_block_helper_build_relation(block_id, servers);
+                    if (TFS_SUCCESS == iret)
+                    {
+                      add_new_block_helper_write_log(block_id, servers);
+                    }
                   }//end send message to dataserver successful
                 } 
               }//end elect dataserver successful
@@ -1943,7 +1970,12 @@ namespace tfs
               iret = add_new_block_helper_send_msg(block_id, need);
               if (TFS_SUCCESS == iret)
               {
-                add_new_block_helper_write_log(block_id, need);
+                //build relation
+                iret = add_new_block_helper_build_relation(block_id, need);
+                if (TFS_SUCCESS == iret)
+                {
+                  add_new_block_helper_write_log(block_id, need);
+                }
               }//end send message to dataserver successful
             }
           }//end if(TFS_SUCCESS == iret), add block collect object successful

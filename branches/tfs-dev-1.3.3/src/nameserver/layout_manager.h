@@ -113,6 +113,7 @@ namespace nameserver
     int add_new_block_helper_send_msg(const uint32_t block_id, const std::vector<ServerCollect*>& servers);
     int add_new_block_helper_write_log(const uint32_t block_id, const std::vector<ServerCollect*>& server);
     int add_new_block_helper_rm_block(const uint32_t block_id, std::vector<ServerCollect*>& servers);
+    int add_new_block_helper_build_relation(const uint32_t block_id, const std::vector<ServerCollect*>& server);
     ServerCollect* find_server_in_vec(const std::vector<ServerCollect*>& servers, const uint64_t server_id);
 
     int update_relation(ServerCollect* server, const std::vector<common::BlockInfo>& blocks, EXPIRE_BLOCK_LIST& expires, const time_t now);
