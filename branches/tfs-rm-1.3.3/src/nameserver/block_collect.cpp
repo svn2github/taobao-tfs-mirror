@@ -1,10 +1,18 @@
 /*
- * BlockCollect.cpp
+ * (C) 2007-2010 Alibaba Group Holding Limited.
  *
- *  Created on: 2010-11-5
- *      Author: duanfei
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+ *
+ *
+ * Version: $Id
+ *
+ * Authors:
+ *   duanfei <duanfei@taobao.com>
+ *      - initial release
+ *
  */
-
 #include <tbsys.h>
 #include "common/parameter.h"
 #include "block_collect.h"
@@ -23,7 +31,7 @@ namespace nameserver
   const int8_t BlockCollect::BLOCK_CREATE_FLAG_YES = 0x01;
   const int8_t BlockCollect::VERSION_AGREED_MASK = 2;
  
-  BlockCollect::BlockCollect(uint32_t block_id, time_t now):
+  BlockCollect::BlockCollect(const uint32_t block_id, const time_t now):
     GCObject(now),
     last_update_time_(now),
     hold_master_(HOLD_MASTER_FLAG_NO),
@@ -34,7 +42,7 @@ namespace nameserver
     info_.block_id_ = block_id;
   }
 
-  bool BlockCollect::add(ServerCollect* server, time_t now, bool force, bool& writable)
+  bool BlockCollect::add(ServerCollect* server, const time_t now, const bool force, bool& writable)
   {
     bool bret = server != NULL;
     if (bret)
@@ -63,69 +71,65 @@ namespace nameserver
         }
         hold_.insert(hold_.begin(), server);
         hold_master_ = HOLD_MASTER_FLAG_YES;
-        if (is_writable())
+      }
+      else 
+      {
+        if (where == hold_.end())
         {
-          TBSYS_LOG(DEBUG,"server(%s) insert master block(%u)", server, CNetUtil::addrToString(server->id()).c_str(), id());
-          hold_[0]->add_master(this);
+          hold_.push_back(server);
         }
-        return true;
-      }
-      if (where == hold_.end())
-      {
-        hold_.push_back(server);
-      }
-      else
-      {
-        TBSYS_LOG(DEBUG,"server(%p)(%s) object is exist", server, CNetUtil::addrToString(server->id()).c_str());
-      }
+        else
+        {
+          TBSYS_LOG(DEBUG,"server(%p)(%s) object is exist", server, CNetUtil::addrToString(server->id()).c_str());
+        }
 
+      }
       if (is_writable())
       {
         assert(hold_[0] != NULL);
+        TBSYS_LOG(DEBUG,"server(%s) insert master block(%u)", 
+            server, CNetUtil::addrToString(server->id()).c_str(), id());
         hold_[0]->add_master(this);
       }
     }
     return bret;
   }
 
-  bool BlockCollect::remove(ServerCollect* server, time_t now, bool remove)
+  bool BlockCollect::remove(ServerCollect* server, const time_t now, const bool remove)
   {
     TBSYS_LOG(DEBUG, "remove block(%u)" , info_.block_id_);
-    bool bret = (server != NULL && !hold_.empty());
-    if (!bret)
-    {
-      bret = true;
-    }
-    else 
+    if (server != NULL && !hold_.empty())
     {
       std::vector<ServerCollect*>::iterator where = find(hold_.begin(), hold_.end(), server);
       if (where == hold_.end())
       {
         TBSYS_LOG(WARN, "dataserver(%s) not found in hold_", CNetUtil::addrToString(server->id()).c_str());
-        return true;
       }
-
-      if (where == hold_.begin())//master
+      else
       {
-        hold_master_ = HOLD_MASTER_FLAG_NO;
+        if (where == hold_.begin())//master
+        {
+          hold_master_ = HOLD_MASTER_FLAG_NO;
+          if (remove)
+          {
+            server->remove_master(this);
+          }
+        }
         if (remove)
         {
-          server->remove_master(this);
+          server->remove_writable(this);
         }
-      }
-      if (remove)
-      {
-        server->remove_writable(this);
-      }
 
-      TBSYS_LOG(DEBUG, "block(%u) remove server(%s), hold_master(%d)", id(), tbsys::CNetUtil::addrToString(server->id()).c_str(), hold_master_);
-      
-      hold_.erase(where);
-      last_update_time_ = now;
+        TBSYS_LOG(DEBUG, "block(%u) remove server(%s), hold_master(%d)", 
+            id(), tbsys::CNetUtil::addrToString(server->id()).c_str(), hold_master_);
 
-      if (is_relieve_writable_relation())
-      {
-        relieve_relation();
+        hold_.erase(where);
+        last_update_time_ = now;
+
+        if (is_relieve_writable_relation())
+        {
+          relieve_relation();
+        }
       }
     }
     return true;
@@ -154,7 +158,7 @@ namespace nameserver
     return bret;
   }
 
-  bool BlockCollect::is_need_master()
+  bool BlockCollect::is_need_master() const
   {
     return ((!is_full())
         && (hold_master_ == HOLD_MASTER_FLAG_NO)
@@ -182,7 +186,7 @@ namespace nameserver
     return bret;
   }
 
-  bool BlockCollect::is_relieve_writable_relation()
+  bool BlockCollect::is_relieve_writable_relation() const
   {
     bool bret = hold_.empty() 
       || is_full() 
@@ -190,7 +194,7 @@ namespace nameserver
     if (!bret)
     {
       bool all_server_writable = true;
-      std::vector<ServerCollect*>::iterator iter = hold_.begin();
+      std::vector<ServerCollect*>::const_iterator iter = hold_.begin();
       for (; iter != hold_.end(); ++iter)
       {
         assert(*iter != NULL);
@@ -206,7 +210,7 @@ namespace nameserver
     return bret;
   }
 
-  bool BlockCollect::relieve_relation(bool remove)
+  bool BlockCollect::relieve_relation(const bool remove)
   {
     std::vector<ServerCollect*>::iterator iter = hold_.begin();
     for (; iter != hold_.end(); ++iter)
@@ -231,8 +235,9 @@ namespace nameserver
     return true;
   }
 
-  bool BlockCollect::check_version(ServerCollect* server, int32_t alive_server_size, NsRole role, bool is_new,
-      const common::BlockInfo& new_block_info, EXPIRE_BLOCK_LIST& expires, bool& force_be_master, time_t now)
+  bool BlockCollect::check_version(ServerCollect* server, const int32_t alive_server_size, 
+      const NsRole role, const bool is_new, const common::BlockInfo& new_block_info, 
+      EXPIRE_BLOCK_LIST& expires, bool& force_be_master, const time_t now)
   {
     bool bret = server != NULL;
     if (bret)
@@ -289,7 +294,7 @@ namespace nameserver
         else if ( info_.version_ < new_block_info.version_) // nameserver version < dataserver version , we'll accept new version and release all dataserver
         {
           int32_t old_version = info_.version_;
-          memcpy(&info_,&new_block_info, sizeof(info_));
+          memcpy(&info_, &new_block_info, sizeof(info_));
           if (!is_new)//release dataserver 
           {
             TBSYS_LOG(WARN, "block(%u) in dataserver(%s) version error(%d:%d),replace ns version, current dataserver size(%u)",
@@ -305,7 +310,7 @@ namespace nameserver
                 remove(server, now);
                 assert (server != NULL);
                 server->remove(this);
-                register_expire_block(expires, (*iter), this);
+                register_expire_block(expires, server, this);
                 TBSYS_LOG(WARN, "release relation dataserver(%s), block(%u)",
                     tbsys::CNetUtil::addrToString((*iter)->id()).c_str(), info_.block_id_);
               }
@@ -350,7 +355,7 @@ namespace nameserver
    * to check a block if replicate
    * @return: -1: none, 0: normal, 1: emergency
    */
-  PlanPriority BlockCollect::check_replicate(time_t now) const
+  PlanPriority BlockCollect::check_replicate(const time_t now) const
   {
     int32_t size = static_cast<int32_t>(hold_.size());
     TBSYS_LOG(DEBUG, "size(%d), block(%u)", size, this->info_.block_id_);
@@ -439,7 +444,7 @@ namespace nameserver
         && (is_full()));
   }
 
-  int BlockCollect::scan(SSMScanParameter& param)
+  int BlockCollect::scan(SSMScanParameter& param) const
   {
     int16_t child_type = param.child_type_;
     bool has_dump = (child_type & SSM_CHILD_BLOCK_TYPE_FULL) ? is_full() : true;
