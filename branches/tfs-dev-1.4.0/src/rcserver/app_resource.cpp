@@ -108,5 +108,20 @@ namespace tfs
     {
       return update_time_in_db > app_last_update_time_;
     }
+
+    int AppResource::get_app_name(const int32_t app_id, std::string& app_name) const
+    {
+      int ret = TFS_SUCCESS;
+      MIdAppInfo::const_iterator it = m_id_appinfo_.find(app_id);
+      if (it == m_id_appinfo_.end())
+      {
+        ret = TFS_ERROR;
+      }
+      else
+      {
+        app_name = it->second.app_name_;
+      }
+      return ret;
+    }
   }
 }

@@ -547,11 +547,11 @@ error:
           {
             log_out_time = S_NOW;
           }
-
           pos += snprintf(sql + pos, 1024, "insert into t_session_info "
-              "(session_id,cache_size,client_version,log_out_time,create_time,modify_time) "
-              "values ('%s',%"PRI64_PREFIX"d,'%s',%s,now(),now())", 
-              session.session_id_.c_str(), session.cache_size_, session.client_version_.c_str(), log_out_time);
+              "(session_id,cache_size,cache_time,client_version,log_out_time,create_time,modify_time) "
+              "values ('%s',%"PRI64_PREFIX"d,%"PRI64_PREFIX"d,'%s',%s,now(),now())", 
+              session.session_id_.c_str(), session.cache_size_, session.cache_time_,
+              session.client_version_.c_str(), log_out_time);
           if (session.is_logout_)
           {
             pos += snprintf(sql + pos, 64, " on duplicate key update log_out_time=now(),modify_time=now();");

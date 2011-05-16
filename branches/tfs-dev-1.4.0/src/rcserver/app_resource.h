@@ -44,6 +44,7 @@ namespace tfs
         int get_app_info(const int32_t app_id, AppInfo& app_info) const;
         int get_last_modify_time(const int32_t app_id, int64_t& last_modify_time) const;
         bool need_reload(const int64_t update_time_in_db) const;
+        int get_app_name(const int32_t app_id, std::string& app_name) const;
 
       private:
         int64_t app_last_update_time_;

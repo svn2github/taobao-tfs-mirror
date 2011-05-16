@@ -187,6 +187,17 @@ EXIT:
       }
       return ret;
     }
+    
+    int ResourceManager::get_app_name(const int32_t app_id, std::string& app_name) const
+    {
+      int ret = EXIT_NOT_INIT_ERROR;
+      if (have_inited_)
+      {
+        tbsys::CRLockGuard guard(resorce_mutex_);
+        ret = app_resource_manager_->get_app_name(app_id, app_name);
+      }
+      return ret;
+    }
 
     int ResourceManager::get_base_info(const int32_t app_id, BaseInfo& base_info)
     {
