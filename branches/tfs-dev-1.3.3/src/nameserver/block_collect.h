@@ -1,8 +1,17 @@
 /*
- * BlockCollect.h
+ * (C) 2007-2010 Alibaba Group Holding Limited.
  *
- *  Created on: 2010-11-5
- *      Author: duanfei
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+ *
+ *
+ * Version: $Id
+ *
+ * Authors:
+ *   duanfei <duanfei@taobao.com>
+ *      - initial release
+ *
  */
 
 #ifndef TFS_NAMESERVER_BLOCK_COLLECT_H_
@@ -24,37 +33,37 @@ namespace nameserver
   class BlockCollect : public virtual GCObject
   {
  public:
-    BlockCollect(uint32_t block_id, time_t now);
-    bool add(ServerCollect* server, time_t now, bool force, bool& writable);
-    bool remove(ServerCollect* server, time_t now, bool remove = true);
+    BlockCollect(const uint32_t block_id, const time_t now);
+    bool add(ServerCollect* server, const time_t now, const bool force, bool& writable);
+    bool remove(ServerCollect* server, const time_t now, const bool remove = true);
     bool exist(const ServerCollect* const server) const;
     ServerCollect* find_master();
     bool is_master(const ServerCollect* const server) const;
-    bool is_need_master();
+    bool is_need_master() const;
     bool is_writable() const;
 
-    bool check_version(ServerCollect* server, int32_t alive_server_size, NsRole role, bool is_new,
-          const common::BlockInfo& block_info, EXPIRE_BLOCK_LIST& expires, bool& force_be_master, time_t now);
+    bool check_version(ServerCollect* server, const int32_t alive_server_size, const NsRole role, const bool is_new,
+          const common::BlockInfo& block_info, EXPIRE_BLOCK_LIST& expires, bool& force_be_master, const time_t now);
 
-    common::PlanPriority check_replicate(time_t now) const;
+    common::PlanPriority check_replicate(const time_t now) const;
     bool check_balance() const;
     bool check_compact() const;
     int check_redundant() const;
-    bool is_relieve_writable_relation();
-    bool relieve_relation(bool remove = true);
+    bool is_relieve_writable_relation() const;
+    bool relieve_relation(const bool remove = true);
 
     inline int32_t size() const { return info_.size_;}
     inline std::vector<ServerCollect*>& get_hold() { return hold_;}
     inline int32_t get_hold_size() const { return hold_.size();}
-    inline void update(const common::BlockInfo& info) { memcpy(&info_,&info, sizeof(info_));} 
+    inline void update(const common::BlockInfo& info) { memcpy(&info_, &info, sizeof(info_));} 
     inline bool is_full() const { return info_.size_ >= common::SYSPARAM_NAMESERVER.max_block_size_; }
-    static bool is_full(int64_t size) { return size >= common::SYSPARAM_NAMESERVER.max_block_size_;} 
+    static bool is_full(int64_t size) { return size >= common::SYSPARAM_NAMESERVER.max_block_size_;}
     inline uint32_t id() const { return info_.block_id_;}
     inline int32_t version() const { return info_.version_;}
-    inline void set_create_flag(int8_t flag = BLOCK_CREATE_FLAG_NO) { create_flag_ = flag;}
+    inline void set_create_flag(const int8_t flag = BLOCK_CREATE_FLAG_NO) { create_flag_ = flag;}
     inline int8_t get_creating_flag() const { return create_flag_;}
 
-    int scan(common::SSMScanParameter& param);
+    int scan(common::SSMScanParameter& param) const;
     void dump() const;
 
     static const int8_t HOLD_MASTER_FLAG_NO;

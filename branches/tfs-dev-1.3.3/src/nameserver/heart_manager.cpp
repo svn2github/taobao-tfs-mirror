@@ -17,6 +17,7 @@
  *      - modify 2010-04-23
  *
  */
+#include <tbsys.h>
 #include <Memory.hpp>
 #include <Mutex.h>
 #include "ns_define.h"
@@ -24,7 +25,6 @@
 #include "heart_manager.h"
 #include "global_factory.h"
 #include "message/client_manager.h"
-#include <tbsys.h>
 
 using namespace tfs::common;
 using namespace tfs::message;
@@ -44,7 +44,7 @@ namespace tfs
     {
     }
 
-    int HeartManagement::initialize(int32_t thread_count, int32_t max_queue_size)
+    int HeartManagement::initialize(const int32_t thread_count, const int32_t max_queue_size)
     {
       max_queue_size_ = max_queue_size;
       work_thread_.setThreadParameter(thread_count, this, this);
@@ -73,6 +73,7 @@ namespace tfs
       bool bret = msg != NULL;
       if (bret)
       {
+        assert(SET_DATASERVER_MESSAGE == msg->getPCode());
         SetDataserverMessage* message = dynamic_cast<SetDataserverMessage*> (msg);
         int32_t max_queue_size = max_queue_size_;
 
@@ -107,7 +108,7 @@ namespace tfs
       if (bret)
       {
         //if return TFS_SUCCESS, packet had been delete in this func
-        // if handlePacketQueue return true, tbnet will delete this packet
+        //if handlePacketQueue return true, tbnet will delete this packet
         return keepalive(packet) != TFS_SUCCESS; 
       }
       return false;
@@ -121,6 +122,7 @@ namespace tfs
         #ifdef TFS_NS_DEBUG
         tbutil::Time begin = tbutil::Time::now();
         #endif
+        assert(SET_DATASERVER_MESSAGE == packet->getPCode());
         SetDataserverMessage* message = dynamic_cast<SetDataserverMessage*> (packet);
         RespHeartMessage *result_msg = new RespHeartMessage();
         DataServerStatInfo& ds_info = message->get_ds();
@@ -133,7 +135,7 @@ namespace tfs
 			  {
 			  	TBSYS_LOG(ERROR, "dataserver(%s) keepalive failed", CNetUtil::addrToString(ds_info.id_).c_str());
 			  	result_msg->set_status(STATUS_MESSAGE_ERROR);
-			  	goto Response;
+			  	goto RESPONSE;
 			  }
 
 			  //dataserver dead
@@ -141,7 +143,7 @@ namespace tfs
 			  {
 			  	TBSYS_LOG(INFO, "dataserver(%s) exit", CNetUtil::addrToString(ds_info.id_).c_str());
           result_msg->set_status(HEART_MESSAGE_OK);
-			  	goto Response;
+			  	goto RESPONSE;
 			  }
 
 			  if (flag == HAS_BLOCK_FLAG_YES)
@@ -155,7 +157,7 @@ namespace tfs
           {
 			      result_msg->set_status(HEART_MESSAGE_OK);
           }
-			  	goto Response;
+			  	goto RESPONSE;
 			  }
 			  else
 			  {
@@ -163,11 +165,11 @@ namespace tfs
 			  	if (need_sent_block)
 			  	{
         		result_msg->set_status(HEART_NEED_SEND_BLOCK_INFO);
-			  		goto Response;
+			  		goto RESPONSE;
 			  	}
 			  }
 			  result_msg->set_status(HEART_MESSAGE_OK);
-			  Response:
+			  RESPONSE:
         #ifdef TFS_NS_DEBUG
         tbutil::Time end = tbutil::Time::now() - begin;
         TBSYS_LOG(INFO, "dataserver(%s) keepalive times: %"PRI64_PREFIX"d(us), need_sent_block(%d)", CNetUtil::addrToString(ds_info.id_).c_str(), end.toMicroSeconds(), need_sent_block);
@@ -214,7 +216,7 @@ namespace tfs
       ngi.dump(TBSYS_LOG_LEVEL(DEBUG));
 
       NewClient* client = NewClientManager::get_instance().create_client();
-      iret = send_msg_to_server(ngi.other_side_ip_port_,client, &mashm, rmsg);
+      iret = send_msg_to_server(ngi.other_side_ip_port_, client, &mashm, rmsg);
       if (TFS_SUCCESS != iret) // otherSide dead
       {
         ns_switch(NS_STATUS_OTHERSIDEDEAD, NS_SYNC_DATA_FLAG_NO);
@@ -555,7 +557,7 @@ namespace tfs
       return TFS_SUCCESS;
     }
 
-    int MasterAndSlaveHeartManager::push(message::Message* message, int32_t max_queue_size, bool block)
+    int MasterAndSlaveHeartManager::push(message::Message* message, const int32_t max_queue_size, const bool block)
     {
       return work_thread_.push(message, max_queue_size, block);
     }

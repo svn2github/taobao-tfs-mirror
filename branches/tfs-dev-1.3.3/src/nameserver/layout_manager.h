@@ -1,8 +1,17 @@
 /*
- * LayoutManager.h
+ * (C) 2007-2010 Alibaba Group Holding Limited.
  *
- *  Created on: 2010-11-5
- *      Author: duanfei
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+ *
+ *
+ * Version: $Id
+ *
+ * Authors:
+ *   duanfei <duanfei@taobao.com> 
+ *      - initial release
+ *
  */
 
 #ifndef TFS_NAMESERVER_LAYOUT_MANAGER_H_
@@ -32,30 +41,136 @@ namespace nameserver
     bool need_new_;
     char error_msg_[256];
   };
+
   class LayoutManager
   {
+  public:
+    LayoutManager();
+    virtual ~LayoutManager();
+
+    int initialize(const int32_t chunk_num = 32);
+
+    BlockChunkPtr get_chunk(const uint32_t block_id) const;
+    BlockCollect*  get_block(const uint32_t block_id);
+    ServerCollect* get_server(const uint64_t server_id);
+
+    void wait_for_shut_down();
+    void destroy();
+    OpLogSyncManager * get_oplog_sync_mgr() { return &oplog_sync_mgr_;}
+
+    int keepalive(const common::DataServerStatInfo&, const common::HasBlockFlag flag,
+          common::BLOCK_INFO_LIST& blocks, common::VUINT32& expires, bool& need_sent_block);
+
+    int open(uint32_t& block_id, const int32_t mode, uint32_t& lease_id, int32_t& version, common::VUINT64& ds_list);
+    int batch_open(const common::VUINT32& blocks, const int32_t mode, const int32_t block_count, std::map<uint32_t, common::BlockInfoSeg>& out);
+
+    int close(CloseParameter& param);
+
+    int update_block_info(const common::BlockInfo& block_info, const uint64_t server, const time_t now, const bool addnew);
+
+    int repair(const uint32_t block_id, const uint64_t server, const int32_t flag, const time_t now, std::string& error_msg);
+
+    int scan(common::SSMScanParameter& stream);
+    int dump_plan(tbnet::DataBuffer& stream);
+    int dump_plan(void);
+
+    int handle_task_complete(message::Message* msg);
+    #if defined(TFS_NS_GTEST) || defined(TFS_NS_INTEGRATION)
+    message::StatusMessage* handle(message::Message* msg);
+    #else
+    int handle(message::Message* msg);
+    #endif
+
+    void interrupt(const uint8_t interrupt, const time_t now);
+
+    int rm_block_from_ds(const uint64_t server_id, const uint32_t block_id);
+    int rm_block_from_ds(const uint64_t server_id, const std::vector<uint32_t>& block_ids);
+
+    uint32_t calc_max_block_id();
+    
+    inline void get_alive_server(common::VUINT64& servers)
+    {
+      common::RWLock::Lock lock(server_mutex_, common::READ_LOCKER);
+      std::for_each(servers_. begin(), servers_.end(), GetAliveServer(servers));
+    }
+
+    int touch(const uint64_t server, const time_t now = time(NULL), const bool promote = true);
+
+#if defined(TFS_NS_GTEST) || defined(TFS_NS_INTEGRATION)
+  public:
+#else
+  private:
+#endif
+    int add_server(const common::DataServerStatInfo& info, bool& isnew, const time_t now);
+    int remove_server(const uint64_t id, const time_t now);
+
+    BlockCollect* add_block(uint32_t& block_id);
+    BlockCollect* add_new_block(uint32_t& block_id, ServerCollect* server = NULL, const time_t now = time(NULL));
+
+    BlockCollect* add_new_block_helper_create_by_id(const uint32_t block_id, const time_t now);
+    BlockCollect* add_new_block_helper_create_by_system(uint32_t& block_id, ServerCollect* server, const time_t now);
+
+    int add_new_block_helper_send_msg(const uint32_t block_id, const std::vector<ServerCollect*>& servers);
+    int add_new_block_helper_write_log(const uint32_t block_id, const std::vector<ServerCollect*>& server);
+    int add_new_block_helper_rm_block(const uint32_t block_id, std::vector<ServerCollect*>& servers);
+    ServerCollect* find_server_in_vec(const std::vector<ServerCollect*>& servers, const uint64_t server_id);
+
+    int update_relation(ServerCollect* server, const std::vector<common::BlockInfo>& blocks, EXPIRE_BLOCK_LIST& expires, const time_t now);
+    int build_relation(BlockCollect* block, ServerCollect* server, const time_t now, const bool force = false);
+    bool relieve_relation(BlockCollect* block, ServerCollect* server, const time_t now);
+    bool relieve_relation(ServerCollect* server, const time_t now);
+
+    void rotate(const time_t now);
+
+    uint32_t get_alive_block_id() const;
+    int64_t calc_all_block_bytes() const;
+    int64_t calc_all_block_count() const;
+
+    BlockCollect* elect_write_block();
+
+    int open_read_mode(const uint32_t block_id, common::VUINT64& readable_ds_list);
+    int open_write_mode(const int32_t mode,
+        uint32_t& block_id,
+        uint32_t& lease_id,
+        int32_t& version,
+        common::VUINT64& ds_list);
+    int open_helper_create_new_block_by_id(const uint32_t block_id);
+    int batch_open_read_mode(const common::VUINT32& blocks, std::map<uint32_t, common::BlockInfoSeg>& out);
+    int batch_open_write_mode(const int32_t mode, const int32_t block_count, std::map<uint32_t, common::BlockInfoSeg>& out);
+
+    int touch(ServerCollect* server, const time_t now, const bool promote = false);
+    void check_server();
+
+    int set_runtime_param(const uint32_t index, const uint32_t value, char *retstr);
+    int block_oplog_write_helper(const int32_t cmd, const common::BlockInfo& info, const std::vector<uint32_t>& blocks, const std::vector<uint64_t>& servers);
+
     template<typename Strategy, typename ElectType>
     friend int32_t elect_ds(Strategy& strategy, ElectType op, LayoutManager& meta, std::vector<ServerCollect*>& except,
           int32_t elect_count, bool check_server_in_plan, std::vector<ServerCollect*> & result);
+
     template<typename Strategy, typename ElectType>
     friend int32_t elect_ds(Strategy& strategy, ElectType op, LayoutManager& meta, std::vector<ServerCollect*>& source,
           std::vector<ServerCollect*>& except, int32_t elect_count, bool check_server_in_plan, std::vector<ServerCollect*>& result);
+
     friend int OpLogSyncManager::replay_helper(const char* const data, int64_t& length, int64_t& offset, time_t now = time(NULL));
+
     struct AddLoad
     {
-      int32_t operator()(const int32_t acc, const ServerCollect* const server) const
+      int32_t operator()(const int32_t acc, const ServerCollect* const server)
       {
         assert(server != NULL);
         return acc + server->load();
       }
     };
+    
     struct BlockNumComp
     {
-      bool operator()(const common::DataServerStatInfo& x, const common::DataServerStatInfo& y) const
+      bool operator()(const common::DataServerStatInfo& x, const common::DataServerStatInfo& y)
       {
         return x.block_count_ < y.block_count_;
       }
     };
+
     struct GetAliveServer
     {
       explicit GetAliveServer(common::VUINT64& servers)
@@ -74,6 +189,7 @@ namespace nameserver
       }
       common::VUINT64& servers_;
     };
+
     struct ServerSetDifferencHelper
     {
       bool operator()(const ServerCollect* lrh, const ServerCollect* rrh)
@@ -81,95 +197,6 @@ namespace nameserver
         return lrh->id() < rrh->id();
       }
     };
-  public:
-    LayoutManager();
-    virtual ~LayoutManager();
-    BlockChunkPtr get_chunk(uint32_t block_id) const;
-    BlockCollect*  get_block(uint32_t block_id);
-    ServerCollect* get_server(uint64_t server_id);
-
-    int initialize(int32_t chunk_num = 32);
-    void wait_for_shut_down();
-    void destroy();
-
-    int keepalive(const common::DataServerStatInfo&, common::HasBlockFlag flag,
-          common::BLOCK_INFO_LIST& blocks, common::VUINT32& expires, bool& need_sent_block);
-
-    int open(uint32_t& block_id, const int32_t mode, uint32_t& lease_id, int32_t& version, common::VUINT64& ds_list);
-    int batch_open(const common::VUINT32& blocks, const int32_t mode, const int32_t block_count, std::map<uint32_t, common::BlockInfoSeg>& out);
-    int close(CloseParameter& param);
-    int update_block_info(const common::BlockInfo& block_info, const uint64_t server, time_t now, bool addnew);
-    int repair(uint32_t block_id, uint64_t server, int32_t flag, time_t now, std::string& error_msg);
-
-    int scan(common::SSMScanParameter& stream);
-    int dump_plan(tbnet::DataBuffer& stream);
-    int dump_plan(void);
-
-    int handle_task_complete(message::Message* msg);
-    #if defined(TFS_NS_GTEST) || defined(TFS_NS_INTEGRATION)
-    message::StatusMessage* handle(message::Message* msg);
-    #else
-    int handle(message::Message* msg);
-    #endif
-
-    void interrupt(uint8_t interrupt, time_t now);
-
-    OpLogSyncManager * get_oplog_sync_mgr() { return &oplog_sync_mgr_;}
-
-    int rm_block_from_ds(const uint64_t server_id, const uint32_t block_id);
-    int rm_block_from_ds(const uint64_t server_id, const std::vector<uint32_t>& block_ids);
-
-    uint32_t calc_max_block_id();
-    
-    inline void get_alive_server(common::VUINT64& servers)
-    {
-      common::RWLock::Lock lock(server_mutex_, common::READ_LOCKER);
-      std::for_each(servers_. begin(), servers_.end(), GetAliveServer(servers));
-    }
-
-    int touch(uint64_t server, time_t now = time(NULL), bool promote = true);
-
-#if defined(TFS_NS_GTEST) || defined(TFS_NS_INTEGRATION)
-  public:
-#else
-  private:
-#endif
-    int add_server(const common::DataServerStatInfo& info, bool& isnew, time_t now);
-    int remove_server(uint64_t id, time_t now);
-    BlockCollect* add_block(uint32_t& block_id);
-    BlockCollect* add_new_block(uint32_t& block_id, ServerCollect* server = NULL, time_t now = time(NULL));
-    BlockCollect* add_new_block_helper_create_by_id(uint32_t block_id, time_t now);
-    BlockCollect* add_new_block_helper_create_by_system(uint32_t& block_id, ServerCollect* server, time_t now);
-    int add_new_block_helper_send_msg(const uint32_t block_id, const std::vector<ServerCollect*>& servers);
-    int add_new_block_helper_write_log(const uint32_t block_id, const std::vector<ServerCollect*>& server);
-    int add_new_block_helper_rm_block(const uint32_t block_id, std::vector<ServerCollect*>& servers);
-    ServerCollect* find_server_in_vec(const std::vector<ServerCollect*>& servers, const uint64_t server_id);
-
-    int update_relation(ServerCollect* server, const std::vector<common::BlockInfo>& blocks, EXPIRE_BLOCK_LIST& expires, time_t now);
-    int build_relation(BlockCollect* block, ServerCollect* server, time_t now, bool force = false);
-    bool relieve_relation(BlockCollect* block, ServerCollect* server, time_t now);
-    bool relieve_relation(ServerCollect* server, time_t now);
-
-    void rotate(time_t now);
-
-    uint32_t get_alive_block_id() const;
-    int64_t calc_all_block_bytes() const;
-    int64_t calc_all_block_count() const;
-    BlockCollect* elect_write_block();
-    int open_read_mode(const uint32_t block_id, common::VUINT64& readable_ds_list);
-    int open_write_mode(const int32_t mode,
-        uint32_t& block_id,
-        uint32_t& lease_id,
-        int32_t& version,
-        common::VUINT64& ds_list);
-    int open_helper_create_new_block_by_id(uint32_t block_id);
-    int batch_open_read_mode(const common::VUINT32& blocks, std::map<uint32_t, common::BlockInfoSeg>& out);
-    int batch_open_write_mode(const int32_t mode, const int32_t block_count, std::map<uint32_t, common::BlockInfoSeg>& out);
-    int touch(ServerCollect* server, time_t now, bool promote = false);
-    void check_server();
-
-    int set_runtime_param(uint32_t index, uint32_t value, char *retstr);
-    int block_oplog_write_helper(const int32_t cmd, const common::BlockInfo& info, const std::vector<uint32_t>& blocks, const std::vector<uint64_t>& servers);
 #if defined(TFS_NS_GTEST) || defined(TFS_NS_INTEGRATION)
   public:
 #else
@@ -179,12 +206,12 @@ namespace nameserver
    {
      friend class LayoutManager;
    public:
-     Task(LayoutManager* manager, common::PlanType type, common::PlanPriority priority, uint32_t block_id, time_t begin, time_t end, const std::vector<ServerCollect*>& runer);
+     Task(LayoutManager* manager, common::PlanType type, common::PlanPriority priority, const uint32_t block_id, const time_t begin, const time_t end, const std::vector<ServerCollect*>& runer);
      virtual ~ Task(){};
      virtual int handle() = 0;
      virtual int handle_complete(message::Message* msg, bool& all_complete_flag) = 0;
      virtual void dump(tbnet::DataBuffer& stream);
-     virtual void dump(int32_t level, const char* const format = NULL);
+     virtual void dump(const int32_t level, const char* const format = NULL);
      virtual void runTimerTask();
      bool operator < (const Task& task)
      {
@@ -222,7 +249,7 @@ namespace nameserver
 
    struct TaskCompare
    {
-     bool operator()(const TaskPtr& lhs, const TaskPtr& rhs) const
+     bool operator()(const TaskPtr& lhs, const TaskPtr& rhs)
      {
         //return lhs < rhs;
         return (*lhs) < (*rhs);
@@ -243,18 +270,18 @@ namespace nameserver
        bool is_complete_;
        bool current_complete_result_;
        common::BlockInfo block_info_;
-       CompactComplete(uint64_t id, uint32_t block_id, common::PlanStatus status):
+       CompactComplete(const uint64_t id, const uint32_t block_id, common::PlanStatus status):
          id_(id), block_id_(block_id), status_(status), all_success_(true),
          has_success_(false), is_complete_(true), current_complete_result_(false){}
      };
    public:
-     CompactTask(LayoutManager* manager, common::PlanPriority priority, uint32_t block_id, time_t begin, time_t end, const std::vector<ServerCollect*>& runer);
+     CompactTask(LayoutManager* manager, common::PlanPriority priority, const uint32_t block_id, const time_t begin, const time_t end, const std::vector<ServerCollect*>& runer);
      virtual ~CompactTask(){}
      virtual int handle();
      virtual int handle_complete(message::Message* msg, bool& all_complete_flag);
      virtual void runTimerTask();
      virtual void dump(tbnet::DataBuffer& stream);
-     virtual void dump(int32_t level, const char* const format = NULL);
+     virtual void dump(const int32_t level, const char* const format = NULL);
   #if defined(TFS_NS_GTEST) || defined(TFS_NS_INTEGRATION)
     public:
   #else
@@ -279,7 +306,7 @@ namespace nameserver
    class ReplicateTask : public virtual Task 
    {
    public:
-     ReplicateTask(LayoutManager* manager, common::PlanPriority priority, uint32_t block_id, time_t begin, time_t end, const std::vector<ServerCollect*>& runer);
+     ReplicateTask(LayoutManager* manager, common::PlanPriority priority, const uint32_t block_id, const time_t begin, const time_t end, const std::vector<ServerCollect*>& runer);
      virtual ~ReplicateTask(){}
      virtual int handle();
      virtual int handle_complete(message::Message* msg, bool& all_complete_flag);
@@ -297,7 +324,7 @@ namespace nameserver
    class DeleteBlockTask : public virtual Task 
    {
    public:
-     DeleteBlockTask(LayoutManager* manager, common::PlanPriority priority, uint32_t block_id, time_t begin, time_t end, const std::vector<ServerCollect*>& runer);
+     DeleteBlockTask(LayoutManager* manager, common::PlanPriority priority, const uint32_t block_id, const time_t begin, const time_t end, const std::vector<ServerCollect*>& runer);
      virtual ~DeleteBlockTask(){}
      virtual int handle();
      virtual int handle_complete(message::Message* msg, bool& all_complete_flag);
@@ -309,7 +336,7 @@ namespace nameserver
    class MoveTask : public virtual ReplicateTask
    {
    public:
-     MoveTask(LayoutManager* manager, common::PlanPriority priority, uint32_t block_id, time_t begin, time_t end, const std::vector<ServerCollect*>& runer);
+     MoveTask(LayoutManager* manager, common::PlanPriority priority, const uint32_t block_id, const time_t begin, const time_t end, const std::vector<ServerCollect*>& runer);
      virtual ~MoveTask(){}
    private:
      DISALLOW_COPY_AND_ASSIGN(MoveTask);
@@ -394,15 +421,15 @@ namespace nameserver
 #endif
 
 #if defined(TFS_NS_GTEST) || defined(TFS_NS_INTEGRATION)
-    bool build_replicate_plan(time_t now, int64_t& need, int64_t& adjust, int64_t& emergency_replicate_count, std::vector<uint32_t>& blocks);
-    bool build_compact_plan(time_t now, int64_t& need, std::vector<uint32_t>& blocks);
-    bool build_balance_plan(time_t now, int64_t& need, std::vector<uint32_t>& blocks);
-    bool build_redundant_plan(time_t now, int64_t& need, std::vector<uint32_t>& blocks);
+    bool build_replicate_plan(const time_t now, int64_t& need, int64_t& adjust, int64_t& emergency_replicate_count, std::vector<uint32_t>& blocks);
+    bool build_compact_plan(const time_t now, int64_t& need, std::vector<uint32_t>& blocks);
+    bool build_balance_plan(const time_t now, int64_t& need, std::vector<uint32_t>& blocks);
+    bool build_redundant_plan(const time_t now, int64_t& need, std::vector<uint32_t>& blocks);
 #else
-    bool build_replicate_plan(time_t now, int64_t& need, int64_t& adjust, int64_t& emergency_replicate_count);
-    bool build_compact_plan(time_t now, int64_t& need);
-    bool build_balance_plan(time_t now, int64_t& need);
-    bool build_redundant_plan(time_t now, int64_t& need);
+    bool build_replicate_plan(const time_t now, int64_t& need, int64_t& adjust, int64_t& emergency_replicate_count);
+    bool build_compact_plan(const time_t now, int64_t& need);
+    bool build_balance_plan(const time_t now, int64_t& need);
+    bool build_redundant_plan(const time_t now, int64_t& need);
 #endif
     void find_need_replicate_blocks(const int64_t need,
         const time_t now,

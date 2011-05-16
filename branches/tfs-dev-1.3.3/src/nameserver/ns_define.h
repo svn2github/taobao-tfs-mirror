@@ -36,7 +36,7 @@ namespace tfs
     class GCObject
     {
     public:
-      explicit GCObject(time_t now):
+      explicit GCObject(const time_t now):
         dead_time_(now) {}
       virtual ~GCObject() {}
       virtual void callback(LayoutManager* manager){}
@@ -47,15 +47,15 @@ namespace tfs
         #endif
         delete this;
       }
-      void set_dead_time(time_t now = time(NULL))
+      void set_dead_time(const time_t now = time(NULL))
       {
         dead_time_ = now;
       }
-      bool can_be_clear(time_t now = time(NULL)) const
+      bool can_be_clear(const time_t now = time(NULL)) const
       {
         return now >= (dead_time_ + common::SYSPARAM_NAMESERVER.object_clear_max_time_);
       }
-      bool is_dead(time_t now = time(NULL)) const
+      bool is_dead(const time_t now = time(NULL)) const
       {
         return now >= (dead_time_ + common::SYSPARAM_NAMESERVER.object_dead_max_time_);
       }
