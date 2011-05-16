@@ -45,7 +45,10 @@ namespace tfs
 
         virtual int login(const std::string& app_key, int32_t& app_id, BaseInfo& base_info) = 0;
         virtual int check_update_info(const int32_t app_id, const int64_t modify_time, bool& update_flag, BaseInfo& base_info) = 0;
-        virtual int get_app_name(const int32_t app_id, std::string& app_name) const;
+        virtual int get_app_name(const int32_t app_id, std::string& app_name) const
+        {
+          return common::TFS_SUCCESS;
+        }
 
         virtual int update_session_info(const std::vector<SessionBaseInfo>& session_infos) = 0;
         virtual int update_session_stat(const std::map<std::string, SessionStat>& session_stats) = 0;
