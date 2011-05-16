@@ -57,7 +57,6 @@ TEST_F(BaseResourceTest, get_cluster_infos)
   EXPECT_EQ(TFS_SUCCESS, tester.get_cluster_infos(1, cluster_rack_datas));
   EXPECT_EQ(2, cluster_rack_datas.size());
 
-  EXPECT_STREQ("1.1.1.1:1010", cluster_rack_datas[0].dupliate_server_addr_.c_str());
   EXPECT_STREQ("2.1.1.1:1010", cluster_rack_datas[1].dupliate_server_addr_.c_str());
 
   EXPECT_EQ(2, cluster_rack_datas[0].cluster_data_.size());

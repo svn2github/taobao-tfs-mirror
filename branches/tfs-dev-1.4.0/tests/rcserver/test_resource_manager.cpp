@@ -18,16 +18,6 @@
 #include "resource_manager.h"
 
 using namespace tfs::rcserver;
-class TestResourceManager: public ResourceManager
-{
-  public:
-  virtual int initialize()
-  {
-    database_helper_ = new TestDatabaseHelper();
-    have_inied_ = true;
-    load();
-  }
-};
 
 class ResourceManagerTest: public ::testing::Test
 {

@@ -19,6 +19,7 @@
 #include <tbsys.h>
 #include <Mutex.h>
 #include "database_helper.h"
+#include "resource_manager.h"
 #include "common/define.h"
 
 namespace tfs
@@ -194,7 +195,26 @@ namespace tfs
           outparam[tmp.id_] = tmp;
           return TFS_SUCCESS;
         }
+        virtual int update_session_info(const std::vector<SessionBaseInfo>& session_infos)
+        {return TFS_SUCCESS;}
+        virtual int update_session_stat(const std::map<std::string, SessionStat>& session_stats)
+        {return TFS_SUCCESS;}
+        virtual int update_app_stat(const MIdAppStat& app_stats)
+        {return TFS_SUCCESS;}
 
+    };
+    class TestResourceManager: public ResourceManager
+    {
+      public:
+        TestResourceManager(){}
+        virtual int initialize()
+        {
+          database_helper_ = new TestDatabaseHelper();
+          have_inited_ = true;
+          load();
+          return TFS_SUCCESS;
+        }
+        virtual ~TestResourceManager(){};
     };
 
   }
