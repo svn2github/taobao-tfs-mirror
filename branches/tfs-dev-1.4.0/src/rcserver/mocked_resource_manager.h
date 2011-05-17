@@ -26,7 +26,7 @@ namespace tfs
     class MockedResourceManager : public IResourceManager
     {
       public:
-        MockedResourceManager() {}
+        MockedResourceManager() : flag_(false) {}
         ~MockedResourceManager() {}
 
       public:
@@ -107,23 +107,64 @@ namespace tfs
 
         int update_session_info(const std::vector<SessionBaseInfo>& session_infos)
         {
-          return common::TFS_SUCCESS;
+          int ret = common::TFS_SUCCESS;
+          if (flag_)
+          {
+            std::vector<SessionBaseInfo>::const_iterator sit = session_infos.begin();
+            for ( ; sit != session_infos.end(); ++sit)
+            {
+              TBSYS_LOG(INFO, "update db session info. session_id: %s, client_version: %s, cache_size: %"PRI64_PREFIX"d,"
+                  " cache_time: %"PRI64_PREFIX"d, modify_time: %"PRI64_PREFIX"d, is_logout: %d",
+                  (*sit).session_id_.c_str(), (*sit).client_version_.c_str(), (*sit).cache_size_,
+                  (*sit).cache_time_, (*sit).modify_time_, (*sit).is_logout_);
+            }
+            flag_ = false;
+          }
+          else
+          {
+            ret = common::TFS_ERROR;
+            flag_ = true;
+          }
+          return ret;
         }
 
         int update_session_stat(const std::map<std::string, SessionStat>& session_stats)
         {
-          return common::TFS_SUCCESS;
+          int ret = common::TFS_SUCCESS;
+          std::map<std::string, SessionStat>::const_iterator stat_it = session_stats.begin(); 
+          for ( ; stat_it != session_stats.end(); ++stat_it)
+          {
+            std::map<OperType, AppOperInfo>::const_iterator mit = stat_it->second.app_oper_info_.begin();
+            for ( ; mit != stat_it->second.app_oper_info_.end(); ++mit)
+            {
+              TBSYS_LOG(INFO, "update db session stat. session_id: %s, oper_type: %d, oper_times: %"PRI64_PREFIX"d, oper_size: %"PRI64_PREFIX"d,"
+                  " oper_rt: %"PRI64_PREFIX"d, oper_succ: %"PRI64_PREFIX"d",
+                  stat_it->first.c_str(), mit->first, mit->second.oper_times_,
+                  mit->second.oper_size_, mit->second.oper_rt_, mit->second.oper_succ_);
+            }
+          }
+          flag_ = false;
+          return ret;
         }
 
         int update_app_stat(const MIdAppStat& app_stats)
         {
-          return common::TFS_SUCCESS;
+          int ret = common::TFS_SUCCESS;
+          std::map<int32_t, AppStat>::const_iterator mit = app_stats.begin();
+          for ( ; mit != app_stats.end(); ++mit)
+          {
+            TBSYS_LOG(INFO, "update db app stat. app_id: %d, id: %d, file_count: %"PRI64_PREFIX"d, used_capacity: %"PRI64_PREFIX"d",
+                mit->first, mit->second.id_, mit->second.file_count_, mit->second.used_capacity_);
+          }
+          flag_ = false;
+          return ret;
         }
       private:
         DISALLOW_COPY_AND_ASSIGN(MockedResourceManager);
         std::map<std::string, int32_t> apps_;
         std::map<int32_t, int64_t> id_2_mtimes_;
         BaseInfo old_info_, new_info_;
+        bool flag_;
     };
   }
 }

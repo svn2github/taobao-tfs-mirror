@@ -31,8 +31,6 @@ namespace tfs
 {
   namespace rcserver
   {
-    static const char SEPARATOR_KEY = '-';
-
     enum UpdateFlag
     {
       LOGIN_FLAG = 1,
@@ -68,7 +66,9 @@ namespace tfs
             const KeepAliveInfo& keep_alive_info, UpdateFlag update_flag);
 
       protected:
-        static void display(const int32_t app_id, const SessionStat& s_stat);
+        static void display(const int32_t app_id, const SessionStat& s_stat, const int64_t cache_hit_ratio = 0);
+        int update_session_info_ex(const int32_t app_id, const std::string& session_id,
+            const KeepAliveInfo& keep_alive_info, UpdateFlag update_flag);
 
       protected:
         SessionManager& manager_;
@@ -109,16 +109,23 @@ namespace tfs
         }
 
         virtual void runTimerTask();
+
+      private:
+        void extract(const AppSessionMap& app_sessions, std::vector<SessionBaseInfo>& v_session_infos,
+            std::map<std::string, SessionStat>& m_session_stats, MIdAppStat& m_app_stat);
+        void rollback(const AppSessionMap& app_sessions);
+
       private:
         IResourceManager* resource_manager_;
     };
     typedef tbutil::Handle<SessionStatTask> SessionStatTaskPtr;
+
     class SessionManager
     {
       public:
         SessionManager(IResourceManager* resource_manager, tbutil::TimerPtr timer)
           : resource_manager_(resource_manager), timer_(timer),
-            monitor_task_(0), stat_task_(0)
+            monitor_task_(0), stat_task_(0), is_init_(false)
         {
         }
         ~SessionManager()
@@ -139,9 +146,6 @@ namespace tfs
       private:
         int update_session_info(const int32_t app_id, const std::string& session_id,
             const KeepAliveInfo& keep_alive_info, UpdateFlag update_flag);
-
-        void gene_session_id(const int32_t app_id, const int64_t session_ip, std::string& session_id);
-        int parse_session_id(const std::string& session_id, int32_t& app_id, int64_t& session_ip);
 
       private:
         DISALLOW_COPY_AND_ASSIGN(SessionManager);

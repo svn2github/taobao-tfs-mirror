@@ -634,10 +634,10 @@ error:
         {
           pos += snprintf(sql + pos, 512, "insert into t_app_stat"
               "(app_id, used_capacity, file_count, create_time, modify_time) "
-              "values (%d,%"PRI64_PREFIX"d,%d,now(),now())", 
+              "values (%d,%"PRI64_PREFIX"d,%"PRI64_PREFIX"d,now(),now())", 
               it->first, it->second.used_capacity_, it->second.file_count_);
           pos += snprintf(sql + pos, 512, " on duplicate key update "
-              "used_capacity=used_capacity+%"PRI64_PREFIX"d,file_count=file_count+%d, modify_time=now();",
+              "used_capacity=used_capacity+%"PRI64_PREFIX"d,file_count=file_count+%"PRI64_PREFIX"d, modify_time=now();",
               it->second.used_capacity_, it->second.file_count_);
           it++;
         }

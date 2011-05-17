@@ -100,10 +100,10 @@ AC_ARG_WITH([release],
     [use optimize (default is NO)]),
     [
       if test "$withval" = "yes"; then
-        CXXFLAGS="-O2 -finline-functions -fno-strict-aliasing -Wall -fPIC -D__STDC_LIMIT_MACROS"
+        CXXFLAGS="-O2 -finline-functions -fno-strict-aliasing -Wall -fPIC -D__STDC_LIMIT_MACROS -D_NO_EXCEPTION"
       fi
     ],
-    [CXXFLAGS="-g -Wall -fPIC -D__STDC_LIMIT_MACROS -DTFS_TEST"]
+    [CXXFLAGS="-g -Wall -fPIC -D__STDC_LIMIT_MACROS -DTFS_TEST -D_NO_EXCEPTION"]
 )
 
 ac_default_prefix=${HOME}/tfs_bin
@@ -160,8 +160,8 @@ AC_CONFIG_FILES([Makefile
                  tests/Makefile
                  tests/batch/Makefile
                  tests/client/Makefile
+                 tests/rcserver/Makefile
                  tests/new_client/Makefile
                  tests/dataserver/Makefile
-                 tests/rcserver/Makefile
                  tests/intergrate/Makefile])
 AC_OUTPUT

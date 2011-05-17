@@ -4,7 +4,7 @@ AM_CPPFLAGS=-I${top_srcdir}/src/rcserver \
 						-I$(TBLIB_ROOT)/include/tbsys \
 						-I$(TBLIB_ROOT)/include/tbnet
 
-AM_LDFLAGS=-lpthread -lrt -lc -lm -lgtest  `mysql_config --libs`
+AM_LDFLAGS=-lpthread -lrt -lc -lm -lgtest -luuid `mysql_config --libs`
 
 LDADD=$(top_builddir)/src/rcserver/librcserver.a \
       $(top_builddir)/src/client/.libs/libtfsclient.a \
@@ -19,8 +19,11 @@ test: check
 TESTS=
 check_PROGRAMS=
 
-#noinst_PROGRAMS=test_app_resource test_base_resource
-noinst_PROGRAMS=test_app_resource test_base_resource test_resource_manager
+noinst_PROGRAMS=test_session_manager test_app_resource test_base_resource test_resource_manager
+
+TESTS+=test_session_manager
+check_PROGRAMS+=test_session_manager
+test_session_manager_SOURCES=test_session_manager.cpp
 
 TESTS+=test_app_resource
 check_PROGRAMS+=test_app_resource

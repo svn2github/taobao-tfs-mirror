@@ -220,7 +220,7 @@ namespace tfs
       std::map<OperType, AppOperInfo> app_oper_info_;
       int64_t cache_hit_ratio_;
 
-      SessionStat() : cache_hit_ratio_(0)
+      SessionStat() : cache_hit_ratio_(100)
       {
         app_oper_info_.clear();
       }
@@ -249,7 +249,7 @@ namespace tfs
     struct AppStat
     {
       int32_t id_;
-      int32_t file_count_;
+      int64_t file_count_;
       int64_t used_capacity_;
       AppStat()
       {
@@ -300,10 +300,10 @@ namespace tfs
 
       KeepAliveInfo& operator +=(const KeepAliveInfo& right)
       {
-        s_base_info_ = right.s_base_info_;
         s_stat_ += right.s_stat_;
         if (last_report_time_ < right.last_report_time_)
         {
+          s_base_info_ = right.s_base_info_;
           s_stat_.cache_hit_ratio_ = right.s_stat_.cache_hit_ratio_;
           last_report_time_ = right.last_report_time_;
         }
