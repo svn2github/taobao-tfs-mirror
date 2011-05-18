@@ -21,7 +21,8 @@ namespace tfs
   namespace common
   {
   //public
-#define CONF_SN_PUBLIC                                "[public]"
+#define CONF_SN_PUBLIC                                "public"
+//#define CONF_SN_PUBLIC                                "[public]"
 #define CONF_SN_NAMESERVER                            "[nameserver]"
 #define CONF_SN_DATASERVER                            "[dataserver]"
 #define CONF_SN_TFSCLIENT                             "[tfsclient]"

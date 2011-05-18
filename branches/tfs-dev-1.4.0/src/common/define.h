@@ -44,6 +44,7 @@ namespace __gnu_cxx
 //#define TFS_NS_GTEST 
 //#define TFS_NS_INTEGRATION
 //#define TFS_NS_DEBUG
+#define TFS_GTEST
 
 namespace tfs
 {
@@ -143,8 +144,11 @@ namespace tfs
     static const int32_t EXIT_NOT_PERM_OPER = -1008;
     static const int32_t EXIT_NOT_OPEN_ERROR = -1009;
 
-    static const int32_t INT_SIZE = 4;
-    static const int32_t INT64_SIZE = 8;
+    static const int8_t INT8_SIZE = 1;
+    static const int8_t INT16_SIZE = 2;
+    static const int8_t INT_SIZE = 4;
+    static const int8_t INT64_SIZE = 8;
+
     static const int32_t MAX_PATH_LENGTH = 256;
     static const int32_t FILEINFO_SIZE = sizeof(FileInfo);
     static const int64_t TFS_MALLOC_MAX_SIZE = 0x00A00000;//10M
@@ -164,7 +168,7 @@ namespace tfs
 
     static const int32_t ADMIN_WARN_DEAD_COUNT = 1;
 
-    static const int64_t DEFAULT_NETWORK_CALL_TIMEOUT  = 3000000;//3s
+    static const int64_t DEFAULT_NETWORK_CALL_TIMEOUT  = 3000;//3s
 
     typedef std::vector<FileInfo*> FILE_INFO_LIST;
   }

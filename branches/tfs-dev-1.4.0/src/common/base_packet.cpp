@@ -85,10 +85,13 @@ namespace tfs
 
     bool BasePacket::encode(tbnet::DataBuffer* output)
     {
-      bool bret = NULL != output && stream_.get_data_length() > 0;
+      bool bret = NULL != output;
       if (bret)
       {
-        output->writeBytes(stream_.get_data(), stream_.get_data_length());
+        if (stream_.get_data_length() > 0)
+        {
+          output->writeBytes(stream_.get_data(), stream_.get_data_length());
+        }
       }
       return bret;
     }
@@ -101,13 +104,13 @@ namespace tfs
         version_ = ((header->_pcode >> 16) & 0xFFFF);
         header->_pcode = (header->_pcode & 0xFFFF);
         int64_t length = header->_dataLen;
-        if (version_ >= TFS_PACKET_VERSION_V1)
-        {
-          length -= TFS_PACKET_HEADER_DIFF_SIZE;
-        }
         bret = length > 0 && input->getDataLen() >= length;
         if (bret)
         {
+          if (version_ >= TFS_PACKET_VERSION_V1)
+          {
+            length -= TFS_PACKET_HEADER_DIFF_SIZE;
+          }
           //both v1 and v2 have id and crc
           if (version_ >= TFS_PACKET_VERSION_V1)
           {
@@ -135,7 +138,15 @@ namespace tfs
                       crc_, crc);
                 }
               }
-           }
+              else
+              {
+                TBSYS_LOG(ERROR, "crc deserialize error, iret: %d", iret);
+              }
+            }
+            else
+            {
+              TBSYS_LOG(ERROR, "channel id deserialize error, iret: %d", iret);
+            }
           }
           if (bret)
           {
@@ -145,13 +156,17 @@ namespace tfs
             input->drainData(length);
             int32_t iret = deserialize(stream_);
             bret = TFS_SUCCESS == iret;
+            if (!bret)
+            {
+              TBSYS_LOG(ERROR, "packet: %d deserialize error, iret: %d", header->_pcode, iret);
+            }
           }
         }
       }
       return bret;
     }
 
-    int BasePacket::reply(tbnet::Packet* packet)
+    int BasePacket::reply(BasePacket* packet)
     {
       int32_t iret = NULL != packet ? TFS_SUCCESS : TFS_ERROR;
       if (TFS_SUCCESS == iret)
@@ -173,14 +188,13 @@ namespace tfs
 
         if (TFS_SUCCESS == iret)
         {
-          BasePacket* message = dynamic_cast<BasePacket*>(packet);
-          message->setChannelId(getChannelId());
-          message->set_id(id_ + 1);
-          message->set_version(version_);
+          packet->setChannelId(getChannelId());
+          packet->set_id(id_ + 1);
+          packet->set_version(version_);
 
           BaseService* service = dynamic_cast<BaseService*>(tbutil::Service::instance());
           //clone & serialize message
-          Packet* reply_msg = service->get_packet_factory()->clone_packet(packet, TFS_PACKET_VERSION_V2, false);
+          tbnet::Packet* reply_msg = service->get_packet_factory()->clone_packet(packet, TFS_PACKET_VERSION_V2, false);
           iret = NULL != reply_msg ? TFS_SUCCESS : TFS_ERROR;
           if (TFS_SUCCESS == iret)
           {
@@ -196,7 +210,7 @@ namespace tfs
             {
               TBSYS_LOG(ERROR, "post packet failure, server: %s, pcode:%d",
                 tbsys::CNetUtil::addrToString(connection_->getServerId()).c_str(), packet->getPCode());
-              tbsys::gDelete(reply_msg);
+              reply_msg->free();
             }
           }
         }
@@ -214,7 +228,8 @@ namespace tfs
       va_end(ap);
       TBSYS_LOGGER.logMessage(level, file, line, function, "%s", msgstr);
 
-      StatusPacket* packet = new StatusPacket(error_code, msgstr);
+      BaseService* service = dynamic_cast<BaseService*>(tbutil::Service::instance());
+      StatusPacket* packet = dynamic_cast<StatusPacket*>(service->get_packet_factory()->createPacket(STATUS_PACKET));
       this->reply(packet);
       return TFS_SUCCESS;
     }

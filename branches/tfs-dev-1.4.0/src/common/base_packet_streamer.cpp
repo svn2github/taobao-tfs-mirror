@@ -60,7 +60,12 @@ namespace tfs
                 &&( input->getDataLen() < TFS_PACKET_HEADER_DIFF_SIZE))
             {
               bret = false;
+              TBSYS_LOG(ERROR, "invalid packet, databuffer length less than : %d", TFS_PACKET_HEADER_DIFF_SIZE);
             }
+          }
+          else
+          {
+            TBSYS_LOG(ERROR, "header deserialize error, iret: %d", iret);
           }
           if (bret)
           {
@@ -111,8 +116,17 @@ namespace tfs
                     TBSYS_LOG(ERROR, "get a packet chid==0, pcode: %d,channel_id:%"PRI64_PREFIX"d", header->_pcode, channel_id);
                   }
                 }
+                else
+                {
+                  TBSYS_LOG(ERROR, "channel id deserialize error, iret: %d", iret);
+                }
               }
             }
+          }
+          else
+          {
+            TBSYS_LOG(ERROR, "invalid packet, databuffer length: %d less than: %d", 
+              input->getDataLen(), TFS_PACKET_HEADER_DIFF_SIZE);
           }
         }
       }

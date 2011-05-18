@@ -178,70 +178,70 @@ namespace tfs
     enum MessageType
     {
       STATUS_MESSAGE = 1,
-      GET_BLOCK_INFO_MESSAGE,
-      SET_BLOCK_INFO_MESSAGE,
-      CARRY_BLOCK_MESSAGE,
-      SET_DATASERVER_MESSAGE,
-      UPDATE_BLOCK_INFO_MESSAGE,
-      READ_DATA_MESSAGE,
-      RESP_READ_DATA_MESSAGE,
-      WRITE_DATA_MESSAGE,
-      CLOSE_FILE_MESSAGE,
-      UNLINK_FILE_MESSAGE,
-      REPLICATE_BLOCK_MESSAGE,
-      COMPACT_BLOCK_MESSAGE,
-      GET_SERVER_STATUS_MESSAGE,
-      SHOW_SERVER_INFORMATION_MESSAGE,
-      SUSPECT_DATASERVER_MESSAGE,
-      FILE_INFO_MESSAGE,
-      RESP_FILE_INFO_MESSAGE,
-      RENAME_FILE_MESSAGE,
-      CLIENT_CMD_MESSAGE,
-      CREATE_FILENAME_MESSAGE,
-      RESP_CREATE_FILENAME_MESSAGE,
-      ROLLBACK_MESSAGE,
-      RESP_HEART_MESSAGE,
-      RESET_BLOCK_VERSION_MESSAGE,
-      BLOCK_FILE_INFO_MESSAGE,
-      LEGACY_UNIQUE_FILE_MESSAGE,
-      LEGACY_RETRY_COMMAND_MESSAGE,
-      NEW_BLOCK_MESSAGE,
-      REMOVE_BLOCK_MESSAGE,
-      LIST_BLOCK_MESSAGE,
-      RESP_LIST_BLOCK_MESSAGE,
-      BLOCK_WRITE_COMPLETE_MESSAGE,
-      BLOCK_RAW_META_MESSAGE,
-      WRITE_RAW_DATA_MESSAGE,
-      WRITE_INFO_BATCH_MESSAGE,
-      BLOCK_COMPACT_COMPLETE_MESSAGE,
-      READ_DATA_MESSAGE_V2,
-      RESP_READ_DATA_MESSAGE_V2,
-      LIST_BITMAP_MESSAGE,
-      RESP_LIST_BITMAP_MESSAGE,
-      RELOAD_CONFIG_MESSAGE,
-      SERVER_META_INFO_MESSAGE,
-      RESP_SERVER_META_INFO_MESSAGE,
-      READ_RAW_DATA_MESSAGE,
-      RESP_READ_RAW_DATA_MESSAGE,
-      REPLICATE_INFO_MESSAGE,
-      ACCESS_STAT_INFO_MESSAGE,
-      READ_SCALE_IMAGE_MESSAGE,
-      OPLOG_SYNC_MESSAGE,
-      OPLOG_SYNC_RESPONSE_MESSAGE,
-      MASTER_AND_SLAVE_HEART_MESSAGE,
-      MASTER_AND_SLAVE_HEART_RESPONSE_MESSAGE,
-      HEARTBEAT_AND_NS_HEART_MESSAGE,
-      OWNER_CHECK_MESSAGE,
-      GET_BLOCK_LIST_MESSAGE,
-      CRC_ERROR_MESSAGE,
-      ADMIN_CMD_MESSAGE,
-      BATCH_GET_BLOCK_INFO_MESSAGE,
-      BATCH_SET_BLOCK_INFO_MESSAGE,
-      REMOVE_BLOCK_RESPONSE_MESSAGE,
-      DUMP_PLAN_MESSAGE,
-      DUMP_PLAN_RESPONSE_MESSAGE,
-      LOCAL_PACKET,
-      STATUS_PACKET,
+      GET_BLOCK_INFO_MESSAGE = 2,
+      SET_BLOCK_INFO_MESSAGE = 3,
+      CARRY_BLOCK_MESSAGE = 4,
+      SET_DATASERVER_MESSAGE = 5,
+      UPDATE_BLOCK_INFO_MESSAGE = 6,
+      READ_DATA_MESSAGE = 7,
+      RESP_READ_DATA_MESSAGE = 8,
+      WRITE_DATA_MESSAGE = 9,
+      CLOSE_FILE_MESSAGE = 10,
+      UNLINK_FILE_MESSAGE = 11,
+      REPLICATE_BLOCK_MESSAGE = 12,
+      COMPACT_BLOCK_MESSAGE = 13,
+      GET_SERVER_STATUS_MESSAGE = 14,
+      SHOW_SERVER_INFORMATION_MESSAGE = 15,
+      SUSPECT_DATASERVER_MESSAGE = 16,
+      FILE_INFO_MESSAGE = 17,
+      RESP_FILE_INFO_MESSAGE = 18,
+      RENAME_FILE_MESSAGE = 19,
+      CLIENT_CMD_MESSAGE = 20,
+      CREATE_FILENAME_MESSAGE = 21,
+      RESP_CREATE_FILENAME_MESSAGE = 22,
+      ROLLBACK_MESSAGE = 23,
+      RESP_HEART_MESSAGE = 24,
+      RESET_BLOCK_VERSION_MESSAGE = 25,
+      BLOCK_FILE_INFO_MESSAGE = 26,
+      LEGACY_UNIQUE_FILE_MESSAGE = 27,
+      LEGACY_RETRY_COMMAND_MESSAGE = 28,
+      NEW_BLOCK_MESSAGE = 29,
+      REMOVE_BLOCK_MESSAGE = 30,
+      LIST_BLOCK_MESSAGE = 31,
+      RESP_LIST_BLOCK_MESSAGE = 32,
+      BLOCK_WRITE_COMPLETE_MESSAGE = 33,
+      BLOCK_RAW_META_MESSAGE = 34,
+      WRITE_RAW_DATA_MESSAGE = 35,
+      WRITE_INFO_BATCH_MESSAGE = 36,
+      BLOCK_COMPACT_COMPLETE_MESSAGE = 37,
+      READ_DATA_MESSAGE_V2 = 38,
+      RESP_READ_DATA_MESSAGE_V2 = 39,
+      LIST_BITMAP_MESSAGE =40,
+      RESP_LIST_BITMAP_MESSAGE = 41,
+      RELOAD_CONFIG_MESSAGE = 42,
+      SERVER_META_INFO_MESSAGE = 43,
+      RESP_SERVER_META_INFO_MESSAGE = 44,
+      READ_RAW_DATA_MESSAGE = 45,
+      RESP_READ_RAW_DATA_MESSAGE = 46,
+      REPLICATE_INFO_MESSAGE = 47,
+      ACCESS_STAT_INFO_MESSAGE = 48,
+      READ_SCALE_IMAGE_MESSAGE = 49,
+      OPLOG_SYNC_MESSAGE = 50,
+      OPLOG_SYNC_RESPONSE_MESSAGE = 51,
+      MASTER_AND_SLAVE_HEART_MESSAGE = 52,
+      MASTER_AND_SLAVE_HEART_RESPONSE_MESSAGE = 53,
+      HEARTBEAT_AND_NS_HEART_MESSAGE = 54,
+      OWNER_CHECK_MESSAGE = 55,
+      GET_BLOCK_LIST_MESSAGE = 56,
+      CRC_ERROR_MESSAGE = 57,
+      ADMIN_CMD_MESSAGE = 58,
+      BATCH_GET_BLOCK_INFO_MESSAGE = 59,
+      BATCH_SET_BLOCK_INFO_MESSAGE = 60,
+      REMOVE_BLOCK_RESPONSE_MESSAGE = 61,
+      DUMP_PLAN_MESSAGE = 62,
+      DUMP_PLAN_RESPONSE_MESSAGE = 63,
+      LOCAL_PACKET = 64,
+      STATUS_PACKET = 65,
     };
 
     // StatusMessage status value
@@ -265,6 +265,10 @@ namespace tfs
     class BasePacket: public tbnet::Packet
     {
     public:
+      typedef BasePacket* (*create_packet_handler)(int32_t);
+      typedef std::map<int32_t, create_packet_handler> CREATE_PACKET_MAP;
+      typedef CREATE_PACKET_MAP::iterator CREATE_PACKET_MAP_ITER;
+    public:
       BasePacket();
       virtual ~BasePacket();
       virtual bool copy(BasePacket* src, const int32_t version, const bool deserialize);
@@ -274,7 +278,7 @@ namespace tfs
       virtual int serialize(Stream& output) = 0;
       virtual int deserialize(Stream& input) = 0;
       virtual int64_t length() const = 0;
-      virtual int reply(tbnet::Packet* packet);
+      virtual int reply(BasePacket* packet);
       int reply_error_packet(const int32_t level, const char* file, const int32_t line,
                const char* function, const int32_t error_code, const char* fmt, ...);
       virtual void dump() const {}
@@ -284,7 +288,7 @@ namespace tfs
       inline void disable_dump() { dump_flag_ = false;}
       inline void set_auto_free(const bool auto_free = true) { auto_free_ = auto_free;}
       inline bool get_auto_free() const { return auto_free_;}
-      inline void free() { if (auto_free_) { delete this;}}
+      virtual void free() { if (auto_free_) { delete this;} }
       inline void set_connection(tbnet::Connection* connection) { connection_ = connection;}
       inline tbnet::Connection* get_connection() const { return connection_;}
       inline void set_direction(const DirectionStatus direction) { direction_ = direction; }
@@ -311,6 +315,7 @@ namespace tfs
       bool auto_free_;
       bool dump_flag_;
     };
+
   }
 }
 #endif //TFS_COMMON_BASE_PACKET_H_

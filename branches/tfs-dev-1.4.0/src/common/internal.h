@@ -26,6 +26,15 @@
 #include <stdint.h>
 #include "define.h"
 #include <databuffer.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <errno.h>
+#include <assert.h>
+#include <limits.h>
+#include <tbnet.h>
+#include "stream.h"
+
 
 namespace tfs
 {
@@ -436,6 +445,62 @@ namespace tfs
       int32_t start_time_;
       int32_t is_move_;
       int32_t server_count_;
+      int serialize(Stream& output)
+      {
+        int32_t iret = output.set_int32(block_id_);
+        if (TFS_SUCCESS == iret)
+        {
+          iret = output.set_int64(source_id_);
+        }
+        if (TFS_SUCCESS == iret)
+        {
+          iret = output.set_int64(destination_id_);
+        }
+        if (TFS_SUCCESS == iret)
+        {
+          iret = output.set_int32(start_time_);
+        }
+        if (TFS_SUCCESS == iret)
+        {
+          iret = output.set_int32(is_move_);
+        }
+        if (TFS_SUCCESS == iret)
+        {
+          iret = output.set_int32(server_count_);
+        }
+        return iret;
+      }
+
+      int deserialize(Stream& input)
+      {
+        int32_t iret = input.get_int32(reinterpret_cast<int32_t*>(&block_id_));
+        if (TFS_SUCCESS == iret)
+        {
+          iret = input.get_int64(reinterpret_cast<int64_t*>(&source_id_));
+        }
+        if (TFS_SUCCESS == iret)
+        {
+          iret = input.get_int64(reinterpret_cast<int64_t*>(&destination_id_)); 
+        }
+        if (TFS_SUCCESS == iret)
+        {
+          iret = input.get_int32(&start_time_); 
+        }
+        if (TFS_SUCCESS == iret)
+        {
+          iret = input.get_int32(&is_move_); 
+        }
+        if (TFS_SUCCESS == iret)
+        {
+          iret = input.get_int32(&server_count_); 
+        }
+        return iret;
+      }
+
+      int64_t length() const
+      {
+        return sizeof(ReplBlock);
+      }
     };
 
     struct Throughput

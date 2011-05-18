@@ -16,6 +16,7 @@
 #ifndef TFS_COMMON_BASE_PACKET_FACTORY_H_
 #define TFS_COMMON_BASE_PACKET_FACTORY_H_
 #include <tbnet.h>
+#include "base_packet.h"
 namespace tfs
 {
   namespace common 
@@ -25,8 +26,12 @@ namespace tfs
     public:
       BasePacketFactory(){}
       virtual ~BasePacketFactory(){}
-      virtual tbnet::Packet* createPacket(int pcode) = 0;
-      virtual tbnet::Packet* clone_packet(tbnet::Packet* packet, int32_t version, bool deserialize) = 0; 
+      virtual int initialize();
+      virtual void destroy();
+      virtual tbnet::Packet* createPacket(int pcode);
+      virtual tbnet::Packet* clone_packet(tbnet::Packet* packet, const int32_t version, const bool deserialize); 
+    protected:
+      BasePacket::CREATE_PACKET_MAP packet_maps_;
     };
   }
 }

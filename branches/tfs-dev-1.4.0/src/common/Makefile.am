@@ -10,11 +10,14 @@ LDADD=$(TBLIB_ROOT)/lib/libtbnet.a \
 noinst_LIBRARIES = libtfscommon.a
 
 libtfscommon_a_SOURCES = config.cpp parameter.cpp func.cpp file_queue.cpp \
-			 file_queue_thread.cpp lock.cpp directory_op.cpp \
-			 file_op.cpp\
+			 file_queue_thread.cpp lock.cpp directory_op.cpp base_packet.cpp\
+			 file_op.cpp base_service.cpp new_client.cpp client_manager.cpp\
+       base_packet_streamer.cpp base_packet_factory.cpp\
+			 stream.cpp status_packet.cpp\
 			 config.h parameter.h func.h file_queue.h \
 			 file_queue_thread.h lock.h directory_op.h \
 			 define.h interval.h error_msg.h config_item.h \
-			 file_op.h statistics.h atomic.h
+			 file_op.h statistics.h atomic.h base_packet_streamer.h\
+			 base_packet_factory.h base_packet.h base_service.h
 
 include_HEADERS = define.h
