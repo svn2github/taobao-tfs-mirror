@@ -37,7 +37,7 @@ namespace nameserver
     BlockChunk();
     virtual ~BlockChunk();
     BlockCollect* add(const uint32_t block_id, const time_t now);
-    bool connect(BlockCollect* block, ServerCollect* server, const time_t now, const bool force, bool& writable);
+    static bool connect(BlockCollect* block, ServerCollect* server, const time_t now, const bool force, bool& writable);
 
     bool remove(const uint32_t block_id);
 

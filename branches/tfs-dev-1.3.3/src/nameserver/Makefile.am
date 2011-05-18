@@ -15,7 +15,9 @@ noinst_LIBRARIES=libnameserver.a
 
 source_list=gc.cpp block_chunk.cpp block_collect.cpp server_collect.cpp \
 		strategy.cpp task.cpp global_factory.cpp  lease_clerk.cpp oplog.cpp\
-		oplog_sync_manager.cpp heart_manager.cpp nameserver.cpp layout_manager.cpp
+		oplog_sync_manager.cpp heart_manager.cpp nameserver.cpp layout_manager.cpp \
+		client_request_server.cpp
+
 
 libnameserver_a_SOURCES=$(source_list)
 libnameserver_a_LDFLAGS=$(AM_LDFLAGS)

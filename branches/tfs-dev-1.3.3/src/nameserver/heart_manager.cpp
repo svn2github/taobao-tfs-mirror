@@ -130,7 +130,7 @@ namespace tfs
 			  bool need_sent_block = false;
 			  const HasBlockFlag flag = message->get_has_block();
 
-			  int iret = meta_mgr_.keepalive(ds_info, flag, message->get_blocks(), expires, need_sent_block); 
+			  int iret = meta_mgr_.get_client_request_server().keepalive(ds_info, flag, message->get_blocks(), expires, need_sent_block); 
 			  if (iret != TFS_SUCCESS)
 			  {
 			  	TBSYS_LOG(ERROR, "dataserver(%s) keepalive failed", CNetUtil::addrToString(ds_info.id_).c_str());

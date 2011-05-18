@@ -90,7 +90,8 @@ namespace tfs
       max_block_id_(0),
       alive_server_size_(0),
       interrupt_(INTERRUPT_NONE),
-      plan_run_flag_(PLAN_RUN_FLAG_REPLICATE)
+      plan_run_flag_(PLAN_RUN_FLAG_REPLICATE),
+      client_request_server_(*this)
     {
       srand(time(NULL));
       tzset();
@@ -133,6 +134,16 @@ namespace tfs
       }
     }
 
+    ClientRequestServer& LayoutManager::get_client_request_server()
+    {
+      return client_request_server_;
+    }
+
+    int32_t LayoutManager::get_alive_server_size() const 
+    {
+      return alive_server_size_;
+    }
+
     int LayoutManager::initialize(const int32_t chunk_num)
     {
       block_chunk_num_ = chunk_num == 0 ? 32 : chunk_num > 1024 ? 1024 : chunk_num;
@@ -171,18 +182,18 @@ namespace tfs
       return block_chunk_[block_id % block_chunk_num_];
     }
 
-    BlockCollect* LayoutManager::get_block(const uint32_t block_id)
-    {
-      BlockChunkPtr ptr = get_chunk(block_id);
-      return ptr->find(block_id);
-    }
+    //BlockCollect* LayoutManager::get_block(const uint32_t block_id)
+    //{
+    //  BlockChunkPtr ptr = get_chunk(block_id);
+    //  return ptr->find(block_id);
+    //}
 
     ServerCollect* LayoutManager::get_server(const uint64_t server)
     {
-      SERVER_MAP::const_iterator iter = servers_.find(server);
-      return ((iter == servers_.end()) 
-          || (iter->second != NULL && !iter->second->is_alive())) ? NULL : iter->second;
+      RWLock::Lock lock(server_mutex_, READ_LOCKER);
+      return get_server_(server);
     }
+
 
 
     void LayoutManager::wait_for_shut_down()
@@ -222,361 +233,9 @@ namespace tfs
       oplog_sync_mgr_.destroy();
     }
 
-    int LayoutManager::keepalive(const common::DataServerStatInfo& ds_info, const common::HasBlockFlag flag,
-        common::BLOCK_INFO_LIST& blocks, common::VUINT32& expires, bool& need_sent_block)
-    {
-      time_t now = time(NULL);
-      //check dataserver status
-      if (ds_info.status_ == DATASERVER_STATUS_DEAD)//dataserver dead
-      {
-        remove_server(ds_info.id_, now);
-        interrupt(INTERRUPT_ALL, now);//interrupt
-        return TFS_SUCCESS;
-      }
-
-      bool isnew = false;
-      int iret = add_server(ds_info, isnew, now);
-      if (iret != TFS_SUCCESS)
-      {
-        TBSYS_LOG(ERROR, "%s", "update information failed in keepalive fuction");
-        return iret;
-      }
-
-      if (isnew) //new dataserver
-      {
-        TBSYS_LOG(INFO, "dataserver(%s) join: use capacity(%" PRI64_PREFIX "u),total capacity(%" PRI64_PREFIX "u), has_block(%s)",
-            tbsys::CNetUtil::addrToString(ds_info.id_).c_str(), ds_info.use_capacity_,
-            ds_info.total_capacity_,flag == HAS_BLOCK_FLAG_YES ? "Yes" : "No");
-        interrupt(INTERRUPT_ALL, now);//interrupt
-      }
-
-      ServerCollect* server = NULL;
-      {
-        RWLock::Lock lock(server_mutex_, READ_LOCKER);
-        server = get_server(ds_info.id_);
-      }
-
-      if (server == NULL)
-      {
-        TBSYS_LOG(ERROR, "ServerCollect object not found by (%s)", CNetUtil::addrToString(ds_info.id_).c_str());
-        return TFS_ERROR;
-      }
-
-#if defined(TFS_NS_GTEST) || defined(TFS_NS_INTEGRATION) || defined(TFS_NS_DEBUG)
-      server->dump();
-#endif
-
-      NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info(); 
-      if (flag == HAS_BLOCK_FLAG_NO)
-      {
-        int32_t block_count = server->block_count();
-        need_sent_block = (isnew || block_count <= 0);
-
-        //switching occurred between master and slave
-        if ((!need_sent_block)
-            && (block_count != ds_info.block_count_))
-        {
-          //dataserver need to re-report if complete switch
-          if (now < ngi.switch_time_)
-          {
-            need_sent_block = true;
-          }
-        }
-        return TFS_SUCCESS;
-      }
-
-      //update all relations of blocks belongs to it
-      EXPIRE_BLOCK_LIST current_expires;
-#if defined(TFS_NS_GTEST) || defined(TFS_NS_INTEGRATION) || defined(TFS_NS_DEBUG)
-      TBSYS_LOG(DEBUG, "server(%s) update_relation, flag(%s)", tbsys::CNetUtil::addrToString(ds_info.id_).c_str(), flag == HAS_BLOCK_FLAG_YES ? "Yes" : "No");
-#endif
-      iret = update_relation(server, blocks, current_expires, now);
-      if (iret == TFS_ERROR)
-      {
-        TBSYS_LOG(ERROR, "%s", "update relationship failed between block and dataserver");
-        return iret;
-      }
-
-      if (ngi.owner_role_ == NS_ROLE_MASTER)//i'm master, we're going to expire blocks
-      {
-        std::vector<uint32_t> rm_list;
-        EXPIRE_BLOCK_LIST::iterator iter = current_expires.begin();
-        for (; iter != current_expires.end(); ++iter)
-        {
-          std::vector<BlockCollect*>& expires_blocks = iter->second;
-          std::vector<BlockCollect*>::iterator r_iter = expires_blocks.begin();
-          rm_list.clear();
-          if (iter->first->id() == ds_info.id_)
-          {
-            for (; r_iter != expires_blocks.end(); ++r_iter)
-            {
-              if (!find_block_in_plan((*r_iter)->id()))
-              {
-                rm_list.push_back((*r_iter)->id());     
-              }
-            }
-          }
-          else
-          {
-            for (; r_iter != expires_blocks.end(); ++r_iter)
-            {
-              //TODO rm_list will cause ds core for now
-              rm_list.push_back((*r_iter)->id());     
-            }
-          }
-          if (!rm_list.empty())
-          {
-            std::vector<int64_t> stat(1, rm_list.size());
-            GFactory::get_stat_mgr().update_entry(GFactory::tfs_ns_stat_block_count_, stat, false);
-            rm_block_from_ds(iter->first->id(), rm_list);
-          }
-        }
-      }
-
-#if !defined(TFS_NS_GTEST) && !defined(TFS_NS_INTEGRATION)
-      touch(server,now); 
-#endif
-      return TFS_SUCCESS;
-    }
-
-    int LayoutManager::open(uint32_t& block_id, const int32_t mode, uint32_t& lease_id, int32_t& version, common::VUINT64& ds_list)
-    {
-      int32_t iret = alive_server_size_<= 0 ? EXIT_NO_DATASERVER : TFS_SUCCESS;
-      if (iret == TFS_SUCCESS)
-      {
-        if (mode & T_READ)//read mode
-        {
-          iret = open_read_mode(block_id, ds_list);
-        }
-        else//write mode
-        {
-          NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
-          iret = ngi.owner_role_ == NS_ROLE_SLAVE ? EXIT_ACCESS_PERMISSION_ERROR: TFS_SUCCESS;
-          if (iret == TFS_SUCCESS)//master
-          {
-            //check this block if doing any operations like replicating, moving, compacting...
-            if ((block_id > 0)
-                && (!(mode & T_NOLEASE)))
-            {
-              RWLock::Lock tlock(maping_mutex_, READ_LOCKER);
-              if (find_block_in_plan(block_id))
-              {
-                TBSYS_LOG(ERROR, "it's error when we'll get block information in open this block(%u) with write mode because block(%u) is busy.",
-                    block_id,  mode);
-                iret = EXIT_BLOCK_BUSY;
-              }
-            }
-
-            if (iret == TFS_SUCCESS)
-            {
-              iret = open_write_mode(mode, block_id, lease_id, version, ds_list);
-            }
-          }
-        } 
-      }
-      std::vector<int64_t> stat(4,0);
-      mode & T_READ ? iret == TFS_SUCCESS ? stat[0] = 1 : stat[1] = 1 
-        : iret == TFS_SUCCESS ? stat[2] = 1 : stat[3] = 1;
-      GFactory::get_stat_mgr().update_entry(GFactory::tfs_ns_stat_, stat);
-      return iret;
-    }
-
-    int LayoutManager::batch_open(const common::VUINT32& blocks, const int32_t mode, const int32_t block_count, std::map<uint32_t, common::BlockInfoSeg>& out)
-    {
-      int32_t iret = alive_server_size_<= 0 ? EXIT_NO_DATASERVER : TFS_SUCCESS;
-      if (iret == TFS_SUCCESS)
-      {
-        if (mode & T_READ)
-        {
-          iret = batch_open_read_mode(blocks, out); 
-        }
-        else
-        {
-          iret = batch_open_write_mode(mode, block_count, out); 
-        }
-      }
-      std::vector<int64_t> stat(4,0);
-      mode & T_READ ? iret == TFS_SUCCESS ? stat[0] = out.size() : stat[1] = __gnu_cxx::abs(out.size() - blocks.size()) 
-        : iret == TFS_SUCCESS ? stat[2] = out.size() : stat[3] = __gnu_cxx::abs(out.size() - block_count);
-      GFactory::get_stat_mgr().update_entry(GFactory::tfs_ns_stat_, stat);
-      return iret;
-    }
-
-    /**
-     * Write commit operation, nameserver confirm this write op and update meta info.
-     * @param [inout] parameter: information.
-     * @return: success or failure
-     */
-    int LayoutManager::close(CloseParameter& parameter)
-    {
-      int32_t iret = TFS_SUCCESS;
-      uint32_t block_id = parameter.block_info_.block_id_;
-      LeaseStatus commit_status = parameter.status_ != WRITE_COMPLETE_STATUS_YES ?
-        LEASE_STATUS_FAILED : LEASE_STATUS_FINISH;
-
-      if (parameter.unlink_flag_ == UNLINK_FLAG_YES)//unlink file 
-      {
-        if (!GFactory::get_lease_factory().commit(block_id, parameter.lease_id_, commit_status))
-        {
-          snprintf(parameter.error_msg_, 256, "close block(%u) successful,but lease(%u) commit fail", block_id, parameter.lease_id_); 
-          TBSYS_LOG(ERROR, "%s", parameter.error_msg_);
-          iret = EXIT_COMMIT_ERROR;
-        }
-        std::vector<int64_t> stat(6,0);
-        iret == TFS_SUCCESS ? stat[4] = 0x01 : stat[5] = 0x01;
-        GFactory::get_stat_mgr().update_entry(GFactory::tfs_ns_stat_, stat);
-        return iret;
-      }
-      else //write file
-      {
-        if (commit_status != LEASE_STATUS_FINISH)
-        {
-          TBSYS_LOG(WARN, "close block(%u) successful, but cleint write operation error,lease(%u) commit begin", block_id, parameter.lease_id_);
-          if (!GFactory::get_lease_factory().commit(block_id, parameter.lease_id_, commit_status))
-          {
-            snprintf(parameter.error_msg_, 256, "close block(%u) successful,but lease(%u) commit fail", block_id, parameter.lease_id_); 
-            TBSYS_LOG(ERROR, "%s", parameter.error_msg_);
-            return EXIT_COMMIT_ERROR;
-          }
-        }
-        else
-        {
-          time_t now = time(NULL);
-          int32_t last_version = 0;
-          BlockCollect* block = NULL;
-          BlockChunkPtr ptr = get_chunk(block_id);
-          {
-            RWLock::Lock lock(*ptr, READ_LOCKER);
-            block = ptr->find(block_id);
-            if (block == NULL)
-            {
-              snprintf(parameter.error_msg_, 256, "close block(%u) fail, block not exist", block_id);
-              TBSYS_LOG(ERROR, "%s", parameter.error_msg_);
-              return EXIT_BLOCK_NOT_FOUND;
-            }
-            last_version = block->version();
-          }
-
-          //check version
-          if (last_version >= parameter.block_info_.version_)
-          {//version errro
-            if (!GFactory::get_lease_factory().commit(block_id, parameter.lease_id_, LEASE_STATUS_FAILED))
-            {
-              snprintf(parameter.error_msg_, 256, "close block(%u) successful,but lease(%u) commit fail", block_id, parameter.lease_id_); 
-              TBSYS_LOG(ERROR, "%s", parameter.error_msg_);
-            }
-            return EXIT_COMMIT_ERROR;
-          }
-
-          //check block is full
-          if (BlockCollect::is_full(parameter.block_info_.size_))
-          {
-            commit_status = LEASE_STATUS_OBSOLETE;
-            parameter.need_new_ = true;
-          }
-
-          //commit lease
-          if (!GFactory::get_lease_factory().commit(block_id, parameter.lease_id_, commit_status))
-          {
-            snprintf(parameter.error_msg_, 256, "close block(%u) successful,but lease(%u) commit fail", block_id, parameter.lease_id_); 
-            TBSYS_LOG(ERROR, "%s", parameter.error_msg_);
-            return EXIT_COMMIT_ERROR;
-          }
-
-          //update block information
-          iret = update_block_info(parameter.block_info_, parameter.id_,now, false);
-          if (iret != TFS_SUCCESS)
-          {
-            TBSYS_LOG(ERROR, "close block(%u) successful, but update block information fail", block_id);
-            TBSYS_LOG(ERROR, "%s", parameter.error_msg_);
-          }
-          return iret;
-        }
-      }
-      return TFS_SUCCESS;
-    }
-
-    /**
-     * client read: get block 's location of dataserver 
-     * only choose dataserver with normal load
-     * @param [in] block_id: query block id, must be a valid blockid
-     * @param [out] ds_list: block location of dataserver.
-     * @return: success or failure
-     */
-    int LayoutManager::open_read_mode(const uint32_t block_id, VUINT64& readable_list)
-    {
-      if (block_id == 0)
-      {
-        TBSYS_LOG(ERROR, "block(%u) is invalid when open this block with read mode", block_id);
-        return EXIT_BLOCK_NOT_FOUND;
-      }
-      BlockChunkPtr ptr = get_chunk(block_id);
-      RWLock::Lock lock(*ptr, READ_LOCKER);
-      BlockCollect* block = ptr->find(block_id);
-
-      if (block == NULL)
-      {
-        TBSYS_LOG(ERROR, "block(%u) not exist when open this block with read mode", block_id);
-        return EXIT_BLOCK_NOT_FOUND;
-      }
-
-      std::vector<ServerCollect*>& readable = block->get_hold(); 
-      if (readable.empty())
-      {
-        TBSYS_LOG(ERROR, "block(%u) hold not any dataserver when open this block with read mode", block_id);
-        return EXIT_NO_DATASERVER;
-      }
-      std::vector<ServerCollect*>::iterator iter = readable.begin();
-      for (; iter != readable.end(); ++iter)
-      {
-        readable_list.push_back((*iter)->id());
-      }
-      return TFS_SUCCESS;
-    }
-
-    int LayoutManager::batch_open_read_mode(const common::VUINT32& blocks, std::map<uint32_t, common::BlockInfoSeg>& out)
-    {
-      std::map<uint32_t, common::BlockInfoSeg>::iterator it;
-      VUINT32::const_iterator iter = blocks.begin();
-      for (; iter != blocks.end(); ++iter)
-      {
-        it = out.find((*iter));
-        if (it == out.end())
-        {
-          std::pair<std::map<uint32_t, common::BlockInfoSeg>::iterator, bool> res = 
-            out.insert(std::pair<uint32_t, common::BlockInfoSeg>((*iter), common::BlockInfoSeg()));
-          it = res.first;
-        }
-        open_read_mode((*iter), it->second.ds_);
-      }
-      return TFS_SUCCESS;
-    }
-
-    int LayoutManager::batch_open_write_mode(const int32_t mode, const int32_t block_count, std::map<uint32_t, common::BlockInfoSeg>& out)
-    {
-      //check mode
-      if (!(mode & T_WRITE))//mode error
-      {
-        TBSYS_LOG(WARN, "access mode(%d) error", mode);
-        return EXIT_ACCESS_MODE_ERROR;
-      }
-      uint32_t block_id = 0;
-      BlockInfoSeg seg;
-      int32_t count = 0;
-      int32_t iret = TFS_ERROR;
-      do
-      {
-        ++count;
-        block_id = 0;
-        seg.ds_.clear();
-        iret = open_write_mode(mode, block_id, seg.lease_, seg.version_, seg.ds_);
-        if (iret == TFS_SUCCESS)
-        {
-          out.insert(std::pair<uint32_t, common::BlockInfoSeg>(block_id, seg));
-        }
-      }
-      while (count < block_count);
-      return TFS_SUCCESS;
+    OpLogSyncManager * LayoutManager::get_oplog_sync_mgr() 
+    { 
+      return &oplog_sync_mgr_;
     }
 
     int LayoutManager::open_helper_create_new_block_by_id(uint32_t block_id)
@@ -623,126 +282,18 @@ namespace tfs
     }
 
 
-    /**
-     * client read: get block 's location of DataServerStatInfo
-     * client write: get new block and location of DataServerStatInfo
-     * @param [in] block_id: query block id, in write mode 
-     * can be set to zero for assign a new write block id.
-     * @param [in] mode: read | write
-     * @param [out] lease_id: write transaction id only for write mode.
-     * @param [out] ds_list: block location of DataServerStatInfos.
-     * @return: success or failure
-     */
-    int LayoutManager::open_write_mode(const int32_t mode,
-        uint32_t& block_id,
-        uint32_t& lease_id,
-        int32_t& version,
-        VUINT64& servers)
-    {
-      //check mode
-      if (!(mode & T_WRITE))//mode error
-      {
-        TBSYS_LOG(WARN, "access mode(%d) error", mode);
-        return EXIT_ACCESS_MODE_ERROR;
-      }
-
-      int32_t iret = TFS_SUCCESS;
-      //nameserver assign a new write block
-      BlockCollect* block = NULL;
-      if ((block_id == 0) && (mode & T_CREATE))//elect a writable block
-      {
-        block = elect_write_block();
-        if (block == NULL)
-        {
-          TBSYS_LOG(ERROR, "%s", "it's failed when elect write block");
-          return EXIT_NO_BLOCK;
-        }
-        block_id = block->id();
-      }
-      else if ((block_id != 0) && (mode & T_NEWBLK)) //create new block by block_id
-      {
-        iret = open_helper_create_new_block_by_id(block_id);
-        if (iret != TFS_SUCCESS)
-        {
-          TBSYS_LOG(ERROR, "create new block(%u) by block id fail", block_id);
-          return iret;
-        }
-      }
-
-      if (block_id == 0)
-      {
-        TBSYS_LOG(WARN, "block(%u) not found in open with write mode", block_id);
-        return EXIT_NO_BLOCK;
-      }
-
-      {
-        BlockChunkPtr ptr = get_chunk(block_id);
-        RWLock::Lock lock(*ptr, READ_LOCKER);
-        if (block == NULL)
-        {
-          block = ptr->find(block_id);
-        }
-        // now check blockcollect object if has any dataserver.
-        if (block == NULL)
-        {
-          TBSYS_LOG(WARN, "block(%u) not found in open with write mode", block_id);
-          return EXIT_NO_BLOCK;
-        }
-
-        if (block->get_hold_size() == 0)
-        {
-          TBSYS_LOG(ERROR, "block is invalid because there's any dataserver was found", block_id);
-          return EXIT_NO_DATASERVER;
-        }
-
-        version = block->version();
-        std::vector<ServerCollect*>& hold = block->get_hold();
-        std::vector<ServerCollect*>::iterator iter = hold.begin();
-        for (; iter != hold.end(); ++iter)
-        {
-          servers.push_back((*iter)->id());
-#if defined(TFS_NS_DEBUG)
-          if ((*iter)->is_alive())
-          {
-            (*iter)->total_elect_num_inc();
-          }
-#endif
-        }
-
-        if (servers.empty())
-        {
-          TBSYS_LOG(ERROR, "any dataserver was't found in this block(%u) object", block_id);
-          return EXIT_NO_DATASERVER;
-        }
-      }
-
-      // register a lease for write..
-      if (!(mode & T_NOLEASE))
-      {
-        lease_id = GFactory::get_lease_factory().add(block_id);
-        if (lease_id == LeaseClerk::INVALID_LEASE)
-        {
-          TBSYS_LOG(ERROR, "block(%u) register lease fail", block_id);
-          return EXIT_CANNOT_GET_LEASE;
-        }
-      }
-      return TFS_SUCCESS;
-    }
 
     int LayoutManager::update_block_info(
         const BlockInfo& new_block_info,
         const uint64_t id,
-        time_t now,
-        bool addnew)
+        const time_t now,
+        const bool addnew)
     {
       ServerCollect* server = NULL;
+      server = get_server(id);
+      if (server != NULL)
       {
-        RWLock::Lock lock(server_mutex_, READ_LOCKER);
-        server = get_server(id);
-        if (server != NULL)
-        {
-          server->touch(now);
-        }
+        server->touch(now);
       }
 
       bool isnew = false;
@@ -798,7 +349,8 @@ namespace tfs
       return TFS_SUCCESS;
     }
 
-    int LayoutManager::repair(uint32_t block_id, uint64_t server, int32_t flag, time_t now, std::string& error_msg)
+    int LayoutManager::repair(const uint32_t block_id, const uint64_t server, 
+        const int32_t flag, const time_t now, std::string& error_msg)
     {
       char msg[512];
       memset(msg, 0, sizeof(msg));
@@ -844,7 +396,7 @@ namespace tfs
           runer.push_back((*iter));
         }
       }
-      if (runer.size() ==0 || runer.empty())
+      if (runer.empty())
       {
         snprintf(msg, 512, "repair block(%u) no any other dataserver(%d) hold a correct replica", block_id, hold_size);
         TBSYS_LOG(ERROR, "%s", msg);
@@ -853,11 +405,9 @@ namespace tfs
       }
       GFactory::get_lease_factory().cancel(block_id);
       ServerCollect* dest_server = NULL;
-      {
-        RWLock::Lock slock(server_mutex_, READ_LOCKER);
-        dest_server = get_server(server);
-        runer.push_back(dest_server);
-      }
+      dest_server = get_server(server);
+      runer.push_back(dest_server);
+
       BlockCollect* block = NULL;
       BlockChunkPtr ptr = get_chunk(block_id);
       RWLock::Lock lock(*ptr, WRITE_LOCKER);
@@ -1175,7 +725,6 @@ namespace tfs
                       uint64_t id = message->get_value1();
                       ServerCollect* server = NULL;
                       {
-                        RWLock::Lock lock(server_mutex_, READ_LOCKER);
                         server = get_server(id);
                       }
                       if (server == NULL)
@@ -1225,7 +774,6 @@ namespace tfs
                       }
                       ServerCollect* server = NULL;
                       {
-                        RWLock::Lock lock(server_mutex_, READ_LOCKER);
                         server = get_server(id);
                       }
                       if (server == NULL)
@@ -1332,7 +880,6 @@ namespace tfs
                       ServerCollect* target_collect = NULL;
                       if (source != 0)
                       {
-                        RWLock::Lock lock(server_mutex_, READ_LOCKER);
                         source_collect = get_server(source);
                       }
                       else
@@ -1355,7 +902,6 @@ namespace tfs
 
                       if (target != 0)
                       {
-                        RWLock::Lock lock(server_mutex_, READ_LOCKER);
                         target_collect = get_server(target);
                       }
                       else
@@ -1453,7 +999,7 @@ namespace tfs
 #endif
       }
 
-    void LayoutManager::interrupt(uint8_t interrupt, time_t now)
+    void LayoutManager::interrupt(const uint8_t interrupt, const time_t now)
     {
       NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info(); 
       TBSYS_LOG(INFO, "owner role(%d), status(%d), receive interrupt(%d), now(%"PRI64_PREFIX"d), switch time(%"PRI64_PREFIX"d)", ngi.owner_role_, ngi.owner_status_, interrupt, now, ngi.switch_time_);
@@ -1527,6 +1073,13 @@ namespace tfs
 #endif
     }
 
+    ServerCollect* LayoutManager::get_server_(const uint64_t server)
+    {
+      SERVER_MAP::const_iterator iter = servers_.find(server);
+      return ((iter == servers_.end()) 
+          || (iter->second != NULL && !iter->second->is_alive())) ? NULL : iter->second;
+    }
+
     /**
      * dataserver join this nameserver, update dataserver of information 
      * and update global statistic information
@@ -1535,12 +1088,12 @@ namespace tfs
      * @param[in] now: current time
      * @return  return TFS_SUCCESS if success, otherwise failed
      */
-    int LayoutManager::add_server(const DataServerStatInfo& info, bool& isnew, time_t now)
+    int LayoutManager::add_server(const DataServerStatInfo& info, const time_t now, bool& isnew)
     {
       //update server information
+      isnew = false;
+      ServerCollect* server_collect = NULL;
       {
-        isnew = false;
-        ServerCollect* server_collect = NULL;
         RWLock::Lock lock(server_mutex_, WRITE_LOCKER);
         SERVER_MAP::iterator iter = servers_.find(info.id_);
         if ((iter == servers_.end())
@@ -1578,8 +1131,8 @@ namespace tfs
         {
           server_collect = iter->second;
         }
-        server_collect->update(info, now);
       }
+      server_collect->update(info, now);
 
       //update global statistic information
       GFactory::get_global_info().update(info, isnew);
@@ -1594,7 +1147,7 @@ namespace tfs
      * @param[in] now : current time
      * @return 
      */
-    int LayoutManager::remove_server(uint64_t server, time_t now)
+    int LayoutManager::remove_server(const uint64_t server, const time_t now)
     {
       TBSYS_LOG(WARN, "server(%s) exit", CNetUtil::addrToString(server).c_str());
       //remove ServerCollect
@@ -1602,7 +1155,7 @@ namespace tfs
       SERVER_MAP::iterator iter = servers_.find(server);
       if (iter != servers_.end())
       {
-        std::vector<int64_t> stat(1,iter->second->block_count());
+        std::vector<int64_t> stat(1, iter->second->block_count());
         GFactory::get_stat_mgr().update_entry(GFactory::tfs_ns_stat_block_count_, stat, false);
 
         //release all relations of blocks belongs to it
@@ -1820,7 +1373,7 @@ namespace tfs
       time_t now = time(NULL);
       BlockChunkPtr ptr = get_chunk(block_id);
       RWLock::Lock lock(*ptr, WRITE_LOCKER);
-      BlockCollect* block = get_block(block_id);
+      BlockCollect* block = ptr->find(block_id);
       int32_t iret = TFS_SUCCESS;
       for (; iter != servers.end(); ++iter)
       {
@@ -1997,7 +1550,7 @@ namespace tfs
      * @param [out] expires: need expire blocks
      * @return success or failure
      */
-    int LayoutManager::update_relation(ServerCollect* server, const std::vector<BlockInfo>& blocks, EXPIRE_BLOCK_LIST& expires, time_t now)
+    int LayoutManager::update_relation(ServerCollect* server, const std::vector<BlockInfo>& blocks, EXPIRE_BLOCK_LIST& expires, const time_t now)
     {
       bool all_success = true;
       bool bret = ((server != NULL && server->is_alive()));
@@ -2055,7 +1608,7 @@ namespace tfs
       return bret ? all_success ? TFS_SUCCESS : TFS_ERROR : TFS_ERROR;
     }
 
-    int LayoutManager::build_relation(BlockCollect* block, ServerCollect* server, time_t now, bool force)
+    int LayoutManager::build_relation(BlockCollect* block, ServerCollect* server, const time_t now, const bool force)
     {
       bool bret = (block != NULL && server != NULL && server->is_alive());
       if (bret)
@@ -2099,7 +1652,7 @@ namespace tfs
       return bret;
     }
 
-    bool LayoutManager::relieve_relation(ServerCollect* server, time_t now)
+    bool LayoutManager::relieve_relation(ServerCollect* server, const time_t now)
     {
       bool bret = server != NULL;
       return bret ? server->clear(*this, now) : bret;
@@ -2148,8 +1701,8 @@ namespace tfs
 
     int LayoutManager::touch(uint64_t server, time_t now, bool promote)
     {
-      RWLock::Lock lock(server_mutex_, READ_LOCKER);
-      ServerCollect* object = get_server(server);
+      ServerCollect* object = NULL;
+      object = get_server(server);
       return touch(object, now, promote);
     }
 
@@ -2356,6 +1909,37 @@ namespace tfs
         }
       }
       return TFS_SUCCESS;
+    }
+
+    int32_t LayoutManager::AddLoad::operator()(const int32_t acc, const ServerCollect* const server)
+    {
+      assert(server != NULL);
+      return acc + server->load();
+    }
+
+    bool LayoutManager::BlockNumComp::operator()(const common::DataServerStatInfo& x, 
+        const common::DataServerStatInfo& y)
+    {
+      return x.block_count_ < y.block_count_;
+    }
+    LayoutManager::GetAliveServer::GetAliveServer(common::VUINT64& servers)
+      :servers_(servers)
+    {
+    }
+
+    bool LayoutManager::GetAliveServer::operator() (const std::pair<uint64_t, ServerCollect*>& node)
+    {
+      if (node.second->is_alive())
+      {
+        servers_.push_back(node.second->id());
+        return true;
+      }
+      return false;
+    }
+    bool LayoutManager::ServerSetDifferencHelper::operator()(const ServerCollect* lrh, 
+        const ServerCollect* rrh)
+    {
+      return lrh->id() < rrh->id();
     }
 
     int LayoutManager::set_runtime_param(uint32_t value1, uint32_t value2, char *retstr)
@@ -2711,7 +2295,6 @@ namespace tfs
           {
             BlockChunkPtr ptr = get_chunk(iter->second->id());
             RWLock::Lock lock(*ptr, READ_LOCKER);
-            RWLock::Lock tlock(maping_mutex_, READ_LOCKER);
             has_replicate = ((!GFactory::get_lease_factory().has_valid_lease(iter->second->id()))
                 && (!find_block_in_plan(iter->second->id()))
                 && (!find_server_in_plan(iter->second->get_hold(), all_find_flag, except)));
@@ -2795,7 +2378,6 @@ namespace tfs
           for (; iter != blocks.end() && !(interrupt_ & INTERRUPT_ALL) && need > 0; ++iter)
           {
             {
-              RWLock::Lock tlock(maping_mutex_, READ_LOCKER);
               has_compact = ((iter->second->check_compact())
                   && (!find_block_in_plan(iter->second->id()))
                   && (!find_server_in_plan(iter->second->get_hold(), all_find_flag, except)));
@@ -2961,7 +2543,6 @@ namespace tfs
             {
               BlockChunkPtr ptr = get_chunk(block_collect->id());
               RWLock::Lock r_lock(*ptr, READ_LOCKER);
-              RWLock::Lock lock(maping_mutex_, READ_LOCKER);
               has_move = ((block_collect != NULL)
                   && (block_collect->check_balance())
                   && (!find_server_in_plan((*it)))
@@ -3057,7 +2638,6 @@ namespace tfs
             except.clear();
             count = iter->second->check_redundant();
             {
-              RWLock::Lock tlock(maping_mutex_, READ_LOCKER);
               has_delete = ((count > 0)
                   && (!find_block_in_plan(iter->second->id()))
                   && (!find_server_in_plan(iter->second->get_hold(), all_find_flag, except)));
@@ -3153,16 +2733,19 @@ namespace tfs
 
     bool LayoutManager::find_block_in_plan(const uint32_t block_id)
     {
+      RWLock::Lock tlock(maping_mutex_, READ_LOCKER);
       return (block_to_task_.end() != block_to_task_.find(block_id));
     }
 
     bool LayoutManager::find_server_in_plan(ServerCollect* server)
     {
+      RWLock::Lock tlock(maping_mutex_, READ_LOCKER);
       return (server_to_task_.end() != server_to_task_.find(server));
     }
 
     bool LayoutManager::find_server_in_plan(const std::vector<ServerCollect*> & servers, bool all_find, std::vector<ServerCollect*>& result)
     {
+      RWLock::Lock tlock(maping_mutex_, READ_LOCKER);
       std::vector<ServerCollect*>::const_iterator iter = servers.begin();
       for (; iter != servers.end(); ++iter)
       {
