@@ -213,8 +213,8 @@ namespace tfs
 
     void DataServer::stop()
     {
-      tran_sport_.stop();
       data_service_.stop();
+      tran_sport_.stop();
     }
 
     int DataServer::start()
@@ -224,9 +224,8 @@ namespace tfs
 
       tran_sport_.start();
       data_service_.init(server_index_);
-      VINT pids;
       //init data service
-      if (data_service_.start(&pids) != TFS_SUCCESS)
+      if (data_service_.start() != TFS_SUCCESS)
       {
         tran_sport_.stop();
         data_service_.stop();
@@ -264,10 +263,6 @@ namespace tfs
 
       //wait
       tran_sport_.wait();
-      for (uint32_t i = 0; i < pids.size(); ++i)
-      {
-        pthread_join(pids[i], NULL);
-      }
       data_service_.wait();
       TBSYS_LOG(INFO, "Process exit normally.");
       return TFS_SUCCESS;

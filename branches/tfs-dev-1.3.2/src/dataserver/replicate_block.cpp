@@ -54,12 +54,11 @@ namespace tfs
       client_ = NULL;
     }
 
-    void* ReplicateBlock::do_replicate_block(void* args)
+    void ReplicateBlock::run(tbsys::CThread* thread, void* args)
     {
       TBSYS_LOG(INFO, "tid: %u", Func::gettid());
       ReplicateBlock* ds = reinterpret_cast<ReplicateBlock *> (args);
       ds->run_replicate_block();
-      return NULL;
     }
 
     int ReplicateBlock::run_replicate_block()
@@ -233,7 +232,7 @@ namespace tfs
         req_wrd_msg.set_length(len);
         req_wrd_msg.set_data(tmp_data_buf);
 
-        //new block		
+        //new block
         if (0 == offset)
         {
           req_wrd_msg.set_new_block(1);
