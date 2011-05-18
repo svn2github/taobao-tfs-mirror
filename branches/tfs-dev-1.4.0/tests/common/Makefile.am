@@ -14,7 +14,8 @@ LDADD=$(top_builddir)/src/common/libtfscommon.a\
 #test: check
 #.PHONY: test
 
-noinst_PROGRAMS= test_serialization  test_packet test_packet_streamer
+noinst_PROGRAMS= test_serialization  test_packet test_packet_streamer test_base_service\
+test_base_service_client
 test_serialization_SOURCES= test_serialization.cpp
 test_serialization_LDFLAGS=${AM_LDFLAGS} -static-libgcc -lgtest
 
@@ -23,3 +24,9 @@ test_packet_LDFLAGS=${AM_LDFLAGS} -static-libgcc -lgtest
 
 test_packet_streamer_SOURCES = test_packet_streamer.cpp new_replicate_block_msg.cpp
 test_packet_streamer_LDFLAGS=${AM_LDFLAGS} -static-libgcc -lgtest
+
+test_base_service_SOURCES=test_base_service.cpp
+test_base_service_LDFLAGS=${AM_LDFLAGS} -static-libgcc -lgtest
+
+test_base_service_client_SOURCE=test_base_service_client.cpp
+test_base_service_client_LDFLAGS=${AM_LDFLAGS} -static-libgcc -lgtest
