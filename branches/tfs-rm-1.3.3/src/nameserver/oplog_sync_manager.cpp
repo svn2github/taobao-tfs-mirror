@@ -522,7 +522,7 @@ namespace tfs
               BlockCollect* block = NULL;
               {
                 RWLock::Lock lock(*ptr, WRITE_LOCKER);
-                block = meta_mgr_.get_block(block_id);
+                block = ptr->find(block_id);
                 if (block == NULL)
                 {
                   block = meta_mgr_.add_block(block_id);
@@ -540,7 +540,6 @@ namespace tfs
               for (; s_iter != oplog.servers_.end(); ++s_iter)
               {
                 {
-                  RWLock::Lock slock(meta_mgr_.server_mutex_, READ_LOCKER);
                   server = meta_mgr_.get_server((*s_iter));
                 }
                 if (server == NULL)
@@ -549,7 +548,7 @@ namespace tfs
                   continue;
                 }
                 RWLock::Lock lock(*ptr, WRITE_LOCKER);
-                block = meta_mgr_.get_block(block_id);
+                block = ptr->find(block_id);
                 if (meta_mgr_.build_relation(block, server, now) != TFS_SUCCESS)
                 {
                   TBSYS_LOG(WARN, "build relation between block(%u) and server(%s) failed",
@@ -576,7 +575,6 @@ namespace tfs
               for (; s_iter != oplog.servers_.end(); ++s_iter)
               {
                 {
-                  RWLock::Lock slock(meta_mgr_.server_mutex_, READ_LOCKER);
                   server = meta_mgr_.get_server((*s_iter));
                 }
                 if (server == NULL)
@@ -586,7 +584,7 @@ namespace tfs
                 }
 
                 RWLock::Lock lock(*ptr, WRITE_LOCKER);
-                block = meta_mgr_.get_block(block_id);
+                block = ptr->find(block_id);
                 if (meta_mgr_.relieve_relation(block, server, now))
                 {
                   TBSYS_LOG(WARN, "relieve relation between block(%u) and server(%s) failed",

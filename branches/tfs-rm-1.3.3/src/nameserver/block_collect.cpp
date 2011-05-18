@@ -357,37 +357,46 @@ namespace nameserver
    */
   PlanPriority BlockCollect::check_replicate(const time_t now) const
   {
-    int32_t size = static_cast<int32_t>(hold_.size());
-    TBSYS_LOG(DEBUG, "size(%d), block(%u)", size, this->info_.block_id_);
-    if (size <= 0)
+    PlanPriority priority = PLAN_PRIORITY_NONE;
+    if (BLOCK_CREATE_FLAG_YES == create_flag_)
     {
-      TBSYS_LOG(ERROR, "block(%u) has been lost, do not replicate", info_.block_id_);
-      return PLAN_PRIORITY_NONE;
+      TBSYS_LOG(DEBUG, "block(%u) creating, do not replicate", info_.block_id_);
     }
-
-    if (size < SYSPARAM_NAMESERVER.min_replication_)// 1 ~ min_replication_
+    else
     {
-      TBSYS_LOG(DEBUG, "last update time: %"PRI64_PREFIX"d, now: %"PRI64_PREFIX"d", last_update_time_, now);
-      if ((last_update_time_ + SYSPARAM_NAMESERVER.replicate_wait_time_) <= now)
+      int32_t size = static_cast<int32_t>(hold_.size());
+      TBSYS_LOG(DEBUG, "size(%d), block(%u)", size, this->info_.block_id_);
+      if (size <= 0)
       {
-        TBSYS_LOG(DEBUG, "emergency replicate block(%u)", info_.block_id_);
-        return PLAN_PRIORITY_EMERGENCY;
+        TBSYS_LOG(ERROR, "block(%u) has been lost, do not replicate", info_.block_id_);
       }
-    } 
-    else if ((size >= SYSPARAM_NAMESERVER.min_replication_) &&
-        (size < SYSPARAM_NAMESERVER.max_replication_))
-    {
-      float ratio = 1.0f - static_cast<float>(size) / static_cast<float>(SYSPARAM_NAMESERVER.max_replication_);
-      int32_t current = static_cast<int32_t>(ratio * 100);
-      bool replicate = current >= SYSPARAM_NAMESERVER.replicate_ratio_;
-      if ((last_update_time_ + SYSPARAM_NAMESERVER.replicate_wait_time_) <= now
-          && replicate)
+      else
       {
-        TBSYS_LOG(DEBUG, "replicate block(%u)", info_.block_id_);
-        return PLAN_PRIORITY_NORMAL;
+        if (size < SYSPARAM_NAMESERVER.min_replication_)// 1 ~ min_replication_
+        {
+          TBSYS_LOG(DEBUG, "last update time: %"PRI64_PREFIX"d, now: %"PRI64_PREFIX"d", last_update_time_, now);
+          if ((last_update_time_ + SYSPARAM_NAMESERVER.replicate_wait_time_) <= now)
+          {
+            TBSYS_LOG(DEBUG, "emergency replicate block(%u)", info_.block_id_);
+            priority = PLAN_PRIORITY_EMERGENCY;
+          }
+        } 
+        else if ((size >= SYSPARAM_NAMESERVER.min_replication_) &&
+            (size < SYSPARAM_NAMESERVER.max_replication_))
+        {
+          float ratio = 1.0f - static_cast<float>(size) / static_cast<float>(SYSPARAM_NAMESERVER.max_replication_);
+          int32_t current = static_cast<int32_t>(ratio * 100);
+          bool replicate = current >= SYSPARAM_NAMESERVER.replicate_ratio_;
+          if ((last_update_time_ + SYSPARAM_NAMESERVER.replicate_wait_time_) <= now
+              && replicate)
+          {
+            TBSYS_LOG(DEBUG, "replicate block(%u)", info_.block_id_);
+            priority = PLAN_PRIORITY_NORMAL;
+          }
+        }
       }
     }
-    return PLAN_PRIORITY_NONE;
+    return priority;
   }
 
   /**
@@ -396,40 +405,50 @@ namespace nameserver
    */
   bool BlockCollect::check_compact() const
   {
-    int32_t size = static_cast<int32_t>(hold_.size());
-    //TBSYS_LOG(DEBUG, "the block(%u) hold (%u) dataserver < min_replication(%d), or not full(%s)",
-    //  info_.block_id_, hold_.size(), SYSPARAM_NAMESERVER.min_replication_, is_full()? "true":"false");
-    if ((size <= 0)
-        || (size < SYSPARAM_NAMESERVER.min_replication_)
-        || (size > SYSPARAM_NAMESERVER.max_replication_)
-        || (!is_full()))
+    bool bret = false;
+    if (BLOCK_CREATE_FLAG_YES == create_flag_)
     {
+      TBSYS_LOG(DEBUG, "block(%u) creating, do not compact", info_.block_id_);
+    } 
+    else
+    {
+      int32_t size = static_cast<int32_t>(hold_.size());
       //TBSYS_LOG(DEBUG, "the block(%u) hold (%u) dataserver < min_replication(%d), or not full(%s)",
-      //    info_.block_id_, hold_.size(), SYSPARAM_NAMESERVER.min_replication_, is_full()? "true":"false");
-      return false;
+      //  info_.block_id_, hold_.size(), SYSPARAM_NAMESERVER.min_replication_, is_full()? "true":"false");
+      if ((size <= 0)
+          || (size < SYSPARAM_NAMESERVER.min_replication_)
+          || (size > SYSPARAM_NAMESERVER.max_replication_)
+          || (!is_full()))
+      {
+        //TBSYS_LOG(DEBUG, "the block(%u) hold (%u) dataserver < min_replication(%d), or not full(%s)",
+        //    info_.block_id_, hold_.size(), SYSPARAM_NAMESERVER.min_replication_, is_full()? "true":"false");
+      }
+      else
+      {
+        if ((info_.file_count_ <= 0)
+            || (info_.size_ <= 0)
+            || (info_.del_file_count_ <= 0)
+            || (info_.del_size_ <= 0))
+        {
+          TBSYS_LOG(DEBUG, "the block(%u) hold file_count(%d), size(%d), delete_file_count(%d), delete_size(%d)",
+              info_.block_id_, info_.file_count_, info_.size_, info_.del_file_count_, info_.del_size_);
+        }
+        else
+        {
+          int32_t delete_file_num_ratio = 
+            static_cast<int32_t>(100 * static_cast<float>(info_.del_file_count_) / static_cast<float>(info_.file_count_));
+          int32_t delete_size_ratio = 
+            static_cast<int32_t>(100 * static_cast<float>(info_.del_size_) / static_cast<float>(info_.size_));
+          if ((delete_file_num_ratio >  SYSPARAM_NAMESERVER.compact_delete_ratio_)
+              || (delete_size_ratio > SYSPARAM_NAMESERVER.compact_delete_ratio_))
+          {
+            TBSYS_LOG(DEBUG, "block(%u) need compact", info_.block_id_);
+            bret = true;
+          }
+        }
+      }
     }
-
-    if ((info_.file_count_ <= 0)
-        || (info_.size_ <= 0)
-        || (info_.del_file_count_ <= 0)
-        || (info_.del_size_ <= 0))
-    {
-      TBSYS_LOG(DEBUG, "the block(%u) hold file_count(%d), size(%d), delete_file_count(%d), delete_size(%d)",
-          info_.block_id_, info_.file_count_, info_.size_, info_.del_file_count_, info_.del_size_);
-      return false;
-    }
-
-    int32_t delete_file_num_ratio = 
-      static_cast<int32_t>(100 * static_cast<float>(info_.del_file_count_) / static_cast<float>(info_.file_count_));
-    int32_t delete_size_ratio = 
-      static_cast<int32_t>(100 * static_cast<float>(info_.del_size_) / static_cast<float>(info_.size_));
-    if ((delete_file_num_ratio >  SYSPARAM_NAMESERVER.compact_delete_ratio_)
-        || (delete_size_ratio > SYSPARAM_NAMESERVER.compact_delete_ratio_))
-    {
-      TBSYS_LOG(DEBUG, "block(%u) need compact", info_.block_id_);
-      return true;
-    }
-    return false;
+    return bret;
   }
 
   int BlockCollect::check_redundant() const

@@ -448,7 +448,7 @@ PASS:
         VUINT64  hold;
 
         NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
-        int32_t iret = meta_mgr_.open(block_id, mode, lease_id, version, hold);
+        int32_t iret = meta_mgr_.get_client_request_server().open(block_id, mode, lease_id, version, hold);
         if (iret == TFS_SUCCESS)
         {
           SetBlockInfoMessage *result_msg = new SetBlockInfoMessage();
@@ -511,7 +511,7 @@ PASS:
         param.lease_id_ = message->get_lease_id();
         param.status_ = message->get_success();
         param.unlink_flag_ = message->get_unlink_flag();
-        int32_t iret = meta_mgr_.close(param);
+        int32_t iret = meta_mgr_.get_client_request_server().close(param);
         message->reply_message(new StatusMessage(iret, param.error_msg_));
         if (param.need_new_ && iret == TFS_SUCCESS)// add new block when block filled complete
         {
@@ -538,7 +538,7 @@ PASS:
 
         BatchSetBlockInfoMessage* reply = new BatchSetBlockInfoMessage();
 
-        int32_t iret = meta_mgr_.batch_open(blocks, mode, block_count, reply->get_infos());
+        int32_t iret = meta_mgr_.get_client_request_server().batch_open(blocks, mode, block_count, reply->get_infos());
         if (iret == TFS_SUCCESS)
         {
           message->reply_message(reply);

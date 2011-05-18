@@ -34,7 +34,9 @@ namespace tfs
   {
     const int8_t LayoutManager::CompactTask::INVALID_SERVER_ID = 0;
     const int8_t LayoutManager::CompactTask::INVALID_BLOCK_ID = 0;
-    LayoutManager::Task::Task(LayoutManager* manager, PlanType type, PlanPriority priority, uint32_t block_id, time_t begin, time_t end, const std::vector<ServerCollect*>& runer):
+    LayoutManager::Task::Task(LayoutManager* manager, const PlanType type, 
+        const PlanPriority priority, uint32_t block_id, 
+        time_t begin, time_t end, const std::vector<ServerCollect*>& runer):
       runer_(runer),
       begin_time_(begin),
       end_time_(end),
@@ -46,6 +48,24 @@ namespace tfs
     {
 
     }
+
+    bool LayoutManager::Task::operator < (const Task& task) const
+    {
+      if (priority_ < task.priority_)
+        return true;
+      if (priority_ > task.priority_)
+        return false;
+      if (type_ < task.type_)
+        return true;
+      if (type_ > task.type_)
+        return false;
+      if (block_id_ < task.block_id_)
+        return true;
+      if (block_id_ > task.block_id_)
+        return false;
+      return (begin_time_ < task.begin_time_);
+    }
+
     void LayoutManager::Task::runTimerTask()
     {
       dump(TBSYS_LOG_LEVEL_INFO, "task expired");
@@ -83,7 +103,7 @@ namespace tfs
         stream.writeInt64((*iter)->id());
       }
     }
-    
+
     void LayoutManager::Task::dump(int32_t level, const char* const format)
     {
       std::string runer;
@@ -96,18 +116,18 @@ namespace tfs
       if (level <= TBSYS_LOGGER._level)
       {
         TBSYS_LOGGER.logMessage(level, __FILE__, __LINE__, __FUNCTION__, "pointer%p, %s type: %s ,status: %s, priority: %s , block_id: %u, begin: %"PRI64_PREFIX"d, end: %"PRI64_PREFIX"d, runer: %s",
-          this,
-          format == NULL ? "" : format,
-          type_ == PLAN_TYPE_REPLICATE ? "replicate" : type_ == PLAN_TYPE_MOVE ? "move" : type_ == PLAN_TYPE_COMPACT
-          ? "compact" : type_ == PLAN_TYPE_DELETE ? "delete" : "unknow",
-          status_ == PLAN_STATUS_BEGIN ? "begin" : status_ == PLAN_STATUS_TIMEOUT ? "timeout" : status_ == PLAN_STATUS_END
-          ? "finish" : status_ == PLAN_STATUS_FAILURE ? "failure": "unknow",
-          priority_ == PLAN_PRIORITY_NORMAL ? "normal" : priority_ == PLAN_PRIORITY_EMERGENCY ? "emergency": "unknow",
-          block_id_, begin_time_, end_time_, runer.c_str());
+            this,
+            format == NULL ? "" : format,
+            type_ == PLAN_TYPE_REPLICATE ? "replicate" : type_ == PLAN_TYPE_MOVE ? "move" : type_ == PLAN_TYPE_COMPACT
+            ? "compact" : type_ == PLAN_TYPE_DELETE ? "delete" : "unknow",
+            status_ == PLAN_STATUS_BEGIN ? "begin" : status_ == PLAN_STATUS_TIMEOUT ? "timeout" : status_ == PLAN_STATUS_END
+            ? "finish" : status_ == PLAN_STATUS_FAILURE ? "failure": "unknow",
+            priority_ == PLAN_PRIORITY_NORMAL ? "normal" : priority_ == PLAN_PRIORITY_EMERGENCY ? "emergency": "unknow",
+            block_id_, begin_time_, end_time_, runer.c_str());
       }
-   }
+    }
 
-    LayoutManager::CompactTask::CompactTask(LayoutManager* manager, PlanPriority priority, uint32_t block_id, time_t begin, time_t end, const std::vector<ServerCollect*>& runer):
+    LayoutManager::CompactTask::CompactTask(LayoutManager* manager, const PlanPriority priority, uint32_t block_id, time_t begin, time_t end, const std::vector<ServerCollect*>& runer):
       Task(manager, PLAN_TYPE_COMPACT, priority, block_id, begin, end, runer)
     {
       memset(&block_info_, 0, sizeof(block_info_));
@@ -124,7 +144,7 @@ namespace tfs
         {
           manager_->running_plan_list_.erase(r_iter);
         }
-        
+
         RWLock::Lock tlock(manager_->maping_mutex_, WRITE_LOCKER);
         manager_->block_to_task_.erase(block_id_);
         std::vector<ServerCollect*>::iterator iter = runer_.begin();
@@ -139,7 +159,7 @@ namespace tfs
       {
         std::pair<uint64_t, PlanStatus>& status = (*iter);
         if (status.second != PLAN_STATUS_END
-          || (status.second !=  PLAN_STATUS_FAILURE))
+            || (status.second !=  PLAN_STATUS_FAILURE))
         {
           status.second = PLAN_STATUS_TIMEOUT;
         }
@@ -191,20 +211,20 @@ namespace tfs
         status += ":";
         plan_status = (*it).second;
         status += plan_status == PLAN_STATUS_BEGIN ? "begin" : plan_status == PLAN_STATUS_TIMEOUT ? "timeout" : plan_status == PLAN_STATUS_END
-        ? "finish" : plan_status == PLAN_STATUS_FAILURE ? "failure": "unknow",
-        status += "/";
+          ? "finish" : plan_status == PLAN_STATUS_FAILURE ? "failure": "unknow",
+          status += "/";
       }
 
       if (level <= TBSYS_LOGGER._level)
       {
         TBSYS_LOGGER.logMessage(level, __FILE__, __LINE__, __FUNCTION__, "%s type: %s ,status: %s, priority: %s , block_id: %u, begin: %"PRI64_PREFIX"d, end: %"PRI64_PREFIX"d, runer: %s, complete status: %s",
-          format == NULL ? "" : format,
-          type_ == PLAN_TYPE_REPLICATE ? "replicate" : type_ == PLAN_TYPE_MOVE ? "move" : type_ == PLAN_TYPE_COMPACT
-          ? "compact" : type_ == PLAN_TYPE_DELETE ? "delete" : "unknow",
-          status_ == PLAN_STATUS_BEGIN ? "begin" : status_ == PLAN_STATUS_TIMEOUT ? "timeout" : status_ == PLAN_STATUS_END
-          ? "finish" : status_ == PLAN_STATUS_FAILURE ? "failure" : "unknow",
-          priority_ == PLAN_PRIORITY_NORMAL ? "normal" : priority_ == PLAN_PRIORITY_EMERGENCY ? "emergency": "unknow",
-          block_id_, begin_time_, end_time_, runer.c_str(), status.c_str());
+            format == NULL ? "" : format,
+            type_ == PLAN_TYPE_REPLICATE ? "replicate" : type_ == PLAN_TYPE_MOVE ? "move" : type_ == PLAN_TYPE_COMPACT
+            ? "compact" : type_ == PLAN_TYPE_DELETE ? "delete" : "unknow",
+            status_ == PLAN_STATUS_BEGIN ? "begin" : status_ == PLAN_STATUS_TIMEOUT ? "timeout" : status_ == PLAN_STATUS_END
+            ? "finish" : status_ == PLAN_STATUS_FAILURE ? "failure" : "unknow",
+            priority_ == PLAN_PRIORITY_NORMAL ? "normal" : priority_ == PLAN_PRIORITY_EMERGENCY ? "emergency": "unknow",
+            block_id_, begin_time_, end_time_, runer.c_str(), status.c_str());
       }
     }
 
@@ -222,14 +242,14 @@ namespace tfs
         res.first = (*iter)->id();
         res.second = PLAN_STATUS_BEGIN;
         msg.set_owner( index == 0 ? 1 : 0);
-        #if !defined(TFS_NS_GTEST) && !defined(TFS_NS_INTEGRATION)
+#if !defined(TFS_NS_GTEST) && !defined(TFS_NS_INTEGRATION)
         if (send_msg_to_server(res.first, &msg) != STATUS_MESSAGE_OK)
         {
           res.second = PLAN_STATUS_TIMEOUT;
           TBSYS_LOG(INFO, "send compact message filed; block (%u) owner(%d) to server(%s), ret(%d)",
-            block_id_, index == 0 ? 1 : 0, CNetUtil::addrToString(res.first).c_str(), iret);
+              block_id_, index == 0 ? 1 : 0, CNetUtil::addrToString(res.first).c_str(), iret);
         }
-        #endif
+#endif
         complete_status_.push_back(res);
       }
 
@@ -256,9 +276,9 @@ namespace tfs
         {
           TBSYS_LOG(ERROR, "block(%u) compact, do compact complete fail(%d)", value.block_id_, iret);
         }
-        #if !defined(TFS_NS_GTEST) && !defined(TFS_NS_INTEGRATION)
+#if !defined(TFS_NS_GTEST) && !defined(TFS_NS_INTEGRATION)
         message->reply_message(new StatusMessage(iret));
-        #endif
+#endif
 
         all_complete_flag = value.is_complete_;
         return iret;
@@ -321,8 +341,8 @@ namespace tfs
       }      
 
       TBSYS_LOG(DEBUG, "complete_count: %d, success_count: %d, complete_status size: %u",
-        complete_count, success_count, complete_status_.size());
-      
+          complete_count, success_count, complete_status_.size());
+
       value.is_complete_ = complete_count == static_cast<int32_t>(complete_status_.size());
       value.has_success_ = success_count != 0;
       value.all_success_ = success_count ==  static_cast<int32_t>(complete_status_.size());
@@ -355,7 +375,6 @@ namespace tfs
         {
           ServerCollect* server = NULL;
           {
-            RWLock::Lock slock(manager_->server_mutex_, READ_LOCKER);
             server = manager_->get_server((*iter));
           }
 
@@ -369,7 +388,7 @@ namespace tfs
             if (!manager_->relieve_relation(block, server, now))
             {
               TBSYS_LOG(WARN, "we'll get failed when relive relation between block(%u) and server(%s)",
-                value.block_id_, CNetUtil::addrToString((*iter)).c_str());
+                  value.block_id_, CNetUtil::addrToString((*iter)).c_str());
             }
             if (ngi.owner_role_ == NS_ROLE_MASTER)
             {
@@ -396,11 +415,11 @@ namespace tfs
             (*iter)->add_writable(block);
           }
         }
-     }
+      }
 
       if (((value.is_complete_)
-          || (value.has_success_))
-         && (ngi.owner_role_ == NS_ROLE_MASTER))
+            || (value.has_success_))
+          && (ngi.owner_role_ == NS_ROLE_MASTER))
       {
         //transmit message.
         CompactBlockCompleteMessage msg;
@@ -434,7 +453,9 @@ namespace tfs
       return TFS_SUCCESS;
     }
 
-    LayoutManager::ReplicateTask::ReplicateTask(LayoutManager* manager, PlanPriority priority, uint32_t block_id, time_t begin, time_t end, const std::vector<ServerCollect*>& runer):
+    LayoutManager::ReplicateTask::ReplicateTask(LayoutManager* manager, const PlanPriority priority, 
+        const uint32_t block_id, const time_t begin, 
+        const time_t end, const std::vector<ServerCollect*>& runer):
       Task(manager, PLAN_TYPE_REPLICATE, priority, block_id, begin, end, runer),
       flag_(REPLICATE_BLOCK_MOVE_FLAG_NO)
     {
@@ -459,23 +480,23 @@ namespace tfs
       block.server_count_ = 0;
       msg.set_repl_block(&block);
       msg.set_command(PLAN_STATUS_BEGIN);
-      #if !defined(TFS_NS_GTEST) && !defined(TFS_NS_INTEGRATION)
+#if !defined(TFS_NS_GTEST) && !defined(TFS_NS_INTEGRATION)
       int32_t iret = send_msg_to_server(block.source_id_, &msg);
       if (STATUS_MESSAGE_OK != iret)
       {
         TBSYS_LOG(ERROR, "send %s command faild, block(%u), %s===>%s",
-          flag_ == REPLICATE_BLOCK_MOVE_FLAG_NO ? "replicate" : "move",
-          block_id_, tbsys::CNetUtil::addrToString(block.source_id_).c_str(),
-          tbsys::CNetUtil::addrToString(block.destination_id_).c_str());
+            flag_ == REPLICATE_BLOCK_MOVE_FLAG_NO ? "replicate" : "move",
+            block_id_, tbsys::CNetUtil::addrToString(block.source_id_).c_str(),
+            tbsys::CNetUtil::addrToString(block.destination_id_).c_str());
       }
       else
       {
         TBSYS_LOG(INFO, "send %s command successful, block(%u), (%s)===>(%s)",
-          flag_ == REPLICATE_BLOCK_MOVE_FLAG_NO ? "replicate" : "move",
-          block_id_, tbsys::CNetUtil::addrToString(block.source_id_).c_str(),
-          tbsys::CNetUtil::addrToString(block.destination_id_).c_str());
+            flag_ == REPLICATE_BLOCK_MOVE_FLAG_NO ? "replicate" : "move",
+            block_id_, tbsys::CNetUtil::addrToString(block.source_id_).c_str(),
+            tbsys::CNetUtil::addrToString(block.destination_id_).c_str());
       }
-      #endif
+#endif
       status_ = PLAN_STATUS_BEGIN;
       begin_time_ = time(NULL);
       end_time_ = begin_time_ + SYSPARAM_NAMESERVER.run_plan_expire_interval_;
@@ -490,25 +511,24 @@ namespace tfs
       bool success = message->get_command() == PLAN_STATUS_END;
       int32_t iret = STATUS_MESSAGE_OK;
       TBSYS_LOG(INFO, "block(%u) %s complete status: %s", blocks.block_id_,
-                blocks.is_move_ == REPLICATE_BLOCK_MOVE_FLAG_YES ? "move" : "replicate",
-                message->get_command() == PLAN_STATUS_END ? "end" :
-                message->get_command() == PLAN_STATUS_TIMEOUT ? "timeout" :
-                message->get_command() == PLAN_STATUS_BEGIN ? "begin" :
-                message->get_command() == PLAN_STATUS_FAILURE ? "failure" : "unknow");
+          blocks.is_move_ == REPLICATE_BLOCK_MOVE_FLAG_YES ? "move" : "replicate",
+          message->get_command() == PLAN_STATUS_END ? "end" :
+          message->get_command() == PLAN_STATUS_TIMEOUT ? "timeout" :
+          message->get_command() == PLAN_STATUS_BEGIN ? "begin" :
+          message->get_command() == PLAN_STATUS_FAILURE ? "failure" : "unknow");
       if (success)
       {
         BlockChunkPtr ptr = manager_->get_chunk(blocks.block_id_);
         BlockCollect* block = NULL;
         {
           RWLock::Lock lock(*ptr, READ_LOCKER);
-          block = manager_->get_block(blocks.block_id_);//find block
+          block = ptr->find(blocks.block_id_);//find block
         }
 
         if (block != NULL)
         {
           ServerCollect* server = NULL;
           {
-            RWLock::Lock lock(manager_->server_mutex_, READ_LOCKER);
             server = manager_->get_server(blocks.destination_id_);// find destination dataserver
           }
           if (server != NULL)
@@ -520,14 +540,13 @@ namespace tfs
           bool has_relieve_relation = false;
           {
             RWLock::Lock lock(*ptr, READ_LOCKER);
-            block = manager_->get_block(blocks.block_id_);
+            block = ptr->find(blocks.block_id_);
             has_relieve_relation = blocks.is_move_ == REPLICATE_BLOCK_MOVE_FLAG_YES
-                    && block->get_hold_size() > SYSPARAM_NAMESERVER.max_replication_;
+              && block->get_hold_size() > SYSPARAM_NAMESERVER.max_replication_;
           }
           if (has_relieve_relation)
           {
             {
-              RWLock::Lock lock(manager_->server_mutex_, READ_LOCKER);//relieve realtion between block and source dataserver
               server = manager_->get_server(blocks.source_id_);
             }
             RWLock::Lock lock(*ptr, WRITE_LOCKER);
@@ -550,9 +569,9 @@ namespace tfs
           {
             manager_->get_oplog_sync_mgr()->log(OPLOG_TYPE_REPLICATE_MSG, buf, size);
           }
-          #if !defined(TFS_NS_GTEST) && !defined(TFS_NS_INTEGRATION)
+#if !defined(TFS_NS_GTEST) && !defined(TFS_NS_INTEGRATION)
           message->reply_message(new StatusMessage(iret));
-          #endif
+#endif
         }
       }
       else
@@ -562,7 +581,7 @@ namespace tfs
       return (iret == STATUS_MESSAGE_OK || iret == STATUS_MESSAGE_REMOVE) ? TFS_SUCCESS : iret;
     }
 
-    LayoutManager::DeleteBlockTask::DeleteBlockTask(LayoutManager* manager, PlanPriority priority, uint32_t block_id, time_t begin, time_t end, const std::vector<ServerCollect*> & runer):
+    LayoutManager::DeleteBlockTask::DeleteBlockTask(LayoutManager* manager, const PlanPriority priority, const uint32_t block_id, const time_t begin, const time_t end, const std::vector<ServerCollect*> & runer):
       Task(manager, PLAN_TYPE_DELETE, priority, block_id, begin, end, runer)
     {
 
@@ -592,8 +611,7 @@ namespace tfs
       return TFS_SUCCESS;
     }
 
-    LayoutManager::MoveTask::MoveTask(LayoutManager* manager, PlanPriority priority, uint32_t block_id, time_t begin, time_t end, const std::vector<ServerCollect*>& runer):
-      Task(manager, PLAN_TYPE_MOVE, priority, block_id, begin, end, runer),
+    LayoutManager::MoveTask::MoveTask(LayoutManager* manager, const PlanPriority priority, uint32_t block_id, time_t begin, time_t end, const std::vector<ServerCollect*>& runer):
       ReplicateTask(manager, priority, block_id, begin, end, runer)
     {
       type_ = PLAN_TYPE_MOVE;
