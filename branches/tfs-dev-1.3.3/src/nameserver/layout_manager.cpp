@@ -67,9 +67,9 @@ namespace tfs
       "build_plan_default_wait_time"
   };
 
-  static void print_servers(std::vector<ServerCollect*>& servers, std::string& result)
+  static void print_servers(const std::vector<ServerCollect*>& servers, std::string& result)
   {
-    std::vector<ServerCollect*>::iterator iter = servers.begin();
+    std::vector<ServerCollect*>::const_iterator iter = servers.begin();
     for (; iter != servers.end(); ++iter)
     {
       result += "/";
@@ -1309,7 +1309,7 @@ namespace tfs
                 ServerCollect* object = NULL;
                 NewClient::RESPONSE_MSG_MAP_ITER iter = sresponse->begin();
                 StatusMessage* message = NULL;
-                for (; iter != sresponse->begin(); ++iter)
+                for (; iter != sresponse->end(); ++iter)
                 {
                   message =  dynamic_cast<StatusMessage*>((iter->second.second));
                   if (STATUS_MESSAGE_OK == message->get_status())
@@ -1324,8 +1324,20 @@ namespace tfs
                 if (success.size() != servers.size())//add block fail, rollback
                 {
                   iret = TFS_ERROR;
+                  std::string success_servers;
+                  std::string needs;
+                  print_servers(servers, needs);
+                  print_servers(success, success_servers);
+                  TBSYS_LOG(ERROR, "add block: %u fail, we'll rollback, servers: %s, success: %s",
+                    block_id, needs.c_str(), success_servers.c_str());
                   add_new_block_helper_rm_block(block_id, success);
                 }
+              }
+              else
+              {
+                std::string needs;
+                print_servers(servers, needs);
+                TBSYS_LOG(ERROR, "add block: %u, send message to server: %s fail", block_id, needs.c_str());
               }
             }
             else // post message fail, rollback
@@ -1355,6 +1367,12 @@ namespace tfs
                   add_new_block_helper_rm_block(block_id, success);
                 }
               }
+              std::string success_servers;
+              std::string needs;
+              print_servers(servers, needs);
+              print_servers(success, success_servers);
+              TBSYS_LOG(ERROR, "add block: %u fail, we'll rollback, servers: %s, success: %s",
+                  block_id, needs.c_str(), success_servers.c_str());
             }
           }
 #endif
