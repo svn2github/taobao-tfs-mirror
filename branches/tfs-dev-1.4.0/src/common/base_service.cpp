@@ -48,6 +48,9 @@ namespace tfs
     
     BaseService::~BaseService()
     {
+      //TODO 
+      //destory packet_factory_ and streamer_
+      
 
     }
 
@@ -71,9 +74,11 @@ namespace tfs
     {
       assert(NULL != client);
       LocalPacket* packet = dynamic_cast<LocalPacket*>(packet_factory_->createPacket(LOCAL_PACKET));
+      assert(NULL != packet);
       packet->set_new_client(client);
       bool bret = main_workers_.push(packet, 0/*no limit*/, false/*no block*/);
-      return bret ? TFS_SUCCESS : TFS_ERROR;
+      assert(true == bret);
+      return TFS_SUCCESS;
     }
 
     bool BaseService::push(BasePacket* packet)

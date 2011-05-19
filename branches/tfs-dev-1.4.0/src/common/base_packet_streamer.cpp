@@ -82,14 +82,7 @@ namespace tfs
               *broken = true;
               TBSYS_LOG(ERROR, "stream error: %x<>%x,%x, dataLen: %d", pheader.flag_,
                 TFS_PACKET_FLAG_V0, TFS_PACKET_FLAG_V1, header->_dataLen);
-              if (TFS_PACKET_FLAG_V1 == pheader.flag_)//discard current data (include packet header)
-              {
-                header->_dataLen += TFS_PACKET_HEADER_DIFF_SIZE;
-              }
-              if (input->getDataLen() >= header->_dataLen)
-              {
-                input->drainData(header->_dataLen);
-              }
+              input->clear();
             }
             else
             {

@@ -286,9 +286,10 @@ namespace tfs
       inline bool is_enable_dump() const { return dump_flag_;}
       inline void enable_dump() { dump_flag_ = true;}
       inline void disable_dump() { dump_flag_ = false;}
-      inline void set_auto_free(const bool auto_free = true) { auto_free_ = auto_free;}
-      inline bool get_auto_free() const { return auto_free_;}
-      virtual void free() { if (auto_free_) { delete this;} }
+      //inline void set_auto_free(const bool auto_free = true) { auto_free_ = auto_free;}
+      //inline bool get_auto_free() const { return auto_free_;}
+      //virtual void free() { if (auto_free_) { delete this;} }
+      virtual void free() { delete this;}
       inline void set_connection(tbnet::Connection* connection) { connection_ = connection;}
       inline tbnet::Connection* get_connection() const { return connection_;}
       inline void set_direction(const DirectionStatus direction) { direction_ = direction; }
@@ -312,7 +313,7 @@ namespace tfs
       DirectionStatus direction_;
       int32_t version_;
       static const int16_t MAX_ERROR_MSG_LENGTH = 512;
-      bool auto_free_;
+      //bool auto_free_;
       bool dump_flag_;
     };
 

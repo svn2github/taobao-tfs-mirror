@@ -34,14 +34,14 @@ namespace tfs
 
     tbnet::Packet* BasePacketFactory::createPacket(int pcode)
     {
-      pcode = (pcode & 0xFFFF);
-      BasePacket::CREATE_PACKET_MAP_ITER iter = packet_maps_.find(pcode);
+      int real_pcode = (pcode & 0xFFFF);
+      BasePacket::CREATE_PACKET_MAP_ITER iter = packet_maps_.find(real_pcode);
       if (iter == packet_maps_.end())
       {
         TBSYS_LOG(ERROR, "create packet error, pcode: %d", pcode);
         return NULL;
       }
-      return (iter->second)(pcode);
+      return (iter->second)(real_pcode);
     }
 
     tbnet::Packet* BasePacketFactory::clone_packet(tbnet::Packet* packet, const int32_t version, const bool deserialize)
@@ -56,7 +56,7 @@ namespace tfs
           if (!bpacket->copy(dynamic_cast<BasePacket*>(packet), version, deserialize))
           {
             TBSYS_LOG(ERROR, "clone packet error, pcode: %d", packet->getPCode());
-            bpacket->set_auto_free();
+            //bpacket->set_auto_free();
             bpacket->free();
             clone_packet = NULL;
           }

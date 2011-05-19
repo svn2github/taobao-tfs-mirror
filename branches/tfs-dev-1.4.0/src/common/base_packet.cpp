@@ -28,7 +28,7 @@ namespace tfs
       crc_(0),
       direction_(DIRECTION_SEND),
       version_(TFS_PACKET_VERSION_V2),
-      auto_free_(true),
+      //auto_free_(true),
       dump_flag_(false)
     {
 
@@ -57,7 +57,7 @@ namespace tfs
           id_ = src->get_id();
           crc_ = src->get_crc();
           version_ = version >= 0 ? version : src->get_version();
-          auto_free_ = src->get_auto_free();
+          //auto_free_ = src->get_auto_free();
           connection_ = src->get_connection();
           direction_  = src->get_direction();
 
