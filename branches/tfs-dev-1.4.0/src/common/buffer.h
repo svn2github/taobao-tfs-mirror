@@ -35,7 +35,7 @@ namespace tfs
         destroy();
       }
 
-      void destroy()
+      inline void destroy()
       {
         if (NULL != pstart_)
         {
@@ -44,32 +44,32 @@ namespace tfs
         }
       }
 
-      char* get_data() const
+      inline char* get_data() const
       {
         return reinterpret_cast<char*>(pdata_);
       }
 
-      int64_t get_data_length() const
+      inline int64_t get_data_length() const
       {
         return  (pfree_ - pdata_);
       }
 
-      char* get_free() const
+      inline char* get_free() const
       {
         return reinterpret_cast<char*>(pfree_);
       }
 
-      int64_t get_free_length() const
+      inline int64_t get_free_length() const
       {
         return (pend_ - pfree_);
       }
 
-      int64_t get_buf_length() const
+      inline int64_t get_buf_length() const
       {
         return (pend_ - pstart_);
       }
 
-      int drain(const int64_t length)
+      inline int drain(const int64_t length)
       {
         int32_t iret = NULL != pdata_ ? TFS_SUCCESS : TFS_ERROR;
         if (TFS_SUCCESS == iret)
@@ -83,7 +83,7 @@ namespace tfs
         return iret;
       }
 
-      int pour(const int64_t length)
+      inline int pour(const int64_t length)
       {
         assert(pend_ - pfree_ >= length);
         int32_t iret = NULL != pfree_ ? TFS_SUCCESS : TFS_ERROR;
@@ -94,7 +94,7 @@ namespace tfs
         return iret;
       }
 
-      int strip( const int64_t length)
+      inline int strip( const int64_t length)
       {
         assert(pfree_ - pdata_ >= length);
         int32_t iret = NULL != pfree_ ? TFS_SUCCESS : TFS_ERROR;
@@ -105,12 +105,12 @@ namespace tfs
         return iret;
       }
 
-      void clear()
+      inline void clear()
       {
         pdata_ = pfree_ = pstart_;
       }
 
-      void expand(const int64_t need)
+      inline void expand(const int64_t need)
       {
         if (NULL == pstart_)
         {
@@ -155,7 +155,7 @@ namespace tfs
         }
       }
     private:
-      bool shrink()
+      inline bool shrink()
       {
         bool bret = NULL != pstart_;
         if (bret)

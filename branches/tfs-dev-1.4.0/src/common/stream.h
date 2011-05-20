@@ -32,10 +32,29 @@ namespace tfs
       explicit Stream(const int64_t length);
       virtual ~Stream();
 
+      static int64_t get_vuint8_length(const std::vector<uint8_t>& value);
+      static int64_t get_vuint16_length(const std::vector<uint16_t>& value);
+      static int64_t get_vuint32_length(const std::vector<uint32_t>& value);
+      static int64_t get_vuint64_length(const std::vector<uint64_t>& value);
+
+      static int64_t get_vint8_length(const std::vector<int8_t>& value);
+      static int64_t get_vint16_length(const std::vector<int16_t>& value);
+      static int64_t get_vint32_length(const std::vector<int32_t>& value);
+      static int64_t get_vint64_length(const std::vector<int64_t>& value);
+
+      static int64_t get_string_length(const char* str);
+      static int64_t get_string_length(const std::string& str);
+
       char* get_data() const;
       int64_t get_data_length() const;
 
-      Buffer& get_buffer() { return buffer_;}
+      char* get_free() const;
+      int64_t get_free_length() const;
+
+      inline int drain(const int64_t length) { return buffer_.drain(length);}
+      inline int pour(const int64_t length) { return buffer_.pour(length);}
+
+      inline Buffer& get_buffer() { return buffer_;}
 
       int set_int8(const int8_t value);
       int set_int16(const int16_t value);

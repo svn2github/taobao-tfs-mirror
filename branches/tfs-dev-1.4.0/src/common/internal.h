@@ -54,16 +54,6 @@ namespace tfs
       OPLOG_RELIEVE_RELATION
     };
 
-    // GetBlockInfoMessage
-    /*enum GetBlockType
-    {
-      BLOCK_READ = 1,
-      BLOCK_WRITE = 2,
-      BLOCK_CREATE = 4,
-      BLOCK_NEWBLK = 8,
-      BLOCK_NOLEASE = 16
-    };*/
-
     enum DataServerLiveStatus
     {
       DATASERVER_STATUS_ALIVE = 0x00,
@@ -142,13 +132,6 @@ namespace tfs
       WRITE_COMPLETE_STATUS_YES = 0x00,
       WRITE_COMPLETE_STATUS_NO
     };
-
-    /*enum CompactCompleteStatus
-    {
-      COMPACT_COMPLETE_STATUS_SUCCESS = 0x00,
-      COMPACT_COMPLETE_STATUS_FAILED,
-      COMPACT_COMPLETE_STATUS_START
-    };*/
 
     // close write file msg
     enum CloseFileServer
@@ -254,7 +237,10 @@ namespace tfs
 
     struct SSMScanParameter
     {
-      tbnet::DataBuffer data_;
+      int deserialize(const char* data, const int64_t data_len, int64_t& pos);
+      int serialize(char* data, const int64_t data_len, int64_t& pos);
+      int64_t length() const;
+      mutable tbnet::DataBuffer data_;
       uint32_t addition_param1_;
       uint32_t addition_param2_;
       uint32_t  start_next_position_;//16~32 bit: start, 0~15 bit: next
@@ -262,55 +248,14 @@ namespace tfs
       int16_t  child_type_;
       int8_t   type_;
       int8_t   end_flag_;
-      int serialize(char*data, int32_t length)
-      {
-        if (length < get_serialize_size())
-        {
-          return TFS_ERROR;
-        }
-        tbnet::DataBuffer output;
-        output.writeInt32(addition_param1_);
-        output.writeInt32(addition_param2_);
-        output.writeInt32(start_next_position_);
-        output.writeInt32(should_actual_count_);
-        output.writeInt16(child_type_);
-        output.writeInt8(type_);
-        output.writeInt8(end_flag_);
-        output.writeInt32(data_.getDataLen());
-        memcpy(data, output.getData(), output.getDataLen());
-        data += output.getDataLen();
-        length -= output.getDataLen();
-        memcpy(data, data_.getData(), data_.getDataLen());
-        data += data_.getDataLen();
-        length -= data_.getDataLen();
-        return TFS_SUCCESS;
-      }
-      int deserialize(char* data, int32_t length)
-      {
-        tbnet::DataBuffer input;
-        input.writeBytes(data, length);
-        addition_param1_ = input.readInt32();
-        addition_param2_ = input.readInt32();
-        start_next_position_ = input.readInt32();
-        should_actual_count_ = input.readInt32();
-        child_type_ = input.readInt16();
-        type_ = input.readInt8();
-        end_flag_ = input.readInt8();
-        int32_t data_len = input.readInt32();
-        data_.ensureFree(data_len);
-        data_.pourData(data_len);
-        input.readBytes(data_.getData(), data_len);
-        return TFS_SUCCESS;
-      }
-      int64_t get_serialize_size()
-      {
-        return sizeof(int32_t) * 5 + sizeof(int16_t)  + sizeof(int8_t) * 2 + data_.getDataLen();
-      }
     };
     // common data structure
 #pragma pack(4)
     struct BlockInfo
     {
+      int deserialize(const char* data, const int64_t data_len, int64_t& pos);
+      int serialize(char* data, const int64_t data_len, int64_t& pos);
+      int64_t length() const;
       uint32_t block_id_;
       int32_t version_;
       int32_t file_count_;
@@ -323,35 +268,11 @@ namespace tfs
       {
         memset(this, 0, sizeof(BlockInfo));
       }
-
-      bool operator==(const BlockInfo& rhs) const
+      inline bool operator==(const BlockInfo& rhs) const
       {
         return block_id_ == rhs.block_id_ && version_ == rhs.version_ && file_count_ == rhs.file_count_ && size_
             == rhs.size_ && del_file_count_ == rhs.del_file_count_ && del_size_ == rhs.del_size_ && seq_no_
             == rhs.seq_no_;
-      }
-
-      int serialize(tbnet::DataBuffer& output)
-      {
-        output.writeInt32(block_id_);
-        output.writeInt32(version_);
-        output.writeInt32(file_count_);
-        output.writeInt32(size_);
-        output.writeInt32(del_file_count_);
-        output.writeInt32(del_size_);
-        output.writeInt32(seq_no_);
-        return output.getDataLen();
-      }
-      int deserialize(tbnet::DataBuffer& input)
-      {
-        block_id_ = input.readInt32();
-        version_  = input.readInt32();
-        file_count_ = input.readInt32();
-        size_ = input.readInt32();
-        del_file_count_ = input.readInt32();
-        del_size_ = input.readInt32();
-        seq_no_ = input.readInt32();
-        return input.getDataLen();
       }
     };
 
@@ -439,72 +360,22 @@ namespace tfs
 
     struct ReplBlock
     {
+      int deserialize(const char* data, const int64_t data_len, int64_t& pos);
+      int serialize(char* data, const int64_t data_len, int64_t& pos);
+      int64_t length() const;
       uint32_t block_id_;
       uint64_t source_id_;
       uint64_t destination_id_;
       int32_t start_time_;
       int32_t is_move_;
       int32_t server_count_;
-      int serialize(Stream& output)
-      {
-        int32_t iret = output.set_int32(block_id_);
-        if (TFS_SUCCESS == iret)
-        {
-          iret = output.set_int64(source_id_);
-        }
-        if (TFS_SUCCESS == iret)
-        {
-          iret = output.set_int64(destination_id_);
-        }
-        if (TFS_SUCCESS == iret)
-        {
-          iret = output.set_int32(start_time_);
-        }
-        if (TFS_SUCCESS == iret)
-        {
-          iret = output.set_int32(is_move_);
-        }
-        if (TFS_SUCCESS == iret)
-        {
-          iret = output.set_int32(server_count_);
-        }
-        return iret;
-      }
-
-      int deserialize(Stream& input)
-      {
-        int32_t iret = input.get_int32(reinterpret_cast<int32_t*>(&block_id_));
-        if (TFS_SUCCESS == iret)
-        {
-          iret = input.get_int64(reinterpret_cast<int64_t*>(&source_id_));
-        }
-        if (TFS_SUCCESS == iret)
-        {
-          iret = input.get_int64(reinterpret_cast<int64_t*>(&destination_id_)); 
-        }
-        if (TFS_SUCCESS == iret)
-        {
-          iret = input.get_int32(&start_time_); 
-        }
-        if (TFS_SUCCESS == iret)
-        {
-          iret = input.get_int32(&is_move_); 
-        }
-        if (TFS_SUCCESS == iret)
-        {
-          iret = input.get_int32(&server_count_); 
-        }
-        return iret;
-      }
-
-      int64_t length() const
-      {
-        return sizeof(ReplBlock);
-      }
-    };
+   };
 
     struct Throughput
     {
+      int deserialize(const char* data, const int64_t data_len, int64_t& pos);
+      int serialize(char* data, const int64_t data_len, int64_t& pos);
+      int64_t length() const;
       int64_t write_byte_;
       int64_t write_file_count_;
       int64_t read_byte_;
@@ -514,6 +385,9 @@ namespace tfs
     //dataserver stat info
     struct DataServerStatInfo
     {
+      int deserialize(const char* data, const int64_t data_len, int64_t& pos);
+      int serialize(char* data, const int64_t data_len, int64_t& pos);
+      int64_t length() const;
       uint64_t id_;
       int64_t use_capacity_;
       int64_t total_capacity_;
@@ -524,45 +398,13 @@ namespace tfs
       Throughput total_tp_;
       int32_t current_time_;
       DataServerLiveStatus status_;
-
-      int serialize(tbnet::DataBuffer& output)
-      {
-        output.writeInt64(id_);
-        output.writeInt64(use_capacity_);
-        output.writeInt64(total_capacity_);
-        output.writeInt32(current_load_);
-        output.writeInt32(block_count_);
-        output.writeInt32(last_update_time_);
-        output.writeInt32(startup_time_);
-        output.writeInt64(total_tp_.write_byte_);
-        output.writeInt64(total_tp_.write_file_count_);
-        output.writeInt64(total_tp_.read_byte_);
-        output.writeInt64(total_tp_.read_file_count_);
-        output.writeInt32(current_time_);
-        output.writeInt32(status_);
-        return output.getDataLen();
-      }
-      int deserialize(tbnet::DataBuffer& input)
-      {
-        id_ = input.readInt64();
-        use_capacity_ = input.readInt64();
-        total_capacity_ = input.readInt64();
-        current_load_ = input.readInt32();
-        block_count_  = input.readInt32();
-        last_update_time_ = input.readInt32();
-        startup_time_ = input.readInt32();
-        total_tp_.write_byte_ = input.readInt64();
-        total_tp_.write_file_count_ = input.readInt64();
-        total_tp_.read_byte_ = input.readInt64();
-        total_tp_.read_file_count_ = input.readInt64();
-        current_time_ = input.readInt32();
-        status_ = (DataServerLiveStatus)input.readInt32();
-        return input.getDataLen();
-      }
     };
 
     struct WriteDataInfo
     {
+      int deserialize(const char* data, const int64_t data_len, int64_t& pos);
+      int serialize(char* data, const int64_t data_len, int64_t& pos);
+      int64_t length() const;
       uint32_t block_id_;
       uint64_t file_id_;
       int32_t offset_;
@@ -573,6 +415,9 @@ namespace tfs
 
     struct CloseFileInfo
     {
+      int deserialize(const char* data, const int64_t data_len, int64_t& pos);
+      int serialize(char* data, const int64_t data_len, int64_t& pos);
+      int64_t length() const;
       uint32_t block_id_;
       uint64_t file_id_;
       CloseFileServer mode_;
@@ -582,6 +427,9 @@ namespace tfs
 
     struct RenameFileInfo
     {
+      int deserialize(const char* data, const int64_t data_len, int64_t& pos);
+      int serialize(char* data, const int64_t data_len, int64_t& pos);
+      int64_t length() const;
       uint32_t block_id_;
       uint64_t file_id_;
       uint64_t new_file_id_;
@@ -590,12 +438,18 @@ namespace tfs
 
     struct ServerMetaInfo
     {
+      int deserialize(const char* data, const int64_t data_len, int64_t& pos);
+      int serialize(char* data, const int64_t data_len, int64_t& pos);
+      int64_t length() const;
       int32_t capacity_;
       int32_t available_;
     };
 
     struct SegmentHead
     {
+      int deserialize(const char* data, const int64_t data_len, int64_t& pos);
+      int serialize(char* data, const int64_t data_len, int64_t& pos);
+      int64_t length() const;
       int32_t count_;           // segment count
       int64_t size_;            // total size that segments contain
       SegmentHead() : count_(0), size_(0)
@@ -605,6 +459,9 @@ namespace tfs
 
     struct SegmentInfo
     {
+      int deserialize(const char* data, const int64_t data_len, int64_t& pos);
+      int serialize(char* data, const int64_t data_len, int64_t& pos);
+      int64_t length() const;
       uint32_t block_id_;       // block id
       uint64_t file_id_;        // file id
       int64_t offset_;          // offset in current file
@@ -670,8 +527,6 @@ namespace tfs
     static const int32_t PORT_PER_PROCESS = 2;
     static const int32_t MAX_DEV_NAME_LEN = 64;
     static const int32_t MAX_READ_SIZE = 1048576;
-
-    //static const int64_t SEGMENT_SIZE = 1 << 20;
 
     // typedef
     typedef std::map<std::string, std::string> STRING_MAP; // string => string

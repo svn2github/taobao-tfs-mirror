@@ -18,6 +18,47 @@ namespace tfs
 {
   namespace common
   {
+    int64_t Stream::get_vuint8_length(const std::vector<uint8_t>& value)
+    {
+      return INT_SIZE + value.size() * INT8_SIZE;
+    }
+    int64_t Stream::get_vuint16_length(const std::vector<uint16_t>& value)
+    {
+      return INT_SIZE + value.size() * INT16_SIZE;
+    }
+    int64_t Stream::get_vuint32_length(const std::vector<uint32_t>& value)
+    {
+      return INT_SIZE + value.size() * INT_SIZE;
+    }
+    int64_t Stream::get_vuint64_length(const std::vector<uint64_t>& value)
+    {
+      return INT_SIZE + value.size() * INT64_SIZE;
+    }
+    int64_t Stream::get_vint8_length(const std::vector<int8_t>& value)
+    {
+      return INT_SIZE + value.size() * INT8_SIZE;
+    }
+    int64_t Stream::get_vint16_length(const std::vector<int16_t>& value)
+    {
+      return INT_SIZE + value.size() * INT16_SIZE;
+    }
+    int64_t Stream::get_vint32_length(const std::vector<int32_t>& value)
+    {
+      return INT_SIZE + value.size() * INT_SIZE;
+    }
+    int64_t Stream::get_vint64_length(const std::vector<int64_t>& value)
+    {
+      return INT_SIZE + value.size() * INT64_SIZE;
+    }
+    int64_t Stream::get_string_length(const char* str)
+    {
+      return NULL == str ? INT_SIZE : strlen(str) + INT_SIZE;
+    }
+    int64_t Stream::get_string_length(const std::string& str)
+    {
+      return str.empty() ? INT_SIZE : str.length() + INT_SIZE;
+    }
+
     Stream::Stream()
     {
 
@@ -44,6 +85,14 @@ namespace tfs
     int64_t Stream::get_data_length() const
     {
       return buffer_.get_data_length();
+    }
+    char* Stream::get_free() const
+    {
+      return buffer_.get_free();
+    }
+    int64_t Stream::get_free_length() const
+    {
+      return buffer_.get_free_length();
     }
 
     void Stream::expand(const int64_t length)
