@@ -19,7 +19,7 @@
 #include <tbsys.h>
 #include <Memory.hpp>
 #include "common/file_op.h"
-#include "common/interval.h"
+#include "common/internal.h"
 #include "gc_file.h"
 
 namespace tfs
