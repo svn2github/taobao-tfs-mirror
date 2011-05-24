@@ -355,7 +355,7 @@ int MockDataServerInstance::close(message::Message* msg)
       {
         message->set_mode(CLOSE_FILE_SLAVER);
         message->set_block(&iter->second.info_);
-        TBSYS_LOG(DEBUG, "block id(%u)", info.block_id_);
+        TBSYS_LOG(DEBUG, "blockid: %u", info.block_id_);
         int iret = send_message_to_slave(message, message->get_ds_list());
         if (iret != TFS_SUCCESS)
         {
@@ -403,7 +403,7 @@ int MockDataServerInstance::create_file_number(message::Message* msg)
     std::map<uint32_t, BlockEntry>::iterator iter = blocks_.find(block_id);
     if (iter == blocks_.end())
     {
-      TBSYS_LOG(DEBUG, "create file number failed, block id : %u", block_id);
+      TBSYS_LOG(DEBUG, "create file number failed, blockid : %u", block_id);
       MessageFactory::send_error_message(message, TBSYS_LOG_LEVEL(ERROR), information_.id_,
             "create file failed. blockid: %u, fileid: %" PRI64_PREFIX "u.", block_id, file_id); 
       return TFS_SUCCESS;

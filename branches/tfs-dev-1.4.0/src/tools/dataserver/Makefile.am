@@ -10,20 +10,24 @@ bin_PROGRAMS = clear_file_system\
                format_file_system\
                read_super_block
 
+
 noinst_PROGRAMS = convert_name\
                   reloadconfig\
                   read_index_tool\
                   reverse_name\
                   modify_super_block\
                   replblk\
-                  tfsping
+                  tfsping\
+                  view_local_key
+
+COMMONLIB = $(top_builddir)/src/message/libtfsmessage.a\
+            $(top_builddir)/src/dataserver/libdataserver.a\
+            $(top_builddir)/src/common/libtfscommon.a\
+            $(TBLIB_ROOT)/lib/libtbnet.a\
+            $(TBLIB_ROOT)/lib/libtbsys.a
 
 LDADD = $(top_builddir)/src/client/.libs/libtfsclient.a\
-	$(top_builddir)/src/message/libtfsmessage.a\
-	$(top_builddir)/src/dataserver/libdataserver.a\
-	$(top_builddir)/src/common/libtfscommon.a\
-	$(TBLIB_ROOT)/lib/libtbnet.a\
-	$(TBLIB_ROOT)/lib/libtbsys.a
+        $(COMMONLIB)
 
 clear_file_system_SOURCES = clear_file_system.cpp
 
@@ -46,3 +50,7 @@ reverse_name_SOURCES = reverse_name.cpp
 format_file_system_SOURCES = format_file_system.cpp
 
 read_index_tool_SOURCES = read_index_tool.cpp
+
+view_local_key_LDADD = $(top_builddir)/src/new_client/.libs/libtfsclient.a\
+                       $(COMMONLIB)
+view_local_key_SOURCES = view_local_key.cpp

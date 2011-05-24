@@ -216,7 +216,7 @@ char** admin_cmd_completion (const char* text, int start, int end)
   // disable default filename completion
   rl_attempted_completion_over = 1;
 
-  switch (get_nth_word(2, g_cur_server, 1)) // command is firet filed, server is second
+  switch (get_nth_word(2, g_cur_server, 1)) // command is first filed, server is second
   {
   case CMD_COMPLETE:
     return rl_completion_matches(text, match_cmd);

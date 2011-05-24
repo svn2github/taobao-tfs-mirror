@@ -11,10 +11,12 @@ warn_echo()
 
 print_usage()
 {
-  warn_echo "Usage: $0 source_ns_ip dest_ns_ip [day]"
+  warn_echo "Usage: $0 source_ns_ip dest_ns_ip [thread_count] [day] [modify_time]"
   warn_echo "          source_ns_ip: source ns ip"
   warn_echo "          dest_ns_ip:   dest ns ip"
+  warn_echo "          thread_count: thread_count"
   warn_echo "          day:          the date of log to be sync, default is yesterday, ex, 20110303, optional"
+  warn_echo "          modify_time:  modify_time"
 }
 #$1 day
 next_day()
@@ -79,14 +81,14 @@ delete_file()
 #$1 source ns ip
 #$2 dest ns ip
 #$3 op type: write|unlink
-#$4 sync day
+#$4 sync day 
 sync_file_by_log()
 {
   if [ -e "$LOG_FILE" ]
   then
     mv $LOG_FILE $LOG_FILE'.'$4
   fi
-
+  
   LOG_NAME=`get_log_name $3 $4`
   for log in $LOG_NAME
   do
@@ -95,16 +97,16 @@ sync_file_by_log()
       cat $log >> $FILE_NAME
     elif [ $3 = "unlink" ]
     then
-      ret=`grep "master unlinkFile success" $log`
+      ret=`grep "master unlink file success" $log`
       if [ -z "$ret" ]
       then
-        ret=`grep "unlink file success" $log`
+        ret=`grep "unlink file success.*master" $log`
         if [ "$ret" ]
         then
-        grep "unlink file success" $log | tr "[A-Z]" "[a-z]" | sed -e "s/ : /: /g" | sed -e "s/\(id: [0-9]*\) /\1, /g" >> $FILE_NAME
+        grep "unlink file success.*master" $log | tr "[A-Z]" "[a-z]" | sed -e "s/ : /: /g" | sed -e "s/\(id: [0-9]*\) /\1, /g" >> $FILE_NAME
         fi
       else
-        grep "master unlinkFile success" $log | tr "[A-Z]" "[a-z]" | sed -e "s/ : /: /g" | sed -e "s/\(id: [0-9]*\) /\1, /g" >> $FILE_NAME
+        grep "master unlink file success" $log | tr "[A-Z]" "[a-z]" | sed -e "s/ : /: /g" | sed -e "s/\(id: [0-9]*\) /\1, /g" >> $FILE_NAME
       fi
     fi
   done
@@ -115,18 +117,26 @@ then
   print_usage
   exit 1
 fi
+
 if [ -z $3 ]
 then
-  DAY=`date -d yesterday +%Y%m%d`
+  THREAD_COUNT=2
 else
-  DAY=$3
+  THREAD_COUNT=$3
 fi
 
 if [ -z $4 ]
 then
-  MODIFY=`date +%Y%m%d`
+  DAY=`date -d yesterday +%Y%m%d`
 else
-  MODIFY=$4
+  DAY=$4
+fi
+
+if [ -z $5 ]
+then
+  MODIFY=`date -d tomorrow +%Y%m%d`
+else
+  MODIFY=$5
 fi
 
 if [ -e "$FILE_NAME" ]
@@ -134,11 +144,11 @@ then
   mv $FILE_NAME $FILE_NAME'.'$4
 fi
 
-sync_file_by_log $1 $2 "write" $DAY
+sync_file_by_log $1 $2 "write" $DAY 
 sync_file_by_log $1 $2 "unlink" $DAY
 
 if [ -e "$FILE_NAME" ]
 then
-  $BASE_HOME/sync_log -s $1 -d $2 -f $FILE_NAME -m $MODIFY
-  #delete_file $FILE_NAME
+  nohup $BASE_HOME/sync_log -s $1 -d $2 -t $THREAD_COUNT -f $FILE_NAME -m $MODIFY -l debug >tmp_log 2>&1 &
+ #delete_file $FILE_NAME
 fi

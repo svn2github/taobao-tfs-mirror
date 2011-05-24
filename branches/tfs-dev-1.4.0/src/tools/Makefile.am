@@ -1,3 +1,3 @@
 AUTOMAKE_OPTIONS=foreign
 
-SUBDIRS = dataserver nameserver adminserver mock transfer
+SUBDIRS = dataserver nameserver adminserver mock transfer cluster
