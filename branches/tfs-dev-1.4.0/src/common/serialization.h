@@ -478,7 +478,7 @@ namespace tfs
           typename T::const_iterator iter = value.begin();
           for (; iter != value.end(); ++iter)
           {
-            iter = iter->serialize(data, data_len, pos);
+            ret = iter->serialize(data, data_len, pos);
             if (TFS_SUCCESS != iret)
             {
               break;
