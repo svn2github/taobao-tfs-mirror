@@ -10,7 +10,7 @@ namespace tfs
 {
   namespace tools
   {
-    static void compute_tp(Throughput* tp, int32_t time)
+    void compute_tp(Throughput* tp, int32_t time)
     {
       if (time < 1)
       {
@@ -21,7 +21,7 @@ namespace tfs
       tp->read_byte_ /= time;
       tp->read_file_count_ /= time;
     }
-    static void add_tp(const Throughput* atp, const Throughput* btp, Throughput* result_tp, const int32_t sign)
+    void add_tp(const Throughput* atp, const Throughput* btp, Throughput* result_tp, const int32_t sign)
     {
       result_tp->write_byte_ = atp->write_byte_ + sign * btp->write_byte_;
       result_tp->write_file_count_ = atp->write_file_count_ + sign * btp->write_file_count_;
@@ -115,6 +115,7 @@ namespace tfs
       total_tp_.read_byte_ = input.readInt64();
       total_tp_.read_file_count_ = input.readInt64();
       length -= (len - input.getDataLen());
+      return TFS_SUCCESS;
     }
     int ServerShow::calculate(ServerShow& old_server)
     {
@@ -124,6 +125,7 @@ namespace tfs
 
       time = current_time_ - startup_time_;
       compute_tp(&total_tp_, time);
+      return TFS_SUCCESS;
     }
     void ServerShow::dump(const uint64_t server_id, const std::set<uint32_t>& blocks, FILE* fp) const
     {
@@ -152,6 +154,26 @@ namespace tfs
     {
       if (fp == NULL) { return; }
 
+#ifdef TFS_NS_DEBUG
+      fprintf(fp, "%17s %7s %7s %2d%% %6d %6d %6s %5"PRI64_PREFIX"d %6s %5"PRI64_PREFIX"d %6s %5"PRI64_PREFIX"d %6s  %5"PRI64_PREFIX"d %5"PRI64_PREFIX"d %-19s\n",
+            tbsys::CNetUtil::addrToString(id_).c_str(),
+            Func::format_size(use_capacity_).c_str(),
+            Func::format_size(total_capacity_).c_str(),
+            total_capacity_ > 0 ? static_cast<int32_t> (use_capacity_ * 100 / total_capacity_) : 0,
+            block_count_,
+            current_load_,
+            Func::format_size(total_tp_.write_byte_).c_str(),
+            total_tp_.write_file_count_,
+            Func::format_size(total_tp_.read_byte_).c_str(),
+            total_tp_.read_file_count_,
+            Func::format_size(last_tp_.write_byte_).c_str(),
+            last_tp_.write_file_count_,
+            Func::format_size(last_tp_.read_byte_).c_str(),
+            last_tp_.read_file_count_,
+            total_elect_num_,
+            Func::time_to_str(startup_time_).c_str()
+            );
+#else
       if (type & SERVER_TYPE_SERVER_INFO)
       {
         fprintf(fp, "%17s %7s %7s %2d%% %6d %6d %6s %5"PRI64_PREFIX"d %6s %5"PRI64_PREFIX"d %6s %5"PRI64_PREFIX"d %6s %5"PRI64_PREFIX"d %-19s\n",
@@ -172,6 +194,7 @@ namespace tfs
             Func::time_to_str(startup_time_).c_str()
             );
       }
+#endif
       if (type & SERVER_TYPE_BLOCK_LIST)
       {
         dump(id_, hold_, fp);
@@ -229,6 +252,7 @@ namespace tfs
       compute_tp(&tmp_tp_, time);
       memcpy(&max_tp_, &tmp_tp_, sizeof(max_tp_));
       last_startup_time_ = server.startup_time_;
+      return TFS_SUCCESS;
     }
 
     int MachineShow::add(ServerShow& server, ServerShow& old_server)
@@ -269,6 +293,7 @@ namespace tfs
       time = server.current_time_ - server.startup_time_;
       compute_tp(&server.total_tp_, time);
       add_tp(&total_tp_, &server.total_tp_, &total_tp_, ADD_OP);
+      return TFS_SUCCESS;
 
     }
     int MachineShow::calculate()
@@ -279,6 +304,7 @@ namespace tfs
         int32_t per_time = (consume_time_ / index_);
         compute_tp(&last_tp_, per_time);
       }
+      return TFS_SUCCESS;
     }
     void MachineShow::dump(const int8_t flag, FILE* fp) const
     {
@@ -350,6 +376,7 @@ namespace tfs
 
       add_tp(&total_tp_, &server.total_tp_, &total_tp_, ADD_OP);
       add_tp(&last_tp_, &server.last_tp_, &last_tp_, ADD_OP);
+      return TFS_SUCCESS;
     }
     int StatStruct::add(MachineShow& machine)
     {
@@ -362,6 +389,7 @@ namespace tfs
 
       add_tp(&total_tp_, &machine.total_tp_, &total_tp_, ADD_OP);
       add_tp(&last_tp_, &machine.last_tp_, &last_tp_, ADD_OP);
+      return TFS_SUCCESS;
     }
     int StatStruct::add(BlockShow& block)
     {
@@ -370,6 +398,7 @@ namespace tfs
       block_size_ += (block.info_.size_ * (block.server_list_.size()));
       delfile_count_ += block.info_.del_file_count_;
       block_del_size_ += block.info_.del_size_;
+      return TFS_SUCCESS;
     }
     void StatStruct::dump(const int8_t type, const int8_t sub_type, FILE* fp) const
     {

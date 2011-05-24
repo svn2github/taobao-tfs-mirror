@@ -9,6 +9,9 @@ namespace tfs
       id_(0), use_capacity_(0), total_capacity_(0), current_load_(0), block_count_(0),
       last_update_time_(0), startup_time_(0), current_time_(0)
     {
+#ifdef TFS_NS_DEBUG
+      total_elect_num_ = 0;
+#endif
       memset(&total_tp_, 0, sizeof(total_tp_));
       memset(&last_tp_, 0, sizeof(last_tp_));
     }
@@ -23,6 +26,9 @@ namespace tfs
         return TFS_ERROR;
       }
       int32_t len = input.getDataLen();
+#ifdef TFS_NS_DEBUG
+      total_elect_num_ = input.readInt64();
+#endif
       id_ = input.readInt64();
       use_capacity_ = input.readInt64();
       total_capacity_ = input.readInt64();
@@ -78,7 +84,7 @@ namespace tfs
 
     void ServerBase::dump() const
     {
-      TBSYS_LOG(INFO, "server_id: %"PRI64_PREFIX"d, use_capacity: %u, total_capacity: %u, current_load: %d, block_count: %d, last_update_time: %s, startup_time: %s, write_byte: %"PRI64_PREFIX"d, write_file_count: %"PRI64_PREFIX"d, read_byte:         %"PRI64_PREFIX"d, read_file_count: %"PRI64_PREFIX"d current_time: %s, status: %d, hold_size: %Zd, writable size: %Zd, master size: %Zd",
+      TBSYS_LOG(INFO, "server_id: %"PRI64_PREFIX"d, use_capacity: %"PRI64_PREFIX"d, total_capacity: %"PRI64_PREFIX"d, current_load: %d, block_count: %d, last_update_time: %s, startup_time: %s, write_byte: %"PRI64_PREFIX"d, write_file_count: %"PRI64_PREFIX"d, read_byte: %"PRI64_PREFIX"d, read_file_count: %"PRI64_PREFIX"d current_time: %s, status: %d, hold_size: %zd, writable size: %zd, master size: %zd",
           id_,
           use_capacity_,
           total_capacity_,
@@ -130,7 +136,7 @@ namespace tfs
 
     void BlockBase::dump() const
     {
-      TBSYS_LOG(INFO, "block_id: %d, version: %d, file_count: %d, size: %d, del_file_count: %d, del_size: %d, seq_no: %d, copys: %Zd",
+      TBSYS_LOG(INFO, "block_id: %u, version: %d, file_count: %d, size: %d, del_file_count: %d, del_size: %d, seq_no: %u, copys: %Zd",
           info_.block_id_, info_.version_, info_.file_count_, info_.size_, info_.del_file_count_, info_.del_size_, info_.seq_no_, server_list_.size());
     }
   }

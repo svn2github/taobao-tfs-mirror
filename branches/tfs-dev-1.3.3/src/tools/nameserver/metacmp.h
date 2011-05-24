@@ -18,7 +18,7 @@ namespace tfs
         int compare(ComType cmp_type, const int8_t type, const int32_t num);
 
       private:
-        int get_data(const uint64_t ns_ip, common::SSMScanParameter& param, tbnet::DataBuffer& data, bool& need_loop);
+        int process_data(common::SSMScanParameter& param, tbnet::DataBuffer& data, const int8_t role, int32_t& map_count);
         int init_param(ComType cmp_type, const int8_t type, const int32_t num, common::SSMScanParameter& param);
         int get_cmp_map(common::SSMScanParameter& param, const int8_t role, bool& need_loop, int32_t& map_count);
         void print_head(ComType cmp_type, const int8_t type) const;
@@ -63,7 +63,7 @@ namespace tfs
           flag.flip();
           int32_t diff_count = flag.count();
           s_iter = slave_map.begin();
-          for (int i = 0; diff_count > 0, s_iter != slave_map.end(); i++, s_iter++)
+          for (int32_t i = 0; (s_iter != slave_map.end()) && (diff_count > 0); i++, s_iter++)
           {
             if (flag.test(i))
             {

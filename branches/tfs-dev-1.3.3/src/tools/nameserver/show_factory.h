@@ -9,8 +9,8 @@ namespace tfs
 {
   namespace tools
   {
-    static void compute_tp(common::Throughput* tp, const int32_t time);
-    static void add_tp(const common::Throughput* atp, const common::Throughput* btp, common::Throughput*, const int32_t sign);
+    void compute_tp(common::Throughput* tp, const int32_t time);
+    void add_tp(const common::Throughput* atp, const common::Throughput* btp, common::Throughput*, const int32_t sign);
     void print_header(const int8_t print_type, const int8_t type, FILE* fp);
 
     class ServerShow : public ServerBase

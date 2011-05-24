@@ -55,7 +55,7 @@ int cmd_show_block(VSTRING&);
 int cmd_show_server(VSTRING& param);
 int cmd_show_machine(VSTRING& param);
 
-typedef map<std::string, CmdInfo> STR_INT_MAP;
+typedef map<string, CmdInfo> STR_INT_MAP;
 typedef STR_INT_MAP::iterator STR_INT_MAP_ITER;
 static STR_INT_MAP g_sub_cmd_map;
 
@@ -126,7 +126,7 @@ int get_cmd(char* key, int32_t& cmd, bool& has_value)
     return TFS_SUCCESS;
   }
 }
-int get_value(const char* data, std::string& value)
+int get_value(const char* data, string& value)
 {
   return ((value = data) != "");
 }
@@ -205,7 +205,7 @@ int parse_param(const VSTRING& param, ComType com_type, ParamInfo& ret_param)
           case CMD_SERVER_ID:
             if (get_value((*iter).c_str(), ret_param.server_ip_port_) == TFS_SUCCESS)
             {
-              if (ret_param.server_ip_port_.find_first_of(":") == std::string::npos)
+              if (ret_param.server_ip_port_.find_first_of(":") == string::npos)
               {
                 ret = TFS_ERROR;
               }
@@ -278,6 +278,7 @@ int parse_param(const VSTRING& param, ComType com_type, ParamInfo& ret_param)
       return ret;
     }
   }
+  return TFS_SUCCESS;
 }
 
 void init()
@@ -427,9 +428,9 @@ int usage(const char *name)
 {
   fprintf(stderr, "\n****************************************************************************** \n");
   fprintf(stderr, "You can both get and compare cluster info by this tool.\n");
-  fprintf(stderr, "Usage: \n", name);
-  fprintf(stderr, "  %s -s ns_ip_port                        show server, block and machine info.\n", name);
-  fprintf(stderr, "  %s -m master_ip_port -s slave_ip_port   compare server, block info.\n", name);
+  fprintf(stderr, "Usage: \n");
+  fprintf(stderr, "  %s -s ns_ip_port [-i exec command]    show server, block and machine info.\n", name);
+  fprintf(stderr, "  %s -m master_ip_port -s slave_ip_port [-i exec command]   compare server, block info.\n", name);
   fprintf(stderr, "****************************************************************************** \n");
   fprintf(stderr, "\n");
   exit(TFS_ERROR);
@@ -477,8 +478,8 @@ int main(int argc,char** argv)
 {
   //TODO readline
   int32_t i;
-  std::string ns_ip_port_1;
-  std::string ns_ip_port_2;
+  string ns_ip_port_1;
+  string ns_ip_port_2;
   bool directly = false;
   while ((i = getopt(argc, argv, "s:m:ih")) != EOF)
   {
@@ -506,7 +507,10 @@ int main(int argc,char** argv)
     usage(argv[0]);
   }
 
+  TBSYS_LOGGER.setLogLevel("error");
+
   init();
+
 
   if (!g_need_cmp)
   {
@@ -549,7 +553,7 @@ int main_loop()
   int ret = TFS_ERROR;
   while (1)
   {
-    std::string tips = "";
+    string tips = "";
     if (!g_need_cmp)
     {
       tips = "show > ";

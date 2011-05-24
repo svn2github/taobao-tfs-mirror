@@ -5,8 +5,8 @@
 #include <tbnet.h>
 #include <Handle.h>
 #include "common/config.h"
-#include "message/client.h"
-#include "message/client_pool.h"
+#include "message/new_client.h"
+#include "message/client_manager.h"
 #include "message/message.h"
 #include "message/message_factory.h"
 #include "common/config_item.h"
@@ -119,6 +119,9 @@ namespace tfs
         int deserialize(tbnet::DataBuffer& input, const int32_t length, int32_t& offset, const int8_t type);
         void dump() const;
 
+#ifdef TFS_NS_DEBUG
+        int64_t total_elect_num_;
+#endif
         uint64_t id_;
         int64_t use_capacity_;
         int64_t total_capacity_;
