@@ -1,3 +1,19 @@
+/*
+ * (C) 2007-2010 Alibaba Group Holding Limited.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+ *
+ *
+ * Version: $Id
+ *
+ * Authors:
+ *   duanfei<duanfei@taobao.com>
+ *      - initial release
+ *
+ */
+
 #ifndef TFS_COMMON_CLIENT_MANAGER_H_
 #define TFS_COMMON_CLIENT_MANAGER_H_
 
@@ -43,7 +59,7 @@ namespace tfs
         bool handlePacket(const WaitId& id, tbnet::Packet* response);
         static NewClient* malloc_new_client_object(const uint32_t seq_id);
         static void free_new_client_object(NewClient* client);
-        bool do_async_callback(NewClient* client, const bool is_callback);
+        bool do_async_callback(NewClient* client);
 
       private:
         DISALLOW_COPY_AND_ASSIGN(NewClientManager);

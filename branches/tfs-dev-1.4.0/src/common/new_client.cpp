@@ -1,10 +1,25 @@
+/*
+ * (C) 2007-2010 Alibaba Group Holding Limited.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+ *
+ *
+ * Version: $Id
+ *
+ * Authors:
+ *   duanfei<duanfei@taobao.com>
+ *      - initial release
+ *
+ */
+#include <Memory.hpp>
 #include "new_client.h"
 #include "error_msg.h"
 #include "define.h"
 #include "client_manager.h"
 #include "local_packet.h"
 #include "status_packet.h"
-#include <Memory.hpp>
 
 namespace tfs
 {
@@ -38,12 +53,13 @@ namespace tfs
       }
     }
 
-    bool NewClient::wait(int64_t timeout_in_ms)
+    bool NewClient::wait(const int64_t timeout_in_ms)
     {
+      int64_t timeout_ms = timeout_in_ms;
       bool ret = true;
-      if (timeout_in_ms <= 0)
+      if (timeout_ms <= 0)
       {
-        timeout_in_ms = common::DEFAULT_NETWORK_CALL_TIMEOUT;
+        timeout_ms = common::DEFAULT_NETWORK_CALL_TIMEOUT;
         TBSYS_LOG(WARN, "timeout_in_ms equal 0, we'll use DEFAULT_NETWORK_CALL_TIMEOUT(%"PRI64_PREFIX"d)(ms)", 
           common::DEFAULT_NETWORK_CALL_TIMEOUT);
       }
@@ -52,7 +68,7 @@ namespace tfs
       uint32_t done_count = success_response_.size() + fail_response_.size();
       complete_ = done_count == send_id_sign_.size();
       if (!complete_)
-        ret = monitor_.timedWait(tbutil::Time::milliSeconds(timeout_in_ms));
+        ret = monitor_.timedWait(tbutil::Time::milliSeconds(timeout_ms));
       complete_ = true;
       return ret;
     }
@@ -68,7 +84,7 @@ namespace tfs
       bool is_callback = complete_ && NULL != callback_;
       if (is_callback)
       {
-        NewClientManager::get_instance().do_async_callback(this, is_callback);
+        NewClientManager::get_instance().do_async_callback(this);
       }
       return true;
     }
@@ -124,6 +140,7 @@ namespace tfs
         {
           callback_ = func;
         }
+        assert (NULL == func || callback_ == func);
 
         if (save_source_msg && NULL == source_msg_ )
         {
@@ -222,6 +239,7 @@ namespace tfs
     {
       SEND_SIGN_PAIR* result = NULL;
       std::vector<SEND_SIGN_PAIR>::iterator iter = send_id_sign_.begin();
+      //TODO need a mutex to protected send_id_sign_
       for (; iter != send_id_sign_.end(); ++iter)
       {
         if ((*iter).first == id.send_id_)
@@ -271,32 +289,15 @@ namespace tfs
     int send_msg_to_server(uint64_t server, tbnet::Packet* message, const int64_t timeout)
     {
       NewClient* client = NewClientManager::get_instance().create_client();
-      int32_t iret = NULL != client ? common::TFS_SUCCESS : common::TFS_ERROR;
+      tbnet::Packet* rmsg;
+      int iret = send_msg_to_server(server, client, message, rmsg, timeout);
       if (common::TFS_SUCCESS == iret)
       {
-        uint8_t send_id = 0;
-        iret = client->post_request(server, message, send_id);  
+        iret = rmsg->getPCode() == STATUS_MESSAGE ? common::TFS_SUCCESS : common::TFS_ERROR;
         if (common::TFS_SUCCESS == iret)
         {
-          client->wait(timeout);
-          NewClient::RESPONSE_MSG_MAP* sresponse = client->get_success_response();
-          NewClient::RESPONSE_MSG_MAP* fresponse = client->get_fail_response();
-          iret = NULL != sresponse && NULL != fresponse ? common::TFS_SUCCESS : common::TFS_ERROR;
-          if (common::TFS_SUCCESS == iret)
-          {
-            iret = sresponse->empty() ? common::EXIT_TIMEOUT_ERROR : common::TFS_SUCCESS;
-            if (common::TFS_SUCCESS == iret)
-            {
-              NewClient::RESPONSE_MSG_MAP_ITER  iter = sresponse->begin();
-              tbnet::Packet* rmsg = iter->second.second;
-              iret = rmsg->getPCode() == STATUS_MESSAGE ? common::TFS_SUCCESS : common::TFS_ERROR;
-              if (common::TFS_SUCCESS == iret)
-              {
-                StatusPacket* smsg = dynamic_cast<StatusPacket*>(rmsg);
-                iret = smsg->get_status();
-              }
-            }
-          }
+          StatusPacket* smsg = dynamic_cast<StatusPacket*>(rmsg);
+          iret = smsg->get_status();
         }
       }
       NewClientManager::get_instance().destroy_client(client);

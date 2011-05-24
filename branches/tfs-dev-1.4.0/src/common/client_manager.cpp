@@ -1,7 +1,22 @@
+/*
+ * (C) 2007-2010 Alibaba Group Holding Limited.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+ *
+ *
+ * Version: $Id
+ *
+ * Authors:
+ *   duanfei<duanfei@taobao.com>
+ *      - initial release
+ *
+ */
+#include <Memory.hpp>
 #include "client_manager.h"
 #include "error_msg.h"
 #include "status_packet.h"
-#include <Memory.hpp>
 
 namespace tfs
 {
@@ -202,7 +217,7 @@ namespace tfs
       //async callback
       if (is_callback)
       {
-        do_async_callback(client, is_callback);
+        do_async_callback(client);
       }
      
       if (!ret && response != NULL && response->isRegularPacket())
@@ -228,38 +243,35 @@ namespace tfs
       tbsys::gDelete(client);
     }
 
-    bool NewClientManager::do_async_callback(NewClient* client, const bool is_callback)
+    bool NewClientManager::do_async_callback(NewClient* client)
     {
       bool bret = NULL != client;
       if (bret)
       {
-        if (is_callback)
+        tbutil::Mutex::Lock lock(mutex_);
+        NEWCLIENT_MAP_ITER iter = new_clients_.find(client->get_seq_id());
+        if (iter == new_clients_.end())
         {
-          tbutil::Mutex::Lock lock(mutex_);
-          NEWCLIENT_MAP_ITER iter = new_clients_.find(client->get_seq_id());
-          if (iter == new_clients_.end())
+          TBSYS_LOG(WARN, "'new client object' not found in new_clinet maps by seq_id: %u", client->get_seq_id());
+        }
+        else
+        {
+          new_clients_.erase(iter);
+        }
+        if ( NULL == async_callback_entry_)
+        {
+          TBSYS_LOG(WARN, "not set async callback function, we'll delete this NewClient object, seq_id: %u",
+              seq_id_);
+          free_new_client_object(client);
+        }
+        else
+        {
+          int32_t iret = async_callback_entry_(client, args_);
+          if (TFS_SUCCESS != iret)
           {
-            TBSYS_LOG(WARN, "'new client object' not found in new_clinet maps by seq_id: %u", client->get_seq_id());
-          }
-          else
-          {
-            new_clients_.erase(iter);
-          }
-          if ( NULL == async_callback_entry_)
-          {
-            TBSYS_LOG(WARN, "not set async callback function, we'll delete this NewClient object, seq_id: %u",
-                seq_id_);
+            //if have error occur, we'll must be delete client object
+            TBSYS_LOG(ERROR, "async callback error, iret: %d", iret);
             free_new_client_object(client);
-          }
-          else
-          {
-            int32_t iret = async_callback_entry_(client, args_);
-            if (TFS_SUCCESS != iret)
-            {
-              //if have error occur, we'll must be delete client object
-              TBSYS_LOG(ERROR, "async callback error, iret: %d", iret);
-              free_new_client_object(client);
-            }
           }
         }
       }
