@@ -306,11 +306,10 @@ namespace tfs
     int Stream::get_string(std::string& str)
     {
       int64_t pos = 0;
-      int64_t length = 0;
-      int32_t iret = Serialization::get_string(buffer_.get_data(), buffer_.get_data_length(), pos, str, length);
+      int32_t iret = Serialization::get_string(buffer_.get_data(), buffer_.get_data_length(), pos, str);
       if (TFS_SUCCESS == iret)
       {
-        buffer_.drain(length);
+        buffer_.drain(str.length());
       }
       return iret;
     }
