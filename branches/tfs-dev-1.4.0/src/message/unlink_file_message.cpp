@@ -14,17 +14,54 @@
  *
  */
 #include "unlink_file_message.h"
-
-using namespace tfs::common;
-
 namespace tfs
 {
   namespace message
   {
+    int UnlinkFileInfo::deserialize(const char* data, const int64_t data_len, int64_t& pos)
+    {
+      int32_t iret = NULL != data && data_len - pos >= length() ? common::TFS_SUCCESS : common::TFS_ERROR;
+      if (common::TFS_SUCCESS  == iret)
+      {
+        iret = common::Serialization::get_int32(data, data_len, pos, reinterpret_cast<int32_t*>(&block_id_));
+      }
+      if (common::TFS_SUCCESS  == iret)
+      {
+        iret = common::Serialization::get_int64(data, data_len, pos, reinterpret_cast<int64_t*>(&file_id_));
+      }
+      if (common::TFS_SUCCESS  == iret)
+      {
+        iret = common::Serialization::get_int32(data, data_len, pos, &is_server_);
+      }
+      return iret;
+    }
+
+    int UnlinkFileInfo::serialize(char* data, const int64_t data_len, int64_t& pos)
+    {
+      int32_t iret = NULL != data && data_len - pos >= length() ? common::TFS_SUCCESS : common::TFS_ERROR;
+      if (common::TFS_SUCCESS  == iret)
+      {
+        iret = common::Serialization::set_int32(data, data_len, pos, block_id_);
+      }
+      if (common::TFS_SUCCESS  == iret)
+      {
+        iret = common::Serialization::set_int64(data, data_len, pos, file_id_);
+      }
+      if (common::TFS_SUCCESS  == iret)
+      {
+        iret = common::Serialization::set_int32(data, data_len, pos, is_server_);
+      }
+      return iret;
+    }
+    int64_t UnlinkFileInfo::length() const
+    {
+      return common::INT_SIZE * 2 + common::INT64_SIZE;
+    }
+ 
     UnlinkFileMessage::UnlinkFileMessage() :
       option_flag_(0), version_(0), lease_(0), has_lease_(false)
     {
-      _packetHeader._pcode = UNLINK_FILE_MESSAGE;
+      _packetHeader._pcode = common::UNLINK_FILE_MESSAGE;
       memset(&unlink_file_info_, 0, sizeof(UnlinkFileInfo));
     }
 
@@ -32,69 +69,72 @@ namespace tfs
     {
     }
 
-    int UnlinkFileMessage::parse(char* data, int32_t len)
+    int UnlinkFileMessage::deserialize(common::Stream& input)
     {
-      if (get_object_copy(&data, &len, reinterpret_cast<void*> (&unlink_file_info_), sizeof(UnlinkFileInfo)) == TFS_ERROR)
+      int64_t pos = 0;
+      int32_t iret = unlink_file_info_.deserialize(input.get_data(), input.get_data_length(), pos);
+      if (common::TFS_SUCCESS == iret)
       {
-        return TFS_ERROR;
+        input.drain(unlink_file_info_.length());
       }
-      if (get_vint64(&data, &len, dataservers_) == TFS_ERROR)
+      if (common::TFS_SUCCESS == iret)
       {
-        return TFS_ERROR;
+        iret = input.get_vint64(dataservers_);
       }
-
-      get_int32(&data, &len, &option_flag_);
-      has_lease_ = parse_special_ds(dataservers_, version_, lease_);
-      return TFS_SUCCESS;
+      if (common::TFS_SUCCESS == iret)
+      {
+        input.get_int32(&option_flag_);
+      }
+      if (common::TFS_SUCCESS == iret)
+      {
+        has_lease_ = BasePacket::parse_special_ds(dataservers_, version_, lease_);
+      }
+      return iret;
     }
 
-    int32_t UnlinkFileMessage::message_length()
+    int64_t UnlinkFileMessage::length() const
     {
-      int32_t len = sizeof(UnlinkFileInfo) + get_vint64_len(dataservers_) + INT_SIZE;
-      if (has_lease_ == true)
+      int64_t len = unlink_file_info_.length() + common::Serialization::get_vint64_length(dataservers_) + common::INT_SIZE;
+      if (has_lease_)
       {
-        len += INT64_SIZE * 3;
+        len += common::INT64_SIZE * 3;
       }
       return len;
     }
 
-    int UnlinkFileMessage::build(char* data, int32_t len)
+    int UnlinkFileMessage::serialize(common::Stream& output)
     {
-      if (has_lease_ == true)
+      if (has_lease_)
       {
         dataservers_.push_back(ULONG_LONG_MAX);
         dataservers_.push_back(static_cast<uint64_t> (version_));
         dataservers_.push_back(static_cast<uint64_t> (lease_));
       }
 
-      if (set_object(&data, &len, &unlink_file_info_, sizeof(UnlinkFileInfo)) == TFS_ERROR)
+      int64_t pos = 0;
+      int32_t iret = unlink_file_info_.serialize(output.get_free(), output.get_free_length(), pos);
+      if (common::TFS_SUCCESS == iret)
       {
-        return TFS_ERROR;
+        output.pour(unlink_file_info_.length());
       }
-      if (set_vint64(&data, &len, dataservers_) == TFS_ERROR)
+      if (common::TFS_SUCCESS == iret)
       {
-        return TFS_ERROR;
+        iret = output.set_vint64(dataservers_);
       }
-      if (set_int32(&data, &len, option_flag_) == TFS_ERROR)
+      if (common::TFS_SUCCESS == iret)
       {
-        return TFS_ERROR;
+        iret = output.set_int32(option_flag_);
       }
-
-      has_lease_ = parse_special_ds(dataservers_, version_, lease_);
-
-      return TFS_SUCCESS;
+      if (common::TFS_SUCCESS == iret)
+      {
+        has_lease_ = BasePacket::parse_special_ds(dataservers_, version_, lease_);
+      }
+      return iret;
     }
 
-    char* UnlinkFileMessage::get_name()
+    common::BasePacket* UnlinkFileMessage::create(const int32_t type)
     {
-      return "unlinkfilemessage";
-    }
-
-    Message* UnlinkFileMessage::create(const int32_t type)
-    {
-      UnlinkFileMessage* req_uf_msg = new UnlinkFileMessage();
-      req_uf_msg->set_message_type(type);
-      return req_uf_msg;
+      return new UnlinkFileMessage();
     }
   }
 }

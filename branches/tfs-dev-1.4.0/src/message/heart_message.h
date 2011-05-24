@@ -15,24 +15,22 @@
  */
 #ifndef TFS_MESSAGE_HEARTMESSAGE_H_
 #define TFS_MESSAGE_HEARTMESSAGE_H_
-
 #include <vector>
-
-#include "message.h"
+#include "common/base_packet.h"
 
 namespace tfs
 {
   namespace message
   {
-    class RespHeartMessage: public Message
+    class RespHeartMessage: public common::BasePacket 
     {
       public:
         RespHeartMessage();
         virtual ~RespHeartMessage();
-        virtual int parse(char* data, int32_t len);
-        virtual int build(char* data, int32_t len);
-        virtual int32_t message_length();
-        virtual char* get_name();
+        virtual int serialize(common::Stream& output);
+        virtual int deserialize(common::Stream& input);
+        virtual int64_t length() const;
+        static common::BasePacket* create(const int32_t type);
 
         inline const common::VUINT32* get_expire_blocks() const
         {
@@ -66,9 +64,6 @@ namespace tfs
         {
           return sync_mirror_status_;
         }
-
-        static Message* create(const int32_t type);
-
       protected:
         int32_t status_;
         int32_t sync_mirror_status_;
@@ -79,11 +74,14 @@ namespace tfs
 #pragma pack(4)
     struct NSIdentityNetPacket
     {
-        uint64_t ip_port_;
-        uint8_t role_;
-        uint8_t status_;
-        uint8_t flags_;
-        uint8_t force_;
+      int serialize(char*data, const int64_t data_len, int64_t& pos);
+      int deserialize(const char*data, const int64_t data_len, int64_t& pos);
+      int64_t length() const;
+      uint64_t ip_port_;
+      uint8_t role_;
+      uint8_t status_;
+      uint8_t flags_;
+      uint8_t force_;
     };
 #pragma pack()
 
@@ -99,15 +97,16 @@ namespace tfs
       HEART_FORCE_MODIFY_OTHERSIDE_ROLE_FLAGS_YES
     };
 
-    class MasterAndSlaveHeartMessage: public Message
+    class MasterAndSlaveHeartMessage: public common::BasePacket 
     {
       public:
         MasterAndSlaveHeartMessage();
         virtual ~MasterAndSlaveHeartMessage();
-        virtual int parse(char* data, int32_t len);
-        virtual int build(char* data, int32_t len);
-        virtual int32_t message_length();
-        virtual char* get_name();
+
+        virtual int serialize(common::Stream& output);
+        virtual int deserialize(common::Stream& input);
+        virtual int64_t length() const;
+        static common::BasePacket* create(const int32_t type);
         inline void set_ip_port(const uint64_t server_ip_port)
         {
           ns_identity_.ip_port_ = server_ip_port;
@@ -148,20 +147,19 @@ namespace tfs
         {
           return ns_identity_.force_;
         }
-        static Message* create(const int32_t type);
       private:
         NSIdentityNetPacket ns_identity_;
     };
 
-    class MasterAndSlaveHeartResponseMessage: public Message
+    class MasterAndSlaveHeartResponseMessage: public common::BasePacket 
     {
       public:
         MasterAndSlaveHeartResponseMessage();
         virtual ~MasterAndSlaveHeartResponseMessage();
-        virtual int parse(char* data, int32_t len);
-        virtual int build(char* data, int32_t len);
-        virtual int32_t message_length();
-        virtual char* get_name();
+        virtual int serialize(common::Stream& output);
+        virtual int deserialize(common::Stream& input);
+        virtual int64_t length() const;
+        static common::BasePacket* create(const int32_t type);
         inline void set_ip_port(const uint64_t server_ip_port)
         {
           ns_identity_.ip_port_ = server_ip_port;
@@ -202,22 +200,20 @@ namespace tfs
         {
           ds_list_ = ds_list;
         }
-        static Message* create(const int32_t type);
       private:
         NSIdentityNetPacket ns_identity_;
         common::VUINT64 ds_list_;
     };
 
-    class HeartBeatAndNSHeartMessage: public Message
+    class HeartBeatAndNSHeartMessage: public common::BasePacket 
     {
       public:
         HeartBeatAndNSHeartMessage();
         virtual ~HeartBeatAndNSHeartMessage();
-        virtual int parse(char* data, int32_t len);
-        virtual int build(char* data, int32_t len);
-        virtual int32_t message_length();
-        virtual char* get_name();
-        static Message* create(const int32_t type);
+        virtual int serialize(common::Stream& output);
+        virtual int deserialize(common::Stream& input);
+        virtual int64_t length() const;
+        static common::BasePacket* create(const int32_t type);
         inline void set_ns_switch_flag_and_status(const uint32_t switch_flag, const uint32_t status)
         {
           flags_ = (status & 0x0000FFFF);
@@ -235,26 +231,24 @@ namespace tfs
         int32_t flags_;
     };
 
-    class OwnerCheckMessage: public Message
+    class OwnerCheckMessage: public common::BasePacket 
     {
       public:
         OwnerCheckMessage();
         virtual ~OwnerCheckMessage();
-        virtual int parse(char* data, int32_t len);
-        virtual int build(char* data, int32_t len);
-        virtual int message_length();
-        virtual char* get_name();
-
-        inline void set_start_time(const time_t start = time(NULL))
+        virtual int serialize(common::Stream& output){ return common::TFS_SUCCESS;}
+        virtual int deserialize(common::Stream& input){ return common::TFS_SUCCESS;}
+        virtual int64_t length() const{return 0;}
+        inline void set_start_time(const int64_t start = time(NULL))
         {
           start_time_ = start;
         }
-        inline time_t get_start_time() const
+        inline int64_t get_start_time() const
         {
           return start_time_;
         }
       private:
-        time_t start_time_;
+        int64_t start_time_;
     };
   }
 }

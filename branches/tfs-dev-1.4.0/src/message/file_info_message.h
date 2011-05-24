@@ -16,23 +16,21 @@
 #ifndef TFS_MESSAGE_FILEINFOMESSAGE_H_
 #define TFS_MESSAGE_FILEINFOMESSAGE_H_
 
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-#include <string>
-#include <errno.h>
-#include "message.h"
+#include "common/base_packet.h"
 
 namespace tfs
 {
   namespace message
   {
-    class FileInfoMessage: public Message
+    class FileInfoMessage: public common::BasePacket 
     {
       public:
         FileInfoMessage();
         virtual ~FileInfoMessage();
-
+        virtual int serialize(common::Stream& output);
+        virtual int deserialize(common::Stream& input);
+        virtual int64_t length() const;
+        static common::BasePacket* create(const int32_t type);
         inline void set_block_id(const uint32_t block_id)
         {
           block_id_ = block_id;
@@ -45,57 +43,47 @@ namespace tfs
         {
           file_id_ = file_id;
         }
-
         inline uint64_t get_file_id() const
         {
           return file_id_;
         }
-
         inline void set_mode(const int32_t mode)
         {
           mode_ = mode;
         }
-
         inline int32_t get_mode() const
         {
           return mode_;
         }
-
-        virtual int parse(char* data, int32_t len);
-        virtual int build(char* data, int32_t len);
-        virtual int32_t message_length();
-        virtual char* get_name();
-
-        static Message* create(const int32_t type);
       protected:
         uint32_t block_id_;
         uint64_t file_id_;
         int32_t mode_;
     };
 
-    class RespFileInfoMessage: public Message
+    class RespFileInfoMessage: public common::BasePacket 
     {
       public:
         RespFileInfoMessage();
         virtual ~RespFileInfoMessage();
+        virtual int serialize(common::Stream& output);
+        virtual int deserialize(common::Stream& input);
+        virtual int64_t length() const;
+        static common::BasePacket* create(const int32_t type);
 
         inline void set_file_info(common::FileInfo* const file_info)
         {
-          file_info_ = file_info;
+          if (NULL != file_info)
+          {
+            file_info_ = *file_info;
+          }
         }
-        inline common::FileInfo* get_file_info() const
+        inline const common::FileInfo* get_file_info()  const
         {
-          return file_info_;
+          return &file_info_;
         }
-
-        virtual int parse(char* data, int32_t len);
-        virtual int build(char* data, int32_t len);
-        virtual int32_t message_length();
-        virtual char* get_name();
-
-        static Message* create(const int32_t type);
       protected:
-        common::FileInfo* file_info_;
+        common::FileInfo file_info_;
     };
   }
 }

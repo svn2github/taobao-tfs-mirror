@@ -15,23 +15,20 @@
  */
 #ifndef TFS_MESSAGE_CREATEFILENAMEMESSAGE_H_
 #define TFS_MESSAGE_CREATEFILENAMEMESSAGE_H_
-
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-#include <string>
-#include <errno.h>
-#include "message.h"
-
+#include "common/base_packet.h"
 namespace tfs
 {
   namespace message
   {
-    class CreateFilenameMessage: public Message
+    class CreateFilenameMessage: public common::BasePacket 
     {
       public:
         CreateFilenameMessage();
         virtual ~CreateFilenameMessage();
+        virtual int serialize(common::Stream& output);
+        virtual int deserialize(common::Stream& input);
+        virtual int64_t length() const;
+        static common::BasePacket* create(const int32_t type);
 
         inline void set_block_id(const uint32_t block_id)
         {
@@ -49,23 +46,20 @@ namespace tfs
         {
           return file_id_;
         }
-
-        virtual int parse(char* data, int32_t len);
-        virtual int build(char* data, int32_t len);
-        virtual int32_t message_length();
-        virtual char* get_name();
-
-        static Message* create(const int32_t type);
       protected:
         uint32_t block_id_;
         uint64_t file_id_;
     };
 
-    class RespCreateFilenameMessage: public Message
+    class RespCreateFilenameMessage: public common::BasePacket 
     {
       public:
         RespCreateFilenameMessage();
         virtual ~RespCreateFilenameMessage();
+        virtual int serialize(common::Stream& output);
+        virtual int deserialize(common::Stream& input);
+        virtual int64_t length() const;
+        static common::BasePacket* create(const int32_t type);
 
         inline void set_block_id(const uint32_t block_id)
         {
@@ -91,13 +85,6 @@ namespace tfs
         {
           return file_number_;
         }
-
-        virtual int parse(char* data, int32_t len);
-        virtual int build(char* data, int32_t len);
-        virtual int32_t message_length();
-        virtual char* get_name();
-
-        static Message* create(const int32_t type);
       protected:
         uint32_t block_id_;
         uint64_t file_id_;
@@ -105,5 +92,4 @@ namespace tfs
     };
   }
 }
-
 #endif

@@ -15,45 +15,39 @@
  */
 #ifndef TFS_MESSAGE_DUMP_PLAN_MESSAGE_H_
 #define TFS_MESSAGE_DUMP_PLAN_MESSAGE_H_
-
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-#include <vector>
-#include <errno.h>
-#include "message.h"
-
+#include "common/base_packet.h"
 namespace tfs
 {
   namespace message
   {
-    class DumpPlanMessage: public Message
+    class DumpPlanMessage: public common::BasePacket 
     {
       public:
         DumpPlanMessage();
         virtual ~DumpPlanMessage();
-        virtual int parse(char* data, int32_t len);
-        virtual int build(char* data, int32_t len);
-        virtual int32_t message_length();
-        virtual char* get_name();
-        static Message* create(const int32_t type);
+        virtual int serialize(common::Stream& output);
+        virtual int deserialize(common::Stream& input);
+        virtual int64_t length() const;
+        static common::BasePacket* create(const int32_t type);
+      private:
+        int8_t reserve_;
     };
-    class DumpPlanResponseMessage: public Message
+
+    class DumpPlanResponseMessage: public common::BasePacket 
     {
       public:
         DumpPlanResponseMessage();
         virtual ~DumpPlanResponseMessage();
-        virtual int parse(char* data, int32_t len);
-        virtual int32_t message_length();
-        virtual int build(char* data, int32_t len);
-        virtual char* get_name();
-        static Message* create(const int32_t type);
+        virtual int serialize(common::Stream& output);
+        virtual int deserialize(common::Stream& input);
+        virtual int64_t length() const;
+        static common::BasePacket* create(const int32_t type);
         inline tbnet::DataBuffer& get_data()
         {
           return data_;
         }
       private:
-        tbnet::DataBuffer data_;
+        mutable tbnet::DataBuffer data_;
     };
   }
 }

@@ -70,11 +70,18 @@ namespace tfs
     typedef std::vector<uint32_t> VUINT32;
     typedef std::vector<int32_t> VINT;
     typedef std::vector<uint32_t> VUINT;
+    typedef std::vector<int16_t> VINT16;
+    typedef std::vector<uint16_t> VUINT16;
+    typedef std::vector<int8_t> VINT8;
+    typedef std::vector<uint8_t> VUINT8;
     typedef std::vector<std::string> VSTRING;
-
+    struct Serialization;
 #pragma pack(4)
     struct FileInfo
     {
+      int deserialize(const char* data, const int64_t data_len, int64_t& pos);
+      int serialize(char* data, const int64_t data_len, int64_t& pos);
+      int64_t length() const;
       uint64_t id_; // file id
       int32_t offset_; // offset in block file
       int32_t size_; // file size
@@ -169,8 +176,6 @@ namespace tfs
     static const int32_t ADMIN_WARN_DEAD_COUNT = 1;
 
     static const int64_t DEFAULT_NETWORK_CALL_TIMEOUT  = 3000;//3s
-
-    typedef std::vector<FileInfo*> FILE_INFO_LIST;
   }
 }
 

@@ -14,91 +14,79 @@
  *
  */
 #include "dump_plan_message.h"
-
-using namespace tfs::common;
-
 namespace tfs
 {
   namespace message
   {
-    DumpPlanMessage::DumpPlanMessage()
+    DumpPlanMessage::DumpPlanMessage():
+      reserve_(0)
     {
-      _packetHeader._pcode = DUMP_PLAN_MESSAGE;
+      _packetHeader._pcode= common::DUMP_PLAN_MESSAGE;
     }
 
     DumpPlanMessage::~DumpPlanMessage()
     {
+
     }
 
-    int DumpPlanMessage::parse(char* data, int32_t len)
+    int DumpPlanMessage::deserialize(common::Stream& input)
     {
-      return TFS_SUCCESS;
+      return input.get_int8(&reserve_);
     }
 
-    int32_t DumpPlanMessage::message_length()
+    int64_t DumpPlanMessage::length() const
     {
-      return 1;
+      return common::INT8_SIZE;
     }
 
-    int DumpPlanMessage::build(char* data, int32_t len)
+    int DumpPlanMessage::serialize(common::Stream& output)
     {
-      return TFS_SUCCESS;
+      return output.set_int8(reserve_);
     }
 
-    char* DumpPlanMessage::get_name()
+    common::BasePacket* DumpPlanMessage::create(const int32_t type)
     {
-      return "dumpplanmessage";
-    }
-
-    Message* DumpPlanMessage::create(const int32_t type)
-    {
-      DumpPlanMessage* msg= new DumpPlanMessage();
-      msg->set_message_type(type);
-      return msg;
+      return new DumpPlanMessage();
     }
 
     DumpPlanResponseMessage::DumpPlanResponseMessage()
     {
-      _packetHeader._pcode = DUMP_PLAN_RESPONSE_MESSAGE;
+      _packetHeader._pcode= common::DUMP_PLAN_RESPONSE_MESSAGE;
     }
 
     DumpPlanResponseMessage::~DumpPlanResponseMessage()
     {
     }
 
-    int DumpPlanResponseMessage::parse(char* data, int32_t len)
+    int DumpPlanResponseMessage::deserialize(common::Stream& input)
     {
-      if (len > 0)
+      int32_t iret = common::TFS_SUCCESS;
+      if (input.get_data_length() > 0)
       {
-        data_.writeBytes(data, len);
+        data_.writeBytes(input.get_data(), input.get_data_length());
       }
-      return TFS_SUCCESS;
+      return iret;
     }
 
-    int32_t DumpPlanResponseMessage::message_length()
+    int64_t DumpPlanResponseMessage::length() const
     {
       return data_.getDataLen();
     }
 
-    int DumpPlanResponseMessage::build(char* data, int32_t len)
+    int DumpPlanResponseMessage::serialize(common::Stream& output)
     {
+      int32_t iret = common::TFS_SUCCESS;
       if (data_.getDataLen() > 0)
       {
-        memcpy(data, data_.getData(), data_.getDataLen());
+        iret = output.set_bytes(data_.getData(), data_.getDataLen());
       }
-      return TFS_SUCCESS;
+      return iret;
     }
 
-    char* DumpPlanResponseMessage::get_name()
+    common::BasePacket* DumpPlanResponseMessage::create(const int32_t type)
     {
-      return "dumpplanresponsemessage";
+      return new DumpPlanResponseMessage();
     }
+  }
 
-    Message* DumpPlanResponseMessage::create(const int32_t type)
-    {
-      DumpPlanResponseMessage* msg = new DumpPlanResponseMessage();
-      msg->set_message_type(type);
-      return msg;
-    }
- }
 }

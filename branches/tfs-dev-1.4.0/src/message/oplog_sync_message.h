@@ -15,39 +15,23 @@
  */
 #ifndef TFS_MESSAGE_OPLOGSYNCMESSAGE_H_
 #define TFS_MESSAGE_OPLOGSYNCMESSAGE_H_ 
-
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-#include <string>
-#include <errno.h>
-#include "message.h"
-
+#include "common/base_packet.h"
 namespace tfs
 {
   namespace message
   {
-    class OpLogSyncMessage: public Message
+    class OpLogSyncMessage: public common::BasePacket 
     {
       public:
         OpLogSyncMessage();
         virtual ~OpLogSyncMessage();
-        virtual int parse(char* data, int32_t len);
-        virtual int build(char* data, int32_t len);
-        virtual int32_t message_length();
-        virtual char* get_name();
-        void set_data(const char* data, int32_t length);
-        int32_t get_length() const
-        {
-          return length_;
-        }
-        const char* get_data() const
-        {
-          return data_;
-        }
-
-        static Message* create(const int32_t type);
-
+        virtual int serialize(common::Stream& output);
+        virtual int deserialize(common::Stream& input);
+        virtual int64_t length() const;
+        static common::BasePacket* create(const int32_t type);
+        void set_data(const char* data, const int64_t length);
+        inline int64_t get_length() const { return length_;}
+        inline const char* get_data() const { return data_;}
       private:
         bool alloc_;
         int32_t length_;
@@ -60,32 +44,20 @@ namespace tfs
       OPLOG_SYNC_MSG_COMPLETE_NO
     };
 
-    class OpLogSyncResponeMessage: public Message
+    class OpLogSyncResponeMessage: public common::BasePacket 
     {
       public:
         OpLogSyncResponeMessage();
         virtual ~OpLogSyncResponeMessage();
-        virtual int parse(char* data, int32_t len);
-        virtual int build(char* data, int32_t len);
-        virtual int32_t message_length();
-        virtual char* get_name();
-        uint8_t get_complete_flag() const
-        {
-          return complete_flag_;
-        }
-        void set_complete_flag(uint8_t flag = OPLOG_SYNC_MSG_COMPLETE_YES)
-        {
-          complete_flag_ = flag;
-        }
-
-        static Message* create(const int32_t type);
-      private:
-        OpLogSyncResponeMessage(const OpLogSyncResponeMessage&);
-        OpLogSyncResponeMessage operator=(const OpLogSyncResponeMessage&);
+        virtual int serialize(common::Stream& output);
+        virtual int deserialize(common::Stream& input);
+        virtual int64_t length() const;
+        static common::BasePacket* create(const int32_t type);
+        inline uint8_t get_complete_flag() const { return complete_flag_;}
+        inline void set_complete_flag(uint8_t flag = OPLOG_SYNC_MSG_COMPLETE_YES) { complete_flag_ = flag;}
       private:
         uint8_t complete_flag_;
     };
-
   }
 }
 #endif

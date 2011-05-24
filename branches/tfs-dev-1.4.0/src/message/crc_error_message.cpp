@@ -15,85 +15,72 @@
  */
 #include "crc_error_message.h"
 
-using namespace tfs::common;
 namespace tfs
 {
   namespace message
   {
     CrcErrorMessage::CrcErrorMessage() :
-      block_id_(0), file_id_(0), crc_(0), error_flag_(CRC_DS_PATIAL_ERROR)
+      block_id_(0), file_id_(0), crc_(0), error_flag_(common::CRC_DS_PATIAL_ERROR)
     {
-      _packetHeader._pcode = CRC_ERROR_MESSAGE;
+      _packetHeader._pcode = common::CRC_ERROR_MESSAGE;
     }
 
     CrcErrorMessage::~CrcErrorMessage()
     {
     }
 
-    int CrcErrorMessage::parse(char* data, int32_t len)
+    int CrcErrorMessage::deserialize(common::Stream& input)
     {
-      if (get_int32(&data, &len, reinterpret_cast<int32_t*> (&block_id_)) == TFS_ERROR)
+      int32_t iret = input.get_int32(reinterpret_cast<int32_t*>(&block_id_));
+      if (common::TFS_SUCCESS == iret)
       {
-        return TFS_ERROR;
+        iret = input.get_int64(reinterpret_cast<int64_t*>(&file_id_));
       }
-      if (get_int64(&data, &len, reinterpret_cast<int64_t*> (&file_id_)) == TFS_ERROR)
+      if (common::TFS_SUCCESS == iret)
       {
-        return TFS_ERROR;
+        iret = input.get_int32(reinterpret_cast<int32_t*>(&crc_));
       }
-      if (get_int32(&data, &len, reinterpret_cast<int32_t*> (&crc_)) == TFS_ERROR)
+      if (common::TFS_SUCCESS == iret)
       {
-        return TFS_ERROR;
+        iret = input.get_int32(reinterpret_cast<int32_t*>(&error_flag_));
       }
-      if (get_int32(&data, &len, reinterpret_cast<int32_t*> (&error_flag_)) == TFS_ERROR)
+      if (common::TFS_SUCCESS == iret)
       {
-        return TFS_ERROR;
+        iret = input.get_vint64(fail_server_);
       }
-      get_vint64(&data, &len, fail_server_);
-      return TFS_SUCCESS;
+      return iret;
     }
 
-    int32_t CrcErrorMessage::message_length()
+    int64_t CrcErrorMessage::length() const
     {
-      int32_t len = INT_SIZE * 3 + INT64_SIZE + get_vint64_len(fail_server_);
-      return len;
+      return common::INT_SIZE * 3 + common::INT64_SIZE + common::Serialization::get_vint64_length(fail_server_);
     }
 
-    int CrcErrorMessage::build(char* data, int32_t len)
+    int CrcErrorMessage::serialize(common::Stream& output)
     {
-      if (set_int32(&data, &len, block_id_) == TFS_ERROR)
+      int32_t iret = output.set_int32(block_id_);
+      if (common::TFS_SUCCESS == iret)
       {
-        return TFS_ERROR;
+        iret = output.set_int64(file_id_);
       }
-      if (set_int64(&data, &len, file_id_) == TFS_ERROR)
+      if (common::TFS_SUCCESS == iret)
       {
-        return TFS_ERROR;
+        iret = output.set_int32(crc_);
       }
-      if (set_int32(&data, &len, crc_) == TFS_ERROR)
+      if (common::TFS_SUCCESS == iret)
       {
-        return TFS_ERROR;
+        iret = output.set_int32(error_flag_);
       }
-      if (set_int32(&data, &len, error_flag_) == TFS_ERROR)
+      if (common::TFS_SUCCESS == iret)
       {
-        return TFS_ERROR;
+        iret = output.set_vint64(fail_server_);
       }
-      if (set_vint64(&data, &len, fail_server_) == TFS_ERROR)
-      {
-        return TFS_ERROR;
-      }
-
-      return TFS_SUCCESS;
+      return iret;
     }
 
-    char* CrcErrorMessage::get_name()
+    common::BasePacket* CrcErrorMessage::create(const int32_t type)
     {
-      return "crcerrormessage";
-    }
-
-    Message* CrcErrorMessage::create(const int32_t type)
-    {
-      CrcErrorMessage* req_ce_msg = new CrcErrorMessage();
-      req_ce_msg->set_message_type(type);
-      return req_ce_msg;
+      return new CrcErrorMessage();
     }
   }
 }

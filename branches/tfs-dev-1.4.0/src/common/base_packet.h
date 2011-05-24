@@ -301,6 +301,8 @@ namespace tfs
       inline void set_id(const uint64_t id) { id_ = id;}
       inline uint64_t get_id() const { return id_;}
 
+      static bool parse_special_ds(std::vector<uint64_t>& value, int32_t& version, uint32_t& lease);
+
   #ifdef TFS_GTEST
     public:
   #else

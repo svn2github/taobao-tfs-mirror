@@ -15,40 +15,29 @@
  */
 #ifndef TFS_MESSAGE_RELOADMESSAGE_H_
 #define TFS_MESSAGE_RELOADMESSAGE_H_
-
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-#include <string>
-#include <errno.h>
-
-#include "message.h"
+#include "common/base_packet.h"
 
 namespace tfs
 {
   namespace message
   {
-    class ReloadConfigMessage: public Message
+    class ReloadConfigMessage: public common::BasePacket 
     {
     public:
       ReloadConfigMessage();
-      ReloadConfigMessage(const int32_t status);
-      void set_message(const int32_t status);
+      //ReloadConfigMessage(const int32_t status);
+      //void set_message(const int32_t status);
       virtual ~ReloadConfigMessage();
-      virtual int parse(char* data, int32_t len);
-      virtual int build(char* data, int32_t len);
-      virtual int32_t message_length();
-      virtual char* get_name();
-      char* get_error() const;
+      virtual int serialize(common::Stream& output);
+      virtual int deserialize(common::Stream& input);
+      virtual int64_t length() const;
+      static common::BasePacket* create(const int32_t type);
+
       void set_switch_cluster_flag(const int32_t flag);
       int32_t get_switch_cluster_flag() const;
-
-      static Message* create(const int32_t type);
-
     protected:
       int32_t flag_;
     };
-
   }
 }
 #endif

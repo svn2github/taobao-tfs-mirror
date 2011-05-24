@@ -15,14 +15,7 @@
  */
 #ifndef TFS_MESSAGE_READDATAMESSAGE_H_
 #define TFS_MESSAGE_READDATAMESSAGE_H_
-
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-#include <string>
-#include <errno.h>
-#include "message.h"
-
+#include "common/base_packet.h"
 namespace tfs
 {
   namespace message
@@ -30,290 +23,135 @@ namespace tfs
 #pragma pack(4)
     struct ReadDataInfo
     {
-        uint32_t block_id_;
-        uint64_t file_id_;
-        int32_t offset_;
-        int32_t length_;
+      int deserialize(const char* data, const int64_t data_len, int64_t& pos);
+      int serialize(char* data, const int64_t data_len, int64_t& pos);
+      int64_t length() const;
+      uint32_t block_id_;
+      uint64_t file_id_;
+      int32_t offset_;
+      int32_t length_;
     };
 #pragma pack()
 
-    class ReadDataMessage: public Message
+    class ReadDataMessage: public common::BasePacket
     {
       public:
         ReadDataMessage();
         virtual ~ReadDataMessage();
-
+        virtual int serialize(common::Stream& output);
+        virtual int deserialize(common::Stream& input);
+        virtual int64_t length() const;
+        static common::BasePacket* create(const int32_t type);
         void set_block_id(const uint32_t block_id)
         {
           read_data_info_.block_id_ = block_id;
         }
-
         uint32_t get_block_id() const
         {
           return read_data_info_.block_id_;
         }
-
         void set_file_id(const uint64_t file_id)
         {
           read_data_info_.file_id_ = file_id;
         }
-
         uint64_t get_file_id() const
         {
           return read_data_info_.file_id_;
         }
-
         void set_offset(const int32_t offset)
         {
           read_data_info_.offset_ = offset;
         }
-
         int32_t get_offset() const
         {
           return read_data_info_.offset_;
         }
-
         void set_length(const int32_t length)
         {
           read_data_info_.length_ = length;
         }
-
         int32_t get_length() const
         {
           return read_data_info_.length_;
         }
-
-        virtual int parse(char* data, int32_t len);
-        virtual int build(char* data, int32_t len);
-        virtual int32_t message_length();
-        virtual char* get_name();
-
-        static Message* create(const int32_t type);
       protected:
         ReadDataInfo read_data_info_;
     };
 
-    class RespReadDataMessage: public Message
+    class RespReadDataMessage: public common::BasePacket
     {
       public:
         RespReadDataMessage();
         virtual ~RespReadDataMessage();
+        virtual int serialize(common::Stream& output);
+        virtual int deserialize(common::Stream& input);
+        virtual int64_t length() const;
+        static common::BasePacket* create(const int32_t type);
 
         char* alloc_data(const int32_t len);
-
-        void set_length(const int32_t len)
-        {
-          length_ = len;
-        }
-
-        char* get_data() const
-        {
-          return data_;
-        }
-
-        int32_t get_length() const
-        {
-          return length_;
-        }
-
-        virtual int parse(char* data, int32_t len);
-        virtual int build(char* data, int32_t len);
-        virtual int32_t message_length();
-        virtual char* get_name();
-
-        static Message* create(const int32_t type);
+        inline void set_length(const int32_t len) { length_ = len;}
+        inline char* get_data() const { return data_;}
+        inline int32_t get_length() const { return length_;}
       protected:
         char* data_;
         int32_t length_;
         bool alloc_;
     };
 
-    class ReadDataMessageV2: public Message
+    class ReadDataMessageV2: public ReadDataMessage 
     {
       public:
         ReadDataMessageV2();
         virtual ~ReadDataMessageV2();
-
-        void set_block_id(const uint32_t block_id)
-        {
-          read_data_info_.block_id_ = block_id;
-        }
-
-        uint32_t get_block_id() const
-        {
-          return read_data_info_.block_id_;
-        }
-
-        void set_file_id(const uint64_t file_id)
-        {
-          read_data_info_.file_id_ = file_id;
-        }
-
-        uint64_t get_file_id() const
-        {
-          return read_data_info_.file_id_;
-        }
-
-        void set_offset(const int32_t offset)
-        {
-          read_data_info_.offset_ = offset;
-        }
-
-        int32_t get_offset() const
-        {
-          return read_data_info_.offset_;
-        }
-
-        void set_length(const int32_t length)
-        {
-          read_data_info_.length_ = length;
-        }
-
-        int32_t get_length() const
-        {
-          return read_data_info_.length_;
-        }
-
-        virtual int parse(char* data, int32_t len);
-        virtual int build(char* data, int32_t len);
-        virtual int32_t message_length();
-        virtual char* get_name();
-
-        static Message* create(const int32_t type);
-      protected:
-        ReadDataInfo read_data_info_;
+        virtual int serialize(common::Stream& output);
+        virtual int deserialize(common::Stream& input);
+        virtual int64_t length() const;
+        static common::BasePacket* create(const int32_t type);
     };
 
-    class RespReadDataMessageV2: public Message
+    class RespReadDataMessageV2: public RespReadDataMessage 
     {
       public:
         RespReadDataMessageV2();
         virtual ~RespReadDataMessageV2();
-
-        char* alloc_data(int32_t len);
-
-        char* get_data() const
-        {
-          return data_;
-        }
-
-        void set_length(const int32_t len)
-        {
-          length_ = len;
-        }
-
-        int32_t get_length() const
-        {
-          return length_;
-        }
+        virtual int serialize(common::Stream& output);
+        virtual int deserialize(common::Stream& input);
+        virtual int64_t length() const;
+        static common::BasePacket* create(const int32_t type);
 
         void set_file_info(common::FileInfo* const file_info)
         {
-          file_info_ = file_info;
+          if (NULL != file_info)
+            file_info_ = *file_info;
         }
-
-        common::FileInfo* get_file_info() const
+        const common::FileInfo* get_file_info() const
         {
-          return file_info_;
+          return file_info_.id_ > 0 ? &file_info_ : NULL;
         }
-
-        virtual int parse(char* data, int32_t len);
-        virtual int build(char* data, int32_t len);
-        virtual int32_t message_length();
-        virtual char* get_name();
-
-        static Message* create(const int32_t type);
       protected:
-        char* data_;
-        int32_t length_;
-        bool alloc_;
-        common::FileInfo* file_info_;
+        common::FileInfo file_info_;
     };
 
-    class ReadRawDataMessage: public Message
+    class ReadRawDataMessage: public ReadDataMessage 
     {
       public:
         ReadRawDataMessage();
         virtual ~ReadRawDataMessage();
-
-        void set_block_id(const uint32_t block_id)
-        {
-          read_data_info_.block_id_ = block_id;
-        }
-
-        uint32_t get_block_id() const
-        {
-          return read_data_info_.block_id_;
-        }
-
-        void set_offset(const int32_t offset)
-        {
-          read_data_info_.offset_ = offset;
-        }
-
-        int32_t get_offset() const
-        {
-          return read_data_info_.offset_;
-        }
-
-        void set_length(const int32_t length)
-        {
-          read_data_info_.length_ = length;
-        }
-
-        int32_t get_length() const
-        {
-          return read_data_info_.length_;
-        }
-
-        virtual int parse(char* data, int32_t len);
-        virtual int build(char* data, int32_t len);
-        virtual int32_t message_length();
-        virtual char* get_name();
-
-        static Message* create(const int32_t type);
-      protected:
-        ReadDataInfo read_data_info_;
+        virtual int serialize(common::Stream& output);
+        virtual int deserialize(common::Stream& input);
+        virtual int64_t length() const;
+        static common::BasePacket* create(const int32_t type);
     };
 
-    class RespReadRawDataMessage: public Message
+    class RespReadRawDataMessage: public RespReadDataMessage 
     {
       public:
         RespReadRawDataMessage();
         virtual ~RespReadRawDataMessage();
-
-        void set_length(const int32_t length)
-        {
-          length_ = length;
-        }
-
-        int32_t get_length() const
-        {
-          return length_;
-        }
-
-        void set_data(char* data)
-        {
-          data_ = data;
-        }
-
-        char* get_data() const
-        {
-          return data_;
-        }
-
-        char* alloc_data(int32_t len);
-
-        virtual int parse(char* data, int32_t len);
-        virtual int build(char* data, int32_t len);
-        virtual int32_t message_length();
-        virtual char* get_name();
-
-        static Message* create(const int32_t type);
-      protected:
-        char* data_;
-        int32_t length_;
-        bool alloc_;
+        virtual int serialize(common::Stream& output);
+        virtual int deserialize(common::Stream& input);
+        virtual int64_t length() const;
+        static common::BasePacket* create(const int32_t type);
     };
 
     class ReadScaleImageMessage: public ReadDataMessageV2
@@ -327,31 +165,28 @@ namespace tfs
         };
         struct ZoomData
         {
-            int32_t zoom_width_;
-            int32_t zoom_height_;
-            int32_t zoom_type_;
+          int deserialize(const char* data, const int64_t data_len, int64_t& pos);
+          int serialize(char* data, const int64_t data_len, int64_t& pos);
+          int64_t length() const;
+          int32_t zoom_width_;
+          int32_t zoom_height_;
+          int32_t zoom_type_;
         };
 
         ReadScaleImageMessage();
         virtual ~ReadScaleImageMessage();
-      public:
-        virtual int parse(char* data, int32_t len);
-        virtual int build(char* data, int32_t len);
-        virtual int32_t message_length();
-        virtual char* get_name();
-
-        static Message* create(const int32_t type);
-
+        virtual int serialize(common::Stream& output);
+        virtual int deserialize(common::Stream& input);
+        virtual int64_t length() const;
+        static common::BasePacket* create(const int32_t type);
         void set_zoom_data(const ZoomData & zoom)
         {
           zoom_ = zoom;
         }
-
         const ZoomData & get_zoom_data() const
         {
           return zoom_;
         }
-
       protected:
         ZoomData zoom_;
     };

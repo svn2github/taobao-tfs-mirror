@@ -59,6 +59,7 @@ namespace tfs
       }
       return iret;
     }
+
     int FileInfo::deserialize(const char*data, const int64_t data_len, int64_t& pos)
     {
       int32_t iret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
@@ -139,7 +140,7 @@ namespace tfs
       }
       if (TFS_SUCCESS == iret)
       {
-        if (data_.getDataLen() > 0)
+        if (data_.getDataLen())
         {
           iret = Serialization::set_bytes(data, data_len, pos, data_.getData(), data_.getDataLen());
         }
@@ -270,6 +271,52 @@ namespace tfs
     int64_t BlockInfo::length() const
     {
       return INT_SIZE * 7;
+    }
+      uint64_t fileid_;
+      struct
+      {
+        int32_t inner_offset_;
+        int32_t size_;
+      } location_;
+ 
+    int RawMeta::deserialize(const char* data, const int64_t data_len, int64_t& pos)
+    {
+
+      int32_t iret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
+      if (TFS_SUCCESS == iret)
+      {
+        iret = Serialization::get_int64(data, data_len, pos, reinterpret_cast<int64_t*>(&fileid_));
+      }
+      if (TFS_SUCCESS == iret)
+      {
+        iret = Serialization::get_int32(data, data_len, pos, &location_.inner_offset_);
+      }
+      if (TFS_SUCCESS == iret)
+      {
+        iret = Serialization::get_int32(data, data_len, pos, &location_.size_);
+      }
+      return iret;
+    }
+    int RawMeta::serialize(char* data, const int64_t data_len, int64_t& pos)
+    {
+      int32_t iret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
+      if (TFS_SUCCESS == iret)
+      {
+        iret = Serialization::set_int64(data, data_len, pos, fileid_);
+      }
+      if (TFS_SUCCESS == iret)
+      {
+        iret = Serialization::set_int32(data, data_len, pos, location_.inner_offset_);
+      }
+      if (TFS_SUCCESS == iret)
+      {
+        iret = Serialization::set_int32(data, data_len, pos, location_.size_);
+      }
+      return iret;
+    }
+    int64_t RawMeta::length() const
+    {
+      return INT64_SIZE + INT_SIZE * 2;
     }
 
     int ReplBlock::serialize(char* data, const int64_t data_len, int64_t& pos)

@@ -16,14 +16,7 @@
 #ifndef TFS_MESSAGE_UNLINKFILEMESSAGE_H_
 #define TFS_MESSAGE_UNLINKFILEMESSAGE_H_
 
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-#include <string>
-#include <errno.h>
-
-#include "message.h"
-
+#include "common/base_packet.h"
 namespace tfs
 {
   namespace message
@@ -31,17 +24,24 @@ namespace tfs
 #pragma pack(4)
     struct UnlinkFileInfo
     {
+      int deserialize(const char* data, const int64_t data_len, int64_t& pos);
+      int serialize(char* data, const int64_t data_len, int64_t& pos);
+      int64_t length() const;
       uint32_t block_id_;
       uint64_t file_id_;
       int32_t is_server_;
     };
 #pragma pack()
 
-    class UnlinkFileMessage: public Message
+    class UnlinkFileMessage: public common::BasePacket 
     {
       public:
         UnlinkFileMessage();
         virtual ~UnlinkFileMessage();
+        virtual int serialize(common::Stream& output);
+        virtual int deserialize(common::Stream& input);
+        virtual int64_t length() const;
+        static common::BasePacket* create(const int32_t type);
 
         inline void set_block_id(const uint32_t block_id)
         {
@@ -154,13 +154,6 @@ namespace tfs
         {
           unlink_file_info_.is_server_ |= REVEAL;
         }
-
-        virtual int parse(char* data, int32_t len);
-        virtual int build(char* data, int32_t len);
-        virtual int32_t message_length();
-        virtual char* get_name();
-
-        static Message* create(const int32_t type);
       protected:
         UnlinkFileInfo unlink_file_info_;
         int32_t option_flag_;
@@ -169,8 +162,6 @@ namespace tfs
         uint32_t lease_;
         bool has_lease_;
     };
-
   }
-
 }
 #endif

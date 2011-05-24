@@ -234,7 +234,6 @@ namespace tfs
       SSM_SCAN_CUTOVER_FLAG_NO  = 0x02
     };
 
-
     struct SSMScanParameter
     {
       int deserialize(const char* data, const int64_t data_len, int64_t& pos);
@@ -303,6 +302,9 @@ namespace tfs
         memcpy(this, &raw_meta, sizeof(RawMeta));
       }
 
+      int deserialize(const char* data, const int64_t data_len, int64_t& pos);
+      int serialize(char* data, const int64_t data_len, int64_t& pos);
+      int64_t length() const;
       uint64_t get_key() const
       {
         return fileid_;
@@ -533,7 +535,7 @@ namespace tfs
     typedef STRING_MAP::iterator STRING_MAP_ITER;
 
     typedef std::vector<BlockInfo> BLOCK_INFO_LIST;
-    typedef std::vector<FileInfo*> FILE_INFO_LIST;
+    typedef std::vector<FileInfo> FILE_INFO_LIST;
     typedef std::map<uint64_t, FileInfo*> FILE_INFO_MAP;
     typedef FILE_INFO_MAP::iterator FILE_INFO_MAP_ITER;
 

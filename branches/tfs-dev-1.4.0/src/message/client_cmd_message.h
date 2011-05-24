@@ -15,13 +15,7 @@
  */
 #ifndef TFS_MESSAGE_CLIENTCMDMESSAGE_H_
 #define TFS_MESSAGE_CLIENTCMDMESSAGE_H_
-
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-#include <string>
-#include <errno.h>
-#include "message.h"
+#include "common/base_packet.h"
 
 namespace tfs
 {
@@ -30,11 +24,14 @@ namespace tfs
 #pragma pack(4)
     struct ClientCmdInformation
     {
-      uint64_t value1_;
-      uint64_t value2_;
-      uint32_t value3_;
-      uint32_t value4_;
+      int64_t value1_;
+      int64_t value2_;
+      int32_t value3_;
+      int32_t value4_;
       int32_t  cmd_;
+      int serialize(char* data, const int64_t data_len, int64_t& pos);
+      int deserialize(const char* data, const int64_t data_len, int64_t& pos);
+      int64_t length() const;
     };
 #pragma pack()
 
@@ -53,11 +50,15 @@ namespace tfs
       CLIENT_CMD_FORCE_DATASERVER_REPORT
     };
 
-    class ClientCmdMessage: public Message
+    class ClientCmdMessage: public common::BasePacket 
     {
     public:
       ClientCmdMessage();
       virtual ~ClientCmdMessage();
+      virtual int serialize(common::Stream& output);
+      virtual int deserialize(common::Stream& input);
+      virtual int64_t length() const;
+      static common::BasePacket* create(const int32_t type);
       inline void set_value1(const uint64_t value)
       {
         info_.value1_ = value;
@@ -98,12 +99,7 @@ namespace tfs
       {
         return info_.cmd_;
       }
-      virtual int parse(char *data, int32_t len);
-      virtual int build(char *data, int32_t len);
-      virtual int32_t message_length();
-      virtual char *get_name();
 
-      static Message* create(const int32_t type);
     protected:
       ClientCmdInformation info_;
     };

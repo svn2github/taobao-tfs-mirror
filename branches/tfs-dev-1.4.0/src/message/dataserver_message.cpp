@@ -14,172 +14,154 @@
  *
  */
 #include "dataserver_message.h"
-
-using namespace tfs::common;
-
 namespace tfs
 {
   namespace message
   {
-    // SetDataserverMessage 
     SetDataserverMessage::SetDataserverMessage() :
-      ds_(NULL), has_block_(HAS_BLOCK_FLAG_NO)
+      has_block_(common::HAS_BLOCK_FLAG_NO)
     {
-      _packetHeader._pcode = SET_DATASERVER_MESSAGE;
+      _packetHeader._pcode = common::SET_DATASERVER_MESSAGE;
+      memset(&ds_, 0, sizeof(ds_));
       blocks_.clear();
     }
 
     SetDataserverMessage::~SetDataserverMessage()
     {
+
     }
 
-    // DataServerStatInfo, block_count, block_id, block_version, ...
-    int SetDataserverMessage::parse(char* data, int32_t len)
+    int SetDataserverMessage::deserialize(common::Stream& input)
     {
-      if (get_object(&data, &len, reinterpret_cast<void**> (&ds_), sizeof(DataServerStatInfo))
-          == TFS_ERROR)
+      int64_t pos = 0;
+      int32_t iret = ds_.deserialize(input.get_data(), input.get_data_length(), pos);
+      if (common::TFS_SUCCESS == iret)
       {
-        return TFS_ERROR;
-      }
-      if (get_int32(&data, &len, reinterpret_cast<int32_t*> (&has_block_)) == TFS_ERROR)
-      {
-        return TFS_ERROR;
-      }
-      if (has_block_ > 0)
-      {
-        int32_t size = 0;
-        if (get_int32(&data, &len, &size) == TFS_ERROR)
+        input.drain(ds_.length());
+        iret = input.get_int32(reinterpret_cast<int32_t*> (&has_block_));
+        if (common::TFS_SUCCESS == iret)
         {
-          return TFS_ERROR;
-        }
-        BlockInfo* block_info;
-        int32_t i = 0;
-        for (i = 0; i < size; i++)
-        {
-          if (get_object(&data, &len, reinterpret_cast<void**> (&block_info), BLOCKINFO_SIZE)
-              == TFS_ERROR)
+          if (has_block_  == common::HAS_BLOCK_FLAG_YES)
           {
-            return TFS_ERROR;
+            int32_t size = 0;
+            iret = input.get_int32(&size);
+            if (common::TFS_SUCCESS == iret)
+            {
+              common::BlockInfo info;
+              for (int32_t i = 0; i < size; ++i)
+              {
+                pos  = 0;
+                iret = info.deserialize(input.get_data(), input.get_data_length(), pos);
+                if (common::TFS_SUCCESS == iret)
+                {
+                  input.drain(info.length());
+                  blocks_.push_back(info);
+                }
+                else
+                {
+                  break;
+                }
+              }
+            }
           }
-          blocks_.push_back(*block_info);
         }
       }
-      return TFS_SUCCESS;
+      return iret;
     }
 
-    int32_t SetDataserverMessage::message_length()
+    int64_t SetDataserverMessage::length() const
     {
-      int32_t len = sizeof(DataServerStatInfo) + INT_SIZE;
+      int64_t len = ds_.length() + common::INT_SIZE;
       if (has_block_ > 0)
       {
-        len += INT_SIZE;
-        len += blocks_.size() * BLOCKINFO_SIZE;
+        len += common::INT_SIZE;
+        common::BlockInfo info;
+        len += blocks_.size() * info.length();
       }
       return len;
     }
 
-    int SetDataserverMessage::build(char* data, int32_t len)
+    int SetDataserverMessage::serialize(common::Stream& output)
     {
-      if (ds_ == NULL)
+      int64_t pos = 0;
+      int32_t iret = ds_.id_ <= 0 ? common::TFS_ERROR : common::TFS_SUCCESS;
+      if (common::TFS_SUCCESS == iret)
       {
-        return TFS_ERROR;
-      }
-
-      if (set_object(&data, &len, reinterpret_cast<void**> (ds_), sizeof(DataServerStatInfo))
-          == TFS_ERROR)
-      {
-        return TFS_ERROR;
-      }
-      if (set_int32(&data, &len, has_block_) == TFS_ERROR)
-      {
-        return TFS_ERROR;
-      }
-      if (has_block_)
-      {
-        // size
-        int32_t size = blocks_.size();
-        if (set_int32(&data, &len, size) == TFS_ERROR)
+        iret = ds_.serialize(output.get_free(), output.get_free_length(), pos);
+        if (common::TFS_SUCCESS == iret)
         {
-          return TFS_ERROR;
+          output.pour(ds_.length());
+          iret = output.set_int32(has_block_);
         }
-        for (int32_t i = 0; i < size; i++)
+      }
+      if (common::TFS_SUCCESS == iret)
+      {
+        if (has_block_ == common::HAS_BLOCK_FLAG_YES)
         {
-          if (set_object(&data, &len, &(blocks_.at(i)), BLOCKINFO_SIZE) == TFS_ERROR)
+          iret = output.set_int32(blocks_.size());
+          if (common::TFS_SUCCESS == iret)
           {
-            return TFS_ERROR;
+            std::vector<common::BlockInfo>::const_iterator iter = blocks_.begin();
+            for (; iter != blocks_.end(); ++iter)
+            {
+              pos = 0;
+              iret = const_cast<common::BlockInfo*>((&(*iter)))->serialize(output.get_free(), output.get_free_length(), pos);
+              if (common::TFS_SUCCESS == iret)
+                output.pour((*iter).length());
+              else
+                break;
+            }
           }
         }
       }
-      return TFS_SUCCESS;
+      return iret;
     }
 
-    char* SetDataserverMessage::get_name()
+    common::BasePacket* SetDataserverMessage::create(const int32_t type)
     {
-      return "setdataservermessage";
+      return new SetDataserverMessage();
     }
 
-    Message* SetDataserverMessage::create(const int32_t type)
+    void SetDataserverMessage::set_ds(common::DataServerStatInfo* ds)
     {
-      SetDataserverMessage* req_sd_msg = new SetDataserverMessage();
-      req_sd_msg->set_message_type(type);
-      return req_sd_msg;
+      if (NULL != ds)
+        ds_ = *ds;
     }
 
-    void SetDataserverMessage::set_ds(DataServerStatInfo* ds)
+    void SetDataserverMessage::add_block(common::BlockInfo* block_info)
     {
-      ds_ = ds;
+      if (NULL != block_info)
+        blocks_.push_back(*block_info);
     }
 
-    void SetDataserverMessage::add_block(BlockInfo* block_info)
+    SuspectDataserverMessage::SuspectDataserverMessage():
+      server_id_(0)
     {
-      blocks_.push_back(*block_info);
-    }
-
-    // SuspectDataserverMessage  
-    SuspectDataserverMessage::SuspectDataserverMessage()
-    {
-      _packetHeader._pcode = SUSPECT_DATASERVER_MESSAGE;
-      server_id_ = 0;
+      _packetHeader._pcode = common::SUSPECT_DATASERVER_MESSAGE;
     }
 
     SuspectDataserverMessage::~SuspectDataserverMessage()
     {
     }
 
-    int SuspectDataserverMessage::parse(char* data, int32_t len)
+    int SuspectDataserverMessage::deserialize(common::Stream& input)
     {
-      if (get_int64(&data, &len, reinterpret_cast<int64_t*> (&server_id_)) == TFS_ERROR)
-      {
-        return TFS_ERROR;
-      }
-      return TFS_SUCCESS;
+      return input.get_int64(reinterpret_cast<int64_t*> (&server_id_));
     }
 
-    int32_t SuspectDataserverMessage::message_length()
+    int64_t SuspectDataserverMessage::length() const
     {
-      return INT64_SIZE;
+      return common::INT64_SIZE;
     }
 
-    int SuspectDataserverMessage::build(char* data, int32_t len)
+    int SuspectDataserverMessage::serialize(common::Stream& output)
     {
-      if (set_int64(&data, &len, server_id_) == TFS_ERROR)
-      {
-        return TFS_ERROR;
-      }
-
-      return TFS_SUCCESS;
+      return output.set_int64(server_id_);
     }
 
-    char* SuspectDataserverMessage::get_name()
+    common::BasePacket* SuspectDataserverMessage::create(const int32_t type)
     {
-      return "suspectdataservermessage";
-    }
-
-    Message* SuspectDataserverMessage::create(const int32_t type)
-    {
-      SuspectDataserverMessage* req_sd_msg = new SuspectDataserverMessage();
-      req_sd_msg->set_message_type(type);
-      return req_sd_msg;
+      return new SuspectDataserverMessage();
     }
   }
 }

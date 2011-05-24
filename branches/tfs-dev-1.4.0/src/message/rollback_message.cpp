@@ -15,123 +15,115 @@
  */
 #include "rollback_message.h"
 
-using namespace tfs::common;
-
 namespace tfs
 {
   namespace message
   {
     RollbackMessage::RollbackMessage() :
-      act_type_(0), block_info_(NULL), file_info_(NULL)
+      act_type_(0)
     {
-      _packetHeader._pcode = ROLLBACK_MESSAGE;
+      memset(&block_info_, 0, block_info_.length());
+      memset(&file_info_, 0, file_info_.length());
+      _packetHeader._pcode = common::ROLLBACK_MESSAGE;
     }
 
     RollbackMessage::~RollbackMessage()
     {
     }
 
-    int RollbackMessage::parse(char* data, int32_t len)
+    int RollbackMessage::deserialize(common::Stream& input)
     {
       int32_t block_len = 0;
       int32_t file_info_len = 0;
-
-      if (get_int32(&data, &len, &act_type_) == TFS_ERROR)
+      int32_t iret = input.get_int32(&act_type_);
+      if (common::TFS_SUCCESS == iret)
       {
-        return TFS_ERROR;
+        iret = input.get_int32(&block_len);
       }
-      if (get_int32(&data, &len, &block_len) == TFS_ERROR)
+      if (common::TFS_SUCCESS == iret)
       {
-        return TFS_ERROR;
+        iret = input.get_int32(&file_info_len);
       }
-      if (get_int32(&data, &len, &file_info_len) == TFS_ERROR)
+      int64_t pos = 0;
+      if (common::TFS_SUCCESS == iret)
       {
-        return TFS_ERROR;
-      }
-      if (block_len > 0)
-      {
-        if (get_object(&data, &len, reinterpret_cast<void**>(&block_info_), BLOCKINFO_SIZE) == TFS_ERROR)
+        if (block_len > 0)
         {
-          return TFS_ERROR;
+          iret = block_info_.deserialize(input.get_data(), input.get_data_length(), pos);
+          if (common::TFS_SUCCESS == iret)
+          {
+            input.drain(block_info_.length());
+          }
         }
       }
-      if (file_info_len > 0)
+      
+      if (common::TFS_SUCCESS == iret)
       {
-        if (get_object(&data, &len, reinterpret_cast<void**>(&file_info_), FILEINFO_SIZE) == TFS_ERROR)
+        if (file_info_len > 0)
         {
-          return TFS_ERROR;
+          pos = 0;
+          iret = file_info_.deserialize(input.get_data(), input.get_data_length(), pos);
+          if (common::TFS_SUCCESS == iret)
+          {
+            input.drain(file_info_.length());
+          }
         }
       }
-      return TFS_SUCCESS;
+      return iret;
     }
 
-    int32_t RollbackMessage::message_length()
+    int64_t RollbackMessage::length() const
     {
-      int32_t block_len = 0;
-      if (block_info_ != NULL)
-      {
-        block_len = BLOCKINFO_SIZE;
-      }
-      int32_t file_info_len = 0;
-      if (file_info_ != NULL)
-      {
-        file_info_len = FILEINFO_SIZE;
-      }
-      int32_t len = INT_SIZE * 3 + block_len + file_info_len;
+      int64_t len = common::INT_SIZE * 3;
+      if (block_info_.block_id_ > 0)
+        len += block_info_.length();
+      if (file_info_.id_ > 0)
+        len += file_info_.length();
       return len;
     }
 
-    int RollbackMessage::build(char* data, int32_t len)
+    int RollbackMessage::serialize(common::Stream& output)
     {
-      int32_t block_len = 0;
-      if (block_info_ != NULL)
+      int32_t block_len = block_info_.block_id_ > 0 ? block_info_.length() : 0;
+      int32_t file_info_len = file_info_.id_ > 0 ? file_info_.length() : 0;
+      int32_t iret = output.set_int32(act_type_);
+      if (common::TFS_SUCCESS == iret)
       {
-        block_len = BLOCKINFO_SIZE;
+        iret = output.set_int32(block_len);
       }
-      int32_t file_info_len = 0;
-      if (file_info_ != NULL)
+      if (common::TFS_SUCCESS == iret)
       {
-        file_info_len = FILEINFO_SIZE;
+        iret = output.set_int32(file_info_len);
       }
-      if (set_int32(&data, &len, act_type_) == TFS_ERROR)
+      int64_t pos = 0;
+      if (common::TFS_SUCCESS == iret)
       {
-        return TFS_ERROR;
-      }
-      if (set_int32(&data, &len, block_len) == TFS_ERROR)
-      {
-        return TFS_ERROR;
-      }
-      if (set_int32(&data, &len, file_info_len) == TFS_ERROR)
-      {
-        return TFS_ERROR;
-      }
-      if (block_len > 0)
-      {
-        if (set_object(&data, &len, block_info_, block_len) == TFS_ERROR)
+        if (block_len > 0)
         {
-          return TFS_ERROR;
+          iret = block_info_.serialize(output.get_free(), output.get_free_length(), pos);
+          if (common::TFS_SUCCESS == iret)
+          {
+            output.pour(block_info_.length());
+          }
         }
       }
-      if (file_info_len > 0)
+      if (common::TFS_SUCCESS == iret)
       {
-        if (set_object(&data, &len, file_info_, file_info_len) == TFS_ERROR)
+        if (file_info_len > 0)
         {
-          return TFS_ERROR;
+          pos = 0;
+          iret = file_info_.serialize(output.get_free(), output.get_free_length(), pos);
+          if (common::TFS_SUCCESS == iret)
+          {
+            output.pour(file_info_.length());
+          }
         }
       }
-      return TFS_SUCCESS;
+      return iret;
     }
-
-    char* RollbackMessage::get_name()
+    common::BasePacket* RollbackMessage::create(const int32_t type)
     {
-      return "rollbackmessage";
-    }
-
-    Message* RollbackMessage::create(const int32_t type)
-    {
-      RollbackMessage* req_r_msg = new RollbackMessage();
-      req_r_msg->set_message_type(type);
-      return req_r_msg;
+      return new RollbackMessage();
     }
   }
 }

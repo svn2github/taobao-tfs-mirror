@@ -15,146 +15,114 @@
  */
 #include "file_info_message.h"
 
-using namespace tfs::common;
-
 namespace tfs
 {
   namespace message
   {
-    // FileInfoMessage
     FileInfoMessage::FileInfoMessage() :
       block_id_(0), file_id_(0), mode_(0)
     {
-      _packetHeader._pcode = FILE_INFO_MESSAGE;
+      _packetHeader._pcode = common::FILE_INFO_MESSAGE;
     }
 
     FileInfoMessage::~FileInfoMessage()
     {
     }
 
-    int FileInfoMessage::parse(char* data, int32_t len)
+    int FileInfoMessage::deserialize(common::Stream& input)
     {
-      if (get_int32(&data, &len, reinterpret_cast<int32_t*> (&block_id_)) == TFS_ERROR)
+      int32_t iret = input.get_int32(reinterpret_cast<int32_t*> (&block_id_));
+      if (common::TFS_SUCCESS == iret)
       {
-        return TFS_ERROR;
+        iret = input.get_int64(reinterpret_cast<int64_t*> (&file_id_));
       }
-      if (get_int64(&data, &len, reinterpret_cast<int64_t*> (&file_id_)) == TFS_ERROR)
+      if (common::TFS_SUCCESS == iret)
       {
-        return TFS_ERROR;
+        iret = input.get_int32(reinterpret_cast<int32_t*> (&mode_));
       }
-      if (get_int32(&data, &len, reinterpret_cast<int32_t*> (&mode_)) == TFS_ERROR)
-      {
-        return TFS_ERROR;
-      }
-
-      return TFS_SUCCESS;
+      return iret;
     }
 
-    int32_t FileInfoMessage::message_length()
+    int64_t FileInfoMessage::length() const
     {
-      int32_t len = INT_SIZE + INT64_SIZE + INT_SIZE;
-      return len;
+      return common::INT_SIZE * 2 + common::INT64_SIZE;
     }
 
-    int FileInfoMessage::build(char* data, int32_t len)
+    int FileInfoMessage::serialize(common::Stream& output)
     {
-      if (set_int32(&data, &len, block_id_) == TFS_ERROR)
+      int32_t iret = output.set_int32(block_id_);
+      if (common::TFS_SUCCESS == iret)
       {
-        return TFS_ERROR;
+        iret = output.set_int64(file_id_);
       }
-      if (set_int64(&data, &len, file_id_) == TFS_ERROR)
+      if (common::TFS_SUCCESS == iret)
       {
-        return TFS_ERROR;
+        iret = output.set_int32(mode_);
       }
-      if (set_int32(&data, &len, mode_) == TFS_ERROR)
-      {
-        return TFS_ERROR;
-      }
-
-      return TFS_SUCCESS;
+      return iret;
     }
 
-    char* FileInfoMessage::get_name()
+    common::BasePacket* FileInfoMessage::create(const int32_t type)
     {
-      return "fileinfomessage";
+      return new FileInfoMessage();
     }
 
-    Message* FileInfoMessage::create(const int32_t type)
+    RespFileInfoMessage::RespFileInfoMessage()
     {
-      FileInfoMessage* req_fi_msg = new FileInfoMessage();
-      req_fi_msg->set_message_type(type);
-      return req_fi_msg;
-    }
-
-    // RespFileInfoMessage
-    RespFileInfoMessage::RespFileInfoMessage() :
-      file_info_(NULL)
-    {
-      _packetHeader._pcode = RESP_FILE_INFO_MESSAGE;
+      _packetHeader._pcode = common::RESP_FILE_INFO_MESSAGE;
+      memset(&file_info_, 0, file_info_.length());
     }
 
     RespFileInfoMessage::~RespFileInfoMessage()
     {
     }
 
-    int RespFileInfoMessage::parse(char* data, int32_t len)
+    int RespFileInfoMessage::deserialize(common::Stream& input)
     {
       int32_t size;
-      if (get_int32(&data, &len, &size) == TFS_ERROR)
-      {
-        return TFS_ERROR;
-      }
+      int32_t iret = input.get_int32(&size);
       if (size > 0)
       {
-        if (get_object(&data, &len,  reinterpret_cast<void**>(&file_info_), FILEINFO_SIZE) == TFS_ERROR)
+        if (common::TFS_SUCCESS == iret)
         {
-          return TFS_ERROR;
+          int64_t pos = 0;
+          iret = file_info_.deserialize(input.get_data(), input.get_data_length(), pos);
+          if (common::TFS_SUCCESS == iret)
+          {
+            input.drain(file_info_.length());
+          }
         }
       }
-      return TFS_SUCCESS;
+      return iret;
     }
 
-    int32_t RespFileInfoMessage::message_length()
+    int64_t RespFileInfoMessage::length() const
     {
-      int32_t len = INT_SIZE;
-      if (file_info_ != NULL)
-      {
-        len += FILEINFO_SIZE;
-      }
-      return len;
+      return file_info_ .id_ > 0 ? common::INT_SIZE + file_info_.length() : common::INT_SIZE;
     }
 
-    int RespFileInfoMessage::build(char* data, int32_t len)
+    int RespFileInfoMessage::serialize(common::Stream& output)
     {
-      int32_t size = 0;
-      if (file_info_ != NULL)
-      {
-        size = FILEINFO_SIZE;
-      }
-      if (set_int32(&data, &len, size) == TFS_ERROR)
-      {
-        return TFS_ERROR;
-      }
+      int32_t size = file_info_.id_ > 0 ? file_info_.length() : 0;
+      int32_t iret = output.set_int32(size);
       if (size > 0)
       {
-        if (set_object(&data, &len, file_info_, size) == TFS_ERROR)
+        if (common::TFS_SUCCESS == iret)
         {
-          return TFS_ERROR;
+          int64_t pos = 0;
+          iret = file_info_.serialize(output.get_free(), output.get_free_length(), pos);
+          if (common::TFS_SUCCESS == iret)
+          {
+            output.pour(file_info_.length());
+          }
         }
       }
-      return TFS_SUCCESS;
+      return iret;
     }
 
-    char* RespFileInfoMessage::get_name()
+    common::BasePacket* RespFileInfoMessage::create(const int32_t type)
     {
-      return "respfileinfomessage";
-    }
-
-    Message* RespFileInfoMessage::create(const int32_t type)
-    {
-      RespFileInfoMessage* resp_fi_msg = new RespFileInfoMessage();
-      resp_fi_msg->set_message_type(type);
-      return resp_fi_msg;
+      return new RespFileInfoMessage();
     }
   }
 }

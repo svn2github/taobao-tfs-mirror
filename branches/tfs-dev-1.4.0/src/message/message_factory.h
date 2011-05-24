@@ -16,15 +16,9 @@
 #ifndef TFS_MESSAGE_MESSAGEFACTORY_H_
 #define TFS_MESSAGE_MESSAGEFACTORY_H_
 
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-#include <string>
-#include <errno.h>
-
-#include "message.h"
+#include "common/base_packet.h"
+#include "common/base_packet_factory.h"
 #include "dataserver_message.h"
-#include "status_message.h"
 #include "block_info_message.h"
 #include "close_file_message.h"
 #include "read_data_message.h"
@@ -40,7 +34,6 @@
 #include "rollback_message.h"
 #include "heart_message.h"
 #include "reload_message.h"
-#include "server_meta_info_message.h"
 #include "oplog_sync_message.h"
 #include "crc_error_message.h"
 #include "admin_cmd_message.h"
@@ -50,23 +43,13 @@ namespace tfs
 {
   namespace message
   {
-    class MessageFactory: public tbnet::IPacketFactory
+    class MessageFactory: public common::BasePacketFactory
     {
       public:
-        MessageFactory();
-        virtual ~MessageFactory();
-        static int send_error_message(Message* packet, int32_t level, char* file, int32_t line, const char* function,
-            uint64_t server_id, char* fmt, ...);
-        static int send_error_message(Message* packet, int32_t level, char* file, int32_t line, const char* function,
-            int32_t err_code, uint64_t server_id, char* fmt, ...);
-
-      public:
-        tbnet::Packet* createPacket(int32_t pcode);
-        Message* clone_message(Message* message, int32_t version = 2, bool deserialize = false);
-
-      protected:
-        Message* create_message(int32_t type);
-        CREATE_MESSAGE_MAP create_message_map_;
+        MessageFactory(){}
+        virtual ~MessageFactory(){}
+        virtual int initialize();
+        virtual void destroy();
     };
   }
 }

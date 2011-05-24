@@ -15,154 +15,148 @@
  */
 #include "close_file_message.h"
 
-using namespace tfs::common;
-
 namespace tfs
 {
   namespace message
   {
     CloseFileMessage::CloseFileMessage() :
-      block_(NULL), file_info_(NULL), option_flag_(0), version_(0), lease_id_(0), has_lease_(false)
+      option_flag_(0), version_(0), lease_id_(0), has_lease_(false)
     {
-      _packetHeader._pcode = CLOSE_FILE_MESSAGE;
-      memset(&close_file_info_, 0, sizeof(CloseFileInfo));
-      close_file_info_.mode_ = CLOSE_FILE_MASTER;
+      _packetHeader._pcode = common::CLOSE_FILE_MESSAGE;
+      memset(&close_file_info_, 0, sizeof(close_file_info_));
+      memset(&block_, 0, sizeof(block_));
+      memset(&file_info_, 0, sizeof(file_info_));
+      close_file_info_.mode_ = common::CLOSE_FILE_MASTER;
     }
 
     CloseFileMessage::~CloseFileMessage()
     {
     }
 
-    int CloseFileMessage::parse(char* data, int32_t len)
+    int CloseFileMessage::deserialize(common::Stream& input)
     {
-      if (get_object_copy(&data, &len, reinterpret_cast<void*> (&close_file_info_), sizeof(CloseFileInfo)) == TFS_ERROR)
+      int64_t pos = 0;
+      int32_t iret = close_file_info_.deserialize(input.get_data(), input.get_data_length(), pos);
+      if (common::TFS_SUCCESS == iret)
       {
-        return TFS_ERROR;
-      }
-      if (get_vint64(&data, &len, ds_) == TFS_ERROR)
-      {
-        return TFS_ERROR;
+        input.drain(close_file_info_.length());
+        iret = input.get_vint64(ds_);
       }
       int32_t size = 0;
-      if (get_int32(&data, &len, &size) == TFS_ERROR)
+      if (common::TFS_SUCCESS == iret)
       {
-        return TFS_ERROR;
+        iret = input.get_int32(&size);
       }
       int32_t file_size = 0;
-      if (get_int32(&data, &len, &file_size) == TFS_ERROR)
+      if (common::TFS_SUCCESS == iret)
       {
-        return TFS_ERROR;
+        iret = input.get_int32(&file_size);
       }
-      if (size > 0)
+      if (size > 0 && common::TFS_SUCCESS == iret)
       {
-        if (get_object(&data, &len, reinterpret_cast<void**> (&block_), size) == TFS_ERROR)
+        pos = 0;
+        iret = block_.deserialize(input.get_data(), input.get_data_length(), pos);
+        if (common::TFS_SUCCESS == iret)
         {
-          return TFS_ERROR;
+          input.drain(block_.length());
         }
       }
-      if (file_size > 0)
+      if (file_size > 0 && common::TFS_SUCCESS == iret)
       {
-        if (get_object(&data, &len, reinterpret_cast<void**> (&file_info_), file_size) == TFS_ERROR)
+        pos = 0;
+        iret = file_info_.deserialize(input.get_data(), input.get_data_length(), pos);
+        if (common::TFS_SUCCESS == iret)
         {
-          return TFS_ERROR;
+          input.drain(file_info_.length());
         }
       }
-
-      get_int32(&data, &len, &option_flag_);
-      has_lease_ = parse_special_ds(ds_, version_, lease_id_);
-
-      return TFS_SUCCESS;
+      if (common::TFS_SUCCESS == iret)
+      {
+        input.get_int32(&option_flag_);
+      }
+      if (common::TFS_SUCCESS == iret)
+      {
+        has_lease_ = BasePacket::parse_special_ds(ds_, version_, lease_id_);
+      }
+      return common::TFS_SUCCESS;
     }
 
-    int32_t CloseFileMessage::message_length()
+    int64_t CloseFileMessage::length() const
     {
-      int32_t len = sizeof(CloseFileInfo) + get_vint64_len(ds_) + INT_SIZE * 2;
-      if (block_ != NULL)
+      int64_t len = close_file_info_.length() + common::Serialization::get_vint64_length(ds_) + common::INT_SIZE * 2;
+      if (block_.block_id_ > 0)
       {
-        len += BLOCKINFO_SIZE;
+        len += block_.length();
       }
-      if (file_info_ != NULL)
+      if (file_info_.id_ > 0)
       {
-        len += FILEINFO_SIZE;
+        len += file_info_.length();
       }
-      len += INT_SIZE;
+      len += common::INT_SIZE;
       if (has_lease_)
       {
-        len += INT64_SIZE * 3;
+        len += common::INT64_SIZE * 3;
       }
       return len;
     }
 
-    int CloseFileMessage::build(char* data, int32_t len)
+    int CloseFileMessage::serialize(common::Stream& output)
     {
-      int32_t size = 0;
-      int32_t file_size = 0;
-      if (block_ != NULL)
-      {
-        size = BLOCKINFO_SIZE;
-      }
-      if (file_info_ != NULL)
-      {
-        file_size = FILEINFO_SIZE;
-      }
-
+      int32_t size = block_.block_id_ > 0 ? block_.length() : 0;
+      int32_t file_size = file_info_.id_ > 0 ? file_info_.length() : 0;
       if (has_lease_)
       {
         ds_.push_back(ULONG_LONG_MAX);
         ds_.push_back(static_cast<uint64_t> (version_));
         ds_.push_back(static_cast<uint64_t> (lease_id_));
       }
-
-      if (set_object(&data, &len, &close_file_info_, sizeof(CloseFileInfo)) == TFS_ERROR)
+      int64_t pos = 0;
+      int32_t iret = close_file_info_.serialize(output.get_free(), output.get_free_length(), pos);
+      if (common::TFS_SUCCESS == iret)
       {
-        return TFS_ERROR;
+        output.pour(close_file_info_.length());
+        iret = output.set_vint64(ds_);
       }
-      if (set_vint64(&data, &len, ds_) == TFS_ERROR)
+      if (common::TFS_SUCCESS == iret)
       {
-        return TFS_ERROR;
+        iret = output.set_int32(size);
       }
-      if (set_int32(&data, &len, size) == TFS_ERROR)
+      if (common::TFS_SUCCESS == iret)
       {
-        return TFS_ERROR;
+        iret = output.set_int32(file_size);
       }
-      if (set_int32(&data, &len, file_size) == TFS_ERROR)
+      if (size > 0 && common::TFS_SUCCESS == iret)
       {
-        return TFS_ERROR;
-      }
-      if (size > 0)
-      {
-        if (set_object(&data, &len, block_, size) == TFS_ERROR)
+        pos = 0;
+        iret = block_.serialize(output.get_free(), output.get_free_length(), pos);
+        if (common::TFS_SUCCESS == iret)
         {
-          return TFS_ERROR;
+          output.pour(block_.length());
         }
       }
-      if (file_size > 0)
+      if (file_size > 0 && common::TFS_SUCCESS == iret)
       {
-        if (set_object(&data, &len, file_info_, file_size) == TFS_ERROR)
+        iret = file_info_.serialize(output.get_free(), output.get_free_length(), pos);
+        if (common::TFS_SUCCESS == iret)
         {
-          return TFS_ERROR;
+          output.pour(file_info_.length());
         }
       }
-      if (set_int32(&data, &len, option_flag_) == TFS_ERROR)
+      if (common::TFS_SUCCESS == iret)
       {
-        return TFS_ERROR;
+        iret = output.set_int32(option_flag_);
       }
-
-      // reparse, avoid push verion&lease again when clone twice;
-      has_lease_ = parse_special_ds(ds_, version_, lease_id_);
-      return TFS_SUCCESS;
+      if (common::TFS_SUCCESS == iret)
+      {
+        // reparse, avoid push verion&lease again when clone twice;
+        has_lease_ = parse_special_ds(ds_, version_, lease_id_);
+      }
+      return iret;
     }
 
-    char* CloseFileMessage::get_name()
+    common::BasePacket* CloseFileMessage::create(const int32_t type)
     {
-      return "closefilemessage";
-    }
-
-    Message* CloseFileMessage::create(const int32_t type)
-    {
-      CloseFileMessage* req_cf_msg = new CloseFileMessage();
-      req_cf_msg->set_message_type(type);
-      return req_cf_msg;
+      return new CloseFileMessage();
     }
   }
 }

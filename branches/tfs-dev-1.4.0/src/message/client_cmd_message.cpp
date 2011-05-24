@@ -14,17 +14,70 @@
  *
  */
 #include "client_cmd_message.h"
-
-using namespace tfs::common;
-
 namespace tfs
 {
   namespace message
   {
-    // ClientCmdMessage 
+    int ClientCmdInformation::serialize(char* data, const int64_t data_len, int64_t& pos)
+    {
+      int32_t iret = NULL != data && data_len - pos >= length() ? common::TFS_SUCCESS : common::TFS_ERROR;
+      if (common::TFS_SUCCESS == iret)
+      {
+        iret = common::Serialization::set_int32(data, data_len, pos, cmd_);
+      }
+      if (common::TFS_SUCCESS == iret)
+      {
+        iret = common::Serialization::set_int64(data, data_len, pos, value1_);
+      }
+      if (common::TFS_SUCCESS == iret)
+      {
+        iret = common::Serialization::set_int32(data, data_len, pos, value3_);
+      }
+      if (common::TFS_SUCCESS == iret)
+      {
+        iret = common::Serialization::set_int32(data, data_len, pos, value4_);
+      }
+      if (common::TFS_SUCCESS == iret)
+      {
+        iret = common::Serialization::set_int64(data, data_len, pos, value2_);
+      }
+      return iret;
+    }
+
+    int ClientCmdInformation::deserialize(const char* data, const int64_t data_len, int64_t& pos)
+    {
+      int32_t iret = NULL != data && data_len - pos >= length() ? common::TFS_SUCCESS : common::TFS_ERROR;
+      if (common::TFS_SUCCESS == iret)
+      {
+        iret = common::Serialization::get_int32(data, data_len, pos, reinterpret_cast<int32_t*>(&cmd_));
+      }
+      if (common::TFS_SUCCESS == iret)
+      {
+        iret = common::Serialization::get_int64(data, data_len, pos, reinterpret_cast<int64_t*>(&value1_));
+      }
+      if (common::TFS_SUCCESS == iret)
+      {
+        iret = common::Serialization::get_int32(data, data_len, pos, reinterpret_cast<int32_t*>(&value3_));
+      }
+      if (common::TFS_SUCCESS == iret)
+      {
+        iret = common::Serialization::get_int32(data, data_len, pos, reinterpret_cast<int32_t*>(&value4_));
+      }
+      if (common::TFS_SUCCESS == iret)
+      {
+        iret = common::Serialization::get_int64(data, data_len, pos, reinterpret_cast<int64_t*>(&value2_));
+      }
+      return iret;
+    }
+
+    int64_t ClientCmdInformation::length() const
+    {
+      return common::INT_SIZE * 3 + common::INT64_SIZE * 2;
+    }
+
     ClientCmdMessage::ClientCmdMessage()
     {
-      _packetHeader._pcode = CLIENT_CMD_MESSAGE;
+      _packetHeader._pcode = common::CLIENT_CMD_MESSAGE;
       memset(&info_, 0, sizeof(ClientCmdInformation));
     }
 
@@ -33,73 +86,36 @@ namespace tfs
 
     }
 
-    int ClientCmdMessage::parse(char *data, int32_t len)
+    int ClientCmdMessage::deserialize(common::Stream& input)
     {
-      int32_t iret = NULL != data ? TFS_SUCCESS : TFS_ERROR;
-      if (TFS_SUCCESS == iret)
+      int64_t pos = 0;
+      int32_t iret = info_.deserialize(input.get_data(), input.get_data_length(), pos);
+      if (common::TFS_SUCCESS == iret)
       {
-        iret = get_int32(&data, &len, &info_.cmd_);
-      }
-      if (TFS_SUCCESS == iret)
-      {
-        iret = get_uint64(&data, &len, &info_.value1_);
-      }
-      if (TFS_SUCCESS == iret)
-      {
-        iret = get_uint32(&data, &len, &info_.value3_);
-      }
-      if (TFS_SUCCESS == iret)
-      {
-        iret = get_uint32(&data, &len, &info_.value4_);
-      }
-      if (TFS_SUCCESS == iret)
-      {
-        iret = get_uint64(&data, &len, &info_.value2_);
+        input.pour(info_.length());
       }
       return iret;
     }
 
-    int32_t ClientCmdMessage::message_length()
+    int64_t ClientCmdMessage::length() const
     {
-      return INT_SIZE * 3 + INT64_SIZE * 2;
+      return info_.length();
     }
 
-    int ClientCmdMessage::build(char *data, int32_t len)
+    int ClientCmdMessage::serialize(common::Stream& output)
     {
-      int32_t iret = NULL != data ? TFS_SUCCESS : TFS_ERROR;
-      if (TFS_SUCCESS == iret)
+      int64_t pos = 0;
+      int32_t iret = info_.serialize(output.get_free(), output.get_free_length(), pos);
+      if (common::TFS_SUCCESS == iret)
       {
-        iret = set_int32(&data, &len, info_.cmd_);
-      }
-      if (TFS_SUCCESS == iret)
-      {
-        iret = set_int64(&data, &len, info_.value1_);
-      }
-      if (TFS_SUCCESS == iret)
-      {
-        iret = set_int32(&data, &len, info_.value3_);
-      }
-      if (TFS_SUCCESS == iret)
-      {
-        iret = set_int32(&data, &len, info_.value4_);
-      }
-      if (TFS_SUCCESS == iret)
-      {
-        iret = set_int64(&data, &len, info_.value2_);
+        output.pour(info_.length());
       }
       return iret;
     }
 
-    char *ClientCmdMessage::get_name()
+    common::BasePacket* ClientCmdMessage::create(const int32_t type)
     {
-      return "clientcmdmessage";
-    }
-
-    Message* ClientCmdMessage::create(const int32_t type)
-    {
-      ClientCmdMessage *req_cc_msg = new ClientCmdMessage();
-      req_cc_msg->set_message_type(type);
-      return req_cc_msg;
+      return new ClientCmdMessage();
     }
   }
 }

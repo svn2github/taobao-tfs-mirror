@@ -15,8 +15,6 @@
  */
 #include "replicate_block_message.h"
 
-using namespace tfs::common;
-
 namespace tfs
 {
   namespace message
@@ -24,109 +22,66 @@ namespace tfs
     ReplicateBlockMessage::ReplicateBlockMessage() :
       command_(0), expire_(0)
     {
-      _packetHeader._pcode = REPLICATE_BLOCK_MESSAGE;
-      memset(&repl_block_, 0, sizeof(ReplBlock));
+      _packetHeader._pcode = common::REPLICATE_BLOCK_MESSAGE;
+      memset(&repl_block_, 0, sizeof(common::ReplBlock));
     }
 
     ReplicateBlockMessage::~ReplicateBlockMessage()
     {
     }
 
-    int ReplicateBlockMessage::parse(char* data, int32_t len)
+    int ReplicateBlockMessage::deserialize(common::Stream& input)
     {
-      if (get_int32(&data, &len, &command_) == TFS_ERROR)
+      int32_t iret = input.get_int32(&command_);
+      if (common::TFS_SUCCESS == iret)
       {
-        return TFS_ERROR;
+        iret =  input.get_int32(&expire_);
       }
-      if (get_int32(&data, &len, &expire_) == TFS_ERROR)
+      if (common::TFS_SUCCESS == iret)
       {
-        return TFS_ERROR;
+        int64_t pos = 0;
+        iret = repl_block_.deserialize(input.get_data(), input.get_data_length(), pos); 
+        if (common::TFS_SUCCESS == iret)
+        {
+          input.drain(repl_block_.length());
+        }
       }
-      if (get_object_copy(&data, &len, reinterpret_cast<void*> (&repl_block_), sizeof(ReplBlock)) == TFS_ERROR)
-      {
-        return TFS_ERROR;
-      }
-      return TFS_SUCCESS;
+      return iret;
     }
 
-    int32_t ReplicateBlockMessage::message_length()
+    int64_t ReplicateBlockMessage::length() const
     {
-      int32_t len = INT_SIZE * 2 + sizeof(ReplBlock);
-      return len;
+      return common::INT_SIZE * 2 + repl_block_.length();
     }
 
-    int ReplicateBlockMessage::build(char* data, int32_t len)
+    int ReplicateBlockMessage::serialize(common::Stream& output)
     {
-      if (set_int32(&data, &len, command_) == TFS_ERROR)
+      int32_t iret = output.set_int32(command_);
+      if (common::TFS_SUCCESS == iret)
       {
-        return TFS_ERROR;
+        iret = output.set_int32(expire_);
       }
-      if (set_int32(&data, &len, expire_) == TFS_ERROR)
+      if (common::TFS_SUCCESS == iret)
       {
-        return TFS_ERROR;
+        int64_t pos = 0;
+        iret = repl_block_.serialize(output.get_free(), output.get_free_length(), pos);
+        if (common::TFS_SUCCESS == iret)
+        {
+          output.pour(repl_block_.length());
+        }
       }
-      if (set_object(&data, &len, &repl_block_, sizeof(ReplBlock)) == TFS_ERROR)
-      {
-        return TFS_ERROR;
-      }
-
-      return TFS_SUCCESS;
+      return iret;
     }
 
-    int ReplicateBlockMessage::serialize(char* buf, const int64_t buf_len, int64_t& pos) const
-    {
-      if ((buf == NULL)
-          || (pos + get_serialize_size() > buf_len))
-      {
-        return -1;
-      }
-      memcpy((buf+pos), &command_, INT_SIZE);
-      pos += INT_SIZE;
-      memcpy((buf+pos), &expire_, INT_SIZE);
-      pos += INT_SIZE;
-      memcpy((buf+pos), &repl_block_, sizeof(ReplBlock));
-      pos += sizeof(ReplBlock);
-      return 0;
-    }
-    
-    int ReplicateBlockMessage::deserialize(const char* buf, const int64_t data_len, int64_t& pos)
-    {
-      if ((buf == NULL)
-          || (pos + get_serialize_size() > data_len))
-      {
-        return -1;
-      }
-      memcpy(&command_, (buf+pos), INT_SIZE);
-      pos += INT_SIZE;
-      memcpy(&expire_, (buf+pos), INT_SIZE);
-      pos += INT_SIZE;
-      memcpy(&repl_block_, (buf+pos), sizeof(ReplBlock));
-      pos += sizeof(ReplBlock);
-      return 0; 
-    }
-    
-    int64_t ReplicateBlockMessage::get_serialize_size(void) const
-    {
-      return sizeof(int32_t) + sizeof(int32_t) + sizeof(ReplBlock);
-    }
-    
     void ReplicateBlockMessage::dump(void) const
     {
       TBSYS_LOG(DEBUG, "command(%d) expire(%u) id(%u) source_id(%llu) dest_id(%llu) start_time(%d) is_move(%d) server_count(%d)",
           command_, expire_, repl_block_.block_id_, repl_block_.source_id_, repl_block_.destination_id_,
           repl_block_.start_time_, repl_block_.is_move_, repl_block_.server_count_);
     }
-
-    char* ReplicateBlockMessage::get_name()
+    common::BasePacket* ReplicateBlockMessage::create(const int32_t type)
     {
-      return "replicateblockmessage";
-    }
-
-    Message* ReplicateBlockMessage::create(const int32_t type)
-    {
-      ReplicateBlockMessage* req_rb_msg = new ReplicateBlockMessage();
-      req_rb_msg->set_message_type(type);
-      return req_rb_msg;
+      return new ReplicateBlockMessage();
     }
   }
 }

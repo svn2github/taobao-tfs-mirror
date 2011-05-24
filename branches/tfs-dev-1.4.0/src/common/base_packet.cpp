@@ -23,6 +23,7 @@ namespace tfs
   namespace common 
   {
     BasePacket::BasePacket():
+      Packet(),
       connection_(NULL),
       id_(0),
       crc_(0),
@@ -233,5 +234,23 @@ namespace tfs
       this->reply(packet);
       return TFS_SUCCESS;
     }
- }
+    // parse for version & lease
+    // ds_: ds1 ds2 ds3 [flag=-1] [version] [leaseid]
+    bool BasePacket::parse_special_ds(std::vector<uint64_t>& value, int32_t& version, uint32_t& lease)
+    {
+      bool bret = false;
+      std::vector<uint64_t>::iterator iter = 
+              std::find(value.begin(), value.end(),static_cast<uint64_t> (ULONG_LONG_MAX));
+      std::vector<uint64_t>::iterator start = iter;
+      if ((iter != value.end())
+        && ((iter + 2) < value.end()))
+      {
+        version = static_cast<int32_t>(*(iter + 1));
+        lease   = static_cast<int32_t>(*(iter + 2));
+        value.erase(start, value.end());
+        bret = true;
+      }
+      return bret;
+    }
+  }
 }

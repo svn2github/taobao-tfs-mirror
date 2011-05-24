@@ -15,23 +15,20 @@
  */
 #ifndef TFS_MESSAGE_CLOSEFILEMESSAGE_H_
 #define TFS_MESSAGE_CLOSEFILEMESSAGE_H_
-
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-#include <string>
-#include <errno.h>
-#include "message.h"
-
+#include "common/base_packet.h"
 namespace tfs
 {
   namespace message
   {
-    class CloseFileMessage: public Message
+    class CloseFileMessage: public common::BasePacket 
     {
       public:
         CloseFileMessage();
         virtual ~CloseFileMessage();
+        virtual int serialize(common::Stream& output);
+        virtual int deserialize(common::Stream& input);
+        virtual int64_t length() const;
+        static common::BasePacket* create(const int32_t type);
 
         inline void set_block_id(const uint32_t block_id)
         {
@@ -59,11 +56,13 @@ namespace tfs
         }
         inline void set_block(common::BlockInfo* const block_info)
         {
-          block_ = block_info;
+          if (NULL != block_info)
+            block_ = *block_info;
         }
         inline void set_file_info(common::FileInfo* const file_info)
         {
-          file_info_ = file_info;
+          if (NULL != file_info)
+            file_info_ = *file_info;
         }
         inline void set_option_flag(const int32_t flag)
         {
@@ -103,13 +102,13 @@ namespace tfs
         {
           return ds_;
         }
-        inline common::BlockInfo* get_block() const
+        inline const common::BlockInfo* get_block() const
         {
-          return block_;
+          return block_.block_id_ > 0 ? &block_ : NULL;
         }
-        inline common::FileInfo* get_file_info() const
+        inline const common::FileInfo* get_file_info() const
         {
-          return file_info_;
+          return file_info_.id_ > 0 ? &file_info_ : NULL;
         }
         inline int32_t get_option_flag() const
         {
@@ -128,16 +127,10 @@ namespace tfs
           return close_file_info_;
         }
 
-        virtual int parse(char* data, int32_t len);
-        virtual int build(char* data, int32_t len);
-        virtual int message_length();
-        virtual char* get_name();
-
-        static Message* create(const int32_t type);
       protected:
         common::CloseFileInfo close_file_info_;
-        common::BlockInfo* block_;
-        common::FileInfo* file_info_;
+        common::BlockInfo block_;
+        common::FileInfo file_info_;
         common::VUINT64 ds_;
         int32_t option_flag_;
         int32_t version_;
