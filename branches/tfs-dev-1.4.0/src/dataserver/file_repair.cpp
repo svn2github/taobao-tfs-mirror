@@ -30,6 +30,14 @@ namespace tfs
   {
     using namespace common;
     using namespace client;
+    FileRepair::~FileRepair()
+    {
+      if (NULL != tfs_client_)
+      {
+        delete tfs_client_;
+        tfs_client_ = NULL;
+      }
+    }
 
     bool FileRepair::init(const uint64_t dataserver_id)
     {
@@ -48,6 +56,11 @@ namespace tfs
         TBSYS_LOG(INFO, "file repair init ns address: %s:%d tmpstr: %s\n", SYSPARAM_DATASERVER.local_ns_ip_,
             SYSPARAM_DATASERVER.local_ns_port_, tmpstr);
 
+        if (NULL != tfs_client_)
+        {
+          delete tfs_client_;
+          tfs_client_ = NULL;
+        }
         tfs_client_ = new TfsClient();
 				int iret = tfs_client_->initialize(tmpstr);
 				if (iret != TFS_SUCCESS)
@@ -63,7 +76,7 @@ namespace tfs
 
     int FileRepair::fetch_file(const CrcCheckFile& crc_check_record, char* tmp_file)
     {
-      if (NULL == tmp_file)
+      if (NULL == tmp_file || !init_status_)
       {
         return TFS_ERROR;
       }
@@ -148,7 +161,7 @@ namespace tfs
         if (rlen < MAX_READ_SIZE)
           break;
       }
-      close(fd);
+      ::close(fd);
       tfs_client_->tfs_close();
       if (crc != finfo.crc_ || crc != crc_check_record.crc_ || total_size != finfo.size_)
       {
@@ -166,6 +179,10 @@ namespace tfs
 
     int FileRepair::repair_file(const CrcCheckFile& crc_check_record, const char* tmp_file)
     {
+      if (NULL == tmp_file || !init_status_)
+      {
+        return TFS_ERROR;
+      }
       FSName fsname;
       fsname.set_block_id(crc_check_record.block_id_);
       fsname.set_file_id(crc_check_record.file_id_);

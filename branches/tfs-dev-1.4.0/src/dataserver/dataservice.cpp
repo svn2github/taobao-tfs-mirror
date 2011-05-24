@@ -57,6 +57,9 @@ namespace tfs
       thread_pids_ = NULL;
 
       max_cpu_usage_ = SYSPARAM_DATASERVER.max_cpu_usage_;
+
+      timer_ = 0;
+      tfs_ds_stat_ = "tfs-ds-stat";
     }
 
     DataService::~DataService()
@@ -95,6 +98,29 @@ namespace tfs
       file_number = file_number << 32;
       data_management_.set_file_number(file_number);
       ds_requester_.init(data_server_info_.id_, ns_ip_port_, &data_management_);
+
+      //init global stat
+      if (timer_ == 0)
+      {
+        timer_ = new tbutil::Timer();
+      }
+      ret = stat_mgr_.initialize(timer_);
+      if (ret != TFS_SUCCESS)
+      {
+        TBSYS_LOG(ERROR, "%s", "initialize stat manager fail");
+        return ret;
+      }
+      int64_t current = tbsys::CTimeUtil::getTime();
+      StatEntry<string, string>::StatEntryPtr stat_ptr = new StatEntry<string, string>(tfs_ds_stat_, current, false);
+      stat_ptr->add_sub_key("read-success");
+      stat_ptr->add_sub_key("read-failed");
+      stat_ptr->add_sub_key("write-success");
+      stat_ptr->add_sub_key("write-failed");
+      stat_ptr->add_sub_key("unlink-success");
+      stat_ptr->add_sub_key("unlink-failed");
+
+      stat_mgr_.add_entry(stat_ptr, SYSPARAM_DATASERVER.dump_stat_info_interval_);
+
       return TFS_SUCCESS;
     }
 
@@ -299,6 +325,13 @@ namespace tfs
       stop_mutex_.unlock();
       //sleep(1);
 
+      //global stat destroy
+      stat_mgr_.destroy();
+      if (timer_ != 0)
+      {
+        timer_->destroy();
+      }
+
       if (NULL != sync_mirror_)
       {
         sync_mirror_->stop();
@@ -333,6 +366,11 @@ namespace tfs
     {
       task_queue_thread_.wait();
       ds_task_queue_thread_.wait();
+      stat_mgr_.wait_for_shut_down();
+      if (timer_ != 0)
+      {
+        timer_  = 0;
+      }
       return TFS_SUCCESS;
     }
 
@@ -596,7 +634,8 @@ namespace tfs
         return false;
       uint64_t peer_id = conn->getPeerId();
       int32_t type = message->get_message_type();
-      if (type == READ_DATA_MESSAGE || type == READ_DATA_MESSAGE_V2)
+      if (type == READ_DATA_MESSAGE || type == READ_DATA_MESSAGE_V2 ||
+          type == READ_DATA_MESSAGE_V3)
         return acl_.deny(peer_id, AccessControl::READ);
       if (type == WRITE_DATA_MESSAGE || type == CLOSE_FILE_MESSAGE)
         return acl_.deny(peer_id, AccessControl::WRITE);
@@ -677,7 +716,10 @@ namespace tfs
         ret = batch_write_info(dynamic_cast<WriteInfoBatchMessage*>(message));
         break;
       case READ_DATA_MESSAGE_V2:
-        ret = read_data_v2(dynamic_cast<ReadDataMessageV2*>(message));
+        ret = read_data_extra(dynamic_cast<ReadDataMessageV2*>(message), READ_VERSION_2);
+        break;
+      case READ_DATA_MESSAGE_V3:
+        ret = read_data_extra(dynamic_cast<ReadDataMessageV3*>(message), READ_VERSION_3);
         break;
       case READ_DATA_MESSAGE:
         ret = read_data(dynamic_cast<ReadDataMessage*>(message));
@@ -789,6 +831,12 @@ namespace tfs
       TBSYS_LOG(INFO,
           "create file %s. filenumber: %" PRI64_PREFIX "u, blockid: %u, fileid: %" PRI64_PREFIX "u, cost time: %" PRI64_PREFIX "d",
           TFS_SUCCESS == ret ? "success" : "fail", file_number, block_id, file_id, TIMER_DURATION());
+
+      if (TFS_SUCCESS != ret)
+      {
+        stat_mgr_.update_entry(tfs_ds_stat_, "write-failed", 1);
+      }
+
       return TFS_SUCCESS;
     }
 
@@ -870,6 +918,12 @@ namespace tfs
           INFO,
           "write data %s. filenumber: %" PRI64_PREFIX "u, blockid: %u, fileid: %" PRI64_PREFIX "u, version: %u, leaseid: %u, role: %s, cost time: %" PRI64_PREFIX "d",
           ret >= 0 ? "success": "fail", write_info.file_number_, write_info.block_id_, write_info.file_id_, version, lease_id, Master_Server_Role == write_info.is_server_ ? "master" : "slave", TIMER_DURATION());
+
+      if (TFS_SUCCESS != ret)
+      {
+        stat_mgr_.update_entry(tfs_ds_stat_, "write-failed", 1);
+      }
+
       return TFS_SUCCESS;
     }
 
@@ -1001,13 +1055,31 @@ namespace tfs
           CLOSE_FILE_SLAVER != close_file_info.mode_ ? "master" : "slave", TIMER_DURATION());
       WRITE_STAT_LOG(INFO, "blockid: %u, fileid: %" PRI64_PREFIX "u, peerip: %s",
           close_file_info.block_id_, close_file_info.file_id_, tbsys::CNetUtil::addrToString(peer_id).c_str());
+
+      string sub_key = "";
+      TFS_SUCCESS == ret ? sub_key = "write-success" : sub_key = "write-failed";
+      stat_mgr_.update_entry(tfs_ds_stat_, sub_key, 1);
       return TFS_SUCCESS;
     }
 
-    int DataService::read_data_v2(ReadDataMessageV2* message)
+    int DataService::read_data_extra(ReadDataMessageV2* message, int32_t version)
     {
       TIMER_START();
-      RespReadDataMessageV2* resp_rd_v2_msg = new RespReadDataMessageV2();
+      RespReadDataMessageV2* resp_rd_v2_msg = NULL;
+      if (READ_VERSION_2 == version)
+      {
+        resp_rd_v2_msg = new RespReadDataMessageV2();
+      }
+      else if (READ_VERSION_3 == version)
+      {
+        resp_rd_v2_msg = new RespReadDataMessageV3();
+      }
+      else
+      {
+        TBSYS_LOG(ERROR, "unknown read version type %d", version);
+        return TFS_ERROR;
+      }
+
       uint32_t block_id = message->get_block_id();
       uint64_t file_id = message->get_file_id();
       int32_t read_len = message->get_length();
@@ -1015,7 +1087,7 @@ namespace tfs
       uint64_t peer_id = message->get_connection()->getPeerId();
 
       TBSYS_LOG(DEBUG, "blockid: %u, fileid: %" PRI64_PREFIX "u, read len: %d, read offset: %d, resp: %p", block_id,
-          file_id, read_len, read_offset, resp_rd_v2_msg);
+                file_id, read_len, read_offset, resp_rd_v2_msg);
       //add FileInfo size if the first fragment
       int32_t real_read_len = 0;
       if (0 == read_offset)
@@ -1053,7 +1125,7 @@ namespace tfs
             tbsys::gDelete(resp_rd_v2_msg);
             tbsys::gDeleteA(tmp_data_buffer);
             TBSYS_LOG(ERROR, "alloc data failed, blockid: %u, fileid: %" PRI64_PREFIX "u, real len: %d", block_id,
-                file_id, real_read_len);
+                      file_id, real_read_len);
             ret = TFS_ERROR;
           }
 
@@ -1083,9 +1155,14 @@ namespace tfs
       }
 
       TIMER_END();
-      TBSYS_LOG(INFO, "read v2 %s. blockid: %u, fileid: %" PRI64_PREFIX "u, read len: %d, read offset: %d, peer ip: %s, cost time: %" PRI64_PREFIX "d",
-          TFS_SUCCESS == ret ? "success" : "fail", block_id, file_id, real_read_len, read_offset,
-          tbsys::CNetUtil::addrToString(peer_id).c_str(), TIMER_DURATION());
+      TBSYS_LOG(INFO, "read v%d %s. blockid: %u, fileid: %" PRI64_PREFIX "u, read len: %d, read offset: %d, peer ip: %s, cost time: %" PRI64_PREFIX "d",
+                version, TFS_SUCCESS == ret ? "success" : "fail",
+                block_id, file_id, real_read_len, read_offset,
+                tbsys::CNetUtil::addrToString(peer_id).c_str(), TIMER_DURATION());
+
+      string sub_key = "";
+      TFS_SUCCESS == ret ? sub_key = "read-success": sub_key = "read-failed";
+      stat_mgr_.update_entry(tfs_ds_stat_, sub_key, 1);
 
       read_stat_mutex_.lock();
       read_stat_buffer_.push_back(make_pair(block_id, file_id));
@@ -1171,6 +1248,10 @@ namespace tfs
           TFS_SUCCESS == ret ? "success" : "fail", block_id, file_id, real_read_len, read_offset,
           tbsys::CNetUtil::addrToString(peer_id).c_str(), TIMER_DURATION());
 
+      string sub_key = "";
+      TFS_SUCCESS == ret ? sub_key = "read-success": sub_key = "read-failed";
+      stat_mgr_.update_entry(tfs_ds_stat_, sub_key, 1);
+
       read_stat_mutex_.lock();
       read_stat_buffer_.push_back(make_pair(block_id, file_id));
       read_stat_mutex_.unlock();
@@ -1237,7 +1318,7 @@ namespace tfs
       if (TFS_SUCCESS != ret)
       {
         try_add_repair_task(block_id, ret);
-        MessageFactory::send_error_message(message, TBSYS_LOG_LEVEL(ERROR), ret, data_server_info_.id_,
+        return MessageFactory::send_error_message(message, TBSYS_LOG_LEVEL(ERROR), ret, data_server_info_.id_,
             "readfileinfo fail, blockid: %u, fileid: %" PRI64_PREFIX "u, ret: %d", block_id, file_id, ret);
       }
 
@@ -1358,6 +1439,10 @@ namespace tfs
       TBSYS_LOG(INFO, "unlink file %s. blockid: %d, fileid: %" PRI64_PREFIX "u, action: %d, isserver: %s, peer ip: %s, cost time: %" PRI64_PREFIX "d",
           TFS_SUCCESS == ret ? "success" : "fail", block_id, file_id, action, is_master ? "master" : "slave",
           tbsys::CNetUtil::addrToString(peer_id).c_str(), TIMER_DURATION());
+
+      string sub_key = "";
+      TFS_SUCCESS == ret ? sub_key = "unlink-success": sub_key = "unlink-failed";
+      stat_mgr_.update_entry(tfs_ds_stat_, sub_key, 1);
 
       return TFS_SUCCESS;
     }
@@ -1932,7 +2017,7 @@ namespace tfs
       return;
     }
 
-    int DataService::init_log_file(tbsys::CLogger& LOGGER, const std::string& log_file)
+    int DataService::init_log_file(tbsys::CLogger& LOGGER, const string& log_file)
     {
       LOGGER.setLogLevel(CONFIG.get_string_value(CONFIG_PUBLIC, CONF_LOG_LEVEL));
 

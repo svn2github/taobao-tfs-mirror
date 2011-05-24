@@ -162,7 +162,8 @@ namespace tfs
       compact_block_monitor_.unlock();
 
       TBSYS_LOG(INFO, "add compact block. cpt_exist: %d, blockid: %u, owner: %d, preserve_time: %d\n",
-          cpt_exist, t_cpt_blk.block_id_, t_cpt_blk.owner_, t_cpt_blk.preserve_time_);
+        cpt_exist, t_cpt_blk.block_id_, t_cpt_blk.owner_, t_cpt_blk.preserve_time_);
+
       return cpt_exist;
     }
 

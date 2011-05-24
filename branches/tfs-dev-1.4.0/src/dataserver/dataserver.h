@@ -31,7 +31,7 @@ namespace tfs
     {
       public:
         DataServer();
-        DataServer(std::string server_index);
+        explicit DataServer(std::string server_index);
         virtual ~DataServer();
         int start();
         void stop();

@@ -26,10 +26,12 @@
 #include "data_management.h"
 #include "requester.h"
 #include "block_checker.h"
-#include "common/interval.h"
+#include "common/internal.h"
 #include "common/config.h"
+#include "common/statistics.h"
 #include "message/message.h"
 #include "message/message_factory.h"
+#include <Timer.h>
 #include <Mutex.h>
 #include <string>
 
@@ -78,7 +80,7 @@ namespace tfs
         int batch_write_info(message::WriteInfoBatchMessage* message);
 
         int read_data(message::ReadDataMessage* message);
-        int read_data_v2(message::ReadDataMessageV2* message);
+        int read_data_extra(message::ReadDataMessageV2* message, int32_t version);
         int read_raw_data(message::ReadRawDataMessage* message);
         int read_file_info(message::FileInfoMessage* message);
 
@@ -165,6 +167,11 @@ namespace tfs
         tbsys::CLogger read_stat_log_;
         std::vector<std::pair<uint32_t, uint64_t> > read_stat_buffer_;
         static const unsigned READ_STAT_LOG_BUFFER_LEN = 100;
+
+        //global stat
+        tbutil::TimerPtr timer_;
+        common::StatManager<std::string, std::string, common::StatEntry > stat_mgr_;
+        std::string tfs_ds_stat_;
     };
   }
 }

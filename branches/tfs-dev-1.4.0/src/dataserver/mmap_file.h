@@ -33,12 +33,12 @@ namespace tfs
     {
       public:
         MMapFile();
-        MMapFile(const int fd);
+        explicit MMapFile(const int fd);
         MMapFile(const MMapOption& mmap_option, const int fd);
         ~MMapFile();
 
         bool sync_file();
-        bool map_file(bool write = false);
+        bool map_file(const bool write = false);
         bool remap_file();
         void* get_data() const;
         int32_t get_size() const;

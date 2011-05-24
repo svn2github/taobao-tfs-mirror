@@ -29,7 +29,7 @@ namespace tfs
     class DataHandle
     {
       public:
-        DataHandle(LogicBlock* logic_blk) :
+        explicit DataHandle(LogicBlock* logic_blk) :
           logic_block_(logic_blk)
         {
         }

@@ -33,19 +33,17 @@ namespace tfs
     {
       public:
         FileRepair() :
-          init_status_(false), dataserver_id_(0)
+          init_status_(false), dataserver_id_(0), tfs_client_(NULL)
         {
         }
-        ~FileRepair()
-        {
-        }
+        ~FileRepair();
 
         bool init(const uint64_t dataserver_id);
         int repair_file(const common::CrcCheckFile& crc_check_record, const char* tmp_file);
         int fetch_file(const common::CrcCheckFile& crc_check_record, char* tmp_file);
 
       private:
-        void get_tmp_file_name(char* buffer, const char* path, const uint32_t block_id, const uint64_t file_id);
+        static void get_tmp_file_name(char* buffer, const char* path, const uint32_t block_id, const uint64_t file_id);
         int write_file(const int fd, const char* buffer, const int32_t length);
 
       private:
