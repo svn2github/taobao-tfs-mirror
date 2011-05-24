@@ -165,16 +165,15 @@ namespace tfs
         return iret;
       }
 
-      static int get_string(const char* data, const int64_t data_len, int64_t& pos, std::string& str, int64_t& length)
+      static int get_string(const char* data, const int64_t data_len, int64_t& pos, std::string& str)
       {
         int32_t iret = NULL != data &&  data_len - pos >= INT_SIZE  &&  pos >= 0 ? TFS_SUCCESS : TFS_ERROR;
         if (TFS_SUCCESS == iret)
         {
-          int32_t tmp = 0;
-          iret = get_int32(data, data_len, pos, &tmp);
+          int32_t length = 0;
+          iret = get_int32(data, data_len, pos, &length);
           if (TFS_SUCCESS == iret)
           {
-            length = tmp;
             if (length > 0)
             {
               iret = data_len - pos >= length ? TFS_SUCCESS : TFS_ERROR;
@@ -190,7 +189,7 @@ namespace tfs
       }
 
       template <typename T>
-      int get_vint8(const char* data, const int64_t data_len, int64_t& pos, T& value)
+      static int get_vint8(const char* data, const int64_t data_len, int64_t& pos, T& value)
       {
         int32_t iret = NULL != data && data_len - pos >= INT_SIZE &&  pos >= 0 ? TFS_SUCCESS : TFS_ERROR;
         if (TFS_SUCCESS == iret)
@@ -219,7 +218,7 @@ namespace tfs
       }
 
       template <typename T>
-      int get_vint16(const char* data, const int64_t data_len, int64_t& pos, T& value)
+      static int get_vint16(const char* data, const int64_t data_len, int64_t& pos, T& value)
       {
         int32_t iret = NULL != data && data_len - pos >= INT_SIZE &&  pos >= 0 ? TFS_SUCCESS : TFS_ERROR;
         if (TFS_SUCCESS == iret)
@@ -248,7 +247,7 @@ namespace tfs
       }
 
       template <typename T>
-      int get_vint32(const char* data, const int64_t data_len, int64_t& pos, T& value)
+      static int get_vint32(const char* data, const int64_t data_len, int64_t& pos, T& value)
       {
         int32_t iret = NULL != data && data_len - pos >= INT_SIZE &&  pos >= 0 ? TFS_SUCCESS : TFS_ERROR;
         if (TFS_SUCCESS == iret)
@@ -277,7 +276,7 @@ namespace tfs
       }
 
       template <typename T>
-      int get_vint64(const char* data, const int64_t data_len, int64_t& pos, T& value)
+      static int get_vint64(const char* data, const int64_t data_len, int64_t& pos, T& value)
       {
         int32_t iret = NULL != data && data_len - pos >= INT_SIZE &&  pos >= 0 ? TFS_SUCCESS : TFS_ERROR;
         if (TFS_SUCCESS == iret)
@@ -356,6 +355,26 @@ namespace tfs
         return iret;
       }
 
+      static int set_string(char* data, const int64_t data_len, int64_t& pos, const std::string& str)
+      {
+        int32_t iret = NULL != data &&  pos < data_len &&  pos >= 0 ? TFS_SUCCESS : TFS_ERROR;
+        if (TFS_SUCCESS == iret)
+        {
+          int64_t length = str.length();
+          iret = data_len - pos >= (length + INT_SIZE) ? TFS_SUCCESS : TFS_ERROR;
+          if (TFS_SUCCESS == iret)
+          {
+            iret = set_int32(data, data_len, pos, length);
+            if (TFS_SUCCESS == iret)
+            {
+              memcpy((data+pos), str.c_str(), length);
+              pos += length;
+            }
+          }
+        }
+        return iret;
+      }
+
       static int set_string(char* data, const int64_t data_len, int64_t& pos, const char* str)
       {
         int32_t iret = NULL != data &&  pos < data_len &&  pos >= 0 ? TFS_SUCCESS : TFS_ERROR;
@@ -388,7 +407,7 @@ namespace tfs
       }
 
       template <typename T>
-      int set_vint8(char* data, const int64_t data_len, int64_t& pos, const T& value)
+      static int set_vint8(char* data, const int64_t data_len, int64_t& pos, const T& value)
       {
         int32_t iret = NULL != data && data_len - pos >= get_vint8_length(value) &&  pos >= 0 ? TFS_SUCCESS : TFS_ERROR;
         if (TFS_SUCCESS == iret)
@@ -408,7 +427,7 @@ namespace tfs
         return iret;
       }
       template <typename T>
-      int set_vint16(char* data, const int64_t data_len, int64_t& pos, const T& value)
+      static int set_vint16(char* data, const int64_t data_len, int64_t& pos, const T& value)
       {
         int32_t iret = NULL != data && data_len - pos >= get_vint16_length(value) &&  pos >= 0 ? TFS_SUCCESS : TFS_ERROR;
         if (TFS_SUCCESS == iret)
@@ -429,7 +448,7 @@ namespace tfs
       }
 
       template <typename T>
-      int set_vint32(char* data, const int64_t data_len, int64_t& pos, const T& value)
+      static int set_vint32(char* data, const int64_t data_len, int64_t& pos, const T& value)
       {
         int32_t iret = NULL != data && data_len - pos >= get_vint32_length(value) &&  pos >= 0 ? TFS_SUCCESS : TFS_ERROR;
         if (TFS_SUCCESS == iret)
@@ -449,7 +468,7 @@ namespace tfs
         return iret;
       }
       template <typename T> 
-      int set_vint64(char* data, const int64_t data_len, int64_t& pos, const T& value)
+      static int set_vint64(char* data, const int64_t data_len, int64_t& pos, const T& value)
       {
         int32_t iret = NULL != data && data_len - pos >= get_vint64_length(value) &&  pos >= 0 ? TFS_SUCCESS : TFS_ERROR;
         if (TFS_SUCCESS == iret)
@@ -470,7 +489,7 @@ namespace tfs
       }
 
       template <typename T>
-      int serialize_list(char* data, const int64_t data_len, int64_t& pos, const T& value)
+      static int serialize_list(char* data, const int64_t data_len, int64_t& pos, const T& value)
       {
         int32_t iret = set_int32(data, data_len, pos, value.size());
         if (TFS_SUCCESS == iret)
@@ -478,7 +497,7 @@ namespace tfs
           typename T::const_iterator iter = value.begin();
           for (; iter != value.end(); ++iter)
           {
-            ret = iter->serialize(data, data_len, pos);
+            iret = (*iter).serialize(data, data_len, pos);
             if (TFS_SUCCESS != iret)
             {
               break;
@@ -489,7 +508,7 @@ namespace tfs
       }
 
       template <typename T>
-      int deserialize_list(const char* data, const int64_t data_len, int64_t& pos, T& value)
+      static int deserialize_list(const char* data, const int64_t data_len, int64_t& pos, T& value)
       {
         int32_t len = 0;
         int32_t iret = Serialization::get_int32(data, data_len, pos, &len);
@@ -497,7 +516,7 @@ namespace tfs
         {
           for (int32_t i = 0; i < len; ++i)
           {
-            T tmp;
+            typename T::value_type tmp;
             iret = tmp.deserialize(data, data_len, pos);
             if (TFS_SUCCESS != iret)
               break;
@@ -509,7 +528,7 @@ namespace tfs
       }
 
       template <typename T>
-      int64_t get_list_length(const T& value)
+      static int64_t get_list_length(const T& value)
       {
         int64_t len = INT_SIZE;
         typename T::const_iterator iter = value.begin();
@@ -521,21 +540,21 @@ namespace tfs
       }
 
       template <typename T>
-      int serialize_kv(char* data, const int64_t data_len, int64_t& pos, const T& value)
+      static int serialize_kv(char* data, const int64_t data_len, int64_t& pos, const T& value)
       {
         //TODO
         return TFS_SUCCESS;
       }
 
       template <typename T>
-      int deserialize_kv(const char* data, const int64_t data_len, int64_t& pos, T& value)
+      static int deserialize_kv(const char* data, const int64_t data_len, int64_t& pos, T& value)
       {
         //TODO
         return TFS_SUCCESS;
       }
 
       template <typename T>
-      int64_t get_kv_length(const T& value)
+      static int64_t get_kv_length(const T& value)
       {
         //TODO
         return TFS_SUCCESS;
