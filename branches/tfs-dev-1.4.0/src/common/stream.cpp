@@ -18,47 +18,6 @@ namespace tfs
 {
   namespace common
   {
-    int64_t Stream::get_vuint8_length(const std::vector<uint8_t>& value)
-    {
-      return INT_SIZE + value.size() * INT8_SIZE;
-    }
-    int64_t Stream::get_vuint16_length(const std::vector<uint16_t>& value)
-    {
-      return INT_SIZE + value.size() * INT16_SIZE;
-    }
-    int64_t Stream::get_vuint32_length(const std::vector<uint32_t>& value)
-    {
-      return INT_SIZE + value.size() * INT_SIZE;
-    }
-    int64_t Stream::get_vuint64_length(const std::vector<uint64_t>& value)
-    {
-      return INT_SIZE + value.size() * INT64_SIZE;
-    }
-    int64_t Stream::get_vint8_length(const std::vector<int8_t>& value)
-    {
-      return INT_SIZE + value.size() * INT8_SIZE;
-    }
-    int64_t Stream::get_vint16_length(const std::vector<int16_t>& value)
-    {
-      return INT_SIZE + value.size() * INT16_SIZE;
-    }
-    int64_t Stream::get_vint32_length(const std::vector<int32_t>& value)
-    {
-      return INT_SIZE + value.size() * INT_SIZE;
-    }
-    int64_t Stream::get_vint64_length(const std::vector<int64_t>& value)
-    {
-      return INT_SIZE + value.size() * INT64_SIZE;
-    }
-    int64_t Stream::get_string_length(const char* str)
-    {
-      return NULL == str ? INT_SIZE : strlen(str) + INT_SIZE;
-    }
-    int64_t Stream::get_string_length(const std::string& str)
-    {
-      return str.empty() ? INT_SIZE : str.length() + INT_SIZE;
-    }
-
     Stream::Stream()
     {
 
@@ -181,10 +140,10 @@ namespace tfs
     int Stream::set_string(const char* str)
     {
       int64_t pos = 0;
-      int64_t length = NULL == str ? 0 : strlen(str);
+      int64_t length = Serialization::get_string_length(str);
       if (buffer_.get_free_length() < length + INT_SIZE)
       {
-        buffer_.expand(length + INT_SIZE);
+        buffer_.expand(length);
       }
       int32_t iret = Serialization::set_string(buffer_.get_free(), buffer_.get_free_length(), pos, str); 
       if (TFS_SUCCESS == iret)
@@ -194,59 +153,86 @@ namespace tfs
       return iret;
     }
 
-    int Stream::set_vint32(const std::vector<uint32_t>& value)
+    int Stream::set_string(const std::string& str)
     {
       int64_t pos = 0;
-      int64_t size = value.size() * INT_SIZE + INT_SIZE;
-      if (buffer_.get_free_length() < size)
+      int64_t length = Serialization::get_string_length(str);
+      if (buffer_.get_free_length() < length + INT_SIZE)
       {
-        buffer_.expand(size);
+        buffer_.expand(length);
       }
-
-      int32_t iret = Serialization::set_int32(buffer_.get_free(), buffer_.get_free_length(), pos, value.size());
+      int32_t iret = Serialization::set_string(buffer_.get_free(), buffer_.get_free_length(), pos, str.c_str()); 
       if (TFS_SUCCESS == iret)
       {
-        std::vector<uint32_t>::const_iterator iter = value.begin();
-        for (; iter != value.end(); ++iter)
-        {
-          iret = Serialization::set_int32(buffer_.get_free(), buffer_.get_free_length(), pos, (*iter));
-          if (TFS_SUCCESS != iret)
-          {
-            break;
-          }
-        }
-        if (TFS_SUCCESS == iret)
-        {
-          buffer_.pour(size);
-        }
+        buffer_.pour(length);
       }
       return iret;
     }
 
-    int Stream::set_vint64(const std::vector<uint64_t>& value)
+    template <typename T>
+    int Stream::set_vint8(const T& value)
     {
       int64_t pos = 0;
-      int64_t size = value.size() * INT64_SIZE + INT_SIZE;
+      int64_t size = Serialization::get_vint8_length(value);
       if (buffer_.get_free_length() < size)
       {
         buffer_.expand(size);
       }
-      int32_t iret = Serialization::set_int32(buffer_.get_free(), buffer_.get_free_length(), pos, value.size());
+      int32_t iret = Serialization::set_vint8(buffer_.get_free(), buffer_.get_free_length(), pos, value);
       if (TFS_SUCCESS == iret)
       {
-        std::vector<uint64_t>::const_iterator iter = value.begin();
-        for (; iter != value.end(); ++iter)
-        {
-          iret = Serialization::set_int64(buffer_.get_free(), buffer_.get_free_length(), pos, (*iter));
-          if (TFS_SUCCESS != iret)
-          {
-            break;
-          }
-        }
-        if (TFS_SUCCESS == iret)
-        {
-          buffer_.pour(size);
-        }
+        buffer_.pour(size);
+      }
+      return iret;
+    }
+
+    template <typename T>
+    int Stream::set_vint16(const T& value)
+    {
+      int64_t pos = 0;
+      int64_t size = Serialization::get_vint16_length(value);
+      if (buffer_.get_free_length() < size)
+      {
+        buffer_.expand(size);
+      }
+      int32_t iret = Serialization::set_vint16(buffer_.get_free(), buffer_.get_free_length(), pos, value);
+      if (TFS_SUCCESS == iret)
+      {
+        buffer_.pour(size);
+      }
+      return iret;
+    }
+
+    template <typename T>
+    int Stream::set_vint32(const T& value)
+    {
+      int64_t pos = 0;
+      int64_t size = Serialization::get_vint32_length(value);
+      if (buffer_.get_free_length() < size)
+      {
+        buffer_.expand(size);
+      }
+      int32_t iret = Serialization::set_vint32(buffer_.get_free(), buffer_.get_free_length(), pos, value);
+      if (TFS_SUCCESS == iret)
+      {
+        buffer_.pour(size);
+      }
+      return iret;
+    }
+
+    template <typename T> 
+    int Stream::set_vint64(const T& value)
+    {
+      int64_t pos = 0;
+      int64_t size = Serialization::get_vint64_length(value);
+      if (buffer_.get_free_length() < size)
+      {
+        buffer_.expand(size);
+      }
+      int32_t iret = Serialization::set_vint64(buffer_.get_free(), buffer_.get_free_length(), pos, value);
+      if (TFS_SUCCESS == iret)
+      {
+        buffer_.pour(size);
       }
       return iret;
     }
@@ -317,53 +303,65 @@ namespace tfs
       return iret;
     }
 
-    int Stream::get_vint32(std::vector<uint32_t>& value)
+    int Stream::get_string(std::string& str)
     {
       int64_t pos = 0;
-      int32_t length = 0;
-      int32_t iret = Serialization::get_int32(buffer_.get_data(), buffer_.get_data_length(), pos, &length);
+      int64_t length = 0;
+      int32_t iret = Serialization::get_string(buffer_.get_data(), buffer_.get_data_length(), pos, str, length);
       if (TFS_SUCCESS == iret)
       {
-        int32_t value = 0;
-        for (int32_t i = 0; i < length; ++i)
-        {
-          iret = Serialization::get_int32(buffer_.get_data(), buffer_.get_data_length(), pos, &value);
-          if (TFS_SUCCESS != iret)
-          {
-            break;
-          }
-        }
-        if (TFS_SUCCESS == iret)
-        {
-          buffer_.drain(length + INT_SIZE);
-        }
+        buffer_.drain(length);
       }
       return iret;
     }
 
-    int Stream::get_vint64(std::vector<uint64_t>& value)
+    template <typename T>
+    int Stream::get_vint8(T& value)
     {
       int64_t pos = 0;
-      int32_t length = 0;
-      int32_t iret = Serialization::get_int32(buffer_.get_data(), buffer_.get_data_length(), pos, &length);
+      int32_t iret = Serialization::get_vint8(buffer_.get_data(), buffer_.get_data_length(), pos, value);
       if (TFS_SUCCESS == iret)
       {
-        int64_t value = 0;
-        for (int32_t i = 0; i < length; ++i)
-        {
-          iret = Serialization::get_int64(buffer_.get_data(), buffer_.get_data_length(), pos, &value);
-          if (TFS_SUCCESS != iret)
-          {
-            break;
-          }
-        }
-        if (TFS_SUCCESS == iret)
-        {
-          buffer_.drain(length + INT_SIZE);
-        }
+        buffer_.drain(pos);
       }
       return iret;
     }
-}//end namespace comon
+
+    template <typename T>
+    int Stream::get_vint16(T& value)
+    {
+      int64_t pos = 0;
+      int32_t iret = Serialization::get_vint16(buffer_.get_data(), buffer_.get_data_length(), pos, value);
+      if (TFS_SUCCESS == iret)
+      {
+        buffer_.drain(pos);
+      }
+      return iret;
+    }
+
+    template <typename T>
+    int Stream::get_vint32(T& value)
+    {
+      int64_t pos = 0;
+      int32_t iret = Serialization::get_vint32(buffer_.get_data(), buffer_.get_data_length(), pos, value);
+      if (TFS_SUCCESS == iret)
+      {
+        buffer_.drain(pos);
+      }
+      return iret;
+    }
+
+    template <typename T>
+    int Stream::get_vint64(T& value)
+    {
+      int64_t pos = 0;
+      int32_t iret = Serialization::get_vint64(static_cast<const char*>(buffer_.get_data()), buffer_.get_data_length(), pos, value);
+      if (TFS_SUCCESS == iret)
+      {
+        buffer_.drain(pos);
+      }
+      return iret;
+    }
+  }//end namespace comon
 }//end namespace tfs
 

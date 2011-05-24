@@ -23,6 +23,34 @@ namespace tfs
   {
     struct Serialization 
     {
+      static int64_t get_string_length(const char* str)
+      {
+        return NULL == str ? INT_SIZE : strlen(str) + INT_SIZE;
+      }
+      static int64_t get_string_length(const std::string& str)
+      {
+        return str.empty() ? INT_SIZE : str.length() + INT_SIZE;
+      }
+      template <typename T> 
+      static int64_t get_vint8_length(const T& value)
+      {
+        return INT_SIZE + value.size() * INT8_SIZE;
+      }
+      template <typename T> 
+      static int64_t get_vint16_length(const T& value)
+      {
+        return INT_SIZE + value.size() * INT16_SIZE;
+      }
+      template <typename T> 
+      static int64_t get_vint32_length(const T& value)
+      {
+        return INT_SIZE + value.size() * INT_SIZE;
+      }
+      template <typename T> 
+      static int64_t get_vint64_length(const T& value)
+      {
+        return INT_SIZE + value.size() * INT64_SIZE;
+      }
       static int get_int8(const char* data, const int64_t data_len, int64_t& pos, int8_t* value)
       {
         int32_t iret = NULL != value && NULL != data && data_len - pos >= INT8_SIZE &&  pos >= 0 ? TFS_SUCCESS : TFS_ERROR;
@@ -90,7 +118,7 @@ namespace tfs
 
       static int get_bytes(const char* data, const int64_t data_len, int64_t& pos, void* buf, const int64_t buf_length)
       {
-        int32_t iret = NULL != data && NULL != buf && buf_length > 0 && data_len - pos > buf_length &&  pos >= 0 ? TFS_SUCCESS : TFS_ERROR;
+        int32_t iret = NULL != data && NULL != buf && buf_length > 0 && data_len - pos >= buf_length &&  pos >= 0 ? TFS_SUCCESS : TFS_ERROR;
         if (TFS_SUCCESS == iret)
         {
           memcpy(buf, (data+pos), buf_length);
@@ -130,6 +158,146 @@ namespace tfs
               else
               {
                 pos -= INT_SIZE;
+              }
+            }
+          }
+        }
+        return iret;
+      }
+
+      static int get_string(const char* data, const int64_t data_len, int64_t& pos, std::string& str, int64_t& length)
+      {
+        int32_t iret = NULL != data &&  data_len - pos >= INT_SIZE  &&  pos >= 0 ? TFS_SUCCESS : TFS_ERROR;
+        if (TFS_SUCCESS == iret)
+        {
+          int32_t tmp = 0;
+          iret = get_int32(data, data_len, pos, &tmp);
+          if (TFS_SUCCESS == iret)
+          {
+            length = tmp;
+            if (length > 0)
+            {
+              iret = data_len - pos >= length ? TFS_SUCCESS : TFS_ERROR;
+              if (TFS_SUCCESS == iret)
+              {
+                str.assign((data + pos), length);
+                pos += length;
+              }
+            }
+          }
+        }
+        return iret;
+      }
+
+      template <typename T>
+      int get_vint8(const char* data, const int64_t data_len, int64_t& pos, T& value)
+      {
+        int32_t iret = NULL != data && data_len - pos >= INT_SIZE &&  pos >= 0 ? TFS_SUCCESS : TFS_ERROR;
+        if (TFS_SUCCESS == iret)
+        {
+          int32_t length = 0;
+          iret =  Serialization::get_int32(data, data_len, pos, &length);
+          if (TFS_SUCCESS == iret
+              && length > 0)
+          {
+            iret = data_len - pos > length * INT8_SIZE ? TFS_SUCCESS : TFS_ERROR;
+            if (TFS_SUCCESS == iret)
+            {
+              int8_t tmp = 0;
+              for (int32_t i = 0; i < length; ++i)
+              {
+                iret = Serialization::get_int8(data, data_len, pos, &tmp);
+                if (TFS_SUCCESS == iret)
+                  value.push_back(tmp);
+                else
+                  break;
+              }
+            }
+          }
+        }
+        return iret;
+      }
+
+      template <typename T>
+      int get_vint16(const char* data, const int64_t data_len, int64_t& pos, T& value)
+      {
+        int32_t iret = NULL != data && data_len - pos >= INT_SIZE &&  pos >= 0 ? TFS_SUCCESS : TFS_ERROR;
+        if (TFS_SUCCESS == iret)
+        {
+          int32_t length = 0;
+          iret =  Serialization::get_int32(data, data_len, pos, &length);
+          if (TFS_SUCCESS == iret
+              && length > 0)
+          {
+            iret = data_len - pos > length * INT16_SIZE ? TFS_SUCCESS : TFS_ERROR;
+            if (TFS_SUCCESS == iret)
+            {
+              int16_t tmp = 0;
+              for (int32_t i = 0; i < length; ++i)
+              {
+                iret = Serialization::get_int16(data, data_len, pos, &tmp);
+                if (TFS_SUCCESS == iret)
+                  value.push_back(tmp);
+                else
+                  break;
+              }
+            }
+          }
+        }
+        return iret;
+      }
+
+      template <typename T>
+      int get_vint32(const char* data, const int64_t data_len, int64_t& pos, T& value)
+      {
+        int32_t iret = NULL != data && data_len - pos >= INT_SIZE &&  pos >= 0 ? TFS_SUCCESS : TFS_ERROR;
+        if (TFS_SUCCESS == iret)
+        {
+          int32_t length = 0;
+          iret =  Serialization::get_int32(data, data_len, pos, &length);
+          if (TFS_SUCCESS == iret
+              && length > 0)
+          {
+            iret = data_len - pos > length * INT_SIZE ? TFS_SUCCESS : TFS_ERROR;
+            if (TFS_SUCCESS == iret)
+            {
+              int32_t tmp = 0;
+              for (int32_t i = 0; i < length; ++i)
+              {
+                iret = Serialization::get_int32(data, data_len, pos, &tmp);
+                if (TFS_SUCCESS == iret)
+                  value.push_back(tmp);
+                else
+                  break;
+              }
+            }
+          }
+        }
+        return iret;
+      }
+
+      template <typename T>
+      int get_vint64(const char* data, const int64_t data_len, int64_t& pos, T& value)
+      {
+        int32_t iret = NULL != data && data_len - pos >= INT_SIZE &&  pos >= 0 ? TFS_SUCCESS : TFS_ERROR;
+        if (TFS_SUCCESS == iret)
+        {
+          int32_t length = 0;
+          iret =  Serialization::get_int32(data, data_len, pos, &length);
+          if (TFS_SUCCESS == iret
+              && length > 0)
+          {
+            iret = data_len - pos > length * INT64_SIZE ? TFS_SUCCESS : TFS_ERROR;
+            if (TFS_SUCCESS == iret)
+            {
+              int64_t tmp = 0;
+              for (int32_t i = 0; i < length; ++i)
+              {
+                iret = Serialization::get_int64(data, data_len, pos, &tmp);
+                if (TFS_SUCCESS == iret)
+                  value.push_back(tmp);
+                else
+                  break;
               }
             }
           }
@@ -210,7 +378,7 @@ namespace tfs
 
       static int set_bytes(char* data, const int64_t data_len, int64_t& pos, const void* buf, const int64_t buf_length)
       {
-        int32_t iret = NULL != data && buf_length > 0 && NULL != buf && data_len - pos >= buf_length  &&  pos >= 0 ? TFS_SUCCESS : TFS_ERROR;
+        int32_t iret = NULL != data && buf_length > 0 && NULL != buf && data_len - pos >= buf_length &&  pos >= 0 ? TFS_SUCCESS : TFS_ERROR;
         if (TFS_SUCCESS == iret)
         {
           memcpy((data+pos), buf, buf_length);
@@ -218,7 +386,161 @@ namespace tfs
         }
         return iret;
       }
-    };
+
+      template <typename T>
+      int set_vint8(char* data, const int64_t data_len, int64_t& pos, const T& value)
+      {
+        int32_t iret = NULL != data && data_len - pos >= get_vint8_length(value) &&  pos >= 0 ? TFS_SUCCESS : TFS_ERROR;
+        if (TFS_SUCCESS == iret)
+        {
+          iret = Serialization::set_int32(data, data_len, pos, value.size());
+          if (TFS_SUCCESS == iret)
+          {
+            typename T::const_iterator iter = value.begin();
+            for (; iter != value.end(); ++iter)
+            {
+              iret = Serialization::set_int8(data, data_len, pos, (*iter));
+              if (TFS_SUCCESS != iret)
+                break;
+            }
+          }
+        }
+        return iret;
+      }
+      template <typename T>
+      int set_vint16(char* data, const int64_t data_len, int64_t& pos, const T& value)
+      {
+        int32_t iret = NULL != data && data_len - pos >= get_vint16_length(value) &&  pos >= 0 ? TFS_SUCCESS : TFS_ERROR;
+        if (TFS_SUCCESS == iret)
+        {
+          iret = Serialization::set_int32(data, data_len, pos, value.size());
+          if (TFS_SUCCESS == iret)
+          {
+            typename T::const_iterator iter = value.begin();
+            for (; iter != value.end(); ++iter)
+            {
+              iret = Serialization::set_int16(data, data_len, pos, (*iter));
+              if (TFS_SUCCESS != iret)
+                break;
+            }
+          }
+        }
+        return iret;
+      }
+
+      template <typename T>
+      int set_vint32(char* data, const int64_t data_len, int64_t& pos, const T& value)
+      {
+        int32_t iret = NULL != data && data_len - pos >= get_vint32_length(value) &&  pos >= 0 ? TFS_SUCCESS : TFS_ERROR;
+        if (TFS_SUCCESS == iret)
+        {
+          iret = Serialization::set_int32(data, data_len, pos, value.size());
+          if (TFS_SUCCESS == iret)
+          {
+            typename T::const_iterator iter = value.begin();
+            for (; iter != value.end(); ++iter)
+            {
+              iret = Serialization::set_int32(data, data_len, pos, (*iter));
+              if (TFS_SUCCESS != iret)
+                break;
+            }
+          }
+        }
+        return iret;
+      }
+      template <typename T> 
+      int set_vint64(char* data, const int64_t data_len, int64_t& pos, const T& value)
+      {
+        int32_t iret = NULL != data && data_len - pos >= get_vint64_length(value) &&  pos >= 0 ? TFS_SUCCESS : TFS_ERROR;
+        if (TFS_SUCCESS == iret)
+        {
+          iret = Serialization::set_int32(data, data_len, pos, value.size());
+          if (TFS_SUCCESS == iret)
+          {
+            typename T::const_iterator iter = value.begin();
+            for (; iter != value.end(); ++iter)
+            {
+              iret = Serialization::set_int64(data, data_len, pos, (*iter));
+              if (TFS_SUCCESS != iret)
+                break;
+            }
+          }
+        }
+        return iret;
+      }
+
+      template <typename T>
+      int serialize_list(char* data, const int64_t data_len, int64_t& pos, const T& value)
+      {
+        int32_t iret = set_int32(data, data_len, pos, value.size());
+        if (TFS_SUCCESS == iret)
+        {
+          typename T::const_iterator iter = value.begin();
+          for (; iter != value.end(); ++iter)
+          {
+            iter = iter->serialize(data, data_len, pos);
+            if (TFS_SUCCESS != iret)
+            {
+              break;
+            }
+          }
+        }
+        return iret;
+      }
+
+      template <typename T>
+      int deserialize_list(const char* data, const int64_t data_len, int64_t& pos, T& value)
+      {
+        int32_t len = 0;
+        int32_t iret = Serialization::get_int32(data, data_len, pos, &len);
+        if (TFS_SUCCESS == iret)
+        {
+          for (int32_t i = 0; i < len; ++i)
+          {
+            T tmp;
+            iret = tmp.deserialize(data, data_len, pos);
+            if (TFS_SUCCESS != iret)
+              break;
+            else
+              value.push_back(tmp);
+          }
+        }
+        return iret;
+      }
+
+      template <typename T>
+      int64_t get_list_length(const T& value)
+      {
+        int64_t len = INT_SIZE;
+        typename T::const_iterator iter = value.begin();
+        for (; iter != value.end(); ++iter)
+        {
+          len += iter->length();
+        }
+        return len;
+      }
+
+      template <typename T>
+      int serialize_kv(char* data, const int64_t data_len, int64_t& pos, const T& value)
+      {
+        //TODO
+        return TFS_SUCCESS;
+      }
+
+      template <typename T>
+      int deserialize_kv(const char* data, const int64_t data_len, int64_t& pos, T& value)
+      {
+        //TODO
+        return TFS_SUCCESS;
+      }
+
+      template <typename T>
+      int64_t get_kv_length(const T& value)
+      {
+        //TODO
+        return TFS_SUCCESS;
+      }
+   };
   }//end namespace comon
 }//end namespace tfs
 

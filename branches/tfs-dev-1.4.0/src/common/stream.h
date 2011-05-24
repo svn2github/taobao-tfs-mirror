@@ -32,19 +32,6 @@ namespace tfs
       explicit Stream(const int64_t length);
       virtual ~Stream();
 
-      static int64_t get_vuint8_length(const std::vector<uint8_t>& value);
-      static int64_t get_vuint16_length(const std::vector<uint16_t>& value);
-      static int64_t get_vuint32_length(const std::vector<uint32_t>& value);
-      static int64_t get_vuint64_length(const std::vector<uint64_t>& value);
-
-      static int64_t get_vint8_length(const std::vector<int8_t>& value);
-      static int64_t get_vint16_length(const std::vector<int16_t>& value);
-      static int64_t get_vint32_length(const std::vector<int32_t>& value);
-      static int64_t get_vint64_length(const std::vector<int64_t>& value);
-
-      static int64_t get_string_length(const char* str);
-      static int64_t get_string_length(const std::string& str);
-
       char* get_data() const;
       int64_t get_data_length() const;
 
@@ -62,8 +49,11 @@ namespace tfs
       int set_int64(const int64_t value);
       int set_bytes(const void* data, const int64_t length);
       int set_string(const char* str);
-      int set_vint32(const std::vector<uint32_t>& value);
-      int set_vint64(const std::vector<uint64_t>& value);
+      int set_string(const std::string& str);
+      template <typename T> int set_vint8(const T& value);
+      template <typename T> int set_vint16(const T& value);
+      template <typename T> int set_vint32(const T& value);
+      template <typename T> int set_vint64(const T& value);
 
       int get_int8(int8_t* value);
       int get_int16(int16_t* value);
@@ -71,8 +61,11 @@ namespace tfs
       int get_int64(int64_t* value);
       int get_bytes(void* data, const int64_t length);
       int get_string(char* str, const int64_t length);
-      int get_vint32(std::vector<uint32_t>& value);
-      int get_vint64(std::vector<uint64_t>& value);
+      int get_string(std::string& str);
+      template <typename T> int get_vint8(T& value);
+      template <typename T> int get_vint16(T& value);
+      template <typename T> int get_vint32(T& value);
+      template <typename T> int get_vint64(T& value);
     private:
       void expand(const int64_t length);
 
