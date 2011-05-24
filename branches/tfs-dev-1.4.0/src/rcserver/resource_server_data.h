@@ -22,12 +22,12 @@
 #include <set>
 #include <algorithm>
 #include <assert.h>
+#include "common/rc_define.h"
 
 namespace tfs
 {
   namespace rcserver
   {
-
     const int ADDR_INFO_LEN = 64;
     const int REM_LEN = 256;
     const int CLUSTER_ID_LEN = 8;
@@ -49,23 +49,10 @@ namespace tfs
     };
     typedef std::vector<ResourceServerInfo> VResourceServerInfo;
 
-    struct ClusterData
-    {
-      int32_t cluster_stat_;
-      int32_t access_type_;
-      std::string cluster_id_;
-      std::string ns_vip_;
-      ClusterData()
-      {
-        cluster_stat_ = -1;
-        access_type_ = -1;
-      }
-    };
-
     struct ClusterRackInfo
     {
       int32_t cluster_rack_id_;
-      ClusterData cluster_data_;
+      common::ClusterData cluster_data_;
       char rem_[REM_LEN];
       ClusterRackInfo()
       {
@@ -90,17 +77,6 @@ namespace tfs
       }
     };
     typedef std::vector<ClusterRackGroup> VClusterRackGroup;
-
-    struct ClusterRackData
-    {
-      bool need_duplicate_;
-      std::string dupliate_server_addr_;
-      std::vector<ClusterData> cluster_data_;
-      ClusterRackData()
-      {
-        need_duplicate_ = false;
-      }
-    };
 
     struct ClusterRackDuplicateServer
     {
@@ -153,99 +129,6 @@ namespace tfs
     };
     typedef std::map<int32_t, AppInfo> MIdAppInfo;  //map<id, appinfo>
 
-    struct SessionBaseInfo
-    {
-      std::string session_id_;
-      std::string client_version_;
-      int64_t cache_size_;
-      int64_t cache_time_;
-      int64_t modify_time_;
-      bool is_logout_;
-
-      SessionBaseInfo(const std::string session_id) : 
-        session_id_(session_id), cache_size_(0), cache_time_(0), modify_time_(0), is_logout_(false)
-      {
-      }
-      SessionBaseInfo() : cache_size_(0), cache_time_(0), modify_time_(0), is_logout_(false)
-      {
-      }
-
-      SessionBaseInfo& operator= (const SessionBaseInfo& right)
-      {
-        client_version_ = right.client_version_;
-        cache_size_ = right.cache_size_;
-        cache_time_ = right.cache_time_;
-        modify_time_ = right.modify_time_;
-        is_logout_ = right.is_logout_;
-        return *this;
-      }
-    };
-
-    enum OperType
-    {
-      OPER_INVALID = 0,
-      OPER_READ,
-      OPER_WRITE,
-      OPER_UNIQUE_WRITE,
-      OPER_UNLINK,
-      OPER_UNIQUE_UNLINK
-    };
-
-    struct AppOperInfo
-    {
-      OperType oper_type_;
-      int64_t oper_times_;  //total
-      int64_t oper_size_;   //succ
-      int64_t oper_rt_;     //succ ¿€º”÷µ
-      int64_t oper_succ_;
-
-      AppOperInfo() : oper_type_(OPER_INVALID), oper_times_(0),
-                      oper_size_(0), oper_rt_(0), oper_succ_(0)
-      {
-      }
-
-      AppOperInfo& operator +=(const AppOperInfo& right)
-      {
-        assert(oper_type_ == right.oper_type_);
-        oper_times_ += right.oper_times_;
-        oper_size_ += right.oper_size_;
-        oper_rt_ += right.oper_rt_;
-        oper_succ_+= right.oper_succ_;
-        return *this;
-      }
-    };
-
-    struct SessionStat
-    {
-      std::map<OperType, AppOperInfo> app_oper_info_;
-      int64_t cache_hit_ratio_;
-
-      SessionStat() : cache_hit_ratio_(100)
-      {
-        app_oper_info_.clear();
-      }
-
-      SessionStat& operator +=(const SessionStat& right)
-      {
-        std::map<OperType, AppOperInfo>::iterator lit;
-        std::map<OperType, AppOperInfo>::const_iterator rit = right.app_oper_info_.begin();
-        for ( ; rit != right.app_oper_info_.end(); ++rit)
-        {
-          lit = app_oper_info_.find(rit->first);
-          if (lit == app_oper_info_.end()) //not found
-          {
-            app_oper_info_.insert(std::pair<OperType, AppOperInfo>(rit->first, rit->second));
-          }
-          else //found
-          {
-            lit->second += rit->second;
-          }
-        }
-        return *this;
-      }
-
-    };
-
     struct AppStat
     {
       int32_t id_;
@@ -265,18 +148,18 @@ namespace tfs
         used_capacity_ = 0;
       }
 
-      void add(const SessionStat& s_stat)
+      void add(const common::SessionStat& s_stat)
       {
-        const std::map<OperType, AppOperInfo>& app_oper_info = s_stat.app_oper_info_;
-        std::map<OperType, AppOperInfo>::const_iterator sit = app_oper_info.begin();
+        const std::map<common::OperType, common::AppOperInfo>& app_oper_info = s_stat.app_oper_info_;
+        std::map<common::OperType, common::AppOperInfo>::const_iterator sit = app_oper_info.begin();
         for ( ; sit != app_oper_info.end(); ++sit)
         {
-          if (OPER_WRITE == sit->first || OPER_UNIQUE_WRITE == sit->first)
+          if (common::OPER_WRITE == sit->first || common::OPER_UNIQUE_WRITE == sit->first)
           {
             file_count_ += sit->second.oper_times_;
             used_capacity_ += sit->second.oper_size_;
           }
-          else if (OPER_UNLINK == sit->first || OPER_UNIQUE_UNLINK == sit->first)
+          else if (common::OPER_UNLINK == sit->first || common::OPER_UNIQUE_UNLINK == sit->first)
           {
             file_count_ -= sit->second.oper_times_;
             used_capacity_ -= sit->second.oper_size_;
@@ -285,39 +168,6 @@ namespace tfs
       }
     };
     typedef std::map<int32_t, AppStat> MIdAppStat;
-
-    struct KeepAliveInfo
-    {
-      KeepAliveInfo(const std::string& session_id) : s_base_info_(session_id), last_report_time_(time(NULL))
-      {
-      }
-      KeepAliveInfo() : last_report_time_(time(NULL))
-      {
-      }
-      SessionBaseInfo s_base_info_;
-      SessionStat s_stat_;
-      int64_t last_report_time_;
-
-      KeepAliveInfo& operator +=(const KeepAliveInfo& right)
-      {
-        s_stat_ += right.s_stat_;
-        if (last_report_time_ < right.last_report_time_)
-        {
-          s_base_info_ = right.s_base_info_;
-          s_stat_.cache_hit_ratio_ = right.s_stat_.cache_hit_ratio_;
-          last_report_time_ = right.last_report_time_;
-        }
-        return *this;
-      }
-    };
-
-    typedef std::map<std::string, KeepAliveInfo> SessionCollectMap;
-    typedef SessionCollectMap::const_iterator SessionCollectMapConstIter;
-    typedef SessionCollectMap::iterator SessionCollectMapIter;
-
-    typedef std::map<int32_t, SessionCollectMap> AppSessionMap;
-    typedef AppSessionMap::const_iterator AppSessionMapConstIter;
-    typedef AppSessionMap::iterator AppSessionMapIter;
   }
 }
 #endif

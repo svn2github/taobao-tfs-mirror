@@ -38,6 +38,7 @@
 #include "crc_error_message.h"
 #include "admin_cmd_message.h"
 #include "dump_plan_message.h"
+#include "rc_session_message.h"
 
 namespace tfs
 {

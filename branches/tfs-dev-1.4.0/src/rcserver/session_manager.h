@@ -31,13 +31,6 @@ namespace tfs
 {
   namespace rcserver
   {
-    enum UpdateFlag
-    {
-      LOGIN_FLAG = 1,
-      KA_FLAG,
-      LOGOUT_FLAG
-    };
-
     class SessionManager;
     class ISessionTask : public tbutil::TimerTask
     {
@@ -45,12 +38,12 @@ namespace tfs
         explicit ISessionTask(SessionManager& manager)
           : manager_(manager), destroy_(false)
         {
-          key_map_[OPER_INVALID] = "invalid";
-          key_map_[OPER_READ] = "read";
-          key_map_[OPER_WRITE] = "write";
-          key_map_[OPER_UNIQUE_WRITE] = "unique_write";
-          key_map_[OPER_UNLINK] = "unlink";
-          key_map_[OPER_UNIQUE_UNLINK] = "unique_unlink";
+          key_map_[common::OPER_INVALID] = "invalid";
+          key_map_[common::OPER_READ] = "read";
+          key_map_[common::OPER_WRITE] = "write";
+          key_map_[common::OPER_UNIQUE_WRITE] = "unique_write";
+          key_map_[common::OPER_UNLINK] = "unlink";
+          key_map_[common::OPER_UNIQUE_UNLINK] = "unique_unlink";
         }
 
         virtual ~ISessionTask()
@@ -63,19 +56,19 @@ namespace tfs
           destroy_ = true;
         }
         int update_session_info(const int32_t app_id, const std::string& session_id,
-            const KeepAliveInfo& keep_alive_info, UpdateFlag update_flag);
+            const common::KeepAliveInfo& keep_alive_info, common::UpdateFlag update_flag);
 
       protected:
-        static void display(const int32_t app_id, const SessionStat& s_stat, const int64_t cache_hit_ratio = 0);
+        static void display(const int32_t app_id, const common::SessionStat& s_stat, const int64_t cache_hit_ratio = 0);
         int update_session_info_ex(const int32_t app_id, const std::string& session_id,
-            const KeepAliveInfo& keep_alive_info, UpdateFlag update_flag);
+            const common::KeepAliveInfo& keep_alive_info, common::UpdateFlag update_flag);
 
       protected:
         SessionManager& manager_;
         bool destroy_;
-        AppSessionMap app_sessions_;
+        common::AppSessionMap app_sessions_;
         common::RWLock rw_lock_;
-        static std::map<OperType, std::string> key_map_;
+        static std::map<common::OperType, std::string> key_map_;
     };
 
     class SessionMonitorTask : public ISessionTask
@@ -111,9 +104,9 @@ namespace tfs
         virtual void runTimerTask();
 
       private:
-        void extract(const AppSessionMap& app_sessions, std::vector<SessionBaseInfo>& v_session_infos,
-            std::map<std::string, SessionStat>& m_session_stats, MIdAppStat& m_app_stat);
-        void rollback(const AppSessionMap& app_sessions);
+        void extract(const common::AppSessionMap& app_sessions, std::vector<common::SessionBaseInfo>& v_session_infos,
+            std::map<std::string, common::SessionStat>& m_session_stats, MIdAppStat& m_app_stat);
+        void rollback(const common::AppSessionMap& app_sessions);
 
       private:
         IResourceManager* resource_manager_;
@@ -138,14 +131,14 @@ namespace tfs
         void destroy();
 
         int login(const std::string& app_key, const int64_t session_ip,
-            std::string& session_id, BaseInfo& base_info);
-        int keep_alive(const std::string& session_id, const KeepAliveInfo& keep_alive_info,
-            bool& update_flag, BaseInfo& base_info);
-        int logout(const std::string& session_id, const KeepAliveInfo& keep_alive_info);
+            std::string& session_id, common::BaseInfo& base_info);
+        int keep_alive(const std::string& session_id, const common::KeepAliveInfo& keep_alive_info,
+            bool& update_flag, common::BaseInfo& base_info);
+        int logout(const std::string& session_id, const common::KeepAliveInfo& keep_alive_info);
 
       private:
         int update_session_info(const int32_t app_id, const std::string& session_id,
-            const KeepAliveInfo& keep_alive_info, UpdateFlag update_flag);
+            const common::KeepAliveInfo& keep_alive_info, common::UpdateFlag update_flag);
 
       private:
         DISALLOW_COPY_AND_ASSIGN(SessionManager);

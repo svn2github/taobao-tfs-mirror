@@ -14,6 +14,7 @@
  *
  */
 #include <tbsys.h>
+#include <algorithm>
 #include "base_resource.h"
 #include "mysql_database_helper.h"
 namespace 
@@ -85,7 +86,7 @@ namespace tfs
     {
       return update_time_in_db > base_last_update_time_;
     }
-    int BaseResource::get_resource_servers(std::set<uint64_t>& resource_servers) const
+    int BaseResource::get_resource_servers(std::vector<uint64_t>& resource_servers) const
     {
       int ret = TFS_SUCCESS;
       resource_servers.clear();
@@ -101,7 +102,15 @@ namespace tfs
           }
           else
           {
-            resource_servers.insert(server);
+            std::vector<uint64_t>::const_iterator vit = find(resource_servers.begin(), resource_servers.end(), server);
+            if (vit != resource_servers.end())
+            {
+              TBSYS_LOG(WARN, "server repeated %s", it->addr_info_);
+            }
+            else
+            {
+              resource_servers.push_back(server);
+            }
           }
         }
       }

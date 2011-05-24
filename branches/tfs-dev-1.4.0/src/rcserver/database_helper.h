@@ -61,8 +61,8 @@ namespace tfs
         virtual int remove(const AppInfo& inparam) = 0;
         virtual int scan(MIdAppInfo& outparam) = 0;
 
-        virtual int update_session_info(const std::vector<SessionBaseInfo>& session_infos) = 0;
-        virtual int update_session_stat(const std::map<std::string, SessionStat>& session_stats) = 0;
+        virtual int update_session_info(const std::vector<common::SessionBaseInfo>& session_infos) = 0;
+        virtual int update_session_stat(const std::map<std::string, common::SessionStat>& session_stats) = 0;
         virtual int update_app_stat(const MIdAppStat& app_stats) = 0;
 
 

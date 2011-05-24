@@ -50,6 +50,13 @@ namespace tfs
 
       /** get timer*/
       inline tbutil::TimerPtr& get_timer() { return timer_;}
+
+      /** handle single packet */
+      virtual tbnet::IPacketHandler::HPRetCode handlePacket(tbnet::Connection *connection, tbnet::Packet *packet);
+
+      /** handle packet*/
+      virtual bool handlePacketQueue(tbnet::Packet *packet, void *args);
+
   protected:
       /** application parse args*/
       virtual int parse_common_line_args(int argc, char* argv[]) { return TFS_SUCCESS;}
@@ -77,12 +84,6 @@ namespace tfs
 
       /** push workitem to workers*/
       bool push(BasePacket* packet);
-
-      /** handle single packet */
-      virtual tbnet::IPacketHandler::HPRetCode handlePacket(tbnet::Connection *connection, tbnet::Packet *packet);
-
-      /** handle packet*/
-      virtual bool handlePacketQueue(tbnet::Packet *packet, void *args);
 
     protected:
       /** get work directory*/

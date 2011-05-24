@@ -58,8 +58,8 @@ namespace tfs
         virtual int scan(MIdAppInfo& outparam);
 
         //update
-        virtual int update_session_info(const std::vector<SessionBaseInfo>& session_infos);
-        virtual int update_session_stat(const std::map<std::string, SessionStat>& session_stats);
+        virtual int update_session_info(const std::vector<common::SessionBaseInfo>& session_infos);
+        virtual int update_session_stat(const std::map<std::string, common::SessionStat>& session_stats);
         virtual int update_app_stat(const MIdAppStat& app_stats);
 
       private:

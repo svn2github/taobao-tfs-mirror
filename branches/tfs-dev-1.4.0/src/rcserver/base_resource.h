@@ -42,9 +42,9 @@ namespace tfs
       public:
         virtual int load();
         bool need_reload(const int64_t update_time_in_db) const;
-        int get_resource_servers(std::set<uint64_t>& resource_servers) const;
+        int get_resource_servers(std::vector<uint64_t>& resource_servers) const;
         int get_cluster_infos(const int32_t cluster_group_id, 
-            std::vector<ClusterRackData>& cluster_rack_datas) const;
+            std::vector<common::ClusterRackData>& cluster_rack_datas) const;
         int get_last_modify_time(int64_t& last_modify_time) const;
 
       private:
