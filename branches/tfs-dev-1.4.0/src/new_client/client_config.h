@@ -6,9 +6,10 @@
  * published by the Free Software Foundation.
  *
  *
- * Version: $Id$
+ * Version: $Id
  *
  * Authors:
+ *   nayan <nayan@taobao.com>
  *      - initial release
  *
  */
@@ -16,6 +17,7 @@
 #define TFS_CLIENT_CONFIG_H_
 
 #include <string>
+#include <stdint.h>
 
 namespace tfs
 {

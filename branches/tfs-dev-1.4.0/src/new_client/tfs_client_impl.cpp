@@ -48,8 +48,7 @@ int TfsClientImpl::initialize(const char* ns_addr, const int32_t cache_time, con
   tbutil::Mutex::Lock lock(mutex_);
   if (is_init_)
   {
-    TBSYS_LOG(ERROR, "tfsclient already initialized");
-    ret = TFS_ERROR;
+    TBSYS_LOG(INFO, "tfsclient already initialized");
   }
   else
   {
@@ -186,6 +185,18 @@ int TfsClientImpl::close(const int fd, char* tfs_name, const int32_t len)
     erase_file(fd);
   }
 
+  return ret;
+}
+
+int64_t TfsClientImpl::get_file_length(const int fd)
+{
+  int64_t ret = EXIT_INVALIDFD_ERROR;
+  TfsFile* tfs_file = get_file(fd);
+  if (NULL != tfs_file)
+  {
+    ScopedRWLock scoped_lock(tfs_file->rw_lock_, READ_LOCKER);
+    ret = tfs_file->get_file_length();
+  }
   return ret;
 }
 

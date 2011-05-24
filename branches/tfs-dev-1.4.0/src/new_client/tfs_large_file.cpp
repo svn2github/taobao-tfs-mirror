@@ -124,7 +124,8 @@ int TfsLargeFile::fstat(TfsFileStat* file_stat, const TfsStatFlag mode)
         file_stat->file_id_ = file_info.id_;
         file_stat->offset_ = file_info.offset_;
         file_stat->size_ = local_key_.get_file_size();
-        file_stat->usize_ = local_key_.get_file_size();
+        // usize = real_size + meta_size
+        file_stat->usize_ += local_key_.get_file_size();
         file_stat->modify_time_ = file_info.modify_time_;
         file_stat->create_time_ = file_info.create_time_;
         file_stat->flag_ = file_info.flag_;
@@ -133,6 +134,10 @@ int TfsLargeFile::fstat(TfsFileStat* file_stat, const TfsStatFlag mode)
     }
     else // file is delete or conceal
     {
+      // TODO: ?
+      // 1. unhide/undelete meta file
+      // 2. read meta file head
+      // 3. hide/delete meta file
       file_stat->file_id_ = meta_seg_->seg_info_.file_id_;
       file_stat->offset_ = static_cast<int32_t>(INVALID_FILE_SIZE);
       file_stat->size_ = INVALID_FILE_SIZE;
@@ -152,6 +157,11 @@ int TfsLargeFile::close()
   return close_ex();
 }
 
+int64_t TfsLargeFile::get_file_length()
+{
+  return local_key_.get_file_size();
+}
+
 int TfsLargeFile::unlink(const char* file_name, const char* suffix, const TfsUnlinkType action)
 {
   // read meta first
@@ -165,6 +175,11 @@ int TfsLargeFile::unlink(const char* file_name, const char* suffix, const TfsUnl
     if (DELETE == action) // if DELETE, need load meta. CONCEAL or REVEAL, skip it
     {
       FileInfo file_info;
+      // TODO: status is HIDE
+      // 1. unhide meta file
+      // 2. read meta file
+      // 3. unlink all file
+      // 4. unlink meta file ?
       if ((ret = fstat_ex(&file_info, NORMAL_STAT)) != TFS_SUCCESS)
       {
         TBSYS_LOG(ERROR, "stat meta file %s fail, ret: %d", fsname_.get_name(true), ret);
@@ -219,9 +234,9 @@ int TfsLargeFile::unlink(const char* file_name, const char* suffix, const TfsUnl
   return ret;
 }
 
-int TfsLargeFile::get_segment_for_read(int64_t offset, char* buf, int64_t count)
+int64_t TfsLargeFile::get_segment_for_read(int64_t offset, char* buf, int64_t count)
 {
-  int ret = TFS_SUCCESS;
+  int64_t ret = count;
   destroy_seg();
   if (read_meta_flag_)
   {
@@ -234,18 +249,13 @@ int TfsLargeFile::get_segment_for_read(int64_t offset, char* buf, int64_t count)
   return ret;
 }
 
-int TfsLargeFile::get_segment_for_write(int64_t offset, const char* buf, int64_t count)
+int64_t TfsLargeFile::get_segment_for_write(int64_t offset, const char* buf, int64_t count)
 {
   destroy_seg();
   return local_key_.get_segment_for_write(offset, buf, count, processing_seg_list_);
 }
 
-int TfsLargeFile::get_size_for_rw(const int64_t check_size, const int64_t count, int64_t& cur_size, bool& not_end)
-{
-  return get_size_for_rw_ex(check_size, count, cur_size, not_end, ClientConfig::batch_size_);
-}
-
-int TfsLargeFile::read_process()
+int TfsLargeFile::read_process(int64_t& read_size)
 {
   int ret = TFS_SUCCESS;
   if ((ret = tfs_session_->get_block_info(processing_seg_list_, flags_)) != TFS_SUCCESS)
@@ -254,10 +264,15 @@ int TfsLargeFile::read_process()
   }
   else
   {
-    if ((ret = process(FILE_PHASE_READ_FILE)) != TFS_SUCCESS)
+    // segList.size() != 0
+    // just use first ds list size to be retry times. maybe random ..
+    int retry_count = processing_seg_list_[0]->ds_.size();
+    do
     {
-      TBSYS_LOG(ERROR, "read data fail, ret: %d", ret);
-    }
+      ret = process(FILE_PHASE_READ_FILE);
+      finish_read_process(ret, read_size);
+    } while (ret != TFS_SUCCESS && --retry_count > 0);
+
   }
   return ret;
 }
@@ -424,11 +439,11 @@ int TfsLargeFile::upload_key()
   {
     int32_t size = local_key_.get_data_size();
     char* buf = new char[size];
-    local_key_.dump_data(buf);
+    local_key_.dump_data(buf, size);
     // TODO .. open large with mainname
     if ((ret = open_ex(NULL, meta_suffix_, T_WRITE)) != TFS_SUCCESS)
     {
-      TBSYS_LOG(ERROR, "upload key fail, open file fail, ret: %d");
+      TBSYS_LOG(ERROR, "upload key fail, open file fail, ret: %d", ret);
     }
     else
     {

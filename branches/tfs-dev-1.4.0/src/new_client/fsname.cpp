@@ -62,7 +62,7 @@ namespace tfs
       cluster_id_ = 0x01;
     }
 
-    FSName::FSName(uint32_t block_id, int32_t seq_id, int32_t suffix, int32_t cluster_id)
+    FSName::FSName(const uint32_t block_id, const int32_t seq_id, const int32_t suffix, const int32_t cluster_id)
     {
       file_.block_id_ = block_id;
       file_.seq_id_ = seq_id;
@@ -71,7 +71,7 @@ namespace tfs
       cluster_id_ = cluster_id;
     }
 
-    FSName::FSName(const char* file_name, const char* suffix, int32_t cluster_id)
+    FSName::FSName(const char* file_name, const char* suffix, int32_t const cluster_id)
     {
       set_name(file_name, suffix, cluster_id);
     }
@@ -99,7 +99,7 @@ namespace tfs
       return;
     }
 
-    const char* FSName::get_name(bool large_flag)
+    const char* FSName::get_name(const bool large_flag)
     {
       if (file_name_[0] != '\0')
       {

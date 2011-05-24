@@ -83,6 +83,18 @@ int TfsSmallFile::close()
   return close_ex();
 }
 
+int64_t TfsSmallFile::get_file_length()
+{
+  int64_t ret_len = 0;
+  FileInfo file_info;
+  int ret = fstat_ex(&file_info, NORMAL_STAT);
+  if (TFS_SUCCESS == ret)
+  {
+    ret_len = file_info.size_;
+  }
+  return ret_len;
+}
+
 int TfsSmallFile::unlink(const char* file_name, const char* suffix, const TfsUnlinkType action)
 {
   int ret = open_ex(file_name, suffix, T_WRITE | T_NOLEASE);
@@ -98,32 +110,31 @@ int TfsSmallFile::unlink(const char* file_name, const char* suffix, const TfsUnl
   return ret;
 }
 
-int TfsSmallFile::get_segment_for_read(int64_t offset, char* buf, int64_t count)
+int64_t TfsSmallFile::get_segment_for_read(int64_t offset, char* buf, int64_t count)
 {
-  return get_segment_for_write(offset, buf, count);
+  return get_meta_segment(offset, buf,
+                          count > ClientConfig::segment_size_ ? ClientConfig::segment_size_ : count);
 }
 
-int TfsSmallFile::get_segment_for_write(int64_t offset, const char* buf, int64_t count)
+int64_t TfsSmallFile::get_segment_for_write(int64_t offset, const char* buf, int64_t count)
 {
-  destroy_seg();
-  return get_meta_segment(offset, const_cast<char*>(buf), count);
+  return get_meta_segment(offset, const_cast<char*>(buf),
+                          count > ClientConfig::segment_size_ ? ClientConfig::segment_size_ : count);
 }
 
-int TfsSmallFile::get_size_for_rw(const int64_t check_size, const int64_t count, int64_t& cur_size, bool& not_end)
-{
-  return get_size_for_rw_ex(check_size, count, cur_size, not_end, ClientConfig::segment_size_);
-}
-
-int TfsSmallFile::read_process()
+int TfsSmallFile::read_process(int64_t& read_size)
 {
   int ret = TFS_SUCCESS;
   //set status
   processing_seg_list_[0]->status_ = SEG_STATUS_OPEN_OVER;
+  processing_seg_list_[0]->pri_ds_index_ = processing_seg_list_[0]->seg_info_.file_id_ %
+    processing_seg_list_[0]->ds_.size();
 
   if ((ret = process(FILE_PHASE_READ_FILE)) != TFS_SUCCESS)
   {
     TBSYS_LOG(ERROR, "read data fail, ret: %d", ret);
   }
+  finish_read_process(ret, read_size);
   return ret;
 }
 

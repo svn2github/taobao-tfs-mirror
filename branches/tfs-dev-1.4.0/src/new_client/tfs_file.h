@@ -9,6 +9,7 @@
 #include "common/lock.h"
 #include "common/client_define.h"
 #include "message/client_manager.h"
+#include "message/message.h"
 #include "tfs_session.h"
 #include "fsname.h"
 #include "local_key.h"
@@ -30,19 +31,19 @@ namespace tfs
 
     struct PhaseStatus
     {
-      InnerFilePhase pre_phase_;
+      SegmentStatus pre_status_;
       SegmentStatus status_;
     };
 
     // CAUTION: depend on InnerFilePhase member sequence, maybe change to map
     const static PhaseStatus phase_status[] = {
-      {FILE_PHASE_OPEN_FILE, SEG_STATUS_OPEN_OVER}, // dummy open.
-      {FILE_PHASE_OPEN_FILE, SEG_STATUS_CREATE_OVER}, // create.
-      {FILE_PHASE_CREATE_FILE, SEG_STATUS_BEFORE_CLOSE_OVER}, // write
-      {FILE_PHASE_WRITE_DATA, SEG_STATUS_ALL_OVER}, // close. just read write stat unlink is same previous phase
-      {FILE_PHASE_OPEN_FILE, SEG_STATUS_ALL_OVER}, // read.
-      {FILE_PHASE_OPEN_FILE, SEG_STATUS_ALL_OVER}, // stat.
-      {FILE_PHASE_OPEN_FILE, SEG_STATUS_ALL_OVER} // unlink.
+      {SEG_STATUS_NOT_INIT, SEG_STATUS_OPEN_OVER},            // dummy open.
+      {SEG_STATUS_OPEN_OVER, SEG_STATUS_CREATE_OVER},         // create.
+      {SEG_STATUS_CREATE_OVER, SEG_STATUS_BEFORE_CLOSE_OVER}, // write
+      {SEG_STATUS_BEFORE_CLOSE_OVER, SEG_STATUS_ALL_OVER}, // close. just read write stat unlink is same previous phase
+      {SEG_STATUS_OPEN_OVER, SEG_STATUS_ALL_OVER},         // read.
+      {SEG_STATUS_OPEN_OVER, SEG_STATUS_ALL_OVER},         // stat.
+      {SEG_STATUS_OPEN_OVER, SEG_STATUS_ALL_OVER}          // unlink.
     };
 
     enum
@@ -67,6 +68,7 @@ namespace tfs
       virtual int64_t pwrite(const void* buf, int64_t count, int64_t offset) = 0;
       virtual int fstat(TfsFileStat* file_info, const TfsStatFlag mode = NORMAL_STAT) = 0;
       virtual int close() = 0;
+      virtual int64_t get_file_length() = 0;
       virtual int unlink(const char* file_name, const char* suffix, const TfsUnlinkType action) = 0;
 
       const char* get_file_name();
@@ -74,10 +76,9 @@ namespace tfs
 
     protected:
       // virtual level operation
-      virtual int get_segment_for_read(int64_t offset, char* buf, int64_t count) = 0;
-      virtual int get_segment_for_write(int64_t offset, const char* buf, int64_t count) = 0;
-      virtual int get_size_for_rw(const int64_t check_size, const int64_t count, int64_t& cur_size, bool& not_end) = 0;
-      virtual int read_process() = 0;
+      virtual int64_t get_segment_for_read(int64_t offset, char* buf, int64_t count) = 0;
+      virtual int64_t get_segment_for_write(int64_t offset, const char* buf, int64_t count) = 0;
+      virtual int read_process(int64_t& read_size) = 0;
       virtual int write_process() = 0;
       virtual int finish_write_process(int status) = 0;
       virtual int close_process() = 0;
@@ -86,7 +87,7 @@ namespace tfs
     protected:
       // common operation
       void destroy_seg();
-      int get_meta_segment(const int64_t offset, char* buf, const int64_t count);
+      int64_t get_meta_segment(const int64_t offset, char* buf, const int64_t count);
       int process(const InnerFilePhase file_phase);
       int32_t finish_read_process(int status, int64_t& read_size);
 
@@ -107,8 +108,13 @@ namespace tfs
       int async_req_create_file(const uint16_t wait_id, const uint16_t index);
       int async_rsp_create_file(message::Message* packet, const uint16_t index);
 
+      int async_req_read_file(const uint16_t wait_id, const uint16_t index,
+                             SegmentData& seg_data, message::Message& rd_message);
       int async_req_read_file(const uint16_t wait_id, const uint16_t index);
       int async_rsp_read_file(message::Message* packet, const uint16_t index);
+
+      int async_req_read_fileV2(const uint16_t wait_id, const uint16_t index);
+      int async_rsp_read_fileV2(message::Message* packet, const uint16_t index);
 
       int async_req_write_data(const uint16_t wait_id, const uint16_t index);
       int async_rsp_write_data(message::Message* packet, const uint16_t index);

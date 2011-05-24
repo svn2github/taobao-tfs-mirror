@@ -19,21 +19,21 @@
 #include "common/define.h"
 #include "common/client_define.h"
 
-#ifdef __OPTIMIZE__
-extern int error_open_missing_mode (void)
-    __attribute__((__error__ ("open with (T_LARGE & T_WRITE) flag needs 1 additional not-NULL argument")));
-extern int error_no_addition_mode (void)
-    __attribute__((__error__ ("open without (T_LARGE & T_WRITE) flag needs no more additional argument")));
-extern int error_open_too_many_arguments (void)
-    __attribute__((__error__ ("open can be called with either 3 or 4 or 5 arguments, no more permitted")));
-#define missing_log_error() error_open_missing_mode()
-#define noadditional_log_error() error_no_addition_mode()
-#define overmany_log_error() error_open_too_many_arguments()
-#else
-#define missing_log_error() fprintf(stderr, "%s", "open with (T_LARGE & T_WRITE) flag needs 1 additional not-NULL argument")
-#define noadditional_log_error() fprintf(stderr, "%s", "open without (T_LARGE & T_WRITE) flag needs no more additional argument")
-#define overmany_log_error() fprintf(stderr, "%s", "open can be called with either 3 or 4 or 5 arguments, no more permitted")
-#endif
+// #ifdef __OPTIMIZE__
+// extern int error_open_missing_mode (void)
+//     __attribute__((__error__ ("open with (T_LARGE & T_WRITE) flag needs 1 additional not-NULL argument")));
+// extern int error_no_addition_mode (void)
+//     __attribute__((__error__ ("open without (T_LARGE & T_WRITE) flag needs no more additional argument")));
+// extern int error_open_too_many_arguments (void)
+//     __attribute__((__error__ ("open can be called with either 3 or 4 or 5 arguments, no more permitted")));
+// #define missing_log_error() error_open_missing_mode()
+// #define noadditional_log_error() error_no_addition_mode()
+// #define overmany_log_error() error_open_too_many_arguments()
+// #else
+#define missing_log_error() fprintf(stderr, "%s\n", "open with (T_LARGE & T_WRITE) flag needs 1 additional not-NULL argument")
+#define noadditional_log_error() fprintf(stderr, "%s\n", "open without (T_LARGE & T_WRITE) flag needs no more additional argument")
+#define overmany_log_error() fprintf(stderr, "%s\n", "open can be called with either 3 or 4 or 5 arguments, no more permitted")
+// #endif
 
 namespace tfs
 {
@@ -127,6 +127,7 @@ namespace tfs
       int64_t pwrite(const int fd, const void* buf, const int64_t count, const int64_t offset);
       int fstat(const int fd, TfsFileStat* buf, const TfsStatFlag mode = NORMAL_STAT);
       int close(const int fd, char* tfs_name = NULL, const int32_t len = 0);
+      int64_t get_file_length(const int fd);
 
       // LargeFile's name will be start with L
       int unlink(const char* file_name, const char* suffix = NULL, const TfsUnlinkType action = DELETE)
