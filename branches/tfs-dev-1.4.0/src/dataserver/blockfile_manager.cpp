@@ -776,7 +776,6 @@ namespace tfs
           ret = t_physical_block->load_block_prefix();
           if (TFS_SUCCESS != ret)
           {
-            tbsys::gDelete(t_physical_block);
             TBSYS_LOG(ERROR, "init physical block fail. fatal error! pos: %d, file: %s", pos, super_block_.mount_point_);
             break;
           }
@@ -817,8 +816,6 @@ namespace tfs
           pit = physcial_blocks_.find(pos);
           if (pit != physcial_blocks_.end())
           {
-            tbsys::gDelete(t_physical_block);
-            tbsys::gDelete(t_logic_block);
             ret = EXIT_PHYSIC_UNEXPECT_FOUND_ERROR;
             TBSYS_LOG(ERROR, "logic blockid: %u, physical blockid: %u is repetitive. fatal error! ret: %d",
                       logic_block_id, pos, EXIT_PHYSIC_UNEXPECT_FOUND_ERROR);
@@ -838,8 +835,6 @@ namespace tfs
               ret = del_block(logic_block_id, C_COMPACT_BLOCK);
               if (TFS_SUCCESS != ret)
               {
-                tbsys::gDelete(t_physical_block);
-                tbsys::gDelete(t_logic_block);
                 break;
               }
             }
@@ -876,7 +871,6 @@ namespace tfs
             ret = ext_physical_block->load_block_prefix();
             if (TFS_SUCCESS != ret)
             {
-              tbsys::gDelete(ext_physical_block);
               TBSYS_LOG(ERROR, "init physical block fail. fatal error! pos: %u, mount point: %s", pos,
                         super_block_.mount_point_);
               break;
@@ -899,7 +893,6 @@ namespace tfs
               if ((tmp_ret = super_block_impl_->flush_file()) != TFS_SUCCESS)
                 TBSYS_LOG(ERROR, "flush super block fail %d", tmp_ret);
               conflict_flag = true;
-              tbsys::gDelete(ext_physical_block);
               break;
             }
 
@@ -1147,12 +1140,13 @@ namespace tfs
       if (TFS_SUCCESS != ret)
       {
         TBSYS_LOG(ERROR, "write super block file error. ret: %d.", ret);
+        return ret;
       }
 
       tbsys::gDelete(super_file_op);
       tbsys::gDeleteA(tmp_buffer);
 
-      return ret;
+      return TFS_SUCCESS;
     }
 
     int BlockFileManager::create_block(const BlockType block_type)
@@ -1177,7 +1171,6 @@ namespace tfs
       else
       {
         TBSYS_LOG(ERROR, "base fs type is not supported. base fs type: %d", super_block_.base_fs_type_);
-        tbsys::gDeleteA(block_prefix);
         return TFS_ERROR;
       }
 
@@ -1195,8 +1188,6 @@ namespace tfs
       }
       else
       {
-        tbsys::gDeleteA(block_prefix);
-        tbsys::gDelete(file_formater);
         return TFS_ERROR;
       }
 
@@ -1247,7 +1238,6 @@ namespace tfs
         tbsys::gDelete(file_op);
       }
 
-      tbsys::gDeleteA(block_prefix);
       tbsys::gDelete(file_formater);
       return TFS_SUCCESS;
     }

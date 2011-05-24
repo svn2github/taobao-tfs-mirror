@@ -69,7 +69,7 @@ namespace tfs
       }
       int32_t length = offset + len;
 
-      if (length > WRITE_DATA_TMPBUF_SIZE || length_ > WRITE_DATA_TMPBUF_SIZE)      // write to file if length is large then max_read_size
+      if (length > WRITE_DATA_TMPBUF_SIZE)      // write to file if length is large then max_read_size
       {
         if (fd_ == -1)          // first write to file
         {

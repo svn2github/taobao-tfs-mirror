@@ -34,7 +34,7 @@ namespace tfs
     class DataFile
     {
       public:
-        explicit DataFile(uint64_t fn);
+        DataFile(uint64_t fn);
         DataFile(uint64_t fn, char* path);
         ~DataFile();
 

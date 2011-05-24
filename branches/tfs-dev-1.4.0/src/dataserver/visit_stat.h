@@ -16,7 +16,7 @@
 #ifndef TFS_DATASERVER_VISITSTAT_H_
 #define TFS_DATASERVER_VISITSTAT_H_
 
-#include "common/internal.h"
+#include "common/interval.h"
 #include <tbtimeutil.h>
 #include <set>
 #include <vector>

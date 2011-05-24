@@ -31,7 +31,7 @@ namespace tfs
     class ParaInfo
     {
       public:
-        explicit ParaInfo(const int32_t size) :
+        ParaInfo(const int32_t size) :
           flag_(false)
         {
           new_buf_ = new char[size];
@@ -73,7 +73,6 @@ namespace tfs
         }
 
       private:
-        DISALLOW_COPY_AND_ASSIGN(ParaInfo);
         bool flag_;
         char* self_buf_;
         char* new_buf_;
@@ -82,7 +81,7 @@ namespace tfs
     class MMapFileOperation: public FileOperation
     {
       public:
-        explicit MMapFileOperation(const std::string& file_name, int open_flags = O_RDWR | O_LARGEFILE) :
+        MMapFileOperation(const std::string& file_name, int open_flags = O_RDWR | O_LARGEFILE) :
           FileOperation(file_name, open_flags), is_mapped_(false), map_file_(NULL)
         {
 
