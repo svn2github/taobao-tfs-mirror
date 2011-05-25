@@ -219,6 +219,7 @@ namespace tfs
         {
           TBSYS_LOG(ERROR, "read raw data fail, ip: %s, blockid: %u, offset: %d, reading len: %d, ret: %d",
               tbsys::CNetUtil::addrToString(ds_ip).c_str(), block_id, offset, read_len, ret);
+          CLIENT_POOL.release_client(client);
           return TFS_ERROR;
         }
         len = read_len;
@@ -284,6 +285,7 @@ namespace tfs
       {
         TBSYS_LOG(ERROR, "replicate get meta info fail, blockid: %u, ret: %d",
             tbsys::CNetUtil::addrToString(ds_ip).c_str(), block_id, ret);
+        CLIENT_POOL.release_client(client);
         return TFS_ERROR;
       }
 
