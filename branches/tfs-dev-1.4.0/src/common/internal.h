@@ -469,6 +469,7 @@ namespace tfs
       int64_t offset_;          // offset in current file
       int32_t size_;            // size of segment
       int32_t crc_;             // crc checksum of segment
+      std::vector<FileInfo> tmp; 
 
       SegmentInfo()
       {

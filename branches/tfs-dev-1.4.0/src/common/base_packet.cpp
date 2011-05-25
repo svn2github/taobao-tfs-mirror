@@ -16,7 +16,7 @@
 #include <Service.h>
 #include "base_packet.h"
 #include "base_service.h"
-#include "status_packet.h"
+#include "status_message.h"
 
 namespace tfs
 {
@@ -174,6 +174,7 @@ namespace tfs
       {
         if (0 == getChannelId())
         {
+          packet->free();
           iret = TFS_ERROR;
           TBSYS_LOG(ERROR, "message (%d) channel is null, reply message (%d)", getPCode(), packet->getPCode());
         }
@@ -182,6 +183,7 @@ namespace tfs
           if (((direction_ & DIRECTION_RECEIVE) && _expireTime > 0) 
                 && (tbsys::CTimeUtil::getTime() > _expireTime))
           {
+            packet->free();
             iret = TFS_ERROR;
             TBSYS_LOG(ERROR, "message (%d), timeout for response, reply message (%d)", getPCode(), packet->getPCode());
           }
@@ -193,26 +195,19 @@ namespace tfs
           packet->set_id(id_ + 1);
           packet->set_version(version_);
 
-          BaseService* service = dynamic_cast<BaseService*>(tbutil::Service::instance());
-          //clone & serialize message
-          tbnet::Packet* reply_msg = service->get_packet_factory()->clone_packet(packet, TFS_PACKET_VERSION_V2, false);
-          iret = NULL != reply_msg ? TFS_SUCCESS : TFS_ERROR;
-          if (TFS_SUCCESS == iret)
+          if (is_enable_dump())
           {
-            if (is_enable_dump())
-            {
-              dump();  
-              dynamic_cast<BasePacket*>(reply_msg)->dump();
-            }
-            //post message
-            bool bret= connection_->postPacket(reply_msg);
-            iret = bret ? TFS_SUCCESS : TFS_ERROR;
-            if (TFS_SUCCESS != iret)
-            {
-              TBSYS_LOG(ERROR, "post packet failure, server: %s, pcode:%d",
+            dump();
+            packet->dump();
+          }
+          //post message
+          bool bret= connection_->postPacket(packet);
+          iret = bret ? TFS_SUCCESS : TFS_ERROR;
+          if (TFS_SUCCESS != iret)
+          {
+            TBSYS_LOG(ERROR, "post packet failure, server: %s, pcode:%d",
                 tbsys::CNetUtil::addrToString(connection_->getServerId()).c_str(), packet->getPCode());
-              reply_msg->free();
-            }
+            packet->free();
           }
         }
       }
@@ -230,8 +225,12 @@ namespace tfs
       TBSYS_LOGGER.logMessage(level, file, line, function, "%s", msgstr);
 
       BaseService* service = dynamic_cast<BaseService*>(tbutil::Service::instance());
-      StatusPacket* packet = dynamic_cast<StatusPacket*>(service->get_packet_factory()->createPacket(STATUS_PACKET));
-      this->reply(packet);
+      StatusMessage* packet = dynamic_cast<StatusMessage*>(service->get_packet_factory()->createPacket(STATUS_MESSAGE));
+      int32_t iret = reply(packet);
+      if (TFS_SUCCESS == iret)
+      {
+        TBSYS_LOG(ERROR, "reply message fail, error code: %d, pcode: %d", error_code, packet->getPCode());
+      }
       return TFS_SUCCESS;
     }
     // parse for version & lease

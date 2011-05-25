@@ -67,6 +67,9 @@ namespace tfs
 
       transport_.wait();
       main_workers_.wait();
+
+      destroy_packet_factory(packet_factory_);
+      destroy_packet_streamer(streamer_);
       return true;
     }
 

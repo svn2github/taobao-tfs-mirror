@@ -19,7 +19,7 @@
 #include "define.h"
 #include "client_manager.h"
 #include "local_packet.h"
-#include "status_packet.h"
+#include "status_message.h"
 
 namespace tfs
 {
@@ -94,7 +94,9 @@ namespace tfs
       int32_t ret = NULL != packet && server > 0 ? common::TFS_SUCCESS : common::EXIT_INVALID_ARGU;
       if (common::TFS_SUCCESS == ret)
       {
+        monitor_.lock();
         send_id = create_send_id(server);
+        monitor_.unlock();
         if (send_id > MAX_SEND_ID)
         {
           ret = common::TFS_ERROR;
@@ -109,7 +111,9 @@ namespace tfs
           {
             TBSYS_LOG(ERROR, "clone message failure, pcode:%d", packet->getPCode());
             ret = common::TFS_ERROR;
+            monitor_.lock();
             destroy_send_id(id);
+            monitor_.unlock();
           }
           else
           {
@@ -122,7 +126,9 @@ namespace tfs
               ret = common::EXIT_SENDMSG_ERROR;
               TBSYS_LOG(INFO, "cannot post packet, maybe send queue is full or disconnect.");
               send_msg->free();
+              monitor_.lock();
               destroy_send_id(id);
+              monitor_.unlock();
             }
           }
         }
@@ -239,7 +245,6 @@ namespace tfs
     {
       SEND_SIGN_PAIR* result = NULL;
       std::vector<SEND_SIGN_PAIR>::iterator iter = send_id_sign_.begin();
-      //TODO need a mutex to protected send_id_sign_
       for (; iter != send_id_sign_.end(); ++iter)
       {
         if ((*iter).first == id.send_id_)
@@ -296,7 +301,7 @@ namespace tfs
         iret = rmsg->getPCode() == STATUS_MESSAGE ? common::TFS_SUCCESS : common::TFS_ERROR;
         if (common::TFS_SUCCESS == iret)
         {
-          StatusPacket* smsg = dynamic_cast<StatusPacket*>(rmsg);
+          StatusMessage* smsg = dynamic_cast<StatusMessage*>(rmsg);
           iret = smsg->get_status();
         }
       }
@@ -348,7 +353,7 @@ namespace tfs
       else
       {
         uint8_t send_id = 0;
-        StatusPacket send_msg(STATUS_MESSAGE_PING);
+        StatusMessage send_msg(STATUS_MESSAGE_PING);
         ret = client->post_request(server_id, &send_msg, send_id);
         if (common::TFS_SUCCESS != ret)
         {

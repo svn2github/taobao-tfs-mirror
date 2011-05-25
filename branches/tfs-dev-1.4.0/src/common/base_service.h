@@ -57,7 +57,6 @@ namespace tfs
       /** handle packet*/
       virtual bool handlePacketQueue(tbnet::Packet *packet, void *args);
 
-  protected:
       /** application parse args*/
       virtual int parse_common_line_args(int argc, char* argv[]) { return TFS_SUCCESS;}
 
@@ -73,8 +72,14 @@ namespace tfs
       /** create the packet streamer, this is used to create packet according to packet code */
       virtual tbnet::IPacketStreamer* create_packet_streamer() = 0;
 
+      /** destroy the packet streamer*/
+      virtual void destroy_packet_streamer(tbnet::IPacketStreamer* streamer) = 0;
+
       /** create the packet streamer, this is used to create packet*/
       virtual BasePacketFactory* create_packet_factory() = 0;
+
+      /** destroy packet factory*/
+      virtual void destroy_packet_factory(BasePacketFactory* factory) = 0;
 
       /** get log file path*/
       virtual const char* get_log_file_path() = 0;
@@ -120,9 +125,6 @@ namespace tfs
       /** interrupt callback*/
       virtual int interruptCallback(int sig);
 
-      /** load config file*/
-      virtual int load_config(const std::string& config, std::string& error_msg){ return TFS_SUCCESS;}
-
       /** initialize work directory && log file*/ 
       int initialize_work_dir(const char* app_name, std::string& error_msg);
 
@@ -134,8 +136,9 @@ namespace tfs
       BasePacketStreamer* streamer_;
       tbutil::TimerPtr timer_;
       tbnet::Transport transport_;
-      tbnet::PacketQueueThread main_workers_;
 
+    protected:
+      tbnet::PacketQueueThread main_workers_;
       int32_t work_queue_size_;
     };
   }

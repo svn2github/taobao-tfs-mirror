@@ -16,7 +16,7 @@
 #include <Memory.hpp>
 #include "client_manager.h"
 #include "error_msg.h"
-#include "status_packet.h"
+#include "status_message.h"
 
 namespace tfs
 {

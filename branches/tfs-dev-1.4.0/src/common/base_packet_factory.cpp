@@ -15,7 +15,7 @@
  */
 #include "base_packet_factory.h"
 #include "local_packet.h"
-#include "status_packet.h"
+#include "status_message.h"
 namespace tfs
 {
   namespace common 
@@ -23,7 +23,7 @@ namespace tfs
     int BasePacketFactory::initialize()
     {
       packet_maps_[LOCAL_PACKET] = LocalPacket::create;
-      packet_maps_[STATUS_PACKET] = StatusPacket::create;
+      packet_maps_[STATUS_MESSAGE] = StatusMessage::create;
       return TFS_SUCCESS;
     }
 
