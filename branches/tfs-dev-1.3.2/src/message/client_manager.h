@@ -7,11 +7,11 @@
 #include "message_factory.h"
 #include "tfs_packet_streamer.h"
 #include "wait_object.h"
-#include "common/interval.h"
+#include "common/internal.h"
 
 namespace tfs
 {
-  namespace message 
+  namespace message
   {
     class WaitObjectManager;
     class NewClientManager : public tbnet::IPacketHandler

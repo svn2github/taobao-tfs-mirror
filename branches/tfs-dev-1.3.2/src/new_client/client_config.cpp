@@ -35,6 +35,12 @@ string StatItem::remove_count_ = "remove_count";
 int64_t ClientConfig::segment_size_ = 2 * 1024 * 1024;
 int64_t ClientConfig::batch_count_ = 8;
 int64_t ClientConfig::batch_size_ = ClientConfig::segment_size_ * ClientConfig::batch_count_;
-int64_t ClientConfig::gc_interval_ = 1200;  //20 min
-int64_t ClientConfig::expired_time_ = 1 * 86400; // 1 days
-int64_t ClientConfig::batch_time_out_ = 3000000; // 3 seconds
+int64_t ClientConfig::client_retry_count_ = 3;      // retry times to read or write
+// interval unit: ms
+int64_t ClientConfig::stat_interval_ = 60000;    // 1min
+int64_t ClientConfig::gc_interval_ = 43200000;  // 12h
+int64_t ClientConfig::expired_time_ = 86400000; // 1 days
+// timeout unit: inner use us, but ms in outside
+// TODO: change to new ClientManager, unify
+int64_t ClientConfig::batch_timeout_ = 3000000; // 3s wait several response timeout
+int64_t ClientConfig::wait_timeout_ = 3000000;  // 3s wait single response timeout

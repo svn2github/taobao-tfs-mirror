@@ -20,7 +20,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <string>
-#include "interval.h"
+#include "internal.h"
 
 namespace tfs
 {

@@ -182,7 +182,7 @@ int TfsSession::get_block_info_ex(uint32_t& block_id, VUINT64& rds, const int32_
   gbi_message.set_block_id(block_id);
 
   Message* rsp = NULL;
-  int ret = NewClientManager::get_instance()->call(ns_addr_, &gbi_message, WAIT_TIME_OUT, rsp);
+  int ret = NewClientManager::get_instance()->call(ns_addr_, &gbi_message, ClientConfig::wait_timeout_, rsp);
 
   if (TFS_SUCCESS != ret)
   {
@@ -246,7 +246,7 @@ int TfsSession::get_block_info_ex(SEG_DATA_LIST& seg_list, const int32_t flag)
   }
 
   Message* rsp = NULL;
-  int ret = NewClientManager::get_instance()->call(ns_addr_, &bgbi_message, WAIT_TIME_OUT, rsp);
+  int ret = NewClientManager::get_instance()->call(ns_addr_, &bgbi_message, ClientConfig::wait_timeout_, rsp);
   if (TFS_SUCCESS != ret)
   {
     TBSYS_LOG(ERROR, "get blockinfo failed, ret: %d", ret);
@@ -355,7 +355,7 @@ int TfsSession::get_cluster_id_from_ns()
   cc_message.set_block_id(20);
 
   Message* rsp = NULL;
-  int ret = NewClientManager::get_instance()->call(ns_addr_, &cc_message, WAIT_TIME_OUT, rsp);
+  int ret = NewClientManager::get_instance()->call(ns_addr_, &cc_message, ClientConfig::wait_timeout_, rsp);
   if (TFS_SUCCESS != ret)
   {
     TBSYS_LOG(ERROR, "get block info failed, ret: %d", ret);

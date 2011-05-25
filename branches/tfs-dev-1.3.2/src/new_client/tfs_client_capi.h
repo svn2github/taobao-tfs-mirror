@@ -67,14 +67,23 @@ extern "C"
   void t_set_batch_count(const int64_t batch_count);
   int64_t t_get_batch_count();
 
-  void t_set_gc_interval(const int64_t gc_interval_s);
+  void t_set_stat_interval(const int64_t stat_interval_ms);
+  int64_t t_get_stat_interval();
+
+  void t_set_gc_interval(const int64_t gc_interval_ms);
   int64_t t_get_gc_interval();
 
-  void t_set_gc_expired_time(const int64_t gc_expired_time_s);
+  void t_set_gc_expired_time(const int64_t gc_expired_time_ms);
   int64_t t_get_gc_expired_time();
 
-  void t_set_batch_time_out(const int64_t time_out_us);
-  int64_t t_get_batch_time_out();
+  void t_set_batch_timeout(const int64_t timeout_ms);
+  int64_t t_get_batch_timeout();
+
+  void t_set_wait_timeout(const int64_t timeout_ms);
+  int64_t t_get_wait_timeout();
+
+  void t_set_client_retry_count(const int64_t count);
+  int64_t t_get_client_retry_count();
 
   void t_set_log_level(const char* level);
 

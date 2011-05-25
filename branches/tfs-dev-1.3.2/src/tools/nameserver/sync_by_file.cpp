@@ -26,7 +26,7 @@
 #include <tbsys.h>
 #include <curses.h>
 #include "common/func.h"
-#include "common/interval.h"
+#include "common/internal.h"
 #include "common/error_msg.h"
 #include "client/tfs_client_api.h"
 #include "util.h"
@@ -150,7 +150,7 @@ class WorkThread : public tbutil::Thread
           atomic_inc(&gstat.copy_failure_);
           continue;
         }
-        
+
         iret = src_tfsclient.tfs_stat(&src_file_info);
         if (iret != TFS_SUCCESS)
         {
@@ -188,9 +188,9 @@ class WorkThread : public tbutil::Thread
         else if (src_file_info.flag_ == 0
                 && (target_file_info.id_ == 0 || src_file_info.size_ != target_file_info.size_
                     || src_file_info.crc_ != target_file_info.crc_)
-                && (TIMESTAMP_DAY <= 0 || src_file_info.modify_time_ < (now - TIMESTAMP_DAY * 86400))) 
+                && (TIMESTAMP_DAY <= 0 || src_file_info.modify_time_ < (now - TIMESTAMP_DAY * 86400)))
         {
-          int32_t max_size = (src_file_info.size_ / MAX_READ_SIZE + 1) * MAX_READ_SIZE; 
+          int32_t max_size = (src_file_info.size_ / MAX_READ_SIZE + 1) * MAX_READ_SIZE;
           char* data = new char[max_size];
           int32_t len = 0;
           int32_t offset = 0;
@@ -215,7 +215,7 @@ class WorkThread : public tbutil::Thread
           }
 
           target_tfsclient.tfs_close();
-          
+
           iret = target_tfsclient.tfs_open(file.c_str(), prefix, WRITE_MODE);
           if (iret != TFS_SUCCESS)
           {
@@ -333,7 +333,7 @@ int main(int argc, char* argv[])
   while ((index = getopt(argc, argv, "s:d:f:t:o:vh")) != EOF)
   {
     switch (index)
-    {   
+    {
       case 's':
         src_ns_ip_port = optarg;
         break;
@@ -373,7 +373,7 @@ int main(int argc, char* argv[])
       fprintf(stderr, "access file(%s) error: %s\n", output_file_path.c_str(), strerror(errno));
       return TFS_ERROR;
     }
-    
+
     if (access(file_path.c_str(), R_OK) < 0)
     {
       fprintf(stderr, "access file(%s) error: %s\n", file_path.c_str(), strerror(errno));
@@ -397,7 +397,7 @@ int main(int argc, char* argv[])
 
     signal(SIGPIPE, SIG_IGN);
     signal(SIGHUP, SIG_IGN);
-    signal(SIGINT, SIG_IGN);                                                                   
+    signal(SIGINT, SIG_IGN);
     signal(SIGTERM, SIG_IGN);
     signal(SIGUSR1, SIG_IGN);
     gworks = new WorkThreadPtr[thread_count];
@@ -454,7 +454,7 @@ int main(int argc, char* argv[])
     }
 
     signal(SIGHUP, interruptcallback);
-    signal(SIGINT, interruptcallback);                                                           
+    signal(SIGINT, interruptcallback);
     signal(SIGTERM, interruptcallback);
     signal(SIGUSR1, interruptcallback);
 

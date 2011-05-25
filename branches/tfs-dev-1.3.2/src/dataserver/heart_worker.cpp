@@ -6,6 +6,7 @@ namespace tfs
 {
   namespace dataserver
   {
+    using namespace std;
     using namespace common;
     using namespace message;
 

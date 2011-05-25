@@ -6,7 +6,7 @@
  * published by the Free Software Foundation.
  *
  *
- * Version: $Id$
+ * Version: $Id: internal.h 301 2011-05-13 11:11:50Z nayan@taobao.com $
  *
  * Authors:
  *   duolong <duolong@taobao.com>
@@ -399,6 +399,9 @@ namespace tfs
     static const int32_t PORT_PER_PROCESS = 2;
     static const int32_t MAX_DEV_NAME_LEN = 64;
     static const int32_t MAX_READ_SIZE = 1048576;
+
+    static const int MAX_FILE_FD = INT_MAX;
+    static const int MAX_OPEN_FD_COUNT = MAX_FILE_FD - 1;
 
     // typedef
     typedef std::map<std::string, std::string> STRING_MAP; // string => string

@@ -25,7 +25,7 @@
 #include <errno.h>
 
 #include "sync_backup.h"
-#include "common/interval.h"
+#include "common/internal.h"
 #include "common/file_queue.h"
 #include "common/file_queue_thread.h"
 #include "message/message_factory.h"

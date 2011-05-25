@@ -5,7 +5,7 @@
 #include <set>
 #include <iostream>
 #include <tbsys.h>
-#include "common/interval.h"
+#include "common/internal.h"
 
 
 using namespace std;

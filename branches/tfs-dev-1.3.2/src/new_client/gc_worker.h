@@ -69,10 +69,10 @@ namespace tfs
         ~GcManager();
 
       public:
-        int initialize(tbutil::TimerPtr timer, const int64_t schedule_interval_s);
+        int initialize(tbutil::TimerPtr timer, const int64_t schedule_interval_ms);
         int wait_for_shut_down();
         int destroy();
-        int reset_schedule_interval(const int64_t schedule_interval_s);
+        int reset_schedule_interval(const int64_t schedule_interval_ms);
 
       private:
         DISALLOW_COPY_AND_ASSIGN(GcManager);

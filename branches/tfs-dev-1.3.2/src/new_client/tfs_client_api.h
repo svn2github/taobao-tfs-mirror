@@ -17,7 +17,6 @@
 
 #include <stdio.h>
 #include "common/define.h"
-#include "common/client_define.h"
 
 // #ifdef __OPTIMIZE__
 // extern int error_open_missing_mode (void)
@@ -137,19 +136,28 @@ namespace tfs
       int unlink(const char* file_name, const char* suffix, const char* ns_addr, const TfsUnlinkType action = DELETE);
 
       void set_segment_size(const int64_t segment_size);
-      int64_t get_segment_size();
+      int64_t get_segment_size() const;
 
       void set_batch_count(const int64_t batch_count);
-      int64_t get_batch_count();
+      int64_t get_batch_count() const;
 
-      void set_gc_interval(const int64_t gc_interval_s);
-      int64_t get_gc_interval();
+      void set_stat_interval(const int64_t stat_interval_ms);
+      int64_t get_stat_interval() const;
 
-      void set_gc_expired_time(const int64_t gc_expired_time_s);
-      int64_t get_gc_expired_time();
+      void set_gc_interval(const int64_t gc_interval_ms);
+      int64_t get_gc_interval() const;
 
-      void set_batch_time_out(const int64_t time_out_us);
-      int64_t get_batch_time_out();
+      void set_gc_expired_time(const int64_t gc_expired_time_ms);
+      int64_t get_gc_expired_time() const;
+
+      void set_batch_timeout(const int64_t timeout_ms);
+      int64_t get_batch_timeout() const;
+
+      void set_wait_timeout(const int64_t timeout_ms);
+      int64_t get_wait_timeout() const;
+
+      void set_client_retry_count(const int64_t count);
+      int64_t get_client_retry_count() const;
 
       void set_log_level(const char* level);
 

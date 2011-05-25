@@ -22,7 +22,7 @@
 #include <string>
 #include <errno.h>
 
-#include "common/interval.h"
+#include "common/internal.h"
 #include "message.h"
 
 namespace tfs

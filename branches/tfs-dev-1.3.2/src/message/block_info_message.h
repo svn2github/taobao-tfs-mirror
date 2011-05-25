@@ -21,7 +21,7 @@
 #include <fcntl.h>
 #include <vector>
 #include <errno.h>
-#include "common/interval.h"
+#include "common/internal.h"
 #include "message.h"
 #include "common/error_msg.h"
 

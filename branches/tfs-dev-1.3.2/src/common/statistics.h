@@ -126,6 +126,7 @@ public:
   int initialize(tbutil::TimerPtr timer);
   int wait_for_shut_down();
   int destroy();
+  int reset_schedule_interval(const int64_t schedule_interval_s);
   int add_entry(const EntryPtr& entry, int64_t schedule_interval_us = 0);
   int remove_entry(const Key& key);
   int update_entry(const Key& key, std::vector<int64_t>& update_list, bool inc = true);
@@ -222,7 +223,7 @@ int StatEntry<int64_t, int64_t>::update(const int64_t& sub_key, const int64_t va
   int32_t offset = iter - sub_key_.begin();
   if ((*iter) > 0  && value != 0 )
   {
-    inc ? atomic_add((&(count_[offset])), value) : atomic_add((&(count_[offset])), (-value)); 
+    inc ? atomic_add((&(count_[offset])), value) : atomic_add((&(count_[offset])), (-value));
   }
   return TFS_SUCCESS;
 }
@@ -272,7 +273,7 @@ void StatEntry<std::string, std::string>::runTimerTask()
   }
 }
 
-int StatEntry<std::string, std::string>::serialize() 
+int StatEntry<std::string, std::string>::serialize()
 {
   std::string result;
   stat_entry_serialize(result);
@@ -307,7 +308,7 @@ int StatEntry<std::string, std::string>::serialize(char* data, int64_t& pos, int
       pos += length;
       memcpy((data+pos), &(*citer), sizeof(uint64_t));
       pos += sizeof(uint64_t);
-    } 
+    }
   }
   return bRet ? TFS_SUCCESS : EXIT_GENERAL_ERROR;
 }
@@ -339,7 +340,7 @@ int StatEntry<std::string, std::string>::update(std::vector<int64_t>& update_lis
     {
       inc ? atomic_add((&(*citer)), (*iter)) : atomic_add((&(*citer)), (-(*iter)));
     }
-  } 
+  }
   return TFS_SUCCESS;
 }
 
@@ -354,7 +355,7 @@ int StatEntry<std::string, std::string>::update(const std::string& sub_key, cons
   int32_t offset = iter - sub_key_.begin();
   if (!(*iter).empty() && value != 0 )
   {
-    inc ? atomic_add((&(count_[offset])), value) : atomic_add((&(count_[offset])), (-value)); 
+    inc ? atomic_add((&(count_[offset])), value) : atomic_add((&(count_[offset])), (-value));
   }
   return TFS_SUCCESS;
 }
@@ -427,6 +428,23 @@ int StatManager<Key, SubKey, Entry>::destroy()
 }
 
 template<typename Key, typename SubKey, template<typename T, typename T2> class Entry>
+int StatManager<Key, SubKey, Entry>::reset_schedule_interval(const int64_t schedule_interval_us)
+{
+  if (!destroy_)
+  {
+    for (STAT_MAP_ITER iter = maps_.begin(); iter != maps_.end(); ++iter)
+    {
+      if (schedule_interval_us > 0)
+      {
+        timer_->cancel(iter->second);
+        timer_->scheduleRepeated(iter->second, tbutil::Time::microSeconds(schedule_interval_us));
+      }
+    }
+  }
+  return TFS_SUCCESS;
+}
+
+template<typename Key, typename SubKey, template<typename T, typename T2> class Entry>
 int StatManager<Key, SubKey, Entry>::add_entry(const EntryPtr& entry, int64_t schedule_interval_us)
 {
   if (!destroy_)
@@ -437,7 +455,7 @@ int StatManager<Key, SubKey, Entry>::add_entry(const EntryPtr& entry, int64_t sc
       TBSYS_LOG(WARN, "%s", "entry is exist");
       return TFS_SUCCESS;
     }
-    std::pair<STAT_MAP_ITER, bool> res = 
+    std::pair<STAT_MAP_ITER, bool> res =
      maps_.insert(value_type(entry->get_key(), entry));
     if (!res.second)
     {

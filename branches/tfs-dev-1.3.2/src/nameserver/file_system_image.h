@@ -27,7 +27,7 @@
 #include <ext/hash_map>
 #include <errno.h>
 
-#include "common/interval.h"
+#include "common/internal.h"
 #include "common/config.h"
 #include "oplog.h"
 #include "block_collect.h"

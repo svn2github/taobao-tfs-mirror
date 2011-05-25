@@ -11,18 +11,18 @@
  * Authors:
  *   duolong <duolong@taobao.com>
  *      - initial release
- *   qushan<qushan@taobao.com> 
+ *   qushan<qushan@taobao.com>
  *      - modify 2009-03-27
- *   duanfei <duanfei@taobao.com> 
+ *   duanfei <duanfei@taobao.com>
  *      - modify 2010-04-23
  *
  */
 #ifndef TFS_NAMESERVER_DEFINE_H_
-#define TFS_NAMESERVER_DEFINE_H_ 
+#define TFS_NAMESERVER_DEFINE_H_
 
 #include <Mutex.h>
 #include <tbsys.h>
-#include "common/interval.h"
+#include "common/internal.h"
 #include "common/func.h"
 
 namespace tfs
@@ -139,4 +139,4 @@ namespace tfs
   }
 }
 
-#endif 
+#endif

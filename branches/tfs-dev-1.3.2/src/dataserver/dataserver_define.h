@@ -18,7 +18,7 @@
 
 #include <string>
 #include <assert.h>
-#include "common/interval.h"
+#include "common/internal.h"
 
 namespace tfs
 {
@@ -80,7 +80,7 @@ namespace tfs
       C_OPER_UPDATE
     };
 
-    #pragma pack(4) 
+    #pragma pack(4)
     struct BlockPrefix
     {
       uint32_t logic_blockid_;

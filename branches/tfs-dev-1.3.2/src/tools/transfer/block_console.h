@@ -16,7 +16,7 @@
 #define TFS_TOOL_BLOCKCONSOLE_H_
 
 #include "common/define.h"
-#include "common/interval.h"
+#include "common/internal.h"
 #include "common/error_msg.h"
 #include "client/tfs_session.h"
 #include <tbnet.h>

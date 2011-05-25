@@ -20,7 +20,7 @@
 #include <Handle.h>
 #include <TbThread.h>
 #include "common/func.h"
-#include "common/interval.h"
+#include "common/internal.h"
 #include "common/error_msg.h"
 #include "client/tfs_client_api.h"
 #include "block_console.h"

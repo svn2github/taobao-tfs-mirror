@@ -28,7 +28,7 @@
 #include "block_checker.h"
 #include "heart_worker.h"
 #include "check_worker.h"
-#include "common/interval.h"
+#include "common/internal.h"
 #include "common/config.h"
 #include "common/statistics.h"
 #include "message/message.h"
@@ -150,7 +150,7 @@ namespace tfs
         tbutil::Mutex count_mutex_;
         tbutil::Mutex read_stat_mutex_;
 
-        vector<tbsys::CThread*> threads_;
+      std::vector<tbsys::CThread*> threads_;
 
         AccessControl acl_;
         AccessStat acs_;

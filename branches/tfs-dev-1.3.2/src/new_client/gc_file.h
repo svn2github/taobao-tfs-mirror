@@ -16,7 +16,7 @@
 #ifndef TFS_CLIENT_GCFILE_H_
 #define TFS_CLIENT_GCFILE_H_
 
-#include "common/interval.h"
+#include "common/internal.h"
 #include "common/file_op.h"
 
 namespace tfs

@@ -19,7 +19,7 @@
 #include "dataserver_define.h"
 #include "blockfile_manager.h"
 #include "logic_block.h"
-#include "common/interval.h"
+#include "common/internal.h"
 #include "common/config.h"
 #include "message/message_factory.h"
 #include "message/client.h"

@@ -22,7 +22,7 @@
 #include <string>
 #include <errno.h>
 
-#include "common/interval.h"
+#include "common/internal.h"
 #include "common/func.h"
 #include "nameserver/layout_manager.h"
 #include "message.h"
@@ -33,7 +33,7 @@ namespace tfs
 {
   namespace message
   {
-    static const int32_t MAX_WBLOCK = 100;         
+    static const int32_t MAX_WBLOCK = 100;
 
     class GetServerStatusMessage: public Message
     {

@@ -14,14 +14,14 @@
  *
  */
 #ifndef TFS_MESSAGE_OPLOGSYNCMESSAGE_H_
-#define TFS_MESSAGE_OPLOGSYNCMESSAGE_H_ 
+#define TFS_MESSAGE_OPLOGSYNCMESSAGE_H_
 
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <string>
 #include <errno.h>
-#include "common/interval.h"
+#include "common/internal.h"
 #include "message.h"
 
 namespace tfs

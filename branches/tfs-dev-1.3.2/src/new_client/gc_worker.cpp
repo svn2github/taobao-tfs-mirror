@@ -40,14 +40,14 @@ GcManager::~GcManager()
   gc_worker_ = 0;
 }
 
-int GcManager::initialize(tbutil::TimerPtr timer, const int64_t schedule_interval_s)
+int GcManager::initialize(tbutil::TimerPtr timer, const int64_t schedule_interval_ms)
 {
   int ret = TFS_ERROR;
   if (0 != timer)
   {
     timer_ = timer;
     gc_worker_ = new GcWorker();
-    timer_->scheduleRepeated(gc_worker_, tbutil::Time::seconds(schedule_interval_s));
+    timer_->scheduleRepeated(gc_worker_, tbutil::Time::milliSeconds(schedule_interval_ms));
     ret = TFS_SUCCESS;
   }
   return ret;
@@ -71,13 +71,13 @@ int GcManager::destroy()
   return TFS_SUCCESS;
 }
 
-int GcManager::reset_schedule_interval(const int64_t schedule_interval_s)
+int GcManager::reset_schedule_interval(const int64_t schedule_interval_ms)
 {
   int ret = TFS_ERROR;
   if (0 != timer_ && 0 != gc_worker_)
   {
     timer_->cancel(gc_worker_);
-    timer_->scheduleRepeated(gc_worker_, tbutil::Time::seconds(schedule_interval_s));
+    timer_->scheduleRepeated(gc_worker_, tbutil::Time::milliSeconds(schedule_interval_ms));
     ret = TFS_SUCCESS;
   }
   return ret;
@@ -96,7 +96,7 @@ void GcWorker::runTimerTask()
   TBSYS_LOG(DEBUG, "gc start");
   int ret = TFS_SUCCESS;
   // gc expired local key and garbage gc file sequencially, maybe use thread
-  
+
   tfs_client_ = TfsClient::Instance();
   // gc expired local key
   if ((ret = start_gc(GC_EXPIRED_LOCAL_KEY)) != TFS_SUCCESS)
@@ -205,7 +205,7 @@ int GcWorker::check_file(const char* path, const char* file, const time_t now)
     TBSYS_LOG(ERROR, "stat file fail: %s, error: %s", file_path, strerror(errno));
     ret = TFS_ERROR;
   }
-  else if (S_ISREG(file_info.st_mode) && now - file_info.st_mtime > ClientConfig::expired_time_)
+  else if (S_ISREG(file_info.st_mode) && now - file_info.st_mtime > (ClientConfig::expired_time_ / 1000))
   {
     TBSYS_LOG(INFO, "file need gc: %s, last modify time: %s",
               file_path, Func::time_to_str(file_info.st_mtime).c_str());

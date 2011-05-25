@@ -26,7 +26,7 @@
 #include <tbsys.h>
 #include <tbnet.h>
 #include <Memory.hpp>
-#include "common/interval.h"
+#include "common/internal.h"
 #include "common/func.h"
 
 namespace tfs
