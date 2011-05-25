@@ -1,3 +1,17 @@
+/*
+ * (C) 2007-2010 Alibaba Group Holding Limited.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+ *
+ *
+ * Version: $Id: bg_task.cpp 166 2011-03-15 07:35:48Z zongdai@taobao.com $
+ *
+ * Authors:
+ *      - initial release
+ *
+ */
 #include "tfs_large_file.h"
 
 using namespace tfs::client;

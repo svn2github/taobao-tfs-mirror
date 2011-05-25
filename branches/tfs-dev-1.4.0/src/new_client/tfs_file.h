@@ -1,3 +1,17 @@
+/*
+ * (C) 2007-2010 Alibaba Group Holding Limited.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+ *
+ *
+ * Version: $Id: bg_task.cpp 166 2011-03-15 07:35:48Z zongdai@taobao.com $
+ *
+ * Authors:
+ *      - initial release
+ *
+ */
 #ifndef TFS_CLIENT_TFSFILE_H_
 #define TFS_CLIENT_TFSFILE_H_
 
@@ -8,14 +22,18 @@
 #include "common/func.h"
 #include "common/lock.h"
 #include "common/client_define.h"
-#include "message/client_manager.h"
-#include "message/message.h"
+//#include "common/client_manager.h"
+#include "common/base_packet.h"
 #include "tfs_session.h"
 #include "fsname.h"
 #include "local_key.h"
 
 namespace tfs
 {
+  namespace common
+  {
+    class NewClient;
+  }
   namespace client
   {
     enum InnerFilePhase
@@ -102,31 +120,31 @@ namespace tfs
       int get_size_for_rw_ex(const int64_t check_size, const int64_t count, int64_t& cur_size, bool& not_end, const int64_t per_size);
 
     private:
-      int do_async_request(const InnerFilePhase file_phase, const uint16_t wait_id, const uint16_t index);
-      int do_async_response(const InnerFilePhase file_phase, message::Message* packet, const uint16_t index);
+      int do_async_request(const InnerFilePhase file_phase, common::NewClient* client, const uint16_t index);
+      int do_async_response(const InnerFilePhase file_phase, common::BasePacket* packet, const uint16_t index);
 
-      int async_req_create_file(const uint16_t wait_id, const uint16_t index);
-      int async_rsp_create_file(message::Message* packet, const uint16_t index);
+      int async_req_create_file(common::NewClient* client, const uint16_t index);
+      int async_rsp_create_file(common::BasePacket* packet, const uint16_t index);
 
-      int async_req_read_file(const uint16_t wait_id, const uint16_t index,
-                             SegmentData& seg_data, message::Message& rd_message);
-      int async_req_read_file(const uint16_t wait_id, const uint16_t index);
-      int async_rsp_read_file(message::Message* packet, const uint16_t index);
+      int async_req_read_file(common::NewClient* client, const uint16_t index,
+                             SegmentData& seg_data, common::BasePacket& rd_message);
+      int async_req_read_file(common::NewClient* client, const uint16_t index);
+      int async_rsp_read_file(common::BasePacket* packet, const uint16_t index);
 
-      int async_req_read_fileV2(const uint16_t wait_id, const uint16_t index);
-      int async_rsp_read_fileV2(message::Message* packet, const uint16_t index);
+      int async_req_read_fileV2(common::NewClient* client, const uint16_t index);
+      int async_rsp_read_fileV2(common::BasePacket* packet, const uint16_t index);
 
-      int async_req_write_data(const uint16_t wait_id, const uint16_t index);
-      int async_rsp_write_data(message::Message* packet, const uint16_t index);
+      int async_req_write_data(common::NewClient* client, const uint16_t index);
+      int async_rsp_write_data(common::BasePacket* packet, const uint16_t index);
 
-      int async_req_close_file(const uint16_t wait_id, const uint16_t index);
-      int async_rsp_close_file(message::Message* packet, const uint16_t index);
+      int async_req_close_file(common::NewClient* client, const uint16_t index);
+      int async_rsp_close_file(common::BasePacket* packet, const uint16_t index);
 
-      int async_req_stat_file(const uint16_t wait_id, const uint16_t index);
-      int async_rsp_stat_file(message::Message* packet, const uint16_t index);
+      int async_req_stat_file(common::NewClient* client, const uint16_t index);
+      int async_rsp_stat_file(common::BasePacket* packet, const uint16_t index);
 
-      int async_req_unlink_file(const uint16_t wait_id, const uint16_t index);
-      int async_rsp_unlink_file(message::Message* packet, const uint16_t index);
+      int async_req_unlink_file(common::NewClient* client, const uint16_t index);
+      int async_rsp_unlink_file(common::BasePacket* packet, const uint16_t index);
 
     public:
       common::RWLock rw_lock_;
@@ -145,6 +163,7 @@ namespace tfs
       int32_t option_flag_; //sync flag
       TfsSession* tfs_session_;
       SEG_DATA_LIST processing_seg_list_;
+      std::map<uint8_t, uint16_t> send_id_index_map_;
     };
   }
 }

@@ -16,9 +16,12 @@
 #include <tbsys.h>
 #include <Memory.hpp>
 #include "tfs_session.h"
-#include "message/client_manager.h"
-#include "message/client.h"
-#include "message/client_pool.h"
+#include "common/client_manager.h"
+#include "common/new_client.h"
+#include "common/status_message.h"
+#include "message/block_info_message.h"
+#include "message/client_cmd_message.h"
+
 
 using namespace tfs::client;
 using namespace tfs::common;
@@ -181,14 +184,16 @@ int TfsSession::get_block_info_ex(uint32_t& block_id, VUINT64& rds, const int32_
   GetBlockInfoMessage gbi_message(flag);
   gbi_message.set_block_id(block_id);
 
-  Message* rsp = NULL;
-  int ret = NewClientManager::get_instance()->call(ns_addr_, &gbi_message, WAIT_TIME_OUT, rsp);
+  //BasePacket* rsp = NULL;
+  tbnet::Packet* rsp = NULL;
+  NewClient* client = NewClientManager::get_instance().create_client();
+  int ret = send_msg_to_server(ns_addr_, client, &gbi_message, rsp, WAIT_TIME_OUT); 
 
   if (TFS_SUCCESS != ret)
   {
     TBSYS_LOG(ERROR, "call get block info failed, blockid: %u ret: %d", block_id, ret);
   }
-  else if (SET_BLOCK_INFO_MESSAGE == rsp->get_message_type()) //rsp will not be null
+  else if (SET_BLOCK_INFO_MESSAGE == rsp->getPCode()) //rsp will not be null
   {
     ret = TFS_ERROR;
     SetBlockInfoMessage* block_info_msg = dynamic_cast<SetBlockInfoMessage*>(rsp);
@@ -208,7 +213,7 @@ int TfsSession::get_block_info_ex(uint32_t& block_id, VUINT64& rds, const int32_
   else
   {
     ret = EXIT_UNKNOWN_MSGTYPE;
-    if (STATUS_MESSAGE == rsp->get_message_type())
+    if (STATUS_MESSAGE == rsp->getPCode())
     {
       TBSYS_LOG(ERROR, "get block %u info fail, ret: %d, error: %s, status: %d",
                 block_id, ret, dynamic_cast<StatusMessage*>(rsp)->get_error(), dynamic_cast<StatusMessage*>(rsp)->get_status());
@@ -216,10 +221,10 @@ int TfsSession::get_block_info_ex(uint32_t& block_id, VUINT64& rds, const int32_
     else
     {
       TBSYS_LOG(ERROR, "get block %u info fail, ret: %d, msg type: %d",
-                block_id, ret, rsp->get_message_type());
+                block_id, ret, rsp->getPCode());
     }
   }
-  tbsys::gDelete(rsp);
+  NewClientManager::get_instance().destroy_client(client);
   return ret;
 }
 
@@ -245,13 +250,14 @@ int TfsSession::get_block_info_ex(SEG_DATA_LIST& seg_list, const int32_t flag)
     }
   }
 
-  Message* rsp = NULL;
-  int ret = NewClientManager::get_instance()->call(ns_addr_, &bgbi_message, WAIT_TIME_OUT, rsp);
+  tbnet::Packet* rsp = NULL;
+  NewClient* client = NewClientManager::get_instance().create_client();
+  int ret = send_msg_to_server(ns_addr_, client, &bgbi_message, rsp, WAIT_TIME_OUT); 
   if (TFS_SUCCESS != ret)
   {
     TBSYS_LOG(ERROR, "get blockinfo failed, ret: %d", ret);
   }
-  else if (BATCH_SET_BLOCK_INFO_MESSAGE == rsp->get_message_type())
+  else if (BATCH_SET_BLOCK_INFO_MESSAGE == rsp->getPCode())
   {
     BatchSetBlockInfoMessage* block_info_msg = dynamic_cast<BatchSetBlockInfoMessage*>(rsp);
     map<uint32_t, BlockInfoSeg>& block_info = block_info_msg->get_infos();
@@ -332,7 +338,7 @@ int TfsSession::get_block_info_ex(SEG_DATA_LIST& seg_list, const int32_t flag)
   else
   {
     ret = EXIT_UNKNOWN_MSGTYPE;
-    if (STATUS_MESSAGE == rsp->get_message_type())
+    if (STATUS_MESSAGE == rsp->getPCode())
     {
       TBSYS_LOG(ERROR, "get batch block info fail, ret: %d, error: %s, status: %d",
                 ret, dynamic_cast<StatusMessage*>(rsp)->get_error(), dynamic_cast<StatusMessage*>(rsp)->get_status());
@@ -340,27 +346,27 @@ int TfsSession::get_block_info_ex(SEG_DATA_LIST& seg_list, const int32_t flag)
     else
     {
       TBSYS_LOG(ERROR, "get batch block info fail, ret: %d, msg type: %d",
-                ret, rsp->get_message_type());
+                ret, rsp->getPCode());
     }
   }
-
-  tbsys::gDelete(rsp);
+  NewClientManager::get_instance().destroy_client(client);
   return ret;
 }
 
 int TfsSession::get_cluster_id_from_ns()
 {
   ClientCmdMessage cc_message;
-  cc_message.set_type(CLIENT_CMD_SET_PARAM);
-  cc_message.set_block_id(20);
+  cc_message.set_cmd(CLIENT_CMD_SET_PARAM); 
+  cc_message.set_value3(20); 
 
-  Message* rsp = NULL;
-  int ret = NewClientManager::get_instance()->call(ns_addr_, &cc_message, WAIT_TIME_OUT, rsp);
+  tbnet::Packet* rsp = NULL;
+  NewClient* client = NewClientManager::get_instance().create_client();
+  int ret = send_msg_to_server(ns_addr_, client, &cc_message, rsp, WAIT_TIME_OUT); 
   if (TFS_SUCCESS != ret)
   {
     TBSYS_LOG(ERROR, "get block info failed, ret: %d", ret);
   }
-  else if (STATUS_MESSAGE == rsp->get_message_type())
+  else if (STATUS_MESSAGE == rsp->getPCode())
   {
     StatusMessage* status_msg = dynamic_cast<StatusMessage*>(rsp);
     //ugly use error msg
@@ -382,11 +388,10 @@ int TfsSession::get_cluster_id_from_ns()
   }
   else
   {
-    TBSYS_LOG(ERROR, "get cluster id from ns failed, msg type error. type: %d", rsp->get_message_type());
+    TBSYS_LOG(ERROR, "get cluster id from ns failed, msg type error. type: %d", rsp->getPCode());
     ret = EXIT_UNKNOWN_MSGTYPE;
   }
-
-  tbsys::gDelete(rsp);
+  NewClientManager::get_instance().destroy_client(client);
   return ret;
 }
 

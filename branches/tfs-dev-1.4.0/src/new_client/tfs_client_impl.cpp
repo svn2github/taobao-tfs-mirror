@@ -15,21 +15,26 @@
  */
 #include <stdarg.h>
 #include <string>
-
 #include <Memory.hpp>
-
+#include "common/base_packet_factory.h"
+#include "common/base_packet_streamer.h"
+#include "common/client_manager.h"
 #include "tfs_client_impl.h"
 #include "tfs_large_file.h"
 #include "tfs_small_file.h"
 #include "gc_worker.h"
 
 using namespace tfs::common;
-using namespace tfs::message;
+//using namespace tfs::message;
 using namespace tfs::client;
 using namespace std;
 
-TfsClientImpl::TfsClientImpl() : is_init_(false), default_tfs_session_(NULL), fd_(1)
+TfsClientImpl::TfsClientImpl() : is_init_(false), default_tfs_session_(NULL), fd_(1), 
+  packet_factory_(NULL), packet_streamer_(NULL)
 {
+  packet_factory_ = new BasePacketFactory();
+  packet_factory_->initialize();
+  packet_streamer_ = new BasePacketStreamer(packet_factory_);
 }
 
 TfsClientImpl::~TfsClientImpl()
@@ -39,6 +44,17 @@ TfsClientImpl::~TfsClientImpl()
     tbsys::gDelete(it->second);
   }
   tfs_file_map_.clear();
+
+  if (NULL != packet_factory_)
+  {
+    delete packet_factory_;
+    packet_factory_ = NULL;
+  }
+  if (NULL != packet_streamer_)
+  {
+    delete packet_streamer_;
+    packet_streamer_ = NULL;
+  }
 }
 
 int TfsClientImpl::initialize(const char* ns_addr, const int32_t cache_time, const int32_t cache_items)
@@ -52,6 +68,7 @@ int TfsClientImpl::initialize(const char* ns_addr, const int32_t cache_time, con
   }
   else
   {
+
     if (NULL == ns_addr)
     {
       TBSYS_LOG(ERROR, "tfsclient initialize need ns ip");
@@ -70,7 +87,14 @@ int TfsClientImpl::initialize(const char* ns_addr, const int32_t cache_time, con
       }
       else
       {
-        is_init_ = true;
+        if (TFS_SUCCESS != (ret = NewClientManager::get_instance().initialize(packet_factory_, packet_streamer_)))
+        {
+          TBSYS_LOG(ERROR, "initialize NewClientManager fail, ret: %d", ret);
+        }
+        else
+        {
+          is_init_ = true;
+        }
       }
     }
   }

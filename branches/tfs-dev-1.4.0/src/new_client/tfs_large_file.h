@@ -1,8 +1,22 @@
+/*
+ * (C) 2007-2010 Alibaba Group Holding Limited.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+ *
+ *
+ * Version: $Id: bg_task.cpp 166 2011-03-15 07:35:48Z zongdai@taobao.com $
+ *
+ * Authors:
+ *      - initial release
+ *
+ */
 #ifndef TFS_CLIENT_TFSLARGEFILE_H_
 #define TFS_CLIENT_TFSLARGEFILE_H_
 
 #include <stdint.h>
-#include "common/interval.h"
+#include "common/internal.h"
 #include "tfs_file.h"
 #include "local_key.h"
 

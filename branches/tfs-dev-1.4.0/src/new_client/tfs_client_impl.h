@@ -24,6 +24,11 @@
 
 namespace tfs
 {
+  namespace common
+  {
+    class BasePacketFactory;
+    class BasePacketStreamer;
+  }
   namespace client
   {
     class tbutil::Mutex;
@@ -100,6 +105,8 @@ namespace tfs
       int fd_;
       FILE_MAP tfs_file_map_;
       tbutil::Mutex mutex_;
+      common::BasePacketFactory* packet_factory_;
+      common::BasePacketStreamer* packet_streamer_;
     };
   }
 }
