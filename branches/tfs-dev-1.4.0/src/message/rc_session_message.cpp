@@ -14,7 +14,7 @@
  *
  */
 #include "rc_session_message.h"
-#include "message.h"
+#include "common/base_packet.h"
 
 namespace tfs
 {
