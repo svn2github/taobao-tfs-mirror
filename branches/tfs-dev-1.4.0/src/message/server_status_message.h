@@ -26,10 +26,9 @@ namespace tfs
       public:
         GetServerStatusMessage();
         virtual ~GetServerStatusMessage();
-        virtual int serialize(common::Stream& output);
+        virtual int serialize(common::Stream& output) const ;
         virtual int deserialize(common::Stream& input);
         virtual int64_t length() const;
-        static common::BasePacket* create(const int32_t type);
         inline void set_status_type(const int32_t type)
         {
           status_type_ = type;
@@ -67,10 +66,9 @@ namespace tfs
 
         AccessStatInfoMessage();
         virtual ~AccessStatInfoMessage();
-        virtual int serialize(common::Stream& output);
+        virtual int serialize(common::Stream& output) const ;
         virtual int deserialize(common::Stream& input);
         virtual int64_t length() const;
-        static common::BasePacket* create(const int32_t type);
 
         inline void set_from_row(int32_t start)
         {
@@ -117,15 +115,15 @@ namespace tfs
         }
 
       private:
-        int set_counter_map(common::Stream& output, COUNTER_TYPE & map, int32_t from_row, int32_t return_row,
-            int32_t size);
+        int set_counter_map(common::Stream& output, const COUNTER_TYPE & map, int32_t from_row, int32_t return_row,
+            int32_t size) const;
         int get_counter_map(common::Stream& input, COUNTER_TYPE & map);
 
       protected:
         COUNTER_TYPE stats_;
         int32_t from_row_;
         int32_t return_row_;
-        int32_t has_next_;
+        mutable int32_t has_next_;
     };
 
     class ShowServerInformationMessage : public common::BasePacket 
@@ -133,10 +131,9 @@ namespace tfs
     public:
       ShowServerInformationMessage();
       virtual ~ShowServerInformationMessage();
-      virtual int serialize(common::Stream& output);
+      virtual int serialize(common::Stream& output) const ;
       virtual int deserialize(common::Stream& input);
       virtual int64_t length() const;
-      static common::BasePacket* create(const int32_t type);
 
       common::SSMScanParameter& get_param()
       {

@@ -26,10 +26,9 @@ namespace tfs
       public:
         WriteDataMessage();
         virtual ~WriteDataMessage();
-        virtual int serialize(common::Stream& output);
+        virtual int serialize(common::Stream& output) const ;
         virtual int deserialize(common::Stream& input);
         virtual int64_t length() const;
-        static common::BasePacket* create(const int32_t type);
 
         inline void set_block_id(const uint32_t block_id)
         {
@@ -67,7 +66,7 @@ namespace tfs
         {
           data_ = data;
         }
-        inline char* get_data() const
+        inline const char* const get_data() const
         {
           return data_;
         }
@@ -118,15 +117,13 @@ namespace tfs
           return write_data_info_;
         }
 
-        char* alloc_data(int32_t len);
-
       protected:
         common::WriteDataInfo write_data_info_;
-        char* data_;
-        common::VUINT64 ds_;
-        int32_t version_;
-        uint32_t lease_;
-        bool has_lease_;
+        const char* data_;
+        mutable common::VUINT64 ds_;
+        mutable int32_t version_;
+        mutable uint32_t lease_;
+        mutable bool has_lease_;
     };
 
 #ifdef _DEL_001_
@@ -135,10 +132,9 @@ namespace tfs
       public:
       RespWriteDataMessage();
       virtual ~RespWriteDataMessage();
-      virtual int serialize(common::Stream& output);
+      virtual int serialize(common::Stream& output) const ;
       virtual int deserialize(common::Stream& input);
       virtual int64_t length() const;
-      static common::BasePacket* create(const int32_t type);
 
       void set_length(const int32_t length)
       {
@@ -154,8 +150,6 @@ namespace tfs
       virtual int build(char* data, int32_t len);
       virtual int32_t message_length();
       virtual char* get_name();
-
-      static Message* create(const int32_t type);
       protected:
       int32_t length_;
     };
@@ -166,10 +160,9 @@ namespace tfs
       public:
         WriteRawDataMessage();
         virtual ~WriteRawDataMessage();
-        virtual int serialize(common::Stream& output);
+        virtual int serialize(common::Stream& output) const ;
         virtual int deserialize(common::Stream& input);
         virtual int64_t length() const;
-        static common::BasePacket* create(const int32_t type);
 
         inline void set_block_id(const uint32_t block_id)
         {
@@ -197,9 +190,9 @@ namespace tfs
         }
         inline void set_data(const char* data)
         {
-          data_ = const_cast<char*> (data);
+          data_ = data;
         }
-        inline char* get_data() const
+        inline const char* const get_data() const
         {
           return data_;
         }
@@ -211,10 +204,9 @@ namespace tfs
         {
           return flag_;
         }
-        char* alloc_data(int32_t len);
       protected:
         common::WriteDataInfo write_data_info_;
-        char* data_;
+        const char* data_;
         int32_t flag_;
     };
 
@@ -223,10 +215,9 @@ namespace tfs
       public:
         WriteInfoBatchMessage();
         virtual ~WriteInfoBatchMessage();
-        virtual int serialize(common::Stream& output);
+        virtual int serialize(common::Stream& output) const ;
         virtual int deserialize(common::Stream& input);
         virtual int64_t length() const;
-        static common::BasePacket* create(const int32_t type);
 
         inline void set_block_id(const uint32_t block_id)
         {
@@ -278,7 +269,6 @@ namespace tfs
         {
           return block_info_.block_id_ <= 0 ? NULL : &block_info_;
         }
-        char* alloc_data(int32_t len);
       protected:
         common::WriteDataInfo write_data_info_;
         common::BlockInfo block_info_;

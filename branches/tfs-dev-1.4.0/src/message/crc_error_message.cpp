@@ -56,7 +56,7 @@ namespace tfs
       return common::INT_SIZE * 3 + common::INT64_SIZE + common::Serialization::get_vint64_length(fail_server_);
     }
 
-    int CrcErrorMessage::serialize(common::Stream& output)
+    int CrcErrorMessage::serialize(common::Stream& output) const 
     {
       int32_t iret = output.set_int32(block_id_);
       if (common::TFS_SUCCESS == iret)
@@ -76,11 +76,6 @@ namespace tfs
         iret = output.set_vint64(fail_server_);
       }
       return iret;
-    }
-
-    common::BasePacket* CrcErrorMessage::create(const int32_t type)
-    {
-      return new CrcErrorMessage();
     }
   }
 }

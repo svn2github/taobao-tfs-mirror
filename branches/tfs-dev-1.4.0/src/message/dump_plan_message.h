@@ -25,10 +25,9 @@ namespace tfs
       public:
         DumpPlanMessage();
         virtual ~DumpPlanMessage();
-        virtual int serialize(common::Stream& output);
+        virtual int serialize(common::Stream& output) const;
         virtual int deserialize(common::Stream& input);
         virtual int64_t length() const;
-        static common::BasePacket* create(const int32_t type);
       private:
         int8_t reserve_;
     };
@@ -38,10 +37,9 @@ namespace tfs
       public:
         DumpPlanResponseMessage();
         virtual ~DumpPlanResponseMessage();
-        virtual int serialize(common::Stream& output);
+        virtual int serialize(common::Stream& output) const;
         virtual int deserialize(common::Stream& input);
         virtual int64_t length() const;
-        static common::BasePacket* create(const int32_t type);
         inline tbnet::DataBuffer& get_data()
         {
           return data_;

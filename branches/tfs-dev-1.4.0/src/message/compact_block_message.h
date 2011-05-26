@@ -26,10 +26,9 @@ namespace tfs
       public:
         CompactBlockMessage();
         virtual ~CompactBlockMessage();
-        virtual int serialize(common::Stream& output);
+        virtual int serialize(common::Stream& output) const ;
         virtual int deserialize(common::Stream& input);
         virtual int64_t length() const;
-        static common::BasePacket* create(const int32_t type);
         inline void set_preserve_time(const int32_t preserve_time)
         {
           preserve_time_ = preserve_time;
@@ -65,10 +64,10 @@ namespace tfs
       public:
         CompactBlockCompleteMessage();
         virtual ~CompactBlockCompleteMessage();
-        virtual int serialize(common::Stream& output);
+        virtual int serialize(common::Stream& output) const ;
         virtual int deserialize(common::Stream& input);
+        int deserialize(const char* data, const int64_t data_len, int64_t& pos);
         virtual int64_t length() const;
-        static common::BasePacket* create(const int32_t type);
         void dump(void) const;
         inline void set_block_id(const uint32_t block_id)
         {

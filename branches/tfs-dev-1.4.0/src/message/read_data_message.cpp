@@ -40,7 +40,7 @@ namespace tfs
       }
       return iret;
     }
-    int ReadDataInfo::serialize(char* data, const int64_t data_len, int64_t& pos)
+    int ReadDataInfo::serialize(char* data, const int64_t data_len, int64_t& pos) const
     {
       int32_t iret = NULL != data && data_len - pos >= length() ? common::TFS_SUCCESS : common::TFS_ERROR;
       if (common::TFS_SUCCESS == iret)
@@ -92,7 +92,7 @@ namespace tfs
       return read_data_info_.length();
     }
 
-    int ReadDataMessage::serialize(common::Stream& output)
+    int ReadDataMessage::serialize(common::Stream& output) const 
     {
       int64_t pos = 0;
       int32_t iret = read_data_info_.serialize(output.get_free(), output.get_free_length(), pos);
@@ -101,11 +101,6 @@ namespace tfs
         output.pour(read_data_info_.length());
       }
       return iret;
-    }
-
-    common::BasePacket* ReadDataMessage::create(const int32_t type)
-    {
-      return new ReadDataMessage();
     }
 
     RespReadDataMessage::RespReadDataMessage() :
@@ -152,12 +147,8 @@ namespace tfs
       {
         if (length_ > 0)
         {
-          char* data = alloc_data(length_); 
-          iret = NULL != data ? common::TFS_SUCCESS : common::TFS_ERROR;
-          if (common::TFS_SUCCESS == iret)
-          {
-            input.get_bytes(data, length_);
-          }
+          data_ = input.get_data();
+          input.drain(length_);
         }
       }
       return iret;
@@ -174,7 +165,7 @@ namespace tfs
       return len;
     }
 
-    int RespReadDataMessage::serialize(common::Stream& output)
+    int RespReadDataMessage::serialize(common::Stream& output) const 
     {
       int32_t iret = output.set_int32(length_);
       if (common::TFS_SUCCESS == iret)
@@ -186,11 +177,6 @@ namespace tfs
         }
       }
       return iret;
-    }
-
-    common::BasePacket* RespReadDataMessage::create(const int32_t type)
-    {
-      return new RespReadDataMessage();
     }
 
     ReadDataMessageV2::ReadDataMessageV2():
@@ -213,14 +199,9 @@ namespace tfs
       return ReadDataMessage::length();
     }
 
-    int ReadDataMessageV2::serialize(common::Stream& output)
+    int ReadDataMessageV2::serialize(common::Stream& output) const 
     {
       return ReadDataMessage::serialize(output);
-    }
-
-    common::BasePacket* ReadDataMessageV2::create(const int32_t type)
-    {
-      return new ReadDataMessageV2();
     }
 
     RespReadDataMessageV2::RespReadDataMessageV2():
@@ -266,7 +247,7 @@ namespace tfs
       return len;
     }
 
-    int RespReadDataMessageV2::serialize(common::Stream& output)
+    int RespReadDataMessageV2::serialize(common::Stream& output) const 
     {
       int32_t iret = RespReadDataMessage::serialize(output);
       int32_t size = file_info_.id_ > 0 ? file_info_.length() : 0;
@@ -289,11 +270,6 @@ namespace tfs
       return iret;
     }
 
-    common::BasePacket* RespReadDataMessageV2::create(const int32_t type)
-    {
-      return new RespReadDataMessageV2();
-    }
-
     ReadRawDataMessage::ReadRawDataMessage():
       ReadDataMessage()
     {
@@ -310,7 +286,7 @@ namespace tfs
       return ReadDataMessage::deserialize(input);
     }
 
-    int ReadRawDataMessage::serialize(common::Stream& output)
+    int ReadRawDataMessage::serialize(common::Stream& output) const 
     {
       return ReadDataMessage::serialize(output);
     }
@@ -318,11 +294,6 @@ namespace tfs
     int64_t ReadRawDataMessage::length() const
     {
       return ReadDataMessage::length();
-    }
-
-    common::BasePacket* ReadRawDataMessage::create(const int32_t type)
-    {
-      return new ReadRawDataMessage();
     }
 
     RespReadRawDataMessage::RespReadRawDataMessage() :
@@ -341,7 +312,7 @@ namespace tfs
       return RespReadDataMessage::deserialize(input);
     }
 
-    int RespReadRawDataMessage::serialize(common::Stream& output)
+    int RespReadRawDataMessage::serialize(common::Stream& output) const 
     {
       return RespReadDataMessage::serialize(output);
     }
@@ -349,11 +320,6 @@ namespace tfs
     int64_t RespReadRawDataMessage::length() const
     {
       return RespReadDataMessage::length();
-    }
-
-    common::BasePacket* RespReadRawDataMessage::create(const int32_t type)
-    {
-      return new RespReadRawDataMessage();
     }
 
     int ReadScaleImageMessage::ZoomData::deserialize(const char* data, const int64_t data_len, int64_t& pos)
@@ -373,7 +339,7 @@ namespace tfs
       }
       return iret;
     }
-    int ReadScaleImageMessage::ZoomData::serialize(char* data, const int64_t data_len, int64_t& pos)
+    int ReadScaleImageMessage::ZoomData::serialize(char* data, const int64_t data_len, int64_t& pos) const
     {
       int32_t iret = NULL != data && data_len - pos >= length() ? common::TFS_SUCCESS : common::TFS_ERROR;
       if (common::TFS_SUCCESS == iret)
@@ -422,7 +388,7 @@ namespace tfs
       return iret;
     }
 
-    int32_t ReadScaleImageMessage::serialize(common::Stream& output)
+    int32_t ReadScaleImageMessage::serialize(common::Stream& output) const 
     {
       int32_t iret = ReadDataMessageV2::serialize(output);
       if (common::TFS_SUCCESS == iret)
@@ -440,11 +406,6 @@ namespace tfs
     int64_t ReadScaleImageMessage::length() const
     {
       return ReadDataMessageV2::length() + sizeof(ZoomData);
-    }
-
-    common::BasePacket* ReadScaleImageMessage::create(const int32_t type)
-    {
-      return new ReadScaleImageMessage();
     }
   }
 }

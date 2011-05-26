@@ -49,12 +49,26 @@ namespace tfs
       return iret;
     }
 
+    int ReplicateBlockMessage::deserialize(const char* data, const int64_t data_len, int64_t& pos)
+    {
+      int32_t iret = common::Serialization::get_int32(data, data_len, pos, &command_);
+      if (common::TFS_SUCCESS == iret)
+      {
+        iret =  common::Serialization::get_int32(data, data_len, pos, &expire_);
+      }
+      if (common::TFS_SUCCESS == iret)
+      {
+        iret = repl_block_.deserialize(data, data_len, pos); 
+      }
+      return iret;
+    }
+
     int64_t ReplicateBlockMessage::length() const
     {
       return common::INT_SIZE * 2 + repl_block_.length();
     }
 
-    int ReplicateBlockMessage::serialize(common::Stream& output)
+    int ReplicateBlockMessage::serialize(common::Stream& output) const 
     {
       int32_t iret = output.set_int32(command_);
       if (common::TFS_SUCCESS == iret)
@@ -78,10 +92,6 @@ namespace tfs
       TBSYS_LOG(DEBUG, "command(%d) expire(%u) id(%u) source_id(%llu) dest_id(%llu) start_time(%d) is_move(%d) server_count(%d)",
           command_, expire_, repl_block_.block_id_, repl_block_.source_id_, repl_block_.destination_id_,
           repl_block_.start_time_, repl_block_.is_move_, repl_block_.server_count_);
-    }
-    common::BasePacket* ReplicateBlockMessage::create(const int32_t type)
-    {
-      return new ReplicateBlockMessage();
     }
   }
 }

@@ -25,10 +25,9 @@ namespace tfs
     public:
       RollbackMessage();
       virtual ~RollbackMessage();
-      virtual int serialize(common::Stream& output);
+      virtual int serialize(common::Stream& output) const ;
       virtual int deserialize(common::Stream& input);
       virtual int64_t length() const;
-      static common::BasePacket* create(const int32_t type);
       inline int32_t get_act_type() const
       {
         return act_type_;

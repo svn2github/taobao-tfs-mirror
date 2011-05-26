@@ -25,7 +25,7 @@ namespace tfs
     struct SdbmStat
     {
       int deserialize(const char* data, const int64_t data_len, int64_t& pos);
-      int serialize(char* data, const int64_t data_len, int64_t& pos);
+      int serialize(char* data, const int64_t data_len, int64_t& pos) const;
       int64_t length() const;
       int32_t startup_time_;
       int32_t fetch_count_;
@@ -45,10 +45,9 @@ namespace tfs
       public:
         GetBlockInfoMessage(const int32_t mode = common::T_READ);
         virtual ~GetBlockInfoMessage();
-        virtual int serialize(common::Stream& output);
+        virtual int serialize(common::Stream& output)  const ;
         virtual int deserialize(common::Stream& input);
         virtual int64_t length() const;
-        static common::BasePacket* create(const int32_t type);
         inline void set_block_id(const uint32_t block_id)
         {
           block_id_ = block_id;
@@ -82,10 +81,9 @@ namespace tfs
       public:
         SetBlockInfoMessage();
         virtual ~SetBlockInfoMessage();
-        virtual int serialize(common::Stream& output);
+        virtual int serialize(common::Stream& output)  const ;
         virtual int deserialize(common::Stream& input);
         virtual int64_t length() const;
-        static common::BasePacket* create(const int32_t type);
         void set_read_block_ds(const uint32_t block_id, common::VUINT64* ds);
         void set_write_block_ds(const uint32_t block_id, common::VUINT64* ds, const int32_t version,
             const int32_t lease_id);
@@ -110,11 +108,11 @@ namespace tfs
           return has_lease_;
         }
       private:
-        common::VUINT64 ds_;
+        mutable common::VUINT64 ds_;
         uint32_t block_id_;
-        int32_t version_;
-        uint32_t lease_;
-        bool has_lease_;
+        mutable int32_t version_;
+        mutable uint32_t lease_;
+        mutable bool has_lease_;
     };
 
     // batch get the block information in the common::DataServerStatInfo
@@ -124,11 +122,10 @@ namespace tfs
       public:
         BatchGetBlockInfoMessage(int32_t mode = common::T_READ);
         virtual ~BatchGetBlockInfoMessage();
-        virtual int serialize(common::Stream& output);
+        virtual int serialize(common::Stream& output)  const ;
         virtual int deserialize(common::Stream& input);
         virtual int64_t length() const;
-        static common::BasePacket* create(const int32_t type);
-        inline int32_t get_block_count()
+        inline int32_t get_block_count() const
         {
           return (mode_ & common::T_READ) ? block_ids_.size() : block_count_;
         }
@@ -165,10 +162,9 @@ namespace tfs
       public:
         BatchSetBlockInfoMessage();
         virtual ~BatchSetBlockInfoMessage();
-        virtual int serialize(common::Stream& output);
+        virtual int serialize(common::Stream& output)  const ;
         virtual int deserialize(common::Stream& input);
         virtual int64_t length() const;
-        static common::BasePacket* create(const int32_t type);
         void set_read_block_ds(const uint32_t block_id, common::VUINT64& ds);
         void set_write_block_ds(const uint32_t block_id, common::VUINT64& ds,
             const int32_t version, const int32_t lease_id);
@@ -211,10 +207,9 @@ namespace tfs
       public:
         CarryBlockMessage();
         virtual ~CarryBlockMessage();
-        virtual int serialize(common::Stream& output);
+        virtual int serialize(common::Stream& output)  const ;
         virtual int deserialize(common::Stream& input);
         virtual int64_t length() const;
-        static common::BasePacket* create(const int32_t type);
         void add_expire_id(const uint32_t block_id);
         void add_new_id(const uint32_t block_id);
         void add_remove_id(const uint32_t block_id);
@@ -245,10 +240,9 @@ namespace tfs
       public:
         NewBlockMessage();
         virtual ~NewBlockMessage();
-        virtual int serialize(common::Stream& output);
+        virtual int serialize(common::Stream& output)  const ;
         virtual int deserialize(common::Stream& input);
         virtual int64_t length() const;
-        static common::BasePacket* create(const int32_t type);
         void add_new_id(const uint32_t block_id);
         inline const common::VUINT32* get_new_blocks() const
         {
@@ -267,10 +261,9 @@ namespace tfs
       public:
         RemoveBlockMessage();
         virtual ~RemoveBlockMessage();
-        virtual int serialize(common::Stream& output);
+        virtual int serialize(common::Stream& output)  const ;
         virtual int deserialize(common::Stream& input);
         virtual int64_t length() const;
-        static common::BasePacket* create(const int32_t type);
         void add_remove_id(const uint32_t block_id);
         inline void set_remove_list(const common::VUINT32& remove_blocks)
         {
@@ -288,10 +281,9 @@ namespace tfs
     {
       public:
         RemoveBlockResponseMessage();
-        virtual int serialize(common::Stream& output);
+        virtual int serialize(common::Stream& output)  const ;
         virtual int deserialize(common::Stream& input);
         virtual int64_t length() const;
-        static common::BasePacket* create(const int32_t type);
         virtual ~RemoveBlockResponseMessage();
         void set_block_id(const uint32_t id)
         {
@@ -311,10 +303,9 @@ namespace tfs
       public:
         ListBlockMessage();
         virtual ~ListBlockMessage();
-        virtual int serialize(common::Stream& output);
+        virtual int serialize(common::Stream& output)  const ;
         virtual int deserialize(common::Stream& input);
         virtual int64_t length() const;
-        static common::BasePacket* create(const int32_t type);
         inline void set_block_type(const int32_t type)
         {
           type_ = type;
@@ -332,10 +323,9 @@ namespace tfs
       public:
         RespListBlockMessage();
         virtual ~RespListBlockMessage();
-        virtual int serialize(common::Stream& output);
+        virtual int serialize(common::Stream& output)  const ;
         virtual int deserialize(common::Stream& input);
         virtual int64_t length() const;
-        static common::BasePacket* create(const int32_t type);
         void add_block_id(const uint32_t block_id);
         inline void set_status_type(const int32_t type)
         {
@@ -391,10 +381,9 @@ namespace tfs
       public:
         UpdateBlockInfoMessage();
         virtual ~UpdateBlockInfoMessage();
-        virtual int serialize(common::Stream& output);
+        virtual int serialize(common::Stream& output)  const ;
         virtual int deserialize(common::Stream& input);
         virtual int64_t length() const;
-        static common::BasePacket* create(const int32_t type);
         inline void set_block_id(const uint32_t block_id)
         {
           block_id_ = block_id;
@@ -450,10 +439,9 @@ namespace tfs
       public:
         ResetBlockVersionMessage();
         virtual ~ResetBlockVersionMessage();
-        virtual int serialize(common::Stream& output);
+        virtual int serialize(common::Stream& output)  const ;
         virtual int deserialize(common::Stream& input);
         virtual int64_t length() const;
-        static common::BasePacket* create(const int32_t type);
         inline void set_block_id(const uint32_t block_id)
         {
           block_id_ = block_id;
@@ -471,10 +459,9 @@ namespace tfs
       public:
         BlockFileInfoMessage();
         virtual ~BlockFileInfoMessage();
-        virtual int serialize(common::Stream& output);
+        virtual int serialize(common::Stream& output)  const ;
         virtual int deserialize(common::Stream& input);
         virtual int64_t length() const;
-        static common::BasePacket* create(const int32_t type);
         inline void set_block_id(const uint32_t block_id)
         {
           block_id_ = block_id;
@@ -497,10 +484,9 @@ namespace tfs
       public:
         BlockRawMetaMessage();
         virtual ~BlockRawMetaMessage();
-        virtual int serialize(common::Stream& output);
+        virtual int serialize(common::Stream& output)  const ;
         virtual int deserialize(common::Stream& input);
         virtual int64_t length() const;
-        static common::BasePacket* create(const int32_t type);
         inline void set_block_id(const uint32_t block_id)
         {
           block_id_ = block_id;
@@ -523,10 +509,9 @@ namespace tfs
       public:
         BlockWriteCompleteMessage();
         virtual ~BlockWriteCompleteMessage();
-        virtual int serialize(common::Stream& output);
+        virtual int serialize(common::Stream& output)  const ;
         virtual int deserialize(common::Stream& input);
         virtual int64_t length() const;
-        static common::BasePacket* create(const int32_t type);
         inline void set_block(const common::BlockInfo* const block_info)
         {
           if (NULL != block_info)
@@ -581,10 +566,9 @@ namespace tfs
       public:
         ListBitMapMessage();
         virtual ~ListBitMapMessage();
-        virtual int serialize(common::Stream& output);
+        virtual int serialize(common::Stream& output)  const ;
         virtual int deserialize(common::Stream& input);
         virtual int64_t length() const;
-        static common::BasePacket* create(const int32_t type);
         inline void set_bitmap_type(const int32_t type)
         {
           type_ = type;
@@ -602,10 +586,9 @@ namespace tfs
       public:
         RespListBitMapMessage();
         virtual ~RespListBitMapMessage();
-        virtual int serialize(common::Stream& output);
+        virtual int serialize(common::Stream& output)  const ;
         virtual int deserialize(common::Stream& input);
         virtual int64_t length() const;
-        static common::BasePacket* create(const int32_t type);
         inline void set_length(const int32_t length)
         {
           ubitmap_len_ = length;

@@ -43,7 +43,7 @@ namespace tfs
     struct MonitorStatus
     {
       int deserialize(const char* data, const int64_t data_len, int64_t& pos);
-      int serialize(char* data, const int64_t data_len, int64_t& pos);
+      int serialize(char* data, const int64_t data_len, int64_t& pos) const;
       int64_t length() const;
       char index_[ADMIN_MAX_INDEX_LENGTH+1];
       int32_t restarting_;
@@ -84,10 +84,9 @@ namespace tfs
       AdminCmdMessage();
       AdminCmdMessage(int32_t cmd_type);
       virtual ~AdminCmdMessage();
-      virtual int serialize(common::Stream& output);
+      virtual int serialize(common::Stream& output) const;
       virtual int deserialize(common::Stream& input);
       virtual int64_t length() const;
-      static common::BasePacket* create(const int32_t type);
 
       inline void set_cmd_type(int32_t type)
       {

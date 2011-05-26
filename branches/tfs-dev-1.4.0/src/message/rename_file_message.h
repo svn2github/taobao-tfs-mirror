@@ -26,10 +26,9 @@ namespace tfs
       public:
         RenameFileMessage();
         virtual ~RenameFileMessage();
-        virtual int serialize(common::Stream& output);
+        virtual int serialize(common::Stream& output) const ;
         virtual int deserialize(common::Stream& input);
         virtual int64_t length() const;
-        static common::BasePacket* create(const int32_t type);
 
         inline void set_block_id(const uint32_t block_id)
         {
@@ -82,10 +81,10 @@ namespace tfs
       protected:
         common::RenameFileInfo rename_file_info_;
         int32_t option_flag_;
-        common::VUINT64 ds_;
-        int32_t version_;
-        uint32_t lease_id_;
-        bool has_lease_;
+        mutable common::VUINT64 ds_;
+        mutable int32_t version_;
+        mutable uint32_t lease_id_;
+        mutable bool has_lease_;
     };
   }
 }

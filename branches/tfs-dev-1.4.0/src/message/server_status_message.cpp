@@ -48,7 +48,7 @@ namespace tfs
       return common::INT_SIZE * 3;
     }
 
-    int GetServerStatusMessage::serialize(common::Stream& output)
+    int GetServerStatusMessage::serialize(common::Stream& output) const 
     {
       int32_t iret = output.set_int32(status_type_);
       if (common::TFS_SUCCESS == iret)
@@ -62,11 +62,6 @@ namespace tfs
       return iret;
     }
 
-    common::BasePacket* GetServerStatusMessage::create(const int32_t type)
-    {
-      return new GetServerStatusMessage();
-    }
-
     AccessStatInfoMessage::AccessStatInfoMessage() :
       from_row_(0), return_row_(0), has_next_(0)
     {
@@ -78,12 +73,7 @@ namespace tfs
 
     }
 
-    common::BasePacket* AccessStatInfoMessage::create(int32_t type)
-    {
-     return new AccessStatInfoMessage();
-    }
-
-    int AccessStatInfoMessage::serialize(common::Stream& output)
+    int AccessStatInfoMessage::serialize(common::Stream& output) const 
     {
       int32_t size = stats_.size();
       size -= from_row_;
@@ -114,8 +104,8 @@ namespace tfs
       return iret;
     }
 
-    int AccessStatInfoMessage::set_counter_map(common::Stream& output, COUNTER_TYPE & map, int32_t from_row,
-        int32_t return_row, int32_t size)
+    int AccessStatInfoMessage::set_counter_map(common::Stream& output, const COUNTER_TYPE & map, int32_t from_row,
+        int32_t return_row, int32_t size) const
     {
       int32_t iret = output.set_int32(size);
       if (common::TFS_SUCCESS == iret)
@@ -210,7 +200,7 @@ namespace tfs
       return iret;
     }
 
-    int ShowServerInformationMessage::serialize(common::Stream& output)
+    int ShowServerInformationMessage::serialize(common::Stream& output) const 
     {
       int64_t pos = 0;
       int32_t iret = param.serialize(output.get_free(), output.get_free_length(), pos);
@@ -224,11 +214,6 @@ namespace tfs
     int64_t ShowServerInformationMessage::length() const
     {
       return param.length();
-    }
-
-    common::BasePacket* ShowServerInformationMessage::create(const int32_t type)
-    {
-      return new ShowServerInformationMessage();
     }
   }
 }

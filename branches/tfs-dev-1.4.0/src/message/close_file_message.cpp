@@ -100,7 +100,7 @@ namespace tfs
       return len;
     }
 
-    int CloseFileMessage::serialize(common::Stream& output)
+    int CloseFileMessage::serialize(common::Stream& output) const 
     {
       int32_t size = block_.block_id_ > 0 ? block_.length() : 0;
       int32_t file_size = file_info_.id_ > 0 ? file_info_.length() : 0;
@@ -152,11 +152,6 @@ namespace tfs
         has_lease_ = parse_special_ds(ds_, version_, lease_id_);
       }
       return iret;
-    }
-
-    common::BasePacket* CloseFileMessage::create(const int32_t type)
-    {
-      return new CloseFileMessage();
     }
   }
 }

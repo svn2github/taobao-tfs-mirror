@@ -58,7 +58,7 @@ namespace tfs
                   common::Serialization::get_vint32_length(new_blocks_);
     }
 
-    int RespHeartMessage::serialize(common::Stream& output)
+    int RespHeartMessage::serialize(common::Stream& output) const 
     {
       int32_t iret = output.set_int32(status_);
       if (common::TFS_SUCCESS == iret)
@@ -76,12 +76,7 @@ namespace tfs
       return iret;
     }
 
-    common::BasePacket* RespHeartMessage::create(const int32_t type)
-    {
-      return new RespHeartMessage();
-    }
-
-    int NSIdentityNetPacket::serialize(char* data, const int64_t data_len, int64_t& pos)
+    int NSIdentityNetPacket::serialize(char* data, const int64_t data_len, int64_t& pos) const
     {
       int32_t iret = NULL != data && data_len - pos >= length() ? common::TFS_SUCCESS : common::TFS_ERROR;
       if (common::TFS_SUCCESS  == iret)
@@ -160,7 +155,7 @@ namespace tfs
       return iret;
     }
 
-    int MasterAndSlaveHeartMessage::serialize(common::Stream& output)
+    int MasterAndSlaveHeartMessage::serialize(common::Stream& output) const 
     {
       int64_t pos = 0;
       int32_t iret = ns_identity_.serialize(output.get_free(), output.get_free_length(), pos);
@@ -174,11 +169,6 @@ namespace tfs
     int64_t MasterAndSlaveHeartMessage::length() const
     {
       return sizeof(ns_identity_);
-    }
-
-    common::BasePacket* MasterAndSlaveHeartMessage::create(const int32_t type)
-    {
-      return new MasterAndSlaveHeartMessage();
     }
 
     MasterAndSlaveHeartResponseMessage::MasterAndSlaveHeartResponseMessage()
@@ -207,7 +197,7 @@ namespace tfs
       return iret;
     }
 
-    int MasterAndSlaveHeartResponseMessage::serialize(common::Stream& output)
+    int MasterAndSlaveHeartResponseMessage::serialize(common::Stream& output) const 
     {
       int64_t pos = 0;
       int32_t iret = ns_identity_.serialize(output.get_free(), output.get_free_length(), pos);
@@ -232,11 +222,6 @@ namespace tfs
       return tmp;
     }
 
-    common::BasePacket* MasterAndSlaveHeartResponseMessage::create(const int32_t type)
-    {
-      return new MasterAndSlaveHeartResponseMessage();
-    }
-
     HeartBeatAndNSHeartMessage::HeartBeatAndNSHeartMessage() :
       flags_(0)
     {
@@ -253,7 +238,7 @@ namespace tfs
       return input.get_int32(&flags_);
     }
 
-    int HeartBeatAndNSHeartMessage::serialize(common::Stream& output)
+    int HeartBeatAndNSHeartMessage::serialize(common::Stream& output) const 
     {
       return output.set_int32(flags_);
     }
@@ -261,11 +246,6 @@ namespace tfs
     int64_t HeartBeatAndNSHeartMessage::length() const
     {
       return common::INT_SIZE;
-    }
-
-    common::BasePacket* HeartBeatAndNSHeartMessage::create(const int32_t type)
-    {
-      return new HeartBeatAndNSHeartMessage();
     }
 
     OwnerCheckMessage::OwnerCheckMessage() :

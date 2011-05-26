@@ -26,10 +26,10 @@ namespace tfs
     public:
       ReplicateBlockMessage();
       virtual ~ReplicateBlockMessage();
-      virtual int serialize(common::Stream& output);
+      virtual int serialize(common::Stream& output) const ;
       virtual int deserialize(common::Stream& input);
+      int deserialize(const char* data, const int64_t data_len, int64_t& pos);
       virtual int64_t length() const;
-      static common::BasePacket* create(const int32_t type);
       void dump(void) const;
       inline void set_command(const int32_t command)
       {

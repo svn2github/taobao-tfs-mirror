@@ -62,7 +62,7 @@ namespace tfs
       return len;
     }
 
-    int RenameFileMessage::serialize(common::Stream& output)
+    int RenameFileMessage::serialize(common::Stream& output) const 
     {
       if (has_lease_ == true)
       {
@@ -87,11 +87,6 @@ namespace tfs
         has_lease_ = common::BasePacket::parse_special_ds(ds_, version_, lease_id_);
       }
       return iret;
-    }
-
-    common::BasePacket* RenameFileMessage::create(const int32_t type)
-    {
-      return new RenameFileMessage();
     }
   }
 }

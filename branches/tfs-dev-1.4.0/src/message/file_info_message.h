@@ -27,10 +27,9 @@ namespace tfs
       public:
         FileInfoMessage();
         virtual ~FileInfoMessage();
-        virtual int serialize(common::Stream& output);
+        virtual int serialize(common::Stream& output) const ;
         virtual int deserialize(common::Stream& input);
         virtual int64_t length() const;
-        static common::BasePacket* create(const int32_t type);
         inline void set_block_id(const uint32_t block_id)
         {
           block_id_ = block_id;
@@ -66,11 +65,9 @@ namespace tfs
       public:
         RespFileInfoMessage();
         virtual ~RespFileInfoMessage();
-        virtual int serialize(common::Stream& output);
+        virtual int serialize(common::Stream& output) const ;
         virtual int deserialize(common::Stream& input);
         virtual int64_t length() const;
-        static common::BasePacket* create(const int32_t type);
-
         inline void set_file_info(common::FileInfo* const file_info)
         {
           if (NULL != file_info)

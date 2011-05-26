@@ -81,7 +81,7 @@ namespace tfs
       return len;
     }
 
-    int SetDataserverMessage::serialize(common::Stream& output)
+    int SetDataserverMessage::serialize(common::Stream& output) const 
     {
       int64_t pos = 0;
       int32_t iret = ds_.id_ <= 0 ? common::TFS_ERROR : common::TFS_SUCCESS;
@@ -117,11 +117,6 @@ namespace tfs
       return iret;
     }
 
-    common::BasePacket* SetDataserverMessage::create(const int32_t type)
-    {
-      return new SetDataserverMessage();
-    }
-
     void SetDataserverMessage::set_ds(common::DataServerStatInfo* ds)
     {
       if (NULL != ds)
@@ -154,14 +149,9 @@ namespace tfs
       return common::INT64_SIZE;
     }
 
-    int SuspectDataserverMessage::serialize(common::Stream& output)
+    int SuspectDataserverMessage::serialize(common::Stream& output) const 
     {
       return output.set_int64(server_id_);
-    }
-
-    common::BasePacket* SuspectDataserverMessage::create(const int32_t type)
-    {
-      return new SuspectDataserverMessage();
     }
   }
 }

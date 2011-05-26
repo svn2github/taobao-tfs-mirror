@@ -25,13 +25,10 @@ namespace tfs
     {
     public:
       ReloadConfigMessage();
-      //ReloadConfigMessage(const int32_t status);
-      //void set_message(const int32_t status);
       virtual ~ReloadConfigMessage();
-      virtual int serialize(common::Stream& output);
+      virtual int serialize(common::Stream& output) const ;
       virtual int deserialize(common::Stream& input);
       virtual int64_t length() const;
-      static common::BasePacket* create(const int32_t type);
 
       void set_switch_cluster_flag(const int32_t flag);
       int32_t get_switch_cluster_flag() const;

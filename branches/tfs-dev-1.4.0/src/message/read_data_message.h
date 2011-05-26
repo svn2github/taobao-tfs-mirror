@@ -24,7 +24,7 @@ namespace tfs
     struct ReadDataInfo
     {
       int deserialize(const char* data, const int64_t data_len, int64_t& pos);
-      int serialize(char* data, const int64_t data_len, int64_t& pos);
+      int serialize(char* data, const int64_t data_len, int64_t& pos) const;
       int64_t length() const;
       uint32_t block_id_;
       uint64_t file_id_;
@@ -38,10 +38,9 @@ namespace tfs
       public:
         ReadDataMessage();
         virtual ~ReadDataMessage();
-        virtual int serialize(common::Stream& output);
+        virtual int serialize(common::Stream& output) const ;
         virtual int deserialize(common::Stream& input);
         virtual int64_t length() const;
-        static common::BasePacket* create(const int32_t type);
         void set_block_id(const uint32_t block_id)
         {
           read_data_info_.block_id_ = block_id;
@@ -83,10 +82,9 @@ namespace tfs
       public:
         RespReadDataMessage();
         virtual ~RespReadDataMessage();
-        virtual int serialize(common::Stream& output);
+        virtual int serialize(common::Stream& output) const ;
         virtual int deserialize(common::Stream& input);
         virtual int64_t length() const;
-        static common::BasePacket* create(const int32_t type);
 
         char* alloc_data(const int32_t len);
         inline void set_length(const int32_t len) { length_ = len;}
@@ -103,10 +101,9 @@ namespace tfs
       public:
         ReadDataMessageV2();
         virtual ~ReadDataMessageV2();
-        virtual int serialize(common::Stream& output);
+        virtual int serialize(common::Stream& output) const ;
         virtual int deserialize(common::Stream& input);
         virtual int64_t length() const;
-        static common::BasePacket* create(const int32_t type);
     };
 
     class RespReadDataMessageV2: public RespReadDataMessage 
@@ -114,10 +111,9 @@ namespace tfs
       public:
         RespReadDataMessageV2();
         virtual ~RespReadDataMessageV2();
-        virtual int serialize(common::Stream& output);
+        virtual int serialize(common::Stream& output) const ;
         virtual int deserialize(common::Stream& input);
         virtual int64_t length() const;
-        static common::BasePacket* create(const int32_t type);
 
         void set_file_info(common::FileInfo* const file_info)
         {
@@ -137,10 +133,9 @@ namespace tfs
       public:
         ReadRawDataMessage();
         virtual ~ReadRawDataMessage();
-        virtual int serialize(common::Stream& output);
+        virtual int serialize(common::Stream& output) const ;
         virtual int deserialize(common::Stream& input);
         virtual int64_t length() const;
-        static common::BasePacket* create(const int32_t type);
     };
 
     class RespReadRawDataMessage: public RespReadDataMessage 
@@ -148,10 +143,9 @@ namespace tfs
       public:
         RespReadRawDataMessage();
         virtual ~RespReadRawDataMessage();
-        virtual int serialize(common::Stream& output);
+        virtual int serialize(common::Stream& output) const ;
         virtual int deserialize(common::Stream& input);
         virtual int64_t length() const;
-        static common::BasePacket* create(const int32_t type);
     };
 
     class ReadScaleImageMessage: public ReadDataMessageV2
@@ -166,7 +160,7 @@ namespace tfs
         struct ZoomData
         {
           int deserialize(const char* data, const int64_t data_len, int64_t& pos);
-          int serialize(char* data, const int64_t data_len, int64_t& pos);
+          int serialize(char* data, const int64_t data_len, int64_t& pos) const;
           int64_t length() const;
           int32_t zoom_width_;
           int32_t zoom_height_;
@@ -175,10 +169,9 @@ namespace tfs
 
         ReadScaleImageMessage();
         virtual ~ReadScaleImageMessage();
-        virtual int serialize(common::Stream& output);
+        virtual int serialize(common::Stream& output) const ;
         virtual int deserialize(common::Stream& input);
         virtual int64_t length() const;
-        static common::BasePacket* create(const int32_t type);
         void set_zoom_data(const ZoomData & zoom)
         {
           zoom_ = zoom;

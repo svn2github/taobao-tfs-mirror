@@ -39,14 +39,9 @@ namespace tfs
       return common::INT_SIZE;
     }
 
-    int ReloadConfigMessage::serialize(common::Stream& input)
+    int ReloadConfigMessage::serialize(common::Stream& output) const
     {
-      return input.set_int32(flag_);
-    }
-
-    common::BasePacket* ReloadConfigMessage::create(const int32_t type)
-    {
-      return new ReloadConfigMessage();
+      return output.set_int32(flag_);
     }
 
     void ReloadConfigMessage::set_switch_cluster_flag(const int32_t flag)

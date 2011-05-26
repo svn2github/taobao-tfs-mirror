@@ -27,10 +27,9 @@ namespace tfs
       public:
         RespHeartMessage();
         virtual ~RespHeartMessage();
-        virtual int serialize(common::Stream& output);
+        virtual int serialize(common::Stream& output) const ;
         virtual int deserialize(common::Stream& input);
         virtual int64_t length() const;
-        static common::BasePacket* create(const int32_t type);
 
         inline const common::VUINT32* get_expire_blocks() const
         {
@@ -74,7 +73,7 @@ namespace tfs
 #pragma pack(4)
     struct NSIdentityNetPacket
     {
-      int serialize(char*data, const int64_t data_len, int64_t& pos);
+      int serialize(char*data, const int64_t data_len, int64_t& pos) const;
       int deserialize(const char*data, const int64_t data_len, int64_t& pos);
       int64_t length() const;
       uint64_t ip_port_;
@@ -103,10 +102,9 @@ namespace tfs
         MasterAndSlaveHeartMessage();
         virtual ~MasterAndSlaveHeartMessage();
 
-        virtual int serialize(common::Stream& output);
+        virtual int serialize(common::Stream& output) const ;
         virtual int deserialize(common::Stream& input);
         virtual int64_t length() const;
-        static common::BasePacket* create(const int32_t type);
         inline void set_ip_port(const uint64_t server_ip_port)
         {
           ns_identity_.ip_port_ = server_ip_port;
@@ -156,10 +154,9 @@ namespace tfs
       public:
         MasterAndSlaveHeartResponseMessage();
         virtual ~MasterAndSlaveHeartResponseMessage();
-        virtual int serialize(common::Stream& output);
+        virtual int serialize(common::Stream& output) const ;
         virtual int deserialize(common::Stream& input);
         virtual int64_t length() const;
-        static common::BasePacket* create(const int32_t type);
         inline void set_ip_port(const uint64_t server_ip_port)
         {
           ns_identity_.ip_port_ = server_ip_port;
@@ -210,10 +207,9 @@ namespace tfs
       public:
         HeartBeatAndNSHeartMessage();
         virtual ~HeartBeatAndNSHeartMessage();
-        virtual int serialize(common::Stream& output);
+        virtual int serialize(common::Stream& output) const ;
         virtual int deserialize(common::Stream& input);
         virtual int64_t length() const;
-        static common::BasePacket* create(const int32_t type);
         inline void set_ns_switch_flag_and_status(const uint32_t switch_flag, const uint32_t status)
         {
           flags_ = (status & 0x0000FFFF);
@@ -236,7 +232,7 @@ namespace tfs
       public:
         OwnerCheckMessage();
         virtual ~OwnerCheckMessage();
-        virtual int serialize(common::Stream& output){ return common::TFS_SUCCESS;}
+        virtual int serialize(common::Stream& output) const { return common::TFS_SUCCESS;}
         virtual int deserialize(common::Stream& input){ return common::TFS_SUCCESS;}
         virtual int64_t length() const{return 0;}
         inline void set_start_time(const int64_t start = time(NULL))

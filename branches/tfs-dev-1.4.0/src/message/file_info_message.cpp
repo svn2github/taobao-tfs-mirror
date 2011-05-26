@@ -48,7 +48,7 @@ namespace tfs
       return common::INT_SIZE * 2 + common::INT64_SIZE;
     }
 
-    int FileInfoMessage::serialize(common::Stream& output)
+    int FileInfoMessage::serialize(common::Stream& output) const 
     {
       int32_t iret = output.set_int32(block_id_);
       if (common::TFS_SUCCESS == iret)
@@ -60,11 +60,6 @@ namespace tfs
         iret = output.set_int32(mode_);
       }
       return iret;
-    }
-
-    common::BasePacket* FileInfoMessage::create(const int32_t type)
-    {
-      return new FileInfoMessage();
     }
 
     RespFileInfoMessage::RespFileInfoMessage()
@@ -101,7 +96,7 @@ namespace tfs
       return file_info_ .id_ > 0 ? common::INT_SIZE + file_info_.length() : common::INT_SIZE;
     }
 
-    int RespFileInfoMessage::serialize(common::Stream& output)
+    int RespFileInfoMessage::serialize(common::Stream& output) const 
     {
       int32_t size = file_info_.id_ > 0 ? file_info_.length() : 0;
       int32_t iret = output.set_int32(size);
@@ -118,11 +113,6 @@ namespace tfs
         }
       }
       return iret;
-    }
-
-    common::BasePacket* RespFileInfoMessage::create(const int32_t type)
-    {
-      return new RespFileInfoMessage();
     }
   }
 }

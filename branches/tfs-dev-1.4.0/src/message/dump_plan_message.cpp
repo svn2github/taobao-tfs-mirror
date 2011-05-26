@@ -39,14 +39,9 @@ namespace tfs
       return common::INT8_SIZE;
     }
 
-    int DumpPlanMessage::serialize(common::Stream& output)
+    int DumpPlanMessage::serialize(common::Stream& output) const
     {
       return output.set_int8(reserve_);
-    }
-
-    common::BasePacket* DumpPlanMessage::create(const int32_t type)
-    {
-      return new DumpPlanMessage();
     }
 
     DumpPlanResponseMessage::DumpPlanResponseMessage()
@@ -73,7 +68,7 @@ namespace tfs
       return data_.getDataLen();
     }
 
-    int DumpPlanResponseMessage::serialize(common::Stream& output)
+    int DumpPlanResponseMessage::serialize(common::Stream& output) const
     {
       int32_t iret = common::TFS_SUCCESS;
       if (data_.getDataLen() > 0)
@@ -82,11 +77,5 @@ namespace tfs
       }
       return iret;
     }
-
-    common::BasePacket* DumpPlanResponseMessage::create(const int32_t type)
-    {
-      return new DumpPlanResponseMessage();
-    }
   }
-
 }

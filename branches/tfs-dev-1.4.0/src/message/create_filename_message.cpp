@@ -44,7 +44,7 @@ namespace tfs
       return common::INT_SIZE + common::INT64_SIZE;
     }
 
-    int CreateFilenameMessage::serialize(common::Stream& output)
+    int CreateFilenameMessage::serialize(common::Stream& output) const 
     {
       int32_t iret = output.set_int32(block_id_);
       if (common::TFS_SUCCESS == iret)
@@ -52,11 +52,6 @@ namespace tfs
         iret = output.set_int64(file_id_);
       }
       return iret;
-    }
-
-    common::BasePacket* CreateFilenameMessage::create(const int32_t type)
-    {
-      return new CreateFilenameMessage();
     }
 
     RespCreateFilenameMessage::RespCreateFilenameMessage() :
@@ -88,7 +83,7 @@ namespace tfs
       return common::INT_SIZE + common::INT64_SIZE * 2;
     }
 
-    int RespCreateFilenameMessage::serialize(common::Stream& output)
+    int RespCreateFilenameMessage::serialize(common::Stream& output) const 
     {
       int32_t iret = output.set_int32(block_id_);
       if (common::TFS_SUCCESS == iret)
@@ -100,10 +95,6 @@ namespace tfs
         iret = output.set_int64(file_number_);
       }
       return iret;
-    }
-    common::BasePacket* RespCreateFilenameMessage::create(const int32_t type)
-    {
-      return new RespCreateFilenameMessage();
     }
   }
 }

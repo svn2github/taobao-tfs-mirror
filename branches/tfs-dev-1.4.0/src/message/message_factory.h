@@ -49,8 +49,7 @@ namespace tfs
       public:
         MessageFactory(){}
         virtual ~MessageFactory(){}
-        virtual int initialize();
-        virtual void destroy();
+        virtual tbnet::Packet* createPacket(int pcode);
     };
   }
 }

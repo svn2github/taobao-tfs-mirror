@@ -25,10 +25,9 @@ namespace tfs
       public:
         SetDataserverMessage();
         virtual ~SetDataserverMessage();
-        virtual int serialize(common::Stream& output);
+        virtual int serialize(common::Stream& output) const ;
         virtual int deserialize(common::Stream& input);
         virtual int64_t length() const;
-        static common::BasePacket* create(const int32_t type);
         void set_ds(common::DataServerStatInfo* ds);
         inline void set_has_block(const common::HasBlockFlag has_block)
         {
@@ -58,10 +57,9 @@ namespace tfs
       public:
         SuspectDataserverMessage();
         virtual ~SuspectDataserverMessage();
-        virtual int serialize(common::Stream& output);
+        virtual int serialize(common::Stream& output) const ;
         virtual int deserialize(common::Stream& input);
         virtual int64_t length() const;
-        static common::BasePacket* create(const int32_t type);
         inline void set_server_id(const uint64_t server_id)
         {
           server_id_ = server_id;

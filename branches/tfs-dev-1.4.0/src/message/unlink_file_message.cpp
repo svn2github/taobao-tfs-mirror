@@ -36,7 +36,7 @@ namespace tfs
       return iret;
     }
 
-    int UnlinkFileInfo::serialize(char* data, const int64_t data_len, int64_t& pos)
+    int UnlinkFileInfo::serialize(char* data, const int64_t data_len, int64_t& pos) const
     {
       int32_t iret = NULL != data && data_len - pos >= length() ? common::TFS_SUCCESS : common::TFS_ERROR;
       if (common::TFS_SUCCESS  == iret)
@@ -102,7 +102,7 @@ namespace tfs
       return len;
     }
 
-    int UnlinkFileMessage::serialize(common::Stream& output)
+    int UnlinkFileMessage::serialize(common::Stream& output) const 
     {
       if (has_lease_)
       {
@@ -130,11 +130,6 @@ namespace tfs
         has_lease_ = BasePacket::parse_special_ds(dataservers_, version_, lease_);
       }
       return iret;
-    }
-
-    common::BasePacket* UnlinkFileMessage::create(const int32_t type)
-    {
-      return new UnlinkFileMessage();
     }
   }
 }

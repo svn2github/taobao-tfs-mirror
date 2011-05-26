@@ -56,7 +56,7 @@ namespace tfs
       }
       return iret;
     }
-    int SdbmStat::serialize(char* data, const int64_t data_len, int64_t& pos)
+    int SdbmStat::serialize(char* data, const int64_t data_len, int64_t& pos) const
     {
       int32_t iret = NULL != data && data_len - pos >= length() ? common::TFS_SUCCESS : common::TFS_ERROR;
       if (common::TFS_SUCCESS == iret)
@@ -127,7 +127,7 @@ namespace tfs
       return common::INT_SIZE * 2 + common::Serialization::get_vint64_length(fail_server_);
     }
 
-    int GetBlockInfoMessage::serialize(common::Stream& output)
+    int GetBlockInfoMessage::serialize(common::Stream& output)  const 
     {
       int32_t iret = output.set_int32(mode_);
       if (common::TFS_SUCCESS == iret)
@@ -139,10 +139,6 @@ namespace tfs
         iret = output.set_vint64(fail_server_);
       }
       return iret;
-    }
-    common::BasePacket* GetBlockInfoMessage::create(const int32_t type)
-    {
-      return new GetBlockInfoMessage();
     }
 
     SetBlockInfoMessage::SetBlockInfoMessage() :
@@ -182,7 +178,7 @@ namespace tfs
       return len;
     }
 
-    int SetBlockInfoMessage::serialize(common::Stream& output)
+    int SetBlockInfoMessage::serialize(common::Stream& output)  const 
     {
       if (has_lease_
         && !ds_.empty())
@@ -202,11 +198,6 @@ namespace tfs
         has_lease_ = common::BasePacket::parse_special_ds(ds_, version_, lease_);
       }
       return iret;
-    }
-
-    common::BasePacket* SetBlockInfoMessage::create(const int32_t type)
-    {
-      return new SetBlockInfoMessage();
     }
 
     void SetBlockInfoMessage::set_read_block_ds(const uint32_t block_id, common::VUINT64* ds)
@@ -265,7 +256,7 @@ namespace tfs
       return (mode_ & common::T_READ) ? len + common::Serialization::get_vint32_length(block_ids_) : len + common::INT_SIZE;
     }
 
-    int BatchGetBlockInfoMessage::serialize(common::Stream& output)
+    int BatchGetBlockInfoMessage::serialize(common::Stream& output)  const 
     {
       int32_t iret = output.set_int32(mode_);
       if (common::TFS_SUCCESS == iret)
@@ -280,11 +271,6 @@ namespace tfs
         }
       }
       return iret;
-    }
-
-    common::BasePacket* BatchGetBlockInfoMessage::create(const int32_t type)
-    {
-      return new BatchGetBlockInfoMessage();
     }
 
     BatchSetBlockInfoMessage::BatchSetBlockInfoMessage()
@@ -340,16 +326,16 @@ namespace tfs
       return len;
     }
 
-    int BatchSetBlockInfoMessage::serialize(common::Stream& output)
+    int BatchSetBlockInfoMessage::serialize(common::Stream& output)  const 
     {
       int32_t iret = output.set_int32(block_infos_.size());
       if (common::TFS_SUCCESS == iret)
       {
-        std::map<uint32_t, common::BlockInfoSeg>::iterator it = block_infos_.begin();
+        std::map<uint32_t, common::BlockInfoSeg>::const_iterator it = block_infos_.begin();
         common::BlockInfoSeg* block_info = NULL;
         for (; it != block_infos_.end(); it++)
         {
-          block_info = &it->second;
+          block_info = const_cast< common::BlockInfoSeg*>(&it->second);
           if ((block_info->has_lease_ )
             && (block_info->ds_.size() > 0))
           {
@@ -370,11 +356,6 @@ namespace tfs
         }
       }
       return iret;
-    }
-
-    common::BasePacket* BatchSetBlockInfoMessage::create(const int32_t type)
-    {
-      return new BatchSetBlockInfoMessage();
     }
 
     void BatchSetBlockInfoMessage::set_read_block_ds(const uint32_t block_id, common::VUINT64& ds)
@@ -421,7 +402,7 @@ namespace tfs
               + common::Serialization::get_vint32_length(new_blocks_);
     }
 
-    int CarryBlockMessage::serialize(common::Stream& output)
+    int CarryBlockMessage::serialize(common::Stream& output)  const 
     {
       int32_t iret = output.set_vint32(expire_blocks_);
       if (common::TFS_SUCCESS == iret)
@@ -433,10 +414,6 @@ namespace tfs
         iret = output.set_vint32(new_blocks_);
       }
       return iret;
-    }
-    common::BasePacket* CarryBlockMessage::create(const int32_t type)
-    {
-      return new CarryBlockMessage();
     }
 
     void CarryBlockMessage::add_expire_id(const uint32_t block_id)
@@ -472,14 +449,9 @@ namespace tfs
       return  common::Serialization::get_vint32_length(new_blocks_);
     }
 
-    int NewBlockMessage::serialize(common::Stream& output)
+    int NewBlockMessage::serialize(common::Stream& output)  const 
     {
-      return output.get_vint32(new_blocks_);
-    }
-
-    common::BasePacket* NewBlockMessage::create(const int32_t type)
-    {
-      return new NewBlockMessage();
+      return output.set_vint32(new_blocks_);
     }
 
     void NewBlockMessage::add_new_id(const uint32_t block_id)
@@ -507,14 +479,9 @@ namespace tfs
       return  common::Serialization::get_vint32_length(remove_blocks_);
     }
 
-    int RemoveBlockMessage::serialize(common::Stream& output)
+    int RemoveBlockMessage::serialize(common::Stream& output)  const 
     {
       return output.set_vint32(remove_blocks_);
-    }
-
-    common::BasePacket* RemoveBlockMessage::create(const int32_t type)
-    {
-      return new RemoveBlockMessage();
     }
 
     void RemoveBlockMessage::add_remove_id(const uint32_t block_id)
@@ -543,14 +510,9 @@ namespace tfs
       return common::INT_SIZE;
     }
 
-    int RemoveBlockResponseMessage::serialize(common::Stream& output)
+    int RemoveBlockResponseMessage::serialize(common::Stream& output)  const 
     {
       return output.set_int32(block_id_);
-    }
-
-    common::BasePacket* RemoveBlockResponseMessage::create(const int32_t type)
-    {
-      return new RemoveBlockResponseMessage();
     }
 
     ListBlockMessage::ListBlockMessage() :
@@ -573,14 +535,9 @@ namespace tfs
       return common::INT_SIZE;
     }
 
-    int ListBlockMessage::serialize(common::Stream& output)
+    int ListBlockMessage::serialize(common::Stream& output)  const 
     {
       return output.set_int32(type_);
-    }
-
-    common::BasePacket* ListBlockMessage::create(const int32_t type)
-    {
-      return new ListBlockMessage();
     }
 
     RespListBlockMessage::RespListBlockMessage() :
@@ -696,7 +653,7 @@ namespace tfs
       return len;
     }
 
-    int RespListBlockMessage::serialize(common::Stream& output)
+    int RespListBlockMessage::serialize(common::Stream& output)  const 
     {
       int32_t iret = output.set_int32(status_type_);
       if (common::TFS_SUCCESS == iret)
@@ -747,11 +704,6 @@ namespace tfs
         }
       }
       return iret;
-    }
-
-    common::BasePacket* RespListBlockMessage::create(const int32_t type)
-    {
-      return new RespListBlockMessage();
     }
 
     void RespListBlockMessage::add_block_id(const uint32_t block_id)
@@ -828,7 +780,7 @@ namespace tfs
       return len;
     }
 
-    int UpdateBlockInfoMessage::serialize(common::Stream& output)
+    int UpdateBlockInfoMessage::serialize(common::Stream& output)  const 
     {
       int32_t iret = output.set_int32(block_id_);
       if (common::TFS_SUCCESS == iret)
@@ -872,11 +824,6 @@ namespace tfs
       return iret;
     }
 
-    common::BasePacket* UpdateBlockInfoMessage::create(const int32_t type)
-    {
-      return new UpdateBlockInfoMessage();
-    }
-
     ResetBlockVersionMessage::ResetBlockVersionMessage() :
       block_id_(0)
     {
@@ -897,14 +844,9 @@ namespace tfs
       return common::INT_SIZE;
     }
 
-    int ResetBlockVersionMessage::serialize(common::Stream& output)
+    int ResetBlockVersionMessage::serialize(common::Stream& output)  const 
     {
       return output.set_int32(block_id_);
-    }
-
-    common::BasePacket* ResetBlockVersionMessage::create(const int32_t type)
-    {
-      return new ResetBlockVersionMessage();
     }
 
     BlockFileInfoMessage::BlockFileInfoMessage() :
@@ -953,7 +895,7 @@ namespace tfs
       return common::INT_SIZE * 2 + fileinfo_list_.size() * info.length();
     }
 
-    int BlockFileInfoMessage::serialize(common::Stream& output)
+    int BlockFileInfoMessage::serialize(common::Stream& output)  const 
     {
       int32_t iret = output.set_int32(block_id_);
       if (common::TFS_SUCCESS == iret)
@@ -962,11 +904,11 @@ namespace tfs
       }
       if (common::TFS_SUCCESS == iret)
       {
-        common::FILE_INFO_LIST::iterator iter = fileinfo_list_.begin();
+        common::FILE_INFO_LIST::const_iterator iter = fileinfo_list_.begin();
         for (; iter != fileinfo_list_.end(); ++iter)
         {
           int64_t pos = 0;
-          iret = const_cast<common::FileInfo*>(&(*iter))->serialize(output.get_free(), output.get_free_length(), pos);
+          iret = (*iter).serialize(output.get_free(), output.get_free_length(), pos);
           if (common::TFS_SUCCESS == iret)
           {
             output.pour((*iter).length());
@@ -978,11 +920,6 @@ namespace tfs
         }
       }
       return iret;
-    }
-
-    common::BasePacket* BlockFileInfoMessage::create(const int32_t type)
-    {
-      return new BlockFileInfoMessage();
     }
 
     BlockRawMetaMessage::BlockRawMetaMessage() :
@@ -1031,7 +968,7 @@ namespace tfs
       return  common::INT_SIZE * 2 + raw_meta_list_.size() * raw.length();
     }
 
-    int BlockRawMetaMessage::serialize(common::Stream& output)
+    int BlockRawMetaMessage::serialize(common::Stream& output)  const 
     {
       int32_t iret = output.set_int32(block_id_);
       if (common::TFS_SUCCESS == iret)
@@ -1040,7 +977,7 @@ namespace tfs
       }
       if (common::TFS_SUCCESS == iret)
       {
-        common::RawMetaVec::iterator iter = raw_meta_list_.begin();
+        common::RawMetaVec::const_iterator iter = raw_meta_list_.begin();
         for (; iter != raw_meta_list_.end(); ++iter)
         {
           int64_t pos = 0;
@@ -1056,11 +993,6 @@ namespace tfs
         }
       }
       return iret;
-    }
-
-    common::BasePacket* BlockRawMetaMessage::create(const int32_t type)
-    {
-      return new BlockRawMetaMessage();
     }
 
     BlockWriteCompleteMessage::BlockWriteCompleteMessage() :
@@ -1105,7 +1037,7 @@ namespace tfs
       return common::INT64_SIZE + block_info_.length() + common::INT_SIZE * 3;
     }
 
-    int BlockWriteCompleteMessage::serialize(common::Stream& output)
+    int BlockWriteCompleteMessage::serialize(common::Stream& output)  const 
     {
       int32_t iret = block_info_.block_id_ <= 0 ? common::TFS_ERROR : common::TFS_SUCCESS;
       if (common::TFS_SUCCESS == iret)
@@ -1136,11 +1068,6 @@ namespace tfs
       return iret;
     }
 
-    common::BasePacket* BlockWriteCompleteMessage::create(const int32_t type)
-    {
-      return new BlockWriteCompleteMessage();
-    }
-
     ListBitMapMessage::ListBitMapMessage() :
       type_(0)
     {
@@ -1161,14 +1088,9 @@ namespace tfs
       return common::INT_SIZE;
     }
 
-    int ListBitMapMessage::serialize(common::Stream& output)
+    int ListBitMapMessage::serialize(common::Stream& output)  const 
     {
       return output.set_int32(type_);
-    }
-
-    common::BasePacket* ListBitMapMessage::create(const int32_t type)
-    {
-      return new ListBitMapMessage();
     }
 
     RespListBitMapMessage::RespListBitMapMessage() :
@@ -1233,7 +1155,7 @@ namespace tfs
       return len;
     }
 
-    int RespListBitMapMessage::serialize(common::Stream& output)
+    int RespListBitMapMessage::serialize(common::Stream& output)  const 
     {
       int32_t iret = output.set_int32(uuse_len_);
       if (common::TFS_SUCCESS == iret)
@@ -1246,11 +1168,6 @@ namespace tfs
         iret = output.set_bytes(data_, ubitmap_len_);
       }
       return iret;
-    }
-
-    common::BasePacket* RespListBitMapMessage::create(const int32_t type)
-    {
-      return new RespListBitMapMessage();
     }
   }
 }

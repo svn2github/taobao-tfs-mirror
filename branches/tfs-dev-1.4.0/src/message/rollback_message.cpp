@@ -82,7 +82,7 @@ namespace tfs
       return len;
     }
 
-    int RollbackMessage::serialize(common::Stream& output)
+    int RollbackMessage::serialize(common::Stream& output) const 
     {
       int32_t block_len = block_info_.block_id_ > 0 ? block_info_.length() : 0;
       int32_t file_info_len = file_info_.id_ > 0 ? file_info_.length() : 0;
@@ -120,10 +120,6 @@ namespace tfs
         }
       }
       return iret;
-    }
-    common::BasePacket* RollbackMessage::create(const int32_t type)
-    {
-      return new RollbackMessage();
     }
   }
 }

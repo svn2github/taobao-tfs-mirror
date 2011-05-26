@@ -18,7 +18,7 @@ namespace tfs
 {
   namespace message
   {
-    int ClientCmdInformation::serialize(char* data, const int64_t data_len, int64_t& pos)
+    int ClientCmdInformation::serialize(char* data, const int64_t data_len, int64_t& pos) const
     {
       int32_t iret = NULL != data && data_len - pos >= length() ? common::TFS_SUCCESS : common::TFS_ERROR;
       if (common::TFS_SUCCESS == iret)
@@ -102,7 +102,7 @@ namespace tfs
       return info_.length();
     }
 
-    int ClientCmdMessage::serialize(common::Stream& output)
+    int ClientCmdMessage::serialize(common::Stream& output) const 
     {
       int64_t pos = 0;
       int32_t iret = info_.serialize(output.get_free(), output.get_free_length(), pos);
@@ -111,11 +111,6 @@ namespace tfs
         output.pour(info_.length());
       }
       return iret;
-    }
-
-    common::BasePacket* ClientCmdMessage::create(const int32_t type)
-    {
-      return new ClientCmdMessage();
     }
   }
 }

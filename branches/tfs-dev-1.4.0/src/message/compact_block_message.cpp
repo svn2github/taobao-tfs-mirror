@@ -44,12 +44,13 @@ namespace tfs
       return iret;
     }
 
+
     int64_t CompactBlockMessage::length() const
     {
       return common::INT_SIZE * 3;
     }
 
-    int CompactBlockMessage::serialize(common::Stream& output)
+    int CompactBlockMessage::serialize(common::Stream& output) const 
     {
       int32_t iret = output.set_int32(preserve_time_);
       if (common::TFS_SUCCESS == iret)
@@ -61,10 +62,6 @@ namespace tfs
         iret = output.set_int32(is_owner_);
       }
       return iret;
-    }
-    common::BasePacket* CompactBlockMessage::create(const int32_t type)
-    {
-      return new CompactBlockMessage();
     }
 
     CompactBlockCompleteMessage::CompactBlockCompleteMessage() :
@@ -109,12 +106,38 @@ namespace tfs
       return iret;
     }
 
+    int CompactBlockCompleteMessage::deserialize(const char* data, const int64_t data_len, int64_t& pos)
+    {
+      int32_t iret = common::Serialization::get_int32(data, data_len, pos, reinterpret_cast<int32_t*> (&block_id_));
+      if (common::TFS_SUCCESS == iret)
+      {
+        iret = common::Serialization::get_int32(data, data_len, pos, &success_);
+      }
+      if (common::TFS_SUCCESS == iret)
+      {
+        iret = common::Serialization::get_int64(data, data_len, pos, reinterpret_cast<int64_t*>(&server_id_));
+      }
+      if (common::TFS_SUCCESS == iret)
+      {
+        iret = common::Serialization::get_int32(data, data_len, pos, reinterpret_cast<int32_t*>(&flag_));
+      }
+      if (common::TFS_SUCCESS == iret)
+      {
+        iret = common::Serialization::get_vint64(data, data_len, pos, ds_list_);
+      }
+      if (common::TFS_SUCCESS == iret)
+      {
+        iret = block_info_.deserialize(data, data_len, pos);
+      }
+      return iret;
+    }
+
     int64_t CompactBlockCompleteMessage::length() const
     {
       return  common::INT_SIZE * 3 + common::INT64_SIZE + block_info_.length() + common::Serialization::get_vint64_length(ds_list_);
     }
 
-    int CompactBlockCompleteMessage::serialize(common::Stream& output)
+    int CompactBlockCompleteMessage::serialize(common::Stream& output) const 
     {
       int32_t iret = output.set_int32(block_id_);
       if (common::TFS_SUCCESS == iret)
@@ -157,11 +180,6 @@ namespace tfs
           "file_count(%u) size(%u) delfile_count(%u) del_size(%u) seqno(%u), ds_list(%u), dataserver(%s)",
           block_id_, success_, server_id_, flag_, block_info_.block_id_, block_info_.version_, block_info_.file_count_, block_info_.size_,
           block_info_.del_file_count_, block_info_.del_size_, block_info_.seq_no_, ds_list_.size(), ipstr.c_str());
-    }
-    
-    common::BasePacket* CompactBlockCompleteMessage::create(const int32_t type)
-    {
-      return new CompactBlockCompleteMessage();
     }
   }
 }

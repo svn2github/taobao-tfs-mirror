@@ -43,8 +43,8 @@ namespace tfs
       if (common::TFS_SUCCESS == iret
         && write_data_info_.length_ > 0)
       {
-        char* data = alloc_data(write_data_info_.length_);
-        iret = input.get_bytes(data, write_data_info_.length_);
+        data_ = input.get_data();
+        input.drain( write_data_info_.length_);
       }
       if (common::TFS_SUCCESS == iret)
       {
@@ -67,7 +67,7 @@ namespace tfs
       return len;
     }
 
-    int WriteDataMessage::serialize(common::Stream& output)
+    int WriteDataMessage::serialize(common::Stream& output) const 
     {
       if (has_lease_)
       {
@@ -95,11 +95,6 @@ namespace tfs
       return iret;
     }
 
-    common::BasePacket* WriteDataMessage::create(const int32_t type)
-    {
-      return new WriteDataMessage();
-    }
-
 #ifdef _DEL_001_
     RespWriteDataMessage::RespWriteDataMessage():
       length_(0)
@@ -121,15 +116,11 @@ namespace tfs
       return common::INT_SIZE;
     }
 
-    int RespWriteDataMessage::serialize(common::Stream& output)
+    int RespWriteDataMessage::serialize(common::Stream& output) const 
     {
       return output.set_int32(lenght_);
     }
 
-    common::BasePacket* RespWriteDataMessage::create(const int32_t type)
-    {
-      return new RespWriteDataMessage();
-    }
 #endif
 
     WriteRawDataMessage::WriteRawDataMessage() :
@@ -153,11 +144,8 @@ namespace tfs
         input.drain(write_data_info_.length());
         if (write_data_info_.length_ > 0)
         {
-          char* data = alloc_data(write_data_info_.length_);
-          if (NULL != data)
-          {
-            iret = input.get_bytes(data, write_data_info_.length_); 
-          }
+          data_ = input.get_data();
+          input.drain( write_data_info_.length_);
         }
       }
 
@@ -178,7 +166,7 @@ namespace tfs
       return len;
     }
 
-    int WriteRawDataMessage::serialize(common::Stream& output)
+    int WriteRawDataMessage::serialize(common::Stream& output) const 
     {
       int64_t pos = 0;
       int32_t iret = write_data_info_.serialize(output.get_free(), output.get_free_length(), pos);
@@ -196,11 +184,6 @@ namespace tfs
         iret = output.set_int32(flag_);
       }
       return iret;
-    }
-
-    common::BasePacket* WriteRawDataMessage::create(const int32_t type)
-    {
-      return new WriteRawDataMessage();
     }
 
     WriteInfoBatchMessage::WriteInfoBatchMessage() :
@@ -287,7 +270,7 @@ namespace tfs
       return len;
     }
 
-    int WriteInfoBatchMessage::serialize(common::Stream& output)
+    int WriteInfoBatchMessage::serialize(common::Stream& output) const 
     {
       int64_t pos = 0;
       int32_t have_block = block_info_.block_id_ >= 0 ? 0 : 1;
@@ -335,11 +318,6 @@ namespace tfs
         iret = output.set_int32(cluster_);
       }
       return iret;
-    }
-
-    common::BasePacket* WriteInfoBatchMessage::create(const int32_t type)
-    {
-      return new WriteInfoBatchMessage();
     }
   }
 }

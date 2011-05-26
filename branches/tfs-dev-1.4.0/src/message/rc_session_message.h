@@ -31,7 +31,7 @@ namespace tfs
       int set_app_key(const char* app_key);
       void set_app_ip(const int64_t app_ip);
 
-      int serialize(common::Stream& output);
+      int serialize(common::Stream& output) const ;
       int deserialize(common::Stream& input);
       int64_t length() const;
 
@@ -39,7 +39,6 @@ namespace tfs
       int64_t get_app_ip() const;
       void dump() const;
 
-      static common::BasePacket* create(const int32_t type);
     private:
       char app_key_[common::MAX_PATH_LENGTH];
       int64_t app_ip_;
@@ -55,15 +54,13 @@ namespace tfs
       int set_session_id(const char* session_id);
       void set_base_info(const common::BaseInfo& base_info);
 
-      int serialize(common::Stream& output);
+      int serialize(common::Stream& output) const ;
       int deserialize(common::Stream& input);
       int64_t length() const;
 
       const char* get_session_id() const;
       const common::BaseInfo& get_base_info() const;
       void dump() const;
-
-      static common::BasePacket* create(const int32_t type);
 
     private:
       char session_id_[common::MAX_PATH_LENGTH];
@@ -79,14 +76,13 @@ namespace tfs
 
       void set_ka_info(const common::KeepAliveInfo& ka_info);
 
-      int serialize(common::Stream& output);
+      int serialize(common::Stream& output) const ;
       int deserialize(common::Stream& input);
       int64_t length() const;
 
       const common::KeepAliveInfo& get_ka_info() const;
       void dump() const;
 
-      static common::BasePacket* create(const int32_t type);
     protected:
       common::KeepAliveInfo ka_info_;
     };
@@ -100,15 +96,13 @@ namespace tfs
       void set_update_flag(const common::UpdateFlag update_flag = common::KA_FLAG);
       void set_base_info(const common::BaseInfo& base_info);
 
-      int serialize(common::Stream& output);
+      int serialize(common::Stream& output) const ;
       int deserialize(common::Stream& input);
       int64_t length() const;
 
       bool get_update_flag() const;
       const common::BaseInfo& get_base_info() const;
       void dump() const;
-
-      static common::BasePacket* create(const int32_t type);
 
     private:
       bool update_flag_;
@@ -120,8 +114,6 @@ namespace tfs
     public:
       ReqRcLogoutMessage();
       virtual ~ReqRcLogoutMessage();
-
-      static common::BasePacket* create(const int32_t type);
     };
 
     //Rsp use status msg 

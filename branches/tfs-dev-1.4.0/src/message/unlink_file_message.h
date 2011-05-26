@@ -25,7 +25,7 @@ namespace tfs
     struct UnlinkFileInfo
     {
       int deserialize(const char* data, const int64_t data_len, int64_t& pos);
-      int serialize(char* data, const int64_t data_len, int64_t& pos);
+      int serialize(char* data, const int64_t data_len, int64_t& pos) const;
       int64_t length() const;
       uint32_t block_id_;
       uint64_t file_id_;
@@ -38,11 +38,9 @@ namespace tfs
       public:
         UnlinkFileMessage();
         virtual ~UnlinkFileMessage();
-        virtual int serialize(common::Stream& output);
+        virtual int serialize(common::Stream& output) const ;
         virtual int deserialize(common::Stream& input);
         virtual int64_t length() const;
-        static common::BasePacket* create(const int32_t type);
-
         inline void set_block_id(const uint32_t block_id)
         {
           unlink_file_info_.block_id_ = block_id;
@@ -157,10 +155,10 @@ namespace tfs
       protected:
         UnlinkFileInfo unlink_file_info_;
         int32_t option_flag_;
-        common::VUINT64 dataservers_;
-        int32_t version_;
-        uint32_t lease_;
-        bool has_lease_;
+        mutable common::VUINT64 dataservers_;
+        mutable int32_t version_;
+        mutable uint32_t lease_;
+        mutable bool has_lease_;
     };
   }
 }

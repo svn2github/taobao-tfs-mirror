@@ -63,7 +63,7 @@ namespace tfs
       app_ip_ = app_ip;
     }
 
-    int ReqRcLoginMessage::serialize(Stream& output)
+    int ReqRcLoginMessage::serialize(common::Stream& output) const 
     {
       int ret = TFS_SUCCESS;
       if (length_ > 0)
@@ -112,11 +112,6 @@ namespace tfs
     void ReqRcLoginMessage::dump() const
     {
       TBSYS_LOG(DEBUG, "app_key: %s, app_ip: %"PRI64_PREFIX"d", app_key_, app_ip_); 
-    }
-
-    BasePacket* ReqRcLoginMessage::create(const int32_t type)
-    {
-      return new (std::nothrow) ReqRcLoginMessage();
     }
 
     const char* ReqRcLoginMessage::get_app_key() const
@@ -169,7 +164,7 @@ namespace tfs
       base_info_ = base_info;
     }
 
-    int RspRcLoginMessage::serialize(Stream& output)
+    int RspRcLoginMessage::serialize(common::Stream& output) const 
     {
       int ret = TFS_SUCCESS;
       if (length_ > 0)
@@ -232,11 +227,6 @@ namespace tfs
       TBSYS_LOG(DEBUG, "session_id: %s", session_id_); 
     }
 
-    BasePacket* RspRcLoginMessage::create(const int32_t type)
-    {
-      return new (std::nothrow) RspRcLoginMessage();
-    }
-
     const char* RspRcLoginMessage::get_session_id() const
     {
       return session_id_;
@@ -261,7 +251,7 @@ namespace tfs
       ka_info_ = ka_info;
     }
 
-    int ReqRcKeepAliveMessage::serialize(Stream& output)
+    int ReqRcKeepAliveMessage::serialize(common::Stream& output) const 
     {
       int ret = TFS_SUCCESS;
       int64_t pos = 0;
@@ -301,10 +291,6 @@ namespace tfs
       return;
     }
 
-    BasePacket* ReqRcKeepAliveMessage::create(const int32_t type)
-    {
-      return new (std::nothrow) ReqRcKeepAliveMessage();
-    }
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     RspRcKeepAliveMessage::RspRcKeepAliveMessage()
@@ -325,7 +311,7 @@ namespace tfs
       base_info_ = base_info;
     }
 
-    int RspRcKeepAliveMessage::serialize(Stream& output)
+    int RspRcKeepAliveMessage::serialize(common::Stream& output) const 
     {
       int ret = TFS_SUCCESS;
       ret = output.set_int8(update_flag_);
@@ -374,10 +360,6 @@ namespace tfs
     {
     }
 
-    BasePacket* RspRcKeepAliveMessage::create(const int32_t type)
-    {
-      return new (std::nothrow) RspRcKeepAliveMessage();
-    }
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     ReqRcLogoutMessage::ReqRcLogoutMessage()
@@ -386,11 +368,6 @@ namespace tfs
     }
     ReqRcLogoutMessage::~ReqRcLogoutMessage()
     {
-    }
-
-    BasePacket* ReqRcLogoutMessage::create(const int32_t type)
-    {
-      return new (std::nothrow) ReqRcLogoutMessage();
     }
   }
 }

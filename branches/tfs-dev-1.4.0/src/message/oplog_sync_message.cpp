@@ -65,7 +65,7 @@ namespace tfs
       return (length_ > 0 && NULL != data_ ) ? common::INT_SIZE + length_ : common::INT_SIZE;
     }
 
-    int OpLogSyncMessage::serialize(common::Stream& output)
+    int OpLogSyncMessage::serialize(common::Stream& output) const 
     {
       int32_t iret = output.set_int32(length_);
       if (common::TFS_SUCCESS == iret)
@@ -76,11 +76,6 @@ namespace tfs
         }
       }
       return iret;
-    }
-
-    common::BasePacket* OpLogSyncMessage::create(const int32_t type)
-    {
-      return new OpLogSyncMessage();
     }
 
     OpLogSyncResponeMessage::OpLogSyncResponeMessage() :
@@ -104,14 +99,9 @@ namespace tfs
       return common::INT8_SIZE;
     }
 
-    int OpLogSyncResponeMessage::serialize(common::Stream& output)
+    int OpLogSyncResponeMessage::serialize(common::Stream& output) const 
     {
       return output.set_int8(complete_flag_);
-    }
-
-    common::BasePacket* OpLogSyncResponeMessage::create(const int32_t type)
-    {
-      return new OpLogSyncResponeMessage();
     }
   }
 }

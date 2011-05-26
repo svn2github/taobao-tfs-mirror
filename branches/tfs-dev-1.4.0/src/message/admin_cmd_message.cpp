@@ -53,7 +53,7 @@ namespace tfs
       }
       return iret;
     }
-    int MonitorStatus::serialize(char* data, const int64_t data_len, int64_t& pos)
+    int MonitorStatus::serialize(char* data, const int64_t data_len, int64_t& pos) const
     {
       int32_t iret = NULL != data && data_len - pos >= length() ? common::TFS_SUCCESS : common::TFS_ERROR;
       if (common::TFS_SUCCESS == iret)
@@ -151,7 +151,7 @@ namespace tfs
       return iret;
     }
 
-    int AdminCmdMessage::serialize(common::Stream& output)
+    int AdminCmdMessage::serialize(common::Stream& output) const 
     {
       int32_t iret= output.set_int32(type_);
       if (common::TFS_SUCCESS == iret)
@@ -162,7 +162,7 @@ namespace tfs
         {
           if (ADMIN_CMD_RESP != type_)
           {
-            common::VSTRING::iterator iter = index_.begin();
+            common::VSTRING::const_iterator iter = index_.begin();
             for (; iter != index_.end(); ++iter)
             {
               iret = output.set_string((*iter));
@@ -173,10 +173,10 @@ namespace tfs
           else
           {
             int64_t pos = 0;
-            std::vector<MonitorStatus>::iterator iter = monitor_status_.begin();
+            std::vector<MonitorStatus>::const_iterator iter = monitor_status_.begin();
             for (; iter != monitor_status_.end(); ++iter)
             {
-              iret = const_cast<MonitorStatus*>(&(*iter))->serialize(output.get_free(), output.get_free_length(), pos);
+              iret = (*iter).serialize(output.get_free(), output.get_free_length(), pos);
               if (common::TFS_SUCCESS == iret)
                 output.pour((*iter).length());
               else
@@ -205,11 +205,6 @@ namespace tfs
         size += st.length() * monitor_status_.size(); 
       }
       return size;
-    }
-
-    common::BasePacket* AdminCmdMessage::create(const int32_t type)
-    {
-      return new AdminCmdMessage();
     }
   }
 }

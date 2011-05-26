@@ -25,10 +25,9 @@ namespace tfs
       public:
         OpLogSyncMessage();
         virtual ~OpLogSyncMessage();
-        virtual int serialize(common::Stream& output);
+        virtual int serialize(common::Stream& output) const ;
         virtual int deserialize(common::Stream& input);
         virtual int64_t length() const;
-        static common::BasePacket* create(const int32_t type);
         void set_data(const char* data, const int64_t length);
         inline int64_t get_length() const { return length_;}
         inline const char* get_data() const { return data_;}
@@ -49,10 +48,9 @@ namespace tfs
       public:
         OpLogSyncResponeMessage();
         virtual ~OpLogSyncResponeMessage();
-        virtual int serialize(common::Stream& output);
+        virtual int serialize(common::Stream& output) const ;
         virtual int deserialize(common::Stream& input);
         virtual int64_t length() const;
-        static common::BasePacket* create(const int32_t type);
         inline uint8_t get_complete_flag() const { return complete_flag_;}
         inline void set_complete_flag(uint8_t flag = OPLOG_SYNC_MSG_COMPLETE_YES) { complete_flag_ = flag;}
       private:

@@ -29,7 +29,7 @@ namespace tfs
       int32_t value3_;
       int32_t value4_;
       int32_t  cmd_;
-      int serialize(char* data, const int64_t data_len, int64_t& pos);
+      int serialize(char* data, const int64_t data_len, int64_t& pos) const;
       int deserialize(const char* data, const int64_t data_len, int64_t& pos);
       int64_t length() const;
     };
@@ -55,10 +55,9 @@ namespace tfs
     public:
       ClientCmdMessage();
       virtual ~ClientCmdMessage();
-      virtual int serialize(common::Stream& output);
+      virtual int serialize(common::Stream& output) const ;
       virtual int deserialize(common::Stream& input);
       virtual int64_t length() const;
-      static common::BasePacket* create(const int32_t type);
       inline void set_value1(const uint64_t value)
       {
         info_.value1_ = value;
