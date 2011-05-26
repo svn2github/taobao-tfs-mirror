@@ -45,6 +45,9 @@ namespace tfs
 #pragma pack(1)
     struct OpLogHeader
     {
+      int serialize(char* data, const int64_t data_len, int64_t& pos) const;
+      int deserialize(const char* data, const int64_t data_len, int64_t& pos);
+      int64_t length() const;
       uint32_t seqno_;
       uint32_t time_;
       uint32_t crc_;
@@ -55,6 +58,10 @@ namespace tfs
     };
     struct OpLogRotateHeader
     {
+      int serialize(char* data, const int64_t data_len, int64_t& pos) const;
+      int deserialize(const char* data, const int64_t data_len, int64_t& pos);
+      int64_t length() const;
+      uint32_t seqno_;
       int32_t rotate_seqno_;
       int32_t rotate_offset_;
     };
@@ -62,13 +69,14 @@ namespace tfs
  
     struct BlockOpLog
     {
+      int serialize(char* data, const int64_t data_len, int64_t& pos) const;
+      int deserialize(const char* data, const int64_t data_len, int64_t& pos);
+      int64_t length() const;
+      uint32_t seqno_;
       common::BlockInfo info_;
       common::VUINT32 blocks_;
       common::VUINT64 servers_;
       int8_t cmd_;
-      int serialize(char* buf, const int64_t buf_len, int64_t& pos) const;
-      int deserialize(const char* buf, const int64_t data_len, int64_t& pos);
-      int64_t get_serialize_size(void) const;
       void dump(void) const;
     };
 

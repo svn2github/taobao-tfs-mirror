@@ -45,7 +45,8 @@ namespace tfs
       CLIENT_CMD_REPAIR_GROUP,
       CLIENT_CMD_SET_PARAM,
       CLIENT_CMD_UNLOADBLK,
-      CLIENT_CMD_FORCE_DATASERVER_REPORT
+      CLIENT_CMD_FORCE_DATASERVER_REPORT,
+      CLIENT_CMD_ROTATE_LOG
     };
 
     class ClientCmdMessage: public common::BasePacket 

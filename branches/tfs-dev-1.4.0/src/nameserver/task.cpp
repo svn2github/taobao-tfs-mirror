@@ -36,7 +36,7 @@ namespace tfs
     const int8_t LayoutManager::CompactTask::INVALID_BLOCK_ID = 0;
     LayoutManager::Task::Task(LayoutManager* manager, const PlanType type, 
         const PlanPriority priority, uint32_t block_id, 
-        time_t begin, time_t end, const std::vector<ServerCollect*>& runer):
+        time_t begin, time_t end, const std::vector<ServerCollect*>& runer, const int64_t seqno):
       runer_(runer),
       begin_time_(begin),
       end_time_(end),
@@ -44,7 +44,8 @@ namespace tfs
       type_(type),
       status_(PLAN_STATUS_NONE),
       priority_(priority),
-      manager_(manager)
+      manager_(manager),
+      seqno_(seqno)
     {
 
     }
@@ -115,7 +116,7 @@ namespace tfs
       }
       if (level <= TBSYS_LOGGER._level)
       {
-        TBSYS_LOGGER.logMessage(level, __FILE__, __LINE__, __FUNCTION__, "pointer%p, %s type: %s ,status: %s, priority: %s , block_id: %u, begin: %"PRI64_PREFIX"d, end: %"PRI64_PREFIX"d, runer: %s",
+        TBSYS_LOGGER.logMessage(level, __FILE__, __LINE__, __FUNCTION__, "pointer%p, %s plan seqno: %"PRI64_PREFIX"d, type: %s ,status: %s, priority: %s , block_id: %u, begin: %"PRI64_PREFIX"d, end: %"PRI64_PREFIX"d, runer: %s",
             this,
             format == NULL ? "" : format,
             type_ == PLAN_TYPE_REPLICATE ? "replicate" : type_ == PLAN_TYPE_MOVE ? "move" : type_ == PLAN_TYPE_COMPACT
@@ -127,8 +128,9 @@ namespace tfs
       }
     }
 
-    LayoutManager::CompactTask::CompactTask(LayoutManager* manager, const PlanPriority priority, uint32_t block_id, time_t begin, time_t end, const std::vector<ServerCollect*>& runer):
-      Task(manager, PLAN_TYPE_COMPACT, priority, block_id, begin, end, runer)
+    LayoutManager::CompactTask::CompactTask(LayoutManager* manager, const PlanPriority priority, 
+      uint32_t block_id, time_t begin, time_t end, const std::vector<ServerCollect*>& runer, const int64_t seqno):
+      Task(manager, PLAN_TYPE_COMPACT, priority, block_id, begin, end, runer, seqno)
     {
       memset(&block_info_, 0, sizeof(block_info_));
     }
@@ -217,7 +219,7 @@ namespace tfs
 
       if (level <= TBSYS_LOGGER._level)
       {
-        TBSYS_LOGGER.logMessage(level, __FILE__, __LINE__, __FUNCTION__, "%s type: %s ,status: %s, priority: %s , block_id: %u, begin: %"PRI64_PREFIX"d, end: %"PRI64_PREFIX"d, runer: %s, complete status: %s",
+        TBSYS_LOGGER.logMessage(level, __FILE__, __LINE__, __FUNCTION__, "%s plan seqno: %"PRI64_PREFIX"d, type: %s ,status: %s, priority: %s , block_id: %u, begin: %"PRI64_PREFIX"d, end: %"PRI64_PREFIX"d, runer: %s, complete status: %s",
             format == NULL ? "" : format,
             type_ == PLAN_TYPE_REPLICATE ? "replicate" : type_ == PLAN_TYPE_MOVE ? "move" : type_ == PLAN_TYPE_COMPACT
             ? "compact" : type_ == PLAN_TYPE_DELETE ? "delete" : "unknow",
@@ -455,8 +457,8 @@ namespace tfs
 
     LayoutManager::ReplicateTask::ReplicateTask(LayoutManager* manager, const PlanPriority priority, 
         const uint32_t block_id, const time_t begin, 
-        const time_t end, const std::vector<ServerCollect*>& runer):
-      Task(manager, PLAN_TYPE_REPLICATE, priority, block_id, begin, end, runer),
+        const time_t end, const std::vector<ServerCollect*>& runer, const int64_t seqno):
+      Task(manager, PLAN_TYPE_REPLICATE, priority, block_id, begin, end, runer, seqno),
       flag_(REPLICATE_BLOCK_MOVE_FLAG_NO)
     {
 
@@ -580,8 +582,10 @@ namespace tfs
       return (iret == STATUS_MESSAGE_OK || iret == STATUS_MESSAGE_REMOVE) ? TFS_SUCCESS : iret;
     }
 
-    LayoutManager::DeleteBlockTask::DeleteBlockTask(LayoutManager* manager, const PlanPriority priority, const uint32_t block_id, const time_t begin, const time_t end, const std::vector<ServerCollect*> & runer):
-      Task(manager, PLAN_TYPE_DELETE, priority, block_id, begin, end, runer)
+    LayoutManager::DeleteBlockTask::DeleteBlockTask(LayoutManager* manager,const PlanPriority priority,
+                const uint32_t block_id, const time_t begin, const time_t end,
+                const std::vector<ServerCollect*> & runer, const int64_t seqno):
+      Task(manager, PLAN_TYPE_DELETE, priority, block_id, begin, end, runer, seqno)
     {
 
     }
@@ -610,8 +614,9 @@ namespace tfs
       return TFS_SUCCESS;
     }
 
-    LayoutManager::MoveTask::MoveTask(LayoutManager* manager, const PlanPriority priority, uint32_t block_id, time_t begin, time_t end, const std::vector<ServerCollect*>& runer):
-      ReplicateTask(manager, priority, block_id, begin, end, runer)
+    LayoutManager::MoveTask::MoveTask(LayoutManager* manager, const PlanPriority priority,
+      uint32_t block_id, time_t begin, time_t end, const std::vector<ServerCollect*>& runer, const int64_t seqno):
+      ReplicateTask(manager, priority, block_id, begin, end, runer, seqno)
     {
       type_ = PLAN_TYPE_MOVE;
       flag_ = REPLICATE_BLOCK_MOVE_FLAG_YES;

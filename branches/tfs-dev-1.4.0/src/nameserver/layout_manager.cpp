@@ -26,6 +26,7 @@
 #include "global_factory.h"
 #include "common/error_msg.h"
 #include "common/base_packet.h"
+#include "common/base_service.h"
 #include "common/status_message.h"
 #include "common/client_manager.h"
 #include "message/block_info_message.h"
@@ -420,7 +421,7 @@ namespace tfs
         TBSYS_LOG(WARN, "relieve relation failed between block(%u) and server(%s)", block_id, CNetUtil::addrToString(dest_server->id()).c_str());
       }
 
-      ReplicateTaskPtr task = new ReplicateTask(this, PLAN_PRIORITY_EMERGENCY, block_id, now, now, runer);
+      ReplicateTaskPtr task = new ReplicateTask(this, PLAN_PRIORITY_EMERGENCY, block_id, now, now, runer, 0);
       bret = add_task(task);
       if (!bret)
       {
@@ -658,14 +659,14 @@ namespace tfs
           switch (msg->getPCode())
           {
             case BLOCK_COMPACT_COMPLETE_MESSAGE:
-              task = new CompactTask(this, PLAN_PRIORITY_NONE, 0, 0, 0, runer);
+              task = new CompactTask(this, PLAN_PRIORITY_NONE, 0, 0, 0, runer, 0);
               break;
             case REPLICATE_BLOCK_MESSAGE: 
               {
                 ReplicateBlockMessage* replicate_msg = dynamic_cast<ReplicateBlockMessage*>(msg);
                 task = replicate_msg->get_move_flag() == REPLICATE_BLOCK_MOVE_FLAG_NO
-                  ? new ReplicateTask(this, PLAN_PRIORITY_NONE, 0, 0, 0, runer)
-                  : new MoveTask(this, PLAN_PRIORITY_NONE, 0, 0, 0, runer);
+                  ? new ReplicateTask(this, PLAN_PRIORITY_NONE, 0, 0, 0, runer, 0)
+                  : new MoveTask(this, PLAN_PRIORITY_NONE, 0, 0, 0, runer, 0);
                 break;
               }
             default:
@@ -787,7 +788,7 @@ namespace tfs
 
                       std::vector<ServerCollect*> runer;
                       runer.push_back(server);
-                      DeleteBlockTaskPtr task = new DeleteBlockTask(this, PLAN_PRIORITY_NORMAL, block_id, now, now, runer);
+                      DeleteBlockTaskPtr task = new DeleteBlockTask(this, PLAN_PRIORITY_NORMAL, block_id, now, now, runer, 0);
                       if (!add_task(task))
                       {
                         task = 0;
@@ -814,7 +815,7 @@ namespace tfs
                         TBSYS_LOG(ERROR, "block(%u) not exist", block_id);
                         break;
                       }
-                      CompactTaskPtr task = new CompactTask(this, PLAN_PRIORITY_NORMAL, block_id, now, now, block->get_hold());
+                      CompactTaskPtr task = new CompactTask(this, PLAN_PRIORITY_NORMAL, block_id, now, now, block->get_hold(), 0);
                       if (!add_task(task))
                       {
                         task = 0;
@@ -938,8 +939,8 @@ namespace tfs
                       runer.push_back(source_collect);
                       runer.push_back(target_collect);
                       TaskPtr task = flag == REPLICATE_BLOCK_MOVE_FLAG_NO ? 
-                        new ReplicateTask(this, PLAN_PRIORITY_EMERGENCY, block_id, now, now, runer):
-                        new MoveTask(this, PLAN_PRIORITY_EMERGENCY, block_id, now, now, runer);
+                        new ReplicateTask(this, PLAN_PRIORITY_EMERGENCY, block_id, now, now, runer, 0):
+                        new MoveTask(this, PLAN_PRIORITY_EMERGENCY, block_id, now, now, runer, 0);
 
                       if (!add_task(task))
                       {
@@ -965,6 +966,12 @@ namespace tfs
                       rmsg->set_message(STATUS_MESSAGE_OK, error_msg);
                       break;
                     }
+                  case CLIENT_CMD_ROTATE_LOG:
+                    {
+                      BaseService* service = dynamic_cast<BaseService*>(BaseService::instance());
+                      TBSYS_LOGGER.rotateLog(service->get_log_path());
+                    }
+                    break;
                   default:
                     break;
                 }
@@ -1686,7 +1693,8 @@ namespace tfs
       {
         last_rotate_log_time_ = now;
         oplog_sync_mgr_.rotate();
-        TBSYS_LOGGER.rotateLog(SYSPARAM_NAMESERVER.config_log_file_);
+        BaseService* service = dynamic_cast<BaseService*>(BaseService::instance());
+        TBSYS_LOGGER.rotateLog(service->get_log_path());
       }
     }
 
@@ -1911,7 +1919,7 @@ namespace tfs
       oplog.cmd_ = cmd;
       oplog.blocks_ = blocks;
       oplog.servers_ = servers;
-      int64_t size = oplog.get_serialize_size();
+      int64_t size = oplog.length();
       int64_t pos = 0;
       char buf[size];
       if (oplog.serialize(buf, size, pos) < 0)
@@ -2021,6 +2029,7 @@ namespace tfs
       bool bwait = true;
       bool interrupt = true;
       int64_t emergency_replicate_count = 0;
+      int64_t current_plan_seqno = 1;
       const NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
 
 #if (!defined(TFS_NS_GTEST))
@@ -2076,7 +2085,7 @@ namespace tfs
             && (!(interrupt_ & INTERRUPT_ALL))
             && (need > 0))
         {
-          bret = build_replicate_plan(now, need, adjust, emergency_replicate_count, blocks);
+          bret = build_replicate_plan(current_plan_seqno, now, need, adjust, emergency_replicate_count, blocks);
           if (!bret)
           {
             TBSYS_LOG(ERROR, "%s", "build replicate plan failed");
@@ -2091,7 +2100,7 @@ namespace tfs
             && (!(interrupt_ & INTERRUPT_ALL))
             && (need > 0))
         {
-          bret = build_balance_plan(now, need, blocks);
+          bret = build_balance_plan(current_plan_seqno, now, need, blocks);
           if (!bret)
           {
             TBSYS_LOG(ERROR, "%s", "build balance plan failed");
@@ -2102,7 +2111,7 @@ namespace tfs
             && (!(interrupt_ & INTERRUPT_ALL))
             && (need > 0))
         {
-          bret = build_compact_plan(now, need, blocks);
+          bret = build_compact_plan(current_plan_seqno, now, need, blocks);
           if (!bret)
           {
             TBSYS_LOG(ERROR, "%s", "build compact plan failed");
@@ -2113,7 +2122,7 @@ namespace tfs
             && (!(interrupt_ & INTERRUPT_ALL))
             && (need > 0))
         {
-          bret = build_redundant_plan(now, need, blocks);
+          bret = build_redundant_plan(current_plan_seqno, now, need, blocks);
           if (!bret)
           {
             TBSYS_LOG(ERROR, "%s", "build redundant plan failed");
@@ -2126,7 +2135,7 @@ namespace tfs
             && (!(interrupt_ & INTERRUPT_ALL))
             && (need > 0))
         {
-          bret = build_replicate_plan(now, need, adjust, emergency_replicate_count);
+          bret = build_replicate_plan(current_plan_seqno, now, need, adjust, emergency_replicate_count);
           if (!bret)
           {
             TBSYS_LOG(ERROR, "%s", "build replicate plan failed");
@@ -2141,7 +2150,7 @@ namespace tfs
             && (!(interrupt_ & INTERRUPT_ALL))
             && (need > 0))
         {
-          bret = build_balance_plan(now, need);
+          bret = build_balance_plan(current_plan_seqno, now, need);
           if (!bret)
           {
             TBSYS_LOG(ERROR, "%s", "build balance plan failed");
@@ -2152,7 +2161,7 @@ namespace tfs
             && (!(interrupt_ & INTERRUPT_ALL))
             && (need > 0))
         {
-          bret = build_compact_plan(now, need);
+          bret = build_compact_plan(current_plan_seqno, now, need);
           if (!bret)
           {
             TBSYS_LOG(ERROR, "%s", "build compact plan failed");
@@ -2163,14 +2172,13 @@ namespace tfs
             && (!(interrupt_ & INTERRUPT_ALL))
             && (need > 0))
         {
-          bret = build_redundant_plan(now, need);
+          bret = build_redundant_plan(current_plan_seqno, now, need);
           if (!bret)
           {
             TBSYS_LOG(ERROR, "%s", "build redundant plan failed");
           }
         }
 #endif
-
         if((interrupt_ & INTERRUPT_ALL))
         {
           interrupt = true;
@@ -2182,6 +2190,7 @@ namespace tfs
         }
         interrupt_ = INTERRUPT_NONE;
         TBSYS_LOG(INFO, "build plan complete, complete: %"PRI64_PREFIX"d", ((total  + adjust)- need));
+        ++current_plan_seqno;
       }
       return TFS_SUCCESS;
     }
@@ -2278,13 +2287,15 @@ namespace tfs
     }
 
 #if defined(TFS_NS_GTEST) || defined(TFS_NS_INTEGRATION)
-    bool LayoutManager::build_replicate_plan(time_t now,
+    bool LayoutManager::build_replicate_plan(const int64_t plan_seqno,
+        const time_t now,
         int64_t& need,
         int64_t& adjust,
         int64_t& emergency_replicate_count,
         std::vector<uint32_t>& blocks)
 #else
-      bool LayoutManager::build_replicate_plan(time_t now,
+      bool LayoutManager::build_replicate_plan(const int64_t plan_seqno,
+          const time_t now,
           int64_t& need,
           int64_t& adjust,
           int64_t& emergency_replicate_count)
@@ -2357,7 +2368,7 @@ namespace tfs
               continue;
             }
             runer.push_back(target.back());
-            ReplicateTaskPtr task = new ReplicateTask(this, iter->first, block_id,now, now, runer);
+            ReplicateTaskPtr task = new ReplicateTask(this, iter->first, block_id,now, now, runer, plan_seqno);
 #if defined(TFS_NS_GTEST) || defined(TFS_NS_INTEGRATION) || defined(TFS_NS_DEBUG)
             task->dump(TBSYS_LOG_LEVEL_DEBUG);
 #endif
@@ -2382,9 +2393,9 @@ namespace tfs
       }
 
 #if defined(TFS_NS_GTEST) || defined(TFS_NS_INTEGRATION)
-    bool LayoutManager::build_compact_plan(time_t now, int64_t& need, std::vector<uint32_t>& plans)
+    bool LayoutManager::build_compact_plan(const int64_t plan_seqno,const time_t now, int64_t& need, std::vector<uint32_t>& plans)
 #else
-      bool LayoutManager::build_compact_plan(time_t now, int64_t& need)
+      bool LayoutManager::build_compact_plan(const int64_t plan_seqno, const time_t now, int64_t& need)
 #endif
       {
         bool has_compact = false;
@@ -2405,7 +2416,7 @@ namespace tfs
 
             if (has_compact)
             {
-              CompactTaskPtr task = new CompactTask(this, PLAN_PRIORITY_NORMAL, iter->second->id(), now, now, iter->second->get_hold());
+              CompactTaskPtr task = new CompactTask(this, PLAN_PRIORITY_NORMAL, iter->second->id(), now, now, iter->second->get_hold(), plan_seqno);
               if (!add_task(task))
               {
                 task = 0;
@@ -2511,9 +2522,9 @@ namespace tfs
     }
 
 #if defined(TFS_NS_GTEST) || defined(TFS_NS_INTEGRATION)
-    bool LayoutManager::build_balance_plan(time_t now, int64_t& need, std::vector<uint32_t>& plans)
+    bool LayoutManager::build_balance_plan(const int64_t plan_seqno, const time_t now, int64_t& need, std::vector<uint32_t>& plans)
 #else
-      bool LayoutManager::build_balance_plan(time_t now, int64_t& need)
+      bool LayoutManager::build_balance_plan(const int64_t plan_seqno, const time_t now, int64_t& need)
 #endif
       {
         double total_capacity  = 0;
@@ -2599,7 +2610,7 @@ namespace tfs
               std::vector<ServerCollect*> runer;
               runer.push_back((*it));
               runer.push_back(target_ds);
-              MoveTaskPtr task = new MoveTask(this, PLAN_PRIORITY_NORMAL,  block_id, now , now, runer);
+              MoveTaskPtr task = new MoveTask(this, PLAN_PRIORITY_NORMAL,  block_id, now , now, runer, plan_seqno);
 
 #if defined(TFS_NS_GTEST) || defined(TFS_NS_INTEGRATION) || defined(TFS_NS_DEBUG)
               task->dump(TBSYS_LOG_LEVEL_DEBUG);
@@ -2615,7 +2626,6 @@ namespace tfs
 #if defined(TFS_NS_GTEST) || defined(TFS_NS_INTEGRATION) || defined(TFS_NS_DEBUG)
               TBSYS_LOG(DEBUG, "add task, type(%d)", task->type_);
 #endif
-
               --need;
               std::set<ServerCollect*>::iterator tmp = target.find((*it));
               if (tmp != target.end())
@@ -2638,62 +2648,62 @@ namespace tfs
       }
 
 #if defined(TFS_NS_GTEST) || defined(TFS_NS_INTEGRATION)
-    bool LayoutManager::build_redundant_plan(time_t now, int64_t& need, std::vector<uint32_t>& plans)
+    bool LayoutManager::build_redundant_plan(const int64_t plan_seqno, const time_t now, int64_t& need, std::vector<uint32_t>& plans)
 #else
-      bool LayoutManager::build_redundant_plan(time_t now, int64_t& need)
+    bool LayoutManager::build_redundant_plan(const int64_t plan_seqno, const time_t now, int64_t& need)
 #endif
+    {
+      bool all_find_flag = true;
+      bool has_delete = false;
+      int32_t  count = 0;
+      std::vector<ServerCollect*> except;
+      std::vector<ServerCollect*> servers;
+      for (int32_t i = 0; i < block_chunk_num_ && !(interrupt_ & INTERRUPT_ALL) && need > 0; ++i)
       {
-        bool all_find_flag = true;
-        bool has_delete = false;
-        int32_t  count = 0;
-        std::vector<ServerCollect*> except;
-        std::vector<ServerCollect*> servers;
-        for (int32_t i = 0; i < block_chunk_num_ && !(interrupt_ & INTERRUPT_ALL) && need > 0; ++i)
+        RWLock::Lock lock(*block_chunk_[i], READ_LOCKER);
+        const BLOCK_MAP& blocks = block_chunk_[i]->block_map_;
+        BLOCK_MAP::const_iterator iter = blocks.begin();
+        for (; iter != blocks.end() && !(interrupt_ & INTERRUPT_ALL) && need > 0; ++iter)
         {
-          RWLock::Lock lock(*block_chunk_[i], READ_LOCKER);
-          const BLOCK_MAP& blocks = block_chunk_[i]->block_map_;
-          BLOCK_MAP::const_iterator iter = blocks.begin();
-          for (; iter != blocks.end() && !(interrupt_ & INTERRUPT_ALL) && need > 0; ++iter)
+          except.clear();
+          count = iter->second->check_redundant();
           {
-            except.clear();
-            count = iter->second->check_redundant();
-            {
-              has_delete = ((count > 0)
-                  && (!find_block_in_plan(iter->second->id()))
-                  && (!find_server_in_plan(iter->second->get_hold(), all_find_flag, except)));
-              if (has_delete)
-              {
-                servers = iter->second->get_hold();
-              }
-            }
+            has_delete = ((count > 0)
+                && (!find_block_in_plan(iter->second->id()))
+                && (!find_server_in_plan(iter->second->get_hold(), all_find_flag, except)));
             if (has_delete)
             {
-              std::vector<ServerCollect*> result;
-              find_server_in_plan_helper(servers, except);
-              if ((delete_excess_backup(servers, count, result) > 0) 
-                  && (!result.empty()))
-              {
-                TBSYS_LOG(INFO, "we will need delete less than block(%u)", iter->second->id());
-                DeleteBlockTaskPtr task = new DeleteBlockTask(this, PLAN_PRIORITY_NORMAL, iter->second->id(), now, now, result);
-                if (!add_task(task))
-                {
-                  task = 0;
-                  TBSYS_LOG(ERROR, "add task(delete) fail, block(%u)", iter->second->id());
-                  continue;
-                }
-                --need;
-#if defined(TFS_NS_GTEST) || defined(TFS_NS_INTEGRATION) || defined(TFS_NS_DEBUG)
-                TBSYS_LOG(DEBUG, "add task, type(%d)", task->type_);
-#endif 
-#if defined(TFS_NS_GTEST) || defined(TFS_NS_INTEGRATION)
-                plans.push_back(task->block_id_);
-#endif
-              } 
+              servers = iter->second->get_hold();
             }
           }
+          if (has_delete)
+          {
+            std::vector<ServerCollect*> result;
+            find_server_in_plan_helper(servers, except);
+            if ((delete_excess_backup(servers, count, result) > 0) 
+                && (!result.empty()))
+            {
+              TBSYS_LOG(INFO, "we will need delete less than block(%u)", iter->second->id());
+              DeleteBlockTaskPtr task = new DeleteBlockTask(this, PLAN_PRIORITY_NORMAL, iter->second->id(), now, now, result, plan_seqno);
+              if (!add_task(task))
+              {
+                task = 0;
+                TBSYS_LOG(ERROR, "add task(delete) fail, block(%u)", iter->second->id());
+                continue;
+              }
+              --need;
+#if defined(TFS_NS_GTEST) || defined(TFS_NS_INTEGRATION) || defined(TFS_NS_DEBUG)
+              TBSYS_LOG(DEBUG, "add task, type(%d)", task->type_);
+#endif 
+#if defined(TFS_NS_GTEST) || defined(TFS_NS_INTEGRATION)
+              plans.push_back(task->block_id_);
+#endif
+            } 
+          }
         }
-        return true;
       }
+      return true;
+    }
 
     bool LayoutManager::add_task(const TaskPtr& task)
     {

@@ -30,6 +30,107 @@ namespace tfs
 {
   namespace nameserver
   {
+    int OpLogHeader::serialize(char* data, const int64_t data_len, int64_t& pos) const
+    {
+      int32_t iret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
+      if (TFS_SUCCESS == iret)
+      {
+        iret = Serialization::set_int32(data, data_len, pos, seqno_);
+      }
+      if (TFS_SUCCESS == iret)
+      {
+        iret = Serialization::set_int32(data, data_len, pos, time_);
+      }
+      if (TFS_SUCCESS == iret)
+      {
+        iret = Serialization::set_int32(data, data_len, pos, crc_);
+      }
+      if (TFS_SUCCESS == iret)
+      {
+        iret = Serialization::set_int16(data, data_len, pos, length_);
+      }
+      if (TFS_SUCCESS == iret)
+      {
+        iret = Serialization::set_int8(data, data_len, pos, type_);
+      }
+      if (TFS_SUCCESS == iret)
+      {
+        iret = Serialization::set_int8(data, data_len, pos, reserve_);
+      }
+      return iret;
+    }
+
+    int OpLogHeader::deserialize(const char* data, const int64_t data_len, int64_t& pos)
+    {
+      int32_t iret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
+      if (TFS_SUCCESS == iret)
+      {
+        iret = Serialization::get_int32(data, data_len, pos, reinterpret_cast<int32_t*>(&seqno_));
+      }
+      if (TFS_SUCCESS == iret)
+      {
+        iret = Serialization::get_int32(data, data_len, pos, reinterpret_cast<int32_t*>(&time_));
+      }
+      if (TFS_SUCCESS == iret)
+      {
+        iret = Serialization::get_int32(data, data_len, pos, reinterpret_cast<int32_t*>(&crc_));
+      }
+      if (TFS_SUCCESS == iret)
+      {
+        iret = Serialization::get_int16(data, data_len, pos, reinterpret_cast<int16_t*>(&length_));
+      }
+      if (TFS_SUCCESS == iret)
+      {
+        iret = Serialization::get_int8(data, data_len, pos, &type_);
+      }
+      if (TFS_SUCCESS == iret)
+      {
+        iret = Serialization::get_int8(data, data_len, pos, &reserve_);
+      }
+      return iret;
+    }
+    int64_t OpLogHeader::length() const
+    {
+      return common::INT_SIZE * 4;
+    }
+    int OpLogRotateHeader::serialize(char* data, const int64_t data_len, int64_t& pos) const
+    {
+      int32_t iret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
+      if (TFS_SUCCESS == iret)
+      {
+        iret = Serialization::set_int32(data, data_len, pos, seqno_);
+      }
+      if (TFS_SUCCESS == iret)
+      {
+        iret = Serialization::set_int32(data, data_len, pos, rotate_seqno_);
+      }
+      if (TFS_SUCCESS == iret)
+      {
+        iret = Serialization::set_int32(data, data_len, pos, rotate_offset_);
+      }
+      return iret;
+    }
+    int OpLogRotateHeader::deserialize(const char* data, const int64_t data_len, int64_t& pos)
+    {
+      int32_t iret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
+      if (TFS_SUCCESS == iret)
+      {
+        iret = Serialization::get_int32(data, data_len, pos, reinterpret_cast<int32_t*>(&seqno_));
+      }
+      if (TFS_SUCCESS == iret)
+      {
+        iret = Serialization::get_int32(data, data_len, pos, reinterpret_cast<int32_t*>(&rotate_seqno_));
+      }
+      if (TFS_SUCCESS == iret)
+      {
+        iret = Serialization::get_int32(data, data_len, pos, &rotate_offset_);
+      }
+      return iret;
+    }
+    int64_t OpLogRotateHeader::length() const
+    {
+      return common::INT_SIZE * 3;
+    }
     void BlockOpLog::dump(void) const
     {
       /*std::string dsstr = OpLogSyncManager::printDsList(ds_list);
@@ -39,69 +140,100 @@ namespace tfs
           block_info.seqno, ds_list.size(), dsstr.c_str());*/
     }
 
-    int BlockOpLog::serialize(char* buf, const int64_t buf_len, int64_t& pos) const
+    int BlockOpLog::serialize(char* data, const int64_t data_len, int64_t& pos) const
     {
-      if ((buf == NULL)
-          || (pos + get_serialize_size() > buf_len))
+      int32_t iret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
+      if (TFS_SUCCESS == iret)
       {
-        return -1;
+        iret = Serialization::set_int8(data, data_len, pos, cmd_);
       }
-      buf[pos] = cmd_;
-      pos++;
-      memcpy((buf+pos), &info_, sizeof(info_));
-      pos += sizeof(info_);
-      buf[pos] = blocks_.size();
-      pos++;
-      for (uint32_t j = 0; j < blocks_.size(); ++j)
+      if (TFS_SUCCESS == iret)
       {
-        memcpy((buf+pos), &blocks_[j], sizeof(uint32_t));
-        pos += sizeof(uint32_t);
+        iret = info_.serialize(data, data_len, pos);
       }
-      buf[pos] = servers_.size();
-      pos++;
-      for (uint32_t i = 0; i < servers_.size(); ++i)
+      if (TFS_SUCCESS == iret)
       {
-        memcpy((buf+pos), &servers_[i], INT64_SIZE);
-        pos += INT64_SIZE;
+        iret = Serialization::set_int8(data, data_len, pos, blocks_.size());
       }
-      return 0;
+      if (TFS_SUCCESS == iret)
+      {
+        std::vector<uint32_t>::const_iterator iter = blocks_.begin();
+        for (; iter != blocks_.end(); ++iter)
+        {
+          iret =  Serialization::set_int32(data, data_len, pos, (*iter));
+          if (TFS_SUCCESS != iret)
+            break;
+        }
+      }
+      if (TFS_SUCCESS == iret)
+      {
+        iret = Serialization::set_int8(data, data_len, pos, servers_.size());
+      }
+      if (TFS_SUCCESS == iret)
+      {
+        std::vector<uint64_t>::const_iterator iter = servers_.begin();
+        for (; iter != servers_.end(); ++iter)
+        {
+          iret =  Serialization::set_int64(data, data_len, pos, (*iter));
+          if (TFS_SUCCESS != iret)
+            break;
+        }
+      }
+      return iret;
     }
 
-    int BlockOpLog::deserialize(const char* buf, const int64_t data_len, int64_t& pos)
+    int BlockOpLog::deserialize(const char* data, const int64_t data_len, int64_t& pos)
     {
-      if ((buf == NULL)
-          || (pos + get_serialize_size() > data_len))
+      int32_t iret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
+      if (TFS_SUCCESS == iret)
       {
-        return -1;
+        iret = Serialization::get_int8(data, data_len, pos, &cmd_);
       }
-      cmd_ = buf[pos];
-      pos++;
-      memcpy(&info_, (buf+pos), sizeof(info_));
-      pos += sizeof(info_);
-      int32_t size = buf[pos];
-      pos++;
-      uint32_t block = 0;
-      for (int32_t j = 0; j < size; ++j)
+      if (TFS_SUCCESS == iret)
       {
-        memcpy(&block, (buf + pos), sizeof(uint32_t));
-        blocks_.push_back(block);
-        pos += sizeof(uint32_t);
+        iret = info_.deserialize(data, data_len, pos);
       }
-      size = buf[pos];
-      pos++;
-      uint64_t server= 0;
-      for (int32_t i = 0; i < size; ++i)
+      if (TFS_SUCCESS == iret)
       {
-        memcpy(&server, (buf+pos), INT64_SIZE);
-        servers_.push_back(server);
-        pos += INT64_SIZE;
+        int8_t size = 0;
+        iret = Serialization::get_int8(data, data_len, pos, &size);
+        if (TFS_SUCCESS == iret)
+        {
+          uint32_t block_id = 0;
+          for (int8_t i = 0; i < size; ++i)
+          {
+            iret = Serialization::get_int32(data, data_len, pos, reinterpret_cast<int32_t*>(&block_id));
+            if (TFS_SUCCESS == iret)
+              blocks_.push_back(block_id);
+            else
+              break;
+          }
+        }
       }
-      return 0;
+
+      if (TFS_SUCCESS == iret)
+      {
+        int8_t size = 0;
+        iret = Serialization::get_int8(data, data_len, pos, &size);
+        if (TFS_SUCCESS == iret)
+        {
+          uint64_t server = 0;
+          for (int8_t i = 0; i < size; ++i)
+          {
+            iret = Serialization::get_int64(data, data_len, pos, reinterpret_cast<int64_t*>(&server));
+            if (TFS_SUCCESS == iret)
+              servers_.push_back(server);
+            else
+              break;
+          }
+        }
+      }
+      return iret;
     }
 
-    int64_t BlockOpLog::get_serialize_size(void) const
+    int64_t BlockOpLog::length(void) const
     {
-      return 1 + sizeof(info_) + 1 + blocks_.size() * sizeof(uint32_t) + 1 +  servers_.size() * sizeof(uint64_t);
+      return INT8_SIZE + info_.length() + INT8_SIZE + blocks_.size() * INT_SIZE + INT8_SIZE + servers_.size() * INT64_SIZE;
     }
 
     OpLog::OpLog(const std::string& logname, int maxLogSlotsSize) :

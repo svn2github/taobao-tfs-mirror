@@ -335,7 +335,7 @@ namespace tfs
           iret = do_master_msg(message, args);
         else if (ngi.owner_role_ == NS_ROLE_SLAVE) //slave
           iret = do_slave_msg(message, args);
-        tbsys::gDelete(message);
+        message->free();
         return iret;
       }
       return TFS_ERROR;
@@ -450,7 +450,7 @@ namespace tfs
       {
         BlockOpLog oplog;
         iret = oplog.deserialize(data, length, offset);
-        if (iret < 0)
+        if (TFS_SUCCESS != iret)
         {
           iret = EXIT_DESERIALIZE_ERROR;
           TBSYS_LOG(ERROR, "deserialize error, data(%s), length(%"PRI64_PREFIX"d) offset(%"PRI64_PREFIX"d)", data, length, offset);
@@ -512,7 +512,7 @@ namespace tfs
                 for (; s_iter != oplog.servers_.end(); ++s_iter)
                 {
                   server = meta_mgr_.get_server((*s_iter));
-                  if (server == NULL)
+                  if (NULL == server)
                   {
                     TBSYS_LOG(WARN, "server object not found by (%s)", CNetUtil::addrToString((*s_iter)).c_str());
                     continue;
@@ -550,7 +550,7 @@ namespace tfs
               for (; s_iter != oplog.servers_.end(); ++s_iter)
               {
                 server = meta_mgr_.get_server((*s_iter));
-                if (server == NULL)
+                if (NULL == server)
                 {
                   TBSYS_LOG(WARN, "server object not found by (%s)", CNetUtil::addrToString((*s_iter)).c_str());
                   continue;

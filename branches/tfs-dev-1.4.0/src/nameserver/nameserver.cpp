@@ -115,11 +115,20 @@ namespace tfs
 
     int NameServer::initialize(int argc, char* argv[])
     {
-      int32_t iret = initialize_ns_global_info();
-      if (TFS_SUCCESS != iret)
+      int32_t iret =  SYSPARAM_NAMESERVER.initialize();
+      if (TFS_SUCCESS == iret)
       {
-        TBSYS_LOG(ERROR, "%s", "initialize nameserver global information error, must be exit");
+        TBSYS_LOG(ERROR, "%s", "initialize nameserver parameter error, must be exit");
         iret = EXIT_GENERAL_ERROR;
+      }
+      if (TFS_SUCCESS == iret)
+      {
+        iret = initialize_ns_global_info();
+        if (TFS_SUCCESS != iret)
+        {
+          TBSYS_LOG(ERROR, "%s", "initialize nameserver global information error, must be exit");
+          iret = EXIT_GENERAL_ERROR;
+        }
       }
       if (TFS_SUCCESS == iret)
       {
@@ -387,11 +396,27 @@ namespace tfs
         iret = NULL != sresponse && fresponse != NULL ? TFS_SUCCESS : TFS_ERROR;
         if (TFS_SUCCESS == iret)
         {
-          //if (client->get_send_id_sign().size() == 1U)
+          tbnet::Packet* packet = client->get_source_msg();
+          assert(NULL != packet);
+          int32_t pcode = packet->getPCode();
+          if (REMOVE_BLOCK_MESSAGE == pcode)
           {
+            RemoveBlockMessage* msg = dynamic_cast<RemoveBlockMessage*>(packet);
             if (!sresponse->empty())
             {
-
+              std::vector<uint32_t>::const_iterator iter =  msg->get_remove_blocks().begin();
+              for (; iter !=  msg->get_remove_blocks().end(); ++iter)
+              {
+                TBSYS_LOG(ERROR, "remove block: %u successful", (*iter));
+              }
+            }
+            else
+            {
+              std::vector<uint32_t>::const_iterator iter =  msg->get_remove_blocks().begin();
+              for (; iter !=  msg->get_remove_blocks().end(); ++iter)
+              {
+                TBSYS_LOG(ERROR, "remove block: %u failed", (*iter));
+              }
             }
           }
         }

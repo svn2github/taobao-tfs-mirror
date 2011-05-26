@@ -82,9 +82,6 @@ namespace tfs
         tbsys::gDelete(factory);
       }
 
-      /** get log file path*/
-      virtual const char* get_log_file_path() { return NULL;}
-
       /** handle single packet */
       virtual tbnet::IPacketHandler::HPRetCode handlePacket(tbnet::Connection *connection, tbnet::Packet *packet);
 
@@ -104,6 +101,9 @@ namespace tfs
       HeartManagement heart_mgr_;
 
     private:
+      /** get log file path*/
+      virtual const char* get_log_file_path() { return NULL;}
+
       int open(common::BasePacket* msg);
       int close(common::BasePacket* msg);
       int batch_open(common::BasePacket* msg);

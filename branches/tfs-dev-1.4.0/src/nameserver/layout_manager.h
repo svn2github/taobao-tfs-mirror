@@ -170,7 +170,8 @@ namespace nameserver
       public:
       Task(LayoutManager* manager, const common::PlanType type, 
           const common::PlanPriority priority, const uint32_t block_id, 
-          const time_t begin, const time_t end, const std::vector<ServerCollect*>& runer);
+          const time_t begin, const time_t end, const std::vector<ServerCollect*>& runer,
+          const int64_t seqno);
       virtual ~ Task(){};
       virtual int handle() = 0;
       virtual int handle_complete(common::BasePacket* msg, bool& all_complete_flag) = 0;
@@ -191,6 +192,7 @@ namespace nameserver
       common::PlanStatus status_;
       common::PlanPriority priority_;
       LayoutManager* manager_;
+      int64_t seqno_;
       private:
       DISALLOW_COPY_AND_ASSIGN(Task);
     };
@@ -224,7 +226,10 @@ namespace nameserver
             has_success_(false), is_complete_(true), current_complete_result_(false){}
         };
       public:
-        CompactTask(LayoutManager* manager, const common::PlanPriority priority, const uint32_t block_id, const time_t begin, const time_t end, const std::vector<ServerCollect*>& runer);
+        CompactTask(LayoutManager* manager, const common::PlanPriority priority,
+                    const uint32_t block_id, const time_t begin, const time_t end,
+                    const std::vector<ServerCollect*>& runer,
+                    const int64_t seqno);
         virtual ~CompactTask(){}
         virtual int handle();
         virtual int handle_complete(common::BasePacket* msg, bool& all_complete_flag);
@@ -255,7 +260,9 @@ namespace nameserver
     class ReplicateTask : public Task 
     {
       public:
-        ReplicateTask(LayoutManager* manager, common::PlanPriority priority, const uint32_t block_id, const time_t begin, const time_t end, const std::vector<ServerCollect*>& runer);
+        ReplicateTask(LayoutManager* manager, common::PlanPriority priority,
+                      const uint32_t block_id, const time_t begin, const time_t end,
+                      const std::vector<ServerCollect*>& runer,const int64_t seqno);
         virtual ~ReplicateTask(){}
         virtual int handle();
         virtual int handle_complete(common::BasePacket* msg, bool& all_complete_flag);
@@ -273,7 +280,9 @@ namespace nameserver
     class DeleteBlockTask : public Task 
     {
       public:
-        DeleteBlockTask(LayoutManager* manager, const common::PlanPriority priority, const uint32_t block_id, const time_t begin, const time_t end, const std::vector<ServerCollect*>& runer);
+        DeleteBlockTask(LayoutManager* manager, const common::PlanPriority priority,
+                      const uint32_t block_id, const time_t begin, const time_t end,
+                      const std::vector<ServerCollect*>& runer, const int64_t seqno);
         virtual ~DeleteBlockTask(){}
         virtual int handle();
         virtual int handle_complete(common::BasePacket* msg, bool& all_complete_flag);
@@ -285,7 +294,9 @@ namespace nameserver
     class MoveTask : public ReplicateTask
     {
       public:
-        MoveTask(LayoutManager* manager, const common::PlanPriority priority, const uint32_t block_id, const time_t begin, const time_t end, const std::vector<ServerCollect*>& runer);
+        MoveTask(LayoutManager* manager, const common::PlanPriority priority,
+                 const uint32_t block_id, const time_t begin, const time_t end,
+                      const std::vector<ServerCollect*>& runer,const int64_t seqno);
         virtual ~MoveTask(){}
       private:
         DISALLOW_COPY_AND_ASSIGN(MoveTask);
@@ -370,15 +381,15 @@ namespace nameserver
 #endif
 
 #if defined(TFS_NS_GTEST) || defined(TFS_NS_INTEGRATION)
-    bool build_replicate_plan(const time_t now, int64_t& need, int64_t& adjust, int64_t& emergency_replicate_count, std::vector<uint32_t>& blocks);
-    bool build_compact_plan(const time_t now, int64_t& need, std::vector<uint32_t>& blocks);
-    bool build_balance_plan(const time_t now, int64_t& need, std::vector<uint32_t>& blocks);
-    bool build_redundant_plan(const time_t now, int64_t& need, std::vector<uint32_t>& blocks);
+    bool build_replicate_plan(const int64_t plan_seqno, const time_t now, int64_t& need, int64_t& adjust, int64_t& emergency_replicate_count, std::vector<uint32_t>& blocks);
+    bool build_compact_plan(const int64_t plan_seqno, const time_t now, int64_t& need, std::vector<uint32_t>& blocks);
+    bool build_balance_plan(const int64_t plan_seqno, const time_t now, int64_t& need, std::vector<uint32_t>& blocks);
+    bool build_redundant_plan(const int64_t plan_seqno, const time_t now, int64_t& need, std::vector<uint32_t>& blocks);
 #else
-    bool build_replicate_plan(const time_t now, int64_t& need, int64_t& adjust, int64_t& emergency_replicate_count);
-    bool build_compact_plan(const time_t now, int64_t& need);
-    bool build_balance_plan(const time_t now, int64_t& need);
-    bool build_redundant_plan(const time_t now, int64_t& need);
+    bool build_replicate_plan(const int64_t plan_seqno, const time_t now, int64_t& need, int64_t& adjust, int64_t& emergency_replicate_count);
+    bool build_compact_plan(const int64_t plan_seqno, const time_t now, int64_t& need);
+    bool build_balance_plan(const int64_t plan_seqno, const time_t now, int64_t& need);
+    bool build_redundant_plan(const int64_t plan_seqno, const time_t now, int64_t& need);
 #endif
     void find_need_replicate_blocks(const int64_t need,
         const time_t now,
@@ -459,7 +470,6 @@ namespace nameserver
     static const std::string dynamic_parameter_str[];
     tbutil::Mutex elect_index_mutex_;
     ClientRequestServer client_request_server_;
-
   };
 }
 }
