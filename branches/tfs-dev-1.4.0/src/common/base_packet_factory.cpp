@@ -36,7 +36,7 @@ namespace tfs
       return NULL;
     }
 
-    tbnet::Packet* BasePacketFactory::clone_packet(tbnet::Packet* packet, const int32_t version, const bool deserialize)
+    tbnet::Packet* BasePacketFactory::clone_packet(tbnet::Packet* packet, const int32_t version, const bool deserialize) 
     {
       tbnet::Packet* clone_packet = NULL;
       if (NULL != packet)

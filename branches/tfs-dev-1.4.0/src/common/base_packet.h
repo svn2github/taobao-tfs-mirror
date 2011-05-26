@@ -245,14 +245,16 @@ namespace tfs
       BATCH_GET_BLOCK_INFO_MESSAGE = 59,
       BATCH_SET_BLOCK_INFO_MESSAGE = 60,
       REMOVE_BLOCK_RESPONSE_MESSAGE = 61,
-      DUMP_PLAN_MESSAGE = 62,
-      DUMP_PLAN_RESPONSE_MESSAGE = 63,
-      REQ_RC_LOGIN_MESSAGE = 64,
-      RSP_RC_LOGIN_MESSAGE = 65,
-      REQ_RC_KEEPALIVE_MESSAGE = 66,
-      RSP_RC_KEEPALIVE_MESSAGE = 67,
-      REQ_RC_LOGOUT_MESSAGE = 68,
-      LOCAL_PACKET = 69,
+      READ_DATA_MESSAGE_V3 = 62,
+      RESP_READ_DATA_MESSAGE_V3 = 63, 
+      DUMP_PLAN_MESSAGE = 64,
+      DUMP_PLAN_RESPONSE_MESSAGE = 65,
+      REQ_RC_LOGIN_MESSAGE = 66,
+      RSP_RC_LOGIN_MESSAGE = 67,
+      REQ_RC_KEEPALIVE_MESSAGE = 68,
+      RSP_RC_KEEPALIVE_MESSAGE = 69,
+      REQ_RC_LOGOUT_MESSAGE = 70,
+      LOCAL_PACKET = 71,
     };
 
     // StatusMessage status value
@@ -329,7 +331,6 @@ namespace tfs
       //bool auto_free_;
       bool dump_flag_;
     };
-
-  }
-}
+  } /** common **/
+}/** tfs **/
 #endif //TFS_COMMON_BASE_PACKET_H_

@@ -43,7 +43,7 @@ namespace tfs
       inline BasePacketFactory* get_packet_factory() { return packet_factory_;}
 
       /** get transport*/
-      tbnet::Transport& get_transport();
+      tbnet::Transport& get_transport() const;
 
       /** stop this service*/
       bool destroy();
@@ -61,7 +61,7 @@ namespace tfs
       virtual int parse_common_line_args(int argc, char* argv[]) { return TFS_SUCCESS;}
 
       /** get listen port*/
-      virtual int get_listen_port() { return get_port();}
+      virtual int get_listen_port() const { return get_port();}
 
       /** initialize application data*/
       virtual int initialize(int argc, char* argv[]) { return TFS_SUCCESS;}
@@ -81,9 +81,6 @@ namespace tfs
       /** destroy packet factory*/
       virtual void destroy_packet_factory(BasePacketFactory* factory) = 0;
 
-      /** get log file path*/
-      virtual const char* get_log_file_path() = 0;
-
       /** async callback function*/
       virtual int async_callback(NewClient* client, void* args);
 
@@ -91,31 +88,38 @@ namespace tfs
       bool push(BasePacket* packet);
 
       /** get work directory*/
-      const char* get_work_dir();
+      const char* get_work_dir() const;
 
       /** get listen port*/
-      int32_t get_port();
+      int32_t get_port() const;
 
       /** get log file level*/
-      const char* get_log_file_level();
+      const char* get_log_file_level() const;
+
+      /** get log file path*/
+      const char* get_log_path() const;
 
       /** get log file size*/
-      int64_t get_log_file_size();
+      int64_t get_log_file_size() const;
 
       /** get log file count*/
-      int32_t get_log_file_count();
+      int32_t get_log_file_count() const;
 
       /** get network device*/
-      const char* const get_dev();
+      const char* const get_dev() const;
 
       /** get main work thread count*/
-      int32_t get_work_thread_count();
+      int32_t get_work_thread_count() const;
 
       /** get work queue size */
-      int32_t get_work_queue_size();
+      int32_t get_work_queue_size() const;
 
       /** get ip addr*/
-      const char* get_ip_addr();
+      const char* get_ip_addr() const;
+
+    protected:
+      /** get log file path*/
+      virtual const char* get_log_file_path() = 0;
 
     private:
       /** application main entry*/
@@ -135,7 +139,7 @@ namespace tfs
       BasePacketStreamer* streamer_;
       tbutil::TimerPtr timer_;
       tbnet::Transport transport_;
-
+      std::string log_file_path_;
     protected:
       tbnet::PacketQueueThread main_workers_;
       int32_t work_queue_size_;

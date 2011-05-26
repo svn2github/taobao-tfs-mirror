@@ -180,10 +180,6 @@ namespace tfs
             TBSYS_LOG(ERROR, "client id(%u) not found", seq_id_);
           }
         }
-        else
-        {
-          TBSYS_LOG(ERROR, "client object is null when call destroy_client function");
-        }
       }
       else
       {

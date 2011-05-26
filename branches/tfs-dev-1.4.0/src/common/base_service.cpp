@@ -21,7 +21,6 @@
 #include "directory_op.h"
 #include "local_packet.h"
 
-using namespace tbsys;
 namespace tfs
 {
   namespace common
@@ -141,12 +140,12 @@ namespace tfs
       return bret;
     }
 
-    const char* BaseService::get_work_dir()
+    const char* BaseService::get_work_dir() const
     {
       return TBSYS_CONFIG.getString(CONF_SN_PUBLIC, CONF_WORK_DIR, NULL);
     }
 
-    int32_t BaseService::get_port()
+    int32_t BaseService::get_port() const
     {
       int32_t port = -1;
       port = TBSYS_CONFIG.getInt(CONF_SN_PUBLIC, CONF_PORT, -1);
@@ -157,38 +156,43 @@ namespace tfs
       return port;
     }
 
-    const char* BaseService::get_log_file_level()
+    const char* BaseService::get_log_file_level() const
     {
       const char* level = TBSYS_CONFIG.getString(CONF_SN_PUBLIC, CONF_LOG_LEVEL, "debug");
       return level;
     }
 
-    int64_t BaseService::get_log_file_size()
+    const char* BaseService::get_log_path() const
+    {
+      return log_file_path_.empty() ? NULL : log_file_path_.c_str();
+    }
+
+    int64_t BaseService::get_log_file_size() const
     {
       return TBSYS_CONFIG.getInt(CONF_SN_PUBLIC, CONF_LOG_SIZE, 0x40000000);
     }
 
-    int32_t BaseService::get_log_file_count()
+    int32_t BaseService::get_log_file_count() const
     {
       return TBSYS_CONFIG.getInt(CONF_SN_PUBLIC, CONF_LOG_NUM, 16);
     }
 
-    const char* const BaseService::get_dev()
+    const char* const BaseService::get_dev() const
     {
       return TBSYS_CONFIG.getString(CONF_SN_PUBLIC, CONF_DEV_NAME, NULL);
     }
 
-    int32_t BaseService::get_work_thread_count()
+    int32_t BaseService::get_work_thread_count() const
     {
       return TBSYS_CONFIG.getInt(CONF_SN_PUBLIC, CONF_THREAD_COUNT, 8);
     }
 
-    int32_t BaseService::get_work_queue_size()
+    int32_t BaseService::get_work_queue_size() const
     {
       return work_queue_size_;
     }
 
-    const char* BaseService::get_ip_addr()
+    const char* BaseService::get_ip_addr() const
     {
       return TBSYS_CONFIG.getString(CONF_SN_PUBLIC, CONF_IP_ADDR, NULL);
     }
@@ -312,6 +316,7 @@ namespace tfs
             }
             log_path += std::string::npos == pos || name.empty() ? "base_service" : name;
             log_path += ".log";
+            log_file_path_ = log_path;
           }
 
           if (0 == access(log_path.c_str(), R_OK))

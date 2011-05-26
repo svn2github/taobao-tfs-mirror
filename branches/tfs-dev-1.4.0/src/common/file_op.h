@@ -39,6 +39,11 @@ namespace tfs
         int flush_data();
         int unlink_file();
 
+        inline char* get_file_name() const
+        {
+          return file_name_;
+        }
+
         virtual int pread_file(char* buf, const int32_t nbytes, const int64_t offset);
         virtual int pwrite_file(const char* buf, const int32_t nbytes, const int64_t offset);
 

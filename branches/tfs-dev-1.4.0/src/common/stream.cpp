@@ -245,7 +245,6 @@ namespace tfs
       }
       return iret;
     }
-
  }//end namespace comon
 }//end namespace tfs
 
