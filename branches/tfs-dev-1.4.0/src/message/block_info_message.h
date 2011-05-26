@@ -355,12 +355,17 @@ namespace tfs
         {
           return &block_pairs_;
         }
-        inline void set_infos(const int32_t type, const std::map<uint32_t, common::BlockInfo>* v_infos)
+        inline void set_infos(const int32_t type, const std::map<uint32_t, common::BlockInfo*>* v_infos)
         {
           if (type & common::LB_INFOS)
           {
             status_type_ = status_type_ | common::LB_INFOS;
-            block_infos_ = (*v_infos);
+            block_infos_.clear();
+            std::map<uint32_t, common::BlockInfo*>::const_iterator it;
+            for (it = v_infos->begin(); it != v_infos->end(); it++)
+            {
+              block_infos_[it->first] = *(it->second);
+            }
           }
         }
         inline const std::map<uint32_t, common::BlockInfo>* get_infos() const
