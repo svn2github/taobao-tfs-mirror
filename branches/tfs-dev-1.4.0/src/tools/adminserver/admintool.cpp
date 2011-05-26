@@ -15,12 +15,13 @@
  *      - modify 2009-03-27
  *
  */
-#include "common/config.h"
 #include "common/define.h"
-#include "common/config.h"
-#include "common/config_item.h"
-#include "message/client.h"
-#include "message/client_pool.h"
+//#include "common/config.h"
+//#include "common/config_item.h"
+#include "common/new_client.h"
+#include "common/client_manager.h"
+#include "common/status_message.h"
+#include "message/admin_cmd_message.h"
 
 using namespace tfs::message;
 using namespace tfs::common;
@@ -43,14 +44,14 @@ struct CmdNode
   }
 };
 
-typedef map<string, Client*> MCLIENT;
-typedef map<string, Client*>::iterator MCLIENT_ITER;
+//typedef map<string, Client*> MCLIENT;
+//typedef map<string, Client*>::iterator MCLIENT_ITER;
 typedef map<string, CmdNode> MSTR_FUNC;
 typedef MSTR_FUNC::iterator MSTR_FUNC_ITER;
 typedef map<string, VSTRING> MSTR_VSTR;
 typedef map<string, VSTRING>::iterator MSTR_VSTR_ITER;
 
-static MCLIENT g_client_map;
+//static MCLIENT g_client_map;
 static MSTR_FUNC g_cmd_map;
 static MSTR_VSTR g_server_map;
 static char* g_cur_cmd;
@@ -336,7 +337,7 @@ int get_server_list(const char* conf_file)
     tmp = strip_line(buf);
     if (tmp[0]) // not blank line
     {
-      g_client_map.insert(MCLIENT::value_type(tmp, NULL)); // lazy connect
+      //g_client_map.insert(MCLIENT::value_type(tmp, NULL)); // lazy connect
       g_server_map.insert(MSTR_VSTR::value_type(tmp, VSTRING()));
     }
   }
@@ -401,10 +402,10 @@ int main(int argc, char* argv[])
     usage(argv[0]);
   }
 
-  for (MCLIENT_ITER it = g_client_map.begin(); it != g_client_map.end(); it++)
-  {
-    CLIENT_POOL.release_client(it->second); // release will check NULL
-  }
+  //for (MCLIENT_ITER it = g_client_map.begin(); it != g_client_map.end(); it++)
+  //{
+  //  CLIENT_POOL.release_client(it->second); // release will check NULL
+  //}
   return TFS_SUCCESS;
 }
 
@@ -511,19 +512,20 @@ int32_t do_cmd(char* key)
 
 int do_monitor(VSTRING& param, int32_t type)
 {
+  int ret = TFS_SUCCESS;
   string server = param[0];
-  MCLIENT_ITER it = g_client_map.find(server);
-  if (g_client_map.end() == it)
-  {
-    it = g_client_map.insert(MCLIENT::value_type(server, NULL)).first;
-  }
+  //MCLIENT_ITER it = g_client_map.find(server);
+  //if (g_client_map.end() == it)
+  //{
+  //  it = g_client_map.insert(MCLIENT::value_type(server, NULL)).first;
+  //}
 
-  if (!it->second)
+  uint64_t ip_port = 0;
   {
     char ip[CMD_MAX_LEN+1];     // to support mutiple port in the same server, must copy
     ip[CMD_MAX_LEN] = '\0';
-    int32_t port = get_port(strncpy(ip, it->first.c_str(), CMD_MAX_LEN));
-    it->second = CLIENT_POOL.get_client(Func::str_to_addr(ip, port));
+    int32_t port = get_port(strncpy(ip, server.c_str(), CMD_MAX_LEN));
+    ip_port = Func::str_to_addr(ip, port);
   }
 
   AdminCmdMessage admin_msg(type);
@@ -532,45 +534,55 @@ int do_monitor(VSTRING& param, int32_t type)
     admin_msg.set_index(param[i]);
   }
 
-  Message* message = it->second->call(&admin_msg);
-
-  int ret = TFS_SUCCESS;
-  if (!message)
+  NewClient* client = NewClientManager::get_instance().create_client();
+  if (NULL != client)
   {
-    fprintf(stderr, "%s cmd op fail\n \033[0m", FAIL_COLOR);
-    ret = TFS_ERROR;
-  }
-  else if (STATUS_MESSAGE == message->get_message_type())
-  {
-    StatusMessage* msg = dynamic_cast<StatusMessage*>(message);
-    ret = msg->get_status();
-    fprintf(stderr, "%s %s \033[0m\n", ret != TFS_SUCCESS ? FAIL_COLOR : SUC_COLOR, msg->get_error());
-  }
-  else if (ADMIN_CMD_MESSAGE == message->get_message_type() &&
-           ADMIN_CMD_RESP == dynamic_cast<AdminCmdMessage*>(message)->get_cmd_type())
-  {
-    vector<MonitorStatus*>* m_status =  dynamic_cast<AdminCmdMessage*>(message)->get_status();
-    int32_t size = m_status->size();
-    fprintf(stderr, "\033[36m       ================== %s count: %d ===================\033[0m\n",
+    tbnet::Packet* message = NULL;
+    if (TFS_SUCCESS == (ret = send_msg_to_server(ip_port, client, &admin_msg, message)))
+    {
+      if (STATUS_MESSAGE == message->getPCode())
+      {
+        StatusMessage* msg = dynamic_cast<StatusMessage*>(message);
+        ret = msg->get_status();
+        fprintf(stderr, "%s %s \033[0m\n", ret != TFS_SUCCESS ? FAIL_COLOR : SUC_COLOR, msg->get_error());
+      }
+      else if (ADMIN_CMD_MESSAGE == message->getPCode() &&
+          ADMIN_CMD_RESP == dynamic_cast<AdminCmdMessage*>(message)->get_cmd_type())
+      {
+        vector<MonitorStatus>* m_status =  dynamic_cast<AdminCmdMessage*>(message)->get_status();
+        int32_t size = m_status->size();
+        fprintf(stderr, "\033[36m       ================== %s count: %d ===================\033[0m\n",
             server.c_str(), size);
 
-    // update server ==> index
-    VSTRING& index = g_server_map[server];
-    index.clear();
+        // update server ==> index
+        VSTRING& index = g_server_map[server];
+        index.clear();
 
-    for (int32_t i = 0; i < size; i++)
-    {
-      (*m_status)[i]->dump();
-      index.push_back((*m_status)[i]->index_);
+        for (int32_t i = 0; i < size; i++)
+        {
+          (*m_status)[i].dump();
+          index.push_back((*m_status)[i].index_);
+        }
+        fprintf(stderr, "\033[36m-----------------------------------------------------------------------------------\033[0m\n\n");
+      }
+      else
+      {
+        fprintf(stderr, "%s unknown message recieved, op cmd fail\n \033[0m", FAIL_COLOR);
+      }
     }
-    fprintf(stderr, "\033[36m-----------------------------------------------------------------------------------\033[0m\n\n");
+    else
+    {
+      fprintf(stderr, "send message error");
+    }
+    NewClientManager::get_instance().destroy_client(client);
+
   }
   else
   {
-    fprintf(stderr, "%s unknown message recieved, op cmd fail\n \033[0m", FAIL_COLOR);
+    fprintf(stderr, "create client error");
+    ret = TFS_ERROR;
   }
 
-  tbsys::gDelete(message);
   return ret;
 }
 
@@ -593,7 +605,8 @@ int cmd_quit(VSTRING&)
 int cmd_show_server(VSTRING&)
 {
   int32_t i = 1;
-  for (MCLIENT_ITER it = g_client_map.begin(); it != g_client_map.end(); it++)
+  MSTR_VSTR::iterator it;
+  for (it = g_server_map.begin(); it != g_server_map.end(); it++)
   {
     fprintf(stderr, "== %d ==  %s\n", i++, it->first.c_str());
   }
@@ -610,7 +623,8 @@ int cmd_show_status_all(VSTRING& param)
 {
   print_head();
   // for uniformity, a little time waste
-  for (MCLIENT_ITER it = g_client_map.begin(); it != g_client_map.end(); it++)
+  MSTR_VSTR::iterator it;
+  for (it = g_server_map.begin(); it != g_server_map.end(); it++)
   {
     param.clear();
     param.push_back(it->first);
@@ -629,7 +643,8 @@ int cmd_check_all(VSTRING& param)
 {
   print_head();
   // for uniformity, a little time waste
-  for (MCLIENT_ITER it = g_client_map.begin(); it != g_client_map.end(); it++)
+  MSTR_VSTR::iterator it;
+  for (it = g_server_map.begin(); it != g_server_map.end(); it++)
   {
     param.clear();
     param.push_back(it->first);
