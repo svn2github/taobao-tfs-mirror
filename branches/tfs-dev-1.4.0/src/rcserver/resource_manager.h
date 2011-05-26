@@ -53,7 +53,7 @@ namespace tfs
     class ResourceManager :public IResourceManager
     {
       public:
-        ResourceManager();
+        ResourceManager(tbutil::TimerPtr timer);
         virtual ~ResourceManager();
 
       public:

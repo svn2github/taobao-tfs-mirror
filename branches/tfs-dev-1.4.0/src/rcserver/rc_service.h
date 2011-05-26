@@ -54,15 +54,16 @@ namespace tfs
         // override
         int destroy_service();
 
-        int req_login();
-        int req_keep_alive();
-        int req_logout();
+        int req_login(common::BasePacket* packet);
+        int req_keep_alive(common::BasePacket* packet);
+        int req_logout(common::BasePacket* packet);
 
-        // reload config // or monitor the modify time of conf file?
+        // reload config
         int req_reload_config();
 
         // reload resource from db
         int req_reload_resource();
+
       private:
         DISALLOW_COPY_AND_ASSIGN(RcService);
 

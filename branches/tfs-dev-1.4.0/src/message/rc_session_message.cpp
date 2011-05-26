@@ -302,7 +302,7 @@ namespace tfs
     {
     }
 
-    void RspRcKeepAliveMessage::set_update_flag(const UpdateFlag update_flag)
+    void RspRcKeepAliveMessage::set_update_flag(const bool update_flag)
     {
       update_flag_ = update_flag;
     }
@@ -315,7 +315,7 @@ namespace tfs
     {
       int ret = TFS_SUCCESS;
       ret = output.set_int8(update_flag_);
-      if (TFS_SUCCESS == ret)
+      if (TFS_SUCCESS == ret && update_flag_)
       {
         int64_t pos = 0;
         ret = base_info_.serialize(output.get_free(), output.get_free_length(), pos);
@@ -326,10 +326,11 @@ namespace tfs
       }
       return ret;
     }
+
     int RspRcKeepAliveMessage::deserialize(Stream& input)
     {
       int ret = input.get_int8(reinterpret_cast<int8_t*>(&update_flag_));
-      if (TFS_SUCCESS == ret)
+      if (TFS_SUCCESS == ret && update_flag_)
       {
         int64_t pos = 0;
         ret = base_info_.deserialize(input.get_data(), input.get_data_length(), pos);
@@ -343,7 +344,7 @@ namespace tfs
 
     int64_t RspRcKeepAliveMessage::length() const
     {
-      return INT8_SIZE + base_info_.length();
+      return update_flag_ ? INT8_SIZE + base_info_.length() : INT8_SIZE;
     }
 
     bool RspRcKeepAliveMessage::get_update_flag() const

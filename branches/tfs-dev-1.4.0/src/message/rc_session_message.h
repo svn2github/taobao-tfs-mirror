@@ -93,7 +93,7 @@ namespace tfs
       RspRcKeepAliveMessage();
       virtual ~RspRcKeepAliveMessage();
 
-      void set_update_flag(const common::UpdateFlag update_flag = common::KA_FLAG);
+      void set_update_flag(const bool update_flag = common::KA_FLAG);
       void set_base_info(const common::BaseInfo& base_info);
 
       int serialize(common::Stream& output) const ;

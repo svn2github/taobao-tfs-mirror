@@ -17,4 +17,4 @@ librcserver_a_SOURCES=database_helper.cpp mysql_database_helper.cpp app_resource
                       session_manager.cpp rc_service.cpp rc_param.cpp
 
 #bin_PROGRAMS = rcserver
-#rcserver_SOURCES=$(librcserver_a_SOURCES) service.cpp
+#rcserver_SOURCES=$(librcserver_a_SOURCES) rc_service.cpp
