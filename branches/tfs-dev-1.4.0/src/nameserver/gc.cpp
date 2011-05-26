@@ -13,10 +13,10 @@
  *      - initial release
  *
  */
+#include "tbsys.h"
 #include "gc.h"
 #include "common/error_msg.h"
 #include "common/config_item.h"
-#include "common/config.h"
 #include "global_factory.h"
 
 using namespace tfs::common;
@@ -82,7 +82,7 @@ namespace nameserver
   int GCObjectManager::initialize()
   {
     ExpireTimerTaskPtr task = new ExpireTimerTask(*this);
-    int64_t interval = CONFIG.get_int_value(CONFIG_PUBLIC, CONF_OBJECT_DEAD_MAX_TIME, 3600);
+    int64_t interval = TBSYS_CONFIG.getInt(CONF_SN_PUBLIC, CONF_OBJECT_DEAD_MAX_TIME, 3600);
     int iret = GFactory::get_timer()->scheduleRepeated(task, tbutil::Time::seconds(interval));
     return iret < 0 ? TFS_ERROR : TFS_SUCCESS;
   }

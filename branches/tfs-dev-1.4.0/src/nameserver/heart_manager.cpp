@@ -17,14 +17,14 @@
  *      - modify 2010-04-23
  *
  */
+#include <tbsys.h>
 #include <Memory.hpp>
 #include <Mutex.h>
 #include "ns_define.h"
 #include "common/error_msg.h"
+#include "common/client_manager.h"
 #include "heart_manager.h"
 #include "global_factory.h"
-#include "message/client_manager.h"
-#include <tbsys.h>
 
 using namespace tfs::common;
 using namespace tfs::message;
@@ -44,7 +44,7 @@ namespace tfs
     {
     }
 
-    int HeartManagement::initialize(int32_t thread_count, int32_t max_queue_size)
+    int HeartManagement::initialize(const int32_t thread_count, const int32_t max_queue_size)
     {
       max_queue_size_ = max_queue_size;
       work_thread_.setThreadParameter(thread_count, this, this);
@@ -68,11 +68,12 @@ namespace tfs
      * if true cannot processing this heart message, directly response to client with busy repsonse.
      * pay special attention to free the message...
      */
-    int HeartManagement::push(Message* msg)
+    int HeartManagement::push(common::BasePacket* msg)
     {
-      bool bret = msg != NULL;
-      if (bret)
+      int32_t iret = NULL != msg ? TFS_SUCCESS : EXIT_GENERAL_ERROR;
+      if (TFS_SUCCESS == iret)
       {
+        assert(SET_DATASERVER_MESSAGE == msg->getPCode());
         SetDataserverMessage* message = dynamic_cast<SetDataserverMessage*> (msg);
         int32_t max_queue_size = max_queue_size_;
 
@@ -85,19 +86,18 @@ namespace tfs
 
         // cannot blocking!
         bool handled = work_thread_.push(message, max_queue_size, false);
-        if (handled)
+        iret = handled ? TFS_SUCCESS : EXIT_GENERAL_ERROR;
+        if (TFS_SUCCESS != iret)
         {
-          return TFS_SUCCESS;
+          //threadpool busy..cannot handle it
+          iret = message->reply_error_packet(TBSYS_LOG_LEVEL(WARN), STATUS_MESSAGE_ERROR, 
+              "nameserver heartbeat busy! cannot accept this request from (%s)",
+              tbsys::CNetUtil::addrToString( message->get_connection()->getPeerId()).c_str());
+          // already repsonse, now can free this message object.
+          message->free();
         }
-        //threadpool busy..cannot handle it
-        MessageFactory::send_error_message(message, TBSYS_LOG_LEVEL(WARN), STATUS_MESSAGE_ERROR, 0,
-            "nameserver heartbeat busy! cannot accept this request from (%s)", tbsys::CNetUtil::addrToString(
-                message->get_connection()->getPeerId()).c_str());
-        // already repsonse, now can free this message object.
-        message->free();
-        return EXIT_GENERAL_ERROR;
       }
-      return EXIT_GENERAL_ERROR;
+      return iret;
    }
 
     // event handler
@@ -107,77 +107,80 @@ namespace tfs
       if (bret)
       {
         //if return TFS_SUCCESS, packet had been delete in this func
-        // if handlePacketQueue return true, tbnet will delete this packet
-        return keepalive(packet) != TFS_SUCCESS; 
+        //if handlePacketQueue return true, tbnet will delete this packet
+        keepalive(packet);
       }
-      return false;
+      return bret;
     }
 
     int HeartManagement::keepalive(tbnet::Packet* packet)
     {
-      bool bret = packet != NULL;
-      if (bret)
+      int32_t iret = NULL != packet ? TFS_SUCCESS : EXIT_GENERAL_ERROR;
+      if (TFS_SUCCESS == iret)
       {
         #ifdef TFS_NS_DEBUG
         tbutil::Time begin = tbutil::Time::now();
         #endif
+        assert(SET_DATASERVER_MESSAGE == packet->getPCode());
         SetDataserverMessage* message = dynamic_cast<SetDataserverMessage*> (packet);
         RespHeartMessage *result_msg = new RespHeartMessage();
-        DataServerStatInfo& ds_info = message->get_ds();
+        const DataServerStatInfo& ds_info = message->get_ds();
 			  VUINT32 expires;
 			  bool need_sent_block = false;
 			  const HasBlockFlag flag = message->get_has_block();
 
-			  int iret = meta_mgr_.keepalive(ds_info, flag, message->get_blocks(), expires, need_sent_block); 
-			  if (iret != TFS_SUCCESS)
+			  int32_t iret = meta_mgr_.get_client_request_server().keepalive(ds_info, flag, message->get_blocks(), expires, need_sent_block); 
+        if (TFS_SUCCESS == iret)
+        {
+			    //dataserver dead
+			    if (ds_info.status_ == DATASERVER_STATUS_DEAD)
+			    {
+			    	TBSYS_LOG(INFO, "dataserver(%s) exit", CNetUtil::addrToString(ds_info.id_).c_str());
+            result_msg->set_status(HEART_MESSAGE_OK);
+            iret = TFS_ERROR;
+			    }
+
+          if (TFS_SUCCESS == iret)
+          {
+			      if (flag == HAS_BLOCK_FLAG_YES)
+			      {
+			      	if (!expires.empty())
+			      	{
+			      		result_msg->set_expire_blocks(expires);
+            	  result_msg->set_status(HEART_EXP_BLOCK_ID);
+			      	}
+              else
+              {
+			          result_msg->set_status(HEART_MESSAGE_OK);
+              }
+			      }
+			      else
+			      {
+			      	//dataserver need report if dataserver is new dataserver or switching occurrd
+			      	if (need_sent_block)
+			      	{
+            		result_msg->set_status(HEART_NEED_SEND_BLOCK_INFO);
+			      	}
+              else
+              {
+			          result_msg->set_status(HEART_MESSAGE_OK);
+              }
+			      }
+          }
+        }
+        else
 			  {
 			  	TBSYS_LOG(ERROR, "dataserver(%s) keepalive failed", CNetUtil::addrToString(ds_info.id_).c_str());
 			  	result_msg->set_status(STATUS_MESSAGE_ERROR);
-			  	goto Response;
 			  }
-
-			  //dataserver dead
-			  if (ds_info.status_ == DATASERVER_STATUS_DEAD)
-			  {
-			  	TBSYS_LOG(INFO, "dataserver(%s) exit", CNetUtil::addrToString(ds_info.id_).c_str());
-          result_msg->set_status(HEART_MESSAGE_OK);
-			  	goto Response;
-			  }
-
-			  if (flag == HAS_BLOCK_FLAG_YES)
-			  {
-			  	if (!expires.empty())
-			  	{
-			  		result_msg->set_expire_blocks(expires);
-        	  result_msg->set_status(HEART_EXP_BLOCK_ID);
-			  	}
-          else
-          {
-			      result_msg->set_status(HEART_MESSAGE_OK);
-          }
-			  	goto Response;
-			  }
-			  else
-			  {
-			  	//dataserver need report if dataserver is new dataserver or switching occurrd
-			  	if (need_sent_block)
-			  	{
-        		result_msg->set_status(HEART_NEED_SEND_BLOCK_INFO);
-			  		goto Response;
-			  	}
-			  }
-			  result_msg->set_status(HEART_MESSAGE_OK);
-			  Response:
         #ifdef TFS_NS_DEBUG
         tbutil::Time end = tbutil::Time::now() - begin;
         TBSYS_LOG(INFO, "dataserver(%s) keepalive times: %"PRI64_PREFIX"d(us), need_sent_block(%d)", CNetUtil::addrToString(ds_info.id_).c_str(), end.toMicroSeconds(), need_sent_block);
         #endif
         TBSYS_LOG(DEBUG,"server(%s) result_msg statu: %d, need_sent_block: %d", tbsys::CNetUtil::addrToString(ds_info.id_).c_str(), result_msg->get_status(), need_sent_block);
-			  message->reply_message(result_msg);
-			  message->free();
-			  return TFS_SUCCESS;
+			  iret = message->reply(result_msg);
       }
-      return EXIT_GENERAL_ERROR;
+      return iret;
     }
 
     CheckOwnerIsMasterTimerTask::CheckOwnerIsMasterTimerTask(LayoutManager* mm) :
@@ -202,7 +205,7 @@ namespace tfs
     void CheckOwnerIsMasterTimerTask::check_when_slave_hold_vip(NsRuntimeGlobalInformation& ngi)
     {
       int iret = -1;
-      Message* rmsg = NULL;
+      tbnet::Packet* rmsg = NULL;
       MasterAndSlaveHeartMessage mashm;
       NsStatus other_side_status = NS_STATUS_OTHERSIDEDEAD;
       NsSyncDataFlag ns_sync_flag = NS_SYNC_DATA_FLAG_NO;
@@ -214,7 +217,7 @@ namespace tfs
       ngi.dump(TBSYS_LOG_LEVEL(DEBUG));
 
       NewClient* client = NewClientManager::get_instance().create_client();
-      iret = send_msg_to_server(ngi.other_side_ip_port_,client, &mashm, rmsg);
+      iret = send_msg_to_server(ngi.other_side_ip_port_, client, &mashm, rmsg);
       if (TFS_SUCCESS != iret) // otherSide dead
       {
         ns_switch(NS_STATUS_OTHERSIDEDEAD, NS_SYNC_DATA_FLAG_NO);
@@ -303,7 +306,7 @@ namespace tfs
       meta_mgr_->calc_max_block_id();
       meta_mgr_->destroy_plan();
       ngi.switch_time_ = time(NULL) + SYSPARAM_NAMESERVER.safe_mode_time_;
-      meta_mgr_->get_oplog_sync_mgr()->notify_all();
+      meta_mgr_->get_oplog_sync_mgr().notify_all();
       TBSYS_LOG(INFO, "%s", "notify all oplog thread");
       return;
     }
@@ -313,7 +316,7 @@ namespace tfs
       MasterAndSlaveHeartMessage mashm;
       NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
       int iret = -1;
-      Message* rmsg = NULL;
+      tbnet::Packet* rmsg = NULL;
 
       mashm.set_ip_port(ngi.owner_ip_port_);
       mashm.set_role(NS_ROLE_SLAVE);
@@ -340,7 +343,7 @@ namespace tfs
                 if ((other_side_status == NS_STATUS_INITIALIZED) && (ngi.sync_oplog_flag_ != NS_SYNC_DATA_FLAG_YES))
                 {
                   ngi.sync_oplog_flag_ = NS_SYNC_DATA_FLAG_YES;
-                  meta_mgr_->get_oplog_sync_mgr()->notify_all();
+                  meta_mgr_->get_oplog_sync_mgr().notify_all();
                   TBSYS_LOG(INFO, "%s", "notify all oplog thread");
                 }
               }
@@ -368,7 +371,7 @@ namespace tfs
         return;
       }
 
-      Message* rmsg = NULL;
+      tbnet::Packet* rmsg = NULL;
       MasterAndSlaveHeartMessage mashm;
       mashm.set_ip_port(ngi.owner_ip_port_);
       mashm.set_role(ngi.owner_role_);
@@ -399,7 +402,7 @@ namespace tfs
                         < NS_SYNC_DATA_FLAG_YES))
                   {
                     ngi.sync_oplog_flag_ = NS_SYNC_DATA_FLAG_YES;
-                    meta_mgr_->get_oplog_sync_mgr()->notify_all();
+                    meta_mgr_->get_oplog_sync_mgr().notify_all();
                     TBSYS_LOG(INFO, "%s", "notify all oplog thread");
                   }
                 }
@@ -414,7 +417,7 @@ namespace tfs
                         < NS_SYNC_DATA_FLAG_YES))
                   {
                     ngi.sync_oplog_flag_ = NS_SYNC_DATA_FLAG_YES;
-                    meta_mgr_->get_oplog_sync_mgr()->notify_all();
+                    meta_mgr_->get_oplog_sync_mgr().notify_all();
                     TBSYS_LOG(INFO, "%s", "notify all oplog thread");
                   }
                 }
@@ -450,7 +453,7 @@ namespace tfs
       {
         return;
       }
-      Message* rmsg = NULL;
+      tbnet::Packet* rmsg = NULL;
       MasterAndSlaveHeartMessage mashm;
       mashm.set_ip_port(ngi.owner_ip_port_);
       mashm.set_role(ngi.owner_role_);
@@ -555,7 +558,7 @@ namespace tfs
       return TFS_SUCCESS;
     }
 
-    int MasterAndSlaveHeartManager::push(message::Message* message, int32_t max_queue_size, bool block)
+    int MasterAndSlaveHeartManager::push(common::BasePacket* message, const int32_t max_queue_size, const bool block)
     {
       return work_thread_.push(message, max_queue_size, block);
     }
@@ -565,7 +568,7 @@ namespace tfs
       bool bret = packet != NULL;
       if (bret)
       {
-        Message* message = dynamic_cast<Message*>(packet);
+        common::BasePacket* message = dynamic_cast<common::BasePacket*>(packet);
         NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
         int iret = TFS_SUCCESS;
 
@@ -585,7 +588,7 @@ namespace tfs
       return false;
     }
 
-    int MasterAndSlaveHeartManager::do_master_msg(Message* message, void*)
+    int MasterAndSlaveHeartManager::do_master_msg(common::BasePacket* message, void*)
     {
       NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
       ngi.dump(TBSYS_LOG_LEVEL(DEBUG));
@@ -599,7 +602,7 @@ namespace tfs
         ngi.owner_status_ = static_cast<NsStatus> (mashm->get_status());
         ngi.sync_oplog_flag_ = ngi.owner_role_ == NS_ROLE_MASTER ? NS_SYNC_DATA_FLAG_YES : NS_SYNC_DATA_FLAG_NO;
         if (ngi.sync_oplog_flag_ == NS_SYNC_DATA_FLAG_YES)
-          meta_mgr_->get_oplog_sync_mgr()->notify_all();
+          meta_mgr_->get_oplog_sync_mgr().notify_all();
 
         TBSYS_LOG(DEBUG, "other side modify owner status, owner status(%s), notify all oplog thread",
             ngi.owner_status_ == NS_STATUS_ACCEPT_DS_INFO ? "acceptdsinfo" : ngi.owner_status_
@@ -620,7 +623,7 @@ namespace tfs
         if ((ngi.other_side_status_ == NS_STATUS_INITIALIZED) && (ngi.sync_oplog_flag_ != NS_SYNC_DATA_FLAG_YES))
         {
           ngi.sync_oplog_flag_ = NS_SYNC_DATA_FLAG_YES;
-          meta_mgr_->get_oplog_sync_mgr()->notify_all();
+          meta_mgr_->get_oplog_sync_mgr().notify_all();
           TBSYS_LOG(INFO, "%s", "notify all oplog thread");
         }
       }
@@ -630,7 +633,7 @@ namespace tfs
         {
           tbutil::Mutex::Lock lock(ngi);
           ngi.sync_oplog_flag_ = NS_SYNC_DATA_FLAG_YES;
-          meta_mgr_->get_oplog_sync_mgr()->notify_all();
+          meta_mgr_->get_oplog_sync_mgr().notify_all();
           TBSYS_LOG(INFO, "%s", "notify all oplog thread");
         }
         else if ((ngi.other_side_status_ >= NS_STATUS_ACCEPT_DS_INFO) && (ngi.sync_oplog_flag_
@@ -650,16 +653,16 @@ namespace tfs
       if (mashm->get_flags() == HEART_GET_DATASERVER_LIST_FLAGS_YES)
       {
         TBSYS_LOG(INFO, "%s", "ns(slave) register");
-        meta_mgr_->get_oplog_sync_mgr()->get_file_queue_thread()->update_queue_information_header();
+        meta_mgr_->get_oplog_sync_mgr().get_file_queue_thread()->update_queue_information_header();
         VUINT64 ds_list;
         meta_mgr_->get_alive_server(ds_list);
         mashrm->set_ds_list(ds_list);
       }
-      message->reply_message(mashrm);
+      message->reply(mashrm);
       return TFS_SUCCESS;
     }
 
-    int MasterAndSlaveHeartManager::do_slave_msg(Message* message, void*)
+    int MasterAndSlaveHeartManager::do_slave_msg(common::BasePacket* message, void*)
     {
       NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
       MasterAndSlaveHeartMessage* mashm = dynamic_cast<MasterAndSlaveHeartMessage*> (message);
@@ -672,7 +675,7 @@ namespace tfs
         ngi.owner_status_ = static_cast<NsStatus> (mashm->get_status());
         ngi.sync_oplog_flag_ = ngi.owner_role_ == NS_ROLE_MASTER ? NS_SYNC_DATA_FLAG_YES : NS_SYNC_DATA_FLAG_NO;
         if (ngi.sync_oplog_flag_ == NS_SYNC_DATA_FLAG_YES)
-          meta_mgr_->get_oplog_sync_mgr()->notify_all();
+          meta_mgr_->get_oplog_sync_mgr().notify_all();
         TBSYS_LOG(DEBUG, "other side modify owner status, owner status(%s), notify all oplog thread",
             ngi.owner_status_ == NS_STATUS_ACCEPT_DS_INFO ? "acceptdsinfo" : ngi.owner_status_
                 == NS_STATUS_INITIALIZED ? "initialized"
@@ -696,11 +699,11 @@ namespace tfs
       mashrm->set_status(ngi.owner_status_);
       mashrm->set_flags(HEART_GET_DATASERVER_LIST_FLAGS_NO);
 
-      message->reply_message(mashrm);
+      message->reply(mashrm);
       return TFS_SUCCESS;
     }
 
-    int MasterAndSlaveHeartManager::do_heartbeat_and_ns_msg(Message* message, void*)
+    int MasterAndSlaveHeartManager::do_heartbeat_and_ns_msg(common::BasePacket* message, void*)
     {
       if (message->getPCode() != HEARTBEAT_AND_NS_HEART_MESSAGE)
         return TFS_SUCCESS;
@@ -712,7 +715,7 @@ namespace tfs
           hbam->get_ns_switch_flag() == NS_SWITCH_FLAG_NO ? "no" : "yes", hbam->get_ns_status());
       HeartBeatAndNSHeartMessage* mashrm = new HeartBeatAndNSHeartMessage();
       mashrm->set_ns_switch_flag_and_status(0 /*no use*/ , ngi.owner_status_);
-      message->reply_message(mashrm);
+      message->reply(mashrm);
 
       if (ns_switch_flag == NS_SWITCH_FLAG_YES)
       {

@@ -56,28 +56,28 @@ namespace tfs
       int wait_for_shut_down();
       int destroy();
       int register_slots(const char* const data, const int64_t length);
-      int register_msg(const message::Message* msg);
       void notify_all();
       void rotate();
       int flush_oplog();
       int log(uint8_t type, const char* const data, const int64_t length);
-      int push(message::Message* msg, int32_t max_queue_size = 0, bool block = false);
-      static std::string printDsList(const common::VUINT64& dsList);//only debug
+      int push(common::BasePacket* msg, int32_t max_queue_size = 0, bool block = false);
     public:
       common::FileQueueThread* get_file_queue_thread() const
       {
         return file_queue_thread_;
       }
       int replay_helper(const char* const data, int64_t& length, int64_t& offset, time_t now = time(NULL));
+      int replay_helper_do_msg(const int32_t type, const char* const data, int64_t& length , int64_t offset);
+      int replay_helper_do_oplog(const int32_t type, const char* const data, int64_t& length , int64_t offset, time_t now);
     private:
       DISALLOW_COPY_AND_ASSIGN( OpLogSyncManager);
       virtual bool handlePacketQueue(tbnet::Packet *packet, void *args);
       static int do_sync_oplog(const void* const data, const int64_t len, const int32_t threadIndex, void *arg);
       int do_sync_oplog(const char* const data, const int64_t length);
-      int execute(const message::Message *msg, const void* args);
-      int do_master_msg(const message::Message* msg, const void* args);
-      int do_slave_msg(const message::Message* msg, const void* args);
-      int do_sync_oplog(const message::Message* msg, const void* args);
+      int execute(const common::BasePacket *msg, const void* args);
+      int do_master_msg(const common::BasePacket* msg, const void* args);
+      int do_slave_msg(const common::BasePacket* msg, const void* args);
+      int do_sync_oplog(const common::BasePacket* msg, const void* args);
       int replay_all();
     private:
       bool is_destroy_;

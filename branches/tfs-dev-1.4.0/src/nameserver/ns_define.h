@@ -26,7 +26,7 @@
 #include "common/func.h"
 #include "common/lock.h"
 #include "common/parameter.h"
-#include "message/new_client.h"
+#include "common/new_client.h"
 
 namespace tfs
 {
@@ -36,7 +36,7 @@ namespace tfs
     class GCObject
     {
     public:
-      explicit GCObject(time_t now):
+      explicit GCObject(const time_t now):
         dead_time_(now) {}
       virtual ~GCObject() {}
       virtual void callback(LayoutManager* manager){}
@@ -47,15 +47,15 @@ namespace tfs
         #endif
         delete this;
       }
-      void set_dead_time(time_t now = time(NULL))
+      void set_dead_time(const time_t now = time(NULL))
       {
         dead_time_ = now;
       }
-      bool can_be_clear(time_t now = time(NULL)) const
+      bool can_be_clear(const time_t now = time(NULL)) const
       {
         return now >= (dead_time_ + common::SYSPARAM_NAMESERVER.object_clear_max_time_);
       }
-      bool is_dead(time_t now = time(NULL)) const
+      bool is_dead(const time_t now = time(NULL)) const
       {
         return now >= (dead_time_ + common::SYSPARAM_NAMESERVER.object_dead_max_time_);
       }
@@ -234,8 +234,8 @@ namespace tfs
                     : other_side_status_ == NS_STATUS_INITIALIZED ? "initialize" : "unknow", sync_oplog_flag_
                 == NS_SYNC_DATA_FLAG_NONE ? "none" : sync_oplog_flag_ == NS_SYNC_DATA_FLAG_NO ? "no" : sync_oplog_flag_
                 == NS_SYNC_DATA_FLAG_READY ? "ready" : sync_oplog_flag_ == NS_SYNC_DATA_FLAG_YES ? "yes" : "unknow",
-                common::Func::time_to_str(last_owner_check_time_.toMicroSeconds()).c_str(),
-                common::Func::time_to_str(last_push_owner_check_packet_time_.toMicroSeconds()).c_str());
+                common::Func::time_to_str(last_owner_check_time_.toSeconds()).c_str(),
+                common::Func::time_to_str(last_push_owner_check_packet_time_.toSeconds()).c_str());
       }
 
       static NsRuntimeGlobalInformation& instance()
@@ -244,11 +244,10 @@ namespace tfs
       }
 
       static NsRuntimeGlobalInformation instance_;
+
     };
-    extern int global_callback_func(message::NewClient* client);
-    extern int send_msg_to_server(uint64_t server, message::Message* msg);
-    extern int send_msg_to_server(uint64_t server, message::NewClient* client, message::Message* msg, message::Message*& output/*not free*/);
-  }
-}
+    extern int ns_async_callback(common::NewClient* client);
+  }/** nameserver **/
+}/** tfs **/
 
 #endif 

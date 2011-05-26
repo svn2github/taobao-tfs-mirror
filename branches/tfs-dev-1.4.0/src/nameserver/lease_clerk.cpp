@@ -25,7 +25,6 @@
 #include "lease_clerk.h"
 #include "global_factory.h"
 #include "common/parameter.h"
-#include "common/config.h"
 #include "common/config_item.h"
 
 #ifndef UINT32_MAX 
@@ -426,7 +425,7 @@ namespace tfs
     int LeaseFactory::initialize(int32_t clerk_num)
     {
       clerk_num_ =  clerk_num <= 0 ? 32 : clerk_num > 1024 ? 1024 : clerk_num;
-      int32_t total = CONFIG.get_int_value(CONFIG_NAMESERVER, CONF_CLEANUP_LEASE_THRESHOLD, 0xFA000);//102400
+      int32_t total = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_CLEANUP_LEASE_THRESHOLD, 0xFA000);//102400
       int32_t remove_threshold = total / clerk_num_;
       tbsys::gDeleteA(clerk_);
       clerk_ = new LeaseClerkPtr[clerk_num_];
@@ -434,9 +433,9 @@ namespace tfs
       {
         clerk_[i] = new LeaseClerk(remove_threshold);
       }
-      LeaseEntry::LEASE_EXPIRE_DEFAULT_TIME_MS = CONFIG.get_int_value(CONFIG_NAMESERVER, CONF_MAX_LEASE_TIMEOUT, LeaseEntry::LEASE_EXPIRE_DEFAULT_TIME_MS);
+      LeaseEntry::LEASE_EXPIRE_DEFAULT_TIME_MS = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_MAX_LEASE_TIMEOUT, LeaseEntry::LEASE_EXPIRE_DEFAULT_TIME_MS);
       LeaseEntry::LEASE_EXPIRE_TIME_MS = LeaseEntry::LEASE_EXPIRE_DEFAULT_TIME_MS;
-      int32_t expired = CONFIG.get_int_value(CONFIG_NAMESERVER, CONF_LEASE_EXPIRED_TIME, 1);
+      int32_t expired = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_LEASE_EXPIRED_TIME, 1);
       LeaseEntry::LEASE_EXPIRE_REMOVE_TIME_MS = expired * 3600 * 1000 + LeaseEntry::LEASE_EXPIRE_DEFAULT_TIME_MS;
       return TFS_SUCCESS;
     }

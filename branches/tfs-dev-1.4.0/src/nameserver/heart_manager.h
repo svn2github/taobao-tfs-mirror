@@ -33,13 +33,14 @@ namespace tfs
     public:
       explicit HeartManagement(LayoutManager& manager);
       virtual ~HeartManagement();
-      int initialize(int32_t thread_count, int32_t max_queue_size);
+      int initialize(const int32_t thread_count, const int32_t max_queue_size);
       void wait_for_shut_down();
       void destroy();
-      int push(message::Message* msg);
-      virtual bool handlePacketQueue(tbnet::Packet *packet, void *args);
-      DISALLOW_COPY_AND_ASSIGN( HeartManagement);
+      int push(common::BasePacket* msg);
+      virtual bool handlePacketQueue(tbnet::Packet* packet, void *args);
+
     private:
+      DISALLOW_COPY_AND_ASSIGN(HeartManagement);
       int keepalive(tbnet::Packet* packet);
       LayoutManager& meta_mgr_;
       int32_t max_queue_size_;
@@ -54,6 +55,7 @@ namespace tfs
       {
       }
       virtual void runTimerTask();
+
     private:
       DISALLOW_COPY_AND_ASSIGN( CheckOwnerIsMasterTimerTask);
       void master_lost_vip(NsRuntimeGlobalInformation& ngi);
@@ -72,8 +74,9 @@ namespace tfs
       {
       }
       virtual void runTimerTask();
+
     private:
-      DISALLOW_COPY_AND_ASSIGN( MasterHeartTimerTask);
+      DISALLOW_COPY_AND_ASSIGN(MasterHeartTimerTask);
       LayoutManager* meta_mgr_;
     };
     typedef tbutil::Handle<MasterHeartTimerTask> MasterHeartTimerTaskPtr;
@@ -86,8 +89,9 @@ namespace tfs
       {
       }
       virtual void runTimerTask();
+
     private:
-      DISALLOW_COPY_AND_ASSIGN( SlaveHeartTimerTask);
+      DISALLOW_COPY_AND_ASSIGN(SlaveHeartTimerTask);
       LayoutManager* meta_mgr_;
       tbutil::TimerPtr& timer_;
     };
@@ -103,12 +107,14 @@ namespace tfs
       int initialize();
       int wait_for_shut_down();
       int destroy();
-      int push(message::Message* message, int32_t max_queue_size = 0, bool block = false);
-    private:
+      int push(common::BasePacket* message, const int32_t max_queue_size = 0, const bool block = false);
       virtual bool handlePacketQueue(tbnet::Packet *packet, void *args);
-      int do_master_msg(message::Message* message, void* args);
-      int do_slave_msg(message::Message* message, void* args);
-      int do_heartbeat_and_ns_msg(message::Message* message, void* args);
+
+    private:
+      int do_master_msg(common::BasePacket* message, void* args);
+      int do_slave_msg(common::BasePacket* message, void* args);
+      int do_heartbeat_and_ns_msg(common::BasePacket* message, void* args);
+
     private:
       DISALLOW_COPY_AND_ASSIGN( MasterAndSlaveHeartManager);
       LayoutManager* meta_mgr_;

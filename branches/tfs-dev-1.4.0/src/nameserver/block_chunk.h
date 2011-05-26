@@ -1,12 +1,21 @@
 /*
- * BlockChunk.h
+ * (C) 2007-2010 Alibaba Group Holding Limited.
  *
- *  Created on: 2010-11-5
- *      Author: duanfei
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+ *
+ *
+ * Version: $Id
+ *
+ * Authors:
+ *   duanfei <duanfei@taobao.com>
+ *      - initial release
+ *
  */
 
-#ifndef BLOCKCHUNK_H_
-#define BLOCKCHUNK_H_
+#ifndef TFS_NAMESERVER_BLOCKCHUNK_H_
+#define TFS_NAMESERVER_BLOCKCHUNK_H_
 
 #include <stdint.h>
 #include <Shared.h>
@@ -27,14 +36,14 @@ namespace nameserver
   public:
     BlockChunk();
     virtual ~BlockChunk();
-    BlockCollect* add(uint32_t block_id, time_t now);
-    bool connect(BlockCollect* block, ServerCollect* server, time_t now, bool force, bool& writable);
+    BlockCollect* add(const uint32_t block_id, const time_t now);
+    static bool connect(BlockCollect* block, ServerCollect* server, const time_t now, const bool force, bool& writable);
 
-    bool remove(uint32_t block_id);
+    bool remove(const uint32_t block_id);
 
-    BlockCollect* find(uint32_t block_id);
+    BlockCollect* find(const uint32_t block_id);
 
-    bool exist(uint32_t block_id) const;
+    bool exist(const uint32_t block_id) const;
 
     uint32_t calc_max_block_id() const;
     int64_t  calc_all_block_bytes() const;

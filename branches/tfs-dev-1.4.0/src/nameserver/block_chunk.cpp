@@ -1,14 +1,23 @@
 /*
- * BlockChunk.cpp
+ * (C) 2007-2010 Alibaba Group Holding Limited.
  *
- *  Created on: 2010-11-5
- *      Author: duanfei
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+ *
+ *
+ * Version: $Id
+ *
+ * Authors:
+ *   duanfei <duanfei@taobao.com>
+ *      - initial release
+ *
  */
 
+#include <Memory.hpp>
 #include "block_chunk.h"
 #include "block_collect.h"
 #include "global_factory.h"
-#include <Memory.hpp>
 using namespace tfs::common;
 
 namespace tfs
@@ -22,7 +31,7 @@ namespace tfs
 
     BlockChunk::~BlockChunk()
     {
-      RWLock::Lock lock(*this, WRITE_LOCKER);
+      //RWLock::Lock lock(*this, WRITE_LOCKER);
       BLOCK_MAP::iterator iter = block_map_.begin();
       for (; iter != block_map_.end(); ++iter)
       {
@@ -35,7 +44,7 @@ namespace tfs
      * @param[in] block_id : block id
      * @return NULL if failed 
      */
-    BlockCollect* BlockChunk::add(const uint32_t block_id, time_t now)
+    BlockCollect* BlockChunk::add(const uint32_t block_id, const time_t now)
     {
       BlockCollect* block = new BlockCollect(block_id, now);
       std::pair<BLOCK_MAP_ITER, bool> res = 
@@ -43,7 +52,7 @@ namespace tfs
       if (!res.second)
       {
         tbsys::gDelete(block);
-        return NULL;
+        block = NULL;
       }
       return block;
     }
@@ -53,7 +62,8 @@ namespace tfs
      * @param[in] block_id: block id
      * @return NULL if add failed or block exist
      */
-    bool BlockChunk::connect(BlockCollect* block, ServerCollect* server, time_t now, bool force, bool& writable)
+    bool BlockChunk::connect(BlockCollect* block, ServerCollect* server, 
+        const time_t now, const bool force, bool& writable)
     {
       bool bret = (block != NULL && server != NULL);
       if (bret)
@@ -63,7 +73,7 @@ namespace tfs
       return bret;
     }
 
-    bool BlockChunk::remove(uint32_t block_id)
+    bool BlockChunk::remove(const uint32_t block_id)
     {
       BLOCK_MAP::iterator iter = block_map_.find(block_id);
       if (iter != block_map_.end())
@@ -75,13 +85,13 @@ namespace tfs
       return true;
     }
 
-    BlockCollect* BlockChunk::find(uint32_t block_id)
+    BlockCollect* BlockChunk::find(const uint32_t block_id)
     {
       BLOCK_MAP::iterator iter = block_map_.find(block_id);
       return iter == block_map_.end() ? NULL : iter->second;
     }
 
-    bool BlockChunk::exist(uint32_t block_id) const
+    bool BlockChunk::exist(const uint32_t block_id) const
     {
       BLOCK_MAP::const_iterator iter = block_map_.find(block_id);
       return (iter != block_map_.end());
@@ -117,9 +127,10 @@ namespace tfs
       return block_map_.size();
     }
 
-    int BlockChunk::scan(SSMScanParameter& param, int32_t& actual,bool& end,int32_t should, bool cutover_chunk)
+    int BlockChunk::scan(SSMScanParameter& param, int32_t& actual,
+        bool& end, const int32_t should, const bool cutover_chunk)
     {
-      RWLock::Lock lock(*this,  READ_LOCKER);
+      //RWLock::Lock lock(*this,  READ_LOCKER);
       int32_t jump_count = 0;
       BLOCK_MAP::iterator iter; 
       if (cutover_chunk)
