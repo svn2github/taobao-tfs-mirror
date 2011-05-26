@@ -20,7 +20,7 @@
 #ifndef TFS_TOOL_LIB_H_
 #define TFS_TOOL_LIB_H_
 
-#include "common/define.h"
+#include "common/internal.h"
 #include "client/tfs_file.h"
 #include "client/fsname.h"
 #include "message/message.h"

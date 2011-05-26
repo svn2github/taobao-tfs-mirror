@@ -18,7 +18,7 @@
 
 #include <Mutex.h>
 #include "lru.h"
-#include "common/define.h"
+#include "common/internal.h"
 #include "local_key.h"
 
 namespace tfs

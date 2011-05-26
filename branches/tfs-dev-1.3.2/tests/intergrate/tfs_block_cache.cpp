@@ -66,7 +66,7 @@ void TfsBlockCacheTest::write_files(const int count)
     {
       large_flag = false;
     }
-    TfsIoApiUtil::generate_length(length, base);  
+    TfsIoApiUtil::generate_length(length, base);
     ASSERT_EQ(length, TfsIoApiUtil::write_new_file(large_flag, length, write_crc, tfs_name, suffix, TFS_FILE_LEN));
     cout << "generate length: " << length << " tfsname: " << tfs_name << " write crc: "
          << write_crc << "large flag: " << large_flag << endl;
@@ -102,10 +102,10 @@ void TfsBlockCacheTest::modify_cache(const int32_t step)
     if (0 == (i % step))
     {
       BlockCache& blk_cache = lit->second;
-      int seed = rand(); 
+      int seed = rand();
       if (1 == (seed % 2))
       {
-        if (blk_cache.ds_.size() > 0) 
+        if (blk_cache.ds_.size() > 0)
         {
           blk_cache.ds_[0] = rand();
         }
@@ -113,7 +113,7 @@ void TfsBlockCacheTest::modify_cache(const int32_t step)
       else if (0 == (seed % 2))
       {
         int index = 0;
-        if (blk_cache.ds_.size() >= 0) 
+        if (blk_cache.ds_.size() >= 0)
         {
           if (blk_cache.ds_.size() >= 2)
           {
@@ -226,8 +226,8 @@ int parse_args(int argc, char *argv[])
 
   TfsBlockCacheTest::ns_ip_ = nsip;
 #ifdef USE_CPP_CLIENT
-  TfsLargeFileTest::tfs_client_ = TfsClient::Instance();
-	int ret = TfsLargeFileTest::tfs_client_->initialize(TfsBlockCacheTest::ns_ip_.c_str(), 10000, 1000000);
+  TfsIoApiUtil::tfs_client_ = TfsClient::Instance();
+	int ret = TfsIoApiUtil::tfs_client_->initialize(TfsBlockCacheTest::ns_ip_.c_str(), 10000, 1000000);
 #else
   int ret = t_initialize(TfsBlockCacheTest::ns_ip_.c_str(), 10000, 1000000);
 #endif
@@ -243,8 +243,8 @@ int parse_args(int argc, char *argv[])
 void destroy()
 {
 #ifdef USE_CPP_CLIENT
-  TfsLargeFileTest::tfs_client_ = TfsClient::Instance();
-	TfsLargeFileTest::tfs_client_->destroy();
+  TfsIoApiUtil::tfs_client_ = TfsClient::Instance();
+	TfsIoApiUtil::tfs_client_->destroy();
 #else
   t_destroy();
 #endif

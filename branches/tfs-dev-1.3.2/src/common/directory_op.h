@@ -16,7 +16,7 @@
 #ifndef TFS_COMMON_DIRECTORYOP_H_
 #define TFS_COMMON_DIRECTORYOP_H_
 
-#include "define.h"
+#include "internal.h"
 namespace tfs
 {
   namespace common

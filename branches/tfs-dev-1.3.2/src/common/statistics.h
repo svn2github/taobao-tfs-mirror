@@ -5,7 +5,7 @@
 #include <Handle.h>
 #include <Shared.h>
 #include "error_msg.h"
-#include "define.h"
+#include "internal.h"
 #include "atomic.h"
 
 namespace tfs

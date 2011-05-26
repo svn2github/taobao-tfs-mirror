@@ -13,7 +13,7 @@
  *      - initial release
  *
  */
-#include "common/define.h"
+#include "common/internal.h"
 #include "common/internal.h"
 #include "mock_data_server_instance.h"
 #include "message/client_pool.h"

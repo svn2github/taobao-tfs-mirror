@@ -34,8 +34,8 @@ class TfsIoApiUtil
     static int64_t write_new_file(const bool large_flag, const int64_t length, uint32_t& crc,
                    char* tfsname = NULL, const char* suffix = NULL, const int32_t name_len = 0);
     static int read_exist_file(const bool large_flag, const char* tfs_name, const char* suffix, uint32_t& read_crc);
-    static int unlink_file(const char* tfsname, const char* suffix = NULL, const TfsUnlinkType action = DELETE);
-    static int stat_exist_file(const bool large_flag, char* tfsname, TfsFileStat& file_info);
+  static int unlink_file(const char* tfsname, const char* suffix = NULL, const tfs::common::TfsUnlinkType action = tfs::common::DELETE);
+    static int stat_exist_file(const bool large_flag, char* tfsname, tfs::common::TfsFileStat& file_info);
     static int generate_data(char* buffer, const int32_t length);
     static int generate_length(int64_t& length, int64_t base);
 

@@ -19,7 +19,7 @@
 #include <Mutex.h>
 #include <stdio.h>
 #include <pthread.h>
-#include "common/define.h"
+#include "common/internal.h"
 #include "tfs_session_pool.h"
 
 namespace tfs
@@ -50,16 +50,16 @@ namespace tfs
       int64_t lseek(const int fd, const int64_t offset, const int whence);
       int64_t pread(const int fd, void* buf, const int64_t count, const int64_t offset);
       int64_t pwrite(const int fd, const void* buf, const int64_t count, const int64_t offset);
-      int fstat(const int fd, TfsFileStat* buf, const TfsStatFlag mode = NORMAL_STAT);
+      int fstat(const int fd, common::TfsFileStat* buf, const common::TfsStatType mode = common::NORMAL_STAT);
       int close(const int fd, char* tfs_name = NULL, const int32_t len = 0);
       int64_t get_file_length(const int fd);
 
       // LargeFile's name will be start with L
-      int unlink(const char* file_name, const char* suffix = NULL, const TfsUnlinkType action = DELETE)
+      int unlink(const char* file_name, const char* suffix = NULL, const common::TfsUnlinkType action = common::DELETE)
       {
         return unlink(file_name, suffix, NULL, action);
       }
-      int unlink(const char* file_name, const char* suffix, const char* ns_addr, const TfsUnlinkType action = DELETE);
+      int unlink(const char* file_name, const char* suffix, const char* ns_addr, const common::TfsUnlinkType action = common::DELETE);
 
       void set_segment_size(const int64_t segment_size);
       int64_t get_segment_size() const;

@@ -109,7 +109,7 @@ int64_t TfsLargeFile::pwrite(const void* buf, const int64_t count, const int64_t
   return pwrite_ex(buf, count, offset);
 }
 
-int TfsLargeFile::fstat(TfsFileStat* file_stat, const TfsStatFlag mode)
+int TfsLargeFile::fstat(TfsFileStat* file_stat, const TfsStatType mode)
 {
   TBSYS_LOG(DEBUG, "stat file start, mode: %d", mode);
   FileInfo file_info;

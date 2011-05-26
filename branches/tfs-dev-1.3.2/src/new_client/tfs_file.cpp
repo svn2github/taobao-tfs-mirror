@@ -295,7 +295,7 @@ int64_t TfsFile::pwrite_ex(const void* buf, const int64_t count, const int64_t o
   return write_ex(buf, count, offset, false);
 }
 
-int TfsFile::fstat_ex(FileInfo* file_info, const TfsStatFlag mode)
+int TfsFile::fstat_ex(FileInfo* file_info, const TfsStatType mode)
 {
   int ret = TFS_SUCCESS;
   if (TFS_FILE_OPEN_YES != file_status_)
@@ -348,7 +348,7 @@ int TfsFile::close_ex()
   else if (file_status_ == TFS_FILE_WRITE_ERROR)
   {
     ret = EXIT_NOT_PERM_OPER;
-    TBSYS_LOG(ERROR, "close tfs file fail, file status: %d, ret: %d", file_status_, ret);
+    TBSYS_LOG(INFO, "occur tfs file write error, close. file status: %d", file_status_);
   }
   else if (!((flags_ & WRITE_MODE) && (0 != offset_)))
   {

@@ -413,7 +413,7 @@ int64_t LocalKey::get_segment_for_read(const int64_t offset, char* buf,
 {
   if (offset >= seg_head_.size_)
   {
-    TBSYS_LOG(ERROR, "read file offset: %"PRI64_PREFIX"d larger than size: %"PRI64_PREFIX"d", offset, seg_head_.size_);
+    TBSYS_LOG(INFO, "read file offset not less than size: %"PRI64_PREFIX"d >= %"PRI64_PREFIX"d", offset, seg_head_.size_);
     return 0;
   }
 

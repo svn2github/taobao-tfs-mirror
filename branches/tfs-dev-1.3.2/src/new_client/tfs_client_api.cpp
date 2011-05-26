@@ -63,7 +63,7 @@ int64_t TfsClient::pwrite(const int fd, const void* buf, const int64_t count, co
   return TfsClientImpl::Instance()->pwrite(fd, buf, count, offset);
 }
 
-int TfsClient::fstat(const int fd, TfsFileStat* buf, const TfsStatFlag mode)
+int TfsClient::fstat(const int fd, TfsFileStat* buf, const TfsStatType mode)
 {
   return TfsClientImpl::Instance()->fstat(fd, buf, mode);
 }

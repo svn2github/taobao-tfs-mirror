@@ -13,9 +13,14 @@ int t_destroy()
   return TfsClient::Instance()->destroy();
 }
 
-int t_open(const char* file_name, const char* suffix, const char* ns_addr, const int flags, const char* local_key)
+int t_open(const char* file_name, const char* suffix, const int flags, const char* local_key)
 {
-  int ret = tfs::common::EXIT_INVALIDFD_ERROR;
+  return t_open2(file_name, suffix, NULL, flags, local_key);
+}
+
+int t_open2(const char* file_name, const char* suffix, const char* ns_addr, const int flags, const char* local_key)
+{
+  int ret = EXIT_INVALIDFD_ERROR;
   if (NULL == local_key)
   {
     ret = TfsClient::Instance()->open(file_name, suffix, ns_addr, flags);
@@ -52,9 +57,11 @@ int64_t t_pwrite(const int fd, const void* buf, const int64_t count, const int64
   return TfsClient::Instance()->pwrite(fd, buf, count, offset);
 }
 
-int t_fstat(const int fd, TfsFileStat* buf, const TfsStatFlag mode)
+int t_fstat(const int fd, TfsFileStat* buf, const TfsStatType mode)
 {
-  return TfsClient::Instance()->fstat(fd, buf, mode);
+  return TfsClient::Instance()->fstat(fd,
+                                      reinterpret_cast<tfs::common::TfsFileStat*>(buf),
+                                      static_cast<tfs::common::TfsStatType>(mode));
 }
 
 int t_close(const int fd, char* tfs_name, const int32_t len)
@@ -69,7 +76,7 @@ int64_t t_get_file_length(const int fd)
 
 int t_unlink(const char* file_name, const char* suffix, const TfsUnlinkType action)
 {
-  return TfsClient::Instance()->unlink(file_name, suffix, action);
+  return TfsClient::Instance()->unlink(file_name, suffix, static_cast<tfs::common::TfsUnlinkType>(action));
 }
 
 void t_set_segment_size(const int64_t segment_size)

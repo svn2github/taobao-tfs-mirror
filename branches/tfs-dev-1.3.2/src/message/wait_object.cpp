@@ -1,11 +1,11 @@
 #include "wait_object.h"
-#include "common/define.h"
+#include "common/internal.h"
 #include <Memory.hpp>
 using namespace std;
 
 namespace tfs
 {
-  namespace message 
+  namespace message
   {
     using namespace common;
 
@@ -103,7 +103,7 @@ namespace tfs
     void WaitObject::add_send_id()
     {
       uint16_t cur_send_id = static_cast<uint16_t>(wait_id_sign_.size());
-      WaitId cur_wait_id; 
+      WaitId cur_wait_id;
       cur_wait_id.seq_id_ = wait_id_;
       cur_wait_id.send_id_ = cur_send_id;
       wait_id_sign_.push_back(cur_wait_id);
@@ -112,7 +112,7 @@ namespace tfs
     void WaitObject::set_send_id(const uint16_t index_id)
     {
       uint16_t cur_send_id = index_id;
-      WaitId cur_wait_id; 
+      WaitId cur_wait_id;
       cur_wait_id.seq_id_ = wait_id_;
       cur_wait_id.send_id_ = cur_send_id;
       wait_id_sign_.push_back(cur_wait_id);
@@ -213,7 +213,7 @@ namespace tfs
         // if got control packet or NULL, we will still add the done counter
         ret = it->second->wakeup(id.send_id_, dynamic_cast<Message*>(response));
       }
-      
+
       if (!ret && response != NULL && response->isRegularPacket())
       {
         TBSYS_LOG(DEBUG, "delete rsp wait object, id: %hu", id.seq_id_);
@@ -229,7 +229,7 @@ namespace tfs
       {
         tbsys::CThreadGuard guard(&mutex_);
         ++seq_id_;
-        if (seq_id_ == UINT16_MAX) 
+        if (seq_id_ == UINT16_MAX)
           seq_id_ = 1;
         wait_object->set_id(seq_id_);
         wait_objects_map_[seq_id_] = wait_object;

@@ -1,7 +1,7 @@
 #ifndef TFS_CLIENT_C_API_H_
 #define TFS_CLIENT_C_API_H_
 
-#include "common/client_define.h"
+#include "common/cdefine.h"
 
 #if __cplusplus
 extern "C"
@@ -25,11 +25,22 @@ extern "C"
    * @param suffix  tfs file suffix
    * @param flags  open flags
    * @param local_key  set NULL if not use
+   *
+   * @return open tfs file success or fail
+   */
+  int t_open(const char* file_name, const char* suffix, const int flags, const char* local_key);
+
+  /**
+   * open tfs file
+   * @param file_name  tfs file name
+   * @param suffix  tfs file suffix
+   * @param flags  open flags
+   * @param local_key  set NULL if not use
    * @param ns_addr  set NULL if not use
    *
    * @return open tfs file success or fail
    */
-  int t_open(const char* file_name, const char* suffix, const char* ns_addr, const int flags, const char* local_key);
+  int t_open2(const char* file_name, const char* suffix, const char* ns_addr, const int flags, const char* local_key);
 
 
   int64_t t_read(const int fd, void* buf, const int64_t count);
@@ -37,7 +48,7 @@ extern "C"
   int64_t t_lseek(const int fd, const int64_t offset, const int whence);
   int64_t t_pread(const int fd, void* buf, const int64_t count, const int64_t offset);
   int64_t t_pwrite(const int fd, const void* buf, const int64_t count, const int64_t offset);
-  int t_fstat(const int fd, TfsFileStat* buf, const TfsStatFlag mode);
+  int t_fstat(const int fd, TfsFileStat* buf, const TfsStatType mode);
   int64_t t_get_file_length(const int fd);
 
   /**

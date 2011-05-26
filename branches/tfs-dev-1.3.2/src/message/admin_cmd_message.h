@@ -19,7 +19,7 @@
 #define TFS_MESSAGE_ADMINCMDMESSAGE_H_
 
 #include "message.h"
-#include "common/define.h"
+#include "common/internal.h"
 
 namespace tfs
 {

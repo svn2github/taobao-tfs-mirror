@@ -137,7 +137,7 @@ class WorkThread : public tbutil::Thread
 typedef tbutil::Handle<WorkThread> WorkThreadPtr;
 static WorkThreadPtr* gworks = NULL;
 static int32_t thread_count = 1;
-static const int32_t MAX_READ_SIZE = 81920;
+static const int32_t MAX_READ_DATA_SIZE = 81920;
 static const int32_t MAX_READ_LEN = 256;
 string source_ns_ip_ = "", dest_ns_ip_ = "";
 FILE *g_sync_succ = NULL, *g_sync_fail = NULL;
@@ -483,7 +483,7 @@ int copy_file(TfsClient& source_tfs_client, TfsClient& dest_tfs_client, const st
   int ret = TFS_SUCCESS;
   int tmp_ret = TFS_SUCCESS;
   bool first_flag = true;
-  char data[MAX_READ_SIZE];
+  char data[MAX_READ_DATA_SIZE];
   int32_t rlen = 0;
 
   FileInfo file_info;
@@ -496,7 +496,7 @@ int copy_file(TfsClient& source_tfs_client, TfsClient& dest_tfs_client, const st
   {
     for (;;)
     {
-      rlen = source_tfs_client.tfs_read_v2(data, MAX_READ_SIZE, &file_info);
+      rlen = source_tfs_client.tfs_read_v2(data, MAX_READ_DATA_SIZE, &file_info);
       if (rlen < 0)
       {
         TBSYS_LOG(ERROR, "read tfsfile fail, filename: %s, datalen: %d", file_name.c_str(), rlen);
@@ -527,7 +527,7 @@ int copy_file(TfsClient& source_tfs_client, TfsClient& dest_tfs_client, const st
         break;
       }
 
-      if (rlen < MAX_READ_SIZE)
+      if (rlen < MAX_READ_DATA_SIZE)
       {
         break;
       }

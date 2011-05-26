@@ -17,7 +17,7 @@
 #define TFS_CLIENT_FSNAME_H_
 
 #include <string>
-#include "common/define.h"
+#include "common/internal.h"
 
 namespace tfs
 {

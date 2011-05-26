@@ -56,7 +56,7 @@ int64_t TfsSmallFile::pwrite(const void *buf, const int64_t count, const int64_t
   return pwrite_ex(buf, count, offset);
 }
 
-int TfsSmallFile::fstat(TfsFileStat* file_stat, const TfsStatFlag mode)
+int TfsSmallFile::fstat(TfsFileStat* file_stat, const TfsStatType mode)
 {
   int ret = TFS_ERROR;
   if (file_stat != NULL)

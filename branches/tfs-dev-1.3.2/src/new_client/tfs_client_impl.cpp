@@ -146,7 +146,7 @@ int64_t TfsClientImpl::pwrite(const int fd, const void* buf, const int64_t count
   return ret;
 }
 
-int TfsClientImpl::fstat(const int fd, TfsFileStat* buf, const TfsStatFlag mode)
+int TfsClientImpl::fstat(const int fd, TfsFileStat* buf, const TfsStatType mode)
 {
   int ret = EXIT_INVALIDFD_ERROR;
   TfsFile* tfs_file = get_file(fd);
@@ -171,10 +171,14 @@ int TfsClientImpl::close(const int fd, char* tfs_name, const int32_t len)
       {
         TBSYS_LOG(ERROR, "tfs close failed. fd: %d, ret: %d", fd, ret);
       }
-      else
+      // buffer not null, then consider as wanting tfs name back
+      // len must invalid
+      else if (NULL != tfs_name)
       {
-        if (NULL == tfs_name || len < TFS_FILE_LEN)
+        if (len < TFS_FILE_LEN)
         {
+          TBSYS_LOG(ERROR, "name buffer length less: %d < %d", len, TFS_FILE_LEN);
+          ret = TFS_ERROR;
         }
         else
         {
@@ -436,7 +440,7 @@ int TfsClientImpl::get_fd()
   int ret_fd = EXIT_INVALIDFD_ERROR;
 
   tbutil::Mutex::Lock lock(mutex_);
-  if (tfs_file_map_.size() >= MAX_OPEN_FD_COUNT)
+  if (static_cast<int32_t>(tfs_file_map_.size()) >= MAX_OPEN_FD_COUNT)
   {
     TBSYS_LOG(ERROR, "too much open files");
   }

@@ -22,10 +22,10 @@ namespace tfs
       virtual int64_t lseek(const int64_t offset, const int whence);
       virtual int64_t pread(void* buf, const int64_t count, const int64_t offset);
       virtual int64_t pwrite(const void* buf, const int64_t count, const int64_t offset);
-      virtual int fstat(TfsFileStat* file_info, const TfsStatFlag mode = NORMAL_STAT);
+      virtual int fstat(common::TfsFileStat* file_info, const common::TfsStatType mode = common::NORMAL_STAT);
       virtual int close();
       virtual int64_t get_file_length();
-      virtual int unlink(const char* file_name, const char* suffix, const TfsUnlinkType action);
+      virtual int unlink(const char* file_name, const char* suffix, const common::TfsUnlinkType action);
 
     protected:
       virtual int64_t get_segment_for_read(const int64_t offset, char* buf, const int64_t count);
