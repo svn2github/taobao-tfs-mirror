@@ -109,6 +109,7 @@ namespace tfs
       int32_t max_eio_error_nums_;
       int32_t expire_check_block_time_;
       int32_t max_cpu_usage_;
+      int32_t dump_stat_info_interval_;
       static DataServerParameter ds_parameter_;
       static DataServerParameter& instance()
       {

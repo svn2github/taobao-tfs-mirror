@@ -152,6 +152,12 @@ namespace tfs
       IS_SERVER = 1
     };
 
+    enum ReadDataVersion
+    {
+      READ_VERSION_2 = 2,
+      READ_VERSION_3 = 3
+    };
+
     enum PlanInterruptFlag
     {
       INTERRUPT_NONE= 0x00,
@@ -447,6 +453,7 @@ namespace tfs
       int32_t available_;
     };
 
+    static const int32_t SEGMENT_HEAD_RESERVE_SIZE = 64;
     struct SegmentHead
     {
       int deserialize(const char* data, const int64_t data_len, int64_t& pos);
@@ -454,8 +461,10 @@ namespace tfs
       int64_t length() const;
       int32_t count_;           // segment count
       int64_t size_;            // total size that segments contain
+      char reserve_[SEGMENT_HEAD_RESERVE_SIZE]; // reserve
       SegmentHead() : count_(0), size_(0)
       {
+        memset(reserve_, 0, SEGMENT_HEAD_RESERVE_SIZE);
       }
     };
 

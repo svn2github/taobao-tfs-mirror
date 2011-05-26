@@ -725,6 +725,10 @@ namespace tfs
       {
         iret = Serialization::get_int64(data, data_len, pos, &size_);
       }
+      if (TFS_SUCCESS == iret)
+      {
+        iret = Serialization::get_bytes(data, data_len, pos, reserve_,SEGMENT_HEAD_RESERVE_SIZE); 
+      }
       return iret;
  
     }
@@ -738,6 +742,10 @@ namespace tfs
       if (TFS_SUCCESS == iret)
       {
         iret = Serialization::set_int64(data, data_len, pos, size_);
+      }
+      if (TFS_SUCCESS == iret)
+      {
+        iret = Serialization::set_bytes(data, data_len, pos, reserve_, SEGMENT_HEAD_RESERVE_SIZE);
       }
       return iret; 
     }
