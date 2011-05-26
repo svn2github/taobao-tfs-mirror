@@ -27,8 +27,8 @@
 
 #include "common/func.h"
 #include "common/directory_op.h"
-#include "client/fsname.h"
-#include "client/tfs_client_api.h"
+#include "new_client/fsname.h"
+#include "new_client/tfs_client_api.h"
 
 using namespace std;
 using namespace tfs::client;
@@ -82,23 +82,22 @@ tbutil::Mutex g_mutex_;
 SyncStat g_sync_stat_;
 int get_file_list(const string& log_file, SYNC_FILE_MAP& sync_file_map);
 
-int sync_file(TfsClient& source_tfs_client, TfsClient& dest_tfs_client, FILE_SET& name_set, const string& modify_time);
-int cmp_file_info(TfsClient& source_tfs_client, TfsClient& dest_tfs_client, string& file_name, const string& modify_time, ActionOp& action_op);
-int do_action(TfsClient& source_tfs_client, TfsClient& dest_tfs_client, const string& file_name, const ActionOp& action_op);
-int do_action_ex(TfsClient& source_tfs_client, TfsClient& dest_tfs_client, const string& file_name, int32_t action);
-int copy_file(TfsClient& source_tfs_client, TfsClient& dest_tfs_client, const string& file_name);
-int get_file_info(TfsClient& tfs_client, string& file_name, FileInfo& buf);
+int sync_file(const string& source_tfs_client, const string& dest_tfs_client, FILE_SET& name_set, const string& modify_time);
+int cmp_file_info(const string& source_tfs_client, const string& dest_tfs_client, string& file_name, const string& modify_time, ActionOp& action_op);
+int do_action(const string& source_tfs_client, const string& dest_tfs_client, const string& file_name, const ActionOp& action_op);
+int do_action_ex(const string& source_tfs_client, const string& dest_tfs_client, const string& file_name, int32_t action);
+int copy_file(const string& source_tfs_client, const string& dest_tfs_client, const string& file_name);
+int get_file_info(const string& tfs_client, string& file_name, TfsFileStat& buf);
 void change_stat(int32_t source_flag, int32_t dest_flag, ActionOp& action_op);
 char* str_match(char* data, const char* prefix);
 
 class WorkThread : public tbutil::Thread
 {
   public:
-    WorkThread(string& source_ns_ip, string& dest_ns_ip, string& modify_time):
-      modify_time_(modify_time)
+    WorkThread(const string& source_ns_ip, const string& dest_ns_ip, const string& modify_time):
+      source_tfs_client_(source_ns_ip), dest_tfs_client_(dest_ns_ip), modify_time_(modify_time)
   {
-    source_tfs_client_.initialize(source_ns_ip.c_str());
-    dest_tfs_client_.initialize(dest_ns_ip.c_str());
+    TfsClient::Instance()->initialize(source_ns_ip.c_str());
   }
     virtual ~WorkThread()
     {
@@ -128,8 +127,8 @@ class WorkThread : public tbutil::Thread
   private:
     WorkThread(const WorkThread&);
     WorkThread& operator=(const WorkThread&);
-    TfsClient source_tfs_client_;
-    TfsClient dest_tfs_client_;
+    string source_tfs_client_;
+    string dest_tfs_client_;
     FILE_SET name_set_;
     string modify_time_;
     bool destroy_;
@@ -373,7 +372,7 @@ int get_file_list(const string& log_file, SYNC_FILE_MAP& sync_file_map)
   }
   return ret;
 }
-int do_action(TfsClient& source_tfs_client, TfsClient& dest_tfs_client, const string& file_name, const ActionOp& action_op)
+int do_action(const string& source_tfs_client, const string& dest_tfs_client, const string& file_name, const ActionOp& action_op)
 {
   int ret = TFS_SUCCESS;
   const ACTION_VEC& action_vec = action_op.action_;
@@ -402,7 +401,7 @@ int do_action(TfsClient& source_tfs_client, TfsClient& dest_tfs_client, const st
   }
   return ret;
 }
-int do_action_ex(TfsClient& source_tfs_client, TfsClient& dest_tfs_client, const string& file_name, int32_t action)
+int do_action_ex(const string& source_tfs_client, const string& dest_tfs_client, const string& file_name, int32_t action)
 {
   int ret = TFS_SUCCESS;
   switch (action)
@@ -411,27 +410,27 @@ int do_action_ex(TfsClient& source_tfs_client, TfsClient& dest_tfs_client, const
       ret = copy_file(source_tfs_client, dest_tfs_client, file_name);
       break;
     case HIDE_SOURCE:
-      ret = source_tfs_client.unlink(file_name.c_str(), NULL, CONCEAL);
+      ret = TfsClient::Instance()->unlink(file_name.c_str(), NULL, source_tfs_client.c_str(), CONCEAL);
       usleep(20000);
       break;
     case HIDE_DEST:
-      ret = dest_tfs_client.unlink(file_name.c_str(), NULL, CONCEAL);
+      ret = TfsClient::Instance()->unlink(file_name.c_str(), NULL, dest_tfs_client.c_str(), CONCEAL);
       usleep(20000);
       break;
     case UNHIDE_SOURCE:
-      ret = source_tfs_client.unlink(file_name.c_str(), NULL, REVEAL);
+      ret = TfsClient::Instance()->unlink(file_name.c_str(), NULL, source_tfs_client.c_str(), REVEAL);
       usleep(20000);
       break;
     case UNHIDE_DEST:
-      ret = dest_tfs_client.unlink(file_name.c_str(), NULL, REVEAL);
+      ret = TfsClient::Instance()->unlink(file_name.c_str(), NULL, dest_tfs_client.c_str(), REVEAL);
       usleep(20000);
       break;
     case UNDELE_DEST:
-      ret = dest_tfs_client.unlink(file_name.c_str(), NULL, UNDELETE);
+      ret = TfsClient::Instance()->unlink(file_name.c_str(), NULL, dest_tfs_client.c_str(), UNDELETE);
       usleep(20000);
       break;
     case DELETE_DEST:
-      ret = dest_tfs_client.unlink(file_name.c_str(), NULL, DELETE);
+      ret = TfsClient::Instance()->unlink(file_name.c_str(), NULL, dest_tfs_client.c_str(), DELETE);
       usleep(20000);
       break;
     default:
@@ -440,7 +439,7 @@ int do_action_ex(TfsClient& source_tfs_client, TfsClient& dest_tfs_client, const
   return ret;
 }
 
-int sync_file(TfsClient& source_tfs_client, TfsClient& dest_tfs_client, FILE_SET& name_set, const string& modify_time)
+int sync_file(const string& source_tfs_client, const string& dest_tfs_client, FILE_SET& name_set, const string& modify_time)
 {
   int ret = TFS_SUCCESS;
   FILE_SET_ITER iter = name_set.begin();
@@ -478,25 +477,29 @@ int sync_file(TfsClient& source_tfs_client, TfsClient& dest_tfs_client, FILE_SET
   }
   return ret;
 }
-int copy_file(TfsClient& source_tfs_client, TfsClient& dest_tfs_client, const string& file_name)
+int copy_file(const string& source_tfs_client, const string& dest_tfs_client, const string& file_name)
 {
   int ret = TFS_SUCCESS;
-  int tmp_ret = TFS_SUCCESS;
-  bool first_flag = true;
   char data[MAX_READ_SIZE];
   int32_t rlen = 0;
 
-  FileInfo file_info;
-  ret = source_tfs_client.tfs_open(file_name.c_str(), NULL, READ_MODE);
-  if (ret != TFS_SUCCESS)
+  int source_fd = TfsClient::Instance()->open(file_name.c_str(), NULL, source_tfs_client.c_str(), READ_MODE);
+  if (source_fd < 0)
   {
-    TBSYS_LOG(ERROR, "open source tfsfile fail when copy file, filename: %s, ret: %d", file_name.c_str(), ret);
+    TBSYS_LOG(ERROR, "open source tfsfile fail when copy file, filename: %s", file_name.c_str());
+    ret = TFS_ERROR;
   }
-  else
+  int dest_fd = TfsClient::Instance()->open(file_name.c_str(), NULL, dest_tfs_client.c_str(), WRITE_MODE | NEWBLK_MODE);
+  if (dest_fd < 0)
+  {
+    TBSYS_LOG(ERROR, "open dest tfsfile fail when copy file, filename: %s", file_name.c_str());
+    ret = TFS_ERROR;
+  }
+  if (TFS_SUCCESS == ret)
   {
     for (;;)
     {
-      rlen = source_tfs_client.tfs_read_v2(data, MAX_READ_SIZE, &file_info);
+      rlen = TfsClient::Instance()->read(source_fd, data, MAX_READ_SIZE);
       if (rlen < 0)
       {
         TBSYS_LOG(ERROR, "read tfsfile fail, filename: %s, datalen: %d", file_name.c_str(), rlen);
@@ -508,19 +511,7 @@ int copy_file(TfsClient& source_tfs_client, TfsClient& dest_tfs_client, const st
         break;
       }
 
-      if (first_flag)
-      {
-        tmp_ret = dest_tfs_client.tfs_open(file_name.c_str(), NULL, WRITE_MODE | NEWBLK_MODE);
-        if (tmp_ret != TFS_SUCCESS)
-        {
-          ret = TFS_ERROR;
-          TBSYS_LOG(ERROR, "open dest tfsfile fail when copy file, filename: %s, ret: %d, %s", file_name.c_str(), tmp_ret, dest_tfs_client.get_error_message());
-          break;
-        }
-        first_flag = false;
-      }
-
-      if (dest_tfs_client.tfs_write(data, rlen) != rlen)
+      if (TfsClient::Instance()->write(dest_fd, data, rlen) != rlen)
       {
         TBSYS_LOG(ERROR, "write tfsfile fail, filename: %s, datalen: %d", file_name.c_str(), rlen);
         ret = TFS_ERROR;
@@ -532,21 +523,27 @@ int copy_file(TfsClient& source_tfs_client, TfsClient& dest_tfs_client, const st
         break;
       }
     }
-    source_tfs_client.tfs_close();
-    if ((tmp_ret = dest_tfs_client.tfs_close()) != TFS_SUCCESS)
+  }
+  if (source_fd > 0)
+  {
+    TfsClient::Instance()->close(source_fd);
+  }
+  if (dest_fd > 0)
+  {
+    if (TFS_SUCCESS != TfsClient::Instance()->close(dest_fd))
     {
       ret = TFS_ERROR;
-      TBSYS_LOG(ERROR, "close dest tfsfile fail, filename: %s, ret: %d, %s", file_name.c_str(), tmp_ret, dest_tfs_client.get_error_message());
+      TBSYS_LOG(ERROR, "close dest tfsfile fail, filename: %s", file_name.c_str());
     }
   }
   return ret;
 }
 
-int cmp_file_info(TfsClient& source_tfs_client, TfsClient& dest_tfs_client, string& file_name, const string& modify_time, ActionOp& action_op)
+int cmp_file_info(const string& source_tfs_client, const string& dest_tfs_client, string& file_name, const string& modify_time, ActionOp& action_op)
 {
   int ret = TFS_SUCCESS;
   int tmp_ret = TFS_SUCCESS;
-  FileInfo source_buf, dest_buf;
+  TfsFileStat source_buf, dest_buf;
   memset(&source_buf, 0, sizeof(source_buf));
   memset(&dest_buf, 0, sizeof(dest_buf));
   tmp_ret = get_file_info(source_tfs_client, file_name, source_buf);
@@ -590,19 +587,21 @@ int cmp_file_info(TfsClient& source_tfs_client, TfsClient& dest_tfs_client, stri
   return ret;
 }
 
-int get_file_info(TfsClient& tfs_client, string& file_name, FileInfo& buf)
+int get_file_info(const string& tfs_client, string& file_name, TfsFileStat& buf)
 {
   int ret = TFS_SUCCESS;
-  ret = tfs_client.tfs_open(file_name.c_str(), NULL, READ_MODE);
-  if (ret != TFS_SUCCESS)
+  
+  int fd = TfsClient::Instance()->open(file_name.c_str(), NULL, tfs_client.c_str(), READ_MODE);
+  if (fd < 0)
   {
+    ret = TFS_ERROR;
     TBSYS_LOG(ERROR, "open file(%s) failed, ret: %d", file_name.c_str(), ret);
   }
   else
   {
-    ret = tfs_client.tfs_stat(&buf, READ_MODE);
+    TfsClient::Instance()->fstat(fd, &buf);
+    TfsClient::Instance()->close(fd);
   }
-  tfs_client.tfs_close();
   return ret;
 }
 void change_stat(int32_t source_flag, int32_t dest_flag, ActionOp& action_op)
