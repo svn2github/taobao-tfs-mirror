@@ -18,6 +18,15 @@
 #ifndef TFS_DATASERVER_DATASERVICE_H_
 #define TFS_DATASERVER_DATASERVICE_H_
 
+#include <Timer.h>
+#include <Mutex.h>
+#include <string>
+#include "common/internal.h"
+#include "common/base_packet.h"
+//#include "common/config.h"
+#include "common/statistics.h"
+#include "common/status_message.h"
+#include "message/message_factory.h"
 #include "replicate_block.h"
 #include "compact_block.h"
 #include "sync_base.h"
@@ -26,14 +35,6 @@
 #include "data_management.h"
 #include "requester.h"
 #include "block_checker.h"
-#include "common/internal.h"
-#include "common/config.h"
-#include "common/statistics.h"
-#include "message/message.h"
-#include "message/message_factory.h"
-#include <Timer.h>
-#include <Mutex.h>
-#include <string>
 
 namespace tfs
 {
@@ -46,7 +47,8 @@ namespace tfs
 #define READ_STAT_LOGGER read_stat_log_
 #define READ_STAT_PRINT(level, ...) READ_STAT_LOGGER.logMessage(TBSYS_LOG_LEVEL(level), __VA_ARGS__)
 #define READ_STAT_LOG(level, ...) (TBSYS_LOG_LEVEL_##level>READ_STAT_LOGGER._level) ? (void)0 : READ_STAT_PRINT(level, __VA_ARGS__)
-    class DataService: public tbnet::IServerAdapter, public tbnet::IPacketQueueHandler, public message::DefaultAsyncCallback
+    //class DataService: public tbnet::IServerAdapter, public tbnet::IPacketQueueHandler, public message::DefaultAsyncCallback
+    class DataService: public tbnet::IServerAdapter, public tbnet::IPacketQueueHandler
     {
       public:
         DataService();
@@ -60,9 +62,9 @@ namespace tfs
         tbnet::IPacketHandler::HPRetCode handlePacket(tbnet::Connection* connection, tbnet::Packet* packet);
         bool handlePacketQueue(tbnet::Packet* packet, void* args);
 
-        int command_done(message::Message* send_message, bool status, const std::string& error);
-        int send_message_to_slave_ds(message::Message* message, const common::VUINT64& ds_list);
-        int post_message_to_server(message::Message* message, const common::VUINT64& ds_list);
+        int command_done(common::BasePacket* send_message, bool status, const std::string& error);
+        int send_message_to_slave_ds(common::BasePacket* message, const common::VUINT64& ds_list);
+        int post_message_to_server(common::BasePacket* message, const common::VUINT64& ds_list);
 
         static void* do_heart(void* args);
         static void* do_check(void* args);
@@ -104,15 +106,15 @@ namespace tfs
         int reset_block_version(message::ResetBlockVersionMessage* message);
 
         int get_server_status(message::GetServerStatusMessage* message);
-        int get_ping_status(message::StatusMessage* message);
+        int get_ping_status(common::StatusMessage* message);
         int client_command(message::ClientCmdMessage* message);
 
-        int get_server_memory_info(message::ServerMetaInfoMessage* message);
+        //TODO int get_server_memory_info(message::ServerMetaInfoMessage* message);
         int reload_config(message::ReloadConfigMessage* message);
         void send_blocks_to_ns(const int32_t who);
 
       private:
-        bool access_deny(message::Message* message);
+        bool access_deny(common::BasePacket* message);
         void do_stat(const uint64_t peer_id,
             const int32_t visit_file_size, const int32_t real_len, const int32_t offset, const int32_t mode);
         int set_ns_ip();
@@ -140,9 +142,10 @@ namespace tfs
         SyncBase* sync_mirror_; //mirror
         int32_t sync_mirror_status_;
 
-        message::Client* hb_client_[2]; //heartbeat socket
-        message::Client* client_; //update
-        message::Client* compact_client_;
+        //message::Client* hb_client_[2]; //heartbeat socket
+        //message::Client* client_; //update
+        //message::Client* compact_client_;
+
 
         tbutil::Mutex stop_mutex_;
         tbutil::Mutex client_mutex_;

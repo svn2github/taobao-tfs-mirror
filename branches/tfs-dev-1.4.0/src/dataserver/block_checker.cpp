@@ -17,9 +17,10 @@
  *      - modify 2010-04-23
  *
  */
+#include <Memory.hpp>
 #include "block_checker.h"
 #include "blockfile_manager.h"
-#include <Memory.hpp>
+#include "common/func.h"
 
 namespace tfs
 {

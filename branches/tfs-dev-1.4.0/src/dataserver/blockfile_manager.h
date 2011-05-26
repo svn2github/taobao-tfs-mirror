@@ -44,8 +44,8 @@ namespace tfs
         }
 
       public:
-        int format_block_file_system(const common::SysParam::FileSystemParam& fs_param);
-        int clear_block_file_system(const common::SysParam::FileSystemParam& fs_param);
+        int format_block_file_system(const common::FileSystemParam& fs_param);
+        int clear_block_file_system(const common::FileSystemParam& fs_param);
         int bootstrap(const common::SysParam::FileSystemParam& fs_param);
 
         int new_block(const uint32_t logic_block_id, uint32_t& physical_block_id, const BlockType block_type =

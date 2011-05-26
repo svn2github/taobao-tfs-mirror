@@ -19,11 +19,12 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <errno.h>
+#include <tbsys.h>
 #include "sync_backup.h"
 #include "logic_block.h"
 #include "blockfile_manager.h"
 #include "client/fsname.h"
-#include <tbsys.h>
+#include "common/func.h"
 
 namespace tfs
 {
@@ -82,13 +83,14 @@ namespace tfs
     bool NfsMirrorBackup::init()
     {
       char tmpstr[TMP_PATH_SIZE];
-      char* nfs_path = CONFIG.get_string_value(CONFIG_PUBLIC, CONF_BACKUP_PATH, NULL);
+      char* nfs_path = NULL;
+      //TODO CONFIG.get_string_value(CONFIG_PUBLIC, CONF_BACKUP_PATH, NULL);
       if (NULL != nfs_path && strlen(nfs_path) > 0)
       {
         sprintf(backup_path_, "%s/storage", nfs_path);
         sprintf(remove_path_, "%s/removed", nfs_path);
-        sprintf(tmpstr, "%s:%d", CONFIG.get_string_value(CONFIG_NAMESERVER, CONF_IP_ADDR), CONFIG.get_int_value(
-              CONFIG_NAMESERVER, CONF_PORT));
+        //TODO sprintf(tmpstr, "%s:%d", CONFIG.get_string_value(CONFIG_NAMESERVER, CONF_IP_ADDR), CONFIG.get_int_value(
+        //      CONFIG_NAMESERVER, CONF_PORT));
         source_client_ = new TfsClient();
         int iret = source_client_->initialize(tmpstr);
         if (iret != TFS_SUCCESS)

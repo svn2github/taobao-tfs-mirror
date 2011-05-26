@@ -18,8 +18,6 @@
 
 #include "logic_block.h"
 #include "data_management.h"
-#include "message/client.h"
-#include "message/message_factory.h"
 
 namespace tfs
 {

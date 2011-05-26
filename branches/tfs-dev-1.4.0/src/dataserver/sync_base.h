@@ -23,14 +23,12 @@
 #include <fcntl.h>
 #include <queue>
 #include <errno.h>
+#include <Monitor.h>
+#include <Mutex.h>
 
 #include "sync_backup.h"
 #include "common/file_queue.h"
 #include "common/file_queue_thread.h"
-#include "message/message_factory.h"
-#include "message/client.h"
-#include <Monitor.h>
-#include <Mutex.h>
 
 namespace tfs
 {
@@ -40,7 +38,7 @@ namespace tfs
     class SyncBase
     {
       public:
-        SyncBase(const int32_t type);
+        explicit SyncBase(const int32_t type);
         ~SyncBase();
         void stop();
 

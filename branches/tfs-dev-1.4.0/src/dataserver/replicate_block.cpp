@@ -13,9 +13,15 @@
  *      - initial release
  *
  */
-#include "replicate_block.h"
 #include <Time.h>
 #include <Memory.hpp>
+#include "message/replicate_block_message.h"
+#include "message/write_data_message.h"
+#include "common/client_manager.h"
+#include "common/new_client.h"
+#include "common/status_message.h"
+#include "replicate_block.h"
+
 
 namespace tfs
 {
@@ -25,11 +31,10 @@ namespace tfs
     using namespace message;
     using namespace tbutil;
 
-    ReplicateBlock::ReplicateBlock(Mutex* mutex, Client* client)
+    ReplicateBlock::ReplicateBlock(const uint64_t ns_ip)
     {
       init();
-      client_mutex_ = mutex;
-      client_ = client;
+      ns_ip_ = ns_ip;
     }
 
     ReplicateBlock::~ReplicateBlock()
@@ -50,8 +55,6 @@ namespace tfs
       expire_cloned_interval_ = SYSPARAM_DATASERVER.expire_cloned_block_time_;
       last_expire_cloned_block_time_ = 0;
       stop_ = 0;
-      client_mutex_ = NULL;
-      client_ = NULL;
     }
 
     void* ReplicateBlock::do_replicate_block(void* args)
@@ -141,29 +144,46 @@ namespace tfs
         req_rb_msg.set_command(PLAN_STATUS_FAILURE);
       }
 
-      int32_t need_remove = 0;
-      client_mutex_->lock();
-      Message* rsp_msg = client_->call(&req_rb_msg);
-      if (NULL != rsp_msg)
+      bool need_remove = false;
+      NewClient* client = NewClientManager::get_instance().create_client();
+      if (NULL != client)
       {
-        StatusMessage* sm = dynamic_cast<StatusMessage*> (rsp_msg);
-        if (b->is_move_ == REPLICATE_BLOCK_MOVE_FLAG_YES && STATUS_MESSAGE_REMOVE == sm->get_status())
+        tbnet::Packet* rsp_msg = NULL;
+        if (TFS_SUCCESS == send_msg_to_server(ns_ip_, client, &req_rb_msg, rsp_msg))
         {
-          need_remove = 1;
-          ret = TFS_SUCCESS;
-        }
-        else if (STATUS_MESSAGE_OK == sm->get_status())
-        {
-          ret = TFS_SUCCESS;
+          if (STATUS_MESSAGE != rsp_msg->getPCode())
+          {
+            TBSYS_LOG(ERROR, "unknow packet pcode: %d", rsp_msg->getPCode());
+          }
+          else
+          {
+            StatusMessage* sm = dynamic_cast<StatusMessage*> (rsp_msg);
+            if (b->is_move_ == REPLICATE_BLOCK_MOVE_FLAG_YES && STATUS_MESSAGE_REMOVE == sm->get_status())
+            {
+              need_remove = true;
+              ret = TFS_SUCCESS;
+            }
+            else if (STATUS_MESSAGE_OK == sm->get_status())
+            {
+              ret = TFS_SUCCESS;
+            }
+            else
+            {
+              TBSYS_LOG(ERROR, "send repl block complete info: %s\n", sm->get_error());
+            }
+          }
         }
         else
         {
-          TBSYS_LOG(ERROR, "send repl block complete info: %s\n", sm->get_error());
+          TBSYS_LOG(ERROR, "send_msg_to_server error");
         }
-        tbsys::gDelete(rsp_msg);
+        NewClientManager::get_instance().destroy_client(client);
+      }
+      else
+      {
+        TBSYS_LOG(ERROR, "create client error");
       }
 
-      client_mutex_->unlock();
       if (need_remove)
       {
         int rm_ret = BlockFileManager::get_instance()->del_block(b->block_id_);
@@ -191,19 +211,6 @@ namespace tfs
 
       // send to port + 1
       ds_ip = Func::addr_inc_port(ds_ip, 1);
-      Client* client = CLIENT_POOL.get_client(ds_ip);
-      if (NULL == client)
-      {
-        TBSYS_LOG(ERROR, "CLIENT_POOL get client ds_ip '%s' fail. blockid: %u\n",
-            tbsys::CNetUtil::addrToString(ds_ip).c_str(), block_id);
-        return TFS_ERROR;
-      }
-      if (TFS_ERROR == client->connect())
-      {
-        CLIENT_POOL.release_client(client);
-        TBSYS_LOG(ERROR, "connect to %s fail, blockid: %u", tbsys::CNetUtil::addrToString(ds_ip).c_str(), block_id);
-        return TFS_ERROR;
-      }
 
       //replicate block file
       int32_t len = 0, offset = 0;
@@ -220,7 +227,7 @@ namespace tfs
         {
           TBSYS_LOG(ERROR, "read raw data fail, ip: %s, blockid: %u, offset: %d, reading len: %d, ret: %d",
               tbsys::CNetUtil::addrToString(ds_ip).c_str(), block_id, offset, read_len, ret);
-          return TFS_ERROR;
+          break;
         }
         len = read_len;
 
@@ -238,28 +245,36 @@ namespace tfs
         {
           req_wrd_msg.set_new_block(1);
         }
-
-        Message* rsp_msg = client->call(&req_wrd_msg);
-        if (NULL != rsp_msg)
+        NewClient* client = NewClientManager::get_instance().create_client();
+        if (NULL != client)
         {
-          if (rsp_msg->get_message_type() == STATUS_MESSAGE)
+          tbnet::Packet* rsp_msg = NULL;
+          if (TFS_SUCCESS == send_msg_to_server(ds_ip, client, &req_wrd_msg, rsp_msg))
           {
-            StatusMessage* sm = dynamic_cast<StatusMessage*> (rsp_msg);
-            if (STATUS_MESSAGE_OK != sm->get_status())
+            if (rsp_msg->getPCode() == STATUS_MESSAGE)
             {
-              TBSYS_LOG(ERROR, "write raw data to %s fail, blockid: %u, offset:%d, reading len: %d",
-                  tbsys::CNetUtil::addrToString(ds_ip).c_str(), block_id, offset, len);
-              ret = TFS_ERROR;
+              StatusMessage* sm = dynamic_cast<StatusMessage*> (rsp_msg);
+              if (STATUS_MESSAGE_OK != sm->get_status())
+              {
+                TBSYS_LOG(ERROR, "write raw data to %s fail, blockid: %u, offset:%d, reading len: %d",
+                    tbsys::CNetUtil::addrToString(ds_ip).c_str(), block_id, offset, len);
+                ret = TFS_ERROR;
+              }
             }
           }
-          tbsys::gDelete(rsp_msg);
+          else
+          {
+            TBSYS_LOG(ERROR, "write raw data to %s fail, blockid: %u, offset: %u, reading len: %d",
+                tbsys::CNetUtil::addrToString(ds_ip).c_str(), block_id, offset, len);
+            ret = TFS_ERROR;
+          }
+          NewClientManager::get_instance().destroy_client(client);
         }
         else
         {
-          TBSYS_LOG(ERROR, "write raw data to %s fail, blockid: %u, offset: %u, reading len: %d",
-              tbsys::CNetUtil::addrToString(ds_ip).c_str(), block_id, offset, len);
-          ret = TFS_ERROR;
+          TBSYS_LOG(ERROR, "create client error");
         }
+
         if (TFS_SUCCESS != ret)
         {
           break;
@@ -270,12 +285,6 @@ namespace tfs
         {
           break;
         }
-      }
-
-      if (TFS_SUCCESS != ret)
-      {
-        CLIENT_POOL.release_client(client);
-        return TFS_ERROR;
       }
 
       //use read index file direct maybe faster
@@ -303,29 +312,40 @@ namespace tfs
           raw_meta_vec.size(), req_wib_msg.get_cluster());
 
       ret = TFS_SUCCESS;
-      Message* rsp_msg = client->call(&req_wib_msg);
-      if (rsp_msg != NULL)
+      NewClient* client = NewClientManager::get_instance().create_client();
+      if (NULL != client)
       {
-        if (STATUS_MESSAGE == rsp_msg->get_message_type())
+        tbnet::Packet* rsp_msg = NULL;
+        if (TFS_SUCCESS == send_msg_to_server(ds_ip, client, &req_wib_msg, rsp_msg))
         {
-          StatusMessage* sm = dynamic_cast<StatusMessage*> (rsp_msg);
-          if (STATUS_MESSAGE_OK != sm->get_status())
+          if (STATUS_MESSAGE == rsp_msg->getPCode())
           {
-            TBSYS_LOG(ERROR, "write meta info to %s fail, blockid: %u", tbsys::CNetUtil::addrToString(ds_ip).c_str(),
-                block_id);
-            ret = TFS_ERROR;
+            StatusMessage* sm = dynamic_cast<StatusMessage*> (rsp_msg);
+            if (STATUS_MESSAGE_OK != sm->get_status())
+            {
+              TBSYS_LOG(ERROR, "write meta info to %s fail, blockid: %u", tbsys::CNetUtil::addrToString(ds_ip).c_str(),
+                  block_id);
+              ret = TFS_ERROR;
+            }
+          }
+          else
+          {
+            TBSYS_LOG(ERROR, "unknow packet pcode :%d", rsp_msg->getPCode());
           }
         }
-        tbsys::gDelete(rsp_msg);
+        else
+        {
+          TBSYS_LOG(ERROR, "write meta info to %s fail, blockid: %u", tbsys::CNetUtil::addrToString(ds_ip).c_str(),
+              block_id);
+          ret = TFS_ERROR;
+        }
+        NewClientManager::get_instance().destroy_client(client);
       }
       else
       {
-        TBSYS_LOG(ERROR, "write meta info to %s fail, blockid: %u", tbsys::CNetUtil::addrToString(ds_ip).c_str(),
-            block_id);
-        ret = TFS_ERROR;
+        TBSYS_LOG(ERROR, "create client error");
       }
 
-      CLIENT_POOL.release_client(client);
       return ret;
     }
 

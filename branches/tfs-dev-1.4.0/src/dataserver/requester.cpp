@@ -13,8 +13,12 @@
  *      - initial release
  *
  */
-#include "requester.h"
 #include <Memory.hpp>
+#include "requester.h"
+#include "message/block_info_message.h"
+#include "common/new_client.h"
+#include "common/client_manager.h"
+#include "common/status_message.h"
 
 namespace tfs
 {
@@ -66,14 +70,16 @@ namespace tfs
       ub_msg.set_block(blk);
       ub_msg.set_server_id(dataserver_id_);
       ub_msg.set_repair(tmp_repair);
-      Message* return_msg = NULL;
-      ret = send_message_to_server(ns_ip_port_, &ub_msg, &return_msg);
-      if (TFS_SUCCESS != ret || !return_msg)
+      NewClient* client = NewClientManager::get_instance().create_client();
+      tbnet::Packet* return_msg = NULL;
+      ret = send_msg_to_server(ns_ip_port_, client, &ub_msg, return_msg);
+      if (TFS_SUCCESS != ret || NULL == return_msg)
       {
+        if (NULL != client) NewClientManager::get_instance().destroy_client(client);
         return ret;
       }
       int need_expire = 0;
-      if (NULL != return_msg)
+      if (STATUS_MESSAGE == return_msg->getPCode())
       {
         StatusMessage* sm = dynamic_cast<StatusMessage*>(return_msg);
         if (STATUS_MESSAGE_OK == sm->get_status())
@@ -89,8 +95,12 @@ namespace tfs
         {
           TBSYS_LOG(ERROR, "req update block info: %s, id: %u, tmp_repair: %d\n", sm->get_error(), block_id, tmp_repair);
         }
-        tbsys::gDelete(return_msg); 
       }
+      else
+      {
+        TBSYS_LOG(ERROR,"unknow packet pcode: %d", return_msg->getPCode());
+      }
+      if (NULL != client) NewClientManager::get_instance().destroy_client(client);
 
       if (need_expire)
       {
@@ -135,15 +145,18 @@ namespace tfs
       bwc_msg.set_success(wc_status);
       bwc_msg.set_unlink_flag(unlink_flag);
 
-      Message* return_msg = NULL;
-      ret = TFS_ERROR;
-      ret = send_message_to_server(ns_ip_port_, &bwc_msg, &return_msg);
-      if (TFS_SUCCESS != ret || !return_msg)
+      NewClient* client = NewClientManager::get_instance().create_client();
+      tbnet::Packet* return_msg = NULL;
+      ret = send_msg_to_server(ns_ip_port_, client, &bwc_msg, return_msg);
+
+
+      if (TFS_SUCCESS != ret || NULL == return_msg)
       {
+        if (NULL != client) NewClientManager::get_instance().destroy_client(client);
         return ret;
       }
 
-      if (STATUS_MESSAGE == return_msg->get_message_type())
+      if (STATUS_MESSAGE == return_msg->getPCode())
       {
         StatusMessage* sm = dynamic_cast<StatusMessage*>(return_msg);
         if (STATUS_MESSAGE_OK == sm->get_status())
@@ -160,10 +173,10 @@ namespace tfs
       else
       {
         TBSYS_LOG(ERROR, "rep block write complete, blockid: %u, msg type: %d error.\n", block_id,
-            return_msg->get_message_type());
+            return_msg->getPCode());
         ret = TFS_ERROR;
       }
-      tbsys::gDelete(return_msg); 
+      NewClientManager::get_instance().destroy_client(client);
       return ret;
     }
   }

@@ -79,15 +79,15 @@ int main(int argc, char *argv[])
   }
 
   //set log level
-  TBSYS_LOGGER.setLogLevel(CONFIG.get_string_value(CONFIG_PUBLIC, CONF_LOG_LEVEL));
-  TBSYS_LOGGER.setMaxFileSize(CONFIG.get_int_value(CONFIG_PUBLIC, CONF_LOG_SIZE, 1024 * 1024 * 1024));
-  TBSYS_LOGGER.setMaxFileIndex(CONFIG.get_int_value(CONFIG_PUBLIC, CONF_LOG_NUM, 30));
+  //TODO TBSYS_LOGGER.setLogLevel(CONFIG.get_string_value(CONFIG_PUBLIC, CONF_LOG_LEVEL));
+  //TODO TBSYS_LOGGER.setMaxFileSize(CONFIG.get_int_value(CONFIG_PUBLIC, CONF_LOG_SIZE, 1024 * 1024 * 1024));
+  //TODO TBSYS_LOGGER.setMaxFileIndex(CONFIG.get_int_value(CONFIG_PUBLIC, CONF_LOG_NUM, 30));
 
   //check directory
   string work_dir = SYSPARAM_DATASERVER.work_dir_;
   if (work_dir.size() == 0)
   {
-    TBSYS_LOG(ERROR, "Directory %s.%s is undefined\n", CONFIG_PUBLIC, CONF_WORK_DIR);
+    //TODO TBSYS_LOG(ERROR, "Directory %s.%s is undefined\n", CONFIG_PUBLIC, CONF_WORK_DIR);
     return EXIT_CONFIG_ERROR;
   }
 
@@ -219,8 +219,8 @@ namespace tfs
 
     int DataServer::start()
     {
-      packet_streamer_.set_packet_factory(&msg_factory_);
-      CLIENT_POOL.init_with_transport(&tran_sport_);
+      //packet_streamer_.set_packet_factory(&msg_factory_);
+      //CLIENT_POOL.init_with_transport(&tran_sport_);
 
       tran_sport_.start();
       data_service_.init(server_index_);
@@ -239,7 +239,7 @@ namespace tfs
       bool ret = true;
 
       sprintf(spec, "tcp::%d", server_port);
-      if (tran_sport_.listen(spec, &packet_streamer_, &data_service_) == NULL)
+      //TODOif (tran_sport_.listen(spec, &packet_streamer_, &data_service_) == NULL)
       {
         TBSYS_LOG(ERROR, "Failed to listen port: %d", server_port);
         ret = false;
@@ -247,7 +247,7 @@ namespace tfs
 
       ++server_port;
       sprintf(spec, "tcp::%d", server_port);
-      if (ret && tran_sport_.listen(spec, &packet_streamer_, &data_service_) == NULL)
+      //TODO if (ret && tran_sport_.listen(spec, &packet_streamer_, &data_service_) == NULL)
       {
         TBSYS_LOG(ERROR, "Failed to listen port: %d", server_port);
         ret = false;

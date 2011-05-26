@@ -18,15 +18,12 @@
 #ifndef TFS_DATASERVER_COMPACTBLOCK_H_
 #define TFS_DATASERVER_COMPACTBLOCK_H_
 
+#include <Mutex.h>
+#include <Monitor.h>
 #include "logic_block.h"
 #include "blockfile_manager.h"
 #include "dataserver_define.h"
-#include "common/config.h"
-#include "message/message_factory.h"
-#include "message/client.h"
-#include "message/client_pool.h"
-#include <Mutex.h>
-#include <Monitor.h>
+//#include "common/config.h"
 
 namespace tfs
 {
@@ -44,7 +41,7 @@ namespace tfs
     {
       public:
         CompactBlock();
-        CompactBlock(tbutil::Mutex* mutex, message::Client* client, const uint64_t dataserver_id);
+        CompactBlock(const uint64_t ns_ip, const uint64_t dataserver_id);
         ~CompactBlock();
 
         // stop compact tasks
@@ -72,8 +69,7 @@ namespace tfs
 
         std::deque<CompactBlkInfo*> compact_block_queue_;
         tbutil::Monitor<tbutil::Mutex> compact_block_monitor_;
-        tbutil::Mutex* client_mutex_;
-        message::Client* client_;
+        uint64_t ns_ip_;
 
         int32_t stop_;
         int32_t expire_compact_interval_;

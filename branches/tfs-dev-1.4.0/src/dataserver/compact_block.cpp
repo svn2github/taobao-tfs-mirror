@@ -15,8 +15,11 @@
  *      - modify 2010-04-23
  *
  */
-#include "compact_block.h"
 #include <Memory.hpp>
+#include "compact_block.h"
+#include "message/compact_block_message.h"
+#include "common/new_client.h"
+#include "common/client_manager.h"
 
 namespace tfs
 {
@@ -32,11 +35,10 @@ namespace tfs
       init();
     }
 
-    CompactBlock::CompactBlock(Mutex* mutex, Client* client, const uint64_t dataserver_id)
+    CompactBlock::CompactBlock(const uint64_t ns_ip, const uint64_t dataserver_id)
     {
       init();
-      client_mutex_ = mutex;
-      client_ = client;
+      ns_ip_ = ns_ip;
       dataserver_id_ = dataserver_id;
     }
 
@@ -46,9 +48,6 @@ namespace tfs
 
     void CompactBlock::init()
     {
-      client_mutex_ = NULL;
-      client_ = NULL;
-
       stop_ = 0;
       expire_compact_interval_ = SYSPARAM_DATASERVER.expire_compact_time_;
       last_expire_compact_block_time_ = 0;
@@ -246,10 +245,10 @@ namespace tfs
       BlockInfo* blk = LogicBlock->get_block_info();
       req_cbc_msg.set_block_info(*blk);
 
-      client_mutex_->lock();
-      Message* rsp_msg = client_->call(&req_cbc_msg);
-      tbsys::gDelete(rsp_msg);
-      client_mutex_->unlock();
+      NewClient* client = NewClientManager::get_instance().create_client();
+      tbnet::Packet* rsp_msg = NULL;
+      send_msg_to_server(ns_ip_, client, &req_cbc_msg, rsp_msg);
+      NewClientManager::get_instance().destroy_client(client);
 
       return TFS_SUCCESS;
     }

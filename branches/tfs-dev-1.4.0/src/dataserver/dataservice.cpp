@@ -15,11 +15,13 @@
  *      - modify 2009-03-27
  *
  */
-#include "dataservice.h"
+#include <Memory.hpp>
+#include "common/new_client.h"
+#include "common/client_manager.h"
 #include "common/func.h"
 #include "common/directory_op.h"
 #include "client/fsname.h"
-#include <Memory.hpp>
+#include "dataservice.h"
 
 namespace tfs
 {
@@ -50,10 +52,10 @@ namespace tfs
       sync_mirror_ = NULL;
       sync_mirror_status_ = 0;
 
-      hb_client_[0] = NULL;
-      hb_client_[1] = NULL;
-      client_ = NULL;
-      compact_client_ = NULL;
+      //hb_client_[0] = NULL;
+      //hb_client_[1] = NULL;
+      //client_ = NULL;
+      //compact_client_ = NULL;
       thread_pids_ = NULL;
 
       max_cpu_usage_ = SYSPARAM_DATASERVER.max_cpu_usage_;
@@ -64,15 +66,15 @@ namespace tfs
 
     DataService::~DataService()
     {
-      CLIENT_POOL.release_client(client_);
-      CLIENT_POOL.release_client(hb_client_[0]);
-      CLIENT_POOL.release_client(hb_client_[1]);
-      CLIENT_POOL.release_client(compact_client_);
+      //CLIENT_POOL.release_client(client_);
+      //CLIENT_POOL.release_client(hb_client_[0]);
+      //CLIENT_POOL.release_client(hb_client_[1]);
+      //CLIENT_POOL.release_client(compact_client_);
 
-      client_ = NULL;
-      hb_client_[0] = NULL;
-      hb_client_[1] = NULL;
-      compact_client_ = NULL;
+      //client_ = NULL;
+      //hb_client_[0] = NULL;
+      //hb_client_[1] = NULL;
+      //compact_client_ = NULL;
     }
 
     int DataService::init(const std::string& server_index)
@@ -119,7 +121,7 @@ namespace tfs
       stat_ptr->add_sub_key("unlink-success");
       stat_ptr->add_sub_key("unlink-failed");
 
-      stat_mgr_.add_entry(stat_ptr, SYSPARAM_DATASERVER.dump_stat_info_interval_);
+      //TODO  stat_mgr_.add_entry(stat_ptr, SYSPARAM_DATASERVER.dump_stat_info_interval_);
 
       return TFS_SUCCESS;
     }
@@ -139,7 +141,8 @@ namespace tfs
         adr->port_ = SYSPARAM_DATASERVER.local_ns_port_;
       }
 
-      char* ip_list = SYSPARAM_DATASERVER.ns_addr_list_;
+      char* ip_list;
+      //TODO char* ip_list = SYSPARAM_DATASERVER.ns_addr_list_;
       if (NULL == ip_list)
       {
         TBSYS_LOG(ERROR, "nameserver real ip list is error");
@@ -199,14 +202,14 @@ namespace tfs
 
     int DataService::start(VINT* pids)
     {
-      client_ = CLIENT_POOL.get_client(ns_ip_port_);
-      hb_client_[0] = CLIENT_POOL.get_client(hb_ip_port_[0]);
-      hb_client_[1] = CLIENT_POOL.get_client(hb_ip_port_[1]);
-      compact_client_ = CLIENT_POOL.get_client(ns_ip_port_);
+      //client_ = CLIENT_POOL.get_client(ns_ip_port_);
+      //hb_client_[0] = CLIENT_POOL.get_client(hb_ip_port_[0]);
+      //hb_client_[1] = CLIENT_POOL.get_client(hb_ip_port_[1]);
+      //compact_client_ = CLIENT_POOL.get_client(ns_ip_port_);
       thread_pids_ = pids;
 
-      repl_block_ = new ReplicateBlock(&client_mutex_, client_);
-      compact_block_ = new CompactBlock(&compact_mutext_, compact_client_, data_server_info_.id_);
+      repl_block_ = new ReplicateBlock(ns_ip_port_);
+      compact_block_ = new CompactBlock(ns_ip_port_, data_server_info_.id_);
 
       //backup type:1.tfs 2.nfs
       int backup_type = SYSPARAM_DATASERVER.tfs_backup_type_;
@@ -237,29 +240,32 @@ namespace tfs
       }
 
       //retry
-      while (0 == stop_ && TFS_SUCCESS != client_->connect())
-      {
-        TBSYS_LOG(ERROR, "connect to nameserver fail, sleep 5s, retry\n");
-        Func::sleep(5, &stop_);
-      }
+      //TODO test ns alive
+      //while (0 == stop_ && TFS_SUCCESS != client_->connect())
+      //{
+      //  TBSYS_LOG(ERROR, "connect to nameserver fail, sleep 5s, retry\n");
+      //  Func::sleep(5, &stop_);
+      //}
       if (stop_)
         return TFS_ERROR;
 
       // heartbeat
-      while (0 == stop_ && (TFS_SUCCESS != hb_client_[0]->connect() && TFS_SUCCESS != hb_client_[1]->connect()))
-      {
-        TBSYS_LOG(ERROR, "hb connect to nameserver fail, sleep 5s, retry\n");
-        Func::sleep(5, &stop_);
-      }
+      // TODO test ns_hb_alive
+      //while (0 == stop_ && (TFS_SUCCESS != hb_client_[0]->connect() && TFS_SUCCESS != hb_client_[1]->connect()))
+      //{
+      //  TBSYS_LOG(ERROR, "hb connect to nameserver fail, sleep 5s, retry\n");
+      //  Func::sleep(5, &stop_);
+      //}
       if (stop_)
         return TFS_ERROR;
 
       // compact
-      while (0 == stop_ && TFS_SUCCESS != compact_client_->connect())
-      {
-        TBSYS_LOG(ERROR, "compact connect to nameserver fail, sleep 5s, retry\n");
-        Func::sleep(5, &stop_);
-      }
+      // test ns alive
+      //while (0 == stop_ && TFS_SUCCESS != compact_client_->connect())
+      //{
+      //  TBSYS_LOG(ERROR, "compact connect to nameserver fail, sleep 5s, retry\n");
+      //  Func::sleep(5, &stop_);
+      //}
       if (stop_)
         return TFS_ERROR;
 
@@ -524,7 +530,7 @@ namespace tfs
       return TFS_SUCCESS;
     }
 
-    int DataService::send_message_to_slave_ds(Message* message, const VUINT64& ds_list)
+    int DataService::send_message_to_slave_ds(BasePacket* message, const VUINT64& ds_list)
     {
       int ret = TFS_SUCCESS;
       int32_t ds_size = static_cast<int32_t>(ds_list.size()) - 1;
@@ -535,9 +541,10 @@ namespace tfs
           continue;
         }
         // send to port(port+1)
+        // TODO not add 1 any more
         uint64_t ds_ip = Func::addr_inc_port(ds_list[i], 1);
         // client send
-        ret = send_message_to_server(ds_ip, message, NULL);
+        ret = send_msg_to_server(ds_ip, message);
         if (TFS_SUCCESS != ret)
         {
           TBSYS_LOG(ERROR, "send message to server to ds ip: %s fail.\n", tbsys::CNetUtil::addrToString(ds_ip).c_str());
@@ -548,7 +555,7 @@ namespace tfs
       return TFS_SUCCESS;
     }
 
-    int DataService::post_message_to_server(Message* message, const VUINT64& ds_list)
+    int DataService::post_message_to_server(BasePacket* message, const VUINT64& ds_list)
     {
       VUINT64 erase_self;
       for (uint32_t i = 0; i < ds_list.size(); ++i)
@@ -563,7 +570,9 @@ namespace tfs
       {
         return 0;
       }
-      if (async_post_message_to_servers(message, erase_self, this) == TFS_SUCCESS)
+      //TODO  async_post
+      //if (async_post_message_to_servers(message, erase_self, this) == TFS_SUCCESS)
+      if (true)
       {
         return 1;
       }
@@ -573,9 +582,9 @@ namespace tfs
       }
     }
 
-    int DataService::command_done(Message* send_message, bool status, const string& error)
+    int DataService::command_done(BasePacket* send_message, bool status, const string& error)
     {
-      if (WRITE_DATA_MESSAGE == send_message->get_message_type())
+      if (WRITE_DATA_MESSAGE == send_message->getPCode())
       {
         WriteDataMessage* message = dynamic_cast<WriteDataMessage*> (send_message);
         if (!status)
@@ -586,9 +595,9 @@ namespace tfs
           data_management_.erase_data_file(message->get_file_number());
         }
 
-        return DefaultAsyncCallback::command_done(send_message, status, error);
+        //TODO return DefaultAsyncCallback::command_done(send_message, status, error);
       }
-      else if (RENAME_FILE_MESSAGE == send_message->get_message_type())
+      else if (RENAME_FILE_MESSAGE == send_message->getPCode())
       {
         RenameFileMessage* message = dynamic_cast<RenameFileMessage*> (send_message);
         uint32_t block_id = message->get_block_id();
@@ -606,9 +615,9 @@ namespace tfs
               "RenameFileMessage fail. chid: %d, blockid: %u, fileid: %" PRI64_PREFIX "u, new fileid: %" PRI64_PREFIX "u\n",
               message->getChannelId(), block_id, file_id, new_file_id);
         }
-        return DefaultAsyncCallback::command_done(send_message, status, error);
+        //TODO return DefaultAsyncCallback::command_done(send_message, status, error);
       }
-      else if (send_message->get_message_type() == UNLINK_FILE_MESSAGE)
+      else if (UNLINK_FILE_MESSAGE == send_message->getPCode())
       {
         // do nothing. unlink don't care other ds response
         UnlinkFileMessage* message = dynamic_cast<UnlinkFileMessage*> (send_message);
@@ -621,19 +630,19 @@ namespace tfs
       }
       else
       {
-        TBSYS_LOG(ERROR, "command done handle error message type: %d\n", send_message->get_message_type());
+        TBSYS_LOG(ERROR, "command done handle error message type: %d\n", send_message->getPCode());
       }
 
       return TFS_ERROR;
     }
 
-    bool DataService::access_deny(Message* message)
+    bool DataService::access_deny(BasePacket* message)
     {
       tbnet::Connection* conn = message->get_connection();
       if (!conn)
         return false;
       uint64_t peer_id = conn->getPeerId();
-      int32_t type = message->get_message_type();
+      int32_t type = message->getPCode();
       if (type == READ_DATA_MESSAGE || type == READ_DATA_MESSAGE_V2 ||
           type == READ_DATA_MESSAGE_V3)
         return acl_.deny(peer_id, AccessControl::READ);
@@ -659,7 +668,7 @@ namespace tfs
         return tbnet::IPacketHandler::FREE_CHANNEL;
       }
 
-      Message* bp = dynamic_cast<Message*>(packet);
+      BasePacket* bp = dynamic_cast<BasePacket*>(packet);
       bp->set_connection(connection);
       bp->set_direction(DIRECTION_RECEIVE);
 
@@ -676,9 +685,9 @@ namespace tfs
         }
         else
         {
-          MessageFactory::send_error_message(bp, TBSYS_LOG_LEVEL(WARN), STATUS_MESSAGE_ACCESS_DENIED,
-              data_server_info_.id_, "you client %s access been denied. msgtype: %d", tbsys::CNetUtil::addrToString(
-                  connection->getPeerId()).c_str(), bp->get_message_type());
+          bp->reply_error_packet(TBSYS_LOG_LEVEL(WARN), STATUS_MESSAGE_ACCESS_DENIED,
+              "you client %s access been denied. msgtype: %d", tbsys::CNetUtil::addrToString(
+                  connection->getPeerId()).c_str(), bp->getPCode());
           // packet denied, must free
           bp->free();
           return tbnet::IPacketHandler::FREE_CHANNEL;
@@ -690,7 +699,7 @@ namespace tfs
 
     bool DataService::handlePacketQueue(tbnet::Packet* packet, void* )
     {
-      Message* message = dynamic_cast<Message*>(packet);
+      BasePacket* message = dynamic_cast<BasePacket*>(packet);
       if (NULL == message)
       {
         TBSYS_LOG(ERROR, "process packet can not convert to message\n");
@@ -698,7 +707,7 @@ namespace tfs
       }
 
       int ret = TFS_SUCCESS;
-      switch (message->get_message_type())
+      switch (message->getPCode())
       {
       case CREATE_FILENAME_MESSAGE:
         ret = create_file_number(dynamic_cast<CreateFilenameMessage*>(message));
@@ -784,14 +793,14 @@ namespace tfs
         ret = client_command(dynamic_cast<ClientCmdMessage*>(message));
         break;
       default:
-        TBSYS_LOG(ERROR, "process packet: %s, type: %d\n", message->get_name(), message->get_message_type());
+        TBSYS_LOG(ERROR, "process packet pcode: %d\n", message->getPCode());
         ret = TFS_ERROR;
         break;
       }
       if (TFS_SUCCESS != ret)
       {
-        MessageFactory::send_error_message(message, TBSYS_LOG_LEVEL(ERROR), ret, data_server_info_.id_,
-            "execute message fail, type: %d. ret: %d\n", message->get_message_type(), ret);
+        message->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret, 
+            "execute message fail, type: %d. ret: %d\n", message->getPCode(), ret);
       }
       return true;
     }
@@ -815,7 +824,7 @@ namespace tfs
             TBSYS_LOG(ERROR, "create file: blockid: %u is null. req update BlockInfo failed", block_id);
           }
         }
-        MessageFactory::send_error_message(message, TBSYS_LOG_LEVEL(ERROR), ret, data_server_info_.id_,
+        message->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret, 
             "create file failed. blockid: %u, fileid: %" PRI64_PREFIX "u, ret: %d.", block_id, file_id, ret);
       }
       else
@@ -824,7 +833,7 @@ namespace tfs
         resp_cfn_msg->set_block_id(block_id);
         resp_cfn_msg->set_file_id(file_id);
         resp_cfn_msg->set_file_number(file_number);
-        message->reply_message(resp_cfn_msg);
+        message->reply(resp_cfn_msg);
       }
 
       TIMER_END();
@@ -846,7 +855,7 @@ namespace tfs
       WriteDataInfo write_info = message->get_write_info();
       int32_t lease_id = message->get_lease_id();
       int32_t version = message->get_block_version();
-      char* msg_data = message->get_data();
+      const char* msg_data = message->get_data();
 
       TBSYS_LOG(
           DEBUG,
@@ -857,16 +866,14 @@ namespace tfs
       int ret = data_management_.write_data(write_info, lease_id, version, msg_data, repair);
       if (EXIT_NO_LOGICBLOCK_ERROR == ret)
       {
-        MessageFactory::send_error_message(message, TBSYS_LOG_LEVEL(ERROR), ret, data_server_info_.id_,
+        message->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret, 
             "write data failed. block is not exist. blockid: %u, fileid: %" PRI64_PREFIX "u, ret: %d",
             write_info.block_id_, write_info.file_id_, ret);
       }
       else if (EXIT_BLOCK_DS_VERSION_ERROR == ret || EXIT_BLOCK_NS_VERSION_ERROR == ret)
       {
-        MessageFactory::send_error_message(
-            message,
+        message->reply_error_packet(
             TBSYS_LOG_LEVEL(ERROR), ret,
-            data_server_info_.id_,
             "write data failed. block version error. blockid: %u, fileid: %" PRI64_PREFIX "u, error ret: %d, repair: %d",
             write_info.block_id_, write_info.file_id_, ret, repair);
         if (TFS_SUCCESS != ds_requester_.req_update_block_info(write_info.block_id_, repair))
@@ -880,7 +887,7 @@ namespace tfs
         {
           ds_requester_.req_block_write_complete(write_info.block_id_, lease_id, TFS_ERROR);
         }
-        MessageFactory::send_error_message(message, TBSYS_LOG_LEVEL(ERROR), ret, data_server_info_.id_,
+        message->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret, 
             "write data fail. blockid: %u, fileid: %" PRI64_PREFIX "u. ret: %d", write_info.block_id_,
             write_info.file_id_, ret);
       }
@@ -897,19 +904,19 @@ namespace tfs
           if (0 == ret)
           {
             //no slave
-            message->reply_message(new StatusMessage(STATUS_MESSAGE_OK));
+            message->reply(new StatusMessage(STATUS_MESSAGE_OK));
           }
           else if (ret < 0)
           {
             ds_requester_.req_block_write_complete(write_info.block_id_, lease_id, EXIT_SENDMSG_ERROR);
-            MessageFactory::send_error_message(message, TBSYS_LOG_LEVEL(ERROR), ret, data_server_info_.id_,
+            message->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret, 
                 "write data fail to other dataserver (send): blockid: %u, fileid: %" PRI64_PREFIX "u, datalen: %d",
                 write_info.block_id_, write_info.file_id_, write_info.length_);
           }
         }
         else
         {
-          message->reply_message(new StatusMessage(STATUS_MESSAGE_OK));
+          message->reply(new StatusMessage(STATUS_MESSAGE_OK));
         }
       }
 
@@ -947,16 +954,14 @@ namespace tfs
       {
         if (EXIT_DATAFILE_EXPIRE_ERROR == ret)
         {
-          MessageFactory::send_error_message(
-              message,
+          message->reply_error_packet(
               TBSYS_LOG_LEVEL(ERROR), ret,
-              data_server_info_.id_,
               "datafile is null(maybe expired). blockid: %u, fileid: %" PRI64_PREFIX "u, filenumber: %" PRI64_PREFIX "u, ret: %d",
               close_file_info.block_id_, close_file_info.file_id_, close_file_info.file_number_, ret);
         }
         else if (EXIT_NO_LOGICBLOCK_ERROR == ret)
         {
-          MessageFactory::send_error_message(message, TBSYS_LOG_LEVEL(ERROR), ret, data_server_info_.id_,
+          message->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret, 
               "close write file failed. block is not exist. blockid: %u, fileid: %" PRI64_PREFIX "u, ret: %d",
               close_file_info.block_id_, close_file_info.file_id_, ret);
         }
@@ -967,10 +972,8 @@ namespace tfs
           {
             ds_requester_.req_block_write_complete(close_file_info.block_id_, lease_id, ret);
           }
-          MessageFactory::send_error_message(
-              message,
+          message->reply_error_packet(
               TBSYS_LOG_LEVEL(ERROR), ret,
-              data_server_info_.id_,
               "close write file error. blockid: %u, fileid : %" PRI64_PREFIX "u, filenumber: %" PRI64_PREFIX "u. ret: %d",
               close_file_info.block_id_, close_file_info.file_id_, close_file_info.file_number_, ret);
         }
@@ -982,7 +985,7 @@ namespace tfs
         ret = data_management_.get_block_info(close_file_info.block_id_, blk, visit_count);
         if (TFS_SUCCESS != ret)
         {
-          MessageFactory::send_error_message(message, TBSYS_LOG_LEVEL(ERROR), ret, data_server_info_.id_,
+          message->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret, 
               "close write file failed. block is not exist. blockid: %u, fileid: %" PRI64_PREFIX "u, ret: %d",
               close_file_info.block_id_, close_file_info.file_id_, ret);
         }
@@ -1001,7 +1004,7 @@ namespace tfs
             {
               // other ds failed, release lease
               ds_requester_.req_block_write_complete(close_file_info.block_id_, lease_id, TFS_ERROR);
-              MessageFactory::send_error_message(message, TBSYS_LOG_LEVEL(ERROR), ret, data_server_info_.id_,
+              message->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret,
                   "close write file to other dataserver fail, blockid: %u, fileid: %" PRI64_PREFIX "u, ret: %d",
                   close_file_info.block_id_, close_file_info.file_id_, ret);
             }
@@ -1024,26 +1027,26 @@ namespace tfs
 
               if (TFS_SUCCESS == ret)
               {
-                message->reply_message(new StatusMessage(STATUS_MESSAGE_OK));
+                message->reply(new StatusMessage(STATUS_MESSAGE_OK));
               }
               else
               {
                 TBSYS_LOG(ERROR,
                     "rep block write complete or write sync log fail, blockid: %u, fileid: %" PRI64_PREFIX "u, ret: %d",
                     close_file_info.block_id_, close_file_info.file_id_, ret);
-                message->reply_message(new StatusMessage(STATUS_MESSAGE_ERROR));
+                message->reply(new StatusMessage(STATUS_MESSAGE_ERROR));
               }
             }
           }
           else
           {
             //slave will save seqno to prevent from the conflict when this block change to master block
-            BlockInfo* copyblk = message->get_block();
+            const BlockInfo* copyblk = message->get_block();
             if (NULL != copyblk)
             {
               blk->seq_no_ = copyblk->seq_no_;
             }
-            message->reply_message(new StatusMessage(STATUS_MESSAGE_OK));
+            message->reply(new StatusMessage(STATUS_MESSAGE_OK));
           }
         }
       }
@@ -1107,7 +1110,7 @@ namespace tfs
         try_add_repair_task(block_id, ret);
         tbsys::gDeleteA(tmp_data_buffer);
         resp_rd_v2_msg->set_length(ret);
-        message->reply_message(resp_rd_v2_msg);
+        message->reply(resp_rd_v2_msg);
       }
       else
       {
@@ -1148,7 +1151,7 @@ namespace tfs
         if (TFS_SUCCESS == ret)
         {
           //set to connection
-          message->reply_message(resp_rd_v2_msg);
+          message->reply(resp_rd_v2_msg);
           tbsys::gDeleteA(tmp_data_buffer);
           do_stat(peer_id, visit_file_size, real_read_len, read_offset, AccessStat::READ_BYTES);
         }
@@ -1199,7 +1202,7 @@ namespace tfs
         try_add_repair_task(block_id, ret);
         tbsys::gDeleteA(tmp_data_buffer);
         resp_rd_msg->set_length(ret);
-        message->reply_message(resp_rd_msg);
+        message->reply(resp_rd_msg);
       }
       else
       {
@@ -1237,7 +1240,7 @@ namespace tfs
         if (TFS_SUCCESS == ret)
         {
           // set to connection
-          message->reply_message(resp_rd_msg);
+          message->reply(resp_rd_msg);
           tbsys::gDeleteA(tmp_data_buffer);
           do_stat(peer_id, visit_file_size, real_read_len, read_offset, AccessStat::READ_BYTES);
         }
@@ -1276,7 +1279,7 @@ namespace tfs
         try_add_repair_task(block_id, ret);
         tbsys::gDeleteA(tmp_data_buffer);
         resp_rrd_msg->set_length(ret);
-        message->reply_message(resp_rrd_msg);
+        message->reply(resp_rrd_msg);
         return ret;
       }
 
@@ -1296,7 +1299,7 @@ namespace tfs
         }
       }
       message->set_length(real_read_len);
-      message->reply_message(resp_rrd_msg);
+      message->reply(resp_rrd_msg);
       tbsys::gDeleteA(tmp_data_buffer);
 
       do_stat(0, 0, real_read_len, read_offset, AccessStat::READ_COUNT);
@@ -1318,13 +1321,13 @@ namespace tfs
       if (TFS_SUCCESS != ret)
       {
         try_add_repair_task(block_id, ret);
-        return MessageFactory::send_error_message(message, TBSYS_LOG_LEVEL(ERROR), ret, data_server_info_.id_,
+        return message->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret, 
             "readfileinfo fail, blockid: %u, fileid: %" PRI64_PREFIX "u, ret: %d", block_id, file_id, ret);
       }
 
       RespFileInfoMessage* resp_fi_msg = new RespFileInfoMessage();
       resp_fi_msg->set_file_info(&finfo);
-      message->reply_message(resp_fi_msg);
+      message->reply(resp_fi_msg);
       TIMER_END();
       TBSYS_LOG(DEBUG, "read fileinfo %s. blockid: %u, fileid: %" PRI64_PREFIX "u, mode: %d, cost time: %" PRI64_PREFIX "d",
           TFS_SUCCESS == ret ? "success" : "fail", block_id, file_id, mode, TIMER_DURATION());
@@ -1344,7 +1347,7 @@ namespace tfs
       if (TFS_SUCCESS != ret)
       {
         try_add_repair_task(block_id, ret);
-        return MessageFactory::send_error_message(message, TBSYS_LOG_LEVEL(ERROR), ret, data_server_info_.id_,
+        return message->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret,
             "rename file fail, blockid: %u, fileid: %" PRI64_PREFIX "u, newfileid: %" PRI64_PREFIX "u, ret: %d",
             block_id, file_id, new_file_id, ret);
       }
@@ -1364,19 +1367,19 @@ namespace tfs
         {
           if (0 == ret)
           {
-            message->reply_message(new StatusMessage(STATUS_MESSAGE_OK));
+            message->reply(new StatusMessage(STATUS_MESSAGE_OK));
           }
           return TFS_SUCCESS;
         }
         else
         {
-          return MessageFactory::send_error_message(message, TBSYS_LOG_LEVEL(ERROR), ret, data_server_info_.id_,
+          return message->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret,
               "renamefile to other dataserver");
         }
       }
 
       // return
-      message->reply_message(new StatusMessage(STATUS_MESSAGE_OK));
+      message->reply(new StatusMessage(STATUS_MESSAGE_OK));
       return TFS_SUCCESS;
     }
 
@@ -1400,13 +1403,13 @@ namespace tfs
       {
         if (EXIT_NO_LOGICBLOCK_ERROR == ret)
         {
-          MessageFactory::send_error_message(message, TBSYS_LOG_LEVEL(ERROR), ret, data_server_info_.id_,
+          message->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret,
               "block not exist, blockid: %u", block_id);
         }
         else
         {
           try_add_repair_task(block_id, ret);
-          MessageFactory::send_error_message(message, TBSYS_LOG_LEVEL(WARN), ret, data_server_info_.id_,
+          message->reply_error_packet(TBSYS_LOG_LEVEL(WARN), ret, 
               "file unlink fail, blockid: %u, fileid: %" PRI64_PREFIX "u, ret: %d", block_id, file_id, ret);
         }
       }
@@ -1419,7 +1422,7 @@ namespace tfs
           post_message_to_server(message, message->get_ds_list());
         }
 
-        message->reply_message(new StatusMessage(STATUS_MESSAGE_OK));
+        message->reply(new StatusMessage(STATUS_MESSAGE_OK));
 
         //sync log
         if (is_master && 0 == (option_flag & TFS_FILE_NO_SYNC_LOG))
@@ -1454,11 +1457,11 @@ namespace tfs
       int ret = data_management_.batch_new_block(new_blocks);
       if (TFS_SUCCESS != ret)
       {
-        return MessageFactory::send_error_message(message, TBSYS_LOG_LEVEL(ERROR), ret, data_server_info_.id_,
+        return message->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret, 
             "newblock error, ret: %d", ret);
       }
 
-      message->reply_message(new StatusMessage(STATUS_MESSAGE_OK));
+      message->reply(new StatusMessage(STATUS_MESSAGE_OK));
       return TFS_SUCCESS;
     }
 
@@ -1472,7 +1475,7 @@ namespace tfs
       int ret = data_management_.batch_remove_block(remove_blocks);
       if (TFS_SUCCESS != ret)
       {
-        return MessageFactory::send_error_message(message, TBSYS_LOG_LEVEL(ERROR), ret, data_server_info_.id_,
+        return message->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret, 
             "removeblock error, ret: %d", ret);
       }
 
@@ -1480,11 +1483,11 @@ namespace tfs
       {
         RemoveBlockResponseMessage* msg = new RemoveBlockResponseMessage();
         msg->set_block_id(*remove_blocks->begin());
-        message->reply_message(msg); 
+        message->reply(msg); 
       }
       else
       {
-        message->reply_message(new StatusMessage(STATUS_MESSAGE_OK));
+        message->reply(new StatusMessage(STATUS_MESSAGE_OK));
       }
       return TFS_SUCCESS;
     }
@@ -1507,7 +1510,7 @@ namespace tfs
               b->destination_id_).c_str(), b->server_count_, tbsys::CNetUtil::addrToString(peer_id).c_str());
       repl_block_->add_repl_task(b);
 
-      message->reply_message(new StatusMessage(STATUS_MESSAGE_OK));
+      message->reply(new StatusMessage(STATUS_MESSAGE_OK));
       return TFS_SUCCESS;
     }
 
@@ -1523,7 +1526,7 @@ namespace tfs
 
       TBSYS_LOG(INFO, "receive compact cmd. blockid: %u, owner: %d, preserve_time: %d, haverb: %d, peer_id: %s\n",
           cblk->block_id_, cblk->owner_, cblk->preserve_time_, ret, tbsys::CNetUtil::addrToString(peer_id).c_str());
-      message->reply_message(new StatusMessage(STATUS_MESSAGE_OK));
+      message->reply(new StatusMessage(STATUS_MESSAGE_OK));
       return TFS_SUCCESS;
     }
 
@@ -1550,7 +1553,7 @@ namespace tfs
       memcpy(packet_data, tmp_data_buffer, bit_map_len);
       resp_lbm_msg->set_length(bit_map_len);
       resp_lbm_msg->set_use_count(set_count);
-      message->reply_message(resp_lbm_msg);
+      message->reply(resp_lbm_msg);
       tbsys::gDeleteA(tmp_data_buffer);
       return TFS_SUCCESS;
     }
@@ -1575,7 +1578,7 @@ namespace tfs
         resp_lb_msg->set_infos(list_type, &block_2_info);
       }
 
-      message->reply_message(resp_lb_msg);
+      message->reply(resp_lb_msg);
       return TFS_SUCCESS;
     }
 
@@ -1594,7 +1597,7 @@ namespace tfs
           "receive crc error cmd, blockid: %u, fileid: %" PRI64_PREFIX "u, crc: %u, flag: %d, failserver size: %d, ret: %d\n",
           check_file_item->block_id_, check_file_item->file_id_, check_file_item->crc_, check_file_item->flag_,
           check_file_item->fail_servers_.size(), ret);
-      message->reply_message(new StatusMessage(STATUS_MESSAGE_OK));
+      message->reply(new StatusMessage(STATUS_MESSAGE_OK));
 
       return TFS_SUCCESS;
     }
@@ -1608,7 +1611,7 @@ namespace tfs
       int ret = data_management_.get_block_info(block_id, blk, visit_count);
       if (TFS_SUCCESS != ret)
       {
-        return MessageFactory::send_error_message(message, TBSYS_LOG_LEVEL(ERROR), ret, data_server_info_.id_,
+        return message->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret, 
             "block is not exist, blockid: %u, ret: %d", block_id, ret);
       }
 
@@ -1618,7 +1621,7 @@ namespace tfs
       resp_ubi_msg->set_server_id(0);
       resp_ubi_msg->set_repair(visit_count);
 
-      message->reply_message(resp_ubi_msg);
+      message->reply(resp_ubi_msg);
       return TFS_SUCCESS;
     }
 
@@ -1639,7 +1642,7 @@ namespace tfs
           resp_cb_msg->add_new_id(block_vecs[i]->get_visit_count());
         }
 
-        message->reply_message(resp_cb_msg);
+        message->reply(resp_cb_msg);
         return TFS_SUCCESS;
       }
       else if (GSS_BLOCK_FILE_INFO == type)
@@ -1650,7 +1653,7 @@ namespace tfs
         int ret = data_management_.get_block_file_list(block_id, fileinfos);
         if (TFS_SUCCESS != ret)
         {
-          return MessageFactory::send_error_message(message, TBSYS_LOG_LEVEL(ERROR), ret, data_server_info_.id_,
+          return message->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret, 
               "GSS_BLOCK_FILE_INFO fail, blockid: %u, ret: %d", block_id, ret);
         }
 
@@ -1658,9 +1661,9 @@ namespace tfs
         FILE_INFO_LIST* v = resp_bfi_msg->get_fileinfo_list();
         for (uint32_t i = 0; i < fileinfos.size(); ++i)
         {
-          v->push_back(&(fileinfos[i]));
+          v->push_back((fileinfos[i]));
         }
-        message->reply_message(resp_bfi_msg);
+        message->reply(resp_bfi_msg);
         return TFS_SUCCESS;
       }
       else if (GSS_BLOCK_RAW_META_INFO == type)
@@ -1671,14 +1674,14 @@ namespace tfs
         int ret = data_management_.get_block_meta_info(block_id, meta_vec);
         if (TFS_SUCCESS != ret)
         {
-          return MessageFactory::send_error_message(message, TBSYS_LOG_LEVEL(ERROR), ret, data_server_info_.id_,
+          return message->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret, 
               "GSS_BLOCK_RAW_META_INFO fail, blockid: %u, ret: %d", block_id, ret);
         }
 
         BlockRawMetaMessage* resp_brm_msg = new BlockRawMetaMessage();
         RawMetaVec* v = resp_brm_msg->get_raw_meta_list();
         v->assign(meta_vec.begin(), meta_vec.end());
-        message->reply_message(resp_brm_msg);
+        message->reply(resp_brm_msg);
         return TFS_SUCCESS;
       }
       else if (GSS_CLIENT_ACCESS_INFO == type)
@@ -1693,11 +1696,11 @@ namespace tfs
         result_message->set_return_row(message->get_return_row());
         result_message->set(acs_.get_stat());
 
-        message->reply_message(result_message);
+        message->reply(result_message);
         return TFS_SUCCESS;
       }
 
-      return MessageFactory::send_error_message(message, TBSYS_LOG_LEVEL(ERROR), data_server_info_.id_,
+      return message->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), STATUS_MESSAGE_ERROR,
           "get server status type unsupport: %d", type);
     }
 
@@ -1752,16 +1755,17 @@ namespace tfs
         }
       }
       while (0);
-      message->reply_message(resp);
+      message->reply(resp);
       return TFS_SUCCESS;
     }
 
     int DataService::reload_config(ReloadConfigMessage* message)
     {
       int ret = TFS_SUCCESS;
-      if ((ret = SysParam::instance().load_data_server(CONFIG.get_config_file_name(), server_index_)) != TFS_SUCCESS)
+      //TODO if ((ret = SysParam::instance().load_data_server(CONFIG.get_config_file_name(), server_index_)) != TFS_SUCCESS)
+      if(true)
       {
-        TBSYS_LOG(ERROR, "reload config sysparam load failed: %s\n", CONFIG.get_config_file_name().c_str());
+        //TODO TBSYS_LOG(ERROR, "reload config sysparam load failed: %s\n", CONFIG.get_config_file_name().c_str());
         return ret;
       }
       if (message->get_switch_cluster_flag() && sync_mirror_)
@@ -1775,7 +1779,7 @@ namespace tfs
       }
 
       TBSYS_LOG(INFO, "reload config ret: %d\n", ret);
-      message->reply_message(new StatusMessage(STATUS_MESSAGE_OK));
+      message->reply(new StatusMessage(STATUS_MESSAGE_OK));
       return TFS_SUCCESS;
     }
 
@@ -1785,7 +1789,7 @@ namespace tfs
       if (STATUS_MESSAGE_PING == message->get_status())
       {
         StatusMessage *statusmessage = new StatusMessage(STATUS_MESSAGE_PING);
-        message->reply_message(statusmessage);
+        message->reply(statusmessage);
       }
       else
       {
@@ -1800,11 +1804,11 @@ namespace tfs
       int ret = data_management_.reset_block_version(block_id);
       if (TFS_SUCCESS != ret)
       {
-        return MessageFactory::send_error_message(message, TBSYS_LOG_LEVEL(ERROR), ret, data_server_info_.id_,
+        return message->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret,
             "reset block version fail, blockid: %u", block_id);
       }
 
-      message->reply_message(new StatusMessage(STATUS_MESSAGE_OK));
+      message->reply(new StatusMessage(STATUS_MESSAGE_OK));
       return TFS_SUCCESS;
     }
 
@@ -1814,7 +1818,7 @@ namespace tfs
       int32_t msg_len = message->get_length();
       int32_t data_offset = message->get_offset();
       int32_t new_flag = message->get_new_block();
-      char* data_buffer = message->get_data();
+      const char* data_buffer = message->get_data();
       uint64_t peer_id = message->get_connection()->getPeerId();
 
       TBSYS_LOG(DEBUG, "writeblockdatafile start, blockid: %u, len: %d, offset: %d, new flag: %d, peer id: %s",
@@ -1826,7 +1830,7 @@ namespace tfs
         ret = data_management_.new_single_block(block_id);
         if (TFS_SUCCESS != ret)
         {
-          return MessageFactory::send_error_message(message, TBSYS_LOG_LEVEL(ERROR), ret, data_server_info_.id_,
+          return message->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret, 
               "write data batch fail, blockid: %u, ret: %d", block_id, ret);
         }
 
@@ -1837,18 +1841,18 @@ namespace tfs
       ret = data_management_.write_raw_data(block_id, data_offset, msg_len, data_buffer);
       if (TFS_SUCCESS != ret)
       {
-        return MessageFactory::send_error_message(message, TBSYS_LOG_LEVEL(ERROR), ret, data_server_info_.id_,
+        return message->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret, 
             "write data batch fail, blockid: %u, ret: %d", block_id, ret);
       }
 
-      message->reply_message(new StatusMessage(STATUS_MESSAGE_OK));
+      message->reply(new StatusMessage(STATUS_MESSAGE_OK));
       return TFS_SUCCESS;
     }
 
     int DataService::batch_write_info(WriteInfoBatchMessage* message)
     {
       uint32_t block_id = message->get_block_id();
-      BlockInfo* blk = message->get_block_info();
+      const BlockInfo* blk = message->get_block_info();
       const RawMetaVec* raw_metas = message->get_raw_meta_list();
       uint64_t peer_id = message->get_connection()->getPeerId();
 
@@ -1857,7 +1861,7 @@ namespace tfs
       int ret = data_management_.batch_write_meta(block_id, blk, raw_metas);
       if (TFS_SUCCESS != ret)
       {
-        return MessageFactory::send_error_message(message, TBSYS_LOG_LEVEL(ERROR), ret, data_server_info_.id_,
+        return message->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret, 
             "write block fileinfo fail, blockid: %u, ret: %d", block_id, ret);
       }
 
@@ -1867,7 +1871,7 @@ namespace tfs
         ret = ds_requester_.req_update_block_info(block_id);
         if (TFS_SUCCESS != ret)
         {
-          return MessageFactory::send_error_message(message, TBSYS_LOG_LEVEL(ERROR), ret, data_server_info_.id_,
+          return message->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret, 
               "write block FileInfo fail: update block, blockid: %u, ret: %d", block_id, ret);
         }
       }
@@ -1876,7 +1880,7 @@ namespace tfs
       repl_block_->del_cloned_block_map(block_id);
 
       TBSYS_LOG(DEBUG, "write block fileinfo successful, blockid: %u", block_id);
-      message->reply_message(new StatusMessage(STATUS_MESSAGE_OK));
+      message->reply(new StatusMessage(STATUS_MESSAGE_OK));
       return TFS_SUCCESS;
     }
 
@@ -1906,69 +1910,71 @@ namespace tfs
           req_sds_msg.add_block((*lit)->get_block_info());
         }
       }
-
-      Message *message = hb_client_[who]->call(&req_sds_msg);
-      if (NULL != message)
+      tbnet::Packet* message = NULL;
+      NewClient* client = NewClientManager::get_instance().create_client();
+      if (NULL != client)
       {
-        if (RESP_HEART_MESSAGE == message->get_message_type())
+        if (TFS_SUCCESS == send_msg_to_server(hb_ip_port_[who], client, &req_sds_msg, message))
         {
-          RespHeartMessage* resp_hb_msg = dynamic_cast<RespHeartMessage*>(message);
-          if (reset_need_send_blockinfo_flag
-             && need_send_blockinfo_[who])
+          if (RESP_HEART_MESSAGE == message->getPCode())
           {
-            need_send_blockinfo_[who] = 0;
-          }
-          if (resp_hb_msg->get_status() == HEART_NEED_SEND_BLOCK_INFO)
-          {
-            TBSYS_LOG(DEBUG, "nameserver %d ask for send block\n", who + 1);
-            need_send_blockinfo_[who] = 1;
-          }
-          else if (resp_hb_msg->get_status() == HEART_EXP_BLOCK_ID)
-          {
-            TBSYS_LOG(INFO, "nameserver %d ask for expire block\n", who + 1);
-            data_management_.add_new_expire_block(resp_hb_msg->get_expire_blocks(), NULL, resp_hb_msg->get_new_blocks());
-          }
+            RespHeartMessage* resp_hb_msg = dynamic_cast<RespHeartMessage*>(message);
+            if (reset_need_send_blockinfo_flag
+                && need_send_blockinfo_[who])
+            {
+              need_send_blockinfo_[who] = 0;
+            }
+            if (resp_hb_msg->get_status() == HEART_NEED_SEND_BLOCK_INFO)
+            {
+              TBSYS_LOG(DEBUG, "nameserver %d ask for send block\n", who + 1);
+              need_send_blockinfo_[who] = 1;
+            }
+            else if (resp_hb_msg->get_status() == HEART_EXP_BLOCK_ID)
+            {
+              TBSYS_LOG(INFO, "nameserver %d ask for expire block\n", who + 1);
+              data_management_.add_new_expire_block(resp_hb_msg->get_expire_blocks(), NULL, resp_hb_msg->get_new_blocks());
+            }
 
-          int32_t old_sync_mirror_status = sync_mirror_status_;
-          sync_mirror_status_ = resp_hb_msg->get_sync_mirror_status();
+            int32_t old_sync_mirror_status = sync_mirror_status_;
+            sync_mirror_status_ = resp_hb_msg->get_sync_mirror_status();
 
-          if (old_sync_mirror_status != sync_mirror_status_)
-          {
-            //has modified
-            if ((sync_mirror_status_ & 1))
+            if (old_sync_mirror_status != sync_mirror_status_)
             {
-              TBSYS_LOG(ERROR, "sync pause.");
-              sync_mirror_->set_pause(1);
+              //has modified
+              if ((sync_mirror_status_ & 1))
+              {
+                TBSYS_LOG(ERROR, "sync pause.");
+                sync_mirror_->set_pause(1);
+              }
+              if ((sync_mirror_status_ & 3) == 2)
+              {
+                TBSYS_LOG(ERROR, "sync start.");
+                sync_mirror_->set_pause(0);
+              }
+              if ((sync_mirror_status_ & 4))
+              {
+                TBSYS_LOG(ERROR, "sync disable log.");
+                sync_mirror_->disable_log();
+              }
+              if ((sync_mirror_status_ & 12) == 8)
+              {
+                TBSYS_LOG(ERROR, "sync reset log.");
+                sync_mirror_->reset_log();
+              }
+              if ((sync_mirror_status_ & 16))
+              {
+                TBSYS_LOG(ERROR, "sync set slave ip.");
+                sync_mirror_->reload_slave_ip();
+              }
             }
-            if ((sync_mirror_status_ & 3) == 2)
-            {
-              TBSYS_LOG(ERROR, "sync start.");
-              sync_mirror_->set_pause(0);
-            }
-            if ((sync_mirror_status_ & 4))
-            {
-              TBSYS_LOG(ERROR, "sync disable log.");
-              sync_mirror_->disable_log();
-            }
-            if ((sync_mirror_status_ & 12) == 8)
-            {
-              TBSYS_LOG(ERROR, "sync reset log.");
-              sync_mirror_->reset_log();
-            }
-            if ((sync_mirror_status_ & 16))
-            {
-              TBSYS_LOG(ERROR, "sync set slave ip.");
-              sync_mirror_->reload_slave_ip();
-            }
+
           }
-
         }
-        tbsys::gDelete(message);
+        NewClientManager::get_instance().destroy_client(client);
       }
       else
       {
-        TBSYS_LOG(ERROR, "Message is NULL");
-        hb_client_[who]->disconnect();
+        TBSYS_LOG(ERROR, "create client error");
       }
     }
 
@@ -2019,7 +2025,7 @@ namespace tfs
 
     int DataService::init_log_file(tbsys::CLogger& LOGGER, const string& log_file)
     {
-      LOGGER.setLogLevel(CONFIG.get_string_value(CONFIG_PUBLIC, CONF_LOG_LEVEL));
+      //TODO LOGGER.setLogLevel(CONFIG.get_string_value(CONFIG_PUBLIC, CONF_LOG_LEVEL));
 
       if (log_file.size() != 0 && access(log_file.c_str(), R_OK) == 0)
       {
@@ -2028,8 +2034,8 @@ namespace tfs
         rename(log_file.c_str(), old_log_file);
       }
       LOGGER.setFileName(log_file.c_str(), true);
-      LOGGER.setMaxFileSize(CONFIG.get_int_value(CONFIG_PUBLIC, CONF_LOG_SIZE, 1024 * 1024 * 1024));
-      LOGGER.setMaxFileIndex(CONFIG.get_int_value(CONFIG_PUBLIC, CONF_LOG_NUM, 30));
+      //TODO LOGGER.setMaxFileSize(CONFIG.get_int_value(CONFIG_PUBLIC, CONF_LOG_SIZE, 1024 * 1024 * 1024));
+      //TODO LOGGER.setMaxFileIndex(CONFIG.get_int_value(CONFIG_PUBLIC, CONF_LOG_NUM, 30));
       return TFS_SUCCESS;
     }
   }

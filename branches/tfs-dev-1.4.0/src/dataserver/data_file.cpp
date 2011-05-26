@@ -13,8 +13,9 @@
  *      - initial release
  *
  */
-#include "data_file.h"
 #include "common/parameter.h"
+#include "common/func.h"
+#include "data_file.h"
 
 namespace tfs
 {
@@ -39,7 +40,8 @@ namespace tfs
       crc_ = 0;
       fd_ = -1;
 
-      char* work_dir = CONFIG.get_string_value(CONFIG_DATASERVER, CONF_WORK_DIR, path);
+      char* work_dir = NULL;
+      //TODO CONFIG.get_string_value(CONFIG_DATASERVER, CONF_WORK_DIR, path);
       sprintf(tmp_file_name_, "%s/tmp/%"PRI64_PREFIX"u.dat", work_dir, fn);
       atomic_set(&ref_count_, 0);
     }

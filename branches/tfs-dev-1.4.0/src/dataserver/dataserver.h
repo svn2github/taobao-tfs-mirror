@@ -20,7 +20,6 @@
 
 #include <tbsys.h>
 #include <tbnet.h>
-#include "message/tfs_packet_streamer.h"
 #include "dataservice.h"
 
 namespace tfs
@@ -42,8 +41,8 @@ namespace tfs
         static const int32_t SPEC_LEN = 32;
 
         std::string server_index_;         // int index
-        message::MessageFactory msg_factory_;
-        message::TfsPacketStreamer packet_streamer_;
+        //message::MessageFactory msg_factory_;
+        //message::TfsPacketStreamer packet_streamer_;
         tbnet::Transport tran_sport_;
         DataService data_service_;
     };

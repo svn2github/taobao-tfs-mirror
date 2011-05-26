@@ -20,12 +20,12 @@
 #ifndef TFS_DATASERVER_BLOCKCHECKER_H_
 #define TFS_DATASERVER_BLOCKCHECKER_H_
 
+#include <Mutex.h>
 #include "logic_block.h"
 #include "dataserver_define.h"
 #include "file_repair.h"
 #include "requester.h"
-#include "common/config.h"
-#include <Mutex.h>
+//#include "common/config.h"
 
 namespace tfs
 {

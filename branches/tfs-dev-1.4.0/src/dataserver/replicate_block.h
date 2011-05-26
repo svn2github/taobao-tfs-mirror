@@ -16,13 +16,11 @@
 #ifndef TFS_DATASERVER_REPLICATEBLOCK_H_
 #define TFS_DATASERVER_REPLICATEBLOCK_H_
 
+//#include "common/config.h"
+#include "common/new_client.h"
 #include "dataserver_define.h"
 #include "blockfile_manager.h"
 #include "logic_block.h"
-#include "common/config.h"
-#include "message/message_factory.h"
-#include "message/client.h"
-#include "message/client_pool.h"
 #include <Mutex.h>
 #include <Monitor.h>
 
@@ -33,7 +31,7 @@ namespace tfs
     class ReplicateBlock
     {
       public:
-        ReplicateBlock(tbutil::Mutex* mutex, message::Client* client);
+        explicit ReplicateBlock(const uint64_t ns_ip);
         ~ReplicateBlock();
 
         void stop();
@@ -66,8 +64,7 @@ namespace tfs
         int32_t expire_cloned_interval_; // check interval
         int32_t last_expire_cloned_block_time_;
 
-        tbutil::Mutex* client_mutex_;
-        message::Client* client_;
+        uint64_t ns_ip_;
     };
 
   }
