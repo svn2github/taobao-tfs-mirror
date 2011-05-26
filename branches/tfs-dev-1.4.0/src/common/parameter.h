@@ -54,7 +54,7 @@ namespace tfs
         int32_t dump_stat_info_interval_;
         int32_t build_plan_default_wait_time_;
         int32_t balance_max_diff_block_num_;
-        char* config_log_file_;
+        const char* config_log_file_;
       };
 
       struct FileSystemParam
@@ -87,7 +87,7 @@ namespace tfs
         std::string read_stat_log_file_;
         std::string pid_file_;
         int32_t local_ds_port_;
-        char* dev_name_;
+        const char* dev_name_;
         int32_t heart_interval_;
         int32_t check_interval_;
         int32_t expire_data_file_time_;
@@ -101,10 +101,10 @@ namespace tfs
         int32_t client_thread_client_;
         int32_t server_thread_client_;
         int32_t tfs_backup_type_;
-        char* local_ns_ip_;
+        const char* local_ns_ip_;
         int32_t local_ns_port_;
-        char* slave_ns_ip_;
-        char* ns_addr_list_;
+        const char* slave_ns_ip_;
+        const char* ns_addr_list_;
         int32_t max_datafile_nums_;
         int32_t max_crc_error_nums_;
         int32_t max_eio_error_nums_;

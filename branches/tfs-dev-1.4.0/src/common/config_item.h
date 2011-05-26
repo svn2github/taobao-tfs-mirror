@@ -22,13 +22,12 @@ namespace tfs
   {
   //public
 #define CONF_SN_PUBLIC                                "public"
-//#define CONF_SN_PUBLIC                                "[public]"
-#define CONF_SN_NAMESERVER                            "[nameserver]"
-#define CONF_SN_DATASERVER                            "[dataserver]"
-#define CONF_SN_TFSCLIENT                             "[tfsclient]"
-#define CONF_SN_ADMINSERVER                           "[adminserver]"
-#define CONF_SN_MOCK_DATASERVER                       "[mockdataserver]"
-#define CONF_SN_RCSERVER                              "[rcserver]"
+#define CONF_SN_NAMESERVER                            "nameserver"
+#define CONF_SN_DATASERVER                            "dataserver"
+#define CONF_SN_TFSCLIENT                             "tfsclient"
+#define CONF_SN_ADMINSERVER                           "adminserver"
+#define CONF_SN_MOCK_DATASERVER                       "mockdataserver"
+#define CONF_SN_RCSERVER                              "rcserver"
 
 #define CONF_CLUSTER_ID                               "cluster_id"
 #define CONF_LOCK_FILE                                "lock_file"

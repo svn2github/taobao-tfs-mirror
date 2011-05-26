@@ -80,7 +80,7 @@ namespace tfs
     struct FileInfo
     {
       int deserialize(const char* data, const int64_t data_len, int64_t& pos);
-      int serialize(char* data, const int64_t data_len, int64_t& pos);
+      int serialize(char* data, const int64_t data_len, int64_t& pos) const;
       int64_t length() const;
       uint64_t id_; // file id
       int32_t offset_; // offset in block file

@@ -53,7 +53,9 @@ namespace tfs
         NewClient* create_client();
         bool destroy_client(NewClient* client);
 
-        tbnet::Packet* clone_packet(tbnet::Packet* message, const int32_t version = 2, const bool deserialize = false);
+        tbnet::Packet* clone_packet(tbnet::Packet* message, const int32_t version = TFS_PACKET_VERSION_V2, const bool deserialize = false);
+
+        tbnet::Packet* create_packet(const int32_t pcode);
 
       private:
         bool handlePacket(const WaitId& id, tbnet::Packet* response);

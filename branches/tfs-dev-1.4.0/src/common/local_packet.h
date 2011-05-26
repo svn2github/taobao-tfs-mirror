@@ -34,7 +34,7 @@ namespace tfs
         }
       }
       bool copy(LocalPacket* src, const int32_t version, const bool deserialize) { return false;}
-      int serialize(Stream& output) {return TFS_SUCCESS;}
+      int serialize(Stream& output) const {return TFS_SUCCESS;}
       int deserialize(Stream& input) {return TFS_SUCCESS;}
       int64_t length() const { return 0;}
 
@@ -49,11 +49,6 @@ namespace tfs
       }
       void set_new_client(NewClient* new_client) { new_client_ = new_client;}
       NewClient* get_new_client() const { return new_client_;}
-  
-      static BasePacket* create(int32_t pcode)
-      {
-        return new LocalPacket();
-      }
     private:
       DISALLOW_COPY_AND_ASSIGN(LocalPacket);
       NewClient* new_client_;

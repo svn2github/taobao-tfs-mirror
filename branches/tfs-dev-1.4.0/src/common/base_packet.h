@@ -36,7 +36,7 @@ namespace tfs
       int32_t length_;
       int16_t type_;
       int16_t check_;
-      int serialize(char*data, const int64_t data_len, int64_t& pos)
+      int serialize(char*data, const int64_t data_len, int64_t& pos) const
       {
         int32_t iret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
         if (TFS_SUCCESS == iret)
@@ -95,7 +95,7 @@ namespace tfs
       int32_t  length_;
       int16_t  type_;
       int16_t  version_;
-      int serialize(char*data, const int64_t data_len, int64_t& pos)
+      int serialize(char*data, const int64_t data_len, int64_t& pos) const
       {
         int32_t iret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
         if (TFS_SUCCESS == iret)
@@ -168,11 +168,18 @@ namespace tfs
       DIRECTION_SEND = 2,
       DIRECTION_MASTER_SLAVE_NS = 4
     };
+
+    enum HeartMessageStatus                                                                        
+    {
+      HEART_MESSAGE_OK = 0,
+      HEART_NEED_SEND_BLOCK_INFO = 1,
+      HEART_EXP_BLOCK_ID = 2
+    };
     enum TfsPacketVersion
     {
       TFS_PACKET_VERSION_V0 = 0,
-      TFS_PACKET_VERSION_V1,
-      TFS_PACKET_VERSION_V2
+      TFS_PACKET_VERSION_V1 = 1,
+      TFS_PACKET_VERSION_V2 = 2
     };
 
     enum MessageType
@@ -279,7 +286,7 @@ namespace tfs
       bool encode(tbnet::DataBuffer* output);
       bool decode(tbnet::DataBuffer* input, tbnet::PacketHeader* header);
 
-      virtual int serialize(Stream& output) = 0;
+      virtual int serialize(Stream& output) const = 0;
       virtual int deserialize(Stream& input) = 0;
       virtual int64_t length() const = 0;
       virtual int reply(BasePacket* packet);

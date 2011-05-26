@@ -48,9 +48,6 @@ namespace tfs
     
     BaseService::~BaseService()
     {
-      //TODO 
-      //destory packet_factory_ and streamer_
-      
 
     }
 
@@ -399,16 +396,6 @@ namespace tfs
           iret = EXIT_GENERAL_ERROR;
           snprintf(buf, 256, "%s create packet factory fail", app_name);
           error_msg = buf;
-        }
-        else
-        {
-          iret = packet_factory_->initialize();
-          if (TFS_SUCCESS != iret)
-          {
-            snprintf(buf, 256, "%s packet factory initialize fail", app_name);
-            error_msg = buf;
-            iret = EXIT_GENERAL_ERROR; 
-          }
         }
         if (TFS_SUCCESS == iret)
         {

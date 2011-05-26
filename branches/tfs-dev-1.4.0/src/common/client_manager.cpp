@@ -230,7 +230,12 @@ namespace tfs
 
     tbnet::Packet* NewClientManager::clone_packet(tbnet::Packet* message, const int32_t version, const bool deserialize)
     {
-      return factory_->clone_packet(message, version, deserialize);
+      return NULL == factory_  ? NULL : factory_->clone_packet(message, version, deserialize);
+    }
+
+    tbnet::Packet* NewClientManager::create_packet(const int32_t pcode)
+    {
+      return NULL == factory_? NULL : factory_->createPacket(pcode);
     }
 
     NewClient* NewClientManager::malloc_new_client_object(const uint32_t seq_id)

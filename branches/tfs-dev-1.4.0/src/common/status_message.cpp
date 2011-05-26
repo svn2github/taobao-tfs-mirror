@@ -52,7 +52,7 @@ namespace tfs
 
     }
 
-    int StatusMessage::serialize(Stream& output)
+    int StatusMessage::serialize(Stream& output) const
     {
       int32_t iret = output.set_int32(status_);
       if (TFS_SUCCESS == iret)
@@ -104,11 +104,6 @@ namespace tfs
     void StatusMessage::dump() const
     {
       TBSYS_LOG(DEBUG, "status: %d, error msg: %s", status_, NULL == msg_ ? "null" : msg_); 
-    }
-
-    BasePacket* StatusMessage::create(const int32_t type)
-    {
-      return new (std::nothrow) StatusMessage();
     }
 
     const char* StatusMessage::get_error() const

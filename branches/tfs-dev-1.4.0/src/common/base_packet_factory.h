@@ -26,12 +26,8 @@ namespace tfs
     public:
       BasePacketFactory(){}
       virtual ~BasePacketFactory(){}
-      virtual int initialize();
-      virtual void destroy();
       virtual tbnet::Packet* createPacket(int pcode);
       virtual tbnet::Packet* clone_packet(tbnet::Packet* packet, const int32_t version, const bool deserialize); 
-    protected:
-      BasePacket::CREATE_PACKET_MAP packet_maps_;
     };
   }
 }

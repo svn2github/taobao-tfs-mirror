@@ -237,7 +237,7 @@ namespace tfs
     struct SSMScanParameter
     {
       int deserialize(const char* data, const int64_t data_len, int64_t& pos);
-      int serialize(char* data, const int64_t data_len, int64_t& pos);
+      int serialize(char* data, const int64_t data_len, int64_t& pos) const;
       int64_t length() const;
       mutable tbnet::DataBuffer data_;
       uint32_t addition_param1_;
@@ -253,7 +253,7 @@ namespace tfs
     struct BlockInfo
     {
       int deserialize(const char* data, const int64_t data_len, int64_t& pos);
-      int serialize(char* data, const int64_t data_len, int64_t& pos);
+      int serialize(char* data, const int64_t data_len, int64_t& pos) const;
       int64_t length() const;
       uint32_t block_id_;
       int32_t version_;
@@ -303,7 +303,7 @@ namespace tfs
       }
 
       int deserialize(const char* data, const int64_t data_len, int64_t& pos);
-      int serialize(char* data, const int64_t data_len, int64_t& pos);
+      int serialize(char* data, const int64_t data_len, int64_t& pos) const;
       int64_t length() const;
       uint64_t get_key() const
       {
@@ -363,7 +363,7 @@ namespace tfs
     struct ReplBlock
     {
       int deserialize(const char* data, const int64_t data_len, int64_t& pos);
-      int serialize(char* data, const int64_t data_len, int64_t& pos);
+      int serialize(char* data, const int64_t data_len, int64_t& pos) const;
       int64_t length() const;
       uint32_t block_id_;
       uint64_t source_id_;
@@ -376,7 +376,7 @@ namespace tfs
     struct Throughput
     {
       int deserialize(const char* data, const int64_t data_len, int64_t& pos);
-      int serialize(char* data, const int64_t data_len, int64_t& pos);
+      int serialize(char* data, const int64_t data_len, int64_t& pos) const;
       int64_t length() const;
       int64_t write_byte_;
       int64_t write_file_count_;
@@ -388,7 +388,7 @@ namespace tfs
     struct DataServerStatInfo
     {
       int deserialize(const char* data, const int64_t data_len, int64_t& pos);
-      int serialize(char* data, const int64_t data_len, int64_t& pos);
+      int serialize(char* data, const int64_t data_len, int64_t& pos) const;
       int64_t length() const;
       uint64_t id_;
       int64_t use_capacity_;
@@ -405,7 +405,7 @@ namespace tfs
     struct WriteDataInfo
     {
       int deserialize(const char* data, const int64_t data_len, int64_t& pos);
-      int serialize(char* data, const int64_t data_len, int64_t& pos);
+      int serialize(char* data, const int64_t data_len, int64_t& pos) const;
       int64_t length() const;
       uint32_t block_id_;
       uint64_t file_id_;
@@ -418,7 +418,7 @@ namespace tfs
     struct CloseFileInfo
     {
       int deserialize(const char* data, const int64_t data_len, int64_t& pos);
-      int serialize(char* data, const int64_t data_len, int64_t& pos);
+      int serialize(char* data, const int64_t data_len, int64_t& pos) const;
       int64_t length() const;
       uint32_t block_id_;
       uint64_t file_id_;
@@ -430,7 +430,7 @@ namespace tfs
     struct RenameFileInfo
     {
       int deserialize(const char* data, const int64_t data_len, int64_t& pos);
-      int serialize(char* data, const int64_t data_len, int64_t& pos);
+      int serialize(char* data, const int64_t data_len, int64_t& pos) const;
       int64_t length() const;
       uint32_t block_id_;
       uint64_t file_id_;
@@ -441,7 +441,7 @@ namespace tfs
     struct ServerMetaInfo
     {
       int deserialize(const char* data, const int64_t data_len, int64_t& pos);
-      int serialize(char* data, const int64_t data_len, int64_t& pos);
+      int serialize(char* data, const int64_t data_len, int64_t& pos) const;
       int64_t length() const;
       int32_t capacity_;
       int32_t available_;
@@ -450,7 +450,7 @@ namespace tfs
     struct SegmentHead
     {
       int deserialize(const char* data, const int64_t data_len, int64_t& pos);
-      int serialize(char* data, const int64_t data_len, int64_t& pos);
+      int serialize(char* data, const int64_t data_len, int64_t& pos) const;
       int64_t length() const;
       int32_t count_;           // segment count
       int64_t size_;            // total size that segments contain
@@ -462,7 +462,7 @@ namespace tfs
     struct SegmentInfo
     {
       int deserialize(const char* data, const int64_t data_len, int64_t& pos);
-      int serialize(char* data, const int64_t data_len, int64_t& pos);
+      int serialize(char* data, const int64_t data_len, int64_t& pos) const;
       int64_t length() const;
       uint32_t block_id_;       // block id
       uint64_t file_id_;        // file id
@@ -527,7 +527,6 @@ namespace tfs
     static const int32_t BLOCKINFO_SIZE = sizeof(BlockInfo);
     static const int32_t RAW_META_SIZE = sizeof(RawMeta);
 
-    static const int32_t PORT_PER_PROCESS = 2;
     static const int32_t MAX_DEV_NAME_LEN = 64;
     static const int32_t MAX_READ_SIZE = 1048576;
 

@@ -90,7 +90,6 @@ namespace tfs
       /** push workitem to workers*/
       bool push(BasePacket* packet);
 
-    protected:
       /** get work directory*/
       const char* get_work_dir();
 

@@ -22,7 +22,7 @@ namespace tfs
 {
   namespace common
   {
-    int FileInfo::serialize(char*data, const int64_t data_len, int64_t& pos)
+    int FileInfo::serialize(char* data, const int64_t data_len, int64_t& pos) const
     {
       int32_t iret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
       if (TFS_SUCCESS == iret)
@@ -103,7 +103,7 @@ namespace tfs
       return INT64_SIZE  + INT_SIZE  * 7;
     }
 
-    int SSMScanParameter::serialize(char*data, const int64_t data_len, int64_t& pos )
+    int SSMScanParameter::serialize(char* data, const int64_t data_len, int64_t& pos ) const
     {
       int32_t iret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
       if (TFS_SUCCESS == iret)
@@ -200,7 +200,7 @@ namespace tfs
       return INT_SIZE * 6 + data_.getDataLen();
     }
 
-    int BlockInfo::serialize(char* data, const int64_t data_len, int64_t& pos)
+    int BlockInfo::serialize(char* data, const int64_t data_len, int64_t& pos) const
     {
       int32_t iret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
       if (TFS_SUCCESS == iret)
@@ -272,13 +272,6 @@ namespace tfs
     {
       return INT_SIZE * 7;
     }
-      uint64_t fileid_;
-      struct
-      {
-        int32_t inner_offset_;
-        int32_t size_;
-      } location_;
- 
     int RawMeta::deserialize(const char* data, const int64_t data_len, int64_t& pos)
     {
 
@@ -297,7 +290,7 @@ namespace tfs
       }
       return iret;
     }
-    int RawMeta::serialize(char* data, const int64_t data_len, int64_t& pos)
+    int RawMeta::serialize(char* data, const int64_t data_len, int64_t& pos) const
     {
       int32_t iret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
       if (TFS_SUCCESS == iret)
@@ -319,7 +312,7 @@ namespace tfs
       return INT64_SIZE + INT_SIZE * 2;
     }
 
-    int ReplBlock::serialize(char* data, const int64_t data_len, int64_t& pos)
+    int ReplBlock::serialize(char* data, const int64_t data_len, int64_t& pos) const
     {
       int32_t iret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
       if (TFS_SUCCESS == iret)
@@ -405,7 +398,7 @@ namespace tfs
       }
       return iret;
     }
-    int Throughput::serialize(char* data, const int64_t data_len, int64_t& pos)
+    int Throughput::serialize(char* data, const int64_t data_len, int64_t& pos) const
     {
       int32_t iret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
       if (TFS_SUCCESS == iret)
@@ -476,7 +469,7 @@ namespace tfs
       }
       return iret;
     }
-    int DataServerStatInfo::serialize(char* data, const int64_t data_len, int64_t& pos)
+    int DataServerStatInfo::serialize(char* data, const int64_t data_len, int64_t& pos) const
     {
       int32_t iret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
       if (TFS_SUCCESS == iret)
@@ -554,7 +547,7 @@ namespace tfs
       }
       return iret;
     }
-    int WriteDataInfo::serialize(char* data, const int64_t data_len, int64_t& pos)
+    int WriteDataInfo::serialize(char* data, const int64_t data_len, int64_t& pos) const
     {
       int32_t iret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
       if (TFS_SUCCESS == iret)
@@ -613,7 +606,7 @@ namespace tfs
       }
       return iret;
     }
-    int CloseFileInfo::serialize(char* data, const int64_t data_len, int64_t& pos)
+    int CloseFileInfo::serialize(char* data, const int64_t data_len, int64_t& pos) const
     {
       int32_t iret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
       if (TFS_SUCCESS == iret)
@@ -665,7 +658,7 @@ namespace tfs
       return iret;
     }
 
-    int RenameFileInfo::serialize(char* data, const int64_t data_len, int64_t& pos)
+    int RenameFileInfo::serialize(char* data, const int64_t data_len, int64_t& pos) const
     {
       int32_t iret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
       if (TFS_SUCCESS == iret)
@@ -703,7 +696,7 @@ namespace tfs
       }
       return iret;
     }
-    int ServerMetaInfo::serialize(char* data, const int64_t data_len, int64_t& pos)
+    int ServerMetaInfo::serialize(char* data, const int64_t data_len, int64_t& pos) const
     {
       int32_t iret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
       if (TFS_SUCCESS == iret)
@@ -735,7 +728,7 @@ namespace tfs
       return iret;
  
     }
-    int SegmentHead::serialize(char* data, const int64_t data_len, int64_t& pos)
+    int SegmentHead::serialize(char* data, const int64_t data_len, int64_t& pos) const
     {
       int32_t iret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
       if (TFS_SUCCESS == iret)
@@ -777,7 +770,7 @@ namespace tfs
       }
       return iret;
     }
-    int SegmentInfo::serialize(char* data, const int64_t data_len, int64_t& pos)
+    int SegmentInfo::serialize(char* data, const int64_t data_len, int64_t& pos) const
     {
       int32_t iret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
       if (TFS_SUCCESS == iret)

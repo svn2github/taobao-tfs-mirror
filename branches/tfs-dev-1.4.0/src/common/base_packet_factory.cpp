@@ -20,28 +20,20 @@ namespace tfs
 {
   namespace common 
   {
-    int BasePacketFactory::initialize()
-    {
-      packet_maps_[LOCAL_PACKET] = LocalPacket::create;
-      packet_maps_[STATUS_MESSAGE] = StatusMessage::create;
-      return TFS_SUCCESS;
-    }
-
-    void BasePacketFactory::destroy()
-    {
-      packet_maps_.clear();
-    }
-
     tbnet::Packet* BasePacketFactory::createPacket(int pcode)
     {
+      tbnet::Packet* packet = NULL;
       int real_pcode = (pcode & 0xFFFF);
-      BasePacket::CREATE_PACKET_MAP_ITER iter = packet_maps_.find(real_pcode);
-      if (iter == packet_maps_.end())
+      switch (real_pcode)
       {
-        TBSYS_LOG(ERROR, "create packet error, pcode: %d", pcode);
-        return NULL;
+      case LOCAL_PACKET:
+        packet = new LocalPacket();
+        break;
+      case STATUS_MESSAGE:
+        packet = new StatusMessage();
+        break;
       }
-      return (iter->second)(real_pcode);
+      return NULL;
     }
 
     tbnet::Packet* BasePacketFactory::clone_packet(tbnet::Packet* packet, const int32_t version, const bool deserialize)
