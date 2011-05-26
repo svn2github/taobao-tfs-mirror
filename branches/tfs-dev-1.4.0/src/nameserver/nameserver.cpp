@@ -116,7 +116,7 @@ namespace tfs
     int NameServer::initialize(int argc, char* argv[])
     {
       int32_t iret =  SYSPARAM_NAMESERVER.initialize();
-      if (TFS_SUCCESS == iret)
+      if (TFS_SUCCESS != iret)
       {
         TBSYS_LOG(ERROR, "%s", "initialize nameserver parameter error, must be exit");
         iret = EXIT_GENERAL_ERROR;
@@ -254,10 +254,6 @@ namespace tfs
       }
       ngi.destroy_flag_ = NS_DESTROY_FLAGS_YES;
 
-      get_timer()->cancel(master_heart_task_);
-      get_timer()->cancel(slave_heart_task_);
-      get_timer()->cancel(check_owner_is_master_task_);
-      GFactory::get_timer()->cancel(owner_check_task_);
       GFactory::destroy();
       heart_mgr_.destroy();
       master_slave_heart_mgr_.destroy();
@@ -668,7 +664,6 @@ namespace tfs
       int32_t iret = GFactory::initialize();
       if (TFS_SUCCESS == iret)
       {
-        TBSYS_LOG(DEBUG, "%s", TBSYS_CONFIG.toString().c_str());
         const char* ns_ip = TBSYS_CONFIG.getString(CONF_SN_NAMESERVER, CONF_IP_ADDR_LIST);
         if (NULL == ns_ip)
         {

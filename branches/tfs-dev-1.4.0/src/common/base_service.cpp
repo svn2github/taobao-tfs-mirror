@@ -263,6 +263,10 @@ namespace tfs
           error_msg = buf;
         }
       }
+      if (TFS_SUCCESS != iret)
+      {
+        destroy();
+      }
       return iret;
     }
 

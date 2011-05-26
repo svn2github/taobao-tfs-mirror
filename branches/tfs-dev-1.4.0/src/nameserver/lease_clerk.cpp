@@ -442,17 +442,20 @@ namespace tfs
 
     int LeaseFactory::wait_for_shut_down()
     {
-      for (int32_t i = 0; i < clerk_num_; i++)
+      if (NULL != clerk_)
       {
-        clerk_[i] = 0;
+        for (int32_t i = 0; i < clerk_num_; i++)
+        {
+          clerk_[i] = 0;
+        }
+        tbsys::gDeleteA(clerk_);
       }
-      tbsys::gDeleteA(clerk_);
       return TFS_SUCCESS;
     }
 
     void LeaseFactory::destroy()
     {
-      if (clerk_ != NULL)
+      if (NULL != clerk_)
       {
         bool check_time = false;
         bool force = true;
