@@ -33,7 +33,6 @@ TfsClientImpl::TfsClientImpl() : is_init_(false), default_tfs_session_(NULL), fd
   packet_factory_(NULL), packet_streamer_(NULL)
 {
   packet_factory_ = new BasePacketFactory();
-  packet_factory_->initialize();
   packet_streamer_ = new BasePacketStreamer(packet_factory_);
 }
 
