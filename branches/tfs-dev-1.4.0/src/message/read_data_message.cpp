@@ -189,21 +189,6 @@ namespace tfs
     {
     }
 
-    int ReadDataMessageV2::deserialize(common::Stream& input)
-    {
-      return ReadDataMessage::deserialize(input);
-    }
-
-    int64_t ReadDataMessageV2::length() const
-    {
-      return ReadDataMessage::length();
-    }
-
-    int ReadDataMessageV2::serialize(common::Stream& output) const 
-    {
-      return ReadDataMessage::serialize(output);
-    }
-
     RespReadDataMessageV2::RespReadDataMessageV2():
       RespReadDataMessage()
     {
@@ -268,6 +253,26 @@ namespace tfs
         }
       }
       return iret;
+    }
+
+    ReadDataMessageV3::ReadDataMessageV3()
+    {
+      _packetHeader._pcode = common::READ_DATA_MESSAGE_V3;
+    }
+
+    ReadDataMessageV3::~ReadDataMessageV3()
+    {
+
+    }
+
+    RespReadDataMessageV3::RespReadDataMessageV3()
+    {
+      _packetHeader._pcode = common::RESP_READ_DATA_MESSAGE_V3;
+    }
+
+    RespReadDataMessageV3::~RespReadDataMessageV3()
+    {
+
     }
 
     ReadRawDataMessage::ReadRawDataMessage():

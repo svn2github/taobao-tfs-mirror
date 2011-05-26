@@ -269,9 +269,9 @@ namespace tfs
         {
           remove_blocks_ = remove_blocks;
         }
-        inline const common::VUINT* get_remove_blocks() const
+        inline const common::VUINT& get_remove_blocks() const
         {
-          return &remove_blocks_;
+          return remove_blocks_;
         }
       protected:
         common::VUINT32 remove_blocks_;
