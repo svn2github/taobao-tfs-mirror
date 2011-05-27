@@ -190,7 +190,7 @@ namespace tfs
     #else
     private:
     #endif
-      // DISALLOW_COPY_AND_ASSIGN(Buffer);
+      DISALLOW_COPY_AND_ASSIGN(Buffer);
       static const int16_t DEFAULT_MALLOC_SIZE = 256;//bytes
       static const int16_t SHRINK_BUFFER_SIZE = 2048;//2KB
       static const int8_t EXPAND_MULTIPLE = 1;

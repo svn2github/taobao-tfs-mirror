@@ -41,6 +41,5 @@ int64_t ClientConfig::stat_interval_ = 60000;    // 1min
 int64_t ClientConfig::gc_interval_ = 43200000;  // 12h
 int64_t ClientConfig::expired_time_ = 86400000; // 1 days
 // timeout unit: inner use us, but ms in outside
-// TODO: change to new ClientManager, unify
 int64_t ClientConfig::batch_timeout_ = 3000000; // 3s wait several response timeout
 int64_t ClientConfig::wait_timeout_ = 3000000;  // 3s wait single response timeout
