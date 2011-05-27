@@ -66,37 +66,29 @@ int TfsClientImpl::initialize(const char* ns_addr, const int32_t cache_time, con
   {
     TBSYS_LOG(INFO, "tfsclient already initialized");
   }
+  else if (NULL == ns_addr)
+  {
+    TBSYS_LOG(ERROR, "tfsclient initialize need ns ip");
+    ret = TFS_ERROR;
+  }
+  else if (TFS_SUCCESS != (ret = NewClientManager::get_instance().initialize(packet_factory_, packet_streamer_)))
+  {
+    TBSYS_LOG(ERROR, "initialize NewClientManager fail, must exit, ret: %d", ret);
+  }
+  else if (NULL == (default_tfs_session_ = SESSION_POOL.get(ns_addr, cache_time, cache_items)))
+  {
+    TBSYS_LOG(ERROR, "tfsclient initialize to ns %s failed. must exit", ns_addr);
+    ret = TFS_ERROR;
+  }
+  else if ((ret = BgTask::initialize()) != TFS_SUCCESS)
+  {
+    TBSYS_LOG(ERROR, "start bg task fail, must exit. ret: %d", ret);
+  }
   else
   {
-    if (NULL == ns_addr)
-    {
-      TBSYS_LOG(ERROR, "tfsclient initialize need ns ip");
-      ret = TFS_ERROR;
-    }
-    else
-    {
-      if (NULL == (default_tfs_session_ = SESSION_POOL.get(ns_addr, cache_time, cache_items)))
-      {
-        TBSYS_LOG(ERROR, "tfsclient initialize to ns %s failed. must exit", ns_addr);
-        ret = TFS_ERROR;
-      }
-      else if ((ret = BgTask::initialize()) != TFS_SUCCESS)
-      {
-        TBSYS_LOG(ERROR, "start bg task fail, ret: %d", ret);
-      }
-      else
-      {
-        if (TFS_SUCCESS != (ret = NewClientManager::get_instance().initialize(packet_factory_, packet_streamer_)))
-        {
-          TBSYS_LOG(ERROR, "initialize NewClientManager fail, ret: %d", ret);
-        }
-        else
-        {
-          is_init_ = true;
-        }
-      }
-    }
+    is_init_ = true;
   }
+
   return ret;
 }
 
