@@ -32,7 +32,7 @@ namespace tfs
     static const int EXIT_INVALID_ARGU_ERROR = -1007;
     static const int32_t EXIT_NOT_PERM_OPER = -1008;
     static const int32_t EXIT_NOT_OPEN_ERROR = -1009;
-    static const int32_t EXIIT_CHECK_CRC_ERROR = -1010;
+    static const int32_t EXIT_CHECK_CRC_ERROR = -1010;
     static const int32_t EXIT_SERIALIZE_ERROR = -1011;
     static const int32_t EXIT_DESERIALIZE_ERROR = -1012;
     const int32_t EXIT_ACCESS_PERMISSION_ERROR = -1013; //access permission error
