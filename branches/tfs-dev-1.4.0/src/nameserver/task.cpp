@@ -97,6 +97,7 @@ namespace tfs
       stream.writeInt32(block_id_);
       stream.writeInt64(begin_time_);
       stream.writeInt64(end_time_);
+      stream.writeInt64(seqno_);
       stream.writeInt8(runer_.size());
       std::vector<ServerCollect*>::iterator iter = runer_.begin();
       for (; iter != runer_.end(); ++iter)
@@ -116,9 +117,10 @@ namespace tfs
       }
       if (level <= TBSYS_LOGGER._level)
       {
-        TBSYS_LOGGER.logMessage(level, __FILE__, __LINE__, __FUNCTION__, "pointer%p, %s plan seqno: %"PRI64_PREFIX"d, type: %s ,status: %s, priority: %s , block_id: %u, begin: %"PRI64_PREFIX"d, end: %"PRI64_PREFIX"d, runer: %s",
+        TBSYS_LOGGER.logMessage(level, __FILE__, __LINE__, __FUNCTION__, "pointer %p, %s plan seqno: %"PRI64_PREFIX"d, type: %s ,status: %s, priority: %s , block_id: %u, begin: %"PRI64_PREFIX"d, end: %"PRI64_PREFIX"d, runer: %s",
             this,
             format == NULL ? "" : format,
+            seqno_,
             type_ == PLAN_TYPE_REPLICATE ? "replicate" : type_ == PLAN_TYPE_MOVE ? "move" : type_ == PLAN_TYPE_COMPACT
             ? "compact" : type_ == PLAN_TYPE_DELETE ? "delete" : "unknow",
             status_ == PLAN_STATUS_BEGIN ? "begin" : status_ == PLAN_STATUS_TIMEOUT ? "timeout" : status_ == PLAN_STATUS_END
@@ -221,6 +223,7 @@ namespace tfs
       {
         TBSYS_LOGGER.logMessage(level, __FILE__, __LINE__, __FUNCTION__, "%s plan seqno: %"PRI64_PREFIX"d, type: %s ,status: %s, priority: %s , block_id: %u, begin: %"PRI64_PREFIX"d, end: %"PRI64_PREFIX"d, runer: %s, complete status: %s",
             format == NULL ? "" : format,
+            seqno_,
             type_ == PLAN_TYPE_REPLICATE ? "replicate" : type_ == PLAN_TYPE_MOVE ? "move" : type_ == PLAN_TYPE_COMPACT
             ? "compact" : type_ == PLAN_TYPE_DELETE ? "delete" : "unknow",
             status_ == PLAN_STATUS_BEGIN ? "begin" : status_ == PLAN_STATUS_TIMEOUT ? "timeout" : status_ == PLAN_STATUS_END

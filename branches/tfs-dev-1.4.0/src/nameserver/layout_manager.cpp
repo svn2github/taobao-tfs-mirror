@@ -1049,7 +1049,7 @@ namespace tfs
       int32_t iret = NULL != client ? TFS_SUCCESS : TFS_ERROR;
       if (TFS_SUCCESS == iret)
       {
-        client->async_post_request(servers, &rbmsg, ns_async_callback, false);
+        client->async_post_request(servers, &rbmsg, ns_async_callback);
       }
       return iret;
 #else
@@ -1074,7 +1074,7 @@ namespace tfs
       int32_t iret = NULL != client ? TFS_SUCCESS : TFS_ERROR;
       if (TFS_SUCCESS == iret)
       {
-        client->async_post_request(servers, &rbmsg, ns_async_callback, false);
+        client->async_post_request(servers, &rbmsg, ns_async_callback);
       }
       return iret;
 #else
@@ -1289,14 +1289,14 @@ namespace tfs
             if (TFS_SUCCESS != iret)
             {
               send_msg_fail.push_back((*iter));
-              TBSYS_LOG(ERROR, "add block(%u) on server(%s) fail",
+              TBSYS_LOG(DEBUG, "send 'New block: %u' msg to server (%s) fail",
                   block_id, CNetUtil::addrToString((*iter)->id()).c_str());
               break;
             }
             else
             {
               send_msg_success.push_back((*iter));
-              TBSYS_LOG(INFO, "add block(%u) on server(%s) successful",
+              TBSYS_LOG(DEBUG, "send 'New block: %u' msg to server (%s) successful",
                   block_id, CNetUtil::addrToString((*iter)->id()).c_str());
             }
 #endif
@@ -1333,13 +1333,19 @@ namespace tfs
                 if (success.size() != servers.size())//add block fail, rollback
                 {
                   iret = TFS_ERROR;
-                  std::string success_servers;
                   std::string needs;
+                  std::string success_servers;
                   print_servers(servers, needs);
                   print_servers(success, success_servers);
                   TBSYS_LOG(ERROR, "add block: %u fail, we'll rollback, servers: %s, success: %s",
                     block_id, needs.c_str(), success_servers.c_str());
                   add_new_block_helper_rm_block(block_id, success);
+                }
+                else
+                {
+                  std::string success_servers;
+                  print_servers(success, success_servers);
+                  TBSYS_LOG(INFO, "add block: %u on servers: %s successful", block_id, success_servers.c_str());
                 }
               }
               else

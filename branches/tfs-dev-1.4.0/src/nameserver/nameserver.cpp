@@ -243,27 +243,24 @@ namespace tfs
     int NameServer::destroy_service()
     {
       NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
-      if (ngi.destroy_flag_ == NS_DESTROY_FLAGS_YES)
+      if (ngi.destroy_flag_ != NS_DESTROY_FLAGS_YES)
       {
-        return TFS_SUCCESS;
+        {
+          tbutil::Mutex::Lock lock(ngi);
+          ngi.owner_status_ = NS_STATUS_UNINITIALIZE;
+          ngi.destroy_flag_ = NS_DESTROY_FLAGS_YES;
+        }
+
+        GFactory::destroy();
+        heart_mgr_.destroy();
+        master_slave_heart_mgr_.destroy();
+        meta_mgr_.destroy();
+
+        heart_mgr_.wait_for_shut_down();
+        master_slave_heart_mgr_.wait_for_shut_down();
+        meta_mgr_.wait_for_shut_down();
+        GFactory::wait_for_shut_down();
       }
-
-      {
-        tbutil::Mutex::Lock lock(ngi);
-        ngi.owner_status_ = NS_STATUS_UNINITIALIZE;
-      }
-      ngi.destroy_flag_ = NS_DESTROY_FLAGS_YES;
-
-      GFactory::destroy();
-      heart_mgr_.destroy();
-      master_slave_heart_mgr_.destroy();
-      meta_mgr_.destroy();
-
-      heart_mgr_.wait_for_shut_down();
-      master_slave_heart_mgr_.wait_for_shut_down();
-      meta_mgr_.wait_for_shut_down();
-      GFactory::wait_for_shut_down();
-
       return TFS_SUCCESS;
     }
 
@@ -274,7 +271,7 @@ namespace tfs
       bool bret = NULL != connection && NULL != packet;
       if (bret)
       {
-        TBSYS_LOG(DEBUG, "packet code : %d", packet->getPCode());
+        TBSYS_LOG(DEBUG, "receive pcode : %d", packet->getPCode());
         if (!packet->isRegularPacket())
         {
           bret = false;
@@ -339,44 +336,48 @@ namespace tfs
       bool bret = BaseService::handlePacketQueue(packet, args);
       if (bret)
       {
-        int32_t iret = common::TFS_ERROR;
-        common::BasePacket* msg = dynamic_cast<common::BasePacket*>(packet);
         int32_t pcode = packet->getPCode();
-        switch (pcode)
+        int32_t iret = LOCAL_PACKET == pcode ? TFS_ERROR : common::TFS_SUCCESS;
+        if (TFS_SUCCESS == iret)
         {
-          case GET_BLOCK_INFO_MESSAGE:
-            iret = open(msg);
-            break;
-          case BLOCK_WRITE_COMPLETE_MESSAGE:
-            iret = close(msg);
-            break;
-          case REPLICATE_BLOCK_MESSAGE:
-          case BLOCK_COMPACT_COMPLETE_MESSAGE:
-          case REMOVE_BLOCK_RESPONSE_MESSAGE:
-          case DUMP_PLAN_MESSAGE:
-          case CLIENT_CMD_MESSAGE:
-            iret = meta_mgr_.handle(msg);
-            break;
-          case UPDATE_BLOCK_INFO_MESSAGE:
-            iret = update_block_info(msg);
-            break;
-          case SHOW_SERVER_INFORMATION_MESSAGE:
-            iret = show_server_information(msg);
-            break;
-          case OWNER_CHECK_MESSAGE:
-            iret = owner_check(msg);
-            break;
-          case STATUS_MESSAGE:
-            iret = ping(msg);
-            break;
-         default:
-            iret = EXIT_UNKNOWN_MSGTYPE;
-            TBSYS_LOG(ERROR, "unknown msg type: %d", pcode);
-            break;
-        }
-        if (common::TFS_SUCCESS != iret)
-        {
-          msg->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), iret, "execute message failed");
+          TBSYS_LOG(DEBUG, "PCODE: %d", pcode);
+          common::BasePacket* msg = dynamic_cast<common::BasePacket*>(packet);
+          switch (pcode)
+          {
+            case GET_BLOCK_INFO_MESSAGE:
+              iret = open(msg);
+              break;
+            case BLOCK_WRITE_COMPLETE_MESSAGE:
+              iret = close(msg);
+              break;
+            case REPLICATE_BLOCK_MESSAGE:
+            case BLOCK_COMPACT_COMPLETE_MESSAGE:
+            case REMOVE_BLOCK_RESPONSE_MESSAGE:
+            case DUMP_PLAN_MESSAGE:
+            case CLIENT_CMD_MESSAGE:
+              iret = meta_mgr_.handle(msg);
+              break;
+            case UPDATE_BLOCK_INFO_MESSAGE:
+              iret = update_block_info(msg);
+              break;
+            case SHOW_SERVER_INFORMATION_MESSAGE:
+              iret = show_server_information(msg);
+              break;
+            case OWNER_CHECK_MESSAGE:
+              iret = owner_check(msg);
+              break;
+            case STATUS_MESSAGE:
+              iret = ping(msg);
+              break;
+            default:
+              iret = EXIT_UNKNOWN_MSGTYPE;
+              TBSYS_LOG(ERROR, "unknown msg type: %d", pcode);
+              break;
+          }
+          if (common::TFS_SUCCESS != iret)
+          {
+            msg->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), iret, "execute message failed");
+          }
         }
       }
       return bret;
