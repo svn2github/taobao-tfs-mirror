@@ -42,7 +42,7 @@ namespace tfs
 
       public:
         void set_file_number(const uint64_t file_number);
-        int init_block_files(const common::SysParam::FileSystemParam& fs_param);
+        int init_block_files(const common::FileSystemParameter& fs_param);
         void get_ds_filesystem_info(int32_t& block_count, int64_t& use_capacity, int64_t& total_capacity);
         int get_all_logic_block(std::list<LogicBlock*>& logic_block_list);
         int64_t get_all_logic_block_size();

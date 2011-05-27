@@ -65,7 +65,7 @@ namespace tfs
       }
     }
 
-    int BlockFileManager::format_block_file_system(const SysParam::FileSystemParam& fs_param)
+    int BlockFileManager::format_block_file_system(const FileSystemParameter& fs_param)
     {
       // 1. initialize super block parameter
       int ret = init_super_blk_param(fs_param);
@@ -95,14 +95,14 @@ namespace tfs
       return TFS_SUCCESS;
     }
 
-    int BlockFileManager::clear_block_file_system(const SysParam::FileSystemParam& fs_param)
+    int BlockFileManager::clear_block_file_system(const FileSystemParameter& fs_param)
     {
       bool ret = DirectoryOp::delete_directory_recursively(fs_param.mount_name_.c_str());
       TBSYS_LOG(INFO, "clear block file system end. mount_point: %s, ret: %d", fs_param.mount_name_.c_str(), ret);
       return ret ? TFS_SUCCESS : TFS_ERROR;
     }
 
-    int BlockFileManager::bootstrap(const SysParam::FileSystemParam& fs_param)
+    int BlockFileManager::bootstrap(const FileSystemParameter& fs_param)
     {
       // 1. load super block
       int ret = load_super_blk(fs_param);
@@ -671,7 +671,7 @@ namespace tfs
       return TFS_SUCCESS;
     }
 
-    int BlockFileManager::load_super_blk(const SysParam::FileSystemParam& fs_param)
+    int BlockFileManager::load_super_blk(const FileSystemParameter& fs_param)
     {
       bool fs_init_status = true;
 
@@ -999,7 +999,7 @@ namespace tfs
       return TFS_SUCCESS;
     }
 
-    int BlockFileManager::init_super_blk_param(const SysParam::FileSystemParam& fs_param)
+    int BlockFileManager::init_super_blk_param(const FileSystemParameter& fs_param)
     {
       memset((void *) &super_block_, 0, sizeof(SuperBlock));
       memcpy(super_block_.mount_tag_, DEV_TAG, sizeof(super_block_.mount_tag_));

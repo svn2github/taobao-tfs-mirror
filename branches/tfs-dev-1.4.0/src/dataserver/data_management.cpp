@@ -46,7 +46,7 @@ namespace tfs
       TBSYS_LOG(INFO, "set file number. file number: %" PRI64_PREFIX "u\n", file_number_);
     }
 
-    int DataManagement::init_block_files(const SysParam::FileSystemParam& fs_param)
+    int DataManagement::init_block_files(const FileSystemParameter& fs_param)
     {
       int64_t time_start = tbsys::CTimeUtil::getTime();
       TBSYS_LOG(INFO, "block file load blocks begin. start time: %" PRI64_PREFIX "d\n", time_start);
