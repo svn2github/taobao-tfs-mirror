@@ -23,16 +23,14 @@
 #include <map>
 #include <tbsys.h>
 
-#include "common/config.h"
 #include "common/define.h"
 #include "common/internal.h"
-#include "client/fsname.h"
-#include "message/message.h"
-#include "message/client_manager.h"
+#include "new_client/fsname.h"
+#include "common/client_manager.h"
 #include "message/server_status_message.h"
 #include "message/client_cmd_message.h"
 #include "common/config_item.h"
-#include "client/tfs_client_api.h"
+#include "new_client/tfs_client_api.h"
 
 using namespace std;
 using namespace tfs::client;
@@ -128,6 +126,8 @@ void init()
   cmd_map["forcereport"] = CMD_FORCE_ALL_DATASERVER_REPORT;
 }
 
+int tfs_save_file(TfsClient* tfs_client, const char* filename, const char* tfsname, 
+    const char* suffix, string& out_file_name, const int32_t mode = T_WRITE);
 int parse_cmd(char* buffer, VEC_STRING& param);
 int switch_cmd(int32_t cmd, TfsClient* tfs_client, VEC_STRING& param);
 int main_loop(TfsClient* tfs_client);
@@ -145,7 +145,7 @@ int list_file_info(TfsClient* tfs_client, VEC_STRING& param);
 int batch_file(TfsClient* tfs_client, VEC_STRING& param);
 int unexpire_blk(TfsClient* tfs_client, VEC_STRING& param);
 int expire_block(TfsClient* tfs_client, VEC_STRING& param);
-int send_message_to_server(uint64_t server_id, Message* ds_message, string& err_msg, Message** retmessage = NULL, const int64_t timeout = 3000/*3s*/);
+int send_message_to_server(uint64_t server_id, BasePacket* ds_message, string& err_msg, BasePacket** retmessage = NULL, const int64_t timeout = 3000/*3s*/);
 int compact_block(TfsClient* tfs_client, VEC_STRING& param);
 int new_file_name(TfsClient* tfs_client, VEC_STRING& param);
 int repair_lose_block(TfsClient* tfs_client, VEC_STRING& param);
@@ -163,6 +163,47 @@ int access_stat_info(VEC_STRING& param);
 int access_control_flag(VEC_STRING& param);
 int get_scale_image(TfsClient* tfs_client, VEC_STRING &param);
 int force_all_dataserver_report(TfsClient* tfs_client, VEC_STRING& param);
+
+int tfs_save_file(TfsClient* tfs_client, const char* filename, const char* tfsname, 
+    const char* suffix, string& out_file_name, const int32_t mode)
+{
+  char* data = new char[MAX_READ_SIZE];
+  if (data == NULL)
+  {
+    fprintf(stderr, "cannot allocate data buffer");
+    return TFS_ERROR;
+  }
+  int fd = open(filename, O_RDONLY);
+  if (fd == -1)
+  {
+    fprintf(stderr, "open file(%s) error", filename);
+    return TFS_ERROR;
+  }
+  int32_t ret = TFS_ERROR;
+  int tfs_fd = 0;
+  tfs_fd = tfs_client->open(tfsname, suffix, mode);
+  if (tfs_fd < 0)
+  {
+    close(fd);
+    return TFS_ERROR;
+  }
+
+  int32_t rlen;
+  while ((rlen = read(fd, data, MAX_READ_SIZE)) > 0)
+  {
+    if (tfs_client->write(tfs_fd, data, rlen) != rlen)
+    {
+      ret = EXIT_GENERAL_ERROR;
+      break;
+    }
+  }
+  char out_file[1024];
+  tfs_client->close(tfs_fd, out_file, 1024);
+  out_file_name = out_file;
+  close(fd);
+  tbsys::gDelete(data);
+  return ret;
+}
 
 // transfer "ip:port" to server_id (64bit)
 uint64_t trans_to_server_id(char* ipport)
@@ -195,10 +236,10 @@ static void sign_handler(int32_t sig)
 {
   switch (sig)
   {
-  case SIGINT:
-	case SIGTERM:
-    fprintf(stderr, "\nTFS> ");
-    break;
+    case SIGINT:
+    case SIGTERM:
+      fprintf(stderr, "\nTFS> ");
+      break;
   }
 }
 
@@ -206,38 +247,38 @@ int main(int argc, char* argv[])
 {
   int32_t i;
   bool directly = false;
-	bool set_log_level = false;
+  bool set_log_level = false;
   // analyze arguments 
   while ((i = getopt(argc, argv, "s:c:d:nih")) != EOF)
   {
     switch (i)
     {
-    case 'n':
-      set_log_level = true;
-      break;
-    case 's':
-      nsip = optarg;
-      break;
-    case 'd':
-      dev_name = optarg;
-			break;
-		case 'c':
-			cluster_id = atoi(optarg);
-			break;
-    case 'i':
-      directly = true;
-      break;
-		case 'h':
-    default:
-      usage(argv[0]);
-      return TFS_ERROR;
+      case 'n':
+        set_log_level = true;
+        break;
+      case 's':
+        nsip = optarg;
+        break;
+      case 'd':
+        dev_name = optarg;
+        break;
+      case 'c':
+        cluster_id = atoi(optarg);
+        break;
+      case 'i':
+        directly = true;
+        break;
+      case 'h':
+      default:
+        usage(argv[0]);
+        return TFS_ERROR;
     }
   }
 
   if ((nsip.empty())
-			|| (nsip.compare(" ") == 0)
-			|| (cluster_id <= 0)
-			|| (cluster_id > 9))
+      || (nsip.compare(" ") == 0)
+      || (cluster_id <= 0)
+      || (cluster_id > 9))
   {
     usage(argv[0]);
     return TFS_ERROR;
@@ -250,19 +291,19 @@ int main(int argc, char* argv[])
 
   init();
 
-  TfsClient tfs_client;
-	int iret = tfs_client.initialize(nsip);
-	if (iret != TFS_SUCCESS)
-	{
-		return TFS_ERROR;
-	}
-	
+  int iret = TfsClient::Instance()->initialize(nsip.c_str());
+  if (iret != TFS_SUCCESS)
+  {
+    return TFS_ERROR;
+  }
+  TfsClient* tfs_client = TfsClient::Instance();
+
   local_server_ip = tbsys::CNetUtil::getLocalAddr(dev_name.c_str());
   if (optind >= argc)
   {
     signal(SIGINT, sign_handler);
-		signal(SIGTERM, sign_handler);
-    main_loop(&tfs_client);
+    signal(SIGTERM, sign_handler);
+    main_loop(tfs_client);
   }
   else // has other params
   {
@@ -274,7 +315,7 @@ int main(int argc, char* argv[])
       {
         param.clear();
         int32_t cmd = parse_cmd(argv[i], param);
-        switch_cmd(cmd, &tfs_client, param);
+        switch_cmd(cmd, tfs_client, param);
       }
     }
     else
@@ -283,7 +324,7 @@ int main(int argc, char* argv[])
       {
         param.clear();
         param.push_back(argv[i]);
-        batch_file(&tfs_client, param);
+        batch_file(tfs_client, param);
       }
     }
   }
@@ -351,107 +392,107 @@ int switch_cmd(int32_t cmd, TfsClient* tfs_client, VEC_STRING& param)
   int ret = TFS_SUCCESS;
   switch (cmd)
   {
-  case CMD_HELP:
-    ret = show_help();
-    break;
-  case CMD_UNKNOWN:
-    fprintf(stderr, "unknown command.\n");
-    break;
-  case CMD_PUT:
-    ret = put_file(tfs_client, param, 0);
-    break;
-  case CMD_GET:
-    ret = get_file(tfs_client, param);
-    break;
-  case CMD_REMOVE:
-    ret = remove_file(tfs_client, param, 0);
-    break;
-  case CMD_UREMOVE:
-    ret = remove_file(tfs_client, param, 1);
-    break;
-  case CMD_UNDEL:
-    ret = undel_file(tfs_client, param);
-    break;
-  case CMD_HIDE:
-    ret = hide_file(tfs_client, param);
-    break;
-  case CMD_RENAME:
-    ret = rename_file(tfs_client, param);
-    break;
-  case CMD_STAT:
-    ret = stat_file(tfs_client, param);
-    break;
-  case CMD_STATBLK:
-    ret = stat_blk(param);
-    break;
-  case CMD_VISIT_COUNT_BLK:
-    ret = visit_count_blk(param);
-    break;
-  case CMD_BATCH:
-    ret = batch_file(tfs_client, param);
-    break;
-  case CMD_UNEXPBLK:
-    ret = unexpire_blk(tfs_client, param);
-    break;
-  case CMD_UNLOADBLK:
-    ret = unload_block(param);
-    break;
-  case CMD_ADDBLK:
-    ret = add_block(tfs_client, param);
-    break;
-  case CMD_EXPBLK:
-    ret = expire_block(tfs_client, param);
-    break;
-  case CMD_COMPACTBLK:
-    ret = compact_block(tfs_client, param);
-    break;
-  case CMD_NEWFILENAME:
-    ret = new_file_name(tfs_client, param);
-    break;
-  case CMD_REPAIR_LOSEBLOCK:
-    ret = repair_lose_block(tfs_client, param);
-    break;
-  case CMD_REPAIR_GROUP:
-    ret = repair_group_block(tfs_client, param);
-    break;
-  case CMD_SET_RUN_PARAM:
-    ret = set_run_param(tfs_client, param);
-    break;
-  case CMD_LIST_FILE:
-    ret = list_file_info(tfs_client, param);
-    break;
-  case CMD_CHECK_FILEINFO:
-    ret = check_file_info(tfs_client, param);
-    break;
-  case CMD_REPAIR_CRC:
-    ret = repair_crc(tfs_client, param);
-    break;
-  case CMD_LIST_BLOCK:
-    ret = list_block(tfs_client, param);
-    break;
-  case CMD_REMOVE_BLOCK:
-    ret = remove_block(tfs_client, param);
-    break;
-  case CMD_CLEAR_REPL_INFO:
-    ret = clear_repl_info(tfs_client);
-    break;
-  case CMD_GET_REPL_INFO:
-    ret = get_repl_info(tfs_client);
-    break;
-  case CMD_ACCESS_STAT_INFO:
-    ret = access_stat_info(param);
-    break;
-  case CMD_SET_ACL_FLAG:
-    ret = access_control_flag(param);
-    break;
-  case CMD_GET_SCALE_IMAGE:
-    ret = get_scale_image(tfs_client, param);
-    break;
-  case CMD_FORCE_ALL_DATASERVER_REPORT:
-    ret = force_all_dataserver_report(tfs_client, param);
-    break;
-  default:
-    break;
+    case CMD_HELP:
+      ret = show_help();
+      break;
+    case CMD_UNKNOWN:
+      fprintf(stderr, "unknown command.\n");
+      break;
+    case CMD_PUT:
+      ret = put_file(tfs_client, param, 0);
+      break;
+    case CMD_GET:
+      ret = get_file(tfs_client, param);
+      break;
+    case CMD_REMOVE:
+      ret = remove_file(tfs_client, param, 0);
+      break;
+    case CMD_UREMOVE:
+      ret = remove_file(tfs_client, param, 1);
+      break;
+    case CMD_UNDEL:
+      ret = undel_file(tfs_client, param);
+      break;
+    case CMD_HIDE:
+      ret = hide_file(tfs_client, param);
+      break;
+    case CMD_RENAME:
+      ret = rename_file(tfs_client, param);
+      break;
+    case CMD_STAT:
+      ret = stat_file(tfs_client, param);
+      break;
+    case CMD_STATBLK:
+      ret = stat_blk(param);
+      break;
+    case CMD_VISIT_COUNT_BLK:
+      ret = visit_count_blk(param);
+      break;
+    case CMD_BATCH:
+      ret = batch_file(tfs_client, param);
+      break;
+    case CMD_UNEXPBLK:
+      ret = unexpire_blk(tfs_client, param);
+      break;
+    case CMD_UNLOADBLK:
+      ret = unload_block(param);
+      break;
+    case CMD_ADDBLK:
+      ret = add_block(tfs_client, param);
+      break;
+    case CMD_EXPBLK:
+      ret = expire_block(tfs_client, param);
+      break;
+    case CMD_COMPACTBLK:
+      ret = compact_block(tfs_client, param);
+      break;
+    case CMD_NEWFILENAME:
+      ret = new_file_name(tfs_client, param);
+      break;
+    case CMD_REPAIR_LOSEBLOCK:
+      ret = repair_lose_block(tfs_client, param);
+      break;
+    case CMD_REPAIR_GROUP:
+      ret = repair_group_block(tfs_client, param);
+      break;
+    case CMD_SET_RUN_PARAM:
+      ret = set_run_param(tfs_client, param);
+      break;
+    case CMD_LIST_FILE:
+      ret = list_file_info(tfs_client, param);
+      break;
+    case CMD_CHECK_FILEINFO:
+      ret = check_file_info(tfs_client, param);
+      break;
+    case CMD_REPAIR_CRC:
+      ret = repair_crc(tfs_client, param);
+      break;
+    case CMD_LIST_BLOCK:
+      ret = list_block(tfs_client, param);
+      break;
+    case CMD_REMOVE_BLOCK:
+      ret = remove_block(tfs_client, param);
+      break;
+    case CMD_CLEAR_REPL_INFO:
+      ret = clear_repl_info(tfs_client);
+      break;
+    case CMD_GET_REPL_INFO:
+      ret = get_repl_info(tfs_client);
+      break;
+    case CMD_ACCESS_STAT_INFO:
+      ret = access_stat_info(param);
+      break;
+    case CMD_SET_ACL_FLAG:
+      ret = access_control_flag(param);
+      break;
+    case CMD_GET_SCALE_IMAGE:
+      ret = get_scale_image(tfs_client, param);
+      break;
+    case CMD_FORCE_ALL_DATASERVER_REPORT:
+      ret = force_all_dataserver_report(tfs_client, param);
+      break;
+    default:
+      break;
   }
   return ret;
 }
@@ -480,29 +521,29 @@ int main_loop(TfsClient* tfs_client)
 int show_help()
 {
   fprintf(stderr, "\nsupported command"
-    "\nexit|quit                      quit console"
-    "\nput local_file [tfs_file]      upload a local file to tfs"
-    "\nget tfs_file local_file        download a remote file to local disk"
-    "\nrm tfs_file                    delete a remote file"
-    "\nrename from_file to_file       rename a remote file"
-    "\nnewfilename                    generate a new tfs file name"
+      "\nexit|quit                      quit console"
+      "\nput local_file [tfs_file]      upload a local file to tfs"
+      "\nget tfs_file local_file        download a remote file to local disk"
+      "\nrm tfs_file                    delete a remote file"
+      "\nrename from_file to_file       rename a remote file"
+      "\nnewfilename                    generate a new tfs file name"
 
-    "\nstat tfs_file                  get the file info from tfs"
-    "\nstatblk                        get the block info"
-    "\nlsf                            list the files in the block"
-    "\ncfi                            check a remote file"
-    "\nvcblk                          list the most used blocks"
+      "\nstat tfs_file                  get the file info from tfs"
+      "\nstatblk                        get the block info"
+      "\nlsf                            list the files in the block"
+      "\ncfi                            check a remote file"
+      "\nvcblk                          list the most used blocks"
 
-    "\n@|batch                        batch handle cmds\n"
+      "\n@|batch                        batch handle cmds\n"
 
-    "\ncompact                        [Attention!] force to compact a block"
-    "\nparam                          [Attention!] set the params"
-    "\nrepairblk                      repair the back block"
-    "\nrepairgrp                      repair the group of a block"
-    "\nremoveblock                    [Attention!] remove a block(includes the meta infos)"
-    "\nlistblock                      list the dataservers the block allocated on"
+      "\ncompact                        [Attention!] force to compact a block"
+      "\nparam                          [Attention!] set the params"
+      "\nrepairblk                      repair the back block"
+      "\nrepairgrp                      repair the group of a block"
+      "\nremoveblock                    [Attention!] remove a block(includes the meta infos)"
+      "\nlistblock                      list the dataservers the block allocated on"
 
-    "\nhelp                           show help info\n\n");
+      "\nhelp                           show help info\n\n");
   return TFS_SUCCESS;
 }
 
@@ -548,21 +589,22 @@ int put_file(TfsClient* tfs_client, VEC_STRING& param, int32_t unique)
   }
   int ret;
   char* name, new_tfs_name[MAX_FILE_NAME_LEN];
+  string out_file_name;
   if (unique)
   {
     ret = TFS_SUCCESS;
   }
   else
   {
-    ret = tfs_client->save_file(local_file, tfs_name, prefix);
+    ret = tfs_save_file(tfs_client, local_file, tfs_name, prefix, out_file_name);
   }
   if (ret == TFS_ERROR)
   {
-    fprintf(stderr, "close tfs_client fail: %s\n", tfs_client->get_error_message());
+    fprintf(stderr, "close tfs_client fail\n");
   }
   else
   {
-    name = unique ? new_tfs_name : const_cast<char*>(tfs_client->get_file_name());
+    name = unique ? new_tfs_name : const_cast<char*>(out_file_name.c_str());
     FSName fs_name(name, NULL, cluster_id);
     fprintf(stdout, "put %s => %s, %u:%" PRI64_PREFIX "u\n", local_file, name, fs_name.get_block_id(), fs_name.get_file_id());
   }
@@ -601,19 +643,21 @@ int get_file(TfsClient* tfs_client, VEC_STRING& param)
     return TFS_ERROR;
   }
 
-  if (tfs_client->tfs_open(tfs_name, prefix, READ_MODE) != TFS_SUCCESS)
+  int tfs_fd = tfs_client->open(tfs_name, prefix, T_READ);
+
+  if (tfs_fd < 0)
   {
-    fprintf(stderr, "open tfs_client fail: %s\n", tfs_client->get_error_message());
+    fprintf(stderr, "open tfs_client fail\n");
     close(fd);
     return TFS_ERROR;
   }
 
-  FileInfo file_info;
-  if (tfs_client->tfs_stat(&file_info) == TFS_ERROR)
+  TfsFileStat file_info;
+  if (tfs_client->fstat(tfs_fd, &file_info) == TFS_ERROR)
   {
-    tfs_client->tfs_close();
+    tfs_client->close(tfs_fd);
     close(fd);
-    fprintf(stderr, "fstat tfs_client fail: %s\n", tfs_client->get_error_message());
+    fprintf(stderr, "fstat tfs_client fail\n");
     return TFS_ERROR;
   }
 
@@ -625,7 +669,7 @@ int get_file(TfsClient* tfs_client, VEC_STRING& param)
     int32_t read_len = tfs_client->tfs_read_v2(data, MAX_READ_SIZE, &file_info);
     if (read_len < 0)
     {
-      fprintf(stderr, "read tfs_client fail: %s\n", tfs_client->get_error_message());
+      fprintf(stderr, "read tfs_client fail\n");
       tfs_client->tfs_close();
       close(fd);
       return TFS_ERROR;
@@ -649,24 +693,24 @@ int get_file(TfsClient* tfs_client, VEC_STRING& param)
       break;
     }
     /*
-     int32_t read_len = tfs_client->tfs_read(data, MAX_READ_SIZE);
-     if (read_len < 0) {
-     fprintf(stderr, "read tfs_client fail: %s\n", tfs_client->get_error_message());
-     tfs_client->tfs_close();
-     close(fd);
-     return TFS_ERROR;
-     }
-     if (read_len == 0) break;
-     if (write(fd, data, read_len) != read_len) {
-     fprintf(stderr, "write local file fail.\n");
-     tfs_client->tfs_close();
-     close(fd);
-     return TFS_ERROR;
-     }
-     crc = Func::crc(crc, data, read_len);
-     total_size += read_len;
-     if (read_len != MAX_READ_SIZE) break;
-     */
+       int32_t read_len = tfs_client->tfs_read(data, MAX_READ_SIZE);
+       if (read_len < 0) {
+       fprintf(stderr, "read tfs_client fail: %s\n", tfs_client->get_error_message());
+       tfs_client->tfs_close();
+       close(fd);
+       return TFS_ERROR;
+       }
+       if (read_len == 0) break;
+       if (write(fd, data, read_len) != read_len) {
+       fprintf(stderr, "write local file fail.\n");
+       tfs_client->tfs_close();
+       close(fd);
+       return TFS_ERROR;
+       }
+       crc = Func::crc(crc, data, read_len);
+       total_size += read_len;
+       if (read_len != MAX_READ_SIZE) break;
+       */
   }
 
   tfs_client->tfs_close();
@@ -674,7 +718,7 @@ int get_file(TfsClient* tfs_client, VEC_STRING& param)
   if (crc != file_info.crc_ || total_size != file_info.size_)
   {
     fprintf(stderr, "%s, crc error: %u <> %u, size: %u <> %u\n", tbsys::CNetUtil::addrToString(
-        tfs_client->get_last_elect_ds_id()).c_str(), crc, file_info.crc_, total_size, file_info.size_);
+          tfs_client->get_last_elect_ds_id()).c_str(), crc, file_info.crc_, total_size, file_info.size_);
     return TFS_ERROR;
   }
 
@@ -726,7 +770,7 @@ int get_scale_image(TfsClient* tfs_client, VEC_STRING& param)
 
   if (tfs_client->tfs_open(tfs_name, prefix, READ_MODE) != TFS_SUCCESS)
   {
-    fprintf(stderr, "open tfs_client fail: %s\n", tfs_client->get_error_message());
+    fprintf(stderr, "open tfs_client fail\n");
     close(fd);
     return TFS_ERROR;
   }
@@ -740,7 +784,7 @@ int get_scale_image(TfsClient* tfs_client, VEC_STRING& param)
     int32_t read_len = tfs_client->tfs_read_scale_image(data, MAX_READ_SIZE, width, height, &file_info);
     if (read_len < 0)
     {
-      fprintf(stderr, "read tfs_client fail: %s\n", tfs_client->get_error_message());
+      fprintf(stderr, "read tfs_client fail\n");
       tfs_client->tfs_close();
       close(fd);
       return TFS_ERROR;
@@ -768,7 +812,7 @@ int get_scale_image(TfsClient* tfs_client, VEC_STRING& param)
   if (crc != file_info.crc_ || total_size != file_info.size_)
   {
     fprintf(stderr, "%s, crc error: %u <> %u, size: %u <> %u\n", tbsys::CNetUtil::addrToString(
-        tfs_client->get_last_elect_ds_id()).c_str(), crc, file_info.crc_, total_size, file_info.size_);
+          tfs_client->get_last_elect_ds_id()).c_str(), crc, file_info.crc_, total_size, file_info.size_);
     return TFS_ERROR;
   }
 
@@ -836,8 +880,8 @@ int force_all_dataserver_report(TfsClient* tfs_client, VEC_STRING& parameter)
       ++count;
       iret = tfs::message::send_message_to_server(nsip_port, msg, &ret_msg);
       if (TFS_SUCCESS == iret
-        && ret_msg != NULL
-        && ret_msg->getPCode() == SHOW_SERVER_INFORMATION_MESSAGE)
+          && ret_msg != NULL
+          && ret_msg->getPCode() == SHOW_SERVER_INFORMATION_MESSAGE)
       {
         break;
       }
@@ -879,13 +923,13 @@ int force_all_dataserver_report(TfsClient* tfs_client, VEC_STRING& parameter)
             if (iret == TFS_SUCCESS)
             {
               TBSYS_LOG(INFO, "send force report command to server(%s) successful",
-                tbsys::CNetUtil::addrToString(info.id_).c_str());
+                  tbsys::CNetUtil::addrToString(info.id_).c_str());
               sleep(sleep_time);
             }
             else
             {
               TBSYS_LOG(INFO, "send force report command to server(%s) fail",
-                tbsys::CNetUtil::addrToString(info.id_).c_str());
+                  tbsys::CNetUtil::addrToString(info.id_).c_str());
             }
           }
           while (count > 0);
@@ -916,7 +960,7 @@ int remove_file(TfsClient* tfs_client, VEC_STRING& param, int32_t unique)
   int32_t ret;
   if (unique)
   {
-		ret = TFS_SUCCESS;
+    ret = TFS_SUCCESS;
     //    ret = (tfs_client->unlink_unique_file(tfs_name, prefix) < 0) ? TFS_ERROR : TFS_SUCCESS;
   }
   else
@@ -926,7 +970,7 @@ int remove_file(TfsClient* tfs_client, VEC_STRING& param, int32_t unique)
 
   if (ret != TFS_SUCCESS)
   {
-    fprintf(stderr, "failed: %s\n", tfs_client->get_error_message());
+    fprintf(stderr, "failed\n");
   }
   else
   {
@@ -953,7 +997,7 @@ int undel_file(TfsClient* tfs_client, VEC_STRING& param)
   char* prefix = tfs_name + FILE_NAME_LEN;
   if (tfs_client->unlink(tfs_name, prefix, 2) != TFS_SUCCESS)
   {
-    fprintf(stderr, "undelete file failed: %s\n", tfs_client->get_error_message());
+    fprintf(stderr, "undelete file failed\n");
   }
 
   return TFS_SUCCESS;
@@ -981,7 +1025,7 @@ int hide_file(TfsClient* tfs_client, VEC_STRING& param)
   char* prefix = tfs_name + FILE_NAME_LEN;
   if (tfs_client->unlink(tfs_name, prefix, hide_opt) != TFS_SUCCESS)
   {
-    fprintf(stderr, "hide failed: %s\n", tfs_client->get_error_message());
+    fprintf(stderr, "hide failed\n");
   }
 
   return TFS_SUCCESS;
@@ -1010,7 +1054,7 @@ int rename_file(TfsClient* tfs_client, VEC_STRING& param)
   }
   char* newprefix = new_tfs_name + FILE_NAME_LEN;
   FSName t1(tfs_name, NULL, cluster_id); 
-	FSName t2(new_tfs_name, NULL, cluster_id);
+  FSName t2(new_tfs_name, NULL, cluster_id);
   if (t1.get_block_id() != t2.get_block_id())
   {
     fprintf(stderr, "new file must be in the same block with the old file\n");
@@ -1023,7 +1067,7 @@ int rename_file(TfsClient* tfs_client, VEC_STRING& param)
   }
   if (tfs_client->rename(tfs_name, prefix, newprefix) != TFS_SUCCESS)
   {
-    fprintf(stderr, "rename failed: %s\n", tfs_client->get_error_message());
+    fprintf(stderr, "rename failed\n");
   }
 
   return TFS_SUCCESS;
@@ -1047,7 +1091,7 @@ int stat_file(TfsClient* tfs_client, VEC_STRING& param)
 
   if (tfs_client->tfs_open(tfs_name, prefix, READ_MODE) != TFS_SUCCESS)
   {
-    fprintf(stderr, "open tfs_client fail: %s\n", tfs_client->get_error_message());
+    fprintf(stderr, "open tfs_client fail\n");
     return TFS_ERROR;
   }
 
@@ -1055,7 +1099,7 @@ int stat_file(TfsClient* tfs_client, VEC_STRING& param)
   if (tfs_client->tfs_stat(&file_info, 1) != TFS_SUCCESS)
   {
     tfs_client->tfs_close();
-    fprintf(stderr, "fstat tfs_client fail: %s\n", tfs_client->get_error_message());
+    fprintf(stderr, "fstat tfs_client fail\n");
     return TFS_ERROR;
   }
   tfs_client->tfs_close();
@@ -1334,25 +1378,25 @@ int repair_lose_block(TfsClient* tfs_client, VEC_STRING& param)
 int repair_group_block(TfsClient* tfs_client, VEC_STRING& param)
 {
   /*int32_t size = param.size();
-  if (size != 1)
-  {
+    if (size != 1)
+    {
     fprintf(stderr, "repairgrp block_id\n\n");
     return TFS_ERROR;
-  }
-  uint32_t block_id = strtoul(param[0].c_str(), (char**) NULL, 10);
-  uint64_t nsip_port = tfs_client->get_ns_ip_port();
+    }
+    uint32_t block_id = strtoul(param[0].c_str(), (char**) NULL, 10);
+    uint64_t nsip_port = tfs_client->get_ns_ip_port();
 
-  ClientCmdMessage req_cc_msg;
-  req_cc_msg.set_type(CLIENT_CMD_REPAIR_GROUP);
-  req_cc_msg.set_block_id(block_id);
-  req_cc_msg.set_version(0);
-  req_cc_msg.set_from_server_id(local_server_ip);
-  string err_msg;
-  if (send_message_to_server(nsip_port, &req_cc_msg, err_msg) == TFS_ERROR)
-  {
+    ClientCmdMessage req_cc_msg;
+    req_cc_msg.set_type(CLIENT_CMD_REPAIR_GROUP);
+    req_cc_msg.set_block_id(block_id);
+    req_cc_msg.set_version(0);
+    req_cc_msg.set_from_server_id(local_server_ip);
+    string err_msg;
+    if (send_message_to_server(nsip_port, &req_cc_msg, err_msg) == TFS_ERROR)
+    {
     fprintf(stderr, "%s\n\n", err_msg.c_str());
     return TFS_ERROR;
-  }*/
+    }*/
 
   return TFS_SUCCESS;
 }
@@ -1379,7 +1423,7 @@ int new_file_name(TfsClient* tfs_client, VEC_STRING& param)
   }
   else
   {
-    fprintf(stderr, "ERROR: %s\n\n", tfs_client->get_error_message());
+    fprintf(stderr, "ERROR: \n\n");
   }
 
   return TFS_SUCCESS;
@@ -1387,20 +1431,20 @@ int new_file_name(TfsClient* tfs_client, VEC_STRING& param)
 
 int set_run_param(TfsClient* tfs_client, VEC_STRING& param)
 {
-    const char* param_str[] = {
-      "min_replication",
-      "max_replication",
-      "max_write_file_count",
-      "max_use_capacity_ratio",
-      "heart_interval",
-      "replicate_wait_time",
-      "compact_delete_ratio",
-      "compact_max_load",
-      "cluster_index",
-      "plan_run_flag",
-      "run_plan_expire_interval"
+  const char* param_str[] = {
+    "min_replication",
+    "max_replication",
+    "max_write_file_count",
+    "max_use_capacity_ratio",
+    "heart_interval",
+    "replicate_wait_time",
+    "compact_delete_ratio",
+    "compact_max_load",
+    "cluster_index",
+    "plan_run_flag",
+    "run_plan_expire_interval"
       "run_plan_ratio",
-      "object_dead_max_time"
+    "object_dead_max_time"
   };
 
   int32_t i, param_strlen = sizeof(param_str) / sizeof(char*);
@@ -1466,35 +1510,35 @@ int set_run_param(TfsClient* tfs_client, VEC_STRING& param)
 int unload_block(VEC_STRING &param)
 {
   /*int32_t size = param.size();
-  if (size != 2)
-  {
+    if (size != 2)
+    {
     fprintf(stderr, "unloadblk ip:port block_id\n\n");
     return TFS_ERROR;
-  }
-  char* ip = const_cast<char*> (param[0].c_str());
-  char* port_str = strchr(ip, ':');
-  if (NULL == port_str)
-  {
+    }
+    char* ip = const_cast<char*> (param[0].c_str());
+    char* port_str = strchr(ip, ':');
+    if (NULL == port_str)
+    {
     fprintf(stderr, "ip:port ,format error.\n\n");
     return TFS_ERROR;
-  }
-  *port_str = '\0';
-  int32_t port = atoi(port_str + 1);
-  uint64_t server_id = Func::str_to_addr(ip, port);
-  uint32_t block_id = strtoul(param[1].c_str(), reinterpret_cast<char**> (NULL), 10);
+    }
+   *port_str = '\0';
+   int32_t port = atoi(port_str + 1);
+   uint64_t server_id = Func::str_to_addr(ip, port);
+   uint32_t block_id = strtoul(param[1].c_str(), reinterpret_cast<char**> (NULL), 10);
 
-  ClientCmdMessage req_cc_msg;
-  req_cc_msg.set_type(CLIENT_CMD_UNLOADBLK);
-  req_cc_msg.set_server_id(server_id);
-  req_cc_msg.set_block_id(block_id);
-  req_cc_msg.set_version(0);
-  req_cc_msg.set_from_server_id(local_server_ip);
-  string err_msg;
-  if (send_message_to_server(server_id, &req_cc_msg, err_msg) == TFS_ERROR)
-  {
-    fprintf(stderr, "%s\n\n", err_msg.c_str());
-    return TFS_ERROR;
-  }*/
+   ClientCmdMessage req_cc_msg;
+   req_cc_msg.set_type(CLIENT_CMD_UNLOADBLK);
+   req_cc_msg.set_server_id(server_id);
+   req_cc_msg.set_block_id(block_id);
+   req_cc_msg.set_version(0);
+   req_cc_msg.set_from_server_id(local_server_ip);
+   string err_msg;
+   if (send_message_to_server(server_id, &req_cc_msg, err_msg) == TFS_ERROR)
+   {
+   fprintf(stderr, "%s\n\n", err_msg.c_str());
+   return TFS_ERROR;
+   }*/
 
   return TFS_SUCCESS;
 }
@@ -1549,7 +1593,7 @@ int stat_blk(VEC_STRING& param)
     else if (dbstat)
     {
       printf("CACHE_HIT:     %d%%\n", 100 * (dbstat->fetch_count_ - dbstat->miss_fetch_count_) / (dbstat->fetch_count_
-          + 1));
+            + 1));
       printf("FETCH_COUNT:   %d\n", dbstat->fetch_count_);
       printf("MISFETCH_COUNT:%d\n", dbstat->miss_fetch_count_);
       printf("STORE_COUNT:   %d\n", dbstat->store_count_);
@@ -1573,58 +1617,58 @@ int stat_blk(VEC_STRING& param)
 
 int visit_count_blk(VEC_STRING& param)
 {
-/*  int32_t size = param.size();
-  if (size != 2)
-  {
-    fprintf(stderr, "vcblk ip:port count\n\n");
-    return TFS_ERROR;
-  }
-  char* ip = const_cast<char*> (param[0].c_str());
-  char* port_str = strchr(ip, ':');
-  if (NULL == port_str)
-  {
-    fprintf(stderr, "ip:port ,format error.\n\n");
-    return TFS_ERROR;
-  }
-  *port_str = '\0';
-  int32_t port = atoi(port_str + 1);
-  uint64_t server_id = Func::str_to_addr(ip, port);
-  int32_t count = atoi(param[1].c_str());
-
-  GetServerStatusMessage req_gss_msg;
-  req_gss_msg.set_status_type(GSS_MAX_VISIT_COUNT);
-  req_gss_msg.set_return_row(count);
-  string err_msg;
-  Message* ret_message = NULL;
-  send_message_to_server(server_id, &req_gss_msg, err_msg, &ret_message);
-  if (NULL == ret_message)
-  {
-    return TFS_ERROR;
-  }
-  if (CARRY_BLOCK_MESSAGE == ret_message->get_message_type())
-  {
-    CarryBlockMessage* req_cb_msg = (CarryBlockMessage*) ret_message;
-    const VUINT32* ids = req_cb_msg->get_expire_blocks();
-    const VUINT32* vcs = req_cb_msg->get_new_blocks();
-    if (ids->size() != vcs->size())
-    {
-      delete ret_message;
+  /*  int32_t size = param.size();
+      if (size != 2)
+      {
+      fprintf(stderr, "vcblk ip:port count\n\n");
       return TFS_ERROR;
-    }
-    for (int32_t i = 0; i < static_cast<int32_t> (ids->size()); i++)
-    {
-      printf("Block: %u => %d\n", ids->at(i), vcs->at(i));
-    }
-  }
-  else if (ret_message->get_message_type() == STATUS_MESSAGE)
-  {
-    StatusMessage* s_msg = (StatusMessage*) ret_message;
-    if (s_msg->get_error() != NULL)
-    {
-      printf("%s\n", s_msg->get_error());
-    }
-  }
-  delete ret_message;*/
+      }
+      char* ip = const_cast<char*> (param[0].c_str());
+      char* port_str = strchr(ip, ':');
+      if (NULL == port_str)
+      {
+      fprintf(stderr, "ip:port ,format error.\n\n");
+      return TFS_ERROR;
+      }
+   *port_str = '\0';
+   int32_t port = atoi(port_str + 1);
+   uint64_t server_id = Func::str_to_addr(ip, port);
+   int32_t count = atoi(param[1].c_str());
+
+   GetServerStatusMessage req_gss_msg;
+   req_gss_msg.set_status_type(GSS_MAX_VISIT_COUNT);
+   req_gss_msg.set_return_row(count);
+   string err_msg;
+   Message* ret_message = NULL;
+   send_message_to_server(server_id, &req_gss_msg, err_msg, &ret_message);
+   if (NULL == ret_message)
+   {
+   return TFS_ERROR;
+   }
+   if (CARRY_BLOCK_MESSAGE == ret_message->get_message_type())
+   {
+   CarryBlockMessage* req_cb_msg = (CarryBlockMessage*) ret_message;
+   const VUINT32* ids = req_cb_msg->get_expire_blocks();
+   const VUINT32* vcs = req_cb_msg->get_new_blocks();
+   if (ids->size() != vcs->size())
+   {
+   delete ret_message;
+   return TFS_ERROR;
+   }
+   for (int32_t i = 0; i < static_cast<int32_t> (ids->size()); i++)
+   {
+   printf("Block: %u => %d\n", ids->at(i), vcs->at(i));
+   }
+   }
+   else if (ret_message->get_message_type() == STATUS_MESSAGE)
+   {
+   StatusMessage* s_msg = (StatusMessage*) ret_message;
+   if (s_msg->get_error() != NULL)
+   {
+   printf("%s\n", s_msg->get_error());
+   }
+   }
+   delete ret_message;*/
 
   return TFS_SUCCESS;
 }
@@ -1632,130 +1676,130 @@ int visit_count_blk(VEC_STRING& param)
 int access_control_flag(VEC_STRING& param)
 {
   /*int32_t size = param.size();
-  if (size < 2)
-  {
+    if (size < 2)
+    {
     fprintf(stderr, "setacl ip:port type [v1 v2]\n\n");
     return TFS_ERROR;
-  }
-  char* ip = const_cast<char*> (param[0].c_str());
-  char* port_str = strchr(ip, ':');
-  if (port_str == NULL)
-  {
+    }
+    char* ip = const_cast<char*> (param[0].c_str());
+    char* port_str = strchr(ip, ':');
+    if (port_str == NULL)
+    {
     fprintf(stderr, "ip:port ,format error.\n\n");
     return TFS_ERROR;
-  }
-  *port_str = '\0';
-  int32_t port = atoi(port_str + 1);
-  uint64_t server_id = Func::str_to_addr(ip, port);
-  uint32_t op_type = atoi(param[1].c_str());
-  if (op_type < 1 || op_type > 5)
-  {
-    fprintf(stderr, "error type %d must in [1,5]\n\n", op_type);
-    return TFS_ERROR;
-  }
+    }
+   *port_str = '\0';
+   int32_t port = atoi(port_str + 1);
+   uint64_t server_id = Func::str_to_addr(ip, port);
+   uint32_t op_type = atoi(param[1].c_str());
+   if (op_type < 1 || op_type > 5)
+   {
+   fprintf(stderr, "error type %d must in [1,5]\n\n", op_type);
+   return TFS_ERROR;
+   }
 
-  const char* value1 = NULL;
-  const char* value2 = NULL;
-  uint64_t v1 = 0;
-  uint32_t v2 = 0;
-  if (size > 2)
-    value1 = param[2].c_str();
-  if (size > 3)
-    value2 = param[3].c_str();
+   const char* value1 = NULL;
+   const char* value2 = NULL;
+   uint64_t v1 = 0;
+   uint32_t v2 = 0;
+   if (size > 2)
+   value1 = param[2].c_str();
+   if (size > 3)
+   value2 = param[3].c_str();
 
-  switch (op_type)
-  {
-  case 1:
-    if (!value1)
-    {
-      fprintf(stderr, "setacl ip:port 1 flag\n");
-      return TFS_ERROR;
-    }
-    v1 = atoi(value1);
-    v2 = 0;
-    break;
-  case 2:
-    if (!value1 || !value2)
-    {
-      fprintf(stderr, "setacl ip:port 2 ip mask\n");
-      return TFS_ERROR;
-    }
-    v1 = tbsys::CNetUtil::strToAddr(const_cast<char*> (value1), 0);
-    v2 = static_cast<uint32_t> (tbsys::CNetUtil::strToAddr(const_cast<char*> (value2), 0));
-    if (!v1 || !v2)
-    {
-      fprintf(stderr, "setacl ip:port 2 ip mask, not  a valid ip & mask\n");
-      return TFS_ERROR;
-    }
-    break;
-  case 3:
-    if (!value1)
-    {
-      fprintf(stderr, "setacl ip:port 3 ipaddr\n");
-      return TFS_ERROR;
-    }
-    v1 = tbsys::CNetUtil::strToAddr(const_cast<char*> (value1), 0);
-    v2 = 0;
-    break;
-  case 4:
-  case 5:
-    v1 = 0;
-    v2 = 0;
-    break;
+   switch (op_type)
+   {
+   case 1:
+   if (!value1)
+   {
+   fprintf(stderr, "setacl ip:port 1 flag\n");
+   return TFS_ERROR;
+   }
+   v1 = atoi(value1);
+   v2 = 0;
+   break;
+   case 2:
+   if (!value1 || !value2)
+   {
+   fprintf(stderr, "setacl ip:port 2 ip mask\n");
+   return TFS_ERROR;
+   }
+   v1 = tbsys::CNetUtil::strToAddr(const_cast<char*> (value1), 0);
+   v2 = static_cast<uint32_t> (tbsys::CNetUtil::strToAddr(const_cast<char*> (value2), 0));
+   if (!v1 || !v2)
+   {
+   fprintf(stderr, "setacl ip:port 2 ip mask, not  a valid ip & mask\n");
+   return TFS_ERROR;
+   }
+   break;
+   case 3:
+   if (!value1)
+   {
+   fprintf(stderr, "setacl ip:port 3 ipaddr\n");
+   return TFS_ERROR;
+   }
+   v1 = tbsys::CNetUtil::strToAddr(const_cast<char*> (value1), 0);
+   v2 = 0;
+   break;
+   case 4:
+   case 5:
+   v1 = 0;
+   v2 = 0;
+   break;
   default:
     fprintf(stderr, "error type %d must in [1,5]\n\n", op_type);
     return TFS_ERROR;
-  }
+}
 
-  ClientCmdMessage req_cc_msg;
-  req_cc_msg.set_type(CLIENT_CMD_SET_PARAM);
-  req_cc_msg.set_block_id(op_type); // param type == 1 as set acl flag.
-  req_cc_msg.set_server_id(v1); // server_id as flag
-  req_cc_msg.set_version(v2);
-  req_cc_msg.set_from_server_id(local_server_ip);
-  string err_msg;
-  if (send_message_to_server(server_id, &req_cc_msg, err_msg) == TFS_ERROR)
-  {
-    fprintf(stderr, "%s\n\n", err_msg.c_str());
-    return TFS_ERROR;
-  }*/
+ClientCmdMessage req_cc_msg;
+req_cc_msg.set_type(CLIENT_CMD_SET_PARAM);
+req_cc_msg.set_block_id(op_type); // param type == 1 as set acl flag.
+req_cc_msg.set_server_id(v1); // server_id as flag
+req_cc_msg.set_version(v2);
+req_cc_msg.set_from_server_id(local_server_ip);
+string err_msg;
+if (send_message_to_server(server_id, &req_cc_msg, err_msg) == TFS_ERROR)
+{
+  fprintf(stderr, "%s\n\n", err_msg.c_str());
+  return TFS_ERROR;
+}*/
 
-  return TFS_SUCCESS;
+return TFS_SUCCESS;
 }
 
 int access_stat_info(VEC_STRING& param)
 {
-/*  int32_t size = param.size();
-  if (size < 1)
-  {
-    fprintf(stderr, "aci ip:port [startrow returnrow]\n\n");
-    return TFS_ERROR;
-  }
-  char* ip = const_cast<char*> (param[0].c_str());
-  char* port_str = strchr(ip, ':');
-  if (port_str == NULL)
-  {
-    fprintf(stderr, "ip:port ,format error.\n\n");
-    return TFS_ERROR;
-  }
-  *port_str = '\0';
-  int32_t port = atoi(port_str + 1);
-  uint64_t server_id = Func::str_to_addr(ip, port);
+  /*  int32_t size = param.size();
+      if (size < 1)
+      {
+      fprintf(stderr, "aci ip:port [startrow returnrow]\n\n");
+      return TFS_ERROR;
+      }
+      char* ip = const_cast<char*> (param[0].c_str());
+      char* port_str = strchr(ip, ':');
+      if (port_str == NULL)
+      {
+      fprintf(stderr, "ip:port ,format error.\n\n");
+      return TFS_ERROR;
+      }
+   *port_str = '\0';
+   int32_t port = atoi(port_str + 1);
+   uint64_t server_id = Func::str_to_addr(ip, port);
   //uint32_t ipaddr = tbsys::CNetUtil::getAddr(reinterpret_cast<char*>param[1].c_str());
 
   uint32_t start_row = 0;
   uint32_t return_row = 0;
   if (size > 1)
   {
-    start_row = atoi(param[1].c_str());
+  start_row = atoi(param[1].c_str());
   }
   if (size > 2)
   {
-    return_row = atoi(param[2].c_str());
+  return_row = atoi(param[2].c_str());
   }
   bool get_all = (start_row == 0 && return_row == 0);
   if (get_all)
-    return_row = 1000;
+  return_row = 1000;
   int32_t has_next = 0;
 
   GetServerStatusMessage req_gss_msg;
@@ -1764,54 +1808,54 @@ int access_stat_info(VEC_STRING& param)
   printf("------------------ -------------- ------------- -------------- ------------\n");
   while (true)
   {
-    req_gss_msg.set_status_type(GSS_CLIENT_ACCESS_INFO);
-    req_gss_msg.set_from_row(start_row);
-    req_gss_msg.set_return_row(return_row);
-    string err_msg;
-    Message* ret_message = NULL;
-    send_message_to_server(server_id, &req_gss_msg, err_msg, &ret_message);
-    if (ret_message == NULL)
-    {
-      return TFS_ERROR;
-    }
-    if (ret_message->get_message_type() == ACCESS_STAT_INFO_MESSAGE)
-    {
-      AccessStatInfoMessage* req_cb_msg = reinterpret_cast<AccessStatInfoMessage*> (ret_message);
-      const AccessStatInfoMessage::COUNTER_TYPE & m = req_cb_msg->get();
-      for (AccessStatInfoMessage::COUNTER_TYPE::const_iterator it = m.begin(); it != m.end(); ++it)
-      {
-printf      ("%15s : %14" PRI64_PREFIX "u %14s %14" PRI64_PREFIX "u %14s\n", tbsys::CNetUtil::addrToString(it->first).c_str(),
-          it->second.read_file_count_, Func::format_size(it->second.read_byte_).c_str(),
-          it->second.write_file_count_, Func::format_size(it->second.write_byte_).c_str());
-    }
+  req_gss_msg.set_status_type(GSS_CLIENT_ACCESS_INFO);
+  req_gss_msg.set_from_row(start_row);
+  req_gss_msg.set_return_row(return_row);
+  string err_msg;
+  Message* ret_message = NULL;
+  send_message_to_server(server_id, &req_gss_msg, err_msg, &ret_message);
+  if (ret_message == NULL)
+  {
+  return TFS_ERROR;
+  }
+  if (ret_message->get_message_type() == ACCESS_STAT_INFO_MESSAGE)
+  {
+  AccessStatInfoMessage* req_cb_msg = reinterpret_cast<AccessStatInfoMessage*> (ret_message);
+  const AccessStatInfoMessage::COUNTER_TYPE & m = req_cb_msg->get();
+  for (AccessStatInfoMessage::COUNTER_TYPE::const_iterator it = m.begin(); it != m.end(); ++it)
+  {
+  printf      ("%15s : %14" PRI64_PREFIX "u %14s %14" PRI64_PREFIX "u %14s\n", tbsys::CNetUtil::addrToString(it->first).c_str(),
+  it->second.read_file_count_, Func::format_size(it->second.read_byte_).c_str(),
+  it->second.write_file_count_, Func::format_size(it->second.write_byte_).c_str());
+  }
 
-    has_next = req_cb_msg->has_next();
+  has_next = req_cb_msg->has_next();
 
   }
   else if (ret_message->get_message_type() == STATUS_MESSAGE)
   {
-    StatusMessage* s_msg = dynamic_cast<StatusMessage*> (ret_message);
-    if (s_msg->get_error() != NULL)
-    {
-      printf("%s\n", s_msg->get_error());
-    }
-    break;
-  }
-  delete ret_message;
-
-  if (get_all)
+  StatusMessage* s_msg = dynamic_cast<StatusMessage*> (ret_message);
+  if (s_msg->get_error() != NULL)
   {
-    if (!has_next)
-    break;
-    else
-    {
-      start_row += return_row;
-    }
+  printf("%s\n", s_msg->get_error());
   }
+  break;
+}
+delete ret_message;
+
+if (get_all)
+{
+  if (!has_next)
+    break;
   else
   {
-    break;
+    start_row += return_row;
   }
+}
+else
+{
+  break;
+}
 
 }*/
 
@@ -1832,97 +1876,97 @@ void print_file_info(uint32_t block_id, int32_t index, FileInfo* file_info, int3
   fs_name.set_file_id(file_info->id_);
   if (detail)
   {
-printf  ("%s %20" PRI64_PREFIX "u %10d %10d %s %s %02d %10u\n", fs_name.get_name(), file_info->id_, file_info->offset_,
-      file_info->size_, Func::time_to_str(file_info->modify_time_).c_str(),
-      Func::time_to_str(file_info->create_time_).c_str(), file_info->flag_, file_info->crc_);
-}
-else
-{
-  printf("%s\n", fs_name.get_name());
-}
+    printf  ("%s %20" PRI64_PREFIX "u %10d %10d %s %s %02d %10u\n", fs_name.get_name(), file_info->id_, file_info->offset_,
+        file_info->size_, Func::time_to_str(file_info->modify_time_).c_str(),
+        Func::time_to_str(file_info->create_time_).c_str(), file_info->flag_, file_info->crc_);
+  }
+  else
+  {
+    printf("%s\n", fs_name.get_name());
+  }
 }
 
 int list_file_info(TfsClient* tfs_client, VEC_STRING& param)
 {
-/*  int32_t size = param.size();
-  if (size < 1 || size > 3)
-  {
-    fprintf(stderr, "lsf block_id ip:port [detail]\n\n");
-    return TFS_ERROR;
-  }
-  uint64_t server_id = 0;
-  uint32_t block_id = strtoul(param[0].c_str(), reinterpret_cast<char**> (NULL), 10);
-  if (size >= 2)
-  {
-    char* ip = const_cast<char*> (param[1].c_str());
-    char* port_str = strchr(ip, ':');
-    if (NULL == port_str)
-    {
+  /*  int32_t size = param.size();
+      if (size < 1 || size > 3)
+      {
+      fprintf(stderr, "lsf block_id ip:port [detail]\n\n");
+      return TFS_ERROR;
+      }
+      uint64_t server_id = 0;
+      uint32_t block_id = strtoul(param[0].c_str(), reinterpret_cast<char**> (NULL), 10);
+      if (size >= 2)
+      {
+      char* ip = const_cast<char*> (param[1].c_str());
+      char* port_str = strchr(ip, ':');
+      if (NULL == port_str)
+      {
       fprintf(stderr, "ip:port ,format error.\n\n");
       return TFS_ERROR;
-    }
-    *port_str = '\0';
-    int32_t port = atoi(port_str + 1);
-    server_id = Func::str_to_addr(ip, port);
-  }
-  int32_t show_detail = 0;
-  if (3 == size && 0 == strcmp(param[2].c_str(), "detail"))
-  {
-    show_detail = 1;
-  }
-
-  FILE_INFO_LIST file_list;
-  if (0 == server_id)
-  {
-    tfs_client->get_file_list(block_id, file_list);
-  }
-  else
-  {
-    GetServerStatusMessage req_gss_msg;
-    req_gss_msg.set_status_type(GSS_BLOCK_FILE_INFO);
-    req_gss_msg.set_return_row(block_id);
-    string err_msg;
-    Message* ret_message = NULL;
-    send_message_to_server(server_id, &req_gss_msg, err_msg, &ret_message);
-    if (ret_message == NULL)
-    {
-      return TFS_ERROR;
-    }
-    if (ret_message->get_message_type() == BLOCK_FILE_INFO_MESSAGE)
-    {
-      BlockFileInfoMessage* req_bfi_msg = dynamic_cast<BlockFileInfoMessage*> (ret_message);
-      FILE_INFO_LIST* file_info_list =  req_bfi_msg->get_fileinfo_list();
-      int32_t i = 0; 
-      int32_t list_size = file_info_list->size();
-      for (i = 0; i < list_size; i++) 
-      {    
-        FileInfo *file_info = new FileInfo();
-        memcpy(file_info, file_info_list->at(i), sizeof(FileInfo));
-        file_list.push_back(file_info);
-      } 
-    }
-    else if (ret_message->get_message_type() == STATUS_MESSAGE)
-    {
-      StatusMessage* s_msg = (StatusMessage*) ret_message;
-      if (s_msg->get_error() != NULL)
-      {
-        printf("%s\n", s_msg->get_error());
       }
-    }
-    delete ret_message;
-  }
-  for (int32_t i = 0; i < static_cast<int32_t> (file_list.size()); i++)
-  {
-    print_file_info(block_id, i, file_list.at(i), show_detail);
-    if (server_id == 0)
-    {
-      delete file_list.at(i);
-    }
-  }
-  printf("total file: %d.\n", static_cast<int32_t> (file_list.size()));
-  file_list.clear();*/
+   *port_str = '\0';
+   int32_t port = atoi(port_str + 1);
+   server_id = Func::str_to_addr(ip, port);
+   }
+   int32_t show_detail = 0;
+   if (3 == size && 0 == strcmp(param[2].c_str(), "detail"))
+   {
+   show_detail = 1;
+   }
 
-  return TFS_SUCCESS;
+   FILE_INFO_LIST file_list;
+   if (0 == server_id)
+   {
+   tfs_client->get_file_list(block_id, file_list);
+   }
+   else
+   {
+   GetServerStatusMessage req_gss_msg;
+   req_gss_msg.set_status_type(GSS_BLOCK_FILE_INFO);
+   req_gss_msg.set_return_row(block_id);
+   string err_msg;
+   Message* ret_message = NULL;
+   send_message_to_server(server_id, &req_gss_msg, err_msg, &ret_message);
+   if (ret_message == NULL)
+   {
+   return TFS_ERROR;
+   }
+   if (ret_message->get_message_type() == BLOCK_FILE_INFO_MESSAGE)
+   {
+   BlockFileInfoMessage* req_bfi_msg = dynamic_cast<BlockFileInfoMessage*> (ret_message);
+   FILE_INFO_LIST* file_info_list =  req_bfi_msg->get_fileinfo_list();
+   int32_t i = 0; 
+   int32_t list_size = file_info_list->size();
+   for (i = 0; i < list_size; i++) 
+   {    
+   FileInfo *file_info = new FileInfo();
+   memcpy(file_info, file_info_list->at(i), sizeof(FileInfo));
+   file_list.push_back(file_info);
+   } 
+   }
+   else if (ret_message->get_message_type() == STATUS_MESSAGE)
+   {
+   StatusMessage* s_msg = (StatusMessage*) ret_message;
+   if (s_msg->get_error() != NULL)
+   {
+   printf("%s\n", s_msg->get_error());
+   }
+   }
+   delete ret_message;
+   }
+   for (int32_t i = 0; i < static_cast<int32_t> (file_list.size()); i++)
+   {
+   print_file_info(block_id, i, file_list.at(i), show_detail);
+   if (server_id == 0)
+  {
+    delete file_list.at(i);
+  }
+}
+printf("total file: %d.\n", static_cast<int32_t> (file_list.size()));
+file_list.clear();*/
+
+return TFS_SUCCESS;
 }
 
 int list_block(TfsClient* tfs_client, VEC_STRING& param)
@@ -1953,60 +1997,60 @@ int list_block(TfsClient* tfs_client, VEC_STRING& param)
 int remove_block(TfsClient* tfs_client, VEC_STRING& param)
 {
   /*int32_t size = param.size();
-  if (size != 1)
-  {
+    if (size != 1)
+    {
     fprintf(stderr, "removeblock block_id\n\n");
     return TFS_ERROR;
-  }
-  uint32_t block_id = strtoul(param[0].c_str(), reinterpret_cast<char**> (NULL), 10);
-  VUINT64 dsList;
-  dsList.clear();
-  int32_t ret = tfs_client->get_block_info(block_id, dsList);
-  if (ret != TFS_SUCCESS)
-  {
+    }
+    uint32_t block_id = strtoul(param[0].c_str(), reinterpret_cast<char**> (NULL), 10);
+    VUINT64 dsList;
+    dsList.clear();
+    int32_t ret = tfs_client->get_block_info(block_id, dsList);
+    if (ret != TFS_SUCCESS)
+    {
     fprintf(stderr, "block no exist in nameserver, blockid:%u.\n", block_id);
-    //      return ret;
+  //      return ret;
   }
   fprintf(stdout, "------block: %u, has %d replicas------\n", block_id, static_cast<int32_t> (dsList.size()));
   //remove meta
   dsList.push_back(0);
   for (uint32_t i = 0; i < dsList.size(); ++i)
   {
-    if (i < dsList.size() - 1)
-    {
-      fprintf(stdout, "removeblock: %u, (%d)th server: %s \n", block_id, i,
-          tbsys::CNetUtil::addrToString(dsList[i]).c_str());
-    }
+  if (i < dsList.size() - 1)
+  {
+  fprintf(stdout, "removeblock: %u, (%d)th server: %s \n", block_id, i,
+  tbsys::CNetUtil::addrToString(dsList[i]).c_str());
+  }
 
-    uint64_t nsip_port = tfs_client->get_ns_ip_port();
+  uint64_t nsip_port = tfs_client->get_ns_ip_port();
 
-    ClientCmdMessage req_cc_msg;
-    req_cc_msg.set_type(CLIENT_CMD_EXPBLK);
-    req_cc_msg.set_server_id(dsList[i]);
-    req_cc_msg.set_block_id(block_id);
-    req_cc_msg.set_version(0);
-    req_cc_msg.set_from_server_id(local_server_ip);
-    string err_msg;
-    if (send_message_to_server(nsip_port, &req_cc_msg, err_msg) == TFS_ERROR)
-    {
-      fprintf(stderr, "%s\n\n", err_msg.c_str());
-      return TFS_ERROR;
-    }
+  ClientCmdMessage req_cc_msg;
+  req_cc_msg.set_type(CLIENT_CMD_EXPBLK);
+  req_cc_msg.set_server_id(dsList[i]);
+  req_cc_msg.set_block_id(block_id);
+  req_cc_msg.set_version(0);
+  req_cc_msg.set_from_server_id(local_server_ip);
+  string err_msg;
+  if (send_message_to_server(nsip_port, &req_cc_msg, err_msg) == TFS_ERROR)
+  {
+  fprintf(stderr, "%s\n\n", err_msg.c_str());
+  return TFS_ERROR;
+  }
   }*/
   return TFS_SUCCESS;
 }
 
 int check_file_info(TfsClient* tfs_client, VEC_STRING& param)
 {
- /* int32_t size = param.size();
-  if (size != 1)
-  {
-    fprintf(stderr, "cfi filename\n\n");
-    return TFS_ERROR;
-  }
+  /* int32_t size = param.size();
+     if (size != 1)
+     {
+     fprintf(stderr, "cfi filename\n\n");
+     return TFS_ERROR;
+     }
 
-  char* filename = const_cast<char*> (param[0].c_str());
-  FSName fs_name;
+     char* filename = const_cast<char*> (param[0].c_str());
+     FSName fs_name;
   //fs_name.set_name(filename, cluster_id, filename + FILE_NAME_LEN);
   fs_name.set_name(filename, filename + FILE_NAME_LEN, cluster_id);
   uint32_t block_id = fs_name.get_block_id();
@@ -2015,45 +2059,45 @@ int check_file_info(TfsClient* tfs_client, VEC_STRING& param)
   VUINT64 rds;
   if (tfs_client->get_unlink_block_info(block_id, rds) == TFS_ERROR)
   {
-    return TFS_ERROR;
+  return TFS_ERROR;
   }
 
   printf("BLOCK_ID: %u\n", block_id);
   for (int32_t i = 0; i < static_cast<int32_t> (rds.size()); i++)
   {
-    uint64_t server_id = rds[i];
-    GetServerStatusMessage req_gss_msg;
-    req_gss_msg.set_status_type(GSS_BLOCK_FILE_INFO);
-    req_gss_msg.set_return_row(block_id);
-    string err_msg;
-    Message* ret_message = NULL;
-    send_message_to_server(server_id, &req_gss_msg, err_msg, &ret_message);
-    if (ret_message == NULL)
-    {
-      return TFS_ERROR;
-    }
-    if (ret_message->get_message_type() == BLOCK_FILE_INFO_MESSAGE)
-    {
-      BlockFileInfoMessage* req_bfi_msg = reinterpret_cast<BlockFileInfoMessage*> (ret_message);
-      FILE_INFO_LIST* file_list = req_bfi_msg->get_fileinfo_list();
-      for (int32_t j = 0; j < static_cast<int32_t> (file_list->size()); j++)
-      {
-        if (file_list->at(j)->id_ != file_id)
-          continue;
-        print_file_info(block_id, i, file_list->at(j), 1);
-        break;
-      }
-      printf("%19sSERVER: %s\n", "", tbsys::CNetUtil::addrToString(server_id).c_str());
-    }
-    else if (ret_message->get_message_type() == STATUS_MESSAGE)
-    {
-      StatusMessage* s_msg = dynamic_cast<StatusMessage*> (ret_message);
-      if (s_msg->get_error() != NULL)
-      {
-        printf("%s\n", s_msg->get_error());
-      }
-    }
-    delete ret_message;
+  uint64_t server_id = rds[i];
+  GetServerStatusMessage req_gss_msg;
+  req_gss_msg.set_status_type(GSS_BLOCK_FILE_INFO);
+  req_gss_msg.set_return_row(block_id);
+  string err_msg;
+  Message* ret_message = NULL;
+  send_message_to_server(server_id, &req_gss_msg, err_msg, &ret_message);
+  if (ret_message == NULL)
+  {
+  return TFS_ERROR;
+  }
+  if (ret_message->get_message_type() == BLOCK_FILE_INFO_MESSAGE)
+  {
+  BlockFileInfoMessage* req_bfi_msg = reinterpret_cast<BlockFileInfoMessage*> (ret_message);
+  FILE_INFO_LIST* file_list = req_bfi_msg->get_fileinfo_list();
+  for (int32_t j = 0; j < static_cast<int32_t> (file_list->size()); j++)
+  {
+  if (file_list->at(j)->id_ != file_id)
+  continue;
+  print_file_info(block_id, i, file_list->at(j), 1);
+  break;
+  }
+  printf("%19sSERVER: %s\n", "", tbsys::CNetUtil::addrToString(server_id).c_str());
+  }
+  else if (ret_message->get_message_type() == STATUS_MESSAGE)
+  {
+  StatusMessage* s_msg = dynamic_cast<StatusMessage*> (ret_message);
+  if (s_msg->get_error() != NULL)
+  {
+  printf("%s\n", s_msg->get_error());
+  }
+  }
+  delete ret_message;
   }
   printf("\n");*/
 
@@ -2066,7 +2110,7 @@ int get_file_retry(TfsClient* tfs_client, char* tfs_name, char* local_file)
   fflush( stderr);
   if (tfs_client->tfs_open(tfs_name, NULL, READ_MODE) != TFS_SUCCESS)
   {
-    fprintf(stderr, "open tfs_client fail: %s\n", tfs_client->get_error_message());
+    fprintf(stderr, "open tfs_client fail\n");
     return TFS_ERROR;
   }
   FileInfo file_info;
@@ -2097,7 +2141,7 @@ int get_file_retry(TfsClient* tfs_client, char* tfs_name, char* local_file)
       int32_t read_len = tfs_client->tfs_read(data, MAX_READ_SIZE);
       if (read_len < 0)
       {
-        fprintf(stderr, "read tfs_client fail: %s\n", tfs_client->get_error_message());
+        fprintf(stderr, "read tfs_client fail\n");
         break;
       }
       if (0 == read_len)
@@ -2161,9 +2205,10 @@ int repair_crc(TfsClient* tfs_client, VEC_STRING& param)
   char local_file[56];
   sprintf(local_file, ".repair_crc_%s", tfs_name);
   int32_t ret = get_file_retry(tfs_client, tfs_name, local_file);
+  string out_file_name;
   if (ret == TFS_SUCCESS)
   {
-    ret = tfs_client->save_file(local_file, tfs_name, NULL);
+    ret = tfs_save_file(tfs_client, local_file, tfs_name, NULL, out_file_name);
     if (ret)
     {
       fprintf(stderr, "save failed: %s => %s\n", local_file, tfs_name);
@@ -2235,17 +2280,17 @@ int clear_repl_info(TfsClient* tfs_client)
 {
   /*uint64_t nsip_port = tfs_client->get_ns_ip_port();
 
-  ClientCmdMessage req_cc_msg;
-  req_cc_msg.set_type(CLIENT_CMD_CLEAR_REPL_INFO);
-  req_cc_msg.set_server_id(0);
-  req_cc_msg.set_block_id(0);
-  req_cc_msg.set_version(0);
-  req_cc_msg.set_from_server_id(local_server_ip);
-  string err_msg;
-  if (send_message_to_server(nsip_port, &req_cc_msg, err_msg) == TFS_ERROR)
-  {
+    ClientCmdMessage req_cc_msg;
+    req_cc_msg.set_type(CLIENT_CMD_CLEAR_REPL_INFO);
+    req_cc_msg.set_server_id(0);
+    req_cc_msg.set_block_id(0);
+    req_cc_msg.set_version(0);
+    req_cc_msg.set_from_server_id(local_server_ip);
+    string err_msg;
+    if (send_message_to_server(nsip_port, &req_cc_msg, err_msg) == TFS_ERROR)
+    {
     fprintf(stderr, "%s\n\n", err_msg.c_str());
     return TFS_ERROR;
-  }*/
+    }*/
   return TFS_SUCCESS;
 }

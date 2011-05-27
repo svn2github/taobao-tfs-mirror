@@ -6,7 +6,7 @@ AM_LDFLAGS=-lz -lrt -lpthread -ldl
 
 bin_PROGRAMS = showsyncoplog tfstool performance ssm rmsyncoplog
 
-LDADD = $(top_builddir)/src/client/.libs/libtfsclient.a\
+LDADD = $(top_builddir)/src/new_client/.libs/libtfsclient.a\
 	$(top_builddir)/src/message/libtfsmessage.a\
 	$(top_builddir)/src/common/libtfscommon.a\
 	$(TBLIB_ROOT)/lib/libtbnet.a\
