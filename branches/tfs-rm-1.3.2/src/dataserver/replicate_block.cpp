@@ -54,12 +54,11 @@ namespace tfs
       client_ = NULL;
     }
 
-    void* ReplicateBlock::do_replicate_block(void* args)
+    void ReplicateBlock::run(tbsys::CThread* thread, void* args)
     {
       TBSYS_LOG(INFO, "tid: %u", Func::gettid());
       ReplicateBlock* ds = reinterpret_cast<ReplicateBlock *> (args);
       ds->run_replicate_block();
-      return NULL;
     }
 
     int ReplicateBlock::run_replicate_block()
@@ -220,6 +219,7 @@ namespace tfs
         {
           TBSYS_LOG(ERROR, "read raw data fail, ip: %s, blockid: %u, offset: %d, reading len: %d, ret: %d",
               tbsys::CNetUtil::addrToString(ds_ip).c_str(), block_id, offset, read_len, ret);
+          CLIENT_POOL.release_client(client);
           return TFS_ERROR;
         }
         len = read_len;
@@ -233,7 +233,7 @@ namespace tfs
         req_wrd_msg.set_length(len);
         req_wrd_msg.set_data(tmp_data_buf);
 
-        //new block		
+        //new block
         if (0 == offset)
         {
           req_wrd_msg.set_new_block(1);
@@ -285,6 +285,7 @@ namespace tfs
       {
         TBSYS_LOG(ERROR, "replicate get meta info fail, blockid: %u, ret: %d",
             tbsys::CNetUtil::addrToString(ds_ip).c_str(), block_id, ret);
+        CLIENT_POOL.release_client(client);
         return TFS_ERROR;
       }
 

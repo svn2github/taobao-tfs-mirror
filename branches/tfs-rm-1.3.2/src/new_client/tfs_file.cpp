@@ -29,7 +29,7 @@ void TfsFile::destroy_seg()
   processing_seg_list_.clear();
 }
 
-int TfsFile::open_ex(const char* file_name, const char* suffix, int32_t flags)
+int TfsFile::open_ex(const char* file_name, const char* suffix, const int32_t flags)
 {
   int ret = TFS_SUCCESS;
   if (NULL == tfs_session_)
@@ -140,7 +140,7 @@ int64_t TfsFile::read_ex(void* buf, const int64_t count, const int64_t offset, c
       else
       {
         seg_count = processing_seg_list_.size();
-        retry_count = CLIENT_TRY_COUNT;
+        retry_count = ClientConfig::client_retry_count_;
         do
         {
           ret = read_process(read_size);
@@ -173,7 +173,7 @@ int64_t TfsFile::read_ex(void* buf, const int64_t count, const int64_t offset, c
   return (TFS_SUCCESS == ret) ? read_size : ret;
 }
 
-int64_t TfsFile::write_ex(const void* buf, int64_t count, int64_t offset, bool modify)
+int64_t TfsFile::write_ex(const void* buf, const int64_t count, const int64_t offset, const bool modify)
 {
   //do not consider the update operation now
   int ret = TFS_SUCCESS;
@@ -210,7 +210,7 @@ int64_t TfsFile::write_ex(const void* buf, int64_t count, int64_t offset, bool m
       }
       else
       {
-        retry_count = CLIENT_TRY_COUNT;
+        retry_count = ClientConfig::client_retry_count_;
         do
         {
           ret = write_process();
@@ -252,7 +252,7 @@ int64_t TfsFile::write_ex(const void* buf, int64_t count, int64_t offset, bool m
   return (TFS_SUCCESS == ret) ? check_size : ret;
 }
 
-int64_t TfsFile::lseek_ex(int64_t offset, int whence)
+int64_t TfsFile::lseek_ex(const int64_t offset, const int whence)
 {
   int64_t ret = TFS_SUCCESS;
   if (TFS_FILE_OPEN_YES != file_status_)
@@ -285,17 +285,17 @@ int64_t TfsFile::lseek_ex(int64_t offset, int whence)
   return ret;
 }
 
-int64_t TfsFile::pread_ex(void* buf, int64_t count, int64_t offset)
+int64_t TfsFile::pread_ex(void* buf, const int64_t count, const int64_t offset)
 {
   return read_ex(buf, count, offset, false);
 }
 
-int64_t TfsFile::pwrite_ex(const void* buf, int64_t count, int64_t offset)
+int64_t TfsFile::pwrite_ex(const void* buf, const int64_t count, const int64_t offset)
 {
   return write_ex(buf, count, offset, false);
 }
 
-int TfsFile::fstat_ex(FileInfo* file_info, const TfsStatFlag mode)
+int TfsFile::fstat_ex(FileInfo* file_info, const TfsStatType mode)
 {
   int ret = TFS_SUCCESS;
   if (TFS_FILE_OPEN_YES != file_status_)
@@ -348,7 +348,7 @@ int TfsFile::close_ex()
   else if (file_status_ == TFS_FILE_WRITE_ERROR)
   {
     ret = EXIT_NOT_PERM_OPER;
-    TBSYS_LOG(ERROR, "close tfs file fail, file status: %d, ret: %d", file_status_, ret);
+    TBSYS_LOG(INFO, "occur tfs file write error, close. file status: %d", file_status_);
   }
   else if (!((flags_ & WRITE_MODE) && (0 != offset_)))
   {
@@ -387,7 +387,7 @@ void TfsFile::set_session(TfsSession* tfs_session)
   tfs_session_ = tfs_session;
 }
 
-int64_t TfsFile::get_meta_segment(const int64_t offset, char* buf, const int64_t count)
+int64_t TfsFile::get_meta_segment(const int64_t offset, const char* buf, const int64_t count)
 {
   int64_t ret = count;
   destroy_seg();
@@ -412,7 +412,7 @@ int64_t TfsFile::get_meta_segment(const int64_t offset, char* buf, const int64_t
 
       SegmentData* seg_data = new SegmentData(*meta_seg_);
       seg_data->seg_info_.size_ = cur_size;
-      seg_data->buf_ = buf + check_size;
+      seg_data->buf_ = const_cast<char*>(buf) + check_size;
       seg_data->inner_offset_ = offset + check_size; // dummy ?
       processing_seg_list_.push_back(seg_data);
 
@@ -422,7 +422,7 @@ int64_t TfsFile::get_meta_segment(const int64_t offset, char* buf, const int64_t
   else
   {
     meta_seg_->seg_info_.size_ = count;
-    meta_seg_->buf_ = buf;
+    meta_seg_->buf_ = const_cast<char*>(buf);
     meta_seg_->inner_offset_ = offset;
     processing_seg_list_.push_back(meta_seg_);
   }
@@ -472,7 +472,7 @@ int TfsFile::process(const InnerFilePhase file_phase)
     else
     {
       std::map<uint16_t, Message*> packets;
-      if ((ret = NewClientManager::get_instance()->get_response(wait_id, req_size, ClientConfig::batch_time_out_, packets)) != TFS_SUCCESS)
+      if ((ret = NewClientManager::get_instance()->get_response(wait_id, req_size, ClientConfig::batch_timeout_, packets)) != TFS_SUCCESS)
       {
         // get response fail, must exit.
         TBSYS_LOG(ERROR, "get respose fail, ret: %d", ret);
@@ -1343,7 +1343,7 @@ int TfsFile::async_rsp_unlink_file(message::Message* rsp, const uint16_t index)
 }
 
 //calculate the size of read process and delete the success one from processing seg list
-int32_t TfsFile::finish_read_process(int status, int64_t& read_size)
+int32_t TfsFile::finish_read_process(const int status, int64_t& read_size)
 {
   int32_t count = 0;
   SEG_DATA_LIST_ITER it = processing_seg_list_.begin();

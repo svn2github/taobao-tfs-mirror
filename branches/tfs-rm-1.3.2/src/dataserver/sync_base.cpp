@@ -11,7 +11,7 @@
  * Authors:
  *   duolong <duolong@taobao.com>
  *      - initial release
- *   zongdai <zongdai@taobao.com> 
+ *   zongdai <zongdai@taobao.com>
  *      - modify 2010-04-23
  *
  */
@@ -25,7 +25,7 @@ namespace tfs
   {
     using namespace common;
 
-    SyncBase::SyncBase(const int32_t type) : 
+    SyncBase::SyncBase(const int32_t type) :
       stop_(0), pause_(0), need_sync_(0), need_sleep_(0),
       file_queue_(NULL), second_file_queue_(NULL), second_file_queue_thread_(NULL), backup_(NULL)
     {
@@ -65,12 +65,11 @@ namespace tfs
       }
     }
 
-    void* SyncBase::do_sync_mirror(void* args)
+    void SyncBase::run(tbsys::CThread* thread, void* args)
     {
       TBSYS_LOG(INFO, "tid: %u", Func::gettid());
       SyncBase* ds = reinterpret_cast<SyncBase*>(args);
       ds->run_sync_mirror();
-      return NULL;
     }
 
     int SyncBase::do_second_sync(const void* data, const int64_t len, const int32_t, void* args)

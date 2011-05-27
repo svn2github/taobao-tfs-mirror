@@ -26,11 +26,14 @@
 #include "data_management.h"
 #include "requester.h"
 #include "block_checker.h"
-#include "common/interval.h"
+#include "heart_worker.h"
+#include "check_worker.h"
+#include "common/internal.h"
 #include "common/config.h"
 #include "common/statistics.h"
 #include "message/message.h"
 #include "message/message_factory.h"
+#include "tbsys.h"
 #include <Timer.h>
 #include <Mutex.h>
 #include <string>
@@ -39,21 +42,23 @@ namespace tfs
 {
   namespace dataserver
   {
-#define WRITE_STAT_LOGGER write_stat_log_
+#define WRITE_STAT_LOGGER DataService::write_stat_log_
 #define WRITE_STAT_PRINT(level, ...) WRITE_STAT_LOGGER.logMessage(TBSYS_LOG_LEVEL(level), __VA_ARGS__)
 #define WRITE_STAT_LOG(level, ...) (TBSYS_LOG_LEVEL_##level>WRITE_STAT_LOGGER._level) ? (void)0 : WRITE_STAT_PRINT(level, __VA_ARGS__)
 
-#define READ_STAT_LOGGER read_stat_log_
+#define READ_STAT_LOGGER DataService::read_stat_log_
 #define READ_STAT_PRINT(level, ...) READ_STAT_LOGGER.logMessage(TBSYS_LOG_LEVEL(level), __VA_ARGS__)
 #define READ_STAT_LOG(level, ...) (TBSYS_LOG_LEVEL_##level>READ_STAT_LOGGER._level) ? (void)0 : READ_STAT_PRINT(level, __VA_ARGS__)
     class DataService: public tbnet::IServerAdapter, public tbnet::IPacketQueueHandler, public message::DefaultAsyncCallback
     {
+      friend class CheckWorker;
+      friend class HeartWorker;
       public:
         DataService();
         virtual ~DataService();
 
         int init(const std::string& server_index);
-        int start(common::VINT* pids);
+        int start();
         int stop();
         int wait();
 
@@ -63,10 +68,6 @@ namespace tfs
         int command_done(message::Message* send_message, bool status, const std::string& error);
         int send_message_to_slave_ds(message::Message* message, const common::VUINT64& ds_list);
         int post_message_to_server(message::Message* message, const common::VUINT64& ds_list);
-
-        static void* do_heart(void* args);
-        static void* do_check(void* args);
-        int stop_heart();
 
       private:
         int run_heart();
@@ -80,7 +81,7 @@ namespace tfs
         int batch_write_info(message::WriteInfoBatchMessage* message);
 
         int read_data(message::ReadDataMessage* message);
-        int read_data_v2(message::ReadDataMessageV2* message);
+        int read_data_extra(message::ReadDataMessageV2* message, int32_t version);
         int read_raw_data(message::ReadRawDataMessage* message);
         int read_file_info(message::FileInfoMessage* message);
 
@@ -109,7 +110,6 @@ namespace tfs
 
         int get_server_memory_info(message::ServerMetaInfoMessage* message);
         int reload_config(message::ReloadConfigMessage* message);
-        void send_blocks_to_ns(const int32_t who);
 
       private:
         bool access_deny(message::Message* message);
@@ -150,7 +150,7 @@ namespace tfs
         tbutil::Mutex count_mutex_;
         tbutil::Mutex read_stat_mutex_;
 
-        common::VINT* thread_pids_;
+      std::vector<tbsys::CThread*> threads_;
 
         AccessControl acl_;
         AccessStat acs_;
@@ -163,14 +163,15 @@ namespace tfs
         tbnet::PacketQueueThread ds_task_queue_thread_;
 
         //write and read log
-        tbsys::CLogger write_stat_log_;
-        tbsys::CLogger read_stat_log_;
+        static tbsys::CLogger write_stat_log_;
+        static tbsys::CLogger read_stat_log_;
         std::vector<std::pair<uint32_t, uint64_t> > read_stat_buffer_;
-        static const unsigned READ_STAT_LOG_BUFFER_LEN = 100;
 
         //global stat
         tbutil::TimerPtr timer_;
         common::StatManager<std::string, std::string, common::StatEntry > stat_mgr_;
+        CheckManager check_mgr_;
+        HeartManager heart_mgr_;
         std::string tfs_ds_stat_;
     };
   }

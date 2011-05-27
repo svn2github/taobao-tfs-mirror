@@ -22,7 +22,7 @@
 #include <vector>
 #include <errno.h>
 #include "message.h"
-#include "common/interval.h"
+#include "common/internal.h"
 
 // the common::DataServerStatInfo information of block
 // format:

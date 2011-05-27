@@ -66,12 +66,11 @@ namespace tfs
     }
 
     // the enterance of compact tasks
-    void* CompactBlock::do_compact_block(void* args)
+    void CompactBlock::run(tbsys::CThread* thread, void* args)
     {
       TBSYS_LOG(INFO, "tid: %u", Func::gettid());
       CompactBlock *ds = reinterpret_cast<CompactBlock *> (args);
       ds->run_compact_block();
-      return NULL;
     }
 
     //execute compacting tasks
@@ -215,7 +214,7 @@ namespace tfs
       }
 
       TBSYS_LOG(DEBUG, "compact del old blockid: %u\n", block_id);
-      // del serve block 
+      // del serve block
       ret = BlockFileManager::get_instance()->del_block(block_id, C_COMPACT_BLOCK);
       if (TFS_SUCCESS != ret)
       {
@@ -334,7 +333,7 @@ namespace tfs
 
         FileInfo dfinfo = *pfinfo;
         dfinfo.offset_ = w_file_offset;
-        // the size returned by FileIterator.current_file_info->size is 
+        // the size returned by FileIterator.current_file_info->size is
         // the size of file content!!!
         dfinfo.size_ = pfinfo->size_ + sizeof(FileInfo);
         dfinfo.usize_ = pfinfo->size_ + sizeof(FileInfo);

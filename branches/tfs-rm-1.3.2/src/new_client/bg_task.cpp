@@ -24,7 +24,7 @@ tbutil::TimerPtr BgTask::timer_ = 0;
 StatManager<string, string, StatEntry> BgTask::stat_mgr_;
 GcManager BgTask::gc_mgr_;
 
-int BgTask::initialize(int64_t gc_schedule_interval)
+int BgTask::initialize()
 {
   int ret = TFS_SUCCESS;
   if (timer_ == 0)
@@ -39,7 +39,7 @@ int BgTask::initialize(int64_t gc_schedule_interval)
   else
   {
     int64_t current = tbsys::CTimeUtil::getTime();
-    StatEntry<string, string>::StatEntryPtr access_ptr = 
+    StatEntry<string, string>::StatEntryPtr access_ptr =
       new StatEntry<string, string>(StatItem::client_access_stat_, current, true);
     access_ptr->add_sub_key(StatItem::read_success_);
     access_ptr->add_sub_key(StatItem::read_fail_);
@@ -50,20 +50,19 @@ int BgTask::initialize(int64_t gc_schedule_interval)
     access_ptr->add_sub_key(StatItem::unlink_success_);
     access_ptr->add_sub_key(StatItem::unlink_fail_);
 
-    StatEntry<string, string>::StatEntryPtr cache_ptr = 
+    StatEntry<string, string>::StatEntryPtr cache_ptr =
       new StatEntry<string, string>(StatItem::client_cache_stat_, current, true);
     cache_ptr->add_sub_key(StatItem::cache_hit_);
     cache_ptr->add_sub_key(StatItem::cache_miss_);
     cache_ptr->add_sub_key(StatItem::remove_count_);
 
-    int64_t stat_interval = 60 * 1000 * 1000; //60s
-    stat_mgr_.add_entry(access_ptr, stat_interval); 
-    stat_mgr_.add_entry(cache_ptr, stat_interval); 
+    stat_mgr_.add_entry(access_ptr, ClientConfig::stat_interval_ * 1000);
+    stat_mgr_.add_entry(cache_ptr, ClientConfig::stat_interval_ * 1000);
   }
 
   if (TFS_SUCCESS == ret)
   {
-    gc_mgr_.initialize(timer_, gc_schedule_interval);
+    gc_mgr_.initialize(timer_, ClientConfig::gc_interval_);
   }
   return ret;
 }

@@ -26,26 +26,26 @@ namespace tfs
     {
     public:
       TfsSmallFile();
-      TfsSmallFile(uint32_t block_id, common::VUINT64& ds_list, const char* write_buf, const int64_t count);
+      TfsSmallFile(const uint32_t block_id, common::VUINT64& ds_list, const char* write_buf, const int64_t count);
       virtual ~TfsSmallFile();
 
-      virtual int open(const char* file_name, const char *suffix, int flags, ... );
-      virtual int64_t read(void* buf, int64_t count);
-      virtual int64_t write(const void* buf, int64_t count);
-      virtual int64_t lseek(int64_t offset, int whence);
-      virtual int64_t pread(void *buf, int64_t count, int64_t offset);
-      virtual int64_t pwrite(const void *buf, int64_t count, int64_t offset);
-      virtual int fstat(TfsFileStat* file_info, const TfsStatFlag mode = NORMAL_STAT);
+      virtual int open(const char* file_name, const char *suffix, const int flags, ... );
+      virtual int64_t read(void* buf, const int64_t count);
+      virtual int64_t write(const void* buf, const int64_t count);
+      virtual int64_t lseek(const int64_t offset, const int whence);
+      virtual int64_t pread(void *buf, const int64_t count, const int64_t offset);
+      virtual int64_t pwrite(const void *buf, const int64_t count, const int64_t offset);
+      virtual int fstat(common::TfsFileStat* file_info, const common::TfsStatType mode = common::NORMAL_STAT);
       virtual int close();
       virtual int64_t get_file_length();
-      virtual int unlink(const char* file_name, const char* suffix, const TfsUnlinkType action);
+      virtual int unlink(const char* file_name, const char* suffix, const common::TfsUnlinkType action);
 
     protected:
-      virtual int64_t get_segment_for_read(int64_t offset, char* buf, int64_t count);
-      virtual int64_t get_segment_for_write(int64_t offset, const char* buf, int64_t count);
+      virtual int64_t get_segment_for_read(const int64_t offset, char* buf, const int64_t count);
+      virtual int64_t get_segment_for_write(const int64_t offset, const char* buf, const int64_t count);
       virtual int read_process(int64_t& read_size);
       virtual int write_process();
-      virtual int32_t finish_write_process(int status);
+      virtual int32_t finish_write_process(const int status);
       virtual int close_process();
       virtual int unlink_process();
     };

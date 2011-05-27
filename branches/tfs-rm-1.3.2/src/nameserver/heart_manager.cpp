@@ -11,16 +11,16 @@
  * Authors:
  *   duolong <duolong@taobao.com>
  *      - initial release
- *   qushan<qushan@taobao.com> 
+ *   qushan<qushan@taobao.com>
  *      - modify 2009-03-27
- *   duanfei <duanfei@taobao.com> 
+ *   duanfei <duanfei@taobao.com>
  *      - modify 2010-04-23
  *
  */
 #include <Memory.hpp>
 #include <Mutex.h>
 #include "ns_define.h"
-#include "common/interval.h"
+#include "common/internal.h"
 #include "common/error_msg.h"
 #include "heart_manager.h"
 #include "message/client.h"

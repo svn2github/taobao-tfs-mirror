@@ -11,13 +11,13 @@
  * Authors:
  *   duolong <duolong@taobao.com>
  *      - initial release
- *   qushan<qushan@taobao.com> 
+ *   qushan<qushan@taobao.com>
  *      - modify 2009-03-27
- *   duanfei <duanfei@taobao.com> 
+ *   duanfei <duanfei@taobao.com>
  *      - modify 2010-04-23
  *
  */
-#include "common/interval.h"
+#include "common/internal.h"
 #include "scanner_manager.h"
 
 using namespace tfs::common;

@@ -26,37 +26,37 @@ TfsSmallFile::~TfsSmallFile()
 {
 }
 
-int TfsSmallFile::open(const char *file_name, const char *suffix, int flags, ... )
+int TfsSmallFile::open(const char *file_name, const char *suffix, const int flags, ... )
 {
   return open_ex(file_name, suffix, flags);
 }
 
-int64_t TfsSmallFile::read(void* buf, int64_t count)
+int64_t TfsSmallFile::read(void* buf, const int64_t count)
 {
   return read_ex(buf, count, offset_);
 }
 
-int64_t TfsSmallFile::write(const void* buf, int64_t count)
+int64_t TfsSmallFile::write(const void* buf, const int64_t count)
 {
   return write_ex(buf, count, offset_);
 }
 
-int64_t TfsSmallFile::lseek(int64_t offset, int whence)
+int64_t TfsSmallFile::lseek(const int64_t offset, const int whence)
 {
   return lseek_ex(offset, whence);
 }
 
-int64_t TfsSmallFile::pread(void *buf, int64_t count, int64_t offset)
+int64_t TfsSmallFile::pread(void *buf, const int64_t count, const int64_t offset)
 {
   return pread_ex(buf, count, offset);
 }
 
-int64_t TfsSmallFile::pwrite(const void *buf, int64_t count, int64_t offset)
+int64_t TfsSmallFile::pwrite(const void *buf, const int64_t count, const int64_t offset)
 {
   return pwrite_ex(buf, count, offset);
 }
 
-int TfsSmallFile::fstat(TfsFileStat* file_stat, const TfsStatFlag mode)
+int TfsSmallFile::fstat(TfsFileStat* file_stat, const TfsStatType mode)
 {
   int ret = TFS_ERROR;
   if (file_stat != NULL)
@@ -110,15 +110,15 @@ int TfsSmallFile::unlink(const char* file_name, const char* suffix, const TfsUnl
   return ret;
 }
 
-int64_t TfsSmallFile::get_segment_for_read(int64_t offset, char* buf, int64_t count)
+int64_t TfsSmallFile::get_segment_for_read(const int64_t offset, char* buf, const int64_t count)
 {
   return get_meta_segment(offset, buf,
                           count > ClientConfig::segment_size_ ? ClientConfig::segment_size_ : count);
 }
 
-int64_t TfsSmallFile::get_segment_for_write(int64_t offset, const char* buf, int64_t count)
+int64_t TfsSmallFile::get_segment_for_write(const int64_t offset, const char* buf, const int64_t count)
 {
-  return get_meta_segment(offset, const_cast<char*>(buf),
+  return get_meta_segment(offset, buf,
                           count > ClientConfig::segment_size_ ? ClientConfig::segment_size_ : count);
 }
 
@@ -141,7 +141,7 @@ int TfsSmallFile::read_process(int64_t& read_size)
 int TfsSmallFile::write_process()
 {
   int ret = TFS_SUCCESS;
-  // set status
+  // just retry this block
   processing_seg_list_[0]->status_ = SEG_STATUS_CREATE_OVER;
   // write data
   if ((ret = process(FILE_PHASE_WRITE_DATA)) != TFS_SUCCESS)
@@ -151,16 +151,26 @@ int TfsSmallFile::write_process()
   return ret;
 }
 
-int32_t TfsSmallFile::finish_write_process(int status)
+int32_t TfsSmallFile::finish_write_process(const int status)
 {
   int32_t count = 0;
+  SEG_DATA_LIST_ITER it = processing_seg_list_.begin();
 
-  // for small file, once fail,
-  if (status != TFS_SUCCESS)
+  if (TFS_SUCCESS == status)
   {
-    // open with filename, just retry this block
-    for (SEG_DATA_LIST_ITER it = processing_seg_list_.begin();
-         it != processing_seg_list_.end(); it++)
+    count = processing_seg_list_.size();
+    for (; it != processing_seg_list_.end(); it++)
+    {
+      if ((*it)->delete_flag_)
+      {
+        tbsys::gDelete(*it);
+      }
+    }
+    processing_seg_list_.clear();
+  }
+  else
+  {
+    while (it != processing_seg_list_.end())
     {
       // for small file, segment just write, not close
       if (SEG_STATUS_BEFORE_CLOSE_OVER == (*it)->status_)
@@ -169,21 +179,14 @@ int32_t TfsSmallFile::finish_write_process(int status)
         {
           tbsys::gDelete(*it);
         }
-        processing_seg_list_.erase(it);
+        it = processing_seg_list_.erase(it);
         count++;
       }
       else
       {
-        (*it)->seg_info_.crc_ = 0;
-        // restart from beginning
-        (*it)->status_ = SEG_STATUS_OPEN_OVER;
+        ++it;
       }
     }
-  }
-  else
-  {
-    count = processing_seg_list_.size();
-    // do nothing, clear by following process
   }
 
   return count;

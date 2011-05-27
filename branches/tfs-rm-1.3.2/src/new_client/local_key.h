@@ -1,10 +1,25 @@
+/*
+ * (C) 2007-2010 Alibaba Group Holding Limited.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+ *
+ *
+ * Version: $Id
+ *
+ * Authors:
+ *   nayan <nayan@taobao.com>
+ *      - initial release
+ *
+ */
 #ifndef TFS_CLIENT_LOCALKEY_H_
 #define TFS_CLIENT_LOCALKEY_H_
 
 #include <tbsys.h>
 #include <Memory.hpp>
 #include "common/file_op.h"
-#include "common/interval.h"
+#include "common/internal.h"
 #include "gc_file.h"
 
 namespace tfs
@@ -44,7 +59,7 @@ namespace tfs
       {
       }
 
-      SegmentData(SegmentData& seg_data)
+      SegmentData(const SegmentData& seg_data)
       {
         delete_flag_ = false;
         memcpy(&seg_info_, &seg_data.seg_info_, sizeof(seg_info_));
@@ -68,9 +83,11 @@ namespace tfs
 
     typedef std::vector<SegmentData*> SEG_DATA_LIST;
     typedef std::vector<SegmentData*>::iterator SEG_DATA_LIST_ITER;
+    typedef std::vector<SegmentData*>::const_iterator SEG_DATA_LIST_CONST_ITER;
 
     typedef std::set<common::SegmentInfo> SEG_SET;
     typedef std::set<common::SegmentInfo>::iterator SEG_SET_ITER;
+    typedef std::set<common::SegmentInfo>::const_iterator SEG_SET_CONST_ITER;
 
     class LocalKey
     {
@@ -84,37 +101,34 @@ namespace tfs
       int load();
       int load(const char* buf);
       int load_file(const char* name);
-      int validate(int64_t total_size = 0);
+      int validate(const int64_t total_size = 0);
       int save();
       int remove();
 
       int64_t get_segment_for_write(const int64_t offset, const char* buf,
-                                int64_t size, SEG_DATA_LIST& seg_list);
-      int64_t get_segment_for_read(const int64_t offset, const char* buf,
+                                const int64_t size, SEG_DATA_LIST& seg_list);
+      int64_t get_segment_for_read(const int64_t offset, char* buf,
                                const int64_t size, SEG_DATA_LIST& seg_list);
 
-      int add_segment(common::SegmentInfo& seg_info);
-      int dump_data(char* buf);
+      int add_segment(const common::SegmentInfo& seg_info);
+      int dump_data(char* buf, const int32_t buff_size) const;
 
       int32_t get_data_size() const;    // get raw data size of segment head and data
       int64_t get_file_size() const;    // get size that segments contain
       int32_t get_segment_size() const; // get segment count
-      SEG_SET& get_seg_info()
-      {
-        return seg_info_;
-      }
+      SEG_SET& get_seg_info();
 
     private:
       void clear();
       void clear_info();
       int load_head(const char* buf);
       int load_segment(const char* buf);
-      void get_segment(const int64_t offset, const char* buf,
-                       int64_t size, SEG_DATA_LIST& seg_list);
+      static void get_segment(const int64_t offset, const char* buf,
+                       const int64_t size, SEG_DATA_LIST& seg_list);
       void check_overlap(const int64_t offset, SEG_SET_ITER& it);
 
-      void gc_segment(SEG_SET_ITER it);
-      void gc_segment(SEG_SET_ITER first, SEG_SET_ITER last);
+      void gc_segment(SEG_SET_CONST_ITER it);
+      void gc_segment(SEG_SET_CONST_ITER first, SEG_SET_CONST_ITER last);
 
     private:
       common::SegmentHead seg_head_;

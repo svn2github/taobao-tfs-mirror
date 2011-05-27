@@ -14,7 +14,7 @@ libtfscommon_a_SOURCES = config.cpp parameter.cpp func.cpp file_queue.cpp \
 			 file_op.cpp\
 			 config.h parameter.h func.h file_queue.h \
 			 file_queue_thread.h lock.h directory_op.h \
-			 define.h interval.h error_msg.h config_item.h \
-			 file_op.h statistics.h atomic.h client_define.h
+			 define.h internal.h error_msg.h config_item.h \
+			 file_op.h statistics.h atomic.h cdefine.h
 
-include_HEADERS = define.h client_define.h
+include_HEADERS = define.h cdefine.h

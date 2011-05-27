@@ -19,7 +19,7 @@
 #include <tbsys.h>
 #include <tbnet.h>
 
-#include "common/interval.h"
+#include "common/internal.h"
 #include "message.h"
 #include "tfs_packet_streamer.h"
 

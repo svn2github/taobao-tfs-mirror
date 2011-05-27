@@ -1,3 +1,18 @@
+/*
+ * (C) 2007-2010 Alibaba Group Holding Limited.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+ *
+ *
+ * Version: $Id
+ *
+ * Authors:
+ *   nayan <nayan@taobao.com>
+ *      - initial release
+ *
+ */
 #include <sys/file.h>
 #include <sys/types.h>
 #include <dirent.h>
@@ -22,16 +37,17 @@ GcManager::GcManager()
 
 GcManager::~GcManager()
 {
+  gc_worker_ = 0;
 }
 
-int GcManager::initialize(tbutil::TimerPtr timer, int64_t schedule_interval_s)
+int GcManager::initialize(tbutil::TimerPtr timer, const int64_t schedule_interval_ms)
 {
   int ret = TFS_ERROR;
   if (0 != timer)
   {
     timer_ = timer;
     gc_worker_ = new GcWorker();
-    timer_->scheduleRepeated(gc_worker_, tbutil::Time::seconds(schedule_interval_s));
+    timer_->scheduleRepeated(gc_worker_, tbutil::Time::milliSeconds(schedule_interval_ms));
     ret = TFS_SUCCESS;
   }
   return ret;
@@ -55,19 +71,19 @@ int GcManager::destroy()
   return TFS_SUCCESS;
 }
 
-int GcManager::reset_schedule_interval(const int64_t schedule_interval_s)
+int GcManager::reset_schedule_interval(const int64_t schedule_interval_ms)
 {
   int ret = TFS_ERROR;
   if (0 != timer_ && 0 != gc_worker_)
   {
-    ret = TFS_SUCCESS;
     timer_->cancel(gc_worker_);
-    timer_->scheduleRepeated(gc_worker_, tbutil::Time::seconds(schedule_interval_s));
+    timer_->scheduleRepeated(gc_worker_, tbutil::Time::milliSeconds(schedule_interval_ms));
+    ret = TFS_SUCCESS;
   }
   return ret;
 }
 
-GcWorker::GcWorker() : tfs_client_(NULL)
+GcWorker::GcWorker() : tfs_client_(NULL), gc_file_(false)
 {
 }
 
@@ -80,7 +96,7 @@ void GcWorker::runTimerTask()
   TBSYS_LOG(DEBUG, "gc start");
   int ret = TFS_SUCCESS;
   // gc expired local key and garbage gc file sequencially, maybe use thread
-  
+
   tfs_client_ = TfsClient::Instance();
   // gc expired local key
   if ((ret = start_gc(GC_EXPIRED_LOCAL_KEY)) != TFS_SUCCESS)
@@ -110,7 +126,7 @@ int GcWorker::destroy()
   return TFS_SUCCESS;
 }
 
-int GcWorker::start_gc(GcType gc_type)
+int GcWorker::start_gc(const GcType gc_type)
 {
   int ret = TFS_SUCCESS;
   if (!destroy_)
@@ -177,14 +193,11 @@ int GcWorker::get_expired_file(const char* path)
   return ret;
 }
 
-int GcWorker::check_file(const char* path, const char* file, time_t now)
+int GcWorker::check_file(const char* path, const char* file, const time_t now)
 {
   int ret = TFS_SUCCESS;
   char file_path[MAX_PATH_LENGTH];
-  int32_t len = strlen(file);
-
-  strncpy(file_path, path, MAX_PATH_LENGTH - len - 1);
-  strncpy(file_path + strlen(path), file, len + 1);
+  snprintf(file_path, MAX_PATH_LENGTH, "%s%s", path, file);
 
   struct stat64 file_info;
   if (stat64(file_path, &file_info) != 0)
@@ -192,7 +205,7 @@ int GcWorker::check_file(const char* path, const char* file, time_t now)
     TBSYS_LOG(ERROR, "stat file fail: %s, error: %s", file_path, strerror(errno));
     ret = TFS_ERROR;
   }
-  else if (S_ISREG(file_info.st_mode) && now - file_info.st_mtime > ClientConfig::expired_time_)
+  else if (S_ISREG(file_info.st_mode) && now - file_info.st_mtime > (ClientConfig::expired_time_ / 1000))
   {
     TBSYS_LOG(INFO, "file need gc: %s, last modify time: %s",
               file_path, Func::time_to_str(file_info.st_mtime).c_str());
@@ -206,7 +219,7 @@ int GcWorker::check_file(const char* path, const char* file, time_t now)
   return ret;
 }
 
-int GcWorker::do_gc(GcType gc_type)
+int GcWorker::do_gc(const GcType gc_type)
 {
   int ret = TFS_SUCCESS, fd = -1;
   string::size_type id_pos = 0;
@@ -254,53 +267,6 @@ int GcWorker::do_gc(GcType gc_type)
   return ret;
 }
 
-template<class T> int GcWorker::do_gc_ex(T& meta, const char* file_name, const char* addr)
-{
-  int ret = TFS_SUCCESS;
-  if ((ret = meta.load_file(file_name)) != TFS_SUCCESS)
-  {
-    TBSYS_LOG(ERROR, "load fail, ret: %d", ret);
-  }
-  else if ((ret = do_unlink(meta.get_seg_info(), addr)) != TFS_SUCCESS)
-  {
-    TBSYS_LOG(ERROR, "do unlink fail, ret: %d", ret);
-  }
-
-  // ignore if unlink all file success, just remove ?
-  if ((ret = meta.remove()) != TFS_SUCCESS)
-  {
-    TBSYS_LOG(ERROR, "remove file fail, file: %s, ret: %d", file_name, ret);
-  }
-
-  return ret;
-}
-
-template<class T> int GcWorker::do_unlink(T& seg_info, const char* addr)
-{
-  int ret = TFS_SUCCESS;
-
-  for (typename T::iterator it = seg_info.begin(); it != seg_info.end(); ++it)
-  {
-    // just not to depend on inner module, use TfsCliet directely
-    // little dummy
-    // FSName reuse name, so every varible each loop
-    FSName fsname;
-    fsname.set_block_id(it->block_id_);
-    fsname.set_file_id(it->file_id_);
-    if ((ret = tfs_client_->unlink(fsname.get_name(), NULL, addr))
-        != TFS_SUCCESS)
-    {
-      TBSYS_LOG(ERROR, "gc segment fail, blockid: %u, fileid: %"PRI64_PREFIX"u, ret: %d",
-                it->block_id_, it->file_id_, ret);
-    }
-    else
-    {
-      TBSYS_LOG(DEBUG, "gc segment success, blockid: %u, fileid: %"PRI64_PREFIX"u",
-                it->block_id_, it->file_id_);
-    }
-  }
-  return ret;
-}
 
 // maybe add to FileOperation
 int GcWorker::check_lock(const char* file)
@@ -309,6 +275,7 @@ int GcWorker::check_lock(const char* file)
   // can not open recognize as lock
   if (fd > 0 && flock(fd, LOCK_EX|LOCK_NB) < 0)
   {
+    close(fd);
     fd = -1;
   }
   return fd;

@@ -17,7 +17,7 @@
 #define TFS_MESSAGE_HEARTMESSAGE_H_
 
 #include <vector>
-#include "common/interval.h"
+#include "common/internal.h"
 
 #include "message.h"
 

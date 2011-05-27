@@ -15,7 +15,7 @@
  */
 #ifndef TFS_CLIENT_METRICS_H_
 #define TFS_CLIENT_METRICS_H_
-#include "common/define.h"
+#include "common/internal.h"
 
 namespace tfs
 {

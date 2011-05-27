@@ -6,7 +6,7 @@
  * published by the Free Software Foundation.
  *
  *
- * Version: $Id$
+ * Version: $Id: internal.h 301 2011-05-13 11:11:50Z nayan@taobao.com $
  *
  * Authors:
  *   duolong <duolong@taobao.com>
@@ -25,6 +25,19 @@
 #include <stdint.h>
 #include "define.h"
 
+#if __WORDSIZE == 32
+namespace __gnu_cxx
+{
+  template<> struct hash<uint64_t>
+  {
+    uint64_t operator()(uint64_t __x) const
+      {
+        return __x;
+      }
+  };
+}
+#endif
+
 namespace tfs
 {
   namespace nameserver
@@ -34,6 +47,28 @@ namespace tfs
   }
   namespace common
   {
+#define CLIENT_POOL ClientManager::gClientManager
+#define CLIENT_SEND_PACKET(serverId,packet,packetHandler,args) ClientManager::gClientManager.m_connmgr->sendPacket(serverId,packet,packetHandler,args)
+
+    //typedef base type
+    typedef std::vector<int64_t> VINT64;
+    typedef std::vector<uint64_t> VUINT64;
+    typedef std::vector<int32_t> VINT32;
+    typedef std::vector<uint32_t> VUINT32;
+    typedef std::vector<int32_t> VINT;
+    typedef std::vector<uint32_t> VUINT;
+    typedef std::vector<std::string> VSTRING;
+
+    enum OperationMode
+    {
+      READ_MODE = 1,
+      WRITE_MODE = 2,
+      APPEND_MODE = 4,
+      UNLINK_MODE = 8,
+      NEWBLK_MODE = 16,
+      NOLEASE_MODE = 32
+    };
+
     enum OplogFlag
     {
       OPLOG_INSERT = 1,
@@ -157,10 +192,37 @@ namespace tfs
       IS_SERVER = 1
     };
 
+    enum ReadDataVersion
+    {
+      READ_VERSION_2 = 2,
+      READ_VERSION_3 = 3
+    };
+
     static const int32_t SEGMENT_HEAD_RESERVE_SIZE = 64;
 
     // common data structure
 #pragma pack(4)
+      struct FileInfo
+      {
+        uint64_t id_; // file id
+        int32_t offset_; // offset in block file
+        int32_t size_; // file size
+        int32_t usize_; // hold space
+        int32_t modify_time_; // modify time
+        int32_t create_time_; // create time
+        int32_t flag_; // deleta flag
+        uint32_t crc_; // crc value
+      };
+
+      struct IpAddr
+      {
+        uint32_t ip_;
+        int32_t port_;
+      };
+
+
+
+
     struct BlockInfo
     {
       uint32_t block_id_;
@@ -389,10 +451,25 @@ namespace tfs
 
     static const int32_t BLOCKINFO_SIZE = sizeof(BlockInfo);
     static const int32_t RAW_META_SIZE = sizeof(RawMeta);
+    static const int32_t FILEINFO_SIZE = sizeof(FileInfo);
 
     static const int32_t PORT_PER_PROCESS = 2;
     static const int32_t MAX_DEV_NAME_LEN = 64;
     static const int32_t MAX_READ_SIZE = 1048576;
+
+    static const int MAX_FILE_FD = INT_MAX;
+    static const int MAX_OPEN_FD_COUNT = MAX_FILE_FD - 1;
+
+    static const int32_t INT_SIZE = 4;
+    static const int32_t INT64_SIZE = 8;
+    static const int32_t MAX_PATH_LENGTH = 256;
+    static const int64_t TFS_MALLOC_MAX_SIZE = 0x00A00000;//10M
+
+    static const int32_t SPEC_LEN = 32;
+    static const int32_t MAX_RESPONSE_TIME = 30000;
+    static const int32_t ERR_MSG_SIZE = 512;
+    static const int32_t ADMIN_WARN_DEAD_COUNT = 1;
+
 
     // typedef
     typedef std::map<std::string, std::string> STRING_MAP; // string => string

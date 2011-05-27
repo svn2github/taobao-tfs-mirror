@@ -13,7 +13,7 @@
  *      - initial release
  *
  */
-#include "common/interval.h"
+#include "common/internal.h"
 #include "server_status_message.h"
 
 using namespace tfs::common;

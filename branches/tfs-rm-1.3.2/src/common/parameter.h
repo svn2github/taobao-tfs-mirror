@@ -16,7 +16,7 @@
 #ifndef TFS_COMMON_PARAMETER_H_
 #define TFS_COMMON_PARAMETER_H_
 
-#include "define.h"
+#include "internal.h"
 
 namespace tfs
 {

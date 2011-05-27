@@ -573,7 +573,7 @@ TBSYS_LOG    (INFO, "ownerchecktime(%"PRI64_PREFIX"d)(us), maxownerchecktime(%"P
 			TBSYS_LOG(DEBUG, "received a msg of oplog sync msg");
       meta_mgr_.get_oplog_sync_mgr()->push(bp);
       break;
-      default:
+  default:
       if (!main_task_queue_thread_.push(bp, main_task_queue_size_, false))
       {
         MessageFactory::send_error_message(bp, TBSYS_LOG_LEVEL(ERROR), STATUS_MESSAGE_ERROR,
@@ -716,7 +716,7 @@ TBSYS_LOG    (INFO, "ownerchecktime(%"PRI64_PREFIX"d)(us), maxownerchecktime(%"P
     int32_t iret = TFS_ERROR;
     VUINT32& blocks = message->get_block_id();
     TBSYS_LOG(INFO, "batch getblock info, block count: %d, mode: %d, blocksize: %d", block_count, mode, blocks.size());
-    
+
     BatchSetBlockInfoMessage* result = new BatchSetBlockInfoMessage();
     if (mode  & BLOCK_READ)
     {
@@ -730,7 +730,7 @@ TBSYS_LOG    (INFO, "ownerchecktime(%"PRI64_PREFIX"d)(us), maxownerchecktime(%"P
         iret = meta_mgr_.read_block_info(block_id, servers);
         if (iret == TFS_SUCCESS)
         {
-          result->set_read_block_ds(block_id, servers); 
+          result->set_read_block_ds(block_id, servers);
         }
       }
     }

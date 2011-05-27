@@ -26,7 +26,7 @@
 #include <tbsys.h>
 #include <tbnet.h>
 #include <Memory.hpp>
-#include "common/interval.h"
+#include "common/internal.h"
 #include "common/func.h"
 
 namespace tfs
@@ -122,7 +122,9 @@ namespace tfs
       CRC_ERROR_MESSAGE,
       ADMIN_CMD_MESSAGE,
       BATCH_GET_BLOCK_INFO_MESSAGE,
-      BATCH_SET_BLOCK_INFO_MESSAGE
+      BATCH_SET_BLOCK_INFO_MESSAGE,
+      READ_DATA_MESSAGE_V3,
+      RESP_READ_DATA_MESSAGE_V3
     };
     //Define Message Type End
 

@@ -16,7 +16,7 @@
  *
  */
 #include "common/config.h"
-#include "common/define.h"
+#include "common/internal.h"
 #include "common/config.h"
 #include "common/config_item.h"
 #include "message/client.h"

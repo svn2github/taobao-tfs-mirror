@@ -19,7 +19,7 @@
 #include "dataserver_define.h"
 #include "blockfile_manager.h"
 #include "logic_block.h"
-#include "common/interval.h"
+#include "common/internal.h"
 #include "common/config.h"
 #include "message/message_factory.h"
 #include "message/client.h"
@@ -31,14 +31,14 @@ namespace tfs
 {
   namespace dataserver
   {
-    class ReplicateBlock
+    class ReplicateBlock : public tbsys::CDefaultRunnable
     {
       public:
         ReplicateBlock(tbutil::Mutex* mutex, message::Client* client);
         ~ReplicateBlock();
 
         void stop();
-        static void* do_replicate_block(void* args);
+        void run(tbsys::CThread* thread, void* args);
 
         int add_repl_task(common::ReplBlock* repl_blk);
 

@@ -37,7 +37,7 @@
 #include <errno.h>
 #include <string>
 
-#include "define.h"
+#include "internal.h"
 
 namespace tfs
 {

@@ -21,7 +21,7 @@
 #include "logic_block.h"
 #include "blockfile_manager.h"
 #include "dataserver_define.h"
-#include "common/interval.h"
+#include "common/internal.h"
 #include "common/config.h"
 #include "message/message_factory.h"
 #include "message/client.h"
@@ -33,7 +33,7 @@ namespace tfs
 {
   namespace dataserver
   {
-    
+
     struct CompactBlkInfo
     {
       uint32_t block_id_;
@@ -41,7 +41,7 @@ namespace tfs
       int32_t owner_;
     };
 
-    class CompactBlock
+    class CompactBlock : public tbsys::CDefaultRunnable
     {
       public:
         CompactBlock();
@@ -50,7 +50,7 @@ namespace tfs
 
         // stop compact tasks
         void stop();
-        static void* do_compact_block(void* args);
+        void run(tbsys::CThread* thread, void* args);
 
         // add logic block compact task
         int add_cpt_task(CompactBlkInfo* cpt_blk);

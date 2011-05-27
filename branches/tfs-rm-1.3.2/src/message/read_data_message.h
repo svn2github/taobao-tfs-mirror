@@ -21,7 +21,7 @@
 #include <fcntl.h>
 #include <string>
 #include <errno.h>
-#include "common/interval.h"
+#include "common/internal.h"
 #include "message.h"
 
 namespace tfs
@@ -129,84 +129,22 @@ namespace tfs
         bool alloc_;
     };
 
-    class ReadDataMessageV2: public Message
+    class ReadDataMessageV2: public ReadDataMessage
     {
       public:
         ReadDataMessageV2();
         virtual ~ReadDataMessageV2();
 
-        void set_block_id(const uint32_t block_id)
-        {
-          read_data_info_.block_id_ = block_id;
-        }
-
-        uint32_t get_block_id() const
-        {
-          return read_data_info_.block_id_;
-        }
-
-        void set_file_id(const uint64_t file_id)
-        {
-          read_data_info_.file_id_ = file_id;
-        }
-
-        uint64_t get_file_id() const
-        {
-          return read_data_info_.file_id_;
-        }
-
-        void set_offset(const int32_t offset)
-        {
-          read_data_info_.offset_ = offset;
-        }
-
-        int32_t get_offset() const
-        {
-          return read_data_info_.offset_;
-        }
-
-        void set_length(const int32_t length)
-        {
-          read_data_info_.length_ = length;
-        }
-
-        int32_t get_length() const
-        {
-          return read_data_info_.length_;
-        }
-
-        virtual int parse(char* data, int32_t len);
-        virtual int build(char* data, int32_t len);
-        virtual int32_t message_length();
         virtual char* get_name();
 
         static Message* create(const int32_t type);
-      protected:
-        ReadDataInfo read_data_info_;
     };
 
-    class RespReadDataMessageV2: public Message
+    class RespReadDataMessageV2: public RespReadDataMessage
     {
       public:
         RespReadDataMessageV2();
         virtual ~RespReadDataMessageV2();
-
-        char* alloc_data(int32_t len);
-
-        char* get_data() const
-        {
-          return data_;
-        }
-
-        void set_length(const int32_t len)
-        {
-          length_ = len;
-        }
-
-        int32_t get_length() const
-        {
-          return length_;
-        }
 
         void set_file_info(common::FileInfo* const file_info)
         {
@@ -225,10 +163,32 @@ namespace tfs
 
         static Message* create(const int32_t type);
       protected:
-        char* data_;
-        int32_t length_;
-        bool alloc_;
         common::FileInfo* file_info_;
+    };
+
+    class ReadDataMessageV3: public ReadDataMessageV2
+    {
+    public:
+        ReadDataMessageV3();
+        virtual ~ReadDataMessageV3();
+
+        virtual char* get_name();
+
+        static Message* create(const int32_t type);
+    };
+
+    class RespReadDataMessageV3: public RespReadDataMessageV2
+    {
+      public:
+        RespReadDataMessageV3();
+        virtual ~RespReadDataMessageV3();
+
+        virtual int parse(char* data, int32_t len);
+        virtual int build(char* data, int32_t len);
+
+        virtual char* get_name();
+
+        static Message* create(const int32_t type);
     };
 
     class ReadRawDataMessage: public Message

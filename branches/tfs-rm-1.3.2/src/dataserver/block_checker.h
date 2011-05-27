@@ -11,9 +11,9 @@
  * Authors:
  *   duolong <duolong@taobao.com>
  *      - initial release
- *   qushan<qushan@taobao.com> 
+ *   qushan<qushan@taobao.com>
  *      - modify 2009-03-27
- *   zongdai <zongdai@taobao.com> 
+ *   zongdai <zongdai@taobao.com>
  *      - modify 2010-04-23
  *
  */
@@ -24,7 +24,7 @@
 #include "dataserver_define.h"
 #include "file_repair.h"
 #include "requester.h"
-#include "common/interval.h"
+#include "common/internal.h"
 #include "common/config.h"
 #include <Mutex.h>
 

@@ -19,7 +19,7 @@
  */
 #include <tbsys.h>
 #include <Memory.hpp>
-#include "common/interval.h"
+#include "common/internal.h"
 #include "common/file_queue.h"
 #include "common/config_item.h"
 #include "common/error_msg.h"

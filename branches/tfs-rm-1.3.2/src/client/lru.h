@@ -18,7 +18,7 @@
 
 #include <list>
 #include <ext/hash_map>
-#include "common/define.h"
+#include "common/internal.h"
 
 namespace tfs
 {

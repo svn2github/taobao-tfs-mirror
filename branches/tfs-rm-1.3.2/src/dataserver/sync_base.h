@@ -11,7 +11,7 @@
  * Authors:
  *   duolong <duolong@taobao.com>
  *      - initial release
- *   zongdai <zongdai@taobao.com> 
+ *   zongdai <zongdai@taobao.com>
  *      - modify 2010-04-23
  *
  */
@@ -25,7 +25,7 @@
 #include <errno.h>
 
 #include "sync_backup.h"
-#include "common/interval.h"
+#include "common/internal.h"
 #include "common/file_queue.h"
 #include "common/file_queue_thread.h"
 #include "message/message_factory.h"
@@ -38,7 +38,7 @@ namespace tfs
   namespace dataserver
   {
 
-    class SyncBase
+    class SyncBase : public tbsys::CDefaultRunnable
     {
       public:
         SyncBase(const int32_t type);
@@ -51,7 +51,7 @@ namespace tfs
         void set_pause(const int32_t v);
         int reload_slave_ip();
 
-        static void* do_sync_mirror(void* args);
+        void run(tbsys::CThread* thread, void* args);
         static int do_second_sync(const void* data, const int64_t len, const int32_t thread_index, void* arg);
 
       private:

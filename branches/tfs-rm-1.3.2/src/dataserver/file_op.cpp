@@ -18,7 +18,7 @@
 #include <string.h>
 #include <errno.h>
 #include "common/error_msg.h"
-#include "common/interval.h"
+#include "common/internal.h"
 #include <Memory.hpp>
 
 namespace tfs

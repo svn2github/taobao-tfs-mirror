@@ -11,9 +11,9 @@
  * Authors:
  *   duolong <duolong@taobao.com>
  *      - initial release
- *   qushan<qushan@taobao.com> 
+ *   qushan<qushan@taobao.com>
  *      - modify 2009-03-27
- *   zongdai <zongdai@taobao.com> 
+ *   zongdai <zongdai@taobao.com>
  *      - modify 2010-04-23
  *
  */
@@ -21,7 +21,7 @@
 #define TFS_DATASERVER_FILEREPAIR_H_
 
 #include "dataserver_define.h"
-#include "common/interval.h"
+#include "common/internal.h"
 #include "client/tfs_client_api.h"
 
 namespace tfs

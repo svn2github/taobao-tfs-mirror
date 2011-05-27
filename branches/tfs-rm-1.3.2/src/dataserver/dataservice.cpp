@@ -28,8 +28,11 @@ namespace tfs
     using namespace common;
     using namespace client;
     using namespace message;
+    using namespace tbsys;
     using namespace std;
 
+    tbsys::CLogger DataService::write_stat_log_;
+    tbsys::CLogger DataService::read_stat_log_;
     DataService::DataService()
     {
       //init dataserver info
@@ -54,16 +57,27 @@ namespace tfs
       hb_client_[1] = NULL;
       client_ = NULL;
       compact_client_ = NULL;
-      thread_pids_ = NULL;
+      threads_.clear();
+      timer_ = 0;
 
       max_cpu_usage_ = SYSPARAM_DATASERVER.max_cpu_usage_;
 
-      timer_ = 0;
       tfs_ds_stat_ = "tfs-ds-stat";
     }
 
     DataService::~DataService()
     {
+
+      for (uint32_t i = 0; i < threads_.size(); ++i)
+      {
+        tbsys::gDelete(threads_[i]);
+      }
+      threads_.clear();
+
+      tbsys::gDelete(repl_block_);
+      tbsys::gDelete(compact_block_);
+      tbsys::gDelete(sync_mirror_);
+
       CLIENT_POOL.release_client(client_);
       CLIENT_POOL.release_client(hb_client_[0]);
       CLIENT_POOL.release_client(hb_client_[1]);
@@ -99,27 +113,14 @@ namespace tfs
       data_management_.set_file_number(file_number);
       ds_requester_.init(data_server_info_.id_, ns_ip_port_, &data_management_);
 
-      //init global stat
+      //init timer
       if (timer_ == 0)
       {
         timer_ = new tbutil::Timer();
       }
-      ret = stat_mgr_.initialize(timer_);
-      if (ret != TFS_SUCCESS)
-      {
-        TBSYS_LOG(ERROR, "%s", "initialize stat manager fail");
-        return ret;
-      }
-      int64_t current = tbsys::CTimeUtil::getTime();
-      StatEntry<string, string>::StatEntryPtr stat_ptr = new StatEntry<string, string>(tfs_ds_stat_, current, false);
-      stat_ptr->add_sub_key("read-success");
-      stat_ptr->add_sub_key("read-failed");
-      stat_ptr->add_sub_key("write-success");
-      stat_ptr->add_sub_key("write-failed");
-      stat_ptr->add_sub_key("unlink-success");
-      stat_ptr->add_sub_key("unlink-failed");
-
-      stat_mgr_.add_entry(stat_ptr, SYSPARAM_DATASERVER.dump_stat_info_interval_);
+      //set write and read log
+      init_log_file(READ_STAT_LOGGER, SYSPARAM_DATASERVER.read_stat_log_file_);
+      init_log_file(WRITE_STAT_LOGGER, SYSPARAM_DATASERVER.write_stat_log_file_);
 
       return TFS_SUCCESS;
     }
@@ -197,13 +198,12 @@ namespace tfs
       return TFS_SUCCESS;
     }
 
-    int DataService::start(VINT* pids)
+    int DataService::start()
     {
       client_ = CLIENT_POOL.get_client(ns_ip_port_);
       hb_client_[0] = CLIENT_POOL.get_client(hb_ip_port_[0]);
       hb_client_[1] = CLIENT_POOL.get_client(hb_ip_port_[1]);
       compact_client_ = CLIENT_POOL.get_client(ns_ip_port_);
-      thread_pids_ = pids;
 
       repl_block_ = new ReplicateBlock(&client_mutex_, client_);
       compact_block_ = new CompactBlock(&compact_mutext_, compact_client_, data_server_info_.id_);
@@ -263,30 +263,53 @@ namespace tfs
       if (stop_)
         return TFS_ERROR;
 
-      pthread_t tid;
-      //start heartbeat thread
-      pthread_create(&tid, NULL, DataService::do_heart, this);
-      thread_pids_->push_back(tid);
+      //init timer task
+      ret = stat_mgr_.initialize(timer_);
+      if (ret != TFS_SUCCESS)
+      {
+        TBSYS_LOG(ERROR, "initialize stat manager fail, ret: %d", ret);
+        return TFS_ERROR;
+      }
+      else
+      {
+        int64_t current = tbsys::CTimeUtil::getTime();
+        StatEntry<string, string>::StatEntryPtr stat_ptr = new StatEntry<string, string>(tfs_ds_stat_, current, false);
+        stat_ptr->add_sub_key("read-success");
+        stat_ptr->add_sub_key("read-failed");
+        stat_ptr->add_sub_key("write-success");
+        stat_ptr->add_sub_key("write-failed");
+        stat_ptr->add_sub_key("unlink-success");
+        stat_ptr->add_sub_key("unlink-failed");
 
-      //start check expire data thread
-      pthread_create(&tid, NULL, DataService::do_check, this);
-      thread_pids_->push_back(tid);
+        stat_mgr_.add_entry(stat_ptr, SYSPARAM_DATASERVER.dump_stat_info_interval_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        check_mgr_.initialize(timer_, SYSPARAM_DATASERVER.check_interval_, this);
+        heart_mgr_.initialize(timer_, SYSPARAM_DATASERVER.heart_interval_, this);
+      }
 
       //start replicate thread
+      //pthread_t tid;
       int32_t replicate_thread_count = SYSPARAM_DATASERVER.replicate_thread_count_;
+      CThread* repl_thread;
       for (int32_t i = 0; i < replicate_thread_count; ++i)
       {
-        pthread_create(&tid, NULL, ReplicateBlock::do_replicate_block, repl_block_);
-        thread_pids_->push_back(tid);
+        repl_thread = new CThread();
+        repl_thread->start(repl_block_, repl_block_);
+        threads_.push_back(repl_thread);
       }
 
       //start compact thread
-      pthread_create(&tid, NULL, CompactBlock::do_compact_block, compact_block_);
-      thread_pids_->push_back(tid);
+      CThread* compact_thread = new CThread();
+      compact_thread->start(compact_block_, compact_block_);
+      threads_.push_back(compact_thread);
 
       //start sync thread
-      pthread_create(&tid, NULL, SyncBase::do_sync_mirror, sync_mirror_);
-      thread_pids_->push_back(tid);
+      CThread* sync_thread = new CThread();
+      sync_thread->start(sync_mirror_, sync_mirror_);
+      threads_.push_back(sync_thread);
 
       //set process thread num for client
       int32_t thread_count = SYSPARAM_DATASERVER.client_thread_client_;
@@ -298,9 +321,6 @@ namespace tfs
       ds_task_queue_thread_.setThreadParameter(thread_count, this, NULL);
       ds_task_queue_thread_.start();
 
-      //set write and read log
-      init_log_file(READ_STAT_LOGGER, SYSPARAM_DATASERVER.read_stat_log_file_);
-      init_log_file(WRITE_STAT_LOGGER, SYSPARAM_DATASERVER.write_stat_log_file_);
 
       TBSYS_LOG(INFO, "dataservice start");
 
@@ -319,18 +339,14 @@ namespace tfs
       //stop task queue
       task_queue_thread_.stop();
       ds_task_queue_thread_.stop();
-      task_queue_thread_.wait();
-      ds_task_queue_thread_.wait();
       stop_ = 1;
       stop_mutex_.unlock();
       //sleep(1);
 
-      //global stat destroy
+      //stop timer thread
       stat_mgr_.destroy();
-      if (timer_ != 0)
-      {
-        timer_->destroy();
-      }
+      check_mgr_.destroy();
+      heart_mgr_.destroy();
 
       if (NULL != sync_mirror_)
       {
@@ -345,18 +361,10 @@ namespace tfs
         compact_block_->stop();
       }
 
-      block_checker_.stop();
-
-      void* retp;
-      for (uint32_t i = 0; i < thread_pids_->size(); ++i)
+      if (timer_ != 0)
       {
-        pthread_join(thread_pids_->at(i), &retp);
+        timer_->destroy();
       }
-      thread_pids_->clear();
-
-      tbsys::gDelete(repl_block_);
-      tbsys::gDelete(compact_block_);
-      tbsys::gDelete(sync_mirror_);
 
       TBSYS_LOG(INFO, "Dataserver stopped.");
       return TFS_SUCCESS;
@@ -367,160 +375,16 @@ namespace tfs
       task_queue_thread_.wait();
       ds_task_queue_thread_.wait();
       stat_mgr_.wait_for_shut_down();
+      check_mgr_.wait_for_shut_down();
+      heart_mgr_.wait_for_shut_down();
+      for (uint32_t i = 0; i < threads_.size(); ++i)
+      {
+        threads_[i]->join();
+      }
       if (timer_ != 0)
       {
         timer_  = 0;
       }
-      return TFS_SUCCESS;
-    }
-
-    void* DataService::do_heart(void *args)
-    {
-      TBSYS_LOG(INFO, "tid: %u", Func::gettid());
-      DataService *ds = reinterpret_cast<DataService*> (args);
-      ds->run_heart();
-      return NULL;
-    }
-
-    int DataService::run_heart()
-    {
-      //sleep for a while, waiting for listen port establish
-      sleep(SYSPARAM_DATASERVER.heart_interval_);
-      while (!stop_)
-      {
-        data_management_.get_ds_filesystem_info(data_server_info_.block_count_, data_server_info_.use_capacity_,
-            data_server_info_.total_capacity_);
-        data_server_info_.current_load_ = Func::get_load_avg();
-        data_server_info_.current_time_ = time(NULL);
-        send_blocks_to_ns(0);
-        send_blocks_to_ns(1);
-
-        // sleep
-        Func::sleep(SYSPARAM_DATASERVER.heart_interval_, &stop_);
-        if (DATASERVER_STATUS_DEAD == data_server_info_.status_)
-        {
-          break;
-        }
-
-        cpu_metrics_.summary();
-      }
-      return TFS_SUCCESS;
-    }
-
-    int DataService::stop_heart()
-    {
-      TBSYS_LOG(INFO, "stop heartbeat...");
-      data_server_info_.status_ = DATASERVER_STATUS_DEAD;
-      send_blocks_to_ns(0);
-      send_blocks_to_ns(1);
-      return TFS_SUCCESS;
-    }
-
-    void* DataService::do_check(void *args)
-    {
-      TBSYS_LOG(INFO, "tid: %u", Func::gettid());
-      DataService *ds = reinterpret_cast<DataService*> (args);
-      ds->run_check();
-      return NULL;
-    }
-
-    int DataService::run_check()
-    {
-      int32_t last_rlog = 0;
-      tzset();
-      int zonesec = 86400 + timezone;
-      while (!stop_)
-      {
-        //check datafile
-        data_management_.gc_data_file();
-        if (stop_)
-          break;
-
-        //check repair block
-        block_checker_.consume_repair_task();
-        if (stop_)
-          break;
-
-        //check clonedblock
-        repl_block_->expire_cloned_block_map();
-        if (stop_)
-          break;
-
-        // check compact block
-        compact_block_->expire_compact_block_map();
-        if (stop_)
-          break;
-
-        int32_t current_time = time(NULL);
-        // check log: write a new log everyday and expire error block
-        if (current_time % 86400 >= zonesec && current_time % 86400 < zonesec + 300 && last_rlog < current_time - 600)
-        {
-          last_rlog = current_time;
-          TBSYS_LOGGER.rotateLog(SYSPARAM_DATASERVER.log_file_.c_str());
-          READ_STAT_LOGGER.rotateLog(SYSPARAM_DATASERVER.read_stat_log_file_.c_str());
-          WRITE_STAT_LOGGER.rotateLog(SYSPARAM_DATASERVER.write_stat_log_file_.c_str());
-
-          // expire error block
-          block_checker_.expire_error_block();
-        }
-        if (stop_)
-          break;
-
-        // check stat
-        count_mutex_.lock();
-        visit_stat_.check_visit_stat();
-        count_mutex_.unlock();
-        if (stop_)
-          break;
-
-        if (read_stat_buffer_.size() >= READ_STAT_LOG_BUFFER_LEN)
-        {
-          int64_t time_start = tbsys::CTimeUtil::getTime();
-          TBSYS_LOG(INFO, "---->START DUMP READ INFO. buffer size: %u, start time: %" PRI64_PREFIX "d", read_stat_buffer_.size(), time_start);
-          read_stat_mutex_.lock();
-          int per_log_size = FILE_NAME_LEN + 2; //two space
-          char read_log_buffer[READ_STAT_LOG_BUFFER_LEN * per_log_size + 1];
-          int32_t loops = read_stat_buffer_.size() / READ_STAT_LOG_BUFFER_LEN;
-          int32_t remain = read_stat_buffer_.size() % READ_STAT_LOG_BUFFER_LEN;
-          int32_t index = 0, offset;
-          int32_t inner_loop = 0;
-          //flush all record to log
-          for (int32_t i = 0; i <= loops; ++i)
-          {
-            memset(read_log_buffer, 0, READ_STAT_LOG_BUFFER_LEN * per_log_size + 1);
-            offset = 0;
-            if (i == loops)
-            {
-              inner_loop = remain;
-            }
-            else
-            {
-              inner_loop = READ_STAT_LOG_BUFFER_LEN;
-            }
-
-            for (int32_t j = 0; j < inner_loop; ++j)
-            {
-              index = i * READ_STAT_LOG_BUFFER_LEN + j;
-              FSName fs_name;
-              fs_name.set_block_id(read_stat_buffer_[index].first);
-              fs_name.set_file_id(read_stat_buffer_[index].second);
-              /* per_log_size + 1: add null */
-              snprintf(read_log_buffer + offset, per_log_size + 1, "  %s", fs_name.get_name());
-              offset += per_log_size;
-            }
-            read_log_buffer[offset] = '\0';
-            READ_STAT_LOG(INFO, "%s", read_log_buffer);
-          }
-          read_stat_buffer_.clear();
-          read_stat_mutex_.unlock();
-          int64_t time_end = tbsys::CTimeUtil::getTime();
-          TBSYS_LOG(INFO, "Dump read info.end time: %" PRI64_PREFIX "d. Cost Time: %" PRI64_PREFIX "d\n", time_end, time_end - time_start);
-        }
-
-        Func::sleep(SYSPARAM_DATASERVER.check_interval_, &stop_);
-      }
-
-      data_management_.remove_data_file();
       return TFS_SUCCESS;
     }
 
@@ -634,7 +498,8 @@ namespace tfs
         return false;
       uint64_t peer_id = conn->getPeerId();
       int32_t type = message->get_message_type();
-      if (type == READ_DATA_MESSAGE || type == READ_DATA_MESSAGE_V2)
+      if (type == READ_DATA_MESSAGE || type == READ_DATA_MESSAGE_V2 ||
+          type == READ_DATA_MESSAGE_V3)
         return acl_.deny(peer_id, AccessControl::READ);
       if (type == WRITE_DATA_MESSAGE || type == CLOSE_FILE_MESSAGE)
         return acl_.deny(peer_id, AccessControl::WRITE);
@@ -715,7 +580,10 @@ namespace tfs
         ret = batch_write_info(dynamic_cast<WriteInfoBatchMessage*>(message));
         break;
       case READ_DATA_MESSAGE_V2:
-        ret = read_data_v2(dynamic_cast<ReadDataMessageV2*>(message));
+        ret = read_data_extra(dynamic_cast<ReadDataMessageV2*>(message), READ_VERSION_2);
+        break;
+      case READ_DATA_MESSAGE_V3:
+        ret = read_data_extra(dynamic_cast<ReadDataMessageV3*>(message), READ_VERSION_3);
         break;
       case READ_DATA_MESSAGE:
         ret = read_data(dynamic_cast<ReadDataMessage*>(message));
@@ -1049,8 +917,11 @@ namespace tfs
           TFS_SUCCESS == ret ? "success" : "fail", close_file_info.file_number_, close_file_info.block_id_,
           close_file_info.file_id_, tbsys::CNetUtil::addrToString(peer_id).c_str(),
           CLOSE_FILE_SLAVER != close_file_info.mode_ ? "master" : "slave", TIMER_DURATION());
-      WRITE_STAT_LOG(INFO, "blockid: %u, fileid: %" PRI64_PREFIX "u, peerip: %s",
-          close_file_info.block_id_, close_file_info.file_id_, tbsys::CNetUtil::addrToString(peer_id).c_str());
+      if (CLOSE_FILE_SLAVER != close_file_info.mode_)
+      {
+        WRITE_STAT_LOG(INFO, "blockid: %u, fileid: %" PRI64_PREFIX "u, peerip: %s",
+            close_file_info.block_id_, close_file_info.file_id_, tbsys::CNetUtil::addrToString(peer_id).c_str());
+      }
 
       string sub_key = "";
       TFS_SUCCESS == ret ? sub_key = "write-success" : sub_key = "write-failed";
@@ -1058,10 +929,24 @@ namespace tfs
       return TFS_SUCCESS;
     }
 
-    int DataService::read_data_v2(ReadDataMessageV2* message)
+    int DataService::read_data_extra(ReadDataMessageV2* message, int32_t version)
     {
       TIMER_START();
-      RespReadDataMessageV2* resp_rd_v2_msg = new RespReadDataMessageV2();
+      RespReadDataMessageV2* resp_rd_v2_msg = NULL;
+      if (READ_VERSION_2 == version)
+      {
+        resp_rd_v2_msg = new RespReadDataMessageV2();
+      }
+      else if (READ_VERSION_3 == version)
+      {
+        resp_rd_v2_msg = new RespReadDataMessageV3();
+      }
+      else
+      {
+        TBSYS_LOG(ERROR, "unknown read version type %d", version);
+        return TFS_ERROR;
+      }
+
       uint32_t block_id = message->get_block_id();
       uint64_t file_id = message->get_file_id();
       int32_t read_len = message->get_length();
@@ -1069,7 +954,7 @@ namespace tfs
       uint64_t peer_id = message->get_connection()->getPeerId();
 
       TBSYS_LOG(DEBUG, "blockid: %u, fileid: %" PRI64_PREFIX "u, read len: %d, read offset: %d, resp: %p", block_id,
-          file_id, read_len, read_offset, resp_rd_v2_msg);
+                file_id, read_len, read_offset, resp_rd_v2_msg);
       //add FileInfo size if the first fragment
       int32_t real_read_len = 0;
       if (0 == read_offset)
@@ -1107,7 +992,7 @@ namespace tfs
             tbsys::gDelete(resp_rd_v2_msg);
             tbsys::gDeleteA(tmp_data_buffer);
             TBSYS_LOG(ERROR, "alloc data failed, blockid: %u, fileid: %" PRI64_PREFIX "u, real len: %d", block_id,
-                file_id, real_read_len);
+                      file_id, real_read_len);
             ret = TFS_ERROR;
           }
 
@@ -1137,9 +1022,10 @@ namespace tfs
       }
 
       TIMER_END();
-      TBSYS_LOG(INFO, "read v2 %s. blockid: %u, fileid: %" PRI64_PREFIX "u, read len: %d, read offset: %d, peer ip: %s, cost time: %" PRI64_PREFIX "d",
-          TFS_SUCCESS == ret ? "success" : "fail", block_id, file_id, real_read_len, read_offset,
-          tbsys::CNetUtil::addrToString(peer_id).c_str(), TIMER_DURATION());
+      TBSYS_LOG(DEBUG, "read v%d %s. blockid: %u, fileid: %" PRI64_PREFIX "u, read len: %d, read offset: %d, peer ip: %s, cost time: %" PRI64_PREFIX "d",
+                version, TFS_SUCCESS == ret ? "success" : "fail",
+                block_id, file_id, real_read_len, read_offset,
+                tbsys::CNetUtil::addrToString(peer_id).c_str(), TIMER_DURATION());
 
       string sub_key = "";
       TFS_SUCCESS == ret ? sub_key = "read-success": sub_key = "read-failed";
@@ -1845,92 +1731,6 @@ namespace tfs
       TBSYS_LOG(DEBUG, "write block fileinfo successful, blockid: %u", block_id);
       message->reply_message(new StatusMessage(STATUS_MESSAGE_OK));
       return TFS_SUCCESS;
-    }
-
-    // send blockinfos to nameserver
-    void DataService::send_blocks_to_ns(const int32_t who)
-    {
-      if (0 != who && 1 != who)
-        return;
-
-      // ns who is not set
-      if (!set_flag_[who])
-        return;
-
-      SetDataserverMessage req_sds_msg;
-      req_sds_msg.set_ds(&data_server_info_);
-      if (need_send_blockinfo_[who])
-      {
-        req_sds_msg.set_has_block(HAS_BLOCK_FLAG_YES);
-
-        list<LogicBlock*> logic_block_list;
-        data_management_.get_all_logic_block(logic_block_list);
-        for (list<LogicBlock*>::iterator lit = logic_block_list.begin(); lit != logic_block_list.end(); ++lit)
-        {
-          TBSYS_LOG(DEBUG, "send block to ns: %d, blockid: %u\n", who, (*lit)->get_logic_block_id());
-          req_sds_msg.add_block((*lit)->get_block_info());
-        }
-      }
-
-      Message *message = hb_client_[who]->call(&req_sds_msg);
-      if (NULL != message)
-      {
-        if (RESP_HEART_MESSAGE == message->get_message_type())
-        {
-          RespHeartMessage* resp_hb_msg = dynamic_cast<RespHeartMessage*>(message);
-          need_send_blockinfo_[who] = 0;
-          if (resp_hb_msg->get_status() == HEART_NEED_SEND_BLOCK_INFO)
-          {
-            TBSYS_LOG(DEBUG, "nameserver %d ask for send block\n", who + 1);
-            need_send_blockinfo_[who] = 1;
-          }
-          else if (resp_hb_msg->get_status() == HEART_EXP_BLOCK_ID)
-          {
-            TBSYS_LOG(INFO, "nameserver %d ask for expire block\n", who + 1);
-            data_management_.add_new_expire_block(resp_hb_msg->get_expire_blocks(), NULL, resp_hb_msg->get_new_blocks());
-          }
-
-          int32_t old_sync_mirror_status = sync_mirror_status_;
-          sync_mirror_status_ = resp_hb_msg->get_sync_mirror_status();
-
-          if (old_sync_mirror_status != sync_mirror_status_)
-          {
-            //has modified
-            if ((sync_mirror_status_ & 1))
-            {
-              TBSYS_LOG(ERROR, "sync pause.");
-              sync_mirror_->set_pause(1);
-            }
-            if ((sync_mirror_status_ & 3) == 2)
-            {
-              TBSYS_LOG(ERROR, "sync start.");
-              sync_mirror_->set_pause(0);
-            }
-            if ((sync_mirror_status_ & 4))
-            {
-              TBSYS_LOG(ERROR, "sync disable log.");
-              sync_mirror_->disable_log();
-            }
-            if ((sync_mirror_status_ & 12) == 8)
-            {
-              TBSYS_LOG(ERROR, "sync reset log.");
-              sync_mirror_->reset_log();
-            }
-            if ((sync_mirror_status_ & 16))
-            {
-              TBSYS_LOG(ERROR, "sync set slave ip.");
-              sync_mirror_->reload_slave_ip();
-            }
-          }
-
-        }
-        tbsys::gDelete(message);
-      }
-      else
-      {
-        TBSYS_LOG(ERROR, "Message is NULL");
-        hb_client_[who]->disconnect();
-      }
     }
 
     void DataService::do_stat(const uint64_t peer_id,

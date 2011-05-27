@@ -18,7 +18,7 @@
 
 #include <string>
 #include <map>
-#include "interval.h"
+#include "internal.h"
 #include "func.h"
 
 namespace tfs
