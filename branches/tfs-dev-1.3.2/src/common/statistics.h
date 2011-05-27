@@ -126,7 +126,7 @@ public:
   int initialize(tbutil::TimerPtr timer);
   int wait_for_shut_down();
   int destroy();
-  int reset_schedule_interval(const int64_t schedule_interval_s);
+  int reset_schedule_interval(const int64_t schedule_interval_us);
   int add_entry(const EntryPtr& entry, int64_t schedule_interval_us = 0);
   int remove_entry(const Key& key);
   int update_entry(const Key& key, std::vector<int64_t>& update_list, bool inc = true);

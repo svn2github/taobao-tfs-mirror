@@ -6,9 +6,6 @@
  * include define.h instead
  * */
 
-#include <stdint.h>
-#include <stdlib.h>
-
 #if __cplusplus
 extern "C"
 {

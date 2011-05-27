@@ -1,6 +1,9 @@
 #ifndef TFS_CLIENT_C_API_H_
 #define TFS_CLIENT_C_API_H_
 
+#include <stdint.h>
+#include <stdlib.h>
+
 #include "common/cdefine.h"
 
 #if __cplusplus
