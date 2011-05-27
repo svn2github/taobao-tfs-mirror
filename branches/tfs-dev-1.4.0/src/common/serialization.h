@@ -25,11 +25,11 @@ namespace tfs
     {
       static int64_t get_string_length(const char* str)
       {
-        return NULL == str ? INT_SIZE : strlen(str) + INT_SIZE;
+        return NULL == str ? INT_SIZE : strlen(str) + INT_SIZE + 1;
       }
       static int64_t get_string_length(const std::string& str)
       {
-        return str.empty() ? INT_SIZE : str.length() + INT_SIZE;
+        return str.empty() ? INT_SIZE : str.length() + INT_SIZE + 1;
       }
       template <typename T> 
       static int64_t get_vint8_length(const T& value)
@@ -360,15 +360,16 @@ namespace tfs
         int32_t iret = NULL != data &&  pos < data_len &&  pos >= 0 ? TFS_SUCCESS : TFS_ERROR;
         if (TFS_SUCCESS == iret)
         {
-          int64_t length = str.length();
+          int64_t length = str.length() + 1; /** include '\0' length*/
           iret = data_len - pos >= (length + INT_SIZE) ? TFS_SUCCESS : TFS_ERROR;
           if (TFS_SUCCESS == iret)
           {
             iret = set_int32(data, data_len, pos, length);
             if (TFS_SUCCESS == iret)
             {
-              memcpy((data+pos), str.c_str(), length);
+              memcpy((data+pos), str.c_str(), length - 1);
               pos += length;
+              data[pos - 1] = '\0';
             }
           }
         }
@@ -380,15 +381,16 @@ namespace tfs
         int32_t iret = NULL != data &&  pos < data_len &&  pos >= 0 ? TFS_SUCCESS : TFS_ERROR;
         if (TFS_SUCCESS == iret)
         {
-          int64_t length = NULL == str ? 0 : strlen(str);
+          int64_t length = NULL == str ? 0 : strlen(str) + 1;/** include '\0'**/
           iret = data_len - pos >= (length + INT_SIZE) ? TFS_SUCCESS : TFS_ERROR;
           if (TFS_SUCCESS == iret)
           {
             iret = set_int32(data, data_len, pos, length);
             if (TFS_SUCCESS == iret)
             {
-              memcpy((data+pos), str, length);
+              memcpy((data+pos), str, length - 1);
               pos += length;
+              data[pos - 1] = '\0';
             }
           }
         }

@@ -37,10 +37,10 @@ namespace tfs
       status_ = status;
       if (NULL != str)
       {
-        length_ = strlen(str);
-        if (length_ > MAX_ERROR_MSG_LENGTH - 1)
+        length_ = Serialization::get_string_length(str);
+        if (length_ > MAX_ERROR_MSG_LENGTH + 1)
         {
-          length_ = MAX_ERROR_MSG_LENGTH - 1;
+          length_ = MAX_ERROR_MSG_LENGTH + 1;
         }
         memcpy(msg_, str, length_);
         msg_[length_] = '\0';
@@ -77,9 +77,9 @@ namespace tfs
         iret = input.get_int32(&length_);
         if (TFS_SUCCESS == iret)
         {
-          if (length_ > MAX_ERROR_MSG_LENGTH)
+          iret = length_ < 0 || length_ > MAX_ERROR_MSG_LENGTH ? TFS_ERROR : TFS_SUCCESS;
+          if (TFS_SUCCESS != iret)
           {
-            iret = TFS_ERROR;
             TBSYS_LOG(ERROR, "error msg length: %d less than : %d", length_, MAX_ERROR_MSG_LENGTH);
           }
           else
@@ -87,7 +87,7 @@ namespace tfs
             if (length_ > 0)
             {
               iret = input.get_bytes(msg_, length_); 
-              msg_[length_] = '\0';
+              msg_[length_ - 1] = '\0';
             }
           }
         }

@@ -52,6 +52,7 @@ namespace tfs
 
     bool BaseService::destroy()
     {
+      TBSYS_LOG(DEBUG, "destroy================================");
       NewClientManager::get_instance().destroy();
       transport_.stop();
       destroy_service();

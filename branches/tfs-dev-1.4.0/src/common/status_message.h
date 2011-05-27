@@ -36,7 +36,7 @@ namespace tfs
 
       void dump() const;
     private:
-      char msg_[MAX_ERROR_MSG_LENGTH];
+      char msg_[MAX_ERROR_MSG_LENGTH + 1];/** include '\0'*/
       int32_t length_;
       int32_t status_;
     };

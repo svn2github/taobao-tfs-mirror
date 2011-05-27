@@ -33,7 +33,7 @@ namespace tfs
         packet = new StatusMessage();
         break;
       }
-      return NULL;
+      return packet;
     }
 
     tbnet::Packet* BasePacketFactory::clone_packet(tbnet::Packet* packet, const int32_t version, const bool deserialize) 
@@ -45,7 +45,9 @@ namespace tfs
         if (NULL != clone_packet)
         {
           BasePacket* bpacket = dynamic_cast<BasePacket*>(clone_packet);
-          if (!bpacket->copy(dynamic_cast<BasePacket*>(packet), version, deserialize))
+          TBSYS_LOG(DEBUG, "pcode: %d, length: %d", bpacket->getPCode(), bpacket->length());
+          bool bret = bpacket->copy(dynamic_cast<BasePacket*>(packet), version, deserialize);
+          if (!bret)
           {
             TBSYS_LOG(ERROR, "clone packet error, pcode: %d", packet->getPCode());
             //bpacket->set_auto_free();

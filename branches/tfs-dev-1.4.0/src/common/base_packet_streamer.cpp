@@ -169,7 +169,7 @@ namespace tfs
           pheader.crc_ = bpacket->get_crc();
           pheader.flag_ = TFS_PACKET_FLAG_V1;
           pheader.id_  = bpacket->get_id();
-          pheader.length_ = bpacket->length();
+          pheader.length_ = bpacket->get_data_length();
           pheader.type_ = header->_pcode;
           pheader.version_ = bpacket->get_version();
           header_length = pheader.length();
@@ -182,7 +182,7 @@ namespace tfs
           pheader.crc_ = bpacket->get_crc();
           pheader.flag_ = TFS_PACKET_FLAG_V1;
           pheader.id_  = bpacket->getChannelId();
-          pheader.length_ = bpacket->length();
+          pheader.length_ = bpacket->get_data_length();
           pheader.type_ = header->_pcode;
           pheader.version_ = bpacket->get_version();
           header_length = pheader.length();
@@ -207,8 +207,11 @@ namespace tfs
         bret = TFS_SUCCESS == iret;
         if (bret)
         {
+          TBSYS_LOG(DEBUG, "header length: %d, body length : %d", header_length, bpacket->get_data_length());
+          Func::hex_dump(output->getData(), output->getDataLen());
           output->pourData(header_length);
           bret = bpacket->encode(output);
+          Func::hex_dump(output->getData(), output->getDataLen());
         }
         else
         {

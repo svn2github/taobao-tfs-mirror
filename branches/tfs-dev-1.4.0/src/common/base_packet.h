@@ -82,7 +82,7 @@ namespace tfs
 
       int64_t length() const
       {
-        return sizeof(TfsPacketNewHeaderV0);
+        return INT_SIZE * 3;
       }
     };
 
@@ -157,7 +157,7 @@ namespace tfs
 
       int64_t length() const
       {
-        return sizeof(TfsPacketNewHeaderV1);
+        return INT_SIZE * 4 + INT64_SIZE;
       }
     };
   #pragma pack()
@@ -291,6 +291,7 @@ namespace tfs
       virtual int serialize(Stream& output) const = 0;
       virtual int deserialize(Stream& input) = 0;
       virtual int64_t length() const = 0;
+      int64_t get_data_length() const { return stream_.get_data_length();}
       virtual int reply(BasePacket* packet);
       int reply_error_packet(const int32_t level, const char* file, const int32_t line,
                const char* function, const int32_t error_code, const char* fmt, ...);
@@ -327,7 +328,7 @@ namespace tfs
       uint32_t crc_;
       DirectionStatus direction_;
       int32_t version_;
-      static const int16_t MAX_ERROR_MSG_LENGTH = 512;
+      static const int16_t MAX_ERROR_MSG_LENGTH = 511; /** not include '\0'*/
       //bool auto_free_;
       bool dump_flag_;
     };

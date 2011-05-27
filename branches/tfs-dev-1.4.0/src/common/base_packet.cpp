@@ -57,19 +57,19 @@ namespace tfs
           //self members 
           id_ = src->get_id();
           crc_ = src->get_crc();
-          version_ = version >= 0 ? version : src->get_version();
+          version_ = version >= TFS_PACKET_VERSION_V0 ? version : src->get_version();
           //auto_free_ = src->get_auto_free();
           connection_ = src->get_connection();
           direction_  = src->get_direction();
 
           stream_.clear();
-          stream_.expand(length());
+          stream_.expand(src->length());
           int32_t iret = src->serialize(stream_);
           bret = TFS_SUCCESS == iret;
           if (bret)
           {
             //recalculate crc
-            if (version >= 1)
+            if (version >= TFS_PACKET_VERSION_V1)
             {
               crc_ = common::Func::crc(TFS_PACKET_FLAG_V1, stream_.get_data(), stream_.get_data_length());
             }
@@ -195,19 +195,28 @@ namespace tfs
           packet->set_id(id_ + 1);
           packet->set_version(version_);
 
-          if (is_enable_dump())
+          iret = packet->serialize(packet->stream_);
+          if (TFS_SUCCESS == iret)
           {
-            dump();
-            packet->dump();
-          }
-          //post message
-          bool bret= connection_->postPacket(packet);
-          iret = bret ? TFS_SUCCESS : TFS_ERROR;
-          if (TFS_SUCCESS != iret)
-          {
-            TBSYS_LOG(ERROR, "post packet failure, server: %s, pcode:%d",
-                tbsys::CNetUtil::addrToString(connection_->getServerId()).c_str(), packet->getPCode());
-            packet->free();
+            //recalculate crc
+            if (version_ >= TFS_PACKET_VERSION_V1)
+            {
+              packet->crc_ = common::Func::crc(TFS_PACKET_FLAG_V1, packet->stream_.get_data(), packet->stream_.get_data_length());
+            }
+            if (is_enable_dump())
+            {
+              dump();
+              packet->dump();
+            }
+            //post message
+            bool bret= connection_->postPacket(packet);
+            iret = bret ? TFS_SUCCESS : TFS_ERROR;
+            if (TFS_SUCCESS != iret)
+            {
+              TBSYS_LOG(ERROR, "post packet failure, server: %s, pcode:%d",
+                  tbsys::CNetUtil::addrToString(connection_->getServerId()).c_str(), packet->getPCode());
+              packet->free();
+            }
           }
         }
       }
@@ -217,7 +226,7 @@ namespace tfs
     int BasePacket::reply_error_packet(const int32_t level, const char* file, const int32_t line,
                const char* function, const int32_t error_code, const char* fmt, ...) 
     {
-      char msgstr[MAX_ERROR_MSG_LENGTH];
+      char msgstr[MAX_ERROR_MSG_LENGTH + 1];/** include '\0'*/
       va_list ap;
       va_start(ap, fmt);
       vsnprintf(msgstr, MAX_ERROR_MSG_LENGTH, fmt, ap);
@@ -226,10 +235,12 @@ namespace tfs
 
       BaseService* service = dynamic_cast<BaseService*>(tbutil::Service::instance());
       StatusMessage* packet = dynamic_cast<StatusMessage*>(service->get_packet_factory()->createPacket(STATUS_MESSAGE));
+      msgstr[MAX_ERROR_MSG_LENGTH] = '\0';
+      packet->set_message(error_code, msgstr);
       int32_t iret = reply(packet);
-      if (TFS_SUCCESS == iret)
+      if (TFS_SUCCESS != iret)
       {
-        TBSYS_LOG(ERROR, "reply message fail, error code: %d, pcode: %d", error_code, packet->getPCode());
+        TBSYS_LOG(ERROR, "reply message: %d failed, error code: %d",packet->getPCode(), error_code);
       }
       return TFS_SUCCESS;
     }
