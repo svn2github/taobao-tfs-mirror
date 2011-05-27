@@ -7,11 +7,11 @@
 #include "common/define.h"
 #include "common/statistics.h"
 #include "common/directory_op.h"
-#include "client/tfs_session.h"
-#include "client/tfs_file.h"
-#include "client/fsname.h"
-#include "message/client.h"
-#include "message/client_pool.h"
+#include "new_client/tfs_session.h"
+#include "new_client/tfs_file.h"
+#include "new_client/fsname.h"
+#include "common/client_manager.h"
+#include "common/new_client.h"
 
 struct StatStruct
 {

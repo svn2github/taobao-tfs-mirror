@@ -8,7 +8,7 @@ AM_LDFLAGS=-lrt -lpthread -ldl
 bin_PROGRAMS = transfer_block split_block_tool compare_crc
 
 LDADD = $(top_builddir)/src/dataserver/libdataserver.a\
-	$(top_builddir)/src/client/.libs/libtfsclient.a\
+	$(top_builddir)/src/new_client/.libs/libtfsclient.a\
 	$(top_builddir)/src/message/libtfsmessage.a\
 	$(top_builddir)/src/common/libtfscommon.a\
 	$(TBLIB_ROOT)/lib/libtbnet.a\

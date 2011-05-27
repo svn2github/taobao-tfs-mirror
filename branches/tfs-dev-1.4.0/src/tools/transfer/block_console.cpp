@@ -13,17 +13,21 @@
  *
  */
 
-#include "block_console.h"
-#include "common/func.h"
-#include "message/message_factory.h"
-#include "message/client_manager.h"
-#include "message/client.h"
-#include "client/tfs_client_api.h"
-#include "dataserver/dataserver_define.h"
-#include "dataserver/visit_stat.h"
 #include <tbsys.h>
 #include <Memory.hpp>
 #include <algorithm>
+#include "block_console.h"
+#include "common/func.h"
+#include "common/client_manager.h"
+#include "common/new_client.h"
+#include "common/status_message.h"
+#include "new_client/tfs_client_api.h"
+#include "dataserver/dataserver_define.h"
+#include "dataserver/visit_stat.h"
+#include "message/server_status_message.h"
+#include "message/block_info_message.h"
+#include "message/read_data_message.h"
+#include "message/write_data_message.h"
 
 using namespace std;
 using namespace tfs::common;
@@ -311,7 +315,7 @@ int TranBlock::run()
 
 int TranBlock::get_src_ds()
 {
-  int ret = src_session_->get_block_info(block_id_, rds_);
+  int ret = src_session_->get_block_info(block_id_, rds_, T_READ);
   if (TFS_SUCCESS == ret)
   {
     if (rds_.size() <= 0)
@@ -331,43 +335,41 @@ int TranBlock::read_index()
 
   // fetch data from the first ds
   int index = 0;
-  Message* rsp = NULL;
-#ifdef USE_NEW_CLIENT
-  int ret = NewClientManager::get_instance()->call(rds_[index], &gfl_msg, WAIT_TIME_OUT, rsp);
-#else
-  int ret = send_message_to_server(rds_[index], &gfl_msg, &rsp);
-#endif
-  if (TFS_SUCCESS != ret)
+  int ret = TFS_SUCCESS;
+  NewClient* client = NewClientManager::get_instance().create_client();
+  if (NULL != client)
   {
-    TBSYS_LOG(ERROR, "get index from ds: %s failed, blockid: %u, ret: %d",
-        tbsys::CNetUtil::addrToString(rds_[index]).c_str(), block_id_, ret);
-  }
-  else if (NULL == rsp) // will not enter this path
-  {
-    TBSYS_LOG(ERROR, "get index from ds: %s failed, blockid: %u, rsp msg is NULL",
-        tbsys::CNetUtil::addrToString(rds_[index]).c_str(), block_id_);
-    ret = TFS_ERROR;
-  }
-  else if (BLOCK_FILE_INFO_MESSAGE == rsp->get_message_type())
-  {
-    BlockFileInfoMessage *bfi_msg = dynamic_cast<BlockFileInfoMessage*>(rsp);
-    FILE_INFO_LIST* tmp_file_vector = bfi_msg->get_fileinfo_list();
-    for (FILE_INFO_LIST::iterator fit = tmp_file_vector->begin(); fit != tmp_file_vector->end(); ++fit)
+    tbnet::Packet* rsp = NULL;
+    if (TFS_SUCCESS == send_msg_to_server(rds_[index], client, &gfl_msg, rsp))
+    {  
+      if (BLOCK_FILE_INFO_MESSAGE == rsp->getPCode())
+      {
+        BlockFileInfoMessage *bfi_msg = dynamic_cast<BlockFileInfoMessage*>(rsp);
+        FILE_INFO_LIST* tmp_file_vector = bfi_msg->get_fileinfo_list();
+        for (FILE_INFO_LIST::iterator fit = tmp_file_vector->begin(); fit != tmp_file_vector->end(); ++fit)
+        {
+          FileInfo finfo = (*fit);
+          file_set_.insert(finfo);
+        }
+
+        total_tran_size_ += file_set_.size() * FILEINFO_SIZE;
+      }
+      else
+      {
+        ret = TFS_ERROR;
+      }
+    } 
+    else
     {
-      FileInfo finfo = *(*fit);
-      file_set_.insert(finfo);
+      ret = TFS_ERROR;
     }
-
-    total_tran_size_ += file_set_.size() * FILEINFO_SIZE;
+    NewClientManager::get_instance().destroy_client(client);
   }
-  else //unknow type
+  else
   {
-    TBSYS_LOG(ERROR, "get index from ds: %s failed, blockid: %u, rsp msg type: %d",
-        tbsys::CNetUtil::addrToString(rds_[index]).c_str(), block_id_, rsp->get_message_type());
     ret = TFS_ERROR;
   }
 
-  tbsys::gDelete(rsp);
   return ret;
 }
 
@@ -390,25 +392,20 @@ int TranBlock::read_data()
       rrd_msg.set_offset(cur_offset_);
       rrd_msg.set_length(read_size);
 
+      NewClient* client = NewClientManager::get_instance().create_client();
+      tbnet::Packet* rsp = NULL;
+      if(TFS_SUCCESS != send_msg_to_server(rds_[index], client, &rrd_msg, rsp))
+      {
+        rsp = NULL;
+      }
+
       // fetch data from the first ds
-      Message* rsp = NULL;
-#ifdef USE_NEW_CLIENT
-  ret = NewClientManager::get_instance()->call(rds_[index], &rrd_msg, WAIT_TIME_OUT, rsp);
-#else
-  ret = send_message_to_server(rds_[index], &rrd_msg, &rsp);
-#endif
-      if (TFS_SUCCESS != ret)
+      if (NULL == rsp)
       {
         TBSYS_LOG(ERROR, "read raw data from ds: %s failed, blockid: %u, offset: %d, remainder_retrys: %"PRI64_PREFIX"d, ret: %d",
             tbsys::CNetUtil::addrToString(rds_[index]).c_str(), block_id_, cur_offset_, remainder_retrys, ret);
       }
-      else if (NULL == rsp) // will not enter this path
-      {
-        TBSYS_LOG(ERROR, "read raw data from ds: %s failed, blockid: %u, offset: %d, remainder_retrys: %"PRI64_PREFIX"d, rsp msg is NULL",
-            tbsys::CNetUtil::addrToString(rds_[index]).c_str(), block_id_, remainder_retrys, cur_offset_);
-        ret = TFS_ERROR;
-      }
-      else if (RESP_READ_RAW_DATA_MESSAGE == rsp->get_message_type())
+      else if (RESP_READ_RAW_DATA_MESSAGE == rsp->getPCode())
       {
         RespReadRawDataMessage* rsp_rrd_msg = dynamic_cast<RespReadRawDataMessage*>(rsp);
         int len = rsp_rrd_msg->get_length();
@@ -436,12 +433,12 @@ int TranBlock::read_data()
       else //unknow type
       {
         TBSYS_LOG(ERROR, "read raw data from ds: %s failed, blockid: %u, offset: %d, remainder_retrys: %"PRI64_PREFIX"d, unknow msg type: %d",
-            tbsys::CNetUtil::addrToString(rds_[index]).c_str(), block_id_, cur_offset_, remainder_retrys, rsp->get_message_type());
+            tbsys::CNetUtil::addrToString(rds_[index]).c_str(), block_id_, cur_offset_, remainder_retrys, rsp->getPCode());
         ret = TFS_ERROR;
       }
 
-      tbsys::gDelete(rsp);
-      if (TFS_SUCCESS != ret)
+      NewClientManager::get_instance().destroy_client(client);
+      if (NULL == rsp)
       {
         --remainder_retrys;
         continue;
@@ -521,12 +518,12 @@ int TranBlock::recombine_data()
         if (finfo.id_ != data_finfo->id_)
         {
           TBSYS_LOG(ERROR, "file id conflict in same offset, serious error. blockid: %u, info fileid: %"PRI64_PREFIX"u, offset: %d, data fileid: %"PRI64_PREFIX"u, offset: %d, total len: %d",
-            block_id_, finfo.id_, finfo.offset_, data_finfo->id_, data_finfo->offset_, src_content_buf_.getDataLen());
+              block_id_, finfo.id_, finfo.offset_, data_finfo->id_, data_finfo->offset_, src_content_buf_.getDataLen());
         }
         else if (finfo.modify_time_ != data_finfo->modify_time_)
         {
           TBSYS_LOG(WARN, "file modify time conflict in same offset, file updated after get meta info. blockid: %u, fileid: %"PRI64_PREFIX"u, info modify time: %d, data modify time: %d",
-            block_id_, finfo.id_, data_finfo->id_, finfo.modify_time_, data_finfo->modify_time_);
+              block_id_, finfo.id_, data_finfo->id_, finfo.modify_time_, data_finfo->modify_time_);
         }
         else
         {
@@ -613,19 +610,13 @@ int TranBlock::write_data()
         req_wrd_msg.set_new_block(1);
       }
 
-      Message* rsp = NULL;
-#ifdef USE_NEW_CLIENT
-  ret = NewClientManager::get_instance()->call(dest_ds_id_, &req_wrd_msg, WAIT_TIME_OUT, rsp);
-#else
-  ret = send_message_to_server(dest_ds_id_, &req_wrd_msg, &rsp);
-#endif
-      if (TFS_SUCCESS != ret)
+      NewClient* client = NewClientManager::get_instance().create_client();
+      tbnet::Packet* rsp = NULL;
+      if(TFS_SUCCESS != send_msg_to_server(dest_ds_id_, client, &req_wrd_msg, rsp))
       {
-        TBSYS_LOG(ERROR, "write raw data to ds: %s failed, blockid: %u, offset: %d, ret: %d",
-            tbsys::CNetUtil::addrToString(dest_ds_id_).c_str(), block_id_, cur_write_offset, ret);
-        ret = TFS_ERROR;
+          rsp = NULL;
       }
-      else if (STATUS_MESSAGE == rsp->get_message_type())
+      if (STATUS_MESSAGE == rsp->getPCode())
       {
         StatusMessage* sm = dynamic_cast<StatusMessage*>(rsp);
         if (STATUS_MESSAGE_OK != sm->get_status())
@@ -645,10 +636,9 @@ int TranBlock::write_data()
       dest_content_buf_.drainData(cur_len);
       block_len = dest_content_buf_.getDataLen();
       cur_write_offset += cur_len;
+      NewClientManager::get_instance().destroy_client(client);
 
-      tbsys::gDelete(rsp);
-
-      if (TFS_SUCCESS != ret)
+      if (NULL == rsp)
       {
         --remainder_retrys;
         continue;
@@ -686,19 +676,14 @@ int TranBlock::write_index()
   req_wib_msg.set_block_info(&dest_block_info_);
   req_wib_msg.set_cluster(COPY_BETWEEN_CLUSTER);
 
-  Message* rsp = NULL;
-#ifdef USE_NEW_CLIENT
-  ret = NewClientManager::get_instance()->call(dest_ds_id_, &req_wib_msg, WAIT_TIME_OUT, rsp);
-#else
-  ret = send_message_to_server(dest_ds_id_, &req_wib_msg, &rsp);
-#endif
-  if (TFS_SUCCESS != ret)
+  NewClient* client = NewClientManager::get_instance().create_client();
+  tbnet::Packet* rsp = NULL;
+  if(TFS_SUCCESS != send_msg_to_server(dest_ds_id_, client, &req_wib_msg, rsp))
   {
-    TBSYS_LOG(ERROR, "write raw index to ds: %s failed, blockid: %u, file count: %d, ret: %d",
-        tbsys::CNetUtil::addrToString(dest_ds_id_).c_str(), block_id_, static_cast<int32_t>(dest_raw_meta_.size()), ret);
-    ret = TFS_ERROR;
+    rsp = NULL;
   }
-  else if (STATUS_MESSAGE == rsp->get_message_type())
+
+  if (STATUS_MESSAGE == rsp->getPCode())
   {
     StatusMessage* sm = dynamic_cast<StatusMessage*>(rsp);
     if (STATUS_MESSAGE_OK != sm->get_status())
@@ -714,8 +699,8 @@ int TranBlock::write_index()
         tbsys::CNetUtil::addrToString(dest_ds_id_).c_str(), block_id_, static_cast<int32_t>(dest_raw_meta_.size()));
     ret = TFS_ERROR;
   }
+  NewClientManager::get_instance().destroy_client(client);
 
-  tbsys::gDelete(rsp);
   return ret;
 }
 
@@ -724,93 +709,98 @@ int TranBlock::check_integrity()
   char data[MAX_READ_SIZE];
   int ret = TFS_SUCCESS;
   RawMetaVecIter vit = dest_raw_meta_.begin();
-  for ( ; vit != dest_raw_meta_.end(); ++vit)
+  if ((ret = TfsClient::Instance()->initialize(dest_ns_addr_.c_str())) != TFS_SUCCESS)
   {
-    if (concealed_files_.find(vit->get_file_id()) != concealed_files_.end())
+    TBSYS_LOG(ERROR, "TfsClient::Instance().initialize error");
+  }
+  else
+  {
+    for ( ; vit != dest_raw_meta_.end(); ++vit)
     {
-      TBSYS_LOG(INFO, "file concealed, check integrity skip it. blockid: %u, fileid: %"PRI64_PREFIX"u",
-          block_id_, vit->get_file_id());
-      continue;
-    }
-    TfsClient tfs_client;
-    if ((ret = tfs_client.initialize(dest_ns_addr_)) != TFS_SUCCESS)
-    {
-      TBSYS_LOG(ERROR, "read data from dest, init tfs client fail, blockid: %u, fileid: %"PRI64_PREFIX"u, ret: %d",
-          block_id_, vit->get_file_id(), ret);
-    }
-    else if ((ret = tfs_client.tfs_open(block_id_, vit->get_file_id(), READ_MODE)) != TFS_SUCCESS)
-    {
-      TBSYS_LOG(ERROR, "read data from dest fail, blockid: %u, fileid: %"PRI64_PREFIX"u, ret: %d",
-          block_id_, vit->get_file_id(), ret);
-    }
-    else
-    {
-      FileInfo dest_info;
-      uint32_t crc = 0;
-      int32_t total_size = 0;
-      data[0] = '\0';
-      while (true)
+      int fd = 0;
+      if (concealed_files_.find(vit->get_file_id()) != concealed_files_.end())
       {
-        int32_t read_len = tfs_client.tfs_read_v2(data, MAX_READ_SIZE, &dest_info);
-        if (read_len < 0)
-        {
-          TBSYS_LOG(ERROR, "read data from dest fail, blockid: %u, fileid: %"PRI64_PREFIX"u, ret: %d, error msg: %s",
-              block_id_, vit->get_file_id(), read_len, tfs_client.get_error_message());
-          ret = TFS_ERROR;
-          break;
-        }
-        if (read_len == 0)
-        {
-          break;
-        }
-
-        total_size += read_len;
-        crc = Func::crc(crc, data, read_len);
-        if (read_len < MAX_READ_SIZE)
-        {
-          break;
-        }
+        TBSYS_LOG(INFO, "file concealed, check integrity skip it. blockid: %u, fileid: %"PRI64_PREFIX"u",
+            block_id_, vit->get_file_id());
+        continue;
       }
-
-      if (TFS_SUCCESS == ret)
+      /* TODO TODO TODO 
+      else if ((fd = TfsClient::Instance().open(block_id_, vit->get_file_id(), READ_MODE)) != TFS_SUCCESS)
       {
-        //FindFileId::set_file_id(vit->get_file_id());
-        FileInfoSetIter fit = find_if(file_set_.begin(), file_set_.end(), FindFileId(vit->get_file_id()));
-        if (fit == file_set_.end())
+        TBSYS_LOG(ERROR, "read data from dest fail, blockid: %u, fileid: %"PRI64_PREFIX"u, ret: %d",
+            block_id_, vit->get_file_id(), ret);
+      }
+      else
+      */
+      {
+        FileInfo dest_info;
+        uint32_t crc = 0;
+        int32_t total_size = 0;
+        data[0] = '\0';
+        while (true)
         {
-          TBSYS_LOG(ERROR, "read file is not in src file list, fatal error. blockid: %u, fileid: %"PRI64_PREFIX"u",
-              block_id_, vit->get_file_id());
-          ret = TFS_ERROR;
-        }
-        else
-        {
-          if (crc != (*fit).crc_ || total_size != (*fit).size_ || crc != dest_info.crc_ || total_size != dest_info.size_)
+          //TODO int32_t read_len = tfs_client.tfs_read_v2(data, MAX_READ_SIZE, &dest_info);
+          int32_t read_len;
+          if (read_len < 0)
           {
-            TBSYS_LOG(ERROR, "blockid: %u, ds: %s, meta crc: %u, size: %d, data crc: %u, size: %d, dest crc: %u, size: %d\n",
-                block_id_, tbsys::CNetUtil::addrToString(tfs_client.get_last_elect_ds_id()).c_str(),
-                (*fit).crc_, (*fit).size_, crc, total_size, dest_info.crc_, dest_info.size_);
+            //TODO TBSYS_LOG(ERROR, "read data from dest fail, blockid: %u, fileid: %"PRI64_PREFIX"u, ret: %d, error msg: %s",
+            //TODO     block_id_, vit->get_file_id(), read_len, tfs_client.get_error_message());
             ret = TFS_ERROR;
+            break;
+          }
+          if (read_len == 0)
+          {
+            break;
+          }
+
+          total_size += read_len;
+          crc = Func::crc(crc, data, read_len);
+          if (read_len < MAX_READ_SIZE)
+          {
+            break;
+          }
+        }
+
+        if (TFS_SUCCESS == ret)
+        {
+          //FindFileId::set_file_id(vit->get_file_id());
+          FileInfoSetIter fit = find_if(file_set_.begin(), file_set_.end(), FindFileId(vit->get_file_id()));
+          if (fit == file_set_.end())
+          {
+            TBSYS_LOG(ERROR, "read file is not in src file list, fatal error. blockid: %u, fileid: %"PRI64_PREFIX"u",
+                block_id_, vit->get_file_id());
+            ret = TFS_ERROR;
+          }
+          else
+          {
+            if (crc != (*fit).crc_ || total_size != (*fit).size_ || crc != dest_info.crc_ || total_size != dest_info.size_)
+            {
+              //TODO TBSYS_LOG(ERROR, "blockid: %u, ds: %s, meta crc: %u, size: %d, data crc: %u, size: %d, dest crc: %u, size: %d\n",
+              //TODO     block_id_, tbsys::CNetUtil::addrToString(tfs_client.get_last_elect_ds_id()).c_str(),
+              //TODO     (*fit).crc_, (*fit).size_, crc, total_size, dest_info.crc_, dest_info.size_);
+              ret = TFS_ERROR;
+            }
           }
         }
       }
-    }
-    tfs_client.tfs_close();
+      //TODO tfs_client.tfs_close();
 
-    if (TFS_SUCCESS != ret)
-    {
-      atomic_inc(&stat_param_.copy_failure_);
+      if (TFS_SUCCESS != ret)
+      {
+        atomic_inc(&stat_param_.copy_failure_);
+      }
+      else
+      {
+        atomic_inc(&stat_param_.copy_success_);
+      }
     }
-    else
-    {
-      atomic_inc(&stat_param_.copy_success_);
-    }
-  }
 
-  TBSYS_LOG(INFO, "blockid: %u check integrity, total: %"PRI64_PREFIX"d, success: %d, fail: %d",
-      block_id_, stat_param_.total_, atomic_read(&stat_param_.copy_success_), atomic_read(&stat_param_.copy_failure_));
-  if (atomic_read(&stat_param_.copy_failure_) != 0)
-  {
-    ret = TFS_ERROR;
+    TBSYS_LOG(INFO, "blockid: %u check integrity, total: %"PRI64_PREFIX"d, success: %d, fail: %d",
+        block_id_, stat_param_.total_, atomic_read(&stat_param_.copy_success_), atomic_read(&stat_param_.copy_failure_));
+    if (atomic_read(&stat_param_.copy_failure_) != 0)
+    {
+      ret = TFS_ERROR;
+    }
   }
 
   return ret;

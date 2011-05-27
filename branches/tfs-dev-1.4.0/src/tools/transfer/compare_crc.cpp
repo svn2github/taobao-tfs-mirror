@@ -1,3 +1,6 @@
+#include "common/status_message.h"
+#include "message/server_status_message.h"
+#include "message/block_info_message.h"
 #include "compare_crc.h"
 
 using namespace std;
@@ -35,14 +38,14 @@ int init_log_file(char* dir_path)
   }
   return TFS_SUCCESS;
 }
-int get_meta_crc(TfsClient& tfs_client, const char* tfs_file_name, FileInfo* finfo)
+int get_meta_crc(const string& tfs_client, const char* tfs_file_name, FileInfo* finfo)
 {
   if (finfo == NULL)
   {
     TBSYS_LOG(WARN, "invalid pointer");
     return TFS_ERROR;
   }
-
+/*TODO TODO
   if (tfs_client.tfs_open(tfs_file_name, NULL, READ_MODE) != TFS_SUCCESS)
   {
     TBSYS_LOG(WARN, "open tfsfile fail: %s", tfs_client.get_error_message());
@@ -60,10 +63,11 @@ int get_meta_crc(TfsClient& tfs_client, const char* tfs_file_name, FileInfo* fin
     return META_FLAG_ABNORMAL;
   }
   tfs_client.tfs_close();
+  */
   return TFS_SUCCESS;
 }
 
-int get_real_crc(TfsClient& tfs_client, const char* tfs_file_name, uint32_t* crc)
+int get_real_crc(const string& tfs_client, const char* tfs_file_name, uint32_t* crc)
 {
   if(crc == NULL)
   {
@@ -71,9 +75,9 @@ int get_real_crc(TfsClient& tfs_client, const char* tfs_file_name, uint32_t* crc
     return TFS_ERROR;
   }
 
-  if (tfs_client.tfs_open(tfs_file_name, NULL, READ_MODE) != TFS_SUCCESS)
+  //TODO if (tfs_client.tfs_open(tfs_file_name, NULL, READ_MODE) != TFS_SUCCESS)
   {
-    TBSYS_LOG(ERROR, "open tfsfile fail: %s", tfs_client.get_error_message());
+    //TODOTBSYS_LOG(ERROR, "open tfsfile fail: %s", tfs_client.get_error_message());
     return TFS_ERROR;
   }
 
@@ -82,10 +86,10 @@ int get_real_crc(TfsClient& tfs_client, const char* tfs_file_name, uint32_t* crc
   int total_size = 0,rlen=0;
   for(;;)
   {
-    rlen = tfs_client.tfs_read(data, MAX_READ_SIZE);
+    //TODO rlen = tfs_client.tfs_read(data, MAX_READ_SIZE);
     if (rlen < 0)
     {
-      TBSYS_LOG(ERROR, "read tfsfile fail: %s", tfs_client.get_error_message());
+      //TODO TBSYS_LOG(ERROR, "read tfsfile fail: %s", tfs_client.get_error_message());
       return TFS_ERROR;
     }
     if (rlen == 0)
@@ -96,11 +100,12 @@ int get_real_crc(TfsClient& tfs_client, const char* tfs_file_name, uint32_t* crc
       break;
   }
   *crc = crc_tmp;
-  tfs_client.tfs_close();
+  //TODO tfs_client.tfs_close();
   return TFS_SUCCESS;
 }
 
-int get_crc_from_filename(TfsClient& old_tfs_client, TfsClient& new_tfs_client, const char* tfs_file_name, string& modify_time)
+int get_crc_from_filename(const string& old_tfs_client, const string& new_tfs_client, 
+    const char* tfs_file_name, string& modify_time)
 {
   int ret = TFS_SUCCESS;
   uint32_t old_real_crc = 0;
@@ -235,9 +240,9 @@ int get_crc_from_filename(TfsClient& old_tfs_client, TfsClient& new_tfs_client, 
             }
             else
             {
-              old_tfs_client.tfs_open(tfs_file_name, NULL, READ_MODE);
+              //TODO old_tfs_client.tfs_open(tfs_file_name, NULL, READ_MODE);
               FileInfo finfo;
-              old_tfs_client.tfs_stat(&finfo,READ_MODE);
+              //TODO old_tfs_client.tfs_stat(&finfo,READ_MODE);
               FSName fsname;
               fsname.set_name(tfs_file_name);
 
@@ -257,7 +262,7 @@ int get_crc_from_filename(TfsClient& old_tfs_client, TfsClient& new_tfs_client, 
                 fprintf(g_unsync_file, "%s\n", tfs_file_name);
                 cmp_stat_.unsync_count_++;
               }
-              old_tfs_client.tfs_close();
+              //TODO old_tfs_client.tfs_close();
             }
           }
         }
@@ -267,7 +272,7 @@ int get_crc_from_filename(TfsClient& old_tfs_client, TfsClient& new_tfs_client, 
   return ret;
 }
 
-int get_crc_from_tfsname_list(TfsClient& old_tfs_client, TfsClient& new_tfs_client, const char* filename_list, string& modify_time)
+int get_crc_from_tfsname_list(const string& old_tfs_client, const string& new_tfs_client, const char* filename_list, string& modify_time)
 {
   int ret = TFS_ERROR;
   FILE *fp;
@@ -290,7 +295,7 @@ int get_crc_from_tfsname_list(TfsClient& old_tfs_client, TfsClient& new_tfs_clie
   return ret;
 }
 
-int get_crc_from_block_list(TfsClient& old_tfs_client, TfsClient& new_tfs_client, const char* block_list, string& modify_time)
+int get_crc_from_block_list(const string& old_tfs_client, const string& new_tfs_client, const char* block_list, string& modify_time)
 {
   int ret = TFS_ERROR;
   FILE *fp;
@@ -302,7 +307,7 @@ int get_crc_from_block_list(TfsClient& old_tfs_client, TfsClient& new_tfs_client
     while (fscanf(fp, "%u\n", &block_id) != EOF)
     {
       VUINT64 ds_list;
-      old_tfs_client.get_block_info(block_id, ds_list);
+      //TODO old_tfs_client.get_block_info(block_id, ds_list);
       if(ds_list.size() > 0)
       {
         uint64_t ds_id = ds_list[0];
@@ -312,35 +317,36 @@ int get_crc_from_block_list(TfsClient& old_tfs_client, TfsClient& new_tfs_client
         gss_message.set_status_type(GSS_BLOCK_FILE_INFO);
         gss_message.set_return_row(block_id);
 
-        Message* ret_message = NULL;
-        ret = send_message_to_server(ds_id, &gss_message, &ret_message);
-        if ((TFS_ERROR != ret) && ret_message != NULL)
+        NewClient* client = NewClientManager::get_instance().create_client();
+        tbnet::Packet* ret_message = NULL;
+        if (NULL != client)
         {
-          if (ret_message->get_message_type() == BLOCK_FILE_INFO_MESSAGE)
+          if (TFS_SUCCESS == send_msg_to_server(ds_id, client, &gss_message, ret_message))
           {
-            BlockFileInfoMessage *bfi_message = (BlockFileInfoMessage*)ret_message;
-            FILE_INFO_LIST* file_info_list = bfi_message->get_fileinfo_list();
-            FILE_INFO_LIST::iterator vit = file_info_list->begin();
-            for ( ; vit != file_info_list->end(); ++vit)
+            if (ret_message->getPCode() == BLOCK_FILE_INFO_MESSAGE)
             {
-              FileInfo* file_info = new FileInfo();
-              memcpy(file_info, *vit, sizeof(FileInfo));
-              file_list.push_back(file_info);
+              BlockFileInfoMessage *bfi_message = (BlockFileInfoMessage*)ret_message;
+              FILE_INFO_LIST* file_info_list = bfi_message->get_fileinfo_list();
+              FILE_INFO_LIST::iterator vit = file_info_list->begin();
+              for ( ; vit != file_info_list->end(); ++vit)
+              {
+                file_list.push_back(*vit);
+              }
+            }
+            else if (ret_message->getPCode() == STATUS_MESSAGE)
+            {
+              StatusMessage* sm = reinterpret_cast<StatusMessage*> (ret_message);
+              if (sm->get_error() != NULL)
+              {
+                TBSYS_LOG(ERROR, "%s", sm->get_error());
+              }
             }
           }
-          else if (ret_message->get_message_type() == STATUS_MESSAGE)
-          {
-            StatusMessage* sm = reinterpret_cast<StatusMessage*> (ret_message);
-            if (sm->get_error() != NULL)
-            {
-              TBSYS_LOG(ERROR, "%s", sm->get_error());
-            }
-          }
-          delete ret_message;
+          NewClientManager::get_instance().destroy_client(client);
         }
         else
         {
-          TBSYS_LOG(ERROR,"get file list message returns null");
+          TBSYS_LOG(ERROR,"create client error");
         }
 
         if (TFS_ERROR != ret)
@@ -352,18 +358,12 @@ int get_crc_from_block_list(TfsClient& old_tfs_client, TfsClient& new_tfs_client
             ++i;
             FSName fsname;
             fsname.set_block_id(block_id);
-            fsname.set_file_id((*vit)->id_);
+            fsname.set_file_id(vit->id_);
             TBSYS_LOG(DEBUG, "gene file i: %d, blockid: %u, fileid: %"PRI64_PREFIX"u, %s",
-                i, block_id, (*vit)->id_, fsname.get_name());
+                i, block_id, (vit)->id_, fsname.get_name());
             get_crc_from_filename(old_tfs_client, new_tfs_client, fsname.get_name(), modify_time);
           }
 
-          vit = file_list.begin();
-          for ( ; vit != file_list.end(); ++vit)
-          {
-            delete *vit;
-            *vit = NULL;
-          }
           file_list.clear();
         }
       }
@@ -448,11 +448,12 @@ int main(int argc, char** argv)
   }
 
   TBSYS_LOGGER.setLogLevel("warn");
-  TfsClient old_tfs_client, new_tfs_client;
-  iret = old_tfs_client.initialize(old_ns_ip.c_str());
+  string old_tfs_client, new_tfs_client;
+  old_tfs_client = old_ns_ip;
+  new_tfs_client = new_ns_ip;
+  iret = TfsClient::Instance()->initialize(old_ns_ip.c_str());
   if (iret != TFS_SUCCESS)
   {
-    iret = new_tfs_client.initialize(new_ns_ip.c_str());
     if (iret != TFS_SUCCESS)
     {
       if ((!block_list.empty()) && (block_list != " "))
@@ -463,10 +464,6 @@ int main(int argc, char** argv)
       {
         get_crc_from_tfsname_list(old_tfs_client, new_tfs_client, tfs_file_name.c_str(), modify_time);
       }
-    }
-    else
-    {
-      TBSYS_LOG(ERROR, "initialize new nameserver(%s) client failed", new_ns_ip.c_str());
     }
   }
   else
