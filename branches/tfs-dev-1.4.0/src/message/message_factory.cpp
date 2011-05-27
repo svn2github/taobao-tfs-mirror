@@ -24,7 +24,8 @@ namespace tfs
       tbnet::Packet* packet = BasePacketFactory::createPacket(pcode);
       if (NULL == packet)
       {
-        switch (pcode)
+        int32_t real_pcode = pcode & 0xFFFF;
+        switch (real_pcode)
         {
           case common::GET_BLOCK_INFO_MESSAGE:
             packet = new GetBlockInfoMessage(); 
@@ -192,7 +193,7 @@ namespace tfs
             packet = new  ShowServerInformationMessage(); 
             break;
           default:
-            TBSYS_LOG(ERROR, "pcode: %d not found in message factory", pcode); break;
+            TBSYS_LOG(ERROR, "pcode: %d not found in message factory", real_pcode);
             break;
         }
       }
