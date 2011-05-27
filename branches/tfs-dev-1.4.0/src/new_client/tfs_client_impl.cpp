@@ -19,20 +19,21 @@
 #include "common/base_packet_factory.h"
 #include "common/base_packet_streamer.h"
 #include "common/client_manager.h"
+#include "message/message_factory.h"
 #include "tfs_client_impl.h"
 #include "tfs_large_file.h"
 #include "tfs_small_file.h"
 #include "gc_worker.h"
 
 using namespace tfs::common;
-//using namespace tfs::message;
+using namespace tfs::message;
 using namespace tfs::client;
 using namespace std;
 
 TfsClientImpl::TfsClientImpl() : is_init_(false), default_tfs_session_(NULL), fd_(1), 
   packet_factory_(NULL), packet_streamer_(NULL)
 {
-  packet_factory_ = new BasePacketFactory();
+  packet_factory_ = new MessageFactory();
   packet_streamer_ = new BasePacketStreamer(packet_factory_);
 }
 
