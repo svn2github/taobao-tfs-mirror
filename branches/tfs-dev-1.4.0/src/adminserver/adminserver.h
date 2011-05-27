@@ -18,15 +18,15 @@
 #ifndef TFS_ADMINSERVER_ADMINSERVER_H_
 #define TFS_ADMINSERVER_ADMINSERVER_H_
 
-#include "common/config.h"
+#include <vector>
+#include <string>
 #include "common/func.h"
 #include "common/config_item.h"
 #include "common/parameter.h"
-#include "message/client.h"
+#include "common/new_client.h"
+#include "common/client_manager.h"
 #include "message/message_factory.h"
 #include "message/admin_cmd_message.h"
-#include <vector>
-#include <string>
 
 namespace tfs
 {
@@ -92,7 +92,7 @@ namespace tfs
       void modify_conf(std::string& index, int32_t type);
       void set_ds_list(char* index_range, std::vector<std::string>& ds_index);
       int get_param(std::string& index);
-      int ping(const uint64_t ip, message::Client *client = NULL);
+      int ping(const uint64_t ip);
       int ping_nameserver(const int status);
       int kill_process(message::MonitorStatus* status, int32_t wait_time, bool clear = false);
 
@@ -114,7 +114,7 @@ namespace tfs
 
       // server stuff
       message::MessageFactory msg_factory_;
-      message::TfsPacketStreamer packet_streamer_;
+      common::BasePacketStreamer packet_streamer_;
       tbnet::Transport transport_;
       tbnet::PacketQueueThread task_queue_thread_;
     };
