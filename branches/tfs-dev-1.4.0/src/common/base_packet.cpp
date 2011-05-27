@@ -195,6 +195,7 @@ namespace tfs
           packet->set_id(id_ + 1);
           packet->set_version(version_);
 
+          packet->stream_.expand(packet->length());
           iret = packet->serialize(packet->stream_);
           if (TFS_SUCCESS == iret)
           {
@@ -244,6 +245,7 @@ namespace tfs
       }
       return TFS_SUCCESS;
     }
+
     // parse for version & lease
     // ds_: ds1 ds2 ds3 [flag=-1] [version] [leaseid]
     bool BasePacket::parse_special_ds(std::vector<uint64_t>& value, int32_t& version, uint32_t& lease)

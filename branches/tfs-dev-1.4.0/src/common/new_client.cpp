@@ -150,7 +150,7 @@ namespace tfs
 
         if (save_source_msg && NULL == source_msg_ )
         {
-          source_msg_ = NewClientManager::get_instance().clone_packet(packet, 2, false);
+          source_msg_ = NewClientManager::get_instance().clone_packet(packet, TFS_PACKET_VERSION_V2, false);
         }
 
         std::vector<uint64_t>::const_iterator iter = servers.begin();

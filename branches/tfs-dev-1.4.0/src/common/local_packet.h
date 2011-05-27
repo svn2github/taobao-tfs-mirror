@@ -30,7 +30,7 @@ namespace tfs
       {
         if (NULL != new_client_)
         {
-          NewClientManager::get_instance().destroy_client(new_client_);
+          NewClientManager::free_new_client_object(new_client_);
         }
       }
       bool copy(LocalPacket* src, const int32_t version, const bool deserialize) { return false;}

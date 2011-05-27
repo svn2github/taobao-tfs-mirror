@@ -57,10 +57,11 @@ namespace tfs
 
         tbnet::Packet* create_packet(const int32_t pcode);
 
-      private:
-        bool handlePacket(const WaitId& id, tbnet::Packet* response);
         static NewClient* malloc_new_client_object(const uint32_t seq_id);
         static void free_new_client_object(NewClient* client);
+
+      private:
+        bool handlePacket(const WaitId& id, tbnet::Packet* response);
         bool do_async_callback(NewClient* client);
 
       private:

@@ -139,13 +139,14 @@ namespace tfs
       }
       if (TFS_SUCCESS == iret)
       {
-        if (data_.getDataLen())
+        if (data_.getDataLen() > 0)
         {
           iret = Serialization::set_bytes(data, data_len, pos, data_.getData(), data_.getDataLen());
         }
       }
       return iret;
     }
+
     int SSMScanParameter::deserialize(const char* data, const int64_t data_len, int64_t& pos)
     {
       int32_t iret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
@@ -186,8 +187,8 @@ namespace tfs
       {
         if (len > 0)
         {
-          data_.ensureFree(data_len);
-          data_.pourData(data_len);
+          data_.ensureFree(len);
+          data_.pourData(len);
           iret = Serialization::get_bytes(data, data_len, pos, data_.getData(), len);
         }
       }

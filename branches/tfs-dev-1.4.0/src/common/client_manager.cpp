@@ -171,13 +171,13 @@ namespace tfs
           if (iter != new_clients_.end())
           {
             free_new_client_object(client);
-            TBSYS_LOG(DEBUG, "erase client id(%u)", seq_id_);
+            TBSYS_LOG(DEBUG, "erase client id(%u)", id);
             new_clients_.erase(iter);
           }
           else
           {
             bret = false;
-            TBSYS_LOG(ERROR, "client id(%u) not found", seq_id_);
+            TBSYS_LOG(ERROR, "client id(%u) not found", id);
           }
         }
       }
