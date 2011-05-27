@@ -24,11 +24,11 @@
 #include "base_packet_factory.h"
 #include "base_packet_streamer.h"
 #include "new_client.h"
-#include "define.h"
+#include "internal.h"
 
 namespace tfs
 {
-  namespace common 
+  namespace common
   {
     class NewClientManager : public tbnet::IPacketHandler
     {
@@ -66,9 +66,9 @@ namespace tfs
       private:
         DISALLOW_COPY_AND_ASSIGN(NewClientManager);
         NEWCLIENT_MAP new_clients_;
-        BasePacketFactory* factory_;                                                                   
+        BasePacketFactory* factory_;
         BasePacketStreamer* streamer_;
-        tbnet::ConnectionManager* connmgr_; 
+        tbnet::ConnectionManager* connmgr_;
         tbnet::Transport* transport_;
 
         tbutil::Mutex mutex_;

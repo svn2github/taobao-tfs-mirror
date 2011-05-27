@@ -15,13 +15,13 @@
  */
 #include <tbsys.h>
 #include "common/config_item.h"
-#include "common/define.h"
+#include "common/internal.h"
 #include "common/error_msg.h"
 #include "rc_param.h"
 
 namespace tfs
 {
-  namespace rcserver 
+  namespace rcserver
   {
     using namespace std;
     using namespace tbsys;

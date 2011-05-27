@@ -1,3 +1,3 @@
 AUTOMAKE_OPTIONS=foreign
 
-SUBDIRS = batch intergrate dataserver client
+SUBDIRS = batch intergrate dataserver

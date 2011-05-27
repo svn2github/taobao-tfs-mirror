@@ -11,9 +11,9 @@
  * Authors:
  *   duolong <duolong@taobao.com>
  *      - initial release
- *   qushan<qushan@taobao.com> 
+ *   qushan<qushan@taobao.com>
  *      - modify 2009-03-27
- *   duanfei <duanfei@taobao.com> 
+ *   duanfei <duanfei@taobao.com>
  *      - modify 2010-04-23
  *
  */
@@ -21,7 +21,7 @@
 #define TFS_NAMESERVER_NAMESERVER_H_
 
 #include "ns_define.h"
-#include "common/define.h"
+#include "common/internal.h"
 #include "common/base_service.h"
 #include "layout_manager.h"
 #include "heart_manager.h"

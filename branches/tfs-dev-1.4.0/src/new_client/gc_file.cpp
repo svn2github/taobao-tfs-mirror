@@ -24,7 +24,7 @@ using namespace tfs::common;
 
 const char* tfs::client::GC_FILE_PATH = "/tmp/TFSlocalkeyDIR/gc/";
 
-GcFile::GcFile(const bool need_save_seg_infos) 
+GcFile::GcFile(const bool need_save_seg_infos)
   :need_save_seg_infos_(need_save_seg_infos), file_pos_(sizeof(SegmentHead)), file_op_(NULL)
 {
 }
@@ -98,7 +98,7 @@ int GcFile::add_segment(const SegmentInfo& seg_info)
 void GcFile::dump(char* buf, const int32_t buffer_size)
 {
   size_t size = seg_info_.size();
-  for (size_t i = 0; i < size && (i + 1) * sizeof(SegmentInfo) <= buffer_size; i++)
+  for (size_t i = 0; i < size && static_cast<int32_t>((i + 1) * sizeof(SegmentInfo)) <= buffer_size; i++)
   {
     memcpy(buf + i * sizeof(SegmentInfo), &seg_info_[i], sizeof(SegmentInfo));
   }

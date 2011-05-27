@@ -24,7 +24,7 @@
 #include <Memory.hpp>
 #include <curses.h>
 #include "common/func.h"
-#include "common/define.h"
+#include "common/internal.h"
 #include "common/error_msg.h"
 #include "client/tfs_client_api.h"
 #include "util.h"
@@ -75,9 +75,9 @@ class StatTimerTask : public tbutil::TimerTask
       tbutil::Mutex::Lock lock(mutex_);
       TBSYS_LOG(INFO, "[read] success: %"PRI64_PREFIX"d fail: %"PRI64_PREFIX"d, [write] success: %"PRI64_PREFIX"d fail : %"PRI64_PREFIX"d",
           (gstat_.read_success_count_/ interval_) * 1000,
-          (gstat_.read_fail_count_/ interval_) *1000, 
+          (gstat_.read_fail_count_/ interval_) *1000,
           (gstat_.write_success_count_/ interval_) * 1000,
-          (gstat_.write_fail_count_/ interval_) * 1000); 
+          (gstat_.write_fail_count_/ interval_) * 1000);
       TBSYS_LOG(DEBUG, "gstat_.read_success_count_(%ld), gstat_.read_success_count_(%ld)", gstat_.read_success_count_, gstat_.write_success_count_);
       gtotal_stat_.read_success_count_ += gstat_.read_success_count_;
       gtotal_stat_.write_success_count_ += gstat_.write_success_count_;
@@ -498,16 +498,16 @@ int main(int argc, char* argv[])
   while ((index = getopt(argc, argv, "s:t:m:o:l:b:i:f:p:g:dvh")) != EOF)
   {
     switch (index)
-    {   
+    {
       case 's':
-        {   
+        {
           ns_ip_port = optarg;
           string::size_type tmppos = ns_ip_port.find_first_of(":");
           if (string::npos == tmppos)
-          {   
+          {
             return EXIT_FAILURE;
-          }   
-        }   
+          }
+        }
         break;
       case 't':
         thread_count = atoi(optarg);
@@ -574,7 +574,7 @@ int main(int argc, char* argv[])
   {
     signal(SIGPIPE, SIG_IGN);
     signal(SIGHUP, SIG_IGN);
-    signal(SIGINT, SIG_IGN);                                                                   
+    signal(SIGINT, SIG_IGN);
     signal(SIGTERM, SIG_IGN);
     signal(SIGUSR1, SIG_IGN);
     int32_t read_ratio = 5;
@@ -641,7 +641,7 @@ int main(int argc, char* argv[])
     }
 
     signal(SIGHUP, interruptcallback);
-    signal(SIGINT, interruptcallback);                                                           
+    signal(SIGINT, interruptcallback);
     signal(SIGTERM, interruptcallback);
     signal(SIGUSR1, interruptcallback);
 
@@ -668,9 +668,9 @@ int main(int argc, char* argv[])
 
     TBSYS_LOG(INFO, "[read] success: %"PRI64_PREFIX"d fail: %"PRI64_PREFIX"d, [write] success: %"PRI64_PREFIX"d fail : %"PRI64_PREFIX"d",
           gtotal_stat_.read_success_count_,
-          gtotal_stat_.read_fail_count_, 
+          gtotal_stat_.read_fail_count_,
           gtotal_stat_.write_success_count_,
-          gtotal_stat_.write_fail_count_); 
+          gtotal_stat_.write_fail_count_);
     if (gdump_file != NULL)
     {
       fclose(gdump_file);

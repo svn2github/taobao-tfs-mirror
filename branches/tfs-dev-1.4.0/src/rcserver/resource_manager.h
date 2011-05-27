@@ -21,7 +21,7 @@
 #include <string>
 #include <tbsys.h>
 #include <Timer.h>
-#include "common/define.h"
+#include "common/internal.h"
 #include "i_resource_manager.h"
 
 namespace tfs
@@ -61,7 +61,7 @@ namespace tfs
         virtual int load();
 
         virtual int login(const std::string& app_key, int32_t& app_id, common::BaseInfo& base_info);
-        virtual int check_update_info(const int32_t app_id, 
+        virtual int check_update_info(const int32_t app_id,
             const int64_t modify_time, bool& update_flag, common::BaseInfo& base_info);
         virtual int get_app_name(const int32_t app_id, std::string& app_name) const;
 

@@ -46,9 +46,12 @@ namespace tfs
       static int64_t segment_size_;
       static int64_t batch_count_;
       static int64_t batch_size_;
+      static int64_t stat_interval_;
       static int64_t gc_interval_;
       static int64_t expired_time_;
-      static int64_t batch_time_out_;
+      static int64_t batch_timeout_;
+      static int64_t wait_timeout_;
+      static int64_t client_retry_count_;
     };
   }
 }

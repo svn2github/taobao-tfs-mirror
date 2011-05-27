@@ -33,7 +33,7 @@ namespace tfs
     };
 #pragma pack()
 
-    class UnlinkFileMessage: public common::BasePacket 
+    class UnlinkFileMessage: public common::BasePacket
     {
       public:
         UnlinkFileMessage();
@@ -88,7 +88,7 @@ namespace tfs
 
         inline int get_unlink_type() const
         {
-          return unlink_file_info_.is_server_ & REVEAL;
+          return unlink_file_info_.is_server_ & common::REVEAL;
         }
 
         inline void set_option_flag(const int32_t flag)
@@ -135,22 +135,22 @@ namespace tfs
 
         inline void set_del()
         {
-          unlink_file_info_.is_server_ |= DELETE;
+          unlink_file_info_.is_server_ |= common::DELETE;
         }
 
         inline void set_undel()
         {
-          unlink_file_info_.is_server_ |= UNDELETE;
+          unlink_file_info_.is_server_ |= common::UNDELETE;
         }
 
         inline void set_conceal()
         {
-          unlink_file_info_.is_server_ |= CONCEAL;
+          unlink_file_info_.is_server_ |= common::CONCEAL;
         }
 
         inline void set_reveal()
         {
-          unlink_file_info_.is_server_ |= REVEAL;
+          unlink_file_info_.is_server_ |= common::REVEAL;
         }
       protected:
         UnlinkFileInfo unlink_file_info_;

@@ -11,7 +11,7 @@
 
 AM_CPPFLAGS=-I${top_srcdir}/src \
             -I$(TBLIB_ROOT)/include/tbsys \
-            -I$(TBLIB_ROOT)/include/tbnet
+            -I$(TBLIB_ROOT)/include/tbnet -DUSE_CPP_CLIENT
 
 
 LDADD=$(top_builddir)/src/new_client/.libs/libtfsclient_c.a \
@@ -20,7 +20,7 @@ LDADD=$(top_builddir)/src/new_client/.libs/libtfsclient_c.a \
       $(TBLIB_ROOT)/lib/libtbnet.a \
       $(TBLIB_ROOT)/lib/libtbsys.a
 
-AM_LDFLAGS=-lpthread -lrt 
+AM_LDFLAGS=-lpthread -lrt
 
 noinst_PROGRAMS=tfs_large_file_cases tfs_block_cache
 #noinst_PROGRAMS=tfs_large_file_cases

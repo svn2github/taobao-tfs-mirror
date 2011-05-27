@@ -13,8 +13,8 @@
  *      - initial release
  *
  */
-#ifndef TFS_COMMON_INTERVAL_H_
-#define TFS_COMMON_INTERVAL_H_
+#ifndef TFS_COMMON_INTERNAL_H_
+#define TFS_COMMON_INTERNAL_H_
 
 #include <string>
 #include <map>
@@ -24,17 +24,30 @@
 #include <ext/hash_map>
 #include <string.h>
 #include <stdint.h>
-#include "define.h"
-#include <databuffer.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <errno.h>
 #include <assert.h>
 #include <limits.h>
-#include <tbnet.h>
-#include "stream.h"
 
+#include "databuffer.h"
+#include "tbnet.h"
+
+#include "define.h"
+
+#if __WORDSIZE == 32
+namespace __gnu_cxx
+{
+  template<> struct hash<uint64_t>
+  {
+    uint64_t operator()(uint64_t __x) const
+    {
+      return __x;
+    }
+  };
+}
+#endif
 
 namespace tfs
 {
@@ -45,6 +58,32 @@ namespace tfs
   }
   namespace common
   {
+#define CLIENT_POOL ClientManager::gClientManager
+#define CLIENT_SEND_PACKET(serverId,packet,packetHandler,args) ClientManager::gClientManager.m_connmgr->sendPacket(serverId,packet,packetHandler,args)
+
+    //typedef base type
+    typedef std::vector<int64_t> VINT64;
+    typedef std::vector<uint64_t> VUINT64;
+    typedef std::vector<int32_t> VINT32;
+    typedef std::vector<uint32_t> VUINT32;
+    typedef std::vector<int32_t> VINT;
+    typedef std::vector<uint32_t> VUINT;
+    typedef std::vector<int16_t> VINT16;
+    typedef std::vector<uint16_t> VUINT16;
+    typedef std::vector<int8_t> VINT8;
+    typedef std::vector<uint8_t> VUINT8;
+    typedef std::vector<std::string> VSTRING;
+
+    enum OperationMode
+    {
+      READ_MODE = 1,
+      WRITE_MODE = 2,
+      APPEND_MODE = 4,
+      UNLINK_MODE = 8,
+      NEWBLK_MODE = 16,
+      NOLEASE_MODE = 32
+    };
+
     enum OplogFlag
     {
       OPLOG_INSERT = 1,
@@ -185,7 +224,7 @@ namespace tfs
     {
       PLAN_PRIORITY_NONE = -1,
       PLAN_PRIORITY_NORMAL = 0,
-      PLAN_PRIORITY_EMERGENCY = 1 
+      PLAN_PRIORITY_EMERGENCY = 1
     };
 
     enum PlanRunFlag
@@ -254,8 +293,23 @@ namespace tfs
       int8_t   type_;
       int8_t   end_flag_;
     };
-    // common data structure
+// common data structure
 #pragma pack(4)
+    struct FileInfo
+    {
+      int deserialize(const char* data, const int64_t data_len, int64_t& pos);
+      int serialize(char* data, const int64_t data_len, int64_t& pos) const;
+      int64_t length() const;
+      uint64_t id_; // file id
+      int32_t offset_; // offset in block file
+      int32_t size_; // file size
+      int32_t usize_; // hold space
+      int32_t modify_time_; // modify time
+      int32_t create_time_; // create time
+      int32_t flag_; // deleta flag
+      uint32_t crc_; // crc value
+    };
+
     struct BlockInfo
     {
       int deserialize(const char* data, const int64_t data_len, int64_t& pos);
@@ -276,8 +330,8 @@ namespace tfs
       inline bool operator==(const BlockInfo& rhs) const
       {
         return block_id_ == rhs.block_id_ && version_ == rhs.version_ && file_count_ == rhs.file_count_ && size_
-            == rhs.size_ && del_file_count_ == rhs.del_file_count_ && del_size_ == rhs.del_size_ && seq_no_
-            == rhs.seq_no_;
+          == rhs.size_ && del_file_count_ == rhs.del_file_count_ && del_size_ == rhs.del_size_ && seq_no_
+          == rhs.seq_no_;
       }
     };
 
@@ -354,7 +408,7 @@ namespace tfs
       bool operator==(const RawMeta& rhs) const
       {
         return fileid_ == rhs.fileid_ && location_.inner_offset_ == rhs.location_.inner_offset_ && location_.size_
-            == rhs.location_.size_;
+          == rhs.location_.size_;
       }
 
     private:
@@ -377,7 +431,7 @@ namespace tfs
       int32_t start_time_;
       int32_t is_move_;
       int32_t server_count_;
-   };
+    };
 
     struct Throughput
     {
@@ -478,7 +532,6 @@ namespace tfs
       int64_t offset_;          // offset in current file
       int32_t size_;            // size of segment
       int32_t crc_;             // crc checksum of segment
-      std::vector<FileInfo> tmp; 
 
       SegmentInfo()
       {
@@ -493,6 +546,13 @@ namespace tfs
         return offset_ < si.offset_;
       }
     };
+
+    struct IpAddr
+    {
+      uint32_t ip_;
+      int32_t port_;
+    };
+
 #pragma pack()
 
     struct CrcCheckFile
@@ -533,12 +593,6 @@ namespace tfs
       }
     };
 
-    static const int32_t BLOCKINFO_SIZE = sizeof(BlockInfo);
-    static const int32_t RAW_META_SIZE = sizeof(RawMeta);
-
-    static const int32_t MAX_DEV_NAME_LEN = 64;
-    static const int32_t MAX_READ_SIZE = 1048576;
-
     // typedef
     typedef std::map<std::string, std::string> STRING_MAP; // string => string
     typedef STRING_MAP::iterator STRING_MAP_ITER;
@@ -568,7 +622,34 @@ namespace tfs
     typedef __gnu_cxx ::hash_map<uint64_t, nameserver::ServerCollect*, __gnu_cxx ::hash<uint64_t> > SERVER_MAP;
     typedef SERVER_MAP::iterator SERVER_MAP_ITER;
     typedef std::vector<RawMeta>::const_iterator RawMetaVecConstIter;
+
+
+    static const int8_t INT8_SIZE = 1;
+    static const int8_t INT16_SIZE = 2;
+    static const int8_t INT_SIZE = 4;
+    static const int8_t INT64_SIZE = 8;
+
+    static const int32_t MAX_PATH_LENGTH = 256;
+    static const int64_t TFS_MALLOC_MAX_SIZE = 0x00A00000;//10M
+
+    static const int32_t FILEINFO_SIZE = sizeof(FileInfo);
+    static const int32_t BLOCKINFO_SIZE = sizeof(BlockInfo);
+    static const int32_t RAW_META_SIZE = sizeof(RawMeta);
+
+    static const int32_t MAX_DEV_NAME_LEN = 64;
+    static const int32_t MAX_READ_SIZE = 1048576;
+
+    static const int MAX_FILE_FD = INT_MAX;
+    static const int MAX_OPEN_FD_COUNT = MAX_FILE_FD - 1;
+
+    static const int32_t SPEC_LEN = 32;
+    static const int32_t MAX_RESPONSE_TIME = 30000;
+
+    static const int32_t ADMIN_WARN_DEAD_COUNT = 1;
+
+    static const int64_t DEFAULT_NETWORK_CALL_TIMEOUT  = 3000;//3s
+
   }
 }
 
-#endif //TFS_COMMON_DEFINE_H_
+#endif //TFS_COMMON_INTERNAL_H_

@@ -27,7 +27,7 @@ namespace tfs
     class BgTask
     {
       public:
-        static int initialize(int64_t gc_schedule_interval = 1200);
+        static int initialize();
         static int wait_for_shut_down();
         static int destroy();
         static common::StatManager<std::string, std::string, common::StatEntry>& get_stat_mgr()

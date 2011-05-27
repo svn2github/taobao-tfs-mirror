@@ -18,7 +18,7 @@
 #include <vector>
 #include <string>
 
-#include "common/define.h"
+#include "common/internal.h"
 #include "common/config.h"
 #include "message/client.h"
 #include "message/client_pool.h"

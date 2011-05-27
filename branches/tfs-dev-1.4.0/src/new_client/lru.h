@@ -20,7 +20,7 @@
 #include <ext/hash_map>
 #include "client_config.h"
 #include "bg_task.h"
-#include "common/define.h"
+#include "common/internal.h"
 
 namespace tfs
 {

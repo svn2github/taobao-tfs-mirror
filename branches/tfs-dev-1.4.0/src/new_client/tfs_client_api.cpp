@@ -63,7 +63,7 @@ int64_t TfsClient::pwrite(const int fd, const void* buf, const int64_t count, co
   return TfsClientImpl::Instance()->pwrite(fd, buf, count, offset);
 }
 
-int TfsClient::fstat(const int fd, TfsFileStat* buf, const TfsStatFlag mode)
+int TfsClient::fstat(const int fd, TfsFileStat* buf, const TfsStatType mode)
 {
   return TfsClientImpl::Instance()->fstat(fd, buf, mode);
 }
@@ -88,7 +88,7 @@ void TfsClient::set_segment_size(const int64_t segment_size)
   return TfsClientImpl::Instance()->set_segment_size(segment_size);
 }
 
-int64_t TfsClient::get_segment_size()
+int64_t TfsClient::get_segment_size() const
 {
   return TfsClientImpl::Instance()->get_segment_size();
 }
@@ -98,39 +98,69 @@ void TfsClient::set_batch_count(const int64_t batch_count)
   return TfsClientImpl::Instance()->set_batch_count(batch_count);
 }
 
-int64_t TfsClient::get_batch_count()
+int64_t TfsClient::get_batch_count() const
 {
   return TfsClientImpl::Instance()->get_batch_count();
 }
 
-void TfsClient::set_gc_expired_time(const int64_t gc_expired_time_s)
+void TfsClient::set_stat_interval(const int64_t stat_interval_ms)
 {
-  return TfsClientImpl::Instance()->set_gc_expired_time(gc_expired_time_s);
+  return TfsClientImpl::Instance()->set_stat_interval(stat_interval_ms);
 }
 
-int64_t TfsClient::get_gc_expired_time()
+int64_t TfsClient::get_stat_interval() const
 {
-  return TfsClientImpl::Instance()->get_gc_expired_time();
+  return TfsClientImpl::Instance()->get_stat_interval();
 }
 
-void TfsClient::set_gc_interval(const int64_t gc_interval_s)
+void TfsClient::set_gc_interval(const int64_t gc_interval_ms)
 {
-  return TfsClientImpl::Instance()->set_gc_interval(gc_interval_s);
+  return TfsClientImpl::Instance()->set_gc_interval(gc_interval_ms);
 }
 
-int64_t TfsClient::get_gc_interval()
+int64_t TfsClient::get_gc_interval() const
 {
   return TfsClientImpl::Instance()->get_gc_interval();
 }
 
-void TfsClient::set_batch_time_out(const int64_t time_out_us)
+void TfsClient::set_gc_expired_time(const int64_t gc_expired_time_ms)
 {
-  return TfsClientImpl::Instance()->set_batch_time_out(time_out_us);
+  return TfsClientImpl::Instance()->set_gc_expired_time(gc_expired_time_ms);
 }
 
-int64_t TfsClient::get_batch_time_out()
+int64_t TfsClient::get_gc_expired_time() const
 {
-  return TfsClientImpl::Instance()->get_batch_time_out();
+  return TfsClientImpl::Instance()->get_gc_expired_time();
+}
+
+void TfsClient::set_batch_timeout(const int64_t timeout_ms)
+{
+  return TfsClientImpl::Instance()->set_batch_timeout(timeout_ms);
+}
+
+int64_t TfsClient::get_batch_timeout() const
+{
+  return TfsClientImpl::Instance()->get_batch_timeout();
+}
+
+void TfsClient::set_wait_timeout(const int64_t timeout_ms)
+{
+  return TfsClientImpl::Instance()->set_wait_timeout(timeout_ms);
+}
+
+int64_t TfsClient::get_wait_timeout() const
+{
+  return TfsClientImpl::Instance()->get_wait_timeout();
+}
+
+void TfsClient::set_client_retry_count(const int64_t count)
+{
+  return TfsClientImpl::Instance()->set_client_retry_count(count);
+}
+
+int64_t TfsClient::get_client_retry_count() const
+{
+  return TfsClientImpl::Instance()->get_client_retry_count();
 }
 
 void TfsClient::set_log_level(const char* level)

@@ -19,7 +19,7 @@
 #include <map>
 #include <set>
 #include <string>
-#include "common/define.h"
+#include "common/internal.h"
 #include "resource.h"
 #include "resource_server_data.h"
 
@@ -30,8 +30,8 @@ namespace tfs
     class BaseResource : public IResource
     {
       public:
-        
-        explicit BaseResource(DatabaseHelper& database_helper) : 
+
+        explicit BaseResource(DatabaseHelper& database_helper) :
           IResource(database_helper), base_last_update_time_(-1)
         {
         }
@@ -43,7 +43,7 @@ namespace tfs
         virtual int load();
         bool need_reload(const int64_t update_time_in_db) const;
         int get_resource_servers(std::vector<uint64_t>& resource_servers) const;
-        int get_cluster_infos(const int32_t cluster_group_id, 
+        int get_cluster_infos(const int32_t cluster_group_id,
             std::vector<common::ClusterRackData>& cluster_rack_datas) const;
         int get_last_modify_time(int64_t& last_modify_time) const;
 

@@ -16,16 +16,16 @@
 #include <Memory.hpp>
 #include "new_client.h"
 #include "error_msg.h"
-#include "define.h"
+#include "internal.h"
 #include "client_manager.h"
 #include "local_packet.h"
 #include "status_message.h"
 
 namespace tfs
 {
-  namespace common 
+  namespace common
   {
-    NewClient::NewClient(const uint32_t& seq_id) 
+    NewClient::NewClient(const uint32_t& seq_id)
     : callback_(NULL),
       source_msg_(NULL),
       seq_id_(seq_id),
@@ -60,11 +60,11 @@ namespace tfs
       if (timeout_ms <= 0)
       {
         timeout_ms = common::DEFAULT_NETWORK_CALL_TIMEOUT;
-        TBSYS_LOG(WARN, "timeout_in_ms equal 0, we'll use DEFAULT_NETWORK_CALL_TIMEOUT(%"PRI64_PREFIX"d)(ms)", 
+        TBSYS_LOG(WARN, "timeout_in_ms equal 0, we'll use DEFAULT_NETWORK_CALL_TIMEOUT(%"PRI64_PREFIX"d)(ms)",
           common::DEFAULT_NETWORK_CALL_TIMEOUT);
       }
       tbutil::Monitor<tbutil::Mutex>::Lock lock(monitor_);
-      post_packet_complete_ = true;//post packet complete, call timewait 
+      post_packet_complete_ = true;//post packet complete, call timewait
       uint32_t done_count = success_response_.size() + fail_response_.size();
       complete_ = done_count == send_id_sign_.size();
       if (!complete_)
@@ -315,7 +315,7 @@ namespace tfs
       if (common::TFS_SUCCESS == iret)
       {
         uint8_t send_id = 0;
-        iret = client->post_request(server, msg, send_id);  
+        iret = client->post_request(server, msg, send_id);
         if (common::TFS_SUCCESS == iret)
         {
           client->wait(timeout);
@@ -340,7 +340,7 @@ namespace tfs
       return iret;
     }
 
-    // test whether the DataServerStatInfo is still alive.  
+    // test whether the DataServerStatInfo is still alive.
     int test_server_alive(const uint64_t server_id, const int64_t timeout)
     {
       int32_t ret = common::TFS_SUCCESS;

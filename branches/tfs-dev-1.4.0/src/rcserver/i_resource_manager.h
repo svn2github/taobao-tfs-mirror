@@ -19,7 +19,7 @@
 #include <set>
 #include <vector>
 #include <string>
-#include "common/define.h"
+#include "common/internal.h"
 #include "resource_server_data.h"
 
 namespace tfs

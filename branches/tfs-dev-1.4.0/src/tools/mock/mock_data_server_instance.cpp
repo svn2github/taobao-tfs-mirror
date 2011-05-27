@@ -13,8 +13,7 @@
  *      - initial release
  *
  */
-#include "common/define.h"
-#include "common/interval.h"
+#include "common/internal.h"
 #include "mock_data_server_instance.h"
 #include "message/client_pool.h"
 #include "common/config.h"
@@ -57,7 +56,7 @@ int MockDataServerInstance::keepalive()
     RWLock::Lock lock(blocks_mutex_, WRITE_LOCKER);
     information_.current_time_ = time(NULL);
     information_.current_load_ = Func::get_load_avg();
-    information_.block_count_  = blocks_.size(); 
+    information_.block_count_  = blocks_.size();
   }
   SetDataserverMessage msg;
   msg.set_ds(&information_);
@@ -120,7 +119,7 @@ tbnet::IPacketHandler::HPRetCode MockDataServerInstance::handlePacket(tbnet::Con
   if (!main_work_queue_.push(msg))
   {
     MessageFactory::send_error_message(msg, TBSYS_LOG_LEVEL(WARN),
-      STATUS_MESSAGE_ERROR, information_.id_, 
+      STATUS_MESSAGE_ERROR, information_.id_,
       "TASK message beyond max queue size, discard." );
     msg->free();
   }
@@ -162,7 +161,7 @@ bool MockDataServerInstance::handlePacketQueue(tbnet::Packet *packet, void *args
   if (iret != TFS_SUCCESS)
   {
     TBSYS_LOG(DEBUG, "pcode(%d)", msg->getPCode());
-    MessageFactory::send_error_message(msg, TBSYS_LOG_LEVEL(ERROR), iret, information_.id_, 
+    MessageFactory::send_error_message(msg, TBSYS_LOG_LEVEL(ERROR), iret, information_.id_,
       "execute message failed");
   }
   return true;
@@ -176,7 +175,7 @@ int MockDataServerInstance::initialize(int32_t port, int64_t capacity, const std
     fprintf(stderr, "load config file(%s) failed\n", conf.c_str());
     return EXIT_GENERAL_ERROR;
   }
- 
+
   information_.total_capacity_ = capacity;
   char* ns_ip = CONFIG.get_string_value(CONFIG_NAMESERVER, CONF_IP_ADDR);
   if (ns_ip == NULL)
@@ -186,7 +185,7 @@ int MockDataServerInstance::initialize(int32_t port, int64_t capacity, const std
   }
   int32_t ns_port = CONFIG.get_int_value(CONFIG_NAMESERVER, CONF_PORT);
   ns_ip_port_ = tbsys::CNetUtil::strToAddr(ns_ip, ns_port);
-  
+
   IpAddr* adr = reinterpret_cast<IpAddr*>(&information_.id_);
   adr->ip_ = Func::get_local_addr(SYSPARAM_MOCK_DATASERVER.dev_name_.c_str());
   adr->port_ = port;
@@ -215,7 +214,7 @@ int MockDataServerInstance::initialize(int32_t port, int64_t capacity, const std
   int32_t thread_count = CONFIG.get_int_value(CONFIG_MOCK_DATASERVER, CONF_THREAD_COUNT, 4);
   main_work_queue_.setThreadParameter(thread_count, this, NULL);
   main_work_queue_.start();
-  
+
   return TFS_SUCCESS;
 }
 
@@ -255,7 +254,7 @@ int MockDataServerInstance::write(message::Message* msg)
       if (iter == blocks_.end())
       {
         MessageFactory::send_error_message(message, TBSYS_LOG_LEVEL(ERROR), information_.id_,
-              "create file failed. blockid: %u, fileid: %" PRI64_PREFIX "u.", write_info.block_id_, write_info.file_id_); 
+              "create file failed. blockid: %u, fileid: %" PRI64_PREFIX "u.", write_info.block_id_, write_info.file_id_);
         return TFS_SUCCESS;
       }
       iter->second.info_.size_ += write_info.length_;
@@ -265,7 +264,7 @@ int MockDataServerInstance::write(message::Message* msg)
       RWLock::Lock lock(infor_mutex_, WRITE_LOCKER);
       information_.use_capacity_ += write_info.length_;
     }
- 
+
     if (Master_Server_Role == write_info.is_server_)
     {
       message->set_server(Slave_Server_Role);
@@ -280,7 +279,7 @@ int MockDataServerInstance::write(message::Message* msg)
       {
         MessageFactory::send_error_message(message, TBSYS_LOG_LEVEL(ERROR), information_.id_,
           "write data fail to other dataserver (send): blockid: %u, fileid: %" PRI64_PREFIX "u, datalen: %d, ret: %d",
-          write_info.block_id_, write_info.file_id_, write_info.length_, iret);                                    
+          write_info.block_id_, write_info.file_id_, write_info.length_, iret);
       }
     }
     else
@@ -348,7 +347,7 @@ int MockDataServerInstance::close(message::Message* msg)
       if (iter == blocks_.end())
       {
         MessageFactory::send_error_message(message, TBSYS_LOG_LEVEL(ERROR), information_.id_,
-              "close write file failed. block is not exist. blockid: %u, fileid: %" PRI64_PREFIX "u.", info.block_id_, info.file_id_); 
+              "close write file failed. block is not exist. blockid: %u, fileid: %" PRI64_PREFIX "u.", info.block_id_, info.file_id_);
         return TFS_SUCCESS;
       }
       if (CLOSE_FILE_SLAVER != info.mode_)
@@ -378,7 +377,7 @@ int MockDataServerInstance::close(message::Message* msg)
       }
       else
       {
-        BlockInfo* copyblk = message->get_block();                                             
+        BlockInfo* copyblk = message->get_block();
         if (NULL != copyblk)
         {
           iter->second.info_.seq_no_ = copyblk->seq_no_;
@@ -386,7 +385,7 @@ int MockDataServerInstance::close(message::Message* msg)
         message->reply_message(new StatusMessage(STATUS_MESSAGE_OK));
       }
     }
- 
+
   }
   return !bret ? TFS_ERROR : TFS_SUCCESS;
 }
@@ -405,7 +404,7 @@ int MockDataServerInstance::create_file_number(message::Message* msg)
     {
       TBSYS_LOG(DEBUG, "create file number failed, blockid : %u", block_id);
       MessageFactory::send_error_message(message, TBSYS_LOG_LEVEL(ERROR), information_.id_,
-            "create file failed. blockid: %u, fileid: %" PRI64_PREFIX "u.", block_id, file_id); 
+            "create file failed. blockid: %u, fileid: %" PRI64_PREFIX "u.", block_id, file_id);
       return TFS_SUCCESS;
     }
     file_id = ++iter->second.file_id_factory_;
@@ -561,6 +560,6 @@ KeepaliveTimerTask::~KeepaliveTimerTask()
 
 void KeepaliveTimerTask::runTimerTask()
 {
-  instance_.keepalive();  
+  instance_.keepalive();
 }
 

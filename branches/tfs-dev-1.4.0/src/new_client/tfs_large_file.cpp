@@ -17,7 +17,7 @@
 using namespace tfs::client;
 using namespace tfs::common;
 
-TfsLargeFile::TfsLargeFile() : TfsFile(), read_meta_flag_(true), meta_suffix_(NULL)
+TfsLargeFile::TfsLargeFile() : read_meta_flag_(true), meta_suffix_(NULL)
 {
 }
 
@@ -98,32 +98,32 @@ int TfsLargeFile::open(const char* file_name, const char* suffix, const int flag
   return ret;
 }
 
-int64_t TfsLargeFile::read(void* buf, int64_t count)
+int64_t TfsLargeFile::read(void* buf, const int64_t count)
 {
   return read_ex(buf, count, offset_);
 }
 
-int64_t TfsLargeFile::write(const void* buf, int64_t count)
+int64_t TfsLargeFile::write(const void* buf, const int64_t count)
 {
   return write_ex(buf, count, offset_);
 }
 
-int64_t TfsLargeFile::lseek(int64_t offset, int whence)
+int64_t TfsLargeFile::lseek(const int64_t offset, const int whence)
 {
   return lseek_ex(offset, whence);
 }
 
-int64_t TfsLargeFile::pread(void* buf, int64_t count, int64_t offset)
+int64_t TfsLargeFile::pread(void* buf, const int64_t count, const int64_t offset)
 {
   return pread_ex(buf, count, offset);
 }
 
-int64_t TfsLargeFile::pwrite(const void* buf, int64_t count, int64_t offset)
+int64_t TfsLargeFile::pwrite(const void* buf, const int64_t count, const int64_t offset)
 {
   return pwrite_ex(buf, count, offset);
 }
 
-int TfsLargeFile::fstat(TfsFileStat* file_stat, const TfsStatFlag mode)
+int TfsLargeFile::fstat(TfsFileStat* file_stat, const TfsStatType mode)
 {
   TBSYS_LOG(DEBUG, "stat file start, mode: %d", mode);
   FileInfo file_info;
@@ -231,7 +231,7 @@ int TfsLargeFile::unlink(const char* file_name, const char* suffix, const TfsUnl
       if ((action & DELETE)) // delete or undelete will affect segments. if conceal or reveal, skip. now do not support UNDELETE
       {
         SEG_SET& seg_list = local_key_.get_seg_info();
-        SEG_SET_ITER sit = seg_list.begin();
+        SEG_SET_CONST_ITER sit = seg_list.begin();
         for ( ; sit != seg_list.end(); ++sit)
         {
           destroy_seg();
@@ -248,7 +248,7 @@ int TfsLargeFile::unlink(const char* file_name, const char* suffix, const TfsUnl
   return ret;
 }
 
-int64_t TfsLargeFile::get_segment_for_read(int64_t offset, char* buf, int64_t count)
+int64_t TfsLargeFile::get_segment_for_read(const int64_t offset, char* buf, const int64_t count)
 {
   int64_t ret = count;
   destroy_seg();
@@ -263,7 +263,7 @@ int64_t TfsLargeFile::get_segment_for_read(int64_t offset, char* buf, int64_t co
   return ret;
 }
 
-int64_t TfsLargeFile::get_segment_for_write(int64_t offset, const char* buf, int64_t count)
+int64_t TfsLargeFile::get_segment_for_write(const int64_t offset, const char* buf, const int64_t count)
 {
   destroy_seg();
   return local_key_.get_segment_for_write(offset, buf, count, processing_seg_list_);
@@ -280,7 +280,7 @@ int TfsLargeFile::read_process(int64_t& read_size)
   {
     // segList.size() != 0
     // just use first ds list size to be retry times. maybe random ..
-    int retry_count = processing_seg_list_[0]->ds_.size();
+    int32_t retry_count = processing_seg_list_[0]->ds_.size();
     do
     {
       ret = process(FILE_PHASE_READ_FILE);
@@ -333,7 +333,7 @@ int TfsLargeFile::write_process()
   return ret;
 }
 
-int32_t TfsLargeFile::finish_write_process(int status)
+int32_t TfsLargeFile::finish_write_process(const int status)
 {
   int32_t count = 0;
   int ret = TFS_ERROR;
@@ -360,7 +360,7 @@ int32_t TfsLargeFile::finish_write_process(int status)
   }
   else
   {
-    for (; it != processing_seg_list_.end();)
+    while (it != processing_seg_list_.end())
     {
       if (SEG_STATUS_ALL_OVER == (*it)->status_) // all over
       {

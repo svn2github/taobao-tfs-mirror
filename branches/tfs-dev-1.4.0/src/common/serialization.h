@@ -14,14 +14,14 @@
  */
 
 #ifndef TFS_COMMON_SERIALIZATION_H_
-#define TFS_COMMON_SERIALIZATION_H_ 
-#include "define.h"
+#define TFS_COMMON_SERIALIZATION_H_
+#include "internal.h"
 
 namespace tfs
 {
   namespace common
   {
-    struct Serialization 
+    struct Serialization
     {
       static int64_t get_string_length(const char* str)
       {
@@ -31,22 +31,22 @@ namespace tfs
       {
         return str.empty() ? INT_SIZE : str.length() + INT_SIZE + 1;
       }
-      template <typename T> 
+      template <typename T>
       static int64_t get_vint8_length(const T& value)
       {
         return INT_SIZE + value.size() * INT8_SIZE;
       }
-      template <typename T> 
+      template <typename T>
       static int64_t get_vint16_length(const T& value)
       {
         return INT_SIZE + value.size() * INT16_SIZE;
       }
-      template <typename T> 
+      template <typename T>
       static int64_t get_vint32_length(const T& value)
       {
         return INT_SIZE + value.size() * INT_SIZE;
       }
-      template <typename T> 
+      template <typename T>
       static int64_t get_vint64_length(const T& value)
       {
         return INT_SIZE + value.size() * INT64_SIZE;
@@ -469,7 +469,7 @@ namespace tfs
         }
         return iret;
       }
-      template <typename T> 
+      template <typename T>
       static int set_vint64(char* data, const int64_t data_len, int64_t& pos, const T& value)
       {
         int32_t iret = NULL != data && data_len - pos >= get_vint64_length(value) &&  pos >= 0 ? TFS_SUCCESS : TFS_ERROR;

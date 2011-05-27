@@ -107,19 +107,16 @@ namespace tfs
 
       int64_t get_segment_for_write(const int64_t offset, const char* buf,
                                 const int64_t size, SEG_DATA_LIST& seg_list);
-      int64_t get_segment_for_read(const int64_t offset, const char* buf,
+      int64_t get_segment_for_read(const int64_t offset, char* buf,
                                const int64_t size, SEG_DATA_LIST& seg_list);
 
-      int add_segment(common::SegmentInfo& seg_info);
+      int add_segment(const common::SegmentInfo& seg_info);
       int dump_data(char* buf, const int32_t buff_size) const;
 
       int32_t get_data_size() const;    // get raw data size of segment head and data
       int64_t get_file_size() const;    // get size that segments contain
       int32_t get_segment_size() const; // get segment count
-      SEG_SET& get_seg_info()
-      {
-        return seg_info_;
-      }
+      SEG_SET& get_seg_info();
 
     private:
       void clear();
@@ -127,11 +124,11 @@ namespace tfs
       int load_head(const char* buf);
       int load_segment(const char* buf);
       static void get_segment(const int64_t offset, const char* buf,
-                       int64_t size, SEG_DATA_LIST& seg_list);
+                       const int64_t size, SEG_DATA_LIST& seg_list);
       void check_overlap(const int64_t offset, SEG_SET_ITER& it);
 
-      void gc_segment(SEG_SET_ITER it);
-      void gc_segment(SEG_SET_ITER first, SEG_SET_ITER last);
+      void gc_segment(SEG_SET_CONST_ITER it);
+      void gc_segment(SEG_SET_CONST_ITER first, SEG_SET_CONST_ITER last);
 
     private:
       common::SegmentHead seg_head_;

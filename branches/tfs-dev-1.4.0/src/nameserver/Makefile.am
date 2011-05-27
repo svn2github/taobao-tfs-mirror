@@ -2,9 +2,9 @@
 AM_CPPFLAGS=-Wall -I$(top_srcdir)/src\
             -I$(TBLIB_ROOT)/include/tbsys\
             -I$(TBLIB_ROOT)/include/tbnet
- 
+
 #AM_LDFLAGS=-lz -lrt -lpthread -ldl -lgcov
-AM_LDFLAGS=-lz -lrt -lpthread -ldl 
+AM_LDFLAGS=-lz -lrt -lpthread -ldl
 
 LDADD=$(top_builddir)/src/message/libtfsmessage.a \
       $(top_builddir)/src/common/libtfscommon.a\
@@ -18,10 +18,10 @@ source_list=nameserver.cpp gc.cpp block_chunk.cpp block_collect.cpp server_colle
 		oplog_sync_manager.cpp heart_manager.cpp layout_manager.cpp client_request_server.cpp
 
 libnameserver_a_SOURCES=$(source_list)
-libnameserver_a_LDFLAGS=$(AM_LDFLAGS)
+libnameserver_a_LIBFLAGS=$(AM_LDFLAGS)
 
 bin_PROGRAMS = nameserver
 
-nameserver_SOURCES=$(source_list) service.cpp 
+nameserver_SOURCES=$(source_list) service.cpp
 
 

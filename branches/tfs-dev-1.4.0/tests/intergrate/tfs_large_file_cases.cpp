@@ -23,6 +23,7 @@
 #include <vector>
 
 using namespace tfs::common;
+using namespace tfs::client;
 using namespace tfs::message;
 using namespace std;
 using namespace tbsys;
@@ -42,7 +43,7 @@ void TfsLargeFileTest::test_read(const bool large_flag, int64_t base, const char
   uint32_t write_crc = 0;
   uint32_t read_crc = 0;
   int64_t length = 0;
-  TfsIoApiUtil::generate_length(length, base);  
+  TfsIoApiUtil::generate_length(length, base);
   cout << "generate length: " << length << endl;
   ASSERT_EQ(length, TfsIoApiUtil::write_new_file(large_flag, length, write_crc, tfs_name, suffix, TFS_FILE_LEN));
   ASSERT_EQ(TFS_SUCCESS, TfsIoApiUtil::read_exist_file(large_flag, tfs_name, suffix, read_crc));
@@ -53,8 +54,8 @@ void TfsLargeFileTest::test_read(const bool large_flag, int64_t base, const char
 void TfsLargeFileTest::unlink_process(const bool large_flag)
 {
   vector<const char*> suffixs;
-  const char* a = NULL; 
-  const char* b = ".jpg"; 
+  const char* a = NULL;
+  const char* b = ".jpg";
   const char* c = ".bmp";
   suffixs.push_back(a);
   suffixs.push_back(b);
@@ -211,7 +212,7 @@ void TfsLargeFileTest::test_update(const bool large_flag, int64_t base, const ch
   char tfs_name[TFS_FILE_LEN];
   memset(tfs_name, 0, TFS_FILE_LEN);
   int64_t length = 0;
-  TfsIoApiUtil::generate_length(length, base);  
+  TfsIoApiUtil::generate_length(length, base);
   cout << "generate length: " << length << endl;
 
   uint32_t write_crc = 0;
@@ -232,7 +233,7 @@ void TfsLargeFileTest::test_update(const bool large_flag, int64_t base, const ch
     ASSERT_EQ(write_crc, read_crc);
 
     // update: re generate length
-    TfsIoApiUtil::generate_length(length, base);  
+    TfsIoApiUtil::generate_length(length, base);
     cout << "generate length: " << length << endl;
     write_crc = 0;
     read_crc = 0;
@@ -253,7 +254,7 @@ void TfsLargeFileTest::test_update(const bool large_flag, int64_t base, const ch
     ASSERT_EQ(write_crc, read_crc);
 
     // update: re generate length
-    TfsIoApiUtil::generate_length(length, base);  
+    TfsIoApiUtil::generate_length(length, base);
     cout << "generate length: " << length << endl;
     read_crc = 0;
     tmp_write_crc = 0;
@@ -267,17 +268,17 @@ TEST_F(TfsLargeFileTest, write_small_file)
 {
   int64_t length = 0;
   uint32_t crc = 0;
-  srand((unsigned)time(NULL)); 
+  srand((unsigned)time(NULL));
   // 512K ~ 1M
-  TfsIoApiUtil::generate_length(length, 1024 * 512);  
+  TfsIoApiUtil::generate_length(length, 1024 * 512);
   ASSERT_EQ(length, TfsIoApiUtil::write_new_file(false, length, crc));
   // 1~2M
   crc = 0;
-  TfsIoApiUtil::generate_length(length, 1024 * 1024);  
+  TfsIoApiUtil::generate_length(length, 1024 * 1024);
   ASSERT_EQ(length, TfsIoApiUtil::write_new_file(false, length, crc));
   // 2~4M
   crc = 0;
-  TfsIoApiUtil::generate_length(length, 2 * 1024 * 1024);  
+  TfsIoApiUtil::generate_length(length, 2 * 1024 * 1024);
   ASSERT_EQ(length, TfsIoApiUtil::write_new_file(false, length, crc));
 }
 
@@ -285,13 +286,13 @@ TEST_F(TfsLargeFileTest, update_small_file)
 {
   const int max_loop = 2;
   // 512K ~ 1M
-  for (int i = 0; i < max_loop; ++i) 
+  for (int i = 0; i < max_loop; ++i)
     test_update(false, 1024 * 512);
   // 1~2M
-  for (int i = 0; i < max_loop; ++i) 
+  for (int i = 0; i < max_loop; ++i)
     test_update(false, 1024 * 1024, ".jpg");
   // 2~4M
-  for (int i = 0; i < max_loop; ++i) 
+  for (int i = 0; i < max_loop; ++i)
     test_update(false, 1024 * 1024, ".jpg");
 }
 
@@ -300,15 +301,15 @@ TEST_F(TfsLargeFileTest, read_small_file)
   const int max_loop = 20;
   //const int max_loop = 1;
   // 512K ~ 1M
-  for (int i = 0; i < max_loop; ++i) 
+  for (int i = 0; i < max_loop; ++i)
     test_read(false, 1024 * 512);
   // 1~2M
-  for (int i = 0; i < max_loop; ++i) 
+  for (int i = 0; i < max_loop; ++i)
     test_read(false, 1024 * 1024, ".jpg");
   // 2~4M
-  for (int i = 0; i < max_loop; ++i) 
+  for (int i = 0; i < max_loop; ++i)
     test_read(false, 1024 * 1024, ".jpg");
-}  
+}
 
 TEST_F(TfsLargeFileTest, stat_exist_small_file)
 {
@@ -339,34 +340,34 @@ TEST_F(TfsLargeFileTest, unlink_small_file)
 //{
 //  int64_t length = 0;
 //  uint32_t crc = 0;
-//  srand((unsigned)time(NULL)); 
+//  srand((unsigned)time(NULL));
 //  // 512K ~ 1M
-//  TfsIoApiUtil::generate_length(length, 1024 * 512);  
+//  TfsIoApiUtil::generate_length(length, 1024 * 512);
 //  ASSERT_EQ(length, TfsIoApiUtil::write_new_file(true, length, crc));
 //  // 1~2M
 //  crc = 0;
-//  TfsIoApiUtil::generate_length(length, 1024 * 1024);  
+//  TfsIoApiUtil::generate_length(length, 1024 * 1024);
 //  ASSERT_EQ(length, TfsIoApiUtil::write_new_file(true, length, crc));
 //  // 2~4M
 //  crc = 0;
-//  TfsIoApiUtil::generate_length(length, 2 * 1024 * 1024);  
+//  TfsIoApiUtil::generate_length(length, 2 * 1024 * 1024);
 //  ASSERT_EQ(length, TfsIoApiUtil::write_new_file(true, length, crc));
 //  // 5~10M
 //  crc = 0;
-//  TfsIoApiUtil::generate_length(length, 5 * 1024 * 1024);  
+//  TfsIoApiUtil::generate_length(length, 5 * 1024 * 1024);
 //  ASSERT_EQ(length, TfsIoApiUtil::write_new_file(true, length, crc));
 //  // 40~80M
 //  crc = 0;
-//  TfsIoApiUtil::generate_length(length, 40 * 1024 * 1024);  
+//  TfsIoApiUtil::generate_length(length, 40 * 1024 * 1024);
 //  ASSERT_EQ(length, TfsIoApiUtil::write_new_file(true, length, crc));
-//  // 1024M ~ 2048M 
+//  // 1024M ~ 2048M
 //  crc = 0;
-//  TfsIoApiUtil::generate_length(length, 1024 * 1024 * 1024);  
+//  TfsIoApiUtil::generate_length(length, 1024 * 1024 * 1024);
 //  ASSERT_EQ(length, TfsIoApiUtil::write_new_file(true, length, crc));
 //  // 3G ~ 6G
 //  crc = 0;
 //  int64_t base = 3 * 1024 * 1024 * 1024L;
-//  TfsIoApiUtil::generate_length(length, base);  
+//  TfsIoApiUtil::generate_length(length, base);
 //  ASSERT_EQ(length, TfsIoApiUtil::write_new_file(true, length, crc));
 //}
 
@@ -374,25 +375,25 @@ TEST_F(TfsLargeFileTest, read_large_file)
 {
   const int max_loop = 1;
   // 512K ~ 1M
-  for (int i = 0; i < max_loop; ++i) 
+  for (int i = 0; i < max_loop; ++i)
     test_read(true, 1024 * 512);
   // 1~2M
-  for (int i = 0; i < max_loop; ++i) 
+  for (int i = 0; i < max_loop; ++i)
     test_read(true, 1024 * 1024, ".jpg");
   // 2~4M
-  for (int i = 0; i < max_loop; ++i) 
+  for (int i = 0; i < max_loop; ++i)
     test_read(true, 2 * 1024 * 1024);
   // 5~10M
-  for (int i = 0; i < max_loop; ++i) 
+  for (int i = 0; i < max_loop; ++i)
     test_read(true, 5 * 1024 * 1024, ".gif");
   // 40~80M
-  for (int i = 0; i < max_loop; ++i) 
+  for (int i = 0; i < max_loop; ++i)
     test_read(true, 40 * 1024 * 1024);
   // 1G ~ 2G
-  for (int i = 0; i < max_loop; ++i) 
+  for (int i = 0; i < max_loop; ++i)
     test_read(true, 1024 * 1024 * 1024, ".bmp");
   // 3G ~ 6G
-  for (int i = 0; i < max_loop; ++i) 
+  for (int i = 0; i < max_loop; ++i)
     test_read(true, 3 * 1024 * 1024 * 1024L);
 }
 
@@ -400,13 +401,13 @@ TEST_F(TfsLargeFileTest, update_large_file)
 {
   const int max_loop = 3;
   // 512K ~ 1M
-  for (int i = 0; i < max_loop; ++i) 
+  for (int i = 0; i < max_loop; ++i)
     test_update(true, 1024 * 512);
   // 10~20M
-  for (int i = 0; i < max_loop; ++i) 
+  for (int i = 0; i < max_loop; ++i)
     test_update(true, 10 * 1024 * 1024, ".jpg");
   // 200~400M
-  for (int i = 0; i < max_loop; ++i) 
+  for (int i = 0; i < max_loop; ++i)
     test_update(true, 200 * 1024 * 1024, ".jpg");
 }
 
@@ -475,8 +476,8 @@ int parse_args(int argc, char *argv[])
 void destroy()
 {
 #ifdef USE_CPP_CLIENT
-  TfsLargeFileTest::tfs_client_ = TfsClient::Instance();
-	TfsLargeFileTest::tfs_client_->destroy();
+  TfsIoApiUtil::tfs_client_ = tfs::client::TfsClient::Instance();
+	TfsIoApiUtil::tfs_client_->destroy();
 #else
   t_destroy();
 #endif

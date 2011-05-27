@@ -30,7 +30,7 @@ using namespace tfs::message;
 using namespace tfs::client;
 using namespace std;
 
-TfsClientImpl::TfsClientImpl() : is_init_(false), default_tfs_session_(NULL), fd_(1), 
+TfsClientImpl::TfsClientImpl() : is_init_(false), default_tfs_session_(NULL), fd_(0),
   packet_factory_(NULL), packet_streamer_(NULL)
 {
   packet_factory_ = new MessageFactory();
@@ -68,7 +68,6 @@ int TfsClientImpl::initialize(const char* ns_addr, const int32_t cache_time, con
   }
   else
   {
-
     if (NULL == ns_addr)
     {
       TBSYS_LOG(ERROR, "tfsclient initialize need ns ip");
@@ -170,7 +169,7 @@ int64_t TfsClientImpl::pwrite(const int fd, const void* buf, const int64_t count
   return ret;
 }
 
-int TfsClientImpl::fstat(const int fd, TfsFileStat* buf, const TfsStatFlag mode)
+int TfsClientImpl::fstat(const int fd, TfsFileStat* buf, const TfsStatType mode)
 {
   int ret = EXIT_INVALIDFD_ERROR;
   TfsFile* tfs_file = get_file(fd);
@@ -195,10 +194,14 @@ int TfsClientImpl::close(const int fd, char* tfs_name, const int32_t len)
       {
         TBSYS_LOG(ERROR, "tfs close failed. fd: %d, ret: %d", fd, ret);
       }
-      else
+      // buffer not null, then consider as wanting tfs name back
+      // len must invalid
+      else if (NULL != tfs_name)
       {
-        if (NULL == tfs_name || len < TFS_FILE_LEN)
+        if (len < TFS_FILE_LEN)
         {
+          TBSYS_LOG(ERROR, "name buffer length less: %d < %d", len, TFS_FILE_LEN);
+          ret = TFS_ERROR;
         }
         else
         {
@@ -226,60 +229,57 @@ int64_t TfsClientImpl::get_file_length(const int fd)
 
 int TfsClientImpl::open(const char* file_name, const char* suffix, const char* ns_addr, const int flags, ...)
 {
-  if (!check_init())
+  int ret_fd = EXIT_INVALIDFD_ERROR;
+
+  if (check_init() && (ret_fd = get_fd()) > 0)
   {
-    return common::EXIT_NOT_INIT_ERROR;
+    TfsSession* tfs_session = (NULL == ns_addr) ? default_tfs_session_ :
+      SESSION_POOL.get(ns_addr, default_tfs_session_->get_cache_time(), default_tfs_session_->get_cache_items());
+
+    if (NULL == tfs_session)
+    {
+      TBSYS_LOG(ERROR, "can not get tfs session : %s.", ns_addr);
+      ret_fd = EXIT_INVALIDFD_ERROR;
+    }
+    else
+    {
+      TfsFile* tfs_file = NULL;
+      int ret = TFS_ERROR;
+
+      if (!(flags & common::T_LARGE))
+      {
+        tfs_file = new TfsSmallFile();
+        tfs_file->set_session(tfs_session);
+        ret = tfs_file->open(file_name, suffix, flags);
+      }
+      else
+      {
+        va_list args;
+        va_start(args, flags);
+        tfs_file = new TfsLargeFile();
+        tfs_file->set_session(tfs_session);
+        ret = tfs_file->open(file_name, suffix, flags, va_arg(args, char*));
+        va_end(args);
+      }
+
+      if (ret != TFS_SUCCESS)
+      {
+        TBSYS_LOG(ERROR, "open tfsfile fail, filename: %s, suffix: %s, flags: %d, ret: %d", file_name, suffix, flags, ret);
+      }
+      else if ((ret = insert_file(ret_fd, tfs_file)) != TFS_SUCCESS)
+      {
+        TBSYS_LOG(ERROR, "add fd fail: %d", ret_fd);
+      }
+
+      if (ret != TFS_SUCCESS)
+      {
+        tbsys::gDelete(tfs_file);
+        ret_fd = EXIT_INVALIDFD_ERROR;
+      }
+    }
   }
 
-  TfsSession* tfs_session = (NULL == ns_addr) ? default_tfs_session_ :
-    SESSION_POOL.get(ns_addr, default_tfs_session_->get_cache_time(), default_tfs_session_->get_cache_items());
-
-  if (NULL == tfs_session)
-  {
-    TBSYS_LOG(ERROR, "can not get tfs session : %s.", ns_addr);
-    return TFS_ERROR;
-  }
-
-  TfsFile* tfs_file = NULL;
-  int ret = TFS_SUCCESS;
-  if (!(flags & common::T_LARGE))
-  {
-    tfs_file = new TfsSmallFile();
-    tfs_file->set_session(tfs_session);
-    ret = tfs_file->open(file_name, suffix, flags);
-  }
-  else
-  {
-    va_list args;
-    va_start(args, flags);
-    tfs_file = new TfsLargeFile();
-    tfs_file->set_session(tfs_session);
-    ret = tfs_file->open(file_name, suffix, flags, va_arg(args, char*));
-    va_end(args);
-  }
-
-  if (ret != TFS_SUCCESS)
-  {
-    TBSYS_LOG(ERROR, "open tfsfile fail, filename: %s, suffix: %s, flags: %d, ret: %d", file_name, suffix, flags, ret);
-    return EXIT_INVALIDFD_ERROR;
-  }
-
-  ret = EXIT_INVALIDFD_ERROR;
-  tbutil::Mutex::Lock lock(mutex_);
-  if (tfs_file_map_.find(fd_) != tfs_file_map_.end()) // should never happen
-  {
-    TBSYS_LOG(ERROR, "create new fd fail. fd: %d already exist in map", fd_);
-  }
-  else if (!(tfs_file_map_.insert(std::map<int, TfsFile*>::value_type(fd_, tfs_file))).second)
-  {
-    TBSYS_LOG(ERROR, "insert fd: %d to global file map fail", fd_);
-  }
-  else
-  {
-    ret = fd_++;
-  }
-
-  return ret;
+  return ret_fd;
 }
 
 int TfsClientImpl::unlink(const char* file_name, const char* suffix, const char* ns_addr, const TfsUnlinkType action)
@@ -337,10 +337,10 @@ void TfsClientImpl::set_segment_size(const int64_t segment_size)
   ClientConfig::segment_size_ = segment_size;
   ClientConfig::batch_size_ = ClientConfig::segment_size_ * ClientConfig::batch_count_;
   TBSYS_LOG(INFO, "set segment size: %" PRI64_PREFIX "d, batch count: %" PRI64_PREFIX "d, batch size: %" PRI64_PREFIX "d",
-      ClientConfig::segment_size_, ClientConfig::batch_count_, ClientConfig::batch_size_);
+            ClientConfig::segment_size_, ClientConfig::batch_count_, ClientConfig::batch_size_);
 }
 
-int64_t TfsClientImpl::get_segment_size()
+int64_t TfsClientImpl::get_segment_size() const
 {
   return ClientConfig::segment_size_;
 }
@@ -350,46 +350,80 @@ void TfsClientImpl::set_batch_count(const int64_t batch_count)
   ClientConfig::batch_count_ = batch_count;
   ClientConfig::batch_size_ = ClientConfig::segment_size_ * ClientConfig::batch_count_;
   TBSYS_LOG(INFO, "set batch count: %" PRI64_PREFIX "d, segment size: %" PRI64_PREFIX "d, batch size: %" PRI64_PREFIX "d",
-      ClientConfig::batch_count_, ClientConfig::segment_size_, ClientConfig::batch_size_);
+            ClientConfig::batch_count_, ClientConfig::segment_size_, ClientConfig::batch_size_);
 }
 
-int64_t TfsClientImpl::get_batch_count()
+int64_t TfsClientImpl::get_batch_count() const
 {
   return ClientConfig::batch_count_;
 }
 
-void TfsClientImpl::set_gc_expired_time(const int64_t gc_expired_time_s)
+void TfsClientImpl::set_stat_interval(const int64_t stat_interval_ms)
 {
-  ClientConfig::expired_time_ = gc_expired_time_s;
-  TBSYS_LOG(INFO, "set gc expired time: %" PRI64_PREFIX "d", ClientConfig::expired_time_);
+  ClientConfig::stat_interval_ = stat_interval_ms;
+  BgTask::get_stat_mgr().reset_schedule_interval(stat_interval_ms * 1000);
+  TBSYS_LOG(INFO, "set stat interval: %" PRI64_PREFIX "d ms", ClientConfig::stat_interval_);
 }
 
-int64_t TfsClientImpl::get_gc_expired_time()
+int64_t TfsClientImpl::get_stat_interval() const
 {
-  return ClientConfig::expired_time_;
+  return ClientConfig::stat_interval_;
 }
 
-void TfsClientImpl::set_gc_interval(const int64_t gc_interval_s)
+void TfsClientImpl::set_gc_interval(const int64_t gc_interval_ms)
 {
-  ClientConfig::gc_interval_ = gc_interval_s;
-  BgTask::get_gc_mgr().reset_schedule_interval(gc_interval_s);
-  TBSYS_LOG(INFO, "set gc interval: %" PRI64_PREFIX "d", ClientConfig::gc_interval_);
+  ClientConfig::gc_interval_ = gc_interval_ms;
+  BgTask::get_gc_mgr().reset_schedule_interval(gc_interval_ms);
+  TBSYS_LOG(INFO, "set gc interval: %" PRI64_PREFIX "d ms", ClientConfig::gc_interval_);
 }
 
-int64_t TfsClientImpl::get_gc_interval()
+int64_t TfsClientImpl::get_gc_interval() const
 {
   return ClientConfig::gc_interval_;
 }
 
-void TfsClientImpl::set_batch_time_out(const int64_t time_out_us)
+void TfsClientImpl::set_gc_expired_time(const int64_t gc_expired_time_ms)
 {
-  ClientConfig::batch_time_out_ = time_out_us;
-  TBSYS_LOG(INFO, "set batch time out: %" PRI64_PREFIX "d", ClientConfig::batch_time_out_);
+  ClientConfig::expired_time_ = gc_expired_time_ms;
+  TBSYS_LOG(INFO, "set gc expired time: %" PRI64_PREFIX "d ms", ClientConfig::expired_time_);
 }
 
-int64_t TfsClientImpl::get_batch_time_out()
+int64_t TfsClientImpl::get_gc_expired_time() const
 {
-  return ClientConfig::batch_time_out_;
+  return ClientConfig::expired_time_;
+}
+
+void TfsClientImpl::set_batch_timeout(const int64_t timeout_ms)
+{
+  ClientConfig::batch_timeout_ = timeout_ms * 1000;
+  TBSYS_LOG(INFO, "set batch timeout: %" PRI64_PREFIX "d ms", timeout_ms);
+}
+
+int64_t TfsClientImpl::get_batch_timeout() const
+{
+  return ClientConfig::batch_timeout_ / 1000;
+}
+
+void TfsClientImpl::set_wait_timeout(const int64_t timeout_ms)
+{
+  ClientConfig::wait_timeout_ = timeout_ms * 1000;
+  TBSYS_LOG(INFO, "set wait timeout: %" PRI64_PREFIX "d us", timeout_ms);
+}
+
+int64_t TfsClientImpl::get_wait_timeout() const
+{
+  return ClientConfig::wait_timeout_ / 1000;
+}
+
+void TfsClientImpl::set_client_retry_count(const int64_t count)
+{
+  ClientConfig::client_retry_count_ = count;
+  TBSYS_LOG(INFO, "set client retry count: %" PRI64_PREFIX "d", ClientConfig::client_retry_count_);
+}
+
+int64_t TfsClientImpl::get_client_retry_count() const
+{
+  return ClientConfig::client_retry_count_;
 }
 
 void TfsClientImpl::set_log_level(const char* level)
@@ -404,7 +438,6 @@ void TfsClientImpl::set_log_level(const char* level)
 // and they will check if file is open.
 bool TfsClientImpl::check_init()
 {
-  tbutil::Mutex::Lock lock(mutex_);
   if (!is_init_)
   {
     TBSYS_LOG(ERROR, "tfsclient not initialized");
@@ -423,6 +456,61 @@ TfsFile* TfsClientImpl::get_file(const int fd)
     return NULL;
   }
   return it->second;
+}
+
+int TfsClientImpl::get_fd()
+{
+  int ret_fd = EXIT_INVALIDFD_ERROR;
+
+  tbutil::Mutex::Lock lock(mutex_);
+  if (static_cast<int32_t>(tfs_file_map_.size()) >= MAX_OPEN_FD_COUNT)
+  {
+    TBSYS_LOG(ERROR, "too much open files");
+  }
+  else
+  {
+    if (MAX_FILE_FD == fd_)
+    {
+      fd_ = 0;
+    }
+
+    bool fd_confict = true;
+    int retry = MAX_OPEN_FD_COUNT;
+
+    while (retry-- > 0 &&
+           (fd_confict = (tfs_file_map_.find(++fd_) != tfs_file_map_.end())))
+    {
+      if (MAX_FILE_FD == fd_)
+      {
+        fd_ = 0;
+      }
+    }
+
+    if (fd_confict)
+    {
+      TBSYS_LOG(ERROR, "too much open files");
+    }
+    else
+    {
+      ret_fd = fd_;
+    }
+  }
+
+  return ret_fd;
+}
+
+int TfsClientImpl::insert_file(const int fd, TfsFile* tfs_file)
+{
+  int ret = TFS_ERROR;
+
+  if (NULL != tfs_file)
+  {
+    tbutil::Mutex::Lock lock(mutex_);
+    ret = (tfs_file_map_.insert(std::map<int, TfsFile*>::value_type(fd, tfs_file))).second ?
+      TFS_SUCCESS : TFS_ERROR;
+  }
+
+  return ret;
 }
 
 int TfsClientImpl::erase_file(const int fd)

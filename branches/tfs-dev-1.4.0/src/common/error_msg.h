@@ -28,11 +28,10 @@ namespace tfs
     const int32_t EXIT_ALL_SEGMENT_ERROR = -1004;
     // defined in define.h for outside use
     // static const int EXIT_INVALIDFD_ERROR = -1005;
-    // static const int EXIT_NOT_INIT_ERROR = -1006;
-    //static const int32_t EXIT_NOT_PERM_OPER = -1007;
-
-    const int32_t EXIT_CHECK_CRC_ERROR = -1008;
-    const int32_t EXIT_DESERIALIZE_ERROR = -1009;
+    static const int EXIT_NOT_INIT_ERROR = -1006;
+    static const int EXIT_INVALID_ARGU_ERROR = -1007;
+    static const int32_t EXIT_NOT_PERM_OPER = -1008;
+    static const int32_t EXIT_NOT_OPEN_ERROR = -1009;
     const int32_t EXIT_SERIALIZE_ERROR = -1010;
     const int32_t EXIT_ACCESS_PERMISSION_ERROR = -1011; //access permission error
     const int32_t EXIT_SYSTEM_PARAMETER_ERROR = -1012; //system parameter error

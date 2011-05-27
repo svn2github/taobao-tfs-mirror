@@ -14,15 +14,15 @@
  */
 
 #ifndef TFS_COMMON_BUFFER_H_
-#define TFS_COMMON_BUFFER_H_ 
-#include "define.h"
+#define TFS_COMMON_BUFFER_H_
+#include "internal.h"
 #include "error_msg.h"
 
 namespace tfs
 {
   namespace common
   {
-    class Buffer 
+    class Buffer
     {
     public:
         Buffer():
@@ -133,7 +133,7 @@ namespace tfs
             while ((buf_size - data_length) < need)
             {
               buf_size <<= EXPAND_MULTIPLE;
-            } 
+            }
 
             unsigned char *newbuf = (unsigned char *)malloc(buf_size);
             assert(newbuf != NULL);
@@ -190,7 +190,7 @@ namespace tfs
     #else
     private:
     #endif
-      DISALLOW_COPY_AND_ASSIGN(Buffer);
+      // DISALLOW_COPY_AND_ASSIGN(Buffer);
       static const int16_t DEFAULT_MALLOC_SIZE = 256;//bytes
       static const int16_t SHRINK_BUFFER_SIZE = 2048;//2KB
       static const int8_t EXPAND_MULTIPLE = 1;

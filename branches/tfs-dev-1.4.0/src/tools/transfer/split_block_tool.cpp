@@ -4,7 +4,7 @@
 #include <set>
 #include <string.h>
 #include <tbsys.h>
-#include "common/define.h"
+#include "common/internal.h"
 using namespace std;
 using namespace tfs::common;
 
@@ -31,7 +31,7 @@ int main(int argc, char* argv[])
     TBSYS_LOG(ERROR, "access input dslist file: %s, blklist file: %s, save_path: %s fail, herror: %s\n",
         dslist_file.c_str(), blklist_file.c_str(), save_path.c_str(), strerror(errno));
     ret = TFS_ERROR;
-  }  
+  }
   else if ((dslist_file_ptr = fopen(dslist_file.c_str(), "r")) == NULL ||
       (blklist_file_ptr = fopen(blklist_file.c_str(), "r")) == NULL)
   {
@@ -40,7 +40,7 @@ int main(int argc, char* argv[])
     ret = TFS_ERROR;
   }
   else
-  {      
+  {
       // create input block
       char ds_addr[MAX_PATH_LENGTH];
       while (fscanf(dslist_file_ptr, "%s", ds_addr) != EOF)
@@ -74,7 +74,7 @@ int main(int argc, char* argv[])
     uint32_t blockid = 0;
     while (fscanf(blklist_file_ptr, "%u", &blockid) != EOF)
     {
-      fprintf(ds_input_blocks[index], "%u\n", blockid); 
+      fprintf(ds_input_blocks[index], "%u\n", blockid);
       ++index;
       if (index == size)
       {

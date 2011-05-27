@@ -22,7 +22,6 @@
 #include <string>
 #include <set>
 
-#include "common/define.h"
 #include "common/internal.h"
 #include "common/error_msg.h"
 #include "new_client/tfs_session.h"

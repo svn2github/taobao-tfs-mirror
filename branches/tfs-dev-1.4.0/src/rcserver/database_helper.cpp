@@ -6,16 +6,16 @@
  * published by the Free Software Foundation.
  *
  *
- * Version: $Id 
+ * Version: $Id
  *
- *   
+ *
  *   Authors:
  *          daoan(daoan@taobao.com)
  *
  */
 
 #include "database_helper.h"
-#include "common/define.h"
+#include "common/internal.h"
 namespace tfs
 {
   using namespace common;

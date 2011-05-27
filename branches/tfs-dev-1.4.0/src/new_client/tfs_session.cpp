@@ -187,7 +187,7 @@ int TfsSession::get_block_info_ex(uint32_t& block_id, VUINT64& rds, const int32_
   //BasePacket* rsp = NULL;
   tbnet::Packet* rsp = NULL;
   NewClient* client = NewClientManager::get_instance().create_client();
-  int ret = send_msg_to_server(ns_addr_, client, &gbi_message, rsp, WAIT_TIME_OUT); 
+  int ret = send_msg_to_server(ns_addr_, client, &gbi_message, rsp, ClientConfig::wait_timeout_);
 
   if (TFS_SUCCESS != ret)
   {
@@ -252,7 +252,7 @@ int TfsSession::get_block_info_ex(SEG_DATA_LIST& seg_list, const int32_t flag)
 
   tbnet::Packet* rsp = NULL;
   NewClient* client = NewClientManager::get_instance().create_client();
-  int ret = send_msg_to_server(ns_addr_, client, &bgbi_message, rsp, WAIT_TIME_OUT); 
+  int ret = send_msg_to_server(ns_addr_, client, &bgbi_message, rsp, ClientConfig::wait_timeout_);
   if (TFS_SUCCESS != ret)
   {
     TBSYS_LOG(ERROR, "get blockinfo failed, ret: %d", ret);
@@ -356,12 +356,12 @@ int TfsSession::get_block_info_ex(SEG_DATA_LIST& seg_list, const int32_t flag)
 int TfsSession::get_cluster_id_from_ns()
 {
   ClientCmdMessage cc_message;
-  cc_message.set_cmd(CLIENT_CMD_SET_PARAM); 
-  cc_message.set_value3(20); 
+  cc_message.set_cmd(CLIENT_CMD_SET_PARAM);
+  cc_message.set_value3(20);
 
   tbnet::Packet* rsp = NULL;
   NewClient* client = NewClientManager::get_instance().create_client();
-  int ret = send_msg_to_server(ns_addr_, client, &cc_message, rsp, WAIT_TIME_OUT); 
+  int ret = send_msg_to_server(ns_addr_, client, &cc_message, rsp, ClientConfig::wait_timeout_);
   if (TFS_SUCCESS != ret)
   {
     TBSYS_LOG(ERROR, "get block info failed, ret: %d", ret);

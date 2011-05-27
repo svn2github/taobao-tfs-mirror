@@ -15,15 +15,13 @@ api_source_list = tfs_file.cpp tfs_large_file.cpp tfs_small_file.cpp tfs_session
 
 ld_fg = $(AM_LDFLAGS) \
         $(top_srcdir)/src/message/libtfsmessage.a \
-        $(top_srcdir)/src/common/libtfscommon.a \
-        $(TBLIB_ROOT)/lib/libtbnet.a \
-        $(TBLIB_ROOT)/lib/libtbsys.a
+        $(top_srcdir)/src/common/libtfscommon.a
 
 libtfsclient_la_SOURCES = ${api_source_list}
-libtfsclient_la_LDFLAGS = ${ld_fg}
+libtfsclient_la_LIBADD = ${ld_fg}
 
 libtfsclient_c_la_SOURCES = ${api_source_list} tfs_client_capi.cpp tfs_client_capi.h
-libtfsclient_c_la_LDFLAGS = ${ld_fg}
+libtfsclient_c_la_LIBADD = ${ld_fg}
 
 include_HEADERS = tfs_client_api.h tfs_client_capi.h
 
@@ -54,4 +52,4 @@ install-exec-hook:
 
 # installed dirctory differ from original src dirctory hierarchy, hardcode to change
 install-data-hook:
-	cd $(DESTDIR)$(includedir) && sed -i 's#common/\(.*\.h\)#\1#g' *.h
+	cd $(DESTDIR)$(includedir) && sed -i 's#common/\(.*\.h\)#\1#g' ${include_HEADERS}

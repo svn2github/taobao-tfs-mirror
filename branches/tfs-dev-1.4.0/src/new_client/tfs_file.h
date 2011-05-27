@@ -21,7 +21,7 @@
 #include "common/error_msg.h"
 #include "common/func.h"
 #include "common/lock.h"
-#include "common/client_define.h"
+#include "common/internal.h"
 //#include "common/client_manager.h"
 #include "common/base_packet.h"
 #include "tfs_session.h"
@@ -79,45 +79,44 @@ namespace tfs
 
       // virtual interface
       virtual int open(const char* file_name, const char* suffix, const int flags, ... ) = 0;
-      virtual int64_t read(void* buf, int64_t count) = 0;
-      virtual int64_t write(const void* buf, int64_t count) = 0;
-      virtual int64_t lseek(int64_t offset, int whence) = 0;
-      virtual int64_t pread(void* buf, int64_t count, int64_t offset) = 0;
-      virtual int64_t pwrite(const void* buf, int64_t count, int64_t offset) = 0;
-      virtual int fstat(TfsFileStat* file_info, const TfsStatFlag mode = NORMAL_STAT) = 0;
+      virtual int64_t read(void* buf, const int64_t count) = 0;
+      virtual int64_t write(const void* buf, const int64_t count) = 0;
+      virtual int64_t lseek(const int64_t offset, const int whence) = 0;
+      virtual int64_t pread(void* buf, const int64_t count, const int64_t offset) = 0;
+      virtual int64_t pwrite(const void* buf, const int64_t count, const int64_t offset) = 0;
+      virtual int fstat(common::TfsFileStat* file_info, const common::TfsStatType mode = common::NORMAL_STAT) = 0;
       virtual int close() = 0;
       virtual int64_t get_file_length() = 0;
-      virtual int unlink(const char* file_name, const char* suffix, const TfsUnlinkType action) = 0;
+      virtual int unlink(const char* file_name, const char* suffix, const common::TfsUnlinkType action) = 0;
 
       const char* get_file_name();
       void set_session(TfsSession* tfs_session);
 
     protected:
       // virtual level operation
-      virtual int64_t get_segment_for_read(int64_t offset, char* buf, int64_t count) = 0;
-      virtual int64_t get_segment_for_write(int64_t offset, const char* buf, int64_t count) = 0;
+      virtual int64_t get_segment_for_read(const int64_t offset, char* buf, const int64_t count) = 0;
+      virtual int64_t get_segment_for_write(const int64_t offset, const char* buf, const int64_t count) = 0;
       virtual int read_process(int64_t& read_size) = 0;
       virtual int write_process() = 0;
-      virtual int finish_write_process(int status) = 0;
+      virtual int finish_write_process(const int status) = 0;
       virtual int close_process() = 0;
       virtual int unlink_process() = 0;
 
     protected:
       // common operation
       void destroy_seg();
-      int64_t get_meta_segment(const int64_t offset, char* buf, const int64_t count);
+      int64_t get_meta_segment(const int64_t offset, const char* buf, const int64_t count);
       int process(const InnerFilePhase file_phase);
-      int32_t finish_read_process(int status, int64_t& read_size);
+      int32_t finish_read_process(const int status, int64_t& read_size);
 
       int open_ex(const char* file_name, const char *suffix, const int32_t flags);
       int64_t read_ex(void* buf, const int64_t count, const int64_t offset, const bool modify = true);
-      int64_t write_ex(const void* buf, int64_t count, int64_t offset, bool modify = true);
-      int64_t lseek_ex(int64_t offset, int whence);
-      int64_t pread_ex(void* buf, int64_t count, int64_t offset);
-      int64_t pwrite_ex(const void* buf, int64_t count, int64_t offset);
-      int fstat_ex(common::FileInfo* file_info, const TfsStatFlag mode);
+      int64_t write_ex(const void* buf, const int64_t count, const int64_t offset, const bool modify = true);
+      int64_t lseek_ex(const int64_t offset, const int whence);
+      int64_t pread_ex(void* buf, const int64_t count, const int64_t offset);
+      int64_t pwrite_ex(const void* buf, const int64_t count, const int64_t offset);
+      int fstat_ex(common::FileInfo* file_info, const common::TfsStatType mode);
       int close_ex();
-      int get_size_for_rw_ex(const int64_t check_size, const int64_t count, int64_t& cur_size, bool& not_end, const int64_t per_size);
 
     private:
       int do_async_request(const InnerFilePhase file_phase, common::NewClient* client, const uint16_t index);
@@ -148,10 +147,6 @@ namespace tfs
 
     public:
       common::RWLock rw_lock_;
-
-    protected:
-      static const int64_t WAIT_TIME_OUT = 3000000;
-      static const int64_t CLIENT_TRY_COUNT = 3;
 
     protected:
       FSName fsname_;

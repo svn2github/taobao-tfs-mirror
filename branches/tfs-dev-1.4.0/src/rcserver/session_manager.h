@@ -22,7 +22,7 @@
 #include <Timer.h>
 #include <Shared.h>
 #include <Handle.h>
-#include "common/define.h"
+#include "common/internal.h"
 #include "common/lock.h"
 #include "i_resource_manager.h"
 #include "resource_server_data.h"

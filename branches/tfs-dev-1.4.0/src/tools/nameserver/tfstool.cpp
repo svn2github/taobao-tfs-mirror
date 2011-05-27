@@ -23,7 +23,6 @@
 #include <map>
 #include <tbsys.h>
 
-#include "common/define.h"
 #include "common/internal.h"
 #include "new_client/fsname.h"
 #include "common/client_manager.h"
@@ -126,7 +125,7 @@ void init()
   cmd_map["forcereport"] = CMD_FORCE_ALL_DATASERVER_REPORT;
 }
 
-int tfs_save_file(TfsClient* tfs_client, const char* filename, const char* tfsname, 
+int tfs_save_file(TfsClient* tfs_client, const char* filename, const char* tfsname,
     const char* suffix, string& out_file_name, const int32_t mode = T_WRITE);
 int parse_cmd(char* buffer, VEC_STRING& param);
 int switch_cmd(int32_t cmd, TfsClient* tfs_client, VEC_STRING& param);
@@ -164,7 +163,7 @@ int access_control_flag(VEC_STRING& param);
 int get_scale_image(TfsClient* tfs_client, VEC_STRING &param);
 int force_all_dataserver_report(TfsClient* tfs_client, VEC_STRING& param);
 
-int tfs_save_file(TfsClient* tfs_client, const char* filename, const char* tfsname, 
+int tfs_save_file(TfsClient* tfs_client, const char* filename, const char* tfsname,
     const char* suffix, string& out_file_name, const int32_t mode)
 {
   char* data = new char[MAX_READ_SIZE];
@@ -248,7 +247,7 @@ int main(int argc, char* argv[])
   int32_t i;
   bool directly = false;
   bool set_log_level = false;
-  // analyze arguments 
+  // analyze arguments
   while ((i = getopt(argc, argv, "s:c:d:nih")) != EOF)
   {
     switch (i)
@@ -889,7 +888,7 @@ int force_all_dataserver_report(TfsClient* tfs_client, VEC_STRING& parameter)
     }
     while(count > 0);
 
-    if (TFS_SUCCESS != iret 
+    if (TFS_SUCCESS != iret
         || ret_msg == NULL
         || ret_msg->getPCode() != SHOW_SERVER_INFORMATION_MESSAGE)
     {
@@ -1053,7 +1052,7 @@ int rename_file(TfsClient* tfs_client, VEC_STRING& param)
     return TFS_ERROR;
   }
   char* newprefix = new_tfs_name + FILE_NAME_LEN;
-  FSName t1(tfs_name, NULL, cluster_id); 
+  FSName t1(tfs_name, NULL, cluster_id);
   FSName t2(new_tfs_name, NULL, cluster_id);
   if (t1.get_block_id() != t2.get_block_id())
   {
@@ -1168,12 +1167,12 @@ int send_message_to_server(uint64_t server_id, Message* msg, string& err_msg, Me
 {
   Message* ret_msg = NULL;
   int iret = NewClientManager::get_instance().call(server_id, msg, timeout, ret_msg);
-  if (TFS_SUCCESS == iret 
+  if (TFS_SUCCESS == iret
       && NULL != ret_msg)
   {
     if (NULL != response)
     {
-      *response = ret_msg; 
+      *response = ret_msg;
     }
     else
     {
@@ -1418,7 +1417,7 @@ int new_file_name(TfsClient* tfs_client, VEC_STRING& param)
   if (tfs_client->new_filename() == TFS_SUCCESS)
   {
     const char* tfs_name = tfs_client->get_file_name();
-    FSName fs_name(tfs_name, NULL, cluster_id); 
+    FSName fs_name(tfs_name, NULL, cluster_id);
     fprintf(stderr, "Name:%s, BlockId:%u, FileId:%" PRI64_PREFIX "u\n\n", tfs_name, fs_name.get_block_id(), fs_name.get_file_id());
   }
   else
@@ -1936,14 +1935,14 @@ int list_file_info(TfsClient* tfs_client, VEC_STRING& param)
    {
    BlockFileInfoMessage* req_bfi_msg = dynamic_cast<BlockFileInfoMessage*> (ret_message);
    FILE_INFO_LIST* file_info_list =  req_bfi_msg->get_fileinfo_list();
-   int32_t i = 0; 
+   int32_t i = 0;
    int32_t list_size = file_info_list->size();
-   for (i = 0; i < list_size; i++) 
-   {    
+   for (i = 0; i < list_size; i++)
+   {
    FileInfo *file_info = new FileInfo();
    memcpy(file_info, file_info_list->at(i), sizeof(FileInfo));
    file_list.push_back(file_info);
-   } 
+   }
    }
    else if (ret_message->get_message_type() == STATUS_MESSAGE)
    {

@@ -18,7 +18,7 @@
 
 #include <map>
 #include <string>
-#include "common/define.h"
+#include "common/internal.h"
 #include "resource.h"
 #include "resource_server_data.h"
 
@@ -29,7 +29,7 @@ namespace tfs
     class AppResource : public IResource
     {
       public:
-        explicit AppResource(DatabaseHelper& database_helper) : 
+        explicit AppResource(DatabaseHelper& database_helper) :
           IResource(database_helper), app_last_update_time_(-1)
         {
         }

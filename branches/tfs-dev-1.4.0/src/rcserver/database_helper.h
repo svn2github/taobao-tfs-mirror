@@ -6,9 +6,9 @@
  * published by the Free Software Foundation.
  *
  *
- * Version: $Id 
+ * Version: $Id
  *
- *   
+ *
  *   Authors:
  *          daoan(daoan@taobao.com)
  *
@@ -17,7 +17,7 @@
 #ifndef TFS_RCSERVER_DATABASE_HELPER_H_
 #define TFS_RCSERVER_DATABASE_HELPER_H_
 #include "resource_server_data.h"
-#include "common/define.h"
+#include "common/internal.h"
 namespace tfs
 {
   namespace rcserver
@@ -34,7 +34,7 @@ namespace tfs
         virtual int connect() = 0;
         virtual int close() = 0;
 
-        //ResourceServerInfo 
+        //ResourceServerInfo
         virtual int select(const ResourceServerInfo& inparam, ResourceServerInfo& outparam) = 0;
         virtual int update(const ResourceServerInfo& inparam) = 0;
         virtual int remove(const ResourceServerInfo& inparam) = 0;

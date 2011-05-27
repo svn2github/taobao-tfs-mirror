@@ -14,7 +14,6 @@
  *
  */
 
-#include "define.h"
 #include "internal.h"
 #include "serialization.h"
 
@@ -727,10 +726,10 @@ namespace tfs
       }
       if (TFS_SUCCESS == iret)
       {
-        iret = Serialization::get_bytes(data, data_len, pos, reserve_,SEGMENT_HEAD_RESERVE_SIZE); 
+        iret = Serialization::get_bytes(data, data_len, pos, reserve_,SEGMENT_HEAD_RESERVE_SIZE);
       }
       return iret;
- 
+
     }
     int SegmentHead::serialize(char* data, const int64_t data_len, int64_t& pos) const
     {
@@ -747,12 +746,12 @@ namespace tfs
       {
         iret = Serialization::set_bytes(data, data_len, pos, reserve_, SEGMENT_HEAD_RESERVE_SIZE);
       }
-      return iret; 
+      return iret;
     }
     int64_t SegmentHead::length() const
     {
       return INT_SIZE + INT64_SIZE;
-    } 
+    }
     int SegmentInfo::deserialize(const char* data, const int64_t data_len, int64_t& pos)
     {
       int32_t iret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;

@@ -15,7 +15,7 @@
  *      - modify 2009-03-27
  *
  */
-#include "common/define.h"
+#include "common/internal.h"
 //#include "common/config.h"
 //#include "common/config_item.h"
 #include "common/new_client.h"

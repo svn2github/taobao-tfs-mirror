@@ -14,7 +14,7 @@
  *
  */
 #include "global_factory.h"
-#include "common/define.h"
+#include "common/internal.h"
 #include "common/error_msg.h"
 #include "server_collect.h"
 
@@ -64,11 +64,11 @@ int GFactory::initialize()
   stat_ptr->add_sub_key("tfs-ns-write-failed");
   stat_ptr->add_sub_key("tfs-ns-unlink");
 
-  stat_mgr_.add_entry(stat_ptr, SYSPARAM_NAMESERVER.dump_stat_info_interval_); 
-  
+  stat_mgr_.add_entry(stat_ptr, SYSPARAM_NAMESERVER.dump_stat_info_interval_);
+
   StatEntry<std::string, std::string>::StatEntryPtr ptr = new StatEntry<std::string, std::string>(tfs_ns_stat_block_count_, current, false);
   ptr->add_sub_key("tfs-ns-block-count");
-  stat_mgr_.add_entry(ptr, SYSPARAM_NAMESERVER.dump_stat_info_interval_); 
+  stat_mgr_.add_entry(ptr, SYSPARAM_NAMESERVER.dump_stat_info_interval_);
 
   return iret;
 }

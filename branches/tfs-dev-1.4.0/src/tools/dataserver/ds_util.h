@@ -16,7 +16,7 @@
 #ifndef TFS_DSTOOL_UTIL_H_
 #define TFS_DSTOOL_UTIL_H_
 
-#include "common/define.h"
+#include "common/internal.h"
 
 uint64_t get_ip_addr(const char* ip);
 #endif

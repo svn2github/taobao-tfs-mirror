@@ -14,9 +14,9 @@
  */
 
 #ifndef TFS_COMMON_STREAM_H_
-#define TFS_COMMON_STREAM_H_ 
+#define TFS_COMMON_STREAM_H_
 
-#include "define.h"
+#include "internal.h"
 #include "buffer.h"
 #include "serialization.h"
 namespace tfs
@@ -24,7 +24,7 @@ namespace tfs
   namespace common
   {
     class BasePacket;
-    class Stream 
+    class Stream
     {
     friend class BasePacket;
     public:
@@ -101,7 +101,7 @@ namespace tfs
         return iret;
       }
 
-      template <typename T> 
+      template <typename T>
       int set_vint64(const T& value)
       {
         int64_t pos = 0;
@@ -174,7 +174,7 @@ namespace tfs
     private:
       void expand(const int64_t length);
 
-      DISALLOW_COPY_AND_ASSIGN(Stream); 
+      DISALLOW_COPY_AND_ASSIGN(Stream);
       Buffer buffer_;
       void clear();
     };

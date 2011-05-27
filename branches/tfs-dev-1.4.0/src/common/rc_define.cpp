@@ -1,11 +1,11 @@
 #include "serialization.h"
-#include "define.h"
+#include "internal.h"
 #include "rc_define.h"
 #include <tbsys.h>
 
 namespace tfs
 {
-  namespace common 
+  namespace common
   {
     using namespace std;
     int ClusterData::serialize(char* data, const int64_t data_len, int64_t& pos) const
@@ -30,7 +30,7 @@ namespace tfs
       return ret;
     }
 
-    int ClusterData::deserialize(const char* data, const int64_t data_len, int64_t& pos)  
+    int ClusterData::deserialize(const char* data, const int64_t data_len, int64_t& pos)
     {
       int ret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
       if (TFS_SUCCESS == ret)

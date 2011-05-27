@@ -27,9 +27,14 @@ int t_destroy()
   return TfsClient::Instance()->destroy();
 }
 
-int t_open(const char* file_name, const char* suffix, const char* ns_addr, const int flags, const char* local_key)
+int t_open(const char* file_name, const char* suffix, const int flags, const char* local_key)
 {
-  int ret = tfs::common::EXIT_INVALIDFD_ERROR;
+  return t_open2(file_name, suffix, NULL, flags, local_key);
+}
+
+int t_open2(const char* file_name, const char* suffix, const char* ns_addr, const int flags, const char* local_key)
+{
+  int ret = EXIT_INVALIDFD_ERROR;
   if (NULL == local_key)
   {
     ret = TfsClient::Instance()->open(file_name, suffix, ns_addr, flags);
@@ -66,9 +71,11 @@ int64_t t_pwrite(const int fd, const void* buf, const int64_t count, const int64
   return TfsClient::Instance()->pwrite(fd, buf, count, offset);
 }
 
-int t_fstat(const int fd, TfsFileStat* buf, const TfsStatFlag mode)
+int t_fstat(const int fd, TfsFileStat* buf, const TfsStatType mode)
 {
-  return TfsClient::Instance()->fstat(fd, buf, mode);
+  return TfsClient::Instance()->fstat(fd,
+                                      reinterpret_cast<tfs::common::TfsFileStat*>(buf),
+                                      static_cast<tfs::common::TfsStatType>(mode));
 }
 
 int t_close(const int fd, char* tfs_name, const int32_t len)
@@ -83,7 +90,7 @@ int64_t t_get_file_length(const int fd)
 
 int t_unlink(const char* file_name, const char* suffix, const TfsUnlinkType action)
 {
-  return TfsClient::Instance()->unlink(file_name, suffix, action);
+  return TfsClient::Instance()->unlink(file_name, suffix, static_cast<tfs::common::TfsUnlinkType>(action));
 }
 
 void t_set_segment_size(const int64_t segment_size)
@@ -106,9 +113,19 @@ int64_t t_get_batch_count()
   return TfsClient::Instance()->get_batch_count();
 }
 
-void t_set_gc_interval(const int64_t gc_interval_s)
+void t_set_stat_interval(const int64_t stat_interval_ms)
 {
-  return TfsClient::Instance()->set_gc_interval(gc_interval_s);
+  return TfsClient::Instance()->set_stat_interval(stat_interval_ms);
+}
+
+int64_t t_get_stat_interval()
+{
+  return TfsClient::Instance()->get_stat_interval();
+}
+
+void t_set_gc_interval(const int64_t gc_interval_ms)
+{
+  return TfsClient::Instance()->set_gc_interval(gc_interval_ms);
 }
 
 int64_t t_get_gc_interval()
@@ -116,9 +133,9 @@ int64_t t_get_gc_interval()
   return TfsClient::Instance()->get_gc_interval();
 }
 
-void t_set_gc_expired_time(const int64_t gc_expired_time_s)
+void t_set_gc_expired_time(const int64_t gc_expired_time_ms)
 {
-  return TfsClient::Instance()->set_gc_expired_time(gc_expired_time_s);
+  return TfsClient::Instance()->set_gc_expired_time(gc_expired_time_ms);
 }
 
 int64_t t_get_gc_expired_time()
@@ -126,14 +143,34 @@ int64_t t_get_gc_expired_time()
   return TfsClient::Instance()->get_gc_expired_time();
 }
 
-void t_set_batch_time_out(const int64_t time_out_us)
+void t_set_batch_timeout(const int64_t timeout_ms)
 {
-  return TfsClient::Instance()->set_gc_expired_time(time_out_us);
+  return TfsClient::Instance()->set_batch_timeout(timeout_ms);
 }
 
-int64_t t_get_batch_time_out()
+int64_t t_get_batch_timeout()
 {
-  return TfsClient::Instance()->get_batch_time_out();
+  return TfsClient::Instance()->get_batch_timeout();
+}
+
+void t_set_wait_timeout(const int64_t timeout_ms)
+{
+  return TfsClient::Instance()->set_wait_timeout(timeout_ms);
+}
+
+int64_t t_get_wait_timeout()
+{
+  return TfsClient::Instance()->get_wait_timeout();
+}
+
+void t_set_client_retry_count(const int64_t count)
+{
+  return TfsClient::Instance()->set_client_retry_count(count);
+}
+
+int64_t t_get_client_retry_count()
+{
+  return TfsClient::Instance()->get_client_retry_count();
 }
 
 void t_set_log_level(const char* level)

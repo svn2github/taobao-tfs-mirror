@@ -18,7 +18,7 @@
 
 #include <Mutex.h>
 #include "lru.h"
-#include "common/define.h"
+#include "common/internal.h"
 #include "local_key.h"
 
 namespace tfs
@@ -49,7 +49,7 @@ namespace tfs
 
       int initialize();
       int get_block_info(uint32_t& block_id, common::VUINT64& rds, int32_t flag);
-      int get_block_info(SEG_DATA_LIST& seg_list, int32_t flag);
+      int get_block_info(SEG_DATA_LIST& seg_list, const int32_t flag);
 
       void remove_block_cache(const uint32_t block_id);
 
@@ -78,7 +78,7 @@ namespace tfs
         return block_cache_items_;
       }
 
-      inline void set_use_cache(UseCacheFlag flag = USE_CACHE_FLAG_YES)
+      inline void set_use_cache(const UseCacheFlag flag = USE_CACHE_FLAG_YES)
       {
         use_cache_ = flag;
       }
@@ -97,9 +97,6 @@ namespace tfs
       int get_block_info_ex(uint32_t& block_id, common::VUINT64& rds, const int32_t flag);
       int get_cluster_id_from_ns();
       void insert_block_cache(const uint32_t block_id, const common::VUINT64& rds);
-
-    private:
-      static const int64_t WAIT_TIME_OUT = 3000000;
 
     private:
       tbutil::Mutex mutex_;

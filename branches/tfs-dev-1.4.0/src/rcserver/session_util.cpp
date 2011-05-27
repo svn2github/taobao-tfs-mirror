@@ -1,20 +1,20 @@
 #include <uuid/uuid.h>
 #include <stdlib.h>
 #include <tbsys.h>
-#include "common/define.h"
+#include "common/internal.h"
 #include "common/error_msg.h"
 #include "session_util.h"
 
 namespace tfs
 {
-  namespace rcserver 
+  namespace rcserver
   {
     using namespace common;
     using namespace std;
 
     string SessionUtil::gene_uuid_str()
     {
-      uuid_t uu; 
+      uuid_t uu;
       uuid_generate(uu);
       char buf[37];
       uuid_unparse(uu, buf);
