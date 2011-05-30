@@ -14,6 +14,8 @@
  *
  */
 #include "resource_manager.h"
+#include "common/parameter.h"
+#include "common/error_msg.h"
 #include "app_resource.h"
 #include "base_resource.h"
 #include "mysql_database_helper.h"
@@ -23,16 +25,16 @@ namespace tfs
   namespace rcserver
   {
     using namespace common;
-    ResourceManager::ResourceManager():
+    ResourceManager::ResourceManager(tbutil::TimerPtr timer):
       database_helper_(NULL),
       app_resource_manager_(NULL),
       base_resource_manager_(NULL),
       have_inited_(false),
-      timer_(0),
+      timer_(timer),
       resource_update_task_(0)
     {
-      timer_ = new tbutil::Timer();
     }
+
     void ResourceManager::clean_resource()
     {
       if (NULL != app_resource_manager_)
@@ -46,23 +48,17 @@ namespace tfs
         base_resource_manager_ = NULL;
       }
     }
+
     ResourceManager::~ResourceManager()
     {
-      if (0 != timer_)
-      {
-        if (0 != resource_update_task_)
-        {
-          timer_->cancel(resource_update_task_);
-          resource_update_task_ = 0;
-        }
-        timer_ = 0;
-      }
       clean_resource();
+      clean_task();
       if (NULL != database_helper_)
       {
         delete database_helper_;
         database_helper_ = NULL;
       }
+      have_inited_ = false;
     }
 
     int ResourceManager::initialize()
@@ -75,7 +71,8 @@ namespace tfs
       }
       database_helper_ = new MysqlDatabaseHelper();
       //TODO get connstr from config file
-      database_helper_->set_conn_param("10.232.31.33:3306:tfs_stat", "tfs", "tfs_stat#2012");
+      database_helper_->set_conn_param(SYSPARAM_RCSERVER.db_info_.c_str(),
+          SYSPARAM_RCSERVER.db_user_.c_str(), SYSPARAM_RCSERVER.db_pwd_.c_str());
       ret = database_helper_->connect();
       if (TFS_SUCCESS != ret)
       {
@@ -92,12 +89,47 @@ namespace tfs
       }
       if (TFS_SUCCESS == ret)
       {
-        int64_t update_interval = 5; //TODO load from config
-        if (timer_->scheduleRepeated(resource_update_task_, tbutil::Time::seconds(update_interval)) != 0)
+        if (0 == resource_update_task_)
         {
-          TBSYS_LOG(ERROR, "call scheduleRepeated failed, update_interval_: %"PRI64_PREFIX"d", update_interval);
-          ret = TFS_ERROR;
+          resource_update_task_ = new ResourceUpdateTask(*this);
         }
+
+        ret = start();
+      }
+      return ret;
+    }
+
+    void ResourceManager::clean_task()
+    {
+      resource_update_task_ = 0;
+    }
+
+    void ResourceManager::stop()
+    {
+      if (0 != resource_update_task_)
+      {
+        resource_update_task_->stop();
+        if (0 != timer_)
+        {
+          timer_->cancel(resource_update_task_);
+        }
+      }
+    }
+
+    int ResourceManager::start()
+    {
+      int ret = TFS_SUCCESS;
+      if (0 == resource_update_task_ || 0 == timer_)
+      {
+        ret = EXIT_INVALID_ARGU;
+        TBSYS_LOG(ERROR, "call ResourceManager::start failed, update task or timer is null, ret: %d", ret);
+      }
+      else if ((ret = timer_->scheduleRepeated(resource_update_task_, tbutil::Time::seconds(SYSPARAM_RCSERVER.update_interval_))) != 0)
+      {
+        TBSYS_LOG(ERROR, "call scheduleRepeated failed, update_interval_: %"PRI64_PREFIX"d, ret: %d",
+            SYSPARAM_RCSERVER.update_interval_, ret);
+        stop();
+        ret = TFS_ERROR;
       }
       return ret;
     }
@@ -266,7 +298,7 @@ EXIT:
 
     void ResourceUpdateTask::runTimerTask()
     {
-      if(manager_.need_reload())
+      if (!stop_ && manager_.need_reload())
       {
         manager_.load();
       }

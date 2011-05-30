@@ -117,6 +117,24 @@ namespace tfs
     };
 
     //Rsp use status msg 
+    class ReqRcReloadMessage: public common::BasePacket 
+    {
+      public:
+        ReqRcReloadMessage();
+        virtual ~ReqRcReloadMessage();
+
+        void set_reload_type(const common::ReloadType type);
+
+        int serialize(common::Stream& output) const ;
+        int deserialize(common::Stream& input);
+        int64_t length() const;
+
+        common::ReloadType get_reload_type() const;
+        void dump() const;
+
+      protected:
+        common::ReloadType reload_type_;
+    };
   }
 }
 #endif //TFS_MESSAGE_RCSESSION_MESSAGE_H_

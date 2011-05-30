@@ -13,10 +13,10 @@
 *      - initial release
 *
 */
+#include "mysql_database_helper.h"
 #include <mysql/mysql.h>
 #include <mysql/errmsg.h>
 #include <vector>
-#include "mysql_database_helper.h"
 
 using namespace std;
 namespace 
@@ -127,8 +127,7 @@ namespace tfs
       int ret = TFS_SUCCESS;
       if (is_connected_)
       {
-        close_mysql();
-        is_connected_ = false;
+        close();
       }
 
       if (!init_mysql(conn_str_, user_name_, passwd_))

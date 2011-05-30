@@ -285,6 +285,33 @@ namespace tfs
 
       return TFS_SUCCESS;
     }
+
+    int RcServerParameter::initialize(void)
+    {
+      const char* top_work_dir = TBSYS_CONFIG.getString(CONF_SN_PUBLIC, CONF_WORK_DIR);
+      if (top_work_dir == NULL)
+      {
+        TBSYS_LOG(ERROR, "RcParam::load work directory config not found");
+        return EXIT_CONFIG_ERROR;
+      }
+
+      char default_work_dir[MAX_PATH_LENGTH], default_log_file[MAX_PATH_LENGTH], default_pid_file[MAX_PATH_LENGTH];
+      snprintf(default_work_dir, MAX_PATH_LENGTH, "%s/rcserver", top_work_dir);
+      snprintf(default_log_file, MAX_PATH_LENGTH, "%s/logs/rcserver.log", top_work_dir);
+      snprintf(default_pid_file, MAX_PATH_LENGTH, "%s/logs/rcserver.pid", top_work_dir);
+      work_dir_ = TBSYS_CONFIG.getString(CONF_SN_RCSERVER, CONF_WORK_DIR, default_work_dir);
+      log_file_ = TBSYS_CONFIG.getString(CONF_SN_RCSERVER, CONF_LOG_FILE, default_log_file);
+      pid_file_ = TBSYS_CONFIG.getString(CONF_SN_RCSERVER, CONF_LOCK_FILE, default_pid_file);
+
+      db_info_ = TBSYS_CONFIG.getString(CONF_SN_RCSERVER, CONF_RC_DB_INFO, NULL);
+      db_user_ = TBSYS_CONFIG.getString(CONF_SN_RCSERVER, CONF_RC_DB_USER, NULL);
+      db_pwd_ = TBSYS_CONFIG.getString(CONF_SN_RCSERVER, CONF_RC_DB_PWD, NULL);
+
+      monitor_interval_ = TBSYS_CONFIG.getInt(CONF_SN_RCSERVER, CONF_RC_MONITOR_INTERVAL, 60);
+      stat_interval_ = TBSYS_CONFIG.getInt(CONF_SN_RCSERVER, CONF_RC_STAT_INTERVAL, 120);
+      update_interval_ = TBSYS_CONFIG.getInt(CONF_SN_RCSERVER, CONF_RC_UPDATE_INTERVAL, 30);
+      return TFS_SUCCESS;
+    }
   }/** common **/
 }/** tfs **/
 

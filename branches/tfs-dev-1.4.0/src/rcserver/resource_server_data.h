@@ -16,12 +16,12 @@
 #ifndef TFS_RCSERVER_RESOURCE_SERVER_DATA_H_
 #define TFS_RCSERVER_RESOURCE_SERVER_DATA_H_
 #include <stdint.h>
+#include <assert.h>
 #include <vector>
 #include <map>
 #include <string>
 #include <set>
 #include <algorithm>
-#include <assert.h>
 #include "common/rc_define.h"
 
 namespace tfs

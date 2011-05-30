@@ -31,6 +31,12 @@ namespace tfs
       LOGOUT_FLAG
     };
 
+    enum ReloadType
+    {
+      RELOAD_CONFIG = 1,
+      RELOAD_RESOURCE
+    };
+
     struct ClusterData
     {
       ClusterData() :

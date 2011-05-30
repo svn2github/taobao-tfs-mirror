@@ -13,8 +13,9 @@
  *      - initial release
  *
  */
-#include "common/error_msg.h"
 #include "session_manager.h"
+#include "common/parameter.h"
+#include "common/error_msg.h"
 #include "session_util.h"
 
 namespace tfs
@@ -25,6 +26,17 @@ namespace tfs
     using namespace std;
 
     map<OperType, string> ISessionTask::key_map_;
+
+    SessionManager::SessionManager(IResourceManager* resource_manager, tbutil::TimerPtr timer)
+      : resource_manager_(resource_manager), timer_(timer),
+      monitor_task_(0), stat_task_(0), is_init_(false)
+    {
+    }
+    SessionManager::~SessionManager()
+    {
+      clean_task();
+      is_init_ = false;
+    }
 
     int SessionManager::initialize(bool reload_flag)
     {
@@ -44,26 +56,16 @@ namespace tfs
           {
             if (is_init_ && reload_flag)
             {
-              destroy();
-              wait_for_shut_down();
+              stop();
+              clean_task();
             }
 
-            int64_t monitor_interval = 5, stat_interval = 10;
             monitor_task_ = new SessionMonitorTask(*this);
             stat_task_ = new SessionStatTask(*this, resource_manager_);
 
-            if (((ret = timer_->scheduleRepeated(monitor_task_, tbutil::Time::seconds(monitor_interval))) != 0)
-                || ((ret = timer_->scheduleRepeated(stat_task_, tbutil::Time::seconds(stat_interval))) != 0)
-               )
+            if ((ret = start()) != TFS_SUCCESS)
             {
-              TBSYS_LOG(ERROR, "call scheduleRepeated failed, stat_interval_: %"PRI64_PREFIX"d, monitor_interval_: %"PRI64_PREFIX"d,"
-                  " ret: %d",
-                  stat_interval, monitor_interval, ret);
-
-              destroy();
-              wait_for_shut_down();
-
-              ret = TFS_ERROR;
+              clean_task();
             }
             else
             {
@@ -77,36 +79,59 @@ namespace tfs
       return ret;
     }
 
-    int SessionManager::wait_for_shut_down()
+    void SessionManager::clean_task()
     {
-      if (0 != timer_)
-      {
-        if (0 != monitor_task_)
-        {
-          timer_->cancel(monitor_task_);
-          monitor_task_ = 0;
-        }
-        if (0 != stat_task_)
-        {
-          timer_->cancel(stat_task_);
-          stat_task_ = 0;
-        }
-      }
-
-      return TFS_SUCCESS;
+      monitor_task_ = 0;
+      stat_task_ = 0;
     }
 
-    void SessionManager::destroy()
+    void SessionManager::stop()
     {
       if (0 != monitor_task_)
       {
-        monitor_task_->destroy();
+        monitor_task_->stop();
+        if (0 != timer_)
+        {
+          timer_->cancel(monitor_task_);
+        }
       }
       if (0 != stat_task_)
       {
-        stat_task_->destroy();
+        stat_task_->stop();
+        if (0 != timer_)
+        {
+          timer_->cancel(stat_task_);
+        }
       }
-      is_init_ = false;
+    }
+
+    int SessionManager::start()
+    {
+      int ret = TFS_SUCCESS;
+      if (0 == monitor_task_ || 0 == stat_task_ || 0 == timer_)
+      {
+        ret = EXIT_INVALID_ARGU;
+        TBSYS_LOG(ERROR, "call SessionManager::start failed, monitor task or stat task or timer is null, ret: %d", ret);
+      }
+      else if (((ret = timer_->scheduleRepeated(monitor_task_, tbutil::Time::seconds(SYSPARAM_RCSERVER.monitor_interval_))) != 0)
+          || ((ret = timer_->scheduleRepeated(stat_task_, tbutil::Time::seconds(SYSPARAM_RCSERVER.stat_interval_))) != 0)
+         )
+      { //schedule fail. will not happen
+        TBSYS_LOG(ERROR, "call scheduleRepeated failed, stat_interval_: %"PRI64_PREFIX"d, monitor_interval_: %"PRI64_PREFIX"d,"
+            " ret: %d",
+            SYSPARAM_RCSERVER.stat_interval_, SYSPARAM_RCSERVER.monitor_interval_, ret);
+
+        // do not destroy task, just stop
+        stop();
+        ret = TFS_ERROR;
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        monitor_task_->start();
+        stat_task_->start();
+      }
+      return ret;
     }
 
     int SessionManager::login(const std::string& app_key, const int64_t session_ip,
@@ -281,7 +306,7 @@ namespace tfs
 
     void SessionMonitorTask::runTimerTask()
     {
-      if (!destroy_)
+      if (!stop_)
       {
         AppSessionMap tmp_sessions;
         {
@@ -313,7 +338,7 @@ namespace tfs
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     void SessionStatTask::runTimerTask()
     {
-      if (!destroy_)
+      if (!stop_)
       {
         AppSessionMap tmp_sessions;
         {

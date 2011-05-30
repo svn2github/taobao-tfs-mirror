@@ -116,9 +116,32 @@ namespace tfs
         return ds_parameter_;
       }
     };
+
+    struct RcServerParameter
+    {
+      int initialize(void);
+
+      std::string work_dir_;
+      std::string log_file_;
+      std::string pid_file_;
+      std::string db_info_;
+      std::string db_user_;
+      std::string db_pwd_;
+      int64_t monitor_interval_;
+      int64_t stat_interval_;
+      int64_t update_interval_;
+
+      static RcServerParameter rc_parameter_;
+      static RcServerParameter& instance()
+      {
+        return rc_parameter_;
+      }
+    };
+
 #define SYSPARAM_NAMESERVER NameServerParameter::instance()
 #define SYSPARAM_DATASERVER DataServerParameter::instance()
 #define SYSPARAM_FILESYSPARAM FileSystemParameter::instance()
+#define SYSPARAM_RCSERVER RcServerParameter::instance()
   }/** common **/
 }/** tfs **/
 #endif //TFS_COMMON_SYSPARAM_H_

@@ -16,8 +16,8 @@
 
 #ifndef TFS_RCSERVER_DATABASE_HELPER_H_
 #define TFS_RCSERVER_DATABASE_HELPER_H_
-#include "resource_server_data.h"
 #include "common/internal.h"
+#include "resource_server_data.h"
 namespace tfs
 {
   namespace rcserver

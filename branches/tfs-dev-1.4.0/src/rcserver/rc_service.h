@@ -57,10 +57,10 @@ namespace tfs
         int req_login(common::BasePacket* packet);
         int req_keep_alive(common::BasePacket* packet);
         int req_logout(common::BasePacket* packet);
+        int req_reload(common::BasePacket* packet);
 
         // reload config
         int req_reload_config();
-
         // reload resource from db
         int req_reload_resource();
 
@@ -72,6 +72,7 @@ namespace tfs
 
         common::BasePacketStreamer* streamer_;
         common::BasePacketFactory* factory_;
+        tbutil::Mutex mutex_;
     };
 
   }

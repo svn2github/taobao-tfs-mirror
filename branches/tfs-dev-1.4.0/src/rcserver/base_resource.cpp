@@ -13,9 +13,9 @@
  *      - initial release
  *
  */
-#include <tbsys.h>
-#include <algorithm>
 #include "base_resource.h"
+#include <algorithm>
+#include <tbsys.h>
 #include "mysql_database_helper.h"
 namespace 
 {

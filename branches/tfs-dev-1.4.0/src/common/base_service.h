@@ -51,6 +51,9 @@ namespace tfs
       /** get timer*/
       inline tbutil::TimerPtr& get_timer() { return timer_;}
 
+      /** reload: such as config file*/
+      inline void reload() { return;}
+
       /** handle single packet */
       virtual tbnet::IPacketHandler::HPRetCode handlePacket(tbnet::Connection *connection, tbnet::Packet *packet);
 

@@ -370,5 +370,47 @@ namespace tfs
     ReqRcLogoutMessage::~ReqRcLogoutMessage()
     {
     }
+
+    ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    ReqRcReloadMessage::ReqRcReloadMessage()
+    {
+      _packetHeader._pcode = REQ_RC_RELOAD_MESSAGE;
+      reload_type_ = RELOAD_RESOURCE;
+    }
+    ReqRcReloadMessage::~ReqRcReloadMessage()
+    {
+    }
+
+    void ReqRcReloadMessage::set_reload_type(const common::ReloadType type)
+    {
+      reload_type_ = type;
+    }
+
+    int ReqRcReloadMessage::serialize(common::Stream& output) const 
+    {
+      return output.set_int32(static_cast<int32_t>(reload_type_));
+    }
+
+    int ReqRcReloadMessage::deserialize(Stream& input)
+    {
+      return input.get_int32(reinterpret_cast<int32_t*>(&reload_type_));
+    }
+   
+    int64_t ReqRcReloadMessage::length() const
+    {
+      return INT_SIZE;
+    }
+
+    common::ReloadType ReqRcReloadMessage::get_reload_type() const
+    {
+      return reload_type_;
+    }
+
+    void ReqRcReloadMessage::dump() const
+    {
+      TBSYS_LOG(DEBUG, "reload_type : %d", reload_type_); 
+      return;
+    }
+
   }
 }

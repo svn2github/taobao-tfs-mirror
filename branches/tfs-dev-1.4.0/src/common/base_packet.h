@@ -254,7 +254,8 @@ namespace tfs
       REQ_RC_KEEPALIVE_MESSAGE = 68,
       RSP_RC_KEEPALIVE_MESSAGE = 69,
       REQ_RC_LOGOUT_MESSAGE = 70,
-      LOCAL_PACKET = 71,
+      REQ_RC_RELOAD_MESSAGE = 71,
+      LOCAL_PACKET = 500,
     };
 
     // StatusMessage status value

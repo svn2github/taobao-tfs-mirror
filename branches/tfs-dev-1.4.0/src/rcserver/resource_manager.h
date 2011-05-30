@@ -37,7 +37,7 @@ namespace tfs
     {
       public:
         ResourceUpdateTask(ResourceManager& resource_manager)
-          : manager_(resource_manager)
+          : stop_(false), manager_(resource_manager)
         {
         }
         virtual ~ResourceUpdateTask()
@@ -45,12 +45,22 @@ namespace tfs
         }
 
         virtual void runTimerTask();
+        void stop()
+        {
+          stop_ = true;
+        }
+
+        void start()
+        {
+          stop_ = false;
+        }
       private:
+        bool stop_;
         ResourceManager& manager_;
     };
     typedef tbutil::Handle<ResourceUpdateTask> ResourceUpdateTaskPtr;
 
-    class ResourceManager :public IResourceManager
+    class ResourceManager : public IResourceManager
     {
       public:
         ResourceManager(tbutil::TimerPtr timer);
@@ -58,6 +68,9 @@ namespace tfs
 
       public:
         virtual int initialize();
+        virtual void clean_task();
+        virtual void stop();
+        virtual int start();
         virtual int load();
 
         virtual int login(const std::string& app_key, int32_t& app_id, common::BaseInfo& base_info);
@@ -77,6 +90,7 @@ namespace tfs
 
       protected:
         DISALLOW_COPY_AND_ASSIGN(ResourceManager);
+
         DatabaseHelper* database_helper_;
         tbsys::CRWLock resorce_mutex_;
         AppResource* app_resource_manager_;

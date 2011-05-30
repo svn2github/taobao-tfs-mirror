@@ -13,8 +13,8 @@
  *      - initial release
  *
  */
-#include <tbsys.h>
 #include "app_resource.h"
+#include <tbsys.h>
 #include "mysql_database_helper.h"
 
 namespace tfs

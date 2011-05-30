@@ -127,6 +127,14 @@ namespace tfs
 #define CONF_EXPIRE_CHECKBLOCK_TIME                   "expire_checkblock_time"
 #define CONF_MAX_CPU_USAGE                            "max_cpu_usage"
 #define CONF_REPLICATE_THREADCOUNT                    "replicate_threadcount"
+
+//rc
+#define CONF_RC_MONITOR_INTERVAL                      "rc_monitor_interval"
+#define CONF_RC_STAT_INTERVAL                         "rc_stat_interval"
+#define CONF_RC_UPDATE_INTERVAL                       "rc_update_interval"
+#define CONF_RC_DB_INFO                               "rc_db_info"
+#define CONF_RC_DB_USER                               "rc_db_user"
+#define CONF_RC_DB_PWD                                "rc_db_pwd"
   }
 }
 #endif //TFS_COMMON_CONFDEFINE_H_

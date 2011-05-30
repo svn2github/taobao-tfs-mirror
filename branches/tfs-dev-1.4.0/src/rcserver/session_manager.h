@@ -16,9 +16,9 @@
 #ifndef TFS_RCSERVER_SESSIONMANAGER_H_
 #define TFS_RCSERVER_SESSIONMANAGER_H_
 
+#include <time.h>
 #include <map>
 #include <string>
-#include <time.h>
 #include <Timer.h>
 #include <Shared.h>
 #include <Handle.h>
@@ -36,7 +36,7 @@ namespace tfs
     {
       public:
         explicit ISessionTask(SessionManager& manager)
-          : manager_(manager), destroy_(false)
+          : manager_(manager), stop_(false)
         {
           key_map_[common::OPER_INVALID] = "invalid";
           key_map_[common::OPER_READ] = "read";
@@ -50,11 +50,17 @@ namespace tfs
         {
         }
 
-        virtual void runTimerTask() = 0;
-        void destroy()
+        void stop()
         {
-          destroy_ = true;
+          stop_ = true;
         }
+
+        void start()
+        {
+          stop_ = false;
+        }
+
+        virtual void runTimerTask() = 0;
         int update_session_info(const int32_t app_id, const std::string& session_id,
             const common::KeepAliveInfo& keep_alive_info, common::UpdateFlag update_flag);
 
@@ -65,7 +71,7 @@ namespace tfs
 
       protected:
         SessionManager& manager_;
-        bool destroy_;
+        bool stop_;
         common::AppSessionMap app_sessions_;
         common::RWLock rw_lock_;
         static std::map<common::OperType, std::string> key_map_;
@@ -116,19 +122,14 @@ namespace tfs
     class SessionManager
     {
       public:
-        SessionManager(IResourceManager* resource_manager, tbutil::TimerPtr timer)
-          : resource_manager_(resource_manager), timer_(timer),
-            monitor_task_(0), stat_task_(0), is_init_(false)
-        {
-        }
-        ~SessionManager()
-        {
-        }
+        SessionManager(IResourceManager* resource_manager, tbutil::TimerPtr timer);
+        ~SessionManager();
 
       public:
         int initialize(const bool reload_flag = false);
-        int wait_for_shut_down();
-        void destroy();
+        void clean_task();
+        void stop();
+        int start();
 
         int login(const std::string& app_key, const int64_t session_ip,
             std::string& session_id, common::BaseInfo& base_info);

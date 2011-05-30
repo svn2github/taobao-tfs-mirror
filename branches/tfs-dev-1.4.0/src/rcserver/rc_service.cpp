@@ -14,12 +14,12 @@
  *
  */
 #include "rc_service.h"
-#include "rc_param.h"
-#include "resource_manager.h"
-#include "session_manager.h"
 #include "common/base_packet.h"
 #include "common/status_message.h"
+#include "common/parameter.h"
 #include "message/message_factory.h"
+#include "resource_manager.h"
+#include "session_manager.h"
 
 namespace tfs
 {
@@ -47,7 +47,7 @@ namespace tfs
 
     const char* RcService::get_log_file_path()
     {
-      return PARAM_RCSERVER.log_file_.c_str();
+      return SYSPARAM_RCSERVER.log_file_.c_str();
     }
 
     bool RcService::handlePacketQueue(tbnet::Packet *packet, void *args)
@@ -90,17 +90,24 @@ namespace tfs
     int RcService::initialize(int argc, char* argv[])
     {
       int ret = TFS_SUCCESS;
-      resource_manager_ = new ResourceManager();
-      if ((ret = resource_manager_->initialize()) != TFS_SUCCESS)
+      if ((ret = RcServerParameter::instance().initialize()) != TFS_SUCCESS)
       {
-        TBSYS_LOG(ERROR, "call ResourceManager::initialize fail. ret: %d", ret);
+        TBSYS_LOG(ERROR, "call RcServerParameter::initialize fail. ret: %d", ret);
       }
       else
       {
-        session_manager_ = new SessionManager(resource_manager_, get_timer());
-        if ((ret = session_manager_->initialize()) != TFS_SUCCESS)
+        resource_manager_ = new ResourceManager(get_timer());
+        if ((ret = resource_manager_->initialize()) != TFS_SUCCESS)
         {
-          TBSYS_LOG(ERROR, "call SessionManager::initialize fail. ret: %d", ret);
+          TBSYS_LOG(ERROR, "call ResourceManager::initialize fail. ret: %d", ret);
+        }
+        else
+        {
+          session_manager_ = new SessionManager(resource_manager_, get_timer());
+          if ((ret = session_manager_->initialize()) != TFS_SUCCESS)
+          {
+            TBSYS_LOG(ERROR, "call SessionManager::initialize fail. ret: %d", ret);
+          }
         }
       }
 
@@ -110,11 +117,8 @@ namespace tfs
     int RcService::destroy_service()
     {
       int ret = TFS_SUCCESS;
-      session_manager_->destroy();
-      session_manager_->wait_for_shut_down();
-
-      // Todo
-      // resource_manager_->destroy();
+      session_manager_->stop();
+      resource_manager_->stop();
       return ret;
     }
 
@@ -213,16 +217,99 @@ namespace tfs
       return ret;
     }
 
-    int req_reload_config()
+    int RcService::req_reload(common::BasePacket* packet)
     {
       int ret = TFS_SUCCESS;
+      if (NULL == packet)
+      {
+        ret = EXIT_INVALID_ARGU;
+        TBSYS_LOG(ERROR, "RcService::req_reload fail. input packet invaild. ret: %d", ret);
+      }
+      else
+      {
+        ReqRcReloadMessage* req_reload_msg = dynamic_cast<ReqRcReloadMessage*>(packet);
+        ReloadType reload_type = req_reload_msg->get_reload_type();
+        if (RELOAD_CONFIG == reload_type)
+        {
+          ret = req_reload_config();
+        }
+        else if (RELOAD_RESOURCE == reload_type)
+        {
+          ret = req_reload_resource();
+        }
+        else
+        {
+          ret = EXIT_INVALID_ARGU;
+          TBSYS_LOG(ERROR, "call RcService::req_reload fail. reload type: %d, ret: %d", reload_type, ret);
+        }
+
+         req_reload_msg->reply(new StatusMessage(ret));
+      }
+      return TFS_SUCCESS;
+    }
+
+    int RcService::req_reload_config()
+    {
+      int ret = TFS_SUCCESS;
+      if (NULL == resource_manager_ || NULL == session_manager_)
+      {
+        ret = EXIT_INVALID_ARGU;
+        TBSYS_LOG(ERROR, "call RcService::req_reload_config fail. resource_manager_ or session_manager_ is null, ret: %d", ret);
+      }
+      else
+      {
+        tbutil::Mutex::Lock lock(mutex_);
+        // reload config
+        BaseService::reload();
+        if ((ret = RcServerParameter::instance().initialize()) != TFS_SUCCESS)
+        {
+          TBSYS_LOG(ERROR, "call RcServerParameter::initialize fail. ret: %d", ret);
+        }
+        else
+        {
+          //stop task
+          session_manager_->stop();
+          resource_manager_->stop();
+
+          int retry_times = 3;
+          while (retry_times > 0)
+          {
+            if ((ret = resource_manager_->initialize()) != TFS_SUCCESS) 
+            {
+              TBSYS_LOG(ERROR, "call resource_manager::initialize fail. retry time: %d, ret: %d", retry_times, ret);
+            }
+            else
+            {
+              break;
+            }
+            --retry_times;
+          }
+
+          if (TFS_SUCCESS == ret)
+          {
+            retry_times = 3;
+            while (retry_times > 0)
+            {
+              if ((ret = session_manager_->start()) != TFS_SUCCESS) 
+              {
+                TBSYS_LOG(ERROR, "call SessionManager::start fail. retry time: %d, ret: %d", retry_times, ret);
+              }
+              else
+              {
+                break;
+              }
+              --retry_times;
+            }
+          }
+        }
+      }
+
       return ret;
     }
 
-    int req_reload_resource()
+    int RcService::req_reload_resource()
     {
-      int ret = TFS_SUCCESS;
-      return ret;
+      return resource_manager_->load();
     }
   }
 }

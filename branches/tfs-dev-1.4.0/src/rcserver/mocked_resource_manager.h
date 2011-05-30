@@ -16,8 +16,8 @@
 #ifndef TFS_RCSERVER_MOCKEDRESOURCEMANAGER_H_
 #define TFS_RCSERVER_MOCKEDRESOURCEMANAGER_H_
 
-#include "i_resource_manager.h"
 #include "common/error_msg.h"
+#include "i_resource_manager.h"
 
 namespace tfs
 {
@@ -55,6 +55,21 @@ namespace tfs
         }
 
         int load()
+        {
+          return common::TFS_SUCCESS;
+        }
+
+        void clean_task()
+        {
+          return;
+        }
+
+        void stop()
+        {
+          return;
+        }
+
+        int start()
         {
           return common::TFS_SUCCESS;
         }
