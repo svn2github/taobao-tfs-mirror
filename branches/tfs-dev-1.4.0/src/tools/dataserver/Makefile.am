@@ -26,7 +26,7 @@ COMMONLIB = $(top_builddir)/src/message/libtfsmessage.a\
             $(TBLIB_ROOT)/lib/libtbnet.a\
             $(TBLIB_ROOT)/lib/libtbsys.a
 
-LDADD = $(top_builddir)/src/client/.libs/libtfsclient.a\
+LDADD = $(top_builddir)/src/new_client/.libs/libtfsclient.a\
         $(COMMONLIB)
 
 clear_file_system_SOURCES = clear_file_system.cpp
