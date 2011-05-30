@@ -26,8 +26,8 @@
 #include <tbsys.h>
 #include <Service.h>
 
-#include "common/config.h"
-#include "common/config_item.h"
+//#include "common/config.h"
+//#include "common/config_item.h"
 #include "common/directory_op.h"
 #include "common/error_msg.h"
 #include "mock_data_server_instance.h"

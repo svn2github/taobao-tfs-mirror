@@ -15,163 +15,32 @@
  *      - modify 2009-03-27
  *
  */
+#include "adminserver.h"
+
 #include "common/directory_op.h"
 #include "common/status_message.h"
-#include "adminserver.h"
+#include "common/config_item.h"
 
 using namespace std;
 using namespace tfs::common;
 using namespace tfs::message;
 using namespace tfs::adminserver;
-
-AdminServer* g_adminserver = NULL;
-
-void signal_handler(int sig)
+namespace
 {
-  switch (sig)
+  template<typename T> void delet_map(T& m)
   {
-  case SIGTERM:
-  case SIGINT:
-    if (g_adminserver)
+    for (typename T::iterator it = m.begin(); it != m.end(); it++)
     {
-      g_adminserver->stop();
+      tbsys::gDelete(it->second);
     }
-    else
-    {
-      exit(TFS_ERROR);
-    }
-    break;
+    m.clear();
   }
 }
 
-int usage(const char *name)
+int main(int argc, char* argv[])
 {
-  fprintf(stderr, "Usage: %s -f conf_file -d -s service_name\n", name); //
-  fprintf(stderr, "-f conf_file    confiure file\n");
-  fprintf(stderr, "-s service_name {ns|ds}\n");
-  fprintf(stderr, "-d              is daemon\n");
-  fprintf(stderr, "-q              not run monitor now\n");
-  fprintf(stderr, "-o              is old version\n");
-  fprintf(stderr, "\n");
-  exit(TFS_ERROR);
-}
-
-int main(int argc, char *argv[])
-{
-  int i = 0;
-  ServiceName service_name = SERVICE_NONE;
-  bool is_daemon = false, run_now = true, is_old = false;
-  char* conf_file = NULL;
-
-  while ((i = getopt(argc, argv, "f:s:i:qdo")) != EOF)
-  {
-    switch (i)
-    {
-    case 'f':
-      conf_file = optarg;
-      break;
-    case 's':
-      if (strncmp(optarg, "ns", 2) == 0)
-      {
-        service_name = SERVICE_NS;
-      }
-      else if (strncmp(optarg, "ds", 2) == 0)
-      {
-        service_name = SERVICE_DS;
-      }
-      break;
-    case 'd':
-      is_daemon = true;
-      break;
-    case 'q':
-      run_now = false;
-      break;
-    case 'o':
-      is_old = true;
-      break;
-    default:
-      usage(argv[0]);
-    }
-  }
-
-  if (NULL == conf_file || SERVICE_NONE == service_name)
-  {
-    usage(argv[0]);
-  }
-
-  //TODO if (CONFIG.load(conf_file) != TFS_SUCCESS)
-  //TODO {
-  //TODO   fprintf(stderr, "fail to load config file %s : %s\n.", conf_file, strerror(errno));
-  //TODO   return TFS_ERROR;
-  //TODO }
-
-  // set log
-  //TODO TBSYS_LOGGER.setLogLevel(CONFIG.get_string_value(CONFIG_PUBLIC, CONF_LOG_LEVEL));
-  //TODO TBSYS_LOGGER.setMaxFileSize(CONFIG.get_int_value(CONFIG_PUBLIC, CONF_LOG_SIZE, 1024 * 1024 * 1024));
-  //TODO TBSYS_LOGGER.setMaxFileIndex(CONFIG.get_int_value(CONFIG_PUBLIC, CONF_LOG_NUM, 10));
-
-  //TODO char* top_work_dir = CONFIG.get_string_value(CONFIG_PUBLIC, CONF_WORK_DIR);
-  char* top_work_dir;
-  if (NULL == top_work_dir)
-  {
-    TBSYS_LOG(ERROR, "work directory config not found");
-    return TFS_ERROR;
-  }
-
-  // pid file
-  char default_pid_file[MAX_PATH_LENGTH+1];
-  default_pid_file[MAX_PATH_LENGTH] = '\0';
-  snprintf(default_pid_file, MAX_PATH_LENGTH, "%s/logs/adminserver.pid", top_work_dir);
-  //TODO char *pid_file = CONFIG.get_string_value(CONFIG_ADMINSERVER, CONF_LOCK_FILE, default_pid_file);
-  char *pid_file;
-
-  if ((i = tbsys::CProcess::existPid(pid_file)) > 0)
-  {
-    TBSYS_LOG(ERROR, "adminserver has already run. Pid: %d", i);
-    return TFS_ERROR;
-  }
-  if (!DirectoryOp::create_full_path(pid_file, true))
-  {
-    TBSYS_LOG(ERROR, "create file(%s)'s directory failed", pid_file);
-    return TFS_ERROR;
-  }
-
-  // log file
-  char default_log_file[MAX_PATH_LENGTH+1];
-  default_log_file[MAX_PATH_LENGTH] = '\0';
-  snprintf(default_log_file, MAX_PATH_LENGTH, "%s/logs/adminserver.log", top_work_dir);
-  //TODO const char *log_file = CONFIG.get_string_value(CONFIG_ADMINSERVER, CONF_LOG_FILE, default_log_file);
-  const char *log_file;
-  if (access(log_file, R_OK) == 0)
-  {
-    TBSYS_LOGGER.rotateLog(log_file);
-  }
-  else if (!DirectoryOp::create_full_path(log_file, true))
-  {
-    TBSYS_LOG(ERROR, "create file(%s)'s directory failed", log_file);
-    return TFS_ERROR;
-  }
-
-  if (is_daemon)
-  {
-    if (Func::start_daemon(pid_file, log_file) > 0)
-    {
-      return TFS_SUCCESS;
-    }
-  }
-
-  // daemon child process
-  signal(SIGPIPE, SIG_IGN);
-  signal(SIGHUP, SIG_IGN);
-  signal(SIGINT, signal_handler);
-  signal(SIGTERM, signal_handler);
-
-  g_adminserver = new AdminServer(conf_file, service_name, is_daemon, is_old);
-  int ret = g_adminserver->start(run_now);
-  delete g_adminserver;
-  g_adminserver = NULL;
-
-  return ret;
+  tfs::adminserver::AdminServer service;
+  return service.main(argc, argv);
 }
 
 
@@ -182,34 +51,54 @@ namespace tfs
   {
     // therer is only one AdminServer instance
     AdminServer::AdminServer() :
-      is_daemon_(false), service_name_(SERVICE_NONE), stop_(0), running_(false),
+      service_name_(SERVICE_NONE), stop_(0), running_(false),
       check_interval_(0), check_count_(0), warn_dead_count_(0)
     {
       conf_file_[0] = '\0';
     }
 
-    AdminServer::AdminServer(const char* conf_file, ServiceName service_name, bool is_daemon, bool is_old) :
-      is_old_(is_old), is_daemon_(is_daemon), service_name_(service_name), stop_(0), running_(false)
-    {
-      strncpy(conf_file_, conf_file, strlen(conf_file)+1);
-      //TODO check_interval_ = CONFIG.get_int_value(CONFIG_ADMINSERVER, CONF_CHECK_INTERVAL, 1);
-      //TODO check_count_ = CONFIG.get_int_value(CONFIG_ADMINSERVER, CONF_CHECK_COUNT, 5);
-      //TODO warn_dead_count_ = CONFIG.get_int_value(CONFIG_ADMINSERVER, CONF_WARN_DEAD_COUNT, ADMIN_WARN_DEAD_COUNT);
-    }
-
     AdminServer::~AdminServer()
     {
-      destruct();
     }
 
-    template<typename T> static void delet_map(T& m)
+    int AdminServer::initialize(int argc, char* argv[])
     {
-      for (typename T::iterator it = m.begin(); it != m.end(); it++)
+      int ret = TFS_SUCCESS;
+      check_interval_ = TBSYS_CONFIG.getInt(CONF_SN_ADMINSERVER, CONF_CHECK_INTERVAL, 1);
+      check_count_ = TBSYS_CONFIG.getInt(CONF_SN_ADMINSERVER, CONF_CHECK_COUNT, 5);
+      warn_dead_count_ = TBSYS_CONFIG.getInt(CONF_SN_ADMINSERVER, CONF_WARN_DEAD_COUNT, ADMIN_WARN_DEAD_COUNT);
+      const char* server_name = TBSYS_CONFIG.getString(CONF_SN_ADMINSERVER, CONF_SERVER_TYPE, NULL);
+      if (NULL == server_name)
       {
-        tbsys::gDelete(it->second);
+        TBSYS_LOG(ERROR, "can not find %s in conf", CONF_SERVER_TYPE);
+        ret = TFS_ERROR;
       }
-      m.clear();
+      if (TFS_SUCCESS == ret)
+      {
+        if (0 == strncmp(server_name, "ns", 2))
+        {
+          service_name_ = SERVICE_NS;
+          TBSYS_LOG(DEBUG, " service_name is ns");
+        }
+        else if (0 == strncmp(server_name, "ds", 2))
+        {
+          service_name_ = SERVICE_DS;
+          TBSYS_LOG(DEBUG, " service_name is ds");
+        }
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = start_monitor();
+      }
+      return ret;
     }
+
+    int AdminServer::destroy_service()
+    {
+      stop_monitor();
+      return TFS_SUCCESS;
+    }
+
 
     void AdminServer::destruct()
     {
@@ -217,21 +106,9 @@ namespace tfs
       delet_map(monitor_status_);
     }
 
-    void AdminServer::wait()
-    {
-      transport_.wait();
-      task_queue_thread_.wait();
-    }
 
-    int AdminServer::stop()
-    {
-      stop_monitor();
-      transport_.stop();
-      task_queue_thread_.stop();
-      return TFS_SUCCESS;
-    }
 
-    void AdminServer::set_ds_list(char* index_range, vector<string>& ds_index)
+    void AdminServer::set_ds_list(const char* index_range, vector<string>& ds_index)
     {
       if (index_range != NULL)
       {
@@ -278,15 +155,7 @@ namespace tfs
 
       if (index.size())         // dataserver
       {
-        // for old compatibility, require different load strategy
-        if (is_old_)
-        {
-          //TODO ret = CONFIG.load(conf_file_);
-        }
-        else
-        {
-          //TODO ret = SysParam::instance().load_data_server(conf_file_, index);
-        }
+        ret = SYSPARAM_DATASERVER.initialize(index);
 
         if (ret != TFS_SUCCESS)
         {
@@ -297,43 +166,43 @@ namespace tfs
         // common whether old or not
         param->index_ = index;
         param->active_ = 1;
-        //TODO param->fkill_waittime_ = CONFIG.get_int_value(CONFIG_ADMINSERVER, CONF_DS_FKILL_WAITTIME);
+        param->fkill_waittime_ = TBSYS_CONFIG.getInt(CONF_SN_ADMINSERVER, CONF_DS_FKILL_WAITTIME);
         param->adr_.ip_ = Func::get_addr("127.0.0.1"); // just monitor local stuff
-        //TODO param->script_ = CONFIG.get_string_value(CONFIG_ADMINSERVER, CONF_DS_SCRIPT);
+        param->script_ = TBSYS_CONFIG.getString(CONF_SN_ADMINSERVER, CONF_DS_SCRIPT, "");
 
-        if(is_old_)
-        {
-          string suffix = ".conf";
-          size_t pos = param->script_.find(suffix);
-          if (string::npos == pos)
-          {
-            TBSYS_LOG(ERROR, "adminserver conf ds script invalid: %s", param->script_.c_str());
-            return TFS_ERROR;
-          }
-          param->script_.replace(pos, suffix.size() , "." + index + suffix);
+        //if(is_old_)
+        //{
+        //  string suffix = ".conf";
+        //  size_t pos = param->script_.find(suffix);
+        //  if (string::npos == pos)
+        //  {
+        //    TBSYS_LOG(ERROR, "adminserver conf ds script invalid: %s", param->script_.c_str());
+        //    return TFS_ERROR;
+        //  }
+        //  param->script_.replace(pos, suffix.size() , "." + index + suffix);
 
-          size_t conf_start = param->script_.find("-f");
-          if (string::npos == conf_start)
-          {
-            TBSYS_LOG(ERROR, "adminserver conf ds script invalid: %s", param->script_.c_str());
-            return TFS_ERROR;
-          }
-          conf_start += 2;        // skip -f
-          conf_start = param->script_.find_first_not_of(" ", conf_start);
-          size_t conf_end = param->script_.find_first_of(" ", conf_start);
-          string conf_file = param->script_.substr(conf_start, (string::npos == conf_end) ? conf_end : conf_end-conf_start);
+        //  size_t conf_start = param->script_.find("-f");
+        //  if (string::npos == conf_start)
+        //  {
+        //    TBSYS_LOG(ERROR, "adminserver conf ds script invalid: %s", param->script_.c_str());
+        //    return TFS_ERROR;
+        //  }
+        //  conf_start += 2;        // skip -f
+        //  conf_start = param->script_.find_first_not_of(" ", conf_start);
+        //  size_t conf_end = param->script_.find_first_of(" ", conf_start);
+        //  string conf_file = param->script_.substr(conf_start, (string::npos == conf_end) ? conf_end : conf_end-conf_start);
 
-          // load specified conf file
-          //TODO if (CONFIG.load(conf_file) != TFS_SUCCESS)
-          {
-            TBSYS_LOG(ERROR, "load config file %s fail: %s", conf_file.c_str(), strerror(errno));
-            return TFS_ERROR;
-          }
-          //TODO param->adr_.port_ = CONFIG.get_int_value(CONFIG_DATASERVER, CONF_PORT);
-          //TODO param->description_ = CONFIG.get_string_value(CONFIG_DATASERVER, CONF_WORK_DIR);
-          //TODO param->lock_file_ = CONFIG.get_string_value(CONFIG_DATASERVER, CONF_LOCK_FILE);
-        }
-        else
+        //  // load specified conf file
+        //  //TODO if (CONFIG.load(conf_file) != TFS_SUCCESS)
+        //  {
+        //    TBSYS_LOG(ERROR, "load config file %s fail: %s", conf_file.c_str(), strerror(errno));
+        //    return TFS_ERROR;
+        //  }
+        //  //TODO param->adr_.port_ = CONFIG.get_int_value(CONFIG_DATASERVER, CONF_PORT);
+        //  //TODO param->description_ = CONFIG.get_string_value(CONFIG_DATASERVER, CONF_WORK_DIR);
+        //  //TODO param->lock_file_ = CONFIG.get_string_value(CONFIG_DATASERVER, CONF_LOCK_FILE);
+        //}
+        //else
         {
           param->script_ += " -i " + index;
           param->description_ = SYSPARAM_FILESYSPARAM.mount_name_;
@@ -347,17 +216,12 @@ namespace tfs
       }
       else                      // ns
       {
-        //TODO if ( SysParam::instance().load(conf_file_)!= TFS_SUCCESS)
-        {
-          TBSYS_LOG(ERROR, "load config file %s fail : %s", conf_file_, strerror(errno));
-          return TFS_ERROR;
-        }
 
-        //TODO param->lock_file_ = SYSPARAM_NAMESERVER.pid_file_;
+        param->lock_file_ = "/tmp/adminserver.lock";
         param->adr_.ip_ = Func::get_addr("127.0.0.1");
-        //TODO param->adr_.port_ = CONFIG.get_int_value(CONFIG_NAMESERVER, CONF_PORT);
-        //TODO param->script_ = CONFIG.get_string_value(CONFIG_ADMINSERVER, CONF_NS_SCRIPT);
-        //TODO param->fkill_waittime_ = CONFIG.get_int_value(CONFIG_ADMINSERVER, CONF_NS_FKILL_WAITTIME);
+        param->adr_.port_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_PORT);
+        param->script_ = TBSYS_CONFIG.getString(CONF_SN_ADMINSERVER, CONF_NS_SCRIPT, "");
+        param->fkill_waittime_ = TBSYS_CONFIG.getInt(CONF_SN_ADMINSERVER, CONF_NS_FKILL_WAITTIME);
         param->description_ = "nameserver";
         param->index_ = index;
         param->active_ = 1;
@@ -434,41 +298,6 @@ namespace tfs
       return TFS_SUCCESS;
     }
 
-    int AdminServer::start(bool run_now)
-    {
-      // start
-      packet_streamer_.set_packet_factory(&msg_factory_);
-      NewClientManager::get_instance().initialize(&msg_factory_, &packet_streamer_, &transport_);
-      //CLIENT_POOL.init_with_transport(&transport_);
-
-      //TODO int32_t port = CONFIG.get_int_value(CONFIG_ADMINSERVER, CONF_PORT, 12000);
-      int32_t port;
-      char spec[SPEC_LEN];
-      sprintf(spec, "tcp::%d", port);
-      if (transport_.listen(spec, &packet_streamer_, this) == NULL)
-      {
-        TBSYS_LOG(ERROR, "Failed to listen port: %d", port);
-        return TFS_ERROR;
-      }
-      transport_.start();
-
-      // start queue thread
-      //TODO task_queue_thread_.setThreadParameter(CONFIG.get_int_value(CONFIG_ADMINSERVER, CONF_THREAD_COUNT, 1), this, NULL);
-      task_queue_thread_.start();
-
-      TBSYS_LOG(INFO, "==== AdminServer start! listen port: %d, pid: %d, service: %s ====", port, getpid(),
-                (SERVICE_NS == service_name_) ? "ns" : "ds");
-      if (run_now)
-      {
-        start_monitor();
-      }
-
-      // main wait for everything
-      wait();
-
-      TBSYS_LOG(INFO, "==== Adminserver exit normally! ====");
-      return TFS_SUCCESS;
-    }
 
     int AdminServer::stop_monitor()
     {
@@ -501,8 +330,7 @@ namespace tfs
           TBSYS_LOG(ERROR, "load config file %s fail : %s", conf_file_, strerror(errno));
           return TFS_ERROR;
         }
-        //TODO char *index_range = CONFIG.get_string_value(CONFIG_ADMINSERVER, CONF_DS_INDEX_LIST, NULL);
-        char *index_range ;
+        const char *index_range = TBSYS_CONFIG.getString(CONF_SN_ADMINSERVER, CONF_DS_INDEX_LIST, NULL);
         if (!index_range)
         {
           TBSYS_LOG(ERROR, "ds index list not found in config file %s .", conf_file_);
@@ -676,12 +504,12 @@ namespace tfs
     {
       uint64_t nsip;
       IpAddr* adr = reinterpret_cast<IpAddr*> (&nsip);
-      //TODO uint32_t ip = Func::get_addr(CONFIG.get_string_value(CONFIG_NAMESERVER, CONF_IP_ADDR));
-      uint32_t ip;
+      string ip_addr = TBSYS_CONFIG.getString(CONF_SN_NAMESERVER, CONF_IP_ADDR, "");
+      uint32_t ip = Func::get_addr(ip_addr.c_str());
       if (ip > 0)
       {
         adr->ip_ = ip;
-        //TODO adr->port_ = CONFIG.get_int_value(CONFIG_NAMESERVER, CONF_PORT);
+        adr->port_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_PORT, 0);
       }
 
       // reuse client
@@ -705,17 +533,27 @@ namespace tfs
         return tbnet::IPacketHandler::FREE_CHANNEL;
       }
 
-      if (!packet->isRegularPacket() || packet->getPCode() != ADMIN_CMD_MESSAGE) // only ADMIN_CMD_MESSAGE support
+      if (!packet->isRegularPacket()) 
       {
+
         TBSYS_LOG(ERROR, "ControlPacket, cmd: %d", dynamic_cast<tbnet::ControlPacket*>(packet)->getCommand());
+        return tbnet::IPacketHandler::FREE_CHANNEL;
+      }
+      if (packet->getPCode() != ADMIN_CMD_MESSAGE)
+      {
+        TBSYS_LOG(ERROR, "Unknow packet: %d", packet->getPCode());
+        packet->free();
         return tbnet::IPacketHandler::FREE_CHANNEL;
       }
 
       BasePacket* bp = dynamic_cast<BasePacket*>(packet);
       bp->set_connection(connection);
       bp->set_direction(DIRECTION_RECEIVE);
-      task_queue_thread_.push(bp);
-
+      if (!main_workers_.push(bp, work_queue_size_))
+      {   
+        TBSYS_LOG(ERROR, "main_workers is full ignore a packet pcode is %d", packet->getPCode());
+        packet->free();
+      }   
       return tbnet::IPacketHandler::KEEP_CHANNEL;
     }
 
@@ -740,32 +578,32 @@ namespace tfs
       // check cmd type
       switch (cmd_type)
       {
-      case ADMIN_CMD_GET_STATUS:
-        ret = cmd_reply_status(message);
-        break;
-      case ADMIN_CMD_CHECK:
-        ret = cmd_check(message);
-        break;
-      case ADMIN_CMD_START_MONITOR:
-        ret = cmd_start_monitor(message);
-        break;
-      case ADMIN_CMD_RESTART_MONITOR:
-        ret = cmd_restart_monitor(message);
-        break;
-      case ADMIN_CMD_STOP_MONITOR:
-        ret = cmd_stop_monitor(message);
-        break;
-      case ADMIN_CMD_START_INDEX:
-        ret = cmd_start_monitor_index(message);
-        break;
-      case ADMIN_CMD_STOP_INDEX:
-        ret = cmd_stop_monitor_index(message);
-        break;
-      case ADMIN_CMD_KILL_ADMINSERVER:
-        ret = cmd_exit(message);
-        break;
-      default:
-        ret = TFS_ERROR;
+        case ADMIN_CMD_GET_STATUS:
+          ret = cmd_reply_status(message);
+          break;
+        case ADMIN_CMD_CHECK:
+          ret = cmd_check(message);
+          break;
+        case ADMIN_CMD_START_MONITOR:
+          ret = cmd_start_monitor(message);
+          break;
+        case ADMIN_CMD_RESTART_MONITOR:
+          ret = cmd_restart_monitor(message);
+          break;
+        case ADMIN_CMD_STOP_MONITOR:
+          ret = cmd_stop_monitor(message);
+          break;
+        case ADMIN_CMD_START_INDEX:
+          ret = cmd_start_monitor_index(message);
+          break;
+        case ADMIN_CMD_STOP_INDEX:
+          ret = cmd_stop_monitor_index(message);
+          break;
+        case ADMIN_CMD_KILL_ADMINSERVER:
+          ret = cmd_exit(message);
+          break;
+        default:
+          ret = TFS_ERROR;
       }
 
       if (ret != TFS_SUCCESS)
@@ -866,7 +704,7 @@ namespace tfs
       string err_msg = success.empty() ? "" : "start index " + success + "success\n";
       err_msg += fail.empty() ? "" : "index " + fail + "already running\n";
       message->reply(new StatusMessage(fail.empty() ? TFS_SUCCESS : TFS_ERROR,
-                                               const_cast<char*>(err_msg.c_str())));
+            const_cast<char*>(err_msg.c_str())));
       return TFS_SUCCESS;
     }
 
@@ -900,14 +738,15 @@ namespace tfs
       string err_msg = success.empty() ? "" : "stop index " + success + "success\n";
       err_msg += fail.empty() ? "" : "index " + fail + "not running\n";
       message->reply(new StatusMessage(fail.empty() ? TFS_SUCCESS : TFS_ERROR,
-                                               const_cast<char*>(err_msg.c_str())));
+            const_cast<char*>(err_msg.c_str())));
       return TFS_SUCCESS;
     }
 
     int AdminServer::cmd_exit(message::AdminCmdMessage* message)
     {
       message->reply(new StatusMessage(TFS_SUCCESS, "adminserver exit"));
-      return stop();
+      stop();
+      return TFS_SUCCESS;
     }
 
   }

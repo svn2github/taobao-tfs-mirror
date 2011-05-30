@@ -25,6 +25,7 @@
 #include "common/parameter.h"
 #include "common/new_client.h"
 #include "common/client_manager.h"
+#include "common/base_service.h"
 #include "message/message_factory.h"
 #include "message/admin_cmd_message.h"
 
@@ -55,25 +56,58 @@ namespace tfs
     typedef std::map<std::string, message::MonitorStatus*> MSTR_STAT;
     typedef std::map<std::string, message::MonitorStatus*>::iterator MSTR_STAT_ITER;
 
-    class AdminServer : public tbnet::IServerAdapter, public tbnet::IPacketQueueHandler
+    class AdminServer : public common::BaseService
     {
     public:
       AdminServer();
-      AdminServer(const char* conf_file, ServiceName service_name, bool is_daemon, bool is_old);
+
       virtual ~AdminServer();
+      /** initialize application data*/
+      virtual int initialize(int argc, char* argv[]);
+
+      /** destroy application data*/
+      virtual int destroy_service();
+
+      /** create the packet streamer, this is used to create packet according to packet code */
+      virtual tbnet::IPacketStreamer* create_packet_streamer()
+      {   
+        return new common::BasePacketStreamer();
+      }   
+
+      /** destroy the packet streamer*/
+      virtual void destroy_packet_streamer(tbnet::IPacketStreamer* streamer)
+      {   
+        tbsys::gDelete(streamer);
+      }
+
+      /** create the packet streamer, this is used to create packet*/
+      virtual common::BasePacketFactory* create_packet_factory()
+      {
+        return new message::MessageFactory();
+      }
+
+      /** destroy packet factory*/
+      virtual void destroy_packet_factory(common::BasePacketFactory* factory)
+      {
+        tbsys::gDelete(factory);
+      }
+
+      /** handle single packet */
+      virtual tbnet::IPacketHandler::HPRetCode handlePacket(tbnet::Connection *connection, tbnet::Packet *packet);
+
+      /** handle packet*/
+      virtual bool handlePacketQueue(tbnet::Packet *packet, void *args);
+
+      virtual const char* get_log_file_path() { return NULL;}
+
+      int callback(common::NewClient* client);
 
       void destruct();
-      int start(bool run_now = true);
-      void wait();
-      int stop();
 
       int start_monitor();
       int stop_monitor();
       static void* do_monitor(void* args);
       int run_monitor();
-
-      tbnet::IPacketHandler::HPRetCode handlePacket(tbnet::Connection *connection, tbnet::Packet *packet);
-      bool handlePacketQueue(tbnet::Packet* packet, void* args);
 
       // command response
       int cmd_reply_status(message::AdminCmdMessage* message);
@@ -90,15 +124,13 @@ namespace tfs
       void add_index(std::string& index, bool add_conf = false);
       void clear_index(std::string& index, bool del_conf = true);
       void modify_conf(std::string& index, int32_t type);
-      void set_ds_list(char* index_range, std::vector<std::string>& ds_index);
+      void set_ds_list(const char* index_range, std::vector<std::string>& ds_index);
       int get_param(std::string& index);
       int ping(const uint64_t ip);
       int ping_nameserver(const int status);
       int kill_process(message::MonitorStatus* status, int32_t wait_time, bool clear = false);
 
     private:
-      bool is_old_;
-      bool is_daemon_;
       char conf_file_[common::MAX_PATH_LENGTH];
 
       // monitor stuff
@@ -113,10 +145,10 @@ namespace tfs
       MSTR_STAT monitor_status_;
 
       // server stuff
-      message::MessageFactory msg_factory_;
-      common::BasePacketStreamer packet_streamer_;
-      tbnet::Transport transport_;
-      tbnet::PacketQueueThread task_queue_thread_;
+      //message::MessageFactory msg_factory_;
+      //common::BasePacketStreamer packet_streamer_;
+      //tbnet::Transport transport_;
+      //tbnet::PacketQueueThread task_queue_thread_;
     };
 
   }
