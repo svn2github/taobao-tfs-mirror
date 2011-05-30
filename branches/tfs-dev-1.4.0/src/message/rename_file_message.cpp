@@ -19,7 +19,7 @@ namespace tfs
   namespace message
   {
     RenameFileMessage::RenameFileMessage() :
-      option_flag_(0)
+      option_flag_(0), version_(0), lease_id_(common::INVALID_LEASE_ID)
     {
       _packetHeader._pcode = common::RENAME_FILE_MESSAGE;
       memset(&rename_file_info_, 0, sizeof(common::RenameFileInfo));
@@ -47,7 +47,7 @@ namespace tfs
       }
       if (common::TFS_SUCCESS == iret)
       {
-        has_lease_ = BasePacket::parse_special_ds(ds_, version_, lease_id_);
+        BasePacket::parse_special_ds(ds_, version_, lease_id_);
       }
       return iret;
     }
@@ -55,16 +55,16 @@ namespace tfs
     int64_t RenameFileMessage::length() const
     {
       int64_t len = rename_file_info_.length() + common::Serialization::get_vint64_length(ds_) + common::INT_SIZE;
-      if (has_lease_)
+      if (has_lease())
       {
         len += common::INT64_SIZE * 3;
       }
       return len;
     }
 
-    int RenameFileMessage::serialize(common::Stream& output) const 
+    int RenameFileMessage::serialize(common::Stream& output) const
     {
-      if (has_lease_ == true)
+      if (has_lease())
       {
         ds_.push_back(ULONG_LONG_MAX);
         ds_.push_back(static_cast<uint64_t> (version_));
@@ -84,7 +84,7 @@ namespace tfs
       }
       if (common::TFS_SUCCESS == iret)
       {
-        has_lease_ = common::BasePacket::parse_special_ds(ds_, version_, lease_id_);
+        common::BasePacket::parse_special_ds(ds_, version_, lease_id_);
       }
       return iret;
     }

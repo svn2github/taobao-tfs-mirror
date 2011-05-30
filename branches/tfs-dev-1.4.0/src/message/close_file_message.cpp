@@ -20,7 +20,7 @@ namespace tfs
   namespace message
   {
     CloseFileMessage::CloseFileMessage() :
-      option_flag_(0), version_(0), lease_id_(0), has_lease_(false)
+      option_flag_(0), version_(0), lease_id_(common::INVALID_LEASE_ID)
     {
       _packetHeader._pcode = common::CLOSE_FILE_MESSAGE;
       memset(&close_file_info_, 0, sizeof(close_file_info_));
@@ -76,7 +76,7 @@ namespace tfs
       }
       if (common::TFS_SUCCESS == iret)
       {
-        has_lease_ = BasePacket::parse_special_ds(ds_, version_, lease_id_);
+        BasePacket::parse_special_ds(ds_, version_, lease_id_);
       }
       return common::TFS_SUCCESS;
     }
@@ -93,18 +93,18 @@ namespace tfs
         len += file_info_.length();
       }
       len += common::INT_SIZE;
-      if (has_lease_)
+      if (has_lease())
       {
         len += common::INT64_SIZE * 3;
       }
       return len;
     }
 
-    int CloseFileMessage::serialize(common::Stream& output) const 
+    int CloseFileMessage::serialize(common::Stream& output) const
     {
       int32_t size = block_.block_id_ > 0 ? block_.length() : 0;
       int32_t file_size = file_info_.id_ > 0 ? file_info_.length() : 0;
-      if (has_lease_)
+      if (has_lease())
       {
         ds_.push_back(ULONG_LONG_MAX);
         ds_.push_back(static_cast<uint64_t> (version_));
@@ -149,7 +149,7 @@ namespace tfs
       if (common::TFS_SUCCESS == iret)
       {
         // reparse, avoid push verion&lease again when clone twice;
-        has_lease_ = parse_special_ds(ds_, version_, lease_id_);
+        BasePacket::parse_special_ds(ds_, version_, lease_id_);
       }
       return iret;
     }

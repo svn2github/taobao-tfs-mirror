@@ -101,18 +101,17 @@ namespace tfs
         }
         inline uint32_t get_lease_id() const
         {
-          return lease_;
+          return lease_id_;
         }
-        inline bool get_has_lease() const
+        inline bool has_lease() const
         {
-          return has_lease_;
+          return (lease_id_ != common::INVALID_LEASE_ID);
         }
       private:
         mutable common::VUINT64 ds_;
         uint32_t block_id_;
         mutable int32_t version_;
-        mutable uint32_t lease_;
-        mutable bool has_lease_;
+        mutable uint32_t lease_id_;
     };
 
     // batch get the block information in the common::DataServerStatInfo
@@ -189,13 +188,13 @@ namespace tfs
         inline int32_t get_lease_id(uint32_t block_id)
         {
           std::map<uint32_t, common::BlockInfoSeg>::iterator it = block_infos_.find(block_id);
-          return it == block_infos_.end() ? common::EXIT_INVALID_ARGU : it->second.lease_;
+          return it == block_infos_.end() ? common::EXIT_INVALID_ARGU : it->second.lease_id_;
         }
         inline bool get_has_lease(const uint32_t block_id)
         {
           std::map<uint32_t, common::BlockInfoSeg>::iterator it = block_infos_.find(block_id);
           // false ?
-          return it == block_infos_.end() ?  false : it->second.has_lease_;
+          return it == block_infos_.end() ?  false : it->second.has_lease();
         }
       private:
         std::map<uint32_t, common::BlockInfoSeg> block_infos_;

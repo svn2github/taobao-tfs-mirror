@@ -29,10 +29,10 @@ namespace nameserver
   {
   }
 
-  int ClientRequestServer::keepalive(const common::DataServerStatInfo& ds_info, 
+  int ClientRequestServer::keepalive(const common::DataServerStatInfo& ds_info,
       const common::HasBlockFlag flag,
-      common::BLOCK_INFO_LIST& blocks, 
-      common::VUINT32& expires, 
+      common::BLOCK_INFO_LIST& blocks,
+      common::VUINT32& expires,
       bool& need_sent_block)
   {
     time_t now = time(NULL);
@@ -75,7 +75,7 @@ namespace nameserver
     server->dump();
 #endif
 
-    NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info(); 
+    NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
     if (flag == HAS_BLOCK_FLAG_NO)
     {
       int32_t block_count = server->block_count();
@@ -121,7 +121,7 @@ namespace nameserver
           {
             if (!lay_out_manager_.find_block_in_plan((*r_iter)->id()))
             {
-              rm_list.push_back((*r_iter)->id());     
+              rm_list.push_back((*r_iter)->id());
             }
           }
         }
@@ -130,7 +130,7 @@ namespace nameserver
           for (; r_iter != expires_blocks.end(); ++r_iter)
           {
             //TODO rm_list will cause ds core for now
-            rm_list.push_back((*r_iter)->id());     
+            rm_list.push_back((*r_iter)->id());
           }
         }
         if (!rm_list.empty())
@@ -143,7 +143,7 @@ namespace nameserver
     }
 
 #if !defined(TFS_NS_GTEST) && !defined(TFS_NS_INTEGRATION)
-    lay_out_manager_.touch(server,now); 
+    lay_out_manager_.touch(server,now);
 #endif
     return TFS_SUCCESS;
   }
@@ -180,15 +180,15 @@ namespace nameserver
             iret = open_write_mode(mode, block_id, lease_id, version, ds_list);
           }
         }
-      } 
+      }
     }
     std::vector<int64_t> stat(4,0);
-    mode & T_READ ? iret == TFS_SUCCESS ? stat[0] = 1 : stat[1] = 1 
+    mode & T_READ ? iret == TFS_SUCCESS ? stat[0] = 1 : stat[1] = 1
       : iret == TFS_SUCCESS ? stat[2] = 1 : stat[3] = 1;
     GFactory::get_stat_mgr().update_entry(GFactory::tfs_ns_stat_, stat);
     return iret;
   }
-  
+
   int ClientRequestServer::open_read_mode(const uint32_t block_id, VUINT64& readable_list)
     {
       if (block_id == 0)
@@ -206,7 +206,7 @@ namespace nameserver
         return EXIT_BLOCK_NOT_FOUND;
       }
 
-      std::vector<ServerCollect*>& readable = block->get_hold(); 
+      std::vector<ServerCollect*>& readable = block->get_hold();
       if (readable.empty())
       {
         TBSYS_LOG(ERROR, "block(%u) hold not any dataserver when open this block with read mode", block_id);
@@ -227,11 +227,11 @@ namespace nameserver
       {
         if (mode & T_READ)
         {
-          iret = batch_open_read_mode(blocks, out); 
+          iret = batch_open_read_mode(blocks, out);
         }
         else
         {
-          iret = batch_open_write_mode(mode, block_count, out); 
+          iret = batch_open_write_mode(mode, block_count, out);
         }
       }
       std::vector<int64_t> stat(4, 0);
@@ -273,11 +273,11 @@ namespace nameserver
       LeaseStatus commit_status = parameter.status_ != WRITE_COMPLETE_STATUS_YES ?
         LEASE_STATUS_FAILED : LEASE_STATUS_FINISH;
 
-      if (parameter.unlink_flag_ == UNLINK_FLAG_YES)//unlink file 
+      if (parameter.unlink_flag_ == UNLINK_FLAG_YES)//unlink file
       {
         if (!GFactory::get_lease_factory().commit(block_id, parameter.lease_id_, commit_status))
         {
-          snprintf(parameter.error_msg_, 256, "close block(%u) successful,but lease(%u) commit fail", block_id, parameter.lease_id_); 
+          snprintf(parameter.error_msg_, 256, "close block(%u) successful,but lease(%u) commit fail", block_id, parameter.lease_id_);
           TBSYS_LOG(ERROR, "%s", parameter.error_msg_);
           iret = EXIT_COMMIT_ERROR;
         }
@@ -293,7 +293,7 @@ namespace nameserver
           TBSYS_LOG(WARN, "close block(%u) successful, but cleint write operation error,lease(%u) commit begin", block_id, parameter.lease_id_);
           if (!GFactory::get_lease_factory().commit(block_id, parameter.lease_id_, commit_status))
           {
-            snprintf(parameter.error_msg_, 256, "close block(%u) successful,but lease(%u) commit fail", block_id, parameter.lease_id_); 
+            snprintf(parameter.error_msg_, 256, "close block(%u) successful,but lease(%u) commit fail", block_id, parameter.lease_id_);
             TBSYS_LOG(ERROR, "%s", parameter.error_msg_);
             return EXIT_COMMIT_ERROR;
           }
@@ -321,7 +321,7 @@ namespace nameserver
           {//version errro
             if (!GFactory::get_lease_factory().commit(block_id, parameter.lease_id_, LEASE_STATUS_FAILED))
             {
-              snprintf(parameter.error_msg_, 256, "close block(%u) successful,but lease(%u) commit fail", block_id, parameter.lease_id_); 
+              snprintf(parameter.error_msg_, 256, "close block(%u) successful,but lease(%u) commit fail", block_id, parameter.lease_id_);
               TBSYS_LOG(ERROR, "%s", parameter.error_msg_);
             }
             return EXIT_COMMIT_ERROR;
@@ -337,7 +337,7 @@ namespace nameserver
           //commit lease
           if (!GFactory::get_lease_factory().commit(block_id, parameter.lease_id_, commit_status))
           {
-            snprintf(parameter.error_msg_, 256, "close block(%u) successful,but lease(%u) commit fail", block_id, parameter.lease_id_); 
+            snprintf(parameter.error_msg_, 256, "close block(%u) successful,but lease(%u) commit fail", block_id, parameter.lease_id_);
             TBSYS_LOG(ERROR, "%s", parameter.error_msg_);
             return EXIT_COMMIT_ERROR;
           }
@@ -358,7 +358,7 @@ namespace nameserver
     /**
      * client read: get block 's location of DataServerStatInfo
      * client write: get new block and location of DataServerStatInfo
-     * @param [in] block_id: query block id, in write mode 
+     * @param [in] block_id: query block id, in write mode
      * can be set to zero for assign a new write block id.
      * @param [in] mode: read | write
      * @param [out] lease_id: write transaction id only for write mode.
@@ -452,7 +452,7 @@ namespace nameserver
       if (!(mode & T_NOLEASE))
       {
         lease_id = GFactory::get_lease_factory().add(block_id);
-        if (lease_id == LeaseClerk::INVALID_LEASE)
+        if (lease_id == INVALID_LEASE_ID)
         {
           TBSYS_LOG(ERROR, "block(%u) register lease fail", block_id);
           return EXIT_CANNOT_GET_LEASE;
@@ -461,7 +461,7 @@ namespace nameserver
       return TFS_SUCCESS;
     }
     /**
-     * client read: get block 's location of dataserver 
+     * client read: get block 's location of dataserver
      * only choose dataserver with normal load
      * @param [in] block_id: query block id, must be a valid blockid
      * @param [out] ds_list: block location of dataserver.
@@ -477,7 +477,7 @@ namespace nameserver
         it = out.find((*iter));
         if (it == out.end())
         {
-          std::pair<std::map<uint32_t, common::BlockInfoSeg>::iterator, bool> res = 
+          std::pair<std::map<uint32_t, common::BlockInfoSeg>::iterator, bool> res =
             out.insert(std::pair<uint32_t, common::BlockInfoSeg>((*iter), common::BlockInfoSeg()));
           it = res.first;
         }
@@ -503,7 +503,7 @@ namespace nameserver
         ++count;
         block_id = 0;
         seg.ds_.clear();
-        iret = open_write_mode(mode, block_id, seg.lease_, seg.version_, seg.ds_);
+        iret = open_write_mode(mode, block_id, seg.lease_id_, seg.version_, seg.ds_);
         if (iret == TFS_SUCCESS)
         {
           out.insert(std::pair<uint32_t, common::BlockInfoSeg>(block_id, seg));

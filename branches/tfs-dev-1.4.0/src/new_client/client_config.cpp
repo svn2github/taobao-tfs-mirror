@@ -40,6 +40,5 @@ int64_t ClientConfig::client_retry_count_ = 3;      // retry times to read or wr
 int64_t ClientConfig::stat_interval_ = 60000;    // 1min
 int64_t ClientConfig::gc_interval_ = 43200000;  // 12h
 int64_t ClientConfig::expired_time_ = 86400000; // 1 days
-// timeout unit: inner use us, but ms in outside
-int64_t ClientConfig::batch_timeout_ = 3000000; // 3s wait several response timeout
-int64_t ClientConfig::wait_timeout_ = 3000000;  // 3s wait single response timeout
+int64_t ClientConfig::batch_timeout_ = 3000; // 3s wait several response timeout
+int64_t ClientConfig::wait_timeout_ = 3000;  // 3s wait single response timeout

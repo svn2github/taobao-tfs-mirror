@@ -426,7 +426,7 @@ int TfsLargeFile::unlink_process()
     }
     else
     {
-      if ((ret = tfs_session_->get_block_info(seg_data->seg_info_.block_id_, seg_data->ds_, T_WRITE | T_NOLEASE)) != TFS_SUCCESS)
+      if ((ret = tfs_session_->get_block_info(seg_data->seg_info_.block_id_, seg_data->ds_, T_WRITE)) != TFS_SUCCESS)
       {
         TBSYS_LOG(ERROR, "unlink get block info fail, ret: %d", ret);
       }

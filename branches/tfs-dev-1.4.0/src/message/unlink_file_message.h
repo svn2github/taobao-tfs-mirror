@@ -104,7 +104,6 @@ namespace tfs
         inline void set_block_version(const int32_t version)
         {
           version_ = version;
-          has_lease_ = true;
         }
 
         inline int32_t get_block_version() const
@@ -112,25 +111,19 @@ namespace tfs
           return version_;
         }
 
-        inline void set_lease_id(const uint32_t lease)
+        inline void set_lease_id(const uint32_t lease_id)
         {
-          lease_ = lease;
-          has_lease_ = true;
+          lease_id_ = lease_id;
         }
 
         inline uint32_t get_lease_id() const
         {
-          return lease_;
+          return lease_id_;
         }
 
         inline bool is_server() const
         {
           return (unlink_file_info_.is_server_ & 0x1) != 0;
-        }
-
-        inline bool get_has_lease() const
-        {
-          return has_lease_;
         }
 
         inline void set_del()
@@ -152,13 +145,18 @@ namespace tfs
         {
           unlink_file_info_.is_server_ |= common::REVEAL;
         }
+
+        inline bool has_lease() const
+        {
+          return (lease_id_ != common::INVALID_LEASE_ID);
+        }
+
       protected:
         UnlinkFileInfo unlink_file_info_;
         int32_t option_flag_;
         mutable common::VUINT64 dataservers_;
         mutable int32_t version_;
-        mutable uint32_t lease_;
-        mutable bool has_lease_;
+        mutable uint32_t lease_id_;
     };
   }
 }

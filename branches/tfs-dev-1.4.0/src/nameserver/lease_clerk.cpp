@@ -11,9 +11,9 @@
  * Authors:
  *   duolong <duolong@taobao.com>
  *      - initial release
- *   qushan<qushan@taobao.com> 
+ *   qushan<qushan@taobao.com>
  *      - modify 2009-03-27
- *   duanfei <duanfei@taobao.com> 
+ *   duanfei <duanfei@taobao.com>
  *      - modify 2010-04-23
  *
  */
@@ -27,7 +27,7 @@
 #include "common/parameter.h"
 #include "common/config_item.h"
 
-#ifndef UINT32_MAX 
+#ifndef UINT32_MAX
 #define UINT32_MAX 4294967295U
 #endif
 
@@ -44,7 +44,6 @@ namespace tfs
     int16_t LeaseEntry::LEASE_EXPIRE_DEFAULT_TIME_MS = 3000;//ms
     int32_t LeaseEntry::LEASE_EXPIRE_TIME_MS = LeaseEntry::LEASE_EXPIRE_DEFAULT_TIME_MS;
     int64_t LeaseEntry::LEASE_EXPIRE_REMOVE_TIME_MS = 1 * LeaseEntry::LEASE_EXPIRE_TIME_MS * 3600;
-    const uint8_t LeaseClerk::INVALID_LEASE = 0;
     LeaseFactory LeaseFactory::instance_;
 
     LeaseEntry::LeaseEntry(LeaseClerkPtr clerk, uint32_t lease_id, int64_t client, LeaseType type):
@@ -68,17 +67,17 @@ namespace tfs
     {
       return lease_id_;
     }
-  
+
     int64_t LeaseEntry::client() const
     {
       return client_;
     }
-    
+
     LeaseType LeaseEntry::type() const
     {
       return static_cast<LeaseType>(type_);
     }
-    
+
     LeaseStatus LeaseEntry::status() const
     {
       return static_cast<LeaseStatus>(status_);
@@ -141,7 +140,7 @@ namespace tfs
           id, last_update_time_.toMicroSeconds(), expire_time_.toMicroSeconds(),
           tbutil::Time::now().toMicroSeconds(), lease_id_, is_valid ? "true" : "false",
           current_wait_count, max_wait_count,
-          status_ == LEASE_STATUS_RUNNING? "runing" : status_ == LEASE_STATUS_FINISH? "finsih" 
+          status_ == LEASE_STATUS_RUNNING? "runing" : status_ == LEASE_STATUS_FINISH? "finsih"
           : status_ == LEASE_STATUS_FAILED ? "failed" : status_ == LEASE_STATUS_EXPIRED ? "expired"
           : status_ == LEASE_STATUS_CANCELED ? "canceled" : status_ == LEASE_STATUS_OBSOLETE ? "obsolet" : "unkown" );
     }
@@ -224,11 +223,11 @@ namespace tfs
       if (ngi.destroy_flag_ == NS_DESTROY_FLAGS_YES)
       {
         TBSYS_LOG(WARN, "%s", "add lease fail because nameserver destroyed");
-        return INVALID_LEASE;
+        return INVALID_LEASE_ID;
       }
 
       mutex_.rdlock();
-      uint32_t lease_id = INVALID_LEASE;
+      uint32_t lease_id = INVALID_LEASE_ID;
       LeaseEntryPtr lease = 0;
       LEASE_MAP_ITER iter = leases_.find(id);
       if ((iter == leases_.end())
@@ -249,7 +248,7 @@ namespace tfs
       {
         TBSYS_LOG(WARN, "lease(%u), current wait thread(%d) beyond max_wait(%d)", lease->id(), LeaseFactory::gwait_count_,
             SYSPARAM_NAMESERVER.max_wait_write_lease_);
-        return INVALID_LEASE;
+        return INVALID_LEASE_ID;
       }
 
       atomic_inc(&LeaseFactory::gwait_count_);
@@ -261,15 +260,15 @@ namespace tfs
 
       if (!lease->is_valid_lease())
       {
-        goto Renew; 
+        goto Renew;
       }
-      return INVALID_LEASE;
+      return INVALID_LEASE_ID;
   Next:
       {
         if (ngi.destroy_flag_ == NS_DESTROY_FLAGS_YES)
         {
           TBSYS_LOG(WARN, "%s", "add lease fail because nameserver destroyed");
-          return INVALID_LEASE;
+          return INVALID_LEASE_ID;
         }
 
         RWLock::Lock lock(mutex_, WRITE_LOCKER);
@@ -281,7 +280,7 @@ namespace tfs
         {
           lease = 0;
           TBSYS_LOG(WARN, "id(%"PRI64_PREFIX"d) has been lease" , id);
-          return INVALID_LEASE;
+          return INVALID_LEASE_ID;
         }
         GFactory::get_timer()->schedule(lease, tbutil::Time::milliSeconds(LeaseEntry::LEASE_EXPIRE_TIME_MS));
         return lease_id;
@@ -291,14 +290,14 @@ namespace tfs
         if (ngi.destroy_flag_ == NS_DESTROY_FLAGS_YES)
         {
           TBSYS_LOG(WARN, "%s", "add lease fail because nameserver destroyed");
-          return INVALID_LEASE;
+          return INVALID_LEASE_ID;
         }
 
         tbutil::Monitor<tbutil::Mutex>::Lock lock(*lease);
         if (lease->is_valid_lease())
         {
           TBSYS_LOG(WARN, "id(%"PRI64_PREFIX"d) has been lease" , id);
-          return INVALID_LEASE;
+          return INVALID_LEASE_ID;
         }
         lease_id = LeaseFactory::new_lease_id();
         lease->reset(lease_id);
@@ -307,7 +306,7 @@ namespace tfs
         GFactory::get_timer()->schedule(lease, tbutil::Time::milliSeconds(LeaseEntry::LEASE_EXPIRE_TIME_MS));
         return lease_id;
       }
-      return INVALID_LEASE;
+      return INVALID_LEASE_ID;
     }
 
     bool LeaseClerk::remove(int64_t id)
@@ -490,7 +489,7 @@ namespace tfs
     {
       return clerk_[id % clerk_num_]->failed(id);
     }
-      
+
     bool LeaseFactory::cancel(int64_t id)
     {
       return clerk_[id % clerk_num_]->cancel(id);

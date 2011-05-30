@@ -97,24 +97,26 @@ namespace tfs
         inline void set_block_version(const int32_t version)
         {
           version_ = version;
-          has_lease_ = true;
         }
         inline int32_t get_block_version() const
         {
           return version_;
         }
-        inline void set_lease_id(const uint32_t lease)
+        inline void set_lease_id(const uint32_t lease_id)
         {
-          lease_ = lease;
-          has_lease_ = true;
+          lease_id_ = lease_id;
         }
         inline uint32_t get_lease_id() const
         {
-          return lease_;
+          return lease_id_;
         }
         inline common::WriteDataInfo get_write_info() const
         {
           return write_data_info_;
+        }
+        inline uint32_t has_lease() const
+        {
+          return (lease_id_ != common::INVALID_LEASE_ID);
         }
 
       protected:
@@ -122,8 +124,7 @@ namespace tfs
         const char* data_;
         mutable common::VUINT64 ds_;
         mutable int32_t version_;
-        mutable uint32_t lease_;
-        mutable bool has_lease_;
+        mutable uint32_t lease_id_;
     };
 
 #ifdef _DEL_001_

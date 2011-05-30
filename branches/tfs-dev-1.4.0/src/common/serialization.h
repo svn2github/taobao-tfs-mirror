@@ -286,7 +286,7 @@ namespace tfs
           if (TFS_SUCCESS == iret
               && length > 0)
           {
-            iret = data_len - pos > length * INT64_SIZE ? TFS_SUCCESS : TFS_ERROR;
+            iret = data_len - pos >= length * INT64_SIZE ? TFS_SUCCESS : TFS_ERROR;
             if (TFS_SUCCESS == iret)
             {
               int64_t tmp = 0;

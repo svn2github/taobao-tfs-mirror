@@ -387,24 +387,24 @@ int64_t TfsClientImpl::get_gc_expired_time() const
 
 void TfsClientImpl::set_batch_timeout(const int64_t timeout_ms)
 {
-  ClientConfig::batch_timeout_ = timeout_ms * 1000;
-  TBSYS_LOG(INFO, "set batch timeout: %" PRI64_PREFIX "d ms", timeout_ms);
+  ClientConfig::batch_timeout_ = timeout_ms;
+  TBSYS_LOG(INFO, "set batch timeout: %" PRI64_PREFIX "d ms", ClientConfig::batch_timeout_);
 }
 
 int64_t TfsClientImpl::get_batch_timeout() const
 {
-  return ClientConfig::batch_timeout_ / 1000;
+  return ClientConfig::batch_timeout_;
 }
 
 void TfsClientImpl::set_wait_timeout(const int64_t timeout_ms)
 {
-  ClientConfig::wait_timeout_ = timeout_ms * 1000;
-  TBSYS_LOG(INFO, "set wait timeout: %" PRI64_PREFIX "d us", timeout_ms);
+  ClientConfig::wait_timeout_ = timeout_ms;
+  TBSYS_LOG(INFO, "set wait timeout: %" PRI64_PREFIX "d ms", ClientConfig::wait_timeout_);
 }
 
 int64_t TfsClientImpl::get_wait_timeout() const
 {
-  return ClientConfig::wait_timeout_ / 1000;
+  return ClientConfig::wait_timeout_;
 }
 
 void TfsClientImpl::set_client_retry_count(const int64_t count)

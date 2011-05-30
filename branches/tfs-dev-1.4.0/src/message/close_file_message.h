@@ -20,7 +20,7 @@ namespace tfs
 {
   namespace message
   {
-    class CloseFileMessage: public common::BasePacket 
+    class CloseFileMessage: public common::BasePacket
     {
       public:
         CloseFileMessage();
@@ -70,12 +70,10 @@ namespace tfs
         inline void set_block_version(const int32_t version)
         {
           version_ = version;
-          has_lease_ = true;
         }
         inline void set_lease_id(const uint32_t lease_id)
         {
           lease_id_ = lease_id;
-          has_lease_ = true;
         }
         inline uint32_t get_block_id() const
         {
@@ -126,6 +124,11 @@ namespace tfs
           return close_file_info_;
         }
 
+        inline bool has_lease() const
+        {
+          return (lease_id_ != common::INVALID_LEASE_ID);
+        }
+
       protected:
         common::CloseFileInfo close_file_info_;
         common::BlockInfo block_;
@@ -134,7 +137,6 @@ namespace tfs
         int32_t option_flag_;
         mutable int32_t version_;
         mutable uint32_t lease_id_;
-        mutable bool has_lease_;
     };
   }
 }

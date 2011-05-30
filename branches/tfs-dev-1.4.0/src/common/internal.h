@@ -576,20 +576,25 @@ namespace tfs
       }
     };
 
+    static const uint32_t INVALID_LEASE_ID = 0;
+
     struct BlockInfoSeg
     {
       common::VUINT64 ds_;
-      bool has_lease_;
-      uint32_t lease_;
+      uint32_t lease_id_;
       int32_t version_;
-      BlockInfoSeg() : has_lease_(false), lease_(0), version_(0)
+      BlockInfoSeg() : lease_id_(INVALID_LEASE_ID), version_(0)
       {
         ds_.clear();
       }
-      BlockInfoSeg(const common::VUINT64& ds, const bool has_lease = false,
-                   const uint32_t lease = 0, const int32_t version = 0) :
-        ds_(ds), has_lease_(has_lease), lease_(lease), version_(version)
+      BlockInfoSeg(const common::VUINT64& ds,
+                   const uint32_t lease_id = INVALID_LEASE_ID, const int32_t version = 0) :
+        ds_(ds), lease_id_(lease_id), version_(version)
       {
+      }
+      bool has_lease() const
+      {
+        return (lease_id_ != INVALID_LEASE_ID);
       }
     };
 

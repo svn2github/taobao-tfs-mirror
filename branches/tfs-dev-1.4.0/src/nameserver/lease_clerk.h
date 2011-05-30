@@ -10,9 +10,9 @@
  * Authors:
  *   duolong <duolong@taobao.com>
  *      - initial release
- *   qushan<qushan@taobao.com> 
+ *   qushan<qushan@taobao.com>
  *      - modify 2009-03-27
- *   duanfei <duanfei@taobao.com> 
+ *   duanfei <duanfei@taobao.com>
  *      - modify 2010-04-23
  *
  */
@@ -105,8 +105,6 @@ namespace tfs
       void clear(bool check_time = true, bool force = false);
       LeaseEntryPtr find( int64_t id) const;
 
-      static const uint8_t INVALID_LEASE;
-
     private:
       bool change(int64_t id, LeaseStatus status);
 #if defined(TFS_NS_GTEST) || defined(TFS_NS_INTEGRATION)
@@ -126,7 +124,7 @@ namespace tfs
     public:
       LeaseFactory();
       ~LeaseFactory();
-      int initialize(int32_t clerk_num = 32); 
+      int initialize(int32_t clerk_num = 32);
       int wait_for_shut_down();
       void destroy();
       static uint32_t new_lease_id();
@@ -160,5 +158,5 @@ namespace tfs
   }
 }
 
-#endif 
+#endif
 

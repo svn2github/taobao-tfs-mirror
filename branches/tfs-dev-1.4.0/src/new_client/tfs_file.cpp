@@ -492,13 +492,12 @@ int TfsFile::process(const InnerFilePhase file_phase)
       }
       else
       {
-        //std::map<uint16_t, Message*> packets;
         client->wait(ClientConfig::batch_timeout_);
         NewClient::RESPONSE_MSG_MAP* res_map = client->get_success_response();
         if (NULL == res_map)
         {
           // get response fail, must exit.
-          TBSYS_LOG(ERROR, "get respose fail, ret: %d", ret);
+          TBSYS_LOG(ERROR, "get respose list fail.");
         }
         else
         {
@@ -682,8 +681,6 @@ int TfsFile::async_rsp_create_file(common::BasePacket* rsp, const uint16_t index
     }
   }
 
-  //tbsys::gDelete(rsp);
-
   if (remove_flag)
   {
     tfs_session_->remove_block_cache(seg_data->seg_info_.block_id_);
@@ -772,7 +769,7 @@ int TfsFile::async_rsp_write_data(common::BasePacket* rsp, const uint16_t index)
     }
   }
 
-  //tbsys::gDelete(rsp);
+
   if (remove_flag)
   {
     tfs_session_->remove_block_cache(seg_data->seg_info_.block_id_);
@@ -851,7 +848,6 @@ int TfsFile::async_rsp_close_file(common::BasePacket* rsp, const uint16_t index)
         }
       }
     }
-    //tbsys::gDelete(rsp);
   }
 
   if (remove_flag)
@@ -1016,7 +1012,6 @@ int TfsFile::async_rsp_read_file(common::BasePacket* rsp, const uint16_t index)
     {
       TBSYS_LOG(ERROR, "message type is error.");
     }
-    tbsys::gDelete(rsp);
   }
 
   if (remove_flag)
@@ -1154,7 +1149,6 @@ int TfsFile::async_rsp_read_fileV2(common::BasePacket* rsp, const uint16_t index
     {
       TBSYS_LOG(ERROR, "message type is error.");
     }
-    //tbsys::gDelete(rsp);
   }
 
   if (remove_flag)
@@ -1309,7 +1303,7 @@ int TfsFile::async_rsp_stat_file(common::BasePacket* rsp, const uint16_t index)
   {
     BgTask::get_stat_mgr().update_entry(StatItem::client_access_stat_, StatItem::stat_success_, 1);
   }
-  //tbsys::gDelete(rsp);
+
   return ret;
 }
 
@@ -1394,7 +1388,7 @@ int TfsFile::async_rsp_unlink_file(common::BasePacket* rsp, const uint16_t index
   {
     BgTask::get_stat_mgr().update_entry(StatItem::client_access_stat_, StatItem::unlink_success_, 1);
   }
-  //tbsys::gDelete(rsp);
+
   return ret;
 }
 

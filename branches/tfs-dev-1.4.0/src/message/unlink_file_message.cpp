@@ -57,9 +57,9 @@ namespace tfs
     {
       return common::INT_SIZE * 2 + common::INT64_SIZE;
     }
- 
+
     UnlinkFileMessage::UnlinkFileMessage() :
-      option_flag_(0), version_(0), lease_(0), has_lease_(false)
+      option_flag_(0), version_(0), lease_id_(common::INVALID_LEASE_ID)
     {
       _packetHeader._pcode = common::UNLINK_FILE_MESSAGE;
       memset(&unlink_file_info_, 0, sizeof(UnlinkFileInfo));
@@ -87,7 +87,7 @@ namespace tfs
       }
       if (common::TFS_SUCCESS == iret)
       {
-        has_lease_ = BasePacket::parse_special_ds(dataservers_, version_, lease_);
+        BasePacket::parse_special_ds(dataservers_, version_, lease_id_);
       }
       return iret;
     }
@@ -95,20 +95,20 @@ namespace tfs
     int64_t UnlinkFileMessage::length() const
     {
       int64_t len = unlink_file_info_.length() + common::Serialization::get_vint64_length(dataservers_) + common::INT_SIZE;
-      if (has_lease_)
+      if (has_lease())
       {
         len += common::INT64_SIZE * 3;
       }
       return len;
     }
 
-    int UnlinkFileMessage::serialize(common::Stream& output) const 
+    int UnlinkFileMessage::serialize(common::Stream& output) const
     {
-      if (has_lease_)
+      if (has_lease())
       {
         dataservers_.push_back(ULONG_LONG_MAX);
         dataservers_.push_back(static_cast<uint64_t> (version_));
-        dataservers_.push_back(static_cast<uint64_t> (lease_));
+        dataservers_.push_back(static_cast<uint64_t> (lease_id_));
       }
 
       int64_t pos = 0;
@@ -127,7 +127,7 @@ namespace tfs
       }
       if (common::TFS_SUCCESS == iret)
       {
-        has_lease_ = BasePacket::parse_special_ds(dataservers_, version_, lease_);
+        BasePacket::parse_special_ds(dataservers_, version_, lease_id_);
       }
       return iret;
     }

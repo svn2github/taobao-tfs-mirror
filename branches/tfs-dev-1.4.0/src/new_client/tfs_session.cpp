@@ -201,7 +201,7 @@ int TfsSession::get_block_info_ex(uint32_t& block_id, VUINT64& rds, const int32_
     block_id = block_info_msg->get_block_id();
     if (rds.size() && block_id > 0)
     {
-      if (block_info_msg->get_has_lease())
+      if (block_info_msg->has_lease())
       {
         rds.push_back(ULONG_LONG_MAX);
         rds.push_back(block_info_msg->get_block_version());
@@ -317,14 +317,15 @@ int TfsSession::get_block_info_ex(SEG_DATA_LIST& seg_list, const int32_t flag)
           seg_list[i]->status_ = SEG_STATUS_OPEN_OVER;
 
           TBSYS_LOG(DEBUG, "get write block %u success, ds list size: %d", seg_list[i]->seg_info_.block_id_, seg_list[i]->ds_.size());
-          if (it->second.has_lease_) // should have
+
+          if (it->second.has_lease()) // should have
           {
             seg_list[i]->ds_.push_back(ULONG_LONG_MAX);
             seg_list[i]->ds_.push_back(it->second.version_);
-            seg_list[i]->ds_.push_back(it->second.lease_);
+            seg_list[i]->ds_.push_back(it->second.lease_id_);
             TBSYS_LOG(DEBUG, "get write block %u success, ds list size: %d, version: %d, lease: %d",
                       seg_list[i]->seg_info_.block_id_, seg_list[i]->ds_.size(),
-                      it->second.version_, it->second.lease_);
+                      it->second.version_, it->second.lease_id_);
           }
         }
       }
@@ -364,7 +365,7 @@ int TfsSession::get_cluster_id_from_ns()
   int ret = send_msg_to_server(ns_addr_, client, &cc_message, rsp, ClientConfig::wait_timeout_);
   if (TFS_SUCCESS != ret)
   {
-    TBSYS_LOG(ERROR, "get block info failed, ret: %d", ret);
+    TBSYS_LOG(ERROR, "get cluster id from ns fail, ret: %d", ret);
   }
   else if (STATUS_MESSAGE == rsp->getPCode())
   {

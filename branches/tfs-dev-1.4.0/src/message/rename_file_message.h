@@ -21,7 +21,7 @@ namespace tfs
 {
   namespace message
   {
-    class RenameFileMessage: public common::BasePacket 
+    class RenameFileMessage: public common::BasePacket
     {
       public:
         RenameFileMessage();
@@ -78,13 +78,16 @@ namespace tfs
         {
           return rename_file_info_.is_server_;
         }
+        inline bool has_lease() const
+        {
+          return (lease_id_ != common::INVALID_LEASE_ID);
+        }
       protected:
         common::RenameFileInfo rename_file_info_;
         int32_t option_flag_;
         mutable common::VUINT64 ds_;
         mutable int32_t version_;
         mutable uint32_t lease_id_;
-        mutable bool has_lease_;
     };
   }
 }

@@ -20,7 +20,7 @@ namespace tfs
   namespace message
   {
     WriteDataMessage::WriteDataMessage() :
-      data_(NULL), version_(0), lease_(0), has_lease_(false)
+      data_(NULL), version_(0), lease_id_(common::INVALID_LEASE_ID)
     {
       _packetHeader._pcode = common::WRITE_DATA_MESSAGE;
       memset(&write_data_info_, 0, sizeof(write_data_info_));
@@ -48,7 +48,7 @@ namespace tfs
       }
       if (common::TFS_SUCCESS == iret)
       {
-        has_lease_ = parse_special_ds(ds_, version_, lease_);
+        parse_special_ds(ds_, version_, lease_id_);
       }
       return iret;
     }
@@ -60,20 +60,20 @@ namespace tfs
       {
         len += write_data_info_.length_;
       }
-      if (has_lease_)
+      if (has_lease())
       {
         len += common::INT64_SIZE * 3;
       }
       return len;
     }
 
-    int WriteDataMessage::serialize(common::Stream& output) const 
+    int WriteDataMessage::serialize(common::Stream& output) const
     {
-      if (has_lease_)
+      if (has_lease())
       {
         ds_.push_back(ULONG_LONG_MAX);
         ds_.push_back(static_cast<uint64_t>(version_));
-        ds_.push_back(static_cast<uint64_t>(lease_));
+        ds_.push_back(static_cast<uint64_t>(lease_id_));
       }
       int64_t pos = 0;
       int32_t iret = write_data_info_.serialize(output.get_free(), output.get_free_length(), pos);
@@ -90,7 +90,7 @@ namespace tfs
       // reparse, avoid push verion&lease again when clone twice;
       if (common::TFS_SUCCESS == iret)
       {
-        has_lease_ = parse_special_ds(ds_, version_, lease_);
+        parse_special_ds(ds_, version_, lease_id_);
       }
       return iret;
     }
@@ -116,7 +116,7 @@ namespace tfs
       return common::INT_SIZE;
     }
 
-    int RespWriteDataMessage::serialize(common::Stream& output) const 
+    int RespWriteDataMessage::serialize(common::Stream& output) const
     {
       return output.set_int32(lenght_);
     }
@@ -166,7 +166,7 @@ namespace tfs
       return len;
     }
 
-    int WriteRawDataMessage::serialize(common::Stream& output) const 
+    int WriteRawDataMessage::serialize(common::Stream& output) const
     {
       int64_t pos = 0;
       int32_t iret = write_data_info_.serialize(output.get_free(), output.get_free_length(), pos);
@@ -178,7 +178,7 @@ namespace tfs
           iret = output.set_bytes(data_, write_data_info_.length_);
         }
       }
-      
+
       if (common::TFS_SUCCESS == iret)
       {
         iret = output.set_int32(flag_);
@@ -213,7 +213,7 @@ namespace tfs
       {
         iret = input.get_int32(&have_block);
       }
-      
+
       if (common::TFS_SUCCESS == iret)
       {
         if (have_block > 0)
@@ -270,7 +270,7 @@ namespace tfs
       return len;
     }
 
-    int WriteInfoBatchMessage::serialize(common::Stream& output) const 
+    int WriteInfoBatchMessage::serialize(common::Stream& output) const
     {
       int64_t pos = 0;
       int32_t have_block = block_info_.block_id_ >= 0 ? 0 : 1;
