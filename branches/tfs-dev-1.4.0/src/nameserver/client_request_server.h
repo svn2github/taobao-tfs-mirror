@@ -15,6 +15,7 @@
 */
 #ifndef TFS_NAMESERVER_CLIENT_REQUEST_SERVER_H_
 #define TFS_NAMESERVER_CLIENT_REQUEST_SERVER_H_
+#include <tbnet.h>
 #include "common/lock.h"
 #include "block_chunk.h"
 #include "block_collect.h"
@@ -48,6 +49,12 @@ namespace nameserver
       int batch_open(const common::VUINT32& blocks, const int32_t mode, const int32_t block_count, std::map<uint32_t, common::BlockInfoSeg>& out);
 
       int close(CloseParameter& param);
+
+      int dump_plan(tbnet::DataBuffer& output);
+      
+      int handle_control_cmd(const common::ClientCmdInformation& info, common::BasePacket* msg, const int64_t buf_length, char* buf);
+
+      int handle(common::BasePacket* msg);
     private:
 
       int open_read_mode(const uint32_t block_id, common::VUINT64& readable_ds_list);
@@ -58,6 +65,13 @@ namespace nameserver
           common::VUINT64& ds_list);
       int batch_open_read_mode(const common::VUINT32& blocks, std::map<uint32_t, common::BlockInfoSeg>& out);
       int batch_open_write_mode(const int32_t mode, const int32_t block_count, std::map<uint32_t, common::BlockInfoSeg>& out);
+
+      int  handle_control_load_block(const common::ClientCmdInformation& info, common::BasePacket* message, const int64_t buf_length, char* error_buf);
+      int  handle_control_delete_block(const time_t now, const common::ClientCmdInformation& info,const int64_t buf_length, char* error_buf);
+      int  handle_control_compact_block(const time_t now, const common::ClientCmdInformation& info, const int64_t buf_length, char* error_buf);
+      int  handle_control_immediately_replicate_block(const time_t now, const common::ClientCmdInformation& info, const int64_t buf_length, char* error_buf);
+      int  handle_control_rotate_log(void);
+      int  handle_control_set_runtime_param(const common::ClientCmdInformation& info, const int64_t buf_length, char* error_buf);
 
     private:
       LayoutManager& lay_out_manager_;

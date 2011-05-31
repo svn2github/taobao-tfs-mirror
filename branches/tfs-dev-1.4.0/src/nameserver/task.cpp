@@ -282,25 +282,28 @@ namespace tfs
           TBSYS_LOG(ERROR, "block(%u) compact, do compact complete fail(%d)", value.block_id_, iret);
         }
 #if !defined(TFS_NS_GTEST) && !defined(TFS_NS_INTEGRATION)
-        message->reply(new StatusMessage(iret));
+        iret = message->reply(new StatusMessage(iret));
 #endif
 
         all_complete_flag = value.is_complete_;
-        return iret;
+        if (all_complete_flag)
+          status_ = PLAN_STATUS_END;
       }
-
-      //slave
-      std::bitset < 3 > bset(message->get_flag());
-      value.all_success_ = bset[0];
-      value.has_success_ = bset[1];
-      value.is_complete_ = bset[2];
-      TBSYS_LOG(DEBUG, "check compact complete flag(%u)", message->get_flag());
-      servers.clear();
-      servers.assign(message->get_ds_list().begin(), message->get_ds_list().end());
-      iret = do_complete(value, servers);
-      if (iret != TFS_SUCCESS)
+      else
       {
-        TBSYS_LOG(ERROR, "block(%u) compact, do compact complete fail(%d)", value.block_id_, iret);
+        //slave
+        std::bitset < 3 > bset(message->get_flag());
+        value.all_success_ = bset[0];
+        value.has_success_ = bset[1];
+        value.is_complete_ = bset[2];
+        TBSYS_LOG(DEBUG, "check compact complete flag(%u)", message->get_flag());
+        servers.clear();
+        servers.assign(message->get_ds_list().begin(), message->get_ds_list().end());
+        iret = do_complete(value, servers);
+        if (iret != TFS_SUCCESS)
+        {
+          TBSYS_LOG(ERROR, "block(%u) compact, do compact complete fail(%d)", value.block_id_, iret);
+        }
       }
       return iret;
     }
@@ -316,7 +319,6 @@ namespace tfs
         if (status.first == value.id_)
         {
           status.second = value.status_;
-          //status.second = value.status_ == PLAN_STATUS_END ? PLAN_STATUS_END : PLAN_STATUS_TIMEOUT;
           if (value.status_ == PLAN_STATUS_END)
           {
             memcpy(&block_info_, &value.block_info_, sizeof(BlockInfo));
@@ -469,43 +471,48 @@ namespace tfs
 
     int LayoutManager::ReplicateTask::handle()
     {
-      if (runer_.size() < 0x2U)
+      int32_t iret = runer_.size() >= 0x2U ? TFS_SUCCESS : TFS_ERROR;
+      if (TFS_SUCCESS != iret)
       {
         TBSYS_LOG(WARN, "task(block: %u, type:%d, priority: %d, runer size: %u) is invalid", block_id_, type_, priority_, runer_.size());
-        return TFS_ERROR;
-      }
-      ReplicateBlockMessage msg;
-      ReplBlock block;
-      memset(&block, 0, sizeof(block));
-      block.block_id_ = block_id_;
-      block.source_id_ = runer_[0]->id();
-      block.destination_id_ = runer_[1]->id();
-      block.start_time_ = time(NULL);
-      block.is_move_ = flag_;
-      block.server_count_ = 0;
-      msg.set_repl_block(&block);
-      msg.set_command(PLAN_STATUS_BEGIN);
-#if !defined(TFS_NS_GTEST) && !defined(TFS_NS_INTEGRATION)
-      int32_t iret = send_msg_to_server(block.source_id_, &msg);
-      if (STATUS_MESSAGE_OK != iret)
-      {
-        TBSYS_LOG(ERROR, "send %s command faild, block(%u), %s===>%s",
-            flag_ == REPLICATE_BLOCK_MOVE_FLAG_NO ? "replicate" : "move",
-            block_id_, tbsys::CNetUtil::addrToString(block.source_id_).c_str(),
-            tbsys::CNetUtil::addrToString(block.destination_id_).c_str());
       }
       else
       {
-        TBSYS_LOG(INFO, "send %s command successful, block(%u), (%s)===>(%s)",
-            flag_ == REPLICATE_BLOCK_MOVE_FLAG_NO ? "replicate" : "move",
-            block_id_, tbsys::CNetUtil::addrToString(block.source_id_).c_str(),
-            tbsys::CNetUtil::addrToString(block.destination_id_).c_str());
-      }
+        ReplicateBlockMessage msg;
+        ReplBlock block;
+        memset(&block, 0, sizeof(block));
+        block.block_id_ = block_id_;
+        block.source_id_ = runer_[0]->id();
+        block.destination_id_ = runer_[1]->id();
+        block.start_time_ = time(NULL);
+        block.is_move_ = flag_;
+        block.server_count_ = 0;
+        msg.set_repl_block(&block);
+        msg.set_command(PLAN_STATUS_BEGIN);
+#if !defined(TFS_NS_GTEST) && !defined(TFS_NS_INTEGRATION)
+        iret = send_msg_to_server(block.source_id_, &msg);
+        if (STATUS_MESSAGE_OK != iret)
+        {
+          TBSYS_LOG(ERROR, "send %s command faild, block: %u, iret: %d %s===>%s",
+              flag_ == REPLICATE_BLOCK_MOVE_FLAG_NO ? "replicate" : "move",
+              block_id_, iret, tbsys::CNetUtil::addrToString(block.source_id_).c_str(),
+              tbsys::CNetUtil::addrToString(block.destination_id_).c_str());
+          iret = TFS_ERROR;
+        }
+        else
+        {
+          TBSYS_LOG(INFO, "send %s command successful, block: %u, (%s)===>(%s)",
+              flag_ == REPLICATE_BLOCK_MOVE_FLAG_NO ? "replicate" : "move",
+              block_id_, tbsys::CNetUtil::addrToString(block.source_id_).c_str(),
+              tbsys::CNetUtil::addrToString(block.destination_id_).c_str());
+
+          status_ = PLAN_STATUS_BEGIN;
+          begin_time_ = time(NULL);
+          end_time_ = begin_time_ + SYSPARAM_NAMESERVER.run_plan_expire_interval_;
+        }
 #endif
-      status_ = PLAN_STATUS_BEGIN;
-      begin_time_ = time(NULL);
-      end_time_ = begin_time_ + SYSPARAM_NAMESERVER.run_plan_expire_interval_;
-      return TFS_SUCCESS;
+      }
+      return iret;
     }
 
     int LayoutManager::ReplicateTask::handle_complete(common::BasePacket* msg, bool& all_complete_flag)
@@ -580,8 +587,15 @@ namespace tfs
       }
       else
       {
-        TBSYS_LOG(WARN, "%s fail, status: %d", blocks.is_move_ == REPLICATE_BLOCK_MOVE_FLAG_YES ? "move" : "replicate", message->get_command());
+        TBSYS_LOG(INFO, "block: %u %s complete status: %s", blocks.block_id_,
+            blocks.is_move_ == REPLICATE_BLOCK_MOVE_FLAG_YES ? "move" : "replicate",
+            message->get_command() == PLAN_STATUS_END ? "end" :
+            message->get_command() == PLAN_STATUS_TIMEOUT ? "timeout" :
+            message->get_command() == PLAN_STATUS_BEGIN ? "begin" :
+            message->get_command() == PLAN_STATUS_FAILURE ? "failure" : "unknow");
       }
+      all_complete_flag = true;
+      status_ = PLAN_STATUS_END;
       return (iret == STATUS_MESSAGE_OK || iret == STATUS_MESSAGE_REMOVE) ? TFS_SUCCESS : iret;
     }
 
@@ -612,6 +626,7 @@ namespace tfs
     int LayoutManager::DeleteBlockTask::handle_complete(common::BasePacket* msg, bool& all_complete_flag)
     {
       all_complete_flag = true;
+      status_ = PLAN_STATUS_END;
       RemoveBlockResponseMessage* message = dynamic_cast<RemoveBlockResponseMessage*>(msg);
       TBSYS_LOG(INFO, "block(%u) remove complete status end", message->get_block_id());
       return TFS_SUCCESS;

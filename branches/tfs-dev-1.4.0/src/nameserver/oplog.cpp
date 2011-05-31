@@ -241,6 +241,7 @@ namespace tfs
           0), last_flush_time_(0), slots_offset_(0), fd_(-1), buffer_(new char[maxLogSlotsSize * MAX_LOG_SIZE + 1])
     {
       memset(buffer_, 0, maxLogSlotsSize * MAX_LOG_SIZE + 1); 
+      memset(&oplog_rotate_header_, 0, sizeof(oplog_rotate_header_));
     }
 
     OpLog::~OpLog()
@@ -252,27 +253,46 @@ namespace tfs
 
     int OpLog::initialize()
     {
-      if (path_.empty())
-        return EXIT_GENERAL_ERROR;
-      if (!DirectoryOp::create_full_path(path_.c_str()))
+      int32_t iret = path_.empty() ? EXIT_GENERAL_ERROR : TFS_SUCCESS;
+      if (TFS_SUCCESS == iret)
       {
-        TBSYS_LOG(ERROR, "create directory(%s) fail...", path_.c_str());
-        return EXIT_GENERAL_ERROR;
+        if (!DirectoryOp::create_full_path(path_.c_str()))
+        {
+          TBSYS_LOG(ERROR, "create directory(%s) fail...", path_.c_str());
+          iret = EXIT_GENERAL_ERROR;
+        }
+        else
+        {
+          std::string headPath = path_ + "/rotateheader.dat";
+          fd_ = open(headPath.c_str(), O_RDWR | O_CREAT, 0600);
+          if (fd_ < 0)
+          {
+            TBSYS_LOG(ERROR, "open file(%s) fail(%s)", headPath.c_str(), strerror(errno));
+            iret = EXIT_GENERAL_ERROR;
+          }
+          else
+          {
+            char buf[oplog_rotate_header_.length()];
+            const int64_t length = read(fd_, buf, oplog_rotate_header_.length());
+            if (length != oplog_rotate_header_.length())
+            {
+              oplog_rotate_header_.rotate_seqno_ = 0x01;
+              oplog_rotate_header_.rotate_offset_ = 0x00;
+            }
+            else
+            {
+              int64_t pos = 0;
+              oplog_rotate_header_.deserialize(buf, oplog_rotate_header_.length(), pos);
+              if (TFS_SUCCESS != iret)
+              {
+                oplog_rotate_header_.rotate_seqno_ = 0x01;
+                oplog_rotate_header_.rotate_offset_ = 0x00;
+              }
+            }
+          }
+        }
       }
-      std::string headPath = path_ + "/rotateheader.dat";
-      fd_ = open(headPath.c_str(), O_RDWR | O_CREAT, 0600);
-      if (fd_ < 0)
-      {
-        TBSYS_LOG(ERROR, "open file(%s) fail(%s)", headPath.c_str(), strerror(errno));
-        return EXIT_GENERAL_ERROR;
-      }
-      int iret = read(fd_, &oplog_rotate_header_, sizeof(oplog_rotate_header_));
-      if (iret != sizeof(oplog_rotate_header_))
-      {
-        oplog_rotate_header_.rotate_seqno_ = 0x01;
-        oplog_rotate_header_.rotate_offset_ = 0x00;
-      }
-      return TFS_SUCCESS;
+      return iret;
     }
 
     int OpLog::update_oplog_rotate_header(const OpLogRotateHeader& head)
@@ -280,38 +300,51 @@ namespace tfs
       tbutil::Mutex::Lock lock(mutex_);
       std::string headPath = path_ + "/rotateheader.dat";
       memcpy(&oplog_rotate_header_, &head, sizeof(head));
+      int32_t iret = TFS_SUCCESS;
       if (fd_ < 0)
       {
         fd_ = open(headPath.c_str(), O_RDWR | O_CREAT, 0600);
         if (fd_ < 0)
         {
           TBSYS_LOG(ERROR, "open file(%s) fail(%s)", headPath.c_str(), strerror(errno));
-          return EXIT_GENERAL_ERROR;
+          iret = EXIT_GENERAL_ERROR;
         }
       }
-
-      lseek(fd_, 0, SEEK_SET);
-      int iret = ::write(fd_, &oplog_rotate_header_, sizeof(oplog_rotate_header_));
-      if (iret != sizeof(oplog_rotate_header_))
+      if (TFS_SUCCESS == iret)
       {
-        TBSYS_LOG(ERROR, "wirte data fail: file(%s), erros(%s)...", headPath.c_str(), strerror(errno));
-        ::close( fd_);
-        fd_ = -1;
-        fd_ = open(headPath.c_str(), O_RDWR | O_CREAT, 0600);
-        if (fd_ < 0)
-        {
-          TBSYS_LOG(ERROR, "open file(%s) fail(%s)", headPath.c_str(), strerror(errno));
-          return EXIT_GENERAL_ERROR;
-        }
         lseek(fd_, 0, SEEK_SET);
-        iret = ::write(fd_, &oplog_rotate_header_, sizeof(oplog_rotate_header_));
-        if (iret != sizeof(oplog_rotate_header_))
+        int64_t pos = 0;
+        char buf[oplog_rotate_header_.length()];
+        memset(buf, 0, sizeof(buf));
+        iret = oplog_rotate_header_.serialize(buf, oplog_rotate_header_.length(), pos);
+        if (TFS_SUCCESS == iret)
         {
-          TBSYS_LOG(ERROR, "wirte data fail: file(%s), erros(%s)...", headPath.c_str(), strerror(errno));
-          return EXIT_GENERAL_ERROR;
+          int64_t length = ::write(fd_, buf, oplog_rotate_header_.length());
+          if (length != oplog_rotate_header_.length())
+          {
+            TBSYS_LOG(ERROR, "wirte data fail: file(%s), erros(%s)...", headPath.c_str(), strerror(errno));
+            ::close( fd_);
+            fd_ = -1;
+            fd_ = open(headPath.c_str(), O_RDWR | O_CREAT, 0600);
+            if (fd_ < 0)
+            {
+              TBSYS_LOG(ERROR, "open file(%s) fail(%s)", headPath.c_str(), strerror(errno));
+              iret = EXIT_GENERAL_ERROR;
+            }
+            else
+            {
+              lseek(fd_, 0, SEEK_SET);
+              length = ::write(fd_, buf, oplog_rotate_header_.length());
+              if (length != oplog_rotate_header_.length())
+              {
+                TBSYS_LOG(ERROR, "wirte data fail: file(%s), erros(%s)...", headPath.c_str(), strerror(errno));
+                iret = EXIT_GENERAL_ERROR;
+              }
+            }
+          }
         }
       }
-      return TFS_SUCCESS;
+      return iret;
     }
 
     bool OpLog::finish(time_t now, bool force/* = false*/) const

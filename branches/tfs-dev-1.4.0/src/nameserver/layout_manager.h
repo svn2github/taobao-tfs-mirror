@@ -34,6 +34,7 @@ namespace nameserver
 {
   class LayoutManager
   {
+    friend class ClientRequestServer;
   public:
     LayoutManager();
     virtual ~LayoutManager();
@@ -67,11 +68,6 @@ namespace nameserver
     int dump_plan(void);
 
     int handle_task_complete(common::BasePacket* msg);
-#if defined(TFS_NS_GTEST) || defined(TFS_NS_INTEGRATION)
-    message::StatusMessage* handle(common::BasePacket* msg);
-#else
-    int handle(common::BasePacket* msg);
-#endif
 
     void interrupt(const uint8_t interrupt, const time_t now);
 
@@ -136,7 +132,7 @@ namespace nameserver
       friend int32_t elect_ds(Strategy& strategy, ElectType op, LayoutManager& meta, std::vector<ServerCollect*>& source,
           std::vector<ServerCollect*>& except, int32_t elect_count, bool check_server_in_plan, std::vector<ServerCollect*>& result);
 
-    friend int OpLogSyncManager::replay_helper_do_oplog(const int32_t type, const char* const data, int64_t& length , int64_t offset, time_t now);
+    friend int OpLogSyncManager::replay_helper_do_oplog(const int32_t type, const char* const data, const int64_t length , int64_t& pos, time_t now);
 
     struct AddLoad
     {

@@ -99,7 +99,8 @@ namespace tfs
       if (max_slots_size > 4096)
         max_slots_size = 0x03;//100KB
       std::string queue_header_path = std::string(path) + "/" + file_queue_name;
-      ARG_NEW(oplog_, OpLog, queue_header_path, max_slots_size);
+      //ARG_NEW(oplog_, OpLog, queue_header_path, max_slots_size);
+      oplog_ = new OpLog(queue_header_path, max_slots_size);
       iret = oplog_->initialize();
       if (iret != TFS_SUCCESS)
       {
@@ -410,22 +411,22 @@ namespace tfs
       return do_sync_oplog(msg, args);
     }
 
-    int OpLogSyncManager::replay_helper_do_msg(const int32_t type, const char* const data, int64_t& length , int64_t offset)
+    int OpLogSyncManager::replay_helper_do_msg(const int32_t type, const char* const data, const int64_t data_len, int64_t& pos)
     {
-      int32_t iret = NULL != data && length > 0 ? TFS_SUCCESS : TFS_ERROR;
+      int32_t iret = NULL != data && data_len - pos > 0 &&  pos >= 0 ? TFS_SUCCESS : TFS_ERROR;
       if (TFS_SUCCESS == iret)
       {
         BasePacket* msg = NULL;
         if (type == OPLOG_TYPE_REPLICATE_MSG)
         {
           ReplicateBlockMessage* tmp = new ReplicateBlockMessage();
-          iret = tmp->deserialize(data, length, offset);
+          iret = tmp->deserialize(data, data_len, pos);
           msg = tmp;
         }
         else
         {
           CompactBlockCompleteMessage* tmp = new CompactBlockCompleteMessage();
-          iret = tmp->deserialize(data, length, offset);
+          iret = tmp->deserialize(data, data_len, pos);
           msg = tmp;
         }
         if (TFS_SUCCESS == iret
@@ -437,30 +438,30 @@ namespace tfs
         if (TFS_SUCCESS != iret)
         {
           tbsys::gDelete(msg);
-          TBSYS_LOG(ERROR, "deserialize error, data(%s), length(%"PRI64_PREFIX"d) offset(%"PRI64_PREFIX"d)", data, length, offset);
+          TBSYS_LOG(ERROR, "deserialize error, data(%s), length(%"PRI64_PREFIX"d) offset(%"PRI64_PREFIX"d)", data, data_len, pos);
         }
       }
       return iret;
     }
 
-    int OpLogSyncManager::replay_helper_do_oplog(const int32_t type, const char* const data, int64_t& length , int64_t offset, time_t now)
+    int OpLogSyncManager::replay_helper_do_oplog(const int32_t type, const char* const data, const int64_t data_len, int64_t& pos, time_t now)
     {
-      int32_t iret = NULL != data && length > 0 ? TFS_SUCCESS : TFS_ERROR;
+      int32_t iret = NULL != data && data_len - pos > 0 &&  pos >= 0 ? TFS_SUCCESS : TFS_ERROR;
       if (TFS_SUCCESS == iret)
       {
         BlockOpLog oplog;
-        iret = oplog.deserialize(data, length, offset);
+        iret = oplog.deserialize(data, data_len, pos);
         if (TFS_SUCCESS != iret)
         {
           iret = EXIT_DESERIALIZE_ERROR;
-          TBSYS_LOG(ERROR, "deserialize error, data(%s), length(%"PRI64_PREFIX"d) offset(%"PRI64_PREFIX"d)", data, length, offset);
+          TBSYS_LOG(ERROR, "deserialize error, data(%s), length(%"PRI64_PREFIX"d) offset(%"PRI64_PREFIX"d)", data, data_len, pos);
         }
         if (TFS_SUCCESS == iret)
         {
           if ((oplog.servers_.empty())
               || (oplog.blocks_.empty()))
           {
-            TBSYS_LOG(ERROR, "play log error, data(%s), length(%"PRI64_PREFIX"d) offset(%"PRI64_PREFIX"d)", data, length, offset);
+            TBSYS_LOG(ERROR, "play log error, data(%s), length(%"PRI64_PREFIX"d) offset(%"PRI64_PREFIX"d)", data, data_len, pos);
             iret = EXIT_PLAY_LOG_ERROR;
           }
         }
@@ -576,35 +577,40 @@ namespace tfs
       return iret;
     }
 
-    int OpLogSyncManager::replay_helper(const char* const data, int64_t& length, int64_t& offset, time_t now)
+    int OpLogSyncManager::replay_helper(const char* const data, int64_t& data_len, int64_t& pos, time_t now)
     {
-      int32_t iret = TFS_ERROR;
-      bool bret = (data != NULL && length > static_cast<int64_t>(sizeof(OpLogHeader)));
-      if (bret)
+      OpLogHeader header;
+      int32_t iret = (NULL != data && data_len - pos >= header.length()) ? TFS_SUCCESS : TFS_ERROR;
+      if (TFS_SUCCESS == iret)
       {
-        OpLogHeader* header = (OpLogHeader*)(data + offset); 
-        offset += sizeof(OpLogHeader);
-        uint32_t crc = 0;
-        crc = Func::crc(crc, header->data_, header->length_);
-        if (crc != header->crc_)
+        iret = header.deserialize(data, data_len, pos);
+        if (TFS_SUCCESS == iret)
         {
-          TBSYS_LOG(ERROR, "check crc(%u)<>(%u) error", header->crc_, crc);
-          return EXIT_CHECK_CRC_ERROR;
-        }
-        int8_t type = header->type_;
-        switch (type)
-        {
-        case OPLOG_TYPE_REPLICATE_MSG:
-        case OPLOG_TYPE_COMPACT_MSG:
-          iret = replay_helper_do_msg(type, data, length, offset);
-        break;
-        case OPLOG_TYPE_BLOCK_OP:
-          iret = replay_helper_do_oplog(type, data, length, offset, now);
-        break;
-        default:
-          TBSYS_LOG(WARN, "type(%d) not found", type);
-          iret =  EXIT_PLAY_LOG_ERROR;
-          break;
+          uint32_t crc = 0;
+          crc = Func::crc(crc, (data + pos), header.length_);
+          if (crc != header.crc_)
+          {
+            TBSYS_LOG(ERROR, "check crc(%u)<>(%u) error", header.crc_, crc);
+            iret = EXIT_CHECK_CRC_ERROR;
+          }
+          else
+          {
+            int8_t type = header.type_;
+            switch (type)
+            {
+            case OPLOG_TYPE_REPLICATE_MSG:
+            case OPLOG_TYPE_COMPACT_MSG:
+              iret = replay_helper_do_msg(type, data, data_len, pos);
+            break;
+            case OPLOG_TYPE_BLOCK_OP:
+              iret = replay_helper_do_oplog(type, data, data_len, pos, now);
+            break;
+            default:
+              TBSYS_LOG(WARN, "type(%d) not found", type);
+              iret =  EXIT_PLAY_LOG_ERROR;
+              break;
+            }
+          }
         }
       }
       return iret;
@@ -659,27 +665,27 @@ namespace tfs
         do
         {
           QueueItem* item = file_queue_->pop();
-          if (item == NULL)
+          if (item != NULL)
           {
-            continue;
-          }
-          const char* const data = item->data_;
-          length = item->length_;
-          offset = 0;
-          do
-          {
-            iret = replay_helper(data, length, offset, now);
-            if ((iret != TFS_SUCCESS)
-                && (iret != EXIT_PLAY_LOG_ERROR))
+            const char* const data = item->data_;
+            length = item->length_;
+            offset = 0;
+            OpLogHeader header;
+            do
             {
-              break;
+              iret = replay_helper(data, length, offset, now);
+              if ((iret != TFS_SUCCESS)
+                  && (iret != EXIT_PLAY_LOG_ERROR))
+              {
+                break;
+              }
             }
+            while ((length > header.length())
+                    && (length > offset)
+                    && (GFactory::get_runtime_info().destroy_flag_!= NS_DESTROY_FLAGS_YES));
+            free(item);
+            item = NULL;
           }
-          while ((length > static_cast<int64_t> (sizeof(OpLogHeader)))
-                  && (length > offset)
-                  && (GFactory::get_runtime_info().destroy_flag_!= NS_DESTROY_FLAGS_YES));
-          free(item);
-          item = NULL;
         }
         while ((qhead->read_seqno_ != qhead->write_seqno_) || ((qhead->read_seqno_ == qhead->write_seqno_)
             && (qhead->read_offset_ != qhead->write_filesize_)) && (GFactory::get_runtime_info().destroy_flag_ != NS_DESTROY_FLAGS_YES));

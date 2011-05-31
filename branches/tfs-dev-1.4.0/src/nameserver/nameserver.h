@@ -111,6 +111,8 @@ namespace tfs
       int show_server_information(common::BasePacket* msg);
       int owner_check(common::BasePacket* msg);
       int ping(common::BasePacket* msg);
+      int dump_plan(common::BasePacket* msg);
+      int client_control_cmd(common::BasePacket* msg);
       int do_master_msg_helper(common::BasePacket* packet);
       int do_slave_msg_helper(common::BasePacket* packet);
 

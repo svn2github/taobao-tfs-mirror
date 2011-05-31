@@ -66,9 +66,9 @@ namespace tfs
       {
         return file_queue_thread_;
       }
-      int replay_helper(const char* const data, int64_t& length, int64_t& offset, time_t now = time(NULL));
-      int replay_helper_do_msg(const int32_t type, const char* const data, int64_t& length , int64_t offset);
-      int replay_helper_do_oplog(const int32_t type, const char* const data, int64_t& length , int64_t offset, time_t now);
+      int replay_helper(const char* const data, int64_t& data_len, int64_t& pos, time_t now = time(NULL));
+      int replay_helper_do_msg(const int32_t type, const char* const data, const int64_t data_len, int64_t& pos);
+      int replay_helper_do_oplog(const int32_t type, const char* const data, const int64_t data_len, int64_t& pos, time_t now);
     private:
       DISALLOW_COPY_AND_ASSIGN( OpLogSyncManager);
       virtual bool handlePacketQueue(tbnet::Packet *packet, void *args);

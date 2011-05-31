@@ -39,7 +39,7 @@ namespace tfs
       MAX_LOOP_TIME(SYSPARAM_NAMESERVER.heart_interval_ * 1000 * 1000 / 2)
     {
       int32_t percent_size = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_TASK_PRECENT_SEC_SIZE, 1);
-      owner_check_time_ = server_->get_work_queue_size() * percent_size * 1000;//us
+      owner_check_time_ = (server_->get_work_queue_size() * percent_size) * 1000;//us
       max_owner_check_time_ = owner_check_time_ * 4;//us
       NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
       ngi.last_push_owner_check_packet_time_ = ngi.last_owner_check_time_ = tbutil::Time::now().toMicroSeconds();//us
@@ -212,7 +212,7 @@ namespace tfs
         if (TFS_SUCCESS == iret)
         {
           int32_t percent_size = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_TASK_PRECENT_SEC_SIZE, 1);
-          int32_t owner_check_interval = get_work_queue_size() * percent_size;
+          int64_t owner_check_interval = get_work_queue_size() * percent_size * 1000;
           owner_check_task_ = new OwnerCheckTimerTask(this);
           iret = GFactory::get_timer()->scheduleRepeated(owner_check_task_, tbutil::Time::microSeconds(owner_check_interval));
           if (iret < 0)
@@ -347,15 +347,16 @@ namespace tfs
             case GET_BLOCK_INFO_MESSAGE:
               iret = open(msg);
               break;
+            case BATCH_GET_BLOCK_INFO_MESSAGE:
+              iret = batch_open(msg);
+              break;
             case BLOCK_WRITE_COMPLETE_MESSAGE:
               iret = close(msg);
               break;
             case REPLICATE_BLOCK_MESSAGE:
             case BLOCK_COMPACT_COMPLETE_MESSAGE:
             case REMOVE_BLOCK_RESPONSE_MESSAGE:
-            case DUMP_PLAN_MESSAGE:
-            case CLIENT_CMD_MESSAGE:
-              iret = meta_mgr_.handle(msg);
+              iret = meta_mgr_.get_client_request_server().handle(msg);
               break;
             case UPDATE_BLOCK_INFO_MESSAGE:
               iret = update_block_info(msg);
@@ -368,6 +369,12 @@ namespace tfs
               break;
             case STATUS_MESSAGE:
               iret = ping(msg);
+              break;
+            case DUMP_PLAN_MESSAGE:
+              iret = dump_plan(msg);
+              break;
+            case CLIENT_CMD_MESSAGE:
+              iret = client_control_cmd(msg);
               break;
             default:
               iret = EXIT_UNKNOWN_MSGTYPE;
@@ -532,6 +539,7 @@ namespace tfs
         }
         else
         {
+          reply->free();
           if(iret == EXIT_NO_DATASERVER)
           {
             iret = message->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), EXIT_NO_DATASERVER,
@@ -547,7 +555,6 @@ namespace tfs
             iret = message->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), iret,
                             "batch get get block information error, mode: %d, iret: %d", mode, iret);
           }
-          reply->free();
         }
      }
       return iret;
@@ -659,6 +666,40 @@ namespace tfs
       }
       return iret;
    }
+
+    int NameServer::dump_plan(common::BasePacket* msg)
+    {
+      int32_t iret = NULL != msg ? common::TFS_SUCCESS : common::TFS_ERROR;
+      if (common::TFS_SUCCESS == iret)
+      {
+        DumpPlanResponseMessage* rmsg = new DumpPlanResponseMessage();
+        iret = meta_mgr_.get_client_request_server().dump_plan(rmsg->get_data());
+        if (TFS_SUCCESS == iret)
+        {
+          iret = msg->reply(rmsg);
+        }
+      }
+      return iret;
+    }
+
+    int NameServer::client_control_cmd(common::BasePacket* msg)
+    {
+      int32_t iret = NULL != msg ? common::TFS_SUCCESS : common::TFS_ERROR;
+      if (common::TFS_SUCCESS == iret)
+      {
+        char buf[256] = {'\0'};
+        ClientCmdMessage* message = dynamic_cast<ClientCmdMessage*>(msg);
+        StatusMessage* rmsg = NULL;
+        iret = meta_mgr_.get_client_request_server().handle_control_cmd(message->get_cmd_info(), msg, 256, buf);
+        if (TFS_SUCCESS == iret)
+          rmsg = new StatusMessage(STATUS_MESSAGE_OK, buf);
+        else
+          rmsg = new StatusMessage(STATUS_MESSAGE_ERROR, buf);
+        TBSYS_LOG(DEBUG, "IRET: %d", iret);
+        iret = msg->reply(rmsg);
+      }
+      return iret;
+    }
 
     int NameServer::initialize_ns_global_info()
     {

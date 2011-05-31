@@ -85,7 +85,7 @@ namespace tfs
         }
 
         // cannot blocking!
-        bool handled = work_thread_.push(message, max_queue_size, false);
+        bool handled = work_thread_.push(msg, max_queue_size, false);
         iret = handled ? TFS_SUCCESS : EXIT_GENERAL_ERROR;
         if (TFS_SUCCESS != iret)
         {
@@ -94,7 +94,7 @@ namespace tfs
               "nameserver heartbeat busy! cannot accept this request from (%s)",
               tbsys::CNetUtil::addrToString( message->get_connection()->getPeerId()).c_str());
           // already repsonse, now can free this message object.
-          message->free();
+          msg->free();
         }
       }
       return iret;
