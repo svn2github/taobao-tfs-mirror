@@ -285,22 +285,6 @@ namespace tfs
     {
 
     }
-
-    int ReadRawDataMessage::deserialize(common::Stream& input)
-    {
-      return ReadDataMessage::deserialize(input);
-    }
-
-    int ReadRawDataMessage::serialize(common::Stream& output) const 
-    {
-      return ReadDataMessage::serialize(output);
-    }
-
-    int64_t ReadRawDataMessage::length() const
-    {
-      return ReadDataMessage::length();
-    }
-
     RespReadRawDataMessage::RespReadRawDataMessage() :
       RespReadDataMessage()
     {
@@ -310,21 +294,6 @@ namespace tfs
     RespReadRawDataMessage::~RespReadRawDataMessage()
     {
 
-    }
-
-    int RespReadRawDataMessage::deserialize(common::Stream& input)
-    {
-      return RespReadDataMessage::deserialize(input);
-    }
-
-    int RespReadRawDataMessage::serialize(common::Stream& output) const 
-    {
-      return RespReadDataMessage::serialize(output);
-    }
-
-    int64_t RespReadRawDataMessage::length() const
-    {
-      return RespReadDataMessage::length();
     }
 
     int ReadScaleImageMessage::ZoomData::deserialize(const char* data, const int64_t data_len, int64_t& pos)

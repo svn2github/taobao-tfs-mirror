@@ -21,34 +21,7 @@ namespace tfs
 {
   namespace message
   {
-#pragma pack(4)
-    struct ClientCmdInformation
-    {
-      int64_t value1_;
-      int64_t value2_;
-      int32_t value3_;
-      int32_t value4_;
-      int32_t  cmd_;
-      int serialize(char* data, const int64_t data_len, int64_t& pos) const;
-      int deserialize(const char* data, const int64_t data_len, int64_t& pos);
-      int64_t length() const;
-    };
-#pragma pack()
-
     // Client Command
-    enum ClientCmd
-    {
-      CLIENT_CMD_EXPBLK = 1,
-      CLIENT_CMD_LOADBLK,
-      CLIENT_CMD_COMPACT,
-      CLIENT_CMD_IMMEDIATELY_REPL,
-      CLIENT_CMD_REPAIR_GROUP,
-      CLIENT_CMD_SET_PARAM,
-      CLIENT_CMD_UNLOADBLK,
-      CLIENT_CMD_FORCE_DATASERVER_REPORT,
-      CLIENT_CMD_ROTATE_LOG
-    };
-
     class ClientCmdMessage: public common::BasePacket 
     {
     public:
@@ -97,9 +70,12 @@ namespace tfs
       {
         return info_.cmd_;
       }
-
+      inline const common::ClientCmdInformation& get_cmd_info() const
+      {
+        return info_;
+      }
     protected:
-      ClientCmdInformation info_;
+      common::ClientCmdInformation info_;
     };
   }
 }

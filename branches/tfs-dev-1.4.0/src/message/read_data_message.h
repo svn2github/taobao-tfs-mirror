@@ -125,7 +125,7 @@ namespace tfs
         common::FileInfo file_info_;
     };
 
-    class ReadDataMessageV3: public ReadDataMessage 
+    class ReadDataMessageV3: public ReadDataMessageV2 
     {
       public:
         ReadDataMessageV3();
@@ -144,9 +144,6 @@ namespace tfs
       public:
         ReadRawDataMessage();
         virtual ~ReadRawDataMessage();
-        virtual int serialize(common::Stream& output) const ;
-        virtual int deserialize(common::Stream& input);
-        virtual int64_t length() const;
     };
 
     class RespReadRawDataMessage: public RespReadDataMessage 
@@ -154,9 +151,6 @@ namespace tfs
       public:
         RespReadRawDataMessage();
         virtual ~RespReadRawDataMessage();
-        virtual int serialize(common::Stream& output) const ;
-        virtual int deserialize(common::Stream& input);
-        virtual int64_t length() const;
     };
 
     class ReadScaleImageMessage: public ReadDataMessageV2

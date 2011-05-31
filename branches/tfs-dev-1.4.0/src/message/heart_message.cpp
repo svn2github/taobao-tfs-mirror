@@ -168,7 +168,7 @@ namespace tfs
 
     int64_t MasterAndSlaveHeartMessage::length() const
     {
-      return sizeof(ns_identity_);
+      return ns_identity_.length();
     }
 
     MasterAndSlaveHeartResponseMessage::MasterAndSlaveHeartResponseMessage()
@@ -214,7 +214,7 @@ namespace tfs
 
     int64_t MasterAndSlaveHeartResponseMessage::length() const
     {
-      int64_t tmp = sizeof(ns_identity_);
+      int64_t tmp = ns_identity_.length();
       if (ns_identity_.flags_ == HEART_GET_DATASERVER_LIST_FLAGS_YES)
       {
         tmp += common::Serialization::get_vint64_length(ds_list_);
