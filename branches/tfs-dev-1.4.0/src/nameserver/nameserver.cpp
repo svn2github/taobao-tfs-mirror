@@ -17,15 +17,16 @@
  *      - modify 2010-04-23
  *
  */
+#include "nameserver.h"
+
 #include <Service.h>
 #include <Memory.hpp>
-#include "nameserver.h"
+#include <iterator>
 #include "common/error_msg.h"
 #include "common/config_item.h"
 #include "common/status_message.h"
-#include "global_factory.h"
 #include "common/client_manager.h"
-#include <iterator>
+#include "global_factory.h"
 
 using namespace tfs::common;
 using namespace tfs::message;

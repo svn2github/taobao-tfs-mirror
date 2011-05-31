@@ -20,9 +20,9 @@
 #ifndef TFS_NAMESERVER_NAMESERVER_H_
 #define TFS_NAMESERVER_NAMESERVER_H_
 
-#include "ns_define.h"
 #include "common/internal.h"
 #include "common/base_service.h"
+#include "ns_define.h"
 #include "layout_manager.h"
 #include "heart_manager.h"
 

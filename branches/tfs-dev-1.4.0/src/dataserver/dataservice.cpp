@@ -15,13 +15,14 @@
  *      - modify 2009-03-27
  *
  */
+#include "dataservice.h"
+
 #include <Memory.hpp>
 #include "common/new_client.h"
 #include "common/client_manager.h"
 #include "common/func.h"
 #include "common/directory_op.h"
-#include "client/fsname.h"
-#include "dataservice.h"
+#include "new_client/fsname.h"
 
 namespace tfs
 {
@@ -121,7 +122,7 @@ namespace tfs
       stat_ptr->add_sub_key("unlink-success");
       stat_ptr->add_sub_key("unlink-failed");
 
-      //TODO  stat_mgr_.add_entry(stat_ptr, SYSPARAM_DATASERVER.dump_stat_info_interval_);
+      stat_mgr_.add_entry(stat_ptr, SYSPARAM_DATASERVER.dump_stat_info_interval_);
 
       return TFS_SUCCESS;
     }
@@ -141,8 +142,7 @@ namespace tfs
         adr->port_ = SYSPARAM_DATASERVER.local_ns_port_;
       }
 
-      char* ip_list;
-      //TODO char* ip_list = SYSPARAM_DATASERVER.ns_addr_list_;
+      char* ip_list = SYSPARAM_DATASERVER.ns_addr_list_;
       if (NULL == ip_list)
       {
         TBSYS_LOG(ERROR, "nameserver real ip list is error");
@@ -216,7 +216,7 @@ namespace tfs
       TBSYS_LOG(INFO, "backup type: %d\n", SYSPARAM_DATASERVER.tfs_backup_type_);
       sync_mirror_ = new SyncBase(backup_type);
 
-      int ret = data_management_.init_block_files(SysParam::instance().filesystem_param());
+      int ret = data_management_.init_block_files(SYSPARAM_FILESYSPARAM);
       if (TFS_SUCCESS != ret)
       {
         TBSYS_LOG(ERROR, "dataservice::start, init block files fail! ret: %d\n", ret);
@@ -1467,22 +1467,22 @@ namespace tfs
 
     int DataService::remove_block(RemoveBlockMessage* message)
     {
-      const VUINT32* remove_blocks = message->get_remove_blocks();
+      const VUINT32& remove_blocks = message->get_remove_blocks();
       uint64_t peer_id = message->get_connection()->getPeerId();
 
       TBSYS_LOG(DEBUG, "remove block. peer id: %s", tbsys::CNetUtil::addrToString(peer_id).c_str());
 
-      int ret = data_management_.batch_remove_block(remove_blocks);
+      int ret = data_management_.batch_remove_block(&remove_blocks);
       if (TFS_SUCCESS != ret)
       {
         return message->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret, 
             "removeblock error, ret: %d", ret);
       }
 
-      if (remove_blocks->size() == 1U)
+      if (remove_blocks.size() == 1U)
       {
         RemoveBlockResponseMessage* msg = new RemoveBlockResponseMessage();
-        msg->set_block_id(*remove_blocks->begin());
+        msg->set_block_id(*(remove_blocks.begin()));
         message->reply(msg); 
       }
       else
@@ -1762,10 +1762,10 @@ namespace tfs
     int DataService::reload_config(ReloadConfigMessage* message)
     {
       int ret = TFS_SUCCESS;
-      //TODO if ((ret = SysParam::instance().load_data_server(CONFIG.get_config_file_name(), server_index_)) != TFS_SUCCESS)
-      if(true)
+      //TODO reload_config
+      if ((ret = SYSPARAM_DATASERVER.initialize(server_index_)) != TFS_SUCCESS)
       {
-        //TODO TBSYS_LOG(ERROR, "reload config sysparam load failed: %s\n", CONFIG.get_config_file_name().c_str());
+        TBSYS_LOG(ERROR, "reload config failed \n");
         return ret;
       }
       if (message->get_switch_cluster_flag() && sync_mirror_)

@@ -22,7 +22,7 @@
 
 #include "dataserver_define.h"
 #include "common/internal.h"
-#include "client/tfs_client_api.h"
+#include "new_client/tfs_client_api.h"
 
 namespace tfs
 {
