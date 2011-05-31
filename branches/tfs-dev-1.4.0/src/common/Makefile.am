@@ -3,8 +3,8 @@ AM_CPPFLAGS=-I$(TBLIB_ROOT)/include/tbsys\
 
 AM_LDFLAGS=-lrt -lpthread -ldl -fPIC
 
-LDADD=$(TBLIB_ROOT)/lib/libtbnet.a \
-      $(TBLIB_ROOT)/lib/libtbsys.a
+#LDADD=$(TBLIB_ROOT)/lib/libtbnet.a \
+#      $(TBLIB_ROOT)/lib/libtbsys.a
 
 
 noinst_LIBRARIES = libtfscommon.a
