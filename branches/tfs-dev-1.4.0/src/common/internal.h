@@ -58,9 +58,6 @@ namespace tfs
   }
   namespace common
   {
-#define CLIENT_POOL ClientManager::gClientManager
-#define CLIENT_SEND_PACKET(serverId,packet,packetHandler,args) ClientManager::gClientManager.m_connmgr->sendPacket(serverId,packet,packetHandler,args)
-
     //typedef base type
     typedef std::vector<int64_t> VINT64;
     typedef std::vector<uint64_t> VUINT64;
@@ -73,16 +70,6 @@ namespace tfs
     typedef std::vector<int8_t> VINT8;
     typedef std::vector<uint8_t> VUINT8;
     typedef std::vector<std::string> VSTRING;
-
-    enum OperationMode
-    {
-      READ_MODE = 1,
-      WRITE_MODE = 2,
-      APPEND_MODE = 4,
-      UNLINK_MODE = 8,
-      NEWBLK_MODE = 16,
-      NOLEASE_MODE = 32
-    };
 
     enum OplogFlag
     {
@@ -197,6 +184,19 @@ namespace tfs
       READ_VERSION_3 = 3
     };
 
+    enum ClientCmd
+    {
+      CLIENT_CMD_EXPBLK = 1,
+      CLIENT_CMD_LOADBLK,
+      CLIENT_CMD_COMPACT,
+      CLIENT_CMD_IMMEDIATELY_REPL,
+      CLIENT_CMD_REPAIR_GROUP,
+      CLIENT_CMD_SET_PARAM,
+      CLIENT_CMD_UNLOADBLK,
+      CLIENT_CMD_FORCE_DATASERVER_REPORT,
+      CLIENT_CMD_ROTATE_LOG
+    };
+
     enum PlanInterruptFlag
     {
       INTERRUPT_NONE= 0x00,
@@ -215,9 +215,9 @@ namespace tfs
     {
       PLAN_STATUS_NONE = 0x00,
       PLAN_STATUS_BEGIN,
-      PLAN_STATUS_TIMEOUT,
+      PLAN_STATUS_END,
       PLAN_STATUS_FAILURE,
-      PLAN_STATUS_END
+      PLAN_STATUS_TIMEOUT
     };
 
     enum PlanPriority
@@ -278,6 +278,7 @@ namespace tfs
       SSM_SCAN_CUTOVER_FLAG_YES = 0x01,
       SSM_SCAN_CUTOVER_FLAG_NO  = 0x02
     };
+
 
     struct SSMScanParameter
     {
@@ -553,6 +554,17 @@ namespace tfs
       int32_t port_;
     };
 
+    struct ClientCmdInformation
+    {
+      int64_t value1_;
+      int64_t value2_;
+      int32_t value3_;
+      int32_t value4_;
+      int32_t  cmd_;
+      int serialize(char* data, const int64_t data_len, int64_t& pos) const;
+      int deserialize(const char* data, const int64_t data_len, int64_t& pos);
+      int64_t length() const;
+    };
 #pragma pack()
 
     struct CrcCheckFile

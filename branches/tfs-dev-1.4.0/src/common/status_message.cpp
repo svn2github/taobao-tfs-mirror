@@ -42,8 +42,9 @@ namespace tfs
         {
           length_ = MAX_ERROR_MSG_LENGTH + 1;
         }
+        TBSYS_LOG(DEBUG, "LENGTH: %d", length_);
         memcpy(msg_, str, length_);
-        msg_[length_] = '\0';
+        msg_[length_ - 1] = '\0';
       }
     }
 
@@ -57,14 +58,7 @@ namespace tfs
       int32_t iret = output.set_int32(status_);
       if (TFS_SUCCESS == iret)
       {
-        iret = output.set_int32(length_);
-        if (length_ > 0)
-        {
-          if (TFS_SUCCESS == iret)
-          {
-            iret = output.set_bytes(msg_, length_);
-          }
-        }
+        iret = output.set_string(msg_);
       }
       return iret;
     }
@@ -74,22 +68,10 @@ namespace tfs
       int32_t iret = input.get_int32(&status_);
       if (TFS_SUCCESS == iret)
       {
-        iret = input.get_int32(&length_);
+        iret = input.get_string(msg_, MAX_ERROR_MSG_LENGTH);
         if (TFS_SUCCESS == iret)
         {
-          iret = length_ < 0 || length_ > MAX_ERROR_MSG_LENGTH ? TFS_ERROR : TFS_SUCCESS;
-          if (TFS_SUCCESS != iret)
-          {
-            TBSYS_LOG(ERROR, "error msg length: %d less than : %d", length_, MAX_ERROR_MSG_LENGTH);
-          }
-          else
-          {
-            if (length_ > 0)
-            {
-              iret = input.get_bytes(msg_, length_); 
-              msg_[length_ - 1] = '\0';
-            }
-          }
+          msg_[MAX_ERROR_MSG_LENGTH] = '\0';
         }
       }
       return iret;
@@ -97,13 +79,7 @@ namespace tfs
 
     int64_t StatusMessage::length() const
     {
-      int64_t tmp = length_ > 0 ? INT_SIZE + length_ : INT_SIZE;
-      return INT_SIZE + tmp;
-    }
-
-    void StatusMessage::dump() const
-    {
-      TBSYS_LOG(DEBUG, "status: %d, error msg: %s", status_, NULL == msg_ ? "null" : msg_); 
+      return INT_SIZE + Serialization::get_string_length(msg_);
     }
 
     const char* StatusMessage::get_error() const

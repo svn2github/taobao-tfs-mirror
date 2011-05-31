@@ -34,7 +34,6 @@ namespace tfs
       const char* get_error() const;
       int32_t get_status() const;
 
-      void dump() const;
     private:
       char msg_[MAX_ERROR_MSG_LENGTH + 1];/** include '\0'*/
       int32_t length_;

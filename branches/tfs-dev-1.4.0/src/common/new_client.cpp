@@ -294,7 +294,7 @@ namespace tfs
     int send_msg_to_server(uint64_t server, tbnet::Packet* message, const int64_t timeout)
     {
       NewClient* client = NewClientManager::get_instance().create_client();
-      tbnet::Packet* rmsg;
+      tbnet::Packet* rmsg = NULL;
       int iret = send_msg_to_server(server, client, message, rmsg, timeout);
       if (common::TFS_SUCCESS == iret)
       {

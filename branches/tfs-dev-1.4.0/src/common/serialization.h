@@ -199,7 +199,7 @@ namespace tfs
           if (TFS_SUCCESS == iret
               && length > 0)
           {
-            iret = data_len - pos > length * INT8_SIZE ? TFS_SUCCESS : TFS_ERROR;
+            iret = data_len - pos >= length * INT8_SIZE ? TFS_SUCCESS : TFS_ERROR;
             if (TFS_SUCCESS == iret)
             {
               int8_t tmp = 0;
@@ -228,7 +228,7 @@ namespace tfs
           if (TFS_SUCCESS == iret
               && length > 0)
           {
-            iret = data_len - pos > length * INT16_SIZE ? TFS_SUCCESS : TFS_ERROR;
+            iret = data_len - pos >= length * INT16_SIZE ? TFS_SUCCESS : TFS_ERROR;
             if (TFS_SUCCESS == iret)
             {
               int16_t tmp = 0;
@@ -257,7 +257,7 @@ namespace tfs
           if (TFS_SUCCESS == iret
               && length > 0)
           {
-            iret = data_len - pos > length * INT_SIZE ? TFS_SUCCESS : TFS_ERROR;
+            iret = data_len - pos >= length * INT_SIZE ? TFS_SUCCESS : TFS_ERROR;
             if (TFS_SUCCESS == iret)
             {
               int32_t tmp = 0;

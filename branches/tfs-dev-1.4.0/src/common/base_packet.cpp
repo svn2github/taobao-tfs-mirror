@@ -227,7 +227,7 @@ namespace tfs
     int BasePacket::reply_error_packet(const int32_t level, const char* file, const int32_t line,
                const char* function, const int32_t error_code, const char* fmt, ...) 
     {
-      char msgstr[MAX_ERROR_MSG_LENGTH + 1];/** include '\0'*/
+      char msgstr[MAX_ERROR_MSG_LENGTH + 1] = {'\0'};/** include '\0'*/
       va_list ap;
       va_start(ap, fmt);
       vsnprintf(msgstr, MAX_ERROR_MSG_LENGTH, fmt, ap);
