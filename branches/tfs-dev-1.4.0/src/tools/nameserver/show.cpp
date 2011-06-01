@@ -1,4 +1,5 @@
 #include "show.h"
+#include "common/status_message.h"
 
 using namespace __gnu_cxx;
 using namespace tbsys;
@@ -11,8 +12,8 @@ namespace tfs
 {
   namespace tools
   {
-    typedef map<std::string, int32_t> STR_INT_MAP;
-    static std::string LAST_DS_FILE = "";
+    typedef map<string, int32_t> STR_INT_MAP;
+    static string LAST_DS_FILE = "";
 
     int ShowInfo::set_ns_ip(const std::string& ns_ip_port)
     {
@@ -21,7 +22,7 @@ namespace tfs
       char pid_tmp[16];
       sprintf(pid_tmp, "%d", getpid());
       string pid(pid_tmp);
-      LAST_DS_FILE = "/tmp/.tfs_last_ds_" + pid; 
+      LAST_DS_FILE = "/tmp/.tfs_last_ds_" + pid;
 
       return TFS_SUCCESS;
     }
@@ -104,7 +105,7 @@ namespace tfs
         DirectoryOp::delete_file(LAST_DS_FILE.c_str());
       }
     }
-    int ShowInfo::get_file_handle(const std::string& filename, FILE** fp)
+    int ShowInfo::get_file_handle(const string& filename, FILE** fp)
     {
       if (filename != "")
       {
@@ -122,11 +123,8 @@ namespace tfs
       return TFS_SUCCESS;
     }
 
-    int ShowInfo::show_server(const int8_t type, const int32_t num, const std::string& server_ip_port, int32_t count, const int32_t interval, const std::string& filename)
+    int ShowInfo::show_server(const int8_t type, const int32_t num, const string& server_ip_port, int32_t count, const int32_t interval, const string& filename)
     {
-      last_server_map_.clear();
-      load_last_ds();
-      int32_t last_server_size = last_server_map_.size();
       FILE* fp = NULL;
       if (TFS_ERROR == get_file_handle(filename, &fp))
       {
@@ -138,6 +136,9 @@ namespace tfs
 
       while ((count > 0 || is_loop_) && !interrupt_)
       {
+        last_server_map_.clear();
+        load_last_ds();
+        int32_t last_server_size = last_server_map_.size();
 
         server_map_.clear();
         StatStruct stat;
@@ -181,16 +182,19 @@ namespace tfs
         while ((!((param.end_flag_ >> 4) & SSM_SCAN_END_FLAG_YES)) && !interrupt_)
         {
           param.data_.clear();
-          Message *ret_msg = NULL;
-          int ret = send_message_to_server(ns_ip_, &msg, &ret_msg);
+          tbnet::Packet* ret_msg = NULL;
+          NewClient* client = NewClientManager::get_instance().create_client();
+          int ret = send_msg_to_server(ns_ip_, client, &msg, ret_msg);
           if (TFS_SUCCESS != ret || ret_msg == NULL)
           {
-            TBSYS_LOG(ERROR, "get server info error");
+            TBSYS_LOG(ERROR, "get server info error, ret: %d", ret);
+            NewClientManager::get_instance().destroy_client(client);
             return TFS_ERROR;
           }
-          if(ret_msg->get_message_type() != SHOW_SERVER_INFORMATION_MESSAGE)
+          if(ret_msg->getPCode() != SHOW_SERVER_INFORMATION_MESSAGE)
           {
-            TBSYS_LOG(ERROR, "get invalid message type");
+            TBSYS_LOG(ERROR, "get invalid message type, pcode: %d", ret_msg->getPCode());
+            NewClientManager::get_instance().destroy_client(client);
             return TFS_ERROR;
           }
           ShowServerInformationMessage* message = dynamic_cast<ShowServerInformationMessage*>(ret_msg);
@@ -241,6 +245,8 @@ namespace tfs
           param.addition_param1_ = ret_param.addition_param1_;
           param.addition_param2_ = ret_param.addition_param2_;
           param.end_flag_ = ret_param.end_flag_;
+          NewClientManager::get_instance().destroy_client(client);
+          save_last_ds();
           if (once)
           {
             break;
@@ -257,14 +263,10 @@ namespace tfs
         }
       }
       if (fp != stdout) fclose(fp);
-      save_last_ds();
       return TFS_SUCCESS;
     }
-    int ShowInfo::show_machine(const int8_t type, const int32_t num, int32_t count, const int32_t interval, const std::string& filename)
+    int ShowInfo::show_machine(const int8_t type, const int32_t num, int32_t count, const int32_t interval, const string& filename)
     {
-      last_server_map_.clear();
-      load_last_ds();
-      int32_t last_server_size = last_server_map_.size();
       FILE* fp = NULL;
       if (TFS_ERROR == get_file_handle(filename, &fp))
       {
@@ -276,6 +278,9 @@ namespace tfs
 
       while ((count > 0 || is_loop_) && !interrupt_)
       {
+        last_server_map_.clear();
+        load_last_ds();
+        int32_t last_server_size = last_server_map_.size();
         server_map_.clear();
         machine_map_.clear();
         StatStruct stat;
@@ -292,16 +297,19 @@ namespace tfs
         while ((!((param.end_flag_ >> 4) & SSM_SCAN_END_FLAG_YES)) && !interrupt_)
         {
           param.data_.clear();
-          Message *ret_msg = NULL;
-          int ret = send_message_to_server(ns_ip_, &msg, &ret_msg);
+          tbnet::Packet*ret_msg = NULL;
+          NewClient* client = NewClientManager::get_instance().create_client();
+          int ret = send_msg_to_server(ns_ip_, client, &msg, ret_msg);
           if (TFS_SUCCESS != ret || ret_msg == NULL)
           {
-            TBSYS_LOG(ERROR, "get server info error");
+            TBSYS_LOG(ERROR, "get server info error, ret: %d", ret);
+            NewClientManager::get_instance().destroy_client(client);
             return TFS_ERROR;
           }
-          if(ret_msg->get_message_type() != SHOW_SERVER_INFORMATION_MESSAGE)
+          if(ret_msg->getPCode() != SHOW_SERVER_INFORMATION_MESSAGE)
           {
-            TBSYS_LOG(ERROR, "get invalid message type");
+            TBSYS_LOG(ERROR, "get invalid message type, pcode: %d", ret_msg->getPCode());
+            NewClientManager::get_instance().destroy_client(client);
             return TFS_ERROR;
           }
           ShowServerInformationMessage* message = dynamic_cast<ShowServerInformationMessage*>(ret_msg);
@@ -346,6 +354,8 @@ namespace tfs
           param.addition_param1_ = ret_param.addition_param1_;
           param.addition_param2_ = ret_param.addition_param2_;
           param.end_flag_ = ret_param.end_flag_;
+          NewClientManager::get_instance().destroy_client(client);
+          save_last_ds();
         }
 
         map<uint64_t, MachineShow>::iterator it = machine_map_.begin();
@@ -362,13 +372,12 @@ namespace tfs
         }
       }
 
-      save_last_ds();
       if (fp != stdout) fclose(fp);
       return TFS_SUCCESS;
 
     }
 
-    int ShowInfo::show_block(const int8_t type, const int32_t num, const uint32_t block_id, int32_t count, const int32_t interval, const std::string& filename)
+    int ShowInfo::show_block(const int8_t type, const int32_t num, const uint32_t block_id, int32_t count, const int32_t interval, const string& filename)
     {
       interrupt_ = false;
       is_loop_ = (count == 0);
@@ -388,12 +397,12 @@ namespace tfs
         param.child_type_ = SSM_CHILD_BLOCK_TYPE_INFO | SSM_CHILD_BLOCK_TYPE_SERVER;
 
         bool once = false;
-        if (block_id != -1)
+        if (static_cast<int32_t> (block_id) != -1)
         {
           param.should_actual_count_ = 0x10000;
           param.end_flag_ = SSM_SCAN_CUTOVER_FLAG_NO;
           param.should_actual_count_ = 0x10000;
-          param.start_next_position_ = ((block_id % 32) << 16);
+          param.start_next_position_ = ((block_id % 512) << 16);
           param.addition_param1_ = block_id;
           once = true;
         }
@@ -406,22 +415,25 @@ namespace tfs
         while ((!((param.end_flag_ >> 4) & SSM_SCAN_END_FLAG_YES)) && !interrupt_)
         {
           param.data_.clear();
-          Message *ret_msg = NULL;
-          int ret = send_message_to_server(ns_ip_, &msg, &ret_msg);
+          tbnet::Packet*ret_msg = NULL;
+          NewClient* client = NewClientManager::get_instance().create_client();
+          int ret = send_msg_to_server(ns_ip_, client, &msg, ret_msg);
           if (TFS_SUCCESS != ret || ret_msg == NULL)
           {
-            TBSYS_LOG(ERROR, "get block info error");
+            TBSYS_LOG(ERROR, "get block info error, ret: %d", ret);
+            NewClientManager::get_instance().destroy_client(client);
             return TFS_ERROR;
           }
           //TBSYS_LOG(DEBUG, "pCode: %d", ret_msg->get_message_type());
-          if(ret_msg->get_message_type() != SHOW_SERVER_INFORMATION_MESSAGE)
+          if(ret_msg->getPCode() != SHOW_SERVER_INFORMATION_MESSAGE)
           {
-            if (ret_msg->get_message_type() == STATUS_MESSAGE)
+            if (ret_msg->getPCode() == STATUS_MESSAGE)
             {
               StatusMessage* msg = dynamic_cast<StatusMessage*>(ret_msg);
               TBSYS_LOG(ERROR, "get invalid message type: error: %s", msg->get_error());
             }
-            TBSYS_LOG(ERROR, "get invalid message type");
+            TBSYS_LOG(ERROR, "get invalid message type, pcode: %d", ret_msg->getPCode());
+            NewClientManager::get_instance().destroy_client(client);
             return TFS_ERROR;
           }
           ShowServerInformationMessage* message = dynamic_cast<ShowServerInformationMessage*>(ret_msg);
@@ -441,7 +453,7 @@ namespace tfs
               //block.BlockBase::dump();
               if (once && (block.info_.block_id_ != block_id))
               {
-                TBSYS_LOG(ERROR, "block(%u) not exists", block_id);
+                TBSYS_LOG(ERROR, "block(%u)(%u) not exists", block.info_.block_id_, block_id);
                 break;
               }
               stat.add(block);
@@ -454,6 +466,7 @@ namespace tfs
           {
             param.addition_param1_ = ret_param.addition_param2_;
           }
+          NewClientManager::get_instance().destroy_client(client);
           if (once)
           {
             break;
