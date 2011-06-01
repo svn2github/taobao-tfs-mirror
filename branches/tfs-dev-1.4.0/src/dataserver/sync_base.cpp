@@ -65,14 +65,6 @@ namespace tfs
       }
     }
 
-    void* SyncBase::do_sync_mirror(void* args)
-    {
-      TBSYS_LOG(INFO, "tid: %u", Func::gettid());
-      SyncBase* ds = reinterpret_cast<SyncBase*>(args);
-      ds->run_sync_mirror();
-      return NULL;
-    }
-
     int SyncBase::do_second_sync(const void* data, const int64_t len, const int32_t, void* args)
     {
       SyncBase* rt = reinterpret_cast<SyncBase*>(args);

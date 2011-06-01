@@ -64,15 +64,6 @@ namespace tfs
       compact_block_monitor_.unlock();
     }
 
-    // the enterance of compact tasks
-    void* CompactBlock::do_compact_block(void* args)
-    {
-      TBSYS_LOG(INFO, "tid: %u", Func::gettid());
-      CompactBlock *ds = reinterpret_cast<CompactBlock *> (args);
-      ds->run_compact_block();
-      return NULL;
-    }
-
     //execute compacting tasks
     int CompactBlock::run_compact_block()
     {

@@ -33,98 +33,217 @@ namespace tfs
     using namespace message;
     using namespace std;
 
-    DataService::DataService()
+    DataService::DataService():
+        server_local_port_(-1),
+        stop_(0),
+        ns_ip_port_(-1),
+        repl_block_(NULL),
+        compact_block_(NULL),
+        sync_mirror_(NULL),
+        sync_mirror_status_(0),
+        max_cpu_usage_ (SYSPARAM_DATASERVER.max_cpu_usage_),
+        tfs_ds_stat_ ("tfs-ds-stat"),
+        heartbeat_thread_(0),
+        do_check_thread_(0),
+        replicate_block_threads_(NULL),
+        compact_block_thread_(0),
+        do_sync_mirror_thread_(0)
     {
       //init dataserver info
       memset(&data_server_info_, 0, sizeof(DataServerStatInfo));
-
-      server_local_port_ = 0;
-      stop_ = 0;
-      need_send_blockinfo_[0] = 1;
-      need_send_blockinfo_[1] = 1;
-      set_flag_[0] = false;
-      set_flag_[1] = false;
-      hb_ip_port_[0] = 0;
-      hb_ip_port_[1] = 0;
-      ns_ip_port_ = 0; //nameserver ip port;
-
-      repl_block_ = NULL;
-      compact_block_ = NULL;
-      sync_mirror_ = NULL;
-      sync_mirror_status_ = 0;
-
-      //hb_client_[0] = NULL;
-      //hb_client_[1] = NULL;
-      //client_ = NULL;
-      //compact_client_ = NULL;
-      thread_pids_ = NULL;
-
-      max_cpu_usage_ = SYSPARAM_DATASERVER.max_cpu_usage_;
-
-      timer_ = 0;
-      tfs_ds_stat_ = "tfs-ds-stat";
+      memset(need_send_blockinfo_, 1, sizeof(need_send_blockinfo_));
+      memset(set_flag_, 0, sizeof(set_flag_));
+      memset(hb_ip_port_, 0, sizeof(hb_ip_port_));
     }
 
     DataService::~DataService()
     {
-      //CLIENT_POOL.release_client(client_);
-      //CLIENT_POOL.release_client(hb_client_[0]);
-      //CLIENT_POOL.release_client(hb_client_[1]);
-      //CLIENT_POOL.release_client(compact_client_);
 
-      //client_ = NULL;
-      //hb_client_[0] = NULL;
-      //hb_client_[1] = NULL;
-      //compact_client_ = NULL;
     }
 
-    int DataService::init(const std::string& server_index)
+    int DataService::parse_common_line_args(int argc, char* argv[])
     {
-      server_index_ = server_index;
+      int32_t i = 0;
+      while ((i = getopt(argc, argv, "o:l:")) != EOF)
+      {
+        switch (i)
+        {
+          case 'o':
+            server_index_ = optarg;
+            break;
+          default:
+            TBSYS_LOG(ERROR, "%s", "invalid parameter");
+            break;
+        }
+      }
+      int32_t iret = server_index_.empty() ? TFS_ERROR : TFS_SUCCESS;
+      if (TFS_SUCCESS == iret)
+      {
+        iret = SYSPARAM_DATASERVER.initialize(server_index_);
+      }
+      return iret;
+    }
+
+    int DataService::get_listen_port() const
+    {
+      return SYSPARAM_DATASERVER.local_ds_port_ < 1024 
+              || SYSPARAM_DATASERVER.local_ds_port_ > 65535 ? -1 : SYSPARAM_DATASERVER.local_ds_port_;
+    }
+
+    const char* DataService::get_log_file_path()
+    {
+      const char* log_file_path = NULL;
+      const char* work_dir = get_work_dir();
+      if (work_dir != NULL)
+      {
+        SYSPARAM_DATASERVER.log_file_ = work_dir;
+        SYSPARAM_DATASERVER.log_file_ += "/logs/dataserver_"+server_index_;
+        SYSPARAM_DATASERVER.log_file_ += ".log";
+        log_file_path = SYSPARAM_DATASERVER.log_file_.c_str();
+      }
+      return log_file_path;
+    }
+
+    int DataService::initialize(int argc, char* argv[])
+    {
+      const char* work_dir = get_work_dir();
+      int32_t iret = TFS_ERROR;
+      if (NULL == work_dir)
+      {
+        iret = EXIT_GENERAL_ERROR;
+        TBSYS_LOG(ERROR, "%s", "dataserver not set work dir, must be exist");
+      }
+      if (TFS_SUCCESS == iret)
+      {
+        string storage_dir;
+        storage_dir.assign(work_dir);
+        storage_dir.append("/storage");
+        if (!DirectoryOp::create_full_path(storage_dir.c_str()))
+        {
+          iret = EXIT_GENERAL_ERROR;
+          TBSYS_LOG(ERROR, "create directory(%s) failed", storage_dir.c_str());
+        }
+        if ( TFS_SUCCESS == iret)
+        {
+          storage_dir.assign(work_dir);
+          storage_dir.append("/tmp");
+          if (!DirectoryOp::create_full_path(storage_dir.c_str()))
+          {
+            iret = EXIT_GENERAL_ERROR;
+            TBSYS_LOG(ERROR, "create directory(%s) failed", storage_dir.c_str());
+          }
+        }
+        if (TFS_SUCCESS == iret)
+        {
+          storage_dir.assign(work_dir);
+          storage_dir.append("/mirror");
+          if (!DirectoryOp::create_full_path(storage_dir.c_str()))
+          {
+            iret = EXIT_GENERAL_ERROR;
+            TBSYS_LOG(ERROR, "create directory(%s) failed", storage_dir.c_str());
+          }
+        }
+      }
+
       //set name server ip
-      int ret = set_ns_ip();
-      if (TFS_SUCCESS != ret)
+      if (TFS_SUCCESS == iret)
       {
-        return ret;
+        iret = set_ns_ip();
       }
 
-      data_server_info_.startup_time_ = time(NULL);
-      IpAddr* adr = reinterpret_cast<IpAddr*>(&data_server_info_.id_);
-      adr->ip_ = Func::get_local_addr(SYSPARAM_DATASERVER.dev_name_);
-      adr->port_ = SYSPARAM_DATASERVER.local_ds_port_;
-      TBSYS_LOG(INFO, "dataserver listen port: %d", adr->port_);
-
-      server_local_port_ = adr->port_;
-
-      //init file number to management
-      uint64_t file_number = ((adr->ip_ & 0xFFFFFF00) | (adr->port_ & 0xFF));
-      file_number = file_number << 32;
-      data_management_.set_file_number(file_number);
-      ds_requester_.init(data_server_info_.id_, ns_ip_port_, &data_management_);
-
-      //init global stat
-      if (timer_ == 0)
+      if (TFS_SUCCESS == iret)
       {
-        timer_ = new tbutil::Timer();
-      }
-      ret = stat_mgr_.initialize(timer_);
-      if (ret != TFS_SUCCESS)
-      {
-        TBSYS_LOG(ERROR, "%s", "initialize stat manager fail");
-        return ret;
-      }
-      int64_t current = tbsys::CTimeUtil::getTime();
-      StatEntry<string, string>::StatEntryPtr stat_ptr = new StatEntry<string, string>(tfs_ds_stat_, current, false);
-      stat_ptr->add_sub_key("read-success");
-      stat_ptr->add_sub_key("read-failed");
-      stat_ptr->add_sub_key("write-success");
-      stat_ptr->add_sub_key("write-failed");
-      stat_ptr->add_sub_key("unlink-success");
-      stat_ptr->add_sub_key("unlink-failed");
+        max_cpu_usage_  = SYSPARAM_DATASERVER.max_cpu_usage_;
+        data_server_info_.startup_time_ = time(NULL);
+        IpAddr* adr = reinterpret_cast<IpAddr*>(&data_server_info_.id_);
+        adr->ip_ = Func::get_local_addr(SYSPARAM_DATASERVER.dev_name_);
+        adr->port_ = SYSPARAM_DATASERVER.local_ds_port_;
+        TBSYS_LOG(INFO, "dataserver listen port: %d", adr->port_);
+        server_local_port_ = adr->port_;
 
-      stat_mgr_.add_entry(stat_ptr, SYSPARAM_DATASERVER.dump_stat_info_interval_);
+        //init file number to management
+        uint64_t file_number = ((adr->ip_ & 0xFFFFFF00) | (adr->port_ & 0xFF));
+        file_number = file_number << 32;
+        data_management_.set_file_number(file_number);
+        ds_requester_.init(data_server_info_.id_, ns_ip_port_, &data_management_);
 
-      return TFS_SUCCESS;
+        //init global stat
+        iret = stat_mgr_.initialize(get_timer());
+        if (iret != TFS_SUCCESS)
+        {
+          TBSYS_LOG(ERROR, "%s", "initialize stat manager fail");
+        }
+        else
+        {
+          int64_t current = tbsys::CTimeUtil::getTime();
+          StatEntry<string, string>::StatEntryPtr stat_ptr = new StatEntry<string, string>(tfs_ds_stat_, current, false);
+          stat_ptr->add_sub_key("read-success");
+          stat_ptr->add_sub_key("read-failed");
+          stat_ptr->add_sub_key("write-success");
+          stat_ptr->add_sub_key("write-failed");
+          stat_ptr->add_sub_key("unlink-success");
+          stat_ptr->add_sub_key("unlink-failed");
+
+          stat_mgr_.add_entry(stat_ptr, SYSPARAM_DATASERVER.dump_stat_info_interval_);
+        }
+
+        if (TFS_SUCCESS == iret)
+        {
+          repl_block_ = new ReplicateBlock(ns_ip_port_);
+          compact_block_ = new CompactBlock(ns_ip_port_, data_server_info_.id_);
+
+          //backup type:1.tfs 2.nfs
+          int backup_type = SYSPARAM_DATASERVER.tfs_backup_type_;
+          TBSYS_LOG(INFO, "backup type: %d\n", SYSPARAM_DATASERVER.tfs_backup_type_);
+          sync_mirror_ = new SyncBase(backup_type);
+
+          iret = data_management_.init_block_files(SYSPARAM_FILESYSPARAM);
+          if (TFS_SUCCESS != iret)
+          {
+            TBSYS_LOG(ERROR, "dataservice::start, init block files fail! ret: %d\n", iret);
+          }
+        }
+
+        if (TFS_SUCCESS == iret)
+        {
+          data_management_.get_ds_filesystem_info(data_server_info_.block_count_, data_server_info_.use_capacity_,
+              data_server_info_.total_capacity_);
+          data_server_info_.current_load_ = Func::get_load_avg();
+          TBSYS_LOG(INFO,
+              "block file status, block count: %d, use capacity: %" PRI64_PREFIX "d, total capacity: %" PRI64_PREFIX "d",
+              data_server_info_.block_count_, data_server_info_.use_capacity_, data_server_info_.total_capacity_);
+
+          block_checker_.init(data_server_info_.id_, &ds_requester_);
+        }
+
+        //TODO test server(nameserver) is alive
+        if (TFS_SUCCESS == iret)
+        {
+
+        }
+
+        if (TFS_SUCCESS == iret)
+        {
+          heartbeat_thread_ = new HeartBeatThreadHelper(*this);
+          do_check_thread_  = new DoCheckThreadHelper(*this);
+          compact_block_thread_ = new CompactBlockThreadHelper(*this);
+          do_sync_mirror_thread_ = new DoSyncMirrorThreadHelper(*this);
+          replicate_block_threads_ =  new ReplicateBlockThreadHelperPtr[SYSPARAM_DATASERVER.replicate_thread_count_];
+          for (int32_t i = 0; i < SYSPARAM_DATASERVER.replicate_thread_count_; ++i)
+          {
+            replicate_block_threads_[i] = new ReplicateBlockThreadHelper(*this);
+          }
+        }
+        if (TFS_SUCCESS == iret)
+        {
+          //set write and read log
+          init_log_file(READ_STAT_LOGGER, SYSPARAM_DATASERVER.read_stat_log_file_);
+          init_log_file(WRITE_STAT_LOGGER, SYSPARAM_DATASERVER.write_stat_log_file_);
+
+          TBSYS_LOG(INFO, "dataservice start");
+        }
+      }
+      return iret;
     }
 
     int DataService::set_ns_ip()
@@ -142,7 +261,7 @@ namespace tfs
         adr->port_ = SYSPARAM_DATASERVER.local_ns_port_;
       }
 
-      char* ip_list = SYSPARAM_DATASERVER.ns_addr_list_;
+      const char* ip_list = SYSPARAM_DATASERVER.ns_addr_list_;
       if (NULL == ip_list)
       {
         TBSYS_LOG(ERROR, "nameserver real ip list is error");
@@ -200,192 +319,74 @@ namespace tfs
       return TFS_SUCCESS;
     }
 
-    int DataService::start(VINT* pids)
+    int DataService::destroy_service()
     {
-      //client_ = CLIENT_POOL.get_client(ns_ip_port_);
-      //hb_client_[0] = CLIENT_POOL.get_client(hb_ip_port_[0]);
-      //hb_client_[1] = CLIENT_POOL.get_client(hb_ip_port_[1]);
-      //compact_client_ = CLIENT_POOL.get_client(ns_ip_port_);
-      thread_pids_ = pids;
-
-      repl_block_ = new ReplicateBlock(ns_ip_port_);
-      compact_block_ = new CompactBlock(ns_ip_port_, data_server_info_.id_);
-
-      //backup type:1.tfs 2.nfs
-      int backup_type = SYSPARAM_DATASERVER.tfs_backup_type_;
-      TBSYS_LOG(INFO, "backup type: %d\n", SYSPARAM_DATASERVER.tfs_backup_type_);
-      sync_mirror_ = new SyncBase(backup_type);
-
-      int ret = data_management_.init_block_files(SYSPARAM_FILESYSPARAM);
-      if (TFS_SUCCESS != ret)
+      int32_t iret = TFS_SUCCESS;
+      bool multiple_stop = false;
       {
-        TBSYS_LOG(ERROR, "dataservice::start, init block files fail! ret: %d\n", ret);
-        return ret;
+        tbutil::Mutex::Lock lock(stop_mutex_);
+        multiple_stop = 1 == stop_ ?  true : false;
+        if (!multiple_stop)
+          stop_ = 1;
       }
-
-      data_management_.get_ds_filesystem_info(data_server_info_.block_count_, data_server_info_.use_capacity_,
-          data_server_info_.total_capacity_);
-      data_server_info_.current_load_ = Func::get_load_avg();
-      TBSYS_LOG(INFO,
-          "block file status, block count: %d, use capacity: %" PRI64_PREFIX "d, total capacity: %" PRI64_PREFIX "d",
-          data_server_info_.block_count_, data_server_info_.use_capacity_, data_server_info_.total_capacity_);
-
-      block_checker_.init(data_server_info_.id_, &ds_requester_);
-
-      //start connect namesever
-      if (0 == ns_ip_port_)
+      if (!multiple_stop)
       {
-        TBSYS_LOG(ERROR, "nameserver ip not set.");
-        return TFS_ERROR;
+        TBSYS_LOG(INFO, "Dataserver stopping...");
+
+        //global stat destroy
+        stat_mgr_.destroy();
+        if (NULL != sync_mirror_)
+        {
+          sync_mirror_->stop();
+        }
+        if (NULL != repl_block_)
+        {
+          repl_block_->stop();
+        }
+        if (NULL != compact_block_)
+        {
+          compact_block_->stop();
+        }
+        block_checker_.stop();
+
+        if (0 != heartbeat_thread_)
+        {
+          heartbeat_thread_->join();
+          heartbeat_thread_ = 0;
+        }
+        if (0 != do_check_thread_)
+        {
+          do_check_thread_->join();
+          do_check_thread_ = 0;
+        }
+        if (0 != compact_block_thread_)
+        {
+          compact_block_thread_->join();
+          compact_block_thread_ = 0;
+        } 
+        if (0 != do_sync_mirror_thread_)
+        {
+          do_sync_mirror_thread_->join();
+          do_sync_mirror_thread_ = 0;
+        }
+        if (NULL != replicate_block_threads_)
+        {
+          for (int32_t i = 0; i < SYSPARAM_DATASERVER.replicate_thread_count_; ++i)
+          {
+            if (0 != replicate_block_threads_[i])
+            {
+              replicate_block_threads_[i]->join();
+              replicate_block_threads_[i] = 0;
+            }
+          }
+        }
+        tbsys::gDeleteA(replicate_block_threads_);
+        tbsys::gDelete(repl_block_);
+        tbsys::gDelete(compact_block_);
+        tbsys::gDelete(sync_mirror_);
+        TBSYS_LOG(INFO, "Dataserver stopped.");
       }
-
-      //retry
-      //TODO test ns alive
-      //while (0 == stop_ && TFS_SUCCESS != client_->connect())
-      //{
-      //  TBSYS_LOG(ERROR, "connect to nameserver fail, sleep 5s, retry\n");
-      //  Func::sleep(5, &stop_);
-      //}
-      if (stop_)
-        return TFS_ERROR;
-
-      // heartbeat
-      // TODO test ns_hb_alive
-      //while (0 == stop_ && (TFS_SUCCESS != hb_client_[0]->connect() && TFS_SUCCESS != hb_client_[1]->connect()))
-      //{
-      //  TBSYS_LOG(ERROR, "hb connect to nameserver fail, sleep 5s, retry\n");
-      //  Func::sleep(5, &stop_);
-      //}
-      if (stop_)
-        return TFS_ERROR;
-
-      // compact
-      // test ns alive
-      //while (0 == stop_ && TFS_SUCCESS != compact_client_->connect())
-      //{
-      //  TBSYS_LOG(ERROR, "compact connect to nameserver fail, sleep 5s, retry\n");
-      //  Func::sleep(5, &stop_);
-      //}
-      if (stop_)
-        return TFS_ERROR;
-
-      pthread_t tid;
-      //start heartbeat thread
-      pthread_create(&tid, NULL, DataService::do_heart, this);
-      thread_pids_->push_back(tid);
-
-      //start check expire data thread
-      pthread_create(&tid, NULL, DataService::do_check, this);
-      thread_pids_->push_back(tid);
-
-      //start replicate thread
-      int32_t replicate_thread_count = SYSPARAM_DATASERVER.replicate_thread_count_;
-      for (int32_t i = 0; i < replicate_thread_count; ++i)
-      {
-        pthread_create(&tid, NULL, ReplicateBlock::do_replicate_block, repl_block_);
-        thread_pids_->push_back(tid);
-      }
-
-      //start compact thread
-      pthread_create(&tid, NULL, CompactBlock::do_compact_block, compact_block_);
-      thread_pids_->push_back(tid);
-
-      //start sync thread
-      pthread_create(&tid, NULL, SyncBase::do_sync_mirror, sync_mirror_);
-      thread_pids_->push_back(tid);
-
-      //set process thread num for client
-      int32_t thread_count = SYSPARAM_DATASERVER.client_thread_client_;
-      task_queue_thread_.setThreadParameter(thread_count, this, NULL);
-      task_queue_thread_.start();
-
-      //set process thread num for dataservers
-      thread_count = SYSPARAM_DATASERVER.server_thread_client_;
-      ds_task_queue_thread_.setThreadParameter(thread_count, this, NULL);
-      ds_task_queue_thread_.start();
-
-      //set write and read log
-      init_log_file(READ_STAT_LOGGER, SYSPARAM_DATASERVER.read_stat_log_file_);
-      init_log_file(WRITE_STAT_LOGGER, SYSPARAM_DATASERVER.write_stat_log_file_);
-
-      TBSYS_LOG(INFO, "dataservice start");
-
-      return TFS_SUCCESS;
-    }
-
-    int DataService::stop()
-    {
-      stop_mutex_.lock();
-      if (stop_)
-      {
-        stop_mutex_.unlock();
-        return TFS_SUCCESS;
-      }
-      TBSYS_LOG(INFO, "Dataserver stopping...");
-      //stop task queue
-      task_queue_thread_.stop();
-      ds_task_queue_thread_.stop();
-      task_queue_thread_.wait();
-      ds_task_queue_thread_.wait();
-      stop_ = 1;
-      stop_mutex_.unlock();
-      //sleep(1);
-
-      //global stat destroy
-      stat_mgr_.destroy();
-      if (timer_ != 0)
-      {
-        timer_->destroy();
-      }
-
-      if (NULL != sync_mirror_)
-      {
-        sync_mirror_->stop();
-      }
-      if (NULL != repl_block_)
-      {
-        repl_block_->stop();
-      }
-      if (NULL != compact_block_)
-      {
-        compact_block_->stop();
-      }
-
-      block_checker_.stop();
-
-      void* retp;
-      for (uint32_t i = 0; i < thread_pids_->size(); ++i)
-      {
-        pthread_join(thread_pids_->at(i), &retp);
-      }
-      thread_pids_->clear();
-
-      tbsys::gDelete(repl_block_);
-      tbsys::gDelete(compact_block_);
-      tbsys::gDelete(sync_mirror_);
-
-      TBSYS_LOG(INFO, "Dataserver stopped.");
-      return TFS_SUCCESS;
-    }
-
-    int DataService::wait()
-    {
-      task_queue_thread_.wait();
-      ds_task_queue_thread_.wait();
-      stat_mgr_.wait_for_shut_down();
-      if (timer_ != 0)
-      {
-        timer_  = 0;
-      }
-      return TFS_SUCCESS;
-    }
-
-    void* DataService::do_heart(void *args)
-    {
-      TBSYS_LOG(INFO, "tid: %u", Func::gettid());
-      DataService *ds = reinterpret_cast<DataService*> (args);
-      ds->run_heart();
-      return NULL;
+      return iret;
     }
 
     int DataService::run_heart()
@@ -420,14 +421,6 @@ namespace tfs
       send_blocks_to_ns(0);
       send_blocks_to_ns(1);
       return TFS_SUCCESS;
-    }
-
-    void* DataService::do_check(void *args)
-    {
-      TBSYS_LOG(INFO, "tid: %u", Func::gettid());
-      DataService *ds = reinterpret_cast<DataService*> (args);
-      ds->run_check();
-      return NULL;
     }
 
     int DataService::run_check()
@@ -582,58 +575,76 @@ namespace tfs
       }
     }
 
-    int DataService::command_done(BasePacket* send_message, bool status, const string& error)
+    int DataService::callback(common::NewClient* client)
     {
-      if (WRITE_DATA_MESSAGE == send_message->getPCode())
+      int32_t iret = NULL != client ? TFS_SUCCESS : TFS_ERROR;
+      if (TFS_SUCCESS == iret)
       {
-        WriteDataMessage* message = dynamic_cast<WriteDataMessage*> (send_message);
-        if (!status)
+        NewClient::RESPONSE_MSG_MAP* sresponse = client->get_success_response();
+        NewClient::RESPONSE_MSG_MAP* fresponse = client->get_fail_response();
+        iret = NULL != sresponse && fresponse != NULL ? TFS_SUCCESS : TFS_ERROR;
+        if (TFS_SUCCESS == iret)
         {
-          TBSYS_LOG(ERROR,
-              "WriteDataMessage fail. chid: %d, blockid: %u, fileid: %" PRI64_PREFIX "u, number: %" PRI64_PREFIX "u\n",
-              message->getChannelId(), message->get_block_id(), message->get_file_id(), message->get_file_number());
-          data_management_.erase_data_file(message->get_file_number());
+          tbnet::Packet* packet = client->get_source_msg();
+          assert(NULL != packet);
+          int32_t pcode = packet->getPCode();
+          bool all_success = sresponse->size() == client->get_send_id_sign().size();
+          common::BasePacket* bpacket= dynamic_cast<BasePacket*>(packet);
+          if (WRITE_DATA_MESSAGE == pcode)
+          {
+            WriteDataMessage* message = dynamic_cast<WriteDataMessage*>(bpacket);
+            if (!all_success)
+            {
+              TBSYS_LOG(ERROR,
+                  "WriteDataMessage fail. chid: %d, blockid: %u, fileid: %" PRI64_PREFIX "u, number: %" PRI64_PREFIX "u\n",
+                  message->getChannelId(), message->get_block_id(), message->get_file_id(), message->get_file_number());
+              data_management_.erase_data_file(message->get_file_number());
+            }
+            StatusMessage* reply_msg =  all_success ?
+              new StatusMessage(STATUS_MESSAGE_OK, "write data complete"):
+              new StatusMessage(STATUS_MESSAGE_ERROR, "write data fail");
+            bpacket->reply(reply_msg);
+          }
+          else if (RENAME_FILE_MESSAGE == pcode)
+          {
+            RenameFileMessage* message = dynamic_cast<RenameFileMessage*> (bpacket);
+            uint32_t block_id = message->get_block_id();
+            uint64_t file_id = message->get_file_id();
+            uint64_t new_file_id = message->get_new_file_id();
+            int32_t option_flag = message->get_option_flag();
+            if (all_success && 0 == (option_flag & TFS_FILE_NO_SYNC_LOG))
+            {
+              sync_mirror_->write_sync_log(OPLOG_RENAME, block_id, new_file_id, file_id);
+            }
+            else if (!all_success)
+            {
+              TBSYS_LOG(
+                  ERROR,
+                  "RenameFileMessage fail. chid: %d, blockid: %u, fileid: %" PRI64_PREFIX "u, new fileid: %" PRI64_PREFIX "u\n",
+                  message->getChannelId(), block_id, file_id, new_file_id);
+            }
+            StatusMessage* reply_msg =  all_success ?
+              new StatusMessage(STATUS_MESSAGE_OK, "rename complete"):
+              new StatusMessage(STATUS_MESSAGE_ERROR, "rename fail");
+            bpacket->reply(reply_msg);
+          }
+          else if (UNLINK_FILE_MESSAGE == pcode)
+          {
+            // do nothing. unlink don't care other ds response
+            UnlinkFileMessage* message = dynamic_cast<UnlinkFileMessage*> (bpacket);
+            if (!all_success)
+            {
+              TBSYS_LOG(WARN, "UnlinkFileMessage fail. chid:%d, blockid: %u, fileid: %" PRI64_PREFIX "u\n",
+                  message->getChannelId(), message->get_block_id(), message->get_file_id());
+            }
+          }
+          else
+          {
+            TBSYS_LOG(ERROR, "callback handle error message pcode: %d", pcode);
+          }
         }
-
-        //TODO return DefaultAsyncCallback::command_done(send_message, status, error);
       }
-      else if (RENAME_FILE_MESSAGE == send_message->getPCode())
-      {
-        RenameFileMessage* message = dynamic_cast<RenameFileMessage*> (send_message);
-        uint32_t block_id = message->get_block_id();
-        uint64_t file_id = message->get_file_id();
-        uint64_t new_file_id = message->get_new_file_id();
-        int32_t option_flag = message->get_option_flag();
-        if (status && 0 == (option_flag & TFS_FILE_NO_SYNC_LOG))
-        {
-          sync_mirror_->write_sync_log(OPLOG_RENAME, block_id, new_file_id, file_id);
-        }
-        else if (!status)
-        {
-          TBSYS_LOG(
-              ERROR,
-              "RenameFileMessage fail. chid: %d, blockid: %u, fileid: %" PRI64_PREFIX "u, new fileid: %" PRI64_PREFIX "u\n",
-              message->getChannelId(), block_id, file_id, new_file_id);
-        }
-        //TODO return DefaultAsyncCallback::command_done(send_message, status, error);
-      }
-      else if (UNLINK_FILE_MESSAGE == send_message->getPCode())
-      {
-        // do nothing. unlink don't care other ds response
-        UnlinkFileMessage* message = dynamic_cast<UnlinkFileMessage*> (send_message);
-        if (!status)
-        {
-          TBSYS_LOG(WARN, "UnlinkFileMessage fail. chid:%d, blockid: %u, fileid: %" PRI64_PREFIX "u\n",
-              message->getChannelId(), message->get_block_id(), message->get_file_id());
-        }
-        return TFS_SUCCESS;
-      }
-      else
-      {
-        TBSYS_LOG(ERROR, "command done handle error message type: %d\n", send_message->getPCode());
-      }
-
-      return TFS_ERROR;
+      return iret;
     }
 
     bool DataService::access_deny(BasePacket* message)
@@ -653,156 +664,149 @@ namespace tfs
       return false;
     }
 
-    tbnet::IPacketHandler::HPRetCode DataService::handlePacket(tbnet::Connection* connection, tbnet::Packet* packet)
+    tbnet::IPacketHandler::HPRetCode DataService::handlePacket(tbnet::Connection *connection, tbnet::Packet *packet)
     {
-      if (NULL == connection || NULL == packet)
+      tbnet::IPacketHandler::HPRetCode hret = tbnet::IPacketHandler::FREE_CHANNEL;
+      bool bret = NULL != connection && NULL != packet;
+      if (bret)
       {
-        TBSYS_LOG(ERROR, "connection or packet ptr NULL");
-        return tbnet::IPacketHandler::FREE_CHANNEL;
-      }
-
-      //control packet
-      if (!packet->isRegularPacket())
-      {
-        TBSYS_LOG(ERROR, "ControlPacket, cmd: %d", dynamic_cast<tbnet::ControlPacket*>(packet)->getCommand());
-        return tbnet::IPacketHandler::FREE_CHANNEL;
-      }
-
-      BasePacket* bp = dynamic_cast<BasePacket*>(packet);
-      bp->set_connection(connection);
-      bp->set_direction(DIRECTION_RECEIVE);
-
-      if (connection != NULL && connection->getLocalPort() == server_local_port_ + 1)
-      {
-        ds_task_queue_thread_.push(bp);
-      }
-      else
-      {
-        // add access control by message type
-        if (!access_deny(bp))
+        TBSYS_LOG(DEBUG, "receive pcode : %d", packet->getPCode());
+        if (!packet->isRegularPacket())
         {
-          task_queue_thread_.push(bp);
+          bret = false;
+          TBSYS_LOG(WARN, "control packet, pcode: %d", dynamic_cast<tbnet::ControlPacket*>(packet)->getCommand());
         }
-        else
+        if (bret)
         {
-          bp->reply_error_packet(TBSYS_LOG_LEVEL(WARN), STATUS_MESSAGE_ACCESS_DENIED,
-              "you client %s access been denied. msgtype: %d", tbsys::CNetUtil::addrToString(
-                  connection->getPeerId()).c_str(), bp->getPCode());
-          // packet denied, must free
-          bp->free();
-          return tbnet::IPacketHandler::FREE_CHANNEL;
+          BasePacket* bpacket = dynamic_cast<BasePacket*>(packet);
+          bpacket->set_connection(connection);
+          bpacket->setExpireTime(MAX_RESPONSE_TIME);
+          bpacket->set_direction(static_cast<DirectionStatus>(bpacket->get_direction()|DIRECTION_RECEIVE));
+
+          if (bpacket->is_enable_dump())
+          {
+            bpacket->dump(); 
+          }
+          // add access control by message type
+          if (!access_deny(bpacket))
+          {
+            hret = tbnet::IPacketHandler::KEEP_CHANNEL;
+            push(bpacket);
+          }
+          else
+          {
+            bpacket->reply_error_packet(TBSYS_LOG_LEVEL(WARN), STATUS_MESSAGE_ACCESS_DENIED,
+                "you client %s access been denied. msgtype: %d", tbsys::CNetUtil::addrToString(
+                  connection->getPeerId()).c_str(), packet->getPCode());
+            // packet denied, must free
+            bpacket->free();
+          }
         }
       }
-
-      return tbnet::IPacketHandler::KEEP_CHANNEL;
+      return hret;
     }
 
-    bool DataService::handlePacketQueue(tbnet::Packet* packet, void* )
+    bool DataService::handlePacketQueue(tbnet::Packet* packet, void* args)
     {
-      BasePacket* message = dynamic_cast<BasePacket*>(packet);
-      if (NULL == message)
+      bool bret = BaseService::handlePacketQueue(packet, args);
+      if (bret)
       {
-        TBSYS_LOG(ERROR, "process packet can not convert to message\n");
-        return true;
+        int32_t pcode = packet->getPCode();
+        TBSYS_LOG(DEBUG, "PCODE: %d", pcode);
+        int32_t ret = LOCAL_PACKET == pcode ? TFS_ERROR : common::TFS_SUCCESS;
+        if (TFS_SUCCESS == ret)
+        {
+          switch (pcode)
+          {
+            case CREATE_FILENAME_MESSAGE:
+              ret = create_file_number(dynamic_cast<CreateFilenameMessage*>(packet));
+              break;
+            case WRITE_DATA_MESSAGE:
+              ret = write_data(dynamic_cast<WriteDataMessage*>(packet));
+              break;
+            case CLOSE_FILE_MESSAGE:
+              ret = close_write_file(dynamic_cast<CloseFileMessage*>(packet));
+              break;
+            case WRITE_RAW_DATA_MESSAGE:
+              ret = write_raw_data(dynamic_cast<WriteRawDataMessage*>(packet));
+              break;
+            case WRITE_INFO_BATCH_MESSAGE:
+              ret = batch_write_info(dynamic_cast<WriteInfoBatchMessage*>(packet));
+              break;
+            case READ_DATA_MESSAGE_V2:
+              ret = read_data_extra(dynamic_cast<ReadDataMessageV2*>(packet), READ_VERSION_2);
+              break;
+            case READ_DATA_MESSAGE_V3:
+              ret = read_data_extra(dynamic_cast<ReadDataMessageV3*>(packet), READ_VERSION_3);
+              break;
+            case READ_DATA_MESSAGE:
+              ret = read_data(dynamic_cast<ReadDataMessage*>(packet));
+              break;
+            case READ_RAW_DATA_MESSAGE:
+              ret = read_raw_data(dynamic_cast<ReadRawDataMessage*>(packet));
+              break;
+            case FILE_INFO_MESSAGE:
+              ret = read_file_info(dynamic_cast<FileInfoMessage*>(packet));
+              break;
+            case UNLINK_FILE_MESSAGE:
+              ret = unlink_file(dynamic_cast<UnlinkFileMessage*>(packet));
+              break;
+            case RENAME_FILE_MESSAGE:
+              ret = rename_file(dynamic_cast<RenameFileMessage*>(packet));
+              break;
+            case NEW_BLOCK_MESSAGE:
+              ret = new_block(dynamic_cast<NewBlockMessage*>(packet));
+              break;
+            case REMOVE_BLOCK_MESSAGE:
+              ret = remove_block(dynamic_cast<RemoveBlockMessage*>(packet));
+              break;
+
+            case LIST_BLOCK_MESSAGE:
+              ret = list_blocks(dynamic_cast<ListBlockMessage*>(packet));
+              break;
+            case LIST_BITMAP_MESSAGE:
+              ret = query_bit_map(dynamic_cast<ListBitMapMessage*>(packet));
+              break;
+            case REPLICATE_BLOCK_MESSAGE:
+              ret = replicate_block_cmd(dynamic_cast<ReplicateBlockMessage*>(packet));
+              break;
+            case COMPACT_BLOCK_MESSAGE:
+              ret = compact_block_cmd(dynamic_cast<CompactBlockMessage*>(packet));
+              break;
+            case CRC_ERROR_MESSAGE:
+              ret = crc_error_cmd(dynamic_cast<CrcErrorMessage*>(packet));
+              break;
+            case GET_BLOCK_INFO_MESSAGE:
+              ret = get_block_info(dynamic_cast<GetBlockInfoMessage*>(packet));
+              break;
+            case RESET_BLOCK_VERSION_MESSAGE:
+              ret = reset_block_version(dynamic_cast<ResetBlockVersionMessage*>(packet));
+              break;
+            case GET_SERVER_STATUS_MESSAGE:
+              ret = get_server_status(dynamic_cast<GetServerStatusMessage*>(packet));
+              break;
+            case RELOAD_CONFIG_MESSAGE:
+              ret = reload_config(dynamic_cast<ReloadConfigMessage*>(packet));
+              break;
+            case STATUS_MESSAGE:
+              ret = get_ping_status(dynamic_cast<StatusMessage*>(packet));
+              break;
+            case CLIENT_CMD_MESSAGE:
+              ret = client_command(dynamic_cast<ClientCmdMessage*>(packet));
+              break;
+            default:
+              TBSYS_LOG(ERROR, "process packet pcode: %d\n", pcode);
+              ret = TFS_ERROR;
+              break;
+          }
+          if (common::TFS_SUCCESS != ret)
+          {
+            common::BasePacket* msg = dynamic_cast<common::BasePacket*>(packet);
+            msg->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret, "execute message failed");
+          }
+        }
       }
-
-      int ret = TFS_SUCCESS;
-      switch (message->getPCode())
-      {
-      case CREATE_FILENAME_MESSAGE:
-        ret = create_file_number(dynamic_cast<CreateFilenameMessage*>(message));
-        break;
-      case WRITE_DATA_MESSAGE:
-        ret = write_data(dynamic_cast<WriteDataMessage*>(message));
-        break;
-      case CLOSE_FILE_MESSAGE:
-        ret = close_write_file(dynamic_cast<CloseFileMessage*>(message));
-        break;
-      case WRITE_RAW_DATA_MESSAGE:
-        ret = write_raw_data(dynamic_cast<WriteRawDataMessage*>(message));
-        break;
-      case WRITE_INFO_BATCH_MESSAGE:
-        ret = batch_write_info(dynamic_cast<WriteInfoBatchMessage*>(message));
-        break;
-      case READ_DATA_MESSAGE_V2:
-        ret = read_data_extra(dynamic_cast<ReadDataMessageV2*>(message), READ_VERSION_2);
-        break;
-      case READ_DATA_MESSAGE_V3:
-        ret = read_data_extra(dynamic_cast<ReadDataMessageV3*>(message), READ_VERSION_3);
-        break;
-      case READ_DATA_MESSAGE:
-        ret = read_data(dynamic_cast<ReadDataMessage*>(message));
-        break;
-      case READ_RAW_DATA_MESSAGE:
-        ret = read_raw_data(dynamic_cast<ReadRawDataMessage*>(message));
-        break;
-      case FILE_INFO_MESSAGE:
-        ret = read_file_info(dynamic_cast<FileInfoMessage*>(message));
-        break;
-
-      case UNLINK_FILE_MESSAGE:
-        ret = unlink_file(dynamic_cast<UnlinkFileMessage*>(message));
-        break;
-      case RENAME_FILE_MESSAGE:
-        ret = rename_file(dynamic_cast<RenameFileMessage*>(message));
-        break;
-
-      case NEW_BLOCK_MESSAGE:
-        ret = new_block(dynamic_cast<NewBlockMessage*>(message));
-        break;
-      case REMOVE_BLOCK_MESSAGE:
-        ret = remove_block(dynamic_cast<RemoveBlockMessage*>(message));
-        break;
-
-      case LIST_BLOCK_MESSAGE:
-        ret = list_blocks(dynamic_cast<ListBlockMessage*>(message));
-        break;
-
-      case LIST_BITMAP_MESSAGE:
-        ret = query_bit_map(dynamic_cast<ListBitMapMessage*>(message));
-        break;
-
-      case REPLICATE_BLOCK_MESSAGE:
-        ret = replicate_block_cmd(dynamic_cast<ReplicateBlockMessage*>(message));
-        break;
-
-      case COMPACT_BLOCK_MESSAGE:
-        ret = compact_block_cmd(dynamic_cast<CompactBlockMessage*>(message));
-        break;
-
-      case CRC_ERROR_MESSAGE:
-        ret = crc_error_cmd(dynamic_cast<CrcErrorMessage*>(message));
-        break;
-
-      case GET_BLOCK_INFO_MESSAGE:
-        ret = get_block_info(dynamic_cast<GetBlockInfoMessage*>(message));
-        break;
-      case RESET_BLOCK_VERSION_MESSAGE:
-        ret = reset_block_version(dynamic_cast<ResetBlockVersionMessage*>(message));
-        break;
-      case GET_SERVER_STATUS_MESSAGE:
-        ret = get_server_status(dynamic_cast<GetServerStatusMessage*>(message));
-        break;
-      case RELOAD_CONFIG_MESSAGE:
-        ret = reload_config(dynamic_cast<ReloadConfigMessage*>(message));
-        break;
-      case STATUS_MESSAGE:
-        ret = get_ping_status(dynamic_cast<StatusMessage*>(message));
-        break;
-      case CLIENT_CMD_MESSAGE:
-        ret = client_command(dynamic_cast<ClientCmdMessage*>(message));
-        break;
-      default:
-        TBSYS_LOG(ERROR, "process packet pcode: %d\n", message->getPCode());
-        ret = TFS_ERROR;
-        break;
-      }
-      if (TFS_SUCCESS != ret)
-      {
-        message->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret, 
-            "execute message fail, type: %d. ret: %d\n", message->getPCode(), ret);
-      }
-      return true;
+      return bret;
     }
 
     int DataService::create_file_number(CreateFilenameMessage* message)
@@ -2037,6 +2041,42 @@ namespace tfs
       //TODO LOGGER.setMaxFileSize(CONFIG.get_int_value(CONFIG_PUBLIC, CONF_LOG_SIZE, 1024 * 1024 * 1024));
       //TODO LOGGER.setMaxFileIndex(CONFIG.get_int_value(CONFIG_PUBLIC, CONF_LOG_NUM, 30));
       return TFS_SUCCESS;
+    }
+    
+    void DataService::HeartBeatThreadHelper::run()
+    {
+      service_.run_heart();
+    }
+
+    void DataService::DoCheckThreadHelper::run()
+    {
+      service_.run_check();
+    }
+
+    void DataService::ReplicateBlockThreadHelper::run()
+    {
+      service_.repl_block_->run_replicate_block();
+    }
+
+    void DataService::CompactBlockThreadHelper::run()
+    {
+      service_.compact_block_->run_compact_block();
+    }
+
+    void DataService::DoSyncMirrorThreadHelper::run()
+    {
+      service_.sync_mirror_->run_sync_mirror();
+    }
+
+    int ns_async_callback(common::NewClient* client)
+    {
+      DataService* service = dynamic_cast<DataService*>(tbutil::Service::instance());
+      int32_t iret = NULL != service ? TFS_SUCCESS : TFS_ERROR;
+      if (TFS_SUCCESS == iret)
+      {
+        iret = service->callback(client);
+      }
+      return iret;
     }
   }
 }

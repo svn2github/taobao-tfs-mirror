@@ -23,7 +23,7 @@
 #include <string>
 #include "common/internal.h"
 #include "common/base_packet.h"
-//#include "common/config.h"
+#include "common/base_service.h"
 #include "common/statistics.h"
 #include "common/status_message.h"
 #include "message/message_factory.h"
@@ -47,27 +47,63 @@ namespace tfs
 #define READ_STAT_LOGGER read_stat_log_
 #define READ_STAT_PRINT(level, ...) READ_STAT_LOGGER.logMessage(TBSYS_LOG_LEVEL(level), __VA_ARGS__)
 #define READ_STAT_LOG(level, ...) (TBSYS_LOG_LEVEL_##level>READ_STAT_LOGGER._level) ? (void)0 : READ_STAT_PRINT(level, __VA_ARGS__)
-    //class DataService: public tbnet::IServerAdapter, public tbnet::IPacketQueueHandler, public message::DefaultAsyncCallback
-    class DataService: public tbnet::IServerAdapter, public tbnet::IPacketQueueHandler
+    class DataService: public common::BaseService
     {
       public:
         DataService();
+
         virtual ~DataService();
 
-        int init(const std::string& server_index);
-        int start(common::VINT* pids);
-        int stop();
-        int wait();
+        /** application parse args*/
+        virtual int parse_common_line_args(int argc, char* argv[]);
 
-        tbnet::IPacketHandler::HPRetCode handlePacket(tbnet::Connection* connection, tbnet::Packet* packet);
-        bool handlePacketQueue(tbnet::Packet* packet, void* args);
+        /** get listen port*/
+        virtual int get_listen_port() const ;
+
+        virtual const char* get_log_file_path();
+
+        /** initialize application data*/
+        virtual int initialize(int argc, char* argv[]);
+
+        /** destroy application data*/
+        virtual int destroy_service();
+
+        /** create the packet streamer, this is used to create packet according to packet code */
+        virtual tbnet::IPacketStreamer* create_packet_streamer()
+        {
+          return new common::BasePacketStreamer();
+        }
+
+        /** destroy the packet streamer*/
+        virtual void destroy_packet_streamer(tbnet::IPacketStreamer* streamer)
+        {
+          tbsys::gDelete(streamer);
+        }
+
+        /** create the packet streamer, this is used to create packet*/
+        virtual common::BasePacketFactory* create_packet_factory()
+        {
+          return new message::MessageFactory();
+        }
+
+        /** destroy packet factory*/
+        virtual void destroy_packet_factory(common::BasePacketFactory* factory)
+        {
+          tbsys::gDelete(factory);
+        }
+
+        /** handle single packet */
+        virtual tbnet::IPacketHandler::HPRetCode handlePacket(tbnet::Connection *connection, tbnet::Packet *packet);
+
+        /** handle packet*/
+        virtual bool handlePacketQueue(tbnet::Packet *packet, void *args);
+
+        int callback(common::NewClient* client);
 
         int command_done(common::BasePacket* send_message, bool status, const std::string& error);
         int send_message_to_slave_ds(common::BasePacket* message, const common::VUINT64& ds_list);
         int post_message_to_server(common::BasePacket* message, const common::VUINT64& ds_list);
 
-        static void* do_heart(void* args);
-        static void* do_check(void* args);
         int stop_heart();
 
       private:
@@ -122,6 +158,87 @@ namespace tfs
         int init_log_file(tbsys::CLogger& LOGGER, const std::string& log_file);
 
       private:
+      class HeartBeatThreadHelper: public tbutil::Thread
+      {
+        public:
+          explicit HeartBeatThreadHelper(DataService& service):
+              service_(service)
+          {
+            start();
+          }
+          virtual ~HeartBeatThreadHelper(){}
+          void run();
+        private:
+          DISALLOW_COPY_AND_ASSIGN(HeartBeatThreadHelper);
+          DataService& service_;
+      };
+      typedef tbutil::Handle<HeartBeatThreadHelper> HeartBeatThreadHelperPtr;
+
+      class DoCheckThreadHelper: public tbutil::Thread
+      {
+        public:
+          explicit DoCheckThreadHelper(DataService& service):
+              service_(service)
+          {
+            start();
+          }
+          virtual ~DoCheckThreadHelper(){}
+          void run();
+        private:
+          DISALLOW_COPY_AND_ASSIGN(DoCheckThreadHelper);
+          DataService& service_;
+      };
+      typedef tbutil::Handle<DoCheckThreadHelper> DoCheckThreadHelperPtr;
+
+      class ReplicateBlockThreadHelper: public tbutil::Thread
+      {
+        public:
+          explicit ReplicateBlockThreadHelper(DataService& service):
+              service_(service)
+          {
+            start();
+          }
+          virtual ~ReplicateBlockThreadHelper(){}
+          void run();
+        private:
+          DISALLOW_COPY_AND_ASSIGN(ReplicateBlockThreadHelper);
+          DataService& service_;
+      };
+      typedef tbutil::Handle<ReplicateBlockThreadHelper> ReplicateBlockThreadHelperPtr;
+
+      class CompactBlockThreadHelper: public tbutil::Thread
+      {
+        public:
+          explicit CompactBlockThreadHelper(DataService& service):
+              service_(service)
+          {
+            start();
+          }
+          virtual ~CompactBlockThreadHelper(){}
+          void run();
+        private:
+          DISALLOW_COPY_AND_ASSIGN(CompactBlockThreadHelper);
+          DataService& service_;
+      };
+      typedef tbutil::Handle<CompactBlockThreadHelper> CompactBlockThreadHelperPtr;
+
+      class DoSyncMirrorThreadHelper: public tbutil::Thread
+      {
+        public:
+          explicit DoSyncMirrorThreadHelper(DataService& service):
+              service_(service)
+          {
+            start();
+          }
+          virtual ~DoSyncMirrorThreadHelper(){}
+          void run();
+        private:
+          DISALLOW_COPY_AND_ASSIGN(DoSyncMirrorThreadHelper);
+          DataService& service_;
+      };
+      typedef tbutil::Handle<DoSyncMirrorThreadHelper> DoSyncMirrorThreadHelperPtr;
+
+      private:
         DISALLOW_COPY_AND_ASSIGN(DataService);
 
         common::DataServerStatInfo data_server_info_; //dataserver info
@@ -142,28 +259,17 @@ namespace tfs
         SyncBase* sync_mirror_; //mirror
         int32_t sync_mirror_status_;
 
-        //message::Client* hb_client_[2]; //heartbeat socket
-        //message::Client* client_; //update
-        //message::Client* compact_client_;
-
-
         tbutil::Mutex stop_mutex_;
         tbutil::Mutex client_mutex_;
         tbutil::Mutex compact_mutext_;
         tbutil::Mutex count_mutex_;
         tbutil::Mutex read_stat_mutex_;
 
-        common::VINT* thread_pids_;
-
         AccessControl acl_;
         AccessStat acs_;
         VisitStat visit_stat_;
         CpuMetrics cpu_metrics_;
         int32_t max_cpu_usage_;
-
-        //task queue
-        tbnet::PacketQueueThread task_queue_thread_;
-        tbnet::PacketQueueThread ds_task_queue_thread_;
 
         //write and read log
         tbsys::CLogger write_stat_log_;
@@ -175,6 +281,12 @@ namespace tfs
         tbutil::TimerPtr timer_;
         common::StatManager<std::string, std::string, common::StatEntry > stat_mgr_;
         std::string tfs_ds_stat_;
+
+        HeartBeatThreadHelperPtr heartbeat_thread_;
+        DoCheckThreadHelperPtr   do_check_thread_;
+        ReplicateBlockThreadHelperPtr* replicate_block_threads_;
+        CompactBlockThreadHelperPtr  compact_block_thread_;
+        DoSyncMirrorThreadHelperPtr  do_sync_mirror_thread_;
     };
   }
 }
