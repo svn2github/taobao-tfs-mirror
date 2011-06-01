@@ -69,14 +69,13 @@ int TfsSession::initialize()
 int TfsSession::get_block_info(uint32_t& block_id, VUINT64& rds, int32_t flag)
 {
   int ret = TFS_SUCCESS;
-  // insert to cache
-  if (flag & T_WRITE)
+  if (flag & T_UNLINK)
   {
-    if (!(flag & T_NOLEASE)) // write, no unlink
-    {
-      flag |= T_CREATE;
-    }
-    ret = get_block_info_ex(block_id, rds, flag);
+    ret = get_block_info_ex(block_id, rds, T_WRITE);
+  }
+  else if (flag & T_WRITE)
+  {
+    ret = get_block_info_ex(block_id, rds, flag | T_CREATE);
   }
   else // read
   {
@@ -126,13 +125,13 @@ int TfsSession::get_block_info(uint32_t& block_id, VUINT64& rds, int32_t flag)
 int TfsSession::get_block_info(SEG_DATA_LIST& seg_list, int32_t flag)
 {
   int ret = TFS_SUCCESS;
-  if (flag & T_WRITE)
+  if (flag & T_UNLINK)
   {
-    if (!(flag & T_NOLEASE)) // write, no unlink
-    {
-      flag |= T_CREATE;
-    }
-    ret = get_block_info_ex(seg_list, flag);
+    ret = get_block_info_ex(seg_list, T_WRITE);
+  }
+  else if (flag & T_WRITE)
+  {
+    ret = get_block_info_ex(seg_list, flag | T_CREATE);
   }
   else
   {

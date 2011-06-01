@@ -97,7 +97,7 @@ int64_t TfsSmallFile::get_file_length()
 
 int TfsSmallFile::unlink(const char* file_name, const char* suffix, const TfsUnlinkType action)
 {
-  int ret = open_ex(file_name, suffix, T_WRITE | T_NOLEASE);
+  int ret = open_ex(file_name, suffix, T_UNLINK);
   if (TFS_SUCCESS != ret)
   {
     TBSYS_LOG(DEBUG, "tfs unlink fail, file_name: %s, action: %d", (file_name == NULL) ? file_name : "NULL", action);

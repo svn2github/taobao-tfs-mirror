@@ -35,70 +35,54 @@ LocalKey::~LocalKey()
   clear_info();
 }
 
+
 int LocalKey::initialize(const char* local_key, const uint64_t addr)
 {
   int ret = TFS_SUCCESS;
+  char name[MAX_PATH_LENGTH];
 
-  if (!DirectoryOp::create_full_path(LOCAL_KEY_PATH))
+  if (!DirectoryOp::create_full_path(LOCAL_KEY_PATH, false, LOCAL_KEY_PATH_MODE))
   {
-    TBSYS_LOG(ERROR, "initialize local key fail, create directory %s failed, error: %d",
-              LOCAL_KEY_PATH, strerror(errno));
-    ret = EXIT_GENERAL_ERROR;
+    TBSYS_LOG(ERROR, "create localkey path %s with mode %d fail, error: %s",
+              LOCAL_KEY_PATH, LOCAL_KEY_PATH_MODE, strerror(errno));
+    ret = TFS_ERROR;
+  }
+  else if ((ret = init_local_key_name(local_key, addr, name)) != TFS_SUCCESS)
+  {
+    TBSYS_LOG(ERROR, "init local key name fail, ret: %d", ret);
   }
   else
   {
-    char name[MAX_PATH_LENGTH];
-    char path_buffer[PATH_MAX];
-
-    if (NULL == realpath(local_key, path_buffer))
+    clear();
+    tbsys::gDelete(file_op_);
+    if (0 != access(name, F_OK)) //not exist
     {
-      TBSYS_LOG(ERROR, "initialize local key %s fail: %s", local_key, strerror(errno));
-      ret = TFS_ERROR;
+      TBSYS_LOG(DEBUG, "create new localkey file: %s", name);
+      file_op_ = new FileOperation(name, O_RDWR|O_CREAT);
     }
     else
     {
-      snprintf(name, MAX_PATH_LENGTH, "%s%s", LOCAL_KEY_PATH, path_buffer);
-      char* tmp_file = name + strlen(LOCAL_KEY_PATH);
-      // convert tmp file name
-      char* pos = NULL;
-      while (NULL != (pos = strchr(tmp_file, '/')))
+      file_op_ = new FileOperation(name, O_RDWR);
+      ret = load();
+      // load fail. localkey is invalid, just delete
+      if (ret != TFS_SUCCESS)
       {
-        tmp_file = pos;
-        *pos = '!';
-      }
-      int len = strlen(name);
-      snprintf(name + len, MAX_PATH_LENGTH - len, "!%" PRI64_PREFIX "u", addr);
-
-      clear();
-      tbsys::gDelete(file_op_);
-      if (0 != access(name, F_OK)) //not exist
-      {
-        TBSYS_LOG(DEBUG, "create new localkey file: %s", name);
+        TBSYS_LOG(WARN, "load local key fail, file is invalid, create new localkey file: %s", name);
+        file_op_->unlink_file();
+        tbsys::gDelete(file_op_);
         file_op_ = new FileOperation(name, O_RDWR|O_CREAT);
-      }
-      else
-      {
-        file_op_ = new FileOperation(name, O_RDWR);
-        ret = load();
-        // load fail. localkey is invalid, just delete
-        if (ret != TFS_SUCCESS)
-        {
-          TBSYS_LOG(WARN, "load local key fail, file is invalid, create new localkey file: %s", name);
-          file_op_->unlink_file();
-          tbsys::gDelete(file_op_);
-          file_op_ = new FileOperation(name, O_RDWR|O_CREAT);
-          clear();
-          ret = TFS_SUCCESS;
-        }
-      }
-
-      if (TFS_SUCCESS == ret)
-      {
-        // initialize gc file
-        ret = gc_file_.initialize(name + strlen(LOCAL_KEY_PATH));
+        clear();
+        ret = TFS_SUCCESS;
       }
     }
+
+    if (TFS_SUCCESS == ret)
+    {
+      // initialize gc file
+      ret = gc_file_.initialize(name + strlen(LOCAL_KEY_PATH));
+    }
   }
+
   return ret;
 }
 
@@ -593,6 +577,45 @@ void LocalKey::gc_segment(SEG_SET_CONST_ITER first, SEG_SET_CONST_ITER last)
     seg_head_.size_ -= total_size;
     seg_head_.count_ = seg_info_.size();
   }
+}
+
+int LocalKey::init_local_key_name(const char* key, const uint64_t addr, char* local_key_name)
+{
+  int ret = TFS_SUCCESS;
+
+  if (NULL == key || 0 == addr || NULL == local_key_name)
+  {
+    TBSYS_LOG(ERROR, "null key or addr occur. key: %p, addr: %"PRI64_PREFIX"u, local key name buffer: %p",
+              key, addr, local_key_name);
+    ret = TFS_ERROR;
+  }
+  else
+  {
+    char path_buffer[PATH_MAX];
+
+    if (NULL == realpath(key, path_buffer))
+    {
+      TBSYS_LOG(ERROR, "initialize local key %s fail, key is not a valid file path. error: %s", key, strerror(errno));
+      ret = TFS_ERROR;
+    }
+    else
+    {
+      snprintf(local_key_name, MAX_PATH_LENGTH, "%s%s", LOCAL_KEY_PATH, path_buffer);
+      char* tmp_file = local_key_name + strlen(LOCAL_KEY_PATH);
+      // convert tmp file name
+      char* pos = NULL;
+      while (NULL != (pos = strchr(tmp_file, '/')))
+      {
+        tmp_file = pos;
+        *pos = '!';
+      }
+
+      int len = strlen(local_key_name);
+      snprintf(local_key_name + len, MAX_PATH_LENGTH - len, "!%" PRI64_PREFIX "u", addr);
+    }
+  }
+
+  return ret;
 }
 
 void LocalKey::clear()
