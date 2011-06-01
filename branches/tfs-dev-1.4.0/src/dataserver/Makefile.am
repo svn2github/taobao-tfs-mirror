@@ -25,4 +25,4 @@ libdataserver_a_SOURCES = dataservice.cpp visit_stat.cpp version.cpp file_op.cpp
 
 
 bin_PROGRAMS = dataserver
-dataserver_SOURCES = dataservice.cpp dataserver.cpp dataservice.h dataserver.h ${libdataserver_a_SOURCES}
+dataserver_SOURCES = dataservice.cpp service.cpp dataservice.h ${libdataserver_a_SOURCES}
