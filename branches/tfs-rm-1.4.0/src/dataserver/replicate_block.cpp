@@ -57,14 +57,6 @@ namespace tfs
       stop_ = 0;
     }
 
-    void* ReplicateBlock::do_replicate_block(void* args)
-    {
-      TBSYS_LOG(INFO, "tid: %u", Func::gettid());
-      ReplicateBlock* ds = reinterpret_cast<ReplicateBlock *> (args);
-      ds->run_replicate_block();
-      return NULL;
-    }
-
     int ReplicateBlock::run_replicate_block()
     {
       Time timeout = Time::seconds(1);

@@ -47,8 +47,8 @@ namespace tfs
         int disable_log();
         void set_pause(const int32_t v);
         int reload_slave_ip();
+        int run_sync_mirror();
 
-        static void* do_sync_mirror(void* args);
         static int do_second_sync(const void* data, const int64_t len, const int32_t thread_index, void* arg);
 
       private:
@@ -67,7 +67,6 @@ namespace tfs
         SyncBackup* backup_;
 
       private:
-        int run_sync_mirror();
         int do_sync(const char* data, const int32_t len, const bool second = false);
     };
 

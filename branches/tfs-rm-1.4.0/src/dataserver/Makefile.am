@@ -11,7 +11,7 @@ LDADD=$(top_builddir)/src/new_client/.libs/libtfsclient.a\
       $(TBLIB_ROOT)/lib/libtbsys.a
 
 noinst_LIBRARIES = libdataserver.a
-libdataserver_a_SOURCES = visit_stat.cpp version.cpp file_op.cpp mmap_file.cpp mmap_file_op.cpp\
+libdataserver_a_SOURCES = dataservice.cpp visit_stat.cpp version.cpp file_op.cpp mmap_file.cpp mmap_file_op.cpp\
 			  superblock_impl.cpp physical_block.cpp bit_map.cpp index_handle.cpp\
 			  data_file.cpp cpu_metrics.cpp logic_block.cpp data_handle.cpp blockfile_manager.cpp\
 			  data_management.cpp replicate_block.cpp compact_block.cpp sync_backup.cpp\
@@ -25,4 +25,4 @@ libdataserver_a_SOURCES = visit_stat.cpp version.cpp file_op.cpp mmap_file.cpp m
 
 
 bin_PROGRAMS = dataserver
-dataserver_SOURCES = dataservice.cpp dataserver.cpp dataservice.h dataserver.h ${libdataserver_a_SOURCES}
+dataserver_SOURCES = dataservice.cpp service.cpp dataservice.h ${libdataserver_a_SOURCES}

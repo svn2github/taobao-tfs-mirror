@@ -16,7 +16,6 @@
 #ifndef TFS_DATASERVER_REPLICATEBLOCK_H_
 #define TFS_DATASERVER_REPLICATEBLOCK_H_
 
-//#include "common/config.h"
 #include "common/new_client.h"
 #include "dataserver_define.h"
 #include "blockfile_manager.h"
@@ -35,17 +34,15 @@ namespace tfs
         ~ReplicateBlock();
 
         void stop();
-        static void* do_replicate_block(void* args);
-
         int add_repl_task(common::ReplBlock* repl_blk);
 
         int add_cloned_block_map(const uint32_t block_id);
         int del_cloned_block_map(const uint32_t block_id);
         int expire_cloned_block_map();
+        int run_replicate_block();
 
       private:
         void init();
-        int run_replicate_block();
         int replicate_block_to_server(const common::ReplBlock* b);
         int send_repl_block_complete_info(const int status, const common::ReplBlock* b);
         int clear_cloned_block_map();

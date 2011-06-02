@@ -46,7 +46,6 @@ namespace tfs
 
         // stop compact tasks
         void stop();
-        static void* do_compact_block(void* args);
 
         // add logic block compact task
         int add_cpt_task(CompactBlkInfo* cpt_blk);
@@ -55,9 +54,10 @@ namespace tfs
         // delete expired compact block files
         int expire_compact_block_map();
 
+        int run_compact_block();
+
       private:
         void init();
-        int run_compact_block();
 
         int clear_compact_block_map();
         int write_big_file(LogicBlock* src, LogicBlock* dest, const common::FileInfo& src_info,

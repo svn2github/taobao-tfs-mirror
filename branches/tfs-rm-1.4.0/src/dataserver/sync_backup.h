@@ -110,9 +110,10 @@ namespace tfs
         }
         virtual ~TfsMirrorBackup()
         {
-          tbsys::gDelete(tfs_client_);
-          tbsys::gDelete(second_tfs_client_);
-          tbsys::gDelete(source_client_);
+          //TODO
+          //tbsys::gDelete(tfs_client_);
+          //tbsys::gDelete(second_tfs_client_);
+          //tbsys::gDelete(source_client_);
         }
 
         virtual bool init();
