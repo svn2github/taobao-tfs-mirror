@@ -414,13 +414,14 @@ namespace tfs
           monitor_.wait();
         }
         int32_t count = 0;
+        int32_t status = STATUS_MESSAGE_ERROR;
         do
         {
           ++count;
-          iret = send_msg_to_server(ngi.other_side_ip_port_, const_cast<common::BasePacket*>(msg));
+          iret = send_msg_to_server(ngi.other_side_ip_port_, const_cast<common::BasePacket*>(msg), status);
         }
-        while (count < 0x03 && STATUS_MESSAGE_OK != iret);
-        iret = STATUS_MESSAGE_OK == iret ? TFS_SUCCESS : TFS_ERROR;
+        while (count < 0x03 && TFS_SUCCESS != iret && STATUS_MESSAGE_OK != status);
+        iret = STATUS_MESSAGE_OK == status ? TFS_SUCCESS : TFS_ERROR;
         if (TFS_ERROR != iret)
         {
           ngi.sync_oplog_flag_ = NS_SYNC_DATA_FLAG_NO;

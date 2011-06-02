@@ -80,7 +80,7 @@ namespace tfs
 
         bool async_wait();
     };
-    int send_msg_to_server(uint64_t server, tbnet::Packet* message, 
+    int send_msg_to_server(uint64_t server, tbnet::Packet* message, int32_t& status, 
                           const int64_t timeout = common::DEFAULT_NETWORK_CALL_TIMEOUT/*ms*/);
     int send_msg_to_server(uint64_t server, NewClient* client, tbnet::Packet* msg, tbnet::Packet*& output/*not free*/,
                           const int64_t timeout = common::DEFAULT_NETWORK_CALL_TIMEOUT/*ms*/);

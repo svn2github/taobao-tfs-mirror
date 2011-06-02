@@ -154,8 +154,8 @@ namespace tfs
             bool find_ip_in_dev = Func::is_local_addr(ip_addr_id);
             if (!find_ip_in_dev)
             {
-              iret = EXIT_GENERAL_ERROR;
-              TBSYS_LOG(ERROR, "ip '%s' is not local ip, local ip: %s",ip_addr, tbsys::CNetUtil::addrToString(local_ip).c_str());
+              //iret = EXIT_GENERAL_ERROR;
+              TBSYS_LOG(WARN, "ip '%s' is not local ip, local ip: %s",ip_addr, tbsys::CNetUtil::addrToString(local_ip).c_str());
             }
           }
         }
@@ -178,7 +178,16 @@ namespace tfs
         iret = heart_mgr_.initialize(heart_thread_count, heart_max_queue_size);
         if (TFS_SUCCESS != iret)
         {
-          TBSYS_LOG(ERROR, "initialize heart manager failed, must be exit, ret(%d)", iret);
+          TBSYS_LOG(ERROR, "initialize heart manager failed, must be exit, ret: %d", iret);
+        }
+      }
+
+      if (TFS_SUCCESS == iret)
+      {
+        iret = master_slave_heart_mgr_.initialize();
+        if (TFS_SUCCESS != iret)
+        {
+          TBSYS_LOG(ERROR, "initialize master and slave heart manager failed, must be exit, ret: %d", iret);
         }
       }
 
@@ -982,6 +991,7 @@ namespace tfs
           //receive all owner check message , master and slave heart message, dataserver heart message
           if (pcode != OWNER_CHECK_MESSAGE
             && pcode != MASTER_AND_SLAVE_HEART_MESSAGE
+            && pcode != MASTER_AND_SLAVE_HEART_RESPONSE_MESSAGE
             && pcode != HEARTBEAT_AND_NS_HEART_MESSAGE
             && pcode != CLIENT_CMD_MESSAGE)
           {
@@ -1006,6 +1016,7 @@ namespace tfs
           if (pcode != OWNER_CHECK_MESSAGE
             && pcode != MASTER_AND_SLAVE_HEART_MESSAGE
             && pcode != HEARTBEAT_AND_NS_HEART_MESSAGE
+            && pcode != MASTER_AND_SLAVE_HEART_RESPONSE_MESSAGE
             && pcode != CLIENT_CMD_MESSAGE)
           {
             if (ngi.owner_status_ <= NS_STATUS_ACCEPT_DS_INFO)

@@ -568,8 +568,10 @@ namespace tfs
             if (TFS_SUCCESS == iret)
             {
 #if !defined(TFS_NS_GTEST) && !defined(TFS_NS_INTEGRATION)
-              iret = send_msg_to_server(id, message);
-              if (STATUS_MESSAGE_OK != iret)
+              int32_t status = STATUS_MESSAGE_ERROR;
+              iret = send_msg_to_server(id, message, status);
+              if (STATUS_MESSAGE_OK != status
+                || TFS_SUCCESS != iret)
               {
                 snprintf(buf, buf_length, "send load block: %u  message to server: %s failed",
                     block_id, CNetUtil::addrToString(id).c_str());

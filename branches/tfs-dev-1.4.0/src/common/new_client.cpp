@@ -291,7 +291,7 @@ namespace tfs
       return bret;
     }
 
-    int send_msg_to_server(uint64_t server, tbnet::Packet* message, const int64_t timeout)
+    int send_msg_to_server(uint64_t server, tbnet::Packet* message, int32_t& status, const int64_t timeout)
     {
       NewClient* client = NewClientManager::get_instance().create_client();
       tbnet::Packet* rmsg = NULL;
@@ -302,7 +302,7 @@ namespace tfs
         if (common::TFS_SUCCESS == iret)
         {
           StatusMessage* smsg = dynamic_cast<StatusMessage*>(rmsg);
-          iret = smsg->get_status();
+          status = smsg->get_status();
         }
       }
       NewClientManager::get_instance().destroy_client(client);

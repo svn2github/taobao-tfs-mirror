@@ -248,7 +248,10 @@ namespace tfs
         res.second = PLAN_STATUS_BEGIN;
         msg.set_owner( index == 0 ? 1 : 0);
 #if !defined(TFS_NS_GTEST) && !defined(TFS_NS_INTEGRATION)
-        if (send_msg_to_server(res.first, &msg) != STATUS_MESSAGE_OK)
+        int32_t status = STATUS_MESSAGE_ERROR;
+        iret = send_msg_to_server(res.first, &msg, status);
+        if (TFS_SUCCESS != iret
+          || STATUS_MESSAGE_OK != status)
         {
           res.second = PLAN_STATUS_TIMEOUT;
           TBSYS_LOG(INFO, "send compact message filed; block (%u) owner(%d) to server(%s), ret(%d)",
@@ -490,8 +493,10 @@ namespace tfs
         msg.set_repl_block(&block);
         msg.set_command(PLAN_STATUS_BEGIN);
 #if !defined(TFS_NS_GTEST) && !defined(TFS_NS_INTEGRATION)
-        iret = send_msg_to_server(block.source_id_, &msg);
-        if (STATUS_MESSAGE_OK != iret)
+        int32_t status = STATUS_MESSAGE_ERROR;
+        iret = send_msg_to_server(block.source_id_, &msg, status);
+        if (TFS_SUCCESS != iret
+          || STATUS_MESSAGE_OK != status)
         {
           TBSYS_LOG(ERROR, "send %s command faild, block: %u, iret: %d %s===>%s",
               flag_ == REPLICATE_BLOCK_MOVE_FLAG_NO ? "replicate" : "move",
