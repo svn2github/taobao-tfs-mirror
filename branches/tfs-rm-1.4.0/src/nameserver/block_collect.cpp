@@ -29,13 +29,16 @@ namespace nameserver
   const int8_t BlockCollect::HOLD_MASTER_FLAG_YES = 0x01;
   const int8_t BlockCollect::BLOCK_CREATE_FLAG_NO = 0x00;
   const int8_t BlockCollect::BLOCK_CREATE_FLAG_YES = 0x01;
+  const int8_t BlockCollect::BLOCK_IN_MASTER_SET_NO = 0x00;
+  const int8_t BlockCollect::BLOCK_IN_MASTER_SET_YES = 0x01;
   const int8_t BlockCollect::VERSION_AGREED_MASK = 2;
  
   BlockCollect::BlockCollect(const uint32_t block_id, const time_t now):
     GCObject(now),
     last_update_time_(now),
     hold_master_(HOLD_MASTER_FLAG_NO),
-    create_flag_(BLOCK_CREATE_FLAG_NO)
+    create_flag_(BLOCK_CREATE_FLAG_NO),
+    in_master_set_(BLOCK_IN_MASTER_SET_NO)
   {
     memset(reserve, 0, sizeof(reserve));
     memset(&info_, 0, sizeof(info_));
@@ -90,6 +93,7 @@ namespace nameserver
         TBSYS_LOG(DEBUG,"server(%s) insert master block(%u)", 
             server, CNetUtil::addrToString(server->id()).c_str(), id());
         hold_[0]->add_master(this);
+        in_master_set_ = BLOCK_IN_MASTER_SET_YES;
       }
     }
     return bret;

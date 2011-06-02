@@ -265,11 +265,11 @@ namespace tfs
       if (maxit != source.end())
         max_load = (*maxit)->load();
 
-      NsGlobalInfo info;
+      NsGlobalStatisticsInfo info;
       info.max_load_ = max_load; // only max_load & alive_server_count could be useful, calc.
       info.alive_server_count_ = source.size();
       // elect seq not used in this case;
-      ReplicateSourceStrategy strategy(NsGlobalInfo::ELECT_SEQ_NO_INITIALIZE, info);
+      ReplicateSourceStrategy strategy(NsGlobalStatisticsInfo::ELECT_SEQ_NO_INITIALIZE, info);
 
       return elect_ds(strategy, NormalElectOperation(), meta, source, except, elect_count, true, result);
     }
@@ -296,11 +296,11 @@ namespace tfs
       if (maxit != targets.end())
         max_load = (*maxit)->load();
 
-      NsGlobalInfo ginfo;
+      NsGlobalStatisticsInfo ginfo;
       ginfo.max_load_ = max_load; // only max_load & alive_server_count could be useful, calc.
       ginfo.alive_server_count_ = targets.size();
       // elect seq not used in this case;
-      ReplicateSourceStrategy strategy(NsGlobalInfo::ELECT_SEQ_NO_INITIALIZE, ginfo);
+      ReplicateSourceStrategy strategy(NsGlobalStatisticsInfo::ELECT_SEQ_NO_INITIALIZE, ginfo);
 
       DS_WEIGHT weights;
       StoreWeight < ReplicateSourceStrategy > store(strategy, weights);

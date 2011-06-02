@@ -47,8 +47,8 @@ namespace nameserver
     unlink_count_(0),
     use_capacity_(info.use_capacity_),
     total_capacity_(info.total_capacity_),
-    elect_num_(NsGlobalInfo::ELECT_SEQ_NO_INITIALIZE),
-    elect_seq_(NsGlobalInfo::ELECT_SEQ_NO_INITIALIZE),
+    elect_num_(NsGlobalStatisticsInfo::ELECT_SEQ_NO_INITIALIZE),
+    elect_seq_(NsGlobalStatisticsInfo::ELECT_SEQ_NO_INITIALIZE),
     startup_time_(now),
     last_update_time_(now),
     current_load_(info.current_load_ <= 0 ? 1 : info.current_load_),
@@ -105,16 +105,20 @@ namespace nameserver
       bret = !block->is_full();
       if (bret)
       {
-        TBSYS_LOG(DEBUG, "server(%s) add master block(%u)", tbsys::CNetUtil::addrToString(id()).c_str(), block->id());
         RWLock::Lock lock(*this, WRITE_LOCKER);
-        std::vector<BlockCollect*>::iterator iter = find(hold_master_.begin(), hold_master_.end(), block);
-        if (iter == hold_master_.end())
+        int32_t current = static_cast<int32_t>(hold_master_.size());
+        if (current < SYSPARAM_NAMESERVER.max_write_file_count_)
         {
-          hold_master_.push_back(block);
-        }
-        else
-        {
-          TBSYS_LOG(WARN, "block(%u) is exist, which in hold_master_ list", block->id());
+          TBSYS_LOG(DEBUG, "server(%s) add master block(%u)", tbsys::CNetUtil::addrToString(id()).c_str(), block->id());
+          std::vector<BlockCollect*>::iterator iter = find(hold_master_.begin(), hold_master_.end(), block);
+          if (iter == hold_master_.end())
+          {
+            hold_master_.push_back(block);
+          }
+          else
+          {
+            TBSYS_LOG(WARN, "block(%u) is exist, which in hold_master_ list", block->id());
+          }
         }
       }
     }
@@ -292,6 +296,7 @@ namespace nameserver
 
     if (scan_flag & SSM_CHILD_SERVER_TYPE_MASTER)
     {
+      TBSYS_LOG(DEBUG,"server : %s, hold_master_: %u", CNetUtil::addrToString(id_).c_str(),hold_master_.size());
       param.data_.writeInt32(hold_master_.size());
       std::vector<BlockCollect*>::const_iterator iter = hold_master_.begin();
       for (; iter != hold_master_.end(); ++iter)
@@ -348,7 +353,11 @@ namespace nameserver
         return true;
       }
 
-      int32_t current = static_cast<int32_t>(hold_master_.size());
+      int32_t current = 0;
+      {
+        RWLock::Lock lock(*this, READ_LOCKER);
+        current = static_cast<int32_t>(hold_master_.size());
+      }
       if (current >= SYSPARAM_NAMESERVER.max_write_file_count_)
       {
         count = 0;
@@ -365,7 +374,7 @@ namespace nameserver
         return true;
       }
 
-      int32_t should = count * 2;
+      int32_t should = count * 16;
       BlockCollect* block = NULL;
       std::vector<BlockCollect*> writable;
       {
@@ -378,6 +387,7 @@ namespace nameserver
               = std::find(hold_master_.begin(), hold_master_.end(), block);
           if (where == hold_master_.end()
               && (block->is_writable()// block is writable
+              && (!block->in_master_set())
                 || block->is_need_master())) 
           {
             --should;
@@ -404,6 +414,7 @@ namespace nameserver
         }
         server = block->find_master();
         if ((block->is_writable())
+           && (!block->in_master_set())
            && (server != NULL)
            && (server == this))
         {
@@ -436,7 +447,7 @@ namespace nameserver
     return (is_alive() && current_load_ < average_load * MAX_LOAD_DOUBLE);
   }
 
-  void ServerCollect::statistics(NsGlobalInfo& stat, bool is_new)
+  void ServerCollect::statistics(NsGlobalStatisticsInfo& stat, bool is_new)
   {
     if (is_new)
     {

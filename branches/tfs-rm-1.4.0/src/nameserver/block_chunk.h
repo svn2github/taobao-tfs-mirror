@@ -20,6 +20,7 @@
 #include <stdint.h>
 #include <Shared.h>
 #include <Handle.h>
+#include "ns_define.h"
 #include "common/lock.h"
 #include "common/internal.h"
 
@@ -27,8 +28,6 @@ namespace tfs
 {
 namespace nameserver
 {
-  class BlockCollect;
-  class ServerCollect;
   class BlockChunk : public virtual common::RWLock,
                      public virtual tbutil::Shared
   {
@@ -55,7 +54,7 @@ namespace nameserver
 #else
   private:
 #endif
-    common::BLOCK_MAP block_map_;
+    BLOCK_MAP block_map_;
   };
   typedef tbutil::Handle<BlockChunk> BlockChunkPtr;
 }

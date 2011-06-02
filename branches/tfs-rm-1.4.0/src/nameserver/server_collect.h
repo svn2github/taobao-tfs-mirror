@@ -37,7 +37,7 @@ namespace nameserver
     bool remove(BlockCollect* block);
     bool exist(BlockCollect* block);
     void update(const common::DataServerStatInfo& info, time_t now);
-    void statistics(NsGlobalInfo& stat, bool is_new);
+    void statistics(NsGlobalStatisticsInfo& stat, bool is_new);
     bool add_writable(BlockCollect* block);
     bool add_master(BlockCollect* block);
     bool remove_master(BlockCollect* block);
@@ -66,7 +66,7 @@ namespace nameserver
     inline void elect_num_inc()
     {
       RWLock::Lock lock(*this, common::WRITE_LOCKER);
-      elect_num_ <  NsGlobalInfo::ELECT_SEQ_NO_INITIALIZE ? elect_num_ = GFactory::get_global_info().calc_elect_seq_num_average() : ++elect_num_;
+      elect_num_ <  NsGlobalStatisticsInfo::ELECT_SEQ_NO_INITIALIZE ? elect_num_ = GFactory::get_global_info().calc_elect_seq_num_average() : ++elect_num_;
     }
     #ifdef TFS_NS_DEBUG
     inline void total_elect_num_inc()

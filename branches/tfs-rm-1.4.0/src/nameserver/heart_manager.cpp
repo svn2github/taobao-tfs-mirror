@@ -170,7 +170,7 @@ namespace tfs
         }
         else
 			  {
-			  	TBSYS_LOG(ERROR, "dataserver(%s) keepalive failed", CNetUtil::addrToString(ds_info.id_).c_str());
+			  	TBSYS_LOG(ERROR, "dataserver(%s) keepalive failed, iret: %d", CNetUtil::addrToString(ds_info.id_).c_str(), iret);
 			  	result_msg->set_status(STATUS_MESSAGE_ERROR);
 			  }
         #ifdef TFS_NS_DEBUG
@@ -248,7 +248,6 @@ namespace tfs
               ngi.owner_role_ = NS_ROLE_MASTER;
               ngi.other_side_role_ = NS_ROLE_SLAVE;
               ngi.sync_oplog_flag_ = NS_SYNC_DATA_FLAG_YES;
-              meta_mgr_->calc_max_block_id();
               ngi.switch_time_ = time(NULL) + SYSPARAM_NAMESERVER.safe_mode_time_;
               meta_mgr_->destroy_plan();
               ns_force_modify_other_side();
@@ -303,7 +302,6 @@ namespace tfs
       ngi.other_side_role_ = NS_ROLE_SLAVE;
       ngi.other_side_status_ = other_side_status;
       ngi.sync_oplog_flag_ = ns_sync_flag;
-      meta_mgr_->calc_max_block_id();
       meta_mgr_->destroy_plan();
       ngi.switch_time_ = time(NULL) + SYSPARAM_NAMESERVER.safe_mode_time_;
       meta_mgr_->get_oplog_sync_mgr().notify_all();
@@ -494,7 +492,6 @@ namespace tfs
           ngi.owner_role_ = NS_ROLE_MASTER;
           ngi.other_side_role_ = NS_ROLE_SLAVE;
           ngi.other_side_status_ = NS_STATUS_OTHERSIDEDEAD;
-          meta_mgr_->calc_max_block_id();
           ngi.switch_time_ = time(NULL) + SYSPARAM_NAMESERVER.safe_mode_time_;
           meta_mgr_->destroy_plan();
           return;
@@ -518,7 +515,6 @@ namespace tfs
           ngi.owner_role_ = NS_ROLE_MASTER;
           ngi.other_side_role_ = NS_ROLE_SLAVE;
           ngi.other_side_status_ = NS_STATUS_OTHERSIDEDEAD;
-          meta_mgr_->calc_max_block_id();
           ngi.switch_time_ = time(NULL) + SYSPARAM_NAMESERVER.safe_mode_time_;
           meta_mgr_->destroy_plan();
           break;
@@ -732,7 +728,6 @@ namespace tfs
             ngi.owner_status_ = NS_STATUS_INITIALIZED;
             ngi.other_side_role_ = NS_ROLE_SLAVE;
             ngi.other_side_status_ = NS_STATUS_OTHERSIDEDEAD;
-            meta_mgr_->calc_max_block_id();
             ngi.switch_time_ = time(NULL) + SYSPARAM_NAMESERVER.safe_mode_time_;
             meta_mgr_->destroy_plan();
             break;

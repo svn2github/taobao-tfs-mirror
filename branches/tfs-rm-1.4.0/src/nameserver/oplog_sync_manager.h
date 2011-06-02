@@ -25,24 +25,27 @@
 #include <Mutex.h>
 #include <Monitor.h>
 #include <Timer.h>
-#include "oplog.h"
-#include "message/message_factory.h"
 #include "common/file_queue.h"
 #include "common/file_queue_thread.h"
+#include "message/message_factory.h"
+
+#include "oplog.h"
+#include "block_id_factory.h"
 
 namespace tfs
 {
   namespace nameserver
   {
     class LayoutManager;
+    class OpLogSyncManager;
     class FlushOpLogTimerTask: public tbutil::TimerTask
     {
     public:
-      FlushOpLogTimerTask(LayoutManager& mm);
+      FlushOpLogTimerTask(OpLogSyncManager& manager);
       virtual void runTimerTask();
     private:
       DISALLOW_COPY_AND_ASSIGN( FlushOpLogTimerTask);
-      LayoutManager& meta_mgr_;
+      OpLogSyncManager& manager_;
     };
     typedef tbutil::Handle<FlushOpLogTimerTask> FlushOpLogTimerTaskPtr;
 
@@ -55,20 +58,18 @@ namespace tfs
       int initialize();
       int wait_for_shut_down();
       int destroy();
-      int register_slots(const char* const data, const int64_t length);
+      int register_slots(const char* const data, const int64_t length) const;
       void notify_all();
       void rotate();
-      int flush_oplog();
+      int flush_oplog(void) const;
       int log(uint8_t type, const char* const data, const int64_t length);
       int push(common::BasePacket* msg, int32_t max_queue_size = 0, bool block = false);
-    public:
-      common::FileQueueThread* get_file_queue_thread() const
-      {
-        return file_queue_thread_;
-      }
+      inline common::FileQueueThread* get_file_queue_thread() const { return file_queue_thread_;}
       int replay_helper(const char* const data, int64_t& data_len, int64_t& pos, time_t now = time(NULL));
       int replay_helper_do_msg(const int32_t type, const char* const data, const int64_t data_len, int64_t& pos);
       int replay_helper_do_oplog(const int32_t type, const char* const data, const int64_t data_len, int64_t& pos, time_t now);
+
+      inline uint32_t generation(const uint32_t id = 0) { return id_factory_.generation(id);}
     private:
       DISALLOW_COPY_AND_ASSIGN( OpLogSyncManager);
       virtual bool handlePacketQueue(tbnet::Packet *packet, void *args);
@@ -85,6 +86,7 @@ namespace tfs
       OpLog* oplog_;
       common::FileQueue* file_queue_;
       common::FileQueueThread* file_queue_thread_;
+      BlockIdFactory id_factory_;
       tbutil::Mutex mutex_;
       tbutil::Monitor<tbutil::Mutex> monitor_;
       tbnet::PacketQueueThread work_thread_;

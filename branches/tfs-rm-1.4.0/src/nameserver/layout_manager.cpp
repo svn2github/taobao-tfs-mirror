@@ -42,7 +42,6 @@ namespace tfs
   namespace nameserver
   {
     const int8_t LayoutManager::INTERVAL = 10;
-    const int16_t LayoutManager::SKIP_BLOCK = 128;
     const int8_t LayoutManager::LOAD_BASE_MULTIPLE = 2;
     const int8_t LayoutManager::ELECT_SEQ_INITIALIE_NUM = 1;
  
@@ -173,9 +172,6 @@ namespace tfs
 #elif defined(TFS_NS_INTEGRATION)
       run_plan_thread_ = new RunPlanThreadHelper(*this);
 #endif
-
-      //find max block id
-      calc_max_block_id();
       return TFS_SUCCESS;
     }
 
@@ -196,8 +192,6 @@ namespace tfs
       RWLock::Lock lock(server_mutex_, READ_LOCKER);
       return get_server_(server);
     }
-
-
 
     void LayoutManager::wait_for_shut_down()
     {
@@ -1387,33 +1381,18 @@ namespace tfs
       }
     }
 
-    uint32_t LayoutManager::get_alive_block_id() const
+    uint32_t LayoutManager::get_alive_block_id()
     {
-      uint32_t max_block_id = atomic_inc(&max_block_id_);
+      uint32_t block_id = oplog_sync_mgr_.generation();
       while (true)
       {
-        BlockChunkPtr ptr = get_chunk(max_block_id);
+        BlockChunkPtr ptr = get_chunk(block_id);
         RWLock::Lock lock(*ptr, READ_LOCKER);
-        if (!ptr->exist(max_block_id))
+        if (!ptr->exist(block_id))
           break;
-        max_block_id = atomic_inc(&max_block_id_);
+        block_id = oplog_sync_mgr_.generation();
       }
-      return max_block_id;
-    }
-
-    uint32_t LayoutManager::calc_max_block_id()
-    {
-      uint32_t max_block_id = 0;
-      uint32_t current = 0;
-      for (int32_t i = 0; i < block_chunk_num_; ++i)
-      {
-        common::RWLock::Lock lock(*block_chunk_[i], common::READ_LOCKER);
-        current = block_chunk_[i]->calc_max_block_id();
-        max_block_id = std::max(max_block_id, current);
-      }
-      max_block_id += SKIP_BLOCK;
-      atomic_add(&max_block_id_, max_block_id);
-      return max_block_id;
+      return block_id;
     }
 
     int LayoutManager::touch(uint64_t server, time_t now, bool promote)
@@ -1528,7 +1507,7 @@ namespace tfs
       }
       bool isnew = true;
       VUINT64 dead_servers;
-      NsGlobalInfo stat_info;
+      NsGlobalStatisticsInfo stat_info;
       ServerCollect *server = NULL;
       std::list<ServerCollect*> alive_servers;
 #if !defined(TFS_NS_GTEST) && !defined(TFS_NS_INTEGRATION)
@@ -1539,7 +1518,7 @@ namespace tfs
         server = NULL;
         dead_servers.clear();
         alive_servers.clear();
-        memset(&stat_info, 0, sizeof(NsGlobalInfo));
+        memset(&stat_info, 0, sizeof(NsGlobalStatisticsInfo));
         time_t now = time(NULL);
         {
           //check dataserver is alive

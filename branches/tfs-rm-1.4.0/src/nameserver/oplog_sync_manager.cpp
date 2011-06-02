@@ -36,9 +36,8 @@ namespace tfs
 {
   namespace nameserver
   {
-
-    FlushOpLogTimerTask::FlushOpLogTimerTask(LayoutManager& mm) :
-      meta_mgr_(mm)
+    FlushOpLogTimerTask::FlushOpLogTimerTask(OpLogSyncManager& manager) :
+      manager_(manager)
     {
 
     }
@@ -46,24 +45,28 @@ namespace tfs
     void FlushOpLogTimerTask::runTimerTask()
     {
       NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
-      OpLogSyncManager& opLogSync = meta_mgr_.get_oplog_sync_mgr();
-      if ((ngi.owner_role_ != NS_ROLE_MASTER) || (opLogSync.is_destroy_))
+      int32_t iret = ngi.owner_role_ == NS_ROLE_MASTER && ! manager_.is_destroy_ ? TFS_SUCCESS : TFS_ERROR;
+      if (TFS_SUCCESS == iret)
+      {
+        iret = ngi.other_side_status_ != NS_STATUS_INITIALIZED ? TFS_ERROR : TFS_SUCCESS;
+        if (TFS_SUCCESS == iret)
+        {
+          iret = manager_.flush_oplog();
+          if (TFS_SUCCESS != iret)
+          {
+            TBSYS_LOG(ERROR, "flush oplog to filequeue failed, iret: %d", iret);
+          }
+        }
+        else
+        {
+          TBSYS_LOG(DEBUG, "%s", " wait for flush oplog....");
+        }
+      }
+      else
       {
         TBSYS_LOG(DEBUG, "%s", " wait for flush oplog....");
-        return;
       }
-
-      if (ngi.other_side_status_ != NS_STATUS_INITIALIZED || ngi.sync_oplog_flag_ == NS_SYNC_DATA_FLAG_NO)
-      {
-        //wait
-        TBSYS_LOG(DEBUG, "%s", " wait for flush oplog....");
-        return;
-      }
-      const int iret = opLogSync.flush_oplog();
-      if (iret != TFS_SUCCESS)
-      {
-        TBSYS_LOG(ERROR, "flush oplog to filequeue failed(%d)...", iret);
-      }
+      return;
     }
 
     OpLogSyncManager::OpLogSyncManager(LayoutManager& mm) :
@@ -81,64 +84,80 @@ namespace tfs
 
     int OpLogSyncManager::initialize()
     {
-      int iret = TFS_SUCCESS;
+      int iret = TFS_ERROR;
+
       //initializeation filequeue, filequeuethread
-      char path[0xff];
-      std::string file_queue_name = "oplogsync";
+      char path[256];
       BaseService* service = dynamic_cast<BaseService*>(BaseService::instance());
       const char* work_dir = service->get_work_dir();
-      snprintf(path, 0xff, "%s/nameserver/filequeue", work_dir);
+      snprintf(path, 256, "%s/nameserver/filequeue", work_dir);
       std::string file_path(path);
+      std::string file_queue_name = "oplogsync";
       ARG_NEW(file_queue_, FileQueue, file_path, file_queue_name, FILE_QUEUE_MAX_FILE_SIZE);
       ARG_NEW(file_queue_thread_, FileQueueThread, file_queue_, this);
 
       //initializeation oplog
       int32_t max_slots_size = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_OPLOG_SYSNC_MAX_SLOTS_NUM);
-      if (max_slots_size <= 0)
-        max_slots_size = 1024;//40KB = 40(bytes) * 1024(slots size)
-      if (max_slots_size > 4096)
-        max_slots_size = 0x03;//100KB
+      max_slots_size = max_slots_size <= 0 ? 1024 : max_slots_size > 4096 ? 4096 : max_slots_size;
       std::string queue_header_path = std::string(path) + "/" + file_queue_name;
-      //ARG_NEW(oplog_, OpLog, queue_header_path, max_slots_size);
-      oplog_ = new OpLog(queue_header_path, max_slots_size);
+      ARG_NEW(oplog_, OpLog, queue_header_path, max_slots_size);
       iret = oplog_->initialize();
       if (iret != TFS_SUCCESS)
       {
-        TBSYS_LOG(ERROR, "%s", "initialization oplog fail...");
-        return iret;
+        TBSYS_LOG(ERROR, "initialize oplog failed, path: %s, iret: %d", queue_header_path.c_str(), iret);
       }
 
-      //initializeation fsimage
-      std::string tmp(path);
-      iret = replay_all();
-      if (iret != TFS_SUCCESS)
+      if (TFS_SUCCESS == iret)
       {
-        TBSYS_LOG(ERROR, "replay all logs error(%d)", iret);
-        return iret;
+        std::string id_path = std::string(work_dir) + "/nameserver/";
+        iret = id_factory_.initialize(id_path);
+        if (TFS_SUCCESS != iret)
+        {
+          TBSYS_LOG(ERROR, "initialize block id factory failed, path: %s, iret: %d", id_path.c_str(), iret);
+        }
       }
 
+      // replay all oplog
+      if (TFS_SUCCESS == iret)
+      {
+        iret = replay_all();
+        if (TFS_SUCCESS != iret)
+        {
+          TBSYS_LOG(ERROR, "replay all oplogs failed, iret: %d", iret);
+        }
+      }
+    
+      std::string tmp(path);
       //reset filequeue
-      file_queue_->set_delete_file_flag(false);
-      file_queue_->clear();
-      const QueueInformationHeader* qhead = file_queue_->get_queue_information_header();
-      OpLogRotateHeader rotmp;
-      rotmp.rotate_seqno_ = qhead->write_seqno_;
-      rotmp.rotate_offset_ = qhead->write_filesize_;
+      if (TFS_SUCCESS == iret)
+      {
+        file_queue_->set_delete_file_flag(false);
+        file_queue_->clear();
+        const QueueInformationHeader* qhead = file_queue_->get_queue_information_header();
+        OpLogRotateHeader rotmp;
+        rotmp.rotate_seqno_ = qhead->write_seqno_;
+        rotmp.rotate_offset_ = qhead->write_filesize_;
 
-      //update rotate header information
-      oplog_->update_oplog_rotate_header(rotmp);
+        //update rotate header information
+        oplog_->update_oplog_rotate_header(rotmp);
+      }
 
       // add flush oplog timer
-      FlushOpLogTimerTaskPtr foltt = new FlushOpLogTimerTask(meta_mgr_);
-      GFactory::get_timer()->scheduleRepeated(foltt, tbutil::Time::seconds(
-          SYSPARAM_NAMESERVER.heart_interval_));
+      if (TFS_SUCCESS == iret)
+      {
+        FlushOpLogTimerTaskPtr foltt = new FlushOpLogTimerTask(*this);
+        GFactory::get_timer()->scheduleRepeated(foltt, tbutil::Time::seconds(
+            SYSPARAM_NAMESERVER.heart_interval_));
+      }
 
-      file_queue_thread_->initialize(1, OpLogSyncManager::do_sync_oplog);
-      const int queue_thread_num = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_OPLOGSYNC_THREAD_NUM, 1);
-      work_thread_.setThreadParameter(queue_thread_num , this, NULL);
-      work_thread_.start();
-      TBSYS_LOG(DEBUG, "%s", "start ns's log sync");
-      return TFS_SUCCESS;
+      if (TFS_SUCCESS == iret)
+      {
+        file_queue_thread_->initialize(1, OpLogSyncManager::do_sync_oplog);
+        const int queue_thread_num = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_OPLOGSYNC_THREAD_NUM, 1);
+        work_thread_.setThreadParameter(queue_thread_num , this, NULL);
+        work_thread_.start();
+      }
+      return iret;
     }
 
     int OpLogSyncManager::wait_for_shut_down()
@@ -148,7 +167,8 @@ namespace tfs
         file_queue_thread_->wait();
       }
       work_thread_.wait();
-      return TFS_SUCCESS;
+
+      return id_factory_.destroy();
     }
 
     int OpLogSyncManager::destroy()
@@ -164,19 +184,17 @@ namespace tfs
       return TFS_SUCCESS;
     }
 
-    int OpLogSyncManager::register_slots(const char* const data, const int64_t length)
+    int OpLogSyncManager::register_slots(const char* const data, const int64_t length) const
     {
       NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
-      if ((ngi.owner_role_ != NS_ROLE_MASTER) || (is_destroy_))
+      int32_t iret = NULL != data && length > 0 
+                    && ngi.owner_role_ ==  NS_ROLE_MASTER 
+                    && !is_destroy_ ? TFS_SUCCESS : EXIT_REGISTER_OPLOG_SYNC_ERROR;
+      if (TFS_SUCCESS == iret)
       {
-        return EXIT_REGISTER_OPLOG_SYNC_ERROR;
+        file_queue_thread_->write(data, length);
       }
-      if (data == NULL || length <= 0)
-      {
-        return TFS_SUCCESS;
-      }
-      file_queue_thread_->write(data, length);
-      return TFS_SUCCESS;
+      return iret;
     }
 
     void OpLogSyncManager::notify_all()
@@ -187,6 +205,7 @@ namespace tfs
 
     void OpLogSyncManager::rotate()
     {
+      tbutil::Mutex::Lock lock(mutex_);
       const QueueInformationHeader* head = file_queue_->get_queue_information_header();
       OpLogRotateHeader ophead;
       ophead.rotate_seqno_ = head->write_seqno_;
@@ -202,15 +221,15 @@ namespace tfs
           ophead.rotate_seqno_, ophead.rotate_offset_, tmp->rotate_seqno_, tmp->rotate_offset_);
     }
 
-    int OpLogSyncManager::flush_oplog()
+    int OpLogSyncManager::flush_oplog(void) const
     {
+      time_t now = time(NULL);
       tbutil::Mutex::Lock lock(mutex_);
-      time_t iNow = time(NULL);
-      if (oplog_->finish(iNow, true))
+      if (oplog_->finish(now, true))
       {
         register_slots(oplog_->get_buffer(), oplog_->get_slots_offset());
         TBSYS_LOG(DEBUG, "oplog size(%d)", oplog_->get_slots_offset());
-        oplog_->reset(iNow);
+        oplog_->reset(now);
       }
       return TFS_SUCCESS;
     }
@@ -219,40 +238,42 @@ namespace tfs
     {
       int iret = TFS_SUCCESS;
       NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
-      if (ngi.owner_role_ != NS_ROLE_MASTER)
+      if (ngi.owner_role_ == NS_ROLE_MASTER)
       {
-        return TFS_SUCCESS;
-      }
-      #if !defined(TFS_NS_GTEST) && !defined(TFS_NS_INTEGRATION)
-      int count = 0;
-      tbutil::Mutex::Lock lock(mutex_);
-      do
-      {
-        ++count;
-        iret = oplog_->write(type, data, length);
+        #if !defined(TFS_NS_GTEST) && !defined(TFS_NS_INTEGRATION)
+        int count = 0;
+        tbutil::Mutex::Lock lock(mutex_);
+        do
+        {
+          ++count;
+          iret = oplog_->write(type, data, length);
+          if (iret != TFS_SUCCESS)
+          {
+            if (iret == EXIT_SLOTS_OFFSET_SIZE_ERROR)
+            {
+              register_slots(oplog_->get_buffer(), oplog_->get_slots_offset());
+              TBSYS_LOG(DEBUG, "oplog size: %"PRI64_PREFIX"d", oplog_->get_slots_offset());
+              oplog_->reset();
+            }
+          }
+        }
+        while (count < 0x03 && iret != TFS_SUCCESS);
+
         if (iret != TFS_SUCCESS)
         {
-          if (iret == EXIT_SLOTS_OFFSET_SIZE_ERROR)
+          TBSYS_LOG(ERROR, "write log file error, type: %d", type);
+        }
+        else
+        {
+          if (oplog_->finish(0))
           {
             register_slots(oplog_->get_buffer(), oplog_->get_slots_offset());
-            TBSYS_LOG(DEBUG, "oplog size(%d)", oplog_->get_slots_offset());
+            TBSYS_LOG(DEBUG, "oplog size: %"PRI64_PREFIX"d", oplog_->get_slots_offset());
             oplog_->reset();
           }
         }
+        #endif
       }
-      while (count < 0x03 && iret != TFS_SUCCESS);
-      if (iret != TFS_SUCCESS)
-      {
-        TBSYS_LOG(ERROR, "write log file error, type(%d)", type);
-        return iret;
-      }
-      if (oplog_->finish(0))
-      {
-        register_slots(oplog_->get_buffer(), oplog_->get_slots_offset());
-        TBSYS_LOG(DEBUG, "oplog size(%d)", oplog_->get_slots_offset());
-        oplog_->reset();
-      }
-      #endif
       return iret;
     }
 
@@ -269,141 +290,144 @@ namespace tfs
 
     int OpLogSyncManager::do_sync_oplog(const char* const data, const int64_t length)
     {
+      int32_t iret = TFS_SUCCESS;
       NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
-      if ((ngi.owner_role_ != NS_ROLE_MASTER) || (is_destroy_))
+      if ((ngi.owner_role_ != NS_ROLE_MASTER)
+          || (is_destroy_))
       {
         file_queue_->clear();
         TBSYS_LOG(INFO, "%s", " wait for sync oplog");
         tbutil::Monitor<tbutil::Mutex>::Lock lock(monitor_);
         monitor_.wait();
-        return TFS_SUCCESS;
       }
-
-      if (ngi.other_side_status_ < NS_STATUS_INITIALIZED || ngi.sync_oplog_flag_ < NS_SYNC_DATA_FLAG_YES)
+      else
       {
-        //wait
-        TBSYS_LOG(INFO, "%s", " wait for sync oplog");
-        tbutil::Monitor<tbutil::Mutex>::Lock lock(monitor_);
-        monitor_.wait();
-      }
-
-      //to send data to the slave & wait
-      OpLogSyncMessage msg;
-      msg.set_data(data, length);
-      tbnet::Packet* rmsg = NULL;
-      int32_t count = 0;
-      int32_t iret = TFS_ERROR;
-      do
-      {
-        ++count;
-        rmsg = NULL;
-        NewClient* client = NewClientManager::get_instance().create_client();
-        iret = send_msg_to_server(ngi.other_side_ip_port_, client, &msg, rmsg);
-        if (TFS_SUCCESS == iret)
+        if (ngi.other_side_status_ < NS_STATUS_INITIALIZED 
+            || ngi.sync_oplog_flag_ < NS_SYNC_DATA_FLAG_YES)
         {
-          iret = rmsg->getPCode() == OPLOG_SYNC_RESPONSE_MESSAGE ? TFS_SUCCESS : TFS_ERROR;
-          if (TFS_SUCCESS == iret)
+          //wait
+          TBSYS_LOG(INFO, "%s", " wait for sync oplog");
+          tbutil::Monitor<tbutil::Mutex>::Lock lock(monitor_);
+          monitor_.wait();
+        }
+        else
+        {
+          //to send data to the slave & wait
+          OpLogSyncMessage msg;
+          msg.set_data(data, length);
+          tbnet::Packet* rmsg = NULL;
+          int32_t count = 0;
+          int32_t iret = TFS_ERROR;
+          do
           {
-            OpLogSyncResponeMessage* tmsg = dynamic_cast<OpLogSyncResponeMessage*> (rmsg);
-            iret = tmsg->get_complete_flag() == OPLOG_SYNC_MSG_COMPLETE_YES ? TFS_SUCCESS : TFS_ERROR;
+            ++count;
+            rmsg = NULL;
+            NewClient* client = NewClientManager::get_instance().create_client();
+            iret = send_msg_to_server(ngi.other_side_ip_port_, client, &msg, rmsg);
             if (TFS_SUCCESS == iret)
             {
-              NewClientManager::get_instance().destroy_client(client);
-              break;
+              iret = rmsg->getPCode() == OPLOG_SYNC_RESPONSE_MESSAGE ? TFS_SUCCESS : TFS_ERROR;
+              if (TFS_SUCCESS == iret)
+              {
+                OpLogSyncResponeMessage* tmsg = dynamic_cast<OpLogSyncResponeMessage*> (rmsg);
+                iret = tmsg->get_complete_flag() == OPLOG_SYNC_MSG_COMPLETE_YES ? TFS_SUCCESS : TFS_ERROR;
+                if (TFS_SUCCESS == iret)
+                {
+                  NewClientManager::get_instance().destroy_client(client);
+                  break;
+                }
+              }
             }
+            NewClientManager::get_instance().destroy_client(client);
+          }
+          while (count < 0x03);
+          if (TFS_SUCCESS != iret)
+          {
+            ngi.sync_oplog_flag_ = NS_SYNC_DATA_FLAG_NO;
+            TBSYS_LOG(WARN, "synchronization oplog: %s message failed, count: %d", data, count);
           }
         }
-        NewClientManager::get_instance().destroy_client(client);
       }
-      while (count < 0x03);
-      if (TFS_ERROR == iret)
-      {
-        ngi.sync_oplog_flag_ = NS_SYNC_DATA_FLAG_NO;
-        TBSYS_LOG(WARN, "synchronization oplog(%s) message failed, count(%d)", data, count);
-      }
-      return TFS_SUCCESS;
+      return iret;
     }
 
-    bool OpLogSyncManager::handlePacketQueue(tbnet::Packet *packet, void *args) 
+    bool OpLogSyncManager::handlePacketQueue(tbnet::Packet *packet, void * args) 
     {
       bool bret = packet != NULL;
       if (bret)
       {
         common::BasePacket* message = dynamic_cast<common::BasePacket*>(packet);
         NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
-        int iret = TFS_SUCCESS;
+        int32_t iret = TFS_SUCCESS;
         if (ngi.owner_role_ == NS_ROLE_MASTER) //master
           iret = do_master_msg(message, args);
         else if (ngi.owner_role_ == NS_ROLE_SLAVE) //slave
           iret = do_slave_msg(message, args);
-        message->free();
-        return iret;
+        if (TFS_SUCCESS != iret)
+        {
+          TBSYS_LOG(ERROR, "do %s message failed, iret: %d", ngi.owner_role_ == NS_ROLE_MASTER ? "master" : "slave", iret);
+        }
       }
-      return TFS_ERROR;
+      return bret;
     }
 
     int OpLogSyncManager::do_sync_oplog(const common::BasePacket* message, const void*)
     {
-      if (is_destroy_)
-        return TFS_SUCCESS;
-
-      const OpLogSyncMessage* msg = dynamic_cast<const OpLogSyncMessage*> (message);
-      const char* data = msg->get_data();
-      int64_t length = msg->get_length();
-      int64_t offset = 0;
-      time_t now = time(NULL);
       int32_t iret = TFS_SUCCESS;
-
-      while ((offset < length) 
-            && (GFactory::get_runtime_info().destroy_flag_!= NS_DESTROY_FLAGS_YES))
+      if (!is_destroy_)
       {
-        iret = replay_helper(data, length, offset, now);
-        if ((iret != TFS_SUCCESS)
-             && (iret != EXIT_PLAY_LOG_ERROR))
+        const OpLogSyncMessage* msg = dynamic_cast<const OpLogSyncMessage*> (message);
+        const char* data = msg->get_data();
+        int64_t length = msg->get_length();
+        int64_t offset = 0;
+        time_t now = time(NULL);
+        while ((offset < length) 
+            && (GFactory::get_runtime_info().destroy_flag_!= NS_DESTROY_FLAGS_YES))
         {
-          break;
+          iret = replay_helper(data, length, offset, now);
+          if ((iret != TFS_SUCCESS)
+              && (iret != EXIT_PLAY_LOG_ERROR))
+          {
+            break;
+          }
         }
+        OpLogSyncResponeMessage* rmsg = NULL;
+        ARG_NEW(rmsg, OpLogSyncResponeMessage);
+        rmsg->set_complete_flag();
+        iret = const_cast<common::BasePacket*> (message)->reply(rmsg);
       }
-      OpLogSyncResponeMessage* rmsg = NULL;
-      ARG_NEW(rmsg, OpLogSyncResponeMessage);
-      rmsg->set_complete_flag();
-      const_cast<common::BasePacket*> (message)->reply(rmsg);
-      return TFS_SUCCESS;
+      return iret;
     }
 
     int OpLogSyncManager::do_master_msg(const common::BasePacket* msg, const void*)
     {
-      if (is_destroy_)
+      int32_t iret = TFS_SUCCESS;
+      if (!is_destroy_)
       {
-        return TFS_SUCCESS;
-      }
-      NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
-      if (ngi.other_side_status_ < NS_STATUS_INITIALIZED || ngi.sync_oplog_flag_ < NS_SYNC_DATA_FLAG_YES)
-      {
-        //wait
-        TBSYS_LOG(DEBUG, "%s", "wait for sync message");
-        tbutil::Monitor<tbutil::Mutex>::Lock lock(monitor_);
-        monitor_.wait();
-      }
-      int32_t iret = TFS_ERROR;
-      int32_t count(0);
-      do
-      {
-        ++count;
-        iret = send_msg_to_server(ngi.other_side_ip_port_, const_cast<common::BasePacket*>(msg));
-        if (STATUS_MESSAGE_OK == iret)
+        NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
+        if (ngi.other_side_status_ < NS_STATUS_INITIALIZED 
+            || ngi.sync_oplog_flag_ < NS_SYNC_DATA_FLAG_YES)
         {
-          iret = TFS_SUCCESS;
-          break;
+          //wait
+          TBSYS_LOG(DEBUG, "%s", "wait for sync message");
+          tbutil::Monitor<tbutil::Mutex>::Lock lock(monitor_);
+          monitor_.wait();
+        }
+        int32_t count = 0;
+        do
+        {
+          ++count;
+          iret = send_msg_to_server(ngi.other_side_ip_port_, const_cast<common::BasePacket*>(msg));
+        }
+        while (count < 0x03 && STATUS_MESSAGE_OK != iret);
+        iret = STATUS_MESSAGE_OK == iret ? TFS_SUCCESS : TFS_ERROR;
+        if (TFS_ERROR != iret)
+        {
+          ngi.sync_oplog_flag_ = NS_SYNC_DATA_FLAG_NO;
+          TBSYS_LOG(WARN, "synchronization operation message failed, count: %d", count);
         }
       }
-      while (count < 0x03);
-      if (TFS_ERROR == iret)
-      {
-        ngi.sync_oplog_flag_ = NS_SYNC_DATA_FLAG_NO;
-        TBSYS_LOG(WARN, "synchronization operation(%s) message failed, count(%d)", NULL, count);
-      }
-      return TFS_SUCCESS;
+      return iret;
     }
 
     int OpLogSyncManager::do_slave_msg(const common::BasePacket* msg, const void* args)
@@ -488,6 +512,9 @@ namespace tfs
               uint32_t block_id = (*iter);
               BlockChunkPtr ptr = meta_mgr_.get_chunk(block_id);
               BlockCollect* block = NULL;
+
+              iret = id_factory_.generation(block_id);
+              if (TFS_SUCCESS == iret)
               {
                 RWLock::Lock lock(*ptr, WRITE_LOCKER);
                 block = ptr->find(block_id);
@@ -596,6 +623,7 @@ namespace tfs
           else
           {
             int8_t type = header.type_;
+            TBSYS_LOG(DEBUG, "type: %d", type);
             switch (type)
             {
             case OPLOG_TYPE_REPLICATE_MSG:
@@ -620,7 +648,7 @@ namespace tfs
     {
       bool has_log = false;
       file_queue_->set_delete_file_flag(true);
-      int iret = file_queue_->load_queue_head();
+      int32_t iret = file_queue_->load_queue_head();
       if (iret != TFS_SUCCESS)
       {
         TBSYS_LOG(DEBUG, "load header file of file_queue errors(%s)", strerror(errno));
