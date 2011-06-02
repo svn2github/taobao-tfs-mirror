@@ -62,12 +62,15 @@ namespace nameserver
     inline int32_t version() const { return info_.version_;}
     inline void set_create_flag(const int8_t flag = BLOCK_CREATE_FLAG_NO) { create_flag_ = flag;}
     inline int8_t get_creating_flag() const { return create_flag_;}
+    inline bool in_master_set() const { return BLOCK_IN_MASTER_SET_YES == in_master_set_;}
 
     int scan(common::SSMScanParameter& param) const;
     void dump() const;
 
     static const int8_t HOLD_MASTER_FLAG_NO;
     static const int8_t HOLD_MASTER_FLAG_YES;
+    static const int8_t BLOCK_IN_MASTER_SET_NO;
+    static const int8_t BLOCK_IN_MASTER_SET_YES;
     static const int8_t BLOCK_CREATE_FLAG_NO;
     static const int8_t BLOCK_CREATE_FLAG_YES;
     static const int8_t VERSION_AGREED_MASK;
@@ -88,7 +91,8 @@ namespace nameserver
     time_t last_update_time_;
     int8_t hold_master_;
     int8_t create_flag_;
-    int8_t reserve[6];
+    int8_t in_master_set_;
+    int8_t reserve[5];
   };
 }
 }
