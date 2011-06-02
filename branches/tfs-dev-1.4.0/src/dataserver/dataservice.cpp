@@ -536,8 +536,10 @@ namespace tfs
         // send to port(port+1)
         // TODO not add 1 any more
         uint64_t ds_ip = Func::addr_inc_port(ds_list[i], 1);
+
+        int32_t ret_status = 0;
         // client send
-        ret = send_msg_to_server(ds_ip, message);
+        ret = send_msg_to_server(ds_ip, message, ret_status);
         if (TFS_SUCCESS != ret)
         {
           TBSYS_LOG(ERROR, "send message to server to ds ip: %s fail.\n", tbsys::CNetUtil::addrToString(ds_ip).c_str());
