@@ -119,6 +119,9 @@ namespace tfs
       int close_ex();
 
     private:
+      int process_fail_response(common::NewClient* client);
+      int process_success_response(const InnerFilePhase file_phase, common::NewClient* client);
+
       int do_async_request(const InnerFilePhase file_phase, common::NewClient* client, const uint16_t index);
       int do_async_response(const InnerFilePhase file_phase, common::BasePacket* packet, const uint16_t index);
 

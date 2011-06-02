@@ -139,7 +139,7 @@ int TfsLargeFile::fstat(TfsFileStat* file_stat, const TfsStatType mode)
         file_stat->offset_ = file_info.offset_;
         file_stat->size_ = local_key_.get_file_size();
         // usize = real_size + meta_size
-        file_stat->usize_ += local_key_.get_file_size();
+        file_stat->usize_ = file_info.usize_ + local_key_.get_file_size();
         file_stat->modify_time_ = file_info.modify_time_;
         file_stat->create_time_ = file_info.create_time_;
         file_stat->flag_ = file_info.flag_;
@@ -426,7 +426,7 @@ int TfsLargeFile::unlink_process()
     }
     else
     {
-      if ((ret = tfs_session_->get_block_info(seg_data->seg_info_.block_id_, seg_data->ds_, T_WRITE)) != TFS_SUCCESS)
+      if ((ret = tfs_session_->get_block_info(seg_data->seg_info_.block_id_, seg_data->ds_, T_UNLINK)) != TFS_SUCCESS)
       {
         TBSYS_LOG(ERROR, "unlink get block info fail, ret: %d", ret);
       }

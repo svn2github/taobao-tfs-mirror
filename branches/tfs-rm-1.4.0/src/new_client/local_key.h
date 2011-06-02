@@ -80,6 +80,7 @@ namespace tfs
     };
 
     extern const char* LOCAL_KEY_PATH;
+    const mode_t LOCAL_KEY_PATH_MODE = 0777;
 
     typedef std::vector<SegmentData*> SEG_DATA_LIST;
     typedef std::vector<SegmentData*>::iterator SEG_DATA_LIST_ITER;
@@ -119,6 +120,7 @@ namespace tfs
       SEG_SET& get_seg_info();
 
     private:
+      int init_local_key_name(const char* key, const uint64_t addr, char* local_key_name);
       void clear();
       void clear_info();
       int load_head(const char* buf);

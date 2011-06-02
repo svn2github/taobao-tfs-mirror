@@ -47,20 +47,27 @@ GcFile::~GcFile()
   tbsys::gDelete(file_op_);
 }
 
+
 int GcFile::initialize(const char* name)
 {
-  char file_path[MAX_PATH_LENGTH];
-  snprintf(file_path, MAX_PATH_LENGTH, "%s%s", GC_FILE_PATH, name);
   int ret = TFS_SUCCESS;
 
-  if (!DirectoryOp::create_full_path(GC_FILE_PATH))
+  if (NULL == name)
   {
-    TBSYS_LOG(ERROR, "initialize local gc fail, create directory %s failed, error: %d, desc: %s",
-              GC_FILE_PATH, errno, strerror(errno));
+    TBSYS_LOG(ERROR, "null gc file name");
     ret = TFS_ERROR;
+  }
+  else if (!DirectoryOp::create_full_path(GC_FILE_PATH, false, GC_FILE_PATH_MODE))
+  {
+    TBSYS_LOG(ERROR, "create gc file path %s with mode %d fail, error: %s",
+              GC_FILE_PATH, GC_FILE_PATH_MODE, strerror(errno));
+    ret =TFS_ERROR;
   }
   else
   {
+    char file_path[MAX_PATH_LENGTH];
+    snprintf(file_path, MAX_PATH_LENGTH, "%s%s", GC_FILE_PATH, name);
+
     if (access(file_path, F_OK) != 0)
     {
       file_op_ = new FileOperation(file_path, O_RDWR|O_CREAT);

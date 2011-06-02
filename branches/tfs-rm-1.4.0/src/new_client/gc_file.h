@@ -25,6 +25,7 @@ namespace tfs
   {
     const int32_t GC_BATCH_WIRTE_COUNT = 10;
     extern const char* GC_FILE_PATH;
+    const mode_t GC_FILE_PATH_MODE = 0777;
 
     class GcFile
     {

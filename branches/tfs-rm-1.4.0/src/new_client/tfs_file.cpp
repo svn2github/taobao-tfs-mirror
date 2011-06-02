@@ -90,7 +90,7 @@ int TfsFile::open_ex(const char* file_name, const char* suffix, const int32_t fl
 
   if (TFS_SUCCESS == ret)
   {
-    if ((flags_ & T_WRITE) && !(flags_ & T_NOLEASE)) // write, no unlink
+    if ((flags_ & T_WRITE) && !(flags_ & T_UNLINK)) // write, no unlink
     {
       get_meta_segment(0, NULL, 0);
       if ((ret = process(FILE_PHASE_CREATE_FILE)) != TFS_SUCCESS)
@@ -279,7 +279,7 @@ int64_t TfsFile::lseek_ex(const int64_t offset, const int whence)
     TBSYS_LOG(ERROR, "lseek fail, file status: %d is not open yes", file_status_);
     ret = EXIT_NOT_OPEN_ERROR;
   }
-  else if (!(flags_ & READ_MODE))
+  else if (!(flags_ & T_READ))
   {
     TBSYS_LOG(ERROR, "lseek fail, file open without read flag: %d", flags_);
     ret = EXIT_NOT_PERM_OPER;
@@ -369,7 +369,7 @@ int TfsFile::close_ex()
     ret = EXIT_NOT_PERM_OPER;
     TBSYS_LOG(INFO, "occur tfs file write error, close. file status: %d", file_status_);
   }
-  else if (!((flags_ & WRITE_MODE) && (0 != offset_)))
+  else if (!((flags_ & T_WRITE) && (0 != offset_)))
   {
     TBSYS_LOG(INFO, "close tfs file successful");
   }
@@ -380,7 +380,7 @@ int TfsFile::close_ex()
 
   if (TFS_SUCCESS == ret && 0 != offset_)
   {
-    if (flags_ & WRITE_MODE)
+    if (flags_ & T_WRITE)
     {
       fsname_.set_file_id(meta_seg_->seg_info_.file_id_);
       fsname_.set_block_id(meta_seg_->seg_info_.block_id_);
@@ -450,12 +450,11 @@ int64_t TfsFile::get_meta_segment(const int64_t offset, const char* buf, const i
 
 int TfsFile::process(const InnerFilePhase file_phase)
 {
-  int ret = TFS_SUCCESS;
+  int ret = EXIT_ALL_SEGMENT_ERROR;
   int32_t size = processing_seg_list_.size();
   if (UINT16_MAX < static_cast<uint32_t>(size))
   {
     TBSYS_LOG(ERROR, "cannot process more than %hu process seq, your request %d", UINT16_MAX, size);
-    ret = TFS_ERROR;
   }
   else
   {
@@ -473,7 +472,7 @@ int TfsFile::process(const InnerFilePhase file_phase)
           {
             // just continue
             TBSYS_LOG(ERROR, "request %hu fail, status: %d, define status: %d",
-                i, processing_seg_list_[i]->status_, phase_status[file_phase].pre_status_);
+                      i, processing_seg_list_[i]->status_, phase_status[file_phase].pre_status_);
             tfs_session_->remove_block_cache(processing_seg_list_[i]->seg_info_.block_id_);
           }
           else
@@ -483,8 +482,8 @@ int TfsFile::process(const InnerFilePhase file_phase)
         }
       }
 
-    TBSYS_LOG(DEBUG, "send packet. request size: %d, successful request size: %d",
-              size, req_size);
+      TBSYS_LOG(DEBUG, "send packet. request size: %d, successful request size: %d",
+                size, req_size);
       // all request fail
       if (0 == req_size)
       {
@@ -492,43 +491,91 @@ int TfsFile::process(const InnerFilePhase file_phase)
       }
       else
       {
+        // wait for response
         client->wait(ClientConfig::batch_timeout_);
-        NewClient::RESPONSE_MSG_MAP* res_map = client->get_success_response();
-        if (NULL == res_map)
-        {
-          // get response fail, must exit.
-          TBSYS_LOG(ERROR, "get respose list fail.");
-        }
-        else
-        {
-          int32_t resp_size = res_map->size();
-          TBSYS_LOG(DEBUG, "get response. wait object id: %p, request size: %d, successful request size: %d, get response size: %d",
-              client, size, req_size, resp_size);
-
-          NewClient::RESPONSE_MSG_MAP_ITER mit = res_map->begin();
-          //uint16_t index = 0;
-          map<uint8_t, uint16_t>::iterator index_it;
-          for ( ; mit != res_map->end(); ++mit)
-          {
-            index_it = send_id_index_map_.find(mit->first);
-            assert (index_it != send_id_index_map_.end());
-            ret = do_async_response(file_phase, dynamic_cast<common::BasePacket*>(mit->second.second),
-                index_it->second);
-            if (TFS_SUCCESS != ret)
-            {
-              // just continue next one
-              TBSYS_LOG(ERROR, "response fail, ret: %d", ret);
-              resp_size--;
-            }
-          }
-
-          ret = (0 == resp_size) ? EXIT_ALL_SEGMENT_ERROR :
-            (resp_size != size) ? EXIT_GENERAL_ERROR : ret;
-        }
+        // process failed response
+        process_fail_response(client);
+        // process successed response
+        ret = process_success_response(file_phase, client);
       }
+
       send_id_index_map_.clear();
       NewClientManager::get_instance().destroy_client(client);
     }
+  }
+
+  return ret;
+}
+
+int TfsFile::process_fail_response(NewClient* client)
+{
+  NewClient::RESPONSE_MSG_MAP* fail_res_map = client->get_fail_response();
+
+  if (NULL != fail_res_map)
+  {
+    for (NewClient::RESPONSE_MSG_MAP_ITER mit = fail_res_map->begin();
+         mit != fail_res_map->end(); ++mit)
+    {
+      map<uint8_t, uint16_t>::iterator index_it =
+        send_id_index_map_.find(mit->first);
+      if (send_id_index_map_.end() == index_it)
+      {
+        TBSYS_LOG(ERROR, "get invalid index id failed response. client id: %p, index id: %hhu", client, mit->first);
+      }
+      else
+      {
+        TBSYS_LOG(DEBUG, "fail to get response from server: %s, remove block cache: %u",
+                  tbsys::CNetUtil::addrToString(mit->first).c_str(),
+                  processing_seg_list_[index_it->second]->seg_info_.block_id_);
+        tfs_session_->remove_block_cache(
+          processing_seg_list_[index_it->second]->seg_info_.block_id_);
+      }
+    }
+  }
+  return TFS_SUCCESS;
+}
+
+int TfsFile::process_success_response(const InnerFilePhase file_phase, NewClient* client)
+{
+  int ret = EXIT_ALL_SEGMENT_ERROR;
+  NewClient::RESPONSE_MSG_MAP* res_map = client->get_success_response();
+
+  if (NULL == res_map)
+  {
+    TBSYS_LOG(ERROR, "get respose list fail.");
+  }
+  else
+  {
+    int32_t resp_size = res_map->size();
+    TBSYS_LOG(DEBUG, "get response. client id: %p, request size: %d, get response size: %d",
+              client, processing_seg_list_.size(), resp_size);
+
+    for (NewClient::RESPONSE_MSG_MAP_ITER mit = res_map->begin();
+         mit != res_map->end(); ++mit)
+    {
+      map<uint8_t, uint16_t>::iterator index_it =
+        send_id_index_map_.find(mit->first);
+      if (send_id_index_map_.end() == index_it)
+      {
+        TBSYS_LOG(ERROR, "get invalid index id response. client id: %p, index id: %hhu", client, mit->first);
+        resp_size--;
+      }
+      else
+      {
+        ret = do_async_response(file_phase, dynamic_cast<common::BasePacket*>(mit->second.second),
+                                index_it->second);
+        if (TFS_SUCCESS != ret)
+        {
+          // just continue next one
+          TBSYS_LOG(ERROR, "response fail, ret: %d, index id: %hhu, seq id: %huu",
+                    ret, index_it->first, index_it->second);
+          resp_size--;
+        }
+      }
+    }
+
+    ret = (0 == resp_size) ? EXIT_ALL_SEGMENT_ERROR :
+      (resp_size != static_cast<int32_t>(processing_seg_list_.size())) ? EXIT_GENERAL_ERROR : ret;
   }
 
   return ret;
