@@ -159,48 +159,45 @@ namespace tfs
     }
 
     // ip is local addr
-    int Func::is_local_addr(const uint32_t ip)
+    bool Func::is_local_addr(const uint32_t ip)
     {
-      int fd, intrface;
+      int32_t intrface = 0;
       struct ifreq buf[16];
       struct ifconf ifc;
+      bool bret = false;
 
-      if ((fd = socket(AF_INET, SOCK_DGRAM, 0)) <= 0)
+      int32_t fd = socket(AF_INET, SOCK_DGRAM, 0);
+      if (fd > 0)
       {
-        return TFS_SUCCESS;
-      }
-
-      ifc.ifc_len = sizeof(buf);
-      ifc.ifc_buf = (caddr_t) buf;
-      if (ioctl(fd, SIOCGIFCONF, (char *) &ifc))
-      {
+        ifc.ifc_len = sizeof(buf);
+        ifc.ifc_buf = (caddr_t) buf;
+        if (0 == ioctl(fd, SIOCGIFCONF, (char *) &ifc))
+        {
+          intrface = ifc.ifc_len / sizeof(struct ifreq);
+          while (intrface-- > 0)
+          {
+            if (ioctl(fd, SIOCGIFFLAGS, (char *) &buf[intrface]))
+            {
+              continue;
+            }
+            if (buf[intrface].ifr_flags & IFF_LOOPBACK)
+              continue;
+            if (!(buf[intrface].ifr_flags & IFF_UP))
+              continue;
+            if (ioctl(fd, SIOCGIFADDR, (char *) &buf[intrface]))
+            {
+              continue;
+            }
+            if (((struct sockaddr_in *) (&buf[intrface].ifr_addr))->sin_addr.s_addr == ip)
+            {
+              bret = true;
+              break;
+            }
+          }
+        }
         close(fd);
-        return TFS_SUCCESS;
       }
-
-      intrface = ifc.ifc_len / sizeof(struct ifreq);
-      while (intrface-- > 0)
-      {
-        if (ioctl(fd, SIOCGIFFLAGS, (char *) &buf[intrface]))
-        {
-          continue;
-        }
-        if (buf[intrface].ifr_flags & IFF_LOOPBACK)
-          continue;
-        if (!(buf[intrface].ifr_flags & IFF_UP))
-          continue;
-        if (ioctl(fd, SIOCGIFADDR, (char *) &buf[intrface]))
-        {
-          continue;
-        }
-        if (((struct sockaddr_in *) (&buf[intrface].ifr_addr))->sin_addr.s_addr == ip)
-        {
-          close(fd);
-          return 1;
-        }
-      }
-      close(fd);
-      return TFS_SUCCESS;
+      return bret;
     }
 
     // set local ip

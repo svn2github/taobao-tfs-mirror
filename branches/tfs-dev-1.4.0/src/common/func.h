@@ -53,7 +53,7 @@ namespace tfs
       static int get_base_name(char* path, char* dirpath);
 
       static uint32_t get_local_addr(const char* dev_name = NULL);
-      static int is_local_addr(const uint32_t ip);
+      static bool is_local_addr(const uint32_t ip);
       static uint32_t get_addr(const char* ip);
       static uint64_t str_to_addr(const char* ip, const int32_t port);
       static uint64_t get_host_ip(const char *s);
