@@ -11,6 +11,7 @@ namespace tfs
 {
   namespace tools
   {
+    static char suffix(int bit) {return bit ? '*' : ' ';}
     template<class V> int find_key(typename V::value_type key, const V& container)
     {
       typename V::const_iterator iter = container.begin();
@@ -93,8 +94,8 @@ namespace tfs
 
       if (sizeof(typename V::value_type) == sizeof(uint32_t)) // uint32_t: print different block
       {
-        int count = flag.count();
-        for (unsigned i = 0; count, it != container.end(); i++, it++)
+        int32_t count = static_cast<int32_t> (flag.count());
+        for (int32_t i = 0; (it != container.end()) && (count > 0); i++, it++)
         {
           if (flag.test(i))
           {
@@ -102,16 +103,16 @@ namespace tfs
             count--;
           }
         }
-        printf(" [%d]\n", (flag.count() - count));
+        printf(" [%d]\n", static_cast<int32_t>((flag.count() - count)));
       }
       else
       {
-        for (int i = 0; it != container.end(); i++, it++)
+        for (int32_t i = 0; it != container.end(); i++, it++)
         {
           printf("%23s%c", tbsys::CNetUtil::addrToString(*it).c_str(),
               suffix(flag[i]));
         }
-        printf(" [%d]\n", container.size());
+        printf(" [%zd]\n", container.size());
       }
     }
     inline double get_percent(int i, int t)
@@ -163,21 +164,22 @@ namespace tfs
       server_b.dump(type);
       if (type & SERVER_TYPE_BLOCK_LIST)
       {
-        printf("!!!!!!Diff BLOCK: (%d/%d = %.2lf%%) BLOCK: (%d/%d = %.2lf%%)\n\n",
-            flag_.count(), hold_.size(), get_percent(flag_.count(), hold_.size()),
-            server_b.flag_.count(), server_b.hold_.size(), get_percent(server_b.flag_.count(), server_b.hold_.size())
-            );
+        printf("!!!!!!Diff BLOCK: (%zd/%zd = %.2lf%%) BLOCK: (%zd/%zd = %.2lf%%)\n\n",
+            flag_.count(), hold_.size(),
+            get_percent(flag_.count(), hold_.size()),
+            server_b.flag_.count(), server_b.hold_.size(),
+            get_percent(server_b.flag_.count(), server_b.hold_.size()));
       }
       if (type & SERVER_TYPE_BLOCK_WRITABLE)
       {
-        printf("!!!!!!Diff WRITABLE: (%d/%d = %.2lf%%) WRITALBE: (%d/%d = %.2lf%%)\n\n",
+        printf("!!!!!!Diff WRITABLE: (%zd/%zd = %.2lf%%) WRITALBE: (%zd/%zd = %.2lf%%)\n\n",
             flag_.count(), writable_.size(), get_percent(flag_.count(), writable_.size()),
             server_b.flag_.count(), server_b.writable_.size(), get_percent(server_b.flag_.count(), server_b.writable_.size())
             );
       }
       if (type & SERVER_TYPE_BLOCK_MASTER)
       {
-        printf("!!!!!!Diff MASTER: (%d/%d = %.2lf%%) MASTER: (%d/%d = %.2lf%%)\n\n",
+        printf("!!!!!!Diff MASTER: (%zd/%zd = %.2lf%%) MASTER: (%zd/%zd = %.2lf%%)\n\n",
             flag_.count(), master_.size(), get_percent(flag_.count(), master_.size()),
             server_b.flag_.count(), server_b.master_.size(), get_percent(server_b.flag_.count(), server_b.master_.size())
             );
@@ -190,7 +192,7 @@ namespace tfs
       {
         if (type & SERVER_TYPE_SERVER_INFO)
         {
-          printf("%-21s %6s%c %4s%c %5u%c %3u%c %5s%c %4u%c %5s%c %4u%c %14s%c %4Zd%c %4Zd%c %4Zd%c\n",
+          printf("%-21s %6s%c %4s%c %5u%c %3u%c %5s%c %4ld%c %5s%c %4ld%c %14s%c %4zd%c %4zd%c %4zd%c\n",
             tbsys::CNetUtil::addrToString(id_).c_str(),
             Func::format_size(use_capacity_).c_str(), suffix(flag_[b]),
             Func::format_size(total_capacity_).c_str(), suffix(flag_[b+1]),
@@ -263,7 +265,7 @@ namespace tfs
       block_b.dump(type);
       if (type & BLOCK_CMP_SERVER)
       {
-        printf("!!!!!!Diff SERVER: (%d/%d = %.2lf%%) SERVER: (%d/%d = %.2lf%%)\n\n",
+        printf("!!!!!!Diff SERVER: (%zd/%zd = %.2lf%%) SERVER: (%zd/%zd = %.2lf%%)\n\n",
           flag_.count(), server_list_.size(), get_percent(flag_.count(), server_list_.size()),
           block_b.flag_.count(), block_b.server_list_.size(), get_percent(block_b.flag_.count(), block_b.server_list_.size())
             );

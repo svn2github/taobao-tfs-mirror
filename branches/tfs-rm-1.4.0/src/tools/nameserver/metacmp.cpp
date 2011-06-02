@@ -1,3 +1,4 @@
+
 #include "metacmp.h"
 
 using namespace __gnu_cxx;
@@ -24,82 +25,8 @@ namespace tfs
 
       return TFS_SUCCESS;
     }
-    int CmpInfo::get_data(uint64_t ns_ip, common::SSMScanParameter& param, tbnet::DataBuffer& data, bool& need_loop)
+    int CmpInfo::process_data(common::SSMScanParameter& param, tbnet::DataBuffer& data, const int8_t role, int32_t& map_count)
     {
-      ShowServerInformationMessage msg;
-      SSMScanParameter& input_param = msg.get_param();
-      input_param = param;
-
-      param.data_.clear();
-      Message *ret_msg = NULL;
-      int ret = -1;
-      ret = send_message_to_server(ns_ip, &msg, &ret_msg);
-
-      if (TFS_SUCCESS != ret || ret_msg == NULL)
-      {
-        TBSYS_LOG(ERROR, "get server info error");
-        return TFS_ERROR;
-      }
-      if(ret_msg->get_message_type() != SHOW_SERVER_INFORMATION_MESSAGE)
-      {
-        TBSYS_LOG(ERROR, "get invalid message type");
-        return TFS_ERROR;
-      }
-      ShowServerInformationMessage* message = dynamic_cast<ShowServerInformationMessage*>(ret_msg);
-      SSMScanParameter& ret_param = message->get_param();
-      data = ret_param.data_;
-      //TBSYS_LOG(DEBUG, "data len: %d", data.getDataLen());
-      if (param.type_ == SSM_TYPE_SERVER)
-      {
-        param.addition_param1_ = ret_param.addition_param1_;
-        param.addition_param2_ = ret_param.addition_param2_;
-        param.end_flag_ = ret_param.end_flag_;
-      }
-      else if (param.type_ == SSM_TYPE_BLOCK)
-      {
-        param.start_next_position_ = (ret_param.start_next_position_ << 16) & 0xffff0000;
-        param.end_flag_ = ret_param.end_flag_;
-        if (param.end_flag_ & SSM_SCAN_CUTOVER_FLAG_NO)
-        {
-          param.addition_param1_ = ret_param.addition_param2_;
-        }
-      }
-      if ((param.end_flag_ >> 4) & SSM_SCAN_END_FLAG_YES)
-      {
-        need_loop = false;
-      }
-      return TFS_SUCCESS;
-
-    }
-    int CmpInfo::init_param(ComType cmp_type, int8_t type, int32_t num, SSMScanParameter& param)
-    {
-      memset(&param, 0, sizeof(SSMScanParameter));
-      if (cmp_type & SERVER_TYPE)
-      {
-        param.type_ = SSM_TYPE_SERVER;
-        param.child_type_ = SSM_CHILD_SERVER_TYPE_INFO
-                           | SSM_CHILD_SERVER_TYPE_HOLD
-                           | SSM_CHILD_SERVER_TYPE_WRITABLE
-                           | SSM_CHILD_SERVER_TYPE_MASTER;
-        param.start_next_position_ = 0x0;
-        param.should_actual_count_= (num << 16);
-        param.end_flag_ = SSM_SCAN_CUTOVER_FLAG_YES;
-      }
-      else if (cmp_type & BLOCK_TYPE)
-      {
-        param.type_ = SSM_TYPE_BLOCK;
-        param.child_type_ = SSM_CHILD_BLOCK_TYPE_INFO | SSM_CHILD_BLOCK_TYPE_SERVER;
-        param.should_actual_count_ = (num << 16);
-        param.end_flag_ = SSM_SCAN_CUTOVER_FLAG_YES;
-      }
-      return TFS_SUCCESS;
-    }
-    int CmpInfo::get_cmp_map(SSMScanParameter& param, int8_t role, bool& need_loop, int32_t& map_count)
-    {
-      tbnet::DataBuffer data;
-      uint64_t ns_ip = (role == Master_Server_Role) ? master_ns_ip_ : slave_ns_ip_;
-      get_data(ns_ip, param, data, need_loop);
-
       int32_t data_len = data.getDataLen();
       int32_t offset = 0;
       while (data_len > offset)
@@ -139,6 +66,90 @@ namespace tfs
           }
         }
       }
+      return TFS_SUCCESS;
+    }
+    int CmpInfo::init_param(ComType cmp_type, int8_t type, int32_t num, SSMScanParameter& param)
+    {
+      memset(&param, 0, sizeof(SSMScanParameter));
+      if (cmp_type & SERVER_TYPE)
+      {
+        param.type_ = SSM_TYPE_SERVER;
+        param.child_type_ = SSM_CHILD_SERVER_TYPE_INFO
+                           | SSM_CHILD_SERVER_TYPE_HOLD
+                           | SSM_CHILD_SERVER_TYPE_WRITABLE
+                           | SSM_CHILD_SERVER_TYPE_MASTER;
+        param.start_next_position_ = 0x0;
+        param.should_actual_count_= (num << 16);
+        param.end_flag_ = SSM_SCAN_CUTOVER_FLAG_YES;
+      }
+      else if (cmp_type & BLOCK_TYPE)
+      {
+        param.type_ = SSM_TYPE_BLOCK;
+        param.child_type_ = SSM_CHILD_BLOCK_TYPE_INFO | SSM_CHILD_BLOCK_TYPE_SERVER;
+        param.should_actual_count_ = (num << 16);
+        param.end_flag_ = SSM_SCAN_CUTOVER_FLAG_YES;
+      }
+      return TFS_SUCCESS;
+    }
+    int CmpInfo::get_cmp_map(SSMScanParameter& param, int8_t role, bool& need_loop, int32_t& map_count)
+    {
+      NewClient* client = NewClientManager::get_instance().create_client();
+      tbnet::DataBuffer data;
+      uint64_t ns_ip = (role == Master_Server_Role) ? master_ns_ip_ : slave_ns_ip_;
+      ShowServerInformationMessage msg;
+      SSMScanParameter& input_param = msg.get_param();
+      input_param = param;
+
+      param.data_.clear();
+      tbnet::Packet *ret_msg = NULL;
+      int ret = -1;
+      ret = send_msg_to_server(ns_ip, client, &msg, ret_msg);
+
+      if (TFS_SUCCESS != ret || ret_msg == NULL)
+      {
+        TBSYS_LOG(ERROR, "get server info error");
+        NewClientManager::get_instance().destroy_client(client);
+        return TFS_ERROR;
+      }
+      if(ret_msg->getPCode() != SHOW_SERVER_INFORMATION_MESSAGE)
+      {
+        TBSYS_LOG(ERROR, "get invalid message type");
+        NewClientManager::get_instance().destroy_client(client);
+        return TFS_ERROR;
+      }
+      ShowServerInformationMessage* message = dynamic_cast<ShowServerInformationMessage*>(ret_msg);
+      SSMScanParameter& ret_param = message->get_param();
+      if (ret_param.data_.getDataLen() > 0)
+      {
+        //TBSYS_LOG(DEBUG, "data len: %d", data.getDataLen());
+        process_data(param, ret_param.data_, role, map_count);
+        if (param.type_ == SSM_TYPE_SERVER)
+        {
+          param.addition_param1_ = ret_param.addition_param1_;
+          param.addition_param2_ = ret_param.addition_param2_;
+          param.end_flag_ = ret_param.end_flag_;
+        }
+        else if (param.type_ == SSM_TYPE_BLOCK)
+        {
+          param.start_next_position_ = (ret_param.start_next_position_ << 16) & 0xffff0000;
+          param.end_flag_ = ret_param.end_flag_;
+          if (param.end_flag_ & SSM_SCAN_CUTOVER_FLAG_NO)
+          {
+            param.addition_param1_ = ret_param.addition_param2_;
+          }
+        }
+        if ((param.end_flag_ >> 4) & SSM_SCAN_END_FLAG_YES)
+        {
+          need_loop = false;
+        }
+      }
+      else
+      {
+        need_loop = false;
+      }
+
+      NewClientManager::get_instance().destroy_client(client);
+      return TFS_SUCCESS;
     }
     int CmpInfo::compare(ComType cmp_type, int8_t type, int32_t num)
     {
@@ -179,6 +190,7 @@ namespace tfs
         do_cmp(master_block_map_, slave_block_map_, stat, type, true);
       }
       stat.print_stat(cmp_type);
+      return TFS_SUCCESS;
     }
     void CmpInfo::print_head(ComType cmp_type, const int8_t type) const
     {

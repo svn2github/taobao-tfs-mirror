@@ -14,7 +14,6 @@ namespace tfs
     template<class V> void cmp_disorder_container(const V& container_a, const V& container_b, std::bitset<MAX_BITS_SIZE>& flag_a, std::bitset<MAX_BITS_SIZE>& flag_b);
     template<class V> void cmp_order_container(const V& container_a, const V& container_b, std::bitset<MAX_BITS_SIZE>& flag_a, std::bitset<MAX_BITS_SIZE>& flag_b);
     template<class V> void print_container(V& container, std::bitset<MAX_BITS_SIZE>& flag, bool reverse = false);
-    static char suffix(int bit) {return bit ? '*' : ' ';}
     class ServerCmp : public ServerBase
     {
       public:
