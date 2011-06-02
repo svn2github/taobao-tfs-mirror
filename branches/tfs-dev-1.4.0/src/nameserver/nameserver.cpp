@@ -42,10 +42,10 @@ namespace tfs
       int32_t percent_size = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_TASK_PRECENT_SEC_SIZE, 1);
       owner_check_time_ = (server_->get_work_queue_size() * percent_size) * 1000;//us
       max_owner_check_time_ = owner_check_time_ * 4;//us
-      NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
-      ngi.last_push_owner_check_packet_time_ = ngi.last_owner_check_time_ = tbutil::Time::now().toMicroSeconds();//us
       TBSYS_LOG(INFO, "owner_check_time(%"PRI64_PREFIX"d)(us), max_owner_check_time(%"PRI64_PREFIX"u)(us)",
           owner_check_time_, max_owner_check_time_);
+      NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
+      ngi.last_push_owner_check_packet_time_ = ngi.last_owner_check_time_ = tbutil::Time::now().toMicroSeconds();//ms
     }
 
     OwnerCheckTimerTask::~OwnerCheckTimerTask()
@@ -56,45 +56,46 @@ namespace tfs
     void OwnerCheckTimerTask::runTimerTask()
     {
       NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
-      if (ngi.owner_status_ < NS_STATUS_INITIALIZED)
-         return;
-
-      bool bret = false;
-      tbutil::Time now = tbutil::Time::now().toMicroSeconds();
-      tbutil::Time end = now + MAX_LOOP_TIME;
-      if (ngi.last_owner_check_time_ >= ngi.last_push_owner_check_packet_time_)
+      if (ngi.owner_status_ >= NS_STATUS_INITIALIZED)
       {
-        tbutil::Time current(0);
-        OwnerCheckMessage* message = new OwnerCheckMessage();
-        while(!bret
-            && (ngi.owner_status_ == NS_STATUS_INITIALIZED)
-            && current < end)
+        bool bret = false;
+        tbutil::Time now = tbutil::Time::now();
+        tbutil::Time end = now + MAX_LOOP_TIME;
+        if (ngi.last_owner_check_time_ >= ngi.last_push_owner_check_packet_time_)
         {
-          bret = server_->push(message);
+          int64_t current = 0;
+          OwnerCheckMessage* message = new OwnerCheckMessage();
+          while(!bret
+              && (ngi.owner_status_ == NS_STATUS_INITIALIZED)
+              && current < end.toMicroSeconds())
+          {
+            bret = server_->push(message);
+            if (!bret)
+            {
+              current = tbutil::Time::now().toMicroSeconds();
+            }
+            else
+            {
+              ngi.last_push_owner_check_packet_time_ = now.toMicroSeconds();
+            }
+          }
           if (!bret)
           {
-            current = tbutil::Time::now().toMicroSeconds();
+            message->free();
           }
-          else
+        }
+        else
+        {
+          int64_t diff = now.toMicroSeconds() - ngi.last_owner_check_time_;
+          if (diff >= max_owner_check_time_)
           {
-            ngi.last_push_owner_check_packet_time_ = now;
+            TBSYS_LOG(INFO,"last push owner check packet time(%"PRI64_PREFIX"d)(us) > max owner check time(%"PRI64_PREFIX"d)(us), nameserver dead, modify owner status(uninitialize)",
+                ngi.last_push_owner_check_packet_time_, now.toMicroSeconds());
+            ngi.owner_status_ = NS_STATUS_UNINITIALIZE;//modif owner status
           }
         }
-        if (!bret)
-        {
-          tbsys::gDelete(message);
-        }
       }
-      else
-      {
-        tbutil::Time diff = now - ngi.last_owner_check_time_;
-        if (diff >= max_owner_check_time_)
-        {
-          TBSYS_LOG(INFO,"last push owner check packet time(%"PRI64_PREFIX"d)(us) > max owner check time(%"PRI64_PREFIX"d)(us), nameserver dead, modify owner status(uninitialize)",
-              ngi.last_push_owner_check_packet_time_.toMicroSeconds(),now.toMicroSeconds());
-          ngi.owner_status_ = NS_STATUS_UNINITIALIZE;//modif owner status
-        }
-      }
+      return;
     }
 
     NameServer::NameServer() :
@@ -122,6 +123,44 @@ namespace tfs
         TBSYS_LOG(ERROR, "%s", "initialize nameserver parameter error, must be exit");
         iret = EXIT_GENERAL_ERROR;
       }
+      const char* ip_addr = get_ip_addr();
+      if (NULL == ip_addr)//get ip addr
+      {
+        iret =  EXIT_CONFIG_ERROR;
+        TBSYS_LOG(ERROR, "%s", "nameserver not set ip_addr");
+      }
+
+      if (TFS_SUCCESS == iret)
+      {
+        const char *dev_name = get_dev();                                                          
+        if (NULL == dev_name)//get dev name
+        {
+          iret =  EXIT_CONFIG_ERROR;
+          TBSYS_LOG(ERROR, "%s","nameserver not set dev_name");
+        }
+        else
+        {
+          uint32_t ip_addr_id = tbsys::CNetUtil::getAddr(ip_addr);
+          if (0 == ip_addr_id)
+          {
+            iret =  EXIT_CONFIG_ERROR;
+            TBSYS_LOG(ERROR, "%s", "nameserver not set ip_addr");
+          }
+          else
+          {
+            uint32_t local_ip = Func::get_local_addr(dev_name);
+            NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
+            ngi.owner_ip_port_  = tbsys::CNetUtil::ipToAddr(local_ip, get_port());
+            bool find_ip_in_dev = Func::is_local_addr(ip_addr_id);
+            if (!find_ip_in_dev)
+            {
+              iret = EXIT_GENERAL_ERROR;
+              TBSYS_LOG(ERROR, "ip '%s' is not local ip, local ip: %s",ip_addr, tbsys::CNetUtil::addrToString(local_ip).c_str());
+            }
+          }
+        }
+      }
+
       if (TFS_SUCCESS == iret)
       {
         iret = initialize_ns_global_info();
@@ -131,6 +170,18 @@ namespace tfs
           iret = EXIT_GENERAL_ERROR;
         }
       }
+
+      if (TFS_SUCCESS == iret)
+      {
+        int32_t heart_thread_count = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_HEART_THREAD_COUNT, 2);
+        int32_t heart_max_queue_size = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_HEART_MAX_QUEUE_SIZE, 10);
+        iret = heart_mgr_.initialize(heart_thread_count, heart_max_queue_size);
+        if (TFS_SUCCESS != iret)
+        {
+          TBSYS_LOG(ERROR, "initialize heart manager failed, must be exit, ret(%d)", iret);
+        }
+      }
+
       if (TFS_SUCCESS == iret)
       {
         //send msg to peer
@@ -148,7 +199,7 @@ namespace tfs
           iret = EXIT_GENERAL_ERROR;
         }
       }
-      
+
       if (TFS_SUCCESS == iret)
       {
         int32_t block_chunk_num = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_BLOCK_CHUNK_NUM, 32);
@@ -158,20 +209,11 @@ namespace tfs
           TBSYS_LOG(ERROR, "initialize layoutmanager failed, must be exit, ret(%d)", iret);
         }
       }
-
-      if (TFS_SUCCESS == iret)
-      {
-        int32_t heart_thread_count = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_HEART_THREAD_COUNT, 2);
-        int32_t heart_max_queue_size = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_HEART_MAX_QUEUE_SIZE, 10);
-        iret = heart_mgr_.initialize(heart_thread_count, heart_max_queue_size);
-        if (TFS_SUCCESS != iret)
-        {
-          TBSYS_LOG(ERROR, "initialize heart manager failed, must be exit, ret(%d)", iret);
-        }
-      }
+      
       if (TFS_SUCCESS == iret)
       {
         NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
+
         //if we're the master ns,we can start service now.change status to INITIALIZED.
         if (ngi.owner_role_ == NS_ROLE_MASTER)
         {
@@ -233,10 +275,13 @@ namespace tfs
             iret = EXIT_GENERAL_ERROR;
           }
         }
+
         if (TFS_SUCCESS == iret)
         {
           GFactory::get_gc_manager().set_layout_manager(&meta_mgr_);
         }
+
+        TBSYS_LOG(INFO, "nameserver running, listen port: %d", get_port());
       }
       return iret;
     }
@@ -261,6 +306,7 @@ namespace tfs
         master_slave_heart_mgr_.wait_for_shut_down();
         meta_mgr_.wait_for_shut_down();
         GFactory::wait_for_shut_down();
+        TBSYS_LOG(INFO, "%s", "nameserver stoped");
       }
       return TFS_SUCCESS;
     }
@@ -643,7 +689,8 @@ namespace tfs
       if (common::TFS_SUCCESS == iret)
       {
         NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
-        ngi.last_owner_check_time_ = tbsys::CTimeUtil::getTime();
+        tbutil::Mutex::Lock lock(ngi);
+        ngi.last_owner_check_time_ = tbutil::Time::now().toMicroSeconds();//us
       }
       return iret;
     }
@@ -724,6 +771,7 @@ namespace tfs
           {
             ns_ip_list.push_back(Func::str_to_addr(t, get_port()));
           }
+
           if (2U != ns_ip_list.size())
           {
             TBSYS_LOG(DEBUG, "%s", "must have two ns,check your ns' list");
@@ -731,42 +779,38 @@ namespace tfs
           }
           else
           {
-            uint32_t local_ip = Func::get_local_addr(get_dev());
-            if (0 == local_ip)
+            uint32_t local_ip = 0;
+            bool bfind_flag = false;
+            std::vector<uint64_t>::iterator iter = ns_ip_list.begin(); 
+            for (; iter != ns_ip_list.end(); ++iter)
             {
-              TBSYS_LOG(ERROR, "%s", "get dev name is null or local ip == 0 , must be exit");
+              bfind_flag = Func::is_local_addr((*iter));
+              if (bfind_flag)
+              {
+                local_ip = (*iter);
+                break;
+              }
+            }
+            if (!bfind_flag)
+            {
+              TBSYS_LOG(ERROR, "ip list: %s not in %s, must be exit", ns_ip, get_dev());
               iret = EXIT_GENERAL_ERROR;
             }
             else
             {
-              uint64_t local_ns_id = 0;
-              IpAddr* adr = reinterpret_cast<IpAddr*>(&local_ns_id);
-              adr->ip_ = local_ip;
-              adr->port_ = get_port();
-              std::vector<uint64_t>::iterator iter = 
-                std::find(ns_ip_list.begin(), ns_ip_list.end(), local_ns_id);
-              if (iter == ns_ip_list.end())
+              NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
+              iter = ns_ip_list.begin();
+              for (;iter != ns_ip_list.end(); ++iter)
               {
-                TBSYS_LOG(ERROR, "local ip(%s) not in ip_list(%s) , must be exit",
-                  tbsys::CNetUtil::addrToString(local_ns_id).c_str(), ns_ip);
-                iret = EXIT_GENERAL_ERROR;
+                local_ip == *iter ? ngi.owner_ip_port_ = *iter : ngi.other_side_ip_port_ = *iter;
               }
-              else
-              {
-                NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
-                iter = ns_ip_list.begin();
-                for (;iter != ns_ip_list.end(); ++iter)
-                {
-                  local_ns_id == *iter ? ngi.owner_ip_port_ = *iter : ngi.other_side_ip_port_ = *iter;
-                }
 
-                ngi.switch_time_ = time(NULL);
-                ngi.owner_status_ = NS_STATUS_UNINITIALIZE;
-                ngi.vip_ = Func::get_addr(get_ip_addr());
-                ngi.owner_role_ = Func::is_local_addr(ngi.vip_) == true ? NS_ROLE_MASTER : NS_ROLE_SLAVE;
-                ngi.other_side_role_ = NS_ROLE_NONE;
-                TBSYS_LOG(DEBUG, "i %s the master server", ngi.owner_role_ == NS_ROLE_MASTER ? "am" : "am not");
-              }
+              ngi.switch_time_ = time(NULL);
+              ngi.owner_status_ = NS_STATUS_UNINITIALIZE;
+              ngi.vip_ = Func::get_addr(get_ip_addr());
+              ngi.owner_role_ = Func::is_local_addr(ngi.vip_) == true ? NS_ROLE_MASTER : NS_ROLE_SLAVE;
+              ngi.other_side_role_ = NS_ROLE_NONE;
+              TBSYS_LOG(DEBUG, "i %s the master server", ngi.owner_role_ == NS_ROLE_MASTER ? "am" : "am not");
             }
           }
         }
@@ -938,7 +982,6 @@ namespace tfs
           //receive all owner check message , master and slave heart message, dataserver heart message
           if (pcode != OWNER_CHECK_MESSAGE
             && pcode != MASTER_AND_SLAVE_HEART_MESSAGE
-            && pcode != SET_DATASERVER_MESSAGE
             && pcode != HEARTBEAT_AND_NS_HEART_MESSAGE
             && pcode != CLIENT_CMD_MESSAGE)
           {
@@ -962,7 +1005,6 @@ namespace tfs
         {
           if (pcode != OWNER_CHECK_MESSAGE
             && pcode != MASTER_AND_SLAVE_HEART_MESSAGE
-            && pcode != SET_DATASERVER_MESSAGE
             && pcode != HEARTBEAT_AND_NS_HEART_MESSAGE
             && pcode != CLIENT_CMD_MESSAGE)
           {
@@ -977,6 +1019,7 @@ namespace tfs
                 && pcode != OPLOG_SYNC_MESSAGE
                 && pcode != GET_BLOCK_INFO_MESSAGE
                 && pcode != GET_BLOCK_INFO_MESSAGE
+                && pcode != SET_DATASERVER_MESSAGE
                 && pcode != BATCH_GET_BLOCK_INFO_MESSAGE 
                 && pcode != SHOW_SERVER_INFORMATION_MESSAGE)
               {

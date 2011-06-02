@@ -51,7 +51,7 @@ namespace tfs
       else
       {
         bool isnew = false;
-        int iret = lay_out_manager_.add_server(ds_info, now, isnew);
+        iret = lay_out_manager_.add_server(ds_info, now, isnew);
         if (iret == TFS_SUCCESS)
         {
           if (isnew) //new dataserver

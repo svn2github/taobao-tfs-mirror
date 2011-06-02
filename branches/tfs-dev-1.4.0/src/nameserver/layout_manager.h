@@ -74,8 +74,6 @@ namespace nameserver
     int rm_block_from_ds(const uint64_t server_id, const uint32_t block_id);
     int rm_block_from_ds(const uint64_t server_id, const std::vector<uint32_t>& block_ids);
 
-    uint32_t calc_max_block_id();
-
     inline void get_alive_server(common::VUINT64& servers)
     {
       common::RWLock::Lock lock(server_mutex_, common::READ_LOCKER);
@@ -115,7 +113,7 @@ namespace nameserver
 
     void rotate(const time_t now);
 
-    uint32_t get_alive_block_id() const;
+    uint32_t get_alive_block_id();
     int64_t calc_all_block_bytes() const;
     int64_t calc_all_block_count() const;
 
@@ -431,7 +429,6 @@ namespace nameserver
 #endif
     static const int8_t ELECT_SEQ_INITIALIE_NUM;
     static const int8_t INTERVAL;
-    static const int16_t SKIP_BLOCK;
     static const int8_t LOAD_BASE_MULTIPLE;
     BuildPlanThreadHelperPtr build_plan_thread_;
     RunPlanThreadHelperPtr run_plan_thread_;
@@ -444,7 +441,7 @@ namespace nameserver
 
     OpLogSyncManager oplog_sync_mgr_;
 
-    common::SERVER_MAP servers_;
+    SERVER_MAP servers_;
     std::vector<ServerCollect*> servers_index_;
     BlockChunkPtr* block_chunk_;
 

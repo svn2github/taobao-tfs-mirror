@@ -36,9 +36,9 @@ namespace tfs
       {
         return NsRuntimeGlobalInformation::instance(); 
       }     
-      static NsGlobalInfo& get_global_info()
+      static NsGlobalStatisticsInfo& get_global_info()
       {
-        return NsGlobalInfo::instance();
+        return NsGlobalStatisticsInfo::instance();
       } 
       static tbutil::TimerPtr& get_timer()
       {

@@ -63,7 +63,7 @@ namespace tfs
     class BaseStrategy
     {
       public:
-        BaseStrategy(int64_t seq, const NsGlobalInfo& g) :
+        BaseStrategy(int64_t seq, const NsGlobalStatisticsInfo& g) :
           seqno_average_num_(0), elect_average_num_(0), total_elect_num_(seq), primary_writable_block_count_(0), use_(0), load_(0), global_info_(g)
         {
         }
@@ -81,13 +81,13 @@ namespace tfs
 
       private:
         DISALLOW_COPY_AND_ASSIGN( BaseStrategy);
-        NsGlobalInfo global_info_;
+        NsGlobalStatisticsInfo global_info_;
     };
 
     class WriteStrategy: public BaseStrategy
     {
       public:
-        WriteStrategy(int64_t seq, const NsGlobalInfo& g) :
+        WriteStrategy(int64_t seq, const NsGlobalStatisticsInfo& g) :
           BaseStrategy(seq, g) {}
         virtual ~WriteStrategy() {}
         virtual int64_t calc(const ServerCollect* server) const;
@@ -98,7 +98,7 @@ namespace tfs
     class ReplicateDestStrategy: public BaseStrategy 
     {
       public:
-        ReplicateDestStrategy(uint32_t seq, const NsGlobalInfo& g):
+        ReplicateDestStrategy(uint32_t seq, const NsGlobalStatisticsInfo& g):
           BaseStrategy(seq, g) {}
         virtual ~ReplicateDestStrategy() {}
         virtual int64_t calc(const ServerCollect* server) const;
@@ -109,7 +109,7 @@ namespace tfs
     class ReplicateSourceStrategy: public BaseStrategy 
     {
       public:
-        ReplicateSourceStrategy(uint32_t seq, const NsGlobalInfo& g) :
+        ReplicateSourceStrategy(uint32_t seq, const NsGlobalStatisticsInfo& g) :
           BaseStrategy(seq, g) {}
         virtual ~ReplicateSourceStrategy() {}
         virtual int64_t calc(const ServerCollect* server) const;
@@ -188,8 +188,8 @@ namespace tfs
         bool has_valid = false;
         DS_WEIGHT weights;
         StoreWeight<Strategy> store(strategy, weights);
-        const common::SERVER_MAP& ds_map = meta.servers_; 
-        common::SERVER_MAP::const_iterator iter = ds_map.begin();
+        const SERVER_MAP& ds_map = meta.servers_; 
+        SERVER_MAP::const_iterator iter = ds_map.begin();
         for (; iter != ds_map.end(); ++iter)
         {
           has_valid = check_server_in_plan ? ((!meta.find_server_in_plan(iter->second))

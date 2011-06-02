@@ -24,8 +24,8 @@ namespace tfs
 {
 namespace nameserver
 {
-NsGlobalInfo NsGlobalInfo::instance_;
-const int8_t NsGlobalInfo::ELECT_SEQ_NO_INITIALIZE = 1;
+NsGlobalStatisticsInfo NsGlobalStatisticsInfo::instance_;
+const int8_t NsGlobalStatisticsInfo::ELECT_SEQ_NO_INITIALIZE = 1;
 NsRuntimeGlobalInformation NsRuntimeGlobalInformation::instance_;
 tbutil::TimerPtr GFactory::timer_ = 0;
 StatManager<std::string, std::string, StatEntry >GFactory::stat_mgr_;
