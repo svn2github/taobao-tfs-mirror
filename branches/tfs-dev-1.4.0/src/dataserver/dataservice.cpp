@@ -638,6 +638,48 @@ namespace tfs
                   message->getChannelId(), message->get_block_id(), message->get_file_id());
             }
           }
+          else if (CLOSE_FILE_MESSAGE == pcode)
+          {
+            CloseFileMessage* message = dynamic_cast<CloseFileMessage*> (bpacket);
+            CloseFileInfo close_file_info = message->get_close_file_info();
+            int32_t lease_id = message->get_lease_id();
+
+            //commit
+            int32_t status = all_success ? TFS_SUCCESS : TFS_ERROR;
+            int32_t iret = ds_requester_.req_block_write_complete(close_file_info.block_id_, lease_id, status);
+            if (TFS_SUCCESS == status)
+            {
+              if (TFS_SUCCESS == iret)
+              {
+                //sync to mirror
+                int option_flag = message->get_option_flag();
+                if (0 == (option_flag & TFS_FILE_NO_SYNC_LOG))
+                {
+                  TBSYS_LOG(INFO, " write sync log, blockid: %u, fileid: %" PRI64_PREFIX "u", close_file_info.block_id_,
+                      close_file_info.file_id_);
+                  iret = sync_mirror_->write_sync_log(OPLOG_INSERT, close_file_info.block_id_,
+                      close_file_info.file_id_);
+                }
+              }
+              if (TFS_SUCCESS == iret)
+              {
+                message->reply(new StatusMessage(STATUS_MESSAGE_OK));
+              }
+              else
+              {
+                TBSYS_LOG(ERROR,
+                    "rep block write complete or write sync log fail, blockid: %u, fileid: %" PRI64_PREFIX "u, ret: %d",
+                    close_file_info.block_id_, close_file_info.file_id_, iret);
+                message->reply(new StatusMessage(STATUS_MESSAGE_ERROR));
+              }
+            }
+            else
+            {
+              message->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), iret,
+                  "close write file to other dataserver fail, blockid: %u, fileid: %" PRI64_PREFIX "u, ret: %d",
+                  close_file_info.block_id_, close_file_info.file_id_, iret);
+            }
+          }
           else
           {
             TBSYS_LOG(ERROR, "callback handle error message pcode: %d", pcode);
@@ -942,7 +984,6 @@ namespace tfs
     {
       TIMER_START();
       CloseFileInfo close_file_info = message->get_close_file_info();
-
       int32_t lease_id = message->get_lease_id();
       uint64_t peer_id = message->get_connection()->getPeerId();
 
@@ -1003,7 +1044,8 @@ namespace tfs
             message->set_mode(CLOSE_FILE_SLAVER);
             message->set_block(blk);
 
-            ret = send_message_to_slave_ds(message, message->get_ds_list());
+            //ret = send_message_to_slave_ds(message, message->get_ds_list());
+            ret = post_message_to_server(message, message->get_ds_list());
             if (TFS_SUCCESS != ret)
             {
               // other ds failed, release lease
@@ -1012,7 +1054,7 @@ namespace tfs
                   "close write file to other dataserver fail, blockid: %u, fileid: %" PRI64_PREFIX "u, ret: %d",
                   close_file_info.block_id_, close_file_info.file_id_, ret);
             }
-            else
+            /*else
             {
               //commit
               ret = ds_requester_.req_block_write_complete(close_file_info.block_id_, lease_id, TFS_SUCCESS);
@@ -1040,7 +1082,7 @@ namespace tfs
                     close_file_info.block_id_, close_file_info.file_id_, ret);
                 message->reply(new StatusMessage(STATUS_MESSAGE_ERROR));
               }
-            }
+            }*/
           }
           else
           {

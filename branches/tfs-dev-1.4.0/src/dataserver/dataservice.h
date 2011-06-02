@@ -100,7 +100,6 @@ namespace tfs
 
         int callback(common::NewClient* client);
 
-        int command_done(common::BasePacket* send_message, bool status, const std::string& error);
         int send_message_to_slave_ds(common::BasePacket* message, const common::VUINT64& ds_list);
         int post_message_to_server(common::BasePacket* message, const common::VUINT64& ds_list);
 
