@@ -91,6 +91,7 @@ namespace tfs
 
       const char* get_file_name();
       void set_session(TfsSession* tfs_session);
+      void set_option_flag(common::OptionFlag option_flag);
 
     protected:
       // virtual level operation
@@ -158,7 +159,7 @@ namespace tfs
       int32_t eof_;
       int64_t offset_;
       SegmentData* meta_seg_;
-      int32_t option_flag_; //sync flag
+      int32_t option_flag_;
       TfsSession* tfs_session_;
       SEG_DATA_LIST processing_seg_list_;
       std::map<uint8_t, uint16_t> send_id_index_map_;

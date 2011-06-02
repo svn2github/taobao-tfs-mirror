@@ -122,12 +122,6 @@ namespace tfs
       GSS_CLIENT_ACCESS_INFO
     };
 
-    //sync
-    enum SyncFlag
-    {
-      TFS_FILE_NO_SYNC_LOG = 1
-    };
-
     enum CheckDsBlockType
     {
       CRC_DS_PATIAL_ERROR = 0,
@@ -638,6 +632,7 @@ namespace tfs
     static const int8_t INT64_SIZE = 8;
 
     static const int32_t MAX_PATH_LENGTH = 256;
+    static const int32_t MAX_ADDRESS_LENGTH = 64;
     static const int64_t TFS_MALLOC_MAX_SIZE = 0x00A00000;//10M
 
     static const int32_t FILEINFO_SIZE = sizeof(FileInfo);
@@ -656,6 +651,17 @@ namespace tfs
     static const int32_t ADMIN_WARN_DEAD_COUNT = 1;
 
     static const int64_t DEFAULT_NETWORK_CALL_TIMEOUT  = 3000;//3s
+
+
+    // client config
+    static const int64_t DEFAULT_CLIENT_RETRY_COUNT = 3;
+    // unit ms
+    static const int64_t DEFAULT_STAT_INTERNAL = 60000; // 1min
+    static const int64_t DEFAULT_GC_INTERNAL = 43200000; // 12h
+
+    static const int64_t MIN_GC_EXPIRED_TIME = 21600000; // 6h
+    static const int64_t MAX_SEGMENT_SIZE = 1 << 21; // 2M
+    static const int64_t MAX_BATCH_COUNT = 16;
 
   }
 }

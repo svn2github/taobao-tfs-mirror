@@ -59,12 +59,16 @@ namespace tfs
       int close(const int fd, char* tfs_name = NULL, const int32_t len = 0);
       int64_t get_file_length(const int fd);
 
-      // LargeFile's name will be start with L
-      int unlink(const char* file_name, const char* suffix = NULL, const common::TfsUnlinkType action = common::DELETE)
-      {
-        return unlink(file_name, suffix, NULL, action);
-      }
-      int unlink(const char* file_name, const char* suffix, const char* ns_addr, const common::TfsUnlinkType action = common::DELETE);
+      int set_option_flag(const int fd, const common::OptionFlag option_flag);
+
+      int unlink(const char* file_name, const char* suffix = NULL,
+                 const common::TfsUnlinkType action = common::DELETE,
+                 const common::OptionFlag option_flag = common::TFS_FILE_DEFAULT_OPTION);
+
+      int unlink(const char* file_name, const char* suffix, const char* ns_addr,
+                 const common::TfsUnlinkType action = common::DELETE,
+                 const common::OptionFlag option_flag = common::TFS_FILE_DEFAULT_OPTION);
+
 
       void set_segment_size(const int64_t segment_size);
       int64_t get_segment_size() const;
@@ -101,6 +105,7 @@ namespace tfs
 
     private:
       bool check_init();
+      TfsSession* get_session(const char* ns_addr);
       int get_fd();
       TfsFile* get_file(const int fd);
       int insert_file(const int fd, TfsFile* tfs_file);

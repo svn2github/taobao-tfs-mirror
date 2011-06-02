@@ -23,6 +23,7 @@ namespace tfs
 {
   namespace client
   {
+
     struct StatItem
     {
       static std::string client_access_stat_;

@@ -610,6 +610,11 @@ namespace tfs
       return TFS_SUCCESS;
     }
 
+    void LogicBlock::reset_seq_id(uint64_t file_id)
+    {
+      index_handle_->reset_avail_key(file_id);
+    }
+
     int LogicBlock::reset_block_version()
     {
       ScopedRWLock scoped_lock(rw_lock_, WRITE_LOCKER);

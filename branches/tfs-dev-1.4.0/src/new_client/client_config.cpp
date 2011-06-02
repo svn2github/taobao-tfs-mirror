@@ -14,8 +14,10 @@
  *
  */
 #include "client_config.h"
+#include "common/internal.h"
 
 using namespace tfs::client;
+using namespace tfs::common;
 using namespace std;
 
 string StatItem::client_access_stat_ = "client_access_stat";
@@ -32,13 +34,13 @@ string StatItem::cache_hit_ = "cache_hit";
 string StatItem::cache_miss_ = "cache_miss";
 string StatItem::remove_count_ = "remove_count";
 
-int64_t ClientConfig::segment_size_ = 2 * 1024 * 1024;
-int64_t ClientConfig::batch_count_ = 8;
+int64_t ClientConfig::segment_size_ = MAX_SEGMENT_SIZE;
+int64_t ClientConfig::batch_count_ = MAX_BATCH_COUNT / 2;
 int64_t ClientConfig::batch_size_ = ClientConfig::segment_size_ * ClientConfig::batch_count_;
-int64_t ClientConfig::client_retry_count_ = 3;      // retry times to read or write
+int64_t ClientConfig::client_retry_count_ = DEFAULT_CLIENT_RETRY_COUNT; // retry times to read or write
 // interval unit: ms
-int64_t ClientConfig::stat_interval_ = 60000;    // 1min
-int64_t ClientConfig::gc_interval_ = 43200000;  // 12h
-int64_t ClientConfig::expired_time_ = 86400000; // 1 days
-int64_t ClientConfig::batch_timeout_ = 3000; // 3s wait several response timeout
-int64_t ClientConfig::wait_timeout_ = 3000;  // 3s wait single response timeout
+int64_t ClientConfig::stat_interval_ = DEFAULT_STAT_INTERNAL;
+int64_t ClientConfig::gc_interval_ = DEFAULT_GC_INTERNAL;
+int64_t ClientConfig::expired_time_ = MIN_GC_EXPIRED_TIME * 4;
+int64_t ClientConfig::batch_timeout_ = DEFAULT_NETWORK_CALL_TIMEOUT; // wait several response timeout
+int64_t ClientConfig::wait_timeout_ = DEFAULT_NETWORK_CALL_TIMEOUT;  // wait single response timeout

@@ -62,13 +62,11 @@ namespace tfs
       cluster_id_ = 0x01;
     }
 
-    FSName::FSName(const uint32_t block_id, const int32_t seq_id, const int32_t suffix, const int32_t cluster_id)
+    FSName::FSName(const uint32_t block_id, const int64_t file_id)
     {
       file_.block_id_ = block_id;
-      file_.seq_id_ = seq_id;
-      file_.suffix_ = suffix;
+      set_file_id(file_id);
       file_name_[0] = '\0';
-      cluster_id_ = cluster_id;
     }
 
     FSName::FSName(const char* file_name, const char* suffix, int32_t const cluster_id)

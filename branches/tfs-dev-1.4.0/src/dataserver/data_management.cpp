@@ -100,6 +100,10 @@ namespace tfs
           return ret;
         }
       }
+      else                      // update seq no over current one to avoid overwrite
+      {
+        logic_block->reset_seq_id(file_id);
+      }
 
       data_file_mutex_.lock();
       file_number = ++file_number_;

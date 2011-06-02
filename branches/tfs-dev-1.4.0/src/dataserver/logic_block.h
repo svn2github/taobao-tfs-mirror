@@ -70,6 +70,7 @@ namespace tfs
         int read_raw_data(char* buf, int32_t& nbyte, const int32_t offset);
         int write_raw_data(const char* buf, const int32_t nbytes, const int32_t offset);
 
+        void reset_seq_id(uint64_t file_id);
         int reset_block_version();
         int get_meta_infos(common::RawMetaVec& raw_metas);
         int get_sorted_meta_infos(common::RawMetaVec& meta_infos);

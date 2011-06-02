@@ -78,9 +78,21 @@ int64_t TfsClient::get_file_length(const int fd)
   return TfsClientImpl::Instance()->get_file_length(fd);
 }
 
-int TfsClient::unlink(const char* file_name, const char* suffix, const char* ns_addr, const TfsUnlinkType action)
+int TfsClient:: unlink(const char* file_name, const char* suffix,
+                           const TfsUnlinkType action, const OptionFlag option_flag)
 {
-  return TfsClientImpl::Instance()->unlink(file_name, suffix, ns_addr, action);
+  return TfsClientImpl::Instance()->unlink(file_name, suffix, action, option_flag);
+}
+
+int TfsClient::unlink(const char* file_name, const char* suffix, const char* ns_addr,
+                          const TfsUnlinkType action, const OptionFlag option_flag)
+{
+  return TfsClientImpl::Instance()->unlink(file_name, suffix, ns_addr, action, option_flag);
+}
+
+int TfsClient::set_option_flag(const int fd, const OptionFlag option_flag)
+{
+  return TfsClientImpl::Instance()->set_option_flag(fd, option_flag);
 }
 
 void TfsClient::set_segment_size(const int64_t segment_size)
@@ -166,6 +178,16 @@ int64_t TfsClient::get_client_retry_count() const
 void TfsClient::set_log_level(const char* level)
 {
   return TfsClientImpl::Instance()->set_log_level(level);
+}
+
+int TfsClient::save_file(const char* local_file, const char* tfs_name, const char* suffix)
+{
+  return TFS_SUCCESS;
+}
+
+int TfsClient::fetch_file(const char* local_file, const char* tfs_name, const char* suffix)
+{
+  return TFS_ERROR;
 }
 
 int TfsClient::open_ex(const char* file_name, const char* suffix, const char* ns_addr, const int flags)

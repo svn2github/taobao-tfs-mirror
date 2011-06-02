@@ -11,35 +11,40 @@
  * Authors:
  *   duolong <duolong@taobao.com>
  *      - initial release
- *   zongdai <zongdai@taobao.com> 
+ *   zongdai <zongdai@taobao.com>
  *      - modify 2010-04-23
  *
  */
-#include "sync_base.h"
-#include "common/parameter.h"
 #include <Memory.hpp>
+
+#include "common/parameter.h"
+#include "sync_base.h"
 
 namespace tfs
 {
   namespace dataserver
   {
-    using namespace common;
+    using namespace tfs::common;
 
-    SyncBase::SyncBase(const int32_t type) : 
+    SyncBase::SyncBase(const int32_t type) :
       stop_(0), pause_(0), need_sync_(0), need_sleep_(0),
       file_queue_(NULL), second_file_queue_(NULL), second_file_queue_thread_(NULL), backup_(NULL)
     {
       // create queue
-      char tmpstr[SYNC_WORK_DIR];
-      sprintf(tmpstr, "%s/mirror", SYSPARAM_DATASERVER.work_dir_.c_str());
+      char tmpstr[MAX_PATH_LENGTH];
+      snprintf(tmpstr, MAX_PATH_LENGTH, "%s/mirror", SYSPARAM_DATASERVER.work_dir_.c_str());
       file_queue_ = new FileQueue(tmpstr, "firstqueue");
       file_queue_->load_queue_head();
       file_queue_->initialize();
 
       if (type == SYNC_TO_TFS_MIRROR)
+      {
         backup_ = new TfsMirrorBackup();
+      }
       else if (type == SYNC_TO_NFS_MIRROR)
+      {
         backup_ = new NfsMirrorBackup();
+      }
       TBSYS_LOG(INFO, "backup type: %d, construct result: %d", type, backup_ ? 1 : 0);
       need_sync_ = backup_ ? backup_->init() : false;
     }
@@ -216,9 +221,13 @@ namespace tfs
       }
       int ret = TFS_ERROR;
       if (!second)
+      {
         ret = backup_->do_sync(sf);
+      }
       else
+      {
         ret = backup_->do_second_sync(sf);
+      }
 
       if (TFS_SUCCESS != ret)
       {
@@ -230,8 +239,8 @@ namespace tfs
       {
         if (NULL == second_file_queue_ && NULL == second_file_queue_thread_)
         {
-          char tmpstr[SYNC_WORK_DIR];
-          sprintf(tmpstr, "%s/mirror", SYSPARAM_DATASERVER.work_dir_.c_str());
+          char tmpstr[MAX_PATH_LENGTH];
+          snprintf(tmpstr, MAX_PATH_LENGTH, "%s/mirror", SYSPARAM_DATASERVER.work_dir_.c_str());
           second_file_queue_ = new FileQueue(tmpstr, "secondqueue");
           second_file_queue_->load_queue_head();
           second_file_queue_->initialize();

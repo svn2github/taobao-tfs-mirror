@@ -306,6 +306,15 @@ namespace tfs
       return TFS_SUCCESS;
     }
 
+    void IndexHandle::reset_avail_key(uint64_t key)
+    {
+      if (block_info()->seq_no_ <= key)
+      {
+        block_info()->seq_no_ = key + 1;
+        // overlap ...
+      }
+    }
+
     int IndexHandle::check_block_version(int32_t& remote_version)
     {
       TBSYS_LOG(DEBUG, "block version. blockid: %u, remote version: %u, local version: %u", block_info()->block_id_,

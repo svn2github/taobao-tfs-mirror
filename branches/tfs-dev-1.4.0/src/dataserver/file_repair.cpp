@@ -11,18 +11,18 @@
  * Authors:
  *   duolong <duolong@taobao.com>
  *      - initial release
- *   qushan<qushan@taobao.com> 
+ *   qushan<qushan@taobao.com>
  *      - modify 2009-03-27
- *   zongdai <zongdai@taobao.com> 
+ *   zongdai <zongdai@taobao.com>
  *      - modify 2010-04-23
  *
  */
-#include "file_repair.h"
+#include "tbsys.h"
 #include "common/parameter.h"
 #include "common/error_msg.h"
 #include "common/func.h"
-#include "client/fsname.h"
-#include <tbsys.h>
+#include "new_client/fsname.h"
+#include "file_repair.h"
 
 namespace tfs
 {
@@ -30,13 +30,15 @@ namespace tfs
   {
     using namespace common;
     using namespace client;
+
+    FileRepair::FileRepair() :
+      init_status_(false), dataserver_id_(0), tfs_client_(NULL)
+    {
+      src_addr_[0] = '\0';
+    }
+
     FileRepair::~FileRepair()
     {
-      if (NULL != tfs_client_)
-      {
-        delete tfs_client_;
-        tfs_client_ = NULL;
-      }
     }
 
     bool FileRepair::init(const uint64_t dataserver_id)
@@ -45,33 +47,26 @@ namespace tfs
       {
         return true;
       }
-      dataserver_id_ = dataserver_id;
 
-      char tmpstr[TMP_IPADDR_LEN];
-      memset(tmpstr, 0, TMP_IPADDR_LEN);
-      if (SYSPARAM_DATASERVER.local_ns_ip_ != NULL && strlen(SYSPARAM_DATASERVER.local_ns_ip_) > 0
-          && SYSPARAM_DATASERVER.local_ns_port_ > 0)
+      TBSYS_LOG(INFO, "file repair init ns address: %s:%d",
+                SYSPARAM_DATASERVER.local_ns_ip_ != NULL ? SYSPARAM_DATASERVER.local_ns_ip_ : "none",
+                SYSPARAM_DATASERVER.local_ns_port_);
+
+      int ret = false;
+      if (SYSPARAM_DATASERVER.local_ns_ip_ != NULL &&
+          strlen(SYSPARAM_DATASERVER.local_ns_ip_) > 0 &&
+          SYSPARAM_DATASERVER.local_ns_port_ > 0)
       {
-        sprintf(tmpstr, "%s:%d", SYSPARAM_DATASERVER.local_ns_ip_, SYSPARAM_DATASERVER.local_ns_port_);
-        TBSYS_LOG(INFO, "file repair init ns address: %s:%d tmpstr: %s\n", SYSPARAM_DATASERVER.local_ns_ip_,
-            SYSPARAM_DATASERVER.local_ns_port_, tmpstr);
+        snprintf(src_addr_, MAX_ADDRESS_LENGTH, "%s:%d",
+                 SYSPARAM_DATASERVER.local_ns_ip_,
+                 SYSPARAM_DATASERVER.local_ns_port_);
 
-        if (NULL != tfs_client_)
-        {
-          delete tfs_client_;
-          tfs_client_ = NULL;
-        }
-        tfs_client_ = new TfsClient();
-				int iret = tfs_client_->initialize(tmpstr);
-				if (iret != TFS_SUCCESS)
-				{
-					return false;
-				}
-        tfs_client_->set_option_flag(TFS_FILE_NO_SYNC_LOG);
+        dataserver_id_ = dataserver_id;
         init_status_ = true;
-        return true;
+        ret = true;
       }
-      return false;
+
+      return ret;
     }
 
     int FileRepair::fetch_file(const CrcCheckFile& crc_check_record, char* tmp_file)
@@ -80,101 +75,91 @@ namespace tfs
       {
         return TFS_ERROR;
       }
-      FSName fsname;
-      fsname.set_block_id(crc_check_record.block_id_);
-      fsname.set_file_id(crc_check_record.file_id_);
-      TBSYS_LOG(INFO, "repair file start, tfsname: %s, blockid: %u, fileid: %" PRI64_PREFIX "u\n", fsname.get_name(),
-          crc_check_record.block_id_, crc_check_record.file_id_);
 
-      if (tfs_client_->tfs_open(crc_check_record.block_id_, crc_check_record.file_id_, READ_MODE) != TFS_SUCCESS)
+      int ret = TFS_SUCCESS;
+      FSName fsname(crc_check_record.block_id_, crc_check_record.file_id_);
+      int src_fd = tfs_client_->open(fsname.get_name(), NULL, src_addr_, T_READ);
+
+      if (src_fd <= 0)
       {
-        TBSYS_LOG(ERROR, "%s open read fail: %u %" PRI64_PREFIX "u (%s)\n", fsname.get_name(), crc_check_record.block_id_,
-            crc_check_record.file_id_, tfs_client_->get_error_message());
-        return TFS_ERROR;
+        TBSYS_LOG(ERROR, "%s open src tfsfile read fail: %u %"PRI64_PREFIX"u, ret: %d",
+                  fsname.get_name(), crc_check_record.block_id_,
+                  crc_check_record.file_id_, src_fd);
+        ret = TFS_ERROR;
       }
-
-      int32_t i = 0;
-      for (; i < MAX_CONNECT_SERVERS; ++i)
+      else
       {
-        // connect id in fail server or self. skip
-        if (tfs_client_->get_last_elect_ds_id() == dataserver_id_ || find(crc_check_record.fail_servers_.begin(),
-              crc_check_record.fail_servers_.end(), tfs_client_->get_last_elect_ds_id()) != crc_check_record.fail_servers_.end())
+        TfsFileStat file_stat;
+        if ((ret = tfs_client_->fstat(src_fd, &file_stat)) != TFS_SUCCESS)
         {
-          int ret = tfs_client_->tfs_reset_read();
-          if (TFS_SUCCESS != ret)
-          {
-            TBSYS_LOG(ERROR, "copy file, tfs reset read fail. try time: %d, ret: %d, error: %s\n", i + 1, ret,
-                tfs_client_->get_error_message());
-            return EXIT_DS_CONNECT_ERROR;
-          }
-          continue;
+          TBSYS_LOG(ERROR, "%s stat tfsfile fail. blockid: %u, fileid: %"PRI64_PREFIX"u, ret: %d",
+                    fsname.get_name(), crc_check_record.block_id_, crc_check_record.file_id_, ret);
         }
         else
         {
-          break;
+          int fd = -1;
+          get_tmp_file_name(tmp_file, SYSPARAM_DATASERVER.work_dir_.c_str(), fsname.get_name());
+
+          if ((fd = open(tmp_file, O_WRONLY | O_CREAT | O_TRUNC, 0660)) == -1)
+          {
+            TBSYS_LOG(ERROR, "copy file, open file: %s failed. error: %s", tmp_file, strerror(errno));
+            ret = TFS_ERROR;
+          }
+          else
+          {
+            char data[MAX_READ_SIZE];
+            int32_t rlen = 0;
+            int32_t wlen = 0;
+            int32_t offset = 0;
+            uint32_t crc = 0;
+
+            ret = TFS_ERROR;
+            while (1)
+            {
+              if ((rlen = tfs_client_->read(src_fd, data, MAX_READ_SIZE)) <= 0)
+              {
+                TBSYS_LOG(ERROR, "%s read src tfsfile fail. blockid: %u, fileid: %"PRI64_PREFIX"u, ret: %d",
+                          fsname.get_name(), crc_check_record.block_id_, crc_check_record.file_id_, rlen);
+                break;
+              }
+
+              if ((wlen = write_file(fd, data, rlen)) != rlen)
+              {
+                TBSYS_LOG(ERROR, "%s write file fail: blockid: %u, fileid: "PRI64_PREFIX"u, write len: %d, ret: %d",
+                          fsname.get_name(), crc_check_record.block_id_, crc_check_record.file_id_, rlen, wlen);
+                  break;
+              }
+
+              crc = Func::crc(crc, data, rlen);
+              offset += rlen;
+
+              if (rlen < MAX_READ_SIZE || offset >= file_stat.size_)
+              {
+                ret = TFS_SUCCESS;
+                break;
+              }
+            }
+
+            if (TFS_SUCCESS == ret)
+            {
+              if (crc != file_stat.crc_ || crc != crc_check_record.crc_ || offset != file_stat.size_)
+              {
+                TBSYS_LOG(ERROR,
+                          "file %s crc error. blockid: %u, fileid: %"PRI64_PREFIX"u, %u <> %u, checkfile crc: %u, size: %d <> %"PRI64_PREFIX"d",
+                          fsname.get_name(), crc_check_record.block_id_, crc_check_record.file_id_,
+                          crc, file_stat.crc_, crc_check_record.crc_, offset, file_stat.size_);
+                ret = TFS_ERROR;
+              }
+            }
+
+            ::close(fd);
+          }
         }
+
+        tfs_client_->close(src_fd);
       }
 
-      if (MAX_CONNECT_SERVERS == i)
-      {
-        TBSYS_LOG(ERROR, "copy file, tfs reset read fail. try time: %d\n", i + 1);
-        return EXIT_DS_CONNECT_ERROR;
-      }
-
-      TBSYS_LOG(INFO, "copy file, blockid: %u, fileid: %" PRI64_PREFIX "u. read from src ds: %s \n",
-          crc_check_record.block_id_, crc_check_record.file_id_,
-          tbsys::CNetUtil::addrToString(tfs_client_->get_last_elect_ds_id()).c_str());
-
-      FileInfo finfo;
-      if (TFS_SUCCESS != tfs_client_->tfs_stat(&finfo))
-      {
-        TBSYS_LOG(ERROR, "%s stat tfs_file_ fail: %u %" PRI64_PREFIX "u (%s)\n", fsname.get_name(),
-            crc_check_record.block_id_, crc_check_record.file_id_, tfs_client_->get_error_message());
-        tfs_client_->tfs_close();
-        return TFS_ERROR;
-      }
-
-      int fd = 0;
-      get_tmp_file_name(tmp_file, SYSPARAM_DATASERVER.work_dir_.c_str(), crc_check_record.block_id_, crc_check_record.file_id_);
-      if ((fd = open(tmp_file, O_WRONLY | O_CREAT | O_TRUNC, 0660)) == -1)
-      {
-        TBSYS_LOG(ERROR, "copy file, open file: %s failed.(%s)\n", tmp_file, strerror(errno));
-        return TFS_ERROR;
-      }
-
-      char data[MAX_READ_SIZE];
-      int32_t rlen = 0, total_size = 0;
-      uint32_t crc = 0;
-      while ((rlen = tfs_client_->tfs_read(data, MAX_READ_SIZE)) > 0)
-      {
-        if (write_file(fd, data, rlen) != rlen)
-        {
-          fprintf(stderr, "%s write tfsfile fail: %u %" PRI64_PREFIX "u (%s)\n", fsname.get_name(),
-              crc_check_record.block_id_, crc_check_record.file_id_, strerror(errno));
-          tfs_client_->tfs_close();
-          ::close(fd);
-          return TFS_ERROR;
-        }
-
-        crc = Func::crc(crc, data, rlen);
-        total_size += rlen;
-        if (rlen < MAX_READ_SIZE)
-          break;
-      }
-      ::close(fd);
-      tfs_client_->tfs_close();
-      if (crc != finfo.crc_ || crc != crc_check_record.crc_ || total_size != finfo.size_)
-      {
-        TBSYS_LOG(ERROR,
-            "file %s crc error. blockid: %u, fileid: %" PRI64_PREFIX "u, %u<>%u, checkfile crc: %u, size: %d<>%d\n",
-            fsname.get_name(), crc_check_record.block_id_, crc_check_record.file_id_, crc, finfo.crc_, crc_check_record.crc_,
-            total_size, finfo.size_);
-        return TFS_ERROR;
-      }
-
-      TBSYS_LOG(INFO, "fetch success: %s", fsname.get_name());
-
-      return TFS_SUCCESS;
+      return ret;
     }
 
     int FileRepair::repair_file(const CrcCheckFile& crc_check_record, const char* tmp_file)
@@ -183,51 +168,54 @@ namespace tfs
       {
         return TFS_ERROR;
       }
-      FSName fsname;
-      fsname.set_block_id(crc_check_record.block_id_);
-      fsname.set_file_id(crc_check_record.file_id_);
 
+      FSName fsname(crc_check_record.block_id_, crc_check_record.file_id_);
       int ret = tfs_client_->save_file(tmp_file, fsname.get_name(), NULL);
+
       if (TFS_SUCCESS != ret)
       {
-        TBSYS_LOG(ERROR, "repair file fail, ret: %d, errmsg: %s, tfsname: %s, blockid: %u fileid: %" PRI64_PREFIX "u\n",
-            ret, tfs_client_->get_file_name(), crc_check_record.block_id_, crc_check_record.file_id_, tfs_client_->get_error_message());
+        TBSYS_LOG(ERROR, "%s repair file fail, blockid: %u fileid: %" PRI64_PREFIX "u, ret: %d",
+                  fsname.get_name(), crc_check_record.block_id_, crc_check_record.file_id_, ret);
       }
       else
       {
-        TBSYS_LOG(ERROR, "repair file successful, tfsname: %s, blockid: %u fileid: %" PRI64_PREFIX "u\n",
-            tfs_client_->get_file_name(), crc_check_record.block_id_, crc_check_record.file_id_);
+        TBSYS_LOG(INFO, "%s repair file fail, blockid: %u fileid: %" PRI64_PREFIX "u",
+                  fsname.get_name(), crc_check_record.block_id_, crc_check_record.file_id_);
       }
 
       return ret;
     }
 
-    void FileRepair::get_tmp_file_name(char* buffer, const char* path, const uint32_t block_id, const uint64_t file_id)
+    void FileRepair::get_tmp_file_name(char* buffer, const char* path, const char* name)
     {
-      if (NULL == buffer || NULL == path)
+      if (NULL == buffer || NULL == path || NULL == name )
       {
         return;
       }
-      FSName fsname;
-      fsname.set_block_id(block_id);
-      fsname.set_file_id(file_id);
-      sprintf(buffer, "%s/tmp/%s", path, fsname.get_name());
+      snprintf(buffer, MAX_PATH_LENGTH, "%s/tmp/%s", path, name);
     }
 
     int FileRepair::write_file(const int fd, const char* buffer, const int32_t length)
     {
       int32_t bytes_write = 0;
+      int wlen = 0;
       while (bytes_write < length)
       {
-        int ret = write(fd, buffer + bytes_write, length - bytes_write);
-        if (ret < 0)
+        wlen = write(fd, buffer + bytes_write, length - bytes_write);
+        if (wlen < 0)
         {
           TBSYS_LOG(ERROR, "file repair failed when write. error desc: %s\n", strerror(errno));
-          return ret;
+          bytes_write = wlen;
+          break;
         }
-        bytes_write += ret;
+        else
+        {
+          bytes_write += wlen;
+        }
       }
+
       return bytes_write;
     }
+
   }
 }

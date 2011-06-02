@@ -26,7 +26,7 @@ using namespace tfs::message;
 using namespace std;
 
 TfsFile::TfsFile() : flags_(-1), file_status_(TFS_FILE_OPEN_NO), eof_(TFS_FILE_EOF_FLAG_NO),
-                     offset_(0), meta_seg_(NULL), option_flag_(0), tfs_session_(NULL)
+                     offset_(0), meta_seg_(NULL), option_flag_(common::TFS_FILE_DEFAULT_OPTION), tfs_session_(NULL)
 {
 }
 
@@ -404,6 +404,11 @@ const char* TfsFile::get_file_name()
 void TfsFile::set_session(TfsSession* tfs_session)
 {
   tfs_session_ = tfs_session;
+}
+
+void TfsFile::set_option_flag(OptionFlag option_flag)
+{
+  option_flag_ |= option_flag;
 }
 
 int64_t TfsFile::get_meta_segment(const int64_t offset, const char* buf, const int64_t count)

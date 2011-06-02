@@ -111,6 +111,12 @@ extern "C"
     REVEAL = 6
   } TfsUnlinkType;
 
+  typedef enum
+  {
+    TFS_FILE_DEFAULT_OPTION = 0,
+    TFS_FILE_NO_SYNC_LOG = 1
+  } OptionFlag;
+
 #if __cplusplus
 }
 #endif

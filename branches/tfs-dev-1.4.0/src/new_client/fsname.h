@@ -34,7 +34,7 @@ namespace tfs
     {
     public:
       FSName();
-      FSName(const uint32_t block_id, const int32_t seq_id, const int32_t suffix = 0, const int32_t cluster_id = 0);
+      FSName(const uint32_t block_id, const int64_t file_id);
       FSName(const char *file_name, const char* suffix = NULL, const int32_t cluster_id = 0);
       virtual ~FSName();
 

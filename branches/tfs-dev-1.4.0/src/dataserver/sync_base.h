@@ -11,7 +11,7 @@
  * Authors:
  *   duolong <duolong@taobao.com>
  *      - initial release
- *   zongdai <zongdai@taobao.com> 
+ *   zongdai <zongdai@taobao.com>
  *      - modify 2010-04-23
  *
  */
@@ -55,7 +55,6 @@ namespace tfs
         SyncBase();
         DISALLOW_COPY_AND_ASSIGN(SyncBase);
 
-        static const int32_t SYNC_WORK_DIR = 256;
         int32_t stop_;
         int32_t pause_;
         int32_t need_sync_;
