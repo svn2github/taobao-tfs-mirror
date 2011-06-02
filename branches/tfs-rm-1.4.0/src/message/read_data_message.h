@@ -125,7 +125,7 @@ namespace tfs
         common::FileInfo file_info_;
     };
 
-    class ReadDataMessageV3: public ReadDataMessageV2 
+    class ReadDataMessageV3: public ReadDataMessageV2
     {
       public:
         ReadDataMessageV3();
