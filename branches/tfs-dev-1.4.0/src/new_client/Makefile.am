@@ -9,9 +9,11 @@ lib_LTLIBRARIES= libtfsclient.la libtfsclient_c.la
 api_source_list = tfs_file.cpp tfs_large_file.cpp tfs_small_file.cpp tfs_session.cpp \
                   fsname.cpp tfs_session_pool.cpp tfs_client_impl.cpp tfs_client_api.cpp \
                   local_key.cpp gc_file.cpp gc_worker.cpp bg_task.cpp client_config.cpp\
+                  tfs_rc_helper.cpp\
                   tfs_file.h tfs_large_file.h tfs_small_file.h tfs_session.h \
                   fsname.h tfs_session_pool.h tfs_client_impl.h tfs_client_api.h \
-                  local_key.h gc_file.h gc_worker.h bg_task.h client_config.h
+                  local_key.h gc_file.h gc_worker.h bg_task.h client_config.h\
+                  tfs_rc_helper.h
 
 ld_fg = $(AM_LDFLAGS) \
         $(top_srcdir)/src/message/libtfsmessage.a \
