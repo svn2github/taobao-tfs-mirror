@@ -100,8 +100,6 @@ namespace tfs
 
       virtual const char* get_log_file_path() { return NULL;}
 
-      int callback(common::NewClient* client);
-
       void destruct();
 
       int start_monitor();
@@ -121,20 +119,20 @@ namespace tfs
       int cmd_exit(message::AdminCmdMessage* message);
 
     private:
-      void add_index(std::string& index, bool add_conf = false);
-      void clear_index(std::string& index, bool del_conf = true);
-      void modify_conf(std::string& index, int32_t type);
+      void reload_config();
+      void add_index(const std::string& index, const bool add_conf = false);
+      void clear_index(const std::string& index, const bool del_conf = true);
+      void modify_conf(const std::string& index, const int32_t type);
       void set_ds_list(const char* index_range, std::vector<std::string>& ds_index);
-      int get_param(std::string& index);
+      int get_param(const std::string& index);
       int ping(const uint64_t ip);
       int ping_nameserver(const int status);
-      int kill_process(message::MonitorStatus* status, int32_t wait_time, bool clear = false);
+      int kill_process(message::MonitorStatus* status, const int32_t wait_time, const bool clear = false);
 
     private:
       char conf_file_[common::MAX_PATH_LENGTH];
 
       // monitor stuff
-      ServiceName service_name_;
       int32_t stop_;
       bool running_;
       int32_t check_interval_;
@@ -144,11 +142,6 @@ namespace tfs
       MSTR_PARA monitor_param_;
       MSTR_STAT monitor_status_;
 
-      // server stuff
-      //message::MessageFactory msg_factory_;
-      //common::BasePacketStreamer packet_streamer_;
-      //tbnet::Transport transport_;
-      //tbnet::PacketQueueThread task_queue_thread_;
     };
 
   }

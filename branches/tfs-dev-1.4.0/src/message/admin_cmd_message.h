@@ -57,7 +57,7 @@ namespace tfs
         memset(this, 0, sizeof(MonitorStatus));
       }
 
-      MonitorStatus(std::string& index)
+      MonitorStatus(const std::string& index)
       {
         memset(this, 0, sizeof(MonitorStatus));
         strncpy(index_, index.c_str(), ADMIN_MAX_INDEX_LENGTH);
