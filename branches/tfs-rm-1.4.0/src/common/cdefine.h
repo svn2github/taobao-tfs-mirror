@@ -86,7 +86,8 @@ extern "C"
     T_NEWBLK = 8,
     T_NOLEASE = 16,
     T_STAT = 32,
-    T_LARGE = 64
+    T_LARGE = 64,
+    T_UNLINK = 128
   } OpenFlag;
 
   typedef enum

@@ -52,7 +52,7 @@ namespace tfs
 
     bool BaseService::destroy()
     {
-      TBSYS_LOG(DEBUG, "destroy================================");
+      TBSYS_LOG(INFO, "destroy================================");
       NewClientManager::get_instance().destroy();
       transport_.stop();
       destroy_service();
@@ -226,7 +226,7 @@ namespace tfs
         iret = initialize_work_dir(argv[0], error_msg);
         if (TFS_SUCCESS != iret)
         {
-          snprintf(buf, 256, "%s initialize work directory fail", argv[0]);
+          snprintf(buf, 256, "%s initialize work directory fail, %s", argv[0], error_msg.c_str());
           error_msg = buf;
         }
       }
@@ -237,7 +237,7 @@ namespace tfs
         iret = initialize_network(argv[0], error_msg);
         if (TFS_SUCCESS != iret)
         {
-          snprintf(buf, 256, "%s initialize network fail", argv[0]);
+          snprintf(buf, 256, "%s initialize network fail, %s", argv[0], error_msg.c_str());
           error_msg = buf;
         }
       }
@@ -359,27 +359,6 @@ namespace tfs
         iret =  EXIT_CONFIG_ERROR;
         snprintf(buf, 256, "%s not set ip_addr", app_name);
         error_msg = buf;
-      }
-
-      if (TFS_SUCCESS == iret)
-      {
-        const char *dev_name = get_dev();
-        if (NULL == dev_name)//get dev name
-        {
-          iret =  EXIT_CONFIG_ERROR;
-          snprintf(buf, 256, "%s not set dev_name", app_name);
-          error_msg = buf;
-        }
-        else
-        {
-          uint64_t local_ip = Func::get_local_addr(dev_name);
-          if (Func::get_addr(ip_addr) != local_ip) //check ip
-          {
-            iret = EXIT_GENERAL_ERROR;
-            snprintf(buf, 256, "ip '%s' is not local ip, local ip: %s",ip_addr, tbsys::CNetUtil::addrToString(local_ip).c_str());
-            error_msg = buf;
-          }
-        }
       }
 
       int32_t port = 0;

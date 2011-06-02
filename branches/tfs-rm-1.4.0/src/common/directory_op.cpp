@@ -92,7 +92,7 @@ namespace tfs
       return !exist ? true : ret;
     }
 
-    bool DirectoryOp::delete_directory_recursively(const char *directory, bool delete_flag)
+    bool DirectoryOp::delete_directory_recursively(const char *directory, const bool delete_flag)
     {
       if (directory == NULL)
         return false;
@@ -192,7 +192,7 @@ namespace tfs
     }
 
     //create the give dirname, return true on success or dirname exists
-    bool DirectoryOp::create_directory(const char* dirname)
+    bool DirectoryOp::create_directory(const char* dirname, const mode_t dir_mode)
     {
       if (dirname == NULL)
         return false;
@@ -201,19 +201,23 @@ namespace tfs
       umask(umake_value);
       mode_t mode = (S_IRWXUGO & (~umake_value)) | S_IWUSR | S_IXUSR;
       bool ret = false;
-      if (mkdir(dirname, mode) == 0)
-        ret = true;
 
-      if (!ret)
+      if (mkdir(dirname, mode) == 0 && // create directory success
+          (dir_mode == 0 ||            // not chmod 
+           chmod(dirname, dir_mode) == 0)) // chmod success
       {
-        if (errno == EEXIST)
-          ret = true;
+        ret = true;
+      }
+
+      if (!ret && EEXIST == errno)
+      {
+        ret = true;
       }
       return ret;
     }
 
     //creates the full path of fullpath, return true on success
-    bool DirectoryOp::create_full_path(const char* fullpath, bool with_file)
+    bool DirectoryOp::create_full_path(const char* fullpath, const bool with_file, const mode_t dir_mode)
     {
       if (fullpath == NULL)
         return false;
@@ -237,11 +241,9 @@ namespace tfs
       struct stat stats;
       if ((lstat(path, &stats) != 0) || !S_ISDIR(stats.st_mode))
       {
-        if (ret)
-        {
-          while (*path == '/')
-            path++;
-        }
+        while (*path == '/')
+          path++;
+
         while (ret)
         {
           path = strchr(path, '/');
@@ -254,7 +256,7 @@ namespace tfs
 
           if (!is_directory(dirpath))
           {
-            if (!create_directory(dirpath))
+            if (!create_directory(dirpath, dir_mode))
             {
               ret = false;
               break;
@@ -272,7 +274,7 @@ namespace tfs
         {
           if (!is_directory(dirpath))
           {
-            if (!create_directory(dirpath))
+            if (!create_directory(dirpath, dir_mode))
               ret = false;
           }
         }

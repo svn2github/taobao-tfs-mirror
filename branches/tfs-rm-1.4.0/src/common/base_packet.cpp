@@ -174,18 +174,18 @@ namespace tfs
       {
         if (0 == getChannelId())
         {
+          TBSYS_LOG(ERROR, "message (%d) channel is null, reply message (%d)", getPCode(), packet->getPCode());
           packet->free();
           iret = TFS_ERROR;
-          TBSYS_LOG(ERROR, "message (%d) channel is null, reply message (%d)", getPCode(), packet->getPCode());
         }
         if (TFS_SUCCESS == iret)
         {
           if (((direction_ & DIRECTION_RECEIVE) && _expireTime > 0) 
                 && (tbsys::CTimeUtil::getTime() > _expireTime))
           {
-            packet->free();
-            iret = TFS_ERROR;
             TBSYS_LOG(ERROR, "message (%d), timeout for response, reply message (%d)", getPCode(), packet->getPCode());
+            iret = TFS_ERROR;
+            packet->free();
           }
         }
 

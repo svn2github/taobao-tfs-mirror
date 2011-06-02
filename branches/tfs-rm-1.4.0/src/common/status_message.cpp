@@ -43,7 +43,7 @@ namespace tfs
           length_ = MAX_ERROR_MSG_LENGTH + 1;
         }
         TBSYS_LOG(DEBUG, "LENGTH: %d", length_);
-        memcpy(msg_, str, length_);
+        memcpy(msg_, str, length_ - 1);//include '\0'
         msg_[length_ - 1] = '\0';
       }
     }

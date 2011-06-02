@@ -51,11 +51,6 @@ namespace __gnu_cxx
 
 namespace tfs
 {
-  namespace nameserver
-  {
-    class BlockCollect;
-    class ServerCollect;
-  }
   namespace common
   {
     //typedef base type
@@ -634,10 +629,6 @@ namespace tfs
     typedef std::vector<RawMeta> RawMetaVec;
     typedef std::vector<RawMeta>::iterator RawMetaVecIter;
 
-    typedef __gnu_cxx ::hash_map<uint32_t, nameserver::BlockCollect*, __gnu_cxx ::hash<uint32_t> > BLOCK_MAP;
-    typedef BLOCK_MAP::iterator BLOCK_MAP_ITER;
-    typedef __gnu_cxx ::hash_map<uint64_t, nameserver::ServerCollect*, __gnu_cxx ::hash<uint64_t> > SERVER_MAP;
-    typedef SERVER_MAP::iterator SERVER_MAP_ITER;
     typedef std::vector<RawMeta>::const_iterator RawMetaVecConstIter;
 
 

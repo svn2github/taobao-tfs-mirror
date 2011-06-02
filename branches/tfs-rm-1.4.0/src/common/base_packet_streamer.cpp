@@ -207,11 +207,11 @@ namespace tfs
         bret = TFS_SUCCESS == iret;
         if (bret)
         {
-          TBSYS_LOG(DEBUG, "header length: %d, body length : %d", header_length, bpacket->get_data_length());
-          Func::hex_dump(output->getData(), output->getDataLen());
+          //TBSYS_LOG(DEBUG, "header length: %d, body length : %d", header_length, bpacket->get_data_length());
+          //Func::hex_dump(output->getData(), output->getDataLen());
           output->pourData(header_length);
           bret = bpacket->encode(output);
-          Func::hex_dump(output->getData(), output->getDataLen());
+          //Func::hex_dump(output->getData(), output->getDataLen());
         }
         else
         {
