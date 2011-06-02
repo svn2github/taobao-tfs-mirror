@@ -6,7 +6,7 @@
  * published by the Free Software Foundation.
  *
  *
- * Version: $Id: gc.h 2140 2011-03-29 01:42:04Z duanfei $
+ * Version: $Id: block_id_factory.h 2140 2011-03-29 01:42:04Z duanfei $
  *
  * Authors:
  *   duanfei <duanfei@taobao.com>
