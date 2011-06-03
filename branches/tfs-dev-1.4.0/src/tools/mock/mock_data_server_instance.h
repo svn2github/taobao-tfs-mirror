@@ -25,13 +25,15 @@
 #include <tbsys.h>
 #include <tbnet.h>
 #include <Timer.h>
+
+#include "common/lock.h"
 #include "common/internal.h"
+#include "common/base_service.h"
 
 namespace tfs
 {
 namespace mock
 {
-
 struct BlockEntry
 {
   BlockEntry()
@@ -43,45 +45,73 @@ struct BlockEntry
   int64_t file_id_factory_;
 };
 
-class MockDataServerInstance:
-    public tbnet::IServerAdapter,
-    public message::DefaultAsyncCallback,
-    public tbnet::IPacketQueueHandler
-
+class MockDataService: public common::BaseService
 {
 public:
-  MockDataServerInstance(int32_t max_write_file_size);
-  virtual ~MockDataServerInstance();
+  MockDataService();
+  virtual ~MockDataService();
 
-  tbnet::IPacketHandler::HPRetCode handlePacket(tbnet::Connection* conn, tbnet::Packet* packet);
-  bool handlePacketQueue(tbnet::Packet *packet, void *args);
-  int command_done(message::Message* msg, bool status, const std::string& error);
-  int initialize(int32_t port, int64_t capacity, const std::string& work_index, const std::string& conf);
-  int wait_for_shut_down();
-  bool destroy();
+  /** application parse args*/
+  virtual int parse_common_line_args(int argc, char* argv[]);
+
+  /** get listen port*/
+  virtual int get_listen_port() const ;
+
+  int32_t get_ns_port() const;
+
+  virtual const char* get_log_file_path();
+
+  /** initialize application data*/
+  virtual int initialize(int argc, char* argv[]);
+
+  /** destroy application data*/
+  virtual int destroy_service() {return common::TFS_SUCCESS;}
+
+  /** create the packet streamer, this is used to create packet according to packet code */
+  virtual tbnet::IPacketStreamer* create_packet_streamer()
+  {
+    return new common::BasePacketStreamer();
+  }
+
+  /** destroy the packet streamer*/
+  virtual void destroy_packet_streamer(tbnet::IPacketStreamer* streamer)
+  {
+    tbsys::gDelete(streamer);
+  }
+
+  /** create the packet streamer, this is used to create packet*/
+  virtual common::BasePacketFactory* create_packet_factory()
+  {
+    return new common::BasePacketFactory();
+  }
+
+  /** destroy packet factory*/
+  virtual void destroy_packet_factory(common::BasePacketFactory* factory)
+  {
+    tbsys::gDelete(factory);
+  }
+
+  /** handle packet*/
+  virtual bool handlePacketQueue(tbnet::Packet *packet, void *args);
+
+  int callback(common::NewClient* client);
 
   int keepalive();
-
 private:
 
-  int write(message::Message* msg);
-  int read(message::Message* msg);
-  int readv2(message::Message* msg);
-  int close(message::Message* msg);
-  int create_file_number(message::Message* msg);
-  int new_block(message::Message* msg);
-  int get_file_info(message::Message* msg);
-  int post_message_to_server(message::Message* msg, const common::VUINT64& ds_list);
-  int send_message_to_slave(message::Message* msg, const common::VUINT64& ds_list);
+  int write(common::BasePacket* msg);
+  int read(common::BasePacket* msg);
+  int readv2(common::BasePacket* msg);
+  int close(common::BasePacket* msg);
+  int create_file_number(common::BasePacket* msg);
+  int new_block(common::BasePacket* msg);
+  int get_file_info(common::BasePacket* msg);
+  int post_message_to_server(common::BasePacket* msg, const common::VUINT64& ds_list);
+  int send_message_to_slave(common::BasePacket* msg, const common::VUINT64& ds_list);
   int commit_to_nameserver(std::map<uint32_t, BlockEntry>::iterator, uint32_t block_id, uint32_t lease_id, int32_t status, common::UnlinkFlag flag = common::UNLINK_FLAG_NO);
 
 private:
-  tbnet::Transport transport_;
-  message::MessageFactory msg_factory_;
-  message::TfsPacketStreamer streamer_;
   tbnet::PacketQueueThread main_work_queue_;
-
-  tbutil::TimerPtr timer_;
 
   std::map<uint32_t, BlockEntry> blocks_;
   common::RWLock blocks_mutex_;
@@ -90,18 +120,21 @@ private:
 
   uint64_t ns_ip_port_;
   common::HasBlockFlag need_send_block_to_ns_;
-  const int32_t MAX_WRITE_FILE_SIZE;
+  int32_t MAX_WRITE_FILE_SIZE;
+
+  std::string log_file_path_;
+  std::string server_index_;
 };
 
 class KeepaliveTimerTask: public tbutil::TimerTask
 {
 public:
-  KeepaliveTimerTask(MockDataServerInstance& instance);
+  KeepaliveTimerTask(MockDataService& instance);
   virtual ~KeepaliveTimerTask();
 
   void runTimerTask();
 private:
-  MockDataServerInstance& instance_;
+  MockDataService& instance_;
 };
 typedef tbutil::Handle<KeepaliveTimerTask> KeepaliveTimerTaskPtr;
 }

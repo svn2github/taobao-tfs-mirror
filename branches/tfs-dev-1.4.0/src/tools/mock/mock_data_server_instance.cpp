@@ -13,29 +13,30 @@
  *      - initial release
  *
  */
-#include "common/internal.h"
-#include "mock_data_server_instance.h"
-#include "message/client_pool.h"
-#include "common/config.h"
-#include "common/config_item.h"
-#include "common/error_msg.h"
-#include "common/func.h"
 
+#include <tbsys.h>
+
+#include "common/status_message.h"
+#include "common/config_item.h"
+#include "common/client_manager.h"
+
+#include "message/message_factory.h"
+
+#include "mock_data_server_instance.h"
+
+using namespace tbsys;
 using namespace tfs::mock;
 using namespace tfs::message;
 using namespace tfs::common;
-using namespace tbnet;
-using namespace tbsys;
-using namespace tbutil;
 static FileInfo gfile_info;
 static const int8_t BUF_LEN = 32;
 static char BUF[BUF_LEN] = {'1'};
 
-MockDataServerInstance::MockDataServerInstance(int32_t max_write_file_size):
-  timer_(0),
+static int ns_async_callback(NewClient* client);
+
+MockDataService::MockDataService():
   ns_ip_port_(0),
-  need_send_block_to_ns_(HAS_BLOCK_FLAG_YES),
-  MAX_WRITE_FILE_SIZE(max_write_file_size)
+  need_send_block_to_ns_(HAS_BLOCK_FLAG_YES)
 {
   memset(&information_, 0, sizeof(information_));
   memset(&gfile_info, 0, sizeof(gfile_info));
@@ -45,12 +46,60 @@ MockDataServerInstance::MockDataServerInstance(int32_t max_write_file_size):
   gfile_info.crc_  = Func::crc(gfile_info.crc_, BUF, BUF_LEN);
 }
 
-MockDataServerInstance::~MockDataServerInstance()
+MockDataService::~MockDataService()
 {
 
 }
 
-int MockDataServerInstance::keepalive()
+int MockDataService::parse_common_line_args(int argc, char* argv[])
+{
+  int32_t i = 0;
+  while ((i = getopt(argc, argv, "l:")) != EOF)
+  {
+    switch (i)
+    {
+      case 'l':
+        server_index_ = optarg;
+        break;
+      case 'c':
+        information_.total_capacity_ = atoi(optarg);
+        break;
+      default:
+        TBSYS_LOG(ERROR, "%s", "invalid parameter");
+        break;
+    }
+  }
+  return server_index_.empty() && information_.total_capacity_ > 0 ? TFS_ERROR : TFS_SUCCESS;
+}
+
+int32_t MockDataService::get_listen_port() const
+{
+  int32_t port = get_port() + atoi(server_index_.c_str());
+  return port <= 1024 || port > 65535 ? -1 : port;
+}
+
+int32_t MockDataService::get_ns_port() const
+{
+  int32_t port = TBSYS_CONFIG.getInt(CONF_SN_MOCK_DATASERVER, CONF_PORT, -1);
+  return port <= 1024 || port > 65535 ? -1 : port;
+}
+
+const char* MockDataService::get_log_file_path()
+{
+  const char* log_file_path = NULL;
+  const char* work_dir = get_work_dir();
+  if (work_dir != NULL)
+  {
+    log_file_path_ = work_dir;
+    log_file_path_ += "/logs/moc_dataserver_"+server_index_;
+    log_file_path_ += ".log";
+    log_file_path = log_file_path_.c_str();
+  }
+  return log_file_path;
+}
+ 
+
+int MockDataService::keepalive()
 {
   {
     RWLock::Lock lock(blocks_mutex_, WRITE_LOCKER);
@@ -58,6 +107,7 @@ int MockDataServerInstance::keepalive()
     information_.current_load_ = Func::get_load_avg();
     information_.block_count_  = blocks_.size();
   }
+
   SetDataserverMessage msg;
   msg.set_ds(&information_);
   if (need_send_block_to_ns_ == HAS_BLOCK_FLAG_YES)
@@ -72,9 +122,10 @@ int MockDataServerInstance::keepalive()
 
   TBSYS_LOG(DEBUG, "keepalive, need_send_block_to_ns_(%d)", need_send_block_to_ns_);
 
-  Message* result = NULL;
-  int iret = send_message_to_server(ns_ip_port_, &msg, &result);
-  if (iret == TFS_SUCCESS && result != NULL)
+  NewClient* client = NewClientManager::get_instance().create_client();
+  tbnet::Packet* result = NULL;
+  int32_t iret = send_msg_to_server(ns_ip_port_, client, &msg, result);
+  if (iret == TFS_SUCCESS)
   {
     if (result->getPCode() == RESP_HEART_MESSAGE)
     {
@@ -89,160 +140,112 @@ int MockDataServerInstance::keepalive()
     {
       TBSYS_LOG(WARN, "message is invalid, pcode(%d)", result->getPCode());
     }
-    tbsys::gDelete(result);
   }
   else
   {
     TBSYS_LOG(ERROR, "%s", "message is null or iret(%d) !=  TFS_SUCCESS");
   }
-  return TFS_SUCCESS;
+  NewClientManager::get_instance().destroy_client(client);
+  return iret;
 }
 
-tbnet::IPacketHandler::HPRetCode MockDataServerInstance::handlePacket(tbnet::Connection* conn, tbnet::Packet* packet)
+/** handle single packet */
+bool MockDataService::handlePacketQueue(tbnet::Packet *packet, void *args)
 {
-  bool bret = conn != NULL && packet != NULL;
-  if (!bret)
-  {
-    TBSYS_LOG(ERROR, "%s", "invalid packet");
-    return tbnet::IPacketHandler::FREE_CHANNEL;
-  }
-
-  if (!packet->isRegularPacket())
-  {
-    TBSYS_LOG(INFO, "control packet cmd(%d)", ((tbnet::ControlPacket*) packet)->getCommand());
-    return tbnet::IPacketHandler::FREE_CHANNEL;
-  }
-  Message* msg = dynamic_cast<Message*>(packet);
-  msg->set_connection(conn);
-  msg->setExpireTime(MAX_RESPONSE_TIME);
-  msg->set_direction(msg->get_direction() | DIRECTION_RECEIVE);
-  if (!main_work_queue_.push(msg))
-  {
-    MessageFactory::send_error_message(msg, TBSYS_LOG_LEVEL(WARN),
-      STATUS_MESSAGE_ERROR, information_.id_,
-      "TASK message beyond max queue size, discard." );
-    msg->free();
-  }
-  return tbnet::IPacketHandler::KEEP_CHANNEL;
-}
-
-bool MockDataServerInstance::handlePacketQueue(tbnet::Packet *packet, void *args)
-{
-  Message* msg = dynamic_cast<Message*>(packet);
-  int32_t pcode = msg->getPCode();
-  int32_t iret  = TFS_ERROR;
-  switch( pcode)
-  {
-  case CREATE_FILENAME_MESSAGE:
-    iret = create_file_number(msg);
-    break;
-  case WRITE_DATA_MESSAGE:
-    iret = write(msg);
-    break;
-  case READ_DATA_MESSAGE:
-    iret = read(msg);
-    break;
-  case READ_DATA_MESSAGE_V2:
-    iret = readv2(msg);
-    break;
-  case CLOSE_FILE_MESSAGE:
-    iret = close(msg);
-    break;
-  case NEW_BLOCK_MESSAGE:
-    iret = new_block(msg);
-    break;
-  case FILE_INFO_MESSAGE:
-    iret = get_file_info(msg);
-    break;
-  default:
-    iret = EXIT_UNKNOWN_MSGTYPE;
-    break;
-  }
-  if (iret != TFS_SUCCESS)
-  {
-    TBSYS_LOG(DEBUG, "pcode(%d)", msg->getPCode());
-    MessageFactory::send_error_message(msg, TBSYS_LOG_LEVEL(ERROR), iret, information_.id_,
-      "execute message failed");
-  }
-  return true;
-}
-
-int MockDataServerInstance::initialize(int32_t port, int64_t capacity, const std::string& work_index, const std::string& conf)
-{
-  int iret = SysParam::instance().load_mock_dataserver(conf);
-  if (iret != TFS_SUCCESS)
-  {
-    fprintf(stderr, "load config file(%s) failed\n", conf.c_str());
-    return EXIT_GENERAL_ERROR;
-  }
-
-  information_.total_capacity_ = capacity;
-  char* ns_ip = CONFIG.get_string_value(CONFIG_NAMESERVER, CONF_IP_ADDR);
-  if (ns_ip == NULL)
-  {
-    TBSYS_LOG(ERROR, "%s", "'ns_ip' is invalid");
-    return TFS_ERROR;
-  }
-  int32_t ns_port = CONFIG.get_int_value(CONFIG_NAMESERVER, CONF_PORT);
-  ns_ip_port_ = tbsys::CNetUtil::strToAddr(ns_ip, ns_port);
-
-  IpAddr* adr = reinterpret_cast<IpAddr*>(&information_.id_);
-  adr->ip_ = Func::get_local_addr(SYSPARAM_MOCK_DATASERVER.dev_name_.c_str());
-  adr->port_ = port;
-  //listen to the port, get packets
-  streamer_.set_packet_factory(&msg_factory_);
-  CLIENT_POOL.init_with_transport(&transport_);
-
-  char spec[SPEC_LEN];
-  memset(spec, 0, sizeof(spec));
-  snprintf(spec, SPEC_LEN, "tcp::%d", port);
-
-  if (transport_.listen(spec, &streamer_, this) == NULL)
-  {
-    TBSYS_LOG(ERROR, "listen port fail, port(%d)", port);
-    return EXIT_NETWORK_ERROR;
-  }
-
-  transport_.start();
-
-  timer_ = new Timer();
-
-  int32_t heart_interval = CONFIG.get_int_value(CONFIG_PUBLIC,CONF_HEART_INTERVAL,2);
-  KeepaliveTimerTaskPtr task = new KeepaliveTimerTask(*this);
-  timer_->scheduleRepeated(task, tbutil::Time::seconds(heart_interval));
-
-  int32_t thread_count = CONFIG.get_int_value(CONFIG_MOCK_DATASERVER, CONF_THREAD_COUNT, 4);
-  main_work_queue_.setThreadParameter(thread_count, this, NULL);
-  main_work_queue_.start();
-
-  return TFS_SUCCESS;
-}
-
-int MockDataServerInstance::wait_for_shut_down()
-{
-  transport_.wait();
-  main_work_queue_.wait();
-  return TFS_SUCCESS;
-}
-
-bool MockDataServerInstance::destroy()
-{
-  if (timer_ != 0)
-  {
-    timer_->destroy();
-  }
-
-  transport_.stop();
-  main_work_queue_.stop();
-  return true;
-}
-
-int MockDataServerInstance::write(message::Message* msg)
-{
-  bool bret = msg != NULL;
+  bool bret = BaseService::handlePacketQueue(packet, args);
   if (bret)
   {
-    int32_t iret = TFS_ERROR;
+    int32_t pcode = packet->getPCode();
+    int32_t iret = LOCAL_PACKET == pcode ? TFS_ERROR : common::TFS_SUCCESS;
+    if (TFS_SUCCESS == iret)
+    {
+      TBSYS_LOG(DEBUG, "PCODE: %d", pcode);
+      common::BasePacket* msg = dynamic_cast<common::BasePacket*>(packet);
+      switch( pcode)
+      {
+        case CREATE_FILENAME_MESSAGE:
+          iret = create_file_number(msg);
+          break;
+        case WRITE_DATA_MESSAGE:
+          iret = write(msg);
+          break;
+        case READ_DATA_MESSAGE:
+          iret = read(msg);
+          break;
+        case READ_DATA_MESSAGE_V2:
+          iret = readv2(msg);
+          break;
+        case CLOSE_FILE_MESSAGE:
+          iret = close(msg);
+          break;
+        case NEW_BLOCK_MESSAGE:
+          iret = new_block(msg);
+          break;
+        case FILE_INFO_MESSAGE:
+          iret = get_file_info(msg);
+          break;
+
+        default:
+          iret = EXIT_UNKNOWN_MSGTYPE;
+          TBSYS_LOG(ERROR, "unknown msg type: %d", pcode);
+          break;
+      }
+      if (common::TFS_SUCCESS != iret)
+      {
+        msg->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), iret, "execute message failed");
+      }
+    }
+  }
+  return bret;
+}
+
+int MockDataService::initialize(int argc, char* argv[])
+{
+  int32_t iret = get_ns_port() > 0 ? TFS_SUCCESS : TFS_ERROR;
+  if (TFS_SUCCESS == iret)
+  {
+    ns_ip_port_ = tbsys::CNetUtil::strToAddr(get_ip_addr(), get_ns_port());
+
+    IpAddr* adr = reinterpret_cast<IpAddr*>(&information_.id_);
+    adr->ip_ = Func::get_local_addr(get_dev());
+    adr->port_ = get_listen_port();
+
+    int32_t heart_interval = TBSYS_CONFIG.getInt(CONF_SN_MOCK_DATASERVER,CONF_HEART_INTERVAL,2);
+    KeepaliveTimerTaskPtr task = new KeepaliveTimerTask(*this);
+    get_timer()->scheduleRepeated(task, tbutil::Time::seconds(heart_interval));
+  }
+  return iret;
+}
+
+int MockDataService::callback(common::NewClient* client)
+{
+  int32_t iret = NULL != client ? TFS_SUCCESS : TFS_ERROR;
+  if (TFS_SUCCESS == iret)
+  {
+    NewClient::RESPONSE_MSG_MAP* sresponse = client->get_success_response();
+    NewClient::RESPONSE_MSG_MAP* fresponse = client->get_fail_response();
+    iret = NULL != sresponse && fresponse != NULL ? TFS_SUCCESS : TFS_ERROR;
+    if (TFS_SUCCESS == iret)
+    {
+      tbnet::Packet* packet = client->get_source_msg();
+      assert(NULL != packet);
+      bool all_success = sresponse->size() == client->get_send_id_sign().size();
+      BasePacket* bpacket= dynamic_cast<BasePacket*>(packet);
+      StatusMessage* reply_msg =  all_success ?
+        new StatusMessage(STATUS_MESSAGE_OK, "write data complete"):
+        new StatusMessage(STATUS_MESSAGE_ERROR, "write data fail");
+      iret = bpacket->reply(reply_msg);
+    }
+  }
+  return iret;
+
+}
+
+int MockDataService::write(common::BasePacket* msg)
+{
+  int32_t iret = NULL != msg ? TFS_SUCCESS : TFS_ERROR;
+  if (TFS_SUCCESS == iret)
+  {
     WriteDataMessage* message = dynamic_cast<WriteDataMessage*>(msg);
     WriteDataInfo write_info = message->get_write_info();
     uint32_t lease_id = message->get_lease_id();
@@ -253,63 +256,66 @@ int MockDataServerInstance::write(message::Message* msg)
       std::map<uint32_t, BlockEntry>::iterator iter = blocks_.find(write_info.block_id_);
       if (iter == blocks_.end())
       {
-        MessageFactory::send_error_message(message, TBSYS_LOG_LEVEL(ERROR), information_.id_,
-              "create file failed. blockid: %u, fileid: %" PRI64_PREFIX "u.", write_info.block_id_, write_info.file_id_);
-        return TFS_SUCCESS;
+        iret = message->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), iret, "create file failed. blockid: %u, fileid: %" PRI64_PREFIX "u.", write_info.block_id_);
       }
-      iter->second.info_.size_ += write_info.length_;
-    }
-
-    {
-      RWLock::Lock lock(infor_mutex_, WRITE_LOCKER);
-      information_.use_capacity_ += write_info.length_;
-    }
-
-    if (Master_Server_Role == write_info.is_server_)
-    {
-      message->set_server(Slave_Server_Role);
-      message->set_lease_id(lease_id);
-      message->set_block_version(version);
-      iret = this->post_message_to_server(message, message->get_ds_list());
-      if ( 0x01 == iret)
+      if (TFS_SUCCESS == iret)
       {
-        message->reply_message(new StatusMessage(STATUS_MESSAGE_OK));
+        iter->second.info_.size_ += write_info.length_;
+      }
+    }
+    if (TFS_SUCCESS == iret)
+    {
+      {
+        RWLock::Lock lock(infor_mutex_, WRITE_LOCKER);
+        information_.use_capacity_ += write_info.length_;
+      }
+
+      if (Master_Server_Role == write_info.is_server_)
+      {
+        message->set_server(Slave_Server_Role);
+        message->set_lease_id(lease_id);
+        message->set_block_version(version);
+        iret = this->post_message_to_server(message, message->get_ds_list());
+        if ( 0x01 == iret)
+        {
+          iret = message->reply(new StatusMessage(STATUS_MESSAGE_OK));
+        }
+        else
+        {
+          iret = message->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), iret,
+            "write data fail to other dataserver (send): blockid: %u, fileid: %" PRI64_PREFIX "u, datalen: %d, ret: %d",
+            write_info.block_id_, write_info.file_id_, write_info.length_, iret);
+        }
       }
       else
       {
-        MessageFactory::send_error_message(message, TBSYS_LOG_LEVEL(ERROR), information_.id_,
-          "write data fail to other dataserver (send): blockid: %u, fileid: %" PRI64_PREFIX "u, datalen: %d, ret: %d",
-          write_info.block_id_, write_info.file_id_, write_info.length_, iret);
+        iret = message->reply(new StatusMessage(STATUS_MESSAGE_OK));
       }
     }
-    else
-    {
-      message->reply_message(new StatusMessage(STATUS_MESSAGE_OK));
-    }
   }
-  return !bret ? TFS_ERROR : TFS_SUCCESS;
+  return iret;
 }
 
-int MockDataServerInstance::read(message::Message* msg)
+int MockDataService::read(common::BasePacket* msg)
 {
-  bool bret = msg != NULL;
-  if (bret)
+  int32_t iret = NULL != msg ? TFS_SUCCESS : TFS_ERROR;
+  if (TFS_SUCCESS == iret)
   {
     ReadDataMessage* message = dynamic_cast<ReadDataMessage*>(msg);
     RespReadDataMessage* rmsg = new RespReadDataMessage();
     char* data = rmsg->alloc_data(BUF_LEN);
     memcpy(data, BUF, BUF_LEN);
     rmsg->set_length(BUF_LEN);
-    message->reply_message(rmsg);
+    iret = message->reply(rmsg);
     TBSYS_LOG(DEBUG, "read msg");
   }
-  return !bret ? TFS_ERROR : TFS_SUCCESS;
+  return iret;
 }
 
-int MockDataServerInstance::readv2(message::Message* msg)
+int MockDataService::readv2(common::BasePacket* msg)
 {
-  bool bret = msg != NULL;
-  if (bret)
+  int32_t iret = NULL != msg ? TFS_SUCCESS : TFS_ERROR;
+  if (TFS_SUCCESS == iret)
   {
     ReadDataMessageV2* message = dynamic_cast<ReadDataMessageV2*>(msg);
     uint32_t block_id = message->get_block_id();
@@ -319,43 +325,43 @@ int MockDataServerInstance::readv2(message::Message* msg)
     if (iter == blocks_.end())
     {
       rmsg->set_length(0);
-      message->reply_message(rmsg);
-      return TFS_SUCCESS;
+      iret = message->reply(rmsg);
     }
-
-    char* data = rmsg->alloc_data(BUF_LEN);
-    memcpy(data, BUF, BUF_LEN);
-    rmsg->set_length(BUF_LEN);
-    rmsg->set_file_info(&gfile_info);
-    message->reply_message(rmsg);
+    else
+    {
+      char* data = rmsg->alloc_data(BUF_LEN);
+      memcpy(data, BUF, BUF_LEN);
+      rmsg->set_length(BUF_LEN);
+      rmsg->set_file_info(&gfile_info);
+      iret = message->reply(rmsg);
+    }
   }
-  return !bret ? TFS_ERROR : TFS_SUCCESS;
+  return iret;
 }
 
-int MockDataServerInstance::close(message::Message* msg)
+int MockDataService::close(common::BasePacket* msg)
 {
-  bool bret = msg != NULL;
-  if (bret)
+  int32_t iret = NULL != msg ? TFS_SUCCESS : TFS_ERROR;
+  if (TFS_SUCCESS == iret)
   {
     CloseFileMessage* message = dynamic_cast<CloseFileMessage*>(msg);
     CloseFileInfo info = message->get_close_file_info();
     uint32_t lease_id = message->get_lease_id();
-
+    RWLock::Lock lock(blocks_mutex_, WRITE_LOCKER);
+    std::map<uint32_t, BlockEntry>::iterator iter = blocks_.find(info.block_id_);
+    if (iter == blocks_.end())
     {
-      RWLock::Lock lock(blocks_mutex_, WRITE_LOCKER);
-      std::map<uint32_t, BlockEntry>::iterator iter = blocks_.find(info.block_id_);
-      if (iter == blocks_.end())
-      {
-        MessageFactory::send_error_message(message, TBSYS_LOG_LEVEL(ERROR), information_.id_,
-              "close write file failed. block is not exist. blockid: %u, fileid: %" PRI64_PREFIX "u.", info.block_id_, info.file_id_);
-        return TFS_SUCCESS;
-      }
+       iret = message->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), iret,
+          "close write file failed. block is not exist. blockid: %u, fileid: %" PRI64_PREFIX "u.", info.block_id_, info.file_id_);
+    }
+    else
+    {
       if (CLOSE_FILE_SLAVER != info.mode_)
       {
         message->set_mode(CLOSE_FILE_SLAVER);
         message->set_block(&iter->second.info_);
         TBSYS_LOG(DEBUG, "blockid: %u", info.block_id_);
-        int iret = send_message_to_slave(message, message->get_ds_list());
+        iret = send_message_to_slave(message, message->get_ds_list());
         if (iret != TFS_SUCCESS)
         {
           iret = commit_to_nameserver(iter, info.block_id_, lease_id, TFS_ERROR);
@@ -366,34 +372,33 @@ int MockDataServerInstance::close(message::Message* msg)
         }
         if (iret == TFS_SUCCESS)
         {
-          message->reply_message(new StatusMessage(STATUS_MESSAGE_OK));
+          iret = message->reply(new StatusMessage(STATUS_MESSAGE_OK));
         }
         else
         {
           TBSYS_LOG(ERROR, "dataserver commit fail, block_id: %u, file_id: %"PRI64_PREFIX"u, iret: %d",
-            info.block_id_, info.file_id_, iret);
-          message->reply_message(new StatusMessage(STATUS_MESSAGE_ERROR));
+              info.block_id_, info.file_id_, iret);
+          iret = message->reply(new StatusMessage(STATUS_MESSAGE_ERROR));
         }
       }
       else
       {
-        BlockInfo* copyblk = message->get_block();
+        const BlockInfo* copyblk = message->get_block();
         if (NULL != copyblk)
         {
           iter->second.info_.seq_no_ = copyblk->seq_no_;
         }
-        message->reply_message(new StatusMessage(STATUS_MESSAGE_OK));
+        iret = message->reply(new StatusMessage(STATUS_MESSAGE_OK));
       }
     }
-
   }
-  return !bret ? TFS_ERROR : TFS_SUCCESS;
+  return iret;
 }
 
-int MockDataServerInstance::create_file_number(message::Message* msg)
+int MockDataService::create_file_number(common::BasePacket* msg)
 {
-  bool bret = msg != NULL;
-  if (bret)
+  int32_t iret = NULL != msg ? TFS_SUCCESS : TFS_ERROR;
+  if (TFS_SUCCESS == iret)
   {
     CreateFilenameMessage* message = dynamic_cast<CreateFilenameMessage*>(msg);
     uint32_t block_id =  message->get_block_id();
@@ -403,24 +408,26 @@ int MockDataServerInstance::create_file_number(message::Message* msg)
     if (iter == blocks_.end())
     {
       TBSYS_LOG(DEBUG, "create file number failed, blockid : %u", block_id);
-      MessageFactory::send_error_message(message, TBSYS_LOG_LEVEL(ERROR), information_.id_,
+      iret = message->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), iret, 
             "create file failed. blockid: %u, fileid: %" PRI64_PREFIX "u.", block_id, file_id);
-      return TFS_SUCCESS;
     }
-    file_id = ++iter->second.file_id_factory_;
-    RespCreateFilenameMessage* rmsg = new RespCreateFilenameMessage();
-    rmsg->set_block_id(block_id);
-    rmsg->set_file_id(file_id);
-    rmsg->set_file_number(file_id);
-    message->reply_message(rmsg);
+    else
+    {
+      file_id = ++iter->second.file_id_factory_;
+      RespCreateFilenameMessage* rmsg = new RespCreateFilenameMessage();
+      rmsg->set_block_id(block_id);
+      rmsg->set_file_id(file_id);
+      rmsg->set_file_number(file_id);
+      iret = message->reply(rmsg);
+    }
   }
-  return !bret ? TFS_ERROR : TFS_SUCCESS;
+  return iret;
 }
 
-int MockDataServerInstance::new_block(message::Message* msg)
+int MockDataService::new_block(common::BasePacket* msg)
 {
-  bool bret = msg != NULL;
-  if (bret)
+  int32_t iret = NULL != msg ? TFS_SUCCESS : TFS_ERROR;
+  if (TFS_SUCCESS == iret)
   {
     NewBlockMessage* message = dynamic_cast<NewBlockMessage*>(msg);
     const VUINT32* blocks = message->get_new_blocks();
@@ -438,116 +445,103 @@ int MockDataServerInstance::new_block(message::Message* msg)
       }
       TBSYS_LOG(INFO, "add new block(%u)", (*iter));
     }
-    message->reply_message(new StatusMessage(STATUS_MESSAGE_OK));
+    iret = message->reply(new StatusMessage(STATUS_MESSAGE_OK));
   }
-  return !bret ? TFS_ERROR : TFS_SUCCESS;
+  return iret;
 }
 
-int MockDataServerInstance::get_file_info(Message* msg)
+int MockDataService::get_file_info(BasePacket* msg)
 {
-  bool bret = msg != NULL;
-  if (bret)
+  int32_t iret = NULL != msg ? TFS_SUCCESS : TFS_ERROR;
+  if (TFS_SUCCESS == iret)
   {
     FileInfoMessage* message = dynamic_cast<FileInfoMessage*>(msg);
     RespFileInfoMessage* rmsg = new RespFileInfoMessage();
     rmsg->set_file_info(&gfile_info);
-    message->reply_message(rmsg);
+    iret = message->reply(rmsg);
   }
-  return !bret ? TFS_ERROR : TFS_SUCCESS;
+  return iret;
 }
 
-int MockDataServerInstance::post_message_to_server(Message* message, const VUINT64& ds_list)
+int MockDataService::post_message_to_server(BasePacket* message, const VUINT64& ds_list)
 {
-  VUINT64 result;
-  VUINT64::const_iterator iter = ds_list.begin();
-  for (; iter != ds_list.end(); ++iter)
+  int32_t iret = NULL != message && !ds_list.empty() ? TFS_SUCCESS : TFS_ERROR;
+  if (TFS_SUCCESS == iret)
   {
-    if ((*iter) == information_.id_)
+    VUINT64 result;
+    VUINT64::const_iterator iter = ds_list.begin();
+    for (; iter != ds_list.end(); ++iter)
     {
-      continue;
+      if ((*iter) != information_.id_)
+      {
+        result.push_back((*iter));
+      }
     }
-    result.push_back((*iter));
+    if (!result.empty())
+    {
+      NewClient* client = NewClientManager::get_instance().create_client();
+      iret = client->async_post_request(result, message, ns_async_callback);
+      NewClientManager::get_instance().destroy_client(client);
+    }
   }
-  if (result.empty())
-  {
-    return 0;
-  }
-  if (async_post_message_to_servers(message, result, this) == TFS_SUCCESS)
-  {
-    return 1;
-  }
-  return -1;
+  return iret;
 }
 
-int MockDataServerInstance::send_message_to_slave(Message* message, const VUINT64& ds_list)
+int MockDataService::send_message_to_slave(BasePacket* message, const VUINT64& ds_list)
 {
-  VUINT64::const_iterator iter = ds_list.begin();
-  for (; iter  != ds_list.end(); ++iter)
+  int32_t iret = NULL != message && !ds_list.empty() ? TFS_SUCCESS : TFS_ERROR;
+  if (TFS_SUCCESS == iret)
   {
-    if ((*iter) == information_.id_)
+    uint8_t send_id = 0;
+    NewClient* client = NewClientManager::get_instance().create_client();
+    VUINT64::const_iterator iter = ds_list.begin();
+    for (; iter  != ds_list.end(); ++iter)
     {
-      continue;
+      if ((*iter) == information_.id_)
+      {
+        continue;
+      }
+      client->post_request((*iter), message, send_id);
+      if (TFS_SUCCESS != iret)
+      {
+        TBSYS_LOG(ERROR, "send message to server to dataserver(%s) fail.", tbsys::CNetUtil::addrToString((*iter)).c_str());
+        break;
+      }
     }
-    int iret = send_message_to_server((*iter), message, NULL);
-    if (iret != TFS_SUCCESS)
-    {
-      TBSYS_LOG(ERROR, "send message to server to dataserver(%s) fail.", tbsys::CNetUtil::addrToString((*iter)).c_str());
-      return iret;
-    }
+    NewClientManager::get_instance().destroy_client(client);
   }
-  return TFS_SUCCESS;
+  return iret;
 }
 
-int MockDataServerInstance::command_done(Message* send_message, bool status, const string& error)
+int MockDataService::commit_to_nameserver(std::map<uint32_t, BlockEntry>::iterator iter, uint32_t block_id, uint32_t lease_id, int32_t status, common::UnlinkFlag flag)
 {
-  return DefaultAsyncCallback::command_done(send_message, status, error);
-}
-
-int MockDataServerInstance::commit_to_nameserver(std::map<uint32_t, BlockEntry>::iterator iter, uint32_t block_id, uint32_t lease_id, int32_t status, common::UnlinkFlag flag)
-{
-  if (iter == blocks_.end())
+  int32_t iret = iter == blocks_.end() ? TFS_ERROR : TFS_SUCCESS;
+  if (TFS_SUCCESS == iret)
   {
-    return TFS_ERROR;
-  }
-  BlockInfo info;
-  memcpy(&info, &iter->second.info_, sizeof(info));
-  ++info.version_;
-  BlockWriteCompleteMessage rmsg;
-  rmsg.set_block(&info);
-  rmsg.set_server_id(information_.id_);
-  rmsg.set_lease_id(lease_id);
-  rmsg.set_success(WRITE_COMPLETE_STATUS_YES);
-  rmsg.set_unlink_flag(flag);
-
-  Message* result = NULL;
-  int iret = send_message_to_server(ns_ip_port_, &rmsg, &result);
-  if (iret != TFS_SUCCESS || result == NULL)
-  {
-    return iret;
-  }
-
-  if (result->getPCode() != STATUS_MESSAGE)
-  {
-    iret = TFS_ERROR;
-  }
-  else
-  {
-    StatusMessage* message = dynamic_cast<StatusMessage*>(result);
-    if (STATUS_MESSAGE_OK == message->get_status())
+    BlockInfo info;
+    memcpy(&info, &iter->second.info_, sizeof(info));
+    ++info.version_;
+    BlockWriteCompleteMessage rmsg;
+    rmsg.set_block(&info);
+    rmsg.set_server_id(information_.id_);
+    rmsg.set_lease_id(lease_id);
+    rmsg.set_success(WRITE_COMPLETE_STATUS_YES);
+    rmsg.set_unlink_flag(flag);
+    int32_t status = STATUS_MESSAGE_ERROR;
+    iret = send_msg_to_server(ns_ip_port_, &rmsg, status);
+    if (TFS_SUCCESS == iret)
     {
-      iter->second.info_.version_++;
-      iret = TFS_SUCCESS;
-    }
-    else
-    {
-      iret = TFS_ERROR;
+      iret = STATUS_MESSAGE_OK == status ? TFS_SUCCESS : TFS_ERROR;
+      if (TFS_SUCCESS == iret)
+      {
+        iter->second.info_.version_++;
+      }
     }
   }
-  tbsys::gDelete(result);
-  return TFS_SUCCESS;
+  return iret;
 }
 
-KeepaliveTimerTask::KeepaliveTimerTask(MockDataServerInstance& instance)
+KeepaliveTimerTask::KeepaliveTimerTask(MockDataService& instance)
   :instance_(instance)
 {
 
@@ -562,4 +556,18 @@ void KeepaliveTimerTask::runTimerTask()
 {
   instance_.keepalive();
 }
+
+int ns_async_callback(NewClient* client)
+{
+  MockDataService* service = dynamic_cast<MockDataService*>(tbutil::Service::instance());
+  int32_t iret = NULL != service ? TFS_SUCCESS : TFS_ERROR;
+  if (TFS_SUCCESS == iret)
+  {
+    iret = service->callback(client);
+  }
+  return iret;
+}
+
+
+
 
