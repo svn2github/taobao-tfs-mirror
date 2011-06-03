@@ -38,32 +38,33 @@ int init_log_file(char* dir_path)
   }
   return TFS_SUCCESS;
 }
-int get_meta_crc(const string& tfs_client, const char* tfs_file_name, FileInfo* finfo)
+int get_meta_crc(const string& tfs_client, const char* tfs_file_name, TfsFileStat* finfo)
 {
   if (finfo == NULL)
   {
     TBSYS_LOG(WARN, "invalid pointer");
     return TFS_ERROR;
   }
-/*TODO TODO
-  if (tfs_client.tfs_open(tfs_file_name, NULL, READ_MODE) != TFS_SUCCESS)
+  int tfs_fd = 0;
+  if ((tfs_fd = TfsClient::Instance()->open(tfs_file_name, NULL, tfs_client.c_str(), T_READ)) < 0)
   {
-    TBSYS_LOG(WARN, "open tfsfile fail: %s", tfs_client.get_error_message());
+    TBSYS_LOG(WARN, "open tfsfile fail");
     return TFS_ERROR;
   }
 
-  if (tfs_client.tfs_stat(finfo, 1) != TFS_SUCCESS)
+  if (TfsClient::Instance()->fstat(tfs_fd, finfo, FORCE_STAT) != TFS_SUCCESS)
   {
-    TBSYS_LOG(WARN, "fstat tfsfile fail: %s, error: %s", tfs_file_name, tfs_client.get_error_message());
+    TBSYS_LOG(WARN, "fstat tfsfile fail: %s", tfs_file_name);
+    TfsClient::Instance()->close(tfs_fd);
     return TFS_ERROR;
   }
 
   if (finfo->flag_ == 1 || finfo->flag_ == 4 || finfo->flag_ == 5)
   {
+    TfsClient::Instance()->close(tfs_fd);
     return META_FLAG_ABNORMAL;
   }
-  tfs_client.tfs_close();
-  */
+  TfsClient::Instance()->close(tfs_fd);
   return TFS_SUCCESS;
 }
 
@@ -75,9 +76,10 @@ int get_real_crc(const string& tfs_client, const char* tfs_file_name, uint32_t* 
     return TFS_ERROR;
   }
 
-  //TODO if (tfs_client.tfs_open(tfs_file_name, NULL, READ_MODE) != TFS_SUCCESS)
+  int tfs_fd = 0;
+  if ((tfs_fd = TfsClient::Instance()->open(tfs_file_name, NULL, tfs_client.c_str(), T_READ)) < 0)
   {
-    //TODOTBSYS_LOG(ERROR, "open tfsfile fail: %s", tfs_client.get_error_message());
+    TBSYS_LOG(ERROR, "open tfsfile fail file name %s", tfs_file_name);
     return TFS_ERROR;
   }
 
@@ -86,10 +88,11 @@ int get_real_crc(const string& tfs_client, const char* tfs_file_name, uint32_t* 
   int total_size = 0,rlen=0;
   for(;;)
   {
-    //TODO rlen = tfs_client.tfs_read(data, MAX_READ_SIZE);
+    rlen = TfsClient::Instance()->read(tfs_fd, data, MAX_READ_SIZE);
     if (rlen < 0)
     {
-      //TODO TBSYS_LOG(ERROR, "read tfsfile fail: %s", tfs_client.get_error_message());
+      TBSYS_LOG(ERROR, "read tfsfile fail: file_name %s", tfs_file_name);
+      TfsClient::Instance()->close(tfs_fd);
       return TFS_ERROR;
     }
     if (rlen == 0)
@@ -100,7 +103,7 @@ int get_real_crc(const string& tfs_client, const char* tfs_file_name, uint32_t* 
       break;
   }
   *crc = crc_tmp;
-  //TODO tfs_client.tfs_close();
+  TfsClient::Instance()->close(tfs_fd);
   return TFS_SUCCESS;
 }
 
@@ -110,9 +113,9 @@ int get_crc_from_filename(const string& old_tfs_client, const string& new_tfs_cl
   int ret = TFS_SUCCESS;
   uint32_t old_real_crc = 0;
   uint32_t new_real_crc = 0;
-  FileInfo old_info, new_info;
-  memset(&old_info, 0, sizeof(FileInfo));
-  memset(&new_info, 0, sizeof(FileInfo));
+  TfsFileStat old_info, new_info;
+  memset(&old_info, 0, sizeof(TfsFileStat));
+  memset(&new_info, 0, sizeof(TfsFileStat));
 
   bool skip_flag = false;
   cmp_stat_.total_count_++;
@@ -240,9 +243,10 @@ int get_crc_from_filename(const string& old_tfs_client, const string& new_tfs_cl
             }
             else
             {
-              //TODO old_tfs_client.tfs_open(tfs_file_name, NULL, READ_MODE);
-              FileInfo finfo;
-              //TODO old_tfs_client.tfs_stat(&finfo,READ_MODE);
+              int tfs_fd_old = 0;
+              tfs_fd_old = TfsClient::Instance()->open(tfs_file_name, NULL, old_tfs_client.c_str(), T_READ);
+              TfsFileStat finfo;
+              TfsClient::Instance()->fstat(tfs_fd_old, &finfo);
               FSName fsname;
               fsname.set_name(tfs_file_name);
 
@@ -262,7 +266,7 @@ int get_crc_from_filename(const string& old_tfs_client, const string& new_tfs_cl
                 fprintf(g_unsync_file, "%s\n", tfs_file_name);
                 cmp_stat_.unsync_count_++;
               }
-              //TODO old_tfs_client.tfs_close();
+              TfsClient::Instance()->close(tfs_fd_old);
             }
           }
         }
