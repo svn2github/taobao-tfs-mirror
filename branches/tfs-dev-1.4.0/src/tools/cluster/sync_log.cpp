@@ -483,13 +483,13 @@ int copy_file(const string& source_tfs_client, const string& dest_tfs_client, co
   char data[MAX_READ_DATA_SIZE];
   int32_t rlen = 0;
 
-  int source_fd = TfsClient::Instance()->open(file_name.c_str(), NULL, source_tfs_client.c_str(), READ_MODE);
+  int source_fd = TfsClient::Instance()->open(file_name.c_str(), NULL, source_tfs_client.c_str(), T_READ);
   if (source_fd < 0)
   {
     TBSYS_LOG(ERROR, "open source tfsfile fail when copy file, filename: %s", file_name.c_str());
     ret = TFS_ERROR;
   }
-  int dest_fd = TfsClient::Instance()->open(file_name.c_str(), NULL, dest_tfs_client.c_str(), WRITE_MODE | NEWBLK_MODE);
+  int dest_fd = TfsClient::Instance()->open(file_name.c_str(), NULL, dest_tfs_client.c_str(), T_WRITE | T_NEWBLK);
   if (dest_fd < 0)
   {
     TBSYS_LOG(ERROR, "open dest tfsfile fail when copy file, filename: %s", file_name.c_str());
@@ -591,7 +591,7 @@ int get_file_info(const string& tfs_client, string& file_name, TfsFileStat& buf)
 {
   int ret = TFS_SUCCESS;
 
-  int fd = TfsClient::Instance()->open(file_name.c_str(), NULL, tfs_client.c_str(), READ_MODE);
+  int fd = TfsClient::Instance()->open(file_name.c_str(), NULL, tfs_client.c_str(), T_READ);
   if (fd < 0)
   {
     ret = TFS_ERROR;
