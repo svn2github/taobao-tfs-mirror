@@ -718,20 +718,21 @@ int TranBlock::check_integrity()
     for ( ; vit != dest_raw_meta_.end(); ++vit)
     {
       int fd = 0;
+      FSName fname_helper;
+      fname_helper.set_block_id(block_id_);
+      fname_helper.set_file_id(vit->get_file_id());
       if (concealed_files_.find(vit->get_file_id()) != concealed_files_.end())
       {
         TBSYS_LOG(INFO, "file concealed, check integrity skip it. blockid: %u, fileid: %"PRI64_PREFIX"u",
             block_id_, vit->get_file_id());
         continue;
       }
-      /* TODO TODO TODO 
-      else if ((fd = TfsClient::Instance().open(block_id_, vit->get_file_id(), READ_MODE)) != TFS_SUCCESS)
+      else if ((fd = TfsClient::Instance()->open(fname_helper.get_name(), NULL, T_READ)) != TFS_SUCCESS)
       {
         TBSYS_LOG(ERROR, "read data from dest fail, blockid: %u, fileid: %"PRI64_PREFIX"u, ret: %d",
             block_id_, vit->get_file_id(), ret);
       }
       else
-      */
       {
         FileInfo dest_info;
         uint32_t crc = 0;
@@ -739,12 +740,12 @@ int TranBlock::check_integrity()
         data[0] = '\0';
         while (true)
         {
-          //TODO int32_t read_len = tfs_client.tfs_read_v2(data, MAX_READ_SIZE, &dest_info);
+          //TODO int32_t read_len = tfs_read_v2(data, MAX_READ_SIZE, &dest_info);
           int32_t read_len;
           if (read_len < 0)
           {
-            //TODO TBSYS_LOG(ERROR, "read data from dest fail, blockid: %u, fileid: %"PRI64_PREFIX"u, ret: %d, error msg: %s",
-            //TODO     block_id_, vit->get_file_id(), read_len, tfs_client.get_error_message());
+            TBSYS_LOG(ERROR, "read data from dest fail, blockid: %u, fileid: %"PRI64_PREFIX"u, ret: %d",
+                 block_id_, vit->get_file_id(), read_len);
             ret = TFS_ERROR;
             break;
           }
@@ -775,15 +776,14 @@ int TranBlock::check_integrity()
           {
             if (crc != (*fit).crc_ || total_size != (*fit).size_ || crc != dest_info.crc_ || total_size != dest_info.size_)
             {
-              //TODO TBSYS_LOG(ERROR, "blockid: %u, ds: %s, meta crc: %u, size: %d, data crc: %u, size: %d, dest crc: %u, size: %d\n",
-              //TODO     block_id_, tbsys::CNetUtil::addrToString(tfs_client.get_last_elect_ds_id()).c_str(),
-              //TODO     (*fit).crc_, (*fit).size_, crc, total_size, dest_info.crc_, dest_info.size_);
+              TBSYS_LOG(ERROR, "blockid: %u, meta crc: %u, size: %d, data crc: %u, size: %d, dest crc: %u, size: %d\n",
+                 block_id_, (*fit).crc_, (*fit).size_, crc, total_size, dest_info.crc_, dest_info.size_);
               ret = TFS_ERROR;
             }
           }
         }
       }
-      //TODO tfs_client.tfs_close();
+      TfsClient::Instance()->close(fd);
 
       if (TFS_SUCCESS != ret)
       {
