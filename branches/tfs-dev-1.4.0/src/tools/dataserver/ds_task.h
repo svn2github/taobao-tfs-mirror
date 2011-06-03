@@ -19,7 +19,7 @@
  */
 #ifndef TFS_DSTOOL_TASK_H_
 #define TFS_DSTOOL_TASK_H_
-#include "client/tfs_file.h"
+#include "new_client/tfs_file.h"
 #include "common/internal.h"
 
 class DsLib;

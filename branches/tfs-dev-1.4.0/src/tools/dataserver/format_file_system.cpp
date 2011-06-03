@@ -63,22 +63,23 @@ int main(int argc, char* argv[])
   }
 
   int ret = 0;
-  if ((ret = SysParam::instance().load_data_server(conf_file, server_index)) != TFS_SUCCESS)
+  TBSYS_CONFIG.load(conf_file);
+  if ((ret = SYSPARAM_FILESYSPARAM.initialize(server_index)) != TFS_SUCCESS)
   {
     cerr << "SysParam::load filesystemparam failed:" << conf_file << endl;
     return ret;
   }
-
-  cout << "mount name: " << SysParam::instance().filesystem_param().mount_name_ << " max mount size: "
-      << SysParam::instance().filesystem_param().max_mount_size_ << " base fs type: "
-      << SysParam::instance().filesystem_param().base_fs_type_ << " superblock reserve offset: "
-      << SysParam::instance().filesystem_param().super_block_reserve_offset_ << " main block size: "
-      << SysParam::instance().filesystem_param().main_block_size_ << " extend block size: "
-      << SysParam::instance().filesystem_param().extend_block_size_ << " block ratio: "
-      << SysParam::instance().filesystem_param().block_type_ratio_ << " file system version: "
-      << SysParam::instance().filesystem_param().file_system_version_ << " avg inner file size: "
-      << SysParam::instance().filesystem_param().avg_segment_size_ << " hash slot ratio: "
-      << SysParam::instance().filesystem_param().hash_slot_ratio_ << endl;
+  
+  cout << "mount name: " << SYSPARAM_FILESYSPARAM.mount_name_ << " max mount size: "
+      << SYSPARAM_FILESYSPARAM.max_mount_size_ << " base fs type: "
+      << SYSPARAM_FILESYSPARAM.base_fs_type_ << " superblock reserve offset: "
+      << SYSPARAM_FILESYSPARAM.super_block_reserve_offset_ << " main block size: "
+      << SYSPARAM_FILESYSPARAM.main_block_size_ << " extend block size: "
+      << SYSPARAM_FILESYSPARAM.extend_block_size_ << " block ratio: "
+      << SYSPARAM_FILESYSPARAM.block_type_ratio_ << " file system version: "
+      << SYSPARAM_FILESYSPARAM.file_system_version_ << " avg inner file size: "
+      << SYSPARAM_FILESYSPARAM.avg_segment_size_ << " hash slot ratio: "
+      << SYSPARAM_FILESYSPARAM.hash_slot_ratio_ << endl;
 
   ret = BlockFileManager::get_instance()->format_block_file_system(SYSPARAM_FILESYSPARAM);
   if (ret)

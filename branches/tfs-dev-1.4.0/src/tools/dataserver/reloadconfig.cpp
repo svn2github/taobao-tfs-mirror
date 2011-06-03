@@ -19,23 +19,16 @@
 #include <string>
 
 #include "common/internal.h"
-#include "common/config.h"
-#include "message/client.h"
-#include "message/client_pool.h"
-#include "message/message.h"
-#include "message/message_factory.h"
+#include "common/new_client.h"
+#include "common/client_manager.h"
+#include "common/status_message.h"
+#include "message/reload_message.h"
 
 using namespace tfs::common;
 using namespace tfs::message;
 
 int reload_config(const uint64_t server_ip, const int32_t flag)
 {
-  Client* client = CLIENT_POOL.get_client(server_ip);
-  if (client->connect() != TFS_SUCCESS)
-  {
-    CLIENT_POOL.release_client(client);
-    return TFS_ERROR;
-  }
 
   printf("server_ip: %s,  flag: %u\n", tbsys::CNetUtil::addrToString(server_ip).c_str(), flag);
 
@@ -44,22 +37,22 @@ int reload_config(const uint64_t server_ip, const int32_t flag)
 
   req_rc_msg.set_switch_cluster_flag(flag);
 
-  Message* message = client->call(&req_rc_msg);
-  if (message != NULL)
+  NewClient* client = NewClientManager::get_instance().create_client();
+  tbnet::Packet* ret_msg = NULL;
+  if(TFS_SUCCESS == send_msg_to_server(server_ip, client, &req_rc_msg, ret_msg))
   {
-    printf("getmessagetype: %d\n", message->get_message_type());
-    if (message->get_message_type() == STATUS_MESSAGE)
+    printf("getmessagetype: %d\n", ret_msg->getPCode());
+    if (ret_msg->getPCode() == STATUS_MESSAGE)
     {
-      StatusMessage* s_msg = dynamic_cast<StatusMessage*>(message);
-      printf("getMessageType: %d %d==%d\n", message->get_message_type(), s_msg->get_status(), STATUS_MESSAGE_OK);
+      StatusMessage* s_msg = dynamic_cast<StatusMessage*>(ret_msg);
+      printf("getMessageType: %d %d==%d\n", ret_msg->getPCode(), s_msg->get_status(), STATUS_MESSAGE_OK);
       if (STATUS_MESSAGE_OK == s_msg->get_status())
       {
         ret_status = TFS_SUCCESS;
       }
     }
-    delete message;
   }
-  CLIENT_POOL.release_client(client);
+  NewClientManager::get_instance().destroy_client(client);
   return ret_status;
 }
 

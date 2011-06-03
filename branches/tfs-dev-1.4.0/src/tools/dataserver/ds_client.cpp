@@ -23,8 +23,8 @@
 #include <vector>
 #include <string>
 #include <map>
-#include "client/tfs_session.h"
-#include "client/tfs_file.h"
+#include "new_client/tfs_session.h"
+#include "new_client/tfs_file.h"
 #include "common/func.h"
 #include "ds_task.h"
 #include "ds_util.h"

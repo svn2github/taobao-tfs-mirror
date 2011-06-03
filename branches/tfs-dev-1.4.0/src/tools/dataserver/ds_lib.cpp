@@ -19,9 +19,22 @@
  */
 #include<stdio.h>
 #include<vector>
-#include "client/tfs_file.h"
-#include "client/fsname.h"
+#include "common/client_manager.h"
+#include "common/new_client.h"
+#include "common/status_message.h"
+#include "new_client/tfs_file.h"
+#include "new_client/fsname.h"
 #include "dataserver/bit_map.h"
+#include "message/server_status_message.h"
+#include "message/block_info_message.h"
+#include "message/create_filename_message.h"
+#include "message/unlink_file_message.h"
+#include "message/read_data_message.h"
+#include "message/file_info_message.h"
+#include "message/rename_file_message.h"
+#include "message/write_data_message.h"
+#include "message/close_file_message.h"
+#include "message/crc_error_message.h"
 #include "ds_lib.h"
 
 using namespace tfs::common;
@@ -40,12 +53,11 @@ int DsLib::get_server_status(DsTask* ds_task)
   req_gss_msg.set_status_type(GSS_MAX_VISIT_COUNT);
   req_gss_msg.set_return_row(num_row);
 
-  std::string err_msg;
-  Message* ret_msg = NULL;
-  ret_status = send_message_to_ds(server_id, &req_gss_msg, err_msg, &ret_msg);
-  if (ret_status == TFS_SUCCESS)
+  NewClient* client = NewClientManager::get_instance().create_client();
+  tbnet::Packet* ret_msg = NULL;
+  if (TFS_SUCCESS == send_msg_to_server(server_id, client, &req_gss_msg, ret_msg))
   {
-    if ((ret_msg == NULL) || (ret_msg->get_message_type() != CARRY_BLOCK_MESSAGE))
+    if (ret_msg->getPCode() != CARRY_BLOCK_MESSAGE)
     {
       fprintf(stderr, "Can't get response message from dataserver.\n");
       ret_status = TFS_ERROR;
@@ -72,7 +84,7 @@ int DsLib::get_server_status(DsTask* ds_task)
     fprintf(stderr, "Get server status message send failure.\n");
     ret_status = TFS_ERROR;
   }
-  delete ret_msg;
+  NewClientManager::get_instance().destroy_client(client);
   return ret_status;
 }
 
@@ -82,28 +94,16 @@ int DsLib::get_ping_status(DsTask* ds_task)
   int ret_status = TFS_ERROR;
 
   StatusMessage s_msg;
-  std::string err_msg;
-  Message* ret_msg = NULL;
-  ret_status = this->send_message_to_ds(server_id, &s_msg, err_msg, &ret_msg);
-  if (ret_status == TFS_SUCCESS)
+  if (TFS_SUCCESS == send_msg_to_server(server_id, &s_msg, ret_status))
   {
-    if (ret_msg == NULL)
-    {
-      fprintf(stderr, "Can't get response message from dataserver.\n");
-      ret_status = TFS_ERROR;
-    }
-    else
-    {
-      printf("ping dataserver success.\n");
-      ret_status = TFS_SUCCESS;
-    }
+    printf("ping dataserver success.\n");
+    ret_status = TFS_SUCCESS;
   }
   else
   {
     fprintf(stderr, "Ping message send failed.\n");
     ret_status = TFS_ERROR;
   }
-  delete ret_msg;
   return ret_status;
 }
 
@@ -114,15 +114,14 @@ int DsLib::new_block(DsTask* ds_task)
 
   NewBlockMessage req_nb_msg;
   req_nb_msg.add_new_id(block_id);
-  std::string err_msg;
-  Message* ret_msg = NULL;
   int ret_status = TFS_ERROR;
-  ret_status = this->send_message_to_ds(server_id, &req_nb_msg, err_msg, &ret_msg);
+
+  int32_t status_value = 0;
+  ret_status = send_msg_to_server(server_id, &req_nb_msg, status_value);
 
   if (ret_status == TFS_SUCCESS)
   {
-    if ((ret_msg->get_message_type() == STATUS_MESSAGE) && ((dynamic_cast<StatusMessage*> (ret_msg))->get_status()
-        == STATUS_MESSAGE_OK))
+    if (STATUS_MESSAGE_OK == status_value)
     {
       printf("New block success\n");
       ret_status = TFS_SUCCESS;
@@ -138,7 +137,6 @@ int DsLib::new_block(DsTask* ds_task)
     fprintf(stderr, "New block message send fail\n");
     ret_status = TFS_ERROR;
   }
-  delete ret_msg;
   return ret_status;
 }
 
@@ -149,15 +147,12 @@ int DsLib::remove_block(DsTask* ds_task)
 
   RemoveBlockMessage req_rb_msg;
   req_rb_msg.add_remove_id(block_id);
-  std::string err_msg;
-  Message* ret_msg = NULL;
   int ret_status = TFS_ERROR;
-  ret_status = this->send_message_to_ds(server_id, &req_rb_msg, err_msg, &ret_msg);
-
+  int32_t status_value = 0;
+  ret_status = send_msg_to_server(server_id, &req_rb_msg, status_value);
   if (ret_status == TFS_SUCCESS)
   {
-    if ((ret_msg->get_message_type() == STATUS_MESSAGE) && ((dynamic_cast<StatusMessage*> (ret_msg))->get_status()
-        == STATUS_MESSAGE_OK))
+    if (STATUS_MESSAGE_OK == status_value)
     {
       printf("Remove block success\n");
       ret_status = TFS_SUCCESS;
@@ -173,7 +168,6 @@ int DsLib::remove_block(DsTask* ds_task)
     fprintf(stderr, "Remove block message send fail\n");
     ret_status = TFS_ERROR;
   }
-  delete ret_msg;
   return ret_status;
 }
 
@@ -195,7 +189,7 @@ void print_block_id(VUINT32* list_blocks)
   printf("\nLogic Block Nums :%d\n", static_cast<int>(list_blocks->size()));
 }
 
-void print_block_info(map<uint32_t, BlockInfo*>* block_infos)
+void print_block_info(map<uint32_t, BlockInfo>* block_infos)
 {
   int64_t total_file_count = 0;
   int64_t total_size = 0;
@@ -203,10 +197,10 @@ void print_block_info(map<uint32_t, BlockInfo*>* block_infos)
   int64_t total_del_size = 0;
   printf("BLOCK_ID   VERSION    FILECOUNT  SIZE       DEL_FILE   DEL_SIZE   SEQ_NO\n");
   printf("---------- ---------- ---------- ---------- ---------- ---------- ----------\n");
-  map<uint32_t, BlockInfo*>::iterator it = block_infos->begin();
+  map<uint32_t, BlockInfo>::iterator it = block_infos->begin();
   for (; it != block_infos->end(); it++)
   {
-    BlockInfo* block_info = it->second;
+    BlockInfo* block_info = &(it->second);
     printf("%-10u %10u %10u %10u %10u %10u %10u\n", block_info->block_id_, block_info->version_,
         block_info->file_count_, block_info->size_, block_info->del_file_count_, block_info->del_size_,
         block_info->seq_no_);
@@ -216,9 +210,9 @@ void print_block_info(map<uint32_t, BlockInfo*>* block_infos)
     total_delfile_count += block_info->del_file_count_;
     total_del_size += block_info->del_size_;
   }
-printf("TOTAL:     %10d %10" PRI64_PREFIX "u %10s %10" PRI64_PREFIX "u %10s\n\n", static_cast<int>(block_infos->size()),
-    total_file_count, Func::format_size(total_size).c_str(), total_delfile_count,
-    Func::format_size(total_del_size).c_str());
+  printf("TOTAL:     %10d %10" PRI64_PREFIX "u %10s %10" PRI64_PREFIX "u %10s\n\n", static_cast<int>(block_infos->size()),
+      total_file_count, Func::format_size(total_size).c_str(), total_delfile_count,
+      Func::format_size(total_del_size).c_str());
 }
 
 void print_block_pair(map<uint32_t, vector<uint32_t> >* logic_phy_pairs)
@@ -259,47 +253,40 @@ int DsLib::list_block(DsTask* ds_task)
   }
   req_lb_msg.set_block_type(xtype);
 
-  std::string err_msg;
-  Message* ret_msg = NULL;
 
   map < uint32_t, vector<uint32_t> >* logic_phy_pairs = NULL;
-  map<uint32_t, BlockInfo*>* block_infos = NULL;
+  map<uint32_t, BlockInfo>* block_infos = NULL;
   VUINT32* list_blocks = NULL;
 
-  ret_status = this->send_message_to_ds(server_id, &req_lb_msg, err_msg, &ret_msg);
-  if ((ret_status == TFS_ERROR) || (ret_msg->get_message_type() != RESP_LIST_BLOCK_MESSAGE))
+  NewClient* client = NewClientManager::get_instance().create_client();
+  tbnet::Packet* ret_msg = NULL;
+  ret_status = send_msg_to_server(server_id, client, &req_lb_msg, ret_msg);
+
+  if (TFS_SUCCESS == ret_status && (RESP_LIST_BLOCK_MESSAGE == ret_msg->getPCode()))
   {
-    return ret_status;
-  }
-  else
-  {
-    printf("get message type: %d\n", ret_msg->get_message_type());
+    printf("get message type: %d\n", ret_msg->getPCode());
     RespListBlockMessage* resp_lb_msg = dynamic_cast<RespListBlockMessage*> (ret_msg);
 
     list_blocks = const_cast<VUINT32*> (resp_lb_msg->get_blocks());
     logic_phy_pairs = const_cast< map < uint32_t, vector<uint32_t> >* > (resp_lb_msg->get_pairs());
-    block_infos = const_cast<map<uint32_t, BlockInfo*>*> (resp_lb_msg->get_infos());
+    block_infos = const_cast<map<uint32_t, BlockInfo>*> (resp_lb_msg->get_infos());
+    if (type & 1)
+    {
+      print_block_id(list_blocks);
+    }
+    if (type & 2)
+    {
+      print_block_pair(logic_phy_pairs);
+    }
+    if (type & 4)
+    {
+      print_block_info(block_infos);
+    }
 
     ret_status = TFS_SUCCESS;
   }
+  NewClientManager::get_instance().destroy_client(client);
 
-  if (type & 1)
-  {
-    print_block_id(list_blocks);
-  }
-  if (type & 2)
-  {
-    print_block_pair(logic_phy_pairs);
-  }
-  if (type & 4)
-  {
-    print_block_info(block_infos);
-  }
-
-  if(ret_msg != NULL)
-  {
-    delete ret_msg;
-  }
   return ret_status;
 }
 
@@ -311,20 +298,18 @@ int DsLib::get_block_info(DsTask* ds_task)
   GetBlockInfoMessage req_gbi_msg;
   req_gbi_msg.set_block_id(block_id);
 
-  std::string err_msg;
-  Message* ret_msg = NULL;
   int ret_status = TFS_ERROR;
-
-  ret_status = this->send_message_to_ds(server_id, &req_gbi_msg, err_msg, &ret_msg);
-  if (ret_status == TFS_SUCCESS)
+  NewClient* client = NewClientManager::get_instance().create_client();
+  tbnet::Packet* ret_msg = NULL;
+  if(TFS_SUCCESS == send_msg_to_server(server_id, client, &req_gbi_msg, ret_msg))
   {
-    if (ret_msg->get_message_type() == UPDATE_BLOCK_INFO_MESSAGE)
+    if (UPDATE_BLOCK_INFO_MESSAGE == ret_msg->getPCode())
     {
       UpdateBlockInfoMessage *req_ubi_msg = dynamic_cast<UpdateBlockInfoMessage*> (ret_msg);
-      SdbmStat *db_stat = req_ubi_msg->get_db_stat();
+      const SdbmStat *db_stat = req_ubi_msg->get_db_stat();
       if (block_id != 0)
       {
-        BlockInfo* block_info = req_ubi_msg->get_block();
+        const BlockInfo* block_info = req_ubi_msg->get_block();
         printf("ID:            %u\n", block_info->block_id_);
         printf("VERSION:       %u\n", block_info->version_);
         printf("FILE_COUNT:    %d\n", block_info->file_count_);
@@ -348,7 +333,7 @@ int DsLib::get_block_info(DsTask* ds_task)
         printf("ITEM_COUNT:    %d\n", db_stat->item_count_);
       }
     }
-    else if (ret_msg->get_message_type() == STATUS_MESSAGE)
+    else if (STATUS_MESSAGE == ret_msg->getPCode())
     {
       StatusMessage* s_msg = dynamic_cast<StatusMessage*> (ret_msg);
       if (s_msg->get_error() != NULL)
@@ -362,7 +347,7 @@ int DsLib::get_block_info(DsTask* ds_task)
     fprintf(stderr, "send message to Data Server failure\n");
     ret_status = TFS_ERROR;
   }
-  delete ret_msg;
+  NewClientManager::get_instance().destroy_client(client);
   return ret_status;
 }
 
@@ -374,17 +359,15 @@ int DsLib::reset_block_version(DsTask* ds_task)
   ResetBlockVersionMessage req_rbv_msg;
   req_rbv_msg.set_block_id(block_id);
 
-  std::string err_msg;
-  Message* ret_msg = NULL;
-
   int ret_status = TFS_ERROR;
-  ret_status = this->send_message_to_ds(server_id, &req_rbv_msg, err_msg, &ret_msg);
+
+  int32_t status_value = 0;
+  ret_status = send_msg_to_server(server_id, &req_rbv_msg, status_value);
   if (ret_status == TFS_SUCCESS)
   {
-    if (ret_msg->get_message_type() == STATUS_MESSAGE)
+    if (STATUS_MESSAGE_OK == status_value)
     {
-      if ((dynamic_cast<StatusMessage*> (ret_msg))->get_status() == STATUS_MESSAGE_OK)
-        printf("Reset block version success\n");
+      printf("Reset block version success\n");
       ret_status = TFS_SUCCESS;
     }
     else
@@ -398,7 +381,6 @@ int DsLib::reset_block_version(DsTask* ds_task)
     fprintf(stderr, "send message to Data Server failure\n");
     ret_status = TFS_ERROR;
   }
-  delete ret_msg;
   return ret_status;
 }
 
@@ -412,19 +394,17 @@ int DsLib::create_file_id(DsTask* ds_task)
   req_cf_msg.set_block_id(block_id);
   req_cf_msg.set_file_id(new_file_id);
 
-  std::string err_msg;
-  Message* ret_msg = NULL;
   int ret_status = TFS_ERROR;
-
-  ret_status = this->send_message_to_ds(server_id, &req_cf_msg, err_msg, &ret_msg);
-  if (ret_status == TFS_SUCCESS)
+  NewClient* client = NewClientManager::get_instance().create_client();
+  tbnet::Packet* ret_msg = NULL;
+  if (TFS_SUCCESS == send_msg_to_server(server_id, client, &req_cf_msg, ret_msg))
   {
-    if (ret_msg->get_message_type() == RESP_CREATE_FILENAME_MESSAGE)
+    if (ret_msg->getPCode() == RESP_CREATE_FILENAME_MESSAGE)
     {
       printf("create file id succeed\n");
       ret_status = TFS_SUCCESS;
     }
-    else if (ret_msg->get_message_type() == STATUS_MESSAGE)
+    else if (ret_msg->getPCode() == STATUS_MESSAGE)
     {
       fprintf(stderr, "return error status\n");
       ret_status = TFS_ERROR;
@@ -435,7 +415,7 @@ int DsLib::create_file_id(DsTask* ds_task)
     printf("send message to Data Server failure\n");
     ret_status = TFS_ERROR;
   }
-  delete ret_msg;
+  NewClientManager::get_instance().destroy_client(client);
   return ret_status;
 }
 
@@ -464,48 +444,64 @@ int DsLib::read_file_data(DsTask* ds_task)
   rd_message.set_length(read_len);
   rd_message.set_offset(offset);
 
-  std::string err_msg;
-  Message* ret_msg = NULL;
-  int ret_status = TFS_ERROR;
-  while (this->send_message_to_ds(server_id, &rd_message, err_msg, &ret_msg) == TFS_SUCCESS)
+  int ret_status = TFS_SUCCESS;
+  while (TFS_SUCCESS == ret_status)
   {
-    ret_status = TFS_SUCCESS;
-    RespReadDataMessage *resp_rd_msg = (RespReadDataMessage *) ret_msg;
-    int32_t len_tmp = resp_rd_msg->get_length();
-
-    if (len_tmp < 0)
+    NewClient* client = NewClientManager::get_instance().create_client();
+    tbnet::Packet* ret_msg = NULL;
+    ret_status = send_msg_to_server(server_id, client, &rd_message, ret_msg);
+    if (TFS_SUCCESS == ret_status && RESP_READ_DATA_MESSAGE != ret_msg->getPCode())
     {
-      fprintf(stderr, "read file(id: %" PRI64_PREFIX "u) data error. ret: %d\n", file_id, len_tmp);
+      fprintf(stderr, "unexpected packet packet id :%d", ret_msg->getPCode());
       ret_status = TFS_ERROR;
-      delete ret_msg;
-      break;
     }
-
-    if (len_tmp == 0)
+    RespReadDataMessage *resp_rd_msg = NULL;
+    int32_t len_tmp = 0;
+    if (TFS_SUCCESS == ret_status)
     {
-      delete ret_msg;
-      break;
-    }
+      resp_rd_msg = (RespReadDataMessage *) ret_msg;
+      len_tmp = resp_rd_msg->get_length();
 
-    ssize_t write_len = write(fd, resp_rd_msg->get_data(), len_tmp);
+      if (len_tmp < 0)
+      {
+        fprintf(stderr, "read file(id: %" PRI64_PREFIX "u) data error. ret: %d\n", file_id, len_tmp);
+        ret_status = TFS_ERROR;
+      }
+    }
+    if (TFS_SUCCESS == ret_status)
+    {
+      if (len_tmp == 0)
+      {
+        ret_status = TFS_ERROR;
+      }
+    }
+    ssize_t write_len = 0;
+    if (TFS_SUCCESS == ret_status)
+    {
+      write_len = write(fd, resp_rd_msg->get_data(), len_tmp);
 
-    if (-1 == write_len)
-    {
-      fprintf(stderr, "write local file fail :%s\n", strerror(errno));
-      delete ret_msg;
-      break;
+      if (-1 == write_len)
+      {
+        fprintf(stderr, "write local file fail :%s\n", strerror(errno));
+        ret_status = TFS_ERROR;
+      }
     }
-    if (len_tmp < MAX_READ_SIZE)
+    if (TFS_SUCCESS == ret_status)
     {
-      delete ret_msg;
-      break;
+      if (len_tmp < MAX_READ_SIZE)
+      {
+        ret_status = TFS_ERROR;
+      }
     }
-    offset += write_len;
-    rd_message.set_block_id(block_id);
-    rd_message.set_file_id(file_id);
-    rd_message.set_length(read_len);
-    rd_message.set_offset(offset);
-    delete ret_msg;
+    if (TFS_SUCCESS == ret_status)
+    {
+      offset += write_len;
+      rd_message.set_block_id(block_id);
+      rd_message.set_file_id(file_id);
+      rd_message.set_length(read_len);
+      rd_message.set_offset(offset);
+    }
+    NewClientManager::get_instance().destroy_client(client);
   }
 
   if (ret_status == TFS_SUCCESS)
@@ -590,26 +586,25 @@ int DsLib::unlink_file(DsTask* ds_task)
     req_uf_msg.set_server();
   }
 
-  std::string err_msg;
-  Message* ret_msg = NULL;
   int ret_status = TFS_ERROR;
-  ret_status = this->send_message_to_ds(server_id, &req_uf_msg, err_msg, &ret_msg);
-  if ((ret_status == TFS_SUCCESS) && (ret_msg != NULL))
+  int32_t status_value = 0;
+  ret_status = send_msg_to_server(server_id, &req_uf_msg, status_value);
+  if ((ret_status == TFS_SUCCESS) )
   {
-    StatusMessage* s_msg = dynamic_cast<StatusMessage*> (ret_msg);
-    if (s_msg->get_status() == STATUS_MESSAGE_ERROR)
+    if (STATUS_MESSAGE_ERROR == status_value)
     {
       ret_status = TFS_SUCCESS;
       fprintf(stderr, "Unlink file fail!\n");
     }
-    else if (s_msg->get_status() == STATUS_MESSAGE_OK)
+    else 
+    {
       printf("unlink file success\n");
+    }
   }
   else
   {
     fprintf(stderr, "Unlink file fail!\n");
   }
-  delete ret_msg;
   return ret_status;
 
 }
@@ -626,14 +621,13 @@ int DsLib::read_file_info(DsTask* ds_task)
   req_fi_msg.set_file_id(file_id);
   req_fi_msg.set_mode(mode);
 
-  std::string err_msg;
-  Message* ret_msg = NULL;
   int ret_status = TFS_ERROR;
-  ret_status = this->send_message_to_ds(server_id, &req_fi_msg, err_msg, &ret_msg);
-
-  if ((ret_status == TFS_SUCCESS) && (ret_msg != NULL))
+  NewClient* client = NewClientManager::get_instance().create_client();
+  tbnet::Packet* ret_msg = NULL;
+  ret_status = send_msg_to_server(server_id, client, &req_fi_msg, ret_msg);
+  if ((ret_status == TFS_SUCCESS))
   {
-    if (ret_msg->get_message_type() == RESP_FILE_INFO_MESSAGE)
+    if (RESP_FILE_INFO_MESSAGE == ret_msg->getPCode())
     {
       RespFileInfoMessage* resp_fi_msg = dynamic_cast<RespFileInfoMessage*> (ret_msg);
       if (resp_fi_msg->get_file_info() != NULL)
@@ -658,7 +652,7 @@ int DsLib::read_file_info(DsTask* ds_task)
         }
       }
     }
-    else if (ret_msg->get_message_type() == STATUS_MESSAGE)
+    else if (STATUS_MESSAGE == ret_msg->getPCode())
     {
       printf("Read file info error:%s", (dynamic_cast<StatusMessage*> (ret_msg))->get_error());
       ret_status = TFS_ERROR;
@@ -675,7 +669,7 @@ int DsLib::read_file_info(DsTask* ds_task)
     ret_status = TFS_ERROR;
   }
 
-  delete ret_msg;
+  NewClientManager::get_instance().destroy_client(client);
   return ret_status;
 
 }
@@ -689,16 +683,16 @@ int DsLib::list_file(DsTask* ds_task)
   req_gss_msg.set_status_type(GSS_BLOCK_FILE_INFO);
   req_gss_msg.set_return_row(block_id);
 
-  std::string err_msg;
-  Message* ret_msg = NULL;
   int ret_status = TFS_ERROR;
-  ret_status = this->send_message_to_ds(server_id, &req_gss_msg, err_msg, &ret_msg);
+  NewClient* client = NewClientManager::get_instance().create_client();
+  tbnet::Packet* ret_msg = NULL;
+  ret_status = send_msg_to_server(server_id, client, &req_gss_msg, ret_msg);
   FILE_INFO_LIST file_list;
 
   //if the information of file can be accessed.
-  if ((ret_status == TFS_SUCCESS) && (ret_msg != NULL))
+  if ((ret_status == TFS_SUCCESS))
   {
-    if (ret_msg->get_message_type() == BLOCK_FILE_INFO_MESSAGE)
+    if (BLOCK_FILE_INFO_MESSAGE == ret_msg->getPCode())
     {
 
       FILE_INFO_LIST* file_info_list = (dynamic_cast<BlockFileInfoMessage*> (ret_msg))->get_fileinfo_list();
@@ -706,9 +700,7 @@ int DsLib::list_file(DsTask* ds_task)
       int32_t list_size = file_info_list->size();
       for (i = 0; i < list_size; i++)
       {
-        FileInfo *file_info = new FileInfo();
-        memcpy(file_info, file_info_list->at(i), sizeof(FileInfo));
-        file_list.push_back(file_info);
+        file_list.push_back(file_info_list->at(i));
       }
       //output file information
       printf("FileList Size = %d\n", list_size);
@@ -719,15 +711,14 @@ int DsLib::list_file(DsTask* ds_task)
 
       for (i = 0; i < list_size; i++)
       {
-        FileInfo* file_info = file_list[i];
+        FileInfo* file_info = &(file_list[i]);
         tfs::client::FSName fsname;
         fsname.set_block_id(block_id);
         fsname.set_file_id(file_info->id_);
         printf("%s %20" PRI64_PREFIX "u %10u %10u %10u %s %s %02d %10u\n", fsname.get_name(), file_info->id_, file_info->offset_,
             file_info->size_, file_info->usize_, Func::time_to_str(file_info->modify_time_).c_str(), Func::time_to_str(
-                file_info->create_time_).c_str(), file_info->flag_, file_info->crc_);
+              file_info->create_time_).c_str(), file_info->flag_, file_info->crc_);
 
-        delete file_info;
       }
       printf(
           "---------- ---------- ---------- ---------- ----------  ---------- ---------- ---------- ---------- ---------- ---------- ----------\n");
@@ -737,7 +728,7 @@ int DsLib::list_file(DsTask* ds_task)
       printf("Total : %d files\n", static_cast<int> (file_list.size()));
       file_list.clear();
     }
-    else if (ret_msg->get_message_type() == STATUS_MESSAGE)
+    else if (STATUS_MESSAGE == ret_msg->getPCode())
     {
       printf("%s", (dynamic_cast<StatusMessage*> (ret_msg))->get_error());
     }
@@ -745,10 +736,8 @@ int DsLib::list_file(DsTask* ds_task)
   else
   {
     fprintf(stderr, "Get File list in Block failure\n");
-    fprintf(stderr, "%s\n", const_cast<char*> (err_msg.c_str()));
   }
-
-  delete ret_msg;
+  NewClientManager::get_instance().destroy_client(client);
   return ret_status;
 
 }
@@ -766,9 +755,8 @@ int DsLib::rename_file(DsTask* ds_task)
   req_rf_msg.set_block_id(block_id);
   req_rf_msg.set_file_id(old_file_id);
   req_rf_msg.set_new_file_id(new_file_id);
-  std::string err_msg;
-  Message* ret_msg = NULL;
-  ret_status = this->send_message_to_ds(server_id, &req_rf_msg, err_msg, &ret_msg);
+  int32_t status_value = 0;
+  ret_status = send_msg_to_server(server_id, &req_rf_msg, status_value);
   if (ret_status == TFS_SUCCESS)
   {
     printf("Rename file succeed\n");
@@ -776,106 +764,95 @@ int DsLib::rename_file(DsTask* ds_task)
   else
   {
     fprintf(stderr, "Rename file failure\n");
-    printf("%s\n", const_cast<char*> (err_msg.c_str()));
   }
   return ret_status;
 }
 
-int DsLib::send_message_to_ds(const uint64_t server_id, const Message* ds_msg, std::string &err_msg,
-    Message** ret_msg)
-{
-  Client* client = CLIENT_POOL.get_client(server_id);
-  if (client->connect() != TFS_SUCCESS)
-  {
-    CLIENT_POOL.release_client(client);
-    return TFS_ERROR;
-  }
-  int ret_status = TFS_ERROR;
-  Message* message = client->call(const_cast<Message*>(ds_msg));
-  if (message != NULL)
-  {
-    if (ret_msg == NULL)
-    {
-      if (message->get_message_type() == STATUS_MESSAGE)
-      {
-        StatusMessage* s_msg = dynamic_cast<StatusMessage*> (message);
-        if (STATUS_MESSAGE_OK == s_msg->get_status())
-        {
-          ret_status = TFS_SUCCESS;
-        }
-        if (s_msg->get_error() != NULL)
-        {
-          err_msg = s_msg->get_error();
-        }
-      }
-      delete message;
-    }
-    else
-    {
-      (*ret_msg) = message;
-      ret_status = TFS_SUCCESS;
-    }
-  }
-  client->disconnect();
-  CLIENT_POOL.release_client(client);
-  return (ret_status);
-}
-
+//int DsLib::send_message_to_ds(const uint64_t server_id, const Message* ds_msg, std::string &err_msg,
+//    Message** ret_msg)
+//{
+//  Client* client = CLIENT_POOL.get_client(server_id);
+//  if (client->connect() != TFS_SUCCESS)
+//  {
+//    CLIENT_POOL.release_client(client);
+//    return TFS_ERROR;
+//  }
+//  int ret_status = TFS_ERROR;
+//  Message* message = client->call(const_cast<Message*>(ds_msg));
+//  if (message != NULL)
+//  {
+//    if (ret_msg == NULL)
+//    {
+//      if (message->get_message_type() == STATUS_MESSAGE)
+//      {
+//        StatusMessage* s_msg = dynamic_cast<StatusMessage*> (message);
+//        if (STATUS_MESSAGE_OK == s_msg->get_status())
+//        {
+//          ret_status = TFS_SUCCESS;
+//        }
+//        if (s_msg->get_error() != NULL)
+//        {
+//          err_msg = s_msg->get_error();
+//        }
+//      }
+//      delete message;
+//    }
+//    else
+//    {
+//      (*ret_msg) = message;
+//      ret_status = TFS_SUCCESS;
+//    }
+//  }
+//  client->disconnect();
+//  CLIENT_POOL.release_client(client);
+//  return (ret_status);
+//}
+//
 int DsLib::create_file_num(const uint64_t server_ip, const uint32_t block_id, const uint64_t file_id,
     uint64_t& new_file_id, int64_t& file_num)
 {
-  Client* client = CLIENT_POOL.get_client(server_ip);
-  if (client->connect() != TFS_SUCCESS)
-  {
-    CLIENT_POOL.release_client(client);
-    return TFS_ERROR;
-  }
 
   int ret = TFS_ERROR;
   CreateFilenameMessage req_cf_msg;
-
   req_cf_msg.set_block_id(block_id);
   req_cf_msg.set_file_id(file_id);
-  Message *message = client->call(&req_cf_msg);
-  if (message != NULL)
+
+  NewClient* client = NewClientManager::get_instance().create_client();
+  tbnet::Packet* ret_msg = NULL;
+  ret = send_msg_to_server(server_ip, client, &req_cf_msg, ret_msg);
+
+  if (TFS_SUCCESS == ret)
   {
-    if (message->get_message_type() == RESP_CREATE_FILENAME_MESSAGE)
+    if (RESP_CREATE_FILENAME_MESSAGE == ret_msg->getPCode())
     {
-      RespCreateFilenameMessage* resp_cf_msg = dynamic_cast<RespCreateFilenameMessage*> (message);
+      RespCreateFilenameMessage* resp_cf_msg = dynamic_cast<RespCreateFilenameMessage*> (ret_msg);
       new_file_id = resp_cf_msg->get_file_id();
       file_num = resp_cf_msg->get_file_number();
       ret = TFS_SUCCESS;
     }
-    else if (message->get_message_type() == STATUS_MESSAGE)
+    else if (STATUS_MESSAGE == ret_msg->getPCode())
     {
-      StatusMessage *s_msg = (StatusMessage*) message;
+      StatusMessage *s_msg = (StatusMessage*) ret_msg;
       fprintf(stderr, "Createfilename message,Return error status: %s, (%d), %s\n", tbsys::CNetUtil::addrToString(
-          client->get_mip()).c_str(), s_msg->get_status(), s_msg->get_error());
+            server_ip).c_str(), s_msg->get_status(), s_msg->get_error());
     }
     else
     {
-      fprintf(stderr, "Createfilename message is error: %d\n", message->get_message_type());
+      fprintf(stderr, "Createfilename message is error: %d\n", ret_msg->getPCode());
     }
-    delete message;
   }
   else
   {
     fprintf(stderr, "Createfilename message send failed.\n");
   }
+  NewClientManager::get_instance().destroy_client(client);
 
-  CLIENT_POOL.release_client(client);
   return (ret);
 }
 
 int DsLib::write_data(const uint64_t server_ip, const uint32_t block_id, const char* data, const int32_t length,
     const int32_t offset, const uint64_t file_id, const uint64_t file_num)
 {
-  Client* client = CLIENT_POOL.get_client(server_ip);
-  if (client->connect() != TFS_SUCCESS)
-  {
-    CLIENT_POOL.release_client(client);
-    return TFS_ERROR;
-  }
 
   VUINT64 ds_list;
   ds_list.clear();
@@ -891,13 +868,15 @@ int DsLib::write_data(const uint64_t server_ip, const uint32_t block_id, const c
   req_wd_msg.set_ds_list(ds_list);
   req_wd_msg.set_data(const_cast<char*>(data));
 
-  Message* message = client->call(&req_wd_msg);
-  if (message != NULL)
+  NewClient* client = NewClientManager::get_instance().create_client();
+  tbnet::Packet* ret_msg = NULL;
+  ret = send_msg_to_server(server_ip, client, &req_wd_msg, ret_msg);
+  if (TFS_SUCCESS == ret)
   {
-    if (message->get_message_type() == STATUS_MESSAGE)
+    if (STATUS_MESSAGE == ret_msg->getPCode())
     {
-      StatusMessage* s_msg = (StatusMessage*) message;
-      if (s_msg->get_status() == STATUS_MESSAGE_OK)
+      StatusMessage* s_msg = (StatusMessage*)ret_msg;
+      if (STATUS_MESSAGE_OK == s_msg->get_status())
       {
         ret = length;
       }
@@ -907,28 +886,20 @@ int DsLib::write_data(const uint64_t server_ip, const uint32_t block_id, const c
         ret = -1;
       }
     }
-    delete message;
   }
   else
   {
     fprintf(stderr, "Write data message send failed\n");
     ret = -1;
   }
+  NewClientManager::get_instance().destroy_client(client);
 
-  CLIENT_POOL.release_client(client);
   return (ret);
 }
 
 int DsLib::close_data(const uint64_t server_ip, const uint32_t block_id, const uint32_t crc, const uint64_t file_id,
     const uint64_t file_num)
 {
-  Client* client = CLIENT_POOL.get_client(server_ip);
-  if (client->connect() != TFS_SUCCESS)
-  {
-    CLIENT_POOL.release_client(client);
-    return TFS_ERROR;
-  }
-
   VUINT64 ds_list;
   ds_list.clear();
   ds_list.push_back(server_ip);
@@ -941,12 +912,14 @@ int DsLib::close_data(const uint64_t server_ip, const uint32_t block_id, const u
   req_cf_msg.set_ds_list(ds_list);
   req_cf_msg.set_crc(crc);
 
-  Message* message = client->call(&req_cf_msg);
-  if (message != NULL)
+  NewClient* client = NewClientManager::get_instance().create_client();
+  tbnet::Packet* ret_msg = NULL;
+  ret = send_msg_to_server(server_ip, client, &req_cf_msg, ret_msg);
+  if (TFS_SUCCESS == ret)
   {
-    if (message->get_message_type() == STATUS_MESSAGE)
+    if (STATUS_MESSAGE == ret_msg->getPCode())
     {
-      StatusMessage* s_msg = dynamic_cast<StatusMessage*> (message);
+      StatusMessage* s_msg = dynamic_cast<StatusMessage*> (ret_msg);
       if (s_msg->get_status() == STATUS_MESSAGE_OK)
       {
         ret = TFS_SUCCESS;
@@ -956,7 +929,6 @@ int DsLib::close_data(const uint64_t server_ip, const uint32_t block_id, const u
         fprintf(stderr, "Close file %s\n", s_msg->get_error());
       }
     }
-    delete message;
   }
   else
   {
@@ -966,8 +938,8 @@ int DsLib::close_data(const uint64_t server_ip, const uint32_t block_id, const u
   {
     fprintf(stderr, "Close file message send failed\n");
   }
+  NewClientManager::get_instance().destroy_client(client);
 
-  CLIENT_POOL.release_client(client);
   return (ret);
 }
 
@@ -993,18 +965,16 @@ int DsLib::send_crc_error(DsTask* ds_task)
   }
 
   std::string err_msg;
-  Message* ret_msg = NULL;
   int ret_status = TFS_ERROR;
-  ret_status = this->send_message_to_ds(server_id, &crc_message, err_msg, &ret_msg);
-  if ((ret_status == TFS_SUCCESS) && (ret_msg != NULL))
+  if(TFS_SUCCESS == send_msg_to_server(server_id, &crc_message, ret_status))
   {
-    StatusMessage *s_msg = dynamic_cast<StatusMessage*> (ret_msg);
-    if (s_msg->get_status() == STATUS_MESSAGE_ERROR)
+
+    if (STATUS_MESSAGE_ERROR == ret_status)
     {
       ret_status = TFS_SUCCESS;
       fprintf(stderr, "send crc error fail!\n");
     }
-    else if (s_msg->get_status() == STATUS_MESSAGE_OK)
+    else if (STATUS_MESSAGE_OK == ret_status)
     {
       printf("send crc error success\n");
       printf("labeled file %" PRI64_PREFIX "u on block %u as crc error(crc: %u)\n", file_id, block_id, crc);
@@ -1021,7 +991,6 @@ int DsLib::send_crc_error(DsTask* ds_task)
   {
     fprintf(stderr, "send crc error fail!\n");
   }
-  delete ret_msg;
   return ret_status;
 
 }
@@ -1067,38 +1036,36 @@ int DsLib::list_bitmap(DsTask* ds_task)
   int ret_status = TFS_ERROR;
   req_lbm_msg.set_bitmap_type(type);
 
-  std::string err_msg;
-  Message* ret_msg = NULL;
+  NewClient* client = NewClientManager::get_instance().create_client();
+  tbnet::Packet* ret_msg = NULL;
+  ret_status = send_msg_to_server(server_id, client, &req_lbm_msg, ret_msg);
 
-  ret_status = send_message_to_ds(server_id, &req_lbm_msg, err_msg, &ret_msg);
   if (ret_status == TFS_ERROR)
   {
+    NewClientManager::get_instance().destroy_client(client);
     return ret_status;
   }
 
   char* bit_data = NULL;
   int32_t map_len = 0, used_len = 0;
-  if ((ret_msg != NULL) && (ret_msg->get_message_type() == RESP_LIST_BITMAP_MESSAGE))
+  if (RESP_LIST_BITMAP_MESSAGE == ret_msg->getPCode())
   {
-      RespListBitMapMessage* resp_lbm_msg = dynamic_cast<RespListBitMapMessage*> (ret_msg);
+    RespListBitMapMessage* resp_lbm_msg = dynamic_cast<RespListBitMapMessage*> (ret_msg);
 
-      map_len = resp_lbm_msg->get_length();
-      used_len = resp_lbm_msg->get_use_count();
-      bit_data = resp_lbm_msg->get_data();
-      ret_status = TFS_SUCCESS;
+    map_len = resp_lbm_msg->get_length();
+    used_len = resp_lbm_msg->get_use_count();
+    bit_data = resp_lbm_msg->get_data();
+    ret_status = TFS_SUCCESS;
   }
   else
   {
-    printf("get message type: %d\n", ret_msg->get_message_type());
+    printf("get message type: %d\n", ret_msg->getPCode());
     printf("get response message from dataserver failed.\n");
+    NewClientManager::get_instance().destroy_client(client);
     return TFS_ERROR;
   }
 
   print_bitmap(map_len, used_len, bit_data);
-
-  if(ret_msg != NULL)
-  {
-    delete ret_msg;
-  }
+  NewClientManager::get_instance().destroy_client(client);
   return ret_status;
 }
