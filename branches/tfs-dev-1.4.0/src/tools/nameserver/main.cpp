@@ -326,6 +326,7 @@ void print_help()
   {
     fprintf(stderr, "block [-n num] [-d block_id] [-s] [-c] [-i] [> filename]   show block info.\n"
         "  -n the number of one fetch, default 1024, optional.\n"
+        "  -d block id, optional.\n"
         "  -s print server list, optional.\n"
         "  -c execute times, default 1, optional.\n"
         "  -i interval time, default 2, optional.\n"
@@ -512,7 +513,7 @@ int main(int argc,char** argv)
     usage(argv[0]);
   }
 
-  //TBSYS_LOGGER.setLogLevel("error");
+  TBSYS_LOGGER.setLogLevel("error");
 
   init();
 

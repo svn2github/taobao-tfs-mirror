@@ -163,6 +163,10 @@ namespace tfs
 
         BlockBase();
         virtual ~BlockBase();
+        bool operator<(const BlockBase& b) const
+        {
+          return info_.block_id_ < b.info_.block_id_;
+        }
 
         int32_t deserialize(tbnet::DataBuffer& input, const int32_t length, int32_t& offset, const int8_t type);
         void dump() const;

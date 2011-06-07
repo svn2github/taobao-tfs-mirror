@@ -386,6 +386,7 @@ namespace tfs
       {
         return TFS_ERROR;
       }
+      int32_t block_chunk_num = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_BLOCK_CHUNK_NUM, 32);
 
       while ((count > 0 || is_loop_) && !interrupt_)
       {
@@ -402,7 +403,7 @@ namespace tfs
           param.should_actual_count_ = 0x10000;
           param.end_flag_ = SSM_SCAN_CUTOVER_FLAG_NO;
           param.should_actual_count_ = 0x10000;
-          param.start_next_position_ = ((block_id % 512) << 16);
+          param.start_next_position_ = ((block_id % block_chunk_num) << 16);
           param.addition_param1_ = block_id;
           once = true;
         }
@@ -415,6 +416,7 @@ namespace tfs
         while ((!((param.end_flag_ >> 4) & SSM_SCAN_END_FLAG_YES)) && !interrupt_)
         {
           param.data_.clear();
+          block_set_.clear();
           tbnet::Packet*ret_msg = NULL;
           NewClient* client = NewClientManager::get_instance().create_client();
           int ret = send_msg_to_server(ns_ip_, client, &msg, ret_msg);
@@ -457,8 +459,13 @@ namespace tfs
                 break;
               }
               stat.add(block);
-              block.dump(type, fp);
+              block_set_.insert(block);
             }
+          }
+          std::set<BlockShow>::iterator iter = block_set_.begin();
+          for (; iter != block_set_.end(); iter++)
+          {
+             (*iter).dump(type, fp);
           }
           param.start_next_position_ = (ret_param.start_next_position_ << 16) & 0xffff0000;
           param.end_flag_ = ret_param.end_flag_;
