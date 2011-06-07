@@ -13,208 +13,189 @@
  *
  */
 
-#include "base_main.h"
 
 #include <tbsys.h>
-#include "config_item.h"
 
-using namespace std;
+#include "define.h"
+#include "base_main.h"
+#include "error_msg.h"
+#include "config_item.h"
+#include "directory_op.h"
 
 namespace tfs 
 {
   namespace common
   {
-    BaseMain* BaseMain::_instance=NULL;
-
-    static void ctrlCHandlerCallback( int sig )
+    BaseMain* BaseMain::instance_=NULL;
+    static void ctrlc_handler_callback( int sig )
     {
       BaseMain* service = BaseMain::instance();
       assert( service != 0 );
-      service->handleInterrupt( sig );
+      service->handle_interrupt( sig );
     }
 
-    BaseMain::BaseMain():stop_(false)
+    BaseMain::BaseMain():
+      stop_(false)
     {
-      assert(_instance == NULL );
-      _instance = this;
+      assert(instance_ == NULL );
+      instance_ = this;
     }
 
     BaseMain::~BaseMain()
     {
-      _instance = NULL;
+      instance_ = NULL;
     }
 
     int BaseMain::main(int argc,char*argv[])
     {
       bool daemonize(false);
-      int idx(1);
-      if (argc < 2 )
+      int32_t idx = 1;
+      int32_t iret = argc < 2 ? TFS_ERROR : TFS_SUCCESS;
+      if (TFS_SUCCESS != iret)
       {
-        cerr<<":invalid option\n"<<"Try `--help' for more information"<<endl;
-        return EXIT_FAILURE;
+        std::cerr<<":invalid option\n"<<"Try `--help' for more information"<<std::endl;
       }
-      while(idx < argc )
+      else
       {
-        if(strcmp(argv[idx],"-h") == 0 || strcmp(argv[idx],"--help") == 0)
+        while(idx < argc )
         {
-          help();//show help
-          return EXIT_SUCCESS;
-        }
-        else if (strcmp(argv[idx], "-v" ) == 0 || strcmp(argv[idx], "--version" ) == 0)
-        {
-          version();//show version
-          return EXIT_SUCCESS;
-        }
-        else if(strcmp(argv[idx], "-d")== 0)
-        {
-          for(int i = idx; i + 1 < argc; ++i)
+          if(strcmp(argv[idx],"-h") == 0 || strcmp(argv[idx],"--help") == 0)
           {
-            argv[i] = argv[i + 1];
+            help();//show help
+            iret = TFS_ERROR;
+            break;
           }
-          argc -= 1;
-          daemonize = true;
-        }
-        else if(strcmp(argv[idx],"-f" ) == 0)
-        {
-          if(idx + 1 < argc)
+          else if (strcmp(argv[idx], "-v" ) == 0 || strcmp(argv[idx], "--version" ) == 0)
           {
-            config_file_=argv[idx + 1];
+            version();//show version
+            iret = TFS_ERROR;
+            break;
+          }
+          else if(strcmp(argv[idx], "-d")== 0)
+          {
+            for(int i = idx; i + 1 < argc; ++i)
+            {
+              argv[i] = argv[i + 1];
+            }
+            argc -= 1;
+            daemonize = true;
+          }
+          else if(strcmp(argv[idx],"-f" ) == 0)
+          {
+            if(idx + 1 < argc)
+            {
+              config_file_=argv[idx + 1];
+            }
+            else
+            {
+              std::cerr<<":--config|-f must be followed by an argument...."<<std::endl;
+              iret = TFS_ERROR;
+              break;
+            }
+            for(int i = idx ; i + 2 < argc; ++i)
+            {
+              argv[i] = argv[i + 2];
+            }
+            argc -= 2;
+            if (config_file_.empty())
+            {
+              std::cerr<<"-f must be followed an argument,argument is not null"<<std::endl;
+              iret = TFS_ERROR;
+              break;
+            }
           }
           else
           {
-            cerr<<":--config|-f must be followed by an argument...."<<endl;
-            return EXIT_FAILURE;
-          }
-          for(int i = idx ; i + 2 < argc; ++i)
+            ++idx;
+          }//end if
+        }//end while idx<argc
+
+        if (TFS_SUCCESS == iret)
+        {
+          std::string errmsg;
+          iret = parse_common_line_args(argc, argv, errmsg);
+          if (TFS_SUCCESS != iret)
           {
-            argv[i] = argv[i + 2];
+            std::cerr << "parse common line args error: " << errmsg << std::endl;
           }
-          argc -= 2;
-          if (config_file_.empty())
+          else
           {
-            cerr<<":--config|-f must be followed an argument,argument is not null"<<endl;
-            return EXIT_FAILURE;
+            iret = start(argc , argv, daemonize);
           }
         }
-        else
-        {
-          ++idx;
-        }//end if
-      }//end while idx<argc
-
-      return start(argc , argv, daemonize);
+      }
+      return iret;
     }
 
     BaseMain* BaseMain::instance()
     {
-      return _instance;
+      return instance_;
     }
 
-    //bool BaseMain::service() const
-    //{
-    //    return _service;
-    //}
-    //
     int BaseMain::start(int argc , char* argv[], const bool daemon)
     {
-      if (EXIT_FAILURE == TBSYS_CONFIG.load(config_file_.c_str()))
+      // load config file
+      int32_t iret = TBSYS_CONFIG.load(config_file_.c_str());
+      if (EXIT_SUCCESS != iret)
       {
-        cerr << "load config error config file is " << config_file_ << endl;
-        return EXIT_FAILURE;
+        std::cerr << "load config error config file is " << config_file_ << std::endl;
+        iret = TFS_SUCCESS;
+      }
+      
+      //initilaize work dir
+      if (TFS_SUCCESS == iret)
+      {
+        iret = initialize_work_dir(argv[0]);
       }
 
-      const char* sz_pid_file =
-        TBSYS_CONFIG.getString(CONF_SN_PUBLIC, CONF_PID_FILE, NULL);
-      const char* sz_log_file =
-        TBSYS_CONFIG.getString(CONF_SN_PUBLIC, CONF_LOG_FILE, NULL);
-
-      string pid_file;
-      string log_file;
-      if (NULL == sz_pid_file)
+      //initialize log file
+      if (TFS_SUCCESS == iret)
       {
-        pid_file = argv[0];
-        pid_file += ".pid";
-      }
-      else
-      {
-        pid_file = sz_pid_file;
-
+        iret = initialize_log_file(argv[0]);
       }
 
-      if (NULL == sz_log_file)
+      //initialize pid file
+      if (TFS_SUCCESS == iret)
       {
-        log_file = argv[0];
-        log_file += ".log";
-      }
-      else
-      {
-        log_file = sz_log_file;
-      }
-      {
-        // make pid file dir log file dir
-        char *p = NULL;
-        char dir_path[256];
-        snprintf(dir_path, 256, "%s", pid_file.c_str());
-        p = strrchr(dir_path, '/');
-        if(p != NULL)
+        if (daemon)
         {
-          *p = '\0';
-        }
-        if(p != NULL && !tbsys::CFileUtil::mkdirs(dir_path)) {
-          fprintf(stderr, "create dir %s error\n", dir_path);
-          return EXIT_FAILURE;
-        }
-        snprintf(dir_path, 256, "%s", log_file.c_str());
-        p = strrchr(dir_path, '/');
-        if(p != NULL)
-        {
-          *p = '\0';
-        }
-        if(p != NULL && !tbsys::CFileUtil::mkdirs(dir_path)) {
-          fprintf(stderr, "create dir %s error\n", dir_path);
-          return EXIT_FAILURE;
+          iret = initialize_pid_file(argv[0]);
         }
       }
 
-      int pid = 0;
-      if((pid = tbsys::CProcess::existPid(pid_file.c_str()))) {
-        fprintf(stderr, "program has been exist: pid=%d\n", pid);
-        return EXIT_FAILURE;
-      }
-      if (0 == access(log_file.c_str(), R_OK))
+      if (TFS_SUCCESS == iret)
       {
-        TBSYS_LOGGER.rotateLog(log_file.c_str());
+        signal(SIGPIPE, SIG_IGN);
+        int32_t pid = 0;
+        if (daemon)
+        {
+          pid = tbsys::CProcess::startDaemon(pid_file_path_.c_str(), log_file_path_.c_str());
+        }
+
+        if (0 == pid)//child process
+        {
+          signal(SIGHUP, ctrlc_handler_callback);
+          signal(SIGTERM, ctrlc_handler_callback);
+          signal(SIGINT, ctrlc_handler_callback);
+          signal(40, ctrlc_handler_callback);
+          signal(41, ctrlc_handler_callback);
+          signal(42, ctrlc_handler_callback);
+
+          iret = run(argc, argv);
+          if (TFS_SUCCESS != iret)
+          {
+            TBSYS_LOG(ERROR, "%s initialze failed, exit", argv[0]);
+          }
+          if (TFS_SUCCESS == iret)
+          {
+            TBSYS_LOG(INFO, "%s initialize successful, wait for shutdown", argv[0]);
+            wait_for_shutdown();
+          }
+          destroy();
+          TBSYS_LOG(INFO, "%s destroyed successful", argv[0]);
+        }
       }
-      TBSYS_LOGGER.setFileName(log_file.c_str());
-      TBSYS_LOGGER.setLogLevel(
-          TBSYS_CONFIG.getString(CONF_SN_PUBLIC, CONF_LOG_LEVEL, "debug"));
-      TBSYS_LOGGER.setMaxFileSize(
-          TBSYS_CONFIG.getInt(CONF_SN_PUBLIC, CONF_LOG_SIZE, 0x40000000));
-      TBSYS_LOGGER.setMaxFileIndex(
-          TBSYS_CONFIG.getInt(CONF_SN_PUBLIC, CONF_LOG_NUM, 16));
-      bool start_ok = true;
-      if (daemon) 
-      {
-        start_ok = (tbsys::CProcess::startDaemon(pid_file.c_str(), log_file.c_str()) == 0);
-      }
-      if (start_ok)
-      {
-        signal(SIGHUP, ctrlCHandlerCallback);
-        signal(SIGTERM, ctrlCHandlerCallback);
-        signal(SIGINT, ctrlCHandlerCallback);
-        signal(40, ctrlCHandlerCallback);
-        signal(41, ctrlCHandlerCallback);
-        signal(42, ctrlCHandlerCallback);
-        string errMsg;
-        run(argc , argv, errMsg);
-        waitForShutdown();
-        destroy();
-      }
-      else
-      {
-        cerr << "start daemon error\n";
-      }
-      return EXIT_SUCCESS;
+      return iret;
     }
 
     void BaseMain::stop()
@@ -224,72 +205,230 @@ namespace tfs
 
     int BaseMain::shutdown()
     {
+      TBSYS_LOG(DEBUG, "notifyAll");
       tbutil::Monitor<tbutil::Mutex>::Lock sync(monitor_);
       if ( !stop_ )
       {
         stop_= true;
         monitor_.notifyAll();
+        TBSYS_LOG(DEBUG, "notifyAll");
       }
-      return EXIT_SUCCESS;
+      return TFS_SUCCESS;
     }
 
-    int BaseMain::waitForShutdown()
+    int BaseMain::wait_for_shutdown()
     {
+      TBSYS_LOG(DEBUG, "wait for shutdown");
       tbutil::Monitor<tbutil::Mutex>::Lock sync(monitor_);
       while( !stop_ )
       {
         monitor_.wait();
       }
-      return EXIT_SUCCESS;
+      TBSYS_LOG(DEBUG, "wait for shutdown");
+      return TFS_SUCCESS;
     }
 
-    int BaseMain::handleInterrupt(int sig)
+    int BaseMain::handle_interrupt(int32_t sig)
     {
+      TBSYS_LOG(INFO, "receive sig: %d", sig);
       switch (sig) 
       {
         case SIGHUP:
           break;
         case SIGTERM:
         case SIGINT:
-            stop();
-            break;
+          stop();
+          break;
         case 40:
-            TBSYS_LOGGER.checkFile();
-            break;
+          TBSYS_LOGGER.checkFile();
+          break;
         case 41:
         case 42:
-            if(sig == 41) 
-            {
-              TBSYS_LOGGER._level++;
-            }
-            else 
-            {
-              TBSYS_LOGGER._level--;
-            }
-            TBSYS_LOG(INFO, "TBSYS_LOGGER._level: %d", TBSYS_LOGGER._level);
-            break;
+          if(sig == 41) 
+          {
+            TBSYS_LOGGER._level++;
+          }
+          else 
+          {
+            TBSYS_LOGGER._level--;
+          }
+          TBSYS_LOG(INFO, "TBSYS_LOGGER._level: %d", TBSYS_LOGGER._level);
+          break;
+        default:
+          break;
       }
-      return EXIT_SUCCESS;
+      return TFS_SUCCESS;
     }
 
     void BaseMain::help()
     {
       std::string options=
         "Options:\n"
-        "-h,--help          Show this message...\n"
-        "-v,--version       Show porgram version...\n"
-        "-d                 Run as a daemon...\n"
-        "-f FILE            Configure files...\n";
-
-        cerr << "Usage:\n" << options;
+        "-h,--help          show this message...\n"
+        "-v,--version       show porgram version...\n"
+        "-d                 run as a daemon...\n"
+        "-f file            configure files...\n";
+        std::cerr << "Usage:\n" << options;
     }
 
     void BaseMain::version()
     {
-      cerr << "Version:1.0.0\n";
-      cerr << "BUILD_TIME " << __DATE__ << __TIME__ << endl;
+      std::cerr << "Version:1.0.0\n";
+      std::cerr << "BUILD_TIME " << __DATE__ << __TIME__ << std::endl;
     }
 
-  }
-}
+    int BaseMain::parse_common_line_args(int argc, char* argv[], std::string& errmsg)
+    {
+      return TFS_SUCCESS;
+    }
+
+    /** get work directory*/
+    const char* BaseMain::get_work_dir() const
+    {
+      return TBSYS_CONFIG.getString(CONF_SN_PUBLIC, CONF_WORK_DIR, NULL);
+    }
+
+    const char* BaseMain::get_log_file_level() const
+    {
+      return TBSYS_CONFIG.getString(CONF_SN_PUBLIC, CONF_LOG_LEVEL, "debug");
+    }
+
+    const char* BaseMain::get_log_path() const
+    {
+      return log_file_path_.empty() ? NULL : log_file_path_.c_str();
+    }
+
+    int64_t BaseMain::get_log_file_size() const
+    {
+      return TBSYS_CONFIG.getInt(CONF_SN_PUBLIC, CONF_LOG_SIZE, 0x40000000);
+    }
+
+    int32_t BaseMain::get_log_file_count() const
+    {
+      return TBSYS_CONFIG.getInt(CONF_SN_PUBLIC, CONF_LOG_NUM, 16);
+    }
+
+    int BaseMain::initialize_work_dir(const char* app_name)
+    {
+      int32_t iret = TFS_SUCCESS;
+      const char* work_dir = get_work_dir();
+      if (NULL == work_dir)
+      {
+        std::cerr << app_name << "not set workdir" <<std::endl;
+        iret = EXIT_CONFIG_ERROR;
+      }
+
+      if (TFS_SUCCESS == iret)
+      {
+        if (!DirectoryOp::create_full_path(work_dir))
+        {
+          std::cerr << app_name << "create workdir" << work_dir <<"error: "<< strerror(errno) << std::endl;
+          iret = EXIT_MAKEDIR_ERROR;
+        }
+      }
+      return iret;
+    }
+
+    int BaseMain::initialize_log_file(const char* app_name)
+    {
+      const char* work_dir = get_work_dir();
+      int32_t iret =  NULL == work_dir ? EXIT_CONFIG_ERROR: TFS_SUCCESS;
+      if (TFS_SUCCESS != iret)
+      {
+        std::cerr << app_name << "not set workdir" <<std::endl;
+      }
+      if (TFS_SUCCESS == iret)
+      {
+        const char* const tmp_path = get_log_file_path();
+        std::string log_path(NULL == tmp_path ? "" : tmp_path);
+        if (log_path.empty()
+            || log_path == "")
+        {
+          log_path = work_dir;
+          log_path += "/logs/";
+          std::string tmp(app_name);
+          std::string::size_type pos = tmp.find_last_of('/');
+          std::string name = tmp.substr(pos);
+          if (!name.empty() && name.c_str()[0] == '/')
+          {
+            name = tmp.substr(pos + 1);
+          }
+          log_path += std::string::npos == pos || name.empty() ? "base_service" : name;
+          log_path += ".log";
+          log_file_path_ = log_path;
+        }
+
+        if (0 == access(log_path.c_str(), R_OK))
+        {
+          TBSYS_LOGGER.rotateLog(log_path.c_str());
+        }
+        else
+        {
+          if (!DirectoryOp::create_full_path(log_path.c_str(), true))
+          {
+            std::cerr << app_name << "create log directory" << log_path << "error: " << strerror(errno) << std::endl;
+            iret = EXIT_MAKEDIR_ERROR;
+          }
+        }
+        if (TFS_SUCCESS == iret)
+        {
+          TBSYS_LOGGER.setLogLevel(get_log_file_level());
+          TBSYS_LOGGER.setMaxFileSize(get_log_file_size());
+          TBSYS_LOGGER.setMaxFileIndex(get_log_file_count());
+        }
+      }
+      return iret;
+    }
+
+    int BaseMain::initialize_pid_file(const char* app_name)
+    {
+      const char* work_dir = get_work_dir();
+      int32_t iret =  NULL == work_dir ? EXIT_CONFIG_ERROR: TFS_SUCCESS;
+      if (TFS_SUCCESS != iret)
+      {
+        std::cerr << app_name << "not set workdir" <<std::endl;
+      }
+      if (TFS_SUCCESS == iret)
+      {
+        const char* const tmp_path = get_pid_file_path();
+        std::string pid_path(NULL == tmp_path ? "" : tmp_path);
+        if (pid_path.empty()
+            || pid_path == "")
+        {
+          pid_path = work_dir;
+          pid_path += "/logs/";
+          std::string tmp(app_name);
+          std::string::size_type pos = tmp.find_last_of('/');
+          std::string name = tmp.substr(pos);
+          if (!name.empty() && name.c_str()[0] == '/')
+          {
+            name = tmp.substr(pos + 1);
+          }
+          pid_path += std::string::npos == pos || name.empty() ? "base_main" : name;
+          pid_path += ".pid";
+          pid_file_path_ = pid_path;
+        }
+
+        if (0 != access(pid_path.c_str(), R_OK))
+        {
+          if (!DirectoryOp::create_full_path(pid_path.c_str(), true))
+          {
+            std::cerr << app_name << "create pid directory" << pid_path << "error: " << strerror(errno) << std::endl;
+            iret = EXIT_MAKEDIR_ERROR;
+          }
+        }
+        if (TFS_SUCCESS == iret)
+        {
+          int32_t pid = 0;
+          if ((pid = tbsys::CProcess::existPid(pid_file_path_.c_str())))
+          {
+            std::cerr << app_name << "has been exist: pid: " << pid << std::endl;
+            iret = TFS_ERROR;
+          }
+        }
+      }
+      return iret;
+    }
+  }/** common **/
+}/** tfs **/
 

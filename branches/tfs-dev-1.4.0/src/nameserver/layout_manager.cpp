@@ -1700,7 +1700,12 @@ namespace tfs
       int64_t emergency_replicate_count = 0;
       int64_t current_plan_seqno = 1;
       const NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
-
+      {
+#if !defined(TFS_NS_GTEST) && !defined(TFS_NS_INTEGRATION)
+        tbutil::Monitor<tbutil::Mutex>::Lock lock(build_plan_monitor_);
+        build_plan_monitor_.timedWait(tbutil::Time::seconds(SYSPARAM_NAMESERVER.safe_mode_time_));
+#endif
+      }
 #if (!defined(TFS_NS_GTEST))
       while (ngi.destroy_flag_ != NS_DESTROY_FLAGS_YES)
 #endif
@@ -1867,6 +1872,13 @@ namespace tfs
     void LayoutManager::run_plan()
     {
       const NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
+      {
+#if !defined(TFS_NS_GTEST) && !defined(TFS_NS_INTEGRATION)
+        tbutil::Monitor<tbutil::Mutex>::Lock lock(run_plan_monitor_);
+        run_plan_monitor_.timedWait(tbutil::Time::seconds(SYSPARAM_NAMESERVER.safe_mode_time_));
+#endif
+      }
+
 #if !defined(TFS_NS_GTEST)
       while (ngi.destroy_flag_ != NS_DESTROY_FLAGS_YES)
 #endif

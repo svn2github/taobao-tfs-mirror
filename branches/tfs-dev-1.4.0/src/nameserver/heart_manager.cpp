@@ -565,178 +565,199 @@ namespace tfs
       if (bret)
       {
         common::BasePacket* message = dynamic_cast<common::BasePacket*>(packet);
-        NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
-        int iret = TFS_SUCCESS;
-
+        int32_t iret = TFS_SUCCESS;
         if (message->getPCode() == HEARTBEAT_AND_NS_HEART_MESSAGE)
         {
           iret = do_heartbeat_and_ns_msg(message, args);//check heartbeat and nameserver heart message
-          tbsys::gDelete(message);
-          return false; //so tbnet will not delete packet again
         }
+        NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
         if (ngi.owner_role_ == NS_ROLE_MASTER) //master
           iret = do_master_msg(message, args);
         else if (ngi.owner_role_ == NS_ROLE_SLAVE) //slave
           iret = do_slave_msg(message, args);
-        tbsys::gDelete(message);
-        return false;//so tbnet will not delete packet again
       }
-      return false;
+      return bret;
     }
 
     int MasterAndSlaveHeartManager::do_master_msg(common::BasePacket* message, void*)
     {
-      NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
-      ngi.dump(TBSYS_LOG_LEVEL(DEBUG));
-      MasterAndSlaveHeartMessage* mashm = dynamic_cast<MasterAndSlaveHeartMessage*> (message);
-      if ((mashm->get_force_flags() == HEART_FORCE_MODIFY_OTHERSIDE_ROLE_FLAGS_YES) 
-          && (ngi.other_side_ip_port_ == mashm->get_ip_port()) && (ngi.owner_role_ != mashm->get_role()))
+      int32_t iret = NULL != message ? TFS_SUCCESS : TFS_ERROR;
+      if (TFS_SUCCESS == iret)
       {
-        tbutil::Mutex::Lock lock(ngi);
-        ngi.owner_role_ = static_cast<NsRole> (mashm->get_role());
-        ngi.other_side_role_ = ngi.owner_role_ == NS_ROLE_MASTER ? NS_ROLE_SLAVE : NS_ROLE_MASTER;
-        ngi.owner_status_ = static_cast<NsStatus> (mashm->get_status());
-        ngi.sync_oplog_flag_ = ngi.owner_role_ == NS_ROLE_MASTER ? NS_SYNC_DATA_FLAG_YES : NS_SYNC_DATA_FLAG_NO;
-        if (ngi.sync_oplog_flag_ == NS_SYNC_DATA_FLAG_YES)
-          meta_mgr_->get_oplog_sync_mgr().notify_all();
-
-        TBSYS_LOG(DEBUG, "other side modify owner status, owner status(%s), notify all oplog thread",
-            ngi.owner_status_ == NS_STATUS_ACCEPT_DS_INFO ? "acceptdsinfo" : ngi.owner_status_
-                == NS_STATUS_INITIALIZED ? "initialized"
-                : ngi.other_side_status_ == NS_STATUS_OTHERSIDEDEAD ? "other side dead" : "unknow");
-        goto reply_message_and_exit; 
-      }
-      if (mashm->get_role() != NS_ROLE_SLAVE)
-      {
-        TBSYS_LOG(WARN, "do master and slave heart fail: owner role(%s), other side role(%s)", ngi.owner_role_
-            == NS_ROLE_MASTER ? "master" : "slave", mashm->get_role() == NS_ROLE_MASTER ? "master" : "slave");
-        return TFS_SUCCESS;
-      }
-      if (ngi.other_side_status_ != mashm->get_status()) //update otherside status
-      {
-        tbutil::Mutex::Lock lock(ngi);
-        ngi.other_side_status_ = static_cast<NsStatus> (mashm->get_status());
-        if ((ngi.other_side_status_ == NS_STATUS_INITIALIZED) && (ngi.sync_oplog_flag_ != NS_SYNC_DATA_FLAG_YES))
-        {
-          ngi.sync_oplog_flag_ = NS_SYNC_DATA_FLAG_YES;
-          meta_mgr_->get_oplog_sync_mgr().notify_all();
-          TBSYS_LOG(INFO, "%s", "notify all oplog thread");
-        }
-      }
-      else
-      {
-        if ((ngi.other_side_status_ == NS_STATUS_INITIALIZED) && (ngi.sync_oplog_flag_ < NS_SYNC_DATA_FLAG_YES))
+        NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
+        ngi.dump(TBSYS_LOG_LEVEL(DEBUG));
+        MasterAndSlaveHeartMessage* mashm = dynamic_cast<MasterAndSlaveHeartMessage*> (message);
+        if ((mashm->get_force_flags() == HEART_FORCE_MODIFY_OTHERSIDE_ROLE_FLAGS_YES) 
+            && (ngi.other_side_ip_port_ == mashm->get_ip_port()) 
+            && (ngi.owner_role_ != mashm->get_role()))
         {
           tbutil::Mutex::Lock lock(ngi);
-          ngi.sync_oplog_flag_ = NS_SYNC_DATA_FLAG_YES;
-          meta_mgr_->get_oplog_sync_mgr().notify_all();
-          TBSYS_LOG(INFO, "%s", "notify all oplog thread");
-        }
-        else if ((ngi.other_side_status_ >= NS_STATUS_ACCEPT_DS_INFO) && (ngi.sync_oplog_flag_
-            < NS_SYNC_DATA_FLAG_YES))
-        {
-          tbutil::Mutex::Lock lock(ngi);
-          ngi.sync_oplog_flag_ = NS_SYNC_DATA_FLAG_READY;
-        }
-      }
-      ngi.dump(TBSYS_LOG_LEVEL(DEBUG));
-      reply_message_and_exit: MasterAndSlaveHeartResponseMessage *mashrm = new MasterAndSlaveHeartResponseMessage();
-      mashrm->set_ip_port(ngi.owner_ip_port_);
-      mashrm->set_role(ngi.owner_role_);
-      mashrm->set_status(ngi.owner_status_);
-      mashrm->set_flags(mashm->get_flags());
+          ngi.owner_role_ = static_cast<NsRole> (mashm->get_role());
+          ngi.other_side_role_ = ngi.owner_role_ == NS_ROLE_MASTER ? NS_ROLE_SLAVE : NS_ROLE_MASTER;
+          ngi.owner_status_ = static_cast<NsStatus> (mashm->get_status());
+          ngi.sync_oplog_flag_ = ngi.owner_role_ == NS_ROLE_MASTER ? NS_SYNC_DATA_FLAG_YES : NS_SYNC_DATA_FLAG_NO;
+          if (ngi.sync_oplog_flag_ == NS_SYNC_DATA_FLAG_YES)
+            meta_mgr_->get_oplog_sync_mgr().notify_all();
 
-      if (mashm->get_flags() == HEART_GET_DATASERVER_LIST_FLAGS_YES)
-      {
-        TBSYS_LOG(INFO, "%s", "ns(slave) register");
-        meta_mgr_->get_oplog_sync_mgr().get_file_queue_thread()->update_queue_information_header();
-        VUINT64 ds_list;
-        meta_mgr_->get_alive_server(ds_list);
-        mashrm->set_ds_list(ds_list);
+          TBSYS_LOG(DEBUG, "other side modify owner status, owner status(%s), notify all oplog thread",
+              ngi.owner_status_ == NS_STATUS_ACCEPT_DS_INFO ? "acceptdsinfo" : ngi.owner_status_
+                  == NS_STATUS_INITIALIZED ? "initialized"
+                  : ngi.other_side_status_ == NS_STATUS_OTHERSIDEDEAD ? "other side dead" : "unknow");
+        }
+        else
+        {
+          if (mashm->get_role() != NS_ROLE_SLAVE)
+          {
+            TBSYS_LOG(WARN, "do master and slave heart fail: owner role(%s), other side role(%s)", ngi.owner_role_
+                == NS_ROLE_MASTER ? "master" : "slave", mashm->get_role() == NS_ROLE_MASTER ? "master" : "slave");
+            iret = TFS_ERROR;
+          }
+          if (TFS_SUCCESS == iret)
+          {
+            if (ngi.other_side_status_ != mashm->get_status()) //update otherside status
+            {
+              tbutil::Mutex::Lock lock(ngi);
+              ngi.other_side_status_ = static_cast<NsStatus> (mashm->get_status());
+              if ((ngi.other_side_status_ == NS_STATUS_INITIALIZED) && (ngi.sync_oplog_flag_ != NS_SYNC_DATA_FLAG_YES))
+              {
+                ngi.sync_oplog_flag_ = NS_SYNC_DATA_FLAG_YES;
+                meta_mgr_->get_oplog_sync_mgr().notify_all();
+                TBSYS_LOG(INFO, "%s", "notify all oplog thread");
+              }
+            }
+            else
+            {
+              if ((ngi.other_side_status_ == NS_STATUS_INITIALIZED) && (ngi.sync_oplog_flag_ < NS_SYNC_DATA_FLAG_YES))
+              {
+                tbutil::Mutex::Lock lock(ngi);
+                ngi.sync_oplog_flag_ = NS_SYNC_DATA_FLAG_YES;
+                meta_mgr_->get_oplog_sync_mgr().notify_all();
+                TBSYS_LOG(INFO, "%s", "notify all oplog thread");
+              }
+              else if ((ngi.other_side_status_ >= NS_STATUS_ACCEPT_DS_INFO) && (ngi.sync_oplog_flag_
+                  < NS_SYNC_DATA_FLAG_YES))
+              {
+                tbutil::Mutex::Lock lock(ngi);
+                ngi.sync_oplog_flag_ = NS_SYNC_DATA_FLAG_READY;
+              }
+            }
+            ngi.dump(TBSYS_LOG_LEVEL(DEBUG));
+          }
+        }
+        if (TFS_SUCCESS == iret)
+        {
+          MasterAndSlaveHeartResponseMessage *mashrm = new MasterAndSlaveHeartResponseMessage();
+          mashrm->set_ip_port(ngi.owner_ip_port_);
+          mashrm->set_role(ngi.owner_role_);
+          mashrm->set_status(ngi.owner_status_);
+          mashrm->set_flags(mashm->get_flags());
+
+          if (mashm->get_flags() == HEART_GET_DATASERVER_LIST_FLAGS_YES)
+          {
+            TBSYS_LOG(INFO, "%s", "ns(slave) register");
+            meta_mgr_->get_oplog_sync_mgr().get_file_queue_thread()->update_queue_information_header();
+            VUINT64 ds_list;
+            meta_mgr_->get_alive_server(ds_list);
+            mashrm->set_ds_list(ds_list);
+          }
+          iret = message->reply(mashrm);
+        }
       }
-      message->reply(mashrm);
-      return TFS_SUCCESS;
+      return iret;
     }
 
     int MasterAndSlaveHeartManager::do_slave_msg(common::BasePacket* message, void*)
     {
-      NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
-      MasterAndSlaveHeartMessage* mashm = dynamic_cast<MasterAndSlaveHeartMessage*> (message);
-      if ((mashm->get_force_flags() == HEART_FORCE_MODIFY_OTHERSIDE_ROLE_FLAGS_YES) && (ngi.other_side_ip_port_
-          == mashm->get_ip_port()) && (ngi.owner_role_ != mashm->get_role()))
+      int32_t iret = NULL != message ? TFS_SUCCESS : TFS_ERROR;
+      if (TFS_SUCCESS == iret)
       {
-        tbutil::Mutex::Lock lock(ngi);
-        ngi.owner_role_ = static_cast<NsRole> (mashm->get_role());
-        ngi.other_side_role_ = ngi.owner_role_ == NS_ROLE_MASTER ? NS_ROLE_SLAVE : NS_ROLE_MASTER;
-        ngi.owner_status_ = static_cast<NsStatus> (mashm->get_status());
-        ngi.sync_oplog_flag_ = ngi.owner_role_ == NS_ROLE_MASTER ? NS_SYNC_DATA_FLAG_YES : NS_SYNC_DATA_FLAG_NO;
-        if (ngi.sync_oplog_flag_ == NS_SYNC_DATA_FLAG_YES)
-          meta_mgr_->get_oplog_sync_mgr().notify_all();
-        TBSYS_LOG(DEBUG, "other side modify owner status, owner status(%s), notify all oplog thread",
-            ngi.owner_status_ == NS_STATUS_ACCEPT_DS_INFO ? "acceptdsinfo" : ngi.owner_status_
-                == NS_STATUS_INITIALIZED ? "initialized"
-                : ngi.other_side_status_ == NS_STATUS_OTHERSIDEDEAD ? "other side dead" : "unknow");
-        goto replay_message_and_exit;
+        NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
+        MasterAndSlaveHeartMessage* mashm = dynamic_cast<MasterAndSlaveHeartMessage*> (message);
+        if ((mashm->get_force_flags() == HEART_FORCE_MODIFY_OTHERSIDE_ROLE_FLAGS_YES) 
+            && (ngi.other_side_ip_port_ == mashm->get_ip_port()) 
+            && (ngi.owner_role_ != mashm->get_role()))
+        {
+          tbutil::Mutex::Lock lock(ngi);
+          ngi.owner_role_ = static_cast<NsRole> (mashm->get_role());
+          ngi.other_side_role_ = ngi.owner_role_ == NS_ROLE_MASTER ? NS_ROLE_SLAVE : NS_ROLE_MASTER;
+          ngi.owner_status_ = static_cast<NsStatus> (mashm->get_status());
+          ngi.sync_oplog_flag_ = ngi.owner_role_ == NS_ROLE_MASTER ? NS_SYNC_DATA_FLAG_YES : NS_SYNC_DATA_FLAG_NO;
+          if (ngi.sync_oplog_flag_ == NS_SYNC_DATA_FLAG_YES)
+            meta_mgr_->get_oplog_sync_mgr().notify_all();
+          TBSYS_LOG(DEBUG, "other side modify owner status, owner status(%s), notify all oplog thread",
+              ngi.owner_status_ == NS_STATUS_ACCEPT_DS_INFO ? "acceptdsinfo" : ngi.owner_status_
+              == NS_STATUS_INITIALIZED ? "initialized"
+              : ngi.other_side_status_ == NS_STATUS_OTHERSIDEDEAD ? "other side dead" : "unknow");
+        }
+        else
+        {
+          if (mashm->get_role() != NS_ROLE_MASTER)
+          {
+            TBSYS_LOG(WARN, "do master and slave heart fail: owner role(%s), other side role(%s)", ngi.owner_role_
+                == NS_ROLE_MASTER ? "master" : "slave", mashm->get_role() == NS_ROLE_MASTER ? "master" : "slave");
+            iret = TFS_ERROR;
+          }
+          else
+          {
+            if (ngi.other_side_status_ != mashm->get_status()) //update otherside status
+            {
+              tbutil::Mutex::Lock lock(ngi);
+              ngi.other_side_status_ = static_cast<NsStatus> (mashm->get_status());
+            }
+          }
+        }
+        if (TFS_SUCCESS == iret)
+        {
+          MasterAndSlaveHeartResponseMessage *mashrm = new MasterAndSlaveHeartResponseMessage();
+          mashrm->set_ip_port(ngi.owner_ip_port_);
+          mashrm->set_role(ngi.owner_role_);
+          mashrm->set_status(ngi.owner_status_);
+          mashrm->set_flags(HEART_GET_DATASERVER_LIST_FLAGS_NO);
+          iret = message->reply(mashrm);
+        }
       }
-      if (mashm->get_role() != NS_ROLE_MASTER)
-      {
-        TBSYS_LOG(WARN, "do master and slave heart fail: owner role(%s), other side role(%s)", ngi.owner_role_
-            == NS_ROLE_MASTER ? "master" : "slave", mashm->get_role() == NS_ROLE_MASTER ? "master" : "slave");
-        return TFS_SUCCESS;
-      }
-      if (ngi.other_side_status_ != mashm->get_status()) //update otherside status
-      {
-        tbutil::Mutex::Lock lock(ngi);
-        ngi.other_side_status_ = static_cast<NsStatus> (mashm->get_status());
-      }
-      replay_message_and_exit: MasterAndSlaveHeartResponseMessage *mashrm = new MasterAndSlaveHeartResponseMessage();
-      mashrm->set_ip_port(ngi.owner_ip_port_);
-      mashrm->set_role(ngi.owner_role_);
-      mashrm->set_status(ngi.owner_status_);
-      mashrm->set_flags(HEART_GET_DATASERVER_LIST_FLAGS_NO);
-
-      message->reply(mashrm);
-      return TFS_SUCCESS;
+      return iret;
     }
 
     int MasterAndSlaveHeartManager::do_heartbeat_and_ns_msg(common::BasePacket* message, void*)
     {
-      if (message->getPCode() != HEARTBEAT_AND_NS_HEART_MESSAGE)
-        return TFS_SUCCESS;
-
-      NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
-      HeartBeatAndNSHeartMessage* hbam = dynamic_cast<HeartBeatAndNSHeartMessage*> (message);
-      int32_t ns_switch_flag = hbam->get_ns_switch_flag();
-      TBSYS_LOG(DEBUG, "ns_switch_flag(%s), status(%d)",
-          hbam->get_ns_switch_flag() == NS_SWITCH_FLAG_NO ? "no" : "yes", hbam->get_ns_status());
-      HeartBeatAndNSHeartMessage* mashrm = new HeartBeatAndNSHeartMessage();
-      mashrm->set_ns_switch_flag_and_status(0 /*no use*/ , ngi.owner_status_);
-      message->reply(mashrm);
-
-      if (ns_switch_flag == NS_SWITCH_FLAG_YES)
+      int32_t iret = NULL != message && message->getPCode() == HEARTBEAT_AND_NS_HEART_MESSAGE ? TFS_SUCCESS : TFS_ERROR;
+      if (TFS_SUCCESS == iret)
       {
-        TBSYS_LOG(WARN, "ns_switch_flag(%s), status(%d)", hbam->get_ns_switch_flag() == NS_SWITCH_FLAG_NO ? "no"
-            : "yes", hbam->get_ns_status());
-        do
+        NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
+        HeartBeatAndNSHeartMessage* hbam = dynamic_cast<HeartBeatAndNSHeartMessage*> (message);
+        int32_t ns_switch_flag = hbam->get_ns_switch_flag();
+        TBSYS_LOG(DEBUG, "ns_switch_flag(%s), status(%d)",
+            hbam->get_ns_switch_flag() == NS_SWITCH_FLAG_NO ? "no" : "yes", hbam->get_ns_status());
+        HeartBeatAndNSHeartMessage* mashrm = new HeartBeatAndNSHeartMessage();
+        mashrm->set_ns_switch_flag_and_status(0 /*no use*/ , ngi.owner_status_);
+        message->reply(mashrm);
+
+        if (ns_switch_flag == NS_SWITCH_FLAG_YES)
         {
-          TBSYS_LOG(DEBUG, "%s", "the master ns is dead,check vip...");
-          if (tbsys::CNetUtil::isLocalAddr(ngi.vip_)) // vip == local ip
+          TBSYS_LOG(WARN, "ns_switch_flag(%s), status(%d)", hbam->get_ns_switch_flag() == NS_SWITCH_FLAG_NO ? "no"
+              : "yes", hbam->get_ns_status());
+          do
           {
-            TBSYS_LOG(WARN, "%s", "the master ns is dead,i'm going to be the master ns");
-            tbutil::Mutex::Lock lock(ngi);
-            ngi.owner_role_ = NS_ROLE_MASTER;
-            ngi.owner_status_ = NS_STATUS_INITIALIZED;
-            ngi.other_side_role_ = NS_ROLE_SLAVE;
-            ngi.other_side_status_ = NS_STATUS_OTHERSIDEDEAD;
-            ngi.switch_time_ = time(NULL) + SYSPARAM_NAMESERVER.safe_mode_time_;
-            meta_mgr_->destroy_plan();
-            break;
+            TBSYS_LOG(DEBUG, "%s", "the master ns is dead,check vip...");
+            if (tbsys::CNetUtil::isLocalAddr(ngi.vip_)) // vip == local ip
+            {
+              TBSYS_LOG(WARN, "%s", "the master ns is dead,i'm going to be the master ns");
+              tbutil::Mutex::Lock lock(ngi);
+              ngi.owner_role_ = NS_ROLE_MASTER;
+              ngi.owner_status_ = NS_STATUS_INITIALIZED;
+              ngi.other_side_role_ = NS_ROLE_SLAVE;
+              ngi.other_side_status_ = NS_STATUS_OTHERSIDEDEAD;
+              ngi.switch_time_ = time(NULL) + SYSPARAM_NAMESERVER.safe_mode_time_;
+              meta_mgr_->destroy_plan();
+              break;
+            }
+            usleep(0x01);
           }
-          usleep(0x01);
+          while (ngi.other_side_status_ != NS_STATUS_INITIALIZED && ngi.owner_status_ == NS_STATUS_INITIALIZED);
         }
-        while (ngi.other_side_status_ != NS_STATUS_INITIALIZED && ngi.owner_status_ == NS_STATUS_INITIALIZED);
       }
-      return TFS_SUCCESS;
+      return iret;
     }
-  }
-}
+  }/** nameserver **/
+} /** tfs **/

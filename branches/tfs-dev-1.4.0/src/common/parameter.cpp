@@ -52,7 +52,7 @@ namespace tfs
 
     int NameServerParameter::initialize(void)
     {
-      const char* index = TBSYS_CONFIG.getString(CONF_SN_PUBLIC, CONF_CLUSTER_ID);
+      const char* index = TBSYS_CONFIG.getString(CONF_SN_NAMESERVER, CONF_CLUSTER_ID);
       if (index == NULL 
           || strlen(index) < 1
           || !isdigit(index[0]))
@@ -62,11 +62,11 @@ namespace tfs
       }
       cluster_index_ = index[0];
 
-      int32_t block_use_ratio = TBSYS_CONFIG.getInt(CONF_SN_PUBLIC, CONF_BLOCK_USE_RATIO, 95);
+      int32_t block_use_ratio = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_BLOCK_USE_RATIO, 95);
       if (block_use_ratio <= 0)
         block_use_ratio = 95;
       block_use_ratio = std::min(100, block_use_ratio);
-      int32_t max_block_size = TBSYS_CONFIG.getInt(CONF_SN_PUBLIC, CONF_BLOCK_MAX_SIZE);
+      int32_t max_block_size = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_BLOCK_MAX_SIZE);
       if (max_block_size <= 0)
       {
         fprintf(stderr, "%s(%d) is invalid\n", CONF_BLOCK_MAX_SIZE, max_block_size);
@@ -77,8 +77,8 @@ namespace tfs
       max_block_size_ = (writeBlockSize & 0xFFF00000) + 1024 * 1024;
       max_block_size_ = std::max(max_block_size_, max_block_size);
 
-      min_replication_ = TBSYS_CONFIG.getInt(CONF_SN_PUBLIC, CONF_MIN_REPLICATION, 2);
-      max_replication_ = TBSYS_CONFIG.getInt(CONF_SN_PUBLIC, CONF_MAX_REPLICATION, 2);
+      min_replication_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_MIN_REPLICATION, 2);
+      max_replication_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_MAX_REPLICATION, 2);
       if (min_replication_ <= 0)
          min_replication_ = 2;
       max_replication_ = std::max(min_replication_, max_replication_);
@@ -91,7 +91,7 @@ namespace tfs
       max_write_file_count_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_MAX_WRITE_FILECOUNT, 16);
       max_write_file_count_ = std::min(max_write_file_count_, 128);
 
-      max_use_capacity_ratio_ = TBSYS_CONFIG.getInt(CONF_SN_PUBLIC, CONF_USE_CAPACITY_RATIO, 98);
+      max_use_capacity_ratio_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_USE_CAPACITY_RATIO, 98);
       max_use_capacity_ratio_ = std::min(max_use_capacity_ratio_, 100);
 
       TBSYS_LOG(INFO, "load configure::max_block_size_:%u, min_replication_:%u,"
@@ -104,7 +104,7 @@ namespace tfs
           group_mask_str = "255.255.255.255";
       group_mask_ = Func::get_addr(group_mask_str);
 
-      heart_interval_ = TBSYS_CONFIG.getInt(CONF_SN_DATASERVER, CONF_HEART_INTERVAL, 2);
+      heart_interval_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_HEART_INTERVAL, 2);
       if (heart_interval_ <= 0)
         heart_interval_ = 2;
 
@@ -188,11 +188,16 @@ namespace tfs
       read_stat_log_file_ = change_index(TBSYS_CONFIG.getString(CONF_SN_DATASERVER, CONF_READ_LOG_FILE, default_read_log_file), std::string("_read_stat.log"), server_index);
       write_stat_log_file_ = change_index(TBSYS_CONFIG.getString(CONF_SN_DATASERVER, CONF_WRITE_LOG_FILE, default_write_log_file), std::string("_write_stat.log"), server_index);
 
-      int base_port = TBSYS_CONFIG.getInt(CONF_SN_DATASERVER, CONF_PORT);
+      int32_t base_port = TBSYS_CONFIG.getInt(CONF_SN_PUBLIC, CONF_PORT, 0);
       local_ds_port_ = base_port + atoi(index.c_str());
-      dev_name_ = TBSYS_CONFIG.getString(CONF_SN_DATASERVER, CONF_DEV_NAME);
+      if (local_ds_port_ <= 1024 || local_ds_port_ > 65535)
+      {
+        TBSYS_LOG(ERROR, "invalid port: %d", local_ds_port_);
+        return TFS_ERROR;
+      }
+      dev_name_ = TBSYS_CONFIG.getString(CONF_SN_PUBLIC, CONF_DEV_NAME);
 
-      heart_interval_ = TBSYS_CONFIG.getInt(CONF_SN_PUBLIC, CONF_HEART_INTERVAL, 5);
+      heart_interval_ = TBSYS_CONFIG.getInt(CONF_SN_DATASERVER, CONF_HEART_INTERVAL, 5);
       check_interval_ = TBSYS_CONFIG.getInt(CONF_SN_DATASERVER, CONF_CHECK_INTERVAL, 2);
       expire_data_file_time_ = TBSYS_CONFIG.getInt(CONF_SN_DATASERVER, CONF_EXPIRE_DATAFILE_TIME, 20);
       expire_cloned_block_time_
@@ -201,7 +206,7 @@ namespace tfs
       replicate_thread_count_ = TBSYS_CONFIG.getInt(CONF_SN_DATASERVER, CONF_REPLICATE_THREADCOUNT, 3);
       //default use O_SYNC
       sync_flag_ = TBSYS_CONFIG.getInt(CONF_SN_DATASERVER, CONF_WRITE_SYNC_FLAG, 1);
-      max_block_size_ = TBSYS_CONFIG.getInt(CONF_SN_PUBLIC, CONF_BLOCK_MAX_SIZE);
+      max_block_size_ = TBSYS_CONFIG.getInt(CONF_SN_DATASERVER, CONF_BLOCK_MAX_SIZE);
       dump_vs_interval_ = TBSYS_CONFIG.getInt(CONF_SN_DATASERVER, CONF_VISIT_STAT_INTERVAL, -1);
 
       const char* max_io_time = TBSYS_CONFIG.getString(CONF_SN_DATASERVER, "CONF_IO_WARN_TIME", "0");
@@ -212,11 +217,11 @@ namespace tfs
       client_thread_client_ = TBSYS_CONFIG.getInt(CONF_SN_DATASERVER, CONF_THREAD_COUNT);
       server_thread_client_ = TBSYS_CONFIG.getInt(CONF_SN_DATASERVER, CONF_DS_THREAD_COUNT);
 
-      tfs_backup_type_ = TBSYS_CONFIG.getInt(CONF_SN_PUBLIC, CONF_BACKUP_TYPE, 1);
-      local_ns_ip_ = TBSYS_CONFIG.getString(CONF_SN_NAMESERVER, CONF_IP_ADDR);
-      local_ns_port_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_PORT);
-      ns_addr_list_ = TBSYS_CONFIG.getString(CONF_SN_NAMESERVER, CONF_IP_ADDR_LIST);
-      slave_ns_ip_ = TBSYS_CONFIG.getString(CONF_SN_PUBLIC, CONF_SLAVE_NSIP, NULL);
+      tfs_backup_type_ = TBSYS_CONFIG.getInt(CONF_SN_DATASERVER, CONF_BACKUP_TYPE, 1);
+      local_ns_ip_ = TBSYS_CONFIG.getString(CONF_SN_DATASERVER, CONF_IP_ADDR);
+      local_ns_port_ = TBSYS_CONFIG.getInt(CONF_SN_DATASERVER, CONF_PORT);
+      ns_addr_list_ = TBSYS_CONFIG.getString(CONF_SN_DATASERVER, CONF_IP_ADDR_LIST);
+      slave_ns_ip_ = TBSYS_CONFIG.getString(CONF_SN_DATASERVER, CONF_SLAVE_NSIP, NULL);
       //config_log_file_ = TBSYS_CONFIG.getString(CONF_SN_DATASERVER, CONF_LOG_FILE);
       max_datafile_nums_ = TBSYS_CONFIG.getInt(CONF_SN_DATASERVER, CONF_DATA_FILE_NUMS, 50);
       max_crc_error_nums_ = TBSYS_CONFIG.getInt(CONF_SN_DATASERVER, CONF_MAX_CRCERROR_NUMS, 4);

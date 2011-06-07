@@ -173,6 +173,16 @@ namespace tfs
 
       if (TFS_SUCCESS == iret)
       {
+        int32_t block_chunk_num = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_BLOCK_CHUNK_NUM, 32);
+        iret =  meta_mgr_.initialize(block_chunk_num);
+        if (TFS_SUCCESS != iret)
+        {
+          TBSYS_LOG(ERROR, "initialize layoutmanager failed, must be exit, ret(%d)", iret);
+        }
+      }
+
+      if (TFS_SUCCESS == iret)
+      {
         int32_t heart_thread_count = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_HEART_THREAD_COUNT, 2);
         int32_t heart_max_queue_size = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_HEART_MAX_QUEUE_SIZE, 10);
         iret = heart_mgr_.initialize(heart_thread_count, heart_max_queue_size);
@@ -208,17 +218,7 @@ namespace tfs
           iret = EXIT_GENERAL_ERROR;
         }
       }
-
-      if (TFS_SUCCESS == iret)
-      {
-        int32_t block_chunk_num = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_BLOCK_CHUNK_NUM, 32);
-        iret =  meta_mgr_.initialize(block_chunk_num);
-        if (TFS_SUCCESS != iret)
-        {
-          TBSYS_LOG(ERROR, "initialize layoutmanager failed, must be exit, ret(%d)", iret);
-        }
-      }
-      
+     
       if (TFS_SUCCESS == iret)
       {
         NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
@@ -315,7 +315,6 @@ namespace tfs
         master_slave_heart_mgr_.wait_for_shut_down();
         meta_mgr_.wait_for_shut_down();
         GFactory::wait_for_shut_down();
-        TBSYS_LOG(INFO, "%s", "nameserver stoped");
       }
       return TFS_SUCCESS;
     }
@@ -771,14 +770,15 @@ namespace tfs
         }
         if (TFS_SUCCESS == iret)
         {
-          std::vector < uint64_t > ns_ip_list;
+          std::vector < uint32_t > ns_ip_list;
           char buffer[256];
           strncpy(buffer, ns_ip, 256);
           char *t = NULL;
           char *s = buffer;
           while ((t = strsep(&s, "|")) != NULL)
           {
-            ns_ip_list.push_back(Func::str_to_addr(t, get_port()));
+            ns_ip_list.push_back(tbsys::CNetUtil::getAddr(t));
+            //ns_ip_list.push_back(Func::str_to_addr(t, get_port()));
           }
 
           if (2U != ns_ip_list.size())
@@ -790,7 +790,7 @@ namespace tfs
           {
             uint32_t local_ip = 0;
             bool bfind_flag = false;
-            std::vector<uint64_t>::iterator iter = ns_ip_list.begin(); 
+            std::vector<uint32_t>::iterator iter = ns_ip_list.begin(); 
             for (; iter != ns_ip_list.end(); ++iter)
             {
               bfind_flag = Func::is_local_addr((*iter));
@@ -811,7 +811,10 @@ namespace tfs
               iter = ns_ip_list.begin();
               for (;iter != ns_ip_list.end(); ++iter)
               {
-                local_ip == *iter ? ngi.owner_ip_port_ = *iter : ngi.other_side_ip_port_ = *iter;
+                if (local_ip == (*iter))
+                  ngi.owner_ip_port_ = tbsys::CNetUtil::ipToAddr((*iter), get_port());
+                else
+                  ngi.other_side_ip_port_ = tbsys::CNetUtil::ipToAddr((*iter), get_port());
               }
 
               ngi.switch_time_ = time(NULL);
@@ -842,7 +845,7 @@ namespace tfs
       int32_t iret = TFS_SUCCESS;
       bool complete = false;
       tbnet::Packet* ret_msg = NULL;
-      while (true)
+      while (!stop_)
       {
         TBSYS_LOG(DEBUG, "get peers(%s) role, owner role(%s), other side role(%s)...", tbsys::CNetUtil::addrToString(
               ngi.other_side_ip_port_).c_str(), ngi.owner_role_ == NS_ROLE_MASTER ? "master"
@@ -927,7 +930,7 @@ namespace tfs
       int32_t percent = 0;
       tbnet::Packet* ret_msg = NULL;
       time_t end_report_time = time(NULL) + SYSPARAM_NAMESERVER.safe_mode_time_;
-      while (true)
+      while (!stop_)
       {
         if (ngi.destroy_flag_ != NS_DESTROY_FLAGS_YES)
         {
@@ -1045,7 +1048,7 @@ namespace tfs
 
     int ns_async_callback(common::NewClient* client)
     {
-      NameServer* service = dynamic_cast<NameServer*>(tbutil::Service::instance());
+      NameServer* service = dynamic_cast<NameServer*>(BaseMain::instance());
       int32_t iret = NULL != service ? TFS_SUCCESS : TFS_ERROR;
       if (TFS_SUCCESS == iret)
       {

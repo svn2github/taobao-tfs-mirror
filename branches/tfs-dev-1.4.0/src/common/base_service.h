@@ -52,17 +52,11 @@ namespace tfs
       /** get timer*/
       inline tbutil::TimerPtr& get_timer() { return timer_;}
 
-      /** reload: such as config file*/
-      void reload();
-
       /** handle single packet */
       virtual tbnet::IPacketHandler::HPRetCode handlePacket(tbnet::Connection *connection, tbnet::Packet *packet);
 
       /** handle packet*/
       virtual bool handlePacketQueue(tbnet::Packet *packet, void *args);
-
-      /** application parse args*/
-      virtual int parse_common_line_args(int argc, char* argv[]) { return TFS_SUCCESS;}
 
       /** get listen port*/
       virtual int get_listen_port() const { return get_port();}
@@ -91,9 +85,6 @@ namespace tfs
       /** push workitem to workers*/
       bool push(BasePacket* packet);
 
-      /** get work directory*/
-      const char* get_work_dir() const;
-
       /** get listen port*/
       int32_t get_port() const;
 
@@ -109,23 +100,18 @@ namespace tfs
       /** get ip addr*/
       const char* get_ip_addr() const;
 
-
     private:
       /** application main entry*/
-      virtual int run(int argc , char*argv[], std::string& error_msg);
-
-      /** initialize work directory && log file*/ 
-      int initialize_work_dir(const char* app_name, std::string& error_msg);
+      virtual int run(int argc , char*argv[]);
 
       /** initialize tbnet*/
-      int initialize_network(const char* app_name, std::string& error_msg);
+      int initialize_network(const char* app_name);
 
     private:
       BasePacketFactory* packet_factory_;
       BasePacketStreamer* streamer_;
       tbutil::TimerPtr timer_;
       tbnet::Transport transport_;
-      std::string log_file_path_;
     protected:
       tbnet::PacketQueueThread main_workers_;
       int32_t work_queue_size_;
