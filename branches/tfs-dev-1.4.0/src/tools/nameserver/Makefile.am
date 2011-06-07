@@ -5,8 +5,8 @@ AM_CPPFLAGS=-I$(top_srcdir)/src\
 
 AM_LDFLAGS=-lz -lrt -lpthread -ldl $(READLINE_LIB)
 
-bin_PROGRAMS = showsyncoplog rmsyncoplog ssm
-
+bin_PROGRAMS = admintool
+#showsyncoplog rmsyncoplog ssm 
 LDADD = $(top_builddir)/src/new_client/.libs/libtfsclient.a\
 	$(top_builddir)/src/message/libtfsmessage.a\
 	$(top_builddir)/src/common/libtfscommon.a\
@@ -23,6 +23,6 @@ ssm_SOURCES = main.cpp show.cpp show_factory.cpp metacmp.cpp cmp_factory.cpp com
 
 rmsyncoplog_SOURCES=rmsyncoplog.cpp
 
-#admintool_SOURCES = admintool.cpp
+admintool_SOURCES = admintool.cpp
 
 

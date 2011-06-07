@@ -118,7 +118,7 @@ int stat_blk(VEC_STRING& param);
 int visit_count_blk(VEC_STRING& param);
 int list_file_info(TfsClient* tfs_client, VEC_STRING& param);
 int batch_file(TfsClient* tfs_client, VEC_STRING& param);
-int send_message_to_server(uint64_t server_id, tbnet::Packet* ds_message, string& err_msg, tbnet::Packet** retmessage = NULL, const int64_t timeout = 3000/*3s*/);
+int send_message_to_server(uint64_t server_id, NewClient* client, tbnet::Packet* ds_message, string& err_msg, tbnet::Packet** retmessage = NULL, const int64_t timeout = 3000/*3s*/);
 int new_file_name(TfsClient* tfs_client, VEC_STRING& param);
 int add_block(TfsClient* tfs_client, VEC_STRING& param);
 int check_file_info(TfsClient* tfs_client, VEC_STRING& param);
@@ -1003,7 +1003,7 @@ int batch_file(TfsClient* tfs_client, VEC_STRING& param)
   return TFS_SUCCESS;
 }
 
-int send_message_to_server(uint64_t server, NewClient* client, tbnet::Packet* msg, string& err_msg, tbnet::Packet** output/*not free*/)
+int send_message_to_server(uint64_t server, NewClient* client, tbnet::Packet* msg, string& err_msg, tbnet::Packet** output/*not free*/, const int64_t timeout = 3000/*3s*/)
 {
   tbnet::Packet* ret_msg = NULL;
   int32_t iret = tfs::common::send_msg_to_server(server, client, msg, ret_msg);
