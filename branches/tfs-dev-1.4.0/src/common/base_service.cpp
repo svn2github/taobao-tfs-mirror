@@ -36,7 +36,6 @@ namespace tfs
     }
 
     BaseService::BaseService():
-      Service(),
       packet_factory_(NULL),
       streamer_(NULL),
       timer_(0),
@@ -49,6 +48,12 @@ namespace tfs
     {
 
     }
+
+    void BaseService::reload()
+    {
+      TBSYS_CONFIG.load(config_file_.c_str());
+    }
+
 
     bool BaseService::destroy()
     {
@@ -157,26 +162,6 @@ namespace tfs
       return port;
     }
 
-    const char* BaseService::get_log_file_level() const
-    {
-      const char* level = TBSYS_CONFIG.getString(CONF_SN_PUBLIC, CONF_LOG_LEVEL, "debug");
-      return level;
-    }
-
-    const char* BaseService::get_log_path() const
-    {
-      return log_file_path_.empty() ? NULL : log_file_path_.c_str();
-    }
-
-    int64_t BaseService::get_log_file_size() const
-    {
-      return TBSYS_CONFIG.getInt(CONF_SN_PUBLIC, CONF_LOG_SIZE, 0x40000000);
-    }
-
-    int32_t BaseService::get_log_file_count() const
-    {
-      return TBSYS_CONFIG.getInt(CONF_SN_PUBLIC, CONF_LOG_NUM, 16);
-    }
 
     const char* const BaseService::get_dev() const
     {
@@ -198,17 +183,11 @@ namespace tfs
       return TBSYS_CONFIG.getString(CONF_SN_PUBLIC, CONF_IP_ADDR, NULL);
     }
 
-    int BaseService::run(int argc , char*argv[], const std::string& config, std::string& error_msg)
+    int BaseService::run(int argc , char*argv[], std::string& error_msg)
     {
       char buf[256];
-      //load config file
-      int32_t iret = TBSYS_CONFIG.load(config.c_str());
-      iret = EXIT_SUCCESS == iret ? TFS_SUCCESS : TFS_ERROR;
-      if (TFS_SUCCESS != iret)
-      {
-        snprintf(buf, 256, "load config file '%s' fail", config.c_str());
-        error_msg = buf;
-      }
+
+      int32_t iret = TFS_SUCCESS;
 
       if (TFS_SUCCESS == iret)
       {
@@ -271,17 +250,6 @@ namespace tfs
       return iret;
     }
 
-    int BaseService::interruptCallback(int sig)
-    {
-      switch (sig)
-      {
-       case SIGTERM:
-       case SIGINT:
-        destroy();
-        break;
-      }
-      return TFS_SUCCESS;
-    }
     
     int BaseService::initialize_work_dir(const char* app_name, std::string& error_msg)
     {
@@ -302,48 +270,6 @@ namespace tfs
           snprintf(buf, 256, "%s create workdir(%s) fail ", app_name, work_dir);
           error_msg = buf;
           iret = EXIT_MAKEDIR_ERROR;
-        }
-        else
-        {
-          const char* const tmp_path = get_log_file_path();
-          std::string log_path(NULL == tmp_path ? "" : tmp_path);
-          if (log_path.empty()
-              || log_path == "")
-          {
-            log_path = work_dir;
-            log_path += "/logs/";
-            std::string tmp(app_name);
-            std::string::size_type pos = tmp.find_last_of('/');
-            std::string name = tmp.substr(pos);
-            if (!name.empty() && name.c_str()[0] == '/')
-            {
-              name = tmp.substr(pos + 1);
-            }
-            log_path += std::string::npos == pos || name.empty() ? "base_service" : name;
-            log_path += ".log";
-            log_file_path_ = log_path;
-          }
-
-          if (0 == access(log_path.c_str(), R_OK))
-          {
-            TBSYS_LOGGER.rotateLog(log_path.c_str());
-          }
-          else
-          {
-            if (!DirectoryOp::create_full_path(log_path.c_str(), true))
-            {
-              snprintf(buf, 256, "%s create log directory(%s) fail ", app_name, dirname(const_cast<char*>(log_path.c_str())));
-              error_msg = buf;
-              iret = EXIT_MAKEDIR_ERROR;
-            }
-          }
-          if (TFS_SUCCESS == iret)
-          {
-            TBSYS_LOGGER.setFileName(log_path.c_str());
-            TBSYS_LOGGER.setLogLevel(get_log_file_level());
-            TBSYS_LOGGER.setMaxFileSize(get_log_file_size());
-            TBSYS_LOGGER.setMaxFileIndex(get_log_file_count());
-          }
         }
       }
       return iret;

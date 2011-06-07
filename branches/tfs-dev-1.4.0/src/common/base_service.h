@@ -20,6 +20,7 @@
 #include <tbsys.h>
 #include <Timer.h>
 #include <Service.h>
+#include "base_main.h"
 #include "base_packet.h"
 #include "base_packet_factory.h"
 #include "base_packet_streamer.h"
@@ -29,7 +30,7 @@ namespace tfs
   namespace common
   {
     class NewClient;
-    class BaseService :  public tbutil::Service ,
+    class BaseService :  public BaseMain,
                          public tbnet::IServerAdapter,
                          public tbnet::IPacketQueueHandler 
     {
@@ -52,7 +53,7 @@ namespace tfs
       inline tbutil::TimerPtr& get_timer() { return timer_;}
 
       /** reload: such as config file*/
-      inline void reload() { return;}
+      void reload();
 
       /** handle single packet */
       virtual tbnet::IPacketHandler::HPRetCode handlePacket(tbnet::Connection *connection, tbnet::Packet *packet);
@@ -96,18 +97,6 @@ namespace tfs
       /** get listen port*/
       int32_t get_port() const;
 
-      /** get log file level*/
-      const char* get_log_file_level() const;
-
-      /** get log file path*/
-      const char* get_log_path() const;
-
-      /** get log file size*/
-      int64_t get_log_file_size() const;
-
-      /** get log file count*/
-      int32_t get_log_file_count() const;
-
       /** get network device*/
       const char* const get_dev() const;
 
@@ -120,16 +109,10 @@ namespace tfs
       /** get ip addr*/
       const char* get_ip_addr() const;
 
-    protected:
-      /** get log file path*/
-      virtual const char* get_log_file_path() = 0;
 
     private:
       /** application main entry*/
-      virtual int run(int argc , char*argv[], const std::string& config, std::string& error_msg);
-
-      /** interrupt callback*/
-      virtual int interruptCallback(int sig);
+      virtual int run(int argc , char*argv[], std::string& error_msg);
 
       /** initialize work directory && log file*/ 
       int initialize_work_dir(const char* app_name, std::string& error_msg);

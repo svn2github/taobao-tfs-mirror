@@ -1376,8 +1376,9 @@ namespace tfs
       {
         last_rotate_log_time_ = now;
         oplog_sync_mgr_.rotate();
-        BaseService* service = dynamic_cast<BaseService*>(BaseService::instance());
-        TBSYS_LOGGER.rotateLog(service->get_log_path());
+        //BaseService* service = dynamic_cast<BaseService*>(BaseService::instance());
+        //TBSYS_LOGGER.rotateLog(service->get_log_path());
+        TBSYS_LOGGER.rotateLog(NULL);
       }
     }
 

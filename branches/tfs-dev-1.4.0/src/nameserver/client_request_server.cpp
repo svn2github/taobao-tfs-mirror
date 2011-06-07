@@ -833,8 +833,9 @@ namespace tfs
 
     int ClientRequestServer::handle_control_rotate_log(void)
     {
-      BaseService* service = dynamic_cast<BaseService*>(BaseService::instance());
-      TBSYS_LOGGER.rotateLog(service->get_log_path());
+      //BaseService* service = dynamic_cast<BaseService*>(BaseService::instance());
+      //TBSYS_LOGGER.rotateLog(service->get_log_path());
+      TBSYS_LOGGER.rotateLog(NULL);
       return TFS_SUCCESS;
     }
 
