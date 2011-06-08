@@ -51,6 +51,4 @@ format_file_system_SOURCES = format_file_system.cpp
 
 read_index_tool_SOURCES = read_index_tool.cpp
 
-view_local_key_LDADD = $(top_builddir)/src/new_client/.libs/libtfsclient.a\
-                       $(COMMONLIB)
 view_local_key_SOURCES = view_local_key.cpp

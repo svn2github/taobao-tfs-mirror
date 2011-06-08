@@ -30,7 +30,7 @@ TfsClient::~TfsClient()
 
 int TfsClient::initialize(const char* ns_addr, const int32_t cache_time, const int32_t cache_items)
 {
-  return TfsClientImpl::Instance()->initialize(ns_addr, cache_items, cache_items);
+  return TfsClientImpl::Instance()->initialize(ns_addr, cache_time, cache_items);
 }
 
 int TfsClient::set_default_server(const char* ns_addr, const int32_t cache_time, const int32_t cache_items)

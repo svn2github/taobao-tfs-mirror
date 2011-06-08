@@ -1,7 +1,8 @@
 AM_CPPFLAGS=-I$(TBLIB_ROOT)/include/tbsys\
-	    -I$(TBLIB_ROOT)/include/tbnet
+	    -I$(TBLIB_ROOT)/include/tbnet\
+	    -fpic
 
-AM_LDFLAGS=-lrt -lpthread -ldl -fPIC
+AM_LDFLAGS=-lrt -lpthread -ldl
 
 noinst_LIBRARIES = libtfscommon.a
 

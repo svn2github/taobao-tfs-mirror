@@ -23,6 +23,7 @@ TfsLargeFile::TfsLargeFile() : meta_suffix_(NULL)
 
 TfsLargeFile::~TfsLargeFile()
 {
+  tbsys::gDeleteA(meta_suffix_);
 }
 
 int TfsLargeFile::open(const char* file_name, const char* suffix, const int flags, ... )
@@ -62,9 +63,14 @@ int TfsLargeFile::open(const char* file_name, const char* suffix, const int flag
       {
         TBSYS_LOG(ERROR, "initialize local key fail, ret: %d", ret);
       }
-      else
+      else if (suffix != NULL)
       {
-        meta_suffix_ = const_cast<char*>(suffix);
+        int32_t len = strlen(suffix);
+        if (len > 0)
+        {
+          meta_suffix_ = new char[len+1];
+          memcpy(meta_suffix_, suffix, len + 1);
+        }
       }
 
       va_end(args);

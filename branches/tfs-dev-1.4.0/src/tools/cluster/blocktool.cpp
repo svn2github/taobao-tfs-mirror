@@ -114,7 +114,6 @@ int list_block(TfsClient* tfs_client, const uint64_t ds_id)
       TBSYS_LOG(DEBUG, "ds_id: %lu", ds_id);
       if ((ret_status == TFS_SUCCESS) && (ret_msg->getPCode() == RESP_LIST_BLOCK_MESSAGE))
       {
-        //printf("get message type: %d\n", ret_msg->get_message_type());
         RespListBlockMessage* resp_lb_msg = dynamic_cast<RespListBlockMessage*> (ret_msg);
 
         block_vec = const_cast<VUINT32*> (resp_lb_msg->get_blocks());

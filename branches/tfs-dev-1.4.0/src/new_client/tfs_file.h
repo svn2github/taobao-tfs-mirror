@@ -22,7 +22,6 @@
 #include "common/func.h"
 #include "common/lock.h"
 #include "common/internal.h"
-//#include "common/client_manager.h"
 #include "common/base_packet.h"
 #include "tfs_session.h"
 #include "fsname.h"

@@ -81,7 +81,7 @@ namespace tfs
       }
       return TFS_SUCCESS;
     }
-    int CmpInfo::init_param(ComType cmp_type, int8_t type, int32_t num, SSMScanParameter& param)
+    int CmpInfo::init_param(ComType cmp_type, int8_t, int32_t num, SSMScanParameter& param)
     {
       memset(&param, 0, sizeof(SSMScanParameter));
       if (cmp_type & SERVER_TYPE)

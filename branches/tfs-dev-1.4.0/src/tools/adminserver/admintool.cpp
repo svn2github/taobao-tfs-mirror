@@ -243,7 +243,7 @@ void init()
   g_cmd_map["mstart"] = CmdNode("mstart server", "start server monitor", 1, 1, cmd_start_monitor);
   g_cmd_map["mrestart"] = CmdNode("mrestart server", "restart server monitor", 1, 1, cmd_restart_monitor);
   g_cmd_map["mstop"] = CmdNode("mstop server", "stop server monitor", 1, 1, cmd_stop_monitor);
-  g_cmd_map["istart"] = CmdNode("istart server index", "start index in server", 2, INT_MAX, cmd_start_index); // -2 means at least two arguments
+  g_cmd_map["istart"] = CmdNode("istart server index", "start index in server", 2, INT_MAX, cmd_start_index);
   g_cmd_map["istop"] = CmdNode("istop server index", "stop index in server", 2, INT_MAX, cmd_stop_index);
   g_cmd_map["kill"] = CmdNode("kill server", "kill adminserver in server", 1, 1, cmd_kill_admin);
 }

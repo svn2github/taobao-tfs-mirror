@@ -31,19 +31,19 @@ using namespace std;
 using namespace tfs;
 using namespace nameserver;
 
-int gstop = 0x00;
+bool gstop = false;
 static const std::string rotateheader("rotateheader.dat");
 static const std::string header("header.dat");
 
-void signlHandler(int signl)
+void signlHandler(int signal)
 {
-  switch(signl)
+  switch(signal)
   {
     case SIGINT:
-      gstop = 0x01;
+      gstop = true;
       break;
     default:
-      fprintf(stderr, "[INFO]: occur signl(%d)", signl);
+      fprintf(stderr, "[INFO]: occur signl(%d)", signal);
       break;
   }
 }
@@ -201,7 +201,7 @@ int main(int argc, char *argv[])
       fprintf(stderr, "%s:%d [ERROR]: do work error\n", __FILE__, __LINE__);
       break;
     }
-    common::Func::sleep(interval, &gstop);
+    common::Func::sleep(interval, gstop);
   }
   while(!gstop);
   return EXIT_SUCCESS;

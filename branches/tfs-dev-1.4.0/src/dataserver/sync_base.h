@@ -55,7 +55,7 @@ namespace tfs
         SyncBase();
         DISALLOW_COPY_AND_ASSIGN(SyncBase);
 
-        int32_t stop_;
+        bool stop_;
         int32_t pause_;
         int32_t need_sync_;
         int32_t need_sleep_;

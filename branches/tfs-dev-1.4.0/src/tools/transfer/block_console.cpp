@@ -9,25 +9,29 @@
  * Version: $Id$
  *
  * Authors:
+ *   duolong <duolong@taobao.com>
  *      - initial release
  *
  */
 
-#include <tbsys.h>
-#include <Memory.hpp>
 #include <algorithm>
-#include "block_console.h"
+
+#include "tbsys.h"
+#include "Memory.hpp"
+
 #include "common/func.h"
 #include "common/client_manager.h"
 #include "common/new_client.h"
 #include "common/status_message.h"
-#include "new_client/tfs_client_api.h"
-#include "dataserver/dataserver_define.h"
-#include "dataserver/visit_stat.h"
 #include "message/server_status_message.h"
 #include "message/block_info_message.h"
 #include "message/read_data_message.h"
 #include "message/write_data_message.h"
+#include "dataserver/dataserver_define.h"
+#include "dataserver/visit_stat.h"
+#include "new_client/tfs_client_api.h"
+
+#include "block_console.h"
 
 using namespace std;
 using namespace tfs::common;
@@ -259,7 +263,7 @@ int BlockConsole::locate_cur_pos()
   return ret;
 }
 
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 TranBlock::TranBlock(const uint32_t blockid, const std::string& dest_ns_addr,
     const uint64_t dest_ds_addr, const int64_t traffic, TfsSession* src_session) :
     block_id_(blockid), dest_ns_addr_(dest_ns_addr), dest_ds_id_(dest_ds_addr),

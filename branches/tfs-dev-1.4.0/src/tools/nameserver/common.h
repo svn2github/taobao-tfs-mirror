@@ -109,10 +109,10 @@ namespace tfs
     struct ParamInfo
     {
       ParamInfo() :
-        type_(CMD_NOP), num_(MAX_READ_NUM), count_(1), interval_(2), filename_(""), block_id_(-1), server_ip_port_("")
+        type_(CMD_NOP), num_(MAX_READ_NUM), count_(1), interval_(2), filename_(""), block_id_(0), server_ip_port_("")
       {}
       ParamInfo(const int8_t type) :
-        type_(type), num_(MAX_READ_NUM), count_(1), interval_(2), filename_(""), block_id_(-1), server_ip_port_("")
+        type_(type), num_(MAX_READ_NUM), count_(1), interval_(2), filename_(""), block_id_(0), server_ip_port_("")
       {}
       ~ParamInfo(){}
       int8_t type_;

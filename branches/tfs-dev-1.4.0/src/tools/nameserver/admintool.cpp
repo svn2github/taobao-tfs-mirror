@@ -98,7 +98,7 @@ char* match_cmd(const char* text, int32_t state)
   return do_match(text, state, g_cmd_map);
 }
 
-char** admin_cmd_completion (const char* text, int start, int end)
+char** admin_cmd_completion (const char* text, int, int)
 {
   // disable default filename completion
   rl_attempted_completion_over = 1;
@@ -210,7 +210,7 @@ int cmd_set_run_param(const VSTRING& param)
   return status;
 }
 
-int cmd_remove_block(const VSTRING& param)
+int cmd_remove_block(const VSTRING&)
 {
 /*  int32_t size = param.size();
     if (size != 1)
@@ -397,7 +397,7 @@ int cmd_repair_group_block(const VSTRING& param)
     return status;
 }
 
-int cmd_repair_crc(const VSTRING& param)
+int cmd_repair_crc(const VSTRING&)
 {
 /*  int32_t size = param.size();
     if (size != 1)
@@ -638,7 +638,7 @@ int cmd_quit(const VSTRING&)
   return TFS_CLIENT_QUIT;
 }
 
-int cmd_get_file_retry(char* tfs_name, char* local_file)
+int cmd_get_file_retry(char*, char*)
 {
 //   fprintf(stderr, "filename: %s\n", tfs_name);
 //   fflush( stderr);

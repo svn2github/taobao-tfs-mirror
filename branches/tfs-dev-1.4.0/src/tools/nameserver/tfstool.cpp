@@ -76,7 +76,7 @@ char* match_cmd(const char* text, int state)
   return NULL;
 }
 
-char** tfscmd_completion (const char* text, int start, int end)
+char** tfscmd_completion (const char* text, int start, int)
 {
   rl_attempted_completion_over = 1;
   // at the start of line, then it's a cmd completion
@@ -579,7 +579,7 @@ int cmd_hide_file(const VSTRING& param)
   return ret;
 }
 
-int cmd_rename_file(const VSTRING& param)
+int cmd_rename_file(const VSTRING&)
 {
   // TODO: rename
   // const char* tfs_name = canonical_param(param[0]);

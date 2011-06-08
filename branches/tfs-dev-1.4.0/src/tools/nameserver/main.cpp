@@ -120,7 +120,7 @@ char* match_cmd(const char* text, int32_t state)
   return do_match(text, state, g_cmd_map);
 }
 
-char** admin_cmd_completion (const char* text, int start, int end)
+char** admin_cmd_completion (const char* text, int, int)
 {
   // disable default filename completion
   rl_attempted_completion_over = 1;

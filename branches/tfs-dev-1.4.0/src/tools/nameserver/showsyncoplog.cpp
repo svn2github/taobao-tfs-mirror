@@ -31,17 +31,17 @@ using namespace std;
 using namespace tfs;
 using namespace nameserver;
 
-int gstop = 0x00;
+bool gstop = false;
 
-void signlHandler(int signl)
+void signlHandler(int signal)
 {
-  switch(signl)
+  switch(signal)
   {
     case SIGINT:
-      gstop = 0x01;
+      gstop = true;
       break;
     default:
-      fprintf(stderr, "[INFO]: occur signl(%d)", signl);
+      fprintf(stderr, "[INFO]: occur signl(%d)", signal);
       break;
   }
 }
@@ -165,9 +165,9 @@ int main(int argc, char *argv[])
     iret = print_information(dir_name, type);
     if ((iret == EXIT_FAILURE)
         || ((count == i + 1) && (count != 0))
-        || (gstop == 0x01))
+        || (gstop))
       break;
-    common::Func::sleep(interval, &gstop);
+    common::Func::sleep(interval, gstop);
   }
   return EXIT_SUCCESS;
 }

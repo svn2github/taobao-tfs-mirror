@@ -102,7 +102,7 @@ char* match_cmd(const char* text, int state)
   return NULL;
 }
 
-char** dscmd_completion (const char* text, int start, int end)
+char** dscmd_completion (const char* text, int start, int)
 {
   // at the start of line, then it's a cmd completion
   return (0 == start) ? rl_completion_matches(text, match_cmd) : (char**)NULL;
