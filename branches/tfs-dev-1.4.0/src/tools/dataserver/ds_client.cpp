@@ -20,18 +20,17 @@
 #include <stdio.h>
 #include <pthread.h>
 #include <signal.h>
+
 #include <vector>
 #include <string>
 #include <map>
-#include "new_client/tfs_session.h"
-#include "new_client/tfs_file.h"
-#include "common/func.h"
-#include "ds_task.h"
-#include "ds_util.h"
 
-#define CMD_MAX_LEN 4096
+#include "common/internal.h"
+#include "common/func.h"
+#include "tools/util/ds_lib.h"
 
 using namespace tfs::common;
+using namespace tfs::tools;
 using namespace std;
 
 typedef map<string, int> STR_INT_MAP;
@@ -129,7 +128,7 @@ int main(int argc, char* argv[])
       iex = 1;
       break;
     case 'd':
-      ds_ip = get_ip_addr(optarg);
+      ds_ip = Func::get_host_ip(optarg);
       if (ds_ip == 0)
       {
         printf("ip or port is invalid, please try again.\n");
@@ -287,7 +286,7 @@ int parse_cmd(char* key, VSTRING & param)
 int switch_cmd(const int cmd, VSTRING & param)
 {
   int ret = TFS_SUCCESS;
-  DsTask* ds_task = new DsTask();
+  DsTask ds_task(ds_ip);
   switch (cmd)
   {
   case CMD_GET_SERVER_STATUS:
@@ -299,8 +298,8 @@ int switch_cmd(const int cmd, VSTRING & param)
         break;
       }
       int num_row = atoi(const_cast<char*>(param[0].c_str()));
-      ds_task->init(ds_ip, num_row);
-      ret = ds_task->get_server_status();
+      ds_task.num_row_ = num_row;
+      ret = DsLib::get_server_status(ds_task);
       break;
     }
   case CMD_GET_PING_STATUS:
@@ -311,8 +310,7 @@ int switch_cmd(const int cmd, VSTRING & param)
         printf("get the ping status of dataServer.\n");
         break;
       }
-      ds_task->init(ds_ip);
-      ret = ds_task->get_ping_status();
+      ret = DsLib::get_ping_status(ds_task);
       break;
     }
   case CMD_NEW_BLOCK:
@@ -324,8 +322,8 @@ int switch_cmd(const int cmd, VSTRING & param)
         break;
       }
       uint32_t ds_block_id = strtoul(const_cast<char*> (param[0].c_str()), reinterpret_cast<char**> (NULL), 10);
-      ds_task->init(ds_ip, ds_block_id);
-      ret = ds_task->new_block();
+      ds_task.block_id_ = ds_block_id;
+      ret = DsLib::new_block(ds_task);
       break;
     }
   case CMD_REMOVE_BlOCK:
@@ -337,8 +335,8 @@ int switch_cmd(const int cmd, VSTRING & param)
         break;
       }
       uint32_t ds_block_id = strtoul(const_cast<char*> (param[0].c_str()), reinterpret_cast<char**> (NULL), 10);
-      ds_task->init(ds_ip, ds_block_id);
-      ret = ds_task->remove_block();
+      ds_task.block_id_ = ds_block_id;
+      ret = DsLib::remove_block(ds_task);
       break;
     }
   case CMD_LIST_BLOCK:
@@ -350,8 +348,8 @@ int switch_cmd(const int cmd, VSTRING & param)
         break;
       }
       int type = atoi(const_cast<char*> (param[0].c_str()));
-      ds_task->init_list_block_type(ds_ip, type);
-      ret = ds_task->list_block();
+      ds_task.list_block_type_ = type;
+      ret = DsLib::list_block(ds_task);
       break;
     }
   case CMD_GET_BLOCK_INFO:
@@ -363,8 +361,8 @@ int switch_cmd(const int cmd, VSTRING & param)
         break;
       }
       uint32_t ds_block_id = strtoul(const_cast<char*> (param[0].c_str()), reinterpret_cast<char**> (NULL), 10);
-      ds_task->init(ds_ip, ds_block_id);
-      ret = ds_task->get_block_info();
+      ds_task.block_id_ = ds_block_id;
+      ret = DsLib::get_block_info(ds_task);
       break;
     }
   case CMD_RESET_BLOCK_VERSION:
@@ -376,8 +374,8 @@ int switch_cmd(const int cmd, VSTRING & param)
         break;
       }
       uint32_t ds_block_id = strtoul(const_cast<char*> (param[0].c_str()), reinterpret_cast<char**> (NULL), 10);
-      ds_task->init(ds_ip, ds_block_id);
-      ret = ds_task->reset_block_version();
+      ds_task.block_id_ = ds_block_id;
+      ret = DsLib::reset_block_version(ds_task);
       break;
     }
   case CMD_CREATE_FILE_ID:
@@ -390,8 +388,9 @@ int switch_cmd(const int cmd, VSTRING & param)
       }
       uint32_t ds_block_id = strtoul(const_cast<char*> (param[0].c_str()), reinterpret_cast<char**> (NULL), 10);
       uint64_t ds_new_file_id = strtoul(const_cast<char*> (param[1].c_str()), reinterpret_cast<char**> (NULL), 10);
-      ds_task->init(ds_ip, ds_block_id, ds_new_file_id);
-      ret = ds_task->create_file_id();
+      ds_task.block_id_ = ds_block_id;
+      ds_task.new_file_id_ = ds_new_file_id;
+      ret = DsLib::create_file_id(ds_task);
       break;
     }
   case CMD_LIST_FILE:
@@ -403,9 +402,9 @@ int switch_cmd(const int cmd, VSTRING & param)
         break;
       }
       uint32_t ds_block_id = strtoul(const_cast<char*> (param[0].c_str()), reinterpret_cast<char**> (NULL), 10);
-
-      ds_task->init(ds_ip, ds_block_id);
-      ret = ds_task->list_file();
+      ds_task.block_id_ = ds_block_id;
+      ds_task.mode_ = 1;
+      ret = DsLib::list_file(ds_task);
       break;
     }
   case CMD_READ_FILE_DATA:
@@ -418,10 +417,10 @@ int switch_cmd(const int cmd, VSTRING & param)
       }
       uint32_t ds_block_id = strtoul(const_cast<char*> (param[0].c_str()), reinterpret_cast<char**> (NULL), 10);
       uint64_t ds_file_id = strtoull(const_cast<char*> (param[1].c_str()), reinterpret_cast<char**> (NULL), 10);
-      char local_file[256] = { '\0' };
-      strcpy(local_file, (char*) param[2].c_str());
-      ds_task->init(ds_ip, ds_block_id, ds_file_id, local_file);
-      ret = ds_task->read_file_data();
+      ds_task.block_id_ = ds_block_id;
+      ds_task.new_file_id_ = ds_file_id;
+      snprintf(ds_task.local_file_, MAX_PATH_LENGTH, "%s", param[2].c_str());
+      ret = DsLib::read_file_data(ds_task);
       break;
     }
   case CMD_WRITE_FILE_DATA:
@@ -434,10 +433,10 @@ int switch_cmd(const int cmd, VSTRING & param)
       }
       uint32_t ds_block_id = strtoul(const_cast<char*> (param[0].c_str()), reinterpret_cast<char**> (NULL), 10);
       uint64_t ds_file_id = strtoul(const_cast<char*> (param[1].c_str()), reinterpret_cast<char**> (NULL), 10);
-      char local_file[256] = { '\0' };
-      strcpy(local_file, (char*) param[2].c_str());
-      ds_task->init(ds_ip, ds_block_id, ds_file_id, local_file);
-      ret = ds_task->write_file_data();
+      ds_task.block_id_ = ds_block_id;
+      ds_task.new_file_id_ = ds_file_id;
+      snprintf(ds_task.local_file_, MAX_PATH_LENGTH, "%s", param[2].c_str());
+      ret = DsLib::write_file_data(ds_task);
       break;
     }
   case CMD_UNLINK_FILE:
@@ -454,9 +453,12 @@ int switch_cmd(const int cmd, VSTRING & param)
       int32_t unlink_type = atoi(const_cast<char*> (param[2].c_str()));
       int32_t option_flag = atoi(const_cast<char*> (param[3].c_str()));
       int32_t is_master = atoi(const_cast<char*> (param[4].c_str()));
-
-      ds_task->init(ds_ip, ds_block_id, ds_file_id, unlink_type, option_flag, is_master);
-      ret = ds_task->unlink_file();
+      ds_task.block_id_ = ds_block_id;
+      ds_task.new_file_id_ = ds_file_id;
+      ds_task.unlink_type_ = unlink_type;
+      ds_task.option_flag_ = option_flag;
+      ds_task.is_master_ = is_master;
+      ret = DsLib::unlink_file(ds_task);
       break;
     }
   case CMD_RENAME_FILE:
@@ -470,8 +472,10 @@ int switch_cmd(const int cmd, VSTRING & param)
       uint32_t ds_block_id = strtoul(const_cast<char*> (param[0].c_str()), reinterpret_cast<char**> (NULL), 10);
       uint64_t ds_old_file_id = strtoul(const_cast<char*> (param[1].c_str()), reinterpret_cast<char**> (NULL), 10);
       uint64_t ds_new_file_id = strtoul(const_cast<char*> (param[2].c_str()), reinterpret_cast<char**> (NULL), 10);
-      ds_task->init(ds_ip, ds_block_id, ds_old_file_id, ds_new_file_id);
-      ret = ds_task->rename_file();
+      ds_task.block_id_ = ds_block_id;
+      ds_task.old_file_id_ = ds_old_file_id;
+      ds_task.new_file_id_ = ds_new_file_id;
+      ret = DsLib::rename_file(ds_task);
       break;
     }
   case CMD_READ_FILE_INFO:
@@ -485,8 +489,10 @@ int switch_cmd(const int cmd, VSTRING & param)
       uint32_t ds_block_id = strtoul(const_cast<char*> (param[0].c_str()), reinterpret_cast<char**> (NULL), 10);
       uint64_t ds_file_id = strtoull(const_cast<char*> (param[1].c_str()), reinterpret_cast<char**> (NULL), 10);
       int32_t ds_mode = atoi(const_cast<char*> (param[2].c_str()));
-      ds_task->init(ds_ip, ds_block_id, ds_file_id, ds_mode);
-      ret = ds_task->read_file_info();
+      ds_task.block_id_ = ds_block_id;
+      ds_task.new_file_id_ = ds_file_id;
+      ds_task.mode_ = ds_mode;
+      ret = DsLib::read_file_info(ds_task);
       break;
     }
   case CMD_SEND_CRC_ERROR:
@@ -509,27 +515,30 @@ int switch_cmd(const int cmd, VSTRING & param)
       }
 
       int32_t ds_snum = 1;
-      uint64_t *fail_servers;
+      VUINT64 *fail_servers;
       if (param.size() > 4)
       {
         ds_snum = param.size() - 4;
-        fail_servers = new uint64_t[ds_snum];
+        fail_servers = new VUINT64(ds_snum);
         int32_t i = 0;
         int32_t param_size = param.size();
         for (i = 4; i < param_size; i++)
         {
-          fail_servers[i - 4] = strtoull(const_cast<char*> (param[i].c_str()), reinterpret_cast<char**> (NULL), 10);
+          fail_servers->push_back(strtoull(const_cast<char*> (param[i].c_str()), reinterpret_cast<char**> (NULL), 10));
         }
       }
       else
       {
-        ds_snum = 1;
-        fail_servers = new uint64_t[1];
-        fail_servers[0] = ds_ip;
+        fail_servers = new VUINT64();
+        fail_servers->push_back(ds_ip);
       }
 
-      ds_task->init(ds_ip, ds_block_id, ds_file_id, ds_crc, ds_error_flag, fail_servers, ds_snum);
-      ret = ds_task->send_crc_error();
+      ds_task.block_id_ = ds_block_id;
+      ds_task.new_file_id_ = ds_file_id;
+      ds_task.crc_ = ds_crc;
+      ds_task.option_flag_ = ds_error_flag;
+      ds_task.failed_servers_ = *fail_servers;
+      ret = DsLib::send_crc_error(ds_task);
       delete[] fail_servers;
       break;
     }
@@ -542,8 +551,8 @@ int switch_cmd(const int cmd, VSTRING & param)
         break;
       }
       int type = atoi(const_cast<char*> (param[0].c_str()));
-      ds_task->init_list_block_type(ds_ip, type);
-      ret = ds_task->list_bitmap();
+      ds_task.list_block_type_ = type;
+      ret = DsLib::list_bitmap(ds_task);
       break;
     }
   case CMD_UNKNOWN:
@@ -556,7 +565,7 @@ int switch_cmd(const int cmd, VSTRING & param)
   default:
     break;
   }
-  delete ds_task;
+
   return ret;
 }
 
@@ -567,7 +576,7 @@ int main_loop()
   char* cmd_line = NULL;
   rl_attempted_completion_function = dscmd_completion;
 #else
-  char cmd_line[CMD_MAX_LEN];
+  char cmd_line[MAX_CMD_SIZE];
 #endif
 
   while (1)
@@ -577,7 +586,7 @@ int main_loop()
     if (!cmd_line)
 #else
     fprintf(stderr, "DataServer> ");
-    if (NULL == fgets(cmd_line, CMD_MAX_LEN, stdin))
+    if (NULL == fgets(cmd_line, MAX_CMD_SIZE, stdin))
 #endif
     {
       continue;

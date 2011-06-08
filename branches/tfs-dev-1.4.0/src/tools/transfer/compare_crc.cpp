@@ -1,13 +1,16 @@
 #include "common/status_message.h"
 #include "message/server_status_message.h"
 #include "message/block_info_message.h"
+#include "tools/util/tool_util.h"
 #include "compare_crc.h"
 
 using namespace std;
 using namespace tfs::common;
 using namespace tfs::client;
 using namespace tfs::message;
+using namespace tfs::tools;
 
+TfsClient* g_tfs_client = NULL;
 FILE *g_succ_file = NULL, *g_fail_file = NULL, *g_error_file = NULL, *g_unsync_file = NULL;
 
 static const int32_t META_FLAG_ABNORMAL = -9800;
@@ -46,25 +49,25 @@ int get_meta_crc(const string& tfs_client, const char* tfs_file_name, TfsFileSta
     return TFS_ERROR;
   }
   int tfs_fd = 0;
-  if ((tfs_fd = TfsClient::Instance()->open(tfs_file_name, NULL, tfs_client.c_str(), T_READ)) < 0)
+  if ((tfs_fd = g_tfs_client->open(tfs_file_name, NULL, tfs_client.c_str(), T_READ)) < 0)
   {
     TBSYS_LOG(WARN, "open tfsfile fail");
     return TFS_ERROR;
   }
 
-  if (TfsClient::Instance()->fstat(tfs_fd, finfo, FORCE_STAT) != TFS_SUCCESS)
+  if (g_tfs_client->fstat(tfs_fd, finfo, FORCE_STAT) != TFS_SUCCESS)
   {
     TBSYS_LOG(WARN, "fstat tfsfile fail: %s", tfs_file_name);
-    TfsClient::Instance()->close(tfs_fd);
+    g_tfs_client->close(tfs_fd);
     return TFS_ERROR;
   }
 
   if (finfo->flag_ == 1 || finfo->flag_ == 4 || finfo->flag_ == 5)
   {
-    TfsClient::Instance()->close(tfs_fd);
+    g_tfs_client->close(tfs_fd);
     return META_FLAG_ABNORMAL;
   }
-  TfsClient::Instance()->close(tfs_fd);
+  g_tfs_client->close(tfs_fd);
   return TFS_SUCCESS;
 }
 
@@ -77,7 +80,7 @@ int get_real_crc(const string& tfs_client, const char* tfs_file_name, uint32_t* 
   }
 
   int tfs_fd = 0;
-  if ((tfs_fd = TfsClient::Instance()->open(tfs_file_name, NULL, tfs_client.c_str(), T_READ)) < 0)
+  if ((tfs_fd = g_tfs_client->open(tfs_file_name, NULL, tfs_client.c_str(), T_READ)) < 0)
   {
     TBSYS_LOG(ERROR, "open tfsfile fail file name %s", tfs_file_name);
     return TFS_ERROR;
@@ -88,11 +91,11 @@ int get_real_crc(const string& tfs_client, const char* tfs_file_name, uint32_t* 
   int total_size = 0,rlen=0;
   for(;;)
   {
-    rlen = TfsClient::Instance()->read(tfs_fd, data, MAX_READ_SIZE);
+    rlen = g_tfs_client->read(tfs_fd, data, MAX_READ_SIZE);
     if (rlen < 0)
     {
       TBSYS_LOG(ERROR, "read tfsfile fail: file_name %s", tfs_file_name);
-      TfsClient::Instance()->close(tfs_fd);
+      g_tfs_client->close(tfs_fd);
       return TFS_ERROR;
     }
     if (rlen == 0)
@@ -103,11 +106,11 @@ int get_real_crc(const string& tfs_client, const char* tfs_file_name, uint32_t* 
       break;
   }
   *crc = crc_tmp;
-  TfsClient::Instance()->close(tfs_fd);
+  g_tfs_client->close(tfs_fd);
   return TFS_SUCCESS;
 }
 
-int get_crc_from_filename(const string& old_tfs_client, const string& new_tfs_client, 
+int get_crc_from_filename(const string& old_tfs_client, const string& new_tfs_client,
     const char* tfs_file_name, string& modify_time)
 {
   int ret = TFS_SUCCESS;
@@ -244,9 +247,9 @@ int get_crc_from_filename(const string& old_tfs_client, const string& new_tfs_cl
             else
             {
               int tfs_fd_old = 0;
-              tfs_fd_old = TfsClient::Instance()->open(tfs_file_name, NULL, old_tfs_client.c_str(), T_READ);
+              tfs_fd_old = g_tfs_client->open(tfs_file_name, NULL, old_tfs_client.c_str(), T_READ);
               TfsFileStat finfo;
-              TfsClient::Instance()->fstat(tfs_fd_old, &finfo);
+              g_tfs_client->fstat(tfs_fd_old, &finfo);
               FSName fsname;
               fsname.set_name(tfs_file_name);
 
@@ -266,7 +269,7 @@ int get_crc_from_filename(const string& old_tfs_client, const string& new_tfs_cl
                 fprintf(g_unsync_file, "%s\n", tfs_file_name);
                 cmp_stat_.unsync_count_++;
               }
-              TfsClient::Instance()->close(tfs_fd_old);
+              g_tfs_client->close(tfs_fd_old);
             }
           }
         }
@@ -311,7 +314,7 @@ int get_crc_from_block_list(const string& old_tfs_client, const string& new_tfs_
     while (fscanf(fp, "%u\n", &block_id) != EOF)
     {
       VUINT64 ds_list;
-      //TODO old_tfs_client.get_block_info(block_id, ds_list);
+      ToolUtil::get_block_ds_list(Func::get_host_ip(old_tfs_client.c_str()), block_id, ds_list);
       if(ds_list.size() > 0)
       {
         uint64_t ds_id = ds_list[0];
@@ -455,7 +458,8 @@ int main(int argc, char** argv)
   string old_tfs_client, new_tfs_client;
   old_tfs_client = old_ns_ip;
   new_tfs_client = new_ns_ip;
-  iret = TfsClient::Instance()->initialize(old_ns_ip.c_str());
+  g_tfs_client = TfsClient::Instance();
+  iret = g_tfs_client->initialize(old_ns_ip.c_str());
   if (iret != TFS_SUCCESS)
   {
     if (iret != TFS_SUCCESS)

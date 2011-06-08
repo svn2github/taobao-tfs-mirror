@@ -66,6 +66,62 @@ namespace tfs
     typedef std::vector<uint8_t> VUINT8;
     typedef std::vector<std::string> VSTRING;
 
+    typedef std::map<std::string, std::string> STRING_MAP; // string => string
+    typedef STRING_MAP::iterator STRING_MAP_ITER;
+
+    typedef __gnu_cxx ::hash_map<uint32_t, VINT64> INT_VINT64_MAP; // int => vector<int64>
+    typedef INT_VINT64_MAP::iterator INT_VINT64_MAP_ITER;
+    typedef __gnu_cxx ::hash_map<uint64_t, VINT, __gnu_cxx ::hash<int> > INT64_VINT_MAP; // int64 => vector<int>
+    typedef INT64_VINT_MAP::iterator INT64_VINT_MAP_ITER;
+    typedef __gnu_cxx ::hash_map<uint32_t, uint64_t> INT_INT64_MAP; // int => int64
+    typedef INT_INT64_MAP::iterator INT_INT64_MAP_ITER;
+    typedef __gnu_cxx ::hash_map<uint64_t, uint32_t, __gnu_cxx ::hash<int> > INT64_INT_MAP; // int64 => int
+    typedef INT64_INT_MAP::iterator INT64_INT_MAP_ITER;
+
+    typedef __gnu_cxx ::hash_map<uint32_t, uint32_t> INT_MAP;
+    typedef INT_MAP::iterator INT_MAP_ITER;
+
+    // base constant
+    static const int8_t INT8_SIZE = 1;
+    static const int8_t INT16_SIZE = 2;
+    static const int8_t INT_SIZE = 4;
+    static const int8_t INT64_SIZE = 8;
+
+    static const int32_t MAX_PATH_LENGTH = 256;
+    static const int32_t MAX_ADDRESS_LENGTH = 64;
+    static const int64_t TFS_MALLOC_MAX_SIZE = 0x00A00000;//10M
+    static const int64_t MAX_CMD_SIZE = 1024;
+
+    static const uint32_t INVALID_LEASE_ID = 0;
+
+    static const int32_t SEGMENT_HEAD_RESERVE_SIZE = 64;
+
+    static const int32_t MAX_DEV_NAME_LEN = 64;
+    static const int32_t MAX_READ_SIZE = 1048576;
+
+    static const int MAX_FILE_FD = INT_MAX;
+    static const int MAX_OPEN_FD_COUNT = MAX_FILE_FD - 1;
+
+    static const int32_t SPEC_LEN = 32;
+    static const int32_t MAX_RESPONSE_TIME = 30000;
+
+    static const int32_t ADMIN_WARN_DEAD_COUNT = 1;
+
+    static const int64_t DEFAULT_NETWORK_CALL_TIMEOUT  = 3000;//3s
+
+    static const int64_t MAX_META_SIZE = 1 << 21; // 2M
+    static const int64_t INVALID_FILE_SIZE = -1;
+
+    // client config
+    static const int64_t DEFAULT_CLIENT_RETRY_COUNT = 3;
+    // unit ms
+    static const int64_t DEFAULT_STAT_INTERNAL = 60000; // 1min
+    static const int64_t DEFAULT_GC_INTERNAL = 43200000; // 12h
+
+    static const int64_t MIN_GC_EXPIRED_TIME = 21600000; // 6h
+    static const int64_t MAX_SEGMENT_SIZE = 1 << 21; // 2M
+    static const int64_t MAX_BATCH_COUNT = 16;
+
     enum OplogFlag
     {
       OPLOG_INSERT = 1,
@@ -268,6 +324,12 @@ namespace tfs
       SSM_SCAN_CUTOVER_FLAG_NO  = 0x02
     };
 
+    enum TfsFileType
+    {
+      INVALID_TFS_FILE_TYPE = 0,
+      SMALL_TFS_FILE_TYPE,
+      LARGE_TFS_FILE_TYPE
+    };
 
     struct SSMScanParameter
     {
@@ -497,7 +559,6 @@ namespace tfs
       int32_t available_;
     };
 
-    static const int32_t SEGMENT_HEAD_RESERVE_SIZE = 64;
     struct SegmentHead
     {
       int deserialize(const char* data, const int64_t data_len, int64_t& pos);
@@ -554,6 +615,7 @@ namespace tfs
       int deserialize(const char* data, const int64_t data_len, int64_t& pos);
       int64_t length() const;
     };
+
 #pragma pack()
 
     struct CrcCheckFile
@@ -577,8 +639,6 @@ namespace tfs
       }
     };
 
-    static const uint32_t INVALID_LEASE_ID = 0;
-
     struct BlockInfoSeg
     {
       common::VUINT64 ds_;
@@ -599,69 +659,46 @@ namespace tfs
       }
     };
 
-    // typedef
-    typedef std::map<std::string, std::string> STRING_MAP; // string => string
-    typedef STRING_MAP::iterator STRING_MAP_ITER;
+    struct DsTask
+    {
+      DsTask() {}
+      DsTask(const uint64_t server_id, const int32_t cluster_id = 0) :
+        server_id_(server_id), cluster_id_(cluster_id) {}
+      ~DsTask() {}
+      uint64_t server_id_;
+      uint64_t old_file_id_;
+      uint64_t new_file_id_;
+      int32_t cluster_id_;
+      uint32_t block_id_;
+      int32_t num_row_;
+      //data member, used in list block
+      int32_t list_block_type_;
+      //data member, used in unlink file
+      int32_t unlink_type_;
+      int32_t option_flag_;
+      //true: 0; false: 1.
+      int32_t is_master_;
+      //data member, used in read file info
+      int32_t mode_;
+      uint32_t crc_;
+      char local_file_[MAX_PATH_LENGTH];
+      VUINT64 failed_servers_;
+    };
 
+    // defined type typedef
     typedef std::vector<BlockInfo> BLOCK_INFO_LIST;
     typedef std::vector<FileInfo> FILE_INFO_LIST;
     typedef std::map<uint64_t, FileInfo*> FILE_INFO_MAP;
     typedef FILE_INFO_MAP::iterator FILE_INFO_MAP_ITER;
-
-    typedef __gnu_cxx ::hash_map<uint32_t, VINT64> INT_VINT64_MAP; // int => vector<int64>
-    typedef INT_VINT64_MAP::iterator INT_VINT64_MAP_ITER;
-    typedef __gnu_cxx ::hash_map<uint64_t, VINT, __gnu_cxx ::hash<int> > INT64_VINT_MAP; // int64 => vector<int>
-    typedef INT64_VINT_MAP::iterator INT64_VINT_MAP_ITER;
-    typedef __gnu_cxx ::hash_map<uint32_t, uint64_t> INT_INT64_MAP; // int => int64
-    typedef INT_INT64_MAP::iterator INT_INT64_MAP_ITER;
-    typedef __gnu_cxx ::hash_map<uint64_t, uint32_t, __gnu_cxx ::hash<int> > INT64_INT_MAP; // int64 => int
-    typedef INT64_INT_MAP::iterator INT64_INT_MAP_ITER;
-
-    typedef __gnu_cxx ::hash_map<uint32_t, uint32_t> INT_MAP;
-    typedef INT_MAP::iterator INT_MAP_ITER;
 
     typedef std::vector<RawMeta> RawMetaVec;
     typedef std::vector<RawMeta>::iterator RawMetaVecIter;
 
     typedef std::vector<RawMeta>::const_iterator RawMetaVecConstIter;
 
-
-    static const int8_t INT8_SIZE = 1;
-    static const int8_t INT16_SIZE = 2;
-    static const int8_t INT_SIZE = 4;
-    static const int8_t INT64_SIZE = 8;
-
-    static const int32_t MAX_PATH_LENGTH = 256;
-    static const int32_t MAX_ADDRESS_LENGTH = 64;
-    static const int64_t TFS_MALLOC_MAX_SIZE = 0x00A00000;//10M
-
     static const int32_t FILEINFO_SIZE = sizeof(FileInfo);
     static const int32_t BLOCKINFO_SIZE = sizeof(BlockInfo);
     static const int32_t RAW_META_SIZE = sizeof(RawMeta);
-
-    static const int32_t MAX_DEV_NAME_LEN = 64;
-    static const int32_t MAX_READ_SIZE = 1048576;
-
-    static const int MAX_FILE_FD = INT_MAX;
-    static const int MAX_OPEN_FD_COUNT = MAX_FILE_FD - 1;
-
-    static const int32_t SPEC_LEN = 32;
-    static const int32_t MAX_RESPONSE_TIME = 30000;
-
-    static const int32_t ADMIN_WARN_DEAD_COUNT = 1;
-
-    static const int64_t DEFAULT_NETWORK_CALL_TIMEOUT  = 3000;//3s
-
-
-    // client config
-    static const int64_t DEFAULT_CLIENT_RETRY_COUNT = 3;
-    // unit ms
-    static const int64_t DEFAULT_STAT_INTERNAL = 60000; // 1min
-    static const int64_t DEFAULT_GC_INTERNAL = 43200000; // 12h
-
-    static const int64_t MIN_GC_EXPIRED_TIME = 21600000; // 6h
-    static const int64_t MAX_SEGMENT_SIZE = 1 << 21; // 2M
-    static const int64_t MAX_BATCH_COUNT = 16;
 
   }
 }

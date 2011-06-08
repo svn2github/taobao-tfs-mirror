@@ -26,7 +26,7 @@
 #include "common/func.h"
 #include "common/internal.h"
 #include "common/error_msg.h"
-#include "client/tfs_client_api.h"
+#include "new_client/tfs_client_api.h"
 #include "util.h"
 
 using namespace tfs::common;

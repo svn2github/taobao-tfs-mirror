@@ -1,9 +1,23 @@
+/*
+ * (C) 2007-2010 Alibaba Group Holding Limited.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+ *
+ *
+ * Version: $Id: func.cpp 400 2011-06-02 07:26:40Z duanfei@taobao.com $
+ *
+ * Authors:
+ *   chuyu <chuyu@taobao.com>
+ *      - initial release
+ *
+ */
 #include "show_factory.h"
 
 using namespace __gnu_cxx;
 using namespace tbsys;
 using namespace tfs::message;
-using namespace tfs::nameserver;
 using namespace tfs::common;
 
 namespace tfs
@@ -299,7 +313,7 @@ namespace tfs
     int MachineShow::calculate()
     {
       // then div
-      if (consume_time_ > 0 && index > 0)
+      if (consume_time_ > 0 && index_ > 0)
       {
         int32_t per_time = (consume_time_ / index_);
         compute_tp(&last_tp_, per_time);
@@ -318,7 +332,7 @@ namespace tfs
             Func::format_size(total_capacity_).c_str(),
             total_capacity_ > 0 ? static_cast<int32_t> (use_capacity_ * 100 / total_capacity_) : 0,
             block_count_,
-            index > 0 ? (current_load_ / index_) : current_load_,
+            index_ > 0 ? (current_load_ / index_) : current_load_,
             Func::format_size(total_tp_.write_byte_).c_str(),
             total_tp_.write_file_count_,
             Func::format_size(total_tp_.read_byte_).c_str(),
@@ -342,7 +356,7 @@ namespace tfs
             Func::format_size(total_capacity_).c_str(),
             total_capacity_ > 0 ? static_cast<int32_t> (use_capacity_ * 100 / total_capacity_) : 0,
             block_count_,
-            index > 0 ? current_load_ / index_ : current_load_,
+            index_ > 0 ? current_load_ / index_ : current_load_,
             Func::format_size(last_tp_.write_byte_).c_str(),
             last_tp_.write_file_count_,
             Func::format_size(last_tp_.read_byte_).c_str(),

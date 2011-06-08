@@ -20,7 +20,7 @@
 
 namespace tfs
 {
-  namespace common 
+  namespace common
   {
     NewClientManager::NewClientManager()
       : factory_(NULL), streamer_(NULL), connmgr_(NULL), transport_(NULL), async_callback_entry_(NULL),
@@ -81,6 +81,11 @@ namespace tfs
         }
       }
       return iret;
+    }
+
+    bool NewClientManager::is_init() const
+    {
+      return initialize_;
     }
 
     tbnet::IPacketHandler::HPRetCode NewClientManager::handlePacket(
@@ -215,7 +220,7 @@ namespace tfs
       {
         do_async_callback(client);
       }
-     
+
       if (!ret && response != NULL && response->isRegularPacket())
       {
         TBSYS_LOG(DEBUG, "delete response message client id: %u", id.seq_id_);

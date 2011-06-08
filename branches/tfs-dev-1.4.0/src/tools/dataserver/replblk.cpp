@@ -21,7 +21,6 @@
 #include "common/client_manager.h"
 #include "common/status_message.h"
 #include "message/replicate_block_message.h"
-#include "ds_util.h"
 
 using namespace tfs::common;
 using namespace tfs::message;
@@ -41,7 +40,7 @@ int replicate_block(uint64_t server_ip, uint64_t dest_ip, uint32_t block_id)
   printf("server_ip: %s, descip: %s, block_id: %u\n", tbsys::CNetUtil::addrToString(repl_block.source_id_).c_str(),
       tbsys::CNetUtil::addrToString(repl_block.destination_id_).c_str(), repl_block.block_id_);
 
-  req_rb_msg.set_command(COMMAND_REPLICATE);
+  req_rb_msg.set_command(PLAN_STATUS_BEGIN);
   req_rb_msg.set_repl_block(&repl_block);
 
   NewClient* client = NewClientManager::get_instance().create_client();

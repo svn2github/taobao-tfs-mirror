@@ -90,7 +90,7 @@ void TfsLargeFileTest::unlink_process(const bool large_flag)
     if (large_flag)
     {
       ASSERT_EQ(length, finfo.size_);
-      ASSERT_EQ(length, finfo.usize_);
+      ASSERT_TRUE(length < finfo.usize_);
     }
     else
       ASSERT_EQ(length , finfo.size_);
@@ -129,7 +129,7 @@ void TfsLargeFileTest::unlink_process(const bool large_flag)
     if (large_flag)
     {
       ASSERT_EQ(length, finfo.size_);
-      ASSERT_EQ(length, finfo.usize_);
+      ASSERT_TRUE(length < finfo.usize_);
     }
     else
       ASSERT_EQ(length , finfo.size_);

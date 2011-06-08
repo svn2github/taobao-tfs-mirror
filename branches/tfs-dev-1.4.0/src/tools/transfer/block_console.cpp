@@ -341,7 +341,7 @@ int TranBlock::read_index()
   {
     tbnet::Packet* rsp = NULL;
     if (TFS_SUCCESS == send_msg_to_server(rds_[index], client, &gfl_msg, rsp))
-    {  
+    {
       if (BLOCK_FILE_INFO_MESSAGE == rsp->getPCode())
       {
         BlockFileInfoMessage *bfi_msg = dynamic_cast<BlockFileInfoMessage*>(rsp);
@@ -358,7 +358,7 @@ int TranBlock::read_index()
       {
         ret = TFS_ERROR;
       }
-    } 
+    }
     else
     {
       ret = TFS_ERROR;
@@ -643,7 +643,7 @@ int TranBlock::write_data()
         --remainder_retrys;
         continue;
       }
-      else 
+      else
       {
         if (cur_len != TRAN_BUFFER_SIZE)
         {
@@ -734,14 +734,13 @@ int TranBlock::check_integrity()
       }
       else
       {
-        FileInfo dest_info;
+        TfsFileStat dest_info;
         uint32_t crc = 0;
         int32_t total_size = 0;
         data[0] = '\0';
         while (true)
         {
-          //TODO int32_t read_len = tfs_read_v2(data, MAX_READ_SIZE, &dest_info);
-          int32_t read_len;
+          int32_t read_len = TfsClient::Instance()->readv2(fd, data, MAX_READ_SIZE, &dest_info);
           if (read_len < 0)
           {
             TBSYS_LOG(ERROR, "read data from dest fail, blockid: %u, fileid: %"PRI64_PREFIX"u, ret: %d",

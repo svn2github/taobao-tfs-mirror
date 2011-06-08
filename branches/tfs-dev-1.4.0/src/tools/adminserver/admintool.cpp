@@ -23,42 +23,21 @@
 #include "common/status_message.h"
 #include "message/admin_cmd_message.h"
 
-using namespace tfs::message;
+#include "tools/util/tool_util.h"
+
 using namespace tfs::common;
+using namespace tfs::message;
+using namespace tfs::tools;
+
 using namespace std;
-
-typedef int (*cmd_function)(VSTRING&);
-struct CmdNode
-{
-  const char* info_;
-  int32_t param_cnt_;
-  cmd_function func_;
-
-  CmdNode()
-  {
-  }
-
-  CmdNode(const char* info, int32_t param_cnt, cmd_function func) :
-    info_(info), param_cnt_(param_cnt), func_(func)
-  {
-  }
-};
-
-//typedef map<string, Client*> MCLIENT;
-//typedef map<string, Client*>::iterator MCLIENT_ITER;
-typedef map<string, CmdNode> MSTR_FUNC;
-typedef MSTR_FUNC::iterator MSTR_FUNC_ITER;
 typedef map<string, VSTRING> MSTR_VSTR;
 typedef map<string, VSTRING>::iterator MSTR_VSTR_ITER;
 
-//static MCLIENT g_client_map;
-static MSTR_FUNC g_cmd_map;
+static STR_FUNC_MAP g_cmd_map;
 static MSTR_VSTR g_server_map;
 static char* g_cur_cmd;
 static const int32_t g_default_port = 12000;
 
-static const int TFS_CLIENT_QUIT = 0xfff1234;
-static const int32_t CMD_MAX_LEN = 4096;
 static const char* SUC_COLOR = "\033[32m";
 static const char* FAIL_COLOR = "\033[31m";
 
@@ -77,7 +56,7 @@ enum
   STOP_COMPLETE
 };
 
-static char g_cur_server[CMD_MAX_LEN+1];
+static char g_cur_server[MAX_CMD_SIZE+1];
 
 // get nth word in current input to store, base on keyth word to check count
 int get_nth_word(int32_t nth, char* store, int32_t keyth)
@@ -127,12 +106,12 @@ int get_nth_word(int32_t nth, char* store, int32_t keyth)
   if (count >= keyth)                // already have key, check count
   {
     char* key = rl_copy_text(key_start, key_end);
-    MSTR_FUNC_ITER it;
+    STR_FUNC_MAP_ITER it;
     if ((it = g_cmd_map.find(key)) != g_cmd_map.end()) // valid key
     {
-      if (count > abs(it->second.param_cnt_)) // over count
+      if (count > it->second.min_param_cnt_) // over count
       {
-        if (it->second.param_cnt_ < 0 )           // valid over count
+        if (count < it->second.max_param_cnt_)           // valid over count
         {
           count = INDEX_COMPLETE;
         }
@@ -235,38 +214,38 @@ char** admin_cmd_completion (const char* text, int start, int end)
 int main_loop();
 int do_cmd(char*);
 
-int do_monitor(VSTRING&, int32_t);
+int do_monitor(const VSTRING&, int32_t);
 
-int cmd_show_help(VSTRING&);
-int cmd_quit(VSTRING&);
-int cmd_show_server(VSTRING&);
-int cmd_show_status(VSTRING&);
-int cmd_show_status_all(VSTRING&);
-int cmd_check(VSTRING&);
-int cmd_check_all(VSTRING&);
-int cmd_start_monitor(VSTRING&);
-int cmd_restart_monitor(VSTRING&);
-int cmd_stop_monitor(VSTRING&);
-int cmd_start_index(VSTRING&);
-int cmd_stop_index(VSTRING&);
-int cmd_kill_admin(VSTRING&);
+int cmd_show_help(const VSTRING&);
+int cmd_quit(const VSTRING&);
+int cmd_show_server(const VSTRING&);
+int cmd_show_status(const VSTRING&);
+int cmd_show_status_all(const VSTRING&);
+int cmd_check(const VSTRING&);
+int cmd_check_all(const VSTRING&);
+int cmd_start_monitor(const VSTRING&);
+int cmd_restart_monitor(const VSTRING&);
+int cmd_stop_monitor(const VSTRING&);
+int cmd_start_index(const VSTRING&);
+int cmd_stop_index(const VSTRING&);
+int cmd_kill_admin(const VSTRING&);
 
 void init()
 {
-  g_cmd_map["help"] = CmdNode("help                 [show help info]", 0, cmd_show_help);
-  g_cmd_map["quit"] = CmdNode("quit                 [quit]", 0, cmd_quit);
-  g_cmd_map["exit"] = CmdNode("exit                 [exit]", 0, cmd_quit);
-  g_cmd_map["show"] = CmdNode("show                 [show server]", 0, cmd_show_server);
-  g_cmd_map["status"] = CmdNode("status server        [show server status]", 1, cmd_show_status);
-  g_cmd_map["astatus"] = CmdNode("astatus              [show all server status]", 0, cmd_show_status_all);
-  g_cmd_map["check"] = CmdNode("check server         [check  server]", 1, cmd_check);
-  g_cmd_map["acheck"] = CmdNode("acheck               [check all server]", 0, cmd_check_all);
-  g_cmd_map["mstart"] = CmdNode("mstart server        [start server monitor]", 1, cmd_start_monitor);
-  g_cmd_map["mrestart"] = CmdNode("mrestart server      [restart server monitor]", 1, cmd_restart_monitor);
-  g_cmd_map["mstop"] = CmdNode("mstop server         [stop server monitor]", 1, cmd_stop_monitor);
-  g_cmd_map["istart"] = CmdNode("istart server index  [start index in server]", -2, cmd_start_index); // -2 means at least two arguments
-  g_cmd_map["istop"] = CmdNode("istop server index   [stop index in server]", -2, cmd_stop_index);
-  g_cmd_map["kill"] = CmdNode("kill server          [kill adminserver in server]", 1, cmd_kill_admin);
+  g_cmd_map["help"] = CmdNode("help", "show help info", 0, 0, cmd_show_help);
+  g_cmd_map["quit"] = CmdNode("quit", "quit", 0, 0, cmd_quit);
+  g_cmd_map["exit"] = CmdNode("exit", "exit", 0, 0, cmd_quit);
+  g_cmd_map["show"] = CmdNode("show", "show server", 0, 0, cmd_show_server);
+  g_cmd_map["status"] = CmdNode("status server", "show server status", 1, 1, cmd_show_status);
+  g_cmd_map["astatus"] = CmdNode("astatus", "show all server status", 0, 0, cmd_show_status_all);
+  g_cmd_map["check"] = CmdNode("check server", "check  server", 1, 1, cmd_check);
+  g_cmd_map["acheck"] = CmdNode("acheck", "check all server", 0, 0, cmd_check_all);
+  g_cmd_map["mstart"] = CmdNode("mstart server", "start server monitor", 1, 1, cmd_start_monitor);
+  g_cmd_map["mrestart"] = CmdNode("mrestart server", "restart server monitor", 1, 1, cmd_restart_monitor);
+  g_cmd_map["mstop"] = CmdNode("mstop server", "stop server monitor", 1, 1, cmd_stop_monitor);
+  g_cmd_map["istart"] = CmdNode("istart server index", "start index in server", 2, INT_MAX, cmd_start_index); // -2 means at least two arguments
+  g_cmd_map["istop"] = CmdNode("istop server index", "stop index in server", 2, INT_MAX, cmd_stop_index);
+  g_cmd_map["kill"] = CmdNode("kill server", "kill adminserver in server", 1, 1, cmd_kill_admin);
 }
 
 static void sign_handler(int32_t sig)
@@ -330,14 +309,13 @@ int get_server_list(const char* conf_file)
     return TFS_ERROR;
   }
 
-  char buf[CMD_MAX_LEN+1];
+  char buf[MAX_CMD_SIZE+1];
   char* tmp = NULL;
-  while (fgets(buf, CMD_MAX_LEN, fp))
+  while (fgets(buf, MAX_CMD_SIZE, fp))
   {
     tmp = strip_line(buf);
     if (tmp[0]) // not blank line
     {
-      //g_client_map.insert(MCLIENT::value_type(tmp, NULL)); // lazy connect
       g_server_map.insert(MSTR_VSTR::value_type(tmp, VSTRING()));
     }
   }
@@ -402,10 +380,6 @@ int main(int argc, char* argv[])
     usage(argv[0]);
   }
 
-  //for (MCLIENT_ITER it = g_client_map.begin(); it != g_client_map.end(); it++)
-  //{
-  //  CLIENT_POOL.release_client(it->second); // release will check NULL
-  //}
   return TFS_SUCCESS;
 }
 
@@ -421,7 +395,7 @@ int main_loop()
   char* cmd_line = NULL;
   rl_attempted_completion_function = admin_cmd_completion;
 #else
-  char cmd_line[CMD_MAX_LEN];
+  char cmd_line[MAX_CMD_SIZE];
 #endif
   int ret = TFS_ERROR;
   while (1)
@@ -431,7 +405,7 @@ int main_loop()
     if (!cmd_line)
 #else
       fprintf(stderr, "admin> ");
-    if (NULL == fgets(cmd_line, CMD_MAX_LEN, stdin))
+    if (NULL == fgets(cmd_line, MAX_CMD_SIZE, stdin))
 #endif
     {
       continue;
@@ -468,7 +442,7 @@ int32_t do_cmd(char* key)
     *token = '\0';
   }
 
-  MSTR_FUNC_ITER it = g_cmd_map.find(Func::str_to_lower(key));
+  STR_FUNC_MAP_ITER it = g_cmd_map.find(Func::str_to_lower(key));
 
   if (it == g_cmd_map.end())
   {
@@ -500,31 +474,26 @@ int32_t do_cmd(char* key)
   }
 
   // check param count
-  int32_t param_cnt = g_cmd_map[g_cur_cmd].param_cnt_;
-  if ((param_cnt < 0 ? static_cast<int32_t>(param.size()) < abs(param_cnt) : static_cast<int32_t>(param.size()) != param_cnt))
+  int32_t param_cnt = param.size();
+  if (param_cnt < it->second.min_param_cnt_ || param_cnt > it->second.max_param_cnt_)
   {
-    fprintf(stderr, "%s\n\n", g_cmd_map[g_cur_cmd].info_);
+    fprintf(stderr, "%s\t\t%s\n\n", it->second.syntax_, it->second.info_);
     return TFS_ERROR;
   }
 
   return it->second.func_(param);
 }
 
-int do_monitor(VSTRING& param, int32_t type)
+int do_monitor(const VSTRING& param, int32_t type)
 {
   int ret = TFS_SUCCESS;
   string server = param[0];
-  //MCLIENT_ITER it = g_client_map.find(server);
-  //if (g_client_map.end() == it)
-  //{
-  //  it = g_client_map.insert(MCLIENT::value_type(server, NULL)).first;
-  //}
 
   uint64_t ip_port = 0;
   {
-    char ip[CMD_MAX_LEN+1];     // to support mutiple port in the same server, must copy
-    ip[CMD_MAX_LEN] = '\0';
-    int32_t port = get_port(strncpy(ip, server.c_str(), CMD_MAX_LEN));
+    char ip[MAX_CMD_SIZE+1];     // to support mutiple port in the same server, must copy
+    ip[MAX_CMD_SIZE] = '\0';
+    int32_t port = get_port(strncpy(ip, server.c_str(), MAX_CMD_SIZE));
     ip_port = Func::str_to_addr(ip, port);
   }
 
@@ -586,23 +555,23 @@ int do_monitor(VSTRING& param, int32_t type)
   return ret;
 }
 
-int cmd_show_help(VSTRING&)
+int cmd_show_help(const VSTRING&)
 {
   fprintf(stderr, "\nsupported command:");
-  for (MSTR_FUNC_ITER it = g_cmd_map.begin(); it != g_cmd_map.end(); it++)
+  for (STR_FUNC_MAP_ITER it = g_cmd_map.begin(); it != g_cmd_map.end(); it++)
   {
-    fprintf(stderr, "\n%s", it->second.info_);
+    fprintf(stderr, "\n%-40s %s", it->second.syntax_, it->second.info_);
   }
   fprintf(stderr, "\n\n");
   return TFS_SUCCESS;
 }
 
-int cmd_quit(VSTRING&)
+int cmd_quit(const VSTRING&)
 {
   return TFS_CLIENT_QUIT;
 }
 
-int cmd_show_server(VSTRING&)
+int cmd_show_server(const VSTRING&)
 {
   int32_t i = 1;
   MSTR_VSTR::iterator it;
@@ -613,17 +582,18 @@ int cmd_show_server(VSTRING&)
   return TFS_SUCCESS;
 }
 
-int cmd_show_status(VSTRING& param)
+int cmd_show_status(const VSTRING& param)
 {
   print_head();
   return do_monitor(param, ADMIN_CMD_GET_STATUS);
 }
 
-int cmd_show_status_all(VSTRING& param)
+int cmd_show_status_all(const VSTRING&)
 {
   print_head();
   // for uniformity, a little time waste
   MSTR_VSTR::iterator it;
+  VSTRING param;
   for (it = g_server_map.begin(); it != g_server_map.end(); it++)
   {
     param.clear();
@@ -633,17 +603,18 @@ int cmd_show_status_all(VSTRING& param)
   return TFS_SUCCESS;
 }
 
-int cmd_check(VSTRING& param)
+int cmd_check(const VSTRING& param)
 {
   print_head();
   return do_monitor(param, ADMIN_CMD_CHECK);
 }
 
-int cmd_check_all(VSTRING& param)
+int cmd_check_all(const VSTRING&)
 {
   print_head();
   // for uniformity, a little time waste
   MSTR_VSTR::iterator it;
+  VSTRING param;
   for (it = g_server_map.begin(); it != g_server_map.end(); it++)
   {
     param.clear();
@@ -653,32 +624,32 @@ int cmd_check_all(VSTRING& param)
   return TFS_SUCCESS;
 }
 
-int cmd_start_monitor(VSTRING& param)
+int cmd_start_monitor(const VSTRING& param)
 {
   return do_monitor(param, ADMIN_CMD_START_MONITOR);
 }
 
-int cmd_restart_monitor(VSTRING& param)
+int cmd_restart_monitor(const VSTRING& param)
 {
   return do_monitor(param, ADMIN_CMD_RESTART_MONITOR);
 }
 
-int cmd_stop_monitor(VSTRING& param)
+int cmd_stop_monitor(const VSTRING& param)
 {
   return do_monitor(param, ADMIN_CMD_STOP_MONITOR);
 }
 
-int cmd_start_index(VSTRING& param)
+int cmd_start_index(const VSTRING& param)
 {
   return do_monitor(param, ADMIN_CMD_START_INDEX);
 }
 
-int cmd_stop_index(VSTRING& param)
+int cmd_stop_index(const VSTRING& param)
 {
   return do_monitor(param, ADMIN_CMD_STOP_INDEX);
 }
 
-int cmd_kill_admin(VSTRING& param)
+int cmd_kill_admin(const VSTRING& param)
 {
   return do_monitor(param, ADMIN_CMD_KILL_ADMINSERVER);
 }

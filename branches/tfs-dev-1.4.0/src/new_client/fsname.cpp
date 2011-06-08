@@ -24,6 +24,9 @@ namespace tfs
 {
   namespace client
   {
+    static const char SMALL_TFS_FILE_KEY_CHAR = 'T';
+    static const char LARGE_TFS_FILE_KEY_CHAR = 'L';
+
     static const char* KEY_MASK = "Taobao-inc";
     static const int32_t KEY_MASK_LEN = strlen(KEY_MASK);
     static const char enc_table[] = "0JoU8EaN3xf19hIS2d.6pZRFBYurMDGw7K5m4CyXsbQjg_vTOAkcHVtzqWilnLPe";
@@ -55,21 +58,21 @@ namespace tfs
       return (h | 0x80000000);
     }
 
-    FSName::FSName()
+    FSName::FSName() : is_valid_(true), cluster_id_(0)
     {
       file_name_[0] = '\0';
       memset(&file_, 0, sizeof(FileBits));
-      cluster_id_ = 0x01;
     }
 
-    FSName::FSName(const uint32_t block_id, const int64_t file_id)
+    FSName::FSName(const uint32_t block_id, const int64_t file_id, const int32_t cluster_id) :
+      is_valid_(true), cluster_id_(cluster_id)
     {
       file_.block_id_ = block_id;
       set_file_id(file_id);
       file_name_[0] = '\0';
     }
 
-    FSName::FSName(const char* file_name, const char* suffix, int32_t const cluster_id)
+    FSName::FSName(const char* file_name, const char* suffix, const int32_t cluster_id) : is_valid_(true)
     {
       set_name(file_name, suffix, cluster_id);
     }
@@ -84,36 +87,48 @@ namespace tfs
       file_name_[0] = '\0';
       cluster_id_ = cluster_id;
       memset(&file_, 0, sizeof(FileBits));
-      if ((NULL == file_name) || static_cast<int32_t>(strlen(file_name)) < FILE_NAME_LEN)
+
+      if (NULL != file_name && file_name[0] != '\0')
       {
-        return;
+        if (static_cast<int32_t>(strlen(file_name)) < FILE_NAME_LEN ||
+            (file_name[0] != SMALL_TFS_FILE_KEY_CHAR &&
+             file_name[0] != LARGE_TFS_FILE_KEY_CHAR))
+        {
+          is_valid_ = false;
+        }
+        else
+        {
+          decode(file_name + 2, (char*) &file_);
+          if (NULL == suffix && static_cast<int32_t>(strlen(file_name)) > FILE_NAME_LEN)
+          {
+            suffix = file_name + FILE_NAME_LEN;
+          }
+          set_suffix(suffix);
+          if (0 == cluster_id_)
+          {
+            cluster_id_ = file_name[1];
+          }
+        }
       }
-      decode(file_name + 2, (char*) &file_);
-      if (NULL == suffix && static_cast<int32_t>(strlen(file_name)) > FILE_NAME_LEN)
-      {
-        suffix = file_name + FILE_NAME_LEN;
-      }
-      set_suffix(suffix);
-      return;
     }
 
     const char* FSName::get_name(const bool large_flag)
     {
-      if (file_name_[0] != '\0')
+      if (file_name_[0] == '\0')
       {
-        return file_name_;
+        encode((char*) &file_, file_name_ + 2);
+        if (large_flag)
+        {
+          file_name_[0] = LARGE_TFS_FILE_KEY_CHAR;
+        }
+        else
+        {
+          file_name_[0] = SMALL_TFS_FILE_KEY_CHAR;
+        }
+        file_name_[1] = static_cast<char> ('0' + cluster_id_);
+        file_name_[FILE_NAME_LEN] = '\0';
       }
-      encode((char*) &file_, file_name_ + 2);
-      if (large_flag)
-      {
-        file_name_[0] = 'L';
-      }
-      else
-      {
-        file_name_[0] = 'T';
-      }
-      file_name_[1] = static_cast<char> ('0' + cluster_id_);
-      file_name_[FILE_NAME_LEN] = '\0';
+
       return file_name_;
     }
 
@@ -131,6 +146,24 @@ namespace tfs
       snprintf(buffer, 256, "block_id: %u, file_id: %"PRI64_PREFIX"u, seq_id: %u, suffix: %u, name: %s",
                file_.block_id_, get_file_id(), file_.seq_id_, file_.suffix_, get_name());
       return string(buffer);
+    }
+
+    TfsFileType FSName::check_file_type(const char* tfs_name)
+    {
+      TfsFileType file_type = INVALID_TFS_FILE_TYPE;
+      if (NULL != tfs_name &&
+          static_cast<int32_t>(strlen(tfs_name)) >= FILE_NAME_LEN)
+      {
+        if (LARGE_TFS_FILE_KEY_CHAR == tfs_name[0])
+        {
+          file_type = LARGE_TFS_FILE_TYPE;
+        }
+        else if (SMALL_TFS_FILE_KEY_CHAR == tfs_name[0])
+        {
+          file_type = SMALL_TFS_FILE_TYPE;
+        }
+      }
+      return file_type;
     }
 
     void FSName::encode(const char *input, char *output)
@@ -176,5 +209,3 @@ namespace tfs
 
   }
 }
-
-

@@ -36,6 +36,33 @@ int64_t TfsSmallFile::read(void* buf, const int64_t count)
   return read_ex(buf, count, offset_);
 }
 
+int64_t TfsSmallFile::readv2(void* buf, const int64_t count, TfsFileStat* file_info)
+{
+  int64_t ret = EXIT_GENERAL_ERROR;
+  int64_t offset = offset_;
+  if (0 == offset && NULL == file_info)
+  {
+    TBSYS_LOG(ERROR, "null tfsfilestat");
+  }
+  else
+  {
+    ret = read_ex(buf, count, offset_, FILE_PHASE_READ_FILE_V2);
+
+    if (0 == offset && ret >= 0 && meta_seg_->file_info_ != NULL)
+    {
+      file_info->file_id_ = meta_seg_->file_info_->id_;
+      file_info->offset_ = meta_seg_->file_info_->offset_;
+      file_info->size_ = meta_seg_->file_info_->size_;
+      file_info->usize_ = meta_seg_->file_info_->usize_;
+      file_info->modify_time_ = meta_seg_->file_info_->modify_time_;
+      file_info->create_time_ = meta_seg_->file_info_->create_time_;
+      file_info->flag_ = meta_seg_->file_info_->flag_;
+      file_info->crc_ = meta_seg_->file_info_->crc_;
+    }
+  }
+  return ret;
+}
+
 int64_t TfsSmallFile::write(const void* buf, const int64_t count)
 {
   return write_ex(buf, count, offset_);
@@ -56,24 +83,21 @@ int64_t TfsSmallFile::pwrite(const void *buf, const int64_t count, const int64_t
   return pwrite_ex(buf, count, offset);
 }
 
-int TfsSmallFile::fstat(TfsFileStat* file_stat, const TfsStatType mode)
+int TfsSmallFile::fstat(TfsFileStat* file_info, const TfsStatType mode)
 {
   int ret = TFS_ERROR;
-  if (file_stat != NULL)
+  if (file_info != NULL)
   {
-    FileInfo file_info;
-    ret = fstat_ex(&file_info, mode);
+    FileInfo inner_file_info;
+    ret = fstat_ex(&inner_file_info, mode);
     if (TFS_SUCCESS == ret)
     {
-      file_stat->file_id_ = file_info.id_;
-      file_stat->offset_ = file_info.offset_;
-      file_stat->size_ = file_info.size_;
-      file_stat->usize_ = file_info.usize_;
-      file_stat->modify_time_ = file_info.modify_time_;
-      file_stat->create_time_ = file_info.create_time_;
-      file_stat->flag_ = file_info.flag_;
-      file_stat->crc_ = file_info.crc_;
+      wrap_file_info(file_info, &inner_file_info);
     }
+  }
+  else
+  {
+    TBSYS_LOG(ERROR, "null tfsfilestat");
   }
   return ret;
 }
@@ -85,12 +109,20 @@ int TfsSmallFile::close()
 
 int64_t TfsSmallFile::get_file_length()
 {
-  int64_t ret_len = 0;
-  FileInfo file_info;
-  int ret = fstat_ex(&file_info, NORMAL_STAT);
-  if (TFS_SUCCESS == ret)
+  int64_t ret_len = -1;
+
+  if (meta_seg_ != NULL && meta_seg_->file_info_ != NULL)
   {
-    ret_len = file_info.size_;
+    ret_len = meta_seg_->file_info_->size_;
+  }
+  else
+  {
+    FileInfo file_info;
+    int ret = fstat_ex(&file_info, NORMAL_STAT);
+    if (TFS_SUCCESS == ret)
+    {
+      ret_len = file_info.size_;
+    }
   }
   return ret_len;
 }
@@ -122,15 +154,12 @@ int64_t TfsSmallFile::get_segment_for_write(const int64_t offset, const char* bu
                           count > ClientConfig::segment_size_ ? ClientConfig::segment_size_ : count);
 }
 
-int TfsSmallFile::read_process(int64_t& read_size)
+int TfsSmallFile::read_process(int64_t& read_size, const InnerFilePhase read_file_phase)
 {
   int ret = TFS_SUCCESS;
-  //set status
-  processing_seg_list_[0]->status_ = SEG_STATUS_OPEN_OVER;
-  processing_seg_list_[0]->pri_ds_index_ = processing_seg_list_[0]->seg_info_.file_id_ %
-    processing_seg_list_[0]->ds_.size();
 
-  if ((ret = process(FILE_PHASE_READ_FILE)) != TFS_SUCCESS)
+  meta_seg_->reset_status();
+  if ((ret = process(read_file_phase)) != TFS_SUCCESS)
   {
     TBSYS_LOG(ERROR, "read data fail, ret: %d", ret);
   }
@@ -196,6 +225,7 @@ int TfsSmallFile::close_process()
 {
   int ret = TFS_SUCCESS;
   get_meta_segment(0, NULL, 0);
+
   if ((ret = process(FILE_PHASE_CLOSE_FILE)) != TFS_SUCCESS)
   {
     TBSYS_LOG(ERROR, "close tfs file fail, ret: %d", ret);
@@ -212,4 +242,20 @@ int TfsSmallFile::unlink_process()
     TBSYS_LOG(ERROR, "unlink file fail, ret: %d", ret);
   }
   return ret;
+}
+
+int TfsSmallFile::wrap_file_info(TfsFileStat* file_stat, FileInfo* file_info)
+{
+  if (file_stat != NULL && file_info != NULL)
+  {
+    file_stat->file_id_ = file_info->id_;
+    file_stat->offset_ = file_info->offset_;
+    file_stat->size_ = file_info->size_;
+    file_stat->usize_ = file_info->usize_;
+    file_stat->modify_time_ = file_info->modify_time_;
+    file_stat->create_time_ = file_info->create_time_;
+    file_stat->flag_ = file_info->flag_;
+    file_stat->crc_ = file_info->crc_;
+  }
+  return TFS_SUCCESS;
 }

@@ -47,10 +47,12 @@ namespace tfs
       }
 
       int initialize(const char* ns_addr, const int32_t cache_time, const int32_t cache_items);
+      int set_default_server(const char* ns_addr, const int32_t cache_time, const int32_t cache_items);
       int destroy();
 
       int open(const char* file_name, const char* suffix, const char* ns_addr, const int flags, ...);
       int64_t read(const int fd, void* buf, const int64_t count);
+      int64_t readv2(const int fd, void* buf, const int64_t count, common::TfsFileStat* file_info);
       int64_t write(const int fd, const void* buf, const int64_t count);
       int64_t lseek(const int fd, const int64_t offset, const int whence);
       int64_t pread(const int fd, void* buf, const int64_t count, const int64_t offset);
@@ -68,7 +70,6 @@ namespace tfs
       int unlink(const char* file_name, const char* suffix, const char* ns_addr,
                  const common::TfsUnlinkType action = common::DELETE,
                  const common::OptionFlag option_flag = common::TFS_FILE_DEFAULT_OPTION);
-
 
       void set_segment_size(const int64_t segment_size);
       int64_t get_segment_size() const;
@@ -95,6 +96,15 @@ namespace tfs
       int64_t get_client_retry_count() const;
 
       void set_log_level(const char* level);
+
+      // sort of utility
+      uint64_t get_server_id();
+      int32_t get_cluster_id();
+      int save_file(const char* local_file, const char* tfs_name, const char* suffix = NULL,
+                    char* ret_tfs_name = NULL, const int32_t ret_tfs_name_len = 0, const int32_t flag = common::T_DEFAULT);
+      int fetch_file(const char* local_file, const char* tfs_name, const char* suffix);
+      int stat_file(const char* tfs_name, const char* suffix,
+                    common::TfsFileStat* file_stat, const common::TfsStatType stat_type = common::NORMAL_STAT);
 
 #ifdef TFS_TEST
       TfsSession* get_tfs_session(const char* ns_addr)

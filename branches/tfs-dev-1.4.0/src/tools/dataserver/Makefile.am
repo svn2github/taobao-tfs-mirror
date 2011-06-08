@@ -10,7 +10,6 @@ bin_PROGRAMS = clear_file_system\
                format_file_system\
                read_super_block
 
-
 noinst_PROGRAMS = convert_name\
                   reloadconfig\
                   read_index_tool\
@@ -26,7 +25,8 @@ COMMONLIB = $(top_builddir)/src/message/libtfsmessage.a\
             $(TBLIB_ROOT)/lib/libtbnet.a\
             $(TBLIB_ROOT)/lib/libtbsys.a
 
-LDADD = $(top_builddir)/src/new_client/.libs/libtfsclient.a\
+LDADD = $(top_builddir)/src/tools/util/libtfstoolsutil.a\
+	$(top_builddir)/src/new_client/.libs/libtfsclient.a\
         $(COMMONLIB)
 
 clear_file_system_SOURCES = clear_file_system.cpp
@@ -39,7 +39,7 @@ reloadconfig_SOURCES = reloadconfig.cpp
 
 tfsping_SOURCES = tfsping.cpp
 
-ds_client_SOURCES = ds_client.cpp ds_task.cpp ds_lib.cpp ds_util.cpp ds_task.h ds_lib.h ds_util.h
+ds_client_SOURCES = ds_client.cpp
 
 replblk_SOURCES = replblk.cpp
 

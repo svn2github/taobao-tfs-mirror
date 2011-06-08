@@ -1,3 +1,18 @@
+/*
+ * (C) 2007-2010 Alibaba Group Holding Limited.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+ *
+ *
+ * Version: $Id: func.cpp 400 2011-06-02 07:26:40Z duanfei@taobao.com $
+ *
+ * Authors:
+ *   duolong <duolong@taobao.com>
+ *      - initial release
+ *
+ */
 #include <stdio.h>
 #include <pthread.h>
 #include <vector>
@@ -143,11 +158,11 @@ int main(int argc, char *argv[])
     switch (i)
     {
       case 'f':
-        dir_name = optarg; 
+        dir_name = optarg;
         break;
       case 'i':
         interval = atoi(optarg);
-        break; 
+        break;
       case 'h':
       default:
         fprintf(stderr, "Usage: %s -f fileQueueDirPath -i interval\n", argv[0]);
@@ -176,7 +191,7 @@ int main(int argc, char *argv[])
   {
     fprintf(stderr, "%s:%d [ERROR]: (%s) not directory\n", __FILE__, __LINE__, dir_name.c_str());
     return EXIT_SUCCESS;
-  } 
+  }
 
   do
   {

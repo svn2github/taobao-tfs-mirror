@@ -80,6 +80,7 @@ extern "C"
 
   typedef enum
   {
+    T_DEFAULT = 0,
     T_READ = 1,
     T_WRITE = 2,
     T_CREATE = 4,

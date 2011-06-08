@@ -1,13 +1,15 @@
 AM_CPPFLAGS=-I$(top_srcdir)/src\
-	-I$(TBLIB_ROOT)/include/tbsys\
-	-I$(TBLIB_ROOT)/include/tbnet\
-   $(READLINE_INCLUDE)
+	    -I$(TBLIB_ROOT)/include/tbsys\
+            -I$(TBLIB_ROOT)/include/tbnet\
+	    $(READLINE_INCLUDE)
 
 AM_LDFLAGS=-lz -lrt -lpthread -ldl $(READLINE_LIB)
 
-bin_PROGRAMS = admintool
-#showsyncoplog rmsyncoplog ssm 
-LDADD = $(top_builddir)/src/new_client/.libs/libtfsclient.a\
+bin_PROGRAMS = admintool showsyncoplog rmsyncoplog ssm tfstool
+
+LDADD = $(top_builddir)/src/tools/util/libtfstoolsutil.a\
+	$(top_builddir)/src/dataserver/libdataserver.a\
+	$(top_builddir)/src/new_client/.libs/libtfsclient.a\
 	$(top_builddir)/src/message/libtfsmessage.a\
 	$(top_builddir)/src/common/libtfscommon.a\
 	$(TBLIB_ROOT)/lib/libtbnet.a\
@@ -15,14 +17,10 @@ LDADD = $(top_builddir)/src/new_client/.libs/libtfsclient.a\
 
 showsyncoplog_SOURCES = showsyncoplog.cpp
 
-#tfstool_SOURCES =  tfstool.cpp
-
-#performance_SOURCES = performance.cpp util.cpp
+tfstool_SOURCES =  tfstool.cpp
 
 ssm_SOURCES = main.cpp show.cpp show_factory.cpp metacmp.cpp cmp_factory.cpp common.cpp
 
 rmsyncoplog_SOURCES=rmsyncoplog.cpp
 
 admintool_SOURCES = admintool.cpp
-
-

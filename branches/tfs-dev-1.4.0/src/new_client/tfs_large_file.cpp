@@ -17,7 +17,7 @@
 using namespace tfs::client;
 using namespace tfs::common;
 
-TfsLargeFile::TfsLargeFile() : read_meta_flag_(true), meta_suffix_(NULL)
+TfsLargeFile::TfsLargeFile() : meta_suffix_(NULL)
 {
 }
 
@@ -30,33 +30,15 @@ int TfsLargeFile::open(const char* file_name, const char* suffix, const int flag
   int ret = TFS_SUCCESS;
 
   flags_ = flags;
-  if (!(flags_ & T_WRITE))       // not write, load meta first
+  if (0 == (flags_ & T_WRITE))       // not write, load meta first
   {
-    if (NULL == file_name || file_name[0] != 'L')
+    if ((ret = open_ex(file_name, suffix, flags)) != TFS_SUCCESS)
     {
-      TBSYS_LOG(ERROR, "open large file fail, illegal file name: %s", file_name ? file_name : "NULL");
-      ret = TFS_ERROR;
+      TBSYS_LOG(ERROR, "open meta file fail, ret: %d", ret);
     }
-    else
+    else if ((flags & (T_READ | T_UNLINK)) != 0)
     {
-      if ((ret = open_ex(file_name, suffix, flags)) != TFS_SUCCESS)
-      {
-        TBSYS_LOG(ERROR, "open meta file fail, ret: %d", ret);
-      }
-
-      // if T_STAT is set, do not load meta here
-      if (TFS_SUCCESS == ret && !(flags & T_STAT))
-      {
-        FileInfo file_info;
-        if ((ret = fstat_ex(&file_info, NORMAL_STAT)) != TFS_SUCCESS)
-        {
-          TBSYS_LOG(ERROR, "stat meta file %s fail, ret: %d", fsname_.get_name(true), ret);
-        }
-        else
-        {
-          ret = load_meta(file_info);
-        }
-      }
+      ret = load_meta();
     }
   }
   else  // write flag
@@ -76,23 +58,24 @@ int TfsLargeFile::open(const char* file_name, const char* suffix, const int flag
         TBSYS_LOG(ERROR, "open with T_LARGE|T_WRITE flag occur null key");
         ret = TFS_ERROR;
       }
+      else if ((ret = local_key_.initialize(local_key, tfs_session_->get_ns_addr())) != TFS_SUCCESS)
+      {
+        TBSYS_LOG(ERROR, "initialize local key fail, ret: %d", ret);
+      }
       else
       {
-        if ((ret = local_key_.initialize(local_key, tfs_session_->get_ns_addr())) != TFS_SUCCESS)
-        {
-          TBSYS_LOG(ERROR, "initialize local key fail, ret: %d", ret);
-        }
+        meta_suffix_ = const_cast<char*>(suffix);
       }
 
-      if (TFS_SUCCESS == ret)
-      {
-        meta_suffix_ = const_cast<char*>(suffix);
-        offset_ = 0;
-        eof_ = TFS_FILE_EOF_FLAG_NO;
-        file_status_ = TFS_FILE_OPEN_YES;
-      }
       va_end(args);
     }
+  }
+
+  if (TFS_SUCCESS == ret)
+  {
+    offset_ = 0;
+    eof_ = TFS_FILE_EOF_FLAG_NO;
+    file_status_ = TFS_FILE_OPEN_YES;
   }
 
   return ret;
@@ -101,6 +84,37 @@ int TfsLargeFile::open(const char* file_name, const char* suffix, const int flag
 int64_t TfsLargeFile::read(void* buf, const int64_t count)
 {
   return read_ex(buf, count, offset_);
+}
+
+int64_t TfsLargeFile::readv2(void* buf, const int64_t count, TfsFileStat* file_info)
+{
+  int64_t ret = EXIT_GENERAL_ERROR;
+  int64_t offset = offset_;
+
+  if (0 == offset && NULL == file_info)
+  {
+    TBSYS_LOG(ERROR, "null tfsfilestat");
+  }
+  else
+  {
+    // read segment not readv2
+    ret = read_ex(buf, count, offset_);
+
+    if (0 == offset && ret >= 0)
+    {
+      if (meta_seg_->file_info_ != NULL)
+      {
+        wrap_file_info(file_info, meta_seg_->file_info_);
+      }
+      // stat to get file info
+      else if ((ret = fstat(file_info, NORMAL_STAT)) != TFS_SUCCESS)
+      {
+        ret = EXIT_GENERAL_ERROR;
+      }
+    }
+  }
+
+  return ret;
 }
 
 int64_t TfsLargeFile::write(const void* buf, const int64_t count)
@@ -123,44 +137,43 @@ int64_t TfsLargeFile::pwrite(const void* buf, const int64_t count, const int64_t
   return pwrite_ex(buf, count, offset);
 }
 
-int TfsLargeFile::fstat(TfsFileStat* file_stat, const TfsStatType mode)
+int TfsLargeFile::fstat(TfsFileStat* file_info, const TfsStatType mode)
 {
-  TBSYS_LOG(DEBUG, "stat file start, mode: %d", mode);
-  FileInfo file_info;
-  int ret = fstat_ex(&file_info, mode);
-  if (TFS_SUCCESS == ret)
+  FileInfo inner_file_info;
+  // first stat meta
+  int ret = fstat_ex(&inner_file_info, mode);
+
+  if (TFS_SUCCESS != ret)
   {
-    if (0 == file_info.flag_)
+    TBSYS_LOG(ERROR, "stat meta file fail. ret: %d", ret);
+  }
+  else if (0 == inner_file_info.flag_)
+  {
+    // load meta
+    // read segmenthead, get meta info
+    if ((ret = load_meta_head()) == TFS_SUCCESS)
     {
-      // load meta
-      if ((ret = load_meta(file_info)) == TFS_SUCCESS)
-      {
-        file_stat->file_id_ = file_info.id_;
-        file_stat->offset_ = file_info.offset_;
-        file_stat->size_ = local_key_.get_file_size();
-        // usize = real_size + meta_size
-        file_stat->usize_ = file_info.usize_ + local_key_.get_file_size();
-        file_stat->modify_time_ = file_info.modify_time_;
-        file_stat->create_time_ = file_info.create_time_;
-        file_stat->flag_ = file_info.flag_;
-        file_stat->crc_ = file_info.crc_;
-      }
+      wrap_file_info(file_info, &inner_file_info);
     }
-    else // file is delete or conceal
+    else
     {
-      // TODO: ?
-      // 1. unhide/undelete meta file
-      // 2. read meta file head
-      // 3. hide/delete meta file
-      file_stat->file_id_ = meta_seg_->seg_info_.file_id_;
-      file_stat->offset_ = static_cast<int32_t>(INVALID_FILE_SIZE);
-      file_stat->size_ = INVALID_FILE_SIZE;
-      file_stat->usize_ = INVALID_FILE_SIZE;
-      file_stat->modify_time_ = static_cast<time_t>(INVALID_FILE_SIZE);
-      file_stat->create_time_ = static_cast<time_t>(INVALID_FILE_SIZE);
-      file_stat->flag_ = file_info.flag_;
-      file_stat->crc_ = static_cast<uint32_t>(INVALID_FILE_SIZE);
+      TBSYS_LOG(ERROR, "load meta head fail. ret: %d", ret);
     }
+  }
+  else // file is delete or conceal
+  {
+    // TODO:
+    // 1. unhide/undelete meta file
+    // 2. read meta file head
+    // 3. hide/delete meta file
+    file_info->file_id_ = inner_file_info.id_;
+    file_info->offset_ = static_cast<int32_t>(INVALID_FILE_SIZE);
+    file_info->size_ = INVALID_FILE_SIZE;
+    file_info->usize_ = INVALID_FILE_SIZE;
+    file_info->modify_time_ = static_cast<time_t>(INVALID_FILE_SIZE);
+    file_info->create_time_ = static_cast<time_t>(INVALID_FILE_SIZE);
+    file_info->flag_ = inner_file_info.flag_;
+    file_info->crc_ = static_cast<uint32_t>(INVALID_FILE_SIZE);
   }
 
   return ret;
@@ -178,69 +191,49 @@ int64_t TfsLargeFile::get_file_length()
 
 int TfsLargeFile::unlink(const char* file_name, const char* suffix, const TfsUnlinkType action)
 {
-  // read meta first
   int ret = TFS_SUCCESS;
-  if ((ret = open_ex(file_name, suffix, T_READ)) != TFS_SUCCESS)
+
+  // only DELETE action support now
+  if (UNDELETE == action)
   {
-    TBSYS_LOG(ERROR, "open meta file fail, ret: %d", ret);
+    TBSYS_LOG(ERROR, "UNDELETE action not support for large file now. action: %d", action);
+    ret = TFS_ERROR;
   }
-  else
+  else if (DELETE == action)
   {
-    if (DELETE == action) // if DELETE, need load meta. CONCEAL or REVEAL, skip it
+    if ((ret = open(file_name, suffix, T_READ)) != TFS_SUCCESS)
     {
-      FileInfo file_info;
-      // TODO: status is HIDE
-      // 1. unhide meta file
-      // 2. read meta file
-      // 3. unlink all file
-      // 4. unlink meta file ?
-      if ((ret = fstat_ex(&file_info, NORMAL_STAT)) != TFS_SUCCESS)
-      {
-        TBSYS_LOG(ERROR, "stat meta file %s fail, ret: %d", fsname_.get_name(true), ret);
-      }
-      else
-      {
-        ret = load_meta(file_info);
-      }
+      TBSYS_LOG(ERROR, "unlink to read meta file fail. ret: %d", ret);
     }
-    else if (UNDELETE == action)
-    {
-      TBSYS_LOG(ERROR, "tfs not support undelete large file now");
-      ret = EXIT_NOT_PERM_OPER;
-      //Todo
-      //1. undelete meta file
-      //2. load meta file
-      //3. undelete all seg file
-    }
+  }
+  else if ((ret = open_ex(file_name, suffix, T_READ)) != TFS_SUCCESS) // just open meta file
+  {
+    TBSYS_LOG(ERROR, "unlink open meta file fail, action: %d, ret: %d", action, ret);
   }
 
   if (TFS_SUCCESS == ret)
   {
-    // unlink meta
+    // trick
     meta_seg_->file_number_ = action;
-    meta_seg_->status_ = SEG_STATUS_OPEN_OVER;
-
     get_meta_segment(0, NULL, 0);
+
+    // unlink meta file first
     if ((ret = unlink_process()) != TFS_SUCCESS)
     {
-      TBSYS_LOG(ERROR, "large file unlink meta fail, ret: %d", ret);
+      TBSYS_LOG(ERROR, "large file unlink meta fail, action: %d, ret: %d", action, ret);
     }
-    else //do not care segment status
+    else if (DELETE == action) // DELETE over all segment
     {
-      //unlink data
-      if ((action & DELETE)) // delete or undelete will affect segments. if conceal or reveal, skip. now do not support UNDELETE
+      SEG_SET& seg_list = local_key_.get_seg_info();
+      SEG_SET_CONST_ITER sit = seg_list.begin();
+      for ( ; sit != seg_list.end(); ++sit)
       {
-        SEG_SET& seg_list = local_key_.get_seg_info();
-        SEG_SET_CONST_ITER sit = seg_list.begin();
-        for ( ; sit != seg_list.end(); ++sit)
-        {
-          destroy_seg();
-          SegmentData* seg_data = new SegmentData();
-          seg_data->seg_info_ = *sit;
-          seg_data->file_number_ = action;
-          processing_seg_list_.push_back(seg_data);
-          unlink_process();
-        }
+        destroy_seg();
+        SegmentData* seg_data = new SegmentData();
+        seg_data->seg_info_ = *sit;
+        seg_data->file_number_ = action;
+        processing_seg_list_.push_back(seg_data);
+        unlink_process();
       }
     }
   }
@@ -250,17 +243,8 @@ int TfsLargeFile::unlink(const char* file_name, const char* suffix, const TfsUnl
 
 int64_t TfsLargeFile::get_segment_for_read(const int64_t offset, char* buf, const int64_t count)
 {
-  int64_t ret = count;
   destroy_seg();
-  if (read_meta_flag_)
-  {
-    ret = get_meta_segment(offset, buf, count);
-  }
-  else
-  {
-    ret = local_key_.get_segment_for_read(offset, buf, count, processing_seg_list_);
-  }
-  return ret;
+  return local_key_.get_segment_for_read(offset, buf, count, processing_seg_list_);
 }
 
 int64_t TfsLargeFile::get_segment_for_write(const int64_t offset, const char* buf, const int64_t count)
@@ -269,10 +253,10 @@ int64_t TfsLargeFile::get_segment_for_write(const int64_t offset, const char* bu
   return local_key_.get_segment_for_write(offset, buf, count, processing_seg_list_);
 }
 
-int TfsLargeFile::read_process(int64_t& read_size)
+int TfsLargeFile::read_process(int64_t& read_size, const InnerFilePhase read_file_phase)
 {
   int ret = TFS_SUCCESS;
-  if ((ret = tfs_session_->get_block_info(processing_seg_list_, flags_)) != TFS_SUCCESS)
+  if ((ret = get_block_info(processing_seg_list_, flags_)) != TFS_SUCCESS)
   {
     TBSYS_LOG(ERROR, "get block info fail, ret: %d", ret);
   }
@@ -283,7 +267,7 @@ int TfsLargeFile::read_process(int64_t& read_size)
     int32_t retry_count = processing_seg_list_[0]->ds_.size();
     do
     {
-      ret = process(FILE_PHASE_READ_FILE);
+      ret = process(read_file_phase);
       finish_read_process(ret, read_size);
     } while (ret != TFS_SUCCESS && --retry_count > 0);
 
@@ -295,7 +279,7 @@ int TfsLargeFile::write_process()
 {
   int ret = TFS_SUCCESS;
   // get block info fail, must exit.
-  if ((ret = tfs_session_->get_block_info(processing_seg_list_, flags_)) != TFS_SUCCESS)
+  if ((ret = get_block_info(processing_seg_list_, flags_)) != TFS_SUCCESS)
   {
     TBSYS_LOG(ERROR, "batch get block info error, count: %d, flag: %d", processing_seg_list_.size(), flags_);
   }
@@ -418,28 +402,33 @@ int TfsLargeFile::unlink_process()
   }
   else
   {
-    SegmentData* seg_data = processing_seg_list_[0];
-    if (NULL == seg_data)
+    if ((ret = get_block_info(*processing_seg_list_[0], T_UNLINK)) != TFS_SUCCESS)
     {
-      TBSYS_LOG(ERROR, "unlink file fail, processing seg list is null");
-      ret = TFS_ERROR;
+      TBSYS_LOG(ERROR, "unlink get block info fail, ret: %d", ret);
     }
-    else
+    else if ((ret = process(FILE_PHASE_UNLINK_FILE)) != TFS_SUCCESS)
     {
-      if ((ret = tfs_session_->get_block_info(seg_data->seg_info_.block_id_, seg_data->ds_, T_UNLINK)) != TFS_SUCCESS)
-      {
-        TBSYS_LOG(ERROR, "unlink get block info fail, ret: %d", ret);
-      }
-      else
-      {
-        if ((ret = process(FILE_PHASE_UNLINK_FILE)) != TFS_SUCCESS)
-        {
-          TBSYS_LOG(ERROR, "unlink file fail, ret: %d", ret);
-        }
-      }
+      TBSYS_LOG(ERROR, "unlink file fail, ret: %d", ret);
     }
   }
   return ret;
+}
+
+int TfsLargeFile::wrap_file_info(TfsFileStat* file_stat, FileInfo* file_info)
+{
+  if (file_stat != NULL && file_info != NULL)
+  {
+    file_stat->file_id_ = file_info->id_;
+    file_stat->offset_ = file_info->offset_;
+    file_stat->size_ = local_key_.get_file_size();
+    // usize = real_size + meta_size
+    file_stat->usize_ = file_info->usize_ + local_key_.get_file_size();
+    file_stat->modify_time_ = file_info->modify_time_;
+    file_stat->create_time_ = file_info->create_time_;
+    file_stat->flag_ = file_info->flag_;
+    file_stat->crc_ = file_info->crc_;
+  }
+  return TFS_SUCCESS;
 }
 
 int TfsLargeFile::upload_key()
@@ -461,11 +450,7 @@ int TfsLargeFile::upload_key()
     }
     else
     {
-      destroy_seg();
-      meta_seg_->buf_ = buf;
-      meta_seg_->seg_info_.offset_ = 0;
-      meta_seg_->seg_info_.size_ = size;
-      processing_seg_list_.push_back(meta_seg_);
+      get_meta_segment(0, buf, size, false);
 
       if ((ret = process(FILE_PHASE_WRITE_DATA)) != TFS_SUCCESS)
       {
@@ -490,26 +475,48 @@ int TfsLargeFile::upload_key()
   return ret;
 }
 
-int TfsLargeFile::load_meta(FileInfo& file_info)
+int TfsLargeFile::load_meta()
 {
   int ret = TFS_SUCCESS;
-  int32_t size = file_info.size_;
-  assert (size <= MAX_META_SIZE);
+
+  int64_t size = MAX_META_SIZE;
   char* seg_buf = new char[size];
 
-  //set meta_seg
-  meta_seg_->seg_info_.offset_ = 0;
-  meta_seg_->seg_info_.size_ = size;
-  meta_seg_->buf_ = seg_buf;
-  meta_seg_->status_ = SEG_STATUS_OPEN_OVER;
-  read_meta_flag_ = true;
+  get_meta_segment(0, seg_buf, size, false);
 
-  if ((ret = read_ex(seg_buf, size, 0, false)) != size)
+  // read all meta file once at best
+  // should succeed in nearly all cases
+  if ((ret = process(FILE_PHASE_READ_FILE_V2)) != TFS_SUCCESS)
   {
-    TBSYS_LOG(ERROR, "read meta file fail, size: %d, retsize: %d", size, ret);
-    ret = TFS_ERROR;
+    TBSYS_LOG(ERROR, "read meta file fail, ret: %d", ret);
   }
-  else
+  else if (meta_seg_->file_info_->size_ > size) // meta file is large than MAX_META_SIZE
+  {
+    TBSYS_LOG(WARN, "load meta file size large than MAX_META_SIZE: %d > %"PRI64_PREFIX"d",
+              meta_seg_->file_info_->size_, size);
+
+    int64_t remain_size = meta_seg_->file_info_->size_ - size;
+    char* extra_seg_buf = new char[meta_seg_->file_info_->size_];
+
+    meta_seg_->reset_status();
+    get_meta_segment(size, extra_seg_buf + size, remain_size);
+
+    // reread to get remain meta file
+    if ((ret = process(FILE_PHASE_READ_FILE)) != TFS_SUCCESS)
+    {
+      TBSYS_LOG(ERROR, "reread meta file fail. remain size: %"PRI64_PREFIX"d, ret: %d",
+                remain_size, ret);
+    }
+    else
+    {
+      memcpy(extra_seg_buf, seg_buf, size);
+
+      tbsys::gDeleteA(seg_buf);
+      seg_buf = extra_seg_buf;
+    }
+  }
+
+  if (TFS_SUCCESS == ret)
   {
     if ((ret = local_key_.load(seg_buf)) != TFS_SUCCESS)
     {
@@ -520,8 +527,33 @@ int TfsLargeFile::load_meta(FileInfo& file_info)
       TBSYS_LOG(ERROR, "local key validate fail when read file, ret: %d", ret);
     }
   }
-  read_meta_flag_ = false;
+
   tbsys::gDeleteA(seg_buf);
+
+  return ret;
+}
+
+int TfsLargeFile::load_meta_head()
+{
+  int ret = TFS_SUCCESS;
+
+  char seg_buf[sizeof(SegmentHead)];
+  int32_t size = sizeof(SegmentHead);
+  int64_t ret_size = 0;
+
+  //set meta_seg
+  meta_seg_->reset_status();
+  get_meta_segment(0, seg_buf, size, false);
+
+  if ((ret = process(FILE_PHASE_READ_FILE)) != TFS_SUCCESS)
+  {
+    TBSYS_LOG(ERROR, "read meta head fail, ret: %"PRI64_PREFIX"d", ret_size);
+    ret = TFS_ERROR;
+  }
+  else
+  {
+    local_key_.load_head(seg_buf);
+  }
 
   return ret;
 }

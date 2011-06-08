@@ -158,8 +158,7 @@ int TfsSession::get_block_info(SEG_DATA_LIST& seg_list, int32_t flag)
             (block_cache->last_time_ >= time(NULL) - block_cache_time_))
         {
             seg_list[i]->ds_ = block_cache->ds_;
-            seg_list[i]->status_ = SEG_STATUS_OPEN_OVER;
-            seg_list[i]->pri_ds_index_ = seg_list[i]->seg_info_.file_id_ % block_cache->ds_.size();
+            seg_list[i]->reset_status();
             block_count++;
         }
       }
@@ -183,10 +182,9 @@ int TfsSession::get_block_info_ex(uint32_t& block_id, VUINT64& rds, const int32_
   GetBlockInfoMessage gbi_message(flag);
   gbi_message.set_block_id(block_id);
 
-  //BasePacket* rsp = NULL;
   tbnet::Packet* rsp = NULL;
   NewClient* client = NewClientManager::get_instance().create_client();
-  int ret = send_msg_to_server(ns_addr_, client, &gbi_message, rsp, ClientConfig::wait_timeout_);
+  int ret = send_msg_to_server(ns_addr_, client, &gbi_message, rsp);
 
   if (TFS_SUCCESS != ret)
   {
@@ -286,8 +284,7 @@ int TfsSession::get_block_info_ex(SEG_DATA_LIST& seg_list, const int32_t flag)
               break;
             }
             seg_list[i]->ds_ = it->second.ds_;
-            seg_list[i]->status_ = SEG_STATUS_OPEN_OVER;
-            seg_list[i]->pri_ds_index_ = seg_list[i]->seg_info_.file_id_ % it->second.ds_.size();
+            seg_list[i]->reset_status();
 
             insert_block_cache(block_id, it->second.ds_);
             TBSYS_LOG(DEBUG, "get block %u info, ds size: %d",

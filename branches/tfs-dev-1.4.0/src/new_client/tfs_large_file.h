@@ -32,6 +32,7 @@ namespace tfs
 
       virtual int open(const char* file_name, const char* suffix, const int flags, ... );
       virtual int64_t read(void* buf, const int64_t count);
+      virtual int64_t readv2(void* buf, const int64_t count, common::TfsFileStat* file_info);
       virtual int64_t write(const void* buf, const int64_t count);
       virtual int64_t lseek(const int64_t offset, const int whence);
       virtual int64_t pread(void* buf, const int64_t count, const int64_t offset);
@@ -44,23 +45,20 @@ namespace tfs
     protected:
       virtual int64_t get_segment_for_read(const int64_t offset, char* buf, const int64_t count);
       virtual int64_t get_segment_for_write(const int64_t offset, const char* buf, const int64_t count);
-      virtual int read_process(int64_t& read_size);
+      virtual int read_process(int64_t& read_size, const InnerFilePhase read_file_phase = FILE_PHASE_READ_FILE);
       virtual int write_process();
       virtual int32_t finish_write_process(const int status);
       virtual int close_process();
       virtual int unlink_process();
+      virtual int wrap_file_info(common::TfsFileStat* file_stat, common::FileInfo* file_info);
 
     private:
       int upload_key();
-      int load_meta(common::FileInfo& file_info);
-
-    private:
-      static const int64_t MAX_META_SIZE = 1 << 22;
-      static const int64_t INVALID_FILE_SIZE = -1;
+      int load_meta();
+      int load_meta_head();
 
     private:
       LocalKey local_key_;
-      bool read_meta_flag_;
       char* meta_suffix_;
     };
   }

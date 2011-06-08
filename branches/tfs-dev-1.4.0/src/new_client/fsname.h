@@ -34,7 +34,7 @@ namespace tfs
     {
     public:
       FSName();
-      FSName(const uint32_t block_id, const int64_t file_id);
+      FSName(const uint32_t block_id, const int64_t file_id, const int32_t cluster_id = 0);
       FSName(const char *file_name, const char* suffix = NULL, const int32_t cluster_id = 0);
       virtual ~FSName();
 
@@ -42,6 +42,13 @@ namespace tfs
       void set_name(const char* file_name, const char* suffix = NULL, const int32_t cluster_id = 0);
       void set_suffix(const char* suffix);
       std::string to_string();
+
+      static common::TfsFileType check_file_type(const char* tfs_name);
+
+      inline bool is_valid() const
+      {
+        return is_valid_;
+      }
 
       inline void set_block_id(const uint32_t id)
       {
@@ -98,6 +105,7 @@ namespace tfs
       void decode(const char * input, char *output);
 
     private:
+      bool is_valid_;
       FileBits file_;
       int32_t cluster_id_;
       char file_name_[common::TFS_FILE_LEN];

@@ -33,6 +33,11 @@ int TfsClient::initialize(const char* ns_addr, const int32_t cache_time, const i
   return TfsClientImpl::Instance()->initialize(ns_addr, cache_items, cache_items);
 }
 
+int TfsClient::set_default_server(const char* ns_addr, const int32_t cache_time, const int32_t cache_items)
+{
+  return TfsClientImpl::Instance()->set_default_server(ns_addr, cache_time, cache_items);
+}
+
 int TfsClient::destroy()
 {
   return TfsClientImpl::Instance()->destroy();
@@ -41,6 +46,11 @@ int TfsClient::destroy()
 int64_t TfsClient::read(const int fd, void* buf, const int64_t count)
 {
   return TfsClientImpl::Instance()->read(fd, buf, count);
+}
+
+int64_t TfsClient::readv2(const int fd, void* buf, const int64_t count, common::TfsFileStat* file_info)
+{
+  return TfsClientImpl::Instance()->readv2(fd, buf, count, file_info);
 }
 
 int64_t TfsClient::write(const int fd, const void* buf, const int64_t count)
@@ -180,14 +190,32 @@ void TfsClient::set_log_level(const char* level)
   return TfsClientImpl::Instance()->set_log_level(level);
 }
 
-int TfsClient::save_file(const char* local_file, const char* tfs_name, const char* suffix)
+uint64_t TfsClient::get_server_id()
 {
-  return TFS_SUCCESS;
+  return TfsClientImpl::Instance()->get_server_id();
+}
+
+int32_t TfsClient::get_cluster_id()
+{
+  return TfsClientImpl::Instance()->get_cluster_id();
+}
+
+int TfsClient::save_file(const char* local_file, const char* tfs_name, const char* suffix,
+                         char* ret_tfs_name, const int32_t ret_tfs_name_len, const int32_t flag)
+{
+  return TfsClientImpl::Instance()->save_file(local_file, tfs_name, suffix,
+                                              ret_tfs_name, ret_tfs_name_len, flag);
 }
 
 int TfsClient::fetch_file(const char* local_file, const char* tfs_name, const char* suffix)
 {
-  return TFS_ERROR;
+  return TfsClientImpl::Instance()->fetch_file(local_file, tfs_name, suffix);
+}
+
+int TfsClient::stat_file(const char* tfs_name, const char* suffix,
+                         TfsFileStat* file_stat, const TfsStatType stat_type)
+{
+  return TfsClientImpl::Instance()->stat_file(tfs_name, suffix, file_stat, stat_type);
 }
 
 int TfsClient::open_ex(const char* file_name, const char* suffix, const char* ns_addr, const int flags)

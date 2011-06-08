@@ -43,6 +43,7 @@ namespace tfs
       FILE_PHASE_WRITE_DATA,
       FILE_PHASE_CLOSE_FILE,
       FILE_PHASE_READ_FILE,
+      FILE_PHASE_READ_FILE_V2,
       FILE_PHASE_STAT_FILE,
       FILE_PHASE_UNLINK_FILE
     };
@@ -60,6 +61,7 @@ namespace tfs
       {SEG_STATUS_CREATE_OVER, SEG_STATUS_BEFORE_CLOSE_OVER}, // write
       {SEG_STATUS_BEFORE_CLOSE_OVER, SEG_STATUS_ALL_OVER}, // close. just read write stat unlink is same previous phase
       {SEG_STATUS_OPEN_OVER, SEG_STATUS_ALL_OVER},         // read.
+      {SEG_STATUS_OPEN_OVER, SEG_STATUS_ALL_OVER},         // readV2.
       {SEG_STATUS_OPEN_OVER, SEG_STATUS_ALL_OVER},         // stat.
       {SEG_STATUS_OPEN_OVER, SEG_STATUS_ALL_OVER}          // unlink.
     };
@@ -80,6 +82,7 @@ namespace tfs
       // virtual interface
       virtual int open(const char* file_name, const char* suffix, const int flags, ... ) = 0;
       virtual int64_t read(void* buf, const int64_t count) = 0;
+      virtual int64_t readv2(void* buf, const int64_t count, common::TfsFileStat* file_info) = 0;
       virtual int64_t write(const void* buf, const int64_t count) = 0;
       virtual int64_t lseek(const int64_t offset, const int whence) = 0;
       virtual int64_t pread(void* buf, const int64_t count, const int64_t offset) = 0;
@@ -97,21 +100,26 @@ namespace tfs
       // virtual level operation
       virtual int64_t get_segment_for_read(const int64_t offset, char* buf, const int64_t count) = 0;
       virtual int64_t get_segment_for_write(const int64_t offset, const char* buf, const int64_t count) = 0;
-      virtual int read_process(int64_t& read_size) = 0;
+      virtual int read_process(int64_t& read_size, const InnerFilePhase file_phase) = 0;
       virtual int write_process() = 0;
       virtual int finish_write_process(const int status) = 0;
       virtual int close_process() = 0;
       virtual int unlink_process() = 0;
+      virtual int wrap_file_info(common::TfsFileStat* file_stat, common::FileInfo* file_info) = 0;
 
     protected:
       // common operation
       void destroy_seg();
-      int64_t get_meta_segment(const int64_t offset, const char* buf, const int64_t count);
+      int64_t get_meta_segment(const int64_t offset, const char* buf, const int64_t count, const bool force_check = true);
       int process(const InnerFilePhase file_phase);
       int32_t finish_read_process(const int status, int64_t& read_size);
 
+      int get_block_info(SegmentData& seg_data, const int32_t flags);
+      int get_block_info(SEG_DATA_LIST& seg_data_list, const int32_t flags);
+
       int open_ex(const char* file_name, const char *suffix, const int32_t flags);
-      int64_t read_ex(void* buf, const int64_t count, const int64_t offset, const bool modify = true);
+      int64_t read_ex(void* buf, const int64_t count, const int64_t offset,
+                      const bool modify = true, const InnerFilePhase read_file_phase = FILE_PHASE_READ_FILE);
       int64_t write_ex(const void* buf, const int64_t count, const int64_t offset, const bool modify = true);
       int64_t lseek_ex(const int64_t offset, const int whence);
       int64_t pread_ex(void* buf, const int64_t count, const int64_t offset);
@@ -134,8 +142,8 @@ namespace tfs
       int async_req_read_file(common::NewClient* client, const uint16_t index);
       int async_rsp_read_file(common::BasePacket* packet, const uint16_t index);
 
-      int async_req_read_fileV2(common::NewClient* client, const uint16_t index);
-      int async_rsp_read_fileV2(common::BasePacket* packet, const uint16_t index);
+      int async_req_read_file_v2(common::NewClient* client, const uint16_t index);
+      int async_rsp_read_file_v2(common::BasePacket* packet, const uint16_t index);
 
       int async_req_write_data(common::NewClient* client, const uint16_t index);
       int async_rsp_write_data(common::BasePacket* packet, const uint16_t index);

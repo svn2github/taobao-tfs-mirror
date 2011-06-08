@@ -100,7 +100,7 @@ namespace tfs
 
     private:
       tbutil::Mutex mutex_;
-      int64_t ns_addr_;
+      uint64_t ns_addr_;
       std::string ns_addr_str_;
       const int32_t block_cache_time_;
       const int32_t block_cache_items_;

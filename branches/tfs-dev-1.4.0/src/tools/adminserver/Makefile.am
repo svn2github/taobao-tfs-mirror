@@ -7,7 +7,8 @@ AM_LDFLAGS=-lrt -lpthread -ldl $(READLINE_LIB)
 
 bin_PROGRAMS = admintool
 
-LDADD = $(top_builddir)/src/message/libtfsmessage.a\
+LDADD = $(top_builddir)/src/tools/util/libtfstoolsutil.a\
+        $(top_builddir)/src/message/libtfsmessage.a\
 	$(top_builddir)/src/common/libtfscommon.a\
 	$(TBLIB_ROOT)/lib/libtbnet.a\
 	$(TBLIB_ROOT)/lib/libtbsys.a

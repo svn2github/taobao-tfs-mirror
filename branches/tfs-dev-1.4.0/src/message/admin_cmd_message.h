@@ -78,7 +78,7 @@ namespace tfs
       }
     };
 
-    class AdminCmdMessage : public common::BasePacket 
+    class AdminCmdMessage : public common::BasePacket
     {
     public:
       AdminCmdMessage();
@@ -96,11 +96,11 @@ namespace tfs
       {
         return type_;
       }
-      inline void set_index(std::string& index)
+      inline void set_index(const std::string& index)
       {
         index_.push_back(index);
       }
-      inline void set_index(common::VSTRING* index)
+      inline void set_index(const common::VSTRING* index)
       {
         if (NULL != index)
           index_ = *index;

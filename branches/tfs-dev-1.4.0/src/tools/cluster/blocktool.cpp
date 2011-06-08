@@ -22,20 +22,22 @@
 #include <string>
 #include <bitset>
 
-#include "new_client/fsname.h"
 #include "common/config_item.h"
-#include "new_client/tfs_client_api.h"
 #include "common/func.h"
-#include "message/block_info_message.h"
 #include "common/new_client.h"
 #include "common/client_manager.h"
 #include "common/base_packet_factory.h"
 #include "common/base_packet_streamer.h"
+#include "message/block_info_message.h"
+#include "new_client/fsname.h"
+#include "new_client/tfs_client_api.h"
+#include "tools/util/tool_util.h"
 
 using namespace std;
 using namespace tfs::client;
 using namespace tfs::common;
 using namespace tfs::message;
+using namespace tfs::tools;
 
 int list_block(TfsClient* tfs_client, const uint64_t ds_id);
 int get_block_copys(TfsClient* tfs_client, const uint64_t ds_id, VUINT32* vec);
@@ -132,8 +134,7 @@ int get_block_copys(TfsClient* tfs_client, uint64_t ds_id, VUINT32* vec)
   for (; iter != vec->end(); iter++)
   {
     VUINT64 ds_list;
-    //TODO int32_t ret = tfs_client->get_block_info((*iter), ds_list);
-    int32_t ret = 0;
+    int ret = ToolUtil::get_block_ds_list(tfs_client->get_server_id(), (*iter), ds_list);
     if (ret != TFS_SUCCESS)
     {
       fprintf(stderr, "block no exist in nameserver, blockid:%u.\n", (*iter));

@@ -121,7 +121,7 @@ namespace tfs
                  SYSPARAM_DATASERVER.local_ns_port_);
 
         tfs_client_ = TfsClient::Instance();
-        ret = true;
+        ret = tfs_client_->initialize() == TFS_SUCCESS ? true : false;
       }
 
       return ret;
@@ -465,7 +465,7 @@ namespace tfs
                  SYSPARAM_DATASERVER.slave_ns_ip_);
 
         tfs_client_ = TfsClient::Instance();
-        ret = true;
+        ret = tfs_client_->initialize() == TFS_SUCCESS ? true : false;
       }
 
       return ret;
