@@ -18,21 +18,21 @@
 #include <stdio.h>
 #include "common/define.h"
 
-#ifdef __OPTIMIZE__
-extern int error_open_missing_mode (void)
-    __attribute__((__error__ ("open with (T_LARGE & T_WRITE) flag needs 1 additional not-NULL argument")));
-extern int error_no_addition_mode (void)
-    __attribute__((__error__ ("open without (T_LARGE & T_WRITE) flag needs no more additional argument")));
-extern int error_open_too_many_arguments (void)
-    __attribute__((__error__ ("open can be called with either 3 or 4 or 5 arguments, no more permitted")));
-#define missing_log_error() error_open_missing_mode()
-#define noadditional_log_error() error_no_addition_mode()
-#define overmany_log_error() error_open_too_many_arguments()
-#else
+// #ifdef __OPTIMIZE__
+// extern int error_open_missing_mode (void)
+//     __attribute__((__error__ ("open with (T_LARGE & T_WRITE) flag needs 1 additional not-NULL argument")));
+// extern int error_no_addition_mode (void)
+//     __attribute__((__error__ ("open without (T_LARGE & T_WRITE) flag needs no more additional argument")));
+// extern int error_open_too_many_arguments (void)
+//     __attribute__((__error__ ("open can be called with either 3 or 4 or 5 arguments, no more permitted")));
+// #define missing_log_error() error_open_missing_mode()
+// #define noadditional_log_error() error_no_addition_mode()
+// #define overmany_log_error() error_open_too_many_arguments()
+// #else
 #define missing_log_error() fprintf(stderr, "%s\n", "open with (T_LARGE & T_WRITE) flag needs 1 additional not-NULL argument")
 #define noadditional_log_error() fprintf(stderr, "%s\n", "open without (T_LARGE & T_WRITE) flag needs no more additional argument")
 #define overmany_log_error() fprintf(stderr, "%s\n", "open can be called with either 3 or 4 or 5 arguments, no more permitted")
-#endif
+// #endif
 
 namespace tfs
 {
