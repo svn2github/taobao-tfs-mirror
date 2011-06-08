@@ -180,11 +180,11 @@ namespace tfs
         return EXIT_SYSTEM_PARAMETER_ERROR;
       }
       slave_ns_ip_ = TBSYS_CONFIG.getString(CONF_SN_DATASERVER, CONF_SLAVE_NSIP);
-      if (NULL == slave_ns_ip_)
+      /*if (NULL == slave_ns_ip_)
       {
         TBSYS_LOG(ERROR, "can not find %s in [%s]", CONF_SLAVE_NSIP, CONF_SN_DATASERVER);
         return EXIT_SYSTEM_PARAMETER_ERROR;
-      }
+      }*/
       //config_log_file_ = TBSYS_CONFIG.getString(CONF_SN_DATASERVER, CONF_LOG_FILE);
       max_datafile_nums_ = TBSYS_CONFIG.getInt(CONF_SN_DATASERVER, CONF_DATA_FILE_NUMS, 50);
       max_crc_error_nums_ = TBSYS_CONFIG.getInt(CONF_SN_DATASERVER, CONF_MAX_CRCERROR_NUMS, 4);
