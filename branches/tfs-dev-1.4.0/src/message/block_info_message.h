@@ -185,10 +185,10 @@ namespace tfs
           std::map<uint32_t, common::BlockInfoSeg>::iterator it = block_infos_.find(block_id);
           return it == block_infos_.end() ? common::EXIT_INVALID_ARGU : it->second.version_;
         }
-        inline int32_t get_lease_id(uint32_t block_id)
+        inline uint32_t get_lease_id(uint32_t block_id)
         {
           std::map<uint32_t, common::BlockInfoSeg>::iterator it = block_infos_.find(block_id);
-          return it == block_infos_.end() ? common::EXIT_INVALID_ARGU : it->second.lease_id_;
+          return it == block_infos_.end() ? common::INVALID_LEASE_ID : it->second.lease_id_;
         }
         inline bool get_has_lease(const uint32_t block_id)
         {
