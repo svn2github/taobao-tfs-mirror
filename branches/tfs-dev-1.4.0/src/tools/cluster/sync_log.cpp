@@ -541,6 +541,7 @@ int copy_file(const string& source_tfs_client, const string& dest_tfs_client, co
 
 int cmp_file_info(const string& source_tfs_client, const string& dest_tfs_client, string& file_name, const string& modify_time, ActionOp& action_op)
 {
+  UNUSED(modify_time);
   int ret = TFS_SUCCESS;
   int tmp_ret = TFS_SUCCESS;
   TfsFileStat source_buf, dest_buf;
