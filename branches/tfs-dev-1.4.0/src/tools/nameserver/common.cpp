@@ -128,7 +128,7 @@ namespace tfs
     BlockBase::~BlockBase()
     {
     }
-    int32_t BlockBase::deserialize(tbnet::DataBuffer& input, const int32_t length, int32_t& offset, const int8_t flag)
+    int32_t BlockBase::deserialize(tbnet::DataBuffer& input, const int32_t length, int32_t& offset, const int8_t)
     {
       if (input.getDataLen() <= 0 || offset >= length)
       {

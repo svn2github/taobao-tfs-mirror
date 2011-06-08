@@ -191,7 +191,7 @@ char* match_index(const char* text, int state)
   }
 }
 
-char** admin_cmd_completion (const char* text, int start, int end)
+char** admin_cmd_completion (const char* text, int, int)
 {
   // disable default filename completion
   rl_attempted_completion_over = 1;
