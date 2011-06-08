@@ -264,7 +264,7 @@ namespace tfs
 
       return TFS_SUCCESS;
     }
-    std::string get_real_mount_name(const std::string& mount_name, const std::string& index)
+    std::string FileSystemParameter::get_real_mount_name(const std::string& mount_name, const std::string& index)
     {
       return mount_name + index;
     }
