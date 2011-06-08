@@ -475,7 +475,7 @@ namespace tfs
         send_blocks_to_ns(1);
 
         // sleep
-        Func::sleep(SYSPARAM_DATASERVER.heart_interval_, stop_);
+        sleep(SYSPARAM_DATASERVER.heart_interval_);
         if (DATASERVER_STATUS_DEAD == data_server_info_.status_)
         {
           break;
@@ -589,7 +589,7 @@ namespace tfs
           TBSYS_LOG(INFO, "Dump read info.end time: %" PRI64_PREFIX "d. Cost Time: %" PRI64_PREFIX "d\n", time_end, time_end - time_start);
         }
 
-        Func::sleep(SYSPARAM_DATASERVER.check_interval_, stop_);
+        sleep(SYSPARAM_DATASERVER.check_interval_);
       }
 
       data_management_.remove_data_file();

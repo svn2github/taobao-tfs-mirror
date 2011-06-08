@@ -213,7 +213,7 @@ namespace tfs
         wait_second -= (time(NULL) - sf->retry_time_);
         if (wait_second > 0)
         {
-          Func::sleep(wait_second, stop_);
+          sleep(wait_second);
         }
         if (stop_)
         {
