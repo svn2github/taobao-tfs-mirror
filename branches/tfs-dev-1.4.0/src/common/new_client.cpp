@@ -340,6 +340,17 @@ namespace tfs
       return iret;
     }
 
+    int post_msg_to_server(const std::vector<uint64_t>& servers, NewClient* client, tbnet::Packet* msg,
+                          NewClient::callback_func func, const bool save_msg)
+    {
+      int32_t iret = !servers.empty() && NULL != client && NULL != msg  && NULL != func? common::TFS_SUCCESS : common::TFS_ERROR;
+      if (TFS_SUCCESS == iret)
+      {
+        iret = client->async_post_request(servers, msg, func, save_msg);
+      }
+      return iret;
+    }
+
     // test whether the DataServerStatInfo is still alive.
     int test_server_alive(const uint64_t server_id, const int64_t timeout)
     {
