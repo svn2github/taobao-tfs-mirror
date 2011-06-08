@@ -27,28 +27,6 @@ namespace tfs
     NameServerParameter NameServerParameter::ns_parameter_;
     FileSystemParameter FileSystemParameter::fs_parameter_;
     DataServerParameter DataServerParameter::ds_parameter_;
-    static std::string change_index(const char* base, const std::string& suffix, const std::string& index)
-    {
-      if (base == NULL)
-      {
-        return NULL;
-      }
-
-      std::string name(base);
-      if (suffix.size() == 0)
-      {
-        name.append(index);
-        return (char*) name.c_str();
-      }
-
-      size_t pos = name.rfind(suffix);
-      if (pos == std::string::npos)
-      {
-        return NULL; // too rough
-      }
-      name.replace(pos, suffix.size(), index + suffix);
-      return name;
-    }
 
     int NameServerParameter::initialize(void)
     {
@@ -162,41 +140,6 @@ namespace tfs
 
     int DataServerParameter::initialize(const std::string& index)
     {
-      std::string server_index;
-      server_index.replace(0, server_index.size(), "_" + index);
-      const char* top_work_dir = TBSYS_CONFIG.getString(CONF_SN_PUBLIC, CONF_WORK_DIR);
-      if (NULL == top_work_dir)
-      {
-        TBSYS_LOG(ERROR, "work directory config not found");
-        return TFS_ERROR;
-      }
-
-      char default_work_dir[MAX_PATH_LENGTH], default_log_file[MAX_PATH_LENGTH], default_pid_file[MAX_PATH_LENGTH];
-      char default_read_log_file[MAX_PATH_LENGTH], default_write_log_file[MAX_PATH_LENGTH];
-      snprintf(default_work_dir, MAX_PATH_LENGTH-1, "%s/dataserver", top_work_dir);
-      snprintf(default_log_file, MAX_PATH_LENGTH-1, "%s/logs/dataserver.log", top_work_dir);
-      snprintf(default_pid_file, MAX_PATH_LENGTH-1, "%s/logs/dataserver.pid", top_work_dir);
-      snprintf(default_read_log_file, MAX_PATH_LENGTH-1, "%s/logs/ead_stat.log", top_work_dir);
-      snprintf(default_write_log_file, MAX_PATH_LENGTH-1, "%s/logs/rite_stat.log", top_work_dir);
-
-      work_dir_ = change_index(TBSYS_CONFIG.getString(CONF_SN_DATASERVER, CONF_WORK_DIR, default_work_dir),
-                                           std::string(""), server_index);
-      log_file_ = change_index(TBSYS_CONFIG.getString(CONF_SN_DATASERVER, CONF_LOG_FILE, default_log_file),
-                                           std::string(".log"), server_index);
-      pid_file_ = change_index(TBSYS_CONFIG.getString(CONF_SN_DATASERVER, CONF_LOCK_FILE, default_pid_file),
-                                           std::string(".pid"), server_index);
-      read_stat_log_file_ = change_index(TBSYS_CONFIG.getString(CONF_SN_DATASERVER, CONF_READ_LOG_FILE, default_read_log_file), std::string("_read_stat.log"), server_index);
-      write_stat_log_file_ = change_index(TBSYS_CONFIG.getString(CONF_SN_DATASERVER, CONF_WRITE_LOG_FILE, default_write_log_file), std::string("_write_stat.log"), server_index);
-
-      int32_t base_port = TBSYS_CONFIG.getInt(CONF_SN_PUBLIC, CONF_PORT, 0);
-      local_ds_port_ = base_port + atoi(index.c_str());
-      if (local_ds_port_ <= 1024 || local_ds_port_ > 65535)
-      {
-        TBSYS_LOG(ERROR, "invalid port: %d", local_ds_port_);
-        return TFS_ERROR;
-      }
-      dev_name_ = TBSYS_CONFIG.getString(CONF_SN_PUBLIC, CONF_DEV_NAME);
-
       heart_interval_ = TBSYS_CONFIG.getInt(CONF_SN_DATASERVER, CONF_HEART_INTERVAL, 5);
       check_interval_ = TBSYS_CONFIG.getInt(CONF_SN_DATASERVER, CONF_CHECK_INTERVAL, 2);
       expire_data_file_time_ = TBSYS_CONFIG.getInt(CONF_SN_DATASERVER, CONF_EXPIRE_DATAFILE_TIME, 20);

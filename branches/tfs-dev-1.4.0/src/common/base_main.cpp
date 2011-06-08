@@ -88,7 +88,7 @@ namespace tfs
             }
             else
             {
-              std::cerr<<":--config|-f must be followed by an argument...."<<std::endl;
+              std::cerr<<"-f must be followed by an argument...."<<std::endl;
               iret = TFS_ERROR;
               break;
             }
@@ -139,7 +139,7 @@ namespace tfs
       if (EXIT_SUCCESS != iret)
       {
         std::cerr << "load config error config file is " << config_file_ << std::endl;
-        iret = TFS_SUCCESS;
+        iret = TFS_ERROR;
       }
       
       //initilaize work dir
@@ -314,7 +314,7 @@ namespace tfs
       const char* work_dir = get_work_dir();
       if (NULL == work_dir)
       {
-        std::cerr << app_name << "not set workdir" <<std::endl;
+        std::cerr << app_name << " not set workdir" <<std::endl;
         iret = EXIT_CONFIG_ERROR;
       }
 
@@ -322,7 +322,7 @@ namespace tfs
       {
         if (!DirectoryOp::create_full_path(work_dir))
         {
-          std::cerr << app_name << "create workdir" << work_dir <<"error: "<< strerror(errno) << std::endl;
+          std::cerr << app_name << " create workdir" << work_dir <<"error: "<< strerror(errno) << std::endl;
           iret = EXIT_MAKEDIR_ERROR;
         }
       }
@@ -335,7 +335,7 @@ namespace tfs
       int32_t iret =  NULL == work_dir ? EXIT_CONFIG_ERROR: TFS_SUCCESS;
       if (TFS_SUCCESS != iret)
       {
-        std::cerr << app_name << "not set workdir" <<std::endl;
+        std::cerr << app_name << " not set workdir" <<std::endl;
       }
       if (TFS_SUCCESS == iret)
       {
@@ -386,7 +386,7 @@ namespace tfs
       int32_t iret =  NULL == work_dir ? EXIT_CONFIG_ERROR: TFS_SUCCESS;
       if (TFS_SUCCESS != iret)
       {
-        std::cerr << app_name << "not set workdir" <<std::endl;
+        std::cerr << app_name << " not set workdir" <<std::endl;
       }
       if (TFS_SUCCESS == iret)
       {
@@ -413,7 +413,7 @@ namespace tfs
         {
           if (!DirectoryOp::create_full_path(pid_path.c_str(), true))
           {
-            std::cerr << app_name << "create pid directory" << pid_path << "error: " << strerror(errno) << std::endl;
+            std::cerr << app_name << " create pid directory" << pid_path << "error: " << strerror(errno) << std::endl;
             iret = EXIT_MAKEDIR_ERROR;
           }
         }
@@ -422,7 +422,7 @@ namespace tfs
           int32_t pid = 0;
           if ((pid = tbsys::CProcess::existPid(pid_file_path_.c_str())))
           {
-            std::cerr << app_name << "has been exist: pid: " << pid << std::endl;
+            std::cerr << app_name << " has been exist: pid: " << pid << std::endl;
             iret = TFS_ERROR;
           }
         }

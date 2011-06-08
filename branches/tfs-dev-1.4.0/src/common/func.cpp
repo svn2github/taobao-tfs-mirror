@@ -445,10 +445,11 @@ namespace tfs
     }
 
     // sleep
-    void Func::sleep(const float f_heart_interval, const int32_t* stop)
+    void Func::sleep(const float f_heart_interval, const bool& stop)
     {
+      TBSYS_LOG(DEBUG, "stop: %d", stop);
       int32_t heart_interval = static_cast<int32_t>(((f_heart_interval + 0.01) * 10));
-      while ((*stop) == 0 && heart_interval > 0)
+      while (!stop && heart_interval > 0)
       {
         usleep(100000);
         heart_interval--;

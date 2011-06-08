@@ -50,7 +50,6 @@ namespace tfs
         /** get log file count*/
         int32_t get_log_file_count() const;
 
-      protected:
         void stop();
 
         virtual int run(int argc , char* argv[]) = 0;

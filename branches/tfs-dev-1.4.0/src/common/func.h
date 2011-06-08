@@ -73,7 +73,7 @@ namespace tfs
       static int64_t curr_time();
       static std::string time_to_str(time_t t, int f = 0);
       static char* safe_malloc(const int32_t len, char* data = NULL);
-      static void sleep(const float f_heart_interval, const int32_t* stop);
+      static void sleep(const float f_heart_interval, const bool& stop);
       static bool hour_range(int min, int max);
       static int32_t split_string(const char* line, const char del, std::vector<std::string>& fields);
 

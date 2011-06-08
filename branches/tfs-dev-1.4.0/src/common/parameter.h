@@ -80,13 +80,6 @@ namespace tfs
     struct DataServerParameter
     {
       int initialize(const std::string& index);
-      std::string work_dir_;
-      std::string log_file_;
-      std::string write_stat_log_file_;
-      std::string read_stat_log_file_;
-      std::string pid_file_;
-      int32_t local_ds_port_;
-      const char* dev_name_;
       int32_t heart_interval_;
       int32_t check_interval_;
       int32_t expire_data_file_time_;

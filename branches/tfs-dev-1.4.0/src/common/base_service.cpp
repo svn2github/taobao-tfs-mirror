@@ -221,7 +221,7 @@ namespace tfs
         if (port <= 0)
         {
           iret = EXIT_CONFIG_ERROR;
-          TBSYS_LOG(ERROR, "%s not set port or port is invalid", app_name);
+          TBSYS_LOG(ERROR, "%s not set port: %d or port: %d is invalid", app_name, port, port);
         }
       }
 
