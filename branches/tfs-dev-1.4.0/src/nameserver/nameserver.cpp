@@ -115,7 +115,7 @@ namespace tfs
 
     }
 
-    int NameServer::initialize(int argc, char* argv[])
+    int NameServer::initialize(int /*argc*/, char* /*argv*/[])
     {
       int32_t iret =  SYSPARAM_NAMESERVER.initialize();
       if (TFS_SUCCESS != iret)

@@ -74,7 +74,7 @@ namespace tfs
       explicit GCObject(const time_t now):
         dead_time_(now) {}
       virtual ~GCObject() {}
-      virtual void callback(LayoutManager* manager){}
+      virtual void callback(LayoutManager* /**manager*/){}
       inline void free(){ delete this;}
       inline void set_dead_time(const time_t now = time(NULL)) {dead_time_ = now;}
       inline bool can_be_clear(const time_t now = time(NULL)) const

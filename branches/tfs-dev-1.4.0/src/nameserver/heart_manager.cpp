@@ -103,6 +103,7 @@ namespace tfs
     // event handler
     bool HeartManagement::handlePacketQueue(tbnet::Packet *packet, void *args)
     {
+      UNUSED(args);
       bool bret = packet != NULL;
       if (bret)
       {

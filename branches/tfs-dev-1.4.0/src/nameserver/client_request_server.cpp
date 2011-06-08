@@ -110,7 +110,7 @@ namespace tfs
                       {
                         if (!lay_out_manager_.find_block_in_plan((*r_iter)->id()))
                         {
-                          rm_list.push_back((*r_iter)->id());     
+                          expires.push_back((*r_iter)->id());     
                         }
                       }
                     }
@@ -842,6 +842,7 @@ namespace tfs
 
     int ClientRequestServer::handle_control_set_runtime_param(const common::ClientCmdInformation& info, const int64_t buf_length, char* buf)
     {
+      UNUSED(buf_length);
       return lay_out_manager_.set_runtime_param(info.value3_, info.value4_, buf);
     }
 

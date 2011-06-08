@@ -239,7 +239,7 @@ namespace nameserver
     return true;
   }
 
-  bool BlockCollect::check_version(ServerCollect* server, const int32_t alive_server_size, 
+  bool BlockCollect::check_version(ServerCollect* server,
       const NsRole role, const bool is_new, const common::BlockInfo& new_block_info, 
       EXPIRE_BLOCK_LIST& expires, bool& force_be_master, const time_t now)
   {
