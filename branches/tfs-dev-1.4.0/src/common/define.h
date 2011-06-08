@@ -16,6 +16,10 @@
 #ifndef TFS_COMMON_DEFINE_H_
 #define TFS_COMMON_DEFINE_H_
 
+#ifndef UNUSED
+#define UNUSED(v) ((void)(v))
+#endif
+
 #include <stdint.h>
 #include <stdlib.h>
 
