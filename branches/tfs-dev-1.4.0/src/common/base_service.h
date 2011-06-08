@@ -62,7 +62,7 @@ namespace tfs
       virtual int get_listen_port() const { return get_port();}
 
       /** initialize application data*/
-      virtual int initialize(int argc, char* argv[]) { return TFS_SUCCESS;}
+      virtual int initialize(int, char* []) { return TFS_SUCCESS;}
 
       /** destroy application data*/
       virtual int destroy_service() {return TFS_SUCCESS;}

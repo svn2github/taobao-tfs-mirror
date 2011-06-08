@@ -69,7 +69,7 @@ namespace tfs
       return true;
     }
 
-    int BaseService::async_callback(NewClient* client, void* args)
+    int BaseService::async_callback(NewClient* client, void*)
     {
       assert(NULL != client);
       LocalPacket* packet = dynamic_cast<LocalPacket*>(packet_factory_->createPacket(LOCAL_PACKET));
@@ -117,7 +117,7 @@ namespace tfs
     }
 
     /** Note if return true, PacketQueueThread will delete this packet*/
-    bool BaseService::handlePacketQueue(tbnet::Packet *packet, void *args)
+    bool BaseService::handlePacketQueue(tbnet::Packet *packet, void *)
     {
       bool bret = true;
       if (NULL == packet)

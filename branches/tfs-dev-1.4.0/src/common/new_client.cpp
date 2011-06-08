@@ -352,7 +352,7 @@ namespace tfs
     }
 
     // test whether the DataServerStatInfo is still alive.
-    int test_server_alive(const uint64_t server_id, const int64_t timeout)
+    int test_server_alive(const uint64_t server_id, const int64_t)
     {
       int32_t ret = common::TFS_SUCCESS;
       NewClient* client = NewClientManager::get_instance().create_client();

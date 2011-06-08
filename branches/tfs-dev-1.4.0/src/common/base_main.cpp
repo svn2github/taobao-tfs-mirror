@@ -277,7 +277,7 @@ namespace tfs
       std::cerr << "BUILD_TIME " << __DATE__ << __TIME__ << std::endl;
     }
 
-    int BaseMain::parse_common_line_args(int argc, char* argv[], std::string& errmsg)
+    int BaseMain::parse_common_line_args(int , char* [], std::string& )
     {
       return TFS_SUCCESS;
     }

@@ -33,9 +33,9 @@ namespace tfs
           NewClientManager::free_new_client_object(new_client_);
         }
       }
-      bool copy(LocalPacket* src, const int32_t version, const bool deserialize) { return false;}
-      int serialize(Stream& output) const {return TFS_SUCCESS;}
-      int deserialize(Stream& input) {return TFS_SUCCESS;}
+      bool copy(LocalPacket* , const int32_t , const bool ) { return false;}
+      int serialize(Stream& ) const {return TFS_SUCCESS;}
+      int deserialize(Stream& ) {return TFS_SUCCESS;}
       int64_t length() const { return 0;}
 
       inline int execute()
