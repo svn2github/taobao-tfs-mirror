@@ -196,9 +196,10 @@ namespace tfs
       return SYSPARAM_FILESYSPARAM.initialize(index);
     }
 
-    std::string DataServerParameter::get_real_pid_file(const std::string& pid_file, const std::string& index)
+    std::string DataServerParameter::get_real_file_name(const std::string& src_file, 
+        const std::string& index, const std::string& suffix)
     {
-      return pid_file + index;
+      return src_file + "_" + index + "." + suffix;
     }
 
     int DataServerParameter::get_real_ds_port(const int ds_port, const std::string& index)

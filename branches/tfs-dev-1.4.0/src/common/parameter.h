@@ -104,7 +104,8 @@ namespace tfs
       int32_t expire_check_block_time_;
       int32_t max_cpu_usage_;
       int32_t dump_stat_info_interval_;
-      static std::string get_real_pid_file(const std::string& pid_file, const std::string& index);
+      static std::string get_real_file_name(const std::string& src_file, 
+          const std::string& index, const std::string& suffix);
       static int get_real_ds_port(const int ds_port, const std::string& index);
       static DataServerParameter ds_parameter_;
       static DataServerParameter& instance()
