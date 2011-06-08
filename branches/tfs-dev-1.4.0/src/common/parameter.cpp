@@ -14,12 +14,17 @@
  *
  */
 #include "parameter.h"
+
+#include <tbsys.h>
 #include "config.h"
 #include "config_item.h"
 #include "error_msg.h"
-#include <tbsys.h>
 #include "func.h"
 #include "internal.h"
+namespace
+{
+  const int PORT_PER_PROCESS = 2;
+}
 namespace tfs
 {
   namespace common
@@ -35,8 +40,8 @@ namespace tfs
           || strlen(index) < 1
           || !isdigit(index[0]))
       {
-        fprintf(stderr, "%s(%s) is invalid\n", CONF_CLUSTER_ID, index == NULL ? "null" : index);
-        return EXIT_SYSTEM_PARAMETER_ERROR; 
+        TBSYS_LOG(ERROR, "%s in [%s] is invalid", CONF_CLUSTER_ID, CONF_SN_NAMESERVER);
+        return EXIT_SYSTEM_PARAMETER_ERROR;
       }
       cluster_index_ = index[0];
 
@@ -47,8 +52,8 @@ namespace tfs
       int32_t max_block_size = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_BLOCK_MAX_SIZE);
       if (max_block_size <= 0)
       {
-        fprintf(stderr, "%s(%d) is invalid\n", CONF_BLOCK_MAX_SIZE, max_block_size);
-        return EXIT_SYSTEM_PARAMETER_ERROR; 
+        TBSYS_LOG(ERROR, "%s in [%s] is invalid", CONF_BLOCK_MAX_SIZE, CONF_SN_NAMESERVER);
+        return EXIT_SYSTEM_PARAMETER_ERROR;
       }
       // roundup to 1M
       int32_t writeBlockSize = (int32_t)(((double) max_block_size * block_use_ratio) / 100);
@@ -162,9 +167,24 @@ namespace tfs
 
       tfs_backup_type_ = TBSYS_CONFIG.getInt(CONF_SN_DATASERVER, CONF_BACKUP_TYPE, 1);
       local_ns_ip_ = TBSYS_CONFIG.getString(CONF_SN_DATASERVER, CONF_IP_ADDR);
+      if (NULL == local_ns_ip_)
+      {
+        TBSYS_LOG(ERROR, "can not find %s in [%s]", CONF_IP_ADDR, CONF_SN_DATASERVER);
+        return EXIT_SYSTEM_PARAMETER_ERROR;
+      }
       local_ns_port_ = TBSYS_CONFIG.getInt(CONF_SN_DATASERVER, CONF_PORT);
       ns_addr_list_ = TBSYS_CONFIG.getString(CONF_SN_DATASERVER, CONF_IP_ADDR_LIST);
-      slave_ns_ip_ = TBSYS_CONFIG.getString(CONF_SN_DATASERVER, CONF_SLAVE_NSIP, NULL);
+      if (NULL == ns_addr_list_)
+      {
+        TBSYS_LOG(ERROR, "can not find %s in [%s]", CONF_IP_ADDR_LIST, CONF_SN_DATASERVER);
+        return EXIT_SYSTEM_PARAMETER_ERROR;
+      }
+      slave_ns_ip_ = TBSYS_CONFIG.getString(CONF_SN_DATASERVER, CONF_SLAVE_NSIP);
+      if (NULL == slave_ns_ip_)
+      {
+        TBSYS_LOG(ERROR, "can not find %s in [%s]", CONF_SLAVE_NSIP, CONF_SN_DATASERVER);
+        return EXIT_SYSTEM_PARAMETER_ERROR;
+      }
       //config_log_file_ = TBSYS_CONFIG.getString(CONF_SN_DATASERVER, CONF_LOG_FILE);
       max_datafile_nums_ = TBSYS_CONFIG.getInt(CONF_SN_DATASERVER, CONF_DATA_FILE_NUMS, 50);
       max_crc_error_nums_ = TBSYS_CONFIG.getInt(CONF_SN_DATASERVER, CONF_MAX_CRCERROR_NUMS, 4);
@@ -176,22 +196,33 @@ namespace tfs
       return SYSPARAM_FILESYSPARAM.initialize(index);
     }
 
+    std::string DataServerParameter::get_real_pid_file(const std::string& pid_file, const std::string& index)
+    {
+      return pid_file + index;
+    }
+
+    int DataServerParameter::get_real_ds_port(const int ds_port, const std::string& index)
+    {
+      return ds_port + (atoi((index.c_str()) - 1) * PORT_PER_PROCESS);
+    }
+
     int FileSystemParameter::initialize(const std::string& index)
     {
       if (TBSYS_CONFIG.getString(CONF_SN_DATASERVER, CONF_MOUNT_POINT_NAME) == NULL || strlen(TBSYS_CONFIG.getString(
-          CONF_SN_DATASERVER, CONF_MOUNT_POINT_NAME)) >= static_cast<uint32_t> (MAX_DEV_NAME_LEN))
+              CONF_SN_DATASERVER, CONF_MOUNT_POINT_NAME)) >= static_cast<uint32_t> (MAX_DEV_NAME_LEN))
       {
-        std::cerr << "mount name is invalid" << std::endl;
-        return TFS_ERROR;
+        TBSYS_LOG(ERROR, "can not find %s in [%s]", CONF_MOUNT_POINT_NAME, CONF_SN_DATASERVER);
+        return EXIT_SYSTEM_PARAMETER_ERROR;
       }
-      mount_name_ = std::string(TBSYS_CONFIG.getString(CONF_SN_DATASERVER, CONF_MOUNT_POINT_NAME)).append(
-          index);
+
+      mount_name_ = TBSYS_CONFIG.getString(CONF_SN_DATASERVER, CONF_MOUNT_POINT_NAME);
+      mount_name_ = get_real_mount_name(mount_name_, index);
 
       const char* tmp_max_size = TBSYS_CONFIG.getString(CONF_SN_DATASERVER, CONF_MOUNT_MAX_USESIZE);
       if (tmp_max_size == NULL)
       {
-        std::cerr << "mount max size is null" << std::endl;
-        return TFS_ERROR;
+        TBSYS_LOG(ERROR, "can not find %s in [%s]", CONF_MOUNT_MAX_USESIZE, CONF_SN_DATASERVER);
+        return EXIT_SYSTEM_PARAMETER_ERROR;
       }
 
       max_mount_size_ = strtoull(tmp_max_size, NULL, 10);
@@ -204,15 +235,15 @@ namespace tfs
       const char* tmp_ratio = TBSYS_CONFIG.getString(CONF_SN_DATASERVER, CONF_BLOCKTYPE_RATIO);
       if (tmp_ratio == NULL)
       {
-        std::cerr << "block ratio is null" << std::endl;
-        return TFS_ERROR;
+        TBSYS_LOG(ERROR, "can not find %s in [%s]", CONF_BLOCKTYPE_RATIO, CONF_SN_DATASERVER);
+        return EXIT_SYSTEM_PARAMETER_ERROR;
       }
 
       block_type_ratio_ = strtof(tmp_ratio, NULL);
       if (block_type_ratio_ == 0)
       {
-        std::cerr << "block ratio is invalid" << std::endl;
-        return TFS_ERROR;
+        TBSYS_LOG(ERROR, "%s error :%s", CONF_BLOCKTYPE_RATIO, tmp_ratio);
+        return EXIT_SYSTEM_PARAMETER_ERROR;
       }
 
       file_system_version_ = TBSYS_CONFIG.getInt(CONF_SN_DATASERVER, CONF_BLOCK_VERSION, 1);
@@ -220,18 +251,22 @@ namespace tfs
       const char* tmp_hash_ratio = TBSYS_CONFIG.getString(CONF_SN_DATASERVER, CONF_HASH_SLOT_RATIO);
       if (tmp_hash_ratio == NULL)
       {
-        std::cerr << "hash slot ratio is null" << std::endl;
-        return TFS_ERROR;
+        TBSYS_LOG(ERROR, "can not find %s in [%s]", CONF_HASH_SLOT_RATIO, CONF_SN_DATASERVER);
+        return EXIT_SYSTEM_PARAMETER_ERROR;
       }
 
       hash_slot_ratio_ = strtof(tmp_hash_ratio, NULL);
       if (hash_slot_ratio_ == 0)
       {
-        std::cerr << "block ratio is invalid" << std::endl;
-        return TFS_ERROR;
+        TBSYS_LOG(ERROR, "%s error :%s", CONF_HASH_SLOT_RATIO, tmp_hash_ratio);
+        return EXIT_SYSTEM_PARAMETER_ERROR;
       }
 
       return TFS_SUCCESS;
+    }
+    std::string get_real_mount_name(const std::string& mount_name, const std::string& index)
+    {
+      return mount_name + index;
     }
 
     int RcServerParameter::initialize(void)
@@ -251,9 +286,9 @@ namespace tfs
       log_file_ = TBSYS_CONFIG.getString(CONF_SN_RCSERVER, CONF_LOG_FILE, default_log_file);
       pid_file_ = TBSYS_CONFIG.getString(CONF_SN_RCSERVER, CONF_LOCK_FILE, default_pid_file);
 
-      db_info_ = TBSYS_CONFIG.getString(CONF_SN_RCSERVER, CONF_RC_DB_INFO, NULL);
-      db_user_ = TBSYS_CONFIG.getString(CONF_SN_RCSERVER, CONF_RC_DB_USER, NULL);
-      db_pwd_ = TBSYS_CONFIG.getString(CONF_SN_RCSERVER, CONF_RC_DB_PWD, NULL);
+      db_info_ = TBSYS_CONFIG.getString(CONF_SN_RCSERVER, CONF_RC_DB_INFO, "");
+      db_user_ = TBSYS_CONFIG.getString(CONF_SN_RCSERVER, CONF_RC_DB_USER, "");
+      db_pwd_ = TBSYS_CONFIG.getString(CONF_SN_RCSERVER, CONF_RC_DB_PWD, "");
 
       monitor_interval_ = TBSYS_CONFIG.getInt(CONF_SN_RCSERVER, CONF_RC_MONITOR_INTERVAL, 60);
       stat_interval_ = TBSYS_CONFIG.getInt(CONF_SN_RCSERVER, CONF_RC_STAT_INTERVAL, 120);

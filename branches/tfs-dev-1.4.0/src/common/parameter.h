@@ -71,6 +71,7 @@ namespace tfs
       int32_t file_system_version_;
       float hash_slot_ratio_; // 0.5
       static FileSystemParameter fs_parameter_;
+      static std::string get_real_mount_name(const std::string& mount_name, const std::string& index);
       static FileSystemParameter& instance()
       {
         return fs_parameter_;
@@ -103,6 +104,8 @@ namespace tfs
       int32_t expire_check_block_time_;
       int32_t max_cpu_usage_;
       int32_t dump_stat_info_interval_;
+      static std::string get_real_pid_file(const std::string& pid_file, const std::string& index);
+      static int get_real_ds_port(const int ds_port, const std::string& index);
       static DataServerParameter ds_parameter_;
       static DataServerParameter& instance()
       {

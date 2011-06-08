@@ -58,10 +58,10 @@ namespace tfs
         virtual int parse_common_line_args(int argc, char* argv[], std::string& errmsg);
 
         /** get log file path*/
-        virtual const char* get_log_file_path() = 0;
+        virtual const char* get_log_file_path(){return NULL;}
   
         /** get pid file path*/
-        virtual const char* get_pid_file_path() = 0;
+        virtual const char* get_pid_file_path(){return NULL;}
 
         virtual bool destroy() = 0;
 
