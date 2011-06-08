@@ -1,6 +1,6 @@
 AUTOMAKE_OPTIONS=foreign
 
-SUBDIRS = src conf scripts tests
+SUBDIRS = src conf scripts 
 pkgdata_datadir=${prefix}/logs
 pkgdata_data_DATA=
 
