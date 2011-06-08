@@ -199,7 +199,7 @@ int main(int argc, char* argv[])
 static void usage(const char* name)
 {
   fprintf(stderr,
-          "Usage: %s -s -c [-d] [-n] [-i] [-h]\n"
+          "Usage: %s -s [-d] [-n] [-i] [-h]\n"
           "       -s nameserver ip port\n"
           "       -d network device\n"
           "       -n set log level\n"
