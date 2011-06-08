@@ -1,3 +1,18 @@
+/*
+ * (C) 2007-2010 Alibaba Group Holding Limited.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+ *
+ *
+ * Version: $Id$
+ *
+ * Authors:
+ *   chuyu <chuyu@taobao.com>
+ *      - initial release
+ *
+ */
 #ifndef TFS_TOOLS_COMMON_H_
 #define TFS_TOOLS_COMMON_H_
 
@@ -94,10 +109,10 @@ namespace tfs
     struct ParamInfo
     {
       ParamInfo() :
-        type_(CMD_NOP), num_(MAX_READ_NUM), count_(1), interval_(2), filename_(""), block_id_(-1), server_ip_port_("")
+        type_(CMD_NOP), num_(MAX_READ_NUM), count_(1), interval_(2), filename_(""), block_id_(0), server_ip_port_("")
       {}
       ParamInfo(const int8_t type) :
-        type_(type), num_(MAX_READ_NUM), count_(1), interval_(2), filename_(""), block_id_(-1), server_ip_port_("")
+        type_(type), num_(MAX_READ_NUM), count_(1), interval_(2), filename_(""), block_id_(0), server_ip_port_("")
       {}
       ~ParamInfo(){}
       int8_t type_;
@@ -163,6 +178,10 @@ namespace tfs
 
         BlockBase();
         virtual ~BlockBase();
+        bool operator<(const BlockBase& b) const
+        {
+          return info_.block_id_ < b.info_.block_id_;
+        }
 
         int32_t deserialize(tbnet::DataBuffer& input, const int32_t length, int32_t& offset, const int8_t type);
         void dump() const;

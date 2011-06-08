@@ -332,7 +332,7 @@ namespace nameserver
     return true;
   }
 
-  bool ServerCollect::touch(LayoutManager& manager, time_t now, uint32_t max_block_id, int32_t alive_server_size, bool promote, int32_t& count)
+  bool ServerCollect::touch(LayoutManager& manager, time_t now, bool promote, int32_t& count)
   {
     if (first_startup_)
     {

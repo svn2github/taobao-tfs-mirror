@@ -13,14 +13,18 @@
  *      - initial release
  *
  */
-#include "client/tfs_client_api.h"
-#include <tbsys.h>
 #include <sys/types.h>
 #include <sys/time.h>
-#include "thread.h"
-#include <string>
 #include <stdint.h>
 #include <limits.h>
+
+#include <map>
+#include <string>
+
+#include "tbsys.h"
+#include "thread.h"
+
+#include "new_client/tfs_client_api.h"
 
 #define THREAD_SIZE 500
 #define BUFFER_SIZE 4096 * 1000
@@ -46,14 +50,14 @@ struct ThreadParam
   int64_t fail_time_consumed_;
 
   tbsys::CThreadMutex* locker_;
-  //add 
+  //add
   std::string conf_;
   std::string oper_ratio_;
   std::string sample_file_;
   std::string ns_ip_port_;
   ThreadParam() :
     index_(0), file_count_(0), succ_count_(0), file_size_(0), min_size_(0),
-    max_size_(0), profile_(false), random_(false), succ_time_consumed_(0), 
+    max_size_(0), profile_(false), random_(false), succ_time_consumed_(0),
     fail_time_consumed_(0)
   {
     oper_ratio_ = "200:8:2:1";

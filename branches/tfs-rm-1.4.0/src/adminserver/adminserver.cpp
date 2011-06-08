@@ -51,7 +51,7 @@ namespace tfs
   {
     // therer is only one AdminServer instance
     AdminServer::AdminServer() :
-      service_name_(SERVICE_NONE), stop_(0), running_(false),
+      stop_(false), running_(false),
       check_interval_(0), check_count_(0), warn_dead_count_(0)
     {
       conf_file_[0] = '\0';
@@ -63,33 +63,12 @@ namespace tfs
 
     int AdminServer::initialize(int argc, char* argv[])
     {
+      UNUSED(argc);
+      UNUSED(argv);
       int ret = TFS_SUCCESS;
-      check_interval_ = TBSYS_CONFIG.getInt(CONF_SN_ADMINSERVER, CONF_CHECK_INTERVAL, 1);
-      check_count_ = TBSYS_CONFIG.getInt(CONF_SN_ADMINSERVER, CONF_CHECK_COUNT, 5);
-      warn_dead_count_ = TBSYS_CONFIG.getInt(CONF_SN_ADMINSERVER, CONF_WARN_DEAD_COUNT, ADMIN_WARN_DEAD_COUNT);
-      const char* server_name = TBSYS_CONFIG.getString(CONF_SN_ADMINSERVER, CONF_SERVER_TYPE, NULL);
-      if (NULL == server_name)
-      {
-        TBSYS_LOG(ERROR, "can not find %s in conf", CONF_SERVER_TYPE);
-        ret = TFS_ERROR;
-      }
-      if (TFS_SUCCESS == ret)
-      {
-        if (0 == strncmp(server_name, "ns", 2))
-        {
-          service_name_ = SERVICE_NS;
-          TBSYS_LOG(DEBUG, " service_name is ns");
-        }
-        else if (0 == strncmp(server_name, "ds", 2))
-        {
-          service_name_ = SERVICE_DS;
-          TBSYS_LOG(DEBUG, " service_name is ds");
-        }
-      }
-      if (TFS_SUCCESS == ret)
-      {
-        ret = start_monitor();
-      }
+      reload_config();
+
+      ret = start_monitor();
       return ret;
     }
 
@@ -112,7 +91,7 @@ namespace tfs
     {
       if (index_range != NULL)
       {
-        char buf[MAX_PATH_LENGTH+1];
+        char buf[MAX_PATH_LENGTH + 1];
         buf[MAX_PATH_LENGTH] = '\0';
         strncpy(buf, index_range, MAX_PATH_LENGTH);
         char* index = NULL;
@@ -128,10 +107,9 @@ namespace tfs
       }
     }
 
-    void AdminServer::modify_conf(string& index, int32_t type)
+    void AdminServer::modify_conf(const string& index, const int32_t type)
     {
-      char cmd[MAX_PATH_LENGTH+1];
-      cmd[MAX_PATH_LENGTH] = '\0';
+      char cmd[MAX_PATH_LENGTH];
       // use sed directly,
       if (1 == type)            // insert, strip trailing ", "
       {
@@ -143,98 +121,61 @@ namespace tfs
         snprintf(cmd, MAX_PATH_LENGTH, "sed -i 's/\\(%s.*[, ]*\\)\\b%s\\b[, ]*\\(.*$\\)/\\1\\2/g' %s",
                  CONF_DS_INDEX_LIST, index.c_str(), conf_file_);
       }
+
       TBSYS_LOG(INFO, "cmd %s", cmd);
       int ret = system(cmd);
       TBSYS_LOG(INFO, "%s ds index %s %s", (1 == type) ? "add" : "delete", index.c_str(), (-1 == ret) ? "fail" : "success");
     }
 
-    int AdminServer::get_param(string& index)
+    int AdminServer::get_param(const string& index)
     {
       int ret = TFS_SUCCESS;
       MonitorParam* param = new MonitorParam();
 
-      if (index.size())         // dataserver
+      if (index.size())
       {
-        ret = SYSPARAM_DATASERVER.initialize(index);
-
         if (ret != TFS_SUCCESS)
         {
-          TBSYS_LOG(ERROR, "load config file %s fail : %s", conf_file_, strerror(errno));
+          TBSYS_LOG(ERROR, "FileSystemParameter.initialize error index is %s", index.c_str());
           return TFS_ERROR;
         }
 
-        // common whether old or not
+
         param->index_ = index;
         param->active_ = 1;
         param->fkill_waittime_ = TBSYS_CONFIG.getInt(CONF_SN_ADMINSERVER, CONF_DS_FKILL_WAITTIME);
         param->adr_.ip_ = Func::get_addr("127.0.0.1"); // just monitor local stuff
         param->script_ = TBSYS_CONFIG.getString(CONF_SN_ADMINSERVER, CONF_DS_SCRIPT, "");
+        param->script_ += " -i " + index;
+        param->description_ = TBSYS_CONFIG.getString(CONF_SN_DATASERVER, CONF_MOUNT_POINT_NAME, "");
+        param->description_ = FileSystemParameter::get_real_mount_name(param->description_, index);
+        param->adr_.port_ = TBSYS_CONFIG.getInt(CONF_SN_DATASERVER, CONF_PORT);
+        param->adr_.port_ = DataServerParameter::get_real_ds_port(param->adr_.port_, index);
 
-        //if(is_old_)
-        //{
-        //  string suffix = ".conf";
-        //  size_t pos = param->script_.find(suffix);
-        //  if (string::npos == pos)
-        //  {
-        //    TBSYS_LOG(ERROR, "adminserver conf ds script invalid: %s", param->script_.c_str());
-        //    return TFS_ERROR;
-        //  }
-        //  param->script_.replace(pos, suffix.size() , "." + index + suffix);
-
-        //  size_t conf_start = param->script_.find("-f");
-        //  if (string::npos == conf_start)
-        //  {
-        //    TBSYS_LOG(ERROR, "adminserver conf ds script invalid: %s", param->script_.c_str());
-        //    return TFS_ERROR;
-        //  }
-        //  conf_start += 2;        // skip -f
-        //  conf_start = param->script_.find_first_not_of(" ", conf_start);
-        //  size_t conf_end = param->script_.find_first_of(" ", conf_start);
-        //  string conf_file = param->script_.substr(conf_start, (string::npos == conf_end) ? conf_end : conf_end-conf_start);
-
-        //  // load specified conf file
-        //  //TODO if (CONFIG.load(conf_file) != TFS_SUCCESS)
-        //  {
-        //    TBSYS_LOG(ERROR, "load config file %s fail: %s", conf_file.c_str(), strerror(errno));
-        //    return TFS_ERROR;
-        //  }
-        //  //TODO param->adr_.port_ = CONFIG.get_int_value(CONFIG_DATASERVER, CONF_PORT);
-        //  //TODO param->description_ = CONFIG.get_string_value(CONFIG_DATASERVER, CONF_WORK_DIR);
-        //  //TODO param->lock_file_ = CONFIG.get_string_value(CONFIG_DATASERVER, CONF_LOCK_FILE);
-        //}
-        //else
-        {
-          param->script_ += " -i " + index;
-          param->description_ = SYSPARAM_FILESYSPARAM.mount_name_;
-          param->adr_.port_ = SYSPARAM_DATASERVER.local_ds_port_;
-          param->lock_file_ = SYSPARAM_DATASERVER.pid_file_;
-        }
-
+        param->lock_file_ = TBSYS_CONFIG.getString(CONF_SN_DATASERVER, CONF_LOCK_FILE, "./");
+        param->lock_file_ = DataServerParameter::get_real_file_name(param->lock_file_, index, "pid");
         TBSYS_LOG(INFO, "load dataserver %s, desc : %s, lock_file : %s, port : %d, script : %s, waittime: %d\n",
-                  index.c_str(), param->description_.c_str(), param->lock_file_.c_str(), param->adr_.port_, param->script_.c_str(),
-                  param->fkill_waittime_);
-      }
-      else                      // ns
-      {
-
-        param->lock_file_ = "/tmp/adminserver.lock";
-        param->adr_.ip_ = Func::get_addr("127.0.0.1");
-        param->adr_.port_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_PORT);
-        param->script_ = TBSYS_CONFIG.getString(CONF_SN_ADMINSERVER, CONF_NS_SCRIPT, "");
-        param->fkill_waittime_ = TBSYS_CONFIG.getInt(CONF_SN_ADMINSERVER, CONF_NS_FKILL_WAITTIME);
-        param->description_ = "nameserver";
-        param->index_ = index;
-        param->active_ = 1;
+            index.c_str(), param->description_.c_str(), param->lock_file_.c_str(), param->adr_.port_, param->script_.c_str(),
+            param->fkill_waittime_);
       }
 
       monitor_param_.insert(MSTR_PARA::value_type(index, param));
-      TBSYS_LOG(DEBUG, "get %s paramter", index.empty() ? "ns" : ("index " + index).c_str());
+      TBSYS_LOG(DEBUG, "get ds  index %s paramter", index.c_str());
+
       return ret;
     }
 
-    void AdminServer::add_index(string& index, bool add_conf)
+    void AdminServer::reload_config()
     {
-      TBSYS_LOG(DEBUG, "add %s to monitor", index.empty() ? "ns" : ("index " + index).c_str());
+      check_interval_ = TBSYS_CONFIG.getInt(CONF_SN_ADMINSERVER, CONF_CHECK_INTERVAL, 1);
+      check_count_ = TBSYS_CONFIG.getInt(CONF_SN_ADMINSERVER, CONF_CHECK_COUNT, 5);
+      warn_dead_count_ = TBSYS_CONFIG.getInt(CONF_SN_ADMINSERVER, CONF_WARN_DEAD_COUNT, ADMIN_WARN_DEAD_COUNT);
+      return;
+    }
+
+    void AdminServer::add_index(const string& index, const bool add_conf)
+    {
+      TBSYS_LOG(DEBUG, "add ds %s to monitor", index.c_str());
       // paramter
       get_param(index);
 
@@ -249,7 +190,7 @@ namespace tfs
         modify_conf(index, 1);
     }
 
-    void AdminServer::clear_index(string& index, bool del_conf)
+    void AdminServer::clear_index(const string& index, const bool del_conf)
     {
       // paramter
       tbsys::gDelete(monitor_param_[index]);
@@ -259,8 +200,10 @@ namespace tfs
         modify_conf(index, 0);
     }
 
-    int AdminServer::kill_process(MonitorStatus* status, int32_t wait_time, bool clear)
+    int AdminServer::kill_process(MonitorStatus* status, const int32_t wait_time, const bool clear)
     {
+      if (NULL == status) return TFS_ERROR;
+
       if (status->pid_ != 0)
       {
         TBSYS_LOG(WARN, "close, pid: %u", status->pid_);
@@ -301,7 +244,7 @@ namespace tfs
 
     int AdminServer::stop_monitor()
     {
-      stop_ = 1;
+      stop_ = true;
       return TFS_SUCCESS;
     }
 
@@ -318,20 +261,12 @@ namespace tfs
       // clean old parameters and status, reread config file to construct parameter
       destruct();
 
-      if (service_name_ & SERVICE_NS)
       {
-        string index = "";
-        add_index(index, false);
-      }
-      else if (service_name_ & SERVICE_DS)
-      {
-        //TODO if (CONFIG.load(conf_file_) != TFS_SUCCESS)
-        {
-          TBSYS_LOG(ERROR, "load config file %s fail : %s", conf_file_, strerror(errno));
-          return TFS_ERROR;
-        }
+        //BaseService::reload();
+        TBSYS_CONFIG.load(config_file_.c_str());
+
         const char *index_range = TBSYS_CONFIG.getString(CONF_SN_ADMINSERVER, CONF_DS_INDEX_LIST, NULL);
-        if (!index_range)
+        if (NULL == index_range)
         {
           TBSYS_LOG(ERROR, "ds index list not found in config file %s .", conf_file_);
           return TFS_ERROR;
@@ -376,18 +311,16 @@ namespace tfs
 
       // now is running, there is always only one monitor running...
       running_ = true;
-      stop_ = 0;
+      stop_ = false;
       TBSYS_LOG(WARN, "== monitor normally start tid: %lu ==", pthread_self());
 
-      if (SERVICE_DS == service_name_)
-      {
-        ping_nameserver(TFS_SUCCESS); // wait for ns
-        if (stop_)
-          return TFS_SUCCESS;
-      }
+      ping_nameserver(TFS_SUCCESS); // wait for ns
+      if (stop_)
+        return TFS_SUCCESS;
 
       MonitorParam* m_param = NULL;
       MonitorStatus* m_status = NULL;
+
 
       while (!stop_)
       {
@@ -409,9 +342,10 @@ namespace tfs
 
           if ( 0 == m_status->pid_ || kill(m_status->pid_, 0) != 0) // process not run
           {
+            TBSYS_LOG(DEBUG, "lock file is %s", m_param->lock_file_.c_str());
             if ((m_status->pid_ = tbsys::CProcess::existPid(m_param->lock_file_.c_str())) == 0)
             {
-              TBSYS_LOG(INFO, "start %s", m_param->description_.c_str());
+              TBSYS_LOG(INFO, "start %s", m_param->script_.c_str());
               if (system(m_param->script_.c_str()) == -1)
               {
                 TBSYS_LOG(ERROR, "start %s fail.", m_param->script_.c_str());
@@ -442,20 +376,20 @@ namespace tfs
               if (m_status->restarting_ == 0)
               {
                 TBSYS_LOG(ERROR, "ping %s fail, ip: %s, failure: %d", m_param->description_.c_str(),
-                          tbsys::CNetUtil::addrToString(ip_address).c_str(), m_status->failure_);
+                    tbsys::CNetUtil::addrToString(ip_address).c_str(), m_status->failure_);
                 m_status->failure_++;
               }
               else // do not ad failure num if the process is restarting status
               {
                 TBSYS_LOG(ERROR, "restarting, desc : %s ip: %s", m_param->description_.c_str(),
-                          tbsys::CNetUtil::addrToString(ip_address).c_str());
+                    tbsys::CNetUtil::addrToString(ip_address).c_str());
                 m_status->failure_ = 0;
               }
             }
             else
             {
               TBSYS_LOG(DEBUG, "ping %s success, ip: %s", m_param->description_.c_str(),
-                        tbsys::CNetUtil::addrToString(ip_address).c_str());
+                  tbsys::CNetUtil::addrToString(ip_address).c_str());
               m_status->failure_ = 0;
               m_status->restarting_ = 0;
             }
@@ -468,7 +402,9 @@ namespace tfs
           }
         }
         // sleep
-        Func::sleep(check_interval_, &stop_);
+
+        sleep(check_interval_);
+        TBSYS_LOG(ERROR, "check_interval_ = %d stop is %d", check_interval_, stop_);
       }
 
       // now not running
@@ -487,12 +423,12 @@ namespace tfs
         tbnet::Packet* message = NULL;
         if(TFS_SUCCESS == send_msg_to_server(ip, client, &ping_msg, message))
         {
-            if (message->getPCode() == STATUS_MESSAGE && 
-                dynamic_cast<StatusMessage*> (message)->get_status()
-                == STATUS_MESSAGE_PING)
-            {
-              ret = TFS_SUCCESS;
-            }
+          if (message->getPCode() == STATUS_MESSAGE && 
+              dynamic_cast<StatusMessage*> (message)->get_status()
+              == STATUS_MESSAGE_PING)
+          {
+            ret = TFS_SUCCESS;
+          }
         }
         NewClientManager::get_instance().destroy_client(client);
       }
@@ -518,7 +454,7 @@ namespace tfs
       {
         if (ping(nsip) == estatus)
           break;
-        Func::sleep(check_interval_, &stop_);
+        sleep(check_interval_);
         ++count;
       }
 
@@ -559,6 +495,7 @@ namespace tfs
 
     bool AdminServer::handlePacketQueue(tbnet::Packet* packet, void* args)
     {
+      UNUSED(args);
       AdminCmdMessage* message = dynamic_cast<AdminCmdMessage*>(packet); // only AdminCmdMessage enqueue
       if (NULL == message)
       {

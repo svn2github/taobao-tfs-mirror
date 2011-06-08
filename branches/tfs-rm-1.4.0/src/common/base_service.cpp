@@ -28,15 +28,15 @@ namespace tfs
     int BaseService::golbal_async_callback_func(NewClient* client, void* args)
     {
       BaseService* service = dynamic_cast<BaseService*>(BaseService::instance());
-      if (NULL != service)
+      int32_t iret = NULL != service ? TFS_SUCCESS : TFS_ERROR;
+      if (TFS_SUCCESS == iret)
       {
-        return service->async_callback(client, args);
+        iret = service->async_callback(client, args);
       }
-      return TFS_ERROR;
+      return iret;
     }
 
     BaseService::BaseService():
-      Service(),
       packet_factory_(NULL),
       streamer_(NULL),
       timer_(0),
@@ -52,11 +52,10 @@ namespace tfs
 
     bool BaseService::destroy()
     {
-      TBSYS_LOG(INFO, "destroy================================");
-      NewClientManager::get_instance().destroy();
       transport_.stop();
-      destroy_service();
       main_workers_.stop();
+      destroy_service();
+      NewClientManager::get_instance().destroy();
       if (0 != timer_)
       {
         timer_->destroy();
@@ -70,7 +69,7 @@ namespace tfs
       return true;
     }
 
-    int BaseService::async_callback(NewClient* client, void* args)
+    int BaseService::async_callback(NewClient* client, void*)
     {
       assert(NULL != client);
       LocalPacket* packet = dynamic_cast<LocalPacket*>(packet_factory_->createPacket(LOCAL_PACKET));
@@ -118,7 +117,7 @@ namespace tfs
     }
 
     /** Note if return true, PacketQueueThread will delete this packet*/
-    bool BaseService::handlePacketQueue(tbnet::Packet *packet, void *args)
+    bool BaseService::handlePacketQueue(tbnet::Packet *packet, void *)
     {
       bool bret = true;
       if (NULL == packet)
@@ -141,11 +140,6 @@ namespace tfs
       return bret;
     }
 
-    const char* BaseService::get_work_dir() const
-    {
-      return TBSYS_CONFIG.getString(CONF_SN_PUBLIC, CONF_WORK_DIR, NULL);
-    }
-
     int32_t BaseService::get_port() const
     {
       int32_t port = -1;
@@ -155,27 +149,6 @@ namespace tfs
         port = -1;
       }
       return port;
-    }
-
-    const char* BaseService::get_log_file_level() const
-    {
-      const char* level = TBSYS_CONFIG.getString(CONF_SN_PUBLIC, CONF_LOG_LEVEL, "debug");
-      return level;
-    }
-
-    const char* BaseService::get_log_path() const
-    {
-      return log_file_path_.empty() ? NULL : log_file_path_.c_str();
-    }
-
-    int64_t BaseService::get_log_file_size() const
-    {
-      return TBSYS_CONFIG.getInt(CONF_SN_PUBLIC, CONF_LOG_SIZE, 0x40000000);
-    }
-
-    int32_t BaseService::get_log_file_count() const
-    {
-      return TBSYS_CONFIG.getInt(CONF_SN_PUBLIC, CONF_LOG_NUM, 16);
     }
 
     const char* const BaseService::get_dev() const
@@ -198,48 +171,13 @@ namespace tfs
       return TBSYS_CONFIG.getString(CONF_SN_PUBLIC, CONF_IP_ADDR, NULL);
     }
 
-    int BaseService::run(int argc , char*argv[], const std::string& config, std::string& error_msg)
+    int BaseService::run(int argc , char*argv[])
     {
-      char buf[256];
-      //load config file
-      int32_t iret = TBSYS_CONFIG.load(config.c_str());
-      iret = EXIT_SUCCESS == iret ? TFS_SUCCESS : TFS_ERROR;
+      //check ip, port, starrt tbnet
+      int32_t iret = initialize_network(argv[0]);
       if (TFS_SUCCESS != iret)
       {
-        snprintf(buf, 256, "load config file '%s' fail", config.c_str());
-        error_msg = buf;
-      }
-
-      if (TFS_SUCCESS == iret)
-      {
-        iret = parse_common_line_args(argc, argv);
-        if (TFS_SUCCESS != iret)
-        {
-          snprintf(buf, 256, "%s parse common line args fail", argv[0]);
-          error_msg = buf;
-        }
-      }
-
-      //create workdir & create logdir && create log file
-      if (TFS_SUCCESS == iret)
-      {
-        iret = initialize_work_dir(argv[0], error_msg);
-        if (TFS_SUCCESS != iret)
-        {
-          snprintf(buf, 256, "%s initialize work directory fail, %s", argv[0], error_msg.c_str());
-          error_msg = buf;
-        }
-      }
-
-      //check ip, port, starrt tbnet
-      if (TFS_SUCCESS == iret)
-      {
-        iret = initialize_network(argv[0], error_msg);
-        if (TFS_SUCCESS != iret)
-        {
-          snprintf(buf, 256, "%s initialize network fail, %s", argv[0], error_msg.c_str());
-          error_msg = buf;
-        }
+        TBSYS_LOG(ERROR, "%s initialize network failed, must be exit", argv[0]);
       }
 
       //start workthread
@@ -260,105 +198,20 @@ namespace tfs
         iret = initialize(argc, argv);
         if (TFS_SUCCESS != iret)
         {
-          snprintf(buf, 256, "%s initialize user data fail", argv[0]);
-          error_msg = buf;
-        }
-      }
-      if (TFS_SUCCESS != iret)
-      {
-        destroy();
-      }
-      return iret;
-    }
-
-    int BaseService::interruptCallback(int sig)
-    {
-      switch (sig)
-      {
-       case SIGTERM:
-       case SIGINT:
-        destroy();
-        break;
-      }
-      return TFS_SUCCESS;
-    }
-    
-    int BaseService::initialize_work_dir(const char* app_name, std::string& error_msg)
-    {
-      int32_t iret = TFS_SUCCESS;
-      char buf[256];
-      const char* work_dir = get_work_dir();
-      if (NULL == work_dir)
-      {
-        snprintf(buf, 256, "%s not set workdir", app_name);
-        error_msg = buf;
-        iret = EXIT_CONFIG_ERROR;
-      }
-
-      if (TFS_SUCCESS == iret)
-      {
-        if (!DirectoryOp::create_full_path(work_dir))
-        {
-          snprintf(buf, 256, "%s create workdir(%s) fail ", app_name, work_dir);
-          error_msg = buf;
-          iret = EXIT_MAKEDIR_ERROR;
-        }
-        else
-        {
-          const char* const tmp_path = get_log_file_path();
-          std::string log_path(NULL == tmp_path ? "" : tmp_path);
-          if (log_path.empty()
-              || log_path == "")
-          {
-            log_path = work_dir;
-            log_path += "/logs/";
-            std::string tmp(app_name);
-            std::string::size_type pos = tmp.find_last_of('/');
-            std::string name = tmp.substr(pos);
-            if (!name.empty() && name.c_str()[0] == '/')
-            {
-              name = tmp.substr(pos + 1);
-            }
-            log_path += std::string::npos == pos || name.empty() ? "base_service" : name;
-            log_path += ".log";
-            log_file_path_ = log_path;
-          }
-
-          if (0 == access(log_path.c_str(), R_OK))
-          {
-            TBSYS_LOGGER.rotateLog(log_path.c_str());
-          }
-          else
-          {
-            if (!DirectoryOp::create_full_path(log_path.c_str(), true))
-            {
-              snprintf(buf, 256, "%s create log directory(%s) fail ", app_name, dirname(const_cast<char*>(log_path.c_str())));
-              error_msg = buf;
-              iret = EXIT_MAKEDIR_ERROR;
-            }
-          }
-          if (TFS_SUCCESS == iret)
-          {
-            TBSYS_LOGGER.setFileName(log_path.c_str());
-            TBSYS_LOGGER.setLogLevel(get_log_file_level());
-            TBSYS_LOGGER.setMaxFileSize(get_log_file_size());
-            TBSYS_LOGGER.setMaxFileIndex(get_log_file_count());
-          }
+          TBSYS_LOG(ERROR, "%s initialize user data failed, must be exit", argv[0]);
         }
       }
       return iret;
     }
 
-    int BaseService::initialize_network(const char* app_name, std::string& error_msg)
+    int BaseService::initialize_network(const char* app_name)
     {
-      char buf[256];
       int32_t iret = TFS_SUCCESS;
       const char* ip_addr = get_ip_addr();
       if (NULL == ip_addr)//get ip addr
       {
         iret =  EXIT_CONFIG_ERROR;
-        snprintf(buf, 256, "%s not set ip_addr", app_name);
-        error_msg = buf;
+        TBSYS_LOG(ERROR, "%s not set ip_addr", app_name);
       }
 
       int32_t port = 0;
@@ -368,8 +221,7 @@ namespace tfs
         if (port <= 0)
         {
           iret = EXIT_CONFIG_ERROR;
-          snprintf(buf, 256, "%s not set port or port is invalid", app_name);
-          error_msg = buf;
+          TBSYS_LOG(ERROR, "%s not set port: %d or port: %d is invalid", app_name, port, port);
         }
       }
 
@@ -383,16 +235,14 @@ namespace tfs
         if (NULL == packet_factory_)
         {
           iret = EXIT_GENERAL_ERROR;
-          snprintf(buf, 256, "%s create packet factory fail", app_name);
-          error_msg = buf;
+          TBSYS_LOG(ERROR, "%s create packet factory fail", app_name);
         }
         if (TFS_SUCCESS == iret)
         {
           streamer_ = dynamic_cast<BasePacketStreamer*>(create_packet_streamer());
           if (NULL == streamer_)
           {
-            snprintf(buf, 256, "%s create packet streamer fail", app_name);
-            error_msg = buf;
+            TBSYS_LOG(ERROR, "%s create packet streamer fail", app_name);
             iret = EXIT_GENERAL_ERROR; 
           }
           else
@@ -401,8 +251,7 @@ namespace tfs
             tbnet::IOComponent* com = transport_.listen(spec, streamer_, this);
             if (NULL == com)
             {
-              snprintf(buf, 256, "%s listen port: %d fail", app_name, port);
-              error_msg = buf;
+              TBSYS_LOG(ERROR, "%s listen port: %d fail", app_name, port);
               iret = EXIT_NETWORK_ERROR;
             }
             else
@@ -420,12 +269,11 @@ namespace tfs
                 &transport_, &BaseService::golbal_async_callback_func, this);
         if (TFS_SUCCESS != iret)
         {
-          snprintf(buf, 256, "%s start client manager fail", app_name);
-          error_msg = buf;
+          TBSYS_LOG(ERROR, "%s start client manager fail", app_name);
           iret = EXIT_NETWORK_ERROR;
         }
       }
       return iret;
     }
-  }
-}
+  }/** common **/
+}/** tfs **/

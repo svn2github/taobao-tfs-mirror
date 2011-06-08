@@ -22,6 +22,11 @@ int t_initialize(const char* ns_addr, const int32_t cache_time, const int32_t ca
   return TfsClient::Instance()->initialize(ns_addr, cache_time, cache_items);
 }
 
+int t_set_default_server(const char* ns_addr, const int32_t cache_time, const int32_t cache_items)
+{
+  return TfsClient::Instance()->set_default_server(ns_addr, cache_time, cache_items);
+}
+
 int t_destroy()
 {
   return TfsClient::Instance()->destroy();
@@ -37,7 +42,7 @@ int t_open2(const char* file_name, const char* suffix, const char* ns_addr, cons
   int ret = EXIT_INVALIDFD_ERROR;
   if (NULL == local_key)
   {
-    ret = TfsClient::Instance()->open(file_name, suffix, ns_addr, flags);
+    ret = TfsClient::Instance()->open(file_name, suffix, ns_addr, flags, NULL);
   }
   else
   {
@@ -49,6 +54,12 @@ int t_open2(const char* file_name, const char* suffix, const char* ns_addr, cons
 int64_t t_read(const int fd, void* buf, const int64_t count)
 {
   return TfsClient::Instance()->read(fd, buf, count);
+}
+
+int64_t t_readv2(const int fd, void* buf, const int64_t count, TfsFileStat* file_info)
+{
+  return TfsClient::Instance()->readv2(fd, buf, count,
+                                       reinterpret_cast<tfs::common::TfsFileStat*>(file_info));
 }
 
 int64_t t_write(const int fd, const void* buf, const int64_t count)
@@ -91,6 +102,11 @@ int64_t t_get_file_length(const int fd)
 int t_unlink(const char* file_name, const char* suffix, const TfsUnlinkType action)
 {
   return TfsClient::Instance()->unlink(file_name, suffix, static_cast<tfs::common::TfsUnlinkType>(action));
+}
+
+int t_set_option_flag(const int fd, const OptionFlag option_flag)
+{
+  return TfsClient::Instance()->set_option_flag(fd, static_cast<tfs::common::OptionFlag>(option_flag));
 }
 
 void t_set_segment_size(const int64_t segment_size)
@@ -176,4 +192,34 @@ int64_t t_get_client_retry_count()
 void t_set_log_level(const char* level)
 {
   return TfsClient::Instance()->set_log_level(level);
+}
+
+uint64_t t_get_server_id()
+{
+  return TfsClient::Instance()->get_server_id();
+}
+
+int32_t t_get_cluster_id()
+{
+  return TfsClient::Instance()->get_cluster_id();
+}
+
+int t_save_file(const char* local_file, const char* tfs_name, const char* suffix,
+                         char* ret_tfs_name, const int32_t ret_tfs_name_len, const int32_t flag)
+{
+  return TfsClient::Instance()->save_file(local_file, tfs_name, suffix,
+                                          ret_tfs_name, ret_tfs_name_len, flag);
+}
+
+int t_fetch_file(const char* local_file, const char* tfs_name, const char* suffix)
+{
+  return TfsClient::Instance()->fetch_file(local_file, tfs_name, suffix);
+}
+
+int t_stat_file(const char* tfs_name, const char* suffix,
+                TfsFileStat* file_stat, const TfsStatType stat_type)
+{
+  return TfsClient::Instance()->stat_file(tfs_name, suffix,
+                                          reinterpret_cast<tfs::common::TfsFileStat*>(file_stat),
+                                          static_cast<tfs::common::TfsStatType>(stat_type));
 }

@@ -234,7 +234,7 @@ namespace tfs
       va_end(ap);
       TBSYS_LOGGER.logMessage(level, file, line, function, "%s", msgstr);
 
-      BaseService* service = dynamic_cast<BaseService*>(tbutil::Service::instance());
+      BaseService* service = dynamic_cast<BaseService*>(BaseMain::instance());
       StatusMessage* packet = dynamic_cast<StatusMessage*>(service->get_packet_factory()->createPacket(STATUS_MESSAGE));
       msgstr[MAX_ERROR_MSG_LENGTH] = '\0';
       packet->set_message(error_code, msgstr);

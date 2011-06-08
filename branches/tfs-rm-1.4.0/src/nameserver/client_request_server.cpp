@@ -110,7 +110,7 @@ namespace tfs
                       {
                         if (!lay_out_manager_.find_block_in_plan((*r_iter)->id()))
                         {
-                          rm_list.push_back((*r_iter)->id());     
+                          expires.push_back((*r_iter)->id());     
                         }
                       }
                     }
@@ -568,8 +568,10 @@ namespace tfs
             if (TFS_SUCCESS == iret)
             {
 #if !defined(TFS_NS_GTEST) && !defined(TFS_NS_INTEGRATION)
-              iret = send_msg_to_server(id, message);
-              if (STATUS_MESSAGE_OK != iret)
+              int32_t status = STATUS_MESSAGE_ERROR;
+              iret = send_msg_to_server(id, message, status);
+              if (STATUS_MESSAGE_OK != status
+                || TFS_SUCCESS != iret)
               {
                 snprintf(buf, buf_length, "send load block: %u  message to server: %s failed",
                     block_id, CNetUtil::addrToString(id).c_str());
@@ -831,14 +833,16 @@ namespace tfs
 
     int ClientRequestServer::handle_control_rotate_log(void)
     {
-      BaseService* service = dynamic_cast<BaseService*>(BaseService::instance());
-      TBSYS_LOGGER.rotateLog(service->get_log_path());
+      //BaseService* service = dynamic_cast<BaseService*>(BaseService::instance());
+      //TBSYS_LOGGER.rotateLog(service->get_log_path());
+      TBSYS_LOGGER.rotateLog(NULL);
       return TFS_SUCCESS;
     }
 
 
     int ClientRequestServer::handle_control_set_runtime_param(const common::ClientCmdInformation& info, const int64_t buf_length, char* buf)
     {
+      UNUSED(buf_length);
       return lay_out_manager_.set_runtime_param(info.value3_, info.value4_, buf);
     }
 

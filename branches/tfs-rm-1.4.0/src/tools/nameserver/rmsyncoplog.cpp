@@ -1,3 +1,18 @@
+/*
+ * (C) 2007-2010 Alibaba Group Holding Limited.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+ *
+ *
+ * Version: $Id: func.cpp 400 2011-06-02 07:26:40Z duanfei@taobao.com $
+ *
+ * Authors:
+ *   duolong <duolong@taobao.com>
+ *      - initial release
+ *
+ */
 #include <stdio.h>
 #include <pthread.h>
 #include <vector>
@@ -16,19 +31,19 @@ using namespace std;
 using namespace tfs;
 using namespace nameserver;
 
-int gstop = 0x00;
+bool gstop = false;
 static const std::string rotateheader("rotateheader.dat");
 static const std::string header("header.dat");
 
-void signlHandler(int signl)
+void signlHandler(int signal)
 {
-  switch(signl)
+  switch(signal)
   {
     case SIGINT:
-      gstop = 0x01;
+      gstop = true;
       break;
     default:
-      fprintf(stderr, "[INFO]: occur signl(%d)", signl);
+      fprintf(stderr, "[INFO]: occur signl(%d)", signal);
       break;
   }
 }
@@ -143,11 +158,11 @@ int main(int argc, char *argv[])
     switch (i)
     {
       case 'f':
-        dir_name = optarg; 
+        dir_name = optarg;
         break;
       case 'i':
         interval = atoi(optarg);
-        break; 
+        break;
       case 'h':
       default:
         fprintf(stderr, "Usage: %s -f fileQueueDirPath -i interval\n", argv[0]);
@@ -176,7 +191,7 @@ int main(int argc, char *argv[])
   {
     fprintf(stderr, "%s:%d [ERROR]: (%s) not directory\n", __FILE__, __LINE__, dir_name.c_str());
     return EXIT_SUCCESS;
-  } 
+  }
 
   do
   {
@@ -186,7 +201,7 @@ int main(int argc, char *argv[])
       fprintf(stderr, "%s:%d [ERROR]: do work error\n", __FILE__, __LINE__);
       break;
     }
-    common::Func::sleep(interval, &gstop);
+    common::Func::sleep(interval, gstop);
   }
   while(!gstop);
   return EXIT_SUCCESS;

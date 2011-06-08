@@ -291,7 +291,7 @@ namespace tfs
       return bret;
     }
 
-    int send_msg_to_server(uint64_t server, tbnet::Packet* message, const int64_t timeout)
+    int send_msg_to_server(uint64_t server, tbnet::Packet* message, int32_t& status, const int64_t timeout)
     {
       NewClient* client = NewClientManager::get_instance().create_client();
       tbnet::Packet* rmsg = NULL;
@@ -302,7 +302,7 @@ namespace tfs
         if (common::TFS_SUCCESS == iret)
         {
           StatusMessage* smsg = dynamic_cast<StatusMessage*>(rmsg);
-          iret = smsg->get_status();
+          status = smsg->get_status();
         }
       }
       NewClientManager::get_instance().destroy_client(client);
@@ -340,8 +340,19 @@ namespace tfs
       return iret;
     }
 
+    int post_msg_to_server(const std::vector<uint64_t>& servers, NewClient* client, tbnet::Packet* msg,
+                          NewClient::callback_func func, const bool save_msg)
+    {
+      int32_t iret = !servers.empty() && NULL != client && NULL != msg  && NULL != func? common::TFS_SUCCESS : common::TFS_ERROR;
+      if (TFS_SUCCESS == iret)
+      {
+        iret = client->async_post_request(servers, msg, func, save_msg);
+      }
+      return iret;
+    }
+
     // test whether the DataServerStatInfo is still alive.
-    int test_server_alive(const uint64_t server_id, const int64_t timeout)
+    int test_server_alive(const uint64_t server_id, const int64_t)
     {
       int32_t ret = common::TFS_SUCCESS;
       NewClient* client = NewClientManager::get_instance().create_client();

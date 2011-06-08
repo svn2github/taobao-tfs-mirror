@@ -100,10 +100,14 @@ namespace tfs
       MasterAndSlaveHeartManager master_slave_heart_mgr_;
       HeartManagement heart_mgr_;
 
-    private:
+    protected:
       /** get log file path*/
       virtual const char* get_log_file_path() { return NULL;}
 
+      /** get pid file path */
+      virtual const char* get_pid_file_path() { return NULL;}
+
+    private:
       int open(common::BasePacket* msg);
       int close(common::BasePacket* msg);
       int batch_open(common::BasePacket* msg);

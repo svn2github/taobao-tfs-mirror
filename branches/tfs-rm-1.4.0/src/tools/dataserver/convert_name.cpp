@@ -14,7 +14,7 @@
  *
  */
 #include "tbsys.h"
-#include "client/fsname.h"
+#include "new_client/fsname.h"
 
 using namespace tfs::client;
 
@@ -34,7 +34,7 @@ int main(int argc, char** argv)
   if (argc > 3)
   {
     printf("prefix : %s\n", argv[3]);
-    fs_name.set_prefix(argv[3]);
+    fs_name.set_suffix(argv[3]);
   }
   printf("blockid: %d, fileid: %" PRI64_PREFIX "u, name: %s\n", block_id, file_id, fs_name.get_name());
   return 0;

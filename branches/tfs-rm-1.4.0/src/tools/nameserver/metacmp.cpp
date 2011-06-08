@@ -1,10 +1,23 @@
-
+/*
+ * (C) 2007-2010 Alibaba Group Holding Limited.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+ *
+ *
+ * Version: $Id: func.cpp 400 2011-06-02 07:26:40Z duanfei@taobao.com $
+ *
+ * Authors:
+ *   chuyu <chuyu@taobao.com>
+ *      - initial release
+ *
+ */
 #include "metacmp.h"
 
 using namespace __gnu_cxx;
 using namespace tbsys;
 using namespace tfs::message;
-using namespace tfs::nameserver;
 using namespace tfs::common;
 
 namespace tfs
@@ -68,7 +81,7 @@ namespace tfs
       }
       return TFS_SUCCESS;
     }
-    int CmpInfo::init_param(ComType cmp_type, int8_t type, int32_t num, SSMScanParameter& param)
+    int CmpInfo::init_param(ComType cmp_type, int8_t, int32_t num, SSMScanParameter& param)
     {
       memset(&param, 0, sizeof(SSMScanParameter));
       if (cmp_type & SERVER_TYPE)

@@ -70,6 +70,8 @@ namespace tfs
 
         // find the next available key greater than key
         int find_avail_key(uint64_t& key);
+        // update next available key
+        void reset_avail_key(uint64_t key);
         // merge the version info from ns and local
         int check_block_version(int32_t& remote_version);
         int reset_block_version();

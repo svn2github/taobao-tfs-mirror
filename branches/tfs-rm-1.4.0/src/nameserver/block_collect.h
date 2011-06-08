@@ -42,7 +42,7 @@ namespace nameserver
     bool is_need_master() const;
     bool is_writable() const;
 
-    bool check_version(ServerCollect* server, const int32_t alive_server_size, const NsRole role, const bool is_new,
+    bool check_version(ServerCollect* server, const NsRole role, const bool is_new,
           const common::BlockInfo& block_info, EXPIRE_BLOCK_LIST& expires, bool& force_be_master, const time_t now);
 
     common::PlanPriority check_replicate(const time_t now) const;

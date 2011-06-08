@@ -14,7 +14,7 @@
  *
  */
 #include "util.h"
-#include "client/fsname.h"
+#include "new_client/fsname.h"
 #include "common/func.h"
 
 using namespace tfs::client;

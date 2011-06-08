@@ -1,3 +1,18 @@
+/*
+ * (C) 2007-2010 Alibaba Group Holding Limited.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+ *
+ *
+ * Version: $Id$
+ *
+ * Authors:
+ *   chuyu <chuyu@taobao.com>
+ *      - initial release
+ *
+ */
 #ifndef TFS_TOOLS_SHOW_H_
 #define TFS_TOOLS_SHOW_H_
 
@@ -32,6 +47,7 @@ namespace tfs
         std::map<uint64_t, ServerShow> last_server_map_;
         std::map<uint64_t, ServerShow> server_map_;
         std::map<uint64_t, MachineShow> machine_map_;
+        std::set<BlockShow> block_set_;
         uint64_t ns_ip_;
     };
   }

@@ -1299,7 +1299,7 @@ namespace tfs
               block = ptr->add(blocks[i].block_id_, now);
               first = true;
             }
-            if (!block->check_version(server, alive_server_size_, ngi.owner_role_, first,
+            if (!block->check_version(server, ngi.owner_role_, first,
                   blocks[i], expires, force_be_master, now)) 
             {
               continue;//version error, not argeed
@@ -1376,8 +1376,9 @@ namespace tfs
       {
         last_rotate_log_time_ = now;
         oplog_sync_mgr_.rotate();
-        BaseService* service = dynamic_cast<BaseService*>(BaseService::instance());
-        TBSYS_LOGGER.rotateLog(service->get_log_path());
+        //BaseService* service = dynamic_cast<BaseService*>(BaseService::instance());
+        //TBSYS_LOGGER.rotateLog(service->get_log_path());
+        TBSYS_LOGGER.rotateLog(NULL);
       }
     }
 
@@ -1482,7 +1483,7 @@ namespace tfs
       if (bret)
       {
         int32_t count = SYSPARAM_NAMESERVER.add_primary_block_count_;
-        server->touch(*this, now, max_block_id_, alive_server_size_, promote, count);
+        server->touch(*this, now, promote, count);
 
         if (GFactory::get_runtime_info().owner_role_ != NS_ROLE_MASTER)
           return TFS_SUCCESS;
@@ -1699,7 +1700,12 @@ namespace tfs
       int64_t emergency_replicate_count = 0;
       int64_t current_plan_seqno = 1;
       const NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
-
+      {
+#if !defined(TFS_NS_GTEST) && !defined(TFS_NS_INTEGRATION)
+        tbutil::Monitor<tbutil::Mutex>::Lock lock(build_plan_monitor_);
+        build_plan_monitor_.timedWait(tbutil::Time::seconds(SYSPARAM_NAMESERVER.safe_mode_time_));
+#endif
+      }
 #if (!defined(TFS_NS_GTEST))
       while (ngi.destroy_flag_ != NS_DESTROY_FLAGS_YES)
 #endif
@@ -1866,6 +1872,13 @@ namespace tfs
     void LayoutManager::run_plan()
     {
       const NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
+      {
+#if !defined(TFS_NS_GTEST) && !defined(TFS_NS_INTEGRATION)
+        tbutil::Monitor<tbutil::Mutex>::Lock lock(run_plan_monitor_);
+        run_plan_monitor_.timedWait(tbutil::Time::seconds(SYSPARAM_NAMESERVER.safe_mode_time_));
+#endif
+      }
+
 #if !defined(TFS_NS_GTEST)
       while (ngi.destroy_flag_ != NS_DESTROY_FLAGS_YES)
 #endif
@@ -2122,6 +2135,7 @@ namespace tfs
         int64_t& total_load,
         int64_t& alive_server_size)
     {
+      UNUSED(average_block_size);
       RWLock::Lock lock(server_mutex_, READ_LOCKER);
       SERVER_MAP::const_iterator iter = servers_.begin();
       for (; iter != servers_.end() && !(interrupt_ & INTERRUPT_ALL) && need > 0; ++iter)
@@ -2146,6 +2160,7 @@ namespace tfs
         std::set<ServerCollect*>& source,
         std::set<ServerCollect*>& target)
     {
+      UNUSED(average_block_size);
       bool has_move = false;
       int64_t current_block_count = 0;
       int64_t should_block_count  = 0;
@@ -2416,6 +2431,7 @@ namespace tfs
     }
     bool LayoutManager::remove_task(const TaskPtr& task)
     {
+      UNUSED(task);
       return true;
     }
 

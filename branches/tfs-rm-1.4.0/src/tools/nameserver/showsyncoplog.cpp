@@ -1,3 +1,18 @@
+/*
+ * (C) 2007-2010 Alibaba Group Holding Limited.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+ *
+ *
+ * Version: $Id$
+ *
+ * Authors:
+ *   duanfei <duanfei@taobao.com>
+ *      - initial release
+ *
+ */
 #include <stdio.h>
 #include <pthread.h>
 #include <vector>
@@ -16,17 +31,17 @@ using namespace std;
 using namespace tfs;
 using namespace nameserver;
 
-int gstop = 0x00;
+bool gstop = false;
 
-void signlHandler(int signl)
+void signlHandler(int signal)
 {
-  switch(signl)
+  switch(signal)
   {
     case SIGINT:
-      gstop = 0x01;
+      gstop = true;
       break;
     default:
-      fprintf(stderr, "[INFO]: occur signl(%d)", signl);
+      fprintf(stderr, "[INFO]: occur signl(%d)", signal);
       break;
   }
 }
@@ -78,7 +93,7 @@ int print_information(std::string& dir_name, int type = 0x00)
     ostringstream current;
     for (int32_t i = 0; i < common::FILE_QUEUE_MAX_THREAD_SIZE; i++)
     {
-      current << "     " << i << "              " << qhead.pos_[i].seqno_ <<"         "<< qhead.pos_[i].offset_ <<"\n";    
+      current << "     " << i << "              " << qhead.pos_[i].seqno_ <<"         "<< qhead.pos_[i].offset_ <<"\n";
     }
     fprintf(stderr, "Current Process: \n");
     fprintf(stderr, "Thread Number     SeqNo     Offset \n");
@@ -101,14 +116,14 @@ int main(int argc, char *argv[])
     switch (i)
     {
       case 'f':
-        dir_name = optarg; 
+        dir_name = optarg;
         break;
       case 'c':
         count = atoi(optarg);
         break;
       case 'i':
         interval = atoi(optarg);
-        break; 
+        break;
       case 't':
         type = atoi(optarg);
         break;
@@ -142,17 +157,17 @@ int main(int argc, char *argv[])
   {
     fprintf(stderr, "%s:%d [ERROR]: (%s) not directory\n", __FILE__, __LINE__, dir_name.c_str());
     return EXIT_SUCCESS;
-  } 
+  }
 
   int iret = 0;
   for (int i = 0; (i < count || count == 0); i++)
   {
     iret = print_information(dir_name, type);
-    if ((iret == EXIT_FAILURE) 
+    if ((iret == EXIT_FAILURE)
         || ((count == i + 1) && (count != 0))
-        || (gstop == 0x01))
-      break; 
-    common::Func::sleep(interval, &gstop);
+        || (gstop))
+      break;
+    common::Func::sleep(interval, gstop);
   }
   return EXIT_SUCCESS;
 }

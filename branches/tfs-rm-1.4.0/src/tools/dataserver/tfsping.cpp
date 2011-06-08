@@ -15,33 +15,21 @@
  */
 #include <stdio.h>
 #include "common/func.h"
-#include "message/client.h"
-#include "message/client_pool.h"
-
+#include "common/new_client.h"
+#include "common/client_manager.h"
+#include "common/status_message.h"
 using namespace tfs::common;
-using namespace tfs::message;
+//using namespace tfs::message;
 
 int ping(const uint64_t ip)
 {
-  Client* client = CLIENT_POOL.get_client(ip);
-  if (client->connect() == TFS_ERROR)
-  {
-    CLIENT_POOL.release_client(client);
-    TBSYS_LOG(ERROR, "connect fail: %s", tbsys::CNetUtil::addrToString(ip).c_str());
-    return TFS_ERROR;
-  }
-  int ret_status = TFS_ERROR;
+  int32_t status_value = 0;
   StatusMessage ping_message(STATUS_MESSAGE_PING);
-  Message* message = client->call(&ping_message);
-  if (message != NULL)
+  int ret_status = send_msg_to_server(ip, &ping_message, status_value);
+  if (TFS_SUCCESS == ret_status && STATUS_MESSAGE_PING != status_value)
   {
-    if (message->get_message_type() == STATUS_MESSAGE && (dynamic_cast<StatusMessage*> (message))->get_status() == STATUS_MESSAGE_PING)
-    {
-      ret_status = TFS_SUCCESS;
-    }
-    delete message;
+    ret_status = TFS_ERROR;
   }
-  CLIENT_POOL.release_client(client);
   return ret_status;
 }
 

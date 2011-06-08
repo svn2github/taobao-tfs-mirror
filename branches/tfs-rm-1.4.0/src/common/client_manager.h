@@ -49,6 +49,7 @@ namespace tfs
                       tbnet::Transport* transport = NULL, async_callback_func_entry entry = NULL,
                       void* args = NULL);
         void destroy();
+        bool is_init() const;
         tbnet::IPacketHandler::HPRetCode handlePacket(tbnet::Packet* packet, void* args);
         NewClient* create_client();
         bool destroy_client(NewClient* client);

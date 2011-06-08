@@ -232,8 +232,8 @@ namespace tfs
       public:
         OwnerCheckMessage();
         virtual ~OwnerCheckMessage();
-        virtual int serialize(common::Stream& output) const { return common::TFS_SUCCESS;}
-        virtual int deserialize(common::Stream& input){ return common::TFS_SUCCESS;}
+        virtual int serialize(common::Stream& ) const { return common::TFS_SUCCESS;}
+        virtual int deserialize(common::Stream& ){ return common::TFS_SUCCESS;}
         virtual int64_t length() const{return 0;}
         inline void set_start_time(const int64_t start = time(NULL))
         {

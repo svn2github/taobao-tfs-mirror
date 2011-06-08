@@ -20,9 +20,11 @@
 #include <map>
 #include <string>
 
+#include <stdint.h>
+
 namespace tfs
 {
-  namespace common 
+  namespace common
   {
     enum UpdateFlag
     {
@@ -95,7 +97,7 @@ namespace tfs
       int64_t modify_time_;
       bool is_logout_;
 
-      SessionBaseInfo(const std::string session_id) : 
+      SessionBaseInfo(const std::string session_id) :
         session_id_(session_id), cache_size_(0), cache_time_(0), modify_time_(0), is_logout_(false)
       {
       }

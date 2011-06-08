@@ -14,9 +14,11 @@
 *
 */
 #include "mysql_database_helper.h"
+
 #include <mysql/mysql.h>
 #include <mysql/errmsg.h>
 #include <vector>
+#include "common/define.h"
 
 using namespace std;
 namespace 
@@ -152,6 +154,8 @@ namespace tfs
 
     int MysqlDatabaseHelper::select(const ResourceServerInfo& inparam, ResourceServerInfo& outparam)
     {
+      UNUSED(inparam);
+      UNUSED(outparam);
       //TODO
       tbutil::Mutex::Lock lock(mutex_);
       int ret = TFS_ERROR;
@@ -160,6 +164,7 @@ namespace tfs
 
     int MysqlDatabaseHelper::update(const ResourceServerInfo& inparam)
     {
+      UNUSED(inparam);
       //TODO 
       tbutil::Mutex::Lock lock(mutex_);
       int ret = TFS_ERROR;
@@ -168,6 +173,7 @@ namespace tfs
 
     int MysqlDatabaseHelper::remove(const ResourceServerInfo& inparam)
     {
+      UNUSED(inparam);
       //TODO
       tbutil::Mutex::Lock lock(mutex_);
       int ret = TFS_ERROR;
@@ -224,6 +230,8 @@ error:
 
     int MysqlDatabaseHelper::select(const ClusterRackInfo& inparam, ClusterRackInfo& outparam)
     {
+      UNUSED(inparam);
+      UNUSED(outparam);
       tbutil::Mutex::Lock lock(mutex_);
       int ret = TFS_ERROR;
       return ret;
@@ -231,6 +239,7 @@ error:
 
     int MysqlDatabaseHelper::update(const ClusterRackInfo& inparam)
     {
+      UNUSED(inparam);
       tbutil::Mutex::Lock lock(mutex_);
       int ret = TFS_ERROR;
       return ret;
@@ -238,6 +247,7 @@ error:
 
     int MysqlDatabaseHelper::remove(const ClusterRackInfo& inparam)
     {
+      UNUSED(inparam);
       tbutil::Mutex::Lock lock(mutex_);
       int ret = TFS_ERROR;
       return ret;
@@ -446,6 +456,8 @@ error:
 
     int MysqlDatabaseHelper::select(const AppInfo& inparam, AppInfo& outparam)
     {
+      UNUSED(inparam);
+      UNUSED(outparam);
       tbutil::Mutex::Lock lock(mutex_);
       int ret = TFS_ERROR;
       return ret;
@@ -453,6 +465,7 @@ error:
 
     int MysqlDatabaseHelper::update(const AppInfo& inparam)
     {
+      UNUSED(inparam);
       tbutil::Mutex::Lock lock(mutex_);
       int ret = TFS_ERROR;
       return ret;
@@ -460,6 +473,7 @@ error:
 
     int MysqlDatabaseHelper::remove(const AppInfo& inparam)
     {
+      UNUSED(inparam);
       tbutil::Mutex::Lock lock(mutex_);
       int ret = TFS_ERROR;
       return ret;

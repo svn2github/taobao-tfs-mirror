@@ -241,7 +241,7 @@ namespace tfs
       int32_t iret = Serialization::get_string(buffer_.get_data(), buffer_.get_data_length(), pos, str);
       if (TFS_SUCCESS == iret)
       {
-        buffer_.drain(str.length());
+        buffer_.drain(Serialization::get_string_length(str));
       }
       return iret;
     }

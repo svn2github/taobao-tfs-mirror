@@ -1,10 +1,27 @@
+/*
+ * (C) 2007-2010 Alibaba Group Holding Limited.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+ *
+ *
+ * Version: $Id: blocktool.cpp 432 2011-06-08 07:06:11Z nayan@taobao.com $
+ *
+ * Authors:
+ *   chuyu <chuyu@taobao.com>
+ *      - initial release
+ *
+ */
 #include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
+
 #include <string>
 #include <set>
 #include <iostream>
-#include <tbsys.h>
+
+#include "tbsys.h"
 #include "common/internal.h"
 
 
@@ -52,7 +69,6 @@ int main(int argc, char* argv[])
   FILE* src_blk_ptr = NULL;
   FILE* dest_blk_ptr = NULL;
 
-  //set<uint32_t> src_blk_list;
   set<uint32_t> dest_blk_list;
   set<uint32_t> diff_blk_list;
   int ret = TFS_SUCCESS;

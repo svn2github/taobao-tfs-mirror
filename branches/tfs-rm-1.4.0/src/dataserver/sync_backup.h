@@ -11,7 +11,7 @@
  * Authors:
  *   duolong <duolong@taobao.com>
  *      - initial release
- *   zongdai <zongdai@taobao.com> 
+ *   zongdai <zongdai@taobao.com>
  *      - modify 2010-04-23
  *
  */
@@ -46,9 +46,7 @@ namespace tfs
     {
       public:
         SyncBackup();
-        virtual ~SyncBackup()
-        {
-        }
+        virtual ~SyncBackup();
 
         virtual bool init() = 0;
         virtual int do_sync(const SyncData* sf);
@@ -60,61 +58,44 @@ namespace tfs
 
       protected:
         DISALLOW_COPY_AND_ASSIGN(SyncBackup);
+      client::TfsClient* tfs_client_;
 
-        static const int32_t TMP_PATH_SIZE = 256;
-        static const int32_t BLOCK_DIR_NUM = 100;
+        char src_addr_[common::MAX_ADDRESS_LENGTH];
+        char dest_addr_[common::MAX_ADDRESS_LENGTH];
     };
 
-    class NfsMirrorBackup: public SyncBackup
+    class NfsMirrorBackup : public SyncBackup
     {
       public:
-        NfsMirrorBackup() :
-          SyncBackup()
-        {
-        }
-        virtual ~NfsMirrorBackup()
-        {
-        }
+        NfsMirrorBackup();
+        virtual ~NfsMirrorBackup();
 
       public:
         virtual bool init();
         virtual int copy_file(const uint32_t block_id, const uint64_t file_id);
-        virtual int remove_file(const uint32_t block_id, const uint64_t file_id, const int32_t undel);
+        virtual int remove_file(const uint32_t block_id, const uint64_t file_id, const common::TfsUnlinkType action);
         virtual int rename_file(const uint32_t block_id, const uint64_t file_id, const uint64_t old_file_id);
         virtual int remote_copy_file(const uint32_t block_id, const uint64_t file_id);
 
       private:
         DISALLOW_COPY_AND_ASSIGN(NfsMirrorBackup);
-
-        char backup_path_[TMP_PATH_SIZE];
-        char remove_path_[TMP_PATH_SIZE];
-        client::TfsClient* source_client_;
-
         static int write_n(const int32_t fd, const char* buffer, const int32_t length);
-        static int mk_dir(const char* path);
-        static int mk_dirs(const char* path);
         static void get_backup_path(char* buf, const char* path, const uint32_t block_id);
         static void get_backup_file_name(char* buf, const char* path, const uint32_t block_id, const uint64_t file_id);
         static int move(const char* source, const char* dest);
-    };
 
-    class TfsMirrorBackup: public SyncBackup
+        static const int32_t BLOCK_DIR_NUM = 100;
+        static const int32_t NFS_MIRROR_DIR_MODE = 0755;
+      char backup_path_[common::MAX_PATH_LENGTH];
+      char remove_path_[common::MAX_PATH_LENGTH];
+
+   };
+
+    class TfsMirrorBackup : public SyncBackup
     {
       public:
-        TfsMirrorBackup() :
-          SyncBackup()
-        {
-          tfs_client_ = NULL;
-          second_tfs_client_ = NULL;
-          source_client_ = NULL;
-        }
-        virtual ~TfsMirrorBackup()
-        {
-          //TODO
-          //tbsys::gDelete(tfs_client_);
-          //tbsys::gDelete(second_tfs_client_);
-          //tbsys::gDelete(source_client_);
-        }
+        TfsMirrorBackup();
+        virtual ~TfsMirrorBackup();
 
         virtual bool init();
         virtual int do_sync(const SyncData* sf);
@@ -123,16 +104,12 @@ namespace tfs
       private:
         DISALLOW_COPY_AND_ASSIGN(TfsMirrorBackup);
 
-        client::TfsClient* tfs_client_;
-        client::TfsClient* second_tfs_client_;
-        client::TfsClient* source_client_;
-
       private:
-        int do_sync(client::TfsClient* tfs_client, const SyncData* sf);
-        int copy_file(client::TfsClient* tfs_client, const uint32_t block_id, const uint64_t file_id);
-        int remove_file(client::TfsClient* tfs_client, const uint32_t block_id, const uint64_t file_id, const int32_t undel);
-        int rename_file(client::TfsClient* tfs_client, const uint32_t block_id, const uint64_t file_id, const uint64_t old_file_id);
-        int remote_copy_file(client::TfsClient* tfs_client, const uint32_t block_id, const uint64_t file_id);
+        int do_sync_ex(const SyncData* sf);
+        int copy_file(const uint32_t block_id, const uint64_t file_id);
+        int remove_file(const uint32_t block_id, const uint64_t file_id, const common::TfsUnlinkType action);
+        int rename_file(const uint32_t block_id, const uint64_t file_id, const uint64_t old_file_id);
+        int remote_copy_file(const uint32_t block_id, const uint64_t file_id);
     };
 
   }

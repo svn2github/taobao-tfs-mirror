@@ -1,13 +1,31 @@
+/*
+ * (C) 2007-2010 Alibaba Group Holding Limited.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+ *
+ *
+ * Version: $Id$
+ *
+ * Authors:
+ *   duolong <duolong@taobao.com>
+ *      - initial release
+ *
+ */
 #include "common/status_message.h"
 #include "message/server_status_message.h"
 #include "message/block_info_message.h"
+#include "tools/util/tool_util.h"
 #include "compare_crc.h"
 
 using namespace std;
 using namespace tfs::common;
 using namespace tfs::client;
 using namespace tfs::message;
+using namespace tfs::tools;
 
+TfsClient* g_tfs_client = NULL;
 FILE *g_succ_file = NULL, *g_fail_file = NULL, *g_error_file = NULL, *g_unsync_file = NULL;
 
 static const int32_t META_FLAG_ABNORMAL = -9800;
@@ -38,32 +56,33 @@ int init_log_file(char* dir_path)
   }
   return TFS_SUCCESS;
 }
-int get_meta_crc(const string& tfs_client, const char* tfs_file_name, FileInfo* finfo)
+int get_meta_crc(const string& tfs_client, const char* tfs_file_name, TfsFileStat* finfo)
 {
   if (finfo == NULL)
   {
     TBSYS_LOG(WARN, "invalid pointer");
     return TFS_ERROR;
   }
-/*TODO TODO
-  if (tfs_client.tfs_open(tfs_file_name, NULL, READ_MODE) != TFS_SUCCESS)
+  int tfs_fd = 0;
+  if ((tfs_fd = g_tfs_client->open(tfs_file_name, NULL, tfs_client.c_str(), T_READ)) < 0)
   {
-    TBSYS_LOG(WARN, "open tfsfile fail: %s", tfs_client.get_error_message());
+    TBSYS_LOG(WARN, "open tfsfile fail");
     return TFS_ERROR;
   }
 
-  if (tfs_client.tfs_stat(finfo, 1) != TFS_SUCCESS)
+  if (g_tfs_client->fstat(tfs_fd, finfo, FORCE_STAT) != TFS_SUCCESS)
   {
-    TBSYS_LOG(WARN, "fstat tfsfile fail: %s, error: %s", tfs_file_name, tfs_client.get_error_message());
+    TBSYS_LOG(WARN, "fstat tfsfile fail: %s", tfs_file_name);
+    g_tfs_client->close(tfs_fd);
     return TFS_ERROR;
   }
 
   if (finfo->flag_ == 1 || finfo->flag_ == 4 || finfo->flag_ == 5)
   {
+    g_tfs_client->close(tfs_fd);
     return META_FLAG_ABNORMAL;
   }
-  tfs_client.tfs_close();
-  */
+  g_tfs_client->close(tfs_fd);
   return TFS_SUCCESS;
 }
 
@@ -75,9 +94,10 @@ int get_real_crc(const string& tfs_client, const char* tfs_file_name, uint32_t* 
     return TFS_ERROR;
   }
 
-  //TODO if (tfs_client.tfs_open(tfs_file_name, NULL, READ_MODE) != TFS_SUCCESS)
+  int tfs_fd = 0;
+  if ((tfs_fd = g_tfs_client->open(tfs_file_name, NULL, tfs_client.c_str(), T_READ)) < 0)
   {
-    //TODOTBSYS_LOG(ERROR, "open tfsfile fail: %s", tfs_client.get_error_message());
+    TBSYS_LOG(ERROR, "open tfsfile fail file name %s", tfs_file_name);
     return TFS_ERROR;
   }
 
@@ -86,10 +106,11 @@ int get_real_crc(const string& tfs_client, const char* tfs_file_name, uint32_t* 
   int total_size = 0,rlen=0;
   for(;;)
   {
-    //TODO rlen = tfs_client.tfs_read(data, MAX_READ_SIZE);
+    rlen = g_tfs_client->read(tfs_fd, data, MAX_READ_SIZE);
     if (rlen < 0)
     {
-      //TODO TBSYS_LOG(ERROR, "read tfsfile fail: %s", tfs_client.get_error_message());
+      TBSYS_LOG(ERROR, "read tfsfile fail: file_name %s", tfs_file_name);
+      g_tfs_client->close(tfs_fd);
       return TFS_ERROR;
     }
     if (rlen == 0)
@@ -100,19 +121,19 @@ int get_real_crc(const string& tfs_client, const char* tfs_file_name, uint32_t* 
       break;
   }
   *crc = crc_tmp;
-  //TODO tfs_client.tfs_close();
+  g_tfs_client->close(tfs_fd);
   return TFS_SUCCESS;
 }
 
-int get_crc_from_filename(const string& old_tfs_client, const string& new_tfs_client, 
+int get_crc_from_filename(const string& old_tfs_client, const string& new_tfs_client,
     const char* tfs_file_name, string& modify_time)
 {
   int ret = TFS_SUCCESS;
   uint32_t old_real_crc = 0;
   uint32_t new_real_crc = 0;
-  FileInfo old_info, new_info;
-  memset(&old_info, 0, sizeof(FileInfo));
-  memset(&new_info, 0, sizeof(FileInfo));
+  TfsFileStat old_info, new_info;
+  memset(&old_info, 0, sizeof(TfsFileStat));
+  memset(&new_info, 0, sizeof(TfsFileStat));
 
   bool skip_flag = false;
   cmp_stat_.total_count_++;
@@ -240,9 +261,10 @@ int get_crc_from_filename(const string& old_tfs_client, const string& new_tfs_cl
             }
             else
             {
-              //TODO old_tfs_client.tfs_open(tfs_file_name, NULL, READ_MODE);
-              FileInfo finfo;
-              //TODO old_tfs_client.tfs_stat(&finfo,READ_MODE);
+              int tfs_fd_old = 0;
+              tfs_fd_old = g_tfs_client->open(tfs_file_name, NULL, old_tfs_client.c_str(), T_READ);
+              TfsFileStat finfo;
+              g_tfs_client->fstat(tfs_fd_old, &finfo);
               FSName fsname;
               fsname.set_name(tfs_file_name);
 
@@ -262,7 +284,7 @@ int get_crc_from_filename(const string& old_tfs_client, const string& new_tfs_cl
                 fprintf(g_unsync_file, "%s\n", tfs_file_name);
                 cmp_stat_.unsync_count_++;
               }
-              //TODO old_tfs_client.tfs_close();
+              g_tfs_client->close(tfs_fd_old);
             }
           }
         }
@@ -307,7 +329,7 @@ int get_crc_from_block_list(const string& old_tfs_client, const string& new_tfs_
     while (fscanf(fp, "%u\n", &block_id) != EOF)
     {
       VUINT64 ds_list;
-      //TODO old_tfs_client.get_block_info(block_id, ds_list);
+      ToolUtil::get_block_ds_list(Func::get_host_ip(old_tfs_client.c_str()), block_id, ds_list);
       if(ds_list.size() > 0)
       {
         uint64_t ds_id = ds_list[0];
@@ -451,7 +473,8 @@ int main(int argc, char** argv)
   string old_tfs_client, new_tfs_client;
   old_tfs_client = old_ns_ip;
   new_tfs_client = new_ns_ip;
-  iret = TfsClient::Instance()->initialize(old_ns_ip.c_str());
+  g_tfs_client = TfsClient::Instance();
+  iret = g_tfs_client->initialize(old_ns_ip.c_str());
   if (iret != TFS_SUCCESS)
   {
     if (iret != TFS_SUCCESS)

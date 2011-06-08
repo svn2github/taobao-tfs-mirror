@@ -80,6 +80,7 @@ extern "C"
 
   typedef enum
   {
+    T_DEFAULT = 0,
     T_READ = 1,
     T_WRITE = 2,
     T_CREATE = 4,
@@ -110,6 +111,12 @@ extern "C"
     CONCEAL = 4,
     REVEAL = 6
   } TfsUnlinkType;
+
+  typedef enum
+  {
+    TFS_FILE_DEFAULT_OPTION = 0,
+    TFS_FILE_NO_SYNC_LOG = 1
+  } OptionFlag;
 
 #if __cplusplus
 }

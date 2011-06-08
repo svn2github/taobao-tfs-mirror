@@ -19,6 +19,7 @@
 #include <string>
 #include <assert.h>
 #include "common/internal.h"
+#include "common/new_client.h"
 
 namespace tfs
 {
@@ -290,6 +291,8 @@ namespace tfs
     typedef ReplBlockMap::iterator ReplBlockMapIter;
     typedef __gnu_cxx::hash_map<uint32_t, ClonedBlock*> ClonedBlockMap; // blockid => ClonedBlock
     typedef ClonedBlockMap::iterator ClonedBlockMapIter;
+
+    int ds_async_callback(common::NewClient* client);
   }
 }
 

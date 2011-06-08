@@ -17,24 +17,16 @@
 #include <pthread.h>
 #include <vector>
 #include <string>
-#include "common/config.h"
-#include "message/client.h"
-#include "message/client_pool.h"
-#include "message/message.h"
-#include "message/message_factory.h"
-#include "ds_util.h"
+#include "common/new_client.h"
+#include "common/client_manager.h"
+#include "common/status_message.h"
+#include "message/replicate_block_message.h"
 
 using namespace tfs::common;
 using namespace tfs::message;
 
 int replicate_block(uint64_t server_ip, uint64_t dest_ip, uint32_t block_id)
 {
-  Client* client = CLIENT_POOL.get_client(server_ip);
-  if (client->connect() != TFS_SUCCESS)
-  {
-    CLIENT_POOL.release_client(client);
-    return TFS_ERROR;
-  }
 
   ReplicateBlockMessage req_rb_msg;
   int32_t ret_status = TFS_ERROR;
@@ -48,23 +40,26 @@ int replicate_block(uint64_t server_ip, uint64_t dest_ip, uint32_t block_id)
   printf("server_ip: %s, descip: %s, block_id: %u\n", tbsys::CNetUtil::addrToString(repl_block.source_id_).c_str(),
       tbsys::CNetUtil::addrToString(repl_block.destination_id_).c_str(), repl_block.block_id_);
 
-  req_rb_msg.set_command(COMMAND_REPLICATE);
+  req_rb_msg.set_command(PLAN_STATUS_BEGIN);
   req_rb_msg.set_repl_block(&repl_block);
-  Message* message = client->call(&req_rb_msg);
-  if (message != NULL)
+
+  NewClient* client = NewClientManager::get_instance().create_client();
+  tbnet::Packet* ret_msg = NULL;
+  ret_status = send_msg_to_server(server_ip, client, &req_rb_msg, ret_msg);
+
+  if (TFS_SUCCESS == ret_status)
   {
-    printf("getMessageType: %d\n", message->get_message_type());
-    if (STATUS_MESSAGE == message->get_message_type())
+    printf("getMessageType: %d\n", ret_msg->getPCode());
+    if (STATUS_MESSAGE == ret_msg->getPCode())
     {
-      StatusMessage* s_msg = dynamic_cast<StatusMessage*>(message);
+      StatusMessage* s_msg = dynamic_cast<StatusMessage*>(ret_msg);
       if (STATUS_MESSAGE_OK == s_msg->get_status())
       {
         ret_status = TFS_SUCCESS;
       }
     }
-    delete message;
   }
-  CLIENT_POOL.release_client(client);
+  NewClientManager::get_instance().destroy_client(client);
   return ret_status;
 }
 

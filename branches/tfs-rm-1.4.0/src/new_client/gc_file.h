@@ -39,7 +39,7 @@ namespace tfs
       int save();
       int remove();
 
-      int validate(const int64_t total_size = 0)
+      int validate(const int64_t = 0)
       {
         return common::TFS_SUCCESS;
       }

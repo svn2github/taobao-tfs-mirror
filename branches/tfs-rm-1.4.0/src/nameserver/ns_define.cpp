@@ -23,7 +23,6 @@ namespace tfs
 {
   namespace nameserver
   {
-    NsGlobalStatisticsInfo::NsGlobalStatisticsInfo instance_;
     NsGlobalStatisticsInfo::NsGlobalStatisticsInfo() :
       elect_seq_num_(ELECT_SEQ_NO_INITIALIZE),
       use_capacity_(0),
@@ -83,8 +82,6 @@ namespace tfs
       TBSYS_LOG(DEBUG, "elect_seq_num: %"PRI64_PREFIX"d, use_capacity: %"PRI64_PREFIX"d, total_capacity: %"PRI64_PREFIX"d, total_block_count: %"PRI64_PREFIX"d, total_load: %d, max_load: %d, max_block_count: %d, alive_server_count: %d",
           elect_seq_num_, use_capacity_, total_capacity_, total_block_count_, total_load_, max_load_, max_block_count_, alive_server_count_); 
     }
-
-    NsRuntimeGlobalInformation::NsRuntimeGlobalInformation intance_;
 
     void NsRuntimeGlobalInformation::initialize()
     {

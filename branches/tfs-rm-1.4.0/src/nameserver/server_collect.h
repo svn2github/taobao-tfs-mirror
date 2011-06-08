@@ -45,7 +45,7 @@ namespace nameserver
     bool clear(LayoutManager& manager, time_t now);
     bool is_writable(int64_t average_used_capacity) const;
     bool is_readable(int32_t average_load) const;
-    bool touch(LayoutManager& manager, time_t now, uint32_t max_block_id, int32_t alive_server_size, bool promote, int32_t& count);
+    bool touch(LayoutManager& manager, time_t now, bool promote, int32_t& count);
     BlockCollect* elect_write_block();
     BlockCollect* force_elect_write_block(void);
 

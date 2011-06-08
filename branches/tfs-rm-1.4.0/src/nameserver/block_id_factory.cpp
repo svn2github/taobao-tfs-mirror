@@ -85,9 +85,10 @@ namespace tfs
 
     int BlockIdFactory::destroy()
     {
-      int32_t iret = update(global_id_);
+      int32_t iret = common::TFS_SUCCESS; 
       if (fd_ > 0)
       {
+        iret = update(global_id_);
         ::close(fd_);
       }
       return iret;

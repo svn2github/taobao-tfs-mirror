@@ -77,6 +77,46 @@ namespace tfs
       {
         tbsys::gDelete(file_info_);
       }
+
+      void reset_status()
+      {
+        status_ = SEG_STATUS_OPEN_OVER;
+        set_pri_ds_index();
+      }
+
+      int64_t get_read_pri_ds()
+      {
+        return ds_[pri_ds_index_];
+      }
+
+      int64_t get_write_pri_ds()
+      {
+        return ds_[0];
+      }
+
+      int32_t get_orig_pri_ds_index()
+      {
+        return seg_info_.file_id_ % ds_.size();
+      }
+
+      void set_pri_ds_index()
+      {
+        pri_ds_index_ = seg_info_.file_id_ % ds_.size();
+      }
+
+      void set_pri_ds_index(int32_t index)
+      {
+        pri_ds_index_ = index % ds_.size();
+      }
+
+      int64_t get_last_ds()
+      {
+        // pri_ds_index_ < 0, server is the last retry one
+        int32_t index = pri_ds_index_ < 0 ? get_orig_pri_ds_index() : pri_ds_index_;
+        index = index == 0 ? ds_.size() - 1 : index - 1;
+        return ds_[index];
+      }
+
     };
 
     extern const char* LOCAL_KEY_PATH;
@@ -101,6 +141,7 @@ namespace tfs
 
       int load();
       int load(const char* buf);
+      int load_head(const char* buf);
       int load_file(const char* name);
       int validate(const int64_t total_size = 0);
       int save();
@@ -123,7 +164,6 @@ namespace tfs
       int init_local_key_name(const char* key, const uint64_t addr, char* local_key_name);
       void clear();
       void clear_info();
-      int load_head(const char* buf);
       int load_segment(const char* buf);
       static void get_segment(const int64_t offset, const char* buf,
                        const int64_t size, SEG_DATA_LIST& seg_list);

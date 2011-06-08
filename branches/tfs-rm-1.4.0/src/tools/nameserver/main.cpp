@@ -1,3 +1,18 @@
+/*
+ * (C) 2007-2010 Alibaba Group Holding Limited.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+ *
+ *
+ * Version: $Id$
+ *
+ * Authors:
+ *   chuyu <chuyu@taobao.com>
+ *      - initial release
+ *
+ */
 #include <stdlib.h>
 #include <stdio.h>
 #include <unistd.h>
@@ -105,7 +120,7 @@ char* match_cmd(const char* text, int32_t state)
   return do_match(text, state, g_cmd_map);
 }
 
-char** admin_cmd_completion (const char* text, int start, int end)
+char** admin_cmd_completion (const char* text, int, int)
 {
   // disable default filename completion
   rl_attempted_completion_over = 1;
@@ -326,6 +341,7 @@ void print_help()
   {
     fprintf(stderr, "block [-n num] [-d block_id] [-s] [-c] [-i] [> filename]   show block info.\n"
         "  -n the number of one fetch, default 1024, optional.\n"
+        "  -d block id, optional.\n"
         "  -s print server list, optional.\n"
         "  -c execute times, default 1, optional.\n"
         "  -i interval time, default 2, optional.\n"
@@ -512,7 +528,7 @@ int main(int argc,char** argv)
     usage(argv[0]);
   }
 
-  //TBSYS_LOGGER.setLogLevel("error");
+  TBSYS_LOGGER.setLogLevel("error");
 
   init();
 

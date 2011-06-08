@@ -38,6 +38,7 @@ namespace tfs
       int32_t iret = write_data_info_.deserialize(input.get_data(), input.get_data_length(), pos);
       if (common::TFS_SUCCESS == iret)
       {
+        input.drain( write_data_info_.length());
         iret = input.get_vint64(ds_);
       }
       if (common::TFS_SUCCESS == iret
@@ -273,7 +274,7 @@ namespace tfs
     int WriteInfoBatchMessage::serialize(common::Stream& output) const
     {
       int64_t pos = 0;
-      int32_t have_block = block_info_.block_id_ >= 0 ? 0 : 1;
+      int32_t have_block = (block_info_.block_id_ > 0) ? 0 : 1;
       int32_t iret = write_data_info_.serialize(output.get_free(), output.get_free_length(), pos);
       if (common::TFS_SUCCESS == iret)
       {

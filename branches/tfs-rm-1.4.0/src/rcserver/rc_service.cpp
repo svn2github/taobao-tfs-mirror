@@ -89,6 +89,8 @@ namespace tfs
 
     int RcService::initialize(int argc, char* argv[])
     {
+      UNUSED(argc);
+      UNUSED(argv);
       int ret = TFS_SUCCESS;
       if ((ret = RcServerParameter::instance().initialize()) != TFS_SUCCESS)
       {
@@ -260,7 +262,8 @@ namespace tfs
       {
         tbutil::Mutex::Lock lock(mutex_);
         // reload config
-        BaseService::reload();
+        TBSYS_CONFIG.load(config_file_.c_str());
+        //BaseService::reload();
         if ((ret = RcServerParameter::instance().initialize()) != TFS_SUCCESS)
         {
           TBSYS_LOG(ERROR, "call RcServerParameter::initialize fail. ret: %d", ret);
