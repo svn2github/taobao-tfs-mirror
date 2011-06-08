@@ -36,6 +36,7 @@ namespace tfs
 
     DataFile::DataFile(uint64_t fn, char* path)
     {
+      UNUSED(path);
       last_update_ = time(NULL);
       length_ = 0;
       crc_ = 0;

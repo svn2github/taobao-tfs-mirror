@@ -45,7 +45,7 @@ namespace tfs
 
     DataService::DataService():
         server_local_port_(-1),
-        ns_ip_port_(-1),
+        ns_ip_port_(0),
         repl_block_(NULL),
         compact_block_(NULL),
         sync_mirror_(NULL),
@@ -141,6 +141,7 @@ namespace tfs
 
     int DataService::initialize(int argc, char* argv[])
     {
+      UNUSED(argc);
       int32_t iret = SYSPARAM_DATASERVER.initialize(server_index_);
       if (TFS_SUCCESS != iret)
       {

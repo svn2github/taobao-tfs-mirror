@@ -45,6 +45,8 @@ namespace tfs
         virtual int check_update_info(const int32_t app_id, const int64_t modify_time, bool& update_flag, common::BaseInfo& base_info) = 0;
         virtual int get_app_name(const int32_t app_id, std::string& app_name) const
         {
+          UNUSED(app_id);
+          UNUSED(app_name);
           return common::TFS_SUCCESS;
         }
 

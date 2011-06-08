@@ -131,7 +131,7 @@ namespace tfs
       char conf_file_[common::MAX_PATH_LENGTH];
 
       // monitor stuff
-      int32_t stop_;
+      bool stop_;
       bool running_;
       int32_t check_interval_;
       int32_t check_count_;

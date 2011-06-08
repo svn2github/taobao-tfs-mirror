@@ -739,6 +739,9 @@ namespace tfs
     int TfsMirrorBackup::rename_file(const uint32_t block_id, const uint64_t file_id,
                                      const uint64_t old_file_id)
     {
+      UNUSED(block_id);
+      UNUSED(file_id);
+      UNUSED(old_file_id);
       // FSName fsname(block_id, file_id);
       // int ret = tfs_client->rename(block_id, old_file_id, file_id);
       // if (TFS_SUCCESS != ret)

@@ -51,7 +51,7 @@ namespace tfs
   {
     // therer is only one AdminServer instance
     AdminServer::AdminServer() :
-      stop_(0), running_(false),
+      stop_(false), running_(false),
       check_interval_(0), check_count_(0), warn_dead_count_(0)
     {
       conf_file_[0] = '\0';
@@ -150,8 +150,8 @@ namespace tfs
         param->adr_.port_ = TBSYS_CONFIG.getInt(CONF_SN_DATASERVER, CONF_PORT);
         param->adr_.port_ = DataServerParameter::get_real_ds_port(param->adr_.port_, index);
 
-        param->lock_file_ = TBSYS_CONFIG.getString(CONF_SN_DATASERVER, CONF_PID_FILE, "./");
-        param->lock_file_ = DataServerParameter::get_real_pid_file(param->lock_file_, index);
+        param->lock_file_ = TBSYS_CONFIG.getString(CONF_SN_DATASERVER, CONF_LOCK_FILE, "./");
+        param->lock_file_ = DataServerParameter::get_real_file_name(param->lock_file_, index, "pid");
         TBSYS_LOG(INFO, "load dataserver %s, desc : %s, lock_file : %s, port : %d, script : %s, waittime: %d\n",
             index.c_str(), param->description_.c_str(), param->lock_file_.c_str(), param->adr_.port_, param->script_.c_str(),
             param->fkill_waittime_);
@@ -242,7 +242,7 @@ namespace tfs
 
     int AdminServer::stop_monitor()
     {
-      stop_ = 1;
+      stop_ = true;
       return TFS_SUCCESS;
     }
 
@@ -309,7 +309,7 @@ namespace tfs
 
       // now is running, there is always only one monitor running...
       running_ = true;
-      stop_ = 0;
+      stop_ = false;
       TBSYS_LOG(WARN, "== monitor normally start tid: %lu ==", pthread_self());
 
       ping_nameserver(TFS_SUCCESS); // wait for ns
@@ -318,6 +318,7 @@ namespace tfs
 
       MonitorParam* m_param = NULL;
       MonitorStatus* m_status = NULL;
+
 
       while (!stop_)
       {
@@ -339,9 +340,10 @@ namespace tfs
 
           if ( 0 == m_status->pid_ || kill(m_status->pid_, 0) != 0) // process not run
           {
+            TBSYS_LOG(DEBUG, "lock file is %s", m_param->lock_file_.c_str());
             if ((m_status->pid_ = tbsys::CProcess::existPid(m_param->lock_file_.c_str())) == 0)
             {
-              TBSYS_LOG(INFO, "start %s", m_param->description_.c_str());
+              TBSYS_LOG(INFO, "start %s", m_param->script_.c_str());
               if (system(m_param->script_.c_str()) == -1)
               {
                 TBSYS_LOG(ERROR, "start %s fail.", m_param->script_.c_str());
@@ -398,7 +400,9 @@ namespace tfs
           }
         }
         // sleep
-        Func::sleep(check_interval_, &stop_);
+
+        sleep(check_interval_);
+        TBSYS_LOG(ERROR, "check_interval_ = %d stop is %d", check_interval_, stop_);
       }
 
       // now not running
@@ -448,7 +452,7 @@ namespace tfs
       {
         if (ping(nsip) == estatus)
           break;
-        Func::sleep(check_interval_, &stop_);
+        sleep(check_interval_);
         ++count;
       }
 
