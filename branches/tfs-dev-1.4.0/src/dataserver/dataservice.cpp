@@ -118,7 +118,7 @@ namespace tfs
       if (work_dir != NULL)
       {
         log_file_path_ = work_dir;
-        log_file_path_ += "/logs/dataserver";
+        log_file_path_ += "/logs/dataserver/";
         SYSPARAM_DATASERVER.get_real_file_name(pid_file_path_, server_index_, "log");
         log_file_path = log_file_path_.c_str();
       }
@@ -132,7 +132,7 @@ namespace tfs
       if (work_dir != NULL)
       {
         pid_file_path_ = work_dir;
-        pid_file_path_ += "/logs/dataserver";
+        pid_file_path_ += "/logs/dataserver/";
         SYSPARAM_DATASERVER.get_real_file_name(pid_file_path_, server_index_, "pid");
         pid_file_path = pid_file_path_.c_str();
       }
