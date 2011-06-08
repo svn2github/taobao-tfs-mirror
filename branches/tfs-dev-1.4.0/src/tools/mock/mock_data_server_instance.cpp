@@ -201,6 +201,8 @@ bool MockDataService::handlePacketQueue(tbnet::Packet *packet, void *args)
 
 int MockDataService::initialize(int argc, char* argv[])
 {
+  UNUSED(argc);
+  UNUSED(argv);
   int32_t iret = get_ns_port() > 0 ? TFS_SUCCESS : TFS_ERROR;
   if (TFS_SUCCESS == iret)
   {
@@ -515,6 +517,8 @@ int MockDataService::send_message_to_slave(BasePacket* message, const VUINT64& d
 
 int MockDataService::commit_to_nameserver(std::map<uint32_t, BlockEntry>::iterator iter, uint32_t block_id, uint32_t lease_id, int32_t status, common::UnlinkFlag flag)
 {
+  UNUSED(status);
+  UNUSED(block_id);
   int32_t iret = iter == blocks_.end() ? TFS_ERROR : TFS_SUCCESS;
   if (TFS_SUCCESS == iret)
   {
@@ -527,11 +531,11 @@ int MockDataService::commit_to_nameserver(std::map<uint32_t, BlockEntry>::iterat
     rmsg.set_lease_id(lease_id);
     rmsg.set_success(WRITE_COMPLETE_STATUS_YES);
     rmsg.set_unlink_flag(flag);
-    int32_t status = STATUS_MESSAGE_ERROR;
-    iret = send_msg_to_server(ns_ip_port_, &rmsg, status);
+    int32_t ret = STATUS_MESSAGE_ERROR;
+    iret = send_msg_to_server(ns_ip_port_, &rmsg, ret);
     if (TFS_SUCCESS == iret)
     {
-      iret = STATUS_MESSAGE_OK == status ? TFS_SUCCESS : TFS_ERROR;
+      iret = STATUS_MESSAGE_OK == ret ? TFS_SUCCESS : TFS_ERROR;
       if (TFS_SUCCESS == iret)
       {
         iter->second.info_.version_++;
@@ -559,7 +563,7 @@ void KeepaliveTimerTask::runTimerTask()
 
 int ns_async_callback(NewClient* client)
 {
-  MockDataService* service = dynamic_cast<MockDataService*>(tbutil::Service::instance());
+  MockDataService* service = dynamic_cast<MockDataService*>(BaseMain::instance());
   int32_t iret = NULL != service ? TFS_SUCCESS : TFS_ERROR;
   if (TFS_SUCCESS == iret)
   {
