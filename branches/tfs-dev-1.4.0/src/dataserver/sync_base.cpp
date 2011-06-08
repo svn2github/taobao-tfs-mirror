@@ -19,6 +19,7 @@
 
 #include "common/parameter.h"
 #include "sync_base.h"
+#include "dataservice.h"
 
 namespace tfs
 {
@@ -32,7 +33,7 @@ namespace tfs
     {
       // create queue
       char tmpstr[MAX_PATH_LENGTH];
-      snprintf(tmpstr, MAX_PATH_LENGTH, "%s/mirror", SYSPARAM_DATASERVER.work_dir_.c_str());
+      snprintf(tmpstr, MAX_PATH_LENGTH, "%s/mirror", DataService::instance()->get_work_dir());
       file_queue_ = new FileQueue(tmpstr, "firstqueue");
       file_queue_->load_queue_head();
       file_queue_->initialize();
@@ -212,7 +213,7 @@ namespace tfs
         wait_second -= (time(NULL) - sf->retry_time_);
         if (wait_second > 0)
         {
-          Func::sleep(wait_second, &stop_);
+          Func::sleep(wait_second, stop_);
         }
         if (stop_)
         {
@@ -240,7 +241,7 @@ namespace tfs
         if (NULL == second_file_queue_ && NULL == second_file_queue_thread_)
         {
           char tmpstr[MAX_PATH_LENGTH];
-          snprintf(tmpstr, MAX_PATH_LENGTH, "%s/mirror", SYSPARAM_DATASERVER.work_dir_.c_str());
+          snprintf(tmpstr, MAX_PATH_LENGTH, "%s/mirror", DataService::instance()->get_work_dir());
           second_file_queue_ = new FileQueue(tmpstr, "secondqueue");
           second_file_queue_->load_queue_head();
           second_file_queue_->initialize();

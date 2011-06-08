@@ -23,6 +23,8 @@
 #include "common/func.h"
 #include "new_client/fsname.h"
 #include "file_repair.h"
+#include "dataservice.h"
+
 
 namespace tfs
 {
@@ -98,7 +100,7 @@ namespace tfs
         else
         {
           int fd = -1;
-          get_tmp_file_name(tmp_file, SYSPARAM_DATASERVER.work_dir_.c_str(), fsname.get_name());
+          get_tmp_file_name(tmp_file, DataService::instance()->get_work_dir(), fsname.get_name());
 
           if ((fd = open(tmp_file, O_WRONLY | O_CREAT | O_TRUNC, 0660)) == -1)
           {

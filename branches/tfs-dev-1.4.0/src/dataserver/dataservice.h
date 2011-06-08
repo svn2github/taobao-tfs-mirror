@@ -55,12 +55,10 @@ namespace tfs
         virtual ~DataService();
 
         /** application parse args*/
-        virtual int parse_common_line_args(int argc, char* argv[]);
+        virtual int parse_common_line_args(int argc, char* argv[], std::string& errmsg);
 
         /** get listen port*/
         virtual int get_listen_port() const ;
-
-        virtual const char* get_log_file_path();
 
         /** initialize application data*/
         virtual int initialize(int argc, char* argv[]);
@@ -100,10 +98,13 @@ namespace tfs
 
         int callback(common::NewClient* client);
 
-        int send_message_to_slave_ds(common::BasePacket* message, const common::VUINT64& ds_list);
         int post_message_to_server(common::BasePacket* message, const common::VUINT64& ds_list);
 
         int stop_heart();
+
+      protected:
+        virtual const char* get_log_file_path();
+        virtual const char* get_pid_file_path();
 
       private:
         int run_heart();
@@ -144,7 +145,6 @@ namespace tfs
         int get_ping_status(common::StatusMessage* message);
         int client_command(message::ClientCmdMessage* message);
 
-        //TODO int get_server_memory_info(message::ServerMetaInfoMessage* message);
         int reload_config(message::ReloadConfigMessage* message);
         void send_blocks_to_ns(const int32_t who);
 
@@ -247,8 +247,7 @@ namespace tfs
         BlockChecker block_checker_;
 
         int32_t server_local_port_;
-        int32_t stop_;
-        int32_t need_send_blockinfo_[2];
+        bool need_send_blockinfo_[2];
         bool set_flag_[2];
         uint64_t hb_ip_port_[2];
         uint64_t ns_ip_port_; //nameserver ip port;
@@ -286,6 +285,9 @@ namespace tfs
         ReplicateBlockThreadHelperPtr* replicate_block_threads_;
         CompactBlockThreadHelperPtr  compact_block_thread_;
         DoSyncMirrorThreadHelperPtr  do_sync_mirror_thread_;
+
+        std::string read_stat_log_file_;
+        std::string write_stat_log_file_;
     };
   }
 }

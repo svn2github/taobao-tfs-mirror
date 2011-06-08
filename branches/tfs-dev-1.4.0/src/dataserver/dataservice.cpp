@@ -35,7 +35,6 @@ namespace tfs
 
     DataService::DataService():
         server_local_port_(-1),
-        stop_(0),
         ns_ip_port_(-1),
         repl_block_(NULL),
         compact_block_(NULL),
@@ -50,8 +49,9 @@ namespace tfs
         do_sync_mirror_thread_(0)
     {
       //init dataserver info
+      need_send_blockinfo_[0] = true;
+      need_send_blockinfo_[1] = true;
       memset(&data_server_info_, 0, sizeof(DataServerStatInfo));
-      memset(need_send_blockinfo_, 1, sizeof(need_send_blockinfo_));
       memset(set_flag_, 0, sizeof(set_flag_));
       memset(hb_ip_port_, 0, sizeof(hb_ip_port_));
     }
@@ -61,33 +61,44 @@ namespace tfs
 
     }
 
-    int DataService::parse_common_line_args(int argc, char* argv[])
+    int DataService::parse_common_line_args(int argc, char* argv[], std::string& errmsg)
     {
-      int32_t i = 0;
-      while ((i = getopt(argc, argv, "o:l:")) != EOF)
+      char buf[256];
+      int32_t index = 0;
+      while ((index = getopt(argc, argv, "i:")) != EOF)
       {
-        switch (i)
+        switch (index)
         {
-          case 'o':
+          case 'i':
             server_index_ = optarg;
             break;
           default:
-            TBSYS_LOG(ERROR, "%s", "invalid parameter");
+            snprintf(buf, 256, "%c invalid parameter", index);
             break;
         }
       }
       int32_t iret = server_index_.empty() ? TFS_ERROR : TFS_SUCCESS;
-      if (TFS_SUCCESS == iret)
+      if (TFS_SUCCESS != iret)
       {
-        iret = SYSPARAM_DATASERVER.initialize(server_index_);
+        snprintf(buf, 256, "server index in empty, invalid parameter");
       }
+      errmsg = buf;
       return iret;
     }
 
     int DataService::get_listen_port() const
     {
-      return SYSPARAM_DATASERVER.local_ds_port_ < 1024 
-              || SYSPARAM_DATASERVER.local_ds_port_ > 65535 ? -1 : SYSPARAM_DATASERVER.local_ds_port_;
+      int32_t port = -1;
+      int32_t base_port = TBSYS_CONFIG.getInt(CONF_SN_PUBLIC, CONF_PORT, 0);
+      if (base_port >= 1024 || base_port <= 65535)
+      {
+        port = base_port + atoi(server_index_.c_str());
+        if (port < 1024 || base_port > 65535)
+        {
+          port = -1;
+        }
+      }
+      return port;
     }
 
     const char* DataService::get_log_file_path()
@@ -96,51 +107,71 @@ namespace tfs
       const char* work_dir = get_work_dir();
       if (work_dir != NULL)
       {
-        SYSPARAM_DATASERVER.log_file_ = work_dir;
-        SYSPARAM_DATASERVER.log_file_ += "/logs/dataserver_"+server_index_;
-        SYSPARAM_DATASERVER.log_file_ += ".log";
-        log_file_path = SYSPARAM_DATASERVER.log_file_.c_str();
+        log_file_path_ = work_dir;
+        log_file_path_ += "/logs/dataserver_" + server_index_;
+        log_file_path_ += ".log";
+        log_file_path = log_file_path_.c_str();
       }
       return log_file_path;
     }
 
+    const char* DataService::get_pid_file_path()
+    {
+      const char* pid_file_path = NULL;
+      const char* work_dir = get_work_dir();
+      if (work_dir != NULL)
+      {
+        pid_file_path_ = work_dir;
+        pid_file_path_ += "/logs/dataserver_" + server_index_;
+        pid_file_path_ += ".pid";
+        pid_file_path = pid_file_path_.c_str();
+      }
+      return pid_file_path;
+    }
+
     int DataService::initialize(int argc, char* argv[])
     {
-      const char* work_dir = get_work_dir();
-      int32_t iret = TFS_ERROR;
-      if (NULL == work_dir)
+      int32_t iret = SYSPARAM_DATASERVER.initialize(server_index_);
+      if (TFS_SUCCESS != iret)
       {
+        TBSYS_LOG(ERROR, "load dataserver parameter failed: %d", iret);
         iret = EXIT_GENERAL_ERROR;
-        TBSYS_LOG(ERROR, "%s", "dataserver not set work dir, must be exist");
       }
+
       if (TFS_SUCCESS == iret)
       {
-        string storage_dir;
-        storage_dir.assign(work_dir);
-        storage_dir.append("/storage");
-        if (!DirectoryOp::create_full_path(storage_dir.c_str()))
+        //create work directory
+        const char* work_dir = get_work_dir();
+        iret = NULL == work_dir ? EXIT_GENERAL_ERROR: TFS_SUCCESS;
+        if (TFS_SUCCESS != iret)
         {
-          iret = EXIT_GENERAL_ERROR;
-          TBSYS_LOG(ERROR, "create directory(%s) failed", storage_dir.c_str());
-        }
-        if ( TFS_SUCCESS == iret)
-        {
-          storage_dir.assign(work_dir);
-          storage_dir.append("/tmp");
-          if (!DirectoryOp::create_full_path(storage_dir.c_str()))
-          {
-            iret = EXIT_GENERAL_ERROR;
-            TBSYS_LOG(ERROR, "create directory(%s) failed", storage_dir.c_str());
-          }
+          TBSYS_LOG(ERROR, "%s not set work dir, must be exist", argv[0]);
         }
         if (TFS_SUCCESS == iret)
         {
-          storage_dir.assign(work_dir);
-          storage_dir.append("/mirror");
+          string storage_dir = work_dir + string("/storage");
           if (!DirectoryOp::create_full_path(storage_dir.c_str()))
           {
             iret = EXIT_GENERAL_ERROR;
-            TBSYS_LOG(ERROR, "create directory(%s) failed", storage_dir.c_str());
+            TBSYS_LOG(ERROR, "create directory %s error: %s", storage_dir.c_str(), strerror(errno));
+          }
+          if ( TFS_SUCCESS == iret)
+          {
+            storage_dir = work_dir + string("/tmp");
+            if (!DirectoryOp::create_full_path(storage_dir.c_str()))
+            {
+              iret = EXIT_GENERAL_ERROR;
+              TBSYS_LOG(ERROR, "create directory %s error: %s", storage_dir.c_str(), strerror(errno));
+            }
+          }
+          if (TFS_SUCCESS == iret)
+          {
+            storage_dir = work_dir + string("/mirror");
+            if (!DirectoryOp::create_full_path(storage_dir.c_str()))
+            {
+              iret = EXIT_GENERAL_ERROR;
+              TBSYS_LOG(ERROR, "create directory %s error: %s", storage_dir.c_str(), strerror(errno));
+            }
           }
         }
       }
@@ -151,14 +182,49 @@ namespace tfs
         iret = set_ns_ip();
       }
 
+      //check dev & ip
+      if (TFS_SUCCESS == iret)
+      {
+        const char* ip_addr = get_ip_addr();
+        if (NULL == ip_addr)//get ip addr
+        {
+          iret =  EXIT_CONFIG_ERROR;
+          TBSYS_LOG(ERROR, "%s", "nameserver not set ip_addr");
+        }
+
+        if (TFS_SUCCESS == iret)
+        {
+          const char *dev_name = get_dev();                                                          
+          if (NULL == dev_name)//get dev name
+          {
+            iret =  EXIT_CONFIG_ERROR;
+            TBSYS_LOG(ERROR, "%s","nameserver not set dev_name");
+          }
+          else
+          {
+            uint32_t ip_addr_id = tbsys::CNetUtil::getAddr(ip_addr);
+            uint32_t local_ip   = Func::get_local_addr(dev_name);
+            if (local_ip != ip_addr_id)
+            {
+              TBSYS_LOG(WARN, "ip '%s' is not local ip, local ip: %s",ip_addr, tbsys::CNetUtil::addrToString(local_ip).c_str());
+              iret = EXIT_CONFIG_ERROR;
+            }
+          }
+        }
+      }
+
       if (TFS_SUCCESS == iret)
       {
         max_cpu_usage_  = SYSPARAM_DATASERVER.max_cpu_usage_;
+
         data_server_info_.startup_time_ = time(NULL);
+
         IpAddr* adr = reinterpret_cast<IpAddr*>(&data_server_info_.id_);
-        adr->ip_ = Func::get_local_addr(SYSPARAM_DATASERVER.dev_name_);
-        adr->port_ = SYSPARAM_DATASERVER.local_ds_port_;
+        adr->ip_ = tbsys::CNetUtil::getAddr(get_ip_addr());
+        adr->port_ = get_listen_port();
+
         TBSYS_LOG(INFO, "dataserver listen port: %d", adr->port_);
+
         server_local_port_ = adr->port_;
 
         //init file number to management
@@ -183,7 +249,6 @@ namespace tfs
           stat_ptr->add_sub_key("write-failed");
           stat_ptr->add_sub_key("unlink-success");
           stat_ptr->add_sub_key("unlink-failed");
-
           stat_mgr_.add_entry(stat_ptr, SYSPARAM_DATASERVER.dump_stat_info_interval_);
         }
 
@@ -216,12 +281,6 @@ namespace tfs
           block_checker_.init(data_server_info_.id_, &ds_requester_);
         }
 
-        //TODO test server(nameserver) is alive
-        if (TFS_SUCCESS == iret)
-        {
-
-        }
-
         if (TFS_SUCCESS == iret)
         {
           heartbeat_thread_ = new HeartBeatThreadHelper(*this);
@@ -234,13 +293,26 @@ namespace tfs
             replicate_block_threads_[i] = new ReplicateBlockThreadHelper(*this);
           }
         }
+
         if (TFS_SUCCESS == iret)
         {
           //set write and read log
-          init_log_file(READ_STAT_LOGGER, SYSPARAM_DATASERVER.read_stat_log_file_);
-          init_log_file(WRITE_STAT_LOGGER, SYSPARAM_DATASERVER.write_stat_log_file_);
-
-          TBSYS_LOG(INFO, "dataservice start");
+          const char* work_dir = get_work_dir();
+          iret = NULL == work_dir ? TFS_ERROR : TFS_SUCCESS;
+          if (TFS_SUCCESS != iret)
+          {
+            TBSYS_LOG(ERROR, "%s not set work directory", argv[0]);
+          }
+          else
+          {
+            read_stat_log_file_ = work_dir;
+            read_stat_log_file_ += "/logs/read_stat_" + server_index_ + ".log";
+            write_stat_log_file_= work_dir;
+            write_stat_log_file_ += "/logs/write_stat_" + server_index_ + ".log";
+            init_log_file(READ_STAT_LOGGER, read_stat_log_file_);
+            init_log_file(WRITE_STAT_LOGGER, write_stat_log_file_);
+            TBSYS_LOG(INFO, "dataservice start");
+          }
         }
       }
       return iret;
@@ -289,7 +361,7 @@ namespace tfs
         if (ns_ip_list.size() != 2)
         {
           TBSYS_LOG(DEBUG, "must have two ns, check your ns' list");
-          need_send_blockinfo_[1] = 0;
+          need_send_blockinfo_[1] = false;
         }
 
         for (uint32_t i = 0; i < ns_ip_list.size(); ++i)
@@ -321,72 +393,58 @@ namespace tfs
 
     int DataService::destroy_service()
     {
-      int32_t iret = TFS_SUCCESS;
-      bool multiple_stop = false;
+      //global stat destroy
+      stat_mgr_.destroy();
+      if (NULL != sync_mirror_)
       {
-        tbutil::Mutex::Lock lock(stop_mutex_);
-        multiple_stop = 1 == stop_ ?  true : false;
-        if (!multiple_stop)
-          stop_ = 1;
+        sync_mirror_->stop();
       }
-      if (!multiple_stop)
+      if (NULL != repl_block_)
       {
-        TBSYS_LOG(INFO, "Dataserver stopping...");
+        repl_block_->stop();
+      }
+      if (NULL != compact_block_)
+      {
+        compact_block_->stop();
+      }
+      block_checker_.stop();
 
-        //global stat destroy
-        stat_mgr_.destroy();
-        if (NULL != sync_mirror_)
+      if (0 != heartbeat_thread_)
+      {
+        heartbeat_thread_->join();
+        heartbeat_thread_ = 0;
+      }
+      if (0 != do_check_thread_)
+      {
+        do_check_thread_->join();
+        do_check_thread_ = 0;
+      }
+      if (0 != compact_block_thread_)
+      {
+        compact_block_thread_->join();
+        compact_block_thread_ = 0;
+      } 
+      if (0 != do_sync_mirror_thread_)
+      {
+        do_sync_mirror_thread_->join();
+        do_sync_mirror_thread_ = 0;
+      }
+      if (NULL != replicate_block_threads_)
+      {
+        for (int32_t i = 0; i < SYSPARAM_DATASERVER.replicate_thread_count_; ++i)
         {
-          sync_mirror_->stop();
-        }
-        if (NULL != repl_block_)
-        {
-          repl_block_->stop();
-        }
-        if (NULL != compact_block_)
-        {
-          compact_block_->stop();
-        }
-        block_checker_.stop();
-
-        if (0 != heartbeat_thread_)
-        {
-          heartbeat_thread_->join();
-          heartbeat_thread_ = 0;
-        }
-        if (0 != do_check_thread_)
-        {
-          do_check_thread_->join();
-          do_check_thread_ = 0;
-        }
-        if (0 != compact_block_thread_)
-        {
-          compact_block_thread_->join();
-          compact_block_thread_ = 0;
-        } 
-        if (0 != do_sync_mirror_thread_)
-        {
-          do_sync_mirror_thread_->join();
-          do_sync_mirror_thread_ = 0;
-        }
-        if (NULL != replicate_block_threads_)
-        {
-          for (int32_t i = 0; i < SYSPARAM_DATASERVER.replicate_thread_count_; ++i)
+          if (0 != replicate_block_threads_[i])
           {
-            if (0 != replicate_block_threads_[i])
-            {
-              replicate_block_threads_[i]->join();
-              replicate_block_threads_[i] = 0;
-            }
+            replicate_block_threads_[i]->join();
+            replicate_block_threads_[i] = 0;
           }
         }
-        tbsys::gDeleteA(replicate_block_threads_);
-        tbsys::gDelete(repl_block_);
-        tbsys::gDelete(compact_block_);
-        tbsys::gDelete(sync_mirror_);
-        TBSYS_LOG(INFO, "Dataserver stopped.");
       }
-      return iret;
+      tbsys::gDeleteA(replicate_block_threads_);
+      tbsys::gDelete(repl_block_);
+      tbsys::gDelete(compact_block_);
+      tbsys::gDelete(sync_mirror_);
+      return TFS_SUCCESS;
     }
 
     int DataService::run_heart()
@@ -395,6 +453,7 @@ namespace tfs
       sleep(SYSPARAM_DATASERVER.heart_interval_);
       while (!stop_)
       {
+        TBSYS_LOG(DEBUG, "===bgegiiiiiiiiiiiiiiiii===========");
         data_management_.get_ds_filesystem_info(data_server_info_.block_count_, data_server_info_.use_capacity_,
             data_server_info_.total_capacity_);
         data_server_info_.current_load_ = Func::get_load_avg();
@@ -403,11 +462,12 @@ namespace tfs
         send_blocks_to_ns(1);
 
         // sleep
-        Func::sleep(SYSPARAM_DATASERVER.heart_interval_, &stop_);
+        Func::sleep(SYSPARAM_DATASERVER.heart_interval_, stop_);
         if (DATASERVER_STATUS_DEAD == data_server_info_.status_)
         {
           break;
         }
+        TBSYS_LOG(DEBUG, "================================: %d", SYSPARAM_DATASERVER.heart_interval_);
 
         cpu_metrics_.summary();
       }
@@ -455,9 +515,9 @@ namespace tfs
         if (current_time % 86400 >= zonesec && current_time % 86400 < zonesec + 300 && last_rlog < current_time - 600)
         {
           last_rlog = current_time;
-          TBSYS_LOGGER.rotateLog(SYSPARAM_DATASERVER.log_file_.c_str());
-          READ_STAT_LOGGER.rotateLog(SYSPARAM_DATASERVER.read_stat_log_file_.c_str());
-          WRITE_STAT_LOGGER.rotateLog(SYSPARAM_DATASERVER.write_stat_log_file_.c_str());
+          TBSYS_LOGGER.rotateLog(log_file_path_.c_str());
+          READ_STAT_LOGGER.rotateLog(read_stat_log_file_.c_str());
+          WRITE_STAT_LOGGER.rotateLog(write_stat_log_file_.c_str());
 
           // expire error block
           block_checker_.expire_error_block();
@@ -516,65 +576,35 @@ namespace tfs
           TBSYS_LOG(INFO, "Dump read info.end time: %" PRI64_PREFIX "d. Cost Time: %" PRI64_PREFIX "d\n", time_end, time_end - time_start);
         }
 
-        Func::sleep(SYSPARAM_DATASERVER.check_interval_, &stop_);
+        Func::sleep(SYSPARAM_DATASERVER.check_interval_, stop_);
       }
 
       data_management_.remove_data_file();
       return TFS_SUCCESS;
     }
 
-    int DataService::send_message_to_slave_ds(BasePacket* message, const VUINT64& ds_list)
-    {
-      int ret = TFS_SUCCESS;
-      int32_t ds_size = static_cast<int32_t>(ds_list.size()) - 1;
-      for (int32_t i = ds_size; i >= 0; --i)
-      {
-        if (ds_list[i] == data_server_info_.id_)
-        {
-          continue;
-        }
-        // send to port(port+1)
-        // TODO not add 1 any more
-        uint64_t ds_ip = Func::addr_inc_port(ds_list[i], 1);
-
-        int32_t ret_status = 0;
-        // client send
-        ret = send_msg_to_server(ds_ip, message, ret_status);
-        if (TFS_SUCCESS != ret)
-        {
-          TBSYS_LOG(ERROR, "send message to server to ds ip: %s fail.\n", tbsys::CNetUtil::addrToString(ds_ip).c_str());
-          return ret;
-        }
-      }
-
-      return TFS_SUCCESS;
-    }
-
     int DataService::post_message_to_server(BasePacket* message, const VUINT64& ds_list)
     {
-      VUINT64 erase_self;
-      for (uint32_t i = 0; i < ds_list.size(); ++i)
+      int32_t iret = !ds_list.empty() ? 0 : -1;
+      if (0 == iret)
       {
-        if (ds_list[i] == data_server_info_.id_)
+        VUINT64 erase_self(ds_list);
+        iret = send_msg_to_server_helper(data_server_info_.id_, erase_self);
+        if (TFS_SUCCESS == iret)
         {
-          continue;
+          if (!erase_self.empty())
+          {
+            NewClient* client = NewClientManager::get_instance().create_client();
+            iret = common::post_msg_to_server(erase_self, client, message, ds_async_callback);
+            iret = TFS_SUCCESS == iret ? 1 : -1;
+          }
+          else
+          {
+            iret = 0;
+          }
         }
-        erase_self.push_back(ds_list[i]);
       }
-      if (erase_self.size() == 0)
-      {
-        return 0;
-      }
-      //TODO  async_post
-      //if (async_post_message_to_servers(message, erase_self, this) == TFS_SUCCESS)
-      if (true)
-      {
-        return 1;
-      }
-      else
-      {
-        return -1;
-      }
+      return iret;
     }
 
     int DataService::callback(common::NewClient* client)
@@ -954,7 +984,7 @@ namespace tfs
             //no slave
             message->reply(new StatusMessage(STATUS_MESSAGE_OK));
           }
-          else if (ret < 0)
+          else
           {
             ds_requester_.req_block_write_complete(write_info.block_id_, lease_id, EXIT_SENDMSG_ERROR);
             message->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret, 
@@ -1046,9 +1076,8 @@ namespace tfs
             message->set_mode(CLOSE_FILE_SLAVER);
             message->set_block(blk);
 
-            //ret = send_message_to_slave_ds(message, message->get_ds_list());
             ret = post_message_to_server(message, message->get_ds_list());
-            if (TFS_SUCCESS != ret)
+            if (ret < 0)
             {
               // other ds failed, release lease
               ds_requester_.req_block_write_complete(close_file_info.block_id_, lease_id, TFS_ERROR);
@@ -1056,7 +1085,7 @@ namespace tfs
                   "close write file to other dataserver fail, blockid: %u, fileid: %" PRI64_PREFIX "u, ret: %d",
                   close_file_info.block_id_, close_file_info.file_id_, ret);
             }
-            /*else
+            else if (ret == 0)//only self
             {
               //commit
               ret = ds_requester_.req_block_write_complete(close_file_info.block_id_, lease_id, TFS_SUCCESS);
@@ -1084,7 +1113,7 @@ namespace tfs
                     close_file_info.block_id_, close_file_info.file_id_, ret);
                 message->reply(new StatusMessage(STATUS_MESSAGE_ERROR));
               }
-            }*/
+            }
           }
           else
           {
@@ -1798,8 +1827,8 @@ namespace tfs
         }
         else if (CLIENT_CMD_FORCE_DATASERVER_REPORT == type)
         {
-          need_send_blockinfo_[0] = 1;
-          need_send_blockinfo_[1] = 1;
+          need_send_blockinfo_[0] = true;
+          need_send_blockinfo_[1] = true;
         }
       }
       while (0);
@@ -1809,26 +1838,32 @@ namespace tfs
 
     int DataService::reload_config(ReloadConfigMessage* message)
     {
-      int ret = TFS_SUCCESS;
-      //TODO reload_config
-      if ((ret = SYSPARAM_DATASERVER.initialize(server_index_)) != TFS_SUCCESS)
+      int32_t ret = TBSYS_CONFIG.load(config_file_.c_str());
+      if (EXIT_SUCCESS == ret)
       {
-        TBSYS_LOG(ERROR, "reload config failed \n");
-        return ret;
-      }
-      if (message->get_switch_cluster_flag() && sync_mirror_)
-      {
-        ret = sync_mirror_->reload_slave_ip();
+        ret = SYSPARAM_DATASERVER.initialize(server_index_);
         if (TFS_SUCCESS != ret)
         {
-          TBSYS_LOG(ERROR, "reload slave ip error. ret: %d\n", ret);
-          return ret;
+          TBSYS_LOG(ERROR, "reload config failed \n");
+        }
+        else
+        {
+          if (message->get_switch_cluster_flag() && sync_mirror_)
+          {
+            ret = sync_mirror_->reload_slave_ip();
+            if (TFS_SUCCESS != ret)
+            {
+              TBSYS_LOG(ERROR, "reload slave ip error. ret: %d\n", ret);
+            }
+          }
+          TBSYS_LOG(INFO, "reload config ret: %d\n", ret);
+          if (TFS_SUCCESS == ret)
+          {
+            ret = message->reply(new StatusMessage(STATUS_MESSAGE_OK));
+          }
         }
       }
-
-      TBSYS_LOG(INFO, "reload config ret: %d\n", ret);
-      message->reply(new StatusMessage(STATUS_MESSAGE_OK));
-      return TFS_SUCCESS;
+      return ret;
     }
 
     int DataService::get_ping_status(StatusMessage* message)
@@ -1970,12 +2005,12 @@ namespace tfs
             if (reset_need_send_blockinfo_flag
                 && need_send_blockinfo_[who])
             {
-              need_send_blockinfo_[who] = 0;
+              need_send_blockinfo_[who] = false;
             }
             if (resp_hb_msg->get_status() == HEART_NEED_SEND_BLOCK_INFO)
             {
               TBSYS_LOG(DEBUG, "nameserver %d ask for send block\n", who + 1);
-              need_send_blockinfo_[who] = 1;
+              need_send_blockinfo_[who] = true;
             }
             else if (resp_hb_msg->get_status() == HEART_EXP_BLOCK_ID)
             {
@@ -2071,20 +2106,23 @@ namespace tfs
       return;
     }
 
-    int DataService::init_log_file(tbsys::CLogger& LOGGER, const string& log_file)
+    int DataService::init_log_file(tbsys::CLogger& logger, const string& log_file)
     {
-      //TODO LOGGER.setLogLevel(CONFIG.get_string_value(CONFIG_PUBLIC, CONF_LOG_LEVEL));
-
-      if (log_file.size() != 0 && access(log_file.c_str(), R_OK) == 0)
+      int32_t iret = log_file.empty() ? TFS_ERROR : TFS_SUCCESS;
+      if (TFS_SUCCESS == iret)
       {
-        char old_log_file[256];
-        sprintf(old_log_file, "%s.%s", log_file.c_str(), Func::time_to_str(time(NULL), 1).c_str());
-        rename(log_file.c_str(), old_log_file);
+        logger.setLogLevel(get_log_file_level());
+        if (access(log_file.c_str(), R_OK) == 0)
+        {
+          char old_log_file[256];
+          sprintf(old_log_file, "%s.%s", log_file.c_str(), Func::time_to_str(time(NULL), 1).c_str());
+          rename(log_file.c_str(), old_log_file);
+        }
+        logger.setFileName(log_file.c_str(), true);
+        logger.setMaxFileSize(get_log_file_size());
+        logger.setMaxFileIndex(get_log_file_count());
       }
-      LOGGER.setFileName(log_file.c_str(), true);
-      //TODO LOGGER.setMaxFileSize(CONFIG.get_int_value(CONFIG_PUBLIC, CONF_LOG_SIZE, 1024 * 1024 * 1024));
-      //TODO LOGGER.setMaxFileIndex(CONFIG.get_int_value(CONFIG_PUBLIC, CONF_LOG_NUM, 30));
-      return TFS_SUCCESS;
+      return iret;
     }
     
     void DataService::HeartBeatThreadHelper::run()
@@ -2112,9 +2150,9 @@ namespace tfs
       service_.sync_mirror_->run_sync_mirror();
     }
 
-    int ns_async_callback(common::NewClient* client)
+    int ds_async_callback(common::NewClient* client)
     {
-      DataService* service = dynamic_cast<DataService*>(tbutil::Service::instance());
+      DataService* service = dynamic_cast<DataService*>(BaseMain::instance());
       int32_t iret = NULL != service ? TFS_SUCCESS : TFS_ERROR;
       if (TFS_SUCCESS == iret)
       {

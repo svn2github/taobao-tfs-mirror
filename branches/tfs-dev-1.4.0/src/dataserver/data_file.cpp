@@ -16,6 +16,7 @@
 #include "common/parameter.h"
 #include "common/func.h"
 #include "data_file.h"
+#include "dataservice.h"
 
 namespace tfs
 {
@@ -29,7 +30,7 @@ namespace tfs
       length_ = 0;
       crc_ = 0;
       fd_ = -1;
-      sprintf(tmp_file_name_, "%s/tmp/%"PRI64_PREFIX"u.dat", SYSPARAM_DATASERVER.work_dir_.c_str(), fn);
+      sprintf(tmp_file_name_, "%s/tmp/%"PRI64_PREFIX"u.dat", DataService::instance()->get_work_dir(), fn);
       atomic_set(&ref_count_, 0);
     }
 
@@ -39,10 +40,7 @@ namespace tfs
       length_ = 0;
       crc_ = 0;
       fd_ = -1;
-
-      char* work_dir = NULL;
-      //TODO CONFIG.get_string_value(CONFIG_DATASERVER, CONF_WORK_DIR, path);
-      sprintf(tmp_file_name_, "%s/tmp/%"PRI64_PREFIX"u.dat", work_dir, fn);
+      sprintf(tmp_file_name_, "%s/tmp/%"PRI64_PREFIX"u.dat", DataService::instance()->get_work_dir(), fn);
       atomic_set(&ref_count_, 0);
     }
 
