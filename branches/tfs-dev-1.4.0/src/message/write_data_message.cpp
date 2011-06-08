@@ -38,6 +38,7 @@ namespace tfs
       int32_t iret = write_data_info_.deserialize(input.get_data(), input.get_data_length(), pos);
       if (common::TFS_SUCCESS == iret)
       {
+        input.drain( write_data_info_.length());
         iret = input.get_vint64(ds_);
       }
       if (common::TFS_SUCCESS == iret
