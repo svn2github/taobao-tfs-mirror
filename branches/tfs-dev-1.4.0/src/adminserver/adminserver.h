@@ -98,8 +98,6 @@ namespace tfs
       /** handle packet*/
       virtual bool handlePacketQueue(tbnet::Packet *packet, void *args);
 
-      virtual const char* get_log_file_path() { return NULL;}
-
       void destruct();
 
       int start_monitor();

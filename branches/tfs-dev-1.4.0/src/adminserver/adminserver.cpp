@@ -132,14 +132,6 @@ namespace tfs
 
       if (index.size())
       {
-        ret = SYSPARAM_DATASERVER.initialize(index);
-        if (ret != TFS_SUCCESS)
-        {
-          TBSYS_LOG(ERROR, "SYSPARAM_DATASERVER.initialize error index is %s", index.c_str());
-          return TFS_ERROR;
-        }
-
-        ret = SYSPARAM_FILESYSPARAM.initialize(index);
         if (ret != TFS_SUCCESS)
         {
           TBSYS_LOG(ERROR, "FileSystemParameter.initialize error index is %s", index.c_str());
@@ -153,10 +145,13 @@ namespace tfs
         param->adr_.ip_ = Func::get_addr("127.0.0.1"); // just monitor local stuff
         param->script_ = TBSYS_CONFIG.getString(CONF_SN_ADMINSERVER, CONF_DS_SCRIPT, "");
         param->script_ += " -i " + index;
-        param->description_ = SYSPARAM_FILESYSPARAM.mount_name_;
-        param->adr_.port_ = SYSPARAM_DATASERVER.local_ds_port_;
-        param->lock_file_ = SYSPARAM_DATASERVER.pid_file_;
+        param->description_ = TBSYS_CONFIG.getString(CONF_SN_DATASERVER, CONF_MOUNT_POINT_NAME, "");
+        param->description_ = FileSystemParameter::get_real_mount_name(param->description_, index);
+        param->adr_.port_ = TBSYS_CONFIG.getInt(CONF_SN_DATASERVER, CONF_PORT);
+        param->adr_.port_ = DataServerParameter::get_real_ds_port(param->adr_.port_, index);
 
+        param->lock_file_ = TBSYS_CONFIG.getString(CONF_SN_DATASERVER, CONF_PID_FILE, "./");
+        param->lock_file_ = DataServerParameter::get_real_pid_file(param->lock_file_, index);
         TBSYS_LOG(INFO, "load dataserver %s, desc : %s, lock_file : %s, port : %d, script : %s, waittime: %d\n",
             index.c_str(), param->description_.c_str(), param->lock_file_.c_str(), param->adr_.port_, param->script_.c_str(),
             param->fkill_waittime_);
@@ -265,8 +260,8 @@ namespace tfs
       destruct();
 
       {
-        BaseService::reload();
-        reload_config();
+        //BaseService::reload();
+        TBSYS_CONFIG.load(config_file_.c_str());
 
         const char *index_range = TBSYS_CONFIG.getString(CONF_SN_ADMINSERVER, CONF_DS_INDEX_LIST, NULL);
         if (NULL == index_range)
