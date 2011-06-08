@@ -33,6 +33,16 @@ namespace tfs
     using namespace message;
     using namespace std;
 
+    static int send_msg_to_server_helper(const uint64_t server, std::vector<uint64_t>& servers)
+    {
+      std::vector<uint64_t>::iterator iter = std::find(servers.begin(), servers.end(), server);
+      if (iter != servers.end())
+      {
+        servers.erase(iter);
+      }
+      return common::TFS_SUCCESS;
+    }
+
     DataService::DataService():
         server_local_port_(-1),
         ns_ip_port_(-1),
@@ -92,7 +102,7 @@ namespace tfs
       int32_t base_port = TBSYS_CONFIG.getInt(CONF_SN_PUBLIC, CONF_PORT, 0);
       if (base_port >= 1024 || base_port <= 65535)
       {
-        port = base_port + atoi(server_index_.c_str());
+        port = SYSPARAM_DATASERVER.get_real_ds_port(base_port, server_index_);
         if (port < 1024 || base_port > 65535)
         {
           port = -1;
@@ -108,8 +118,8 @@ namespace tfs
       if (work_dir != NULL)
       {
         log_file_path_ = work_dir;
-        log_file_path_ += "/logs/dataserver_" + server_index_;
-        log_file_path_ += ".log";
+        log_file_path_ += "/logs/dataserver";
+        SYSPARAM_DATASERVER.get_real_file_name(pid_file_path_, server_index_, "log");
         log_file_path = log_file_path_.c_str();
       }
       return log_file_path;
@@ -122,8 +132,8 @@ namespace tfs
       if (work_dir != NULL)
       {
         pid_file_path_ = work_dir;
-        pid_file_path_ += "/logs/dataserver_" + server_index_;
-        pid_file_path_ += ".pid";
+        pid_file_path_ += "/logs/dataserver";
+        SYSPARAM_DATASERVER.get_real_file_name(pid_file_path_, server_index_, "pid");
         pid_file_path = pid_file_path_.c_str();
       }
       return pid_file_path;
@@ -189,7 +199,7 @@ namespace tfs
         if (NULL == ip_addr)//get ip addr
         {
           iret =  EXIT_CONFIG_ERROR;
-          TBSYS_LOG(ERROR, "%s", "nameserver not set ip_addr");
+          TBSYS_LOG(ERROR, "%s", "dataserver not set ip_addr");
         }
 
         if (TFS_SUCCESS == iret)
@@ -198,7 +208,7 @@ namespace tfs
           if (NULL == dev_name)//get dev name
           {
             iret =  EXIT_CONFIG_ERROR;
-            TBSYS_LOG(ERROR, "%s","nameserver not set dev_name");
+            TBSYS_LOG(ERROR, "%s","dataserver not set dev_name");
           }
           else
           {
@@ -306,9 +316,11 @@ namespace tfs
           else
           {
             read_stat_log_file_ = work_dir;
-            read_stat_log_file_ += "/logs/read_stat_" + server_index_ + ".log";
+            read_stat_log_file_ += "/logs/read_stat";
+            SYSPARAM_DATASERVER.get_real_file_name(read_stat_log_file_, server_index_, "log");
             write_stat_log_file_= work_dir;
-            write_stat_log_file_ += "/logs/write_stat_" + server_index_ + ".log";
+            write_stat_log_file_ += "/logs/write_stat";
+            SYSPARAM_DATASERVER.get_real_file_name(write_stat_log_file_, server_index_, "log");
             init_log_file(READ_STAT_LOGGER, read_stat_log_file_);
             init_log_file(WRITE_STAT_LOGGER, write_stat_log_file_);
             TBSYS_LOG(INFO, "dataservice start");
@@ -325,7 +337,7 @@ namespace tfs
       uint32_t ip = Func::get_addr(SYSPARAM_DATASERVER.local_ns_ip_);
       if (0 == ip)
       {
-        TBSYS_LOG(ERROR, "nameserver ip is error.");
+        TBSYS_LOG(ERROR, "dataserver ip is error.");
       }
       else
       {
@@ -336,7 +348,7 @@ namespace tfs
       const char* ip_list = SYSPARAM_DATASERVER.ns_addr_list_;
       if (NULL == ip_list)
       {
-        TBSYS_LOG(ERROR, "nameserver real ip list is error");
+        TBSYS_LOG(ERROR, "dataserver real ip list is error");
       }
       else
       {
@@ -370,7 +382,7 @@ namespace tfs
           adr->ip_ = ns_ip_list[i];
           if (0 == adr->ip_)
           {
-            TBSYS_LOG(ERROR, "nameserver real ip: %s list is error", ip_list);
+            TBSYS_LOG(ERROR, "dataserver real ip: %s list is error", ip_list);
             if (0 == i)
             {
               return TFS_ERROR;
@@ -1967,7 +1979,7 @@ namespace tfs
       return TFS_SUCCESS;
     }
 
-    // send blockinfos to nameserver
+    // send blockinfos to dataserver
     void DataService::send_blocks_to_ns(const int32_t who)
     {
       if (0 != who && 1 != who)
