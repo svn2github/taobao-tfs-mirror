@@ -63,6 +63,8 @@ namespace tfs
 
     int AdminServer::initialize(int argc, char* argv[])
     {
+      UNUSED(argc);
+      UNUSED(argv);
       int ret = TFS_SUCCESS;
       reload_config();
 
@@ -493,6 +495,7 @@ namespace tfs
 
     bool AdminServer::handlePacketQueue(tbnet::Packet* packet, void* args)
     {
+      UNUSED(args);
       AdminCmdMessage* message = dynamic_cast<AdminCmdMessage*>(packet); // only AdminCmdMessage enqueue
       if (NULL == message)
       {
