@@ -79,6 +79,32 @@ namespace tfs
     }
   }
 
+  static int find_servers_difference(const std::vector<ServerCollect*>& first,
+                                     const std::vector<ServerCollect*>& second,
+                                     std::vector<ServerCollect*>& result)
+  {
+    std::vector<ServerCollect*>::const_iterator iter = second.begin();
+    std::vector<ServerCollect*>::const_iterator rt;
+    for (; iter != second.end(); ++iter)
+    {
+      bool bfind = false;
+      rt = first.begin();
+      for (; rt != first.end();)
+      {
+        if ((*rt)->id() == (*iter)->id())
+        {
+          bfind = true;
+          break;
+        }
+      }
+      if (!bfind)
+      {
+        result.push_back((*iter));
+      }
+    }
+    return result.size();
+  }
+
   LayoutManager::LayoutManager():
       build_plan_thread_(0),
       run_plan_thread_(0),
@@ -1149,7 +1175,8 @@ namespace tfs
               else//elect dataserver successful
               {
                 std::vector<ServerCollect*> servers;
-                std::set_difference(need.begin(), need.end(), exist.begin(), exist.end(), servers.begin(), ServerSetDifferencHelper());
+                //std::set_difference(need.begin(), need.end(), exist.begin(), exist.end(), servers.begin(), ServerSetDifferencHelper());
+                find_servers_difference(need, exist, servers);
                 iret = servers.empty() ? TFS_ERROR : TFS_SUCCESS;
                 if (TFS_SUCCESS == iret)
                 {
@@ -1632,11 +1659,6 @@ namespace tfs
         return true;
       }
       return false;
-    }
-    bool LayoutManager::ServerSetDifferencHelper::operator()(const ServerCollect* lrh, 
-        const ServerCollect* rrh)
-    {
-      return lrh->id() < rrh->id();
     }
 
     int LayoutManager::set_runtime_param(uint32_t value1, uint32_t value2, char *retstr)
