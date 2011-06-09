@@ -402,9 +402,7 @@ namespace tfs
           }
         }
         // sleep
-
         sleep(check_interval_);
-        TBSYS_LOG(ERROR, "check_interval_ = %d stop is %d", check_interval_, stop_);
       }
 
       // now not running

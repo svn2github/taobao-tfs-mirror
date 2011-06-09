@@ -118,8 +118,8 @@ namespace tfs
       if (work_dir != NULL)
       {
         log_file_path_ = work_dir;
-        log_file_path_ += "/logs/dataserver/";
-        SYSPARAM_DATASERVER.get_real_file_name(pid_file_path_, server_index_, "log");
+        log_file_path_ += "/logs/dataserver";
+        log_file_path_ = SYSPARAM_DATASERVER.get_real_file_name(log_file_path_, server_index_, "log");
         log_file_path = log_file_path_.c_str();
       }
       return log_file_path;
@@ -132,8 +132,8 @@ namespace tfs
       if (work_dir != NULL)
       {
         pid_file_path_ = work_dir;
-        pid_file_path_ += "/logs/dataserver/";
-        SYSPARAM_DATASERVER.get_real_file_name(pid_file_path_, server_index_, "pid");
+        pid_file_path_ += "/logs/dataserver";
+        pid_file_path_ = SYSPARAM_DATASERVER.get_real_file_name(pid_file_path_, server_index_, "pid");
         pid_file_path = pid_file_path_.c_str();
       }
       return pid_file_path;
@@ -318,10 +318,10 @@ namespace tfs
           {
             read_stat_log_file_ = work_dir;
             read_stat_log_file_ += "/logs/read_stat";
-            SYSPARAM_DATASERVER.get_real_file_name(read_stat_log_file_, server_index_, "log");
+            read_stat_log_file_ = SYSPARAM_DATASERVER.get_real_file_name(read_stat_log_file_, server_index_, "log");
             write_stat_log_file_= work_dir;
             write_stat_log_file_ += "/logs/write_stat";
-            SYSPARAM_DATASERVER.get_real_file_name(write_stat_log_file_, server_index_, "log");
+            write_stat_log_file_  = SYSPARAM_DATASERVER.get_real_file_name(write_stat_log_file_, server_index_, "log");
             init_log_file(READ_STAT_LOGGER, read_stat_log_file_);
             init_log_file(WRITE_STAT_LOGGER, write_stat_log_file_);
             TBSYS_LOG(INFO, "dataservice start");

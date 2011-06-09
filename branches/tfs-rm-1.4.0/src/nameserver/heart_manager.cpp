@@ -571,11 +571,14 @@ namespace tfs
         {
           iret = do_heartbeat_and_ns_msg(message, args);//check heartbeat and nameserver heart message
         }
-        NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
-        if (ngi.owner_role_ == NS_ROLE_MASTER) //master
-          iret = do_master_msg(message, args);
-        else if (ngi.owner_role_ == NS_ROLE_SLAVE) //slave
-          iret = do_slave_msg(message, args);
+        else
+        {
+          NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
+          if (ngi.owner_role_ == NS_ROLE_MASTER) //master
+            iret = do_master_msg(message, args);
+          else if (ngi.owner_role_ == NS_ROLE_SLAVE) //slave
+            iret = do_slave_msg(message, args);
+        }
       }
       return bret;
     }
