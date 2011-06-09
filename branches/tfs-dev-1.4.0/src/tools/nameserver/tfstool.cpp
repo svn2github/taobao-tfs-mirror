@@ -719,7 +719,7 @@ int cmd_visit_count_blk(const VSTRING& param)
   int32_t count = 0;
   int ret = TFS_ERROR;
 
-  if ((server_id  == Func::get_host_ip(param[0].c_str())) <= 0)
+  if ((server_id  = Func::get_host_ip(param[0].c_str())) <= 0)
   {
     fprintf(stderr, "invalid ds address: %s\n", param[0].c_str());
   }
