@@ -412,7 +412,7 @@ namespace tfs
         param.child_type_ = SSM_CHILD_BLOCK_TYPE_INFO | SSM_CHILD_BLOCK_TYPE_SERVER;
 
         bool once = false;
-        if (static_cast<int32_t> (block_id) != -1)
+        if (block_id > 0)
         {
           param.should_actual_count_ = 0x10000;
           param.end_flag_ = SSM_SCAN_CUTOVER_FLAG_NO;
