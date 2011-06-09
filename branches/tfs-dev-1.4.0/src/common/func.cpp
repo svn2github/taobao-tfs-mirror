@@ -314,7 +314,8 @@ namespace tfs
     uint64_t Func::get_host_ip(const char *s)
     {
      char addr[100];
-     strncpy(addr, s, strlen(s)+1);
+     strncpy(addr, s, 100);
+     addr[99] = '\0';
      char* pos = strchr(addr, ':');
 
      if (pos)
