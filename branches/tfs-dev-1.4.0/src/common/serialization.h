@@ -29,7 +29,7 @@ namespace tfs
       }
       static int64_t get_string_length(const std::string& str)
       {
-        return str.empty() ? INT_SIZE : str.length() + INT_SIZE + 1;
+        return str.length() + INT_SIZE + 1;
       }
       template <typename T>
       static int64_t get_vint8_length(const T& value)
