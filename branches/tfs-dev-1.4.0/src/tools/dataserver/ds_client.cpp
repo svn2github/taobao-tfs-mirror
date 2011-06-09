@@ -27,6 +27,8 @@
 
 #include "common/internal.h"
 #include "common/func.h"
+#include "common/client_manager.h"
+#include "message/message_factory.h"
 #include "tools/util/ds_lib.h"
 
 using namespace tfs::common;
@@ -144,6 +146,11 @@ int main(int argc, char* argv[])
       return TFS_ERROR;
     }
   }
+  tfs::message::MessageFactory factory;
+  tfs::common::BasePacketStreamer streamer;
+  streamer.set_packet_factory(&factory);
+  NewClientManager::get_instance().initialize(&factory, &streamer);
+
   init();
 
   if (optind >= argc)
