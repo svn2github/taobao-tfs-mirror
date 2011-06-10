@@ -294,7 +294,6 @@ namespace tfs
         std::vector<int64_t> stat(6,0);
         iret == TFS_SUCCESS ? stat[4] = 0x01 : stat[5] = 0x01;
         GFactory::get_stat_mgr().update_entry(GFactory::tfs_ns_stat_, stat);
-        return iret;
       }
       else //write file
       {
@@ -305,7 +304,7 @@ namespace tfs
           {
             snprintf(parameter.error_msg_, 256, "close block(%u) successful,but lease(%u) commit fail", block_id, parameter.lease_id_);
             TBSYS_LOG(ERROR, "%s", parameter.error_msg_);
-            return EXIT_COMMIT_ERROR;
+            iret = EXIT_COMMIT_ERROR;
           }
         }
         else
@@ -321,48 +320,61 @@ namespace tfs
             {
               snprintf(parameter.error_msg_, 256, "close block(%u) fail, block not exist", block_id);
               TBSYS_LOG(ERROR, "%s", parameter.error_msg_);
-              return EXIT_BLOCK_NOT_FOUND;
+              iret = EXIT_BLOCK_NOT_FOUND;
             }
-            last_version = block->version();
-          }
-
-          //check version
-          if (last_version >= parameter.block_info_.version_)
-          {//version errro
-            if (!GFactory::get_lease_factory().commit(block_id, parameter.lease_id_, LEASE_STATUS_FAILED))
+            else
             {
-              snprintf(parameter.error_msg_, 256, "close block(%u) successful,but lease(%u) commit fail", block_id, parameter.lease_id_);
-              TBSYS_LOG(ERROR, "%s", parameter.error_msg_);
+              last_version = block->version();
             }
-            return EXIT_COMMIT_ERROR;
           }
 
-          //check block is full
-          if (BlockCollect::is_full(parameter.block_info_.size_))
+          if (TFS_SUCCESS == iret)
           {
-            commit_status = LEASE_STATUS_OBSOLETE;
-            parameter.need_new_ = true;
-          }
+            //check version
+            if (last_version >= parameter.block_info_.version_)
+            {//version errro
+              if (!GFactory::get_lease_factory().commit(block_id, parameter.lease_id_, LEASE_STATUS_FAILED))
+              {
+                snprintf(parameter.error_msg_, 256, "close block(%u) successful,but lease(%u) commit fail", block_id, parameter.lease_id_);
+                TBSYS_LOG(ERROR, "%s", parameter.error_msg_);
+              }
+              iret = EXIT_COMMIT_ERROR;
+            }
+            if (TFS_SUCCESS == iret)
+            {
+              //check block is full
+              if (BlockCollect::is_full(parameter.block_info_.size_))
+              {
+                commit_status = LEASE_STATUS_OBSOLETE;
+                parameter.need_new_ = true;
+              }
+            }
 
-          //commit lease
-          if (!GFactory::get_lease_factory().commit(block_id, parameter.lease_id_, commit_status))
-          {
-            snprintf(parameter.error_msg_, 256, "close block(%u) successful,but lease(%u) commit fail", block_id, parameter.lease_id_);
-            TBSYS_LOG(ERROR, "%s", parameter.error_msg_);
-            return EXIT_COMMIT_ERROR;
-          }
+            if (TFS_SUCCESS == iret)
+            {
+              //commit lease
+              if (!GFactory::get_lease_factory().commit(block_id, parameter.lease_id_, commit_status))
+              {
+                snprintf(parameter.error_msg_, 256, "close block(%u) successful,but lease(%u) commit fail", block_id, parameter.lease_id_);
+                TBSYS_LOG(ERROR, "%s", parameter.error_msg_);
+                iret = EXIT_COMMIT_ERROR;
+              }
+            }
 
-          //update block information
-          iret = lay_out_manager_.update_block_info(parameter.block_info_, parameter.id_, now, false);
-          if (iret != TFS_SUCCESS)
-          {
-            TBSYS_LOG(ERROR, "close block(%u) successful, but update block information fail", block_id);
-            TBSYS_LOG(ERROR, "%s", parameter.error_msg_);
+            if (TFS_SUCCESS == iret)
+            {
+              //update block information
+              iret = lay_out_manager_.update_block_info(parameter.block_info_, parameter.id_, now, false);
+              if (iret != TFS_SUCCESS)
+              {
+                TBSYS_LOG(ERROR, "close block(%u) successful, but update block information fail", block_id);
+                TBSYS_LOG(ERROR, "%s", parameter.error_msg_);
+              }
+            }
           }
-          return iret;
         }
       }
-      return TFS_SUCCESS;
+      return iret;
     }
 
     /**
@@ -488,7 +500,7 @@ namespace tfs
           }
         }
       }
-      return TFS_SUCCESS;
+      return iret;
     }
     /**
      * client read: get block 's location of dataserver
@@ -833,9 +845,8 @@ namespace tfs
 
     int ClientRequestServer::handle_control_rotate_log(void)
     {
-      //BaseService* service = dynamic_cast<BaseService*>(BaseService::instance());
-      //TBSYS_LOGGER.rotateLog(service->get_log_path());
-      TBSYS_LOGGER.rotateLog(NULL);
+      BaseService* service = dynamic_cast<BaseService*>(BaseService::instance());
+      TBSYS_LOGGER.rotateLog(service->get_log_path());
       return TFS_SUCCESS;
     }
 
