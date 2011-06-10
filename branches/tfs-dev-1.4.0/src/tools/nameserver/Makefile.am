@@ -5,7 +5,7 @@ AM_CPPFLAGS=-I$(top_srcdir)/src\
 
 AM_LDFLAGS=-lz -lrt -lpthread -ldl $(READLINE_LIB)
 
-bin_PROGRAMS = admintool showsyncoplog rmsyncoplog ssm tfstool
+bin_PROGRAMS = admintool showsyncoplog rmsyncoplog ssm tfstool performance syncbyfile
 
 LDADD = $(top_builddir)/src/tools/util/libtfstoolsutil.a\
 	$(top_builddir)/src/dataserver/libdataserver.a\
@@ -24,3 +24,5 @@ ssm_SOURCES = main.cpp show.cpp show_factory.cpp metacmp.cpp cmp_factory.cpp com
 rmsyncoplog_SOURCES=rmsyncoplog.cpp
 
 admintool_SOURCES = admintool.cpp
+performance_SOURCES = performance.cpp
+syncbyfile_SOURCES=sync_by_file.cpp

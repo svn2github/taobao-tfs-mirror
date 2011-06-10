@@ -26,14 +26,14 @@
 #include <tbsys.h>
 #include <curses.h>
 #include "common/func.h"
-#include "common/interval.h"
+#include "common/internal.h"
 #include "common/error_msg.h"
-#include "client/tfs_client_api.h"
-#include "util.h"
+#include "new_client/tfs_client_api.h"
 
 using namespace tfs::common;
 using namespace tfs::client;
 using namespace tbsys;
+using namespace std;
 
 struct StatParam
 {
@@ -58,9 +58,9 @@ class WorkThread : public tbutil::Thread
       target_ns_ip_port_(target),
       TIMESTAMP_DAY(timestamp_day),
       destroy_(false)
-    {
+  {
 
-    }
+  }
 
     virtual ~WorkThread()
     {
@@ -69,19 +69,13 @@ class WorkThread : public tbutil::Thread
 
     int initialize()
     {
-      int iret = src_tfsclient.initialize(src_ns_ip_port_, 0, 0);
+      int iret = TfsClient::Instance()->initialize(NULL, 0, 0);
       if (iret != TFS_SUCCESS)
       {
-        TBSYS_LOG(ERROR, "tfsclient initialize failed: %s", src_tfsclient.get_error_message());
+        TBSYS_LOG(ERROR, "tfsclient initialize failed");
         return TFS_ERROR;
       }
 
-      iret = target_tfsclient.initialize(target_ns_ip_port_, 0, 0);
-      if (iret != TFS_SUCCESS)
-      {
-        TBSYS_LOG(ERROR, "tfsclient initialize failed: %s", target_tfsclient.get_error_message());
-        return TFS_ERROR;
-      }
       return TFS_SUCCESS;
     }
 
@@ -126,8 +120,8 @@ class WorkThread : public tbutil::Thread
       const int16_t MAX_COUNT_RESET = 32;
       int32_t iret = TFS_ERROR;
       std::string file;
-      FileInfo src_file_info;
-      FileInfo target_file_info;
+      TfsFileStat src_file_info;
+      TfsFileStat target_file_info;
       while(!destroy_ && !files_.empty())
       {
         if (count > MAX_COUNT_RESET)
@@ -142,60 +136,59 @@ class WorkThread : public tbutil::Thread
         memset(&target_file_info, 0, sizeof(target_file_info));
 
         const char* prefix = NULL;//file.c_str() + FILE_NAME_LEN;
-        iret = src_tfsclient.tfs_open(file.c_str(), prefix, READ_MODE);
-        if (iret != TFS_SUCCESS)
+        int tfs_fd = TfsClient::Instance()->open(file.c_str(), prefix, src_ns_ip_port_.c_str(), T_READ);
+        if (tfs_fd < 0)
         {
-          fprintf(stderr, "open tfsfile error: %s\n", src_tfsclient.get_error_message());
+          fprintf(stderr, "open tfsfile error %s\n", file.c_str());
           errors_.push_back(file);
           atomic_inc(&gstat.copy_failure_);
-          continue;
-        }
-        
-        iret = src_tfsclient.tfs_stat(&src_file_info);
-        if (iret != TFS_SUCCESS)
-        {
-          fprintf(stderr, "stat tfsfile error: %s\n", src_tfsclient.get_error_message());
-          errors_.push_back(file);
-          atomic_inc(&gstat.copy_failure_);
-          src_tfsclient.tfs_close();
           continue;
         }
 
-        iret = target_tfsclient.tfs_open(file.c_str(), prefix, READ_MODE);
+        iret = TfsClient::Instance()->fstat(tfs_fd, &src_file_info);
         if (iret != TFS_SUCCESS)
         {
-          fprintf(stderr, "open tfsfile(target) error: %s\n", target_tfsclient.get_error_message());
+          fprintf(stderr, "stat tfsfile error %s\n", file.c_str());
           errors_.push_back(file);
           atomic_inc(&gstat.copy_failure_);
-          src_tfsclient.tfs_close();
-          continue;
+          TfsClient::Instance()->close(tfs_fd);
           continue;
         }
 
-        iret = target_tfsclient.tfs_stat(&target_file_info);
+        int target_tfs_fd = TfsClient::Instance()->open(file.c_str(), prefix, target_ns_ip_port_.c_str(), T_READ);
+        if (target_tfs_fd < 0)
+        {
+          fprintf(stderr, "open tfsfile(target) error: %s\n", file.c_str());
+          errors_.push_back(file);
+          atomic_inc(&gstat.copy_failure_);
+          TfsClient::Instance()->close(tfs_fd);
+          continue;
+        }
+
+        iret = TfsClient::Instance()->fstat(target_tfs_fd, &target_file_info);
         if (iret != TFS_SUCCESS)
         {
-          fprintf(stderr, "stat tfsfile(target) error: %s\n", target_tfsclient.get_error_message());
+          fprintf(stderr, "stat tfsfile(target) error: %s\n", file.c_str());
         }
 
         time_t now = time(NULL) - 60;
         if (src_file_info.modify_time_ > now
-          || (target_file_info.id_ != 0 && target_file_info.modify_time_ > now))
+            || (target_file_info.file_id_ != 0 && target_file_info.modify_time_ > now))
         {
           fprintf(stderr, "[INFO]: %s is new file\n", file.c_str());
           atomic_inc(&gstat.copy_none_);
         }
         else if (src_file_info.flag_ == 0
-                && (target_file_info.id_ == 0 || src_file_info.size_ != target_file_info.size_
-                    || src_file_info.crc_ != target_file_info.crc_)
-                && (TIMESTAMP_DAY <= 0 || src_file_info.modify_time_ < (now - TIMESTAMP_DAY * 86400))) 
+            && (target_file_info.file_id_ == 0 || src_file_info.size_ != target_file_info.size_
+              || src_file_info.crc_ != target_file_info.crc_)
+            && (TIMESTAMP_DAY <= 0 || src_file_info.modify_time_ < (now - TIMESTAMP_DAY * 86400))) 
         {
           int32_t max_size = (src_file_info.size_ / MAX_READ_SIZE + 1) * MAX_READ_SIZE; 
           char* data = new char[max_size];
           int32_t len = 0;
           int32_t offset = 0;
           uint32_t crc = 0;
-          while ((len = src_tfsclient.tfs_read((data+offset), MAX_READ_SIZE)) > 0)
+          while ((len = TfsClient::Instance()->read(tfs_fd, (data+offset), MAX_READ_SIZE)) > 0)
           {
             crc = Func::crc(crc, (data+offset), len);
             offset += len;
@@ -203,27 +196,27 @@ class WorkThread : public tbutil::Thread
               break;
           }
           if (src_file_info.crc_ != crc
-            || src_file_info.size_ != offset)
+              || src_file_info.size_ != offset)
           {
-            fprintf(stderr, "read tfsfile(src) fail: old crc(%u) != new crc(%u) or old size(%d) != new size(%d)\n", src_file_info.crc_, crc, src_file_info.size_, offset);
+            fprintf(stderr, "read tfsfile(src) fail: old crc(%u) != new crc(%u) or old size(%"PRI64_PREFIX"d) != new size(%d)\n", src_file_info.crc_, crc, src_file_info.size_, offset);
             tbsys::gDeleteA(data);
             errors_.push_back(file);
             atomic_inc(&gstat.copy_failure_);
-            src_tfsclient.tfs_close();
-            target_tfsclient.tfs_close();
+            TfsClient::Instance()->close(tfs_fd);
+            TfsClient::Instance()->close(target_tfs_fd);
             continue;
           }
+          TfsClient::Instance()->close(target_tfs_fd);
 
-          target_tfsclient.tfs_close();
-          
-          iret = target_tfsclient.tfs_open(file.c_str(), prefix, WRITE_MODE);
-          if (iret != TFS_SUCCESS)
+
+          target_tfs_fd = TfsClient::Instance()->open(file.c_str(), prefix, target_ns_ip_port_.c_str(), T_WRITE);
+          if (target_tfs_fd < 0)
           {
-            fprintf(stderr, "open tfsfile(target) error: %s\n", target_tfsclient.get_error_message());
+            fprintf(stderr, "open tfsfile(target) error: %s\n", file.c_str());
             tbsys::gDeleteA(data);
             errors_.push_back(file);
             atomic_inc(&gstat.copy_failure_);
-            src_tfsclient.tfs_close();
+            TfsClient::Instance()->close(tfs_fd);
             continue;
           }
           int32_t write_len = 0;
@@ -233,10 +226,10 @@ class WorkThread : public tbutil::Thread
           {
             write_len = MAX_READ_SIZE;
             write_len = std::min(write_len, MAX_READ_SIZE);
-            len = target_tfsclient.tfs_write((data+write_offset), write_len);
+            len = TfsClient::Instance()->write(target_tfs_fd, (data+write_offset), write_len);
             if (len != write_len)
             {
-              fprintf(stderr, "write tfsfile(target) error: %s\n", target_tfsclient.get_error_message());
+              fprintf(stderr, "write tfsfile(target) error: %s\n", file.c_str());
               tbsys::gDeleteA(data);
               errors_.push_back(file);
               atomic_inc(&gstat.copy_failure_);
@@ -255,8 +248,8 @@ class WorkThread : public tbutil::Thread
         {
           atomic_inc(&gstat.copy_none_);
         }
-        src_tfsclient.tfs_close();
-        target_tfsclient.tfs_close();
+        TfsClient::Instance()->close(tfs_fd);
+        TfsClient::Instance()->close(target_tfs_fd);
       }
     }
 
@@ -268,8 +261,6 @@ class WorkThread : public tbutil::Thread
   private:
     WorkThread(const WorkThread&);
     WorkThread& operator=(const WorkThread&);
-    TfsClient src_tfsclient;
-    TfsClient target_tfsclient;
     std::vector<std::string> files_;
     std::vector<std::string> errors_;
     std::string src_ns_ip_port_;
@@ -373,7 +364,7 @@ int main(int argc, char* argv[])
       fprintf(stderr, "access file(%s) error: %s\n", output_file_path.c_str(), strerror(errno));
       return TFS_ERROR;
     }
-    
+
     if (access(file_path.c_str(), R_OK) < 0)
     {
       fprintf(stderr, "access file(%s) error: %s\n", file_path.c_str(), strerror(errno));

@@ -27,11 +27,54 @@
 #include "common/internal.h"
 #include "common/error_msg.h"
 #include "new_client/tfs_client_api.h"
-#include "util.h"
 
 using namespace tfs::common;
 using namespace tfs::client;
 using namespace std;
+class Timer
+{
+public:
+  Timer();
+  int64_t start();
+  int64_t consume();
+  int64_t current();
+
+private:
+  int64_t start_;
+  int64_t end_;
+};
+Timer::Timer()
+{
+}
+
+int64_t Timer::current()
+{
+  struct timeval s_start;
+  gettimeofday(&s_start, NULL);
+  return s_start.tv_sec * 1000000LL + s_start.tv_usec;
+}
+
+int64_t Timer::start()
+{
+  start_ = current();
+  return start_;
+}
+
+int64_t Timer::consume()
+{
+  end_ = current();
+  return end_ - start_;
+}
+void generate_data(char* buf, uint32_t size)
+{
+  srand(time(NULL) + rand() + pthread_self());
+
+  for (uint32_t i = 0; i < size; i++)
+  {
+    buf[i] = static_cast<char> (rand() % 90 + 32);
+  }
+  return ;
+}
 
 #define FILE_NAME_LEN 18
 struct StatParam
@@ -113,7 +156,7 @@ typedef tbutil::Handle<StatTimerTask> StatTimerTaskPtr;
   return TFS_SUCCESS;
 }*/
 
-int read_file(TfsClient& tfs_file, char* tfs_name, StatParam& stat_param)
+int read_file(char* tfs_name, StatParam& stat_param)
 {
   char *prefix = NULL;
   if (static_cast<int32_t> (strlen(tfs_name)) < FILE_NAME_LEN || tfs_name[0] != 'T')
@@ -126,18 +169,19 @@ int read_file(TfsClient& tfs_file, char* tfs_name, StatParam& stat_param)
   Timer timer;
   timer.start();
 
-  if (tfs_file.tfs_open(tfs_name, prefix, READ_MODE) != EXIT_SUCCESS)
+  int tfs_fd = TfsClient::Instance()->open(tfs_name, prefix, T_READ);
+  if (tfs_fd < 0)
   {
-    fprintf(stderr, "open tfsfile fail: %s\n", tfs_file.get_error_message());
+    fprintf(stderr, "open tfsfile fail\n");
     stat_param.read_fail_count_++;
     return EXIT_FAILURE;
   }
 
-  FileInfo finfo;
-  if (tfs_file.tfs_stat(&finfo) == EXIT_FAILURE)
+  TfsFileStat finfo;
+  if (TfsClient::Instance()->fstat(tfs_fd, &finfo) != TFS_SUCCESS)
   {
-    tfs_file.tfs_close();
-    fprintf(stderr, "fstat tfsfile fail: %s\n", tfs_file.get_error_message());
+    TfsClient::Instance()->close(tfs_fd);
+    fprintf(stderr, "fstat tfsfile fail\n");
     stat_param.read_fail_count_++;
     return EXIT_FAILURE;
   }
@@ -147,11 +191,11 @@ int read_file(TfsClient& tfs_file, char* tfs_name, StatParam& stat_param)
   int rlen = 0;
   for (;;)
   {
-    rlen = tfs_file.tfs_read(data, READ_MAX_SIZE);
+    rlen = TfsClient::Instance()->read(tfs_fd, data, READ_MAX_SIZE);
     if (rlen < 0)
     {
-      fprintf(stderr, "read tfsfile fail: %s\n", tfs_file.get_error_message());
-      tfs_file.tfs_close();
+      fprintf(stderr, "read tfsfile fail\n");
+      TfsClient::Instance()->close(tfs_fd);
       stat_param.read_fail_count_++;
       return EXIT_FAILURE;
     }
@@ -165,18 +209,49 @@ int read_file(TfsClient& tfs_file, char* tfs_name, StatParam& stat_param)
   }
   if (total_size == 0)
   {
-    tfs_file.tfs_close();
+    TfsClient::Instance()->close(tfs_fd);
     stat_param.read_fail_count_++;
-    fprintf(stderr, "read tfsfile fail(%s), total len(%d)\n", tfs_file.get_error_message(), total_size);
+    fprintf(stderr, "read tfsfile fail, total len(%d)\n", total_size);
     return EXIT_FAILURE;
   }
-
-  tfs_file.tfs_close();
+  TfsClient::Instance()->close(tfs_fd);
   stat_param.read_success_count_++;
   stat_param.read_response_ = timer.consume();
   return EXIT_SUCCESS;
 }
-int write_file(TfsClient& tfs_file, const char* data, int32_t length ,StatParam& stat_param)
+
+int write_data(int tfs_fd, char* data, int length)
+{
+  int num_wrote = 0;
+  int left = length - num_wrote;
+
+  int ret = EXIT_SUCCESS;
+
+  while (left > 0)
+  {
+    //printf("begin write data(%d)\n", left);
+    ret = TfsClient::Instance()->write(tfs_fd, data + num_wrote, left);
+    //printf("write data completed(%d)\n", ret);
+    if (ret < 0)
+    {
+      return ret;
+    }
+
+    if (ret >= left)
+    {
+      return left;
+    }
+    else
+    {
+      num_wrote += ret;
+      left = length - num_wrote;
+    }
+  }
+
+  return num_wrote;
+}
+
+int write_file(string& tfs_file_name, const char* data, int32_t length ,StatParam& stat_param)
 {
   uint32_t block_id = 0;
   uint64_t file_id = 0;
@@ -184,35 +259,34 @@ int write_file(TfsClient& tfs_file, const char* data, int32_t length ,StatParam&
   Timer timer;
   timer.start();
 
-  int ret = retry_open_file(&tfs_file, NULL, NULL,WRITE_MODE);
-  convname(tfs_file.get_file_name(), NULL, block_id, file_id);
-  if (ret == TFS_ERROR)
+  int tfs_fd = TfsClient::Instance()->open(NULL, NULL, T_WRITE);
+  if (tfs_fd < 0)
   {
-    fprintf(stderr, "tfsopen failed(%u), (%" PRI64_PREFIX "u), (%s), err(%s)\n", block_id, file_id,
-        tfs_file.get_file_name(), tfs_file.get_error_message());
+    fprintf(stderr, "tfsopen failed\n");
     stat_param.write_fail_count_++;
-    return ret;
+    return EXIT_FAILURE;
   }
+  char tfs_name_buff[20];
 
-  ret = write_data(&tfs_file, const_cast<char*>(data), length);
+  int ret = write_data(tfs_fd, const_cast<char*>(data), length);
   if (ret < 0)
   {
-    fprintf(stderr, "tfswrite failed(%u), (%" PRI64_PREFIX "u), (%s), err(%s)\n", block_id, file_id, tfs_file.get_file_name(), tfs_file.get_error_message());
-    tfs_file.tfs_close();
+    fprintf(stderr, "tfswrite failed(%u), (%" PRI64_PREFIX "u)\n", block_id, file_id);
+    TfsClient::Instance()->close(tfs_fd);
     stat_param.write_fail_count_++;
     return ret;
   }
   else
   {
-    ret = tfs_file.tfs_close();
-    if (ret == TFS_SUCCESS)
+    if(TFS_SUCCESS == TfsClient::Instance()->close(tfs_fd, tfs_name_buff, 20))
     {
+      tfs_file_name = tfs_name_buff;
       stat_param.write_success_count_++;
       stat_param.write_response_ = timer.consume();
     }
     else
     {
-      fprintf(stderr, "tfs_close(%s) failed: err(%s)\n", tfs_file.get_file_name(), tfs_file.get_error_message());
+      fprintf(stderr, "tfs_close failed\n");
       stat_param.write_fail_count_++;
       return ret;
     }
@@ -271,11 +345,10 @@ class WorkThread : public tbutil::Thread
 
     virtual void run()
     {
-      TfsClient tfsclient;
-      int iret = tfsclient.initialize(ns_ip_port_, 0, 0);
+      int iret = TfsClient::Instance()->initialize(ns_ip_port_.c_str(), 0, 0);
       if (iret != TFS_SUCCESS)
       {
-        TBSYS_LOG(ERROR, "tfsclient initialize failed: %s", tfsclient.get_error_message());
+        TBSYS_LOG(ERROR, "tfsclient initialize failed");
         return ;
       }
       static const int32_t DATA_MAX_SIZE = 128;
@@ -284,17 +357,18 @@ class WorkThread : public tbutil::Thread
       int32_t loop = 0;
       const int32_t MAX_READ_COUNT = read_ratio_ *  BASE_MAX_COUNT;
       const int32_t MAX_WRITE_COUNT = write_ratio_ * BASE_MAX_COUNT;
+      string tfs_name_created;
       while(!destroy_)
       {
         if (mode_ & WRITE_TYPE)
         {
-          if (write_file(tfsclient, data, DATA_MAX_SIZE, stat_) != TFS_SUCCESS)
+          if (write_file(tfs_name_created, data, DATA_MAX_SIZE, stat_) != TFS_SUCCESS)
           {
             TBSYS_LOG(ERROR, "write file(%s) fail", file_path_.c_str());
           }
           else
           {
-            write_request_queue_.push_back(tfsclient.get_file_name());
+            write_request_queue_.push_back(tfs_name_created);
           }
           ++loop;
           if (loop >= LOOP_MAX)
@@ -322,7 +396,7 @@ class WorkThread : public tbutil::Thread
           srand(time(NULL));
           int32_t index = rand() % queue_size;
           std::string file_name = read_request_queue_[index];
-          if (read_file(tfsclient, const_cast<char*> (file_name.c_str()), stat_) != TFS_SUCCESS)
+          if (read_file(const_cast<char*> (file_name.c_str()), stat_) != TFS_SUCCESS)
           {
             TBSYS_LOG(ERROR, "read file(%s) fail", file_name.c_str());
           }
@@ -344,13 +418,13 @@ class WorkThread : public tbutil::Thread
           int32_t i = 0;
           while ( i < MAX_WRITE_COUNT )
           {
-            if (write_file(tfsclient, data, DATA_MAX_SIZE, stat_) != TFS_SUCCESS)
+            if (write_file(tfs_name_created, data, DATA_MAX_SIZE, stat_) != TFS_SUCCESS)
             {
               TBSYS_LOG(ERROR, "write file(%s) fail", file_path_.c_str());
             }
             else
             {
-              write_request_queue_.push_back(tfsclient.get_file_name());
+              write_request_queue_.push_back(tfs_name_created);
             }
             ++loop;
             if (loop >= LOOP_MAX)
@@ -370,13 +444,13 @@ class WorkThread : public tbutil::Thread
           }
 
           {
-             tbutil::Mutex::Lock lock(mutex_);
-             gstat_.write_success_count_ += stat_.write_success_count_;
-             gstat_.write_fail_count_ += stat_.write_fail_count_;
-             gstat_.write_response_ += stat_.write_response_;
-             stat_.write_success_count_ = 0;
-             stat_.write_fail_count_ = 0;
-             stat_.write_response_ = 0;
+            tbutil::Mutex::Lock lock(mutex_);
+            gstat_.write_success_count_ += stat_.write_success_count_;
+            gstat_.write_fail_count_ += stat_.write_fail_count_;
+            gstat_.write_response_ += stat_.write_response_;
+            stat_.write_success_count_ = 0;
+            stat_.write_fail_count_ = 0;
+            stat_.write_response_ = 0;
           }
           loop = 0;
           i = 0;
@@ -391,7 +465,7 @@ class WorkThread : public tbutil::Thread
             }
             int32_t index = rand() % queue_size;
             std::string file_name = write_request_queue_[index];
-            if (read_file(tfsclient, const_cast<char*>(file_name.c_str()), stat_) != TFS_SUCCESS)
+            if (read_file(const_cast<char*>(file_name.c_str()), stat_) != TFS_SUCCESS)
             {
               TBSYS_LOG(ERROR, "read file(%s) fail", file_name.c_str());
             }
@@ -667,10 +741,10 @@ int main(int argc, char* argv[])
     tbsys::gDeleteA(gworks);
 
     TBSYS_LOG(INFO, "[read] success: %"PRI64_PREFIX"d fail: %"PRI64_PREFIX"d, [write] success: %"PRI64_PREFIX"d fail : %"PRI64_PREFIX"d",
-          gtotal_stat_.read_success_count_,
-          gtotal_stat_.read_fail_count_,
-          gtotal_stat_.write_success_count_,
-          gtotal_stat_.write_fail_count_);
+        gtotal_stat_.read_success_count_,
+        gtotal_stat_.read_fail_count_,
+        gtotal_stat_.write_success_count_,
+        gtotal_stat_.write_fail_count_);
     if (gdump_file != NULL)
     {
       fclose(gdump_file);
