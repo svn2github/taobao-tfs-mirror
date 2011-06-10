@@ -43,6 +43,7 @@ public class FailOverBaseCase {
 	//Define
 	final public int NSINDEX = 0;
 	final public int DSINDEX = 1;
+	final public int DSINDEXI = 1;
 	final public int FAILCOUNTNOR = 0;
 	final public String NSIPA = tfsGrid.getCluster(NSINDEX).getServer(0).getIp();
 	final public String NSIPB = tfsGrid.getCluster(NSINDEX).getServer(1).getIp();
@@ -54,10 +55,11 @@ public class FailOverBaseCase {
 	final public String CLIENTCONF = tfsSeedClient.getConfname();
 	
 	/* Key word */
-	final public String WRITEFILE        = "writeFile:";
-	final public String READFILE         = "readFile:";
-	final public String SAVEUNIQUEFILE   = "SaveUniqueFile:";
-	final public String UNIQUE           = "Unique:";
+	final public String WRITEFILE        = "writeFile :";
+	final public String READFILE         = "readFile :";
+	final public String UNLINKFILE         = "unlinkFile :";
+	final public String SAVEUNIQUEFILE   = "SaveUniqueFile :";
+	final public String UNIQUE           = "Unique :";
 	final public String WRITEFILESTATIS  = "write statis:";
 	final public String SAVEUNIQUESTATIS = "saveUnique statis:";
 	final public String UNIQUESTATIS     = "uniqueFile statis:";
@@ -67,8 +69,9 @@ public class FailOverBaseCase {
 	/* Client conf */
 	final public String LOOPFLAG = "loop_flag";
 	final public String FILESIZE = "size";
-	final public String UNITSIZE = "unit";
-	final public String READTYPE = "readType";
+	final public String UNITSIZEMIN = "unit_min";
+	final public String UNITSIZEMAX = "unit_max";
+	final public String READTYPE = "largeFlag";
 	final public int LOOPON = 1;
 	final public int LOOPOFF = 0;
 	
@@ -78,10 +81,10 @@ public class FailOverBaseCase {
 	
 	/* For scan log on client */
 	final public int TAILLINE = 100;
-	final public int TAILRATECOL = 12;
-	final public int RUNRATECOL = 13;
-	final public int TAILTPSCOL = 13;
-	final public int RUNTPSCOL = 11;
+	final public int TAILRATECOL = 13;
+	final public int RUNRATECOL = 14;
+	final public int TAILTPSCOL = 14;
+	final public int RUNTPSCOL = 12;
 	final public int SCANTIME = 120;
 	
 	/* Thread count on client */
@@ -104,6 +107,10 @@ public class FailOverBaseCase {
 	final public float HALFRATE = 50;
 	final public float FAILRATE = 0;
 	final public int WAITTIME = 30;
+	final public int BLOCKCHKTIME = 500;
+	
+	/* Other */
+	public String caseName = "";
 	
 	/* Vip */
 	public String masterIp = NSIPA;
@@ -130,11 +137,11 @@ public class FailOverBaseCase {
 	 * @param logName
 	 * @return
 	 */
-	public boolean writeCmd(String logName)
+	public boolean writeCmd()
 	{
 		boolean bRet = false;
 		log.info("Write command start ===>");
-		bRet = Proc.proStartBase(CLIENTIP, WRITECMD + logName);
+		bRet = Proc.proStartBackroundBase(CLIENTIP, WRITECMD + caseName);
 		log.info("Write command end ===>");
 		return bRet;
 	}
@@ -144,11 +151,25 @@ public class FailOverBaseCase {
 	 * @param logName
 	 * @return
 	 */
-	public boolean readCmd(String logName)
+	public boolean writeCmdStop()
+	{
+		boolean bRet = false;
+		log.info("Write command stop start ===>");
+		bRet = Proc.proStopByCmd(CLIENTIP, WRITECMD + caseName);
+		log.info("Write command stop end ===>");
+		return bRet;
+	}
+	
+	/**
+	 * 
+	 * @param logName
+	 * @return
+	 */
+	public boolean readCmd()
 	{
 		boolean bRet = false;
 		log.info("Read command start ===>");
-		bRet = Proc.proStartBase(CLIENTIP, READCMD + logName);
+		bRet = Proc.proStartBackroundBase(CLIENTIP, READCMD + caseName);
 		log.info("Read command end ===>");
 		return bRet;
 	}
@@ -158,12 +179,72 @@ public class FailOverBaseCase {
 	 * @param logName
 	 * @return
 	 */
-	public boolean unlinkCmd(String logName)
+	public boolean readCmdStop()
+	{
+		boolean bRet = false;
+		log.info("Write command stop start ===>");
+		bRet = Proc.proStopByCmd(CLIENTIP, READCMD + caseName);
+		log.info("Write command stop end ===>");
+		return bRet;
+	}
+	
+	public boolean readCmdMon()
+	{
+		boolean bRet = false;
+		log.info("Read command monitor start ===>");
+		for (;;)
+		{
+			int iRet = Proc.proMonitorBase(CLIENTIP, READCMD + caseName);
+			if (iRet == 0)
+			{
+				bRet = true;
+				break;
+			} else if (iRet > 0)
+			{
+				continue;
+			} else {
+				bRet = false;
+				break;
+			}
+		}
+		log.info("Read command monitor end ===>");
+		return bRet;
+	}
+	
+	/**
+	 * 
+	 * @param logName
+	 * @return
+	 */
+	public boolean unlinkCmd()
 	{
 		boolean bRet = false;
 		log.info("Unlink command start ==>");
-		bRet = Proc.proStartBase(CLIENTIP, UNLINKCMD + logName);
+		bRet = Proc.proStartBackroundBase(CLIENTIP, UNLINKCMD + caseName);
 		log.info("Unlink command end ==>");
+		return bRet;
+	}
+	
+	public boolean unlinkCmdMon()
+	{
+		boolean bRet = false;
+		log.info("Read command monitor start ===>");
+		for (;;)
+		{
+			int iRet = Proc.proMonitorBase(CLIENTIP, UNLINKCMD + caseName);
+			if (iRet == 0)
+			{
+				bRet = true;
+				break;
+			} else if (iRet > 0)
+			{
+				continue;
+			} else {
+				bRet = false;
+				break;
+			}
+		}
+		log.info("Read command monitor end ===>");
 		return bRet;
 	}
 	
@@ -175,21 +256,23 @@ public class FailOverBaseCase {
 	public boolean setSeedSize(int iSize)
 	{
 		boolean bRet = false;
-		bRet = conf.confReplaceSingle(CLIENTIP, CLIENTCONF, FILESIZE, String.valueOf(iSize));
+		bRet = conf.confReplaceSingleByPart(CLIENTIP, CLIENTCONF, "tfsseed", FILESIZE, String.valueOf(iSize));
 		return bRet;
 	}
 	
 	public boolean setUnitSize(int iSize)
 	{
 		boolean bRet = false;
-		bRet = conf.confReplaceSingle(CLIENTIP, CLIENTCONF, UNITSIZE, String.valueOf(iSize));
+		bRet = conf.confReplaceSingleByPart(CLIENTIP, CLIENTCONF, "tfsseed", UNITSIZEMIN, String.valueOf(iSize));
+		if (bRet == false) return bRet;
+		bRet = conf.confReplaceSingleByPart(CLIENTIP, CLIENTCONF, "tfsseed", UNITSIZEMAX, String.valueOf(iSize));
 		return bRet;
 	}
 	
 	public boolean setSeedFlag(int iFlag)
 	{
 		boolean bRet = false;
-		bRet = conf.confReplaceSingle(CLIENTIP, CLIENTCONF, LOOPFLAG, String.valueOf(iFlag));
+		bRet = conf.confReplaceSingleByPart(CLIENTIP, CLIENTCONF, "tfsseed", LOOPFLAG, String.valueOf(iFlag));
 		return bRet;
 	}
 	
@@ -422,7 +505,7 @@ public class FailOverBaseCase {
 		return bRet;
 	}
 	
-	public boolean checkRateEnd(float fStd, int iMode){
+	public boolean checkRateEnd_old(float fStd, int iMode){
 		boolean bRet = false;
 		float fRet = 0;
 		if ((iMode & WRITEONLY) != 0)
@@ -517,12 +600,12 @@ public class FailOverBaseCase {
 		return true;
 	}
 	
-	public boolean checkRateEnd(float fStd, int iMode, String logName){
+	public boolean checkRateEnd(float fStd, int iMode){
 		boolean bRet = false;
 		float fRet = 0;
 		if ((iMode & WRITEONLY) != 0)
 		{
-			fRet = getRateEnd(CLIENTIP, "tfsSeedLarge." + logName, WRITEFILESTATIS);
+			fRet = getRateEnd(CLIENTIP, "/home/admin/tfstest_new/tfsSeed." + caseName, WRITEFILESTATIS);
 			if (fRet == -1)
 			{
 				return bRet;
@@ -538,7 +621,7 @@ public class FailOverBaseCase {
 
 		if ((iMode & READ) != 0)
 		{			
-			fRet = getRateEnd(CLIENTIP, "tfsRead." + logName, READFILESTATIS);
+			fRet = getRateEnd(CLIENTIP, "/home/admin/tfstest_new/tfsRead." + caseName, READFILESTATIS);
 			if (fRet == -1)
 			{
 				return bRet;
@@ -554,7 +637,7 @@ public class FailOverBaseCase {
 		
 		if ((iMode & UNLINK) != 0)
 		{			
-			fRet = getRateEnd(CLIENTIP, "tfsUnlink." + logName, UNLINKSTATIS);
+			fRet = getRateEnd(CLIENTIP, "/home/admin/tfstest_new/tfsUnlink." + caseName, UNLINKSTATIS);
 			if (fRet == -1)
 			{
 				return bRet;
@@ -576,7 +659,7 @@ public class FailOverBaseCase {
 		float fRet = 0;
 		if ((iMode & WRITEONLY) != 0)
 		{
-			fRet = getRateRun(CLIENTIP, logFile, WRITEFILESTATIS);
+			fRet = getRateRun(CLIENTIP, logFile, WRITEFILE);
 			if (fRet == -1)
 			{
 				return bRet;
@@ -591,7 +674,7 @@ public class FailOverBaseCase {
 		}
 		if ((iMode & WRITEUNI) != 0)
 		{
-			fRet = getRateRun(CLIENTIP, logFile, SAVEUNIQUESTATIS);
+			fRet = getRateRun(CLIENTIP, logFile, SAVEUNIQUEFILE);
 			if (fRet == -1)
 			{
 				return bRet;
@@ -603,7 +686,7 @@ public class FailOverBaseCase {
 			} else {
 				log.info("SaveUnique success rate(" + fRet + "%) is higher than " + fStd + "%");
 			}
-			fRet = getRateRun(CLIENTIP, logFile, UNIQUESTATIS);
+			fRet = getRateRun(CLIENTIP, logFile, UNIQUE);
 			if (fRet == -1)
 			{
 				return bRet;
@@ -618,7 +701,23 @@ public class FailOverBaseCase {
 		}
 		if ((iMode & READ) != 0)
 		{			
-			fRet = getRateRun(CLIENTIP, logFile, READFILESTATIS);
+			fRet = getRateRun(CLIENTIP, logFile, READFILE);
+			if (fRet == -1)
+			{
+				return bRet;
+			}	
+			if (fRet < fStd)
+			{
+				log.error("Read success rate(" + fRet + "%) is lower than " + fStd + "% !!!");
+				return bRet;
+			} else {
+				log.info("Read success rate(" + fRet + "%) is higher than " + fStd + "%");
+			}
+		}
+		
+		if ((iMode & UNLINK) != 0)
+		{			
+			fRet = getRateRun(CLIENTIP, logFile, UNLINKFILE);
 			if (fRet == -1)
 			{
 				return bRet;
@@ -635,10 +734,10 @@ public class FailOverBaseCase {
 		return true;
 	}
 	
-	public boolean checkRateRun(float fStd, int iMode, String caseName)
+	public boolean checkRateRun(float fStd, int iMode)
 	{
 		boolean bRet = false;
-		String sorLog = tfsSeedClient.getLogs();
+		String sorLog = tfsSeedClient.getLogs() + caseName;
 		String tarLog = createClientLog(caseName, TEMP);
 		String startCmd = "tail -f " + sorLog + " > " + tarLog;
 		bRet = Proc.proStartBack(CLIENTIP, startCmd);
@@ -666,7 +765,7 @@ public class FailOverBaseCase {
 		return bRet;
 	}
 	
-	public boolean checkWrittenFile(float fStd, String caseName){
+	public boolean checkWrittenFile(float fStd){
 		boolean bRet = false;
 		int iRet = -1;
 		
@@ -702,11 +801,11 @@ public class FailOverBaseCase {
 		return bRet;
 	} 
 	
-	public boolean mvSeedFile(String suffix)
+	public boolean mvSeedFile()
 	{
 		boolean bRet = false;
 		String seedFile = "/home/admin/tfstest_new/tfsseed_file_list.txt";
-		bRet = File.fileCopy(CLIENTIP, seedFile, seedFile + suffix);
+		bRet = File.fileCopy(CLIENTIP, seedFile, seedFile + caseName);
 		if (bRet == false) return bRet;
 		bRet = File.fileDel(CLIENTIP, seedFile);
 		return bRet;
@@ -872,4 +971,153 @@ public class FailOverBaseCase {
 		return bRet;
 	}
 	
+	public boolean killOneDs()
+	{
+		boolean bRet = false;
+		log.info("Kill one ds start ===>");
+		AppServer cs = tfsGrid.getCluster(DSINDEX).getServer(0);
+		bRet = cs.stop(KillTypeEnum.NORMALKILL, WAITTIME);
+		log.info("Kill one ds end ===>");
+		return bRet;
+	}
+	
+	public boolean startOneDs()
+	{
+		boolean bRet = false;
+		log.info("Start one ds start ===>");
+		AppServer cs = tfsGrid.getCluster(DSINDEX).getServer(0);
+		bRet = cs.start();
+		log.info("Start one ds end ===>");
+		return bRet;
+	}
+	
+	public boolean killAllDsOneSide()
+	{
+		boolean bRet = false;
+		log.info("Kill all ds on one side start ===>");
+		AppCluster csCluster = tfsGrid.getCluster(DSINDEX);
+		for(int iLoop = 0; iLoop < csCluster.getServerList().size(); iLoop ++)
+		{
+			AppServer cs = csCluster.getServer(iLoop);
+			bRet = cs.stop(KillTypeEnum.NORMALKILL, WAITTIME);
+			if (bRet == false)
+			{
+				break;
+			}
+		}
+		log.info("Kill all ds on one side end ===>");
+		return bRet;
+	}
+	
+	public boolean startAllDsOneSide()
+	{
+		boolean bRet = false;
+		log.info("Start all ds on one side start ===>");
+		AppCluster csCluster = tfsGrid.getCluster(DSINDEX);
+		for(int iLoop = 0; iLoop < csCluster.getServerList().size(); iLoop ++)
+		{
+			AppServer cs = csCluster.getServer(iLoop);
+			bRet = cs.stop(KillTypeEnum.NORMALKILL, WAITTIME);
+			if (bRet == false)
+			{
+				break;
+			}
+		}
+		log.info("Start all ds on one side end ===>");
+		return bRet;
+	}
+	
+	public boolean killAllDs()
+	{
+		boolean bRet = false;
+		log.info("Kill all ds start ===>");
+		for (int iLoop = DSINDEX; iLoop <= DSINDEXI; iLoop ++)
+		{
+			AppCluster csCluster = tfsGrid.getCluster(iLoop);
+			for(int jLoop = 0; jLoop < csCluster.getServerList().size(); jLoop ++)
+			{
+				AppServer cs = csCluster.getServer(jLoop);
+				bRet = cs.stop(KillTypeEnum.NORMALKILL, WAITTIME);
+				if (bRet == false)
+				{
+					break;
+				}
+			}
+		}
+		log.info("Kill all ds end ===>");
+		return bRet;
+	}
+	
+	public boolean startAllDs()
+	{
+		boolean bRet = false;
+		log.info("Start all ds start ===>");
+		for (int iLoop = DSINDEX; iLoop <= DSINDEXI; iLoop ++)
+		{
+			AppCluster csCluster = tfsGrid.getCluster(iLoop);
+			for(int jLoop = 0; jLoop < csCluster.getServerList().size(); jLoop ++)
+			{
+				AppServer cs = csCluster.getServer(jLoop);
+				bRet = cs.start();
+				if (bRet == false)
+				{
+					break;
+				}
+			}
+		}
+		log.info("Start all ds end ===>");
+		return bRet;
+	}
+	
+	public boolean cleanOneDs()
+	{
+		boolean bRet = false;
+		log.info("Clean one ds start ===>");
+		AppServer cs = tfsGrid.getCluster(DSINDEX).getServer(0);
+		bRet = cs.stop(KillTypeEnum.NORMALKILL, WAITTIME);
+		if (bRet == false) return bRet;
+		
+		bRet = cs.clean();
+		log.info("Clean one ds end ===>");
+		return bRet;
+	}
+	
+	public boolean cleanAllDsOneSide()
+	{
+		boolean bRet = false;
+		log.info("Clean all ds on one side start ===>");
+		AppCluster csCluster = tfsGrid.getCluster(DSINDEX);
+		for(int iLoop = 0; iLoop < csCluster.getServerList().size(); iLoop ++)
+		{
+			AppServer cs = csCluster.getServer(iLoop);
+			bRet = cs.stop(KillTypeEnum.NORMALKILL, WAITTIME);
+			if (bRet == false) break;
+
+			bRet = cs.clean();
+			if (bRet == false) break;
+		}
+		log.info("Clean all ds on one side end ===>");
+		return bRet;
+	}
+	
+	public boolean cleanAllDs()
+	{
+		boolean bRet = false;
+		log.info("Clean all ds start ===>");
+		for (int iLoop = DSINDEX; iLoop <= DSINDEXI; iLoop ++)
+		{
+			AppCluster csCluster = tfsGrid.getCluster(iLoop);
+			for(int jLoop = 0; jLoop < csCluster.getServerList().size(); jLoop ++)
+			{
+				AppServer cs = csCluster.getServer(jLoop);
+				bRet = cs.stop(KillTypeEnum.NORMALKILL, WAITTIME);
+				if (bRet == false) break;
+				
+				bRet = cs.clean();
+				if (bRet == false) break;
+			}
+		}
+		log.info("Clean all ds end ===>");
+		return bRet;
+	}
 }
