@@ -658,7 +658,7 @@ int TfsFile::do_async_request(const InnerFilePhase file_phase, NewClient* client
               client, file_phase, ret,
               seg_data->seg_info_.block_id_, seg_data->seg_info_.file_id_, seg_data->seg_info_.offset_,
               seg_data->seg_info_.size_, seg_data->seg_info_.crc_, seg_data->inner_offset_,
-              seg_data->file_number_, seg_data->status_, 
+              seg_data->file_number_, seg_data->status_,
               tbsys::CNetUtil::addrToString(seg_data->get_last_read_pri_ds()).c_str(),
               tbsys::CNetUtil::addrToString(seg_data->get_write_pri_ds()).c_str());
   }
@@ -705,14 +705,14 @@ int TfsFile::do_async_response(const InnerFilePhase file_phase, common::BasePack
   else
   {
     SegmentData* seg_data = processing_seg_list_[index];
-    TBSYS_LOG(ERROR, "do reponse fail. packet: %p, phase: %d, ret: %d, ",
+    TBSYS_LOG(ERROR, "do reponse fail. packet: %p, phase: %d, ret: %d, "
               "blockid: %u, fileid: %"PRI64_PREFIX"u, offset: %"PRI64_PREFIX"d, "
               "size: %d, crc: %d, inneroffset: %d, filenumber: %"PRI64_PREFIX"d, "
               "status: %d, rserver: %s, wserver: %s.",
-              packet, file_phase, ret, 
+              packet, file_phase, ret,
               seg_data->seg_info_.block_id_, seg_data->seg_info_.file_id_, seg_data->seg_info_.offset_,
               seg_data->seg_info_.size_, seg_data->seg_info_.crc_, seg_data->inner_offset_,
-              seg_data->file_number_, seg_data->status_, 
+              seg_data->file_number_, seg_data->status_,
               tbsys::CNetUtil::addrToString(seg_data->get_last_read_pri_ds()).c_str(),
               tbsys::CNetUtil::addrToString(seg_data->get_write_pri_ds()).c_str());
   }
