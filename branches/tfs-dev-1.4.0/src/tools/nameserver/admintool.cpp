@@ -649,7 +649,6 @@ int main(int argc,char** argv)
 {
   int32_t i;
   bool directly = false;
-  const char* dev_name = "eth0";
   const char* ns_ip = NULL;
 
   while ((i = getopt(argc, argv, "s:d:ih")) != EOF)
@@ -658,9 +657,6 @@ int main(int argc,char** argv)
     {
     case 's':
       ns_ip = optarg;
-      break;
-    case 'd':
-      dev_name = optarg;
       break;
     case 'i':
       directly = true;
@@ -715,7 +711,7 @@ int usage(const char *name)
           "\n****************************************************************************** \n"
           "You can operate nameserver by this tool.\n"
           "Usage: \n"
-          "  %s -s ns_ip_port [-d dev_name] [-i 'command'] [-h help]\n"
+          "  %s -s ns_ip_port [-i 'command'] [-h help]\n"
           "****************************************************************************** \n\n",
           name);
   exit(TFS_ERROR);
