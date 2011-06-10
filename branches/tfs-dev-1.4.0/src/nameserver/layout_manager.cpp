@@ -83,23 +83,30 @@ namespace tfs
                                      const std::vector<ServerCollect*>& second,
                                      std::vector<ServerCollect*>& result)
   {
-    std::vector<ServerCollect*>::const_iterator iter = second.begin();
-    std::vector<ServerCollect*>::const_iterator rt;
-    for (; iter != second.end(); ++iter)
+    if (second.empty())
     {
-      bool bfind = false;
-      rt = first.begin();
-      for (; rt != first.end(); rt++)
+      result.assign(first.begin(), first.end());
+    }
+    else
+    {
+      std::vector<ServerCollect*>::const_iterator iter = second.begin();
+      std::vector<ServerCollect*>::const_iterator rt;
+      for (; iter != second.end(); ++iter)
       {
-        if ((*rt)->id() == (*iter)->id())
+        bool bfind = false;
+        rt = first.begin();
+        for (; rt != first.end(); rt++)
         {
-          bfind = true;
-          break;
+          if ((*rt)->id() == (*iter)->id())
+          {
+            bfind = true;
+            break;
+          }
         }
-      }
-      if (!bfind)
-      {
-        result.push_back((*iter));
+        if (!bfind)
+        {
+          result.push_back((*iter));
+        }
       }
     }
     return result.size();
@@ -263,6 +270,7 @@ namespace tfs
 
     int LayoutManager::open_helper_create_new_block_by_id(uint32_t block_id)
     {
+      int32_t iret = TFS_SUCCESS;
       BlockChunkPtr ptr = get_chunk(block_id);
       ptr->rdlock();//lock
       BlockCollect* block = ptr->find(block_id);
@@ -273,35 +281,41 @@ namespace tfs
         if (block == NULL)
         {
           TBSYS_LOG(ERROR, "add new block(%u) failed because there's any dataserver was found", block_id);
-          return EXIT_NO_DATASERVER;
-        }
-        ptr->rdlock();
-        block = ptr->find(block_id);
-        if (block == NULL)
-        {
-          ptr->unlock();
-          TBSYS_LOG(ERROR, "add new block(%u) failed because there's any dataserver was found", block_id);
-          return EXIT_NO_DATASERVER;
-        }
-      }
-
-      if (block->get_hold_size() == 0)
-      {
-        if (block->get_creating_flag() == BlockCollect::BLOCK_CREATE_FLAG_YES)
-        {
-          ptr->unlock();
-          TBSYS_LOG(ERROR, "block(%u) found meta data, but creating by another thread, must be return", block_id);
-          return EXIT_NO_BLOCK;
+          iret = EXIT_NO_DATASERVER;
         }
         else
         {
-          ptr->unlock();
-          TBSYS_LOG(ERROR, "block(%u) found meta data, but no dataserver hold it.", block_id);
-          return EXIT_NO_DATASERVER;
+          ptr->rdlock();
+          block = ptr->find(block_id);
+          if (block == NULL)
+          {
+            TBSYS_LOG(ERROR, "add new block(%u) failed because there's any dataserver was found", block_id);
+            iret = EXIT_NO_DATASERVER;
+          }
+        }
+      }
+
+      if (TFS_SUCCESS == iret)
+      {
+        if (NULL != block)
+        {
+          if (block->get_hold_size() == 0)
+          {
+            if (block->get_creating_flag() == BlockCollect::BLOCK_CREATE_FLAG_YES)
+            {
+              TBSYS_LOG(ERROR, "block(%u) found meta data, but creating by another thread, must be return", block_id);
+              iret = EXIT_NO_BLOCK;
+            }
+            else
+            {
+              TBSYS_LOG(ERROR, "block(%u) found meta data, but no dataserver hold it.", block_id);
+              iret = EXIT_NO_DATASERVER;
+            }
+          }
         }
       }
       ptr->unlock();
-      return TFS_SUCCESS;
+      return iret;
     }
 
     int LayoutManager::update_block_info(
