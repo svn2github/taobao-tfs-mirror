@@ -1829,7 +1829,7 @@ namespace tfs
           }
           else if (AccessControl::ACL_RELOAD == block_id )
           {
-            ret = acl_.reload();
+            ret = acl_.reload(config_file_.c_str());
           }
           if (ret < 0)
             ret = STATUS_MESSAGE_ERROR;

@@ -126,7 +126,7 @@ namespace tfs
 
       public:
         int32_t load();
-        int32_t reload();
+        int32_t reload(const char* conf_file_name);
         int32_t load(const char* aclipmask, const char* aclfile);
         bool deny(uint64_t ipport, int32_t op);
         int32_t set_flag(int32_t f)

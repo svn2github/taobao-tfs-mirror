@@ -14,7 +14,8 @@
  *
  */
 #include <tbsys.h>
-//#include "common/config.h"
+#include <config.h>
+#include "common/config_item.h"
 #include "common/func.h"
 #include "common/parameter.h"
 #include "visit_stat.h"
@@ -257,28 +258,22 @@ namespace tfs
 
     int32_t AccessControl::load()
     {
-      char* aclipmask = NULL;
-      char* aclfile = NULL;
-      //TODO
-      //char* aclipmask = CONFIG.get_string_value(CONFIG_DATASERVER, "access_control_ipmask");
-      //char* aclfile = CONFIG.get_string_value(CONFIG_DATASERVER, "access_control_file");
+      const char* aclipmask = TBSYS_CONFIG.getString(CONF_SN_DATASERVER, "access_control_ipmask", NULL);
+      const char* aclfile = TBSYS_CONFIG.getString(CONF_SN_DATASERVER, "access_control_file", NULL);
       return load(aclipmask, aclfile);
     }
 
-    int32_t AccessControl::reload()
+    int32_t AccessControl::reload(const char* conf_file_name)
     {
       if (clear() < 0)
         return TFS_ERROR;
-      //TODO
-      char* aclipmask = NULL;
-      char* aclfile = NULL;
-      //Configure oneconf;
-      //if (oneconf.load(CONFIG.get_config_file_name()) != TFS_SUCCESS)
-      //{
-      //  return TFS_ERROR;
-      //}
-      //char* aclipmask = oneconf.get_string_value(CONFIG_DATASERVER, "access_control_ipmask");
-      //char* aclfile = oneconf.get_string_value(CONFIG_DATASERVER, "access_control_file");
+      tbsys::CConfig oneconf;
+      if (oneconf.load(conf_file_name) != EXIT_SUCCESS)
+      {
+        return TFS_ERROR;
+      }
+      const char* aclipmask = oneconf.getString(CONF_SN_DATASERVER, "access_control_ipmask", NULL);
+      const char* aclfile = oneconf.getString(CONF_SN_DATASERVER, "access_control_file", NULL);
       return load(aclipmask, aclfile);
     }
 
