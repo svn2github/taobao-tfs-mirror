@@ -1,16 +1,19 @@
 #!/bin/sh
 
 TFS_HOME="`cd ..;pwd`"
-TFS_CONF=${TFS_HOME}/conf/tfs.conf
+TFS_NS_CONF=${TFS_HOME}/conf/ns.conf
+TFS_DS_CONF=${TFS_HOME}/conf/ds.conf
+TFS_MOCK_DS_CONF=${TFS_HOME}/conf/mock_ds.conf
+TFS_ADMIN_CONF=${TFS_HOME}/conf/ads.conf
 BIN_DIR=${TFS_HOME}/bin
 NS_BIN=${BIN_DIR}/nameserver
 DS_BIN=${BIN_DIR}/dataserver
 ADMIN_BIN=${BIN_DIR}/adminserver
 MOCK_DS_BIN=${BIN_DIR}/mock_data_server
-NS_CMD="${NS_BIN} -f ${TFS_CONF} -d"
-DS_CMD="${DS_BIN} -f ${TFS_CONF} -d -i"
-ADMIN_CMD="${ADMIN_BIN} -f ${TFS_CONF} -d -s"
-MOCK_DS_CMD="${MOCK_DS_BIN} -f ${TFS_CONF} -d -i"
+NS_CMD="${NS_BIN} -f ${TFS_NS_CONF} -d"
+DS_CMD="${DS_BIN} -f ${TFS_DS_CONF} -d -i"
+ADMIN_CMD="${ADMIN_BIN} -f ${TFS_ADMIN_CONF} -d -s"
+MOCK_DS_CMD="${MOCK_DS_BIN} -f ${TFS_MOCK_DS_CONF} -d -i"
 UP_TIME=4
 DOWN_TIME=8
 

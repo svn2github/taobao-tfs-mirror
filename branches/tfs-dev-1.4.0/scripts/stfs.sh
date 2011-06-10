@@ -1,7 +1,7 @@
 #!/bin/sh
 
 TFS_HOME="`cd ..;pwd`"
-TFS_CONF=${TFS_HOME}/conf/tfs.conf
+TFS_CONF=${TFS_HOME}/conf/ds.conf
 BIN_DIR=${TFS_HOME}/bin
 CLEAR_BIN=${BIN_DIR}/clear_file_system
 FORMAT_BIN=${BIN_DIR}/format_file_system

@@ -2041,16 +2041,16 @@ namespace tfs
           if (has_replicate)//need replicate
           {
             //elect source server
+            std::vector<ServerCollect*> target(source);
             find_server_in_plan_helper(source, except);
             std::vector<ServerCollect*> runer;
             std::vector<ServerCollect*> result;
-            std::vector<ServerCollect*> except;
-            int32_t iret = 0;
+            int32_t count = 0;
             {
               RWLock::Lock tlock(maping_mutex_, READ_LOCKER);
-              iret = elect_replicate_source_ds(*this, source, except,1, result);
+              count = elect_replicate_source_ds(*this, source, except,1, result);
             }
-            if (iret != 1)
+            if (1 != count)
             {
               TBSYS_LOG(WARN, "replicate block(%u) cannot found source dataserver", block_id);
               continue;
@@ -2058,14 +2058,13 @@ namespace tfs
             runer.push_back(result.back());
 
             //elect target server
-            std::vector<ServerCollect*> target;
             except = source;
             {
               RWLock::Lock rlock(server_mutex_, READ_LOCKER);
               RWLock::Lock tlock(maping_mutex_, READ_LOCKER);
-              iret = elect_replicate_dest_ds(*this, except, 1, target);
+              count = elect_replicate_dest_ds(*this, except, 1, target);
             }
-            if (iret != 1)
+            if (1 != count)
             {
               TBSYS_LOG(WARN, "replicate block(%u) cannot found target dataserver", block_id);
               continue;
