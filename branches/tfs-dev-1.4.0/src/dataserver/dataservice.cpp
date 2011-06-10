@@ -601,15 +601,14 @@ namespace tfs
       int32_t iret = !ds_list.empty() ? 0 : -1;
       if (0 == iret)
       {
+        iret = -1;
         VUINT64 erase_self(ds_list);
-        iret = send_msg_to_server_helper(data_server_info_.id_, erase_self);
-        if (TFS_SUCCESS == iret)
+        if (TFS_SUCCESS == send_msg_to_server_helper(data_server_info_.id_, erase_self))
         {
           if (!erase_self.empty())
           {
             NewClient* client = NewClientManager::get_instance().create_client();
-            iret = common::post_msg_to_server(erase_self, client, message, ds_async_callback);
-            iret = TFS_SUCCESS == iret ? 1 : -1;
+            iret = TFS_SUCCESS == common::post_msg_to_server(erase_self, client, message, ds_async_callback) ? 1 : -1;
           }
           else
           {
@@ -997,7 +996,7 @@ namespace tfs
             //no slave
             message->reply(new StatusMessage(STATUS_MESSAGE_OK));
           }
-          else
+          else if ( ret < 0)
           {
             ds_requester_.req_block_write_complete(write_info.block_id_, lease_id, EXIT_SENDMSG_ERROR);
             message->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret, 
