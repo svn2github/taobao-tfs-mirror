@@ -206,10 +206,10 @@ int32_t TfsClient::get_block_cache_items() const
   return TfsClientImpl::Instance()->get_block_cache_items();
 }
 
-double TfsClient::get_cache_hit_radio() const
-{
-  return TfsClientImpl::Instance()->get_block_cache_items();
-}
+// double TfsClient::get_cache_hit_radio() const
+// {
+//   return TfsClientImpl::Instance()->get_cache_hit_radio();
+// }
 
 uint64_t TfsClient::get_server_id()
 {

@@ -171,7 +171,7 @@ namespace tfs
 
       int32_t get_block_cache_time() const;
       int32_t get_block_cache_items() const;
-      double get_cache_hit_radio() const;
+      // double get_cache_hit_radio() const;
 
       // sort of utility
       uint64_t get_server_id();

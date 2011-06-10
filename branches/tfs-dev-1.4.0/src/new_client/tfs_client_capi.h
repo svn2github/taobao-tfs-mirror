@@ -116,7 +116,7 @@ extern "C"
   int64_t t_get_client_retry_count();
 
   void t_set_log_level(const char* level);
-  void t_set_log_level(const char* file);
+  void t_set_log_file(const char* file);
 
   // sort of utility
   uint64_t t_get_server_id();
