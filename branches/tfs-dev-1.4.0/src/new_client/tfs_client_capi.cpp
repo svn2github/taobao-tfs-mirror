@@ -17,9 +17,9 @@
 
 using namespace tfs::client;
 
-int t_initialize(const char* ns_addr, const int32_t cache_time, const int32_t cache_items)
+int t_initialize(const char* ns_addr, const int32_t cache_time, const int32_t cache_items, const int start_bg)
 {
-  return TfsClient::Instance()->initialize(ns_addr, cache_time, cache_items);
+  return TfsClient::Instance()->initialize(ns_addr, cache_time, cache_items, !!start_bg);
 }
 
 int t_set_default_server(const char* ns_addr, const int32_t cache_time, const int32_t cache_items)
@@ -192,6 +192,11 @@ int64_t t_get_client_retry_count()
 void t_set_log_level(const char* level)
 {
   return TfsClient::Instance()->set_log_level(level);
+}
+
+void t_set_log_file(const char* file)
+{
+  return TfsClient::Instance()->set_log_file(file);
 }
 
 uint64_t t_get_server_id()

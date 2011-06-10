@@ -1411,7 +1411,7 @@ namespace tfs
       if (TFS_SUCCESS != ret)
       {
         try_add_repair_task(block_id, ret);
-        return message->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret, 
+        return message->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret,
             "readfileinfo fail, blockid: %u, fileid: %" PRI64_PREFIX "u, ret: %d", block_id, file_id, ret);
       }
 
@@ -1419,7 +1419,7 @@ namespace tfs
       resp_fi_msg->set_file_info(&finfo);
       message->reply(resp_fi_msg);
       TIMER_END();
-      TBSYS_LOG(DEBUG, "read fileinfo %s. blockid: %u, fileid: %" PRI64_PREFIX "u, mode: %d, cost time: %" PRI64_PREFIX "d",
+      TBSYS_LOG(INFO, "read fileinfo %s. blockid: %u, fileid: %" PRI64_PREFIX "u, mode: %d, cost time: %" PRI64_PREFIX "d",
           TFS_SUCCESS == ret ? "success" : "fail", block_id, file_id, mode, TIMER_DURATION());
       return TFS_SUCCESS;
     }

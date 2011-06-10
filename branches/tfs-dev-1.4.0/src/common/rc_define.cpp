@@ -316,7 +316,7 @@ namespace tfs
           }
           if (TFS_SUCCESS == ret)
           {
-            if (!app_oper_info_.insert(pair<OperType, AppOperInfo>(oper_type, app_oper)).second);
+            if (!app_oper_info_.insert(pair<OperType, AppOperInfo>(oper_type, app_oper)).second)
             {
               TBSYS_LOG(ERROR, "insert the same type: %d, size: %d", oper_type, len);
               ret = TFS_ERROR;

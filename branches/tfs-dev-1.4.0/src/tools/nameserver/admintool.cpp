@@ -28,7 +28,6 @@ using namespace std;
 
 static TfsClient* g_tfs_client = NULL;
 static STR_FUNC_MAP g_cmd_map;
-static uint64_t g_local_server_ip = 0;
 
 int usage(const char *name);
 static void sign_handler(const int32_t sig);
@@ -43,12 +42,10 @@ int cmd_quit(const VSTRING&);
 int cmd_set_run_param(const VSTRING& param);
 int cmd_add_block(const VSTRING& param);
 int cmd_remove_block(const VSTRING& param);
-int cmd_expire_block(const VSTRING& param);
-int cmd_unexpire_block(const VSTRING& param);
+int cmd_load_block(const VSTRING& param);
 int cmd_compact_block(const VSTRING& param);
-int cmd_repair_lose_block(const VSTRING& param);
+int cmd_replicate_block(const VSTRING& param);
 int cmd_repair_group_block(const VSTRING& param);
-int cmd_repair_crc(const VSTRING& param);
 int cmd_access_stat_info(const VSTRING& param);
 int cmd_access_control_flag(const VSTRING& param);
 int cmd_rotate_log(const VSTRING& param);
@@ -112,13 +109,12 @@ void init()
   g_cmd_map["quit"] = CmdNode("quit", "quit", 0, 0, cmd_quit);
   g_cmd_map["exit"] = CmdNode("exit", "exit", 0, 0, cmd_quit);
   g_cmd_map["param"] = CmdNode("param name [set value [extravalue]]", "set/get param value", 1, 4, cmd_set_run_param);
-  g_cmd_map["removeblock"] = CmdNode("removeblock blockid", "remove block", 1, 1, cmd_remove_block);
-  g_cmd_map["expblk"] = CmdNode("expblk blockid dsip:port", "expire block", 2, 2, cmd_expire_block);
-  g_cmd_map["ueblk"] = CmdNode("ueblk blockid dsip:port", "unexpire block", 2, 2, cmd_unexpire_block);
-  g_cmd_map["compact"] = CmdNode("compact blockid", "compact block", 1, 1, cmd_compact_block);
-  g_cmd_map["repairblk"] = CmdNode("repairblk blockid [src dest action]", "repair block", 1, 4, cmd_repair_lose_block);
-  g_cmd_map["repairgrp"] = CmdNode("repairgrp blockid", "repairgrp block", 1, 1, cmd_repair_group_block);
-  g_cmd_map["repaircrc"] = CmdNode("repaircrc filename", "repair file's crc", 1, 1, cmd_repair_crc);
+  g_cmd_map["addblk"] = CmdNode("addblk blockid", "add block", 1, 1, cmd_add_block);
+  g_cmd_map["removeblk"] = CmdNode("removeblock blockid [serverip:port]", "remove block", 1, 2, cmd_remove_block);
+  g_cmd_map["loadblk"] = CmdNode("loadblk blockid serverip:port", "load block", 2, 2, cmd_load_block);
+  g_cmd_map["compactblk"] = CmdNode("compact blockid", "compact block", 1, 1, cmd_compact_block);
+  g_cmd_map["replblk"] = CmdNode("replblk blockid [src dest action]", "replicate block", 1, 4, cmd_replicate_block);
+  g_cmd_map["repairgrp"] = CmdNode("repairgrp blockid", "repair group block", 1, 1, cmd_repair_group_block);
   g_cmd_map["aci"] = CmdNode("aci ip:port [startrow returnrow]", "access control", 1, 3, cmd_access_stat_info);
   g_cmd_map["setacl"] = CmdNode("setacl ip:port type [v1 [v2]]","set access control", 1, 4, cmd_access_control_flag);
   g_cmd_map["rotatelog"] = CmdNode("rotatelog ip:port","rotate log", 1, 1, cmd_rotate_log);
@@ -128,26 +124,27 @@ void init()
 int cmd_set_run_param(const VSTRING& param)
 {
   const static char* param_str[] = {
-    "min_replication",
-    "max_replication",
-    "max_write_file_count",
-    "max_use_capacity_ratio",
-    "heart_interval",
-    "replicate_wait_time",
-    "compact_delete_ratio",
-    "compact_max_load",
-    "plan_run_flag",
-    "run_plan_expire_interval",
-    "run_plan_ratio",
-    "object_dead_max_time",
-    "balance_max_diff_block_num",
-    "log_level",
-    "add_primary_block_count",
-    "build_plan_interval",
-    "replicate_ratio",
-    "max_wait_write_lease",
-    "cluster_index",
-    "build_plan_default_wait_time"
+      "min_replication",
+      "max_replication",
+      "max_write_file_count",
+      "max_use_capacity_ratio",
+      "heart_interval",
+      "replicate_wait_time",
+      "compact_delete_ratio",
+      "compact_max_load",
+      "plan_run_flag",
+      "run_plan_expire_interval",
+      "run_plan_ratio",
+      "object_dead_max_time",
+      "balance_max_diff_block_num",
+      "log_level",
+      "add_primary_block_count",
+      "build_plan_interval",
+      "replicate_ratio",
+      "max_wait_write_lease",
+      "tmp",
+      "cluster_index",
+      "build_plan_default_wait_time"
   };
   static int32_t param_strlen = sizeof(param_str) / sizeof(char*);
 
@@ -198,7 +195,7 @@ int cmd_set_run_param(const VSTRING& param)
   ClientCmdMessage req_cc_msg;
   req_cc_msg.set_cmd(CLIENT_CMD_SET_PARAM);
   req_cc_msg.set_value3(index);
-  req_cc_msg.set_value1(value);
+  req_cc_msg.set_value4(value);
 
   int32_t status = TFS_ERROR;
 
@@ -210,86 +207,57 @@ int cmd_set_run_param(const VSTRING& param)
   return status;
 }
 
-int cmd_remove_block(const VSTRING&)
-{
-/*  int32_t size = param.size();
-    if (size != 1)
-    {
-    fprintf(stderr, "removeblock block_id\n\n");
-    return TFS_ERROR;
-    }
-    uint32_t block_id = strtoul(param[0].c_str(), reinterpret_cast<char**> (NULL), 10);
-    VUINT64 ds_list;
-    ds_list.clear();
-    int32_t ret = tfs_client.get_block_info(block_id, ds_list);
-    if (ret != TFS_SUCCESS)
-    {
-    fprintf(stderr, "block no exist in nameserver, blockid:%u.\n", block_id);
-    return ret;
-    }
-    fprintf(stdout, "------block: %u, has %d replicas------\n", block_id, static_cast<int32_t> (ds_list.size()));
-    //remove meta
-    ds_list.push_back(0);
-    for (uint32_t i = 0; i < ds_list.size(); ++i)
-    {
-    if (i < ds_list.size() - 1)
-    {
-    fprintf(stdout, "removeblock: %u, (%d)th server: %s \n", block_id, i,
-    tbsys::CNetUtil::addrToString(ds_list[i]).c_str());
-    }
-
-    //uint64_t nsip_port = tfs_client.get_ns_ip_port();
-
-    ClientCmdMessage req_cc_msg;
-    req_cc_msg.set_cmd(CLIENT_CMD_EXPBLK);
-    req_cc_msg.set_value1(ds_list[i]);
-    req_cc_msg.set_value3(block_id);
-    req_cc_msg.set_value4(0);
-    req_cc_msg.set_value2(g_local_server_ip);
-    string err_msg;
-    NewClient* client = NewClientManager::get_instance().create_client();
-    if (send_message_to_server(ns_id, client, &req_cc_msg, err_msg) == TFS_ERROR)
-    {
-    fprintf(stderr, "%s\n\n", err_msg.c_str());
-    NewClientManager::get_instance().destroy_client(client);
-    return TFS_ERROR;
-    }
-    NewClientManager::get_instance().destroy_client(client);
-    }
-*/  return TFS_SUCCESS;
-}
-
-int cmd_expire_block(const VSTRING& param)
+int cmd_add_block(const VSTRING& param)
 {
   uint32_t block_id = atoi(param[0].c_str());
-  uint64_t server_id = Func::get_host_ip(param[1].c_str());
-  if (0 == server_id || 0 == block_id)
+
+  if (0 == block_id)
   {
-    fprintf(stderr, "invalid address or blockid: %s %s\n", param[0].c_str(), param[1].c_str());
+    fprintf(stderr, "block_id: %u\n\n", block_id);
     return TFS_ERROR;
+  }
+
+  VUINT64 ds_list;
+
+  int ret = ToolUtil::get_block_ds_list(g_tfs_client->get_server_id(), block_id, ds_list, T_WRITE|T_NEWBLK|T_NOLEASE);
+
+  ToolUtil::print_info(ret, "add block %u", block_id);
+
+  return ret;
+}
+
+int cmd_remove_block(const VSTRING& param)
+{
+  uint32_t block_id = atoi(param[0].c_str());
+  if (0 == block_id)
+  {
+    fprintf(stderr, "invalid blockid: %s\n", param[0].c_str());
+    return TFS_ERROR;
+  }
+  uint64_t server_id = 0;
+  if (param.size() > 1)
+  {
+    server_id = Func::get_host_ip(param[1].c_str());
   }
 
   ClientCmdMessage req_cc_msg;
   req_cc_msg.set_cmd(CLIENT_CMD_EXPBLK);
   req_cc_msg.set_value1(server_id);
   req_cc_msg.set_value3(block_id);
-  req_cc_msg.set_value4(0);
-  req_cc_msg.set_value2(g_local_server_ip);
 
   int32_t status = TFS_ERROR;
 
   send_msg_to_server(g_tfs_client->get_server_id(), &req_cc_msg, status);
 
-  ToolUtil::print_info(status, "expireblock %s %s", param[0].c_str(), param[1].c_str());
+  ToolUtil::print_info(status, "removeblock %s %s", param[0].c_str(), param[1].c_str());
 
   return status;
 }
 
-int cmd_unexpire_block(const VSTRING& param)
+int cmd_load_block(const VSTRING& param)
 {
   uint32_t block_id = atoi(param[0].c_str());
   uint64_t server_id = Func::get_host_ip(param[1].c_str());
-
   if (0 == server_id || 0 == block_id)
   {
     fprintf(stderr, "invalid blockid or address: %s %s\n", param[0].c_str(), param[1].c_str());
@@ -300,14 +268,12 @@ int cmd_unexpire_block(const VSTRING& param)
   req_cc_msg.set_cmd(CLIENT_CMD_LOADBLK);
   req_cc_msg.set_value1(server_id);
   req_cc_msg.set_value3(block_id);
-  req_cc_msg.set_value4(0);
-  req_cc_msg.set_value2(g_local_server_ip);
 
   int status = TFS_ERROR;
 
   send_msg_to_server(g_tfs_client->get_server_id(), &req_cc_msg, status);
 
-  ToolUtil::print_info(status, "unexpireblock %s %s", param[0].c_str(), param[1].c_str());
+  ToolUtil::print_info(status, "loadblock %s %s", param[0].c_str(), param[1].c_str());
 
   return status;
 }
@@ -315,7 +281,7 @@ int cmd_unexpire_block(const VSTRING& param)
 int cmd_compact_block(const VSTRING& param)
 {
   uint32_t block_id = atoi(param[0].c_str());
-  if (block_id <= 0)
+  if (0 == block_id)
   {
     fprintf(stderr, "invalid block id: %u\n", block_id);
     return TFS_ERROR;
@@ -323,10 +289,7 @@ int cmd_compact_block(const VSTRING& param)
 
   ClientCmdMessage req_cc_msg;
   req_cc_msg.set_cmd(CLIENT_CMD_COMPACT);
-  req_cc_msg.set_value1(0);
   req_cc_msg.set_value3(block_id);
-  req_cc_msg.set_value4(0);
-  req_cc_msg.set_value2(g_local_server_ip);
 
   int32_t status = TFS_ERROR;
   send_msg_to_server(g_tfs_client->get_server_id(), &req_cc_msg, status);
@@ -335,109 +298,70 @@ int cmd_compact_block(const VSTRING& param)
   return status;
 }
 
-int cmd_repair_lose_block(const VSTRING& param)
+int cmd_replicate_block(const VSTRING& param)
 {
   int32_t size = param.size();
-  int32_t action = 2;
+  ReplicateBlockMoveFlag action = REPLICATE_BLOCK_MOVE_FLAG_NO;
   if (size != 1 && size != 4)
   {
-    fprintf(stderr, "repairblk block_id [source] [dest] [action]\n\n");
+    fprintf(stderr, "replblk block_id [source dest action]\n\n");
     return TFS_ERROR;
   }
   uint32_t block_id = atoi(param[0].c_str());
-  if (block_id <= 0)
+  if (0 == block_id)
   {
     fprintf(stderr, "invalid blockid: %u\n", block_id);
     return TFS_ERROR;
   }
 
-  uint64_t src_ns_id = 0;
-  uint64_t dest_ns_id = 0;
+  uint64_t src_id = 0;
+  uint64_t dest_id = 0;
   if (4 == size)
   {
-    src_ns_id = Func::get_host_ip(param[1].c_str());
-    dest_ns_id = Func::get_host_ip(param[2].c_str());
-    action = atoi(param[3].c_str());
+    src_id = Func::get_host_ip(param[1].c_str());
+    dest_id = Func::get_host_ip(param[2].c_str());
+    if (param[3] == "move")
+    {
+      action = REPLICATE_BLOCK_MOVE_FLAG_YES;
+    }
   }
 
   ClientCmdMessage req_cc_msg;
   req_cc_msg.set_cmd(CLIENT_CMD_IMMEDIATELY_REPL);
+  req_cc_msg.set_value1(src_id);
+  req_cc_msg.set_value2(dest_id);
   req_cc_msg.set_value3(block_id);
   req_cc_msg.set_value4(action);
-  req_cc_msg.set_value2(src_ns_id);
-  req_cc_msg.set_value1(dest_ns_id);
 
   int32_t status = TFS_ERROR;
   send_msg_to_server(g_tfs_client->get_server_id(), &req_cc_msg, status);
-  ToolUtil::print_info(status, "repairblk %u %"PRI64_PREFIX"u %"PRI64_PREFIX"u", block_id, src_ns_id, dest_ns_id);
+  ToolUtil::print_info(status, "replicate block %u %"PRI64_PREFIX"u %"PRI64_PREFIX"u", block_id, src_id, dest_id);
 
   return status;
 }
 
-int cmd_repair_group_block(const VSTRING& param)
+int cmd_repair_group_block(const VSTRING&)
 {
-  uint32_t block_id = atoi(param[0].c_str());
+  // uint32_t block_id = atoi(param[0].c_str());
 
-  if (block_id <= 0)
-  {
-    fprintf(stderr, "invalid block id %u\n", block_id);
-    return TFS_ERROR;
-  }
+  // if (block_id <= 0)
+  // {
+  //   fprintf(stderr, "invalid block id %u\n", block_id);
+  //   return TFS_ERROR;
+  // }
 
-    ClientCmdMessage req_cc_msg;
-    req_cc_msg.set_cmd(CLIENT_CMD_REPAIR_GROUP);
-    req_cc_msg.set_value3(block_id);
-    req_cc_msg.set_value4(0);
-    req_cc_msg.set_value1(g_local_server_ip);
+  //   ClientCmdMessage req_cc_msg;
+  //   req_cc_msg.set_cmd(CLIENT_CMD_REPAIR_GROUP);
+  //   req_cc_msg.set_value3(block_id);
+  //   req_cc_msg.set_value4(0);
+  //   req_cc_msg.set_value1(g_local_server_ip);
 
-    int32_t status = TFS_ERROR;
-    send_msg_to_server(g_tfs_client->get_server_id(), &req_cc_msg, status);
-    ToolUtil::print_info(status, "repairgrp %u", block_id);
+  //   int32_t status = TFS_ERROR;
+  //   send_msg_to_server(g_tfs_client->get_server_id(), &req_cc_msg, status);
+  //   ToolUtil::print_info(status, "repairgrp %u", block_id);
 
-    return status;
-}
-
-int cmd_repair_crc(const VSTRING&)
-{
-/*  int32_t size = param.size();
-    if (size != 1)
-    {
-    fprintf(stderr, "repaircrc filename\n\n");
-    return TFS_ERROR;
-    }
-
-    char* tfs_name = const_cast<char*> (param[0].c_str());
-    if (static_cast<int32_t> (strlen(tfs_name)) < FILE_NAME_LEN || tfs_name[0] != 'T')
-    {
-    fprintf(stderr, "file name error: %s\n", tfs_name);
-    return TFS_ERROR;
-    }
-
-    char local_file[56];
-    sprintf(local_file, ".repair_crc_%s", tfs_name);
-    int32_t ret = get_file_retry(tfs_client, tfs_name, local_file);
-    if (ret == TFS_SUCCESS)
-    {
-    ret = tfs_client.save_file(local_file, tfs_name, NULL);
-    if (ret)
-    {
-    fprintf(stderr, "save failed: %s => %s\n", local_file, tfs_name);
-    }
-    }
-    else if (ret == TFS_ERROR - 100)
-    {
-    fprintf(stderr, "file not exits: %s\n", tfs_name);
-    }
-    else
-    {
-    fprintf(stderr, "don't have such file: %s\n", tfs_name);
-    }
-    unlink(local_file);
-
-    tfs_client.tfs_close();
-    return ret;
-*/
-  return 0;
+  //   return status;
+  return TFS_SUCCESS;
 }
 
 int cmd_access_stat_info(const VSTRING& param)
@@ -608,7 +532,6 @@ int cmd_access_control_flag(const VSTRING& param)
   req_cc_msg.set_value3(op_type); // param type == 1 as set acl flag.
   req_cc_msg.set_value1(v1); // ns_id as flag
   req_cc_msg.set_value4(v2);
-  req_cc_msg.set_value2(g_local_server_ip);
 
   int32_t status = TFS_ERROR;
   send_msg_to_server(server_id, &req_cc_msg, status);
@@ -755,7 +678,7 @@ int main(int argc,char** argv)
   }
 
   g_tfs_client = TfsClient::Instance();
-  int ret = g_tfs_client->initialize(ns_ip);
+  int ret = g_tfs_client->initialize(ns_ip, DEFAULT_BLOCK_CACHE_TIME, DEFAULT_BLOCK_CACHE_ITEMS, false);
   if (ret != TFS_SUCCESS)
   {
     fprintf(stderr, "init tfs client fail. ret: %d\n", ret);
@@ -763,8 +686,6 @@ int main(int argc,char** argv)
   }
 
   init();
-
-  g_local_server_ip = tbsys::CNetUtil::getLocalAddr(dev_name);
 
   if (optind >= argc)
   {

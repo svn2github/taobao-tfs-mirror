@@ -425,13 +425,16 @@ int StatManager<Key, SubKey, Entry>::initialize(tbutil::TimerPtr timer)
 template<typename Key, typename SubKey, template<typename T, typename T2> class Entry>
 int StatManager<Key, SubKey, Entry>::wait_for_shut_down()
 {
-  STAT_MAP_ITER iter = maps_.begin();
-  for (; iter != maps_.end(); ++iter)
+  if (timer_ != 0)
   {
-    iter->second->serialize();
-    timer_->cancel(iter->second);
+    STAT_MAP_ITER iter = maps_.begin();
+    for (; iter != maps_.end(); ++iter)
+    {
+      iter->second->serialize();
+      timer_->cancel(iter->second);
+    }
+    maps_.clear();
   }
-  maps_.clear();
   return TFS_SUCCESS;
 }
 
@@ -445,7 +448,7 @@ int StatManager<Key, SubKey, Entry>::destroy()
 template<typename Key, typename SubKey, template<typename T, typename T2> class Entry>
 int StatManager<Key, SubKey, Entry>::reset_schedule_interval(const int64_t schedule_interval_us)
 {
-  if (!destroy_)
+  if (timer_ != 0 && !destroy_)
   {
     for (STAT_MAP_ITER iter = maps_.begin(); iter != maps_.end(); ++iter)
     {
@@ -462,7 +465,7 @@ int StatManager<Key, SubKey, Entry>::reset_schedule_interval(const int64_t sched
 template<typename Key, typename SubKey, template<typename T, typename T2> class Entry>
 int StatManager<Key, SubKey, Entry>::add_entry(const EntryPtr& entry, int64_t schedule_interval_us)
 {
-  if (!destroy_)
+  if (timer_ != 0 && !destroy_)
   {
     STAT_MAP_ITER iter = maps_.find(entry->get_key());
     if (iter != maps_.end())
@@ -503,7 +506,7 @@ int StatManager<Key, SubKey, Entry>::remove_entry(const Key& key)
 template<typename Key, typename SubKey, template<typename T, typename T2> class Entry>
 int StatManager<Key, SubKey, Entry>::update_entry(const Key& key, std::vector<int64_t>& update_list, bool inc)
 {
-  if (!destroy_)
+  if (timer_ != 0 && !destroy_)
   {
     STAT_MAP_ITER iter = maps_.find(key);
     if (iter == maps_.end())
@@ -519,7 +522,7 @@ int StatManager<Key, SubKey, Entry>::update_entry(const Key& key, std::vector<in
 template<typename Key, typename SubKey, template<typename T, typename T2> class Entry>
 int StatManager<Key, SubKey, Entry>::update_entry(const Key& key, const SubKey& subkey, const int64_t value, bool inc)
 {
-  if (!destroy_)
+  if (timer_ != 0 && !destroy_)
   {
     STAT_MAP_ITER iter = maps_.find(key);
     if (iter == maps_.end())

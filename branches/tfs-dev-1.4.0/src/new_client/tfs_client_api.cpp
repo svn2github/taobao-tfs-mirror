@@ -28,9 +28,10 @@ TfsClient::~TfsClient()
 {
 }
 
-int TfsClient::initialize(const char* ns_addr, const int32_t cache_time, const int32_t cache_items)
+int TfsClient::initialize(const char* ns_addr, const int32_t cache_time, const int32_t cache_items,
+                          const bool start_bg)
 {
-  return TfsClientImpl::Instance()->initialize(ns_addr, cache_time, cache_items);
+  return TfsClientImpl::Instance()->initialize(ns_addr, cache_time, cache_items, start_bg);
 }
 
 int TfsClient::set_default_server(const char* ns_addr, const int32_t cache_time, const int32_t cache_items)
@@ -89,13 +90,13 @@ int64_t TfsClient::get_file_length(const int fd)
 }
 
 int TfsClient:: unlink(const char* file_name, const char* suffix,
-                           const TfsUnlinkType action, const OptionFlag option_flag)
+                       const TfsUnlinkType action, const OptionFlag option_flag)
 {
   return TfsClientImpl::Instance()->unlink(file_name, suffix, action, option_flag);
 }
 
 int TfsClient::unlink(const char* file_name, const char* suffix, const char* ns_addr,
-                          const TfsUnlinkType action, const OptionFlag option_flag)
+                      const TfsUnlinkType action, const OptionFlag option_flag)
 {
   return TfsClientImpl::Instance()->unlink(file_name, suffix, ns_addr, action, option_flag);
 }
@@ -188,6 +189,26 @@ int64_t TfsClient::get_client_retry_count() const
 void TfsClient::set_log_level(const char* level)
 {
   return TfsClientImpl::Instance()->set_log_level(level);
+}
+
+void TfsClient::set_log_file(const char* file)
+{
+  return TfsClientImpl::Instance()->set_log_file(file);
+}
+
+int32_t TfsClient::get_block_cache_time() const
+{
+  return TfsClientImpl::Instance()->get_block_cache_time();
+}
+
+int32_t TfsClient::get_block_cache_items() const
+{
+  return TfsClientImpl::Instance()->get_block_cache_items();
+}
+
+double TfsClient::get_cache_hit_radio() const
+{
+  return TfsClientImpl::Instance()->get_block_cache_items();
 }
 
 uint64_t TfsClient::get_server_id()

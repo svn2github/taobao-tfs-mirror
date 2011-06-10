@@ -112,7 +112,6 @@ int cmd_stat_blk(const VSTRING& param);
 int cmd_visit_count_blk(const VSTRING& param);
 int cmd_list_file_info(const VSTRING& param);
 int cmd_batch_file(const VSTRING& param);
-int cmd_add_block(const VSTRING& param);
 int cmd_check_file_info(const VSTRING& param);
 int cmd_list_block(const VSTRING& param);
 
@@ -156,7 +155,7 @@ int main(int argc, char* argv[])
   }
 
   g_tfs_client = TfsClient::Instance();
-  int ret = g_tfs_client->initialize(nsip);
+  int ret = g_tfs_client->initialize(nsip, DEFAULT_BLOCK_CACHE_TIME, DEFAULT_BLOCK_CACHE_ITEMS, false);
 
   if (ret != TFS_SUCCESS)
   {
@@ -199,9 +198,8 @@ int main(int argc, char* argv[])
 static void usage(const char* name)
 {
   fprintf(stderr,
-          "Usage: %s -s [-d] [-n] [-i] [-h]\n"
+          "Usage: %s -s [-n] [-i] [-h]\n"
           "       -s nameserver ip port\n"
-          "       -d network device\n"
           "       -n set log level\n"
           "       -i directly execute the command\n"
           "       -h help\n",
@@ -221,11 +219,6 @@ static void sign_handler(const int32_t sig)
 
 void init()
 {
-  static MessageFactory factory;
-  static BasePacketStreamer streamer;
-  streamer.set_packet_factory(&factory);
-  NewClientManager::get_instance().initialize(&factory, &streamer);
-
   g_cmd_map["help"] = CmdNode("help", "show help info", 0, 0, cmd_show_help);
   g_cmd_map["quit"] = CmdNode("quit", "quit", 0, 0, cmd_quit);
   g_cmd_map["exit"] = CmdNode("exit", "exit", 0, 0, cmd_quit);
@@ -248,7 +241,6 @@ void init()
   g_cmd_map["lsf"] = CmdNode("lsf blockid serverip:port [detail]", "list file list in block", 2, 3, cmd_list_file_info);
   g_cmd_map["listblock"] = CmdNode("listblock blockid", "list block server list", 1, 1, cmd_list_block);
   g_cmd_map["cfi"] = CmdNode("cfi tfsname", "check file info", 1, 1, cmd_check_file_info);
-  g_cmd_map["addblk"] = CmdNode("addblk blockid", "add block", 1, 1, cmd_add_block);
   g_cmd_map["@"] = CmdNode("@ file", "batch run command in file", 1, 1, cmd_batch_file);
   g_cmd_map["batch"] = CmdNode("batch file", "batch run command in file", 1, 1, cmd_batch_file);
 }
@@ -667,25 +659,6 @@ int cmd_batch_file(const VSTRING& param)
     fclose(fp);
   }
   return TFS_SUCCESS;
-}
-
-int cmd_add_block(const VSTRING& param)
-{
-  uint32_t block_id = atoi(param[0].c_str());
-
-  if (0 == block_id)
-  {
-    fprintf(stderr, "block_id: %u\n\n", block_id);
-    return TFS_ERROR;
-  }
-
-  VUINT64 ds_list;
-
-  int ret = ToolUtil::get_block_ds_list(g_tfs_client->get_server_id(), block_id, ds_list, T_WRITE|T_NEWBLK);
-
-  ToolUtil::print_info(ret, "add block %u", block_id);
-
-  return ret;
 }
 
 int cmd_stat_blk(const VSTRING& param)

@@ -505,7 +505,7 @@ int TfsLargeFile::load_meta()
     char* extra_seg_buf = new char[meta_seg_->file_info_->size_];
 
     meta_seg_->reset_status();
-    get_meta_segment(size, extra_seg_buf + size, remain_size);
+    get_meta_segment(size, extra_seg_buf + size, remain_size, false);
 
     // reread to get remain meta file
     if ((ret = process(FILE_PHASE_READ_FILE)) != TFS_SUCCESS)

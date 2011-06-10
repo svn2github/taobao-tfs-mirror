@@ -48,7 +48,8 @@ namespace tfs
       }
 
       int initialize(const char* ns_addr = NULL, const int32_t cache_time = common::DEFAULT_BLOCK_CACHE_TIME,
-                     const int32_t cache_items = common::DEFAULT_BLOCK_CACHE_ITEMS);
+                     const int32_t cache_items = common::DEFAULT_BLOCK_CACHE_ITEMS,
+                     const bool start_bg = true);
       int set_default_server(const char* ns_addr, const int32_t cache_time = common::DEFAULT_BLOCK_CACHE_TIME,
                      const int32_t cache_items = common::DEFAULT_BLOCK_CACHE_ITEMS);
       int destroy();
@@ -166,6 +167,11 @@ namespace tfs
       int64_t get_client_retry_count() const;
 
       void set_log_level(const char* level);
+      void set_log_file(const char* file);
+
+      int32_t get_block_cache_time() const;
+      int32_t get_block_cache_items() const;
+      double get_cache_hit_radio() const;
 
       // sort of utility
       uint64_t get_server_id();

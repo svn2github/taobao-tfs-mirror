@@ -49,7 +49,8 @@ TfsClientImpl::~TfsClientImpl()
   tbsys::gDelete(packet_streamer_);
 }
 
-int TfsClientImpl::initialize(const char* ns_addr, const int32_t cache_time, const int32_t cache_items)
+int TfsClientImpl::initialize(const char* ns_addr, const int32_t cache_time, const int32_t cache_items,
+                              const bool start_bg)
 {
   int ret = TFS_SUCCESS;
 
@@ -68,11 +69,15 @@ int TfsClientImpl::initialize(const char* ns_addr, const int32_t cache_time, con
     TBSYS_LOG(ERROR, "tfsclient initialize to ns %s failed. must exit", ns_addr);
     ret = TFS_ERROR;
   }
-  else if ((ret = BgTask::initialize()) != TFS_SUCCESS)
+  else if (start_bg)
   {
-    TBSYS_LOG(ERROR, "start bg task fail, must exit. ret: %d", ret);
+    if ((ret = BgTask::initialize()) != TFS_SUCCESS)
+    {
+      TBSYS_LOG(ERROR, "start bg task fail, must exit. ret: %d", ret);
+    }
   }
-  else
+
+  if (TFS_SUCCESS == ret)
   {
     is_init_ = true;
   }
@@ -513,6 +518,52 @@ void TfsClientImpl::set_log_level(const char* level)
 {
   TBSYS_LOG(INFO, "set log level: %s", level);
   TBSYS_LOGGER.setLogLevel(level);
+}
+
+void TfsClientImpl::set_log_file(const char* file)
+{
+  if (NULL == file)
+  {
+    TBSYS_LOG(ERROR, "file is null");
+  }
+  else
+  {
+    TBSYS_LOG(INFO, "set log file: %s", file);
+  }
+  TBSYS_LOGGER.setFileName(file);
+}
+
+int32_t TfsClientImpl::get_block_cache_time() const
+{
+  int32_t ret = 0;
+  if (NULL == default_tfs_session_)
+  {
+    TBSYS_LOG(ERROR, "no default session");
+  }
+  else
+  {
+    ret = default_tfs_session_->get_cache_time();
+  }
+  return ret;
+}
+
+int32_t TfsClientImpl::get_block_cache_items() const
+{
+  int32_t ret = 0;
+  if (NULL == default_tfs_session_)
+  {
+    TBSYS_LOG(ERROR, "no default session");
+  }
+  else
+  {
+    ret = default_tfs_session_->get_cache_items();
+  }
+  return ret;
+}
+
+double TfsClientImpl::get_cache_hit_radio() const
+{
+  return 1;
 }
 
 uint64_t TfsClientImpl::get_server_id()
