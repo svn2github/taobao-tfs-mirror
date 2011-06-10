@@ -75,9 +75,9 @@ public class FailOverBaseCase {
 	final public int LOOPON = 1;
 	final public int LOOPOFF = 0;
 	
-	final public String WRITECMD = "cd /home/admin/tfstest_new; ./tfsControlPress -f test_tfs.conf -i tfsSeed -l tfsSeed.";
-	final public String READCMD = "cd /home/admin/tfstest_new; ./tfsControlPress -f test_tfs.conf -i tfsRead -l tfsRead.";
-	final public String UNLINKCMD = "cd /home/admin/tfstest_new; ./tfsControlPress -f test_tfs.conf -i tfsUnlink -l tfsUnlink.";
+	final public String WRITECMD = "./tfsControlPress -f test_tfs.conf -i tfsSeed -l tfsSeed.";
+	final public String READCMD = "./tfsControlPress -f test_tfs.conf -i tfsRead -l tfsRead.";
+	final public String UNLINKCMD = "./tfsControlPress -f test_tfs.conf -i tfsUnlink -l tfsUnlink.";
 	
 	/* For scan log on client */
 	final public int TAILLINE = 100;
@@ -141,7 +141,7 @@ public class FailOverBaseCase {
 	{
 		boolean bRet = false;
 		log.info("Write command start ===>");
-		bRet = Proc.proStartBackroundBase(CLIENTIP, WRITECMD + caseName);
+		bRet = Proc.proStartBackroundBase(CLIENTIP, WRITECMD + caseName, "/home/admin/tfstest_new");
 		log.info("Write command end ===>");
 		return bRet;
 	}
@@ -169,7 +169,7 @@ public class FailOverBaseCase {
 	{
 		boolean bRet = false;
 		log.info("Read command start ===>");
-		bRet = Proc.proStartBackroundBase(CLIENTIP, READCMD + caseName);
+		bRet = Proc.proStartBackroundBase(CLIENTIP, READCMD + caseName, "/home/admin/tfstest_new");
 		log.info("Read command end ===>");
 		return bRet;
 	}
@@ -220,7 +220,7 @@ public class FailOverBaseCase {
 	{
 		boolean bRet = false;
 		log.info("Unlink command start ==>");
-		bRet = Proc.proStartBackroundBase(CLIENTIP, UNLINKCMD + caseName);
+		bRet = Proc.proStartBackroundBase(CLIENTIP, UNLINKCMD + caseName, "/home/admin/tfstest_new");
 		log.info("Unlink command end ==>");
 		return bRet;
 	}

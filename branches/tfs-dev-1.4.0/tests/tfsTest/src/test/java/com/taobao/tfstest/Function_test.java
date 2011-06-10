@@ -19,6 +19,10 @@ public class Function_test extends FailOverBaseCase {
 		boolean bRet = false;
 		bRet = chkBlockCnt(500, 1);
 		Assert.assertTrue(bRet);
+		bRet = chkBlockCnt(500, 3);
+		Assert.assertTrue(bRet);
+		bRet = chkBlockCnt(500, 0);
+		Assert.assertTrue(bRet);
 	}
 	
 	@Before
@@ -31,6 +35,14 @@ public class Function_test extends FailOverBaseCase {
 		
 		/* Kill the client process */
 		bRet = tfsSeedClient.stop(KillTypeEnum.FORCEKILL, WAITTIME);
+		Assert.assertTrue(bRet);
+		
+		/* Kill the grid */
+		bRet = tfsGrid.stop(KillTypeEnum.FORCEKILL, WAITTIME);
+		Assert.assertTrue(bRet);
+		
+		/* Clean the log file */
+		bRet = tfsGrid.clean();
 		Assert.assertTrue(bRet);
 		
 		bRet = tfsGrid.start();
