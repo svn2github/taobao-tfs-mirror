@@ -304,12 +304,12 @@ namespace tfs
     }
 
     //  port + inc
-    uint64_t Func::addr_inc_port(const uint64_t ipport, const int32_t inc)
+    /*uint64_t Func::addr_inc_port(const uint64_t ipport, const int32_t inc)
     {
       IpAddr* adr = (IpAddr *) (&ipport);
       adr->port_ += inc;
       return ipport;
-    }
+    }*/
 
     uint64_t Func::get_host_ip(const char *s)
     {

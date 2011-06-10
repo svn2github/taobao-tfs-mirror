@@ -21,13 +21,13 @@ namespace tfs
 {
   namespace message
   {
-    enum CommandStatus
+    /*enum CommandStatus
     {
       COMMAND_REPLICATE = 1,
       COMMAND_REPL_COMPLETE,
       COMMAND_REPL_FAILURE,
       COMMAND_CLIENT_REPL = 100
-    };
+    };*/
     class ReplicateBlockMessage: public common::BasePacket 
     {
       public:
