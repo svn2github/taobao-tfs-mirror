@@ -304,8 +304,6 @@ namespace tfs
       return TFS_SUCCESS;
     }
 
-
-
     int LayoutManager::update_block_info(
         const BlockInfo& new_block_info,
         const uint64_t id,
