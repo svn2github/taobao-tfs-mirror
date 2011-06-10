@@ -112,7 +112,7 @@ void init()
   g_cmd_map["addblk"] = CmdNode("addblk blockid", "add block", 1, 1, cmd_add_block);
   g_cmd_map["removeblk"] = CmdNode("removeblock blockid [serverip:port]", "remove block", 1, 2, cmd_remove_block);
   g_cmd_map["loadblk"] = CmdNode("loadblk blockid serverip:port", "load block", 2, 2, cmd_load_block);
-  g_cmd_map["compactblk"] = CmdNode("compact blockid", "compact block", 1, 1, cmd_compact_block);
+  g_cmd_map["compactblk"] = CmdNode("compactblk blockid", "compact block", 1, 1, cmd_compact_block);
   g_cmd_map["replblk"] = CmdNode("replblk blockid [src dest action]", "replicate block", 1, 4, cmd_replicate_block);
   g_cmd_map["repairgrp"] = CmdNode("repairgrp blockid", "repair group block", 1, 1, cmd_repair_group_block);
   g_cmd_map["aci"] = CmdNode("aci ip:port [startrow returnrow]", "access control", 1, 3, cmd_access_stat_info);
