@@ -159,11 +159,15 @@ int TfsSmallFile::read_process(int64_t& read_size, const InnerFilePhase read_fil
   int ret = TFS_SUCCESS;
 
   meta_seg_->reset_status();
-  if ((ret = process(read_file_phase)) != TFS_SUCCESS)
+  int32_t retry_count = processing_seg_list_[0]->ds_.size();
+  do
   {
-    TBSYS_LOG(ERROR, "read data fail, ret: %d", ret);
-  }
-  finish_read_process(ret, read_size);
+    if ((ret = process(read_file_phase)) != TFS_SUCCESS)
+    {
+      TBSYS_LOG(ERROR, "read data fail, ret: %d", ret);
+    }
+    finish_read_process(ret, read_size);
+  } while (ret != TFS_SUCCESS && --retry_count > 0);
   return ret;
 }
 

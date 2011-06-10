@@ -32,6 +32,7 @@ TfsSession::TfsSession(const std::string& nsip, const int32_t cache_time, const 
   :ns_addr_(0), ns_addr_str_(nsip), block_cache_time_(cache_time), block_cache_items_(cache_items),
 		cluster_id_(0), use_cache_(USE_CACHE_FLAG_YES)
 {
+  block_cache_map_.resize(block_cache_items_);
 }
 
 TfsSession::~TfsSession()

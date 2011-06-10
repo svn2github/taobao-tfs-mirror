@@ -46,7 +46,7 @@ namespace tfs
         return &tfs_client_impl;
       }
 
-      int initialize(const char* ns_addr, const int32_t cache_time, const int32_t cache_items);
+      int initialize(const char* ns_addr, const int32_t cache_time, const int32_t cache_items, const bool start_bg);
       int set_default_server(const char* ns_addr, const int32_t cache_time, const int32_t cache_items);
       int destroy();
 
@@ -96,6 +96,11 @@ namespace tfs
       int64_t get_client_retry_count() const;
 
       void set_log_level(const char* level);
+      void set_log_file(const char* file);
+
+      int32_t get_block_cache_time() const;
+      int32_t get_block_cache_items() const;
+      double get_cache_hit_radio() const;
 
       // sort of utility
       uint64_t get_server_id();

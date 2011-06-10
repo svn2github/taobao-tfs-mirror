@@ -5,9 +5,9 @@
     <bean id="seedClient" class="com.taobao.gaia.AppServer">
         <property name="ip" value="10.232.4.11"/>
        	<property name="pid" value="-1"/>
-       	<property name="confname" value="/home/admin/tfstest_new/tfstestapi.conf" />
+       	<property name="confname" value="/home/admin/tfstest_new/test_tfs.conf" />
        	<property name="dir" value="/home/admin/tfstest_new/" />
-       	<property name="logs" value="/home/admin/tfstest_new/tfsSeed.log" />
+       	<property name="logs" value="/home/admin/tfstest_new/tfsSeed." />
         <property name="isBackground" value="true" />
 		<property name="startcmd">
 		<value>/home/admin/tfstest_new/tfsControlPress -f /home/admin/tfstest_new/tfstestapi.conf -i tfsSeed -l /home/admin/tfstest_new/tfsSeed.log</value>
@@ -23,9 +23,9 @@
     <bean id="readClient" class="com.taobao.gaia.AppServer">
         <property name="ip" value="10.232.4.11"/>
        	<property name="pid" value="-1"/>
-       	<property name="confname" value="/home/admin/tfstest_large/tfstestapi.conf" />
+       	<property name="confname" value="/home/admin/tfstest_new/test_tfs.conf" />
        	<property name="dir" value="/home/admin/tfstest_large/" />
-       	<property name="logs" value="/home/admin/tfstest_new/tfsRead.log" />
+       	<property name="logs" value="/home/admin/tfstest_new/tfsRead." />
        	<property name="isBackground" value="true" />
 		<property name="startcmd">
 		<value>/home/admin/tfstest_large/tfsControlPress -f /home/admin/tfstest_large/tfstestapi.conf -i tfsRead -l /home/admin/tfstest_large/tfsRead.log</value>

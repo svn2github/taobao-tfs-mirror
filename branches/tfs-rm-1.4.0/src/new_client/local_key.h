@@ -84,17 +84,17 @@ namespace tfs
         set_pri_ds_index();
       }
 
-      int64_t get_read_pri_ds()
+      int64_t get_read_pri_ds() const
       {
         return ds_[pri_ds_index_];
       }
 
-      int64_t get_write_pri_ds()
+      int64_t get_write_pri_ds() const
       {
         return ds_[0];
       }
 
-      int32_t get_orig_pri_ds_index()
+      int32_t get_orig_pri_ds_index() const
       {
         return seg_info_.file_id_ % ds_.size();
       }
@@ -109,11 +109,15 @@ namespace tfs
         pri_ds_index_ = index % ds_.size();
       }
 
-      int64_t get_last_ds()
+      int64_t get_last_read_pri_ds() const
       {
-        // pri_ds_index_ < 0, server is the last retry one
-        int32_t index = pri_ds_index_ < 0 ? get_orig_pri_ds_index() : pri_ds_index_;
-        index = index == 0 ? ds_.size() - 1 : index - 1;
+        int32_t index = 0;
+        if (0 == file_number_)  // not write
+        {
+          // pri_ds_index_ < 0, server is the last retry one
+          index = pri_ds_index_ < 0 ? get_orig_pri_ds_index() : pri_ds_index_;
+          index = index == 0 ? ds_.size() - 1 : index - 1;
+        }
         return ds_[index];
       }
 

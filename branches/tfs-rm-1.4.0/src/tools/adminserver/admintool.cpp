@@ -16,11 +16,10 @@
  *
  */
 #include "common/internal.h"
-//#include "common/config.h"
-//#include "common/config_item.h"
 #include "common/new_client.h"
 #include "common/client_manager.h"
 #include "common/status_message.h"
+#include "message/message_factory.h"
 #include "message/admin_cmd_message.h"
 
 #include "tools/util/tool_util.h"
@@ -359,6 +358,10 @@ int main(int argc, char* argv[])
   {
     TBSYS_LOGGER.setLogLevel("ERROR");
   }
+  tfs::message::MessageFactory factory;
+  tfs::common::BasePacketStreamer streamer;
+  streamer.set_packet_factory(&factory);
+  NewClientManager::get_instance().initialize(&factory, &streamer);
 
   init();
 

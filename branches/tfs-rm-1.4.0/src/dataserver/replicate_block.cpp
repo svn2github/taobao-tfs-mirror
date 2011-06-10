@@ -202,7 +202,7 @@ namespace tfs
       }
 
       // send to port + 1
-      ds_ip = Func::addr_inc_port(ds_ip, 1);
+      //ds_ip = Func::addr_inc_port(ds_ip, 1);
 
       //replicate block file
       int32_t len = 0, offset = 0;

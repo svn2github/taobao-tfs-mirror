@@ -79,6 +79,32 @@ namespace tfs
     }
   }
 
+  static int find_servers_difference(const std::vector<ServerCollect*>& first,
+                                     const std::vector<ServerCollect*>& second,
+                                     std::vector<ServerCollect*>& result)
+  {
+    std::vector<ServerCollect*>::const_iterator iter = second.begin();
+    std::vector<ServerCollect*>::const_iterator rt;
+    for (; iter != second.end(); ++iter)
+    {
+      bool bfind = false;
+      rt = first.begin();
+      for (; rt != first.end(); rt++)
+      {
+        if ((*rt)->id() == (*iter)->id())
+        {
+          bfind = true;
+          break;
+        }
+      }
+      if (!bfind)
+      {
+        result.push_back((*iter));
+      }
+    }
+    return result.size();
+  }
+
   LayoutManager::LayoutManager():
       build_plan_thread_(0),
       run_plan_thread_(0),
@@ -1149,7 +1175,8 @@ namespace tfs
               else//elect dataserver successful
               {
                 std::vector<ServerCollect*> servers;
-                std::set_difference(need.begin(), need.end(), exist.begin(), exist.end(), servers.begin(), ServerSetDifferencHelper());
+                //std::set_difference(need.begin(), need.end(), exist.begin(), exist.end(), servers.begin(), ServerSetDifferencHelper());
+                find_servers_difference(need, exist, servers);
                 iret = servers.empty() ? TFS_ERROR : TFS_SUCCESS;
                 if (TFS_SUCCESS == iret)
                 {
@@ -1633,11 +1660,6 @@ namespace tfs
       }
       return false;
     }
-    bool LayoutManager::ServerSetDifferencHelper::operator()(const ServerCollect* lrh, 
-        const ServerCollect* rrh)
-    {
-      return lrh->id() < rrh->id();
-    }
 
     int LayoutManager::set_runtime_param(uint32_t value1, uint32_t value2, char *retstr)
     {
@@ -2019,16 +2041,16 @@ namespace tfs
           if (has_replicate)//need replicate
           {
             //elect source server
+            std::vector<ServerCollect*> target(source);
             find_server_in_plan_helper(source, except);
             std::vector<ServerCollect*> runer;
             std::vector<ServerCollect*> result;
-            std::vector<ServerCollect*> except;
-            int32_t iret = 0;
+            int32_t count = 0;
             {
               RWLock::Lock tlock(maping_mutex_, READ_LOCKER);
-              iret = elect_replicate_source_ds(*this, source, except,1, result);
+              count = elect_replicate_source_ds(*this, source, except,1, result);
             }
-            if (iret != 1)
+            if (1 != count)
             {
               TBSYS_LOG(WARN, "replicate block(%u) cannot found source dataserver", block_id);
               continue;
@@ -2036,14 +2058,13 @@ namespace tfs
             runer.push_back(result.back());
 
             //elect target server
-            std::vector<ServerCollect*> target;
             except = source;
             {
               RWLock::Lock rlock(server_mutex_, READ_LOCKER);
               RWLock::Lock tlock(maping_mutex_, READ_LOCKER);
-              iret = elect_replicate_dest_ds(*this, except, 1, target);
+              count = elect_replicate_dest_ds(*this, except, 1, target);
             }
-            if (iret != 1)
+            if (1 != count)
             {
               TBSYS_LOG(WARN, "replicate block(%u) cannot found target dataserver", block_id);
               continue;

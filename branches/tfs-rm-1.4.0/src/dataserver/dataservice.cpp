@@ -601,15 +601,14 @@ namespace tfs
       int32_t iret = !ds_list.empty() ? 0 : -1;
       if (0 == iret)
       {
+        iret = -1;
         VUINT64 erase_self(ds_list);
-        iret = send_msg_to_server_helper(data_server_info_.id_, erase_self);
-        if (TFS_SUCCESS == iret)
+        if (TFS_SUCCESS == send_msg_to_server_helper(data_server_info_.id_, erase_self))
         {
           if (!erase_self.empty())
           {
             NewClient* client = NewClientManager::get_instance().create_client();
-            iret = common::post_msg_to_server(erase_self, client, message, ds_async_callback);
-            iret = TFS_SUCCESS == iret ? 1 : -1;
+            iret = TFS_SUCCESS == common::post_msg_to_server(erase_self, client, message, ds_async_callback) ? 1 : -1;
           }
           else
           {
@@ -997,7 +996,7 @@ namespace tfs
             //no slave
             message->reply(new StatusMessage(STATUS_MESSAGE_OK));
           }
-          else
+          else if ( ret < 0)
           {
             ds_requester_.req_block_write_complete(write_info.block_id_, lease_id, EXIT_SENDMSG_ERROR);
             message->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret, 
@@ -1411,7 +1410,7 @@ namespace tfs
       if (TFS_SUCCESS != ret)
       {
         try_add_repair_task(block_id, ret);
-        return message->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret, 
+        return message->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret,
             "readfileinfo fail, blockid: %u, fileid: %" PRI64_PREFIX "u, ret: %d", block_id, file_id, ret);
       }
 
@@ -1419,7 +1418,7 @@ namespace tfs
       resp_fi_msg->set_file_info(&finfo);
       message->reply(resp_fi_msg);
       TIMER_END();
-      TBSYS_LOG(DEBUG, "read fileinfo %s. blockid: %u, fileid: %" PRI64_PREFIX "u, mode: %d, cost time: %" PRI64_PREFIX "d",
+      TBSYS_LOG(INFO, "read fileinfo %s. blockid: %u, fileid: %" PRI64_PREFIX "u, mode: %d, cost time: %" PRI64_PREFIX "d",
           TFS_SUCCESS == ret ? "success" : "fail", block_id, file_id, mode, TIMER_DURATION());
       return TFS_SUCCESS;
     }

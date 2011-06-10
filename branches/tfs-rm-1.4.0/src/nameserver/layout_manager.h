@@ -149,10 +149,6 @@ namespace nameserver
       common::VUINT64& servers_;
     };
 
-    struct ServerSetDifferencHelper
-    {
-      bool operator()(const ServerCollect* lrh, const ServerCollect* rrh);
-    };
 #if defined(TFS_NS_GTEST) || defined(TFS_NS_INTEGRATION)
   public:
 #else
