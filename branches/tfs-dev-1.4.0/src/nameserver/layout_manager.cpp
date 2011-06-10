@@ -89,7 +89,7 @@ namespace tfs
     {
       bool bfind = false;
       rt = first.begin();
-      for (; rt != first.end();)
+      for (; rt != first.end(); rt++)
       {
         if ((*rt)->id() == (*iter)->id())
         {
