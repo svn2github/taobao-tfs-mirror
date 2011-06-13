@@ -253,7 +253,7 @@ namespace nameserver
         if ((info_.file_count_ > new_block_info.file_count_)
             || (info_.size_ != new_block_info.size_)) 
         {
-          TBSYS_LOG(WARN, "block info not match");
+          TBSYS_LOG(WARN, "block: %u info not match");
           if (role == NS_ROLE_MASTER)
           {
             register_expire_block(expires, server, this);
@@ -278,7 +278,7 @@ namespace nameserver
         {
           if (ds_size > 0)//has dataserver hold block, release
           {
-            TBSYS_LOG(WARN, "block(%u) in dataserver(%s) version error(%d:%d)",
+            TBSYS_LOG(WARN, "block: %u in dataserver: %s version error(%d:%d)",
                 new_block_info.block_id_, tbsys::CNetUtil::addrToString(server->id()).c_str(),
                 info_.version_, new_block_info.block_id_);
             if (role == NS_ROLE_MASTER)
@@ -289,7 +289,7 @@ namespace nameserver
           }
           else //we'll accept current version
           {
-            TBSYS_LOG(WARN, "block(%u) in dataserver(%s) version error(%d:%d), but not found dataserver",
+            TBSYS_LOG(WARN, "block: %u in dataserver: %s version error(%d:%d), but not found dataserver",
                 new_block_info.block_id_, tbsys::CNetUtil::addrToString(server->id()).c_str(),
                 info_.version_, new_block_info.block_id_);
             memcpy(&info_,&new_block_info, sizeof(info_));
@@ -301,7 +301,7 @@ namespace nameserver
           memcpy(&info_, &new_block_info, sizeof(info_));
           if (!is_new)//release dataserver 
           {
-            TBSYS_LOG(WARN, "block(%u) in dataserver(%s) version error(%d:%d),replace ns version, current dataserver size(%u)",
+            TBSYS_LOG(WARN, "block: %u in dataserver: %s version error(%d:%d),replace ns version, current dataserver size: %u",
                 new_block_info.block_id_, tbsys::CNetUtil::addrToString(server->id()).c_str(),
                 old_version, new_block_info.version_, ds_size);
             if (role == NS_ROLE_MASTER)
@@ -315,7 +315,7 @@ namespace nameserver
                 assert (server != NULL);
                 server->remove(this);
                 register_expire_block(expires, server, this);
-                TBSYS_LOG(WARN, "release relation dataserver(%s), block(%u)",
+                TBSYS_LOG(WARN, "release relation dataserver: %s, block: %u",
                     tbsys::CNetUtil::addrToString((*iter)->id()).c_str(), info_.block_id_);
               }
               hold_master_ = HOLD_MASTER_FLAG_NO;

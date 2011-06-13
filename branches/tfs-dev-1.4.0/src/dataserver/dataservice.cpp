@@ -637,17 +637,31 @@ namespace tfs
           if (WRITE_DATA_MESSAGE == pcode)
           {
             WriteDataMessage* message = dynamic_cast<WriteDataMessage*>(bpacket);
+            WriteDataInfo write_info = message->get_write_info();
+            int32_t lease_id = message->get_lease_id();
+            int32_t version = message->get_block_version();
             if (!all_success)
             {
               TBSYS_LOG(ERROR,
-                  "WriteDataMessage fail. chid: %d, blockid: %u, fileid: %" PRI64_PREFIX "u, number: %" PRI64_PREFIX "u\n",
+                  "write data fail. chid: %d, blockid: %u, fileid: %" PRI64_PREFIX "u, number: %" PRI64_PREFIX "u\n",
                   message->getChannelId(), message->get_block_id(), message->get_file_id(), message->get_file_number());
               data_management_.erase_data_file(message->get_file_number());
+            }
+            else
+            {
+              TBSYS_LOG(
+                  INFO,
+                  "write data success. filenumber: %" PRI64_PREFIX "u, blockid: %u, fileid: %" PRI64_PREFIX "u, version: %u, leaseid: %u, role: master",
+                  write_info.file_number_, write_info.block_id_, write_info.file_id_, version, lease_id);
             }
             StatusMessage* reply_msg =  all_success ?
               new StatusMessage(STATUS_MESSAGE_OK, "write data complete"):
               new StatusMessage(STATUS_MESSAGE_ERROR, "write data fail");
             bpacket->reply(reply_msg);
+            if (TFS_SUCCESS != iret)
+            {
+              stat_mgr_.update_entry(tfs_ds_stat_, "write-failed", 1);
+            }
           }
           else if (RENAME_FILE_MESSAGE == pcode)
           {
@@ -687,6 +701,7 @@ namespace tfs
             CloseFileMessage* message = dynamic_cast<CloseFileMessage*> (bpacket);
             CloseFileInfo close_file_info = message->get_close_file_info();
             int32_t lease_id = message->get_lease_id();
+            uint64_t peer_id = message->get_connection()->getPeerId();
 
             //commit
             int32_t status = all_success ? TFS_SUCCESS : TFS_ERROR;
@@ -723,6 +738,16 @@ namespace tfs
                   "close write file to other dataserver fail, blockid: %u, fileid: %" PRI64_PREFIX "u, ret: %d",
                   close_file_info.block_id_, close_file_info.file_id_, iret);
             }
+            TBSYS_LOG(INFO, "close file %s. filenumber: %" PRI64_PREFIX "u, blockid: %u, fileid: %" PRI64_PREFIX "u, peerip: %s, role: %s",
+                TFS_SUCCESS == iret ? "success" : "fail", close_file_info.file_number_, close_file_info.block_id_,
+                close_file_info.file_id_, tbsys::CNetUtil::addrToString(peer_id).c_str(),
+                CLOSE_FILE_SLAVER != close_file_info.mode_ ? "master" : "slave");
+            WRITE_STAT_LOG(INFO, "blockid: %u, fileid: %" PRI64_PREFIX "u, peerip: %s",
+                close_file_info.block_id_, close_file_info.file_id_, tbsys::CNetUtil::addrToString(peer_id).c_str());
+
+            string sub_key = "";
+            TFS_SUCCESS == iret ? sub_key = "write-success" : sub_key = "write-failed";
+            stat_mgr_.update_entry(tfs_ds_stat_, sub_key, 1);
           }
           else
           {
@@ -995,6 +1020,16 @@ namespace tfs
           {
             //no slave
             message->reply(new StatusMessage(STATUS_MESSAGE_OK));
+            TIMER_END();
+            TBSYS_LOG(
+                INFO,
+                "write data %s. filenumber: %" PRI64_PREFIX "u, blockid: %u, fileid: %" PRI64_PREFIX "u, version: %u, leaseid: %u, role: %s, cost time: %" PRI64_PREFIX "d",
+                ret >= 0 ? "success": "fail", write_info.file_number_, write_info.block_id_, write_info.file_id_, version, lease_id, Master_Server_Role == write_info.is_server_ ? "master" : "slave", TIMER_DURATION());
+
+            if (TFS_SUCCESS != ret)
+            {
+              stat_mgr_.update_entry(tfs_ds_stat_, "write-failed", 1);
+            }
           }
           else if ( ret < 0)
           {
@@ -1006,21 +1041,21 @@ namespace tfs
         }
         else
         {
+          TBSYS_LOG(DEBUG, "====================================");
           message->reply(new StatusMessage(STATUS_MESSAGE_OK));
+          TBSYS_LOG(DEBUG, "====================================");
+          TIMER_END();
+          TBSYS_LOG(
+              INFO,
+              "write data %s. filenumber: %" PRI64_PREFIX "u, blockid: %u, fileid: %" PRI64_PREFIX "u, version: %u, leaseid: %u, role: %s, cost time: %" PRI64_PREFIX "d",
+              ret >= 0 ? "success": "fail", write_info.file_number_, write_info.block_id_, write_info.file_id_, version, lease_id, Master_Server_Role == write_info.is_server_ ? "master" : "slave", TIMER_DURATION());
+
+          if (TFS_SUCCESS != ret)
+          {
+            stat_mgr_.update_entry(tfs_ds_stat_, "write-failed", 1);
+          }
         }
       }
-
-      TIMER_END();
-      TBSYS_LOG(
-          INFO,
-          "write data %s. filenumber: %" PRI64_PREFIX "u, blockid: %u, fileid: %" PRI64_PREFIX "u, version: %u, leaseid: %u, role: %s, cost time: %" PRI64_PREFIX "d",
-          ret >= 0 ? "success": "fail", write_info.file_number_, write_info.block_id_, write_info.file_id_, version, lease_id, Master_Server_Role == write_info.is_server_ ? "master" : "slave", TIMER_DURATION());
-
-      if (TFS_SUCCESS != ret)
-      {
-        stat_mgr_.update_entry(tfs_ds_stat_, "write-failed", 1);
-      }
-
       return TFS_SUCCESS;
     }
 
@@ -1125,6 +1160,17 @@ namespace tfs
                     close_file_info.block_id_, close_file_info.file_id_, ret);
                 message->reply(new StatusMessage(STATUS_MESSAGE_ERROR));
               }
+              TIMER_END();
+              TBSYS_LOG(INFO, "close file %s. filenumber: %" PRI64_PREFIX "u, blockid: %u, fileid: %" PRI64_PREFIX "u, peerip: %s, role: %s, cost time: %" PRI64_PREFIX "d",
+                  TFS_SUCCESS == ret ? "success" : "fail", close_file_info.file_number_, close_file_info.block_id_,
+                  close_file_info.file_id_, tbsys::CNetUtil::addrToString(peer_id).c_str(),
+                  CLOSE_FILE_SLAVER != close_file_info.mode_ ? "master" : "slave", TIMER_DURATION());
+              WRITE_STAT_LOG(INFO, "blockid: %u, fileid: %" PRI64_PREFIX "u, peerip: %s",
+                  close_file_info.block_id_, close_file_info.file_id_, tbsys::CNetUtil::addrToString(peer_id).c_str());
+
+              string sub_key = "";
+              TFS_SUCCESS == ret ? sub_key = "write-success" : sub_key = "write-failed";
+              stat_mgr_.update_entry(tfs_ds_stat_, sub_key, 1);
             }
           }
           else
@@ -1136,21 +1182,20 @@ namespace tfs
               blk->seq_no_ = copyblk->seq_no_;
             }
             message->reply(new StatusMessage(STATUS_MESSAGE_OK));
+            TIMER_END();
+            TBSYS_LOG(INFO, "close file %s. filenumber: %" PRI64_PREFIX "u, blockid: %u, fileid: %" PRI64_PREFIX "u, peerip: %s, role: %s, cost time: %" PRI64_PREFIX "d",
+                TFS_SUCCESS == ret ? "success" : "fail", close_file_info.file_number_, close_file_info.block_id_,
+                close_file_info.file_id_, tbsys::CNetUtil::addrToString(peer_id).c_str(),
+                CLOSE_FILE_SLAVER != close_file_info.mode_ ? "master" : "slave", TIMER_DURATION());
+            WRITE_STAT_LOG(INFO, "blockid: %u, fileid: %" PRI64_PREFIX "u, peerip: %s",
+                close_file_info.block_id_, close_file_info.file_id_, tbsys::CNetUtil::addrToString(peer_id).c_str());
+
+            string sub_key = "";
+            TFS_SUCCESS == ret ? sub_key = "write-success" : sub_key = "write-failed";
+            stat_mgr_.update_entry(tfs_ds_stat_, sub_key, 1);
           }
         }
       }
-
-      TIMER_END();
-      TBSYS_LOG(INFO, "close file %s. filenumber: %" PRI64_PREFIX "u, blockid: %u, fileid: %" PRI64_PREFIX "u, peerip: %s, role: %s, cost time: %" PRI64_PREFIX "d",
-          TFS_SUCCESS == ret ? "success" : "fail", close_file_info.file_number_, close_file_info.block_id_,
-          close_file_info.file_id_, tbsys::CNetUtil::addrToString(peer_id).c_str(),
-          CLOSE_FILE_SLAVER != close_file_info.mode_ ? "master" : "slave", TIMER_DURATION());
-      WRITE_STAT_LOG(INFO, "blockid: %u, fileid: %" PRI64_PREFIX "u, peerip: %s",
-          close_file_info.block_id_, close_file_info.file_id_, tbsys::CNetUtil::addrToString(peer_id).c_str());
-
-      string sub_key = "";
-      TFS_SUCCESS == ret ? sub_key = "write-success" : sub_key = "write-failed";
-      stat_mgr_.update_entry(tfs_ds_stat_, sub_key, 1);
       return TFS_SUCCESS;
     }
 

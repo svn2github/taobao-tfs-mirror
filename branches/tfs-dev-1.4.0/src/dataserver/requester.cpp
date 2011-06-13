@@ -152,7 +152,8 @@ namespace tfs
 
       if (TFS_SUCCESS != ret || NULL == return_msg)
       {
-        if (NULL != client) NewClientManager::get_instance().destroy_client(client);
+        if (NULL != client)
+          NewClientManager::get_instance().destroy_client(client);
         return ret;
       }
 

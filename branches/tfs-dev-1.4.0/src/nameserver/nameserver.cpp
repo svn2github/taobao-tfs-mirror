@@ -561,10 +561,11 @@ namespace tfs
         param.status_ = message->get_success();
         param.unlink_flag_ = message->get_unlink_flag();
         iret = meta_mgr_.get_client_request_server().close(param);
-        if (TFS_SUCCESS == iret)
+        if (TFS_SUCCESS != iret)
         {
-          iret = message->reply(new StatusMessage(iret, param.error_msg_));
+          TBSYS_LOG(ERROR, "%s", param.error_msg_);
         }
+        iret = message->reply(new StatusMessage(iret, param.error_msg_));
         if (param.need_new_ && iret == TFS_SUCCESS)// add new block when block filled complete
         {
           bool promote = true;
@@ -625,7 +626,7 @@ namespace tfs
         if (block_id == 0)
         {
           iret = msg->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), EXIT_BLOCK_NOT_FOUND,
-              "repair block(%u), block object not found", block_id);
+              "repair block: %u, block object not found", block_id);
         }
         else
         {
@@ -637,17 +638,17 @@ namespace tfs
             if (NULL == message->get_block())
             {
               iret = message->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), EXIT_BLOCK_NOT_FOUND,
-                  "repair block(%u) blockinfo object is null", block_id);
+                  "repair block: %u, blockinfo object is null", block_id);
             }
             else
             {
               BlockInfo info = (*message->get_block());
-              TBSYS_LOG(DEBUG, "block(%u) repair, new information: version(%d)", block_id, info.version_);
+              TBSYS_LOG(DEBUG, "block: %u repair, new information: version: %d", block_id, info.version_);
               bool addnew = true;
               int iret = meta_mgr_.update_block_info(info, dest_server, now, addnew);
               if (iret == TFS_SUCCESS)
               {
-                iret = message->reply(new StatusMessage(iret, "update block info successful"));
+                iret = message->reply(new StatusMessage(STATUS_MESSAGE_OK, "update block info successful"));
               }
               else
               {

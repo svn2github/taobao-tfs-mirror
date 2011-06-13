@@ -287,9 +287,8 @@ namespace tfs
       {
         if (!GFactory::get_lease_factory().commit(block_id, parameter.lease_id_, commit_status))
         {
-          snprintf(parameter.error_msg_, 256, "close block(%u) successful,but lease(%u) commit fail", block_id, parameter.lease_id_);
-          TBSYS_LOG(ERROR, "%s", parameter.error_msg_);
           iret = EXIT_COMMIT_ERROR;
+          snprintf(parameter.error_msg_, 256, "close block: %u successful,but lease: %u commit fail", block_id, parameter.lease_id_);
         }
         std::vector<int64_t> stat(6,0);
         iret == TFS_SUCCESS ? stat[4] = 0x01 : stat[5] = 0x01;
@@ -299,12 +298,11 @@ namespace tfs
       {
         if (commit_status != LEASE_STATUS_FINISH)
         {
-          TBSYS_LOG(WARN, "close block(%u) successful, but cleint write operation error,lease(%u) commit begin", block_id, parameter.lease_id_);
+          TBSYS_LOG(WARN, "close block: %u successful, but cleint write operation error,lease: %u commit begin", block_id, parameter.lease_id_);
           if (!GFactory::get_lease_factory().commit(block_id, parameter.lease_id_, commit_status))
           {
-            snprintf(parameter.error_msg_, 256, "close block(%u) successful,but lease(%u) commit fail", block_id, parameter.lease_id_);
-            TBSYS_LOG(ERROR, "%s", parameter.error_msg_);
             iret = EXIT_COMMIT_ERROR;
+            snprintf(parameter.error_msg_, 256, "close block: %u successful,but lease: %u commit fail", block_id, parameter.lease_id_);
           }
         }
         else
@@ -318,9 +316,8 @@ namespace tfs
             block = ptr->find(block_id);
             if (block == NULL)
             {
-              snprintf(parameter.error_msg_, 256, "close block(%u) fail, block not exist", block_id);
-              TBSYS_LOG(ERROR, "%s", parameter.error_msg_);
               iret = EXIT_BLOCK_NOT_FOUND;
+              snprintf(parameter.error_msg_, 256, "close block: %u fail, block not exist", block_id);
             }
             else
             {
@@ -335,8 +332,7 @@ namespace tfs
             {//version errro
               if (!GFactory::get_lease_factory().commit(block_id, parameter.lease_id_, LEASE_STATUS_FAILED))
               {
-                snprintf(parameter.error_msg_, 256, "close block(%u) successful,but lease(%u) commit fail", block_id, parameter.lease_id_);
-                TBSYS_LOG(ERROR, "%s", parameter.error_msg_);
+                snprintf(parameter.error_msg_, 256, "close block: %u successful, but lease: %u commit fail", block_id, parameter.lease_id_);
               }
               iret = EXIT_COMMIT_ERROR;
             }
@@ -355,9 +351,8 @@ namespace tfs
               //commit lease
               if (!GFactory::get_lease_factory().commit(block_id, parameter.lease_id_, commit_status))
               {
-                snprintf(parameter.error_msg_, 256, "close block(%u) successful,but lease(%u) commit fail", block_id, parameter.lease_id_);
-                TBSYS_LOG(ERROR, "%s", parameter.error_msg_);
                 iret = EXIT_COMMIT_ERROR;
+                snprintf(parameter.error_msg_, 256, "close block: %u successful,but lease: %u commit fail", block_id, parameter.lease_id_);
               }
             }
 
@@ -367,8 +362,7 @@ namespace tfs
               iret = lay_out_manager_.update_block_info(parameter.block_info_, parameter.id_, now, false);
               if (iret != TFS_SUCCESS)
               {
-                TBSYS_LOG(ERROR, "close block(%u) successful, but update block information fail", block_id);
-                TBSYS_LOG(ERROR, "%s", parameter.error_msg_);
+                snprintf(parameter.error_msg_,256,"close block: %u successful, but update block information fail", block_id);
               }
             }
           }

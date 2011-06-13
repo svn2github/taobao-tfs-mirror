@@ -47,7 +47,6 @@ namespace nameserver
     ClientRequestServer& get_client_request_server();
 
     BlockChunkPtr get_chunk(const uint32_t block_id) const;
-    //BlockCollect*  get_block(const uint32_t block_id);
     ServerCollect* get_server(const uint64_t server_id);
 
     int add_server(const common::DataServerStatInfo& info, const time_t now, bool& isnew);
