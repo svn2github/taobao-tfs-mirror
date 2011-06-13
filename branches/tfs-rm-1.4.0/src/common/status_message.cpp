@@ -20,14 +20,17 @@ namespace tfs
   {
     StatusMessage::StatusMessage() :
       length_(0),
-      status_(0)
+      status_(STATUS_MESSAGE_ERROR)
     {
-      memset(msg_, 0, sizeof(msg_));
+      msg_[0] = '\0';
       _packetHeader._pcode = STATUS_MESSAGE;
     }
 
-    StatusMessage::StatusMessage(const int32_t status, const char* const str)
+    StatusMessage::StatusMessage(const int32_t status, const char* const str):
+      length_(0),
+      status_(status)
     {
+      msg_[0] = '\0';
       _packetHeader._pcode = STATUS_MESSAGE;
       set_message(status, str);
     }
@@ -46,6 +49,7 @@ namespace tfs
         memcpy(msg_, str, length_ - 1);//include '\0'
         msg_[length_ - 1] = '\0';
       }
+      TBSYS_LOG(DEBUG, "status msg : status: %d, length: %ld, %p", status_, length_, str);
     }
 
     StatusMessage::~StatusMessage()
@@ -65,6 +69,7 @@ namespace tfs
 
     int StatusMessage::deserialize(Stream& input)
     {
+      //Func::hex_dump(input.get_data(), input.get_data_length());
       int32_t iret = input.get_int32(&status_);
       if (TFS_SUCCESS == iret)
       {

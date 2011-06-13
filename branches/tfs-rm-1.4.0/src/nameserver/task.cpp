@@ -615,18 +615,38 @@ namespace tfs
 
     int LayoutManager::DeleteBlockTask::handle()
     {
-      std::vector<ServerCollect*>::iterator iter = runer_.begin();
-      for (; iter != runer_.end(); ++iter)
+      time_t now = time(NULL);
+      BlockChunkPtr ptr = manager_->get_chunk(block_id_);
+      RWLock::Lock(*ptr, WRITE_LOCKER);
+      BlockCollect* block  = ptr->find(block_id_);
+      int32_t iret = NULL != block ? TFS_SUCCESS : TFS_ERROR;
+      if (TFS_SUCCESS == iret)
       {
-        manager_->rm_block_from_ds((*iter)->id(), block_id_);
-      }
-      std::vector<int64_t> stat(1, runer_.size());
-      GFactory::get_stat_mgr().update_entry(GFactory::tfs_ns_stat_block_count_, stat, false);
+        std::vector<ServerCollect*>::iterator iter = runer_.begin();
+        for (; iter != runer_.end(); ++iter)
+        {
+          iret = LayoutManager::relieve_relation(block, (*iter), now) ? TFS_SUCCESS : TFS_ERROR;
+          if (TFS_SUCCESS != iret)
+          {
+            TBSYS_LOG(ERROR, "remove block: %u no server: %s relieve relation failed", block_id_, tbsys::CNetUtil::addrToString((*iter)->id()).c_str());
+          }
+          else
+          {
+            iret = manager_->rm_block_from_ds((*iter)->id(), block_id_);
+            if (TFS_SUCCESS != iret)
+            {
+              TBSYS_LOG(ERROR, "send remove block: %u command on server: %s failed", block_id_, tbsys::CNetUtil::addrToString((*iter)->id()).c_str());
+            }
+          }
+        }
+        std::vector<int64_t> stat(1, runer_.size());
+        GFactory::get_stat_mgr().update_entry(GFactory::tfs_ns_stat_block_count_, stat, false);
 
-      status_ = PLAN_STATUS_BEGIN;
-      begin_time_ = time(NULL);
-      end_time_ = begin_time_ + SYSPARAM_NAMESERVER.run_plan_expire_interval_;
-      return TFS_SUCCESS;
+        status_ = PLAN_STATUS_BEGIN;
+        begin_time_ = now;
+        end_time_ = begin_time_ + SYSPARAM_NAMESERVER.run_plan_expire_interval_;
+      }
+      return iret;
     }
 
     int LayoutManager::DeleteBlockTask::handle_complete(common::BasePacket* msg, bool& all_complete_flag)

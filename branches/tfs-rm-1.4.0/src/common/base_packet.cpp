@@ -103,6 +103,7 @@ namespace tfs
       if (bret)
       {
         version_ = ((header->_pcode >> 16) & 0xFFFF);
+        TBSYS_LOG(DEBUG, "pcode: %d, %d", header->_pcode,header->_pcode & 0xFFFF); 
         header->_pcode = (header->_pcode & 0xFFFF);
         int64_t length = header->_dataLen;
         bret = length > 0 && input->getDataLen() >= length;
@@ -154,6 +155,7 @@ namespace tfs
             stream_.clear();
             stream_.expand(length);
             stream_.set_bytes(input->getData(), length);
+            //Func::hex_dump(input->getData(), length);
             input->drainData(length);
             int32_t iret = deserialize(stream_);
             bret = TFS_SUCCESS == iret;
@@ -195,8 +197,10 @@ namespace tfs
           packet->set_id(id_ + 1);
           packet->set_version(version_);
 
+          packet->stream_.clear();
           packet->stream_.expand(packet->length());
           iret = packet->serialize(packet->stream_);
+          //Func::hex_dump(packet->stream_.get_data(), packet->stream_.get_data_length());
           if (TFS_SUCCESS == iret)
           {
             //recalculate crc
@@ -232,7 +236,7 @@ namespace tfs
       va_start(ap, fmt);
       vsnprintf(msgstr, MAX_ERROR_MSG_LENGTH, fmt, ap);
       va_end(ap);
-      TBSYS_LOGGER.logMessage(level, file, line, function, "%s", msgstr);
+      TBSYS_LOGGER.logMessage(level, file, line, function, "%s, error code: %d", msgstr, error_code);
 
       BaseService* service = dynamic_cast<BaseService*>(BaseMain::instance());
       StatusMessage* packet = dynamic_cast<StatusMessage*>(service->get_packet_factory()->createPacket(STATUS_MESSAGE));
@@ -241,9 +245,9 @@ namespace tfs
       int32_t iret = reply(packet);
       if (TFS_SUCCESS != iret)
       {
-        TBSYS_LOG(ERROR, "reply message: %d failed, error code: %d",packet->getPCode(), error_code);
+        TBSYS_LOG(ERROR, "reply message: %d failed, error code: %d", packet->getPCode(), error_code);
       }
-      return TFS_SUCCESS;
+      return iret;
     }
 
     // parse for version & lease

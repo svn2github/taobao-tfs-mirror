@@ -48,6 +48,7 @@ namespace tfs
         bret = input->getDataLen() >= TFS_PACKET_HEADER_V0_SIZE;
         if (bret)
         {
+          //Func::hex_dump(input->getData(), input->getDataLen());
           //first peek header size, check the flag , if flag == v1, need more data;
           TfsPacketNewHeaderV0 pheader;
           int64_t pos = 0;
@@ -207,7 +208,7 @@ namespace tfs
         bret = TFS_SUCCESS == iret;
         if (bret)
         {
-          //TBSYS_LOG(DEBUG, "header length: %d, body length : %d", header_length, bpacket->get_data_length());
+          TBSYS_LOG(DEBUG, "pcode: %d, header length: %d, body length : %d", bpacket->getPCode(), header_length, bpacket->get_data_length());
           //Func::hex_dump(output->getData(), output->getDataLen());
           output->pourData(header_length);
           bret = bpacket->encode(output);
