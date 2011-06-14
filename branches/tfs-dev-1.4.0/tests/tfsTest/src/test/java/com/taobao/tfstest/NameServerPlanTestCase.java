@@ -1271,7 +1271,6 @@ public class NameServerPlanTestCase {
 		
 		/* Get the previous checkNum plans' priority */
 		ArrayList<String> output = new ArrayList<String>();
-		int checkCount = 0;
 		bRet = getPreviousXPlanPriority(NSVIP, checkNum, checkCountLimit, output);
 		if (bRet == false) return bRet;
 		
@@ -1364,7 +1363,7 @@ public class NameServerPlanTestCase {
    
 		/* Use admintool to rotate ns log*/
 		String strCmd = TFS_BIN_HOME + "/admintool -s " + NSVIP + ":" + NSPORT + " -i 'rotatelog " + NSVIP + ":" + NSPORT + "'";     
-		bRet = Proc.proStartBase(CLIENTIP, strCmd);
+		bRet = Proc.proStartBase(NSIPA, strCmd);
 		if (bRet == false) return bRet;
 		
 		return bRet;
@@ -1390,13 +1389,13 @@ public class NameServerPlanTestCase {
     
 		/* Use ssm tool to get blockList*/
 		String strCmd = TFS_BIN_HOME + "/ssm -s " + NSVIP + ":" + NSPORT + " -i block > " + BL_LOG_NAME;     
-		bRet = Proc.proStartBase(CLIENTIP, strCmd);
+		bRet = Proc.proStartBase(NSIPA, strCmd);
 		if (bRet == false) return bRet;
 		
 		/* Check copy num */
 		ArrayList<String> copyNumList = new ArrayList<String>();
 		int correct = 0;
-		bRet = Log.scanAll(CLIENTIP, BL_LOG_NAME, blockList, BLOCKID_BL_COL, COPYNUM_BL_COL, copyNumList);
+		bRet = Log.scanAll(NSIPA, BL_LOG_NAME, blockList, BLOCKID_BL_COL, COPYNUM_BL_COL, copyNumList);
 		for (int iLoop = 0; iLoop < copyNumList.size(); iLoop++)
 		{
 			//log.debug("copyNum: " + copyNumList.get(iLoop));
@@ -1429,13 +1428,13 @@ public class NameServerPlanTestCase {
     
 		/* Use ssm tool to get blockList*/
 		String strCmd = TFS_BIN_HOME + "/ssm -s " + NSVIP + ":" + NSPORT + " -i block > " + BL_LOG_NAME;     
-		bRet = Proc.proStartBase(CLIENTIP, strCmd);
+		bRet = Proc.proStartBase(NSIPA, strCmd);
 		if (bRet == false) return bRet;
 		
 		/* Check copy num */
 		ArrayList<String> delFileCntList = new ArrayList<String>();
 		int correct = 0;
-		bRet = Log.scanAll(CLIENTIP, BL_LOG_NAME, blockList, BLOCKID_BL_COL, DELFILE_BL_COL, delFileCntList);
+		bRet = Log.scanAll(NSIPA, BL_LOG_NAME, blockList, BLOCKID_BL_COL, DELFILE_BL_COL, delFileCntList);
 		for (int iLoop = 0; iLoop < delFileCntList.size(); iLoop++)
 		{
 			//log.debug("copyNum: " + copyNumList.get(iLoop));
@@ -1467,11 +1466,11 @@ public class NameServerPlanTestCase {
     
 		/* Use ssm tool to get blockList*/
 		String strCmd = TFS_BIN_HOME + "/ssm -s " + NSVIP + ":" + NSPORT + " -i block > " + BL_LOG_NAME;     
-		bRet = Proc.proStartBase(CLIENTIP, strCmd);
+		bRet = Proc.proStartBase(NSIPA, strCmd);
 		if (bRet == false) return bRet;
 		
 		/* Find the blocks whose del_file count is not 0 */
-		bRet = Log.scanAll(CLIENTIP, BL_LOG_NAME, " > 0", DELFILE_BL_COL, BLOCKID_BL_COL, blockList);
+		bRet = Log.scanAll(NSIPA, BL_LOG_NAME, " > 0", DELFILE_BL_COL, BLOCKID_BL_COL, blockList);
 
 		/* The 1st one would be "BLOCK_ID" remove it */
 		blockList.remove(0);
@@ -1496,11 +1495,11 @@ public class NameServerPlanTestCase {
 		
 		/* Use ssm tool to get blockList*/
 		String strCmd = TFS_BIN_HOME + "/ssm -s " + NSVIP + ":" + NSPORT + " -i block > " + BL_LOG_NAME;     
-		bRet = Proc.proStartBase(CLIENTIP, strCmd);
+		bRet = Proc.proStartBase(NSIPA, strCmd);
 		if (bRet == false) return bRet;
 		
 		/* Find the blocks whose del_file count is not 0 */
-		bRet = Log.scanAll(CLIENTIP, BL_LOG_NAME, " > 0", DELFILE_BL_COL, BLOCKID_BL_COL, blockList);
+		bRet = Log.scanAll(NSIPA, BL_LOG_NAME, " > 0", DELFILE_BL_COL, BLOCKID_BL_COL, blockList);
 
 		/* The 1st one would be "BLOCK_ID" remove it */
 		blockList.remove(0);
@@ -1509,7 +1508,7 @@ public class NameServerPlanTestCase {
 		for (int iLoop = 0; iLoop < blockList.size(); iLoop++)
 		{
 			strCmd = TFS_BIN_HOME + "/admintool -s " + NSVIP + ":" + NSPORT + " -i 'compact " + blockList.get(iLoop) + "'";
-			bRet = Proc.proStartBase(CLIENTIP, strCmd);
+			bRet = Proc.proStartBase(NSIPA, strCmd);
 		}		
 
 		if (bRet == false) return bRet;
@@ -1532,7 +1531,7 @@ public class NameServerPlanTestCase {
     
 		/* Use admin tool to set */
 		String strCmd = TFS_BIN_HOME + "/admintool -s " + NSVIP + ":" + NSPORT + " -i 'param  max_replication set " + value + "'";     
-		bRet = Proc.proStartBase(CLIENTIP, strCmd);
+		bRet = Proc.proStartBase(NSIPA, strCmd);
 		//TODO:执行成功与否的判断？
 		if (bRet == false) return bRet;
     
@@ -1550,7 +1549,7 @@ public class NameServerPlanTestCase {
     
 		/* Use admin tool to set */
 		String strCmd = TFS_BIN_HOME + "/admintool -s " + NSVIP + ":" + NSPORT + " -i 'param  min_replication set " + value + "'";     
-		bRet = Proc.proStartBase(CLIENTIP, strCmd);
+		bRet = Proc.proStartBase(NSIPA, strCmd);
 		//TODO:执行成功与否的判断？
 		if (bRet == false) return bRet;
     
@@ -1568,7 +1567,7 @@ public class NameServerPlanTestCase {
     
 		/* Use admin tool to set */
 		String strCmd = TFS_BIN_HOME + "/admintool -s " + NSVIP + ":" + NSPORT + " -i 'param  balance_max_diff_block_num set " + value + "'";     
-		bRet = Proc.proStartBase(CLIENTIP, strCmd);
+		bRet = Proc.proStartBase(NSIPA, strCmd);
 		//TODO:执行成功与否的判断？
 		if (bRet == false) return bRet;
     
