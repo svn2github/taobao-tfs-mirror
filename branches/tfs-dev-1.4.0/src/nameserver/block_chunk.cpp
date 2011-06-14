@@ -146,7 +146,7 @@ namespace tfs
         iter = block_map_.find(param.addition_param1_);
       }
 
-      TBSYS_LOG(DEBUG, "block_map_size: (%u)", block_map_.size());
+      TBSYS_LOG(DEBUG, "block_map_size: : %u", block_map_.size());
       bool has_block = iter != block_map_.end();
       if (has_block)
       {
@@ -154,7 +154,7 @@ namespace tfs
         {
           if (iter->second->scan(param) == TFS_SUCCESS)
           {
-            TBSYS_LOG(DEBUG, "BlockChunk scan block(%u)", iter->second->id());
+            TBSYS_LOG(DEBUG, "BlockChunk scan block: %u", iter->second->id());
             ++actual;
           }
         }
@@ -166,5 +166,5 @@ namespace tfs
       }
       return jump_count;
     }
-  }
-}
+  } /** nameserver **/
+} /** tfs **/

@@ -18,6 +18,7 @@
  *
  */
 #include "ns_define.h"
+#include "server_collect.h"
 
 namespace tfs
 {
@@ -101,9 +102,9 @@ namespace tfs
           file,
           line,
           function,
-          "owner ip port(%s), other side ip port(%s), switch time(%s), vip(%s)\
-          ,destroy flag(%s), owner role(%s), other side role(%s), owner status(%s), other side status(%s)\
-          ,sync oplog flag(%s), last owner check time(%s), last push owner check packet time(%s)",
+          "owner ip port: %s, other side ip port: %s, switch time: %s, vip: %s\
+          ,destroy flag: %s, owner role: %s, other side role: %s, owner status: %s, other side status: %s\
+          ,sync oplog flag: %s, last owner check time: %s, last push owner check packet time: %s",
           tbsys::CNetUtil::addrToString(owner_ip_port_).c_str(),
           tbsys::CNetUtil::addrToString(other_side_ip_port_).c_str(),
           common::Func::time_to_str(switch_time_).c_str(), tbsys::CNetUtil::addrToString(vip_).c_str(), destroy_flag_
@@ -128,5 +129,38 @@ namespace tfs
     {
       return instance_;
     }
+
+    void print_servers(const std::vector<ServerCollect*>& servers, std::string& result)
+    {
+      std::vector<ServerCollect*>::const_iterator iter = servers.begin();
+      for (; iter != servers.end(); ++iter)
+      {
+        result += "/";
+        result += tbsys::CNetUtil::addrToString((*iter)->id());
+      }
+    }
+
+    void print_servers(const std::vector<uint64_t>& servers, std::string& result)
+    {
+      std::vector<uint64_t>::const_iterator iter = servers.begin();
+      for (; iter != servers.end(); ++iter)
+      {
+        result += "/";
+        result += tbsys::CNetUtil::addrToString((*iter));
+      }
+    }
+
+    void print_blocks(const std::vector<uint32_t>& blocks, std::string& result)
+    {
+      char data[32]={'\0'};
+      std::vector<uint32_t>::const_iterator iter = blocks.begin();
+      for (; iter != blocks.end(); ++iter)
+      {
+        result += "/";
+        snprintf(data, 32, "%d", (*iter));
+        result.append(data);
+      }
+    }
+
   }/** nameserver **/
 }/** tfs **/

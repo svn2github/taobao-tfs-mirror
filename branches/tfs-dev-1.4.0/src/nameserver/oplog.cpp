@@ -131,11 +131,14 @@ namespace tfs
     }
     void BlockOpLog::dump(void) const
     {
-      /*std::string dsstr = OpLogSyncManager::printDsList(ds_list);
-        TBSYS_LOG(DEBUG, "cmd(%s), id(%u) version(%u) file_count(%u) size(%u) delfile_count(%u) del_size(%u) seqno(%u), ds_size(%u), dataserver(%s)",
-        cmd == OPLOG_INSERT ? "insert" : cmd == OPLOG_REMOVE ? "remove" : cmd == OPLOG_RELEASE_RELATION ? "release" : "update",
-        block_info.id, block_info.version, block_info.file_count, block_info.size, block_info.delfile_count, block_info.del_size,
-        block_info.seqno, ds_list.size(), dsstr.c_str());*/
+      std::string bstr;
+      std::string sstr;
+      print_servers(servers_, sstr);
+      print_blocks(blocks_, bstr);
+      TBSYS_LOG(DEBUG, "cmd: %s, block_ids: %s version: %u file_count: %u size: %u delfile_count: %u del_size: %u seqno: %u, ds_size: %u, dataserver: %s",
+        cmd_ == common::OPLOG_INSERT ? "insert" : cmd_ == common::OPLOG_REMOVE ? "remove" : cmd_ == common::OPLOG_RELIEVE_RELATION ? "release" : cmd_ == common::OPLOG_RENAME ? "rename" : "update",
+        bstr.c_str(), info_.version_, info_.file_count_, info_.size_, info_.del_file_count_, info_.del_size_,
+        info_.seq_no_, servers_.size(), sstr.c_str());
     }
 
     int BlockOpLog::serialize(char* data, const int64_t data_len, int64_t& pos) const
@@ -258,7 +261,7 @@ namespace tfs
       {
         if (!common::DirectoryOp::create_full_path(path_.c_str()))
         {
-          TBSYS_LOG(ERROR, "create directory(%s) fail...", path_.c_str());
+          TBSYS_LOG(ERROR, "create directory: %s fail...", path_.c_str());
           iret = common::EXIT_GENERAL_ERROR;
         }
         else
@@ -267,7 +270,7 @@ namespace tfs
           fd_ = open(path_.c_str(), O_RDWR | O_CREAT, 0600);
           if (fd_ < 0)
           {
-            TBSYS_LOG(ERROR, "open file(%s) fail(%s)", path_.c_str(), strerror(errno));
+            TBSYS_LOG(ERROR, "open file: %s fail: %s", path_.c_str(), strerror(errno));
             iret = common::EXIT_GENERAL_ERROR;
           }
           else
@@ -301,7 +304,7 @@ namespace tfs
         fd_ = open(path_.c_str(), O_RDWR | O_CREAT, 0600);
         if (fd_ < 0)
         {
-          TBSYS_LOG(ERROR, "open file(%s) fail(%s)", path_.c_str(), strerror(errno));
+          TBSYS_LOG(ERROR, "open file: %s fail: %s", path_.c_str(), strerror(errno));
           iret = common::EXIT_GENERAL_ERROR;
         }
       }
@@ -317,13 +320,13 @@ namespace tfs
           int64_t length = ::write(fd_, buf, oplog_rotate_header_.length());
           if (length != oplog_rotate_header_.length())
           {
-            TBSYS_LOG(ERROR, "wirte data fail: file(%s), erros(%s)...", path_.c_str(), strerror(errno));
+            TBSYS_LOG(ERROR, "wirte data fail: file: %s, erros: %s...", path_.c_str(), strerror(errno));
             ::close( fd_);
             fd_ = -1;
             fd_ = open(path_.c_str(), O_RDWR | O_CREAT, 0600);
             if (fd_ < 0)
             {
-              TBSYS_LOG(ERROR, "open file(%s) fail(%s)", path_.c_str(), strerror(errno));
+              TBSYS_LOG(ERROR, "open file: %s fail: %s", path_.c_str(), strerror(errno));
               iret = common::EXIT_GENERAL_ERROR;
             }
             else
@@ -332,7 +335,7 @@ namespace tfs
               length = ::write(fd_, buf, oplog_rotate_header_.length());
               if (length != oplog_rotate_header_.length())
               {
-                TBSYS_LOG(ERROR, "wirte data fail: file(%s), erros(%s)...", path_.c_str(), strerror(errno));
+                TBSYS_LOG(ERROR, "wirte data fail: file: %s, erros: %s...", path_.c_str(), strerror(errno));
                 iret = common::EXIT_GENERAL_ERROR;
               }
             }
@@ -357,7 +360,7 @@ namespace tfs
         const int64_t offset = slots_offset_ + header.length() + length;
         if (offset > MAX_LOG_BUFFER_SIZE)
         {
-          TBSYS_LOG(DEBUG, "(slots_offset_ + size)(%d) > MAX_LOG_BUFFER_SIZE(%d)",
+          TBSYS_LOG(DEBUG, "(slots_offset_ + size): %d > MAX_LOG_BUFFER_SIZE: %d",
               offset, MAX_LOG_BUFFER_SIZE);
           iret = common::EXIT_SLOTS_OFFSET_SIZE_ERROR;
         }

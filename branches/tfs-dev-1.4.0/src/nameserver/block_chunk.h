@@ -26,38 +26,38 @@
 
 namespace tfs
 {
-namespace nameserver
-{
-  class BlockChunk : public virtual common::RWLock,
-                     public virtual tbutil::Shared
+  namespace nameserver
   {
-    friend class LayoutManager;
-  public:
-    BlockChunk();
-    virtual ~BlockChunk();
-    BlockCollect* add(const uint32_t block_id, const time_t now);
-    static bool connect(BlockCollect* block, ServerCollect* server, const time_t now, const bool force, bool& writable);
+    class BlockChunk : public virtual common::RWLock,
+    public virtual tbutil::Shared
+    {
+      friend class LayoutManager;
+      public:
+      BlockChunk();
+      virtual ~BlockChunk();
+      BlockCollect* add(const uint32_t block_id, const time_t now);
+      static bool connect(BlockCollect* block, ServerCollect* server, const time_t now, const bool force, bool& writable);
 
-    bool remove(const uint32_t block_id);
+      bool remove(const uint32_t block_id);
 
-    BlockCollect* find(const uint32_t block_id);
+      BlockCollect* find(const uint32_t block_id);
 
-    bool exist(const uint32_t block_id) const;
+      bool exist(const uint32_t block_id) const;
 
-    uint32_t calc_max_block_id() const;
-    int64_t  calc_all_block_bytes() const;
-    uint32_t calc_size() const;
-    int scan(common::SSMScanParameter& param, int32_t& actual, bool& end, int32_t should, bool cutover_chunk);
+      uint32_t calc_max_block_id() const;
+      int64_t  calc_all_block_bytes() const;
+      uint32_t calc_size() const;
+      int scan(common::SSMScanParameter& param, int32_t& actual, bool& end, int32_t should, bool cutover_chunk);
 
 #if defined(TFS_NS_GTEST) || defined(TFS_NS_INTEGRATION)
-  public:
+      public:
 #else
-  private:
+      private:
 #endif
-    BLOCK_MAP block_map_;
-  };
-  typedef tbutil::Handle<BlockChunk> BlockChunkPtr;
-}
-}
+      BLOCK_MAP block_map_;
+    };
+    typedef tbutil::Handle<BlockChunk> BlockChunkPtr;
+  }/** nameserver **/
+}/** tfs **/
 
 #endif /* BLOCKCHUNK_H_ */

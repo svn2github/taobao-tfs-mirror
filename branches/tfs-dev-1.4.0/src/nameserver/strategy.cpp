@@ -33,51 +33,65 @@ namespace tfs
   {
     static const int8_t BASE_MULTIPLE = 2;
     template<typename T1, typename T2>
-    int32_t percent(T1 v, T2 total)
-    {
-      if (total == 0)
-        total = v == 0 ? 1 : v;
-      return std::min(static_cast<int32_t> (10000 * (static_cast<double> (v) / total)), 10000);
-    }
+      int32_t percent(T1 v, T2 total)
+      {
+        if (total == 0)
+          total = v == 0 ? 1 : v;
+        return std::min(static_cast<int32_t> (10000 * (static_cast<double> (v) / total)), 10000);
+      }
 
     bool check_average(int32_t current_load, int32_t total_load, int64_t use_capacity, int64_t total_use_capacity,
         int64_t alive_ds_count)
     {
       if (alive_ds_count == 0)
       {
-        #if defined(TFS_NS_GTEST) || defined(TFS_NS_INTEGRATION) || defined(TFS_NS_DEBUG)
-        TBSYS_LOG(DEBUG, "alive dataserver not found alive_ds_count(%"PRI64_PREFIX"d)", alive_ds_count);
-        #endif
+#if defined(TFS_NS_GTEST) || defined(TFS_NS_INTEGRATION) || defined(TFS_NS_DEBUG)
+        TBSYS_LOG(DEBUG, "alive dataserver not found alive_ds_count: %"PRI64_PREFIX"d", alive_ds_count);
+#endif
         return false;
       }
       int64_t average_load = total_load / alive_ds_count;
       int64_t average_use = total_use_capacity / alive_ds_count;
-      #if defined(TFS_NS_GTEST) || defined(TFS_NS_INTEGRATION) || defined(TFS_NS_DEBUG)
+#if defined(TFS_NS_GTEST) || defined(TFS_NS_INTEGRATION) || defined(TFS_NS_DEBUG)
       TBSYS_LOG(DEBUG, "alive_ds_count: %"PRI64_PREFIX"d, total_load: %d, average_load: %"PRI64_PREFIX"d current_load: %d, total_use_capacity: %"PRI64_PREFIX"d,average_use: %"PRI64_PREFIX"d",
-        alive_ds_count, total_load, average_load, current_load, total_use_capacity, average_use); 
-      #endif
+          alive_ds_count, total_load, average_load, current_load, total_use_capacity, average_use); 
+#endif
 
       return (((current_load < average_load * BASE_MULTIPLE) || (total_load == 0)) && ((use_capacity <= average_use * BASE_MULTIPLE)
-          || (total_use_capacity == 0)));
+            || (total_use_capacity == 0)));
     }
 
     bool BaseStrategy::check(const ServerCollect* server) const
     {
-      if (!server->is_alive())
+      bool bret = !server->in_safe_mode_time();
+      if (!bret)
       {
-        #if defined(TFS_NS_GTEST) || defined(TFS_NS_INTEGRATION) || defined(TFS_NS_DEBUG)
-        TBSYS_LOG(DEBUG, "dataserver(%s) is dead, can't join ",
+#if defined(TFS_NS_GTEST) || defined(TFS_NS_INTEGRATION) || defined(TFS_NS_DEBUG)
+        TBSYS_LOG(DEBUG, "dataserver: %s in SAFE_MODE_TIME status , can't join ",
             CNetUtil::addrToString(server->id()).c_str());
-        #endif
-        return false;
+#endif
       }
-
-      #if defined(TFS_NS_GTEST) || defined(TFS_NS_INTEGRATION) || defined(TFS_NS_DEBUG)
-      TBSYS_LOG(DEBUG, "server(%s),elect_seq_num(%"PRI64_PREFIX"d)",
-        tbsys::CNetUtil::addrToString(server->id()).c_str(), server->get_elect_num());
-      #endif
-      return check_average(server->load(), global_info_.total_load_, server->use_capacity(),
+      if (bret)
+      {
+        bret = server->is_alive();
+        if (!bret)
+        {
+#if defined(TFS_NS_GTEST) || defined(TFS_NS_INTEGRATION) || defined(TFS_NS_DEBUG)
+          TBSYS_LOG(DEBUG, "dataserver: %s is dead, can't join ",
+            CNetUtil::addrToString(server->id()).c_str());
+#endif
+        }
+      }
+      if (bret)
+      {
+#if defined(TFS_NS_GTEST) || defined(TFS_NS_INTEGRATION) || defined(TFS_NS_DEBUG)
+      TBSYS_LOG(DEBUG, "server: %s,elect_seq_num: %"PRI64_PREFIX"d",
+          tbsys::CNetUtil::addrToString(server->id()).c_str(), server->get_elect_num());
+#endif
+     bret = check_average(server->load(), global_info_.total_load_, server->use_capacity(),
           global_info_.total_capacity_, global_info_.alive_server_count_);
+      }
+      return bret;
     }
 
     void BaseStrategy::normalize(const ServerCollect* server) const
@@ -98,10 +112,10 @@ namespace tfs
         load_ = percent(server->load(), 3000);
       else
         load_ = percent(server->load(), global_info_.max_load_);
-      #if defined(TFS_NS_GTEST) || defined(TFS_NS_INTEGRATION) || defined(TFS_NS_DEBUG)
-      TBSYS_LOG(DEBUG, "server(%s), elect_seq_num(%"PRI64_PREFIX"d), load(%d), use_(%d), elect_average_num_(%"PRI64_PREFIX"d), seqno_average_num_(%"PRI64_PREFIX"d)",
-        tbsys::CNetUtil::addrToString(server->id()).c_str(), server->get_elect_num(), load_, use_,elect_average_num_, seqno_average_num_);
-      #endif
+#if defined(TFS_NS_GTEST) || defined(TFS_NS_INTEGRATION) || defined(TFS_NS_DEBUG)
+      TBSYS_LOG(DEBUG, "server: %s, elect_seq_num: %"PRI64_PREFIX"d, load: %d, use_: %d, elect_average_num_: %"PRI64_PREFIX"d, seqno_average_num_: %"PRI64_PREFIX"d",
+          tbsys::CNetUtil::addrToString(server->id()).c_str(), server->get_elect_num(), load_, use_,elect_average_num_, seqno_average_num_);
+#endif
     }
 
     //---------------------------------------------------------
@@ -111,17 +125,17 @@ namespace tfs
     {
       if (server->is_full())
       {
-        #if defined(TFS_NS_GTEST) || defined(TFS_NS_INTEGRATION) || defined(TFS_NS_DEBUG)
-        TBSYS_LOG(INFO, "dataserver(%s) is full , can't join elect list", CNetUtil::addrToString(
-            server->id()).c_str());
-        #endif
+#if defined(TFS_NS_GTEST) || defined(TFS_NS_INTEGRATION) || defined(TFS_NS_DEBUG)
+        TBSYS_LOG(INFO, "dataserver: %s is full , can't join elect list", CNetUtil::addrToString(
+              server->id()).c_str());
+#endif
         return 0;
       }
       if (!BaseStrategy::check(server))
       {
-        #if defined(TFS_NS_GTEST) || defined(TFS_NS_INTEGRATION) || defined(TFS_NS_DEBUG)
-        TBSYS_LOG(INFO, "server(%s) can't join elect list", CNetUtil::addrToString(server->id()).c_str());
-        #endif
+#if defined(TFS_NS_GTEST) || defined(TFS_NS_INTEGRATION) || defined(TFS_NS_DEBUG)
+        TBSYS_LOG(INFO, "server: %s can't join elect list", CNetUtil::addrToString(server->id()).c_str());
+#endif
         return 0;
       }
       return server->get_elect_num();
@@ -133,17 +147,17 @@ namespace tfs
     {
       if (server->is_full())
       {
-        #if defined(TFS_NS_GTEST) || defined(TFS_NS_INTEGRATION) || defined(TFS_NS_DEBUG)
-        TBSYS_LOG(INFO, "dataserver(%s) is full , can't join elect list", CNetUtil::addrToString(
-            server->id()).c_str());
-        #endif
+#if defined(TFS_NS_GTEST) || defined(TFS_NS_INTEGRATION) || defined(TFS_NS_DEBUG)
+        TBSYS_LOG(INFO, "dataserver: %s is full , can't join elect list", CNetUtil::addrToString(
+              server->id()).c_str());
+#endif
         return 0;
       }
       if (!BaseStrategy::check(server))
       {
-        #if defined(TFS_NS_GTEST) || defined(TFS_NS_INTEGRATION) || defined(TFS_NS_DEBUG)
-        TBSYS_LOG(INFO, "server(%s) can't join elect list", CNetUtil::addrToString(server->id()).c_str());
-        #endif
+#if defined(TFS_NS_GTEST) || defined(TFS_NS_INTEGRATION) || defined(TFS_NS_DEBUG)
+        TBSYS_LOG(INFO, "server: %s can't join elect list", CNetUtil::addrToString(server->id()).c_str());
+#endif
         return 0;
       }
       BaseStrategy::normalize(server);
@@ -161,12 +175,12 @@ namespace tfs
 
     void dump_weigths(const DS_WEIGHT& weights)
     {
-      TBSYS_LOG(INFO,"-----------------------dump_weigths(%"PRI64_PREFIX"u)----------------------\n", weights.size());
+      TBSYS_LOG(INFO,"-----------------------dump_weigths: %"PRI64_PREFIX"u----------------------\n", weights.size());
       DS_WEIGHT::const_iterator it = weights.begin();
       while (it != weights.end())
       {
-        TBSYS_LOG(DEBUG,"server(%s), weight(%"PRI64_PREFIX"d), elect_seq_num(%"PRI64_PREFIX"d), total elect_seq_num(%"PRI64_PREFIX"d)\n", tbsys::CNetUtil::addrToString(it->second->id()).c_str(),
-              it->first, it->second->get_elect_num(), GFactory::get_global_info().elect_seq_num_);
+        TBSYS_LOG(DEBUG,"server: %s, weight: %"PRI64_PREFIX"d, elect_seq_num: %"PRI64_PREFIX"d, total elect_seq_num: %"PRI64_PREFIX"d", tbsys::CNetUtil::addrToString(it->second->id()).c_str(),
+            it->first, it->second->get_elect_num(), GFactory::get_global_info().elect_seq_num_);
         ++it;
       }
       TBSYS_LOG(DEBUG, "%s", "-----------------------dump_weigths end----------------------\n");
@@ -191,7 +205,7 @@ namespace tfs
     {
       if (elect_count == 0)
       {
-        TBSYS_LOG(DEBUG, "current elect count(%d) <= 0, must be return", elect_count);
+        TBSYS_LOG(DEBUG, "current elect count: %d <= 0, must be return", elect_count);
         return 0;
       }
 
@@ -208,7 +222,7 @@ namespace tfs
 
       DS_WEIGHT::const_iterator iter = weights.begin();
       int32_t need_elect_count = elect_count;
-      TBSYS_LOG(DEBUG, "weights.size(%u), need_elect_count(%d)", weights.size(), need_elect_count);
+      TBSYS_LOG(DEBUG, "weights.size: %u, need_elect_count: %d", weights.size(), need_elect_count);
       while (iter != weights.end() && need_elect_count > 0)
       {
         uint32_t dlan = Func::get_lan(iter->second->id(), SYSPARAM_NAMESERVER.group_mask_);
@@ -225,7 +239,7 @@ namespace tfs
         }
         ++iter;
       }
-      TBSYS_LOG(DEBUG, "current elect_count(%d)", elect_count - need_elect_count);
+      TBSYS_LOG(DEBUG, "current elect_count: %d", elect_count - need_elect_count);
       return elect_count - need_elect_count;
     }
 
@@ -287,7 +301,7 @@ namespace tfs
 
     bool elect_move_dest_ds(const std::set<ServerCollect*>& targets, const vector<ServerCollect*> & source, const ServerCollect* mover, ServerCollect** result)
     {
-			uint64_t id = 0;
+      uint64_t id = 0;
       uint32_t lan = 0;
       int32_t max_load = 1;
       *result = NULL;
@@ -313,7 +327,7 @@ namespace tfs
       {
         lan = Func::get_lan((*s_iter)->id(), SYSPARAM_NAMESERVER.group_mask_);
         existlan.insert(lan);
-        TBSYS_LOG(DEBUG, "exist server(%s)", tbsys::CNetUtil::addrToString((*s_iter)->id()).c_str());
+        TBSYS_LOG(DEBUG, "exist server: %s", tbsys::CNetUtil::addrToString((*s_iter)->id()).c_str());
         //exist_server.insert((*s_iter));
       }
 
@@ -321,13 +335,13 @@ namespace tfs
       DS_WEIGHT::const_iterator iter = weights.begin();
       while (iter != weights.end())
       {
-				id = iter->second->id();
+        id = iter->second->id();
         lan = Func::get_lan(id, SYSPARAM_NAMESERVER.group_mask_);
-        TBSYS_LOG(DEBUG, "server(%s) find(%d)", tbsys::CNetUtil::addrToString(id).c_str(),
-          existlan.find(lan) == existlan.end()/*, exist_server.find(iter->second) == exist_server.end()*/);
+        TBSYS_LOG(DEBUG, "server: %s find: %d", tbsys::CNetUtil::addrToString(id).c_str(),
+            existlan.find(lan) == existlan.end()/*, exist_server.find(iter->second) == exist_server.end()*/);
         if ((first_result == NULL) 
             && (existlan.find(lan) == existlan.end()))
-            //&& (exist_server.find(iter->second) == exist_server.end()))
+          //&& (exist_server.find(iter->second) == exist_server.end()))
         {
           first_result = iter->second;
         }
@@ -335,7 +349,7 @@ namespace tfs
         if ((*result == NULL)
             && (existlan.find(lan) == existlan.end())
             && (get_ip(id) == get_ip(mover->id())))
-            //&& (exist_server.find(iter->second) == exist_server.end()))
+          //&& (exist_server.find(iter->second) == exist_server.end()))
         {
           *result = iter->second;
         }
@@ -409,6 +423,6 @@ namespace tfs
       }
       return result.size();;
     }
-  }
-}
+  }/** nameserver **/
+}/** tfs **/
 
