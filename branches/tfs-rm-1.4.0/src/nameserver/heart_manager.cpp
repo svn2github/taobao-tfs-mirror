@@ -91,7 +91,7 @@ namespace tfs
         {
           //threadpool busy..cannot handle it
           iret = message->reply_error_packet(TBSYS_LOG_LEVEL(WARN), STATUS_MESSAGE_ERROR, 
-              "nameserver heartbeat busy! cannot accept this request from (%s)",
+              "nameserver heartbeat busy! cannot accept this request from : %s",
               tbsys::CNetUtil::addrToString( message->get_connection()->getPeerId()).c_str());
           // already repsonse, now can free this message object.
           msg->free();
@@ -136,7 +136,7 @@ namespace tfs
 			    //dataserver dead
 			    if (ds_info.status_ == DATASERVER_STATUS_DEAD)
 			    {
-			    	TBSYS_LOG(INFO, "dataserver(%s) exit", CNetUtil::addrToString(ds_info.id_).c_str());
+			    	TBSYS_LOG(INFO, "dataserver: %s exit", CNetUtil::addrToString(ds_info.id_).c_str());
             result_msg->set_status(HEART_MESSAGE_OK);
             iret = TFS_ERROR;
 			    }
@@ -171,14 +171,14 @@ namespace tfs
         }
         else
 			  {
-			  	TBSYS_LOG(ERROR, "dataserver(%s) keepalive failed, iret: %d", CNetUtil::addrToString(ds_info.id_).c_str(), iret);
+			  	TBSYS_LOG(ERROR, "dataserver: %s keepalive failed, iret: %d", CNetUtil::addrToString(ds_info.id_).c_str(), iret);
 			  	result_msg->set_status(STATUS_MESSAGE_ERROR);
 			  }
         #ifdef TFS_NS_DEBUG
         tbutil::Time end = tbutil::Time::now() - begin;
-        TBSYS_LOG(INFO, "dataserver(%s) keepalive times: %"PRI64_PREFIX"d(us), need_sent_block(%d)", CNetUtil::addrToString(ds_info.id_).c_str(), end.toMicroSeconds(), need_sent_block);
+        TBSYS_LOG(INFO, "dataserver: %s keepalive times: %"PRI64_PREFIX"d(us), need_sent_block: %d", CNetUtil::addrToString(ds_info.id_).c_str(), end.toMicroSeconds(), need_sent_block);
         #endif
-        TBSYS_LOG(DEBUG,"server(%s) result_msg statu: %d, need_sent_block: %d", tbsys::CNetUtil::addrToString(ds_info.id_).c_str(), result_msg->get_status(), need_sent_block);
+        TBSYS_LOG(DEBUG,"server: %s result_msg statu: %d, need_sent_block: %d", tbsys::CNetUtil::addrToString(ds_info.id_).c_str(), result_msg->get_status(), need_sent_block);
 			  iret = message->reply(result_msg);
       }
       return iret;
@@ -295,7 +295,7 @@ namespace tfs
     void CheckOwnerIsMasterTimerTask::ns_switch(const NsStatus& other_side_status, const NsSyncDataFlag& ns_sync_flag)
     {
       NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
-      TBSYS_LOG(WARN, "the master ns(%s) is dead, i'm going to be the master ns(%s)",
+      TBSYS_LOG(WARN, "the master ns: %s is dead, i'm going to be the master ns: %s",
           tbsys::CNetUtil::addrToString(ngi.other_side_ip_port_).c_str(), tbsys::CNetUtil::addrToString(
             ngi.owner_ip_port_).c_str());
       tbutil::Mutex::Lock lock(ngi);
@@ -424,7 +424,7 @@ namespace tfs
               NewClientManager::get_instance().destroy_client(client);
               return;
             }
-            TBSYS_LOG(WARN, "do master and slave heart fail: owner role(%s), other side role(%s)", ngi.owner_role_
+            TBSYS_LOG(WARN, "do master and slave heart fail: owner role: %s, other side role: %s", ngi.owner_role_
                 == NS_ROLE_MASTER ? "master" : "slave", tmsg->get_role() == NS_ROLE_MASTER ? "master" : "slave");
           }
         }
@@ -433,7 +433,7 @@ namespace tfs
       while (count < 0x03);
 
       //slave dead
-      TBSYS_LOG(WARN, "slave(%s) dead", tbsys::CNetUtil::addrToString(ngi.other_side_ip_port_).c_str());
+      TBSYS_LOG(WARN, "slave: %s dead", tbsys::CNetUtil::addrToString(ngi.other_side_ip_port_).c_str());
       tbutil::Mutex::Lock lock(ngi);
       ngi.sync_oplog_flag_ = NS_SYNC_DATA_FLAG_NO;
       ngi.other_side_status_ = NS_STATUS_UNINITIALIZE;
@@ -481,7 +481,7 @@ namespace tfs
               NewClientManager::get_instance().destroy_client(client);
               return;
             }
-            TBSYS_LOG(WARN, "do master and slave heart fail: owner role(%s), other side role(%s)", ngi.owner_role_
+            TBSYS_LOG(WARN, "do master and slave heart fail: owner role: %s, other side role: %s", ngi.owner_role_
                 == NS_ROLE_MASTER ? "master" : "slave", tmsg->get_role() == NS_ROLE_MASTER ? "master" : "slave");
           }
         }
@@ -603,7 +603,7 @@ namespace tfs
           if (ngi.sync_oplog_flag_ == NS_SYNC_DATA_FLAG_YES)
             meta_mgr_->get_oplog_sync_mgr().notify_all();
 
-          TBSYS_LOG(DEBUG, "other side modify owner status, owner status(%s), notify all oplog thread",
+          TBSYS_LOG(DEBUG, "other side modify owner status, owner status: %s, notify all oplog thread",
               ngi.owner_status_ == NS_STATUS_ACCEPT_DS_INFO ? "acceptdsinfo" : ngi.owner_status_
                   == NS_STATUS_INITIALIZED ? "initialized"
                   : ngi.other_side_status_ == NS_STATUS_OTHERSIDEDEAD ? "other side dead" : "unknow");
@@ -612,7 +612,7 @@ namespace tfs
         {
           if (mashm->get_role() != NS_ROLE_SLAVE)
           {
-            TBSYS_LOG(WARN, "do master and slave heart fail: owner role(%s), other side role(%s)", ngi.owner_role_
+            TBSYS_LOG(WARN, "do master and slave heart fail: owner role: %s, other side role: %s", ngi.owner_role_
                 == NS_ROLE_MASTER ? "master" : "slave", mashm->get_role() == NS_ROLE_MASTER ? "master" : "slave");
             iret = TFS_ERROR;
           }
@@ -688,7 +688,7 @@ namespace tfs
           ngi.sync_oplog_flag_ = ngi.owner_role_ == NS_ROLE_MASTER ? NS_SYNC_DATA_FLAG_YES : NS_SYNC_DATA_FLAG_NO;
           if (ngi.sync_oplog_flag_ == NS_SYNC_DATA_FLAG_YES)
             meta_mgr_->get_oplog_sync_mgr().notify_all();
-          TBSYS_LOG(DEBUG, "other side modify owner status, owner status(%s), notify all oplog thread",
+          TBSYS_LOG(DEBUG, "other side modify owner status, owner status: %s, notify all oplog thread",
               ngi.owner_status_ == NS_STATUS_ACCEPT_DS_INFO ? "acceptdsinfo" : ngi.owner_status_
               == NS_STATUS_INITIALIZED ? "initialized"
               : ngi.other_side_status_ == NS_STATUS_OTHERSIDEDEAD ? "other side dead" : "unknow");
@@ -697,7 +697,7 @@ namespace tfs
         {
           if (mashm->get_role() != NS_ROLE_MASTER)
           {
-            TBSYS_LOG(WARN, "do master and slave heart fail: owner role(%s), other side role(%s)", ngi.owner_role_
+            TBSYS_LOG(WARN, "do master and slave heart fail: owner role: %s, other side role: %s", ngi.owner_role_
                 == NS_ROLE_MASTER ? "master" : "slave", mashm->get_role() == NS_ROLE_MASTER ? "master" : "slave");
             iret = TFS_ERROR;
           }
@@ -731,7 +731,7 @@ namespace tfs
         NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
         HeartBeatAndNSHeartMessage* hbam = dynamic_cast<HeartBeatAndNSHeartMessage*> (message);
         int32_t ns_switch_flag = hbam->get_ns_switch_flag();
-        TBSYS_LOG(DEBUG, "ns_switch_flag(%s), status(%d)",
+        TBSYS_LOG(DEBUG, "ns_switch_flag: %s, status: %d",
             hbam->get_ns_switch_flag() == NS_SWITCH_FLAG_NO ? "no" : "yes", hbam->get_ns_status());
         HeartBeatAndNSHeartMessage* mashrm = new HeartBeatAndNSHeartMessage();
         mashrm->set_ns_switch_flag_and_status(0 /*no use*/ , ngi.owner_status_);
@@ -739,7 +739,7 @@ namespace tfs
 
         if (ns_switch_flag == NS_SWITCH_FLAG_YES)
         {
-          TBSYS_LOG(WARN, "ns_switch_flag(%s), status(%d)", hbam->get_ns_switch_flag() == NS_SWITCH_FLAG_NO ? "no"
+          TBSYS_LOG(WARN, "ns_switch_flag: %s, status: %d", hbam->get_ns_switch_flag() == NS_SWITCH_FLAG_NO ? "no"
               : "yes", hbam->get_ns_status());
           do
           {

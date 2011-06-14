@@ -42,7 +42,7 @@ namespace tfs
       int32_t percent_size = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_TASK_PRECENT_SEC_SIZE, 1);
       owner_check_time_ = (server_->get_work_queue_size() * percent_size) * 1000;//us
       max_owner_check_time_ = owner_check_time_ * 4;//us
-      TBSYS_LOG(INFO, "owner_check_time(%"PRI64_PREFIX"d)(us), max_owner_check_time(%"PRI64_PREFIX"u)(us)",
+      TBSYS_LOG(INFO, "owner_check_time: %"PRI64_PREFIX"d(us), max_owner_check_time: %"PRI64_PREFIX"u(us)",
           owner_check_time_, max_owner_check_time_);
       NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
       ngi.last_push_owner_check_packet_time_ = ngi.last_owner_check_time_ = tbutil::Time::now().toMicroSeconds();//ms
@@ -89,7 +89,7 @@ namespace tfs
           int64_t diff = now.toMicroSeconds() - ngi.last_owner_check_time_;
           if (diff >= max_owner_check_time_)
           {
-            TBSYS_LOG(INFO,"last push owner check packet time(%"PRI64_PREFIX"d)(us) > max owner check time(%"PRI64_PREFIX"d)(us), nameserver dead, modify owner status(uninitialize)",
+            TBSYS_LOG(INFO,"last push owner check packet time: %"PRI64_PREFIX"d(us) > max owner check time: %"PRI64_PREFIX"d(us), nameserver dead, modify owner status(uninitialize)",
                 ngi.last_push_owner_check_packet_time_, now.toMicroSeconds());
             ngi.owner_status_ = NS_STATUS_UNINITIALIZE;//modif owner status
           }
@@ -177,7 +177,7 @@ namespace tfs
         iret =  meta_mgr_.initialize(block_chunk_num);
         if (TFS_SUCCESS != iret)
         {
-          TBSYS_LOG(ERROR, "initialize layoutmanager failed, must be exit, ret(%d)", iret);
+          TBSYS_LOG(ERROR, "initialize layoutmanager failed, must be exit, ret: %d", iret);
         }
       }
 
@@ -212,7 +212,7 @@ namespace tfs
         if ((TFS_SUCCESS != iret)
           || (ngi.owner_role_ == ngi.other_side_role_))
         {
-          TBSYS_LOG(ERROR, "iret != TFS_SUCCESS or owner role(%s) == other side role(%s), must be exit...",
+          TBSYS_LOG(ERROR, "iret != TFS_SUCCESS or owner role: %s == other side role: %s, must be exit...",
               ngi.owner_role_ == NS_ROLE_MASTER ? "master" : "slave", ngi.other_side_role_
               == NS_ROLE_MASTER ? "master" : "slave");
           iret = EXIT_GENERAL_ERROR;
@@ -378,7 +378,7 @@ namespace tfs
           {
             bpacket->free();
             ngi.dump(TBSYS_LOG_LEVEL(INFO));
-            TBSYS_LOG(WARN, "the msg(%d) will be ignored", pcode);
+            TBSYS_LOG(WARN, "the msg: %d will be ignored", pcode);
           }
         }
       }
@@ -501,7 +501,7 @@ namespace tfs
           SetBlockInfoMessage *result_msg = new SetBlockInfoMessage();
           if (mode & T_READ)// read mode
           {
-            TBSYS_LOG(DEBUG, "read block info, block(%u), mode(%d)", block_id, mode);
+            TBSYS_LOG(DEBUG, "read block info, block: %u, mode: %d", block_id, mode);
             result_msg->set_read_block_ds(block_id, &hold);
           }
           else //write mode
@@ -515,7 +515,7 @@ namespace tfs
               str +="/";
               str += tbsys::CNetUtil::addrToString((*iter));
             }
-            TBSYS_LOG(DEBUG, "get block info: block(%u) mode(%d) lease(%u), version(%d), dataserver(%s), result(%d)",
+            TBSYS_LOG(DEBUG, "get block info: block: %u mode: %d lease: %u, version: %d, dataserver: %s, result: %d",
                 block_id, mode, lease_id, version, str.c_str(), iret);
             #endif
           }
@@ -536,7 +536,7 @@ namespace tfs
           else
           {
             iret = message->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), iret, 
-                            "got error, when get block(%u) mode(%d), result(%d) information", block_id, mode, iret);
+                            "got error, when get block: %u mode: %d, result: %d information", block_id, mode, iret);
           }
         }
       }
@@ -652,7 +652,7 @@ namespace tfs
               }
               else
               {
-                TBSYS_LOG(ERROR, "new block info version lower than meta,cannot update, iret(%d)", iret);
+                TBSYS_LOG(ERROR, "new block info version lower than meta,cannot update, iret: %d", iret);
                 iret = message->reply(new StatusMessage(iret, "new block info version lower than meta, cannot update"));
               }
             }
@@ -779,7 +779,6 @@ namespace tfs
           while ((t = strsep(&s, "|")) != NULL)
           {
             ns_ip_list.push_back(tbsys::CNetUtil::getAddr(t));
-            //ns_ip_list.push_back(Func::str_to_addr(t, get_port()));
           }
 
           if (2U != ns_ip_list.size())
@@ -822,7 +821,7 @@ namespace tfs
               ngi.owner_status_ = NS_STATUS_UNINITIALIZE;
               ngi.vip_ = Func::get_addr(get_ip_addr());
               ngi.owner_role_ = Func::is_local_addr(ngi.vip_) == true ? NS_ROLE_MASTER : NS_ROLE_SLAVE;
-              ngi.other_side_role_ = NS_ROLE_NONE;
+              ngi.other_side_role_ = NS_ROLE_SLAVE;
               TBSYS_LOG(DEBUG, "i %s the master server", ngi.owner_role_ == NS_ROLE_MASTER ? "am" : "am not");
             }
           }
@@ -848,7 +847,7 @@ namespace tfs
       tbnet::Packet* ret_msg = NULL;
       while (!stop_)
       {
-        TBSYS_LOG(DEBUG, "get peers(%s) role, owner role(%s), other side role(%s)...", tbsys::CNetUtil::addrToString(
+        TBSYS_LOG(DEBUG, "get peers: %s role, owner role: %s, other side role: %s...", tbsys::CNetUtil::addrToString(
               ngi.other_side_ip_port_).c_str(), ngi.owner_role_ == NS_ROLE_MASTER ? "master"
             : "slave", ngi.other_side_role_ == NS_ROLE_MASTER ? "master" : "slave");
         ret_msg = NULL;

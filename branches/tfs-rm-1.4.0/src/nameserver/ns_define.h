@@ -150,6 +150,9 @@ namespace tfs
     typedef BLOCK_MAP::iterator BLOCK_MAP_ITER;
 
     extern int ns_async_callback(common::NewClient* client);
+    extern void print_servers(const std::vector<ServerCollect*>& servers, std::string& result);
+    extern void print_servers(const std::vector<uint64_t>& servers, std::string& result);
+    extern void print_blocks(const std::vector<uint32_t>& blocks, std::string& result);
 
   }/** nameserver **/
 }/** tfs **/

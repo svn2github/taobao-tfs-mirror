@@ -176,7 +176,7 @@ namespace tfs
       int32_t iret = do_complete(value, servers);
       if (iret != TFS_SUCCESS)
       {
-        TBSYS_LOG(WARN, "compact task do complete fail(%d)", iret);
+        TBSYS_LOG(WARN, "compact task do complete fail: %d", iret);
       }
 
       {
@@ -255,7 +255,7 @@ namespace tfs
           || STATUS_MESSAGE_OK != status)
         {
           res.second = PLAN_STATUS_TIMEOUT;
-          TBSYS_LOG(INFO, "send compact message filed; block (%u) owner(%d) to server(%s), ret(%d)",
+          TBSYS_LOG(INFO, "send compact message filed; block : %u owner: %d to server: %s, ret: %d",
               block_id_, index == 0 ? 1 : 0, CNetUtil::addrToString(res.first).c_str(), iret);
         }
 #endif
@@ -283,7 +283,7 @@ namespace tfs
         iret = do_complete(value, servers);
         if (iret != TFS_SUCCESS)
         {
-          TBSYS_LOG(ERROR, "block(%u) compact, do compact complete fail(%d)", value.block_id_, iret);
+          TBSYS_LOG(ERROR, "block: %u compact, do compact complete fail: %d", value.block_id_, iret);
         }
 #if !defined(TFS_NS_GTEST) && !defined(TFS_NS_INTEGRATION)
         iret = message->reply(new StatusMessage(iret));
@@ -300,13 +300,13 @@ namespace tfs
         value.all_success_ = bset[0];
         value.has_success_ = bset[1];
         value.is_complete_ = bset[2];
-        TBSYS_LOG(DEBUG, "check compact complete flag(%u)", message->get_flag());
+        TBSYS_LOG(DEBUG, "check compact complete flag: %u", message->get_flag());
         servers.clear();
         servers.assign(message->get_ds_list().begin(), message->get_ds_list().end());
         iret = do_complete(value, servers);
         if (iret != TFS_SUCCESS)
         {
-          TBSYS_LOG(ERROR, "block(%u) compact, do compact complete fail(%d)", value.block_id_, iret);
+          TBSYS_LOG(ERROR, "block: %u compact, do compact complete fail: %d", value.block_id_, iret);
         }
       }
       return iret;
@@ -369,7 +369,7 @@ namespace tfs
         if (block_collect != NULL)
         {
           block_collect->update(block_info_);
-          TBSYS_LOG(DEBUG,"check compacting complete server(%s), block(%u),copy blockinfo into metadata, block size(%d)",
+          TBSYS_LOG(DEBUG,"check compacting complete server: %s, block: %u,copy blockinfo into metadata, block size: %d",
               CNetUtil::addrToString(value.id_).c_str(), value.block_id_, block_info_.size_);
         }
       }
@@ -398,7 +398,7 @@ namespace tfs
           {
             if (!manager_->relieve_relation(block, server, now))
             {
-              TBSYS_LOG(WARN, "we'll get failed when relive relation between block(%u) and server(%s)",
+              TBSYS_LOG(WARN, "we'll get failed when relive relation between block: %u and server: %s",
                   value.block_id_, CNetUtil::addrToString((*iter)).c_str());
             }
             if (ngi.owner_role_ == NS_ROLE_MASTER)
@@ -445,7 +445,7 @@ namespace tfs
         bset[1] = value.has_success_;
         bset[2] = value.is_complete_;
         msg.set_flag(bset.to_ulong());
-        TBSYS_LOG(DEBUG, "check compact complete flag(%d)", msg.get_flag());
+        TBSYS_LOG(DEBUG, "check compact complete flag: %d", msg.get_flag());
 
         common::Stream stream(msg.length());
         int32_t iret = msg.serialize(stream);
@@ -478,7 +478,7 @@ namespace tfs
       int32_t iret = runer_.size() >= 0x2U ? TFS_SUCCESS : TFS_ERROR;
       if (TFS_SUCCESS != iret)
       {
-        TBSYS_LOG(WARN, "task(block: %u, type:%d, priority: %d, runer size: %u) is invalid", block_id_, type_, priority_, runer_.size());
+        TBSYS_LOG(WARN, "task (replicate) block: %u, type: %d, priority: %d, runer size: %u is invalid", block_id_, type_, priority_, runer_.size());
       }
       else
       {
@@ -507,7 +507,7 @@ namespace tfs
         }
         else
         {
-          TBSYS_LOG(INFO, "send %s command successful, block: %u, (%s)===>(%s)",
+          TBSYS_LOG(INFO, "send %s command successful, block: %u, : %s===>: %s",
               flag_ == REPLICATE_BLOCK_MOVE_FLAG_NO ? "replicate" : "move",
               block_id_, tbsys::CNetUtil::addrToString(block.source_id_).c_str(),
               tbsys::CNetUtil::addrToString(block.destination_id_).c_str());
@@ -528,7 +528,7 @@ namespace tfs
       const ReplBlock blocks = *message->get_repl_block();
       bool success = message->get_command() == PLAN_STATUS_END;
       int32_t iret = STATUS_MESSAGE_OK;
-      TBSYS_LOG(INFO, "block(%u) %s complete status: %s", blocks.block_id_,
+      TBSYS_LOG(INFO, "block: %u %s complete status: %s", blocks.block_id_,
           blocks.is_move_ == REPLICATE_BLOCK_MOVE_FLAG_YES ? "move" : "replicate",
           message->get_command() == PLAN_STATUS_END ? "end" :
           message->get_command() == PLAN_STATUS_TIMEOUT ? "timeout" :
@@ -654,7 +654,7 @@ namespace tfs
       all_complete_flag = true;
       status_ = PLAN_STATUS_END;
       RemoveBlockResponseMessage* message = dynamic_cast<RemoveBlockResponseMessage*>(msg);
-      TBSYS_LOG(INFO, "block(%u) remove complete status end", message->get_block_id());
+      TBSYS_LOG(INFO, "block: %u remove complete status end", message->get_block_id());
       return TFS_SUCCESS;
     }
 
@@ -679,7 +679,7 @@ namespace tfs
       }
       catch(std::exception& e)
       {
-        TBSYS_LOG(ERROR, "catch exception(%s)", e.what());
+        TBSYS_LOG(ERROR, "catch exception: %s", e.what());
       }
       catch(...)
       {
@@ -695,7 +695,7 @@ namespace tfs
       }
       catch(std::exception& e)
       {
-        TBSYS_LOG(ERROR, "catch exception(%s)", e.what());
+        TBSYS_LOG(ERROR, "catch exception: %s", e.what());
       }
       catch(...)
       {
@@ -711,7 +711,7 @@ namespace tfs
       }
       catch(std::exception& e)
       {
-        TBSYS_LOG(ERROR, "catch exception(%s)", e.what());
+        TBSYS_LOG(ERROR, "catch exception: %s", e.what());
       }
       catch(...)
       {

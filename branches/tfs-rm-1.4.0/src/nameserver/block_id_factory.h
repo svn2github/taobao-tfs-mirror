@@ -31,6 +31,8 @@ namespace tfs
         int initialize(const std::string& path);
         int destroy();
         uint32_t generation(const uint32_t id = 0);
+
+      static const uint32_t INVALID_BLOCK_ID;
 #if defined(TFS_NS_GTEST) || defined(TFS_NS_INTEGRATION)
       public:
 #else

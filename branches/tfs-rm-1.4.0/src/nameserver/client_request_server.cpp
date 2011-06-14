@@ -56,7 +56,7 @@ namespace tfs
         {
           if (isnew) //new dataserver
           {
-            TBSYS_LOG(INFO, "dataserver(%s) join: use capacity(%" PRI64_PREFIX "u),total capacity(%" PRI64_PREFIX "u), has_block(%s)",
+            TBSYS_LOG(INFO, "dataserver: %s join: use capacity: %" PRI64_PREFIX "u, total capacity: %" PRI64_PREFIX "u, has_block: %s",
                 tbsys::CNetUtil::addrToString(ds_info.id_).c_str(), ds_info.use_capacity_,
                 ds_info.total_capacity_,flag == HAS_BLOCK_FLAG_YES ? "Yes" : "No");
             lay_out_manager_.interrupt(INTERRUPT_ALL, now);//interrupt
@@ -90,7 +90,7 @@ namespace tfs
               //update all relations of blocks belongs to it
               EXPIRE_BLOCK_LIST current_expires;
               #if defined(TFS_NS_GTEST) || defined(TFS_NS_INTEGRATION) || defined(TFS_NS_DEBUG)
-              TBSYS_LOG(DEBUG, "server(%s) update_relation, flag(%s)", tbsys::CNetUtil::addrToString(ds_info.id_).c_str(), flag == HAS_BLOCK_FLAG_YES ? "Yes" : "No");
+              TBSYS_LOG(DEBUG, "server: %s update_relation, flag: %s", tbsys::CNetUtil::addrToString(ds_info.id_).c_str(), flag == HAS_BLOCK_FLAG_YES ? "Yes" : "No");
               #endif  
               iret = lay_out_manager_.update_relation(server, blocks, current_expires, now);
               if (TFS_SUCCESS == iret)
@@ -142,7 +142,7 @@ namespace tfs
           }
           else
           {
-            TBSYS_LOG(ERROR, "ServerCollect object not found by (%s)", CNetUtil::addrToString(ds_info.id_).c_str());
+            TBSYS_LOG(ERROR, "ServerCollect object not found by : %s", CNetUtil::addrToString(ds_info.id_).c_str());
           }
         }
         else
@@ -174,7 +174,7 @@ namespace tfs
             {
               if (lay_out_manager_.find_block_in_plan(block_id))
               {
-                TBSYS_LOG(ERROR, "it's error when we'll get block information in open this block(%u) with write mode because block(%u) is busy.",
+                TBSYS_LOG(ERROR, "it's error when we'll get block information in open this block: %u with write mode because block: %u is busy.",
                     block_id,  mode);
                 iret = EXIT_BLOCK_BUSY;
               }
@@ -219,12 +219,12 @@ namespace tfs
           }
           if (TFS_SUCCESS != iret)
           {
-            TBSYS_LOG(ERROR, "block(%u) hold not any dataserver when open this block with read mode", block_id);
+            TBSYS_LOG(ERROR, "block: %u hold not any dataserver when open this block with read mode", block_id);
           }
         }
         else
         {
-          TBSYS_LOG(ERROR, "block(%u) not exist when open this block with read mode", block_id);
+          TBSYS_LOG(ERROR, "block: %u not exist when open this block with read mode", block_id);
         }
       }
       return iret;
@@ -390,7 +390,7 @@ namespace tfs
       int32_t iret = mode & T_WRITE ? TFS_SUCCESS : EXIT_ACCESS_MODE_ERROR;
       if (TFS_SUCCESS != iret)
       {
-        TBSYS_LOG(WARN, "access mode(%d) error", mode);
+        TBSYS_LOG(WARN, "access mode: %d error", mode);
       }
       else
       {
@@ -489,7 +489,7 @@ namespace tfs
             iret = lease_id == INVALID_LEASE_ID ? EXIT_CANNOT_GET_LEASE : TFS_SUCCESS;
             if (TFS_SUCCESS != iret)
             {
-              TBSYS_LOG(ERROR, "block(%u) register lease failed", block_id);
+              TBSYS_LOG(ERROR, "block: %u register lease failed", block_id);
             }
           }
         }
@@ -545,7 +545,7 @@ namespace tfs
       }
       else
       {
-        TBSYS_LOG(WARN, "access mode(%d) error", mode);
+        TBSYS_LOG(WARN, "access mode: %d error", mode);
       }
       return iret;
     }
@@ -753,7 +753,7 @@ namespace tfs
             int32_t count = elect_replicate_source_ds(lay_out_manager_, source, except,1, result);
             if (count != 1)
             {
-              snprintf(buf, buf_length, "immediately %s block(%u) fail, cannot found source dataserver",
+              snprintf(buf, buf_length, "immediately %s block: %u fail, cannot found source dataserver",
                   flag == REPLICATE_BLOCK_MOVE_FLAG_NO ? "replicate" : "move", block_id);
               TBSYS_LOG(ERROR, "%s", buf);
               iret = TFS_ERROR;
@@ -777,7 +777,7 @@ namespace tfs
               int32_t count = elect_replicate_dest_ds(lay_out_manager_, except, 1, target_servers);
               if (count != 1)
               {
-                snprintf(buf, buf_length, "immediately %s block(%u) fail, cannot found target dataserver",
+                snprintf(buf, buf_length, "immediately %s block: %u fail, cannot found target dataserver",
                     flag == REPLICATE_BLOCK_MOVE_FLAG_NO ? "replicate" : "move", block_id);
                 TBSYS_LOG(ERROR, "%s", buf);
                 iret = TFS_ERROR;
@@ -803,14 +803,14 @@ namespace tfs
               {
                 task = 0;
                 iret = TFS_ERROR;
-                snprintf(buf, buf_length, "add task %s fail block(%u)",
+                snprintf(buf, buf_length, "add task %s fail block: %u",
                     flag == REPLICATE_BLOCK_MOVE_FLAG_NO ? "replicate" : "move", block_id);
                 TBSYS_LOG(ERROR, "%s", buf);
               }
             }
             else
             {
-              snprintf(buf, buf_length, "immediately %s block(%u) fail, parameter is illegal, flag(%s), source(%s), target(%s)",
+              snprintf(buf, buf_length, "immediately %s block: %u fail, parameter is illegal, flag: %s, source: %s, target: %s",
                   flag == REPLICATE_BLOCK_MOVE_FLAG_NO ? "replicate" : "move",
                   block_id, flag == REPLICATE_BLOCK_MOVE_FLAG_NO ? "no" : "yes",
                   CNetUtil::addrToString(source).c_str(), CNetUtil::addrToString(target).c_str());
@@ -820,7 +820,7 @@ namespace tfs
         }
         else
         {
-          snprintf(buf, buf_length, "immediately %s block(%u) fail, parameter is illegal, flag(%s), source(%s), target(%s)",
+          snprintf(buf, buf_length, "immediately %s block: %u fail, parameter is illegal, flag: %s, source: %s, target: %s",
               flag == REPLICATE_BLOCK_MOVE_FLAG_NO ? "replicate" : "move",
               block_id, flag == REPLICATE_BLOCK_MOVE_FLAG_NO ? "no" : "yes",
               CNetUtil::addrToString(source).c_str(), CNetUtil::addrToString(target).c_str());
@@ -829,7 +829,7 @@ namespace tfs
       }
       else
       {
-        snprintf(buf, buf_length, "immediately %s block(%u) fail, block(%u) not exist",
+        snprintf(buf, buf_length, "immediately %s block: %u fail, block: %u not exist",
             flag == REPLICATE_BLOCK_MOVE_FLAG_NO ? "replicate" : "move",
             block_id, block_id);
         TBSYS_LOG(ERROR, "%s", buf);

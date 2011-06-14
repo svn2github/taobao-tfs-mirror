@@ -85,7 +85,7 @@ namespace tfs
 
     void LeaseEntry::runTimerTask()
     {
-      TBSYS_LOG(DEBUG, "lease id(%u) client id(%"PRI64_PREFIX"d) exipired", lease_id_, client_);
+      TBSYS_LOG(DEBUG, "lease id: %u client id: %"PRI64_PREFIX"d exipired", lease_id_, client_);
       clerk_->expire(client_);
     }
 
@@ -101,7 +101,7 @@ namespace tfs
     bool LeaseEntry::is_valid_lease() const
     {
       tbutil::Time now = tbutil::Time::now();
-      TBSYS_LOG(DEBUG, "is valid lease status(%d:%s) time(%s)" , status_, status_ == LEASE_STATUS_RUNNING ? "true" : "false",
+      TBSYS_LOG(DEBUG, "is valid lease status %d:%s time: %s" , status_, status_ == LEASE_STATUS_RUNNING ? "true" : "false",
          now < expire_time_ ? "true" : "false");
       return (status_ == LEASE_STATUS_RUNNING
           && now < expire_time_);
@@ -134,9 +134,9 @@ namespace tfs
 
     void LeaseEntry::dump(int64_t id, bool is_valid, int64_t current_wait_count, int64_t max_wait_count) const
     {
-      TBSYS_LOG(DEBUG, "id(%"PRI64_PREFIX"d),last update time(%"PRI64_PREFIX"d), expire time(%"PRI64_PREFIX"d),"
-          "now time(%"PRI64_PREFIX"d), lease id(%u), is valid(%s), current wait count(%"PRI64_PREFIX"d),"
-          "max wait count(%"PRI64_PREFIX"d) status(%s)",
+      TBSYS_LOG(DEBUG, "id: %"PRI64_PREFIX"d,last update time: %"PRI64_PREFIX"d, expire time: %"PRI64_PREFIX"d,"
+          "now time: %"PRI64_PREFIX"d, lease id: %u, is valid: %s, current wait count: %"PRI64_PREFIX"d,"
+          "max wait count: %"PRI64_PREFIX"d status: %s",
           id, last_update_time_.toMicroSeconds(), expire_time_.toMicroSeconds(),
           tbutil::Time::now().toMicroSeconds(), lease_id_, is_valid ? "true" : "false",
           current_wait_count, max_wait_count,
@@ -167,7 +167,7 @@ namespace tfs
     {
       RWLock::Lock lock(mutex_, WRITE_LOCKER);
       int32_t size = static_cast<int32_t>(leases_.size());
-      TBSYS_LOG(INFO, "prepare to cleanup lease, current lease map size(%u)", size);
+      TBSYS_LOG(INFO, "prepare to cleanup lease, current lease map size: %u", size);
       tbutil::Time now = tbutil::Time::now();
       bool remove = true;
       while (remove)
@@ -193,7 +193,7 @@ namespace tfs
         size = leases_.size();
      }
       tbutil::Time end = tbutil::Time::now();
-      TBSYS_LOG(INFO, "cleanup lease complete, current lease map size(%u), consume(%" PRI64_PREFIX "d)",
+      TBSYS_LOG(INFO, "cleanup lease complete, current lease map size: %u, consume: %" PRI64_PREFIX "d",
           leases_.size(), (end - now).toMicroSeconds());
     }
 
@@ -203,7 +203,7 @@ namespace tfs
       LeaseEntryPtr lease = find(id);
       if (lease == 0)
       {
-        //TBSYS_LOG(WARN, "lease not found by id(%"PRI64_PREFIX"d)", id);
+        //TBSYS_LOG(WARN, "lease not found by id: %"PRI64_PREFIX"d", id);
         return false;
       }
       return lease->is_valid_lease();
@@ -218,7 +218,7 @@ namespace tfs
 
     uint32_t LeaseClerk::add(int64_t id)
     {
-      TBSYS_LOG(DEBUG, "client(%"PRI64_PREFIX"d) register lease", id);
+      TBSYS_LOG(DEBUG, "client: %"PRI64_PREFIX"d register lease", id);
       NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
       if (ngi.destroy_flag_ == NS_DESTROY_FLAGS_YES)
       {
@@ -246,7 +246,7 @@ namespace tfs
 
       if (LeaseFactory::gwait_count_ > SYSPARAM_NAMESERVER.max_wait_write_lease_)
       {
-        TBSYS_LOG(WARN, "lease(%u), current wait thread(%d) beyond max_wait(%d)", lease->id(), LeaseFactory::gwait_count_,
+        TBSYS_LOG(WARN, "lease: %u, current wait thread: %d beyond max_wait: %d", lease->id(), LeaseFactory::gwait_count_,
             SYSPARAM_NAMESERVER.max_wait_write_lease_);
         return INVALID_LEASE_ID;
       }
@@ -279,7 +279,7 @@ namespace tfs
         if (!res.second)
         {
           lease = 0;
-          TBSYS_LOG(WARN, "id(%"PRI64_PREFIX"d) has been lease" , id);
+          TBSYS_LOG(WARN, "id: %"PRI64_PREFIX"d has been lease" , id);
           return INVALID_LEASE_ID;
         }
         GFactory::get_timer()->schedule(lease, tbutil::Time::milliSeconds(LeaseEntry::LEASE_EXPIRE_TIME_MS));
@@ -296,7 +296,7 @@ namespace tfs
         tbutil::Monitor<tbutil::Mutex>::Lock lock(*lease);
         if (lease->is_valid_lease())
         {
-          TBSYS_LOG(WARN, "id(%"PRI64_PREFIX"d) has been lease" , id);
+          TBSYS_LOG(WARN, "id: %"PRI64_PREFIX"d has been lease" , id);
           return INVALID_LEASE_ID;
         }
         lease_id = LeaseFactory::new_lease_id();
@@ -353,7 +353,7 @@ namespace tfs
       LeaseEntryPtr lease = find(id);
       if (lease == 0)
       {
-        TBSYS_LOG(ERROR, "lease not found by block id(%u)", id);
+        TBSYS_LOG(ERROR, "lease not found by block id: %u", id);
         return false;
       }
       tbutil::Monitor<tbutil::Mutex>::Lock lock(*lease);
@@ -379,24 +379,24 @@ namespace tfs
         lease = find(id);
         if (lease == 0)
         {
-          TBSYS_LOG(WARN, "lease not found by id(%"PRI64_PREFIX"d)", id);
+          TBSYS_LOG(WARN, "lease not found by id: %"PRI64_PREFIX"d", id);
           return false;
         }
       }
 
-      TBSYS_LOG(DEBUG,"commit (%"PRI64_PREFIX"d), status: %d", id, status);
+      TBSYS_LOG(DEBUG,"commit : %"PRI64_PREFIX"d, status: %d", id, status);
 
       Monitor<Mutex>::Lock lock(*lease);
       if (lease->id() != lease_id)
       {
         lease->notifyAll();
-        TBSYS_LOG(ERROR, "id(%"PRI64_PREFIX"d) lease id not match (%u,%u)", id, lease->id(), lease_id);
+        TBSYS_LOG(ERROR, "id: %"PRI64_PREFIX"d lease id not match %u:%u", id, lease->id(), lease_id);
         return false;
       }
 
       if (!lease->is_valid_lease())
       {
-        TBSYS_LOG(WARN, "id(%"PRI64_PREFIX"d) has lease, but it(%u) was invalid", id, lease_id);
+        TBSYS_LOG(WARN, "id: %"PRI64_PREFIX"d has lease, but it: %u was invalid", id, lease_id);
         lease->change(LEASE_STATUS_EXPIRED);
         lease->notifyAll();
         return false;
@@ -404,7 +404,7 @@ namespace tfs
 
       lease->change(status);
       lease->notifyAll();
-      TBSYS_LOG(DEBUG, "cancel ---------(%ld)", lease->id());
+      TBSYS_LOG(DEBUG, "cancel ---------%"PRI64_PREFIX"d", lease->id());
       GFactory::get_timer()->cancel(lease);
       return true;
     }

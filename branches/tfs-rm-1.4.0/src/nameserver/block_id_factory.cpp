@@ -23,6 +23,7 @@ namespace tfs
   {
     const uint16_t BlockIdFactory::BLOCK_START_NUMBER = 100;
     const uint16_t BlockIdFactory::SKIP_BLOCK_NUMBER  = 100;
+    const uint32_t BlockIdFactory::INVALID_BLOCK_ID = 0;
     BlockIdFactory::BlockIdFactory():
       global_id_(BLOCK_START_NUMBER),
       count_(0),
@@ -43,7 +44,7 @@ namespace tfs
       {
         if (!common::DirectoryOp::create_full_path(path.c_str()))
         {
-          TBSYS_LOG(ERROR, "create directory(%s) fail...", path.c_str());
+          TBSYS_LOG(ERROR, "create directory: %s fail...", path.c_str());
           iret = common::EXIT_GENERAL_ERROR;
         }
         if (common::TFS_SUCCESS == iret)
@@ -97,7 +98,7 @@ namespace tfs
     uint32_t BlockIdFactory::generation(const uint32_t id)
     {
       bool update_flag = false;
-      uint32_t ret_id = 0;
+      uint32_t ret_id = INVALID_BLOCK_ID;
       {
         tbutil::Mutex::Lock lock(mutex_);
         ++count_;
@@ -117,6 +118,7 @@ namespace tfs
         if (common::TFS_SUCCESS != iret)
         {
           TBSYS_LOG(ERROR, "update global block id failed, id: %u, iret: %d", ret_id, iret);
+          ret_id = INVALID_BLOCK_ID;
         }
       }
       return ret_id;

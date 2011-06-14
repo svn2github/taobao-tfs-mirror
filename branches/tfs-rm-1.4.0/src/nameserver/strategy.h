@@ -127,7 +127,7 @@ namespace tfs
           void operator()(const ServerCollect* server) const
           {
             int64_t weight = strategy_.calc(server);
-            TBSYS_LOG(DEBUG, "server(%s) weight(%"PRI64_PREFIX"d)", tbsys::CNetUtil::addrToString(server->id()).c_str(), weight);
+            TBSYS_LOG(DEBUG, "server: %s weight: %"PRI64_PREFIX"d", tbsys::CNetUtil::addrToString(server->id()).c_str(), weight);
             if (weight > 0)
               weights_.insert(std::make_pair(weight, const_cast<ServerCollect*> (server)));
           }
@@ -200,7 +200,7 @@ namespace tfs
             store(iter->second);
           }
         }
-        TBSYS_LOG(INFO, "plan hold server size(%u), server size(%u)", meta.server_to_task_.size(), meta.servers_.size());
+        TBSYS_LOG(INFO, "plan hold server size: %u, server size: %u", meta.server_to_task_.size(), meta.servers_.size());
 
         return op(weights, elect_count, result);
       }

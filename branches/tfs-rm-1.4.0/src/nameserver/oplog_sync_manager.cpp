@@ -214,9 +214,9 @@ namespace tfs
       oplog_->update_oplog_rotate_header(ophead);
       TBSYS_LOG(
           INFO,
-          "queue header: readseqno(%d), read_offset(%d), write_seqno(%d),\
-                        write_file_size(%d), queuesize(%d). oplogheader:, rotate_seqno(%d)\
-                        rotate_offset(%d), last_rotate_seqno(%d), last_rotate_offset(%d)",
+          "queue header: readseqno: %d, read_offset: %d, write_seqno: %d,\
+                        write_file_size: %d, queuesize: %d. oplogheader:, rotate_seqno: %d\
+                        rotate_offset: %d, last_rotate_seqno: %d, last_rotate_offset: %d",
           head->read_seqno_, head->read_offset_, head->write_seqno_, head->write_filesize_, head->queue_size_,
           ophead.rotate_seqno_, ophead.rotate_offset_, tmp->rotate_seqno_, tmp->rotate_offset_);
     }
@@ -228,7 +228,7 @@ namespace tfs
       if (oplog_->finish(now, true))
       {
         register_slots(oplog_->get_buffer(), oplog_->get_slots_offset());
-        TBSYS_LOG(DEBUG, "oplog size(%d)", oplog_->get_slots_offset());
+        TBSYS_LOG(DEBUG, "oplog size: %d", oplog_->get_slots_offset());
         oplog_->reset(now);
       }
       return TFS_SUCCESS;
@@ -463,7 +463,7 @@ namespace tfs
         if (TFS_SUCCESS != iret)
         {
           tbsys::gDelete(msg);
-          TBSYS_LOG(ERROR, "deserialize error, data(%s), length(%"PRI64_PREFIX"d) offset(%"PRI64_PREFIX"d)", data, data_len, pos);
+          TBSYS_LOG(ERROR, "deserialize error, data: %s, length: %"PRI64_PREFIX"d offset: %"PRI64_PREFIX"d", data, data_len, pos);
         }
       }
       return iret;
@@ -476,17 +476,18 @@ namespace tfs
       {
         BlockOpLog oplog;
         iret = oplog.deserialize(data, data_len, pos);
+        oplog.dump();
         if (TFS_SUCCESS != iret)
         {
           iret = EXIT_DESERIALIZE_ERROR;
-          TBSYS_LOG(ERROR, "deserialize error, data(%s), length(%"PRI64_PREFIX"d) offset(%"PRI64_PREFIX"d)", data, data_len, pos);
+          TBSYS_LOG(ERROR, "deserialize error, data: %s, length: %"PRI64_PREFIX"d, offset: %"PRI64_PREFIX"d", data, data_len, pos);
         }
         if (TFS_SUCCESS == iret)
         {
-          if ((oplog.servers_.empty())
+          if (oplog.servers_.empty()
               || (oplog.blocks_.empty()))
           {
-            TBSYS_LOG(ERROR, "play log error, data(%s), length(%"PRI64_PREFIX"d) offset(%"PRI64_PREFIX"d)", data, data_len, pos);
+            TBSYS_LOG(ERROR, "play log error, data: %s, length: %"PRI64_PREFIX"d, offset: %"PRI64_PREFIX"d", data, data_len, pos);
             iret = EXIT_PLAY_LOG_ERROR;
           }
         }
@@ -501,7 +502,7 @@ namespace tfs
               iret = meta_mgr_.update_block_info(oplog.info_, oplog.servers_[0], now, addnew);
               if (TFS_SUCCESS != iret)
               {
-                TBSYS_LOG(WARN, "update block information error, block(%u), server(%s)",
+                TBSYS_LOG(WARN, "update block information error, block: %u, server: %s",
                   oplog.info_.block_id_, CNetUtil::addrToString(oplog.servers_[0]).c_str());
               }
             }
@@ -514,7 +515,8 @@ namespace tfs
               BlockChunkPtr ptr = meta_mgr_.get_chunk(block_id);
               BlockCollect* block = NULL;
 
-              iret = id_factory_.generation(block_id);
+              uint32_t tmp_block_id = id_factory_.generation(block_id);
+              iret = BlockIdFactory::INVALID_BLOCK_ID != tmp_block_id ? TFS_SUCCESS : TFS_ERROR;
               if (TFS_SUCCESS == iret)
               {
                 RWLock::Lock lock(*ptr, WRITE_LOCKER);
@@ -524,7 +526,7 @@ namespace tfs
                   block = meta_mgr_.add_block(block_id);
                   if (NULL == block)
                   {
-                    TBSYS_LOG(WARN, "add block(%u) error", block_id);
+                    TBSYS_LOG(WARN, "add block: %u error", block_id);
                     iret = EXIT_PLAY_LOG_ERROR;
                   }
                 }
@@ -532,6 +534,10 @@ namespace tfs
                 {
                   block->update(oplog.info_);
                 }
+              }
+              else
+              {
+                TBSYS_LOG(ERROR, "generation block id: %u failed, iret: %d", block_id, iret);
               }
 
               if (TFS_SUCCESS == iret)
@@ -543,14 +549,16 @@ namespace tfs
                   server = meta_mgr_.get_server((*s_iter));
                   if (NULL == server)
                   {
-                    TBSYS_LOG(WARN, "server object not found by (%s)", CNetUtil::addrToString((*s_iter)).c_str());
+                    TBSYS_LOG(WARN, "server object not found by : %s", CNetUtil::addrToString((*s_iter)).c_str());
                     continue;
                   }
+                  TBSYS_LOG(DEBUG, "build replation between block: %u and server: %s",
+                        block_id, CNetUtil::addrToString((*s_iter)).c_str());
                   RWLock::Lock lock(*ptr, WRITE_LOCKER);
                   block = ptr->find(block_id);
                   if (meta_mgr_.build_relation(block, server, now) != TFS_SUCCESS)
                   {
-                    TBSYS_LOG(WARN, "build relation between block(%u) and server(%s) failed",
+                    TBSYS_LOG(WARN, "build relation between block: %u and server: %s failed",
                         block_id, CNetUtil::addrToString((*s_iter)).c_str());
                   }
                 }
@@ -581,15 +589,15 @@ namespace tfs
                 server = meta_mgr_.get_server((*s_iter));
                 if (NULL == server)
                 {
-                  TBSYS_LOG(WARN, "server object not found by (%s)", CNetUtil::addrToString((*s_iter)).c_str());
+                  TBSYS_LOG(WARN, "server object not found by : %s", CNetUtil::addrToString((*s_iter)).c_str());
                   continue;
                 }
 
                 RWLock::Lock lock(*ptr, WRITE_LOCKER);
                 block = ptr->find(block_id);
-                if (meta_mgr_.relieve_relation(block, server, now))
+                if (!meta_mgr_.relieve_relation(block, server, now))
                 {
-                  TBSYS_LOG(WARN, "relieve relation between block(%u) and server(%s) failed",
+                  TBSYS_LOG(WARN, "relieve relation between block: %u and server: %s failed",
                     block_id, CNetUtil::addrToString((*s_iter)).c_str());
                 }
               }
@@ -597,7 +605,7 @@ namespace tfs
           }
           else
           {
-            TBSYS_LOG(WARN, "type(%d) and  cmd(%d) not found", type, oplog.cmd_);
+            TBSYS_LOG(WARN, "type: %d and  cmd: %d not found", type, oplog.cmd_);
             iret = EXIT_PLAY_LOG_ERROR;
           }
         }
@@ -618,7 +626,7 @@ namespace tfs
           crc = Func::crc(crc, (data + pos), header.length_);
           if (crc != header.crc_)
           {
-            TBSYS_LOG(ERROR, "check crc(%u)<>(%u) error", header.crc_, crc);
+            TBSYS_LOG(ERROR, "check crc: %u<>: %u error", header.crc_, crc);
             iret = EXIT_CHECK_CRC_ERROR;
           }
           else
@@ -635,7 +643,7 @@ namespace tfs
               iret = replay_helper_do_oplog(type, data, data_len, pos, now);
             break;
             default:
-              TBSYS_LOG(WARN, "type(%d) not found", type);
+              TBSYS_LOG(WARN, "type: %d not found", type);
               iret =  EXIT_PLAY_LOG_ERROR;
               break;
             }
@@ -652,15 +660,15 @@ namespace tfs
       int32_t iret = file_queue_->load_queue_head();
       if (iret != TFS_SUCCESS)
       {
-        TBSYS_LOG(DEBUG, "load header file of file_queue errors(%s)", strerror(errno));
+        TBSYS_LOG(DEBUG, "load header file of file_queue errors: %s", strerror(errno));
         return iret;
       }
       OpLogRotateHeader head = *oplog_->get_oplog_rotate_header();
       QueueInformationHeader* qhead = file_queue_->get_queue_information_header();
       QueueInformationHeader tmp = *qhead;
-      TBSYS_LOG(DEBUG, "befor load queue header: read seqno(%d), read offset(%d), write seqno(%d),"
-        "write file size(%d), queue size(%d). oplog header:, rotate seqno(%d)"
-        "rotate offset(%d)", qhead->read_seqno_, qhead->read_offset_, qhead->write_seqno_, qhead->write_filesize_,
+      TBSYS_LOG(DEBUG, "befor load queue header: read seqno: %d, read offset: %d, write seqno: %d,"
+        "write file size: %d, queue size: %d. oplog header:, rotate seqno: %d"
+        "rotate offset: %d", qhead->read_seqno_, qhead->read_offset_, qhead->write_seqno_, qhead->write_filesize_,
           qhead->queue_size_, head.rotate_seqno_, head.rotate_offset_);
       if (qhead->read_seqno_ > 0x01 && qhead->write_seqno_ > 0x01 && head.rotate_seqno_ > 0)
       {
@@ -673,15 +681,15 @@ namespace tfs
           file_queue_->update_queue_information_header(&tmp);
         }
       }
-      TBSYS_LOG(DEBUG, "after load queue header: read seqno(%d), read offset(%d), write seqno(%d),"
-        "write file size(%d), queue size(%d). oplog header:, rotate seqno(%d)"
-        "rotate offset(%d)", qhead->read_seqno_, qhead->read_offset_, qhead->write_seqno_, qhead->write_filesize_,
+      TBSYS_LOG(DEBUG, "after load queue header: read seqno: %d, read offset: %d, write seqno: %d,"
+        "write file size: %d, queue size: %d. oplog header:, rotate seqno: %d"
+        "rotate offset: %d", qhead->read_seqno_, qhead->read_offset_, qhead->write_seqno_, qhead->write_filesize_,
           qhead->queue_size_, head.rotate_seqno_, head.rotate_offset_);
 
       iret = file_queue_->initialize();
       if (iret != TFS_SUCCESS)
       {
-        TBSYS_LOG(DEBUG, "call FileQueue::finishSetup errors(%s)", strerror(errno));
+        TBSYS_LOG(DEBUG, "call FileQueue::finishSetup errors: %s", strerror(errno));
         return iret;
       }
 
