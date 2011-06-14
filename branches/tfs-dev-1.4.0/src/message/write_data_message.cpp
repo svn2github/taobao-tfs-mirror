@@ -45,7 +45,7 @@ namespace tfs
         && write_data_info_.length_ > 0)
       {
         data_ = input.get_data();
-        input.drain( write_data_info_.length_);
+        input.drain(write_data_info_.length_);
       }
       if (common::TFS_SUCCESS == iret)
       {

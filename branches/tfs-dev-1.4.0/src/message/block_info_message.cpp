@@ -1141,7 +1141,7 @@ namespace tfs
           iret = input.get_bytes(data, ubitmap_len_);
         }
       }
-      return common::TFS_SUCCESS;
+      return iret;
     }
 
     int64_t RespListBitMapMessage::length() const
