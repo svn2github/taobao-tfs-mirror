@@ -219,12 +219,14 @@ namespace tfs
     int64_t RspRcLoginMessage::length() const
     {
       int64_t tmp = length_ > 0 ? INT_SIZE + length_ : INT_SIZE;
-      return INT64_SIZE + tmp;
+      //return INT64_SIZE + tmp;
+      return base_info_.length() + tmp;
     }
 
     void RspRcLoginMessage::dump() const
     {
       TBSYS_LOG(DEBUG, "session_id: %s", session_id_); 
+      base_info_.dump();
     }
 
     const char* RspRcLoginMessage::get_session_id() const

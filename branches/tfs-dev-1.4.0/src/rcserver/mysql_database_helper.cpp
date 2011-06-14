@@ -95,8 +95,8 @@ static bool open_mysql()
             mysql_.port, NULL, CLIENT_MULTI_STATEMENTS);
     if (!conn) 
     {
-        TBSYS_LOG(ERROR, "connect mysql database (%s:%s:%s) error(%s)",
-                mysql_.host.c_str(), mysql_.user.c_str(), mysql_.database.c_str(),
+        TBSYS_LOG(ERROR, "connect mysql database (%s:%d:%s:%s:%s) error(%s)",
+                mysql_.host.c_str(), mysql_.port, mysql_.user.c_str(), mysql_.database.c_str(), mysql_.pass.c_str(),
                 mysql_error(&mysql_.mysql));
         return false;
     }

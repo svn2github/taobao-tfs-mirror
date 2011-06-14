@@ -32,6 +32,7 @@ namespace tfs
     NameServerParameter NameServerParameter::ns_parameter_;
     FileSystemParameter FileSystemParameter::fs_parameter_;
     DataServerParameter DataServerParameter::ds_parameter_;
+    RcServerParameter RcServerParameter::rc_parameter_;
 
     int NameServerParameter::initialize(void)
     {
