@@ -78,7 +78,7 @@ namespace tfs
       {
         BasePacket::parse_special_ds(ds_, version_, lease_id_);
       }
-      return common::TFS_SUCCESS;
+      return iret;
     }
 
     int64_t CloseFileMessage::length() const

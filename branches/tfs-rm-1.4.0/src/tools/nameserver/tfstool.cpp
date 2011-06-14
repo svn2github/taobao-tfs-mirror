@@ -155,7 +155,7 @@ int main(int argc, char* argv[])
   }
 
   g_tfs_client = TfsClient::Instance();
-  int ret = g_tfs_client->initialize(nsip, DEFAULT_BLOCK_CACHE_TIME, DEFAULT_BLOCK_CACHE_ITEMS, false);
+  int ret = g_tfs_client->initialize(nsip, DEFAULT_BLOCK_CACHE_TIME, 1000, false);
 
   if (ret != TFS_SUCCESS)
   {
