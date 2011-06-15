@@ -3,6 +3,7 @@
  */
 package com.taobao.tfstest;
 
+import java.util.HashMap;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -150,7 +151,7 @@ public class Function_ns_plan_test extends NameServerPlanTestCase {
 	public void Function_03_move_block(){
 		
 		boolean bRet = false;
-		caseName = "Function_03_copy_block";
+		caseName = "Function_03_move_block";
 		log.info(caseName + "===> start");
 		
 		/* Set loop flag */
@@ -658,6 +659,54 @@ public class Function_ns_plan_test extends NameServerPlanTestCase {
 		
 		/* Check interrupt */
 		bRet = checkInterrupt(2);
+		Assert.assertTrue(bRet);
+		
+		log.info(caseName + "===> end");
+		return ;
+	}
+
+	public void Function_13_new_elect_writable_block_algorithm(){
+		
+		boolean bRet = false;
+		caseName = "Function_13_new_elect_writable_block_algorithm";
+		log.info(caseName + "===> start");
+		
+		/* Set loop flag */
+		bRet = setSeedFlag(LOOPON);
+		Assert.assertTrue(bRet);
+		
+		/* Set seed size */
+		bRet = setSeedSize(1);
+		Assert.assertTrue(bRet);
+		
+		/* Set unlink ratio */
+		bRet = setUnlinkRatio(0);
+		Assert.assertTrue(bRet);
+		
+		/* Get the block num hold by each ds before write */
+		HashMap<String, Integer> blockDisBefore = new HashMap<String, Integer>();
+		bRet = getBlockDistribution(blockDisBefore);
+		Assert.assertTrue(bRet);
+		
+		/* Write file */
+		bRet = writeCmd();
+		Assert.assertTrue(bRet);
+		
+		/* Check the rate of write process */
+		bRet = checkRateRun(SUCCESSRATE, WRITEONLY|READ|UNLINK);
+		Assert.assertTrue(bRet);
+		
+		/* Stop write cmd */
+		bRet = writeCmdStop();
+		Assert.assertTrue(bRet);
+
+		/* Get the block num hold by each ds after write */
+		HashMap<String, Integer> blockDisAfter = new HashMap<String, Integer>();
+		bRet = getBlockDistribution(blockDisAfter);
+		Assert.assertTrue(bRet);
+		
+		/* Check new added block balance status*/
+		bRet = checkWriteBalanceStatus(blockDisBefore, blockDisAfter);
 		Assert.assertTrue(bRet);
 		
 		log.info(caseName + "===> end");
