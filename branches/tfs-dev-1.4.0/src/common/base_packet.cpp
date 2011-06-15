@@ -105,7 +105,7 @@ namespace tfs
         version_ = ((header->_pcode >> 16) & 0xFFFF);
         header->_pcode = (header->_pcode & 0xFFFF);
         int64_t length = header->_dataLen;
-        bret = length > 0 && input->getDataLen() >= (length + TFS_PACKET_HEADER_DIFF_SIZE);
+        bret = length > 0 && input->getDataLen() >= length;
         if (!bret)
         {
           TBSYS_LOG(ERROR, "invalid packet: %d, length: %"PRI64_PREFIX"d  input buffer length: %"PRI64_PREFIX"d",
@@ -114,10 +114,6 @@ namespace tfs
         }
         else
         {
-          if (version_ >= TFS_PACKET_VERSION_V1)
-          {
-            length -= TFS_PACKET_HEADER_DIFF_SIZE;
-          }
           //both v1 and v2 have id and crc
           if (version_ >= TFS_PACKET_VERSION_V1)
           {
@@ -126,7 +122,7 @@ namespace tfs
             if (TFS_SUCCESS != iret)
             {
               bret = false;
-              input->drainData(length + TFS_PACKET_HEADER_DIFF_SIZE);
+              input->drainData(length);
               TBSYS_LOG(ERROR, "channel id deserialize error, iret: %d", iret);
             }
             else
@@ -135,11 +131,12 @@ namespace tfs
               if (TFS_SUCCESS != iret)
               {
                 bret = false;
-                input->drainData(length + TFS_PACKET_HEADER_DIFF_SIZE);
+                input->drainData(length);
                 TBSYS_LOG(ERROR, "crc deserialize error, iret: %d", iret);
               }
               else
               {
+                length -= TFS_PACKET_HEADER_DIFF_SIZE;
                 input->drainData(TFS_PACKET_HEADER_DIFF_SIZE);
                 uint32_t crc = Func::crc(TFS_PACKET_FLAG_V1, input->getData(), length); 
                 bret = crc == crc_;
