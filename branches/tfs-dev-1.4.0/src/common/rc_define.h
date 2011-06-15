@@ -121,15 +121,6 @@ namespace tfs
       {
       }
 
-      SessionBaseInfo& operator= (const SessionBaseInfo& right)
-      {
-        client_version_ = right.client_version_;
-        cache_size_ = right.cache_size_;
-        cache_time_ = right.cache_time_;
-        modify_time_ = right.modify_time_;
-        is_logout_ = right.is_logout_;
-        return *this;
-      }
     };
 
     enum OperType

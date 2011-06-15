@@ -237,7 +237,7 @@ namespace tfs
         }
         else
         {
-          ret = req_logout_msg->reply(new StatusMessage());
+          ret = req_logout_msg->reply(new StatusMessage(ret));
         }
       }
       return ret;

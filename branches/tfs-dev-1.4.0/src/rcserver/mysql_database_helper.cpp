@@ -543,7 +543,7 @@ error:
     {
       int ret = TFS_SUCCESS;
       const int SQLS_IN_STR = 100;
-      char* sql = new char[(1024 + 64) * SQLS_IN_STR];
+      char* sql = new char[(1024 + 256) * SQLS_IN_STR];
       int session_size = session_infos.size();
       int done = 0;
       int pos = 0;
@@ -567,11 +567,17 @@ error:
               session.client_version_.c_str(), log_out_time);
           if (session.is_logout_)
           {
-            pos += snprintf(sql + pos, 64, " on duplicate key update log_out_time=now(),modify_time=now();");
+            pos += snprintf(sql + pos, 256, " on duplicate key update log_out_time=now(),modify_time=now(),"
+                "cache_size=%"PRI64_PREFIX"d, cache_time=%"PRI64_PREFIX"d,"
+                "client_version='%s';",
+                session.cache_size_, session.cache_time_, session.client_version_.c_str());
           }
           else
           {
-            pos += snprintf(sql + pos, 64, " on duplicate key update modify_time=now();");
+            pos += snprintf(sql + pos, 256, " on duplicate key update modify_time=now(),"
+                "cache_size=%"PRI64_PREFIX"d, cache_time=%"PRI64_PREFIX"d,"
+                "client_version='%s';",
+                session.cache_size_, session.cache_time_, session.client_version_.c_str());
           }
           done++;
         }

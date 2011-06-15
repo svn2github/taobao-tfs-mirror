@@ -376,7 +376,7 @@ namespace tfs
           ret = Serialization::get_int32(data, data_len, pos, reinterpret_cast<int32_t*>(&oper_type));
           if (TFS_SUCCESS == ret)
           {
-            ret = app_oper.deserialize(data, len, pos);
+            ret = app_oper.deserialize(data, data_len, pos);
           }
           if (TFS_SUCCESS == ret)
           {
