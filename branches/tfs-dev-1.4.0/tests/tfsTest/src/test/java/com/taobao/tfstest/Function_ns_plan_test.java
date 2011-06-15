@@ -3,8 +3,6 @@
  */
 package com.taobao.tfstest;
 
-import java.util.ArrayList;
-
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -18,9 +16,7 @@ import com.taobao.gaia.KillTypeEnum;
  */
 public class Function_ns_plan_test extends NameServerPlanTestCase {
 	
-	/* Check dump plan limit */
-	final public int DEFAULT_CHECK_PLAN_TIME_LIMIT	= 100;
-	final public int DEFAULT_CHECK_PLAN_NUM      	= 20;
+
 	
 	@Test
 	public void Function_01_one_ds_out_emerge_rep_block(){
@@ -56,26 +52,18 @@ public class Function_ns_plan_test extends NameServerPlanTestCase {
 		/* Wait 10s for recover */
 		sleep (10);
 		
-		/* Check the rate of write process */
-		bRet = checkRateRun(SUCCESSRATE, WRITEONLY|READ|UNLINK);
+		/* Stop write cmd */
+		bRet = writeCmdStop();
 		Assert.assertTrue(bRet);
 		
 		/* Check block copys */
-		bRet = chkBlockCnt(BLOCKCHKTIME, 0);
+		bRet = chkBlockCnt(BLOCK_CHK_TIME, 0);
 		Assert.assertTrue(bRet);
-		bRet = chkBlockCnt(BLOCKCHKTIME, 1);
+		bRet = chkBlockCnt(BLOCK_CHK_TIME, 1);
 		Assert.assertTrue(bRet);
 
 		/* Check dump plan log */
-		bRet = checkPlan(PlanType.PLAN_TYPE_EMERG_REPLICATE, DEFAULT_CHECK_PLAN_TIME_LIMIT);
-		Assert.assertTrue(bRet);
-		
-		/* Check the rate of write process */
-		bRet = checkRateRun(SUCCESSRATE, WRITEONLY|READ|UNLINK);
-		Assert.assertTrue(bRet);
-		
-		/* Stop write cmd */
-		bRet = writeCmdStop();
+		bRet = checkPlan(PlanType.PLAN_TYPE_EMERG_REPLICATE, BLOCK_CHK_TIME);
 		Assert.assertTrue(bRet);
 		
 		/* Read file */
@@ -94,7 +82,7 @@ public class Function_ns_plan_test extends NameServerPlanTestCase {
 		return ;
 	}
 	
-	/* Make sure minReplication and maxReplication are both configured as 1 */
+	/* Call setNsConf @setUp to make sure min/maxReplication are both configured as 1 */
 	public void Function_02_rep_block(){
 		
 		boolean bRet = false;
@@ -116,7 +104,11 @@ public class Function_ns_plan_test extends NameServerPlanTestCase {
 		/* Check the rate of write process */
 		bRet = checkRateRun(SUCCESSRATE, WRITEONLY|READ|UNLINK);
 		Assert.assertTrue(bRet);
-		
+	
+		/* Stop write cmd */
+		bRet = writeCmdStop();
+		Assert.assertTrue(bRet);
+
 		/* Modify MaxReplication */
 		bRet = setMaxReplication(3);
 		Assert.assertTrue(bRet);
@@ -129,23 +121,15 @@ public class Function_ns_plan_test extends NameServerPlanTestCase {
 		Assert.assertTrue(bRet);
 		
 		/* Check block copys */
-		bRet = chkBlockCnt(BLOCKCHKTIME, 0);
+		bRet = chkBlockCnt(BLOCK_CHK_TIME, 0);
 		Assert.assertTrue(bRet);
-		bRet = chkBlockCnt(BLOCKCHKTIME, 1);
+		bRet = chkBlockCnt(BLOCK_CHK_TIME, 1);
 		Assert.assertTrue(bRet);
 
 		/* Check dump plan log */
-		bRet = checkPlan(PlanType.PLAN_TYPE_REPLICATE, DEFAULT_CHECK_PLAN_TIME_LIMIT);
+		bRet = checkPlan(PlanType.PLAN_TYPE_REPLICATE, BLOCK_CHK_TIME);
 		Assert.assertTrue(bRet);
-		
-		/* Check the rate of write process */
-		bRet = checkRateRun(SUCCESSRATE, WRITEONLY|READ|UNLINK);
-		Assert.assertTrue(bRet);
-		
-		/* Stop write cmd */
-		bRet = writeCmdStop();
-		Assert.assertTrue(bRet);
-		
+			
 		/* Read file */
 		bRet = readCmd();
 		Assert.assertTrue(bRet);
@@ -180,14 +164,14 @@ public class Function_ns_plan_test extends NameServerPlanTestCase {
 		/* Write file */
 		bRet = writeCmd();
 		Assert.assertTrue(bRet);
-		
-		/* Stop write cmd */
-		bRet = writeCmdStop();
-		Assert.assertTrue(bRet);
 
 		/* Check the rate of write process */
 		bRet = checkRateRun(SUCCESSRATE, WRITEONLY|READ|UNLINK);
 		Assert.assertTrue(bRet);
+		
+		/* Stop write cmd */
+		bRet = writeCmdStop();
+		Assert.assertTrue(bRet);	
 		
 		/* Modify balance_max_diff_block_num */
 		bRet = setBalanceMaxDiffBlockNum(1);
@@ -197,7 +181,7 @@ public class Function_ns_plan_test extends NameServerPlanTestCase {
 		sleep (10);
 
 		/* Check dump plan log */
-		bRet = checkPlan(PlanType.PLAN_TYPE_MOVE, DEFAULT_CHECK_PLAN_TIME_LIMIT);
+		bRet = checkPlan(PlanType.PLAN_TYPE_MOVE, BLOCK_CHK_TIME);
 		Assert.assertTrue(bRet);
 		
 		/* Read file */
@@ -251,7 +235,7 @@ public class Function_ns_plan_test extends NameServerPlanTestCase {
 		Assert.assertTrue(bRet);
 		
 		/* Check dump plan log */
-		bRet = checkPlan(PlanType.PLAN_TYPE_COMPACT, DEFAULT_CHECK_PLAN_TIME_LIMIT);
+		bRet = checkPlan(PlanType.PLAN_TYPE_COMPACT, BLOCK_CHK_TIME);
 		Assert.assertTrue(bRet);
 		
 		log.info(caseName + "===> end");
@@ -303,7 +287,7 @@ public class Function_ns_plan_test extends NameServerPlanTestCase {
 		sleep(10);		
 		
 		/* Check dump plan log */
-		bRet = checkPlan(PlanType.PLAN_TYPE_DELETE, DEFAULT_CHECK_PLAN_TIME_LIMIT);
+		bRet = checkPlan(PlanType.PLAN_TYPE_DELETE, BLOCK_CHK_TIME);
 		Assert.assertTrue(bRet);
 		
 		log.info(caseName + "===> end");
@@ -361,7 +345,7 @@ public class Function_ns_plan_test extends NameServerPlanTestCase {
 		Assert.assertTrue(bRet);	
 		
 		/* Check previous plan's priority */
-		bRet = checkPreviousPlanIsEmergency(DEFAULT_CHECK_PLAN_NUM, DEFAULT_CHECK_PLAN_TIME_LIMIT);
+		bRet = checkPreviousPlanIsEmergency(PLAN_CHK_NUM, BLOCK_CHK_TIME);
 		Assert.assertTrue(bRet);
 		
 		log.info(caseName + "===> end");
@@ -414,7 +398,7 @@ public class Function_ns_plan_test extends NameServerPlanTestCase {
 		Assert.assertTrue(bRet);	
 		
 		/* Check previous plan's priority */
-		bRet = checkPreviousPlanIsEmergency(DEFAULT_CHECK_PLAN_NUM, DEFAULT_CHECK_PLAN_TIME_LIMIT);
+		bRet = checkPreviousPlanIsEmergency(PLAN_CHK_NUM, BLOCK_CHK_TIME);
 		Assert.assertTrue(bRet);
 		
 		log.info(caseName + "===> end");
@@ -467,7 +451,7 @@ public class Function_ns_plan_test extends NameServerPlanTestCase {
 		Assert.assertTrue(bRet);	
 		
 		/* Check previous plan's priority */
-		bRet = checkPreviousPlanIsEmergency(DEFAULT_CHECK_PLAN_NUM, DEFAULT_CHECK_PLAN_TIME_LIMIT);
+		bRet = checkPreviousPlanIsEmergency(PLAN_CHK_NUM, BLOCK_CHK_TIME);
 		Assert.assertTrue(bRet);
 		
 		log.info(caseName + "===> end");
@@ -527,7 +511,7 @@ public class Function_ns_plan_test extends NameServerPlanTestCase {
 		Assert.assertTrue(bRet);	
 		
 		/* Check previous plan's priority */
-		bRet = checkPreviousPlanIsEmergency(DEFAULT_CHECK_PLAN_NUM, DEFAULT_CHECK_PLAN_TIME_LIMIT);
+		bRet = checkPreviousPlanIsEmergency(PLAN_CHK_NUM, BLOCK_CHK_TIME);
 		Assert.assertTrue(bRet);
 		
 		log.info(caseName + "===> end");

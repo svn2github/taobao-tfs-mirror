@@ -37,6 +37,7 @@ public class NameServerPlanTestCase {
 	
 	final AppServer tfsSeedClient = (AppServer) clientFactory.getBean("seedClient");
 	final AppServer tfsReadClient = (AppServer) clientFactory.getBean("readClient");
+	final AppServer tfsUnlinkClient = (AppServer) clientFactory.getBean("unlinkClient");
 	//final AppServer tfsReadClient_slave = (AppServer) clientFactory.getBean("slaveReadClient");
 	
 	//Define
@@ -119,9 +120,9 @@ public class NameServerPlanTestCase {
 	final public int LOOPON = 1;
 	final public int LOOPOFF = 0;
 	
-	final public String WRITECMD = "./tfsControlPress -f test_tfs.conf -i tfsSeed -l tfsSeed.";
-	final public String READCMD = "./tfsControlPress -f test_tfs.conf -i tfsRead -l tfsRead.";
-	final public String UNLINKCMD = "./tfsControlPress -f test_tfs.conf -i tfsUnlink -l tfsUnlink.";
+	final public String WRITECMD = "./tfsControlPress -f test_tfs.conf -i tfsSeed -l tfsSeed.log";
+	final public String READCMD = "./tfsControlPress -f test_tfs.conf -i tfsRead -l tfsRead.log";
+	final public String UNLINKCMD = "./tfsControlPress -f test_tfs.conf -i tfsUnlink -l tfsUnlink.log";
 	
 	/* For scan log on client */
 	final public int TAILLINE = 100;
@@ -151,7 +152,8 @@ public class NameServerPlanTestCase {
 	final public float HALFRATE = 50;
 	final public float FAILRATE = 0;
 	final public int WAITTIME = 30;
-	final public int BLOCKCHKTIME = 500;
+	final public int BLOCK_CHK_TIME = 500;
+	final public int PLAN_CHK_NUM   = 20;
 	
 	/* Other */
 	public String caseName = "";
@@ -692,7 +694,7 @@ public class NameServerPlanTestCase {
 		float fRet = 0;
 		if ((iMode & WRITEONLY) != 0)
 		{
-			fRet = getRateEnd(CLIENTIP, TEST_HOME + "/tfsSeed." + caseName, WRITEFILESTATIS);
+			fRet = getRateEnd(CLIENTIP, tfsSeedClient.getLogs() + caseName, WRITEFILESTATIS);
 			if (fRet == -1)
 			{
 				return bRet;
@@ -708,7 +710,7 @@ public class NameServerPlanTestCase {
 
 		if ((iMode & READ) != 0)
 		{			
-			fRet = getRateEnd(CLIENTIP, TEST_HOME + "/tfsRead." + caseName, READFILESTATIS);
+			fRet = getRateEnd(CLIENTIP, tfsReadClient.getLogs() + caseName, READFILESTATIS);
 			if (fRet == -1)
 			{
 				return bRet;
@@ -724,7 +726,7 @@ public class NameServerPlanTestCase {
 		
 		if ((iMode & UNLINK) != 0)
 		{			
-			fRet = getRateEnd(CLIENTIP, TEST_HOME + "/tfsUnlink." + caseName, UNLINKSTATIS);
+			fRet = getRateEnd(CLIENTIP, tfsUnlinkClient.getLogs() + caseName, UNLINKSTATIS);
 			if (fRet == -1)
 			{
 				return bRet;
@@ -1021,20 +1023,20 @@ public class NameServerPlanTestCase {
 		return bRet;
 	}
 	
-	public boolean chkBlockCnt(int iTimes, int iBlockCnt)
+	public boolean chkBlockCnt(int times, int shouldNotExistBlockCnt)
 	{
 		boolean bRet = false;
 		ArrayList<String> listOut = new ArrayList<String>();
-		String cmd = TFS_BIN_HOME + "/ssm -s " + NSVIP + ":" + NSPORT + " -i block | grep \\\"" + iBlockCnt + "$\\\" | wc -l";
+		String cmd = TFS_BIN_HOME + "/ssm -s " + NSVIP + ":" + NSPORT + " -i block | grep \\\"" + shouldNotExistBlockCnt + "$\\\" | wc -l";
 		
-		for (int iLoop = 0; iLoop < iTimes; iLoop ++)
+		for (int iLoop = 0; iLoop < times; iLoop ++)
 		{
 			bRet = Proc.cmdOutBase(NSIPA, cmd, null, 1, null, listOut);
 			if (bRet == false) return bRet;
 			
 			try{
-				int temp = Integer.valueOf(listOut.get(listOut.size() - 1));			
-				if (temp == 0)
+				int stillExistNum = Integer.valueOf(listOut.get(listOut.size() - 1));			
+				if (stillExistNum == 0)
 				{
 					bRet = true;
 					break;
@@ -1050,7 +1052,7 @@ public class NameServerPlanTestCase {
 				bRet = false;
 				break;
 			}
-			sleep(1);
+			sleep(10);
 		}
 		return bRet;
 	}
