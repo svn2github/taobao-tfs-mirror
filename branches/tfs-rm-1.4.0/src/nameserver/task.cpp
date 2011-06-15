@@ -403,7 +403,11 @@ namespace tfs
             }
             if (ngi.owner_role_ == NS_ROLE_MASTER)
             {
+              #if __WORDSIZE == 64
               std::vector<int64_t> stat(1, 1);
+              #else
+              std::vector<int32_t> stat(1, 1);
+              #endif
               GFactory::get_stat_mgr().update_entry(GFactory::tfs_ns_stat_block_count_, stat, false);
               manager_->rm_block_from_ds((*iter), value.block_id_);
             }
@@ -639,7 +643,12 @@ namespace tfs
             }
           }
         }
+
+        #if __WORDSIZE == 64
         std::vector<int64_t> stat(1, runer_.size());
+        #else
+        std::vector<int32_t> stat(1, runer_.size());
+        #endif
         GFactory::get_stat_mgr().update_entry(GFactory::tfs_ns_stat_block_count_, stat, false);
 
         status_ = PLAN_STATUS_BEGIN;

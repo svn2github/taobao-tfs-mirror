@@ -90,23 +90,21 @@ namespace tfs
 
       if (NULL != file_name && file_name[0] != '\0')
       {
-        if (static_cast<int32_t>(strlen(file_name)) < FILE_NAME_LEN ||
-            (file_name[0] != SMALL_TFS_FILE_KEY_CHAR &&
-             file_name[0] != LARGE_TFS_FILE_KEY_CHAR))
+        if (check_file_type(file_name) == INVALID_TFS_FILE_TYPE)
         {
           is_valid_ = false;
         }
         else
         {
           decode(file_name + 2, (char*) &file_);
-          if (NULL == suffix && static_cast<int32_t>(strlen(file_name)) > FILE_NAME_LEN)
+          if (NULL == suffix)
           {
             suffix = file_name + FILE_NAME_LEN;
           }
           set_suffix(suffix);
           if (0 == cluster_id_)
           {
-            cluster_id_ = file_name[1];
+            cluster_id_ = file_name[1] - '0';
           }
         }
       }

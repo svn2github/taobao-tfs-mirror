@@ -31,7 +31,7 @@ int FileQueue::load_queue_head()
 {
   if (!DirectoryOp::create_full_path(queue_path_.c_str()))
   {
-    TBSYS_LOG(ERROR, "create directoy (%s) filed", queue_path_.c_str());
+    TBSYS_LOG(ERROR, "create directoy : %s filed", queue_path_.c_str());
     return EXIT_MAKEDIR_ERROR;
   }
 
@@ -39,7 +39,7 @@ int FileQueue::load_queue_head()
   information_fd_ = open(path.c_str(), O_RDWR | O_CREAT, 0600);
   if (information_fd_ == -1)
   {
-    TBSYS_LOG(ERROR, "open file(%s) failed", path.c_str());
+    TBSYS_LOG(ERROR, "open file: %s failed", path.c_str());
     return EXIT_OPEN_FILE_ERROR;
   }
 
@@ -50,7 +50,7 @@ int FileQueue::load_queue_head()
     queue_information_header_.read_seqno_ = 0x01;
     queue_information_header_.write_seqno_ = 0x01;
   }
-  TBSYS_LOG(DEBUG, "readno(%d), writeno(%d), queueSize(%d)", queue_information_header_.read_seqno_,
+  TBSYS_LOG(DEBUG, "readno: %d, writeno: %d, queueSize: %d", queue_information_header_.read_seqno_,
       queue_information_header_.write_seqno_, queue_information_header_.queue_size_);
   return TFS_SUCCESS;
 }
@@ -109,7 +109,7 @@ int FileQueue::push(const void* const data, const int64_t len)
 {
   if (data == NULL || len <= 0 || len > TFS_MALLOC_MAX_SIZE)
   {
-    TBSYS_LOG(WARN, "invalid data(%p), length(%ld)", data, len);
+    TBSYS_LOG(WARN, "invalid data: %p, length: %"PRI64_PREFIX"d", data, len);
     return EXIT_GENERAL_ERROR;
   }
 
@@ -147,7 +147,7 @@ int FileQueue::push(const void* const data, const int64_t len)
 
   if (ret != size)
   {
-    TBSYS_LOG(WARN, "write filed, path(%s), fd(%d), lenght(%d), ret(%d), size(%d)", queue_path_.c_str(), write_fd_,
+    TBSYS_LOG(WARN, "write filed, path: %s, fd: %d, lenght: %d, ret: %d, size: %d", queue_path_.c_str(), write_fd_,
         len, ret, size);
     ret = size - ret;
     if (ret > 0 && ret <= size)
@@ -157,7 +157,7 @@ int FileQueue::push(const void* const data, const int64_t len)
     return EXIT_GENERAL_ERROR;
   }
   queue_information_header_.queue_size_++;
-  TBSYS_LOG(DEBUG, "queue_size_(%d),size(%d),iret(%d), write_filesize_(%d), max_file_size(%u), write_seqno_(%d)",
+  TBSYS_LOG(DEBUG, "queue_size_: %d,size: %d,iret: %d, write_filesize_: %d, max_file_size: %u, write_seqno_: %d",
       queue_information_header_.queue_size_, size, ret, queue_information_header_.write_filesize_, max_file_size_,
       queue_information_header_.write_seqno_);
   return TFS_SUCCESS;
@@ -170,14 +170,14 @@ QueueItem *FileQueue::pop(int index)
   int count = 0;
   if (read_fd_ == -1)
   {
-    TBSYS_LOG(WARN, "file(%s:%d) is close...", queue_path_.c_str(), queue_information_header_.read_seqno_);
+    TBSYS_LOG(WARN, "file %s:%d is close...", queue_path_.c_str(), queue_information_header_.read_seqno_);
     do
     {
       ++count;
       iret = open_read_file();
       if (iret != TFS_SUCCESS)
       {
-        TBSYS_LOG(WARN, "reopen file(%s:%d) failed", queue_path_.c_str(), queue_information_header_.read_seqno_);
+        TBSYS_LOG(WARN, "reopen file %s: %d failed", queue_path_.c_str(), queue_information_header_.read_seqno_);
         ::close( read_fd_);
         read_fd_ = -1;
         continue;
@@ -205,12 +205,12 @@ QueueItem *FileQueue::pop(int index)
     int32_t retsize = read(read_fd_, &size, sizeof(int32_t));
     if (retsize < 0)
     {
-      TBSYS_LOG(ERROR, "read head size errors(%d: %s) from (%d)", errno, strerror(errno), read_fd_);
+      TBSYS_LOG(ERROR, "read head size errors %d : %s from : %d", errno, strerror(errno), read_fd_);
       break;
     }
     if (retsize != sizeof(int32_t) && retsize != 0)
     {
-      TBSYS_LOG(ERROR, "read head size(%d) errors(%d: %s) from (%d)", retsize, errno, strerror(errno), read_fd_);
+      TBSYS_LOG(ERROR, "read head size: %d errors %d : %s from : %d", retsize, errno, strerror(errno), read_fd_);
       lseek(read_fd_, (0 - retsize), SEEK_CUR);
       break;
     }
@@ -238,7 +238,7 @@ QueueItem *FileQueue::pop(int index)
         item = NULL;
       }
       TBSYS_LOG(ERROR,
-          "read file failed length(%d : %d) form fd(%d), read_seqno_(%d), read_offset_(%d), current pos_tion(%d)",
+          "read file failed length %d : %d form fd: %d, read_seqno_: %d, read_offset_: %d, current pos_tion: %d",
           iret, size, read_fd_, queue_information_header_.read_seqno_, queue_information_header_.read_offset_, curpos_);
       ::lseek(read_fd_, 0, SEEK_END);
       if (queue_information_header_.write_seqno_ > queue_information_header_.read_seqno_)
@@ -274,14 +274,14 @@ QueueItem *FileQueue::pop(int index)
  int count = 0;
  if (read_fd_ == -1)
  {
- TBSYS_LOG(WARN, "file(%s:%d) is close...", queue_path_.c_str(), queue_information_header_.read_seqno_);
+ TBSYS_LOG(WARN, "file %s: %d is close...", queue_path_.c_str(), queue_information_header_.read_seqno_);
  do
  {
  ++count;
  iret = open_read_file();
  if (iret != TFS_SUCCESS)
  {
- TBSYS_LOG(WARN, "reopen file(%s:%d) failed...", queue_path_.c_str(), queue_information_header_.read_seqno_);
+ TBSYS_LOG(WARN, "reopen file %s: %d failed...", queue_path_.c_str(), queue_information_header_.read_seqno_);
  ::close( read_fd_);
  read_fd_ = -1;
  continue;
@@ -308,12 +308,12 @@ QueueItem *FileQueue::pop(int index)
  int retsize = read(read_fd_, &size, sizeof(int32_t));
  if (retsize < 0)
  {
- TBSYS_LOG(ERROR, "read head size errors(%d: %s) from (%d)", errno, strerror(errno), read_fd_);
+ TBSYS_LOG(ERROR, "read head size errors %d : %s from : %d", errno, strerror(errno), read_fd_);
  break;
  }
  if (retsize != sizeof(int32_t) && retsize != 0)
  {
- TBSYS_LOG(ERROR, "read head size(%d) errors(%d: %s) from (%d)", retsize, errno, strerror(errno), read_fd_);
+ TBSYS_LOG(ERROR, "read head size: %d errors %d : %s from : %d", retsize, errno, strerror(errno), read_fd_);
  lseek(read_fd_, (0 - retsize), SEEK_CUR);
  break;
  }
@@ -342,7 +342,7 @@ QueueItem *FileQueue::pop(int index)
  item = NULL;
  }
  TBSYS_LOG(ERROR,
- "read file failed length(%d : %d) form fd(%d), read_seqno_(%d), read_offset_(%d), current pos_tion(%d)",
+ "read file failed length %d : %d form fd: %d, read_seqno_: %d, read_offset_: %d, current pos_tion: %d",
  iret, size, read_fd_, queue_information_header_.read_seqno_, queue_information_header_.read_offset_,
  curpos_);
  ::lseek(read_fd_, 0, SEEK_END);
@@ -410,7 +410,7 @@ int FileQueue::open_write_file()
   write_fd_ = open(tmp, O_WRONLY | O_CREAT | O_APPEND, 0600);
   if (write_fd_ == -1)
   {
-    TBSYS_LOG(ERROR, "open file(%s) failed", tmp);
+    TBSYS_LOG(ERROR, "open file: %s failed", tmp);
     return TFS_ERROR;
   }
   return TFS_SUCCESS;
@@ -447,13 +447,13 @@ int FileQueue::open_read_file()
   read_fd_ = open(tmp, O_RDONLY, 0600);
   if (read_fd_ == -1)
   {
-    TBSYS_LOG(ERROR, "open file(%s) failed", tmp);
+    TBSYS_LOG(ERROR, "open file: %s failed", tmp);
     return TFS_ERROR;
   }
   int iret = lseek(read_fd_, queue_information_header_.read_offset_, SEEK_SET);
   if (iret < 0)
   {
-    TBSYS_LOG(ERROR, "call lseek filed(%s)", strerror(errno));
+    TBSYS_LOG(ERROR, "call lseek filed: %s", strerror(errno));
     return TFS_ERROR;
   }
   return TFS_SUCCESS;
@@ -473,7 +473,7 @@ int FileQueue::write_header()
       {
         break;
       }
-      TBSYS_LOG(ERROR, "write queue infromation header failed, path(%s), errors(%s)", queue_path_.c_str(), strerror(
+      TBSYS_LOG(ERROR, "write queue infromation header failed, path: %s, errors: %s", queue_path_.c_str(), strerror(
           errno));
       ::close( information_fd_);
       information_fd_ = -1;
@@ -483,7 +483,7 @@ int FileQueue::write_header()
       information_fd_ = open(tmp, O_RDWR | O_CREAT, 0600);
       if (information_fd_ == -1)
       {
-        TBSYS_LOG(ERROR, "open file(%s) failed", tmp);
+        TBSYS_LOG(ERROR, "open file: %s failed", tmp);
         return EXIT_GENERAL_ERROR;
       }
       lseek(information_fd_, 0, SEEK_SET);

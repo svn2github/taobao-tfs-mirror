@@ -32,22 +32,22 @@ namespace tfs
     RcService::RcService() :
       resource_manager_(NULL), session_manager_(NULL)
     {
-      //Todo: replace factory
-      factory_ = new common::BasePacketFactory();
-      streamer_ = new common::BasePacketStreamer(factory_);
     }
 
     RcService::~RcService()
     {
       tbsys::gDelete(resource_manager_);
       tbsys::gDelete(session_manager_);
-      tbsys::gDelete(streamer_);
-      tbsys::gDelete(factory_);
     }
 
     const char* RcService::get_log_file_path()
     {
-      return SYSPARAM_RCSERVER.log_file_.c_str();
+      return NULL;
+    }
+
+    const char* RcService::get_pid_file_path()
+    {
+      return NULL;
     }
 
     bool RcService::handlePacketQueue(tbnet::Packet *packet, void *args)
@@ -92,23 +92,34 @@ namespace tfs
       UNUSED(argc);
       UNUSED(argv);
       int ret = TFS_SUCCESS;
-      if ((ret = RcServerParameter::instance().initialize()) != TFS_SUCCESS)
+      uint32_t dev_ip = Func::get_local_addr(get_dev());
+      uint32_t cfg_ip = Func::get_addr(get_ip_addr());
+      if (dev_ip != cfg_ip)
       {
-        TBSYS_LOG(ERROR, "call RcServerParameter::initialize fail. ret: %d", ret);
+        ret = EXIT_CONFIG_ERROR; 
+        TBSYS_LOG(ERROR, "call RcServerParameter::initialize fail. dev name: %s, cfg ip: %s, dev id: %u, cfg id: %u, ret: %d", 
+            get_dev(), get_ip_addr(), dev_ip, cfg_ip, ret);
       }
       else
       {
-        resource_manager_ = new ResourceManager(get_timer());
-        if ((ret = resource_manager_->initialize()) != TFS_SUCCESS)
+        if ((ret = RcServerParameter::instance().initialize()) != TFS_SUCCESS)
         {
-          TBSYS_LOG(ERROR, "call ResourceManager::initialize fail. ret: %d", ret);
+          TBSYS_LOG(ERROR, "call RcServerParameter::initialize fail. ret: %d", ret);
         }
         else
         {
-          session_manager_ = new SessionManager(resource_manager_, get_timer());
-          if ((ret = session_manager_->initialize()) != TFS_SUCCESS)
+          resource_manager_ = new ResourceManager(get_timer());
+          if ((ret = resource_manager_->initialize()) != TFS_SUCCESS)
           {
-            TBSYS_LOG(ERROR, "call SessionManager::initialize fail. ret: %d", ret);
+            TBSYS_LOG(ERROR, "call ResourceManager::initialize fail. ret: %d", ret);
+          }
+          else
+          {
+            session_manager_ = new SessionManager(resource_manager_, get_timer());
+            if ((ret = session_manager_->initialize()) != TFS_SUCCESS)
+            {
+              TBSYS_LOG(ERROR, "call SessionManager::initialize fail. ret: %d", ret);
+            }
           }
         }
       }
@@ -119,8 +130,10 @@ namespace tfs
     int RcService::destroy_service()
     {
       int ret = TFS_SUCCESS;
-      session_manager_->stop();
-      resource_manager_->stop();
+      if (NULL != session_manager_)
+        session_manager_->stop();
+      if (NULL != resource_manager_)
+        resource_manager_->stop();
       return ret;
     }
 
@@ -137,10 +150,13 @@ namespace tfs
         ReqRcLoginMessage* req_login_msg = dynamic_cast<ReqRcLoginMessage*>(packet);
         string session_id;
         BaseInfo base_info;
+        TBSYS_LOG(DEBUG, "call RspRcLoginMessage::login start. app_key: %s, app_ip: %"PRI64_PREFIX"d, ret: %d",
+            req_login_msg->get_app_key(), req_login_msg->get_app_ip(), ret);
         if ((ret = session_manager_->login(req_login_msg->get_app_key(),
                 req_login_msg->get_app_ip(), session_id, base_info)) != TFS_SUCCESS)
         {
-          TBSYS_LOG(ERROR, "call SessionManager::login fail. input packet invaild. ret: %d", ret);
+          TBSYS_LOG(ERROR, "call SessionManager::login fail. app_key: %s, app_ip: %"PRI64_PREFIX"d, ret: %d",
+            req_login_msg->get_app_key(), req_login_msg->get_app_ip(), ret);
         }
         else
         {
@@ -151,8 +167,16 @@ namespace tfs
           }
           else
           {
+            base_info.dump();
             rsp_login_msg->set_base_info(base_info);
-            req_login_msg->reply(rsp_login_msg);
+            int inner_ret = req_login_msg->reply(rsp_login_msg);
+            if (TFS_SUCCESS != inner_ret)
+            {
+              TBSYS_LOG(DEBUG, "call RspRcLoginMessage::login fail. app_key: %s, app_ip: %"PRI64_PREFIX"d, inner_ret: %d",
+                  req_login_msg->get_app_key(), req_login_msg->get_app_ip(), inner_ret);
+            }
+            TBSYS_LOG(DEBUG, "call RspRcLoginMessage::login end. app_key: %s, app_ip: %"PRI64_PREFIX"d, session_id: %s, ret: %d",
+                req_login_msg->get_app_key(), req_login_msg->get_app_ip(), session_id.c_str(), ret);
           }
         }
       }

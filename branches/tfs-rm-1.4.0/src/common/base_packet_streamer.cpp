@@ -54,73 +54,72 @@ namespace tfs
           int64_t pos = 0;
           int32_t iret = pheader.deserialize(input->getData(), input->getDataLen(), pos);
           bret = TFS_SUCCESS == iret;
-          if (bret)
+          if (!bret)
           {
-            input->drainData(pheader.length());
-            if ((TFS_PACKET_FLAG_V1 == pheader.flag_)
-                &&( input->getDataLen() < TFS_PACKET_HEADER_DIFF_SIZE))
-            {
-              bret = false;
-              TBSYS_LOG(ERROR, "invalid packet, databuffer length less than : %d", TFS_PACKET_HEADER_DIFF_SIZE);
-            }
+            *broken = true;
+            input->clear();
+            TBSYS_LOG(ERROR, "header deserialize error, iret: %d", iret);
           }
           else
           {
-            TBSYS_LOG(ERROR, "header deserialize error, iret: %d", iret);
-          }
-          if (bret)
-          {
-            header->_dataLen = pheader.length_;
-            header->_pcode   = pheader.type_;
-            header->_chid = 1;
-            uint64_t channel_id = 0;
-
-            if (((TFS_PACKET_FLAG_V0 != pheader.flag_)
-                &&(TFS_PACKET_FLAG_V1 != pheader.flag_))
-               || ( 0 >= header->_dataLen)
-               || (0x4000000 < header->_dataLen))//max 64M
+            if ((TFS_PACKET_FLAG_V1 == pheader.flag_)
+                && ((input->getDataLen() - pheader.length()) < TFS_PACKET_HEADER_DIFF_SIZE))
             {
-              *broken = true;
-              TBSYS_LOG(ERROR, "stream error: %x<>%x,%x, dataLen: %d", pheader.flag_,
-                TFS_PACKET_FLAG_V0, TFS_PACKET_FLAG_V1, header->_dataLen);
-              input->clear();
+              bret = false;
             }
             else
             {
-              if (TFS_PACKET_FLAG_V1 == pheader.flag_)
+              input->drainData(pheader.length());
+              header->_dataLen = pheader.length_;
+              header->_pcode   = pheader.type_;
+              header->_chid = 1;
+              uint64_t channel_id = 0;
+
+              if (((TFS_PACKET_FLAG_V0 != pheader.flag_)
+                    &&(TFS_PACKET_FLAG_V1 != pheader.flag_))
+                  || ( 0 >= header->_dataLen)
+                  || (0x4000000 < header->_dataLen))//max 64M
               {
-                header->_pcode |= (pheader.check_ << 16);
-                header->_dataLen += TFS_PACKET_HEADER_DIFF_SIZE;
-                pos = 0;
-                iret = Serialization::get_int64(input->getData(), input->getDataLen(), pos, reinterpret_cast<int64_t*>(&channel_id));
-                bret = TFS_SUCCESS == iret;
-                if (bret)
+                *broken = true;
+                input->clear();
+                TBSYS_LOG(ERROR, "stream error: %x<>%x,%x, dataLen: %d", pheader.flag_,
+                    TFS_PACKET_FLAG_V0, TFS_PACKET_FLAG_V1, header->_dataLen);
+              }
+              else
+              {
+                if (TFS_PACKET_FLAG_V1 == pheader.flag_)
                 {
-                  if (TFS_PACKET_VERSION_V2 == pheader.check_)
+                  header->_pcode |= (pheader.check_ << 16);
+                  header->_dataLen += TFS_PACKET_HEADER_DIFF_SIZE;
+                  pos = 0;
+                  iret = Serialization::get_int64(input->getData(), input->getDataLen(), pos, reinterpret_cast<int64_t*>(&channel_id));
+                  bret = TFS_SUCCESS == iret;
+                  if (bret)
                   {
-                    header->_chid = static_cast<uint32_t>((channel_id & 0xFFFFFFFF));
+                    if (TFS_PACKET_VERSION_V2 == pheader.check_)
+                    {
+                      header->_chid = static_cast<uint32_t>((channel_id & 0xFFFFFFFF));
+                    }
+                    else if (TFS_PACKET_VERSION_V1 == pheader.check_)
+                    {
+                      //tbnet version client got origin version 1 packet
+                      header->_chid = static_cast<uint32_t>((channel_id & 0xFFFFFFFF)) - 1;
+                    }
+                    if (header->_chid == 0)
+                    {
+                      TBSYS_LOG(ERROR, "get a packet chid==0, pcode: %d,channel_id:%"PRI64_PREFIX"d", header->_pcode, channel_id);
+                    }
                   }
-                  else if (TFS_PACKET_VERSION_V1 == pheader.check_)
+                  else
                   {
-                    //tbnet version client got origin version 1 packet
-                    header->_chid = static_cast<uint32_t>((channel_id & 0xFFFFFFFF)) - 1;
+                    bret = false;
+                    *broken = true;
+                    input->clear();
+                    TBSYS_LOG(ERROR, "channel id deserialize error, iret: %d", iret);
                   }
-                  if (header->_chid == 0)
-                  {
-                    TBSYS_LOG(ERROR, "get a packet chid==0, pcode: %d,channel_id:%"PRI64_PREFIX"d", header->_pcode, channel_id);
-                  }
-                }
-                else
-                {
-                  TBSYS_LOG(ERROR, "channel id deserialize error, iret: %d", iret);
                 }
               }
             }
-          }
-          else
-          {
-            TBSYS_LOG(ERROR, "invalid packet, databuffer length: %d less than: %d", 
-              input->getDataLen(), TFS_PACKET_HEADER_DIFF_SIZE);
           }
         }
       }
@@ -144,7 +143,7 @@ namespace tfs
         }
         else
         {
-          TBSYS_LOG(ERROR, "create packet(%d) fail, drain data length(%d)",
+          TBSYS_LOG(ERROR, "create packet: %d fail, drain data length: %d",
             header->_pcode, header->_dataLen);
           input->drainData(header->_dataLen);
         }

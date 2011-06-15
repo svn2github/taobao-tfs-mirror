@@ -94,13 +94,13 @@ namespace tfs
         int iret = write_header();
         if (iret != TFS_SUCCESS)
         {
-          TBSYS_LOG(ERROR, "write queue information header error, iret(%d)", iret);
+          TBSYS_LOG(ERROR, "write queue information header error, iret: %d", iret);
           return iret;
         }
         iret = open_read_file();
         if (iret != TFS_SUCCESS)
         {
-          TBSYS_LOG(ERROR, "open file failed, iret(%d)", iret);
+          TBSYS_LOG(ERROR, "open file failed, iret: %d", iret);
         }
         return iret;
       }

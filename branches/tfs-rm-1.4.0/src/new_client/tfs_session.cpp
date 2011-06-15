@@ -33,11 +33,17 @@ TfsSession::TfsSession(const std::string& nsip, const int32_t cache_time, const 
 		cluster_id_(0), use_cache_(USE_CACHE_FLAG_YES)
 {
   block_cache_map_.resize(block_cache_items_);
+#ifdef _WITH_UNIQUE_STORE
+  unique_store_ = NULL;
+#endif
 }
 
 TfsSession::~TfsSession()
 {
   block_cache_map_.clear();
+#ifdef _WITH_UNIQUE_STORE
+  tbsys::gDelete(unique_store_);
+#endif
 }
 
 int TfsSession::initialize()
@@ -67,6 +73,34 @@ int TfsSession::initialize()
   return ret;
 }
 
+#ifdef _WITH_UNIQUE_STORE
+int TfsSession::init_unique_store(const char* master_addr, const char* slave_addr,
+                                  const char* group_name, const int32_t area)
+{
+  int ret = TFS_ERROR;
+  tbutil::Mutex::Lock lock(mutex_);
+
+  if (NULL == unique_store_)
+  {
+    unique_store_ = new TfsUniqueStore();
+    ret = unique_store_->initialize(master_addr, slave_addr, group_name, area, ns_addr_str_.c_str());
+    if (ret != TFS_SUCCESS)
+    {
+      // reinit later?
+      tbsys::gDelete(unique_store_);
+    }
+  }
+  else
+  {
+    // clear and reinit?
+    TBSYS_LOG(INFO, "unique store already init");
+    ret = TFS_SUCCESS;
+  }
+
+  return ret;
+}
+#endif
+
 int TfsSession::get_block_info(uint32_t& block_id, VUINT64& rds, int32_t flag)
 {
   int ret = TFS_SUCCESS;
@@ -76,7 +110,11 @@ int TfsSession::get_block_info(uint32_t& block_id, VUINT64& rds, int32_t flag)
   }
   else if (flag & T_WRITE)
   {
-    ret = get_block_info_ex(block_id, rds, flag | T_CREATE);
+    if ((flag & T_NEWBLK) == 0)
+    {
+      flag |= T_CREATE;
+    }
+    ret = get_block_info_ex(block_id, rds, flag);
   }
   else // read
   {

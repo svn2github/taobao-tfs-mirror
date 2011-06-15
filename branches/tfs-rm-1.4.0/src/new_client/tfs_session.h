@@ -17,9 +17,14 @@
 #define TFS_CLIENT_TFSSESSION_H_
 
 #include <Mutex.h>
-#include "lru.h"
+
 #include "common/internal.h"
+#include "lru.h"
 #include "local_key.h"
+
+#ifdef _WITH_UNIQUE_STORE
+#include "tfs_unique_store.h"
+#endif
 
 namespace tfs
 {
@@ -82,6 +87,18 @@ namespace tfs
       {
         use_cache_ = flag;
       }
+
+#ifdef _WITH_UNIQUE_STORE
+    private:
+      TfsUniqueStore* unique_store_;
+    public:
+      int init_unique_store(const char* master_addr, const char* slave_addr,
+                            const char* group_name, const int32_t area);
+      inline TfsUniqueStore* get_unique_store() const
+      {
+        return unique_store_;
+      }
+#endif
 
 #ifdef TFS_TEST
       BLOCK_CACHE_MAP* get_block_cache_map()

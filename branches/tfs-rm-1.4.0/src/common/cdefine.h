@@ -38,6 +38,7 @@ extern "C"
   static const int32_t TFS_FILE_LEN = FILE_NAME_LEN + 1;
   static const int32_t FILE_NAME_EXCEPT_SUFFIX_LEN = 12;
   static const int32_t MAX_FILE_NAME_LEN = 128;
+  static const int32_t MAX_SUFFIX_LEN = MAX_FILE_NAME_LEN - TFS_FILE_LEN;
   static const int32_t STANDARD_SUFFIX_LEN = 4;
 
 #else
@@ -56,6 +57,7 @@ extern "C"
 #define TFS_FILE_LEN (FILE_NAME_LEN + 1)
 #define FILE_NAME_EXCEPT_SUFFIX_LEN 12
 #define MAX_FILE_NAME_LEN 128
+#define MAX_SUFFIX_LEN (MAX_FILE_NAME_LEN - TFS_FILE_LEN)
 #define STANDARD_SUFFIX_LEN 4
 
 #endif

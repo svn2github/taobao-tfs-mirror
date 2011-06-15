@@ -50,6 +50,7 @@ namespace tfs
       int deserialize(const char* data, const int64_t data_len, int64_t& pos);
       int serialize(char* data, const int64_t data_len, int64_t& pos) const;
       int64_t length() const;
+      void dump() const;
 
       int32_t cluster_stat_;
       int32_t access_type_;
@@ -67,6 +68,7 @@ namespace tfs
       int deserialize(const char* data, const int64_t data_len, int64_t& pos);
       int serialize(char* data, const int64_t data_len, int64_t& pos) const;
       int64_t length() const;
+      void dump() const;
 
       bool need_duplicate_;
       std::string dupliate_server_addr_;
@@ -75,13 +77,26 @@ namespace tfs
 
     struct BaseInfo
     {
+      BaseInfo() : report_interval_(0)
+      {
+      }
+
       int deserialize(const char* data, const int64_t data_len, int64_t& pos);
       int serialize(char* data, const int64_t data_len, int64_t& pos) const;
       int64_t length() const;
+      void dump() const;
 
       std::vector<uint64_t> rc_server_infos_;
       std::vector<ClusterRackData> cluster_infos_;
       int32_t report_interval_;
+
+      BaseInfo& operator= (const BaseInfo& right)
+      {
+        rc_server_infos_ = right.rc_server_infos_;
+        cluster_infos_ = right.cluster_infos_;
+        report_interval_ = right.report_interval_;
+        return *this;
+      }
     };
 
     struct SessionBaseInfo
@@ -89,6 +104,7 @@ namespace tfs
       int deserialize(const char* data, const int64_t data_len, int64_t& pos);
       int serialize(char* data, const int64_t data_len, int64_t& pos) const;
       int64_t length() const;
+      void dump() const;
 
       std::string session_id_;
       std::string client_version_;
@@ -131,6 +147,7 @@ namespace tfs
       int deserialize(const char* data, const int64_t data_len, int64_t& pos);
       int serialize(char* data, const int64_t data_len, int64_t& pos) const;
       int64_t length() const;
+      void dump() const;
 
       OperType oper_type_;
       int64_t oper_times_;  //total
@@ -159,6 +176,7 @@ namespace tfs
       int deserialize(const char* data, const int64_t data_len, int64_t& pos);
       int serialize(char* data, const int64_t data_len, int64_t& pos) const;
       int64_t length() const;
+      void dump() const;
 
       std::map<OperType, AppOperInfo> app_oper_info_;
       int64_t cache_hit_ratio_;
@@ -201,6 +219,7 @@ namespace tfs
       int deserialize(const char* data, const int64_t data_len, int64_t& pos);
       int serialize(char* data, const int64_t data_len, int64_t& pos) const;
       int64_t length() const;
+      void dump() const;
 
       KeepAliveInfo& operator +=(const KeepAliveInfo& right)
       {

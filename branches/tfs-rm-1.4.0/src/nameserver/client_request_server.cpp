@@ -124,7 +124,11 @@ namespace tfs
                     }
                     if (!rm_list.empty())
                     {
+                    #if __WORDSIZE == 64
                       std::vector<int64_t> stat(1, rm_list.size());
+                    #else
+                      std::vector<int32_t> stat(1, rm_list.size());
+                    #endif
                       GFactory::get_stat_mgr().update_entry(GFactory::tfs_ns_stat_block_count_, stat, false);
                       lay_out_manager_.rm_block_from_ds(iter->first->id(), rm_list);
                     }
@@ -187,7 +191,12 @@ namespace tfs
           }
         } 
       }
+
+      #if __WORDSIZE == 64
       std::vector<int64_t> stat(4,0);
+      #else
+      std::vector<int32_t> stat(4,0);
+      #endif
       mode & T_READ ? iret == TFS_SUCCESS ? stat[0] = 1 : stat[1] = 1 
         : iret == TFS_SUCCESS ? stat[2] = 1 : stat[3] = 1;
       GFactory::get_stat_mgr().update_entry(GFactory::tfs_ns_stat_, stat);
@@ -244,7 +253,11 @@ namespace tfs
           iret = batch_open_write_mode(mode, block_count, out);
         }
       }
+      #if __WORDSIZE == 64
       std::vector<int64_t> stat(4, 0);
+      #else
+      std::vector<int32_t> stat(4, 0);
+      #endif
       if (mode & T_READ)
       {
         if (iret == TFS_SUCCESS)
@@ -290,7 +303,12 @@ namespace tfs
           iret = EXIT_COMMIT_ERROR;
           snprintf(parameter.error_msg_, 256, "close block: %u successful,but lease: %u commit fail", block_id, parameter.lease_id_);
         }
+
+        #if __WORDSIZE == 64
         std::vector<int64_t> stat(6,0);
+        #else
+        std::vector<int32_t> stat(6,0);
+        #endif
         iret == TFS_SUCCESS ? stat[4] = 0x01 : stat[5] = 0x01;
         GFactory::get_stat_mgr().update_entry(GFactory::tfs_ns_stat_, stat);
       }

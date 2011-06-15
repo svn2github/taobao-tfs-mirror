@@ -37,6 +37,7 @@ namespace tfs
     static const int32_t EXIT_DESERIALIZE_ERROR = -1012;
     const int32_t EXIT_ACCESS_PERMISSION_ERROR = -1013; //access permission error
     const int32_t EXIT_SYSTEM_PARAMETER_ERROR = -1014; //system parameter error
+    const int32_t EXIT_UNIQUE_META_NOT_EXIST = -1015;
 
     const int32_t EXIT_FILE_OP_ERROR = -2000;
     const int32_t EXIT_OPEN_FILE_ERROR = -2001;

@@ -17,6 +17,7 @@
 #define TFS_RCSERVER_RCSERVICE_H_
 
 #include "common/base_service.h"
+#include "message/message_factory.h"
 
 namespace tfs
 {
@@ -34,17 +35,26 @@ namespace tfs
         // override
         tbnet::IPacketStreamer* create_packet_streamer()
         {
-          return streamer_;
+          return new common::BasePacketStreamer();
         }
 
+        void destroy_packet_streamer(tbnet::IPacketStreamer* streamer)
+        {
+          tbsys::gDelete(streamer);
+        }
         // override
         common::BasePacketFactory* create_packet_factory()
         {
-          return factory_;
+          return new message::MessageFactory();
         }
 
+        void destroy_packet_factory(common::BasePacketFactory* factory)
+        {
+          tbsys::gDelete(factory);
+        }
         // override
         const char* get_log_file_path();
+        const char* get_pid_file_path();
         // override
         bool handlePacketQueue(tbnet::Packet* packet, void* args);
 
@@ -70,8 +80,6 @@ namespace tfs
         IResourceManager* resource_manager_;
         SessionManager* session_manager_;
 
-        common::BasePacketStreamer* streamer_;
-        common::BasePacketFactory* factory_;
         tbutil::Mutex mutex_;
     };
 
