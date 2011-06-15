@@ -847,7 +847,11 @@ namespace tfs
           isnew = true; 
           ++alive_server_size_;
           servers_index_.push_back(server_collect);
+          #if __WORDSIZE == 64
           std::vector<int64_t> stat(1, info.block_count_);
+          #else
+          std::vector<int32_t> stat(1, info.block_count_);
+          #endif
           GFactory::get_stat_mgr().update_entry(GFactory::tfs_ns_stat_block_count_, stat);
         }
         else
@@ -878,7 +882,12 @@ namespace tfs
       SERVER_MAP::iterator iter = servers_.find(server);
       if (iter != servers_.end())
       {
+
+        #if __WORDSIZE == 64
         std::vector<int64_t> stat(1, iter->second->block_count());
+        #else
+        std::vector<int32_t> stat(1, iter->second->block_count());
+        #endif
         GFactory::get_stat_mgr().update_entry(GFactory::tfs_ns_stat_block_count_, stat, false);
 
         //release all relations of blocks belongs to it
