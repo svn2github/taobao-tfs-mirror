@@ -46,6 +46,14 @@ namespace __gnu_cxx
       return __x;
     }
   };
+
+  template<> struct hash<int64_t>
+  {
+    int64_t operator()(int64_t __x) const
+    {
+      return __x;
+    }
+  };
 }
 #endif
 
