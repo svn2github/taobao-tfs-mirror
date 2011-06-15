@@ -52,6 +52,7 @@ public class NameServerPlanTestCase {
 	final public String NSMACA = tfsGrid.getCluster(NSINDEX).getServer(0).getMacName();
 	final public String NSMACB = tfsGrid.getCluster(NSINDEX).getServer(1).getMacName();
 	final public String IPALIAS = tfsGrid.getCluster(NSINDEX).getServer(0).getIpAlias();
+	final public String NSCONF = tfsGrid.getCluster(NSINDEX).getServer(0).getConfname();	
 	final public String CLIENTIP = tfsSeedClient.getIp();
 	final public String CLIENTCONF = tfsSeedClient.getConfname();
 	
@@ -145,7 +146,7 @@ public class NameServerPlanTestCase {
 	final public int UNLINK = 32;
 	
 	/* Standard */
-	final public float SUCCESSRATE = 100;
+	final public float SUCCESSRATE = 50;
 	final public float HIGHRATE = (float) 99.99;
 	final public float HALFRATE = 50;
 	final public float FAILRATE = 0;
@@ -328,6 +329,37 @@ public class NameServerPlanTestCase {
 	{
 		boolean bRet = false;
 		bRet = conf.confReplaceSingleByPart(CLIENTIP, CLIENTCONF, "tfsseed", UNLINKRATIO, String.valueOf(iUnlinkRatio));
+		return bRet;
+	}
+
+	/**
+	 * 
+	 * @param part
+	 * @param keyWord
+	 * @param value
+	 * @return
+	 */
+	public boolean setNsConf(String part, String keyWord, String value)
+	{
+		boolean bRet = false;
+		
+		/* set NSA's conf */
+		bRet = conf.confReplaceSingleByPart(NSIPA, NSCONF, part, keyWord, value);
+		if (bRet == false) 
+		{
+			log.debug("Set " + NSIPA + " 's " + keyWord + " to " + value + " fail!");
+			return bRet;
+		}
+		log.debug("Set " + NSIPA + keyWord + " to " + value + " success!");
+		
+		/* set NSB's conf */
+		bRet = conf.confReplaceSingleByPart(NSIPB, NSCONF, part, keyWord, value);
+		if (bRet == false) 
+		{
+			log.debug("Set " + NSIPB + " 's " + keyWord + " to " + value + " fail!");
+			return bRet;
+		}
+		log.debug("Set " + NSIPA + keyWord + " to " + value + " success!");
 		return bRet;
 	}
 	
@@ -992,11 +1024,8 @@ public class NameServerPlanTestCase {
 	public boolean chkBlockCnt(int iTimes, int iBlockCnt)
 	{
 		boolean bRet = false;
-		String vip = tfsGrid.getCluster(NSINDEX).getServer(0).getVip();
-		int port = tfsGrid.getCluster(NSINDEX).getServer(0).getPort();
 		ArrayList<String> listOut = new ArrayList<String>();
-		String cmd = "cd /home/admin/tfs/lib;" + "./ssm -s " + vip + ":" + port + " -i " + "\\\"block\\\" | grep \\\"" + iBlockCnt + "$\\\" | wc -l";
-		//String cmd = "cd /home/admin/tfs/lib; ls";
+		String cmd = TFS_BIN_HOME + "/ssm -s " + NSVIP + ":" + NSPORT + " -i block | grep \\\"" + iBlockCnt + "$\\\" | wc -l";
 		
 		for (int iLoop = 0; iLoop < iTimes; iLoop ++)
 		{

@@ -715,6 +715,12 @@ public class Function_ns_plan_test extends NameServerPlanTestCase {
 		bRet = tfsGrid.clean();
 		Assert.assertTrue(bRet);
 		
+		/* Set NS conf */
+		//bRet = setNsConf("nameserver", "max_replication", "1");
+		//Assert.assertTrue(bRet);
+		//bRet = setNsConf("nameserver", "min_replication", "1");
+		//Assert.assertTrue(bRet);
+		
 		bRet = tfsGrid.start();
 		Assert.assertTrue(bRet);
 		
