@@ -7,6 +7,7 @@ AM_LDFLAGS=-lrt -lpthread -ldl
 LDADD=$(top_builddir)/src/new_client/.libs/libtfsclient.a\
       $(top_builddir)/src/message/libtfsmessage.a\
       $(top_builddir)/src/common/libtfscommon.a\
+      $(UNIQUE_STORE_LDFLAGS)\
       $(TBLIB_ROOT)/lib/libtbnet.a\
       $(TBLIB_ROOT)/lib/libtbsys.a
 

@@ -13,12 +13,13 @@
  *
  */
 #include <map>
-#include "tfs_file.h"
-#include "bg_task.h"
-#include "message/message_factory.h"
+
 #include "common/client_manager.h"
 #include "common/base_packet.h"
 #include "common/status_message.h"
+#include "message/message_factory.h"
+#include "tfs_file.h"
+#include "bg_task.h"
 
 using namespace tfs::client;
 using namespace tfs::common;

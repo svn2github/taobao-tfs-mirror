@@ -56,71 +56,71 @@ namespace tfs
 
       __always_inline __attribute__ ((__gnu_inline__)) int
       open(const char* file_name, const char* suffix, const int flags, ... )
+      {
+        int ret = common::EXIT_INVALIDFD_ERROR;
+        if (__builtin_va_arg_pack_len() > 1)
         {
-          int ret = common::EXIT_INVALIDFD_ERROR;
-          if (__builtin_va_arg_pack_len() > 1)
+          overmany_log_error();
+        }
+        else if (flags & common::T_WRITE && flags & common::T_LARGE)
+        {
+          if (__builtin_va_arg_pack_len() != 1)
           {
-            overmany_log_error();
-          }
-          else if (flags & common::T_WRITE && flags & common::T_LARGE)
-          {
-            if (__builtin_va_arg_pack_len() != 1)
-            {
-              missing_log_error();
-            }
-            else
-            {
-              ret = open_ex_with_arg(file_name, suffix, (const char*)NULL, flags, __builtin_va_arg_pack());
-            }
+            missing_log_error();
           }
           else
           {
-            if (__builtin_va_arg_pack_len() > 0)
-            {
-              noadditional_log_error();
-            }
-            else
-            {
-              ret = open_ex(file_name, suffix, (const char*)NULL, flags);
-            }
+            ret = open_ex_with_arg(file_name, suffix, (const char*)NULL, flags, __builtin_va_arg_pack());
           }
-
-          return ret;
         }
+        else
+        {
+          if (__builtin_va_arg_pack_len() > 0)
+          {
+            noadditional_log_error();
+          }
+          else
+          {
+            ret = open_ex(file_name, suffix, (const char*)NULL, flags);
+          }
+        }
+
+        return ret;
+      }
 
       __always_inline __attribute__ ((__gnu_inline__)) int
       open(const char* file_name, const char* suffix, const char* ns_addr, const int flags, ... )
+      {
+        int ret = common::EXIT_INVALIDFD_ERROR;
+        if (__builtin_va_arg_pack_len() > 1)
         {
-          int ret = common::EXIT_INVALIDFD_ERROR;
-          if (__builtin_va_arg_pack_len() > 1)
+          overmany_log_error();
+        }
+        else if (flags & common::T_WRITE && flags & common::T_LARGE)
+        {
+          if (__builtin_va_arg_pack_len() != 1)
           {
-            overmany_log_error();
-          }
-          else if (flags & common::T_WRITE && flags & common::T_LARGE)
-          {
-            if (__builtin_va_arg_pack_len() != 1)
-            {
-              missing_log_error();
-            }
-            else
-            {
-              ret = open_ex_with_arg(file_name, suffix, ns_addr, flags, __builtin_va_arg_pack());
-            }
+            missing_log_error();
           }
           else
           {
-            if (__builtin_va_arg_pack_len() > 0)
-            {
-              noadditional_log_error();
-            }
-            else
-            {
-              ret = open_ex(file_name, suffix, ns_addr, flags);
-            }
+            ret = open_ex_with_arg(file_name, suffix, ns_addr, flags, __builtin_va_arg_pack());
           }
-
-          return ret;
         }
+        else
+        {
+          if (__builtin_va_arg_pack_len() > 0)
+          {
+            noadditional_log_error();
+          }
+          else
+          {
+            ret = open_ex(file_name, suffix, ns_addr, flags);
+          }
+        }
+
+        return ret;
+      }
 
       int64_t read(const int fd, void* buf, const int64_t count);
       int64_t readv2(const int fd, void* buf, const int64_t count, common::TfsFileStat* file_info);
@@ -173,14 +173,34 @@ namespace tfs
       int32_t get_block_cache_items() const;
       // double get_cache_hit_radio() const;
 
+#ifdef _WITH_UNIQUE_STORE
+      // unique stuff
+      int init_unique_store(const char* master_addr, const char* slave_addr,
+                            const char* group_name, const int32_t area, const char* ns_addr = NULL);
+      int save_unique(const char* buf, const int64_t count,
+                      const char* file_name, const char* suffix = NULL,
+                      char* ret_tfs_name = NULL, const int32_t ret_tfs_name_len = 0, const char* ns_addr = NULL);
+      int save_unique(const char* local_file,
+                      const char* file_name, const char* suffix = NULL,
+                      char* ret_tfs_name = NULL, const int32_t ret_tfs_name_len = 0, const char* ns_addr = NULL);
+      int32_t unlink_unique(const char* file_name, const char* suffix = NULL,
+                            const int32_t count = 1, const char* ns_addr = NULL);
+#endif
+
       // sort of utility
       uint64_t get_server_id();
       int32_t get_cluster_id();
       int save_file(const char* local_file, const char* tfs_name, const char* suffix = NULL,
-                    char* ret_tfs_name = NULL, const int32_t ret_tfs_name_len = 0, const int32_t flag = common::T_DEFAULT);
-      int fetch_file(const char* local_file, const char* tfs_name, const char* suffix);
+                    char* ret_tfs_name = NULL, const int32_t ret_tfs_name_len = 0,
+                    const char* ns_addr = NULL, const int32_t flag = common::T_DEFAULT);
+      int save_file(const char* buf, const int64_t count, const char* tfs_name, const char* suffix = NULL,
+                    char* ret_tfs_name = NULL, const int32_t ret_tfs_name_len = 0, const char* ns_addr = NULL,
+                    const int32_t flag = common::T_DEFAULT, const char* key = NULL);
+      int fetch_file(const char* local_file, const char* tfs_name, const char* suffix, const char* ns_addr = NULL);
+      int fetch_file(const char* tfs_name, const char* suffix, char*& buf, int64_t& count, const char* ns_addr = NULL);
       int stat_file(const char* tfs_name, const char* suffix,
-                    common::TfsFileStat* file_stat, const common::TfsStatType stat_type = common::NORMAL_STAT);
+                    common::TfsFileStat* file_stat, const common::TfsStatType stat_type = common::NORMAL_STAT,
+                    const char* ns_addr = NULL);
 
     private:
       TfsClient();

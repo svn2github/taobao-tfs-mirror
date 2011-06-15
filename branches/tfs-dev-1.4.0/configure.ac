@@ -63,6 +63,32 @@ fi
 AC_SUBST([READLINE_INCLUDE])
 AC_SUBST([READLINE_LIB])
 
+AC_ARG_WITH([tair-root],
+           AS_HELP_STRING([--with-tair-root],
+           [Tair installation path, need when enable uniquestore feature]),
+           TAIR_ROOT=${withval})
+if  test -z "${TAIR_ROOT}"; then
+   dnl tbnet include path supplied
+   TAIR_ROOT="/usr/local"
+fi
+if ! test -d "${TAIR_ROOT}/include" -a -d "${TBLIB_ROOT}/lib"; then
+        AC_MSG_ERROR([TAIR_ROOT is not work! expect TAIR_ROOT/include and TAIR_ROOT/lib directory])
+        exit 1;
+fi
+
+AC_ARG_ENABLE([uniquestore],
+           AS_HELP_STRING([--enable-uniquestore],
+           [enable unique store feature. need TaoBao Tair library support, use --with-tair-root to specify path]),
+           [enable_uniquestore=${enableval}],
+           [enable_uniquestore="no"])
+if test "${enable_uniquestore}" = "yes"; then
+        UNIQUE_STORE_CPPFLAGS="-D_WITH_UNIQUE_STORE -I${TAIR_ROOT}/include"
+        UNIQUE_STORE_LDFLAGS="${TAIR_ROOT}/lib/libtairclientapi.a -lboost_thread -lz"
+fi
+AM_CONDITIONAL([WITH_UNIQUE_STORE],[test x$enable_uniquestore = xyes])
+AC_SUBST([UNIQUE_STORE_CPPFLAGS])
+AC_SUBST([UNIQUE_STORE_LDFLAGS])
+
 AC_CACHE_CHECK(if fallocate is implemented, ac_cv_func_fallocate,
   AC_TRY_RUN([
     #include <fcntl.h>
@@ -103,7 +129,7 @@ AC_ARG_WITH([release],
         CXXFLAGS="-O2 -finline-functions -fno-strict-aliasing -Wall -fPIC -D__STDC_LIMIT_MACROS -D_NO_EXCEPTION"
       fi
     ],
-    [CXXFLAGS="-g -pg -D__STDC_LIMIT_MACROS -Wall -Werror -Wextra -Wunused-parameter -Wformat -Wconversion -Wdeprecated"]
+    [CXXFLAGS="-g -pg -D__STDC_LIMIT_MACROS -Wall -Werror -Wextra -Wunused-parameter -Wformat -Wconversion -Wdeprecated "]
     #[CXXFLAGS="-g -Wall -fPIC -D__STDC_LIMIT_MACROS -DTFS_TEST -D_NO_EXCEPTION"]
 )
 

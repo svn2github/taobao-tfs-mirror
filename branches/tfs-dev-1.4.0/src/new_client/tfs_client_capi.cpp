@@ -210,10 +210,10 @@ int32_t t_get_cluster_id()
 }
 
 int t_save_file(const char* local_file, const char* tfs_name, const char* suffix,
-                         char* ret_tfs_name, const int32_t ret_tfs_name_len, const int32_t flag)
+                char* ret_tfs_name, const int32_t ret_tfs_name_len, const int32_t flag)
 {
   return TfsClient::Instance()->save_file(local_file, tfs_name, suffix,
-                                          ret_tfs_name, ret_tfs_name_len, flag);
+                                          ret_tfs_name, ret_tfs_name_len, NULL, flag);
 }
 
 int t_fetch_file(const char* local_file, const char* tfs_name, const char* suffix)
