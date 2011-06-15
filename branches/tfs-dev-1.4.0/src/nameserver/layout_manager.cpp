@@ -1902,11 +1902,12 @@ namespace tfs
         if((interrupt_ & INTERRUPT_ALL))
         {
           interrupt = true;
-          TBSYS_LOG(INFO, "receive interrupt: %d", interrupt_);
           tbutil::Monitor<tbutil::Mutex>::Lock lock(run_plan_monitor_);
+          TBSYS_LOG(INFO, "receive interrupt: %d, pending plan list size: %u", interrupt_, pending_plan_list_.size());
           std::set<TaskPtr, TaskCompare>::iterator iter = pending_plan_list_.begin();
           for (; iter != pending_plan_list_.end(); ++iter)
             finish_plan_list_.push_back((*iter));
+          pending_plan_list_.clear();
         }
         interrupt_ = INTERRUPT_NONE;
         TBSYS_LOG(INFO, "build plan complete, complete: %"PRI64_PREFIX"d", ((total  + adjust)- need));
