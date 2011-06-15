@@ -60,7 +60,7 @@ namespace tfs
       if (timeout_ms <= 0)
       {
         timeout_ms = common::DEFAULT_NETWORK_CALL_TIMEOUT;
-        TBSYS_LOG(WARN, "timeout_in_ms equal 0, we'll use DEFAULT_NETWORK_CALL_TIMEOUT(%"PRI64_PREFIX"d)(ms)",
+        TBSYS_LOG(WARN, "timeout_in_ms equal 0, we'll use DEFAULT_NETWORK_CALL_TIMEOUT: %"PRI64_PREFIX"d(ms)",
           common::DEFAULT_NETWORK_CALL_TIMEOUT);
       }
       tbutil::Monitor<tbutil::Mutex>::Lock lock(monitor_);
@@ -368,7 +368,7 @@ namespace tfs
         ret = client->post_request(server_id, &send_msg, send_id);
         if (common::TFS_SUCCESS != ret)
         {
-          TBSYS_LOG(ERROR, "test server alive ping server(%s) error, server is down",
+          TBSYS_LOG(ERROR, "test server alive ping server: %s error, server is down",
             tbsys::CNetUtil::addrToString(server_id).c_str());
         }
         else
@@ -377,7 +377,7 @@ namespace tfs
           if (!bret)
           {
             ret = common::TFS_ERROR;
-            TBSYS_LOG(ERROR, "%s", "new client wait server(%s) response fail",
+            TBSYS_LOG(ERROR, "%s", "new client wait server: %s response fail",
               tbsys::CNetUtil::addrToString(server_id).c_str());
           }
           else
@@ -387,7 +387,7 @@ namespace tfs
                 || response->empty())
             {
               ret = common::TFS_ERROR;
-              TBSYS_LOG(ERROR, "test server alive ping server(%s) error, server mybe down",
+              TBSYS_LOG(ERROR, "test server alive ping server: %s error, server mybe down",
                   tbsys::CNetUtil::addrToString(server_id).c_str());
             }
             else

@@ -64,13 +64,13 @@ namespace tfs
       {
         tbutil::Monitor<tbutil::Mutex>::Lock lock(monitor_);
         QueueInformationHeader head = *file_queue_->get_queue_information_header();
-        TBSYS_LOG(INFO, "Update QinfoHead(before): readSeqNo(%d), readOffset(%d), writeSeqNo(%d),"
-          "writeFileSize(%d)", head.read_seqno_, head.read_offset_, head.write_seqno_, head.write_filesize_);
+        TBSYS_LOG(INFO, "Update QinfoHead(before): readSeqNo: %d, readOffset: %d, writeSeqNo: %d,"
+          "writeFileSize: %d", head.read_seqno_, head.read_offset_, head.write_seqno_, head.write_filesize_);
         head.read_seqno_ = head.write_seqno_;
         head.read_offset_ = head.write_filesize_;
         file_queue_->update_queue_information_header(&head);
-        TBSYS_LOG(INFO, "Update QinfoHead(after): readSeqNo(%d), readOffset(%d), writeSeqNo(%d),"
-          "writeFileSize(%d)", head.read_seqno_, head.read_offset_, head.write_seqno_, head.write_filesize_);
+        TBSYS_LOG(INFO, "Update QinfoHead(after): readSeqNo: %d, readOffset: %d, writeSeqNo: %d,"
+          "writeFileSize: %d", head.read_seqno_, head.read_offset_, head.write_seqno_, head.write_filesize_);
       }
 
     private:

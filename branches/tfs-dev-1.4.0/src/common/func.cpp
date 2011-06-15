@@ -432,7 +432,7 @@ namespace tfs
     {
       if (len <= 0 || len > TFS_MALLOC_MAX_SIZE)
       {
-        TBSYS_LOG(ERROR, "allocate to large memory: len(%u) > maxlen(%u)", len, TFS_MALLOC_MAX_SIZE);
+        TBSYS_LOG(ERROR, "allocate to large memory: len: %u > maxlen: %u", len, TFS_MALLOC_MAX_SIZE);
         return NULL;
       }
       if (data == NULL)
