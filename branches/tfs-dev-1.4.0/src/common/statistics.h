@@ -578,6 +578,7 @@ namespace tfs
             timer_->cancel(iter->second);
           }
           maps_.clear();
+          timer_ = 0;
         }
         return TFS_SUCCESS;
       }

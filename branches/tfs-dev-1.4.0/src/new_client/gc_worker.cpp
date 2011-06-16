@@ -58,6 +58,7 @@ int GcManager::wait_for_shut_down()
   if (0 != timer_ && 0 != gc_worker_)
   {
     timer_->cancel(gc_worker_);
+    timer_ = 0;
   }
   return TFS_SUCCESS;
 }
