@@ -147,7 +147,6 @@ public class Function_ns_plan_test extends NameServerPlanTestCase {
 		return ;
 	}
 
-	//TODO:check balance_max_diff_block_num modification work?
 	public void Function_03_move_block(){
 		
 		boolean bRet = false;
@@ -159,7 +158,7 @@ public class Function_ns_plan_test extends NameServerPlanTestCase {
 		Assert.assertTrue(bRet);
 		
 		/* Set seed size */
-		bRet = setSeedSize(1);
+		bRet = setSeedSize(100);
 		Assert.assertTrue(bRet);
 		
 		/* Write file */
@@ -170,17 +169,17 @@ public class Function_ns_plan_test extends NameServerPlanTestCase {
 		bRet = checkRateRun(SUCCESSRATE, WRITEONLY|READ|UNLINK);
 		Assert.assertTrue(bRet);
 		
-		/* Stop write cmd */
-		bRet = writeCmdStop();
-		Assert.assertTrue(bRet);	
-		
 		/* Modify balance_max_diff_block_num */
 		bRet = setBalanceMaxDiffBlockNum(1);
 		Assert.assertTrue(bRet);
 		
-		/* Wait 10s for move */
-		sleep (10);
+		/* Wait 10s for write */
+		sleep (120);
 
+		/* Stop write cmd */
+		bRet = writeCmdStop();
+		Assert.assertTrue(bRet);
+		
 		/* Check dump plan log */
 		bRet = checkPlan(PlanType.PLAN_TYPE_MOVE, BLOCK_CHK_TIME);
 		Assert.assertTrue(bRet);
@@ -272,20 +271,30 @@ public class Function_ns_plan_test extends NameServerPlanTestCase {
 		/* Stop write cmd */
 		bRet = writeCmdStop();
 		Assert.assertTrue(bRet);
+
+		/* Make sure now all blocks have 2 copies */
+		bRet = chkBlockCnt(BLOCK_CHK_TIME, 0);
+		Assert.assertTrue(bRet);
+		bRet = chkBlockCnt(BLOCK_CHK_TIME, 1);
+		Assert.assertTrue(bRet);
 		
 		/* Kill the 1st ds */
 		bRet = killOneDs();
 		Assert.assertTrue(bRet);
 		
-		/* Wait for completion of replication*/
-		sleep(10);
+		/* Wait for completion of replication */
+		bRet = chkBlockCnt(BLOCK_CHK_TIME, 0);
+		Assert.assertTrue(bRet);
+		bRet = chkBlockCnt(BLOCK_CHK_TIME, 1);
+		Assert.assertTrue(bRet);
 		
 		/* Start the killed ds */
 		bRet = startOneDs();
 		Assert.assertTrue(bRet);
 		
-		/* Wait for completion of deletion*/
-		sleep(10);		
+		/* Wait for completion of deletion */
+		bRet = chkBlockCnt(BLOCK_CHK_TIME, 3);
+		Assert.assertTrue(bRet);
 		
 		/* Check dump plan log */
 		bRet = checkPlan(PlanType.PLAN_TYPE_DELETE, BLOCK_CHK_TIME);
@@ -295,7 +304,7 @@ public class Function_ns_plan_test extends NameServerPlanTestCase {
 		return ;
 	}
 	
-	/* Make sure minReplication and maxReplication are both configured as 1 */
+	/* Call setNsConf @setUp to make sure min/maxReplication are both configured as 1  */
 	public void Function_06_emerg_rep_vs_rep_block(){
 		
 		boolean bRet = false;
@@ -333,13 +342,17 @@ public class Function_ns_plan_test extends NameServerPlanTestCase {
 		/* Modify MinReplication */
 		bRet = setMinReplication(2);
 		Assert.assertTrue(bRet);
-		
-		/* Wait for replication*/
-		sleep(10);	
+
+		/* Check REPLICATE plan */
+		bRet = checkPlan(PlanType.PLAN_TYPE_REPLICATE, BLOCK_CHK_TIME);
+		Assert.assertTrue(bRet);
 		
 		/* Kill the 1st ds to clear the plan list */
 		bRet = killOneDs();
 		Assert.assertTrue(bRet);
+		
+		/* Wait */
+		sleep(10);	
 		
 		/* Rotate ns log */
 		bRet = rotateLog();
@@ -364,7 +377,7 @@ public class Function_ns_plan_test extends NameServerPlanTestCase {
 		Assert.assertTrue(bRet);
 		
 		/* Set seed size */
-		bRet = setSeedSize(1);
+		bRet = setSeedSize(100);
 		Assert.assertTrue(bRet);
 		
 		/* Set unlink ratio */
@@ -387,12 +400,16 @@ public class Function_ns_plan_test extends NameServerPlanTestCase {
 		bRet = setBalanceMaxDiffBlockNum(1);
 		Assert.assertTrue(bRet);
 		
-		/* Wait for replication*/
-		sleep(10);	
+		/* Check MOVE plan */
+		bRet = checkPlan(PlanType.PLAN_TYPE_MOVE, BLOCK_CHK_TIME);
+		Assert.assertTrue(bRet);
 		
 		/* Kill the 1st ds to clear the plan list */
 		bRet = killOneDs();
 		Assert.assertTrue(bRet);
+
+		/* Wait */
+		sleep(10);	
 		
 		/* Rotate ns log */
 		bRet = rotateLog();
@@ -440,16 +457,20 @@ public class Function_ns_plan_test extends NameServerPlanTestCase {
 		bRet = compactBlock();
 		Assert.assertTrue(bRet);
 		
-		/* Wait for replication*/
-		sleep(10);	
+		/* Check COMPACT plan */
+		bRet = checkPlan(PlanType.PLAN_TYPE_COMPACT, BLOCK_CHK_TIME);
+		Assert.assertTrue(bRet);
 		
 		/* Kill the 1st ds to clear the plan list and trigger emerg_rep*/
 		bRet = killOneDs();
 		Assert.assertTrue(bRet);
 		
+		/* Wait */
+		sleep(10);	
+		
 		/* Rotate ns log */
 		bRet = rotateLog();
-		Assert.assertTrue(bRet);	
+		Assert.assertTrue(bRet);
 		
 		/* Check previous plan's priority */
 		bRet = checkPreviousPlanIsEmergency(PLAN_CHK_NUM, BLOCK_CHK_TIME);
@@ -489,23 +510,36 @@ public class Function_ns_plan_test extends NameServerPlanTestCase {
 		bRet = writeCmdStop();
 		Assert.assertTrue(bRet);
 		
+		/* Make sure now all blocks have 2 copies */
+		bRet = chkBlockCnt(BLOCK_CHK_TIME, 0);
+		Assert.assertTrue(bRet);
+		bRet = chkBlockCnt(BLOCK_CHK_TIME, 1);
+		Assert.assertTrue(bRet);
+		
 		/* Kill the 1st ds */
 		bRet = killOneDs();
 		Assert.assertTrue(bRet);
 		
-		/* Wait for completion of replication*/
-		sleep(10);
+		/* Wait for completion of replication */
+		bRet = chkBlockCnt(BLOCK_CHK_TIME, 0);
+		Assert.assertTrue(bRet);
+		bRet = chkBlockCnt(BLOCK_CHK_TIME, 1);
+		Assert.assertTrue(bRet);
 		
 		/* Start the killed ds */
 		bRet = startOneDs();
 		Assert.assertTrue(bRet);
 		
-		/* Wait for completion of deletion*/
-		sleep(10);		
+		/* Check DELETE plan */
+		bRet = checkPlan(PlanType.PLAN_TYPE_DELETE, BLOCK_CHK_TIME);
+		Assert.assertTrue(bRet);
 		
 		/* Kill the 2nd ds to clear the plan list and trigger emerg_rep*/
 		bRet = killSecondDs();
 		Assert.assertTrue(bRet);
+		
+		/* Wait */
+		sleep(10);	
 		
 		/* Rotate ns log */
 		bRet = rotateLog();
@@ -552,10 +586,16 @@ public class Function_ns_plan_test extends NameServerPlanTestCase {
 		/* Kill the 1st ds */
 		bRet = killOneDs();
 		Assert.assertTrue(bRet);
+
+		/* Wait */
+		sleep(10);	
 		
 		/* Rotate ns log */
 		bRet = rotateLog();
 		Assert.assertTrue(bRet);
+
+		/* Wait */
+		sleep(10);	
 		
 		/* Check interrupt */
 		bRet = checkInterrupt(1);
@@ -598,6 +638,9 @@ public class Function_ns_plan_test extends NameServerPlanTestCase {
 		/* Kill the 1st ds */
 		bRet = killOneDs();
 		Assert.assertTrue(bRet);
+
+		/* Wait */
+		sleep(10);	
 		
 		/* Rotate ns log */
 		bRet = rotateLog();
@@ -606,6 +649,9 @@ public class Function_ns_plan_test extends NameServerPlanTestCase {
 		/* Start the 1st ds */
 		bRet = startOneDs();
 		Assert.assertTrue(bRet);
+
+		/* Wait */
+		sleep(10);	
 		
 		/* Check interrupt */
 		bRet = checkInterrupt(1);
@@ -652,10 +698,16 @@ public class Function_ns_plan_test extends NameServerPlanTestCase {
 		/* Kill the 1st ds */
 		bRet = killOneDs();
 		Assert.assertTrue(bRet);
+
+		/* Wait */
+		sleep(10);	
 		
 		/* Start the 1st ds */
 		bRet = startOneDs();
 		Assert.assertTrue(bRet);
+	
+		/* Wait */
+		sleep(10);	
 		
 		/* Check interrupt */
 		bRet = checkInterrupt(2);

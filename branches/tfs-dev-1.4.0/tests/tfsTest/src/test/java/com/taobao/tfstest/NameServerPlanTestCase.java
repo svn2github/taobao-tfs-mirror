@@ -1282,7 +1282,7 @@ public class NameServerPlanTestCase {
 			return bRet;
 		
 		/* Get the previous planNum plans' priority */
-		String strCmd = "grep -m "+ planNum + "\\\"" + PLANSEQNO + "\\\" " + 
+		String strCmd = "grep -m "+ planNum + " \\\"" + PLANSEQNO + "\\\" " + 
 			NS_LOG_NAME + " | sed \\\"s/].*plan seqno/]plan seqno/\\\" | awk '{print $" +
 			PRIORITY_DP_COL + "}'";
 
@@ -1381,7 +1381,7 @@ public class NameServerPlanTestCase {
 	{
 		boolean bRet = false;
 		
-		String strCmd = "grep \"receive interrupt(1)$\" | wc -l" + NS_LOG_NAME; 
+		String strCmd = "grep \"receive interrupt: 1, pending plan list size:\" | wc -l" + NS_LOG_NAME; 
 		ArrayList<String> output = new ArrayList<String>();
 		bRet = Proc.proStartBase(NSVIP, strCmd, output);
 		if (bRet == false) return bRet;
