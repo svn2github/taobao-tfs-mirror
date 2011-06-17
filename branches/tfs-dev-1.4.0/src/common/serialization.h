@@ -127,7 +127,7 @@ namespace tfs
         return iret;
       }
 
-      static int get_string(const char* data, const int64_t data_len, int64_t& pos, char* str, const int64_t str_buf_length)
+      static int get_string(const char* data, const int64_t data_len, int64_t& pos, char* str, int64_t& str_buf_length)
       {
         int32_t iret = NULL != data &&  data_len - pos >= INT_SIZE  &&  pos >= 0 ? TFS_SUCCESS : TFS_ERROR;
         if (TFS_SUCCESS == iret)
@@ -152,6 +152,7 @@ namespace tfs
                   {
                     memcpy(str, (data+pos), length);
                     pos += length;
+                    str_buf_length = length;
                   }
                 }
               }

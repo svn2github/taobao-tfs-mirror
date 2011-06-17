@@ -224,7 +224,7 @@ namespace tfs
       return iret;
     }
 
-    int Stream::get_string(char* str, const int64_t length)
+    int Stream::get_string(char* str, int64_t& length)
     {
       int64_t pos = 0;
       int32_t iret = Serialization::get_string(buffer_.get_data(), buffer_.get_data_length(), pos, str, length);

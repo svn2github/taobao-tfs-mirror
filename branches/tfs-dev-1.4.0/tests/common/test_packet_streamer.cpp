@@ -21,7 +21,6 @@
 #include "common/base_packet.h"
 #include "common/base_packet_factory.h"
 #include "common/base_packet_streamer.h"
-#include "message/message.h"
 #include "message/replicate_block_message.h"
 #include "new_replicate_block_msg.h"
 

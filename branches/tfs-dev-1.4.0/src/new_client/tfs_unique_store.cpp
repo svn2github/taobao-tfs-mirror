@@ -137,7 +137,6 @@ namespace tfs
         }
         else
         {
-          bool name_match = false;
           UniqueKey unique_key;
           UniqueValue unique_value;
 
@@ -172,7 +171,7 @@ namespace tfs
             {
               // check uniquestore filename and tfs filename.
               // if not match, not modify unique store meta info and file.
-              if (!(name_match = check_tfsname_match(unique_value.file_name_, tfs_name, suffix)))
+              if (!(check_tfsname_match(unique_value.file_name_, tfs_name, suffix)))
               {
                 TBSYS_LOG(WARN, "unlink filename mismatch unique store filename: %s%s <> %s",
                           tfs_name, NULL == suffix ? "" : suffix, unique_value.file_name_);
@@ -180,8 +179,13 @@ namespace tfs
               else                // unlink success and name match, then decrease
               {
                 TBSYS_LOG(DEBUG, "unique refcount: %d, decrease count: %d", unique_value.ref_count_, count);
-                if ((ref_count = unique_handler_->decrease(unique_key, unique_value, count)) < 0)
+                int32_t num = 0;
+                if ((num = unique_handler_->decrease(unique_key, unique_value, count)) < 0)
                 {
+                  if (ref_count == 0)
+                    file_size = buf_len;
+                  else
+                    file_size = 0;
                   // if count >= unqiue_value.ref_count_, will delete this key
                   TBSYS_LOG(ERROR, "decrease count fail. count: %d", count);
                 }
@@ -192,7 +196,6 @@ namespace tfs
           tbsys::gDelete(buf);
         }
       }
-
       return ref_count;
     }
 

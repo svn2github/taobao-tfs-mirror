@@ -195,7 +195,7 @@ int64_t TfsLargeFile::get_file_length()
   return local_key_.get_file_size();
 }
 
-int TfsLargeFile::unlink(const char* file_name, const char* suffix, const TfsUnlinkType action)
+int TfsLargeFile::unlink(const char* file_name, const char* suffix, int64_t& file_size, const TfsUnlinkType action)
 {
   int ret = TFS_SUCCESS;
 
@@ -230,6 +230,7 @@ int TfsLargeFile::unlink(const char* file_name, const char* suffix, const TfsUnl
     }
     else if (DELETE == action) // DELETE over all segment
     {
+      file_size = meta_seg_->seg_info_.size_ + local_key_.get_file_size();
       SEG_SET& seg_list = local_key_.get_seg_info();
       SEG_SET_CONST_ITER sit = seg_list.begin();
       for ( ; sit != seg_list.end(); ++sit)

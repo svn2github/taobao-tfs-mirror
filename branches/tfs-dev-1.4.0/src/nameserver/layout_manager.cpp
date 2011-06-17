@@ -406,7 +406,7 @@ namespace tfs
             && (hold_size >= SYSPARAM_NAMESERVER.min_replication_))
         {
           snprintf(msg, 512, "already got block: %u,  replicate: %d", block_id, hold_size);
-          iret = EXIT_BLOCK_NOT_FOUND;
+          iret = EXIT_BLOCK_NOT_FOUND;//
         }
       }
   
@@ -436,6 +436,7 @@ namespace tfs
           snprintf(msg, 512, "repair block: %u no any other dataserver: %d hold a correct replica", block_id, hold_size);
         }
       }
+
       if (TFS_SUCCESS == iret)
       {
         GFactory::get_lease_factory().cancel(block_id);

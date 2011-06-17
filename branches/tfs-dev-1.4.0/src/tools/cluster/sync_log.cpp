@@ -403,6 +403,7 @@ int do_action(const string& source_tfs_client, const string& dest_tfs_client, co
 }
 int do_action_ex(const string& source_tfs_client, const string& dest_tfs_client, const string& file_name, int32_t action)
 {
+  int64_t file_size = 0;
   int ret = TFS_SUCCESS;
   switch (action)
   {
@@ -410,27 +411,27 @@ int do_action_ex(const string& source_tfs_client, const string& dest_tfs_client,
       ret = copy_file(source_tfs_client, dest_tfs_client, file_name);
       break;
     case HIDE_SOURCE:
-      ret = TfsClient::Instance()->unlink(file_name.c_str(), NULL, source_tfs_client.c_str(), CONCEAL);
+      ret = TfsClient::Instance()->unlink(file_name.c_str(), NULL, source_tfs_client.c_str(), file_size, CONCEAL);
       usleep(20000);
       break;
     case HIDE_DEST:
-      ret = TfsClient::Instance()->unlink(file_name.c_str(), NULL, dest_tfs_client.c_str(), CONCEAL);
+      ret = TfsClient::Instance()->unlink(file_name.c_str(), NULL, dest_tfs_client.c_str(), file_size, CONCEAL);
       usleep(20000);
       break;
     case UNHIDE_SOURCE:
-      ret = TfsClient::Instance()->unlink(file_name.c_str(), NULL, source_tfs_client.c_str(), REVEAL);
+      ret = TfsClient::Instance()->unlink(file_name.c_str(), NULL, source_tfs_client.c_str(), file_size, REVEAL);
       usleep(20000);
       break;
     case UNHIDE_DEST:
-      ret = TfsClient::Instance()->unlink(file_name.c_str(), NULL, dest_tfs_client.c_str(), REVEAL);
+      ret = TfsClient::Instance()->unlink(file_name.c_str(), NULL, dest_tfs_client.c_str(), file_size, REVEAL);
       usleep(20000);
       break;
     case UNDELE_DEST:
-      ret = TfsClient::Instance()->unlink(file_name.c_str(), NULL, dest_tfs_client.c_str(), UNDELETE);
+      ret = TfsClient::Instance()->unlink(file_name.c_str(), NULL, dest_tfs_client.c_str(), file_size, UNDELETE);
       usleep(20000);
       break;
     case DELETE_DEST:
-      ret = TfsClient::Instance()->unlink(file_name.c_str(), NULL, dest_tfs_client.c_str(), DELETE);
+      ret = TfsClient::Instance()->unlink(file_name.c_str(), NULL, dest_tfs_client.c_str(), file_size, DELETE);
       usleep(20000);
       break;
     default:

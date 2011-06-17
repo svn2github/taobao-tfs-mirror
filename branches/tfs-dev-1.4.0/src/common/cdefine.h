@@ -117,8 +117,15 @@ extern "C"
   typedef enum
   {
     TFS_FILE_DEFAULT_OPTION = 0,
-    TFS_FILE_NO_SYNC_LOG = 1
+    TFS_FILE_NO_SYNC_LOG = 1,
+    TFS_FILE_CLOSE_FLAG_WRITE_DATA_FAILED = 2
   } OptionFlag;
+
+  typedef enum
+  {
+    READ_DATA_OPTION_FLAG_NORMAL = 0,
+    READ_DATA_OPTION_FLAG_FORCE = 1 
+  } ReadDataOptionFlag;
 
 #if __cplusplus
 }

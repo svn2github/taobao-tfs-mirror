@@ -63,11 +63,11 @@ namespace tfs
 
       int set_option_flag(const int fd, const common::OptionFlag option_flag);
 
-      int unlink(const char* file_name, const char* suffix = NULL,
+      int unlink(const char* file_name, const char* suffix , int64_t& file_size,
                  const common::TfsUnlinkType action = common::DELETE,
                  const common::OptionFlag option_flag = common::TFS_FILE_DEFAULT_OPTION);
 
-      int unlink(const char* file_name, const char* suffix, const char* ns_addr,
+      int unlink(const char* file_name, const char* suffix, const char* ns_addr, int64_t& file_size,
                  const common::TfsUnlinkType action = common::DELETE,
                  const common::OptionFlag option_flag = common::TFS_FILE_DEFAULT_OPTION);
 

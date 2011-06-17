@@ -127,7 +127,7 @@ int64_t TfsSmallFile::get_file_length()
   return ret_len;
 }
 
-int TfsSmallFile::unlink(const char* file_name, const char* suffix, const TfsUnlinkType action)
+int TfsSmallFile::unlink(const char* file_name, const char* suffix, int64_t& file_size, const TfsUnlinkType action)
 {
   int ret = open_ex(file_name, suffix, T_UNLINK);
   if (TFS_SUCCESS != ret)
@@ -138,6 +138,10 @@ int TfsSmallFile::unlink(const char* file_name, const char* suffix, const TfsUnl
   {
     meta_seg_->file_number_ = action;
     ret = unlink_process();
+    if (TFS_SUCCESS == ret)
+    {
+      file_size = meta_seg_->seg_info_.size_;
+    }
   }
   return ret;
 }

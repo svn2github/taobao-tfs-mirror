@@ -198,7 +198,7 @@ namespace tfs
         while (1)
         {
           rlen = MAX_READ_SIZE;
-          ret = logic_block->read_file(file_id, data, rlen, offset);
+          ret = logic_block->read_file(file_id, data, rlen, offset, READ_DATA_OPTION_FLAG_NORMAL);
 
           if (ret != TFS_SUCCESS)
           {
@@ -634,7 +634,7 @@ namespace tfs
         while (1)
         {
           rlen = MAX_READ_SIZE;
-          ret = logic_block->read_file(file_id, data, rlen, offset);
+          ret = logic_block->read_file(file_id, data, rlen, offset, READ_DATA_OPTION_FLAG_NORMAL);
           if (ret != TFS_SUCCESS)
           {
             TBSYS_LOG(ERROR, "read file fail. blockid: %u, fileid: %"PRI64_PREFIX"u, offset: %d, ret: %d",
@@ -721,7 +721,8 @@ namespace tfs
     {
       FSName fsname(block_id, file_id);
 
-      int ret = tfs_client_->unlink(fsname.get_name(), NULL, dest_addr_, action, TFS_FILE_NO_SYNC_LOG);
+      int64_t file_size = 0;
+      int ret = tfs_client_->unlink(fsname.get_name(), NULL, dest_addr_, file_size, action, TFS_FILE_NO_SYNC_LOG);
       if (TFS_SUCCESS != ret)
       {
         TBSYS_LOG(ERROR, "tfs mirror remove file fail. blockid: %d, fileid: %"PRI64_PREFIX"u, action: %d, ret: %d",

@@ -94,16 +94,16 @@ int TfsClient::set_option_flag(const int fd, const OptionFlag option_flag)
   return TfsClientImpl::Instance()->set_option_flag(fd, option_flag);
 }
 
-int TfsClient:: unlink(const char* file_name, const char* suffix,
+int TfsClient:: unlink(const char* file_name, const char* suffix, int64_t& file_size,
                        const TfsUnlinkType action, const OptionFlag option_flag)
 {
-  return TfsClientImpl::Instance()->unlink(file_name, suffix, action, option_flag);
+  return TfsClientImpl::Instance()->unlink(file_name, suffix, file_size, action, option_flag);
 }
 
-int TfsClient::unlink(const char* file_name, const char* suffix, const char* ns_addr,
+int TfsClient::unlink(const char* file_name, const char* suffix, const char* ns_addr, int64_t& file_size,
                       const TfsUnlinkType action, const OptionFlag option_flag)
 {
-  return TfsClientImpl::Instance()->unlink(file_name, suffix, ns_addr, action, option_flag);
+  return TfsClientImpl::Instance()->unlink(file_name, suffix, ns_addr, file_size, action, option_flag);
 }
 
 #ifdef _WITH_UNIQUE_STORE

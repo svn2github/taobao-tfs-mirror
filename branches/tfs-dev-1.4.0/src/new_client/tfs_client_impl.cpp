@@ -315,13 +315,13 @@ int TfsClientImpl::set_option_flag(const int fd, const common::OptionFlag option
   return ret;
 }
 
-int TfsClientImpl::unlink(const char* file_name, const char* suffix,
+int TfsClientImpl::unlink(const char* file_name, const char* suffix, int64_t& file_size,
                           const TfsUnlinkType action, const OptionFlag option_flag)
 {
-  return unlink(file_name, suffix, NULL, action, option_flag);
+  return unlink(file_name, suffix, NULL, file_size, action, option_flag);
 }
 
-int TfsClientImpl::unlink(const char* file_name, const char* suffix, const char* ns_addr,
+int TfsClientImpl::unlink(const char* file_name, const char* suffix, const char* ns_addr, int64_t& file_size,
                           const TfsUnlinkType action, const OptionFlag option_flag)
 {
   int ret = TFS_ERROR;
@@ -344,14 +344,14 @@ int TfsClientImpl::unlink(const char* file_name, const char* suffix, const char*
       tfs_file = new TfsSmallFile();
       tfs_file->set_session(tfs_session);
       tfs_file->set_option_flag(option_flag);
-      ret = tfs_file->unlink(file_name, suffix, action);
+      ret = tfs_file->unlink(file_name, suffix, file_size, action);
     }
     else if (file_type == LARGE_TFS_FILE_TYPE)
     {
       tfs_file = new TfsLargeFile();
       tfs_file->set_session(tfs_session);
       tfs_file->set_option_flag(option_flag);
-      ret = tfs_file->unlink(file_name, suffix, action);
+      ret = tfs_file->unlink(file_name, suffix, file_size, action);
     }
     else
     {

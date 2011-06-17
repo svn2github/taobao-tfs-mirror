@@ -383,23 +383,35 @@ int TfsFile::fstat_ex(FileInfo* file_info, const TfsStatType mode)
 
 int TfsFile::close_ex()
 {
-  int ret = TFS_SUCCESS;
-  if (file_status_ == TFS_FILE_OPEN_NO)
+  int ret = file_status_ == TFS_FILE_OPEN_NO ? EXIT_NOT_OPEN_ERROR : TFS_SUCCESS;
+  if (TFS_SUCCESS != ret)//file not open
   {
     TBSYS_LOG(INFO, "close tfs file, buf file status is not open");
   }
-  else if (file_status_ == TFS_FILE_WRITE_ERROR)
+  else
   {
-    ret = EXIT_NOT_PERM_OPER;
-    TBSYS_LOG(INFO, "occur tfs file write error, close. file status: %d", file_status_);
-  }
-  else if (!((flags_ & T_WRITE) && (0 != offset_)))
-  {
-    TBSYS_LOG(INFO, "close tfs file successful");
-  }
-  else if ((ret = close_process()) != TFS_SUCCESS) // write mode
-  {
-    TBSYS_LOG(ERROR, "close tfs file fail, ret: %d", ret);
+    if (!(flags_ & T_WRITE))
+    {
+      TBSYS_LOG(INFO, "close tfs file successful");
+    }
+    else// write mode
+    {
+      if ((TFS_FILE_WRITE_ERROR != file_status_)
+        && (offset_ <= 0))
+      {
+        option_flag_ |= TFS_FILE_CLOSE_FLAG_WRITE_DATA_FAILED; 
+      }
+      ret = close_process();
+      if (TFS_SUCCESS != ret)
+      {
+        TBSYS_LOG(ERROR, "close tfs file fail, ret: %d", ret);
+      }
+      if (file_status_ == TFS_FILE_WRITE_ERROR)
+      {
+        ret = EXIT_NOT_PERM_OPER;
+        TBSYS_LOG(WARN, "occur tfs file write error, close. file status: %d", file_status_);
+      }
+    }
   }
 
   if (TFS_SUCCESS == ret && 0 != offset_)
@@ -1468,6 +1480,21 @@ int TfsFile::async_rsp_unlink_file(common::BasePacket* rsp, const uint16_t index
         }
         TBSYS_LOG(WARN, "block_id: %u, file_id: %"PRI64_PREFIX"u, error: %s, status: %d",
                   seg_data->seg_info_.block_id_, seg_data->seg_info_.file_id_, msg->get_error(), msg->get_status());
+      }
+      else
+      {
+        const char* data = msg->get_error();
+        if (NULL != data)
+        {
+          int64_t file_size = 0;
+          int64_t pos = 0;
+          ret = Serialization::get_int64(data, msg->get_error_msg_length(), pos, &file_size);
+          if ((TFS_SUCCESS == ret)
+              && (NULL != seg_data))
+          {
+            seg_data->seg_info_.size_ = file_size;
+          }
+        }
       }
     }
     else // unknow msg type

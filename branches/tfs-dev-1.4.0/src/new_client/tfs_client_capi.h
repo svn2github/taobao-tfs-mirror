@@ -87,7 +87,7 @@ extern "C"
    *
    * @return unlink tfs file success or fail
    */
-  int t_unlink(const char* file_name, const char* suffix, const TfsUnlinkType action);
+  int t_unlink(const char* file_name, const char* suffix, int64_t& file_size, const TfsUnlinkType action);
 
   int t_set_option_flag(const int fd, const OptionFlag option_flag);
 

@@ -89,7 +89,7 @@ namespace tfs
       virtual int fstat(common::TfsFileStat* file_info, const common::TfsStatType mode = common::NORMAL_STAT) = 0;
       virtual int close() = 0;
       virtual int64_t get_file_length() = 0;
-      virtual int unlink(const char* file_name, const char* suffix, const common::TfsUnlinkType action) = 0;
+      virtual int unlink(const char* file_name, const char* suffix, int64_t& file_size, const common::TfsUnlinkType action) = 0;
 
       const char* get_file_name();
       void set_session(TfsSession* tfs_session);

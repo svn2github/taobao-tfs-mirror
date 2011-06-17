@@ -29,3 +29,4 @@ case "x$1" in
 	;;
 esac
 
+CXXFLAGS="-g -pg -D__STDC_LIMIT_MACROS -Wall -Werror -Wextra -Wunused-parameter -Wformat -Wconversion -Wdeprecated"
