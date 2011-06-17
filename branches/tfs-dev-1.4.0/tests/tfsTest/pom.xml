@@ -23,7 +23,7 @@
 				<version>2.7</version>
 				<configuration>
 					<includes>
-						<include>**/Function_test.java</include>
+						<include>**/Function_ns_test.java</include>
 					</includes>
 				</configuration>
 			</plugin>

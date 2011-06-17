@@ -16,7 +16,7 @@ import com.taobao.gaia.KillTypeEnum;
  */
 public class Function_ns_test extends FailOverBaseCase {
 	
-	@Test
+	//@Test
 	public void Function_01_happy_path(){
 		
 		boolean bRet = false;
@@ -31,12 +31,16 @@ public class Function_ns_test extends FailOverBaseCase {
 		bRet = setSeedSize(1);
 		Assert.assertTrue(bRet);
 		
+		/* Check block copys */
+		//bRet = chkBlockCntBothNormal(2);
+		//Assert.assertTrue(bRet);
+		
 		/* Write file */
 		bRet = writeCmd();
 		Assert.assertTrue(bRet);
 		
 		/* sleep */
-		sleep(30);
+		sleep(120);
 		
 		/* Stop write process */
 		bRet = writeCmdStop();
@@ -70,22 +74,18 @@ public class Function_ns_test extends FailOverBaseCase {
 		bRet = checkRateEnd(SUCCESSRATE, UNLINK);
 		Assert.assertTrue(bRet);
 		
-		/* Read file */
-		bRet = readCmd();
-		Assert.assertTrue(bRet);
+		/* Check block copys */
+		//bRet = chkBlockCntBothNormal(2);
+		//Assert.assertTrue(bRet);
 		
-		/* Monitor the read process */
-		bRet = readCmdMon();
-		Assert.assertTrue(bRet);
-		
-		/* Check rate */
-		bRet = checkRateEnd(FAILRATE, READ );
+		bRet = chkFinalRetFail();
 		Assert.assertTrue(bRet);
 		
 		log.info(caseName + "===> end");
 		return ;
 	}
 	
+	@Test
 	public void Function_02_one_ds_out_copy_block(){
 		
 		boolean bRet = false;
@@ -108,21 +108,23 @@ public class Function_ns_test extends FailOverBaseCase {
 		bRet = checkRateRun(SUCCESSRATE, WRITEONLY|READ|UNLINK);
 		Assert.assertTrue(bRet);
 		
+		/* Check block copys */
+		bRet = chkBlockCntBothNormal(2);
+		Assert.assertTrue(bRet);
+		
 		/* Kill one ds */
 		bRet = killOneDs();
 		Assert.assertTrue(bRet);
 		
-		/* Wait 10s for recover */
-		sleep (10);
+		/* Wait 20s for recover */
+		sleep (20);
 		
 		/* Check the rate of write process */
 		bRet = checkRateRun(SUCCESSRATE, WRITEONLY|READ|UNLINK);
 		Assert.assertTrue(bRet);
 		
 		/* Check block copys */
-		bRet = chkBlockCnt(BLOCKCHKTIME, 0);
-		Assert.assertTrue(bRet);
-		bRet = chkBlockCnt(BLOCKCHKTIME, 1);
+		bRet = chkBlockCntBothNormal(2);
 		Assert.assertTrue(bRet);
 		
 		/* Check the rate of write process */
@@ -134,15 +136,7 @@ public class Function_ns_test extends FailOverBaseCase {
 		Assert.assertTrue(bRet);
 		
 		/* Read file */
-		bRet = readCmd();
-		Assert.assertTrue(bRet);
-		
-		/* Monitor the read process */
-		bRet = readCmdMon();
-		Assert.assertTrue(bRet);
-		
-		/* Check rate */
-		bRet = checkRateEnd(SUCCESSRATE, READ);
+		bRet = chkFinalRetSuc();
 		Assert.assertTrue(bRet);
 		
 		log.info(caseName + "===> end");
@@ -175,17 +169,15 @@ public class Function_ns_test extends FailOverBaseCase {
 		bRet = killAllDsOneSide();
 		Assert.assertTrue(bRet);
 		
-		/* Wait 10s for recover */
-		sleep (10);
+		/* Wait 20s for recover */
+		sleep (20);
 		
 		/* Check the rate of write process */
 		bRet = checkRateRun(FAILRATE, WRITEONLY);
 		Assert.assertTrue(bRet);
 		
 		/* Check block copys */
-		bRet = chkBlockCnt(BLOCKCHKTIME, 0);
-		Assert.assertTrue(bRet);
-		bRet = chkBlockCnt(BLOCKCHKTIME, 2);
+		bRet = chkBlockCntBothNormal(1);
 		Assert.assertTrue(bRet);
 		
 		/* Start */
@@ -193,11 +185,7 @@ public class Function_ns_test extends FailOverBaseCase {
 		Assert.assertTrue(bRet);
 		
 		/* Check block copys */
-		bRet = chkBlockCnt(BLOCKCHKTIME, 0);
-		Assert.assertTrue(bRet);
-		bRet = chkBlockCnt(BLOCKCHKTIME, 1);
-		Assert.assertTrue(bRet);
-		bRet = chkBlockCnt(BLOCKCHKTIME, 3);
+		bRet = chkBlockCntBothNormal(2);
 		Assert.assertTrue(bRet);
 		
 		/* Check the rate of write process */
@@ -209,15 +197,7 @@ public class Function_ns_test extends FailOverBaseCase {
 		Assert.assertTrue(bRet);
 		
 		/* Read file */
-		bRet = readCmd();
-		Assert.assertTrue(bRet);
-		
-		/* Monitor the read process */
-		bRet = readCmdMon();
-		Assert.assertTrue(bRet);
-		
-		/* Check rate */
-		bRet = checkRateEnd(SUCCESSRATE, READ);
+		bRet = chkFinalRetSuc();
 		Assert.assertTrue(bRet);
 		
 		log.info(caseName + "===> end");
@@ -250,17 +230,15 @@ public class Function_ns_test extends FailOverBaseCase {
 		bRet = killAllDs();
 		Assert.assertTrue(bRet);
 		
-		/* Wait 10s for recover */
-		sleep (10);
+		/* Wait 20s for recover */
+		sleep (20);
 		
 		/* Check the rate of write process */
 		bRet = checkRateRun(FAILRATE, WRITEONLY);
 		Assert.assertTrue(bRet);
 		
 		/* Check block copys */
-		bRet = chkBlockCnt(BLOCKCHKTIME, 1);
-		Assert.assertTrue(bRet);
-		bRet = chkBlockCnt(BLOCKCHKTIME, 2);
+		bRet = chkBlockCntBothNormal(0);
 		Assert.assertTrue(bRet);
 		
 		/* Start */
@@ -268,11 +246,7 @@ public class Function_ns_test extends FailOverBaseCase {
 		Assert.assertTrue(bRet);
 		
 		/* Check block copys */
-		bRet = chkBlockCnt(BLOCKCHKTIME, 0);
-		Assert.assertTrue(bRet);
-		bRet = chkBlockCnt(BLOCKCHKTIME, 1);
-		Assert.assertTrue(bRet);
-		bRet = chkBlockCnt(BLOCKCHKTIME, 3);
+		bRet = chkBlockCntBothNormal(2);
 		Assert.assertTrue(bRet);
 		
 		/* Check the rate of write process */
@@ -284,15 +258,7 @@ public class Function_ns_test extends FailOverBaseCase {
 		Assert.assertTrue(bRet);
 		
 		/* Read file */
-		bRet = readCmd();
-		Assert.assertTrue(bRet);
-		
-		/* Monitor the read process */
-		bRet = readCmdMon();
-		Assert.assertTrue(bRet);
-		
-		/* Check rate */
-		bRet = checkRateEnd(SUCCESSRATE, READ);
+		bRet = chkFinalRetSuc();
 		Assert.assertTrue(bRet);
 		
 		log.info(caseName + "===> end");
@@ -318,11 +284,7 @@ public class Function_ns_test extends FailOverBaseCase {
 		Assert.assertTrue(bRet);
 		
 		/* Check block copys */
-		bRet = chkBlockCnt(BLOCKCHKTIME, 0);
-		Assert.assertTrue(bRet);
-		bRet = chkBlockCnt(BLOCKCHKTIME, 1);
-		Assert.assertTrue(bRet);
-		bRet = chkBlockCnt(BLOCKCHKTIME, 3);
+		bRet = chkBlockCntBothNormal(2);
 		Assert.assertTrue(bRet);
 		
 		/* Write file */
@@ -346,15 +308,7 @@ public class Function_ns_test extends FailOverBaseCase {
 		Assert.assertTrue(bRet);
 		
 		/* Read file */
-		bRet = readCmd();
-		Assert.assertTrue(bRet);
-		
-		/* Monitor the read process */
-		bRet = readCmdMon();
-		Assert.assertTrue(bRet);
-		
-		/* Check rate */
-		bRet = checkRateEnd(SUCCESSRATE, READ);
+		bRet = chkFinalRetSuc();
 		Assert.assertTrue(bRet);
 		
 		log.info(caseName + "===> end");
@@ -380,9 +334,7 @@ public class Function_ns_test extends FailOverBaseCase {
 		Assert.assertTrue(bRet);
 		
 		/* Check block copys */
-		bRet = chkBlockCnt(BLOCKCHKTIME, 0);
-		Assert.assertTrue(bRet);
-		bRet = chkBlockCnt(BLOCKCHKTIME, 2);
+		bRet = chkBlockCntBothNormal(1);
 		Assert.assertTrue(bRet);
 		
 		/* Write file */
@@ -390,7 +342,7 @@ public class Function_ns_test extends FailOverBaseCase {
 		Assert.assertTrue(bRet);
 		
 		/* Check the rate of write process */
-		bRet = checkRateRun(FAILRATE, WRITEONLY|READ|UNLINK);
+		bRet = checkRateRun(FAILRATE, WRITEONLY|READ);
 		Assert.assertTrue(bRet);
 		
 		/* All ds one side in */
@@ -398,11 +350,7 @@ public class Function_ns_test extends FailOverBaseCase {
 		Assert.assertTrue(bRet);
 		
 		/* Check block copys */
-		bRet = chkBlockCnt(BLOCKCHKTIME, 0);
-		Assert.assertTrue(bRet);
-		bRet = chkBlockCnt(BLOCKCHKTIME, 1);
-		Assert.assertTrue(bRet);
-		bRet = chkBlockCnt(BLOCKCHKTIME, 2);
+		bRet = chkBlockCntBothNormal(2);
 		Assert.assertTrue(bRet);
 		
 		/* Check the rate of write process */
@@ -414,15 +362,7 @@ public class Function_ns_test extends FailOverBaseCase {
 		Assert.assertTrue(bRet);
 		
 		/* Read file */
-		bRet = readCmd();
-		Assert.assertTrue(bRet);
-		
-		/* Monitor the read process */
-		bRet = readCmdMon();
-		Assert.assertTrue(bRet);
-		
-		/* Check rate */
-		bRet = checkRateEnd(SUCCESSRATE, READ);
+		bRet = chkFinalRetSuc();
 		Assert.assertTrue(bRet);
 		
 		log.info(caseName + "===> end");
@@ -448,9 +388,7 @@ public class Function_ns_test extends FailOverBaseCase {
 		Assert.assertTrue(bRet);
 		
 		/* Check block copys */
-		bRet = chkBlockCnt(BLOCKCHKTIME, 1);
-		Assert.assertTrue(bRet);
-		bRet = chkBlockCnt(BLOCKCHKTIME, 2);
+		bRet = chkBlockCntBothNormal(0);
 		Assert.assertTrue(bRet);
 		
 		/* Write file */
@@ -458,7 +396,7 @@ public class Function_ns_test extends FailOverBaseCase {
 		Assert.assertTrue(bRet);
 		
 		/* Check the rate of write process */
-		bRet = checkRateRun(FAILRATE, WRITEONLY|READ|UNLINK);
+		bRet = checkRateRun(FAILRATE, WRITEONLY|READ);
 		Assert.assertTrue(bRet);
 		
 		/* All ds one side in */
@@ -466,11 +404,7 @@ public class Function_ns_test extends FailOverBaseCase {
 		Assert.assertTrue(bRet);
 		
 		/* Check block copys */
-		bRet = chkBlockCnt(BLOCKCHKTIME, 0);
-		Assert.assertTrue(bRet);
-		bRet = chkBlockCnt(BLOCKCHKTIME, 1);
-		Assert.assertTrue(bRet);
-		bRet = chkBlockCnt(BLOCKCHKTIME, 2);
+		bRet = chkBlockCntBothNormal(2);
 		Assert.assertTrue(bRet);
 		
 		/* Check the rate of write process */
@@ -482,15 +416,7 @@ public class Function_ns_test extends FailOverBaseCase {
 		Assert.assertTrue(bRet);
 		
 		/* Read file */
-		bRet = readCmd();
-		Assert.assertTrue(bRet);
-		
-		/* Monitor the read process */
-		bRet = readCmdMon();
-		Assert.assertTrue(bRet);
-		
-		/* Check rate */
-		bRet = checkRateEnd(SUCCESSRATE, READ);
+		bRet = chkFinalRetSuc();
 		Assert.assertTrue(bRet);
 		
 		log.info(caseName + "===> end");
@@ -516,11 +442,7 @@ public void Function_08_one_clean_ds_in(){
 		Assert.assertTrue(bRet);
 		
 		/* Check block copys */
-		bRet = chkBlockCnt(BLOCKCHKTIME, 0);
-		Assert.assertTrue(bRet);
-		bRet = chkBlockCnt(BLOCKCHKTIME, 1);
-		Assert.assertTrue(bRet);
-		bRet = chkBlockCnt(BLOCKCHKTIME, 3);
+		bRet = chkBlockCntBothNormal(2);
 		Assert.assertTrue(bRet);
 		
 		/* Write file */
@@ -547,15 +469,7 @@ public void Function_08_one_clean_ds_in(){
 		Assert.assertTrue(bRet);
 		
 		/* Read file */
-		bRet = readCmd();
-		Assert.assertTrue(bRet);
-		
-		/* Monitor the read process */
-		bRet = readCmdMon();
-		Assert.assertTrue(bRet);
-		
-		/* Check rate */
-		bRet = checkRateEnd(SUCCESSRATE, READ);
+		bRet = chkFinalRetSuc();
 		Assert.assertTrue(bRet);
 		
 		log.info(caseName + "===> end");
@@ -581,9 +495,7 @@ public void Function_08_one_clean_ds_in(){
 		Assert.assertTrue(bRet);
 		
 		/* Check block copys */
-		bRet = chkBlockCnt(BLOCKCHKTIME, 0);
-		Assert.assertTrue(bRet);
-		bRet = chkBlockCnt(BLOCKCHKTIME, 2);
+		bRet = chkBlockCntBothNormal(1);
 		Assert.assertTrue(bRet);
 		
 		/* Write file */
@@ -591,7 +503,7 @@ public void Function_08_one_clean_ds_in(){
 		Assert.assertTrue(bRet);
 		
 		/* Check the rate of write process */
-		bRet = checkRateRun(FAILRATE, WRITEONLY|READ|UNLINK);
+		bRet = checkRateRun(FAILRATE, WRITEONLY|READ);
 		Assert.assertTrue(bRet);
 		
 		/* All ds one side in */
@@ -599,11 +511,7 @@ public void Function_08_one_clean_ds_in(){
 		Assert.assertTrue(bRet);
 		
 		/* Check block copys */
-		bRet = chkBlockCnt(BLOCKCHKTIME, 0);
-		Assert.assertTrue(bRet);
-		bRet = chkBlockCnt(BLOCKCHKTIME, 1);
-		Assert.assertTrue(bRet);
-		bRet = chkBlockCnt(BLOCKCHKTIME, 2);
+		bRet = chkBlockCntBothNormal(2);
 		Assert.assertTrue(bRet);
 		
 		/* Check the rate of write process */
@@ -615,15 +523,7 @@ public void Function_08_one_clean_ds_in(){
 		Assert.assertTrue(bRet);
 		
 		/* Read file */
-		bRet = readCmd();
-		Assert.assertTrue(bRet);
-		
-		/* Monitor the read process */
-		bRet = readCmdMon();
-		Assert.assertTrue(bRet);
-		
-		/* Check rate */
-		bRet = checkRateEnd(SUCCESSRATE, READ);
+		bRet = chkFinalRetSuc();
 		Assert.assertTrue(bRet);
 		
 		log.info(caseName + "===> end");
@@ -649,9 +549,7 @@ public void Function_08_one_clean_ds_in(){
 		Assert.assertTrue(bRet);
 		
 		/* Check block copys */
-		bRet = chkBlockCnt(BLOCKCHKTIME, 1);
-		Assert.assertTrue(bRet);
-		bRet = chkBlockCnt(BLOCKCHKTIME, 2);
+		bRet = chkBlockCntBothNormal(0);
 		Assert.assertTrue(bRet);
 		
 		/* Write file */
@@ -659,7 +557,7 @@ public void Function_08_one_clean_ds_in(){
 		Assert.assertTrue(bRet);
 		
 		/* Check the rate of write process */
-		bRet = checkRateRun(FAILRATE, WRITEONLY|READ|UNLINK);
+		bRet = checkRateRun(FAILRATE, WRITEONLY|READ);
 		Assert.assertTrue(bRet);
 		
 		/* All ds one side in */
@@ -679,15 +577,7 @@ public void Function_08_one_clean_ds_in(){
 		Assert.assertTrue(bRet);
 		
 		/* Read file */
-		bRet = readCmd();
-		Assert.assertTrue(bRet);
-		
-		/* Monitor the read process */
-		bRet = readCmdMon();
-		Assert.assertTrue(bRet);
-		
-		/* Check rate */
-		bRet = checkRateEnd(SUCCESSRATE, READ);
+		bRet = chkFinalRetSuc();
 		Assert.assertTrue(bRet);
 		
 		log.info(caseName + "===> end");
@@ -728,15 +618,7 @@ public void Function_08_one_clean_ds_in(){
 		Assert.assertTrue(bRet);
 		
 		/* Read file */
-		bRet = readCmd();
-		Assert.assertTrue(bRet);
-		
-		/* Monitor the read process */
-		bRet = readCmdMon();
-		Assert.assertTrue(bRet);
-		
-		/* Check rate */
-		bRet = checkRateEnd(SUCCESSRATE, READ);
+		bRet = chkFinalRetSuc();
 		Assert.assertTrue(bRet);
 		
 		log.info(caseName + "===> end");
@@ -747,9 +629,13 @@ public void Function_08_one_clean_ds_in(){
 	public void tearDown(){
 		boolean bRet = false;
 		
+		/* Stop all client process */
+		bRet = allCmdStop();
+		Assert.assertTrue(bRet);
+		
 		/* Move the seed file list */
-//		bRet = mvSeedFile();
-//		Assert.assertTrue(bRet);
+		bRet = mvSeedFile();
+		Assert.assertTrue(bRet);
 		
 		/* Clean the caseName */
 		caseName = "";
