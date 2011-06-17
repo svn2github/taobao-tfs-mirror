@@ -151,8 +151,9 @@ public class FailOverBaseCase {
 	/* Other */
 	public String caseName = "";
 	
-	/* Vip */
-	public String masterIp = NSIPA;
+	/* VIP server */
+	public AppServer MASTERSER = tfsGrid.getCluster(NSINDEX).getServer(0);
+	public AppServer SLAVESER = tfsGrid.getCluster(NSINDEX).getServer(1);
 	
 	/**
 	 * 
@@ -196,6 +197,17 @@ public class FailOverBaseCase {
 		log.info("Write command stop start ===>");
 		bRet = Proc.proStopByCmd(CLIENTIP, WRITECMD + caseName);
 		log.info("Write command stop end ===>");
+		return bRet;
+	}
+	
+	public boolean allCmdStop()
+	{
+		boolean bRet = false;
+		bRet = Proc.proStopByCmd(CLIENTIP, WRITECMD + caseName);
+		if (bRet == false) return bRet;
+		bRet = Proc.proStopByCmd(CLIENTIP, READCMD + caseName);
+		if (bRet == false) return bRet;
+		bRet = Proc.proStopByCmd(CLIENTIP, UNLINKCMD + caseName);
 		return bRet;
 	}
 	
@@ -398,16 +410,13 @@ public class FailOverBaseCase {
 	public boolean resetAllFailCnt()
 	{
 		log.info("Reset failcount start ===>");
-		boolean bRet = resetFailCount(NSIPA);
+		boolean bRet = resetFailCount(MASTERSER.getIp());
 		if (bRet == false) return bRet;
 		
-		bRet = resetFailCount(NSIPB);
+		bRet = resetFailCount(SLAVESER.getIp());
 		log.info("Reset failcount end ===>");
 		return bRet;	
 	}
-	
-	
-	
 	
 	/**
 	 * 
@@ -763,10 +772,10 @@ public class FailOverBaseCase {
 			}	
 			if (fRet < fStd)
 			{
-				log.error("Read success rate(" + fRet + "%) is lower than " + fStd + "% !!!");
+				log.error("Unlink success rate(" + fRet + "%) is lower than " + fStd + "% !!!");
 				return bRet;
 			} else {
-				log.info("Read success rate(" + fRet + "%) is higher than " + fStd + "%");
+				log.info("Unlink success rate(" + fRet + "%) is higher than " + fStd + "%");
 			}
 		}
 		
@@ -778,8 +787,8 @@ public class FailOverBaseCase {
 		boolean bRet = false;
 		String sorLog = tfsSeedClient.getLogs() + caseName;
 		String tarLog = createClientLog(caseName, TEMP);
-		String startCmd = "tail -f " + sorLog + " > " + tarLog;
-		bRet = Proc.proStartBack(CLIENTIP, startCmd);
+		String startCmd = "tail -f " + sorLog;
+		bRet = Proc.proStartBack(CLIENTIP, startCmd + " > " + tarLog);
 		if (bRet == false)
 		{
 			return bRet;
@@ -795,7 +804,7 @@ public class FailOverBaseCase {
 		}
 		
 		/* check the result */
-		checkRateRunByLog( fStd,  iMode,  tarLog);
+		bRet = checkRateRunByLog( fStd,  iMode,  tarLog);
 		if (bRet == false)
 		{
 			return bRet;
@@ -905,29 +914,29 @@ public class FailOverBaseCase {
 	public boolean killMasterNs()
 	{
 		boolean bRet = false;
-		String tempIp = "";
-		String tempMaster = "";
+		AppServer tempIp = null;
+		AppServer tempMaster = null;
 		List<AppServer> listNs = tfsGrid.getCluster(NSINDEX).getServerList();
 
 		/* Find the master ns */
-		if (listNs.get(0).getIp().equals(masterIp))
+		if (listNs.get(0) == MASTERSER)
 		{
 			bRet = listNs.get(0).stop(KillTypeEnum.NORMALKILL, WAITTIME);
 			if (bRet == false) return bRet;
-			tempIp = listNs.get(0).getIp();
-			tempMaster = listNs.get(1).getIp();
+			tempIp = listNs.get(0);
+			tempMaster = listNs.get(1);
 		} else {
 			bRet = listNs.get(1).stop(KillTypeEnum.NORMALKILL, WAITTIME);
 			if (bRet == false) return bRet;
-			tempIp = listNs.get(1).getIp();
-			tempMaster = listNs.get(0).getIp();
+			tempIp = listNs.get(1);
+			tempMaster = listNs.get(0);
 		}
 		
 		/* Wait for vip migrate */
 		sleep (5);
 		
 		/* Check vip */
-		bRet = HA.chkVipBase(tempIp);
+		bRet = HA.chkVipBase(tempIp.getIp());
 		if (bRet == true)
 		{
 			log.error("VIP is not migrate yet!!!");
@@ -935,11 +944,99 @@ public class FailOverBaseCase {
 		}
 		
 		/* Reset the failcount */
-		bRet = resetFailCount(tempIp);
+		bRet = resetFailCount(tempIp.getIp());
 		if (bRet == false) return bRet;
 		
 		/* Set the new vip */
-		masterIp = tempMaster;
+		MASTERSER = tempMaster;
+		SLAVESER = tempIp;
+		
+		return bRet;
+	}
+	
+	public boolean cleanMasterNs()
+	{
+		boolean bRet = false;
+		AppServer tempIp = null;
+		AppServer tempMaster = null;
+		List<AppServer> listNs = tfsGrid.getCluster(NSINDEX).getServerList();
+
+		/* Find the master ns */
+		if (listNs.get(0) == MASTERSER)
+		{
+			bRet = listNs.get(0).stop(KillTypeEnum.NORMALKILL, WAITTIME);
+			if (bRet == false) return bRet;
+			bRet = listNs.get(0).clean();
+			if (bRet == false) return bRet;
+			tempIp = listNs.get(0);
+			tempMaster = listNs.get(1);
+		} else {
+			bRet = listNs.get(1).stop(KillTypeEnum.NORMALKILL, WAITTIME);
+			if (bRet == false) return bRet;
+			bRet = listNs.get(1).clean();
+			if (bRet == false) return bRet;
+			tempIp = listNs.get(1);
+			tempMaster = listNs.get(0);
+		}
+		
+		/* Wait for vip migrate */
+		sleep (5);
+		
+		/* Check vip */
+		bRet = HA.chkVipBase(tempMaster.getIp());
+		if (bRet == true)
+		{
+			log.error("VIP is not migrate yet!!!");
+			return false;
+		}
+		
+		/* Reset the failcount */
+		bRet = resetFailCount(tempIp.getIp());
+		if (bRet == false) return bRet;
+		
+		/* Set the new vip */
+		MASTERSER = tempMaster;
+		SLAVESER = tempIp;
+		
+		return bRet;
+	}
+	
+	public boolean cleanNs()
+	{
+		boolean bRet = false;
+		AppServer tempIp = null;
+		List<AppServer> listNs = tfsGrid.getCluster(NSINDEX).getServerList();
+
+		/* Find the master ns */
+		if (listNs.get(0) == MASTERSER)
+		{
+			bRet = listNs.get(0).stop(KillTypeEnum.NORMALKILL, WAITTIME);
+			if (bRet == false) return bRet;
+			bRet = listNs.get(0).clean();
+			if (bRet == false) return bRet;
+			tempIp = listNs.get(0);
+		} else {
+			bRet = listNs.get(1).stop(KillTypeEnum.NORMALKILL, WAITTIME);
+			if (bRet == false) return bRet;
+			bRet = listNs.get(1).clean();
+			if (bRet == false) return bRet;
+			tempIp = listNs.get(1);
+		}
+		
+		/* Wait for vip migrate */
+		sleep (5);
+		
+		/* Check vip */
+		bRet = HA.chkVipBase(tempIp.getIp());
+		if (bRet == true)
+		{
+			log.error("VIP is not migrate yet!!!");
+			return false;
+		}
+		
+		/* Reset the failcount */
+		bRet = resetFailCount(tempIp.getIp());
+		if (bRet == false) return bRet;
 		
 		return bRet;
 	}
@@ -950,12 +1047,12 @@ public class FailOverBaseCase {
 		List<AppServer> listNs = tfsGrid.getCluster(NSINDEX).getServerList();
 
 		/* Find the master ns */
-		if (listNs.get(0).getIp().equals(masterIp))
+		if (listNs.get(0) == MASTERSER)
 		{
-			bRet = listNs.get(0).stop(KillTypeEnum.NORMALKILL, WAITTIME);
+			bRet = listNs.get(1).stop(KillTypeEnum.NORMALKILL, WAITTIME);
 			if (bRet == false) return bRet;
 		} else {
-			bRet = listNs.get(1).stop(KillTypeEnum.NORMALKILL, WAITTIME);
+			bRet = listNs.get(0).stop(KillTypeEnum.NORMALKILL, WAITTIME);
 			if (bRet == false) return bRet;
 		}
 		
@@ -963,12 +1060,69 @@ public class FailOverBaseCase {
 		sleep (5);
 		
 		/* Check vip */
-		bRet = HA.chkVipBase(masterIp);
-		if (bRet == true)
+		bRet = HA.chkVipBase(MASTERSER.getIp());
+		if (bRet == false)
 		{
 			log.error("VIP is not on master ns yet!!!");
 			return false;
 		}
+		
+		return bRet;
+	}
+	
+	public boolean disableSlaveNs()
+	{
+		boolean bRet = false;
+		List<AppServer> listNs = tfsGrid.getCluster(NSINDEX).getServerList();
+		AppServer ns = new AppServer();
+
+		/* Find the slave ns */
+		if (listNs.get(0) == MASTERSER)
+		{
+			ns = listNs.get(1);
+		} else {
+			ns = listNs.get(0);
+		}
+		
+		bRet = ns.stop(KillTypeEnum.NORMALKILL, WAITTIME);
+		if (bRet == false) return bRet;
+		
+		/* Set the failcount */
+		bRet = HA.setFailCount(ns.getIp(), ns.getResName(), ns.getMacName(), 1);
+		if (bRet ==  false) return bRet;
+		
+		/* Wait for vip migrate */
+		sleep (5);
+		
+		/* Check vip */
+		bRet = HA.chkVipBase(MASTERSER.getIp());
+		if (bRet == false)
+		{
+			log.error("VIP is not on master ns yet!!!");
+			return false;
+		}
+		
+		return bRet;
+	}
+	
+	public boolean startNs()
+	{
+		boolean bRet = false;
+		AppServer server = new AppServer();
+		AppServer serverSlave = new AppServer();
+		for(int iLoop = 0; iLoop < tfsGrid.getCluster(NSINDEX).getServerList().size(); iLoop ++)
+		{
+			server = tfsGrid.getCluster(NSINDEX).getServer(iLoop);
+			if(server.getIp().equals(MASTERSER.getIp()))
+			{
+				bRet = server.start();
+				if (bRet == false) return bRet;
+			} else {
+				serverSlave = server;
+			}
+		}
+		
+		bRet = serverSlave.start();
 		
 		return bRet;
 	}
@@ -994,12 +1148,74 @@ public class FailOverBaseCase {
 					bRet = true;
 					break;
 				}
-				
-//				for(int jLoop = 0;jLoop < listOut.size(); jLoop ++)
-//				{
-//					log.info("Result: " + listOut.get(jLoop));
-//				}
-//				break;
+			} catch (Exception e){
+				e.printStackTrace();
+				bRet = false;
+				break;
+			}
+			sleep(1);
+		}
+		return bRet;
+	}
+	
+	public boolean chkBlockCntBothNormal(int iBlockCnt)
+	{
+		boolean bRet = false;
+		for (int iLoop = 0; iLoop < 4; iLoop ++)
+		{
+			if (iBlockCnt != iLoop)
+			{
+				bRet = chkBlockCntBoth(BLOCKCHKTIME, iLoop);
+				if (bRet == false) break;
+			}
+		}
+		
+		return bRet;
+	}
+	
+	public boolean chkBlockCntBoth(int iTimes, int iBlockCnt)
+	{
+		boolean bRet = false;
+		int port = tfsGrid.getCluster(NSINDEX).getServer(0).getPort();
+		ArrayList<String> listOut = new ArrayList<String>();
+		int iLoop = 0;
+		String cmd = "";
+		//String cmd = "cd /home/admin/tfs/lib; ls";
+		
+		for (iLoop = 0; iLoop < iTimes; iLoop ++)
+		{
+			cmd = "cd /home/admin/tfs/lib;" + "./ssm -s " + NSIPA + ":" + port + " -i " + "\\\"block\\\" | grep \\\"" + iBlockCnt + "$\\\" | wc -l";
+			bRet = Proc.cmdOutBase(NSIPA, cmd, null, 1, null, listOut);
+			if (bRet == false) return bRet;
+			
+			try{
+				int temp = Integer.valueOf(listOut.get(listOut.size() - 1));			
+				if (temp == 0)
+				{
+					bRet = true;
+					break;
+				}
+			} catch (Exception e){
+				e.printStackTrace();
+				bRet = false;
+				break;
+			}
+			sleep(1);
+		}
+		
+		for (int jLoop = 0; jLoop < iTimes - iLoop + 1; jLoop ++)
+		{
+			cmd = "cd /home/admin/tfs/lib;" + "./ssm -s " + NSIPB + ":" + port + " -i " + "\\\"block\\\" | grep \\\"" + iBlockCnt + "$\\\" | wc -l";
+			bRet = Proc.cmdOutBase(NSIPB, cmd, null, 1, null, listOut);
+			if (bRet == false) return bRet;
+			
+			try{
+				int temp = Integer.valueOf(listOut.get(listOut.size() - 1));			
+				if (temp == 0)
+				{
+					bRet = true;
+					break;
+				}
 			} catch (Exception e){
 				e.printStackTrace();
 				bRet = false;
@@ -1362,6 +1578,16 @@ public class FailOverBaseCase {
 		return bRet;
 	}
 	
+	public boolean killOneDsForce()
+	{
+		boolean bRet = false;
+		log.info("Kill one ds start ===>");
+		AppServer cs = tfsGrid.getCluster(DSINDEX).getServer(0);
+		bRet = cs.stop(KillTypeEnum.FORCEKILL, WAITTIME);
+		log.info("Kill one ds end ===>");
+		return bRet;
+	}
+	
 	public boolean startOneDs()
 	{
 		boolean bRet = false;
@@ -1381,6 +1607,24 @@ public class FailOverBaseCase {
 		{
 			AppServer cs = csCluster.getServer(iLoop);
 			bRet = cs.stop(KillTypeEnum.NORMALKILL, WAITTIME);
+			if (bRet == false)
+			{
+				break;
+			}
+		}
+		log.info("Kill all ds on one side end ===>");
+		return bRet;
+	}
+	
+	public boolean killAllDsOneSideForce()
+	{
+		boolean bRet = false;
+		log.info("Kill all ds on one side start ===>");
+		AppCluster csCluster = tfsGrid.getCluster(DSINDEX);
+		for(int iLoop = 0; iLoop < csCluster.getServerList().size(); iLoop ++)
+		{
+			AppServer cs = csCluster.getServer(iLoop);
+			bRet = cs.stop(KillTypeEnum.FORCEKILL, WAITTIME);
 			if (bRet == false)
 			{
 				break;
@@ -1419,6 +1663,27 @@ public class FailOverBaseCase {
 			{
 				AppServer cs = csCluster.getServer(jLoop);
 				bRet = cs.stop(KillTypeEnum.NORMALKILL, WAITTIME);
+				if (bRet == false)
+				{
+					break;
+				}
+			}
+		}
+		log.info("Kill all ds end ===>");
+		return bRet;
+	}
+	
+	public boolean killAllDsForce()
+	{
+		boolean bRet = false;
+		log.info("Kill all ds start ===>");
+		for (int iLoop = DSINDEX; iLoop <= DSINDEXI; iLoop ++)
+		{
+			AppCluster csCluster = tfsGrid.getCluster(iLoop);
+			for(int jLoop = 0; jLoop < csCluster.getServerList().size(); jLoop ++)
+			{
+				AppServer cs = csCluster.getServer(jLoop);
+				bRet = cs.stop(KillTypeEnum.FORCEKILL, WAITTIME);
 				if (bRet == false)
 				{
 					break;
@@ -1499,6 +1764,48 @@ public class FailOverBaseCase {
 			}
 		}
 		log.info("Clean all ds end ===>");
+		return bRet;
+	}
+	
+	public boolean chkFinalRetSuc()
+	{
+		boolean bRet = false;
+		/* Read file */
+		bRet = readCmd();
+		if (bRet == false) return bRet;
+		
+		/* Monitor the read process */
+		bRet = readCmdMon();
+		if (bRet == false) return bRet;
+		
+		/* Check rate */
+		bRet = checkRateEnd(SUCCESSRATE, READ );
+		return bRet;
+	}
+	
+	public boolean chkFinalRetFail()
+	{
+		boolean bRet = false;
+		/* Read file */
+		bRet = readCmd();
+		if (bRet == false) return bRet;
+		
+		/* Monitor the read process */
+		bRet = readCmdMon();
+		if (bRet == false) return bRet;
+		
+		/* Check rate */
+		bRet = checkRateEnd(FAILRATE, READ );
+		return bRet;
+	}
+	
+	public boolean blockOneCs()
+	{
+		boolean bRet = false;
+		AppServer cs = tfsGrid.getCluster(DSINDEX).getServer(0);
+		AppServer ns = new AppServer();
+		
+		
 		return bRet;
 	}
 }
