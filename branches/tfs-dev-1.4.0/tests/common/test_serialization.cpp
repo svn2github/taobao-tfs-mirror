@@ -72,7 +72,7 @@ public:
   ~TestSerialization(){}
 };
 
-static const int32_t BUF_LEN = 32;
+static const int64_t BUF_LEN = 32;
 
 TEST_F(TestSerialization, set_int8)
 {
@@ -644,14 +644,14 @@ TEST_F(TestSerialization, test_set_string)
   pos = 0;
   iret = Serialization::set_string(data, BUF_LEN, pos, NULL);
   EXPECT_EQ(TFS_SUCCESS, iret);
-  EXPECT_EQ(INT_SIZE, pos);
+  EXPECT_EQ(INT_SIZE + 1, pos);
 
   //data_len < actual data length
   pos = 0;
   iret = Serialization::set_string(data, 12, pos, value.c_str());
   EXPECT_EQ(TFS_SUCCESS, iret);
-  EXPECT_EQ(static_cast<int64_t>((value.length() + INT_SIZE)), pos);
-  const int32_t LEN = BUF_LEN - value.length() - INT_SIZE - INT_SIZE;
+  EXPECT_EQ(static_cast<int64_t>((value.length() + INT_SIZE + 1)), pos);
+  const int32_t LEN = BUF_LEN - value.length() - INT_SIZE - INT_SIZE - 2;
   std::string tmp(LEN, 'a');
   iret = Serialization::set_string(data, BUF_LEN, pos, tmp.c_str());
   EXPECT_EQ(TFS_SUCCESS, iret);
@@ -668,51 +668,58 @@ TEST_F(TestSerialization, test_get_string)
   char data[BUF_LEN];
   int32_t iret = Serialization::set_string(data, BUF_LEN, pos, value.c_str());
   EXPECT_EQ(TFS_SUCCESS, iret);
-  EXPECT_EQ(static_cast<int64_t>((value.length() + INT_SIZE)), pos);
+  EXPECT_EQ(static_cast<int64_t>((value.length() + INT_SIZE + 1)), pos);
 
   char str[BUF_LEN];
 
   //data is null && pos < 0
   pos = -1;
-  iret = Serialization::get_string(NULL, BUF_LEN, pos, str, BUF_LEN);
+  int64_t str_len = BUF_LEN;
+  iret = Serialization::get_string(NULL, BUF_LEN, pos, str, str_len);
   EXPECT_EQ(TFS_ERROR, iret);
   EXPECT_EQ(-1, pos);
 
   //pos < 0
-  iret = Serialization::get_string(data, BUF_LEN, pos, str, BUF_LEN);
+  str_len = BUF_LEN;
+  iret = Serialization::get_string(data, BUF_LEN, pos, str, str_len);
   EXPECT_EQ(TFS_ERROR, iret);
   EXPECT_EQ(-1, pos);
 
   //pos == data_len
   pos = BUF_LEN;
-  iret = Serialization::get_string(data, BUF_LEN, pos, str, BUF_LEN);
+  str_len = BUF_LEN;
+  iret = Serialization::get_string(data, BUF_LEN, pos, str, str_len);
   EXPECT_EQ(TFS_ERROR, iret);
-  EXPECT_EQ(BUF_LEN, pos);
+  EXPECT_EQ(str_len, pos);
 
   //pos > data_len
   pos = BUF_LEN + 1;
-  iret = Serialization::get_string(data, BUF_LEN, pos, str, BUF_LEN);
+  str_len = BUF_LEN;
+  iret = Serialization::get_string(data, BUF_LEN, pos, str, str_len);
   EXPECT_EQ(TFS_ERROR, iret);
   EXPECT_EQ(BUF_LEN + 1, pos);
 
   pos = 0;
-  iret = Serialization::get_string(data, BUF_LEN, pos, str, (value.length() - 1));
+  str_len = value.length() - 1;
+  iret = Serialization::get_string(data, BUF_LEN, pos, str, str_len);
   EXPECT_EQ(TFS_ERROR, iret);
   EXPECT_EQ(0, pos);
 
-  iret = Serialization::get_string(data, BUF_LEN, pos, str, BUF_LEN);
+  str_len = BUF_LEN;
+  iret = Serialization::get_string(data, BUF_LEN, pos, str, str_len);
   EXPECT_EQ(TFS_SUCCESS, iret);
   EXPECT_EQ(0, memcmp(value.c_str(), str, value.length()));
 
   pos = 0;
   iret = Serialization::set_string(data, BUF_LEN, pos, NULL);
   EXPECT_EQ(TFS_SUCCESS, iret);
-  EXPECT_EQ(INT_SIZE, pos);
+  EXPECT_EQ(INT_SIZE + 1, pos);
 
   pos = 0;
-  iret = Serialization::get_string(data, BUF_LEN, pos, str, 0);
+  str_len = BUF_LEN;
+  iret = Serialization::get_string(data, BUF_LEN, pos, str, str_len);
   EXPECT_EQ(TFS_SUCCESS, iret);
-  EXPECT_EQ(INT_SIZE, pos);
+  EXPECT_EQ(INT_SIZE + 1, pos);
 }
 
 TEST_F(TestSerialization, test_set_bytes)

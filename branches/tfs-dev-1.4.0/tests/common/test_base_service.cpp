@@ -22,8 +22,7 @@
 #include "common/base_service.h"
 #include "common/lock.h"
 #include "common/directory_op.h"
-#include "common/new_client.h"
-#include "common/status_packet.h"
+#include "common/status_message.h"
 #include "common/new_client.h"
 #include "common/client_manager.h"
 #include "test_base_service_helper.h"
@@ -109,6 +108,9 @@ public:
   {
     return streamer_;
   }
+  virtual void destroy_packet_streamer(tbnet::IPacketStreamer* streamer)
+  {
+  }
 
   /** create the packet streamer, this is used to create packet*/
   virtual tfs::common::BasePacketFactory* create_packet_factory()
@@ -120,6 +122,9 @@ public:
   virtual const char* get_log_file_path()
   {
     return NULL;
+  }
+  virtual void destroy_packet_factory(BasePacketFactory* factory)
+  {
   }
 
   /** handle packet*/

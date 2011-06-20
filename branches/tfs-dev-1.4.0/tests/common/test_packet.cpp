@@ -19,7 +19,6 @@
 #include <time.h>
 #include "common/func.h"
 #include "common/base_packet.h"
-#include "message/message.h"
 #include "message/replicate_block_message.h"
 #include "new_replicate_block_msg.h"
 
@@ -41,7 +40,7 @@ public:
 TEST_F(TestPacket, msg_compatible)
 {
   tfs::message::ReplicateBlockMessage old_msg;
-  const int32_t BUF_LEN = old_msg.message_length();
+  const int32_t BUF_LEN = old_msg.length();
   char buf[BUF_LEN];
   tfs::common::ReplBlock block;
   memset(&block, 0, sizeof(block));
@@ -60,7 +59,8 @@ TEST_F(TestPacket, msg_compatible)
   old_msg.set_repl_block(&block);
 
   //serialize old msg && deserialize new msg
-  int32_t iret = old_msg.build(buf, BUF_LEN);
+  common::Stream buf;
+  int32_t iret = old_msg.serialize(buf);
   EXPECT_EQ(tfs::common::TFS_SUCCESS, iret);
 
   tfs::common::Stream middle_buf;
