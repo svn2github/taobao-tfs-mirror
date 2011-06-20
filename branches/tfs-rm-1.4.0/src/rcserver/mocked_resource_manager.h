@@ -74,7 +74,7 @@ namespace tfs
           return common::TFS_SUCCESS;
         }
 
-        int login(const std::string& app_key, int32_t& app_id, BaseInfo& base_info)
+        int login(const std::string& app_key, int32_t& app_id, common::BaseInfo& base_info)
         {
           int ret = common::TFS_SUCCESS;
           std::map<std::string, int32_t>::iterator mit = apps_.find(app_key);
@@ -90,7 +90,7 @@ namespace tfs
           return ret;
         }
 
-        int check_update_info(const int32_t app_id, const int64_t modify_time, bool& update_flag, BaseInfo& base_info)
+        int check_update_info(const int32_t app_id, const int64_t modify_time, bool& update_flag, common::BaseInfo& base_info)
         {
           int ret = common::TFS_SUCCESS;
           std::map<int32_t, int64_t>::iterator mit = id_2_mtimes_.find(app_id);
@@ -116,16 +116,17 @@ namespace tfs
 
         int logout(const std::string& session_id)
         {
+          UNUSED(session_id);
           int ret = common::TFS_SUCCESS;
           return ret;
         }
 
-        int update_session_info(const std::vector<SessionBaseInfo>& session_infos)
+        int update_session_info(const std::vector<common::SessionBaseInfo>& session_infos)
         {
           int ret = common::TFS_SUCCESS;
           if (flag_)
           {
-            std::vector<SessionBaseInfo>::const_iterator sit = session_infos.begin();
+            std::vector<common::SessionBaseInfo>::const_iterator sit = session_infos.begin();
             for ( ; sit != session_infos.end(); ++sit)
             {
               TBSYS_LOG(INFO, "update db session info. session_id: %s, client_version: %s, cache_size: %"PRI64_PREFIX"d,"
@@ -143,13 +144,13 @@ namespace tfs
           return ret;
         }
 
-        int update_session_stat(const std::map<std::string, SessionStat>& session_stats)
+        int update_session_stat(const std::map<std::string, common::SessionStat>& session_stats)
         {
           int ret = common::TFS_SUCCESS;
-          std::map<std::string, SessionStat>::const_iterator stat_it = session_stats.begin(); 
+          std::map<std::string, common::SessionStat>::const_iterator stat_it = session_stats.begin(); 
           for ( ; stat_it != session_stats.end(); ++stat_it)
           {
-            std::map<OperType, AppOperInfo>::const_iterator mit = stat_it->second.app_oper_info_.begin();
+            std::map<common::OperType, common::AppOperInfo>::const_iterator mit = stat_it->second.app_oper_info_.begin();
             for ( ; mit != stat_it->second.app_oper_info_.end(); ++mit)
             {
               TBSYS_LOG(INFO, "update db session stat. session_id: %s, oper_type: %d, oper_times: %"PRI64_PREFIX"d, oper_size: %"PRI64_PREFIX"d,"
@@ -178,7 +179,7 @@ namespace tfs
         DISALLOW_COPY_AND_ASSIGN(MockedResourceManager);
         std::map<std::string, int32_t> apps_;
         std::map<int32_t, int64_t> id_2_mtimes_;
-        BaseInfo old_info_, new_info_;
+        common::BaseInfo old_info_, new_info_;
         bool flag_;
     };
   }

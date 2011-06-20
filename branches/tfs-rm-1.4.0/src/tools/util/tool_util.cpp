@@ -50,6 +50,7 @@ namespace tfs
           }
           else if (rsp->getPCode() == STATUS_MESSAGE)
           {
+            ret = dynamic_cast<StatusMessage*>(rsp)->get_status();
             fprintf(stderr, "get block info fail, error: %s\n,", dynamic_cast<StatusMessage*>(rsp)->get_error());
             ret = dynamic_cast<StatusMessage*>(rsp)->get_status();
           }

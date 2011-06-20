@@ -11,9 +11,9 @@
  * Authors:
  *   duolong <duolong@taobao.com>
  *      - initial release
- *   qushan<qushan@taobao.com> 
+ *   qushan<qushan@taobao.com>
  *      - modify 2009-03-27
- *   duanfei <duanfei@taobao.com> 
+ *   duanfei <duanfei@taobao.com>
  *      - modify 2010-04-23
  *
  */
@@ -34,8 +34,8 @@ namespace tfs
   {
     const int8_t LayoutManager::CompactTask::INVALID_SERVER_ID = 0;
     const int8_t LayoutManager::CompactTask::INVALID_BLOCK_ID = 0;
-    LayoutManager::Task::Task(LayoutManager* manager, const PlanType type, 
-        const PlanPriority priority, uint32_t block_id, 
+    LayoutManager::Task::Task(LayoutManager* manager, const PlanType type,
+        const PlanPriority priority, uint32_t block_id,
         time_t begin, time_t end, const std::vector<ServerCollect*>& runer, const int64_t seqno):
       runer_(runer),
       begin_time_(begin),
@@ -130,7 +130,7 @@ namespace tfs
       }
     }
 
-    LayoutManager::CompactTask::CompactTask(LayoutManager* manager, const PlanPriority priority, 
+    LayoutManager::CompactTask::CompactTask(LayoutManager* manager, const PlanPriority priority,
       uint32_t block_id, time_t begin, time_t end, const std::vector<ServerCollect*>& runer, const int64_t seqno):
       Task(manager, PLAN_TYPE_COMPACT, priority, block_id, begin, end, runer, seqno)
     {
@@ -206,7 +206,7 @@ namespace tfs
         runer += CNetUtil::addrToString((*iter)->id());
         runer += "/";
       }
-      PlanStatus plan_status = PLAN_STATUS_NONE; 
+      PlanStatus plan_status = PLAN_STATUS_NONE;
       std::string status;
       std::vector< std::pair <uint64_t, PlanStatus> >::iterator it= complete_status_.begin();
       for (; it != complete_status_.end(); ++it)
@@ -349,7 +349,7 @@ namespace tfs
             servers.push_back(status.first);
           }
         }
-      }      
+      }
 
       TBSYS_LOG(DEBUG, "complete_count: %d, success_count: %d, complete_status size: %u",
           complete_count, success_count, complete_status_.size());
@@ -375,7 +375,7 @@ namespace tfs
       }
 
       NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
-      if (value.is_complete_ 
+      if (value.is_complete_
           && value.has_success_
           && !servers.empty())
       {
@@ -403,11 +403,7 @@ namespace tfs
             }
             if (ngi.owner_role_ == NS_ROLE_MASTER)
             {
-              #if __WORDSIZE == 64
-              std::vector<int64_t> stat(1, 1);
-              #else
-              std::vector<int32_t> stat(1, 1);
-              #endif
+              std::vector<stat_int_t> stat(1, 1);
               GFactory::get_stat_mgr().update_entry(GFactory::tfs_ns_stat_block_count_, stat, false);
               manager_->rm_block_from_ds((*iter), value.block_id_);
             }
@@ -468,8 +464,8 @@ namespace tfs
       return TFS_SUCCESS;
     }
 
-    LayoutManager::ReplicateTask::ReplicateTask(LayoutManager* manager, const PlanPriority priority, 
-        const uint32_t block_id, const time_t begin, 
+    LayoutManager::ReplicateTask::ReplicateTask(LayoutManager* manager, const PlanPriority priority,
+        const uint32_t block_id, const time_t begin,
         const time_t end, const std::vector<ServerCollect*>& runer, const int64_t seqno):
       Task(manager, PLAN_TYPE_REPLICATE, priority, block_id, begin, end, runer, seqno),
       flag_(REPLICATE_BLOCK_MOVE_FLAG_NO)
@@ -644,11 +640,7 @@ namespace tfs
           }
         }
 
-        #if __WORDSIZE == 64
-        std::vector<int64_t> stat(1, runer_.size());
-        #else
-        std::vector<int32_t> stat(1, runer_.size());
-        #endif
+        std::vector<stat_int_t> stat(1, runer_.size());
         GFactory::get_stat_mgr().update_entry(GFactory::tfs_ns_stat_block_count_, stat, false);
 
         status_ = PLAN_STATUS_BEGIN;

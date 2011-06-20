@@ -423,11 +423,13 @@ int put_file_ex(const VSTRING& param, const bool unique, const bool is_large)
   if (unique)
   {
     // TODO: save unique
-    ret = g_tfs_client->save_file(local_file, tfs_name, suffix, ret_tfs_name, TFS_FILE_LEN, NULL, flag);
+    ret = g_tfs_client->save_file(local_file, tfs_name, suffix, ret_tfs_name, TFS_FILE_LEN, NULL, flag) < 0 ?
+      TFS_ERROR : TFS_SUCCESS;
   }
   else
   {
-    ret = g_tfs_client->save_file(local_file, tfs_name, suffix, ret_tfs_name, TFS_FILE_LEN, NULL, flag);
+    ret = g_tfs_client->save_file(local_file, tfs_name, suffix, ret_tfs_name, TFS_FILE_LEN, NULL, flag) < 0 ?
+      TFS_ERROR : TFS_SUCCESS;
   }
 
   ToolUtil::print_info(ret, "put %s => %s", local_file, ret_tfs_name);
@@ -438,14 +440,15 @@ int remove_file_ex(const VSTRING& param, const int32_t unique)
 {
   const char* tfs_name = canonical_param(param[0]);
   int ret = TFS_SUCCESS;
+  int64_t file_size = 0;
   if (unique)
   {
     // TODO: unlink_unique
-    ret = g_tfs_client->unlink(tfs_name);
+    ret = g_tfs_client->unlink(tfs_name, NULL, file_size);
   }
   else
   {
-    ret = g_tfs_client->unlink(tfs_name);
+    ret = g_tfs_client->unlink(tfs_name, NULL, file_size);
   }
 
   ToolUtil::print_info(ret, "unlink %s", tfs_name);
@@ -547,7 +550,8 @@ int cmd_uremove_file(const VSTRING& param)
 int cmd_undel_file(const VSTRING& param)
 {
   const char* tfs_name = canonical_param(param[0]);
-  int ret = g_tfs_client->unlink(tfs_name, NULL, UNDELETE);
+  int64_t file_size = 0;
+  int ret = g_tfs_client->unlink(tfs_name, NULL, file_size,UNDELETE);
 
   ToolUtil::print_info(ret, "undel %s", tfs_name);
 
@@ -564,7 +568,8 @@ int cmd_hide_file(const VSTRING& param)
     unlink_type = static_cast<TfsUnlinkType>(atoi(param[1].c_str()));
   }
 
-  int ret = g_tfs_client->unlink(tfs_name, NULL, unlink_type);
+  int64_t file_size = 0;
+  int ret = g_tfs_client->unlink(tfs_name, NULL, file_size, unlink_type);
 
   ToolUtil::print_info(ret, "hide %s %d", tfs_name, unlink_type);
 

@@ -41,7 +41,7 @@ TEST_F(BaseResourceTest, get_resource_servers)
   TestDatabaseHelper data_helper;
   BaseResource tester(data_helper);
   EXPECT_EQ(TFS_SUCCESS, tester.load());
-  std::set<uint64_t> resource_servers;
+  std::vector<uint64_t> resource_servers;
   EXPECT_EQ(TFS_SUCCESS, tester.get_resource_servers(resource_servers));
   EXPECT_EQ(1, resource_servers.size());
   EXPECT_EQ(tbsys::CNetUtil::strToAddr("10.232.35.41:2123",0), *(resource_servers.begin()));

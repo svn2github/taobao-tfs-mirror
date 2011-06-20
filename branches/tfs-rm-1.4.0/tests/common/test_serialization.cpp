@@ -20,6 +20,44 @@
 #include "serialization.h"
 
 using namespace tfs::common;
+    #pragma pack(4)
+    struct TfsPacketNewHeaderV3
+    {
+      uint32_t flag_;
+      int32_t length_;
+      int16_t type_;
+      int16_t check_;
+    };
+
+    struct TfsPacketNewHeaderV4
+    {
+      uint64_t id_;
+      uint32_t flag_;
+      uint32_t crc_;
+      int32_t  length_;
+      int16_t  type_;
+      int16_t  version_;
+    };
+  struct TfsPacketNewHeaderV5
+  {
+    uint32_t flag_;
+    int32_t length_;
+    short type_;
+    short check_;
+  };
+  
+  struct TfsPacketNewHeaderV6
+  {
+    uint32_t flag_;
+    int32_t length_;
+    short type_;
+    short version_;
+    uint64_t id_;
+    uint32_t crc_;
+  };
+  #pragma pack()
+ 
+ 
 
 class TestSerialization : public virtual ::testing::Test
 {
@@ -784,6 +822,11 @@ TEST_F(TestSerialization, test_get_bytes)
 
 int main(int argc, char* argv[])
 {
+  printf("TfsPacketNewHeaderV3: %d\n", sizeof(TfsPacketNewHeaderV3));
+  printf("TfsPacketNewHeaderV4: %d\n", sizeof(TfsPacketNewHeaderV4));
+  printf("TfsPacketNewHeaderV5: %d\n", sizeof(TfsPacketNewHeaderV5));
+  printf("TfsPacketNewHeaderV6: %d\n", sizeof(TfsPacketNewHeaderV6));
+ 
   testing::InitGoogleTest(&argc, argv);
   return RUN_ALL_TESTS();
 }

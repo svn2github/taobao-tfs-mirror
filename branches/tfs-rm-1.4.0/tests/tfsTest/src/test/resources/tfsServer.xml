@@ -175,9 +175,11 @@
 		<property name="ipAlias" value="ip-alias" />
 		<property name="startcmd" value="/home/admin/tfs/lib/nameserver -f /home/admin/tfs/conf/tfs.conf -d" />
 		<property name="stopcmd" value="" />
+		<property name="ulimit" value="on" />
 		<property name="cleancmd">
 			<list>
-				<value>rm -rf /home/admin/tfs/logs/*</value>
+				<value>rm -rf /home/admin/tfs/logs/nameserver.log*</value>
+				<value>rm -rf /home/admin/tfs/nameserver</value>
 			</list>
 		</property>
 	</bean>
@@ -195,9 +197,11 @@
 		<property name="ipAlias" value="ip-alias" />
 		<property name="startcmd" value="/home/admin/tfs/lib/nameserver -f /home/admin/tfs/conf/tfs.conf -d" />
 		<property name="stopcmd" value="" />
+		<property name="ulimit" value="on" />
 		<property name="cleancmd">
 			<list>
-				<value>rm -rf /home/admin/tfs/logs/*</value>
+				<value>rm -rf /home/admin/tfs/logs/nameserver.log*</value>
+				<value>rm -rf /home/admin/tfs/nameserver</value>
 			</list>
 		</property>
 	</bean>

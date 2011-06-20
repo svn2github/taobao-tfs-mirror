@@ -343,7 +343,7 @@ namespace tfs
       return ret;
     }
 
-    int LogicBlock::read_file(const uint64_t inner_file_id, char* buf, int32_t& nbytes, const int32_t offset)
+    int LogicBlock::read_file(const uint64_t inner_file_id, char* buf, int32_t& nbytes, const int32_t offset, const int8_t flag)
     {
       RawMeta file_meta;
       // 1. get file meta info(offset)
@@ -382,15 +382,29 @@ namespace tfs
       // 3. the first fragment, check fileinfo
       if (0 == offset)
       {
-        if ((((FileInfo *) buf)->id_ != inner_file_id) || (((((FileInfo *) buf)->flag_) & (FI_DELETED | FI_INVALID
-            | FI_CONCEAL)) != 0))
+        if ((flag & READ_DATA_OPTION_FLAG_FORCE))
         {
-          TBSYS_LOG(WARN,
-              "find FileInfo fail, blockid: %u, fileid: %" PRI64_PREFIX "u, id: %" PRI64_PREFIX "u, flag: %d",
-              logic_block_id_, inner_file_id, ((FileInfo *) buf)->id_, ((FileInfo *) buf)->flag_);
-          return EXIT_FILE_INFO_ERROR;
+          if ((((FileInfo *) buf)->id_ != inner_file_id) 
+              || (((((FileInfo *) buf)->flag_) & (FI_DELETED | FI_INVALID )) != 0))
+          {
+            TBSYS_LOG(WARN,
+                "find FileInfo fail, blockid: %u, fileid: %" PRI64_PREFIX "u, id: %" PRI64_PREFIX "u, flag: %d",
+                logic_block_id_, inner_file_id, ((FileInfo *) buf)->id_, ((FileInfo *) buf)->flag_);
+            return EXIT_FILE_INFO_ERROR;
+          }
         }
-      }
+        else
+        {
+          if ((((FileInfo *) buf)->id_ != inner_file_id) 
+              || (((((FileInfo *) buf)->flag_) & (FI_DELETED | FI_INVALID | FI_CONCEAL)) != 0))
+          {
+            TBSYS_LOG(WARN,
+                "find FileInfo fail, blockid: %u, fileid: %" PRI64_PREFIX "u, id: %" PRI64_PREFIX "u, flag: %d",
+                logic_block_id_, inner_file_id, ((FileInfo *) buf)->id_, ((FileInfo *) buf)->flag_);
+            return EXIT_FILE_INFO_ERROR;
+          }
+        }
+     }
 
       return TFS_SUCCESS;
     }
@@ -473,7 +487,7 @@ namespace tfs
       return index_handle_->flush();
     }
 
-    int LogicBlock::unlink_file(const uint64_t inner_file_id, const int32_t action)
+    int LogicBlock::unlink_file(const uint64_t inner_file_id, const int32_t action, int64_t& file_size)
     {
       // 1. ...
       ScopedRWLock scoped_lock(rw_lock_, WRITE_LOCKER);
@@ -496,6 +510,8 @@ namespace tfs
             inner_file_id, ret);
         return ret;
       }
+
+      file_size = finfo.size_;
 
       int32_t oper_type = 0;
       // 4. dispatch action

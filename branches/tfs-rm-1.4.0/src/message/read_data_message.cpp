@@ -66,7 +66,8 @@ namespace tfs
       return common::INT_SIZE * 3 + common::INT64_SIZE;
     }
 
-    ReadDataMessage::ReadDataMessage()
+    ReadDataMessage::ReadDataMessage():
+      flag_(common::READ_DATA_OPTION_FLAG_NORMAL)
     {
       _packetHeader._pcode = common::READ_DATA_MESSAGE;
       memset(&read_data_info_, 0, sizeof(ReadDataInfo));
@@ -84,21 +85,29 @@ namespace tfs
       {
         input.drain(read_data_info_.length());
       }
+      if (common::TFS_SUCCESS == iret)
+      {
+        input.get_int8(&flag_);
+      }
       return iret;
     }
 
     int64_t ReadDataMessage::length() const
     {
-      return read_data_info_.length();
+      return read_data_info_.length() + common::INT8_SIZE;
     }
 
-    int ReadDataMessage::serialize(common::Stream& output) const 
+    int ReadDataMessage::serialize(common::Stream& output) const
     {
       int64_t pos = 0;
       int32_t iret = read_data_info_.serialize(output.get_free(), output.get_free_length(), pos);
       if (common::TFS_SUCCESS == iret)
       {
         output.pour(read_data_info_.length());
+      }
+      if (common::TFS_SUCCESS == iret)
+      {
+        output.set_int8(flag_);
       }
       return iret;
     }
@@ -165,12 +174,12 @@ namespace tfs
       return len;
     }
 
-    int RespReadDataMessage::serialize(common::Stream& output) const 
+    int RespReadDataMessage::serialize(common::Stream& output) const
     {
       int32_t iret = output.set_int32(length_);
       if (common::TFS_SUCCESS == iret)
       {
-        if (length_ > 0 
+        if (length_ > 0
           && NULL != data_)
         {
           iret = output.set_bytes(data_, length_);
@@ -232,7 +241,7 @@ namespace tfs
       return len;
     }
 
-    int RespReadDataMessageV2::serialize(common::Stream& output) const 
+    int RespReadDataMessageV2::serialize(common::Stream& output) const
     {
       int32_t iret = RespReadDataMessage::serialize(output);
       int32_t size = file_info_.id_ > 0 ? file_info_.length() : 0;
@@ -349,25 +358,27 @@ namespace tfs
 
     int32_t ReadScaleImageMessage::deserialize(common::Stream& input)
     {
-      int32_t iret = ReadDataMessageV2::deserialize(input);
+      int64_t pos = 0;
+      int32_t iret = read_data_info_.deserialize(input.get_data(), input.get_data_length(), pos);
       if (common::TFS_SUCCESS == iret)
       {
-        int64_t pos = 0;
+        input.drain(read_data_info_.length());
         iret = zoom_.deserialize(input.get_data(), input.get_data_length(), pos);
         if (common::TFS_SUCCESS == iret)
         {
-          input.drain(zoom_.length()); 
+          input.drain(zoom_.length());
         }
       }
       return iret;
     }
 
-    int32_t ReadScaleImageMessage::serialize(common::Stream& output) const 
+    int32_t ReadScaleImageMessage::serialize(common::Stream& output) const
     {
-      int32_t iret = ReadDataMessageV2::serialize(output);
+      int64_t pos = 0;
+      int32_t iret = read_data_info_.serialize(output.get_free(), output.get_free_length(), pos);
       if (common::TFS_SUCCESS == iret)
       {
-        int64_t pos = 0;
+        output.pour(read_data_info_.length());
         iret = zoom_.serialize(output.get_free(), output.get_free_length(), pos);
         if (common::TFS_SUCCESS == iret)
         {
@@ -379,7 +390,7 @@ namespace tfs
 
     int64_t ReadScaleImageMessage::length() const
     {
-      return ReadDataMessageV2::length() + sizeof(ZoomData);
+      return read_data_info_.length() + sizeof(ZoomData);
     }
   }
 }

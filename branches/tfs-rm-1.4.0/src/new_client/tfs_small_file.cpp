@@ -46,7 +46,7 @@ int64_t TfsSmallFile::readv2(void* buf, const int64_t count, TfsFileStat* file_i
   }
   else
   {
-    ret = read_ex(buf, count, offset_, FILE_PHASE_READ_FILE_V2);
+    ret = read_ex(buf, count, offset_, true, FILE_PHASE_READ_FILE_V2);
 
     if (0 == offset && ret >= 0 && meta_seg_->file_info_ != NULL)
     {
@@ -127,7 +127,7 @@ int64_t TfsSmallFile::get_file_length()
   return ret_len;
 }
 
-int TfsSmallFile::unlink(const char* file_name, const char* suffix, const TfsUnlinkType action)
+int TfsSmallFile::unlink(const char* file_name, const char* suffix, int64_t& file_size, const TfsUnlinkType action)
 {
   int ret = open_ex(file_name, suffix, T_UNLINK);
   if (TFS_SUCCESS != ret)
@@ -136,8 +136,13 @@ int TfsSmallFile::unlink(const char* file_name, const char* suffix, const TfsUnl
   }
   else
   {
-    meta_seg_->file_number_ = action;
+    meta_seg_->extra_value_.unlink_action_ = action;
+    get_meta_segment(0, NULL, 0);
     ret = unlink_process();
+    if (TFS_SUCCESS == ret && (DELETE == action || UNDELETE == action))
+    {
+      file_size = meta_seg_->seg_info_.size_;
+    }
   }
   return ret;
 }
@@ -240,7 +245,6 @@ int TfsSmallFile::close_process()
 int TfsSmallFile::unlink_process()
 {
   int ret = TFS_SUCCESS;
-  get_meta_segment(0, NULL, 0);
   if ((ret = process(FILE_PHASE_UNLINK_FILE)) != TFS_SUCCESS)
   {
     TBSYS_LOG(ERROR, "unlink file fail, ret: %d", ret);

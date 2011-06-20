@@ -31,10 +31,8 @@ namespace tfs
       stop_(0), pause_(0), need_sync_(0), need_sleep_(0),
       file_queue_(NULL), second_file_queue_(NULL), second_file_queue_thread_(NULL), backup_(NULL)
     {
-      // create queue
-      char tmpstr[MAX_PATH_LENGTH];
-      snprintf(tmpstr, MAX_PATH_LENGTH, "%s/mirror", DataService::instance()->get_work_dir());
-      file_queue_ = new FileQueue(tmpstr, "firstqueue");
+      mirror_dir_ = dynamic_cast<DataService*>(DataService::instance())->get_real_work_dir() + "/mirror";
+      file_queue_ = new FileQueue(mirror_dir_.c_str(), "firstqueue");
       file_queue_->load_queue_head();
       file_queue_->initialize();
 
@@ -240,9 +238,7 @@ namespace tfs
       {
         if (NULL == second_file_queue_ && NULL == second_file_queue_thread_)
         {
-          char tmpstr[MAX_PATH_LENGTH];
-          snprintf(tmpstr, MAX_PATH_LENGTH, "%s/mirror", DataService::instance()->get_work_dir());
-          second_file_queue_ = new FileQueue(tmpstr, "secondqueue");
+          second_file_queue_ = new FileQueue(mirror_dir_.c_str(), "secondqueue");
           second_file_queue_->load_queue_head();
           second_file_queue_->initialize();
           second_file_queue_thread_ = new FileQueueThread(second_file_queue_, this);

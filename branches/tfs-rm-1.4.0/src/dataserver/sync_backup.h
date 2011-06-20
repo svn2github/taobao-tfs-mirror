@@ -44,20 +44,20 @@ namespace tfs
 
     class SyncBackup
     {
-      public:
-        SyncBackup();
-        virtual ~SyncBackup();
+    public:
+      SyncBackup();
+      virtual ~SyncBackup();
 
-        virtual bool init() = 0;
-        virtual int do_sync(const SyncData* sf);
-        virtual int do_second_sync(const SyncData* sf);
-        virtual int copy_file(const uint32_t block_id, const uint64_t file_id);
-        virtual int remove_file(const uint32_t block_id, const uint64_t file_id, const int32_t undel);
-        virtual int rename_file(const uint32_t block_id, const uint64_t file_id, const uint64_t old_file_id);
-        virtual int remote_copy_file(const uint32_t block_id, const uint64_t file_id);
+      virtual bool init() = 0;
+      virtual int do_sync(const SyncData* sf);
+      virtual int do_second_sync(const SyncData* sf);
+      virtual int copy_file(const uint32_t block_id, const uint64_t file_id);
+      virtual int remove_file(const uint32_t block_id, const uint64_t file_id, const int32_t undel);
+      virtual int rename_file(const uint32_t block_id, const uint64_t file_id, const uint64_t old_file_id);
+      virtual int remote_copy_file(const uint32_t block_id, const uint64_t file_id);
 
-      protected:
-        DISALLOW_COPY_AND_ASSIGN(SyncBackup);
+    protected:
+      DISALLOW_COPY_AND_ASSIGN(SyncBackup);
       client::TfsClient* tfs_client_;
 
         char src_addr_[common::MAX_ADDRESS_LENGTH];
@@ -86,8 +86,8 @@ namespace tfs
 
         static const int32_t BLOCK_DIR_NUM = 100;
         static const int32_t NFS_MIRROR_DIR_MODE = 0755;
-      char backup_path_[common::MAX_PATH_LENGTH];
-      char remove_path_[common::MAX_PATH_LENGTH];
+        char backup_path_[common::MAX_PATH_LENGTH];
+        char remove_path_[common::MAX_PATH_LENGTH];
 
    };
 

@@ -280,7 +280,7 @@ namespace tfs
       return TFS_SUCCESS;
     }
 
-    int DataManagement::read_data(const uint32_t block_id, const uint64_t file_id, const int32_t read_offset,
+    int DataManagement::read_data(const uint32_t block_id, const uint64_t file_id, const int32_t read_offset, const int8_t flag,
         int32_t& real_read_len, char* tmp_data_buffer)
     {
       LogicBlock* logic_block = BlockFileManager::get_instance()->get_logic_block(block_id);
@@ -291,7 +291,7 @@ namespace tfs
       }
 
       int64_t start = tbsys::CTimeUtil::getTime();
-      int ret = logic_block->read_file(file_id, tmp_data_buffer, real_read_len, read_offset);
+      int ret = logic_block->read_file(file_id, tmp_data_buffer, real_read_len, read_offset, flag);
       if (TFS_SUCCESS != ret)
       {
         TBSYS_LOG(ERROR, "blockid: %u read data error, fileid: %" PRI64_PREFIX "u, size: %d, offset: %d, ret: %d",
@@ -350,8 +350,9 @@ namespace tfs
       }
 
       // if mode is 0 and file is not in nomal status, return error.
-      if (0 == finfo.id_ || finfo.id_ != file_id || ((finfo.flag_ & (FI_DELETED | FI_INVALID | FI_CONCEAL)) != 0 && 0
-          == mode))
+      if ((0 == finfo.id_) 
+          || (finfo.id_ != file_id )
+          || ((finfo.flag_ & (FI_DELETED | FI_INVALID | FI_CONCEAL)) != 0 && 0 == mode))
       {
         TBSYS_LOG(WARN,
             "FileInfo parse fail. blockid: %u, fileid: %" PRI64_PREFIX "u, infoid: %" PRI64_PREFIX "u, flag: %d",
@@ -393,7 +394,7 @@ namespace tfs
       return TFS_SUCCESS;
     }
 
-    int DataManagement::unlink_file(const uint32_t block_id, const uint64_t file_id, const int32_t action)
+    int DataManagement::unlink_file(const uint32_t block_id, const uint64_t file_id, const int32_t action, int64_t& file_size)
     {
       LogicBlock* logic_block = BlockFileManager::get_instance()->get_logic_block(block_id);
       if (NULL == logic_block)
@@ -402,7 +403,7 @@ namespace tfs
         return EXIT_NO_LOGICBLOCK_ERROR;
       }
 
-      int ret = logic_block->unlink_file(file_id, action);
+      int ret = logic_block->unlink_file(file_id, action, file_size);
       if (TFS_SUCCESS != ret)
       {
         TBSYS_LOG(ERROR, "del file fail, blockid: %u, fileid: %" PRI64_PREFIX "u, ret: %d", block_id, file_id, ret);

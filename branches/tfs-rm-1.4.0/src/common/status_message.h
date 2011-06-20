@@ -31,12 +31,13 @@ namespace tfs
       int serialize(Stream& output) const;
       int deserialize(Stream& input);
       int64_t length() const;
-      const char* get_error() const;
-      int32_t get_status() const;
+      inline const char* get_error() const { return msg_;}
+      inline int64_t get_error_msg_length() const { return length_;}
+      inline int32_t get_status() const { return status_;}
 
     private:
       char msg_[MAX_ERROR_MSG_LENGTH + 1];/** include '\0'*/
-      int32_t length_;
+      int64_t length_;
       int32_t status_;
     };
   }

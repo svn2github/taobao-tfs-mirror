@@ -39,7 +39,7 @@ namespace tfs
       virtual int fstat(common::TfsFileStat* file_info, const common::TfsStatType mode = common::NORMAL_STAT);
       virtual int close();
       virtual int64_t get_file_length();
-      virtual int unlink(const char* file_name, const char* suffix, const common::TfsUnlinkType action);
+      virtual int unlink(const char* file_name, const char* suffix, int64_t& file_size, const common::TfsUnlinkType action);
 
     protected:
       virtual int64_t get_segment_for_read(const int64_t offset, char* buf, const int64_t count);

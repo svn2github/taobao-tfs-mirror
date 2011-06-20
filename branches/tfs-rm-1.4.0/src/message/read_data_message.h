@@ -73,8 +73,17 @@ namespace tfs
         {
           return read_data_info_.length_;
         }
+        int8_t get_flag() const 
+        {
+          return flag_;
+        }
+        void set_flag(const int8_t flag)
+        {
+          flag_ = flag;
+        }
       protected:
         ReadDataInfo read_data_info_;
+        int8_t flag_;
     };
 
     class RespReadDataMessage: public common::BasePacket
@@ -153,7 +162,7 @@ namespace tfs
         virtual ~RespReadRawDataMessage();
     };
 
-    class ReadScaleImageMessage: public ReadDataMessageV2
+    class ReadScaleImageMessage: public ReadDataMessage
     {
       public:
         enum ZoomStatus

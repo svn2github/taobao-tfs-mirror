@@ -315,13 +315,13 @@ int TfsClientImpl::set_option_flag(const int fd, const common::OptionFlag option
   return ret;
 }
 
-int TfsClientImpl::unlink(const char* file_name, const char* suffix,
+int TfsClientImpl::unlink(const char* file_name, const char* suffix, int64_t& file_size,
                           const TfsUnlinkType action, const OptionFlag option_flag)
 {
-  return unlink(file_name, suffix, NULL, action, option_flag);
+  return unlink(file_name, suffix, NULL, file_size, action, option_flag);
 }
 
-int TfsClientImpl::unlink(const char* file_name, const char* suffix, const char* ns_addr,
+int TfsClientImpl::unlink(const char* file_name, const char* suffix, const char* ns_addr, int64_t& file_size,
                           const TfsUnlinkType action, const OptionFlag option_flag)
 {
   int ret = TFS_ERROR;
@@ -344,14 +344,14 @@ int TfsClientImpl::unlink(const char* file_name, const char* suffix, const char*
       tfs_file = new TfsSmallFile();
       tfs_file->set_session(tfs_session);
       tfs_file->set_option_flag(option_flag);
-      ret = tfs_file->unlink(file_name, suffix, action);
+      ret = tfs_file->unlink(file_name, suffix, file_size, action);
     }
     else if (file_type == LARGE_TFS_FILE_TYPE)
     {
       tfs_file = new TfsLargeFile();
       tfs_file->set_session(tfs_session);
       tfs_file->set_option_flag(option_flag);
-      ret = tfs_file->unlink(file_name, suffix, action);
+      ret = tfs_file->unlink(file_name, suffix, file_size, action);
     }
     else
     {
@@ -363,7 +363,7 @@ int TfsClientImpl::unlink(const char* file_name, const char* suffix, const char*
   return ret;
 }
 
-#ifdef _WITH_UNIQUE_STORE
+#ifdef WITH_UNIQUE_STORE
 TfsUniqueStore* TfsClientImpl::get_unique_store(const char* ns_addr)
 {
   TfsUniqueStore* unique_store = NULL;
@@ -399,14 +399,18 @@ int TfsClientImpl::init_unique_store(const char* master_addr, const char* slave_
   return ret;
 }
 
-int TfsClientImpl::save_unique(const char* buf, const int64_t count,
-                               const char* file_name, const char* suffix,
-                               char* ret_tfs_name, const int32_t ret_tfs_name_len, const char* ns_addr)
+int64_t TfsClientImpl::save_unique(const char* buf, const int64_t count,
+                                   const char* file_name, const char* suffix,
+                                   char* ret_tfs_name, const int32_t ret_tfs_name_len, const char* ns_addr)
 {
-  int ret = TFS_ERROR;
+  int64_t ret = INVALID_FILE_SIZE;
   TfsUniqueStore* unique_store = get_unique_store(ns_addr);
 
-  if (unique_store != NULL)
+  if ((NULL == file_name || '\0' == file_name[0]) && (NULL == ret_tfs_name || ret_tfs_name_len < TFS_FILE_LEN))
+  {
+    TBSYS_LOG(ERROR, "without invalid tfs name and invalid return tfs name buffer or length");
+  }
+  else if (unique_store != NULL)
   {
     ret = unique_store->save(buf, count, file_name, suffix, ret_tfs_name, ret_tfs_name_len);
   }
@@ -417,13 +421,17 @@ int TfsClientImpl::save_unique(const char* buf, const int64_t count,
   return ret;
 }
 
-int TfsClientImpl::save_unique(const char* local_file,
-                               const char* file_name, const char* suffix,
-                               char* ret_tfs_name, const int32_t ret_tfs_name_len, const char* ns_addr)
+int64_t TfsClientImpl::save_unique(const char* local_file,
+                                   const char* file_name, const char* suffix,
+                                   char* ret_tfs_name, const int32_t ret_tfs_name_len, const char* ns_addr)
 {
-  int ret = TFS_ERROR;
+  int64_t ret = INVALID_FILE_SIZE;
   TfsUniqueStore* unique_store = get_unique_store(ns_addr);
 
+  if ((NULL == file_name || '\0' == file_name[0]) && (NULL == ret_tfs_name || ret_tfs_name_len < TFS_FILE_LEN))
+  {
+    TBSYS_LOG(ERROR, "without invalid tfs name and invalid return tfs name buffer or length");
+  }
   if (unique_store != NULL)
   {
     ret = unique_store->save(local_file, file_name, suffix, ret_tfs_name, ret_tfs_name_len);
@@ -436,14 +444,15 @@ int TfsClientImpl::save_unique(const char* local_file,
   return ret;
 }
 
-int32_t TfsClientImpl::unlink_unique(const char* file_name, const char* suffix, const int32_t count, const char* ns_addr)
+int32_t TfsClientImpl::unlink_unique(const char* file_name, const char* suffix, int64_t& file_size,
+                                     const int32_t count, const char* ns_addr)
 {
   int ret = TFS_ERROR;
   TfsUniqueStore* unique_store = get_unique_store(ns_addr);
 
   if (unique_store != NULL)
   {
-    ret = unique_store->unlink(file_name, suffix, count);
+    ret = unique_store->unlink(file_name, suffix, file_size, count);
   }
   else
   {
@@ -652,9 +661,9 @@ int32_t TfsClientImpl::get_block_cache_items() const
   return ret;
 }
 
-double TfsClientImpl::get_cache_hit_radio() const
+int32_t TfsClientImpl::get_cache_hit_ratio() const
 {
-  return 1;
+  return BgTask::get_cache_hit_ratio();
 }
 
 uint64_t TfsClientImpl::get_server_id()
@@ -677,16 +686,21 @@ int32_t TfsClientImpl::get_cluster_id()
   return cluster_id;
 }
 
-int TfsClientImpl::save_file(const char* local_file, const char* tfs_name, const char* suffix,
-                             char* ret_tfs_name, const int32_t ret_tfs_name_len,
-                             const char* ns_addr, const int32_t flag)
+int64_t TfsClientImpl::save_file(const char* local_file, const char* tfs_name, const char* suffix,
+                                 char* ret_tfs_name, const int32_t ret_tfs_name_len,
+                                 const char* ns_addr, const int32_t flag)
 {
   int ret = TFS_ERROR;
   int fd = -1;
+  int64_t file_size = 0;
 
   if (NULL == local_file)
   {
     TBSYS_LOG(ERROR, "local file is null");
+  }
+  else if ((NULL == tfs_name || '\0' == tfs_name[0]) && (NULL == ret_tfs_name || ret_tfs_name_len < TFS_FILE_LEN))
+  {
+    TBSYS_LOG(ERROR, "without invalid tfs name and invalid return tfs name buffer or length");
   }
   else if ((fd = ::open(local_file, O_RDONLY)) < 0)
   {
@@ -731,6 +745,8 @@ int TfsClientImpl::save_file(const char* local_file, const char* tfs_name, const
           break;
         }
 
+        file_size += read_len;
+
         if (read_len < MAX_READ_SIZE)
         {
           break;
@@ -748,10 +764,10 @@ int TfsClientImpl::save_file(const char* local_file, const char* tfs_name, const
     ::close(fd);
   }
 
-  return ret;
+  return ret != TFS_SUCCESS ? INVALID_FILE_SIZE : file_size;
 }
 
-int TfsClientImpl::save_file(const char* buf, const int64_t count, const char* tfs_name, const char* suffix,
+int64_t TfsClientImpl::save_file(const char* buf, const int64_t count, const char* tfs_name, const char* suffix,
                              char* ret_tfs_name, const int32_t ret_tfs_name_len,
                              const char* ns_addr, const int32_t flag, const char* key)
 {
@@ -760,6 +776,10 @@ int TfsClientImpl::save_file(const char* buf, const int64_t count, const char* t
   if (NULL == buf || count <= 0)
   {
     TBSYS_LOG(ERROR, "invalid buffer and count. buffer: %p, count: %"PRI64_PREFIX"d", buf, count);
+  }
+  else if ((NULL == tfs_name || '\0' == tfs_name[0]) && (NULL == ret_tfs_name || ret_tfs_name_len < TFS_FILE_LEN))
+  {
+    TBSYS_LOG(ERROR, "without invalid tfs name and invalid return tfs name buffer length");
   }
   else
   {
@@ -786,7 +806,7 @@ int TfsClientImpl::save_file(const char* buf, const int64_t count, const char* t
     }
   }
 
-  return ret;
+  return ret != TFS_SUCCESS ? INVALID_FILE_SIZE : count;
 }
 
 int TfsClientImpl::fetch_file(const char* local_file, const char* tfs_name, const char* suffix, const char* ns_addr)

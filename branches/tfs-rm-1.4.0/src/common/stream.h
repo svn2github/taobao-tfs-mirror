@@ -123,7 +123,7 @@ namespace tfs
       int get_int32(int32_t* value);
       int get_int64(int64_t* value);
       int get_bytes(void* data, const int64_t length);
-      int get_string(char* str, const int64_t length);
+      int get_string(char* str, int64_t& length);
       int get_string(std::string& str);
       template <typename T>
       int get_vint8(T& value)

@@ -110,7 +110,7 @@ void init()
   g_cmd_map["exit"] = CmdNode("exit", "exit", 0, 0, cmd_quit);
   g_cmd_map["param"] = CmdNode("param name [set value [extravalue]]", "set/get param value", 1, 4, cmd_set_run_param);
   g_cmd_map["addblk"] = CmdNode("addblk blockid", "add block", 1, 1, cmd_add_block);
-  g_cmd_map["removeblk"] = CmdNode("removeblock blockid [serverip:port]", "remove block", 1, 2, cmd_remove_block);
+  g_cmd_map["removeblk"] = CmdNode("removeblock blockid serverip:port", "remove block", 2, 2, cmd_remove_block);
   g_cmd_map["loadblk"] = CmdNode("loadblk blockid serverip:port", "load block", 2, 2, cmd_load_block);
   g_cmd_map["compactblk"] = CmdNode("compactblk blockid", "compact block", 1, 1, cmd_compact_block);
   g_cmd_map["replblk"] = CmdNode("replblk blockid [src dest action]", "replicate block", 1, 4, cmd_replicate_block);
@@ -148,12 +148,11 @@ int cmd_set_run_param(const VSTRING& param)
   };
   static int32_t param_strlen = sizeof(param_str) / sizeof(char*);
 
-  int32_t i;
   int32_t size = param.size();
-  if (size != 1 && size != 3 && size != 4)
+  if (size != 1 && size != 3)
   {
     fprintf(stderr, "param param_name\n\n");
-    for (i = 0; i < param_strlen; i++)
+    for (int32_t i = 0; i < param_strlen; i++)
     {
       fprintf(stderr, "%s\n", param_str[i]);
     }
@@ -162,7 +161,7 @@ int cmd_set_run_param(const VSTRING& param)
 
   const char* param_name = param[0].c_str();
   uint32_t index = 0;
-  for (i = 0; i < param_strlen; i++)
+  for (int32_t i = 0; i < param_strlen; i++)
   {
     if (strcmp(param_name, param_str[i]) == 0)
     {
@@ -170,13 +169,17 @@ int cmd_set_run_param(const VSTRING& param)
       break;
     }
   }
+
   if (0 == index)
   {
     fprintf(stderr, "param %s not valid\n", param_name);
     return TFS_ERROR;
   }
-  uint64_t value = 0;
-  if (3 == size || 4 == size)
+
+  int32_t value = 0;
+  bool is_set = false;
+
+  if (3 == size)
   {
     if (strcmp("set", param[1].c_str()))
     {
@@ -184,12 +187,8 @@ int cmd_set_run_param(const VSTRING& param)
       return TFS_ERROR;
     }
     index |= 0x10000000;
+    is_set = true;
     value = atoi(param[2].c_str());
-    if (4 == size)
-    {
-      value <<= 32;
-      value |= atoi(param[3].c_str());
-    }
   }
 
   ClientCmdMessage req_cc_msg;
@@ -197,14 +196,35 @@ int cmd_set_run_param(const VSTRING& param)
   req_cc_msg.set_value3(index);
   req_cc_msg.set_value4(value);
 
-  int32_t status = TFS_ERROR;
+  tbnet::Packet* ret_message = NULL;
+  NewClient* client = NewClientManager::get_instance().create_client();
+  send_msg_to_server(g_tfs_client->get_server_id(), client, &req_cc_msg, ret_message);
 
-  send_msg_to_server(g_tfs_client->get_server_id(), &req_cc_msg, status);
+  int ret = TFS_SUCCESS;
+  string ret_value = "";
+  if (ret_message == NULL)
+  {
+    ret = TFS_ERROR;
+  }
+  else if (ret_message->getPCode() == STATUS_MESSAGE)
+  {
+    StatusMessage* s_msg = dynamic_cast<StatusMessage*> (ret_message);
+    ret = s_msg->get_status();
+    if (ret == STATUS_MESSAGE_OK && !is_set)
+    {
+      ret_value = s_msg->get_error();
+    }
+  }
 
-  ToolUtil::print_info(status, "param %s %s %s", param[0].c_str(), index & 0x10000000 ? "set" : "",
-                       index & 0x10000000 ? param[2].c_str() : "");
+  string ret_str = "param " +
+    (is_set ? (string(param_name) + " set " + param[2]) :
+     string(param_name) + " " + ret_value);
 
-  return status;
+  ToolUtil::print_info(ret, "%s", ret_str.c_str());
+
+  NewClientManager::get_instance().destroy_client(client);
+
+  return ret;
 }
 
 int cmd_add_block(const VSTRING& param)
@@ -229,15 +249,11 @@ int cmd_add_block(const VSTRING& param)
 int cmd_remove_block(const VSTRING& param)
 {
   uint32_t block_id = atoi(param[0].c_str());
-  if (0 == block_id)
+  uint64_t server_id = Func::get_host_ip(param[1].c_str());
+  if (0 == server_id || 0 == block_id)
   {
-    fprintf(stderr, "invalid blockid: %s\n", param[0].c_str());
+    fprintf(stderr, "invalid blockid or address: %s %s\n", param[0].c_str(), param[1].c_str());
     return TFS_ERROR;
-  }
-  uint64_t server_id = 0;
-  if (param.size() > 1)
-  {
-    server_id = Func::get_host_ip(param[1].c_str());
   }
 
   ClientCmdMessage req_cc_msg;

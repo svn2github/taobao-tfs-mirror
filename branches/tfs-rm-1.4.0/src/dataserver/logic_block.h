@@ -62,11 +62,11 @@ namespace tfs
         int check_block_version(int32_t& remote_version, common::UpdateBlockType &repair);
         int close_write_file(const uint64_t inner_file_id, DataFile* datafile, const uint32_t crc);
 
-        int read_file(const uint64_t inner_file_id, char* buf, int32_t& nbytes, const int32_t offset);
+        int read_file(const uint64_t inner_file_id, char* buf, int32_t& nbytes, const int32_t offset, const int8_t flag);
         int read_file_info(const uint64_t inner_file_id, common::FileInfo& finfo);
 
         int rename_file(const uint64_t old_inner_file_id, const uint64_t new_inner_file_id);
-        int unlink_file(const uint64_t inner_file_id, const int32_t action);
+        int unlink_file(const uint64_t inner_file_id, const int32_t action, int64_t& file_size);
         int read_raw_data(char* buf, int32_t& nbyte, const int32_t offset);
         int write_raw_data(const char* buf, const int32_t nbytes, const int32_t offset);
 
