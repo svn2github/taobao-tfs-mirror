@@ -87,9 +87,9 @@ namespace tfs
       return impl_->read(fd, buf, count);
     }
 
-    int64_t RcClient::read_v2(const int fd, void* buf, const int64_t count, TfsFileStat* tfs_stat_buf)
+    int64_t RcClient::readv2(const int fd, void* buf, const int64_t count, TfsFileStat* tfs_stat_buf)
     {
-      return impl_->read_v2(fd, buf, count, tfs_stat_buf);
+      return impl_->readv2(fd, buf, count, tfs_stat_buf);
     }
     int64_t RcClient::pread(const int fd, void* buf, const int64_t count, const int64_t offset)
     {
@@ -109,7 +109,8 @@ namespace tfs
     {
       return impl_->lseek(fd, offset, whence);
     }
-    int RcClient::fstat(const int fd, common::TfsFileStat* buf)
+
+    TfsRetType RcClient::fstat(const int fd, common::TfsFileStat* buf)
     {
       return impl_->fstat(fd, buf);
     }
@@ -119,15 +120,15 @@ namespace tfs
       return impl_->unlink(file_name, suffix, action);
     }
 
-    int64_t RcClient::savefile(const char* local_file, char* tfs_name_buff, const int32_t buff_len,
+    int64_t RcClient::save_file(const char* local_file, char* tfs_name_buff, const int32_t buff_len,
         const bool is_large_file)
     {
-      return impl_->savefile(local_file, tfs_name_buff, buff_len, is_large_file);
+      return impl_->save_file(local_file, tfs_name_buff, buff_len, is_large_file);
     }
-    int64_t RcClient::savefile(const char* source_data, const int32_t data_len,
+    int64_t RcClient::save_file(const char* source_data, const int32_t data_len,
         char* tfs_name_buff, const int32_t buff_len)
     {
-      return impl_->savefile(source_data, data_len, tfs_name_buff, buff_len);
+      return impl_->save_file(source_data, data_len, tfs_name_buff, buff_len);
     }
 
   }

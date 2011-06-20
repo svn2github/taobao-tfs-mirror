@@ -28,7 +28,7 @@ using namespace tfs::message;
 using namespace std;
 
 
-int RcHelper::login(const int64_t rc_ip, const string& app_key, const int64_t app_ip,
+int RcHelper::login(const uint64_t rc_ip, const string& app_key, const uint64_t app_ip,
     string& session_id, BaseInfo& base_info)
 {
   ReqRcLoginMessage req_login_msg;
@@ -40,7 +40,7 @@ int RcHelper::login(const int64_t rc_ip, const string& app_key, const int64_t ap
   int ret = send_msg_to_server(rc_ip, client, &req_login_msg, rsp, ClientConfig::wait_timeout_);
   if (TFS_SUCCESS != ret)
   {
-    TBSYS_LOG(ERROR, "call req login rc fail, rc_ip: %"PRI64_PREFIX"d, app_key: %s, app_ip: %"PRI64_PREFIX"d, ret: %d",
+    TBSYS_LOG(ERROR, "call req login rc fail, rc_ip: %"PRI64_PREFIX"u, app_key: %s, app_ip: %"PRI64_PREFIX"u, ret: %d",
         rc_ip, app_key.c_str(), app_ip, ret);
   }
   else if (RSP_RC_LOGIN_MESSAGE == rsp->getPCode()) //rsp will not be null
@@ -55,14 +55,14 @@ int RcHelper::login(const int64_t rc_ip, const string& app_key, const int64_t ap
     ret = EXIT_UNKNOWN_MSGTYPE;
     if (STATUS_MESSAGE == rsp->getPCode())
     {
-      TBSYS_LOG(ERROR, "call req login rc fail, rc_ip: %"PRI64_PREFIX"d, app_key: %s, app_ip: %"PRI64_PREFIX"d,"
+      TBSYS_LOG(ERROR, "call req login rc fail, rc_ip: %"PRI64_PREFIX"u, app_key: %s, app_ip: %"PRI64_PREFIX"u,"
           "ret: %d, error: %s, status: %d",
           rc_ip, app_key.c_str(), app_ip, ret,
           dynamic_cast<StatusMessage*>(rsp)->get_error(), dynamic_cast<StatusMessage*>(rsp)->get_status());
     }
     else
     {
-      TBSYS_LOG(ERROR, "call req login rc fail, rc_ip: %"PRI64_PREFIX"d, app_key: %s, app_ip: %"PRI64_PREFIX"d, ret: %d, msg type: %d",
+      TBSYS_LOG(ERROR, "call req login rc fail, rc_ip: %"PRI64_PREFIX"u, app_key: %s, app_ip: %"PRI64_PREFIX"u, ret: %d, msg type: %d",
           rc_ip, app_key.c_str(), app_ip, ret, rsp->getPCode());
     }
   }
@@ -70,7 +70,7 @@ int RcHelper::login(const int64_t rc_ip, const string& app_key, const int64_t ap
   return ret;
 }
 
-int RcHelper::keep_alive(const int64_t rc_ip, const common::KeepAliveInfo& ka_info,
+int RcHelper::keep_alive(const uint64_t rc_ip, const common::KeepAliveInfo& ka_info,
     bool& update_flag, common::BaseInfo& base_info)
 {
   ReqRcKeepAliveMessage req_ka_msg;
@@ -81,7 +81,7 @@ int RcHelper::keep_alive(const int64_t rc_ip, const common::KeepAliveInfo& ka_in
   int ret = send_msg_to_server(rc_ip, client, &req_ka_msg, rsp, ClientConfig::wait_timeout_);
   if (TFS_SUCCESS != ret)
   {
-    TBSYS_LOG(ERROR, "call req keep alive rc fail, rc_ip: %"PRI64_PREFIX"d, session_id: %s, ret: %d",
+    TBSYS_LOG(ERROR, "call req keep alive rc fail, rc_ip: %"PRI64_PREFIX"u, session_id: %s, ret: %d",
         rc_ip, ka_info.s_base_info_.session_id_.c_str(), ret);
   }
   else if (RSP_RC_KEEPALIVE_MESSAGE == rsp->getPCode()) //rsp will not be null
@@ -99,13 +99,13 @@ int RcHelper::keep_alive(const int64_t rc_ip, const common::KeepAliveInfo& ka_in
     ret = EXIT_UNKNOWN_MSGTYPE;
     if (STATUS_MESSAGE == rsp->getPCode())
     {
-      TBSYS_LOG(ERROR, "call req keep alive rc fail, rc_ip: %"PRI64_PREFIX"d, session_id: %s, ret: %d, error: %s, status: %d",
+      TBSYS_LOG(ERROR, "call req keep alive rc fail, rc_ip: %"PRI64_PREFIX"u, session_id: %s, ret: %d, error: %s, status: %d",
           rc_ip, ka_info.s_base_info_.session_id_.c_str(), ret,
           dynamic_cast<StatusMessage*>(rsp)->get_error(), dynamic_cast<StatusMessage*>(rsp)->get_status());
     }
     else
     {
-      TBSYS_LOG(ERROR, "call req keep alive rc fail, rc_ip: %"PRI64_PREFIX"d, session_id: %s, ret: %d, msg type: %d",
+      TBSYS_LOG(ERROR, "call req keep alive rc fail, rc_ip: %"PRI64_PREFIX"u, session_id: %s, ret: %d, msg type: %d",
           rc_ip, ka_info.s_base_info_.session_id_.c_str(), ret, rsp->getPCode());
     }
   }
@@ -113,7 +113,7 @@ int RcHelper::keep_alive(const int64_t rc_ip, const common::KeepAliveInfo& ka_in
   return ret;
 }
 
-int RcHelper::logout(const int64_t rc_ip, const common::KeepAliveInfo& ka_info)
+int RcHelper::logout(const uint64_t rc_ip, const common::KeepAliveInfo& ka_info)
 {
   ReqRcLogoutMessage req_logout_msg;
   req_logout_msg.set_ka_info(ka_info);
@@ -123,29 +123,29 @@ int RcHelper::logout(const int64_t rc_ip, const common::KeepAliveInfo& ka_info)
   int ret = send_msg_to_server(rc_ip, client, &req_logout_msg, rsp, ClientConfig::wait_timeout_);
   if (TFS_SUCCESS != ret)
   {
-    TBSYS_LOG(ERROR, "call req logout rc fail, rc_ip: %"PRI64_PREFIX"d, session_id: %s, ret: %d",
+    TBSYS_LOG(ERROR, "call req logout rc fail, rc_ip: %"PRI64_PREFIX"u, session_id: %s, ret: %d",
         rc_ip, ka_info.s_base_info_.session_id_.c_str(), ret);
   }
   else if (STATUS_MESSAGE == rsp->getPCode()) //rsp will not be null
   {
-    if (0 != dynamic_cast<StatusMessage*>(rsp)->get_status())
+    if (STATUS_MESSAGE_OK != dynamic_cast<StatusMessage*>(rsp)->get_status())
     {
       ret = dynamic_cast<StatusMessage*>(rsp)->get_status();
-      TBSYS_LOG(ERROR, "call req logout rc fail, rc_ip: %"PRI64_PREFIX"d, session_id: %s, ret: %d",
+      TBSYS_LOG(ERROR, "call req logout rc fail, rc_ip: %"PRI64_PREFIX"u, session_id: %s, ret: %d",
           rc_ip, ka_info.s_base_info_.session_id_.c_str(), ret);
     }
   }
   else
   {
     ret = EXIT_UNKNOWN_MSGTYPE;
-    TBSYS_LOG(ERROR, "call req logout rc fail, rc_ip: %"PRI64_PREFIX"d, session_id: %s, ret: %d, msg type: %d",
+    TBSYS_LOG(ERROR, "call req logout rc fail, rc_ip: %"PRI64_PREFIX"u, session_id: %s, ret: %d, msg type: %d",
         rc_ip, ka_info.s_base_info_.session_id_.c_str(), ret, rsp->getPCode());
   }
   NewClientManager::get_instance().destroy_client(client);
   return ret;
 }
 
-int RcHelper::reload(const int64_t rc_ip, const common::ReloadType reload_type)
+int RcHelper::reload(const uint64_t rc_ip, const common::ReloadType reload_type)
 {
   ReqRcReloadMessage req_reload_msg;
   req_reload_msg.set_reload_type(reload_type);
@@ -155,22 +155,22 @@ int RcHelper::reload(const int64_t rc_ip, const common::ReloadType reload_type)
   int ret = send_msg_to_server(rc_ip, client, &req_reload_msg, rsp, ClientConfig::wait_timeout_);
   if (TFS_SUCCESS != ret)
   {
-    TBSYS_LOG(ERROR, "call req reload rc fail, rc_ip: %"PRI64_PREFIX"d, reload_type: %d, ret: %d",
+    TBSYS_LOG(ERROR, "call req reload rc fail, rc_ip: %"PRI64_PREFIX"u, reload_type: %d, ret: %d",
         rc_ip, reload_type, ret);
   }
   else if (STATUS_MESSAGE == rsp->getPCode()) //rsp will not be null
   {
-    if (0 != dynamic_cast<StatusMessage*>(rsp)->get_status())
+    if (STATUS_MESSAGE_OK != dynamic_cast<StatusMessage*>(rsp)->get_status())
     {
       ret = dynamic_cast<StatusMessage*>(rsp)->get_status();
-      TBSYS_LOG(ERROR, "call req reload rc fail, rc_ip: %"PRI64_PREFIX"d, reload_type: %d, ret: %d",
+      TBSYS_LOG(ERROR, "call req reload rc fail, rc_ip: %"PRI64_PREFIX"u, reload_type: %d, ret: %d",
           rc_ip, reload_type, ret);
     }
   }
   else
   {
     ret = EXIT_UNKNOWN_MSGTYPE;
-    TBSYS_LOG(ERROR, "call req reload rc fail, rc_ip: %"PRI64_PREFIX"d, reload_type: %d, ret: %d, msg type: %d",
+    TBSYS_LOG(ERROR, "call req reload rc fail, rc_ip: %"PRI64_PREFIX"u, reload_type: %d, ret: %d, msg type: %d",
         rc_ip, reload_type, ret, rsp->getPCode());
   }
   NewClientManager::get_instance().destroy_client(client);

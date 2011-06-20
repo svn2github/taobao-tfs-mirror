@@ -164,7 +164,12 @@ int64_t TfsFile::read_ex(void* buf, const int64_t count, const int64_t offset,
     TBSYS_LOG(ERROR, "read fail, file open without read flag: %d", flags_);
     ret = EXIT_NOT_PERM_OPER;
   }
-  else
+  else if (NULL == buf || count < 0)
+  {
+    TBSYS_LOG(ERROR, "invalid read buffer or count. buffer: %p, count: %"PRI64_PREFIX"d", buf, count);
+    ret = TFS_ERROR;
+  }
+  else if (count > 0)
   {
     int64_t check_size = 0, cur_size = 0, seg_count = 0, retry_count = 0;
 
@@ -236,7 +241,12 @@ int64_t TfsFile::write_ex(const void* buf, const int64_t count, const int64_t of
     TBSYS_LOG(ERROR, "write fail: file open without write flag");
     ret = EXIT_NOT_PERM_OPER;
   }
-  else
+  else if (NULL == buf || count < 0)
+  {
+    TBSYS_LOG(ERROR, "invalid write buffer or count. buffer: %p, count: %"PRI64_PREFIX"d", buf, count);
+    ret = TFS_ERROR;
+  }
+  else if (count > 0)
   {
     int64_t cur_size = 0, seg_count = 0, retry_count = 0;
 
@@ -288,11 +298,14 @@ int64_t TfsFile::write_ex(const void* buf, const int64_t count, const int64_t of
     }
   }
 
-  if (TFS_SUCCESS != ret && EXIT_NOT_OPEN_ERROR != ret && EXIT_NOT_PERM_OPER != ret)
+  if (TFS_SUCCESS != ret)
   {
-    file_status_ = TFS_FILE_WRITE_ERROR;
+    if (EXIT_NOT_OPEN_ERROR != ret && EXIT_NOT_PERM_OPER != ret)
+    {
+      file_status_ = TFS_FILE_WRITE_ERROR;
+    }
   }
-  else if (TFS_SUCCESS == ret)
+  else
   {
     file_status_ = TFS_FILE_OPEN_YES;
   }

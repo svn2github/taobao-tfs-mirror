@@ -65,7 +65,7 @@ namespace tfs
         TfsRetType close(const int fd, char* tfs_name_buff = NULL, const int32_t buff_len = 0);
 
         int64_t read(const int fd, void* buf, const int64_t count);
-        int64_t read_v2(const int fd, void* buf, const int64_t count, common::TfsFileStat* tfs_stat_buf);
+        int64_t readv2(const int fd, void* buf, const int64_t count, common::TfsFileStat* tfs_stat_buf);
         int64_t pread(const int fd, void* buf, const int64_t count, const int64_t offset);
 
         int64_t write(const int fd, const void* buf, const int64_t count);
@@ -76,10 +76,10 @@ namespace tfs
 
         TfsRetType unlink(const char* file_name, const char* suffix = NULL,
             const common::TfsUnlinkType action = common::DELETE);
-        int64_t savefile(const char* local_file, char* tfs_name_buff, const int32_t buff_len,
+        int64_t save_file(const char* local_file, char* tfs_name_buff, const int32_t buff_len,
             const bool is_large_file = false);
 
-        int64_t savefile(const char* source_data, const int32_t data_len,
+        int64_t save_file(const char* source_data, const int32_t data_len,
             char* tfs_name_buff, const int32_t buff_len);
 
         TfsRetType logout();
@@ -87,7 +87,7 @@ namespace tfs
         DISALLOW_COPY_AND_ASSIGN(RcClientImpl);
 
       private:
-        TfsRetType login(const int64_t rc_ip, const char* app_key, const int64_t app_ip);
+        TfsRetType login(const uint64_t rc_ip, const char* app_key, const uint64_t app_ip);
 
         TfsRetType check_init_stat() const;
 
@@ -103,17 +103,17 @@ namespace tfs
         TfsRetType unlink(const char* ns_addr, const char* file_name,
             const char* suffix, const common::TfsUnlinkType action);
 
-        int64_t savefile(const char* ns_addr, const char* local_file, char* tfs_name_buff,
+        int64_t save_file(const char* ns_addr, const char* local_file, char* tfs_name_buff,
             const int32_t buff_len, const bool is_large_file = false);
 
-        int64_t savefile(const char* ns_addr, const char* source_data, const int32_t data_len,
+        int64_t save_file(const char* ns_addr, const char* source_data, const int32_t data_len,
             char* tfs_name_buff, const int32_t buff_len);
 
         std::string get_ns_addr(const char* file_name, const RcClient::RC_MODE mode, const int index) const;
 
         static int32_t get_cluster_id(const char* file_name);
         static void parse_cluster_id(const std::string& cluster_id_str, int32_t& id, bool& is_master);
-        static uint32_t caculate_distance(const std::string& ip_str, const uint32_t addr);
+        static uint32_t calculate_distance(const std::string& ip_str, const uint32_t addr);
 
         void calculate_ns_info(const common::BaseInfo& base_info, const uint32_t local_addr);
 

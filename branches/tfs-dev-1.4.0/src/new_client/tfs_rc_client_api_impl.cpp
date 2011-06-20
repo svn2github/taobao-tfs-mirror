@@ -119,8 +119,8 @@ namespace tfs
       uint64_t rc_ip = Func::get_host_ip(str_rc_ip);
       uint64_t app_ip = Func::str_to_addr(str_app_ip, 0);
       return initialize(rc_ip, app_key, app_ip, cache_times, cache_items, dev_name);
-
     }
+
     TfsRetType RcClientImpl::initialize(const uint64_t rc_ip, const char* app_key, const uint64_t app_ip,
         const int32_t cache_times, const int32_t cache_items, const char* dev_name)
     {
@@ -184,7 +184,7 @@ namespace tfs
       }
       if (TFS_SUCCESS == ret)
       {
-        init_stat_ = INIT_LOGINED;
+        init_stat_ = INIT_INVALID;
       }
       return ret;
     }
@@ -247,6 +247,10 @@ namespace tfs
         {
           flag = common::T_WRITE;
         }
+        else if (RcClient::STAT == mode)
+        {
+          flag = common::T_STAT;
+        }
         else
         {
           flag = common::T_READ;
@@ -286,7 +290,7 @@ namespace tfs
       return read_count;
     }
 
-    int64_t RcClientImpl::read_v2(const int fd, void* buf, const int64_t count, TfsFileStat* tfs_stat_buf)
+    int64_t RcClientImpl::readv2(const int fd, void* buf, const int64_t count, TfsFileStat* tfs_stat_buf)
     {
       int64_t read_count = -1;
       int ret = check_init_stat();
@@ -382,7 +386,7 @@ namespace tfs
         if (TFS_SUCCESS == ret)
         {
           int64_t start_time = tbsys::CTimeUtil::getTime();
-          int64_t data_size = 0; 
+          int64_t data_size = 0;
           int32_t ref_count = TfsClient::Instance()->unlink_unique(file_name, suffix, data_size, 1, ns_addr);
           int64_t response_time = tbsys::CTimeUtil::getTime() - start_time;
           add_stat_info(OPER_UNIQUE_UNLINK, data_size, response_time, ref_count >= 0);
@@ -392,14 +396,14 @@ namespace tfs
           }
         }
 #else
-        TBSYS_LOG(ERROR, "you should compile client whith marc WITH_UNIQUE_STORE");
+        TBSYS_LOG(ERROR, "you should compile client with --enable-uniquestore");
         ret = TFS_ERROR;
 #endif
       }
       else
       {
         int64_t start_time = tbsys::CTimeUtil::getTime();
-        int64_t data_size = 0; 
+        int64_t data_size = 0;
         int32_t ref_count = TfsClient::Instance()->unlink(file_name, suffix,
             ns_addr, data_size, action);
         int64_t response_time = tbsys::CTimeUtil::getTime() - start_time;
@@ -423,7 +427,7 @@ namespace tfs
       return ret;
     }
 
-    int64_t RcClientImpl::savefile(const char* local_file, char* tfs_name_buff, const int32_t buff_len,
+    int64_t RcClientImpl::save_file(const char* local_file, char* tfs_name_buff, const int32_t buff_len,
         const bool is_large_file)
     {
       int ret = check_init_stat();
@@ -439,12 +443,12 @@ namespace tfs
             {
               break;
             }
-            saved_size = savefile(ns_addr.c_str(), local_file, tfs_name_buff, buff_len, is_large_file);
+            saved_size = save_file(ns_addr.c_str(), local_file, tfs_name_buff, buff_len, is_large_file);
           } while(saved_size < 0);
       }
       return saved_size;
     }
-    int64_t RcClientImpl::savefile(const char* source_data, const int32_t data_len,
+    int64_t RcClientImpl::save_file(const char* source_data, const int32_t data_len,
         char* tfs_name_buff, const int32_t buff_len)
     {
       int ret = check_init_stat();
@@ -460,13 +464,13 @@ namespace tfs
             {
               break;
             }
-            saved_size = savefile(ns_addr.c_str(), source_data, data_len,
+            saved_size = save_file(ns_addr.c_str(), source_data, data_len,
                 tfs_name_buff, buff_len);
           } while(saved_size < 0);
       }
       return saved_size;
     }
-    int64_t RcClientImpl::savefile(const char* ns_addr, const char* local_file, char* tfs_name_buff,
+    int64_t RcClientImpl::save_file(const char* ns_addr, const char* local_file, char* tfs_name_buff,
         const int32_t buff_len, const bool is_large_file)
     {
       int flag = T_DEFAULT;
@@ -491,7 +495,7 @@ namespace tfs
           add_stat_info(OPER_UNIQUE_WRITE, saved_size, response_time, saved_size >= 0);
         }
 #else
-        TBSYS_LOG(ERROR, "you should compile client whith marc WITH_UNIQUE_STORE");
+        TBSYS_LOG(ERROR, "you should compile client with --enable-uniquestore");
         saved_size = -1;
 #endif
       }
@@ -505,7 +509,7 @@ namespace tfs
       }
       return saved_size;
     }
-    int64_t RcClientImpl::savefile(const char* ns_addr, const char* source_data, const int32_t data_len,
+    int64_t RcClientImpl::save_file(const char* ns_addr, const char* source_data, const int32_t data_len,
         char* tfs_name_buff, const int32_t buff_len)
     {
       int64_t saved_size = -1;
@@ -525,7 +529,7 @@ namespace tfs
           add_stat_info(OPER_UNIQUE_WRITE, saved_size, response_time, saved_size >= 0);
         }
 #else
-        TBSYS_LOG(ERROR, "you should compile client whith marc WITH_UNIQUE_STORE");
+        TBSYS_LOG(ERROR, "you should compile client with --enable-uniquestore");
 #endif
       }
       else
@@ -539,7 +543,7 @@ namespace tfs
       return saved_size;
     }
 
-    TfsRetType RcClientImpl::login(const int64_t rc_ip, const char* app_key, const int64_t app_ip)
+    TfsRetType RcClientImpl::login(const uint64_t rc_ip, const char* app_key, const uint64_t app_ip)
     {
       int ret = TFS_SUCCESS;
       if (TFS_SUCCESS == (ret = RcHelper::login(rc_ip, app_key, app_ip,
@@ -671,9 +675,9 @@ namespace tfs
             }
             else
             {
-              //caculat who will be the first choice;
-              uint32_t distance1 = caculate_distance(write_ns_[0], local_addr);
-              uint32_t distance2 = caculate_distance(cluster_data_it->ns_vip_, local_addr);
+              //calculate who will be the first choice;
+              uint32_t distance1 = calculate_distance(write_ns_[0], local_addr);
+              uint32_t distance2 = calculate_distance(cluster_data_it->ns_vip_, local_addr);
               if (distance1 > distance2)
               {
                 write_ns_[1] = write_ns_[0];
@@ -692,9 +696,9 @@ namespace tfs
           }
           else
           {
-            //caculat who will be the first choice;
-            uint32_t distance1 = caculate_distance(choice[0][cluster_id], local_addr);
-            uint32_t distance2 = caculate_distance(cluster_data_it->ns_vip_, local_addr);
+            //calculate who will be the first choice;
+            uint32_t distance1 = calculate_distance(choice[0][cluster_id], local_addr);
+            uint32_t distance2 = calculate_distance(cluster_data_it->ns_vip_, local_addr);
             if (distance1 > distance2)
             {
               choice[1][cluster_id] = choice[0][cluster_id];
@@ -717,7 +721,7 @@ namespace tfs
           }
         }
       }
-      TBSYS_LOG(INFO, "need_use_unique_:%d local_addr_:%u", need_use_unique_, local_addr_);
+      TBSYS_LOG(INFO, "need_use_unique_:%d local_addr_:%u", need_use_unique_, local_addr);
       for (int i = 0; i < 2; i++)
       {
         TBSYS_LOG(INFO, "%d write_ns %s", i, write_ns_[i].c_str());
@@ -745,7 +749,7 @@ namespace tfs
         is_master = (cluster_id_str[2] == 'M' || cluster_id_str[2] == 'm');
       }
     }
-    uint32_t RcClientImpl::caculate_distance(const std::string& ip_str, const uint32_t addr)
+    uint32_t RcClientImpl::calculate_distance(const std::string& ip_str, const uint32_t addr)
     {
       uint32_t ip1 = Func::get_addr(ip_str.c_str());
       uint32_t ip2 = addr;
@@ -781,16 +785,18 @@ namespace tfs
       tbsys::CStringUtil::split(tmp, ";", list);
       if (list.size() < 4)
       {
-        TBSYS_LOG(ERROR, "parse_duplicate_info error :%s", duplicate_info.c_str());
+        TBSYS_LOG(ERROR, "parse_duplicate_info error: %s", duplicate_info.c_str());
       }
-      duplicate_server_master_ = list[0];
-      duplicate_server_slave_ = list[1];
-      duplicate_server_group_ = list[2];
-      duplicate_server_area_ = atoi(list[3]);
+      else
+      {
+        duplicate_server_master_ = list[0];
+        duplicate_server_slave_ = list[1];
+        duplicate_server_group_ = list[2];
+        duplicate_server_area_ = atoi(list[3]);
+      }
       TBSYS_LOG(DEBUG, "master = %s slave = %s group= %s area = %d",
-          duplicate_server_master_.c_str(), duplicate_server_slave_.c_str(),
-          duplicate_server_group_.c_str(), duplicate_server_area_);
-
+                duplicate_server_master_.c_str(), duplicate_server_slave_.c_str(),
+                duplicate_server_group_.c_str(), duplicate_server_area_);
     }
   }
 }

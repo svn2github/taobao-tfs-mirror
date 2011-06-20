@@ -25,12 +25,12 @@ namespace tfs
     class RcHelper
     {
     public:
-      static int login(const int64_t rc_ip, const std::string& app_key, const int64_t app_ip,
+      static int login(const uint64_t rc_ip, const std::string& app_key, const uint64_t app_ip,
           std::string& session_id, common::BaseInfo& base_info);
-      static int keep_alive(const int64_t rc_ip, const common::KeepAliveInfo& ka_info,
+      static int keep_alive(const uint64_t rc_ip, const common::KeepAliveInfo& ka_info,
           bool& update_flag, common::BaseInfo& base_info);
-      static int logout(const int64_t rc_ip, const common::KeepAliveInfo& ka_info);
-      static int reload(const int64_t rc_ip, const common::ReloadType reload_type);
+      static int logout(const uint64_t rc_ip, const common::KeepAliveInfo& ka_info);
+      static int reload(const uint64_t rc_ip, const common::ReloadType reload_type);
 
     private:
     };

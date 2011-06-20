@@ -55,7 +55,7 @@ namespace tfs
         TfsRetType close(const int fd, char* tfs_name_buff = NULL, const int32_t buff_len = 0);
 
         int64_t read(const int fd, void* buf, const int64_t count);
-        int64_t read_v2(const int fd, void* buf, const int64_t count, common::TfsFileStat* tfs_stat_buf);
+        int64_t readv2(const int fd, void* buf, const int64_t count, common::TfsFileStat* tfs_stat_buf);
         int64_t pread(const int fd, void* buf, const int64_t count, const int64_t offset);
 
         int64_t write(const int fd, const void* buf, const int64_t count);
@@ -67,9 +67,9 @@ namespace tfs
 
         TfsRetType unlink(const char* file_name, const char* suffix = NULL,
             const common::TfsUnlinkType action = common::DELETE);
-        int64_t savefile(const char* local_file, char* tfs_name_buff, const int32_t buff_len,
+        int64_t save_file(const char* local_file, char* tfs_name_buff, const int32_t buff_len,
             const bool is_large_file = false);
-        int64_t savefile(const char* source_data, const int32_t data_len,
+        int64_t save_file(const char* source_data, const int32_t data_len,
             char* tfs_name_buff, const int32_t buff_len);
 
         TfsRetType logout();
