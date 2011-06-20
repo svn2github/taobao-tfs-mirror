@@ -173,7 +173,7 @@ public class Function_ns_plan_test extends NameServerPlanTestCase {
 		bRet = setBalanceMaxDiffBlockNum(1);
 		Assert.assertTrue(bRet);
 		
-		/* Wait 10s for write */
+		/* Wait 120s for write */
 		sleep (120);
 
 		/* Stop write cmd */
@@ -281,6 +281,9 @@ public class Function_ns_plan_test extends NameServerPlanTestCase {
 		/* Kill the 1st ds */
 		bRet = killOneDs();
 		Assert.assertTrue(bRet);
+
+		/* Wait 10s for ssm to update the latest info */
+		sleep (10);
 		
 		/* Wait for completion of replication */
 		bRet = chkBlockCnt(BLOCK_CHK_TIME, 0);
@@ -291,6 +294,9 @@ public class Function_ns_plan_test extends NameServerPlanTestCase {
 		/* Start the killed ds */
 		bRet = startOneDs();
 		Assert.assertTrue(bRet);
+
+		/* Wait 10s for ssm to update the latest info */
+		sleep (10);
 		
 		/* Wait for completion of deletion */
 		bRet = chkBlockCnt(BLOCK_CHK_TIME, 3);
@@ -519,6 +525,9 @@ public class Function_ns_plan_test extends NameServerPlanTestCase {
 		/* Kill the 1st ds */
 		bRet = killOneDs();
 		Assert.assertTrue(bRet);
+
+		/* Wait 10s for ssm to update the latest info */
+		sleep (10);
 		
 		/* Wait for completion of replication */
 		bRet = chkBlockCnt(BLOCK_CHK_TIME, 0);
@@ -752,6 +761,12 @@ public class Function_ns_plan_test extends NameServerPlanTestCase {
 		bRet = writeCmdStop();
 		Assert.assertTrue(bRet);
 
+		/* Wait for completion of replication */
+		bRet = chkBlockCnt(BLOCK_CHK_TIME, 0);
+		Assert.assertTrue(bRet);
+		bRet = chkBlockCnt(BLOCK_CHK_TIME, 1);
+		Assert.assertTrue(bRet);
+		
 		/* Get the block num hold by each ds after write */
 		HashMap<String, Integer> blockDisAfter = new HashMap<String, Integer>();
 		bRet = getBlockDistribution(blockDisAfter);
@@ -764,6 +779,70 @@ public class Function_ns_plan_test extends NameServerPlanTestCase {
 		log.info(caseName + "===> end");
 		return ;
 	}
+	
+	/* Call setNsConf @setUp to make sure min/maxReplication are configured as 2 & 3  */
+	public void Function_14_copy_2_3_rep_block(){
+		
+		boolean bRet = false;
+		caseName = "Function_14_copy_2_3_rep_block";
+		log.info(caseName + "===> start");
+		
+		/* Set loop flag */
+		bRet = setSeedFlag(LOOPON);
+		Assert.assertTrue(bRet);
+		
+		/* Set seed size */
+		bRet = setSeedSize(1);
+		Assert.assertTrue(bRet);
+		
+		/* Set unlink ratio */
+		bRet = setUnlinkRatio(0);
+		Assert.assertTrue(bRet);
+		
+		/* Write file */
+		bRet = writeCmd();
+		Assert.assertTrue(bRet);
+		
+		/* Check the rate of write process */
+		bRet = checkRateRun(SUCCESSRATE, WRITEONLY|READ|UNLINK);
+		Assert.assertTrue(bRet);
+		
+		/* Stop write cmd */
+		bRet = writeCmdStop();
+		Assert.assertTrue(bRet);
+		
+		/* Check block copys */
+		bRet = chkBlockCnt(BLOCK_CHK_TIME, 0);
+		Assert.assertTrue(bRet);
+		bRet = chkBlockCnt(BLOCK_CHK_TIME, 1);
+		Assert.assertTrue(bRet);	
+		
+		/* Kill one ds */
+		bRet = killOneDs();
+		Assert.assertTrue(bRet);
+		
+		/* Wait 10s for recover */
+		sleep (10);
+		
+		/* Check dump plan log */
+		bRet = checkPlan(PlanType.PLAN_TYPE_REPLICATE, BLOCK_CHK_TIME);
+		Assert.assertTrue(bRet);
+		
+		/* Read file */
+		bRet = readCmd();
+		Assert.assertTrue(bRet);
+		
+		/* Monitor the read process */
+		bRet = readCmdMon();
+		Assert.assertTrue(bRet);
+		
+		/* Check rate */
+		bRet = checkRateEnd(SUCCESSRATE, READ);
+		Assert.assertTrue(bRet);
+		
+		log.info(caseName + "===> end");
+		return ;
+	}	
 	
 	@After
 	public void tearDown(){
@@ -801,10 +880,10 @@ public class Function_ns_plan_test extends NameServerPlanTestCase {
 		Assert.assertTrue(bRet);
 		
 		/* Set NS conf */
-		//bRet = setNsConf("nameserver", "max_replication", "1");
-		//Assert.assertTrue(bRet);
-		//bRet = setNsConf("nameserver", "min_replication", "1");
-		//Assert.assertTrue(bRet);
+		bRet = setNsConf("nameserver", "max_replication", "2");
+		Assert.assertTrue(bRet);
+		bRet = setNsConf("nameserver", "min_replication", "3");
+		Assert.assertTrue(bRet);
 		
 		bRet = tfsGrid.start();
 		Assert.assertTrue(bRet);

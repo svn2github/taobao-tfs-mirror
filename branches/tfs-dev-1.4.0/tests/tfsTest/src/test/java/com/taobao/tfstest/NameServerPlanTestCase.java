@@ -86,8 +86,8 @@ public class NameServerPlanTestCase {
 	final public String MOVE             = "move";
 	final public String COMPACT          = "compact";
 	final public String DELETE           = "delete";
-	final public String FINISH           = "finish";
-	final public String START            = "start";
+	final public String STATUS_FINISH    = "status: finish";
+	final public String STATUS_BEGIN     = "status: begin";
 	final public String EMERGENCY        = "emergency";
 	final public String NORMAL           = "normal";
 
@@ -838,8 +838,8 @@ public class NameServerPlanTestCase {
 		boolean bRet = false;
 		String sorLog = tfsSeedClient.getLogs() + caseName;
 		String tarLog = createClientLog(caseName, TEMP);
-		String startCmd = "tail -f " + sorLog + " > " + tarLog;
-		bRet = Proc.proStartBack(CLIENTIP, startCmd);
+		String startCmd = "tail -f " + sorLog;
+		bRet = Proc.proStartBack(CLIENTIP, startCmd + " > " + tarLog);
 		if (bRet == false)
 		{
 			return bRet;
@@ -855,7 +855,7 @@ public class NameServerPlanTestCase {
 		}
 		
 		/* check the result */
-		checkRateRunByLog( fStd,  iMode,  tarLog);
+		bRet = checkRateRunByLog( fStd,  iMode,  tarLog);
 		if (bRet == false)
 		{
 			return bRet;
@@ -1037,7 +1037,8 @@ public class NameServerPlanTestCase {
 	{
 		boolean bRet = false;
 		ArrayList<String> listOut = new ArrayList<String>();
-		String cmd = TFS_BIN_HOME + "/ssm -s " + NSVIP + ":" + NSPORT + " -i block | grep \\\"" + shouldNotExistBlockCnt + "$\\\" | wc -l";
+		String cmd = TFS_BIN_HOME + "/ssm -s " + NSVIP + ":" + NSPORT +
+			" -i block | grep \\\"" + shouldNotExistBlockCnt + "$\\\" | wc -l";
 		
 		for (int iLoop = 0; iLoop < times; iLoop ++)
 		{
@@ -1063,6 +1064,74 @@ public class NameServerPlanTestCase {
 				break;
 			}
 			sleep(10);
+		}
+		return bRet;
+	}
+	
+	public boolean chkBlockCntBothNormal(int iBlockCnt)
+	{
+		boolean bRet = false;
+		for (int iLoop = 0; iLoop < 4; iLoop ++)
+		{
+			if (iBlockCnt != iLoop)
+			{
+				bRet = chkBlockCntBoth(BLOCK_CHK_TIME, iLoop);
+				if (bRet == false) break;
+			}
+		}
+		
+		return bRet;
+	}
+	
+	public boolean chkBlockCntBoth(int iTimes, int shouldNotExistBlockCnt)
+	{
+		boolean bRet = false;
+		ArrayList<String> listOut = new ArrayList<String>();
+		int iLoop = 0;
+		String cmd = "";
+		
+		for (iLoop = 0; iLoop < iTimes; iLoop ++)
+		{
+			cmd = TFS_BIN_HOME + "/ssm -s " + NSIPA + ":" + NSPORT +
+				" -i block | grep \\\"" + shouldNotExistBlockCnt + "$\\\" | wc -l";
+			bRet = Proc.cmdOutBase(NSIPA, cmd, null, 1, null, listOut);
+			if (bRet == false) return bRet;
+			
+			try{
+				int stillExistNum = Integer.valueOf(listOut.get(listOut.size() - 1));			
+				if (stillExistNum == 0)
+				{
+					bRet = true;
+					break;
+				}
+			} catch (Exception e){
+				e.printStackTrace();
+				bRet = false;
+				break;
+			}
+			sleep(1);
+		}
+		
+		for (int jLoop = 0; jLoop < iTimes - iLoop + 1; jLoop ++)
+		{
+			cmd = TFS_BIN_HOME + "/ssm -s " + NSIPB + ":" + NSPORT +
+				" -i block | grep \\\"" + shouldNotExistBlockCnt + "$\\\" | wc -l";
+			bRet = Proc.cmdOutBase(NSIPB, cmd, null, 1, null, listOut);
+			if (bRet == false) return bRet;
+			
+			try{
+				int stillExistNum = Integer.valueOf(listOut.get(listOut.size() - 1));			
+				if (stillExistNum == 0)
+				{
+					bRet = true;
+					break;
+				}
+			} catch (Exception e){
+				e.printStackTrace();
+				bRet = false;
+				break;
+			}
+			sleep(1);
 		}
 		return bRet;
 	}
@@ -1138,7 +1207,7 @@ public class NameServerPlanTestCase {
 		ArrayList<String> keyWords = new ArrayList<String>(); 
 		ArrayList<String> filterList = new ArrayList<String>();
 		keyWords.add(REPLICATE);
-		keyWords.add(FINISH);
+		keyWords.add(STATUS_FINISH);
 		keyWords.add(NORMAL);
 		filterList.add(",");
 		bRet = Log.scanAll(tarIp, DP_LOG_NAME, keyWords, BLOCKID_DP_COL, filterList, blockList);
@@ -1167,7 +1236,7 @@ public class NameServerPlanTestCase {
 		ArrayList<String> keyWords = new ArrayList<String>(); 
 		ArrayList<String> filterList = new ArrayList<String>();
 		keyWords.add(MOVE);
-		keyWords.add(FINISH);
+		keyWords.add(STATUS_FINISH);
 		keyWords.add(NORMAL);
 		filterList.add(",");
 		bRet = Log.scanAll(tarIp, DP_LOG_NAME, keyWords, BLOCKID_DP_COL, filterList, blockList);
@@ -1196,7 +1265,7 @@ public class NameServerPlanTestCase {
 		ArrayList<String> keyWords = new ArrayList<String>(); 
 		ArrayList<String> filterList = new ArrayList<String>();
 		keyWords.add(COMPACT);
-		keyWords.add(FINISH);
+		keyWords.add(STATUS_FINISH);
 		keyWords.add(NORMAL);
 		filterList.add(",");
 		bRet = Log.scanAll(tarIp, DP_LOG_NAME, keyWords, BLOCKID_DP_COL, filterList, blockList);
@@ -1225,7 +1294,7 @@ public class NameServerPlanTestCase {
 		ArrayList<String> keyWords = new ArrayList<String>(); 
 		ArrayList<String> filterList = new ArrayList<String>();
 		keyWords.add(DELETE);
-		keyWords.add(FINISH);
+		keyWords.add(STATUS_FINISH);
 		keyWords.add(NORMAL);
 		filterList.add(",");
 		bRet = Log.scanAll(tarIp, DP_LOG_NAME, keyWords, BLOCKID_DP_COL, filterList, blockList);
@@ -1254,7 +1323,7 @@ public class NameServerPlanTestCase {
 		ArrayList<String> keyWords = new ArrayList<String>(); 
 		ArrayList<String> filterList = new ArrayList<String>();
 		keyWords.add(REPLICATE);
-		keyWords.add(FINISH);
+		keyWords.add(STATUS_FINISH);
 		keyWords.add(EMERGENCY);
 		filterList.add(",");
 		bRet = Log.scanAll(tarIp, DP_LOG_NAME, keyWords, BLOCKID_DP_COL, filterList, blockList);
@@ -1283,7 +1352,8 @@ public class NameServerPlanTestCase {
 		
 		/* Get the previous planNum plans' priority */
 		String strCmd = "grep -m "+ planNum + " \\\"" + PLANSEQNO + "\\\" " + 
-			NS_LOG_NAME + " | sed \\\"s/].*plan seqno/]plan seqno/\\\" | awk '{print $" +
+			NS_LOG_NAME + " | grep " + "\\\"" + STATUS_BEGIN + "\\\"" + 
+			" | sed \\\"s/].*plan seqno/]plan seqno/\\\" | awk '{print $" +
 			PRIORITY_DP_COL + "}'";
 
 		int checkCount = 0;
@@ -1609,7 +1679,7 @@ public class NameServerPlanTestCase {
     
 		/* Use admin tool to set */
 		String strCmd = TFS_BIN_HOME + "/admintool -n -s " + NSVIP + 
-			":" + NSPORT + " -i 'param  min_replication set " + value + "'";     
+			":" + NSPORT + " -i 'param min_replication set " + value + "'";     
 		ArrayList<String> result = new ArrayList<String>();
 		bRet = Proc.proStartBase(NSIPA, strCmd, result);		
 		if (bRet == false) return bRet;
@@ -1633,7 +1703,7 @@ public class NameServerPlanTestCase {
     
 		/* Use admin tool to set */
 		String strCmd = TFS_BIN_HOME + "/admintool -n -s " + NSVIP + 
-			":" + NSPORT + " -i 'param  balance_max_diff_block_num set " + value + "'";     
+			":" + NSPORT + " -i 'param balance_max_diff_block_num set " + value + "'";     
 		ArrayList<String> result = new ArrayList<String>();
 		bRet = Proc.proStartBase(NSIPA, strCmd, result);
 		if (bRet == false) return bRet;
@@ -1679,6 +1749,7 @@ public class NameServerPlanTestCase {
 		}
 		for (int iLoop = 0; iLoop < dsIpList.size(); iLoop++)
 		{
+			log.debug("ds: " + dsIpList.get(iLoop) + ", blkCnt: " + blkCntList.get(iLoop));
 			blockDis.put(dsIpList.get(iLoop), Integer.parseInt(blkCntList.get(iLoop)));
 		}
     
@@ -1711,6 +1782,8 @@ public class NameServerPlanTestCase {
 			entry = iter.next();
 			dsIp = entry.getKey();
 			diffBlkCntList.add(entry.getValue() - blockDisBefore.get(dsIp));
+			log.debug("ds: " + dsIp + " blk num before: " + blockDisBefore.get(dsIp) + 
+					", after: " + entry.getValue());
 		}
 		
 		/* Compute the avg num of the added blk cnt */		
@@ -1722,6 +1795,7 @@ public class NameServerPlanTestCase {
 			sum += diffBlkCntList.get(iLoop);
 		}
 		avg = sum / diffBlkCntList.size();
+		log.debug("blk num diff sum: " + sum + ", avg: " + avg);
 		
 		/* If some one is far from avg, fail*/
 		for (int iLoop = 0; iLoop < diffBlkCntList.size(); iLoop++)
