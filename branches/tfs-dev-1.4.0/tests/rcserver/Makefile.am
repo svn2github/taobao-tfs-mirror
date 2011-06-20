@@ -5,9 +5,10 @@ AM_CPPFLAGS=-I${top_srcdir}/src/rcserver \
 						-I$(TBLIB_ROOT)/include/tbnet
 
 AM_LDFLAGS=-lpthread -lrt -lc -lm -lgtest -luuid `mysql_config --libs`
+CXXFLAGS= -g
 
 LDADD=$(top_builddir)/src/rcserver/librcserver.a \
-      $(top_builddir)/src/client/.libs/libtfsclient.a \
+      $(top_builddir)/src/new_client/.libs/libtfsclient.a \
 			$(top_builddir)/src/message/libtfsmessage.a \
       $(top_builddir)/src/common/libtfscommon.a \
 			$(TBLIB_ROOT)/lib/libtbnet.a \

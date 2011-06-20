@@ -45,14 +45,18 @@ namespace tfs
         //ResourceServerInfo 
         virtual int select(const ResourceServerInfo& inparam, ResourceServerInfo& outparam)
         {
+          UNUSED(inparam);
+          UNUSED(outparam);
           return TFS_SUCCESS;
         }
         virtual int update(const ResourceServerInfo& inparam)
         {
+          UNUSED(inparam);
           return TFS_SUCCESS;
         }
         virtual int remove(const ResourceServerInfo& inparam)
         {
+          UNUSED(inparam);
           return TFS_SUCCESS;
         }
         virtual int scan(VResourceServerInfo& outparam)
@@ -70,14 +74,18 @@ namespace tfs
         //ClusterRackInfo
         virtual int select(const ClusterRackInfo& inparam, ClusterRackInfo& outparam)
         {
+          UNUSED(inparam);
+          UNUSED(outparam);
           return TFS_SUCCESS;
         }
         virtual int update(const ClusterRackInfo& inparam)
         {
+          UNUSED(inparam);
           return TFS_SUCCESS;
         }
         virtual int remove(const ClusterRackInfo& inparam)
         {
+          UNUSED(inparam);
           return TFS_SUCCESS;
         }
         virtual int scan(VClusterRackInfo& outparam)
@@ -163,14 +171,18 @@ namespace tfs
         //AppInfo
         virtual int select(const AppInfo& inparam, AppInfo& outparam)
         {
+          UNUSED(inparam);
+          UNUSED(outparam);
           return TFS_SUCCESS;
         }
         virtual int update(const AppInfo& inparam)
         {
+          UNUSED(inparam);
           return TFS_SUCCESS;
         }
         virtual int remove(const AppInfo& inparam)
         {
+          UNUSED(inparam);
           return TFS_SUCCESS;
         }
         virtual int scan(MIdAppInfo& outparam)
@@ -196,17 +208,17 @@ namespace tfs
           return TFS_SUCCESS;
         }
         virtual int update_session_info(const std::vector<SessionBaseInfo>& session_infos)
-        {return TFS_SUCCESS;}
+        {UNUSED(session_infos); return TFS_SUCCESS;}
         virtual int update_session_stat(const std::map<std::string, SessionStat>& session_stats)
-        {return TFS_SUCCESS;}
+        {UNUSED(session_stats); return TFS_SUCCESS;}
         virtual int update_app_stat(const MIdAppStat& app_stats)
-        {return TFS_SUCCESS;}
+        {UNUSED(app_stats); return TFS_SUCCESS;}
 
     };
     class TestResourceManager: public ResourceManager
     {
       public:
-        TestResourceManager(){}
+        explicit TestResourceManager(tbutil::TimerPtr ptr):ResourceManager(ptr){}
         virtual int initialize()
         {
           database_helper_ = new TestDatabaseHelper();

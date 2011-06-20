@@ -553,9 +553,7 @@ void SessionManagerTest::gene_info(int sleep_interval)
   }
   sleep(sleep_interval/2);
   cout << "end second sleep " << sleep_interval << "s" << endl;
-  session_manager_->destroy();
-  ASSERT_EQ(session_manager_->wait_for_shut_down(), TFS_SUCCESS);
-  cout << "destory task" << endl;
+  session_manager_->stop();
 }
 
 TEST_F(SessionManagerTest, testSessionStat)

@@ -38,7 +38,7 @@ class ResourceManagerTest: public ::testing::Test
 
 TEST_F(ResourceManagerTest, login)
 {
-  TestResourceManager tester;
+  TestResourceManager tester(new tbutil::Timer());
   tester.initialize();
   int32_t app_id = 0;
   BaseInfo base_info;
@@ -58,7 +58,7 @@ TEST_F(ResourceManagerTest, login)
 
 TEST_F(ResourceManagerTest, check_update_info)
 {
-  TestResourceManager tester;
+  TestResourceManager tester(new tbutil::Timer());
   tester.initialize();
   bool update_flag = false;
   BaseInfo base_info;
