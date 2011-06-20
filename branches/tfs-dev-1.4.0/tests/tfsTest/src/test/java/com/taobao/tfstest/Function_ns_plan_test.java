@@ -17,8 +17,6 @@ import com.taobao.gaia.KillTypeEnum;
  */
 public class Function_ns_plan_test extends NameServerPlanTestCase {
 	
-
-	
 	@Test
 	public void Function_01_one_ds_out_emerge_rep_block(){
 		
@@ -844,6 +842,72 @@ public class Function_ns_plan_test extends NameServerPlanTestCase {
 		return ;
 	}	
 	
+	public void Function_15_modify_gc_wait_time(){
+		
+		boolean bRet = false;
+		caseName = "Function_15_modify_gc_wait_time";
+		log.info(caseName + "===> start");
+		
+		/* Set loop flag */
+		bRet = setSeedFlag(LOOPON);
+		Assert.assertTrue(bRet);
+		
+		/* Set seed size */
+		bRet = setSeedSize(1);
+		Assert.assertTrue(bRet);
+		
+		/* Set unlink ratio */
+		bRet = setUnlinkRatio(0);
+		Assert.assertTrue(bRet);
+		
+		/* Write file */
+		bRet = writeCmd();
+		Assert.assertTrue(bRet);
+		
+		/* Check the rate of write process */
+		bRet = checkRateRun(SUCCESSRATE, WRITEONLY|READ);
+		Assert.assertTrue(bRet);
+		
+		/* Modify object_dead_max_time */
+		bRet = setObjectDeadMaxTime(1800);
+		Assert.assertTrue(bRet);
+
+		/* Check the rate of write process */
+		bRet = checkRateRun(SUCCESSRATE, WRITEONLY|READ);
+		Assert.assertTrue(bRet);
+
+		/* Modify object_dead_max_time */
+		bRet = setObjectDeadMaxTime(7200);
+		Assert.assertTrue(bRet);
+
+		/* Check the rate of write process */
+		bRet = checkRateRun(SUCCESSRATE, WRITEONLY|READ);
+		Assert.assertTrue(bRet);
+
+		/* Modify object_dead_max_time */
+		bRet = setObjectDeadMaxTime(3600);
+		Assert.assertTrue(bRet);
+		
+		/* Stop write cmd */
+		bRet = writeCmdStop();
+		Assert.assertTrue(bRet);
+		
+		/* Read file */
+		bRet = readCmd();
+		Assert.assertTrue(bRet);
+		
+		/* Monitor the read process */
+		bRet = readCmdMon();
+		Assert.assertTrue(bRet);
+		
+		/* Check rate */
+		bRet = checkRateEnd(SUCCESSRATE, READ);
+		Assert.assertTrue(bRet);
+		
+		log.info(caseName + "===> end");
+		return ;
+	}	
+	
 	@After
 	public void tearDown(){
 		boolean bRet = false;
@@ -880,9 +944,9 @@ public class Function_ns_plan_test extends NameServerPlanTestCase {
 		Assert.assertTrue(bRet);
 		
 		/* Set NS conf */
-		bRet = setNsConf("nameserver", "max_replication", "2");
+		bRet = setNsConf("nameserver", "max_replication", "3");
 		Assert.assertTrue(bRet);
-		bRet = setNsConf("nameserver", "min_replication", "3");
+		bRet = setNsConf("nameserver", "min_replication", "2");
 		Assert.assertTrue(bRet);
 		
 		bRet = tfsGrid.start();

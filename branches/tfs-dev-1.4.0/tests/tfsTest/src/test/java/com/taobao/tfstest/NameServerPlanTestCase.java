@@ -1653,7 +1653,7 @@ public class NameServerPlanTestCase {
 	{
 		boolean bRet = false;
     
-		/* Use admin tool to set */
+		/* Use admintool to set */
 		String strCmd = TFS_BIN_HOME + "/admintool -n -s " + NSVIP + 
 			":" + NSPORT + " -i 'param max_replication set " + value + "'";  
 		ArrayList<String> result = new ArrayList<String>();
@@ -1677,7 +1677,7 @@ public class NameServerPlanTestCase {
 	{
 		boolean bRet = false;
     
-		/* Use admin tool to set */
+		/* Use admintool to set */
 		String strCmd = TFS_BIN_HOME + "/admintool -n -s " + NSVIP + 
 			":" + NSPORT + " -i 'param min_replication set " + value + "'";     
 		ArrayList<String> result = new ArrayList<String>();
@@ -1701,9 +1701,32 @@ public class NameServerPlanTestCase {
 	{
 		boolean bRet = false;
     
-		/* Use admin tool to set */
+		/* Use admintool to set */
 		String strCmd = TFS_BIN_HOME + "/admintool -n -s " + NSVIP + 
 			":" + NSPORT + " -i 'param balance_max_diff_block_num set " + value + "'";     
+		ArrayList<String> result = new ArrayList<String>();
+		bRet = Proc.proStartBase(NSIPA, strCmd, result);
+		if (bRet == false) return bRet;
+		
+		if (result.get(0).indexOf("success")!= -1)
+			bRet = true;
+		else
+			bRet = false;   
+		return bRet;
+	}
+
+	/**
+	 * @author mingyan 
+	 * @param value
+	 * @return
+	 */
+	public boolean setObjectDeadMaxTime(int value)
+	{
+		boolean bRet = false;
+    
+		/* Use admintool to set */
+		String strCmd = TFS_BIN_HOME + "/admintool -n -s " + NSVIP + 
+			":" + NSPORT + " -i 'param object_dead_max_time set " + value + "'";     
 		ArrayList<String> result = new ArrayList<String>();
 		bRet = Proc.proStartBase(NSIPA, strCmd, result);
 		if (bRet == false) return bRet;
