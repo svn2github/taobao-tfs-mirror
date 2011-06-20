@@ -70,7 +70,6 @@ namespace tfs
         database_helper_ = NULL;
       }
       database_helper_ = new MysqlDatabaseHelper();
-      //TODO get connstr from config file
       database_helper_->set_conn_param(SYSPARAM_RCSERVER.db_info_.c_str(),
           SYSPARAM_RCSERVER.db_user_.c_str(), SYSPARAM_RCSERVER.db_pwd_.c_str());
       ret = database_helper_->connect();
@@ -193,7 +192,7 @@ EXIT:
       return ret;
     }
 
-    int ResourceManager::check_update_info(const int32_t app_id, 
+    int ResourceManager::check_update_info(const int32_t app_id,
             const int64_t modify_time, bool& update_flag, BaseInfo& base_info)
     {
       int ret = EXIT_NOT_INIT_ERROR;
@@ -219,7 +218,7 @@ EXIT:
       }
       return ret;
     }
-    
+
     int ResourceManager::get_app_name(const int32_t app_id, std::string& app_name) const
     {
       int ret = EXIT_NOT_INIT_ERROR;

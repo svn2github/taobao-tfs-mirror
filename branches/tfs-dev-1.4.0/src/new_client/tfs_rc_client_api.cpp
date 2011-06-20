@@ -34,14 +34,14 @@ namespace tfs
       delete impl_;
       impl_ = NULL;
     }
-    int RcClient::initialize(const char* str_rc_ip, const char* app_key, const char* str_app_ip,
+    TfsRetType RcClient::initialize(const char* str_rc_ip, const char* app_key, const char* str_app_ip,
         const int32_t cache_times, const int32_t cache_items, const char* dev_name)
     {
       int32_t real_cache_times = (cache_times > 0) ? cache_times : common::DEFAULT_BLOCK_CACHE_TIME;
       int32_t real_cache_items = (cache_items > 0) ? cache_items : common::DEFAULT_BLOCK_CACHE_ITEMS;
       return impl_->initialize(str_rc_ip, app_key, str_app_ip, real_cache_times, real_cache_items, dev_name);
     }
-    int RcClient::initialize(const uint64_t rc_ip, const char* app_key, const uint64_t app_ip,
+    TfsRetType RcClient::initialize(const uint64_t rc_ip, const char* app_key, const uint64_t app_ip,
         const int32_t cache_times, const int32_t cache_items, const char* dev_name)
     {
       int32_t real_cache_times = (cache_times > 0) ? cache_times : common::DEFAULT_BLOCK_CACHE_TIME;
@@ -50,7 +50,7 @@ namespace tfs
     }
 
 
-    int RcClient::logout()
+    TfsRetType RcClient::logout()
     {
       return impl_->logout();
     }
@@ -71,13 +71,13 @@ namespace tfs
       impl_->set_log_file(log_file);
     }
 
-    int RcClient::open(const char* file_name, const char* suffix, const RC_MODE mode, 
+    int RcClient::open(const char* file_name, const char* suffix, const RC_MODE mode,
           const bool large, const char* local_key)
     {
       return impl_->open(file_name, suffix, mode, large, local_key);
     }
 
-    int RcClient::close(const int fd, char* tfs_name_buff, const int32_t buff_len)
+    TfsRetType RcClient::close(const int fd, char* tfs_name_buff, const int32_t buff_len)
     {
       return impl_->close(fd, tfs_name_buff, buff_len);
     }
@@ -100,10 +100,10 @@ namespace tfs
     {
       return impl_->write(fd, buf, count);
     }
-    int64_t RcClient::pwrite(const int fd, const void* buf, const int64_t count, const int64_t offset)
-    {
-      return impl_->pwrite(fd, buf, count, offset);
-    }
+    //int64_t RcClient::pwrite(const int fd, const void* buf, const int64_t count, const int64_t offset)
+    //{
+    //  return impl_->pwrite(fd, buf, count, offset);
+    //}
 
     int64_t RcClient::lseek(const int fd, const int64_t offset, const int whence)
     {
@@ -114,20 +114,20 @@ namespace tfs
       return impl_->fstat(fd, buf);
     }
 
-    int RcClient::unlink(const char* file_name, const char* suffix, const common::TfsUnlinkType action)
+    TfsRetType RcClient::unlink(const char* file_name, const char* suffix, const common::TfsUnlinkType action)
     {
       return impl_->unlink(file_name, suffix, action);
     }
 
-    int RcClient::savefile(const char* local_file, char* tfs_name_buff, const int32_t buff_len, 
+    int64_t RcClient::savefile(const char* local_file, char* tfs_name_buff, const int32_t buff_len,
         const bool is_large_file)
     {
       return impl_->savefile(local_file, tfs_name_buff, buff_len, is_large_file);
     }
-    int RcClient::savefile(const char* source_data, const int32_t data_len, 
-        char* tfs_name_buff, const int32_t buff_len, const bool is_large_file)
+    int64_t RcClient::savefile(const char* source_data, const int32_t data_len,
+        char* tfs_name_buff, const int32_t buff_len)
     {
-      return impl_->savefile(source_data, data_len, tfs_name_buff, buff_len, is_large_file);
+      return impl_->savefile(source_data, data_len, tfs_name_buff, buff_len);
     }
 
   }

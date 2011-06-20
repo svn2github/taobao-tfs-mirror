@@ -93,7 +93,7 @@ int TfsSession::init_unique_store(const char* master_addr, const char* slave_add
   else
   {
     // clear and reinit?
-    TBSYS_LOG(INFO, "unique store already init");
+    TBSYS_LOG(DEBUG, "unique store already init");
     ret = TFS_SUCCESS;
   }
 

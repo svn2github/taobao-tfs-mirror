@@ -653,9 +653,9 @@ int32_t TfsClientImpl::get_block_cache_items() const
   return ret;
 }
 
-int32_t TfsClientImpl::get_cache_hit_radio() const
+int32_t TfsClientImpl::get_cache_hit_ratio() const
 {
-  return BgTask::get_cache_hit_radio();
+  return BgTask::get_cache_hit_ratio();
 }
 
 uint64_t TfsClientImpl::get_server_id()

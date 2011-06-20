@@ -236,9 +236,9 @@ int32_t TfsClient::get_block_cache_items() const
   return TfsClientImpl::Instance()->get_block_cache_items();
 }
 
-int32_t TfsClient::get_cache_hit_radio() const
+int32_t TfsClient::get_cache_hit_ratio() const
 {
-  return TfsClientImpl::Instance()->get_cache_hit_radio();
+  return TfsClientImpl::Instance()->get_cache_hit_ratio();
 }
 
 uint64_t TfsClient::get_server_id()

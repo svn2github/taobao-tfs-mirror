@@ -96,8 +96,8 @@ namespace tfs
       uint32_t cfg_ip = Func::get_addr(get_ip_addr());
       if (dev_ip != cfg_ip)
       {
-        ret = EXIT_CONFIG_ERROR; 
-        TBSYS_LOG(ERROR, "call RcServerParameter::initialize fail. dev name: %s, cfg ip: %s, dev id: %u, cfg id: %u, ret: %d", 
+        ret = EXIT_CONFIG_ERROR;
+        TBSYS_LOG(ERROR, "call RcServerParameter::initialize fail. dev name: %s, cfg ip: %s, dev id: %u, cfg id: %u, ret: %d",
             get_dev(), get_ip_addr(), dev_ip, cfg_ip, ret);
       }
       else
@@ -120,6 +120,7 @@ namespace tfs
             {
               TBSYS_LOG(ERROR, "call SessionManager::initialize fail. ret: %d", ret);
             }
+            //TBSYS_LOG(INFO, "init ok ========");
           }
         }
       }
@@ -196,6 +197,13 @@ namespace tfs
         ReqRcKeepAliveMessage* req_ka_msg = dynamic_cast<ReqRcKeepAliveMessage*>(packet);
         const KeepAliveInfo& ka_info = req_ka_msg->get_ka_info();
         bool update_flag = false;
+
+        //map<OperType, AppOperInfo>::const_iterator it = ka_info.s_stat_.app_oper_info_.find(OPER_READ);
+        //if (it != ka_info.s_stat_.app_oper_info_.end())
+        //{
+        //TBSYS_LOG(INFO, "===================== times %d", it->second.oper_times_);
+        //}
+        ///////////////////////
         BaseInfo base_info;
         if ((ret = session_manager_->keep_alive(ka_info.s_base_info_.session_id_,
                 ka_info, update_flag, base_info)) != TFS_SUCCESS)
@@ -301,7 +309,7 @@ namespace tfs
           int retry_times = 3;
           while (retry_times > 0)
           {
-            if ((ret = resource_manager_->initialize()) != TFS_SUCCESS) 
+            if ((ret = resource_manager_->initialize()) != TFS_SUCCESS)
             {
               TBSYS_LOG(ERROR, "call resource_manager::initialize fail. retry time: %d, ret: %d", retry_times, ret);
             }
@@ -317,7 +325,7 @@ namespace tfs
             retry_times = 3;
             while (retry_times > 0)
             {
-              if ((ret = session_manager_->start()) != TFS_SUCCESS) 
+              if ((ret = session_manager_->start()) != TFS_SUCCESS)
               {
                 TBSYS_LOG(ERROR, "call SessionManager::start fail. retry time: %d, ret: %d", retry_times, ret);
               }

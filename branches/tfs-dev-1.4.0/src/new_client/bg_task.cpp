@@ -67,7 +67,7 @@ int BgTask::initialize()
   return ret;
 }
 
-int32_t BgTask::get_cache_hit_radio()
+int32_t BgTask::get_cache_hit_ratio()
 {
   uint64_t cache_hit = 0;
   uint64_t cache_miss = 0;

@@ -45,11 +45,12 @@ namespace tfs
         RcClientImpl();
         ~RcClientImpl();
 
-        int initialize(const char* str_rc_ip, const char* app_key, const char* str_app_ip,
+        TfsRetType initialize(const char* str_rc_ip, const char* app_key, const char* str_app_ip,
             const int32_t cache_times = common::DEFAULT_BLOCK_CACHE_TIME,
             const int32_t cache_items = common::DEFAULT_BLOCK_CACHE_ITEMS,
             const char* dev_name = NULL);
-        int initialize(const uint64_t rc_ip, const char* app_key, const uint64_t app_ip,
+        //return value :TFS_SUCCESS/TFS_ERROR;
+        TfsRetType initialize(const uint64_t rc_ip, const char* app_key, const uint64_t app_ip,
             const int32_t cache_times = common::DEFAULT_BLOCK_CACHE_TIME,
             const int32_t cache_items = common::DEFAULT_BLOCK_CACHE_ITEMS,
             const char* dev_name = NULL);
@@ -58,9 +59,10 @@ namespace tfs
         void set_log_level(const char* level);
         void set_log_file(const char* log_file);
 
-        int open(const char* file_name, const char* suffix, const RcClient::RC_MODE mode, 
+        //return value fd
+        int open(const char* file_name, const char* suffix, const RcClient::RC_MODE mode,
             const bool large = false, const char* local_key = NULL);
-        int close(const int fd, char* tfs_name_buff = NULL, const int32_t buff_len = 0);
+        TfsRetType close(const int fd, char* tfs_name_buff = NULL, const int32_t buff_len = 0);
 
         int64_t read(const int fd, void* buf, const int64_t count);
         int64_t read_v2(const int fd, void* buf, const int64_t count, common::TfsFileStat* tfs_stat_buf);
@@ -70,46 +72,61 @@ namespace tfs
         int64_t pwrite(const int fd, const void* buf, const int64_t count, const int64_t offset);
 
         int64_t lseek(const int fd, const int64_t offset, const int whence);
-        int fstat(const int fd, common::TfsFileStat* buf);
+        TfsRetType fstat(const int fd, common::TfsFileStat* buf);
 
-        int unlink(const char* file_name, const char* suffix = NULL, 
-            const common::TfsUnlinkType action = common::DELETE);        
-        int savefile(const char* local_file, char* tfs_name_buff, const int32_t buff_len, 
+        TfsRetType unlink(const char* file_name, const char* suffix = NULL,
+            const common::TfsUnlinkType action = common::DELETE);
+        int64_t savefile(const char* local_file, char* tfs_name_buff, const int32_t buff_len,
             const bool is_large_file = false);
-        int savefile(const char* source_data, const int32_t data_len, 
-            char* tfs_name_buff, const int32_t buff_len, const bool is_large_file = false);
 
-        int logout();
+        int64_t savefile(const char* source_data, const int32_t data_len,
+            char* tfs_name_buff, const int32_t buff_len);
+
+        TfsRetType logout();
       private:
         DISALLOW_COPY_AND_ASSIGN(RcClientImpl);
 
       private:
-        int login(const int64_t rc_ip, const char* app_key, const int64_t app_ip);
+        TfsRetType login(const int64_t rc_ip, const char* app_key, const int64_t app_ip);
 
-        int check_init_stat() const;
+        TfsRetType check_init_stat() const;
 
         uint64_t get_active_rc_ip(size_t& retry_index) const;
         void get_ka_info(common::KeepAliveInfo& kainfo);
-        
-        void add_stat_info(const common::OperType& oper_type, const int64_t size, 
+
+        void add_stat_info(const common::OperType& oper_type, const int64_t size,
             const int64_t response_time, const bool is_success);
 
-        int open(const char* ns_addr, const char* file_name, const char* suffix, const RcClient::RC_MODE mode, 
-            const bool large, const char* local_key);
+        int open(const char* ns_addr, const char* file_name, const char* suffix,
+            const RcClient::RC_MODE mode, const bool large, const char* local_key);
+
+        TfsRetType unlink(const char* ns_addr, const char* file_name,
+            const char* suffix, const common::TfsUnlinkType action);
+
+        int64_t savefile(const char* ns_addr, const char* local_file, char* tfs_name_buff,
+            const int32_t buff_len, const bool is_large_file = false);
+
+        int64_t savefile(const char* ns_addr, const char* source_data, const int32_t data_len,
+            char* tfs_name_buff, const int32_t buff_len);
 
         std::string get_ns_addr(const char* file_name, const RcClient::RC_MODE mode, const int index) const;
 
         static int32_t get_cluster_id(const char* file_name);
         static void parse_cluster_id(const std::string& cluster_id_str, int32_t& id, bool& is_master);
         static uint32_t caculate_distance(const std::string& ip_str, const uint32_t addr);
-        
+
         void calculate_ns_info(const common::BaseInfo& base_info, const uint32_t local_addr);
+
+        void parse_duplicate_info(const std::string& duplicate_info);
 
       private:
         typedef std::map<int32_t, std::string> ClusterNsType; //<cluster_id, ns>
         ClusterNsType choice[2];
         std::string write_ns_[2];
-        std::string duplicate_server_;
+        std::string duplicate_server_master_;
+        std::string duplicate_server_slave_;
+        std::string duplicate_server_group_;
+        int32_t duplicate_server_area_;
         bool need_use_unique_;
         uint32_t local_addr_;
 
@@ -131,4 +148,4 @@ namespace tfs
   }
 }
 
-#endif  
+#endif

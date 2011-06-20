@@ -18,7 +18,7 @@
 
 namespace tfs
 {
-  namespace message 
+  namespace message
   {
     using namespace common;
     using namespace std;
@@ -63,7 +63,7 @@ namespace tfs
       app_ip_ = app_ip;
     }
 
-    int ReqRcLoginMessage::serialize(common::Stream& output) const 
+    int ReqRcLoginMessage::serialize(common::Stream& output) const
     {
       int ret = TFS_SUCCESS;
       if (length_ > 0)
@@ -111,7 +111,7 @@ namespace tfs
 
     void ReqRcLoginMessage::dump() const
     {
-      TBSYS_LOG(DEBUG, "app_key: %s, app_ip: %"PRI64_PREFIX"d", app_key_, app_ip_); 
+      TBSYS_LOG(DEBUG, "app_key: %s, app_ip: %"PRI64_PREFIX"d", app_key_, app_ip_);
     }
 
     const char* ReqRcLoginMessage::get_app_key() const
@@ -164,7 +164,7 @@ namespace tfs
       base_info_ = base_info;
     }
 
-    int RspRcLoginMessage::serialize(common::Stream& output) const 
+    int RspRcLoginMessage::serialize(common::Stream& output) const
     {
       int ret = TFS_SUCCESS;
       if (length_ > 0)
@@ -225,7 +225,7 @@ namespace tfs
 
     void RspRcLoginMessage::dump() const
     {
-      TBSYS_LOG(DEBUG, "session_id: %s", session_id_); 
+      TBSYS_LOG(DEBUG, "session_id: %s", session_id_);
       base_info_.dump();
     }
 
@@ -251,9 +251,10 @@ namespace tfs
     void ReqRcKeepAliveMessage::set_ka_info(const KeepAliveInfo& ka_info)
     {
       ka_info_ = ka_info;
+
     }
 
-    int ReqRcKeepAliveMessage::serialize(common::Stream& output) const 
+    int ReqRcKeepAliveMessage::serialize(common::Stream& output) const
     {
       int ret = TFS_SUCCESS;
       int64_t pos = 0;
@@ -276,7 +277,7 @@ namespace tfs
       }
       return ret;
     }
-   
+
     int64_t ReqRcKeepAliveMessage::length() const
     {
       return ka_info_.length();
@@ -313,7 +314,7 @@ namespace tfs
       base_info_ = base_info;
     }
 
-    int RspRcKeepAliveMessage::serialize(common::Stream& output) const 
+    int RspRcKeepAliveMessage::serialize(common::Stream& output) const
     {
       int ret = TFS_SUCCESS;
       ret = output.set_int8(update_flag_);
@@ -388,7 +389,7 @@ namespace tfs
       reload_type_ = type;
     }
 
-    int ReqRcReloadMessage::serialize(common::Stream& output) const 
+    int ReqRcReloadMessage::serialize(common::Stream& output) const
     {
       return output.set_int32(static_cast<int32_t>(reload_type_));
     }
@@ -397,7 +398,7 @@ namespace tfs
     {
       return input.get_int32(reinterpret_cast<int32_t*>(&reload_type_));
     }
-   
+
     int64_t ReqRcReloadMessage::length() const
     {
       return INT_SIZE;
@@ -410,7 +411,7 @@ namespace tfs
 
     void ReqRcReloadMessage::dump() const
     {
-      TBSYS_LOG(DEBUG, "reload_type : %d", reload_type_); 
+      TBSYS_LOG(DEBUG, "reload_type : %d", reload_type_);
       return;
     }
 

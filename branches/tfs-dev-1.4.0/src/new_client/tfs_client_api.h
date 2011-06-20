@@ -171,7 +171,7 @@ namespace tfs
 
       int32_t get_block_cache_time() const;
       int32_t get_block_cache_items() const;
-      int32_t get_cache_hit_radio() const;
+      int32_t get_cache_hit_ratio() const;
 
 #ifdef WITH_UNIQUE_STORE
       // unique stuff

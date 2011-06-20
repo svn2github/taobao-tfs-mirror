@@ -22,6 +22,7 @@ namespace tfs
 {
   namespace client
   {
+    typedef int TfsRetType;
     class RcClientImpl;
     class RcClient
     {
@@ -36,11 +37,11 @@ namespace tfs
         RcClient();
         ~RcClient();
 
-        int initialize(const char* str_rc_ip, const char* app_key, const char* str_app_ip,
+        TfsRetType initialize(const char* str_rc_ip, const char* app_key, const char* str_app_ip,
             const int32_t cache_times = 0,
             const int32_t cache_items = 0,
             const char* dev_name = NULL);
-        int initialize(const uint64_t rc_ip, const char* app_key, const uint64_t app_ip,
+        TfsRetType initialize(const uint64_t rc_ip, const char* app_key, const uint64_t app_ip,
             const int32_t cache_times = 0,
             const int32_t cache_items = 0,
             const char* dev_name = NULL);
@@ -49,28 +50,29 @@ namespace tfs
         void set_log_level(const char* level);
         void set_log_file(const char* log_file);
 
-        int open(const char* file_name, const char* suffix, const RC_MODE mode, 
+        int open(const char* file_name, const char* suffix, const RC_MODE mode,
             const bool large = false, const char* local_key = NULL);
-        int close(const int fd, char* tfs_name_buff = NULL, const int32_t buff_len = 0);
+        TfsRetType close(const int fd, char* tfs_name_buff = NULL, const int32_t buff_len = 0);
 
         int64_t read(const int fd, void* buf, const int64_t count);
         int64_t read_v2(const int fd, void* buf, const int64_t count, common::TfsFileStat* tfs_stat_buf);
         int64_t pread(const int fd, void* buf, const int64_t count, const int64_t offset);
 
         int64_t write(const int fd, const void* buf, const int64_t count);
-        int64_t pwrite(const int fd, const void* buf, const int64_t count, const int64_t offset);
+        //not support pwrite for now
+        //int64_t pwrite(const int fd, const void* buf, const int64_t count, const int64_t offset);
 
         int64_t lseek(const int fd, const int64_t offset, const int whence);
-        int fstat(const int fd, common::TfsFileStat* buf);
+        TfsRetType fstat(const int fd, common::TfsFileStat* buf);
 
-        int unlink(const char* file_name, const char* suffix = NULL, 
-            const common::TfsUnlinkType action = common::DELETE);        
-        int savefile(const char* local_file, char* tfs_name_buff, const int32_t buff_len, 
+        TfsRetType unlink(const char* file_name, const char* suffix = NULL,
+            const common::TfsUnlinkType action = common::DELETE);
+        int64_t savefile(const char* local_file, char* tfs_name_buff, const int32_t buff_len,
             const bool is_large_file = false);
-        int savefile(const char* source_data, const int32_t data_len, 
-            char* tfs_name_buff, const int32_t buff_len, const bool is_large_file = false);
+        int64_t savefile(const char* source_data, const int32_t data_len,
+            char* tfs_name_buff, const int32_t buff_len);
 
-        int logout();
+        TfsRetType logout();
       private:
         RcClient(const RcClient&);
         RcClientImpl* impl_;
@@ -79,4 +81,4 @@ namespace tfs
   }
 }
 
-#endif  
+#endif

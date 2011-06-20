@@ -369,7 +369,7 @@ namespace tfs
         if (TFS_SUCCESS != ret)
         {
           //add log
-          TBSYS_LOG(ERROR, "update info to db fail. session info size: %u, session stat size: %u, app stat size: %u, ret: %d", 
+          TBSYS_LOG(ERROR, "update info to db fail. session info size: %u, session stat size: %u, app stat size: %u, ret: %d",
               v_session_infos.size(), m_session_stats.size(), m_app_stat.size(), ret);
           //roll back
           rollback(tmp_sessions);
