@@ -26,11 +26,15 @@ namespace tfs
 {
   namespace client
   {
+    const static int32_t PRI_DS_NOT_INIT = -1;
+    const static int32_t PRI_DS_TRY_ALL_OVER = -2;
+
     enum TfsFileEofFlag
     {
       TFS_FILE_EOF_FLAG_NO = 0x00,
       TFS_FILE_EOF_FLAG_YES
     };
+
     enum SegmentStatus
     {
       SEG_STATUS_NOT_INIT = 0,      // not initialized
@@ -40,6 +44,14 @@ namespace tfs
       SEG_STATUS_ALL_OVER           // all is completed
     };
 
+    union ExtraValue            // special value in mutex condition
+    {
+      uint64_t write_file_number_;           // write as file_number
+      common::TfsUnlinkType unlink_action_;  // unlink as unlink type
+      common::ReadDataOptionFlag read_flag_; // read as read flag
+      common::TfsStatType stat_mode_;        // stat as stat mode
+    };
+
     struct SegmentData
     {
       bool delete_flag_;        // delete flag
@@ -47,16 +59,17 @@ namespace tfs
       char* buf_;                   // buffer start
       int32_t inner_offset_;        // offset of this segment to operate
       common::FileInfo* file_info_;
-      uint64_t file_number_;
+      ExtraValue extra_value_;
       common::VUINT64 ds_;
       int32_t pri_ds_index_;
       int32_t status_;
       TfsFileEofFlag eof_;
 
       SegmentData() : delete_flag_(true), buf_(NULL), inner_offset_(0), file_info_(NULL),
-                      file_number_(0), pri_ds_index_(0),
+                      pri_ds_index_(PRI_DS_NOT_INIT),
                       status_(SEG_STATUS_NOT_INIT), eof_(TFS_FILE_EOF_FLAG_NO)
       {
+        extra_value_.write_file_number_ = 0;
       }
 
       SegmentData(const SegmentData& seg_data)
@@ -66,7 +79,7 @@ namespace tfs
         buf_ = seg_data.buf_;
         inner_offset_ = seg_data.inner_offset_;
         file_info_ = NULL;      // not copy
-        file_number_ = seg_data.file_number_;
+        extra_value_.write_file_number_ = seg_data.extra_value_.write_file_number_;
         ds_ = seg_data.ds_;
         pri_ds_index_ = seg_data.pri_ds_index_;
         status_ = seg_data.status_;
@@ -112,16 +125,32 @@ namespace tfs
       int64_t get_last_read_pri_ds() const
       {
         int32_t index = 0;
-        if (0 == file_number_)  // not write
+        if (PRI_DS_NOT_INIT != pri_ds_index_)  // read
         {
           // pri_ds_index_ < 0, server is the last retry one
-          index = pri_ds_index_ < 0 ? get_orig_pri_ds_index() : pri_ds_index_;
+          index = PRI_DS_TRY_ALL_OVER == pri_ds_index_ ? get_orig_pri_ds_index() : pri_ds_index_;
           index = index == 0 ? ds_.size() - 1 : index - 1;
         }
         return ds_[index];
       }
-
     };
+
+#define SEG_DATA_SELF_FMT                                               \
+    ", blockid: %u, fileid: %"PRI64_PREFIX"u, offset: %"PRI64_PREFIX"d, " \
+    "size: %d, crc: %d, inneroffset: %d, filenumber: %"PRI64_PREFIX"d, " \
+    "status: %d, rserver: %s, wserver: %s."
+
+#define SEG_DATA_SELF_ARGS(SEG)                                              \
+    SEG->seg_info_.block_id_, SEG->seg_info_.file_id_, SEG->seg_info_.offset_, \
+      SEG->seg_info_.size_, SEG->seg_info_.crc_, SEG->inner_offset_,    \
+      SEG->extra_value_.write_file_number_, SEG->status_,               \
+      tbsys::CNetUtil::addrToString(SEG->get_last_read_pri_ds()).c_str(), \
+      tbsys::CNetUtil::addrToString(SEG->get_write_pri_ds()).c_str()
+
+#define DUMP_SEGMENTDATA(seg, level, fmt, args...)                      \
+    (TBSYS_LOG(level,                                                   \
+               fmt SEG_DATA_SELF_FMT, ##args, SEG_DATA_SELF_ARGS(seg)))
+
 
     extern const char* LOCAL_KEY_PATH;
     const mode_t LOCAL_KEY_PATH_MODE = 0777;

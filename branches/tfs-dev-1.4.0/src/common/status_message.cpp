@@ -16,7 +16,7 @@
 #include "status_message.h"
 namespace tfs
 {
-  namespace common 
+  namespace common
   {
     StatusMessage::StatusMessage() :
       length_(0),
@@ -40,14 +40,14 @@ namespace tfs
       status_ = status;
       if (NULL != str)
       {
-        int64_t length = Serialization::get_string_length(str);
-        if (length > MAX_ERROR_MSG_LENGTH + 1)
+        int64_t length = strlen(str);
+        if (length > MAX_ERROR_MSG_LENGTH)
         {
-          length = MAX_ERROR_MSG_LENGTH + 1;
+          length = MAX_ERROR_MSG_LENGTH;
         }
-        memcpy(msg_, str, length - 1);//include '\0'
-        msg_[length - 1] = '\0';
-        length_ = strlen(str);
+        memcpy(msg_, str, length);
+        msg_[length] = '\0';
+        length_ = length;
       }
       TBSYS_LOG(DEBUG, "status msg : status: %d, length: %ld, %p", status_, length_, str);
     }

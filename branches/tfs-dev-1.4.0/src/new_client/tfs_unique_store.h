@@ -43,15 +43,15 @@ namespace tfs
       int initialize(const char* master_addr, const char* slave_addr, const char* group_name, const int32_t area,
                      const char* ns_addr);
 
-      int save(const char* buf, const int64_t count,
-               const char* tfs_name, const char* suffix,
-               char* ret_tfs_name, const int32_t ret_tfs_name_len);
+      int64_t save(const char* buf, const int64_t count,
+                   const char* tfs_name, const char* suffix,
+                   char* ret_tfs_name, const int32_t ret_tfs_name_len);
 
-      int save(const char* local_file,
-               const char* tfs_name, const char* suffix,
-               char* ret_tfs_name, const int32_t ret_tfs_name_len);
+      int64_t save(const char* local_file,
+                   const char* tfs_name, const char* suffix,
+                   char* ret_tfs_name, const int32_t ret_tfs_name_len);
 
-      int32_t unlink(const char* tfs_name, const char* suffix, const int32_t count);
+      int32_t unlink(const char* tfs_name, const char* suffix, int64_t& file_size, const int32_t count);
 
     private:
       bool check_init();

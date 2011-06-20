@@ -64,9 +64,9 @@ namespace tfs
       return ret;
     }
 
-    int TfsUniqueStore::save(const char* buf, const int64_t count,
-                             const char* tfs_name, const char* suffix,
-                             char* ret_tfs_name, const int32_t ret_tfs_name_len)
+    int64_t TfsUniqueStore::save(const char* buf, const int64_t count,
+                                 const char* tfs_name, const char* suffix,
+                                 char* ret_tfs_name, const int32_t ret_tfs_name_len)
     {
       int ret = TFS_ERROR;
 
@@ -88,19 +88,19 @@ namespace tfs
         ret = process(action, unique_key, unique_value, tfs_name, suffix, ret_tfs_name, ret_tfs_name_len);
       }
 
-      return ret;
+      return ret != TFS_SUCCESS ? INVALID_FILE_SIZE : count;
     }
 
-    int TfsUniqueStore::save(const char* local_file,
-                             const char* tfs_name, const char* suffix,
-                             char* ret_tfs_name, const int32_t ret_tfs_name_len)
+    int64_t TfsUniqueStore::save(const char* local_file,
+                                 const char* tfs_name, const char* suffix,
+                                 char* ret_tfs_name, const int32_t ret_tfs_name_len)
     {
       int ret = TFS_ERROR;
+      int64_t count = 0;
 
       if (check_init())
       {
         char* buf = NULL;
-        int64_t count = 0;
         if ((ret = read_local_file(local_file, buf, count)) != TFS_SUCCESS)
         {
           TBSYS_LOG(ERROR, "read local file data fail. ret: %d", ret);
@@ -113,10 +113,10 @@ namespace tfs
         tbsys::gDelete(buf);
       }
 
-      return ret;
+      return ret != TFS_SUCCESS ? INVALID_FILE_SIZE : count;
     }
 
-    int32_t TfsUniqueStore::unlink(const char* tfs_name, const char* suffix, const int32_t count)
+    int32_t TfsUniqueStore::unlink(const char* tfs_name, const char* suffix, int64_t& file_size, const int32_t count)
     {
       int32_t ref_count = INVALID_REFERENCE_COUNT;
 
@@ -154,7 +154,7 @@ namespace tfs
             {
               TBSYS_LOG(DEBUG, "refcnt less than unlink count. %d <= %d",unique_value.ref_count_, count);
 
-              ret = TfsClient::Instance()->unlink(tfs_name, suffix, ns_addr_.c_str());
+              ret = TfsClient::Instance()->unlink(tfs_name, suffix, ns_addr_.c_str(), file_size);
 
               if (ret != TFS_SUCCESS)
               {
@@ -171,6 +171,7 @@ namespace tfs
             {
               // check uniquestore filename and tfs filename.
               // if not match, not modify unique store meta info and file.
+              // ... CONSISTENCY ...
               if (!(check_tfsname_match(unique_value.file_name_, tfs_name, suffix)))
               {
                 TBSYS_LOG(WARN, "unlink filename mismatch unique store filename: %s%s <> %s",
@@ -179,15 +180,20 @@ namespace tfs
               else                // unlink success and name match, then decrease
               {
                 TBSYS_LOG(DEBUG, "unique refcount: %d, decrease count: %d", unique_value.ref_count_, count);
-                int32_t num = 0;
-                if ((num = unique_handler_->decrease(unique_key, unique_value, count)) < 0)
+                int32_t bak_ref_count = ref_count;
+                // if count >= unqiue_value.ref_count_, will delete this key
+                if ((ref_count = unique_handler_->decrease(unique_key, unique_value, count)) < 0)
                 {
-                  if (ref_count == 0)
-                    file_size = buf_len;
-                  else
-                    file_size = 0;
-                  // if count >= unqiue_value.ref_count_, will delete this key
+                  // if tfs file is already unlinked(ref_count = 0), ignore error.
+                  if (0 == bak_ref_count) // not unlink file, must fail
+                  {
+                    ref_count = 0;
+                  }
                   TBSYS_LOG(ERROR, "decrease count fail. count: %d", count);
+                }
+                else
+                {
+                  file_size = buf_len; // decrease success, set file size
                 }
               }
             }
@@ -358,7 +364,7 @@ namespace tfs
     {
       int ret = TfsClient::Instance()->
         save_file(unique_key.data_, unique_key.data_len_, tfs_name, suffix,
-                  ret_tfs_name, ret_tfs_name_len, ns_addr_.c_str());
+                  ret_tfs_name, ret_tfs_name_len, ns_addr_.c_str()) < 0 ? TFS_ERROR : TFS_SUCCESS;
 
       TBSYS_LOG(DEBUG, "write tfs data ret: %d, name: %s", ret, ret != TFS_SUCCESS ? "NULL" : ret_tfs_name);
       if (ret != TFS_SUCCESS)

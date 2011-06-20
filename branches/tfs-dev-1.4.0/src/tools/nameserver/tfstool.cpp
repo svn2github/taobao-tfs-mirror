@@ -423,11 +423,13 @@ int put_file_ex(const VSTRING& param, const bool unique, const bool is_large)
   if (unique)
   {
     // TODO: save unique
-    ret = g_tfs_client->save_file(local_file, tfs_name, suffix, ret_tfs_name, TFS_FILE_LEN, NULL, flag);
+    ret = g_tfs_client->save_file(local_file, tfs_name, suffix, ret_tfs_name, TFS_FILE_LEN, NULL, flag) < 0 ?
+      TFS_ERROR : TFS_SUCCESS;
   }
   else
   {
-    ret = g_tfs_client->save_file(local_file, tfs_name, suffix, ret_tfs_name, TFS_FILE_LEN, NULL, flag);
+    ret = g_tfs_client->save_file(local_file, tfs_name, suffix, ret_tfs_name, TFS_FILE_LEN, NULL, flag) < 0 ?
+      TFS_ERROR : TFS_SUCCESS;
   }
 
   ToolUtil::print_info(ret, "put %s => %s", local_file, ret_tfs_name);

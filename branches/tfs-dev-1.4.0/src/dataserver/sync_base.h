@@ -64,6 +64,7 @@ namespace tfs
         common::FileQueue* second_file_queue_;
         common::FileQueueThread* second_file_queue_thread_;
         SyncBackup* backup_;
+        std::string mirror_dir_;
 
       private:
         int do_sync(const char* data, const int32_t len, const bool second = false);

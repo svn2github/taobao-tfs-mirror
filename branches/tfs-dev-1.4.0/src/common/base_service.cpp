@@ -44,7 +44,7 @@ namespace tfs
     {
 
     }
-    
+
     BaseService::~BaseService()
     {
 
@@ -105,7 +105,7 @@ namespace tfs
 
           if (bpacket->is_enable_dump())
           {
-            bpacket->dump(); 
+            bpacket->dump();
           }
           if (!main_workers_.push(bpacket, work_queue_size_))
           {
@@ -129,7 +129,8 @@ namespace tfs
       {
         if (LOCAL_PACKET == packet->getPCode())
         {
-          LocalPacket* local_packet = dynamic_cast<LocalPacket*>(packet);          
+          bret = false;
+          LocalPacket* local_packet = dynamic_cast<LocalPacket*>(packet);
           int32_t iret = local_packet->execute();
           if (TFS_SUCCESS != iret)
           {
@@ -184,7 +185,7 @@ namespace tfs
       if (TFS_SUCCESS == iret)
       {
         int32_t thread_count = get_work_thread_count();
-        main_workers_.setThreadParameter(thread_count, this, NULL);        
+        main_workers_.setThreadParameter(thread_count, this, NULL);
         main_workers_.start();
 
         work_queue_size_ = TBSYS_CONFIG.getInt(CONF_SN_PUBLIC, CONF_TASK_MAX_QUEUE_SIZE, 10240);
@@ -230,7 +231,7 @@ namespace tfs
       {
         char spec[32];
         sprintf(spec, "tcp::%d", port);
-        
+
         packet_factory_ = create_packet_factory();
         if (NULL == packet_factory_)
         {
@@ -243,7 +244,7 @@ namespace tfs
           if (NULL == streamer_)
           {
             TBSYS_LOG(ERROR, "%s create packet streamer fail", app_name);
-            iret = EXIT_GENERAL_ERROR; 
+            iret = EXIT_GENERAL_ERROR;
           }
           else
           {
@@ -256,7 +257,7 @@ namespace tfs
             }
             else
             {
-              transport_.start();        
+              transport_.start();
             }
           }
         }
@@ -265,7 +266,7 @@ namespace tfs
       // start client manager
       if (TFS_SUCCESS == iret)
       {
-        iret = NewClientManager::get_instance().initialize(packet_factory_, streamer_, 
+        iret = NewClientManager::get_instance().initialize(packet_factory_, streamer_,
                 &transport_, &BaseService::golbal_async_callback_func, this);
         if (TFS_SUCCESS != iret)
         {

@@ -99,9 +99,14 @@ int64_t t_get_file_length(const int fd)
   return TfsClient::Instance()->get_file_length(fd);
 }
 
-int t_unlink(const char* file_name, const char* suffix, int64_t& file_size, const TfsUnlinkType action)
+int t_unlink(const char* file_name, const char* suffix, int64_t* file_size, const TfsUnlinkType action)
 {
-  return TfsClient::Instance()->unlink(file_name, suffix, file_size,static_cast<tfs::common::TfsUnlinkType>(action));
+  int ret = tfs::common::TFS_ERROR;
+  if (NULL != file_size)
+  {
+    ret = TfsClient::Instance()->unlink(file_name, suffix, *file_size, static_cast<tfs::common::TfsUnlinkType>(action));
+  }
+  return ret;
 }
 
 int t_set_option_flag(const int fd, const OptionFlag option_flag)
@@ -209,7 +214,7 @@ int32_t t_get_cluster_id()
   return TfsClient::Instance()->get_cluster_id();
 }
 
-int t_save_file(const char* local_file, const char* tfs_name, const char* suffix,
+int64_t t_save_file(const char* local_file, const char* tfs_name, const char* suffix,
                 char* ret_tfs_name, const int32_t ret_tfs_name_len, const int32_t flag)
 {
   return TfsClient::Instance()->save_file(local_file, tfs_name, suffix,

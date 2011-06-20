@@ -67,6 +67,25 @@ int BgTask::initialize()
   return ret;
 }
 
+int32_t BgTask::get_cache_hit_radio()
+{
+  uint64_t cache_hit = 0;
+  uint64_t cache_miss = 0;
+
+  if (!stat_mgr_.is_init())
+  {
+    TBSYS_LOG(WARN, "stat bgtask not init. no cache statistics");
+  }
+  else
+  {
+    cache_hit = stat_mgr_.get_stat_value(StatItem::client_cache_stat_, StatItem::cache_hit_);
+    cache_miss = stat_mgr_.get_stat_value(StatItem::client_cache_stat_, StatItem::cache_miss_);
+  }
+
+  uint64_t cache_count = cache_hit + cache_miss;
+  return cache_count > 0 ? (cache_hit * 100) / cache_count : 0;
+}
+
 int BgTask::wait_for_shut_down()
 {
   stat_mgr_.wait_for_shut_down();

@@ -35,9 +35,9 @@ namespace tfs
 
     }
 
-    int ClientRequestServer::keepalive(const common::DataServerStatInfo& ds_info, 
+    int ClientRequestServer::keepalive(const common::DataServerStatInfo& ds_info,
         const common::HasBlockFlag flag,
-        common::BLOCK_INFO_LIST& blocks, common::VUINT32& expires, 
+        common::BLOCK_INFO_LIST& blocks, common::VUINT32& expires,
         bool& need_sent_block)
     {
       int32_t iret = TFS_ERROR;
@@ -67,7 +67,7 @@ namespace tfs
           {
             #if defined(TFS_NS_GTEST) || defined(TFS_NS_INTEGRATION) || defined(TFS_NS_DEBUG)
             server->dump();
-            #endif  
+            #endif
             NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
             if (flag == HAS_BLOCK_FLAG_NO)
             {
@@ -91,7 +91,7 @@ namespace tfs
               EXPIRE_BLOCK_LIST current_expires;
               #if defined(TFS_NS_GTEST) || defined(TFS_NS_INTEGRATION) || defined(TFS_NS_DEBUG)
               TBSYS_LOG(DEBUG, "server: %s update_relation, flag: %s", tbsys::CNetUtil::addrToString(ds_info.id_).c_str(), flag == HAS_BLOCK_FLAG_YES ? "Yes" : "No");
-              #endif  
+              #endif
               iret = lay_out_manager_.update_relation(server, blocks, current_expires, now);
               if (TFS_SUCCESS == iret)
               {
@@ -110,7 +110,7 @@ namespace tfs
                       {
                         if (!lay_out_manager_.find_block_in_plan((*r_iter)->id()))
                         {
-                          expires.push_back((*r_iter)->id());     
+                          expires.push_back((*r_iter)->id());
                         }
                       }
                     }
@@ -119,16 +119,12 @@ namespace tfs
                       for (; r_iter != expires_blocks.end(); ++r_iter)
                       {
                         //TODO rm_list will cause ds core for now
-                        rm_list.push_back((*r_iter)->id());     
+                        rm_list.push_back((*r_iter)->id());
                       }
                     }
                     if (!rm_list.empty())
                     {
-                    #if __WORDSIZE == 64
-                      std::vector<int64_t> stat(1, rm_list.size());
-                    #else
-                      std::vector<int32_t> stat(1, rm_list.size());
-                    #endif
+                      std::vector<stat_int_t> stat(1, rm_list.size());
                       GFactory::get_stat_mgr().update_entry(GFactory::tfs_ns_stat_block_count_, stat, false);
                       lay_out_manager_.rm_block_from_ds(iter->first->id(), rm_list);
                     }
@@ -189,15 +185,12 @@ namespace tfs
               iret = open_write_mode(mode, block_id, lease_id, version, ds_list);
             }
           }
-        } 
+        }
       }
 
-      #if __WORDSIZE == 64
-      std::vector<int64_t> stat(4,0);
-      #else
-      std::vector<int32_t> stat(4,0);
-      #endif
-      mode & T_READ ? iret == TFS_SUCCESS ? stat[0] = 1 : stat[1] = 1 
+      std::vector<stat_int_t> stat(4,0);
+
+      mode & T_READ ? iret == TFS_SUCCESS ? stat[0] = 1 : stat[1] = 1
         : iret == TFS_SUCCESS ? stat[2] = 1 : stat[3] = 1;
       GFactory::get_stat_mgr().update_entry(GFactory::tfs_ns_stat_, stat);
       return iret;
@@ -214,7 +207,7 @@ namespace tfs
         iret = NULL == block ? EXIT_BLOCK_NOT_FOUND : TFS_SUCCESS;
         if (TFS_SUCCESS == iret)
         {
-          std::vector<ServerCollect*>& readable = block->get_hold(); 
+          std::vector<ServerCollect*>& readable = block->get_hold();
           iret = readable.empty() ? EXIT_NO_DATASERVER : TFS_SUCCESS;
           if (TFS_SUCCESS == iret)
           {
@@ -253,11 +246,7 @@ namespace tfs
           iret = batch_open_write_mode(mode, block_count, out);
         }
       }
-      #if __WORDSIZE == 64
-      std::vector<int64_t> stat(4, 0);
-      #else
-      std::vector<int32_t> stat(4, 0);
-      #endif
+      std::vector<stat_int_t> stat(4, 0);
       if (mode & T_READ)
       {
         if (iret == TFS_SUCCESS)
@@ -304,11 +293,7 @@ namespace tfs
           snprintf(parameter.error_msg_, 256, "close block: %u successful,but lease: %u commit fail", block_id, parameter.lease_id_);
         }
 
-        #if __WORDSIZE == 64
-        std::vector<int64_t> stat(6,0);
-        #else
-        std::vector<int32_t> stat(6,0);
-        #endif
+        std::vector<stat_int_t> stat(6,0);
         iret == TFS_SUCCESS ? stat[4] = 0x01 : stat[5] = 0x01;
         GFactory::get_stat_mgr().update_entry(GFactory::tfs_ns_stat_, stat);
       }
@@ -432,7 +417,7 @@ namespace tfs
             }
           }
         }
-        else if (mode & T_NEWBLK) 
+        else if (mode & T_NEWBLK)
         {
           iret = 0 == block_id ? TFS_ERROR : TFS_SUCCESS;
           if (TFS_SUCCESS == iret)
@@ -474,7 +459,7 @@ namespace tfs
                   {
                     (*iter)->total_elect_num_inc();
                   }
-#endif  
+#endif
                 }
                 iret = servers.empty() ? EXIT_NO_DATASERVER : TFS_SUCCESS;
                 if (TFS_SUCCESS != iret)
@@ -698,7 +683,7 @@ namespace tfs
       uint32_t block_id = info.value3_;
       BlockChunkPtr ptr = lay_out_manager_.get_chunk(block_id);
       RWLock::Lock lock(*ptr, READ_LOCKER);
-      BlockCollect* block = ptr->find(block_id); 
+      BlockCollect* block = ptr->find(block_id);
       int32_t iret = NULL == block ? TFS_ERROR : TFS_SUCCESS;
       if (TFS_SUCCESS == iret)
       {
@@ -728,7 +713,7 @@ namespace tfs
       std::vector<ServerCollect*> runer;
       BlockChunkPtr ptr = lay_out_manager_.get_chunk(block_id);
       RWLock::Lock lock(*ptr, READ_LOCKER);
-      BlockCollect* block = ptr->find(block_id); 
+      BlockCollect* block = ptr->find(block_id);
       int32_t iret = NULL == block ? TFS_ERROR : TFS_SUCCESS;
       if (TFS_SUCCESS == iret)
       {
@@ -737,12 +722,12 @@ namespace tfs
         {
           if ( 0 != source
               && 0 != target
-              && 0 != block_id 
+              && 0 != block_id
               && target != source)
           {
             bret = true;
           }
-        } 
+        }
         else
         {
           if ((0 != block_id)
@@ -814,7 +799,7 @@ namespace tfs
             {
               runer.push_back(source_collect);
               runer.push_back(target_collect);
-              LayoutManager::TaskPtr task = flag == REPLICATE_BLOCK_MOVE_FLAG_NO ? 
+              LayoutManager::TaskPtr task = flag == REPLICATE_BLOCK_MOVE_FLAG_NO ?
                 new LayoutManager::ReplicateTask(&lay_out_manager_, PLAN_PRIORITY_EMERGENCY, block_id, now, now, runer, 0):
                 new LayoutManager::MoveTask(&lay_out_manager_, PLAN_PRIORITY_EMERGENCY, block_id, now, now, runer, 0);
               if (!lay_out_manager_.add_task(task))

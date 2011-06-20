@@ -106,14 +106,14 @@ int TfsClient::unlink(const char* file_name, const char* suffix, const char* ns_
   return TfsClientImpl::Instance()->unlink(file_name, suffix, ns_addr, file_size, action, option_flag);
 }
 
-#ifdef _WITH_UNIQUE_STORE
+#ifdef WITH_UNIQUE_STORE
 int TfsClient::init_unique_store(const char* master_addr, const char* slave_addr,
                                      const char* group_name, const int32_t area, const char* ns_addr)
 {
   return TfsClientImpl::Instance()->init_unique_store(master_addr, slave_addr, group_name, area, ns_addr);
 }
 
-int TfsClient::save_unique(const char* buf, const int64_t count,
+int64_t TfsClient::save_unique(const char* buf, const int64_t count,
                            const char* file_name, const char* suffix,
                            char* ret_tfs_name, const int32_t ret_tfs_name_len, const char* ns_addr)
 {
@@ -121,7 +121,7 @@ int TfsClient::save_unique(const char* buf, const int64_t count,
                                                 ret_tfs_name, ret_tfs_name_len, ns_addr);
 }
 
-int TfsClient::save_unique(const char* local_file,
+int64_t TfsClient::save_unique(const char* local_file,
                            const char* file_name, const char* suffix,
                            char* ret_tfs_name, const int32_t ret_tfs_name_len, const char* ns_addr)
 {
@@ -129,9 +129,10 @@ int TfsClient::save_unique(const char* local_file,
                                                 ret_tfs_name, ret_tfs_name_len, ns_addr);
 }
 
-int32_t TfsClient::unlink_unique(const char* file_name, const char* suffix, const int32_t count, const char* ns_addr)
+int32_t TfsClient::unlink_unique(const char* file_name, const char* suffix, int64_t& file_size,
+                                 const int32_t count, const char* ns_addr)
 {
-  return TfsClientImpl::Instance()->unlink_unique(file_name, suffix, count, ns_addr);
+  return TfsClientImpl::Instance()->unlink_unique(file_name, suffix, file_size, count, ns_addr);
 }
 #endif
 
@@ -235,10 +236,10 @@ int32_t TfsClient::get_block_cache_items() const
   return TfsClientImpl::Instance()->get_block_cache_items();
 }
 
-// double TfsClient::get_cache_hit_radio() const
-// {
-//   return TfsClientImpl::Instance()->get_cache_hit_radio();
-// }
+int32_t TfsClient::get_cache_hit_radio() const
+{
+  return TfsClientImpl::Instance()->get_cache_hit_radio();
+}
 
 uint64_t TfsClient::get_server_id()
 {
@@ -250,7 +251,7 @@ int32_t TfsClient::get_cluster_id()
   return TfsClientImpl::Instance()->get_cluster_id();
 }
 
-int TfsClient::save_file(const char* local_file, const char* tfs_name, const char* suffix,
+int64_t TfsClient::save_file(const char* local_file, const char* tfs_name, const char* suffix,
                          char* ret_tfs_name, const int32_t ret_tfs_name_len,
                          const char* ns_addr, const int32_t flag)
 {
@@ -258,7 +259,7 @@ int TfsClient::save_file(const char* local_file, const char* tfs_name, const cha
                                               ret_tfs_name, ret_tfs_name_len, ns_addr, flag);
 }
 
-int TfsClient::save_file(const char* buf, const int64_t count, const char* tfs_name, const char* suffix,
+int64_t TfsClient::save_file(const char* buf, const int64_t count, const char* tfs_name, const char* suffix,
                          char* ret_tfs_name, const int32_t ret_tfs_name_len,
                          const char* ns_addr, const int32_t flag, const char* key)
 {

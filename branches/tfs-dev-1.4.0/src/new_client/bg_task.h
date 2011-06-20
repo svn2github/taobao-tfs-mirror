@@ -30,6 +30,8 @@ namespace tfs
         static int initialize();
         static int wait_for_shut_down();
         static int destroy();
+        static int32_t get_cache_hit_radio();
+
         static common::StatManager<std::string, std::string, common::StatEntry>& get_stat_mgr()
         {
           return stat_mgr_;

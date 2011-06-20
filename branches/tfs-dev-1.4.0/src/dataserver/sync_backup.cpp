@@ -121,7 +121,9 @@ namespace tfs
                  SYSPARAM_DATASERVER.local_ns_port_);
 
         tfs_client_ = TfsClient::Instance();
-        ret = tfs_client_->initialize() == TFS_SUCCESS ? true : false;
+        ret =
+          tfs_client_->initialize(NULL, DEFAULT_BLOCK_CACHE_TIME, DEFAULT_BLOCK_CACHE_ITEMS, false) == TFS_SUCCESS ?
+          true : false;
       }
 
       return ret;
@@ -465,7 +467,9 @@ namespace tfs
                  SYSPARAM_DATASERVER.slave_ns_ip_);
 
         tfs_client_ = TfsClient::Instance();
-        ret = tfs_client_->initialize() == TFS_SUCCESS ? true : false;
+        ret =
+          tfs_client_->initialize(NULL, DEFAULT_BLOCK_CACHE_TIME, DEFAULT_BLOCK_CACHE_ITEMS, false) == TFS_SUCCESS ?
+          true : false;
       }
 
       return ret;

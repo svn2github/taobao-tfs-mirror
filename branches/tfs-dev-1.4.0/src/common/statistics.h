@@ -16,9 +16,11 @@
 #ifndef TFS_COMMON_STATISTICS_H_
 #define TFS_COMMON_STATISTICS_H_
 #include <map>
+
 #include <Timer.h>
 #include <Handle.h>
 #include <Shared.h>
+
 #include "error_msg.h"
 #include "internal.h"
 #include "atomic.h"
@@ -27,6 +29,17 @@ namespace tfs
 {
   namespace common
   {
+    // wrap atomic x86_64 limit.
+#if __WORDSIZE == 32
+#define stat_int_t int32_t
+#define stat_uint_t uint32_t
+#define STAT_INT_T_SIZE INT_SIZE
+#else
+#define stat_int_t int64_t
+#define stat_uint_t uint64_t
+#define STAT_INT_T_SIZE INT64_SIZE
+#endif
+
     template < typename Key, typename SubKey>
       class StatEntry : public virtual tbutil::TimerTask
     {
@@ -40,13 +53,9 @@ namespace tfs
         virtual int serialize(char* data, int64_t& pos, int64_t length) = 0;
         virtual void reset() = 0;
 
-#if __WORDSIZE == 64
-        virtual int update(std::vector<int64_t>& update_list, bool inc = true) = 0;
+        virtual int update(std::vector<stat_int_t>& update_list, bool inc = true) = 0;
         virtual int update(const SubKey& subkey, const int64_t value, bool inc = true) = 0;
-#else
-        virtual int update(std::vector<int32_t>& update_list, bool inc = true) = 0;
-        virtual int update(const SubKey& subkey, const int32_t value, bool inc = true) = 0;
-#endif
+
       private:
         StatEntry();
         StatEntry(const StatEntry&);
@@ -54,18 +63,11 @@ namespace tfs
     };
 
     template<>
-#if __WORDSIZE == 64
-      class StatEntry<int64_t, int64_t>: public virtual tbutil::TimerTask
-#else
-      class StatEntry<int64_t, int32_t>: public virtual tbutil::TimerTask
-#endif
+      class StatEntry<int64_t, stat_int_t>: public virtual tbutil::TimerTask
       {
         public:
-#if __WORDSIZE == 64
-          typedef tbutil::Handle< StatEntry< int64_t, int64_t > > StatEntryPtr;
-#else
-          typedef tbutil::Handle< StatEntry< int64_t, int32_t > > StatEntryPtr;
-#endif
+          typedef tbutil::Handle< StatEntry< int64_t, stat_int_t > > StatEntryPtr;
+
         public:
           StatEntry(const int64_t& key, int64_t begin, bool dump_complete_reset)
             :key_(key),
@@ -83,13 +85,8 @@ namespace tfs
           inline virtual int serialize();
           inline virtual int serialize(char* data, int64_t& pos, int64_t length);
           inline virtual void reset();
-#if __WORDSIZE == 64
-          inline virtual int update(std::vector<int64_t>& update_list, bool inc = true);
-          inline virtual int update(const int64_t& sub_key, const int64_t value, bool inc = true);
-#else
-          inline virtual int update(std::vector<int32_t>& update_list, bool inc = true);
-          inline virtual int update(const int64_t& sub_key, const int32_t value, bool inc = true);
-#endif
+          inline virtual int update(std::vector<stat_int_t>& update_list, bool inc = true);
+          inline virtual int update(const int64_t& sub_key, const stat_int_t value, bool inc = true);
           const int64_t& get_key() const { return key_;}
           inline void add_sub_key(const int64_t& sub_key);
         public:
@@ -101,11 +98,8 @@ namespace tfs
           int64_t end_us_;
           bool dump_complete_reset;
           std::vector<int64_t> sub_key_;
-#if __WORDSIZE == 64
-          std::vector<uint64_t> count_;
-#else
-          std::vector<uint32_t> count_;
-#endif
+          std::vector<stat_uint_t> count_;
+
         private:
           StatEntry();
           StatEntry(const StatEntry&);
@@ -132,13 +126,10 @@ namespace tfs
           inline virtual int serialize(char* data, int64_t& pos, int64_t length);
           inline virtual void reset();
 
-#if __WORDSIZE == 64
-          inline virtual int update(std::vector<int64_t>& update_list, bool inc = true);
-          inline virtual int update(const std::string& sub_key, const int64_t value, bool inc = true);
-#else
-          inline virtual int update(std::vector<int32_t>& update_list, bool inc = true);
-          inline virtual int update(const std::string& sub_key, const int32_t value, bool inc = true);
-#endif
+          inline virtual int update(std::vector<stat_int_t>& update_list, bool inc = true);
+          inline virtual int update(const std::string& sub_key, const stat_int_t value, bool inc = true);
+          inline stat_uint_t get_current_value(const std::string& sub_key);
+
           const std::string& get_key() const { return key_;}
           inline void add_sub_key(const std::string& sub_key);
         private:
@@ -151,11 +142,8 @@ namespace tfs
           bool dump_complete_reset;
           std::vector<std::string> sub_key_;
 
-#if __WORDSIZE == 64
-          std::vector<uint64_t> count_;
-#else
-          std::vector<uint32_t> count_;
-#endif
+          std::vector<stat_uint_t> count_;
+
         private:
           StatEntry();
           StatEntry(const StatEntry&);
@@ -172,20 +160,17 @@ namespace tfs
         public:
         StatManager();
         ~StatManager();
+        bool is_init();
         int initialize(tbutil::TimerPtr timer);
         int wait_for_shut_down();
         int destroy();
         int reset_schedule_interval(const int64_t schedule_interval_us);
         int add_entry(const EntryPtr& entry, int64_t schedule_interval_us = 0);
         int remove_entry(const Key& key);
+        int64_t get_stat_value(const Key& key, const SubKey& sub_key);
 
-#if __WORDSIZE == 64
-        int update_entry(const Key& key, std::vector<int64_t>& update_list, bool inc = true);
-        int update_entry(const Key& key, const SubKey& subkey, const int64_t value, bool inc = true);
-#else
-        int update_entry(const Key& key, std::vector<int32_t>& update_list, bool inc = true);
-        int update_entry(const Key& key, const SubKey& subkey, const int32_t value, bool inc = true);
-#endif
+        int update_entry(const Key& key, std::vector<stat_int_t>& update_list, bool inc = true);
+        int update_entry(const Key& key, const SubKey& subkey, const stat_int_t value, bool inc = true);
         void serialize(const Key& key) const;
         void serialize(const Key& key, char* data, int64_t& pos, int64_t length);
         private:
@@ -194,11 +179,7 @@ namespace tfs
         STAT_MAP maps_;
       };
 
-#if __WORDSIZE == 64
-    void StatEntry<int64_t, int64_t>::runTimerTask()
-#else
-      void StatEntry<int64_t, int32_t>::runTimerTask()
-#endif
+      void StatEntry<int64_t, stat_int_t>::runTimerTask()
       {
         end_us_ = tbsys::CTimeUtil::getTime();
         if (serialize() != TFS_SUCCESS)
@@ -212,11 +193,7 @@ namespace tfs
         }
       }
 
-#if __WORDSIZE == 64
-    int StatEntry<int64_t, int64_t>::serialize()
-#else
-      int StatEntry<int64_t, int32_t>::serialize()
-#endif
+      int StatEntry<int64_t, stat_int_t>::serialize()
       {
         std::string result;
         stat_entry_serialize(result);
@@ -225,11 +202,7 @@ namespace tfs
         return TFS_SUCCESS;
       }
 
-#if __WORDSIZE == 64
-    int StatEntry<int64_t, int64_t>::serialize(char* data, int64_t& pos, int64_t length)
-#else
-      int StatEntry<int64_t, int32_t>::serialize(char* data, int64_t& pos, int64_t length)
-#endif
+      int StatEntry<int64_t, stat_int_t>::serialize(char* data, int64_t& pos, int64_t length)
       {
         int32_t size = INT64_SIZE * 3 + calculate_stat_entry_length();
         bool bret = (data != NULL) && (length - pos > size);
@@ -242,60 +215,33 @@ namespace tfs
           memcpy((data + pos), &end_us_, INT64_SIZE);
           pos += INT64_SIZE;
           std::vector<int64_t>::iterator siter = sub_key_.begin();
+          std::vector<stat_uint_t>::iterator iter = count_.begin();
 
-#if __WORDSIZE == 64
-          std::vector<uint64_t>::iterator iter = count_.begin();
-#else
-          std::vector<uint32_t>::iterator iter = count_.begin();
-#endif
           for (; siter != sub_key_.end() && iter != count_.end(); ++siter, ++iter)
           {
-#if __WORDSIZE == 64
-            memcpy((data+pos), &(*iter), INT64_SIZE);
-            pos += INT64_SIZE;
-            memcpy((data+pos), &(*iter), INT64_SIZE);
-            pos += INT64_SIZE;
-#else
-            memcpy((data+pos), &(*iter), INT_SIZE);
-            pos += INT_SIZE;
-            memcpy((data+pos), &(*iter), INT_SIZE);
-            pos += INT_SIZE;
-#endif
+            memcpy((data+pos), &(*iter), STAT_INT_T_SIZE);
+            pos += STAT_INT_T_SIZE;
+            memcpy((data+pos), &(*iter), STAT_INT_T_SIZE);
+            pos += STAT_INT_T_SIZE;
           }
         }
         return bret ? TFS_SUCCESS : EXIT_GENERAL_ERROR;
       }
 
-#if __WORDSIZE == 64
-    void StatEntry<int64_t, int64_t>::reset()
-#else
-      void StatEntry<int64_t, int32_t>::reset()
-#endif
+      void StatEntry<int64_t, stat_int_t>::reset()
       {
-#if __WORDSIZE == 64
-        std::vector<uint64_t>::iterator iter = count_.begin();
-#else
-        std::vector<uint32_t>::iterator iter = count_.begin();
-#endif
+        std::vector<stat_uint_t>::iterator iter = count_.begin();
         for (; iter != count_.end(); ++iter)
         {
           atomic_exchange((&(*iter)), 0);
         }
       }
 
-#if __WORDSIZE == 64
-    int StatEntry<int64_t, int64_t>::update(std::vector<int64_t>& update_list, bool inc)
-#else
-      int StatEntry<int64_t, int32_t>::update(std::vector<int32_t>& update_list, bool inc)
-#endif
+      int StatEntry<int64_t, stat_int_t>::update(std::vector<stat_int_t>& update_list, bool inc)
       {
-#if __WORDSIZE == 64
-        std::vector<int64_t>::iterator iter = update_list.begin();
-        std::vector<uint64_t>::iterator citer = count_.begin();
-#else
-        std::vector<int32_t>::iterator iter = update_list.begin();
-        std::vector<uint32_t>::iterator citer = count_.begin();
-#endif
+        std::vector<stat_int_t>::iterator iter = update_list.begin();
+        std::vector<stat_uint_t>::iterator citer = count_.begin();
+
         std::vector<int64_t>::iterator siter = sub_key_.begin();
         for (; siter != sub_key_.end() && citer != count_.end() && iter != update_list.end();
             ++siter, ++citer, ++iter)
@@ -308,11 +254,7 @@ namespace tfs
         return TFS_SUCCESS;
       }
 
-#if __WORDSIZE == 64
-    int StatEntry<int64_t, int64_t>::update(const int64_t& sub_key, const int64_t value, bool inc)
-#else
-      int StatEntry<int64_t, int32_t>::update(const int64_t& sub_key, const int32_t value, bool inc)
-#endif
+      int StatEntry<int64_t, stat_int_t>::update(const int64_t& sub_key, const stat_int_t value, bool inc)
       {
         std::vector<int64_t>::const_iterator iter = std::find(sub_key_.begin(), sub_key_.end(), sub_key);
         int32_t iret = iter == sub_key_.end() ? TFS_ERROR : TFS_SUCCESS;
@@ -327,52 +269,29 @@ namespace tfs
         return iret;
       }
 
-#if __WORDSIZE == 64
-    void StatEntry<int64_t, int64_t>::add_sub_key(const int64_t& sub_key)
-#else
-      void StatEntry<int64_t, int32_t>::add_sub_key(const int64_t& sub_key)
-#endif
+      void StatEntry<int64_t, stat_int_t>::add_sub_key(const int64_t& sub_key)
       {
         sub_key_.push_back(sub_key);
         count_.push_back(0);
       }
 
-#if __WORDSIZE == 64
-    int32_t StatEntry<int64_t, int64_t>::calculate_stat_entry_length()
-#else
-      int32_t StatEntry<int64_t, int32_t>::calculate_stat_entry_length()
-#endif
+      int32_t StatEntry<int64_t, stat_int_t>::calculate_stat_entry_length()
       {
         int32_t length = 0;
         std::vector<int64_t>::const_iterator iter = sub_key_.begin();
-#if __WORDSIZE == 64
-        std::vector<uint64_t>::const_iterator citer = count_.begin();
-#else
-        std::vector<uint32_t>::const_iterator citer = count_.begin();
-#endif
+        std::vector<stat_uint_t>::const_iterator citer = count_.begin();
         for (; iter != sub_key_.end() && citer != count_.end(); ++iter, ++citer)
         {
-#if __WORDSIZE == 64
-          length += INT64_SIZE * 2;
-#else
-          length += INT64_SIZE + INT_SIZE;
-#endif
+          length += INT64_SIZE + STAT_INT_T_SIZE;
         }
         return length;
       }
 
-#if __WORDSIZE == 64
-    void StatEntry<int64_t, int64_t>::stat_entry_serialize(std::string& result)
-#else
-      void StatEntry<int64_t, int32_t>::stat_entry_serialize(std::string& result)
-#endif
+      void StatEntry<int64_t, stat_int_t>::stat_entry_serialize(std::string& result)
       {
         std::vector<int64_t>::const_iterator iter = sub_key_.begin();
-#if __WORDSIZE == 64
-        std::vector<uint64_t>::const_iterator citer = count_.begin();
-#else
-        std::vector<uint32_t>::const_iterator citer = count_.begin();
-#endif
+        std::vector<stat_uint_t>::const_iterator citer = count_.begin();
+
         for (; iter != sub_key_.end() && citer != count_.end(); ++iter, ++citer)
         {
           std::ostringstream str;
@@ -420,11 +339,8 @@ namespace tfs
         memcpy((data + pos), &end_us_, INT64_SIZE);
         pos += INT64_SIZE;
         std::vector<std::string>::iterator iter = sub_key_.begin();
-#if __WORDSIZE == 64
-        std::vector<uint64_t>::iterator citer = count_.begin();
-#else
-        std::vector<uint32_t>::iterator citer = count_.begin();
-#endif
+        std::vector<stat_uint_t>::iterator citer = count_.begin();
+
         for (; iter != sub_key_.end() && citer != count_.end(); ++iter, ++citer)
         {
           length = (*iter).length();
@@ -432,13 +348,8 @@ namespace tfs
           pos += sizeof(int16_t);
           memcpy((data+pos), (*iter).c_str(), length);
           pos += length;
-#if __WORDSIZE == 64
-          memcpy((data+pos), &(*citer), INT64_SIZE);
-          pos += INT64_SIZE;
-#else
-          memcpy((data+pos), &(*citer), INT_SIZE);
-          pos += INT_SIZE;
-#endif
+          memcpy((data+pos), &(*citer), STAT_INT_T_SIZE);
+          pos += STAT_INT_T_SIZE;
         }
       }
       return bret ? TFS_SUCCESS : EXIT_GENERAL_ERROR;
@@ -446,11 +357,8 @@ namespace tfs
 
     void StatEntry<std::string, std::string>::reset()
     {
-#if __WORDSIZE == 64
-      std::vector<uint64_t>::iterator iter = count_.begin();
-#else
-      std::vector<uint32_t>::iterator iter = count_.begin();
-#endif
+      std::vector<stat_uint_t>::iterator iter = count_.begin();
+
       for (; iter != count_.end(); ++iter)
       {
         atomic_exchange(&(*iter), 0);
@@ -463,20 +371,12 @@ namespace tfs
       count_.push_back(0);
     }
 
-#if __WORDSIZE == 64
-    int StatEntry<std::string, std::string>::update(std::vector<int64_t>& update_list, bool inc)
-#else
-      int StatEntry<std::string, std::string>::update(std::vector<int32_t>& update_list, bool inc)
-#endif
+      int StatEntry<std::string, std::string>::update(std::vector<stat_int_t>& update_list, bool inc)
       {
         std::vector<std::string>::iterator siter = sub_key_.begin();
-#if __WORDSIZE == 64
-        std::vector<uint64_t>::iterator citer = count_.begin();
-        std::vector<int64_t>::iterator iter = update_list.begin();
-#else
-        std::vector<uint32_t>::iterator citer = count_.begin();
-        std::vector<int32_t>::iterator iter = update_list.begin();
-#endif
+        std::vector<stat_uint_t>::iterator citer = count_.begin();
+        std::vector<stat_int_t>::iterator iter = update_list.begin();
+
         for (; iter != update_list.end() && citer != count_.end() && siter != sub_key_.end();
             ++iter, ++citer, ++siter)
         {
@@ -488,11 +388,7 @@ namespace tfs
         return TFS_SUCCESS;
       }
 
-#if __WORDSIZE == 64
-    int StatEntry<std::string, std::string>::update(const std::string& sub_key, const int64_t value, bool inc)
-#else
-      int StatEntry<std::string, std::string>::update(const std::string& sub_key, const int32_t value, bool inc)
-#endif
+      int StatEntry<std::string, std::string>::update(const std::string& sub_key, const stat_int_t value, bool inc)
       {
         std::vector<std::string>::const_iterator iter = std::find(sub_key_.begin(), sub_key_.end(), sub_key);
         int32_t iret = iter == sub_key_.end() ? TFS_ERROR : TFS_SUCCESS;
@@ -507,24 +403,34 @@ namespace tfs
         return iret;
       }
 
+      stat_uint_t StatEntry<std::string, std::string>::get_current_value(const std::string& sub_key)
+      {
+        stat_uint_t current_value = 0;
+        std::vector<std::string>::const_iterator iter = std::find(sub_key_.begin(), sub_key_.end(), sub_key);
+        int32_t iret = iter == sub_key_.end() ? TFS_ERROR : TFS_SUCCESS;
+        if (TFS_SUCCESS == iret)
+        {
+          int32_t offset = iter - sub_key_.begin();
+          if (!(*iter).empty())
+          {
+            current_value = count_[offset];
+          }
+        }
+
+        return current_value;
+      }
+
     int32_t StatEntry<std::string, std::string>::calculate_stat_entry_length()
     {
       int32_t length = 0;
       std::vector<std::string>::const_iterator iter = sub_key_.begin();
-#if __WORDSIZE == 64
-      std::vector<uint64_t>::const_iterator citer = count_.begin();
-#else
-      std::vector<uint32_t>::const_iterator citer = count_.begin();
-#endif
+      std::vector<stat_uint_t>::const_iterator citer = count_.begin();
+
       for (; iter != sub_key_.end() && citer != count_.end(); ++iter, ++citer)
       {
         length += sizeof(int16_t);
         length += (*iter).length();
-#if __WORDSIZE == 64
-        length += INT64_SIZE;
-#else
-        length += INT_SIZE;
-#endif
+        length += STAT_INT_T_SIZE;
       }
       return length;
     }
@@ -532,11 +438,8 @@ namespace tfs
     void StatEntry<std::string, std::string>::stat_entry_serialize(std::string& result)
     {
       std::vector<std::string>::iterator iter = sub_key_.begin();
-#if __WORDSIZE == 64
-      std::vector<uint64_t>::iterator citer = count_.begin();
-#else
-      std::vector<uint32_t>::iterator citer = count_.begin();
-#endif
+      std::vector<stat_uint_t>::iterator citer = count_.begin();
+
       for (; iter != sub_key_.end() && citer != count_.end(); ++iter, ++citer)
       {
         std::ostringstream str;
@@ -558,6 +461,12 @@ namespace tfs
       {
 
       }
+
+    template<typename Key, typename SubKey, template<typename T, typename T2> class Entry>
+      bool StatManager<Key, SubKey, Entry>::is_init()
+    {
+      return (timer_ != 0 && !destroy_);
+    }
 
     template<typename Key, typename SubKey, template<typename T, typename T2> class Entry>
       int StatManager<Key, SubKey, Entry>::initialize(tbutil::TimerPtr timer)
@@ -593,7 +502,7 @@ namespace tfs
     template<typename Key, typename SubKey, template<typename T, typename T2> class Entry>
       int StatManager<Key, SubKey, Entry>::reset_schedule_interval(const int64_t schedule_interval_us)
       {
-        if (timer_ != 0 && !destroy_)
+        if (is_init())
         {
           for (STAT_MAP_ITER iter = maps_.begin(); iter != maps_.end(); ++iter)
           {
@@ -610,7 +519,7 @@ namespace tfs
     template<typename Key, typename SubKey, template<typename T, typename T2> class Entry>
       int StatManager<Key, SubKey, Entry>::add_entry(const EntryPtr& entry, int64_t schedule_interval_us)
       {
-        if (timer_ != 0 && !destroy_)
+        if (is_init())
         {
           STAT_MAP_ITER iter = maps_.find(entry->get_key());
           if (iter != maps_.end())
@@ -649,13 +558,25 @@ namespace tfs
       }
 
     template<typename Key, typename SubKey, template<typename T, typename T2> class Entry>
-#if __WORDSIZE == 64
-      int StatManager<Key, SubKey, Entry>::update_entry(const Key& key, std::vector<int64_t>& update_list, bool inc)
-#else
-      int StatManager<Key, SubKey, Entry>::update_entry(const Key& key, std::vector<int32_t>& update_list, bool inc)
-#endif
+    int64_t StatManager<Key, SubKey, Entry>::get_stat_value(const Key& key, const SubKey& sub_key)
+    {
+      int64_t current_value = 0;
+      if (is_init())
       {
-        if (timer_ != 0 && !destroy_)
+        STAT_MAP_ITER iter = maps_.find(key);
+        if (maps_.end() == iter)
+        {
+          TBSYS_LOG(ERROR, "%s", "'stat entry' not found in maps");
+        }
+        current_value = iter->second->get_current_value(sub_key);
+      }
+      return current_value;
+    }
+
+    template<typename Key, typename SubKey, template<typename T, typename T2> class Entry>
+      int StatManager<Key, SubKey, Entry>::update_entry(const Key& key, std::vector<stat_int_t>& update_list, bool inc)
+      {
+        if (is_init())
         {
           STAT_MAP_ITER iter = maps_.find(key);
           if (iter == maps_.end())
@@ -669,13 +590,9 @@ namespace tfs
       }
 
     template<typename Key, typename SubKey, template<typename T, typename T2> class Entry>
-#if __WORDSIZE == 64
-      int StatManager<Key, SubKey, Entry>::update_entry(const Key& key, const SubKey& subkey, const int64_t value, bool inc)
-#else
-      int StatManager<Key, SubKey, Entry>::update_entry(const Key& key, const SubKey& subkey, const int32_t value, bool inc)
-#endif
+      int StatManager<Key, SubKey, Entry>::update_entry(const Key& key, const SubKey& subkey, const stat_int_t value, bool inc)
       {
-        if (timer_ != 0 && !destroy_)
+        if (is_init())
         {
           STAT_MAP_ITER iter = maps_.find(key);
           if (iter == maps_.end())
@@ -691,7 +608,7 @@ namespace tfs
     template<typename Key, typename SubKey, template<typename T, typename T2> class Entry>
       void StatManager<Key, SubKey, Entry>::serialize(const Key& key) const
       {
-        if (!destroy_)
+        if (is_init())
         {
           STAT_MAP_ITER iter = maps_.find(key);
           if (iter == maps_.end())

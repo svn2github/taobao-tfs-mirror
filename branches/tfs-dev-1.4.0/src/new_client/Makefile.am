@@ -1,6 +1,9 @@
 if WITH_UNIQUE_STORE
 unique_store_source=tfs_unique_store.cpp tfs_unique_store.h unique_store.h\
 	            tair_unique_handler.cpp tair_unique_handler.h md5.h md5.cpp
+trim_cmd=sed -i -e '/ifdef \+WITH_UNIQUE_STORE/{h;d}' -e '/endif/{x;/ifdef \+WITH_UNIQUE_STORE/d;x}'
+else
+trim_cmd=sed -i -n -e '/ifdef \+WITH_UNIQUE_STORE/{h;d}' -e '/endif/{x;/ifdef \+WITH_UNIQUE_STORE/d;x;p;d}' -e 'x;/ifdef \+WITH_UNIQUE_STORE/{x;d};x;p'
 endif
 
 AM_CPPFLAGS=-fPIC -I${top_srcdir}/src\
@@ -60,4 +63,6 @@ install-exec-hook:
 
 # installed dirctory differ from original src dirctory hierarchy, hardcode to change
 install-data-hook:
-	cd $(DESTDIR)$(includedir) && sed -i 's#common/\(.*\.h\)#\1#g' ${include_HEADERS}
+	cd $(DESTDIR)$(includedir) && \
+        sed -i 's#common/\(.*\.h\)#\1#g' ${include_HEADERS} && \
+	${trim_cmd} ${include_HEADERS}

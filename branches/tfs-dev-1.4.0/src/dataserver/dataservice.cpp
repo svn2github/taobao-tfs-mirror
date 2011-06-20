@@ -139,6 +139,17 @@ namespace tfs
       return pid_file_path;
     }
 
+    string DataService::get_real_work_dir()
+    {
+      const char* work_dir = get_work_dir();
+      string real_work_dir = "";
+      if (NULL != work_dir)
+      {
+        real_work_dir = string(work_dir) + "/dataserver_" + server_index_;
+      }
+      return real_work_dir;
+    }
+
     int DataService::initialize(int argc, char* argv[])
     {
       UNUSED(argc);
@@ -152,8 +163,8 @@ namespace tfs
       if (TFS_SUCCESS == iret)
       {
         //create work directory
-        const char* work_dir = get_work_dir();
-        iret = NULL == work_dir ? EXIT_GENERAL_ERROR: TFS_SUCCESS;
+        string work_dir = get_real_work_dir();
+        iret = work_dir.empty() ? EXIT_GENERAL_ERROR: TFS_SUCCESS;
         if (TFS_SUCCESS != iret)
         {
           TBSYS_LOG(ERROR, "%s not set work dir, must be exist", argv[0]);
@@ -205,7 +216,7 @@ namespace tfs
 
         if (TFS_SUCCESS == iret)
         {
-          const char *dev_name = get_dev();                                                          
+          const char *dev_name = get_dev();
           if (NULL == dev_name)//get dev name
           {
             iret =  EXIT_CONFIG_ERROR;
@@ -436,7 +447,7 @@ namespace tfs
       {
         compact_block_thread_->join();
         compact_block_thread_ = 0;
-      } 
+      }
       if (0 != do_sync_mirror_thread_)
       {
         do_sync_mirror_thread_->join();
@@ -466,7 +477,6 @@ namespace tfs
       sleep(SYSPARAM_DATASERVER.heart_interval_);
       while (!stop_)
       {
-        TBSYS_LOG(DEBUG, "===bgegiiiiiiiiiiiiiiiii===========");
         data_management_.get_ds_filesystem_info(data_server_info_.block_count_, data_server_info_.use_capacity_,
             data_server_info_.total_capacity_);
         data_server_info_.current_load_ = Func::get_load_avg();
@@ -480,7 +490,6 @@ namespace tfs
         {
           break;
         }
-        TBSYS_LOG(DEBUG, "================================: %d", SYSPARAM_DATASERVER.heart_interval_);
 
         cpu_metrics_.summary();
       }
@@ -738,10 +747,9 @@ namespace tfs
                   "close write file to other dataserver fail, blockid: %u, fileid: %" PRI64_PREFIX "u, ret: %d",
                   close_file_info.block_id_, close_file_info.file_id_, iret);
             }
-            TBSYS_LOG(INFO, "close file %s. filenumber: %" PRI64_PREFIX "u, blockid: %u, fileid: %" PRI64_PREFIX "u, peerip: %s, role: %s",
+            TBSYS_LOG(INFO, "close file %s. filenumber: %" PRI64_PREFIX "u, blockid: %u, fileid: %" PRI64_PREFIX "u, peerip: %s, role: master",
                 TFS_SUCCESS == iret ? "success" : "fail", close_file_info.file_number_, close_file_info.block_id_,
-                close_file_info.file_id_, tbsys::CNetUtil::addrToString(peer_id).c_str(),
-                CLOSE_FILE_SLAVER != close_file_info.mode_ ? "master" : "slave");
+                close_file_info.file_id_, tbsys::CNetUtil::addrToString(peer_id).c_str());
             WRITE_STAT_LOG(INFO, "blockid: %u, fileid: %" PRI64_PREFIX "u, peerip: %s",
                 close_file_info.block_id_, close_file_info.file_id_, tbsys::CNetUtil::addrToString(peer_id).c_str());
 
@@ -796,7 +804,7 @@ namespace tfs
 
           if (bpacket->is_enable_dump())
           {
-            bpacket->dump(); 
+            bpacket->dump();
           }
           // add access control by message type
           if (!access_deny(bpacket))
@@ -939,7 +947,7 @@ namespace tfs
             TBSYS_LOG(ERROR, "create file: blockid: %u is null. req update BlockInfo failed", block_id);
           }
         }
-        message->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret, 
+        message->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret,
             "create file failed. blockid: %u, fileid: %" PRI64_PREFIX "u, ret: %d.", block_id, file_id, ret);
       }
       else
@@ -981,7 +989,7 @@ namespace tfs
       int ret = data_management_.write_data(write_info, lease_id, version, msg_data, repair);
       if (EXIT_NO_LOGICBLOCK_ERROR == ret)
       {
-        message->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret, 
+        message->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret,
             "write data failed. block is not exist. blockid: %u, fileid: %" PRI64_PREFIX "u, ret: %d",
             write_info.block_id_, write_info.file_id_, ret);
       }
@@ -1002,7 +1010,7 @@ namespace tfs
         {
           ds_requester_.req_block_write_complete(write_info.block_id_, lease_id, TFS_ERROR);
         }
-        message->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret, 
+        message->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret,
             "write data fail. blockid: %u, fileid: %" PRI64_PREFIX "u. ret: %d", write_info.block_id_,
             write_info.file_id_, ret);
       }
@@ -1034,7 +1042,7 @@ namespace tfs
           else if ( ret < 0)
           {
             ds_requester_.req_block_write_complete(write_info.block_id_, lease_id, EXIT_SENDMSG_ERROR);
-            message->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret, 
+            message->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret,
                 "write data fail to other dataserver (send): blockid: %u, fileid: %" PRI64_PREFIX "u, datalen: %d",
                 write_info.block_id_, write_info.file_id_, write_info.length_);
           }
@@ -1107,7 +1115,7 @@ namespace tfs
           }
           else if (EXIT_NO_LOGICBLOCK_ERROR == ret)
           {
-            ret = message->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret, 
+            ret = message->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret,
                 "close write file failed. block is not exist. blockid: %u, fileid: %" PRI64_PREFIX "u, ret: %d",
                 close_file_info.block_id_, close_file_info.file_id_, ret);
           }
@@ -1131,7 +1139,7 @@ namespace tfs
           ret = data_management_.get_block_info(close_file_info.block_id_, blk, visit_count);
           if (TFS_SUCCESS != ret)
           {
-            ret = message->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret, 
+            ret = message->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret,
                 "close write file failed. block is not exist. blockid: %u, fileid: %" PRI64_PREFIX "u, ret: %d",
                 close_file_info.block_id_, close_file_info.file_id_, ret);
           }
@@ -1192,6 +1200,11 @@ namespace tfs
                 string sub_key = "";
                 TFS_SUCCESS == ret ? sub_key = "write-success" : sub_key = "write-failed";
                 stat_mgr_.update_entry(tfs_ds_stat_, sub_key, 1);
+              }
+              else
+              {
+                // post success.
+                ret = TFS_SUCCESS;
               }
             }
             else
@@ -1568,7 +1581,7 @@ namespace tfs
         else
         {
           try_add_repair_task(block_id, ret);
-          message->reply_error_packet(TBSYS_LOG_LEVEL(WARN), ret, 
+          message->reply_error_packet(TBSYS_LOG_LEVEL(WARN), ret,
               "file unlink fail, blockid: %u, fileid: %" PRI64_PREFIX "u, ret: %d", block_id, file_id, ret);
         }
       }
@@ -1581,9 +1594,8 @@ namespace tfs
           post_message_to_server(message, message->get_ds_list());
         }
 
-        char data[INT64_SIZE + 1] = {'\0'};//include '\0'
-        int64_t pos = 0;
-        Serialization::set_int64(data, INT64_SIZE, pos, file_size);
+        char data[128];
+        snprintf(data, 128, "%"PRI64_PREFIX"d", file_size);
         message->reply(new StatusMessage(STATUS_MESSAGE_OK, data));
 
         //sync log
@@ -1619,7 +1631,7 @@ namespace tfs
       int ret = data_management_.batch_new_block(new_blocks);
       if (TFS_SUCCESS != ret)
       {
-        return message->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret, 
+        return message->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret,
             "newblock error, ret: %d", ret);
       }
 
@@ -1637,7 +1649,7 @@ namespace tfs
       int ret = data_management_.batch_remove_block(&remove_blocks);
       if (TFS_SUCCESS != ret)
       {
-        return message->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret, 
+        return message->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret,
             "removeblock error, ret: %d", ret);
       }
 
@@ -1645,7 +1657,7 @@ namespace tfs
       {
         RemoveBlockResponseMessage* msg = new RemoveBlockResponseMessage();
         msg->set_block_id(*(remove_blocks.begin()));
-        message->reply(msg); 
+        message->reply(msg);
       }
       else
       {
@@ -1773,7 +1785,7 @@ namespace tfs
       int ret = data_management_.get_block_info(block_id, blk, visit_count);
       if (TFS_SUCCESS != ret)
       {
-        return message->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret, 
+        return message->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret,
             "block is not exist, blockid: %u, ret: %d", block_id, ret);
       }
 
@@ -1815,7 +1827,7 @@ namespace tfs
         int ret = data_management_.get_block_file_list(block_id, fileinfos);
         if (TFS_SUCCESS != ret)
         {
-          return message->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret, 
+          return message->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret,
               "GSS_BLOCK_FILE_INFO fail, blockid: %u, ret: %d", block_id, ret);
         }
 
@@ -1836,7 +1848,7 @@ namespace tfs
         int ret = data_management_.get_block_meta_info(block_id, meta_vec);
         if (TFS_SUCCESS != ret)
         {
-          return message->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret, 
+          return message->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret,
               "GSS_BLOCK_RAW_META_INFO fail, blockid: %u, ret: %d", block_id, ret);
         }
 
@@ -1998,7 +2010,7 @@ namespace tfs
         ret = data_management_.new_single_block(block_id);
         if (TFS_SUCCESS != ret)
         {
-          return message->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret, 
+          return message->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret,
               "write data batch fail, blockid: %u, ret: %d", block_id, ret);
         }
 
@@ -2009,7 +2021,7 @@ namespace tfs
       ret = data_management_.write_raw_data(block_id, data_offset, msg_len, data_buffer);
       if (TFS_SUCCESS != ret)
       {
-        return message->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret, 
+        return message->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret,
             "write data batch fail, blockid: %u, ret: %d", block_id, ret);
       }
 
@@ -2029,7 +2041,7 @@ namespace tfs
       int ret = data_management_.batch_write_meta(block_id, blk, raw_metas);
       if (TFS_SUCCESS != ret)
       {
-        return message->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret, 
+        return message->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret,
             "write block fileinfo fail, blockid: %u, ret: %d", block_id, ret);
       }
 
@@ -2039,7 +2051,7 @@ namespace tfs
         ret = ds_requester_.req_update_block_info(block_id);
         if (TFS_SUCCESS != ret)
         {
-          return message->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret, 
+          return message->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret,
               "write block FileInfo fail: update block, blockid: %u, ret: %d", block_id, ret);
         }
       }
@@ -2209,7 +2221,7 @@ namespace tfs
       }
       return iret;
     }
-    
+
     void DataService::HeartBeatThreadHelper::run()
     {
       service_.run_heart();

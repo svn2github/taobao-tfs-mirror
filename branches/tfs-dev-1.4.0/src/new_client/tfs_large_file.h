@@ -54,7 +54,7 @@ namespace tfs
 
     private:
       int upload_key();
-      int load_meta();
+      int load_meta(int32_t flags);
       int load_meta_head();
 
     private:

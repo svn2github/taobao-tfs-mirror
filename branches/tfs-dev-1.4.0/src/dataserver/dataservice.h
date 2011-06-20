@@ -102,6 +102,8 @@ namespace tfs
 
         int stop_heart();
 
+        std::string get_real_work_dir();
+
       protected:
         virtual const char* get_log_file_path();
         virtual const char* get_pid_file_path();

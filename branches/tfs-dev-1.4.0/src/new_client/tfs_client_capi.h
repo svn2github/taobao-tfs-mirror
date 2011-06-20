@@ -87,7 +87,7 @@ extern "C"
    *
    * @return unlink tfs file success or fail
    */
-  int t_unlink(const char* file_name, const char* suffix, int64_t& file_size, const TfsUnlinkType action);
+  int t_unlink(const char* file_name, const char* suffix, int64_t* file_size, const TfsUnlinkType action);
 
   int t_set_option_flag(const int fd, const OptionFlag option_flag);
 
@@ -121,8 +121,8 @@ extern "C"
   // sort of utility
   uint64_t t_get_server_id();
   int32_t t_get_cluster_id();
-  int t_save_file(const char* local_file, const char* tfs_name, const char* suffix,
-                  char* ret_tfs_name, const int32_t ret_tfs_name_len, const int32_t flag);
+  int64_t t_save_file(const char* local_file, const char* tfs_name, const char* suffix,
+                      char* ret_tfs_name, const int32_t ret_tfs_name_len, const int32_t flag);
   int t_fetch_file(const char* local_file, const char* tfs_name, const char* suffix);
   int t_stat_file(const char* tfs_name, const char* suffix,
                   TfsFileStat* file_stat, const TfsStatType stat_type);

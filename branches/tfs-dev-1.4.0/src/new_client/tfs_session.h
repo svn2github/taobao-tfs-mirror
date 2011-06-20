@@ -22,7 +22,7 @@
 #include "lru.h"
 #include "local_key.h"
 
-#ifdef _WITH_UNIQUE_STORE
+#ifdef WITH_UNIQUE_STORE
 #include "tfs_unique_store.h"
 #endif
 
@@ -88,7 +88,7 @@ namespace tfs
         use_cache_ = flag;
       }
 
-#ifdef _WITH_UNIQUE_STORE
+#ifdef WITH_UNIQUE_STORE
     private:
       TfsUniqueStore* unique_store_;
     public:

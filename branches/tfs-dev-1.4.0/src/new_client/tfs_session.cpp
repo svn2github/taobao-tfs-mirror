@@ -33,7 +33,7 @@ TfsSession::TfsSession(const std::string& nsip, const int32_t cache_time, const 
 		cluster_id_(0), use_cache_(USE_CACHE_FLAG_YES)
 {
   block_cache_map_.resize(block_cache_items_);
-#ifdef _WITH_UNIQUE_STORE
+#ifdef WITH_UNIQUE_STORE
   unique_store_ = NULL;
 #endif
 }
@@ -41,7 +41,7 @@ TfsSession::TfsSession(const std::string& nsip, const int32_t cache_time, const 
 TfsSession::~TfsSession()
 {
   block_cache_map_.clear();
-#ifdef _WITH_UNIQUE_STORE
+#ifdef WITH_UNIQUE_STORE
   tbsys::gDelete(unique_store_);
 #endif
 }
@@ -73,7 +73,7 @@ int TfsSession::initialize()
   return ret;
 }
 
-#ifdef _WITH_UNIQUE_STORE
+#ifdef WITH_UNIQUE_STORE
 int TfsSession::init_unique_store(const char* master_addr, const char* slave_addr,
                                   const char* group_name, const int32_t area)
 {

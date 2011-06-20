@@ -27,7 +27,8 @@ using namespace tfs::message;
 using namespace std;
 
 TfsFile::TfsFile() : flags_(-1), file_status_(TFS_FILE_OPEN_NO), eof_(TFS_FILE_EOF_FLAG_NO),
-                     offset_(0), meta_seg_(NULL), option_flag_(common::TFS_FILE_DEFAULT_OPTION), tfs_session_(NULL)
+                     offset_(0), meta_seg_(NULL), option_flag_(common::TFS_FILE_DEFAULT_OPTION),
+                     tfs_session_(NULL)
 {
 }
 
@@ -362,11 +363,9 @@ int TfsFile::fstat_ex(FileInfo* file_info, const TfsStatType mode)
   }
   else
   {
-    // trick, use meta_seg_ directly, backup orignal value. absolutely no thread safe
-    int32_t save_flags = flags_;
     FileInfo* save_file_info = meta_seg_->file_info_;
     meta_seg_->file_info_ = file_info;
-    flags_ = static_cast<int32_t>(mode);
+    meta_seg_->extra_value_.stat_mode_ = mode;
 
     meta_seg_->reset_status();
     get_meta_segment(0, NULL, 0);  // just stat
@@ -375,7 +374,6 @@ int TfsFile::fstat_ex(FileInfo* file_info, const TfsStatType mode)
 
     // recovery backup
     meta_seg_->file_info_ = save_file_info;
-    flags_ = save_flags;
   }
 
   return ret;
@@ -399,7 +397,7 @@ int TfsFile::close_ex()
       if ((TFS_FILE_WRITE_ERROR != file_status_)
         && (offset_ <= 0))
       {
-        option_flag_ |= TFS_FILE_CLOSE_FLAG_WRITE_DATA_FAILED; 
+        option_flag_ |= TFS_FILE_CLOSE_FLAG_WRITE_DATA_FAILED;
       }
       ret = close_process();
       if (TFS_SUCCESS != ret)
@@ -565,7 +563,8 @@ int TfsFile::process_fail_response(NewClient* client)
       }
       else
       {
-        TBSYS_LOG(WARN, "fail to get response from server: %s, remove block cache: %u",
+        DUMP_SEGMENTDATA(processing_seg_list_[index_it->second], ERROR, "fail get resp. index id: %hhu", mit->first);
+        TBSYS_LOG(ERROR, "fail to get response from server: %s, remove block cache: %u",
                   tbsys::CNetUtil::addrToString(mit->second.first).c_str(),
                   processing_seg_list_[index_it->second]->seg_info_.block_id_);
         tfs_session_->remove_block_cache(
@@ -588,12 +587,17 @@ int TfsFile::process_success_response(const InnerFilePhase file_phase, NewClient
   else
   {
     int32_t resp_size = res_map->size();
-    TBSYS_LOG(DEBUG, "get response. client id: %p, request size: %d, get response size: %d",
+    TBSYS_LOG(DEBUG, "get success response. client id: %p, request size: %d, get response size: %d",
               client, processing_seg_list_.size(), resp_size);
 
     if (0 == resp_size)
     {
-      TBSYS_LOG(ERROR, "get zero response");
+      TBSYS_LOG(ERROR, "get zero response. client id: %p, phase: %d.", client, file_phase);
+      for (map<uint8_t, uint16_t>::iterator index_it = send_id_index_map_.begin();
+           index_it != send_id_index_map_.begin(); ++index_it)
+      {
+        DUMP_SEGMENTDATA(processing_seg_list_[index_it->second], ERROR, "no resp. index id: %hhu", index_it->first);
+      }
     }
     else
     {
@@ -661,19 +665,16 @@ int TfsFile::do_async_request(const InnerFilePhase file_phase, NewClient* client
     break;
   }
 
+  SegmentData* seg_data = processing_seg_list_[index];
   if (ret != TFS_SUCCESS)
   {
-    SegmentData* seg_data = processing_seg_list_[index];
-    TBSYS_LOG(ERROR, "do request fail. client: %p, phase: %d, ret: %d, "
-              "blockid: %u, fileid: %"PRI64_PREFIX"u, offset: %"PRI64_PREFIX"d, "
-              "size: %d, crc: %d, inneroffset: %d, filenumber: %"PRI64_PREFIX"d, "
-              "status: %d, rserver: %s, wserver: %s.",
-              client, file_phase, ret,
-              seg_data->seg_info_.block_id_, seg_data->seg_info_.file_id_, seg_data->seg_info_.offset_,
-              seg_data->seg_info_.size_, seg_data->seg_info_.crc_, seg_data->inner_offset_,
-              seg_data->file_number_, seg_data->status_,
-              tbsys::CNetUtil::addrToString(seg_data->get_last_read_pri_ds()).c_str(),
-              tbsys::CNetUtil::addrToString(seg_data->get_write_pri_ds()).c_str());
+    DUMP_SEGMENTDATA(seg_data, ERROR, "do request fail. client: %p, index: %hu, phase: %d, ret: %d",
+                     client, index, file_phase, ret);
+  }
+  else
+  {
+    DUMP_SEGMENTDATA(seg_data, DEBUG, "do request success. client: %p, index: %hu, phase: %d, ret: %d",
+                     client, index, file_phase, ret);
   }
 
   return ret;
@@ -711,23 +712,17 @@ int TfsFile::do_async_response(const InnerFilePhase file_phase, common::BasePack
     break;
   }
 
-  if (TFS_SUCCESS == ret)
+  SegmentData* seg_data = processing_seg_list_[index];
+  if (ret != TFS_SUCCESS)
   {
-    processing_seg_list_[index]->status_ = phase_status[file_phase].status_;
+    DUMP_SEGMENTDATA(seg_data, ERROR, "do response fail. index: %hu, phase: %d, ret: %d",
+                     index, file_phase, ret);
   }
   else
   {
-    SegmentData* seg_data = processing_seg_list_[index];
-    TBSYS_LOG(ERROR, "do reponse fail. packet: %p, phase: %d, ret: %d, "
-              "blockid: %u, fileid: %"PRI64_PREFIX"u, offset: %"PRI64_PREFIX"d, "
-              "size: %d, crc: %d, inneroffset: %d, filenumber: %"PRI64_PREFIX"d, "
-              "status: %d, rserver: %s, wserver: %s.",
-              packet, file_phase, ret,
-              seg_data->seg_info_.block_id_, seg_data->seg_info_.file_id_, seg_data->seg_info_.offset_,
-              seg_data->seg_info_.size_, seg_data->seg_info_.crc_, seg_data->inner_offset_,
-              seg_data->file_number_, seg_data->status_,
-              tbsys::CNetUtil::addrToString(seg_data->get_last_read_pri_ds()).c_str(),
-              tbsys::CNetUtil::addrToString(seg_data->get_write_pri_ds()).c_str());
+    seg_data->status_ = phase_status[file_phase].status_;
+    DUMP_SEGMENTDATA(seg_data, DEBUG, "do response success. index: %hu, phase: %d, ret: %d",
+                     index, file_phase, ret);
   }
 
   return ret;
@@ -805,9 +800,9 @@ int TfsFile::async_rsp_create_file(common::BasePacket* rsp, const uint16_t index
     else
     {
       seg_data->seg_info_.file_id_ = msg->get_file_id();
-      seg_data->file_number_ = msg->get_file_number();
+      seg_data->extra_value_.write_file_number_ = msg->get_file_number();
       TBSYS_LOG(DEBUG, "create file name rsp. blockid: %u, fileid: %"PRI64_PREFIX"u, filenumber: %"PRI64_PREFIX"u",
-                seg_data->seg_info_.block_id_, seg_data->seg_info_.file_id_, seg_data->file_number_);
+                seg_data->seg_info_.block_id_, seg_data->seg_info_.file_id_, seg_data->extra_value_.write_file_number_);
       ret = TFS_SUCCESS;
     }
   }
@@ -829,7 +824,7 @@ int TfsFile::async_req_write_data(NewClient* client, const uint16_t index)
   SegmentData* seg_data = processing_seg_list_[index];
 
   WriteDataMessage wd_message;
-  wd_message.set_file_number(seg_data->file_number_);
+  wd_message.set_file_number(seg_data->extra_value_.write_file_number_);
   wd_message.set_block_id(seg_data->seg_info_.block_id_);
   wd_message.set_file_id(seg_data->seg_info_.file_id_);
   wd_message.set_offset(seg_data->inner_offset_);
@@ -917,10 +912,10 @@ int TfsFile::async_req_close_file(NewClient* client, const uint16_t index)
 {
   SegmentData* seg_data = processing_seg_list_[index];
   CloseFileMessage cf_message;
-  cf_message.set_file_number(seg_data->file_number_);
+  cf_message.set_file_number(seg_data->extra_value_.write_file_number_);
   cf_message.set_block_id(seg_data->seg_info_.block_id_);
   cf_message.set_file_id(seg_data->seg_info_.file_id_);
-  //set sync flag
+  // set flag
   cf_message.set_option_flag(option_flag_);
 
   cf_message.set_ds_list(seg_data->ds_);
@@ -1044,7 +1039,7 @@ int TfsFile::async_req_read_file(NewClient* client, const uint16_t index,
 
       if (0 == retry_count) // try last ds
       {
-        seg_data.pri_ds_index_ = -1;
+        seg_data.pri_ds_index_ = PRI_DS_TRY_ALL_OVER;
       }
       else
       {
@@ -1063,6 +1058,7 @@ int TfsFile::async_req_read_file(NewClient* client, const uint16_t index)
   rd_message.set_file_id(seg_data->seg_info_.file_id_);
   rd_message.set_offset(seg_data->inner_offset_);
   rd_message.set_length(seg_data->seg_info_.size_);
+  rd_message.set_flag(seg_data->extra_value_.read_flag_);
 
   int ret = async_req_read_file(client, index, *seg_data, rd_message);
   if (TFS_SUCCESS != ret)
@@ -1166,6 +1162,7 @@ int TfsFile::async_req_read_file_v2(NewClient* client, const uint16_t index)
   rd_message.set_file_id(seg_data->seg_info_.file_id_);
   rd_message.set_offset(seg_data->inner_offset_);
   rd_message.set_length(seg_data->seg_info_.size_);
+  rd_message.set_flag(seg_data->extra_value_.read_flag_);
 
   int ret = async_req_read_file(client, index, *seg_data, rd_message);
   if (TFS_SUCCESS != ret)
@@ -1301,7 +1298,7 @@ int TfsFile::async_req_stat_file(NewClient* client, const uint16_t index)
   stat_message.set_block_id(seg_data->seg_info_.block_id_);
   stat_message.set_file_id(seg_data->seg_info_.file_id_);
   TBSYS_LOG(DEBUG, "req stat file flag: %d", flags_);
-  stat_message.set_mode(flags_);
+  stat_message.set_mode(seg_data->extra_value_.stat_mode_);
 
   int32_t ds_size = seg_data->ds_.size();
   if (0 == ds_size)
@@ -1432,7 +1429,7 @@ int TfsFile::async_req_unlink_file(NewClient* client, const uint16_t index)
   uf_message.set_block_id(seg_data->seg_info_.block_id_);
   uf_message.set_file_id(seg_data->seg_info_.file_id_);
   uf_message.set_ds_list(seg_data->ds_);
-  uf_message.set_unlink_type(static_cast<int32_t>(seg_data->file_number_)); // action
+  uf_message.set_unlink_type(static_cast<int32_t>(seg_data->extra_value_.unlink_action_)); // action
   uf_message.set_option_flag(option_flag_);
 
   // no not need to estimate the ds number is zero
@@ -1486,11 +1483,8 @@ int TfsFile::async_rsp_unlink_file(common::BasePacket* rsp, const uint16_t index
         const char* data = msg->get_error();
         if (NULL != data)
         {
-          int64_t file_size = 0;
-          int64_t pos = 0;
-          ret = Serialization::get_int64(data, msg->get_error_msg_length(), pos, &file_size);
-          if ((TFS_SUCCESS == ret)
-              && (NULL != seg_data))
+          int64_t file_size = strtoll(data, reinterpret_cast<char**>(NULL), 0);
+          if (file_size > 0)    // compatibile, no return file size, not error.
           {
             seg_data->seg_info_.size_ = file_size;
           }

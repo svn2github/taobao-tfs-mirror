@@ -100,33 +100,34 @@ namespace tfs
 
       int32_t get_block_cache_time() const;
       int32_t get_block_cache_items() const;
-      double get_cache_hit_radio() const;
+      int32_t get_cache_hit_radio() const;
 
 
-#ifdef _WITH_UNIQUE_STORE
+#ifdef WITH_UNIQUE_STORE
 #include "tfs_unique_store.h"
       // unique stuff
       TfsUniqueStore* get_unique_store(const char* ns_addr);
       int init_unique_store(const char* master_addr, const char* slave_addr,
                             const char* group_name, const int32_t area, const char* ns_addr);
-      int save_unique(const char* buf, const int64_t count,
-                      const char* file_name, const char* suffix,
-                      char* ret_tfs_name, const int32_t ret_tfs_name_len, const char* ns_addr);
-      int save_unique(const char* local_file,
-                      const char* file_name, const char* suffix,
-                      char* ret_tfs_name, const int32_t ret_tfs_name_len, const char* ns_addr);
-      int32_t unlink_unique(const char* file_name, const char* suffix, const int32_t count, const char* ns_addr);
+      int64_t save_unique(const char* buf, const int64_t count,
+                          const char* file_name, const char* suffix,
+                          char* ret_tfs_name, const int32_t ret_tfs_name_len, const char* ns_addr);
+      int64_t save_unique(const char* local_file,
+                          const char* file_name, const char* suffix,
+                          char* ret_tfs_name, const int32_t ret_tfs_name_len, const char* ns_addr);
+      int32_t unlink_unique(const char* file_name, const char* suffix, int64_t& file_size,
+                            const int32_t count, const char* ns_addr);
 #endif
 
       // sort of utility
       uint64_t get_server_id();
       int32_t get_cluster_id();
-      int save_file(const char* local_file, const char* tfs_name, const char* suffix,
-                    char* ret_tfs_name, const int32_t ret_tfs_name_len,
-                    const char* ns_addr, const int32_t flag);
-      int save_file(const char* buf, const int64_t count, const char* tfs_name, const char* suffix,
-                    char* ret_tfs_name, const int32_t ret_tfs_name_len, const char* ns_addr,
-                    const int32_t flag, const char* key);
+      int64_t save_file(const char* local_file, const char* tfs_name, const char* suffix,
+                        char* ret_tfs_name, const int32_t ret_tfs_name_len,
+                        const char* ns_addr, const int32_t flag);
+      int64_t save_file(const char* buf, const int64_t count, const char* tfs_name, const char* suffix,
+                        char* ret_tfs_name, const int32_t ret_tfs_name_len, const char* ns_addr,
+                        const int32_t flag, const char* key);
       int fetch_file(const char* local_file, const char* tfs_name, const char* suffix, const char* ns_addr);
       int fetch_file(const char* tfs_name, const char* suffix, char*& buf, int64_t& count, const char* ns_addr);
       int stat_file(const char* tfs_name, const char* suffix,

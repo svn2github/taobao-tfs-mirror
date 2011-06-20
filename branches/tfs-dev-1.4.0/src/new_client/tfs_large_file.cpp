@@ -30,16 +30,15 @@ int TfsLargeFile::open(const char* file_name, const char* suffix, const int flag
 {
   int ret = TFS_SUCCESS;
 
-  flags_ = flags;
-  if (0 == (flags_ & T_WRITE))       // not write, load meta first
+  if (0 == (flags & T_WRITE))       // not write, load meta first
   {
-    if ((ret = open_ex(file_name, suffix, flags)) != TFS_SUCCESS)
+    if ((ret = open_ex(file_name, suffix, T_READ)) != TFS_SUCCESS)
     {
       TBSYS_LOG(ERROR, "open meta file fail, ret: %d", ret);
     }
     else if ((flags & (T_READ | T_UNLINK)) != 0)
     {
-      ret = load_meta();
+      ret = load_meta(flags);
     }
   }
   else  // write flag
@@ -79,6 +78,7 @@ int TfsLargeFile::open(const char* file_name, const char* suffix, const int flag
 
   if (TFS_SUCCESS == ret)
   {
+    flags_ = flags;
     offset_ = 0;
     eof_ = TFS_FILE_EOF_FLAG_NO;
     file_status_ = TFS_FILE_OPEN_YES;
@@ -205,22 +205,30 @@ int TfsLargeFile::unlink(const char* file_name, const char* suffix, int64_t& fil
     TBSYS_LOG(ERROR, "UNDELETE action not support for large file now. action: %d", action);
     ret = TFS_ERROR;
   }
-  else if (DELETE == action)
+  else if (DELETE != action)    // CONCEAL || REVEAL
   {
-    if ((ret = open(file_name, suffix, T_READ)) != TFS_SUCCESS)
+    if ((ret = open_ex(file_name, suffix, T_UNLINK)) != TFS_SUCCESS) // just do action over meta file
     {
-      TBSYS_LOG(ERROR, "unlink to read meta file fail. ret: %d", ret);
+      TBSYS_LOG(ERROR, "unlink open meta file fail, action: %d, ret: %d", action, ret);
+    }
+    else
+    {
+      meta_seg_->extra_value_.unlink_action_ = action;
+      get_meta_segment(0, NULL, 0);
+
+      if ((ret = process(FILE_PHASE_UNLINK_FILE)) != TFS_SUCCESS) // do action over meta file
+      {
+        TBSYS_LOG(ERROR, "unlink file fail, action: %d, ret: %d", action, ret);
+      }
     }
   }
-  else if ((ret = open_ex(file_name, suffix, T_READ)) != TFS_SUCCESS) // just open meta file
+  else if ((ret = open(file_name, suffix, T_UNLINK)) != TFS_SUCCESS) // DELETE
   {
-    TBSYS_LOG(ERROR, "unlink open meta file fail, action: %d, ret: %d", action, ret);
+    TBSYS_LOG(ERROR, "unlink to read meta file fail. action: %d, ret: %d", action, ret);
   }
-
-  if (TFS_SUCCESS == ret)
+  else
   {
-    // trick
-    meta_seg_->file_number_ = action;
+    meta_seg_->extra_value_.unlink_action_ = action;
     get_meta_segment(0, NULL, 0);
 
     // unlink meta file first
@@ -228,9 +236,11 @@ int TfsLargeFile::unlink(const char* file_name, const char* suffix, int64_t& fil
     {
       TBSYS_LOG(ERROR, "large file unlink meta fail, action: %d, ret: %d", action, ret);
     }
-    else if (DELETE == action) // DELETE over all segment
+    else
     {
+      // seg_info != NULL
       file_size = meta_seg_->seg_info_.size_ + local_key_.get_file_size();
+
       SEG_SET& seg_list = local_key_.get_seg_info();
       SEG_SET_CONST_ITER sit = seg_list.begin();
       for ( ; sit != seg_list.end(); ++sit)
@@ -238,7 +248,7 @@ int TfsLargeFile::unlink(const char* file_name, const char* suffix, int64_t& fil
         destroy_seg();
         SegmentData* seg_data = new SegmentData();
         seg_data->seg_info_ = *sit;
-        seg_data->file_number_ = action;
+        seg_data->extra_value_.unlink_action_ = action;
         processing_seg_list_.push_back(seg_data);
         unlink_process();
       }
@@ -482,9 +492,14 @@ int TfsLargeFile::upload_key()
   return ret;
 }
 
-int TfsLargeFile::load_meta()
+int TfsLargeFile::load_meta(int32_t flags)
 {
   int ret = TFS_SUCCESS;
+
+  if (flags & T_UNLINK)         // unlink mode, set force flag to read hidden file
+  {
+    meta_seg_->extra_value_.read_flag_ = READ_DATA_OPTION_FLAG_FORCE;
+  }
 
   int64_t size = MAX_META_SIZE;
   char* seg_buf = new char[size];
