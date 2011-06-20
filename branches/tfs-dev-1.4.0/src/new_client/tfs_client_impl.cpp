@@ -406,7 +406,11 @@ int64_t TfsClientImpl::save_unique(const char* buf, const int64_t count,
   int64_t ret = INVALID_FILE_SIZE;
   TfsUniqueStore* unique_store = get_unique_store(ns_addr);
 
-  if (unique_store != NULL)
+  if ((NULL == file_name || '\0' == file_name[0]) && (NULL == ret_tfs_name || ret_tfs_name_len < TFS_FILE_LEN))
+  {
+    TBSYS_LOG(ERROR, "without invalid tfs name and invalid return tfs name buffer or length");
+  }
+  else if (unique_store != NULL)
   {
     ret = unique_store->save(buf, count, file_name, suffix, ret_tfs_name, ret_tfs_name_len);
   }
@@ -424,6 +428,10 @@ int64_t TfsClientImpl::save_unique(const char* local_file,
   int64_t ret = INVALID_FILE_SIZE;
   TfsUniqueStore* unique_store = get_unique_store(ns_addr);
 
+  if ((NULL == file_name || '\0' == file_name[0]) && (NULL == ret_tfs_name || ret_tfs_name_len < TFS_FILE_LEN))
+  {
+    TBSYS_LOG(ERROR, "without invalid tfs name and invalid return tfs name buffer or length");
+  }
   if (unique_store != NULL)
   {
     ret = unique_store->save(local_file, file_name, suffix, ret_tfs_name, ret_tfs_name_len);
@@ -690,6 +698,10 @@ int64_t TfsClientImpl::save_file(const char* local_file, const char* tfs_name, c
   {
     TBSYS_LOG(ERROR, "local file is null");
   }
+  else if ((NULL == tfs_name || '\0' == tfs_name[0]) && (NULL == ret_tfs_name || ret_tfs_name_len < TFS_FILE_LEN))
+  {
+    TBSYS_LOG(ERROR, "without invalid tfs name and invalid return tfs name buffer or length");
+  }
   else if ((fd = ::open(local_file, O_RDONLY)) < 0)
   {
     TBSYS_LOG(ERROR, "open local file %s fail: %s", local_file, strerror(errno));
@@ -764,6 +776,10 @@ int64_t TfsClientImpl::save_file(const char* buf, const int64_t count, const cha
   if (NULL == buf || count <= 0)
   {
     TBSYS_LOG(ERROR, "invalid buffer and count. buffer: %p, count: %"PRI64_PREFIX"d", buf, count);
+  }
+  else if ((NULL == tfs_name || '\0' == tfs_name[0]) && (NULL == ret_tfs_name || ret_tfs_name_len < TFS_FILE_LEN))
+  {
+    TBSYS_LOG(ERROR, "without invalid tfs name and invalid return tfs name buffer length");
   }
   else
   {

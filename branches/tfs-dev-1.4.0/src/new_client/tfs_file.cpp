@@ -394,8 +394,7 @@ int TfsFile::close_ex()
     }
     else// write mode
     {
-      if ((TFS_FILE_WRITE_ERROR != file_status_)
-        && (offset_ <= 0))
+      if (TFS_FILE_WRITE_ERROR == file_status_ || offset_ <= 0)
       {
         option_flag_ |= TFS_FILE_CLOSE_FLAG_WRITE_DATA_FAILED;
       }
