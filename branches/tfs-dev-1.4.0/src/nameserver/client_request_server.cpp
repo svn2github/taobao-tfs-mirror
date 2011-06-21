@@ -623,56 +623,27 @@ namespace tfs
 
     int ClientRequestServer::handle_control_delete_block(const time_t now, const common::ClientCmdInformation& info,const int64_t buf_length, char* buf)
     {
+      UNUSED(buf);
+      UNUSED(buf_length);
       uint64_t id = info.value1_;
       uint32_t block_id = info.value3_;
-      BlockCollect* block = NULL;
-      bool has_server = true;
-      int32_t iret = TFS_ERROR;
+      ServerCollect* server = lay_out_manager_.get_server(id);
+      BlockChunkPtr ptr = lay_out_manager_.get_chunk(block_id);
+      RWLock::Lock lock(*ptr, WRITE_LOCKER);
+      BlockCollect* block = ptr->find(block_id);
+      int32_t iret = TFS_SUCCESS;
+      if (NULL != block)
       {
-        BlockChunkPtr ptr = lay_out_manager_.get_chunk(block_id);
-        RWLock::Lock lock(*ptr, WRITE_LOCKER);
-        block = ptr->find(block_id);
-        iret = NULL == block ? TFS_ERROR : TFS_SUCCESS;
-        if (TFS_SUCCESS == iret)
+        if (block->get_hold_size() <= 0)
         {
-          if (block->get_hold_size() <= 0 && id == 0)
-          {
-            ptr->remove(block_id);
-            iret = TFS_SUCCESS;
-            has_server = false;
-          }
+          ptr->remove(block_id);
         }
         else
         {
-          snprintf(buf, buf_length, " block: %u no exist", block_id);
-          TBSYS_LOG(ERROR, "%s", buf);
-        }
-      }
-      if (has_server)
-      {
-        ServerCollect* server = lay_out_manager_.get_server(id);
-        iret = NULL == server ? TFS_ERROR : TFS_SUCCESS;
-        if (TFS_SUCCESS == iret)
-        {
-          std::vector<ServerCollect*> runer;
-          runer.push_back(server);
-          LayoutManager::DeleteBlockTaskPtr task = new LayoutManager::DeleteBlockTask(&lay_out_manager_, PLAN_PRIORITY_NORMAL, block_id, now, now, runer, 0);
-          if (!lay_out_manager_.add_task(task))
+          if (NULL != server)
           {
-            task = 0;
-            iret = TFS_ERROR;
-            snprintf(buf, buf_length, " add task(delete) failed, server: %s, block: %u", CNetUtil::addrToString(id).c_str(), block_id);
-            TBSYS_LOG(ERROR, "%s", buf);
+            iret = lay_out_manager_.relieve_relation(block, server, now) ? TFS_SUCCESS : TFS_ERROR;
           }
-          else
-          {
-            lay_out_manager_.relieve_relation(block, server, now);
-          }
-        }
-        else
-        {
-          snprintf(buf, buf_length, " server: %s no exist", CNetUtil::addrToString(id).c_str());
-          TBSYS_LOG(ERROR, "%s", buf);
         }
       }
       return iret;

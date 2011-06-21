@@ -410,7 +410,7 @@ namespace tfs
               break;
             case REPLICATE_BLOCK_MESSAGE:
             case BLOCK_COMPACT_COMPLETE_MESSAGE:
-            case REMOVE_BLOCK_RESPONSE_MESSAGE:
+            //case REMOVE_BLOCK_RESPONSE_MESSAGE:
               iret = meta_mgr_.get_client_request_server().handle(msg);
               break;
             case UPDATE_BLOCK_INFO_MESSAGE:
@@ -460,21 +460,12 @@ namespace tfs
           int32_t pcode = packet->getPCode();
           if (REMOVE_BLOCK_MESSAGE == pcode)
           {
-            RemoveBlockMessage* msg = dynamic_cast<RemoveBlockMessage*>(packet);
             if (!sresponse->empty())
             {
-              std::vector<uint32_t>::const_iterator iter =  msg->get_remove_blocks().begin();
-              for (; iter !=  msg->get_remove_blocks().end(); ++iter)
+              NewClient::RESPONSE_MSG_MAP_ITER iter = sresponse->begin();
+              for (; iter != sresponse->end(); ++iter)
               {
-                TBSYS_LOG(ERROR, "remove block: %u successful", (*iter));
-              }
-            }
-            else
-            {
-              std::vector<uint32_t>::const_iterator iter =  msg->get_remove_blocks().begin();
-              for (; iter !=  msg->get_remove_blocks().end(); ++iter)
-              {
-                TBSYS_LOG(ERROR, "remove block: %u failed", (*iter));
+                meta_mgr_.get_client_request_server().handle(dynamic_cast<BasePacket*>(iter->second.second));
               }
             }
           }
