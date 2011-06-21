@@ -29,7 +29,7 @@ namespace tfs
       }
       static int64_t get_string_length(const std::string& str)
       {
-        return str.length() + INT_SIZE + 1;
+        return str.empty() ? INT_SIZE : str.length() + INT_SIZE + 1;
       }
       template <typename T>
       static int64_t get_vint8_length(const T& value)
@@ -161,6 +161,11 @@ namespace tfs
                 pos -= INT_SIZE;
               }
             }
+            else
+            {
+              str_buf_length = 0;
+              str[0] = '\0';
+            }
           }
         }
         return iret;
@@ -183,6 +188,10 @@ namespace tfs
                 str.assign((data + pos), length);
                 pos += length;
               }
+            }
+            else
+            {
+              str.clear();
             }
           }
         }
@@ -361,16 +370,19 @@ namespace tfs
         int32_t iret = NULL != data &&  pos < data_len &&  pos >= 0 ? TFS_SUCCESS : TFS_ERROR;
         if (TFS_SUCCESS == iret)
         {
-          int64_t length = str.length() + 1; /** include '\0' length*/
+          int64_t length = str.empty() ? 0 : str.length() + 1;/** include '\0' length*/
           iret = data_len - pos >= (length + INT_SIZE) ? TFS_SUCCESS : TFS_ERROR;
           if (TFS_SUCCESS == iret)
           {
             iret = set_int32(data, data_len, pos, length);
             if (TFS_SUCCESS == iret)
             {
-              memcpy((data+pos), str.c_str(), length - 1);
-              pos += length;
-              data[pos - 1] = '\0';
+              if (length > 0)
+              {
+                memcpy((data+pos), str.c_str(), length - 1);
+                pos += length;
+                data[pos - 1] = '\0';
+              }
             }
           }
         }
@@ -389,9 +401,12 @@ namespace tfs
             iret = set_int32(data, data_len, pos, length);
             if (TFS_SUCCESS == iret)
             {
-              memcpy((data+pos), str, length - 1);
-              pos += length;
-              data[pos - 1] = '\0';
+              if (length > 0)
+              {
+                memcpy((data+pos), str, length - 1);
+                pos += length;
+                data[pos - 1] = '\0';
+              }
             }
           }
         }

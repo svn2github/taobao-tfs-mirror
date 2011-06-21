@@ -644,7 +644,7 @@ TEST_F(TestSerialization, test_set_string)
   pos = 0;
   iret = Serialization::set_string(data, BUF_LEN, pos, NULL);
   EXPECT_EQ(TFS_SUCCESS, iret);
-  EXPECT_EQ(INT_SIZE + 1, pos);
+  EXPECT_EQ(INT_SIZE, pos);
 
   //data_len < actual data length
   pos = 0;
@@ -713,13 +713,13 @@ TEST_F(TestSerialization, test_get_string)
   pos = 0;
   iret = Serialization::set_string(data, BUF_LEN, pos, NULL);
   EXPECT_EQ(TFS_SUCCESS, iret);
-  EXPECT_EQ(INT_SIZE + 1, pos);
+  EXPECT_EQ(INT_SIZE, pos);
 
   pos = 0;
   str_len = BUF_LEN;
   iret = Serialization::get_string(data, BUF_LEN, pos, str, str_len);
   EXPECT_EQ(TFS_SUCCESS, iret);
-  EXPECT_EQ(INT_SIZE + 1, pos);
+  EXPECT_EQ(INT_SIZE, pos);
 }
 
 TEST_F(TestSerialization, test_set_bytes)
