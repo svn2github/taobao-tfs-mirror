@@ -89,6 +89,9 @@ extern "C"
    */
   int t_unlink(const char* file_name, const char* suffix, int64_t* file_size, const TfsUnlinkType action);
 
+  int t_unlink2(const char* file_name, const char* suffix,
+                int64_t* file_size, const TfsUnlinkType action, const char* ns_addr);
+
   int t_set_option_flag(const int fd, const OptionFlag option_flag);
 
   void t_set_segment_size(const int64_t segment_size);
@@ -118,14 +121,32 @@ extern "C"
   void t_set_log_level(const char* level);
   void t_set_log_file(const char* file);
 
+  int32_t t_get_block_cache_time();
+  int32_t t_get_block_cache_items();
+  int32_t t_get_cache_hit_ratio();
+
+#ifdef WITH_UNIQUE_STORE
+  // unique stuff
+  int t_init_unique_store(const char* master_addr, const char* slave_addr,
+                          const char* group_name, const int32_t area, const char* ns_addr);
+  int64_t t_save_unique_buf(const char* buf, const int64_t count,
+                            const char* file_name, const char* suffix,
+                            char* ret_tfs_name, const int32_t ret_tfs_name_len, const char* ns_addr);
+  int64_t t_save_unique_file(const char* local_file,
+                             const char* file_name, const char* suffix,
+                             char* ret_tfs_name, const int32_t ret_tfs_name_len, const char* ns_addr);
+  int32_t t_unlink_unique(const char* file_name, const char* suffix, int64_t* file_size,
+                          const int32_t count, const char* ns_addr);
+#endif
+
   // sort of utility
   uint64_t t_get_server_id();
   int32_t t_get_cluster_id();
   int64_t t_save_file(const char* local_file, const char* tfs_name, const char* suffix,
-                      char* ret_tfs_name, const int32_t ret_tfs_name_len, const int32_t flag);
-  int t_fetch_file(const char* local_file, const char* tfs_name, const char* suffix);
+                      char* ret_tfs_name, const int32_t ret_tfs_name_len, const int32_t flag, char* ns_addr);
+  int t_fetch_file(const char* local_file, const char* tfs_name, const char* suffix, const char* ns_addr);
   int t_stat_file(const char* tfs_name, const char* suffix,
-                  TfsFileStat* file_stat, const TfsStatType stat_type);
+                  TfsFileStat* file_stat, const TfsStatType stat_type, const char* ns_addr);
 #if __cplusplus
 }
 #endif

@@ -136,7 +136,7 @@ int TfsSmallFile::unlink(const char* file_name, const char* suffix, int64_t& fil
   }
   else
   {
-    meta_seg_->extra_value_.unlink_action_ = action;
+    meta_seg_->unlink_action_ = action;
     get_meta_segment(0, NULL, 0);
     ret = unlink_process();
     if (TFS_SUCCESS == ret && (DELETE == action || UNDELETE == action))

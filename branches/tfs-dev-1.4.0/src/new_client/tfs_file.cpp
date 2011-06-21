@@ -378,7 +378,7 @@ int TfsFile::fstat_ex(FileInfo* file_info, const TfsStatType mode)
   {
     FileInfo* save_file_info = meta_seg_->file_info_;
     meta_seg_->file_info_ = file_info;
-    meta_seg_->extra_value_.stat_mode_ = mode;
+    meta_seg_->stat_mode_ = mode;
 
     meta_seg_->reset_status();
     get_meta_segment(0, NULL, 0);  // just stat
@@ -812,9 +812,9 @@ int TfsFile::async_rsp_create_file(common::BasePacket* rsp, const uint16_t index
     else
     {
       seg_data->seg_info_.file_id_ = msg->get_file_id();
-      seg_data->extra_value_.write_file_number_ = msg->get_file_number();
+      seg_data->write_file_number_ = msg->get_file_number();
       TBSYS_LOG(DEBUG, "create file name rsp. blockid: %u, fileid: %"PRI64_PREFIX"u, filenumber: %"PRI64_PREFIX"u",
-                seg_data->seg_info_.block_id_, seg_data->seg_info_.file_id_, seg_data->extra_value_.write_file_number_);
+                seg_data->seg_info_.block_id_, seg_data->seg_info_.file_id_, seg_data->write_file_number_);
       ret = TFS_SUCCESS;
     }
   }
@@ -836,7 +836,7 @@ int TfsFile::async_req_write_data(NewClient* client, const uint16_t index)
   SegmentData* seg_data = processing_seg_list_[index];
 
   WriteDataMessage wd_message;
-  wd_message.set_file_number(seg_data->extra_value_.write_file_number_);
+  wd_message.set_file_number(seg_data->write_file_number_);
   wd_message.set_block_id(seg_data->seg_info_.block_id_);
   wd_message.set_file_id(seg_data->seg_info_.file_id_);
   wd_message.set_offset(seg_data->inner_offset_);
@@ -924,7 +924,7 @@ int TfsFile::async_req_close_file(NewClient* client, const uint16_t index)
 {
   SegmentData* seg_data = processing_seg_list_[index];
   CloseFileMessage cf_message;
-  cf_message.set_file_number(seg_data->extra_value_.write_file_number_);
+  cf_message.set_file_number(seg_data->write_file_number_);
   cf_message.set_block_id(seg_data->seg_info_.block_id_);
   cf_message.set_file_id(seg_data->seg_info_.file_id_);
   // set flag
@@ -1070,7 +1070,7 @@ int TfsFile::async_req_read_file(NewClient* client, const uint16_t index)
   rd_message.set_file_id(seg_data->seg_info_.file_id_);
   rd_message.set_offset(seg_data->inner_offset_);
   rd_message.set_length(seg_data->seg_info_.size_);
-  rd_message.set_flag(seg_data->extra_value_.read_flag_);
+  rd_message.set_flag(seg_data->read_flag_);
 
   int ret = async_req_read_file(client, index, *seg_data, rd_message);
   if (TFS_SUCCESS != ret)
@@ -1174,7 +1174,7 @@ int TfsFile::async_req_read_file_v2(NewClient* client, const uint16_t index)
   rd_message.set_file_id(seg_data->seg_info_.file_id_);
   rd_message.set_offset(seg_data->inner_offset_);
   rd_message.set_length(seg_data->seg_info_.size_);
-  rd_message.set_flag(seg_data->extra_value_.read_flag_);
+  rd_message.set_flag(seg_data->read_flag_);
 
   int ret = async_req_read_file(client, index, *seg_data, rd_message);
   if (TFS_SUCCESS != ret)
@@ -1310,7 +1310,7 @@ int TfsFile::async_req_stat_file(NewClient* client, const uint16_t index)
   stat_message.set_block_id(seg_data->seg_info_.block_id_);
   stat_message.set_file_id(seg_data->seg_info_.file_id_);
   TBSYS_LOG(DEBUG, "req stat file flag: %d", flags_);
-  stat_message.set_mode(seg_data->extra_value_.stat_mode_);
+  stat_message.set_mode(seg_data->stat_mode_);
 
   int32_t ds_size = seg_data->ds_.size();
   if (0 == ds_size)
@@ -1441,7 +1441,7 @@ int TfsFile::async_req_unlink_file(NewClient* client, const uint16_t index)
   uf_message.set_block_id(seg_data->seg_info_.block_id_);
   uf_message.set_file_id(seg_data->seg_info_.file_id_);
   uf_message.set_ds_list(seg_data->ds_);
-  uf_message.set_unlink_type(static_cast<int32_t>(seg_data->extra_value_.unlink_action_)); // action
+  uf_message.set_unlink_type(static_cast<int32_t>(seg_data->unlink_action_)); // action
   uf_message.set_option_flag(option_flag_);
 
   // no not need to estimate the ds number is zero

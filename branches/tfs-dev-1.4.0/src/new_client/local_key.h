@@ -44,14 +44,6 @@ namespace tfs
       SEG_STATUS_ALL_OVER           // all is completed
     };
 
-    union ExtraValue            // special value in mutex condition
-    {
-      uint64_t write_file_number_;           // write as file_number
-      common::TfsUnlinkType unlink_action_;  // unlink as unlink type
-      common::ReadDataOptionFlag read_flag_; // read as read flag
-      common::TfsStatType stat_mode_;        // stat as stat mode
-    };
-
     struct SegmentData
     {
       bool delete_flag_;        // delete flag
@@ -59,7 +51,13 @@ namespace tfs
       char* buf_;                   // buffer start
       int32_t inner_offset_;        // offset of this segment to operate
       common::FileInfo* file_info_;
-      ExtraValue extra_value_;
+      union                     // special value in mutex condition
+      {
+        uint64_t write_file_number_;           // write as file_number
+        common::TfsUnlinkType unlink_action_;  // unlink as unlink type
+        common::ReadDataOptionFlag read_flag_; // read as read flag
+        common::TfsStatType stat_mode_;        // stat as stat mode
+      };
       common::VUINT64 ds_;
       int32_t pri_ds_index_;
       int32_t status_;
@@ -69,7 +67,7 @@ namespace tfs
                       pri_ds_index_(PRI_DS_NOT_INIT),
                       status_(SEG_STATUS_NOT_INIT), eof_(TFS_FILE_EOF_FLAG_NO)
       {
-        extra_value_.write_file_number_ = 0;
+        write_file_number_ = 0;
       }
 
       SegmentData(const SegmentData& seg_data)
@@ -79,7 +77,7 @@ namespace tfs
         buf_ = seg_data.buf_;
         inner_offset_ = seg_data.inner_offset_;
         file_info_ = NULL;      // not copy
-        extra_value_.write_file_number_ = seg_data.extra_value_.write_file_number_;
+        write_file_number_ = seg_data.write_file_number_;
         ds_ = seg_data.ds_;
         pri_ds_index_ = seg_data.pri_ds_index_;
         status_ = seg_data.status_;
@@ -143,7 +141,7 @@ namespace tfs
 #define SEG_DATA_SELF_ARGS(SEG)                                              \
     SEG->seg_info_.block_id_, SEG->seg_info_.file_id_, SEG->seg_info_.offset_, \
       SEG->seg_info_.size_, SEG->seg_info_.crc_, SEG->inner_offset_,    \
-      SEG->extra_value_.write_file_number_, SEG->status_,               \
+      SEG->write_file_number_, SEG->status_,               \
       tbsys::CNetUtil::addrToString(SEG->get_last_read_pri_ds()).c_str(), \
       tbsys::CNetUtil::addrToString(SEG->get_write_pri_ds()).c_str()
 

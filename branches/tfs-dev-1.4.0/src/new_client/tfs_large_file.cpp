@@ -213,7 +213,7 @@ int TfsLargeFile::unlink(const char* file_name, const char* suffix, int64_t& fil
     }
     else
     {
-      meta_seg_->extra_value_.unlink_action_ = action;
+      meta_seg_->unlink_action_ = action;
       get_meta_segment(0, NULL, 0);
 
       if ((ret = process(FILE_PHASE_UNLINK_FILE)) != TFS_SUCCESS) // do action over meta file
@@ -228,7 +228,7 @@ int TfsLargeFile::unlink(const char* file_name, const char* suffix, int64_t& fil
   }
   else
   {
-    meta_seg_->extra_value_.unlink_action_ = action;
+    meta_seg_->unlink_action_ = action;
     get_meta_segment(0, NULL, 0);
 
     // unlink meta file first
@@ -248,7 +248,7 @@ int TfsLargeFile::unlink(const char* file_name, const char* suffix, int64_t& fil
         destroy_seg();
         SegmentData* seg_data = new SegmentData();
         seg_data->seg_info_ = *sit;
-        seg_data->extra_value_.unlink_action_ = action;
+        seg_data->unlink_action_ = action;
         processing_seg_list_.push_back(seg_data);
         unlink_process();
       }
@@ -498,7 +498,7 @@ int TfsLargeFile::load_meta(int32_t flags)
 
   if (flags & T_UNLINK)         // unlink mode, set force flag to read hidden file
   {
-    meta_seg_->extra_value_.read_flag_ = READ_DATA_OPTION_FLAG_FORCE;
+    meta_seg_->read_flag_ = READ_DATA_OPTION_FLAG_FORCE;
   }
 
   int64_t size = MAX_META_SIZE;
