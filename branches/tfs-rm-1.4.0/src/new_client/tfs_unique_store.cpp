@@ -96,7 +96,7 @@ namespace tfs
                                  char* ret_tfs_name, const int32_t ret_tfs_name_len)
     {
       int ret = TFS_ERROR;
-      int64_t count = 0;
+      int64_t count = INVALID_FILE_SIZE;
 
       if (check_init())
       {
@@ -107,13 +107,13 @@ namespace tfs
         }
         else
         {
-          ret = save(buf, count, tfs_name, suffix, ret_tfs_name, ret_tfs_name_len);
+          count = save(buf, count, tfs_name, suffix, ret_tfs_name, ret_tfs_name_len);
         }
 
         tbsys::gDelete(buf);
       }
 
-      return ret != TFS_SUCCESS ? INVALID_FILE_SIZE : count;
+      return count;
     }
 
     int32_t TfsUniqueStore::unlink(const char* tfs_name, const char* suffix, int64_t& file_size, const int32_t count)
