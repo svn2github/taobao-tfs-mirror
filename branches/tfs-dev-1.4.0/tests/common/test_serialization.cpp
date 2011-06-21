@@ -721,6 +721,38 @@ TEST_F(TestSerialization, test_get_string)
   EXPECT_EQ(TFS_SUCCESS, iret);
   EXPECT_EQ(INT_SIZE, pos);
 }
+TEST_F(TestSerialization, test_string_set_get)
+{
+  char data[BUF_LEN];
+  char data2[BUF_LEN];
+  std::string t1 = "1234";
+  std::string t2;
+  int64_t pos;
+  int iret;
+
+  pos = 0;
+  iret = Serialization::set_string(data, BUF_LEN, pos, t1);
+  EXPECT_EQ(TFS_SUCCESS, iret);
+  pos = 0;
+  iret = Serialization::get_string(data, BUF_LEN, pos, t2);
+  EXPECT_EQ(TFS_SUCCESS, iret);
+  EXPECT_TRUE(t1 == t2);
+  EXPECT_EQ(t1.length(), t2.length());
+
+  
+  data[0] = 0;
+  data2[0] = 1;
+  pos = 0;
+  iret = Serialization::set_string(data, BUF_LEN, pos, data);
+  EXPECT_EQ(TFS_SUCCESS, iret);
+  pos = 0;
+  int64_t buff_len = 0;
+  iret = Serialization::get_string(data, BUF_LEN, pos, data2, buff_len);
+  EXPECT_EQ(TFS_SUCCESS, iret);
+  EXPECT_EQ(0 , buff_len);
+  EXPECT_EQ(data[0], data2[0]);
+
+}
 
 TEST_F(TestSerialization, test_set_bytes)
 {
