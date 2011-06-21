@@ -746,7 +746,7 @@ namespace tfs
      */
     int LayoutManager::rm_block_from_ds(const uint64_t ds_id, const uint32_t block_id)
     {
-      TBSYS_LOG(INFO, "remove  block : %u on server : %s", block_id, tbsys::CNetUtil::addrToString(ds_id).c_str());
+      TBSYS_LOG(INFO, "remove  block: %u on server : %s", block_id, tbsys::CNetUtil::addrToString(ds_id).c_str());
 #if !defined(TFS_NS_GTEST) && !defined(TFS_NS_INTEGRATION)
       RemoveBlockMessage rbmsg;
       rbmsg.add_remove_id(block_id);
@@ -774,7 +774,7 @@ namespace tfs
 
     int LayoutManager::rm_block_from_ds(const uint64_t ds_id, const std::vector<uint32_t>& blocks)
     {
-      TBSYS_LOG(INFO, "remove  block count : %u on server : %s", blocks.size(),
+      TBSYS_LOG(INFO, "remove  block count: %u on server : %s", blocks.size(),
           tbsys::CNetUtil::addrToString(ds_id).c_str());
 #if !defined(TFS_NS_GTEST) && !defined(TFS_NS_INTEGRATION)
       RemoveBlockMessage rbmsg;
@@ -1928,49 +1928,60 @@ namespace tfs
 #endif
       }
 
+      int32_t iret = TFS_ERROR;
+      TaskPtr task = 0;
 #if !defined(TFS_NS_GTEST)
       while (ngi.destroy_flag_ != NS_DESTROY_FLAGS_YES)
 #endif
       {
-        tbutil::Monitor<tbutil::Mutex>::Lock lock(run_plan_monitor_);
+        task = 0;
+        run_plan_monitor_.lock();
         while ((pending_plan_list_.empty())
             && (ngi.destroy_flag_ != NS_DESTROY_FLAGS_YES))
         {
           run_plan_monitor_.wait();
         }
-
-        //handle task
         if (!pending_plan_list_.empty())//find task
         {
           std::set<TaskPtr, TaskCompare>::const_iterator iter = pending_plan_list_.begin();
           if (iter != pending_plan_list_.end())
           {
-            TaskPtr task = (*iter);
-            if (task->handle() != TFS_SUCCESS)
+            task = (*iter);
+          }
+        }
+        run_plan_monitor_.unlock();
+
+        //handle task
+        if (0 != task)
+        {
+          iret = task->handle();
+          if (TFS_SUCCESS != iret)
+          {
+            task->dump(TBSYS_LOG_LEVEL_ERROR, "task handle fail");
+            RWLock::Lock tlock(maping_mutex_, WRITE_LOCKER);
+            block_to_task_.erase(task->block_id_);
+            std::vector<ServerCollect*>::iterator i_iter = task->runer_.begin();
+            for (; i_iter != task->runer_.end(); ++i_iter)
             {
-              task->dump(TBSYS_LOG_LEVEL_ERROR, "task handle fail");
-              RWLock::Lock tlock(maping_mutex_, WRITE_LOCKER);
-              block_to_task_.erase(task->block_id_);
-              std::vector<ServerCollect*>::iterator i_iter = task->runer_.begin();
-              for (; i_iter != task->runer_.end(); ++i_iter)
-              {
-                server_to_task_.erase((*i_iter));
-              }
+              server_to_task_.erase((*i_iter));
+            }
+          }
+
+          run_plan_monitor_.lock();
+          if (TFS_SUCCESS == iret)
+          {
+            std::pair<std::set<TaskPtr, TaskCompare>::iterator, bool> res = running_plan_list_.insert((task));
+            if (!res.second)
+            {
+              TBSYS_LOG(WARN, "%s", "task exist");
             }
             else
             {
-              std::pair<std::set<TaskPtr, TaskCompare>::iterator, bool> res = running_plan_list_.insert((*iter));
-              if (!res.second)
-              {
-                TBSYS_LOG(WARN, "%s", "task exist");
-              }
-              else
-              {
-                GFactory::get_timer()->schedule((*iter), tbutil::Time::seconds((*iter)->end_time_ - (*iter)->begin_time_));
-              }
+              GFactory::get_timer()->schedule(task, tbutil::Time::seconds(task->end_time_ - task->begin_time_));
             }
-            pending_plan_list_.erase(iter);
           }
+          pending_plan_list_.erase(task);
+          run_plan_monitor_.unlock();
         }
       }
     }

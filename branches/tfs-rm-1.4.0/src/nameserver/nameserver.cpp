@@ -460,13 +460,12 @@ namespace tfs
           int32_t pcode = packet->getPCode();
           if (REMOVE_BLOCK_MESSAGE == pcode)
           {
-            RemoveBlockMessage* msg = dynamic_cast<RemoveBlockMessage*>(packet);
             if (!sresponse->empty())
             {
-               NewClient::RESPONSE_MSG_MAP_ITER iter = sresponse->begin();
+              NewClient::RESPONSE_MSG_MAP_ITER iter = sresponse->begin();
               for (; iter != sresponse->end(); ++iter)
               {
-                meta_mgr_.get_client_request_server().handle((*iter)->second);
+                meta_mgr_.get_client_request_server().handle(dynamic_cast<BasePacket*>(iter->second.second));
               }
             }
           }
