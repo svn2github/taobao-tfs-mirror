@@ -741,12 +741,14 @@ TEST_F(TestSerialization, test_string_set_get)
 
   
   data[0] = 0;
+  data[1] = '2';
+  std::string tmp(data, 2);
   data2[0] = 1;
   pos = 0;
   iret = Serialization::set_string(data, BUF_LEN, pos, data);
   EXPECT_EQ(TFS_SUCCESS, iret);
   pos = 0;
-  int64_t buff_len = 0;
+  int64_t buff_len = 1;
   iret = Serialization::get_string(data, BUF_LEN, pos, data2, buff_len);
   EXPECT_EQ(TFS_SUCCESS, iret);
   EXPECT_EQ(0 , buff_len);

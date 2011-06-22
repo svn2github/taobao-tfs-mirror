@@ -25,7 +25,7 @@ namespace tfs
     {
       static int64_t get_string_length(const char* str)
       {
-        return NULL == str ? INT_SIZE : strlen(str) + INT_SIZE + 1;
+        return NULL == str ? INT_SIZE : strlen(str) == 0 ? INT_SIZE : strlen(str) + INT_SIZE + 1;
       }
       static int64_t get_string_length(const std::string& str)
       {
@@ -152,7 +152,7 @@ namespace tfs
                   {
                     memcpy(str, (data+pos), length);
                     pos += length;
-                    str_buf_length = length;
+                    str_buf_length = length - 1;
                   }
                 }
               }
@@ -185,7 +185,7 @@ namespace tfs
               iret = data_len - pos >= length ? TFS_SUCCESS : TFS_ERROR;
               if (TFS_SUCCESS == iret)
               {
-                str.assign((data + pos), length);
+                str.assign((data + pos), length - 1);
                 pos += length;
               }
             }
@@ -394,7 +394,7 @@ namespace tfs
         int32_t iret = NULL != data &&  pos < data_len &&  pos >= 0 ? TFS_SUCCESS : TFS_ERROR;
         if (TFS_SUCCESS == iret)
         {
-          int64_t length = NULL == str ? 0 : strlen(str) + 1;/** include '\0'**/
+          int64_t length = NULL == str ? 0 : strlen(str) == 0 ? 0 : strlen(str) + 1;/** include '\0'**/
           iret = data_len - pos >= (length + INT_SIZE) ? TFS_SUCCESS : TFS_ERROR;
           if (TFS_SUCCESS == iret)
           {
