@@ -224,13 +224,13 @@ namespace tfs
       return iret;
     }
 
-    int Stream::get_string(char* str, int64_t& length)
+    int Stream::get_string(const int64_t buf_length, char* str, int64_t& real_length)
     {
       int64_t pos = 0;
-      int32_t iret = Serialization::get_string(buffer_.get_data(), buffer_.get_data_length(), pos, str, length);
+      int32_t iret = Serialization::get_string(buffer_.get_data(), buffer_.get_data_length(), pos, buf_length, str, real_length);
       if (TFS_SUCCESS == iret)
       {
-        buffer_.drain(length);
+        buffer_.drain(real_length);
       }
       return iret;
     }

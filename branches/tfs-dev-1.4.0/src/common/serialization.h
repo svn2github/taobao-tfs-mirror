@@ -127,11 +127,13 @@ namespace tfs
         return iret;
       }
 
-      static int get_string(const char* data, const int64_t data_len, int64_t& pos, char* str, int64_t& str_buf_length)
+      static int get_string(const char* data, const int64_t data_len, int64_t& pos, const int64_t str_buf_length, char* str, int64_t& real_str_buf_length)
       {
-        int32_t iret = NULL != data &&  data_len - pos >= INT_SIZE  &&  pos >= 0 ? TFS_SUCCESS : TFS_ERROR;
+        int32_t iret = NULL != data &&  data_len - pos >= INT_SIZE  &&  pos >= 0  && NULL != str && str_buf_length > 0 ? TFS_SUCCESS : TFS_ERROR;
         if (TFS_SUCCESS == iret)
         {
+          str[0] = '\0';
+          real_str_buf_length = 0;
           int32_t length  = 0;
           iret = get_int32(data, data_len, pos, &length);
           if (TFS_SUCCESS == iret)
@@ -141,30 +143,14 @@ namespace tfs
               iret = length <= str_buf_length ? TFS_SUCCESS : TFS_ERROR;
               if (TFS_SUCCESS == iret)
               {
-                if (NULL == str)
+                iret = data_len - pos >= length ? TFS_SUCCESS : TFS_ERROR;
+                if (TFS_SUCCESS == iret)
                 {
-                  iret = TFS_ERROR;
-                }
-                else
-                {
-                  iret = data_len - pos >= length ? TFS_SUCCESS : TFS_ERROR;
-                  if (TFS_SUCCESS == iret)
-                  {
-                    memcpy(str, (data+pos), length);
-                    pos += length;
-                    str_buf_length = length - 1;
-                  }
+                  memcpy(str, (data+pos), length);
+                  pos += length;
+                  real_str_buf_length = length - 1;
                 }
               }
-              else
-              {
-                pos -= INT_SIZE;
-              }
-            }
-            else
-            {
-              str_buf_length = 0;
-              str[0] = '\0';
             }
           }
         }
