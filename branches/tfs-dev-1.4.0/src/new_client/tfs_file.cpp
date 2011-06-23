@@ -606,7 +606,7 @@ int TfsFile::process_success_response(const InnerFilePhase file_phase, NewClient
     {
       TBSYS_LOG(ERROR, "get zero response. client id: %p, phase: %d.", client, file_phase);
       for (map<uint8_t, uint16_t>::iterator index_it = send_id_index_map_.begin();
-           index_it != send_id_index_map_.begin(); ++index_it)
+           index_it != send_id_index_map_.end(); ++index_it)
       {
         DUMP_SEGMENTDATA(processing_seg_list_[index_it->second], ERROR, "no resp. index id: %hhu", index_it->first);
       }
