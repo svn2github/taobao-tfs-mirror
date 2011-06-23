@@ -76,7 +76,7 @@ namespace tfs
         iret = input.get_string(MAX_ERROR_MSG_LENGTH, msg_, length_);
         if (TFS_SUCCESS == iret)
         {
-          msg_[length_ - 1] = '\0';
+          msg_[length_] = '\0';
         }
       }
       return iret;

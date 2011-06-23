@@ -156,7 +156,7 @@ namespace tfs
     {
       UNUSED(inparam);
       UNUSED(outparam);
-      //TODO
+      //not supported
       tbutil::Mutex::Lock lock(mutex_);
       int ret = TFS_ERROR;
       return ret;
@@ -165,7 +165,7 @@ namespace tfs
     int MysqlDatabaseHelper::update(const ResourceServerInfo& inparam)
     {
       UNUSED(inparam);
-      //TODO 
+      //not supported
       tbutil::Mutex::Lock lock(mutex_);
       int ret = TFS_ERROR;
       return ret;
@@ -174,7 +174,7 @@ namespace tfs
     int MysqlDatabaseHelper::remove(const ResourceServerInfo& inparam)
     {
       UNUSED(inparam);
-      //TODO
+      //not supported
       tbutil::Mutex::Lock lock(mutex_);
       int ret = TFS_ERROR;
       return ret;

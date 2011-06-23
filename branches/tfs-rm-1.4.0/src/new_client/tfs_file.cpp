@@ -977,7 +977,7 @@ int TfsFile::async_rsp_close_file(common::BasePacket* rsp, const uint16_t index)
       else
       {
         ret = msg->get_status();
-        TBSYS_LOG(ERROR, "tfs file close, ret: %d, get errow msg: %s, dsip: %s",
+        TBSYS_LOG(ERROR, "tfs file close, ret: %d, get error msg: %s, dsip: %s",
                   ret, msg->get_error(), tbsys::CNetUtil::addrToString(seg_data->get_write_pri_ds()).c_str());
         if (EXIT_NO_LOGICBLOCK_ERROR == ret)
         {
@@ -1129,7 +1129,7 @@ int TfsFile::async_rsp_read_file(common::BasePacket* rsp, const uint16_t index)
         {
           remove_flag = true;
         }
-        TBSYS_LOG(ERROR, "tfs read read fail from dataserver: %s, ret len: %d",
+        TBSYS_LOG(ERROR, "tfs read fail from dataserver: %s, ret len: %d",
                   tbsys::CNetUtil::addrToString(seg_data->get_last_read_pri_ds()).c_str(), ret_len);
         //set errno
         ret = ret_len;
