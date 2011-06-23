@@ -56,15 +56,13 @@ namespace tfs
 #define CONF_USE_CAPACITY_RATIO                       "use_capacity_ratio"
 
 
-  //adminserver
-#define CONF_NS_SCRIPT                                "ns_script"
+  //adminserver, only monitor ds
 #define CONF_DS_SCRIPT                                "ds_script"
-#define CONF_NS_FKILL_WAITTIME                        "ns_fkill_waittime"
 #define CONF_DS_FKILL_WAITTIME                        "ds_fkill_waittime"
+#define CONF_CHECK_INTERVAL                           "check_interval"
 #define CONF_CHECK_COUNT                              "check_count"
 #define CONF_DS_INDEX_LIST                            "ds_index_list"
 #define CONF_WARN_DEAD_COUNT                          "warn_dead_count"
-#define CONF_SERVER_TYPE                              "server_type"
 
   //nameserver
 #define CONF_IP_ADDR_LIST                             "ip_addr_list"
@@ -96,7 +94,6 @@ namespace tfs
 #define CONF_BALANCE_MAX_DIFF_BLOCK_NUM               "balance_max_diff_block_num"
 
   //dataserver
-#define CONF_CHECK_INTERVAL                           "check_interval"
 #define CONF_DATA_THREAD_COUNT                        "data_thread_count"
 #define CONF_EXPIRE_COMPACTBLOCK_TIME                 "expire_compactblock_time"
 #define CONF_DS_DEAD_TIME                             "ds_dead_time"

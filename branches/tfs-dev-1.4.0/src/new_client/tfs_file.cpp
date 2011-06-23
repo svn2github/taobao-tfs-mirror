@@ -608,7 +608,7 @@ int TfsFile::process_success_response(const InnerFilePhase file_phase, NewClient
       for (map<uint8_t, uint16_t>::iterator index_it = send_id_index_map_.begin();
            index_it != send_id_index_map_.end(); ++index_it)
       {
-        DUMP_SEGMENTDATA(processing_seg_list_[index_it->second], ERROR, "no resp. index id: %hhu", index_it->first);
+        DUMP_SEGMENTDATA(processing_seg_list_[index_it->second], ERROR, "no resp. client: %p, index id: %hhu", client, index_it->first);
       }
     }
     else

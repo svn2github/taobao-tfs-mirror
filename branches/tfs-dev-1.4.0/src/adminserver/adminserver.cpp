@@ -27,7 +27,7 @@ using namespace tfs::message;
 using namespace tfs::adminserver;
 namespace
 {
-  template<typename T> void delet_map(T& m)
+  template<typename T> void delete_map(T& m)
   {
     for (typename T::iterator it = m.begin(); it != m.end(); it++)
     {
@@ -81,8 +81,8 @@ namespace tfs
 
     void AdminServer::destruct()
     {
-      delet_map(monitor_param_);
-      delet_map(monitor_status_);
+      delete_map(monitor_param_);
+      delete_map(monitor_status_);
     }
 
 
@@ -139,7 +139,6 @@ namespace tfs
           TBSYS_LOG(ERROR, "FileSystemParameter.initialize error index is %s", index.c_str());
           return TFS_ERROR;
         }
-
 
         param->index_ = index;
         param->active_ = 1;
