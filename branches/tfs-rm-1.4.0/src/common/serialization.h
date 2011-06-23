@@ -25,11 +25,11 @@ namespace tfs
     {
       static int64_t get_string_length(const char* str)
       {
-        return NULL == str ? INT_SIZE : strlen(str) + INT_SIZE + 1;
+        return NULL == str ? INT_SIZE : strlen(str) == 0 ? INT_SIZE : strlen(str) + INT_SIZE + 1;
       }
       static int64_t get_string_length(const std::string& str)
       {
-        return str.length() + INT_SIZE + 1;
+        return str.empty() ? INT_SIZE : str.length() + INT_SIZE + 1;
       }
       template <typename T>
       static int64_t get_vint8_length(const T& value)
@@ -127,11 +127,13 @@ namespace tfs
         return iret;
       }
 
-      static int get_string(const char* data, const int64_t data_len, int64_t& pos, char* str, int64_t& str_buf_length)
+      static int get_string(const char* data, const int64_t data_len, int64_t& pos, const int64_t str_buf_length, char* str, int64_t& real_str_buf_length)
       {
-        int32_t iret = NULL != data &&  data_len - pos >= INT_SIZE  &&  pos >= 0 ? TFS_SUCCESS : TFS_ERROR;
+        int32_t iret = NULL != data &&  data_len - pos >= INT_SIZE  &&  pos >= 0  && NULL != str && str_buf_length > 0 ? TFS_SUCCESS : TFS_ERROR;
         if (TFS_SUCCESS == iret)
         {
+          str[0] = '\0';
+          real_str_buf_length = 0;
           int32_t length  = 0;
           iret = get_int32(data, data_len, pos, &length);
           if (TFS_SUCCESS == iret)
@@ -141,24 +143,13 @@ namespace tfs
               iret = length <= str_buf_length ? TFS_SUCCESS : TFS_ERROR;
               if (TFS_SUCCESS == iret)
               {
-                if (NULL == str)
+                iret = data_len - pos >= length ? TFS_SUCCESS : TFS_ERROR;
+                if (TFS_SUCCESS == iret)
                 {
-                  iret = TFS_ERROR;
+                  memcpy(str, (data+pos), length);
+                  pos += length;
+                  real_str_buf_length = length - 1;
                 }
-                else
-                {
-                  iret = data_len - pos >= length ? TFS_SUCCESS : TFS_ERROR;
-                  if (TFS_SUCCESS == iret)
-                  {
-                    memcpy(str, (data+pos), length);
-                    pos += length;
-                    str_buf_length = length;
-                  }
-                }
-              }
-              else
-              {
-                pos -= INT_SIZE;
               }
             }
           }
@@ -180,9 +171,13 @@ namespace tfs
               iret = data_len - pos >= length ? TFS_SUCCESS : TFS_ERROR;
               if (TFS_SUCCESS == iret)
               {
-                str.assign((data + pos), length);
+                str.assign((data + pos), length - 1);
                 pos += length;
               }
+            }
+            else
+            {
+              str.clear();
             }
           }
         }
@@ -361,16 +356,19 @@ namespace tfs
         int32_t iret = NULL != data &&  pos < data_len &&  pos >= 0 ? TFS_SUCCESS : TFS_ERROR;
         if (TFS_SUCCESS == iret)
         {
-          int64_t length = str.length() + 1; /** include '\0' length*/
+          int64_t length = str.empty() ? 0 : str.length() + 1;/** include '\0' length*/
           iret = data_len - pos >= (length + INT_SIZE) ? TFS_SUCCESS : TFS_ERROR;
           if (TFS_SUCCESS == iret)
           {
             iret = set_int32(data, data_len, pos, length);
             if (TFS_SUCCESS == iret)
             {
-              memcpy((data+pos), str.c_str(), length - 1);
-              pos += length;
-              data[pos - 1] = '\0';
+              if (length > 0)
+              {
+                memcpy((data+pos), str.c_str(), length - 1);
+                pos += length;
+                data[pos - 1] = '\0';
+              }
             }
           }
         }
@@ -382,16 +380,19 @@ namespace tfs
         int32_t iret = NULL != data &&  pos < data_len &&  pos >= 0 ? TFS_SUCCESS : TFS_ERROR;
         if (TFS_SUCCESS == iret)
         {
-          int64_t length = NULL == str ? 0 : strlen(str) + 1;/** include '\0'**/
+          int64_t length = NULL == str ? 0 : strlen(str) == 0 ? 0 : strlen(str) + 1;/** include '\0'**/
           iret = data_len - pos >= (length + INT_SIZE) ? TFS_SUCCESS : TFS_ERROR;
           if (TFS_SUCCESS == iret)
           {
             iret = set_int32(data, data_len, pos, length);
             if (TFS_SUCCESS == iret)
             {
-              memcpy((data+pos), str, length - 1);
-              pos += length;
-              data[pos - 1] = '\0';
+              if (length > 0)
+              {
+                memcpy((data+pos), str, length - 1);
+                pos += length;
+                data[pos - 1] = '\0';
+              }
             }
           }
         }

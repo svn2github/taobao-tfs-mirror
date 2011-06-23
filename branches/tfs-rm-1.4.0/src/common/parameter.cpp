@@ -108,7 +108,7 @@ namespace tfs
       if (object_clear_max_time_ <= 0)
         object_clear_max_time_ = 300;
 
-     int32_t thread_count = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_THREAD_COUNT, 1);
+     int32_t thread_count = TBSYS_CONFIG.getInt(CONF_SN_PUBLIC, CONF_THREAD_COUNT, 8);
       max_wait_write_lease_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_MAX_WAIT_WRITE_LEASE, 5);
       if (max_wait_write_lease_ >= thread_count)
         max_wait_write_lease_ = thread_count / 2;
@@ -128,7 +128,7 @@ namespace tfs
       run_plan_expire_interval_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_RUN_PLAN_EXPIRE_INTERVAL, 120);
       if (run_plan_expire_interval_ <= 0)
         run_plan_expire_interval_ = 120;
-      run_plan_ratio_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_RUN_PLAN_RATIO,25);
+      run_plan_ratio_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_BUILD_PLAN_RATIO,25);
       if (run_plan_ratio_ <= 25)
         run_plan_ratio_ = 25;
       run_plan_ratio_ = std::min(run_plan_ratio_, 100);
@@ -158,13 +158,10 @@ namespace tfs
       max_block_size_ = TBSYS_CONFIG.getInt(CONF_SN_DATASERVER, CONF_BLOCK_MAX_SIZE);
       dump_vs_interval_ = TBSYS_CONFIG.getInt(CONF_SN_DATASERVER, CONF_VISIT_STAT_INTERVAL, -1);
 
-      const char* max_io_time = TBSYS_CONFIG.getString(CONF_SN_DATASERVER, "CONF_IO_WARN_TIME", "0");
+      const char* max_io_time = TBSYS_CONFIG.getString(CONF_SN_DATASERVER, CONF_IO_WARN_TIME, "0");
       max_io_warn_time_ = strtoll(max_io_time, NULL, 10);
       if (max_io_warn_time_ < 200000 || max_io_warn_time_ > 2000000)
         max_io_warn_time_ = 1000000;
-
-      client_thread_client_ = TBSYS_CONFIG.getInt(CONF_SN_DATASERVER, CONF_THREAD_COUNT);
-      server_thread_client_ = TBSYS_CONFIG.getInt(CONF_SN_DATASERVER, CONF_DS_THREAD_COUNT);
 
       tfs_backup_type_ = TBSYS_CONFIG.getInt(CONF_SN_DATASERVER, CONF_BACKUP_TYPE, 1);
       local_ns_ip_ = TBSYS_CONFIG.getString(CONF_SN_DATASERVER, CONF_IP_ADDR);
@@ -273,21 +270,6 @@ namespace tfs
 
     int RcServerParameter::initialize(void)
     {
-      const char* top_work_dir = TBSYS_CONFIG.getString(CONF_SN_PUBLIC, CONF_WORK_DIR);
-      if (top_work_dir == NULL)
-      {
-        TBSYS_LOG(ERROR, "RcParam::load work directory config not found");
-        return EXIT_CONFIG_ERROR;
-      }
-
-      char default_work_dir[MAX_PATH_LENGTH], default_log_file[MAX_PATH_LENGTH], default_pid_file[MAX_PATH_LENGTH];
-      snprintf(default_work_dir, MAX_PATH_LENGTH, "%s/rcserver", top_work_dir);
-      snprintf(default_log_file, MAX_PATH_LENGTH, "%s/logs/rcserver.log", top_work_dir);
-      snprintf(default_pid_file, MAX_PATH_LENGTH, "%s/logs/rcserver.pid", top_work_dir);
-      work_dir_ = TBSYS_CONFIG.getString(CONF_SN_RCSERVER, CONF_WORK_DIR, default_work_dir);
-      log_file_ = TBSYS_CONFIG.getString(CONF_SN_RCSERVER, CONF_LOG_FILE, default_log_file);
-      pid_file_ = TBSYS_CONFIG.getString(CONF_SN_RCSERVER, CONF_LOCK_FILE, default_pid_file);
-
       db_info_ = TBSYS_CONFIG.getString(CONF_SN_RCSERVER, CONF_RC_DB_INFO, "");
       db_user_ = TBSYS_CONFIG.getString(CONF_SN_RCSERVER, CONF_RC_DB_USER, "");
       db_pwd_ = TBSYS_CONFIG.getString(CONF_SN_RCSERVER, CONF_RC_DB_PWD, "");

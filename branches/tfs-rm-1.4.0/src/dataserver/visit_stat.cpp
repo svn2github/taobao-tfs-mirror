@@ -270,7 +270,6 @@ namespace tfs
         return TFS_ERROR;
 
       tbsys::CConfig oneconf;
-
       DataService* service = dynamic_cast<DataService*>(BaseMain::instance());
       if (oneconf.load(service->config_file_.c_str()) != TFS_SUCCESS)
       {

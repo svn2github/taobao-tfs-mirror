@@ -82,8 +82,7 @@ namespace nameserver
   int GCObjectManager::initialize()
   {
     ExpireTimerTaskPtr task = new ExpireTimerTask(*this);
-    int64_t interval = TBSYS_CONFIG.getInt(CONF_SN_PUBLIC, CONF_OBJECT_DEAD_MAX_TIME, 3600);
-    int iret = GFactory::get_timer()->scheduleRepeated(task, tbutil::Time::seconds(interval));
+    int iret = GFactory::get_timer()->scheduleRepeated(task, tbutil::Time::seconds(SYSPARAM_NAMESERVER.object_dead_max_time_));
     return iret < 0 ? TFS_ERROR : TFS_SUCCESS;
   }
   

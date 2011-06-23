@@ -73,8 +73,7 @@ namespace tfs
       int32_t iret = input.get_int32(&status_);
       if (TFS_SUCCESS == iret)
       {
-        length_ = MAX_ERROR_MSG_LENGTH;
-        iret = input.get_string(msg_, length_);
+        iret = input.get_string(MAX_ERROR_MSG_LENGTH, msg_, length_);
         if (TFS_SUCCESS == iret)
         {
           msg_[length_ - 1] = '\0';

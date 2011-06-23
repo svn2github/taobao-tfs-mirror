@@ -947,7 +947,7 @@ namespace tfs
             TBSYS_LOG(ERROR, "create file: blockid: %u is null. req update BlockInfo failed", block_id);
           }
         }
-        message->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret,
+        ret = message->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret,
             "create file failed. blockid: %u, fileid: %" PRI64_PREFIX "u, ret: %d.", block_id, file_id, ret);
       }
       else
@@ -956,7 +956,7 @@ namespace tfs
         resp_cfn_msg->set_block_id(block_id);
         resp_cfn_msg->set_file_id(file_id);
         resp_cfn_msg->set_file_number(file_number);
-        message->reply(resp_cfn_msg);
+        ret = message->reply(resp_cfn_msg);
       }
 
       TIMER_END();
@@ -968,8 +968,7 @@ namespace tfs
       {
         stat_mgr_.update_entry(tfs_ds_stat_, "write-failed", 1);
       }
-
-      return TFS_SUCCESS;
+      return ret;
     }
 
     int DataService::write_data(WriteDataMessage* message)

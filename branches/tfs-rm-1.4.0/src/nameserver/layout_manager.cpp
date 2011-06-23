@@ -835,6 +835,8 @@ namespace tfs
             }
             iter->second->set_dead_time(now);
             GFactory::get_gc_manager().add(iter->second);
+            std::vector<stat_int_t> stat(1, iter->second->block_count());
+            GFactory::get_stat_mgr().update_entry(GFactory::tfs_ns_stat_block_count_, stat, false);
             servers_.erase(iter);
           }
           ARG_NEW(server_collect, ServerCollect, info, now);
@@ -849,7 +851,6 @@ namespace tfs
           ++alive_server_size_;
           servers_index_.push_back(server_collect);
           std::vector<stat_int_t> stat(1, info.block_count_);
-
           GFactory::get_stat_mgr().update_entry(GFactory::tfs_ns_stat_block_count_, stat);
         }
         else

@@ -735,7 +735,7 @@ public class Function_ns_plan_test extends NameServerPlanTestCase {
 		Assert.assertTrue(bRet);
 		
 		/* Set seed size */
-		bRet = setSeedSize(1);
+		bRet = setSeedSize(100);
 		Assert.assertTrue(bRet);
 		
 		/* Set unlink ratio */
@@ -751,18 +751,29 @@ public class Function_ns_plan_test extends NameServerPlanTestCase {
 		bRet = writeCmd();
 		Assert.assertTrue(bRet);
 		
-		/* Check the rate of write process */
-		bRet = checkRateRun(SUCCESSRATE, WRITEONLY|READ|UNLINK);
+		/* Start sar to account network traffic */
+		bRet = networkTrafMonStart(SAMPLE_INTERVAL, WRITE_TIME/SAMPLE_INTERVAL);
 		Assert.assertTrue(bRet);
+	
+		/* Wait */
+		sleep(WRITE_TIME);	
 		
 		/* Stop write cmd */
 		bRet = writeCmdStop();
+		Assert.assertTrue(bRet);
+		
+		/* Check the rate of write process */
+		bRet = checkRateEnd(SUCCESSRATE, WRITEONLY|READ|UNLINK);
 		Assert.assertTrue(bRet);
 
 		/* Wait for completion of replication */
 		bRet = chkBlockCnt(BLOCK_CHK_TIME, 0);
 		Assert.assertTrue(bRet);
 		bRet = chkBlockCnt(BLOCK_CHK_TIME, 1);
+		Assert.assertTrue(bRet);
+
+		/* Check network traffic balance */
+		bRet = checkNetworkTrafBalance();
 		Assert.assertTrue(bRet);
 		
 		/* Get the block num hold by each ds after write */
@@ -944,10 +955,10 @@ public class Function_ns_plan_test extends NameServerPlanTestCase {
 		Assert.assertTrue(bRet);
 		
 		/* Set NS conf */
-		bRet = setNsConf("nameserver", "max_replication", "3");
-		Assert.assertTrue(bRet);
-		bRet = setNsConf("nameserver", "min_replication", "2");
-		Assert.assertTrue(bRet);
+		//bRet = setNsConf("nameserver", "max_replication", "3");
+		//Assert.assertTrue(bRet);
+		//bRet = setNsConf("nameserver", "min_replication", "2");
+		//Assert.assertTrue(bRet);
 		
 		bRet = tfsGrid.start();
 		Assert.assertTrue(bRet);

@@ -91,8 +91,6 @@ namespace tfs
       int32_t sync_flag_;
       int32_t dump_vs_interval_;
       int64_t max_io_warn_time_;
-      int32_t client_thread_client_;
-      int32_t server_thread_client_;
       int32_t tfs_backup_type_;
       const char* local_ns_ip_;
       int32_t local_ns_port_;
@@ -118,9 +116,6 @@ namespace tfs
     {
       int initialize(void);
 
-      std::string work_dir_;
-      std::string log_file_;
-      std::string pid_file_;
       std::string db_info_;
       std::string db_user_;
       std::string db_pwd_;
