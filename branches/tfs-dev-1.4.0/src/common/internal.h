@@ -101,6 +101,7 @@ namespace tfs
     static const int64_t MAX_CMD_SIZE = 1024;
 
     static const uint32_t INVALID_LEASE_ID = 0;
+    static const uint32_t INVALID_BLOCK_ID = 0;
 
     static const int32_t SEGMENT_HEAD_RESERVE_SIZE = 64;
 
@@ -129,6 +130,8 @@ namespace tfs
     static const int64_t MIN_GC_EXPIRED_TIME = 21600000; // 6h
     static const int64_t MAX_SEGMENT_SIZE = 1 << 21; // 2M
     static const int64_t MAX_BATCH_COUNT = 16;
+
+    static const int32_t MAX_DEV_TAG_LEN = 8;
 
     enum OplogFlag
     {
@@ -235,6 +238,14 @@ namespace tfs
     {
       READ_VERSION_2 = 2,
       READ_VERSION_3 = 3
+    };
+
+    enum BaseFsType
+    {
+      NO_INIT = 0,
+      EXT4,
+      EXT3_FULL,
+      EXT3_FTRUN
     };
 
     enum ClientCmd
@@ -693,6 +704,51 @@ namespace tfs
       VUINT64 failed_servers_;
     };
 
+    struct MMapOption
+    {
+      int32_t max_mmap_size_;
+      int32_t first_mmap_size_;
+      int32_t per_mmap_size_;
+
+      int serialize(char* data, const int64_t data_len, int64_t& pos) const;
+      int deserialize(const char* data, const int64_t data_len, int64_t& pos);
+      int64_t length() const;
+    };
+
+    struct SuperBlock
+    {
+      char mount_tag_[MAX_DEV_TAG_LEN]; // magic tag
+      int32_t time_;                    // mount time
+      char mount_point_[common::MAX_DEV_NAME_LEN]; // name of mount point
+      int64_t mount_point_use_space_; // the max space of the mount point
+      BaseFsType base_fs_type_; // ext4, ext3...
+
+      int32_t superblock_reserve_offset_; // super block start offset. not used
+      int32_t bitmap_start_offset_; // bitmap start offset
+
+      int32_t avg_segment_size_; // avg file size in block file
+
+      float block_type_ratio_; // block type ration
+      int32_t main_block_count_; // total count of main block
+      int32_t main_block_size_; // per size of main block
+
+      int32_t extend_block_count_; // total count of ext block
+      int32_t extend_block_size_; // per size of ext block
+
+      int32_t used_block_count_; // used main block count
+      int32_t used_extend_block_count_; // used ext block count
+
+      float hash_slot_ratio_; // hash slot count / file count ratio
+      int32_t hash_slot_size_; // number of hash bucket slot
+      MMapOption mmap_option_; // mmap option
+      int32_t version_; // version
+
+      int serialize(char* data, const int64_t data_len, int64_t& pos) const;
+      int deserialize(const char* data, const int64_t data_len, int64_t& pos);
+      int64_t length() const;
+      void display() const;
+    };
+
     // defined type typedef
     typedef std::vector<BlockInfo> BLOCK_INFO_LIST;
     typedef std::vector<FileInfo> FILE_INFO_LIST;
@@ -707,7 +763,6 @@ namespace tfs
     static const int32_t FILEINFO_SIZE = sizeof(FileInfo);
     static const int32_t BLOCKINFO_SIZE = sizeof(BlockInfo);
     static const int32_t RAW_META_SIZE = sizeof(RawMeta);
-
   }
 }
 

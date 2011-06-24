@@ -129,7 +129,6 @@ namespace tfs
       {
         if (LOCAL_PACKET == packet->getPCode())
         {
-          bret = false;
           LocalPacket* local_packet = dynamic_cast<LocalPacket*>(packet);
           int32_t iret = local_packet->execute();
           if (TFS_SUCCESS != iret)

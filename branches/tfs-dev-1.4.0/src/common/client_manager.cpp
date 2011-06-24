@@ -45,6 +45,13 @@ namespace tfs
       }
       tbsys::gDelete(connmgr_);
       initialize_ = false;
+
+      NEWCLIENT_MAP_ITER iter = new_clients_.begin();
+      for (; iter != new_clients_.end(); ++iter)
+      {
+        free_new_client_object(iter->second);
+      }
+      new_clients_.clear();
     }
 
 
@@ -76,6 +83,11 @@ namespace tfs
             }
             connmgr_ = new tbnet::ConnectionManager(transport_, streamer_, this);
             initialize_ = true;
+            NEWCLIENT_MAP_ITER iter = new_clients_.begin();
+            for (; iter != new_clients_.end(); ++iter)
+            {
+              free_new_client_object(iter->second);
+            }
             new_clients_.clear();
           }
         }

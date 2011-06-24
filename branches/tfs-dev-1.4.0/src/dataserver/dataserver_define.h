@@ -31,8 +31,7 @@ namespace tfs
     static const std::string INDEX_DIR_PREFIX = "/index/";
     static const mode_t DIR_MODE = 0755;
     static const int32_t MAX_COMPACT_READ_SIZE = 8388608;
-    static const int32_t MAX_DEV_TAG_LEN = 8;
-    static const char DEV_TAG[MAX_DEV_TAG_LEN] = "TAOBAO";
+    static const char DEV_TAG[common::MAX_DEV_TAG_LEN] = "TAOBAO";
     static const int32_t COPY_BETWEEN_CLUSTER = -1;
     static const int32_t BLOCK_VERSION_MAGIC_NUM = 2;
 
@@ -42,14 +41,6 @@ namespace tfs
       FI_DELETED = 1,
       FI_INVALID = 2,
       FI_CONCEAL = 4
-    };
-
-    enum BaseFsType
-    {
-      NO_INIT = 0,
-      EXT4,
-      EXT3_FULL,
-      EXT3_FTRUN
     };
 
     enum DirtyFlag
@@ -87,65 +78,7 @@ namespace tfs
       uint32_t logic_blockid_;
       uint32_t prev_physic_blockid_;
       uint32_t next_physic_blockid_;
-
-      BlockPrefix() :
-        logic_blockid_(0), prev_physic_blockid_(0), next_physic_blockid_(0)
-      {
-      }
-
-      BlockPrefix(const BlockPrefix& rhs)
-      {
-        logic_blockid_ = rhs.logic_blockid_;
-        prev_physic_blockid_ = rhs.prev_physic_blockid_;
-        next_physic_blockid_ = rhs.next_physic_blockid_;
-      }
-
-      BlockPrefix& operator=(const BlockPrefix& rhs)
-      {
-        if (this == &rhs)
-        {
-          return *this;
-        }
-        logic_blockid_ = rhs.logic_blockid_;
-        prev_physic_blockid_ = rhs.prev_physic_blockid_;
-        next_physic_blockid_ = rhs.next_physic_blockid_;
-        return *this;
-      }
-
-      BlockPrefix& clone(const BlockPrefix& rhs)
-      {
-        assert(this != &rhs);
-        logic_blockid_ = rhs.logic_blockid_;
-        prev_physic_blockid_ = rhs.prev_physic_blockid_;
-        next_physic_blockid_ = rhs.next_physic_blockid_;
-        return *this;
-      }
     };
-
-    struct MMapOption
-    {
-      int32_t max_mmap_size_;
-      int32_t first_mmap_size_;
-      int32_t per_mmap_size_;
-
-      MMapOption() :
-        max_mmap_size_(0), first_mmap_size_(0), per_mmap_size_(0)
-      {
-      }
-
-      MMapOption& operator=(const MMapOption& rhs)
-      {
-        if (this == &rhs)
-        {
-          return *this;
-        }
-        max_mmap_size_ = rhs.max_mmap_size_;
-        first_mmap_size_ = rhs.first_mmap_size_;
-        per_mmap_size_ = rhs.per_mmap_size_;
-        return *this;
-      }
-    };
-
     struct MetaInfo
     {
       public:
@@ -273,11 +206,6 @@ namespace tfs
       uint32_t blockid_;
       int32_t start_time_;
       int32_t status_;
-
-      ClonedBlock() :
-        blockid_(0), start_time_(0), status_(0)
-      {
-      }
     };
     #pragma pack()
 

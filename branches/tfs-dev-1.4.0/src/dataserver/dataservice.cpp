@@ -92,7 +92,7 @@ namespace tfs
       {
         snprintf(buf, 256, "server index in empty, invalid parameter");
       }
-      errmsg = buf;
+      errmsg.assign(buf);
       return iret;
     }
 
@@ -831,8 +831,7 @@ namespace tfs
       if (bret)
       {
         int32_t pcode = packet->getPCode();
-        TBSYS_LOG(DEBUG, "PCODE: %d", pcode);
-        int32_t ret = LOCAL_PACKET == pcode ? TFS_ERROR : common::TFS_SUCCESS;
+        int32_t ret = LOCAL_PACKET == pcode ? TFS_ERROR : TFS_SUCCESS;
         if (TFS_SUCCESS == ret)
         {
           switch (pcode)
@@ -879,7 +878,6 @@ namespace tfs
             case REMOVE_BLOCK_MESSAGE:
               ret = remove_block(dynamic_cast<RemoveBlockMessage*>(packet));
               break;
-
             case LIST_BLOCK_MESSAGE:
               ret = list_blocks(dynamic_cast<ListBlockMessage*>(packet));
               break;
@@ -912,6 +910,9 @@ namespace tfs
               break;
             case CLIENT_CMD_MESSAGE:
               ret = client_command(dynamic_cast<ClientCmdMessage*>(packet));
+              break;
+            case GET_DATASERVER_INFORMATION_MESSAGE:
+              ret = get_dataserver_information(dynamic_cast<BasePacket*>(packet));
               break;
             default:
               TBSYS_LOG(ERROR, "process packet pcode: %d\n", pcode);
@@ -2063,6 +2064,52 @@ namespace tfs
       return TFS_SUCCESS;
     }
 
+    int DataService::get_dataserver_information(common::BasePacket* packet)
+    {
+      int32_t iret = NULL != packet ? TFS_SUCCESS : TFS_ERROR; 
+      if (TFS_SUCCESS == iret)
+      {
+        GetDataServerInformationMessage* message = dynamic_cast<GetDataServerInformationMessage*>(packet);
+        
+        int32_t flag = message->get_flag();
+        char* tmp_data_buffer = NULL;
+        int32_t bit_map_len = 0;
+        int32_t set_count = 0;
+        data_management_.query_bit_map(flag, &tmp_data_buffer, bit_map_len, set_count);
+        GetDataServerInformationResponseMessage* reply_msg = new GetDataServerInformationResponseMessage();
+        char* data = reply_msg->alloc_data(bit_map_len);
+        if (NULL == data)
+        {
+          tbsys::gDeleteA(tmp_data_buffer);
+          tbsys::gDelete(reply_msg);
+          TBSYS_LOG(ERROR, "query bitmap. allocate memory fail. type: %d", flag);
+          iret = TFS_ERROR;
+        }
+        else
+        {
+          TBSYS_LOG(DEBUG, "query bitmap. type: %d, bitmaplen: %u, setcount: %u", flag, bit_map_len, set_count);
+          memcpy(data, tmp_data_buffer, bit_map_len);
+          tbsys::gDeleteA(tmp_data_buffer);
+
+          SuperBlock block;
+          memset(&block, 0, sizeof(block));
+          iret = BlockFileManager::get_instance()->query_super_block(block);
+          if (TFS_SUCCESS == iret)
+          {
+            reply_msg->set_super_block(block);
+            reply_msg->set_dataserver_stat_info(data_server_info_);
+            iret = packet->reply(reply_msg);
+          }
+          else
+          {
+            tbsys::gDelete(reply_msg);
+            TBSYS_LOG(ERROR, "query super block information fail. ret: %d", iret);
+          }
+        }
+      }
+      return iret;
+    }
+
     // send blockinfos to dataserver
     void DataService::send_blocks_to_ns(const int32_t who)
     {
@@ -2256,5 +2303,6 @@ namespace tfs
       }
       return iret;
     }
+
   }
 }

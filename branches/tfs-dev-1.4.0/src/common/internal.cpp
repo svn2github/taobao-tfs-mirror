@@ -864,5 +864,265 @@ namespace tfs
     {
       return common::INT_SIZE * 3 + common::INT64_SIZE * 2;
     }
-  }
-}
+
+    int MMapOption::serialize(char* data, const int64_t data_len, int64_t& pos) const
+    {
+      int32_t iret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
+      if (TFS_SUCCESS == iret)
+      {
+        iret = Serialization::set_int32(data, data_len, pos, max_mmap_size_);
+      }
+      if (TFS_SUCCESS == iret)
+      {
+        iret = Serialization::set_int32(data, data_len, pos, first_mmap_size_);
+      }
+      if (TFS_SUCCESS == iret)
+      {
+        iret = Serialization::set_int32(data, data_len, pos, per_mmap_size_);
+      }
+      return iret;
+    }
+
+    int MMapOption::deserialize(const char* data, const int64_t data_len, int64_t& pos)
+    {
+      int32_t iret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
+      if (TFS_SUCCESS == iret)
+      {
+        iret = Serialization::get_int32(data, data_len, pos, &max_mmap_size_);
+      }
+      if (TFS_SUCCESS == iret)
+      {
+        iret = Serialization::get_int32(data, data_len, pos, &first_mmap_size_);
+      }
+      if (TFS_SUCCESS == iret)
+      {
+        iret = Serialization::get_int32(data, data_len, pos, &per_mmap_size_);
+      }
+      return iret;
+    }
+
+    int64_t MMapOption::length() const
+    {
+      return INT_SIZE * 3;
+    }
+
+    int SuperBlock::serialize(char* data, const int64_t data_len, int64_t& pos) const
+    {
+      int32_t iret = NULL != data && data_len - pos >= length() ? common::TFS_SUCCESS : common::TFS_ERROR;
+      if (common::TFS_SUCCESS == iret)
+      {
+        iret = common::Serialization::set_int32(data, data_len, pos, MAX_DEV_TAG_LEN);
+      }
+      if (common::TFS_SUCCESS == iret)
+      {
+        iret = common::Serialization::set_bytes(data, data_len, pos, mount_tag_, MAX_DEV_TAG_LEN);
+      }
+      if (common::TFS_SUCCESS == iret)
+      {
+        iret = common::Serialization::set_int32(data, data_len, pos, time_);
+      }
+      if (common::TFS_SUCCESS == iret)
+      {
+        iret = common::Serialization::set_int32(data, data_len, pos, common::MAX_DEV_NAME_LEN);
+      }
+      if (common::TFS_SUCCESS == iret)
+      {
+        iret = common::Serialization::set_bytes(data, data_len, pos, mount_point_, MAX_DEV_TAG_LEN);
+      }
+      if (common::TFS_SUCCESS == iret)
+      {
+        iret = common::Serialization::set_int64(data, data_len, pos, mount_point_use_space_);
+      }
+      if (common::TFS_SUCCESS == iret)
+      {
+        iret = common::Serialization::set_int32(data, data_len, pos, base_fs_type_);
+      }
+      if (common::TFS_SUCCESS == iret)
+      {
+        iret = common::Serialization::set_int32(data, data_len, pos, superblock_reserve_offset_);
+      }
+      if (common::TFS_SUCCESS == iret)
+      {
+        iret = common::Serialization::set_int32(data, data_len, pos, bitmap_start_offset_);
+      }
+      if (common::TFS_SUCCESS == iret)
+      {
+        iret = common::Serialization::set_int32(data, data_len, pos, avg_segment_size_);
+      }
+      if (common::TFS_SUCCESS == iret)
+      {
+        iret = common::Serialization::set_int32(data, data_len, pos, static_cast<int32_t>(block_type_ratio_));
+      }
+      if (common::TFS_SUCCESS == iret)
+      {
+        iret = common::Serialization::set_int32(data, data_len, pos, main_block_count_);
+      }
+      if (common::TFS_SUCCESS == iret)
+      {
+        iret = common::Serialization::set_int32(data, data_len, pos, main_block_size_);
+      }
+      if (common::TFS_SUCCESS == iret)
+      {
+        iret = common::Serialization::set_int32(data, data_len, pos, extend_block_count_);
+      }
+      if (common::TFS_SUCCESS == iret)
+      {
+        iret = common::Serialization::set_int32(data, data_len, pos, extend_block_size_);
+      }
+      if (common::TFS_SUCCESS == iret)
+      {
+        iret = common::Serialization::set_int32(data, data_len, pos, used_block_count_);
+      }
+      if (common::TFS_SUCCESS == iret)
+      {
+        iret = common::Serialization::set_int32(data, data_len, pos, used_extend_block_count_);
+      }
+      if (common::TFS_SUCCESS == iret)
+      {
+        iret = common::Serialization::set_int32(data, data_len, pos, static_cast<int32_t>(hash_slot_ratio_));
+      }
+      if (common::TFS_SUCCESS == iret)
+      {
+        iret = common::Serialization::set_int32(data, data_len, pos, hash_slot_size_);
+      }
+      if (common::TFS_SUCCESS == iret)
+      {
+        iret = mmap_option_.serialize(data, data_len, pos);
+      }
+      if (common::TFS_SUCCESS == iret)
+      {
+        iret = common::Serialization::set_int32(data, data_len, pos, version_);
+      }
+      return iret;
+    }
+
+    int SuperBlock::deserialize(const char* data, const int64_t data_len, int64_t& pos)
+    {
+      int32_t iret = NULL != data && data_len - pos >= length() ? common::TFS_SUCCESS : common::TFS_ERROR;
+      int32_t str_length = 0;
+      if (common::TFS_SUCCESS == iret)
+      {
+        iret = common::Serialization::get_int32(data, data_len, pos, &str_length);
+      }
+      if (common::TFS_SUCCESS == iret)
+      {
+        iret = str_length > 0 && str_length <= common::MAX_DEV_NAME_LEN ? common::TFS_SUCCESS : common::TFS_ERROR;
+        if (common::TFS_SUCCESS == iret)
+        {
+          iret = common::Serialization::get_bytes(data, data_len, pos, mount_tag_, str_length);
+        }
+      }
+      if (common::TFS_SUCCESS == iret)
+      {
+        iret = common::Serialization::get_int32(data, data_len, pos, &time_);
+      }
+      if (common::TFS_SUCCESS == iret)
+      {
+        str_length = 0;
+        iret = common::Serialization::get_int32(data, data_len, pos, &str_length);
+      }
+
+      if (common::TFS_SUCCESS == iret)
+      {
+        iret = str_length > 0 && str_length <= common::MAX_DEV_NAME_LEN ? common::TFS_SUCCESS : common::TFS_ERROR;
+        if (common::TFS_SUCCESS == iret)
+        {
+          iret = common::Serialization::get_bytes(data, data_len, pos, mount_point_, str_length);
+        }
+      }
+      if (common::TFS_SUCCESS == iret)
+      {
+        iret = common::Serialization::get_int64(data, data_len, pos, &mount_point_use_space_);
+      }
+      if (common::TFS_SUCCESS == iret)
+      {
+        iret = common::Serialization::get_int32(data, data_len, pos, reinterpret_cast<int32_t*>(&base_fs_type_));
+      }
+      if (common::TFS_SUCCESS == iret)
+      {
+        iret = common::Serialization::get_int32(data, data_len, pos, &superblock_reserve_offset_);
+      }
+      if (common::TFS_SUCCESS == iret)
+      {
+        iret = common::Serialization::get_int32(data, data_len, pos, &bitmap_start_offset_);
+      }
+      if (common::TFS_SUCCESS == iret)
+      {
+        iret = common::Serialization::get_int32(data, data_len, pos, &avg_segment_size_);
+      }
+      if (common::TFS_SUCCESS == iret)
+      {
+        iret = common::Serialization::get_int32(data, data_len, pos, reinterpret_cast<int32_t*>(&block_type_ratio_));
+      }
+      if (common::TFS_SUCCESS == iret)
+      {
+        iret = common::Serialization::get_int32(data, data_len, pos, &main_block_count_);
+      }
+      if (common::TFS_SUCCESS == iret)
+      {
+        iret = common::Serialization::get_int32(data, data_len, pos, &main_block_size_);
+      }
+      if (common::TFS_SUCCESS == iret)
+      {
+        iret = common::Serialization::get_int32(data, data_len, pos, &extend_block_count_);
+      }
+      if (common::TFS_SUCCESS == iret)
+      {
+        iret = common::Serialization::get_int32(data, data_len, pos, &extend_block_size_);
+      }
+      if (common::TFS_SUCCESS == iret)
+      {
+        iret = common::Serialization::get_int32(data, data_len, pos, &used_block_count_);
+      }
+      if (common::TFS_SUCCESS == iret)
+      {
+        iret = common::Serialization::get_int32(data, data_len, pos, &used_extend_block_count_);
+      }
+      if (common::TFS_SUCCESS == iret)
+      {
+        iret = common::Serialization::get_int32(data, data_len, pos, reinterpret_cast<int32_t*>(&hash_slot_ratio_));
+      }
+      if (common::TFS_SUCCESS == iret)
+      {
+        iret = common::Serialization::get_int32(data, data_len, pos, &hash_slot_size_);
+      }
+      if (common::TFS_SUCCESS == iret)
+      {
+        iret = mmap_option_.deserialize(data, data_len, pos);
+      }
+      if (common::TFS_SUCCESS == iret)
+      {
+        iret = common::Serialization::get_int32(data, data_len, pos, &version_);
+      }
+      return iret;
+    }
+    int64_t SuperBlock::length() const
+    {
+      return 17 * common::INT_SIZE + common::INT64_SIZE + MAX_DEV_TAG_LEN * 2 + mmap_option_.length();
+    }
+    void SuperBlock::display() const
+    {
+      std::cout << "tag " << mount_tag_ << std::endl;
+      std::cout << "mount time " << time_ << std::endl;
+      std::cout << "mount desc " << mount_point_ << std::endl;
+      std::cout << "max use space " << mount_point_use_space_ << std::endl;
+      std::cout << "base filesystem " << base_fs_type_ << std::endl;
+      std::cout << "superblock reserve " << superblock_reserve_offset_ << std::endl;
+      std::cout << "bitmap start offset " << bitmap_start_offset_ << std::endl;
+      std::cout << "avg inner file size " << avg_segment_size_ << std::endl;
+      std::cout << "block type ratio " << block_type_ratio_ << std::endl;
+      std::cout << "main block count " << main_block_count_ << std::endl;
+      std::cout << "main block size " << main_block_size_ << std::endl;
+      std::cout << "extend block count " << extend_block_count_ << std::endl;
+      std::cout << "extend block size " << extend_block_size_ << std::endl;
+      std::cout << "used main block count " << used_block_count_ << std::endl;
+      std::cout << "used extend block count " << used_extend_block_count_ << std::endl;
+      std::cout << "hash slot ratio " << hash_slot_ratio_ << std::endl;
+      std::cout << "hash slot size " << hash_slot_size_ << std::endl;
+      std::cout << "first mmap size " << mmap_option_.first_mmap_size_ << std::endl;
+      std::cout << "mmap size step " << mmap_option_.per_mmap_size_ << std::endl;
+      std::cout << "max mmap size " << mmap_option_.max_mmap_size_ << std::endl;
+      std::cout << "version " << version_ << std::endl;
+    }
+  } /** nameserver **/
+}/** tfs **/
