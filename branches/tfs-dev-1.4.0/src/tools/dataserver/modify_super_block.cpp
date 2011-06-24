@@ -15,10 +15,10 @@
  *      - modify 2010-03-20
  *
  */
+#include "common/internal.h"
 #include "dataserver/blockfile_manager.h"
 #include "common/parameter.h"
 #include "dataserver/version.h"
-#include "dataserver/superblock.h"
 #include <stdio.h>
 
 using namespace tfs::common;

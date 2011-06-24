@@ -210,6 +210,12 @@ namespace tfs
           case common::REQ_RC_RELOAD_MESSAGE:
             packet = new ReqRcReloadMessage();
             break;
+          case common::GET_DATASERVER_INFORMATION_MESSAGE:
+            packet = new GetDataServerInformationMessage();
+            break;
+          case common::GET_DATASERVER_INFORMATION_RESPONSE_MESSAGE:
+            packet = new GetDataServerInformationResponseMessage();
+            break;
           default:
             TBSYS_LOG(ERROR, "pcode: %d not found in message factory", real_pcode);
             break;
