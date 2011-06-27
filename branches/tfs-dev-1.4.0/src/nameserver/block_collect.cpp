@@ -65,6 +65,7 @@ namespace nameserver
       {
         assert(hold_[0] != NULL);
         hold_[0]->remove_master(this);
+        in_master_set_ = BLOCK_IN_MASTER_SET_YES;
       }
       if (can_be_master || force)
       {
@@ -117,12 +118,16 @@ namespace nameserver
           hold_master_ = HOLD_MASTER_FLAG_NO;
           if (remove)
           {
+            in_master_set_ = BLOCK_IN_MASTER_SET_YES;
             server->remove_master(this);
           }
         }
         if (remove)
         {
-          server->remove_writable(this);
+          if (is_full())
+          {
+            server->remove_writable(this);
+          }
         }
 
         TBSYS_LOG(DEBUG, "block: %u remove server: %s, hold_master: %d", 
@@ -172,10 +177,10 @@ namespace nameserver
 
   bool BlockCollect::is_writable() const
   {
-    bool bret = ((!is_full())
+    return ((!is_full())
         && (hold_master_ == HOLD_MASTER_FLAG_YES)
         && (static_cast<int32_t>(hold_.size()) >= common::SYSPARAM_NAMESERVER.min_replication_));
-    if (bret)
+    /*if (bret)
     {
       std::vector<ServerCollect*>::const_iterator iter = hold_.begin();
       for (; iter != hold_.end(); ++iter)
@@ -188,7 +193,7 @@ namespace nameserver
         }
       }
     }
-    return bret;
+    return bret;*/
   }
 
   bool BlockCollect::is_relieve_writable_relation() const
@@ -196,7 +201,7 @@ namespace nameserver
     bool bret = hold_.empty() 
       || is_full() 
       || (static_cast<int32_t>(hold_.size()) < SYSPARAM_NAMESERVER.min_replication_);
-    if (!bret)
+    /*if (!bret)
     {
       bool all_server_writable = true;
       std::vector<ServerCollect*>::const_iterator iter = hold_.begin();
@@ -211,7 +216,7 @@ namespace nameserver
       }
       bret = !all_server_writable;
       TBSYS_LOG(DEBUG,"we will check whether the relationship between lift write, is_full: %d, all_writable: %d, hold size: %u", is_full(), all_server_writable, hold_.size());
-    }
+    }*/
     return bret;
   }
 
@@ -223,7 +228,10 @@ namespace nameserver
       if (remove)
       {
         assert(*iter != NULL);
-        (*iter)->remove_writable(this);//remove block form server's writable_
+        if (is_full())
+        {
+          (*iter)->remove_writable(this);//remove block form server's writable_
+        }
       }
     }
 
@@ -234,6 +242,7 @@ namespace nameserver
       {
         assert (!hold_.empty());
         assert (hold_[0] != NULL);
+        in_master_set_ = BLOCK_IN_MASTER_SET_YES;
         hold_[0]->remove_master(this);
       }
     }

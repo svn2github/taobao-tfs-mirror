@@ -39,7 +39,7 @@ namespace tfs
       server_(server),
       MAX_LOOP_TIME(SYSPARAM_NAMESERVER.heart_interval_ * 1000 * 1000 / 2)
     {
-      int32_t percent_size = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_TASK_PRECENT_SEC_SIZE, 1);
+      int32_t percent_size = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_TASK_PRECENT_SEC_SIZE, 200);
       owner_check_time_ = (server_->get_work_queue_size() * percent_size) * 1000;//us
       max_owner_check_time_ = owner_check_time_ * 4;//us
       TBSYS_LOG(INFO, "owner_check_time: %"PRI64_PREFIX"d(us), max_owner_check_time: %"PRI64_PREFIX"u(us)",

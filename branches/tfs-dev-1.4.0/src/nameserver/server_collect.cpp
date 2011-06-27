@@ -197,13 +197,13 @@ namespace tfs
       {
         BlockChunkPtr ptr = manager.get_chunk((*iter)->id());
         RWLock::Lock lock(*ptr, WRITE_LOCKER);
-        BlockCollect* block_collect = (*iter);
+        BlockCollect* block= (*iter);
         //unwrite block if not enough dataserver relate it
-        bool bret = block_collect->remove(this, now, remove);
+        bool bret = block->remove(this, now, remove);
         if (!bret)
         {
           TBSYS_LOG(ERROR, "failed when relieve between block: %u and dataserver: %s",
-              block_collect->id(), CNetUtil::addrToString(id()).c_str());
+              block->id(), CNetUtil::addrToString(id()).c_str());
         }
       }
       return true;
