@@ -41,6 +41,7 @@ namespace tfs
       return common::INT16_SIZE;
     }
     GetDataServerInformationResponseMessage::GetDataServerInformationResponseMessage():
+      bit_map_element_count_(0),
       data_length_(0),
       data_(NULL),
       flag_(0),
@@ -70,6 +71,10 @@ namespace tfs
       }
       if (common::TFS_SUCCESS == iret)
       {
+        iret = output.set_int32(bit_map_element_count_);
+      }
+      if (common::TFS_SUCCESS == iret)
+      {
         iret = output.set_int32(data_length_); 
         if (common::TFS_SUCCESS == iret)
         {
@@ -94,6 +99,10 @@ namespace tfs
       }
       if (common::TFS_SUCCESS == iret)
       {
+        iret = input.get_int32(&bit_map_element_count_);
+      }
+      if (common::TFS_SUCCESS == iret)
+      {
         iret = input.get_int32(&data_length_);
         if (common::TFS_SUCCESS == iret)
         {
@@ -108,7 +117,7 @@ namespace tfs
 
     int64_t GetDataServerInformationResponseMessage::length() const
     {
-      return sblock_.length() + info_.length() + common::INT16_SIZE + common::INT_SIZE + data_length_;
+      return sblock_.length() + info_.length() + common::INT16_SIZE + common::INT_SIZE * 2 + data_length_;
     }
 
     char* GetDataServerInformationResponseMessage::alloc_data(const int64_t length)

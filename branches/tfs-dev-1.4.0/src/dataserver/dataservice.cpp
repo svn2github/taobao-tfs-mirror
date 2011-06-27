@@ -2070,13 +2070,12 @@ namespace tfs
       if (TFS_SUCCESS == iret)
       {
         GetDataServerInformationMessage* message = dynamic_cast<GetDataServerInformationMessage*>(packet);
-        
+        GetDataServerInformationResponseMessage* reply_msg = new GetDataServerInformationResponseMessage();
         int32_t flag = message->get_flag();
         char* tmp_data_buffer = NULL;
         int32_t bit_map_len = 0;
-        int32_t set_count = 0;
+        int32_t& set_count = reply_msg->get_bit_map_element_count();
         data_management_.query_bit_map(flag, &tmp_data_buffer, bit_map_len, set_count);
-        GetDataServerInformationResponseMessage* reply_msg = new GetDataServerInformationResponseMessage();
         char* data = reply_msg->alloc_data(bit_map_len);
         if (NULL == data)
         {

@@ -49,6 +49,8 @@ namespace tfs
         const common::SuperBlock& get_super_block() const { return sblock_;}
         const common::DataServerStatInfo& get_dataserver_stat_info() const { return info_;}
 
+        int32_t& get_bit_map_element_count() {return  bit_map_element_count_;}
+
         char* get_data() const { return data_;}
 
         char* alloc_data(const int64_t length);
@@ -56,6 +58,7 @@ namespace tfs
       protected:
         common::SuperBlock sblock_;
         common::DataServerStatInfo info_;
+        int32_t bit_map_element_count_;
         int32_t data_length_;
         char* data_;
         int16_t flag_;
