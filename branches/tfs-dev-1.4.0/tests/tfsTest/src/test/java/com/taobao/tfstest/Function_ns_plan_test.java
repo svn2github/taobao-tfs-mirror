@@ -363,7 +363,7 @@ public class Function_ns_plan_test extends NameServerPlanTestCase {
 		Assert.assertTrue(bRet);	
 		
 		/* Check previous plan's priority */
-		bRet = checkPreviousPlanIsEmergency(PLAN_CHK_NUM, BLOCK_CHK_TIME);
+		bRet = chkPreviousPlanIsEmergency(PLAN_CHK_NUM, BLOCK_CHK_TIME);
 		Assert.assertTrue(bRet);
 		
 		log.info(caseName + "===> end");
@@ -420,7 +420,7 @@ public class Function_ns_plan_test extends NameServerPlanTestCase {
 		Assert.assertTrue(bRet);	
 		
 		/* Check previous plan's priority */
-		bRet = checkPreviousPlanIsEmergency(PLAN_CHK_NUM, BLOCK_CHK_TIME);
+		bRet = chkPreviousPlanIsEmergency(PLAN_CHK_NUM, BLOCK_CHK_TIME);
 		Assert.assertTrue(bRet);
 		
 		log.info(caseName + "===> end");
@@ -477,7 +477,7 @@ public class Function_ns_plan_test extends NameServerPlanTestCase {
 		Assert.assertTrue(bRet);
 		
 		/* Check previous plan's priority */
-		bRet = checkPreviousPlanIsEmergency(PLAN_CHK_NUM, BLOCK_CHK_TIME);
+		bRet = chkPreviousPlanIsEmergency(PLAN_CHK_NUM, BLOCK_CHK_TIME);
 		Assert.assertTrue(bRet);
 		
 		log.info(caseName + "===> end");
@@ -553,7 +553,7 @@ public class Function_ns_plan_test extends NameServerPlanTestCase {
 		Assert.assertTrue(bRet);	
 		
 		/* Check previous plan's priority */
-		bRet = checkPreviousPlanIsEmergency(PLAN_CHK_NUM, BLOCK_CHK_TIME);
+		bRet = chkPreviousPlanIsEmergency(PLAN_CHK_NUM, BLOCK_CHK_TIME);
 		Assert.assertTrue(bRet);
 		
 		log.info(caseName + "===> end");
@@ -741,6 +741,9 @@ public class Function_ns_plan_test extends NameServerPlanTestCase {
 		/* Set unlink ratio */
 		bRet = setUnlinkRatio(0);
 		Assert.assertTrue(bRet);
+
+		/* Wait */
+		sleep(60);	
 		
 		/* Get the block num hold by each ds before write */
 		HashMap<String, Integer> blockDisBefore = new HashMap<String, Integer>();
@@ -763,7 +766,7 @@ public class Function_ns_plan_test extends NameServerPlanTestCase {
 		Assert.assertTrue(bRet);
 		
 		/* Check the rate of write process */
-		bRet = checkRateEnd(SUCCESSRATE, WRITEONLY|READ|UNLINK);
+		bRet = checkRateEnd(SUCCESSRATE, WRITEONLY);
 		Assert.assertTrue(bRet);
 
 		/* Wait for completion of replication */
@@ -773,7 +776,7 @@ public class Function_ns_plan_test extends NameServerPlanTestCase {
 		Assert.assertTrue(bRet);
 
 		/* Check network traffic balance */
-		bRet = checkNetworkTrafBalance();
+		bRet = chkNetworkTrafBalance();
 		Assert.assertTrue(bRet);
 		
 		/* Get the block num hold by each ds after write */
