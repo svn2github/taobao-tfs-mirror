@@ -36,24 +36,29 @@ namespace tfs
 
     void NewClientManager::destroy()
     {
-      tbutil::Mutex::Lock lock(mutex_);
-      if (own_transport_)
-      {
-        transport_->stop();
-        transport_->wait();
-        tbsys::gDelete(transport_);
-      }
-      tbsys::gDelete(connmgr_);
+      mutex_.lock();
+      bool initialize = initialize_;
       initialize_ = false;
-
-      NEWCLIENT_MAP_ITER iter = new_clients_.begin();
-      for (; iter != new_clients_.end(); ++iter)
+      mutex_.unlock();
+      
+      if (initialize)
       {
-        free_new_client_object(iter->second);
-      }
-      new_clients_.clear();
-    }
+        if (own_transport_)
+        {
+          transport_->stop();
+          transport_->wait();
+          tbsys::gDelete(transport_);
+        }
+        tbsys::gDelete(connmgr_);
 
+        NEWCLIENT_MAP_ITER iter = new_clients_.begin();
+        for (; iter != new_clients_.end(); ++iter)
+        {
+          free_new_client_object(iter->second);
+        }
+        new_clients_.clear();
+      }
+    }
 
     int NewClientManager::initialize(BasePacketFactory* factory, BasePacketStreamer* streamer,
                    tbnet::Transport* transport, async_callback_func_entry entry,
