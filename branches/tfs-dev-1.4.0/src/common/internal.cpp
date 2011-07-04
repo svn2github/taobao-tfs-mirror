@@ -927,7 +927,7 @@ namespace tfs
       }
       if (common::TFS_SUCCESS == iret)
       {
-        iret = common::Serialization::set_bytes(data, data_len, pos, mount_point_, MAX_DEV_TAG_LEN);
+        iret = common::Serialization::set_bytes(data, data_len, pos, mount_point_, MAX_DEV_NAME_LEN);
       }
       if (common::TFS_SUCCESS == iret)
       {
@@ -1098,7 +1098,7 @@ namespace tfs
     }
     int64_t SuperBlock::length() const
     {
-      return 17 * common::INT_SIZE + common::INT64_SIZE + MAX_DEV_TAG_LEN * 2 + mmap_option_.length();
+      return 17 * common::INT_SIZE + common::INT64_SIZE + MAX_DEV_TAG_LEN + MAX_DEV_NAME_LEN + mmap_option_.length();
     }
     void SuperBlock::display() const
     {
