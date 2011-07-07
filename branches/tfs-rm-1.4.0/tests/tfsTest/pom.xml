@@ -23,6 +23,7 @@
 				<version>2.7</version>
 				<configuration>
 					<includes>
+						<include>**/Failover_ha_test.java</include>
 						<include>**/Function_ns_test.java</include>
 					</includes>
 				</configuration>

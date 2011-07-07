@@ -247,7 +247,7 @@ namespace tfs
       int32_t size = file_info_.id_ > 0 ? file_info_.length() : 0;
       if (common::TFS_SUCCESS == iret)
       {
-        iret = output.set_int32(file_info_.length());
+        iret = output.set_int32(size);
       }
       if (common::TFS_SUCCESS == iret)
       {

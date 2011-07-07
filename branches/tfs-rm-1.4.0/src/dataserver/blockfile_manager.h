@@ -61,7 +61,7 @@ namespace tfs
         int get_all_physic_block(std::list<PhysicalBlock*>& physic_block_list);
 
         //status info
-        int query_super_block(SuperBlock& super_block_info);
+        int query_super_block(common::SuperBlock& super_block_info);
         int query_approx_block_count(int32_t& block_count) const;
         int query_bit_map(char** bit_map_buffer, int32_t& bit_map_len, int32_t& set_count, const BitMapType bitmap_type =
             C_ALLOCATE_BLOCK);
@@ -116,7 +116,7 @@ namespace tfs
         int bit_map_size_;      // bitmap size
         BitMap* normal_bit_map_; // normal bitmap
         BitMap* error_bit_map_;  // error bitmap
-        SuperBlock super_block_; // super block
+        common::SuperBlock super_block_; // super block
         SuperBlockImpl* super_block_impl_; // super block implementation handle
         common::RWLock rw_lock_;           // read-write lock
     };

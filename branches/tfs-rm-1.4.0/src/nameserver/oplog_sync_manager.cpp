@@ -661,73 +661,77 @@ namespace tfs
       if (iret != TFS_SUCCESS)
       {
         TBSYS_LOG(DEBUG, "load header file of file_queue errors: %s", strerror(errno));
-        return iret;
       }
-      OpLogRotateHeader head = *oplog_->get_oplog_rotate_header();
-      QueueInformationHeader* qhead = file_queue_->get_queue_information_header();
-      QueueInformationHeader tmp = *qhead;
-      TBSYS_LOG(DEBUG, "befor load queue header: read seqno: %d, read offset: %d, write seqno: %d,"
-        "write file size: %d, queue size: %d. oplog header:, rotate seqno: %d"
-        "rotate offset: %d", qhead->read_seqno_, qhead->read_offset_, qhead->write_seqno_, qhead->write_filesize_,
-          qhead->queue_size_, head.rotate_seqno_, head.rotate_offset_);
-      if (qhead->read_seqno_ > 0x01 && qhead->write_seqno_ > 0x01 && head.rotate_seqno_ > 0)
+      else
       {
-        has_log = true;
-        if (tmp.read_seqno_ <= head.rotate_seqno_)
+        OpLogRotateHeader head = *oplog_->get_oplog_rotate_header();
+        QueueInformationHeader* qhead = file_queue_->get_queue_information_header();
+        QueueInformationHeader tmp = *qhead;
+        TBSYS_LOG(DEBUG, "befor load queue header: read seqno: %d, read offset: %d, write seqno: %d,"
+          "write file size: %d, queue size: %d. oplog header:, rotate seqno: %d"
+          "rotate offset: %d", qhead->read_seqno_, qhead->read_offset_, qhead->write_seqno_, qhead->write_filesize_,
+            qhead->queue_size_, head.rotate_seqno_, head.rotate_offset_);
+        if (qhead->read_seqno_ > 0x01 && qhead->write_seqno_ > 0x01 && head.rotate_seqno_ > 0)
         {
-          tmp.read_seqno_ = head.rotate_seqno_;
-          if (tmp.read_seqno_ == head.rotate_seqno_)
-            tmp.read_offset_ = head.rotate_offset_;
-          file_queue_->update_queue_information_header(&tmp);
-        }
-      }
-      TBSYS_LOG(DEBUG, "after load queue header: read seqno: %d, read offset: %d, write seqno: %d,"
-        "write file size: %d, queue size: %d. oplog header:, rotate seqno: %d"
-        "rotate offset: %d", qhead->read_seqno_, qhead->read_offset_, qhead->write_seqno_, qhead->write_filesize_,
-          qhead->queue_size_, head.rotate_seqno_, head.rotate_offset_);
-
-      iret = file_queue_->initialize();
-      if (iret != TFS_SUCCESS)
-      {
-        TBSYS_LOG(DEBUG, "call FileQueue::finishSetup errors: %s", strerror(errno));
-        return iret;
-      }
-
-      if (has_log)
-      {
-        time_t now = time(NULL);
-        int64_t length = 0;
-        int64_t offset = 0;
-        int32_t iret = TFS_SUCCESS;
-        do
-        {
-          QueueItem* item = file_queue_->pop();
-          if (item != NULL)
+          has_log = true;
+          if (tmp.read_seqno_ <= head.rotate_seqno_)
           {
-            const char* const data = item->data_;
-            length = item->length_;
-            offset = 0;
-            OpLogHeader header;
-            do
-            {
-              iret = replay_helper(data, length, offset, now);
-              if ((iret != TFS_SUCCESS)
-                  && (iret != EXIT_PLAY_LOG_ERROR))
-              {
-                break;
-              }
-            }
-            while ((length > header.length())
-                    && (length > offset)
-                    && (GFactory::get_runtime_info().destroy_flag_!= NS_DESTROY_FLAGS_YES));
-            free(item);
-            item = NULL;
+            tmp.read_seqno_ = head.rotate_seqno_;
+            if (tmp.read_seqno_ == head.rotate_seqno_)
+              tmp.read_offset_ = head.rotate_offset_;
+            file_queue_->update_queue_information_header(&tmp);
           }
         }
-        while ((qhead->read_seqno_ != qhead->write_seqno_) || ((qhead->read_seqno_ == qhead->write_seqno_)
-            && (qhead->read_offset_ != qhead->write_filesize_)) && (GFactory::get_runtime_info().destroy_flag_ != NS_DESTROY_FLAGS_YES));
+        TBSYS_LOG(DEBUG, "after load queue header: read seqno: %d, read offset: %d, write seqno: %d,"
+          "write file size: %d, queue size: %d. oplog header:, rotate seqno: %d"
+          "rotate offset: %d", qhead->read_seqno_, qhead->read_offset_, qhead->write_seqno_, qhead->write_filesize_,
+            qhead->queue_size_, head.rotate_seqno_, head.rotate_offset_);
+
+        iret = file_queue_->initialize();
+        if (iret != TFS_SUCCESS)
+        {
+          TBSYS_LOG(DEBUG, "call FileQueue::finishSetup errors: %s", strerror(errno));
+        }
+        else
+        {
+          if (has_log)
+          {
+            time_t now = time(NULL);
+            int64_t length = 0;
+            int64_t offset = 0;
+            int32_t iret = TFS_SUCCESS;
+            do
+            {
+              QueueItem* item = file_queue_->pop();
+              if (item != NULL)
+              {
+                const char* const data = item->data_;
+                length = item->length_;
+                offset = 0;
+                OpLogHeader header;
+                do
+                {
+                  iret = replay_helper(data, length, offset, now);
+                  if ((iret != TFS_SUCCESS)
+                      && (iret != EXIT_PLAY_LOG_ERROR))
+                  {
+                    break;
+                  }
+                }
+                while ((length > header.length())
+                        && (length > offset)
+                        && (GFactory::get_runtime_info().destroy_flag_!= NS_DESTROY_FLAGS_YES));
+                free(item);
+                item = NULL;
+              }
+            }
+            while (((qhead->read_seqno_ < qhead->write_seqno_) 
+                  || ((qhead->read_seqno_ == qhead->write_seqno_) && (qhead->read_offset_ != qhead->write_filesize_))) 
+                 && (GFactory::get_runtime_info().destroy_flag_ != NS_DESTROY_FLAGS_YES));
+          }
+        }
       }
-      return TFS_SUCCESS;
+      return iret;
     }
   }//end namespace nameserver
 }//end namespace tfs

@@ -39,6 +39,7 @@
 #include "admin_cmd_message.h"
 #include "dump_plan_message.h"
 #include "rc_session_message.h"
+#include "get_dataserver_information_message.h"
 
 namespace tfs
 {

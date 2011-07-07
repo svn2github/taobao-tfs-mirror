@@ -363,7 +363,7 @@ public class Function_ns_plan_test extends NameServerPlanTestCase {
 		Assert.assertTrue(bRet);	
 		
 		/* Check previous plan's priority */
-		bRet = checkPreviousPlanIsEmergency(PLAN_CHK_NUM, BLOCK_CHK_TIME);
+		bRet = chkPreviousPlanIsEmergency(PLAN_CHK_NUM, BLOCK_CHK_TIME);
 		Assert.assertTrue(bRet);
 		
 		log.info(caseName + "===> end");
@@ -420,7 +420,7 @@ public class Function_ns_plan_test extends NameServerPlanTestCase {
 		Assert.assertTrue(bRet);	
 		
 		/* Check previous plan's priority */
-		bRet = checkPreviousPlanIsEmergency(PLAN_CHK_NUM, BLOCK_CHK_TIME);
+		bRet = chkPreviousPlanIsEmergency(PLAN_CHK_NUM, BLOCK_CHK_TIME);
 		Assert.assertTrue(bRet);
 		
 		log.info(caseName + "===> end");
@@ -477,7 +477,7 @@ public class Function_ns_plan_test extends NameServerPlanTestCase {
 		Assert.assertTrue(bRet);
 		
 		/* Check previous plan's priority */
-		bRet = checkPreviousPlanIsEmergency(PLAN_CHK_NUM, BLOCK_CHK_TIME);
+		bRet = chkPreviousPlanIsEmergency(PLAN_CHK_NUM, BLOCK_CHK_TIME);
 		Assert.assertTrue(bRet);
 		
 		log.info(caseName + "===> end");
@@ -553,7 +553,7 @@ public class Function_ns_plan_test extends NameServerPlanTestCase {
 		Assert.assertTrue(bRet);	
 		
 		/* Check previous plan's priority */
-		bRet = checkPreviousPlanIsEmergency(PLAN_CHK_NUM, BLOCK_CHK_TIME);
+		bRet = chkPreviousPlanIsEmergency(PLAN_CHK_NUM, BLOCK_CHK_TIME);
 		Assert.assertTrue(bRet);
 		
 		log.info(caseName + "===> end");
@@ -741,6 +741,9 @@ public class Function_ns_plan_test extends NameServerPlanTestCase {
 		/* Set unlink ratio */
 		bRet = setUnlinkRatio(0);
 		Assert.assertTrue(bRet);
+
+		/* Wait */
+		sleep(60);	
 		
 		/* Get the block num hold by each ds before write */
 		HashMap<String, Integer> blockDisBefore = new HashMap<String, Integer>();
@@ -752,18 +755,18 @@ public class Function_ns_plan_test extends NameServerPlanTestCase {
 		Assert.assertTrue(bRet);
 		
 		/* Start sar to account network traffic */
-		bRet = networkTrafMonStart(SAMPLE_INTERVAL, WRITE_TIME/SAMPLE_INTERVAL);
+		bRet = networkTrafMonStart(SAMPLE_INTERVAL, TEST_TIME/SAMPLE_INTERVAL);
 		Assert.assertTrue(bRet);
 	
 		/* Wait */
-		sleep(WRITE_TIME);	
+		sleep(TEST_TIME);	
 		
 		/* Stop write cmd */
 		bRet = writeCmdStop();
 		Assert.assertTrue(bRet);
 		
 		/* Check the rate of write process */
-		bRet = checkRateEnd(SUCCESSRATE, WRITEONLY|READ|UNLINK);
+		bRet = checkRateEnd(SUCCESSRATE, WRITEONLY);
 		Assert.assertTrue(bRet);
 
 		/* Wait for completion of replication */
@@ -773,7 +776,7 @@ public class Function_ns_plan_test extends NameServerPlanTestCase {
 		Assert.assertTrue(bRet);
 
 		/* Check network traffic balance */
-		bRet = checkNetworkTrafBalance();
+		bRet = chkNetworkTrafBalance("eth0", RXBYTPERSEC_SD_COL);
 		Assert.assertTrue(bRet);
 		
 		/* Get the block num hold by each ds after write */
@@ -789,64 +792,37 @@ public class Function_ns_plan_test extends NameServerPlanTestCase {
 		return ;
 	}
 	
-	/* Call setNsConf @setUp to make sure min/maxReplication are configured as 2 & 3  */
-	public void Function_14_copy_2_3_rep_block(){
+	public void Function_14_check_read_network_traffic_balance(){
 		
 		boolean bRet = false;
-		caseName = "Function_14_copy_2_3_rep_block";
+		caseName = "Function_14_check_read_network_traffic_balance";
 		log.info(caseName + "===> start");
 		
 		/* Set loop flag */
-		bRet = setSeedFlag(LOOPON);
-		Assert.assertTrue(bRet);
-		
-		/* Set seed size */
-		bRet = setSeedSize(1);
-		Assert.assertTrue(bRet);
-		
-		/* Set unlink ratio */
-		bRet = setUnlinkRatio(0);
-		Assert.assertTrue(bRet);
-		
-		/* Write file */
-		bRet = writeCmd();
-		Assert.assertTrue(bRet);
-		
-		/* Check the rate of write process */
-		bRet = checkRateRun(SUCCESSRATE, WRITEONLY|READ|UNLINK);
-		Assert.assertTrue(bRet);
-		
-		/* Stop write cmd */
-		bRet = writeCmdStop();
-		Assert.assertTrue(bRet);
-		
-		/* Check block copys */
-		bRet = chkBlockCnt(BLOCK_CHK_TIME, 0);
-		Assert.assertTrue(bRet);
-		bRet = chkBlockCnt(BLOCK_CHK_TIME, 1);
-		Assert.assertTrue(bRet);	
-		
-		/* Kill one ds */
-		bRet = killOneDs();
-		Assert.assertTrue(bRet);
-		
-		/* Wait 10s for recover */
-		sleep (10);
-		
-		/* Check dump plan log */
-		bRet = checkPlan(PlanType.PLAN_TYPE_REPLICATE, BLOCK_CHK_TIME);
+		bRet = setReadFlag(LOOPON);
 		Assert.assertTrue(bRet);
 		
 		/* Read file */
 		bRet = readCmd();
 		Assert.assertTrue(bRet);
 		
-		/* Monitor the read process */
-		bRet = readCmdMon();
+		/* Start sar to account network traffic */
+		bRet = networkTrafMonStart(SAMPLE_INTERVAL, TEST_TIME/SAMPLE_INTERVAL);
 		Assert.assertTrue(bRet);
 		
-		/* Check rate */
+		/* Wait */
+		sleep(TEST_TIME);	
+		
+		/* Stop cmd */
+		bRet = readCmdStop();
+		Assert.assertTrue(bRet);
+		
+		/* Check the rate of write process */
 		bRet = checkRateEnd(SUCCESSRATE, READ);
+		Assert.assertTrue(bRet);
+
+		/* Check network traffic balance */
+		bRet = chkNetworkTrafBalance("eth0", TXBYTPERSEC_SD_COL);
 		Assert.assertTrue(bRet);
 		
 		log.info(caseName + "===> end");

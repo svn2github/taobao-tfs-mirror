@@ -148,12 +148,6 @@ namespace tfs
         iret = initialize_work_dir(argv[0]);
       }
 
-      //initialize log file
-      if (TFS_SUCCESS == iret)
-      {
-        iret = initialize_log_file(argv[0]);
-      }
-
       //initialize pid file
       if (TFS_SUCCESS == iret)
       {
@@ -161,6 +155,12 @@ namespace tfs
         {
           iret = initialize_pid_file(argv[0]);
         }
+      }
+
+      //initialize log file
+      if (TFS_SUCCESS == iret)
+      {
+        iret = initialize_log_file(argv[0]);
       }
 
       if (TFS_SUCCESS == iret)

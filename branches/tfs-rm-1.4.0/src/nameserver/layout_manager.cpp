@@ -1125,18 +1125,21 @@ namespace tfs
       BlockChunkPtr ptr = get_chunk(block_id);
       RWLock::Lock lock(*ptr, WRITE_LOCKER);
       BlockCollect* block = ptr->find(block_id);
-      int32_t iret = TFS_SUCCESS;
-      for (; iter != servers.end(); ++iter)
+      int32_t iret = NULL != block ? TFS_SUCCESS : TFS_ERROR;
+      if (TFS_SUCCESS == iret)
       {
-        iret = build_relation(block, (*iter), now);
-        if (iret != TFS_SUCCESS)
+        for (; iter != servers.end(); ++iter)
         {
-          TBSYS_LOG(WARN, "build relation fail between dataserver: %s and block: %u", CNetUtil::addrToString((*iter)->id()).c_str(), block->id());
-          break;
+          iret = build_relation(block, (*iter), now);
+          if (iret != TFS_SUCCESS)
+          {
+            TBSYS_LOG(WARN, "build relation fail between dataserver: %s and block: %u", CNetUtil::addrToString((*iter)->id()).c_str(), block->id());
+            break;
+          }
         }
+        //create new block complete
+        block->set_create_flag();
       }
-      //create new block complete
-      block->set_create_flag();
       return iret;
     }
 
@@ -1223,14 +1226,31 @@ namespace tfs
     BlockCollect* LayoutManager::add_new_block_helper_create_by_system(uint32_t& block_id, ServerCollect* server, time_t now)
     {
       BlockCollect* block = NULL;
-      int32_t iret = block_id != 0 ? TFS_ERROR : TFS_SUCCESS;
+      int32_t iret = block_id != 0 || alive_server_size_ <= 0 ? TFS_ERROR : TFS_SUCCESS;
       if (TFS_SUCCESS == iret)
       {
-        if (alive_server_size_ > 0)
+        std::vector<ServerCollect*> need;
+        if (server != NULL)
+        {
+          int64_t use_capacity = GFactory::get_global_info().use_capacity_ <= 0 ? alive_server_size_ : GFactory::get_global_info().use_capacity_;
+          if (server->is_writable(use_capacity/alive_server_size_))
+          {
+            need.push_back(server);
+          }
+        }
+        int32_t count = SYSPARAM_NAMESERVER.max_replication_ - need.size();
+        if (count > 0)
+        {
+          RWLock::Lock lock(server_mutex_, READ_LOCKER);
+          elect_write_server(*this, count, need);
+        }
+        iret = static_cast<int32_t>(need.size()) >= SYSPARAM_NAMESERVER.min_replication_ ? TFS_SUCCESS : TFS_ERROR; 
+        if (TFS_SUCCESS == iret)
         {
           BlockChunkPtr ptr = 0;
-          std::vector<ServerCollect*> need;
           block_id = get_alive_block_id();
+          iret = INVALID_BLOCK_ID == block_id ? TFS_ERROR : TFS_SUCCESS;
+          if (TFS_SUCCESS == iret)
           {
             //add block collect object
             ptr = get_chunk(block_id);
@@ -1246,51 +1266,28 @@ namespace tfs
               TBSYS_LOG(ERROR, "add new block: %u fail", block_id);
             }
           }
-
           if (TFS_SUCCESS == iret)//add block collect object successful
           {
-            if (server != NULL)
+            iret = add_new_block_helper_send_msg(block_id, need);
+            if (TFS_SUCCESS == iret)
             {
-              int64_t use_capacity = GFactory::get_global_info().use_capacity_ <= 0 ? alive_server_size_ : GFactory::get_global_info().use_capacity_;
-              if (server->is_writable(use_capacity/alive_server_size_))
-              {
-                need.push_back(server);
-              }
-            }
-            int32_t count = SYSPARAM_NAMESERVER.max_replication_ - need.size();
-            if (count > 0)
-            {
-              RWLock::Lock lock(server_mutex_, READ_LOCKER);
-              elect_write_server(*this, count, need);
-            }
-
-            if (need.empty())
-            {
-              iret = TFS_ERROR;
-              TBSYS_LOG(ERROR, "create new block: %u fail, dataserver is not enough", block_id);
-              RWLock::Lock lock(*ptr, WRITE_LOCKER);
-              ptr->remove(block_id);
-            }
-            else
-            {
-              iret = add_new_block_helper_send_msg(block_id, need);
+              //build relation
+              iret = add_new_block_helper_build_relation(block_id, need);
               if (TFS_SUCCESS == iret)
               {
-                //build relation
-                iret = add_new_block_helper_build_relation(block_id, need);
-                if (TFS_SUCCESS == iret)
-                {
-                  add_new_block_helper_write_log(block_id, need);
-                }
-              }//end send message to dataserver successful
-              else
+                add_new_block_helper_write_log(block_id, need);
+              }
+            }//end send message to dataserver successful
+            else
+            {
+              if (0 != ptr)
               {
                 RWLock::Lock lock(*ptr, WRITE_LOCKER);
                 ptr->remove(block_id);
               }
             }
-          }//end if(TFS_SUCCESS == iret), add block collect object successful
-        }//end if(alive_server_size > 0) check alive server size
+          }
+        }
       }//end if (TFS_SUCCESS == iret) check parameter
       return TFS_SUCCESS == iret ? block : NULL;
     }

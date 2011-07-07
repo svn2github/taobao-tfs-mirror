@@ -97,7 +97,7 @@ namespace tfs
         int pread_file(ParaInfo& m_meta_info, const int32_t size, const int64_t offset);
         int pwrite_file(const char* buf, const int32_t size, const int64_t offset);
 
-        int mmap_file(const MMapOption& mmap_option);
+        int mmap_file(const common::MMapOption& mmap_option);
         int munmap_file();
         void* get_map_data() const;
         int flush_file();

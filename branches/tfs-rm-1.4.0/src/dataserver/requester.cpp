@@ -73,9 +73,9 @@ namespace tfs
       NewClient* client = NewClientManager::get_instance().create_client();
       tbnet::Packet* return_msg = NULL;
       ret = send_msg_to_server(ns_ip_port_, client, &ub_msg, return_msg);
-      if (TFS_SUCCESS != ret || NULL == return_msg)
+      if (TFS_SUCCESS != ret)
       {
-        if (NULL != client) NewClientManager::get_instance().destroy_client(client);
+        NewClientManager::get_instance().destroy_client(client);
         return ret;
       }
       int need_expire = 0;
@@ -100,7 +100,7 @@ namespace tfs
       {
         TBSYS_LOG(ERROR,"unknow packet pcode: %d", return_msg->getPCode());
       }
-      if (NULL != client) NewClientManager::get_instance().destroy_client(client);
+      NewClientManager::get_instance().destroy_client(client);
 
       if (need_expire)
       {
@@ -150,10 +150,9 @@ namespace tfs
       ret = send_msg_to_server(ns_ip_port_, client, &bwc_msg, return_msg);
 
 
-      if (TFS_SUCCESS != ret || NULL == return_msg)
+      if (TFS_SUCCESS != ret)
       {
-        if (NULL != client)
-          NewClientManager::get_instance().destroy_client(client);
+        NewClientManager::get_instance().destroy_client(client);
         return ret;
       }
 

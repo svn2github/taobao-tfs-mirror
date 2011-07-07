@@ -34,7 +34,7 @@ namespace tfs
       public:
         MMapFile();
         explicit MMapFile(const int fd);
-        MMapFile(const MMapOption& mmap_option, const int fd);
+        MMapFile(const common::MMapOption& mmap_option, const int fd);
         ~MMapFile();
 
         bool sync_file();
@@ -51,7 +51,7 @@ namespace tfs
         int32_t size_;
         int fd_;
         void* data_;
-        MMapOption mmap_file_option_;
+        common::MMapOption mmap_file_option_;
     };
   }
 }

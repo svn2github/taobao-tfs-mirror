@@ -150,6 +150,8 @@ namespace tfs
         int reload_config(message::ReloadConfigMessage* message);
         void send_blocks_to_ns(const int32_t who);
 
+        int get_dataserver_information(common::BasePacket* packet);
+
       private:
         bool access_deny(common::BasePacket* message);
         void do_stat(const uint64_t peer_id,
