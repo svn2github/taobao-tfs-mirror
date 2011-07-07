@@ -62,7 +62,7 @@ public class FailOverBaseCase {
 	final public String TFS_HOME        = tfsGrid.getCluster(NSINDEX).getServer(0).getDir(); 
 	final public String TEST_HOME       = tfsSeedClient.getDir(); 
 	final public String TFS_LOG_HOME    = TFS_HOME + "/logs";
-	final public String TFS_BIN_HOME    = TFS_HOME + "/bin";
+	final public String TFS_BIN_HOME    = tfsGrid.getCluster(NSINDEX).getServer(0).getBinPath();
 	final public String DP_LOG_NAME     = TFS_LOG_HOME + "/dumpplan.log";
 	final public String BL_LOG_NAME     = TFS_LOG_HOME + "/blocklist.log";
 	final public String CURR_LOG_NAME   = "nameserver.log";	
@@ -1214,8 +1214,8 @@ public class FailOverBaseCase {
 		String vip = tfsGrid.getCluster(NSINDEX).getServer(0).getVip();
 		int port = tfsGrid.getCluster(NSINDEX).getServer(0).getPort();
 		ArrayList<String> listOut = new ArrayList<String>();
-		String cmd = "cd /home/admin/tfs/lib;" + "./ssm -s " + vip + ":" + port + " -i " + "\\\"block\\\" | grep \\\"" + iBlockCnt + "$\\\" | wc -l";
-		//String cmd = "cd /home/admin/tfs/lib; ls";
+		String cmd = "cd " + TFS_BIN_HOME + ";" + "./ssm -s " + vip + ":" + 
+			port + " -i " + "\\\"block\\\" | grep \\\"" + iBlockCnt + "$\\\" | wc -l";
 		
 		for (int iLoop = 0; iLoop < iTimes; iLoop ++)
 		{
@@ -1261,7 +1261,6 @@ public class FailOverBaseCase {
 		ArrayList<String> listOut = new ArrayList<String>();
 		int iLoop = 0;
 		String cmd = "";
-		//String cmd = "cd /home/admin/tfs/lib; ls";
 		
 		if (false == MASTERSER.isRun())
 		{
@@ -1271,7 +1270,8 @@ public class FailOverBaseCase {
 		{
 			/* Reset list */
 			listOut.clear();
-			cmd = "cd /home/admin/tfs/lib;" + "./ssm -s " + MASTERSER.getIp() + ":" + MASTERSER.getPort() + " -i " + "\\\"block\\\" | grep \\\"" + iBlockCnt + "$\\\" | wc -l";
+			cmd = "cd " + TFS_BIN_HOME + "; ./ssm -s " + MASTERSER.getIp() +
+				":" + MASTERSER.getPort() + " -i " + "\\\"block\\\" | grep \\\"" + iBlockCnt + "$\\\" | wc -l";
 			bRet = Proc.cmdOutBase(MASTERSER.getIp(), cmd, null, 1, null, listOut);
 			if (bRet == false) return bRet;
 			
@@ -1300,7 +1300,8 @@ public class FailOverBaseCase {
 		
 		/* Reset list */
 		listOut.clear();
-		cmd = "cd /home/admin/tfs/lib;" + "./ssm -s " + SLAVESER.getIp() + ":" + SLAVESER.getPort() + " -i " + "\\\"block\\\" | grep \\\"" + iBlockCnt + "$\\\" | wc -l";
+		cmd = "cd " + TFS_BIN_HOME + "; ./ssm -s " + SLAVESER.getIp() + 
+			":" + SLAVESER.getPort() + " -i " + "\\\"block\\\" | grep \\\"" + iBlockCnt + "$\\\" | wc -l";
 		bRet = Proc.cmdOutBase(SLAVESER.getIp(), cmd, null, 1, null, listOut);
 		if (bRet == false) return bRet;
 		
@@ -1340,7 +1341,6 @@ public class FailOverBaseCase {
 		ArrayList<String> listOut = new ArrayList<String>();
 		int iLoop = 0;
 		String cmd = "";
-		//String cmd = "cd /home/admin/tfs/lib; ls";
 		
 		if (false == MASTERSER.isRun())
 		{
@@ -1350,7 +1350,7 @@ public class FailOverBaseCase {
 		{
 			/* Reset list */
 			listOut.clear();
-			cmd = "cd /home/admin/tfs/lib;" + "./showssm -f ../conf/tfs.conf.09 -t 1 | grep \\\"" + iBlockCnt + "$\\\" | grep -v \\\"TOTAL\\\" | wc -l";
+			cmd = "cd " + TFS_BIN_HOME + "; ./showssm -f ../conf/tfs.conf.09 -t 1 | grep \\\"" + iBlockCnt + "$\\\" | grep -v \\\"TOTAL\\\" | wc -l";
 			bRet = Proc.cmdOutBase(MASTERSER.getIp(), cmd, null, 1, null, listOut);
 			if (bRet == false) return bRet;
 			
@@ -1379,7 +1379,7 @@ public class FailOverBaseCase {
 		
 		/* Reset list */
 		listOut.clear();
-		cmd = "cd /home/admin/tfs/lib;" + "./showssm -f ../conf/tfs.conf.10 -t 1 | grep \\\"" + iBlockCnt + "$\\\" | grep -v \\\"TOTAL\\\"| wc -l";
+		cmd = "cd " + TFS_BIN_HOME + "; ./showssm -f ../conf/tfs.conf.10 -t 1 | grep \\\"" + iBlockCnt + "$\\\" | grep -v \\\"TOTAL\\\"| wc -l";
 		bRet = Proc.cmdOutBase(SLAVESER.getIp(), cmd, null, 1, null, listOut);
 		if (bRet == false) return bRet;
 		
@@ -2040,7 +2040,8 @@ public class FailOverBaseCase {
 		boolean bRet = false;
 		ArrayList<String> listOut = new ArrayList<String>();
 		
-		String cmd = "cd /home/admin/tfs/lib;" + "./ssm -s " + ip + ":" + iPort + " -i " + "\\\"block\\\" | grep \\\"" + iBlockCnt + "$\\\" | wc -l";
+		String cmd = "cd " + TFS_BIN_HOME + "; ./ssm -s " + ip + ":" + 
+			iPort + " -i " + "\\\"block\\\" | grep \\\"" + iBlockCnt + "$\\\" | wc -l";
 		bRet = Proc.cmdOutBase(ip, cmd, null, 1, null, listOut);
 		if (bRet == false) return -1;
 		
@@ -2095,7 +2096,8 @@ public class FailOverBaseCase {
 		boolean bRet = false;
 		ArrayList<String> listOut = new ArrayList<String>();
 		
-		String cmd = "cd /home/admin/tfs/lib;" + "./showssm -f ../conf/" + confName + " -t 1 | grep \\\"" + iBlockCnt + "$\\\" | grep -v \\\"TOTAL\\\" | wc -l";
+		String cmd = "cd " + TFS_BIN_HOME + "; ./showssm -f ../conf/" + confName + 
+			" -t 1 | grep \\\"" + iBlockCnt + "$\\\" | grep -v \\\"TOTAL\\\" | wc -l";
 		bRet = Proc.cmdOutBase(MASTERSER.getIp(), cmd, null, 1, null, listOut);
 		if (bRet == false) return -1;
 		
@@ -2168,7 +2170,8 @@ public class FailOverBaseCase {
 		int iRet = -1;
 		boolean bRet = false;
 		ArrayList<String> listOut = new ArrayList<String>(); 
-		String cmd = "cd /home/admin/tfs/lib;" + "./ssm -s " + ip + ":" + iPort + " -i " + "\\\"server\\\" | grep \\\"G\\\" | grep -v \\\"TOTAL\\\"| wc -l";
+		String cmd = "cd " + TFS_BIN_HOME + "; ./ssm -s " + ip + ":" + iPort + 
+			" -i " + "\\\"server\\\" | grep \\\"G\\\" | grep -v \\\"TOTAL\\\"| wc -l";
 		bRet = Proc.cmdOutBase(MASTERSER.getIp(), cmd, null, 1, null, listOut);
 		if (bRet == false) return -1;
 		

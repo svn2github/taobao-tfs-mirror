@@ -799,7 +799,7 @@ public class Function_ns_plan_test extends NameServerPlanTestCase {
 		log.info(caseName + "===> start");
 		
 		/* Set loop flag */
-		bRet = setReadFlag(LOOPOFF);
+		bRet = setReadFlag(LOOPON);
 		Assert.assertTrue(bRet);
 		
 		/* Read file */
@@ -809,7 +809,7 @@ public class Function_ns_plan_test extends NameServerPlanTestCase {
 		/* Start sar to account network traffic */
 		bRet = networkTrafMonStart(SAMPLE_INTERVAL, TEST_TIME/SAMPLE_INTERVAL);
 		Assert.assertTrue(bRet);
-	
+		
 		/* Wait */
 		sleep(TEST_TIME);	
 		

@@ -8,6 +8,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Iterator;
 import java.util.Map.Entry;
+import java.util.Date;
 
 import com.taobao.gaia.AppCluster;
 import com.taobao.gaia.AppGrid;
@@ -71,8 +72,8 @@ public class NameServerPlanTestCase {
 	final public String DP_LOG_NAME     = TFS_LOG_HOME + "/dumpplan.log";
 	final public String BL_LOG_NAME     = TFS_LOG_HOME + "/blocklist.log";
 	final public String CURR_LOG_NAME   = "nameserver.log";	
-	final public String SAR_DSA_LOG     = TFS_HOME + "/sar_" + DSIPA + ".log";	
-	final public String SAR_DSB_LOG     = TFS_HOME + "/sar_" + DSIPB + ".log";
+	public String SAR_DSA_LOG     		= TFS_HOME + "/sar_";	
+	public String SAR_DSB_LOG     		= TFS_HOME + "/sar_";
 	
 	/* Key word */
 	final public String WRITEFILE        = "writeFile :";
@@ -1860,11 +1861,15 @@ public class NameServerPlanTestCase {
 	public boolean networkTrafMonStart(int interval, int count)
 	{	
 		boolean bRet = false;
+		Date date = new Date();
+		SAR_DSA_LOG += date.toString() + ".log";
 		String strCmd = "sar -n DEV -o " + SAR_DSA_LOG + " " + interval + " " + count;
 		log.info("Sar command start ===>");
 		bRet = Proc.proStartBackroundBase(DSIPA, strCmd);
 		if (bRet == false) return bRet;
-		
+
+		date = new Date();
+		SAR_DSB_LOG += date.toString() + ".log";
 		strCmd = "sar -n DEV -o " + SAR_DSB_LOG + " " + interval + " " + count;
 		bRet = Proc.proStartBackroundBase(DSIPB, strCmd);		
 		log.info("Sar command end ===>");		
