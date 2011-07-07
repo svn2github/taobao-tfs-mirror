@@ -511,7 +511,7 @@ namespace tfs
         return ret;
       }
 
-      file_size = finfo.size_;
+      file_size = finfo.size_ - FILEINFO_SIZE;
 
       int32_t oper_type = 0;
       // 4. dispatch action
