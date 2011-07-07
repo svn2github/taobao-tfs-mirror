@@ -13,7 +13,7 @@
 		<property name="stopcmd" value="" />
 		<property name="cleancmd">
 			<list>
-				<value>rm -rf /home/admin/tfs/logs/dataserver_1.log*</value>
+				<value>rm -rf /home/admin/tfs/logs/dataserver_1*</value>
 				<value>cd /home/admin/tfs/tools; sh stfs.sh clear 1; sh stfs.sh format 1</value>
 			</list>
 		</property>
@@ -30,7 +30,7 @@
 		<property name="stopcmd" value="" />
 		<property name="cleancmd">
 			<list>
-				<value>rm -rf /home/admin/tfs/logs/dataserver_2.log*</value>
+				<value>rm -rf /home/admin/tfs/logs/dataserver_2*</value>
 				<value>cd /home/admin/tfs/tools; sh stfs.sh clear 2; sh stfs.sh format 2</value>
 			</list>
 		</property>
@@ -47,7 +47,7 @@
 		<property name="stopcmd" value="" />
 		<property name="cleancmd">
 			<list>
-				<value>rm -rf /home/admin/tfs/logs/dataserver_3.log*</value>
+				<value>rm -rf /home/admin/tfs/logs/dataserver_3*</value>
 				<value>cd /home/admin/tfs/tools; sh stfs.sh clear 3; sh stfs.sh format 3</value>
 			</list>
 		</property>
@@ -64,7 +64,7 @@
 		<property name="stopcmd" value="" />
 		<property name="cleancmd">
 			<list>
-				<value>rm -rf /home/admin/tfs/logs/dataserver_4.log*</value>
+				<value>rm -rf /home/admin/tfs/logs/dataserver_4*</value>
 				<value>cd /home/admin/tfs/tools; sh stfs.sh clear 4; sh stfs.sh format 4</value>
 			</list>
 		</property>
@@ -81,7 +81,7 @@
 		<property name="stopcmd" value="" />
 		<property name="cleancmd">
 			<list>
-				<value>rm -rf /home/admin/tfs/logs/dataserver_1.log*</value>
+				<value>rm -rf /home/admin/tfs/logs/dataserver_1*</value>
 				<value>cd /home/admin/tfs/tools; sh stfs.sh clear 1; sh stfs.sh format 1</value>
 			</list>
 		</property>
@@ -98,7 +98,7 @@
 		<property name="stopcmd" value="" />
 		<property name="cleancmd">
 			<list>
-				<value>rm -rf /home/admin/tfs/logs/dataserver_2.log*</value>
+				<value>rm -rf /home/admin/tfs/logs/dataserver_2*</value>
 				<value>cd /home/admin/tfs/tools; sh stfs.sh clear 2; sh stfs.sh format 2</value>
 			</list>
 		</property>
@@ -115,7 +115,7 @@
 		<property name="stopcmd" value="" />
 		<property name="cleancmd">
 			<list>
-				<value>rm -rf /home/admin/tfs/logs/dataserver_3.log*</value>
+				<value>rm -rf /home/admin/tfs/logs/dataserver_3*</value>
 				<value>cd /home/admin/tfs/tools; sh stfs.sh clear 3; sh stfs.sh format 3</value>
 			</list>
 		</property>
@@ -132,7 +132,7 @@
 		<property name="stopcmd" value="" />
 		<property name="cleancmd">
 			<list>
-				<value>rm -rf /home/admin/tfs/logs/dataserver_4.log*</value>
+				<value>rm -rf /home/admin/tfs/logs/dataserver_4*</value>
 				<value>cd /home/admin/tfs/tools; sh stfs.sh clear 4; sh stfs.sh format 4</value>
 			</list>
 		</property>

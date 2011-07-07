@@ -45,6 +45,9 @@ public class FailOverBaseCase {
 	final public int DSINDEX = 1;
 	final public int DSINDEXI = 1;
 	final public int FAILCOUNTNOR = 0;
+	final public int FAILCOUNTERR = 1;
+	final public int BLOCKCOPYCNT = 2;
+	final public int BLOCKCOPYCNT13 = 3;
 	final public String NSIPA = tfsGrid.getCluster(NSINDEX).getServer(0).getIp();
 	final public String NSIPB = tfsGrid.getCluster(NSINDEX).getServer(1).getIp();
 	final public int NSPORTA = tfsGrid.getCluster(NSINDEX).getServer(0).getPort();
@@ -67,7 +70,7 @@ public class FailOverBaseCase {
 	/* Key word */
 	final public String WRITEFILE        = "writeFile :";
 	final public String READFILE         = "readFile :";
-	final public String UNLINKFILE         = "unlinkFile :";
+	final public String UNLINKFILE       = "unlinkFile :";
 	final public String SAVEUNIQUEFILE   = "SaveUniqueFile :";
 	final public String UNIQUE           = "Unique :";
 	final public String WRITEFILESTATIS  = "write statis:";
@@ -84,6 +87,7 @@ public class FailOverBaseCase {
 	final public String START            = "start";
 	final public String EMERGENCY        = "emergency";
 	final public String NORMAL           = "normal";
+	final public String DELETEBLOCK		 = "delete block! logic blockid";
 
 	/* Plan type */
 	enum PlanType 
@@ -125,6 +129,7 @@ public class FailOverBaseCase {
 	final public int TAILTPSCOL = 14;
 	final public int RUNTPSCOL = 12;
 	final public int SCANTIME = 120;
+	final public int MIGRATETIME = 30;
 	
 	/* Thread count on client */
 	final public int HIGHTHREAD = 100;
@@ -139,6 +144,8 @@ public class FailOverBaseCase {
 	final public int TEMP = 8;
 	final public int READSLAVE = 16;
 	final public int UNLINK = 32;
+	final public int READONLY = 64;
+	final public int UNLINKONLY = 128;
 	
 	/* Standard */
 	final public float SUCCESSRATE = 100;
@@ -385,21 +392,40 @@ public class FailOverBaseCase {
 	 * @param strIp
 	 * @return
 	 */
-	public boolean resetFailCount(String strIp)
+	public boolean resetFailCount(AppServer app)
 	{
 		boolean bRet = false;
-		String macName = null;
-		if (strIp == NSIPA)
+		bRet = HA.setFailCountBase(app.getIp(), app.getResName(), app.getMacName(), FAILCOUNTNOR);
+		
+		/* Wait */
+		sleep(10);
+		
+		int iRet = HA.getFailCountBase(app.getIp(), app.getResName(), app.getMacName());
+		if (iRet != 0)
 		{
-			macName = NSMACA;
-		} else if (strIp == NSIPB)
-		{
-			macName = NSMACB;
-		} else {
-			log.error("IP address(" + strIp + ") is not a ns's ip!!!");
-			return bRet;
+			return false;
 		}
-		bRet = HA.setFailCountBase(strIp, NSRES, macName, FAILCOUNTNOR);
+		return bRet;
+	}
+	
+	/**
+	 * 
+	 * @param app
+	 * @return
+	 */
+	public boolean setFailCount(AppServer app)
+	{
+		boolean bRet = false;
+		bRet = HA.setFailCountBase(app.getIp(), app.getResName(), app.getMacName(), FAILCOUNTERR);
+		
+		/* Wait */
+		sleep(10);
+		
+		int iRet = HA.getFailCountBase(app.getIp(), app.getResName(), app.getMacName());
+		if (iRet == 0)
+		{
+			return false;
+		}
 		return bRet;
 	}
 	
@@ -410,11 +436,23 @@ public class FailOverBaseCase {
 	public boolean resetAllFailCnt()
 	{
 		log.info("Reset failcount start ===>");
-		boolean bRet = resetFailCount(MASTERSER.getIp());
+		boolean bRet = resetFailCount(MASTERSER);
 		if (bRet == false) return bRet;
 		
-		bRet = resetFailCount(SLAVESER.getIp());
+		bRet = resetFailCount(SLAVESER);
 		log.info("Reset failcount end ===>");
+		return bRet;	
+	}
+	
+	
+	public boolean setAllFailCnt()
+	{
+		log.info("Set failcount start ===>");
+		boolean bRet = setFailCount(MASTERSER);
+		if (bRet == false) return bRet;
+		
+		bRet = setFailCount(SLAVESER);
+		log.info("Set failcount end ===>");
 		return bRet;	
 	}
 	
@@ -426,7 +464,16 @@ public class FailOverBaseCase {
 	{
 		boolean bRet = false;
 		log.info("Migrate vip start ===>");
-		bRet = HA.setVipMigrateBase(NSIPA, IPALIAS, NSMACA);
+		bRet = HA.setVipMigrateBase(MASTERSER.getIp(), MASTERSER.getIpAlias(), MASTERSER.getMacName());
+		if (bRet ==  false)
+		{
+			return bRet;
+		}
+		
+		/* Wait for migrate */
+		sleep(MIGRATETIME);
+		
+		bRet = HA.chkVipBase(MASTERSER.getIp());
 		log.info("Migrate vip end ===>");
 		return bRet;	
 	}
@@ -669,6 +716,22 @@ public class FailOverBaseCase {
 
 		if ((iMode & READ) != 0)
 		{			
+			fRet = getRateEnd(CLIENTIP, TEST_HOME + "/tfsSeed." + caseName, READFILESTATIS);
+			if (fRet == -1)
+			{
+				return bRet;
+			}	
+			if (fRet < fStd)
+			{
+				log.error("Read success rate(" + fRet + "%) if lower than " + fStd + "% !!!");
+				return bRet;
+			} else {
+				log.info("Read success rate(" + fRet + "%) if higher than " + fStd + "% !!!");
+			}
+		}
+		
+		if ((iMode & READONLY) != 0)
+		{			
 			fRet = getRateEnd(CLIENTIP, TEST_HOME + "/tfsRead." + caseName, READFILESTATIS);
 			if (fRet == -1)
 			{
@@ -684,6 +747,22 @@ public class FailOverBaseCase {
 		}
 		
 		if ((iMode & UNLINK) != 0)
+		{			
+			fRet = getRateEnd(CLIENTIP, TEST_HOME + "/tfsSeed." + caseName, UNLINKSTATIS);
+			if (fRet == -1)
+			{
+				return bRet;
+			}	
+			if (fRet < fStd)
+			{
+				log.error("Read success rate(" + fRet + "%) if lower than " + fStd + "% !!!");
+				return bRet;
+			} else {
+				log.info("Read_slave success rate(" + fRet + "%) if higher than " + fStd + "% !!!");
+			}
+		}
+		
+		if ((iMode & UNLINKONLY) != 0)
 		{			
 			fRet = getRateEnd(CLIENTIP, TEST_HOME + "/tfsUnlink." + caseName, UNLINKSTATIS);
 			if (fRet == -1)
@@ -804,12 +883,7 @@ public class FailOverBaseCase {
 		}
 		
 		/* check the result */
-		bRet = checkRateRunByLog( fStd,  iMode,  tarLog);
-		if (bRet == false)
-		{
-			return bRet;
-		}
-		
+		bRet = checkRateRunByLog( fStd,  iMode,  tarLog);		
 		return bRet;
 	}
 	
@@ -933,7 +1007,7 @@ public class FailOverBaseCase {
 		}
 		
 		/* Wait for vip migrate */
-		sleep (5);
+		sleep (MIGRATETIME);
 		
 		/* Check vip */
 		bRet = HA.chkVipBase(tempIp.getIp());
@@ -944,7 +1018,7 @@ public class FailOverBaseCase {
 		}
 		
 		/* Reset the failcount */
-		bRet = resetFailCount(tempIp.getIp());
+		bRet = resetFailCount(tempIp);
 		if (bRet == false) return bRet;
 		
 		/* Set the new vip */
@@ -980,7 +1054,7 @@ public class FailOverBaseCase {
 		}
 		
 		/* Wait for vip migrate */
-		sleep (5);
+		sleep (MIGRATETIME);
 		
 		/* Check vip */
 		bRet = HA.chkVipBase(tempMaster.getIp());
@@ -991,7 +1065,7 @@ public class FailOverBaseCase {
 		}
 		
 		/* Reset the failcount */
-		bRet = resetFailCount(tempIp.getIp());
+		bRet = resetFailCount(tempIp);
 		if (bRet == false) return bRet;
 		
 		/* Set the new vip */
@@ -1035,7 +1109,7 @@ public class FailOverBaseCase {
 		}
 		
 		/* Reset the failcount */
-		bRet = resetFailCount(tempIp.getIp());
+		bRet = resetFailCount(tempIp);
 		if (bRet == false) return bRet;
 		
 		return bRet;
@@ -1105,6 +1179,13 @@ public class FailOverBaseCase {
 		return bRet;
 	}
 	
+	public boolean startSlaveNs()
+	{
+		boolean bRet = false;
+		bRet = SLAVESER.start();
+		return bRet;
+	}
+	
 	public boolean startNs()
 	{
 		boolean bRet = false;
@@ -1138,7 +1219,7 @@ public class FailOverBaseCase {
 		
 		for (int iLoop = 0; iLoop < iTimes; iLoop ++)
 		{
-			bRet = Proc.cmdOutBase(NSIPA, cmd, null, 1, null, listOut);
+			bRet = Proc.cmdOutBase(MASTERSER.getIp(), cmd, null, 1, null, listOut);
 			if (bRet == false) return bRet;
 			
 			try{
@@ -1161,6 +1242,7 @@ public class FailOverBaseCase {
 	public boolean chkBlockCntBothNormal(int iBlockCnt)
 	{
 		boolean bRet = false;
+		sleep (30);
 		for (int iLoop = 0; iLoop < 4; iLoop ++)
 		{
 			if (iBlockCnt != iLoop)
@@ -1176,16 +1258,21 @@ public class FailOverBaseCase {
 	public boolean chkBlockCntBoth(int iTimes, int iBlockCnt)
 	{
 		boolean bRet = false;
-		int port = tfsGrid.getCluster(NSINDEX).getServer(0).getPort();
 		ArrayList<String> listOut = new ArrayList<String>();
 		int iLoop = 0;
 		String cmd = "";
 		//String cmd = "cd /home/admin/tfs/lib; ls";
 		
+		if (false == MASTERSER.isRun())
+		{
+			return false;
+		}
 		for (iLoop = 0; iLoop < iTimes; iLoop ++)
 		{
-			cmd = "cd /home/admin/tfs/lib;" + "./ssm -s " + NSIPA + ":" + port + " -i " + "\\\"block\\\" | grep \\\"" + iBlockCnt + "$\\\" | wc -l";
-			bRet = Proc.cmdOutBase(NSIPA, cmd, null, 1, null, listOut);
+			/* Reset list */
+			listOut.clear();
+			cmd = "cd /home/admin/tfs/lib;" + "./ssm -s " + MASTERSER.getIp() + ":" + MASTERSER.getPort() + " -i " + "\\\"block\\\" | grep \\\"" + iBlockCnt + "$\\\" | wc -l";
+			bRet = Proc.cmdOutBase(MASTERSER.getIp(), cmd, null, 1, null, listOut);
 			if (bRet == false) return bRet;
 			
 			try{
@@ -1203,10 +1290,68 @@ public class FailOverBaseCase {
 			sleep(1);
 		}
 		
-		for (int jLoop = 0; jLoop < iTimes - iLoop + 1; jLoop ++)
+		if (false == SLAVESER.isRun())
 		{
-			cmd = "cd /home/admin/tfs/lib;" + "./ssm -s " + NSIPB + ":" + port + " -i " + "\\\"block\\\" | grep \\\"" + iBlockCnt + "$\\\" | wc -l";
-			bRet = Proc.cmdOutBase(NSIPB, cmd, null, 1, null, listOut);
+			return bRet;
+		} else {
+			/* Reset */
+			bRet = false;
+		}
+		
+		/* Reset list */
+		listOut.clear();
+		cmd = "cd /home/admin/tfs/lib;" + "./ssm -s " + SLAVESER.getIp() + ":" + SLAVESER.getPort() + " -i " + "\\\"block\\\" | grep \\\"" + iBlockCnt + "$\\\" | wc -l";
+		bRet = Proc.cmdOutBase(SLAVESER.getIp(), cmd, null, 1, null, listOut);
+		if (bRet == false) return bRet;
+		
+		try{
+			int temp = Integer.valueOf(listOut.get(listOut.size() - 1));			
+			if (temp == 0)
+			{
+				bRet = true;
+			}
+		} catch (Exception e){
+			e.printStackTrace();
+			bRet = false;
+		}
+
+		return bRet;
+	}
+	
+	public boolean chkBlockCntBothNormal_1_3(int iBlockCnt)
+	{
+		boolean bRet = false;
+		sleep (30);
+		for (int iLoop = 0; iLoop < 4; iLoop ++)
+		{
+			if (iBlockCnt != iLoop)
+			{
+				bRet = chkBlockCntBoth_1_3(BLOCKCHKTIME, iLoop);
+				if (bRet == false) break;
+			}
+		}
+		
+		return bRet;
+	}
+	
+	public boolean chkBlockCntBoth_1_3(int iTimes, int iBlockCnt)
+	{
+		boolean bRet = false;
+		ArrayList<String> listOut = new ArrayList<String>();
+		int iLoop = 0;
+		String cmd = "";
+		//String cmd = "cd /home/admin/tfs/lib; ls";
+		
+		if (false == MASTERSER.isRun())
+		{
+			return false;
+		}
+		for (iLoop = 0; iLoop < iTimes; iLoop ++)
+		{
+			/* Reset list */
+			listOut.clear();
+			cmd = "cd /home/admin/tfs/lib;" + "./showssm -f ../conf/tfs.conf.09 -t 1 | grep \\\"" + iBlockCnt + "$\\\" | grep -v \\\"TOTAL\\\" | wc -l";
+			bRet = Proc.cmdOutBase(MASTERSER.getIp(), cmd, null, 1, null, listOut);
 			if (bRet == false) return bRet;
 			
 			try{
@@ -1223,6 +1368,32 @@ public class FailOverBaseCase {
 			}
 			sleep(1);
 		}
+		
+		if (false == SLAVESER.isRun())
+		{
+			return bRet;
+		} else {
+			/* Reset */
+			bRet = false;
+		}
+		
+		/* Reset list */
+		listOut.clear();
+		cmd = "cd /home/admin/tfs/lib;" + "./showssm -f ../conf/tfs.conf.10 -t 1 | grep \\\"" + iBlockCnt + "$\\\" | grep -v \\\"TOTAL\\\"| wc -l";
+		bRet = Proc.cmdOutBase(SLAVESER.getIp(), cmd, null, 1, null, listOut);
+		if (bRet == false) return bRet;
+		
+		try{
+			int temp = Integer.valueOf(listOut.get(listOut.size() - 1));			
+			if (temp == 0)
+			{
+				bRet = true;
+			}
+		} catch (Exception e){
+			e.printStackTrace();
+			bRet = false;
+		}
+
 		return bRet;
 	}
 	
@@ -1779,7 +1950,7 @@ public class FailOverBaseCase {
 		if (bRet == false) return bRet;
 		
 		/* Check rate */
-		bRet = checkRateEnd(SUCCESSRATE, READ );
+		bRet = checkRateEnd(SUCCESSRATE, READONLY );
 		return bRet;
 	}
 	
@@ -1799,13 +1970,229 @@ public class FailOverBaseCase {
 		return bRet;
 	}
 	
-	public boolean blockOneCs()
+	public boolean chkVip()
 	{
 		boolean bRet = false;
-		AppServer cs = tfsGrid.getCluster(DSINDEX).getServer(0);
-		AppServer ns = new AppServer();
+		bRet = HA.chkVipBase(MASTERSER.getIp());		
+		return bRet;
+	}
+	
+	public boolean chkAlive()
+	{
+		boolean bRet = false;
+		bRet = tfsGrid.isAlive();
+		return bRet;
+	}
+	
+	public boolean putSeed()
+	{
+		boolean bRet = false;
+		
+		/* Write file */
+		bRet = writeCmd();
+		if (bRet == false) return bRet;
+		
+		/* Check block copys */
+		bRet = chkBlockCntBothNormal(2);
+		if (bRet == false) return bRet;
+		
+		/* Check the rate of write process */
+		bRet = checkRateRun(SUCCESSRATE, WRITEONLY|READ);
+		if (bRet == false) return bRet;
+		
+		/* Stop write cmd */
+		bRet = writeCmdStop();
+		return bRet;
+	}
+	
+	public boolean chkBlockCopyCnt()
+	{
+		boolean bRet = false;
+		int iRet = getBlockCopyCnt(MASTERSER.getIp(), MASTERSER.getPort(), BLOCKCOPYCNT);
+		if (iRet <= 0)
+		{
+			log.error("Block copy count(" + iRet + ") should be larger than zero on " + MASTERSER.getIp() + "!!!");
+			return bRet;
+		}
+		
+		int iRetS = getBlockCopyCnt(SLAVESER.getIp(), SLAVESER.getPort(), BLOCKCOPYCNT);
+		if (iRet <= 0)
+		{
+			log.error("Block copy count(" + iRet + ") should be larger than zero on " + SLAVESER.getIp() + "!!!");
+			return bRet;
+		}
+		
+		if (iRet != iRetS)
+		{
+			log.error("Maser ns's block count(" + iRet + ") should be equal with slave ns's(" + iRetS + ") !!!");
+			return bRet;
+		} else {
+			bRet = true;
+		}
 		
 		
 		return bRet;
 	}
+	
+	public int getBlockCopyCnt(String ip, int iPort, int iBlockCnt)
+	{
+		int iRet = -1;
+		boolean bRet = false;
+		ArrayList<String> listOut = new ArrayList<String>();
+		
+		String cmd = "cd /home/admin/tfs/lib;" + "./ssm -s " + ip + ":" + iPort + " -i " + "\\\"block\\\" | grep \\\"" + iBlockCnt + "$\\\" | wc -l";
+		bRet = Proc.cmdOutBase(ip, cmd, null, 1, null, listOut);
+		if (bRet == false) return -1;
+		
+		try{
+			iRet = Integer.valueOf(listOut.get(listOut.size() - 1));			
+			if (iRet > 0)
+			{
+				bRet = true;
+				return iRet;
+			}
+		} catch (Exception e){
+			e.printStackTrace();
+		}
+		
+		return -1;
+	}
+	
+	public boolean chkBlockCopyCnt_1_3()
+	{
+		boolean bRet = false;
+		int iRet = getBlockCopyCnt_1_3("tfs.conf.09", BLOCKCOPYCNT13);
+		if (iRet <= 0)
+		{
+			log.error("Block copy count(" + iRet + ") should be larger than zero on " + MASTERSER.getIp() + "!!!");
+			return bRet;
+		}
+		
+		sleep(20);
+		
+		int iRetS = getBlockCopyCnt_1_3("tfs.conf.10", BLOCKCOPYCNT13);
+		if (iRet <= 0)
+		{
+			log.error("Block copy count(" + iRet + ") should be larger than zero on " + SLAVESER.getIp() + "!!!");
+			return bRet;
+		}
+		
+		if (iRet != iRetS)
+		{
+			log.error("Maser ns's block count(" + iRet + ") should be equal with slave ns's(" + iRetS + ") !!!");
+			return bRet;
+		} else {
+			bRet = true;
+		}
+		
+		
+		return bRet;
+	}
+	
+	public int getBlockCopyCnt_1_3(String confName, int iBlockCnt)
+	{
+		int iRet = -1;
+		boolean bRet = false;
+		ArrayList<String> listOut = new ArrayList<String>();
+		
+		String cmd = "cd /home/admin/tfs/lib;" + "./showssm -f ../conf/" + confName + " -t 1 | grep \\\"" + iBlockCnt + "$\\\" | grep -v \\\"TOTAL\\\" | wc -l";
+		bRet = Proc.cmdOutBase(MASTERSER.getIp(), cmd, null, 1, null, listOut);
+		if (bRet == false) return -1;
+		
+		try{
+			iRet = Integer.valueOf(listOut.get(listOut.size() - 1));			
+			if (iRet > 0)
+			{
+				bRet = true;
+				return iRet;
+			}
+		} catch (Exception e){
+			e.printStackTrace();
+		}
+		
+		return -1;
+	}
+	
+	public boolean chkAliveDs()
+	{
+		boolean bRet = false;
+		int iCount = 0;
+		int iRet = -1;
+		int iRetS = -1;
+		/* Get the count of running servers */
+		for (int iLoop = 1; iLoop <= tfsGrid.getClusterList().size(); iLoop ++)
+		{
+			for (int jLoop = 0; jLoop < tfsGrid.getCluster(iLoop).getServerList().size(); jLoop ++)
+			{
+				if (tfsGrid.getCluster(iLoop).getServer(jLoop).isRun())
+				{
+					iCount ++;
+				}
+			}
+		}
+		
+		if (!MASTERSER.isRun())
+		{
+			log.error("Master server is not running");
+			return bRet;
+		}
+		
+		/* Get the result of ssm form master ns */
+		iRet = getAliveDs(MASTERSER.getIp(), MASTERSER.getPort());
+		
+		if (iRet != iCount)
+		{
+			log.error("Running server(" + iCount + ") is not match the result(" + iRet + ") of ssm!!!");
+			return bRet;
+		}
+		
+		if (!SLAVESER.isRun())
+		{
+			bRet = true;
+		} else {
+			/* Get the result of ssm form slave ns */
+			iRetS = getAliveDs(SLAVESER.getIp(), SLAVESER.getPort());
+			if (iRet != iRetS)
+			{
+				log.error("Master ns's ds(" + iRet + ") is not match the slave's(" + iRetS + ")!!!");
+			} else {
+				bRet = true;
+			}
+		}
+
+		return bRet;
+	}
+	
+	public int getAliveDs(String ip, int iPort )
+	{
+		int iRet = -1;
+		boolean bRet = false;
+		ArrayList<String> listOut = new ArrayList<String>(); 
+		String cmd = "cd /home/admin/tfs/lib;" + "./ssm -s " + ip + ":" + iPort + " -i " + "\\\"server\\\" | grep \\\"G\\\" | grep -v \\\"TOTAL\\\"| wc -l";
+		bRet = Proc.cmdOutBase(MASTERSER.getIp(), cmd, null, 1, null, listOut);
+		if (bRet == false) return -1;
+		
+		try{
+			iRet = Integer.valueOf(listOut.get(listOut.size() - 1));			
+			if (iRet > 0)
+			{
+				bRet = true;
+				return iRet;
+			}
+		} catch (Exception e){
+			e.printStackTrace();
+		}
+		return iRet;
+	}
+	
+	public boolean blockOneCs()
+	{
+		boolean bRet = false;
+		AppServer cs = tfsGrid.getCluster(DSINDEX).getServer(0);
+		
+		
+		
+		return bRet;
+	}
+	
 }
