@@ -169,6 +169,7 @@
 		<property name="confname" value="/home/admin/tfs/conf/tfs.conf" />
 		<property name="logs" value="/home/admin/tfs/logs/nameserver.log" />
 		<property name="dir" value="/home/admin/tfs" />
+		<property name="binPath" value="/home/admin/tfs/lib" />
 		<property name="vip" value="10.232.4.232" />
 		<property name="macName" value="tfs004011.sqa.cm4" />
 		<property name="resName" value="tfs-name-server" />
@@ -191,6 +192,7 @@
 		<property name="confname" value="/home/admin/tfs/conf/tfs.conf" />
 		<property name="logs" value="/home/admin/tfs/logs/nameserver.log" />
 		<property name="dir" value="/home/admin/tfs" />
+		<property name="binPath" value="/home/admin/tfs/lib" />
 		<property name="vip" value="10.232.4.232" />
 		<property name="macName" value="tfs004012.sqa.cm4" />
 		<property name="resName" value="tfs-name-server" />
