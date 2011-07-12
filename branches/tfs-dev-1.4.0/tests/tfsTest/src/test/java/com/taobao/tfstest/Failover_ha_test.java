@@ -218,6 +218,8 @@ public class Failover_ha_test extends FailOverBaseCase {
 		bRet = writeCmd();
 		Assert.assertTrue(bRet);
 		
+		sleep (30);
+		
 		/* Check the rate of write process */
 		bRet = checkRateRun(SUCCESSRATE, WRITEONLY|READ);
 		Assert.assertTrue(bRet);
@@ -231,7 +233,7 @@ public class Failover_ha_test extends FailOverBaseCase {
 		Assert.assertTrue(bRet);
 		
 		/* Wait 20s for recover */
-		sleep (10);
+		sleep (30);
 		
 		/* Check the rate of write process */
 		bRet = checkRateRun(SUCCESSRATE, WRITEONLY|READ);
@@ -302,6 +304,8 @@ public class Failover_ha_test extends FailOverBaseCase {
 		/* Write file */
 		bRet = writeCmd();
 		Assert.assertTrue(bRet);
+	
+		sleep (30);
 		
 		/* Check the rate of write process */
 		bRet = checkRateRun(SUCCESSRATE, WRITEONLY|READ);
@@ -325,7 +329,7 @@ public class Failover_ha_test extends FailOverBaseCase {
 		}
 		
 		/* Wait 20s for recover */
-		sleep (10);
+		sleep (30);
 		
 		/* Check the rate of write process */
 		bRet = checkRateRun(SUCCESSRATE, WRITEONLY|READ);
@@ -385,6 +389,8 @@ public class Failover_ha_test extends FailOverBaseCase {
 		/* Write file */
 		bRet = writeCmd();
 		Assert.assertTrue(bRet);
+		
+		sleep (30);
 		
 		/* Check the rate of write process */
 		bRet = checkRateRun(SUCCESSRATE, WRITEONLY|READ);
@@ -465,6 +471,8 @@ public class Failover_ha_test extends FailOverBaseCase {
 		bRet = writeCmd();
 		Assert.assertTrue(bRet);
 		
+		sleep (30);
+		
 		/* Check the rate of write process */
 		bRet = checkRateRun(SUCCESSRATE, WRITEONLY|READ);
 		Assert.assertTrue(bRet);
@@ -539,6 +547,8 @@ public class Failover_ha_test extends FailOverBaseCase {
 		bRet = writeCmd();
 		Assert.assertTrue(bRet);
 		
+		sleep (30);
+		
 		/* Check the rate of write process */
 		bRet = checkRateRun(SUCCESSRATE, WRITEONLY|READ);
 		Assert.assertTrue(bRet);
@@ -600,6 +610,8 @@ public void Failover_08_one_ds_out_copy_block_switch(){
 		/* Write file */
 		bRet = writeCmd();
 		Assert.assertTrue(bRet);
+		
+		sleep (30);
 		
 		/* Check the rate of write process */
 		bRet = checkRateRun(SUCCESSRATE, WRITEONLY|READ);
@@ -670,6 +682,8 @@ public void Failover_08_one_ds_out_copy_block_switch(){
 		bRet = writeCmd();
 		Assert.assertTrue(bRet);
 		
+		sleep (30);
+		
 		/* Check the rate of write process */
 		bRet = checkRateRun(SUCCESSRATE, WRITEONLY|READ);
 		Assert.assertTrue(bRet);
@@ -720,9 +734,15 @@ public void Failover_08_one_ds_out_copy_block_switch(){
 		bRet = setSeedSize(1);
 		Assert.assertTrue(bRet);
 		
+		/* Set unlink ratio */
+		bRet = setUnlinkRatio(70);
+		Assert.assertTrue(bRet);	
+		
 		/* Start write cmd */
 		bRet = writeCmd();
 		Assert.assertTrue(bRet);
+		
+		sleep (30);
 		
 		/* Check the rate of write process */
 		bRet = checkRateRun(SUCCESSRATE, WRITEONLY|READ|UNLINK);
@@ -782,7 +802,7 @@ public void Failover_08_one_ds_out_copy_block_switch(){
 		Assert.assertTrue(bRet);
 		
 		/* Wait 20s for recover */
-		sleep (10);
+		sleep (20);
 		
 		/* Restart ns */
 		bRet = startSlaveNs();
