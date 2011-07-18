@@ -36,7 +36,7 @@ TfsSessionPool::~TfsSessionPool()
   pool_.clear();
 }
 
-TfsSession* TfsSessionPool::get(const char* ns_addr, const int32_t cache_time, const int32_t cache_items)
+TfsSession* TfsSessionPool::get(const char* ns_addr, const int64_t cache_time, const int64_t cache_items)
 {
   tbutil::Mutex::Lock lock(mutex_);
   SESSION_MAP::iterator it = pool_.find(ns_addr);

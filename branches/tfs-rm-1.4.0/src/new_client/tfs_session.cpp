@@ -28,7 +28,7 @@ using namespace tfs::common;
 using namespace tfs::message;
 using namespace std;
 
-TfsSession::TfsSession(const std::string& nsip, const int32_t cache_time, const int32_t cache_items)
+TfsSession::TfsSession(const std::string& nsip, const int64_t cache_time, const int64_t cache_items)
   :ns_addr_(0), ns_addr_str_(nsip), block_cache_time_(cache_time), block_cache_items_(cache_items),
 		cluster_id_(0), use_cache_(USE_CACHE_FLAG_YES)
 {

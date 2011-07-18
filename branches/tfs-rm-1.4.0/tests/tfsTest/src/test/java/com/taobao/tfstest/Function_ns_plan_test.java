@@ -17,7 +17,7 @@ import com.taobao.gaia.KillTypeEnum;
  */
 public class Function_ns_plan_test extends NameServerPlanTestCase {
 	
-	@Test
+	//@Test
 	public void Function_01_one_ds_out_emerge_rep_block(){
 		
 		boolean bRet = false;
@@ -889,6 +889,45 @@ public class Function_ns_plan_test extends NameServerPlanTestCase {
 		
 		/* Check rate */
 		bRet = checkRateEnd(SUCCESSRATE, READ);
+		Assert.assertTrue(bRet);
+		
+		log.info(caseName + "===> end");
+		return ;
+	}	
+	@Test
+	public void Function_16_write_mass_blocks(){
+		
+		boolean bRet = false;
+		caseName = "Function_16_write_mass_blocks";
+		log.info(caseName + "===> start");
+		
+		/* Set loop flag */
+		bRet = setSeedFlag(LOOPON);
+		Assert.assertTrue(bRet);
+		
+		/* Set seed size */
+		bRet = setSeedSize(1);
+		Assert.assertTrue(bRet);
+	
+		/* Get current used cap(before write) */
+		HashMap<String, Double> usedCap = new HashMap<String, Double>();
+		bRet = getUsedCap(usedCap);
+		Assert.assertTrue(bRet);
+		
+		/* Write file */
+		bRet = writeCmd();
+		Assert.assertTrue(bRet);
+
+		double chkValue = usedCap.get("Before") + CHK_WRITE_AMOUNT;
+		bRet = chkUsedCap(chkValue);
+		Assert.assertTrue(bRet);
+		
+		/* Stop write process */
+		bRet = writeCmdStop();
+		Assert.assertTrue(bRet);
+		
+		/* Check rate */
+		bRet = checkRateEnd(SUCCESSRATE, WRITEONLY);
 		Assert.assertTrue(bRet);
 		
 		log.info(caseName + "===> end");

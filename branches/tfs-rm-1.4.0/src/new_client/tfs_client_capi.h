@@ -94,6 +94,12 @@ extern "C"
 
   int t_set_option_flag(const int fd, const OptionFlag option_flag);
 
+  void t_set_cache_items(const int64_t cache_items);
+  int64_t t_get_cache_items();
+
+  void t_set_cache_time(const int64_t cache_time);
+  int64_t t_get_cache_time();
+
   void t_set_segment_size(const int64_t segment_size);
   int64_t t_get_segment_size();
 

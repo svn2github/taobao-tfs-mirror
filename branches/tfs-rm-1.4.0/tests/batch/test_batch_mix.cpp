@@ -17,7 +17,7 @@
 #include <algorithm>
 #include <functional>
 #include "common/func.h"
-#include "client/tfs_client_api.h"
+#include "new_client/tfs_client_api.h"
 #include "util.h"
 #include "thread.h"
 

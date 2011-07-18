@@ -13,7 +13,7 @@
  *      - initial release
  *
  */
-#include "client/tfs_client_api.h"
+#include "new_client/tfs_client_api.h"
 #include <tbsys.h>
 #include <sys/types.h>
 #include <sys/time.h>

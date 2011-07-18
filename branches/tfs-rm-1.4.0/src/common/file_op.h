@@ -29,13 +29,16 @@ namespace tfs
     class FileOperation
     {
       public:
-        FileOperation(const std::string& file_name, const int open_flags = O_RDWR | O_LARGEFILE);
+      FileOperation(const std::string& file_name, const int open_flags = O_RDWR | O_LARGEFILE);
         virtual ~FileOperation();
 
         int open_file();
         void close_file();
         virtual int flush_file();
 
+        int lock_file();
+        int unlock_file();
+  
         int flush_data();
         int unlink_file();
 
@@ -73,6 +76,7 @@ namespace tfs
         int fd_;                // file handle
         int open_flags_;        // open flags
         char* file_name_;       // file path name
+        bool locked_;
     };
   }
 }

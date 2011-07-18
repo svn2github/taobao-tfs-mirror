@@ -18,23 +18,23 @@
 #include "common/error_msg.h"
 #include "common/func.h"
 #include "client_config.h"
+#include "fsname.h"
 #include "local_key.h"
+#include "tfs_client_api.h"
 
 using namespace tfs::client;
 using namespace tfs::common;
 
 const char* tfs::client::LOCAL_KEY_PATH = "/tmp/TFSlocalkeyDIR/";
 
-LocalKey::LocalKey() : file_op_(NULL)
+LocalKey::LocalKey() : server_id_(0)
 {
 }
 
 LocalKey::~LocalKey()
 {
-  tbsys::gDelete(file_op_);
   clear_info();
 }
-
 
 int LocalKey::initialize(const char* local_key, const uint64_t addr)
 {
@@ -54,23 +54,18 @@ int LocalKey::initialize(const char* local_key, const uint64_t addr)
   else
   {
     clear();
-    tbsys::gDelete(file_op_);
     if (0 != access(name, F_OK)) //not exist
     {
       TBSYS_LOG(DEBUG, "create new localkey file: %s", name);
-      file_op_ = new FileOperation(name, O_RDWR|O_CREAT);
+      ret = init_file_op(name, O_RDWR|O_CREAT);
     }
-    else
+    else if ((ret = init_file_op(name, O_RDWR)) == TFS_SUCCESS)
     {
-      file_op_ = new FileOperation(name, O_RDWR);
       ret = load();
       // load fail. localkey is invalid, just delete
       if (ret != TFS_SUCCESS)
       {
-        TBSYS_LOG(WARN, "load local key fail, file is invalid, create new localkey file: %s", name);
-        file_op_->unlink_file();
-        tbsys::gDelete(file_op_);
-        file_op_ = new FileOperation(name, O_RDWR|O_CREAT);
+        TBSYS_LOG(WARN, "load local key fail, file is invalid, ignore: %s", name);
         clear();
         ret = TFS_SUCCESS;
       }
@@ -78,6 +73,7 @@ int LocalKey::initialize(const char* local_key, const uint64_t addr)
 
     if (TFS_SUCCESS == ret)
     {
+      server_id_ = addr;
       // initialize gc file
       ret = gc_file_.initialize(name + strlen(LOCAL_KEY_PATH));
     }
@@ -114,14 +110,6 @@ int LocalKey::load()
     tbsys::gDeleteA(buf);
   }
   return ret;
-}
-
-// for gc load file.
-int LocalKey::load_file(const char* name)
-{
-  tbsys::gDelete(file_op_);
-  file_op_ = new FileOperation(name, O_RDWR);
-  return load();
 }
 
 int LocalKey::load(const char* buf)
@@ -171,7 +159,7 @@ int LocalKey::validate(const int64_t total_size)
   else if (seg_info_.size() > 0)   // not empty
   {
     int64_t size = 0, check_size = total_size != 0 ? total_size : seg_head_.size_;
-    SEG_SET_CONST_ITER it = seg_info_.begin();
+    SEG_INFO_CONST_ITER it = seg_info_.begin();
     if (it->offset_ != 0)
     {
       TBSYS_LOG(ERROR, "segment info offset not start with 0: %"PRI64_PREFIX"d", it->offset_);
@@ -179,7 +167,7 @@ int LocalKey::validate(const int64_t total_size)
     }
     else
     {
-      SEG_SET_CONST_ITER nit = it;
+      SEG_INFO_CONST_ITER nit = it;
       nit++;
       size += it->size_;
 
@@ -225,7 +213,7 @@ int LocalKey::save()
   {
     int32_t size = get_data_size();
     char* buf = new char[size];
-    dump_data(buf, size);
+    dump(buf, size);
 
     if ((ret = file_op_->pwrite_file(buf, size, 0)) != TFS_SUCCESS)
     {
@@ -249,58 +237,6 @@ int LocalKey::save()
   return ret;
 }
 
-int LocalKey::remove()
-{
-  int ret = TFS_SUCCESS;
-  if ((ret = file_op_->unlink_file()) != TFS_SUCCESS)
-  {
-    TBSYS_LOG(ERROR, "remove local key fail, ret: %d", ret);
-  }
-  else
-  {
-    TBSYS_LOG(DEBUG, "remove local key success");
-  }
-  return ret;
-}
-
-int32_t LocalKey::get_data_size() const
-{
-  return sizeof(SegmentHead) + seg_head_.count_ * sizeof(SegmentInfo);
-}
-
-int64_t LocalKey::get_file_size() const
-{
-  return seg_head_.size_;
-}
-
-int32_t LocalKey::get_segment_size() const
-{
-  return seg_head_.count_;
-}
-
-SEG_SET& LocalKey::get_seg_info()
-{
-  return seg_info_;
-}
-
-int LocalKey::dump_data(char* buf, const int32_t size) const
-{
-  int ret = TFS_ERROR;
-  if (size >= get_data_size())
-  {
-    memcpy(buf, &seg_head_, sizeof(SegmentHead));
-    char* pos = buf + sizeof(SegmentHead);
-    SEG_SET_CONST_ITER it;
-    for (it = seg_info_.begin(); it != seg_info_.end(); ++it)
-    {
-      memcpy(pos, &(*it), sizeof(SegmentInfo));
-      pos += sizeof(SegmentInfo);
-    }
-    ret = TFS_SUCCESS;
-  }
-  return ret;
-}
-
 int64_t LocalKey::get_segment_for_write(const int64_t offset, const char* buf,
                                         const int64_t size, SEG_DATA_LIST& seg_list)
 {
@@ -308,9 +244,10 @@ int64_t LocalKey::get_segment_for_write(const int64_t offset, const char* buf,
     need_write_size = 0, remain_nw_size = 0, // remain_need_write_size
     total_size = 0;
   int32_t tmp_crc = 0;
+  TfsFileStat file_stat;
   const char* cur_buf = buf;
   SegmentInfo seg_info;
-  SEG_SET_CONST_ITER it, first_it;
+  SEG_INFO_CONST_ITER it, first_it;
 
   while (static_cast<int32_t>(seg_list.size()) < ClientConfig::batch_count_ &&
          remain_size > 0)
@@ -364,6 +301,16 @@ int64_t LocalKey::get_segment_for_write(const int64_t offset, const char* buf,
             need_write_size += it->size_;
             remain_nw_size -= it->size_;
           }
+          else if (TfsClient::Instance()->stat_file(FSName(it->block_id_, it->file_id_).get_name(),
+                                                    NULL, &file_stat, NORMAL_STAT,
+                                                    tbsys::CNetUtil::addrToString(server_id_).c_str())
+                   != TFS_SUCCESS) // server id util
+          {
+            TBSYS_LOG(INFO, "segment info is not valid. blockid: %u, fileid: %"PRI64_PREFIX"u",
+                      it->block_id_, it->file_id_);
+            need_write_size += it->size_;
+            remain_nw_size -= it->size_;
+          }
           else // full segment crc is correct, use it
           {
             TBSYS_LOG(INFO, "segment data written: offset: %"PRI64_PREFIX"d, blockid: %u, fileid: %"PRI64_PREFIX"u, size: %d, crc: %u", it->offset_, it->block_id_, it->file_id_, it->size_, it->crc_);
@@ -409,7 +356,7 @@ int64_t LocalKey::get_segment_for_read(const int64_t offset, char* buf,
 
   SegmentInfo seg_info;
   seg_info.offset_ = offset;
-  SEG_SET_CONST_ITER it = seg_info_.lower_bound(seg_info);
+  SEG_INFO_CONST_ITER it = seg_info_.lower_bound(seg_info);
 
   if (seg_info_.end() == it || it->offset_ != offset)
   {
@@ -421,7 +368,7 @@ int64_t LocalKey::get_segment_for_read(const int64_t offset, char* buf,
     }
     else                        // found previous segment middle, get info
     {
-      SEG_SET_CONST_ITER pre_it = it;
+      SEG_INFO_CONST_ITER pre_it = it;
       --pre_it;
       // actually SHOULD always occur, cause adjacent and completed read segment info
       if (pre_it->offset_ + pre_it->size_ > offset)
@@ -467,7 +414,7 @@ int64_t LocalKey::get_segment_for_read(const int64_t offset, char* buf,
   return check_size;
 }
 
-void LocalKey::check_overlap(const int64_t offset, SEG_SET_CONST_ITER& it)
+void LocalKey::check_overlap(const int64_t offset, SEG_INFO_CONST_ITER& it)
 {
   if (it != seg_info_.begin())
   {
@@ -552,7 +499,7 @@ int LocalKey::load_segment(const char* buf)
   return ret;
 }
 
-void LocalKey::gc_segment(SEG_SET_CONST_ITER it)
+void LocalKey::gc_segment(SEG_INFO_CONST_ITER it)
 {
   gc_file_.add_segment(*it);
 
@@ -562,13 +509,13 @@ void LocalKey::gc_segment(SEG_SET_CONST_ITER it)
   seg_info_.erase(it);
 }
 
-void LocalKey::gc_segment(SEG_SET_CONST_ITER first, SEG_SET_CONST_ITER last)
+void LocalKey::gc_segment(SEG_INFO_CONST_ITER first, SEG_INFO_CONST_ITER last)
 {
   // not update head info
   if (first != last && first != seg_info_.end())
   {
     int64_t total_size = 0;
-    for (SEG_SET_CONST_ITER it = first; it != last && it != seg_info_.end(); it++)
+    for (SEG_INFO_CONST_ITER it = first; it != last && it != seg_info_.end(); it++)
     {
       gc_file_.add_segment(*it);
       total_size += it->size_;
@@ -616,15 +563,4 @@ int LocalKey::init_local_key_name(const char* key, const uint64_t addr, char* lo
   }
 
   return ret;
-}
-
-void LocalKey::clear()
-{
-  memset(&seg_head_, 0, sizeof(SegmentHead));
-  clear_info();
-}
-
-void LocalKey::clear_info()
-{
-  seg_info_.clear();
 }

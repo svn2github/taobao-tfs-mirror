@@ -26,6 +26,11 @@ namespace tfs
 {
   namespace common
   {
+#if defined(__DATE__) && defined(__TIME__) && defined(PACKAGE) && defined(VERSION)
+static const char g_build_description[] = "Taobao file system(TFS), Version: " VERSION ", Build time: "__DATE__ " "__TIME__;
+#else
+static const char _g_build_description[] = "unknown";
+#endif
     BaseMain* BaseMain::instance_=NULL;
     static void ctrlc_handler_callback( int sig )
     {
@@ -273,8 +278,7 @@ namespace tfs
 
     void BaseMain::version()
     {
-      std::cerr << "Version:1.0.0\n";
-      std::cerr << "BUILD_TIME " << __DATE__ << __TIME__ << std::endl;
+      std::cerr << g_build_description << std::endl;
     }
 
     int BaseMain::parse_common_line_args(int , char* [], std::string& )

@@ -27,6 +27,7 @@ COMMONLIB = $(top_builddir)/src/message/libtfsmessage.a\
 
 LDADD = $(top_builddir)/src/tools/util/libtfstoolsutil.a\
 	$(top_builddir)/src/new_client/.libs/libtfsclient.a\
+	$(UNIQUE_STORE_LDFLAGS)\
         $(COMMONLIB)
 
 clear_file_system_SOURCES = clear_file_system.cpp

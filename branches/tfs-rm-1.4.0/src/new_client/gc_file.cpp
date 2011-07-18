@@ -17,6 +17,7 @@
 #include "tbsys.h"
 
 #include "common/directory_op.h"
+#include "common/error_msg.h"
 #include "gc_file.h"
 
 using namespace tfs::client;
@@ -25,7 +26,7 @@ using namespace tfs::common;
 const char* tfs::client::GC_FILE_PATH = "/tmp/TFSlocalkeyDIR/gc/";
 
 GcFile::GcFile(const bool need_save_seg_infos)
-  :need_save_seg_infos_(need_save_seg_infos), file_pos_(sizeof(SegmentHead)), file_op_(NULL)
+  :need_save_seg_infos_(need_save_seg_infos), file_pos_(sizeof(SegmentHead))
 {
 }
 
@@ -44,9 +45,7 @@ GcFile::~GcFile()
       save_gc();
     }
   }
-  tbsys::gDelete(file_op_);
 }
-
 
 int GcFile::initialize(const char* name)
 {
@@ -70,24 +69,16 @@ int GcFile::initialize(const char* name)
 
     if (access(file_path, F_OK) != 0)
     {
-      file_op_ = new FileOperation(file_path, O_RDWR|O_CREAT);
+      ret = init_file_op(file_path, O_RDWR|O_CREAT);
     }
-    else
+    else if ((ret = init_file_op(file_path, O_RDWR|O_APPEND)) == TFS_SUCCESS)
     {
-      file_op_ = new FileOperation(file_path, O_RDWR|O_APPEND);
       load_head();
       TBSYS_LOG(DEBUG, "load head count: %d, size: %"PRI64_PREFIX"d", seg_head_.count_, seg_head_.size_);
+      TBSYS_LOG(DEBUG, "initialize gc file success");
     }
-    TBSYS_LOG(DEBUG, "initialize gc file success");
   }
   return ret;
-}
-
-int GcFile::load_file(const char* name)
-{
-  tbsys::gDelete(file_op_);
-  file_op_ = new FileOperation(name, O_RDWR);
-  return load();
 }
 
 int GcFile::add_segment(const SegmentInfo& seg_info)
@@ -102,13 +93,9 @@ int GcFile::add_segment(const SegmentInfo& seg_info)
   return ret;
 }
 
-void GcFile::dump(char* buf, const int32_t buffer_size)
+int GcFile::validate(const int64_t)
 {
-  size_t size = seg_info_.size();
-  for (size_t i = 0; i < size && static_cast<int32_t>((i + 1) * sizeof(SegmentInfo)) <= buffer_size; i++)
-  {
-    memcpy(buf + i * sizeof(SegmentInfo), &seg_info_[i], sizeof(SegmentInfo));
-  }
+  return TFS_SUCCESS;
 }
 
 int GcFile::save()
@@ -125,40 +112,6 @@ int GcFile::save()
     ret = save_gc();
   }
   return ret;
-}
-
-int GcFile::remove()
-{
-  int ret = TFS_SUCCESS;
-  if (NULL == file_op_)
-  {
-    TBSYS_LOG(ERROR, "remove gc file fail, not initialized");
-    ret = TFS_ERROR;
-  }
-  else if ((ret = file_op_->unlink_file()) != TFS_SUCCESS)
-  {
-    TBSYS_LOG(ERROR, "remove gc file fail, ret: %d", ret);
-  }
-  else
-  {
-    TBSYS_LOG(INFO, "remove gc file success");
-  }
-  return ret;
-}
-
-int32_t GcFile::get_data_size() const
-{
-  return sizeof(SegmentHead) + seg_head_.count_ * sizeof(SegmentInfo);
-}
-
-int64_t GcFile::get_file_size() const
-{
-  return seg_head_.size_;
-}
-
-int32_t GcFile::get_segment_size() const
-{
-  return seg_head_.count_;
 }
 
 int GcFile::save_gc()
@@ -183,7 +136,7 @@ int GcFile::save_gc()
               seg_info_.size(), size, seg_head_.count_, seg_head_.size_);
     file_op_->flush_file();
     file_pos_ += size;
-    seg_info_.clear();
+    clear_info();
   }
   tbsys::gDeleteA(buf);
 
@@ -212,7 +165,7 @@ int GcFile::load()
     }
     else
     {
-      seg_info_.clear();
+      clear_info();
       SegmentInfo* seg_info = reinterpret_cast<SegmentInfo*>(buf);
       for (int32_t i = 0; i < seg_head_.count_; i++)
       {

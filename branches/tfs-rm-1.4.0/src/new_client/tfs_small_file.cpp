@@ -161,19 +161,8 @@ int64_t TfsSmallFile::get_segment_for_write(const int64_t offset, const char* bu
 
 int TfsSmallFile::read_process(int64_t& read_size, const InnerFilePhase read_file_phase)
 {
-  int ret = TFS_SUCCESS;
-
   meta_seg_->reset_status();
-  int32_t retry_count = processing_seg_list_[0]->ds_.size();
-  do
-  {
-    if ((ret = process(read_file_phase)) != TFS_SUCCESS)
-    {
-      TBSYS_LOG(ERROR, "read data fail, ret: %d", ret);
-    }
-    finish_read_process(ret, read_size);
-  } while (ret != TFS_SUCCESS && --retry_count > 0);
-  return ret;
+  return read_process_ex(read_size, read_file_phase);
 }
 
 int TfsSmallFile::write_process()

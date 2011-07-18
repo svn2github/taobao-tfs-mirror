@@ -136,6 +136,26 @@ int32_t TfsClient::unlink_unique(const char* file_name, const char* suffix, int6
 }
 #endif
 
+void TfsClient::set_cache_items(const int64_t cache_items)
+{
+  return TfsClientImpl::Instance()->set_cache_items(cache_items);
+}
+
+int64_t TfsClient::get_cache_items() const
+{
+  return TfsClientImpl::Instance()->get_cache_items();
+}
+
+void TfsClient::set_cache_time(const int64_t cache_time)
+{
+  return TfsClientImpl::Instance()->set_cache_time(cache_time);
+}
+
+int64_t TfsClient::get_cache_time() const
+{
+  return TfsClientImpl::Instance()->get_cache_time();
+}
+
 void TfsClient::set_segment_size(const int64_t segment_size)
 {
   return TfsClientImpl::Instance()->set_segment_size(segment_size);

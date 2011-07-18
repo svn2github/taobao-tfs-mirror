@@ -613,7 +613,7 @@ namespace tfs
       return iret;
     }
 
-    int OpLogSyncManager::replay_helper(const char* const data, int64_t& data_len, int64_t& pos, time_t now)
+    int OpLogSyncManager::replay_helper(const char* const data, const int64_t data_len, int64_t& pos, const time_t now)
     {
       OpLogHeader header;
       int32_t iret = (NULL != data && data_len - pos >= header.length()) ? TFS_SUCCESS : TFS_ERROR;

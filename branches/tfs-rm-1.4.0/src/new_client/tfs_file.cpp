@@ -1528,6 +1528,21 @@ int TfsFile::async_rsp_unlink_file(common::BasePacket* rsp, const uint16_t index
   return ret;
 }
 
+int TfsFile::read_process_ex(int64_t& read_size, const InnerFilePhase read_file_phase)
+{
+  int ret = TFS_ERROR;
+  // segList.size() != 0
+  // just use first ds list size to be retry times. maybe random ..
+  int32_t retry_count = processing_seg_list_[0]->ds_.size();
+  do
+  {
+    ret = process(read_file_phase);
+    finish_read_process(ret, read_size);
+  } while (ret != TFS_SUCCESS && --retry_count > 0);
+
+  return ret;
+}
+
 //calculate the size of read process and delete the success one from processing seg list
 int32_t TfsFile::finish_read_process(int status, int64_t& read_size)
 {

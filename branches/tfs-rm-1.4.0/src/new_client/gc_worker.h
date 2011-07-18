@@ -17,6 +17,7 @@
 #define TFS_CLIENT_GCWORKER_H_
 
 #include <Timer.h>
+#include "common/error_msg.h"
 #include "tfs_client_api.h"
 #include "local_key.h"
 #include "gc_file.h"
@@ -55,7 +56,6 @@ namespace tfs
     private:
       DISALLOW_COPY_AND_ASSIGN(GcWorker);
       bool destroy_;
-      TfsClient* tfs_client_;
       LocalKey local_key_;
       GcFile gc_file_;
       std::vector<std::string> file_;
@@ -84,22 +84,29 @@ namespace tfs
 
     template<class T> int GcWorker::do_gc_ex(T& meta, const char* file_name, const char* addr, int64_t& file_size)
     {
-      int ret = common::TFS_SUCCESS;
-      if ((ret = meta.load_file(file_name)) != common::TFS_SUCCESS)
-      {
-        TBSYS_LOG(ERROR, "load fail, ret: %d", ret);
-      }
-      else if ((ret = do_unlink(meta.get_seg_info(), addr, file_size)) != common::TFS_SUCCESS)
-      {
-        TBSYS_LOG(ERROR, "do unlink fail, ret: %d", ret);
-      }
+      int ret = meta.load_file(file_name);
 
-      // ignore if unlink all file success, just remove ?
-      if ((ret = meta.remove()) != common::TFS_SUCCESS)
+      if (common::EXIT_FILE_BUSY_ERROR == ret)
       {
-        TBSYS_LOG(ERROR, "remove file fail, file: %s, ret: %d", file_name, ret);
+        TBSYS_LOG(WARN, "file is busy, maybe other gc worker is mastering over it: %s", file_name);
       }
+      else
+      {
+        if (ret != common::TFS_SUCCESS)
+        {
+          TBSYS_LOG(ERROR, "load file %s fail, ret: %d", file_name, ret);
+        }
+        else if ((ret = do_unlink(meta.get_seg_info(), addr, file_size)) != common::TFS_SUCCESS)
+        {
+          TBSYS_LOG(ERROR, "do unlink fail, ret: %d", ret);
+        }
 
+        // ignore if unlink all file success, just remove ?
+        if ((ret = meta.remove()) != common::TFS_SUCCESS)
+        {
+          TBSYS_LOG(ERROR, "remove file fail, file: %s, ret: %d", file_name, ret);
+        }
+      }
       return ret;
     }
 
@@ -115,7 +122,7 @@ namespace tfs
         FSName fsname;
         fsname.set_block_id(it->block_id_);
         fsname.set_file_id(it->file_id_);
-        if (tfs_client_->unlink(fsname.get_name(), NULL, addr, file_size) != common::TFS_SUCCESS)
+        if (TfsClient::Instance()->unlink(fsname.get_name(), NULL, addr, file_size) != common::TFS_SUCCESS)
         {
           TBSYS_LOG(ERROR, "gc segment fail, blockid: %u, fileid: %"PRI64_PREFIX"u, ret: %d",
               it->block_id_, it->file_id_, ret);

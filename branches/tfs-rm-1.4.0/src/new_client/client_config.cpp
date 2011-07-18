@@ -34,6 +34,8 @@ string StatItem::cache_hit_ = "cache_hit";
 string StatItem::cache_miss_ = "cache_miss";
 string StatItem::remove_count_ = "remove_count";
 
+int64_t ClientConfig::cache_items_ = DEFAULT_BLOCK_CACHE_ITEMS;
+int64_t ClientConfig::cache_time_ = DEFAULT_BLOCK_CACHE_TIME;
 int64_t ClientConfig::segment_size_ = MAX_SEGMENT_SIZE;
 int64_t ClientConfig::batch_count_ = MAX_BATCH_COUNT / 2;
 int64_t ClientConfig::batch_size_ = ClientConfig::segment_size_ * ClientConfig::batch_count_;
