@@ -127,12 +127,16 @@ public class NameServerPlanTestCase {
 	final public int TXBYTPERSEC_SD_COL  = 6;
 	/* used_cap'col number in server list(ssm) */
 	final public int USED_CAP_COL        = 3;
+	/* curr_blk_cnt'col number in server list(ssm) */
+	final public int CURR_BLKCNT_COL     = 6;
 	
 	/* Define blk cnt and network traffic diff threshold to check write balance */
 	final public int   BLK_DIFF_THRESHOLD       		  = 10;	
 	final public double NETWORKTRAF_IMBALANCE_THRESHOLD   = 1000000.0;
 	/* Define used capacity threshold for check in write test(GB)*/
-	final public double CHK_WRITE_AMOUNT       		      = 80.0;	
+	final public double CHK_WRITE_AMOUNT       		      = 400.0;	
+	/* Define blk cnt for check in write test*/
+	final public int BLK_CNT_THRESHOLD	                  = 40000;	
 	
 	/* Client conf */
 	final public String LOOPFLAG = "loop_flag";
@@ -2013,6 +2017,71 @@ public class NameServerPlanTestCase {
 			log.debug("usedCapNow: " + value);
 			result.clear();
 			sleep(10);
+		} while(value < chkValue);
+		
+		bRet = true;
+    
+		return bRet;
+	}
+	
+	/**
+	 * @author mingyan 
+	 * @param blkCnt
+	 * @return
+	 */
+	public boolean getCurrBlkCnt(HashMap<String, Integer> blkCnt)
+	{
+		boolean bRet = false;
+    
+		/* Use ssm to query */
+		String strCmd = TFS_BIN_HOME + "/ssm -s " + NSVIP + 
+			":" + NSPORT + " -i server";
+		ArrayList<String> result = new ArrayList<String>();
+		String strValue = "";
+		String strPreValue;
+		do {
+			bRet = Proc.cmdOutBase(NSIPA, strCmd, "TOTAL:", CURR_BLKCNT_COL, null, result);
+			if (bRet == false) return bRet;
+			
+			if (result.size() != 1) return false;
+			strPreValue = strValue;
+			strValue = result.get(0);
+			result.clear();
+			sleep(20);
+		} while (strValue.equals("0") || !strPreValue.equals(strValue));
+		int valueBefore = Integer.parseInt(strValue);
+		log.debug("blkCntBefore: " + valueBefore);
+		blkCnt.put("Before", valueBefore);
+		
+		bRet = true;
+    
+		return bRet;
+	}	
+
+	/**
+	 * @author mingyan 
+	 * @param chkValue
+	 * @return
+	 */
+	public boolean chkCurrBlkCnt(int chkValue)
+	{
+		boolean bRet = false;
+    
+		/* Use ssm to query */
+		String strCmd = TFS_BIN_HOME + "/ssm -s " + NSVIP + 
+			":" + NSPORT + " -i server";
+		ArrayList<String> result = new ArrayList<String>();
+		double value;
+		do {
+			bRet = Proc.cmdOutBase(NSIPA, strCmd, "TOTAL:", CURR_BLKCNT_COL, null, result);
+			if (bRet == false) return bRet;
+			
+			if (result.size() != 1) return false;
+			String strValue = result.get(0);
+			value = Integer.parseInt(strValue);
+			log.debug("currBlkCnt: " + value);
+			result.clear();
+			sleep(20);
 		} while(value < chkValue);
 		
 		bRet = true;

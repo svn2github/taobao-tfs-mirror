@@ -908,18 +908,12 @@ public class Function_ns_plan_test extends NameServerPlanTestCase {
 		/* Set seed size */
 		bRet = setSeedSize(1);
 		Assert.assertTrue(bRet);
-	
-		/* Get current used cap(before write) */
-		HashMap<String, Double> usedCap = new HashMap<String, Double>();
-		bRet = getUsedCap(usedCap);
-		Assert.assertTrue(bRet);
 		
 		/* Write file */
 		bRet = writeCmd();
 		Assert.assertTrue(bRet);
 
-		double chkValue = usedCap.get("Before") + CHK_WRITE_AMOUNT;
-		bRet = chkUsedCap(chkValue);
+		bRet = chkCurrBlkCnt(BLK_CNT_THRESHOLD);
 		Assert.assertTrue(bRet);
 		
 		/* Stop write process */

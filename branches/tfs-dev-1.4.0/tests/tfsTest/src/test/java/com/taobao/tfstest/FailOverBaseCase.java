@@ -124,7 +124,7 @@ public class FailOverBaseCase {
 	final public String UNLINKCMD = "./tfsControlPress -f test_tfs.conf -i tfsUnlink -l tfsUnlink.";
 	
 	/* For scan log on client */
-	final public int TAILLINE = 100;
+	final public int TAILLINE = 3000;
 	final public int TAILRATECOL = 13;
 	final public int RUNRATECOL = 13;
 	final public int TAILTPSCOL = 14;
