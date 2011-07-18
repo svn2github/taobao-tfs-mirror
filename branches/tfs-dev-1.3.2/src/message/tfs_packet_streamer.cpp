@@ -70,6 +70,7 @@ namespace tfs
         TBSYS_LOG(ERROR, "stream error: %x<>%x, dataLen: %d", tfs_packet_header.flag_, TFS_PACKET_FLAG_V1,
             header->_dataLen);
         *broken = true;
+        input->clear();
       }
       if (tfs_packet_header.flag_ == TFS_PACKET_FLAG_V1)
       {
