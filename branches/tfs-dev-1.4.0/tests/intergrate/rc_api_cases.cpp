@@ -103,6 +103,7 @@ void RcApiTest::login(const int num)
 
 void RcApiTest::keep_alive(const int num)
 {
+  UNUSED(num);
 }
 
 TEST_F(RcApiTest, test_login)
