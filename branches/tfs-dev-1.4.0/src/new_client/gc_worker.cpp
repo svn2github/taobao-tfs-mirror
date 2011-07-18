@@ -84,7 +84,7 @@ int GcManager::reset_schedule_interval(const int64_t schedule_interval_ms)
   return ret;
 }
 
-GcWorker::GcWorker() : tfs_client_(NULL), gc_file_(false)
+GcWorker::GcWorker()
 {
 }
 
@@ -98,7 +98,6 @@ void GcWorker::runTimerTask()
   int ret = TFS_SUCCESS;
   // gc expired local key and garbage gc file sequencially, maybe use thread
 
-  tfs_client_ = TfsClient::Instance();
   // gc expired local key
   if ((ret = start_gc(GC_EXPIRED_LOCAL_KEY)) != TFS_SUCCESS)
   {
@@ -222,7 +221,7 @@ int GcWorker::check_file(const char* path, const char* file, const time_t now)
 
 int GcWorker::do_gc(const GcType gc_type)
 {
-  int ret = TFS_SUCCESS, fd = -1;
+  int ret = TFS_SUCCESS;
   string::size_type id_pos = 0;
 
   TBSYS_LOG(DEBUG, "gc file count: %d", file_.size());
@@ -232,10 +231,6 @@ int GcWorker::do_gc(const GcType gc_type)
     if (string::npos == (id_pos = file_name.rfind('!')))
     {
       TBSYS_LOG(ERROR, "file name is not valid, no server id: %s", file_name.c_str());
-    }
-    else if ((fd = check_lock(file_name.c_str())) < 0)
-    {
-      TBSYS_LOG(WARN, "file is locked, maybe other gc process is master it");
     }
     else
     {
@@ -259,26 +254,8 @@ int GcWorker::do_gc(const GcType gc_type)
           TBSYS_LOG(ERROR, "gc garbage file fail, file name: %s, ret: %d, file size: %"PRI64_PREFIX"d", file_name.c_str(), ret, file_size);
         }
       }
-
-      // release lock, maybe add to FileOperation
-      flock(fd, LOCK_UN);
-      close(fd);
     }
   }
 
   return ret;
-}
-
-
-// maybe add to FileOperation
-int GcWorker::check_lock(const char* file)
-{
-  int fd = open(file, O_RDONLY);
-  // can not open recognize as lock
-  if (fd > 0 && flock(fd, LOCK_EX|LOCK_NB) < 0)
-  {
-    close(fd);
-    fd = -1;
-  }
-  return fd;
 }

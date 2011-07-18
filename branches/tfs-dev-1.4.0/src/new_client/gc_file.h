@@ -18,6 +18,7 @@
 
 #include "common/internal.h"
 #include "common/file_op.h"
+#include "segment_container.h"
 
 namespace tfs
 {
@@ -27,43 +28,27 @@ namespace tfs
     extern const char* GC_FILE_PATH;
     const mode_t GC_FILE_PATH_MODE = 0777;
 
-    class GcFile
+    class GcFile : public SegmentContainer< std::vector<common::SegmentInfo> >
     {
     public:
       explicit GcFile(const bool need_save_seg_infos = true);
-      ~GcFile();
+      virtual ~GcFile();
+
+      virtual int load();
+      virtual int add_segment(const common::SegmentInfo& seg_info);
+      virtual int validate(const int64_t total_size = 0);
+      virtual int save();
 
       int initialize(const char* name);
-      int load_file(const char* name);
-      int add_segment(const common::SegmentInfo& seg_info);
-      int save();
-      int remove();
-
-      int validate(const int64_t = 0)
-      {
-        return common::TFS_SUCCESS;
-      }
-      int32_t get_data_size() const;    // get raw data size of segment head and data
-      int64_t get_file_size() const;    // get size that segments contain
-      int32_t get_segment_size() const; // get segment count
-      std::vector<common::SegmentInfo>& get_seg_info()
-      {
-        return seg_info_;
-      }
 
     private:
       DISALLOW_COPY_AND_ASSIGN(GcFile);
       int save_gc();
-      int load();
       int load_head();
-      void dump(char* buf, const int32_t size);
 
     private:
       bool need_save_seg_infos_;
       int file_pos_;
-      common::FileOperation* file_op_;
-      common::SegmentHead seg_head_;
-      std::vector<common::SegmentInfo> seg_info_;
     };
   }
 }

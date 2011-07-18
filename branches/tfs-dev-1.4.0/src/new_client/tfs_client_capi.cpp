@@ -124,6 +124,26 @@ int t_set_option_flag(const int fd, const OptionFlag option_flag)
   return TfsClient::Instance()->set_option_flag(fd, static_cast<tfs::common::OptionFlag>(option_flag));
 }
 
+void t_set_cache_items(const int64_t cache_items)
+{
+  return TfsClient::Instance()->set_cache_items(cache_items);
+}
+
+int64_t t_get_cache_items()
+{
+  return TfsClient::Instance()->get_cache_items();
+}
+
+void t_set_cache_time(const int64_t cache_time)
+{
+  return TfsClient::Instance()->set_cache_time(cache_time);
+}
+
+int64_t t_get_cache_time()
+{
+  return TfsClient::Instance()->get_cache_time();
+}
+
 void t_set_segment_size(const int64_t segment_size)
 {
   return TfsClient::Instance()->set_segment_size(segment_size);

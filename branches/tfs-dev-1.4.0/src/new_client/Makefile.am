@@ -21,7 +21,7 @@ api_source_list = tfs_file.cpp tfs_large_file.cpp tfs_small_file.cpp tfs_session
                   tfs_rc_helper.cpp tfs_rc_client_api.cpp tfs_rc_client_api_impl.cpp \
                   tfs_file.h tfs_large_file.h tfs_small_file.h tfs_session.h \
                   fsname.h tfs_session_pool.h tfs_client_impl.h tfs_client_api.h \
-                  local_key.h gc_file.h gc_worker.h bg_task.h client_config.h\
+                  segment_container.h local_key.h gc_file.h gc_worker.h bg_task.h client_config.h\
                   tfs_rc_helper.h ${unique_store_source}
 
 ld_fg = $(AM_LDFLAGS) \

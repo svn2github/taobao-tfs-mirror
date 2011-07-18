@@ -111,6 +111,7 @@ namespace tfs
       void destroy_seg();
       int64_t get_meta_segment(const int64_t offset, const char* buf, const int64_t count, const bool force_check = true);
       int process(const InnerFilePhase file_phase);
+      int read_process_ex(int64_t& read_size, const InnerFilePhase read_file_phase);
       int32_t finish_read_process(const int status, int64_t& read_size);
 
       int get_block_info(SegmentData& seg_data, const int32_t flags);

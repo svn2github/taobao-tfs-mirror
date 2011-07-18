@@ -20,6 +20,7 @@
 #include <Memory.hpp>
 #include "common/file_op.h"
 #include "common/internal.h"
+#include "segment_container.h"
 #include "gc_file.h"
 
 namespace tfs
@@ -157,57 +158,41 @@ namespace tfs
     typedef std::vector<SegmentData*>::iterator SEG_DATA_LIST_ITER;
     typedef std::vector<SegmentData*>::const_iterator SEG_DATA_LIST_CONST_ITER;
 
-    typedef std::set<common::SegmentInfo> SEG_SET;
-    typedef std::set<common::SegmentInfo>::iterator SEG_SET_ITER;
-    typedef std::set<common::SegmentInfo>::const_iterator SEG_SET_CONST_ITER;
-
-    class LocalKey
+    class LocalKey : public SegmentContainer< std::set<common::SegmentInfo> >
     {
     public:
-
       LocalKey();
-      ~LocalKey();
+      virtual ~LocalKey();
+
+      virtual int load();
+      virtual int add_segment(const common::SegmentInfo& seg_info);
+      virtual int validate(const int64_t total_size = 0);
+      virtual int save();
 
       int initialize(const char* local_key, const uint64_t addr);
-
-      int load();
       int load(const char* buf);
       int load_head(const char* buf);
-      int load_file(const char* name);
-      int validate(const int64_t total_size = 0);
-      int save();
-      int remove();
 
       int64_t get_segment_for_write(const int64_t offset, const char* buf,
                                 const int64_t size, SEG_DATA_LIST& seg_list);
       int64_t get_segment_for_read(const int64_t offset, char* buf,
                                const int64_t size, SEG_DATA_LIST& seg_list);
 
-      int add_segment(const common::SegmentInfo& seg_info);
-      int dump_data(char* buf, const int32_t buff_size) const;
-
-      int32_t get_data_size() const;    // get raw data size of segment head and data
-      int64_t get_file_size() const;    // get size that segments contain
-      int32_t get_segment_size() const; // get segment count
-      SEG_SET& get_seg_info();
 
     private:
       int init_local_key_name(const char* key, const uint64_t addr, char* local_key_name);
-      void clear();
-      void clear_info();
       int load_segment(const char* buf);
+
       static void get_segment(const int64_t offset, const char* buf,
                        const int64_t size, SEG_DATA_LIST& seg_list);
-      void check_overlap(const int64_t offset, SEG_SET_ITER& it);
+      void check_overlap(const int64_t offset, SEG_INFO_CONST_ITER& it);
 
-      void gc_segment(SEG_SET_CONST_ITER it);
-      void gc_segment(SEG_SET_CONST_ITER first, SEG_SET_CONST_ITER last);
+      void gc_segment(SEG_INFO_CONST_ITER it);
+      void gc_segment(SEG_INFO_CONST_ITER first, SEG_INFO_CONST_ITER last);
 
     private:
-      common::SegmentHead seg_head_;
-      common::FileOperation* file_op_;
+      uint64_t server_id_;
       GcFile gc_file_;
-      SEG_SET seg_info_;
     };
   }
 }
