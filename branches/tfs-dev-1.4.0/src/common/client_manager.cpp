@@ -32,15 +32,21 @@ namespace tfs
     NewClientManager::~NewClientManager()
     {
       destroy();
+      destroy_resource();
     }
 
     void NewClientManager::destroy()
     {
+      tbutil::Mutex::Lock lock(mutex_);
+      initialize_ = false;
+    }
+
+    void NewClientManager::destroy_resource()
+    {
       mutex_.lock();
       bool initialize = initialize_;
-      initialize_ = false;
       mutex_.unlock();
-      
+
       if (initialize)
       {
         if (own_transport_)
@@ -87,6 +93,7 @@ namespace tfs
               transport_ = transport;
             }
             connmgr_ = new tbnet::ConnectionManager(transport_, streamer_, this);
+            connmgr_->setDefaultQueueLimit(0, DEFAULT_CLIENT_CONNTION_QUEUE_LIMIT);
             initialize_ = true;
             NEWCLIENT_MAP_ITER iter = new_clients_.begin();
             for (; iter != new_clients_.end(); ++iter)
@@ -108,7 +115,7 @@ namespace tfs
     tbnet::IPacketHandler::HPRetCode NewClientManager::handlePacket(
         tbnet::Packet* packet, void* args)
     {
-      bool call_wakeup = NULL != args && initialize_;
+      bool call_wakeup = NULL != args /*&& initialize_*/;
       if (call_wakeup)
       {
         bool is_disconntion_packet = (NULL != packet)
@@ -210,7 +217,6 @@ namespace tfs
       return bret;
     }
 
-
     bool NewClientManager::handlePacket(const WaitId& id, tbnet::Packet* response)
     {
       bool ret = true;
@@ -227,13 +233,20 @@ namespace tfs
         else
         {
           client = iter->second;
-          // if got control packet or NULL, we will still add the done counter
-          ret = iter->second->handlePacket(id, response, is_callback);
         }
       }
 
+      //if got control packet or NULL, we will still add the done counter
+      if ((ret)
+        && (NULL != client))
+      {
+        // if got control packet or NULL, we will still add the done counter
+        ret = client->handlePacket(id, response, is_callback);
+      }
+
       //async callback
-      if (is_callback)
+      if ((ret)
+        && (is_callback))
       {
         do_async_callback(client);
       }
@@ -271,7 +284,7 @@ namespace tfs
       bool bret = NULL != client;
       if (bret)
       {
-        tbutil::Mutex::Lock lock(mutex_);
+        mutex_.lock();
         NEWCLIENT_MAP_ITER iter = new_clients_.find(client->get_seq_id());
         if (iter == new_clients_.end())
         {
@@ -281,6 +294,8 @@ namespace tfs
         {
           new_clients_.erase(iter);
         }
+        mutex_.unlock();
+
         if ( NULL == async_callback_entry_)
         {
           TBSYS_LOG(WARN, "not set async callback function, we'll delete this NewClient object, seq_id: %u",
