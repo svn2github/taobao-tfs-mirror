@@ -62,6 +62,7 @@ namespace tfs
         static void free_new_client_object(NewClient* client);
 
       private:
+        void destroy_resource();
         bool handlePacket(const WaitId& id, tbnet::Packet* response);
         bool do_async_callback(NewClient* client);
 
@@ -77,6 +78,7 @@ namespace tfs
         async_callback_func_entry async_callback_entry_;
         void* args_;
         static const uint32_t MAX_SEQ_ID = 0xFFFFFF - 1;
+        static const int32_t  DEFAULT_CLIENT_CONNTION_QUEUE_LIMIT = 10240;
         uint32_t seq_id_;
 
         bool initialize_;

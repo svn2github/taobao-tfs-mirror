@@ -115,6 +115,7 @@ public class FailOverBaseCase {
 	final public String UNITSIZEMIN = "unit_min";
 	final public String UNITSIZEMAX = "unit_max";
 	final public String READTYPE = "largeFlag";
+	final public String UNLINKRATIO = "unlinkRatio";
 	final public int LOOPON = 1;
 	final public int LOOPOFF = 0;
 	
@@ -123,13 +124,13 @@ public class FailOverBaseCase {
 	final public String UNLINKCMD = "./tfsControlPress -f test_tfs.conf -i tfsUnlink -l tfsUnlink.";
 	
 	/* For scan log on client */
-	final public int TAILLINE = 100;
+	final public int TAILLINE = 3000;
 	final public int TAILRATECOL = 13;
-	final public int RUNRATECOL = 14;
+	final public int RUNRATECOL = 13;
 	final public int TAILTPSCOL = 14;
-	final public int RUNTPSCOL = 12;
+	final public int RUNTPSCOL = 11;
 	final public int SCANTIME = 120;
-	final public int MIGRATETIME = 30;
+	final public int MIGRATETIME = 20;
 	
 	/* Thread count on client */
 	final public int HIGHTHREAD = 100;
@@ -161,6 +162,8 @@ public class FailOverBaseCase {
 	/* VIP server */
 	public AppServer MASTERSER = tfsGrid.getCluster(NSINDEX).getServer(0);
 	public AppServer SLAVESER = tfsGrid.getCluster(NSINDEX).getServer(1);
+
+	final public String VIPETHNAME = "eth0:1";
 	
 	/**
 	 * 
@@ -333,6 +336,25 @@ public class FailOverBaseCase {
 		bRet = conf.confReplaceSingleByPart(CLIENTIP, CLIENTCONF, "tfsseed", LOOPFLAG, String.valueOf(iFlag));
 		return bRet;
 	}
+
+	public boolean setReadFlag(int iFlag)
+	{
+		boolean bRet = false;
+		bRet = conf.confReplaceSingleByPart(CLIENTIP, CLIENTCONF, "tfsread", LOOPFLAG, String.valueOf(iFlag));
+		return bRet;
+	}	
+	
+	/**
+	 * 
+	 * @param iUnlinkRatio
+	 * @return
+	 */
+	public boolean setUnlinkRatio(int iUnlinkRatio)
+	{
+		boolean bRet = false;
+		bRet = conf.confReplaceSingleByPart(CLIENTIP, CLIENTCONF, "tfsseed", UNLINKRATIO, String.valueOf(iUnlinkRatio));
+		return bRet;
+	}
 	
 	/**
 	 * 
@@ -473,7 +495,7 @@ public class FailOverBaseCase {
 		/* Wait for migrate */
 		sleep(MIGRATETIME);
 		
-		bRet = HA.chkVipBase(MASTERSER.getIp());
+		bRet = HA.chkVipBase(MASTERSER.getIp(), VIPETHNAME);
 		log.info("Migrate vip end ===>");
 		return bRet;	
 	}
@@ -1010,7 +1032,7 @@ public class FailOverBaseCase {
 		sleep (MIGRATETIME);
 		
 		/* Check vip */
-		bRet = HA.chkVipBase(tempIp.getIp());
+		bRet = HA.chkVipBase(tempIp.getIp(), VIPETHNAME);
 		if (bRet == true)
 		{
 			log.error("VIP is not migrate yet!!!");
@@ -1057,7 +1079,7 @@ public class FailOverBaseCase {
 		sleep (MIGRATETIME);
 		
 		/* Check vip */
-		bRet = HA.chkVipBase(tempMaster.getIp());
+		bRet = HA.chkVipBase(tempMaster.getIp(), VIPETHNAME);
 		if (bRet == true)
 		{
 			log.error("VIP is not migrate yet!!!");
@@ -1101,7 +1123,7 @@ public class FailOverBaseCase {
 		sleep (5);
 		
 		/* Check vip */
-		bRet = HA.chkVipBase(tempIp.getIp());
+		bRet = HA.chkVipBase(tempIp.getIp(), VIPETHNAME);
 		if (bRet == true)
 		{
 			log.error("VIP is not migrate yet!!!");
@@ -1134,7 +1156,7 @@ public class FailOverBaseCase {
 		sleep (5);
 		
 		/* Check vip */
-		bRet = HA.chkVipBase(MASTERSER.getIp());
+		bRet = HA.chkVipBase(MASTERSER.getIp(), VIPETHNAME);
 		if (bRet == false)
 		{
 			log.error("VIP is not on master ns yet!!!");
@@ -1169,7 +1191,7 @@ public class FailOverBaseCase {
 		sleep (5);
 		
 		/* Check vip */
-		bRet = HA.chkVipBase(MASTERSER.getIp());
+		bRet = HA.chkVipBase(MASTERSER.getIp(), VIPETHNAME);
 		if (bRet == false)
 		{
 			log.error("VIP is not on master ns yet!!!");
@@ -1973,7 +1995,7 @@ public class FailOverBaseCase {
 	public boolean chkVip()
 	{
 		boolean bRet = false;
-		bRet = HA.chkVipBase(MASTERSER.getIp());		
+		bRet = HA.chkVipBase(MASTERSER.getIp(), VIPETHNAME);		
 		return bRet;
 	}
 	
