@@ -32,21 +32,20 @@ namespace tfs
     NewClientManager::~NewClientManager()
     {
       destroy();
-      destroy_resource();
+      NEWCLIENT_MAP_ITER iter = new_clients_.begin();
+      for (; iter != new_clients_.end(); ++iter)
+      {
+        free_new_client_object(iter->second);
+      }
+      new_clients_.clear();
     }
 
     void NewClientManager::destroy()
     {
-      tbutil::Mutex::Lock lock(mutex_);
-      initialize_ = false;
-    }
-
-    void NewClientManager::destroy_resource()
-    {
       mutex_.lock();
       bool initialize = initialize_;
+      initialize_ = false;
       mutex_.unlock();
-
       if (initialize)
       {
         if (own_transport_)
@@ -56,13 +55,6 @@ namespace tfs
           tbsys::gDelete(transport_);
         }
         tbsys::gDelete(connmgr_);
-
-        NEWCLIENT_MAP_ITER iter = new_clients_.begin();
-        for (; iter != new_clients_.end(); ++iter)
-        {
-          free_new_client_object(iter->second);
-        }
-        new_clients_.clear();
       }
     }
 

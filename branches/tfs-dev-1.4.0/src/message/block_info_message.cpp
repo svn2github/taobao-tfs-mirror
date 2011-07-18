@@ -714,6 +714,7 @@ namespace tfs
       block_id_(0), server_id_(0), repair_(0)
     {
       _packetHeader._pcode = common::UPDATE_BLOCK_INFO_MESSAGE;
+      memset(&db_stat_, 0, sizeof(db_stat_));
     }
 
     UpdateBlockInfoMessage::~UpdateBlockInfoMessage()

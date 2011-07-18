@@ -154,6 +154,7 @@ namespace tfs
             stream_.clear();
             stream_.expand(length);
             stream_.set_bytes(input->getData(), length);
+            TBSYS_LOG(DEBUG, "decode packet pcode: %d", header->_pcode);
             //Func::hex_dump(input->getData(), length);
             input->drainData(length);
             int32_t iret = deserialize(stream_);
@@ -199,6 +200,7 @@ namespace tfs
           packet->stream_.clear();
           packet->stream_.expand(packet->length());
           iret = packet->serialize(packet->stream_);
+          TBSYS_LOG(DEBUG, "reply, pcode: %d, %d", getPCode(), packet->getPCode());
           //Func::hex_dump(packet->stream_.get_data(), packet->stream_.get_data_length());
           if (TFS_SUCCESS == iret)
           {
