@@ -125,7 +125,7 @@ public class FailOverBaseCase {
 	
 	/* For scan log on client */
 	final public int TAILLINE = 3000;
-	final public int TAILRATECOL = 13;
+	final public int TAILRATECOL = 12;
 	final public int RUNRATECOL = 13;
 	final public int TAILTPSCOL = 14;
 	final public int RUNTPSCOL = 11;

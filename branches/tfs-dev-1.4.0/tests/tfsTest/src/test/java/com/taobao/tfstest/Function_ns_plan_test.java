@@ -894,7 +894,7 @@ public class Function_ns_plan_test extends NameServerPlanTestCase {
 		log.info(caseName + "===> end");
 		return ;
 	}	
-  @Test
+	@Test
 	public void Function_16_write_mass_blocks(){
 		
 		boolean bRet = false;

@@ -59,7 +59,7 @@ public class NameServerPlanTestCase {
 	final public String IPALIAS = tfsGrid.getCluster(NSINDEX).getServer(0).getIpAlias();
 	final public String NSCONF = tfsGrid.getCluster(NSINDEX).getServer(0).getConfname();	
 	final public String DSIPA = tfsGrid.getCluster(DSINDEX).getServer(0).getIp();
-	final public String DSIPB = tfsGrid.getCluster(DSINDEXI).getServer(1).getIp();
+	final public String DSIPB = tfsGrid.getCluster(DSINDEXI).getServer(0).getIp();
 	final public String CLIENTIP = tfsSeedClient.getIp();
 	final public String CLIENTCONF = tfsSeedClient.getConfname();
 	
@@ -134,7 +134,7 @@ public class NameServerPlanTestCase {
 	final public int   BLK_DIFF_THRESHOLD       		  = 10;	
 	final public double NETWORKTRAF_IMBALANCE_THRESHOLD   = 1000000.0;
 	/* Define used capacity threshold for check in write test(GB)*/
-	final public double CHK_WRITE_AMOUNT       		      = 400.0;	
+	final public double CHK_WRITE_AMOUNT       		      = 200.0;	
 	/* Define blk cnt for check in write test*/
 	final public int BLK_CNT_THRESHOLD	                  = 40000;	
 	
@@ -1957,11 +1957,19 @@ public class NameServerPlanTestCase {
 		String strCmd = TFS_BIN_HOME + "/ssm -s " + NSVIP + 
 			":" + NSPORT + " -i server";
 		ArrayList<String> result = new ArrayList<String>();
-		bRet = Proc.cmdOutBase(NSIPA, strCmd, "TOTAL:", USED_CAP_COL, null, result);
-		if (bRet == false) return bRet;
+		String strPreValue;
+		String strValue = "";
+		do {
+			bRet = Proc.cmdOutBase(NSIPA, strCmd, "TOTAL:", USED_CAP_COL, null, result);
+			if (bRet == false) return bRet;
+			
+			if (result.size() != 1) return false;
+			strPreValue = strValue;
+			strValue = result.get(0);
+			result.clear();
+			sleep(20);
+		} while (strValue.equals("0") || !strPreValue.equals(strValue));		
 		
-		if (result.size() != 1) return false;
-		String strValue = result.get(0);
 		double transFactor = 1.0;
 		if (strValue.endsWith("M"))
 		{
@@ -1971,7 +1979,7 @@ public class NameServerPlanTestCase {
 		{
 			transFactor = 1/1024;
 		}
-		strValue = strValue.substring(0, strValue.length()-2);
+		strValue = strValue.substring(0, strValue.length()-1);
 		double valueBefore = Double.parseDouble(strValue);
 		valueBefore /= transFactor;
 		log.debug("usedCapBefore: " + valueBefore);
@@ -2011,12 +2019,12 @@ public class NameServerPlanTestCase {
 			{
 				transFactor = 1/1024;
 			}
-			strValue = strValue.substring(0, strValue.length()-2);
+			strValue = strValue.substring(0, strValue.length()-1);
 			value = Double.parseDouble(strValue);
 			value /= transFactor;
 			log.debug("usedCapNow: " + value);
 			result.clear();
-			sleep(10);
+			sleep(20);
 		} while(value < chkValue);
 		
 		bRet = true;
@@ -2071,7 +2079,7 @@ public class NameServerPlanTestCase {
 		String strCmd = TFS_BIN_HOME + "/ssm -s " + NSVIP + 
 			":" + NSPORT + " -i server";
 		ArrayList<String> result = new ArrayList<String>();
-		double value;
+		int value;
 		do {
 			bRet = Proc.cmdOutBase(NSIPA, strCmd, "TOTAL:", CURR_BLKCNT_COL, null, result);
 			if (bRet == false) return bRet;
