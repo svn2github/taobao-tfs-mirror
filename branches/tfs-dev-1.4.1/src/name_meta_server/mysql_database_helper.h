@@ -29,40 +29,13 @@ namespace tfs
         virtual int connect();
         virtual int close();
 
-        //ResourceServerInfo
-        virtual int select(const ResourceServerInfo& inparam, ResourceServerInfo& outparam);
-        virtual int update(const ResourceServerInfo& inparam);
-        virtual int remove(const ResourceServerInfo& inparam);
-        virtual int scan(VResourceServerInfo& outparam);
+        virtual int create_dir(const int64_t app_id, const int64_t uid,
+            const int64_t ppid, const char* pname, const int32_t pname_len,
+            const int64_t pid, const int64_t id, const char* name, const int32_t name_len,
+            int32_t& mysql_proc_ret);
 
-        //ClusterRackInfo
-        virtual int select(const ClusterRackInfo& inparam, ClusterRackInfo& outparam);
-        virtual int update(const ClusterRackInfo& inparam);
-        virtual int remove(const ClusterRackInfo& inparam);
-        virtual int scan(VClusterRackInfo& outparam);
-
-        //ClusterRackGroup
-        virtual int scan(VClusterRackGroup& outparam);
-
-        //ClusterRackDuplicateServer
-        virtual int scan(VClusterRackDuplicateServer& outparam);
-
-        //BaseInfoUpdateTime
-        virtual int select(BaseInfoUpdateTime& outparam);
-
-        //AppInfo
-        virtual int select(const AppInfo& inparam, AppInfo& outparam);
-        virtual int update(const AppInfo& inparam);
-        virtual int remove(const AppInfo& inparam);
-        virtual int scan(MIdAppInfo& outparam);
-
-        //update
-        virtual int update_session_info(const std::vector<common::SessionBaseInfo>& session_infos);
-        virtual int update_session_stat(const std::map<std::string, common::SessionStat>& session_stats);
-        virtual int update_app_stat(const MIdAppStat& app_stats);
 
       private:
-        int exect_update_sql(const char* sql);
 
       private:
         tbutil::Mutex mutex_;

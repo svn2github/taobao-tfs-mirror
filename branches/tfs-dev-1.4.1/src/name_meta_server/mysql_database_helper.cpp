@@ -1,18 +1,18 @@
 /*
-* (C) 2007-2010 Alibaba Group Holding Limited.
-*
-* This program is free software; you can redistribute it and/or modify
-* it under the terms of the GNU General Public License version 2 as
-* published by the Free Software Foundation.
-*
-*
-* Version: $Id
-*
-* Authors:
-*   daoan <daoan@taobao.com>
-*      - initial release
-*
-*/
+ * (C) 2007-2010 Alibaba Group Holding Limited.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+ *
+ *
+ * Version: $Id
+ *
+ * Authors:
+ *   daoan <daoan@taobao.com>
+ *      - initial release
+ *
+ */
 #include "mysql_database_helper.h"
 
 #include <mysql/mysql.h>
@@ -23,7 +23,7 @@
 using namespace std;
 namespace 
 {
-struct mysql_ex {
+  struct mysql_ex {
     string host;
     int port;
     string user;
@@ -32,36 +32,36 @@ struct mysql_ex {
     bool   isopen;
     bool   inited;
     MYSQL  mysql;
-};
+  };
 
-static mysql_ex  mysql_;
-static int split_string(const char* line, const char del, vector<string> & fields) 
-{
+  static mysql_ex  mysql_;
+  static int split_string(const char* line, const char del, vector<string> & fields) 
+  {
     const char* start = line;
     const char* p = NULL;
     char buffer[256];
     while (start != NULL) 
     {
-        p = strchr(start, del);
-        if (p != NULL) 
-        {
-            memset(buffer, 0, 256);
-            strncpy(buffer, start, p - start);
-            if (strlen(buffer) > 0) fields.push_back(buffer);
-            start = p + 1;
-        } 
-        else 
-        {
-            memset(buffer, 0, 256);
-            strcpy(buffer, start);
-            if (strlen(buffer) > 0) fields.push_back(buffer);
-            break;
-        }
+      p = strchr(start, del);
+      if (p != NULL) 
+      {
+        memset(buffer, 0, 256);
+        strncpy(buffer, start, p - start);
+        if (strlen(buffer) > 0) fields.push_back(buffer);
+        start = p + 1;
+      } 
+      else 
+      {
+        memset(buffer, 0, 256);
+        strcpy(buffer, start);
+        if (strlen(buffer) > 0) fields.push_back(buffer);
+        break;
+      }
     }
     return fields.size();
-}
-static bool init_mysql(const char* mysqlconn, const char* user_name, const char* passwd) 
-{
+  }
+  static bool init_mysql(const char* mysqlconn, const char* user_name, const char* passwd) 
+  {
     vector<string> fields;
     split_string(mysqlconn, ':', fields);
     mysql_.isopen = false;
@@ -80,38 +80,105 @@ static bool init_mysql(const char* mysqlconn, const char* user_name, const char*
     mysql_options(&mysql_.mysql, MYSQL_OPT_READ_TIMEOUT, (const char *)&v);
     mysql_options(&mysql_.mysql, MYSQL_OPT_WRITE_TIMEOUT, (const char *)&v);
     return true;
-}
+  }
 
-static bool open_mysql()
-{
+  static bool open_mysql()
+  {
     if (!mysql_.inited) return false;
     if (mysql_.isopen) return true;
     MYSQL *conn = mysql_real_connect(
-            &mysql_.mysql,
-            mysql_.host.c_str(),
-            mysql_.user.c_str(),
-            mysql_.pass.c_str(),
-            mysql_.database.c_str(),
-            mysql_.port, NULL, CLIENT_MULTI_STATEMENTS);
+        &mysql_.mysql,
+        mysql_.host.c_str(),
+        mysql_.user.c_str(),
+        mysql_.pass.c_str(),
+        mysql_.database.c_str(),
+        mysql_.port, NULL, CLIENT_MULTI_STATEMENTS);
     if (!conn) 
     {
-        TBSYS_LOG(ERROR, "connect mysql database (%s:%d:%s:%s:%s) error(%s)",
-                mysql_.host.c_str(), mysql_.port, mysql_.user.c_str(), mysql_.database.c_str(), mysql_.pass.c_str(),
-                mysql_error(&mysql_.mysql));
-        return false;
+      TBSYS_LOG(ERROR, "connect mysql database (%s:%d:%s:%s:%s) error(%s)",
+          mysql_.host.c_str(), mysql_.port, mysql_.user.c_str(), mysql_.database.c_str(), mysql_.pass.c_str(),
+          mysql_error(&mysql_.mysql));
+      return false;
     }
     mysql_.isopen = true;
     return true;
-}
+  }
 
-static int close_mysql()
-{
+  static int close_mysql()
+  {
     if (mysql_.isopen) 
     {
-        mysql_close(&mysql_.mysql);
+      mysql_close(&mysql_.mysql);
     }
     return 0;
-}
+  }
+  static bool excute_stmt(MYSQL_STMT *stmt, int32_t& mysql_proc_ret)
+  {
+    bool ret = true;
+    int status;
+    my_bool    is_null;    /* input parameter nullability */
+    status = mysql_stmt_execute(stmt);
+    if (status)
+    {
+      TBSYS_LOG(ERROR, "Error: %s (errno: %d)\n",
+          mysql_stmt_error(stmt), mysql_stmt_errno(stmt));
+      ret = false;
+    }
+    if (ret)
+    {
+      int num_fields;       /* number of columns in result */
+      MYSQL_BIND rs_bind;  /* for output buffers */
+
+      /* the column count is > 0 if there is a result set */
+      /* 0 if the result is only the final status packet */
+      num_fields = mysql_stmt_field_count(stmt);
+      TBSYS_LOG(DEBUG, "num_fields = %d", num_fields);
+      if (num_fields == 1)
+      {
+
+        memset(&rs_bind, 0, sizeof (MYSQL_BIND));
+
+        /* set up and bind result set output buffers */
+        rs_bind.buffer_type = MYSQL_TYPE_LONG;
+        rs_bind.is_null = &is_null;
+
+        rs_bind.buffer = (char *) &mysql_proc_ret;
+        rs_bind.buffer_length = sizeof(mysql_proc_ret);
+
+        status = mysql_stmt_bind_result(stmt, &rs_bind);
+        if (status)
+        {
+          TBSYS_LOG(ERROR, "Error: %s (errno: %d)\n",
+              mysql_stmt_error(stmt), mysql_stmt_errno(stmt));
+          ret = false;
+        }
+        while (ret)
+        {
+          status = mysql_stmt_fetch(stmt);
+
+          if (status == MYSQL_NO_DATA)
+          {
+            break;
+          }
+          if (status == 1)
+          {
+            TBSYS_LOG(ERROR, "mysql_stmt_fetch error");
+          }
+          TBSYS_LOG(DEBUG, "mysql_proc_ret = %d", mysql_proc_ret);
+        }
+        mysql_next_result(&mysql_.mysql); //mysql bugs, we must have this
+      }
+      else
+      {
+        TBSYS_LOG(ERROR, "num_fields = %d have debug info in prcedure?", num_fields);
+        ret = false;
+      }
+
+      mysql_stmt_free_result(stmt);
+      mysql_stmt_close(stmt);
+    }
+    return ret;
+  }
 }
 
 namespace tfs
@@ -152,549 +219,103 @@ namespace tfs
       return TFS_SUCCESS;
     }
 
-    int MysqlDatabaseHelper::select(const ResourceServerInfo& inparam, ResourceServerInfo& outparam)
+    int MysqlDatabaseHelper::create_dir(const int64_t app_id, const int64_t uid,
+        const int64_t ppid, const char* pname, const int32_t pname_len,
+        const int64_t pid, const int64_t id, const char* name, const int32_t name_len,
+        int32_t& mysql_proc_ret)
     {
-      UNUSED(inparam);
-      UNUSED(outparam);
-      //not supported
-      tbutil::Mutex::Lock lock(mutex_);
       int ret = TFS_ERROR;
-      return ret;
-    }
+      MYSQL_STMT *stmt;
+      MYSQL_BIND ps_params[7];  /* input parameter buffers */
+      unsigned long _pname_len = pname_len;
+      unsigned long _name_len = name_len;
+      int        status;
+      const char* str = "CALL create_dir(?, ?, ?, ?, ?, ?, ?)";
 
-    int MysqlDatabaseHelper::update(const ResourceServerInfo& inparam)
-    {
-      UNUSED(inparam);
-      //not supported
-      tbutil::Mutex::Lock lock(mutex_);
-      int ret = TFS_ERROR;
-      return ret;
-    }
+      mysql_proc_ret = 0;
 
-    int MysqlDatabaseHelper::remove(const ResourceServerInfo& inparam)
-    {
-      UNUSED(inparam);
-      //not supported
       tbutil::Mutex::Lock lock(mutex_);
-      int ret = TFS_ERROR;
-      return ret;
-    }
-
-    int MysqlDatabaseHelper::scan(VResourceServerInfo& outparam)
-    {
-      outparam.clear();
-      tbutil::Mutex::Lock lock(mutex_);
-      int ret = TFS_ERROR;
       if (!is_connected_)
       {
         connect();
       }
       if (is_connected_)
       {
-        char sql[1024];
-        char table[256];
-        snprintf(table, 256, "%s", "T_RESOURCE_SERVER_INFO");
-        snprintf(sql, 1024, "select ADDR_INFO, STAT, REM from %s", table);
-        ret = mysql_query(&mysql_.mysql, sql);
-        if (ret) 
+        stmt = mysql_stmt_init(&mysql_.mysql);
+        ret = TFS_SUCCESS;
+        status = mysql_stmt_prepare(stmt, str, strlen(str)); //TODO prepare once
+        if (status)
         {
-          TBSYS_LOG(ERROR, "query (%s) failure: %s %s", sql,  mysql_.host.c_str(), mysql_error(&mysql_.mysql));
-          close();
-          return TFS_ERROR;
-        }
-
-        MYSQL_ROW row;
-        ResourceServerInfo tmp;
-        MYSQL_RES *mysql_ret = mysql_store_result(&mysql_.mysql);
-        if (mysql_ret == NULL) 
-        {
-          TBSYS_LOG(ERROR, "mysql_store_result failure: %s %s", mysql_.host.c_str(), mysql_error(&mysql_.mysql));
-          close();
+          TBSYS_LOG(ERROR, "Error: %s (errno: %d)\n",
+              mysql_stmt_error(stmt), mysql_stmt_errno(stmt));
           ret = TFS_ERROR;
-          goto error;
         }
-
-        while(NULL != (row = mysql_fetch_row(mysql_ret)))
+        if (TFS_SUCCESS == ret)
         {
-          snprintf(tmp.addr_info_, ADDR_INFO_LEN, "%s", row[0]);
-          tmp.stat_ = atoi(row[1]);
-          snprintf(tmp.rem_, REM_LEN, "%s", row[2]);
-          outparam.push_back(tmp);
-        }
+          memset(ps_params, 0, sizeof (ps_params));
+          ps_params[0].buffer_type = MYSQL_TYPE_LONGLONG;
+          ps_params[0].buffer = (char *) &app_id;
+          ps_params[0].length = 0;
+          ps_params[0].is_null = 0;
 
-error:
-        mysql_free_result(mysql_ret);
-      }
-      return ret;
-    }
+          ps_params[1].buffer_type = MYSQL_TYPE_LONGLONG;
+          ps_params[1].buffer = (char *) &uid;
+          ps_params[1].length = 0;
+          ps_params[1].is_null = 0;
 
-    int MysqlDatabaseHelper::select(const ClusterRackInfo& inparam, ClusterRackInfo& outparam)
-    {
-      UNUSED(inparam);
-      UNUSED(outparam);
-      tbutil::Mutex::Lock lock(mutex_);
-      int ret = TFS_ERROR;
-      return ret;
-    }
+          ps_params[2].buffer_type = MYSQL_TYPE_LONGLONG;
+          ps_params[2].buffer = (char *) &ppid;
+          ps_params[2].length = 0;
+          ps_params[2].is_null = 0;
 
-    int MysqlDatabaseHelper::update(const ClusterRackInfo& inparam)
-    {
-      UNUSED(inparam);
-      tbutil::Mutex::Lock lock(mutex_);
-      int ret = TFS_ERROR;
-      return ret;
-    }
+          ps_params[3].buffer_type = MYSQL_TYPE_VAR_STRING;
+          ps_params[3].buffer = (char *) pname;
+          ps_params[3].length = &_pname_len;
+          ps_params[3].is_null = 0;
 
-    int MysqlDatabaseHelper::remove(const ClusterRackInfo& inparam)
-    {
-      UNUSED(inparam);
-      tbutil::Mutex::Lock lock(mutex_);
-      int ret = TFS_ERROR;
-      return ret;
-    }
+          ps_params[4].buffer_type = MYSQL_TYPE_LONGLONG;
+          ps_params[4].buffer = (char *) &pid;
+          ps_params[4].length = 0;
+          ps_params[4].is_null = 0;
 
-    int MysqlDatabaseHelper::scan(VClusterRackInfo& outparam)
-    {
-      outparam.clear();
-      tbutil::Mutex::Lock lock(mutex_);
-      int ret = TFS_ERROR;
-      if (!is_connected_)
-      {
-        connect();
-      }
-      if (is_connected_)
-      {
-        char sql[1024];
-        char table[256];
-        snprintf(table, 256, "%s", "T_CLUSTER_RACK_INFO");
-        snprintf(sql, 1024, "select cluster_rack_id, cluster_id, ns_vip, "
-            "cluster_stat, rem from %s", table);
-        ret = mysql_query(&mysql_.mysql, sql);
-        if (ret) 
-        {
-          TBSYS_LOG(ERROR, "query (%s) failure: %s %s", sql,  mysql_.host.c_str(), mysql_error(&mysql_.mysql));
-          close();
-          return TFS_ERROR;
-        }
+          ps_params[5].buffer_type = MYSQL_TYPE_LONGLONG;
+          ps_params[5].buffer = (char *) &id;
+          ps_params[5].length = 0;
+          ps_params[5].is_null = 0;
 
-        MYSQL_ROW row;
-        ClusterRackInfo tmp;
+          ps_params[6].buffer_type = MYSQL_TYPE_VAR_STRING;
+          ps_params[6].buffer = (char *) name;
+          ps_params[6].length = &_name_len;
+          ps_params[6].is_null = 0;
 
-        MYSQL_RES *mysql_ret = mysql_store_result(&mysql_.mysql);
-        if (mysql_ret == NULL) 
-        {
-          TBSYS_LOG(ERROR, "mysql_store_result failure: %s %s", mysql_.host.c_str(), mysql_error(&mysql_.mysql));
-          close();
-          ret = TFS_ERROR;
-          goto error;
-        }
+          //ps_params[7].buffer_type = MYSQL_TYPE_LONG;
+          //ps_params[7].buffer = (char *) &mysql_proc_ret;
+          //ps_params[7].length = 0;
+          //ps_params[7].is_null = 0;
 
-        while(NULL != (row = mysql_fetch_row(mysql_ret)))
-        {
-          tmp.cluster_rack_id_ = atoi(row[0]);
-          tmp.cluster_data_.cluster_id_ = row[1];
-          tmp.cluster_data_.ns_vip_ = row[2];
-          tmp.cluster_data_.cluster_stat_ = atoi(row[3]);
-          tmp.cluster_data_.access_type_ = -1;
-          snprintf(tmp.rem_, REM_LEN, "%s", row[4]);
-          outparam.push_back(tmp);
-        }
-
-error:
-        mysql_free_result(mysql_ret);
-      }
-      return ret;
-    }
-    int MysqlDatabaseHelper::scan(VClusterRackGroup& outparam)
-    {
-      outparam.clear();
-      tbutil::Mutex::Lock lock(mutex_);
-      int ret = TFS_ERROR;
-      if (!is_connected_)
-      {
-        connect();
-      }
-      if (is_connected_)
-      {
-        char sql[1024];
-        char table[256];
-        snprintf(table, 256, "%s", "T_CLUSTER_RACK_GROUP");
-        snprintf(sql, 1024, "select cluster_group_id, cluster_rack_id, cluster_rack_access_type, "
-            "rem from %s", table);
-        ret = mysql_query(&mysql_.mysql, sql);
-        if (ret) 
-        {
-          TBSYS_LOG(ERROR, "query (%s) failure: %s %s", sql,  mysql_.host.c_str(), mysql_error(&mysql_.mysql));
-          close();
-          return TFS_ERROR;
-        }
-
-        MYSQL_ROW row;
-        ClusterRackGroup tmp;
-
-        MYSQL_RES *mysql_ret = mysql_store_result(&mysql_.mysql);
-        if (mysql_ret == NULL) 
-        {
-          TBSYS_LOG(ERROR, "mysql_store_result failure: %s %s", mysql_.host.c_str(), mysql_error(&mysql_.mysql));
-          close();
-          ret = TFS_ERROR;
-          goto error;
-        }
-
-        while(NULL != (row = mysql_fetch_row(mysql_ret)))
-        {
-          tmp.cluster_group_id_ = atoi(row[0]);
-          tmp.cluster_rack_id_ = atoi(row[1]);
-          tmp.cluster_rack_access_type_ = atoi(row[2]);
-          snprintf(tmp.rem_, REM_LEN, "%s", row[3]);
-          outparam.push_back(tmp);
-        }
-
-error:
-        mysql_free_result(mysql_ret);
-      }
-      return ret;
-    }
-
-    int MysqlDatabaseHelper::scan(VClusterRackDuplicateServer& outparam)
-    {
-      outparam.clear();
-      tbutil::Mutex::Lock lock(mutex_);
-      int ret = TFS_ERROR;
-      if (!is_connected_)
-      {
-        connect();
-      }
-      if (is_connected_)
-      {
-        char sql[1024];
-        char table[256];
-        snprintf(table, 256, "%s", "T_CLUSTER_RACK_DUPLICATE_SERVER");
-        snprintf(sql, 1024, "select cluster_rack_id, dupliate_server_addr from %s", table);
-        ret = mysql_query(&mysql_.mysql, sql);
-        if (ret) 
-        {
-          TBSYS_LOG(ERROR, "query (%s) failure: %s %s", sql,  mysql_.host.c_str(), mysql_error(&mysql_.mysql));
-          close();
-          return TFS_ERROR;
-        }
-
-        MYSQL_ROW row;
-        ClusterRackDuplicateServer tmp;
-
-        MYSQL_RES *mysql_ret = mysql_store_result(&mysql_.mysql);
-        if (mysql_ret == NULL) 
-        {
-          TBSYS_LOG(ERROR, "mysql_store_result failure: %s %s", mysql_.host.c_str(), mysql_error(&mysql_.mysql));
-          close();
-          ret = TFS_ERROR;
-          goto error;
-        }
-
-        while(NULL != (row = mysql_fetch_row(mysql_ret)))
-        {
-          tmp.cluster_rack_id_ = atoi(row[0]);
-          snprintf(tmp.dupliate_server_addr_, ADDR_INFO_LEN, "%s", row[1]);
-          outparam.push_back(tmp);
-        }
-
-error:
-        mysql_free_result(mysql_ret);
-      }
-      return ret;
-    }
-
-    int MysqlDatabaseHelper::select(BaseInfoUpdateTime& outparam)
-    {
-      tbutil::Mutex::Lock lock(mutex_);
-      int ret = TFS_ERROR;
-      if (!is_connected_)
-      {
-        connect();
-      }
-      if (is_connected_)
-      {
-        char sql[1024];
-        char table[256];
-        snprintf(table, 256, "%s", "T_BASE_INFO_UPDATE_TIME");
-        snprintf(sql, 1024, "select UNIX_TIMESTAMP(base_last_update_time), UNIX_TIMESTAMP(app_last_update_time) from %s", table);
-        ret = mysql_query(&mysql_.mysql, sql);
-        if (ret) 
-        {
-          TBSYS_LOG(ERROR, "query (%s) failure: %s %s", sql,  mysql_.host.c_str(), mysql_error(&mysql_.mysql));
-          close();
-          return TFS_ERROR;
-        }
-
-        MYSQL_ROW row;
-
-        MYSQL_RES *mysql_ret = mysql_store_result(&mysql_.mysql);
-        if (mysql_ret == NULL) 
-        {
-          TBSYS_LOG(ERROR, "mysql_store_result failure: %s %s", mysql_.host.c_str(), mysql_error(&mysql_.mysql));
-          close();
-          ret = TFS_ERROR;
-          goto error;
-        }
-        ret = TFS_ERROR;
-
-        while(NULL != (row = mysql_fetch_row(mysql_ret) ))
-        {
-          outparam.base_last_update_time_ = atoi(row[0]);
-          outparam.base_last_update_time_ *= 1000 * 1000;
-          outparam.app_last_update_time_ = atoi(row[0]);
-          outparam.app_last_update_time_ *= 1000 * 1000;
-          ret = TFS_SUCCESS;
-          break;
-        }
-
-error:
-        mysql_free_result(mysql_ret);
-      }
-      return ret;
-    }
-
-    int MysqlDatabaseHelper::select(const AppInfo& inparam, AppInfo& outparam)
-    {
-      UNUSED(inparam);
-      UNUSED(outparam);
-      tbutil::Mutex::Lock lock(mutex_);
-      int ret = TFS_ERROR;
-      return ret;
-    }
-
-    int MysqlDatabaseHelper::update(const AppInfo& inparam)
-    {
-      UNUSED(inparam);
-      tbutil::Mutex::Lock lock(mutex_);
-      int ret = TFS_ERROR;
-      return ret;
-    }
-
-    int MysqlDatabaseHelper::remove(const AppInfo& inparam)
-    {
-      UNUSED(inparam);
-      tbutil::Mutex::Lock lock(mutex_);
-      int ret = TFS_ERROR;
-      return ret;
-    }
-
-    int MysqlDatabaseHelper::scan(MIdAppInfo& outparam)
-    {
-      outparam.clear();
-      tbutil::Mutex::Lock lock(mutex_);
-      int ret = TFS_ERROR;
-      if (!is_connected_)
-      {
-        connect();
-      }
-      if (is_connected_)
-      {
-        char sql[1024];
-        char table[256];
-        snprintf(table, 256, "%s", "T_APP_INFO");
-        snprintf(sql, 1024, "select app_key, id, quto, cluster_group_id, "
-            "app_name, app_owner, report_interval, "
-            "need_duplicate, rem, UNIX_TIMESTAMP(modify_time) from %s", table);
-        ret = mysql_query(&mysql_.mysql, sql);
-        if (ret) 
-        {
-          TBSYS_LOG(ERROR, "query (%s) failure: %s %s", sql,  mysql_.host.c_str(), mysql_error(&mysql_.mysql));
-          close();
-          return TFS_ERROR;
-        }
-
-        MYSQL_ROW row;
-        AppInfo tmp;
-
-        MYSQL_RES *mysql_ret = mysql_store_result(&mysql_.mysql);
-        if (mysql_ret == NULL) 
-        {
-          TBSYS_LOG(ERROR, "mysql_store_result failure: %s %s", mysql_.host.c_str(), mysql_error(&mysql_.mysql));
-          close();
-          ret = TFS_ERROR;
-          goto error;
-        }
-
-        while(NULL != (row = mysql_fetch_row(mysql_ret)))
-        {
-          snprintf(tmp.key_, APP_KEY_LEN, "%s", row[0]);
-          tmp.id_ = atoi(row[1]);
-          tmp.quto_ = strtoll(row[2], NULL, 10);
-          tmp.cluster_group_id_ = atoi(row[3]);
-          snprintf(tmp.app_name_, REM_LEN, "%s", row[4]);
-          snprintf(tmp.app_owner_, REM_LEN, "%s", row[5]);
-          tmp.report_interval_ = atoi(row[6]);
-          tmp.need_duplicate_ = atoi(row[7]);
-          snprintf(tmp.rem_, REM_LEN, "%s", row[8]);
-          tmp.modify_time_ = atoi(row[9]);
-          tmp.modify_time_ *= 1000 * 1000;
-
-          outparam[tmp.id_] = tmp;
-        }
-
-error:
-        mysql_free_result(mysql_ret);
-      }
-      return ret;
-    }
-
-    int MysqlDatabaseHelper::update_session_info(const std::vector<SessionBaseInfo>& session_infos)
-    {
-      int ret = TFS_SUCCESS;
-      const int SQLS_IN_STR = 100;
-      char* sql = new char[(1024 + 256) * SQLS_IN_STR];
-      int session_size = session_infos.size();
-      int done = 0;
-      int pos = 0;
-      static const char* S_NOW = "now()";
-      static const char* s_NULL = "NULL";
-      while (done < session_size)
-      {
-        pos = 0;
-        for (int i = 0 ; i < SQLS_IN_STR && done < session_size; i++)
-        {
-          const SessionBaseInfo& session = session_infos[done];
-          const char* log_out_time = s_NULL;
-          if (session.is_logout_)
+          status = mysql_stmt_bind_param(stmt, ps_params);
+          if (status)
           {
-            log_out_time = S_NOW;
-          }
-          pos += snprintf(sql + pos, 1024, "insert into t_session_info "
-              "(session_id,cache_size,cache_time,client_version,log_out_time,create_time,modify_time) "
-              "values ('%s',%"PRI64_PREFIX"d,%"PRI64_PREFIX"d,'%s',%s,now(),now())", 
-              session.session_id_.c_str(), session.cache_size_, session.cache_time_,
-              session.client_version_.c_str(), log_out_time);
-          if (session.is_logout_)
-          {
-            pos += snprintf(sql + pos, 256, " on duplicate key update log_out_time=now(),modify_time=now(),"
-                "cache_size=%"PRI64_PREFIX"d, cache_time=%"PRI64_PREFIX"d,"
-                "client_version='%s';",
-                session.cache_size_, session.cache_time_, session.client_version_.c_str());
-          }
-          else
-          {
-            pos += snprintf(sql + pos, 256, " on duplicate key update modify_time=now(),"
-                "cache_size=%"PRI64_PREFIX"d, cache_time=%"PRI64_PREFIX"d,"
-                "client_version='%s';",
-                session.cache_size_, session.cache_time_, session.client_version_.c_str());
-          }
-          done++;
-        }
-        ret = exect_update_sql(sql);
-        if (TFS_SUCCESS != ret)
-        {
-          break;
-        }
-      }
-      delete []sql;
-      return ret;
-    }
-    int MysqlDatabaseHelper::update_session_stat(const std::map<std::string, SessionStat>& session_stats)
-    {
-      int ret = TFS_SUCCESS;
-      const int SQLS_IN_STR = 100;
-      char* sql = new char[(1024 + 1024) * SQLS_IN_STR];
-      std::map<std::string, SessionStat>::const_iterator it = session_stats.begin();
-      int pos = 0;
-      int done = 0;
-      while (it != session_stats.end() && TFS_SUCCESS == ret)
-      {
-        std::map<OperType, AppOperInfo>::const_iterator inner_it = it->second.app_oper_info_.begin();
-        for (; inner_it != it->second.app_oper_info_.end() && TFS_SUCCESS == ret; inner_it++)
-        {
-
-          pos += snprintf(sql + pos, 1024, "insert into t_session_stat "
-              "(session_id,oper_type,oper_times,file_size,response_time,succ_times,create_time,modify_time) "
-              "values ('%s',%d,%"PRI64_PREFIX"d,%"PRI64_PREFIX"d,%"PRI64_PREFIX"d,%"PRI64_PREFIX"d,now(),now())", 
-              it->first.c_str(), inner_it->first, 
-              inner_it->second.oper_times_, inner_it->second.oper_size_, 
-              inner_it->second.oper_rt_, inner_it->second.oper_succ_);
-
-          pos += snprintf(sql + pos, 1024, " on duplicate key update "
-              "oper_times=oper_times+%"PRI64_PREFIX"d,file_size=file_size+%"PRI64_PREFIX"d,"
-              "response_time=response_time+%"PRI64_PREFIX"d,succ_times=succ_times+%"PRI64_PREFIX"d,"
-              "modify_time=now();", 
-              inner_it->second.oper_times_, inner_it->second.oper_size_, 
-              inner_it->second.oper_rt_, inner_it->second.oper_succ_);
-          done++;
-          if (done >= SQLS_IN_STR)
-          {
-            done = 0;
-            pos = 0;
-            ret = exect_update_sql(sql);
-            if (TFS_SUCCESS != ret)
-            {
-              break;
-            }
-          }
-        }
-        it++;
-      }
-      if (TFS_SUCCESS == ret && done > 0)
-      {
-        ret = exect_update_sql(sql);
-      }
-      delete []sql;
-      return ret;
-    }
-
-    int MysqlDatabaseHelper::update_app_stat(const MIdAppStat& app_stats)
-    {
-      int ret = TFS_SUCCESS;
-      const int SQLS_IN_STR = 100;
-      char* sql = new char[(512 + 512 ) * SQLS_IN_STR];
-      MIdAppStat::const_iterator it = app_stats.begin();
-      int pos = 0;
-      while (it != app_stats.end())
-      {
-        pos = 0;
-        for (int i = 0 ; i < SQLS_IN_STR && it != app_stats.end(); i++)
-        {
-          pos += snprintf(sql + pos, 512, "insert into t_app_stat"
-              "(app_id, used_capacity, file_count, create_time, modify_time) "
-              "values (%d,%"PRI64_PREFIX"d,%"PRI64_PREFIX"d,now(),now())", 
-              it->first, it->second.used_capacity_, it->second.file_count_);
-          pos += snprintf(sql + pos, 512, " on duplicate key update "
-              "used_capacity=used_capacity+%"PRI64_PREFIX"d,file_count=file_count+%"PRI64_PREFIX"d, modify_time=now();",
-              it->second.used_capacity_, it->second.file_count_);
-          it++;
-        }
-        ret = exect_update_sql(sql);
-        if (TFS_SUCCESS != ret)
-        {
-          break;
-        }
-      }
-      delete []sql;
-      return ret;
-    }
-
-    int MysqlDatabaseHelper::exect_update_sql(const char* sql)
-    {
-      int ret = TFS_ERROR;
-      tbutil::Mutex::Lock lock(mutex_);
-      if (!is_connected_)
-      {
-        connect();
-      }
-      if (is_connected_)
-      {
-        ret = mysql_query(&mysql_.mysql, sql);
-        do
-        {
-          MYSQL_RES *mysql_ret = mysql_store_result(&mysql_.mysql);
-          mysql_free_result(mysql_ret);
-          if (ret) 
-          {
-            TBSYS_LOG(ERROR, "error is %s sql is ",  mysql_error(&mysql_.mysql), sql);
-            close();
+            TBSYS_LOG(ERROR, "Error: %s (errno: %d)\n",
+                mysql_stmt_error(stmt), mysql_stmt_errno(stmt));
             ret = TFS_ERROR;
           }
-        } while (!mysql_next_result(&mysql_.mysql));
+          if (TFS_SUCCESS == ret)
+          {
+            if (!excute_stmt(stmt, mysql_proc_ret))
+            {
+              ret = TFS_ERROR;
+            }
+          }
+
+        }
+      }
+      if (TFS_SUCCESS != ret)
+      {
+        close();
       }
       return ret;
     }
-
   }
 }
+

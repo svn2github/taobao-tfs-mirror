@@ -33,40 +33,14 @@ namespace tfs
         virtual int connect() = 0;
         virtual int close() = 0;
 
-        //ResourceServerInfo
-        virtual int select(const ResourceServerInfo& inparam, ResourceServerInfo& outparam) = 0;
-        virtual int update(const ResourceServerInfo& inparam) = 0;
-        virtual int remove(const ResourceServerInfo& inparam) = 0;
-        virtual int scan(VResourceServerInfo& outparam) = 0;
-
-        //ClusterRackInfo
-        virtual int select(const ClusterRackInfo& inparam, ClusterRackInfo& outparam) = 0;
-        virtual int update(const ClusterRackInfo& inparam) = 0;
-        virtual int remove(const ClusterRackInfo& inparam) = 0;
-        virtual int scan(VClusterRackInfo& outparam) = 0;
-
-        //ClusterRackGroup
-        virtual int scan(VClusterRackGroup& outparam) = 0;
-
-        //ClusterRackDuplicateServer
-        virtual int scan(VClusterRackDuplicateServer& outparam) = 0;
-
-        //BaseInfoUpdateTime
-        virtual int select(BaseInfoUpdateTime& outparam) = 0;
-
-        //AppInfo
-        virtual int select(const AppInfo& inparam, AppInfo& outparam) = 0;
-        virtual int update(const AppInfo& inparam) = 0;
-        virtual int remove(const AppInfo& inparam) = 0;
-        virtual int scan(MIdAppInfo& outparam) = 0;
-
-        virtual int update_session_info(const std::vector<common::SessionBaseInfo>& session_infos) = 0;
-        virtual int update_session_stat(const std::map<std::string, common::SessionStat>& session_stats) = 0;
-        virtual int update_app_stat(const MIdAppStat& app_stats) = 0;
-
+        virtual int create_dir(const int64_t app_id, const int64_t uid,
+            const int64_t ppid, const char* pname, const int32_t pname_len,
+            const int64_t pid, const int64_t id, const char* name, const int32_t name_len,
+            int32_t& mysql_proc_ret) = 0;
 
       protected:
-        enum {
+        enum 
+        {
           CONN_STR_LEN = 256,
         };
         char conn_str_[CONN_STR_LEN];
