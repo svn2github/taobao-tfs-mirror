@@ -4,16 +4,17 @@ create procedure
 pwrite_file(in i_app_id bigint, in i_uid bigint,
   in i_pid bigint unsigned,
   in i_name varbinary(512),
-  in i_size bigint, in i_ver_no smallint, in i_meta_info VARBINARY(65536),
-  out o_ret int)
+  in i_size bigint, in i_ver_no smallint, in i_meta_info VARBINARY(65536))
 begin
   declare aff_row int;
+  declare o_ret int;
   declare next_ver_no smallint;
   declare real_pid bigint unsigned;
   declare exit handler for sqlexception
   begin
     set o_ret = 0;
     rollback;
+    select o_ret;
   end;
   select 0 into aff_row;
   select 0 into o_ret;
@@ -43,10 +44,11 @@ begin
     select row_count() into aff_row;
   end if;
   set o_ret = aff_row;
-  if o_ret = 0 then
+  if o_ret <= 0 then
     rollback;
   else
     commit;
   end if;
+  select o_ret;
 end $$
 delimiter ;

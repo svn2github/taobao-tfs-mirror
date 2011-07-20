@@ -23,7 +23,8 @@ begin
     else
       update t_meta_info set modify_time = now()
       where app_id = i_app_id and uid = i_uid and pid = i_ppid and name = i_pname;
-      select row_count() into aff_row;
+      select count(1) into aff_row from t_meta_info
+      where app_id = i_app_id and uid = i_uid and pid = i_ppid and name = i_pname;
       if aff_row = 1 then
         insert into t_meta_info (app_id, uid, pid, name, id, create_time, modify_time, size)
         values (i_app_id, i_uid, i_pid, i_name, i_id, now(), now(), 0);
@@ -31,7 +32,7 @@ begin
       end if;
     end if;
     set o_ret = aff_row;
-    if o_ret = 0 then
+    if o_ret <= 0 then
         rollback;
     else
         commit;

@@ -316,6 +316,591 @@ namespace tfs
       }
       return ret;
     }
+    int MysqlDatabaseHelper::rm_dir(const int64_t app_id, const int64_t uid, const int64_t ppid,
+            const char* pname, const int32_t pname_len, const int64_t pid, const int64_t id,
+            const char* name, const int32_t name_len, int32_t& mysql_proc_ret)
+    {
+      int ret = TFS_ERROR;
+      MYSQL_STMT *stmt;
+      MYSQL_BIND ps_params[7];  /* input parameter buffers */
+      unsigned long _pname_len = pname_len;
+      unsigned long _name_len = name_len;
+      int        status;
+      const char* str = "CALL rm_dir(?, ?, ?, ?, ?, ?, ?)";
+
+      mysql_proc_ret = 0;
+
+      tbutil::Mutex::Lock lock(mutex_);
+      if (!is_connected_)
+      {
+        connect();
+      }
+      if (is_connected_)
+      {
+        stmt = mysql_stmt_init(&mysql_.mysql);
+        ret = TFS_SUCCESS;
+        status = mysql_stmt_prepare(stmt, str, strlen(str)); //TODO prepare once
+        if (status)
+        {
+          TBSYS_LOG(ERROR, "Error: %s (errno: %d)\n",
+              mysql_stmt_error(stmt), mysql_stmt_errno(stmt));
+          ret = TFS_ERROR;
+        }
+        if (TFS_SUCCESS == ret)
+        {
+          memset(ps_params, 0, sizeof (ps_params));
+          ps_params[0].buffer_type = MYSQL_TYPE_LONGLONG;
+          ps_params[0].buffer = (char *) &app_id;
+          ps_params[0].length = 0;
+          ps_params[0].is_null = 0;
+
+          ps_params[1].buffer_type = MYSQL_TYPE_LONGLONG;
+          ps_params[1].buffer = (char *) &uid;
+          ps_params[1].length = 0;
+          ps_params[1].is_null = 0;
+
+          ps_params[2].buffer_type = MYSQL_TYPE_LONGLONG;
+          ps_params[2].buffer = (char *) &ppid;
+          ps_params[2].length = 0;
+          ps_params[2].is_null = 0;
+
+          ps_params[3].buffer_type = MYSQL_TYPE_VAR_STRING;
+          ps_params[3].buffer = (char *) pname;
+          ps_params[3].length = &_pname_len;
+          ps_params[3].is_null = 0;
+
+          ps_params[4].buffer_type = MYSQL_TYPE_LONGLONG;
+          ps_params[4].buffer = (char *) &pid;
+          ps_params[4].length = 0;
+          ps_params[4].is_null = 0;
+
+          ps_params[5].buffer_type = MYSQL_TYPE_LONGLONG;
+          ps_params[5].buffer = (char *) &id;
+          ps_params[5].length = 0;
+          ps_params[5].is_null = 0;
+
+          ps_params[6].buffer_type = MYSQL_TYPE_VAR_STRING;
+          ps_params[6].buffer = (char *) name;
+          ps_params[6].length = &_name_len;
+          ps_params[6].is_null = 0;
+
+          //ps_params[7].buffer_type = MYSQL_TYPE_LONG;
+          //ps_params[7].buffer = (char *) &mysql_proc_ret;
+          //ps_params[7].length = 0;
+          //ps_params[7].is_null = 0;
+
+          status = mysql_stmt_bind_param(stmt, ps_params);
+          if (status)
+          {
+            TBSYS_LOG(ERROR, "Error: %s (errno: %d)\n",
+                mysql_stmt_error(stmt), mysql_stmt_errno(stmt));
+            ret = TFS_ERROR;
+          }
+          if (TFS_SUCCESS == ret)
+          {
+            if (!excute_stmt(stmt, mysql_proc_ret))
+            {
+              ret = TFS_ERROR;
+            }
+          }
+
+        }
+      }
+      if (TFS_SUCCESS != ret)
+      {
+        close();
+      }
+      return ret;
+    }
+
+    int MysqlDatabaseHelper::mv_dir(const int64_t app_id, const int64_t uid, 
+        const int64_t s_ppid, const int64_t s_pid, const char* s_pname, const int32_t s_pname_len,
+        const int64_t d_ppid, const int64_t d_pid, const char* d_pname, const int32_t d_pname_len,
+        const char* s_name, const int32_t s_name_len,
+        const char* d_name, const int32_t d_name_len,
+        int32_t& mysql_proc_ret)
+    {
+      int ret = TFS_ERROR;
+      MYSQL_STMT *stmt;
+      MYSQL_BIND ps_params[10];  /* input parameter buffers */
+      unsigned long _s_pname_len = s_pname_len;
+      unsigned long _d_pname_len = d_pname_len;
+      unsigned long _s_name_len = s_name_len;
+      unsigned long _d_name_len = d_name_len;
+      int        status;
+      const char* str = "CALL mv_dir(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+
+      mysql_proc_ret = 0;
+
+      tbutil::Mutex::Lock lock(mutex_);
+      if (!is_connected_)
+      {
+        connect();
+      }
+      if (is_connected_)
+      {
+        stmt = mysql_stmt_init(&mysql_.mysql);
+        ret = TFS_SUCCESS;
+        status = mysql_stmt_prepare(stmt, str, strlen(str)); //TODO prepare once
+        if (status)
+        {
+          TBSYS_LOG(ERROR, "Error: %s (errno: %d)\n",
+              mysql_stmt_error(stmt), mysql_stmt_errno(stmt));
+          ret = TFS_ERROR;
+        }
+        if (TFS_SUCCESS == ret)
+        {
+          memset(ps_params, 0, sizeof (ps_params));
+          ps_params[0].buffer_type = MYSQL_TYPE_LONGLONG;
+          ps_params[0].buffer = (char *) &app_id;
+          ps_params[0].length = 0;
+          ps_params[0].is_null = 0;
+
+          ps_params[1].buffer_type = MYSQL_TYPE_LONGLONG;
+          ps_params[1].buffer = (char *) &uid;
+          ps_params[1].length = 0;
+          ps_params[1].is_null = 0;
+
+          ps_params[2].buffer_type = MYSQL_TYPE_LONGLONG;
+          ps_params[2].buffer = (char *) &s_ppid;
+          ps_params[2].length = 0;
+          ps_params[2].is_null = 0;
+
+          ps_params[3].buffer_type = MYSQL_TYPE_LONGLONG;
+          ps_params[3].buffer = (char *) &s_pid;
+          ps_params[3].length = 0;
+          ps_params[3].is_null = 0;
+
+          ps_params[4].buffer_type = MYSQL_TYPE_VAR_STRING;
+          ps_params[4].buffer = (char *) s_pname;
+          ps_params[4].length = &_s_pname_len;
+          ps_params[4].is_null = 0;
+
+          ps_params[5].buffer_type = MYSQL_TYPE_LONGLONG;
+          ps_params[5].buffer = (char *) &d_ppid;
+          ps_params[5].length = 0;
+          ps_params[5].is_null = 0;
+
+          ps_params[6].buffer_type = MYSQL_TYPE_LONGLONG;
+          ps_params[6].buffer = (char *) &d_pid;
+          ps_params[6].length = 0;
+          ps_params[6].is_null = 0;
+
+          ps_params[7].buffer_type = MYSQL_TYPE_VAR_STRING;
+          ps_params[7].buffer = (char *) d_pname;
+          ps_params[7].length = &_d_pname_len;
+          ps_params[7].is_null = 0;
+
+          ps_params[8].buffer_type = MYSQL_TYPE_VAR_STRING;
+          ps_params[8].buffer = (char *) s_name;
+          ps_params[8].length = &_s_name_len;
+          ps_params[8].is_null = 0;
+
+          ps_params[9].buffer_type = MYSQL_TYPE_VAR_STRING;
+          ps_params[9].buffer = (char *) d_name;
+          ps_params[9].length = &_d_name_len;
+          ps_params[9].is_null = 0;
+
+
+          status = mysql_stmt_bind_param(stmt, ps_params);
+          if (status)
+          {
+            TBSYS_LOG(ERROR, "Error: %s (errno: %d)\n",
+                mysql_stmt_error(stmt), mysql_stmt_errno(stmt));
+            ret = TFS_ERROR;
+          }
+          if (TFS_SUCCESS == ret)
+          {
+            if (!excute_stmt(stmt, mysql_proc_ret))
+            {
+              ret = TFS_ERROR;
+            }
+          }
+
+        }
+      }
+      if (TFS_SUCCESS != ret)
+      {
+        close();
+      }
+      return ret;
+    }
+    int MysqlDatabaseHelper::create_file(const int64_t app_id, const int64_t uid, 
+            const int64_t ppid, const int64_t pid, const char* pname, const int32_t pname_len,
+            const char* name, const int32_t name_len, int32_t& mysql_proc_ret)
+    {
+      int ret = TFS_ERROR;
+      MYSQL_STMT *stmt;
+      MYSQL_BIND ps_params[6];  /* input parameter buffers */
+      unsigned long _pname_len = pname_len;
+      unsigned long _name_len = name_len;
+      int        status;
+      const char* str = "CALL create_file(?, ?, ?, ?, ?, ?)";
+
+      mysql_proc_ret = 0;
+
+      tbutil::Mutex::Lock lock(mutex_);
+      if (!is_connected_)
+      {
+        connect();
+      }
+      if (is_connected_)
+      {
+        stmt = mysql_stmt_init(&mysql_.mysql);
+        ret = TFS_SUCCESS;
+        status = mysql_stmt_prepare(stmt, str, strlen(str)); //TODO prepare once
+        if (status)
+        {
+          TBSYS_LOG(ERROR, "Error: %s (errno: %d)\n",
+              mysql_stmt_error(stmt), mysql_stmt_errno(stmt));
+          ret = TFS_ERROR;
+        }
+        if (TFS_SUCCESS == ret)
+        {
+          memset(ps_params, 0, sizeof (ps_params));
+          ps_params[0].buffer_type = MYSQL_TYPE_LONGLONG;
+          ps_params[0].buffer = (char *) &app_id;
+          ps_params[0].length = 0;
+          ps_params[0].is_null = 0;
+
+          ps_params[1].buffer_type = MYSQL_TYPE_LONGLONG;
+          ps_params[1].buffer = (char *) &uid;
+          ps_params[1].length = 0;
+          ps_params[1].is_null = 0;
+
+          ps_params[2].buffer_type = MYSQL_TYPE_LONGLONG;
+          ps_params[2].buffer = (char *) &ppid;
+          ps_params[2].length = 0;
+          ps_params[2].is_null = 0;
+
+          ps_params[3].buffer_type = MYSQL_TYPE_LONGLONG;
+          ps_params[3].buffer = (char *) &pid;
+          ps_params[3].length = 0;
+          ps_params[3].is_null = 0;
+
+          ps_params[4].buffer_type = MYSQL_TYPE_VAR_STRING;
+          ps_params[4].buffer = (char *) pname;
+          ps_params[4].length = &_pname_len;
+          ps_params[4].is_null = 0;
+
+          ps_params[5].buffer_type = MYSQL_TYPE_VAR_STRING;
+          ps_params[5].buffer = (char *) name;
+          ps_params[5].length = &_name_len;
+          ps_params[5].is_null = 0;
+
+          status = mysql_stmt_bind_param(stmt, ps_params);
+          if (status)
+          {
+            TBSYS_LOG(ERROR, "Error: %s (errno: %d)\n",
+                mysql_stmt_error(stmt), mysql_stmt_errno(stmt));
+            ret = TFS_ERROR;
+          }
+          if (TFS_SUCCESS == ret)
+          {
+            if (!excute_stmt(stmt, mysql_proc_ret))
+            {
+              ret = TFS_ERROR;
+            }
+          }
+
+        }
+      }
+      if (TFS_SUCCESS != ret)
+      {
+        close();
+      }
+      return ret;
+    }
+    int MysqlDatabaseHelper::rm_file(const int64_t app_id, const int64_t uid, 
+            const int64_t ppid, const int64_t pid, const char* pname, const int32_t pname_len,
+            const char* name, const int32_t name_len, int32_t& mysql_proc_ret)
+    {
+      int ret = TFS_ERROR;
+      MYSQL_STMT *stmt;
+      MYSQL_BIND ps_params[6];  /* input parameter buffers */
+      unsigned long _pname_len = pname_len;
+      unsigned long _name_len = name_len;
+      int        status;
+      const char* str = "CALL rm_file(?, ?, ?, ?, ?, ?)";
+
+      mysql_proc_ret = 0;
+
+      tbutil::Mutex::Lock lock(mutex_);
+      if (!is_connected_)
+      {
+        connect();
+      }
+      if (is_connected_)
+      {
+        stmt = mysql_stmt_init(&mysql_.mysql);
+        ret = TFS_SUCCESS;
+        status = mysql_stmt_prepare(stmt, str, strlen(str)); //TODO prepare once
+        if (status)
+        {
+          TBSYS_LOG(ERROR, "Error: %s (errno: %d)\n",
+              mysql_stmt_error(stmt), mysql_stmt_errno(stmt));
+          ret = TFS_ERROR;
+        }
+        if (TFS_SUCCESS == ret)
+        {
+          memset(ps_params, 0, sizeof (ps_params));
+          ps_params[0].buffer_type = MYSQL_TYPE_LONGLONG;
+          ps_params[0].buffer = (char *) &app_id;
+          ps_params[0].length = 0;
+          ps_params[0].is_null = 0;
+
+          ps_params[1].buffer_type = MYSQL_TYPE_LONGLONG;
+          ps_params[1].buffer = (char *) &uid;
+          ps_params[1].length = 0;
+          ps_params[1].is_null = 0;
+
+          ps_params[2].buffer_type = MYSQL_TYPE_LONGLONG;
+          ps_params[2].buffer = (char *) &ppid;
+          ps_params[2].length = 0;
+          ps_params[2].is_null = 0;
+
+          ps_params[3].buffer_type = MYSQL_TYPE_LONGLONG;
+          ps_params[3].buffer = (char *) &pid;
+          ps_params[3].length = 0;
+          ps_params[3].is_null = 0;
+
+          ps_params[4].buffer_type = MYSQL_TYPE_VAR_STRING;
+          ps_params[4].buffer = (char *) pname;
+          ps_params[4].length = &_pname_len;
+          ps_params[4].is_null = 0;
+
+          ps_params[5].buffer_type = MYSQL_TYPE_VAR_STRING;
+          ps_params[5].buffer = (char *) name;
+          ps_params[5].length = &_name_len;
+          ps_params[5].is_null = 0;
+
+          status = mysql_stmt_bind_param(stmt, ps_params);
+          if (status)
+          {
+            TBSYS_LOG(ERROR, "Error: %s (errno: %d)\n",
+                mysql_stmt_error(stmt), mysql_stmt_errno(stmt));
+            ret = TFS_ERROR;
+          }
+          if (TFS_SUCCESS == ret)
+          {
+            if (!excute_stmt(stmt, mysql_proc_ret))
+            {
+              ret = TFS_ERROR;
+            }
+          }
+
+        }
+      }
+      if (TFS_SUCCESS != ret)
+      {
+        close();
+      }
+      return ret;
+    }
+    int MysqlDatabaseHelper::pwrite_file(const int64_t app_id, const int64_t uid, 
+        const int64_t pid, const char* name, const int32_t name_len,
+        const int64_t size, const int16_t ver_no, const char* meta_info, const int32_t meta_len,
+        int32_t& mysql_proc_ret)
+    {
+      int ret = TFS_ERROR;
+      MYSQL_STMT *stmt;
+      MYSQL_BIND ps_params[7];  /* input parameter buffers */
+      unsigned long _name_len = name_len;
+      unsigned long _meta_len = meta_len;
+      int        status;
+      const char* str = "CALL pwrite_file(?, ?, ?, ?, ?, ?, ?)";
+
+      mysql_proc_ret = 0;
+
+      tbutil::Mutex::Lock lock(mutex_);
+      if (!is_connected_)
+      {
+        connect();
+      }
+      if (is_connected_)
+      {
+        stmt = mysql_stmt_init(&mysql_.mysql);
+        ret = TFS_SUCCESS;
+        status = mysql_stmt_prepare(stmt, str, strlen(str)); //TODO prepare once
+        if (status)
+        {
+          TBSYS_LOG(ERROR, "Error: %s (errno: %d)\n",
+              mysql_stmt_error(stmt), mysql_stmt_errno(stmt));
+          ret = TFS_ERROR;
+        }
+        if (TFS_SUCCESS == ret)
+        {
+          memset(ps_params, 0, sizeof (ps_params));
+          ps_params[0].buffer_type = MYSQL_TYPE_LONGLONG;
+          ps_params[0].buffer = (char *) &app_id;
+          ps_params[0].length = 0;
+          ps_params[0].is_null = 0;
+
+          ps_params[1].buffer_type = MYSQL_TYPE_LONGLONG;
+          ps_params[1].buffer = (char *) &uid;
+          ps_params[1].length = 0;
+          ps_params[1].is_null = 0;
+
+          ps_params[2].buffer_type = MYSQL_TYPE_LONGLONG;
+          ps_params[2].buffer = (char *) &pid;
+          ps_params[2].length = 0;
+          ps_params[2].is_null = 0;
+
+          ps_params[3].buffer_type = MYSQL_TYPE_VAR_STRING;
+          ps_params[3].buffer = (char *) name;
+          ps_params[3].length = &_name_len;
+          ps_params[3].is_null = 0;
+
+          ps_params[4].buffer_type = MYSQL_TYPE_LONGLONG;
+          ps_params[4].buffer = (char *) &size;
+          ps_params[4].length = 0;
+          ps_params[4].is_null = 0;
+
+          ps_params[5].buffer_type = MYSQL_TYPE_SHORT;
+          ps_params[5].buffer = (char *) &ver_no;
+          ps_params[5].length = 0;
+          ps_params[5].is_null = 0;
+
+          ps_params[6].buffer_type = MYSQL_TYPE_LONGLONG;
+          ps_params[6].buffer = (char *) meta_info;
+          ps_params[6].length = &_meta_len;
+          ps_params[6].is_null = 0;
+
+          status = mysql_stmt_bind_param(stmt, ps_params);
+          if (status)
+          {
+            TBSYS_LOG(ERROR, "Error: %s (errno: %d)\n",
+                mysql_stmt_error(stmt), mysql_stmt_errno(stmt));
+            ret = TFS_ERROR;
+          }
+          if (TFS_SUCCESS == ret)
+          {
+            if (!excute_stmt(stmt, mysql_proc_ret))
+            {
+              ret = TFS_ERROR;
+            }
+          }
+
+        }
+      }
+      if (TFS_SUCCESS != ret)
+      {
+        close();
+      }
+      return ret;
+    }
+    int MysqlDatabaseHelper::mv_file(const int64_t app_id, const int64_t uid, 
+        const int64_t s_ppid, const int64_t s_pid, const char* s_pname, const int32_t s_pname_len,
+        const int64_t d_ppid, const int64_t d_pid, const char* d_pname, const int32_t d_pname_len,
+        const char* s_name, const int32_t s_name_len,
+        const char* d_name, const int32_t d_name_len,
+        int32_t& mysql_proc_ret)
+    {
+      int ret = TFS_ERROR;
+      MYSQL_STMT *stmt;
+      MYSQL_BIND ps_params[10];  /* input parameter buffers */
+      unsigned long _s_pname_len = s_pname_len;
+      unsigned long _d_pname_len = d_pname_len;
+      unsigned long _s_name_len = s_name_len;
+      unsigned long _d_name_len = d_name_len;
+      int        status;
+      const char* str = "CALL mv_file(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+
+      mysql_proc_ret = 0;
+
+      tbutil::Mutex::Lock lock(mutex_);
+      if (!is_connected_)
+      {
+        connect();
+      }
+      if (is_connected_)
+      {
+        stmt = mysql_stmt_init(&mysql_.mysql);
+        ret = TFS_SUCCESS;
+        status = mysql_stmt_prepare(stmt, str, strlen(str)); //TODO prepare once
+        if (status)
+        {
+          TBSYS_LOG(ERROR, "Error: %s (errno: %d)\n",
+              mysql_stmt_error(stmt), mysql_stmt_errno(stmt));
+          ret = TFS_ERROR;
+        }
+        if (TFS_SUCCESS == ret)
+        {
+          memset(ps_params, 0, sizeof (ps_params));
+          ps_params[0].buffer_type = MYSQL_TYPE_LONGLONG;
+          ps_params[0].buffer = (char *) &app_id;
+          ps_params[0].length = 0;
+          ps_params[0].is_null = 0;
+
+          ps_params[1].buffer_type = MYSQL_TYPE_LONGLONG;
+          ps_params[1].buffer = (char *) &uid;
+          ps_params[1].length = 0;
+          ps_params[1].is_null = 0;
+
+          ps_params[2].buffer_type = MYSQL_TYPE_LONGLONG;
+          ps_params[2].buffer = (char *) &s_ppid;
+          ps_params[2].length = 0;
+          ps_params[2].is_null = 0;
+
+          ps_params[3].buffer_type = MYSQL_TYPE_LONGLONG;
+          ps_params[3].buffer = (char *) &s_pid;
+          ps_params[3].length = 0;
+          ps_params[3].is_null = 0;
+
+          ps_params[4].buffer_type = MYSQL_TYPE_VAR_STRING;
+          ps_params[4].buffer = (char *) s_pname;
+          ps_params[4].length = &_s_pname_len;
+          ps_params[4].is_null = 0;
+
+          ps_params[5].buffer_type = MYSQL_TYPE_LONGLONG;
+          ps_params[5].buffer = (char *) &d_ppid;
+          ps_params[5].length = 0;
+          ps_params[5].is_null = 0;
+
+          ps_params[6].buffer_type = MYSQL_TYPE_LONGLONG;
+          ps_params[6].buffer = (char *) &d_pid;
+          ps_params[6].length = 0;
+          ps_params[6].is_null = 0;
+
+          ps_params[7].buffer_type = MYSQL_TYPE_VAR_STRING;
+          ps_params[7].buffer = (char *) d_pname;
+          ps_params[7].length = &_d_pname_len;
+          ps_params[7].is_null = 0;
+
+          ps_params[8].buffer_type = MYSQL_TYPE_VAR_STRING;
+          ps_params[8].buffer = (char *) s_name;
+          ps_params[8].length = &_s_name_len;
+          ps_params[8].is_null = 0;
+
+          ps_params[9].buffer_type = MYSQL_TYPE_VAR_STRING;
+          ps_params[9].buffer = (char *) d_name;
+          ps_params[9].length = &_d_name_len;
+          ps_params[9].is_null = 0;
+
+
+          status = mysql_stmt_bind_param(stmt, ps_params);
+          if (status)
+          {
+            TBSYS_LOG(ERROR, "Error: %s (errno: %d)\n",
+                mysql_stmt_error(stmt), mysql_stmt_errno(stmt));
+            ret = TFS_ERROR;
+          }
+          if (TFS_SUCCESS == ret)
+          {
+            if (!excute_stmt(stmt, mysql_proc_ret))
+            {
+              ret = TFS_ERROR;
+            }
+          }
+
+        }
+      }
+      if (TFS_SUCCESS != ret)
+      {
+        close();
+      }
+      return ret;
+    }
   }
 }
 
