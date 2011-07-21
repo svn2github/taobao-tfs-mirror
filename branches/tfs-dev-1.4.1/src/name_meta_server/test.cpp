@@ -85,17 +85,17 @@ int main()
   sprintf(d_name, "%c%s", 2, "12");
   printf("will mv dir 4_1234->3_123  R->2_12\n");
   //scanf("%d", &mysql_proc_ret);
-  ret = tt.mv_dir(2, 2, 
+  ret = tt.mv_dir(2, 2,
       30, 31, s_pname, 5,
       0, 30, d_pname, 2,
       s_name, 4, d_name, 3,
       mysql_proc_ret);
   printf("ret = %d mysql_proc_ret = %ld\n", ret, mysql_proc_ret);
-  
+
   printf("will create file 4_1234->4_file \n");
   sprintf(pname,"%c%s", 4, "1234");
   sprintf(name, "%c%s", 4, "file");
-  ret = tt.create_file(2, 2, 
+  ret = tt.create_file(2, 2,
       30, 31, pname, 5,
       name, 5,
       mysql_proc_ret);
@@ -115,7 +115,7 @@ int main()
   }
 
   printf("will rm file 4_1234->4_file \n");
-  ret = tt.rm_file(2, 2, 
+  ret = tt.rm_file(2, 2,
       30, 31, pname, 5,
       name, 5,
       mysql_proc_ret);
@@ -124,16 +124,16 @@ int main()
   printf("will create file 4_1234->4_file \n");
   sprintf(pname,"%c%s", 4, "1234");
   sprintf(name, "%c%s", 4, "file");
-  ret = tt.create_file(2, 2, 
+  ret = tt.create_file(2, 2,
       30, 31, pname, 5,
       name, 5,
       mysql_proc_ret);
   printf("ret = %d mysql_proc_ret = %ld\n", ret, mysql_proc_ret);
 
   printf("will pwrite file 4_1234->4_file \n");
-  ret = tt.pwrite_file(2, 2, 
+  ret = tt.pwrite_file(2, 2,
       31, name, 5,
-      100, 1, 
+      100, 1,
       name,  100,
       mysql_proc_ret);
   printf("ret = %d mysql_proc_ret = %ld\n", ret, mysql_proc_ret);
@@ -141,9 +141,9 @@ int main()
   printf("will pwrite file 4_1234->4_file[100] \n");
   name[5]=name[6]=name[7]=0;
   name[8]=100;
-  ret = tt.pwrite_file(2, 2, 
+  ret = tt.pwrite_file(2, 2,
       31, name, 9,
-      100, 0, 
+      100, 0,
       name,  100,
       mysql_proc_ret);
   printf("ret = %d mysql_proc_ret = %ld\n", ret, mysql_proc_ret);
@@ -154,7 +154,7 @@ int main()
   sprintf(d_name, "%c%s", 4, "elif");
   printf("will mv file 4_1234->4_file  R->4_elif\n");
   //scanf("%d", &mysql_proc_ret);
-  ret = tt.mv_file(2, 2, 
+  ret = tt.mv_file(2, 2,
       30, 31, s_pname, 5,
       0, 30, d_pname, 2,
       s_name, 5, d_name, 5,
@@ -162,6 +162,12 @@ int main()
   printf("ret = %d mysql_proc_ret = %ld\n", ret, mysql_proc_ret);
   ret = tt.ls_meta_info(out_v_meta_info, 2, 2);
   printf("ls_meta_info ret = %d \n", ret);
+  for (size_t i = 0; i < out_v_meta_info.size(); i++)
+  {
+    dump_meta_info(out_v_meta_info[i]);
+  }
+  ret = tt.ls_meta_info(out_v_meta_info, 2, 1);
+  printf("ls_meta_info ret = %d size = %lu\n", ret , out_v_meta_info.size());
   for (size_t i = 0; i < out_v_meta_info.size(); i++)
   {
     dump_meta_info(out_v_meta_info[i]);

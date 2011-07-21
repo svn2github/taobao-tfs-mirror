@@ -28,7 +28,7 @@ namespace tfs
     {
       public:
         MetaInfo():
-          pid_(-1), id_(0), create_time_(0), modify_time_(0), 
+          pid_(-1), id_(0), create_time_(0), modify_time_(0),
           size_(0), ver_no_(0)
       {
       }

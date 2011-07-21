@@ -3,7 +3,7 @@ AM_CPPFLAGS=-Wall -I$(top_srcdir)/src\
             -I$(TBLIB_ROOT)/include/tbnet\
 						`mysql_config --include`
  
-AM_LDFLAGS=-lz -lrt -lpthread -ldl -luuid `mysql_config --libs`
+AM_LDFLAGS=-lz -lrt -lpthread -ldl -luuid `mysql_config --libs_r`
 
 LDADD=$(top_builddir)/src/message/libtfsmessage.a \
       $(top_builddir)/src/common/libtfscommon.a\
@@ -12,7 +12,9 @@ LDADD=$(top_builddir)/src/message/libtfsmessage.a \
 
 noinst_LIBRARIES=libnamemetaserver.a
 
-libnamemetaserver_a_SOURCES=database_helper.cpp mysql_database_helper.cpp 
+libnamemetaserver_a_SOURCES=database_helper.cpp mysql_database_helper.cpp database_pool.cpp
 
-bin_PROGRAMS = test
+bin_PROGRAMS = test test_pool
 test_SOURCES=$(libnamemetaserver_a_SOURCES) test.cpp
+
+test_pool_SOURCES=$(libnamemetaserver_a_SOURCES) test_pool.cpp

@@ -44,26 +44,26 @@ namespace tfs
             const char* pname, const int32_t pname_len, const int64_t pid, const int64_t id,
             const char* name, const int32_t name_len, int64_t& mysql_proc_ret);
 
-        virtual int mv_dir(const int64_t app_id, const int64_t uid, 
+        virtual int mv_dir(const int64_t app_id, const int64_t uid,
             const int64_t s_ppid, const int64_t s_pid, const char* s_pname, const int32_t s_pname_len,
             const int64_t d_ppid, const int64_t d_pid, const char* d_pname, const int32_t d_pname_len,
             const char* s_name, const int32_t s_name_len,
             const char* d_name, const int32_t d_name_len, int64_t& mysql_proc_ret);
 
-        virtual int create_file(const int64_t app_id, const int64_t uid, 
+        virtual int create_file(const int64_t app_id, const int64_t uid,
             const int64_t ppid, const int64_t pid, const char* pname, const int32_t pname_len,
             const char* name, const int32_t name_len, int64_t& mysql_proc_ret);
 
-        virtual int rm_file(const int64_t app_id, const int64_t uid, 
+        virtual int rm_file(const int64_t app_id, const int64_t uid,
             const int64_t ppid, const int64_t pid, const char* pname, const int32_t pname_len,
             const char* name, const int32_t name_len, int64_t& mysql_proc_ret);
 
-        virtual int pwrite_file(const int64_t app_id, const int64_t uid, 
+        virtual int pwrite_file(const int64_t app_id, const int64_t uid,
             const int64_t pid, const char* name, const int32_t name_len,
             const int64_t size, const int16_t ver_no, const char* meta_info, const int32_t meta_len,
             int64_t& mysql_proc_ret);
 
-        virtual int mv_file(const int64_t app_id, const int64_t uid, 
+        virtual int mv_file(const int64_t app_id, const int64_t uid,
             const int64_t s_ppid, const int64_t s_pid, const char* s_pname, const int32_t s_pname_len,
             const int64_t d_ppid, const int64_t d_pid, const char* d_pname, const int32_t d_pname_len,
             const char* s_name, const int32_t s_name_len,
@@ -72,7 +72,7 @@ namespace tfs
         virtual int get_nex_val(int64_t& next_val);
 
       private:
-        enum 
+        enum
         {
           ROW_LIMIT = 500,
           META_NAME_LEN = 512,
@@ -85,8 +85,25 @@ namespace tfs
         int64_t pid_;
         char pname_[META_NAME_LEN];
         unsigned long pname_len_;
+      private:
+        struct mysql_ex {
+          std::string host;
+          int port;
+          std::string user;
+          std::string pass;
+          std::string database;
+          bool   isopen;
+          bool   inited;
+          MYSQL  mysql;
+        };
+
+        bool init_mysql(const char* mysqlconn, const char* user_name, const char* passwd);
+        bool open_mysql();
+        int close_mysql();
+        bool excute_stmt(MYSQL_STMT *stmt, int64_t& mysql_proc_ret);
 
       private:
+        mysql_ex  mysql_;
         tbutil::Mutex mutex_;
 
     };
