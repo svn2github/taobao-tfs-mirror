@@ -304,6 +304,7 @@ int TfsClientImpl::unlink(const char* file_name, const char* suffix, const char*
       {
         TBSYS_LOG(ERROR, "tfs file name illegal: %s", file_name);
       }
+      tbsys::gDelete(tfs_file);
     }
   }
   return ret;
