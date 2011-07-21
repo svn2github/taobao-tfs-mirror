@@ -15,7 +15,6 @@
  */
 #include "mysql_database_helper.h"
 
-#include <mysql/mysql.h>
 #include <mysql/errmsg.h>
 #include <vector>
 #include "common/define.h"
@@ -112,7 +111,7 @@ namespace
     }
     return 0;
   }
-  static bool excute_stmt(MYSQL_STMT *stmt, int32_t& mysql_proc_ret)
+  static bool excute_stmt(MYSQL_STMT *stmt, int64_t& mysql_proc_ret)
   {
     bool ret = true;
     int status;
@@ -186,6 +185,10 @@ namespace tfs
   namespace namemetaserver
   {
     using namespace common;
+    MysqlDatabaseHelper::MysqlDatabaseHelper()
+    {
+      stmt_ = NULL;
+    }
     MysqlDatabaseHelper::~MysqlDatabaseHelper()
     {
       close();
@@ -207,6 +210,57 @@ namespace tfs
       {
         ret = TFS_ERROR;
       }
+      if (TFS_SUCCESS == ret)
+      {
+        char sql[1024];
+        snprintf(sql, 1024, "select pid, name, id, UNIX_TIMESTAMP(create_time), "
+            "UNIX_TIMESTAMP(modify_time), size, ver_no, meta_info from t_meta_info "
+            "where app_id = ? and uid = ? and pid >= ? and name >= ? limit %d", ROW_LIMIT);
+        if (NULL != stmt_)
+        {
+          mysql_stmt_free_result(stmt_);
+          mysql_stmt_close(stmt_);
+        }
+        stmt_ = mysql_stmt_init(&mysql_.mysql);
+        int status = mysql_stmt_prepare(stmt_, sql, strlen(sql));
+        if (status)
+        {
+          TBSYS_LOG(ERROR, "Error: %s (errno: %d)\n",
+              mysql_stmt_error(stmt_), mysql_stmt_errno(stmt_));
+          ret = TFS_ERROR;
+        }
+        if (TFS_SUCCESS == ret)
+        {
+          memset(ps_params_, 0, sizeof (ps_params_));
+          ps_params_[0].buffer_type = MYSQL_TYPE_LONGLONG;
+          ps_params_[0].buffer = (char *) &app_id_;
+          ps_params_[0].length = 0;
+          ps_params_[0].is_null = 0;
+
+          ps_params_[1].buffer_type = MYSQL_TYPE_LONGLONG;
+          ps_params_[1].buffer = (char *) &uid_;
+          ps_params_[1].length = 0;
+          ps_params_[1].is_null = 0;
+
+          ps_params_[2].buffer_type = MYSQL_TYPE_LONGLONG;
+          ps_params_[2].buffer = (char *) &pid_;
+          ps_params_[2].length = 0;
+          ps_params_[2].is_null = 0;
+
+          ps_params_[3].buffer_type = MYSQL_TYPE_VAR_STRING;
+          ps_params_[3].buffer = (char *) pname_;
+          ps_params_[3].length = &pname_len_;
+          ps_params_[3].is_null = 0;
+
+          status = mysql_stmt_bind_param(stmt_, ps_params_);
+          if (status)
+          {
+            TBSYS_LOG(ERROR, "Error: %s (errno: %d)\n",
+                mysql_stmt_error(stmt_), mysql_stmt_errno(stmt_));
+            ret = TFS_ERROR;
+          }
+        }
+      }
 
       is_connected_ = TFS_SUCCESS == ret;
       return ret;
@@ -214,15 +268,166 @@ namespace tfs
 
     int MysqlDatabaseHelper::close()
     {
+      if (NULL != stmt_)
+      {
+        mysql_stmt_free_result(stmt_);
+        mysql_stmt_close(stmt_);
+        stmt_ = NULL;
+      }
       close_mysql();
       is_connected_ = false;
       return TFS_SUCCESS;
+    }
+    int MysqlDatabaseHelper::ls_meta_info(std::vector<MetaInfo>& out_v_meta_info,
+        const int64_t app_id, const int64_t uid,
+            const int64_t pid, const char* name, const int32_t name_len)
+    {
+      int ret = TFS_ERROR;
+      out_v_meta_info.clear();
+      tbutil::Mutex::Lock lock(mutex_);
+      if (!is_connected_)
+      {
+        connect();
+      }
+      if (is_connected_)
+      {
+        ret = TFS_SUCCESS;
+        int status;
+        app_id_ = app_id;
+        uid_ = uid;
+        pid_ = pid;
+        if (NULL != name && name_len > 0 && name_len < META_NAME_LEN)
+        {
+          memcpy(pname_, name, name_len);
+          pname_len_ = name_len;
+        }
+        else
+        {
+          pname_[0] = 0; 
+          pname_len_ = 1;
+        }
+        status = mysql_stmt_execute(stmt_);
+        if (status)
+        {
+          TBSYS_LOG(ERROR, "Error: %s (errno: %d)\n",
+              mysql_stmt_error(stmt_), mysql_stmt_errno(stmt_));
+          ret = TFS_ERROR;
+        }
+        if (TFS_SUCCESS == ret)
+        {
+          MYSQL_BIND rs_bind[8];  /* for output buffers */
+          my_bool    is_null[8];
+          int64_t o_pid = 0;
+          char o_name[META_NAME_LEN];
+          unsigned long o_name_len = 0;
+          int64_t o_id = 0;
+          int32_t o_create_time = 0;
+          int32_t o_modify_time = 0;
+          int64_t o_size = 0;
+          int16_t o_ver_no = 0;
+          static char o_slide_info[SLIDE_INFO_LEN];
+          unsigned long o_slide_info_len = 0;
+
+          memset(rs_bind, 0, sizeof (rs_bind) );
+
+          /* set up and bind result set output buffers */
+          rs_bind[0].buffer_type = MYSQL_TYPE_LONGLONG;
+          rs_bind[0].is_null = &is_null[0];
+          rs_bind[0].buffer = (char *) &o_pid;
+          rs_bind[0].is_unsigned = 1;
+
+          rs_bind[1].buffer_type = MYSQL_TYPE_STRING;
+          rs_bind[1].is_null = &is_null[1];
+          rs_bind[1].buffer = (char *) o_name;
+          rs_bind[1].buffer_length = META_NAME_LEN;
+          rs_bind[1].length= &o_name_len;
+
+          rs_bind[2].buffer_type = MYSQL_TYPE_LONGLONG;
+          rs_bind[2].is_null = &is_null[2];
+          rs_bind[2].buffer = (char *) &o_id;
+
+          rs_bind[3].buffer_type = MYSQL_TYPE_LONG;
+          rs_bind[3].is_null = &is_null[3];
+          rs_bind[3].buffer = (char *) &o_create_time;
+
+          rs_bind[4].buffer_type = MYSQL_TYPE_LONG;
+          rs_bind[4].is_null = &is_null[4];
+          rs_bind[4].buffer = (char *) &o_modify_time;
+
+          rs_bind[5].buffer_type = MYSQL_TYPE_LONGLONG;
+          rs_bind[5].is_null = &is_null[5];
+          rs_bind[5].buffer = (char *) &o_size;
+
+          rs_bind[6].buffer_type = MYSQL_TYPE_SHORT;
+          rs_bind[6].is_null = &is_null[6];
+          rs_bind[6].buffer = (char *) &o_ver_no;
+
+          rs_bind[7].buffer_type = MYSQL_TYPE_BLOB;
+          rs_bind[7].is_null = &is_null[7];
+          rs_bind[7].buffer_length = SLIDE_INFO_LEN;
+          rs_bind[7].buffer = (char *) o_slide_info;
+          rs_bind[7].length= &o_slide_info_len;
+
+          status = mysql_stmt_bind_result(stmt_, rs_bind);
+          if (status)
+          {
+            TBSYS_LOG(ERROR, "Error: %s (errno: %d)\n",
+                mysql_stmt_error(stmt_), mysql_stmt_errno(stmt_));
+            ret = TFS_ERROR;
+          }
+          if (TFS_SUCCESS == ret)
+          {
+            status = mysql_stmt_store_result(stmt_);
+            if (status)
+            {
+              TBSYS_LOG(ERROR, "Error: %s (errno: %d)\n",
+                  mysql_stmt_error(stmt_), mysql_stmt_errno(stmt_));
+              ret = TFS_ERROR;
+            }
+          }
+          while (TFS_SUCCESS == ret )
+          {
+            status = mysql_stmt_fetch(stmt_);
+            if (1 == status)
+            {
+              TBSYS_LOG(ERROR, "Error: %s (errno: %d)\n",
+                  mysql_stmt_error(stmt_), mysql_stmt_errno(stmt_));
+              ret = TFS_ERROR;
+              break;
+            }else if (MYSQL_NO_DATA == status) 
+            {
+              break;
+            }
+            else if (MYSQL_DATA_TRUNCATED == status)
+            {
+              TBSYS_LOG(ERROR, "MYSQL_DATA_TRUNCATED");
+              break;
+            }
+            MetaInfo tmp;
+            tmp.name_.assign(o_name, o_name_len);
+            tmp.pid_ = o_pid;
+            tmp.id_ = o_id;
+            tmp.create_time_ = o_create_time;
+            tmp.modify_time_ = o_modify_time;
+            tmp.size_ = o_size;
+            tmp.ver_no_ = o_ver_no;
+            //TODO slide_info_;
+            out_v_meta_info.push_back(tmp);
+          }
+          mysql_next_result(&mysql_.mysql); //mysql bugs, we must have this
+        }
+      }
+      if (TFS_SUCCESS != ret)
+      {
+        close();
+      }
+      return ret;
     }
 
     int MysqlDatabaseHelper::create_dir(const int64_t app_id, const int64_t uid,
         const int64_t ppid, const char* pname, const int32_t pname_len,
         const int64_t pid, const int64_t id, const char* name, const int32_t name_len,
-        int32_t& mysql_proc_ret)
+        int64_t& mysql_proc_ret)
     {
       int ret = TFS_ERROR;
       MYSQL_STMT *stmt;
@@ -318,7 +523,7 @@ namespace tfs
     }
     int MysqlDatabaseHelper::rm_dir(const int64_t app_id, const int64_t uid, const int64_t ppid,
             const char* pname, const int32_t pname_len, const int64_t pid, const int64_t id,
-            const char* name, const int32_t name_len, int32_t& mysql_proc_ret)
+            const char* name, const int32_t name_len, int64_t& mysql_proc_ret)
     {
       int ret = TFS_ERROR;
       MYSQL_STMT *stmt;
@@ -384,11 +589,6 @@ namespace tfs
           ps_params[6].length = &_name_len;
           ps_params[6].is_null = 0;
 
-          //ps_params[7].buffer_type = MYSQL_TYPE_LONG;
-          //ps_params[7].buffer = (char *) &mysql_proc_ret;
-          //ps_params[7].length = 0;
-          //ps_params[7].is_null = 0;
-
           status = mysql_stmt_bind_param(stmt, ps_params);
           if (status)
           {
@@ -418,7 +618,7 @@ namespace tfs
         const int64_t d_ppid, const int64_t d_pid, const char* d_pname, const int32_t d_pname_len,
         const char* s_name, const int32_t s_name_len,
         const char* d_name, const int32_t d_name_len,
-        int32_t& mysql_proc_ret)
+        int64_t& mysql_proc_ret)
     {
       int ret = TFS_ERROR;
       MYSQL_STMT *stmt;
@@ -527,7 +727,7 @@ namespace tfs
     }
     int MysqlDatabaseHelper::create_file(const int64_t app_id, const int64_t uid, 
             const int64_t ppid, const int64_t pid, const char* pname, const int32_t pname_len,
-            const char* name, const int32_t name_len, int32_t& mysql_proc_ret)
+            const char* name, const int32_t name_len, int64_t& mysql_proc_ret)
     {
       int ret = TFS_ERROR;
       MYSQL_STMT *stmt;
@@ -613,7 +813,7 @@ namespace tfs
     }
     int MysqlDatabaseHelper::rm_file(const int64_t app_id, const int64_t uid, 
             const int64_t ppid, const int64_t pid, const char* pname, const int32_t pname_len,
-            const char* name, const int32_t name_len, int32_t& mysql_proc_ret)
+            const char* name, const int32_t name_len, int64_t& mysql_proc_ret)
     {
       int ret = TFS_ERROR;
       MYSQL_STMT *stmt;
@@ -700,7 +900,7 @@ namespace tfs
     int MysqlDatabaseHelper::pwrite_file(const int64_t app_id, const int64_t uid, 
         const int64_t pid, const char* name, const int32_t name_len,
         const int64_t size, const int16_t ver_no, const char* meta_info, const int32_t meta_len,
-        int32_t& mysql_proc_ret)
+        int64_t& mysql_proc_ret)
     {
       int ret = TFS_ERROR;
       MYSQL_STMT *stmt;
@@ -761,7 +961,7 @@ namespace tfs
           ps_params[5].length = 0;
           ps_params[5].is_null = 0;
 
-          ps_params[6].buffer_type = MYSQL_TYPE_LONGLONG;
+          ps_params[6].buffer_type = MYSQL_TYPE_BLOB;
           ps_params[6].buffer = (char *) meta_info;
           ps_params[6].length = &_meta_len;
           ps_params[6].is_null = 0;
@@ -794,7 +994,7 @@ namespace tfs
         const int64_t d_ppid, const int64_t d_pid, const char* d_pname, const int32_t d_pname_len,
         const char* s_name, const int32_t s_name_len,
         const char* d_name, const int32_t d_name_len,
-        int32_t& mysql_proc_ret)
+        int64_t& mysql_proc_ret)
     {
       int ret = TFS_ERROR;
       MYSQL_STMT *stmt;
@@ -901,6 +1101,47 @@ namespace tfs
       }
       return ret;
     }
+    int MysqlDatabaseHelper::get_nex_val(int64_t& next_val)
+    {
+      int ret = TFS_ERROR;
+      MYSQL_STMT *stmt;
+      int        status;
+      const char* str = "CALL pid_seq_nextval()";
+
+      next_val = 0;
+
+      tbutil::Mutex::Lock lock(mutex_);
+      if (!is_connected_)
+      {
+        connect();
+      }
+      if (is_connected_)
+      {
+        stmt = mysql_stmt_init(&mysql_.mysql);
+        ret = TFS_SUCCESS;
+        status = mysql_stmt_prepare(stmt, str, strlen(str)); //TODO prepare once
+        if (status)
+        {
+          TBSYS_LOG(ERROR, "Error: %s (errno: %d)\n",
+              mysql_stmt_error(stmt), mysql_stmt_errno(stmt));
+          ret = TFS_ERROR;
+        }
+        if (TFS_SUCCESS == ret)
+        {
+            if (!excute_stmt(stmt, next_val))
+            {
+              ret = TFS_ERROR;
+            }
+
+        }
+      }
+      if (TFS_SUCCESS != ret)
+      {
+        close();
+      }
+      return ret;
+    }
+
   }
 }
 

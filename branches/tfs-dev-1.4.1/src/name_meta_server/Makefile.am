@@ -10,9 +10,9 @@ LDADD=$(top_builddir)/src/message/libtfsmessage.a \
       $(TBLIB_ROOT)/lib/libtbnet.a \
       $(TBLIB_ROOT)/lib/libtbsys.a 
 
-noinst_LIBRARIES=librcserver.a
+noinst_LIBRARIES=libnamemetaserver.a
 
-librcserver_a_SOURCES=database_helper.cpp mysql_database_helper.cpp 
+libnamemetaserver_a_SOURCES=database_helper.cpp mysql_database_helper.cpp 
 
 bin_PROGRAMS = test
-test_SOURCES=$(librcserver_a_SOURCES) test.cpp
+test_SOURCES=$(libnamemetaserver_a_SOURCES) test.cpp

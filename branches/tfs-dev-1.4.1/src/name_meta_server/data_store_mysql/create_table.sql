@@ -8,6 +8,6 @@ CREATE TABLE t_meta_info (
   modify_time datetime not null,
   size bigint not null,
   ver_no smallint default 0,
-  meta_info varbinary (65536),
+  meta_info text,
   PRIMARY KEY (app_id, uid, pid, name)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;

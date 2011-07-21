@@ -4,7 +4,7 @@ create procedure
 pwrite_file(in i_app_id bigint, in i_uid bigint,
   in i_pid bigint unsigned,
   in i_name varbinary(512),
-  in i_size bigint, in i_ver_no smallint, in i_meta_info VARBINARY(65536))
+  in i_size bigint, in i_ver_no smallint, in i_meta_info text)
 begin
   declare aff_row int;
   declare o_ret int;
