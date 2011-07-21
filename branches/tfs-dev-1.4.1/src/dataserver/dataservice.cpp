@@ -665,17 +665,10 @@ namespace tfs
             StatusMessage* reply_msg =  all_success ?
               new StatusMessage(STATUS_MESSAGE_OK, "write data complete"):
               new StatusMessage(STATUS_MESSAGE_ERROR, "write data fail");
-            iret = bpacket->reply(reply_msg);
+            bpacket->reply(reply_msg);
             if (TFS_SUCCESS != iret)
             {
               stat_mgr_.update_entry(tfs_ds_stat_, "write-failed", 1);
-            }
-            if (TFS_SUCCESS != iret)
-            {
-              TBSYS_LOG(
-                  ERROR,
-                  "write data fail. filenumber: %" PRI64_PREFIX "u, blockid: %u, fileid: %" PRI64_PREFIX "u, version: %u, leaseid: %u, role: master",
-                  write_info.file_number_, write_info.block_id_, write_info.file_id_, version, lease_id);
             }
           }
           else if (RENAME_FILE_MESSAGE == pcode)
