@@ -99,6 +99,8 @@ namespace tfs
       // ns who is not set
       if (!dataservice_->set_flag_[who])
         return;
+
+      bool reset_need_send_blockinfo_flag = dataservice_->data_management_.get_all_logic_block_size() <= 0;
       SetDataserverMessage req_sds_msg;
       req_sds_msg.set_ds(&dataservice_->data_server_info_);
       if (dataservice_->need_send_blockinfo_[who])

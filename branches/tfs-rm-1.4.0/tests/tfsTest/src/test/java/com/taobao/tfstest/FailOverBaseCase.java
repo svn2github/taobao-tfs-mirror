@@ -41,6 +41,7 @@ public class FailOverBaseCase {
 	//final AppServer tfsReadClient_slave = (AppServer) clientFactory.getBean("slaveReadClient");
 	
 	//Define
+	final public boolean DEFINE_NS13 = true;
 	final public int NSINDEX = 0;
 	final public int DSINDEX = 1;
 	final public int DSINDEXI = 1;
@@ -129,7 +130,7 @@ public class FailOverBaseCase {
 	final public int RUNRATECOL = 13;
 	final public int TAILTPSCOL = 14;
 	final public int RUNTPSCOL = 11;
-	final public int SCANTIME = 120;
+	final public int SCANTIME = 300;
 	final public int MIGRATETIME = 20;
 	
 	/* Thread count on client */
@@ -1236,8 +1237,15 @@ public class FailOverBaseCase {
 		String vip = tfsGrid.getCluster(NSINDEX).getServer(0).getVip();
 		int port = tfsGrid.getCluster(NSINDEX).getServer(0).getPort();
 		ArrayList<String> listOut = new ArrayList<String>();
-		String cmd = "cd " + TFS_BIN_HOME + ";" + "./ssm -s " + vip + ":" + 
-			port + " -i " + "\\\"block\\\" | grep \\\"" + iBlockCnt + "$\\\" | wc -l";
+		String cmd;
+		if (DEFINE_NS13) {
+			cmd = "cd " + TFS_BIN_HOME + "; ./showssm -f ../conf/tfs.conf -t 1 | grep -v \\\"TOTAL\\\" | grep \\\"" + 
+				iBlockCnt + "$\\\" | wc -l";
+		}
+		else {
+			cmd = "cd " + TFS_BIN_HOME + "; ./ssm -s " + vip + 
+				":" + port + " -i " + "\\\"block\\\" | grep -v \\\"TOTAL\\\" | grep \\\"" + iBlockCnt + "$\\\" | wc -l";
+		}
 		
 		for (int iLoop = 0; iLoop < iTimes; iLoop ++)
 		{
@@ -1292,8 +1300,14 @@ public class FailOverBaseCase {
 		{
 			/* Reset list */
 			listOut.clear();
-			cmd = "cd " + TFS_BIN_HOME + "; ./ssm -s " + MASTERSER.getIp() +
-				":" + MASTERSER.getPort() + " -i " + "\\\"block\\\" | grep \\\"" + iBlockCnt + "$\\\" | wc -l";
+			if (DEFINE_NS13) {
+				cmd = "cd " + TFS_BIN_HOME + "; ./showssm -f ../conf/tfs.conf -t 1 | grep -v \\\"TOTAL\\\" | grep \\\"" + 
+					iBlockCnt + "$\\\" | wc -l";
+			}
+			else {
+				cmd = "cd " + TFS_BIN_HOME + "; ./ssm -s " + MASTERSER.getIp() + 
+					":" + MASTERSER.getPort() + " -i " + "\\\"block\\\" | grep -v \\\"TOTAL\\\" | grep \\\"" + iBlockCnt + "$\\\" | wc -l";
+			}
 			bRet = Proc.cmdOutBase(MASTERSER.getIp(), cmd, null, 1, null, listOut);
 			if (bRet == false) return bRet;
 			
@@ -1322,8 +1336,15 @@ public class FailOverBaseCase {
 		
 		/* Reset list */
 		listOut.clear();
-		cmd = "cd " + TFS_BIN_HOME + "; ./ssm -s " + SLAVESER.getIp() + 
-			":" + SLAVESER.getPort() + " -i " + "\\\"block\\\" | grep \\\"" + iBlockCnt + "$\\\" | wc -l";
+		if (DEFINE_NS13) {
+			cmd = "cd " + TFS_BIN_HOME + "; ./showssm -f ../conf/tfs.conf -t 1 | grep -v \\\"TOTAL\\\" | grep \\\"" + 
+				iBlockCnt + "$\\\" | wc -l";
+		}
+		else {
+			cmd = "cd " + TFS_BIN_HOME + "; ./ssm -s " + SLAVESER.getIp() + 
+				":" + SLAVESER.getPort() + " -i " + "\\\"block\\\" | grep -v \\\"TOTAL\\\" | grep \\\"" + iBlockCnt + "$\\\" | wc -l";
+		}
+		
 		bRet = Proc.cmdOutBase(SLAVESER.getIp(), cmd, null, 1, null, listOut);
 		if (bRet == false) return bRet;
 		
@@ -2061,9 +2082,15 @@ public class FailOverBaseCase {
 		int iRet = -1;
 		boolean bRet = false;
 		ArrayList<String> listOut = new ArrayList<String>();
-		
-		String cmd = "cd " + TFS_BIN_HOME + "; ./ssm -s " + ip + ":" + 
-			iPort + " -i " + "\\\"block\\\" | grep \\\"" + iBlockCnt + "$\\\" | wc -l";
+		String cmd;
+		if (DEFINE_NS13) {
+			cmd = "cd " + TFS_BIN_HOME + "; ./showssm -f ../conf/tfs.conf -t 1 | grep -v \\\"TOTAL\\\" | grep \\\"" + 
+				iBlockCnt + "$\\\" | wc -l";
+		}
+		else {
+			cmd = "cd " + TFS_BIN_HOME + "; ./ssm -s " + ip + 
+				":" + iPort + " -i " + "\\\"block\\\" | grep -v \\\"TOTAL\\\" | grep \\\"" + iBlockCnt + "$\\\" | wc -l";
+		}		
 		bRet = Proc.cmdOutBase(ip, cmd, null, 1, null, listOut);
 		if (bRet == false) return -1;
 		
@@ -2192,8 +2219,14 @@ public class FailOverBaseCase {
 		int iRet = -1;
 		boolean bRet = false;
 		ArrayList<String> listOut = new ArrayList<String>(); 
-		String cmd = "cd " + TFS_BIN_HOME + "; ./ssm -s " + ip + ":" + iPort + 
-			" -i " + "\\\"server\\\" | grep \\\"G\\\" | grep -v \\\"TOTAL\\\"| wc -l";
+		String cmd;
+		if (DEFINE_NS13) {
+			cmd = "cd " + TFS_BIN_HOME + "; ./showssm -f ../conf/tfs.conf -t 2 |grep -v \\\"TOTAL\\\"| grep \\\"G\\\" | wc -l";
+		}
+		else {
+			cmd = "cd " + TFS_BIN_HOME + "; ./ssm -s " + ip + 
+				":" + iPort + " -i " + "\\\"server\\\"  |grep -v \\\"TOTAL\\\" |grep \\\"G\\\" |wc -l";
+		}		
 		bRet = Proc.cmdOutBase(MASTERSER.getIp(), cmd, null, 1, null, listOut);
 		if (bRet == false) return -1;
 		
