@@ -38,8 +38,8 @@ namespace tfs
         return g_session_pool_;
       }
 
-      TfsSession* get(const char* ns_addr, const int32_t cache_time = common::DEFAULT_BLOCK_CACHE_TIME,
-                      const int32_t cache_items = common::DEFAULT_BLOCK_CACHE_ITEMS);
+      TfsSession* get(const char* ns_addr, const int64_t cache_time = ClientConfig::cache_time_,
+                      const int64_t cache_items = ClientConfig::cache_items_);
       void release(TfsSession* session);
 
     private:

@@ -48,6 +48,7 @@ namespace tfs
     const int32_t EXIT_FILESYSTEM_ERROR = -2006;
     const int32_t EXIT_FILE_FORMAT_ERROR = -2007;
     const int32_t EXIT_SLOTS_OFFSET_SIZE_ERROR = -2008;
+    const int32_t EXIT_FILE_BUSY_ERROR = -2009;
 
     const int32_t EXIT_NETWORK_ERROR = -3000;
     const int32_t EXIT_IOCTL_ERROR = -3001;

@@ -79,6 +79,8 @@ int TfsClientImpl::initialize(const char* ns_addr, const int32_t cache_time, con
 
   if (TFS_SUCCESS == ret)
   {
+    set_cache_time(cache_time);
+    set_cache_items(cache_items);
     is_init_ = true;
   }
 
@@ -463,6 +465,39 @@ int32_t TfsClientImpl::unlink_unique(const char* file_name, const char* suffix, 
 }
 #endif
 
+void TfsClientImpl::set_cache_items(const int64_t cache_items)
+{
+  if (cache_items > 0)
+  {
+    ClientConfig::cache_items_ = cache_items;
+    TBSYS_LOG(INFO, "set cache items: %"PRI64_PREFIX"d", ClientConfig::cache_items_);
+  }
+  else
+  {
+    TBSYS_LOG(WARN, "set cache items invalid: %"PRI64_PREFIX"d", cache_items);
+  }
+}
+
+int64_t TfsClientImpl::get_cache_items() const
+{
+  return ClientConfig::cache_items_;
+}
+
+void TfsClientImpl::set_cache_time(const int64_t cache_time)
+{
+  if (cache_time > 0)
+  {
+    ClientConfig::cache_time_ = cache_time;
+    TBSYS_LOG(INFO, "set cache time: %"PRI64_PREFIX"d", ClientConfig::cache_time_);
+  }
+  TBSYS_LOG(WARN, "set cache time invalid: %"PRI64_PREFIX"d", cache_time);
+}
+
+int64_t TfsClientImpl::get_cache_time() const
+{
+  return ClientConfig::cache_time_;
+}
+
 void TfsClientImpl::set_segment_size(const int64_t segment_size)
 {
   if (segment_size > 0 && segment_size <= MAX_SEGMENT_SIZE)
@@ -768,8 +803,8 @@ int64_t TfsClientImpl::save_file(const char* local_file, const char* tfs_name, c
 }
 
 int64_t TfsClientImpl::save_file(const char* buf, const int64_t count, const char* tfs_name, const char* suffix,
-                             char* ret_tfs_name, const int32_t ret_tfs_name_len,
-                             const char* ns_addr, const int32_t flag, const char* key)
+                                 char* ret_tfs_name, const int32_t ret_tfs_name_len,
+                                 const char* ns_addr, const int32_t flag, const char* key)
 {
   int ret = TFS_ERROR;
 
@@ -794,8 +829,8 @@ int64_t TfsClientImpl::save_file(const char* buf, const int64_t count, const cha
       int64_t write_len = write(tfs_fd, buf, count);
       if (write_len != count)
       {
-          TBSYS_LOG(ERROR, "write to tfs fail, write len: %"PRI64_PREFIX"d, ret: %"PRI64_PREFIX"d",
-                    count, write_len);
+        TBSYS_LOG(ERROR, "write to tfs fail, write len: %"PRI64_PREFIX"d, ret: %"PRI64_PREFIX"d",
+                  count, write_len);
       }
 
       // close anyway
@@ -1018,7 +1053,8 @@ bool TfsClientImpl::check_init()
 
 TfsSession* TfsClientImpl::get_session(const char* ns_addr)
 {
-  return NULL == ns_addr ? default_tfs_session_ : SESSION_POOL.get(ns_addr);
+  return NULL == ns_addr ? default_tfs_session_ :
+    SESSION_POOL.get(ns_addr, ClientConfig::cache_time_, ClientConfig::cache_items_);
 }
 
 TfsFile* TfsClientImpl::get_file(const int fd)

@@ -241,8 +241,8 @@ int TfsLargeFile::unlink(const char* file_name, const char* suffix, int64_t& fil
       // seg_info != NULL
       file_size = meta_seg_->seg_info_.size_ + local_key_.get_file_size();
 
-      SEG_SET& seg_list = local_key_.get_seg_info();
-      SEG_SET_CONST_ITER sit = seg_list.begin();
+      LocalKey::SEG_INFO_LIST& seg_list = local_key_.get_seg_info();
+      LocalKey::SEG_INFO_CONST_ITER sit = seg_list.begin();
       for ( ; sit != seg_list.end(); ++sit)
       {
         destroy_seg();
@@ -279,15 +279,7 @@ int TfsLargeFile::read_process(int64_t& read_size, const InnerFilePhase read_fil
   }
   else
   {
-    // segList.size() != 0
-    // just use first ds list size to be retry times. maybe random ..
-    int32_t retry_count = processing_seg_list_[0]->ds_.size();
-    do
-    {
-      ret = process(read_file_phase);
-      finish_read_process(ret, read_size);
-    } while (ret != TFS_SUCCESS && --retry_count > 0);
-
+    ret = read_process_ex(read_size, read_file_phase);
   }
   return ret;
 }
@@ -459,7 +451,7 @@ int TfsLargeFile::upload_key()
   {
     int32_t size = local_key_.get_data_size();
     char* buf = new char[size];
-    local_key_.dump_data(buf, size);
+    local_key_.dump(buf, size);
     // TODO .. open large with mainname
     if ((ret = open_ex(NULL, meta_suffix_, T_WRITE)) != TFS_SUCCESS)
     {
@@ -502,13 +494,14 @@ int TfsLargeFile::load_meta(int32_t flags)
   }
 
   int64_t size = MAX_META_SIZE;
+  int64_t read_size = 0;
   char* seg_buf = new char[size];
 
   get_meta_segment(0, seg_buf, size, false);
 
   // read all meta file once at best
   // should succeed in nearly all cases
-  if ((ret = process(FILE_PHASE_READ_FILE_V2)) != TFS_SUCCESS)
+  if ((ret = read_process_ex(read_size, FILE_PHASE_READ_FILE_V2)) != TFS_SUCCESS)
   {
     TBSYS_LOG(ERROR, "read meta file fail, ret: %d", ret);
   }
@@ -524,7 +517,7 @@ int TfsLargeFile::load_meta(int32_t flags)
     get_meta_segment(size, extra_seg_buf + size, remain_size, false);
 
     // reread to get remain meta file
-    if ((ret = process(FILE_PHASE_READ_FILE)) != TFS_SUCCESS)
+    if ((ret = read_process_ex(read_size, FILE_PHASE_READ_FILE)) != TFS_SUCCESS)
     {
       TBSYS_LOG(ERROR, "reread meta file fail. remain size: %"PRI64_PREFIX"d, ret: %d",
                 remain_size, ret);
@@ -567,7 +560,7 @@ int TfsLargeFile::load_meta_head()
   meta_seg_->reset_status();
   get_meta_segment(0, seg_buf, size, false);
 
-  if ((ret = process(FILE_PHASE_READ_FILE)) != TFS_SUCCESS)
+  if ((ret = read_process_ex(ret_size, FILE_PHASE_READ_FILE)) != TFS_SUCCESS)
   {
     TBSYS_LOG(ERROR, "read meta head fail, ret: %"PRI64_PREFIX"d", ret_size);
     ret = TFS_ERROR;

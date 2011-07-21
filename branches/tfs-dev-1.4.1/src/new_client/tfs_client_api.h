@@ -51,7 +51,7 @@ namespace tfs
                      const int32_t cache_items = common::DEFAULT_BLOCK_CACHE_ITEMS,
                      const bool start_bg = true);
       int set_default_server(const char* ns_addr, const int32_t cache_time = common::DEFAULT_BLOCK_CACHE_TIME,
-                     const int32_t cache_items = common::DEFAULT_BLOCK_CACHE_ITEMS);
+                             const int32_t cache_items = common::DEFAULT_BLOCK_CACHE_ITEMS);
       int destroy();
 
       __always_inline __attribute__ ((__gnu_inline__)) int
@@ -141,6 +141,12 @@ namespace tfs
       int unlink(const char* file_name, const char* suffix, const char* ns_addr, int64_t& file_size,
                  const common::TfsUnlinkType action = common::DELETE,
                  const common::OptionFlag option_flag = common::TFS_FILE_DEFAULT_OPTION);
+
+      void set_cache_items(const int64_t cache_items);
+      int64_t get_cache_items() const;
+
+      void set_cache_time(const int64_t cache_time);
+      int64_t get_cache_time() const;
 
       void set_segment_size(const int64_t segment_size);
       int64_t get_segment_size() const;

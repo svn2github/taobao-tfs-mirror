@@ -44,6 +44,8 @@ namespace tfs
 
     struct ClientConfig
     {
+      static int64_t cache_items_;
+      static int64_t cache_time_;
       static int64_t segment_size_;
       static int64_t batch_count_;
       static int64_t batch_size_;

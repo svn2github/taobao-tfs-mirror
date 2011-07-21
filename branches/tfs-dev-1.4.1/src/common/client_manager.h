@@ -62,7 +62,6 @@ namespace tfs
         static void free_new_client_object(NewClient* client);
 
       private:
-        void destroy_resource();
         bool handlePacket(const WaitId& id, tbnet::Packet* response);
         bool do_async_callback(NewClient* client);
 

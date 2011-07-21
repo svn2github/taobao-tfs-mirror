@@ -49,7 +49,7 @@ namespace tfs
       typedef lru<uint32_t, BlockCache> BLOCK_CACHE_MAP;
       typedef BLOCK_CACHE_MAP::iterator BLOCK_CACHE_MAP_ITER;
     public:
-			TfsSession(const std::string& nsip, const int32_t cache_time, const int32_t cache_items);
+			TfsSession(const std::string& nsip, const int64_t cache_time, const int64_t cache_items);
       virtual ~TfsSession();
 
       int initialize();
@@ -73,12 +73,12 @@ namespace tfs
         return ns_addr_;
       }
 
-      inline const int32_t get_cache_time() const
+      inline const int64_t get_cache_time() const
       {
         return block_cache_time_;
       }
 
-      inline const int32_t get_cache_items() const
+      inline const int64_t get_cache_items() const
       {
         return block_cache_items_;
       }
@@ -119,8 +119,8 @@ namespace tfs
       tbutil::Mutex mutex_;
       uint64_t ns_addr_;
       std::string ns_addr_str_;
-      const int32_t block_cache_time_;
-      const int32_t block_cache_items_;
+      const int64_t block_cache_time_;
+      const int64_t block_cache_items_;
       int32_t cluster_id_;
       UseCacheFlag use_cache_;
       BLOCK_CACHE_MAP block_cache_map_;

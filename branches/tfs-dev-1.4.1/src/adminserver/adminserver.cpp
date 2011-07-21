@@ -166,9 +166,9 @@ namespace tfs
 
     void AdminServer::reload_config()
     {
-      check_interval_ = TBSYS_CONFIG.getInt(CONF_SN_ADMINSERVER, CONF_CHECK_INTERVAL, 1);
+      check_interval_ = TBSYS_CONFIG.getInt(CONF_SN_ADMINSERVER, CONF_CHECK_INTERVAL, 5);
       check_count_ = TBSYS_CONFIG.getInt(CONF_SN_ADMINSERVER, CONF_CHECK_COUNT, 5);
-      warn_dead_count_ = TBSYS_CONFIG.getInt(CONF_SN_ADMINSERVER, CONF_WARN_DEAD_COUNT, ADMIN_WARN_DEAD_COUNT);
+      warn_dead_count_ = TBSYS_CONFIG.getInt(CONF_SN_ADMINSERVER, CONF_WARN_DEAD_COUNT, 5);
       return;
     }
 
