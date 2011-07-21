@@ -238,7 +238,8 @@ namespace tfs
     {
       int iret = TFS_SUCCESS;
       NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
-      if (ngi.owner_role_ == NS_ROLE_MASTER)
+      if ((ngi.owner_role_ == NS_ROLE_MASTER)
+         && (ngi.owner_status_ == NS_STATUS_INITIALIZED))
       {
         #if !defined(TFS_NS_GTEST) && !defined(TFS_NS_INTEGRATION)
         int count = 0;
