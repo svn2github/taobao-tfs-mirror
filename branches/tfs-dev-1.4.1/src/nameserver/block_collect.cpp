@@ -93,7 +93,7 @@ namespace nameserver
       {
         assert(hold_[0] != NULL);
         TBSYS_LOG(DEBUG,"server: %s insert master block: %u", 
-            CNetUtil::addrToString(server->id()).c_str(), id());
+            server, CNetUtil::addrToString(server->id()).c_str(), id());
         hold_[0]->add_master(this);
         in_master_set_ = BLOCK_IN_MASTER_SET_YES;
       }
