@@ -32,11 +32,12 @@ namespace tfs
 {
 namespace nameserver
 {
+  class NameServer;
   class LayoutManager
   {
     friend class ClientRequestServer;
   public:
-    LayoutManager();
+    LayoutManager(NameServer& manager);
     virtual ~LayoutManager();
 
     int initialize(const int32_t chunk_num = 32);
@@ -87,6 +88,8 @@ namespace nameserver
     int touch(ServerCollect* server, const time_t now, const bool promote = false);
 
     int open_helper_create_new_block_by_id(const uint32_t block_id);
+
+    void register_report_servers(void);
 
 #if defined(TFS_NS_GTEST) || defined(TFS_NS_INTEGRATION)
   public:
@@ -457,6 +460,7 @@ namespace nameserver
     common::RWLock server_mutex_;
     static const std::string dynamic_parameter_str[];
     tbutil::Mutex elect_index_mutex_;
+    NameServer& manager_;
     ClientRequestServer client_request_server_;
   };
 }

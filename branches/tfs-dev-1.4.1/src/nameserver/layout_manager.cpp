@@ -22,6 +22,7 @@
 #include <Memory.hpp>
 #include "strategy.h"
 #include "ns_define.h"
+#include "nameserver.h"
 #include "layout_manager.h"
 #include "global_factory.h"
 #include "common/error_msg.h"
@@ -102,7 +103,7 @@ namespace tfs
     return result.size();
   }
 
-  LayoutManager::LayoutManager():
+  LayoutManager::LayoutManager(NameServer& manager):
       build_plan_thread_(0),
       run_plan_thread_(0),
       check_dataserver_thread_(0),
@@ -116,7 +117,8 @@ namespace tfs
       alive_server_size_(0),
       interrupt_(INTERRUPT_NONE),
       plan_run_flag_(PLAN_RUN_FLAG_REPLICATE),
-      client_request_server_(*this)
+      manager_(manager),
+      client_request_server_(*this, manager)
     {
       srand(time(NULL));
       tzset();
@@ -302,6 +304,20 @@ namespace tfs
       }
       ptr->unlock();
       return iret;
+    }
+
+    void LayoutManager::register_report_servers(void)
+    {
+      std::vector<uint64_t> servers;
+      {
+        RWLock::Lock lock(server_mutex_, READ_LOCKER);
+        SERVER_MAP::const_iterator iter = servers_.begin();
+        for (; iter != servers_.begin(); ++iter)
+        {
+          servers.push_back(iter->first);
+        }
+      }
+      manager_.get_heart_management().add_uncomplete_report_server(servers);
     }
 
     int LayoutManager::update_block_info(
@@ -1557,6 +1573,7 @@ namespace tfs
       }
       bool isnew = true;
       VUINT64 dead_servers;
+      VUINT64 actual_dead_servers;
       NsGlobalStatisticsInfo stat_info;
       ServerCollect *server = NULL;
       std::list<ServerCollect*> alive_servers;
@@ -1568,6 +1585,7 @@ namespace tfs
         server = NULL;
         dead_servers.clear();
         alive_servers.clear();
+        actual_dead_servers.clear();
         memset(&stat_info, 0, sizeof(NsGlobalStatisticsInfo));
         time_t now = time(NULL);
         {
@@ -1579,20 +1597,30 @@ namespace tfs
             server = iter->second;
             if (!server->is_alive(now))
             {
-              if (test_server_alive(server->id()) == TFS_SUCCESS)
-              {
-                server->touch(now);
-              }
-              else
-              {
-                server->dead();
-                dead_servers.push_back(server->id());
-              }
+              dead_servers.push_back(server->id());
             }
             else
             {
               server->statistics(stat_info, isnew);
               alive_servers.push_back(server);
+            }
+          }
+        }
+
+        VUINT64::iterator iter = dead_servers.begin();
+        for (; iter != dead_servers.end(); ++iter)
+        {
+          server = get_server((*iter));
+          if (NULL != server)
+          {
+            if (test_server_alive((*iter)) == TFS_SUCCESS)
+            {
+              server->statistics(stat_info, isnew);
+              alive_servers.push_back(server);
+            }
+            else
+            {
+              actual_dead_servers.push_back((*iter));
             }
           }
         }
@@ -1614,13 +1642,13 @@ namespace tfs
           touch((*it), now, true);
         }
 
-        VUINT64::iterator iter = dead_servers.begin();
-        for (; iter != dead_servers.end(); ++iter)
+        iter = actual_dead_servers.begin();
+        for (; iter != actual_dead_servers.end(); ++iter)
         {
           remove_server((*iter), now);
         }
 
-        if (!dead_servers.empty())
+        if (!actual_dead_servers.empty())
         {
           interrupt(INTERRUPT_ALL, now);
         }
@@ -1763,13 +1791,17 @@ namespace tfs
         int64_t adjust = 0;
         int64_t total = 0;
         {
+          bool has_report_server = manager_.get_heart_management().empty_uncomplete_report_server();
+          time_t wait_time = has_report_server ? SYSPARAM_NAMESERVER.build_plan_default_wait_time_ : interrupt
+                                               ? 0  : !bwait 
+                                               ? SYSPARAM_NAMESERVER.build_plan_default_wait_time_ : ngi.switch_time_ > now 
+                                               ? ngi.switch_time_ - now : SYSPARAM_NAMESERVER.build_plan_interval_;
           tbutil::Monitor<tbutil::Mutex>::Lock lock(build_plan_monitor_);
           if (ngi.owner_role_ == NS_ROLE_SLAVE)
           {
             build_plan_monitor_.wait();
           }
 
-          time_t wait_time = interrupt ? 0 : !bwait ? SYSPARAM_NAMESERVER.build_plan_default_wait_time_ : ngi.switch_time_ > now ? ngi.switch_time_ - now : SYSPARAM_NAMESERVER.build_plan_interval_;
           bwait = true;
           interrupt = false;
           build_plan_monitor_.timedWait(tbutil::Time::seconds(wait_time));

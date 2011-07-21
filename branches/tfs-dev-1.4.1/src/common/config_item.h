@@ -47,6 +47,8 @@ namespace tfs
 #define CONF_HEART_INTERVAL                           "heart_interval"
 #define CONF_HEART_MAX_QUEUE_SIZE                     "heart_max_queue_size"
 #define CONF_HEART_THREAD_COUNT												"heart_thread_count"
+#define CONF_REPORT_BLOCK_THREAD_COUNT                "report_block_thread_count"
+#define CONF_REPORT_BLOCK_MAX_QUEUE_SIZE              "report_block_max_queue_size"
 #define CONF_MAX_REPLICATION                          "max_replication"
 #define CONF_MIN_REPLICATION                          "min_replication"
 #define CONF_USE_CAPACITY_RATIO                       "use_capacity_ratio"
@@ -94,6 +96,10 @@ namespace tfs
 
 
 #define CONF_DUMP_STAT_INFO_INTERVAL                  "dump_stat_info_interval"
+
+#define CONF_GROUP_SEQ                                "group_seq"
+#define CONF_GROUP_COUNT                              "group_count"
+#define CONF_TIME_REPORT_BLOCK_INTERVAL               "time_report_block_interval" //
 
   //dataserver
 #define CONF_DATA_THREAD_COUNT                        "data_thread_count"

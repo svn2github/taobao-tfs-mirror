@@ -99,13 +99,13 @@ namespace tfs
     }
 
     NameServer::NameServer() :
-      meta_mgr_(),
+      meta_mgr_(*this),
       master_heart_task_(0),
       slave_heart_task_(0),
       owner_check_task_(0),
       check_owner_is_master_task_(0),
       master_slave_heart_mgr_(&meta_mgr_, get_timer()),
-      heart_mgr_(meta_mgr_)
+      heart_mgr_(*this)
     {
 
     }
@@ -183,9 +183,11 @@ namespace tfs
 
       if (TFS_SUCCESS == iret)
       {
-        int32_t heart_thread_count = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_HEART_THREAD_COUNT, 2);
-        int32_t heart_max_queue_size = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_HEART_MAX_QUEUE_SIZE, 10);
-        iret = heart_mgr_.initialize(heart_thread_count, heart_max_queue_size);
+        int32_t heart_thread_count = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_HEART_THREAD_COUNT, 1);
+        int32_t heart_max_queue_size = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_HEART_MAX_QUEUE_SIZE, 10240);
+        int32_t report_thread_count = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_REPORT_BLOCK_THREAD_COUNT, 2);
+        int32_t report_max_queue_size = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_REPORT_BLOCK_MAX_QUEUE_SIZE, 2);
+        iret = heart_mgr_.initialize(heart_thread_count, heart_max_queue_size, report_thread_count, report_max_queue_size);
         if (TFS_SUCCESS != iret)
         {
           TBSYS_LOG(ERROR, "initialize heart manager failed, must be exit, ret: %d", iret);

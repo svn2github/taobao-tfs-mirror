@@ -90,6 +90,9 @@ namespace tfs
 
       int callback(common::NewClient* client);
 
+      LayoutManager& get_layout_manager() { return meta_mgr_;}
+      HeartManagement& get_heart_management() { return heart_mgr_;}
+
    private:
       DISALLOW_COPY_AND_ASSIGN(NameServer);
       LayoutManager meta_mgr_;

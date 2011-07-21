@@ -38,13 +38,14 @@ namespace nameserver
     char error_msg_[256];
   };
   class LayoutManager;
+  class NameServer;
   class ClientRequestServer
   {
     public:
-      explicit ClientRequestServer(LayoutManager& lay_out_manager);
+      ClientRequestServer(LayoutManager& lay_out_manager, NameServer& manager);
 
-      int keepalive(const common::DataServerStatInfo&, const common::HasBlockFlag flag,
-          common::BLOCK_INFO_LIST& blocks, common::VUINT32& expires, bool& need_sent_block);
+      int keepalive(const common::DataServerStatInfo& info, const time_t now, bool& need_send_block);
+      int report_block(const common::DataServerStatInfo& info, const time_t now, common::BLOCK_INFO_LIST& blocks, common::VUINT32& expires);
       int open(uint32_t& block_id, const int32_t mode, uint32_t& lease_id, int32_t& version, common::VUINT64& ds_list);
       int batch_open(const common::VUINT32& blocks, const int32_t mode, const int32_t block_count, std::map<uint32_t, common::BlockInfoSeg>& out);
 
@@ -75,6 +76,7 @@ namespace nameserver
 
     private:
       LayoutManager& lay_out_manager_;
+      NameServer& manager_;
   };
 }
 }

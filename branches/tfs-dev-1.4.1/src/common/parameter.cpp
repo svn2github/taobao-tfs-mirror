@@ -141,6 +141,19 @@ namespace tfs
       balance_max_diff_block_num_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_BALANCE_MAX_DIFF_BLOCK_NUM, 5);//s
       if (balance_max_diff_block_num_ <= 0)
         balance_max_diff_block_num_ = 5;
+      group_count_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_GROUP_COUNT, 1);
+      if (group_count_ < 0)
+      {
+        TBSYS_LOG(ERROR, "%s in [%s] is invalid, value: %d", CONF_GROUP_COUNT, CONF_SN_NAMESERVER, group_count_);
+        return EXIT_SYSTEM_PARAMETER_ERROR;
+      }
+      group_seq_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_GROUP_SEQ, 0);
+      if ((group_seq_ < 0) 
+        || (group_seq_ >= group_count_))
+      {
+        TBSYS_LOG(ERROR, "%s in [%s] is invalid, value: %d", CONF_GROUP_SEQ, CONF_SN_NAMESERVER, group_seq_);
+        return EXIT_SYSTEM_PARAMETER_ERROR;
+      }
       return TFS_SUCCESS;
     }
 

@@ -21,7 +21,9 @@
 #include <Memory.hpp>
 #include <Mutex.h>
 #include "ns_define.h"
+#include "nameserver.h"
 #include "common/error_msg.h"
+#include "common/config_item.h"
 #include "common/client_manager.h"
 #include "heart_manager.h"
 #include "global_factory.h"
@@ -35,31 +37,45 @@ namespace tfs
   namespace nameserver
   {
 
-    HeartManagement::HeartManagement(LayoutManager& m) :
-      meta_mgr_(m)
+    HeartManagement::HeartManagement(NameServer& m) :
+      meta_mgr_(m),
+      keepalive_queue_size_(10240),
+      report_block_queue_size_(2),
+      keepalive_queue_header_(*this),
+      report_block_queue_header_(*this)
     {
+
     }
 
     HeartManagement::~HeartManagement()
     {
     }
 
-    int HeartManagement::initialize(const int32_t thread_count, const int32_t max_queue_size)
+    int HeartManagement::initialize(const int32_t keepalive_thread_count, const int32_t keepalive_queue_size,
+                     const int32_t report_block_thread_count, const int32_t report_block_queue_size)
     {
-      max_queue_size_ = max_queue_size;
-      work_thread_.setThreadParameter(thread_count, this, this);
-      work_thread_.start();
-      return TFS_SUCCESS;
+      keepalive_queue_size_ = keepalive_queue_size;
+      report_block_queue_size_ = report_block_queue_size;
+      keepalive_threads_.setThreadParameter(keepalive_thread_count, &keepalive_queue_header_, this);
+      report_block_threads_.setThreadParameter(report_block_thread_count, &report_block_queue_header_, this);
+      keepalive_threads_.start();
+      report_block_threads_.start();
+      TimeReportBlockTimerTaskPtr task = new TimeReportBlockTimerTask(meta_mgr_);
+      int32_t time_report_block_interval = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_TIME_REPORT_BLOCK_INTERVAL, 86400);
+      int32_t iret = GFactory::get_timer()->scheduleRepeated(task, tbutil::Time::seconds(time_report_block_interval));
+      return iret < 0 ? TFS_ERROR : TFS_SUCCESS;
     }
 
     void HeartManagement::wait_for_shut_down()
     {
-      work_thread_.wait();
+      keepalive_threads_.wait();
+      report_block_threads_.wait();
     }
 
     void HeartManagement::destroy()
     {
-      work_thread_.stop(true);
+      keepalive_threads_.stop(true);
+      report_block_threads_.stop(true);
     }
 
     /**
@@ -75,17 +91,19 @@ namespace tfs
       {
         assert(SET_DATASERVER_MESSAGE == msg->getPCode());
         SetDataserverMessage* message = dynamic_cast<SetDataserverMessage*> (msg);
-        int32_t max_queue_size = max_queue_size_;
-
-        // normal heartbeat or dead heartbeat, just push
-        if ((message->get_ds().status_ == DATASERVER_STATUS_DEAD)
-            || (message->get_has_block() == HAS_BLOCK_FLAG_NO))
+        DataServerLiveStatus status = message->get_ds().status_;
+        bool handled = false;
+        //dataserver report block heartbeat message
+        if ((DATASERVER_STATUS_ALIVE == status)
+           && (HAS_BLOCK_FLAG_YES == message->get_has_block()))
         {
-          max_queue_size = 0;
+          handled = report_block_threads_.push(msg, report_block_queue_size_, false);
+        } 
+        else//normal or login or logout heartbeat message, just push 
+        {
+          //cannot blocking!
+          handled = keepalive_threads_.push(msg, keepalive_queue_size_, false);
         }
-
-        // cannot blocking!
-        bool handled = work_thread_.push(msg, max_queue_size, false);
         iret = handled ? TFS_SUCCESS : EXIT_GENERAL_ERROR;
         if (TFS_SUCCESS != iret)
         {
@@ -98,10 +116,10 @@ namespace tfs
         }
       }
       return iret;
-   }
+    }
 
     // event handler
-    bool HeartManagement::handlePacketQueue(tbnet::Packet *packet, void *args)
+    bool HeartManagement::KeepAliveIPacketQueueHeaderHelper::handlePacketQueue(tbnet::Packet *packet, void *args)
     {
       UNUSED(args);
       bool bret = packet != NULL;
@@ -109,7 +127,20 @@ namespace tfs
       {
         //if return TFS_SUCCESS, packet had been delete in this func
         //if handlePacketQueue return true, tbnet will delete this packet
-        keepalive(packet);
+        manager_.keepalive(packet);
+      }
+      return bret;
+    }
+
+    bool HeartManagement::ReportBlockIPacketQueueHeaderHelper::handlePacketQueue(tbnet::Packet *packet, void *args)
+    {
+      UNUSED(args);
+      bool bret = packet != NULL;
+      if (bret)
+      {
+        //if return TFS_SUCCESS, packet had been delete in this func
+        //if handlePacketQueue return true, tbnet will delete this packet
+        manager_.report_block(packet);
       }
       return bret;
     }
@@ -119,18 +150,16 @@ namespace tfs
       int32_t iret = NULL != packet ? TFS_SUCCESS : EXIT_GENERAL_ERROR;
       if (TFS_SUCCESS == iret)
       {
-        #ifdef TFS_NS_DEBUG
-        tbutil::Time begin = tbutil::Time::now();
-        #endif
-        assert(SET_DATASERVER_MESSAGE == packet->getPCode());
         SetDataserverMessage* message = dynamic_cast<SetDataserverMessage*> (packet);
+        assert(SET_DATASERVER_MESSAGE == packet->getPCode());
+        assert(HAS_BLOCK_FLAG_NO == message->get_has_block());
+        assert(0 == message->get_blocks().size());
         RespHeartMessage *result_msg = new RespHeartMessage();
         const DataServerStatInfo& ds_info = message->get_ds();
-			  VUINT32 expires;
 			  bool need_sent_block = false;
-			  const HasBlockFlag flag = message->get_has_block();
+        time_t now = time(NULL);
 
-			  int32_t iret = meta_mgr_.get_client_request_server().keepalive(ds_info, flag, message->get_blocks(), expires, need_sent_block); 
+			  iret = meta_mgr_.get_layout_manager().get_client_request_server().keepalive(ds_info, now, need_sent_block); 
         if (TFS_SUCCESS == iret)
         {
 			    //dataserver dead
@@ -138,50 +167,206 @@ namespace tfs
 			    {
 			    	TBSYS_LOG(INFO, "dataserver: %s exit", CNetUtil::addrToString(ds_info.id_).c_str());
             result_msg->set_status(HEART_MESSAGE_OK);
-            iret = TFS_ERROR;
 			    }
-
-          if (TFS_SUCCESS == iret)
+          else
           {
-			      if (flag == HAS_BLOCK_FLAG_YES)
-			      {
-			      	if (!expires.empty())
-			      	{
-			      		result_msg->set_expire_blocks(expires);
-            	  result_msg->set_status(HEART_EXP_BLOCK_ID);
-			      	}
-              else
-              {
-			          result_msg->set_status(HEART_MESSAGE_OK);
-              }
-			      }
-			      else
-			      {
-			      	//dataserver need report if dataserver is new dataserver or switching occurrd
-			      	if (need_sent_block)
-			      	{
-            		result_msg->set_status(HEART_NEED_SEND_BLOCK_INFO);
-			      	}
-              else
-              {
-			          result_msg->set_status(HEART_MESSAGE_OK);
-              }
-			      }
+            result_msg->set_status(need_sent_block ? HEART_NEED_SEND_BLOCK_INFO : HEART_MESSAGE_OK);
           }
         }
         else
 			  {
 			  	TBSYS_LOG(ERROR, "dataserver: %s keepalive failed, iret: %d", CNetUtil::addrToString(ds_info.id_).c_str(), iret);
+          result_msg->set_status(STATUS_MESSAGE_ERROR);
+			  }
+			  iret = message->reply(result_msg);
+        TBSYS_LOG(DEBUG,"server: %s keepalive %s, iret: %d,result msg status: %d,  need_sent_block: %s", 
+              tbsys::CNetUtil::addrToString(ds_info.id_).c_str(), TFS_SUCCESS == iret ? "successful" : "fail",
+              iret, result_msg->get_status(), need_sent_block ? "yes" : "no");
+      }
+      return iret;
+    }
+
+    int HeartManagement::report_block(tbnet::Packet* packet)
+    {
+      int32_t iret = NULL != packet ? TFS_SUCCESS : EXIT_GENERAL_ERROR;
+      if (TFS_SUCCESS == iret)
+      {
+        #ifdef TFS_NS_DEBUG
+        tbutil::Time begin = tbutil::Time::now();
+        #endif
+        SetDataserverMessage* message = dynamic_cast<SetDataserverMessage*> (packet);
+        assert(SET_DATASERVER_MESSAGE == packet->getPCode());
+        assert(HAS_BLOCK_FLAG_YES == message->get_has_block());
+        RespHeartMessage *result_msg = new RespHeartMessage();
+        const DataServerStatInfo& ds_info = message->get_ds();
+			  VUINT32 expires;
+        time_t now = time(NULL);
+
+			  iret = meta_mgr_.get_layout_manager().get_client_request_server().report_block(ds_info, now, message->get_blocks(), expires); 
+        if (TFS_SUCCESS == iret)
+        {
+			    //dataserver dead
+			    if (ds_info.status_ == DATASERVER_STATUS_DEAD)
+			    {
+			    	TBSYS_LOG(INFO, "dataserver: %s exit", CNetUtil::addrToString(ds_info.id_).c_str());
+            result_msg->set_status(HEART_MESSAGE_OK);
+			    }
+          else
+          {
+            if (!expires.empty())
+            {
+              result_msg->set_expire_blocks(expires);
+              result_msg->set_status(HEART_EXP_BLOCK_ID);
+            }
+            else
+            {
+              result_msg->set_status(HEART_MESSAGE_OK);
+            }
+          }
+        }
+        else
+			  {
+			  	TBSYS_LOG(ERROR, "dataserver: %s report block failed, iret: %d", CNetUtil::addrToString(ds_info.id_).c_str(), iret);
 			  	result_msg->set_status(STATUS_MESSAGE_ERROR);
 			  }
+
         #ifdef TFS_NS_DEBUG
         tbutil::Time end = tbutil::Time::now() - begin;
-        TBSYS_LOG(INFO, "dataserver: %s keepalive times: %"PRI64_PREFIX"d(us), need_sent_block: %d", CNetUtil::addrToString(ds_info.id_).c_str(), end.toMicroSeconds(), need_sent_block);
+        TBSYS_LOG(INFO, "dataserver: %s report block consume times: %"PRI64_PREFIX"d(us)",
+          CNetUtil::addrToString(ds_info.id_).c_str(), end.toMicroSeconds());
         #endif
-        TBSYS_LOG(DEBUG,"server: %s result_msg statu: %d, need_sent_block: %d", tbsys::CNetUtil::addrToString(ds_info.id_).c_str(), result_msg->get_status(), need_sent_block);
 			  iret = message->reply(result_msg);
       }
       return iret;
+    }
+
+
+    int HeartManagement::add_report_server(const uint64_t server)
+    {
+      RWLock::Lock lock(mutex_, WRITE_LOCKER);
+      std::vector<uint64_t>::iterator iter = 
+          std::find(current_report_servers_.begin(), current_report_servers_.end(), server);
+      int32_t iret = current_report_servers_.end() == iter ? TFS_SUCCESS : TFS_ERROR;
+      if (TFS_SUCCESS == iret)
+      {
+        current_report_servers_.push_back(server);
+      }
+      return iret;
+    }
+
+    int HeartManagement::del_report_server(const uint64_t server)
+    {
+      RWLock::Lock lock(mutex_, WRITE_LOCKER);
+      std::vector<uint64_t>::iterator iter = 
+          std::find(current_report_servers_.begin(), current_report_servers_.end(), server);
+      if (current_report_servers_.end() != iter)
+      {
+        current_report_servers_.erase(iter);
+      }
+      return TFS_SUCCESS;
+    }
+
+    int HeartManagement::add_uncomplete_report_server(const uint64_t server)
+    {
+      RWLock::Lock lock(mutex_, WRITE_LOCKER);
+      int32_t iret = server > 0 ? TFS_SUCCESS : TFS_ERROR;
+      if (TFS_SUCCESS == iret)
+      {
+        std::vector<uint64_t>::iterator iter = 
+            std::find(uncomplete_report_servers_.begin(), uncomplete_report_servers_.end(), server);
+        iret = uncomplete_report_servers_.end() == iter ? TFS_SUCCESS : TFS_ERROR;
+        if (TFS_SUCCESS == iret)
+        {
+          uncomplete_report_servers_.push_back(server);
+        }
+      }
+      return iret;
+    }
+
+    int HeartManagement::add_uncomplete_report_server(std::vector<uint64_t>& servers)
+    {
+      RWLock::Lock lock(mutex_, WRITE_LOCKER);
+      std::vector<uint64_t>::const_iterator iter = current_report_servers_.begin();
+      std::vector<uint64_t>::iterator it;
+      for (; iter != current_report_servers_.end();)
+      {
+        it = std::find(servers.begin(), servers.end(), (*iter));
+        if (current_report_servers_.end() != it)
+        {
+          servers.erase(it);
+        }
+      }
+      iter = uncomplete_report_servers_.begin();
+      for (; iter != uncomplete_report_servers_.end();)
+      {
+        it = std::find(servers.begin(), servers.end(), (*iter));
+        if (current_report_servers_.end() != it)
+        {
+          servers.erase(it);
+        }
+      }
+      uncomplete_report_servers_.insert(uncomplete_report_servers_.end(), servers.begin(), servers.end());
+      return TFS_SUCCESS;
+    }
+
+    int HeartManagement::del_uncomplete_report_server(const uint64_t server)
+    {
+      RWLock::Lock lock(mutex_, WRITE_LOCKER);
+      int32_t iret = server > 0 ? TFS_SUCCESS : TFS_ERROR;
+      if (TFS_SUCCESS == iret)
+      {
+        std::vector<uint64_t>::iterator iter = 
+            std::find(uncomplete_report_servers_.begin(), uncomplete_report_servers_.end(), server);
+        if (uncomplete_report_servers_.end() != iter)
+        {
+          uncomplete_report_servers_.erase(iter);
+        }
+      }
+      return TFS_SUCCESS;
+    }
+
+    bool HeartManagement::exist_uncomplete_report_server(const uint64_t server)
+    {
+      RWLock::Lock lock(mutex_, READ_LOCKER);
+      std::vector<uint64_t>::iterator iter = 
+           std::find(current_report_servers_.begin(), current_report_servers_.end(), server);
+      bool exist = current_report_servers_.end() != iter;
+      if (!exist)
+      {
+        iter = std::find(uncomplete_report_servers_.begin(), uncomplete_report_servers_.end(), server);
+        exist = uncomplete_report_servers_.end() != iter;
+      }
+      return exist;
+    }
+
+    bool HeartManagement::empty_uncomplete_report_server(void)
+    {
+      RWLock::Lock lock(mutex_, READ_LOCKER);
+      return ((uncomplete_report_servers_.empty())
+              && (current_report_servers_.empty()));
+    }
+
+    bool HeartManagement::can_be_report(const uint64_t server)
+    {
+      RWLock::Lock lock(mutex_, READ_LOCKER);
+      bool can_be_report = current_report_servers_.size() < report_block_queue_size_;
+      if (can_be_report)
+      {
+        std::vector<uint64_t>::iterator iter = 
+        std::find(current_report_servers_.begin(), current_report_servers_.end(), server);
+        can_be_report = current_report_servers_.end() == iter;
+        if (can_be_report)
+        {
+          iter = std::find(uncomplete_report_servers_.begin(), uncomplete_report_servers_.end(), server);
+          can_be_report = uncomplete_report_servers_.end() != iter;
+        }
+      }
+      return can_be_report;
+    }
+
+    void HeartManagement::TimeReportBlockTimerTask::runTimerTask()
+    {
+      manager_.get_layout_manager().register_report_servers();
     }
 
     CheckOwnerIsMasterTimerTask::CheckOwnerIsMasterTimerTask(LayoutManager* mm) :
@@ -189,6 +374,7 @@ namespace tfs
     {
 
     }
+
     void CheckOwnerIsMasterTimerTask::master_lost_vip(NsRuntimeGlobalInformation& ngi)
     {
       if (!tbsys::CNetUtil::isLocalAddr(ngi.vip_))
@@ -251,6 +437,7 @@ namespace tfs
               ngi.sync_oplog_flag_ = NS_SYNC_DATA_FLAG_YES;
               ngi.switch_time_ = time(NULL) + SYSPARAM_NAMESERVER.safe_mode_time_;
               meta_mgr_->destroy_plan();
+              meta_mgr_->register_report_servers();
               ns_force_modify_other_side();
             }
           }
@@ -295,7 +482,7 @@ namespace tfs
     void CheckOwnerIsMasterTimerTask::ns_switch(const NsStatus& other_side_status, const NsSyncDataFlag& ns_sync_flag)
     {
       NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
-      TBSYS_LOG(WARN, "the master ns: %s is dead, i'm going to be the master ns: %s",
+      TBSYS_LOG(WARN, "the master ns: %s mybe dead, i'm going to be the master ns: %s",
           tbsys::CNetUtil::addrToString(ngi.other_side_ip_port_).c_str(), tbsys::CNetUtil::addrToString(
             ngi.owner_ip_port_).c_str());
       tbutil::Mutex::Lock lock(ngi);
@@ -306,6 +493,7 @@ namespace tfs
       meta_mgr_->destroy_plan();
       ngi.switch_time_ = time(NULL) + SYSPARAM_NAMESERVER.safe_mode_time_;
       meta_mgr_->get_oplog_sync_mgr().notify_all();
+      meta_mgr_->register_report_servers();
       TBSYS_LOG(INFO, "%s", "notify all oplog thread");
       return;
     }
@@ -365,78 +553,86 @@ namespace tfs
     void MasterHeartTimerTask::runTimerTask()
     {
       NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
-      if ((ngi.owner_role_ != NS_ROLE_MASTER) || (ngi.owner_status_ != NS_STATUS_INITIALIZED))
+      if ((ngi.owner_role_ == NS_ROLE_MASTER)
+          && (ngi.owner_status_ >= NS_STATUS_INITIALIZED))
       {
-        return;
-      }
-
-      tbnet::Packet* rmsg = NULL;
-      MasterAndSlaveHeartMessage mashm;
-      mashm.set_ip_port(ngi.owner_ip_port_);
-      mashm.set_role(ngi.owner_role_);
-      mashm.set_status(ngi.owner_status_);
-      mashm.set_flags(HEART_GET_DATASERVER_LIST_FLAGS_NO);
-      ngi.dump(TBSYS_LOG_LEVEL(DEBUG));
-      int count(0);
-      do
-      {
-        ++count;
-        rmsg = NULL;
-        NewClient* client = NewClientManager::get_instance().create_client();
-        int32_t iret = send_msg_to_server(ngi.other_side_ip_port_,client, &mashm, rmsg);
-        if (TFS_SUCCESS == iret)
+        tbnet::Packet* rmsg = NULL;
+        MasterAndSlaveHeartMessage mashm;
+        mashm.set_ip_port(ngi.owner_ip_port_);
+        mashm.set_role(ngi.owner_role_);
+        mashm.set_status(ngi.owner_status_);
+        mashm.set_flags(HEART_GET_DATASERVER_LIST_FLAGS_NO);
+        ngi.dump(TBSYS_LOG_LEVEL(DEBUG));
+        bool slave_is_alive = false;
+        int32_t count = 0;
+        int32_t iret = TFS_ERROR;
+        do
         {
-          if (rmsg->getPCode() == MASTER_AND_SLAVE_HEART_RESPONSE_MESSAGE)
+          ++count;
+          rmsg = NULL;
+          NewClient* client = NewClientManager::get_instance().create_client();
+          iret = send_msg_to_server(ngi.other_side_ip_port_,client, &mashm, rmsg);
+          if (TFS_SUCCESS == iret)
           {
-            MasterAndSlaveHeartResponseMessage* tmsg = dynamic_cast<MasterAndSlaveHeartResponseMessage*> (rmsg);
-            if (tmsg->get_role() == NS_ROLE_SLAVE)
+            if (rmsg->getPCode() == MASTER_AND_SLAVE_HEART_RESPONSE_MESSAGE)
             {
-              if (ngi.other_side_status_ != tmsg->get_status()) // update otherside status
+              MasterAndSlaveHeartResponseMessage* tmsg = dynamic_cast<MasterAndSlaveHeartResponseMessage*> (rmsg);
+              if (tmsg->get_role() == NS_ROLE_SLAVE)//other side role == slave
               {
-                tbutil::Mutex::Lock lock(ngi);
-                if (ngi.other_side_status_ != tmsg->get_status())
+                if (ngi.other_side_status_ != tmsg->get_status()) // update otherside status
                 {
-                  ngi.other_side_status_ = static_cast<NsStatus> (tmsg->get_status());
-                  if ((ngi.other_side_status_ == NS_STATUS_INITIALIZED) && (ngi.sync_oplog_flag_
-                        < NS_SYNC_DATA_FLAG_YES))
+                  tbutil::Mutex::Lock lock(ngi);
+                  if (ngi.other_side_status_ != tmsg->get_status())
                   {
-                    ngi.sync_oplog_flag_ = NS_SYNC_DATA_FLAG_YES;
-                    meta_mgr_->get_oplog_sync_mgr().notify_all();
-                    TBSYS_LOG(INFO, "%s", "notify all oplog thread");
+                    ngi.other_side_status_ = static_cast<NsStatus> (tmsg->get_status());
+                    if ((ngi.other_side_status_ == NS_STATUS_INITIALIZED) && (ngi.sync_oplog_flag_
+                          < NS_SYNC_DATA_FLAG_YES))
+                    {
+                      ngi.sync_oplog_flag_ = NS_SYNC_DATA_FLAG_YES;
+                      meta_mgr_->get_oplog_sync_mgr().notify_all();
+                      TBSYS_LOG(INFO, "%s", "notify all oplog thread");
+                    }
                   }
                 }
+                else
+                {
+                  if ((ngi.other_side_status_ == NS_STATUS_INITIALIZED) && (ngi.sync_oplog_flag_
+                      < NS_SYNC_DATA_FLAG_YES))
+                  {
+                    tbutil::Mutex::Lock lock(ngi);
+                    if ((ngi.other_side_status_ == NS_STATUS_INITIALIZED) && (ngi.sync_oplog_flag_
+                          < NS_SYNC_DATA_FLAG_YES))
+                    {
+                      ngi.sync_oplog_flag_ = NS_SYNC_DATA_FLAG_YES;
+                      meta_mgr_->get_oplog_sync_mgr().notify_all();
+                      TBSYS_LOG(INFO, "%s", "notify all oplog thread");
+                    }
+                  }
+                }
+                NewClientManager::get_instance().destroy_client(client);
+                slave_is_alive = true;
               }
               else
               {
-                if ((ngi.other_side_status_ == NS_STATUS_INITIALIZED) && (ngi.sync_oplog_flag_
-                    < NS_SYNC_DATA_FLAG_YES))
-                {
-                  tbutil::Mutex::Lock lock(ngi);
-                  if ((ngi.other_side_status_ == NS_STATUS_INITIALIZED) && (ngi.sync_oplog_flag_
-                        < NS_SYNC_DATA_FLAG_YES))
-                  {
-                    ngi.sync_oplog_flag_ = NS_SYNC_DATA_FLAG_YES;
-                    meta_mgr_->get_oplog_sync_mgr().notify_all();
-                    TBSYS_LOG(INFO, "%s", "notify all oplog thread");
-                  }
-                }
+                TBSYS_LOG(WARN, "do master and slave heart fail: owner role: %s, other side role: %s", ngi.owner_role_
+                  == NS_ROLE_MASTER ? "master" : "slave", tmsg->get_role() == NS_ROLE_MASTER ? "master" : "slave");
               }
-              NewClientManager::get_instance().destroy_client(client);
-              return;
             }
-            TBSYS_LOG(WARN, "do master and slave heart fail: owner role: %s, other side role: %s", ngi.owner_role_
-                == NS_ROLE_MASTER ? "master" : "slave", tmsg->get_role() == NS_ROLE_MASTER ? "master" : "slave");
           }
+          NewClientManager::get_instance().destroy_client(client);
         }
-        NewClientManager::get_instance().destroy_client(client);
-      }
-      while (count < 0x03);
+        while ((count < 0x03)
+              && (!slave_is_alive));
 
-      //slave dead
-      TBSYS_LOG(WARN, "slave: %s dead", tbsys::CNetUtil::addrToString(ngi.other_side_ip_port_).c_str());
-      tbutil::Mutex::Lock lock(ngi);
-      ngi.sync_oplog_flag_ = NS_SYNC_DATA_FLAG_NO;
-      ngi.other_side_status_ = NS_STATUS_UNINITIALIZE;
+        if (!slave_is_alive)
+        {
+          //slave dead
+          TBSYS_LOG(WARN, "slave: %s dead", tbsys::CNetUtil::addrToString(ngi.other_side_ip_port_).c_str());
+          tbutil::Mutex::Lock lock(ngi);
+          ngi.sync_oplog_flag_ = NS_SYNC_DATA_FLAG_NO;
+          ngi.other_side_status_ = NS_STATUS_UNINITIALIZE;
+        }
+      }
     }
 
     SlaveHeartTimerTask::SlaveHeartTimerTask(LayoutManager* mm, tbutil::TimerPtr& timer) :
@@ -448,81 +644,97 @@ namespace tfs
     void SlaveHeartTimerTask::runTimerTask()
     {
       NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
-      if ((ngi.owner_role_ != NS_ROLE_SLAVE) || (ngi.owner_status_ != NS_STATUS_INITIALIZED))
+      if ((ngi.owner_role_ == NS_ROLE_SLAVE)
+          && (ngi.owner_status_ >= NS_STATUS_INITIALIZED))
       {
-        return;
-      }
-      tbnet::Packet* rmsg = NULL;
-      MasterAndSlaveHeartMessage mashm;
-      mashm.set_ip_port(ngi.owner_ip_port_);
-      mashm.set_role(ngi.owner_role_);
-      mashm.set_status(ngi.owner_status_);
-      mashm.set_flags(HEART_GET_DATASERVER_LIST_FLAGS_NO);
-      int count(0);
-      ngi.dump(TBSYS_LOG_LEVEL(DEBUG));
-      do
-      {
-        ++count;
-        rmsg = NULL;
-        NewClient* client = NewClientManager::get_instance().create_client();
-        int32_t iret = send_msg_to_server(ngi.other_side_ip_port_,client, &mashm, rmsg);
-        if (TFS_SUCCESS == iret)
+        tbnet::Packet* rmsg = NULL;
+        MasterAndSlaveHeartMessage mashm;
+        mashm.set_ip_port(ngi.owner_ip_port_);
+        mashm.set_role(ngi.owner_role_);
+        mashm.set_status(ngi.owner_status_);
+        mashm.set_flags(HEART_GET_DATASERVER_LIST_FLAGS_NO);
+        ngi.dump(TBSYS_LOG_LEVEL(DEBUG));
+        int32_t count = 0;
+        int32_t iret = TFS_ERROR;
+        bool master_is_alive = false;
+        bool switch_flag = false;
+        do
         {
-          if (rmsg->getPCode() == MASTER_AND_SLAVE_HEART_RESPONSE_MESSAGE)
+          ++count;
+          rmsg = NULL;
+          NewClient* client = NewClientManager::get_instance().create_client();
+          iret = send_msg_to_server(ngi.other_side_ip_port_,client, &mashm, rmsg);
+          if (TFS_SUCCESS == iret)
           {
-            MasterAndSlaveHeartResponseMessage* tmsg = dynamic_cast<MasterAndSlaveHeartResponseMessage*> (rmsg);
-            if (tmsg->get_role() == NS_ROLE_MASTER) //i am slave
+            if (rmsg->getPCode() == MASTER_AND_SLAVE_HEART_RESPONSE_MESSAGE)
             {
-              if (ngi.other_side_status_ != tmsg->get_status()) // update otherside status
+              MasterAndSlaveHeartResponseMessage* tmsg = dynamic_cast<MasterAndSlaveHeartResponseMessage*> (rmsg);
+              if (tmsg->get_role() == NS_ROLE_MASTER) //i am slave
               {
-                tbutil::Mutex::Lock lock(ngi);
-                ngi.other_side_status_ = static_cast<NsStatus> (tmsg->get_status());
+                if (ngi.other_side_status_ != tmsg->get_status()) // update otherside status
+                {
+                  tbutil::Mutex::Lock lock(ngi);
+                  ngi.other_side_status_ = static_cast<NsStatus> (tmsg->get_status());
+                }
+                master_is_alive = true;
               }
-              NewClientManager::get_instance().destroy_client(client);
-              return;
+              else
+              {
+                TBSYS_LOG(WARN, "do master and slave heart fail: owner role: %s, other side role: %s", ngi.owner_role_
+                  == NS_ROLE_MASTER ? "master" : "slave", tmsg->get_role() == NS_ROLE_MASTER ? "master" : "slave");
+              }
             }
-            TBSYS_LOG(WARN, "do master and slave heart fail: owner role: %s, other side role: %s", ngi.owner_role_
-                == NS_ROLE_MASTER ? "master" : "slave", tmsg->get_role() == NS_ROLE_MASTER ? "master" : "slave");
+          }
+          NewClientManager::get_instance().destroy_client(client);
+          if (!master_is_alive)
+          {
+            if (tbsys::CNetUtil::isLocalAddr(ngi.vip_)) // vip == local ip
+            {
+              TBSYS_LOG(WARN, "%s", "the master ns is dead,i'm going to be the master ns");
+              tbutil::Mutex::Lock lock(ngi);
+              ngi.owner_role_ = NS_ROLE_MASTER;
+              ngi.other_side_role_ = NS_ROLE_SLAVE;
+              ngi.other_side_status_ = NS_STATUS_OTHERSIDEDEAD;
+              ngi.switch_time_ = time(NULL) + SYSPARAM_NAMESERVER.safe_mode_time_;
+              meta_mgr_->destroy_plan();
+              meta_mgr_->register_report_servers();  
+              switch_flag = true;
+            }
           }
         }
-        NewClientManager::get_instance().destroy_client(client);
-        if (tbsys::CNetUtil::isLocalAddr(ngi.vip_)) // vip == local ip
+        while ((count < 0x03)
+                && (!master_is_alive));
+
+        if ((!master_is_alive)// master is dead and vip != local ip
+            && (!switch_flag))
         {
-          TBSYS_LOG(WARN, "%s", "the master ns is dead,i'm going to be the master ns");
-          tbutil::Mutex::Lock lock(ngi);
-          ngi.owner_role_ = NS_ROLE_MASTER;
-          ngi.other_side_role_ = NS_ROLE_SLAVE;
-          ngi.other_side_status_ = NS_STATUS_OTHERSIDEDEAD;
-          ngi.switch_time_ = time(NULL) + SYSPARAM_NAMESERVER.safe_mode_time_;
-          meta_mgr_->destroy_plan();
-          return;
+          //make sure master dead
+          {
+            tbutil::Mutex::Lock lock(ngi);
+            ngi.other_side_status_ = NS_STATUS_OTHERSIDEDEAD;
+          }
+
+          do
+          {
+            TBSYS_LOG(DEBUG, "%s", "the master ns is dead,check vip...");
+            if (tbsys::CNetUtil::isLocalAddr(ngi.vip_)) // vip == local ip
+            {
+              TBSYS_LOG(WARN, "%s", "the master ns is dead,I'm going to be the master ns");
+              tbutil::Mutex::Lock lock(ngi);
+              ngi.owner_role_ = NS_ROLE_MASTER;
+              ngi.other_side_role_ = NS_ROLE_SLAVE;
+              ngi.other_side_status_ = NS_STATUS_OTHERSIDEDEAD;
+              ngi.switch_time_ = time(NULL) + SYSPARAM_NAMESERVER.safe_mode_time_;
+              meta_mgr_->destroy_plan();
+              meta_mgr_->register_report_servers();  
+              break;
+            }
+            usleep(0x01);
+          }
+          while ((ngi.other_side_status_ != NS_STATUS_INITIALIZED)
+                  && (ngi.owner_status_ == NS_STATUS_INITIALIZED));
         }
       }
-      while (count < 0x03);
-
-      //make sure master dead
-      {
-        tbutil::Mutex::Lock lock(ngi);
-        ngi.other_side_status_ = NS_STATUS_OTHERSIDEDEAD;
-      }
-
-      do
-      {
-        TBSYS_LOG(DEBUG, "%s", "the master ns is dead,check vip...");
-        if (tbsys::CNetUtil::isLocalAddr(ngi.vip_)) // vip == local ip
-        {
-          TBSYS_LOG(WARN, "%s", "the master ns is dead,I'm going to be the master ns");
-          tbutil::Mutex::Lock lock(ngi);
-          ngi.owner_role_ = NS_ROLE_MASTER;
-          ngi.other_side_role_ = NS_ROLE_SLAVE;
-          ngi.other_side_status_ = NS_STATUS_OTHERSIDEDEAD;
-          ngi.switch_time_ = time(NULL) + SYSPARAM_NAMESERVER.safe_mode_time_;
-          meta_mgr_->destroy_plan();
-          break;
-        }
-        usleep(0x01);
-      }
-      while (ngi.other_side_status_ != NS_STATUS_INITIALIZED && ngi.owner_status_ == NS_STATUS_INITIALIZED);
     }
 
     MasterAndSlaveHeartManager::MasterAndSlaveHeartManager(LayoutManager* mm, tbutil::TimerPtr& timer) :
@@ -541,7 +753,7 @@ namespace tfs
       work_thread_.setThreadParameter(1, this, this);
       work_thread_.start();
       return TFS_SUCCESS;
-    }
+   }
 
     int MasterAndSlaveHeartManager::wait_for_shut_down()
     {
@@ -758,7 +970,8 @@ namespace tfs
             }
             usleep(0x01);
           }
-          while (ngi.other_side_status_ != NS_STATUS_INITIALIZED && ngi.owner_status_ == NS_STATUS_INITIALIZED);
+          while ((ngi.other_side_status_ != NS_STATUS_INITIALIZED)
+                && (ngi.owner_status_ == NS_STATUS_INITIALIZED));
         }
       }
       return iret;

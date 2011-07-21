@@ -49,6 +49,8 @@ namespace tfs
       int32_t dump_stat_info_interval_;
       int32_t build_plan_default_wait_time_;
       int32_t balance_max_diff_block_num_;
+      int32_t group_seq_;
+      int32_t group_count_;
 
       static NameServerParameter ns_parameter_;
       static NameServerParameter& instance()

@@ -90,6 +90,11 @@ namespace tfs
 
       void callback(LayoutManager* manager);
 
+      inline bool is_equal_group(const uint32_t id) const
+      {
+        return (static_cast<int32_t>((id % common::SYSPARAM_NAMESERVER.group_count_)) == common::SYSPARAM_NAMESERVER.group_seq_);
+      }
+
       static const int8_t MULTIPLE;
       static const int8_t MAX_LOAD_DOUBLE;
       static const int8_t DUMP_FLAG_HOLD;

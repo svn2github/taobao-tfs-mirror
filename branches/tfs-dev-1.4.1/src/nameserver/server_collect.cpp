@@ -79,7 +79,8 @@ namespace tfs
           TBSYS_LOG(WARN, "block: %u is exist", block->id());
         }
 
-        if (writable)
+        if ((writable)
+            && is_equal_group(block->id()))
         {
           std::pair<std::set<BlockCollect*>::iterator, bool> res = writable_.insert(block);
           if (!res.second)
@@ -114,7 +115,8 @@ namespace tfs
         {
           RWLock::Lock lock(*this, WRITE_LOCKER);
           int32_t current = static_cast<int32_t>(hold_master_.size());
-          if (current < SYSPARAM_NAMESERVER.max_write_file_count_)
+          if (current < SYSPARAM_NAMESERVER.max_write_file_count_
+              && is_equal_group(block->id()))
           {
             TBSYS_LOG(DEBUG, "server: %s add master block: %u", tbsys::CNetUtil::addrToString(id()).c_str(), block->id());
             std::vector<BlockCollect*>::iterator iter = find(hold_master_.begin(), hold_master_.end(), block);
@@ -138,7 +140,8 @@ namespace tfs
       if (bret)
       {
         bret = !block->is_full();
-        if (bret)
+        if ((bret)
+            && (is_equal_group(block->id())))
         {
           RWLock::Lock lock(*this, WRITE_LOCKER);
           std::pair<std::set<BlockCollect*>::iterator, bool > res = writable_.insert(block);
@@ -382,10 +385,10 @@ namespace tfs
                     block = *iter++;
                     std::vector<BlockCollect*>::iterator where 
                       = std::find(hold_master_.begin(), hold_master_.end(), block);
-                    if (where == hold_master_.end()
-                        && (block->is_writable()// block is writable
-                          && (!block->in_master_set())
-                          || block->is_need_master())) 
+                    if ((where == hold_master_.end())
+                        && ((block->is_writable())// block is writable
+                          && ((!block->in_master_set())
+                          || (block->is_need_master())))) 
                     {
                       --should;
                       writable.push_back(block);

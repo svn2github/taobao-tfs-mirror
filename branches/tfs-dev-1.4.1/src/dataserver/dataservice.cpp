@@ -59,8 +59,7 @@ namespace tfs
         do_sync_mirror_thread_(0)
     {
       //init dataserver info
-      need_send_blockinfo_[0] = true;
-      need_send_blockinfo_[1] = true;
+      memset(need_send_blockinfo_, 0, sizeof(need_send_blockinfo_));
       memset(&data_server_info_, 0, sizeof(DataServerStatInfo));
       memset(set_flag_, 0, sizeof(set_flag_));
       memset(hb_ip_port_, 0, sizeof(hb_ip_port_));
@@ -486,7 +485,7 @@ namespace tfs
 
         // sleep
         sleep(SYSPARAM_DATASERVER.heart_interval_);
-        if (DATASERVER_STATUS_DEAD == data_server_info_.status_)
+        if (DATASERVER_STATUS_DEAD== data_server_info_.status_)
         {
           break;
         }
@@ -666,10 +665,17 @@ namespace tfs
             StatusMessage* reply_msg =  all_success ?
               new StatusMessage(STATUS_MESSAGE_OK, "write data complete"):
               new StatusMessage(STATUS_MESSAGE_ERROR, "write data fail");
-            bpacket->reply(reply_msg);
+            iret = bpacket->reply(reply_msg);
             if (TFS_SUCCESS != iret)
             {
               stat_mgr_.update_entry(tfs_ds_stat_, "write-failed", 1);
+            }
+            if (TFS_SUCCESS != iret)
+            {
+              TBSYS_LOG(
+                  ERROR,
+                  "write data fail. filenumber: %" PRI64_PREFIX "u, blockid: %u, fileid: %" PRI64_PREFIX "u, version: %u, leaseid: %u, role: master",
+                  write_info.file_number_, write_info.block_id_, write_info.file_id_, version, lease_id);
             }
           }
           else if (RENAME_FILE_MESSAGE == pcode)
@@ -2159,40 +2165,6 @@ namespace tfs
               TBSYS_LOG(INFO, "nameserver %d ask for expire block\n", who + 1);
               data_management_.add_new_expire_block(resp_hb_msg->get_expire_blocks(), NULL, resp_hb_msg->get_new_blocks());
             }
-
-            int32_t old_sync_mirror_status = sync_mirror_status_;
-            sync_mirror_status_ = resp_hb_msg->get_sync_mirror_status();
-
-            if (old_sync_mirror_status != sync_mirror_status_)
-            {
-              //has modified
-              if ((sync_mirror_status_ & 1))
-              {
-                TBSYS_LOG(ERROR, "sync pause.");
-                sync_mirror_->set_pause(1);
-              }
-              if ((sync_mirror_status_ & 3) == 2)
-              {
-                TBSYS_LOG(ERROR, "sync start.");
-                sync_mirror_->set_pause(0);
-              }
-              if ((sync_mirror_status_ & 4))
-              {
-                TBSYS_LOG(ERROR, "sync disable log.");
-                sync_mirror_->disable_log();
-              }
-              if ((sync_mirror_status_ & 12) == 8)
-              {
-                TBSYS_LOG(ERROR, "sync reset log.");
-                sync_mirror_->reset_log();
-              }
-              if ((sync_mirror_status_ & 16))
-              {
-                TBSYS_LOG(ERROR, "sync set slave ip.");
-                sync_mirror_->reload_slave_ip();
-              }
-            }
-
           }
         }
         NewClientManager::get_instance().destroy_client(client);
