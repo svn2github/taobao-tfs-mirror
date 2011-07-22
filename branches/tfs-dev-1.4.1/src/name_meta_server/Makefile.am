@@ -12,9 +12,14 @@ LDADD=$(top_builddir)/src/message/libtfsmessage.a \
 
 noinst_LIBRARIES=libnamemetaserver.a
 
-libnamemetaserver_a_SOURCES=database_helper.cpp mysql_database_helper.cpp database_pool.cpp
+libnamemetaserver_a_SOURCES=meta_server_service.cpp meta_store_manager.cpp \
+			    database_helper.cpp mysql_database_helper.cpp \
+                            database_pool.cpp
 
-bin_PROGRAMS = test test_pool
+bin_PROGRAMS = metaserver test test_pool
+
+metaserver_SOURCES=$(libnamemetaserver_a_SOURCES) main.cpp
+
 test_SOURCES=$(libnamemetaserver_a_SOURCES) test.cpp
 
 test_pool_SOURCES=$(libnamemetaserver_a_SOURCES) test_pool.cpp
