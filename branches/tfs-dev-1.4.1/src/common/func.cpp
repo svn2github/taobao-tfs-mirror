@@ -544,18 +544,16 @@ namespace tfs
         p = strchr(start, del);
         if (p != NULL)
         {
-          memset(buffer, 0, BUFSIZ);
+          //memset(buffer, 0, BUFSIZ);
+          assert(p - start < BUFSIZ);
           strncpy(buffer, start, p - start);
-          if (strlen(buffer) > 0)
-            fields.push_back(buffer);
+          buffer[p - start] = 0;
+          fields.push_back(buffer);
           start = p + 1;
         }
         else
         {
-          memset(buffer, 0, BUFSIZ);
-          strcpy(buffer, start);
-          if (strlen(buffer) > 0)
-            fields.push_back(buffer);
+          fields.push_back(start);
           break;
         }
       }
