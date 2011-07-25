@@ -548,12 +548,14 @@ namespace tfs
           assert(p - start < BUFSIZ);
           strncpy(buffer, start, p - start);
           buffer[p - start] = 0;
-          fields.push_back(buffer);
+          if (buffer[0] != '\0')
+            fields.push_back(buffer);
           start = p + 1;
         }
         else
         {
-          fields.push_back(start);
+          if (start[0] != '\0')
+            fields.push_back(start);
           break;
         }
       }
@@ -682,7 +684,7 @@ namespace tfs
               addrstr, hexstr);
       }
     }
- 
+
 
   }
 }
