@@ -19,6 +19,7 @@
 #include <mysql/errmsg.h>
 #include <vector>
 #include "common/define.h"
+#include "common/func.h"
 
 using namespace std;
 namespace 
@@ -35,35 +36,10 @@ struct mysql_ex {
 };
 
 static mysql_ex  mysql_;
-static int split_string(const char* line, const char del, vector<string> & fields) 
-{
-    const char* start = line;
-    const char* p = NULL;
-    char buffer[256];
-    while (start != NULL) 
-    {
-        p = strchr(start, del);
-        if (p != NULL) 
-        {
-            memset(buffer, 0, 256);
-            strncpy(buffer, start, p - start);
-            if (strlen(buffer) > 0) fields.push_back(buffer);
-            start = p + 1;
-        } 
-        else 
-        {
-            memset(buffer, 0, 256);
-            strcpy(buffer, start);
-            if (strlen(buffer) > 0) fields.push_back(buffer);
-            break;
-        }
-    }
-    return fields.size();
-}
 static bool init_mysql(const char* mysqlconn, const char* user_name, const char* passwd) 
 {
     vector<string> fields;
-    split_string(mysqlconn, ':', fields);
+    tfs::common::Func::split_string(mysqlconn, ':', fields);
     mysql_.isopen = false;
     if (fields.size() < 3 || NULL == user_name || NULL == passwd) 
       return false;
