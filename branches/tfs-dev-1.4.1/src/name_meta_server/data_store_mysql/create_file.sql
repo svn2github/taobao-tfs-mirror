@@ -9,7 +9,7 @@ begin
     declare o_ret int;
     declare exit handler for sqlexception
     begin
-        set o_ret = 0;
+        set o_ret = -1;
         rollback;
         select o_ret;
     end;
@@ -24,8 +24,10 @@ begin
       insert into t_meta_info (app_id, uid, pid , name, id, create_time, modify_time, size, ver_no)
       values (i_app_id, i_uid, i_pid | (1 << 63), i_name, 0, now(), now(), 0, 1);
       select row_count() into aff_row;
+      set o_ret = 1;
+    else
+      set o_ret = -2;
     end if;
-    set o_ret = aff_row;
     if o_ret <= 0 then
       rollback;
     else

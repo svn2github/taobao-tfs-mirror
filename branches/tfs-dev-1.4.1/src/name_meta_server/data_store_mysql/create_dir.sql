@@ -9,7 +9,7 @@ begin
     declare o_ret int;
     declare exit handler for sqlexception
     begin
-        set o_ret = 0;
+        set o_ret = -1;
         rollback;
         select o_ret;
     end;
@@ -33,6 +33,7 @@ begin
     end if;
     set o_ret = aff_row;
     if o_ret <= 0 then
+        set o_ret = -2;
         rollback;
     else
         commit;

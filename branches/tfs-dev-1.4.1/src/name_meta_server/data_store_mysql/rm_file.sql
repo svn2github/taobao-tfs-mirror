@@ -27,7 +27,11 @@ begin
     select row_count() into aff_row;
     if aff_row >= 1 then
       set o_ret = 1;
+    else
+      set o_ret = -3;
     end if;
+  else
+    set o_ret = -2;
   end if;
   if o_ret = 1 then
     commit;
