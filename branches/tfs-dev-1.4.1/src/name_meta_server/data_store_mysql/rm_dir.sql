@@ -6,7 +6,7 @@ rm_dir(in i_app_id bigint, in i_uid bigint, in i_ppid bigint unsigned,
   in i_name varbinary(512))
 begin
   declare aff_row int;
-  declare o_ret int;
+  declare o_ret bigint;
   declare exit handler for sqlexception
   begin
     set o_ret = 0;

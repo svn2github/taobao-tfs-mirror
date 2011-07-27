@@ -7,7 +7,7 @@ pwrite_file(in i_app_id bigint, in i_uid bigint,
   in i_size bigint, in i_ver_no smallint, in i_meta_info text)
 begin
   declare aff_row int;
-  declare o_ret int;
+  declare o_ret bigint;
   declare next_ver_no smallint;
   declare real_pid bigint unsigned;
   declare exit handler for sqlexception

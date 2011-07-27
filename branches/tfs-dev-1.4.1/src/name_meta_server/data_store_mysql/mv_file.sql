@@ -8,7 +8,7 @@ mv_file(in i_app_id bigint, in i_uid bigint,
 begin
   declare aff_row int;
   declare s_name_len int;
-  declare o_ret int;
+  declare o_ret bigint;
   declare s_name_end varbinary(512);
   declare exit handler for sqlexception
   begin
