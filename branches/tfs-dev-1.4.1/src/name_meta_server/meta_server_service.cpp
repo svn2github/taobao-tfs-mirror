@@ -355,6 +355,7 @@ namespace tfs
           vector<FragMeta> v_frag_info(in_v_frag_info);
           sort(v_frag_info.begin(), v_frag_info.end());
           vector<FragMeta>::iterator write_frag_info_it = v_frag_info.begin();
+          //we use while, but no
           while (write_frag_info_it != v_frag_info.end() && TFS_SUCCESS == ret)
           {
             tmp_v_meta_info.clear();
@@ -409,13 +410,14 @@ namespace tfs
             //now  write_frag_info_it  should be write to v_meta_info_it
             if (!v_meta_info_it->frag_info_.had_been_split_)
             {
-              while(write_frag_info_it != v_frag_info.end()
-                  && static_cast<int32_t>(v_meta_info_it->frag_info_.v_frag_meta_.size()) <= SOFT_MAX_FRAG_INFO_COUNT)
+              while(write_frag_info_it != v_frag_info.end())
+                 // && static_cast<int32_t>(v_meta_info_it->frag_info_.v_frag_meta_.size()) <= SOFT_MAX_FRAG_INFO_COUNT)
               {
                 v_meta_info_it->frag_info_.v_frag_meta_.push_back(*write_frag_info_it);
                 write_frag_info_it++;
               }
-              if (write_frag_info_it != v_frag_info.end())
+              if (static_cast<int32_t>(v_meta_info_it->frag_info_.v_frag_meta_.size()) 
+                  > SOFT_MAX_FRAG_INFO_COUNT)
               {
                 v_meta_info_it->frag_info_.had_been_split_ = true;
               }
@@ -423,9 +425,14 @@ namespace tfs
             else
             {
               int64_t last_offset = v_meta_info_it->frag_info_.get_last_offset();
-              while(write_frag_info_it != v_frag_info.end() &&
-                  write_frag_info_it->offset_ < last_offset)
+              while(write_frag_info_it != v_frag_info.end())
               {
+                if (write_frag_info_it->offset_ >= last_offset)
+                {
+                  //TODO this means the frag clinet give me have a hole in it 
+                  ret = TFS_ERROR;
+                  break;
+                }
                 v_meta_info_it->frag_info_.v_frag_meta_.push_back(*write_frag_info_it);
                 write_frag_info_it ++;
               }
@@ -445,13 +452,14 @@ namespace tfs
               //TODO ret = check_frag_info(v_meta_info_it->frag_info_);
               if (TFS_SUCCESS == ret)
               {
-              //update this info;
-              v_meta_info_it->size_ = v_meta_info_it->frag_info_.get_last_offset();
-              ret = store_manager_->insert(app_id, uid, p_meta_info.pid_,
-                  p_meta_info.name_.data(), p_meta_info.name_.length(), v_meta_info_it->id_,
-                  v_meta_info_it->name_.data(), v_meta_info_it->name_.length(), PWRITE_FILE);
+                //update this info;
+                v_meta_info_it->size_ = v_meta_info_it->frag_info_.get_last_offset();
+                ret = store_manager_->insert(app_id, uid, p_meta_info.pid_,
+                    p_meta_info.name_.data(), p_meta_info.name_.length(), v_meta_info_it->id_,
+                    v_meta_info_it->name_.data(), v_meta_info_it->name_.length(), PWRITE_FILE);
               }
             }
+            assert(write_frag_info_it == v_frag_info.end());
           }
         }
       }
