@@ -166,7 +166,7 @@ namespace tfs
           int32_t o_modify_time = 0;
           int64_t o_size = 0;
           int16_t o_ver_no = 0;
-          static char o_slide_info[SLIDE_INFO_LEN];
+          char o_slide_info[SLIDE_INFO_LEN];
           unsigned long o_slide_info_len = 0;
 
           memset(rs_bind, 0, sizeof (rs_bind) );
@@ -252,7 +252,11 @@ namespace tfs
             tmp.modify_time_ = o_modify_time;
             tmp.size_ = o_size;
             tmp.ver_no_ = o_ver_no;
-            //TODO slide_info_;
+            if (!is_null[7])
+            {
+              int64_t pos = 0;
+              tmp.frag_info_.deserialize(o_slide_info, o_slide_info_len, pos);
+            }
             out_v_meta_info.push_back(tmp);
           }
           mysql_next_result(&mysql_.mysql); //mysql bugs, we must have this
@@ -1094,7 +1098,7 @@ namespace tfs
             {
               TBSYS_LOG(ERROR, "mysql_stmt_fetch error");
             }
-            TBSYS_LOG(DEBUG, "mysql_proc_ret = %d", mysql_proc_ret);
+            TBSYS_LOG(DEBUG, "mysql_proc_ret = %"PRI64_PREFIX"d", mysql_proc_ret);
           }
           mysql_next_result(&mysql_.mysql); //mysql bugs, we must have this
         }
