@@ -1073,7 +1073,7 @@ namespace tfs
           memset(&rs_bind, 0, sizeof (MYSQL_BIND));
 
           /* set up and bind result set output buffers */
-          rs_bind.buffer_type = MYSQL_TYPE_LONG;
+          rs_bind.buffer_type = MYSQL_TYPE_LONGLONG;
           rs_bind.is_null = &is_null;
 
           rs_bind.buffer = (char *) &mysql_proc_ret;
