@@ -371,7 +371,7 @@ namespace tfs
               //TODO give a error_no. this means no create file found
               ret = TFS_ERROR;
             }
-            if (cluster_id != 0 && cluster_id != in_cluster_id)
+            if (in_cluster_id != 0 && cluster_id != in_cluster_id)
             {
               //TODO give a error_no. this means cluster_id error
               ret = TFS_ERROR;
@@ -455,8 +455,9 @@ namespace tfs
                 //update this info;
                 v_meta_info_it->size_ = v_meta_info_it->frag_info_.get_last_offset();
                 ret = store_manager_->insert(app_id, uid, p_meta_info.pid_,
-                    p_meta_info.name_.data(), p_meta_info.name_.length(), v_meta_info_it->id_,
-                    v_meta_info_it->name_.data(), v_meta_info_it->name_.length(), PWRITE_FILE);
+                    p_meta_info.name_.data(), p_meta_info.name_.length(), p_meta_info.id_,
+                    v_meta_info_it->name_.data(), v_meta_info_it->name_.length(), PWRITE_FILE, 
+                    &(*v_meta_info_it));
               }
             }
             assert(write_frag_info_it == v_frag_info.end());

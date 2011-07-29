@@ -41,13 +41,15 @@ namespace tfs
       int ret = TFS_ERROR;
       out_v_meta_info.clear();
       std::vector<MetaInfo> tmp_meta_info;
+      int64_t comp_pid = 0;
       ret = database_helper_->ls_meta_info(tmp_meta_info, app_id, uid, pid, name, name_len);
       if (TFS_SUCCESS == ret)
       {
         std::vector<MetaInfo>::const_iterator it = tmp_meta_info.begin();
         for( ;it != tmp_meta_info.end(); it++)
         {
-          if (it->pid_ == pid && 0 == memcmp(it->name_.data(), name, name_len))
+          comp_pid = it->pid_ & ~(1L<<63);
+          if (comp_pid == pid && 0 == memcmp(it->name_.data(), name, name_len))
           {
             out_v_meta_info.push_back(*it);
           }
@@ -92,37 +94,44 @@ namespace tfs
       }
       else if (type == PWRITE_FILE)
       {
-        int64_t frag_len = meta_info->frag_info_.get_length();
-        if (frag_len > 65535)
+        if (NULL == meta_info)
         {
-          TBSYS_LOG(ERROR, "meta info is too long(%d > %d)", frag_len, 65535);
-          ret = TFS_ERROR;
+          TBSYS_LOG(ERROR, "meta_info should not be NULL");
         }
         else
         {
-          int64_t pos = 0;
-          char* frag_info = (char*) malloc(frag_len);
-          if (NULL == frag_info)
+          int64_t frag_len = meta_info->frag_info_.get_length();
+          if (frag_len > 65535)
           {
-            TBSYS_LOG(ERROR, "mem not enough");
+            TBSYS_LOG(ERROR, "meta info is too long(%d > %d)", frag_len, 65535);
             ret = TFS_ERROR;
           }
           else
           {
-            status = meta_info->frag_info_.serialize(frag_info, frag_len, pos);
-            if (TFS_SUCCESS != status)
+            int64_t pos = 0;
+            char* frag_info = (char*) malloc(frag_len);
+            if (NULL == frag_info)
             {
-              TBSYS_LOG(ERROR, "get meta info failed, status: %d ", status);
+              TBSYS_LOG(ERROR, "mem not enough");
+              ret = TFS_ERROR;
             }
             else
             {
-              status = database_helper_->pwrite_file(app_id, uid, pid, name, name_len, meta_info->size_, meta_info->ver_no_, frag_info, frag_len, proc_ret);
+              status = meta_info->frag_info_.serialize(frag_info, frag_len, pos);
               if (TFS_SUCCESS != status)
               {
-                TBSYS_LOG(DEBUG, "database helper pwrite file, status: %d", status);
+                TBSYS_LOG(ERROR, "get meta info failed, status: %d ", status);
               }
+              else
+              {
+                status = database_helper_->pwrite_file(app_id, uid, pid, name, name_len, meta_info->size_, meta_info->ver_no_, frag_info, frag_len, proc_ret);
+                if (TFS_SUCCESS != status)
+                {
+                  TBSYS_LOG(DEBUG, "database helper pwrite file, status: %d", status);
+                }
+              }
+              free (frag_info);
             }
-            free (frag_info);
           }
         }
       }
