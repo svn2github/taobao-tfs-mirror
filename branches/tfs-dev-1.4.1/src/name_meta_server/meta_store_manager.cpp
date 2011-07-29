@@ -36,20 +36,28 @@ namespace tfs
     }
 
 
-    int MetaStoreManager::select(const int64_t app_id, const int64_t uid, const int64_t pid, const char* name, const int32_t name_len, std::vector<MetaInfo>& out_v_meta_info)
+    int MetaStoreManager::select(const int64_t app_id, const int64_t uid, const int64_t pid, const char* name, const int32_t name_len, const bool is_file, std::vector<MetaInfo>& out_v_meta_info)
     {
       int ret = TFS_ERROR;
       out_v_meta_info.clear();
       std::vector<MetaInfo> tmp_meta_info;
-      int64_t comp_pid = 0;
-      ret = database_helper_->ls_meta_info(tmp_meta_info, app_id, uid, pid, name, name_len);
+      int64_t real_pid = 0;
+      if (is_file)
+      {
+        real_pid = pid | (1L<<63);
+      }
+      else
+      {
+        real_pid = pid & ~(1L<<63);
+      }
+      
+      ret = database_helper_->ls_meta_info(tmp_meta_info, app_id, uid, real_pid, name, name_len);
       if (TFS_SUCCESS == ret)
       {
         std::vector<MetaInfo>::const_iterator it = tmp_meta_info.begin();
         for( ;it != tmp_meta_info.end(); it++)
         {
-          comp_pid = it->pid_ & ~(1L<<63);
-          if (comp_pid == pid && 0 == memcmp(it->name_.data(), name, name_len))
+          if (it->pid_ == real_pid && 0 == memcmp(it->name_.data(), name, name_len))
           {
             out_v_meta_info.push_back(*it);
           }

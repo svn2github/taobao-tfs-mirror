@@ -177,7 +177,8 @@ namespace tfs
           std::vector<MetaInfo> v_meta_info;
           std::vector<MetaInfo>::iterator iter;
 
-          ret = store_manager_->select(app_id, uid, p_meta_info.id_, name, name_len, v_meta_info);
+          ret = store_manager_->select(app_id, uid, p_meta_info.id_, name, name_len, 
+              type != DIRECTORY, v_meta_info);
           if ((TFS_SUCCESS == ret) && (static_cast<int32_t>(v_meta_info.size()) > 0))
           {
             iter = v_meta_info.begin();
@@ -302,7 +303,7 @@ namespace tfs
         tmp_v_meta_info.clear();
         still_have = false;
         ret = store_manager_->select(app_id, uid, pid,
-            search_name, search_name_len, tmp_v_meta_info);
+            search_name, search_name_len, true, tmp_v_meta_info);
         if (TFS_SUCCESS != ret)
         {
           TBSYS_LOG(WARN, "get read meta info fail, ret: %d", ret);
@@ -584,7 +585,7 @@ namespace tfs
         {
           break;
         }
-        ret = store_manager_->select(app_id, uid, pid, name, name_len, tmp_v_meta_info);
+        ret = store_manager_->select(app_id, uid, pid, name, name_len, false, tmp_v_meta_info);
 
         if (ret != TFS_SUCCESS)
         {
