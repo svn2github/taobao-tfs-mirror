@@ -56,11 +56,11 @@ namespace tfs
       int mv(const int64_t app_id, const int64_t uid,
           const char* file_path, const char* dest_file_path, const FileType type);
       int write(const int64_t app_id, const int64_t uid,
-          const char* file_path, const int32_t cluster_id,
-          const std::vector<FragMeta>& v_frag_info, int32_t* write_ret);
+          const char* file_path,
+          const FragInfo& in_v_frag_info, int32_t* write_ret);
       int read(const int64_t app_id, const int64_t uid, const char* file_path,
           const int64_t offset, const int64_t size,
-          int32_t& cluster_id, std::vector<FragMeta>& v_frag_info, bool& still_have);
+          FragInfo& frag_info, bool& still_have);
 
     private:
       // override

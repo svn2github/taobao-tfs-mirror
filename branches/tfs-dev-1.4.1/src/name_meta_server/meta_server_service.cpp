@@ -247,7 +247,7 @@ namespace tfs
 
     int MetaServerService::read(const int64_t app_id, const int64_t uid, const char* file_path,
                                 const int64_t offset, const int64_t size,
-                                int32_t& cluster_id, vector<FragMeta>& v_frag_info, bool& still_have)
+                                FragInfo& frag_info, bool& still_have)
     {
       char name[MAX_FILE_PATH_LEN];
       int32_t name_len = 0, pname_len = 0;
@@ -274,11 +274,11 @@ namespace tfs
         {
           get_name(v_name, depth, name, MAX_FILE_PATH_LEN, name_len);
           ret = get_meta_info(app_id, uid, p_meta_info.id_, name, name_len, offset,
-              tmp_v_meta_info, cluster_id);
+              tmp_v_meta_info, frag_info.cluster_id_);
           if (ret == TFS_SUCCESS)
           {
             if ((ret = read_frag_info(tmp_v_meta_info, offset, size,
-                    cluster_id, v_frag_info, still_have)) != TFS_SUCCESS)
+                    frag_info.cluster_id_, frag_info.v_frag_meta_, still_have)) != TFS_SUCCESS)
             {
               TBSYS_LOG(WARN, "parse read frag info fail. ret: %d", ret);
             }
@@ -325,8 +325,8 @@ namespace tfs
     }
 
     int MetaServerService::write(const int64_t app_id, const int64_t uid,
-        const char* file_path, const int32_t cluster_id,
-        const vector<FragMeta>& in_v_frag_info, int32_t* write_ret)
+        const char* file_path,
+        const FragInfo& frag_info, int32_t* write_ret)
     {
       char name[MAX_FILE_PATH_LEN];
       int32_t name_len = 0, pname_len = 0;
@@ -352,11 +352,11 @@ namespace tfs
         else
         {
           get_name(v_name, depth, name, MAX_FILE_PATH_LEN, name_len);
-          vector<FragMeta> v_frag_info(in_v_frag_info);
-          sort(v_frag_info.begin(), v_frag_info.end());
-          vector<FragMeta>::iterator write_frag_info_it = v_frag_info.begin();
+          vector<FragMeta> v_frag_meta(frag_info.v_frag_meta_);
+          sort(v_frag_meta.begin(), v_frag_meta.end());
+          vector<FragMeta>::iterator write_frag_info_it = v_frag_meta.begin();
           //we use while, but no
-          while (write_frag_info_it != v_frag_info.end() && TFS_SUCCESS == ret)
+          while (write_frag_info_it != v_frag_meta.end() && TFS_SUCCESS == ret)
           {
             tmp_v_meta_info.clear();
             int32_t in_cluster_id = -1;
@@ -371,7 +371,7 @@ namespace tfs
               //TODO give a error_no. this means no create file found
               ret = TFS_ERROR;
             }
-            if (in_cluster_id != 0 && cluster_id != in_cluster_id)
+            if (in_cluster_id != 0 && frag_info.cluster_id_ != in_cluster_id)
             {
               //TODO give a error_no. this means cluster_id error
               ret = TFS_ERROR;
@@ -381,7 +381,7 @@ namespace tfs
               //this is for split, we make a new metainfo
               MetaInfo tmp;
               tmp.pid_ = p_meta_info.id_;
-              tmp.frag_info_.cluster_id_ = cluster_id;
+              tmp.frag_info_.cluster_id_ = frag_info.cluster_id_;
               char tmp_name[MAX_FILE_PATH_LEN + 8];
               memcpy(tmp_name, name, name_len);
               int64_to_char(tmp_name+name_len, MAX_FILE_PATH_LEN + 8 - name_len,
@@ -410,7 +410,7 @@ namespace tfs
             //now  write_frag_info_it  should be write to v_meta_info_it
             if (!v_meta_info_it->frag_info_.had_been_split_)
             {
-              while(write_frag_info_it != v_frag_info.end())
+              while(write_frag_info_it != v_frag_meta.end())
                  // && static_cast<int32_t>(v_meta_info_it->frag_info_.v_frag_meta_.size()) <= SOFT_MAX_FRAG_INFO_COUNT)
               {
                 v_meta_info_it->frag_info_.v_frag_meta_.push_back(*write_frag_info_it);
@@ -425,7 +425,7 @@ namespace tfs
             else
             {
               int64_t last_offset = v_meta_info_it->frag_info_.get_last_offset();
-              while(write_frag_info_it != v_frag_info.end())
+              while(write_frag_info_it != frag_info.v_frag_meta_.end())
               {
                 if (write_frag_info_it->offset_ >= last_offset)
                 {
@@ -456,7 +456,7 @@ namespace tfs
                 v_meta_info_it->size_ = v_meta_info_it->frag_info_.get_last_offset();
                 if (v_meta_info_it->frag_info_.cluster_id_ == 0)
                 {
-                  v_meta_info_it->frag_info_.cluster_id_ = cluster_id;
+                  v_meta_info_it->frag_info_.cluster_id_ = frag_info.cluster_id_;
                 }
                 ret = store_manager_->insert(app_id, uid, p_meta_info.pid_,
                     p_meta_info.name_.data(), p_meta_info.name_.length(), p_meta_info.id_,
@@ -464,7 +464,7 @@ namespace tfs
                     &(*v_meta_info_it));
               }
             }
-            assert(write_frag_info_it == v_frag_info.end());
+            assert(write_frag_info_it == v_frag_meta.end());
           }
         }
       }
