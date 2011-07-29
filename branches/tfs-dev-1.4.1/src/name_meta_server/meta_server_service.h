@@ -85,20 +85,6 @@ namespace tfs
           const int64_t offset, const int32_t size,
           int32_t& cluster_id, std::vector<FragMeta>& v_out_frag_info, bool& still_have);
 
-      int write_frag_info(int32_t cluster_id, std::vector<MetaInfo>& v_meta_info,
-          const std::vector<FragMeta>& v_frag_info);
-      int insert_frag_info(std::vector<MetaInfo>& v_meta_info, const std::vector<FragMeta>& src_v_frag_info,
-          int32_t& end_index);
-      int merge_frag_info(const MetaInfo& meta_info, const std::vector<FragMeta>& src_v_frag_info,
-          int32_t& end_index);
-      int fast_merge_frag_info(std::vector<FragMeta>& dest_v_frag_info,
-          const std::vector<FragMeta>& dest_v_frag_info,
-          std::vector<FragMeta>::const_iterator& src_it,
-          int32_t& end_index);
-      int update_write_frag_info(std::vector<MetaInfo>& v_meta_info, const int64_t app_id, const int64_t uid,
-          MetaInfo& p_meta_info, const char* panme, const int32_t pname_len,
-          char* name, const int32_t name_len);
-
       static int int64_to_char(char* buff, const int32_t buff_size, const int64_t v);
       static int char_to_int64(char* data, const int32_t data_size, int64_t& v);
 
