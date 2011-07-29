@@ -454,6 +454,10 @@ namespace tfs
               {
                 //update this info;
                 v_meta_info_it->size_ = v_meta_info_it->frag_info_.get_last_offset();
+                if (v_meta_info_it->frag_info_.cluster_id_ == 0)
+                {
+                  v_meta_info_it->frag_info_.cluster_id_ = cluster_id;
+                }
                 ret = store_manager_->insert(app_id, uid, p_meta_info.pid_,
                     p_meta_info.name_.data(), p_meta_info.name_.length(), p_meta_info.id_,
                     v_meta_info_it->name_.data(), v_meta_info_it->name_.length(), PWRITE_FILE, 
@@ -486,26 +490,18 @@ namespace tfs
           continue;
         }
         const vector<FragMeta>& v_in_frag_info = meta_info_it->frag_info_.v_frag_meta_;
+        if (v_in_frag_info.empty())
+        {
+          //no frag to be read
+          break;
+        }
         FragMeta fragmeta_for_search;
         fragmeta_for_search.offset_ = offset;
         vector<FragMeta>::const_iterator it =
           lower_bound(v_in_frag_info.begin(), v_in_frag_info.end(), fragmeta_for_search);
         if (it == v_in_frag_info.end())
         {
-          TBSYS_LOG(ERROR, "error in frag_info");
-          break;
-        }
-        if (it->offset_ > offset)
-        {
-          if (it == v_in_frag_info.begin())
-          {
-            TBSYS_LOG(ERROR, "error in frag_info");
-            break;
-          }
-          else
-          {
-            it--;
-          }
+          it--;
         }
         cluster_id = meta_info_it->frag_info_.cluster_id_;
         still_have = true;
