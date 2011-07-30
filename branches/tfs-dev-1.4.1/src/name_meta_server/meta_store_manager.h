@@ -16,7 +16,7 @@
 #ifndef TFS_NAMEMETASERVER_NAMEMETASTOREMANAGER_H_
 #define TFS_NAMEMETASERVER_NAMEMETASTOREMANAGER_H_
 #include "Memory.hpp"
-#include "sql_define.h"
+#include "metaserver_define.h"
 #include "meta_info.h"
 #include "mysql_database_helper.h"
 //#include "meta_cache_handler.h"

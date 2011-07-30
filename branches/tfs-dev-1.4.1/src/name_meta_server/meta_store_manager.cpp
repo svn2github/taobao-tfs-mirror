@@ -61,10 +61,6 @@ namespace tfs
           {
             out_v_meta_info.push_back(*it);
           }
-          else
-          {
-            break;
-          }
         }
 
       }
@@ -109,9 +105,9 @@ namespace tfs
         else
         {
           int64_t frag_len = meta_info->frag_info_.get_length();
-          if (frag_len > 65535)
+          if (frag_len > MAX_FRAG_INFO_SIZE)
           {
-            TBSYS_LOG(ERROR, "meta info is too long(%d > %d)", frag_len, 65535);
+            TBSYS_LOG(ERROR, "meta info is too long(%d > %d)", frag_len, MAX_FRAG_INFO_SIZE);
             ret = TFS_ERROR;
           }
           else
@@ -144,9 +140,13 @@ namespace tfs
         }
       }
 
-      if ((static_cast<int32_t>(proc_ret)) > 0)
+      if (TFS_SUCCESS == status && proc_ret > 0)
       {
         ret = TFS_SUCCESS;
+      }
+      else
+      {
+        ret = proc_ret;
       }
       return ret;
     }
@@ -181,9 +181,13 @@ namespace tfs
         }
       }
 
-      if ((static_cast<int32_t>(proc_ret)) > 0)
+      if (TFS_SUCCESS == status && proc_ret > 0)
       {
         ret = TFS_SUCCESS;
+      }
+      else
+      {
+        ret = proc_ret;
       }
       return ret;
     }
@@ -221,9 +225,13 @@ namespace tfs
         }
       }
 
-      if ((static_cast<int32_t>(proc_ret)) > 0)
+      if (TFS_SUCCESS == status && proc_ret > 0)
       {
         ret = TFS_SUCCESS;
+      }
+      else
+      {
+        ret = proc_ret;
       }
       return ret;
     }

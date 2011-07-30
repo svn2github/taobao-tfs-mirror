@@ -304,6 +304,7 @@ namespace tfs
         still_have = false;
         ret = store_manager_->select(app_id, uid, pid,
             search_name, search_name_len, true, tmp_v_meta_info);
+        TBSYS_LOG(DEBUG, "select size: %zd", tmp_v_meta_info.size());
         if (TFS_SUCCESS != ret)
         {
           TBSYS_LOG(WARN, "get read meta info fail, ret: %d", ret);
@@ -365,6 +366,7 @@ namespace tfs
                 write_frag_info_it->offset_, tmp_v_meta_info, in_cluster_id);
             if (TFS_SUCCESS != ret)
             {
+              TBSYS_LOG(DEBUG, "record not exist, name(%s)", name);
               break;
             }
             if (in_cluster_id == -1)
@@ -405,7 +407,7 @@ namespace tfs
 
             if (!found_meta_info_should_be_updated)
             {
-              ret = UPDATE_FRAG_INFO_ERROR;
+              ret = EXIT_UPDATE_FRAG_INFO_ERROR;
               break;
             }
             //now  write_frag_info_it  should be write to v_meta_info_it
@@ -595,7 +597,6 @@ namespace tfs
         std::vector<MetaInfo>::const_iterator iner_iter;
         for (iner_iter = tmp_v_meta_info.begin(); iner_iter != tmp_v_meta_info.end(); iner_iter++)
         {
-          TBSYS_LOG(DEBUG, "***%s*** -> ***%s***, ret: %d", iner_iter->name_.c_str(), name, memcmp(iner_iter->name_.c_str(), name, name_len));
           pid = iner_iter->id_;
           // get parent info
           if (i == depth - 1)

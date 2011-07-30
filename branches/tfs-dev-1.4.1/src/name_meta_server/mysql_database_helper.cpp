@@ -56,7 +56,7 @@ namespace tfs
         char sql[1024];
         snprintf(sql, 1024, "select pid, name, id, UNIX_TIMESTAMP(create_time), "
             "UNIX_TIMESTAMP(modify_time), size, ver_no, meta_info from t_meta_info "
-            "where app_id = ? and uid = ? and pid >= ? and name >= ? limit %d", ROW_LIMIT);
+            "where app_id = ? and uid = ? and pid = ? and name >= ? limit %d", ROW_LIMIT);
         if (NULL != stmt_)
         {
           mysql_stmt_free_result(stmt_);
