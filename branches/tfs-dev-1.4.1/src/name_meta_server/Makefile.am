@@ -14,7 +14,7 @@ noinst_LIBRARIES=libnamemetaserver.a
 
 libnamemetaserver_a_SOURCES=meta_server_service.cpp meta_store_manager.cpp \
 			    database_helper.cpp mysql_database_helper.cpp \
-                            database_pool.cpp metaserver_define.cpp
+                            database_pool.cpp meta_server_define.cpp
 
 bin_PROGRAMS = test test_pool test_service
 
