@@ -26,7 +26,7 @@
 
 namespace tfs
 {
-  namespace common 
+  namespace common
   {
     //old structure
     #pragma pack(4)
@@ -169,7 +169,7 @@ namespace tfs
       DIRECTION_MASTER_SLAVE_NS = 4
     };
 
-    enum HeartMessageStatus                                                                        
+    enum HeartMessageStatus
     {
       HEART_MESSAGE_OK = 0,
       HEART_NEED_SEND_BLOCK_INFO = 1,
@@ -246,7 +246,7 @@ namespace tfs
       BATCH_SET_BLOCK_INFO_MESSAGE = 60,
       REMOVE_BLOCK_RESPONSE_MESSAGE = 61,
       READ_DATA_MESSAGE_V3 = 62,
-      RESP_READ_DATA_MESSAGE_V3 = 63, 
+      RESP_READ_DATA_MESSAGE_V3 = 63,
       DUMP_PLAN_MESSAGE = 64,
       DUMP_PLAN_RESPONSE_MESSAGE = 65,
       REQ_RC_LOGIN_MESSAGE = 66,
@@ -257,6 +257,10 @@ namespace tfs
       REQ_RC_RELOAD_MESSAGE = 71,
       GET_DATASERVER_INFORMATION_MESSAGE = 72,
       GET_DATASERVER_INFORMATION_RESPONSE_MESSAGE = 73,
+      FILEPATH_ACTION_MESSAGE = 74,
+      WRITE_FILEPATH_MESSAGE = 75,
+      READ_FILEPATH_MESSAGE = 76,
+      RESP_READ_FILEPATH_MESSAGE = 77,
       LOCAL_PACKET = 500,
     };
 

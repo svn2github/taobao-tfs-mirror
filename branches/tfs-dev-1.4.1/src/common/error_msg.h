@@ -123,6 +123,13 @@ namespace tfs
     const int32_t EXIT_REGISTER_OPLOG_SYNC_ERROR = -12000;
     const int32_t EXIT_MAKEDIR_ERROR = -13000;
 
+    const int32_t EXIT_UNKNOWN_SQL_ERROR= -14000;
+    const int32_t EXIT_TARGET_EXIST_ERROR = -14001;
+    const int32_t EXIT_PARENT_EXIST_ERROR = -14002;
+    const int32_t EXIT_DELETE_DIR_WITH_FILE_ERROR = -14003;
+    const int32_t EXIT_VERSION_CONFLICT_ERROR = -14004;
+    const int32_t EXIT_UPDATE_FRAG_INFO_ERROR = -14005;
+    
   }
 }
 #endif //TFS_COMMON_ERRMSG_H_

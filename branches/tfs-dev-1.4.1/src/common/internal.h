@@ -749,6 +749,16 @@ namespace tfs
       void display() const;
     };
 
+    enum MetaActionOp
+    {
+      NON_ACTION = 0,
+      CREATE_DIR = 1,
+      CREATE_FILE = 2,
+      REMOVE_DIR = 3,
+      REMOVE_FILE = 4,
+      MOVE_DIR = 5,
+      MOVE_FILE = 6
+    };
     // defined type typedef
     typedef std::vector<BlockInfo> BLOCK_INFO_LIST;
     typedef std::vector<FileInfo> FILE_INFO_LIST;
