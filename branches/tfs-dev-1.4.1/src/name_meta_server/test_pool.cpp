@@ -48,7 +48,7 @@ int main()
 {
   assert (1==mysql_thread_safe());
   enum {POOL_SIZE = 10,};
-  DataBasePool tt(POOL_SIZE);
+  DataBasePool tt;
   char coon[50] = {"10.232.35.41:3306:tfs_name_db"};
   char usr[50] = {"root"};
   char pass[50] = {"root"};
@@ -64,7 +64,7 @@ int main()
     hash_flag[i] = 1;
   }
 
-  assert(tt.init_pool(coon_str, usr_name, pass_word, hash_flag));
+  assert(tt.init_pool(POOL_SIZE, (char**)coon_str, (char**)usr_name, (char**)pass_word, hash_flag));
 
   pthread_t tid[30];
   for (int i = 0; i < 20; i++)

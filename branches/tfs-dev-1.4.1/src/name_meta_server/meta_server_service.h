@@ -50,10 +50,11 @@ namespace tfs
           const char* file_path, const char* dest_file_path, const FileType type);
       int write(const int64_t app_id, const int64_t uid,
           const char* file_path,
-          const FragInfo& in_v_frag_info, int32_t* write_ret);
+          const FragInfo& in_v_frag_info);
       int read(const int64_t app_id, const int64_t uid, const char* file_path,
           const int64_t offset, const int64_t size,
           FragInfo& frag_info, bool& still_have);
+      //TODO ls
 
     private:
       // override
@@ -77,11 +78,15 @@ namespace tfs
       int read_frag_info(const std::vector<MetaInfo>& v_meta_info,
           const int64_t offset, const int32_t size,
           int32_t& cluster_id, std::vector<FragMeta>& v_out_frag_info, bool& still_have);
+      
+      static int check_frag_info(const FragInfo& frag_info);
 
       static int int64_to_char(char* buff, const int32_t buff_size, const int64_t v);
       static int char_to_int64(char* data, const int32_t data_size, int64_t& v);
 
     private:
+      char top_dir_name_[10];
+      int32_t top_dir_size_;
       DISALLOW_COPY_AND_ASSIGN(MetaServerService);
 
       MetaStoreManager* store_manager_;

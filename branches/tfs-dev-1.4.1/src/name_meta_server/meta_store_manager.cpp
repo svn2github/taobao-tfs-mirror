@@ -14,6 +14,7 @@
 *
 */
 #include "meta_store_manager.h"
+#include "database_helper.h"
 
 using namespace tfs::common;
 namespace tfs
@@ -22,17 +23,56 @@ namespace tfs
   {
     MetaStoreManager::MetaStoreManager()
     {
-      database_helper_ = new MysqlDatabaseHelper();
-      database_helper_->set_conn_param(ConnStr::mysql_conn_str_.c_str(), ConnStr::mysql_user_.c_str(), ConnStr::mysql_password_.c_str());
-      //meta_cache_handler_ = new MetaCacheHandler();
+      database_pool_ = new DataBasePool();
+    }
+    int MetaStoreManager::init(const int32_t pool_size)
+    {
+      char* conn_str[DataBasePool::MAX_POOL_SIZE];
+      char* user_name[DataBasePool::MAX_POOL_SIZE];
+      char* passwd[DataBasePool::MAX_POOL_SIZE];
+      int32_t hash_flag[DataBasePool::MAX_POOL_SIZE];
 
-      database_helper_->connect();
+      int32_t my_pool_size = pool_size;
+      int ret = TFS_SUCCESS;
+
+      if (pool_size > DataBasePool::MAX_POOL_SIZE)
+      {
+        TBSYS_LOG(INFO, "pool size is too lage set it to %d",
+            DataBasePool::MAX_POOL_SIZE);
+        my_pool_size = DataBasePool::MAX_POOL_SIZE;
+      }
+      for (int i = 0; i < pool_size; i++)
+      {
+        //TODO from conf file
+        conn_str[i] = (char*)malloc(100);
+        snprintf(conn_str[i], 100, "%s", ConnStr::mysql_conn_str_.c_str());
+        user_name[i] = (char*)malloc(100);
+        snprintf(user_name[i], 100, "%s", ConnStr::mysql_user_.c_str());
+        passwd[i] = (char*)malloc(100);
+        snprintf(passwd[i], 100, "%s", ConnStr::mysql_password_.c_str());
+        hash_flag[i] = 1; 
+
+      }
+      bool pool_ret = database_pool_->init_pool(pool_size, 
+          conn_str, user_name, passwd, hash_flag);
+
+      if(!pool_ret)
+      {
+        TBSYS_LOG(ERROR, "database pool init error");
+        ret = TFS_ERROR;
+      }
+      for (int i = 0; i < pool_size; i++)
+      {
+        free(conn_str[i]);
+        free(user_name[i]);
+        free(passwd[i]);
+      }
+      return ret;
     }
 
     MetaStoreManager::~MetaStoreManager()
     {
-      tbsys::gDelete(database_helper_);
-      //tbsys::gDelete(meta_cache_handler_);
+      tbsys::gDelete(database_pool_);
     }
 
 
@@ -51,7 +91,14 @@ namespace tfs
         real_pid = pid & ~(1L<<63);
       }
       
-      ret = database_helper_->ls_meta_info(tmp_meta_info, app_id, uid, real_pid, name, name_len);
+
+      DatabaseHelper* database_helper = NULL;
+      database_helper = database_pool_->get(database_pool_->get_hash_flag(app_id, uid));
+      if (NULL != database_helper)
+      {
+        ret = database_helper->ls_meta_info(tmp_meta_info, app_id, uid, real_pid, name, name_len);
+      }
+      database_pool_->release(database_helper);
       if (TFS_SUCCESS == ret)
       {
         std::vector<MetaInfo>::const_iterator it = tmp_meta_info.begin();
@@ -74,71 +121,78 @@ namespace tfs
       int ret = TFS_ERROR;
       int status = TFS_ERROR;
       int64_t proc_ret = 0;
+      
+      DatabaseHelper* database_helper = NULL;
+      database_helper = database_pool_->get(database_pool_->get_hash_flag(app_id, uid));
+      if (NULL != database_helper)
+      {
 
-      if (type == NORMAL_FILE)
-      {
-        status = database_helper_->create_file(app_id, uid, ppid, pid, pname, pname_len, name, name_len, proc_ret);
-        if (TFS_SUCCESS != status)
+        if (type == NORMAL_FILE)
         {
-          TBSYS_LOG(DEBUG, "database helper create file, status: %d", status);
-        }
-      }
-      else if (type == DIRECTORY)
-      {
-        int64_t id = 0;
-        status = database_helper_->get_nex_val(id);
-        if (TFS_SUCCESS == status && id != 0)
-        {
-          status = database_helper_->create_dir(app_id, uid, ppid, pname, pname_len, pid, id, name, name_len, proc_ret);
+          status = database_helper->create_file(app_id, uid, ppid, pid, pname, pname_len, name, name_len, proc_ret);
           if (TFS_SUCCESS != status)
           {
-            TBSYS_LOG(DEBUG, "database helper create dir, status: %d", status);
+            TBSYS_LOG(DEBUG, "database helper create file, status: %d", status);
           }
         }
-      }
-      else if (type == PWRITE_FILE)
-      {
-        if (NULL == meta_info)
+        else if (type == DIRECTORY)
         {
-          TBSYS_LOG(ERROR, "meta_info should not be NULL");
-        }
-        else
-        {
-          int64_t frag_len = meta_info->frag_info_.get_length();
-          if (frag_len > MAX_FRAG_INFO_SIZE)
+          int64_t id = 0;
+          status = database_helper->get_nex_val(id);
+          if (TFS_SUCCESS == status && id != 0)
           {
-            TBSYS_LOG(ERROR, "meta info is too long(%d > %d)", frag_len, MAX_FRAG_INFO_SIZE);
-            ret = TFS_ERROR;
+            status = database_helper->create_dir(app_id, uid, ppid, pname, pname_len, pid, id, name, name_len, proc_ret);
+            if (TFS_SUCCESS != status)
+            {
+              TBSYS_LOG(DEBUG, "database helper create dir, status: %d", status);
+            }
+          }
+        }
+        else if (type == PWRITE_FILE)
+        {
+          if (NULL == meta_info)
+          {
+            TBSYS_LOG(ERROR, "meta_info should not be NULL");
           }
           else
           {
-            int64_t pos = 0;
-            char* frag_info = (char*) malloc(frag_len);
-            if (NULL == frag_info)
+            int64_t frag_len = meta_info->frag_info_.get_length();
+            if (frag_len > MAX_FRAG_INFO_SIZE)
             {
-              TBSYS_LOG(ERROR, "mem not enough");
+              TBSYS_LOG(ERROR, "meta info is too long(%d > %d)", frag_len, MAX_FRAG_INFO_SIZE);
               ret = TFS_ERROR;
             }
             else
             {
-              status = meta_info->frag_info_.serialize(frag_info, frag_len, pos);
-              if (TFS_SUCCESS != status)
+              int64_t pos = 0;
+              char* frag_info = (char*) malloc(frag_len);
+              if (NULL == frag_info)
               {
-                TBSYS_LOG(ERROR, "get meta info failed, status: %d ", status);
+                TBSYS_LOG(ERROR, "mem not enough");
+                ret = TFS_ERROR;
               }
               else
               {
-                status = database_helper_->pwrite_file(app_id, uid, pid, name, name_len, meta_info->size_, meta_info->ver_no_, frag_info, frag_len, proc_ret);
+                status = meta_info->frag_info_.serialize(frag_info, frag_len, pos);
                 if (TFS_SUCCESS != status)
                 {
-                  TBSYS_LOG(DEBUG, "database helper pwrite file, status: %d", status);
+                  TBSYS_LOG(ERROR, "get meta info failed, status: %d ", status);
                 }
+                else
+                {
+                  status = database_helper->pwrite_file(app_id, uid, pid, name, name_len, meta_info->size_, meta_info->ver_no_, frag_info, frag_len, proc_ret);
+                  if (TFS_SUCCESS != status)
+                  {
+                    TBSYS_LOG(DEBUG, "database helper pwrite file, status: %d", status);
+                  }
+                }
+                free (frag_info);
               }
-              free (frag_info);
             }
           }
         }
       }
+      database_pool_->release(database_helper);
 
       if (TFS_SUCCESS == status && proc_ret > 0)
       {
@@ -162,24 +216,30 @@ namespace tfs
       int status = TFS_ERROR;
       int64_t proc_ret = 0;
 
-      if (type & NORMAL_FILE)
+      DatabaseHelper* database_helper = NULL;
+      database_helper = database_pool_->get(database_pool_->get_hash_flag(app_id, uid));
+      if (NULL != database_helper)
       {
-        status = database_helper_->mv_file(app_id, uid, s_ppid, s_pid, s_pname, s_pname_len,
-        d_ppid, d_pid, d_pname, d_pname_len, s_name, s_name_len, d_name, d_name_len, proc_ret);
-        if (TFS_SUCCESS != status)
+        if (type & NORMAL_FILE)
         {
-          TBSYS_LOG(DEBUG, "database helper mv file, status: %d", status);
+          status = database_helper->mv_file(app_id, uid, s_ppid, s_pid, s_pname, s_pname_len,
+              d_ppid, d_pid, d_pname, d_pname_len, s_name, s_name_len, d_name, d_name_len, proc_ret);
+          if (TFS_SUCCESS != status)
+          {
+            TBSYS_LOG(DEBUG, "database helper mv file, status: %d", status);
+          }
+        }
+        else if (type & DIRECTORY)
+        {
+          status = database_helper->mv_dir(app_id, uid, s_ppid, s_pid, s_pname, s_pname_len,
+              d_ppid, d_pid, d_pname, d_pname_len, s_name, s_name_len, d_name, d_name_len, proc_ret);
+          if (TFS_SUCCESS != status)
+          {
+            TBSYS_LOG(DEBUG, "database helper mv dir, status: %d", status);
+          }
         }
       }
-      else if (type & DIRECTORY)
-      {
-        status = database_helper_->mv_dir(app_id, uid, s_ppid, s_pid, s_pname, s_pname_len,
-        d_ppid, d_pid, d_pname, d_pname_len, s_name, s_name_len, d_name, d_name_len, proc_ret);
-        if (TFS_SUCCESS != status)
-        {
-          TBSYS_LOG(DEBUG, "database helper mv dir, status: %d", status);
-        }
-      }
+      database_pool_->release(database_helper);
 
       if (TFS_SUCCESS == status && proc_ret > 0)
       {
@@ -201,9 +261,13 @@ namespace tfs
       int status = TFS_ERROR;
       int64_t proc_ret = 0;
 
+      DatabaseHelper* database_helper = NULL;
+      database_helper = database_pool_->get(database_pool_->get_hash_flag(app_id, uid));
+      if (NULL != database_helper)
+      {
       if (type & NORMAL_FILE)
       {
-        status = database_helper_->rm_file(app_id, uid, ppid, pid, pname, pname_len, name, name_len, proc_ret);
+        status = database_helper->rm_file(app_id, uid, ppid, pid, pname, pname_len, name, name_len, proc_ret);
         if (TFS_SUCCESS != status)
         {
           TBSYS_LOG(DEBUG, "database helper rm file, status: %d", status);
@@ -217,13 +281,15 @@ namespace tfs
         }
         else
         {
-          status = database_helper_->rm_dir(app_id, uid, ppid, pname, pname_len, pid, id, name, name_len, proc_ret);
+          status = database_helper->rm_dir(app_id, uid, ppid, pname, pname_len, pid, id, name, name_len, proc_ret);
           if (TFS_SUCCESS != status)
           {
             TBSYS_LOG(DEBUG, "database helper rm dir, status: %d", status);
           }
         }
       }
+      }
+      database_pool_->release(database_helper);
 
       if (TFS_SUCCESS == status && proc_ret > 0)
       {

@@ -23,11 +23,16 @@ void dump_meta_info(const MetaInfo& metainfo)
 
   TBSYS_LOG(INFO, "size = %d, name_len = %d", size, nlen);
 }
+void dump_frag_meta(const FragMeta& fm)
+{
+  TBSYS_LOG(INFO, "offset_ %ld file_id_ %lu size_ %d block_id_ %u", 
+      fm.offset_, fm.file_id_, fm.size_, fm.block_id_);
+}
 
 int main()
 {
-  int64_t app_id = 3;
-  int64_t uid = 1;
+  int64_t app_id = 5;
+  int64_t uid = 5;
 
   char dir_path[512], new_dir_path[512], wrong_dir_path[512];
   char file_path[512], new_file_path[512], wrong_file_path[512];
@@ -50,8 +55,6 @@ int main()
   ret = service.create(app_id, uid, dir_path, DIRECTORY);
   printf("create dir %s, ret: %d\n", dir_path, ret);
 
-  ret = service.create(app_id, uid, dir_path, DIRECTORY);
-  printf("create dir %s, ret: %d\n", dir_path, ret);
 
   sprintf(new_file_path, "/taat/that");
 
@@ -63,25 +66,29 @@ int main()
   ret = service.create(app_id, uid, file_path, NORMAL_FILE);
   printf("create file %s, ret: %d\n", file_path, ret);
 
-  ret = service.create(app_id, uid, file_path, NORMAL_FILE);
-  printf("create file %s, ret: %d\n", file_path, ret);
 
+  printf("---------------------------\n");
 
-  bool still_have = true;
-  int64_t offset = 25;
-  int64_t size = 3;
-  int32_t write_ret = 0;
-  FragInfo in_frag_info, out_frag_info;
-  in_frag_info.cluster_id_ = 1;
-  //in_frag_info.v_frag_meta_.push_back(FragMeta(0, 23, 20, 23));
-  in_frag_info.v_frag_meta_.push_back(FragMeta(30, 23, 10, 23));
-  in_frag_info.v_frag_meta_.push_back(FragMeta(40, 23, 50, 23));
+  FragInfo tfi;
+  tfi.cluster_id_ = 1;
+  FragMeta tmp;
+  tmp.offset_ = 10;
+  tmp.file_id_ = 1;
+  tmp.size_ = 10;
+  tmp.block_id_ = 5;
+  tfi.v_frag_meta_.push_back(tmp);
 
-  ret = service.write(app_id, uid, file_path, in_frag_info, &write_ret);
-  printf("ret: %d\n", ret);
-  ret = service.read(app_id, uid, file_path, offset, size, out_frag_info, still_have);
-  printf("cluster id: %d, still_have: %d, ret: %d\n", out_frag_info.cluster_id_, still_have, ret);
-  out_frag_info.dump();
+  ret = service.write(app_id, uid, file_path, tfi);
+  printf("write file %s, ret: %d\n", file_path, ret);
+  tfi.v_frag_meta_.clear();
+  bool sh;
+  ret = service.read(app_id, uid, file_path, 2, 5, tfi, sh);
+  printf("read ret = %d, cid = %d sh = %d \n", ret, tfi.cluster_id_, sh);
+  for (size_t i = 0; i < tfi.v_frag_meta_.size(); i++)
+  {
+    dump_frag_meta(tfi.v_frag_meta_[i]);
+  }
+  return 0;
 
   sprintf(wrong_dir_path, "/admin/test");
   ret = service.create(app_id, uid, wrong_dir_path, DIRECTORY);

@@ -26,17 +26,19 @@ namespace tfs
     class DataBasePool
     {
       public:
-        explicit DataBasePool(const int32_t pool_size);
-        ~DataBasePool();
-        bool init_pool(const char** conn_str, const char** user_name,
-            const char** passwd, const int32_t* hash_flag);
-        DatabaseHelper* get(const int32_t hash_flag);
-        void release(DatabaseHelper* database_helper);
-      private:
         enum
         {
           MAX_POOL_SIZE = 20,
         };
+        DataBasePool();
+        ~DataBasePool();
+        bool init_pool(const int32_t pool_size,
+            char** conn_str, char** user_name,
+            char** passwd, int32_t* hash_flag);
+        DatabaseHelper* get(const int32_t hash_flag);
+        void release(DatabaseHelper* database_helper);
+        static int32_t get_hash_flag(const int64_t app_id, const int64_t uid);
+      private:
         struct DataBaseInfo
         {
           DataBaseInfo():database_helper_(NULL), busy_flag_(true), hash_flag_(-1) {}

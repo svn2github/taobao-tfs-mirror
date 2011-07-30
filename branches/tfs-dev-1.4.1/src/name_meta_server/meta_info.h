@@ -31,7 +31,6 @@ namespace tfs
       { };
       FragMeta(int64_t offset, uint64_t file_id, int32_t size, uint32_t block_id): offset_(offset), file_id_(file_id), size_(size), block_id_(block_id)
       { };
-      ~FragMeta();
       int64_t offset_;
       uint64_t file_id_;
       int32_t size_;

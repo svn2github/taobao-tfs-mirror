@@ -21,17 +21,9 @@ namespace tfs
   using namespace common;
   namespace namemetaserver
   {
-    DataBasePool::DataBasePool(const int32_t pool_size)
+    DataBasePool::DataBasePool():pool_size_(0)
     {
       my_init();
-      pool_size_ = pool_size;
-      if (pool_size_ > MAX_POOL_SIZE)
-      {
-        pool_size_ = MAX_POOL_SIZE;
-      } else if (pool_size_ < 1)
-      {
-        pool_size_ = 1;
-      }
     }
     DataBasePool::~DataBasePool()
     {
@@ -49,8 +41,9 @@ namespace tfs
       }
       mysql_thread_end();
     }
-    bool DataBasePool::init_pool(const char** conn_str, const char** user_name,
-        const char** passwd, const int32_t* hash_flag)
+    bool DataBasePool::init_pool(const int32_t pool_size, 
+        char** conn_str,  char** user_name,
+        char** passwd,  int32_t* hash_flag)
     {
       bool ret = true;
       for (int i = 0; i < pool_size_; i++)
@@ -59,6 +52,17 @@ namespace tfs
         {
           delete base_info_[i].database_helper_;
         }
+      }
+      pool_size_ = pool_size;
+      if (pool_size_ > MAX_POOL_SIZE)
+      {
+        pool_size_ = MAX_POOL_SIZE;
+      } else if (pool_size_ < 1)
+      {
+        pool_size_ = 1;
+      }
+      for (int i = 0; i < pool_size_; i++)
+      {
         base_info_[i].database_helper_ = new MysqlDatabaseHelper();
         if (TFS_SUCCESS != base_info_[i].database_helper_->set_conn_param(conn_str[i], user_name[i], passwd[i]))
         {
@@ -80,14 +84,30 @@ namespace tfs
     DatabaseHelper* DataBasePool::get(const int32_t hash_flag)
     {
       DatabaseHelper* ret = NULL;
-      tbutil::Mutex::Lock lock(mutex_);
-      for (int i = 0; i < pool_size_; i++)
+      if (0 == pool_size_)
       {
-        if (!base_info_[i].busy_flag_ && base_info_[i].hash_flag_ == hash_flag)
+        TBSYS_LOG(ERROR, "pool size is 0");
+      }
+      else
+      {
+        while(NULL == ret)
         {
-          ret = base_info_[i].database_helper_;
-          base_info_[i].busy_flag_ = true;
-          break;
+          {
+            tbutil::Mutex::Lock lock(mutex_);
+            for (int i = 0; i < pool_size_; i++)
+            {
+              if (!base_info_[i].busy_flag_ && base_info_[i].hash_flag_ == hash_flag)
+              {
+                ret = base_info_[i].database_helper_;
+                base_info_[i].busy_flag_ = true;
+                break;
+              }
+            }
+          }
+          if (NULL == ret)
+          {
+            usleep(500);
+          }
         }
       }
       return ret;
@@ -110,6 +130,12 @@ namespace tfs
           break;
         }
       }
+    }
+    int32_t DataBasePool::get_hash_flag(const int64_t app_id, const int64_t uid)
+    {
+      UNUSED(app_id);
+      UNUSED(uid);
+      return 1;
     }
 
   }

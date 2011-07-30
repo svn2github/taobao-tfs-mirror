@@ -27,6 +27,11 @@ namespace tfs
     MetaServerService::MetaServerService() : store_manager_(NULL)
     {
       store_manager_ =  new MetaStoreManager();
+      top_dir_name_[0] = 1;
+      top_dir_name_[1] = '/';
+      top_dir_size_ = 2;
+      //TODO  use the number from conf
+      store_manager_->init(5);
     }
 
     MetaServerService::~MetaServerService()
@@ -328,12 +333,11 @@ namespace tfs
 
     int MetaServerService::write(const int64_t app_id, const int64_t uid,
         const char* file_path,
-        const FragInfo& frag_info, int32_t* write_ret)
+        const FragInfo& frag_info)
     {
       char name[MAX_FILE_PATH_LEN];
       int32_t name_len = 0, pname_len = 0;
       int ret = TFS_SUCCESS;
-      UNUSED(write_ret); //TODO all frgment ret is error;
 
       MetaInfo p_meta_info;
       std::vector<MetaInfo> tmp_v_meta_info;
@@ -452,7 +456,7 @@ namespace tfs
               //resort it
               sort(v_meta_info_it->frag_info_.v_frag_meta_.begin(),
                   v_meta_info_it->frag_info_.v_frag_meta_.end());
-              //TODO ret = check_frag_info(v_meta_info_it->frag_info_);
+              ret = check_frag_info(v_meta_info_it->frag_info_);
               if (TFS_SUCCESS == ret)
               {
                 //update this info;
@@ -618,12 +622,47 @@ namespace tfs
 
     int MetaServerService::create_top_dir(const int64_t app_id, const int64_t uid)
     {
-      char name[3];
-      name[0] = 1;
-      name[1] = '/';
-      name[2] = '\0';
 
-      return store_manager_->insert(app_id, uid, 0, "", 0, 0, name, 2, DIRECTORY);
+      return store_manager_->insert(app_id, uid, 0, "", 0, 0, 
+          top_dir_name_, top_dir_size_, DIRECTORY);
+    }
+
+    int MetaServerService::check_frag_info(const FragInfo& frag_info)
+    {
+      int ret = TFS_SUCCESS;
+      if (frag_info.v_frag_meta_.size() > 0 && frag_info.cluster_id_ <= 0)
+      {
+        TBSYS_LOG(ERROR, "cluster id error %d", frag_info.cluster_id_);
+        ret = TFS_ERROR;
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        if (static_cast<int32_t>(frag_info.v_frag_meta_.size())
+            > SOFT_MAX_FRAG_INFO_COUNT &&
+            !frag_info.had_been_split_)
+        {
+          TBSYS_LOG(ERROR, "frag_meta count %d, should be split", 
+              frag_info.v_frag_meta_.size());
+          ret = TFS_ERROR;
+        }
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        int64_t last_offset = -1;
+        for (size_t i = 0; i < frag_info.v_frag_meta_.size(); i++)
+        {
+          if (frag_info.v_frag_meta_[i].offset_ <= last_offset)
+          {
+            TBSYS_LOG(ERROR, "frag info have some error");
+            ret = TFS_ERROR;
+            break;
+          }
+          last_offset = frag_info.v_frag_meta_[i].offset_ + 
+            frag_info.v_frag_meta_[i].size_;
+        }
+
+      }
+      return ret;
     }
     int MetaServerService::int64_to_char(char* buff, const int32_t buff_size, const int64_t v)
     {

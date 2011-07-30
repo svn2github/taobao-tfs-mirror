@@ -19,7 +19,7 @@
 #include "metaserver_define.h"
 #include "meta_info.h"
 #include "mysql_database_helper.h"
-//#include "meta_cache_handler.h"
+#include "database_pool.h"
 
 namespace tfs
 {
@@ -30,6 +30,7 @@ namespace tfs
       public:
         MetaStoreManager();
         ~MetaStoreManager();
+        int init(const int32_t pool_size);
 
         int select(const int64_t app_id, const int64_t uid,
             const int64_t pid, const char* name, const int32_t name_len, const bool is_file, std::vector<MetaInfo>& out_v_meta_info);
@@ -51,8 +52,7 @@ namespace tfs
             const char* name, const int64_t name_len,
             const FileType type);
       private:
-        DatabaseHelper* database_helper_;
-        //MetaCacheHandler* meta_cache_handler_;
+        DataBasePool* database_pool_;
     };
   }
 }
