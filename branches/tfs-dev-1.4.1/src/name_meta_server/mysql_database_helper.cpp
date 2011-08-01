@@ -87,6 +87,7 @@ namespace tfs
           ps_params_[2].buffer = (char *) &pid_;
           ps_params_[2].length = 0;
           ps_params_[2].is_null = 0;
+          ps_params_[2].is_unsigned = 1;
 
           ps_params_[3].buffer_type = MYSQL_TYPE_VAR_STRING;
           ps_params_[3].buffer = (char *) pname_;
