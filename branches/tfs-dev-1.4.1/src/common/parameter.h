@@ -132,10 +132,27 @@ namespace tfs
       }
     };
 
+    struct NameMeatServerParameter
+    {
+      int initialize(void);
+
+      std::string db_info_;
+      std::string db_user_;
+      std::string db_pwd_;
+      int32_t max_frag_info_size_;
+
+      static NameMeatServerParameter meta_parameter_;
+      static NameMeatServerParameter& instance()
+      {
+        return meta_parameter_;
+      }
+    };
+
 #define SYSPARAM_NAMESERVER NameServerParameter::instance()
 #define SYSPARAM_DATASERVER DataServerParameter::instance()
 #define SYSPARAM_FILESYSPARAM FileSystemParameter::instance()
 #define SYSPARAM_RCSERVER RcServerParameter::instance()
+#define SYSPARAM_NAMEMETASERVER NAMEMETAServerParameter::instance()
   }/** common **/
 }/** tfs **/
 #endif //TFS_COMMON_SYSPARAM_H_

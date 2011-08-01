@@ -216,6 +216,18 @@ namespace tfs
           case common::GET_DATASERVER_INFORMATION_RESPONSE_MESSAGE:
             packet = new GetDataServerInformationResponseMessage();
             break;
+          case common::FILEPATH_ACTION_MESSAGE:
+            packet = new FilepathActionMessage();
+            break;
+          case common::WRITE_FILEPATH_MESSAGE:
+            packet = new WriteFilepathMessage();
+            break;
+          case common::READ_FILEPATH_MESSAGE:
+            packet = new ReadFilepathMessage();
+            break;
+          case common::RESP_READ_FILEPATH_MESSAGE:
+            packet = new RespReadFilepathMessage();
+            break;
           default:
             TBSYS_LOG(ERROR, "pcode: %d not found in message factory", real_pcode);
             break;

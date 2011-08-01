@@ -40,6 +40,7 @@
 #include "dump_plan_message.h"
 #include "rc_session_message.h"
 #include "get_dataserver_information_message.h"
+#include "meta_nameserver_client_message.h"
 
 namespace tfs
 {

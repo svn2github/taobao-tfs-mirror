@@ -28,6 +28,7 @@ namespace tfs
 #define CONF_SN_ADMINSERVER                           "adminserver"
 #define CONF_SN_MOCK_DATASERVER                       "mockdataserver"
 #define CONF_SN_RCSERVER                              "rcserver"
+#define CONF_SN_NAMEMETASERVER                        "metaserver"
 
 #define CONF_CLUSTER_ID                               "cluster_id"
 #define CONF_LOCK_FILE                                "lock_file"
@@ -144,6 +145,12 @@ namespace tfs
 #define CONF_RC_DB_INFO                               "rc_db_info"
 #define CONF_RC_DB_USER                               "rc_db_user"
 #define CONF_RC_DB_PWD                                "rc_db_pwd"
+
+//name_meta_server
+#define CONF_MAX_FRAG_INFO_SIZE                       "meta_max_frag_info_size"
+#define CONF_META_DB_INFO                             "meta_db_info"
+#define CONF_META_DB_USER                             "meta_db_user"
+#define CONF_META_DB_PWD                              "meta_db_pwd"
   }
 }
 #endif //TFS_COMMON_CONFDEFINE_H_

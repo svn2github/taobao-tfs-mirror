@@ -33,6 +33,7 @@ namespace tfs
     FileSystemParameter FileSystemParameter::fs_parameter_;
     DataServerParameter DataServerParameter::ds_parameter_;
     RcServerParameter RcServerParameter::rc_parameter_;
+    NameMeatServerParameter NameMeatServerParameter::meta_parameter_;
 
     int NameServerParameter::initialize(void)
     {
@@ -290,6 +291,16 @@ namespace tfs
       monitor_interval_ = TBSYS_CONFIG.getInt(CONF_SN_RCSERVER, CONF_RC_MONITOR_INTERVAL, 60);
       stat_interval_ = TBSYS_CONFIG.getInt(CONF_SN_RCSERVER, CONF_RC_STAT_INTERVAL, 120);
       update_interval_ = TBSYS_CONFIG.getInt(CONF_SN_RCSERVER, CONF_RC_UPDATE_INTERVAL, 30);
+      return TFS_SUCCESS;
+    }
+
+    int NameMeatServerParameter::initialize(void)
+    {
+      db_info_ = TBSYS_CONFIG.getString(CONF_SN_NAMEMETASERVER, CONF_META_DB_INFO, "");
+      db_user_ = TBSYS_CONFIG.getString(CONF_SN_NAMEMETASERVER, CONF_META_DB_USER, "");
+      db_pwd_ = TBSYS_CONFIG.getString(CONF_SN_NAMEMETASERVER, CONF_META_DB_PWD, "");
+
+      max_frag_info_size_ = TBSYS_CONFIG.getInt(CONF_SN_NAMEMETASERVER, CONF_MAX_FRAG_INFO_SIZE, 65535);
       return TFS_SUCCESS;
     }
   }/** common **/

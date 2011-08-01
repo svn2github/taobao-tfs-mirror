@@ -18,7 +18,9 @@
 #define TFS_NAMEMETASERVER_NAMEMETASERVERSERVICE_H_
 
 #include "common/base_service.h"
+#include "common/status_message.h"
 #include "message/message_factory.h"
+#include "message/meta_nameserver_client_message.h"
 #include "meta_store_manager.h"
 
 namespace tfs
@@ -41,6 +43,10 @@ namespace tfs
       virtual const char* get_log_file_path();
       virtual const char* get_pid_file_path();
       virtual bool handlePacketQueue(tbnet::Packet* packet, void* args);
+
+      int do_action(common::BasePacket* packet);
+      int do_write(common::BasePacket* packet);
+      int do_read(common::BasePacket* packet);
 
       int create(const int64_t app_id, const int64_t uid,
           const char* file_path, const FileType type);

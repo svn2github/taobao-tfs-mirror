@@ -27,14 +27,14 @@ namespace tfs
   {
     struct FragMeta
     {
-      FragMeta(): offset_(0), file_id_(0), size_(0), block_id_(0)
+      FragMeta(): block_id_(0), file_id_(0), offset_(0), size_(0)
       { };
-      FragMeta(int64_t offset, uint64_t file_id, int32_t size, uint32_t block_id): offset_(offset), file_id_(file_id), size_(size), block_id_(block_id)
+      FragMeta(uint32_t block_id, uint64_t file_id, int64_t offset, int32_t size): block_id_(block_id), file_id_(file_id), offset_(offset), size_(size)
       { };
-      int64_t offset_;
-      uint64_t file_id_;
-      int32_t size_;
       uint32_t block_id_;
+      uint64_t file_id_;
+      int64_t offset_;
+      int32_t size_;
       static int64_t get_length()
       {
         return 2 * sizeof(int64_t) + 2 * sizeof(int32_t);
@@ -44,10 +44,10 @@ namespace tfs
         int ret = common::TFS_ERROR;
         if (buff_len - pos >= get_length())
         {
-          common::Serialization::set_int64(data, buff_len, pos, offset_);
-          common::Serialization::set_int64(data, buff_len, pos, file_id_);
-          common::Serialization::set_int32(data, buff_len, pos, size_);
           common::Serialization::set_int32(data, buff_len, pos, block_id_);
+          common::Serialization::set_int64(data, buff_len, pos, file_id_);
+          common::Serialization::set_int64(data, buff_len, pos, offset_);
+          common::Serialization::set_int32(data, buff_len, pos, size_);
           ret = common::TFS_SUCCESS;
         }
         return ret;
@@ -56,55 +56,52 @@ namespace tfs
       int serialize(common::Stream& output) const
       {
         int ret = common::TFS_ERROR;
-        if (output.get_free_length() > get_length())
+        ret = output.set_int32(block_id_);
+        if (common::TFS_SUCCESS == ret)
+        {
+          ret = output.set_int64(file_id_);
+        }
+        if (common::TFS_SUCCESS == ret)
         {
           ret = output.set_int64(offset_);
-          if (common::TFS_SUCCESS == ret)
-          {
-            ret = output.set_int64(file_id_);
-          }
-          if (common::TFS_SUCCESS == ret)
-          {
-            ret = output.set_int32(size_);
-          }
-          if (common::TFS_SUCCESS == ret)
-          {
-            ret = output.set_int32(block_id_);
-          }
+        }
+        if (common::TFS_SUCCESS == ret)
+        {
+          ret = output.set_int32(size_);
         }
         return ret;
       }
       int deserialize(char* data, const int64_t data_len, int64_t& pos)
       {
-        int ret = common::Serialization::get_int64(data, data_len, pos, &offset_);
+        int ret = common::Serialization::get_int32(data, data_len, pos, reinterpret_cast<int32_t*>(&block_id_));
         if (common::TFS_SUCCESS == ret)
         {
           ret = common::Serialization::get_int64(data, data_len, pos, reinterpret_cast<int64_t*>(&file_id_));
         }
         if (common::TFS_SUCCESS == ret)
         {
-          ret = common::Serialization::get_int32(data, data_len, pos, &size_);
+          ret = common::Serialization::get_int64(data, data_len, pos, &offset_);
         }
         if (common::TFS_SUCCESS == ret)
         {
-          ret = common::Serialization::get_int32(data, data_len, pos, reinterpret_cast<int32_t*>(&block_id_));
+          ret = common::Serialization::get_int32(data, data_len, pos, &size_);
         }
         return ret;
       }
       int deserialize(common::Stream& input)
       {
-        int ret = input.get_int64(&offset_);
+        int ret = input.get_int32(reinterpret_cast<int32_t*>(&block_id_));
         if (common::TFS_SUCCESS == ret)
         {
           ret = input.get_int64(reinterpret_cast<int64_t*>(&file_id_));
         }
         if (common::TFS_SUCCESS == ret)
         {
-          ret = input.get_int32(&size_);
+          ret = input.get_int64(&offset_);
         }
         if (common::TFS_SUCCESS == ret)
         {
-          ret = input.get_int32(reinterpret_cast<int32_t*>(&block_id_));
+          ret = input.get_int32(&size_);
         }
         return ret;
       }
@@ -136,16 +133,15 @@ namespace tfs
       int serialize(char* data, const int64_t buff_len, int64_t& pos) const
       {
         int ret = common::TFS_ERROR;
+        common::Serialization::set_int32(data, buff_len, pos, cluster_id_);
         if (buff_len - pos >= get_length())
         {
           int32_t frag_count = static_cast<int32_t>(v_frag_meta_.size());
-          assert(frag_count  > 0 );
           if (had_been_split_)
           {
             frag_count |= (1 << 31);
           }
           common::Serialization::set_int32(data, buff_len, pos, frag_count);
-          common::Serialization::set_int32(data, buff_len, pos, cluster_id_);
           std::vector<FragMeta>::const_iterator iter = v_frag_meta_.begin();
           for (; iter != v_frag_meta_.end(); iter++)
           {
@@ -158,26 +154,18 @@ namespace tfs
       int serialize(common::Stream& output) const
       {
         int ret = common::TFS_ERROR;
-        if (output.get_free_length() >= get_length())
+        ret = output.set_int32(cluster_id_);
+        int32_t frag_count = static_cast<int32_t>(v_frag_meta_.size());
+        if (common::TFS_SUCCESS == ret)
         {
-          int32_t frag_count = static_cast<int32_t>(v_frag_meta_.size());
-          assert(frag_count  > 0 );
-          if (had_been_split_)
-          {
-            frag_count |= (1 << 31);
-          }
           ret = output.set_int32(frag_count);
+        }
+        std::vector<FragMeta>::const_iterator iter = v_frag_meta_.begin();
+        for (; iter != v_frag_meta_.end(); iter++)
+        {
           if (common::TFS_SUCCESS == ret)
           {
-            ret = output.set_int32(cluster_id_);
-          }
-          std::vector<FragMeta>::const_iterator iter = v_frag_meta_.begin();
-          for (; iter != v_frag_meta_.end(); iter++)
-          {
-            if (common::TFS_SUCCESS == ret)
-            {
-              ret = (*iter).serialize(output);
-            }
+            ret = (*iter).serialize(output);
           }
         }
         return ret;
@@ -185,12 +173,12 @@ namespace tfs
       int deserialize(char* data, const int64_t data_len, int64_t& pos)
       {
         int32_t frg_count = 0;
-        int ret = common::Serialization::get_int32(data, data_len, pos, &frg_count);
+        int ret = common::Serialization::get_int32(data, data_len, pos, &cluster_id_);
         if (common::TFS_SUCCESS == ret)
         {
+          ret = common::Serialization::get_int32(data, data_len, pos, &frg_count);
           had_been_split_ = (frg_count >> 31);
           frg_count = frg_count & ~(1 << 31);
-          ret = common::Serialization::get_int32(data, data_len, pos, &cluster_id_);
         }
         if (common::TFS_SUCCESS == ret)
         {
@@ -207,12 +195,10 @@ namespace tfs
       int deserialize(common::Stream& input)
       {
         int32_t frg_count = 0;
-        int ret = input.get_int32(&frg_count);
+        int ret = input.get_int32(&cluster_id_);
         if (common::TFS_SUCCESS == ret)
         {
-          had_been_split_ = (frg_count >> 31);
-          frg_count = frg_count & ~(1 << 31);
-          ret = input.get_int32(&cluster_id_);
+          ret = input.get_int32(&frg_count);
         }
         if (common::TFS_SUCCESS == ret)
         {

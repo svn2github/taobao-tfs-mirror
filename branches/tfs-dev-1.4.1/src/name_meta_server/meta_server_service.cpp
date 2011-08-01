@@ -18,6 +18,7 @@
 #include "meta_server_service.h"
 
 using namespace tfs::common;
+using namespace tfs::message;
 using namespace std;
 
 namespace tfs
@@ -94,10 +95,19 @@ namespace tfs
         base_packet = dynamic_cast<BasePacket*>(packet);
         switch (base_packet->getPCode())
         {
-        default:
-          ret = EXIT_UNKNOWN_MSGTYPE;
-          TBSYS_LOG(ERROR, "unknown msg type: %d", base_packet->getPCode());
-          break;
+          case FILEPATH_ACTION_MESSAGE:
+            ret = do_action(base_packet);
+            break;
+          case WRITE_FILEPATH_MESSAGE:
+            ret = do_write(base_packet);
+            break;
+          case READ_FILEPATH_MESSAGE:
+            ret = do_read(base_packet);
+            break;
+          default:
+            ret = EXIT_UNKNOWN_MSGTYPE;
+            TBSYS_LOG(ERROR, "unknown msg type: %d", base_packet->getPCode());
+            break;
         }
       }
 
@@ -108,6 +118,121 @@ namespace tfs
 
       // always return true. packet will be freed by caller
       return true;
+    }
+    int MetaServerService::do_action(common::BasePacket* packet)
+    {
+      int ret = TFS_SUCCESS;
+      if (NULL == packet)
+      {
+        ret = EXIT_INVALID_ARGU;
+        TBSYS_LOG(ERROR, "MetaNameService::do action fail. input packet invaild. ret: %d", ret);
+      }
+      else
+      {
+        FilepathActionMessage* req_fa_msg = dynamic_cast<FilepathActionMessage*>(packet);
+        int64_t app_id = req_fa_msg->get_app_id();
+        int64_t uid = req_fa_msg->get_user_id();
+        const char* file_path = req_fa_msg->get_file_path();
+        const char* new_file_path = req_fa_msg->get_new_file_path();
+        common::MetaActionOp action = req_fa_msg->get_action();
+        TBSYS_LOG(DEBUG, "call FilepathActionMessage::do action start. app_id: %"PRI64_PREFIX"d, uid: %"PRI64_PREFIX"d, file_path: %s, new_file_path: %s, action: %d ret: %d",
+            app_id, uid, file_path, action, ret);
+        switch (action)
+        {
+          case CREATE_DIR:
+            ret = create(app_id, uid, file_path, DIRECTORY);
+            break;
+          case CREATE_FILE:
+            ret = create(app_id, uid, file_path, NORMAL_FILE);
+            break;
+          case REMOVE_DIR:
+            ret = rm(app_id, uid, file_path, DIRECTORY);
+            break;
+          case REMOVE_FILE:
+            ret = rm(app_id, uid, file_path, NORMAL_FILE);
+            break;
+          case MOVE_DIR:
+            ret = mv(app_id, uid, file_path, new_file_path, DIRECTORY);
+            break;
+          case MOVE_FILE:
+            ret = mv(app_id, uid, file_path, new_file_path, NORMAL_FILE);
+            break;
+          default:
+            break;
+        }
+
+        if (ret != TFS_SUCCESS)
+        {
+          ret = req_fa_msg->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret, "execute message failed");
+        }
+        else
+        {
+          ret = req_fa_msg->reply(new StatusMessage(STATUS_MESSAGE_OK));
+        }
+      }
+      return ret;
+    }
+
+    int MetaServerService::do_write(common::BasePacket* packet)
+    {
+      int ret = TFS_SUCCESS;
+      if (NULL == packet)
+      {
+        ret = EXIT_INVALID_ARGU;
+        TBSYS_LOG(ERROR, "MetaNameService::do write fail. input packet invaild. ret: %d", ret);
+      }
+      else
+      {
+        WriteFilepathMessage* req_wf_msg = dynamic_cast<WriteFilepathMessage*>(packet);
+        TBSYS_LOG(DEBUG, "call FilepathActionMessage::do action start. app_id: %"PRI64_PREFIX"d, user_id: %"PRI64_PREFIX"d, file_path: %s, meta_size: %zd ret: %d",
+            req_wf_msg->get_app_id(), req_wf_msg->get_user_id(), req_wf_msg->get_file_path(), req_wf_msg->get_frag_info().v_frag_meta_.size(), ret);
+
+        ret = write(req_wf_msg->get_app_id(), req_wf_msg->get_user_id(), req_wf_msg->get_file_path(), req_wf_msg->get_frag_info());
+        if (ret != TFS_SUCCESS)
+        {
+          ret = req_wf_msg->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret, "execute message failed");
+        }
+        else
+        {
+          ret = req_wf_msg->reply(new StatusMessage(STATUS_MESSAGE_OK));
+        }
+      }
+      return ret;
+    }
+
+    int MetaServerService::do_read(common::BasePacket* packet)
+    {
+      int ret = TFS_SUCCESS;
+      if (NULL == packet)
+      {
+        ret = EXIT_INVALID_ARGU;
+        TBSYS_LOG(ERROR, "MetaNameService::do read fail. input packet invaild. ret: %d", ret);
+      }
+      else
+      {
+        ReadFilepathMessage* req_rf_msg = dynamic_cast<ReadFilepathMessage*>(packet);
+        TBSYS_LOG(DEBUG, "call FilepathActionMessage::do read start. app_id: %"PRI64_PREFIX"d, user_id: %"PRI64_PREFIX"d, "
+            "file_path: %s, offset :%"PRI64_PREFIX"d, size: %"PRI64_PREFIX"d, ret: %d",
+            req_rf_msg->get_app_id(), req_rf_msg->get_user_id(), req_rf_msg->get_file_path(), req_rf_msg->get_offset(), req_rf_msg->get_size(), ret);
+
+        FragInfo frag_info;
+        bool still_have;
+        ret = read(req_rf_msg->get_app_id(), req_rf_msg->get_user_id(), req_rf_msg->get_file_path(), req_rf_msg->get_offset(), req_rf_msg->get_size(), frag_info, still_have);
+        if (ret != TFS_SUCCESS)
+        {
+          RespReadFilepathMessage* resp_rf_msg = new RespReadFilepathMessage();
+          resp_rf_msg->set_frag_info(frag_info);
+          resp_rf_msg->set_still_have(still_have);
+          ret = req_rf_msg->reply(resp_rf_msg);
+
+          tbsys::gDelete(resp_rf_msg);
+        }
+        else
+        {
+          ret = req_rf_msg->reply(new StatusMessage(STATUS_MESSAGE_OK));
+        }
+      }
+      return ret;
     }
 
     int MetaServerService::create(const int64_t app_id, const int64_t uid,
