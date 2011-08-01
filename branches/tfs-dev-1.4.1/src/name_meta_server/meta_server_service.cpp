@@ -450,6 +450,14 @@ namespace tfs
             still_have = true;
             memcpy(search_name, last_metaInfo.name_.data(), last_metaInfo.name_.length());
             search_name_len = last_metaInfo.name_.length();
+            if (search_name_len == (unsigned char)search_name[0] + 1)
+            {
+              int64_to_char(search_name + search_name_len, 8, 
+                  last_metaInfo.frag_info_.get_last_offset());
+              search_name_len += 8;
+            }
+            
+
           }
         }
       } while(TFS_SUCCESS == ret && still_have);
@@ -553,6 +561,7 @@ namespace tfs
               if (static_cast<int32_t>(v_meta_info_it->frag_info_.v_frag_meta_.size()) 
                   > SOFT_MAX_FRAG_INFO_COUNT)
               {
+                TBSYS_LOG(DEBUG, "split meta_info");
                 v_meta_info_it->frag_info_.had_been_split_ = true;
               }
             }
