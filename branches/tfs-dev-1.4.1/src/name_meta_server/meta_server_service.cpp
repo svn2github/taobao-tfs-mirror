@@ -776,7 +776,7 @@ namespace tfs
         int64_t last_offset = -1;
         for (size_t i = 0; i < frag_info.v_frag_meta_.size(); i++)
         {
-          if (frag_info.v_frag_meta_[i].offset_ <= last_offset)
+          if (frag_info.v_frag_meta_[i].offset_ < last_offset)
           {
             TBSYS_LOG(ERROR, "frag info have some error");
             ret = TFS_ERROR;

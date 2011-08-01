@@ -62,6 +62,10 @@ namespace tfs
           FragInfo& frag_info, bool& still_have);
       //TODO ls
 
+      static int check_frag_info(const FragInfo& frag_info);
+      static int int64_to_char(char* buff, const int32_t buff_size, const int64_t v);
+      static int char_to_int64(char* data, const int32_t data_size, int64_t& v);
+
     private:
       // override
       virtual int initialize(int argc, char* argv[]);
@@ -85,10 +89,6 @@ namespace tfs
           const int64_t offset, const int32_t size,
           int32_t& cluster_id, std::vector<FragMeta>& v_out_frag_info, bool& still_have);
       
-      static int check_frag_info(const FragInfo& frag_info);
-
-      static int int64_to_char(char* buff, const int32_t buff_size, const int64_t v);
-      static int char_to_int64(char* data, const int32_t data_size, int64_t& v);
 
     private:
       char top_dir_name_[10];
