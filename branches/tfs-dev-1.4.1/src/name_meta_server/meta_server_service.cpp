@@ -444,7 +444,7 @@ namespace tfs
         {
           const MetaInfo& last_metaInfo = tmp_v_meta_info[tmp_v_meta_info.size() - 1];
           cluster_id = last_metaInfo.frag_info_.cluster_id_;
-          if (last_metaInfo.frag_info_.get_last_offset() < offset &&
+          if (last_metaInfo.frag_info_.get_last_offset() <= offset &&
               last_metaInfo.frag_info_.had_been_split_)
           {
             still_have = true;
@@ -456,8 +456,6 @@ namespace tfs
                   last_metaInfo.frag_info_.get_last_offset());
               search_name_len += 8;
             }
-            
-
           }
         }
       } while(TFS_SUCCESS == ret && still_have);
@@ -572,12 +570,15 @@ namespace tfs
               {
                 if (write_frag_info_it->offset_ >= last_offset)
                 {
-                  //TODO this means the frag clinet give me have a hole in it 
                   ret = TFS_ERROR;
                   break;
                 }
                 v_meta_info_it->frag_info_.v_frag_meta_.push_back(*write_frag_info_it);
                 write_frag_info_it ++;
+              }
+              if (TFS_SUCCESS != ret)
+              {
+                break;
               }
               if (static_cast<int32_t>(v_meta_info_it->frag_info_.v_frag_meta_.size()) >= MAX_FRAG_INFO_COUNT)
               {
@@ -627,7 +628,7 @@ namespace tfs
 
       while (meta_info_it != v_meta_info.end())
       {
-        if (meta_info_it->frag_info_.get_last_offset() < offset)
+        if (meta_info_it->frag_info_.get_last_offset() <= offset)
         {
           meta_info_it++;
           continue;
