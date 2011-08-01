@@ -129,7 +129,7 @@ namespace tfs
         blocks_.push_back(*block_info);
     }
 
-    SuspectDataserverMessage::SuspectDataserverMessage():
+    /*SuspectDataserverMessage::SuspectDataserverMessage():
       server_id_(0)
     {
       _packetHeader._pcode = common::SUSPECT_DATASERVER_MESSAGE;
@@ -152,6 +152,6 @@ namespace tfs
     int SuspectDataserverMessage::serialize(common::Stream& output) const 
     {
       return output.set_int64(server_id_);
-    }
+    }*/
   }
 }

@@ -191,9 +191,9 @@ namespace tfs
           NEWCLIENT_MAP_ITER iter = new_clients_.find(id);
           if (iter != new_clients_.end())
           {
+            new_clients_.erase(iter);
             free_new_client_object(client);
             TBSYS_LOG(DEBUG, "erase client id: %u", id);
-            new_clients_.erase(iter);
           }
           else
           {
@@ -226,14 +226,14 @@ namespace tfs
         {
           client = iter->second;
         }
-      }
 
-      //if got control packet or NULL, we will still add the done counter
-      if ((ret)
-        && (NULL != client))
-      {
-        // if got control packet or NULL, we will still add the done counter
-        ret = client->handlePacket(id, response, is_callback);
+        //if got control packet or NULL, we will still add the done counter
+        if ((ret)
+            && (NULL != client))
+        {
+          // if got control packet or NULL, we will still add the done counter
+          ret = client->handlePacket(id, response, is_callback);
+        }
       }
 
       //async callback

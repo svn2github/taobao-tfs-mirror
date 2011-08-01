@@ -117,7 +117,6 @@ namespace tfs
           }
           else
           {
-            TBSYS_LOG(DEBUG, "seq_id: %u, send_id: %d, pcode: %d", id.seq_id_, id.send_id_, packet->getPCode());
             //dynamic_cast<BasePacket*>(send_msg)->set_auto_free(true);
             bool send_ok = NewClientManager::get_instance().connmgr_->sendPacket(server, send_msg,
                 NULL, reinterpret_cast<void*>(*(reinterpret_cast<int32_t*>(&id))));
@@ -133,6 +132,9 @@ namespace tfs
           }
         }
       }
+      TBSYS_LOG(DEBUG, "send msg to server: %s %s, seq_id: %u, send_id: %d, pcode: %d", 
+                 tbsys::CNetUtil::addrToString(server).c_str(), TFS_SUCCESS == ret ? "successful" : "fail",
+                 seq_id_, send_id, packet->getPCode());
       return ret;
     }
 
