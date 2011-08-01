@@ -133,9 +133,9 @@ namespace tfs
       int serialize(char* data, const int64_t buff_len, int64_t& pos) const
       {
         int ret = common::TFS_ERROR;
-        common::Serialization::set_int32(data, buff_len, pos, cluster_id_);
         if (buff_len - pos >= get_length())
         {
+          common::Serialization::set_int32(data, buff_len, pos, cluster_id_);
           int32_t frag_count = static_cast<int32_t>(v_frag_meta_.size());
           if (had_been_split_)
           {
