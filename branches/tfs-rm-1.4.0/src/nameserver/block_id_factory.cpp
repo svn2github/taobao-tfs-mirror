@@ -132,15 +132,20 @@ namespace tfs
       int32_t iret = common::Serialization::set_int32(data, common::INT_SIZE, pos, id);
       if (common::TFS_SUCCESS == iret)
       {
+        int32_t offset = 0;
         int32_t length = 0;
         int32_t count  = 0;
         do
         {
           ++count;
-          length = ::write(fd_, data, common::INT_SIZE);
+          length = ::write(fd_, (data + offset), (common::INT_SIZE - offset));
+          if (length > 0)
+          {
+            offset += length;
+          }
         }
-        while (count < 3 && length != common::INT_SIZE);
-        iret = common::INT_SIZE == length ? common::TFS_SUCCESS : common::TFS_ERROR;
+        while (count < 3 && offset < common::INT_SIZE);
+        iret = common::INT_SIZE == offset ? common::TFS_SUCCESS : common::TFS_ERROR;
       }
       return iret;
     }

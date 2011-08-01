@@ -265,7 +265,7 @@ namespace tfs
       status_ = PLAN_STATUS_BEGIN;
       begin_time_ = time(NULL);
       end_time_ = begin_time_ + SYSPARAM_NAMESERVER.run_plan_expire_interval_;
-      return TFS_SUCCESS;
+      return iret;
     }
 
     int LayoutManager::CompactTask::handle_complete(common::BasePacket* msg, bool& all_complete_flag)

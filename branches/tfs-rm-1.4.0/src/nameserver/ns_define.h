@@ -28,6 +28,9 @@
 #include "common/parameter.h"
 #include "common/new_client.h"
 
+//#define TFS_NS_GTEST
+//#define TFS_NS_DEBUG
+
 namespace tfs
 {
   namespace nameserver

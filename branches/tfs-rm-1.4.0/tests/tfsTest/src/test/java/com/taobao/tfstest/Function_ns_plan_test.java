@@ -32,10 +32,6 @@ public class Function_ns_plan_test extends NameServerPlanTestCase {
 		bRet = setSeedSize(1);
 		Assert.assertTrue(bRet);
 		
-		/* Set unlink ratio */
-		bRet = setUnlinkRatio(0);
-		Assert.assertTrue(bRet);
-		
 		/* Write file */
 		bRet = writeCmd();
 		Assert.assertTrue(bRet);
@@ -56,13 +52,15 @@ public class Function_ns_plan_test extends NameServerPlanTestCase {
 		Assert.assertTrue(bRet);
 		
 		/* Check block copys */
-		bRet = chkBlockCnt(BLOCK_CHK_TIME, 0);
-		Assert.assertTrue(bRet);
-		bRet = chkBlockCnt(BLOCK_CHK_TIME, 1);
+		bRet = chkBlockCntBothNormal(2);
 		Assert.assertTrue(bRet);
 
 		/* Check dump plan log */
 		bRet = checkPlan(PlanType.PLAN_TYPE_EMERG_REPLICATE, BLOCK_CHK_TIME);
+		Assert.assertTrue(bRet);
+		
+		/* Check multi replicated block */
+		bRet = chkMultiReplicatedBlock();
 		Assert.assertTrue(bRet);
 		
 		/* Read file */
@@ -120,15 +118,13 @@ public class Function_ns_plan_test extends NameServerPlanTestCase {
 		Assert.assertTrue(bRet);
 		
 		/* Check block copys */
-		bRet = chkBlockCnt(BLOCK_CHK_TIME, 0);
-		Assert.assertTrue(bRet);
-		bRet = chkBlockCnt(BLOCK_CHK_TIME, 1);
+		bRet = chkBlockCntBothNormal(2);
 		Assert.assertTrue(bRet);
 
 		/* Check dump plan log */
 		bRet = checkPlan(PlanType.PLAN_TYPE_REPLICATE, BLOCK_CHK_TIME);
 		Assert.assertTrue(bRet);
-			
+		
 		/* Read file */
 		bRet = readCmd();
 		Assert.assertTrue(bRet);
@@ -271,9 +267,7 @@ public class Function_ns_plan_test extends NameServerPlanTestCase {
 		Assert.assertTrue(bRet);
 
 		/* Make sure now all blocks have 2 copies */
-		bRet = chkBlockCnt(BLOCK_CHK_TIME, 0);
-		Assert.assertTrue(bRet);
-		bRet = chkBlockCnt(BLOCK_CHK_TIME, 1);
+		bRet = chkBlockCntBothNormal(2);
 		Assert.assertTrue(bRet);
 		
 		/* Kill the 1st ds */
@@ -284,9 +278,7 @@ public class Function_ns_plan_test extends NameServerPlanTestCase {
 		sleep (10);
 		
 		/* Wait for completion of replication */
-		bRet = chkBlockCnt(BLOCK_CHK_TIME, 0);
-		Assert.assertTrue(bRet);
-		bRet = chkBlockCnt(BLOCK_CHK_TIME, 1);
+		bRet = chkBlockCntBothNormal(2);
 		Assert.assertTrue(bRet);
 		
 		/* Start the killed ds */
@@ -515,9 +507,7 @@ public class Function_ns_plan_test extends NameServerPlanTestCase {
 		Assert.assertTrue(bRet);
 		
 		/* Make sure now all blocks have 2 copies */
-		bRet = chkBlockCnt(BLOCK_CHK_TIME, 0);
-		Assert.assertTrue(bRet);
-		bRet = chkBlockCnt(BLOCK_CHK_TIME, 1);
+		bRet = chkBlockCntBothNormal(2);
 		Assert.assertTrue(bRet);
 		
 		/* Kill the 1st ds */
@@ -528,9 +518,7 @@ public class Function_ns_plan_test extends NameServerPlanTestCase {
 		sleep (10);
 		
 		/* Wait for completion of replication */
-		bRet = chkBlockCnt(BLOCK_CHK_TIME, 0);
-		Assert.assertTrue(bRet);
-		bRet = chkBlockCnt(BLOCK_CHK_TIME, 1);
+		bRet = chkBlockCntBothNormal(2);
 		Assert.assertTrue(bRet);
 		
 		/* Start the killed ds */
@@ -770,9 +758,7 @@ public class Function_ns_plan_test extends NameServerPlanTestCase {
 		Assert.assertTrue(bRet);
 
 		/* Wait for completion of replication */
-		bRet = chkBlockCnt(BLOCK_CHK_TIME, 0);
-		Assert.assertTrue(bRet);
-		bRet = chkBlockCnt(BLOCK_CHK_TIME, 1);
+		bRet = chkBlockCntBothNormal(2);
 		Assert.assertTrue(bRet);
 
 		/* Check network traffic balance */
