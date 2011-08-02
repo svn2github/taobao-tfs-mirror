@@ -92,7 +92,7 @@ namespace tfs
           const int64_t offset, const int64_t size,
           int32_t& cluster_id, std::vector<FragMeta>& v_out_frag_info, bool& still_have);
 
-      void calculate_file_meta_info(const std::vector<MetaInfo>& tmp_v_meta_info, 
+      void calculate_file_meta_info(const std::vector<MetaInfo>& tmp_v_meta_info, const bool ls_file,
           std::vector<MetaInfo>& meta_info, MetaInfo& last_meta_info);
 
 

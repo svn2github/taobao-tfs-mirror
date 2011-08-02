@@ -419,7 +419,7 @@ namespace tfs
       return ret;
     }
     void MetaServerService::calculate_file_meta_info(const std::vector<MetaInfo>& tmp_v_meta_info, 
-        std::vector<MetaInfo>& meta_info, MetaInfo& last_meta_info)
+        const bool ls_file, std::vector<MetaInfo>& meta_info, MetaInfo& last_meta_info)
     {
       vector<MetaInfo>::const_iterator it = tmp_v_meta_info.begin();
       for (; it != tmp_v_meta_info.end() && 
@@ -432,7 +432,6 @@ namespace tfs
           {
             meta_info.push_back(last_meta_info);
             last_meta_info.name_.clear();
-            continue;
           }
         }
         else
@@ -444,7 +443,6 @@ namespace tfs
             {
               meta_info.push_back(last_meta_info);
               last_meta_info.name_.clear();
-              continue;
             }
           }
           else
@@ -455,12 +453,15 @@ namespace tfs
             {
               meta_info.push_back(last_meta_info);
               last_meta_info.name_.clear();
-              continue;
             }
           }
         }
+        if (ls_file && meta_info.size() > 0)
+        {
+          break;
+        }
       }
-      if (static_cast<int32_t>(meta_info.size()) < MAX_OUT_FRAG_INFO 
+      if (!ls_file && static_cast<int32_t>(meta_info.size()) < MAX_OUT_FRAG_INFO 
           && !last_meta_info.name_.empty())
       {
         meta_info.push_back(last_meta_info);
@@ -480,8 +481,10 @@ namespace tfs
       MetaInfo p_meta_info;
       std::vector<MetaInfo> tmp_v_meta_info;
       std::vector<std::string> v_name;
+      bool ls_file = false;
       if (-1 == pid)
       {
+        ls_file = (file_type != DIRECTORY);
         //this is the first ls, 
         if ((ret = parse_name(file_path, v_name)) != TFS_SUCCESS)
         {
@@ -545,7 +548,12 @@ namespace tfs
             my_file_type != DIRECTORY, tmp_v_meta_info, still_have);
         if (my_file_type != DIRECTORY) 
         {
-          calculate_file_meta_info(tmp_v_meta_info, meta_info, last_meta_info);
+          calculate_file_meta_info(tmp_v_meta_info, ls_file, meta_info, last_meta_info);
+          if (ls_file && meta_info.size() > 0)
+          {
+            still_have = false;
+            break;
+          }
         }
         else
         {
@@ -577,7 +585,6 @@ namespace tfs
           still_have = true;
         }
       }
-
       return ret;
     }
     int MetaServerService::get_meta_info(const int64_t app_id, const int64_t uid, const int64_t pid,
