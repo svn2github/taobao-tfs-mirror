@@ -111,7 +111,7 @@ namespace tfs
 
         LogicBlockMap logic_blocks_; // logic blocks
         LogicBlockMap compact_logic_blocks_; // compact logic blocks
-        PhysicalBlockMap physcial_blocks_;   // physcial blocks
+        PhysicalBlockMap physical_blocks_;   // physical blocks
 
         int bit_map_size_;      // bitmap size
         BitMap* normal_bit_map_; // normal bitmap
