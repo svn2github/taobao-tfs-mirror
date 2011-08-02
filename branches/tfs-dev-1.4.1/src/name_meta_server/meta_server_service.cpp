@@ -672,6 +672,10 @@ namespace tfs
             break;
           }
         }
+        if (!meta_info_it->frag_info_.had_been_split_ && it == v_in_frag_info.end())
+        {
+          still_have = false;
+        }
         break;
       }
       return TFS_SUCCESS;

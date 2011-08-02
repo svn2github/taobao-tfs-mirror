@@ -83,7 +83,7 @@ namespace tfs
 
       int get_meta_info(const int64_t app_id, const int64_t uid, const int64_t pid,
           const char* name, const int32_t name_len, const int64_t offset,
-          std::vector<MetaInfo>& v_meta_info, int32_t& cluster_id);
+          std::vector<MetaInfo>& v_meta_info, int32_t& cluster_id, int64_t& last_offset);
 
       int read_frag_info(const std::vector<MetaInfo>& v_meta_info,
           const int64_t offset, const int32_t size,
