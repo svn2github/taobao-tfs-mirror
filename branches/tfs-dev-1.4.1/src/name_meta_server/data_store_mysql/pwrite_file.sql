@@ -12,7 +12,7 @@ begin
   declare real_pid bigint unsigned;
   declare exit handler for sqlexception
   begin
-    set o_ret = -5;
+    set o_ret = -14004;
     rollback;
     select o_ret;
   end;
@@ -43,12 +43,12 @@ begin
     end if;
     select row_count() into aff_row;
     if aff_row <= 0 then
-      set o_ret = -5;
+      set o_ret = -14004;
     else
       set o_ret = 1;
     end if;
   else
-    set o_ret = -3;
+    set o_ret = -14001;
   end if;
   if o_ret <= 0 then
     rollback;

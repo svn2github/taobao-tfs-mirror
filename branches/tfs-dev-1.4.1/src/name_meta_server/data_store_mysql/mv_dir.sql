@@ -10,7 +10,7 @@ begin
   declare o_ret bigint;
   declare exit handler for sqlexception
   begin
-    set o_ret = 0;
+    set o_ret = -14000;
     rollback;
     select o_ret;
   end;
@@ -40,13 +40,13 @@ begin
       if aff_row = 1 then
         set o_ret = 1;
       else
-        set o_ret = -3;
+        set o_ret = -14001;
       end if;
     else
-      set o_ret = -2;
+      set o_ret = -14002;
     end if;
   else
-    set o_ret = -2;
+    set o_ret = -14002;
   end if;
   if o_ret = 1 then
     commit;

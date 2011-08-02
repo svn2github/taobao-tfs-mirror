@@ -12,7 +12,7 @@ begin
   declare s_name_end varbinary(512);
   declare exit handler for sqlexception
   begin
-    set o_ret = -1;
+    set o_ret = -14001;
     rollback;
     select o_ret;
   end;
@@ -53,10 +53,10 @@ begin
         set o_ret = 1;
       end if;
     else
-      set o_ret = -2;
+      set o_ret = -14002;
     end if;
   else
-    set o_ret = -2;
+    set o_ret = -14002;
   end if;
   if o_ret = 1 then
     commit;
