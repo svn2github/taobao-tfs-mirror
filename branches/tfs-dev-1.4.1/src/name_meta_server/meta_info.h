@@ -224,17 +224,17 @@ namespace tfs
       }
       void dump() const
       {
-        fprintf(stdout, "cluster_id: %d\n", cluster_id_);
-        fprintf(stdout, "had_been_split: %d\n", had_been_split_);
-        fprintf(stdout, "frag_size : %zd\n", v_frag_meta_.size());
+        fprintf(stderr, "cluster_id: %d\n", cluster_id_);
+        fprintf(stderr, "had_been_split: %d\n", had_been_split_);
+        fprintf(stderr, "frag_size : %zd\n", v_frag_meta_.size());
 
         std::vector<FragMeta>::const_iterator iter = v_frag_meta_.begin();
         for (; iter != v_frag_meta_.end(); iter++)
         {
-          fprintf(stdout, "offset: %"PRI64_PREFIX"d  ", (*iter).offset_);
-          fprintf(stdout, "file_id: %"PRI64_PREFIX"u  ", (*iter).file_id_);
-          fprintf(stdout, "size: %d  ", (*iter).size_);
-          fprintf(stdout, "block_id: %u\n", (*iter).block_id_);
+          fprintf(stderr, "offset: %"PRI64_PREFIX"d  ", (*iter).offset_);
+          fprintf(stderr, "file_id: %"PRI64_PREFIX"u  ", (*iter).file_id_);
+          fprintf(stderr, "size: %d  ", (*iter).size_);
+          fprintf(stderr, "block_id: %u\n", (*iter).block_id_);
         }
       }
     };

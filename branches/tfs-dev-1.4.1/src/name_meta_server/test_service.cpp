@@ -16,6 +16,7 @@
 #include "meta_server_service.h"
 using namespace tfs;
 using namespace tfs::namemetaserver;
+const int32_t FRAG_LEN = 65535;
 void dump_meta_info(const MetaInfo& metainfo)
 {
   int size = metainfo.size_;
@@ -71,18 +72,39 @@ int main()
 
   FragInfo tfi;
   tfi.cluster_id_ = 1;
+  for (int i = 0; i < MAX_FRAG_INFO_COUNT + 1; i++)
+  {
+    FragMeta tmp;
+    tmp.offset_ = 10 * i;
+    tmp.file_id_ = 1;
+    tmp.size_ = 9;
+    tmp.block_id_ = 5;
+    tfi.v_frag_meta_.push_back(tmp);
+  }
+
+  ret = service.write(app_id, uid, file_path, tfi);
+  printf("write file %s, ret: %d\n", file_path, ret);
+
+  bool sh;
+  ret = service.read(app_id, uid, file_path, MAX_FRAG_INFO_COUNT * 10, 40, tfi, sh);
+  printf("read ret = %d, cid = %d sh = %d \n", ret, tfi.cluster_id_, sh);
+  for (size_t i = 0; i < tfi.v_frag_meta_.size(); i++)
+  {
+    dump_frag_meta(tfi.v_frag_meta_[i]);
+  }
+
+  tfi.v_frag_meta_.clear();
   FragMeta tmp;
-  tmp.offset_ = 10;
+  tmp.offset_ = 10 * (MAX_FRAG_INFO_COUNT+1);
   tmp.file_id_ = 1;
-  tmp.size_ = 10;
+  tmp.size_ = 9;
   tmp.block_id_ = 5;
   tfi.v_frag_meta_.push_back(tmp);
 
   ret = service.write(app_id, uid, file_path, tfi);
   printf("write file %s, ret: %d\n", file_path, ret);
-  tfi.v_frag_meta_.clear();
-  bool sh;
-  ret = service.read(app_id, uid, file_path, 2, 5, tfi, sh);
+
+  ret = service.read(app_id, uid, file_path, (MAX_FRAG_INFO_COUNT+1) * 10, 40, tfi, sh);
   printf("read ret = %d, cid = %d sh = %d \n", ret, tfi.cluster_id_, sh);
   for (size_t i = 0; i < tfi.v_frag_meta_.size(); i++)
   {

@@ -36,7 +36,9 @@ namespace tfs
     {
       int ret = TFS_ERROR;
 
+      TBSYS_LOG(INFO, "input_size: %d", input.get_data_length());
       ret = input.get_int64(&app_id_);
+      TBSYS_LOG(INFO, "app_id: %ld", app_id_);
       if (TFS_SUCCESS == ret)
       {
         ret = input.get_int64(&user_id_);

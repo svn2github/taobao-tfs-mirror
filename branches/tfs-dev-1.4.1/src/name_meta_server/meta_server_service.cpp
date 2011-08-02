@@ -136,7 +136,7 @@ namespace tfs
         const char* new_file_path = req_fa_msg->get_new_file_path();
         common::MetaActionOp action = req_fa_msg->get_action();
         TBSYS_LOG(DEBUG, "call FilepathActionMessage::do action start. app_id: %"PRI64_PREFIX"d, uid: %"PRI64_PREFIX"d, file_path: %s, new_file_path: %s, action: %d ret: %d",
-            app_id, uid, file_path, action, ret);
+            app_id, uid, file_path, new_file_path, action, ret);
         switch (action)
         {
           case CREATE_DIR:
@@ -186,6 +186,7 @@ namespace tfs
         WriteFilepathMessage* req_wf_msg = dynamic_cast<WriteFilepathMessage*>(packet);
         TBSYS_LOG(DEBUG, "call FilepathActionMessage::do action start. app_id: %"PRI64_PREFIX"d, user_id: %"PRI64_PREFIX"d, file_path: %s, meta_size: %zd ret: %d",
             req_wf_msg->get_app_id(), req_wf_msg->get_user_id(), req_wf_msg->get_file_path(), req_wf_msg->get_frag_info().v_frag_meta_.size(), ret);
+        req_wf_msg->get_frag_info().dump();
 
         ret = write(req_wf_msg->get_app_id(), req_wf_msg->get_user_id(), req_wf_msg->get_file_path(), req_wf_msg->get_frag_info());
         if (ret != TFS_SUCCESS)
@@ -220,16 +221,14 @@ namespace tfs
         ret = read(req_rf_msg->get_app_id(), req_rf_msg->get_user_id(), req_rf_msg->get_file_path(), req_rf_msg->get_offset(), req_rf_msg->get_size(), frag_info, still_have);
         if (ret != TFS_SUCCESS)
         {
+          ret = req_rf_msg->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret, "execute message failed");
+        }
+        else
+        {
           RespReadFilepathMessage* resp_rf_msg = new RespReadFilepathMessage();
           resp_rf_msg->set_frag_info(frag_info);
           resp_rf_msg->set_still_have(still_have);
           ret = req_rf_msg->reply(resp_rf_msg);
-
-          tbsys::gDelete(resp_rf_msg);
-        }
-        else
-        {
-          ret = req_rf_msg->reply(new StatusMessage(STATUS_MESSAGE_OK));
         }
       }
       return ret;
@@ -622,7 +621,7 @@ namespace tfs
     {
       int32_t end_offset = offset + size;
       vector<MetaInfo>::const_iterator meta_info_it = v_meta_info.begin();;
-      cluster_id = -1;
+      cluster_id = 0;
       v_out_frag_info.clear();
       still_have = false;
 
@@ -643,9 +642,13 @@ namespace tfs
         fragmeta_for_search.offset_ = offset;
         vector<FragMeta>::const_iterator it =
           lower_bound(v_in_frag_info.begin(), v_in_frag_info.end(), fragmeta_for_search);
-        if (it == v_in_frag_info.end())
+        if (it != v_in_frag_info.begin())
         {
-          it--;
+          vector<FragMeta>::const_iterator tmp_it = it - 1;
+          if (offset < tmp_it->offset_ + tmp_it->size_)
+          {
+            it--;
+          }
         }
         cluster_id = meta_info_it->frag_info_.cluster_id_;
         still_have = true;
@@ -790,7 +793,7 @@ namespace tfs
         {
           if (frag_info.v_frag_meta_[i].offset_ < last_offset)
           {
-            TBSYS_LOG(ERROR, "frag info have some error");
+            TBSYS_LOG(ERROR, "frag info have some error, %ld < %ld", frag_info.v_frag_meta_[i].offset_, last_offset);
             ret = TFS_ERROR;
             break;
           }
