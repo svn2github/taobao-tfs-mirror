@@ -128,7 +128,10 @@ namespace tfs
     const int32_t EXIT_PARENT_EXIST_ERROR = -14002;
     const int32_t EXIT_DELETE_DIR_WITH_FILE_ERROR = -14003;
     const int32_t EXIT_VERSION_CONFLICT_ERROR = -14004;
-    const int32_t EXIT_UPDATE_FRAG_INFO_ERROR = -14005;
+    const int32_t EXIT_NOT_CREATE_ERROR = -14005;
+    const int32_t EXIT_CLUSTER_ID_ERROR = -14006;
+    const int32_t EXIT_FRAG_META_OVERFLOW_ERROR = -14007;
+    const int32_t EXIT_UPDATE_FRAG_INFO_ERROR = -14008;
     
   }
 }

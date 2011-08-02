@@ -509,14 +509,12 @@ namespace tfs
             }
             if (in_cluster_id == -1)
             {
-              //TODO give a error_no. this means no create file found
-              ret = TFS_ERROR;
+              ret = EXIT_NOT_CREATE_ERROR;
               break;
             }
             if (in_cluster_id != 0 && frag_info.cluster_id_ != in_cluster_id)
             {
-              //TODO give a error_no. this means cluster_id error
-              ret = TFS_ERROR;
+              ret = EXIT_CLUSTER_ID_ERROR;
               break;
             }
             if (tmp_v_meta_info.empty())
@@ -592,8 +590,7 @@ namespace tfs
               }
               if (static_cast<int32_t>(v_meta_info_it->frag_info_.v_frag_meta_.size()) >= MAX_FRAG_INFO_COUNT)
               {
-                //TODO
-                ret = TFS_ERROR;
+                ret = EXIT_FRAG_META_OVERFLOW_ERROR;
                 break;
               }
 
@@ -627,10 +624,10 @@ namespace tfs
     }
 
     int MetaServerService::read_frag_info(const vector<MetaInfo>& v_meta_info, const int64_t offset,
-        const int32_t size, int32_t& cluster_id,
+        const int64_t size, int32_t& cluster_id,
         vector<FragMeta>& v_out_frag_info, bool& still_have)
     {
-      int32_t end_offset = offset + size;
+      int64_t end_offset = offset + size;
       vector<MetaInfo>::const_iterator meta_info_it = v_meta_info.begin();;
       cluster_id = 0;
       v_out_frag_info.clear();
@@ -643,8 +640,8 @@ namespace tfs
           meta_info_it++;
           continue;
         }
-        const vector<FragMeta>& v_in_frag_info = meta_info_it->frag_info_.v_frag_meta_;
-        if (v_in_frag_info.empty())
+        const vector<FragMeta>& v_in_frag_meta = meta_info_it->frag_info_.v_frag_meta_;
+        if (v_in_frag_meta.empty())
         {
           //no frag to be read
           break;
@@ -652,8 +649,8 @@ namespace tfs
         FragMeta fragmeta_for_search;
         fragmeta_for_search.offset_ = offset;
         vector<FragMeta>::const_iterator it =
-          lower_bound(v_in_frag_info.begin(), v_in_frag_info.end(), fragmeta_for_search);
-        if (it != v_in_frag_info.begin())
+          lower_bound(v_in_frag_meta.begin(), v_in_frag_meta.end(), fragmeta_for_search);
+        if (it != v_in_frag_meta.begin())
         {
           vector<FragMeta>::const_iterator tmp_it = it - 1;
           if (offset < tmp_it->offset_ + tmp_it->size_)
@@ -663,7 +660,7 @@ namespace tfs
         }
         cluster_id = meta_info_it->frag_info_.cluster_id_;
         still_have = true;
-        for(int s = 0; it != v_in_frag_info.end() && s < MAX_OUT_FRAG_INFO; it++, s++)
+        for(int s = 0; it != v_in_frag_meta.end() && s < MAX_OUT_FRAG_INFO; it++, s++)
         {
           v_out_frag_info.push_back(*it);
           if (it->offset_ + it->size_ > end_offset)
@@ -672,7 +669,7 @@ namespace tfs
             break;
           }
         }
-        if (!meta_info_it->frag_info_.had_been_split_ && it == v_in_frag_info.end())
+        if (!meta_info_it->frag_info_.had_been_split_ && it == v_in_frag_meta.end())
         {
           still_have = false;
         }

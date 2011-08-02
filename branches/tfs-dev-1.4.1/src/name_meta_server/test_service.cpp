@@ -62,6 +62,21 @@ int main()
   ret = service.create(app_id, uid, new_file_path, NORMAL_FILE);
   printf("create file %s, ret: %d\n", new_file_path, ret);
 
+  sprintf(new_file_path, "/taat/1");
+
+  ret = service.create(app_id, uid, new_file_path, NORMAL_FILE);
+  printf("create file %s, ret: %d\n", new_file_path, ret);
+
+  sprintf(new_file_path, "/taat/zz");
+
+  ret = service.create(app_id, uid, new_file_path, NORMAL_FILE);
+  printf("create file %s, ret: %d\n", new_file_path, ret);
+
+  sprintf(new_file_path, "/taat/zzzz");
+
+  ret = service.create(app_id, uid, new_file_path, NORMAL_FILE);
+  printf("create file %s, ret: %d\n", new_file_path, ret);
+
   sprintf(file_path, "/test/that");
 
   ret = service.create(app_id, uid, file_path, NORMAL_FILE);
@@ -70,47 +85,47 @@ int main()
 
   printf("---------------------------\n");
 
-  FragInfo tfi;
-  tfi.cluster_id_ = 1;
-  for (int i = 0; i < MAX_FRAG_INFO_COUNT + 1; i++)
-  {
-    FragMeta tmp;
-    tmp.offset_ = 10 * i;
-    tmp.file_id_ = 1;
-    tmp.size_ = 9;
-    tmp.block_id_ = 5;
-    tfi.v_frag_meta_.push_back(tmp);
-  }
+  //FragInfo tfi;
+  //tfi.cluster_id_ = 1;
+  //for (int i = 0; i < MAX_FRAG_INFO_COUNT + 100; i++)
+  //{
+  //  FragMeta tmp;
+  //  tmp.offset_ = 10 * i;
+  //  tmp.file_id_ = 1;
+  //  tmp.size_ = 9;
+  //  tmp.block_id_ = 5;
+  //  tfi.v_frag_meta_.push_back(tmp);
+  //}
 
-  ret = service.write(app_id, uid, file_path, tfi);
-  printf("write file %s, ret: %d\n", file_path, ret);
+  //ret = service.write(app_id, uid, file_path, tfi);
+  //printf("write file %s, ret: %d\n", file_path, ret);
 
-  bool sh;
-  ret = service.read(app_id, uid, file_path, MAX_FRAG_INFO_COUNT * 10, 40, tfi, sh);
-  printf("read ret = %d, cid = %d sh = %d \n", ret, tfi.cluster_id_, sh);
-  for (size_t i = 0; i < tfi.v_frag_meta_.size(); i++)
-  {
-    dump_frag_meta(tfi.v_frag_meta_[i]);
-  }
+  //bool sh;
+  //ret = service.read(app_id, uid, file_path, MAX_FRAG_INFO_COUNT * 10, 40, tfi, sh);
+  //printf("read ret = %d, cid = %d sh = %d \n", ret, tfi.cluster_id_, sh);
+  //for (size_t i = 0; i < tfi.v_frag_meta_.size(); i++)
+  //{
+  //  dump_frag_meta(tfi.v_frag_meta_[i]);
+  //}
 
-  tfi.v_frag_meta_.clear();
-  FragMeta tmp;
-  tmp.offset_ = 10 * (MAX_FRAG_INFO_COUNT+1);
-  tmp.file_id_ = 1;
-  tmp.size_ = 9;
-  tmp.block_id_ = 5;
-  tfi.v_frag_meta_.push_back(tmp);
+  //tfi.v_frag_meta_.clear();
+  //FragMeta tmp;
+  //tmp.offset_ = 10 * (MAX_FRAG_INFO_COUNT+101);
+  //tmp.file_id_ = 1;
+  //tmp.size_ = 9;
+  //tmp.block_id_ = 5;
+  //tfi.v_frag_meta_.push_back(tmp);
 
-  ret = service.write(app_id, uid, file_path, tfi);
-  printf("write file %s, ret: %d\n", file_path, ret);
+  //ret = service.write(app_id, uid, file_path, tfi);
+  //printf("write file %s, ret: %d\n", file_path, ret);
 
-  ret = service.read(app_id, uid, file_path, (MAX_FRAG_INFO_COUNT+1) * 10, 40, tfi, sh);
-  printf("read ret = %d, cid = %d sh = %d \n", ret, tfi.cluster_id_, sh);
-  for (size_t i = 0; i < tfi.v_frag_meta_.size(); i++)
-  {
-    dump_frag_meta(tfi.v_frag_meta_[i]);
-  }
-  return 0;
+  //ret = service.read(app_id, uid, file_path, (MAX_FRAG_INFO_COUNT+101) * 10, 40, tfi, sh);
+  //printf("read ret = %d, cid = %d sh = %d \n", ret, tfi.cluster_id_, sh);
+  //for (size_t i = 0; i < tfi.v_frag_meta_.size(); i++)
+  //{
+  //  dump_frag_meta(tfi.v_frag_meta_[i]);
+  //}
+  //return 0;
 
   sprintf(wrong_dir_path, "/admin/test");
   ret = service.create(app_id, uid, wrong_dir_path, DIRECTORY);

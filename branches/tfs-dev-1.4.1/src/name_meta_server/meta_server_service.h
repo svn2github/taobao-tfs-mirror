@@ -86,7 +86,7 @@ namespace tfs
           std::vector<MetaInfo>& v_meta_info, int32_t& cluster_id, int64_t& last_offset);
 
       int read_frag_info(const std::vector<MetaInfo>& v_meta_info,
-          const int64_t offset, const int32_t size,
+          const int64_t offset, const int64_t size,
           int32_t& cluster_id, std::vector<FragMeta>& v_out_frag_info, bool& still_have);
       
 
