@@ -403,8 +403,9 @@ namespace tfs
         else
         {
           get_name(v_name, depth, name, MAX_FILE_PATH_LEN, name_len);
+          int64_t last_offset = 0;
           ret = get_meta_info(app_id, uid, p_meta_info.id_, name, name_len, offset,
-              tmp_v_meta_info, frag_info.cluster_id_);
+              tmp_v_meta_info, frag_info.cluster_id_, last_offset);
           if (ret == TFS_SUCCESS)
           {
             if ((ret = read_frag_info(tmp_v_meta_info, offset, size,
@@ -419,7 +420,7 @@ namespace tfs
     }
     int MetaServerService::get_meta_info(const int64_t app_id, const int64_t uid, const int64_t pid,
         const char* name, const int32_t name_len, const int64_t offset,
-        std::vector<MetaInfo>& tmp_v_meta_info, int32_t& cluster_id)
+        std::vector<MetaInfo>& tmp_v_meta_info, int32_t& cluster_id, int64_t& last_offset)
     {
       int ret = TFS_ERROR;
       char search_name[MAX_FILE_PATH_LEN + 8];
@@ -427,6 +428,7 @@ namespace tfs
       assert(name_len <= MAX_FILE_PATH_LEN);
       memcpy(search_name, name, search_name_len);
       bool still_have = false;
+      last_offset = 0;
       cluster_id = -1;
       do {
         tmp_v_meta_info.clear();
@@ -443,16 +445,17 @@ namespace tfs
         {
           const MetaInfo& last_metaInfo = tmp_v_meta_info[tmp_v_meta_info.size() - 1];
           cluster_id = last_metaInfo.frag_info_.cluster_id_;
-          if (last_metaInfo.frag_info_.get_last_offset() <= offset &&
-              last_metaInfo.frag_info_.had_been_split_)
+          if (((-1 == offset || last_metaInfo.frag_info_.get_last_offset() <= offset) &&
+              last_metaInfo.frag_info_.had_been_split_)) 
+
           {
             still_have = true;
             memcpy(search_name, last_metaInfo.name_.data(), last_metaInfo.name_.length());
             search_name_len = last_metaInfo.name_.length();
             if (search_name_len == (unsigned char)search_name[0] + 1)
             {
-              int64_to_char(search_name + search_name_len, 8, 
-                  last_metaInfo.frag_info_.get_last_offset());
+              last_offset = last_metaInfo.frag_info_.get_last_offset();
+              int64_to_char(search_name + search_name_len, 8, last_offset);
               search_name_len += 8;
             }
           }
@@ -496,8 +499,9 @@ namespace tfs
           {
             tmp_v_meta_info.clear();
             int32_t in_cluster_id = -1;
+            int64_t last_offset = 0;
             ret = get_meta_info(app_id, uid, p_meta_info.id_, name, name_len,
-                write_frag_info_it->offset_, tmp_v_meta_info, in_cluster_id);
+                write_frag_info_it->offset_, tmp_v_meta_info, in_cluster_id, last_offset);
             if (TFS_SUCCESS != ret)
             {
               TBSYS_LOG(DEBUG, "record not exist, name(%s)", name);
@@ -521,10 +525,11 @@ namespace tfs
               MetaInfo tmp;
               tmp.pid_ = p_meta_info.id_;
               tmp.frag_info_.cluster_id_ = frag_info.cluster_id_;
+              tmp.frag_info_.had_been_split_ = false;
               char tmp_name[MAX_FILE_PATH_LEN + 8];
               memcpy(tmp_name, name, name_len);
               int64_to_char(tmp_name+name_len, MAX_FILE_PATH_LEN + 8 - name_len,
-                  write_frag_info_it->offset_);
+                  last_offset);
 
               tmp.name_.assign(tmp_name, name_len + 8);
               tmp_v_meta_info.push_back(tmp);
@@ -534,7 +539,8 @@ namespace tfs
             for (; v_meta_info_it != tmp_v_meta_info.end(); v_meta_info_it++)
             {
               if (!v_meta_info_it->frag_info_.had_been_split_ ||
-                  v_meta_info_it->frag_info_.get_last_offset() > write_frag_info_it->offset_)
+                  (write_frag_info_it->offset_ != -1 && 
+                   v_meta_info_it->frag_info_.get_last_offset() > write_frag_info_it->offset_))
               {
                 found_meta_info_should_be_updated = true;
                 break;
@@ -552,6 +558,11 @@ namespace tfs
               while(write_frag_info_it != v_frag_meta.end())
                  // && static_cast<int32_t>(v_meta_info_it->frag_info_.v_frag_meta_.size()) <= SOFT_MAX_FRAG_INFO_COUNT)
               {
+                if (-1 == write_frag_info_it->offset_)
+                {
+                  write_frag_info_it->offset_ = last_offset;
+                  last_offset += write_frag_info_it->size_;
+                }
                 v_meta_info_it->frag_info_.v_frag_meta_.push_back(*write_frag_info_it);
                 write_frag_info_it++;
               }
