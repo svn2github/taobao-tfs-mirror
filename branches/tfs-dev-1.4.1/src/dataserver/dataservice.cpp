@@ -254,6 +254,14 @@ namespace tfs
         data_management_.set_file_number(file_number);
         ds_requester_.init(data_server_info_.id_, ns_ip_port_, &data_management_);
 
+        //init gcobject manager
+        iret = GCObjectManager::instance().initialize(get_timer());                                                                                          
+        if (iret != TFS_SUCCESS)
+        {
+          TBSYS_LOG(ERROR, "%s", "initialize gcobject manager fail");
+          return iret;
+        }
+
         //init global stat
         iret = stat_mgr_.initialize(get_timer());
         if (iret != TFS_SUCCESS)
@@ -418,6 +426,7 @@ namespace tfs
     {
       //global stat destroy
       stat_mgr_.destroy();
+
       if (NULL != sync_mirror_)
       {
         sync_mirror_->stop();
@@ -467,6 +476,7 @@ namespace tfs
       tbsys::gDelete(repl_block_);
       tbsys::gDelete(compact_block_);
       tbsys::gDelete(sync_mirror_);
+      GCObjectManager::instance().destroy();
       return TFS_SUCCESS;
     }
 

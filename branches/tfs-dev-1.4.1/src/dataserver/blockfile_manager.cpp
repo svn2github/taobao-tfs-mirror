@@ -17,6 +17,7 @@
  */
 #include "blockfile_manager.h"
 #include "blockfile_format.h"
+#include "gc.h"
 #include "common/directory_op.h"
 #include <string.h>
 #include <Memory.hpp>
@@ -59,7 +60,7 @@ namespace tfs
 
     void BlockFileManager::destruct_physic_blocks()
     {
-      for (PhysicalBlockMapIter mit = physcial_blocks_.begin(); mit != physcial_blocks_.end(); ++mit)
+      for (PhysicalBlockMapIter mit = physical_blocks_.begin(); mit != physical_blocks_.end(); ++mit)
       {
         tbsys::gDelete(mit->second);
       }
@@ -142,9 +143,9 @@ namespace tfs
       if (TFS_SUCCESS != ret)
         return ret;
 
-      PhysicalBlockMapIter pmit = physcial_blocks_.find(physical_block_id);
+      PhysicalBlockMapIter pmit = physical_blocks_.find(physical_block_id);
       // oops, same physical block id found
-      if (pmit != physcial_blocks_.end())
+      if (pmit != physical_blocks_.end())
       {
         TBSYS_LOG(ERROR, "bitmap and physical blocks conflict. fatal error! physical blockid: %u", physical_block_id);
         assert(false);
@@ -200,7 +201,7 @@ namespace tfs
           break;
 
         // 11. insert to associate map
-        physcial_blocks_.insert(PhysicalBlockMap::value_type(physical_block_id, t_physical_block));
+        physical_blocks_.insert(PhysicalBlockMap::value_type(physical_block_id, t_physical_block));
         selected_logic_blocks->insert(LogicBlockMapIter::value_type(logic_block_id, t_logic_block));
 
         TBSYS_LOG(INFO, "new block success! logic blockid: %u, physical blockid: %u.", logic_block_id,
@@ -213,7 +214,6 @@ namespace tfs
       if (ret)
       {
         TBSYS_LOG(ERROR, "new block fail. logic blockid: %u. ret: %d", logic_block_id, ret);
-
         rollback_superblock(physical_block_id, block_count_modify_flag);
         t_logic_block->delete_block_file();
 
@@ -260,8 +260,8 @@ namespace tfs
         uint32_t physic_id = (*lit)->get_physic_block_id();
         TBSYS_LOG(INFO, "blockid: %u, del physical block! physic blockid: %u.", logic_block_id, physic_id);
 
-        PhysicalBlockMapIter mpit = physcial_blocks_.find(physic_id);
-        if (mpit == physcial_blocks_.end())
+        PhysicalBlockMapIter mpit = physical_blocks_.find(physic_id);
+        if (mpit == physical_blocks_.end())
         {
           TBSYS_LOG(ERROR, "can not find physical block! physic blockid: %u.", physic_id);
           assert(false);
@@ -272,7 +272,7 @@ namespace tfs
           {
             tmp_physic_block.push_back(mpit->second);
           }
-          physcial_blocks_.erase(mpit);
+          physical_blocks_.erase(mpit);
         }
         // normal bitmap clear reset
         normal_bit_map_->reset(physic_id);
@@ -303,19 +303,14 @@ namespace tfs
       TBSYS_LOG(INFO, "logicblock delete %s! logic blockid: %u. physical block size: %d, blocktype: %d, ret: %d",
                 ret ? "fail" : "success", logic_block_id, size, tmp_block_type, ret);
 
-      // 11. clean logic block associate stuff(index handle, physic block) & unlock
+      // 11. unlock & add logic block into gcobject manager
       if (delete_block)
       {
-        delete_block->delete_block_file();
         delete_block->unlock();
+        delete_block->set_dead_time();
+        GCObjectManager::instance().add(delete_block);
       }
-      tbsys::gDelete(delete_block);
 
-      // 12. clean physic block
-      for (list<PhysicalBlock*>::iterator lit = tmp_physic_block.begin(); lit != tmp_physic_block.end(); ++lit)
-      {
-        tbsys::gDelete(*lit);
-      }
       return ret;
     }
 
@@ -347,16 +342,16 @@ namespace tfs
       if (TFS_SUCCESS != ret)
         return ret;
 
-      PhysicalBlockMapIter pmit = physcial_blocks_.find(ext_physical_block_id);
-      if (pmit != physcial_blocks_.end())
+      PhysicalBlockMapIter pmit = physical_blocks_.find(ext_physical_block_id);
+      if (pmit != physical_blocks_.end())
       {
         TBSYS_LOG(ERROR, "physical block conflict. fatal error! ext physical blockid: %u", ext_physical_block_id);
         assert(false);
       }
 
       // 4. make sure physical_block_id exist
-      pmit = physcial_blocks_.find(physical_block_id);
-      if (pmit == physcial_blocks_.end())
+      pmit = physical_blocks_.find(physical_block_id);
+      if (pmit == physical_blocks_.end())
       {
         TBSYS_LOG(ERROR, "can not find physical blockid: %u", physical_block_id);
         assert(false);
@@ -414,7 +409,7 @@ namespace tfs
           break;
 
         // 12. insert to physic block map
-        physcial_blocks_.insert(PhysicalBlockMap::value_type(ext_physical_block_id, tmp_physical_block));
+        physical_blocks_.insert(PhysicalBlockMap::value_type(ext_physical_block_id, tmp_physical_block));
         (*physic_block) = tmp_physical_block;
       }
       while (0);
@@ -583,7 +578,7 @@ namespace tfs
     {
       ScopedRWLock scoped_lock(rw_lock_, READ_LOCKER);
       physic_block_list.clear();
-      for (PhysicalBlockMapIter mit = physcial_blocks_.begin(); mit != physcial_blocks_.end(); ++mit)
+      for (PhysicalBlockMapIter mit = physical_blocks_.begin(); mit != physical_blocks_.end(); ++mit)
       {
         physic_block_list.push_back(mit->second);
       }
@@ -814,8 +809,8 @@ namespace tfs
             block_prefix.next_physic_blockid_, pos);
 
           // 5. make sure this physical block hasn't been loaded
-          pit = physcial_blocks_.find(pos);
-          if (pit != physcial_blocks_.end())
+          pit = physical_blocks_.find(pos);
+          if (pit != physical_blocks_.end())
           {
             tbsys::gDelete(t_physical_block);
             tbsys::gDelete(t_logic_block);
@@ -851,7 +846,7 @@ namespace tfs
           }
 
           // 7. insert physic block to physic map
-          physcial_blocks_.insert(PhysicalBlockMap::value_type(pos, t_physical_block));
+          physical_blocks_.insert(PhysicalBlockMap::value_type(pos, t_physical_block));
 
           uint32_t ext_pos = pos;
           // 8. add extend physical block
@@ -908,8 +903,8 @@ namespace tfs
               "read blockprefix! ext physical blockid pos: %u. prev blockid: %u. blockprefix's physic prev blockid: %u, next physic blockid: %u, logic blockid :%u",
               ext_pos, prev_block_id, block_prefix.prev_physic_blockid_, block_prefix.next_physic_blockid_,
               block_prefix.logic_blockid_);
-            pit = physcial_blocks_.find(ext_pos);
-            if (pit != physcial_blocks_.end())
+            pit = physical_blocks_.find(ext_pos);
+            if (pit != physical_blocks_.end())
             {
               tbsys::gDelete(ext_physical_block);
               ret = EXIT_PHYSIC_UNEXPECT_FOUND_ERROR;
@@ -920,7 +915,7 @@ namespace tfs
             }
 
             t_logic_block->add_physic_block(ext_physical_block);
-            physcial_blocks_.insert(PhysicalBlockMap::value_type(ext_pos, ext_physical_block));
+            physical_blocks_.insert(PhysicalBlockMap::value_type(ext_pos, ext_physical_block));
           }
 
           if (TFS_SUCCESS != ret)

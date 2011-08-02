@@ -35,6 +35,7 @@
 #include "data_management.h"
 #include "requester.h"
 #include "block_checker.h"
+#include "gc.h"
 
 namespace tfs
 {

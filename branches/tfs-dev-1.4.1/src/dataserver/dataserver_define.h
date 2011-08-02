@@ -19,6 +19,7 @@
 #include <string>
 #include <assert.h>
 #include "common/internal.h"
+#include "common/parameter.h"
 #include "common/new_client.h"
 
 namespace tfs
@@ -208,6 +209,27 @@ namespace tfs
       int32_t status_;
     };
     #pragma pack()
+
+    class GCObject
+    {
+    public:
+      explicit GCObject(const time_t now):
+        dead_time_(now) {}
+      virtual ~GCObject() {}
+      virtual void callback(){}
+      inline void free(){ delete this;}
+      inline void set_dead_time(const time_t now = time(NULL)) {dead_time_ = now;}
+      inline bool can_be_clear(const time_t now = time(NULL)) const
+      {
+        return now >= (dead_time_ + common::SYSPARAM_DATASERVER.object_clear_max_time_);
+      }
+      inline bool is_dead(const time_t now = time(NULL)) const
+      {
+        return now >= (dead_time_ + common::SYSPARAM_DATASERVER.object_dead_max_time_);
+      }
+    private:
+      time_t dead_time_;
+    };
 
     static const int32_t META_INFO_SIZE = sizeof(MetaInfo);
 

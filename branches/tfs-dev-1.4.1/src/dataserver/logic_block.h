@@ -34,11 +34,11 @@ namespace tfs
   namespace dataserver
   {
 
-    class LogicBlock
+    class LogicBlock: public GCObject
     {
       public:
-        LogicBlock(const uint32_t logic_block_id, const uint32_t main_blk_key, const std::string& base_path);
-        LogicBlock(const uint32_t logic_block_id);
+        LogicBlock(const uint32_t logic_block_id, const uint32_t main_blk_key, const std::string& base_path, const time_t now = time(NULL));
+        LogicBlock(const uint32_t logic_block_id, const time_t now = time(NULL));
 
         ~LogicBlock();
 
@@ -75,6 +75,10 @@ namespace tfs
         int get_meta_infos(common::RawMetaVec& raw_metas);
         int get_sorted_meta_infos(common::RawMetaVec& meta_infos);
         int get_file_infos(std::vector<common::FileInfo>& fileinfos);
+
+        //gc callback
+        void callback();
+        void clear();
 
         common::BlockInfo* get_block_info() const
         {

@@ -25,8 +25,8 @@ namespace tfs
     using namespace common;
     using namespace std;
 
-    LogicBlock::LogicBlock(const uint32_t logic_block_id, const uint32_t main_blk_key, const std::string& base_path) :
-      logic_block_id_(logic_block_id), avail_data_size_(0), visit_count_(0), last_update_(time(NULL)),
+    LogicBlock::LogicBlock(const uint32_t logic_block_id, const uint32_t main_blk_key, const std::string& base_path, const time_t now) :
+      GCObject(now), logic_block_id_(logic_block_id), avail_data_size_(0), visit_count_(0), last_update_(now),
           last_abnorm_time_(0)
     {
       data_handle_ = new DataHandle(this);
@@ -34,9 +34,9 @@ namespace tfs
       physical_block_list_.clear();
     }
 
-    LogicBlock::LogicBlock(const uint32_t logic_block_id) :
-      logic_block_id_(logic_block_id), avail_data_size_(0), visit_count_(0),
-          last_update_(time(NULL)), last_abnorm_time_(0), data_handle_(NULL), index_handle_(NULL)
+    LogicBlock::LogicBlock(const uint32_t logic_block_id, const time_t now) :
+      GCObject(now), logic_block_id_(logic_block_id), avail_data_size_(0), visit_count_(0),
+          last_update_(now), last_abnorm_time_(0), data_handle_(NULL), index_handle_(NULL)
     {
     }
 
@@ -789,6 +789,23 @@ namespace tfs
         return EXIT_PHYSICALBLOCK_NUM_ERROR;
       }
       return TFS_SUCCESS;
+    }
+
+    void LogicBlock::clear()
+    {
+      //clean logic block associate stuff(index handle, physic block)
+      delete_block_file();
+
+      // clean physic block
+      for (list<PhysicalBlock*>::iterator lit = physical_block_list_.begin(); lit != physical_block_list_.end(); ++lit)
+      {
+        tbsys::gDelete(*lit);
+      }
+    }
+
+    void LogicBlock::callback()
+    {
+      clear();
     }
 
     FileIterator::FileIterator(LogicBlock* logic_block)

@@ -103,6 +103,8 @@ namespace tfs
       int32_t max_eio_error_nums_;
       int32_t expire_check_block_time_;
       int32_t max_cpu_usage_;
+      int32_t object_dead_max_time_;
+      int32_t object_clear_max_time_;
       int32_t dump_stat_info_interval_;
       static std::string get_real_file_name(const std::string& src_file, 
           const std::string& index, const std::string& suffix);
