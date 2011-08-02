@@ -138,7 +138,7 @@ namespace tfs
         app_id_ = app_id;
         uid_ = uid;
         pid_ = pid;
-        if (NULL != name && name_len > 0 && name_len < META_NAME_LEN)
+        if (NULL != name && name_len > 0 && name_len < MAX_FILE_PATH_LEN)
         {
           memcpy(pname_, name, name_len);
           pname_len_ = name_len;
@@ -160,14 +160,14 @@ namespace tfs
           MYSQL_BIND rs_bind[8];  /* for output buffers */
           my_bool    is_null[8];
           int64_t o_pid = 0;
-          char o_name[META_NAME_LEN];
+          char o_name[MAX_FILE_PATH_LEN];
           unsigned long o_name_len = 0;
           int64_t o_id = 0;
           int32_t o_create_time = 0;
           int32_t o_modify_time = 0;
           int64_t o_size = 0;
           int16_t o_ver_no = 0;
-          char o_slide_info[SLIDE_INFO_LEN];
+          char o_slide_info[MAX_FRAG_INFO_SIZE];
           unsigned long o_slide_info_len = 0;
 
           memset(rs_bind, 0, sizeof (rs_bind) );
@@ -181,7 +181,7 @@ namespace tfs
           rs_bind[1].buffer_type = MYSQL_TYPE_STRING;
           rs_bind[1].is_null = &is_null[1];
           rs_bind[1].buffer = (char *) o_name;
-          rs_bind[1].buffer_length = META_NAME_LEN;
+          rs_bind[1].buffer_length = MAX_FILE_PATH_LEN;
           rs_bind[1].length= &o_name_len;
 
           rs_bind[2].buffer_type = MYSQL_TYPE_LONGLONG;
@@ -206,7 +206,7 @@ namespace tfs
 
           rs_bind[7].buffer_type = MYSQL_TYPE_BLOB;
           rs_bind[7].is_null = &is_null[7];
-          rs_bind[7].buffer_length = SLIDE_INFO_LEN;
+          rs_bind[7].buffer_length = MAX_FRAG_INFO_SIZE;
           rs_bind[7].buffer = (char *) o_slide_info;
           rs_bind[7].length= &o_slide_info_len;
 
@@ -749,7 +749,7 @@ namespace tfs
         int64_t& mysql_proc_ret)
     {
       int ret = TFS_ERROR;
-      if (SLIDE_INFO_LEN >= meta_len)
+      if (MAX_FRAG_INFO_SIZE >= meta_len)
       {
         MYSQL_STMT *stmt;
         MYSQL_BIND ps_params[7];  /* input parameter buffers */

@@ -18,6 +18,7 @@
 #define TFS_NAMEMETASERVER_DATABASE_HELPER_H_
 #include "common/internal.h"
 #include "meta_info.h"
+#include "meta_server_define.h"
 namespace tfs
 {
   namespace namemetaserver

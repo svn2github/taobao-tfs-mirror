@@ -80,7 +80,29 @@ namespace tfs
     {
       int ret = TFS_ERROR;
       out_v_meta_info.clear();
+      bool still_have = false;
       std::vector<MetaInfo> tmp_meta_info;
+      ret = ls(app_id, uid, pid, name, name_len, is_file, tmp_meta_info, still_have);
+      if (TFS_SUCCESS == ret)
+      {
+        std::vector<MetaInfo>::const_iterator it = tmp_meta_info.begin();
+        for( ;it != tmp_meta_info.end(); it++)
+        {
+          if (0 == memcmp(it->name_.data(), name, name_len))
+          {
+            out_v_meta_info.push_back(*it);
+          }
+        }
+
+      }
+      return ret;
+    }
+
+    int MetaStoreManager::ls(const int64_t app_id, const int64_t uid, const int64_t pid, const char* name, const int32_t name_len, const bool is_file, std::vector<MetaInfo>& out_v_meta_info, bool& still_have)
+    {
+      int ret = TFS_ERROR;
+      still_have = false;
+      out_v_meta_info.clear();
       int64_t real_pid = 0;
       if (is_file)
       {
@@ -90,26 +112,17 @@ namespace tfs
       {
         real_pid = pid & ~(1L<<63);
       }
-      
 
       DatabaseHelper* database_helper = NULL;
       database_helper = database_pool_->get(database_pool_->get_hash_flag(app_id, uid));
       if (NULL != database_helper)
       {
-        ret = database_helper->ls_meta_info(tmp_meta_info, app_id, uid, real_pid, name, name_len);
+        ret = database_helper->ls_meta_info(out_v_meta_info, app_id, uid, real_pid, name, name_len);
       }
       database_pool_->release(database_helper);
-      if (TFS_SUCCESS == ret)
+      if (static_cast<int32_t>(out_v_meta_info.size()) >= ROW_LIMIT)
       {
-        std::vector<MetaInfo>::const_iterator it = tmp_meta_info.begin();
-        for( ;it != tmp_meta_info.end(); it++)
-        {
-          if (it->pid_ == real_pid && 0 == memcmp(it->name_.data(), name, name_len))
-          {
-            out_v_meta_info.push_back(*it);
-          }
-        }
-
+        still_have = true;
       }
       return ret;
     }

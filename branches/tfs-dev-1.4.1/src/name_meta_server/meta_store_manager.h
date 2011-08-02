@@ -35,6 +35,10 @@ namespace tfs
         int select(const int64_t app_id, const int64_t uid,
             const int64_t pid, const char* name, const int32_t name_len, const bool is_file, std::vector<MetaInfo>& out_v_meta_info);
 
+        int ls(const int64_t app_id, const int64_t uid, const int64_t pid, const char* name, 
+            const int32_t name_len, const bool is_file, 
+            std::vector<MetaInfo>& out_v_meta_info, bool& still_have);
+
         int insert(const int64_t app_id, const int64_t uid,
             const int64_t ppid, const char* pname, const int32_t pname_len,
             const int64_t pid, const char* name, const int32_t name_len,

@@ -60,7 +60,10 @@ namespace tfs
       int read(const int64_t app_id, const int64_t uid, const char* file_path,
           const int64_t offset, const int64_t size,
           FragInfo& frag_info, bool& still_have);
-      //TODO ls
+
+      int ls(const int64_t app_id, const int64_t uid, const int64_t pid, 
+          const char* file_path, const int32_t file_len,
+          const FileType, std::vector<MetaInfo>& meta_info, bool& still_have);
 
       static int check_frag_info(const FragInfo& frag_info);
       static int int64_to_char(char* buff, const int32_t buff_size, const int64_t v);
@@ -82,13 +85,16 @@ namespace tfs
 
 
       int get_meta_info(const int64_t app_id, const int64_t uid, const int64_t pid,
-          const char* name, const int32_t name_len, const int64_t offset,
+          const char* name, const int32_t name_len, const int64_t offset, const bool is_file,
           std::vector<MetaInfo>& v_meta_info, int32_t& cluster_id, int64_t& last_offset);
 
       int read_frag_info(const std::vector<MetaInfo>& v_meta_info,
           const int64_t offset, const int64_t size,
           int32_t& cluster_id, std::vector<FragMeta>& v_out_frag_info, bool& still_have);
-      
+
+      void calculate_file_meta_info(const std::vector<MetaInfo>& tmp_v_meta_info, 
+          std::vector<MetaInfo>& meta_info, MetaInfo& last_meta_info);
+
 
     private:
       char top_dir_name_[10];

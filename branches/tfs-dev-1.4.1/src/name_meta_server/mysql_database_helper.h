@@ -72,18 +72,12 @@ namespace tfs
         virtual int get_nex_val(int64_t& next_val);
 
       private:
-        enum
-        {
-          ROW_LIMIT = 500,
-          META_NAME_LEN = 512,
-          SLIDE_INFO_LEN = 65535,
-        };
         MYSQL_STMT *stmt_;
         MYSQL_BIND ps_params_[4];  /* input parameter buffers */
         int64_t app_id_;
         int64_t uid_;
         int64_t pid_;
-        char pname_[META_NAME_LEN];
+        char pname_[MAX_FILE_PATH_LEN];
         unsigned long pname_len_;
       private:
         struct mysql_ex {

@@ -251,6 +251,17 @@ namespace tfs
           size_(0), ver_no_(0), frag_info_(frag_info)
       {
       }
+        MetaInfo& copy_no_frag(const MetaInfo& right)
+        {
+          pid_ = right.pid_;
+          id_ = right.id_;
+          create_time_ = right.create_time_;
+          modify_time_ = right.modify_time_;
+          size_ = right.size_;
+          ver_no_ = right.ver_no_;
+          name_ = right.name_;
+          return *this;
+        }
 
         int64_t pid_;
         int64_t id_;
