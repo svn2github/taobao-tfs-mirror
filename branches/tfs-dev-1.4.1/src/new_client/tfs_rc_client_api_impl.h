@@ -41,7 +41,6 @@ namespace tfs
     {
       friend class StatUpdateTask;
       public:
-      public:
         RcClientImpl();
         ~RcClientImpl();
 
@@ -119,10 +118,17 @@ namespace tfs
 
         void parse_duplicate_info(const std::string& duplicate_info);
 
+      public:
+
+        int add_ns_into_write_ns(const std::string& ip_str, const uint32_t addr);
+      
+        int add_ns_into_choice(const std::string& ip_str, const uint32_t addr, const int32_t cluster_id);
+
       private:
+        static const int8_t CHOICE_CLUSTER_NS_TYPE_LENGTH = 3;
         typedef std::map<int32_t, std::string> ClusterNsType; //<cluster_id, ns>
-        ClusterNsType choice[2];
-        std::string write_ns_[2];
+        ClusterNsType choice[CHOICE_CLUSTER_NS_TYPE_LENGTH];
+        std::string write_ns_[CHOICE_CLUSTER_NS_TYPE_LENGTH];
         std::string duplicate_server_master_;
         std::string duplicate_server_slave_;
         std::string duplicate_server_group_;

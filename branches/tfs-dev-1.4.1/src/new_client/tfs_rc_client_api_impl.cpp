@@ -37,6 +37,7 @@ namespace tfs
   {
     using namespace tfs::common;
     using namespace std;
+
     StatUpdateTask::StatUpdateTask(RcClientImpl& rc_client):rc_client_(rc_client)
     {
     }
@@ -608,7 +609,8 @@ namespace tfs
     {
       string ns_addr;
       int32_t cluster_id = get_cluster_id(file_name);
-      if (index > 1 || (RcClient::CREATE != mode && 0 == cluster_id))
+      if ((index >= CHOICE_CLUSTER_NS_TYPE_LENGTH) 
+          || (RcClient::CREATE != mode && 0 == cluster_id))
       {
         //null ;
       }
@@ -643,11 +645,12 @@ namespace tfs
 
     void RcClientImpl::calculate_ns_info(const common::BaseInfo& base_info, const uint32_t local_addr)
     {
-      write_ns_[0].clear();
-      write_ns_[1].clear();
+      for (int8_t i = 0; i < CHOICE_CLUSTER_NS_TYPE_LENGTH; ++i)
+      {
+        write_ns_[i].clear();
+        choice[i].clear();
+      }
       need_use_unique_ = false;
-      choice[0].clear();
-      choice[1].clear();
       std::vector<ClusterRackData>::const_iterator it = base_info.cluster_infos_.begin();
       std::vector<ClusterData>::const_iterator cluster_data_it;
       for (; it != base_info.cluster_infos_.end(); it++)
@@ -659,58 +662,16 @@ namespace tfs
           assert(0 != cluster_data_it->cluster_stat_);
           //rc server should not give the cluster which stat is 0
           assert(0 != cluster_data_it->access_type_);
-          if (CLUSTER_ACCESS_TYPE_READ_WRITE == cluster_data_it->access_type_)
-          {
-            can_write = true;
-          }
           int32_t cluster_id = 0;
           bool is_master = false;
           parse_cluster_id(cluster_data_it->cluster_id_, cluster_id, is_master);
 
           if (CLUSTER_ACCESS_TYPE_READ_WRITE == cluster_data_it->access_type_)
           {
-            if (write_ns_[0].empty())
-            {
-              write_ns_[0] = cluster_data_it->ns_vip_;
-            }
-            else
-            {
-              //calculate who will be the first choice;
-              uint32_t distance1 = calculate_distance(write_ns_[0], local_addr);
-              uint32_t distance2 = calculate_distance(cluster_data_it->ns_vip_, local_addr);
-              if (distance1 > distance2)
-              {
-                write_ns_[1] = write_ns_[0];
-                write_ns_[0] = cluster_data_it->ns_vip_;
-              }
-              else
-              {
-                write_ns_[1] = cluster_data_it->ns_vip_;
-              }
-
-            }
+            can_write = true;
+            add_ns_into_write_ns(cluster_data_it->ns_vip_, local_addr);
           }
-          if (choice[0][cluster_id].empty())
-          {
-            choice[0][cluster_id] = cluster_data_it->ns_vip_;
-          }
-          else
-          {
-            //calculate who will be the first choice;
-            uint32_t distance1 = calculate_distance(choice[0][cluster_id], local_addr);
-            uint32_t distance2 = calculate_distance(cluster_data_it->ns_vip_, local_addr);
-            if (distance1 > distance2)
-            {
-              choice[1][cluster_id] = choice[0][cluster_id];
-              choice[0][cluster_id] = cluster_data_it->ns_vip_;
-            }
-            else
-            {
-              choice[1][cluster_id] = cluster_data_it->ns_vip_;
-            }
-
-          }
-
+          add_ns_into_choice(cluster_data_it->ns_vip_, local_addr, cluster_id);
         }
         if (can_write)
         {
@@ -722,7 +683,7 @@ namespace tfs
         }
       }
       TBSYS_LOG(INFO, "need_use_unique_:%d local_addr_:%u", need_use_unique_, local_addr);
-      for (int i = 0; i < 2; i++)
+      for (int i = 0; i < CHOICE_CLUSTER_NS_TYPE_LENGTH; i++)
       {
         TBSYS_LOG(INFO, "%d write_ns %s", i, write_ns_[i].c_str());
         ClusterNsType::const_iterator it = choice[i].begin();
@@ -797,6 +758,82 @@ namespace tfs
       TBSYS_LOG(DEBUG, "master = %s slave = %s group= %s area = %d",
                 duplicate_server_master_.c_str(), duplicate_server_slave_.c_str(),
                 duplicate_server_group_.c_str(), duplicate_server_area_);
+    }
+
+    int RcClientImpl::add_ns_into_write_ns(const std::string& ip_str, const uint32_t addr)
+    {
+      int32_t iret = !ip_str.empty() || addr > 0 ? TFS_SUCCESS : TFS_ERROR;
+      if (TFS_SUCCESS == iret)
+      {
+        int8_t index = 0;
+        //calculate who will be the first choice;
+        uint32_t distance2 = calculate_distance(ip_str, addr);
+        for (; index < CHOICE_CLUSTER_NS_TYPE_LENGTH; index++)
+        {
+          if (write_ns_[index].empty())
+          {
+            break;
+          }
+          else
+          {
+            uint32_t distance1 = calculate_distance(write_ns_[index], addr);
+            if (distance1 > distance2)
+            {
+              break;
+            }
+          }
+        }
+        if (index < CHOICE_CLUSTER_NS_TYPE_LENGTH)
+        {
+          for (int8_t i = CHOICE_CLUSTER_NS_TYPE_LENGTH - 1; i > index; i--)
+          {
+            write_ns_[i] = write_ns_[i - 1];
+          }
+          write_ns_[index] = ip_str;
+        }
+      }
+      return iret;
+    }
+
+    int RcClientImpl::add_ns_into_choice(const std::string& ip_str, const uint32_t addr, const int32_t cluster_id)
+    {
+      int32_t iret = !ip_str.empty() || addr > 0  || cluster_id <= 48 || cluster_id >= 58 ? TFS_SUCCESS : TFS_ERROR;
+      if (TFS_SUCCESS == iret)
+      {
+        int8_t index = 0;
+        //calculate who will be the first choice;
+        uint32_t distance2 = calculate_distance(ip_str, addr);
+        for (; index < CHOICE_CLUSTER_NS_TYPE_LENGTH; index++)
+        {
+          if (choice[index].empty())
+          {
+            break;
+          }
+          else
+          {
+            ClusterNsType::const_iterator it = choice[index].begin();
+            if (!(*it).second.empty())
+            {
+              uint32_t distance1 = calculate_distance((*it).second, addr);
+              if (distance1 > distance2)
+              {
+                break;
+              }
+            }
+          }
+        }
+
+        if (index < CHOICE_CLUSTER_NS_TYPE_LENGTH)
+        {
+          for (int8_t i = CHOICE_CLUSTER_NS_TYPE_LENGTH - 1; i > index ; i--)
+          {
+            choice[i] = choice[i - 1];
+            choice[i - 1].clear();
+          }
+          choice[index][cluster_id] = ip_str;
+        }
+      }
+      return iret;
     }
   }
 }
