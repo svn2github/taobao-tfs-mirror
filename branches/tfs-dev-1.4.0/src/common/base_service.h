@@ -43,6 +43,9 @@ namespace tfs
 
       inline BasePacketFactory* get_packet_factory() { return packet_factory_;}
 
+      /** get the packete streamer */
+      inline tbnet::IPacketStreamer* get_packet_streamer() { return  streamer_;}
+
       /** get transport*/
       tbnet::Transport& get_transport() const;
 
@@ -73,7 +76,7 @@ namespace tfs
       /** destroy the packet streamer*/
       virtual void destroy_packet_streamer(tbnet::IPacketStreamer* streamer) = 0;
 
-      /** create the packet streamer, this is used to create packet*/
+      /** create the packet factory, this is used to create packet*/
       virtual BasePacketFactory* create_packet_factory() = 0;
 
       /** destroy packet factory*/
@@ -111,8 +114,8 @@ namespace tfs
       BasePacketFactory* packet_factory_;
       BasePacketStreamer* streamer_;
       tbutil::TimerPtr timer_;
-      tbnet::Transport transport_;
     protected:
+      tbnet::Transport transport_;
       tbnet::PacketQueueThread main_workers_;
       int32_t work_queue_size_;
     };

@@ -249,12 +249,39 @@ namespace tfs
 
         server_local_port_ = adr->port_;
 
-        //init file number to management
-        uint64_t file_number = ((adr->ip_ & 0xFFFFFF00) | (adr->port_ & 0xFF));
-        file_number = file_number << 32;
-        data_management_.set_file_number(file_number);
-        ds_requester_.init(data_server_info_.id_, ns_ip_port_, &data_management_);
-
+        BasePacketStreamer* streamer = dynamic_cast<BasePacketStreamer*>(get_packet_streamer());
+        if (NULL == streamer)
+        {
+          TBSYS_LOG(ERROR, "get packet streamer fail, stremer is null");
+          iret = EXIT_GENERAL_ERROR;
+        }
+        else
+        {
+          char spec[32];
+          int32_t second_listen_port = adr->port_ + 1;
+          snprintf(spec, 32, "tcp::%d", second_listen_port);
+          tbnet::IOComponent* com = transport_.listen(spec, get_packet_streamer(), this);
+          if (NULL == com)
+          {
+            TBSYS_LOG(ERROR, "listen port: %d fail", second_listen_port);
+            iret = EXIT_NETWORK_ERROR;
+          }
+          else
+          {
+            TBSYS_LOG(INFO, "listen second port: %d successful", second_listen_port);
+          }
+        }
+        if (TFS_SUCCESS == iret)
+        {
+          //init file number to management
+          uint64_t file_number = ((adr->ip_ & 0xFFFFFF00) | (adr->port_ & 0xFF));
+          file_number = file_number << 32;
+          data_management_.set_file_number(file_number);
+          ds_requester_.init(data_server_info_.id_, ns_ip_port_, &data_management_);
+        }
+      }
+      if (TFS_SUCCESS == iret)
+      {
         //init global stat
         iret = stat_mgr_.initialize(get_timer());
         if (iret != TFS_SUCCESS)
