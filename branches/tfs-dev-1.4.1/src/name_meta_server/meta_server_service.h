@@ -68,6 +68,7 @@ namespace tfs
       static int check_frag_info(const FragInfo& frag_info);
       static int int64_to_char(char* buff, const int32_t buff_size, const int64_t v);
       static int char_to_int64(char* data, const int32_t data_size, int64_t& v);
+      static void next_file_name(char* name, int32_t& name_len); 
 
     private:
       // override
@@ -94,6 +95,13 @@ namespace tfs
 
       void calculate_file_meta_info(const std::vector<MetaInfo>& tmp_v_meta_info, const bool ls_file,
           std::vector<MetaInfo>& meta_info, MetaInfo& last_meta_info);
+
+      void make_new_meta_info(const int64_t pid, const int32_t cluster_id,
+          const char* name, const int32_t name_len, const int64_t last_offset,
+          std::vector<MetaInfo>& tmp_v_meta_info);
+
+      void add_frag_to_meta(std::vector<FragMeta>& v_frag_meta, 
+          MetaInfo& meta_info, int64_t& last_offset);
 
 
     private:

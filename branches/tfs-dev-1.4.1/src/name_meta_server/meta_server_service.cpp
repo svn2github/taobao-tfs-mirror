@@ -520,20 +520,9 @@ namespace tfs
           }
           else
           {
-            int64_t skip = 1;
             memcpy(name, file_path, file_len);
             name_len = file_len;
-            if (name_len == (unsigned char)name[0] + 1)
-            {
-              int64_to_char(name + name_len, 8, skip);
-              name_len += 8;
-            }
-            else
-            {
-              char_to_int64(name + name_len - 8, 8, skip);
-              skip += 1;
-              int64_to_char(name + name_len - 8, 8, skip);
-            }
+            next_file_name(name, name_len);
           }
           p_meta_info.id_ = pid;
         }
@@ -566,18 +555,7 @@ namespace tfs
         }
         if (static_cast<int32_t>(meta_info.size()) < MAX_OUT_FRAG_INFO)
         {
-          int64_t skip = 1;
-          if (name_len == (unsigned char)name[0] + 1)
-          {
-            int64_to_char(name + name_len, 8, skip);
-            name_len += 8;
-          }
-          else
-          {
-            char_to_int64(name + name_len - 8, 8, skip);
-            skip += 1;
-            int64_to_char(name + name_len - 8, 8, skip);
-          }
+          next_file_name(name, name_len);
         }
         if (still_have == false && my_file_type == DIRECTORY)
         {
@@ -622,15 +600,7 @@ namespace tfs
             memcpy(search_name, last_metaInfo.name_.data(), last_metaInfo.name_.length());
             search_name_len = last_metaInfo.name_.length();
             last_offset = last_metaInfo.frag_info_.get_last_offset();
-            if (search_name_len == (unsigned char)search_name[0] + 1)
-            {
-              int64_to_char(search_name + search_name_len, 8, last_offset);
-              search_name_len += 8;
-            }
-            else
-            {
-              int64_to_char(search_name + search_name_len - 8, 8, last_offset);
-            }
+            next_file_name(search_name, search_name_len);
           }
         }
       } while(TFS_SUCCESS == ret && still_have);
@@ -667,7 +637,7 @@ namespace tfs
           vector<FragMeta> v_frag_meta(frag_info.v_frag_meta_);
           sort(v_frag_meta.begin(), v_frag_meta.end());
           vector<FragMeta>::iterator write_frag_info_it = v_frag_meta.begin();
-          //we use while, but no
+          //we use while, so we can use break instead of goto, no loop here
           while (write_frag_info_it != v_frag_meta.end() && TFS_SUCCESS == ret)
           {
             tmp_v_meta_info.clear();
@@ -692,18 +662,10 @@ namespace tfs
             }
             if (tmp_v_meta_info.empty())
             {
-              //this is for split, we make a new metainfo
-              MetaInfo tmp;
-              tmp.pid_ = p_meta_info.id_;
-              tmp.frag_info_.cluster_id_ = frag_info.cluster_id_;
-              tmp.frag_info_.had_been_split_ = false;
-              char tmp_name[MAX_FILE_PATH_LEN + 8];
-              memcpy(tmp_name, name, name_len);
-              int64_to_char(tmp_name+name_len, MAX_FILE_PATH_LEN + 8 - name_len,
-                  last_offset);
 
-              tmp.name_.assign(tmp_name, name_len + 8);
-              tmp_v_meta_info.push_back(tmp);
+              //this is for split, we make a new metainfo
+              make_new_meta_info(p_meta_info.id_, frag_info.cluster_id_,
+                  name, name_len, last_offset, tmp_v_meta_info);
             }
             bool found_meta_info_should_be_updated = false;
             std::vector<MetaInfo>::iterator v_meta_info_it = tmp_v_meta_info.begin();
@@ -726,23 +688,7 @@ namespace tfs
             //now  write_frag_info_it  should be write to v_meta_info_it
             if (!v_meta_info_it->frag_info_.had_been_split_)
             {
-              while(write_frag_info_it != v_frag_meta.end())
-                // && static_cast<int32_t>(v_meta_info_it->frag_info_.v_frag_meta_.size()) <= SOFT_MAX_FRAG_INFO_COUNT)
-              {
-                if (-1 == write_frag_info_it->offset_)
-                {
-                  write_frag_info_it->offset_ = last_offset;
-                  last_offset += write_frag_info_it->size_;
-                }
-                v_meta_info_it->frag_info_.v_frag_meta_.push_back(*write_frag_info_it);
-                write_frag_info_it++;
-              }
-              if (static_cast<int32_t>(v_meta_info_it->frag_info_.v_frag_meta_.size()) 
-                  > SOFT_MAX_FRAG_INFO_COUNT)
-              {
-                TBSYS_LOG(DEBUG, "split meta_info");
-                v_meta_info_it->frag_info_.had_been_split_ = true;
-              }
+              add_frag_to_meta(v_frag_meta, *v_meta_info_it, last_offset);
             }
             else
             {
@@ -794,6 +740,42 @@ namespace tfs
       }
 
       return ret;
+    }
+    void MetaServerService::add_frag_to_meta(vector<FragMeta>& v_frag_meta, 
+        MetaInfo& meta_info, int64_t& last_offset)
+    {
+      vector<FragMeta>::iterator write_frag_info_it = v_frag_meta.begin();
+      while(write_frag_info_it != v_frag_meta.end())
+      {
+        if (-1 == write_frag_info_it->offset_)
+        {
+          write_frag_info_it->offset_ = last_offset;
+          last_offset += write_frag_info_it->size_;
+        }
+        meta_info.frag_info_.v_frag_meta_.push_back(*write_frag_info_it);
+        write_frag_info_it++;
+      }
+      if (static_cast<int32_t>(meta_info.frag_info_.v_frag_meta_.size()) 
+          > SOFT_MAX_FRAG_INFO_COUNT)
+      {
+        TBSYS_LOG(DEBUG, "split meta_info");
+        meta_info.frag_info_.had_been_split_ = true;
+      }
+    }
+    void MetaServerService::make_new_meta_info(const int64_t pid, const int32_t cluster_id,
+        const char* name, const int32_t name_len, const int64_t last_offset,
+          std::vector<MetaInfo>& tmp_v_meta_info)
+    {
+      MetaInfo tmp;
+      tmp.pid_ = pid;
+      tmp.frag_info_.cluster_id_ = cluster_id;
+      tmp.frag_info_.had_been_split_ = false;
+      char tmp_name[MAX_FILE_PATH_LEN + 8];
+      memcpy(tmp_name, name, name_len);
+      int64_to_char(tmp_name+name_len, MAX_FILE_PATH_LEN + 8 - name_len,
+          last_offset);
+      tmp.name_.assign(tmp_name, name_len + 8);
+      tmp_v_meta_info.push_back(tmp);
     }
 
     int MetaServerService::read_frag_info(const vector<MetaInfo>& v_meta_info, const int64_t offset,
@@ -1029,6 +1011,22 @@ namespace tfs
         ret = TFS_SUCCESS;
       }
       return ret;
+    }
+    void MetaServerService::next_file_name(char* name, int32_t& name_len)
+    {
+      int64_t skip = 1;
+      if (name_len == (unsigned char)name[0] + 1)
+      {
+        int64_to_char(name + name_len, 8, skip);
+        name_len += 8;
+      }
+      else
+      {
+        char_to_int64(name + name_len - 8, 8, skip);
+        skip += 1;
+        int64_to_char(name + name_len - 8, 8, skip);
+      }
+
     }
   }
 }
