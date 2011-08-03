@@ -39,7 +39,7 @@ namespace tfs
     SyncBackup::SyncBackup() : tfs_client_(NULL)
     {
       src_addr_[0] = '\0';
-      dest_addr_[0] = '\0';
+      memset(dest_addr_, 0, sizeof(dest_addr_));
     }
 
     SyncBackup::~SyncBackup()
@@ -463,8 +463,14 @@ namespace tfs
       {
         snprintf(src_addr_, MAX_ADDRESS_LENGTH, "%s:%d",
                  SYSPARAM_DATASERVER.local_ns_ip_, SYSPARAM_DATASERVER.local_ns_port_);
-        snprintf(dest_addr_, MAX_ADDRESS_LENGTH, "%s",
-                 SYSPARAM_DATASERVER.slave_ns_ip_);
+        std::vector<std::string> slave_ns_ip;
+        common::Func::split_string(SYSPARAM_DATASERVER.slave_ns_ip_, '|', slave_ns_ip);
+        std::vector<std::string>::const_iterator iter = slave_ns_ip.begin();
+        int8_t index = 0;
+        for (; iter != slave_ns_ip.end() && index < BACKUP_CLUSTER_NS_LENGTH; iter++, index++)
+        {
+          snprintf(dest_addr_[index], MAX_ADDRESS_LENGTH, "%s", (*iter).c_str());
+        }
 
         tfs_client_ = TfsClient::Instance();
         ret =
@@ -488,22 +494,29 @@ namespace tfs
     int TfsMirrorBackup::do_sync_ex(const SyncData *sf)
     {
       int ret = TFS_ERROR;
-      switch (sf->cmd_)
+      int8_t i = 0;
+      for (; i < BACKUP_CLUSTER_NS_LENGTH; i++)
       {
-      case OPLOG_INSERT:
-        ret = copy_file(sf->block_id_, sf->file_id_);
-        break;
-      case OPLOG_REMOVE:
-        ret = remove_file(sf->block_id_, sf->file_id_, static_cast<TfsUnlinkType>(sf->old_file_id_));
-        break;
-      case OPLOG_RENAME:
-        ret = rename_file(sf->block_id_, sf->file_id_, sf->old_file_id_);
-        break;
+        if (dest_addr_[i][0] != '\0')
+        {
+          switch (sf->cmd_)
+          {
+          case OPLOG_INSERT:
+            ret = copy_file(dest_addr_[i], sf->block_id_, sf->file_id_);
+            break;
+          case OPLOG_REMOVE:
+            ret = remove_file(dest_addr_[i], sf->block_id_, sf->file_id_, static_cast<TfsUnlinkType>(sf->old_file_id_));
+            break;
+          case OPLOG_RENAME:
+            ret = rename_file(dest_addr_[i], sf->block_id_, sf->file_id_, sf->old_file_id_);
+            break;
+          }
+        }
       }
       return ret;
     }
 
-    int TfsMirrorBackup::remote_copy_file(const uint32_t block_id, const uint64_t file_id)
+    int TfsMirrorBackup::remote_copy_file(const char* dest_addr, const uint32_t block_id, const uint64_t file_id)
     {
       FSName fsname(block_id, file_id);
       int ret = TFS_SUCCESS;
@@ -525,7 +538,7 @@ namespace tfs
           TBSYS_LOG(ERROR, "%s stat src file fail. blockid: %u, fileid: %"PRI64_PREFIX"u, ret: %d",
                     fsname.get_name(), block_id, file_id, ret);
         }
-        else if ((dest_fd = tfs_client_-> open(fsname.get_name(), NULL, dest_addr_, T_WRITE|T_NEWBLK)) <= 0)
+        else if ((dest_fd = tfs_client_-> open(fsname.get_name(), NULL, dest_addr, T_WRITE|T_NEWBLK)) <= 0)
         {
           TBSYS_LOG(ERROR, "%s open dest write fail. blockid: %u, fileid: %" PRI64_PREFIX "u, ret: %d",
                     fsname.get_name(), block_id, file_id, dest_fd);
@@ -604,19 +617,19 @@ namespace tfs
       return ret;
     }
 
-    int TfsMirrorBackup::copy_file(const uint32_t block_id, const uint64_t file_id)
+    int TfsMirrorBackup::copy_file(const char* dest_addr, const uint32_t block_id, const uint64_t file_id)
     {
       int ret = TFS_SUCCESS;
       LogicBlock* logic_block = BlockFileManager::get_instance()->get_logic_block(block_id);
       if (NULL == logic_block)
       {
-        return remote_copy_file(block_id, file_id);
+        return remote_copy_file(dest_addr, block_id, file_id);
       }
 
       FSName fsname(block_id, file_id);
       FileInfo finfo;
 
-      int dest_fd = tfs_client_->open(fsname.get_name(), NULL, dest_addr_, T_WRITE|T_NEWBLK);
+      int dest_fd = tfs_client_->open(fsname.get_name(), NULL, dest_addr, T_WRITE|T_NEWBLK);
       if (dest_fd <= 0)
       {
         TBSYS_LOG(ERROR, "open dest tfsfile fail. ret: %d", dest_fd);
@@ -720,13 +733,13 @@ namespace tfs
       return ret;
     }
 
-    int TfsMirrorBackup::remove_file(const uint32_t block_id, const uint64_t file_id,
+    int TfsMirrorBackup::remove_file(const char* dest_addr, const uint32_t block_id, const uint64_t file_id,
                                      const TfsUnlinkType action)
     {
       FSName fsname(block_id, file_id);
 
       int64_t file_size = 0;
-      int ret = tfs_client_->unlink(fsname.get_name(), NULL, dest_addr_, file_size, action, TFS_FILE_NO_SYNC_LOG);
+      int ret = tfs_client_->unlink(fsname.get_name(), NULL, dest_addr, file_size, action, TFS_FILE_NO_SYNC_LOG);
       if (TFS_SUCCESS != ret)
       {
         TBSYS_LOG(ERROR, "tfs mirror remove file fail. blockid: %d, fileid: %"PRI64_PREFIX"u, action: %d, ret: %d",
@@ -741,12 +754,13 @@ namespace tfs
       return ret;
     }
 
-    int TfsMirrorBackup::rename_file(const uint32_t block_id, const uint64_t file_id,
+    int TfsMirrorBackup::rename_file(const char* dest_addr, const uint32_t block_id, const uint64_t file_id,
                                      const uint64_t old_file_id)
     {
       UNUSED(block_id);
       UNUSED(file_id);
       UNUSED(old_file_id);
+      UNUSED(dest_addr);
       // FSName fsname(block_id, file_id);
       // int ret = tfs_client->rename(block_id, old_file_id, file_id);
       // if (TFS_SUCCESS != ret)

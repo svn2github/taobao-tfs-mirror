@@ -57,11 +57,12 @@ namespace tfs
       virtual int remote_copy_file(const uint32_t block_id, const uint64_t file_id);
 
     protected:
+      static const int8_t BACKUP_CLUSTER_NS_LENGTH  = 2;
       DISALLOW_COPY_AND_ASSIGN(SyncBackup);
       client::TfsClient* tfs_client_;
 
         char src_addr_[common::MAX_ADDRESS_LENGTH];
-        char dest_addr_[common::MAX_ADDRESS_LENGTH];
+        char dest_addr_[BACKUP_CLUSTER_NS_LENGTH][common::MAX_ADDRESS_LENGTH];
     };
 
     class NfsMirrorBackup : public SyncBackup
@@ -106,10 +107,10 @@ namespace tfs
 
       private:
         int do_sync_ex(const SyncData* sf);
-        int copy_file(const uint32_t block_id, const uint64_t file_id);
-        int remove_file(const uint32_t block_id, const uint64_t file_id, const common::TfsUnlinkType action);
-        int rename_file(const uint32_t block_id, const uint64_t file_id, const uint64_t old_file_id);
-        int remote_copy_file(const uint32_t block_id, const uint64_t file_id);
+        int copy_file(const char* dest_addr, const uint32_t block_id, const uint64_t file_id);
+        int remove_file(const char* dest_addr, const uint32_t block_id, const uint64_t file_id, const common::TfsUnlinkType action);
+        int rename_file(const char* dest_addr, const uint32_t block_id, const uint64_t file_id, const uint64_t old_file_id);
+        int remote_copy_file(const char* dest_addr, const uint32_t block_id, const uint64_t file_id);
     };
 
   }
