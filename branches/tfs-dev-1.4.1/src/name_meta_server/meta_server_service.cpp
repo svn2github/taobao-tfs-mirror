@@ -14,9 +14,10 @@
  *
  */
 
-#include "common/base_packet.h"
 #include "meta_server_service.h"
 
+#include "common/base_packet.h"
+#include "common/parameter.h"
 using namespace tfs::common;
 using namespace tfs::message;
 using namespace std;
@@ -31,8 +32,6 @@ namespace tfs
       top_dir_name_[0] = 1;
       top_dir_name_[1] = '/';
       top_dir_size_ = 2;
-      //TODO  use the number from conf
-      store_manager_->init(5);
     }
 
     MetaServerService::~MetaServerService()
@@ -74,7 +73,20 @@ namespace tfs
     {
       UNUSED(argc);
       UNUSED(argv);
-      return TFS_SUCCESS;
+      int ret = TFS_SUCCESS;
+      if ((ret = SYSPARAM_NAMEMETASERVER.initialize()) != TFS_SUCCESS)
+      {   
+        TBSYS_LOG(ERROR, "call SYSPARAM_NAMEMETASERVER::initialize fail. ret: %d", ret);
+      }
+      else
+      {
+        ret = store_manager_->init(SYSPARAM_NAMEMETASERVER.max_pool_size_);
+        if (TFS_SUCCESS != ret)
+        {
+          TBSYS_LOG(ERROR, "init store_manager error");
+        }
+      }
+      return ret;
     }
 
     int MetaServerService::destroy_service()
@@ -235,7 +247,7 @@ namespace tfs
     }
 
     int MetaServerService::create(const int64_t app_id, const int64_t uid,
-                                  const char* file_path, const FileType type)
+        const char* file_path, const FileType type)
     {
       char name[MAX_FILE_PATH_LEN], pname[MAX_FILE_PATH_LEN];
       int32_t name_len = 0, pname_len = 0;
@@ -269,7 +281,7 @@ namespace tfs
           get_name(v_name, depth, name, MAX_FILE_PATH_LEN, name_len);
           TBSYS_LOG(DEBUG, "name: %s, ppid: %lu, pid: %lu", name, p_meta_info.pid_, p_meta_info.id_);
           if ((ret = store_manager_->insert(app_id, uid, p_meta_info.pid_, p_meta_info.name_.c_str(), pname_len,
-                p_meta_info.id_, name, name_len, type)) != TFS_SUCCESS)
+                  p_meta_info.id_, name, name_len, type)) != TFS_SUCCESS)
           {
             TBSYS_LOG(ERROR, "create fail: %s, type: %d, ret: %d", file_path, type, ret);
           }
@@ -277,13 +289,13 @@ namespace tfs
       }
 
       TBSYS_LOG(DEBUG, "create %s, type: %d, appid: %"PRI64_PREFIX"d, uid: %"PRI64_PREFIX"d, filepath: %s",
-                TFS_SUCCESS == ret ? "success" : "fail", type, app_id, uid, file_path);
+          TFS_SUCCESS == ret ? "success" : "fail", type, app_id, uid, file_path);
 
       return ret;
     }
 
     int MetaServerService::rm(const int64_t app_id, const int64_t uid,
-                              const char* file_path, const FileType type)
+        const char* file_path, const FileType type)
     {
       char name[MAX_FILE_PATH_LEN];
       int32_t name_len = 0, pname_len = 0;
@@ -313,7 +325,7 @@ namespace tfs
             iter = v_meta_info.begin();
             if ((ret = store_manager_->remove(app_id, uid,
                     p_meta_info.pid_, p_meta_info.name_.c_str(), pname_len,
-                  p_meta_info.id_, (*iter).id_, name, name_len, type)) != TFS_SUCCESS)
+                    p_meta_info.id_, (*iter).id_, name, name_len, type)) != TFS_SUCCESS)
             {
               TBSYS_LOG(ERROR, "rm fail: %s, type: %d, ret: %d", file_path, type, ret);
             }
@@ -322,14 +334,14 @@ namespace tfs
       }
 
       TBSYS_LOG(DEBUG, "rm %s, type: %d, appid: %"PRI64_PREFIX"d, uid: %"PRI64_PREFIX"d, filepath: %s",
-                TFS_SUCCESS == ret ? "success" : "fail", type, app_id, uid, file_path);
+          TFS_SUCCESS == ret ? "success" : "fail", type, app_id, uid, file_path);
 
       return ret;
     }
 
     int MetaServerService::mv(const int64_t app_id, const int64_t uid,
-                              const char* file_path, const char* dest_file_path,
-                              const FileType type)
+        const char* file_path, const char* dest_file_path,
+        const FileType type)
     {
       char name[MAX_FILE_PATH_LEN], dest_name[MAX_FILE_PATH_LEN];
       std::vector<std::string> v_name, dest_v_name;
@@ -370,14 +382,14 @@ namespace tfs
       }
 
       TBSYS_LOG(DEBUG, "mv %s, type: %d, appid: %"PRI64_PREFIX"d, uid: %"PRI64_PREFIX"d, filepath: %s",
-                TFS_SUCCESS == ret ? "success" : "fail", type, app_id, uid, file_path);
+          TFS_SUCCESS == ret ? "success" : "fail", type, app_id, uid, file_path);
 
       return ret;
     }
 
     int MetaServerService::read(const int64_t app_id, const int64_t uid, const char* file_path,
-                                const int64_t offset, const int64_t size,
-                                FragInfo& frag_info, bool& still_have)
+        const int64_t offset, const int64_t size,
+        FragInfo& frag_info, bool& still_have)
     {
       char name[MAX_FILE_PATH_LEN];
       int32_t name_len = 0, pname_len = 0;
@@ -764,7 +776,7 @@ namespace tfs
     }
     void MetaServerService::make_new_meta_info(const int64_t pid, const int32_t cluster_id,
         const char* name, const int32_t name_len, const int64_t last_offset,
-          std::vector<MetaInfo>& tmp_v_meta_info)
+        std::vector<MetaInfo>& tmp_v_meta_info)
     {
       MetaInfo tmp;
       tmp.pid_ = pid;

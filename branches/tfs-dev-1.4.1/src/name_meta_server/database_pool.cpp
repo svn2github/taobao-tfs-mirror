@@ -16,6 +16,7 @@
 #include "database_pool.h"
 #include "mysql_database_helper.h"
 #include "common/internal.h"
+#include "common/parameter.h"
 namespace tfs
 {
   using namespace common;
@@ -68,6 +69,8 @@ namespace tfs
           ret = false;
           break;
         }
+        TBSYS_LOG(DEBUG, "database_helper %d connn_str %s user_name %s passwd %s hashflag %d",
+            i, conn_str[i], user_name[i], passwd[i], hash_flag[i]);
         base_info_[i].busy_flag_ = false;
         base_info_[i].hash_flag_ = hash_flag[i];
       }
@@ -132,9 +135,9 @@ namespace tfs
     }
     int32_t DataBasePool::get_hash_flag(const int64_t app_id, const int64_t uid)
     {
-      UNUSED(app_id);
-      UNUSED(uid);
-      return 1;
+      HashHelper helper(app_id, uid);
+      return tbsys::CStringUtil::murMurHash((const void*)&helper, sizeof(HashHelper)) 
+        % SYSPARAM_NAMEMETASERVER.db_infos_.size();
     }
 
   }

@@ -302,12 +302,33 @@ namespace tfs
 
     int NameMeatServerParameter::initialize(void)
     {
-      db_info_ = TBSYS_CONFIG.getString(CONF_SN_NAMEMETASERVER, CONF_META_DB_INFO, "");
-      db_user_ = TBSYS_CONFIG.getString(CONF_SN_NAMEMETASERVER, CONF_META_DB_USER, "");
-      db_pwd_ = TBSYS_CONFIG.getString(CONF_SN_NAMEMETASERVER, CONF_META_DB_PWD, "");
-
-      max_frag_info_size_ = TBSYS_CONFIG.getInt(CONF_SN_NAMEMETASERVER, CONF_MAX_FRAG_INFO_SIZE, 65535);
-      return TFS_SUCCESS;
+      int ret = TFS_SUCCESS;
+      max_pool_size_ = TBSYS_CONFIG.getInt(CONF_SN_NAMEMETASERVER, CONF_MAX_SPOOL_SIZE, 10);
+      std::string db_infos = TBSYS_CONFIG.getString(CONF_SN_NAMEMETASERVER, CONF_META_DB_INFOS, "");
+      std::vector<std::string> fields;
+      Func::split_string(db_infos.c_str(), ';', fields);
+      TBSYS_LOG(DEBUG, "fields.size = %d", fields.size());
+      for (size_t i = 0; i < fields.size(); i++)
+      {
+        std::vector<std::string> items;
+        Func::split_string(fields[i].c_str(), ',', items);
+        TBSYS_LOG(DEBUG, "items.size = %d", items.size());
+        DbInfo tmp_db_info;
+        if (items.size() >= 3)
+        {
+          tmp_db_info.conn_str_ = items[0];
+          tmp_db_info.user_ = items[1];
+          tmp_db_info.passwd = items[2];
+          tmp_db_info.hash_value_ = db_infos_.size();
+          db_infos_.push_back(tmp_db_info);
+        }
+      }
+      if (db_infos_.size() == 0)
+      {
+        TBSYS_LOG(ERROR, "can not find dbinfos");
+        ret = TFS_ERROR;
+      }
+      return ret;
     }
   }/** common **/
 }/** tfs **/

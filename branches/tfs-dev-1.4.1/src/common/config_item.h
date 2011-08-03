@@ -147,10 +147,8 @@ namespace tfs
 #define CONF_RC_DB_PWD                                "rc_db_pwd"
 
 //name_meta_server
-#define CONF_MAX_FRAG_INFO_SIZE                       "meta_max_frag_info_size"
-#define CONF_META_DB_INFO                             "meta_db_info"
-#define CONF_META_DB_USER                             "meta_db_user"
-#define CONF_META_DB_PWD                              "meta_db_pwd"
+#define CONF_MAX_SPOOL_SIZE                            "max_spool_size"
+#define CONF_META_DB_INFOS                             "meta_db_infos"
   }
 }
 #endif //TFS_COMMON_CONFDEFINE_H_

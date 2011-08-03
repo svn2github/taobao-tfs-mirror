@@ -136,12 +136,19 @@ namespace tfs
 
     struct NameMeatServerParameter
     {
+      struct DbInfo
+      {
+        DbInfo():hash_value_(0)
+        {
+        }
+        std::string conn_str_;
+        std::string user_;
+        std::string passwd;
+        int32_t hash_value_;
+      };
       int initialize(void);
-
-      std::string db_info_;
-      std::string db_user_;
-      std::string db_pwd_;
-      int32_t max_frag_info_size_;
+      std::vector<DbInfo> db_infos_;
+      int32_t max_pool_size_;
 
       static NameMeatServerParameter meta_parameter_;
       static NameMeatServerParameter& instance()
@@ -154,7 +161,7 @@ namespace tfs
 #define SYSPARAM_DATASERVER DataServerParameter::instance()
 #define SYSPARAM_FILESYSPARAM FileSystemParameter::instance()
 #define SYSPARAM_RCSERVER RcServerParameter::instance()
-#define SYSPARAM_NAMEMETASERVER NAMEMETAServerParameter::instance()
+#define SYSPARAM_NAMEMETASERVER NameMeatServerParameter::instance()
   }/** common **/
 }/** tfs **/
 #endif //TFS_COMMON_SYSPARAM_H_

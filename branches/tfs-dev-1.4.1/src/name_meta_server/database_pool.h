@@ -46,6 +46,15 @@ namespace tfs
           bool busy_flag_;
           int32_t hash_flag_;
         };
+        struct HashHelper
+        {
+          HashHelper(const int64_t app_id, const int64_t uid):
+            app_id_(app_id), uid_(uid)
+          {
+          }
+          int64_t app_id_;
+          int64_t uid_;
+        };
         DataBaseInfo base_info_[MAX_POOL_SIZE];
         int32_t pool_size_;
         tbutil::Mutex mutex_;

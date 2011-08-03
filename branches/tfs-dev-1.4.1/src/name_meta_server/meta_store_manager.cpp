@@ -15,6 +15,7 @@
 */
 #include "meta_store_manager.h"
 #include "database_helper.h"
+#include "common/parameter.h"
 
 using namespace tfs::common;
 namespace tfs
@@ -43,15 +44,16 @@ namespace tfs
       }
       for (int i = 0; i < pool_size; i++)
       {
-        //TODO from conf file
-        conn_str[i] = (char*)malloc(100);
-        snprintf(conn_str[i], 100, "%s", ConnStr::mysql_conn_str_.c_str());
-        user_name[i] = (char*)malloc(100);
-        snprintf(user_name[i], 100, "%s", ConnStr::mysql_user_.c_str());
-        passwd[i] = (char*)malloc(100);
-        snprintf(passwd[i], 100, "%s", ConnStr::mysql_password_.c_str());
-        hash_flag[i] = 1; 
+        int data_base_index = i % SYSPARAM_NAMEMETASERVER.db_infos_.size();
+        const NameMeatServerParameter::DbInfo& dbinfo = SYSPARAM_NAMEMETASERVER.db_infos_[data_base_index];
 
+        conn_str[i] = (char*)malloc(100);
+        snprintf(conn_str[i], 100, "%s", dbinfo.conn_str_.c_str());
+        user_name[i] = (char*)malloc(100);
+        snprintf(user_name[i], 100, "%s", dbinfo.user_.c_str());
+        passwd[i] = (char*)malloc(100);
+        snprintf(passwd[i], 100, "%s", dbinfo.passwd.c_str());
+        hash_flag[i] = dbinfo.hash_value_; 
       }
       bool pool_ret = database_pool_->init_pool(pool_size, 
           conn_str, user_name, passwd, hash_flag);
