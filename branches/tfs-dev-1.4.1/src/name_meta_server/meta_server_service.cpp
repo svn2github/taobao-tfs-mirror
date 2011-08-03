@@ -461,11 +461,6 @@ namespace tfs
           break;
         }
       }
-      if (!ls_file && static_cast<int32_t>(meta_info.size()) < MAX_OUT_FRAG_INFO 
-          && !last_meta_info.name_.empty())
-      {
-        meta_info.push_back(last_meta_info);
-      }
       return;
     }
     int MetaServerService::ls(const int64_t app_id, const int64_t uid, const int64_t pid, 
@@ -475,7 +470,7 @@ namespace tfs
       char name[MAX_FILE_PATH_LEN + 16];
       int32_t name_len = 0, pname_len = 0;
       int ret = TFS_SUCCESS;
-      still_have = false;
+      still_have = true;
       FileType my_file_type = file_type;
 
       MetaInfo p_meta_info;
@@ -562,6 +557,11 @@ namespace tfs
           my_file_type = NORMAL_FILE;
           still_have = true;
         }
+      }
+      if (!ls_file && static_cast<int32_t>(meta_info.size()) < MAX_OUT_FRAG_INFO 
+          && !last_meta_info.name_.empty())
+      {
+        meta_info.push_back(last_meta_info);
       }
       return ret;
     }

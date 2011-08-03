@@ -23,7 +23,6 @@ namespace tfs
   {
     DataBasePool::DataBasePool():pool_size_(0)
     {
-      my_init();
     }
     DataBasePool::~DataBasePool()
     {
