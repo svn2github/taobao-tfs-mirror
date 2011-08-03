@@ -2,10 +2,10 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.59)
-AC_INIT([tfs], 1.3, duolong@taobao.com)
+AC_INIT([tfs], 1.4, duolong@taobao.com)
 AC_CONFIG_SRCDIR([src/common/config_item.h])
 
-AM_INIT_AUTOMAKE(tfs, 1.3)
+AM_INIT_AUTOMAKE(tfs, 1.4)
 # Checks for programs.
 AC_PROG_AWK
 AC_PROG_CXX
