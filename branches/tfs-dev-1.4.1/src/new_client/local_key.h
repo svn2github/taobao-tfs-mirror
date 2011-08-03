@@ -170,8 +170,8 @@ namespace tfs
       virtual int save();
 
       int initialize(const char* local_key, const uint64_t addr);
-      int load(const char* buf);
-      int load_head(const char* buf);
+      int load(const char* buf, const int32_t buf_len);
+      int load_head(const char* buf, const int32_t buf_len);
 
       int64_t get_segment_for_write(const int64_t offset, const char* buf,
                                 const int64_t size, SEG_DATA_LIST& seg_list);
@@ -181,7 +181,7 @@ namespace tfs
 
     private:
       int init_local_key_name(const char* key, const uint64_t addr, char* local_key_name);
-      int load_segment(const char* buf);
+      int load_segment(const char* buf, const int32_t buf_len);
 
       static void get_segment(const int64_t offset, const char* buf,
                        const int64_t size, SEG_DATA_LIST& seg_list);

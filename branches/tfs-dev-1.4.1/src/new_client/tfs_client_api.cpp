@@ -303,17 +303,23 @@ int TfsClient::stat_file(const char* tfs_name, const char* suffix,
   return TfsClientImpl::Instance()->stat_file(tfs_name, suffix, file_stat, stat_type, ns_addr);
 }
 
-int TfsClient::open_ex(const char* file_name, const char* suffix, const char* ns_addr, const int flags)
+int TfsClient::open(const char* file_name, const char* suffix, const int flags, const char* key)
 {
-  return TfsClientImpl::Instance()->open(file_name, suffix, ns_addr, flags);
+  return open(file_name, suffix, NULL, flags, key);
 }
 
-int TfsClient::open_ex_with_arg(const char* file_name, const char* suffix, const char* ns_addr, const int flags, ...)
+int TfsClient::open(const char* file_name, const char* suffix, const char* ns_addr, const int flags, const char* key)
 {
   int ret = EXIT_INVALIDFD_ERROR;
-  va_list args;
-  va_start(args, flags);
-  ret = TfsClientImpl::Instance()->open(file_name, suffix, ns_addr, flags, va_arg(args, char*));
-  va_end(args);
+
+  if ((flags & T_LARGE) && (flags & T_WRITE) && NULL == key)
+  {
+    TBSYS_LOG(ERROR, "open with T_LARGE|T_WRITE but without key");
+  }
+  else
+  {
+    ret = TfsClientImpl::Instance()->open(file_name, suffix, ns_addr, flags, key);
+  }
+
   return ret;
 }

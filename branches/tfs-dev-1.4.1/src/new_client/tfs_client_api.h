@@ -18,22 +18,6 @@
 #include <stdio.h>
 #include "common/define.h"
 
-// #ifdef __OPTIMIZE__
-// extern int error_open_missing_mode (void)
-//     __attribute__((__error__ ("open with (T_LARGE & T_WRITE) flag needs 1 additional not-NULL argument")));
-// extern int error_no_addition_mode (void)
-//     __attribute__((__error__ ("open without (T_LARGE & T_WRITE) flag needs no more additional argument")));
-// extern int error_open_too_many_arguments (void)
-//     __attribute__((__error__ ("open can be called with either 3 or 4 or 5 arguments, no more permitted")));
-// #define missing_log_error() error_open_missing_mode()
-// #define noadditional_log_error() error_no_addition_mode()
-// #define overmany_log_error() error_open_too_many_arguments()
-// #else
-#define missing_log_error() fprintf(stderr, "%s\n", "open with (T_LARGE & T_WRITE) flag needs 1 additional not-NULL argument")
-#define noadditional_log_error() fprintf(stderr, "%s\n", "open without (T_LARGE & T_WRITE) flag needs no more additional argument")
-#define overmany_log_error() fprintf(stderr, "%s\n", "open can be called with either 3 or 4 or 5 arguments, no more permitted")
-// #endif
-
 namespace tfs
 {
   namespace client
@@ -54,73 +38,9 @@ namespace tfs
                              const int32_t cache_items = common::DEFAULT_BLOCK_CACHE_ITEMS);
       int destroy();
 
-      __always_inline __attribute__ ((__gnu_inline__)) int
-      open(const char* file_name, const char* suffix, const int flags, ... )
-      {
-        int ret = common::EXIT_INVALIDFD_ERROR;
-        if (__builtin_va_arg_pack_len() > 1)
-        {
-          overmany_log_error();
-        }
-        else if (flags & common::T_WRITE && flags & common::T_LARGE)
-        {
-          if (__builtin_va_arg_pack_len() != 1)
-          {
-            missing_log_error();
-          }
-          else
-          {
-            ret = open_ex_with_arg(file_name, suffix, (const char*)NULL, flags, __builtin_va_arg_pack());
-          }
-        }
-        else
-        {
-          if (__builtin_va_arg_pack_len() > 0)
-          {
-            noadditional_log_error();
-          }
-          else
-          {
-            ret = open_ex(file_name, suffix, (const char*)NULL, flags);
-          }
-        }
+      int open(const char* file_name, const char* suffix, const int flags, const char* key = NULL);
 
-        return ret;
-      }
-
-      __always_inline __attribute__ ((__gnu_inline__)) int
-      open(const char* file_name, const char* suffix, const char* ns_addr, const int flags, ... )
-      {
-        int ret = common::EXIT_INVALIDFD_ERROR;
-        if (__builtin_va_arg_pack_len() > 1)
-        {
-          overmany_log_error();
-        }
-        else if (flags & common::T_WRITE && flags & common::T_LARGE)
-        {
-          if (__builtin_va_arg_pack_len() != 1)
-          {
-            missing_log_error();
-          }
-          else
-          {
-            ret = open_ex_with_arg(file_name, suffix, ns_addr, flags, __builtin_va_arg_pack());
-          }
-        }
-        else
-        {
-          if (__builtin_va_arg_pack_len() > 0)
-          {
-            noadditional_log_error();
-          }
-          else
-          {
-            ret = open_ex(file_name, suffix, ns_addr, flags);
-          }
-        }
-
-        return ret;
-      }
+      int open(const char* file_name, const char* suffix, const char* ns_addr, const int flags, const char* key = NULL );
 
       int64_t read(const int fd, void* buf, const int64_t count);
       int64_t readv2(const int fd, void* buf, const int64_t count, common::TfsFileStat* file_info);
@@ -212,8 +132,6 @@ namespace tfs
       TfsClient();
       DISALLOW_COPY_AND_ASSIGN(TfsClient);
       ~TfsClient();
-      int open_ex(const char* file_name, const char* suffix, const char* ns_addr, const int flags);
-      int open_ex_with_arg(const char* file_name, const char* suffix, const char* ns_addr, const int flags, ...);
     };
   }
 }

@@ -533,7 +533,7 @@ int TfsLargeFile::load_meta(int32_t flags)
 
   if (TFS_SUCCESS == ret)
   {
-    if ((ret = local_key_.load(seg_buf)) != TFS_SUCCESS)
+    if ((ret = local_key_.load(seg_buf, meta_seg_->file_info_->size_)) != TFS_SUCCESS)
     {
       TBSYS_LOG(ERROR, "construct meta file info fail, ret: %d", ret);
     }
@@ -567,7 +567,7 @@ int TfsLargeFile::load_meta_head()
   }
   else
   {
-    local_key_.load_head(seg_buf);
+    local_key_.load_head(seg_buf, ret_size);
   }
 
   return ret;

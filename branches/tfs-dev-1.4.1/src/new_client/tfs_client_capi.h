@@ -18,12 +18,13 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-#include "common/cdefine.h"
-
 #if __cplusplus
 extern "C"
 {
 #endif
+
+#include "common/cdefine.h"
+
   /**
    * init tfs client
    * @param ns_addr  which cluster will be used
