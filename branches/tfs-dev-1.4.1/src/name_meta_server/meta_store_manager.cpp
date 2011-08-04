@@ -136,12 +136,21 @@ namespace tfs
       int ret = TFS_ERROR;
       int status = TFS_ERROR;
       int64_t proc_ret = 0;
-      
+      int64_t id = 0;
       DatabaseHelper* database_helper = NULL;
+      if (type == DIRECTORY) 
+      {
+        database_helper = database_pool_->get(0);
+        if (NULL != database_helper)
+        {
+          database_helper->get_nex_val(id);
+          database_pool_->release(database_helper);
+          database_helper = NULL;
+        }
+      }
       database_helper = database_pool_->get(database_pool_->get_hash_flag(app_id, uid));
       if (NULL != database_helper)
       {
-
         if (type == NORMAL_FILE)
         {
           status = database_helper->create_file(app_id, uid, ppid, pid, pname, pname_len, name, name_len, proc_ret);
@@ -152,9 +161,7 @@ namespace tfs
         }
         else if (type == DIRECTORY)
         {
-          int64_t id = 0;
-          status = database_helper->get_nex_val(id);
-          if (TFS_SUCCESS == status && id != 0)
+          if (id != 0)
           {
             status = database_helper->create_dir(app_id, uid, ppid, pname, pname_len, pid, id, name, name_len, proc_ret);
             if (TFS_SUCCESS != status)
@@ -268,9 +275,9 @@ namespace tfs
     }
 
     int MetaStoreManager::remove(const int64_t app_id, const int64_t uid, const int64_t ppid,
-            const char* pname, const int64_t pname_len, const int64_t pid, const int64_t id,
-            const char* name, const int64_t name_len,
-            const FileType type)
+        const char* pname, const int64_t pname_len, const int64_t pid, const int64_t id,
+        const char* name, const int64_t name_len,
+        const FileType type)
     {
       int ret = TFS_ERROR;
       int status = TFS_ERROR;
@@ -280,29 +287,29 @@ namespace tfs
       database_helper = database_pool_->get(database_pool_->get_hash_flag(app_id, uid));
       if (NULL != database_helper)
       {
-      if (type & NORMAL_FILE)
-      {
-        status = database_helper->rm_file(app_id, uid, ppid, pid, pname, pname_len, name, name_len, proc_ret);
-        if (TFS_SUCCESS != status)
+        if (type & NORMAL_FILE)
         {
-          TBSYS_LOG(DEBUG, "database helper rm file, status: %d", status);
-        }
-      }
-      else if (type & DIRECTORY)
-      {
-        if (id == 0)
-        {
-          TBSYS_LOG(DEBUG, "wrong type, target is file.");
-        }
-        else
-        {
-          status = database_helper->rm_dir(app_id, uid, ppid, pname, pname_len, pid, id, name, name_len, proc_ret);
+          status = database_helper->rm_file(app_id, uid, ppid, pid, pname, pname_len, name, name_len, proc_ret);
           if (TFS_SUCCESS != status)
           {
-            TBSYS_LOG(DEBUG, "database helper rm dir, status: %d", status);
+            TBSYS_LOG(DEBUG, "database helper rm file, status: %d", status);
           }
         }
-      }
+        else if (type & DIRECTORY)
+        {
+          if (id == 0)
+          {
+            TBSYS_LOG(DEBUG, "wrong type, target is file.");
+          }
+          else
+          {
+            status = database_helper->rm_dir(app_id, uid, ppid, pname, pname_len, pid, id, name, name_len, proc_ret);
+            if (TFS_SUCCESS != status)
+            {
+              TBSYS_LOG(DEBUG, "database helper rm dir, status: %d", status);
+            }
+          }
+        }
       }
       database_pool_->release(database_helper);
 
