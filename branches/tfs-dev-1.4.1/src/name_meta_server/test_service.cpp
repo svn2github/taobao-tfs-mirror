@@ -14,19 +14,21 @@
 *
 */
 #include "meta_server_service.h"
-using namespace tfs;
+
 using namespace tfs::namemetaserver;
+using namespace tfs::common;
+
 const int32_t FRAG_LEN = 65535;
 void dump_meta_info(const MetaInfo& metainfo)
 {
-  int size = metainfo.size_;
-  int nlen = metainfo.name_.length();
+  int size = metainfo.file_info_.size_;
+  int nlen = metainfo.file_info_.name_.length();
 
   TBSYS_LOG(INFO, "size = %d, name_len = %d", size, nlen);
 }
 void dump_frag_meta(const FragMeta& fm)
 {
-  TBSYS_LOG(INFO, "offset_ %ld file_id_ %lu size_ %d block_id_ %u", 
+  TBSYS_LOG(INFO, "offset_ %ld file_id_ %lu size_ %d block_id_ %u",
       fm.offset_, fm.file_id_, fm.size_, fm.block_id_);
 }
 

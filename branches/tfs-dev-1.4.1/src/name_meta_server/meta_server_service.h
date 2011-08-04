@@ -6,10 +6,10 @@
  * published by the Free Software Foundation.
  *
  *
- * Version: $Id
+ * Version: $Id$
  *
  * Authors:
- *   nayan <nayan@taobao.com>
+ *   chuyu <chuyu@taobao.com>
  *      - initial release
  *
  */
@@ -21,13 +21,13 @@
 #include "common/status_message.h"
 #include "message/message_factory.h"
 #include "message/meta_nameserver_client_message.h"
+
 #include "meta_store_manager.h"
 
 namespace tfs
 {
   namespace namemetaserver
   {
-    const int32_t MAX_FRAG_INFO_COUNT = MAX_FRAG_INFO_SIZE/sizeof(FragMeta) - 1;
     class MetaServerService : public common::BaseService
     {
     public:
@@ -47,62 +47,73 @@ namespace tfs
       int do_action(common::BasePacket* packet);
       int do_write(common::BasePacket* packet);
       int do_read(common::BasePacket* packet);
+      int do_ls(common::BasePacket* packet);
 
       int create(const int64_t app_id, const int64_t uid,
-          const char* file_path, const FileType type);
+                 const char* file_path, const common::FileType type);
       int rm(const int64_t app_id, const int64_t uid,
-          const char* file_path, const FileType type);
+             const char* file_path, const common::FileType type);
       int mv(const int64_t app_id, const int64_t uid,
-          const char* file_path, const char* dest_file_path, const FileType type);
+             const char* file_path, const char* dest_file_path, const common::FileType type);
       int write(const int64_t app_id, const int64_t uid,
-          const char* file_path,
-          const FragInfo& in_v_frag_info);
+                const char* file_path,
+                const common::FragInfo& in_v_frag_info);
       int read(const int64_t app_id, const int64_t uid, const char* file_path,
-          const int64_t offset, const int64_t size,
-          FragInfo& frag_info, bool& still_have);
+               const int64_t offset, const int64_t size,
+               common::FragInfo& frag_info, bool& still_have);
 
-      int ls(const int64_t app_id, const int64_t uid, const int64_t pid, 
-          const char* file_path, const int32_t file_len,
-          const FileType, std::vector<MetaInfo>& meta_info, bool& still_have);
+      int ls(const int64_t app_id, const int64_t uid, const int64_t pid,
+             const char* file_path, const common::FileType,
+             std::vector<common::MetaInfo>& meta_info, bool& still_have);
 
-      static int check_frag_info(const FragInfo& frag_info);
+      static int check_frag_info(const common::FragInfo& frag_info);
       static int int64_to_char(char* buff, const int32_t buff_size, const int64_t v);
       static int char_to_int64(char* data, const int32_t data_size, int64_t& v);
-      static void next_file_name(char* name, int32_t& name_len); 
+      static void next_file_name(char* name, int32_t& name_len);
 
     private:
       // override
       virtual int initialize(int argc, char* argv[]);
       virtual int destroy_service();
 
-      int get_p_meta_info(const int64_t app_id, const int64_t uid,
-          const std::vector<std::string>& v_name,
-          MetaInfo& out_meta_info, int32_t& name_len);
       int create_top_dir(const int64_t app_id, const int64_t uid);
 
       static int parse_name(const char* file_path, std::vector<std::string>& v_name);
       static int32_t get_depth(const std::vector<std::string>& v_name);
-      static int get_name(const std::vector<std::string>& v_name, const int32_t depth, char* buffer, const int32_t buffer_len, int32_t& name_len);
+      static int get_name(const std::vector<std::string>& v_name, const int32_t depth,
+                          char* buffer, const int32_t buffer_len, int32_t& name_len);
 
-
+      int parse_file_path(const int64_t app_id, const int64_t uid, const char* file_path,
+                          common::MetaInfo& p_meta_info, char* name, int32_t& name_len);
+      int get_p_meta_info(const int64_t app_id, const int64_t uid,
+                          const std::vector<std::string>& v_name, common::MetaInfo& out_meta_info);
+      int get_dir_meta_info(const int64_t app_id, const int64_t uid, const int64_t pid,
+                            const char* name, const int32_t name_len,
+                            MetaInfo& out_meta_info);
       int get_meta_info(const int64_t app_id, const int64_t uid, const int64_t pid,
-          const char* name, const int32_t name_len, const int64_t offset, const bool is_file,
-          std::vector<MetaInfo>& v_meta_info, int32_t& cluster_id, int64_t& last_offset);
+                        const char* name, const int32_t name_len, const int64_t offset, const bool is_file,
+                        std::vector<common::MetaInfo>& v_meta_info, int32_t& cluster_id, int64_t& last_offset);
 
-      int read_frag_info(const std::vector<MetaInfo>& v_meta_info,
-          const int64_t offset, const int64_t size,
-          int32_t& cluster_id, std::vector<FragMeta>& v_out_frag_info, bool& still_have);
+      int read_frag_info(const std::vector<common::MetaInfo>& v_meta_info,
+                         const int64_t offset, const int64_t size,
+                         int32_t& cluster_id, std::vector<common::FragMeta>& v_out_frag_info, bool& still_have);
 
-      void calculate_file_meta_info(const std::vector<MetaInfo>& tmp_v_meta_info, const bool ls_file,
-          std::vector<MetaInfo>& meta_info, MetaInfo& last_meta_info);
+      void calculate_file_meta_info(const std::vector<common::MetaInfo>& tmp_v_meta_info, const bool ls_file,
+                                    std::vector<common::MetaInfo>& meta_info, common::MetaInfo& last_meta_info);
 
-      void make_new_meta_info(const int64_t pid, const int32_t cluster_id,
-          const char* name, const int32_t name_len, const int64_t last_offset,
-          std::vector<MetaInfo>& tmp_v_meta_info);
+      void add_new_meta_info(const int64_t pid, const int32_t cluster_id,
+                              const char* name, const int32_t name_len, const int64_t last_offset,
+                              std::vector<common::MetaInfo>& tmp_v_meta_info);
 
-      void add_frag_to_meta(std::vector<FragMeta>& v_frag_meta, 
-          MetaInfo& meta_info, int64_t& last_offset);
+      void add_frag_to_meta(std::vector<common::FragMeta>::iterator& frag_meta_begin,
+                            std::vector<common::FragMeta>::iterator frag_meta_end,
+                            common::MetaInfo& meta_info, int64_t& last_offset);
 
+      template<class T>
+      bool check_not_out_over(const T& v)
+      {
+        return static_cast<int32_t>(v.size()) < common::MAX_OUT_INFO_COUNT;
+      }
 
     private:
       char top_dir_name_[10];

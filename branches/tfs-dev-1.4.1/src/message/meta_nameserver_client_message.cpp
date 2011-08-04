@@ -16,7 +16,7 @@
 #include "meta_nameserver_client_message.h"
 
 using namespace tfs::common;
-using namespace tfs::namemetaserver;
+
 namespace tfs
 {
   namespace message
@@ -221,7 +221,7 @@ namespace tfs
       int ret = TFS_ERROR;
 
       ret = input.get_int8(reinterpret_cast<int8_t*>(&still_have_));
-     
+
       if (TFS_SUCCESS == ret)
       {
         ret = frag_info_.deserialize(input);
@@ -244,5 +244,130 @@ namespace tfs
       }
       return ret;
     }
+
+    LsFilepathMessage::LsFilepathMessage() :
+      app_id_(0), user_id_(0), file_path_(), file_type_(NORMAL_FILE)
+    {
+      _packetHeader._pcode = LS_FILEPATH_MESSAGE;
+    }
+
+    LsFilepathMessage::~LsFilepathMessage()
+    {
+    }
+
+    int64_t LsFilepathMessage::length() const
+    {
+      return INT64_SIZE * 3 + common::Serialization::get_string_length(file_path_) + INT8_SIZE;
+    }
+
+    int LsFilepathMessage::serialize(common::Stream& output) const
+    {
+      int ret = TFS_SUCCESS;
+      ret = output.set_int64(app_id_);
+      if (TFS_SUCCESS == ret)
+      {
+        ret = output.set_int64(user_id_);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = output.set_int64(pid_);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = output.set_string(file_path_);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = output.set_int8(static_cast<char>(file_type_));
+      }
+      return ret;
+    }
+
+    int LsFilepathMessage::deserialize(common::Stream& input)
+    {
+      int ret = input.get_int64(&app_id_);
+      if (TFS_SUCCESS == ret)
+      {
+        ret = input.get_int64(&user_id_);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = input.get_int64(&pid_);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = input.get_string(file_path_);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = input.get_int8(reinterpret_cast<int8_t*>(&file_type_));
+      }
+      return ret;
+    }
+
+    RespLsFilepathMessage::RespLsFilepathMessage() :
+      still_have_(false)
+    {
+      meta_infos_.clear();
+      _packetHeader._pcode = RESP_LS_FILEPATH_MESSAGE;
+    }
+
+    RespLsFilepathMessage::~RespLsFilepathMessage()
+    {
+
+    }
+    int64_t RespLsFilepathMessage::length() const
+    {
+      int64_t len = INT8_SIZE + INT_SIZE;
+      for (std::vector<MetaInfo>::const_iterator it = meta_infos_.begin();
+           it != meta_infos_.end(); it++)
+      {
+        len += it->length();
+      }
+      return len;
+    }
+
+    int RespLsFilepathMessage::serialize(Stream& output) const
+    {
+      int ret = output.set_int8(still_have_);
+      if (TFS_SUCCESS == ret)
+      {
+        ret = output.set_int32(meta_infos_.size());
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        for (std::vector<MetaInfo>::const_iterator it = meta_infos_.begin();
+             TFS_SUCCESS == ret && it != meta_infos_.end(); it++)
+        {
+          ret = it->serialize(output);
+        }
+      }
+      return ret;
+    }
+
+    int RespLsFilepathMessage::deserialize(Stream& input)
+    {
+      int ret = input.get_int8(reinterpret_cast<int8_t*>(&still_have_));
+      int32_t count = 0;
+      if (TFS_SUCCESS == ret)
+      {
+        ret = input.get_int32(&count);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        for (int32_t i = 0; i < count; i++)
+        {
+          MetaInfo file_meta_info;
+          ret = file_meta_info.deserialize(input);
+          if (ret != TFS_SUCCESS)
+          {
+            break;
+          }
+          meta_infos_.push_back(file_meta_info);
+        }
+      }
+      return ret;
+    }
+
   }
 }

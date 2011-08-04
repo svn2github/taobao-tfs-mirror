@@ -16,8 +16,9 @@
 #include <pthread.h>
 #include "mysql_database_helper.h"
 #include "database_pool.h"
-using namespace tfs;
 using namespace tfs::namemetaserver;
+using namespace tfs::common;
+
 void* run(void* arg)
 {
   DataBasePool* dbp = (DataBasePool*) arg;

@@ -71,10 +71,6 @@ if  test -z "${TAIR_ROOT}"; then
    dnl tbnet include path supplied
    TAIR_ROOT="/usr/local"
 fi
-if ! test -d "${TAIR_ROOT}/include" -a -d "${TBLIB_ROOT}/lib"; then
-        AC_MSG_ERROR([TAIR_ROOT is not work! expect TAIR_ROOT/include and TAIR_ROOT/lib directory])
-        exit 1;
-fi
 
 AC_ARG_ENABLE([uniquestore],
            AS_HELP_STRING([--enable-uniquestore],
@@ -82,6 +78,10 @@ AC_ARG_ENABLE([uniquestore],
            [enable_uniquestore=${enableval}],
            [enable_uniquestore="no"])
 if test "${enable_uniquestore}" = "yes"; then
+        if ! test -d "${TAIR_ROOT}/include" -a -d "${TBLIB_ROOT}/lib"; then
+                AC_MSG_ERROR([TAIR_ROOT is not work! expect TAIR_ROOT/include and TAIR_ROOT/lib directory])
+                exit 1;
+        fi
         UNIQUE_STORE_CPPFLAGS="-DWITH_UNIQUE_STORE -I${TAIR_ROOT}/include"
         UNIQUE_STORE_LDFLAGS="${TAIR_ROOT}/lib/libtairclientapi.a -lboost_thread -lz"
 fi

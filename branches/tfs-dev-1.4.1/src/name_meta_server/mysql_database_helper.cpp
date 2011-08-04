@@ -246,13 +246,13 @@ namespace tfs
               break;
             }
             MetaInfo tmp;
-            tmp.name_.assign(o_name, o_name_len);
-            tmp.pid_ = o_pid;
-            tmp.id_ = o_id;
-            tmp.create_time_ = o_create_time;
-            tmp.modify_time_ = o_modify_time;
-            tmp.size_ = o_size;
-            tmp.ver_no_ = o_ver_no;
+            tmp.file_info_.name_.assign(o_name, o_name_len);
+            tmp.file_info_.pid_ = o_pid;
+            tmp.file_info_.id_ = o_id;
+            tmp.file_info_.create_time_ = o_create_time;
+            tmp.file_info_.modify_time_ = o_modify_time;
+            tmp.file_info_.size_ = o_size;
+            tmp.file_info_.ver_no_ = o_ver_no;
             if (!is_null[7])
             {
               int64_t pos = 0;

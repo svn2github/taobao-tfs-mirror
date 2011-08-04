@@ -6,7 +6,7 @@
 * published by the Free Software Foundation.
 *
 *
-* Version: $Id
+* Version: $Id$
 *
 * Authors:
 *   daoan <daoan@taobao.com>
@@ -41,7 +41,7 @@ namespace tfs
       }
       mysql_thread_end();
     }
-    bool DataBasePool::init_pool(const int32_t pool_size, 
+    bool DataBasePool::init_pool(const int32_t pool_size,
         char** conn_str,  char** user_name,
         char** passwd,  int32_t* hash_flag)
     {
@@ -136,7 +136,7 @@ namespace tfs
     int32_t DataBasePool::get_hash_flag(const int64_t app_id, const int64_t uid)
     {
       HashHelper helper(app_id, uid);
-      return tbsys::CStringUtil::murMurHash((const void*)&helper, sizeof(HashHelper)) 
+      return tbsys::CStringUtil::murMurHash((const void*)&helper, sizeof(HashHelper))
         % SYSPARAM_NAMEMETASERVER.db_infos_.size();
     }
 

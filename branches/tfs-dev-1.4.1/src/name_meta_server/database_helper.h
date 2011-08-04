@@ -17,8 +17,8 @@
 #ifndef TFS_NAMEMETASERVER_DATABASE_HELPER_H_
 #define TFS_NAMEMETASERVER_DATABASE_HELPER_H_
 #include "common/internal.h"
-#include "meta_info.h"
-#include "meta_server_define.h"
+#include "common/meta_server_define.h"
+
 namespace tfs
 {
   namespace namemetaserver
@@ -35,7 +35,7 @@ namespace tfs
         virtual int connect() = 0;
         virtual int close() = 0;
 
-        virtual int ls_meta_info(std::vector<MetaInfo>& out_v_meta_info,
+        virtual int ls_meta_info(std::vector<common::MetaInfo>& out_v_meta_info,
             const int64_t app_id, const int64_t uid,
             const int64_t pid = 0, const char* name = NULL, const int32_t name_len = 0) = 0;
 

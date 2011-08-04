@@ -15,9 +15,12 @@
  */
 #ifndef TFS_MESSAGE_METANAMESERVERCLIENTMESSAGE_H_
 #define TFS_MESSAGE_METANAMESERVERCLIENTMESSAGE_H_
+
 #include "common/base_packet.h"
-#include "name_meta_server/meta_info.h"
-#include "name_meta_server/meta_server_service.h"
+#include "common/meta_server_define.h"
+
+using tfs::common::MetaInfo;
+
 namespace tfs
 {
   namespace message
@@ -120,11 +123,11 @@ namespace tfs
           return file_path_.c_str();
         }
 
-        inline namemetaserver::FragInfo& get_frag_info()
+        inline common::FragInfo& get_frag_info()
         {
           return frag_info_;
         }
-        inline void set_frag_info(const namemetaserver::FragInfo& frag_info)
+        inline void set_frag_info(const common::FragInfo& frag_info)
         {
           frag_info_ = frag_info;
         }
@@ -133,7 +136,7 @@ namespace tfs
         int64_t app_id_;
         int64_t user_id_;
         std::string file_path_;
-        namemetaserver::FragInfo frag_info_;
+        common::FragInfo frag_info_;
     };
 
     class ReadFilepathMessage: public common::BasePacket
@@ -207,11 +210,11 @@ namespace tfs
         virtual int deserialize(common::Stream& input);
         virtual int64_t length() const;
 
-        inline namemetaserver::FragInfo& get_frag_info()
+        inline common::FragInfo& get_frag_info()
         {
           return frag_info_;
         }
-        inline void set_frag_info(const namemetaserver::FragInfo frag_info)
+        inline void set_frag_info(const common::FragInfo& frag_info)
         {
           frag_info_ = frag_info;
         }
@@ -226,8 +229,103 @@ namespace tfs
         }
 
       protected:
-        namemetaserver::FragInfo frag_info_;
+        common::FragInfo frag_info_;
         bool still_have_;
+    };
+
+    class LsFilepathMessage: public common::BasePacket
+    {
+    public:
+      LsFilepathMessage();
+      virtual ~LsFilepathMessage();
+      virtual int serialize(common::Stream& output) const ;
+      virtual int deserialize(common::Stream& input);
+      virtual int64_t length() const;
+
+        inline void set_app_id(const int64_t app_id)
+        {
+          app_id_ = app_id;
+        }
+        inline int64_t get_app_id() const
+        {
+          return app_id_;
+        }
+
+        inline void set_user_id(const int64_t user_id)
+        {
+          user_id_ = user_id;
+        }
+        inline int64_t get_user_id() const
+        {
+          return user_id_;
+        }
+        inline void set_file_path(const char* file_path)
+        {
+          file_path_ = std::string(file_path);
+        }
+        inline const char* get_file_path() const
+        {
+          return file_path_.c_str();
+        }
+        inline void set_file_type(int32_t file_type)
+        {
+          file_type_ = file_type;
+        }
+        inline int32_t get_file_type()
+        {
+          return file_type_;
+        }
+
+        inline void set_pid(int64_t pid)
+        {
+          pid_ = pid;
+        }
+
+        inline int64_t get_pid() const
+        {
+          return pid_;
+        }
+
+    private:
+      int64_t app_id_;
+      int64_t user_id_;
+      int64_t pid_;
+      std::string file_path_;
+      int32_t file_type_;
+    };
+
+    class RespLsFilepathMessage: public common::BasePacket
+    {
+    public:
+      RespLsFilepathMessage();
+      virtual ~RespLsFilepathMessage();
+      virtual int serialize(common::Stream& output) const ;
+      virtual int deserialize(common::Stream& input);
+      virtual int64_t length() const;
+
+      inline void set_still_have(bool still_have)
+      {
+        still_have_ = still_have;
+      }
+
+      inline bool get_still_have() const
+      {
+        return still_have_;
+      }
+
+      inline void set_meta_infos(std::vector<MetaInfo>& meta_infos)
+      {
+        meta_infos_ = meta_infos;
+      }
+
+      inline std::vector<MetaInfo>& get_meta_infos()
+      {
+        return meta_infos_;
+      }
+
+    private:
+      bool still_have_;
+      std::vector<MetaInfo> meta_infos_;
     };
   }
 }

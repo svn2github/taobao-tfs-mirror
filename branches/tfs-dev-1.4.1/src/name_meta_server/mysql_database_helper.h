@@ -19,6 +19,7 @@
 #include <tbsys.h>
 #include <Mutex.h>
 #include "database_helper.h"
+
 namespace tfs
 {
   namespace namemetaserver
@@ -31,7 +32,7 @@ namespace tfs
         virtual int connect();
         virtual int close();
 
-        virtual int ls_meta_info(std::vector<MetaInfo>& out_v_meta_info,
+        virtual int ls_meta_info(std::vector<common::MetaInfo>& out_v_meta_info,
             const int64_t app_id, const int64_t uid,
             const int64_t pid = 0, const char* name = NULL, const int32_t name_len = 0);
 
@@ -77,7 +78,7 @@ namespace tfs
         int64_t app_id_;
         int64_t uid_;
         int64_t pid_;
-        char pname_[MAX_FILE_PATH_LEN];
+        char pname_[common::MAX_FILE_PATH_LEN];
         unsigned long pname_len_;
       private:
         struct mysql_ex {

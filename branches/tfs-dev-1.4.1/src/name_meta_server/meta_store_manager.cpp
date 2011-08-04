@@ -53,9 +53,9 @@ namespace tfs
         snprintf(user_name[i], 100, "%s", dbinfo.user_.c_str());
         passwd[i] = (char*)malloc(100);
         snprintf(passwd[i], 100, "%s", dbinfo.passwd.c_str());
-        hash_flag[i] = dbinfo.hash_value_; 
+        hash_flag[i] = dbinfo.hash_value_;
       }
-      bool pool_ret = database_pool_->init_pool(pool_size, 
+      bool pool_ret = database_pool_->init_pool(pool_size,
           conn_str, user_name, passwd, hash_flag);
 
       if(!pool_ret)
@@ -90,7 +90,7 @@ namespace tfs
         std::vector<MetaInfo>::const_iterator it = tmp_meta_info.begin();
         for( ;it != tmp_meta_info.end(); it++)
         {
-          if (0 == memcmp(it->name_.data(), name, name_len))
+          if (0 == memcmp(it->file_info_.name_.data(), name, name_len))
           {
             out_v_meta_info.push_back(*it);
           }
@@ -138,7 +138,7 @@ namespace tfs
       int64_t proc_ret = 0;
       int64_t id = 0;
       DatabaseHelper* database_helper = NULL;
-      if (type == DIRECTORY) 
+      if (type == DIRECTORY)
       {
         database_helper = database_pool_->get(0);
         if (NULL != database_helper)
@@ -202,7 +202,8 @@ namespace tfs
                 }
                 else
                 {
-                  status = database_helper->pwrite_file(app_id, uid, pid, name, name_len, meta_info->size_, meta_info->ver_no_, frag_info, frag_len, proc_ret);
+                  status = database_helper->pwrite_file(app_id, uid, pid, name, name_len,
+                  meta_info->file_info_.size_, meta_info->file_info_.ver_no_, frag_info, frag_len, proc_ret);
                   if (TFS_SUCCESS != status)
                   {
                     TBSYS_LOG(DEBUG, "database helper pwrite file, status: %d", status);

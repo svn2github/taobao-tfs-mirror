@@ -16,8 +16,8 @@
 #ifndef TFS_NAMEMETASERVER_NAMEMETASTOREMANAGER_H_
 #define TFS_NAMEMETASERVER_NAMEMETASTOREMANAGER_H_
 #include "Memory.hpp"
-#include "meta_server_define.h"
-#include "meta_info.h"
+#include "common/meta_server_define.h"
+
 #include "mysql_database_helper.h"
 #include "database_pool.h"
 
@@ -33,28 +33,29 @@ namespace tfs
         int init(const int32_t pool_size);
 
         int select(const int64_t app_id, const int64_t uid,
-            const int64_t pid, const char* name, const int32_t name_len, const bool is_file, std::vector<MetaInfo>& out_v_meta_info);
+                   const int64_t pid, const char* name, const int32_t name_len, const bool is_file,
+                   std::vector<common::MetaInfo>& out_v_meta_info);
 
-        int ls(const int64_t app_id, const int64_t uid, const int64_t pid, const char* name, 
-            const int32_t name_len, const bool is_file, 
-            std::vector<MetaInfo>& out_v_meta_info, bool& still_have);
+        int ls(const int64_t app_id, const int64_t uid, const int64_t pid, const char* name,
+            const int32_t name_len, const bool is_file,
+               std::vector<common::MetaInfo>& out_v_meta_info, bool& still_have);
 
         int insert(const int64_t app_id, const int64_t uid,
             const int64_t ppid, const char* pname, const int32_t pname_len,
             const int64_t pid, const char* name, const int32_t name_len,
-            const FileType type, MetaInfo* meta_info = NULL);
+            const common::FileType type, common::MetaInfo* meta_info = NULL);
 
         int update(const int64_t app_id, const int64_t uid,
             const int64_t s_ppid, const int64_t s_pid, const char* s_pname, const int32_t s_pname_len,
             const int64_t d_ppid, const int64_t d_pid, const char* d_pname, const int32_t d_pname_len,
             const char* s_name, const int32_t s_name_len,
             const char* d_name, const int32_t d_name_len,
-            const FileType type);
+            const common::FileType type);
 
         int remove(const int64_t app_id, const int64_t uid, const int64_t ppid,
             const char* pname, const int64_t pname_len, const int64_t pid, const int64_t id,
             const char* name, const int64_t name_len,
-            const FileType type);
+            const common::FileType type);
       private:
         DataBasePool* database_pool_;
     };

@@ -14,12 +14,13 @@
 *
 */
 #include "mysql_database_helper.h"
-using namespace tfs;
+
 using namespace tfs::namemetaserver;
+using namespace tfs::common;
 void dump_meta_info(const MetaInfo& metainfo)
 {
-  int size = metainfo.size_;
-  int nlen = metainfo.name_.length();
+  int size = metainfo.file_info_.size_;
+  int nlen = metainfo.file_info_.name_.length();
 
   TBSYS_LOG(INFO, "size = %d, name_len = %d", size, nlen);
 }

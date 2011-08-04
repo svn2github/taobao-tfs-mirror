@@ -1,20 +1,20 @@
 AM_CPPFLAGS=-Wall -I$(top_srcdir)/src\
             -I$(TBLIB_ROOT)/include/tbsys\
             -I$(TBLIB_ROOT)/include/tbnet\
-						`mysql_config --include`
- 
-AM_LDFLAGS=-lz -lrt -lpthread -ldl -luuid `mysql_config --libs_r`
+						`/usr/bin/mysql_config --include`
+
+AM_LDFLAGS=-lz -lrt -lpthread -ldl -luuid `/usr/bin/mysql_config --libs_r`
 
 LDADD=$(top_builddir)/src/message/libtfsmessage.a \
       $(top_builddir)/src/common/libtfscommon.a\
       $(TBLIB_ROOT)/lib/libtbnet.a \
-      $(TBLIB_ROOT)/lib/libtbsys.a 
+      $(TBLIB_ROOT)/lib/libtbsys.a
 
 noinst_LIBRARIES=libnamemetaserver.a
 
 libnamemetaserver_a_SOURCES=meta_server_service.cpp meta_store_manager.cpp \
 			    database_helper.cpp mysql_database_helper.cpp \
-                            database_pool.cpp meta_server_define.cpp
+                            database_pool.cpp
 
 bin_PROGRAMS = metaserver test test_pool test_service
 
