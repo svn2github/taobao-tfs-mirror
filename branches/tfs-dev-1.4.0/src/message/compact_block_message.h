@@ -93,7 +93,7 @@ namespace tfs
         {
           return block_info_;
         }
-        inline void set_success(const common::PlanStatus success)
+        inline void set_success(const common::CompactStatus success)
         {
           success_ = success;
         }

@@ -300,6 +300,13 @@ namespace tfs
       PLAN_RUN_FLAG_DELETE = 1 << 3
     };
 
+    enum CompactStatus
+    {
+      COMPACT_STATUS_SUCCESS = 0,
+      COMPACT_STATUS_START,
+      COMPACT_STATUS_FAILED
+    };
+
     enum DeleteExcessBackupStrategy
     {
       DELETE_EXCESS_BACKUP_STRATEGY_NORMAL = 1,
