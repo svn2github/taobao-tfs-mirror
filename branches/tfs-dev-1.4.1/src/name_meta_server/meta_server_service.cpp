@@ -6,7 +6,7 @@
  * published by the Free Software Foundation.
  *
  *
- * Version: $Id$
+ * Version: $Id: meta_server_service.cpp 49 2010-11-16 09:58:57Z nayan@taobao.com $
  *
  * Authors:
  *   chuyu <chuyu@taobao.com>
@@ -675,6 +675,7 @@ namespace tfs
           still_have = false;
 
           // return directory and file separately
+          // first directory type, then file type
           ret = store_manager_->ls(app_id, uid, p_meta_info.get_id(), name, name_len,
                                    my_file_type != DIRECTORY, tmp_v_meta_info, still_have);
 
@@ -702,10 +703,13 @@ namespace tfs
             }
           }
 
-          // not list all
-          if (!check_not_out_over(v_meta_info) && tmp_v_meta_info_it != tmp_v_meta_info.end())
+          if (!check_not_out_over(v_meta_info))
           {
-            still_have = true;
+            // not list all
+            if (tmp_v_meta_info_it != tmp_v_meta_info.end())
+            {
+              still_have = true;
+            }
             break;
           }
 

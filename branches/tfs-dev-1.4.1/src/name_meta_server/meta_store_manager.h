@@ -6,7 +6,7 @@
 * published by the Free Software Foundation.
 *
 *
-* Version: $Id
+* Version: $Id$
 *
 * Authors:
 *   chuyu <chuyu@taobao.com>
@@ -56,6 +56,10 @@ namespace tfs
             const char* pname, const int64_t pname_len, const int64_t pid, const int64_t id,
             const char* name, const int64_t name_len,
             const common::FileType type);
+
+      private:
+        int get_return_status(const int status, const int proc_ret);
+
       private:
         DataBasePool* database_pool_;
     };

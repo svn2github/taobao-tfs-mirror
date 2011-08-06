@@ -6,7 +6,7 @@
 * published by the Free Software Foundation.
 *
 *
-* Version: $Id
+* Version: $Id$
 *
 * Authors:
 *   chuyu <chuyu@taobao.com>
@@ -120,8 +120,9 @@ namespace tfs
       if (NULL != database_helper)
       {
         ret = database_helper->ls_meta_info(out_v_meta_info, app_id, uid, real_pid, name, name_len);
+        database_pool_->release(database_helper);
       }
-      database_pool_->release(database_helper);
+
       if (static_cast<int32_t>(out_v_meta_info.size()) >= ROW_LIMIT)
       {
         still_have = true;
@@ -214,17 +215,11 @@ namespace tfs
             }
           }
         }
-      }
-      database_pool_->release(database_helper);
 
-      if (TFS_SUCCESS == status && proc_ret > 0)
-      {
-        ret = TFS_SUCCESS;
+        ret = get_return_status(status, proc_ret);
+        database_pool_->release(database_helper);
       }
-      else
-      {
-        ret = proc_ret;
-      }
+
       return ret;
     }
 
@@ -261,17 +256,11 @@ namespace tfs
             TBSYS_LOG(DEBUG, "database helper mv dir, status: %d", status);
           }
         }
-      }
-      database_pool_->release(database_helper);
 
-      if (TFS_SUCCESS == status && proc_ret > 0)
-      {
-        ret = TFS_SUCCESS;
+        ret = get_return_status(status, proc_ret);
+        database_pool_->release(database_helper);
       }
-      else
-      {
-        ret = proc_ret;
-      }
+
       return ret;
     }
 
@@ -311,17 +300,35 @@ namespace tfs
             }
           }
         }
-      }
-      database_pool_->release(database_helper);
 
-      if (TFS_SUCCESS == status && proc_ret > 0)
-      {
-        ret = TFS_SUCCESS;
+        ret = get_return_status(status, proc_ret);
+        database_pool_->release(database_helper);
       }
-      else
+
+      return ret;
+    }
+
+    // proc_ret depend database's logic
+    // be ware of different conflicted semantic of error code.
+    // database level and manager level should be be consensus about error code definition,
+    // otherwise, manager level SHOULD merge difference
+    int MetaStoreManager::get_return_status(const int status, const int proc_ret)
+    {
+      int ret = TFS_SUCCESS;
+      // maybe network fail
+      if (status != TFS_SUCCESS)
+      {
+        ret = status;
+      }
+      else if (TFS_SUCCESS == proc_ret) // conflict with TFS_SUCCESS(0) error code
+      {
+        ret = TFS_ERROR;
+      }
+      else if (proc_ret < 0)
       {
         ret = proc_ret;
       }
+
       return ret;
     }
   }
