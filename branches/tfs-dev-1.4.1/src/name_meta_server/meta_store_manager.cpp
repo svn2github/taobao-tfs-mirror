@@ -309,7 +309,6 @@ namespace tfs
     }
 
     // proc_ret depend database's logic
-    // be ware of different conflicted semantic of error code.
     // database level and manager level should be be consensus about error code definition,
     // otherwise, manager level SHOULD merge difference
     int MetaStoreManager::get_return_status(const int status, const int proc_ret)
@@ -319,10 +318,6 @@ namespace tfs
       if (status != TFS_SUCCESS)
       {
         ret = status;
-      }
-      else if (TFS_SUCCESS == proc_ret) // conflict with TFS_SUCCESS(0) error code
-      {
-        ret = TFS_ERROR;
       }
       else if (proc_ret < 0)
       {
