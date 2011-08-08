@@ -28,8 +28,3 @@ case "x$1" in
 	echo "Usage: $0 [ clean | init ]"
 	;;
 esac
-<<<<<<< .working
-=======
-
-./configure CXXFLAGS="-g -D__STDC_LIMIT_MACROS -Wall -Werror -Wextra -Wunused-parameter -Wformat -Wconversion -Wdeprecated"
->>>>>>> .merge-right.r676
