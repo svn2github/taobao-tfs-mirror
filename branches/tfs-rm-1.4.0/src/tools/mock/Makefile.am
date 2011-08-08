@@ -11,7 +11,7 @@ LDADD=$(top_builddir)/src/message/libtfsmessage.a \
       $(TBLIB_ROOT)/lib/libtbsys.a
 
 
-MOCKDATASERVER_SOURCE_LIST= mock_data_server_instance.cpp
+MOCKDATASERVER_SOURCE_LIST= mock_data_server_instance.cpp mock_data_server_instance.h
 
 bin_PROGRAMS = mock_data_server
 

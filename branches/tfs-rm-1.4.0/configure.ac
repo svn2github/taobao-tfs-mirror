@@ -167,6 +167,7 @@ AC_CHECK_FUNCS([fdatasync ftruncate gethostbyname getpagesize gettimeofday memse
 AC_CONFIG_FILES([Makefile
                  conf/Makefile
                  scripts/Makefile
+                 scripts/ha/Makefile
                  src/Makefile
                  src/adminserver/Makefile
                  src/new_client/Makefile

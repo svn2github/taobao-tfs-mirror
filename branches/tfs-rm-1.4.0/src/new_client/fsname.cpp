@@ -27,19 +27,22 @@ namespace tfs
     static const char SMALL_TFS_FILE_KEY_CHAR = 'T';
     static const char LARGE_TFS_FILE_KEY_CHAR = 'L';
 
-    static const char* KEY_MASK = "Taobao-inc";
-    static const int32_t KEY_MASK_LEN = strlen(KEY_MASK);
-    static const char enc_table[] = "0JoU8EaN3xf19hIS2d.6pZRFBYurMDGw7K5m4CyXsbQjg_vTOAkcHVtzqWilnLPe";
-    static const char dec_table[] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,18,0,0,11,16,8,36,34,19,32,4,12,0,0,0,0,0,0,0,49,24,37,29,5,23,30,52,14,1,33,61,28,7,48,62,42,22,15,47,3,53,57,39,25,21,0,0,0,0,45,0,6,41,51,17,63,10,44,13,58,43,50,59,35,60,2,20,56,27,40,54,26,46,31,9,38,55,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+    //static const char* KEY_MASK = "Taobao-inc";
+    //static const int32_t KEY_MASK_LEN = strlen(KEY_MASK);
 
-    static int xor_mask(const char* source, const int32_t len, char* target)
+    static const char enc_table[] = "XabcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWYZ0123456789_.";
+    static const char dec_table[] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,63,0,52,53,54,55,56,57,58,59,60,61,0,0,0,0,0,0,0,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,0,50,51,0,0,0,0,62,0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+    //static const char enc_table[] = "0JoU8EaN3xf19hIS2d.6pZRFBYurMDGw7K5m4CyXsbQjg_vTOAkcHVtzqWilnLPe";
+    //static const char dec_table[] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,18,0,0,11,16,8,36,34,19,32,4,12,0,0,0,0,0,0,0,49,24,37,29,5,23,30,52,14,1,33,61,28,7,48,62,42,22,15,47,3,53,57,39,25,21,0,0,0,0,45,0,6,41,51,17,63,10,44,13,58,43,50,59,35,60,2,20,56,27,40,54,26,46,31,9,38,55,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+
+    /*static int xor_mask(const char* source, const int32_t len, char* target)
     {
       for (int32_t i = 0; i < len; i++)
       {
         target[i] = source[i] ^ KEY_MASK[i % KEY_MASK_LEN];
       }
       return TFS_SUCCESS;
-    }
+    }*/
 
     static int32_t hash(const char *str)
     {
@@ -168,15 +171,16 @@ namespace tfs
     {
       if (input != NULL && output != NULL)
       {
-        char buffer[FILE_NAME_EXCEPT_SUFFIX_LEN];
-        xor_mask(input, FILE_NAME_EXCEPT_SUFFIX_LEN, buffer);
+        //char buffer[FILE_NAME_EXCEPT_SUFFIX_LEN];
+        //xor_mask(input, FILE_NAME_EXCEPT_SUFFIX_LEN, buffer);
 
         int32_t i = 0;
         int32_t k = 0;
         uint32_t value = 0;
         for (i = 0; i < FILE_NAME_EXCEPT_SUFFIX_LEN; i += 3)
         {
-          value = ((buffer[i] << 16) & 0xff0000) + ((buffer[i + 1] << 8) & 0xff00) + (buffer[i + 2] & 0xff);
+          //value = ((buffer[i] << 16) & 0xff0000) + ((buffer[i + 1] << 8) & 0xff00) + (buffer[i + 2] & 0xff);
+          value = ((input[i] << 16) & 0xff0000) + ((input[i + 1] << 8) & 0xff00) + (input[i + 2] & 0xff);
           output[k++] = enc_table[value >> 18];
           output[k++] = enc_table[(value >> 12) & 0x3f];
           output[k++] = enc_table[(value >> 6) & 0x3f];
@@ -192,16 +196,16 @@ namespace tfs
         int32_t i = 0;
         int32_t k = 0;
         uint32_t value = 0;
-        char buffer[FILE_NAME_EXCEPT_SUFFIX_LEN];
+        //char buffer[FILE_NAME_EXCEPT_SUFFIX_LEN];
         for (i = 0; i < FILE_NAME_LEN - 2; i += 4)
         {
           value = (dec_table[input[i] & 0xff] << 18) + (dec_table[input[i + 1] & 0xff] << 12) +
             (dec_table[input[i + 2] & 0xff] << 6) + dec_table[input[i + 3] & 0xff];
-          buffer[k++] = static_cast<char> ((value >> 16) & 0xff);
-          buffer[k++] = static_cast<char> ((value >> 8) & 0xff);
-          buffer[k++] = static_cast<char> (value & 0xff);
+          output[k++] = static_cast<char> ((value >> 16) & 0xff);
+          output[k++] = static_cast<char> ((value >> 8) & 0xff);
+          output[k++] = static_cast<char> (value & 0xff);
         }
-        xor_mask(buffer, FILE_NAME_EXCEPT_SUFFIX_LEN, output);
+        //xor_mask(buffer, FILE_NAME_EXCEPT_SUFFIX_LEN, output);
       }
     }
 
