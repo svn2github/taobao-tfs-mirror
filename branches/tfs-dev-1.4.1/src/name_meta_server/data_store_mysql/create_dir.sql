@@ -14,7 +14,7 @@ begin
         select o_ret;
     end;
     select 0 into aff_row;
-    select 0 into o_ret;
+    select -14000 into o_ret;
     start transaction;
     if i_pid = 0 then
       insert into t_meta_info (app_id, uid, pid, name, id, create_time, modify_time, size)

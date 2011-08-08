@@ -14,7 +14,7 @@ begin
         select o_ret;
     end;
     select 0 into aff_row;
-    select 0 into o_ret;
+    select -14000 into o_ret;
     start transaction;
     update t_meta_info set modify_time = now()
     where app_id = i_app_id and uid = i_uid and pid = i_ppid and name = i_pname;

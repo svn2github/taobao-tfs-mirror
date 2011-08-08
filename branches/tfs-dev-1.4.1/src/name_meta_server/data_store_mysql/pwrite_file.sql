@@ -17,7 +17,7 @@ begin
     select o_ret;
   end;
   select 0 into aff_row;
-  select 0 into o_ret;
+  select -14000 into o_ret;
   select i_pid | (1 << 63) into real_pid;
   if i_ver_no = 0 then
     set next_ver_no = 1;

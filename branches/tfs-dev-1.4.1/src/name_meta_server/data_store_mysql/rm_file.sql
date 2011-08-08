@@ -9,12 +9,12 @@ begin
   declare name_end varbinary(512);
   declare exit handler for sqlexception
   begin
-    set o_ret = 0;
+    set o_ret = -14000;
     rollback;
     select o_ret;
   end;
   select 0 into aff_row;
-  select 0 into o_ret;
+  select -14000 into o_ret;
   set name_end = concat(i_name, char(255,255,255,255,255,255,255,255));
   start transaction;
   update t_meta_info set modify_time = now()
@@ -28,15 +28,15 @@ begin
     if aff_row >= 1 then
       set o_ret = 1;
     else
-      set o_ret = -3;
+      set o_ret = -14001;
     end if;
   else
-    set o_ret = -2;
+    set o_ret = -14002;
   end if;
-  if o_ret = 1 then
-    commit;
-  else
+  if o_ret <= 0 then
     rollback;
+  else
+    commit;
   end if;
   select o_ret;
 end $$
