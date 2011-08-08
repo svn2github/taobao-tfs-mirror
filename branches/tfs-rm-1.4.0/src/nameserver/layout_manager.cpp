@@ -431,6 +431,7 @@ namespace tfs
           if ((*iter)->id() != server)
           {
             runer.push_back((*iter));
+            break;
           }
         }
         iret = runer.empty() ? EXIT_NO_DATASERVER : TFS_SUCCESS;

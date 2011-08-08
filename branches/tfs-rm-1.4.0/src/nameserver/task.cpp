@@ -272,7 +272,8 @@ namespace tfs
     {
       dump(TBSYS_LOG_LEVEL_INFO, "handle compact complete message");
       CompactBlockCompleteMessage* message = dynamic_cast<CompactBlockCompleteMessage*>(msg);
-      CompactComplete value(message->get_server_id(), message->get_block_id(), static_cast<PlanStatus>(message->get_success()));
+      PlanStatus status = status_transform_compact_to_plan(static_cast<CompactStatus>(message->get_success()));
+      CompactComplete value(message->get_server_id(), message->get_block_id(), status);
       memcpy(&value.block_info_, &message->get_block_info(), sizeof(block_info_));
       int32_t iret = TFS_SUCCESS;
       VUINT64 servers;
@@ -437,7 +438,7 @@ namespace tfs
         msg.set_block_id(value.block_id_);
         msg.set_server_id(value.id_);
         msg.set_block_info(block_info_);
-        msg.set_success(static_cast<PlanStatus>(value.status_));
+        msg.set_success(status_transform_plan_to_compact(value.status_));
         msg.set_ds_list(servers);
 
         std::bitset < 3 > bset;
@@ -462,6 +463,19 @@ namespace tfs
         }
       }
       return TFS_SUCCESS;
+    }
+
+    CompactStatus LayoutManager::CompactTask::status_transform_plan_to_compact(const PlanStatus status) const
+    {
+      return status == PLAN_STATUS_END ? COMPACT_STATUS_SUCCESS : 
+             status == PLAN_STATUS_BEGIN ? COMPACT_STATUS_START : COMPACT_STATUS_FAILED;
+    }
+
+    PlanStatus LayoutManager::CompactTask::status_transform_compact_to_plan(const CompactStatus status) const
+    {
+      return status == COMPACT_STATUS_SUCCESS ? PLAN_STATUS_END : 
+             status == COMPACT_STATUS_START ? PLAN_STATUS_BEGIN :
+             status == COMPACT_STATUS_FAILED ? PLAN_STATUS_FAILURE : PLAN_STATUS_NONE; 
     }
 
     LayoutManager::ReplicateTask::ReplicateTask(LayoutManager* manager, const PlanPriority priority,
