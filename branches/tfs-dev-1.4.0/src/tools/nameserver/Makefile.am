@@ -20,7 +20,8 @@ showsyncoplog_SOURCES = showsyncoplog.cpp
 
 tfstool_SOURCES =  tfstool.cpp
 
-ssm_SOURCES = main.cpp show.cpp show_factory.cpp metacmp.cpp cmp_factory.cpp common.cpp
+ssm_SOURCES = main.cpp show.cpp show_factory.cpp metacmp.cpp cmp_factory.cpp common.cpp\
+							show.h  show_factory.h metacmp.h cmp_factory.h common.h
 
 rmsyncoplog_SOURCES=rmsyncoplog.cpp
 
