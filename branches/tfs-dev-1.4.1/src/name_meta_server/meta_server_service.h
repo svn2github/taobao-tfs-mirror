@@ -6,7 +6,7 @@
  * published by the Free Software Foundation.
  *
  *
- * Version: $Id: meta_server_service.h 49 2010-11-16 09:58:57Z nayan@taobao.com $
+ * Version: $Id: meta_server_service.h 49 2011-08-08 09:58:57Z nayan@taobao.com $
  *
  * Authors:
  *   chuyu <chuyu@taobao.com>

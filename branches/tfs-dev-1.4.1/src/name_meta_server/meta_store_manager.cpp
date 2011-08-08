@@ -136,7 +136,7 @@ namespace tfs
     {
       int ret = TFS_ERROR;
       int status = TFS_ERROR;
-      int64_t proc_ret = 0;
+      int64_t proc_ret = EXIT_UNKNOWN_SQL_ERROR;
       int64_t id = 0;
       DatabaseHelper* database_helper = NULL;
       if (type == DIRECTORY)
@@ -232,7 +232,7 @@ namespace tfs
     {
       int ret = TFS_ERROR;
       int status = TFS_ERROR;
-      int64_t proc_ret = 0;
+      int64_t proc_ret = EXIT_UNKNOWN_SQL_ERROR;
 
       DatabaseHelper* database_helper = NULL;
       database_helper = database_pool_->get(database_pool_->get_hash_flag(app_id, uid));
@@ -271,7 +271,7 @@ namespace tfs
     {
       int ret = TFS_ERROR;
       int status = TFS_ERROR;
-      int64_t proc_ret = 0;
+      int64_t proc_ret = EXIT_UNKNOWN_SQL_ERROR;
 
       DatabaseHelper* database_helper = NULL;
       database_helper = database_pool_->get(database_pool_->get_hash_flag(app_id, uid));
@@ -317,9 +317,10 @@ namespace tfs
       // maybe network fail
       if (status != TFS_SUCCESS)
       {
-        ret = status;
+        // // TODO. maybe do sth.
+        // ret = status;
       }
-      else if (proc_ret < 0)
+      if (proc_ret < 0)
       {
         ret = proc_ret;
       }

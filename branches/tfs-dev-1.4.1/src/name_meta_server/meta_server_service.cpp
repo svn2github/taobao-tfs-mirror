@@ -6,7 +6,7 @@
  * published by the Free Software Foundation.
  *
  *
- * Version: $Id: meta_server_service.cpp 49 2010-11-16 09:58:57Z nayan@taobao.com $
+ * Version: $Id: meta_server_service.cpp 49 2011-08-08 09:58:57Z nayan@taobao.com $
  *
  * Authors:
  *   chuyu <chuyu@taobao.com>
@@ -385,7 +385,12 @@ namespace tfs
         ret = store_manager_->select(app_id, uid, p_meta_info.get_id(), name, name_len,
                                      type != DIRECTORY, v_meta_info);
 
-        if ((TFS_SUCCESS == ret) && (static_cast<int32_t>(v_meta_info.size()) > 0))
+        // file not exist
+        if (TFS_SUCCESS != ret || v_meta_info.empty())
+        {
+          ret = TFS_ERROR;
+        }
+        else
         {
           std::vector<MetaInfo>::iterator iter = v_meta_info.begin();
           if ((ret = store_manager_->remove(app_id, uid, p_meta_info.get_pid(),
@@ -735,11 +740,6 @@ namespace tfs
         }
       }
 
-      TBSYS_LOG(DEBUG, "== meta info count: %d", static_cast<int32_t>(v_meta_info.size()));
-      for (int32_t i = 0; i < static_cast<int32_t>(v_meta_info.size()); i++)
-      {
-        TBSYS_LOG(DEBUG, "== metainfo %s ", v_meta_info[i].get_name());
-      }
       return ret;
     }
 
