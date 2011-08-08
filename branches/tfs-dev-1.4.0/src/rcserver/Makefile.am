@@ -14,7 +14,10 @@ noinst_LIBRARIES=librcserver.a
 
 librcserver_a_SOURCES=database_helper.cpp mysql_database_helper.cpp app_resource.cpp\
                       resource_manager.cpp base_resource.cpp session_util.cpp\
-                      session_manager.cpp rc_service.cpp
+                      session_manager.cpp rc_service.cpp app_resource.h base_resource.h\
+											database_helper.h i_resource_manager.h mocked_resource_manager.h\
+											mysql_database_helper.h rc_service.h resource.h resource_manager.h\
+											resource_server_data.h session_manager.h session_util.h
 
 bin_PROGRAMS = rcserver
 rcserver_SOURCES=$(librcserver_a_SOURCES) main.cpp
