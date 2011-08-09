@@ -871,15 +871,15 @@ namespace tfs
         {
           const MetaInfo& last_metaInfo = tmp_v_meta_info[tmp_v_meta_info.size() - 1];
           cluster_id = last_metaInfo.frag_info_.cluster_id_;
+          last_offset = last_metaInfo.get_last_offset();
 
           // offset is -1 means file's max offset
-          if ((-1 == offset || last_metaInfo.get_last_offset() <= offset) &&
+          if ((-1 == offset || last_offset <= offset) &&
                 last_metaInfo.frag_info_.had_been_split_)
           {
             still_have = true;
             memcpy(search_name, last_metaInfo.get_name(), last_metaInfo.get_name_len());
             search_name_len = last_metaInfo.get_name_len();
-            last_offset = last_metaInfo.get_last_offset();
             next_file_name(search_name, search_name_len);
           }
         }
@@ -1118,7 +1118,8 @@ namespace tfs
         {
           if (frag_info.v_frag_meta_[i].offset_ < last_offset)
           {
-            TBSYS_LOG(ERROR, "frag info have some error, %ld < %ld", frag_info.v_frag_meta_[i].offset_, last_offset);
+            TBSYS_LOG(ERROR, "frag info have some error, %"PRI64_PREFIX"d < %"PRI64_PREFIX"d",
+                      frag_info.v_frag_meta_[i].offset_, last_offset);
             ret = TFS_ERROR;
             break;
           }
