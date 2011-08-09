@@ -19,16 +19,14 @@ noinst_PROGRAMS = convert_name\
                   tfsping\
                   view_local_key
 
-COMMONLIB = $(top_builddir)/src/message/libtfsmessage.a\
-            $(top_builddir)/src/dataserver/libdataserver.a\
-            $(top_builddir)/src/common/libtfscommon.a\
-            $(TBLIB_ROOT)/lib/libtbnet.a\
-            $(TBLIB_ROOT)/lib/libtbsys.a
-
-LDADD = $(top_builddir)/src/tools/util/libtfstoolsutil.a\
-	$(top_builddir)/src/new_client/.libs/libtfsclient.a\
-	$(UNIQUE_STORE_LDFLAGS)\
-        $(COMMONLIB)
+LDADD =	$(top_builddir)/src/tools/util/libtfstoolsutil.a\
+				$(top_builddir)/src/dataserver/libdataserver.a\
+				$(top_builddir)/src/new_client/.libs/libtfsclient.a\
+				$(UNIQUE_STORE_LDFLAGS)\
+				$(top_builddir)/src/message/libtfsmessage.a\
+        $(top_builddir)/src/common/libtfscommon.a\
+        $(TBLIB_ROOT)/lib/libtbnet.a\
+        $(TBLIB_ROOT)/lib/libtbsys.a
 
 clear_file_system_SOURCES = clear_file_system.cpp
 
