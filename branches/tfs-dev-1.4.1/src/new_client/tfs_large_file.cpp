@@ -521,6 +521,7 @@ int TfsLargeFile::load_meta(int32_t flags)
     {
       TBSYS_LOG(ERROR, "reread meta file fail. remain size: %"PRI64_PREFIX"d, ret: %d",
                 remain_size, ret);
+      tbsys::gDelete(extra_seg_buf);
     }
     else
     {

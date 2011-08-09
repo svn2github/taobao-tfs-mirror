@@ -1,5 +1,5 @@
 if WITH_UNIQUE_STORE
-unique_store_source=tfs_unique_store.cpp tfs_unique_store.h unique_store.h\
+unique_store_source=tfs_unique_store.cpp tfs_unique_store.h unique_handler.h\
 	            tair_unique_handler.cpp tair_unique_handler.h md5.h md5.cpp
 trim_cmd=sed -i -e '/ifdef \+WITH_UNIQUE_STORE/{h;d}' -e '/endif/{x;/ifdef \+WITH_UNIQUE_STORE/d;x}'
 else
