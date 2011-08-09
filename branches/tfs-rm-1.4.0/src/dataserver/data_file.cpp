@@ -30,7 +30,7 @@ namespace tfs
       length_ = 0;
       crc_ = 0;
       fd_ = -1;
-      sprintf(tmp_file_name_, "%s/tmp/%"PRI64_PREFIX"u.dat", DataService::instance()->get_work_dir(), fn);
+      sprintf(tmp_file_name_, "%s/tmp/%"PRI64_PREFIX"u.dat", dynamic_cast<DataService*>(DataService::instance())->get_real_work_dir().c_str(), fn);
       atomic_set(&ref_count_, 0);
     }
 
@@ -41,7 +41,7 @@ namespace tfs
       length_ = 0;
       crc_ = 0;
       fd_ = -1;
-      sprintf(tmp_file_name_, "%s/tmp/%"PRI64_PREFIX"u.dat", DataService::instance()->get_work_dir(), fn);
+      sprintf(tmp_file_name_, "%s/tmp/%"PRI64_PREFIX"u.dat", dynamic_cast<DataService*>(DataService::instance())->get_real_work_dir().c_str(), fn);
       atomic_set(&ref_count_, 0);
     }
 
