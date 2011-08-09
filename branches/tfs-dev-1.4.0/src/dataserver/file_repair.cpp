@@ -100,7 +100,7 @@ namespace tfs
         else
         {
           int fd = -1;
-          get_tmp_file_name(tmp_file, DataService::instance()->get_work_dir(), fsname.get_name());
+          get_tmp_file_name(tmp_file, dynamic_cast<DataService*>(DataService::instance())->get_real_work_dir().c_str(), fsname.get_name());
 
           if ((fd = open(tmp_file, O_WRONLY | O_CREAT | O_TRUNC, 0660)) == -1)
           {
