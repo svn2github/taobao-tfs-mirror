@@ -613,7 +613,7 @@ namespace tfs
         return remote_copy_file(block_id, file_id);
       }
 
-      FSName fsname(block_id, file_id);
+      FSName fsname(block_id, file_id, tfs_client_->get_cluster_id());
       FileInfo finfo;
 
       int dest_fd = tfs_client_->open(fsname.get_name(), NULL, dest_addr_, T_WRITE|T_NEWBLK);
@@ -661,6 +661,7 @@ namespace tfs
             }
 
             memcpy(&finfo, data, FILEINFO_SIZE);
+            finfo.size_ -= FILEINFO_SIZE;
             real_rlen -= FILEINFO_SIZE;
             real_data += FILEINFO_SIZE;
           }
