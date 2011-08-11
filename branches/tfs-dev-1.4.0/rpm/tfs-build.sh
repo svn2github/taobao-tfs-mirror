@@ -12,7 +12,7 @@ sed -i  "s/^Version:.*$/Version: "$3"/" $2.spec
 cd $temppath
 chmod +x build.sh
 ./build.sh init
-export TBLIB_ROOT=/usr
+export TBLIB_ROOT=/opt/csr/common
 ./configure
 make PREFIX=/home/admin/tfs rpms
 mv *.rpm rpm/
