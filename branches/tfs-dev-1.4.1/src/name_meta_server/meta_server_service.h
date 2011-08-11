@@ -83,7 +83,8 @@ namespace tfs
       static int get_name(const char* name, char* buffer, const int32_t buffer_len, int32_t& name_len);
 
       int parse_file_path(const int64_t app_id, const int64_t uid, const char* file_path,
-                          common::MetaInfo& p_meta_info, char* name, int32_t& name_len);
+                          common::MetaInfo& p_meta_info, char* name, int32_t& name_len,
+                          const bool root_ok = false);
       int get_p_meta_info(const int64_t app_id, const int64_t uid,
                           const std::vector<std::string>& v_name, common::MetaInfo& out_meta_info);
       int get_dir_meta_info(const int64_t app_id, const int64_t uid, const int64_t pid,

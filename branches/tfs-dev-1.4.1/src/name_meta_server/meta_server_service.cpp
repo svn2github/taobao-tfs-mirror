@@ -306,7 +306,7 @@ namespace tfs
                                   const char* file_path, const FileType type)
     {
       int ret = TFS_SUCCESS;
-      char name[MAX_FILE_PATH_LEN];
+      char name[MAX_META_FILE_NAME_LEN];
       int32_t name_len = 0;
       MetaInfo p_meta_info;
 
@@ -346,7 +346,7 @@ namespace tfs
 
       if (TFS_SUCCESS == ret)
       {
-        if ((ret = get_name(v_name[get_depth(v_name)].c_str(), name, MAX_FILE_PATH_LEN, name_len)) != TFS_SUCCESS)
+        if ((ret = get_name(v_name[get_depth(v_name)].c_str(), name, MAX_META_FILE_NAME_LEN, name_len)) != TFS_SUCCESS)
         {
           TBSYS_LOG(INFO, "get name fail. ret: %d", ret);
         }
@@ -367,7 +367,7 @@ namespace tfs
     int MetaServerService::rm(const int64_t app_id, const int64_t uid,
                               const char* file_path, const FileType type)
     {
-      char name[MAX_FILE_PATH_LEN];
+      char name[MAX_META_FILE_NAME_LEN];
       int32_t name_len = 0;
       int ret = TFS_SUCCESS;
 
@@ -413,7 +413,7 @@ namespace tfs
                               const char* file_path, const char* dest_file_path,
                               const FileType type)
     {
-      char name[MAX_FILE_PATH_LEN], dest_name[MAX_FILE_PATH_LEN];
+      char name[MAX_META_FILE_NAME_LEN], dest_name[MAX_META_FILE_NAME_LEN];
       int32_t name_len = 0, dest_name_len = 0;
       int ret = TFS_SUCCESS;
       MetaInfo p_meta_info, dest_p_meta_info;
@@ -452,7 +452,7 @@ namespace tfs
                                 const int64_t offset, const int64_t size,
                                 FragInfo& frag_info, bool& still_have)
     {
-      char name[MAX_FILE_PATH_LEN];
+      char name[MAX_META_FILE_NAME_LEN];
       int32_t name_len = 0;
       int ret = TFS_SUCCESS;
       still_have = false;
@@ -488,7 +488,7 @@ namespace tfs
     int MetaServerService::write(const int64_t app_id, const int64_t uid,
                                  const char* file_path, const FragInfo& frag_info)
     {
-      char name[MAX_FILE_PATH_LEN];
+      char name[MAX_META_FILE_NAME_LEN];
       int32_t name_len = 0;
       int ret = TFS_SUCCESS;
 
@@ -622,7 +622,7 @@ namespace tfs
                               std::vector<MetaInfo>& v_meta_info, bool& still_have)
     {
       // for inner name data struct
-      char name[MAX_FILE_NAME_LEN+16] = {'\0'};
+      char name[MAX_META_FILE_NAME_LEN+16] = {'\0'};
       int32_t name_len = 1;
       int ret = TFS_SUCCESS;
       FileType my_file_type = file_type;
@@ -636,7 +636,7 @@ namespace tfs
         // just list single file
         ls_file = (file_type != DIRECTORY);
 
-        if ((ret = parse_file_path(app_id, uid, file_path, p_meta_info, name, name_len)) != TFS_SUCCESS)
+        if ((ret = parse_file_path(app_id, uid, file_path, p_meta_info, name, name_len, true)) != TFS_SUCCESS)
         {
           TBSYS_LOG(INFO, "parse file path fail. appid: %"PRI64_PREFIX"d, uid: %"PRI64_PREFIX"d, %s",
                     app_id, uid, file_path);
@@ -655,14 +655,14 @@ namespace tfs
       else                      // pid is not -1 means continue last ls
       {
         int32_t file_len = (NULL == file_path ? 0 : strlen(file_path));
-        if (file_len >= MAX_FILE_PATH_LEN)
+        if (file_len >= MAX_META_FILE_NAME_LEN)
         {
           TBSYS_LOG(WARN, "file_path(%s) is invalid", file_path);
           ret = TFS_ERROR;
         }
         else if (file_len > 0)  // continue from file_path
         {
-          get_name(file_path, name, MAX_FILE_NAME_LEN, name_len);
+          get_name(file_path, name, MAX_META_FILE_NAME_LEN, name_len);
           next_file_name(name, name_len);
         }
 
@@ -747,7 +747,7 @@ namespace tfs
     // return parent directory's metainfo of current file(directory),
     // and file name(store format) without any prefix directory
     int MetaServerService::parse_file_path(const int64_t app_id, const int64_t uid, const char* file_path,
-                                           MetaInfo& p_meta_info, char* name, int32_t& name_len)
+                                           MetaInfo& p_meta_info, char* name, int32_t& name_len, const bool root_ok)
     {
       int ret = TFS_SUCCESS;
       std::vector<std::string> v_name;
@@ -756,9 +756,21 @@ namespace tfs
       {
         TBSYS_LOG(INFO, "file_path(%s) is invalid", file_path);
       }
+      else if (get_depth(v_name) == 0)
+      {
+        if (root_ok) // file_path only has "/"
+        {
+          p_meta_info.file_info_.id_ = 0;
+          ret = get_name(v_name[0].c_str(), name, MAX_META_FILE_NAME_LEN, name_len);
+        }
+        else
+        {
+          ret = TFS_ERROR;
+        }
+      }
       else if ((ret = get_p_meta_info(app_id, uid, v_name, p_meta_info)) == TFS_SUCCESS)
       {
-        ret = get_name(v_name[get_depth(v_name)].c_str(), name, MAX_FILE_PATH_LEN, name_len);
+        ret = get_name(v_name[get_depth(v_name)].c_str(), name, MAX_META_FILE_NAME_LEN, name_len);
       }
 
       return ret;
@@ -773,14 +785,14 @@ namespace tfs
       int ret = TFS_ERROR;
       int32_t depth = get_depth(v_name);
 
-      char name[MAX_FILE_PATH_LEN];
+      char name[MAX_META_FILE_NAME_LEN];
       int32_t name_len = 0;
       std::vector<MetaInfo> tmp_v_meta_info;
       int64_t pid = 0;
 
       for (int32_t i = 0; i < depth; i++)
       {
-        if ((ret = get_name(v_name[i].c_str(), name, MAX_FILE_PATH_LEN, name_len)) != TFS_SUCCESS)
+        if ((ret = get_name(v_name[i].c_str(), name, MAX_META_FILE_NAME_LEN, name_len)) != TFS_SUCCESS)
         {
           break;
         }
@@ -843,9 +855,9 @@ namespace tfs
                                          int32_t& cluster_id, int64_t& last_offset)
     {
       int ret = TFS_ERROR;
-      char search_name[MAX_FILE_PATH_LEN + 8];
+      char search_name[MAX_META_FILE_NAME_LEN + 8];
       int32_t search_name_len = name_len;
-      assert(name_len <= MAX_FILE_PATH_LEN);
+      assert(name_len <= MAX_META_FILE_NAME_LEN);
       memcpy(search_name, name, search_name_len);
       bool still_have = false;
 
@@ -970,9 +982,9 @@ namespace tfs
       tmp.file_info_.pid_ = pid;
       tmp.frag_info_.cluster_id_ = cluster_id;
       tmp.frag_info_.had_been_split_ = false;
-      char tmp_name[MAX_FILE_PATH_LEN + 8];
+      char tmp_name[MAX_META_FILE_NAME_LEN + 8];
       memcpy(tmp_name, name, name_len);
-      int64_to_char(tmp_name+name_len, MAX_FILE_PATH_LEN + 8 - name_len,
+      int64_to_char(tmp_name+name_len, MAX_META_FILE_NAME_LEN + 8 - name_len,
                     last_offset);
       tmp.file_info_.name_.assign(tmp_name, name_len + 8);
       tmp_v_meta_info.push_back(tmp);
