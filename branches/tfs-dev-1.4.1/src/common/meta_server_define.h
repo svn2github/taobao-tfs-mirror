@@ -155,11 +155,11 @@ namespace tfs
     const int32_t MAX_FILE_PATH_LEN = 512;
     const int32_t MAX_META_FILE_NAME_LEN = 255;
     // threshhold count when should split
-    const int32_t SOFT_MAX_FRAG_META_COUNT = 5;
+    const int32_t SOFT_MAX_FRAG_META_COUNT = 1024;
     const int32_t MAX_FRAG_INFO_SIZE = 65535;
     const int32_t MAX_FRAG_META_COUNT = MAX_FRAG_INFO_SIZE/sizeof(FragMeta) - 1;
     // MetaInfo or FragInfo return count once
-    const int32_t MAX_OUT_INFO_COUNT = 10;
+    const int32_t MAX_OUT_INFO_COUNT = 500;
     const int32_t ROW_LIMIT = 500;
 
   }
