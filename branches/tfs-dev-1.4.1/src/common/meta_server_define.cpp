@@ -309,7 +309,11 @@ namespace tfs
 
     int FileMetaInfo::deserialize(common::Stream& input)
     {
-      int ret = input.get_int64(&pid_);
+      int ret = input.get_string(name_);
+      if (common::TFS_SUCCESS == ret)
+      {
+        ret = input.get_int64(&pid_);
+      }
       if (common::TFS_SUCCESS == ret)
       {
         ret = input.get_int64(&id_);
@@ -329,10 +333,6 @@ namespace tfs
       if (common::TFS_SUCCESS == ret)
       {
         ret = input.get_int16(&ver_no_);
-      }
-      if (common::TFS_SUCCESS == ret)
-      {
-        ret = input.get_string(name_);
       }
       return ret;
     }
