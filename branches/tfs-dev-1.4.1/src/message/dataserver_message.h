@@ -52,7 +52,7 @@ namespace tfs
         common::HasBlockFlag has_block_;
     };
 
-    class SuspectDataserverMessage: public common::BasePacket 
+    /*class SuspectDataserverMessage: public common::BasePacket 
     {
       public:
         SuspectDataserverMessage();
@@ -70,7 +70,7 @@ namespace tfs
         }
       protected:
         uint64_t server_id_;
-    };
+    };*/
   }
 }
 #endif

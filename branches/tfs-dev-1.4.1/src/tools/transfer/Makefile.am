@@ -16,6 +16,6 @@ LDADD = $(top_builddir)/src/tools/util/libtfstoolsutil.a\
 	$(TBLIB_ROOT)/lib/libtbnet.a\
 	$(TBLIB_ROOT)/lib/libtbsys.a
 
-transfer_block_SOURCES = transfer_block.cpp block_console.cpp block_console.h
+transfer_block_SOURCES = transfer_block.cpp block_console.cpp block_console.h 
 split_block_tool_SOURCES = split_block_tool.cpp
-compare_crc_SOURCES=compare_crc.cpp
+compare_crc_SOURCES=compare_crc.cpp compare_crc.h

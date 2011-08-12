@@ -11,6 +11,9 @@ Prefix:%{_prefix}
 Source:%{NAME}-%{VERSION}.tar.gz
 BuildRoot: %{_tmppath}/%{name}-root
 
+BuildRequires: t-csrd-tbnet-devel = 1.4.0
+BuildRequires: mysql-server >= 5.0.7, mysql-devel >= 5.0.7
+
 %description
 TFS is a distributed file system.
 
@@ -28,7 +31,7 @@ files for developing applications that use the %name package.
 %build
 chmod u+x build.sh
 ./build.sh init
-./configure --prefix=%{_prefix} --with-release=yes
+./configure --prefix=%{_prefix}
 make %{?_smp_mflags}
 
 %install

@@ -18,11 +18,9 @@ test: check
 TESTS=
 check_PROGRAMS=
 
-noinst_PROGRAMS=test_local_key test_gc_worker
+noinst_PROGRAMS= test_distance
 
-TESTS+=test_local_key test_gc_worker test_lru
-check_PROGRAMS+=test_local_key test_gc_worker test_lru
-
-test_local_key_SOURCES=test_local_key.cpp
-test_gc_worker_SOURCES=test_gc_worker.cpp
-test_lru_SOURCES=test_lru.cpp
+TESTS+=test_distance
+check_PROGRAMS+=test_distance
+test_distance_SOURCES=test_distance.cpp
+test_distance_LDFLAGS=${AM_LDFLAGS} -static-libgcc -lgtest

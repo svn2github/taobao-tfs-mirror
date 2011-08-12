@@ -622,7 +622,10 @@ namespace tfs
                     block_id, CNetUtil::addrToString(id).c_str());
                 TBSYS_LOG(ERROR, "%s", buf);
               }
+#else
+              UNUSED(message);
 #endif
+
               if (TFS_SUCCESS == iret)
               {
                 iret = lay_out_manager_.build_relation(block, server, time(NULL));

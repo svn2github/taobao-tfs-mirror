@@ -273,6 +273,10 @@ namespace tfs
             oplog_->reset();
           }
         }
+        #else
+        UNUSED(data);
+        UNUSED(type);
+        UNUSED(length);
         #endif
       }
       return iret;

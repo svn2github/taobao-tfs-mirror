@@ -81,9 +81,9 @@ namespace tfs
           case common::GET_SERVER_STATUS_MESSAGE:
             packet = new  GetServerStatusMessage();
             break;
-          case common::SUSPECT_DATASERVER_MESSAGE:
+          /*case common::SUSPECT_DATASERVER_MESSAGE:
             packet = new  SuspectDataserverMessage();
-            break;
+            break;*/
           case common::RENAME_FILE_MESSAGE:
             packet = new  RenameFileMessage();
             break;

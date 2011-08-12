@@ -665,12 +665,16 @@ int main(int argc,char** argv)
 {
   int32_t i;
   bool directly = false;
+  bool set_log_level = false;
   const char* ns_ip = NULL;
 
-  while ((i = getopt(argc, argv, "s:d:ih")) != EOF)
+  while ((i = getopt(argc, argv, "s:d:nih")) != EOF)
   {
     switch (i)
     {
+    case 'n':
+        set_log_level = true;
+        break;
     case 's':
       ns_ip = optarg;
       break;
@@ -681,6 +685,11 @@ int main(int argc,char** argv)
     default:
       usage(argv[0]);
     }
+  }
+
+  if (set_log_level)
+  {
+    TBSYS_LOGGER.setLogLevel("ERROR");
   }
 
   if (NULL == ns_ip)
@@ -906,7 +915,7 @@ int cmd_dump_plan(const VSTRING& param)
       uint32_t block_id;
       uint64_t plan_begin_time;
       uint64_t plan_end_time;
-      uint64_t plan_seqno;
+      int64_t plan_seqno;
       uint8_t server_num;
       std::string runer;
       uint8_t plan_complete_status_num;
@@ -915,7 +924,7 @@ int cmd_dump_plan(const VSTRING& param)
 
       printf("Plan Number(running + pending):%d\n", plan_num);
       printf("seqno   type       status     priority   block_id   begin        end           runer  \n");
-      printf("------  ---------  -------    ---------  --------   -----------  ------------  -------\n");
+      printf("------  ---------  -------    ---------  --------   -----------  -----------  -------\n");
 
       for (uint32_t i=0; i<plan_num; i++)
       {
@@ -927,7 +936,8 @@ int cmd_dump_plan(const VSTRING& param)
         plan_end_time = data_buff.readInt64();
         plan_seqno = data_buff.readInt64();
         server_num = data_buff.readInt8();
-
+        runer = "";
+ 
         for (uint32_t j=0; j<server_num; j++)
         {
           runer += tbsys::CNetUtil::addrToString(data_buff.readInt64());
@@ -948,7 +958,7 @@ int cmd_dump_plan(const VSTRING& param)
         }
 
         //display plan info
-        printf("%-10"PRI64_PREFIX"d %-10s %-10s %-10s %-10u %-12"PRI64_PREFIX"d %-12"PRI64_PREFIX"d %-20s\n",
+        printf("%-7"PRI64_PREFIX"d %-10s %-10s %-10s %-10u %-12"PRI64_PREFIX"d %-12"PRI64_PREFIX"d %-31s\n",
                plan_seqno,
                plan_type == PLAN_TYPE_REPLICATE ? "replicate" : plan_type == PLAN_TYPE_MOVE ? "move" : plan_type == PLAN_TYPE_COMPACT ? "compact" : plan_type == PLAN_TYPE_DELETE ? "delete" : "unknow",
                plan_status == PLAN_STATUS_BEGIN ? "begin" : plan_status == PLAN_STATUS_TIMEOUT ? "timeout" : plan_status == PLAN_STATUS_END ? "finish" : plan_status == PLAN_STATUS_FAILURE ? "failure": "unknow",

@@ -2,10 +2,10 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.59)
-AC_INIT([tfs], 1.3, duolong@taobao.com)
+AC_INIT([tfs], 1.4.0, duolong@taobao.com)
 AC_CONFIG_SRCDIR([src/common/config_item.h])
 
-AM_INIT_AUTOMAKE(tfs, 1.3)
+AM_INIT_AUTOMAKE(tfs, 1.4.0)
 # Checks for programs.
 AC_PROG_AWK
 AC_PROG_CXX
@@ -129,7 +129,7 @@ AC_ARG_WITH([release],
         CXXFLAGS="-O2 -finline-functions -fno-strict-aliasing -Wall -fPIC -D__STDC_LIMIT_MACROS -D_NO_EXCEPTION"
       fi
     ],
-    [CXXFLAGS="-g -pg -D__STDC_LIMIT_MACROS -Wall -Werror -Wextra -Wunused-parameter -Wformat -Wconversion -Wdeprecated "]
+    [CXXFLAGS="-g -D__STDC_LIMIT_MACROS -Wall -Werror -Wextra -Wunused-parameter -Wformat -Wconversion -Wdeprecated "]
     #[CXXFLAGS="-g -Wall -fPIC -D__STDC_LIMIT_MACROS -DTFS_TEST -D_NO_EXCEPTION"]
 )
 
@@ -167,6 +167,7 @@ AC_CHECK_FUNCS([fdatasync ftruncate gethostbyname getpagesize gettimeofday memse
 AC_CONFIG_FILES([Makefile
                  conf/Makefile
                  scripts/Makefile
+                 scripts/ha/Makefile
                  src/Makefile
                  src/adminserver/Makefile
                  src/new_client/Makefile
@@ -190,6 +191,7 @@ AC_CONFIG_FILES([Makefile
                  tests/rcserver/Makefile
                  tests/name_meta_server/Makefile
                  tests/common/Makefile
+                 tests/new_client/Makefile
                  tests/dataserver/Makefile
                  tests/intergrate/Makefile])
 AC_OUTPUT

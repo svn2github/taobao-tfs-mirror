@@ -181,9 +181,10 @@ namespace tfs
       {
         block_chunk_[i] = new BlockChunk();
       }
+      int32_t iret = TFS_ERROR;
 
 #if !defined(TFS_NS_GTEST) && !defined(TFS_NS_INTEGRATION)
-      int32_t iret = oplog_sync_mgr_.initialize();
+      iret = oplog_sync_mgr_.initialize();
       if (iret != TFS_SUCCESS)
       {
         TBSYS_LOG(ERROR, "initialize oplog sync manager fail, must be exit, iret: %d", iret);
@@ -194,10 +195,11 @@ namespace tfs
       build_plan_thread_ = new BuildPlanThreadHelper(*this);
       check_dataserver_thread_ = new CheckDataServerThreadHelper(*this);
       run_plan_thread_ = new RunPlanThreadHelper(*this);
-#elif defined(TFS_NS_INTEGRATION)
+#if defined(TFS_NS_INTEGRATION)
       run_plan_thread_ = new RunPlanThreadHelper(*this);
 #endif
       }
+#endif
       return iret;
     }
 
@@ -399,6 +401,7 @@ namespace tfs
     int LayoutManager::repair(const uint32_t block_id, const uint64_t server,
         const int32_t flag, const time_t now, std::string& error_msg)
     {
+      TBSYS_LOG(DEBUG, "repair, block: %u, server: %s", block_id, tbsys::CNetUtil::addrToString(server).c_str());
       char msg[512] = {'\0'};
       std::vector<ServerCollect*> hold;
       int32_t iret = TFS_SUCCESS;
@@ -444,6 +447,7 @@ namespace tfs
           if ((*iter)->id() != server)
           {
             runer.push_back((*iter));
+            break;
           }
         }
         iret = runer.empty() ? EXIT_NO_DATASERVER : TFS_SUCCESS;
@@ -474,6 +478,10 @@ namespace tfs
           if (TFS_SUCCESS != iret)
           {
             TBSYS_LOG(WARN, "add task(ReplicateTask) failed, block: %u", block_id);
+          }
+          else
+          {
+            task->dump(TBSYS_LOG_LEVEL_DEBUG, "repair,");
           }
         }
       }
@@ -1009,7 +1017,9 @@ namespace tfs
         {
           NewBlockMessage msg;
           msg.add_new_id(block_id);
+#if !defined(TFS_NS_GTEST) && !defined(TFS_NS_INTEGRATION)
           uint8_t send_id = 0;
+#endif
           std::vector<ServerCollect*> send_msg_success;
           std::vector<ServerCollect*> send_msg_fail;
           std::vector<ServerCollect*>::const_iterator iter = servers.begin();
@@ -1824,6 +1834,7 @@ namespace tfs
 
         if (need <= 0)
         {
+          bwait = !(current >= should && current > 0);
           TBSYS_LOG(WARN, "plan size: %"PRI64_PREFIX"d > should: %"PRI64_PREFIX"d, nothing to do", current, should);
         }
 
@@ -2010,7 +2021,15 @@ namespace tfs
               GFactory::get_timer()->schedule(task, tbutil::Time::seconds(task->end_time_ - task->begin_time_));
             }
           }
-          pending_plan_list_.erase(task);
+          std::set<TaskPtr, TaskCompare>::const_iterator iter = pending_plan_list_.find(task);
+          if (pending_plan_list_.end() != iter)
+          {
+            pending_plan_list_.erase(iter);
+          }
+          else
+          {
+            task->dump(TBSYS_LOG_LEVEL_DEBUG, "task object not found in pending_plan_list,");
+          }
           run_plan_monitor_.unlock();
         }
       }
@@ -2513,10 +2532,11 @@ namespace tfs
       out << task->type_ << " " ;
       out << task->block_id_ << " " ;
       index = task->runer_.begin();
+      for (; index != task->runer_.end(); ++index)
       {
-        out << (*index)->id() << " ";
+        out << tbsys::CNetUtil::addrToString((*index)->id()) << "/";
       }
-      TBSYS_LOG(ERROR, " add_task : %s", out.str().c_str());
+      TBSYS_LOG(ERROR, " add task : %s", out.str().c_str());
 #endif
       return true;
     }

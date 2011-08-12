@@ -226,10 +226,10 @@ namespace tfs
 
       CompactBlockCompleteMessage req_cbc_msg;
       req_cbc_msg.set_block_id(block_id);
-      PlanStatus compact_status = PLAN_STATUS_END;
+      CompactStatus compact_status = COMPACT_STATUS_SUCCESS;
       if (TFS_SUCCESS != success)
       {
-        compact_status = PLAN_STATUS_FAILURE;
+        compact_status = COMPACT_STATUS_FAILED;
       }
       req_cbc_msg.set_success(compact_status);
       req_cbc_msg.set_server_id(dataserver_id_);

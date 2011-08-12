@@ -45,7 +45,7 @@ namespace tfs
       int32_t fd = open(LAST_DS_FILE.c_str(), O_RDONLY);
       if (fd < 0)
       {
-        TBSYS_LOG(ERROR, "open file(%s) fail,errors(%s)", LAST_DS_FILE.c_str(), strerror(errno));
+        TBSYS_LOG(DEBUG, "open file(%s) fail,errors(%s)", LAST_DS_FILE.c_str(), strerror(errno));
         return;
       }
       int32_t size = 0;

@@ -5,7 +5,7 @@ AM_CPPFLAGS=-I$(top_srcdir)/src\
 
 AM_LDFLAGS=-lrt -lpthread -ldl $(READLINE_LIB)
 
-bin_PROGRAMS = admintool
+bin_PROGRAMS = adminservertool
 
 LDADD = $(top_builddir)/src/tools/util/libtfstoolsutil.a\
         $(top_builddir)/src/message/libtfsmessage.a\
@@ -13,4 +13,4 @@ LDADD = $(top_builddir)/src/tools/util/libtfstoolsutil.a\
 	$(TBLIB_ROOT)/lib/libtbnet.a\
 	$(TBLIB_ROOT)/lib/libtbsys.a
 
-admintool_SOURCES =  admintool.cpp
+adminservertool_SOURCES =  adminservertool.cpp

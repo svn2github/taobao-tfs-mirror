@@ -19,10 +19,11 @@ api_source_list = tfs_file.cpp tfs_large_file.cpp tfs_small_file.cpp tfs_session
                   fsname.cpp tfs_session_pool.cpp tfs_client_impl.cpp tfs_client_api.cpp \
                   local_key.cpp gc_file.cpp gc_worker.cpp bg_task.cpp client_config.cpp\
                   tfs_rc_helper.cpp tfs_rc_client_api.cpp tfs_rc_client_api_impl.cpp \
-                  tfs_file.h tfs_large_file.h tfs_small_file.h tfs_session.h \
-                  fsname.h tfs_session_pool.h tfs_client_impl.h tfs_client_api.h \
-                  segment_container.h local_key.h gc_file.h gc_worker.h bg_task.h client_config.h\
-                  tfs_rc_helper.h ${unique_store_source}
+									bg_task.h client_config.h fsname.h gc_file.h gc_worker.h local_key.h\
+									lru.h md5.h segment_container.h tfs_client_api.h tfs_client_capi.h\
+									tfs_client_impl.h tfs_client_metrics.h tfs_file.h tfs_large_file.h\
+									tfs_rc_client_api.h tfs_rc_client_api_impl.h tfs_rc_helper.h tfs_session.h \
+									tfs_session_pool.h tfs_small_file.h ${unique_store_source}
 
 ld_fg = $(AM_LDFLAGS) \
         $(top_srcdir)/src/message/libtfsmessage.a \

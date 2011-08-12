@@ -45,6 +45,7 @@ public class NameServerPlanTestCase {
 	//final AppServer tfsReadClient_slave = (AppServer) clientFactory.getBean("slaveReadClient");
 	
 	//Define
+	final public boolean DEFINE_NS13 = false;
 	final public int NSINDEX = 0;
 	final public int DSINDEX = 1;
 	final public int DSINDEXI = 2;
@@ -158,7 +159,7 @@ public class NameServerPlanTestCase {
 	final public int RUNRATECOL = 14;
 	final public int TAILTPSCOL = 13;
 	final public int RUNTPSCOL = 12;
-	final public int SCANTIME = 120;
+	final public int SCANTIME = 240;
 	
 	/* Thread count on client */
 	final public int HIGHTHREAD = 100;
@@ -190,6 +191,10 @@ public class NameServerPlanTestCase {
 	
 	/* Vip */
 	public String masterIp = NSIPA;
+	
+	/* VIP server */
+	public AppServer MASTERSER = tfsGrid.getCluster(NSINDEX).getServer(0);
+	public AppServer SLAVESER = tfsGrid.getCluster(NSINDEX).getServer(1);
 	
 	/**
 	 * 
@@ -1109,24 +1114,35 @@ public class NameServerPlanTestCase {
 		
 		return bRet;
 	}
-	
-	public boolean chkBlockCntBoth(int iTimes, int shouldNotExistBlockCnt)
+	public boolean chkBlockCntBoth(int iTimes, int iBlockCnt)
 	{
 		boolean bRet = false;
 		ArrayList<String> listOut = new ArrayList<String>();
 		int iLoop = 0;
 		String cmd = "";
 		
+		if (false == MASTERSER.isRun())
+		{
+			return false;
+		}
 		for (iLoop = 0; iLoop < iTimes; iLoop ++)
 		{
-			cmd = TFS_BIN_HOME + "/ssm -s " + NSIPA + ":" + NSPORT +
-				" -i block | grep \\\"" + shouldNotExistBlockCnt + "$\\\" | wc -l";
-			bRet = Proc.cmdOutBase(NSIPA, cmd, null, 1, null, listOut);
+			/* Reset list */
+			listOut.clear();
+			if (DEFINE_NS13) {
+				cmd = "cd " + TFS_BIN_HOME + "; ./showssm -f ../conf/tfs.conf -t 1 | grep -v \\\"TOTAL\\\" | grep \\\"" + 
+					iBlockCnt + "$\\\" | wc -l";
+			}
+			else {
+				cmd = "cd " + TFS_BIN_HOME + "; ./ssm -s " + MASTERSER.getIp() + 
+					":" + MASTERSER.getPort() + " -i " + "\\\"block\\\" | grep -v \\\"TOTAL\\\" | grep \\\"" + iBlockCnt + "$\\\" | wc -l";
+			}
+			bRet = Proc.cmdOutBase(MASTERSER.getIp(), cmd, null, 1, null, listOut);
 			if (bRet == false) return bRet;
 			
 			try{
-				int stillExistNum = Integer.valueOf(listOut.get(listOut.size() - 1));			
-				if (stillExistNum == 0)
+				int temp = Integer.valueOf(listOut.get(listOut.size() - 1));			
+				if (temp == 0)
 				{
 					bRet = true;
 					break;
@@ -1139,27 +1155,39 @@ public class NameServerPlanTestCase {
 			sleep(1);
 		}
 		
-		for (int jLoop = 0; jLoop < iTimes - iLoop + 1; jLoop ++)
+		if (false == SLAVESER.isRun())
 		{
-			cmd = TFS_BIN_HOME + "/ssm -s " + NSIPB + ":" + NSPORT +
-				" -i block | grep \\\"" + shouldNotExistBlockCnt + "$\\\" | wc -l";
-			bRet = Proc.cmdOutBase(NSIPB, cmd, null, 1, null, listOut);
-			if (bRet == false) return bRet;
-			
-			try{
-				int stillExistNum = Integer.valueOf(listOut.get(listOut.size() - 1));			
-				if (stillExistNum == 0)
-				{
-					bRet = true;
-					break;
-				}
-			} catch (Exception e){
-				e.printStackTrace();
-				bRet = false;
-				break;
-			}
-			sleep(1);
+			return bRet;
+		} else {
+			/* Reset */
+			bRet = false;
 		}
+		
+		/* Reset list */
+		listOut.clear();
+		if (DEFINE_NS13) {
+			cmd = "cd " + TFS_BIN_HOME + "; ./showssm -f ../conf/tfs.conf -t 1 | grep -v \\\"TOTAL\\\" | grep \\\"" + 
+				iBlockCnt + "$\\\" | wc -l";
+		}
+		else {
+			cmd = "cd " + TFS_BIN_HOME + "; ./ssm -s " + SLAVESER.getIp() + 
+				":" + SLAVESER.getPort() + " -i " + "\\\"block\\\" | grep -v \\\"TOTAL\\\" | grep \\\"" + iBlockCnt + "$\\\" | wc -l";
+		}
+		
+		bRet = Proc.cmdOutBase(SLAVESER.getIp(), cmd, null, 1, null, listOut);
+		if (bRet == false) return bRet;
+		
+		try{
+			int temp = Integer.valueOf(listOut.get(listOut.size() - 1));			
+			if (temp == 0)
+			{
+				bRet = true;
+			}
+		} catch (Exception e){
+			e.printStackTrace();
+			bRet = false;
+		}
+
 		return bRet;
 	}
 	
@@ -1219,6 +1247,34 @@ public class NameServerPlanTestCase {
 		return bRet;
 	}
 
+	/**
+	 * @author mingyan
+	 * @return
+	 */
+	public boolean chkMultiReplicatedBlock()
+	{
+		boolean bRet = false;
+		String cmd = "cd " + TFS_LOG_HOME;
+		bRet = Proc.proStartBase(NSIPA, cmd);
+		if (bRet == false) return bRet;
+		
+		ArrayList<String> results = new ArrayList<String>();
+		cmd = "grep \\\"send replicate command succ\\\" nameserver.log |" +
+				"awk 'print $11'|awk -F \\\",\\\" '{print $1}'|sort|uniq -c|grep -v \\\"1 \\\"";
+		int checkCount = 0;
+		while (checkCount < BLOCK_CHK_TIME)
+		{
+			bRet = Proc.proStartBase(NSIPA, cmd, results);
+			if (bRet == false) return bRet;
+			if (results.size() > 0)
+				return false;
+			checkCount++;
+			sleep(10);
+		}
+		
+		return bRet;
+	}
+	
 	/**
 	 * @author mingyan
 	 * @param tarIp
@@ -1967,6 +2023,7 @@ public class NameServerPlanTestCase {
 			strPreValue = strValue;
 			strValue = result.get(0);
 			result.clear();
+			log.debug("strPreValue: " + strPreValue + ", strValue: " + strValue);
 			sleep(20);
 		} while (strValue.equals("0") || !strPreValue.equals(strValue));		
 		

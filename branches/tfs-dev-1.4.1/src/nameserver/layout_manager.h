@@ -235,6 +235,8 @@ namespace nameserver
 #endif
         void check_complete(CompactComplete& value, common::VUINT64& ds_list);
         int do_complete(CompactComplete& value, common::VUINT64& ds_list);
+        common::CompactStatus status_transform_plan_to_compact(const common::PlanStatus status) const;
+        common::PlanStatus status_transform_compact_to_plan(const common::CompactStatus status) const;
 #if defined(TFS_NS_GTEST) || defined(TFS_NS_INTEGRATION)
       public:
 #else

@@ -1,5 +1,11 @@
 pkgdata_datadir=${prefix}/scripts
-pkgdata_data_DATA=stfs.sh tfs.sh
+pkgdata_data_DATA=stfs.sh tfs.sh 
+
+SUBDIRS = ha
+
+DIST_SUBDIRS = ha
+
+EXTRA_DIST=ha/authkeys.sh ha/deploy.sh ha/ha.cf ha/NameServer ha/nsdep.sh ha/ns.xml
 
 install-data-hook:
 	mv ${DESTDIR}/${prefix}/scripts/stfs.sh ${DESTDIR}/${prefix}/scripts/stfs
