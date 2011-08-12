@@ -318,7 +318,7 @@ namespace tfs
         {
           tmp_db_info.conn_str_ = items[0];
           tmp_db_info.user_ = items[1];
-          tmp_db_info.passwd = items[2];
+          tmp_db_info.passwd_ = items[2];
           tmp_db_info.hash_value_ = db_infos_.size();
           db_infos_.push_back(tmp_db_info);
         }

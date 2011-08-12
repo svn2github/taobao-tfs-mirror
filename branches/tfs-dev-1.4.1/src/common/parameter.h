@@ -143,7 +143,7 @@ namespace tfs
         }
         std::string conn_str_;
         std::string user_;
-        std::string passwd;
+        std::string passwd_;
         int32_t hash_value_;
       };
       int initialize(void);

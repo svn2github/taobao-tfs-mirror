@@ -43,6 +43,8 @@ namespace tfs
       virtual const char* get_log_file_path();
       virtual const char* get_pid_file_path();
       virtual bool handlePacketQueue(tbnet::Packet* packet, void* args);
+      virtual int initialize(int argc, char* argv[]);
+      virtual int destroy_service();
 
       int do_action(common::BasePacket* packet);
       int do_write(common::BasePacket* packet);
@@ -72,9 +74,6 @@ namespace tfs
       static void next_file_name(char* name, int32_t& name_len);
 
     private:
-      // override
-      virtual int initialize(int argc, char* argv[]);
-      virtual int destroy_service();
 
       int create_top_dir(const int64_t app_id, const int64_t uid);
 

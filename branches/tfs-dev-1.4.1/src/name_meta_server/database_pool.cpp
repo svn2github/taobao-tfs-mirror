@@ -135,9 +135,18 @@ namespace tfs
     }
     int32_t DataBasePool::get_hash_flag(const int64_t app_id, const int64_t uid)
     {
-      HashHelper helper(app_id, uid);
-      return tbsys::CStringUtil::murMurHash((const void*)&helper, sizeof(HashHelper))
-        % SYSPARAM_NAMEMETASERVER.db_infos_.size();
+      int32_t hash_value = -1;
+      if (0 == SYSPARAM_NAMEMETASERVER.db_infos_.size())
+      {
+        TBSYS_LOG(ERROR, "no database info");
+      }
+      else
+      {
+        HashHelper helper(app_id, uid);
+        hash_value = tbsys::CStringUtil::murMurHash((const void*)&helper, sizeof(HashHelper))
+          % SYSPARAM_NAMEMETASERVER.db_infos_.size();
+      }
+      return hash_value;
     }
 
   }

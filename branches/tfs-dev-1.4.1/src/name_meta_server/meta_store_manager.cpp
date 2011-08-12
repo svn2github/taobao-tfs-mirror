@@ -52,7 +52,7 @@ namespace tfs
         user_name[i] = (char*)malloc(100);
         snprintf(user_name[i], 100, "%s", dbinfo.user_.c_str());
         passwd[i] = (char*)malloc(100);
-        snprintf(passwd[i], 100, "%s", dbinfo.passwd.c_str());
+        snprintf(passwd[i], 100, "%s", dbinfo.passwd_.c_str());
         hash_flag[i] = dbinfo.hash_value_;
       }
       bool pool_ret = database_pool_->init_pool(pool_size,
