@@ -21,8 +21,50 @@ namespace tfs
 {
   namespace message
   {
+    BaseMetaParameter::BaseMetaParameter() :
+      app_id_(0), user_id_(0), file_path_()
+    {
+    }
+    BaseMetaParameter::~BaseMetaParameter()
+    {
+    }
+    int BaseMetaParameter::deserialize(Stream& input)
+    {
+      int ret = TFS_ERROR;
+
+      ret = input.get_int64(&app_id_);
+      TBSYS_LOG(DEBUG, "app_id: %ld", app_id_);
+      if (TFS_SUCCESS == ret)
+      {
+        ret = input.get_int64(&user_id_);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = input.get_string(file_path_);
+      }
+      return ret;
+    }
+    int64_t BaseMetaParameter::length() const
+    {
+      return 2 * common::INT64_SIZE + common::Serialization::get_string_length(file_path_);
+    }
+    int BaseMetaParameter::serialize(Stream& output) const
+    {
+      int ret = TFS_SUCCESS;
+      ret = output.set_int64(app_id_);
+      if (TFS_SUCCESS == ret)
+      {
+        ret = output.set_int64(user_id_);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = output.set_string(file_path_);
+      }
+      return ret;
+    }
+
     FilepathActionMessage::FilepathActionMessage() :
-      app_id_(0), user_id_(0), file_path_(), new_file_path_(), action_(NON_ACTION)
+      BaseMetaParameter(), new_file_path_(), action_(NON_ACTION)
     {
       _packetHeader._pcode = FILEPATH_ACTION_MESSAGE;
     }
@@ -36,17 +78,7 @@ namespace tfs
     {
       int ret = TFS_ERROR;
 
-      TBSYS_LOG(INFO, "input_size: %d", input.get_data_length());
-      ret = input.get_int64(&app_id_);
-      TBSYS_LOG(INFO, "app_id: %ld", app_id_);
-      if (TFS_SUCCESS == ret)
-      {
-        ret = input.get_int64(&user_id_);
-      }
-      if (TFS_SUCCESS == ret)
-      {
-        ret = input.get_string(file_path_);
-      }
+      ret = BaseMetaParameter::deserialize(input);
       if (TFS_SUCCESS == ret)
       {
         ret = input.get_string(new_file_path_);
@@ -60,21 +92,13 @@ namespace tfs
 
     int64_t FilepathActionMessage::length() const
     {
-      return 2 * common::INT64_SIZE + common::Serialization::get_string_length(file_path_) + common::Serialization::get_string_length(new_file_path_) + common::INT8_SIZE;
+      return BaseMetaParameter::length() + common::Serialization::get_string_length(new_file_path_) + common::INT8_SIZE;
     }
 
     int FilepathActionMessage::serialize(Stream& output) const
     {
       int ret = TFS_SUCCESS;
-      ret = output.set_int64(app_id_);
-      if (TFS_SUCCESS == ret)
-      {
-        ret = output.set_int64(user_id_);
-      }
-      if (TFS_SUCCESS == ret)
-      {
-        ret = output.set_string(file_path_);
-      }
+      ret = BaseMetaParameter::serialize(output);
       if (TFS_SUCCESS == ret)
       {
         ret = output.set_string(new_file_path_);
@@ -87,7 +111,7 @@ namespace tfs
     }
 
     WriteFilepathMessage::WriteFilepathMessage() :
-      app_id_(0), user_id_(0), file_path_()
+      BaseMetaParameter()
     {
       _packetHeader._pcode = WRITE_FILEPATH_MESSAGE;
     }
@@ -101,15 +125,7 @@ namespace tfs
     {
       int ret = TFS_ERROR;
 
-      ret = input.get_int64(&app_id_);
-      if (TFS_SUCCESS == ret)
-      {
-        ret = input.get_int64(&user_id_);
-      }
-      if (TFS_SUCCESS == ret)
-      {
-        ret = input.get_string(file_path_);
-      }
+      ret = BaseMetaParameter::deserialize(input);
       if (TFS_SUCCESS == ret)
       {
         ret = frag_info_.deserialize(input);
@@ -119,21 +135,13 @@ namespace tfs
 
     int64_t WriteFilepathMessage::length() const
     {
-      return 2 * INT64_SIZE + common::Serialization::get_string_length(file_path_) + frag_info_.get_length();
+      return BaseMetaParameter::length() + frag_info_.get_length();
     }
 
     int WriteFilepathMessage::serialize(Stream& output) const
     {
       int ret = TFS_SUCCESS;
-      ret = output.set_int64(app_id_);
-      if (TFS_SUCCESS == ret)
-      {
-        ret = output.set_int64(user_id_);
-      }
-      if (TFS_SUCCESS == ret)
-      {
-        ret = output.set_string(file_path_);
-      }
+      ret = BaseMetaParameter::serialize(output);
       if (TFS_SUCCESS == ret)
       {
         ret = frag_info_.serialize(output);
@@ -143,7 +151,7 @@ namespace tfs
 
 
     ReadFilepathMessage::ReadFilepathMessage() :
-      app_id_(0), user_id_(0), file_path_(""), offset_(0), size_(0)
+      BaseMetaParameter(), offset_(0), size_(0)
     {
       _packetHeader._pcode = READ_FILEPATH_MESSAGE;
     }
@@ -157,15 +165,7 @@ namespace tfs
     {
       int ret = TFS_ERROR;
 
-      ret = input.get_int64(&app_id_);
-      if (TFS_SUCCESS == ret)
-      {
-        ret = input.get_int64(&user_id_);
-      }
-      if (TFS_SUCCESS == ret)
-      {
-        ret = input.get_string(file_path_);
-      }
+      ret = BaseMetaParameter::deserialize(input);
       if (TFS_SUCCESS == ret)
       {
         ret = input.get_int64(&offset_);
@@ -179,21 +179,13 @@ namespace tfs
 
     int64_t ReadFilepathMessage::length() const
     {
-      return 4 * common::INT64_SIZE + common::Serialization::get_string_length(file_path_);
+      return BaseMetaParameter::length() + 2 * common::INT64_SIZE;
     }
 
     int ReadFilepathMessage::serialize(Stream& output) const
     {
       int ret = TFS_SUCCESS;
-      ret = output.set_int64(app_id_);
-      if (TFS_SUCCESS == ret)
-      {
-        ret = output.set_int64(user_id_);
-      }
-      if (TFS_SUCCESS == ret)
-      {
-        ret = output.set_string(file_path_);
-      }
+      ret = BaseMetaParameter::serialize(output);
       if (TFS_SUCCESS == ret)
       {
         ret = output.set_int64(offset_);
@@ -246,7 +238,7 @@ namespace tfs
     }
 
     LsFilepathMessage::LsFilepathMessage() :
-      app_id_(0), user_id_(0), file_path_(), file_type_(NORMAL_FILE)
+      BaseMetaParameter(), file_type_(NORMAL_FILE)
     {
       _packetHeader._pcode = LS_FILEPATH_MESSAGE;
     }
@@ -257,7 +249,7 @@ namespace tfs
 
     int64_t LsFilepathMessage::length() const
     {
-      return INT64_SIZE * 3 + common::Serialization::get_string_length(file_path_) + INT8_SIZE;
+      return BaseMetaParameter::length() + INT64_SIZE + INT8_SIZE;
     }
 
     int LsFilepathMessage::serialize(common::Stream& output) const

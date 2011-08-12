@@ -25,15 +25,14 @@ namespace tfs
 {
   namespace message
   {
-    class FilepathActionMessage: public common::BasePacket
+    class BaseMetaParameter: public common::BasePacket
     {
       public:
-        FilepathActionMessage();
-        virtual ~FilepathActionMessage();
+        BaseMetaParameter();
+        virtual ~BaseMetaParameter();
         virtual int serialize(common::Stream& output) const ;
         virtual int deserialize(common::Stream& input);
         virtual int64_t length() const;
-
         inline void set_app_id(const int64_t app_id)
         {
           app_id_ = app_id;
@@ -54,12 +53,26 @@ namespace tfs
 
         inline void set_file_path(const char* file_path)
         {
-          file_path_ = std::string(file_path);
+          file_path_ = file_path;
         }
         inline const char* const get_file_path() const
         {
           return file_path_.c_str();
         }
+      protected:
+        int64_t app_id_;
+        int64_t user_id_;
+        std::string file_path_;
+    };
+    class FilepathActionMessage: public BaseMetaParameter
+    {
+      public:
+        FilepathActionMessage();
+        virtual ~FilepathActionMessage();
+        virtual int serialize(common::Stream& output) const ;
+        virtual int deserialize(common::Stream& input);
+        virtual int64_t length() const;
+
 
         inline void set_new_file_path(const char* new_file_path)
         {
@@ -80,14 +93,11 @@ namespace tfs
         }
 
       protected:
-        int64_t app_id_;
-        int64_t user_id_;
-        std::string file_path_;
         std::string new_file_path_;
         common::MetaActionOp action_;
     };
 
-    class WriteFilepathMessage: public common::BasePacket
+    class WriteFilepathMessage: public BaseMetaParameter
     {
       public:
         WriteFilepathMessage();
@@ -95,33 +105,6 @@ namespace tfs
         virtual int serialize(common::Stream& output) const ;
         virtual int deserialize(common::Stream& input);
         virtual int64_t length() const;
-
-        inline void set_app_id(const int64_t app_id)
-        {
-          app_id_ = app_id;
-        }
-        inline int64_t get_app_id() const
-        {
-          return app_id_;
-        }
-
-        inline void set_user_id(const int64_t user_id)
-        {
-          user_id_ = user_id;
-        }
-        inline int64_t get_user_id() const
-        {
-          return user_id_;
-        }
-
-        inline void set_file_path(const char* file_path)
-        {
-          file_path_ = std::string(file_path);
-        }
-        inline const char* get_file_path() const
-        {
-          return file_path_.c_str();
-        }
 
         inline common::FragInfo& get_frag_info()
         {
@@ -133,13 +116,10 @@ namespace tfs
         }
 
       protected:
-        int64_t app_id_;
-        int64_t user_id_;
-        std::string file_path_;
         common::FragInfo frag_info_;
     };
 
-    class ReadFilepathMessage: public common::BasePacket
+    class ReadFilepathMessage: public BaseMetaParameter
     {
       public:
         ReadFilepathMessage();
@@ -147,33 +127,6 @@ namespace tfs
         virtual int serialize(common::Stream& output) const ;
         virtual int deserialize(common::Stream& input);
         virtual int64_t length() const;
-
-        inline void set_app_id(const int64_t app_id)
-        {
-          app_id_ = app_id;
-        }
-        inline int64_t get_app_id() const
-        {
-          return app_id_;
-        }
-
-        inline void set_user_id(const int64_t user_id)
-        {
-          user_id_ = user_id;
-        }
-        inline int64_t get_user_id() const
-        {
-          return user_id_;
-        }
-
-        inline void set_file_path(const char* file_path)
-        {
-          file_path_ = std::string(file_path);
-        }
-        inline const char* get_file_path() const
-        {
-          return file_path_.c_str();
-        }
 
         inline void set_offset(const int64_t offset)
         {
@@ -194,9 +147,6 @@ namespace tfs
         }
 
       protected:
-        int64_t app_id_;
-        int64_t user_id_;
-        std::string file_path_;
         int64_t offset_;
         int64_t size_;
     };
@@ -233,7 +183,7 @@ namespace tfs
         bool still_have_;
     };
 
-    class LsFilepathMessage: public common::BasePacket
+    class LsFilepathMessage: public BaseMetaParameter
     {
     public:
       LsFilepathMessage();
@@ -242,31 +192,6 @@ namespace tfs
       virtual int deserialize(common::Stream& input);
       virtual int64_t length() const;
 
-        inline void set_app_id(const int64_t app_id)
-        {
-          app_id_ = app_id;
-        }
-        inline int64_t get_app_id() const
-        {
-          return app_id_;
-        }
-
-        inline void set_user_id(const int64_t user_id)
-        {
-          user_id_ = user_id;
-        }
-        inline int64_t get_user_id() const
-        {
-          return user_id_;
-        }
-        inline void set_file_path(const char* file_path)
-        {
-          file_path_ = std::string(file_path);
-        }
-        inline const char* get_file_path() const
-        {
-          return file_path_.c_str();
-        }
         inline void set_file_type(int32_t file_type)
         {
           file_type_ = file_type;
@@ -287,14 +212,11 @@ namespace tfs
         }
 
     private:
-      int64_t app_id_;
-      int64_t user_id_;
       int64_t pid_;
-      std::string file_path_;
       int32_t file_type_;
     };
 
-    class RespLsFilepathMessage: public common::BasePacket
+    class RespLsFilepathMessage: public BaseMetaParameter
     {
     public:
       RespLsFilepathMessage();
