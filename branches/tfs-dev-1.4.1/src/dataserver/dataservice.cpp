@@ -247,7 +247,6 @@ namespace tfs
         TBSYS_LOG(INFO, "dataserver listen port: %d", adr->port_);
 
         server_local_port_ = adr->port_;
-
         BasePacketStreamer* streamer = dynamic_cast<BasePacketStreamer*>(get_packet_streamer());
         if (NULL == streamer)
         {
@@ -279,16 +278,9 @@ namespace tfs
           ds_requester_.init(data_server_info_.id_, ns_ip_port_, &data_management_);
         }
       }
+
       if (TFS_SUCCESS == iret)
       {
-        //init gcobject manager
-        iret = GCObjectManager::instance().initialize(get_timer());                                                                                          
-        if (iret != TFS_SUCCESS)
-        {
-          TBSYS_LOG(ERROR, "%s", "initialize gcobject manager fail");
-          return iret;
-        }
-
         //init global stat
         iret = stat_mgr_.initialize(get_timer());
         if (iret != TFS_SUCCESS)
