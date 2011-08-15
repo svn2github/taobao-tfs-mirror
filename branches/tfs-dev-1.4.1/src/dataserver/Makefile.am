@@ -18,7 +18,7 @@ libdataserver_a_SOURCES = visit_stat.cpp version.cpp file_op.cpp mmap_file.cpp m
 			  data_management.cpp replicate_block.cpp compact_block.cpp sync_backup.cpp\
 			  sync_base.cpp requester.cpp file_repair.cpp block_checker.cpp dataservice.cpp\
 				bit_map.h block_checker.h blockfile_format.h blockfile_manager.h block_status.h\
-				check_worker.h compact_block.h cpu_metrics.h data_file.h data_handle.h data_management.h\
+				compact_block.h cpu_metrics.h data_file.h data_handle.h data_management.h\
 				dataserver_define.h file_op.h file_repair.h index_handle.h logic_block.h\
 				mmap_file.h mmap_file_op.h physical_block.h replicate_block.h requester.h gc.h\
 				superblock_impl.h sync_backup.h sync_base.h version.h visit_stat.h dataservice.h

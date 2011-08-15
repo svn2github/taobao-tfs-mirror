@@ -2,10 +2,10 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.59)
-AC_INIT([tfs], 1.4.0, duolong@taobao.com)
+AC_INIT([tfs], 1.4.1, duolong@taobao.com)
 AC_CONFIG_SRCDIR([src/common/config_item.h])
 
-AM_INIT_AUTOMAKE(tfs, 1.4.0)
+AM_INIT_AUTOMAKE(tfs, 1.4.1)
 # Checks for programs.
 AC_PROG_AWK
 AC_PROG_CXX
@@ -26,6 +26,8 @@ AC_CHECK_LIB([m], [main])
 AC_CHECK_LIB([pthread], [main])
 # FIXME: Replace `main' with a function in `-lrt':
 AC_CHECK_LIB([rt], [main])
+
+AC_CHECK_LIB([mysqlclient], [main])
 
 AC_ARG_WITH([tblib-root],
            AS_HELP_STRING([--with-tblib-root],
@@ -164,6 +166,10 @@ AC_TYPE_SIGNAL
 AC_FUNC_STAT
 AC_CHECK_FUNCS([fdatasync ftruncate gethostbyname getpagesize gettimeofday memset mkdir munmap rmdir socket strcasecmp strchr strdup strerror strstr strtoul strtoull tzset])
 
+m4_include([ax_lib_mysql.m4])
+
+AX_LIB_MYSQL([>=5.1.4])
+
 AC_CONFIG_FILES([Makefile
                  conf/Makefile
                  scripts/Makefile
@@ -191,7 +197,6 @@ AC_CONFIG_FILES([Makefile
                  tests/rcserver/Makefile
                  tests/name_meta_server/Makefile
                  tests/common/Makefile
-                 tests/new_client/Makefile
                  tests/dataserver/Makefile
                  tests/intergrate/Makefile])
 AC_OUTPUT

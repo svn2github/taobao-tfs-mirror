@@ -1,9 +1,8 @@
-AM_CPPFLAGS=-Wall -I$(top_srcdir)/src\
+AM_CPPFLAGS=$(MYSQL_CXXFLAGS) -Wall -I$(top_srcdir)/src\
             -I$(TBLIB_ROOT)/include/tbsys\
-            -I$(TBLIB_ROOT)/include/tbnet\
-						`mysql_config --include`
+            -I$(TBLIB_ROOT)/include/tbnet
  
-AM_LDFLAGS=-lz -lrt -lpthread -ldl -luuid `mysql_config --libs`
+AM_LDFLAGS= $(MYSQL_LDFLAGS) -lz -lrt -lpthread -ldl -luuid
 
 LDADD=$(top_builddir)/src/message/libtfsmessage.a \
       $(top_builddir)/src/common/libtfscommon.a\
