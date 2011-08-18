@@ -115,6 +115,7 @@ namespace tfs
         return static_cast<int32_t>(v.size()) < common::MAX_OUT_INFO_COUNT;
       }
 
+      static bool is_sub_dir(const char* sub_dir, const char* parents_dir);
     private:
       char top_dir_name_[10];
       int32_t top_dir_size_;

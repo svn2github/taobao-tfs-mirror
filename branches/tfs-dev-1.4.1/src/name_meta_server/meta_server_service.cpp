@@ -417,28 +417,38 @@ namespace tfs
       int32_t name_len = 0, dest_name_len = 0;
       int ret = TFS_SUCCESS;
       MetaInfo p_meta_info, dest_p_meta_info;
-
-      if ((ret = parse_file_path(app_id, uid, file_path, p_meta_info, name, name_len)) != TFS_SUCCESS)
+      if (DIRECTORY == type)
       {
-        TBSYS_LOG(INFO, "parse file path fail. appid: %"PRI64_PREFIX"d, uid: %"PRI64_PREFIX"d, %s",
-                  app_id, uid, file_path);
-      }
-      else if ((ret = parse_file_path(app_id, uid, dest_file_path, dest_p_meta_info, dest_name, dest_name_len))
-               != TFS_SUCCESS)
-      {
-        TBSYS_LOG(INFO, "parse dest file fail. appid: %"PRI64_PREFIX"d, uid: %"PRI64_PREFIX"d, %s",
-                  app_id, uid, dest_file_path);
-      }
-      else
-      {
-        if ((ret = store_manager_->update(app_id, uid,
-                                          p_meta_info.get_pid(), p_meta_info.get_id(),
-                                          p_meta_info.get_name(), p_meta_info.get_name_len(),
-                                          dest_p_meta_info.get_pid(), dest_p_meta_info.get_id(),
-                                          dest_p_meta_info.get_name(), dest_p_meta_info.get_name_len(),
-                                          name, name_len, dest_name, dest_name_len, type)) != TFS_SUCCESS)
+        if (is_sub_dir(dest_file_path, file_path))
         {
-          TBSYS_LOG(ERROR, "mv fail: %s, type: %d, ret: %d", file_path, type, ret);
+          ret = EXIT_MOVE_TO_SUB_DIR_ERROR;
+        }
+      }
+      if (TFS_SUCCESS == ret)
+      {
+
+        if ((ret = parse_file_path(app_id, uid, file_path, p_meta_info, name, name_len)) != TFS_SUCCESS)
+        {
+          TBSYS_LOG(INFO, "parse file path fail. appid: %"PRI64_PREFIX"d, uid: %"PRI64_PREFIX"d, %s",
+              app_id, uid, file_path);
+        }
+        else if ((ret = parse_file_path(app_id, uid, dest_file_path, dest_p_meta_info, dest_name, dest_name_len))
+            != TFS_SUCCESS)
+        {
+          TBSYS_LOG(INFO, "parse dest file fail. appid: %"PRI64_PREFIX"d, uid: %"PRI64_PREFIX"d, %s",
+              app_id, uid, dest_file_path);
+        }
+        else
+        {
+          if ((ret = store_manager_->update(app_id, uid,
+                  p_meta_info.get_pid(), p_meta_info.get_id(),
+                  p_meta_info.get_name(), p_meta_info.get_name_len(),
+                  dest_p_meta_info.get_pid(), dest_p_meta_info.get_id(),
+                  dest_p_meta_info.get_name(), dest_p_meta_info.get_name_len(),
+                  name, name_len, dest_name, dest_name_len, type)) != TFS_SUCCESS)
+          {
+            TBSYS_LOG(ERROR, "mv fail: %s, type: %d, ret: %d", file_path, type, ret);
+          }
         }
       }
 
@@ -1202,6 +1212,41 @@ namespace tfs
         int64_to_char(name + name_len - 8, 8, skip);
       }
 
+    }
+    bool MetaServerService::is_sub_dir(const char* sub_dir, const char* parents_dir)
+    {
+      bool ret = false;
+      if (NULL != sub_dir && NULL != parents_dir)
+      {
+        char* pos = strstr(sub_dir, parents_dir);
+        if (pos == sub_dir)
+        {  
+          size_t p_len = strlen(parents_dir);
+          size_t c_len = strlen(sub_dir);
+          if (p_len == c_len)
+          {
+            //sub_dir == parents_dir;
+            ret = false;
+          }
+          else
+          {
+            if ('/' == *(parents_dir + p_len - 1))
+            {
+              // parents ended with '/'
+              ret = true;
+            }
+            else
+            {
+              pos += p_len;
+              if ('/' == *pos)
+              {  
+                ret = true;
+              }  
+            }
+          }
+        }  
+      }  
+      return ret;
     }
   }
 }

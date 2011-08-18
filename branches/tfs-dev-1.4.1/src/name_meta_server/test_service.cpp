@@ -14,6 +14,7 @@
 *
 */
 #include "meta_server_service.h"
+#include "common/parameter.h"
 
 using namespace tfs::namemetaserver;
 using namespace tfs::common;
@@ -34,60 +35,75 @@ void dump_frag_meta(const FragMeta& fm)
 
 int main()
 {
-  int64_t app_id = 5;
+  int64_t app_id = 8;
   int64_t uid = 5;
 
-  char dir_path[512], new_dir_path[512], wrong_dir_path[512];
-  char file_path[512], new_file_path[512], wrong_file_path[512];
+  char dir_path[512], new_dir_path[512];
+  //, wrong_dir_path[512];
+  //char file_path[512], new_file_path[512], wrong_file_path[512];
   int ret = 1;
 
   tfs::namemetaserver::MetaServerService service;
+  NameMeatServerParameter::DbInfo dbinfo;
+  dbinfo.conn_str_ = "10.232.35.41:3306:tfs_name_db";
+  dbinfo.user_ = "root";
+  dbinfo.passwd_ = "root";
+
+
+  SYSPARAM_NAMEMETASERVER.db_infos_.push_back(dbinfo);
+  SYSPARAM_NAMEMETASERVER.max_pool_size_ = 5;
+  service.initialize(0, NULL);
 
   // create file or dir test
   // TODO read file to test if the file or dir is exist
   printf("-----------------------------------------------\n");
   printf("app_id %lu, uid: %lu\n", app_id, uid);
 
-  sprintf(new_dir_path, "/taat");
+  sprintf(new_dir_path, "/test");
 
   ret = service.create(app_id, uid, new_dir_path, DIRECTORY);
   printf("create dir %s, ret: %d\n", new_dir_path, ret);
 
-  sprintf(dir_path, "/test");
+  sprintf(dir_path, "/test/test2");
 
   ret = service.create(app_id, uid, dir_path, DIRECTORY);
   printf("create dir %s, ret: %d\n", dir_path, ret);
 
 
-  sprintf(new_file_path, "/taat/that");
+  sprintf(new_dir_path, "/test/test2/test3");
 
-  ret = service.create(app_id, uid, new_file_path, NORMAL_FILE);
-  printf("create file %s, ret: %d\n", new_file_path, ret);
+  ret = service.create(app_id, uid, new_dir_path, DIRECTORY);
+  printf("create file %s, ret: %d\n", new_dir_path, ret);
 
-  sprintf(new_file_path, "/taat/1");
+  sprintf(dir_path, "/test");
+  sprintf(new_dir_path, "/test/test2/test5");
+  ret = service.mv(app_id, uid, dir_path, new_dir_path, DIRECTORY);
+  printf("mv file %s->%s, %d\n", dir_path, new_dir_path, ret);
 
-  ret = service.create(app_id, uid, new_file_path, NORMAL_FILE);
-  printf("create file %s, ret: %d\n", new_file_path, ret);
+  //sprintf(new_file_path, "/taat/1");
 
-  sprintf(new_file_path, "/taat/zz");
+  //ret = service.create(app_id, uid, new_file_path, NORMAL_FILE);
+  //printf("create file %s, ret: %d\n", new_file_path, ret);
 
-  ret = service.create(app_id, uid, new_file_path, NORMAL_FILE);
-  printf("create file %s, ret: %d\n", new_file_path, ret);
+  //sprintf(new_file_path, "/taat/zz");
 
-  sprintf(new_file_path, "/taat/zzzz");
+  //ret = service.create(app_id, uid, new_file_path, NORMAL_FILE);
+  //printf("create file %s, ret: %d\n", new_file_path, ret);
 
-  ret = service.create(app_id, uid, new_file_path, NORMAL_FILE);
-  printf("create file %s, ret: %d\n", new_file_path, ret);
+  //sprintf(new_file_path, "/taat/zzzz");
 
-  sprintf(file_path, "/test/that");
+  //ret = service.create(app_id, uid, new_file_path, NORMAL_FILE);
+  //printf("create file %s, ret: %d\n", new_file_path, ret);
 
-  ret = service.create(app_id, uid, file_path, NORMAL_FILE);
-  printf("create file %s, ret: %d\n", file_path, ret);
+  //sprintf(file_path, "/test/that");
+
+  //ret = service.create(app_id, uid, file_path, NORMAL_FILE);
+  //printf("create file %s, ret: %d\n", file_path, ret);
 
 
-  printf("---------------------------\n");
+  //printf("---------------------------\n");
 
-  //FragInfo tfi;
+  ////FragInfo tfi;
   //tfi.cluster_id_ = 1;
   //for (int i = 0; i < MAX_FRAG_INFO_COUNT + 100; i++)
   //{
@@ -129,13 +145,13 @@ int main()
   //}
   //return 0;
 
-  sprintf(wrong_dir_path, "/admin/test");
-  ret = service.create(app_id, uid, wrong_dir_path, DIRECTORY);
-  printf("create dir %s, ret: %d\n", wrong_dir_path, ret);
+  //sprintf(wrong_dir_path, "/admin/test");
+  //ret = service.create(app_id, uid, wrong_dir_path, DIRECTORY);
+  //printf("create dir %s, ret: %d\n", wrong_dir_path, ret);
 
-  sprintf(wrong_file_path, "/admin/test/1.txt");
-  ret = service.create(app_id, uid, wrong_file_path, NORMAL_FILE);
-  printf("create file %s, ret: %d\n", wrong_file_path, ret);
+  //sprintf(wrong_file_path, "/admin/test/1.txt");
+  //ret = service.create(app_id, uid, wrong_file_path, NORMAL_FILE);
+  //printf("create file %s, ret: %d\n", wrong_file_path, ret);
 
   //// rm file or dir test
   //// TODO read file to test if the file or dir is exist
@@ -180,7 +196,7 @@ int main()
   //ret = service.create(app_id, uid, dir_path, DIRECTORY);
   //printf("create dir %s, %d\n", dir_path, ret);
 
-  sprintf(new_dir_path, "/admin");
+  //sprintf(new_dir_path, "/admin");
   //ret = service.create(app_id, uid, new_dir_path, DIRECTORY);
   //printf("create dir %s, %d\n", new_dir_path, ret);
 
@@ -207,7 +223,7 @@ int main()
   //sprintf(new_dir_path, "/admin");
   //ret = service.create(app_id, uid, new_dir_path, DIRECTORY);
   //printf("create dir %s, %d\n", new_dir_path, ret);
-  sprintf(new_file_path, "/admin/new.txt");
+  //sprintf(new_file_path, "/admin/new.txt");
   //ret = service.create(app_id, uid, new_file_path, NORMAL_FILE);
   //printf("create file %s, %d\n", new_file_path, ret);
 
