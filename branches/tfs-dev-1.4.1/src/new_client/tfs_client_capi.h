@@ -149,11 +149,12 @@ extern "C"
   // sort of utility
   uint64_t t_get_server_id();
   int32_t t_get_cluster_id();
-  int64_t t_save_file(const char* local_file, const char* tfs_name, const char* suffix,
-                      char* ret_tfs_name, const int32_t ret_tfs_name_len, const int32_t flag, char* ns_addr);
+  int64_t t_save_file(char* ret_tfs_file_name, const int32_t ret_tfs_name_len, const char* local_file,
+                      const int32_t flag, const char* suffix, const char* ns_addr);
+
   int t_fetch_file(const char* local_file, const char* tfs_name, const char* suffix, const char* ns_addr);
-  int t_stat_file(const char* tfs_name, const char* suffix,
-                  TfsFileStat* file_stat, const TfsStatType stat_type, const char* ns_addr);
+  int t_stat_file(TfsFileStat* file_stat, const char* tfs_name, const char* suffix,
+                  const char* ns_addr, const TfsStatType stat_type);
 #if __cplusplus
 }
 #endif

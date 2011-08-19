@@ -110,7 +110,7 @@ int t_unlink2(const char* file_name, const char* suffix,
   int64_t ret_file_size = 0;
 
   int ret = TfsClient::Instance()->
-    unlink(file_name, suffix, ns_addr, ret_file_size, static_cast<tfs::common::TfsUnlinkType>(action));
+    unlink(ret_file_size, file_name, suffix, ns_addr, static_cast<tfs::common::TfsUnlinkType>(action));
 
   if (tfs::common::TFS_SUCCESS == ret && file_size != NULL)
   {
@@ -295,11 +295,11 @@ int32_t t_get_cluster_id()
   return TfsClient::Instance()->get_cluster_id();
 }
 
-int64_t t_save_file(const char* local_file, const char* tfs_name, const char* suffix,
-                    char* ret_tfs_name, const int32_t ret_tfs_name_len, const int32_t flag, const char* ns_addr)
+int64_t t_save_file(char* ret_tfs_file_name, const int32_t ret_tfs_file_name_len, const char* local_file,
+                    const int32_t flag, const char* suffix, const char* ns_addr)
 {
-  return TfsClient::Instance()->save_file(local_file, tfs_name, suffix,
-                                          ret_tfs_name, ret_tfs_name_len, ns_addr, flag);
+  return TfsClient::Instance()->save_file(ret_tfs_file_name, ret_tfs_file_name_len, local_file, flag, suffix,
+                                          ns_addr, NULL);
 }
 
 int t_fetch_file(const char* local_file, const char* tfs_name, const char* suffix, const char* ns_addr)
@@ -307,10 +307,10 @@ int t_fetch_file(const char* local_file, const char* tfs_name, const char* suffi
   return TfsClient::Instance()->fetch_file(local_file, tfs_name, suffix, ns_addr);
 }
 
-int t_stat_file(const char* tfs_name, const char* suffix,
-                TfsFileStat* file_stat, const TfsStatType stat_type, const char* ns_addr)
+int t_stat_file(TfsFileStat* file_stat, const char* tfs_name, const char* suffix,
+                  const char* ns_addr, const TfsStatType stat_type)
 {
-  return TfsClient::Instance()->stat_file(tfs_name, suffix,
-                                          reinterpret_cast<tfs::common::TfsFileStat*>(file_stat),
-                                          static_cast<tfs::common::TfsStatType>(stat_type), ns_addr);
+  return TfsClient::Instance()->stat_file(reinterpret_cast<tfs::common::TfsFileStat*>(file_stat),
+                                          tfs_name, suffix, ns_addr,
+                                          static_cast<tfs::common::TfsStatType>(stat_type));
 }
