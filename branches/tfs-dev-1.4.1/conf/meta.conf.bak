@@ -1,0 +1,17 @@
+[public]
+    log_level = debug
+    log_num = 20
+    log_size = 134217728
+    work_dir = /home/chuyu/tfs_meta
+
+    thread_count = 4
+    ip_addr = 10.232.35.40
+    dev_name = bond0
+    port = 15100
+
+[metaserver]
+    meta_db_info = 10.232.35.41:3306:tfs_name_db 
+    meta_db_user = root 
+    meta_db_pwd = root 
+    
+    meta_max_frag_info_size = 65535 

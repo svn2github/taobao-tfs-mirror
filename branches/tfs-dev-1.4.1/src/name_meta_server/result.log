@@ -1,0 +1,433 @@
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:298 [47290284459712] old_name: /, new_name: /, name_len: 2
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:345 [47290284459712] file(/) not found, ret: 1
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:298 [47290284459712] old_name: /, new_name: /, name_len: 2
+[2011-07-26 19:33:26] DEBUG mysql_database_helper.cpp:1087 [47290284459712] num_fields = 1
+[2011-07-26 19:33:26] DEBUG mysql_database_helper.cpp:1119 [47290284459712] mysql_proc_ret = 264
+[2011-07-26 19:33:26] DEBUG mysql_database_helper.cpp:1087 [47290284459712] num_fields = 1
+[2011-07-26 19:33:26] DEBUG mysql_database_helper.cpp:1119 [47290284459712] mysql_proc_ret = 1
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:298 [47290284459712] old_name: /, new_name: /, name_len: 2
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:329 [47290284459712] ***/*** -> ***/***, ret: 0
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:298 [47290284459712] old_name: test, new_name: test, name_len: 5
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:140 [47290284459712] name: test, ppid: 0, pid: 264
+[2011-07-26 19:33:26] DEBUG mysql_database_helper.cpp:1087 [47290284459712] num_fields = 1
+[2011-07-26 19:33:26] DEBUG mysql_database_helper.cpp:1119 [47290284459712] mysql_proc_ret = 265
+[2011-07-26 19:33:26] DEBUG mysql_database_helper.cpp:1087 [47290284459712] num_fields = 1
+[2011-07-26 19:33:26] DEBUG mysql_database_helper.cpp:1119 [47290284459712] mysql_proc_ret = 1
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:148 [47290284459712] create success, type: 2, appid: 3, uid: 1, filepath: /test
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:298 [47290284459712] old_name: /, new_name: /, name_len: 2
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:329 [47290284459712] ***/*** -> ***/***, ret: 0
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:298 [47290284459712] old_name: test, new_name: test, name_len: 5
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:140 [47290284459712] name: test, ppid: 0, pid: 264
+[2011-07-26 19:33:26] DEBUG mysql_database_helper.cpp:1087 [47290284459712] num_fields = 1
+[2011-07-26 19:33:26] DEBUG mysql_database_helper.cpp:1119 [47290284459712] mysql_proc_ret = 266
+[2011-07-26 19:33:26] DEBUG mysql_database_helper.cpp:1087 [47290284459712] num_fields = 1
+[2011-07-26 19:33:26] DEBUG mysql_database_helper.cpp:1119 [47290284459712] mysql_proc_ret = 4294967295
+[2011-07-26 19:33:26] ERROR create (meta_server_service.cpp:143) [47290284459712] create fail: /test, type: 2, ret: 1
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:148 [47290284459712] create fail, type: 2, appid: 3, uid: 1, filepath: /test
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:298 [47290284459712] old_name: /, new_name: /, name_len: 2
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:329 [47290284459712] ***/*** -> ***/***, ret: 0
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:298 [47290284459712] old_name: test, new_name: test, name_len: 5
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:329 [47290284459712] ***test*** -> ***test***, ret: 0
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:298 [47290284459712] old_name: 1.txt, new_name: 1.txt, name_len: 6
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:140 [47290284459712] name: 1.txt, ppid: 264, pid: 265
+[2011-07-26 19:33:26] DEBUG mysql_database_helper.cpp:1087 [47290284459712] num_fields = 1
+[2011-07-26 19:33:26] DEBUG mysql_database_helper.cpp:1119 [47290284459712] mysql_proc_ret = 1
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:148 [47290284459712] create success, type: 1, appid: 3, uid: 1, filepath: /test/1.txt
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:298 [47290284459712] old_name: /, new_name: /, name_len: 2
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:329 [47290284459712] ***/*** -> ***/***, ret: 0
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:298 [47290284459712] old_name: test, new_name: test, name_len: 5
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:329 [47290284459712] ***test*** -> ***test***, ret: 0
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:298 [47290284459712] old_name: 1.txt, new_name: 1.txt, name_len: 6
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:140 [47290284459712] name: 1.txt, ppid: 264, pid: 265
+[2011-07-26 19:33:26] DEBUG mysql_database_helper.cpp:1087 [47290284459712] num_fields = 1
+[2011-07-26 19:33:26] DEBUG mysql_database_helper.cpp:1119 [47290284459712] mysql_proc_ret = 4294967295
+[2011-07-26 19:33:26] ERROR create (meta_server_service.cpp:143) [47290284459712] create fail: /test/1.txt, type: 1, ret: 1
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:148 [47290284459712] create fail, type: 1, appid: 3, uid: 1, filepath: /test/1.txt
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:298 [47290284459712] old_name: /, new_name: /, name_len: 2
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:329 [47290284459712] ***/*** -> ***/***, ret: 0
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:298 [47290284459712] old_name: admin, new_name: admin, name_len: 6
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:345 [47290284459712] file(admin) not found, ret: 1
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:298 [47290284459712] old_name: admin, new_name: admin, name_len: 6
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:148 [47290284459712] create fail, type: 2, appid: 3, uid: 1, filepath: /admin/test
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:298 [47290284459712] old_name: /, new_name: /, name_len: 2
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:329 [47290284459712] ***/*** -> ***/***, ret: 0
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:298 [47290284459712] old_name: admin, new_name: admin, name_len: 6
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:345 [47290284459712] file(admin) not found, ret: 1
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:298 [47290284459712] old_name: test, new_name: test, name_len: 5
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:148 [47290284459712] create fail, type: 1, appid: 3, uid: 1, filepath: /admin/test/1.txt
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:298 [47290284459712] old_name: /, new_name: /, name_len: 2
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:345 [47290284459712] file(/) not found, ret: 1
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:298 [47290284459712] old_name: /, new_name: /, name_len: 2
+[2011-07-26 19:33:26] DEBUG mysql_database_helper.cpp:1087 [47290284459712] num_fields = 1
+[2011-07-26 19:33:26] DEBUG mysql_database_helper.cpp:1119 [47290284459712] mysql_proc_ret = 267
+[2011-07-26 19:33:26] DEBUG mysql_database_helper.cpp:1087 [47290284459712] num_fields = 1
+[2011-07-26 19:33:26] DEBUG mysql_database_helper.cpp:1119 [47290284459712] mysql_proc_ret = 1
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:298 [47290284459712] old_name: /, new_name: /, name_len: 2
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:329 [47290284459712] ***/*** -> ***/***, ret: 0
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:298 [47290284459712] old_name: test, new_name: test, name_len: 5
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:140 [47290284459712] name: test, ppid: 0, pid: 267
+[2011-07-26 19:33:26] DEBUG mysql_database_helper.cpp:1087 [47290284459712] num_fields = 1
+[2011-07-26 19:33:26] DEBUG mysql_database_helper.cpp:1119 [47290284459712] mysql_proc_ret = 268
+[2011-07-26 19:33:26] DEBUG mysql_database_helper.cpp:1087 [47290284459712] num_fields = 1
+[2011-07-26 19:33:26] DEBUG mysql_database_helper.cpp:1119 [47290284459712] mysql_proc_ret = 1
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:148 [47290284459712] create success, type: 2, appid: 3, uid: 2, filepath: /test
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:298 [47290284459712] old_name: /, new_name: /, name_len: 2
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:329 [47290284459712] ***/*** -> ***/***, ret: 0
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:298 [47290284459712] old_name: test, new_name: test, name_len: 5
+[2011-07-26 19:33:26] DEBUG mysql_database_helper.cpp:1087 [47290284459712] num_fields = 1
+[2011-07-26 19:33:26] DEBUG mysql_database_helper.cpp:1119 [47290284459712] mysql_proc_ret = 1
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:197 [47290284459712] rm success, type: 2, appid: 3, uid: 2, filepath: /test
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:298 [47290284459712] old_name: /, new_name: /, name_len: 2
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:329 [47290284459712] ***/*** -> ***/***, ret: 0
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:298 [47290284459712] old_name: test, new_name: test, name_len: 5
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:140 [47290284459712] name: test, ppid: 0, pid: 267
+[2011-07-26 19:33:26] DEBUG mysql_database_helper.cpp:1087 [47290284459712] num_fields = 1
+[2011-07-26 19:33:26] DEBUG mysql_database_helper.cpp:1119 [47290284459712] mysql_proc_ret = 269
+[2011-07-26 19:33:26] DEBUG mysql_database_helper.cpp:1087 [47290284459712] num_fields = 1
+[2011-07-26 19:33:26] DEBUG mysql_database_helper.cpp:1119 [47290284459712] mysql_proc_ret = 1
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:148 [47290284459712] create success, type: 2, appid: 3, uid: 2, filepath: /test
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:298 [47290284459712] old_name: /, new_name: /, name_len: 2
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:329 [47290284459712] ***/*** -> ***/***, ret: 0
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:298 [47290284459712] old_name: test, new_name: test, name_len: 5
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:329 [47290284459712] ***test*** -> ***test***, ret: 0
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:298 [47290284459712] old_name: 1.txt, new_name: 1.txt, name_len: 6
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:140 [47290284459712] name: 1.txt, ppid: 267, pid: 269
+[2011-07-26 19:33:26] DEBUG mysql_database_helper.cpp:1087 [47290284459712] num_fields = 1
+[2011-07-26 19:33:26] DEBUG mysql_database_helper.cpp:1119 [47290284459712] mysql_proc_ret = 1
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:148 [47290284459712] create success, type: 1, appid: 3, uid: 2, filepath: /test/1.txt
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:298 [47290284459712] old_name: /, new_name: /, name_len: 2
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:329 [47290284459712] ***/*** -> ***/***, ret: 0
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:298 [47290284459712] old_name: test, new_name: test, name_len: 5
+[2011-07-26 19:33:26] DEBUG mysql_database_helper.cpp:1087 [47290284459712] num_fields = 1
+[2011-07-26 19:33:26] DEBUG mysql_database_helper.cpp:1119 [47290284459712] mysql_proc_ret = 4294967292
+[2011-07-26 19:33:26] ERROR rm (meta_server_service.cpp:190) [47290284459712] rm fail: /test, type: 2, ret: 1
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:197 [47290284459712] rm fail, type: 2, appid: 3, uid: 2, filepath: /test
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:298 [47290284459712] old_name: /, new_name: /, name_len: 2
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:329 [47290284459712] ***/*** -> ***/***, ret: 0
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:298 [47290284459712] old_name: test, new_name: test, name_len: 5
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:329 [47290284459712] ***test*** -> ***test***, ret: 0
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:298 [47290284459712] old_name: 1.txt, new_name: 1.txt, name_len: 6
+[2011-07-26 19:33:26] DEBUG mysql_database_helper.cpp:1087 [47290284459712] num_fields = 1
+[2011-07-26 19:33:26] DEBUG mysql_database_helper.cpp:1119 [47290284459712] mysql_proc_ret = 1
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:197 [47290284459712] rm success, type: 1, appid: 3, uid: 2, filepath: /test/1.txt
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:298 [47290284459712] old_name: /, new_name: /, name_len: 2
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:329 [47290284459712] ***/*** -> ***/***, ret: 0
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:298 [47290284459712] old_name: test, new_name: test, name_len: 5
+[2011-07-26 19:33:26] DEBUG mysql_database_helper.cpp:1087 [47290284459712] num_fields = 1
+[2011-07-26 19:33:26] DEBUG mysql_database_helper.cpp:1119 [47290284459712] mysql_proc_ret = 1
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:197 [47290284459712] rm success, type: 2, appid: 3, uid: 2, filepath: /test
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:298 [47290284459712] old_name: /, new_name: /, name_len: 2
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:329 [47290284459712] ***/*** -> ***/***, ret: 0
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:298 [47290284459712] old_name: admin, new_name: admin, name_len: 6
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:345 [47290284459712] file(admin) not found, ret: 1
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:298 [47290284459712] old_name: admin, new_name: admin, name_len: 6
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:197 [47290284459712] rm fail, type: 2, appid: 3, uid: 2, filepath: /admin/test
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:298 [47290284459712] old_name: /, new_name: /, name_len: 2
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:329 [47290284459712] ***/*** -> ***/***, ret: 0
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:298 [47290284459712] old_name: admin, new_name: admin, name_len: 6
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:345 [47290284459712] file(admin) not found, ret: 1
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:298 [47290284459712] old_name: test, new_name: test, name_len: 5
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:197 [47290284459712] rm fail, type: 1, appid: 3, uid: 2, filepath: /admin/test/1.txt
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:298 [47290284459712] old_name: /, new_name: /, name_len: 2
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:345 [47290284459712] file(/) not found, ret: 1
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:298 [47290284459712] old_name: /, new_name: /, name_len: 2
+[2011-07-26 19:33:26] DEBUG mysql_database_helper.cpp:1087 [47290284459712] num_fields = 1
+[2011-07-26 19:33:26] DEBUG mysql_database_helper.cpp:1119 [47290284459712] mysql_proc_ret = 270
+[2011-07-26 19:33:26] DEBUG mysql_database_helper.cpp:1087 [47290284459712] num_fields = 1
+[2011-07-26 19:33:26] DEBUG mysql_database_helper.cpp:1119 [47290284459712] mysql_proc_ret = 1
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:298 [47290284459712] old_name: /, new_name: /, name_len: 2
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:329 [47290284459712] ***/*** -> ***/***, ret: 0
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:298 [47290284459712] old_name: test, new_name: test, name_len: 5
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:140 [47290284459712] name: test, ppid: 0, pid: 270
+[2011-07-26 19:33:26] DEBUG mysql_database_helper.cpp:1087 [47290284459712] num_fields = 1
+[2011-07-26 19:33:26] DEBUG mysql_database_helper.cpp:1119 [47290284459712] mysql_proc_ret = 271
+[2011-07-26 19:33:26] DEBUG mysql_database_helper.cpp:1087 [47290284459712] num_fields = 1
+[2011-07-26 19:33:26] DEBUG mysql_database_helper.cpp:1119 [47290284459712] mysql_proc_ret = 1
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:148 [47290284459712] create success, type: 2, appid: 3, uid: 3, filepath: /test
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:298 [47290284459712] old_name: /, new_name: /, name_len: 2
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:329 [47290284459712] ***/*** -> ***/***, ret: 0
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:298 [47290284459712] old_name: admin, new_name: admin, name_len: 6
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:140 [47290284459712] name: admin, ppid: 0, pid: 270
+[2011-07-26 19:33:26] DEBUG mysql_database_helper.cpp:1087 [47290284459712] num_fields = 1
+[2011-07-26 19:33:26] DEBUG mysql_database_helper.cpp:1119 [47290284459712] mysql_proc_ret = 272
+[2011-07-26 19:33:26] DEBUG mysql_database_helper.cpp:1087 [47290284459712] num_fields = 1
+[2011-07-26 19:33:26] DEBUG mysql_database_helper.cpp:1119 [47290284459712] mysql_proc_ret = 1
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:148 [47290284459712] create success, type: 2, appid: 3, uid: 3, filepath: /admin
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:298 [47290284459712] old_name: /, new_name: /, name_len: 2
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:329 [47290284459712] ***/*** -> ***/***, ret: 0
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:298 [47290284459712] old_name: /, new_name: /, name_len: 2
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:329 [47290284459712] ***/*** -> ***/***, ret: 0
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:298 [47290284459712] old_name: test, new_name: test, name_len: 5
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:298 [47290284459712] old_name: admin, new_name: admin, name_len: 6
+[2011-07-26 19:33:26] DEBUG mysql_database_helper.cpp:1087 [47290284459712] num_fields = 1
+[2011-07-26 19:33:26] DEBUG mysql_database_helper.cpp:1119 [47290284459712] mysql_proc_ret = 0
+[2011-07-26 19:33:26] ERROR mv (meta_server_service.cpp:244) [47290284459712] mv fail: /test, type: 2, ret: 1
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:249 [47290284459712] mv fail, type: 2, appid: 3, uid: 3, filepath: /test
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:298 [47290284459712] old_name: /, new_name: /, name_len: 2
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:329 [47290284459712] ***/*** -> ***/***, ret: 0
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:298 [47290284459712] old_name: admin, new_name: admin, name_len: 6
+[2011-07-26 19:33:26] DEBUG mysql_database_helper.cpp:1087 [47290284459712] num_fields = 1
+[2011-07-26 19:33:26] DEBUG mysql_database_helper.cpp:1119 [47290284459712] mysql_proc_ret = 1
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:197 [47290284459712] rm success, type: 2, appid: 3, uid: 3, filepath: /admin
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:298 [47290284459712] old_name: /, new_name: /, name_len: 2
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:329 [47290284459712] ***/*** -> ***/***, ret: 0
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:298 [47290284459712] old_name: /, new_name: /, name_len: 2
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:329 [47290284459712] ***/*** -> ***/***, ret: 0
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:298 [47290284459712] old_name: test, new_name: test, name_len: 5
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:298 [47290284459712] old_name: admin, new_name: admin, name_len: 6
+[2011-07-26 19:33:26] DEBUG mysql_database_helper.cpp:1087 [47290284459712] num_fields = 1
+[2011-07-26 19:33:26] DEBUG mysql_database_helper.cpp:1119 [47290284459712] mysql_proc_ret = 1
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:249 [47290284459712] mv success, type: 2, appid: 3, uid: 3, filepath: /test
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:298 [47290284459712] old_name: /, new_name: /, name_len: 2
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:345 [47290284459712] file(/) not found, ret: 1
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:298 [47290284459712] old_name: /, new_name: /, name_len: 2
+[2011-07-26 19:33:26] DEBUG mysql_database_helper.cpp:1087 [47290284459712] num_fields = 1
+[2011-07-26 19:33:26] DEBUG mysql_database_helper.cpp:1119 [47290284459712] mysql_proc_ret = 273
+[2011-07-26 19:33:26] DEBUG mysql_database_helper.cpp:1087 [47290284459712] num_fields = 1
+[2011-07-26 19:33:26] DEBUG mysql_database_helper.cpp:1119 [47290284459712] mysql_proc_ret = 1
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:298 [47290284459712] old_name: /, new_name: /, name_len: 2
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:329 [47290284459712] ***/*** -> ***/***, ret: 0
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:298 [47290284459712] old_name: test, new_name: test, name_len: 5
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:140 [47290284459712] name: test, ppid: 0, pid: 273
+[2011-07-26 19:33:26] DEBUG mysql_database_helper.cpp:1087 [47290284459712] num_fields = 1
+[2011-07-26 19:33:26] DEBUG mysql_database_helper.cpp:1119 [47290284459712] mysql_proc_ret = 274
+[2011-07-26 19:33:26] DEBUG mysql_database_helper.cpp:1087 [47290284459712] num_fields = 1
+[2011-07-26 19:33:26] DEBUG mysql_database_helper.cpp:1119 [47290284459712] mysql_proc_ret = 1
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:148 [47290284459712] create success, type: 2, appid: 3, uid: 4, filepath: /test
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:298 [47290284459712] old_name: /, new_name: /, name_len: 2
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:329 [47290284459712] ***/*** -> ***/***, ret: 0
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:298 [47290284459712] old_name: test, new_name: test, name_len: 5
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:329 [47290284459712] ***test*** -> ***test***, ret: 0
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:298 [47290284459712] old_name: old.txt, new_name: old.txt, name_len: 8
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:140 [47290284459712] name: old.txt, ppid: 273, pid: 274
+[2011-07-26 19:33:26] DEBUG mysql_database_helper.cpp:1087 [47290284459712] num_fields = 1
+[2011-07-26 19:33:26] DEBUG mysql_database_helper.cpp:1119 [47290284459712] mysql_proc_ret = 1
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:148 [47290284459712] create success, type: 1, appid: 3, uid: 4, filepath: /test/old.txt
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:298 [47290284459712] old_name: /, new_name: /, name_len: 2
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:329 [47290284459712] ***/*** -> ***/***, ret: 0
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:298 [47290284459712] old_name: admin, new_name: admin, name_len: 6
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:140 [47290284459712] name: admin, ppid: 0, pid: 273
+[2011-07-26 19:33:26] DEBUG mysql_database_helper.cpp:1087 [47290284459712] num_fields = 1
+[2011-07-26 19:33:26] DEBUG mysql_database_helper.cpp:1119 [47290284459712] mysql_proc_ret = 275
+[2011-07-26 19:33:26] DEBUG mysql_database_helper.cpp:1087 [47290284459712] num_fields = 1
+[2011-07-26 19:33:26] DEBUG mysql_database_helper.cpp:1119 [47290284459712] mysql_proc_ret = 1
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:148 [47290284459712] create success, type: 2, appid: 3, uid: 4, filepath: /admin
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:298 [47290284459712] old_name: /, new_name: /, name_len: 2
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:329 [47290284459712] ***/*** -> ***/***, ret: 0
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:298 [47290284459712] old_name: admin, new_name: admin, name_len: 6
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:329 [47290284459712] ***admin*** -> ***admin***, ret: 0
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:298 [47290284459712] old_name: new.txt, new_name: new.txt, name_len: 8
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:140 [47290284459712] name: new.txt, ppid: 273, pid: 275
+[2011-07-26 19:33:26] DEBUG mysql_database_helper.cpp:1087 [47290284459712] num_fields = 1
+[2011-07-26 19:33:26] DEBUG mysql_database_helper.cpp:1119 [47290284459712] mysql_proc_ret = 1
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:148 [47290284459712] create success, type: 1, appid: 3, uid: 4, filepath: /admin/new.txt
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:298 [47290284459712] old_name: /, new_name: /, name_len: 2
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:329 [47290284459712] ***/*** -> ***/***, ret: 0
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:298 [47290284459712] old_name: test, new_name: test, name_len: 5
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:329 [47290284459712] ***test*** -> ***test***, ret: 0
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:298 [47290284459712] old_name: /, new_name: /, name_len: 2
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:329 [47290284459712] ***/*** -> ***/***, ret: 0
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:298 [47290284459712] old_name: admin, new_name: admin, name_len: 6
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:329 [47290284459712] ***admin*** -> ***admin***, ret: 0
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:298 [47290284459712] old_name: old.txt, new_name: old.txt, name_len: 8
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:298 [47290284459712] old_name: new.txt, new_name: new.txt, name_len: 8
+[2011-07-26 19:33:26] DEBUG mysql_database_helper.cpp:1087 [47290284459712] num_fields = 1
+[2011-07-26 19:33:26] DEBUG mysql_database_helper.cpp:1119 [47290284459712] mysql_proc_ret = 4294967295
+[2011-07-26 19:33:26] ERROR mv (meta_server_service.cpp:244) [47290284459712] mv fail: /test/old.txt, type: 1, ret: 1
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:249 [47290284459712] mv fail, type: 1, appid: 3, uid: 4, filepath: /test/old.txt
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:298 [47290284459712] old_name: /, new_name: /, name_len: 2
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:329 [47290284459712] ***/*** -> ***/***, ret: 0
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:298 [47290284459712] old_name: admin, new_name: admin, name_len: 6
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:329 [47290284459712] ***admin*** -> ***admin***, ret: 0
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:298 [47290284459712] old_name: new.txt, new_name: new.txt, name_len: 8
+[2011-07-26 19:33:26] DEBUG mysql_database_helper.cpp:1087 [47290284459712] num_fields = 1
+[2011-07-26 19:33:26] DEBUG mysql_database_helper.cpp:1119 [47290284459712] mysql_proc_ret = 1
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:197 [47290284459712] rm success, type: 1, appid: 3, uid: 4, filepath: /admin/new.txt
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:298 [47290284459712] old_name: /, new_name: /, name_len: 2
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:329 [47290284459712] ***/*** -> ***/***, ret: 0
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:298 [47290284459712] old_name: test, new_name: test, name_len: 5
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:329 [47290284459712] ***test*** -> ***test***, ret: 0
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:298 [47290284459712] old_name: /, new_name: /, name_len: 2
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:329 [47290284459712] ***/*** -> ***/***, ret: 0
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:298 [47290284459712] old_name: admin, new_name: admin, name_len: 6
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:329 [47290284459712] ***admin*** -> ***admin***, ret: 0
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:298 [47290284459712] old_name: old.txt, new_name: old.txt, name_len: 8
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:298 [47290284459712] old_name: new.txt, new_name: new.txt, name_len: 8
+[2011-07-26 19:33:26] DEBUG mysql_database_helper.cpp:1087 [47290284459712] num_fields = 1
+[2011-07-26 19:33:26] DEBUG mysql_database_helper.cpp:1119 [47290284459712] mysql_proc_ret = 1
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:249 [47290284459712] mv success, type: 1, appid: 3, uid: 4, filepath: /test/old.txt
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:298 [47290284459712] old_name: /, new_name: /, name_len: 2
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:345 [47290284459712] file(/) not found, ret: 1
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:298 [47290284459712] old_name: /, new_name: /, name_len: 2
+[2011-07-26 19:33:26] DEBUG mysql_database_helper.cpp:1087 [47290284459712] num_fields = 1
+[2011-07-26 19:33:26] DEBUG mysql_database_helper.cpp:1119 [47290284459712] mysql_proc_ret = 276
+[2011-07-26 19:33:26] DEBUG mysql_database_helper.cpp:1087 [47290284459712] num_fields = 1
+[2011-07-26 19:33:26] DEBUG mysql_database_helper.cpp:1119 [47290284459712] mysql_proc_ret = 1
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:298 [47290284459712] old_name: /, new_name: /, name_len: 2
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:329 [47290284459712] ***/*** -> ***/***, ret: 0
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:298 [47290284459712] old_name: test, new_name: test, name_len: 5
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:140 [47290284459712] name: test, ppid: 0, pid: 276
+[2011-07-26 19:33:26] DEBUG mysql_database_helper.cpp:1087 [47290284459712] num_fields = 1
+[2011-07-26 19:33:26] DEBUG mysql_database_helper.cpp:1119 [47290284459712] mysql_proc_ret = 277
+[2011-07-26 19:33:26] DEBUG mysql_database_helper.cpp:1087 [47290284459712] num_fields = 1
+[2011-07-26 19:33:26] DEBUG mysql_database_helper.cpp:1119 [47290284459712] mysql_proc_ret = 1
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:148 [47290284459712] create success, type: 2, appid: 3, uid: 5, filepath: /test
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:298 [47290284459712] old_name: /, new_name: /, name_len: 2
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:329 [47290284459712] ***/*** -> ***/***, ret: 0
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:298 [47290284459712] old_name: test, new_name: test, name_len: 5
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:329 [47290284459712] ***test*** -> ***test***, ret: 0
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:298 [47290284459712] old_name: old.txt, new_name: old.txt, name_len: 8
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:140 [47290284459712] name: old.txt, ppid: 276, pid: 277
+[2011-07-26 19:33:26] DEBUG mysql_database_helper.cpp:1087 [47290284459712] num_fields = 1
+[2011-07-26 19:33:26] DEBUG mysql_database_helper.cpp:1119 [47290284459712] mysql_proc_ret = 1
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:148 [47290284459712] create success, type: 1, appid: 3, uid: 5, filepath: /test/old.txt
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:298 [47290284459712] old_name: /, new_name: /, name_len: 2
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:329 [47290284459712] ***/*** -> ***/***, ret: 0
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:298 [47290284459712] old_name: admin, new_name: admin, name_len: 6
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:140 [47290284459712] name: admin, ppid: 0, pid: 276
+[2011-07-26 19:33:26] DEBUG mysql_database_helper.cpp:1087 [47290284459712] num_fields = 1
+[2011-07-26 19:33:26] DEBUG mysql_database_helper.cpp:1119 [47290284459712] mysql_proc_ret = 278
+[2011-07-26 19:33:26] DEBUG mysql_database_helper.cpp:1087 [47290284459712] num_fields = 1
+[2011-07-26 19:33:26] DEBUG mysql_database_helper.cpp:1119 [47290284459712] mysql_proc_ret = 1
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:148 [47290284459712] create success, type: 2, appid: 3, uid: 5, filepath: /admin
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:298 [47290284459712] old_name: /, new_name: /, name_len: 2
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:329 [47290284459712] ***/*** -> ***/***, ret: 0
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:298 [47290284459712] old_name: test, new_name: test, name_len: 5
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:329 [47290284459712] ***test*** -> ***test***, ret: 0
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:298 [47290284459712] old_name: /, new_name: /, name_len: 2
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:329 [47290284459712] ***/*** -> ***/***, ret: 0
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:298 [47290284459712] old_name: old.txt, new_name: old.txt, name_len: 8
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:298 [47290284459712] old_name: admin, new_name: admin, name_len: 6
+[2011-07-26 19:33:26] DEBUG mysql_database_helper.cpp:1087 [47290284459712] num_fields = 1
+[2011-07-26 19:33:26] DEBUG mysql_database_helper.cpp:1119 [47290284459712] mysql_proc_ret = 1
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:249 [47290284459712] mv success, type: 1, appid: 3, uid: 5, filepath: /test/old.txt
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:298 [47290284459712] old_name: /, new_name: /, name_len: 2
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:329 [47290284459712] ***/*** -> ***/***, ret: 0
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:298 [47290284459712] old_name: admin, new_name: admin, name_len: 6
+[2011-07-26 19:33:26] DEBUG mysql_database_helper.cpp:1087 [47290284459712] num_fields = 1
+[2011-07-26 19:33:26] DEBUG mysql_database_helper.cpp:1119 [47290284459712] mysql_proc_ret = 1
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:197 [47290284459712] rm success, type: 2, appid: 3, uid: 5, filepath: /admin
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:298 [47290284459712] old_name: /, new_name: /, name_len: 2
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:329 [47290284459712] ***/*** -> ***/***, ret: 0
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:298 [47290284459712] old_name: test, new_name: test, name_len: 5
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:329 [47290284459712] ***test*** -> ***test***, ret: 0
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:298 [47290284459712] old_name: /, new_name: /, name_len: 2
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:329 [47290284459712] ***/*** -> ***/***, ret: 0
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:298 [47290284459712] old_name: old.txt, new_name: old.txt, name_len: 8
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:298 [47290284459712] old_name: admin, new_name: admin, name_len: 6
+[2011-07-26 19:33:26] DEBUG mysql_database_helper.cpp:1087 [47290284459712] num_fields = 1
+[2011-07-26 19:33:26] DEBUG mysql_database_helper.cpp:1119 [47290284459712] mysql_proc_ret = 0
+[2011-07-26 19:33:26] ERROR mv (meta_server_service.cpp:244) [47290284459712] mv fail: /test/old.txt, type: 1, ret: 1
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:249 [47290284459712] mv fail, type: 1, appid: 3, uid: 5, filepath: /test/old.txt
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:298 [47290284459712] old_name: /, new_name: /, name_len: 2
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:345 [47290284459712] file(/) not found, ret: 1
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:298 [47290284459712] old_name: /, new_name: /, name_len: 2
+[2011-07-26 19:33:26] DEBUG mysql_database_helper.cpp:1087 [47290284459712] num_fields = 1
+[2011-07-26 19:33:26] DEBUG mysql_database_helper.cpp:1119 [47290284459712] mysql_proc_ret = 279
+[2011-07-26 19:33:26] DEBUG mysql_database_helper.cpp:1087 [47290284459712] num_fields = 1
+[2011-07-26 19:33:26] DEBUG mysql_database_helper.cpp:1119 [47290284459712] mysql_proc_ret = 1
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:298 [47290284459712] old_name: /, new_name: /, name_len: 2
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:329 [47290284459712] ***/*** -> ***/***, ret: 0
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:298 [47290284459712] old_name: test, new_name: test, name_len: 5
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:140 [47290284459712] name: test, ppid: 0, pid: 279
+[2011-07-26 19:33:26] DEBUG mysql_database_helper.cpp:1087 [47290284459712] num_fields = 1
+[2011-07-26 19:33:26] DEBUG mysql_database_helper.cpp:1119 [47290284459712] mysql_proc_ret = 280
+[2011-07-26 19:33:26] DEBUG mysql_database_helper.cpp:1087 [47290284459712] num_fields = 1
+[2011-07-26 19:33:26] DEBUG mysql_database_helper.cpp:1119 [47290284459712] mysql_proc_ret = 1
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:148 [47290284459712] create success, type: 2, appid: 3, uid: 6, filepath: /test
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:298 [47290284459712] old_name: /, new_name: /, name_len: 2
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:329 [47290284459712] ***/*** -> ***/***, ret: 0
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:298 [47290284459712] old_name: admin, new_name: admin, name_len: 6
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:140 [47290284459712] name: admin, ppid: 0, pid: 279
+[2011-07-26 19:33:26] DEBUG mysql_database_helper.cpp:1087 [47290284459712] num_fields = 1
+[2011-07-26 19:33:26] DEBUG mysql_database_helper.cpp:1119 [47290284459712] mysql_proc_ret = 281
+[2011-07-26 19:33:26] DEBUG mysql_database_helper.cpp:1087 [47290284459712] num_fields = 1
+[2011-07-26 19:33:26] DEBUG mysql_database_helper.cpp:1119 [47290284459712] mysql_proc_ret = 1
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:148 [47290284459712] create success, type: 2, appid: 3, uid: 6, filepath: /admin
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:298 [47290284459712] old_name: /, new_name: /, name_len: 2
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:329 [47290284459712] ***/*** -> ***/***, ret: 0
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:298 [47290284459712] old_name: admin, new_name: admin, name_len: 6
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:329 [47290284459712] ***admin*** -> ***admin***, ret: 0
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:298 [47290284459712] old_name: new.txt, new_name: new.txt, name_len: 8
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:140 [47290284459712] name: new.txt, ppid: 279, pid: 281
+[2011-07-26 19:33:26] DEBUG mysql_database_helper.cpp:1087 [47290284459712] num_fields = 1
+[2011-07-26 19:33:26] DEBUG mysql_database_helper.cpp:1119 [47290284459712] mysql_proc_ret = 1
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:148 [47290284459712] create success, type: 1, appid: 3, uid: 6, filepath: /admin/new.txt
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:298 [47290284459712] old_name: /, new_name: /, name_len: 2
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:329 [47290284459712] ***/*** -> ***/***, ret: 0
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:298 [47290284459712] old_name: /, new_name: /, name_len: 2
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:329 [47290284459712] ***/*** -> ***/***, ret: 0
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:298 [47290284459712] old_name: admin, new_name: admin, name_len: 6
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:329 [47290284459712] ***admin*** -> ***admin***, ret: 0
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:298 [47290284459712] old_name: test, new_name: test, name_len: 5
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:298 [47290284459712] old_name: new.txt, new_name: new.txt, name_len: 8
+[2011-07-26 19:33:26] DEBUG mysql_database_helper.cpp:1087 [47290284459712] num_fields = 1
+[2011-07-26 19:33:26] DEBUG mysql_database_helper.cpp:1119 [47290284459712] mysql_proc_ret = 1
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:249 [47290284459712] mv success, type: 2, appid: 3, uid: 6, filepath: /test
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:298 [47290284459712] old_name: /, new_name: /, name_len: 2
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:329 [47290284459712] ***/*** -> ***/***, ret: 0
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:298 [47290284459712] old_name: admin, new_name: admin, name_len: 6
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:329 [47290284459712] ***admin*** -> ***admin***, ret: 0
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:298 [47290284459712] old_name: new.txt, new_name: new.txt, name_len: 8
+[2011-07-26 19:33:26] DEBUG mysql_database_helper.cpp:1087 [47290284459712] num_fields = 1
+[2011-07-26 19:33:26] DEBUG mysql_database_helper.cpp:1119 [47290284459712] mysql_proc_ret = 1
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:197 [47290284459712] rm success, type: 2, appid: 3, uid: 6, filepath: /admin/new.txt
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:298 [47290284459712] old_name: /, new_name: /, name_len: 2
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:329 [47290284459712] ***/*** -> ***/***, ret: 0
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:298 [47290284459712] old_name: /, new_name: /, name_len: 2
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:329 [47290284459712] ***/*** -> ***/***, ret: 0
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:298 [47290284459712] old_name: admin, new_name: admin, name_len: 6
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:329 [47290284459712] ***admin*** -> ***admin***, ret: 0
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:298 [47290284459712] old_name: test, new_name: test, name_len: 5
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:298 [47290284459712] old_name: new.txt, new_name: new.txt, name_len: 8
+[2011-07-26 19:33:26] DEBUG mysql_database_helper.cpp:1087 [47290284459712] num_fields = 1
+[2011-07-26 19:33:26] DEBUG mysql_database_helper.cpp:1119 [47290284459712] mysql_proc_ret = 4294967293
+[2011-07-26 19:33:26] ERROR mv (meta_server_service.cpp:244) [47290284459712] mv fail: /test, type: 2, ret: 1
+[2011-07-26 19:33:26] DEBUG meta_server_service.cpp:249 [47290284459712] mv fail, type: 2, appid: 3, uid: 6, filepath: /test
+-----------------------------------------------
+app_id 3, uid: 1
+create dir /test, ret: 0
+create dir /test, ret: 1
+create file /test/1.txt, ret: 0
+create file /test/1.txt, ret: 1
+create dir /admin/test, ret: 1
+create file /admin/test/1.txt, ret: 1
+-----------------------------------------------
+app_id 3, uid: 2
+create dir /test, ret: 0
+rm dir /test, ret: 0
+create file /test/1.txt, ret: 0
+rm dir /test, ret: 1
+rm file /test/1.txt, ret: 0
+rm dir /test, ret: 0
+rm dir /admin/test/1.txt, ret: 1
+rm file /admin/test/1.txt, ret: 1
+-----------------------------------------------
+app_id 3, uid: 3
+create dir /test, 0
+create dir /admin, 0
+mv file /test->/admin, 1
+rm dir /admin, 0
+mv file /test->/admin, 0
+app_id 3, uid: 4
+create dir /test, 0
+create file /test/old.txt, 0
+create dir /admin, 0
+create file /admin/new.txt, 0
+mv file /test/old.txt->/admin/new.txt, 1
+rm dir /admin/new.txt, 0
+mv dir /test/old.txt->/admin/new.txt, 0
+app_id 3, uid: 5
+create dir /test, 0
+create file /test/old.txt, 0
+create dir /admin/new.txt, 0
+mv file /test/old.txt->/admin, 0
+rm dir /admin, 0
+mv file /test/old.txt->/admin, 1
+app_id 3, uid: 6
+create dir /test, 0
+create dir /admin/new.txt, 0
+create file /admin/new.txt, 0
+mv file /test->/admin/new.txt, 0
+rm dir /admin/new.txt, 0
+mv file /test->/admin/new.txt, 1

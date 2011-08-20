@@ -1,0 +1,3 @@
+version.o version.o: version.cpp version.h
+
+version.h:
