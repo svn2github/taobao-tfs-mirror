@@ -172,7 +172,8 @@ namespace tfs
       }
 
       FSName fsname(crc_check_record.block_id_, crc_check_record.file_id_);
-      int ret = tfs_client_->save_file(tmp_file, fsname.get_name()) < 0 ? TFS_ERROR : TFS_SUCCESS;
+      int ret = tfs_client_->save_file_update(fsname.get_name(), tmp_file, T_DEFAULT, NULL) < 0 ? TFS_ERROR : TFS_SUCCESS;
+      // int ret = tfs_client_->save_file(tmp_file, fsname.get_name()) < 0 ? TFS_ERROR : TFS_SUCCESS;
 
       if (TFS_SUCCESS != ret)
       {

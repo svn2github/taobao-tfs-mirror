@@ -675,6 +675,10 @@ namespace tfs
           get_name(file_path, name, MAX_META_FILE_NAME_LEN, name_len);
           next_file_name(name, name_len);
         }
+        else
+        {
+          my_file_type = DIRECTORY; // just start over
+        }
 
         p_meta_info.file_info_.id_ = pid;
       }
@@ -1006,12 +1010,13 @@ namespace tfs
     {
       int64_t end_offset = offset + size;
       vector<MetaInfo>::const_iterator meta_info_it = v_meta_info.begin();;
-      cluster_id = 0;
+      cluster_id = -1;
       v_out_frag_meta.clear();
       still_have = false;
 
       while (meta_info_it != v_meta_info.end())
       {
+        cluster_id = meta_info_it->frag_info_.cluster_id_;
         if (meta_info_it->get_last_offset() <= offset)
         {
           meta_info_it++;
@@ -1040,7 +1045,6 @@ namespace tfs
           }
         }
 
-        cluster_id = meta_info_it->frag_info_.cluster_id_;
         still_have = true;
 
         for(; it != v_in_frag_meta.end() && check_not_out_over(v_out_frag_meta); it++)

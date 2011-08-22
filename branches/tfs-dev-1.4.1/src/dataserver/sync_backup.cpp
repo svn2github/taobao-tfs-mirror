@@ -739,7 +739,8 @@ namespace tfs
       FSName fsname(block_id, file_id);
 
       int64_t file_size = 0;
-      int ret = tfs_client_->unlink(fsname.get_name(), NULL, dest_addr, file_size, action, TFS_FILE_NO_SYNC_LOG);
+      int ret = tfs_client_->unlink(file_size, fsname.get_name(), NULL, dest_addr, action, TFS_FILE_NO_SYNC_LOG);
+      // int ret = tfs_client_->unlink(fsname.get_name(), NULL, dest_addr, file_size, action, TFS_FILE_NO_SYNC_LOG);
       if (TFS_SUCCESS != ret)
       {
         TBSYS_LOG(ERROR, "tfs mirror remove file fail. blockid: %d, fileid: %"PRI64_PREFIX"u, action: %d, ret: %d",
