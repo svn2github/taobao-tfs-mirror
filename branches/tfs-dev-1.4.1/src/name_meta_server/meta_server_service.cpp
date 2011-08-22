@@ -675,10 +675,6 @@ namespace tfs
           get_name(file_path, name, MAX_META_FILE_NAME_LEN, name_len);
           next_file_name(name, name_len);
         }
-        else
-        {
-          my_file_type = DIRECTORY; // just start over
-        }
 
         p_meta_info.file_info_.id_ = pid;
       }
@@ -698,38 +694,49 @@ namespace tfs
           ret = store_manager_->ls(app_id, uid, p_meta_info.get_id(), name, name_len,
                                    my_file_type != DIRECTORY, tmp_v_meta_info, still_have);
 
-          tmp_v_meta_info_it = tmp_v_meta_info.begin();
-
-          if (my_file_type != DIRECTORY)
+          if (!tmp_v_meta_info.empty())
           {
-            // caclulate file meta info
-            calculate_file_meta_info(tmp_v_meta_info_it, tmp_v_meta_info.end(),
-                                     ls_file, v_meta_info, last_meta_info);
-            // ls file only need one meta info
-            if (ls_file && !v_meta_info.empty())
+            tmp_v_meta_info_it = tmp_v_meta_info.begin();
+
+            if (my_file_type != DIRECTORY)
             {
-              still_have = false;
+              // caclulate file meta info
+              calculate_file_meta_info(tmp_v_meta_info_it, tmp_v_meta_info.end(),
+                                       ls_file, v_meta_info, last_meta_info);
+              // ls file only need one meta info
+              if (ls_file && !v_meta_info.empty())
+              {
+                still_have = false;
+                break;
+              }
+            }
+            else
+            {
+              // just push directory's metainfo
+              for (; tmp_v_meta_info_it != tmp_v_meta_info.end() && check_not_out_over(v_meta_info);
+                   tmp_v_meta_info_it++)
+              {
+                v_meta_info.push_back(*tmp_v_meta_info_it);
+              }
+            }
+
+            if (!check_not_out_over(v_meta_info))
+            {
+              // not list all
+              if (tmp_v_meta_info_it != tmp_v_meta_info.end())
+              {
+                still_have = true;
+              }
               break;
             }
-          }
-          else
-          {
-            // just push directory's metainfo
-            for (; tmp_v_meta_info_it != tmp_v_meta_info.end() && check_not_out_over(v_meta_info);
-                 tmp_v_meta_info_it++)
-            {
-              v_meta_info.push_back(*tmp_v_meta_info_it);
-            }
-          }
 
-          if (!check_not_out_over(v_meta_info))
-          {
-            // not list all
-            if (tmp_v_meta_info_it != tmp_v_meta_info.end())
+            // still have and need continue
+            if (still_have)
             {
-              still_have = true;
+              tmp_v_meta_info_it--;
+              next_file_name_base_on(name, name_len,
+                                     tmp_v_meta_info_it->get_name(), tmp_v_meta_info_it->get_name_len());
             }
-            break;
           }
 
           // directory over, continue list file
@@ -737,14 +744,10 @@ namespace tfs
           {
             my_file_type = NORMAL_FILE;
             still_have = true;
+            name[0] = '\0';
+            name_len = 1;
           }
-
-          // still have and need continue
-          if (still_have)
-          {
-            next_file_name(name, name_len);
-          }
-        } while (TFS_SUCCESS == ret && check_not_out_over(v_meta_info) && still_have);
+        } while (TFS_SUCCESS == ret && still_have);
 
 
         if (TFS_SUCCESS == ret && !ls_file && check_not_out_over(v_meta_info)
@@ -901,12 +904,11 @@ namespace tfs
 
           // offset is -1 means file's max offset
           if ((-1 == offset || last_offset <= offset) &&
-                last_metaInfo.frag_info_.had_been_split_)
+              last_metaInfo.frag_info_.had_been_split_)
           {
             still_have = true;
-            memcpy(search_name, last_metaInfo.get_name(), last_metaInfo.get_name_len());
-            search_name_len = last_metaInfo.get_name_len();
-            next_file_name(search_name, search_name_len);
+            next_file_name_base_on(search_name, search_name_len,
+                                   last_metaInfo.get_name(), last_metaInfo.get_name_len());
           }
         }
       } while(TFS_SUCCESS == ret && still_have);
@@ -1201,6 +1203,14 @@ namespace tfs
       return ret;
     }
 
+    void MetaServerService::next_file_name_base_on(char* name, int32_t& name_len,
+                                                   const char* base_name, const int32_t base_name_len)
+    {
+      memcpy(name, base_name, base_name_len);
+      name_len = base_name_len;
+      next_file_name(name, name_len);
+    }
+
     void MetaServerService::next_file_name(char* name, int32_t& name_len)
     {
       int64_t skip = 1;
@@ -1215,8 +1225,8 @@ namespace tfs
         skip += 1;
         int64_to_char(name + name_len - 8, 8, skip);
       }
-
     }
+
     bool MetaServerService::is_sub_dir(const char* sub_dir, const char* parents_dir)
     {
       bool ret = false;
@@ -1224,7 +1234,7 @@ namespace tfs
       {
         char* pos = strstr(sub_dir, parents_dir);
         if (pos == sub_dir)
-        {  
+        {
           size_t p_len = strlen(parents_dir);
           size_t c_len = strlen(sub_dir);
           if (p_len == c_len)
@@ -1243,13 +1253,13 @@ namespace tfs
             {
               pos += p_len;
               if ('/' == *pos)
-              {  
+              {
                 ret = true;
-              }  
+              }
             }
           }
-        }  
-      }  
+        }
+      }
       return ret;
     }
   }

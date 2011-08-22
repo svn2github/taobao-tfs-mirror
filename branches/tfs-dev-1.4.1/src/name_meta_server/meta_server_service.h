@@ -72,6 +72,8 @@ namespace tfs
       static int int64_to_char(char* buff, const int32_t buff_size, const int64_t v);
       static int char_to_int64(char* data, const int32_t data_size, int64_t& v);
       static void next_file_name(char* name, int32_t& name_len);
+      static void next_file_name_base_on(char* name, int32_t& name_len,
+                                         const char* base_name, const int32_t base_name_len);
 
     private:
 
