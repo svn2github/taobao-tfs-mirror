@@ -18,6 +18,7 @@
 #include <iostream>
 #include <functional>
 #include <numeric>
+#include <math.h>
 #include <tbsys.h>
 #include <Memory.hpp>
 #include "strategy.h"
@@ -67,7 +68,9 @@ namespace tfs
       "max_wait_write_lease",
       "tmp",
       "cluster_index",
-      "build_plan_default_wait_time"
+      "build_plan_default_wait_time",
+      "group_count",
+      "group_seq"
   };
 
   static int find_servers_difference(const std::vector<ServerCollect*>& first,
@@ -101,6 +104,24 @@ namespace tfs
       }
     }
     return result.size();
+  }
+
+  static const uint64_t GB = 1 * 1024 * 1024 * 1024;
+  static const uint64_t MB = 1 * 1024 * 1024;
+  static const double PERCENTAGE_MIN = 0.0000001;
+  static const double PERCENTAGE_MAX = 1.0000000;
+  static double calc_capacity_percentage(const uint64_t capacity, const uint64_t total_capactiy)
+  {
+    double ret = PERCENTAGE_MIN;
+    uint64_t unit = capacity > GB ? GB : MB;
+    uint64_t tmp_capacity = capacity / unit;
+    uint64_t tmp_total_capacity = total_capactiy / unit;
+    if ((tmp_capacity != 0) 
+        && (tmp_total_capacity != 0))
+    {
+      ret = (double)tmp_capacity / (double)tmp_total_capacity;
+    }
+    return ret;
   }
 
   LayoutManager::LayoutManager(NameServer& manager):
@@ -2238,7 +2259,7 @@ namespace tfs
      */
     void LayoutManager::statistic_all_server_info(const int64_t need,
         const int64_t average_block_size,
-        double& total_capacity,
+        uint64_t& total_capacity,
         int64_t& total_block_count,
         int64_t& total_load,
         int64_t& alive_server_size)
@@ -2262,7 +2283,7 @@ namespace tfs
 
     void LayoutManager::split_servers(const int64_t need,
         const int64_t average_load,
-        const double total_capacity,
+        const uint64_t total_capacity,
         const int64_t total_block_count,
         const int64_t average_block_size,
         std::set<ServerCollect*>& source,
@@ -2270,9 +2291,6 @@ namespace tfs
     {
       UNUSED(average_block_size);
       bool has_move = false;
-      int64_t current_block_count = 0;
-      int64_t should_block_count  = 0;
-      double current_total_capacity = 0;
       RWLock::Lock lock(server_mutex_, READ_LOCKER);
       SERVER_MAP::const_iterator iter = servers_.begin();
       for (; iter != servers_.end() && !(interrupt_ & INTERRUPT_ALL) && need > 0; ++iter)
@@ -2289,26 +2307,55 @@ namespace tfs
         }
         if (has_move)
         {
-          current_block_count = iter->second->block_count();
-          current_total_capacity = iter->second->total_capacity() * SYSPARAM_NAMESERVER.max_use_capacity_ratio_ / 100;
-          should_block_count = static_cast<int64_t>((current_total_capacity / total_capacity) * total_block_count);
+          split_servers_helper(average_load, total_capacity,
+                              total_block_count, iter->second, source, target);
+        }
+      }
+    }
 
-#if defined(TFS_NS_GTEST) || defined(TFS_NS_INTEGRATION) || defined(TFS_NS_DEBUG)
-          TBSYS_LOG(DEBUG, "server: %s, current_block_count: %"PRI64_PREFIX"d should_block_count: %"PRI64_PREFIX"d", CNetUtil::addrToString(iter->first).c_str(), current_block_count, should_block_count);
-#endif
-          if (current_block_count > should_block_count  + SYSPARAM_NAMESERVER.balance_max_diff_block_num_)
+    void LayoutManager::split_servers_helper(const int64_t average_load,
+        const uint64_t total_capacity,
+        const int64_t total_block_count,
+        ServerCollect* server,
+        std::set<ServerCollect*>& source,
+        std::set<ServerCollect*>& target)
+    {
+      if (NULL != server)
+      {
+        const int64_t current_block_count = server->block_count();
+        const uint64_t current_total_capacity = server->total_capacity() * SYSPARAM_NAMESERVER.max_use_capacity_ratio_ / 100;
+        double pt = calc_capacity_percentage(current_total_capacity, total_capacity);
+        int64_t should_block_count = static_cast<int64_t>(pt * total_block_count); 
+        double percent = PERCENTAGE_MAX - (static_cast<double>(current_block_count) / static_cast<double>(should_block_count));
+        if (percent > PERCENTAGE_MIN)
+        {
+          if (percent > SYSPARAM_NAMESERVER.balance_percent_)
           {
-            source.insert(iter->second);
-          }
-          else
-          {
-            if ((average_load <= 0)
-                || (iter->second->load() < average_load * LOAD_BASE_MULTIPLE))
+            if (current_block_count < should_block_count  
+                                      + SYSPARAM_NAMESERVER.balance_max_diff_block_num_)
             {
-              target.insert(iter->second);
+              if ((average_load <= 0)
+                  || (server->load() < average_load * LOAD_BASE_MULTIPLE))
+              {
+                target.insert(server);
+              }
             }
           }
         }
+        else
+        {
+          if (fabs(percent) > SYSPARAM_NAMESERVER.balance_percent_)
+          {
+            if (current_block_count > should_block_count  
+                                      + SYSPARAM_NAMESERVER.balance_max_diff_block_num_)
+            {
+              source.insert(server);
+            }
+          }
+        }
+        TBSYS_LOG(DEBUG, "server: %s, current_block_count: %"PRI64_PREFIX"d, should_block_count: %"PRI64_PREFIX"d\
+                          pt: %e, percent: %e, balance_percent_: %e", CNetUtil::addrToString(server->id()).c_str(),
+                          current_block_count, should_block_count, pt, percent, SYSPARAM_NAMESERVER.balance_percent_);
       }
     }
 
@@ -2318,7 +2365,7 @@ namespace tfs
     bool LayoutManager::build_balance_plan(const int64_t plan_seqno, const time_t now, int64_t& need)
 #endif
       {
-        double total_capacity  = 0;
+        uint64_t total_capacity  = 0;
         int64_t total_block_count = 0;
         int64_t total_load = 1;
         int64_t alive_server_size = 0;

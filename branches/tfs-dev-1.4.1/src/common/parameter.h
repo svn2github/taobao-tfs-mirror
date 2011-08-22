@@ -51,6 +51,7 @@ namespace tfs
       int32_t balance_max_diff_block_num_;
       int32_t group_seq_;
       int32_t group_count_;
+      double  balance_percent_;
 
       static NameServerParameter ns_parameter_;
       static NameServerParameter& instance()

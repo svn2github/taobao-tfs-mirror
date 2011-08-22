@@ -144,7 +144,9 @@ int cmd_set_run_param(const VSTRING& param)
       "max_wait_write_lease",
       "tmp",
       "cluster_index",
-      "build_plan_default_wait_time"
+      "build_plan_default_wait_time",
+      "group_count",
+      "greup_seq"
   };
   static int32_t param_strlen = sizeof(param_str) / sizeof(char*);
 

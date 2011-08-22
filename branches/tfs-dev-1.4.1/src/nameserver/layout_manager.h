@@ -394,16 +394,23 @@ namespace nameserver
 
     void statistic_all_server_info(const int64_t need,
         const int64_t average_block_size,
-        double& total_capacity, 
+        uint64_t & total_capacity, 
         int64_t& total_block_count,
         int64_t& total_load,
         int64_t& alive_server_size);
 
     void split_servers(const int64_t need,
         const int64_t average_load,
-        const double total_capacity,
+        const uint64_t total_capacity,
         const int64_t total_block_count,
         const int64_t average_block_size,
+        std::set<ServerCollect*>& source,
+        std::set<ServerCollect*>& target);
+
+    void split_servers_helper(const int64_t average_load,
+        const uint64_t total_capacity,
+        const int64_t total_block_count,
+        ServerCollect* server,
         std::set<ServerCollect*>& source,
         std::set<ServerCollect*>& target);
 
