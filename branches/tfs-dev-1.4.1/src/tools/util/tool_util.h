@@ -6,7 +6,7 @@
  * published by the Free Software Foundation.
  *
  *
- * Version: $Id$
+ * Version: $Id: ds_lib.cpp 413 2011-06-03 00:52:46Z daoan@taobao.com $
  *
  * Authors:
  *   nayan <nayan@taobao.com>

@@ -6,7 +6,7 @@
  * published by the Free Software Foundation.
  *
  *
- * Version: $Id$
+ * Version: $Id: func.cpp 400 2011-06-02 07:26:40Z duanfei@taobao.com $
  *
  * Authors:
  *   chuyu <chuyu@taobao.com>

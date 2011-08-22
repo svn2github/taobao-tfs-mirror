@@ -6,7 +6,7 @@
  * published by the Free Software Foundation.
  *
  *
- * Version: $Id$
+ * Version: $Id: test_tfs_statis.h 155 2011-07-26 14:33:27Z mingyan.zc@taobao.com $
  *
  * Authors:
  *   mingyan.zc@taobao.com

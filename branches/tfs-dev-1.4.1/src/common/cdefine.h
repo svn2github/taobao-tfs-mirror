@@ -6,7 +6,7 @@
  * published by the Free Software Foundation.
  *
  *
- * Version: $Id$
+ * Version: $Id: cdefine.h 345 2011-05-26 01:18:00Z nayan@taobao.com $
  *
  * Authors:
  *   duolong <duolong@taobao.com>

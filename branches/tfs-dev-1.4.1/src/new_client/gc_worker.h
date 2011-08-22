@@ -122,7 +122,7 @@ namespace tfs
         FSName fsname;
         fsname.set_block_id(it->block_id_);
         fsname.set_file_id(it->file_id_);
-        if (TfsClient::Instance()->unlink(fsname.get_name(), NULL, addr, file_size) != common::TFS_SUCCESS)
+        if (TfsClient::Instance()->unlink(file_size, fsname.get_name(), NULL, addr) != common::TFS_SUCCESS)
         {
           TBSYS_LOG(ERROR, "gc segment fail, blockid: %u, fileid: %"PRI64_PREFIX"u, ret: %d",
               it->block_id_, it->file_id_, ret);

@@ -6,7 +6,7 @@
  * published by the Free Software Foundation.
  *
  *
- * Version: $Id$
+ * Version: $Id: service.cpp 344 2011-05-26 01:17:38Z duanfei@taobao.com $
  *
  * Authors:
  *   duolong <duolong@taobao.com>

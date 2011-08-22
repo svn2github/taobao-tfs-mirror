@@ -6,7 +6,7 @@
  * published by the Free Software Foundation.
  *
  *
- * Version: $Id$
+ * Version: $Id: adminserver.cpp 18 2010-10-12 09:45:55Z nayan@taobao.com $
  *
  * Authors:
  *   duolong <duolong@taobao.com>

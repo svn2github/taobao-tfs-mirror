@@ -6,7 +6,7 @@
  * published by the Free Software Foundation.
  *
  *
- * Version: $Id$
+ * Version: $Id: internal.h 311 2011-05-18 05:38:41Z duanfei@taobao.com $
  *
  * Authors:
  *   duolong <duolong@taobao.com>

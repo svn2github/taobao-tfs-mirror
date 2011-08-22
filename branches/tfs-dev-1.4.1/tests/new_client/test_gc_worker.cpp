@@ -227,8 +227,8 @@ int parse_args(int argc, char *argv[])
   }
 
   GcWorkerTest::id_ = Func::get_host_ip(nsip);
-  GcWorkerTest::tfs_meta_client_ = new NameMetaClient();
-	int ret = GcWorkerTest::tfs_client_->set_server_ip(nsip);
+  GcWorkerTest::tfs_client_ = TfsClient::Instance();
+	int ret = GcWorkerTest::tfs_client_->initialize(nsip);
 	if (ret != TFS_SUCCESS)
 	{
     cout << "tfs client init fail" << endl;

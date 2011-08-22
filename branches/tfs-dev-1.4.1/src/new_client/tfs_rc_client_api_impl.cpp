@@ -6,7 +6,7 @@
  * published by the Free Software Foundation.
  *
  *
- * Version: $Id$
+ * Version: $Id: tfs_client_api.cpp 49 2010-11-16 09:58:57Z zongdai@taobao.com $
  *
  * Authors:
  *    daoan<aoan@taobao.com>
@@ -405,8 +405,8 @@ namespace tfs
       {
         int64_t start_time = tbsys::CTimeUtil::getTime();
         int64_t data_size = 0;
-        int32_t ref_count = TfsClient::Instance()->unlink(file_name, suffix,
-            ns_addr, data_size, action);
+        int32_t ref_count = TfsClient::Instance()->unlink(data_size, file_name, suffix,
+            ns_addr,action);
         int64_t response_time = tbsys::CTimeUtil::getTime() - start_time;
         switch (action)
         {
@@ -490,8 +490,8 @@ namespace tfs
         if (TFS_SUCCESS == ret)
         {
           int64_t start_time = tbsys::CTimeUtil::getTime();
-          saved_size = TfsClient::Instance()->save_unique(local_file,
-              NULL, NULL, tfs_name_buff, buff_len, ns_addr);
+          saved_size = TfsClient::Instance()->save_unique(tfs_name_buff, buff_len, local_file,
+              flag, NULL, ns_addr);
           int64_t response_time = tbsys::CTimeUtil::getTime() - start_time;
           add_stat_info(OPER_UNIQUE_WRITE, saved_size, response_time, saved_size >= 0);
         }
@@ -503,8 +503,8 @@ namespace tfs
       else
       {
         int64_t start_time = tbsys::CTimeUtil::getTime();
-        saved_size = TfsClient::Instance()->save_file(local_file,
-              NULL, NULL, tfs_name_buff, buff_len, ns_addr, flag);
+        saved_size = TfsClient::Instance()->save_file(tfs_name_buff, buff_len, local_file,
+              flag, NULL, ns_addr);
         int64_t response_time = tbsys::CTimeUtil::getTime() - start_time;
         add_stat_info(OPER_WRITE, saved_size, response_time, saved_size >= 0);
       }
@@ -524,8 +524,8 @@ namespace tfs
         if (TFS_SUCCESS == ret)
         {
           int64_t start_time = tbsys::CTimeUtil::getTime();
-          saved_size = TfsClient::Instance()->save_unique(source_data, data_len,
-              NULL, NULL, tfs_name_buff, buff_len, ns_addr);
+          saved_size = TfsClient::Instance()->save_unique(tfs_name_buff, buf_len, source_data, data_len,
+              T_WRITE, NULL, tfs_name_buff, buff_len, ns_addr);
           int64_t response_time = tbsys::CTimeUtil::getTime() - start_time;
           add_stat_info(OPER_UNIQUE_WRITE, saved_size, response_time, saved_size >= 0);
         }
@@ -536,8 +536,8 @@ namespace tfs
       else
       {
         int64_t start_time = tbsys::CTimeUtil::getTime();
-        saved_size = TfsClient::Instance()->save_file(source_data, data_len,
-              NULL, NULL, tfs_name_buff, buff_len, ns_addr);
+        saved_size = TfsClient::Instance()->save(tfs_name_buff, buff_len, source_data, data_len,
+              T_WRITE, NULL, ns_addr);
         int64_t response_time = tbsys::CTimeUtil::getTime() - start_time;
         add_stat_info(OPER_WRITE, saved_size, response_time, saved_size >= 0);
       }

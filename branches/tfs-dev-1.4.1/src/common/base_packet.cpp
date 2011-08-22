@@ -6,7 +6,7 @@
  * published by the Free Software Foundation.
  *
  *
- * Version: $Id$
+ * Version: $Id: base_packet.cpp 213 2011-04-22 16:22:51Z duanfei@taobao.com $
  *
  * Authors:
  *   duolong <duolong@taobao.com>

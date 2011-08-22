@@ -6,7 +6,7 @@
  * published by the Free Software Foundation.
  *
  *
- * Version: $Id$
+ * Version: $Id: tfs_session_pool.h 5 2010-09-29 07:44:56Z duanfei@taobao.com $
  *
  * Authors:
  *   zhuhui <zhuhui_a.pt@taobao.com>

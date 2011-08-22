@@ -242,15 +242,6 @@ namespace tfs
       }
     }
 
-    void FragInfo::push_back(FragInfo& new_frag_info)
-    {
-      std::vector<FragMeta>::iterator iter = new_frag_info.v_frag_meta_.begin();
-      for(; iter != new_frag_info.v_frag_meta_.end(); iter++)
-      {
-        v_frag_meta_.push_back(*iter);
-      }
-    }
-
 
 
     FileMetaInfo::FileMetaInfo() :
@@ -277,11 +268,6 @@ namespace tfs
     const char* FileMetaInfo::get_real_name() const
     {
       return name_.length() > 0 ? name_.data() + 1 : NULL;
-    }
-
-    bool FileMetaInfo::is_file() const
-    {
-      return ((pid_ >> 63) & 0x01);
     }
 
     // length to serialize

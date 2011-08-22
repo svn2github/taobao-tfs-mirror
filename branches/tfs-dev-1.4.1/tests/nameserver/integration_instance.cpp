@@ -6,7 +6,7 @@
  * published by the Free Software Foundation.
  *
  *
- * Version: $Id$
+ * Version: $Id: integration_instance.cpp 2090 2011-02-16 06:52:58Z duanfei $
  *
  * Authors:
  *   duanfei<duanfei@taobao.com>

@@ -18,10 +18,9 @@ test: check
 TESTS=
 check_PROGRAMS=
 
-noinst_PROGRAMS= test_meta_client
+noinst_PROGRAMS= test_distance
 
-TESTS+=test_meta_client
-check_PROGRAMS+=test_meta_client
-
-test_meta_client_SOURCES=test_meta_client.cpp
-test_meta_client_LDFLAGS=${AM_LDFLAGS} -static-libgcc -lgtest
+TESTS+=test_distance
+check_PROGRAMS+=test_distance
+test_distance_SOURCES=test_distance.cpp
+test_distance_LDFLAGS=${AM_LDFLAGS} -static-libgcc -lgtest

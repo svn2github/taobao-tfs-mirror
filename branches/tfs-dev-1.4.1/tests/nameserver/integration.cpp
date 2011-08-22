@@ -7,7 +7,7 @@
  * published by the Free Software Foundation.
  *
  *
- * Version: $Id$
+ * Version: $Id: integration.cpp 2069 2011-02-15 06:35:25Z duanfei $
  *
  * Authors:
  *   duanfei<duanfei@taobao.com>

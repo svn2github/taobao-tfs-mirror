@@ -6,7 +6,7 @@
  * published by the Free Software Foundation.
  *
  *
- * Version: $Id$
+ * Version: $Id: replicate_block_message.cpp 186 2011-04-07 06:32:20Z duanfei@taobao.com $
  *
  * Authors:
  *   duolong <duolong@taobao.com>

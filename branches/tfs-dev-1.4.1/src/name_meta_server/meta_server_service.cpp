@@ -6,7 +6,7 @@
  * published by the Free Software Foundation.
  *
  *
- * Version: $Id$
+ * Version: $Id: meta_server_service.cpp 49 2011-08-08 09:58:57Z nayan@taobao.com $
  *
  * Authors:
  *   chuyu <chuyu@taobao.com>
@@ -183,7 +183,6 @@ namespace tfs
 
         if (ret != TFS_SUCCESS)
         {
-          TBSYS_LOG(ERROR, "do file action faild. ret: %d", ret);
           ret = req_fa_msg->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret, "execute message failed");
         }
         else
@@ -206,7 +205,7 @@ namespace tfs
       else
       {
         ReadFilepathMessage* req_rf_msg = dynamic_cast<ReadFilepathMessage*>(packet);
-        TBSYS_LOG(DEBUG, "call ReadFilepathMessage::do read start."
+        TBSYS_LOG(DEBUG, "call FilepathActionMessage::do read start."
                   "app_id: %"PRI64_PREFIX"d, user_id: %"PRI64_PREFIX"d, "
                   "file_path: %s, offset :%"PRI64_PREFIX"d, size: %"PRI64_PREFIX"d, ret: %d",
                   req_rf_msg->get_app_id(), req_rf_msg->get_user_id(),
@@ -221,7 +220,6 @@ namespace tfs
 
         if (ret != TFS_SUCCESS)
         {
-          TBSYS_LOG(ERROR, "do read faild. read from store manager error, ret: %d", ret);
           ret = req_rf_msg->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret, "execute message failed");
         }
         else
@@ -246,7 +244,7 @@ namespace tfs
       {
         WriteFilepathMessage* req_wf_msg = dynamic_cast<WriteFilepathMessage*>(packet);
 
-        TBSYS_LOG(DEBUG, "call WriteFilepathMessage::do write start. "
+        TBSYS_LOG(DEBUG, "call FilepathActionMessage::do action start. "
                   "app_id: %"PRI64_PREFIX"d, user_id: %"PRI64_PREFIX"d, file_path: %s, meta_size: %zd ret: %d",
                   req_wf_msg->get_app_id(), req_wf_msg->get_user_id(), req_wf_msg->get_file_path(),
                   req_wf_msg->get_frag_info().v_frag_meta_.size(), ret);
@@ -256,7 +254,6 @@ namespace tfs
 
         if (ret != TFS_SUCCESS)
         {
-          TBSYS_LOG(ERROR, "do write faild. write to store manager error, ret: %d", ret);
           ret = req_wf_msg->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret, "execute message failed");
         }
         else
@@ -279,7 +276,7 @@ namespace tfs
       else
       {
         LsFilepathMessage* req_lf_msg = dynamic_cast<LsFilepathMessage*>(packet);
-        TBSYS_LOG(DEBUG, "call LsFilePathMessage::do ls start."
+        TBSYS_LOG(DEBUG, "call FilepathActionMessage::do ls start."
                   " app_id: %"PRI64_PREFIX"d, user_id: %"PRI64_PREFIX"d,"
                   " pid: %"PRI64_PREFIX"d, file_path: %s, file_type: %d",
                   req_lf_msg->get_app_id(), req_lf_msg->get_user_id(), req_lf_msg->get_pid(),
@@ -294,7 +291,6 @@ namespace tfs
 
         if (ret != TFS_SUCCESS)
         {
-          TBSYS_LOG(ERROR, "do ls faild. get ls info from store manager error, ret: %d", ret);
           ret = req_lf_msg->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret, "execute message failed");
         }
         else
@@ -421,28 +417,38 @@ namespace tfs
       int32_t name_len = 0, dest_name_len = 0;
       int ret = TFS_SUCCESS;
       MetaInfo p_meta_info, dest_p_meta_info;
-
-      if ((ret = parse_file_path(app_id, uid, file_path, p_meta_info, name, name_len)) != TFS_SUCCESS)
+      if (DIRECTORY == type)
       {
-        TBSYS_LOG(INFO, "parse file path fail. appid: %"PRI64_PREFIX"d, uid: %"PRI64_PREFIX"d, %s",
-                  app_id, uid, file_path);
-      }
-      else if ((ret = parse_file_path(app_id, uid, dest_file_path, dest_p_meta_info, dest_name, dest_name_len))
-               != TFS_SUCCESS)
-      {
-        TBSYS_LOG(INFO, "parse dest file fail. appid: %"PRI64_PREFIX"d, uid: %"PRI64_PREFIX"d, %s",
-                  app_id, uid, dest_file_path);
-      }
-      else
-      {
-        if ((ret = store_manager_->update(app_id, uid,
-                                          p_meta_info.get_pid(), p_meta_info.get_id(),
-                                          p_meta_info.get_name(), p_meta_info.get_name_len(),
-                                          dest_p_meta_info.get_pid(), dest_p_meta_info.get_id(),
-                                          dest_p_meta_info.get_name(), dest_p_meta_info.get_name_len(),
-                                          name, name_len, dest_name, dest_name_len, type)) != TFS_SUCCESS)
+        if (is_sub_dir(dest_file_path, file_path))
         {
-          TBSYS_LOG(ERROR, "mv fail: %s, type: %d, ret: %d", file_path, type, ret);
+          ret = EXIT_MOVE_TO_SUB_DIR_ERROR;
+        }
+      }
+      if (TFS_SUCCESS == ret)
+      {
+
+        if ((ret = parse_file_path(app_id, uid, file_path, p_meta_info, name, name_len)) != TFS_SUCCESS)
+        {
+          TBSYS_LOG(INFO, "parse file path fail. appid: %"PRI64_PREFIX"d, uid: %"PRI64_PREFIX"d, %s",
+              app_id, uid, file_path);
+        }
+        else if ((ret = parse_file_path(app_id, uid, dest_file_path, dest_p_meta_info, dest_name, dest_name_len))
+            != TFS_SUCCESS)
+        {
+          TBSYS_LOG(INFO, "parse dest file fail. appid: %"PRI64_PREFIX"d, uid: %"PRI64_PREFIX"d, %s",
+              app_id, uid, dest_file_path);
+        }
+        else
+        {
+          if ((ret = store_manager_->update(app_id, uid,
+                  p_meta_info.get_pid(), p_meta_info.get_id(),
+                  p_meta_info.get_name(), p_meta_info.get_name_len(),
+                  dest_p_meta_info.get_pid(), dest_p_meta_info.get_id(),
+                  dest_p_meta_info.get_name(), dest_p_meta_info.get_name_len(),
+                  name, name_len, dest_name, dest_name_len, type)) != TFS_SUCCESS)
+          {
+            TBSYS_LOG(ERROR, "mv fail: %s, type: %d, ret: %d", file_path, type, ret);
+          }
         }
       }
 
@@ -572,8 +578,6 @@ namespace tfs
             {
               if (write_frag_meta_it->offset_ >= orig_last_offset)
               {
-                TBSYS_LOG(WARN, "invalid offset, write offset: %"PRI64_PREFIX"d, orig offset: %"PRI64_PREFIX"d",
-                    write_frag_meta_it->offset_, orig_last_offset);
                 ret = TFS_ERROR;
                 break;
               }
@@ -1209,7 +1213,6 @@ namespace tfs
       }
 
     }
-<<<<<<< .mine
     bool MetaServerService::is_sub_dir(const char* sub_dir, const char* parents_dir)
     {
       bool ret = false;
@@ -1217,7 +1220,7 @@ namespace tfs
       {
         char* pos = strstr(sub_dir, parents_dir);
         if (pos == sub_dir)
-        {
+        {  
           size_t p_len = strlen(parents_dir);
           size_t c_len = strlen(sub_dir);
           if (p_len == c_len)
@@ -1236,16 +1239,14 @@ namespace tfs
             {
               pos += p_len;
               if ('/' == *pos)
-              {
+              {  
                 ret = true;
-              }
+              }  
             }
           }
-        }
-      }
+        }  
+      }  
       return ret;
     }
-=======
->>>>>>> .r713
   }
 }

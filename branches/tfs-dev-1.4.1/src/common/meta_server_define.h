@@ -70,7 +70,6 @@ namespace tfs
       // get last offset current fraginfo hold
       int64_t get_last_offset() const;
       void dump() const;
-      void push_back(FragInfo& new_frag_info);
 
       int32_t cluster_id_;
       bool had_been_split_;
@@ -98,7 +97,6 @@ namespace tfs
       // |   char  | namelen  |
       // ----------------------
       const char* get_real_name() const;
-      bool is_file() const;
       // length to serialize
       int64_t length() const;
       int serialize(common::Stream& output) const;

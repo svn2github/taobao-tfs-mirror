@@ -6,7 +6,7 @@
  * published by the Free Software Foundation.
  *
  *
- * Version: $Id$
+ * Version: $Id: block_id_factory.cpp 2014 2011-01-06 07:41:45Z duanfei $
  *
  * Authors:
  *   duanfei <duanfei@taobao.com>

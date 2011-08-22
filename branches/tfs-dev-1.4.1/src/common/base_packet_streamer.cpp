@@ -6,7 +6,7 @@
  * published by the Free Software Foundation.
  *
  *
- * Version: $Id$
+ * Version: $Id: base_packet_streamer.cpp 5 2011-04-22 16:22:56Z duanfei@taobao.com $
  *
  * Authors:
  *   duolong <duolong@taobao.com>

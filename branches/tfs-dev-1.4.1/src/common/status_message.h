@@ -6,7 +6,7 @@
  * published by the Free Software Foundation.
  *
  *
- * Version: $Id$
+ * Version: $Id: status_packet.h 186 2011-04-28 16:07:20Z duanfei@taobao.com $
  *
  * Authors:
  *   duanfei <duanfei@taobao.com>

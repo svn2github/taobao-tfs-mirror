@@ -6,7 +6,7 @@
  * published by the Free Software Foundation.
  *
  *
- * Version: $Id$
+ * Version: $Id: meta_server_service.h 49 2011-08-08 09:58:57Z nayan@taobao.com $
  *
  * Authors:
  *   chuyu <chuyu@taobao.com>
@@ -115,6 +115,7 @@ namespace tfs
         return static_cast<int32_t>(v.size()) < common::MAX_OUT_INFO_COUNT;
       }
 
+      static bool is_sub_dir(const char* sub_dir, const char* parents_dir);
     private:
       char top_dir_name_[10];
       int32_t top_dir_size_;

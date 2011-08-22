@@ -6,7 +6,7 @@
  * published by the Free Software Foundation.
  *
  *
- * Version: $Id$
+ * Version: $Id: blocktool.cpp 432 2011-06-08 07:06:11Z nayan@taobao.com $
  *
  * Authors:
  *   chuyu <chuyu@taobao.com>

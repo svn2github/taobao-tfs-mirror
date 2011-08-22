@@ -132,7 +132,7 @@ namespace tfs
     const int32_t EXIT_CLUSTER_ID_ERROR = -14006;
     const int32_t EXIT_FRAG_META_OVERFLOW_ERROR = -14007;
     const int32_t EXIT_UPDATE_FRAG_INFO_ERROR = -14008;
-    
+    const int32_t EXIT_MOVE_TO_SUB_DIR_ERROR = -14009;
   }
 }
 #endif //TFS_COMMON_ERRMSG_H_

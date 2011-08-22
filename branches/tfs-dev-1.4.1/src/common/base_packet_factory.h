@@ -6,7 +6,7 @@
  * published by the Free Software Foundation.
  *
  *
- * Version: $Id$
+ * Version: $Id: message_factory.h 186 2011-04-22 13:47:20Z duanfei@taobao.com $
  *
  * Authors:
  *   duanfei<duanfei@taobao.com>
