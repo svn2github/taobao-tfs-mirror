@@ -2286,7 +2286,8 @@ namespace tfs
         const uint64_t total_capacity,
         const int64_t total_block_count,
         const int64_t average_block_size,
-        std::set<ServerCollect*>& source,
+        std::multimap<int32_t, ServerCollect*>& source,
+        //std::set<ServerCollect*>& source,
         std::set<ServerCollect*>& target)
     {
       UNUSED(average_block_size);
@@ -2317,7 +2318,8 @@ namespace tfs
         const uint64_t total_capacity,
         const int64_t total_block_count,
         ServerCollect* server,
-        std::set<ServerCollect*>& source,
+        std::multimap<int32_t, ServerCollect*>& source,
+        //std::set<ServerCollect*>& source,
         std::set<ServerCollect*>& target)
     {
       if (NULL != server)
@@ -2346,10 +2348,12 @@ namespace tfs
         {
           if (fabs(percent) > SYSPARAM_NAMESERVER.balance_percent_)
           {
-            if (current_block_count > should_block_count  
-                                      + SYSPARAM_NAMESERVER.balance_max_diff_block_num_)
+            int32_t diff = current_block_count - should_block_count -
+                          SYSPARAM_NAMESERVER.balance_max_diff_block_num_;
+            if (diff > 0)
             {
-              source.insert(server);
+              source.insert(std::multimap<int32_t, ServerCollect*>::value_type(diff, server));
+              //source.insert(server);
             }
           }
         }
@@ -2386,7 +2390,8 @@ namespace tfs
           else
           {
             std::set<ServerCollect*> target;
-            std::set<ServerCollect*> source;
+            std::multimap<int32_t, ServerCollect*> source;
+            //std::set<ServerCollect*> source;
             int64_t average_load = total_load / alive_server_size;
 
             split_servers(need, average_load, total_capacity, total_block_count, average_block_size, source, target);
@@ -2397,12 +2402,14 @@ namespace tfs
             uint32_t block_id = 0;
             std::vector<ServerCollect*> except;
             std::vector<ServerCollect*> servers;
-            std::set<ServerCollect*>::const_iterator it = source.begin();
-            for (; it != source.end() && !(interrupt_ & INTERRUPT_ALL) && need > 0 && !target.empty(); ++it)
+            //std::set<ServerCollect*>::const_iterator it = source.begin();
+            std::multimap<int32_t, ServerCollect*>::const_reverse_iterator it = source.rbegin();
+            //for (; it != source.end() && !(interrupt_ & INTERRUPT_ALL) && need > 0 && !target.empty(); ++it)
+            for (; it != source.rend() && !(interrupt_ & INTERRUPT_ALL) && need > 0 && !target.empty(); ++it)
             {
-              (*it)->rdlock();
-              std::set<BlockCollect*, ServerCollect::BlockIdComp> blocks((*it)->hold_);
-              (*it)->unlock();
+              it->second->rdlock();
+              std::set<BlockCollect*, ServerCollect::BlockIdComp> blocks(it->second->hold_);
+              it->second->unlock();
 
               std::set<BlockCollect*, ServerCollect::BlockIdComp>::const_iterator cn_iter = blocks.begin();
               for (; cn_iter != blocks.end() && !(interrupt_ & INTERRUPT_ALL) && need > 0; ++cn_iter)
@@ -2414,7 +2421,7 @@ namespace tfs
                   RWLock::Lock r_lock(*ptr, READ_LOCKER);
                   has_move = ((block_collect != NULL)
                       && (block_collect->check_balance())
-                      && (!find_server_in_plan((*it)))
+                      && (!find_server_in_plan(it->second))
                       && (!find_block_in_plan(block_collect->id())));
 #if defined(TFS_NS_GTEST) || defined(TFS_NS_INTEGRATION) || defined(TFS_NS_DEBUG)
                   TBSYS_LOG(DEBUG, "block: %u check balance has_move: %s", block_collect->id(), has_move ? "true" : "false");
@@ -2427,26 +2434,26 @@ namespace tfs
                 }
                 if (has_move)
                 {
-                  std::vector<ServerCollect*>::iterator where = std::find(servers.begin(), servers.end(), (*it));
+                  std::vector<ServerCollect*>::iterator where = std::find(servers.begin(), servers.end(), it->second);
                   if (where == servers.end())
                   {
                     TBSYS_LOG(ERROR, "cannot elect move source server block: %u, source: %s",
-                        block_id, CNetUtil::addrToString((*it)->id()).c_str());
+                        block_id, CNetUtil::addrToString(it->second->id()).c_str());
                     continue;
                   }
                   servers.erase(where);
 
                   //elect dest dataserver
                   ServerCollect* target_ds = NULL;
-                  bool bret = elect_move_dest_ds(target, servers, (*it), &target_ds);
+                  bool bret = elect_move_dest_ds(target, servers, it->second, &target_ds);
                   if (!bret)
                   {
                     TBSYS_LOG(ERROR, "cannot elect move dest server block: %u, source: %s",
-                        block_collect->id(), CNetUtil::addrToString((*it)->id()).c_str());
+                        block_collect->id(), CNetUtil::addrToString(it->second->id()).c_str());
                     continue;
                   }
                   std::vector<ServerCollect*> runer;
-                  runer.push_back((*it));
+                  runer.push_back(it->second);
                   runer.push_back(target_ds);
                   MoveTaskPtr task = new MoveTask(this, PLAN_PRIORITY_NORMAL,  block_id, now , now, runer, plan_seqno);
 
@@ -2465,7 +2472,7 @@ namespace tfs
                   TBSYS_LOG(DEBUG, "add task, type: %d", task->type_);
 #endif
                   --need;
-                  std::set<ServerCollect*>::iterator tmp = target.find((*it));
+                  std::set<ServerCollect*>::iterator tmp = target.find(it->second);
                   if (tmp != target.end())
                   {
                     target.erase(tmp);
