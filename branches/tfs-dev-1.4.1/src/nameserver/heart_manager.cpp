@@ -510,7 +510,8 @@ namespace tfs
       mashm.set_status(ngi.other_side_status_);
       mashm.set_flags(HEART_GET_DATASERVER_LIST_FLAGS_NO);
       mashm.set_force_flags(HEART_FORCE_MODIFY_OTHERSIDE_ROLE_FLAGS_YES);
-      int count = 0;
+      bool success = false;
+      int32_t count = 0;
       do
       {
         count++;
@@ -534,13 +535,14 @@ namespace tfs
                   TBSYS_LOG(INFO, "%s", "notify all oplog thread");
                 }
               }
-              break;
+              success = true;
             }
           }
         }
         NewClientManager::get_instance().destroy_client(client);
       }
-      while (count < 3);
+      while ((count < 3)
+             && !success);
       return;
     }
 
@@ -609,7 +611,6 @@ namespace tfs
                     }
                   }
                 }
-                NewClientManager::get_instance().destroy_client(client);
                 slave_is_alive = true;
               }
               else
