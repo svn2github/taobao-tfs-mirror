@@ -19,7 +19,7 @@
 #define TFS_DATASERVER_SYNCBACKUP_H_
 
 #include "common/internal.h"
-#include "new_client/tfs_client_api.h"
+#include "new_client/tfs_client_impl.h"
 #include <Memory.hpp>
 
 namespace tfs
@@ -59,7 +59,7 @@ namespace tfs
     protected:
       static const int8_t BACKUP_CLUSTER_NS_LENGTH  = 2;
       DISALLOW_COPY_AND_ASSIGN(SyncBackup);
-      client::TfsClient* tfs_client_;
+      client::TfsClientImpl* tfs_client_;
 
         char src_addr_[common::MAX_ADDRESS_LENGTH];
         char dest_addr_[BACKUP_CLUSTER_NS_LENGTH][common::MAX_ADDRESS_LENGTH];

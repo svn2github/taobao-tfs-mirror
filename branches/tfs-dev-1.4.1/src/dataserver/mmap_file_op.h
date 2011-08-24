@@ -11,16 +11,16 @@
  * Authors:
  *   duolong <duolong@taobao.com>
  *      - initial release
- *   qushan<qushan@taobao.com> 
+ *   qushan<qushan@taobao.com>
  *      - modify 2009-03-27
- *   zongdai <zongdai@taobao.com> 
+ *   zongdai <zongdai@taobao.com>
  *      - modify 2010-04-23
  *
  */
 #ifndef TFS_DATASERVER_MMAPFILE_OP_H_
 #define TFS_DATASERVER_MMAPFILE_OP_H_
 
-#include "file_op.h"
+#include "common/file_op.h"
 #include "mmap_file.h"
 #include <Memory.hpp>
 
@@ -79,7 +79,7 @@ namespace tfs
         char* new_buf_;
     };
 
-    class MMapFileOperation: public FileOperation
+    class MMapFileOperation: public common::FileOperation
     {
       public:
         explicit MMapFileOperation(const std::string& file_name, int open_flags = O_RDWR | O_LARGEFILE) :

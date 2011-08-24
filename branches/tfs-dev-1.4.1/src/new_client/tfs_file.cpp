@@ -164,10 +164,11 @@ int64_t TfsFile::read_ex(void* buf, const int64_t count, const int64_t offset,
     TBSYS_LOG(ERROR, "read fail, file open without read flag: %d", flags_);
     ret = EXIT_NOT_PERM_OPER;
   }
-  else if (NULL == buf || count < 0)
+  else if (NULL == buf || count < 0 || offset < 0)
   {
-    TBSYS_LOG(ERROR, "invalid read buffer or count. buffer: %p, count: %"PRI64_PREFIX"d", buf, count);
-    ret = TFS_ERROR;
+    TBSYS_LOG(ERROR, "invalid read buffer or count. buffer: %p, count: %"PRI64_PREFIX"d, offset: %"PRI64_PREFIX"d",
+              buf, count, offset);
+    ret = EXIT_PARAMETER_ERROR;
   }
   else if (count > 0)
   {
@@ -185,7 +186,7 @@ int64_t TfsFile::read_ex(void* buf, const int64_t count, const int64_t offset,
       }
       else if (0 == cur_size)
       {
-        TBSYS_LOG(INFO, "file read reach end, offset: %"PRI64_PREFIX"d, size: %"PRI64_PREFIX"d",
+        TBSYS_LOG(DEBUG, "file read reach end, offset: %"PRI64_PREFIX"d, size: %"PRI64_PREFIX"d",
                   offset + check_size, cur_size);
         eof_ = TFS_FILE_EOF_FLAG_YES;
         break;
@@ -241,10 +242,11 @@ int64_t TfsFile::write_ex(const void* buf, const int64_t count, const int64_t of
     TBSYS_LOG(ERROR, "write fail: file open without write flag");
     ret = EXIT_NOT_PERM_OPER;
   }
-  else if (NULL == buf || count < 0)
+  else if (NULL == buf || count < 0 || offset < 0)
   {
-    TBSYS_LOG(ERROR, "invalid write buffer or count. buffer: %p, count: %"PRI64_PREFIX"d", buf, count);
-    ret = TFS_ERROR;
+    TBSYS_LOG(ERROR, "invalid write buffer or count. buffer: %p, count: %"PRI64_PREFIX"d, offset: %"PRI64_PREFIX"d",
+              buf, count, offset);
+    ret = EXIT_PARAMETER_ERROR;
   }
   else if (count > 0)
   {
@@ -321,7 +323,7 @@ int64_t TfsFile::lseek_ex(const int64_t offset, const int whence)
     TBSYS_LOG(ERROR, "lseek fail, file status: %d is not open yes", file_status_);
     ret = EXIT_NOT_OPEN_ERROR;
   }
-  else if (!(flags_ & T_READ))
+  else if ((flags_ & (T_READ|T_WRITE)) == 0)
   {
     TBSYS_LOG(ERROR, "lseek fail, file open without read flag: %d", flags_);
     ret = EXIT_NOT_PERM_OPER;

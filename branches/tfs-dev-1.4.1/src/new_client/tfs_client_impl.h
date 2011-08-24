@@ -58,7 +58,7 @@ namespace tfs
       int64_t pread(const int fd, void* buf, const int64_t count, const int64_t offset);
       int64_t pwrite(const int fd, const void* buf, const int64_t count, const int64_t offset);
       int fstat(const int fd, common::TfsFileStat* buf, const common::TfsStatType mode = common::NORMAL_STAT);
-      int close(const int fd, char* tfs_name = NULL, const int32_t len = 0);
+      int close(const int fd, char* ret_tfs_name = NULL, const int32_t ret_tfs_name_len = 0);
       int64_t get_file_length(const int fd);
 
       int set_option_flag(const int fd, const common::OptionFlag option_flag);
@@ -108,44 +108,77 @@ namespace tfs
       int32_t get_block_cache_items() const;
       int32_t get_cache_hit_ratio() const;
 
+#ifdef TFS_TEST
+      TfsSession* get_tfs_session(const char* ns_addr)
+        {
+          return SESSION_POOL.get(ns_addr);
+        }
+#endif
+
 #ifdef WITH_UNIQUE_STORE
 #include "tfs_unique_store.h"
-      // unique stuff
       TfsUniqueStore* get_unique_store(const char* ns_addr);
       int init_unique_store(const char* master_addr, const char* slave_addr,
                             const char* group_name, const int32_t area, const char* ns_addr = NULL);
-      int64_t save_unique_update(const char* tfs_file_name, const char* buf, const int64_t count,
-                          const int32_t flag, const char* suffix, const char* ns_addr = NULL, const char* key = NULL);
-      int64_t save_unique(char* ret_tfs_file_name, const int32_t ret_tfs_file_name_len, const char* buf, const int64_t count,
-                   const int32_t flag, const char* suffix = NULL, const char* ns_addr = NULL, const char* key = NULL);
-      int64_t save_unique_file_update(const char* tfs_file_name, const char* local_file,
-                               const int32_t flag, const char* suffix,  const char* ns_addr = NULL, const char* key = NULL);
-      int64_t save_unique_file(char* ret_tfs_file_name, const int32_t ret_tfs_file_name_len, const char* local_file,
-                        const int32_t flag,  const char* suffix = NULL, const char* ns_addr = NULL , const char* key = NULL);
-      int32_t unlink_unique(int64_t& file_size, const char* tfs_file_name, const char* suffix,
-                            const int32_t count = 1, const char* ns_addr = NULL);
+      int64_t save_unique(char* ret_tfs_name, const int32_t ret_tfs_name_len,
+                          const char* buf, const int64_t count,
+                          const char* suffix = NULL, const char* ns_addr = NULL);
+      int64_t save_unique(char* ret_tfs_name, const int32_t ret_tfs_name_len,
+                          const char* local_file,
+                          const char* suffix = NULL, const char* ns_addr = NULL);
+      int64_t save_unique_update(const char* buf, const int64_t count,
+                                 const char* file_name, const char* suffix = NULL, const char* ns_addr = NULL);
+      int64_t save_unique_update(const char* local_file,
+                                 const char* file_name, const char* suffix = NULL, const char* ns_addr = NULL);
+      int32_t unlink_unique(int64_t& file_size, const char* file_name, const char* suffix = NULL,
+                            const char* ns_addr = NULL, const int32_t count = 1);
+
+      int64_t save_unique_ex(char* ret_tfs_name, const int32_t ret_tfs_name_len,
+                             const char* buf, const int64_t count,
+                             const char* file_name, const char* suffix, const char* ns_addr);
+      int64_t save_unique_ex(char* ret_tfs_name, const int32_t ret_tfs_name_len,
+                             const char* local_file,
+                             const char* file_name, const char* suffix, const char* ns_addr);
 #endif
+
       // sort of utility
       uint64_t get_server_id();
       int32_t get_cluster_id();
-      int64_t save_update(const char* tfs_file_name, const char* buf, const int64_t count,
-                          const int32_t flag, const char* suffix, const char* ns_addr = NULL, const char* key = NULL);
-      int64_t save(char* ret_tfs_file_name, const int32_t ret_tfs_file_name_len, const char* buf, const int64_t count,
-                   const int32_t flag, const char* suffix = NULL, const char* ns_addr = NULL, const char* key = NULL);
-      int64_t save_file_update(const char* tfs_file_name, const char* local_file,
-                               const int32_t flag, const char* suffix,  const char* ns_addr = NULL, const char* key = NULL);
-      int64_t save_file(char* ret_tfs_file_name, const int32_t ret_tfs_file_name_len, const char* local_file,
-                        const int32_t flag,  const char* suffix = NULL, const char* ns_addr = NULL , const char* key = NULL);
-      int fetch_file(const char* local_file, const char* tfs_name, const char* suffix, const char* ns_addr = NULL);
-      int fetch_file(char*& buf, int64_t& count, const char* tfs_name, const char* suffix, const char* ns_addr = NULL);
-      int stat_file(common::TfsFileStat* file_stat, const char* tfs_name, const char* suffix,
-                    const char* ns_addr = NULL, const common::TfsStatType stat_type = common::NORMAL_STAT);
-#ifdef TFS_TEST
-      TfsSession* get_tfs_session(const char* ns_addr)
-      {
-        return SESSION_POOL.get(ns_addr);
-      }
-#endif
+      int64_t save_file(char* ret_tfs_name, const int32_t ret_tfs_name_len,
+                        const char* buf, const int64_t count,
+                        const int32_t flag, const char* suffix = NULL,
+                        const char* ns_addr = NULL, const char* key = NULL);
+      int64_t save_file(char* ret_tfs_name, const int32_t ret_tfs_name_len,
+                        const char* local_file,
+                        const int32_t flag, const char* suffix = NULL,
+                        const char* ns_addr = NULL);
+      int64_t save_file_update(const char* buf, const int64_t count,
+                               const int32_t flag,
+                               const char* file_name, const char* suffix = NULL,
+                               const char* ns_addr = NULL, const char* key = NULL);
+      int64_t save_file_update(const char* local_file,
+                               const int32_t flag,
+                               const char* file_name, const char* suffix = NULL,
+                               const char* ns_addr = NULL);
+      int fetch_file(char* buf, const int64_t count,
+                     const char* file_name, const char* suffix = NULL, const char* ns_addr = NULL);
+      int fetch_file(const char* local_file,
+                     const char* file_name, const char* suffix = NULL, const char* ns_addr = NULL);
+      int stat_file(common::TfsFileStat* file_stat, const char* file_name, const char* suffix = NULL,
+                    const common::TfsStatType stat_type = common::NORMAL_STAT, const char* ns_addr = NULL);
+
+      int64_t save_file_ex(char* ret_tfs_name, const int32_t ret_tfs_name_len,
+                           const char* local_file, const int32_t flag,
+                           const char* file_name, const char* suffix = NULL,
+                           const char* ns_addr = NULL);
+      int64_t save_file_ex(char* ret_tfs_name, const int32_t ret_tfs_name_len,
+                           const char* buf, const int64_t count, const int32_t flag,
+                           const char* file_name, const char* suffix = NULL,
+                           const char* ns_addr = NULL, const char* key = NULL);
+      // fetch file to buffer, return count
+      // WARNING: user MUST free buf.
+      int fetch_file_ex(char*& buf, int64_t& count,
+                        const char* file_name, const char* suffix = NULL, const char* ns_addr = NULL);
 
     private:
       bool check_init();

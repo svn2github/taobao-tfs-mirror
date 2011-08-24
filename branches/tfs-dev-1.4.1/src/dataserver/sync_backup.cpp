@@ -120,7 +120,7 @@ namespace tfs
                  SYSPARAM_DATASERVER.local_ns_ip_,
                  SYSPARAM_DATASERVER.local_ns_port_);
 
-        tfs_client_ = TfsClient::Instance();
+        tfs_client_ = TfsClientImpl::Instance();
         ret =
           tfs_client_->initialize(NULL, DEFAULT_BLOCK_CACHE_TIME, DEFAULT_BLOCK_CACHE_ITEMS, false) == TFS_SUCCESS ?
           true : false;
@@ -472,7 +472,7 @@ namespace tfs
           snprintf(dest_addr_[index], MAX_ADDRESS_LENGTH, "%s", (*iter).c_str());
         }
 
-        tfs_client_ = TfsClient::Instance();
+        tfs_client_ = TfsClientImpl::Instance();
         ret =
           tfs_client_->initialize(NULL, DEFAULT_BLOCK_CACHE_TIME, DEFAULT_BLOCK_CACHE_ITEMS, false) == TFS_SUCCESS ?
           true : false;

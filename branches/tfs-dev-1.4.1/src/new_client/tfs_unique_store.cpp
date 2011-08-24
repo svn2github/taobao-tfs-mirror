@@ -17,7 +17,7 @@
 
 #include "common/error_msg.h"
 #include "fsname.h"
-#include "tfs_client_api.h"
+#include "tfs_client_impl.h"
 #include "tfs_unique_store.h"
 
 using namespace tfs::common;
@@ -128,7 +128,7 @@ namespace tfs
       {
         char* buf = NULL;
         int64_t buf_len = 0;
-        int ret = TfsClient::Instance()->fetch_file(tfs_name, suffix, buf, buf_len, ns_addr_.c_str());
+        int ret = TfsClientImpl::Instance()->fetch_file_ex(buf, buf_len, tfs_name, suffix, ns_addr_.c_str());
 
         if (ret != TFS_SUCCESS)
         {
@@ -154,7 +154,7 @@ namespace tfs
             {
               TBSYS_LOG(DEBUG, "refcnt less than unlink count. %d <= %d",unique_value.ref_count_, count);
 
-              ret = TfsClient::Instance()->unlink(tfs_name, suffix, ns_addr_.c_str(), file_size);
+              ret = TfsClientImpl::Instance()->unlink(file_size, tfs_name, suffix, ns_addr_.c_str());
 
               if (ret != TFS_SUCCESS)
               {
@@ -306,7 +306,7 @@ namespace tfs
       {
         TBSYS_LOG(DEBUG, "unique meta found and name match: filename: %s, refcnt: %d, version: %d", unique_value.file_name_, unique_value.ref_count_, unique_value.version_);
         TfsFileStat file_stat;
-        ret = TfsClient::Instance()->stat_file(unique_value.file_name_, NULL, &file_stat,
+        ret = TfsClientImpl::Instance()->stat_file(&file_stat, unique_value.file_name_, NULL,
                                                NORMAL_STAT, ns_addr_.c_str());
 
         if (ret != TFS_SUCCESS)
@@ -362,9 +362,9 @@ namespace tfs
                                   const char* tfs_name, const char* suffix,
                                   char* ret_tfs_name, const int32_t ret_tfs_name_len)
     {
-      int ret = TfsClient::Instance()->
-        save_file(unique_key.data_, unique_key.data_len_, tfs_name, suffix,
-                  ret_tfs_name, ret_tfs_name_len, ns_addr_.c_str()) < 0 ? TFS_ERROR : TFS_SUCCESS;
+      int ret = TfsClientImpl::Instance()->
+        save_file_ex(ret_tfs_name, ret_tfs_name_len, unique_key.data_, unique_key.data_len_, T_DEFAULT,
+                     tfs_name, suffix, ns_addr_.c_str()) < 0 ? TFS_ERROR : TFS_SUCCESS;
 
       TBSYS_LOG(DEBUG, "write tfs data ret: %d, name: %s", ret, ret != TFS_SUCCESS ? "NULL" : ret_tfs_name);
       if (ret != TFS_SUCCESS)

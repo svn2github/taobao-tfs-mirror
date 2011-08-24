@@ -35,7 +35,7 @@
 #include "tools/util/tool_util.h"
 #include "tools/util/ds_lib.h"
 #include "new_client/fsname.h"
-#include "new_client/tfs_client_api.h"
+#include "new_client/tfs_client_impl.h"
 
 using namespace std;
 using namespace tfs::client;
@@ -43,7 +43,7 @@ using namespace tfs::common;
 using namespace tfs::message;
 using namespace tfs::tools;
 
-static TfsClient* g_tfs_client = NULL;
+static TfsClientImpl* g_tfs_client = NULL;
 static STR_FUNC_MAP g_cmd_map;
 
 #ifdef _WITH_READ_LINE
@@ -154,7 +154,7 @@ int main(int argc, char* argv[])
     return TFS_ERROR;
   }
 
-  g_tfs_client = TfsClient::Instance();
+  g_tfs_client = TfsClientImpl::Instance();
   int ret = g_tfs_client->initialize(nsip, DEFAULT_BLOCK_CACHE_TIME, 1000, false);
 
   if (ret != TFS_SUCCESS)
@@ -423,16 +423,30 @@ int put_file_ex(const VSTRING& param, const bool unique, const bool is_large)
   if (unique)
   {
     // TODO: save unique
-    ret = g_tfs_client->save_file(local_file, tfs_name, suffix, ret_tfs_name, TFS_FILE_LEN, NULL, flag) < 0 ?
-      TFS_ERROR : TFS_SUCCESS;
+    if (tfs_name != NULL)
+    {
+      ret = g_tfs_client->save_file_update(local_file, flag, tfs_name, suffix) < 0 ? TFS_ERROR : TFS_SUCCESS;
+    }
+    else
+    {
+      ret = g_tfs_client->save_file(ret_tfs_name, TFS_FILE_LEN, local_file, flag, suffix) < 0 ?
+        TFS_ERROR : TFS_SUCCESS;
+    }
   }
   else
   {
-    ret = g_tfs_client->save_file(local_file, tfs_name, suffix, ret_tfs_name, TFS_FILE_LEN, NULL, flag) < 0 ?
-      TFS_ERROR : TFS_SUCCESS;
+    if (tfs_name != NULL)
+    {
+      ret = g_tfs_client->save_file_update(local_file, flag, tfs_name, suffix) < 0 ? TFS_ERROR : TFS_SUCCESS;
+    }
+    else
+    {
+      ret = g_tfs_client->save_file(ret_tfs_name, TFS_FILE_LEN, local_file, flag, suffix) < 0 ?
+        TFS_ERROR : TFS_SUCCESS;
+    }
   }
 
-  ToolUtil::print_info(ret, "put %s => %s", local_file, ret_tfs_name);
+  ToolUtil::print_info(ret, "put %s => %s", local_file, tfs_name != NULL ? FSName(tfs_name, suffix).get_name() : ret_tfs_name);
   return ret;
 }
 
@@ -444,11 +458,11 @@ int remove_file_ex(const VSTRING& param, const int32_t unique)
   if (unique)
   {
     // TODO: unlink_unique
-    ret = g_tfs_client->unlink(tfs_name, NULL, file_size);
+    ret = g_tfs_client->unlink(file_size, tfs_name, NULL);
   }
   else
   {
-    ret = g_tfs_client->unlink(tfs_name, NULL, file_size);
+    ret = g_tfs_client->unlink(file_size, tfs_name, NULL);
   }
 
   ToolUtil::print_info(ret, "unlink %s", tfs_name);
@@ -551,7 +565,7 @@ int cmd_undel_file(const VSTRING& param)
 {
   const char* tfs_name = canonical_param(param[0]);
   int64_t file_size = 0;
-  int ret = g_tfs_client->unlink(tfs_name, NULL, file_size,UNDELETE);
+  int ret = g_tfs_client->unlink(file_size, tfs_name, NULL, UNDELETE);
 
   ToolUtil::print_info(ret, "undel %s", tfs_name);
 
@@ -569,7 +583,7 @@ int cmd_hide_file(const VSTRING& param)
   }
 
   int64_t file_size = 0;
-  int ret = g_tfs_client->unlink(tfs_name, NULL, file_size, unlink_type);
+  int ret = g_tfs_client->unlink(file_size, tfs_name, NULL, unlink_type);
 
   ToolUtil::print_info(ret, "hide %s %d", tfs_name, unlink_type);
 
@@ -594,7 +608,7 @@ int cmd_stat_file(const VSTRING& param)
   const char* tfs_name = canonical_param(param[0]);
 
   TfsFileStat file_stat;
-  int ret = g_tfs_client->stat_file(tfs_name, NULL, &file_stat, FORCE_STAT);
+  int ret = g_tfs_client->stat_file(&file_stat, tfs_name, NULL, FORCE_STAT);
 
   ToolUtil::print_info(ret, "stat %s", tfs_name);
 

@@ -9,7 +9,7 @@
  * Version: $Id: tfs_client_api.cpp 49 2010-11-16 09:58:57Z zongdai@taobao.com $
  *
  * Authors:
- *    daoan<aoan@taobao.com>
+ *    daoan<daoan@taobao.com>
  *      - initial release
  *
  */
@@ -388,7 +388,7 @@ namespace tfs
         {
           int64_t start_time = tbsys::CTimeUtil::getTime();
           int64_t data_size = 0;
-          int32_t ref_count = TfsClient::Instance()->unlink_unique(file_name, suffix, data_size, 1, ns_addr);
+          int32_t ref_count = TfsClient::Instance()->unlink_unique(data_size, file_name, suffix, ns_addr, 1);
           int64_t response_time = tbsys::CTimeUtil::getTime() - start_time;
           add_stat_info(OPER_UNIQUE_UNLINK, data_size, response_time, ref_count >= 0);
           if (ref_count < 0)
@@ -524,8 +524,8 @@ namespace tfs
         if (TFS_SUCCESS == ret)
         {
           int64_t start_time = tbsys::CTimeUtil::getTime();
-          saved_size = TfsClient::Instance()->save_unique(tfs_name_buff, buf_len, source_data, data_len,
-              T_WRITE, NULL, tfs_name_buff, buff_len, ns_addr);
+          saved_size = TfsClient::Instance()->save_unique(tfs_name_buff, buff_len, source_data, data_len,
+              NULL, ns_addr);
           int64_t response_time = tbsys::CTimeUtil::getTime() - start_time;
           add_stat_info(OPER_UNIQUE_WRITE, saved_size, response_time, saved_size >= 0);
         }
@@ -536,8 +536,8 @@ namespace tfs
       else
       {
         int64_t start_time = tbsys::CTimeUtil::getTime();
-        saved_size = TfsClient::Instance()->save(tfs_name_buff, buff_len, source_data, data_len,
-              T_WRITE, NULL, ns_addr);
+        saved_size = TfsClient::Instance()->save_file(tfs_name_buff, buff_len, source_data, data_len,
+              T_DEFAULT, NULL, ns_addr);
         int64_t response_time = tbsys::CTimeUtil::getTime() - start_time;
         add_stat_info(OPER_WRITE, saved_size, response_time, saved_size >= 0);
       }
@@ -609,7 +609,7 @@ namespace tfs
     {
       string ns_addr;
       int32_t cluster_id = get_cluster_id(file_name);
-      if ((index >= CHOICE_CLUSTER_NS_TYPE_LENGTH) 
+      if ((index >= CHOICE_CLUSTER_NS_TYPE_LENGTH)
           || (RcClient::CREATE != mode && 0 == cluster_id))
       {
         //null ;

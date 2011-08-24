@@ -18,9 +18,10 @@
 #include <iostream>
 #include <string>
 #include "dataserver/index_handle.h"
-#include "dataserver/file_op.h"
+#include "common/file_op.h"
 
 using namespace std;
+using namespace tfs::common;
 using namespace tfs::dataserver;
 
 int main(int argc, char* argv[])

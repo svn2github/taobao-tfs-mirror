@@ -306,7 +306,7 @@ int64_t LocalKey::get_segment_for_write(const int64_t offset, const char* buf,
             remain_nw_size -= it->size_;
           }
           else if (TfsClient::Instance()->stat_file(&file_stat, FSName(it->block_id_, it->file_id_).get_name(),
-                                                    NULL,tbsys::CNetUtil::addrToString(server_id_).c_str(), NORMAL_STAT)
+                                                    NULL, NORMAL_STAT, tbsys::CNetUtil::addrToString(server_id_).c_str())
                    != TFS_SUCCESS) // server id util
           {
             TBSYS_LOG(INFO, "segment info is not valid. blockid: %u, fileid: %"PRI64_PREFIX"u",

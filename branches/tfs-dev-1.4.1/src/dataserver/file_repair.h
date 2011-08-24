@@ -23,7 +23,7 @@
 #include "dataserver_define.h"
 
 #include "common/internal.h"
-#include "new_client/tfs_client_api.h"
+#include "new_client/tfs_client_impl.h"
 
 namespace tfs
 {
@@ -48,7 +48,7 @@ namespace tfs
         bool init_status_;
         uint64_t dataserver_id_;
         char src_addr_[common::MAX_ADDRESS_LENGTH];
-        client::TfsClient* tfs_client_;
+        client::TfsClientImpl* tfs_client_;
     };
   }
 }

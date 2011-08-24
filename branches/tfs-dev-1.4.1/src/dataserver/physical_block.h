@@ -17,7 +17,7 @@
 #define TFS_DATASERVER_PHYSICALBLOCK_H_
 
 #include <string>
-#include "file_op.h"
+#include "common/file_op.h"
 #include "dataserver_define.h"
 //#include "common/config.h"
 #include "common/config_item.h"
@@ -78,7 +78,7 @@ namespace tfs
         int32_t data_start_; // the data start offset of this block file
         int32_t total_data_len_; // total data size
         BlockPrefix block_prefix_; // block meta info prefix
-        FileOperation* file_op_;   // file operation handle
+        common::FileOperation* file_op_;   // file operation handle
     };
 
   }

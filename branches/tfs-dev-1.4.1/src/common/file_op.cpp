@@ -25,7 +25,7 @@ namespace tfs
   namespace common
   {
     FileOperation::FileOperation(const std::string& file_name, const int open_flags) :
-      fd_(-1), open_flags_(open_flags), locked_(false)
+      fd_(-1), open_flags_(open_flags)
     {
       file_name_ = strdup(file_name.c_str());
     }
@@ -34,7 +34,6 @@ namespace tfs
     {
       if (fd_ > 0)
       {
-        unlock_file();
         ::close(fd_);
         fd_ = -1;
       }
@@ -53,68 +52,7 @@ namespace tfs
         return;
       }
       ::close(fd_);
-    }
-
-    // use record lock to make mutex access over one file(F_WRLCK),
-    // record lock is not inherited by a child process,
-    // so check lock in mock child process to get mutex.
-    // use should request to lock explicitly(just as advisory locking)
-    int FileOperation::lock_file()
-    {
-      int ret = -1;
-
-      if (locked_)
-      {
-        ret = 0;
-      }
-      else if (check_file() > 0)
-      {
-        struct flock f_lock;
-        f_lock.l_type = F_WRLCK;
-        f_lock.l_whence = SEEK_SET;
-        f_lock.l_start = 0;
-        f_lock.l_len = 0;
-        ret = fcntl(fd_, F_GETLK, &f_lock);
-
-        // consider checking lock fail as not own a lock
-        if (ret != 0 || f_lock.l_type == F_UNLCK)
-        {
-          f_lock.l_type = F_WRLCK;
-          ret = fcntl(fd_, F_SETLK, &f_lock);
-
-          if (ret == 0)
-          {
-            locked_ = true;
-          }
-        }
-        else
-        {
-          ret = -1;             // lock is already occupid, can't get lock
-        }
-      }
-
-      return ret;
-    }
-
-    int FileOperation::unlock_file()
-    {
-      int ret = 0;
-      if (fd_ > 0 && locked_)
-      {
-        struct flock f_lock;        
-        f_lock.l_type = F_UNLCK;
-        f_lock.l_whence = SEEK_SET;
-        f_lock.l_start = 0;
-        f_lock.l_len = 0;
-
-        ret = fcntl(fd_, F_SETLK, &f_lock);
-        if (0 == ret)
-        {
-          locked_ = false;
-        }
-      }
-
-      return ret;
+      fd_ = -1;
     }
 
     int FileOperation::pread_file(char* buf, const int32_t nbytes, const int64_t offset)

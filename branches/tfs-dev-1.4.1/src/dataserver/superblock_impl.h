@@ -17,7 +17,7 @@
 #define TFS_DATASERVER_SUPERBLOCK_IMPL_H_
 
 #include <string>
-#include "file_op.h"
+#include "common/file_op.h"
 #include "bit_map.h"
 #include "common/error_msg.h"
 
@@ -54,7 +54,7 @@ namespace tfs
         std::string super_block_file_; // associate super block file
         int32_t super_reserve_offset_; // super block reserved offset
         int32_t bitmap_start_offset_;  // super block bitmap offset
-        FileOperation* file_op_;
+        common::FileOperation* file_op_;
     };
   }
 }

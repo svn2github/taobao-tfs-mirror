@@ -59,11 +59,16 @@ int TfsClientImpl::initialize(const char* ns_addr, const int32_t cache_time, con
   {
     TBSYS_LOG(INFO, "tfsclient already initialized");
   }
+  else if (cache_items <= 0 || cache_time <= 0)
+  {
+    TBSYS_LOG(ERROR, "invalid cache config. cache_time: %d, cache_items: %d", cache_time, cache_items);
+    ret = TFS_ERROR;
+  }
   else if (TFS_SUCCESS != (ret = NewClientManager::get_instance().initialize(packet_factory_, packet_streamer_)))
   {
     TBSYS_LOG(ERROR, "initialize NewClientManager fail, must exit, ret: %d", ret);
   }
-  else if (ns_addr != NULL &&   // pass a valid ns addr, then must init success
+  else if (ns_addr != NULL && strlen(ns_addr) > 0 &&   // pass a valid ns addr, then must init success
            NULL == (default_tfs_session_ = SESSION_POOL.get(ns_addr, cache_time, cache_items)))
   {
     TBSYS_LOG(ERROR, "tfsclient initialize to ns %s failed. must exit", ns_addr);
@@ -109,8 +114,13 @@ int TfsClientImpl::set_default_server(const char* ns_addr, const int32_t cache_t
 
 int TfsClientImpl::destroy()
 {
-  BgTask::destroy();
-  BgTask::wait_for_shut_down();
+  tbutil::Mutex::Lock lock(mutex_);
+  if (is_init_)
+  {
+    BgTask::destroy();
+    BgTask::wait_for_shut_down();
+    is_init_ = false;
+  }
   return TFS_SUCCESS;
 }
 
@@ -201,7 +211,7 @@ int TfsClientImpl::fstat(const int fd, TfsFileStat* buf, const TfsStatType mode)
   return ret;
 }
 
-int TfsClientImpl::close(const int fd, char* tfs_name, const int32_t len)
+int TfsClientImpl::close(const int fd, char* ret_tfs_name, const int32_t ret_tfs_name_len)
 {
   int ret = EXIT_INVALIDFD_ERROR;
   TfsFile* tfs_file = get_file(fd);
@@ -216,16 +226,16 @@ int TfsClientImpl::close(const int fd, char* tfs_name, const int32_t len)
       }
       // buffer not null, then consider as wanting tfs name back
       // len must invalid
-      else if (NULL != tfs_name)
+      else if (NULL != ret_tfs_name)
       {
-        if (len < TFS_FILE_LEN)
+        if (ret_tfs_name_len < TFS_FILE_LEN)
         {
-          TBSYS_LOG(ERROR, "name buffer length less: %d < %d", len, TFS_FILE_LEN);
+          TBSYS_LOG(ERROR, "name buffer length less: %d < %d", ret_tfs_name_len, TFS_FILE_LEN);
           ret = TFS_ERROR;
         }
         else
         {
-          memcpy(tfs_name, tfs_file->get_file_name(), TFS_FILE_LEN);
+          memcpy(ret_tfs_name, tfs_file->get_file_name(), TFS_FILE_LEN);
         }
       }
     }
@@ -400,116 +410,84 @@ int TfsClientImpl::init_unique_store(const char* master_addr, const char* slave_
 
   return ret;
 }
-int64_t TfsclientImpl::save_unique_update(const char* tfs_file_name, const char* buf, const int64_t count,
-                          const char* suffix, const int32_t flag, const char* ns_addr, const char* key)
+
+int64_t TfsClientImpl::save_unique(char* ret_tfs_name, const int32_t ret_tfs_name_len,
+                                   const char* buf, const int64_t count,
+                                   const char* suffix, const char* ns_addr)
 {
-  int64_t ret = NULL == buf || count <= 0 || NULL == tfs_file_name || (flag & common::T_LARGE)
-              || static_cast<int32_t>(strlen(tfs_file_name)) < FILE_NAME_LEN
-              || NULL == suffix || '\0' == tfs_file_name[0] || '\0' ==  suffix[0] 
-              ? EXIT_PARAMETER_ERROR : TFS_SUCCESS;
-  if (TFS_SUCCESS == ret)
-  {
-    ret = INVALID_FILE_SIZE;
-    TfsUniqueStore* unique_store = get_unique_store(ns_addr);
-    if (NULL != unique_strore)
-    {
-      ret = unique_store->save(buf, count, file_name, suffix, NULL, 0);
-    }
-    else
-    {
-      TBSYS_LOG(ERROR, "unique store not init");
-    }
-  } 
-  else
+  int64_t ret = INVALID_FILE_SIZE;
+  if (NULL == ret_tfs_name || ret_tfs_name_len < TFS_FILE_LEN)
   {
     TBSYS_LOG(ERROR, "invalid parameter, must be return");
+    ret = EXIT_PARAMETER_ERROR;
   }
+  else
+  {
+    ret = save_unique_ex(ret_tfs_name, ret_tfs_name_len, buf, count, NULL, suffix, ns_addr);
+  }
+
   return ret;
 }
 
-int64_t TfsClientImpl::save_unique(char* ret_tfs_file_name, const int32_t ret_tfs_file_name_len, const char* buf, const int64_t count,
-                   const int32_t flag, const char* suffix, const char* ns_addr, const char* key)
+int64_t TfsClientImpl::save_unique(char* ret_tfs_name, const int32_t ret_tfs_name_len,
+                                   const char* local_file,
+                                   const char* suffix, const char* ns_addr)
 {
-  int64_t ret = NULL == buf || count <= 0 || NULL == ret_tfs_file_name 
-                || ret_tfs_file_name_len < TFS_FILE_LEN ? EXIT_PARAMETER_ERROR : TFS_SUCCESS;
-  if (TFS_SUCCESS == ret)
+  int64_t ret =  INVALID_FILE_SIZE;
+
+  if (NULL == ret_tfs_name || ret_tfs_name_len < TFS_FILE_LEN)
   {
-    ret = INVALID_FILE_SIZE;
-    TfsUniqueStore* unique_store = get_unique_store(ns_addr);
-    if (NULL != unique_strore)
-    {
-      ret = unique_store->save(buf, count, NULL, suffix, ret_tfs_file_name, ret_tfs_file_name_len);
-    }
-    else
-    {
-      TBSYS_LOG(ERROR, "unique store not init");
-    }
+    TBSYS_LOG(ERROR, "invalid parameter, must be return");
+    ret = EXIT_PARAMETER_ERROR;
   }
   else
   {
-    TBSYS_LOG(ERROR, "invalid parameter, must be return");
+    ret = save_unique_ex(ret_tfs_name, ret_tfs_name_len, local_file, NULL, suffix, ns_addr);
   }
+
   return ret;
 }
 
-
-int64_t TfsClientImpl::save_unique_file_update(const char* tfs_file_name, const char* local_file,
-                               const char* suffix, const int32_t flag,  const char* ns_addr, const char* key)
+int64_t TfsClientImpl::save_unique_update(const char* buf, const int64_t count,
+                                          const char* file_name, const char* suffix, const char* ns_addr)
 {
-  int64_t ret = NULL == local_file || '\0' == local_file[0] || NULL == tfs_file_name
-                || static_cast<int32_t>(strlen(tfs_file_name)) < TFS_FILE_LEN
-                || (flag & common::T_LARGE) 
-                || '\0' == tfs_file_name[0] ? EXIT_PARAMETER_ERROR : TFS_SUCCESS;
-  if (TFS_SUCCESS == ret)
+  int64_t ret =  INVALID_FILE_SIZE;
+
+  if (NULL == file_name || static_cast<int32_t>(strlen(file_name)) < FILE_NAME_LEN)
   {
-    ret = INVALID_FILE_SIZE;
-    TfsUniqueStore* unique_store = get_unique_store(ns_addr);
-    if (NULL != unique_strore)
-    {
-      ret = unique_store->save(local_file, tfs_file_name, suffix, NULL, 0);
-    }
-    else
-    {
-      TBSYS_LOG(ERROR, "unique store not init");
-    }
+    TBSYS_LOG(ERROR, "invalid parameter, must be return");
+    ret = EXIT_PARAMETER_ERROR;
   }
   else
   {
-    TBSYS_LOG(ERROR, "invalid parameter, must be return");
+    ret = save_unique_ex(NULL, 0, buf, count, file_name, suffix, ns_addr);
   }
+
   return ret;
 }
 
-
-int64_t TfsClientImpl::save_unique_file(char* ret_tfs_file_name, const int32_t ret_tfs_file_name_len, const char* local_file,
-                        const int32_t flag,  const char* suffix, const char* ns_addr, const char* key)
+int64_t TfsClientImpl::save_unique_update(const char* local_file,
+                                          const char* file_name, const char* suffix, const char* ns_addr)
 {
-  int64_t ret = NULL == local_file || '\0' == local_file[0] || NULL == ret_tfs_file_name
-                || ret_tfs_file_name_len <= TFS_FILE_LEN ? EXIT_PARAMETER_ERROR : TFS_SUCCESS;
-  if (TFS_SUCCESS == ret)
+  int64_t ret =  INVALID_FILE_SIZE;
+
+  if (NULL == file_name || static_cast<int32_t>(strlen(file_name)) < FILE_NAME_LEN)
   {
-    ret = INVALID_FILE_SIZE;
-    TfsUniqueStore* unique_store = get_unique_store(ns_addr);
-    if (NULL != unique_strore)
-    {
-      ret = unique_store->save(local_file, NULL, suffix, ret_tfs_file_name, ret_tfs_file_name_len);
-    }
-    else
-    {
-      TBSYS_LOG(ERROR, "unique store not init");
-    }
+    TBSYS_LOG(ERROR, "invalid parameter, must be return");
+    ret = EXIT_PARAMETER_ERROR;
   }
   else
   {
-    TBSYS_LOG(ERROR, "invalid parameter, must be return");
+    ret = save_unique_ex(NULL, 0, local_file, file_name, suffix, ns_addr);
   }
+
   return ret;
 }
 
 int32_t TfsClientImpl::unlink_unique(int64_t& file_size, const char* file_name, const char* suffix,
-                                     const int32_t count, const char* ns_addr)
+                                     const char* ns_addr, const int32_t count)
 {
-  int ret = TFS_ERROR;
+  int32_t ret = INVALID_REFERENCE_COUNT;
   TfsUniqueStore* unique_store = get_unique_store(ns_addr);
 
   if (unique_store != NULL)
@@ -521,6 +499,57 @@ int32_t TfsClientImpl::unlink_unique(int64_t& file_size, const char* file_name, 
     TBSYS_LOG(ERROR, "unique store not init");
   }
 
+  return ret;
+}
+
+int64_t TfsClientImpl::save_unique_ex(char* ret_tfs_name, const int32_t ret_tfs_name_len,
+                                      const char* buf, const int64_t count,
+                                      const char* file_name, const char* suffix, const char* ns_addr)
+{
+  int64_t ret = INVALID_FILE_SIZE;
+  if (NULL == buf || count <= 0)
+  {
+    TBSYS_LOG(ERROR, "invalid parameter, must be return");
+    ret = EXIT_PARAMETER_ERROR;
+  }
+  else
+  {
+    TfsUniqueStore* unique_store = get_unique_store(ns_addr);
+    if (unique_store != NULL)
+    {
+      ret = unique_store->save(buf, count, file_name, suffix, ret_tfs_name, ret_tfs_name_len);
+    }
+    else
+    {
+      TBSYS_LOG(ERROR, "unique store not init");
+    }
+  }
+
+  return ret;
+}
+
+int64_t TfsClientImpl::save_unique_ex(char* ret_tfs_name, const int32_t ret_tfs_name_len,
+                                      const char* local_file,
+                                      const char* file_name, const char* suffix, const char* ns_addr)
+{
+  int64_t ret = INVALID_FILE_SIZE;
+  if (NULL == local_file)
+  {
+    TBSYS_LOG(ERROR, "invalid parameter, must be return");
+    ret = EXIT_PARAMETER_ERROR;
+  }
+  else
+  {
+    TfsUniqueStore* unique_store = get_unique_store(ns_addr);
+    if (unique_store != NULL)
+    {
+      ret = unique_store->save(local_file, file_name, suffix, ret_tfs_name, ret_tfs_name_len);
+    }
+    else
+    {
+      TBSYS_LOG(ERROR, "unique store not init");
+    }
+  }
   return ret;
 }
 #endif
@@ -784,23 +813,193 @@ int32_t TfsClientImpl::get_cluster_id()
   return cluster_id;
 }
 
-int64_t TfsClientImpl::save_update(const char* tfs_file_name, const char* buf, const int64_t count,
-            const int32_t flag, const char* suffix, const char* ns_addr, const char* key)
+int64_t TfsClientImpl::save_file(char* ret_tfs_name, const int32_t ret_tfs_name_len,
+                                 const char* buf, const int64_t count,
+                                 const int32_t flag, const char* suffix,
+                                 const char* ns_addr, const char* key)
 {
-  int64_t ret = NULL == buf || count <= 0 || NULL == tfs_file_name || (flag &  common::T_LARGE) 
-            || '\0' == tfs_file_name[0] || static_cast<int32_t>(strlen(tfs_file_name)) < TFS_FILE_LEN
-              ? EXIT_PARAMETER_ERROR : TFS_SUCCESS;
-  if (TFS_SUCCESS == ret)
+  int64_t ret = INVALID_FILE_SIZE;
+
+  if (NULL == ret_tfs_name || ret_tfs_name_len < TFS_FILE_LEN)
   {
-    int fd = open(tfs_file_name, suffix, ns_addr, (T_WRITE|flag), key);
-    if (fd <= 0)
+    TBSYS_LOG(ERROR, "invalid parameter, must be return");
+    ret = EXIT_PARAMETER_ERROR;
+  }
+  else
+  {
+    ret = save_file_ex(ret_tfs_name, ret_tfs_name_len, buf, count, flag, NULL, suffix, ns_addr, key);
+  }
+
+  return ret;
+}
+
+int64_t TfsClientImpl::save_file(char* ret_tfs_name, const int32_t ret_tfs_name_len,
+                                 const char* local_file,
+                                 const int32_t flag, const char* suffix,
+                                 const char* ns_addr)
+{
+  int64_t ret = INVALID_FILE_SIZE;
+
+  if (NULL == ret_tfs_name || ret_tfs_name_len < TFS_FILE_LEN)
+  {
+    TBSYS_LOG(ERROR, "invalid parameter, must be return");
+    ret = EXIT_PARAMETER_ERROR;
+  }
+  else
+  {
+    ret = save_file_ex(ret_tfs_name, ret_tfs_name_len, local_file, flag, NULL, suffix, ns_addr);
+  }
+  return ret;
+}
+
+int64_t TfsClientImpl::save_file_update(const char* buf, const int64_t count, const int32_t flag,
+                                        const char* file_name, const char* suffix,
+                                        const char* ns_addr, const char* key)
+{
+  int64_t ret = INVALID_FILE_SIZE;
+  if (NULL == file_name || static_cast<int32_t>(strlen(file_name)) < FILE_NAME_LEN)
+  {
+    TBSYS_LOG(ERROR, "invalid parameter, must be return");
+    ret = EXIT_PARAMETER_ERROR;
+  }
+  else
+  {
+    ret = save_file_ex(NULL, 0, buf, count, flag, file_name, suffix, ns_addr, key);
+  }
+
+  return ret;
+}
+
+int64_t TfsClientImpl::save_file_update(const char* local_file, const int32_t flag,
+                                        const char* file_name, const char* suffix,
+                                        const char* ns_addr)
+{
+  int64_t ret = INVALID_FILE_SIZE;
+  if (NULL == file_name || static_cast<int32_t>(strlen(file_name)) < FILE_NAME_LEN)
+  {
+    TBSYS_LOG(ERROR, "invalid parameter, must be return");
+    ret = EXIT_PARAMETER_ERROR;
+  }
+  else
+  {
+    ret = save_file_ex(NULL, 0, local_file, flag, file_name, suffix, ns_addr);
+  }
+
+  return ret;
+}
+
+int64_t TfsClientImpl::save_file_ex(char* ret_tfs_name, const int32_t ret_tfs_name_len,
+                                    const char* local_file, const int32_t flag,
+                                    const char* file_name, const char* suffix,
+                                    const char* ns_addr)
+{
+  int ret = TFS_ERROR;
+  int fd = -1;
+  int64_t file_size = 0;
+
+  if (NULL == local_file)
+  {
+    TBSYS_LOG(ERROR, "local file is null");
+  }
+  else if (flag & (~(T_DEFAULT|T_WRITE|T_NEWBLK|T_LARGE)) != 0)
+  {
+    TBSYS_LOG(ERROR, "only T_DEFAULT or T_WRITE or T_NEWBLK or T_LARGE flag support to save");
+  }
+  else if ((fd = ::open(local_file, O_RDONLY)) < 0)
+  {
+    TBSYS_LOG(ERROR, "open local file %s fail: %s", local_file, strerror(errno));
+  }
+  else
+  {
+    int tfs_fd = open(file_name, suffix, ns_addr, T_WRITE|flag, local_file);
+    if (tfs_fd <= 0)
+    {
+      TBSYS_LOG(ERROR, "open tfs file to write fail. tfsname: %s, suffix: %s, flag: %d, ret: %d",
+                file_name, suffix, flag, tfs_fd);
+    }
+    else
+    {
+      int32_t io_size = MAX_READ_SIZE;
+      if (flag & T_LARGE)
+      {
+        io_size = 4 * MAX_READ_SIZE;
+      }
+
+      char* buf = new char[io_size];
+      int64_t read_len = 0, write_len = 0;
+
+      while (true)
+      {
+        if ((read_len = ::read(fd, buf, io_size)) < 0)
+        {
+          if (EAGAIN == errno)
+          {
+            continue;
+          }
+          TBSYS_LOG(ERROR, "read local file %s fail, ret: %s, error: %s", local_file, read_len, strerror(errno));
+          break;
+        }
+
+        if (0 == read_len)
+        {
+          break;
+        }
+
+        if ((write_len = write(tfs_fd, buf, read_len)) != read_len)
+        {
+          TBSYS_LOG(ERROR, "write to tfs fail, write len: %"PRI64_PREFIX"d, ret: %"PRI64_PREFIX"d",
+                    read_len, write_len);
+          break;
+        }
+
+        file_size += read_len;
+
+        if (read_len < MAX_READ_SIZE)
+        {
+          break;
+        }
+      }
+
+      if ((ret = close(tfs_fd, ret_tfs_name, ret_tfs_name_len)) != TFS_SUCCESS)
+      {
+        TBSYS_LOG(ERROR, "close tfs file fail, ret: %d", ret);
+      }
+
+      tbsys::gDeleteA(buf);
+    }
+
+    ::close(fd);
+  }
+
+  return ret != TFS_SUCCESS ? INVALID_FILE_SIZE : file_size;
+}
+
+int64_t TfsClientImpl::save_file_ex(char* ret_tfs_name, const int32_t ret_tfs_name_len,
+                                    const char* buf, const int64_t count, const int32_t flag,
+                                    const char* file_name, const char* suffix,
+                                    const char* ns_addr,const char* key)
+{
+  int ret = TFS_ERROR;
+
+  if (NULL == buf || count <= 0)
+  {
+    TBSYS_LOG(ERROR, "invalid buffer and count. buffer: %p, count: %"PRI64_PREFIX"d", buf, count);
+  }
+  else if (flag & (~(T_DEFAULT|T_WRITE|T_NEWBLK|T_LARGE)) != 0)
+  {
+    TBSYS_LOG(ERROR, "only T_DEFAULT or T_WRITE or T_NEWBLK or T_LARGE flag support to save");
+  }
+  else
+  {
+    int tfs_fd = open(file_name, suffix, ns_addr, T_WRITE|flag, key);
+    if (tfs_fd <= 0)
     {
       TBSYS_LOG(ERROR, "open tfs file to write fail. tfsname: %s, suffix: %s, flag: %d, key: %s, ret: %d",
-                tfs_file_name, suffix, flag, key, fd);
+                file_name, suffix, flag, key, tfs_fd);
     }
     else
     {
-      int64_t write_len = this->write(fd, buf, count);
+      int64_t write_len = write(tfs_fd, buf, count);
       if (write_len != count)
       {
         TBSYS_LOG(ERROR, "write to tfs fail, write len: %"PRI64_PREFIX"d, ret: %"PRI64_PREFIX"d",
@@ -808,205 +1007,17 @@ int64_t TfsClientImpl::save_update(const char* tfs_file_name, const char* buf, c
       }
 
       // close anyway
-      if ((ret = this->close(fd)) != TFS_SUCCESS)
+      if ((ret = close(tfs_fd, ret_tfs_name, ret_tfs_name_len)) != TFS_SUCCESS)
       {
         TBSYS_LOG(ERROR, "close tfs file fail, ret: %d", ret);
       }
     }
   }
-  else
-  {
-    TBSYS_LOG(ERROR, "invalid parameter, must be return");
-  }
-  return ret;
+
+  return ret != TFS_SUCCESS ? INVALID_FILE_SIZE : count;
 }
 
-int64_t TfsClientImpl::save(char* ret_tfs_file_name, const int32_t ret_tfs_file_name_len,
-                        const char* buf, const int64_t count, const int32_t flag, 
-                        const char* suffix, const char* ns_addr, const char* key)
-{
-  int64_t ret = NULL == buf || count <= 0 || NULL == ret_tfs_file_name 
-              || ret_tfs_file_name_len < TFS_FILE_LEN ? EXIT_PARAMETER_ERROR : TFS_SUCCESS;
-  if (TFS_SUCCESS == ret)
-  {
-    int fd = this->open(NULL, suffix, ns_addr, (T_WRITE|flag), key);
-    if (fd <= 0)
-    {
-      TBSYS_LOG(ERROR, "open tfs file to write fail. suffix: %s, flag: %d, key: %s, ret: %d",
-                suffix, flag, key, fd);
-    }
-    else
-    {
-      int64_t write_len = this->write(fd, buf, count);
-      if (write_len != count)
-      {
-        TBSYS_LOG(ERROR, "write to tfs fail, write len: %"PRI64_PREFIX"d, ret: %"PRI64_PREFIX"d",
-                  count, write_len);
-      }
-
-      // close anyway
-      if ((ret = this->close(fd, ret_tfs_file_name, ret_tfs_file_name_len)) != TFS_SUCCESS)
-      {
-        TBSYS_LOG(ERROR, "close tfs file fail, ret: %d", ret);
-      }
-    }
-  }
-  else
-  {
-    TBSYS_LOG(ERROR, "invalid parameter, must be return");
-  }
-  return ret;
-}
-int64_t TfsClientImpl::save_file_update(const char* tfs_file_name,const char* local_file, 
-                         const int32_t flag, const char* suffix, const char* ns_addr, const char* key)
-{
-  UNUSED(key);
-  int64_t ret = NULL == local_file || '\0' == local_file[0] 
-              || NULL == tfs_file_name || '\0' == tfs_file_name || flag & T_LARGE
-              || static_cast<int32_t>(strlen(tfs_file_name)) < TFS_FILE_LEN ? EXIT_PARAMETER_ERROR : TFS_SUCCESS;
-  if (TFS_SUCCESS == ret)
-  {
-    int32_t fd = ::open(local_file, O_RDONLY);
-    if (fd < 0)
-    {
-      TBSYS_LOG(ERROR, "open local file %s fail: %s", local_file, strerror(errno));
-    }
-    else
-    {
-      int tfs_fd = this->open(tfs_file_name, suffix, ns_addr, T_WRITE|flag, local_file);
-      if (tfs_fd <= 0)
-      {
-        TBSYS_LOG(ERROR, "open tfs file to write fail. tfsname: %s, suffix: %s, flag: %d, ret: %d",
-            tfs_file_name, suffix, flag, tfs_fd);
-      }
-      else
-      {
-        int32_t io_size = MAX_READ_SIZE;
-        char* buf = new char[io_size];
-        int64_t length = 0;
-        int64_t write_len = 0;
-        int64_t file_size = 0;
-        while(true)
-        {
-          length = ::read(fd, buf, io_size);
-          if (length < 0)
-          {
-            if (length == EAGAIN)
-              continue;
-            else
-              break;
-          }
-          else if (0 == length)
-          {
-            break;
-          }
-          else
-          {
-            write_len = write(tfs_fd, buf, length);
-            if (write_len != length)
-            {
-              TBSYS_LOG(ERROR, "write to tfs fail, write len: %"PRI64_PREFIX"d, ret: %"PRI64_PREFIX"d",
-                      length, write_len);
-              break;
-            }
-            file_size += length;
-          }
-        }
-        if ((ret = this->close(tfs_fd)) != TFS_SUCCESS)
-        {
-          TBSYS_LOG(ERROR, "close tfs file fail, ret: %d", ret);
-        }
-        else
-        {
-          ret = file_size;
-        }
-        tbsys::gDeleteA(buf);
-      }
-      ::close(fd);
-    }
-  }
-  else
-  {
-    TBSYS_LOG(ERROR, "invalid parameter, must be return");
-  }
-  return ret;
-}
-int64_t TfsClientImpl::save_file(char* ret_tfs_file_name, const int32_t ret_tfs_file_name_len, const char* local_file,
-                        const int32_t flag,  const char* suffix, const char* ns_addr , const char* key)
-{
-  UNUSED(key);
-  int64_t ret = NULL == local_file || '\0' == local_file[0] 
-              || NULL == ret_tfs_file_name || ret_tfs_file_name_len < TFS_FILE_LEN
-              ? EXIT_PARAMETER_ERROR : TFS_SUCCESS;
-  if (TFS_SUCCESS == ret)
-  {
-    int32_t fd = ::open(local_file, O_RDONLY);
-    if (fd < 0)
-    {
-      TBSYS_LOG(ERROR, "open local file %s fail: %s", local_file, strerror(errno));
-    }
-    else
-    {
-      int tfs_fd = this->open(NULL, suffix, ns_addr, T_WRITE|flag, local_file);
-      if (tfs_fd <= 0)
-      {
-        TBSYS_LOG(ERROR, "open tfs file to write fail.suffix: %s, flag: %d, ret: %d",
-            suffix, flag, tfs_fd);
-      }
-      else
-      {
-        int32_t io_size = flag & T_LARGE ? 4 * MAX_READ_SIZE : MAX_READ_SIZE;
-        char* buf = new char[io_size];
-        int64_t length = 0;
-        int64_t write_len = 0;
-        int64_t file_size = 0;
-        while(true)
-        {
-          length = ::read(fd, buf, io_size);
-          if (length < 0)
-          {
-            if (errno == EAGAIN)
-              continue;
-            else
-              break;
-          }
-          else if (0 == length)
-          {
-            break;
-          }
-          else
-          {
-            write_len = this->write(tfs_fd, buf, length);
-            if (write_len != length)
-            {
-              TBSYS_LOG(ERROR, "write to tfs fail, write len: %"PRI64_PREFIX"d, ret: %"PRI64_PREFIX"d",
-                      length , write_len);
-              break;
-            }
-            file_size += length;
-          }
-        }
-        if ((ret = this->close(tfs_fd, ret_tfs_file_name, ret_tfs_file_name_len)) != TFS_SUCCESS)
-        {
-          TBSYS_LOG(ERROR, "close tfs file fail, ret: %d", ret);
-        }
-        else
-        {
-          ret = file_size;
-        }
-        tbsys::gDeleteA(buf);
-      }
-      ::close(fd);
-    }
-  }
-  else
-  {
-    TBSYS_LOG(ERROR, "invalid parameter, must be return");
-  }
-  return ret;
-}
-
-int TfsClientImpl::fetch_file(const char* local_file, const char* tfs_name, const char* suffix, const char* ns_addr)
+int TfsClientImpl::fetch_file(const char* local_file, const char* file_name, const char* suffix, const char* ns_addr)
 {
   int ret = TFS_ERROR;
   int fd = -1;
@@ -1015,12 +1026,14 @@ int TfsClientImpl::fetch_file(const char* local_file, const char* tfs_name, cons
   if (NULL == local_file)
   {
     TBSYS_LOG(ERROR, "local file is null");
+    ret = EXIT_PARAMETER_ERROR;
   }
-  else if ((file_type = FSName::check_file_type(tfs_name)) == INVALID_TFS_FILE_TYPE)
+  else if ((file_type = FSName::check_file_type(file_name)) == INVALID_TFS_FILE_TYPE)
   {
-    TBSYS_LOG(ERROR, "invalid tfs name: %s", tfs_name);
+    TBSYS_LOG(ERROR, "invalid tfs name: %s", file_name);
+    ret = EXIT_PARAMETER_ERROR;
   }
-  else if ((fd = ::open(local_file, O_WRONLY|O_CREAT, 0644)) < 0)
+  else if ((fd = ::open(local_file, O_WRONLY|O_CREAT|O_TRUNC, 0644)) < 0)
   {
     TBSYS_LOG(ERROR, "open local file %s to write fail: %s", local_file, strerror(errno));
   }
@@ -1034,11 +1047,11 @@ int TfsClientImpl::fetch_file(const char* local_file, const char* tfs_name, cons
       io_size = 4 * MAX_READ_SIZE;
     }
 
-    int tfs_fd = this->open(tfs_name, suffix, ns_addr, T_READ|flag);
+    int tfs_fd = this->open(file_name, suffix, ns_addr, T_READ|flag);
     if (tfs_fd <= 0)
     {
       TBSYS_LOG(ERROR, "open tfs file to read fail. tfsname: %s, suffix: %s, ret: %d",
-                tfs_name, suffix, tfs_fd);
+                file_name, suffix, tfs_fd);
     }
     else
     {
@@ -1050,7 +1063,7 @@ int TfsClientImpl::fetch_file(const char* local_file, const char* tfs_name, cons
         if ((read_len = this->read(tfs_fd, buf, io_size)) < 0)
         {
           TBSYS_LOG(ERROR, "read tfs file fail. tfsname: %s, suffix: %s, ret: %"PRI64_PREFIX"d",
-                    tfs_name, suffix, read_len);
+                    file_name, suffix, read_len);
           break;
         }
 
@@ -1083,17 +1096,21 @@ int TfsClientImpl::fetch_file(const char* local_file, const char* tfs_name, cons
   return ret;
 }
 
-// fetch file to buffer, return count
-// WARNING: user MUST free buf.
-int TfsClientImpl::fetch_file(char*& buf, int64_t& count, const char* tfs_name, const char* suffix,
+int TfsClientImpl::fetch_file(char* buf, const int64_t count, const char* file_name, const char* suffix,
                               const char* ns_addr)
 {
   int ret = TFS_ERROR;
   TfsFileType file_type = INVALID_TFS_FILE_TYPE;
 
-  if ((file_type = FSName::check_file_type(tfs_name)) == INVALID_TFS_FILE_TYPE)
+  if (NULL == buf || count <= 0 || NULL == file_name)
   {
-    TBSYS_LOG(ERROR, "invalid tfs name: %s", tfs_name);
+    TBSYS_LOG(ERROR, "invalid parameter");
+    ret = EXIT_PARAMETER_ERROR;
+  }
+  else if ((file_type = FSName::check_file_type(file_name)) == INVALID_TFS_FILE_TYPE)
+  {
+    TBSYS_LOG(ERROR, "invalid tfs name: %s", file_name);
+    ret = EXIT_PARAMETER_ERROR;
   }
   else
   {
@@ -1105,13 +1122,71 @@ int TfsClientImpl::fetch_file(char*& buf, int64_t& count, const char* tfs_name, 
       io_size = 4 * MAX_READ_SIZE;
     }
 
-    int tfs_fd = this->open(tfs_name, suffix, ns_addr, T_READ|flag);
+    int tfs_fd = this->open(file_name, suffix, ns_addr, T_READ|flag);
+    if (tfs_fd <= 0)
+    {
+      TBSYS_LOG(ERROR, "open tfs file to read fail. tfsname: %s, suffix: %s, ret: %d",
+                file_name, suffix, tfs_fd);
+    }
+    else
+    {
+      int64_t read_len = 0, left_len = count, per_io_size = 0;
+      while (left_len > 0)
+      {
+        per_io_size = io_size > left_len ? left_len : io_size;
+        if ((read_len = this->read(tfs_fd, buf + (count - left_len), per_io_size)) < 0)
+        {
+          TBSYS_LOG(ERROR, "read tfs file fail. tfsname: %s, suffix: %s, ret: %"PRI64_PREFIX"d",
+                    file_name, suffix, read_len);
+          ret = read_len;
+          break;
+        }
+
+        // read over
+        if (read_len < per_io_size)
+        {
+          ret = TFS_SUCCESS;
+          break;
+        }
+
+        left_len -= read_len;
+      }
+
+      close(tfs_fd);
+    }
+  }
+
+  return ret;
+}
+
+int TfsClientImpl::fetch_file_ex(char*& buf, int64_t& count, const char* file_name, const char* suffix,
+                                 const char* ns_addr)
+{
+  int ret = TFS_ERROR;
+  TfsFileType file_type = INVALID_TFS_FILE_TYPE;
+
+  if ((file_type = FSName::check_file_type(file_name)) == INVALID_TFS_FILE_TYPE)
+  {
+    TBSYS_LOG(ERROR, "invalid tfs name: %s", file_name);
+    ret = EXIT_PARAMETER_ERROR;
+  }
+  else
+  {
+    int32_t flag = T_DEFAULT;
+    int32_t io_size = MAX_READ_SIZE;
+    if (file_type == LARGE_TFS_FILE_TYPE)
+    {
+      flag = T_LARGE;
+      io_size = 4 * MAX_READ_SIZE;
+    }
+
+    int tfs_fd = this->open(file_name, suffix, ns_addr, T_READ|flag);
     int64_t file_length = 0;
 
     if (tfs_fd <= 0)
     {
       TBSYS_LOG(ERROR, "open tfs file to read fail. tfsname: %s, suffix: %s, ret: %d",
-                tfs_name, suffix, tfs_fd);
+                file_name, suffix, tfs_fd);
     }
     else
     {
@@ -1129,24 +1204,27 @@ int TfsClientImpl::fetch_file(char*& buf, int64_t& count, const char* tfs_name, 
         // user MUST free
         buf = new char[file_length];
 
-        int64_t read_len = 0, already_read_len = 0;
+        int64_t read_len = 0, left_len = file_length, per_io_size = 0;
 
-        while (1)
+        while (left_len > 0)
         {
-          if ((read_len = this->read(tfs_fd, buf + already_read_len, io_size)) < 0)
+          per_io_size = io_size > left_len ? left_len : io_size;
+          if ((read_len = this->read(tfs_fd, buf + (file_length - left_len), per_io_size)) < 0)
           {
             TBSYS_LOG(ERROR, "read tfs file fail. tfsname: %s, suffix: %s, ret: %"PRI64_PREFIX"d",
-                      tfs_name, suffix, read_len);
+                      file_name, suffix, read_len);
+            ret = read_len;
             break;
           }
 
-          already_read_len += read_len;
-          if (already_read_len >= file_length)
+          if (left_len - read_len <= 0)
           {
             ret = TFS_SUCCESS;
-            count = already_read_len;
+            count = file_length;
             break;
           }
+
+          left_len -= read_len;
         }
 
         if (TFS_SUCCESS != ret)
@@ -1161,8 +1239,8 @@ int TfsClientImpl::fetch_file(char*& buf, int64_t& count, const char* tfs_name, 
   return ret;
 }
 
-int TfsClientImpl::stat_file(common::TfsFileStat* file_stat, const char* tfs_name, const char* suffix,
-                    const char* ns_addr , const common::TfsStatType stat_type)
+int TfsClientImpl::stat_file(common::TfsFileStat* file_stat, const char* file_name, const char* suffix,
+                             const common::TfsStatType stat_type, const char* ns_addr)
 {
   int ret = TFS_ERROR;
   TfsFileType file_type = INVALID_TFS_FILE_TYPE;
@@ -1170,10 +1248,12 @@ int TfsClientImpl::stat_file(common::TfsFileStat* file_stat, const char* tfs_nam
   if (NULL == file_stat)
   {
     TBSYS_LOG(ERROR, "tfsfilestat is null");
+    ret = EXIT_PARAMETER_ERROR;
   }
-  else if ((file_type = FSName::check_file_type(tfs_name)) == INVALID_TFS_FILE_TYPE)
+  else if ((file_type = FSName::check_file_type(file_name)) == INVALID_TFS_FILE_TYPE)
   {
-    TBSYS_LOG(ERROR, "invalid tfs name: %s", tfs_name);
+    TBSYS_LOG(ERROR, "invalid tfs name: %s", file_name);
+    ret = EXIT_PARAMETER_ERROR;
   }
   else
   {
@@ -1183,15 +1263,15 @@ int TfsClientImpl::stat_file(common::TfsFileStat* file_stat, const char* tfs_nam
       flag |= T_LARGE;
     }
 
-    int tfs_fd = this->open(tfs_name, suffix, ns_addr, T_STAT|flag);
+    int tfs_fd = this->open(file_name, suffix, ns_addr, T_STAT|flag);
     if (tfs_fd < 0)
     {
-      TBSYS_LOG(ERROR, "open tfs file stat fail. tfsname: %s, suffix: %s", tfs_name, suffix);
+      TBSYS_LOG(ERROR, "open tfs file stat fail. tfsname: %s, suffix: %s", file_name, suffix);
     }
     else if ((ret = fstat(tfs_fd, file_stat, stat_type)) != TFS_SUCCESS)
     {
       TBSYS_LOG(ERROR, "stat tfs file fail. tfsname: %s, suffix, %s, stattype: %d",
-                tfs_name, suffix, stat_type);
+                file_name, suffix, stat_type);
     }
     this->close(tfs_fd);
   }
