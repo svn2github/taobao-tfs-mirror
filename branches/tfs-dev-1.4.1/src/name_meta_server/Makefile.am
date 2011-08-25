@@ -17,7 +17,8 @@ metaserver_INCLUDE=database_helper.h  meta_server_service.h\
 									mysql_database_helper.h database_pool.h meta_store_manager.h
 
 libnamemetaserver_a_SOURCES=meta_server_service.cpp meta_store_manager.cpp \
-			    database_helper.cpp mysql_database_helper.cpp database_pool.cpp
+			    database_helper.cpp mysql_database_helper.cpp database_pool.cpp \
+					mem_helper.cpp meta_cache_helper.cpp meta_cache_info.cpp
 
 bin_PROGRAMS = metaserver test test_pool test_service
 

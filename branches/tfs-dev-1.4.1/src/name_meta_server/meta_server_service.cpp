@@ -305,6 +305,7 @@ namespace tfs
     int MetaServerService::create(const int64_t app_id, const int64_t uid,
                                   const char* file_path, const FileType type)
     {
+      PROFILER_START("create");
       int ret = TFS_SUCCESS;
       char name[MAX_META_FILE_NAME_LEN];
       int32_t name_len = 0;
@@ -346,6 +347,7 @@ namespace tfs
 
       if (TFS_SUCCESS == ret)
       {
+          PROFILER_BEGIN("insert");
         if ((ret = get_name(v_name[get_depth(v_name)].c_str(), name, MAX_META_FILE_NAME_LEN, name_len)) != TFS_SUCCESS)
         {
           TBSYS_LOG(INFO, "get name fail. ret: %d", ret);
@@ -356,17 +358,20 @@ namespace tfs
         {
           TBSYS_LOG(ERROR, "create fail: %s, type: %d, ret: %d", file_path, type, ret);
         }
+          PROFILER_END();
       }
 
       TBSYS_LOG(DEBUG, "create %s, type: %d, appid: %"PRI64_PREFIX"d, uid: %"PRI64_PREFIX"d, filepath: %s",
                 TFS_SUCCESS == ret ? "success" : "fail", type, app_id, uid, file_path);
-
+      PROFILER_DUMP();
+      PROFILER_STOP();
       return ret;
     }
 
     int MetaServerService::rm(const int64_t app_id, const int64_t uid,
                               const char* file_path, const FileType type)
     {
+      PROFILER_START("rm");
       char name[MAX_META_FILE_NAME_LEN];
       int32_t name_len = 0;
       int ret = TFS_SUCCESS;
@@ -381,9 +386,11 @@ namespace tfs
       else
       {
         std::vector<MetaInfo> v_meta_info;
+        PROFILER_BEGIN("select");
 
         ret = store_manager_->select(app_id, uid, p_meta_info.get_id(), name, name_len,
                                      type != DIRECTORY, v_meta_info);
+        PROFILER_END();
 
         // file not exist
         if (TFS_SUCCESS != ret || v_meta_info.empty())
@@ -392,20 +399,24 @@ namespace tfs
         }
         else
         {
+          PROFILER_BEGIN("remove");
           std::vector<MetaInfo>::iterator iter = v_meta_info.begin();
           if ((ret = store_manager_->remove(app_id, uid, p_meta_info.get_pid(),
                                             p_meta_info.get_name(), p_meta_info.get_name_len(),
                                             p_meta_info.get_id(), iter->get_id(),
                                             name, name_len, type)) != TFS_SUCCESS)
           {
-            TBSYS_LOG(ERROR, "rm fail: %s, type: %d, ret: %d", file_path, type, ret);
+            TBSYS_LOG(DEBUG, "rm fail: %s, type: %d, ret: %d", file_path, type, ret);
           }
+          PROFILER_END();
         }
       }
 
       TBSYS_LOG(DEBUG, "rm %s, type: %d, appid: %"PRI64_PREFIX"d, uid: %"PRI64_PREFIX"d, filepath: %s",
                 TFS_SUCCESS == ret ? "success" : "fail", type, app_id, uid, file_path);
 
+      PROFILER_DUMP();
+      PROFILER_STOP();
       return ret;
     }
 
@@ -447,7 +458,7 @@ namespace tfs
                   dest_p_meta_info.get_name(), dest_p_meta_info.get_name_len(),
                   name, name_len, dest_name, dest_name_len, type)) != TFS_SUCCESS)
           {
-            TBSYS_LOG(ERROR, "mv fail: %s, type: %d, ret: %d", file_path, type, ret);
+            TBSYS_LOG(DEBUG, "mv fail: %s, type: %d, ret: %d", file_path, type, ret);
           }
         }
       }

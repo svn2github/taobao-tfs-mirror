@@ -164,7 +164,9 @@ namespace tfs
         {
           if (id != 0)
           {
+            PROFILER_BEGIN("create_dir");
             status = database_helper->create_dir(app_id, uid, ppid, pname, pname_len, pid, id, name, name_len, proc_ret);
+            PROFILER_END();
             if (TFS_SUCCESS != status)
             {
               TBSYS_LOG(DEBUG, "database helper create dir, status: %d", status);
@@ -293,7 +295,9 @@ namespace tfs
           }
           else
           {
+            PROFILER_BEGIN("rm_dir");
             status = database_helper->rm_dir(app_id, uid, ppid, pname, pname_len, pid, id, name, name_len, proc_ret);
+            PROFILER_END();
             if (TFS_SUCCESS != status)
             {
               TBSYS_LOG(DEBUG, "database helper rm dir, status: %d", status);
@@ -317,6 +321,7 @@ namespace tfs
       // maybe network fail
       if (status != TFS_SUCCESS)
       {
+        TBSYS_LOG(ERROR, "ret is %d when we ask data from database");
         // // TODO. maybe do sth.
         // ret = status;
       }

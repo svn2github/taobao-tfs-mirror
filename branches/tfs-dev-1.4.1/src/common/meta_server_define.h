@@ -70,6 +70,7 @@ namespace tfs
       // get last offset current fraginfo hold
       int64_t get_last_offset() const;
       void dump() const;
+      void push_back(FragInfo& new_frag_info);
 
       int32_t cluster_id_;
       bool had_been_split_;
@@ -97,6 +98,7 @@ namespace tfs
       // |   char  | namelen  |
       // ----------------------
       const char* get_real_name() const;
+      bool is_file() const;
       // length to serialize
       int64_t length() const;
       int serialize(common::Stream& output) const;
@@ -160,7 +162,7 @@ namespace tfs
     const int32_t MAX_FRAG_META_COUNT = MAX_FRAG_INFO_SIZE/sizeof(FragMeta) - 1;
     // MetaInfo or FragInfo return count once
     const int32_t MAX_OUT_INFO_COUNT = 500;
-    const int32_t ROW_LIMIT = 500;
+    const int32_t ROW_LIMIT = 5;
 
   }
 }

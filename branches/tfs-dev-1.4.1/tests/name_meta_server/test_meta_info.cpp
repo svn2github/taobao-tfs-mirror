@@ -102,6 +102,23 @@ TEST_F(MetaInfoTest, FileMetaInfo)
   fmi2.deserialize(out);
   EXPECT_EQ(fmi.pid_, fmi2.pid_);
 }
+TEST_F(MetaInfoTest, MetaInfo)
+{
+  FileMetaInfo fmi;
+  fmi.pid_ = 30;
+  fmi.id_ = 40;
+  fmi.create_time_ = 50;
+  fmi.modify_time_ = 60;
+  fmi.size_ = 70;
+  fmi.ver_no_ = 80;
+  fmi.name_ = "hello";
+  Stream out;
+  fmi.serialize(out);
+  EXPECT_EQ(out.get_data_length(), fmi.length());
+  FileMetaInfo fmi2;
+  fmi2.deserialize(out);
+  EXPECT_EQ(fmi.pid_, fmi2.pid_);
+}
 TEST_F(MetaInfoTest, check_frag_info_ok)
 {
   FragInfo fi;
