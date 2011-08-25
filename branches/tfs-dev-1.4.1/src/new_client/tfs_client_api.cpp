@@ -292,9 +292,9 @@ int TfsClient::fetch_file(const char* local_file, const char* file_name,
   return TfsClientImpl::Instance()->fetch_file(local_file, file_name, suffix, ns_addr);
 }
 
-int TfsClient::fetch_file(char* buf, const int64_t count, const char* file_name, const char* suffix, const char* ns_addr)
+int TfsClient::fetch_file(int64_t& ret_count, char* buf, const int64_t count, const char* file_name, const char* suffix, const char* ns_addr)
 {
-  return TfsClientImpl::Instance()->fetch_file(buf, count, file_name, suffix, ns_addr);
+  return TfsClientImpl::Instance()->fetch_file(ret_count, buf, count, file_name, suffix, ns_addr);
 }
 
 int TfsClient::stat_file(TfsFileStat* file_stat, const char* file_name, const char* suffix,

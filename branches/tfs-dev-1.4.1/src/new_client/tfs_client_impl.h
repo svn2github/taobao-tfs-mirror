@@ -160,7 +160,7 @@ namespace tfs
                                const int32_t flag,
                                const char* file_name, const char* suffix = NULL,
                                const char* ns_addr = NULL);
-      int fetch_file(char* buf, const int64_t count,
+      int fetch_file(int64_t& ret_count, char* buf, const int64_t count,
                      const char* file_name, const char* suffix = NULL, const char* ns_addr = NULL);
       int fetch_file(const char* local_file,
                      const char* file_name, const char* suffix = NULL, const char* ns_addr = NULL);

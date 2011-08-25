@@ -155,7 +155,7 @@ extern "C"
   int64_t t_save_file(char* ret_tfs_name, const int32_t ret_tfs_name_len,
                       const char* local_file,
                       const int32_t flag, const char* suffix, const char* ns_addr);
-  int t_fetch_buf(char* buf, const int64_t count, const char* file_name, const char* suffix, const char* ns_addr);
+  int t_fetch_buf(int64_t* ret_count, char* buf, const int64_t count, const char* file_name, const char* suffix, const char* ns_addr);
   int t_fetch_file(const char* local_file, const char* file_name, const char* suffix, const char* ns_addr);
   int t_stat_file(TfsFileStat* file_stat, const char* file_name, const char* suffix,
                   const TfsStatType stat_type, const char* ns_addr);

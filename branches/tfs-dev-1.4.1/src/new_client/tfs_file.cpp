@@ -317,7 +317,7 @@ int64_t TfsFile::write_ex(const void* buf, const int64_t count, const int64_t of
 
 int64_t TfsFile::lseek_ex(const int64_t offset, const int whence)
 {
-  int64_t ret = TFS_SUCCESS;
+  int64_t ret = INVALID_FILE_SIZE;
   if (TFS_FILE_OPEN_YES != file_status_)
   {
     TBSYS_LOG(ERROR, "lseek fail, file status: %d is not open yes", file_status_);
@@ -333,12 +333,28 @@ int64_t TfsFile::lseek_ex(const int64_t offset, const int whence)
     switch (whence)
     {
     case T_SEEK_SET:
-      offset_ = offset;
-      ret = offset_;
+      if (offset < 0)
+      {
+        TBSYS_LOG(ERROR, "wrong offset seek_set, %"PRI64_PREFIX"d", offset);
+        ret = EXIT_PARAMETER_ERROR;
+      }
+      else
+      {
+        offset_ = offset;
+        ret = offset_;
+      }
       break;
     case T_SEEK_CUR:
-      offset_ += offset;
-      ret = offset_;
+      if (offset_ + offset < 0)
+      {
+        TBSYS_LOG(ERROR, "wrong offset seek_cur, %"PRI64_PREFIX"d", offset);
+        ret = EXIT_PARAMETER_ERROR;
+      }
+      else
+      {
+        offset_ += offset;
+        ret = offset_;
+      }
       break;
     default:
       TBSYS_LOG(ERROR, "unknown seek flag: %d", whence);

@@ -1096,7 +1096,8 @@ int TfsClientImpl::fetch_file(const char* local_file, const char* file_name, con
   return ret;
 }
 
-int TfsClientImpl::fetch_file(char* buf, const int64_t count, const char* file_name, const char* suffix,
+int TfsClientImpl::fetch_file(int64_t& ret_count, char* buf, const int64_t count,
+                              const char* file_name, const char* suffix,
                               const char* ns_addr)
 {
   int ret = TFS_ERROR;
@@ -1142,14 +1143,15 @@ int TfsClientImpl::fetch_file(char* buf, const int64_t count, const char* file_n
           break;
         }
 
+        left_len -= read_len;
+
         // read over
-        if (read_len < per_io_size)
+        if (0 == left_len || read_len < per_io_size)
         {
           ret = TFS_SUCCESS;
+          ret_count = count - left_len;
           break;
         }
-
-        left_len -= read_len;
       }
 
       close(tfs_fd);

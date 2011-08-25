@@ -311,9 +311,18 @@ int64_t t_save_file(char* ret_tfs_name, const int32_t ret_tfs_name_len, const ch
   return TfsClient::Instance()->save_file(ret_tfs_name, ret_tfs_name_len, local_file, flag, suffix, ns_addr);
 }
 
-int t_fetch_buf(char* buf, const int64_t count, const char* tfs_name, const char* suffix, const char* ns_addr)
+int t_fetch_buf(int64_t* ret_count, char* buf, const int64_t count, const char* tfs_name, const char* suffix, const char* ns_addr)
 {
-  return TfsClient::Instance()->fetch_file(buf, count, tfs_name, suffix, ns_addr);
+  int ret = TFS_ERROR;
+  if (ret_count != NULL)
+  {
+    int64_t real_ret_count = 0;
+    if ((ret = TfsClient::Instance()->fetch_file(real_ret_count, buf, count, tfs_name, suffix, ns_addr)) == TFS_SUCCESS)
+    {
+      *ret_count = real_ret_count;
+    }
+  }
+  return ret;
 }
 
 int t_fetch_file(const char* local_file, const char* tfs_name, const char* suffix, const char* ns_addr)
