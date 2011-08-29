@@ -1688,7 +1688,7 @@ namespace tfs
             "removeblock error, ret: %d", ret);
       }
 
-      if (remove_blocks.size() == 1U)
+      if (common::REMOVE_BLOCK_RESPONSE_FLAG_YES == message->get_response_flag())
       {
         RemoveBlockResponseMessage* msg = new RemoveBlockResponseMessage();
         msg->set_block_id(*(remove_blocks.begin()));

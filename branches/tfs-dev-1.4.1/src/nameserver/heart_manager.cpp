@@ -286,23 +286,31 @@ namespace tfs
     int HeartManagement::add_uncomplete_report_server(std::vector<uint64_t>& servers)
     {
       RWLock::Lock lock(mutex_, WRITE_LOCKER);
-      std::vector<uint64_t>::const_iterator iter = current_report_servers_.begin();
+      std::vector<uint64_t>::iterator iter = servers.begin();
       std::vector<uint64_t>::iterator it;
-      for (; iter != current_report_servers_.end();)
+      for (; iter != servers.end();)
       {
-        it = std::find(servers.begin(), servers.end(), (*iter));
+        it = std::find(current_report_servers_.begin(), current_report_servers_.end(), (*iter));
         if (current_report_servers_.end() != it)
         {
-          servers.erase(it);
+          servers.erase(++iter);
+        }
+        else
+        {
+          iter++;
         }
       }
-      iter = uncomplete_report_servers_.begin();
-      for (; iter != uncomplete_report_servers_.end();)
+      iter = servers.begin();
+      for (; iter != servers.end();)
       {
-        it = std::find(servers.begin(), servers.end(), (*iter));
-        if (current_report_servers_.end() != it)
+        it = std::find(uncomplete_report_servers_.begin(), uncomplete_report_servers_.end(), (*iter));
+        if (uncomplete_report_servers_.end() != it)
         {
-          servers.erase(it);
+          servers.erase(++iter);
+        }
+        else
+        {
+          iter++;
         }
       }
       uncomplete_report_servers_.insert(uncomplete_report_servers_.end(), servers.begin(), servers.end());

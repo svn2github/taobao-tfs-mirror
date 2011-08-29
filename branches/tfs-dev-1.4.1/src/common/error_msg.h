@@ -77,6 +77,7 @@ namespace tfs
     const int32_t EXIT_PLAY_LOG_ERROR = -5013;//play log error
     const int32_t EXIT_NAMESERVER_ONLY_READ = -5014;//current nameserver only read
     const int32_t EXIT_BLOCK_ALREADY_EXIST = -5015;//current block already exist
+    const int32_t EXIT_CREATE_BLOCK_BY_ID_ERROR = -5016;//create block by block id failed
 
     const int32_t EXIT_WRITE_OFFSET_ERROR = -8001; // write offset error
     const int32_t EXIT_READ_OFFSET_ERROR = -8002; // read offset error

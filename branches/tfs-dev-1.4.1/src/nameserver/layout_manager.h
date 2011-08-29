@@ -71,8 +71,10 @@ namespace nameserver
 
     void interrupt(const uint8_t interrupt, const time_t now);
 
-    int rm_block_from_ds(const uint64_t server_id, const uint32_t block_id);
-    int rm_block_from_ds(const uint64_t server_id, const std::vector<uint32_t>& block_ids);
+    int rm_block_from_ds(const uint64_t server_id, const uint32_t block_id,
+                        const common::RemoveBlockResponseFlag flag = common::REMOVE_BLOCK_RESPONSE_FLAG_NO);
+    int rm_block_from_ds(const uint64_t server_id, const std::vector<uint32_t>& block_ids,
+                        const common::RemoveBlockResponseFlag flag = common::REMOVE_BLOCK_RESPONSE_FLAG_NO);
 
     inline void get_alive_server(common::VUINT64& servers)
     {

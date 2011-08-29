@@ -646,7 +646,7 @@ namespace tfs
           }
           else
           {
-            iret = manager_->rm_block_from_ds((*iter)->id(), block_id_);
+            iret = manager_->rm_block_from_ds((*iter)->id(), block_id_, REMOVE_BLOCK_RESPONSE_FLAG_YES);
             if (TFS_SUCCESS != iret)
             {
               TBSYS_LOG(ERROR, "send remove block: %u command on server: %s failed", block_id_, tbsys::CNetUtil::addrToString((*iter)->id()).c_str());

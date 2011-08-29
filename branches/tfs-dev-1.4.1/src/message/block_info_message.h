@@ -257,7 +257,7 @@ namespace tfs
 
     class RemoveBlockMessage:  public common::BasePacket
     {
-      public:
+     public:
         RemoveBlockMessage();
         virtual ~RemoveBlockMessage();
         virtual int serialize(common::Stream& output)  const ;
@@ -272,8 +272,17 @@ namespace tfs
         {
           return remove_blocks_;
         }
+        inline void set_response_flag(common::RemoveBlockResponseFlag flag = common::REMOVE_BLOCK_RESPONSE_FLAG_YES)
+        {
+          response_flag_ = flag;
+        }
+        inline int8_t get_response_flag() const
+        {
+          return response_flag_;
+        }
       protected:
         common::VUINT32 remove_blocks_;
+        int8_t response_flag_;
     };
 
     class RemoveBlockResponseMessage :  public common::BasePacket

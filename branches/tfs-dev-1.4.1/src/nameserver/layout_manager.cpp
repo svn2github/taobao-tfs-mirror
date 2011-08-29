@@ -285,30 +285,24 @@ namespace tfs
       BlockChunkPtr ptr = get_chunk(block_id);
       ptr->rdlock();//lock
       BlockCollect* block = ptr->find(block_id);
-      if (block == NULL)//block not found by block_id
+      ptr->unlock();//unlock
+      if (NULL == block)//block not found by block_id
       {
-        ptr->unlock();//unlock
         block = add_new_block(block_id);
-        if (block == NULL)
+        iret = NULL == block ? EXIT_CREATE_BLOCK_BY_ID_ERROR : TFS_SUCCESS;
+        if (TFS_SUCCESS != iret)
         {
-          TBSYS_LOG(ERROR, "add new block: %u failed because there's any dataserver was found", block_id);
-          iret = EXIT_NO_DATASERVER;
-        }
-        else
-        {
-          ptr->rdlock();
-          block = ptr->find(block_id);
-          if (block == NULL)
-          {
-            TBSYS_LOG(ERROR, "add new block: %u failed because there's any dataserver was found", block_id);
-            iret = EXIT_NO_DATASERVER;
-          }
+          TBSYS_LOG(ERROR, "add new block: %u failed because create block by blockid error", block_id);
+          iret = EXIT_CREATE_BLOCK_BY_ID_ERROR;
         }
       }
 
       if (TFS_SUCCESS == iret)
       {
-        if (NULL != block)
+        RWLock::Lock(*ptr, READ_LOCKER);
+        block = ptr->find(block_id);
+        iret = NULL != block ? TFS_SUCCESS : EXIT_NO_BLOCK;
+        if (TFS_SUCCESS == iret)
         {
           if (block->get_hold_size() == 0)
           {
@@ -325,7 +319,6 @@ namespace tfs
           }
         }
       }
-      ptr->unlock();
       return iret;
     }
 
@@ -789,12 +782,14 @@ namespace tfs
      * @param [in] block_id block id, the one need expired.
      * @return TFS_SUCCESS success.
      */
-    int LayoutManager::rm_block_from_ds(const uint64_t ds_id, const uint32_t block_id)
+    int LayoutManager::rm_block_from_ds(const uint64_t ds_id, const uint32_t block_id,
+                        const common::RemoveBlockResponseFlag flag)
     {
       TBSYS_LOG(INFO, "remove  block: %u on server : %s", block_id, tbsys::CNetUtil::addrToString(ds_id).c_str());
 #if !defined(TFS_NS_GTEST) && !defined(TFS_NS_INTEGRATION)
       RemoveBlockMessage rbmsg;
       rbmsg.add_remove_id(block_id);
+      rbmsg.set_response_flag(flag);
 
       BlockInfo info;
       memset(&info, 0, sizeof(info));
@@ -817,13 +812,15 @@ namespace tfs
 #endif
     }
 
-    int LayoutManager::rm_block_from_ds(const uint64_t ds_id, const std::vector<uint32_t>& blocks)
+    int LayoutManager::rm_block_from_ds(const uint64_t ds_id, const std::vector<uint32_t>& blocks,
+                        const common::RemoveBlockResponseFlag flag)
     {
       TBSYS_LOG(INFO, "remove  block count: %u on server : %s", blocks.size(),
           tbsys::CNetUtil::addrToString(ds_id).c_str());
 #if !defined(TFS_NS_GTEST) && !defined(TFS_NS_INTEGRATION)
       RemoveBlockMessage rbmsg;
       rbmsg.set_remove_list(blocks);
+      rbmsg.set_response_flag(flag);
       BlockInfo info;
       memset(&info, 0, sizeof(info));
       std::vector<uint64_t> servers;
@@ -1261,6 +1258,19 @@ namespace tfs
                       add_new_block_helper_write_log(block_id, servers);
                     }
                   }//end send message to dataserver successful
+                  else
+                  {
+                    RWLock::Lock lock(*ptr, WRITE_LOCKER);
+                    block = ptr->find(block_id);
+                    if ((new_create_block_collect)
+                        || ((NULL != block)
+                           && (!new_create_block_collect)
+                           && (block->get_creating_flag() == BlockCollect::BLOCK_CREATE_FLAG_NO) 
+                           && (block->get_hold_size() <= 0)))
+                    {
+                      ptr->remove(block_id);
+                    }
+                  }
                 }
               }//end elect dataserver successful
             }//end if (count >0)
@@ -1272,7 +1282,7 @@ namespace tfs
 
     BlockCollect* LayoutManager::add_new_block_helper_create_by_system(uint32_t& block_id, ServerCollect* server, time_t now)
     {
-      BlockCollect* block = NULL;
+      /*BlockCollect* block = NULL;
       int32_t iret = block_id != 0 || alive_server_size_ <= 0 ? TFS_ERROR : TFS_SUCCESS;
       if (TFS_SUCCESS == iret)
       {
@@ -1332,6 +1342,79 @@ namespace tfs
                 RWLock::Lock lock(*ptr, WRITE_LOCKER);
                 ptr->remove(block_id);
               }
+            }
+          }
+        }
+      }//end if (TFS_SUCCESS == iret) check parameter*/
+      BlockCollect* block = NULL;
+      int32_t iret = block_id != 0 || alive_server_size_ <= 0 ? TFS_ERROR : TFS_SUCCESS;
+      if (TFS_SUCCESS == iret)
+      {
+        std::vector<ServerCollect*> need;
+        if (server != NULL)
+        {
+          int64_t use_capacity = GFactory::get_global_info().use_capacity_ <= 0 ? alive_server_size_ : GFactory::get_global_info().use_capacity_;
+          if (server->is_writable(use_capacity/alive_server_size_))
+          {
+            need.push_back(server);
+          }
+        }
+        BlockChunkPtr ptr = 0;
+        block_id = get_alive_block_id();
+        iret = INVALID_BLOCK_ID == block_id ? TFS_ERROR : TFS_SUCCESS;
+        if (TFS_SUCCESS == iret)
+        {
+          //add block collect object
+          ptr = get_chunk(block_id);
+          RWLock::Lock lock(*ptr, WRITE_LOCKER);
+          block = ptr->add(block_id, now);
+          iret = NULL != block ? TFS_SUCCESS : TFS_ERROR;
+          if (TFS_SUCCESS == iret)
+          {
+            block->set_create_flag(BlockCollect::BLOCK_CREATE_FLAG_YES);
+          }
+          else
+          {
+            TBSYS_LOG(ERROR, "add new block: %u fail", block_id);
+          }
+        }
+
+        if (TFS_SUCCESS == iret)
+        {
+          int32_t count = SYSPARAM_NAMESERVER.max_replication_ - need.size();
+          if (count > 0)
+          {
+            RWLock::Lock lock(server_mutex_, READ_LOCKER);
+            elect_write_server(*this, count, need);
+          }
+          iret = static_cast<int32_t>(need.size()) >= SYSPARAM_NAMESERVER.min_replication_ ? TFS_SUCCESS : TFS_ERROR; 
+          if (TFS_SUCCESS == iret)//add block collect object successful
+          {
+            iret = add_new_block_helper_send_msg(block_id, need);
+            if (TFS_SUCCESS == iret)
+            {
+              //build relation
+              iret = add_new_block_helper_build_relation(block_id, need);
+              if (TFS_SUCCESS == iret)
+              {
+                add_new_block_helper_write_log(block_id, need);
+              }
+            }//end send message to dataserver successful
+            else
+            {
+              if (0 != ptr)//rollback
+              {
+                RWLock::Lock lock(*ptr, WRITE_LOCKER);
+                ptr->remove(block_id);
+              }
+            }
+          }
+          else
+          {
+            if (0 != ptr)//rollback
+            {
+              RWLock::Lock lock(*ptr, WRITE_LOCKER);
+              ptr->remove(block_id);
             }
           }
         }
