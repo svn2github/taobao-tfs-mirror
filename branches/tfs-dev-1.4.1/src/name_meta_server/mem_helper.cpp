@@ -16,16 +16,41 @@
 #include "mem_helper.h"
 
 #include <stdlib.h>
+#include "meta_cache_helper.h"
 namespace tfs
 {
   namespace namemetaserver
   {
-    void* MemHelper::malloc(const int64_t size)
+    void* MemHelper::malloc(const int64_t size, const int32_t type)
     {
+      switch (type)
+      {
+        //TODO get from free_list
+        case CACHE_ROOT_NODE:
+          break;
+        case CACHE_DIR_META_NODE:
+          break;
+        case CACHE_FILE_META_NODE:
+          break;
+        default:
+          break;
+      }
       return ::malloc(size);
     }
-    void MemHelper::free(void* p)
+    void MemHelper::free(void* p, const int32_t type)
     {
+      switch (type)
+      {
+        //TODO insert into free_list
+        case CACHE_ROOT_NODE:
+          break;
+        case CACHE_DIR_META_NODE:
+          break;
+        case CACHE_FILE_META_NODE:
+          break;
+        default:
+          break;
+      }
       return ::free(p);
     }
   }

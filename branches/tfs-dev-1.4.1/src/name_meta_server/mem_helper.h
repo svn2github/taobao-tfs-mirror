@@ -25,8 +25,14 @@ namespace tfs
     class MemHelper
     {
       public:
-      static void* malloc(const int64_t size);
-      static void free(void* p);
+        enum
+        {
+          CACHE_ROOT_NODE = 1,
+          CACHE_DIR_META_NODE = 2,
+          CACHE_FILE_META_NODE = 3,
+        };
+        static void* malloc(const int64_t size, const int32_t type = 0);
+        static void free(void* p, const int32_t type = 0);
     };
   }
 }

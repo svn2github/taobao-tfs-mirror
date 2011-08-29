@@ -319,29 +319,34 @@ namespace tfs
       {
         TBSYS_LOG(INFO, "file_path(%s) is invalid", file_path);
       }
-      else if ((ret = get_p_meta_info(app_id, uid, v_name, p_meta_info)) != TFS_SUCCESS)
+      if (TFS_SUCCESS == ret)
       {
-        if (1 == get_depth(v_name))
+        //TODO mutex app_id, uid
+        ret = get_p_meta_info(app_id, uid, v_name, p_meta_info);
+        if (ret != TFS_SUCCESS)
         {
-          TBSYS_LOG(DEBUG, "create top directory. appid: %"PRI64_PREFIX"d, uid: %"PRI64_PREFIX"d, filepath: %s",
-                    app_id, uid, file_path);
-          // first create, "/foo", maybe no top directory
-          if ((ret = create_top_dir(app_id, uid)) != TFS_SUCCESS)
+          if (1 == get_depth(v_name))
           {
-            TBSYS_LOG(ERROR, "create top dir fail. appid: %"PRI64_PREFIX"d, uid: %"PRI64_PREFIX"d, filepath: %s",
-                      app_id, uid, file_path);
+            TBSYS_LOG(DEBUG, "create top directory. appid: %"PRI64_PREFIX"d, uid: %"PRI64_PREFIX"d, filepath: %s",
+                app_id, uid, file_path);
+            // first create, "/foo", maybe no top directory
+            if ((ret = create_top_dir(app_id, uid)) != TFS_SUCCESS)
+            {
+              TBSYS_LOG(ERROR, "create top dir fail. appid: %"PRI64_PREFIX"d, uid: %"PRI64_PREFIX"d, filepath: %s",
+                  app_id, uid, file_path);
+            }
+            // re-get info.
+            else if ((ret = get_p_meta_info(app_id, uid, v_name, p_meta_info)) != TFS_SUCCESS)
+            {
+              TBSYS_LOG(INFO, "get info fail. appid: %"PRI64_PREFIX"d, uid: %"PRI64_PREFIX"d, %s",
+                  app_id, uid, file_path);
+            }
           }
-          // re-get info.
-          else if ((ret = get_p_meta_info(app_id, uid, v_name, p_meta_info)) != TFS_SUCCESS)
+          else
           {
             TBSYS_LOG(INFO, "get info fail. appid: %"PRI64_PREFIX"d, uid: %"PRI64_PREFIX"d, %s",
-                      app_id, uid, file_path);
+                app_id, uid, file_path);
           }
-        }
-        else
-        {
-          TBSYS_LOG(INFO, "get info fail. appid: %"PRI64_PREFIX"d, uid: %"PRI64_PREFIX"d, %s",
-                    app_id, uid, file_path);
         }
       }
 
@@ -876,6 +881,7 @@ namespace tfs
       return ret;
     }
 
+    //TODO will be replaced by MetaStoreManager::get_file_frag_info
     int MetaServerService::get_meta_info(const int64_t app_id, const int64_t uid, const int64_t pid,
                                          const char* name, const int32_t name_len,
                                          const int64_t offset, const bool is_file,

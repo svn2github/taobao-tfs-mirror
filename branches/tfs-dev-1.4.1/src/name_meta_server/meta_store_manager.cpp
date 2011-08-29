@@ -16,13 +16,15 @@
 #include "meta_store_manager.h"
 #include "database_helper.h"
 #include "common/parameter.h"
+#include "meta_cache_helper.h"
 
 using namespace tfs::common;
 namespace tfs
 {
   namespace namemetaserver
   {
-    MetaStoreManager::MetaStoreManager()
+    MetaStoreManager::MetaStoreManager():
+      mutex_count_(5), app_id_uid_mutex_(NULL)
     {
       database_pool_ = new DataBasePool();
     }
@@ -69,15 +71,200 @@ namespace tfs
         free(user_name[i]);
         free(passwd[i]);
       }
+      app_id_uid_mutex_ = new tbsys::CThreadMutex[mutex_count_];
       return ret;
     }
 
     MetaStoreManager::~MetaStoreManager()
     {
       tbsys::gDelete(database_pool_);
+      tbsys::gDelete(app_id_uid_mutex_);
+    }
+    tbsys::CThreadMutex* MetaStoreManager::get_mutex(const int64_t app_id, const int64_t uid)
+    {
+      assert(NULL != app_id_uid_mutex_);
+      assert(mutex_count_ > 0);
+      HashHelper helper(app_id, uid);
+      int32_t hash_value = tbsys::CStringUtil::murMurHash((const void*)&helper, sizeof(HashHelper))
+        % mutex_count_;
+      return app_id_uid_mutex_ + hash_value;
+    }
+
+    int MetaStoreManager::select(const int64_t app_id, const int64_t uid, CacheDirMetaNode* p_dir_node,
+            const char* name, const bool is_file, void*& ret_node)
+    {
+      int ret = TFS_SUCCESS;
+      ret_node = NULL;
+      if (NULL == name || NULL == p_dir_node)
+      {
+        TBSYS_LOG(ERROR, "parameter error");
+        ret = TFS_ERROR;
+      }
+      bool got_all = false;
+      if (TFS_SUCCESS == ret)
+      {
+        if (is_file)
+        {
+          CacheFileMetaNode* ret_file_node = NULL;
+          ret = MetaCacheHelper::find_file(p_dir_node, name, ret_file_node);
+          ret_node = ret_file_node;
+          got_all = p_dir_node->is_got_all_file_children();
+        }
+        else
+        {
+          CacheDirMetaNode* ret_dir_node = NULL;
+          ret = MetaCacheHelper::find_dir(p_dir_node, name, ret_dir_node);
+          ret_node = ret_dir_node;
+          got_all = p_dir_node->is_got_all_dir_children();
+        }
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        if (NULL == ret_node && !got_all)
+        {
+          //need pull data from database
+          //TODO get all child from db, and set p_dir_node->flag_;
+          UNUSED(app_id);
+          UNUSED(uid);
+          ret = select(0, 0, p_dir_node, name, is_file, ret_node);
+        }
+      }
+      return ret;
+    }
+
+    //this will replace MetaServerService::get_meta_info func
+    int MetaStoreManager::get_file_frag_info(const int64_t app_id, const int64_t uid, 
+        CacheDirMetaNode* p_dir_node, CacheFileMetaNode* file_node,
+        const int64_t offset, std::vector<common::MetaInfo>& out_v_meta_info,
+        int32_t& cluster_id, int64_t& last_offset)
+    {
+      assert (NULL != p_dir_node);
+      assert (NULL != file_node);
+      cluster_id = -1;
+      last_offset = 0;
+      if (NULL == file_node->meta_info_ && -1 == file_node->size_)
+      {
+        //TODO get the first frag info of this file, set size if we got all
+      }
+      if (NULL == file_node->meta_info_)
+      {
+        assert(0 == file_node->size_);
+        //this means the file have no frag info, file size is 0
+      }
+      else
+      {
+        //TODO 
+        //if (offset < file_node->meta_info_.last_offset)
+        //{
+        //  //get info from mem
+        //}
+        //else
+        //{
+        //  //get info from db;
+        //}
+        UNUSED(app_id);
+        UNUSED(uid);
+        UNUSED(offset);
+        UNUSED(out_v_meta_info);
+      }
+      return TFS_SUCCESS;
+    }
+
+    //always return all children 
+    int MetaStoreManager::ls(const int64_t app_id, const int64_t uid, CacheDirMetaNode* p_dir_node,
+        const char* name, const bool is_file,
+        std::vector<common::MetaInfo>& out_v_meta_info, bool& still_have)
+    {
+      int ret = TFS_SUCCESS;
+      //TODO if we had not got p_dir_node's children we should got all children and put them into cache
+      //out_v_meta_info's size should be limited in MAX_OUT_INFO_COUNT
+      //out_v_meta_info will get the infos, which one >= name
+      UNUSED(app_id);
+      UNUSED(uid);
+      UNUSED(p_dir_node);
+      UNUSED(name);
+      UNUSED(is_file);
+      UNUSED(out_v_meta_info);
+      UNUSED(still_have);
+      return ret;
+
+    }
+    int MetaStoreManager::insert(const int64_t app_id, const int64_t uid,
+        CacheDirMetaNode* p_p_dir_node, CacheDirMetaNode* p_dir_node,
+        const char* name, const common::FileType type, common::MetaInfo* meta_info)
+    {
+      int ret = TFS_SUCCESS;
+      int32_t name_len = 0;
+      //we only cache the first line for file
+      if (NULL == p_p_dir_node || NULL == p_dir_node)
+      {
+        TBSYS_LOG(ERROR, "prameters err");
+        ret = TFS_ERROR;
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = insert(app_id, uid, p_p_dir_node->id_, p_dir_node->name_,
+            name_len, p_dir_node->id_,
+            name, name_len, type, meta_info);
+        if (TFS_SUCCESS != ret)
+        {
+          TBSYS_LOG(ERROR, "insert into db error");
+        }
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        int32_t now = tbsys::CTimeUtil::getTime()/1000000;
+        p_dir_node->modify_time_ = now;
+        switch (type)
+        {
+          case NORMAL_FILE:
+            {
+              if (NULL == p_dir_node->child_file_infos_)
+              {
+                p_dir_node->child_file_infos_ = new InfoArray<CacheFileMetaNode>();
+              }
+              InfoArray<CacheFileMetaNode>* info_array = NULL;
+              info_array = (InfoArray<CacheFileMetaNode>*)(p_dir_node->child_file_infos_);
+              CacheFileMetaNode* file_node = new CacheFileMetaNode();
+              file_node->size_ = -1;
+              file_node->create_time_ = now;
+              file_node->modify_time_ = now;
+              file_node->meta_info_ = NULL;
+              file_node->version_ = 0;
+              file_node->name_ = new char[name_len];
+              memcpy(file_node->name_, name, name_len);
+              if (!info_array->insert(file_node))
+              {
+                ret = TFS_ERROR;
+                delete [] file_node->name_;
+                file_node->name_ = NULL;
+              }
+            }
+            break;
+          case DIRECTORY:
+            {
+              if (NULL == p_dir_node->child_dir_infos_)
+              {
+                p_dir_node->child_dir_infos_ = new InfoArray<CacheDirMetaNode>();
+              }
+            }
+            break;
+          case PWRITE_FILE:
+            break;
+          default:
+            ret = TFS_ERROR;
+            TBSYS_LOG(ERROR, "unknow type %d", type);
+            break;
+        }
+        
+
+      }
+      return ret;
     }
 
 
+    ////////////////////////////////////////
+    //database about
     int MetaStoreManager::select(const int64_t app_id, const int64_t uid, const int64_t pid, const char* name, const int32_t name_len, const bool is_file, std::vector<MetaInfo>& out_v_meta_info)
     {
       int ret = TFS_ERROR;
@@ -206,7 +393,7 @@ namespace tfs
                 else
                 {
                   status = database_helper->pwrite_file(app_id, uid, pid, name, name_len,
-                  meta_info->file_info_.size_, meta_info->file_info_.ver_no_, frag_info, frag_len, proc_ret);
+                      meta_info->file_info_.size_, meta_info->file_info_.ver_no_, frag_info, frag_len, proc_ret);
                   if (TFS_SUCCESS != status)
                   {
                     TBSYS_LOG(DEBUG, "database helper pwrite file, status: %d", status);

@@ -54,6 +54,24 @@ namespace tfs
       bool operator < (const CacheDirMetaNode& right) const;
       bool operator == (const CacheDirMetaNode& right) const;
       bool operator != (const CacheDirMetaNode& right) const;
+      bool is_got_all_file_children() const
+      {
+        return 1 == flag_ & 0x01;
+      }
+      void set_got_all_file_children()
+      {
+        flag_ |= 0x01;
+      }
+      bool is_got_all_dir_children() const
+      {
+        return 1 == flag_ & 0x02;
+      }
+      void set_got_all_dir_children()
+      {
+        flag_ |= 0x02;
+      }
+
+
       int64_t id_;
       int32_t create_time_;
       int32_t modify_time_;
@@ -61,7 +79,8 @@ namespace tfs
       void* child_dir_infos_;
       void* child_file_infos_;
       int16_t version_;
-      int16_t flag_;    //we will set lowest bit if we got all children in cache
+      int16_t flag_;    //we will set lowest bit if we got all file children in cache, second lowset, dir children
+
     };
     struct CacheFileMetaNode
     {
@@ -154,35 +173,38 @@ namespace tfs
       bool InfoArray<T>::insert(T* node)
       {
         bool ret = false;
-        T** insert_pos = NULL;
-        insert_pos = std::lower_bound(begin_, begin_ + size_, node, PointCompareHelper());
-        int index = insert_pos - begin_;
-        if (size_ == 0 || index == size_ ||**insert_pos != *node)
+        if (NULL != node)
         {
-          //insert node to pos = index;
-          if (capacity_ == size_)
+          T** insert_pos = NULL;
+          insert_pos = std::lower_bound(begin_, begin_ + size_, node, PointCompareHelper());
+          int index = insert_pos - begin_;
+          if (size_ == 0 || index == size_ ||**insert_pos != *node)
           {
-            //expand
-            capacity_ += capacity_;
-            T** new_begin = (T**)MemHelper::malloc(sizeof(void*) * capacity_);
-            assert(NULL != new_begin);
-            memcpy(new_begin, begin_, sizeof(void*) * index);
-            new_begin[index] = node;
-            memcpy(new_begin + index + 1, begin_ + index, (size_ - index) * sizeof(void*));
-            MemHelper::free(begin_);
-            begin_ = new_begin;
+            //insert node to pos = index;
+            if (capacity_ == size_)
+            {
+              //expand
+              capacity_ += capacity_;
+              T** new_begin = (T**)MemHelper::malloc(sizeof(void*) * capacity_);
+              assert(NULL != new_begin);
+              memcpy(new_begin, begin_, sizeof(void*) * index);
+              new_begin[index] = node;
+              memcpy(new_begin + index + 1, begin_ + index, (size_ - index) * sizeof(void*));
+              MemHelper::free(begin_);
+              begin_ = new_begin;
+            }
+            else
+            {
+              memmove(begin_ + index + 1, begin_ + index, (size_ - index) * sizeof(void*));
+              begin_[index] = node;
+            }
+            size_++;
+            ret = true;
           }
           else
           {
-            memmove(begin_ + index + 1, begin_ + index, (size_ - index) * sizeof(void*));
-            begin_[index] = node;
+            TBSYS_LOG(ERROR, "should not insert the same value");
           }
-          size_++;
-          ret = true;
-        }
-        else
-        {
-          TBSYS_LOG(ERROR, "should not insert the same value");
         }
         return ret;
       }

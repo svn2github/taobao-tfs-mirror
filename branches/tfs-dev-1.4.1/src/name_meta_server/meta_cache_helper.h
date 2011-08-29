@@ -23,81 +23,85 @@ namespace tfs
     class MetaCacheHelper
     {
       public:
-        enum ObjType {
-          CACHE_ROOT_NODE = 1,
-          CACHE_DIR_META_NODE = 2,
-          CACHE_FILE_META_NODE = 3,
-        };  //we use this when malloc and free, so wo can reuse obj
-    template<class T>
-      static bool less_compare(const T& left, const T& right)
-      {
-        if (NULL == left.name_)
-        {
-          if (NULL == right.name_)
+        template<class T>
+          static bool less_compare(const T& left, const T& right)
           {
-            return false;
-          }
-          return true;
-        }
-        else
-        {
-          if (NULL == right.name_)
-          {
-            return false;
-          }
-          else
-          {
-            //the first char is the size of name
-            int l_len = *((unsigned char*)left.name_);
-            int r_len = *((unsigned char*)right.name_);
-            int ret_comp = ::memcmp(left.name_ + 1, right.name_ + 1, std::min(l_len, r_len));
-            if (0 == ret_comp)
+            if (NULL == left.name_)
             {
-              ret_comp = l_len - r_len;
+              if (NULL == right.name_)
+              {
+                return false;
+              }
+              return true;
             }
-            return ret_comp < 0;
-          }
-        }
-      }
-    template<class T>
-      static bool equal_compare(const T& left, const T& right)
-      {
-        if (NULL == left.name_)
-        {
-          if (NULL == right.name_)
-          {
-            return true;
-          }
-          return false;
-        }
-        else
-        {
-          if (NULL == right.name_)
-          {
-            return false;
-          }
-          else
-          {
-            //the first char is the size of name
-            int l_len = *((unsigned char*)left.name_);
-            int r_len = *((unsigned char*)right.name_);
-            if (l_len != r_len)
+            else
             {
+              if (NULL == right.name_)
+              {
+                return false;
+              }
+              else
+              {
+                //the first char is the size of name
+                int l_len = *((unsigned char*)left.name_);
+                int r_len = *((unsigned char*)right.name_);
+                int ret_comp = ::memcmp(left.name_ + 1, right.name_ + 1, std::min(l_len, r_len));
+                if (0 == ret_comp)
+                {
+                  ret_comp = l_len - r_len;
+                }
+                return ret_comp < 0;
+              }
+            }
+          }
+        template<class T>
+          static bool equal_compare(const T& left, const T& right)
+          {
+            if (NULL == left.name_)
+            {
+              if (NULL == right.name_)
+              {
+                return true;
+              }
               return false;
             }
-            int ret_comp = ::memcmp(left.name_ + 1, right.name_ + 1, std::min(l_len, r_len));
-            return ret_comp == 0;
+            else
+            {
+              if (NULL == right.name_)
+              {
+                return false;
+              }
+              else
+              {
+                //the first char is the size of name
+                int l_len = *((unsigned char*)left.name_);
+                int r_len = *((unsigned char*)right.name_);
+                if (l_len != r_len)
+                {
+                  return false;
+                }
+                int ret_comp = ::memcmp(left.name_ + 1, right.name_ + 1, std::min(l_len, r_len));
+                return ret_comp == 0;
+              }
+            }
           }
-        }
-      }
 
-      static int find_dir(const CacheDirMetaNode* p_dir_node,
-          const char* name, CacheDirMetaNode*& ret_node);
-      static int find_file(const CacheDirMetaNode* p_dir_node,
-          const char* name, CacheFileMetaNode*& ret_node);
+        static InfoArray<CacheDirMetaNode>* get_sub_dirs_array_info(const CacheDirMetaNode* p_dir_node);
+        static InfoArray<CacheFileMetaNode>* get_sub_files_array_info(const CacheDirMetaNode* p_dir_node);
+
+        static int find_dir(const CacheDirMetaNode* p_dir_node,
+            const char* name, CacheDirMetaNode*& ret_node);
+        static int find_file(const CacheDirMetaNode* p_dir_node,
+            const char* name, CacheFileMetaNode*& ret_node);
+
+        static int rm_dir(const CacheDirMetaNode* p_dir_node, const char* name);
+        static int rm_file(const CacheDirMetaNode* p_dir_node, const char* name);
+
+        static int insert_dir(const CacheDirMetaNode* p_dir_node, CacheDirMetaNode* node);
+        static int insert_file(const CacheDirMetaNode* p_dir_node, CacheFileMetaNode* node);
       private:
-      template<class T>
-      static int find(InfoArray<T>* info_arrfy, const char* name, T**& ret_value);
+        template<class T>
+          static int find(InfoArray<T>* info_arrfy, const char* name, T**& ret_value);
     };
   }
 }
