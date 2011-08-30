@@ -113,7 +113,7 @@ namespace tfs
 #endif
       // sort of utility
       uint64_t get_server_id();
-      int32_t get_cluster_id();
+      int32_t get_cluster_id(const char* ns_addr = NULL);
 
       int64_t save_file(char* ret_tfs_name, const int32_t ret_tfs_name_len,
                         const char* buf, const int64_t count,

@@ -266,9 +266,9 @@ uint64_t TfsClient::get_server_id()
   return TfsClientImpl::Instance()->get_server_id();
 }
 
-int32_t TfsClient::get_cluster_id()
+int32_t TfsClient::get_cluster_id(const char* ns_addr)
 {
-  return TfsClientImpl::Instance()->get_cluster_id();
+  return TfsClientImpl::Instance()->get_cluster_id(ns_addr);
 }
 
 int64_t TfsClient::save_file(char* ret_tfs_name, const int32_t ret_tfs_name_len,

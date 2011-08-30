@@ -242,16 +242,14 @@ namespace tfs
       }
     }
 
-    void FragInfo::push_back(FragInfo& new_frag_info)
+    void FragInfo::push_back(const FragInfo& new_frag_info)
     {
-      std::vector<FragMeta>::iterator iter = new_frag_info.v_frag_meta_.begin();
+      std::vector<FragMeta>::const_iterator iter = new_frag_info.v_frag_meta_.begin();
       for(; iter != new_frag_info.v_frag_meta_.end(); iter++)
       {
         v_frag_meta_.push_back(*iter);
       }
     }
-
-
 
     FileMetaInfo::FileMetaInfo() :
       pid_(-1), id_(0), create_time_(0), modify_time_(0),

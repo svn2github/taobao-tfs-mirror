@@ -70,7 +70,7 @@ namespace tfs
       // get last offset current fraginfo hold
       int64_t get_last_offset() const;
       void dump() const;
-      void push_back(FragInfo& new_frag_info);
+      void push_back(const FragInfo& new_frag_info);
 
       int32_t cluster_id_;
       bool had_been_split_;
@@ -163,6 +163,8 @@ namespace tfs
     // MetaInfo or FragInfo return count once
     const int32_t MAX_OUT_INFO_COUNT = 500;
     const int32_t ROW_LIMIT = 5;
+
+    const int64_t MAX_READ_FRAG_SIZE = static_cast<int64_t>(1) << 63 - 1;
 
   }
 }

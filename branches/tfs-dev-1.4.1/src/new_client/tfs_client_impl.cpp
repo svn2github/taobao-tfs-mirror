@@ -803,12 +803,31 @@ uint64_t TfsClientImpl::get_server_id()
   return server_id;
 }
 
-int32_t TfsClientImpl::get_cluster_id()
+int32_t TfsClientImpl::get_cluster_id(const char* ns_addr)
 {
   int32_t cluster_id = 0;
-  if (default_tfs_session_ != NULL)
+  if  (ns_addr != NULL)
   {
-    cluster_id = default_tfs_session_->get_cluster_id();
+    TfsSession* tfs_session = NULL;
+    if (!check_init())
+    {
+      TBSYS_LOG(ERROR, "tfs client not init");
+    }
+    else if (NULL == (tfs_session = get_session(ns_addr)))
+    {
+      TBSYS_LOG(ERROR, "can not get tfs session: %s.", NULL == ns_addr ? "default" : ns_addr);
+    }
+    else
+    {
+      cluster_id = tfs_session->get_cluster_id();
+    }
+  }
+  else
+  {
+    if (default_tfs_session_ != NULL)
+    {
+      cluster_id = default_tfs_session_->get_cluster_id();
+    }
   }
   return cluster_id;
 }
