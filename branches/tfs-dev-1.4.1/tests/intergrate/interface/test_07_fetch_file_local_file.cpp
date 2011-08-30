@@ -21,7 +21,7 @@ TEST_F(TfsInit,01_fetch_local_right)
 
 
 
-TEST_F(TfsInit,04_fetch_local_wrong_tfsname)
+TEST_F(TfsInit,02_fetch_local_wrong_tfsname)
 {
      char tfs_name[19]="twyujikolpoiujikmn";
 	 
@@ -38,7 +38,7 @@ TEST_F(TfsInit,04_fetch_local_wrong_tfsname)
 
 
 
-TEST_F(TfsInit,05_fetch_local_with_suffix)
+TEST_F(TfsInit,03_fetch_local_with_suffix)
 {
      char tfs_name[19];
 	 int32_t tfs_name_len=19;
@@ -54,7 +54,7 @@ TEST_F(TfsInit,05_fetch_local_with_suffix)
 	 EXPECT_EQ(TFS_SUCCESS,ret);
 }
 
-TEST_F(TfsInit,06_fetch_local_dif_suffix_1)
+TEST_F(TfsInit,04_fetch_local_dif_suffix_1)
 {
      char tfs_name[19];
 	 int32_t tfs_name_len=19;
@@ -70,7 +70,7 @@ TEST_F(TfsInit,06_fetch_local_dif_suffix_1)
 	 EXPECT_NE(TFS_SUCCESS,ret);
 }
 
-TEST_F(TfsInit,07_fetch_local_dif_suffix_2)
+TEST_F(TfsInit,05_fetch_local_dif_suffix_2)
 {
      char tfs_name[19];
 	 int32_t tfs_name_len=19;
@@ -86,7 +86,7 @@ TEST_F(TfsInit,07_fetch_local_dif_suffix_2)
 	 EXPECT_NE(TFS_SUCCESS,ret);
 }
 
-TEST_F(TfsInit,08_fetch_local_with_nsaddr)
+TEST_F(TfsInit,06_fetch_local_with_nsaddr)
 {
      char tfs_name[19];
 	 int32_t tfs_name_len=19;
@@ -102,7 +102,7 @@ TEST_F(TfsInit,08_fetch_local_with_nsaddr)
 	 EXPECT_EQ(TFS_SUCCESS,ret);
 }
 
-TEST_F(TfsInit,09_fetch_local_with_dif_nsaddr)
+TEST_F(TfsInit,07_fetch_local_with_dif_nsaddr)
 {
      char tfs_name[19];
 	 int32_t tfs_name_len=19;
@@ -119,7 +119,7 @@ TEST_F(TfsInit,09_fetch_local_with_dif_nsaddr)
 	 EXPECT_NE(TFS_SUCCESS,ret);
 }
 
-TEST_F(TfsInit,10_fetch_local_not_exit_nsaddr)
+TEST_F(TfsInit,08_fetch_local_not_exit_nsaddr)
 {
      char tfs_name[19];
 	 int32_t tfs_name_len=19;
@@ -135,7 +135,7 @@ TEST_F(TfsInit,10_fetch_local_not_exit_nsaddr)
 	 EXPECT_NE(TFS_SUCCESS,ret);
 }
 
-TEST_F(TfsInit,11_fetch_local_wrong_nsaddr)
+TEST_F(TfsInit,09_fetch_local_wrong_nsaddr)
 {
      char tfs_name[19];
 	 int32_t tfs_name_len=19;
@@ -151,7 +151,7 @@ TEST_F(TfsInit,11_fetch_local_wrong_nsaddr)
 	 EXPECT_NE(TFS_SUCCESS,ret);
 }
 
-TEST_F(TfsInit,12_fetch_null_local)
+TEST_F(TfsInit,10_fetch_null_local)
 {
      char tfs_name[19];
 	 int32_t tfs_name_len=19;
@@ -167,7 +167,7 @@ TEST_F(TfsInit,12_fetch_null_local)
 	 EXPECT_NE(TFS_SUCCESS,ret);
 }
 
-TEST_F(TfsInit,13_fetch_empty_local)
+TEST_F(TfsInit,11_fetch_empty_local)
 {
      char tfs_name[19];
 	 int32_t tfs_name_len=19;
@@ -183,7 +183,7 @@ TEST_F(TfsInit,13_fetch_empty_local)
 	 EXPECT_NE(TFS_SUCCESS,ret);
 }
 
-TEST_F(TfsInit,14_fetch_wrong_local)
+TEST_F(TfsInit,12_fetch_wrong_local)
 {
      char tfs_name[19];
 	 int32_t tfs_name_len=19;
@@ -199,7 +199,7 @@ TEST_F(TfsInit,14_fetch_wrong_local)
 	 EXPECT_NE(TFS_SUCCESS,ret);
 }
 
-TEST_F(TfsInit,15_fetch_large)
+TEST_F(TfsInit,13_fetch_large)
 {
      char tfs_name[19];
 	 int32_t tfs_name_len=19;
