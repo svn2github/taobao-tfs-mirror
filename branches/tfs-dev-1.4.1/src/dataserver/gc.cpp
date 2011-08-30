@@ -26,7 +26,7 @@ namespace dataserver
   GCObjectManager GCObjectManager::instance_;
 
   GCObjectManager::GCObjectManager():
-    destroy_(false)
+    is_init_(false), destroy_(false)
   {
 
   }
@@ -77,6 +77,7 @@ namespace dataserver
   {
     ExpireTimerTaskPtr task = new ExpireTimerTask(*this);
     int iret = timer->scheduleRepeated(task, tbutil::Time::seconds(SYSPARAM_DATASERVER.object_dead_max_time_));
+    is_init_ = true;
     return iret < 0 ? TFS_ERROR : TFS_SUCCESS;
   }
   

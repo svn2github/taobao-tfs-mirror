@@ -48,15 +48,13 @@ namespace tfs
         ns_ip_port_(0),
         repl_block_(NULL),
         compact_block_(NULL),
-        sync_mirror_(NULL),
         sync_mirror_status_(0),
         max_cpu_usage_ (SYSPARAM_DATASERVER.max_cpu_usage_),
         tfs_ds_stat_ ("tfs-ds-stat"),
         heartbeat_thread_(0),
         do_check_thread_(0),
         replicate_block_threads_(NULL),
-        compact_block_thread_(0),
-        do_sync_mirror_thread_(0)
+        compact_block_thread_(0)
     {
       //init dataserver info
       memset(need_send_blockinfo_, 0, sizeof(need_send_blockinfo_));
@@ -281,6 +279,14 @@ namespace tfs
 
       if (TFS_SUCCESS == iret)
       {
+        //init gcobject manager
+        iret = GCObjectManager::instance().initialize(get_timer());                                                                                          
+        if (TFS_SUCCESS != iret)
+        {
+          TBSYS_LOG(ERROR, "%s", "initialize gcobject manager fail");
+          return iret;
+        }
+
         //init global stat
         iret = stat_mgr_.initialize(get_timer());
         if (iret != TFS_SUCCESS)
@@ -305,15 +311,18 @@ namespace tfs
           repl_block_ = new ReplicateBlock(ns_ip_port_);
           compact_block_ = new CompactBlock(ns_ip_port_, data_server_info_.id_);
 
-          //backup type:1.tfs 2.nfs
-          int backup_type = SYSPARAM_DATASERVER.tfs_backup_type_;
-          TBSYS_LOG(INFO, "backup type: %d\n", SYSPARAM_DATASERVER.tfs_backup_type_);
-          sync_mirror_ = new SyncBase(backup_type);
-
           iret = data_management_.init_block_files(SYSPARAM_FILESYSPARAM);
           if (TFS_SUCCESS != iret)
           {
             TBSYS_LOG(ERROR, "dataservice::start, init block files fail! ret: %d\n", iret);
+          }
+
+          // sync mirror should init after bootstrap
+          iret = init_sync_mirror();
+          if (TFS_SUCCESS != iret)
+          {
+            TBSYS_LOG(ERROR, "dataservice::start, init sync mirror fail! \n");
+            return iret;
           }
         }
 
@@ -334,7 +343,6 @@ namespace tfs
           heartbeat_thread_ = new HeartBeatThreadHelper(*this);
           do_check_thread_  = new DoCheckThreadHelper(*this);
           compact_block_thread_ = new CompactBlockThreadHelper(*this);
-          do_sync_mirror_thread_ = new DoSyncMirrorThreadHelper(*this);
           replicate_block_threads_ =  new ReplicateBlockThreadHelperPtr[SYSPARAM_DATASERVER.replicate_thread_count_];
           for (int32_t i = 0; i < SYSPARAM_DATASERVER.replicate_thread_count_; ++i)
           {
@@ -366,6 +374,65 @@ namespace tfs
         }
       }
       return iret;
+    }
+
+    int DataService::init_sync_mirror()
+    {
+      int ret = TFS_SUCCESS;
+      //backup type:1.tfs 2.nfs
+      int backup_type = SYSPARAM_DATASERVER.tfs_backup_type_;
+      TBSYS_LOG(INFO, "backup type: %d\n", SYSPARAM_DATASERVER.tfs_backup_type_);
+
+      char src_addr[common::MAX_ADDRESS_LENGTH];
+      char dest_addr[common::MAX_ADDRESS_LENGTH];
+      memset(src_addr, 0, common::MAX_ADDRESS_LENGTH);
+      memset(dest_addr, 0, common::MAX_ADDRESS_LENGTH);
+
+      // sync to tfs
+      if (backup_type == SYNC_TO_TFS_MIRROR)
+      {
+        if (SYSPARAM_DATASERVER.local_ns_ip_ != NULL &&
+            strlen(SYSPARAM_DATASERVER.local_ns_ip_) > 0 &&
+            SYSPARAM_DATASERVER.local_ns_port_ != 0 &&
+            SYSPARAM_DATASERVER.slave_ns_ip_ != NULL &&
+            strlen(SYSPARAM_DATASERVER.slave_ns_ip_) > 0)
+        {
+          // 1.if sync_mirror_ not empty, stop & clean
+          sync_mirror_mutex_.lock();
+          if (!sync_mirror_.empty())
+          {
+            vector<SyncBase*>::iterator iter = sync_mirror_.begin();
+            for (; iter != sync_mirror_.end(); iter++)
+            {
+              (*iter)->stop();
+              tbsys::gDelete(*iter);
+            }
+            sync_mirror_.clear();
+          }
+          // 2.init SyncBase
+          snprintf(src_addr, MAX_ADDRESS_LENGTH, "%s:%d",
+                   SYSPARAM_DATASERVER.local_ns_ip_, SYSPARAM_DATASERVER.local_ns_port_);
+          std::vector<std::string> slave_ns_ip;
+          common::Func::split_string(SYSPARAM_DATASERVER.slave_ns_ip_, '|', slave_ns_ip);
+          for (uint8_t i = 0; i < slave_ns_ip.size(); i++)
+          {
+            // check slave_ns_ip valid 
+            snprintf(dest_addr, MAX_ADDRESS_LENGTH, "%s", slave_ns_ip.at(i).c_str());
+            SyncBase* sync_base = new SyncBase(*this, backup_type, i, src_addr, dest_addr);
+            // SyncBase init, will create thread
+            ret = sync_base->init();
+            if (TFS_SUCCESS != ret)
+            {
+              TBSYS_LOG(ERROR, "init sync base fail! local cluster ns addr: %s,slave cluster ns addr: %s\n",
+                      src_addr, dest_addr);
+              return ret;
+            }
+            sync_mirror_.push_back(sync_base);
+          }
+          sync_mirror_mutex_.unlock();
+        }
+      }
+      return ret;
     }
 
     int DataService::set_ns_ip()
@@ -446,10 +513,15 @@ namespace tfs
       //global stat destroy
       stat_mgr_.destroy();
 
-      if (NULL != sync_mirror_)
+      sync_mirror_mutex_.lock();
+      vector<SyncBase*>::iterator iter = sync_mirror_.begin();
+      for (; iter != sync_mirror_.end(); iter++)
       {
-        sync_mirror_->stop();
+        (*iter)->stop();
+        tbsys::gDelete(*iter);
       }
+      sync_mirror_.clear();
+      sync_mirror_mutex_.unlock();
       if (NULL != repl_block_)
       {
         repl_block_->stop();
@@ -475,11 +547,6 @@ namespace tfs
         compact_block_thread_->join();
         compact_block_thread_ = 0;
       }
-      if (0 != do_sync_mirror_thread_)
-      {
-        do_sync_mirror_thread_->join();
-        do_sync_mirror_thread_ = 0;
-      }
       if (NULL != replicate_block_threads_)
       {
         for (int32_t i = 0; i < SYSPARAM_DATASERVER.replicate_thread_count_; ++i)
@@ -494,7 +561,6 @@ namespace tfs
       tbsys::gDeleteA(replicate_block_threads_);
       tbsys::gDelete(repl_block_);
       tbsys::gDelete(compact_block_);
-      tbsys::gDelete(sync_mirror_);
       GCObjectManager::instance().destroy();
       return TFS_SUCCESS;
     }
@@ -716,7 +782,10 @@ namespace tfs
             int32_t option_flag = message->get_option_flag();
             if (all_success && 0 == (option_flag & TFS_FILE_NO_SYNC_LOG))
             {
-              sync_mirror_->write_sync_log(OPLOG_RENAME, block_id, new_file_id, file_id);
+              if (sync_mirror_.size() > 0)
+              {
+                sync_mirror_.at(0)->write_sync_log(OPLOG_RENAME, block_id, new_file_id, file_id);
+              }
             }
             else if (!all_success)
             {
@@ -755,13 +824,16 @@ namespace tfs
               if (TFS_SUCCESS == iret)
               {
                 //sync to mirror
-                int option_flag = message->get_option_flag();
-                if (0 == (option_flag & TFS_FILE_NO_SYNC_LOG))
+                if (sync_mirror_.size() > 0)
                 {
-                  TBSYS_LOG(INFO, " write sync log, blockid: %u, fileid: %" PRI64_PREFIX "u", close_file_info.block_id_,
-                      close_file_info.file_id_);
-                  iret = sync_mirror_->write_sync_log(OPLOG_INSERT, close_file_info.block_id_,
-                      close_file_info.file_id_);
+                  int option_flag = message->get_option_flag();
+                  if (0 == (option_flag & TFS_FILE_NO_SYNC_LOG))
+                  {
+                    TBSYS_LOG(INFO, " write sync log, blockid: %u, fileid: %" PRI64_PREFIX "u", close_file_info.block_id_,
+                        close_file_info.file_id_);
+                    iret = sync_mirror_.at(0)->write_sync_log(OPLOG_INSERT, close_file_info.block_id_,
+                        close_file_info.file_id_);
+                  }
                 }
               }
               if (TFS_SUCCESS == iret)
@@ -1204,12 +1276,15 @@ namespace tfs
                 if (TFS_SUCCESS == ret)
                 {
                   //sync to mirror
-                  if (0 == (option_flag & TFS_FILE_NO_SYNC_LOG))
+                  if (sync_mirror_.size() > 0)
                   {
-                    TBSYS_LOG(INFO, " write sync log, blockid: %u, fileid: %" PRI64_PREFIX "u", close_file_info.block_id_,
-                        close_file_info.file_id_);
-                    ret = sync_mirror_->write_sync_log(OPLOG_INSERT, close_file_info.block_id_,
-                        close_file_info.file_id_);
+                    if (0 == (option_flag & TFS_FILE_NO_SYNC_LOG))
+                    {
+                      TBSYS_LOG(INFO, " write sync log, blockid: %u, fileid: %" PRI64_PREFIX "u", close_file_info.block_id_,
+                          close_file_info.file_id_);
+                      ret = sync_mirror_.at(0)->write_sync_log(OPLOG_INSERT, close_file_info.block_id_,
+                          close_file_info.file_id_);
+                    }
                   }
                 }
 
@@ -1634,11 +1709,14 @@ namespace tfs
         message->reply(new StatusMessage(STATUS_MESSAGE_OK, data));
 
         //sync log
-        if (is_master && 0 == (option_flag & TFS_FILE_NO_SYNC_LOG))
+        if (sync_mirror_.size() > 0)
         {
-          TBSYS_LOG(DEBUG, "master dataserver: delete synclog. blockid: %d, fileid: %" PRI64_PREFIX "u, action: %d\n",
-              block_id, file_id, action);
-          sync_mirror_->write_sync_log(OPLOG_REMOVE, block_id, file_id, action);
+          if (is_master && 0 == (option_flag & TFS_FILE_NO_SYNC_LOG))
+          {
+            TBSYS_LOG(DEBUG, "master dataserver: delete synclog. blockid: %d, fileid: %" PRI64_PREFIX "u, action: %d\n",
+                block_id, file_id, action);
+            sync_mirror_.at(0)->write_sync_log(OPLOG_REMOVE, block_id, file_id, action);
+          }
         }
       }
 
@@ -1980,19 +2058,17 @@ namespace tfs
         }
         else
         {
-          if (message->get_switch_cluster_flag() && sync_mirror_)
+          // reply first, or will timeout
+          ret = message->reply(new StatusMessage(STATUS_MESSAGE_OK));
+          if (message->get_switch_cluster_flag())
           {
-            ret = sync_mirror_->reload_slave_ip();
+            ret = init_sync_mirror();
             if (TFS_SUCCESS != ret)
             {
-              TBSYS_LOG(ERROR, "reload slave ip error. ret: %d\n", ret);
+              TBSYS_LOG(ERROR, "reload config failed, init sync mirror fail!\n");
             }
           }
           TBSYS_LOG(INFO, "reload config ret: %d\n", ret);
-          if (TFS_SUCCESS == ret)
-          {
-            ret = message->reply(new StatusMessage(STATUS_MESSAGE_OK));
-          }
         }
       }
       return ret;
@@ -2286,11 +2362,6 @@ namespace tfs
     void DataService::CompactBlockThreadHelper::run()
     {
       service_.compact_block_->run_compact_block();
-    }
-
-    void DataService::DoSyncMirrorThreadHelper::run()
-    {
-      service_.sync_mirror_->run_sync_mirror();
     }
 
     int ds_async_callback(common::NewClient* client)

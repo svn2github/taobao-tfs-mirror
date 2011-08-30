@@ -303,12 +303,30 @@ namespace tfs
       TBSYS_LOG(INFO, "logicblock delete %s! logic blockid: %u. physical block size: %d, blocktype: %d, ret: %d",
                 ret ? "fail" : "success", logic_block_id, size, tmp_block_type, ret);
 
-      // 11. unlock & add logic block into gcobject manager
+      // 11. clean logic block associate stuff(index handle, physic block) & unlock 
       if (delete_block)
       {
+        delete_block->delete_block_file();
         delete_block->unlock();
-        delete_block->set_dead_time();
-        GCObjectManager::instance().add(delete_block);
+      }
+      // 12. if gc init, delay delete pointer, unlock & add logic block into gcobject manager
+      if (GCObjectManager::instance().is_init())
+      {
+        if (delete_block)
+        {
+          delete_block->set_dead_time();
+          GCObjectManager::instance().add(delete_block);
+        }
+      }
+      // else, delete pointer
+      else
+      {
+        tbsys::gDelete(delete_block);
+
+        for (list<PhysicalBlock*>::iterator lit = tmp_physic_block.begin(); lit != tmp_physic_block.end(); ++lit)
+        {
+          tbsys::gDelete(*lit);
+        }
       }
 
       return ret;
