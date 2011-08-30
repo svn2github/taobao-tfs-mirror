@@ -66,6 +66,9 @@ namespace tfs
             const char* local_file, const char* tfs_name);
         int64_t fetch_file(const char* ns_addr, const int64_t app_id, const int64_t uid,
             const char* local_file, const char* tfs_name);
+        //for tools
+        int read_frag_info(const int64_t app_id, const int64_t uid,
+            const char* file_path, common::FragInfo& frag_info);
 
       private:
         //meta server related

@@ -391,6 +391,13 @@ namespace tfs
       return ret != TFS_SUCCESS ? INVALID_FILE_SIZE : off_set;
     }
 
+    int NameMetaClientImpl::read_frag_info(const int64_t app_id, const int64_t uid,
+        const char* file_path, FragInfo& frag_info)
+    {
+      uint64_t meta_server_id = get_meta_server_id(app_id, uid);
+      return read_frag_info(meta_server_id, app_id, uid, file_path, frag_info);
+    }
+
 
     int NameMetaClientImpl::do_file_action(const int64_t app_id, const int64_t uid, MetaActionOp action, const char* path, const char* new_path)
     {
@@ -511,11 +518,10 @@ namespace tfs
             v_file_meta_info.push_back(iter->file_info_);
           }
 
-          FileMetaInfo last_file_meta_info;
-          last_file_meta_info = v_file_meta_info[meta_size - 1];
+          FileMetaInfo last_file_meta_info = tmp_v_meta_info[meta_size - 1].file_info_;
           last_pid = last_file_meta_info.pid_;
           last_file_type = last_file_meta_info.is_file() ? NORMAL_FILE:DIRECTORY;
-          strcpy(last_file_path, v_file_meta_info[meta_size - 1].name_.c_str());
+          strcpy(last_file_path, last_file_meta_info.name_.c_str());
         }
       }
       while (meta_size > 0 && still_have);

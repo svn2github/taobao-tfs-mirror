@@ -29,6 +29,7 @@
 #include "common/config_item.h"
 #include "common/client_manager.h"
 #include "common/status_message.h"
+#include "common/meta_server_define.h"
 #include "message/server_status_message.h"
 #include "message/client_cmd_message.h"
 #include "message/message_factory.h"
@@ -36,6 +37,7 @@
 #include "tools/util/ds_lib.h"
 #include "new_client/fsname.h"
 #include "new_client/tfs_client_impl.h"
+#include "new_client/tfs_meta_client_api_impl.h"
 
 using namespace std;
 using namespace tfs::client;
@@ -114,6 +116,13 @@ int cmd_list_file_info(const VSTRING& param);
 int cmd_batch_file(const VSTRING& param);
 int cmd_check_file_info(const VSTRING& param);
 int cmd_list_block(const VSTRING& param);
+//for meta server
+int cmd_ls_dir_meta(const VSTRING& param);
+int cmd_ls_file_meta(const VSTRING& param);
+int cmd_create_dir_meta(const VSTRING& param);
+int cmd_rm_dir_meta(const VSTRING& param);
+
+const char* g_meta_server_list = NULL;
 
 int main(int argc, char* argv[])
 {
@@ -123,7 +132,7 @@ int main(int argc, char* argv[])
   const char* nsip = NULL;
 
   // analyze arguments
-  while ((i = getopt(argc, argv, "s:nih")) != EOF)
+  while ((i = getopt(argc, argv, "s:m:nih")) != EOF)
   {
     switch (i)
     {
@@ -132,6 +141,9 @@ int main(int argc, char* argv[])
         break;
       case 's':
         nsip = optarg;
+        break;
+      case 'm':
+        g_meta_server_list = optarg;
         break;
       case 'i':
         directly = true;
@@ -200,6 +212,7 @@ static void usage(const char* name)
   fprintf(stderr,
           "Usage: %s -s [-n] [-i] [-h]\n"
           "       -s nameserver ip port\n"
+          "       -m meta_server_list /will be changed to root server when ready\n"
           "       -n set log level\n"
           "       -i directly execute the command\n"
           "       -h help\n",
@@ -243,6 +256,15 @@ void init()
   g_cmd_map["cfi"] = CmdNode("cfi tfsname", "check file info", 1, 1, cmd_check_file_info);
   g_cmd_map["@"] = CmdNode("@ file", "batch run command in file", 1, 1, cmd_batch_file);
   g_cmd_map["batch"] = CmdNode("batch file", "batch run command in file", 1, 1, cmd_batch_file);
+
+  g_cmd_map["ls_dir_meta"] = CmdNode("ls_dir_meta app_id uid full_path_dir_name",
+      "ls files and dirs in full_path_dir_name", 3, 3, cmd_ls_dir_meta);
+  g_cmd_map["ls_file_meta"] = CmdNode("ls_file_meta app_id uid full_path_file_name",
+      "ls file info and frag infos of full_path_file_name", 3, 3, cmd_ls_file_meta);
+  g_cmd_map["create_dir_meta"] = CmdNode("create_dir_meta app_id uid full_path_dir_name",
+      "create full_path_dir_name", 3, 3, cmd_create_dir_meta);
+  g_cmd_map["rm_dir_meta"] = CmdNode("rm_dir_meta app_id uid full_path_dir_name",
+      "rm full_path_dir_name", 3, 3, cmd_rm_dir_meta);
 }
 
 int main_loop()
@@ -817,5 +839,85 @@ int cmd_check_file_info(const VSTRING& param)
       }
     }
   }
+  return ret;
+}
+int cmd_ls_dir_meta(const VSTRING& param)
+{
+  int ret = TFS_SUCCESS;
+  NameMetaClientImpl impl;
+  int64_t app_id = strtoll(param[0].c_str(), NULL, 10);
+  int64_t uid = strtoll(param[1].c_str(), NULL, 10);
+  ret = impl.set_meta_servers(g_meta_server_list);
+
+  std::vector<FileMetaInfo> meta_info;
+  std::vector<FileMetaInfo>::const_iterator it;
+  if (TFS_SUCCESS == ret)
+  {
+    ret = impl.ls_dir(app_id, uid, param[2].c_str(), meta_info);
+  }
+  if (TFS_SUCCESS == ret)
+  {
+    for (it = meta_info.begin(); it != meta_info.end(); it++)
+    {
+      if (it->name_.size() > 0)
+        fprintf(stdout, "name:%s\n", it->name_.data());
+      fprintf(stdout, "pid %"PRI64_PREFIX"d id %"PRI64_PREFIX
+          "d create_time %d modify_time %d size %"PRI64_PREFIX"d ver_no %d\n",
+          it->pid_, it->id_, it->create_time_, it->modify_time_, it->size_, it->ver_no_);
+    }
+  }
+  return ret;
+}
+int cmd_ls_file_meta(const VSTRING& param)
+{
+  int ret = TFS_SUCCESS;
+  NameMetaClientImpl impl;
+  int64_t app_id = strtoll(param[0].c_str(), NULL, 10);
+  int64_t uid = strtoll(param[1].c_str(), NULL, 10);
+  ret = impl.set_meta_servers(g_meta_server_list);
+  FileMetaInfo file_info;
+  ret = impl.ls_file(app_id, uid, param[2].c_str(), file_info);
+  if (TFS_SUCCESS == ret)
+  {
+    if (file_info.name_.size() > 0)
+      fprintf(stdout, "name:%s\n", file_info.name_.data());
+    fprintf(stdout, "pid %"PRI64_PREFIX"d id %"PRI64_PREFIX
+        "d create_time %d modify_time %d size %"PRI64_PREFIX"d ver_no %d\n",
+        file_info.pid_, file_info.id_, file_info.create_time_,
+        file_info.modify_time_, file_info.size_, file_info.ver_no_);
+    FragInfo fraginfo;
+    ret = impl.read_frag_info(app_id, uid, param[2].c_str(), fraginfo);
+    if (TFS_SUCCESS == ret)
+    {
+      fraginfo.dump();
+    }
+  }
+  return ret;
+}
+int cmd_create_dir_meta(const VSTRING& param)
+{
+  int ret = TFS_SUCCESS;
+  NameMetaClientImpl impl;
+  int64_t app_id = strtoll(param[0].c_str(), NULL, 10);
+  int64_t uid = strtoll(param[1].c_str(), NULL, 10);
+  ret = impl.set_meta_servers(g_meta_server_list);
+  if (TFS_SUCCESS == ret)
+  {
+    ret = impl.create_dir(app_id, uid, param[2].c_str());
+  }
+  return ret;
+}
+int cmd_rm_dir_meta(const VSTRING& param)
+{
+  int ret = TFS_SUCCESS;
+  NameMetaClientImpl impl;
+  int64_t app_id = strtoll(param[0].c_str(), NULL, 10);
+  int64_t uid = strtoll(param[1].c_str(), NULL, 10);
+  ret = impl.set_meta_servers(g_meta_server_list);
+  if (TFS_SUCCESS == ret)
+  {
+    ret = impl.rm_dir(app_id, uid, param[2].c_str());
+  }
+
   return ret;
 }
