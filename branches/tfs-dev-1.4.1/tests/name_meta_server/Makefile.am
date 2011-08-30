@@ -20,12 +20,17 @@ test: check
 TESTS=
 check_PROGRAMS=
 
-noinst_PROGRAMS=test_meta_info test_cache_info
+noinst_PROGRAMS=test_meta_info test_cache_info test_cache_helper
 
 TESTS+=test_meta_info
 check_PROGRAMS+=test_meta_info
 test_meta_info_SOURCES=test_meta_info.cpp
+
 TESTS+=test_cache_info
 check_PROGRAMS+=test_cache_info
 test_cache_info_SOURCES= test_cache_info.cpp 
+
+TESTS+=test_cache_helper
+check_PROGRAMS+=test_cache_helper
+test_cache_helper_SOURCES= test_cache_helper.cpp 
 
