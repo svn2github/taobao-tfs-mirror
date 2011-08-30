@@ -155,7 +155,7 @@ int64_t TfsFile::read_ex(void* buf, const int64_t count, const int64_t offset,
     TBSYS_LOG(ERROR, "read fail, file status: %d is not open yes.", file_status_);
     ret = EXIT_NOT_OPEN_ERROR;
   }
-  else if (TFS_FILE_EOF_FLAG_YES == eof_)
+  else if (modify && TFS_FILE_EOF_FLAG_YES == eof_)
   {
     TBSYS_LOG(DEBUG, "read file reach end");
   }
