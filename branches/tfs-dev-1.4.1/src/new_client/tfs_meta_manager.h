@@ -33,7 +33,7 @@ namespace tfs
       int64_t read_data(const char* ns_addr, const uint32_t block_id, const uint64_t file_id,
           void* buffer, const int32_t pos, const int64_t length);
 
-      int64_t write_data(const char* ns_addr, void* buffer, const int64_t pos, const int64_t length,
+      int64_t write_data(const char* ns_addr, const void* buffer, const int64_t pos, const int64_t length,
           common::FragMeta& frag_meta);
 
     private:

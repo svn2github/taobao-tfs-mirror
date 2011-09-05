@@ -58,14 +58,15 @@ namespace tfs
         int64_t read(const char* ns_addr, const int64_t app_id, const int64_t uid,
             const char* file_path, void* buffer, const int64_t offset, const int64_t length);
         int64_t write(const char* ns_addr, const int64_t app_id, const int64_t uid,
-            const char* file_path, void* buffer, const int64_t length);
+            const char* file_path, const void* buffer, const int64_t length);
         int64_t write(const char* ns_addr, const int64_t app_id, const int64_t uid,
-            const char* file_path, void* buffer, const int64_t offset, const int64_t length);
+            const char* file_path, const void* buffer, const int64_t offset, const int64_t length);
 
         int64_t save_file(const char* ns_addr, const int64_t app_id, const int64_t uid,
             const char* local_file, const char* tfs_name);
         int64_t fetch_file(const char* ns_addr, const int64_t app_id, const int64_t uid,
             const char* local_file, const char* tfs_name);
+        int32_t get_cluster_id(const int64_t app_id, const int64_t uid, const char* path);
         //for tools
         int read_frag_info(const int64_t app_id, const int64_t uid,
             const char* file_path, common::FragInfo& frag_info);
@@ -96,7 +97,7 @@ namespace tfs
         // tfs cluster related
         int unlink_file(common::FragInfo& frag_info);
         int64_t read_data(const char* ns_addr, const common::FragInfo& frag_info, void* buffer, int64_t pos, int64_t length);
-        int64_t write_data(const char* ns_addr, int32_t cluster_id, void* buffer, int64_t pos, int64_t length,
+        int64_t write_data(const char* ns_addr, int32_t cluster_id, const void* buffer, int64_t pos, int64_t length,
             common::FragInfo& frag_info);
 
       private:

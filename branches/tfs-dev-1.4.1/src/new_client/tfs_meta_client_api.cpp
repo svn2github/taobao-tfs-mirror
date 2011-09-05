@@ -88,6 +88,10 @@ namespace tfs
     {
       return impl_->ls_file(app_id, uid, file_path, file_meta_info);
     }
+    int32_t NameMetaClient::get_cluster_id(const int64_t app_id, const int64_t uid, const char* path)
+    {
+      return impl_->get_cluster_id(app_id, uid, path);
+    }
 
     int64_t NameMetaClient::read(const char* ns_addr, const int64_t app_id, const int64_t uid,
         const char* file_path, void* buffer, int64_t offset, int64_t length)
@@ -96,13 +100,13 @@ namespace tfs
     }
 
     int64_t NameMetaClient::write(const char* ns_addr, const int64_t app_id, const int64_t uid,
-        const char* file_path, void* buffer, const int64_t length)
+        const char* file_path, const void* buffer, const int64_t length)
     {
       return impl_->write(ns_addr, app_id, uid, file_path, buffer, length);
     }
 
     int64_t NameMetaClient::write(const char* ns_addr, const int64_t app_id, const int64_t uid,
-        const char* file_path, void* buffer, const int64_t offset, const int64_t length)
+        const char* file_path, const void* buffer, const int64_t offset, const int64_t length)
     {
       return impl_->write(ns_addr, app_id, uid, file_path, buffer, offset, length);
     }

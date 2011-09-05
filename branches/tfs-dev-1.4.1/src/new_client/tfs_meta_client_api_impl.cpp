@@ -206,13 +206,13 @@ namespace tfs
     }
 
     int64_t NameMetaClientImpl::write(const char* ns_addr, int64_t app_id, int64_t uid,
-        const char* file_path, void* buffer, const int64_t length)
+        const char* file_path, const void* buffer, const int64_t length)
     {
       return write(ns_addr, app_id, uid, file_path, buffer, -1, length);
     }
 
     int64_t NameMetaClientImpl::write(const char* ns_addr, int64_t app_id, int64_t uid,
-        const char* file_path, void* buffer, const int64_t offset, const int64_t length)
+        const char* file_path, const void* buffer, const int64_t offset, const int64_t length)
     {
       int ret = TFS_SUCCESS;
       int32_t cluster_id = -1;
@@ -239,7 +239,7 @@ namespace tfs
           // write MAX_BATCH_DATA_LENGTH(8M) to tfs cluster
           int64_t write_length = min(left_length, MAX_BATCH_DATA_LENGTH);
           FragInfo frag_info;
-          int64_t real_write_length = write_data(ns_addr, cluster_id, reinterpret_cast<char*>(buffer) + cur_pos,
+          int64_t real_write_length = write_data(ns_addr, cluster_id, reinterpret_cast<const char*>(buffer) + cur_pos,
               cur_offset, write_length, frag_info);
           if (real_write_length != write_length)
           {
@@ -587,6 +587,11 @@ namespace tfs
       return ret;
     }
 
+    int32_t NameMetaClientImpl::get_cluster_id(const int64_t app_id, const int64_t uid, const char* path)
+    {
+      uint64_t meta_server_id = get_meta_server_id(app_id, uid);
+      return get_cluster_id(meta_server_id, app_id, uid, path);
+    }
     int32_t NameMetaClientImpl::get_cluster_id(const uint64_t meta_server_id, const int64_t app_id, const int64_t uid,
         const char* path)
     {
@@ -694,7 +699,7 @@ namespace tfs
     }
 
     int64_t NameMetaClientImpl::write_data(const char* ns_addr, int32_t cluster_id,
-        void* buffer, int64_t offset, int64_t length,
+        const void* buffer, int64_t offset, int64_t length,
         FragInfo& frag_info)
     {
       int ret = TFS_SUCCESS;
@@ -719,7 +724,7 @@ namespace tfs
         // write to tfs, and get frag meta
         write_length = min(left_length, MAX_SEGMENT_LENGTH);
         FragMeta frag_meta;
-        int64_t real_length = tfs_meta_manager.write_data(ns_addr, reinterpret_cast<char*>(buffer) + cur_pos, cur_offset, write_length, frag_meta);
+        int64_t real_length = tfs_meta_manager.write_data(ns_addr, reinterpret_cast<const char*>(buffer) + cur_pos, cur_offset, write_length, frag_meta);
 
         if (real_length != write_length)
         {

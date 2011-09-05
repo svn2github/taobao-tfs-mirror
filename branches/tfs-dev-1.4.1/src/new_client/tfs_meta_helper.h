@@ -18,6 +18,7 @@
 
 #include <string>
 #include "common/meta_server_define.h"
+#include "common/internal.h"
 
 namespace tfs
 {

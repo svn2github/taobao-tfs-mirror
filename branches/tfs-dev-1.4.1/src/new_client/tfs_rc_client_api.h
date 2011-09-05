@@ -17,6 +17,7 @@
 
 #include <string>
 #include "common/define.h"
+#include "common/meta_server_define.h"
 
 namespace tfs
 {
@@ -32,6 +33,9 @@ namespace tfs
           CREATE = 1,
           READ = 2,
           STAT = 3,
+          WRITE = 4, //raw tfs will not use this. only CREATE.
+                     //this for name meta tfs. 
+                     //use create create a tfs_file, use write for writing or appendding
         };
       public:
         RcClient();
@@ -73,6 +77,21 @@ namespace tfs
             char* tfs_name_buff, const int32_t buff_len);
 
         TfsRetType logout();
+        ///////////////// for name meta
+
+        TfsRetType create_dir(const int64_t uid, const char* dir_path);
+        TfsRetType rm_dir(const int64_t uid, const char* dir_path);
+        TfsRetType rm_file(const int64_t uid, const char* file_path);
+
+        TfsRetType mv_dir(const int64_t uid, const char* src_dir_path, const char* dest_dir_path);
+        TfsRetType mv_file(const int64_t uid, const char* src_file_path, const char* dest_file_path);
+
+        TfsRetType ls_dir(const int64_t uid, const char* dir_path,
+            std::vector<common::FileMetaInfo>& v_file_meta_info);
+        TfsRetType ls_file(const int64_t uid,
+            const char* file_path,
+            common::FileMetaInfo& file_meta_info);
+        
       private:
         RcClient(const RcClient&);
         RcClientImpl* impl_;

@@ -58,7 +58,7 @@ int64_t TfsMetaManager::read_data(const char* ns_addr, const uint32_t block_id, 
   return ret_length;
 }
 
-int64_t TfsMetaManager::write_data(const char* ns_addr, void* buffer, const int64_t offset, const int64_t length,
+int64_t TfsMetaManager::write_data(const char* ns_addr, const void* buffer, const int64_t offset, const int64_t length,
     common::FragMeta& frag_meta)
 {
   //TODO get tfs_file from file_pool
@@ -78,7 +78,7 @@ int64_t TfsMetaManager::write_data(const char* ns_addr, void* buffer, const int6
     do
     {
       cur_length = min(left_length, MAX_WRITE_DATA_IO);
-      write_length = tfs_client_->write(fd, reinterpret_cast<char*>(buffer) + cur_pos, cur_length);
+      write_length = tfs_client_->write(fd, reinterpret_cast<const char*>(buffer) + cur_pos, cur_length);
       if (write_length < 0)
       {
         TBSYS_LOG(ERROR, "tfs write data error, ret: %"PRI64_PREFIX"d", write_length);

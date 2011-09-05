@@ -15,6 +15,8 @@
  */
 
 #include "meta_server_define.h"
+#include "serialization.h"
+#include "stream.h"
 
 namespace tfs
 {

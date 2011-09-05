@@ -18,13 +18,12 @@
 
 #include <vector>
 #include <string>
-#include "serialization.h"
-#include "stream.h"
 
 namespace tfs
 {
   namespace common
   {
+    class Stream;
     enum FileType
     {
       NORMAL_FILE = 1,
