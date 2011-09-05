@@ -34,7 +34,7 @@ namespace tfs
         //TODO int init(const int32_t pool_size, const int32_t cache_size, const int32_t mutex_count); //cache_size M
         int init(const int32_t pool_size); //will replace 
 
-          tbsys::CThreadMutex* get_mutex(const int64_t app_id, const int64_t uid);
+        tbsys::CThreadMutex* get_mutex(const int64_t app_id, const int64_t uid);
 
         CacheDirMetaNode* get_top_dir(const int64_t app_id, const int64_t uid);
 
@@ -70,8 +70,10 @@ namespace tfs
             const int64_t pid, const char* name, const int32_t name_len, const bool is_file,
             std::vector<common::MetaInfo>& out_v_meta_info);
 
-        int ls(const int64_t app_id, const int64_t uid, const int64_t pid, const char* name,
-            const int32_t name_len, const bool is_file,
+        int ls(const int64_t app_id, const int64_t uid, const int64_t pid, 
+            const char* name, const int32_t name_len, 
+            const char* name_end, const int32_t name_end_len, 
+            const bool is_file,
             std::vector<common::MetaInfo>& out_v_meta_info, bool& still_have);
 
         int insert(const int64_t app_id, const int64_t uid,
@@ -91,6 +93,12 @@ namespace tfs
             const char* name, const int64_t name_len,
             const common::FileType type);
       private:
+        int get_all_children_from_db(const int64_t app_id, const int64_t uid, CacheDirMetaNode* p_dir_node);
+
+        int fill_file_meta_info(std::vector<common::MetaInfo>::iterator& meta_info_begin,
+            const std::vector<common::MetaInfo>::iterator meta_info_end,
+            CacheDirMetaNode* p_dir_node);
+
         int get_return_status(const int status, const int proc_ret);
         int force_rc(const int32_t need_size);
 

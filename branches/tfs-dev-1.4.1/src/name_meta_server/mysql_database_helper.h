@@ -34,7 +34,8 @@ namespace tfs
 
         virtual int ls_meta_info(std::vector<common::MetaInfo>& out_v_meta_info,
             const int64_t app_id, const int64_t uid,
-            const int64_t pid = 0, const char* name = NULL, const int32_t name_len = 0);
+            const int64_t pid = 0, const char* name = NULL, const int32_t name_len = 0,
+            const char* name_end = NULL, const int32_t name_end_len = 0);
 
         virtual int create_dir(const int64_t app_id, const int64_t uid,
             const int64_t ppid, const char* pname, const int32_t pname_len,
@@ -74,12 +75,14 @@ namespace tfs
 
       private:
         MYSQL_STMT *stmt_;
-        MYSQL_BIND ps_params_[4];  /* input parameter buffers */
+        MYSQL_BIND ps_params_[5];  /* input parameter buffers */
         int64_t app_id_;
         int64_t uid_;
         int64_t pid_;
         char pname_[common::MAX_FILE_PATH_LEN];
+        char pname_end_[common::MAX_FILE_PATH_LEN];
         unsigned long pname_len_;
+        unsigned long pname_end_len_;
       private:
         struct mysql_ex {
           std::string host;

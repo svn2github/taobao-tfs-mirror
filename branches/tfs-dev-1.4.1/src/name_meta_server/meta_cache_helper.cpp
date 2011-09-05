@@ -22,8 +22,8 @@ namespace tfs
   {
     using namespace common;
 
-    MetaCacheHelper::ROOT_NODE_MAP MetaCacheHelper::root_node_map_;
-    CacheRootNode* MetaCacheHelper::lru_head_;
+    //MetaCacheHelper::ROOT_NODE_MAP MetaCacheHelper::root_node_map_;
+    //CacheRootNode* MetaCacheHelper::lru_head_;
     InfoArray<CacheDirMetaNode>* MetaCacheHelper::get_sub_dirs_array_info(const CacheDirMetaNode* p_dir_node)
     {
       InfoArray<CacheDirMetaNode>* ret = NULL;
@@ -207,79 +207,71 @@ namespace tfs
       return ret;
     }
 
-    CacheDirMetaNode* MetaCacheHelper::add_top_dir(const int64_t app_id, const int64_t uid)
-    {
-      ROOT_NODE_MAP_ITER iter = root_node_map_.find(app_id);
-      TBSYS_LOG(DEBUG, "add top dir %"PRI64_PREFIX"d, %"PRI64_PREFIX"d", app_id, uid);
-      if (iter == root_node_map_.end())
-      {
-        iter = root_node_map_.insert(std::make_pair(app_id, __gnu_cxx::hash_map<int64_t, CacheRootNode*>())).first;
-      }
+    //CacheDirMetaNode* MetaCacheHelper::add_top_dir(const int64_t app_id, const int64_t uid)
+    //{
+    //  ROOT_NODE_MAP_ITER iter = root_node_map_.find(app_id);
+    //  TBSYS_LOG(DEBUG, "add top dir %"PRI64_PREFIX"d, %"PRI64_PREFIX"d", app_id, uid);
+    //  if (iter == root_node_map_.end())
+    //  {
+    //    iter = root_node_map_.insert(std::make_pair(app_id, __gnu_cxx::hash_map<int64_t, CacheRootNode*>())).first;
+    //  }
 
-      __gnu_cxx::hash_map<int64_t, CacheRootNode*>::const_iterator inner_iter = iter->second.find(uid);
-      if (inner_iter == iter->second.end())
-      {
-        inner_iter =
-          iter->second.insert(std::make_pair(uid, (CacheRootNode*)MemHelper::malloc(sizeof(CacheRootNode), CACHE_ROOT_NODE))).first;
-      }
+    //  __gnu_cxx::hash_map<int64_t, CacheRootNode*>::const_iterator inner_iter = iter->second.find(uid);
+    //  if (inner_iter == iter->second.end())
+    //  {
+    //    inner_iter =
+    //      iter->second.insert(std::make_pair(uid, (CacheRootNode*)MemHelper::malloc(sizeof(CacheRootNode), CACHE_ROOT_NODE))).first;
+    //  }
 
-      if (NULL == inner_iter->second->dir_meta_)
-      {
-        inner_iter->second->dir_meta_ = reinterpret_cast<CacheDirMetaNode*>(MemHelper::malloc(sizeof(CacheDirMetaNode), CACHE_DIR_META_NODE));
-      }
-      return inner_iter->second->dir_meta_;
-    }
+    //  if (NULL == inner_iter->second->dir_meta_)
+    //  {
+    //    inner_iter->second->dir_meta_ = reinterpret_cast<CacheDirMetaNode*>(MemHelper::malloc(sizeof(CacheDirMetaNode), CACHE_DIR_META_NODE));
+    //  }
+    //  return inner_iter->second->dir_meta_;
+    //}
 
-    CacheDirMetaNode* MetaCacheHelper::get_top_dir(const int64_t app_id, const int64_t uid)
-    {
-      CacheDirMetaNode* top_dir = NULL;
-      CacheRootNode* root_node = get_root_node(app_id, uid);
-      if (root_node != NULL)
-      {
-        TBSYS_LOG(DEBUG, "get top dir ");
-        top_dir = root_node->dir_meta_;
-        entrance(root_node);
-      }
-      return top_dir;
-    }
+    //CacheDirMetaNode* MetaCacheHelper::get_top_dir(const int64_t app_id, const int64_t uid)
+    //{
+    //  CacheDirMetaNode* top_dir = NULL;
+    //  CacheRootNode* root_node = get_root_node(app_id, uid);
+    //  if (root_node != NULL)
+    //  {
+    //    TBSYS_LOG(DEBUG, "get top dir ");
+    //    top_dir = root_node->dir_meta_;
+    //    entrance(root_node);
+    //  }
+    //  return top_dir;
+    //}
 
-    CacheRootNode* MetaCacheHelper::get_root_node(const int64_t app_id, const int64_t uid)
-    {
-      CacheRootNode* root_node = NULL;
-      ROOT_NODE_MAP_CONST_ITER iter = root_node_map_.find(app_id);
+    //CacheRootNode* MetaCacheHelper::get_root_node(const int64_t app_id, const int64_t uid)
+    //{
+    //  CacheRootNode* root_node = NULL;
+    //  ROOT_NODE_MAP_CONST_ITER iter = root_node_map_.find(app_id);
 
-      if (iter != root_node_map_.end())
-      {
-        __gnu_cxx::hash_map<int64_t, CacheRootNode*>::const_iterator uid_iter = iter->second.find(uid);
-        if (uid_iter != iter->second.end())
-        {
-          root_node = (CacheRootNode*)&(uid_iter->second);
-        }
-      }
-      return root_node;
-    }
+    //  if (iter != root_node_map_.end())
+    //  {
+    //    __gnu_cxx::hash_map<int64_t, CacheRootNode*>::const_iterator uid_iter = iter->second.find(uid);
+    //    if (uid_iter != iter->second.end())
+    //    {
+    //      root_node = (CacheRootNode*)&(uid_iter->second);
+    //    }
+    //  }
+    //  return root_node;
+    //}
 
-    void MetaCacheHelper::entrance(CacheRootNode* root_node)
-    {
-      // TODO: lock
-      if (root_node->previous_ != root_node->next_)
-      {
-        root_node->previous_->next_ = root_node->next_;
-        root_node->previous_ = lru_head_->previous_;
-        root_node->next_ = lru_head_;
-        lru_head_->previous_ = root_node;
-        lru_head_ = root_node;
-      }
-      ++root_node->visit_count_;
-    }
+    //void MetaCacheHelper::entrance(CacheRootNode* root_node)
+    //{
+    //  // TODO: lock
+    //  if (root_node->previous_ != root_node->next_)
+    //  {
+    //    root_node->previous_->next_ = root_node->next_;
+    //    root_node->previous_ = lru_head_->previous_;
+    //    root_node->next_ = lru_head_;
+    //    lru_head_->previous_ = root_node;
+    //    lru_head_ = root_node;
+    //  }
+    //  ++root_node->visit_count_;
+    //}
 
-    template<class T>
-      int MetaCacheHelper::find(InfoArray<T>* info_arrfy, const char* name, T**& ret_value)
-      {
-        int ret = TFS_SUCCESS;
-        assert(NULL != info_arrfy);
-        ret_value = info_arrfy->find(name);
-        return ret;
-      }
   }
 }

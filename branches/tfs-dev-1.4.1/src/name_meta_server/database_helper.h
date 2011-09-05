@@ -37,7 +37,8 @@ namespace tfs
 
         virtual int ls_meta_info(std::vector<common::MetaInfo>& out_v_meta_info,
             const int64_t app_id, const int64_t uid,
-            const int64_t pid = 0, const char* name = NULL, const int32_t name_len = 0) = 0;
+            const int64_t pid = 0, const char* name = NULL, const int32_t name_len = 0,
+            const char* name_end = NULL, const int32_t name_end_len = 0) = 0;
 
         virtual int create_dir(const int64_t app_id, const int64_t uid,
             const int64_t ppid, const char* pname, const int32_t pname_len,

@@ -16,16 +16,16 @@
 #ifndef TFS_NAMEMETASERVER_MEM_HELPER_H_
 #define TFS_NAMEMETASERVER_MEM_HELPER_H_
 #include <stdint.h>
-
+#include <tbsys.h>
 #include "common/define.h"
 
 namespace tfs
 {
   namespace namemetaserver
   {
-    class CacheRootNode;
-    class CacheDirMetaNode;
-    class CacheFileMetaNode;
+    //class CacheRootNode;
+    //class CacheDirMetaNode;
+    //class CacheFileMetaNode;
 
     enum
     {
@@ -35,25 +35,12 @@ namespace tfs
       CACHE_FILE_META_NODE = 3,
     };
 
-    // use array not list
     class MemNodeList
     {
     public:
-      MemNodeList();
+      explicit MemNodeList(const int32_t capacity);
       ~MemNodeList();
 
-      inline bool empty() const
-      {
-        return (0 == size_);
-      }
-      inline bool full() const
-      {
-        return (capacity_ == size_);
-      }
-      inline int32_t get_size() const
-      {
-        return size_;
-      }
       inline int32_t get_capacity() const
       {
         return capacity_;
@@ -61,27 +48,32 @@ namespace tfs
 
       void* get();
       bool put(void* p);
-      void free();
     private:
-      static const int32_t MAX_MEM_NODE_CAPACITY = 1 << 30;
       int32_t size_;
       int32_t capacity_;
-      void** p_list_;
+      void** p_root_;
     };
 
     class MemHelper
     {
     public:
-      MemHelper();
       ~MemHelper();
-
+      static bool init(const int32_t r_free_list_count, const int32_t d_free_list_count,
+          const int32_t f_free_list_count);
       static void* malloc(const int64_t size, const int32_t type = CACHE_NONE_NODE);
       static void free(void* p, const int32_t type = CACHE_NONE_NODE);
-      static void destroy();
     private:
-      static MemNodeList root_node_free_list_;
-      static MemNodeList dir_node_free_list_;
-      static MemNodeList file_node_free_list_;
+      MemHelper();
+      MemHelper(const int32_t r_free_list_count, const int32_t d_free_list_count, 
+          const int32_t f_free_list_count);
+      void destroy();
+    private:
+      static tbsys::CThreadMutex mutex_;
+      static MemHelper* instance_;
+    private:
+      MemNodeList* root_node_free_list_;
+      MemNodeList* dir_node_free_list_;
+      MemNodeList* file_node_free_list_;
     };
   }
 }

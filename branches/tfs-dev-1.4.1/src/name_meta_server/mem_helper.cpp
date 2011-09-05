@@ -16,30 +16,30 @@
 #include "mem_helper.h"
 
 #include <stdlib.h>
+#include <tbsys.h>
 #include "meta_cache_helper.h"
 
 namespace tfs
 {
   namespace namemetaserver
   {
-    MemNodeList::MemNodeList() : size_(0), capacity_(10)
+    MemNodeList::MemNodeList(const int32_t capacity)
+      :size_(0), capacity_(capacity), p_root_(NULL)
     {
-      p_list_ = (void**)::malloc(sizeof(void*) * capacity_);
-      assert(NULL != p_list_);
     }
 
     MemNodeList::~MemNodeList()
     {
-      free();
-      ::free(p_list_);
     }
 
     void* MemNodeList::get()
     {
       void* p_ret = NULL;
-      if (!empty())
+      if (size_ > 0)
       {
-        p_ret = p_list_[size_-1];
+        assert (NULL != p_root_);
+        p_ret = (void*)p_root_;
+        p_root_ = (void**)(*p_root_);
         --size_;
       }
       return p_ret;
@@ -47,71 +47,107 @@ namespace tfs
 
     bool MemNodeList::put(void* p)
     {
-      bool ret = true;
-      if (p != NULL)
+      bool ret = false;
+      if (size_ < capacity_)
       {
-        if (full())
-        {
-          if (capacity_ >= MAX_MEM_NODE_CAPACITY)
-          {
-            ret = false;
-          }
-          else
-          {
-            int32_t new_capacity = capacity_ << 1;
-            void** new_p_list = (void**)::malloc(sizeof(void*) * new_capacity);
-            memcpy(new_p_list, p_list_, capacity_);
-            ::free(p_list_);
-            capacity_ = new_capacity;
-            p_list_ = new_p_list;
-            p_list_[size_++] = p;
-          }
-        }
-        else
-        {
-          p_list_[size_++] = p;
-        }
+        (*((void**)p)) = p_root_;
+        ++size_;
+        p_root_ = (void**)p;
+        ret = true;
       }
       return ret;
     }
 
-    void MemNodeList::free()
+
+    tbsys::CThreadMutex MemHelper::mutex_;
+    MemHelper* MemHelper::instance_ = NULL;
+
+    MemHelper::MemHelper(): root_node_free_list_(NULL),
+        dir_node_free_list_(NULL), file_node_free_list_(NULL)
     {
-      for (int32_t i = 0; i < size_; i++)
-      {
-        ::free(p_list_[i]);
-      }
-      size_ = 0;
+    }
+    MemHelper::MemHelper(const int32_t r_free_list_count, const int32_t d_free_list_count, 
+          const int32_t f_free_list_count)
+    {
+      root_node_free_list_ = new MemNodeList(r_free_list_count);
+      dir_node_free_list_ = new MemNodeList(d_free_list_count);
+      file_node_free_list_ = new MemNodeList(f_free_list_count);
     }
 
-    MemNodeList MemHelper::root_node_free_list_;
-    MemNodeList MemHelper::dir_node_free_list_;
-    MemNodeList MemHelper::file_node_free_list_;
-
-    MemHelper::MemHelper()
+    bool MemHelper::init(const int32_t r_free_list_count, const int32_t d_free_list_count,
+          const int32_t f_free_list_count)
     {
+      bool ret = false;
+      tbsys::CThreadGuard mutex_guard(&mutex_);
+      if (NULL == instance_)
+      {
+        instance_ = new MemHelper(r_free_list_count, d_free_list_count, f_free_list_count);
+      }
+      ret = (NULL != instance_);
+      return ret;
     }
     MemHelper::~MemHelper()
     {
       destroy();
+      if (NULL != root_node_free_list_)
+      {
+        delete root_node_free_list_;
+        root_node_free_list_ = NULL;
+      }
+      if (NULL != dir_node_free_list_)
+      {
+        delete dir_node_free_list_;
+        dir_node_free_list_ = NULL;
+      }
+      if (NULL != file_node_free_list_)
+      {
+        delete file_node_free_list_;
+        file_node_free_list_ = NULL;
+      }
+      if (NULL != instance_)
+      {
+        delete instance_;
+        instance_ = NULL;
+      }
+    }
+
+    void MemHelper::destroy()
+    {
+      void* p = NULL;
+      while(NULL != root_node_free_list_ && NULL != (p = root_node_free_list_->get()))
+      {
+        ::free(p);
+      }
+      while(NULL != dir_node_free_list_ && NULL != (p = dir_node_free_list_->get()))
+      {
+        ::free(p);
+      }
+      while(NULL != file_node_free_list_ && NULL != (p = file_node_free_list_->get()))
+      {
+        ::free(p);
+      }
     }
 
     void* MemHelper::malloc(const int64_t size, const int32_t type)
     {
       void* ret_p = NULL;
-      switch (type)
       {
-      case CACHE_ROOT_NODE:
-        ret_p = root_node_free_list_.get();
-        break;
-      case CACHE_DIR_META_NODE:
-        ret_p = dir_node_free_list_.get();
-        break;
-      case CACHE_FILE_META_NODE:
-        ret_p = file_node_free_list_.get();
-        break;
-      default:
-        break;
+        tbsys::CThreadGuard mutex_guard(&mutex_);
+        assert(NULL != instance_);
+        switch (type)
+        {
+          case CACHE_ROOT_NODE:
+            ret_p = instance_->root_node_free_list_->get();
+            break;
+          case CACHE_DIR_META_NODE:
+            ret_p = instance_->dir_node_free_list_->get();
+            break;
+          case CACHE_FILE_META_NODE:
+            ret_p = instance_->file_node_free_list_->get();
+            break;
+          default:
+            break;
+        }
       }
 
       if (NULL == ret_p)
@@ -125,35 +161,29 @@ namespace tfs
       if (p != NULL)
       {
         bool ret = false;
-        switch (type)
         {
-        case CACHE_ROOT_NODE:
-          reinterpret_cast<CacheRootNode*>(p)->reset();
-          ret = root_node_free_list_.put(p);
-          break;
-        case CACHE_DIR_META_NODE:
-          reinterpret_cast<CacheDirMetaNode*>(p)->reset();
-          ret = dir_node_free_list_.put(p);
-          break;
-        case CACHE_FILE_META_NODE:
-          reinterpret_cast<CacheFileMetaNode*>(p)->reset();
-          ret = file_node_free_list_.put(p);
-          break;
-        default:
-          break;
+          tbsys::CThreadGuard mutex_guard(&mutex_);
+          assert(NULL != instance_);
+          switch (type)
+          {
+            case CACHE_ROOT_NODE:
+              ret = instance_->root_node_free_list_->put(p);
+              break;
+            case CACHE_DIR_META_NODE:
+              ret = instance_->dir_node_free_list_->put(p);
+              break;
+            case CACHE_FILE_META_NODE:
+              ret = instance_->file_node_free_list_->put(p);
+              break;
+            default:
+              break;
+          }
         }
-
         if (!ret)
         {
           ::free(p);
         }
       }
-    }
-    void MemHelper::destroy()
-    {
-      root_node_free_list_.free();
-      dir_node_free_list_.free();
-      file_node_free_list_.free();
     }
   }
 }

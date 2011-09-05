@@ -14,15 +14,19 @@
 *
 */
 #include "meta_store_manager.h"
-#include "database_helper.h"
+
 #include "common/parameter.h"
+#include "common/error_msg.h"
+#include "database_helper.h"
 #include "meta_cache_helper.h"
+#include "meta_server_service.h"
 
 using namespace tfs::common;
 namespace tfs
 {
   namespace namemetaserver
   {
+    using namespace std;
     MetaStoreManager::MetaStoreManager():
       mutex_count_(5), app_id_uid_mutex_(NULL)
     {
@@ -92,7 +96,11 @@ namespace tfs
 
     CacheDirMetaNode* MetaStoreManager::get_top_dir(const int64_t app_id, const int64_t uid)
     {
-      return MetaCacheHelper::get_top_dir(app_id, uid);
+      //TODO get_top_dir from lru
+      UNUSED(app_id);
+      UNUSED(uid);
+      CacheDirMetaNode* ret = NULL;
+      return ret;
     }
 
     int MetaStoreManager::select(const int64_t app_id, const int64_t uid, CacheDirMetaNode* p_dir_node,
@@ -127,14 +135,13 @@ namespace tfs
       {
         if (NULL == ret_node && !got_all)
         {
-          //need pull data from database
+          assert (app_id != 0);
+          assert (uid != 0);
           //TODO get all child from db, and set p_dir_node->flag_;
-          UNUSED(app_id);
-          UNUSED(uid);
-          ret = select(0, 0, p_dir_node, name, is_file, ret_node);
+          ret = get_all_children_from_db(app_id, uid, p_dir_node);
           if (TFS_SUCCESS == ret)
           {
-            
+            ret = select(0, 0, p_dir_node, name, is_file, ret_node);
           }
         }
       }
@@ -289,24 +296,29 @@ namespace tfs
       int ret = TFS_ERROR;
       out_v_meta_info.clear();
       bool still_have = false;
-      std::vector<MetaInfo> tmp_meta_info;
-      ret = ls(app_id, uid, pid, name, name_len, is_file, tmp_meta_info, still_have);
-      if (TFS_SUCCESS == ret)
+      char name_end[MAX_META_FILE_NAME_LEN+16];
+      if (NULL == name || (unsigned char)name[0] + 1 > MAX_META_FILE_NAME_LEN)
       {
-        std::vector<MetaInfo>::const_iterator it = tmp_meta_info.begin();
-        for( ;it != tmp_meta_info.end(); it++)
-        {
-          if (0 == memcmp(it->file_info_.name_.data(), name, name_len))
-          {
-            out_v_meta_info.push_back(*it);
-          }
-        }
-
+        TBSYS_LOG(ERROR, "parameters error");
+      }
+      else
+      {
+        //make name_end [len]xxxxxxxx[max_offset] 
+        memcpy(name_end, name, name_len);
+        char* p = name_end + (unsigned char)name[0] + 1;
+        int32_t name_end_len = name_len;
+        name_end_len = (unsigned char)name[0] + 1 + 8;
+        MetaServerService::int64_to_char(p, 8, -1L);
+        ret = ls(app_id, uid, pid, name, name_len, name_end, name_end_len, 
+            is_file, out_v_meta_info, still_have);
       }
       return ret;
     }
 
-    int MetaStoreManager::ls(const int64_t app_id, const int64_t uid, const int64_t pid, const char* name, const int32_t name_len, const bool is_file, std::vector<MetaInfo>& out_v_meta_info, bool& still_have)
+    int MetaStoreManager::ls(const int64_t app_id, const int64_t uid, const int64_t pid, 
+        const char* name, const int32_t name_len, 
+        const char* name_end, const int32_t name_end_len,
+        const bool is_file, std::vector<MetaInfo>& out_v_meta_info, bool& still_have)
     {
       int ret = TFS_ERROR;
       still_have = false;
@@ -325,7 +337,8 @@ namespace tfs
       database_helper = database_pool_->get(database_pool_->get_hash_flag(app_id, uid));
       if (NULL != database_helper)
       {
-        ret = database_helper->ls_meta_info(out_v_meta_info, app_id, uid, real_pid, name, name_len);
+        ret = database_helper->ls_meta_info(out_v_meta_info, app_id, uid, real_pid, 
+            name, name_len, name_end, name_end_len);
         database_pool_->release(database_helper);
       }
 
@@ -538,5 +551,123 @@ namespace tfs
 
       return ret;
     }
+
+    int MetaStoreManager::get_all_children_from_db(const int64_t app_id, const int64_t uid,
+        CacheDirMetaNode* p_dir_node)
+    {
+      int ret = TFS_ERROR;
+      assert (NULL != p_dir_node);
+      std::vector<MetaInfo> tmp_v_meta_info;
+      vector<MetaInfo>::iterator tmp_v_meta_info_it;
+      char name[MAX_META_FILE_NAME_LEN + 16];
+      int32_t name_len = 1;
+      name[0] = '\0';
+      bool still_have = false;
+      int my_file_type = DIRECTORY;
+      do
+      {
+        tmp_v_meta_info.clear();
+        still_have = false;
+
+        ret = ls(app_id, uid, p_dir_node->id_, 
+            name, name_len, NULL, 0,
+            my_file_type != DIRECTORY, tmp_v_meta_info, still_have);
+
+        if (!tmp_v_meta_info.empty())
+        {
+          tmp_v_meta_info_it = tmp_v_meta_info.begin();
+
+          if (my_file_type != DIRECTORY)
+          {
+            // fill file meta info
+            ret = fill_file_meta_info(tmp_v_meta_info_it, tmp_v_meta_info.end(), p_dir_node);
+            if (TFS_SUCCESS != ret)
+            {
+              break;
+            }
+          }
+          else
+          {
+            //TODO fill dir info;
+          }
+
+          // still have and need continue
+          if (still_have)
+          {
+            tmp_v_meta_info_it--;
+            MetaServerService::next_file_name_base_on(name, name_len,
+                tmp_v_meta_info_it->get_name(), tmp_v_meta_info_it->get_name_len());
+          }
+        }
+
+        // directory over, continue list file
+        if (my_file_type == DIRECTORY && !still_have)
+        {
+          my_file_type = NORMAL_FILE;
+          still_have = true;
+          name[0] = '\0';
+          name_len = 1;
+        }
+      } while (TFS_SUCCESS == ret && still_have);
+      if (TFS_SUCCESS == ret)
+      {
+        //set flag = child all;
+      }
+
+      return ret;
+    }
+    int MetaStoreManager::fill_file_meta_info(std::vector<common::MetaInfo>::iterator& meta_info_begin,
+        const std::vector<common::MetaInfo>::iterator meta_info_end,
+        CacheDirMetaNode* p_dir_node)
+    {
+      int ret = TFS_SUCCESS;
+      assert(NULL != p_dir_node);
+      for (; meta_info_begin != meta_info_end; meta_info_begin++)
+      {
+        CacheFileMetaNode* file_meta;
+        ret = MetaCacheHelper::find_file(p_dir_node, 
+            meta_info_begin->file_info_.name_.c_str(), file_meta);
+        if (TFS_SUCCESS != ret)
+        {
+          break;
+        }
+        // is the first line of file?
+        if (meta_info_begin->file_info_.name_.length() > 0
+            && *((unsigned char*)(meta_info_begin->file_info_.name_.c_str())) == meta_info_begin->file_info_.name_.length() -1)
+        {
+          //first line of file, insert it;
+          if (NULL == file_meta)
+          {
+            file_meta = new CacheFileMetaNode();
+            file_meta->name_ = (char*)malloc(meta_info_begin->file_info_.name_.length());
+            memcpy(file_meta->name_, meta_info_begin->file_info_.name_.c_str(), 
+                meta_info_begin->file_info_.name_.length());
+            file_meta->version_ = meta_info_begin->file_info_.ver_no_;
+
+            int64_t buff_len = 0;
+            int64_t pos = 0;
+            buff_len = meta_info_begin->frag_info_.get_length();
+            file_meta->meta_info_ = (char*)malloc(buff_len);
+            assert(TFS_SUCCESS == 
+                meta_info_begin->frag_info_.serialize(file_meta->meta_info_, buff_len, pos));
+
+            ret = MetaCacheHelper::insert_file(p_dir_node, file_meta);
+            if (TFS_SUCCESS != ret)
+            {
+              free(file_meta->meta_info_);
+              free(file_meta->name_);
+              delete file_meta;
+              break;
+            }
+          }
+        }
+        assert (NULL != file_meta);
+        file_meta->size_ = meta_info_begin->frag_info_.get_last_offset();
+        file_meta->create_time_ = meta_info_begin->file_info_.create_time_;
+        file_meta->modify_time_ = meta_info_begin->file_info_.modify_time_;
+      }
+      return ret;
+    }
+
   }
 }
