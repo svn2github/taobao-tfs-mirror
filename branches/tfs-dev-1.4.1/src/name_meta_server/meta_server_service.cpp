@@ -315,6 +315,7 @@ namespace tfs
       // not use parse_file_path to avoid dummy reparse.
       std::vector<std::string> v_name;
 
+      CacheDirMetaNode* p_p_dir_node = NULL, *p_dir_node = NULL;
       if ((ret = parse_name(file_path, v_name)) != TFS_SUCCESS)
       {
         TBSYS_LOG(INFO, "file_path(%s) is invalid", file_path);
@@ -322,44 +323,48 @@ namespace tfs
       if (TFS_SUCCESS == ret)
       {
         //TODO mutex app_id, uid
-        ret = get_p_meta_info(app_id, uid, v_name, p_meta_info);
+        ret = get_p_meta_info(app_id, uid, v_name, p_p_dir_node, p_dir_node);
+        // ret = get_p_meta_info(app_id, uid, v_name, p_meta_info);
         if (ret != TFS_SUCCESS)
         {
           if (1 == get_depth(v_name))
           {
             TBSYS_LOG(DEBUG, "create top directory. appid: %"PRI64_PREFIX"d, uid: %"PRI64_PREFIX"d, filepath: %s",
-                app_id, uid, file_path);
+                      app_id, uid, file_path);
             // first create, "/foo", maybe no top directory
             if ((ret = create_top_dir(app_id, uid)) != TFS_SUCCESS)
             {
               TBSYS_LOG(ERROR, "create top dir fail. appid: %"PRI64_PREFIX"d, uid: %"PRI64_PREFIX"d, filepath: %s",
-                  app_id, uid, file_path);
+                        app_id, uid, file_path);
             }
             // re-get info.
-            else if ((ret = get_p_meta_info(app_id, uid, v_name, p_meta_info)) != TFS_SUCCESS)
+            else if ((ret = get_p_meta_info(app_id, uid, v_name, p_p_dir_node, p_dir_node)) != TFS_SUCCESS)
+              // else if ((ret = get_p_meta_info(app_id, uid, v_name, p_meta_info)) != TFS_SUCCESS)
             {
               TBSYS_LOG(INFO, "get info fail. appid: %"PRI64_PREFIX"d, uid: %"PRI64_PREFIX"d, %s",
-                  app_id, uid, file_path);
+                        app_id, uid, file_path);
             }
           }
           else
           {
             TBSYS_LOG(INFO, "get info fail. appid: %"PRI64_PREFIX"d, uid: %"PRI64_PREFIX"d, %s",
-                app_id, uid, file_path);
+                      app_id, uid, file_path);
           }
         }
       }
 
       if (TFS_SUCCESS == ret)
       {
-          PROFILER_BEGIN("insert");
+        PROFILER_BEGIN("insert");
         if ((ret = get_name(v_name[get_depth(v_name)].c_str(), name, MAX_META_FILE_NAME_LEN, name_len)) != TFS_SUCCESS)
         {
           TBSYS_LOG(INFO, "get name fail. ret: %d", ret);
         }
-        else if ((ret = store_manager_->insert(app_id, uid, p_meta_info.get_pid(),
-                                          p_meta_info.get_name(), p_meta_info.get_name_len(),
-                                          p_meta_info.get_id(), name, name_len, type)) != TFS_SUCCESS)
+        // else if ((ret = store_manager_->insert(app_id, uid, p_meta_info.get_pid(),
+        //                                   p_meta_info.get_name(), p_meta_info.get_name_len(),
+        //                                   p_meta_info.get_id(), name, name_len, type)) != TFS_SUCCESS)
+        else if ((ret = store_manager_->insert(app_id, uid, p_p_dir_node, p_dir_node,
+                                               name, type)) != TFS_SUCCESS)
         {
           TBSYS_LOG(ERROR, "create fail: %s, type: %d, ret: %d", file_path, type, ret);
         }
@@ -860,6 +865,56 @@ namespace tfs
       return ret;
     }
 
+    int MetaServerService::get_p_meta_info(const int64_t app_id, const int64_t uid,
+                                           const std::vector<std::string>& v_name,
+                                           CacheDirMetaNode*& out_p_dir_node,
+                                           CacheDirMetaNode*& out_dir_node)
+    {
+      int ret = TFS_ERROR;
+      int32_t depth = get_depth(v_name);
+
+      char name[MAX_META_FILE_NAME_LEN];
+      int32_t name_len = 0;
+      std::vector<MetaInfo> tmp_v_meta_info;
+
+      CacheDirMetaNode* p_dir_node = get_top_dir(app_id, uid);
+      void* dir_node = NULL;
+
+      for (int32_t i = 0; i < depth; i++)
+      {
+        if ((ret = get_name(v_name[i].c_str(), name, MAX_META_FILE_NAME_LEN, name_len)) != TFS_SUCCESS)
+        {
+          break;
+        }
+
+        ret = store_manager_->select(app_id, uid, p_dir_node, name, false, dir_node);
+
+        if (ret != TFS_SUCCESS)
+        {
+          TBSYS_LOG(ERROR, "select name(%s) failed, ret: %d", name, ret);
+          break;
+        }
+
+        if (NULL == dir_node)
+        {
+          ret = TFS_ERROR;
+          TBSYS_LOG(DEBUG, "file(%s) not found, ret: %d", name, ret);
+          break;
+        }
+
+        if (i == depth - 1)
+        {
+          out_p_dir_node = p_dir_node;
+          out_dir_node = reinterpret_cast<CacheDirMetaNode*>(dir_node);
+          ret = TFS_SUCCESS;
+          break;
+        }
+        p_dir_node = reinterpret_cast<CacheDirMetaNode*>(dir_node);
+      }
+
+      return ret;
+    }
+
     int MetaServerService::get_dir_meta_info(const int64_t app_id, const int64_t uid, const int64_t pid,
                                              const char* name, const int32_t name_len,
                                              MetaInfo& out_meta_info)
@@ -1130,9 +1185,16 @@ namespace tfs
 
     int MetaServerService::create_top_dir(const int64_t app_id, const int64_t uid)
     {
+      return store_manager_->insert(app_id, uid, NULL, NULL, top_dir_name_, DIRECTORY);
+      // return store_manager_->insert(app_id, uid, 0, "", 0, 0,
+      //                               top_dir_name_, top_dir_size_, DIRECTORY);
+    }
 
-      return store_manager_->insert(app_id, uid, 0, "", 0, 0,
-                                    top_dir_name_, top_dir_size_, DIRECTORY);
+    CacheDirMetaNode* MetaServerService::get_top_dir(const int64_t app_id, const int64_t uid)
+    {
+      void* top_dir = NULL;
+      store_manager_->select(app_id, uid, NULL, top_dir_name_, false, top_dir);
+      return reinterpret_cast<CacheDirMetaNode*>(top_dir);
     }
 
     int MetaServerService::check_frag_info(const FragInfo& frag_info)

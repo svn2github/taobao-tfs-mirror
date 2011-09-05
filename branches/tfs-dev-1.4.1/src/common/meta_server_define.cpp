@@ -20,6 +20,30 @@ namespace tfs
 {
   namespace common
   {
+    int32_t FileName::length(const char* data)
+    {
+      int32_t length = 0;
+      if (data != NULL)
+      {
+        length = data[0] & 0x7F;
+        if (length > 0)
+        {
+          length += (data[0] & 0x80) ? (NAME_EXTRA_SIZE + 1): 1;
+        }
+      }
+      return length;
+    }
+
+    const char* FileName::name(const char* data)
+    {
+      const char* ret_name = data;
+      if (length(data) > 0)
+      {
+        ret_name = data + 1;
+      }
+      return ret_name;
+    }
+
     FragMeta::FragMeta() :
       block_id_(0), file_id_(0), offset_(0), size_(0)
     {

@@ -15,6 +15,7 @@
 */
 #ifndef TFS_NAMEMETASERVER_META_CACHE_HELPER_H_
 #define TFS_NAMEMETASERVER_META_CACHE_HELPER_H_
+#include <ext/hash_map>
 #include "meta_cache_info.h"
 namespace tfs
 {
@@ -86,8 +87,14 @@ namespace tfs
             }
           }
 
+      typedef __gnu_cxx::hash_map<int64_t, __gnu_cxx::hash_map<int64_t, CacheRootNode*> > ROOT_NODE_MAP;
+      typedef ROOT_NODE_MAP::const_iterator ROOT_NODE_MAP_CONST_ITER;
+      typedef ROOT_NODE_MAP::iterator ROOT_NODE_MAP_ITER;
+
         static InfoArray<CacheDirMetaNode>* get_sub_dirs_array_info(const CacheDirMetaNode* p_dir_node);
         static InfoArray<CacheFileMetaNode>* get_sub_files_array_info(const CacheDirMetaNode* p_dir_node);
+        static InfoArray<CacheDirMetaNode>* add_sub_dirs_array_info(CacheDirMetaNode* p_dir_node);
+        static InfoArray<CacheFileMetaNode>* add_sub_file_array_info(CacheDirMetaNode* p_dir_node);
 
         static int find_dir(const CacheDirMetaNode* p_dir_node,
             const char* name, CacheDirMetaNode*& ret_node);
@@ -97,11 +104,26 @@ namespace tfs
         static int rm_dir(const CacheDirMetaNode* p_dir_node, const char* name);
         static int rm_file(const CacheDirMetaNode* p_dir_node, const char* name);
 
-        static int insert_dir(const CacheDirMetaNode* p_dir_node, CacheDirMetaNode* node);
-        static int insert_file(const CacheDirMetaNode* p_dir_node, CacheFileMetaNode* node);
+        static int insert_dir(CacheDirMetaNode* p_dir_node, CacheDirMetaNode* node);
+        static int insert_file(CacheDirMetaNode* p_dir_node, CacheFileMetaNode* node);
+
+      static CacheDirMetaNode* add_top_dir(const int64_t app_id, const int64_t uid);
+      static CacheDirMetaNode* get_top_dir(const int64_t app_id, const int64_t uid);
+      static CacheRootNode* get_root_node(const int64_t app_id, const int64_t uid);
+
+      void gc(const CacheRootNode* root_node);
+      void gc(const int64_t app_id);
+      void gc(const int64_t app_id, const int64_t uid);
+
+      static void entrance(CacheRootNode* root_node);
       private:
         template<class T>
           static int find(InfoArray<T>* info_arrfy, const char* name, T**& ret_value);
+
+
+    private:
+      static ROOT_NODE_MAP root_node_map_;
+      static CacheRootNode* lru_head_;
     };
   }
 }

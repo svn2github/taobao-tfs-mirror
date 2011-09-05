@@ -76,8 +76,15 @@ namespace tfs
                                          const char* base_name, const int32_t base_name_len);
 
     private:
+      int get_p_meta_info(const int64_t app_id, const int64_t uid,
+                          const std::vector<std::string>& v_name,
+                          CacheDirMetaNode*& out_p_dir_node,
+                          CacheDirMetaNode*& out_dir_node);
+
+    private:
 
       int create_top_dir(const int64_t app_id, const int64_t uid);
+      CacheDirMetaNode* get_top_dir(const int64_t app_id, const int64_t uid);
 
       static int parse_name(const char* file_path, std::vector<std::string>& v_name);
       static int32_t get_depth(const std::vector<std::string>& v_name);

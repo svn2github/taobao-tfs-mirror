@@ -20,7 +20,7 @@ libnamemetaserver_a_SOURCES=meta_server_service.cpp meta_store_manager.cpp \
 			    database_helper.cpp mysql_database_helper.cpp database_pool.cpp \
 					mem_helper.cpp meta_cache_helper.cpp meta_cache_info.cpp
 
-bin_PROGRAMS = metaserver test test_pool test_service
+bin_PROGRAMS = metaserver test test_pool test_service test_cache_info
 
 metaserver_SOURCES=$(libnamemetaserver_a_SOURCES) main.cpp
 
@@ -29,3 +29,6 @@ test_SOURCES=$(libnamemetaserver_a_SOURCES) test.cpp
 test_pool_SOURCES=$(libnamemetaserver_a_SOURCES) test_pool.cpp
 
 test_service_SOURCES=$(libnamemetaserver_a_SOURCES) test_service.cpp
+
+test_cache_info_LDFLAGS=-lgtest
+test_cache_info_SOURCES=$(libnamemetaserver_a_SOURCES) test_cache_info.cpp

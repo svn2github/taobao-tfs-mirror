@@ -32,6 +32,14 @@ namespace tfs
       PWRITE_FILE = 3
     };
 
+    class FileName
+    {
+    public:
+      static const int32_t NAME_EXTRA_SIZE = 8;
+      static int32_t length(const char* data);
+      static const char* name(const char* data);
+    };
+
     struct FragMeta
     {
       FragMeta();

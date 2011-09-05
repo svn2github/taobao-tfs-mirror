@@ -39,7 +39,10 @@ namespace tfs
       int64_t user_id_;
       int64_t size_;    //the mem size occupied by this user
       int64_t visit_count_;
-      CacheDirMetaNode* dir_meta_;
+      CacheDirMetaNode* dir_meta_; // top dir
+      // for lru list
+      CacheRootNode* previous_;
+      CacheRootNode* next_;
     };
     struct CacheDirMetaNode
     {
@@ -80,7 +83,6 @@ namespace tfs
       void* child_file_infos_;
       int16_t version_;
       int16_t flag_;    //we will set lowest bit if we got all file children in cache, second lowset, dir children
-
     };
     struct CacheFileMetaNode
     {
@@ -110,7 +112,7 @@ namespace tfs
           InfoArray();
           T** find(const char* name);
           bool insert(T* node);
-          void remove(const char* name);
+          T** remove(const char* name);
           ~InfoArray();
           int32_t get_size() const
           {
@@ -209,7 +211,7 @@ namespace tfs
         return ret;
       }
     template<class T>
-      void InfoArray<T>::remove(const char* name)
+      T** InfoArray<T>::remove(const char* name)
       {
         T** pos = find(name);
         if (NULL != pos)
@@ -218,7 +220,7 @@ namespace tfs
           memmove(begin_ + index, begin_ + index + 1, (size_ - index - 1) * sizeof(void*));
           size_ --;
         }
-        return;
+        return pos;
       }
   }
 }

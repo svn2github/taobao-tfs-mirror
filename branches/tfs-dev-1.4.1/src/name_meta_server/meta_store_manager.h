@@ -34,7 +34,9 @@ namespace tfs
         //TODO int init(const int32_t pool_size, const int32_t cache_size, const int32_t mutex_count); //cache_size M
         int init(const int32_t pool_size); //will replace 
 
-        tbsys::CThreadMutex* get_mutex(const int64_t app_id, const int64_t uid);
+          tbsys::CThreadMutex* get_mutex(const int64_t app_id, const int64_t uid);
+
+        CacheDirMetaNode* get_top_dir(const int64_t app_id, const int64_t uid);
 
         int select(const int64_t app_id, const int64_t uid, CacheDirMetaNode* p_dir_node,
             const char* name, const bool is_file, void*& ret_node);
