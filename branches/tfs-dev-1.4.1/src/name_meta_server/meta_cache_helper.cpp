@@ -47,8 +47,9 @@ namespace tfs
       InfoArray<CacheDirMetaNode>* ret = NULL;
       if (NULL != p_dir_node)
       {
-        // malloc
-        ret = new InfoArray<CacheDirMetaNode>();
+        void* addr = malloc(sizeof(InfoArray<CacheDirMetaNode>));
+        assert(NULL != addr);
+        ret = new(addr)InfoArray<CacheDirMetaNode>();
         p_dir_node->child_dir_infos_ = ret;
       }
       return ret;
@@ -58,8 +59,9 @@ namespace tfs
       InfoArray<CacheFileMetaNode>* ret = NULL;
       if (NULL != p_dir_node)
       {
-        // malloc
-        ret = new InfoArray<CacheFileMetaNode>();
+        void* addr = malloc(sizeof(InfoArray<CacheFileMetaNode>));
+        assert(NULL != addr);
+        ret = new(addr)InfoArray<CacheFileMetaNode>();
         p_dir_node->child_file_infos_ = ret;
       }
       return ret;
@@ -114,38 +116,34 @@ namespace tfs
       }
       return ret;
     }
-    int MetaCacheHelper::rm_dir(const CacheDirMetaNode* p_dir_node, const char* name)
+    int MetaCacheHelper::rm_dir(const CacheDirMetaNode* p_dir_node, CacheDirMetaNode* dir_node)
     {
       int ret = TFS_ERROR;
-      if (NULL != p_dir_node && NULL != name)
+      if (NULL != p_dir_node && NULL != dir_node && NULL != dir_node->name_)
       {
         InfoArray<CacheDirMetaNode>* child_dir_infos = get_sub_dirs_array_info(p_dir_node);
         if (NULL != child_dir_infos)
         {
-          CacheDirMetaNode** child_dir = child_dir_infos->remove(name);
-          if (child_dir != NULL)
+          if(child_dir_infos->remove(dir_node->name_))
           {
-            MemHelper::free(*child_dir, CACHE_DIR_META_NODE);
+            ret = TFS_SUCCESS;
           }
-          ret = TFS_SUCCESS;
         }
       }
       return ret;
     }
-    int MetaCacheHelper::rm_file(const CacheDirMetaNode* p_dir_node, const char* name)
+    int MetaCacheHelper::rm_file(const CacheDirMetaNode* p_dir_node, CacheFileMetaNode* file_node)
     {
       int ret = TFS_ERROR;
-      if (NULL != p_dir_node && NULL != name)
+      if (NULL != p_dir_node && NULL != file_node && NULL != file_node->name_)
       {
         InfoArray<CacheFileMetaNode>* child_file_infos = get_sub_files_array_info(p_dir_node);
         if (NULL != child_file_infos)
         {
-          CacheFileMetaNode** child_file = child_file_infos->remove(name);
-          if (child_file != NULL)
+          if(child_file_infos->remove(file_node->name_))
           {
-            MemHelper::free(*child_file, CACHE_FILE_META_NODE);
+            ret = TFS_SUCCESS;
           }
-          ret = TFS_SUCCESS;
         }
       }
       return ret;
@@ -203,6 +201,61 @@ namespace tfs
             ret = TFS_SUCCESS;
           }
         }
+      }
+      return ret;
+    }
+
+    int MetaCacheHelper::free(CacheDirMetaNode* dir_meta_node)
+    {
+      int ret = TFS_SUCCESS;
+      if (NULL != dir_meta_node)
+      {
+        if (NULL != dir_meta_node->name_)
+        {
+          ::free(dir_meta_node->name_);
+          dir_meta_node->name_ = NULL;
+        }
+        if (NULL != dir_meta_node->child_dir_infos_)
+        {
+          InfoArray<CacheDirMetaNode>* child_dir_infos = get_sub_dirs_array_info(dir_meta_node);
+          CacheDirMetaNode** begin = child_dir_infos->get_begin();
+          for (int i = 0; i < child_dir_infos->get_size(); i++)
+          {
+            free(*(begin + i));
+          }
+          ((InfoArray<CacheDirMetaNode>*)(dir_meta_node->child_dir_infos_))->~InfoArray();
+          ::free((InfoArray<CacheDirMetaNode>*)(dir_meta_node->child_dir_infos_));
+        }
+        if (NULL != dir_meta_node->child_dir_infos_)
+        {
+          InfoArray<CacheFileMetaNode>* child_file_infos = get_sub_files_array_info(dir_meta_node);
+          CacheFileMetaNode** begin = child_file_infos->get_begin();
+          for (int i = 0; i < child_file_infos->get_size(); i++)
+          {
+            free(*(begin + i));
+          }
+          ((InfoArray<CacheFileMetaNode>*)(dir_meta_node->child_file_infos_))->~InfoArray();
+          ::free((InfoArray<CacheFileMetaNode>*)(dir_meta_node->child_file_infos_));
+        }
+        ::free(dir_meta_node);
+      }
+      return ret;
+    }
+    int MetaCacheHelper::free(CacheFileMetaNode* file_meta_node)
+    {
+      int ret = TFS_SUCCESS;
+      if (NULL != file_meta_node)
+      {
+        if (NULL != file_meta_node->name_)
+        {
+          ::free(file_meta_node->name_);
+          file_meta_node->name_ = NULL;
+        }
+        if (NULL != file_meta_node->meta_info_)
+        {
+          ::free(file_meta_node->meta_info_);
+        }
+        ::free(file_meta_node);
       }
       return ret;
     }

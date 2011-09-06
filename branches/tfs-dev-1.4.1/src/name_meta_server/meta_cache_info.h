@@ -40,9 +40,6 @@ namespace tfs
       int64_t size_;    //the mem size occupied by this user
       int64_t visit_count_;
       CacheDirMetaNode* dir_meta_; // top dir
-      // for lru list
-      CacheRootNode* previous_;
-      CacheRootNode* next_;
     };
     struct CacheDirMetaNode
     {
@@ -57,23 +54,14 @@ namespace tfs
       bool operator < (const CacheDirMetaNode& right) const;
       bool operator == (const CacheDirMetaNode& right) const;
       bool operator != (const CacheDirMetaNode& right) const;
-      bool is_got_all_file_children() const
+      bool is_got_all_children() const
       {
         return 1 == flag_ & 0x01;
       }
-      void set_got_all_file_children()
+      void set_got_all_children()
       {
         flag_ |= 0x01;
       }
-      bool is_got_all_dir_children() const
-      {
-        return 1 == flag_ & 0x02;
-      }
-      void set_got_all_dir_children()
-      {
-        flag_ |= 0x02;
-      }
-
 
       int64_t id_;
       int32_t create_time_;
@@ -82,7 +70,7 @@ namespace tfs
       void* child_dir_infos_;
       void* child_file_infos_;
       int16_t version_;
-      int16_t flag_;    //we will set lowest bit if we got all file children in cache, second lowset, dir children
+      int16_t flag_;    //we will set lowest bit if we got all  children in cache
     };
     struct CacheFileMetaNode
     {
@@ -112,7 +100,7 @@ namespace tfs
           InfoArray();
           T** find(const char* name);
           bool insert(T* node);
-          T** remove(const char* name);
+          bool remove(const char* name);
           ~InfoArray();
           int32_t get_size() const
           {
@@ -211,16 +199,18 @@ namespace tfs
         return ret;
       }
     template<class T>
-      T** InfoArray<T>::remove(const char* name)
+      bool InfoArray<T>::remove(const char* name)
       {
+        bool ret = false;
         T** pos = find(name);
         if (NULL != pos)
         {
+          ret = true;
           int index = pos - begin_;
           memmove(begin_ + index, begin_ + index + 1, (size_ - index - 1) * sizeof(void*));
           size_ --;
         }
-        return pos;
+        return ret;
       }
   }
 }

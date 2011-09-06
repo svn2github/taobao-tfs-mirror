@@ -102,11 +102,14 @@ namespace tfs
         static int find_file(const CacheDirMetaNode* p_dir_node,
             const char* name, CacheFileMetaNode*& ret_node);
 
-        static int rm_dir(const CacheDirMetaNode* p_dir_node, const char* name);
-        static int rm_file(const CacheDirMetaNode* p_dir_node, const char* name);
+        static int rm_dir(const CacheDirMetaNode* p_dir_node, CacheDirMetaNode* dir_node);
+        static int rm_file(const CacheDirMetaNode* p_dir_node, CacheFileMetaNode* file_node);
 
         static int insert_dir(CacheDirMetaNode* p_dir_node, CacheDirMetaNode* node);
         static int insert_file(CacheDirMetaNode* p_dir_node, CacheFileMetaNode* node);
+
+        static int free(CacheDirMetaNode* dir_meta_node);
+        static int free(CacheFileMetaNode* dir_meta_node);
 
         //static CacheDirMetaNode* add_top_dir(const int64_t app_id, const int64_t uid);
         //static CacheDirMetaNode* get_top_dir(const int64_t app_id, const int64_t uid);
