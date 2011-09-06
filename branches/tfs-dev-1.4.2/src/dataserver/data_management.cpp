@@ -352,7 +352,7 @@ namespace tfs
       // if mode is 0 and file is not in nomal status, return error.
       if ((0 == finfo.id_) 
           || (finfo.id_ != file_id )
-          || ((finfo.flag_ & (FI_DELETED | FI_INVALID | FI_CONCEAL)) != 0 && 0 == mode))
+          || ((finfo.flag_ & (FI_DELETED | FI_INVALID | FI_CONCEAL)) != 0 && NORMAL_STAT == mode))
       {
         TBSYS_LOG(WARN,
             "FileInfo parse fail. blockid: %u, fileid: %" PRI64_PREFIX "u, infoid: %" PRI64_PREFIX "u, flag: %d",

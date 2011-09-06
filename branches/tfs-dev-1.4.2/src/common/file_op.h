@@ -36,9 +36,6 @@ namespace tfs
         void close_file();
         virtual int flush_file();
 
-        int lock_file();
-        int unlock_file();
-  
         int flush_data();
         int unlink_file();
 
@@ -76,7 +73,6 @@ namespace tfs
         int fd_;                // file handle
         int open_flags_;        // open flags
         char* file_name_;       // file path name
-        bool locked_;
     };
   }
 }

@@ -394,7 +394,12 @@ int32_t TfsLargeFile::finish_write_process(const int status)
 int TfsLargeFile::close_process()
 {
   int ret = TFS_ERROR;
-  if ((ret = upload_key()) != TFS_SUCCESS) // upload key data
+  if (offset_ <= 0)
+  {
+    TBSYS_LOG(ERROR, "close tfs file fail: no data write ever");
+    local_key_.remove();        // ignore
+  }
+  else if ((ret = upload_key()) != TFS_SUCCESS) // upload key data
   {
     TBSYS_LOG(ERROR, "close tfs file fail: upload key fail, ret: %d");
   }

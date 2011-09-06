@@ -1,11 +1,26 @@
-#ifndef TFS_RCSERVER_SESSIONUTIL_H_
-#define TFS_RCSERVER_SESSIONUTIL_H_
+/*
+ * (C) 2007-2010 Alibaba Group Holding Limited.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+ *
+ *
+ * Version: $Id
+ *
+ *
+ *   Authors:
+ *          zongdai(zongdai@taobao.com)
+ *
+ */
+#ifndef TFS_COMMON_SESSIONUTIL_H_
+#define TFS_COMMON_SESSIONUTIL_H_
 
 #include <string>
 
 namespace tfs
 {
-  namespace rcserver 
+  namespace common
   {
     static const char SEPARATOR_KEY = '-';
     class SessionUtil

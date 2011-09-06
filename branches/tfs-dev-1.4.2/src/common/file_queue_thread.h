@@ -45,7 +45,7 @@ namespace tfs
         FileQueueThread *queue_thread_;
 
       private:
-        DISALLOW_COPY_AND_ASSIGN( QueueThreadParam);
+        DISALLOW_COPY_AND_ASSIGN(QueueThreadParam);
       };
 
       typedef int (*deal_func)(const void * const data, const int64_t len, const int32_t thread_index, void* arg);

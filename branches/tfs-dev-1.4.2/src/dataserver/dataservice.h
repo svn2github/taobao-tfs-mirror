@@ -50,6 +50,9 @@ namespace tfs
 #define READ_STAT_LOG(level, ...) (TBSYS_LOG_LEVEL_##level>READ_STAT_LOGGER._level) ? (void)0 : READ_STAT_PRINT(level, __VA_ARGS__)
     class DataService: public common::BaseService
     {
+    
+      friend int SyncBase::run_sync_mirror();
+
       public:
         DataService();
 
@@ -160,6 +163,7 @@ namespace tfs
         int set_ns_ip();
         void try_add_repair_task(const uint32_t block_id, const int ret);
         int init_log_file(tbsys::CLogger& LOGGER, const std::string& log_file);
+        int init_sync_mirror();
 
       private:
       class HeartBeatThreadHelper: public tbutil::Thread
@@ -226,22 +230,6 @@ namespace tfs
       };
       typedef tbutil::Handle<CompactBlockThreadHelper> CompactBlockThreadHelperPtr;
 
-      class DoSyncMirrorThreadHelper: public tbutil::Thread
-      {
-        public:
-          explicit DoSyncMirrorThreadHelper(DataService& service):
-              service_(service)
-          {
-            start();
-          }
-          virtual ~DoSyncMirrorThreadHelper(){}
-          void run();
-        private:
-          DISALLOW_COPY_AND_ASSIGN(DoSyncMirrorThreadHelper);
-          DataService& service_;
-      };
-      typedef tbutil::Handle<DoSyncMirrorThreadHelper> DoSyncMirrorThreadHelperPtr;
-
       private:
         DISALLOW_COPY_AND_ASSIGN(DataService);
 
@@ -259,7 +247,11 @@ namespace tfs
 
         ReplicateBlock* repl_block_; //replicate
         CompactBlock* compact_block_; //compact
-        SyncBase* sync_mirror_; //mirror
+#if defined(TFS_DS_GTEST)
+      public:
+#else
+#endif
+        std::vector<SyncBase*> sync_mirror_;
         int32_t sync_mirror_status_;
 
         tbutil::Mutex stop_mutex_;
@@ -267,6 +259,7 @@ namespace tfs
         tbutil::Mutex compact_mutext_;
         tbutil::Mutex count_mutex_;
         tbutil::Mutex read_stat_mutex_;
+        tbutil::Mutex sync_mirror_mutex_;
 
         AccessControl acl_;
         AccessStat acs_;
@@ -289,7 +282,6 @@ namespace tfs
         DoCheckThreadHelperPtr   do_check_thread_;
         ReplicateBlockThreadHelperPtr* replicate_block_threads_;
         CompactBlockThreadHelperPtr  compact_block_thread_;
-        DoSyncMirrorThreadHelperPtr  do_sync_mirror_thread_;
 
         std::string read_stat_log_file_;
         std::string write_stat_log_file_;

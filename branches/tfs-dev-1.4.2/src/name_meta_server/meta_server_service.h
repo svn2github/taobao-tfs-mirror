@@ -72,10 +72,16 @@ namespace tfs
       static int int64_to_char(char* buff, const int32_t buff_size, const int64_t v);
       static int char_to_int64(char* data, const int32_t data_size, int64_t& v);
       static void next_file_name(char* name, int32_t& name_len);
+      static void next_file_name_base_on(char* name, int32_t& name_len,
+                                         const char* base_name, const int32_t base_name_len);
 
     private:
+      int get_p_meta_info(CacheRootNode* root_node,
+                          const std::vector<std::string>& v_name,
+                          CacheDirMetaNode*& out_p_dir_node,
+                          CacheDirMetaNode*& out_dir_node);
 
-      int create_top_dir(const int64_t app_id, const int64_t uid);
+    private:
 
       static int parse_name(const char* file_path, std::vector<std::string>& v_name);
       static int32_t get_depth(const std::vector<std::string>& v_name);
@@ -115,9 +121,8 @@ namespace tfs
         return static_cast<int32_t>(v.size()) < common::MAX_OUT_INFO_COUNT;
       }
 
+      static bool is_sub_dir(const char* sub_dir, const char* parents_dir);
     private:
-      char top_dir_name_[10];
-      int32_t top_dir_size_;
       DISALLOW_COPY_AND_ASSIGN(MetaServerService);
 
       MetaStoreManager* store_manager_;

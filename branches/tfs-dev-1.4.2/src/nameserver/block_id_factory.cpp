@@ -135,6 +135,7 @@ namespace tfs
         int32_t offset = 0;
         int32_t length = 0;
         int32_t count  = 0;
+        ::lseek(fd_, 0, SEEK_SET);
         do
         {
           ++count;

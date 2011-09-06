@@ -766,6 +766,12 @@ namespace tfs
       MOVE_DIR = 5,
       MOVE_FILE = 6
     };
+    typedef enum _RemoveBlockResponseFlag 
+    {
+      REMOVE_BLOCK_RESPONSE_FLAG_NO = 0,
+      REMOVE_BLOCK_RESPONSE_FLAG_YES = 1
+    }RemoveBlockResponseFlag;
+
     // defined type typedef
     typedef std::vector<BlockInfo> BLOCK_INFO_LIST;
     typedef std::vector<FileInfo> FILE_INFO_LIST;

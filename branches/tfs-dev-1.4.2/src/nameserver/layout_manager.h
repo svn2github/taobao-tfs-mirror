@@ -71,8 +71,10 @@ namespace nameserver
 
     void interrupt(const uint8_t interrupt, const time_t now);
 
-    int rm_block_from_ds(const uint64_t server_id, const uint32_t block_id);
-    int rm_block_from_ds(const uint64_t server_id, const std::vector<uint32_t>& block_ids);
+    int rm_block_from_ds(const uint64_t server_id, const uint32_t block_id,
+                        const common::RemoveBlockResponseFlag flag = common::REMOVE_BLOCK_RESPONSE_FLAG_NO);
+    int rm_block_from_ds(const uint64_t server_id, const std::vector<uint32_t>& block_ids,
+                        const common::RemoveBlockResponseFlag flag = common::REMOVE_BLOCK_RESPONSE_FLAG_NO);
 
     inline void get_alive_server(common::VUINT64& servers)
     {
@@ -394,17 +396,26 @@ namespace nameserver
 
     void statistic_all_server_info(const int64_t need,
         const int64_t average_block_size,
-        double& total_capacity, 
+        uint64_t & total_capacity, 
         int64_t& total_block_count,
         int64_t& total_load,
         int64_t& alive_server_size);
 
     void split_servers(const int64_t need,
         const int64_t average_load,
-        const double total_capacity,
+        const uint64_t total_capacity,
         const int64_t total_block_count,
         const int64_t average_block_size,
-        std::set<ServerCollect*>& source,
+        //std::set<ServerCollect*>& source,
+        std::multimap<int32_t, ServerCollect*>& source,
+        std::set<ServerCollect*>& target);
+
+    void split_servers_helper(const int64_t average_load,
+        const uint64_t total_capacity,
+        const int64_t total_block_count,
+        ServerCollect* server,
+        //std::set<ServerCollect*>& source,
+        std::multimap<int32_t, ServerCollect*>& source,
         std::set<ServerCollect*>& target);
 
     bool add_task(const TaskPtr& task);

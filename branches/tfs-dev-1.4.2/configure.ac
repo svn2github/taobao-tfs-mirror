@@ -168,7 +168,7 @@ AC_CHECK_FUNCS([fdatasync ftruncate gethostbyname getpagesize gettimeofday memse
 
 m4_include([ax_lib_mysql.m4])
 
-AX_LIB_MYSQL([>=5.1.4])
+AX_LIB_MYSQL([5.1.4])
 
 AC_CONFIG_FILES([Makefile
                  conf/Makefile
@@ -197,6 +197,7 @@ AC_CONFIG_FILES([Makefile
                  tests/rcserver/Makefile
                  tests/name_meta_server/Makefile
                  tests/common/Makefile
+                 tests/new_client/Makefile
                  tests/dataserver/Makefile
                  tests/intergrate/Makefile])
 AC_OUTPUT

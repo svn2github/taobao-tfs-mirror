@@ -142,6 +142,8 @@ namespace tfs
       balance_max_diff_block_num_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_BALANCE_MAX_DIFF_BLOCK_NUM, 5);//s
       if (balance_max_diff_block_num_ <= 0)
         balance_max_diff_block_num_ = 5;
+      const char* percent = TBSYS_CONFIG.getString(CONF_SN_NAMESERVER, CONF_BALANCE_PERCENT,"0.00001");
+      balance_percent_ = strtod(percent, NULL);
       group_count_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_GROUP_COUNT, 1);
       if (group_count_ < 0)
       {

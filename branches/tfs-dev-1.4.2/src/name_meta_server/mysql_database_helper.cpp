@@ -56,7 +56,7 @@ namespace tfs
         char sql[1024];
         snprintf(sql, 1024, "select pid, name, id, UNIX_TIMESTAMP(create_time), "
             "UNIX_TIMESTAMP(modify_time), size, ver_no, meta_info from t_meta_info "
-            "where app_id = ? and uid = ? and pid = ? and name >= ? limit %d", ROW_LIMIT);
+            "where app_id = ? and uid = ? and pid = ? and name >= ? and name < ? limit %d", ROW_LIMIT);
         if (NULL != stmt_)
         {
           mysql_stmt_free_result(stmt_);
@@ -94,6 +94,11 @@ namespace tfs
           ps_params_[3].length = &pname_len_;
           ps_params_[3].is_null = 0;
 
+          ps_params_[4].buffer_type = MYSQL_TYPE_VAR_STRING;
+          ps_params_[4].buffer = (char *) pname_end_;
+          ps_params_[4].length = &pname_end_len_;
+          ps_params_[4].is_null = 0;
+
           status = mysql_stmt_bind_param(stmt_, ps_params_);
           if (status)
           {
@@ -122,7 +127,7 @@ namespace tfs
     }
     int MysqlDatabaseHelper::ls_meta_info(std::vector<MetaInfo>& out_v_meta_info,
         const int64_t app_id, const int64_t uid,
-            const int64_t pid, const char* name, const int32_t name_len)
+            const int64_t pid, const char* name, const int32_t name_len, const char* name_end, const int32_t name_end_len)
     {
       int ret = TFS_ERROR;
       out_v_meta_info.clear();
@@ -147,6 +152,17 @@ namespace tfs
         {
           pname_[0] = 0;
           pname_len_ = 1;
+        }
+        if (NULL != name_end && name_end_len > 0 && name_end_len < MAX_FILE_PATH_LEN)
+        {
+          memcpy(pname_end_, name_end, name_end_len);
+          pname_end_len_ = name_end_len;
+
+        }
+        else
+        {
+          pname_end_[0]= 0xff;
+          pname_end_len_ = 1;
         }
         status = mysql_stmt_execute(stmt_);
         if (status)

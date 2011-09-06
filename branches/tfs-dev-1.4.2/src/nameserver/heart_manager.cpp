@@ -286,23 +286,31 @@ namespace tfs
     int HeartManagement::add_uncomplete_report_server(std::vector<uint64_t>& servers)
     {
       RWLock::Lock lock(mutex_, WRITE_LOCKER);
-      std::vector<uint64_t>::const_iterator iter = current_report_servers_.begin();
+      std::vector<uint64_t>::iterator iter = servers.begin();
       std::vector<uint64_t>::iterator it;
-      for (; iter != current_report_servers_.end();)
+      for (; iter != servers.end();)
       {
-        it = std::find(servers.begin(), servers.end(), (*iter));
+        it = std::find(current_report_servers_.begin(), current_report_servers_.end(), (*iter));
         if (current_report_servers_.end() != it)
         {
-          servers.erase(it);
+          servers.erase(++iter);
+        }
+        else
+        {
+          iter++;
         }
       }
-      iter = uncomplete_report_servers_.begin();
-      for (; iter != uncomplete_report_servers_.end();)
+      iter = servers.begin();
+      for (; iter != servers.end();)
       {
-        it = std::find(servers.begin(), servers.end(), (*iter));
-        if (current_report_servers_.end() != it)
+        it = std::find(uncomplete_report_servers_.begin(), uncomplete_report_servers_.end(), (*iter));
+        if (uncomplete_report_servers_.end() != it)
         {
-          servers.erase(it);
+          servers.erase(++iter);
+        }
+        else
+        {
+          iter++;
         }
       }
       uncomplete_report_servers_.insert(uncomplete_report_servers_.end(), servers.begin(), servers.end());
@@ -510,7 +518,8 @@ namespace tfs
       mashm.set_status(ngi.other_side_status_);
       mashm.set_flags(HEART_GET_DATASERVER_LIST_FLAGS_NO);
       mashm.set_force_flags(HEART_FORCE_MODIFY_OTHERSIDE_ROLE_FLAGS_YES);
-      int count = 0;
+      bool success = false;
+      int32_t count = 0;
       do
       {
         count++;
@@ -534,13 +543,14 @@ namespace tfs
                   TBSYS_LOG(INFO, "%s", "notify all oplog thread");
                 }
               }
-              break;
+              success = true;
             }
           }
         }
         NewClientManager::get_instance().destroy_client(client);
       }
-      while (count < 3);
+      while ((count < 3)
+             && !success);
       return;
     }
 
@@ -609,7 +619,6 @@ namespace tfs
                     }
                   }
                 }
-                NewClientManager::get_instance().destroy_client(client);
                 slave_is_alive = true;
               }
               else

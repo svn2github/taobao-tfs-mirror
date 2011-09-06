@@ -25,9 +25,14 @@
 
 namespace tfs
 {
+  namespace common
+  {
+    class FileMetaInf;
+  }
   namespace client
   {
     class RcClientImpl;
+    class NameMetaClient;
     class StatUpdateTask : public tbutil::TimerTask
     {
       public:
@@ -61,6 +66,7 @@ namespace tfs
         //return value fd
         int open(const char* file_name, const char* suffix, const RcClient::RC_MODE mode,
             const bool large = false, const char* local_key = NULL);
+        int open(const int64_t uid, const char* name, const RcClient::RC_MODE mode);
         TfsRetType close(const int fd, char* tfs_name_buff = NULL, const int32_t buff_len = 0);
 
         int64_t read(const int fd, void* buf, const int64_t count);
@@ -82,13 +88,29 @@ namespace tfs
             char* tfs_name_buff, const int32_t buff_len);
 
         TfsRetType logout();
+
+        ////////////////  for name meta
+        TfsRetType create_dir(const int64_t uid, const char* dir_path);
+
+        TfsRetType rm_dir(const int64_t uid, const char* dir_path);
+        TfsRetType rm_file(const int64_t uid, const char* file_path);
+
+        TfsRetType mv_dir(const int64_t uid, const char* src_dir_path, const char* dest_dir_path);
+        TfsRetType mv_file(const int64_t uid, const char* src_file_path, const char* dest_file_path);
+
+        TfsRetType ls_dir(const int64_t uid, const char* dir_path,
+            std::vector<common::FileMetaInfo>& v_file_meta_info);
+        TfsRetType ls_file(const int64_t uid,
+            const char* file_path,
+            common::FileMetaInfo& file_meta_info);
+
       private:
         DISALLOW_COPY_AND_ASSIGN(RcClientImpl);
 
       private:
         TfsRetType login(const uint64_t rc_ip, const char* app_key, const uint64_t app_ip);
 
-        TfsRetType check_init_stat() const;
+        TfsRetType check_init_stat(const bool check_app_id = false) const;
 
         uint64_t get_active_rc_ip(size_t& retry_index) const;
         void get_ka_info(common::KeepAliveInfo& kainfo);
@@ -109,6 +131,7 @@ namespace tfs
             char* tfs_name_buff, const int32_t buff_len);
 
         std::string get_ns_addr(const char* file_name, const RcClient::RC_MODE mode, const int index) const;
+        std::string get_ns_addr_by_cluster_id(int32_t cluster_id, const RcClient::RC_MODE mode, const int index) const;
 
         static int32_t get_cluster_id(const char* file_name);
         static void parse_cluster_id(const std::string& cluster_id_str, int32_t& id, bool& is_master);
@@ -150,6 +173,32 @@ namespace tfs
 
       private:
         mutable tbsys::CThreadMutex mutex_;
+
+      private:
+        struct fdInfo
+        {
+          fdInfo(const int raw_tfs_fd, const int64_t uid, const char* name = NULL)
+            :raw_tfs_fd_(raw_tfs_fd), uid_(uid) 
+          {
+            if (NULL != name)
+              name_ = name;
+          }
+          int raw_tfs_fd_;
+          int64_t uid_;
+          std::string name_;
+          std::string ns_addr_;
+        };
+        std::map<int, fdInfo> fd_infos_;
+        mutable tbsys::CThreadMutex fd_info_mutex_;
+        NameMetaClient* name_meta_client_;
+        int64_t app_id_;
+        int my_fd_;
+      private:
+        static bool is_raw_ftsname(const char* name);
+        int gen_fdinfo(const fdInfo& fdinfo);
+        TfsRetType remove_fdinfo(const int fd, fdInfo& fdinfo);
+        TfsRetType get_fdinfo(const int fd, fdInfo& fdinfo) const;
+
     };
   }
 }

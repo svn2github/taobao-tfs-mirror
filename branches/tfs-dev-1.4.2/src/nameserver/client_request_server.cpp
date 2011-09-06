@@ -437,8 +437,9 @@ namespace tfs
         BlockCollect* block = NULL;
         if (mode & T_CREATE)
         {
-          iret = 0 != block_id ? TFS_ERROR : TFS_SUCCESS;
-          if (TFS_SUCCESS == iret)
+          //iret = 0 != block_id ? TFS_ERROR : TFS_SUCCESS;
+          //if (TFS_SUCCESS == iret)
+          if (0 == block_id)
           {
             //elect a writable block
             block = lay_out_manager_.elect_write_block();

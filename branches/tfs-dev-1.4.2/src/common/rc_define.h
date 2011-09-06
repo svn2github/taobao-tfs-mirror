@@ -13,8 +13,8 @@
  *          zongdai(zongdai@taobao.com)
  *
  */
-#ifndef TFS_RC_DEFINE_H_
-#define TFS_RC_DEFINE_H_
+#ifndef TFS_COMMON_RC_DEFINE_H_
+#define TFS_COMMON_RC_DEFINE_H_
 
 #include <vector>
 #include <map>

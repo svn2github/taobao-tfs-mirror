@@ -94,6 +94,7 @@ namespace tfs
 #define CONF_CLEANUP_LEASE_THRESHOLD                  "cleanup_lease_threshold"
 
 #define CONF_BALANCE_MAX_DIFF_BLOCK_NUM               "balance_max_diff_block_num"
+#define CONF_BALANCE_PERCENT                          "balance_percent"
 
 
 #define CONF_DUMP_STAT_INFO_INTERVAL                  "dump_stat_info_interval"

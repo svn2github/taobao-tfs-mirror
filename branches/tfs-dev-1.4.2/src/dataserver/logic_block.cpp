@@ -793,9 +793,6 @@ namespace tfs
 
     void LogicBlock::clear()
     {
-      //clean logic block associate stuff(index handle, physic block)
-      delete_block_file();
-
       // clean physic block
       for (list<PhysicalBlock*>::iterator lit = physical_block_list_.begin(); lit != physical_block_list_.end(); ++lit)
       {

@@ -20,8 +20,6 @@
 #include <Mutex.h>
 #include "dataserver_define.h"
 
-#define TFS_DS_GTEST
-
 namespace tfs
 {
 namespace dataserver
@@ -36,6 +34,7 @@ namespace dataserver
     int initialize(tbutil::TimerPtr timer);
     int wait_for_shut_down();
     void destroy();
+    bool is_init() { return is_init_; }
     static GCObjectManager& instance()
     {
       return instance_;
@@ -49,6 +48,7 @@ namespace dataserver
     std::list<GCObject*> object_list_;
     tbutil::Mutex mutex_;
     static GCObjectManager instance_;
+    bool is_init_;
     bool destroy_;
 
   #if defined(TFS_DS_GTEST) || defined(TFS_DS_INTEGRATION)

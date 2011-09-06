@@ -130,6 +130,40 @@ namespace tfs
     {
       return impl_->save_file(source_data, data_len, tfs_name_buff, buff_len);
     }
+    TfsRetType RcClient::create_dir(const int64_t uid, const char* dir_path)
+    {
+      return impl_->create_dir(uid, dir_path);
+    }
+    TfsRetType RcClient::rm_dir(const int64_t uid, const char* dir_path)
+    {
+      return impl_->rm_dir(uid, dir_path);
+    }
+    TfsRetType RcClient::rm_file(const int64_t uid, const char* file_path)
+    {
+      return impl_->rm_file(uid, file_path);
+    }
 
+    TfsRetType RcClient::mv_dir(const int64_t uid, const char* src_dir_path, const char* dest_dir_path)
+    {
+      return impl_->mv_dir(uid, src_dir_path, dest_dir_path);
+    }
+    TfsRetType RcClient::mv_file(const int64_t uid, const char* src_file_path, 
+        const char* dest_file_path)
+    {
+      return impl_->mv_file(uid, src_file_path, dest_file_path);
+    }
+
+    TfsRetType RcClient::ls_dir(const int64_t uid, const char* dir_path,
+        std::vector<common::FileMetaInfo>& v_file_meta_info)
+    {
+      return impl_->ls_dir(uid, dir_path, v_file_meta_info);
+    }
+
+    TfsRetType RcClient::ls_file(const int64_t uid,
+        const char* file_path,
+        common::FileMetaInfo& file_meta_info)
+    {
+      return impl_->ls_file(uid, file_path, file_meta_info);
+    }
   }
 }

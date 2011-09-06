@@ -31,7 +31,7 @@ int FileQueue::load_queue_head()
 {
   if (!DirectoryOp::create_full_path(queue_path_.c_str()))
   {
-    TBSYS_LOG(ERROR, "create directoy : %s filed", queue_path_.c_str());
+    TBSYS_LOG(ERROR, "create directoy : %s failed", queue_path_.c_str());
     return EXIT_MAKEDIR_ERROR;
   }
 
@@ -504,6 +504,7 @@ int FileQueue::recover_record()
   for (int32_t i = 0; i < FILE_QUEUE_MAX_THREAD_SIZE; ++i)
   {
     unsettle *pos_ = &(queue_information_header_.pos_[i]);
+    // finish
     if (pos_->seqno_ == 0)
       continue;
     if (pos_->seqno_ > queue_information_header_.read_seqno_)

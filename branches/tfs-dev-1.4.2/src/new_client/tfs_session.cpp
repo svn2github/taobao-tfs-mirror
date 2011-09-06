@@ -253,6 +253,7 @@ int TfsSession::get_block_info_ex(uint32_t& block_id, VUINT64& rds, const int32_
     {
       TBSYS_LOG(ERROR, "get block %u info fail, ret: %d, error: %s, status: %d",
                 block_id, ret, dynamic_cast<StatusMessage*>(rsp)->get_error(), dynamic_cast<StatusMessage*>(rsp)->get_status());
+      ret = dynamic_cast<StatusMessage*>(rsp)->get_status();
     }
     else
     {
