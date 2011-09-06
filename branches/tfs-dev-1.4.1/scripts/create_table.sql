@@ -1,97 +1,97 @@
-CREATE TABLE T_RESOURCE_SERVER_INFO (
-  ADDR_INFO CHAR(64) NOT NULL,
-  STAT INT NOT NULL DEFAULT 1,
-  REM CHAR(255),
-  CREATE_TIME DATETIME,
-  MODIFY_TIME DATETIME,
-  PRIMARY KEY (ADDR_INFO)
+CREATE TABLE t_resource_server_info (
+  addr_info VARCHAR(64) NOT NULL,
+  stat INT NOT NULL DEFAULT 1,
+  rem VARCHAR(255),
+  create_time DATETIME,
+  modify_time DATETIME,
+  PRIMARY KEY (addr_info)
 );
 
-CREATE TABLE T_CLUSTER_RACK_INFO (
-  CLUSTER_RACK_ID INT,
-  CLUSTER_ID   CHAR(8),
-  NS_VIP CHAR(64),
-  CLUSTER_STAT  INT,
-  REM CHAR(255),
-  CREATE_TIME DATETIME,
-  MODIFY_TIME DATETIME,
-  PRIMARY KEY (CLUSTER_RACK_ID, CLUSTER_ID)
+CREATE TABLE t_cluster_rack_info (
+  cluster_rack_id INT,
+  cluster_id   VARCHAR(8),
+  ns_vip VARCHAR(64),
+  cluster_stat  INT,
+  rem VARCHAR(255),
+  create_time DATETIME,
+  modify_time DATETIME,
+  PRIMARY KEY (cluster_rack_id, cluster_id)
 );
-ALTER TABLE T_CLUSTER_RACK_INFO ADD UNIQUE KEY UN_CLUSTER_ID (CLUSTER_ID);
-ALTER TABLE T_CLUSTER_RACK_INFO ADD UNIQUE KEY UN_NS_VIP  (NS_VIP);
+ALTER TABLE t_cluster_rack_info ADD UNIQUE KEY un_cluster_id (cluster_id);
+ALTER TABLE t_cluster_rack_info ADD UNIQUE KEY un_ns_vip  (ns_vip);
 
-CREATE TABLE T_CLUSTER_RACK_GROUP (
-  CLUSTER_GROUP_ID INT,
-  CLUSTER_RACK_ID INT,
-  CLUSTER_RACK_ACCESS_TYPE INT,
-  REM CHAR(255),
-  CREATE_TIME DATETIME,
-  MODIFY_TIME DATETIME,
-  PRIMARY KEY (CLUSTER_GROUP_ID, CLUSTER_RACK_ID)
-);
-
-CREATE TABLE T_CLUSTER_RACK_DUPLICATE_SERVER (
-  CLUSTER_RACK_ID INT,
-  DUPLIATE_SERVER_ADDR CHAR(64),
-  CREATE_TIME DATETIME,
-  MODIFY_TIME DATETIME,
-  PRIMARY KEY (CLUSTER_RACK_ID)
+CREATE TABLE t_cluster_rack_group (
+  cluster_group_id INT,
+  cluster_rack_id INT,
+  cluster_rack_access_type INT,
+  rem VARCHAR(255),
+  create_time DATETIME,
+  modify_time DATETIME,
+  PRIMARY KEY (cluster_group_id, cluster_rack_id)
 );
 
-CREATE TABLE T_BASE_INFO_UPDATE_TIME (
-  BASE_LAST_UPDATE_TIME DATETIME,
-  APP_LAST_UPDATE_TIME  DATETIME
+CREATE TABLE t_cluster_rack_duplicate_server (
+  cluster_rack_id INT,
+  dupliate_server_addr VARCHAR(64),
+  create_time DATETIME,
+  modify_time DATETIME,
+  PRIMARY KEY (cluster_rack_id)
 );
 
-CREATE TABLE T_APP_INFO (
-  APP_KEY CHAR(255),
-  ID INT,
-  QUTO BIGINT,
-  CLUSTER_GROUP_ID INT,
-  APP_NAME CHAR(255) NOT NULL,
-  APP_OWNER CHAR(255),
-  REPORT_INTERVAL INT,
-  NEED_DUPLICATE INT,
-  REM CHAR(255),
-  CREATE_TIME DATETIME,
-  MODIFY_TIME DATETIME,
-  PRIMARY KEY (APP_KEY)
+CREATE TABLE t_base_info_update_time (
+  base_last_update_time DATETIME,
+  app_last_update_time  DATETIME
 );
 
-ALTER TABLE T_APP_INFO ADD UNIQUE KEY APP_INFO_UN_ID (ID);
-ALTER TABLE T_APP_INFO ADD UNIQUE KEY APP_INFO_UN_NAME (APP_NAME);
-
-
-CREATE TABLE T_SESSION_INFO (
-  SESSION_ID CHAR(255),
-  CACHE_SIZE BIGINT,
-  CACHE_TIME BIGINT,
-  CLIENT_VERSION CHAR(64),
-  LOG_OUT_TIME DATETIME,
-  CREATE_TIME DATETIME,
-  MODIFY_TIME DATETIME,
-  PRIMARY KEY (SESSION_ID)
+CREATE TABLE t_app_info (
+  app_key VARCHAR(255),
+  id INT,
+  quto BIGINT,
+  cluster_group_id INT,
+  app_name VARCHAR(255) NOT NULL,
+  app_owner VARCHAR(255),
+  report_interval INT,
+  need_duplicate INT,
+  rem VARCHAR(255),
+  create_time DATETIME,
+  modify_time DATETIME,
+  PRIMARY KEY (app_key)
 );
 
-CREATE TABLE T_SESSION_STAT (
-  SESSION_ID CHAR(255),
-  OPER_TYPE  INT,
-  OPER_TIMES BIGINT,
-  FILE_SIZE BIGINT,
-  RESPONSE_TIME INT,
-  SUCC_TIMES BIGINT,
-  CREATE_TIME DATETIME,
-  MODIFY_TIME DATETIME,
-  PRIMARY KEY (SESSION_ID, OPER_TYPE)
+ALTER TABLE t_app_info ADD UNIQUE KEY app_info_un_id (id);
+ALTER TABLE t_app_info ADD UNIQUE KEY app_info_un_name (app_name);
+
+
+CREATE TABLE t_session_info (
+  session_id VARCHAR(255),
+  cache_size BIGINT,
+  cache_time BIGINT,
+  client_version VARCHAR(64),
+  log_out_time DATETIME,
+  create_time DATETIME,
+  modify_time DATETIME,
+  PRIMARY KEY (session_id)
 );
 
-CREATE TABLE T_APP_STAT (
-  APP_ID INT,
-  USED_CAPACITY  BIGINT,
-  FILE_COUNT BIGINT,
-  CREATE_TIME DATETIME,
-  MODIFY_TIME DATETIME,
-  PRIMARY KEY (APP_ID)
+CREATE TABLE t_session_stat (
+  session_id VARCHAR(255),
+  oper_type  INT,
+  oper_times BIGINT,
+  file_size BIGINT,
+  response_time INT,
+  succ_times BIGINT,
+  create_time DATETIME,
+  modify_time DATETIME,
+  PRIMARY KEY (session_id, oper_type)
+);
+
+CREATE TABLE t_app_stat (
+  app_id INT,
+  used_capacity BIGINT,
+  file_count BIGINT,
+  create_time DATETIME,
+  modify_time DATETIME,
+  PRIMARY KEY (app_id)
 );
 
 
