@@ -69,22 +69,34 @@ namespace tfs
       //check datafile
       dataservice_->data_management_.gc_data_file();
       if (destroy_)
+      {
+        dataservice_->data_management_.remove_data_file();
         return TFS_SUCCESS;
+      }
 
       //check repair block
       dataservice_->block_checker_.consume_repair_task();
       if (destroy_)
+      {
+        dataservice_->data_management_.remove_data_file();
         return TFS_SUCCESS;
+      }
 
       //check clonedblock
       dataservice_->repl_block_->expire_cloned_block_map();
       if (destroy_)
+      {
+        dataservice_->data_management_.remove_data_file();
         return TFS_SUCCESS;
+      }
 
       // check compact block
       dataservice_->compact_block_->expire_compact_block_map();
       if (destroy_)
+      {
+        dataservice_->data_management_.remove_data_file();
         return TFS_SUCCESS;
+      }
 
       int32_t current_time = time(NULL);
       // check log: write a new log everyday and expire error block
@@ -99,7 +111,10 @@ namespace tfs
         dataservice_->block_checker_.expire_error_block();
       }
       if (destroy_)
+      {
+        dataservice_->data_management_.remove_data_file();
         return TFS_SUCCESS;
+      }
 
       // check stat
       dataservice_->count_mutex_.lock();
@@ -150,8 +165,10 @@ namespace tfs
         TBSYS_LOG(INFO, "Dump read info.end time: %" PRI64_PREFIX "d. Cost Time: %" PRI64_PREFIX "d\n", time_end, time_end - time_start);
       }
       if (destroy_)
+      {
+        dataservice_->data_management_.remove_data_file();
         return TFS_SUCCESS;
-      dataservice_->data_management_.remove_data_file();
+      }
 
       return TFS_SUCCESS;
     }
