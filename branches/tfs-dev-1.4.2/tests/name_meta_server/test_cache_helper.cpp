@@ -38,6 +38,7 @@ class MetaCacheHelperTest: public ::testing::Test
 };
 TEST_F(MetaCacheHelperTest, insert_dir)
 {
+  {
   char name1[100];
   char name2[100];
   char name3[100];
@@ -58,6 +59,8 @@ TEST_F(MetaCacheHelperTest, insert_dir)
   EXPECT_EQ(TFS_SUCCESS, MetaCacheHelper::insert_dir(&t1, &t4));
   InfoArray<CacheDirMetaNode>* dir_infos = MetaCacheHelper::get_sub_dirs_array_info(&t1);
   EXPECT_EQ(3, dir_infos->get_size());
+  }
+  printf("used size %ld\n",MemHelper::get_used_size());
 }
 TEST_F(MetaCacheHelperTest, find_dir)
 {

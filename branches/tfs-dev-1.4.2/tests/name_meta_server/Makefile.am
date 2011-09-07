@@ -20,7 +20,7 @@ test: check
 TESTS=
 check_PROGRAMS=
 
-noinst_PROGRAMS=test_meta_info test_cache_info test_cache_helper
+noinst_PROGRAMS=test_meta_info test_cache_info test_cache_helper test_service
 
 TESTS+=test_meta_info
 check_PROGRAMS+=test_meta_info
@@ -34,3 +34,6 @@ TESTS+=test_cache_helper
 check_PROGRAMS+=test_cache_helper
 test_cache_helper_SOURCES= test_cache_helper.cpp 
 
+TESTS+=test_service
+check_PROGRAMS+=test_service
+test_service_SOURCES= test_service.cpp 
