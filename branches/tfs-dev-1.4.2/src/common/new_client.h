@@ -86,6 +86,8 @@ namespace tfs
                           const int64_t timeout = common::DEFAULT_NETWORK_CALL_TIMEOUT/*ms*/);
     int post_msg_to_server(const std::vector<uint64_t>& servers, NewClient* client, tbnet::Packet* message, NewClient::callback_func func,
                           bool save_source_msg = true);
+    int post_msg_to_server(uint64_t servers, NewClient* client, tbnet::Packet* message, NewClient::callback_func func,
+                          bool save_source_msg = true);
     int test_server_alive(const uint64_t server_id, const int64_t timeout = common::DEFAULT_NETWORK_CALL_TIMEOUT/*ms*/);
   } /* message */
 } /* tfs */
