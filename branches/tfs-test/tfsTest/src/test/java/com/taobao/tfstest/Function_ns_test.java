@@ -3,15 +3,15 @@
  */
 package com.taobao.tfstest;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import org.junit.After;
+import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 import com.taobao.gaia.KillTypeEnum;
-import com.taobao.tfstest.FailOverBaseCase.PlanType;
 
 /**
  * @author Administrator/mingyan
@@ -141,6 +141,10 @@ public class Function_ns_test extends FailOverBaseCase {
 		
 		/* Read file */
 		bRet = chkFinalRetSuc();
+		Assert.assertTrue(bRet);
+		
+		/* Start the killed ds */
+		bRet = startOneDs();
 		Assert.assertTrue(bRet);
 		
 		log.info(caseName + "===> end");
@@ -640,6 +644,10 @@ public class Function_ns_test extends FailOverBaseCase {
 		bRet = setMinReplication(BLOCKCOPYCNT);
 		Assert.assertTrue(bRet);	
 		
+		/* Modify MinReplication */
+		bRet = setMaxReplication(BLOCKCOPYCNT);
+		Assert.assertTrue(bRet);
+		
 		log.info(caseName + "===> end");
 		return ;
 	}
@@ -676,7 +684,7 @@ public class Function_ns_test extends FailOverBaseCase {
 		return ;
 	}
 	
-	@After
+	@AfterClass
 	public void tearDown(){
 		boolean bRet = false;
 		
@@ -692,7 +700,7 @@ public class Function_ns_test extends FailOverBaseCase {
 		caseName = "";
 	}
 	
-	@Before
+	@BeforeClass
 	public void setUp(){
 		boolean bRet = false;
 		

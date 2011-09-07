@@ -2314,7 +2314,7 @@ public class FailOverBaseCase {
 		/* Use ssm to query */
 		String strCmd;
 		if (DEFINE_NS13) {
-			strCmd = TFS_BIN_HOME + "/showssm -f ../conf/ns.conf -t 2";
+			strCmd = "cd " + TFS_BIN_HOME + "; ./showssm -f ../conf/ns.conf -t 2";
 		}
 		else {
 			strCmd = TFS_BIN_HOME + "/ssm -s " + NSVIP + 
@@ -2367,7 +2367,7 @@ public class FailOverBaseCase {
 		/* Use ssm to query */
 		String strCmd;
 		if (DEFINE_NS13) {
-			strCmd = TFS_BIN_HOME + "/showssm -f ../conf/ns.conf -t 2";
+			strCmd = "cd " + TFS_BIN_HOME + "; ./showssm -f ../conf/ns.conf -t 2";
 		}
 		else {
 			strCmd = TFS_BIN_HOME + "/ssm -s " + NSVIP + 
@@ -2415,7 +2415,7 @@ public class FailOverBaseCase {
 		/* Use ssm to query */
 		String strCmd;
 		if (DEFINE_NS13) {
-			strCmd = TFS_BIN_HOME + "/showssm -f ../conf/ns.conf -t 2";
+			strCmd = "cd " + TFS_BIN_HOME + "; ./showssm -f ../conf/ns.conf -t 2";
 		}
 		else {
 			strCmd = TFS_BIN_HOME + "/ssm -s " + NSVIP + 
@@ -2455,7 +2455,7 @@ public class FailOverBaseCase {
 		/* Use ssm to query */
 		String strCmd;
 		if (DEFINE_NS13) {
-			strCmd = TFS_BIN_HOME + "/showssm -f ../conf/ns.conf -t 2";
+			strCmd = "cd " + TFS_BIN_HOME + "; ./showssm -f ../conf/ns.conf -t 2";
 		}
 		else {
 			strCmd = TFS_BIN_HOME + "/ssm -s " + NSVIP + 
