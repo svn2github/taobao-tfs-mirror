@@ -2324,7 +2324,7 @@ public class FailOverBaseCase {
 		String strPreValue;
 		String strValue = "";
 		do {
-			bRet = Proc.cmdOutBase(MASTERIP, strCmd, "TOTAL:", USED_CAP_COL, null, result);
+			bRet = Proc.cmdOutBase(MASTERIP, strCmd, "TOTAL[: ]", USED_CAP_COL, null, result);
 			if (bRet == false) return bRet;
 			
 			if (result.size() != 1) return false;
@@ -2376,7 +2376,7 @@ public class FailOverBaseCase {
 		ArrayList<String> result = new ArrayList<String>();
 		double value;
 		do {
-			bRet = Proc.cmdOutBase(MASTERIP, strCmd, "TOTAL:", USED_CAP_COL, null, result);
+			bRet = Proc.cmdOutBase(MASTERIP, strCmd, "TOTAL[: ]", USED_CAP_COL, null, result);
 			if (bRet == false) return bRet;
 			
 			if (result.size() != 1) return false;
@@ -2425,7 +2425,7 @@ public class FailOverBaseCase {
 		String strValue = "";
 		String strPreValue;
 		do {
-			bRet = Proc.cmdOutBase(MASTERIP, strCmd, "TOTAL:", CURR_BLKCNT_COL, null, result);
+			bRet = Proc.cmdOutBase(MASTERIP, strCmd, "TOTAL[: ]", CURR_BLKCNT_COL, null, result);
 			if (bRet == false) return bRet;
 			
 			if (result.size() != 1) return false;
@@ -2464,7 +2464,7 @@ public class FailOverBaseCase {
 		ArrayList<String> result = new ArrayList<String>();
 		int value;
 		do {
-			bRet = Proc.cmdOutBase(MASTERIP, strCmd, "TOTAL:", CURR_BLKCNT_COL, null, result);
+			bRet = Proc.cmdOutBase(MASTERIP, strCmd, "TOTAL[: ]", CURR_BLKCNT_COL, null, result);
 			if (bRet == false) return bRet;
 			
 			if (result.size() != 1) return false;
