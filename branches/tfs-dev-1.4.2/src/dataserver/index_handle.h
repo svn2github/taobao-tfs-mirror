@@ -18,8 +18,9 @@
 #ifndef TFS_DATASERVER_INDEXHANDLE_H_
 #define TFS_DATASERVER_INDEXHANDLE_H_
 
-#include "mmap_file_op.h"
 #include "common/internal.h"
+#include "mmap_file_op.h"
+#include "dataserver_define.h"
 
 namespace tfs
 {

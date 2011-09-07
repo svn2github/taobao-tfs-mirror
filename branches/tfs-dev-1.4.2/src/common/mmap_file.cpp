@@ -6,7 +6,7 @@
  * published by the Free Software Foundation.
  *
  *
- * Version: $Id$
+ * Version: $Id: mmap_file.cpp 552 2011-06-24 08:44:50Z duanfei@taobao.com $
  *
  * Authors:
  *   duolong <duolong@taobao.com>
@@ -17,14 +17,14 @@
  *      - modify 2010-04-23
  *
  */
-#include "mmap_file.h"
+
 #include <tbsys.h>
+#include "mmap_file.h"
 
 namespace tfs
 {
-  namespace dataserver
+  namespace common 
   {
-
     MMapFile::MMapFile() :
       size_(0), fd_(-1), data_(NULL)
     {
@@ -205,5 +205,5 @@ namespace tfs
 
       return true;
     }
-  }
-}
+  } /** common **/
+} /** tfs **/

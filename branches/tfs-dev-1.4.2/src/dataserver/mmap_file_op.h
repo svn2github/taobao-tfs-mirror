@@ -21,7 +21,7 @@
 #define TFS_DATASERVER_MMAPFILE_OP_H_
 
 #include "common/file_op.h"
-#include "mmap_file.h"
+#include "common/mmap_file.h"
 #include <Memory.hpp>
 
 namespace tfs
@@ -107,7 +107,7 @@ namespace tfs
         DISALLOW_COPY_AND_ASSIGN(MMapFileOperation);
 
         bool is_mapped_;
-        MMapFile* map_file_;
+        common::MMapFile* map_file_;
     };
 
   }
