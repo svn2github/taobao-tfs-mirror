@@ -5,10 +5,8 @@ package com.taobao.tfstest;
 
 import java.util.HashMap;
 import org.junit.After;
-import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Test;
 
 import com.taobao.gaia.KillTypeEnum;
@@ -224,12 +222,9 @@ public class Function_ns_test extends FailOverBaseCase {
 		bRet = checkRateRun(SUCCESSRATE, WRITEONLY|READ|UNLINK);
 		Assert.assertTrue(bRet);
 		
-		/* Kill one ds */
+		/* Kill all ds */
 		bRet = killAllDs();
 		Assert.assertTrue(bRet);
-		
-		/* Wait 20s for recover */
-		sleep (20);
 		
 		/* Check the rate of write process */
 		bRet = checkRateRun(FAILRATE, WRITEONLY);
@@ -684,7 +679,7 @@ public class Function_ns_test extends FailOverBaseCase {
 		return ;
 	}
 	
-	@AfterClass
+	@After
 	public void tearDown(){
 		boolean bRet = false;
 		
@@ -700,35 +695,49 @@ public class Function_ns_test extends FailOverBaseCase {
 		caseName = "";
 	}
 	
-	@BeforeClass
+	@Before
 	public void setUp(){
 		boolean bRet = false;
 		
 		/* Reset case name */
 		caseName = "";
 
-		/* Set the failcount */
-		bRet = setAllFailCnt();
-		Assert.assertTrue(bRet);
-		
-		/* Kill the grid */
-		bRet = tfsGrid.stop(KillTypeEnum.FORCEKILL, WAITTIME);
-		Assert.assertTrue(bRet);
-		
-		/* Set Vip */
-		bRet = migrateVip();
-		Assert.assertTrue(bRet);
-		
-		/* Clean the log file */
-		bRet = tfsGrid.clean();
-		Assert.assertTrue(bRet);
-		
-		bRet = tfsGrid.start();
-		Assert.assertTrue(bRet);
-		
-		/* Set failcount */
-		bRet = resetAllFailCnt();
-		Assert.assertTrue(bRet);
+		if (!grid_started)
+		{
+			/* Set the failcount */
+			bRet = setAllFailCnt();
+			Assert.assertTrue(bRet);
+			
+			/* Kill the grid */
+			bRet = tfsGrid.stop(KillTypeEnum.FORCEKILL, WAITTIME);
+			Assert.assertTrue(bRet);
+			
+			bRet = tfsGrid2.stop(KillTypeEnum.FORCEKILL, WAITTIME);
+			Assert.assertTrue(bRet);
+			
+			/* Set Vip */
+			bRet = migrateVip();
+			Assert.assertTrue(bRet);
+			
+			/* Clean the log file */
+			bRet = tfsGrid.clean();
+			Assert.assertTrue(bRet);
+			
+			bRet = tfsGrid.start();
+			Assert.assertTrue(bRet);
+			
+			bRet = tfsGrid2.clean();
+			Assert.assertTrue(bRet);
+			
+			bRet = tfsGrid2.start();
+			Assert.assertTrue(bRet);
+			
+			/* Set failcount */
+			bRet = resetAllFailCnt();
+			Assert.assertTrue(bRet);
+			
+			grid_started = true;
+		}
 	
 	}
 }

@@ -26,11 +26,13 @@ import org.springframework.context.support.ClassPathXmlApplicationContext;
 
 public class FailOverBaseCase {
 	
+	boolean grid_started = false;
 	final ApplicationContext beanFactory = new ClassPathXmlApplicationContext("tfsServer.xml");
 	final AppGrid tfsGrid 		= (AppGrid) beanFactory.getBean("tfsGrid");
+	final AppGrid tfsGrid2 		= (AppGrid) beanFactory.getBean("tfsGrid2");
 	//final AppGrid slaveTfsGrid 	= (AppGrid) beanFactory.getBean("slaveTfsGrid");
 	
-	protected static Logger log = Logger.getLogger("TfsTest");
+	protected Logger log = Logger.getLogger("TfsTest");
 	
 	public HelpConf conf = new HelpConf();
 	public HelpHA HA = new HelpHA();
@@ -2945,9 +2947,7 @@ public class FailOverBaseCase {
 	{
 		boolean bRet = false;
 		AppServer cs = tfsGrid.getCluster(DSINDEX).getServer(0);
-		
-		
-		
+				
 		return bRet;
 	}
 	
