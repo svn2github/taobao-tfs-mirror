@@ -920,7 +920,7 @@ int64_t TfsClientImpl::save_file_ex(char* ret_tfs_name, const int32_t ret_tfs_na
   {
     TBSYS_LOG(ERROR, "local file is null");
   }
-  else if (flag & (~(T_DEFAULT|T_WRITE|T_NEWBLK|T_LARGE)) != 0)
+  else if ((flag & (~(T_DEFAULT|T_WRITE|T_NEWBLK|T_LARGE))) != 0)
   {
     TBSYS_LOG(ERROR, "only T_DEFAULT or T_WRITE or T_NEWBLK or T_LARGE flag support to save");
   }
@@ -1004,7 +1004,7 @@ int64_t TfsClientImpl::save_file_ex(char* ret_tfs_name, const int32_t ret_tfs_na
   {
     TBSYS_LOG(ERROR, "invalid buffer and count. buffer: %p, count: %"PRI64_PREFIX"d", buf, count);
   }
-  else if (flag & (~(T_DEFAULT|T_WRITE|T_NEWBLK|T_LARGE)) != 0)
+  else if ((flag & (~(T_DEFAULT|T_WRITE|T_NEWBLK|T_LARGE))) != 0)
   {
     TBSYS_LOG(ERROR, "only T_DEFAULT or T_WRITE or T_NEWBLK or T_LARGE flag support to save");
   }
