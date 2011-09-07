@@ -1,6 +1,6 @@
 #!/bin/sh
 
-cd ../gaia
+cd ../../gaia
 sh exec.sh "install -Dmaven.test.skip=true"
 
 mvn clean
