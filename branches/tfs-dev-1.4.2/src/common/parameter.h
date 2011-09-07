@@ -158,11 +158,27 @@ namespace tfs
       }
     };
 
+    struct RtServerParameter
+    {
+      int32_t mts_rts_lease_expired_time_;
+      int32_t mts_rts_lease_expired_interval_;
+      int32_t safe_mode_time_;
+      
+      int initialize(void);
+
+      static RtServerParameter rt_parameter_;
+      static RtServerParameter& instance()
+      {
+        return rt_parameter_;
+      }
+    };
+
 #define SYSPARAM_NAMESERVER NameServerParameter::instance()
 #define SYSPARAM_DATASERVER DataServerParameter::instance()
 #define SYSPARAM_FILESYSPARAM FileSystemParameter::instance()
 #define SYSPARAM_RCSERVER RcServerParameter::instance()
 #define SYSPARAM_NAMEMETASERVER NameMeatServerParameter::instance()
+#define SYSPARAM_RTSERVER RtServerParameter::instance()
   }/** common **/
 }/** tfs **/
 #endif //TFS_COMMON_SYSPARAM_H_

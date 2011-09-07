@@ -34,6 +34,7 @@ namespace tfs
     DataServerParameter DataServerParameter::ds_parameter_;
     RcServerParameter RcServerParameter::rc_parameter_;
     NameMeatServerParameter NameMeatServerParameter::meta_parameter_;
+    RtServerParameter RtServerParameter::rt_parameter_;
 
     int NameServerParameter::initialize(void)
     {
@@ -331,6 +332,33 @@ namespace tfs
         ret = TFS_ERROR;
       }
       return ret;
+    }
+
+    int RtServerParameter::initialize(void)
+    {
+      int32_t iret = TFS_SUCCESS;
+      mts_rts_lease_expired_time_ = TBSYS_CONFIG.getInt(CONF_SN_ROOTSERVER, CONF_MTS_RTS_LEASE_EXPIRED_TIME, 0);
+      if (mts_rts_lease_expired_time_ <= 0)
+      {
+        TBSYS_LOG(ERROR, "mts_rts_lease_expired_time: %d is invalid", mts_rts_lease_expired_time_);
+        iret = TFS_ERROR;
+      }
+      if (TFS_SUCCESS == iret)
+      {
+        mts_rts_lease_expired_interval_
+        = TBSYS_CONFIG.getInt(CONF_SN_ROOTSERVER, CONF_MTS_RTS_LEASE_EXPIRED_INTERVAL, 1);
+        if (mts_rts_lease_expired_interval_ > mts_rts_lease_expired_time_ / 2 )
+        {
+          TBSYS_LOG(ERROR, "mts_rts_lease_expired_interval: %d is invalid, less than: %d",
+            mts_rts_lease_expired_interval_, mts_rts_lease_expired_time_ / 2 + 1);
+          iret = TFS_ERROR;
+        }
+        if (TFS_SUCCESS == iret)
+        {
+          safe_mode_time_ = TBSYS_CONFIG.getInt(CONF_SN_ROOTSERVER, CONF_SAFE_MODE_TIME, 60);
+        }
+      }
+      return iret;
     }
   }/** common **/
 }/** tfs **/

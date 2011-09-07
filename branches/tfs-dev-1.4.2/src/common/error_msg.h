@@ -38,7 +38,10 @@ namespace tfs
     const int32_t EXIT_ACCESS_PERMISSION_ERROR = -1013; //access permission error
     const int32_t EXIT_SYSTEM_PARAMETER_ERROR = -1014; //system parameter error
     const int32_t EXIT_UNIQUE_META_NOT_EXIST = -1015;
-    const int32_t EXIT_PARAMETER_ERROR = -1016; // interface parameter error
+    const int32_t EXIT_PARAMETER_ERROR = -1016;//fuction paameter error
+    const int32_t EXIT_MMAP_FILE_ERROR = -1017;//mmap file failed
+    const int32_t EXIT_LRU_VALUE_NOT_EXIST = -1018;//lru value not found by key 
+    const int32_t EXIT_LRU_VALUE_EXIST = -1019;//lru value existed 
 
     const int32_t EXIT_FILE_OP_ERROR = -2000;
     const int32_t EXIT_OPEN_FILE_ERROR = -2001;
@@ -135,7 +138,12 @@ namespace tfs
     const int32_t EXIT_CLUSTER_ID_ERROR = -14006;
     const int32_t EXIT_FRAG_META_OVERFLOW_ERROR = -14007;
     const int32_t EXIT_UPDATE_FRAG_INFO_ERROR = -14008;
-    const int32_t EXIT_MOVE_TO_SUB_DIR_ERROR = -14009;
+
+    const int32_t EXIT_REGISTER_ERROR = -15000;// server register fail
+    const int32_t EXIT_REGISTER_EXIST_ERROR = -15001;// server register fail, server is existed
+    const int32_t EXIT_REGISTER_NOT_EXIST_ERROR = -15002;// renew lease fail, server is not existed
+
+    const int32_t EXIT_MOVE_TO_SUB_DIR_ERROR = -222222;//TODO
   }
 }
 #endif //TFS_COMMON_ERRMSG_H_

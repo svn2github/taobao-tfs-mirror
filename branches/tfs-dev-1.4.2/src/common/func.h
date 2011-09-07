@@ -80,6 +80,10 @@ namespace tfs
       static int start_daemon(const char *pid_file, const char *log_file);
       static void hex_dump(const void* data, const int32_t size,
                            const bool char_type = true, const int32_t log_level = TBSYS_LOG_LEVEL_DEBUG);
+      /* bit opertion */
+      static int32_t set_bit(int32_t data, int32_t index);
+      static int32_t clr_bit(int32_t data, int32_t index);
+      static int32_t test_bit(int32_t data, int32_t index);
 #ifdef _syscall0
       static _syscall0(pid_t,gettid)
 #else
