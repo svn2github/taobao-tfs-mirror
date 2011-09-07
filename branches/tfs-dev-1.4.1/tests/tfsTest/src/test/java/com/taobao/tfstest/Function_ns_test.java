@@ -96,6 +96,10 @@ public class Function_ns_test extends FailOverBaseCase {
 		caseName = "Function_02_one_ds_out_copy_block";
 		log.info(caseName + "===> start");
 		
+		/* Check block copys */
+		bRet = chkBlockCntBothNormal(BLOCKCOPYCNT);
+		Assert.assertTrue(bRet);
+		
 		/* Write file */
 		bRet = writeCmd();
 		Assert.assertTrue(bRet);
@@ -150,6 +154,10 @@ public class Function_ns_test extends FailOverBaseCase {
 		caseName = "Function_03_all_ds_out_one_side";
 		log.info(caseName + "===> start");
 		
+		/* Check block copys */
+		bRet = chkBlockCntBothNormal(BLOCKCOPYCNT);
+		Assert.assertTrue(bRet);
+		
 		/* Write file */
 		bRet = writeCmd();
 		Assert.assertTrue(bRet);
@@ -199,6 +207,10 @@ public class Function_ns_test extends FailOverBaseCase {
 		boolean bRet = false;
 		caseName = "Function_04_all_ds_out";
 		log.info(caseName + "===> start");
+		
+		/* Check block copys */
+		bRet = chkBlockCntBothNormal(BLOCKCOPYCNT);
+		Assert.assertTrue(bRet);
 		
 		/* Write file */
 		bRet = writeCmd();
@@ -297,6 +309,10 @@ public class Function_ns_test extends FailOverBaseCase {
 		caseName = "Function_06_all_ds_one_side_in";
 		log.info(caseName + "===> start");
 		
+		/* Check block copys */
+		bRet = chkBlockCntBothNormal(BLOCKCOPYCNT);
+		Assert.assertTrue(bRet);
+		
 		/* Kill one ds */
 		bRet = killAllDsOneSide();
 		Assert.assertTrue(bRet);
@@ -339,6 +355,10 @@ public class Function_ns_test extends FailOverBaseCase {
 		boolean bRet = false;
 		caseName = "Function_07_all_ds_in";
 		log.info(caseName + "===> start");
+		
+		/* Check block copys */
+		bRet = chkBlockCntBothNormal(BLOCKCOPYCNT);
+		Assert.assertTrue(bRet);
 		
 		/* Kill one ds */
 		bRet = killAllDs();
@@ -432,6 +452,10 @@ public class Function_ns_test extends FailOverBaseCase {
 		boolean bRet = false;
 		caseName = "Function_09_all_clean_ds_one_side_in";
 		log.info(caseName + "===> start");
+
+		/* Check block copys */
+		bRet = chkBlockCntBothNormal(BLOCKCOPYCNT);
+		Assert.assertTrue(bRet);
 		
 		/* Kill one ds */
 		bRet = cleanAllDsOneSide();
@@ -475,6 +499,10 @@ public class Function_ns_test extends FailOverBaseCase {
 		boolean bRet = false;
 		caseName = "Function_10_all_clean_ds_in";
 		log.info(caseName + "===> start");
+		
+		/* Check block copys */
+		bRet = chkBlockCntBothNormal(BLOCKCOPYCNT);
+		Assert.assertTrue(bRet);
 		
 		/* Kill one ds */
 		bRet = cleanAllDs();

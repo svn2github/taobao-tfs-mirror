@@ -2312,8 +2312,14 @@ public class FailOverBaseCase {
 		boolean bRet = false;
     
 		/* Use ssm to query */
-		String strCmd = TFS_BIN_HOME + "/ssm -s " + NSVIP + 
-			":" + NSPORT + " -i server";
+		String strCmd;
+		if (DEFINE_NS13) {
+			strCmd = TFS_BIN_HOME + "/showssm -f ../conf/ns.conf -t 2";
+		}
+		else {
+			strCmd = TFS_BIN_HOME + "/ssm -s " + NSVIP + 
+				":" + NSPORT + " -i server";
+		}
 		ArrayList<String> result = new ArrayList<String>();
 		String strPreValue;
 		String strValue = "";
@@ -2359,8 +2365,14 @@ public class FailOverBaseCase {
 		boolean bRet = false;
     
 		/* Use ssm to query */
-		String strCmd = TFS_BIN_HOME + "/ssm -s " + NSVIP + 
-			":" + NSPORT + " -i server";
+		String strCmd;
+		if (DEFINE_NS13) {
+			strCmd = TFS_BIN_HOME + "/showssm -f ../conf/ns.conf -t 2";
+		}
+		else {
+			strCmd = TFS_BIN_HOME + "/ssm -s " + NSVIP + 
+				":" + NSPORT + " -i server";
+		}
 		ArrayList<String> result = new ArrayList<String>();
 		double value;
 		do {
@@ -2401,8 +2413,14 @@ public class FailOverBaseCase {
 		boolean bRet = false;
     
 		/* Use ssm to query */
-		String strCmd = TFS_BIN_HOME + "/ssm -s " + NSVIP + 
-			":" + NSPORT + " -i server";
+		String strCmd;
+		if (DEFINE_NS13) {
+			strCmd = TFS_BIN_HOME + "/showssm -f ../conf/ns.conf -t 2";
+		}
+		else {
+			strCmd = TFS_BIN_HOME + "/ssm -s " + NSVIP + 
+				":" + NSPORT + " -i server";
+		}
 		ArrayList<String> result = new ArrayList<String>();
 		String strValue = "";
 		String strPreValue;
@@ -2435,8 +2453,14 @@ public class FailOverBaseCase {
 		boolean bRet = false;
     
 		/* Use ssm to query */
-		String strCmd = TFS_BIN_HOME + "/ssm -s " + NSVIP + 
-			":" + NSPORT + " -i server";
+		String strCmd;
+		if (DEFINE_NS13) {
+			strCmd = TFS_BIN_HOME + "/showssm -f ../conf/ns.conf -t 2";
+		}
+		else {
+			strCmd = TFS_BIN_HOME + "/ssm -s " + NSVIP + 
+				":" + NSPORT + " -i server";
+		}
 		ArrayList<String> result = new ArrayList<String>();
 		int value;
 		do {
@@ -2530,7 +2554,7 @@ public class FailOverBaseCase {
 		for(int iLoop = 0; iLoop < csCluster.getServerList().size(); iLoop ++)
 		{
 			AppServer cs = csCluster.getServer(iLoop);
-			bRet = cs.stop(KillTypeEnum.NORMALKILL, WAITTIME);
+			bRet = cs.start();
 			if (bRet == false)
 			{
 				break;
