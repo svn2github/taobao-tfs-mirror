@@ -61,6 +61,7 @@ namespace tfs
 
     tbsys::CThreadMutex MemHelper::mutex_;
     MemHelper* MemHelper::instance_ = NULL;
+    int64_t MemHelper::used_size_ = 0;
 
     MemHelper::MemHelper(): root_node_free_list_(NULL),
         dir_node_free_list_(NULL), file_node_free_list_(NULL)
@@ -116,43 +117,60 @@ namespace tfs
       void* p = NULL;
       while(NULL != root_node_free_list_ && NULL != (p = root_node_free_list_->get()))
       {
-        ::free(p);
+        free(p);
       }
       while(NULL != dir_node_free_list_ && NULL != (p = dir_node_free_list_->get()))
       {
-        ::free(p);
+        free(p);
       }
       while(NULL != file_node_free_list_ && NULL != (p = file_node_free_list_->get()))
       {
-        ::free(p);
+        free(p);
       }
     }
 
+    int64_t MemHelper::get_used_size()
+    {
+      return used_size_;
+    }
     void* MemHelper::malloc(const int64_t size, const int32_t type)
     {
       void* ret_p = NULL;
+      if (size > 500)
       {
-        tbsys::CThreadGuard mutex_guard(&mutex_);
-        assert(NULL != instance_);
-        switch (type)
-        {
-          case CACHE_ROOT_NODE:
-            ret_p = instance_->root_node_free_list_->get();
-            break;
-          case CACHE_DIR_META_NODE:
-            ret_p = instance_->dir_node_free_list_->get();
-            break;
-          case CACHE_FILE_META_NODE:
-            ret_p = instance_->file_node_free_list_->get();
-            break;
-          default:
-            break;
-        }
+        TBSYS_LOG(ERROR, "why you need so much mem ?");
+        assert(1);
       }
-
-      if (NULL == ret_p)
+      else
       {
-        ret_p = ::malloc(size);
+        {
+          tbsys::CThreadGuard mutex_guard(&mutex_);
+          used_size_ += size;
+          if (type != CACHE_NONE_NODE)
+          {
+            assert(NULL != instance_);
+            switch (type)
+            {
+              case CACHE_ROOT_NODE:
+                ret_p = instance_->root_node_free_list_->get();
+                break;
+              case CACHE_DIR_META_NODE:
+                ret_p = instance_->dir_node_free_list_->get();
+                break;
+              case CACHE_FILE_META_NODE:
+                ret_p = instance_->file_node_free_list_->get();
+                break;
+              default:
+                break;
+            }
+          }
+        }
+        if (NULL == ret_p)
+        {
+          ret_p = ::malloc(size + sizeof(int16_t));
+          *((int16_t*)ret_p) = size;
+          ret_p = (char*)ret_p + sizeof(int16_t);
+        }
       }
       return ret_p;
     }
@@ -160,28 +178,35 @@ namespace tfs
     {
       if (p != NULL)
       {
+        char* real_p = (char*)p;
+        real_p -= sizeof(int16_t);
+        int16_t size = *((int16_t*)real_p);
         bool ret = false;
         {
           tbsys::CThreadGuard mutex_guard(&mutex_);
-          assert(NULL != instance_);
-          switch (type)
+          used_size_ -= size;
+          if (type != CACHE_NONE_NODE)
           {
-            case CACHE_ROOT_NODE:
-              ret = instance_->root_node_free_list_->put(p);
-              break;
-            case CACHE_DIR_META_NODE:
-              ret = instance_->dir_node_free_list_->put(p);
-              break;
-            case CACHE_FILE_META_NODE:
-              ret = instance_->file_node_free_list_->put(p);
-              break;
-            default:
-              break;
+            assert(NULL != instance_);
+            switch (type)
+            {
+              case CACHE_ROOT_NODE:
+                ret = instance_->root_node_free_list_->put(p);
+                break;
+              case CACHE_DIR_META_NODE:
+                ret = instance_->dir_node_free_list_->put(p);
+                break;
+              case CACHE_FILE_META_NODE:
+                ret = instance_->file_node_free_list_->put(p);
+                break;
+              default:
+                break;
+            }
           }
         }
         if (!ret)
         {
-          ::free(p);
+          ::free(real_p);
         }
       }
     }

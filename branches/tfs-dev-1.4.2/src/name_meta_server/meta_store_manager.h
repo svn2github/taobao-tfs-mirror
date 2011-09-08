@@ -46,25 +46,22 @@ namespace tfs
         int select(const int64_t app_id, const int64_t uid, CacheDirMetaNode* p_dir_node,
             const char* name, const bool is_file, void*& ret_node);
 
-
-        int ls(const int64_t app_id, const int64_t uid, CacheDirMetaNode* p_dir_node,
-            const char* name, const bool is_file,
-            std::vector<common::MetaInfo>& out_v_meta_info, bool& still_have);
-
         int insert(const int64_t app_id, const int64_t uid,
-            CacheDirMetaNode* p_p_dir_node, CacheDirMetaNode* p_dir_node,
-            const char* name, const common::FileType type, common::MetaInfo* meta_info = NULL);
+            const int64_t pp_id, CacheDirMetaNode* p_dir_node,
+            const char* name, const int32_t name_len,
+            const common::FileType type, common::MetaInfo* meta_info = NULL);
 
         int update(const int64_t app_id, const int64_t uid,
-            CacheDirMetaNode* s_p_p_dir_node, CacheDirMetaNode* s_p_dir_node, 
-            CacheDirMetaNode* d_p_p_dir_node, CacheDirMetaNode* d_p_dir_node, 
+            const int64_t s_ppid, CacheDirMetaNode* s_p_dir_node, 
+            const int64_t d_ppid, CacheDirMetaNode* d_p_dir_node, 
             const char* s_name, const char* d_name,
             const common::FileType type);
 
-        int remove(const int64_t app_id, const int64_t uid, 
-            CacheDirMetaNode* p_p_dir_node,
-            CacheDirMetaNode* p_dir_node,
-            const char* name, const common::FileType type);
+        int remove(const int64_t app_id, const int64_t uid, int64_t ppid,
+            CacheDirMetaNode* p_dir_node, void* node_will_removed, const common::FileType type);
+
+        int get_dir_meta_info(const int64_t app_id, const int64_t uid, const int64_t pid,
+            const char* name, const int32_t name_len, common::MetaInfo& out_meta_info);
         //TODO private:
       public:
         int get_file_frag_info(const int64_t app_id, const int64_t uid, 
@@ -114,7 +111,9 @@ namespace tfs
             const std::vector<common::MetaInfo>::iterator meta_info_end,
             CacheDirMetaNode* p_dir_node);
 
-        int free_root_node(CacheRootNode* root_node);
+        static int free(CacheRootNode* root_node);
+        static int free(CacheDirMetaNode* dir_meta_node);
+        static int free(CacheFileMetaNode* dir_meta_node);
 
         int get_return_status(const int status, const int proc_ret);
         int force_rc(const int32_t need_size);

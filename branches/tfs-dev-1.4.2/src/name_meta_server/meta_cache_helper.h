@@ -110,6 +110,7 @@ namespace tfs
 
         static int free(CacheDirMetaNode* dir_meta_node);
         static int free(CacheFileMetaNode* dir_meta_node);
+        static int free(CacheRootNode* root_node);
 
         //static CacheDirMetaNode* add_top_dir(const int64_t app_id, const int64_t uid);
         //static CacheDirMetaNode* get_top_dir(const int64_t app_id, const int64_t uid);

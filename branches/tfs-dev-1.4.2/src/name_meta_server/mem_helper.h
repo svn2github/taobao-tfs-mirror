@@ -62,6 +62,7 @@ namespace tfs
           const int32_t f_free_list_count);
       static void* malloc(const int64_t size, const int32_t type = CACHE_NONE_NODE);
       static void free(void* p, const int32_t type = CACHE_NONE_NODE);
+      static int64_t get_used_size();
     private:
       MemHelper();
       MemHelper(const int32_t r_free_list_count, const int32_t d_free_list_count, 
@@ -70,6 +71,7 @@ namespace tfs
     private:
       static tbsys::CThreadMutex mutex_;
       static MemHelper* instance_;
+      static int64_t used_size_;
     private:
       MemNodeList* root_node_free_list_;
       MemNodeList* dir_node_free_list_;

@@ -84,8 +84,8 @@ namespace tfs
 
     MetaStoreManager::~MetaStoreManager()
     {
-      tbsys::gDelete(database_pool_);
-      tbsys::gDelete(app_id_uid_mutex_);
+      delete database_pool_;
+      delete [] app_id_uid_mutex_;
     }
     tbsys::CThreadMutex* MetaStoreManager::get_mutex(const int64_t app_id, const int64_t uid)
     {
@@ -103,7 +103,9 @@ namespace tfs
       //if root not exit in lru, we need ls '/' and put the result ro lru
       UNUSED(app_id);
       UNUSED(uid);
-      CacheRootNode* ret = NULL;
+      //this is for test
+      static CacheRootNode test_root_node;
+      CacheRootNode* ret = &test_root_node;
       return ret;
     }
     int MetaStoreManager::create_top_dir(const int64_t app_id, const int64_t uid, CacheRootNode* root_node)
@@ -119,7 +121,7 @@ namespace tfs
             NULL, 0, false, out_v_meta_info, still_have);
         if (TFS_SUCCESS == ret && !out_v_meta_info.empty())
         {
-          root_node->dir_meta_ = (CacheDirMetaNode*)malloc(sizeof(CacheDirMetaNode));
+          root_node->dir_meta_ = (CacheDirMetaNode*)MemHelper::malloc(sizeof(CacheDirMetaNode), CACHE_DIR_META_NODE);
           assert(NULL != root_node->dir_meta_);
           FileMetaInfo& file_info = out_v_meta_info[0].file_info_;
           root_node->dir_meta_->id_ = file_info.id_;
@@ -130,21 +132,23 @@ namespace tfs
           root_node->dir_meta_->child_dir_infos_ = NULL;
           root_node->dir_meta_->child_file_infos_ = NULL;
           root_node->dir_meta_->flag_ = 0;
+          root_node->dir_meta_->set_got_all_children();
         }
       }
       return ret;
     }
 
-    int MetaStoreManager::free_root_node(CacheRootNode* root_node)
+    int MetaStoreManager::free(CacheRootNode* root_node)
     {
-      int ret = TFS_SUCCESS;
-      assert(NULL != root_node);
-      if (NULL != root_node->dir_meta_)
-      {
-        MetaCacheHelper::free(root_node->dir_meta_);
-      }
-      free(root_node);
-      return ret;
+      return MetaCacheHelper::free(root_node);
+    }
+    int MetaStoreManager::free(CacheDirMetaNode* dir_meta_node)
+    {
+      return MetaCacheHelper::free(dir_meta_node);
+    }
+    int MetaStoreManager::free(CacheFileMetaNode* dir_meta_node)
+    {
+      return MetaCacheHelper::free(dir_meta_node);
     }
 
 
@@ -191,48 +195,23 @@ namespace tfs
       return ret;
     }
 
-
-    //always return all children 
-    int MetaStoreManager::ls(const int64_t app_id, const int64_t uid, CacheDirMetaNode* p_dir_node,
-                             const char* name, const bool is_file,
-                             std::vector<common::MetaInfo>& out_v_meta_info, bool& still_have)
-    {
-      int ret = TFS_SUCCESS;
-      //TODO if we had not got p_dir_node's children we should got all children and put them into cache
-      //out_v_meta_info's size should be limited in MAX_OUT_INFO_COUNT
-      //out_v_meta_info will get the infos, which one >= name
-      UNUSED(app_id);
-      UNUSED(uid);
-      UNUSED(p_dir_node);
-      UNUSED(name);
-      UNUSED(is_file);
-      UNUSED(out_v_meta_info);
-      UNUSED(still_have);
-      return ret;
-
-    }
     int MetaStoreManager::insert(const int64_t app_id, const int64_t uid,
-                                 CacheDirMetaNode* p_p_dir_node, CacheDirMetaNode* p_dir_node,
-                                 const char* name, const common::FileType type, common::MetaInfo* meta_info)
+                                 const int64_t pp_id, CacheDirMetaNode* p_dir_node,
+                                 const char* name, const int32_t name_len,
+                                 const common::FileType type, common::MetaInfo* meta_info)
     {
       int ret = TFS_SUCCESS;
-      int32_t p_name_len = 0, name_len = 0;
+      int32_t p_name_len = 0;
       //int64_t dir_id = 0;
-      int64_t pp_id = 0;
       //we only cache the first line for file
       if (NULL == p_dir_node)
       {
         TBSYS_LOG(ERROR, "prameters err");
         ret = TFS_ERROR;
       }
-      if (NULL != p_p_dir_node)
-      {
-        pp_id = p_p_dir_node->id_;
-      }
       if (TFS_SUCCESS == ret)
       {
         p_name_len = FileName::length(p_dir_node->name_);
-        name_len = FileName::length(name);
         ret = insert(app_id, uid, pp_id, p_dir_node->name_,
                      p_name_len, p_dir_node->id_,
                      name, name_len, type, meta_info);
@@ -244,7 +223,7 @@ namespace tfs
         {
           vector<MetaInfo> out_v_meta_info;
           bool still_have;
-          char name_end[MAX_META_FILE_NAME_LEN+16];
+          char name_end[MAX_META_FILE_NAME_LEN];
           int32_t name_end_len = 0;
           MetaServerService::next_file_name_base_on(name_end, name_end_len, name, name_len);
           ret = ls(app_id, uid, p_dir_node->id_, name, name_len, 
@@ -258,6 +237,7 @@ namespace tfs
             {
               CacheDirMetaNode* dir_node =
                 static_cast<CacheDirMetaNode*>(MemHelper::malloc(sizeof(CacheDirMetaNode), CACHE_DIR_META_NODE));
+              dir_node->reset();
               dir_node->id_ = file_info.id_;
               dir_node->create_time_ = file_info.create_time_;
               dir_node->modify_time_ = file_info.modify_time_;
@@ -265,11 +245,10 @@ namespace tfs
               dir_node->flag_ = 0;
               dir_node->name_ = static_cast<char*>(MemHelper::malloc(name_len));
               memcpy(dir_node->name_, name, name_len);
-              if ((ret == MetaCacheHelper::insert_dir(p_dir_node, dir_node)) != TFS_SUCCESS)
+              if ((ret = MetaCacheHelper::insert_dir(p_dir_node, dir_node)) != TFS_SUCCESS)
               {
                 TBSYS_LOG(ERROR, "insert dir error");
-                MemHelper::free(dir_node->name_);
-                MemHelper::free(dir_node, CACHE_DIR_META_NODE);
+                free(dir_node);
               }
             }
             else
@@ -282,13 +261,13 @@ namespace tfs
               {
                 file_node->size_ = -1;
                 //replace info if cur is the first line
-                if (*((unsigned char*)name) + 1 == name_len)
+                if (FileName::length(name) == name_len)
                 {
                   file_node->create_time_ = file_info.create_time_;
                   file_node->modify_time_ = file_info.modify_time_;
                   file_node->version_ = file_info.ver_no_;
                   buff_len = out_v_meta_info[0].frag_info_.get_length();
-                  ::free(file_node->meta_info_);
+                  MemHelper::free(file_node->meta_info_);
                   file_node->meta_info_ = (char*)MemHelper::malloc(buff_len);
                   assert(NULL != file_node->meta_info_);
                   int64_t pos = 0;
@@ -312,12 +291,10 @@ namespace tfs
                 file_node->version_ = file_info.ver_no_;
                 file_node->name_ = static_cast<char*>(MemHelper::malloc(name_len));
                 memcpy(file_node->name_, name, name_len);
-                if ((ret == MetaCacheHelper::insert_file(p_dir_node, file_node)) != TFS_SUCCESS)
+                if ((ret = MetaCacheHelper::insert_file(p_dir_node, file_node)) != TFS_SUCCESS)
                 {
                   TBSYS_LOG(ERROR, "insert file error");
-                  MemHelper::free(file_node->meta_info_);
-                  MemHelper::free(file_node->name_);
-                  MemHelper::free(file_node, CACHE_FILE_META_NODE);
+                  free(file_node);
                 }
               }
             }
@@ -327,11 +304,136 @@ namespace tfs
       return ret;
     }
 
-    //this will replace MetaServerService::get_meta_info func
+    int MetaStoreManager::update(const int64_t app_id, const int64_t uid,
+        const int64_t s_ppid, CacheDirMetaNode* s_p_dir_node, 
+        const int64_t d_ppid, CacheDirMetaNode* d_p_dir_node, 
+        const char* s_name, const char* d_name,
+        const common::FileType type)
+    {
+      int ret = TFS_ERROR;
+      if (NULL != s_p_dir_node && NULL != d_p_dir_node && NULL != s_name && NULL != d_name)
+      {
+        //check if dest have exist (dir and file)
+        void* ret_node = NULL;
+        ret = TFS_SUCCESS;
+        select(app_id, uid, d_p_dir_node, d_name, true, ret_node);
+        if (NULL != ret_node)
+        {
+          TBSYS_LOG(INFO, "same name file exist");
+          ret = TFS_ERROR;
+        }
+        if (TFS_SUCCESS == ret)
+        {
+          select(app_id, uid, d_p_dir_node, d_name, false, ret_node);
+          if (NULL != ret_node)
+          {
+            TBSYS_LOG(INFO, "same name dir exist");
+            ret = TFS_ERROR;
+          }
+        }
+        if (TFS_SUCCESS == ret)
+        {
+          //db_update
+          ret = update(app_id, uid, s_ppid, 
+              s_p_dir_node->id_, s_p_dir_node->name_, FileName::length(s_p_dir_node->name_),
+              d_ppid, d_p_dir_node->id_, d_p_dir_node->name_, FileName::length(d_p_dir_node->name_),
+              s_name, FileName::length(s_name),
+              d_name, FileName::length(d_name), type);
+        }
+        if (TFS_SUCCESS == ret)
+        {
+          //update mem
+          if (DIRECTORY != type)
+          {
+            CacheFileMetaNode* ret_node = NULL;
+            MetaCacheHelper::find_file(s_p_dir_node, s_name, ret_node);
+            if (NULL != ret_node)
+            {
+              assert(TFS_SUCCESS == MetaCacheHelper::rm_file(s_p_dir_node, ret_node));
+              MemHelper::free(ret_node->name_);
+              ret_node->name_ = (char*)MemHelper::malloc(FileName::length(d_name));
+              assert(NULL != ret_node->name_);
+              memcpy(ret_node->name_, d_name, FileName::length(d_name));
+              ret = MetaCacheHelper::insert_file(d_p_dir_node, ret_node);
+              if (TFS_SUCCESS != ret)
+              {
+                TBSYS_LOG(ERROR, "can not insert new node");
+                free(ret_node);
+              }
+            }
+          }
+          else
+          {
+            CacheDirMetaNode* ret_node = NULL;
+            MetaCacheHelper::find_dir(s_p_dir_node, s_name, ret_node);
+            if (NULL != ret_node)
+            {
+              assert(TFS_SUCCESS == MetaCacheHelper::rm_dir(s_p_dir_node, ret_node));
+              MemHelper::free(ret_node->name_);
+              ret_node->name_ = (char*)MemHelper::malloc(FileName::length(d_name));
+              assert(NULL != ret_node->name_);
+              memcpy(ret_node->name_, d_name, FileName::length(d_name));
+              ret = MetaCacheHelper::insert_dir(d_p_dir_node, ret_node);
+              if (TFS_SUCCESS != ret)
+              {
+                TBSYS_LOG(ERROR, "can not insert new node");
+                free(ret_node);
+              }
+            }
+          }
+        }
+      }
+
+      return ret;
+    }
+
+    int MetaStoreManager::remove(const int64_t app_id, const int64_t uid, const int64_t ppid,
+        CacheDirMetaNode* p_dir_node, void* node_will_removed, const FileType type)
+    {
+      int ret = TFS_ERROR;
+      if (NULL != p_dir_node && NULL != node_will_removed)
+      {
+        char* name = NULL;
+        int64_t p_name_len = FileName::length(p_dir_node->name_);
+        int64_t id = 0;
+        CacheDirMetaNode* dir_node = NULL;
+        CacheFileMetaNode* file_node = NULL;
+        if (DIRECTORY != type)
+        {
+          file_node = (CacheFileMetaNode*)node_will_removed;
+          name = file_node->name_;
+        }
+        else
+        {
+          dir_node = (CacheDirMetaNode*)node_will_removed;
+          name = dir_node->name_;
+          id = dir_node->id_;
+        }
+
+        ret = remove(app_id, uid, ppid, p_dir_node->name_, p_name_len,
+            p_dir_node->id_, id, name, FileName::length(name), type);
+        if (TFS_SUCCESS == ret)
+        {
+          //remove from mem
+          if (DIRECTORY != type)
+          {
+            assert(TFS_SUCCESS == MetaCacheHelper::rm_file(p_dir_node, file_node));
+            free(file_node);
+          }
+          else
+          {
+            assert(TFS_SUCCESS == MetaCacheHelper::rm_dir(p_dir_node, dir_node));
+            free(dir_node);
+          }
+        }
+      }
+      return ret;
+    }
+
     int MetaStoreManager::get_file_frag_info(const int64_t app_id, const int64_t uid, 
-                                             CacheDirMetaNode* p_dir_node, CacheFileMetaNode* file_node,
-                                             const int64_t offset, std::vector<common::MetaInfo>& out_v_meta_info,
-                                             int32_t& cluster_id, int64_t& last_offset)
+        CacheDirMetaNode* p_dir_node, CacheFileMetaNode* file_node,
+        const int64_t offset, std::vector<common::MetaInfo>& out_v_meta_info,
+        int32_t& cluster_id, int64_t& last_offset)
     {
       int ret = TFS_SUCCESS;
       assert (NULL != p_dir_node);
@@ -339,29 +441,27 @@ namespace tfs
       cluster_id = -1;
       last_offset = 0;
       assert(NULL != file_node->meta_info_);
-      assert(-1 != file_node->size_);
-      if (0 == file_node->size_)
+      //assert(-1 != file_node->size_);
+      MetaInfo meta_info;
+      int64_t pos = 0;
+      meta_info.frag_info_.deserialize(file_node->meta_info_, MAX_FRAG_INFO_SIZE, pos);
+      cluster_id = meta_info.frag_info_.cluster_id_;
+      if ((offset >= meta_info.frag_info_.get_last_offset() || -1 == offset) 
+          && meta_info.frag_info_.had_been_split_)
       {
-        //this means the file have no frag info, file size is 0
+        int32_t name_len = FileName::length(file_node->name_);
+        ret = get_meta_info_from_db(app_id, uid, p_dir_node->id_, 
+            file_node->name_, name_len, offset, out_v_meta_info, cluster_id, last_offset);
       }
-      else
+      else 
       {
-        MetaInfo meta_info;
-        int64_t pos = 0;
-        meta_info.frag_info_.deserialize(file_node->meta_info_, MAX_FRAG_INFO_SIZE, pos);
-        if (offset < meta_info.frag_info_.get_last_offset())
-        {
-          //TODO meta_info.file_info_
-          cluster_id = meta_info.frag_info_.cluster_id_;
-          last_offset = meta_info.frag_info_.get_last_offset();
-          out_v_meta_info.push_back(meta_info);
-        }
-        else if (meta_info.frag_info_.had_been_split_)
-        {
-          int32_t name_len = *((unsigned char*)file_node->name_) + 1;
-          ret = get_meta_info_from_db(app_id, uid, p_dir_node->id_, 
-              file_node->name_, name_len, offset, out_v_meta_info, cluster_id, last_offset);
-        }
+        meta_info.file_info_.name_.assign(file_node->name_, FileName::length(file_node->name_));
+        meta_info.file_info_.ver_no_ = file_node->version_;
+        meta_info.file_info_.create_time_ = file_node->create_time_;
+        meta_info.file_info_.modify_time_ = file_node->modify_time_;
+        meta_info.file_info_.size_ = file_node->size_;
+        last_offset = meta_info.frag_info_.get_last_offset();
+        out_v_meta_info.push_back(meta_info);
       }
       return ret;
     }
@@ -372,7 +472,7 @@ namespace tfs
         int32_t& cluster_id, int64_t& last_offset)
     {
       int ret = TFS_ERROR;
-      char search_name[MAX_META_FILE_NAME_LEN + 8];
+      char search_name[MAX_META_FILE_NAME_LEN];
       int32_t search_name_len = name_len;
       assert(name_len <= MAX_META_FILE_NAME_LEN);
       memcpy(search_name, name, search_name_len);
@@ -411,6 +511,7 @@ namespace tfs
       return ret;
     }
 
+
     ////////////////////////////////////////
     //database about
     int MetaStoreManager::select(const int64_t app_id, const int64_t uid, const int64_t pid, const char* name, const int32_t name_len, const bool is_file, std::vector<MetaInfo>& out_v_meta_info)
@@ -418,8 +519,8 @@ namespace tfs
       int ret = TFS_ERROR;
       out_v_meta_info.clear();
       bool still_have = false;
-      char name_end[MAX_META_FILE_NAME_LEN+16];
-      if (NULL == name || (unsigned char)name[0] + 1 > MAX_META_FILE_NAME_LEN)
+      char name_end[MAX_META_FILE_NAME_LEN];
+      if (NULL == name || FileName::length(name) > MAX_META_FILE_NAME_LEN)
       {
         TBSYS_LOG(ERROR, "parameters error");
       }
@@ -427,9 +528,9 @@ namespace tfs
       {
         //make name_end [len]xxxxxxxx[max_offset] 
         memcpy(name_end, name, name_len);
-        char* p = name_end + (unsigned char)name[0] + 1;
+        char* p = name_end + FileName::length(name);
         int32_t name_end_len = name_len;
-        name_end_len = (unsigned char)name[0] + 1 + 8;
+        name_end_len = FileName::length(name) + 8;
         MetaServerService::int64_to_char(p, 8, -1L);
         ret = ls(app_id, uid, pid, name, name_len, name_end, name_end_len, 
             is_file, out_v_meta_info, still_have);
@@ -531,7 +632,7 @@ namespace tfs
             else
             {
               int64_t pos = 0;
-              char* frag_info = (char*) malloc(frag_len);
+              char* frag_info = (char*)MemHelper::malloc(frag_len);
               if (NULL == frag_info)
               {
                 TBSYS_LOG(ERROR, "mem not enough");
@@ -553,7 +654,7 @@ namespace tfs
                     TBSYS_LOG(DEBUG, "database helper pwrite file, status: %d", status);
                   }
                 }
-                free (frag_info);
+                MemHelper::free(frag_info);
               }
             }
           }
@@ -674,14 +775,34 @@ namespace tfs
       return ret;
     }
 
+    int MetaStoreManager::get_dir_meta_info(const int64_t app_id, const int64_t uid, const int64_t pid,
+        const char* name, const int32_t name_len, MetaInfo& out_meta_info)
+    {
+      std::vector<MetaInfo> tmp_v_meta_info;
+      int ret = select(app_id, uid, pid, name, name_len, false, tmp_v_meta_info);
+      if (ret != TFS_SUCCESS || tmp_v_meta_info.empty())
+      {
+        TBSYS_LOG(INFO, "get dir meta info fail. %s, ret: %d", name, ret);
+        ret = TFS_ERROR;
+      }
+      else
+      {
+        // copy
+        out_meta_info.copy_no_frag(*tmp_v_meta_info.begin());
+      }
+      return ret;
+    }
+
     int MetaStoreManager::get_all_children_from_db(const int64_t app_id, const int64_t uid,
         CacheDirMetaNode* p_dir_node)
     {
+      TBSYS_LOG(DEBUG, "get_all_children_from_db app_id %"PRI64_PREFIX"d uid %"PRI64_PREFIX"d",
+          app_id, uid);
       int ret = TFS_ERROR;
       assert (NULL != p_dir_node);
       std::vector<MetaInfo> tmp_v_meta_info;
       vector<MetaInfo>::iterator tmp_v_meta_info_it;
-      char name[MAX_META_FILE_NAME_LEN + 16];
+      char name[MAX_META_FILE_NAME_LEN];
       int32_t name_len = 1;
       name[0] = '\0';
       bool still_have = false;
@@ -737,6 +858,7 @@ namespace tfs
 
       return ret;
     }
+
     int MetaStoreManager::fill_file_meta_info(std::vector<common::MetaInfo>::iterator& meta_info_begin,
         const std::vector<common::MetaInfo>::iterator meta_info_end,
         CacheDirMetaNode* p_dir_node)
@@ -759,9 +881,9 @@ namespace tfs
           //first line of file, insert it;
           if (NULL == file_meta)
           {
-            file_meta = (CacheFileMetaNode*)malloc(sizeof(CacheFileMetaNode));
+            file_meta = (CacheFileMetaNode*)MemHelper::malloc(sizeof(CacheFileMetaNode), CACHE_FILE_META_NODE);
             assert(NULL != file_meta);
-            file_meta->name_ = (char*)malloc(meta_info_begin->file_info_.name_.length());
+            file_meta->name_ = (char*)MemHelper::malloc(meta_info_begin->file_info_.name_.length());
             memcpy(file_meta->name_, meta_info_begin->file_info_.name_.c_str(), 
                 meta_info_begin->file_info_.name_.length());
             file_meta->version_ = meta_info_begin->file_info_.ver_no_;
@@ -770,7 +892,7 @@ namespace tfs
             int64_t pos = 0;
             file_meta->meta_info_ = NULL;
             buff_len = meta_info_begin->frag_info_.get_length();
-            file_meta->meta_info_ = (char*)malloc(buff_len);
+            file_meta->meta_info_ = (char*)MemHelper::malloc(buff_len);
             assert(NULL != file_meta->meta_info_);
             assert(TFS_SUCCESS == 
                 meta_info_begin->frag_info_.serialize(file_meta->meta_info_, buff_len, pos));
@@ -778,8 +900,6 @@ namespace tfs
             ret = MetaCacheHelper::insert_file(p_dir_node, file_meta);
             if (TFS_SUCCESS != ret)
             {
-              free(file_meta->meta_info_);
-              free(file_meta->name_);
               free(file_meta);
               break;
             }
@@ -792,6 +912,7 @@ namespace tfs
       }
       return ret;
     }
+
     int MetaStoreManager::fill_dir_info(std::vector<common::MetaInfo>::iterator& meta_info_begin,
         const std::vector<common::MetaInfo>::iterator meta_info_end,
         CacheDirMetaNode* p_dir_node)
@@ -810,10 +931,10 @@ namespace tfs
         if (NULL == dir_meta)
         {
           //insert a dir meta
-          dir_meta = (CacheDirMetaNode*)malloc(sizeof(CacheDirMetaNode));
+          dir_meta = (CacheDirMetaNode*)MemHelper::malloc(sizeof(CacheDirMetaNode), CACHE_DIR_META_NODE);
           assert(NULL != dir_meta);
           dir_meta->id_= meta_info_begin->file_info_.id_;
-          dir_meta->name_ = (char*)malloc(meta_info_begin->file_info_.name_.length());
+          dir_meta->name_ = (char*)MemHelper::malloc(meta_info_begin->file_info_.name_.length());
           memcpy(dir_meta->name_, meta_info_begin->file_info_.name_.c_str(), 
               meta_info_begin->file_info_.name_.length());
 
@@ -822,7 +943,6 @@ namespace tfs
           ret = MetaCacheHelper::insert_dir(p_dir_node, dir_meta);
           if (TFS_SUCCESS != ret)
           {
-            free(dir_meta->name_);
             free(dir_meta);
             break;
           }

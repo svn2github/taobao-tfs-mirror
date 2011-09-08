@@ -35,6 +35,7 @@ namespace tfs
       {
         memset(this, 0, sizeof(CacheRootNode));
       }
+      void dump() const;
       int64_t app_id_;
       int64_t user_id_;
       int64_t size_;    //the mem size occupied by this user
@@ -51,6 +52,7 @@ namespace tfs
       {
         memset(this, 0, sizeof(CacheDirMetaNode));
       }
+      void dump() const;
       bool operator < (const CacheDirMetaNode& right) const;
       bool operator == (const CacheDirMetaNode& right) const;
       bool operator != (const CacheDirMetaNode& right) const;
@@ -83,6 +85,7 @@ namespace tfs
         memset(this, 0, sizeof(CacheFileMetaNode));
         size_ = -1;
       }
+      void dump() const;
       bool operator < (const CacheFileMetaNode& right) const;
       bool operator == (const CacheFileMetaNode& right) const;
       bool operator != (const CacheFileMetaNode& right) const;
@@ -153,7 +156,7 @@ namespace tfs
         T tmp;
         tmp.name_ = (char*)name;
         ret = std::lower_bound(begin_, begin_ + size_, &tmp, PointCompareHelper());
-        if (**ret != tmp)
+        if (ret == begin_ + size_ || **ret != tmp)
         {
           ret = NULL;
         }

@@ -42,7 +42,7 @@ namespace tfs
     struct FragMeta
     {
       FragMeta();
-      FragMeta(uint32_t block_id, uint64_t file_id, int64_t offset, int32_t size);
+      FragMeta(const uint32_t block_id, const uint64_t file_id, const int64_t offset, const int32_t size);
 
       static int64_t get_length();
       bool operator < (const FragMeta& right) const;
@@ -54,9 +54,9 @@ namespace tfs
       int serialize(common::Stream& output) const;
       int deserialize(common::Stream& input);
 
-      uint32_t block_id_;
       uint64_t file_id_;
       int64_t offset_;
+      uint32_t block_id_;
       int32_t size_;
     };
 
@@ -164,13 +164,13 @@ namespace tfs
     const int32_t MAX_FILE_PATH_LEN = 512;
     const int32_t MAX_META_FILE_NAME_LEN = 255;
     // threshhold count when should split
-    const int32_t SOFT_MAX_FRAG_META_COUNT = 1024;
+    //const int32_t SOFT_MAX_FRAG_META_COUNT = 1024;
+    const int32_t SOFT_MAX_FRAG_META_COUNT = 5;
     const int32_t MAX_FRAG_INFO_SIZE = 65535;
     const int32_t MAX_FRAG_META_COUNT = MAX_FRAG_INFO_SIZE/sizeof(FragMeta) - 1;
     // MetaInfo or FragInfo return count once
     const int32_t MAX_OUT_INFO_COUNT = 500;
-    const int32_t ROW_LIMIT = 5;
-
+    const int32_t ROW_LIMIT = 500;
     const int64_t MAX_READ_FRAG_SIZE = static_cast<int64_t>(1) << 63 - 1;
 
   }

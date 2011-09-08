@@ -57,9 +57,11 @@ namespace tfs
              const char* file_path, const common::FileType type);
       int mv(const int64_t app_id, const int64_t uid,
              const char* file_path, const char* dest_file_path, const common::FileType type);
+
       int write(const int64_t app_id, const int64_t uid,
                 const char* file_path,
                 const common::FragInfo& in_v_frag_info);
+
       int read(const int64_t app_id, const int64_t uid, const char* file_path,
                const int64_t offset, const int64_t size,
                common::FragInfo& frag_info, bool& still_have);
@@ -74,6 +76,11 @@ namespace tfs
       static void next_file_name(char* name, int32_t& name_len);
       static void next_file_name_base_on(char* name, int32_t& name_len,
                                          const char* base_name, const int32_t base_name_len);
+      //for test 
+      CacheRootNode* get_root_node(const int64_t app_id, const int64_t uid)
+      {
+        return store_manager_->get_root_node(app_id, uid);
+      }
 
     private:
       int get_p_meta_info(CacheRootNode* root_node,
@@ -88,38 +95,36 @@ namespace tfs
       static int get_name(const char* name, char* buffer, const int32_t buffer_len, int32_t& name_len);
 
       int parse_file_path(const int64_t app_id, const int64_t uid, const char* file_path,
-                          common::MetaInfo& p_meta_info, char* name, int32_t& name_len,
-                          const bool root_ok = false);
+                          common::MetaInfo& p_meta_info, char* name, int32_t& name_len);
+
+      int parse_file_path(CacheRootNode* root_node, const char* file_path,
+          CacheDirMetaNode*& p_dir_node, int64_t& pp_id, char* name, int32_t& name_len,
+          const bool root_ok = false);
+
       int get_p_meta_info(const int64_t app_id, const int64_t uid,
-                          const std::vector<std::string>& v_name, common::MetaInfo& out_meta_info);
-      int get_dir_meta_info(const int64_t app_id, const int64_t uid, const int64_t pid,
-                            const char* name, const int32_t name_len,
-                            MetaInfo& out_meta_info);
-      int get_meta_info(const int64_t app_id, const int64_t uid, const int64_t pid,
-                        const char* name, const int32_t name_len, const int64_t offset, const bool is_file,
-                        std::vector<common::MetaInfo>& v_meta_info, int32_t& cluster_id, int64_t& last_offset);
+          const std::vector<std::string>& v_name, common::MetaInfo& out_meta_info);
 
       int read_frag_info(const std::vector<common::MetaInfo>& v_meta_info,
-                         const int64_t offset, const int64_t size,
-                         int32_t& cluster_id, std::vector<common::FragMeta>& v_out_frag_info, bool& still_have);
+          const int64_t offset, const int64_t size,
+          int32_t& cluster_id, std::vector<common::FragMeta>& v_out_frag_info, bool& still_have);
 
       void calculate_file_meta_info(std::vector<common::MetaInfo>::iterator& meta_info_begin,
-                                    const std::vector<common::MetaInfo>::iterator meta_info_end, const bool ls_file,
-                                    std::vector<common::MetaInfo>& v_meta_info, common::MetaInfo& last_meta_info);
+          const std::vector<common::MetaInfo>::iterator meta_info_end, const bool ls_file,
+          std::vector<common::MetaInfo>& v_meta_info, common::MetaInfo& last_meta_info);
 
       void add_new_meta_info(const int64_t pid, const int32_t cluster_id,
-                              const char* name, const int32_t name_len, const int64_t last_offset,
-                              std::vector<common::MetaInfo>& tmp_v_meta_info);
+          const char* name, const int32_t name_len, const int64_t last_offset,
+          std::vector<common::MetaInfo>& tmp_v_meta_info);
 
       void add_frag_to_meta(std::vector<common::FragMeta>::iterator& frag_meta_begin,
-                            std::vector<common::FragMeta>::iterator frag_meta_end,
-                            common::MetaInfo& meta_info, int64_t& last_offset);
+          std::vector<common::FragMeta>::iterator frag_meta_end,
+          common::MetaInfo& meta_info, int64_t& last_offset);
 
       template<class T>
-      bool check_not_out_over(const T& v)
-      {
-        return static_cast<int32_t>(v.size()) < common::MAX_OUT_INFO_COUNT;
-      }
+        bool check_not_out_over(const T& v)
+        {
+          return static_cast<int32_t>(v.size()) < common::MAX_OUT_INFO_COUNT;
+        }
 
       static bool is_sub_dir(const char* sub_dir, const char* parents_dir);
     private:

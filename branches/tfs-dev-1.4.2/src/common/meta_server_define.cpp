@@ -27,11 +27,12 @@ namespace tfs
       int32_t length = 0;
       if (data != NULL)
       {
-        length = data[0] & 0x7F;
-        if (length > 0)
-        {
-          length += (data[0] & 0x80) ? (NAME_EXTRA_SIZE + 1): 1;
-        }
+        length = *((unsigned char*)data) + 1;
+        //length = data[0] & 0x7F;
+        //if (length > 0)
+        //{
+        //  length += (data[0] & 0x80) ? (NAME_EXTRA_SIZE + 1): 1;
+        //}
       }
       return length;
     }
@@ -47,12 +48,12 @@ namespace tfs
     }
 
     FragMeta::FragMeta() :
-      block_id_(0), file_id_(0), offset_(0), size_(0)
+      file_id_(0), offset_(0), block_id_(0), size_(0)
     {
     }
 
     FragMeta::FragMeta(uint32_t block_id, uint64_t file_id, int64_t offset, int32_t size) :
-      block_id_(block_id), file_id_(file_id), offset_(offset), size_(size)
+      file_id_(file_id), offset_(offset), block_id_(block_id), size_(size)
     {
     }
 

@@ -47,7 +47,7 @@ namespace tfs
       InfoArray<CacheDirMetaNode>* ret = NULL;
       if (NULL != p_dir_node)
       {
-        void* addr = malloc(sizeof(InfoArray<CacheDirMetaNode>));
+        void* addr = MemHelper::malloc(sizeof(InfoArray<CacheDirMetaNode>));
         assert(NULL != addr);
         ret = new(addr)InfoArray<CacheDirMetaNode>();
         p_dir_node->child_dir_infos_ = ret;
@@ -59,7 +59,7 @@ namespace tfs
       InfoArray<CacheFileMetaNode>* ret = NULL;
       if (NULL != p_dir_node)
       {
-        void* addr = malloc(sizeof(InfoArray<CacheFileMetaNode>));
+        void* addr = MemHelper::malloc(sizeof(InfoArray<CacheFileMetaNode>));
         assert(NULL != addr);
         ret = new(addr)InfoArray<CacheFileMetaNode>();
         p_dir_node->child_file_infos_ = ret;
@@ -210,11 +210,6 @@ namespace tfs
       int ret = TFS_SUCCESS;
       if (NULL != dir_meta_node)
       {
-        if (NULL != dir_meta_node->name_)
-        {
-          ::free(dir_meta_node->name_);
-          dir_meta_node->name_ = NULL;
-        }
         if (NULL != dir_meta_node->child_dir_infos_)
         {
           InfoArray<CacheDirMetaNode>* child_dir_infos = get_sub_dirs_array_info(dir_meta_node);
@@ -224,7 +219,7 @@ namespace tfs
             free(*(begin + i));
           }
           ((InfoArray<CacheDirMetaNode>*)(dir_meta_node->child_dir_infos_))->~InfoArray();
-          ::free((InfoArray<CacheDirMetaNode>*)(dir_meta_node->child_dir_infos_));
+          MemHelper::free(dir_meta_node->child_dir_infos_);
         }
         if (NULL != dir_meta_node->child_dir_infos_)
         {
@@ -235,9 +230,14 @@ namespace tfs
             free(*(begin + i));
           }
           ((InfoArray<CacheFileMetaNode>*)(dir_meta_node->child_file_infos_))->~InfoArray();
-          ::free((InfoArray<CacheFileMetaNode>*)(dir_meta_node->child_file_infos_));
+          MemHelper::free(dir_meta_node->child_file_infos_);
         }
-        ::free(dir_meta_node);
+        if (NULL != dir_meta_node->name_)
+        {
+          MemHelper::free(dir_meta_node->name_);
+          dir_meta_node->name_ = NULL;
+        }
+        MemHelper::free(dir_meta_node, CACHE_DIR_META_NODE);
       }
       return ret;
     }
@@ -248,15 +248,26 @@ namespace tfs
       {
         if (NULL != file_meta_node->name_)
         {
-          ::free(file_meta_node->name_);
+          MemHelper::free(file_meta_node->name_);
           file_meta_node->name_ = NULL;
         }
         if (NULL != file_meta_node->meta_info_)
         {
-          ::free(file_meta_node->meta_info_);
+          MemHelper::free(file_meta_node->meta_info_);
         }
-        ::free(file_meta_node);
+        MemHelper::free(file_meta_node, CACHE_FILE_META_NODE);
       }
+      return ret;
+    }
+    int MetaCacheHelper::free(CacheRootNode* root_node)
+    {
+      int ret = TFS_SUCCESS;
+      assert(NULL != root_node);
+      if (NULL != root_node->dir_meta_)
+      {
+        free(root_node->dir_meta_);
+      }
+      MemHelper::free(root_node, CACHE_ROOT_NODE);
       return ret;
     }
 

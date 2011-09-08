@@ -306,11 +306,11 @@ namespace tfs
       int ret = TFS_SUCCESS;
       char name[MAX_META_FILE_NAME_LEN];
       int32_t name_len = 0;
-      MetaInfo p_meta_info;
 
       // not use parse_file_path to avoid dummy reparse.
       std::vector<std::string> v_name;
       CacheDirMetaNode* p_p_dir_node = NULL, *p_dir_node = NULL;
+      int64_t pp_id = 0;
       if ((ret = parse_name(file_path, v_name)) != TFS_SUCCESS)
       {
         TBSYS_LOG(INFO, "file_path(%s) is invalid", file_path);
@@ -336,21 +336,48 @@ namespace tfs
           TBSYS_LOG(INFO, "get info fail. appid: %"PRI64_PREFIX"d, uid: %"PRI64_PREFIX"d, %s",
               app_id, uid, file_path);
         }
+        else
+        {
+          assert(NULL != p_dir_node);
+          if (NULL != p_p_dir_node)
+          {
+            pp_id = p_p_dir_node->id_;
+          }
+        }
       }
 
       if (TFS_SUCCESS == ret)
       {
         PROFILER_BEGIN("insert");
-        if ((ret = get_name(v_name[get_depth(v_name)].c_str(), name, MAX_META_FILE_NAME_LEN, name_len)) != TFS_SUCCESS)
+        ret = get_name(v_name[get_depth(v_name)].c_str(), name, MAX_META_FILE_NAME_LEN, name_len);
+        if (TFS_SUCCESS != ret)
         {
           TBSYS_LOG(INFO, "get name fail. ret: %d", ret);
         }
-        else if ((ret = store_manager_->insert(app_id, uid, p_p_dir_node, p_dir_node,
-                                               name, type)) != TFS_SUCCESS)
+        void* ret_node = NULL;
+        store_manager_->select(app_id, uid, p_dir_node, name,
+                                     false, ret_node);
+        if (NULL != ret_node)
         {
-          TBSYS_LOG(ERROR, "create fail: %s, type: %d, ret: %d", file_path, type, ret);
+          TBSYS_LOG(INFO, "name is a exist dir");
+          ret = TFS_ERROR;
         }
-          PROFILER_END();
+        store_manager_->select(app_id, uid, p_dir_node, name,
+                                     true, ret_node);
+        if (NULL != ret_node)
+        {
+          TBSYS_LOG(INFO, "name is a exist file");
+          ret = TFS_ERROR;
+        }
+        if (TFS_SUCCESS == ret)
+        {
+          ret = store_manager_->insert(app_id, uid, pp_id, p_dir_node, name, FileName::length(name), type);
+          if (TFS_SUCCESS != ret)
+          {
+            TBSYS_LOG(ERROR, "create fail: %s, type: %d, ret: %d", file_path, type, ret);
+          }
+        }
+        PROFILER_END();
       }
 
       TBSYS_LOG(DEBUG, "create %s, type: %d, appid: %"PRI64_PREFIX"d, uid: %"PRI64_PREFIX"d, filepath: %s",
@@ -368,9 +395,12 @@ namespace tfs
       int32_t name_len = 0;
       int ret = TFS_SUCCESS;
 
-      MetaInfo p_meta_info;
-
-      if ((ret = parse_file_path(app_id, uid, file_path, p_meta_info, name, name_len)) != TFS_SUCCESS)
+      tbsys::CThreadMutex* mutex = store_manager_->get_mutex(app_id, uid);
+      tbsys::CThreadGuard mutex_guard(mutex);
+      CacheRootNode* root_node = store_manager_->get_root_node(app_id, uid);
+      CacheDirMetaNode* p_dir_node = NULL;
+      int64_t pp_id = 0;
+      if ((ret = parse_file_path(root_node, file_path, p_dir_node, pp_id, name, name_len)) != TFS_SUCCESS)
       {
         TBSYS_LOG(INFO, "get info fail. appid: %"PRI64_PREFIX"d, uid: %"PRI64_PREFIX"d, %s",
                   app_id, uid, file_path);
@@ -380,23 +410,20 @@ namespace tfs
         std::vector<MetaInfo> v_meta_info;
         PROFILER_BEGIN("select");
 
-        ret = store_manager_->select(app_id, uid, p_meta_info.get_id(), name, name_len,
-                                     type != DIRECTORY, v_meta_info);
+        void* ret_node = NULL;
+        ret = store_manager_->select(app_id, uid, p_dir_node, name,
+                                     type != DIRECTORY, ret_node);
         PROFILER_END();
 
         // file not exist
-        if (TFS_SUCCESS != ret || v_meta_info.empty())
+        if (TFS_SUCCESS != ret || NULL == ret_node)
         {
           ret = TFS_ERROR;
         }
         else
         {
           PROFILER_BEGIN("remove");
-          std::vector<MetaInfo>::iterator iter = v_meta_info.begin();
-          if ((ret = store_manager_->remove(app_id, uid, p_meta_info.get_pid(),
-                                            p_meta_info.get_name(), p_meta_info.get_name_len(),
-                                            p_meta_info.get_id(), iter->get_id(),
-                                            name, name_len, type)) != TFS_SUCCESS)
+          if ((ret = store_manager_->remove(app_id, uid, pp_id, p_dir_node, ret_node, type)) != TFS_SUCCESS)
           {
             TBSYS_LOG(DEBUG, "rm fail: %s, type: %d, ret: %d", file_path, type, ret);
           }
@@ -419,7 +446,14 @@ namespace tfs
       char name[MAX_META_FILE_NAME_LEN], dest_name[MAX_META_FILE_NAME_LEN];
       int32_t name_len = 0, dest_name_len = 0;
       int ret = TFS_SUCCESS;
-      MetaInfo p_meta_info, dest_p_meta_info;
+      tbsys::CThreadMutex* mutex = store_manager_->get_mutex(app_id, uid);
+      tbsys::CThreadGuard mutex_guard(mutex);
+      CacheRootNode* root_node = store_manager_->get_root_node(app_id, uid);
+
+      CacheDirMetaNode* p_dir_node = NULL;
+      CacheDirMetaNode* dest_p_dir_node = NULL;
+      int64_t pp_id = 0;
+      int64_t dest_pp_id = 0;
       if (DIRECTORY == type)
       {
         if (is_sub_dir(dest_file_path, file_path))
@@ -429,14 +463,13 @@ namespace tfs
       }
       if (TFS_SUCCESS == ret)
       {
-
-        if ((ret = parse_file_path(app_id, uid, file_path, p_meta_info, name, name_len)) != TFS_SUCCESS)
+        if ((ret = parse_file_path(root_node, file_path, p_dir_node, pp_id, name, name_len)) != TFS_SUCCESS)
         {
-          TBSYS_LOG(INFO, "parse file path fail. appid: %"PRI64_PREFIX"d, uid: %"PRI64_PREFIX"d, %s",
+          TBSYS_LOG(INFO, "get info fail. appid: %"PRI64_PREFIX"d, uid: %"PRI64_PREFIX"d, %s",
               app_id, uid, file_path);
         }
-        else if ((ret = parse_file_path(app_id, uid, dest_file_path, dest_p_meta_info, dest_name, dest_name_len))
-            != TFS_SUCCESS)
+        else if ((ret = parse_file_path(root_node, dest_file_path, dest_p_dir_node, dest_pp_id,
+                dest_name, dest_name_len)) != TFS_SUCCESS)
         {
           TBSYS_LOG(INFO, "parse dest file fail. appid: %"PRI64_PREFIX"d, uid: %"PRI64_PREFIX"d, %s",
               app_id, uid, dest_file_path);
@@ -444,11 +477,9 @@ namespace tfs
         else
         {
           if ((ret = store_manager_->update(app_id, uid,
-                  p_meta_info.get_pid(), p_meta_info.get_id(),
-                  p_meta_info.get_name(), p_meta_info.get_name_len(),
-                  dest_p_meta_info.get_pid(), dest_p_meta_info.get_id(),
-                  dest_p_meta_info.get_name(), dest_p_meta_info.get_name_len(),
-                  name, name_len, dest_name, dest_name_len, type)) != TFS_SUCCESS)
+                  pp_id, p_dir_node,
+                  dest_pp_id, dest_p_dir_node,
+                  name, dest_name, type)) != TFS_SUCCESS)
           {
             TBSYS_LOG(DEBUG, "mv fail: %s, type: %d, ret: %d", file_path, type, ret);
           }
@@ -456,7 +487,7 @@ namespace tfs
       }
 
       TBSYS_LOG(DEBUG, "mv %s, type: %d, appid: %"PRI64_PREFIX"d, uid: %"PRI64_PREFIX"d, filepath: %s",
-                TFS_SUCCESS == ret ? "success" : "fail", type, app_id, uid, file_path);
+          TFS_SUCCESS == ret ? "success" : "fail", type, app_id, uid, file_path);
 
       return ret;
     }
@@ -470,31 +501,36 @@ namespace tfs
       int ret = TFS_SUCCESS;
       still_have = false;
 
-      MetaInfo p_meta_info;
-      std::vector<MetaInfo> tmp_v_meta_info;
-      std::vector<std::string> v_name;
+      tbsys::CThreadMutex* mutex = store_manager_->get_mutex(app_id, uid);
+      tbsys::CThreadGuard mutex_guard(mutex);
+      CacheRootNode* root_node = store_manager_->get_root_node(app_id, uid);
+      CacheDirMetaNode* p_dir_node = NULL;
+      int64_t pp_id = 0;
 
-      if ((ret = parse_file_path(app_id, uid, file_path, p_meta_info, name, name_len)) != TFS_SUCCESS)
+      ret = parse_file_path(root_node, file_path, p_dir_node, pp_id, name, name_len);
+      if (TFS_SUCCESS == ret)
       {
-        TBSYS_LOG(INFO, "parse file path fail. appid: %"PRI64_PREFIX"d, uid: %"PRI64_PREFIX"d, %s",
-                  app_id, uid, file_path);
-      }
-      else
-      {
+        std::vector<MetaInfo> tmp_v_meta_info;
+        std::vector<std::string> v_name;
         int64_t last_offset = 0;
-        ret = get_meta_info(app_id, uid, p_meta_info.get_id(), name, name_len, offset, true,
-                            tmp_v_meta_info, frag_info.cluster_id_, last_offset);
-
-        if (ret == TFS_SUCCESS)
+        void* ret_file_node = NULL;
+        ret = store_manager_->select(app_id, uid, p_dir_node, name, true, ret_file_node);
+        if (TFS_SUCCESS == ret && NULL != ret_file_node)
         {
-          if ((ret = read_frag_info(tmp_v_meta_info, offset, size,
-                                    frag_info.cluster_id_, frag_info.v_frag_meta_, still_have)) != TFS_SUCCESS)
+          CacheFileMetaNode* file_node = (CacheFileMetaNode*)ret_file_node;
+          ret = store_manager_->get_file_frag_info(app_id, uid, p_dir_node, file_node,
+              offset, tmp_v_meta_info, frag_info.cluster_id_, last_offset);
+
+          if (TFS_SUCCESS == ret)
           {
-            TBSYS_LOG(WARN, "parse read frag info fail. ret: %d", ret);
+            if ((ret = read_frag_info(tmp_v_meta_info, offset, size,
+                    frag_info.cluster_id_, frag_info.v_frag_meta_, still_have)) != TFS_SUCCESS)
+            {
+              TBSYS_LOG(WARN, "parse read frag info fail. ret: %d", ret);
+            }
           }
         }
       }
-
       return ret;
     }
 
@@ -505,16 +541,16 @@ namespace tfs
       int32_t name_len = 0;
       int ret = TFS_SUCCESS;
 
-      MetaInfo p_meta_info;
-      std::vector<MetaInfo> tmp_v_meta_info;
+      tbsys::CThreadMutex* mutex = store_manager_->get_mutex(app_id, uid);
+      tbsys::CThreadGuard mutex_guard(mutex);
+      CacheRootNode* root_node = store_manager_->get_root_node(app_id, uid);
+      CacheDirMetaNode* p_dir_node = NULL;
+      int64_t pp_id = 0;
 
-      if ((ret = parse_file_path(app_id, uid, file_path, p_meta_info, name, name_len)) != TFS_SUCCESS)
+      ret = parse_file_path(root_node, file_path, p_dir_node, pp_id, name, name_len);
+      if (TFS_SUCCESS == ret)
       {
-        TBSYS_LOG(INFO, "parse file path fail. appid: %"PRI64_PREFIX"d, uid: %"PRI64_PREFIX"d, %s",
-                  app_id, uid, file_path);
-      }
-      else
-      {
+        std::vector<MetaInfo> tmp_v_meta_info;
         vector<FragMeta> v_frag_meta(frag_info.v_frag_meta_);
         sort(v_frag_meta.begin(), v_frag_meta.end());
         vector<FragMeta>::iterator write_frag_meta_it = v_frag_meta.begin();
@@ -525,108 +561,115 @@ namespace tfs
           tmp_v_meta_info.clear();
           int32_t in_cluster_id = -1;
           int64_t last_offset = 0;
-          ret = get_meta_info(app_id, uid, p_meta_info.get_id(), name, name_len,
-                              write_frag_meta_it->offset_, true, tmp_v_meta_info, in_cluster_id, last_offset);
-
-          if (TFS_SUCCESS != ret)
+          void* ret_file_node = NULL;
+          ret = store_manager_->select(app_id, uid, p_dir_node, name, true, ret_file_node);
+          if (TFS_SUCCESS == ret && NULL == ret_file_node)
           {
-            TBSYS_LOG(DEBUG, "record not exist, name(%s)", name);
-            break;
-          }
-          if (in_cluster_id == -1)
-          {
-            ret = EXIT_NOT_CREATE_ERROR;
-            break;
-          }
-          if (in_cluster_id != 0 && frag_info.cluster_id_ != in_cluster_id)
-          {
-            ret = EXIT_CLUSTER_ID_ERROR;
-            break;
-          }
-          if (tmp_v_meta_info.empty())
-          {
-            //this is for split, we make a new metainfo
-            add_new_meta_info(p_meta_info.get_id(), frag_info.cluster_id_,
-                              name, name_len, last_offset, tmp_v_meta_info);
-          }
-
-          bool found_meta_info_should_be_updated = false;
-          std::vector<MetaInfo>::iterator v_meta_info_it = tmp_v_meta_info.begin();
-          for (; v_meta_info_it != tmp_v_meta_info.end(); v_meta_info_it++)
-          {
-            if (!v_meta_info_it->frag_info_.had_been_split_ ||
-                (write_frag_meta_it->offset_ != -1 &&
-                 v_meta_info_it->get_last_offset() > write_frag_meta_it->offset_))
-            {
-              found_meta_info_should_be_updated = true;
-              break;
-            }
-          }
-
-          if (!found_meta_info_should_be_updated)
-          {
-            ret = EXIT_UPDATE_FRAG_INFO_ERROR;
-            break;
-          }
-
-          //now write_frag_meta_it  should be write to v_meta_info_it
-          if (!v_meta_info_it->frag_info_.had_been_split_)
-          {
-            add_frag_to_meta(write_frag_meta_it, v_frag_meta.end(), *v_meta_info_it, last_offset);
-          }
-          else
-          {
-            int64_t orig_last_offset = v_meta_info_it->get_last_offset();
-            while(write_frag_meta_it != frag_info.v_frag_meta_.end())
-            {
-              if (write_frag_meta_it->offset_ >= orig_last_offset)
-              {
-                ret = TFS_ERROR;
-                break;
-              }
-              v_meta_info_it->frag_info_.v_frag_meta_.push_back(*write_frag_meta_it);
-              write_frag_meta_it ++;
-            }
-
-            if (TFS_SUCCESS != ret)
-            {
-              break;
-            }
-
-            // too many frag info
-            if (static_cast<int32_t>(v_meta_info_it->frag_info_.v_frag_meta_.size()) >= MAX_FRAG_META_COUNT)
-            {
-              ret = EXIT_FRAG_META_OVERFLOW_ERROR;
-              break;
-            }
-
+            TBSYS_LOG(DEBUG, "file do not exist");
+            ret = TFS_ERROR;
           }
           if (TFS_SUCCESS == ret)
           {
-            //resort it
-            sort(v_meta_info_it->frag_info_.v_frag_meta_.begin(),
-                 v_meta_info_it->frag_info_.v_frag_meta_.end());
-            if (v_meta_info_it->frag_info_.cluster_id_ == 0)
+            CacheFileMetaNode* file_node = (CacheFileMetaNode*)ret_file_node;
+            ret = store_manager_->get_file_frag_info(app_id, uid, p_dir_node, file_node,
+                write_frag_meta_it->offset_, tmp_v_meta_info, in_cluster_id, last_offset);
+            if (TFS_SUCCESS != ret)
             {
-              v_meta_info_it->frag_info_.cluster_id_ = frag_info.cluster_id_;
+              TBSYS_LOG(DEBUG, "record not exist, name(%s)", name);
+              break;
             }
-            ret = check_frag_info(v_meta_info_it->frag_info_);
+            if (in_cluster_id == -1)
+            {
+              ret = EXIT_NOT_CREATE_ERROR;
+              break;
+            }
+            if (in_cluster_id != 0 && frag_info.cluster_id_ != in_cluster_id)
+            {
+              ret = EXIT_CLUSTER_ID_ERROR;
+              break;
+            }
+            if (tmp_v_meta_info.empty())
+            {
+              //this is for split, we make a new metainfo
+              add_new_meta_info(p_dir_node->id_, frag_info.cluster_id_,
+                  name, name_len, last_offset, tmp_v_meta_info);
+            }
+
+            bool found_meta_info_should_be_updated = false;
+            std::vector<MetaInfo>::iterator v_meta_info_it = tmp_v_meta_info.begin();
+            for (; v_meta_info_it != tmp_v_meta_info.end(); v_meta_info_it++)
+            {
+              if (!v_meta_info_it->frag_info_.had_been_split_ ||
+                  (write_frag_meta_it->offset_ != -1 &&
+                   v_meta_info_it->get_last_offset() > write_frag_meta_it->offset_))
+              {
+                found_meta_info_should_be_updated = true;
+                break;
+              }
+            }
+
+            if (!found_meta_info_should_be_updated)
+            {
+              ret = EXIT_UPDATE_FRAG_INFO_ERROR;
+              break;
+            }
+
+            //now write_frag_meta_it  should be write to v_meta_info_it
+            if (!v_meta_info_it->frag_info_.had_been_split_)
+            {
+              add_frag_to_meta(write_frag_meta_it, v_frag_meta.end(), *v_meta_info_it, last_offset);
+            }
+            else
+            {
+              int64_t orig_last_offset = v_meta_info_it->get_last_offset();
+              while(write_frag_meta_it != frag_info.v_frag_meta_.end())
+              {
+                if (write_frag_meta_it->offset_ >= orig_last_offset)
+                {
+                  ret = TFS_ERROR;
+                  break;
+                }
+                v_meta_info_it->frag_info_.v_frag_meta_.push_back(*write_frag_meta_it);
+                write_frag_meta_it ++;
+              }
+
+              if (TFS_SUCCESS != ret)
+              {
+                break;
+              }
+
+              // too many frag info
+              if (static_cast<int32_t>(v_meta_info_it->frag_info_.v_frag_meta_.size()) >= MAX_FRAG_META_COUNT)
+              {
+                ret = EXIT_FRAG_META_OVERFLOW_ERROR;
+                break;
+              }
+
+            }
             if (TFS_SUCCESS == ret)
             {
-              //update this info;
-              v_meta_info_it->file_info_.size_ = v_meta_info_it->get_last_offset();
-              ret = store_manager_->insert(app_id, uid, p_meta_info.get_pid(),
-                                           p_meta_info.get_name(), p_meta_info.get_name_len(),
-                                           p_meta_info.get_id(), v_meta_info_it->get_name(),
-                                           v_meta_info_it->get_name_len(),PWRITE_FILE,
-                                           &(*v_meta_info_it));
+              //resort it
+              sort(v_meta_info_it->frag_info_.v_frag_meta_.begin(),
+                  v_meta_info_it->frag_info_.v_frag_meta_.end());
+              if (v_meta_info_it->frag_info_.cluster_id_ == 0)
+              {
+                v_meta_info_it->frag_info_.cluster_id_ = frag_info.cluster_id_;
+              }
+              ret = check_frag_info(v_meta_info_it->frag_info_);
+              if (TFS_SUCCESS == ret)
+              {
+                //update this info;
+                v_meta_info_it->file_info_.size_ = v_meta_info_it->get_last_offset();
+                ret = store_manager_->insert(app_id, uid, pp_id,
+                    p_dir_node, v_meta_info_it->get_name(), 
+                    v_meta_info_it->get_name_len(), PWRITE_FILE, &(*v_meta_info_it));
+              }
             }
+            assert(write_frag_meta_it == v_frag_meta.end());
           }
-          assert(write_frag_meta_it == v_frag_meta.end());
         } while (write_frag_meta_it != v_frag_meta.end() && TFS_SUCCESS == ret);
 
       }
-
       return ret;
     }
 
@@ -635,13 +678,14 @@ namespace tfs
                               std::vector<MetaInfo>& v_meta_info, bool& still_have)
     {
       // for inner name data struct
-      char name[MAX_META_FILE_NAME_LEN+16] = {'\0'};
+      char name[MAX_META_FILE_NAME_LEN] = {'\0'};
       int32_t name_len = 1;
       int ret = TFS_SUCCESS;
       FileType my_file_type = file_type;
-      MetaInfo p_meta_info;
       bool ls_file = false;
       still_have = true;
+      MetaInfo p_meta_info;
+
 
       // first ls. parse file info
       if (-1 == pid)
@@ -649,23 +693,27 @@ namespace tfs
         // just list single file
         ls_file = (file_type != DIRECTORY);
 
-        if ((ret = parse_file_path(app_id, uid, file_path, p_meta_info, name, name_len, true)) != TFS_SUCCESS)
+        ret = parse_file_path(app_id, uid, file_path, p_meta_info, name, name_len);
+        if (TFS_SUCCESS != ret)
         {
           TBSYS_LOG(INFO, "parse file path fail. appid: %"PRI64_PREFIX"d, uid: %"PRI64_PREFIX"d, %s",
                     app_id, uid, file_path);
         }
-        else if (DIRECTORY == file_type) // ls directory, should get current directory info
+        if (TFS_SUCCESS == ret)
         {
-          if ((ret = get_dir_meta_info(app_id, uid, p_meta_info.get_id(), name, name_len, p_meta_info))
-              == TFS_SUCCESS)
+          if (DIRECTORY == file_type) // ls directory, should get current directory info
           {
-            // start over
-            name[0] = '\0';
-            name_len = 1;
+            if ((ret = store_manager_->get_dir_meta_info(app_id, uid, p_meta_info.get_id(),
+                    name, name_len, p_meta_info)) == TFS_SUCCESS)
+            {
+              // start over
+              name[0] = '\0';
+              name_len = 1;
+            }
           }
         }
       }
-      else                      // pid is not -1 means continue last ls
+      else                        // pid is not -1 means continue last ls
       {
         int32_t file_len = (NULL == file_path ? 0 : strlen(file_path));
         if (file_len >= MAX_META_FILE_NAME_LEN)
@@ -675,8 +723,11 @@ namespace tfs
         }
         else if (file_len > 0)  // continue from file_path
         {
-          get_name(file_path, name, MAX_META_FILE_NAME_LEN, name_len);
-          next_file_name(name, name_len);
+          ret = get_name(file_path, name, MAX_META_FILE_NAME_LEN, name_len);
+          if (TFS_SUCCESS == ret)
+          {
+            next_file_name(name, name_len);
+          }
         }
 
         p_meta_info.file_info_.id_ = pid;
@@ -767,8 +818,9 @@ namespace tfs
     // parse file path.
     // return parent dir's metainfo of current file(dir),
     // and file name(store format) without any prefix dir
-    int MetaServerService::parse_file_path(const int64_t app_id, const int64_t uid, const char* file_path,
-        MetaInfo& p_meta_info, char* name, int32_t& name_len, const bool root_ok)
+    // get info from db, no cache will be affected
+     int MetaServerService::parse_file_path(const int64_t app_id, const int64_t uid, const char* file_path,
+        MetaInfo& p_meta_info, char* name, int32_t& name_len)
     {
       int ret = TFS_SUCCESS;
       std::vector<std::string> v_name;
@@ -779,15 +831,8 @@ namespace tfs
       }
       else if (get_depth(v_name) == 0)
       {
-        if (root_ok) // file_path only has "/"
-        {
-          p_meta_info.file_info_.id_ = 0;
-          ret = get_name(v_name[0].c_str(), name, MAX_META_FILE_NAME_LEN, name_len);
-        }
-        else
-        {
-          ret = TFS_ERROR;
-        }
+        p_meta_info.file_info_.id_ = 0;
+        ret = get_name(v_name[0].c_str(), name, MAX_META_FILE_NAME_LEN, name_len);
       }
       else if ((ret = get_p_meta_info(app_id, uid, v_name, p_meta_info)) == TFS_SUCCESS)
       {
@@ -796,9 +841,56 @@ namespace tfs
 
       return ret;
     }
+    // parse file path.
+    // return parent dir's metainfo of current file(dir),
+    // and file name(store format) without any prefix dir
+    int MetaServerService::parse_file_path(CacheRootNode* root_node, const char* file_path,
+        CacheDirMetaNode*& p_dir_node, int64_t& pp_id,
+        char* name, int32_t& name_len, const bool root_ok)
+    {
+      int ret = TFS_SUCCESS;
+      std::vector<std::string> v_name;
+      CacheDirMetaNode* pp_dir_node;
+      p_dir_node = NULL;
+      pp_id = 0;
+
+      if ((ret = parse_name(file_path, v_name)) != TFS_SUCCESS)
+      {
+        TBSYS_LOG(INFO, "file_path(%s) is invalid", file_path);
+      }
+      else if (get_depth(v_name) == 0)
+      {
+        if (root_ok) // file_path only has "/"
+        {
+          ret = get_name(v_name[0].c_str(), name, MAX_META_FILE_NAME_LEN, name_len);
+        }
+        else
+        {
+          ret = TFS_ERROR;
+        }
+      }
+      else if ((ret = get_p_meta_info(root_node, v_name, pp_dir_node, p_dir_node)) == TFS_SUCCESS)
+      {
+        if (NULL != pp_dir_node)
+        {
+          pp_id = pp_dir_node->id_;
+        }
+        if (NULL == p_dir_node)
+        {
+          //we can not find parent info;
+          ret = TFS_ERROR;
+        }
+        else
+        {
+          ret = get_name(v_name[get_depth(v_name)].c_str(), name, MAX_META_FILE_NAME_LEN, name_len);
+        }
+      }
+
+      return ret;
+    }
 
 
-    // get dir parent dir's meta info
+    // get dir parent dir's meta info from db
     int MetaServerService::get_p_meta_info(const int64_t app_id, const int64_t uid,
         const std::vector<std::string>& v_name,
         MetaInfo& out_meta_info)
@@ -848,10 +940,11 @@ namespace tfs
       return ret;
     }
 
+    //get parent's info return TFS_ERROR if we can not find parent
     int MetaServerService::get_p_meta_info(CacheRootNode* root_node,
         const std::vector<std::string>& v_name,
-        CacheDirMetaNode*& out_p_dir_node,
-        CacheDirMetaNode*& out_dir_node)
+        CacheDirMetaNode*& out_pp_dir_node,
+        CacheDirMetaNode*& out_p_dir_node)
     {
       int ret = TFS_SUCCESS;
       assert(NULL != root_node);
@@ -860,10 +953,9 @@ namespace tfs
       char name[MAX_META_FILE_NAME_LEN];
       int32_t name_len = 0;
 
-      out_p_dir_node = NULL;
-      out_dir_node = root_node->dir_meta_;
+      out_pp_dir_node = NULL;
+      out_p_dir_node = root_node->dir_meta_;
       void* dir_node = NULL;
-      CacheDirMetaNode* p_dir_node = root_node->dir_meta_;
 
       for (int32_t i = 1; i < depth; i++)
       {
@@ -873,7 +965,7 @@ namespace tfs
         }
 
         ret = store_manager_->select(root_node->app_id_, root_node->user_id_, 
-            p_dir_node, name, false, dir_node);
+            out_p_dir_node, name, false, dir_node);
 
         if (ret != TFS_SUCCESS)
         {
@@ -887,88 +979,12 @@ namespace tfs
           TBSYS_LOG(DEBUG, "file(%s) not found, ret: %d", name, ret);
           break;
         }
-        p_dir_node = reinterpret_cast<CacheDirMetaNode*>(dir_node);
-      }
-      if (TFS_SUCCESS == ret)
-      {
-        out_p_dir_node = p_dir_node;
-        out_dir_node = reinterpret_cast<CacheDirMetaNode*>(dir_node);
+        out_pp_dir_node = out_p_dir_node;
+        out_p_dir_node = reinterpret_cast<CacheDirMetaNode*>(dir_node);
       }
       return ret;
     }
 
-    int MetaServerService::get_dir_meta_info(const int64_t app_id, const int64_t uid, const int64_t pid,
-        const char* name, const int32_t name_len,
-        MetaInfo& out_meta_info)
-    {
-      std::vector<MetaInfo> tmp_v_meta_info;
-      int ret = store_manager_->select(app_id, uid, pid,
-          name, name_len, false, tmp_v_meta_info);
-      if (ret != TFS_SUCCESS || tmp_v_meta_info.empty())
-      {
-        TBSYS_LOG(INFO, "get dir meta info fail. %s, ret: %d", name, ret);
-        ret = TFS_ERROR;
-      }
-      else
-      {
-        // copy
-        out_meta_info.copy_no_frag(*tmp_v_meta_info.begin());
-      }
-
-      return ret;
-    }
-
-    //TODO will be replaced by MetaStoreManager::get_file_frag_info
-    int MetaServerService::get_meta_info(const int64_t app_id, const int64_t uid, const int64_t pid,
-        const char* name, const int32_t name_len,
-        const int64_t offset, const bool is_file,
-        std::vector<MetaInfo>& tmp_v_meta_info,
-        int32_t& cluster_id, int64_t& last_offset)
-    {
-      int ret = TFS_ERROR;
-      char search_name[MAX_META_FILE_NAME_LEN + 8];
-      int32_t search_name_len = name_len;
-      assert(name_len <= MAX_META_FILE_NAME_LEN);
-      memcpy(search_name, name, search_name_len);
-      bool still_have = false;
-
-      last_offset = 0;
-      cluster_id = -1;
-
-      do
-      {
-        tmp_v_meta_info.clear();
-        still_have = false;
-
-        ret = store_manager_->select(app_id, uid, pid,
-            search_name, search_name_len, is_file, tmp_v_meta_info);
-
-        TBSYS_LOG(DEBUG, "select size: %zd", tmp_v_meta_info.size());
-        if (TFS_SUCCESS != ret)
-        {
-          TBSYS_LOG(WARN, "get read meta info fail, name: %s, ret: %d", search_name, ret);
-          break;
-        }
-
-        if (!tmp_v_meta_info.empty())
-        {
-          const MetaInfo& last_metaInfo = tmp_v_meta_info[tmp_v_meta_info.size() - 1];
-          cluster_id = last_metaInfo.frag_info_.cluster_id_;
-          last_offset = last_metaInfo.get_last_offset();
-
-          // offset is -1 means file's max offset
-          if ((-1 == offset || last_offset <= offset) &&
-              last_metaInfo.frag_info_.had_been_split_)
-          {
-            still_have = true;
-            next_file_name_base_on(search_name, search_name_len,
-                last_metaInfo.get_name(), last_metaInfo.get_name_len());
-          }
-        }
-      } while(TFS_SUCCESS == ret && still_have);
-
-      return ret;
-    }
 
     void MetaServerService::calculate_file_meta_info(std::vector<common::MetaInfo>::iterator& meta_info_begin,
         const std::vector<common::MetaInfo>::iterator meta_info_end,
@@ -1052,9 +1068,9 @@ namespace tfs
       tmp.file_info_.pid_ = pid;
       tmp.frag_info_.cluster_id_ = cluster_id;
       tmp.frag_info_.had_been_split_ = false;
-      char tmp_name[MAX_META_FILE_NAME_LEN + 8];
+      char tmp_name[MAX_META_FILE_NAME_LEN];
       memcpy(tmp_name, name, name_len);
-      int64_to_char(tmp_name+name_len, MAX_META_FILE_NAME_LEN + 8 - name_len,
+      int64_to_char(tmp_name + name_len, MAX_META_FILE_NAME_LEN - name_len,
           last_offset);
       tmp.file_info_.name_.assign(tmp_name, name_len + 8);
       tmp_v_meta_info.push_back(tmp);
@@ -1149,9 +1165,12 @@ namespace tfs
     int MetaServerService::get_name(const char* name, char* buffer, const int32_t buffer_len, int32_t& name_len)
     {
       int ret = TFS_SUCCESS;
+      //name will be like this
+      //    |-----len str----|--8 byte--|
+      //[len]xxxxxxxxxxxxxxxx[off_set]
       name_len = strlen(name) + 1;
 
-      if (name_len > MAX_META_FILE_NAME_LEN || name_len >= buffer_len || buffer == NULL)
+      if (name_len + 8 > MAX_META_FILE_NAME_LEN || name_len + 8 >= buffer_len || buffer == NULL)
       {
         TBSYS_LOG(ERROR, "buffer is not enough or buffer is null, %d < %d", buffer_len, name_len);
         ret = TFS_ERROR;
@@ -1159,7 +1178,7 @@ namespace tfs
       else
       {
         snprintf(buffer, name_len + 1, "%c%s", char(name_len - 1), name);
-        TBSYS_LOG(DEBUG, "old_name: %s, new_name: %s, name_len: %d", name, buffer, name_len);
+        TBSYS_LOG(DEBUG, "old_name: %s, new_name: %.*s, name_len: %d", name, name_len, buffer + 1, name_len);
       }
 
       return ret;
@@ -1261,7 +1280,7 @@ namespace tfs
     void MetaServerService::next_file_name(char* name, int32_t& name_len)
     {
       int64_t skip = 1;
-      if (name_len == (unsigned char)name[0] + 1)
+      if (name_len == FileName::length(name))
       {
         int64_to_char(name + name_len, 8, skip);
         name_len += 8;
