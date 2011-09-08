@@ -310,7 +310,7 @@ namespace tfs
       {
         stmt = mysql_stmt_init(&mysql_.mysql);
         ret = TFS_SUCCESS;
-        status = mysql_stmt_prepare(stmt, str, strlen(str)); //TODO prepare once
+        status = mysql_stmt_prepare(stmt, str, strlen(str));
         if (status)
         {
           TBSYS_LOG(ERROR, "Error: %s (errno: %d)\n",
@@ -406,7 +406,7 @@ namespace tfs
       {
         stmt = mysql_stmt_init(&mysql_.mysql);
         ret = TFS_SUCCESS;
-        status = mysql_stmt_prepare(stmt, str, strlen(str)); //TODO prepare once
+        status = mysql_stmt_prepare(stmt, str, strlen(str));
         if (status)
         {
           TBSYS_LOG(ERROR, "Error: %s (errno: %d)\n",
@@ -503,7 +503,7 @@ namespace tfs
       {
         stmt = mysql_stmt_init(&mysql_.mysql);
         ret = TFS_SUCCESS;
-        status = mysql_stmt_prepare(stmt, str, strlen(str)); //TODO prepare once
+        status = mysql_stmt_prepare(stmt, str, strlen(str));
         if (status)
         {
           TBSYS_LOG(ERROR, "Error: %s (errno: %d)\n",
@@ -610,7 +610,7 @@ namespace tfs
       {
         stmt = mysql_stmt_init(&mysql_.mysql);
         ret = TFS_SUCCESS;
-        status = mysql_stmt_prepare(stmt, str, strlen(str)); //TODO prepare once
+        status = mysql_stmt_prepare(stmt, str, strlen(str));
         if (status)
         {
           TBSYS_LOG(ERROR, "Error: %s (errno: %d)\n",
@@ -696,7 +696,7 @@ namespace tfs
       {
         stmt = mysql_stmt_init(&mysql_.mysql);
         ret = TFS_SUCCESS;
-        status = mysql_stmt_prepare(stmt, str, strlen(str)); //TODO prepare once
+        status = mysql_stmt_prepare(stmt, str, strlen(str));
         if (status)
         {
           TBSYS_LOG(ERROR, "Error: %s (errno: %d)\n",
@@ -785,7 +785,7 @@ namespace tfs
         {
           stmt = mysql_stmt_init(&mysql_.mysql);
           ret = TFS_SUCCESS;
-          status = mysql_stmt_prepare(stmt, str, strlen(str)); //TODO prepare once
+          status = mysql_stmt_prepare(stmt, str, strlen(str));
           if (status)
           {
             TBSYS_LOG(ERROR, "Error: %s (errno: %d)\n",
@@ -886,7 +886,7 @@ namespace tfs
       {
         stmt = mysql_stmt_init(&mysql_.mysql);
         ret = TFS_SUCCESS;
-        status = mysql_stmt_prepare(stmt, str, strlen(str)); //TODO prepare once
+        status = mysql_stmt_prepare(stmt, str, strlen(str));
         if (status)
         {
           TBSYS_LOG(ERROR, "Error: %s (errno: %d)\n",
@@ -988,7 +988,7 @@ namespace tfs
       {
         stmt = mysql_stmt_init(&mysql_.mysql);
         ret = TFS_SUCCESS;
-        status = mysql_stmt_prepare(stmt, str, strlen(str)); //TODO prepare once
+        status = mysql_stmt_prepare(stmt, str, strlen(str));
         if (status)
         {
           TBSYS_LOG(ERROR, "Error: %s (errno: %d)\n",
