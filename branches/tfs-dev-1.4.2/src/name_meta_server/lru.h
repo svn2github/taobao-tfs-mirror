@@ -13,27 +13,30 @@
  *      - initial release
  *
  */
-#ifndef TFS_ROOTSERVER_LRU_H_
-#define TFS_ROOTSERVER_LRU_H_
+#ifndef TFS_NAMEMETASERVER_LRU_H_
+#define TFS_NAMEMETASERVER_LRU_H_
 
 #include <list>
 #include <ext/hash_map>
 #include "common/internal.h"
-
+#include "common/error_msg.h"
 namespace tfs
 {
-  namespace rootserver 
+  namespace namemetaserver
   {
     template<typename Key, typename Value>
     class BaseStrategy;
     template<typename Key, typename Value>
     class Lru
     {
+#ifndef GTEST_INCLUDE_GTEST_GTEST_H_
+#else
       friend class LruTest;
       FRIEND_TEST(LruTest, insert);
       FRIEND_TEST(LruTest, get);
       FRIEND_TEST(LruTest, put);
       FRIEND_TEST(LruTest, gc);
+#endif
 
       template <typename T3>
       struct Node;
@@ -196,7 +199,7 @@ namespace tfs
     {
       return static_cast<int64_t>(lru_.size() * ratio);
     }
-  }/** rootserver **/
+  }/** namemetaserver **/
 }/** tfs **/
 #endif
 

@@ -20,7 +20,7 @@ test: check
 TESTS=
 check_PROGRAMS=
 
-noinst_PROGRAMS=test_meta_info test_cache_info test_cache_helper test_service
+noinst_PROGRAMS=test_meta_info test_cache_info test_cache_helper test_lru test_service 
 
 TESTS+=test_meta_info
 check_PROGRAMS+=test_meta_info
@@ -33,6 +33,11 @@ test_cache_info_SOURCES= test_cache_info.cpp
 TESTS+=test_cache_helper
 check_PROGRAMS+=test_cache_helper
 test_cache_helper_SOURCES= test_cache_helper.cpp 
+
+TESTS+=test_lru
+check_PROGRAMS+=test_lru
+test_lru_SOURCES= test_lru.cpp 
+test_lru_LDFLAGS=${AM_LDFLAGS} -static-libgcc -lgtest 
 
 TESTS+=test_service
 check_PROGRAMS+=test_service

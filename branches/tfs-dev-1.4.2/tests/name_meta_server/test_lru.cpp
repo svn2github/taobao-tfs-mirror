@@ -15,17 +15,18 @@
  */
 #include <set>
 #include <gtest/gtest.h>
-#include "build_table.h"
+#include <tbsys.h>
+#include <Memory.hpp>
 #include "lru.h"
 
 using namespace std;
 using namespace tfs::common;
-using namespace tfs::rootserver;
+using namespace tfs::namemetaserver;
 using namespace tbsys;
 
 namespace tfs
 {
-  namespace rootserver
+  namespace namemetaserver
   {
     struct Key
     {
@@ -61,7 +62,6 @@ namespace tfs
         virtual void SetUp(){}
         virtual void TearDown(){}
         static const int32_t SERVER_COUNT;
-        static void get_diff(BuildTable& tables);
     };
 
     TEST_F(LruTest, insert)
