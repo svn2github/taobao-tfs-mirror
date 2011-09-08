@@ -13,14 +13,10 @@ LDADD=$(top_builddir)/src/rootserver/librootserver.a \
       $(TBLIB_ROOT)/lib/libtbsys.a
 
 
-noinst_PROGRAMS= build_table_test meta_server_manger_test test_lru
+noinst_PROGRAMS= build_table_test meta_server_manger_test
 
 build_table_test_SOURCES=build_table_test.cpp
 build_table_test_LDFLAGS=${AM_LDFLAGS} -static-libgcc -lgtest
 
 meta_server_manger_test_SOURCES=meta_server_manger_test.cpp
 meta_server_manger_test_LDFLAGS=${AM_LDFLAGS} -static-libgcc -lgtest
-
-
-test_lru_SOURCES=test_lru.cpp
-test_lru_LDFLAGS=${AM_LDFLAGS} -static-libgcc -lgtest
