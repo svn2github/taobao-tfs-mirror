@@ -26,10 +26,8 @@ namespace tfs
     void CacheRootNode::dump() const
     {
       TBSYS_LOG(DEBUG, "CacheRootNode: app_id = %"PRI64_PREFIX"d "
-          "user_id_ = %"PRI64_PREFIX"d "
-          "size_ = %"PRI64_PREFIX"d "
-          "visit_count_ %"PRI64_PREFIX"d ",
-          app_id_, user_id_, size_, visit_count_);
+          "user_id_ = %"PRI64_PREFIX"d ",
+          app_id_, user_id_);
       if (NULL != dir_meta_)
         dir_meta_->dump();
       TBSYS_LOG(DEBUG, "dump CacheRootNode over");

@@ -38,8 +38,8 @@ namespace tfs
       void dump() const;
       int64_t app_id_;
       int64_t user_id_;
-      int64_t size_;    //the mem size occupied by this user
-      int64_t visit_count_;
+      //int64_t size_;    //the mem size occupied by this user
+      //int64_t visit_count_;
       CacheDirMetaNode* dir_meta_; // top dir
     };
     struct CacheDirMetaNode
