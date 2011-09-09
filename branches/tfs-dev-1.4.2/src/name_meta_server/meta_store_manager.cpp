@@ -133,9 +133,12 @@ namespace tfs
 
     void MetaStoreManager::do_lru_gc(const double ratio)
     {
+      int64_t used_size = MemHelper::get_used_size();
+      used_size = used_size >> 10;
       TBSYS_LOG(DEBUG, "do_lru_gc");
       BaseStrategy<AppIdUid, CacheRootNode> strategy(lru_);
       vector<CacheRootNode*> v_root_node;
+      if ((double)used_size/(double)cache_size_ > (1 - ratio/2))
       {
         tbsys::CThreadGuard mutex_guard(&lru_mutex_);
         if (TFS_SUCCESS != lru_.gc(ratio, &strategy, v_root_node))
