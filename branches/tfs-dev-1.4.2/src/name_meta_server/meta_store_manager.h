@@ -21,6 +21,7 @@
 #include "mysql_database_helper.h"
 #include "database_pool.h"
 #include "meta_cache_info.h"
+#include "lru.h"
 
 namespace tfs
 {
@@ -30,16 +31,16 @@ namespace tfs
     {
       public:
         MetaStoreManager();
-        ~MetaStoreManager();
-        //TODO int init(const int32_t pool_size, const int32_t cache_size, const int32_t mutex_count); //cache_size M
-        int init(const int32_t pool_size); //will replace 
-
+        ~MetaStoreManager();  
+        int init(const int32_t pool_size, const int32_t cache_size, const int32_t mutex_count);
         tbsys::CThreadMutex* get_mutex(const int64_t app_id, const int64_t uid);
 
+        void do_lru_gc(const double ratio);
         //this func will get root_node from lru cache
         //when we gen a new root node we will ls '/' 
         //so dir_meta_ == NULL means no top dir;
         CacheRootNode* get_root_node(const int64_t app_id, const int64_t uid);
+        void revert_root_node(const int64_t app_id, const int64_t uid);
 
         int create_top_dir(const int64_t app_id, const int64_t uid, CacheRootNode* root_node);
 
@@ -110,19 +111,24 @@ namespace tfs
             const std::vector<common::MetaInfo>::iterator meta_info_end,
             CacheDirMetaNode* p_dir_node);
 
-        static int free(CacheRootNode* root_node);
-        static int free(CacheDirMetaNode* dir_meta_node);
-        static int free(CacheFileMetaNode* dir_meta_node);
-
         int get_return_status(const int status, const int proc_ret);
         int force_rc(const int32_t need_size);
 
       private:
         char top_dir_name_[10];
         int32_t top_dir_size_;
+        int32_t cache_size_;   //MB
         DISALLOW_COPY_AND_ASSIGN(MetaStoreManager);
         DataBasePool* database_pool_;
-        //TODO lrucache
+        tbsys::CThreadMutex lru_mutex_;
+        struct AppIdUid
+        {
+          AppIdUid(const int64_t app_id, const int64_t uid);
+          int64_t app_id_;
+          int64_t uid_;
+          bool operator < (const AppIdUid& right) const;
+        };
+        Lru<AppIdUid, CacheRootNode> lru_;
         int mutex_count_;
         tbsys::CThreadMutex* app_id_uid_mutex_;
     };

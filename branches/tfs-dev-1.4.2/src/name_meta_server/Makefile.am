@@ -15,7 +15,7 @@ noinst_LIBRARIES=libnamemetaserver.a
 
 metaserver_INCLUDE=database_helper.h mem_helper.h meta_cache_info.h meta_server_service.h\
 									mysql_database_helper.h database_pool.h meta_cache_helper.h \
-									meta_hash_helper.h meta_store_manager.h lru.h
+									meta_store_manager.h lru.h
 
 libnamemetaserver_a_SOURCES=meta_server_service.cpp meta_store_manager.cpp \
 			    database_helper.cpp mysql_database_helper.cpp database_pool.cpp \

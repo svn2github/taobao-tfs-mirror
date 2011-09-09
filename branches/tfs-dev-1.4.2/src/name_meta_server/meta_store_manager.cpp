@@ -28,14 +28,14 @@ namespace tfs
   {
     using namespace std;
     MetaStoreManager::MetaStoreManager():
-      mutex_count_(5), app_id_uid_mutex_(NULL)
+      cache_size_(1024), mutex_count_(5), app_id_uid_mutex_(NULL)
     {
        database_pool_ = new DataBasePool();
        top_dir_name_[0] = 1; 
        top_dir_name_[1] = '/'; 
        top_dir_size_ = 2;
     }
-    int MetaStoreManager::init(const int32_t pool_size)
+    int MetaStoreManager::init(const int32_t pool_size, const int32_t cache_size, const int32_t mutex_count)
     {
       char* conn_str[DataBasePool::MAX_POOL_SIZE];
       char* user_name[DataBasePool::MAX_POOL_SIZE];
@@ -44,7 +44,22 @@ namespace tfs
 
       int32_t my_pool_size = pool_size;
       int ret = TFS_SUCCESS;
+      cache_size_ = cache_size;
+      if (cache_size_ < 200)
+      {
+        cache_size_ = 200;
+        TBSYS_LOG(WARN, "change cache_size to %d MB", cache_size_);
+      }
+      TBSYS_LOG(INFO, "set cache size %d MB", cache_size_);
 
+      mutex_count_ = mutex_count;
+
+      if (mutex_count_ < 5)
+      {
+        mutex_count_ = 5;
+        TBSYS_LOG(WARN, "change mutex_count to %d", mutex_count_);
+      }
+      TBSYS_LOG(INFO, "set mutex_count to  %d", mutex_count_);
       if (pool_size > DataBasePool::MAX_POOL_SIZE)
       {
         TBSYS_LOG(INFO, "pool size is too lage set it to %d",
@@ -84,6 +99,13 @@ namespace tfs
 
     MetaStoreManager::~MetaStoreManager()
     {
+      vector<CacheRootNode*> v_root_node;
+      lru_.gc(v_root_node);
+      vector<CacheRootNode*>::iterator it = v_root_node.begin();
+      for (; it != v_root_node.end(); it++)
+      {
+        MetaCacheHelper::free(*it);
+      }
       delete database_pool_;
       delete [] app_id_uid_mutex_;
     }
@@ -97,8 +119,24 @@ namespace tfs
       return app_id_uid_mutex_ + hash_value;
     }
 
+    void MetaStoreManager::do_lru_gc(const double ratio)
+    {
+      BaseStrategy<AppIdUid, CacheRootNode> strategy(lru_);
+      vector<CacheRootNode*> v_root_node;
+      if (TFS_SUCCESS != lru_.gc(ratio, &strategy,v_root_node))
+      {
+        TBSYS_LOG(ERROR, "lru gc error");
+      }
+      vector<CacheRootNode*>::iterator it = v_root_node.begin();
+      for (; it != v_root_node.end(); it++)
+      {
+        MetaCacheHelper::free(*it);
+      }
+      return ;
+    }
     CacheRootNode* MetaStoreManager::get_root_node(const int64_t app_id, const int64_t uid)
     {
+      tbsys::CThreadGuard mutex_guard(&lru_mutex_);
       //TODO get_root_node from lru
       //if root not exit in lru, we need ls '/' and put the result ro lru
       UNUSED(app_id);
@@ -107,6 +145,12 @@ namespace tfs
       static CacheRootNode test_root_node;
       CacheRootNode* ret = &test_root_node;
       return ret;
+    }
+    void MetaStoreManager::revert_root_node(const int64_t app_id, const int64_t uid)
+    {
+      tbsys::CThreadGuard mutex_guard(&lru_mutex_);
+      lru_.put(AppIdUid(app_id, uid));
+      return;
     }
     int MetaStoreManager::create_top_dir(const int64_t app_id, const int64_t uid, CacheRootNode* root_node)
     {
@@ -137,20 +181,6 @@ namespace tfs
       }
       return ret;
     }
-
-    int MetaStoreManager::free(CacheRootNode* root_node)
-    {
-      return MetaCacheHelper::free(root_node);
-    }
-    int MetaStoreManager::free(CacheDirMetaNode* dir_meta_node)
-    {
-      return MetaCacheHelper::free(dir_meta_node);
-    }
-    int MetaStoreManager::free(CacheFileMetaNode* dir_meta_node)
-    {
-      return MetaCacheHelper::free(dir_meta_node);
-    }
-
 
     int MetaStoreManager::select(const int64_t app_id, const int64_t uid, CacheDirMetaNode* p_dir_node,
                                  const char* name, const bool is_file, void*& ret_node)
@@ -248,7 +278,7 @@ namespace tfs
               if ((ret = MetaCacheHelper::insert_dir(p_dir_node, dir_node)) != TFS_SUCCESS)
               {
                 TBSYS_LOG(ERROR, "insert dir error");
-                free(dir_node);
+                MetaCacheHelper::free(dir_node);
               }
             }
             else
@@ -294,7 +324,7 @@ namespace tfs
                 if ((ret = MetaCacheHelper::insert_file(p_dir_node, file_node)) != TFS_SUCCESS)
                 {
                   TBSYS_LOG(ERROR, "insert file error");
-                  free(file_node);
+                  MetaCacheHelper::free(file_node);
                 }
               }
             }
@@ -358,7 +388,7 @@ namespace tfs
               if (TFS_SUCCESS != ret)
               {
                 TBSYS_LOG(ERROR, "can not insert new node");
-                free(ret_node);
+                MetaCacheHelper::free(ret_node);
               }
             }
           }
@@ -377,7 +407,7 @@ namespace tfs
               if (TFS_SUCCESS != ret)
               {
                 TBSYS_LOG(ERROR, "can not insert new node");
-                free(ret_node);
+                MetaCacheHelper::free(ret_node);
               }
             }
           }
@@ -418,12 +448,12 @@ namespace tfs
           if (DIRECTORY != type)
           {
             assert(TFS_SUCCESS == MetaCacheHelper::rm_file(p_dir_node, file_node));
-            free(file_node);
+            MetaCacheHelper::free(file_node);
           }
           else
           {
             assert(TFS_SUCCESS == MetaCacheHelper::rm_dir(p_dir_node, dir_node));
-            free(dir_node);
+            MetaCacheHelper::free(dir_node);
           }
         }
       }
@@ -531,7 +561,7 @@ namespace tfs
         char* p = name_end + FileName::length(name);
         int32_t name_end_len = name_len;
         name_end_len = FileName::length(name) + 8;
-        MetaServerService::int64_to_char(p, 8, -1L);
+        Serialization::int64_to_char(p, 8, -1L);
         ret = ls(app_id, uid, pid, name, name_len, name_end, name_end_len, 
             is_file, out_v_meta_info, still_have);
       }
@@ -900,7 +930,7 @@ namespace tfs
             ret = MetaCacheHelper::insert_file(p_dir_node, file_meta);
             if (TFS_SUCCESS != ret)
             {
-              free(file_meta);
+              MetaCacheHelper::free(file_meta);
               break;
             }
           }
@@ -943,7 +973,7 @@ namespace tfs
           ret = MetaCacheHelper::insert_dir(p_dir_node, dir_meta);
           if (TFS_SUCCESS != ret)
           {
-            free(dir_meta);
+            MetaCacheHelper::free(dir_meta);
             break;
           }
         }
@@ -954,6 +984,23 @@ namespace tfs
       }
       return ret;
     }
+    MetaStoreManager::AppIdUid::AppIdUid(const int64_t app_id, const int64_t uid)
+      :app_id_(app_id), uid_(uid)
+    {
+    }
+    bool MetaStoreManager::AppIdUid::operator < (const MetaStoreManager::AppIdUid& right) const
+    {
+      if (app_id_ < right.app_id_)
+      {
+        return true;
+      }
+      if (app_id_ > right.app_id_)
+      {
+        return false;
+      }
+      return uid_ < right.uid_;
+    }
+
 
   }
 }

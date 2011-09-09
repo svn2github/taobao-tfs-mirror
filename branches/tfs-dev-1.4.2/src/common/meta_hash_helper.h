@@ -13,18 +13,16 @@
 *      - initial release
 *
 */
-#ifndef TFS_NAMEMETASERVER_META_HASH_HELPER_H_
-#define TFS_NAMEMETASERVER_META_HASH_HELPER_H_
+#ifndef TFS_COMMON_META_HASH_HELPER_H_
+#define TFS_COMMON_META_HASH_HELPER_H_
+#include <stdint.h>
 namespace tfs
 {
-  namespace namemetaserver
+  namespace common
   {
     struct HashHelper
     {
-      HashHelper(const int64_t app_id, const int64_t uid):
-        app_id_(app_id), uid_(uid)
-      {
-      }
+      HashHelper(const int64_t app_id, const int64_t uid);
       int64_t app_id_;
       int64_t uid_;
     };

@@ -18,7 +18,7 @@
 #include <tbsys.h>
 #include <Mutex.h>
 #include "common/internal.h"
-#include "meta_hash_helper.h"
+#include "common/meta_hash_helper.h"
 namespace tfs
 {
   namespace namemetaserver
