@@ -79,7 +79,7 @@ namespace tfs
       {
         //TODO get cache size and mutex count from config file
         ret = store_manager_->init(SYSPARAM_NAMEMETASERVER.max_pool_size_,
-            1024, 10);
+            1024, 0.1, 10);
         if (TFS_SUCCESS != ret)
         {
           TBSYS_LOG(ERROR, "init store_manager error");

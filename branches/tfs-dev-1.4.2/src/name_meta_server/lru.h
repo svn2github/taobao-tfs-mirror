@@ -100,6 +100,7 @@ namespace tfs
         list_.splice(list_.begin(), list_, iter->second);
         iter->second->inc_visit_count();
         iter->second->inc_ref();
+        TBSYS_LOG(DEBUG, "ref_count_ = %l"PRI64_PREFIX"d", iter->second->ref_count_);
         value = iter->second->value_;
       }
       return value;
@@ -113,6 +114,7 @@ namespace tfs
       if (common::TFS_SUCCESS == iret)
       {
         iter->second->dec_ref();
+        TBSYS_LOG(DEBUG, "ref_count_ = %l"PRI64_PREFIX"d", iter->second->ref_count_);
       }
       return iret;
     }
@@ -197,7 +199,7 @@ namespace tfs
     template<typename Key, typename Value>
     int64_t BaseStrategy<Key, Value>::calc_gc_count(const double ratio)
     {
-      return static_cast<int64_t>(lru_.size() * ratio);
+      return static_cast<int64_t>(lru_.size() * ratio) + 1;
     }
   }/** namemetaserver **/
 }/** tfs **/

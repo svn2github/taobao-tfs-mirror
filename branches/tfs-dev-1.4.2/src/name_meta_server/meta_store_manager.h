@@ -32,7 +32,8 @@ namespace tfs
       public:
         MetaStoreManager();
         ~MetaStoreManager();  
-        int init(const int32_t pool_size, const int32_t cache_size, const int32_t mutex_count);
+        int init(const int32_t pool_size, const int32_t cache_size, 
+            const double gc_ratio, const int32_t mutex_count);
         tbsys::CThreadMutex* get_mutex(const int64_t app_id, const int64_t uid);
 
         void do_lru_gc(const double ratio);
@@ -101,6 +102,9 @@ namespace tfs
             const char* name, const int64_t name_len,
             const common::FileType type);
       private:
+        void* malloc(const int64_t size, const int32_t type = CACHE_NONE_NODE);
+        int ls_top_dir(const int64_t app_id, const int64_t uid, CacheRootNode* root_node,
+            const bool is_new_dir);
         int get_all_children_from_db(const int64_t app_id, const int64_t uid, CacheDirMetaNode* p_dir_node);
 
         int fill_file_meta_info(std::vector<common::MetaInfo>::iterator& meta_info_begin,
@@ -118,6 +122,7 @@ namespace tfs
         char top_dir_name_[10];
         int32_t top_dir_size_;
         int32_t cache_size_;   //MB
+        double gc_ratio_;
         DISALLOW_COPY_AND_ASSIGN(MetaStoreManager);
         DataBasePool* database_pool_;
         tbsys::CThreadMutex lru_mutex_;

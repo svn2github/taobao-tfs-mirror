@@ -66,33 +66,36 @@ TEST_F(ServiceTest, create_dir)
   sprintf(new_dir_path, "/test1");
   ret = service.create(app_id, uid, new_dir_path, DIRECTORY);
   EXPECT_EQ(TFS_SUCCESS, ret);
-  CacheRootNode* p = service.get_root_node(app_id, uid);
-  p->dump();
+  CacheRootNode* p = NULL;
 
   TBSYS_LOG(INFO, "create /test1/");
   sprintf(new_dir_path, "/test1/");
   ret = service.create(app_id, uid, new_dir_path, DIRECTORY);
   EXPECT_EQ(TFS_ERROR, ret);
-  p->dump();
 
   TBSYS_LOG(INFO, "create /test1/ff/");
   sprintf(new_dir_path, "/test1/ff/");
   ret = service.create(app_id, uid, new_dir_path, DIRECTORY);
   EXPECT_EQ(TFS_SUCCESS, ret);
-  p->dump();
 
   TBSYS_LOG(INFO, "create /test2/ff");
   sprintf(new_dir_path, "/test2/ff");
   ret = service.create(app_id, uid, new_dir_path, DIRECTORY);
   EXPECT_EQ(TFS_ERROR, ret);
-  p->dump();
 
   TBSYS_LOG(INFO, "create /test2");
   sprintf(new_dir_path, "/test2");
   ret = service.create(app_id, uid, new_dir_path, DIRECTORY);
   EXPECT_EQ(TFS_SUCCESS, ret);
-  p->dump();
+  //p = service.get_root_node(app_id, uid);
+  //p->dump();
+  //service.revert_root_node(app_id, uid);
   //now we have  /test1/   /test1/ff/  /test2/
+  //use this to test gc
+  TBSYS_LOG(INFO, "create /test2");
+  sprintf(new_dir_path, "/test2");
+  ret = service.create(app_id, uid + 1, new_dir_path, DIRECTORY);
+  EXPECT_EQ(TFS_SUCCESS, ret);
 }
 TEST_F(ServiceTest, create_file)
 {
@@ -102,32 +105,26 @@ TEST_F(ServiceTest, create_file)
   sprintf(new_dir_path, "/test1/ff");
   ret = service.create(app_id, uid, new_dir_path, NORMAL_FILE);
   EXPECT_NE(TFS_SUCCESS, ret);
-  CacheRootNode* p = service.get_root_node(app_id, uid);
-  p->dump();
 
   TBSYS_LOG(INFO, "create /test3/f1");
   sprintf(new_dir_path, "/test3/f1");
   ret = service.create(app_id, uid, new_dir_path, NORMAL_FILE);
   EXPECT_EQ(TFS_ERROR, ret);
-  p->dump();
 
   TBSYS_LOG(INFO, "create /test1/ff/");
   sprintf(new_dir_path, "/test1/ff/");
   ret = service.create(app_id, uid, new_dir_path, NORMAL_FILE);
   EXPECT_EQ(TFS_ERROR, ret);
-  p->dump();
 
   TBSYS_LOG(INFO, "create /test2/ff");
   sprintf(new_dir_path, "/test2/ff");
   ret = service.create(app_id, uid, new_dir_path, NORMAL_FILE);
   EXPECT_EQ(TFS_SUCCESS, ret);
-  p->dump();
 
   TBSYS_LOG(INFO, "create /test2");
   sprintf(new_dir_path, "/test2");
   ret = service.create(app_id, uid, new_dir_path, NORMAL_FILE);
   EXPECT_EQ(TFS_ERROR, ret);
-  p->dump();
   //now we have  /test1/   /test1/ff/  /test2/ff
 }
 TEST_F(ServiceTest, rm_dir)
@@ -138,20 +135,16 @@ TEST_F(ServiceTest, rm_dir)
   sprintf(new_dir_path, "/test1/ff/f1");
   ret = service.rm(app_id, uid, new_dir_path, DIRECTORY);
   EXPECT_NE(TFS_SUCCESS, ret);
-  CacheRootNode* p = service.get_root_node(app_id, uid);
-  p->dump();
 
   TBSYS_LOG(INFO, "rm /test1/ff");
   sprintf(new_dir_path, "/test1/ff");
   ret = service.rm(app_id, uid, new_dir_path, DIRECTORY);
   EXPECT_EQ(TFS_SUCCESS, ret);
-  p->dump();
 
   TBSYS_LOG(INFO, "create /test2/");
   sprintf(new_dir_path, "/test2/");
   ret = service.rm(app_id, uid, new_dir_path, DIRECTORY);
   EXPECT_NE(TFS_SUCCESS, ret);
-  p->dump();
 
   //now we have  /test1/    /test2/ff
 }
@@ -163,26 +156,21 @@ TEST_F(ServiceTest, rm_file)
   sprintf(new_dir_path, "/test1/ff");
   ret = service.rm(app_id, uid, new_dir_path, NORMAL_FILE);
   EXPECT_NE(TFS_SUCCESS, ret);
-  CacheRootNode* p = service.get_root_node(app_id, uid);
-  p->dump();
 
   TBSYS_LOG(INFO, "rm /test3/f1");
   sprintf(new_dir_path, "/test3/f1");
   ret = service.rm(app_id, uid, new_dir_path, NORMAL_FILE);
   EXPECT_NE(TFS_SUCCESS, ret);
-  p->dump();
 
   TBSYS_LOG(INFO, "rm /test1");
   sprintf(new_dir_path, "/test1");
   ret = service.rm(app_id, uid, new_dir_path, NORMAL_FILE);
   EXPECT_NE(TFS_SUCCESS, ret);
-  p->dump();
 
   TBSYS_LOG(INFO, "rm /test2/ff");
   sprintf(new_dir_path, "/test2/ff");
   ret = service.rm(app_id, uid, new_dir_path, NORMAL_FILE);
   EXPECT_EQ(TFS_SUCCESS, ret);
-  p->dump();
 
   //now we have  /test1/   /test2/
 } 
@@ -195,29 +183,24 @@ TEST_F(ServiceTest, mv_dir)
   sprintf(new_dir_path, "/test2/ff");
   ret = service.create(app_id, uid, new_dir_path, NORMAL_FILE);
   EXPECT_EQ(TFS_SUCCESS, ret);
-  CacheRootNode* p = service.get_root_node(app_id, uid);
-  p->dump();
 
   TBSYS_LOG(INFO, "mv /test2/ /test1/test3/t2");
   sprintf(new_dir_path, "/test2");
   sprintf(dest_dir_path, "/test1/test3/t2");
   ret = service.mv(app_id, uid, new_dir_path, dest_dir_path, DIRECTORY);
   EXPECT_NE(TFS_SUCCESS, ret);
-  p->dump();
 
   TBSYS_LOG(INFO, "mv /test2/ /test1");
   sprintf(new_dir_path, "/test2");
   sprintf(dest_dir_path, "/test1");
   ret = service.mv(app_id, uid, new_dir_path, dest_dir_path, DIRECTORY);
   EXPECT_NE(TFS_SUCCESS, ret);
-  p->dump();
 
   TBSYS_LOG(INFO, "mv /test2/ /test1/test3");
   sprintf(new_dir_path, "/test2");
   sprintf(dest_dir_path, "/test1/test3");
   ret = service.mv(app_id, uid, new_dir_path, dest_dir_path, DIRECTORY);
   EXPECT_EQ(TFS_SUCCESS, ret);
-  p->dump();
   //now we have  /test1/test3/ff 
 } 
 
@@ -227,7 +210,6 @@ TEST_F(ServiceTest, mv_file)
   char dest_dir_path[1024];
   int ret = 0;
 
-  CacheRootNode* p = service.get_root_node(app_id, uid);
 
   TBSYS_LOG(INFO, "mv /test1/test3/ff /test2");
   sprintf(new_dir_path, "/test1/test3/ff");
@@ -236,14 +218,12 @@ TEST_F(ServiceTest, mv_file)
   EXPECT_NE(TFS_SUCCESS, ret);
   ret = service.mv(app_id, uid, new_dir_path, dest_dir_path, NORMAL_FILE);
   EXPECT_EQ(TFS_SUCCESS, ret);
-  p->dump();
 
   TBSYS_LOG(INFO, "mv /test1/test3 /test4");
   sprintf(new_dir_path, "/test1/test3");
   sprintf(dest_dir_path, "/test4");
   ret = service.mv(app_id, uid, new_dir_path, dest_dir_path, NORMAL_FILE);
   EXPECT_NE(TFS_SUCCESS, ret);
-  p->dump();
 
   //now we have  /test1/test3/ /test2
 } 
@@ -288,7 +268,6 @@ TEST_F(ServiceTest, write_file)
   frag_meta.size_= 10;
   fra_info.v_frag_meta_.push_back(frag_meta);
 
-  CacheRootNode* p = service.get_root_node(app_id, uid);
 
   TBSYS_LOG(INFO, "write /test1/test3");
   sprintf(new_dir_path, "/test1/test3");
@@ -331,7 +310,6 @@ TEST_F(ServiceTest, write_file)
   sprintf(new_dir_path, "/test2");
   ret = service.write(app_id, uid, new_dir_path, fra_info);
   EXPECT_EQ(TFS_SUCCESS, ret);
-  p->dump();
 
   //now we have  /test1/test3/ /test2
 } 
@@ -450,6 +428,7 @@ TEST_F(ServiceTest, ls)
 } 
 int main(int argc, char* argv[])
 {
+  {
   MemHelper::init(5,5,5);
   dbinfo.conn_str_ = "10.232.36.205:3306:tfs_name_db";
   dbinfo.user_ = "root";
@@ -458,14 +437,10 @@ int main(int argc, char* argv[])
   SYSPARAM_NAMEMETASERVER.db_infos_.push_back(dbinfo);
   SYSPARAM_NAMEMETASERVER.max_pool_size_ = 5;
   service.initialize(0, NULL);
-  CacheRootNode* p = service.get_root_node(app_id, uid);
-  p->app_id_ = app_id;
-  p->user_id_ = uid;
   printf("app_id %lu, uid: %lu\n", app_id, uid);
   //TBSYS_LOGGER.setLogLevel("debug");
   PROFILER_SET_STATUS(0);
-
-
   testing::InitGoogleTest(&argc, argv);
+  }
   return RUN_ALL_TESTS();
 }
