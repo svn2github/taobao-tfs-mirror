@@ -55,122 +55,6 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		return false;
 	}
 
-	@Test
-	public void clusterA_sync_clusterB() {
-		boolean bRet = false;
-
-		/* write to cluster A */
-		bRet = setSeedFlag(1);
-		assertTrue(bRet);
-		bRet = setSeedSize(1);
-		assertTrue(bRet);
-		
-		/*stop write process*/
-		bRet = writeCmd();
-		assertTrue(bRet);
-
-		/*wait 20 s*/
-		sleep(20);
-		
-		/*stop write proccess*/
-		bRet = writeCmdStop();
-		assertTrue(bRet);
-		
-		/* verify */
-		check_sync(MASTERIP, tfsGrid2.getCluster(NSINDEX).getServer(0).getIp());
-
-		/* unlink to cluster A */
-		bRet=unlinkCmd();
-
-		/* verify */
-		check_sync(MASTERIP, tfsGrid2.getCluster(NSINDEX).getServer(0).getIp());
-	}
-
-	/*
-	 * 1.配置双集群。集群A和集群B。 2.集群A中写入数据。 3.集群B中不能删除集群A写入的数据。
-	 */
-	@Test
-	public void clusterA_shall_not_effect_clusterB() {
-		boolean bRet = false;
-
-		/* write to cluster A */
-		bRet = setSeedFlag(1);
-		assertTrue(bRet);
-		bRet = setSeedSize(1);
-		assertTrue(bRet);
-		bRet = writeCmd();
-		assertTrue(bRet);
-
-		/* wait 5 s */
-		sleep(5);
-		
-		/*stop write process*/
-		bRet = writeCmdStop();
-		assertTrue(bRet);
-		
-		/* delete from cluster B */
-		bRet = unlinkCmd();
-		assertFalse(bRet);
-
-		/* verify */
-		check_sync(MASTERIP, tfsGrid2.getCluster(NSINDEX).getServer(0).getIp());
-	}
-
-
-	public boolean ClusterBMigrateVip()
-	{
-		boolean bRet = false;
-		log.info("ClusterBMigrateVip vip start ===>");
-		AppServer clusterBMASTERSER = tfsGrid2.getCluster(NSINDEX).getServer(0);
-		bRet = HA.setVipMigrateBase(clusterBMASTERSER.getIp(), 
-		                            clusterBMASTERSER.getIpAlias(), 
-		                            clusterBMASTERSER.getMacName());
-		if (bRet ==  false)
-		{
-			return bRet;
-		}
-
-		/* Wait for migrate */
-		sleep(MIGRATETIME);
-		
-		bRet = HA.chkVipBase(clusterBMASTERSER.getIp(), VIPETHNAME);
-		log.info("ClusterBMigrateVip vip end ===>");
-		return bRet;	
-	}
-
-	/*
-	 * 1.配置双集群。集群A和集群B。 2.集群A中写入数据。 3.集群B中发生迁移。 4.集群A可以删除写入的数据。并且同步到集群B上
-	 */
-	@Test
-	public void Cluster_A_write_B_migrate() {
-		boolean bRet = false;
-		caseName = " Cluster_A_write_B_move";
-		log.info(caseName + "===> start");
-		/* write to cluster A */
-		bRet = setSeedFlag(1);
-		assertTrue(bRet);
-
-		bRet = setSeedSize(1);
-		assertTrue(bRet);
-
-		bRet = writeCmd();
-		assertTrue(bRet);
-		
-		/*stop 20 s*/
-		sleep(20);
-        bRet = writeCmdStop();
-       
-		/* Migrate vip */
-		ClusterBMigrateVip();
-
-		/* delete from clusterA */
-		bRet = unlinkCmd();
-		assertTrue(bRet);
-
-		/* verify */
-		check_sync(MASTERIP, tfsGrid2.getCluster(NSINDEX).getServer(0).getIp());
-	}
-
 
 	public boolean killMasterNs(AppGrid tfsAppGrid)
 	{
@@ -206,8 +90,9 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		
 		/* Reset the failcount */
 		bRet = resetFailCount(tempIp);
-		if (bRet == false) return bRet;
+		if (bRet == false) 
 
+		return bRet;
 		return bRet;
 	}
 	public boolean killSlaveNs(AppGrid tfsAppGrid)
@@ -306,6 +191,150 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		bRet = serverSlave.start();
 		
 		return bRet;
+	}
+	public boolean ClusterBMigrateVip()
+	{
+		boolean bRet = false;
+		log.info("ClusterBMigrateVip vip start ===>");
+		AppServer clusterBMASTERSER = tfsGrid2.getCluster(NSINDEX).getServer(0);
+		bRet = HA.setVipMigrateBase(clusterBMASTERSER.getIp(), 
+		                            clusterBMASTERSER.getIpAlias(), 
+		                            clusterBMASTERSER.getMacName());
+		if (bRet ==  false)
+		{
+			return bRet;
+		}
+
+		/* Wait for migrate */
+		sleep(MIGRATETIME);
+		
+		bRet = HA.chkVipBase(clusterBMASTERSER.getIp(), VIPETHNAME);
+		log.info("ClusterBMigrateVip vip end ===>");
+		return bRet;	
+	}
+	public boolean killOneDsForce(AppGrid tfsAppGrid)
+	{
+		boolean bRet = false;
+		log.info("Kill one ds start ===>");
+		AppServer cs = tfsAppGrid.getCluster(DSINDEX).getServer(0);
+		bRet = cs.stop(KillTypeEnum.FORCEKILL, WAITTIME);
+		log.info("Kill one ds end ===>");
+		return bRet;
+	}
+	public boolean startOneDs(AppGrid tfsAppGrid)
+	{
+		boolean bRet = false;
+		log.info("Start one ds start ===>");
+		AppServer cs = tfsAppGrid.getCluster(DSINDEX).getServer(0);
+		bRet = cs.start();
+		log.info("Start one ds end ===>");
+		return bRet;
+	}
+	public boolean killOneDs(AppGrid tfsAppGrid)
+	{
+		boolean bRet = false;
+		log.info("Kill one ds start ===>");
+		AppServer cs = tfsAppGrid.getCluster(DSINDEX).getServer(0);
+		bRet = cs.stop(KillTypeEnum.NORMALKILL, WAITTIME);
+		log.info("Kill one ds end ===>");
+		return bRet;
+	}
+
+	@Test
+	public void clusterA_sync_clusterB() {
+		boolean bRet = false;
+
+		/* write to cluster A */
+		bRet = setSeedFlag(1);
+		assertTrue(bRet);
+		bRet = setSeedSize(1);
+		assertTrue(bRet);
+		
+		/*stop write process*/
+		bRet = writeCmd();
+		assertTrue(bRet);
+
+		/*wait 20 s*/
+		sleep(20);
+		
+		/*stop write proccess*/
+		bRet = writeCmdStop();
+		assertTrue(bRet);
+		
+		/* verify */
+		check_sync(MASTERIP, tfsGrid2.getCluster(NSINDEX).getServer(0).getIp());
+
+		/* unlink to cluster A */
+		bRet=unlinkCmd();
+
+		/* verify */
+		check_sync(MASTERIP, tfsGrid2.getCluster(NSINDEX).getServer(0).getIp());
+	}
+
+	/*
+	 * 1.配置双集群。集群A和集群B。 2.集群A中写入数据。 3.集群B中不能删除集群A写入的数据。
+	 */
+	@Test
+	public void clusterA_shall_not_effect_clusterB() {
+		boolean bRet = false;
+
+		/* write to cluster A */
+		bRet = setSeedFlag(1);
+		assertTrue(bRet);
+		bRet = setSeedSize(1);
+		assertTrue(bRet);
+		bRet = writeCmd();
+		assertTrue(bRet);
+
+		/* wait 5 s */
+		sleep(5);
+		
+		/*stop write process*/
+		bRet = writeCmdStop();
+		assertTrue(bRet);
+		
+		/* delete from cluster B */
+		bRet = unlinkCmd();
+		assertFalse(bRet);
+
+		/* verify */
+		check_sync(MASTERIP, tfsGrid2.getCluster(NSINDEX).getServer(0).getIp());
+	}
+
+
+	
+
+	/*
+	 * 1.配置双集群。集群A和集群B。 2.集群A中写入数据。 3.集群B中发生迁移。 4.集群A可以删除写入的数据。并且同步到集群B上
+	 */
+	@Test
+	public void Cluster_A_write_B_migrate() {
+		boolean bRet = false;
+		caseName = " Cluster_A_write_B_move";
+		log.info(caseName + "===> start");
+		/* write to cluster A */
+		bRet = setSeedFlag(1);
+		assertTrue(bRet);
+
+		bRet = setSeedSize(1);
+		assertTrue(bRet);
+
+		bRet = writeCmd();
+		assertTrue(bRet);
+		
+		/*stop 20 s*/
+		sleep(20);
+        bRet = writeCmdStop();
+       
+		/* Migrate vip */
+		ClusterBMigrateVip();
+
+		/* delete from clusterA */
+		bRet = unlinkCmd();
+		assertTrue(bRet);
+
+		/* verify */
+		check_sync(MASTERIP, tfsGrid2.getCluster(NSINDEX).getServer(0).getIp());
 	}
 
 
@@ -469,34 +498,7 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		check_sync(MASTERIP, tfsGrid2.getCluster(NSINDEX).getServer(0).getIp());
 	}
 
-	public boolean killOneDsForce(AppGrid tfsAppGrid)
-	{
-		boolean bRet = false;
-		log.info("Kill one ds start ===>");
-		AppServer cs = tfsAppGrid.getCluster(DSINDEX).getServer(0);
-		bRet = cs.stop(KillTypeEnum.FORCEKILL, WAITTIME);
-		log.info("Kill one ds end ===>");
-		return bRet;
-	}
-	public boolean startOneDs(AppGrid tfsAppGrid)
-	{
-		boolean bRet = false;
-		log.info("Start one ds start ===>");
-		AppServer cs = tfsAppGrid.getCluster(DSINDEX).getServer(0);
-		bRet = cs.start();
-		log.info("Start one ds end ===>");
-		return bRet;
-	}
-	public boolean killOneDs(AppGrid tfsAppGrid)
-	{
-		boolean bRet = false;
-		log.info("Kill one ds start ===>");
-		AppServer cs = tfsAppGrid.getCluster(DSINDEX).getServer(0);
-		bRet = cs.stop(KillTypeEnum.NORMALKILL, WAITTIME);
-		log.info("Kill one ds end ===>");
-		return bRet;
-	}
-
+	
 	@Test
 	public void Cluster_AB_restartDS_Kill_9() {
 		/*
