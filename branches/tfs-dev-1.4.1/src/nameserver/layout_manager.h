@@ -461,7 +461,6 @@ namespace nameserver
     int64_t write_second_index_;
     time_t  zonesec_;
     time_t  last_rotate_log_time_;
-    volatile mutable uint32_t max_block_id_;
     volatile int32_t alive_server_size_;
 
     volatile uint8_t interrupt_;

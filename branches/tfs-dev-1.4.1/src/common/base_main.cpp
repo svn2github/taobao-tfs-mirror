@@ -289,7 +289,7 @@ static const char _g_build_description[] = "unknown";
     /** get work directory*/
     const char* BaseMain::get_work_dir() const
     {
-      return TBSYS_CONFIG.getString(CONF_SN_PUBLIC, CONF_WORK_DIR, NULL);
+      return TBSYS_CONFIG.getString(CONF_SN_PUBLIC, CONF_WORK_DIR, "/tmp");
     }
 
     const char* BaseMain::get_log_file_level() const

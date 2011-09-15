@@ -112,8 +112,15 @@ namespace tfs
       if (status_ > LEASE_STATUS_RUNNING)
         return true;
       Time time_out = expire_time_ - tbutil::Time::now();
-      tbutil::Monitor<tbutil::Mutex>::Lock lock(*this);
-      return timedWait(time_out);
+      if (time_out >= 0 )
+      {
+        tbutil::Monitor<tbutil::Mutex>::Lock lock(*this);
+        return timedWait(time_out);
+      }
+      else
+      {
+        return true;
+      }
     }
 
     void LeaseEntry::change(LeaseStatus status)

@@ -556,7 +556,8 @@ int TfsFile::process(const InnerFilePhase file_phase)
       // all request fail
       if (0 == req_size)
       {
-        ret = EXIT_ALL_SEGMENT_ERROR;
+        if (size > 1)
+          ret = EXIT_ALL_SEGMENT_ERROR;
       }
       else
       {
@@ -656,8 +657,9 @@ int TfsFile::process_success_response(const InnerFilePhase file_phase, NewClient
       }
     }
 
-    ret = (0 == resp_size) ? EXIT_ALL_SEGMENT_ERROR :
-      (resp_size != static_cast<int32_t>(processing_seg_list_.size())) ? EXIT_GENERAL_ERROR : ret;
+    if (processing_seg_list_.size() > 1)
+      ret = (0 == resp_size) ? EXIT_ALL_SEGMENT_ERROR :
+        (resp_size != static_cast<int32_t>(processing_seg_list_.size())) ? EXIT_GENERAL_ERROR : ret;
   }
 
   return ret;

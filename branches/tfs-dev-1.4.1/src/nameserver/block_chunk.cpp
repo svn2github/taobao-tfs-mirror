@@ -150,12 +150,18 @@ namespace tfs
       bool has_block = iter != block_map_.end();
       if (has_block)
       {
-        for (; iter != block_map_.end() && actual < should ; ++iter, ++jump_count)
+        for (; iter != block_map_.end(); ++iter, ++jump_count)
         {
           if (iter->second->scan(param) == TFS_SUCCESS)
           {
             TBSYS_LOG(DEBUG, "BlockChunk scan block: %u", iter->second->id());
             ++actual;
+          }
+          if (actual == should)
+          {
+            ++iter;
+            ++jump_count;
+            break;
           }
         }
         end = iter == block_map_.end();

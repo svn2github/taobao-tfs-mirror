@@ -134,7 +134,6 @@ namespace tfs
       write_index_(-1),
       write_second_index_(-1),
       last_rotate_log_time_(0),
-      max_block_id_(0),
       alive_server_size_(0),
       interrupt_(INTERRUPT_NONE),
       plan_run_flag_(PLAN_RUN_FLAG_REPLICATE),
@@ -212,14 +211,16 @@ namespace tfs
       }
       else
       {
-      //initialize thread
-      build_plan_thread_ = new BuildPlanThreadHelper(*this);
-      check_dataserver_thread_ = new CheckDataServerThreadHelper(*this);
-      run_plan_thread_ = new RunPlanThreadHelper(*this);
+        //initialize thread
+        build_plan_thread_ = new BuildPlanThreadHelper(*this);
+        check_dataserver_thread_ = new CheckDataServerThreadHelper(*this);
+        run_plan_thread_ = new RunPlanThreadHelper(*this);
 #if defined(TFS_NS_INTEGRATION)
-      run_plan_thread_ = new RunPlanThreadHelper(*this);
+        run_plan_thread_ = new RunPlanThreadHelper(*this);
 #endif
-      }
+     }
+#else
+      iret = TFS_SUCCESS;
 #endif
       return iret;
     }
@@ -328,7 +329,7 @@ namespace tfs
       {
         RWLock::Lock lock(server_mutex_, READ_LOCKER);
         SERVER_MAP::const_iterator iter = servers_.begin();
-        for (; iter != servers_.begin(); ++iter)
+        for (; iter != servers_.end(); ++iter)
         {
           servers.push_back(iter->first);
         }
@@ -808,6 +809,7 @@ namespace tfs
       }
       return iret;
 #else
+      UNUSED(flag);
       return TFS_SUCCESS;
 #endif
     }
@@ -835,6 +837,7 @@ namespace tfs
       }
       return iret;
 #else
+      UNUSED(flag);
       return TFS_SUCCESS;
 #endif
     }
@@ -1727,12 +1730,14 @@ namespace tfs
           server = get_server((*iter));
           if (NULL != server)
           {
+#if !defined(TFS_NS_GTEST) && !defined(TFS_NS_INTEGRATION)
             if (test_server_alive((*iter)) == TFS_SUCCESS)
             {
               server->statistics(stat_info, isnew);
               alive_servers.push_back(server);
             }
             else
+#endif
             {
               actual_dead_servers.push_back((*iter));
             }
@@ -1762,12 +1767,15 @@ namespace tfs
           remove_server((*iter), now);
         }
 
+#if !defined(TFS_NS_GTEST) && !defined(TFS_NS_INTEGRATION)
         if (!actual_dead_servers.empty())
         {
           interrupt(INTERRUPT_ALL, now);
         }
+
         tbutil::Monitor<tbutil::Mutex>::Lock lock(check_server_monitor_);
         check_server_monitor_.timedWait(tbutil::Time::seconds(SYSPARAM_NAMESERVER.heart_interval_));
+#endif
       }
     }
 
@@ -1859,6 +1867,8 @@ namespace tfs
           &tmp,
           &SYSPARAM_NAMESERVER.cluster_index_,
           &SYSPARAM_NAMESERVER.build_plan_default_wait_time_,
+          &SYSPARAM_NAMESERVER.group_count_,
+          &SYSPARAM_NAMESERVER.group_seq_,
         };
         int32_t size = sizeof(param) / sizeof(int32_t*);
         if (index < 0x01 || index > size)
@@ -2233,13 +2243,14 @@ namespace tfs
           {
             //elect source server
             std::vector<ServerCollect*> target(source);
+            //remove server in except from source
             find_server_in_plan_helper(source, except);
             std::vector<ServerCollect*> runer;
             std::vector<ServerCollect*> result;
             int32_t count = 0;
             {
               RWLock::Lock tlock(maping_mutex_, READ_LOCKER);
-              count = elect_replicate_source_ds(*this, source, except,1, result);
+              count = elect_replicate_source_ds(*this, source, except, 1, result);
             }
             if (1 != count)
             {

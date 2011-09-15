@@ -255,7 +255,7 @@ namespace tfs
           || STATUS_MESSAGE_OK != status)
         {
           res.second = PLAN_STATUS_TIMEOUT;
-          TBSYS_LOG(INFO, "send compact message filed; block : %u owner: %d to server: %s, ret: %d",
+          TBSYS_LOG(INFO, "send compact message failed; block : %u owner: %d to server: %s, ret: %d",
               block_id_, index == 0 ? 1 : 0, CNetUtil::addrToString(res.first).c_str(), iret);
         }
 #endif

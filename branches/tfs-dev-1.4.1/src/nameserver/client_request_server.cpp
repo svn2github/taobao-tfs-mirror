@@ -858,7 +858,6 @@ namespace tfs
       return TFS_SUCCESS;
     }
 
-
     int ClientRequestServer::handle_control_set_runtime_param(const common::ClientCmdInformation& info, const int64_t buf_length, char* buf)
     {
       UNUSED(buf_length);
