@@ -7,7 +7,9 @@ import java.util.Iterator;
 import java.util.List;
 
 import org.apache.log4j.Logger;
+import org.junit.After;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
 
 import com.ibm.staf.STAFResult;
@@ -20,6 +22,7 @@ import com.taobao.gaia.HelpBase;
 /**
  * @author lexin
  */
+
 public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 	/* Other */
 	public String caseName = "";
@@ -40,20 +43,30 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 	}
 
 	public boolean check_sync(String clusterAIP, String clusterBIP) {
-		ArrayList<String> result = new ArrayList<String>(500);
+        log.info("Start to check_sync:" + clusterAIP + ", " + clusterBIP);
+        ArrayList<String> result = new ArrayList<String>(500);
+    
+        String strCmd = "cat ";
+        strCmd += TEST_HOME + "/tfsseed_file_list.txt | sed 's/\\(.*\\) \\(.*\\)/\\1/g'";
+        boolean bRet = false;
+        bRet = helpBase.proStartBase(clusterAIP, strCmd, result);
+        assertTrue("Get write file list on cluster B failure!", bRet);
+        for (int i = 0; i < result.size(); i++) {
+                // TODO: tfstool usage
+                ArrayList<String> chkResult = new ArrayList<String>(20);
+                strCmd = "/home/admin/tfs_bin/bin/tfstool -s ";
+                strCmd += clusterBIP;
+                strCmd += ":3100 -n -i stat ";
+                strCmd += result.get(i);
+                strCmd += " |grep STATUS | sed 's/ STATUS:[ ]*\\(.*\\)/\\1/g'";
+                log.info("Executed command is :" + strCmd);
+                bRet = helpBase.proStartBase(clusterBIP, strCmd, chkResult);
+                assertEquals(0, Integer.parseInt(chkResult.get(0)));
+                assertTrue("Check file on cluster B failure!", bRet);
+        }
+        return false;
+    }
 
-		String strCmd = "cat /home/admin/tfstest_new/dsExt3/tfsseed_file_list.txt | sed 's/\\(.*\\) \\(.*\\)/\\1/g'";// hava problem
-		boolean bRet = false;
-		bRet = helpBase.proStartBase(clusterAIP, strCmd, result);
-		assertTrue("Get write file list on cluster B failure!", bRet);
-		for (int i = 0; i < result.size(); i++) {
-			// TODO: tfstool usage
-			strCmd = "./tfstool stat" + result.get(i);
-			bRet = helpBase.proStartBase(clusterBIP, strCmd);
-			assertTrue("Check file on cluster B failure!", bRet);
-		}
-		return false;
-	}
 
 
 	public boolean killMasterNs(AppGrid tfsAppGrid)
@@ -645,6 +658,68 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		
 		/* verification */
 		check_sync(MASTERIP, tfsGrid2.getCluster(NSINDEX).getServer(0).getIp());
+
+	}
+	@After
+	public void tearDown()
+	{
+	   boolean bRet = false;
+	   
+	   /* Stop all client process */
+	   bRet = allCmdStop();
+	   Assert.assertTrue(bRet);
+	   
+	   /* Move the seed file list */
+	   //bRet = mvSeedFile();
+	   //Assert.assertTrue(bRet);
+	   
+	   /* Clean the caseName */
+	   caseName = "";
+	}
+
+	@Before
+	public void setUp(){
+	   boolean bRet = false;
+	   
+	   /* Reset case name */
+	   caseName = "";
+
+	   if (!grid_started)
+	   {
+	      /* Set the failcount */
+	      bRet = setAllFailCnt();
+	      Assert.assertTrue(bRet);
+	      
+	      /* Kill the grid */
+	      bRet = tfsGrid.stop(KillTypeEnum.FORCEKILL, WAITTIME);
+	      Assert.assertTrue(bRet);
+	      
+	      bRet = tfsGrid2.stop(KillTypeEnum.FORCEKILL, WAITTIME);
+	      Assert.assertTrue(bRet);
+	      
+	      /* Set Vip */
+	      bRet = migrateVip();
+	      Assert.assertTrue(bRet);
+	      
+	      /* Clean the log file */
+	      bRet = tfsGrid.clean();
+	      Assert.assertTrue(bRet);
+	      
+	      bRet = tfsGrid.start();
+	      Assert.assertTrue(bRet);
+	      
+	      bRet = tfsGrid2.clean();
+	      Assert.assertTrue(bRet);
+	      
+	      bRet = tfsGrid2.start();
+	      Assert.assertTrue(bRet);
+	      
+	      /* Set failcount */
+	      bRet = resetAllFailCnt();
+	      Assert.assertTrue(bRet);
+	      
+	      grid_started = true;
+	   }
 
 	}
 }
