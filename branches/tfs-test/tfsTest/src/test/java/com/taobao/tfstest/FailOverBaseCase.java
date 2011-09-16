@@ -30,6 +30,7 @@ public class FailOverBaseCase {
 	final ApplicationContext beanFactory = new ClassPathXmlApplicationContext("tfsServer.xml");
 	final AppGrid tfsGrid 		= (AppGrid) beanFactory.getBean("tfsGrid");
 	final AppGrid tfsGrid2 		= (AppGrid) beanFactory.getBean("tfsGrid2");
+	//final AppGrid tfsGrid3 		= (AppGrid) beanFactory.getBean("tfsGrid3");
 	//final AppGrid slaveTfsGrid 	= (AppGrid) beanFactory.getBean("slaveTfsGrid");
 	
 	protected Logger log = Logger.getLogger("TfsTest");
@@ -139,6 +140,7 @@ public class FailOverBaseCase {
 	final public int BLK_CNT_THRESHOLD	                  = 40000;	
 	
 	/* Client conf */
+	final public String NSIP = "ns_ip";
 	final public String LOOPFLAG = "loop_flag";
 	final public String FILESIZE = "writeCount";
 	final public String UNITSIZEMIN = "unit_min";
@@ -387,6 +389,18 @@ public class FailOverBaseCase {
 		bRet = conf.confReplaceSingleByPart(CLIENTIP, CLIENTCONF, "tfsseed", UNLINKRATIO, String.valueOf(iUnlinkRatio));
 		return bRet;
 	}
+	
+	/**
+	 * 
+	 * @param nsIp
+	 * @return
+	 */	
+	public boolean setClusterAddr(String nsIp)
+	{
+		boolean bRet = false;
+		bRet = conf.confReplaceSingleByPart(CLIENTIP, CLIENTCONF, "public", NSIP, nsIp);
+		return bRet;
+	}
 
 	/**
 	 * 
@@ -419,7 +433,7 @@ public class FailOverBaseCase {
 		return bRet;
 	}
 	
-	/**
+	/*
 	 * 
 	 * @param grid
 	 * @param bFlag
