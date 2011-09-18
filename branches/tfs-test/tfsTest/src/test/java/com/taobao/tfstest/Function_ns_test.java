@@ -11,7 +11,6 @@ import org.junit.Before;
 import org.junit.Test;
 
 import com.taobao.gaia.KillTypeEnum;
-import com.taobao.tfstest.FailOverBaseCase.PlanType;
 
 /**
  * @author Administrator/mingyan
@@ -1225,6 +1224,7 @@ public class Function_ns_test extends FailOverBaseCase {
 		log.info(caseName + "===> end");
 		return ;
 	}
+	
 	
 	@After
 	public void tearDown(){

@@ -187,7 +187,7 @@ public class FailOverBaseCase {
 	final public int WAITTIME = 30;
 	final public int BLOCK_CHK_TIME = 500;
 	final public int PLAN_CHK_NUM   = 20;
-	final public int TEST_TIME = 5400;     //in second
+	final public int TEST_TIME = 7200;     //in second
 	final public int SAMPLE_INTERVAL = 60;  //in second(sar)
 	
 	/* Other */
