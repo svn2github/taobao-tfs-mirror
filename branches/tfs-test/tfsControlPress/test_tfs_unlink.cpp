@@ -75,10 +75,17 @@ int TestTfsUnlink::testUnlink()
     return 0;
   }
   
-  const char *tfsFilename = _filenameSetPerThread.at(_currentFile).c_str();
-  const char *postfix = strlen(tfsFilename) > 18 ? (char *)(tfsFilename + 18) : NULL;
+  const char *file_name = _filenameSetPerThread.at(_currentFile).c_str();
+  const char *postfix = strlen(file_name) > 18 ? (char *)(file_name + 18) : NULL;
   int64_t fileSize = 0;
-  ret = _tfsFile->unlink(tfsFilename, postfix, fileSize);
+#if defined(VER_132)
+  ret = _tfsFile->unlink(file_name, postfix);
+#elif defined(VER_140)
+  ret = _tfsFile->unlink(file_name, postfix, fileSize);
+#elif defined(VER_141)
+  ret = _tfsFile->unlink(fileSize, file_name, postfix);
+#endif
+
   if (ret != 0)
   {
     TBSYS_LOG(ERROR, "Unlink failed:%d, fileSize:%d", ret, fileSize);
@@ -87,9 +94,9 @@ int TestTfsUnlink::testUnlink()
 
   if (_largeFlag)
   {
-    ret = _tfsFile->open((char *)tfsFilename,(char *)postfix, T_STAT | T_LARGE);                                                                     
+    ret = _tfsFile->open((char *)file_name,(char *)postfix, T_STAT | T_LARGE);                                                                     
   } else {
-    ret = _tfsFile->open((char *)tfsFilename,(char *)postfix, T_STAT);
+    ret = _tfsFile->open((char *)file_name,(char *)postfix, T_STAT);
   }
 
   if (ret <= 0)

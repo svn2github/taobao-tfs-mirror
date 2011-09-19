@@ -36,7 +36,7 @@ int TestTfsUpdate::setUp()
   TestGFactory::_index ++;
   /* Set localkey */
   _keyIndex = TestGFactory::_index;  
-  char *filelist = (char *)CConfig::getCConfig().getString("tfswrite","seedlist_name");
+  char *filelist = (char *)CConfig::getCConfig().getString("tfsseed","filelist_name");
   
   TBSYS_LOG(DEBUG,"filelist = %s", filelist);
   if(filelist == NULL)
@@ -261,7 +261,13 @@ int TestTfsUpdate::testUnlink()
 
   const char *postfix = strlen(_tfsFilename) > 18 ? (char *)(_tfsFilename + 18) : NULL;
   int64_t fileSize = 0;
+#if defined(VER_132)
+  ret = _tfsFile->unlink(_tfsFilename, postfix);
+#elif defined(VER_140)
   ret = _tfsFile->unlink(_tfsFilename, postfix, fileSize);
+#elif defined(VER_141)
+  ret = _tfsFile->unlink(fileSize, _tfsFilename, postfix);
+#endif
 
   if (ret != 0)
   {
@@ -390,8 +396,8 @@ int TestTfsUpdate::run()
 int TestTfsUpdate::saveFilename()
 {
   FILE *fp = NULL;
-  char *filelist = (char *)CConfig::getCConfig().getString("tfswrite",
-         "writelist_name");
+  char *filelist = (char *)CConfig::getCConfig().getString("tfseed",
+         "filelist_name");
 
   if(filelist == NULL){
     filelist = "./write_file_list.txt";                                                                                                                

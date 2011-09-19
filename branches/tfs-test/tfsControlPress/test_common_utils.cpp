@@ -1,5 +1,5 @@
 /*
- * (C) 2007-2011 Alibaba Group Holding Limited.
+ * (C) 2007-2010 Alibaba Group Holding Limited.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -18,7 +18,7 @@
 
 int TestCommonUtils::generateData(char *data, int size)
 {
-	srand(time(NULL)+rand()+pthread_self());
+	srand(time(NULL) + rand() + pthread_self());
 
 	for(int i = 0; i < size; i ++) 
   {
@@ -29,75 +29,71 @@ int TestCommonUtils::generateData(char *data, int size)
 	return size;
 }
 
-int TestCommonUtils::readFilelist(char *filelist, VUINT32& crcSet, VSTRING& filenameSet)
+int TestCommonUtils::readFilelist(char *filelist, VUINT32& crc_set, VSTRING& filename_set)
 {
 
   FILE *fp = NULL;
-  if((fp = fopen(filelist,"r")) == NULL)
+  if((fp = fopen(filelist, "r")) == NULL)
   {
     TBSYS_LOG(DEBUG,"open file_list failed.");
     return -1;
   }
   uint32_t crc = 0;
   char filename[64];
-  while(fgets(filename,sizeof(filename),fp))
+  while (fgets(filename, sizeof(filename), fp))
   {
     if(filename[strlen(filename)-1] == '\n')
     {
       filename[strlen(filename)-1] = '\0';
-    } else {
+    }
+    else {
       filename[strlen(filename)] = '\0';
     }
-#if 0
-    TBSYS_LOG(ERROR,"line = %d, filename = %s, filelist = %s!!!",__LINE__,filename, filelist);
-#endif
-    char *p = strchr(filename,' ');
+    char *p = strchr(filename, ' ');
     *p++ = '\0';
-    sscanf(p,"%u",&crc);
+    sscanf(p, "%u", &crc);
 
-    filenameSet.push_back(filename);
-    crcSet.push_back(crc);
-
+    filename_set.push_back(filename);
+    crc_set.push_back(crc);
   }
-
   return 0;
 }
 
 
-int TestCommonUtils::getFilelist(int partNo, int partSize, VUINT32& crcSet, 
-      VUINT32& crcSetPerThread, VSTRING& filenameSet, VSTRING& filenameSetPerThread)
+int TestCommonUtils::getFilelist(int part_no, int part_size, VUINT32& crc_set, 
+      VUINT32& crc_set_per_thread, VSTRING& filename_set, VSTRING& filename_set_per_thread)
 {
   // total size less than thread count
-  if (partSize == 0)
+  if (part_size == 0)
   {
-    partSize = 1; 
+    part_size = 1; 
   }
   
-  int offset = partNo * partSize;
-  int end = (offset + partSize) > (int)crcSet.size()? crcSet.size():(offset + partSize); 
+  int offset = part_no * part_size;
+  int end = (offset + part_size) > static_cast<int>(crc_set.size()) ? crc_set.size() : (offset + part_size); 
   for (; offset < end; offset++)
   {
-    crcSetPerThread.push_back(crcSet[offset]);
-    filenameSetPerThread.push_back( filenameSet.at(offset).c_str() );
+    crc_set_per_thread.push_back(crc_set[offset]);
+    filename_set_per_thread.push_back(filename_set.at(offset).c_str());
   }
 
   // the last thread eat the left
-  if (partNo == (TestGFactory::_threadCount - 1) )
+  if (part_no == (TestGFactory::_threadCount - 1) )
   {
-    for (; offset < (int)crcSet.size(); offset++)
+    for (; offset < static_cast<int>(crc_set.size()); offset++)
     {
-      crcSetPerThread.push_back(crcSet[offset]);
-      filenameSetPerThread.push_back( filenameSet.at(offset).c_str() );
+      crc_set_per_thread.push_back(crc_set[offset]);
+      filename_set_per_thread.push_back(filename_set.at(offset).c_str());
     }
   }
 
   //debug
   /*
   char fileListPerThread[20] = {0};
-  sprintf(fileListPerThread, "./read_file_list_%d.txt", partNo);
+  sprintf(fileListPerThread, "./read_file_list_%d.txt", part_no);
   FILE *fp = fopen(fileListPerThread, "w");
-  VSTRING::iterator it = filenameSetPerThread.begin();
-  for (; it != filenameSetPerThread.end(); it++)
+  VSTRING::iterator it = filename_set_per_thread.begin();
+  for (; it != filename_set_per_thread.end(); it++)
   {
      fprintf(fp, "%s\n", it->c_str());
   } 

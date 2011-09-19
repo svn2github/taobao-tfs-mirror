@@ -16,7 +16,6 @@
 #include "test_tfs_case.h"
 #include "test_gfactory.h"
 
-#define NO_CLIENT_CACHE
 
 using namespace tbsys;
 
@@ -27,9 +26,9 @@ int TestTfsCase::setUp()
   g_lock.lock();
   _tfsFile = TfsClient::Instance();
 #ifdef NO_CLIENT_CACHE
-  _tfsFile->initialize( ( CConfig::getCConfig().getString("public", "ns_ip") ), 0, 1);
+  _tfsFile->initialize((CConfig::getCConfig().getString("public", "ns_ip")), 1, 1);
 #else
-  _tfsFile->initialize( ( CConfig::getCConfig().getString("public", "ns_ip") ) );
+  _tfsFile->initialize((CConfig::getCConfig().getString("public", "ns_ip")));
 #endif
   TBSYS_LOG(DEBUG, "_batchCount = %d", TestGFactory::_batchCount);
   TBSYS_LOG(DEBUG, "_segSize = %d", TestGFactory::_segSize);

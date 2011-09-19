@@ -1,5 +1,5 @@
 /*
- * (C) 2007-2011 Alibaba Group Holding Limited.
+ * (C) 2007-2010 Alibaba Group Holding Limited.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -20,18 +20,18 @@
 #include "test_tfs_unlink.h"
 #include "test_tfs_update.h"
 
-TestTfsCase * TestCaseFactory::getTestCase(string testIndex)
+TestTfsCase * TestCaseFactory::getTestCase(string test_index)
 {
-  if (testIndex == "tfsSeed") {
+  if (test_index == "tfsSeed") {
     return new TestTfsSeed();
-  } else if (testIndex == "tfsUpdate") {
+  } else if (test_index == "tfsUpdate") {
     return new TestTfsUpdate();
-  } else if (testIndex == "tfsRead") {
+  } else if (test_index == "tfsRead") {
     return new TestTfsRead();
-  } else if (testIndex == "tfsUnlink") {
+  } else if (test_index == "tfsUnlink") {
     return new TestTfsUnlink();
   } else {
-    TBSYS_LOG( ERROR, "Test index error : %s", testIndex.c_str() );    
+    TBSYS_LOG(ERROR, "Test index error : %s", test_index.c_str());    
   }
 
   return NULL;

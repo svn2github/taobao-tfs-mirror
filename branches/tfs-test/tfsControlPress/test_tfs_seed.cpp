@@ -218,7 +218,13 @@ int TestTfsSeed::testUnlink()
 
   const char *postfix = strlen(_fileName) > 18 ? (char *)(_fileName + 18) : NULL;
   int64_t fileSize = 0;
+#if defined(VER_132)
+  ret = _tfsFile->unlink(_fileName, postfix);
+#elif defined(VER_140)
   ret = _tfsFile->unlink(_fileName, postfix, fileSize);
+#elif defined(VER_141)
+  ret = _tfsFile->unlink(fileSize, _fileName, postfix);
+#endif
 
   if (ret != 0)
   {
@@ -243,21 +249,20 @@ int TestTfsSeed::testUnlink()
 
   sleep(2);
 
-  ret = _tfsFile->fstat( fd, &info, FORCE_STAT );
+  ret = _tfsFile->fstat(fd, &info, FORCE_STAT);
   if(ret != 0)
   {
     TBSYS_LOG(ERROR,"Fstat failed:%d",ret);
-    _tfsFile->close( fd );
+    _tfsFile->close(fd);
     return ret;
   }
-  _tfsFile->close( fd );
+  _tfsFile->close(fd);
 
   if (info.flag_ == 0)
   {
     TBSYS_LOG(ERROR,"Unlink faild: delete falg = %d", info.flag_);
     return -1;
   }
-  //_alreadyUnlinked = true;
   return ret;
 }
 
@@ -351,14 +356,14 @@ out:
 int TestTfsSeed::saveFilename()
 {
   FILE *fp = NULL;
-  char *filelist = (char *)CConfig::getCConfig().getString("tfswrite",
+  char *filelist = (char *)CConfig::getCConfig().getString("tfsseed",
          "seedlist_name");
 
   if(filelist == NULL){
     filelist = "./tfsseed_file_list.txt";                                                                                                                
   }
 
-  if((fp = fopen(filelist,"w")) == NULL)
+  if((fp = fopen(filelist, "w")) == NULL)
   {
       TBSYS_LOG(ERROR,"open write_file_list failed.");
       return -1;
