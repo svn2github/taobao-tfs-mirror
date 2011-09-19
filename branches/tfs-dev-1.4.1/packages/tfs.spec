@@ -11,8 +11,8 @@ Prefix:%{_prefix}
 Source:%{NAME}-%{VERSION}.tar.gz
 BuildRoot: %{_tmppath}/%{name}-root
 
-#BuildRequires: t-csrd-tbnet-devel = 1.4.0
-#BuildRequires: mysql-server >= 5.0.7, mysql-devel >= 5.0.7
+BuildRequires: t-csrd-tbnet-devel = 1.4.0
+BuildRequires: mysql-server >= 5.0.7, mysql-devel >= 5.0.7
 
 %description
 TFS is a distributed file system.
