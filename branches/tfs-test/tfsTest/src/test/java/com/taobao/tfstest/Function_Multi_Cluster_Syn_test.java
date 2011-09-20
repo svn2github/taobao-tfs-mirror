@@ -364,7 +364,7 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 
 	/*
 	 * 1.配置双集群。集群A和集群B。 2.集群A中写入数据。
-	 * 3.集群B中发生数据迁移(集群B一开始需要3台机器，写之前先kill掉1台，写完之后启动)。
+	 * 3.集群B中发生数据迁移(写之前先kill掉B集群的1台ds，写完之后启动)。
 	 * 4.集群B中可以看到集群A中已写入的数据，集群A可以删除写入的数据，并且同步到集群B上
 	 */
 	// @Test
@@ -378,7 +378,7 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		/* Clean one ds */
 		bRet = cleanOneDs(tfsGrid2);
 		Assert.assertTrue(bRet);
-
+		
 		/* write to cluster A */
 		bRet = writeCmd();
 		assertTrue(bRet);
@@ -481,7 +481,7 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		// startSlaveNs(tfsGrid3);
 		// startAllDs(tfsGrid3);
 		//
-		/* stop 100 s */
+		
 
 		/* stop 100 s */
 		sleep(100);
@@ -534,13 +534,13 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		killMasterNs(tfsGrid2);
 		killSlaveNs(tfsGrid2);
 		killAllDs(tfsGrid2);
-
+		
+		/* set write/read/unlink cluster addr */
+		
+		bRet = setClusterAddr(clusterAIP);
+		assertTrue(bRet);
+		
 		/* write to cluster A */
-		bRet = setSeedFlag(1);
-		assertTrue(bRet);
-
-		bRet = setSeedSize(1000);
-		assertTrue(bRet);
 
 		bRet = writeCmd();
 		assertTrue(bRet);
@@ -588,7 +588,7 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 
 		/* verification */
 
-		// check_sync(MASTERIP, clusterCIP, STATUS_NORMAL);
+		//check_sync(MASTERIP, clusterCIP, STATUS_NORMAL);
 		check_sync(MASTERIP, clusterBIP, STATUS_NORMAL);
 	}
 
@@ -620,7 +620,7 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 
 		/* delete from clusterA */
 		bRet = unlinkCmd();
-		assertFalse(bRet);
+		assertTrue(bRet);
 
 		/* wait 100 s */
 		sleep(100);
@@ -659,6 +659,7 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		bRet = writeCmd();
 		assertTrue(bRet);
 
+		/* wait 100 s */
 		sleep(100);
 
 		/* Check A ststus */
@@ -670,6 +671,10 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 
 		/* start DS ofB kill_9 */
 		killOneDsForce(tfsGrid2);
+		
+		/* wait 10s */
+		sleep(10);
+		
 		startOneDs(tfsGrid2);
 
 		/* Check AB data */
