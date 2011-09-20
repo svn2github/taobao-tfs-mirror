@@ -31,7 +31,8 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 			.getVip();
 	final public String clusterBIP = tfsGrid2.getCluster(NSINDEX).getServer(0)
 			.getVip();
-	//final public String clusterCIP = tfsGrid3.getCluster(NSINDEX).getServer(0).getVip();
+	// final public String clusterCIP =
+	// tfsGrid3.getCluster(NSINDEX).getServer(0).getVip();
 
 	/* Other */
 	public String caseName = "";
@@ -54,8 +55,8 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 			ArrayList<String> chkResult = new ArrayList<String>(20);
 			strCmd = "/home/admin/tfs_bin/bin/tfstool -s ";
 			strCmd += clusterBIP;
-			strCmd += ":3100 -n -i \"stat ";
-			strCmd += result.get(i) + "\"";
+			strCmd += ":3100 -n -i\\\"stat ";
+			strCmd += result.get(i) + "\\\"";
 			strCmd += " |grep STATUS | awk '{print $2}'";
 			log.info("Executed command is :" + strCmd);
 			bRet = helpBase.proStartBase(clusterBIP, strCmd, chkResult);
@@ -251,10 +252,11 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		log.info("Kill one ds end ===>");
 		return bRet;
 	}
-	public boolean setClusterAddr(String nsIp)
-	{
+
+	public boolean setClusterAddr(String nsIp) {
 		boolean bRet = false;
-		bRet = conf.confReplaceSingleByPart(CLIENTIP, CLIENTCONF, "public", NSIP, nsIp);
+		bRet = conf.confReplaceSingleByPart(CLIENTIP, CLIENTCONF, "public",
+				NSIP, nsIp);
 		return bRet;
 	}
 
@@ -366,7 +368,7 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 	 * 4.集群B中可以看到集群A中已写入的数据，集群A可以删除写入的数据，并且同步到集群B上
 	 */
 	// @Test
-	public void Function_03_sync_while_move_block() {
+	public void Function_03_sync_while_migrate_block() {
 
 		boolean bRet = false;
 
@@ -383,14 +385,14 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 
 		/* stop 100 s */
 		sleep(100);
-		
+
 		/* stop write process */
 		bRet = writeCmdStop();
 		assertTrue(bRet);
-		
+
 		/* verify */
 		check_sync(MASTERIP, clusterBIP, STATUS_NORMAL);
-		
+
 		/* Start one ds */
 		bRet = startOneDs(tfsGrid2);
 		Assert.assertTrue(bRet);
@@ -398,15 +400,14 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		/* verify */
 		check_sync(MASTERIP, clusterBIP, STATUS_NORMAL);
 
-		
 		/* set write/read/unlink cluster addr */
 		bRet = setClusterAddr(clusterAIP);
 		assertTrue(bRet);
-		
+
 		/* delete from clusterA */
 		bRet = unlinkCmd();
 		assertTrue(bRet);
-		
+
 		/* verify */
 		check_sync(MASTERIP, clusterBIP, STATUS_NORMAL);
 	}
@@ -415,11 +416,11 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 	public void Function_04_sync_while__shutBC_startBC() {
 		/*
 		 * 1.配置多集群。集群A和集群B和集群C 2.关闭集群BC 3.不影响集群A的访问，但是同步会失败（可用脚本检测到）。
-		 * 4.再次启动集群BC，同步恢复
+		 * 4.再次启动集群BC，同步恢复（3个集群）
 		 */
 
 		boolean bRet = false;
-		
+
 		caseName = " Function_04_sync_while__shutBC_startBC()";
 		log.info(caseName + "===> start");
 
@@ -427,26 +428,26 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		killMasterNs(tfsGrid2);
 		killSlaveNs(tfsGrid2);
 		killAllDs(tfsGrid2);
-		
+
 		/* check cluster B shut */
 		bRet = chkAlive();
 		Assert.assertFalse(bRet);
-		
+
 		/* shut cluster C */
-//		killMasterNs(tfsGrid3);
-//		killSlaveNs(tfsGrid3);
-//		killAllDs(tfsGrid3);
-		
+		// killMasterNs(tfsGrid3);
+		// killSlaveNs(tfsGrid3);
+		// killAllDs(tfsGrid3);
+
 		/* check cluster C shut */
 		bRet = chkAlive();
 		Assert.assertFalse(bRet);
-		
+
 		/* check cluster A work normal */
 		bRet = chkAlive();
 		Assert.assertTrue(bRet);
-		
-        /*调用脚本检测同步失败*/
-		
+
+		/* 调用脚本检测同步失败 */
+
 		/* Check block copys */
 		bRet = chkBlockCntBothNormal(1);
 		assertTrue(bRet);
@@ -462,30 +463,29 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		/* Stop write cmd */
 		bRet = writeCmdStop();
 		assertTrue(bRet);
-		
 
 		/* start cluster B */
 		startNs(tfsGrid2);
 		startSlaveNs(tfsGrid2);
 		startAllDs(tfsGrid2);
-		
+
 		/* stop 100 s */
 		sleep(100);
-		
+
 		/* check cluster B start */
 		bRet = chkAlive();
 		Assert.assertTrue(bRet);
-		
+
 		/* shut cluster C */
-//		startNs(tfsGrid3);
-//		startSlaveNs(tfsGrid3);
-//		startAllDs(tfsGrid3);
-//		
+		// startNs(tfsGrid3);
+		// startSlaveNs(tfsGrid3);
+		// startAllDs(tfsGrid3);
+		//
 		/* stop 100 s */
-		
+
 		/* stop 100 s */
 		sleep(100);
-		
+
 		/* check cluster C start */
 		bRet = chkAlive();
 		Assert.assertTrue(bRet);
@@ -502,7 +502,20 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		bRet = chkBlockCopyCnt();
 		Assert.assertTrue(bRet);
 
+		/* Check vip */
+		bRet = chkVip();
+		Assert.assertTrue(bRet);
+
+		/* Check the status of servers */
+		bRet = chkAlive();
+		Assert.assertTrue(bRet);
+
+		/* start clusterB and clusterC */
+		startNs(tfsGrid2);
+		startAllDs(tfsGrid2);
+
 		/* verification */
+		check_sync(MASTERIP, clusterAIP, STATUS_NORMAL);
 		check_sync(MASTERIP, clusterBIP, STATUS_NORMAL);
 	}
 
@@ -510,7 +523,7 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 	public void Function_05_sync_while_shutB_startB() {
 
 		/*
-		 * 1.配置多集群。集群A和集群B和集群C 2.关闭集群B 3.不影响集群A和C的访问已经同步。 2.再次启动集群B
+		 * 1.配置多集群。集群A和集群B和集群C 2.关闭集群B 3.不影响集群A和C的访问已经同步。 2.再次启动集群B（3个集群）
 		 */
 
 		boolean bRet = false;
@@ -523,6 +536,11 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		killAllDs(tfsGrid2);
 
 		/* write to cluster A */
+		bRet = setSeedFlag(1);
+		assertTrue(bRet);
+
+		bRet = setSeedSize(1000);
+		assertTrue(bRet);
 
 		bRet = writeCmd();
 		assertTrue(bRet);
@@ -535,7 +553,7 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		assertTrue(bRet);
 
 		/* Wait 100s for recover cluster B */
-		 sleep(100);
+		sleep(100);
 
 		/* start clusterB */
 		startNs(tfsGrid2);
@@ -543,7 +561,7 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		startSlaveNs(tfsGrid2);
 
 		/* verify A is sync with B&C */
-		//check_sync(MASTERIP, clusterCIP, STATUS_NORMAL);
+		// check_sync(MASTERIP, clusterCIP, STATUS_NORMAL);
 		check_sync(MASTERIP, clusterBIP, STATUS_NORMAL);
 	}
 
@@ -555,12 +573,12 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 
 		boolean bRet = false;
 
-		
 		caseName = " Function_06_sync_while_netunblockB_()";
 		log.info(caseName + "===> start");
 
 		/* block clusterB net */
-		helpBase.netBlockBase(MASTERSER.getIp(), tfsGrid2.getCluster(NSINDEX).getServer(0).getIp(), 1, 5);
+		helpBase.netBlockBase(MASTERSER.getIp(), tfsGrid2.getCluster(NSINDEX)
+				.getServer(0).getIp(), 1, 5);
 
 		/* wait 100s */
 		sleep(100);
@@ -569,25 +587,25 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		helpBase.netUnblockBase(MASTERSER.getIp());
 
 		/* verification */
-		
-	//	check_sync(MASTERIP, clusterCIP, STATUS_NORMAL);
+
+		// check_sync(MASTERIP, clusterCIP, STATUS_NORMAL);
 		check_sync(MASTERIP, clusterBIP, STATUS_NORMAL);
 	}
 
 	// @Test
 	public void Function_07_sync_while__del_A_() {
 		/*
-		 * 1.配置多集群。集群A和集群B和集群C 2.集群A中写入删除数据
+		 * 1.配置多集群。集群A和集群B和集群C 2.集群A中写入删除数据（3个集群）
 		 */
 		boolean bRet = false;
 
 		caseName = " Function_07_sync_while__del_A_()";
 		log.info(caseName + "===> start");
-		
+
 		/* set write/read/unlink cluster addr */
 		bRet = setClusterAddr(clusterAIP);
 		assertTrue(bRet);
-		
+
 		/* write to cluster A */
 
 		bRet = writeCmd();
@@ -617,10 +635,9 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 
 		/* verify */
 		check_sync(MASTERIP, clusterBIP, STATUS_NORMAL);
-	
 
-		/*  Check ABC sysnc */
-	//	check_sync(MASTERIP, clusterCIP, STATUS_NORMAL);
+		/* Check ABC sysnc */
+		// check_sync(MASTERIP, clusterCIP, STATUS_NORMAL);
 		check_sync(MASTERIP, clusterBIP, STATUS_NORMAL);
 	}
 
@@ -633,20 +650,20 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 
 		caseName = " Function_08_sync_while_AB_restartDS_Kill_9()";
 		log.info(caseName + "===> start");
-		
+
 		/* set write/read/unlink cluster addr */
 		bRet = setClusterAddr(clusterAIP);
 		assertTrue(bRet);
-		
+
 		/* write to cluster A */
 		bRet = writeCmd();
 		assertTrue(bRet);
 
 		sleep(100);
-		
-		/*  Check A ststus */
+
+		/* Check A ststus */
 		check_sync(MASTERIP, clusterAIP, STATUS_NORMAL);
-		
+
 		/* delete from clusterA */
 		bRet = unlinkCmd();
 		assertTrue(bRet);
@@ -668,21 +685,21 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 
 		caseName = " Function_09_sync_while_restartDS_()";
 		log.info(caseName + "===> start");
-		
+
 		/* write to cluster A */
-		
+
 		bRet = writeCmd();
 		assertTrue(bRet);
 
 		sleep(100);
-	
-		/*  Check A ststus */
+
+		/* Check A ststus */
 		check_sync(MASTERIP, clusterAIP, STATUS_NORMAL);
 
 		/* delete from clusterA */
 		bRet = unlinkCmd();
 		assertTrue(bRet);
-		
+
 		/* wait 100 s */
 		sleep(100);
 
@@ -694,18 +711,18 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		bRet = checkRateEnd(FAILRATE, UNLINK);
 		Assert.assertTrue(bRet);
 
-		/*  Check A ststus */
+		/* Check A ststus */
 		check_sync(MASTERIP, clusterAIP, STATUS_NORMAL);
 
 		/* kill DS ofB kill_9 */
 		killOneDs(tfsGrid2);
-		
+
 		/* wait 100 s */
 		sleep(100);
-		
+
 		/* start DS ofB kill_9 */
 		startOneDs(tfsGrid2);
-		
+
 		/* Check AB data */
 		check_sync(MASTERIP, clusterBIP, STATUS_NORMAL);
 
@@ -716,34 +733,35 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 	 */
 	// @Test
 	public void Function_10_sync_while_block_one_ds() {
-		
+
 		boolean bRet = false;
-	
+
 		caseName = " Function_10_sync_while_block_one_ds()";
 		log.info(caseName + "===> start");
-		
 
 		/* Block clusterB DS net */
-		helpBase.portBlockBase(MASTERSER.getIp(), tfsGrid2.getCluster(NSINDEX).getServer(0).getIp(), tfsGrid2.getCluster(NSINDEX).getServer(0).getPort());
+		helpBase.portBlockBase(MASTERSER.getIp(), tfsGrid2.getCluster(NSINDEX)
+				.getServer(0).getIp(), tfsGrid2.getCluster(NSINDEX)
+				.getServer(0).getPort());
 
 		/* set write/read/unlink cluster addr */
 		bRet = setClusterAddr(clusterAIP);
 		assertTrue(bRet);
-		
+
 		/* write to cluster A */
 		bRet = writeCmd();
 		assertTrue(bRet);
-		
+
 		/* wait 100s */
 		sleep(100);
-		
+
 		/* delete from clusterA */
 		bRet = unlinkCmd();
 		assertFalse(bRet);
-		
+
 		/* wait 50s */
 		sleep(50);
-		
+
 		/* Monitor the unlink process */
 		bRet = unlinkCmdMon();
 		Assert.assertTrue(bRet);
@@ -752,7 +770,7 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		bRet = checkRateEnd(FAILRATE, UNLINK);
 		Assert.assertTrue(bRet);
 
-		/*  Check A ststus */
+		/* Check A ststus */
 		check_sync(MASTERIP, clusterAIP, STATUS_NORMAL);
 
 		/* netUnblock Cluster DS */
@@ -774,19 +792,20 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 
 		/* block clusterB net */
 		/* Block clusterB DS net */
-		helpBase.netBlockBase(MASTERSER.getIp(), tfsGrid2.getCluster(NSINDEX).getServer(0).getIp(), 1, 5);
+		helpBase.netBlockBase(MASTERSER.getIp(), tfsGrid2.getCluster(NSINDEX)
+				.getServer(0).getIp(), 1, 5);
 
 		/* set write/read/unlink cluster addr */
 		bRet = setClusterAddr(clusterAIP);
 		assertTrue(bRet);
-		
+
 		/* write to cluster A */
-		
+
 		bRet = writeCmd();
 		assertTrue(bRet);
 
-		/* wait 5s */
-		sleep(15);
+		/* wait 50s */
+		sleep(50);
 
 		/* stop write */
 		bRet = writeCmdStop();
