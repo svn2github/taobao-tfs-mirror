@@ -13,6 +13,8 @@ BuildRoot: %{_tmppath}/%{name}-root
 
 BuildRequires: t-csrd-tbnet-devel = 1.4.0
 BuildRequires: mysql-server >= 5.0.7, mysql-devel >= 5.0.7
+BuildRequires: MySQL-client-community, 
+BuildRequires: gcc = 4.1, 
 
 %description
 TFS is a distributed file system.
