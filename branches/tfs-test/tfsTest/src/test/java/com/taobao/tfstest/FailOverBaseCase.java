@@ -30,8 +30,8 @@ public class FailOverBaseCase {
 	final ApplicationContext beanFactory = new ClassPathXmlApplicationContext("tfsServer.xml");
 	final AppGrid tfsGrid 		= (AppGrid) beanFactory.getBean("tfsGrid");
 	final AppGrid tfsGrid2 		= (AppGrid) beanFactory.getBean("tfsGrid2");
-	//final AppGrid tfsGrid3 		= (AppGrid) beanFactory.getBean("tfsGrid3");
-	//final AppGrid slaveTfsGrid 	= (AppGrid) beanFactory.getBean("slaveTfsGrid");
+	final AppGrid tfsGrid3 		= (AppGrid) beanFactory.getBean("tfsGrid3");
+	final AppGrid slaveTfsGrid 	= (AppGrid) beanFactory.getBean("slaveTfsGrid");
 	
 	protected Logger log = Logger.getLogger("TfsTest");
 	
@@ -197,7 +197,7 @@ public class FailOverBaseCase {
 	public AppServer MASTERSER = tfsGrid.getCluster(NSINDEX).getServer(0);
 	public AppServer SLAVESER = tfsGrid.getCluster(NSINDEX).getServer(1);
 
-	final public String VIPETHNAME = "eth0:1";
+	final public String VIPETHNAME = "eth0:0";
 	
 	/**
 	 * 
