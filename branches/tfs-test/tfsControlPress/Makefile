@@ -2,17 +2,17 @@
 SRC_DIR=.
 OUT_DIR=./out
 #TFS_SRC=/home/admin/tfs1.3_ha/src
-TFS_SRC=/home/admin/tfs-rm-1.3.2/src
+#TFS_SRC=/home/admin/tfs-rm-1.3.2/src
 #TFS_SRC=/home/admin/tfs-rm-1.4.0/src
-#TFS_SRC=/home/admin/tfs-dev-1.4.1/src
+TFS_SRC=/home/admin/tfs-dev-1.4.1/src
 TBLIB_ROOT=/home/admin/lib
 SRC=/lib
 
 
 #complie option
 CPP=g++
-#CFLAGS=-Wall -g -DVER_132 -DNO_CLIENT_CACHE -I$(TFS_SRC) -I$(TFS_SRC)/common -I$(TFS_SRC)/new_client -I$(TFS_SRC)/dataserver -I$(TFS_SRC)/message -I$(TBLIB_ROOT)/include/tbnet -I$(TBLIB_ROOT)/include/tbsys
-CFLAGS=-Wall -g -DVER_132 -I$(TFS_SRC) -I$(TFS_SRC)/common -I$(TFS_SRC)/new_client -I$(TFS_SRC)/dataserver -I$(TFS_SRC)/message -I$(TBLIB_ROOT)/include/tbnet -I$(TBLIB_ROOT)/include/tbsys
+#CFLAGS=-Wall -g -DVER_132 -I$(TFS_SRC) -I$(TFS_SRC)/common -I$(TFS_SRC)/new_client -I$(TFS_SRC)/dataserver -I$(TFS_SRC)/message -I$(TBLIB_ROOT)/include/tbnet -I$(TBLIB_ROOT)/include/tbsys
+CFLAGS=-Wall -g -DVER_141 -I$(TFS_SRC) -I$(TFS_SRC)/common -I$(TFS_SRC)/new_client -I$(TFS_SRC)/dataserver -I$(TFS_SRC)/message -I$(TBLIB_ROOT)/include/tbnet -I$(TBLIB_ROOT)/include/tbsys
 LIBFLAGS=-L${SRC} -L${TFS_SRC}/new_client/ -L${TFS_SRC}/message/
 LIBS= $(TFS_SRC)/new_client/.libs/libtfsclient.a $(TFS_SRC)/message/libtfsmessage.a $(TFS_SRC)/common/libtfscommon.a $(TBLIB_ROOT)/lib/libtbnet.a $(TBLIB_ROOT)/lib/libtbsys.a -lpthread -lpthread -lrt
 

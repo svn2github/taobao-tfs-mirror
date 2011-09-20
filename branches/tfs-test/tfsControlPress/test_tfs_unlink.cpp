@@ -64,7 +64,6 @@ int TestTfsUnlink::setUp()
 int TestTfsUnlink::testUnlink()
 {
   int ret = 0;
-  int fd = 0;
   TfsFileStat info;
 
   memset( (char *)&info, 0x00, sizeof(TfsFileStat) );
@@ -91,6 +90,8 @@ int TestTfsUnlink::testUnlink()
     TBSYS_LOG(ERROR, "Unlink failed:%d, fileSize:%d", ret, fileSize);
     return ret;
   }
+#if 0
+  int fd = 0;
 
   if (_largeFlag)
   {
@@ -122,6 +123,7 @@ int TestTfsUnlink::testUnlink()
     TBSYS_LOG(ERROR,"Unlink faild: delete falg = %d", info.flag_);
     return -1;
   }
+#endif
   return ret;
 }
 

@@ -14,17 +14,15 @@
  *
  */
 #include "test_tfs_statis.h"
+#include "func.h"
 
-void TestTfsStatis::addStatis(int64_t start_time, int64_t end_time, int ret,
-  const char *testCase  /*=Statis*/)
+using namespace tbsys;
+
+void TestTfsStatis::addStatis(int64_t start_time, int64_t end_time, int ret, const char *testCase) 
 {
-  TestTfsStatis::TimeInterval timeInter;
-  timeInter._start_time = start_time;
-  timeInter._end_time = end_time;
   _mutex.lock();
-  timeInter._count = _total_count ++;
+  _total_count++;
   bool sucess = (ret == 0) ? true : false;
-  timeInter._sucess = sucess;
   if(sucess){
     ++_sucess_count;
     ++_interval_success;
@@ -39,7 +37,7 @@ void TestTfsStatis::addStatis(int64_t start_time, int64_t end_time, int ret,
     _interval_success = -1;
   }
   float fTps = 0;
-  if ((end_time - _stdd_time)  / 1000000.0f != 0)
+  if ((end_time - _stdd_time) / 1000000.0f != 0)
   {
     fTps = (float)_interval_success / ((end_time - _stdd_time) / 1000000.0f);
   }
@@ -47,26 +45,19 @@ void TestTfsStatis::addStatis(int64_t start_time, int64_t end_time, int ret,
   {
     _fTps = (fTps - _fTps) / (_total_count - 1 ) + _fTps;
   }
-
-#if 0
-  TBSYS_LOG(ERROR,"%s:TPS(T/s):%f",testCase, (float)fTps);
-#endif
-  //char strTime[16];
-  //TBSYS_LOG(ERROR,"start:%s,end:%s : %s",CTimeUtil::timeToStr(start_time,strTime),CTimeUtil::timeToStr(end_time,strTime),sucess ? "SUCCESS" : "FAILED");
+ // TBSYS_LOG(ERROR,"end:%s, stdd_time:%s", 
+            //tfs::common::Func::time_to_str(end_time/1000000).c_str(), tfs::common::Func::time_to_str(_stdd_time/1000000).c_str());
   if (_total_count % 1000 == 0) {
     //TBSYS_LOG(ERROR,"starttime=%lld, endtime=%lld", _stdd_time, end_time);
-    //TBSYS_LOG(ERROR,"%s:%d:SUCCESS:%d,FAILED:%d:TPS(T/s):%f",testCase,_total_count/100,_interval_success,_interval_failed, _interval_success / (end_time /1000000 - _stdd_time / 1000000) );
-    TBSYS_LOG(INFO,"%s : %d: SUCCESS:%d, FAILED:%d, TPS(T/s):%f, sum_success:%d, sum_failed:%d interval_time:%f",
+    TBSYS_LOG(INFO,"%s : %d: SUCCESS:%d, FAILED:%d, TPS(T/s):%f, sum_success:%d, sum_failed:%d, interval_time:%f",
       testCase,_total_count/1000,_interval_success,_interval_failed,
       (float)fTps, _sucess_count, _failed_count,
-      ( (float)end_time / 1000000 - (float)_stdd_time / 1000000) );
+      ((float)(end_time - _stdd_time) / 1000000.0f));
     _interval_success = 0;
     _interval_failed = 0;
     _stdd_time = end_time;
   }
-  //_time_statis.push_back(timeInter);
   _mutex.unlock();
-  //TBSYS_LOG(ERROR,"total:%d,failed:%d,success:%d",_total_count,_failed_count,_sucess_count);
 }
 
 void TestTfsStatis::displayStatis(const char *testCase)

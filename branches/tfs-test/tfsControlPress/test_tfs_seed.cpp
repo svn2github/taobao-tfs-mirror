@@ -211,7 +211,6 @@ int TestTfsSeed::testRead()
 int TestTfsSeed::testUnlink()
 {
   int ret = 0;
-  int fd = 0;
 
   TfsFileStat info;
   memset( (char *)&info, 0x00, sizeof(TfsFileStat) );
@@ -232,6 +231,8 @@ int TestTfsSeed::testUnlink()
     return ret;
   }
   _alreadyUnlinked = true;
+#if 0
+  int fd = 0;
   if (_largeFlag)
   {
     ret = _tfsFile->open((char *)_fileName,(char *)postfix, T_STAT | T_LARGE);                                                                     
@@ -263,6 +264,7 @@ int TestTfsSeed::testUnlink()
     TBSYS_LOG(ERROR,"Unlink faild: delete falg = %d", info.flag_);
     return -1;
   }
+#endif
   return ret;
 }
 
@@ -276,6 +278,7 @@ int TestTfsSeed::run()
 
   memset( (char *)strCrc, 0x00, CRCSIZE );
 
+	//start_time = CTimeUtil::getTime();
 	if( (ret = testWrite()) != 0 ){
 		TBSYS_LOG(ERROR,"TestSeed::testWrite: FAILED: %d", ret);
 	} else {
@@ -284,9 +287,7 @@ int TestTfsSeed::run()
 
 	end_time = CTimeUtil::getTime();
 
-  TestTfsSeed::_lock.lock();
 	TestGFactory::_statisForWrite.addStatis(start_time, end_time, ret, "writeFile");
-  TestTfsSeed::_lock.unlock();
 
   if (ret != 0)
   {
@@ -295,7 +296,7 @@ int TestTfsSeed::run()
  
   if (_writeVerifyFlag)
   {
-    start_time = 0;
+    start_time = CTimeUtil::getTime();
     if ( (ret = testRead()) != 0)
     {
       TBSYS_LOG(ERROR,"TestSeed::testRead: FAILED: %d", ret);
@@ -306,14 +307,12 @@ int TestTfsSeed::run()
 
     end_time = CTimeUtil::getTime();
 
-    TestTfsSeed::_lock.lock();
     TestGFactory::_statisForRead.addStatis(start_time, end_time, ret, "readFile");
-    TestTfsSeed::_lock.unlock();
   }
 
   if (_unlinkRatio > 0 )
   {
-    start_time = 0;
+    start_time = CTimeUtil::getTime();
     srand(time(NULL)+rand()+pthread_self());
     int randNo = rand() % 100;
     if (randNo < _unlinkRatio)
@@ -328,9 +327,7 @@ int TestTfsSeed::run()
 
       end_time = CTimeUtil::getTime();
 
-      TestTfsSeed::_lock.lock();
       TestGFactory::_statisForUnlink.addStatis(start_time, end_time, ret, "unlinkFile");
-      TestTfsSeed::_lock.unlock();
     }
   }
 
