@@ -31,8 +31,7 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 			.getVip();
 	final public String clusterBIP = tfsGrid2.getCluster(NSINDEX).getServer(0)
 			.getVip();
-	// final public String clusterCIP =
-	// tfsGrid3.getCluster(NSINDEX).getServer(0).getVip();
+	 final public String clusterCIP =tfsGrid3.getCluster(NSINDEX).getServer(0).getVip();
 
 	/* Other */
 	public String caseName = "";
@@ -167,33 +166,33 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		log.info("Start all ds end ===>");
 		return bRet;
 	}
+	public boolean startSlaveNs(AppGrid tfsAppGrid) {
+	      boolean bRet = false;
+	      bRet = tfsAppGrid.getCluster(NSINDEX).getServer(1).start();
+	      return bRet;
+	   }
 
-	public boolean startSlaveNs(AppGrid tfsGrid2) {
-		boolean bRet = false;
-		bRet = SLAVESER.start();
-		return bRet;
-	}
+	   public boolean startNs(AppGrid tfsAppGrid) {
+	      boolean bRet = false;
+	      AppServer server = new AppServer();
+	      AppServer serverSlave = new AppServer();
+	      for (int iLoop = 0; iLoop < tfsGrid.getCluster(NSINDEX).getServerList()
+	            .size(); iLoop++) {
+	         server = tfsAppGrid.getCluster(NSINDEX).getServer(iLoop);
+	         if (server.getIp().equals(MASTERSER.getIp())) {
+	            bRet = server.start();
+	            if (bRet == false)
+	               return bRet;
+	         } else {
+	            serverSlave = server;
+	         }
+	      }
 
-	public boolean startNs(AppGrid tfsGrid2) {
-		boolean bRet = false;
-		AppServer server = new AppServer();
-		AppServer serverSlave = new AppServer();
-		for (int iLoop = 0; iLoop < tfsGrid.getCluster(NSINDEX).getServerList()
-				.size(); iLoop++) {
-			server = tfsGrid.getCluster(NSINDEX).getServer(iLoop);
-			if (server.getIp().equals(MASTERSER.getIp())) {
-				bRet = server.start();
-				if (bRet == false)
-					return bRet;
-			} else {
-				serverSlave = server;
-			}
-		}
+	      bRet = serverSlave.start();
 
-		bRet = serverSlave.start();
+	      return bRet;
+	   }
 
-		return bRet;
-	}
 
 	public boolean ClusterBMigrateVip() {
 		boolean bRet = false;
@@ -305,8 +304,8 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		Assert.assertTrue(bRet);
 
 		/* Check rate */
-		bRet = checkRateEnd(SUCCESSRATE, UNLINK);
-		Assert.assertTrue(bRet);
+//		bRet = checkRateEnd(SUCCESSRATE, UNLINK);
+//		Assert.assertTrue(bRet);
 
 		/* verify */
 		check_sync(MASTERIP, clusterBIP, STATUS_DELETED);
@@ -350,8 +349,8 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		Assert.assertTrue(bRet);
 
 		/* Check rate */
-		bRet = checkRateEnd(FAILRATE, UNLINK);
-		Assert.assertTrue(bRet);
+//		bRet = checkRateEnd(FAILRATE, UNLINK);
+//		Assert.assertTrue(bRet);
 
 		/* verify */
 		check_sync(MASTERIP, clusterBIP, STATUS_NORMAL);
@@ -433,10 +432,10 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		bRet = chkAlive();
 		Assert.assertFalse(bRet);
 
-		/* shut cluster C */
-		// killMasterNs(tfsGrid3);
-		// killSlaveNs(tfsGrid3);
-		// killAllDs(tfsGrid3);
+		/* kill cluster C */
+		 killMasterNs(tfsGrid3);
+		 killSlaveNs(tfsGrid3);
+		 killAllDs(tfsGrid3);
 
 		/* check cluster C shut */
 		bRet = chkAlive();
@@ -477,12 +476,10 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		Assert.assertTrue(bRet);
 
 		/* shut cluster C */
-		// startNs(tfsGrid3);
-		// startSlaveNs(tfsGrid3);
-		// startAllDs(tfsGrid3);
-		//
+		 startNs(tfsGrid3);
+		 startSlaveNs(tfsGrid3);
+		 startAllDs(tfsGrid3);
 		
-
 		/* stop 100 s */
 		sleep(100);
 
@@ -517,6 +514,8 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		/* verification */
 		check_sync(MASTERIP, clusterAIP, STATUS_NORMAL);
 		check_sync(MASTERIP, clusterBIP, STATUS_NORMAL);
+		check_sync(MASTERIP, clusterCIP, STATUS_NORMAL);
+	
 	}
 
 	// @Test
@@ -531,6 +530,7 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		caseName = " Function_05_sync_while_shutB_startB()";
 		log.info(caseName + "===> start");
 
+		/*kill clusterB*/
 		killMasterNs(tfsGrid2);
 		killSlaveNs(tfsGrid2);
 		killAllDs(tfsGrid2);
@@ -561,14 +561,14 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		startSlaveNs(tfsGrid2);
 
 		/* verify A is sync with B&C */
-		// check_sync(MASTERIP, clusterCIP, STATUS_NORMAL);
+		check_sync(MASTERIP, clusterCIP, STATUS_NORMAL);
 		check_sync(MASTERIP, clusterBIP, STATUS_NORMAL);
 	}
 
 	// @Test
 	public void Function_06_sync_while_netunblockB_() {
 		/*
-		 * 1.配置多集群。集群A和集群B和集群C 2.阻塞集群B与集群C 3.一段时间后解除阻塞
+		 * 1.配置多集群。集群A和集群B和集群C 2.阻塞集群B与集群C 4.像集群A写数据  5.一段时间后解除BC的阻塞6，验证数据同步
 		 */
 
 		boolean bRet = false;
@@ -576,26 +576,43 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		caseName = " Function_06_sync_while_netunblockB_()";
 		log.info(caseName + "===> start");
 
-		/* block clusterB net */
+		/* block clusterB  net */
 		helpBase.netBlockBase(MASTERSER.getIp(), tfsGrid2.getCluster(NSINDEX)
 				.getServer(0).getIp(), 1, 5);
-
+		helpBase.netBlockBase(MASTERSER.getIp(), tfsGrid3.getCluster(NSINDEX)
+				.getServer(0).getIp(), 1, 5);
+	
 		/* wait 100s */
 		sleep(100);
+		
+		/* set write/read/unlink cluster addr */
+		bRet = setClusterAddr(clusterAIP);
+		assertTrue(bRet);
 
+		/* write to cluster A */
+
+		bRet = writeCmd();
+		assertTrue(bRet);
+
+		/* wait 100 s */
+		sleep(100);
+
+		/* stop write */
+		bRet = writeCmdStop();
+		assertTrue(bRet);
+		
 		/* netUnblock Cluster B and cluster C */
 		helpBase.netUnblockBase(MASTERSER.getIp());
 
 		/* verification */
-
-		//check_sync(MASTERIP, clusterCIP, STATUS_NORMAL);
+		check_sync(MASTERIP, clusterCIP, STATUS_NORMAL);
 		check_sync(MASTERIP, clusterBIP, STATUS_NORMAL);
 	}
 
 	// @Test
 	public void Function_07_sync_while__del_A_() {
 		/*
-		 * 1.配置多集群。集群A和集群B和集群C 2.集群A中写入删除数据（3个集群）
+		 * 1.配置多集群。集群A和集群B和集群C 2.集群A中写入删除数据3.查看ABC是否同步（3个集群）
 		 */
 		boolean bRet = false;
 
@@ -637,7 +654,7 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		check_sync(MASTERIP, clusterBIP, STATUS_NORMAL);
 
 		/* Check ABC sysnc */
-		// check_sync(MASTERIP, clusterCIP, STATUS_NORMAL);
+		check_sync(MASTERIP, clusterCIP, STATUS_NORMAL);
 		check_sync(MASTERIP, clusterBIP, STATUS_NORMAL);
 	}
 
