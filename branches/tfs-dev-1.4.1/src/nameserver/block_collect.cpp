@@ -65,7 +65,6 @@ namespace nameserver
       {
         assert(hold_[0] != NULL);
         hold_[0]->remove_master(this);
-        in_master_set_ = BLOCK_IN_MASTER_SET_YES;
       }
       if (can_be_master || force)
       {
@@ -103,6 +102,7 @@ namespace nameserver
 
   bool BlockCollect::remove(ServerCollect* server, const time_t now, const bool remove)
   {
+    UNUSED(remove);
     TBSYS_LOG(DEBUG, "remove block: %u" , info_.block_id_);
     if (server != NULL && !hold_.empty())
     {
@@ -116,18 +116,12 @@ namespace nameserver
         if (where == hold_.begin())//master
         {
           hold_master_ = HOLD_MASTER_FLAG_NO;
-          if (remove)
-          {
-            in_master_set_ = BLOCK_IN_MASTER_SET_YES;
-            server->remove_master(this);
-          }
+          in_master_set_ = BLOCK_IN_MASTER_SET_NO;
+          server->remove_master(this);
         }
-        if (remove)
+        if (is_full())
         {
-          if (is_full())
-          {
-            server->remove_writable(this);
-          }
+          server->remove_writable(this);
         }
 
         TBSYS_LOG(DEBUG, "block: %u remove server: %s, hold_master: %d", 
@@ -180,71 +174,32 @@ namespace nameserver
     return ((!is_full())
         && (hold_master_ == HOLD_MASTER_FLAG_YES)
         && (static_cast<int32_t>(hold_.size()) >= common::SYSPARAM_NAMESERVER.min_replication_));
-    /*if (bret)
-    {
-      std::vector<ServerCollect*>::const_iterator iter = hold_.begin();
-      for (; iter != hold_.end(); ++iter)
-      {
-        assert ((*iter) != NULL);
-        if ((*iter)->is_full())
-        {
-          bret = false;
-          break;
-        }
-      }
-    }
-    return bret;*/
   }
 
   bool BlockCollect::is_relieve_writable_relation() const
   {
-    bool bret = hold_.empty() 
+    return hold_.empty() 
       || is_full() 
       || (static_cast<int32_t>(hold_.size()) < SYSPARAM_NAMESERVER.min_replication_);
-    /*if (!bret)
-    {
-      bool all_server_writable = true;
-      std::vector<ServerCollect*>::const_iterator iter = hold_.begin();
-      for (; iter != hold_.end(); ++iter)
-      {
-        assert(*iter != NULL);
-        if ((*iter)->is_full())
-        {
-          all_server_writable = false;
-          break;
-        }
-      }
-      bret = !all_server_writable;
-      TBSYS_LOG(DEBUG,"we will check whether the relationship between lift write, is_full: %d, all_writable: %d, hold size: %u", is_full(), all_server_writable, hold_.size());
-    }*/
-    return bret;
   }
 
   bool BlockCollect::relieve_relation(const bool remove)
   {
+    UNUSED(remove);
     std::vector<ServerCollect*>::iterator iter = hold_.begin();
-    for (; iter != hold_.end(); ++iter)
+    for (; is_full() && iter != hold_.end(); ++iter)
     {
-      if (remove)
-      {
-        assert(*iter != NULL);
-        if (is_full())
-        {
-          (*iter)->remove_writable(this);//remove block form server's writable_
-        }
-      }
+      assert(*iter != NULL);
+      (*iter)->remove_writable(this);//remove block form server's writable_
     }
 
     if (hold_master_ != HOLD_MASTER_FLAG_NO)//
     {
+      assert (!hold_.empty());
+      assert (hold_[0] != NULL);
+      hold_[0]->remove_master(this);
       hold_master_ = HOLD_MASTER_FLAG_NO;
-      if (remove)
-      {
-        assert (!hold_.empty());
-        assert (hold_[0] != NULL);
-        in_master_set_ = BLOCK_IN_MASTER_SET_YES;
-        hold_[0]->remove_master(this);
-      }
+      in_master_set_ = BLOCK_IN_MASTER_SET_NO;
     }
     return true;
   }

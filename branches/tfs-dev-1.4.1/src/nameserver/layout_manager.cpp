@@ -108,14 +108,14 @@ namespace tfs
 
   static const uint64_t GB = 1 * 1024 * 1024 * 1024;
   static const uint64_t MB = 1 * 1024 * 1024;
-  static const double PERCENTAGE_MIN = 0.0000001;
-  static const double PERCENTAGE_MAX = 1.0000000;
-  static double calc_capacity_percentage(const uint64_t capacity, const uint64_t total_capactiy)
+  static const double PERCENTAGE_MIN = 0.000001;
+  static const double PERCENTAGE_MAX = 1.000000;
+  static double calc_capacity_percentage(const uint64_t capacity, const uint64_t total_capacity)
   {
     double ret = PERCENTAGE_MIN;
     uint64_t unit = capacity > GB ? GB : MB;
     uint64_t tmp_capacity = capacity / unit;
-    uint64_t tmp_total_capacity = total_capactiy / unit;
+    uint64_t tmp_total_capacity = total_capacity / unit;
     if ((tmp_capacity != 0) 
         && (tmp_total_capacity != 0))
     {
@@ -2427,8 +2427,9 @@ namespace tfs
         {
           if (percent > SYSPARAM_NAMESERVER.balance_percent_)
           {
-            if (current_block_count < should_block_count  
-                                      + SYSPARAM_NAMESERVER.balance_max_diff_block_num_)
+            int32_t diff = should_block_count - current_block_count - 
+              SYSPARAM_NAMESERVER.balance_max_diff_block_num_;
+            if (diff > 0)
             {
               if ((average_load <= 0)
                   || (server->load() < average_load * LOAD_BASE_MULTIPLE))
@@ -2447,7 +2448,6 @@ namespace tfs
             if (diff > 0)
             {
               source.insert(std::multimap<int32_t, ServerCollect*>::value_type(diff, server));
-              //source.insert(server);
             }
           }
         }

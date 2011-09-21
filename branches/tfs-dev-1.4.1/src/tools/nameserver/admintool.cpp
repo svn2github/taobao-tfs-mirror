@@ -50,6 +50,7 @@ int cmd_access_stat_info(const VSTRING& param);
 int cmd_access_control_flag(const VSTRING& param);
 int cmd_rotate_log(const VSTRING& param);
 int cmd_dump_plan(const VSTRING &param);
+int cmd_set_bpr(const VSTRING &param);
 
 #ifdef _WITH_READ_LINE
 #include "readline/readline.h"
@@ -119,6 +120,59 @@ void init()
   g_cmd_map["setacl"] = CmdNode("setacl ip:port type [v1 [v2]]","set access control", 1, 4, cmd_access_control_flag);
   g_cmd_map["rotatelog"] = CmdNode("rotatelog ip:port","rotate log", 1, 1, cmd_rotate_log);
   g_cmd_map["dumpplan"] = CmdNode("dumpplan [serverip:port [action]]", "dump plan server", 0, 2, cmd_dump_plan);
+  g_cmd_map["setbpr"] = CmdNode("setbpr value1 value2", "setbpt percent ratio", 2, 2, cmd_set_bpr);
+}
+
+int cmd_set_bpr(const VSTRING& param)
+{
+  int32_t size = param.size();
+  int32_t iret = 2 != size ? EXIT_PARAMETER_ERROR : TFS_SUCCESS;
+  if (TFS_SUCCESS != iret)
+  {
+    fprintf(stderr, "parameter size: %d is invalid, must be 2\n", size);
+  }
+  else
+  {
+    int32_t value3 = atoi(param[0].c_str());
+    int32_t value4 = atoi(param[1].c_str());
+    iret = value3 > 1 || value3 < 0 || (value4 >> 6) > 0 ? EXIT_PARAMETER_ERROR : TFS_SUCCESS;
+    if (TFS_SUCCESS != iret)
+    {
+      fprintf(stderr, "parameter is invalid, value3: %d, value4: %d\n", value3, value4);
+    }
+    else
+    {
+      ClientCmdMessage req_cc_msg;
+      req_cc_msg.set_cmd(CLIENT_CMD_SET_PARAM);
+      req_cc_msg.set_value3(value3);
+      req_cc_msg.set_value4(value4);
+
+      tbnet::Packet* ret_message = NULL;
+      NewClient* client = NewClientManager::get_instance().create_client();
+      iret = send_msg_to_server(g_tfs_client->get_server_id(), client, &req_cc_msg, ret_message);
+      string ret_value = "successful";
+      if (TFS_SUCCESS != iret)
+      {
+        ret_value = "setbpr failed";
+      }
+      else
+      {
+        if (ret_message->getPCode() == STATUS_MESSAGE)
+        {
+          StatusMessage* s_msg = dynamic_cast<StatusMessage*> (ret_message);
+          iret = s_msg->get_status();
+          if (iret != STATUS_MESSAGE_OK)
+          {
+            ret_value = s_msg->get_error();
+          }
+        }
+      }
+      ToolUtil::print_info(iret, "%s", ret_value.c_str());
+
+      NewClientManager::get_instance().destroy_client(client);
+    }
+  }
+  return iret;
 }
 
 int cmd_set_run_param(const VSTRING& param)

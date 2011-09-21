@@ -12,9 +12,10 @@ Source:%{NAME}-%{VERSION}.tar.gz
 BuildRoot: %{_tmppath}/%{name}-root
 
 BuildRequires: t-csrd-tbnet-devel = 1.4.0
+#BuildRequires: MySQL-devel-community,MySQL-client-community
 BuildRequires: mysql-server >= 5.0.7, mysql-devel >= 5.0.7
-BuildRequires: MySQL-client-community, 
-BuildRequires: gcc = 4.1, 
+BuildRequires: tair-devel = 2.3
+#BuildRequires: gcc = 4.1
 
 %description
 TFS is a distributed file system.
@@ -33,7 +34,7 @@ files for developing applications that use the %name package.
 %build
 chmod u+x build.sh
 ./build.sh init
-./configure --prefix=%{_prefix}
+./configure --prefix=%{_prefix} --enable-uniquestore --with-tair-root=/opt/csr/tair-2.3
 make %{?_smp_mflags}
 
 %install
@@ -42,6 +43,19 @@ make DESTDIR=$RPM_BUILD_ROOT install
 
 %clean
 rm -rf $RPM_BUILD_ROOT
+
+%post
+echo %{_prefix}/lib > /etc/ld.so.conf.d/tfs-%{VERSION}.conf
+echo /opt/csr/common/lib >> /etc/ld.so.conf.d/tfs-%{VERSION}.conf
+/sbin/ldconfig
+
+%post devel
+echo %{_prefix}/lib > /etc/ld.so.conf.d/tfs-%{VERSION}.conf
+echo /opt/csr/common/lib >> /etc/ld.so.conf.d/tfs-%{VERSION}.conf
+/sbin/ldconfig
+
+%postun
+rm  -f /etc/ld.so.conf.d/tfs-%{VERSION}.conf
 
 %files
 %defattr(0755, admin, admin)
