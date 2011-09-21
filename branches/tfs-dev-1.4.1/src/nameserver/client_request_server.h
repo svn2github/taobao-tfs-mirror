@@ -73,7 +73,8 @@ namespace nameserver
       int  handle_control_immediately_replicate_block(const time_t now, const common::ClientCmdInformation& info, const int64_t buf_length, char* error_buf);
       int  handle_control_rotate_log(void);
       int  handle_control_set_runtime_param(const common::ClientCmdInformation& info, const int64_t buf_length, char* error_buf);
-      int  handle_control_balance_percent(const common::ClientCmdInformation& info, const int64_t buf_length, char* error_buf);
+      int  handle_control_get_balance_percent(const int64_t buf_length, char* error_buf);
+      int  handle_control_set_balance_percent(const common::ClientCmdInformation& info, const int64_t buf_length, char* error_buf);
 
     private:
       LayoutManager& lay_out_manager_;
