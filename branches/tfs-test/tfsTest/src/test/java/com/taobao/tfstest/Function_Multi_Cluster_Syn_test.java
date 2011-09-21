@@ -71,11 +71,14 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		strCmd += TEST_HOME
 				+ "/tfsseed_file_list.txt | sed 's/\\(.*\\) \\(.*\\)/\\1/g'";
 		boolean bRet = false;
-	//	
+
 		bRet = helpBase.proStartBase(clusterAIP, strCmd, result);
-		assertTrue("Get write file list on cluster B failure!", bRet);
+		if (bRet == false)
+		{
+			log.error("Get write file list on cluster B failure!");
+			return bRet;
+		}
 		for (int i = 0; i < result.size(); i++) {
-			// TODO: tfstool usage
 			ArrayList<String> chkResult = new ArrayList<String>(20);
 			strCmd = "/home/admin/tfs_bin/bin/tfstool -s ";
 			strCmd += clusterBIP;
@@ -85,10 +88,14 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 			log.info("Executed command is :" + strCmd);
 			bRet = helpBase.proStartBase(clusterBIP, strCmd, chkResult);
 		//  bRet = Proc.cmdOutBase(clusterAIP, strSubCmd, "STATUS", 2, null, chkResult);
-			assertTrue("Check file on cluster B failure!!!!", bRet);
+			if (bRet == false || chkResult.size() <= 0)
+			{
+				log.error("Check file on cluster B failure!!!!");
+				return bRet;
+			}
 			assertEquals(chkVal, Integer.parseInt(chkResult.get(0)));
 		}
-		return false;
+		return bRet;
 	}
 
 	public boolean killMasterNs(AppGrid tfsAppGrid) {
@@ -299,7 +306,11 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 
 		bRet = setSeedSize(1);
 		assertTrue(bRet);
-
+		
+		/* Set unlink ratio */
+		bRet = setUnlinkRatio(50);
+		Assert.assertTrue(bRet);
+		
 		/* set write/read/unlink cluster addr */
 		bRet = setClusterAddr(clusterAIP);
 		assertTrue(bRet);
@@ -316,31 +327,41 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		assertTrue(bRet);
 
 		/* verify */
-		check_sync(MASTERIP, clusterBIP, STATUS_NORMAL);
+		bRet = check_sync(MASTERIP, clusterBIP, STATUS_NORMAL);
+		assertTrue(bRet);
+		
+		/* set write/read/unlink cluster addr */
+		bRet = setClusterAddr(clusterBIP);
+		assertTrue(bRet);
 
+		/* Read file */
+		bRet = chkFinalRetSuc();
+		Assert.assertTrue(bRet);
+		
 		/* set write/read/unlink cluster addr */
 		bRet = setClusterAddr(clusterAIP);
 		assertTrue(bRet);
-
-		/* unlink cluster A */
+		
+		/* unlink from cluster A */
 		bRet = unlinkCmd();
 
 		/* Monitor the unlink process */
 		bRet = unlinkCmdMon();
 		Assert.assertTrue(bRet);
-
-		/* Check rate */
-//		bRet = checkRateEnd(SUCCESSRATE, UNLINK);
-//		Assert.assertTrue(bRet);
-
+		
 		/* verify */
-		check_sync(MASTERIP, clusterBIP, STATUS_DELETED);
+		bRet = check_sync(MASTERIP, clusterBIP, STATUS_DELETED);
+		assertTrue(bRet);
+		
+		/* set write/read/unlink cluster addr */
+		bRet = setClusterAddr(clusterAIP);
+		assertTrue(bRet);
 	}
 
 	/*
-	 * 1.ÅäÖÃË«¼¯Èº¡£¼¯ÈºAºÍ¼¯ÈºB¡£ 2.¼¯ÈºAÖÐÐ´ÈëÊý¾Ý¡£ 3.¼¯ÈºBÖÐÎÞ·¨É¾³ý¼¯ÈºAÐ´ÈëµÄÊý¾Ý¡£
+	 * 1.ï¿½ï¿½ï¿½ï¿½Ë«ï¿½ï¿½Èºï¿½ï¿½ï¿½ï¿½ÈºAï¿½Í¼ï¿½ÈºBï¿½ï¿½ 2.ï¿½ï¿½ÈºAï¿½ï¿½Ð´ï¿½ï¿½ï¿½ï¿½Ý¡ï¿½ 3.ï¿½ï¿½ÈºBï¿½ï¿½ï¿½Þ·ï¿½É¾ï¿½ï¿½ÈºAÐ´ï¿½ï¿½ï¿½ï¿½ï¿½Ý¡ï¿½
 	 */
-	// @Test
+	@Test
 	public void Function_02_duplex_write_independent() {
 
 		boolean bRet = false;
@@ -360,12 +381,17 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		assertTrue(bRet);
 
 		/* verify */
-		check_sync(MASTERIP, clusterBIP, STATUS_NORMAL);
-
+		bRet = check_sync(MASTERIP, clusterBIP, STATUS_NORMAL);
+		assertTrue(bRet);
+		
 		/* set write/read/unlink cluster addr */
 		bRet = setClusterAddr(clusterBIP);
 		assertTrue(bRet);
 
+		/* Read file */
+		bRet = chkFinalRetSuc();
+		Assert.assertTrue(bRet);
+		
 		/* delete from cluster B */
 		bRet = unlinkCmd();
 		assertTrue(bRet);
@@ -379,25 +405,25 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 //		Assert.assertTrue(bRet);
 
 		/* verify */
-		check_sync(MASTERIP, clusterBIP, STATUS_NORMAL);
-
+		bRet = check_sync(MASTERIP, clusterAIP, STATUS_DELETED);
+		assertTrue(bRet);
+		
 		/* set write/read/unlink cluster addr */
 		bRet = setClusterAddr(clusterAIP);
 		assertTrue(bRet);
-
 	}
 
 	/*
-	 * 1.ÅäÖÃË«¼¯Èº¡£¼¯ÈºAºÍ¼¯ÈºB¡£ 2.¼¯ÈºAÖÐÐ´ÈëÊý¾Ý¡£
-	 * 3.¼¯ÈºBÖÐ·¢ÉúÊý¾ÝÇ¨ÒÆ(Ð´Ö®Ç°ÏÈkillµôB¼¯ÈºµÄ1Ì¨ds£¬Ð´ÍêÖ®ºóÆô¶¯)¡£
-	 * 4.¼¯ÈºBÖÐ¿ÉÒÔ¿´µ½¼¯ÈºAÖÐÒÑÐ´ÈëµÄÊý¾Ý£¬¼¯ÈºA¿ÉÒÔÉ¾³ýÐ´ÈëµÄÊý¾Ý£¬²¢ÇÒÍ¬²½µ½¼¯ÈºBÉÏ
+	 * 1.ï¿½ï¿½ï¿½ï¿½Ë«ï¿½ï¿½Èºï¿½ï¿½ï¿½ï¿½ÈºAï¿½Í¼ï¿½ÈºBï¿½ï¿½ 2.ï¿½ï¿½ÈºAï¿½ï¿½Ð´ï¿½ï¿½ï¿½ï¿½Ý¡ï¿½
+	 * 3.ï¿½ï¿½ÈºBï¿½Ð·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ç¨ï¿½ï¿½(Ð´Ö®Ç°ï¿½ï¿½killï¿½ï¿½Bï¿½ï¿½Èºï¿½ï¿½1Ì¨dsï¿½ï¿½Ð´ï¿½ï¿½Ö®ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½)ï¿½ï¿½
+	 * 4.ï¿½ï¿½ÈºBï¿½Ð¿ï¿½ï¿½Ô¿ï¿½ï¿½ï¿½ï¿½ï¿½ÈºAï¿½ï¿½ï¿½ï¿½Ð´ï¿½ï¿½ï¿½ï¿½ï¿½Ý£ï¿½ï¿½ï¿½ÈºAï¿½ï¿½ï¿½ï¿½É¾ï¿½ï¿½Ð´ï¿½ï¿½ï¿½ï¿½ï¿½Ý£ï¿½ï¿½ï¿½ï¿½ï¿½Í¬ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ÈºBï¿½ï¿½
 	 */
-	// @Test
-	public void Function_03_sync_while_migrate_block() {
+	@Test
+	public void Function_03_sync_while_balance() {
 
 		boolean bRet = false;
 
-		caseName = "Function_03_sync_while_move_block";
+		caseName = "Function_03_sync_while_balance";
 		log.info(caseName + "===> start");
 
 		/* Clean one ds */
@@ -415,33 +441,47 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		bRet = writeCmdStop();
 		assertTrue(bRet);
 
-		/* verify */
-		check_sync(MASTERIP, clusterBIP, STATUS_NORMAL);
-
 		/* Start one ds */
 		bRet = startOneDs(tfsGrid2);
 		Assert.assertTrue(bRet);
-
+		
+		/* wait for balance */
+		sleep(60);
+		
 		/* verify */
-		check_sync(MASTERIP, clusterBIP, STATUS_NORMAL);
-
+		bRet = check_sync(MASTERIP, clusterBIP, STATUS_NORMAL);
+		assertTrue(bRet);
+		
+		/* set write/read/unlink cluster addr */
+		bRet = setClusterAddr(clusterBIP);
+		assertTrue(bRet);
+		
+		/* Read file */
+		bRet = chkFinalRetSuc();
+		Assert.assertTrue(bRet);
+		
 		/* set write/read/unlink cluster addr */
 		bRet = setClusterAddr(clusterAIP);
 		assertTrue(bRet);
-
-		/* delete from clusterA */
+		
+		/* delete from cluster A */
 		bRet = unlinkCmd();
 		assertTrue(bRet);
 
+		/* Monitor the unlink process */
+		bRet = unlinkCmdMon();
+		Assert.assertTrue(bRet);
+
 		/* verify */
-		check_sync(MASTERIP, clusterBIP, STATUS_NORMAL);
+		bRet = check_sync(MASTERIP, clusterBIP, STATUS_DELETED);
+		assertTrue(bRet);
 	}
 
-	// @Test
+	@Test
 	public void Function_04_sync_while__shutBC_startBC() {
 		/*
-		 * 1.ÅäÖÃ¶à¼¯Èº¡£¼¯ÈºAºÍ¼¯ÈºBºÍ¼¯ÈºC 2.¹Ø±Õ¼¯ÈºBC 3.²»Ó°Ïì¼¯ÈºAµÄ·ÃÎÊ£¬µ«ÊÇÍ¬²½»áÊ§°Ü£¨¿ÉÓÃ½Å±¾¼ì²âµ½£©¡£
-		 * 4.ÔÙ´ÎÆô¶¯¼¯ÈºBC£¬Í¬²½»Ö¸´£¨Èý¸ö¼¯Èº£©
+		 * 1.ï¿½ï¿½ï¿½Ã¶à¼¯Èºï¿½ï¿½ï¿½ï¿½ÈºAï¿½Í¼ï¿½ÈºBï¿½Í¼ï¿½ÈºC 2.ï¿½Ø±Õ¼ï¿½ÈºBC 3.ï¿½ï¿½Ó°ï¿½ì¼¯ÈºAï¿½Ä·ï¿½ï¿½Ê£ï¿½ï¿½ï¿½ï¿½ï¿½Í¬ï¿½ï¿½ï¿½ï¿½Ê§ï¿½Ü£ï¿½ï¿½ï¿½ï¿½Ã½Å±ï¿½ï¿½ï¿½âµ½ï¿½ï¿½ï¿½ï¿½
+		 * 4.ï¿½Ù´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ÈºBCï¿½ï¿½Í¬ï¿½ï¿½ï¿½Ö¸ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Èºï¿½ï¿½
 		 */
 
 		boolean bRet = false;
@@ -471,18 +511,17 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		bRet = chkAlive();
 		Assert.assertTrue(bRet);
 
-		/* µ÷ÓÃ½Å±¾¼ì²âÍ¬²½Ê§°Ü */
+		/* ï¿½ï¿½ï¿½Ã½Å±ï¿½ï¿½ï¿½ï¿½Í¬ï¿½ï¿½Ê§ï¿½ï¿½ */
 
 		/* Check block copys */
-		bRet = chkBlockCntBothNormal(1);
+		bRet = chkBlockCntBothNormal(BLOCKCOPYCNT);
 		assertTrue(bRet);
 
 		/* write to cluster A */
-
 		bRet = writeCmd();
 		assertTrue(bRet);
 
-		/* stop 100 s */
+		/* sleep 100 s */
 		sleep(100);
 
 		/* Stop write cmd */
@@ -494,7 +533,7 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		startSlaveNs(tfsGrid2);
 		startAllDs(tfsGrid2);
 
-		/* stop 100 s */
+		/* sleep 100 s */
 		sleep(100);
 
 		/* check cluster B start */
@@ -502,50 +541,64 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		Assert.assertTrue(bRet);
 
 		/* shut cluster C */
-		 startNs(tfsGrid3);
-		 startSlaveNs(tfsGrid3);
-		 startAllDs(tfsGrid3);
+		startNs(tfsGrid3);
+		startSlaveNs(tfsGrid3);
+		startAllDs(tfsGrid3);
 		
-		/* stop 100 s */
+		/* sleep 100 s */
 		sleep(100);
 
 		/* check cluster C start */
 		bRet = tfsGrid3.isAlive();
 		Assert.assertTrue(bRet);
 
+		/* set write/read/unlink cluster addr */
+		bRet = setClusterAddr(clusterBIP);
+		assertTrue(bRet);
+	
+		/* verification */
+		bRet = check_sync(MASTERIP, clusterBIP, STATUS_NORMAL);
+		Assert.assertTrue(bRet);
+		
 		/* Read file */
 		bRet = chkFinalRetSuc();
 		Assert.assertTrue(bRet);
-
-		/* Check block copys */
-		bRet = chkBlockCntBothNormal(1);
-		Assert.assertTrue(bRet);
-
-		/* Check block copy count */
-		bRet = chkBlockCopyCnt();
-		Assert.assertTrue(bRet);
-
-		/* Check vip */
-		bRet = chkVip();
-		Assert.assertTrue(bRet);
-
-		/* Check the status of servers */
-		bRet = tfsGrid.isAlive();
-		Assert.assertTrue(bRet);
-
-		/* verification */
+		
+		/* set write/read/unlink cluster addr */
+		bRet = setClusterAddr(clusterCIP);
+		assertTrue(bRet);
 	
-		check_sync(MASTERIP, clusterBIP, STATUS_NORMAL);
+		bRet = check_sync(MASTERIP, clusterCIP, STATUS_NORMAL);
+		Assert.assertTrue(bRet);	
+		
+		/* Read file */
+		bRet = chkFinalRetSuc();
+		Assert.assertTrue(bRet);
+		
+		/* set write/read/unlink cluster addr */
+		bRet = setClusterAddr(clusterAIP);
+		assertTrue(bRet);
+		
+		/* delete from cluster A */
+		bRet = unlinkCmd();
+		assertTrue(bRet);
+
+		/* Monitor the unlink process */
+		bRet = unlinkCmdMon();
+		Assert.assertTrue(bRet);
 	
-		check_sync(MASTERIP, clusterCIP, STATUS_NORMAL);
-	
+		bRet = check_sync(MASTERIP, clusterBIP, STATUS_DELETED);
+		Assert.assertTrue(bRet);	
+		
+		bRet = check_sync(MASTERIP, clusterCIP, STATUS_DELETED);
+		Assert.assertTrue(bRet);			
 	}
 
-	// @Test
+	@Test
 	public void Function_05_sync_while_shutB_startB() {
 
 		/*
-		 * 1.ÅäÖÃ¶à¼¯Èº¡£¼¯ÈºAºÍ¼¯ÈºBºÍ¼¯ÈºC 2.¹Ø±Õ¼¯ÈºB 3.²»Ó°Ïì¼¯ÈºAºÍCµÄ·ÃÎÊÒÑ¾­Í¬²½¡£ 2.ÔÙ´ÎÆô¶¯¼¯ÈºB£¨3¸ö¼¯Èº£©
+		 * 1.ï¿½ï¿½ï¿½Ã¶à¼¯Èºï¿½ï¿½ï¿½ï¿½ÈºAï¿½Í¼ï¿½ÈºBï¿½Í¼ï¿½ÈºC 2.ï¿½Ø±Õ¼ï¿½ÈºB 3.ï¿½ï¿½Ó°ï¿½ì¼¯ÈºAï¿½ï¿½Cï¿½Ä·ï¿½ï¿½ï¿½ï¿½Ñ¾ï¿½Í¬ï¿½ï¿½ï¿½ï¿½ 2.ï¿½Ù´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ÈºBï¿½ï¿½3ï¿½ï¿½ï¿½ï¿½Èºï¿½ï¿½
 		 */
 
 		boolean bRet = false;
@@ -559,12 +612,10 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		killAllDs(tfsGrid2);
 		
 		/* set write/read/unlink cluster addr */
-		
 		bRet = setClusterAddr(clusterAIP);
 		assertTrue(bRet);
 		
 		/* write to cluster A */
-
 		bRet = writeCmd();
 		assertTrue(bRet);
 
@@ -575,28 +626,62 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		bRet = writeCmdStop();
 		assertTrue(bRet);
 
-		/* Wait 100s for recover cluster B */
-		sleep(100);
-
 		/* start clusterB */
 		startNs(tfsGrid2);
 		startAllDs(tfsGrid2);
 		startSlaveNs(tfsGrid2);
+		
+		bRet = check_sync(MASTERIP, clusterCIP, STATUS_DELETED);
+		Assert.assertTrue(bRet);
+		
+		/* set write/read/unlink cluster addr */
+		bRet = setClusterAddr(clusterCIP);
+		assertTrue(bRet);
+		
+		/* Read file */
+		bRet = chkFinalRetSuc();
+		Assert.assertTrue(bRet);
+		
+		/* verify B */
+		bRet = check_sync(MASTERIP, clusterBIP, STATUS_NORMAL);
+		assertTrue(bRet);
+		
+		/* set write/read/unlink cluster addr */
+		bRet = setClusterAddr(clusterBIP);
+		assertTrue(bRet);
+		
+		/* Read file */
+		bRet = chkFinalRetSuc();
+		Assert.assertTrue(bRet);
+		
+		/* set write/read/unlink cluster addr */
+		bRet = setClusterAddr(clusterAIP);
+		assertTrue(bRet);
+		
+		/* delete from cluster A */
+		bRet = unlinkCmd();
+		assertTrue(bRet);
 
-		/* verify A is sync with B&C */
-		check_sync(MASTERIP, clusterCIP, STATUS_NORMAL);
-		check_sync(MASTERIP, clusterBIP, STATUS_NORMAL);
+		/* Monitor the unlink process */
+		bRet = unlinkCmdMon();
+		Assert.assertTrue(bRet);
+	
+		bRet = check_sync(MASTERIP, clusterBIP, STATUS_DELETED);
+		Assert.assertTrue(bRet);
+		
+		bRet = check_sync(MASTERIP, clusterCIP, STATUS_DELETED);
+		Assert.assertTrue(bRet);
 	}
 
-	// @Test
-	public void Function_06_sync_while_netunblockB_() {
+	@Test
+	public void Function_06_sync_while_netunblockB() {
 		/*
-		 * 1.ÅäÖÃ¶à¼¯Èº¡£¼¯ÈºAºÍ¼¯ÈºBºÍ¼¯ÈºC 2.×èÈû¼¯ÈºBÓë¼¯ÈºC 4.Ïñ¼¯ÈºAÐ´Êý¾Ý  5.Ò»¶ÎÊ±¼äºó½â³ýBCµÄ×èÈû6£¬ÑéÖ¤Êý¾ÝÍ¬²½
+		 * 1.ï¿½ï¿½ï¿½Ã¶à¼¯Èºï¿½ï¿½ï¿½ï¿½ÈºAï¿½Í¼ï¿½ÈºBï¿½Í¼ï¿½ÈºC 2.ï¿½ï¿½ï¿½ï¿½ÈºBï¿½ë¼¯ÈºC 4.ï¿½ï¿½ÈºAÐ´ï¿½ï¿½ï¿½  5.Ò»ï¿½ï¿½Ê±ï¿½ï¿½ï¿½ï¿½ï¿½BCï¿½ï¿½ï¿½ï¿½ï¿½ï¿½6ï¿½ï¿½ï¿½ï¿½Ö¤ï¿½ï¿½ï¿½Í¬ï¿½ï¿½
 		 */
 
 		boolean bRet = false;
 
-		caseName = " Function_06_sync_while_netunblockB_()";
+		caseName = " Function_06_sync_while_netunblockB";
 		log.info(caseName + "===> start");
 
 		/* block clusterB  net */
@@ -613,7 +698,6 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		assertTrue(bRet);
 
 		/* write to cluster A */
-
 		bRet = writeCmd();
 		assertTrue(bRet);
 
@@ -631,14 +715,51 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		sleep(100);
 		
 		/* verification */
-		check_sync(MASTERIP, clusterCIP, STATUS_NORMAL);
-		check_sync(MASTERIP, clusterBIP, STATUS_NORMAL);
+		bRet = check_sync(MASTERIP, clusterBIP, STATUS_NORMAL);
+		assertTrue(bRet);
+		
+		/* set write/read/unlink cluster addr */
+		bRet = setClusterAddr(clusterBIP);
+		assertTrue(bRet);
+
+		/* Read file */
+		bRet = chkFinalRetSuc();
+		Assert.assertTrue(bRet);
+		
+		bRet = check_sync(MASTERIP, clusterCIP, STATUS_NORMAL);
+		assertTrue(bRet);
+		
+		/* set write/read/unlink cluster addr */
+		bRet = setClusterAddr(clusterCIP);
+		assertTrue(bRet);
+
+		/* Read file */
+		bRet = chkFinalRetSuc();
+		Assert.assertTrue(bRet);
+		
+		/* set write/read/unlink cluster addr */
+		bRet = setClusterAddr(clusterAIP);
+		assertTrue(bRet);
+		
+		/* delete from cluster A */
+		bRet = unlinkCmd();
+		assertTrue(bRet);
+
+		/* Monitor the unlink process */
+		bRet = unlinkCmdMon();
+		Assert.assertTrue(bRet);
+	
+		bRet = check_sync(MASTERIP, clusterBIP, STATUS_DELETED);
+		Assert.assertTrue(bRet);	
+		
+		bRet = check_sync(MASTERIP, clusterCIP, STATUS_DELETED);
+		Assert.assertTrue(bRet);		
 	}
 
 	// @Test
 	public void Function_07_sync_while__del_A_() {
 		/*
-		 * 1.ÅäÖÃ¶à¼¯Èº¡£¼¯ÈºAºÍ¼¯ÈºBºÍ¼¯ÈºC 2.¼¯ÈºAÖÐÐ´ÈëÉ¾³ýÊý¾Ý3.²é¿´ABCÊÇ·ñÍ¬²½£¨Èý¸ö¼¯Èº£©
+		 * 1.ï¿½ï¿½ï¿½Ã¶à¼¯Èºï¿½ï¿½ï¿½ï¿½ÈºAï¿½Í¼ï¿½ÈºBï¿½Í¼ï¿½ÈºC 2.ï¿½ï¿½ÈºAï¿½ï¿½Ð´ï¿½ï¿½É¾ï¿½ï¿½ï¿½ï¿½ï¿½3.ï¿½é¿´ABCï¿½Ç·ï¿½Í¬ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Èºï¿½ï¿½
 		 */
 		boolean bRet = false;
 
@@ -661,15 +782,35 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		assertTrue(bRet);
 
 		/* verify */
-		check_sync(MASTERIP, clusterBIP, STATUS_NORMAL);
-		check_sync(MASTERIP, clusterCIP, STATUS_NORMAL);
-	
+		bRet = check_sync(MASTERIP, clusterBIP, STATUS_NORMAL);
+		assertTrue(bRet);
+		
+		/* set write/read/unlink cluster addr */
+		bRet = setClusterAddr(clusterBIP);
+		assertTrue(bRet);
+
+		/* Read file */
+		bRet = chkFinalRetSuc();
+		Assert.assertTrue(bRet);
+		
+		bRet = check_sync(MASTERIP, clusterCIP, STATUS_NORMAL);
+		assertTrue(bRet);
+
+		/* set write/read/unlink cluster addr */
+		bRet = setClusterAddr(clusterCIP);
+		assertTrue(bRet);
+
+		/* Read file */
+		bRet = chkFinalRetSuc();
+		Assert.assertTrue(bRet);
+
+		/* set write/read/unlink cluster addr */
+		bRet = setClusterAddr(clusterAIP);
+		assertTrue(bRet);
+		
 		/* delete from clusterA */
 		bRet = unlinkCmd();
 		assertTrue(bRet);
-
-		/* wait 100 s */
-		 sleep(100);
 
 		/* Monitor the unlink process */
 		bRet = unlinkCmdMon();
@@ -679,20 +820,24 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 	//	bRet = checkRateEnd(FAILRATE, UNLINK);
 	//	Assert.assertTrue(bRet);
 
-		/* Check ABC sysnc */
-		check_sync(MASTERIP, clusterCIP, STATUS_NORMAL);
-		check_sync(MASTERIP, clusterBIP, STATUS_NORMAL);
+		/* Check sync */
+		bRet = check_sync(MASTERIP, clusterBIP, STATUS_DELETED);
+		assertTrue(bRet);
+		
+		bRet = check_sync(MASTERIP, clusterCIP, STATUS_DELETED);
+		assertTrue(bRet);
 	}
-	@Test
+	
+	//@Test
 	public void Function_08_sync_while__shutBC_startBC() {
 		/*
-		 * 1.ÅäÖÃ¶à¼¯Èº¡£¼¯ÈºAºÍ¼¯ÈºBºÍ¼¯ÈºC 2.¹Ø±Õ¼¯ÈºB 3.ÏòAÐ´ÈëÊý¾Ý£¬
-		 * 4.ÔÙ´ÎÆô¶¯¼¯ÈºB£¬Í¬²½»Ö¸´£¨Èý¸ö¼¯Èº£©
+		 * 1.ï¿½ï¿½ï¿½Ã¶à¼¯Èºï¿½ï¿½ï¿½ï¿½ÈºAï¿½Í¼ï¿½ÈºBï¿½Í¼ï¿½ÈºC 2.ï¿½Ø±Õ¼ï¿½ÈºB 3.ï¿½ï¿½AÐ´ï¿½ï¿½ï¿½ï¿½Ý£ï¿½
+		 * 4.ï¿½Ù´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ÈºBï¿½ï¿½Í¬ï¿½ï¿½ï¿½Ö¸ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Èºï¿½ï¿½
 		 */
 
 		boolean bRet = false;
 
-		caseName = " Function_04_sync_while__shutBC_startBC()";
+		caseName = " Function_04_sync_while__shutBC_startBC";
 		log.info(caseName + "===> start");
 
 		/* shut cluster B */
@@ -739,14 +884,14 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 	
 	}
 
-	 @Test
+	@Test
 	public void Function_09_sync_while_AB_restartDS_Kill_9() {
 		/*
-		 * 1.ÅäÖÃË«¼¯Èº¡£¼¯ÈºAºÍ¼¯ÈºB¡£ 2.¼¯ÈºAÖÐÐ´ÈëÉ¾³ýÊý¾Ý¡£ 3.ÖØÆôµ¥Ì¨(¶àÌ¨)DS£¨kill -9£©
+		 * 1.ï¿½ï¿½ï¿½ï¿½Ë«ï¿½ï¿½Èºï¿½ï¿½ï¿½ï¿½ÈºAï¿½Í¼ï¿½ÈºBï¿½ï¿½ 2.ï¿½ï¿½ÈºAï¿½ï¿½Ð´ï¿½ï¿½É¾ï¿½ï¿½ï¿½ï¿½Ý¡ï¿½ 3.ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ì¨(ï¿½ï¿½Ì¨)DSï¿½ï¿½kill -9ï¿½ï¿½
 		 */
 		boolean bRet = false;
 
-		caseName = " Function_08_sync_while_AB_restartDS_Kill_9()";
+		caseName = " Function_08_sync_while_AB_restartDS_Kill_9";
 		log.info(caseName + "===> start");
 
 		/* set write/read/unlink cluster addr */
@@ -759,30 +904,69 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 
 		/* wait 100 s */
 		sleep(100);
+		
+		/* kill one ds of cluster A */
+		bRet = killOneDsForce();
+		assertTrue(bRet);
+		
+		/* Stop write cmd */
+		bRet = writeCmdStop();
+		assertTrue(bRet);
+		
+		/* start the killed ds */
+		bRet = startOneDs();
+		assertTrue(bRet);	
+		
+		/* Check B ststus */
+		bRet = check_sync(MASTERIP, clusterBIP, STATUS_NORMAL);
+		assertTrue(bRet);
+		
+		/* Check C ststus */
+		bRet = check_sync(MASTERIP, clusterCIP, STATUS_NORMAL);
+		assertTrue(bRet);
+		
+		/* set write/read/unlink cluster addr */
+		bRet = setClusterAddr(clusterBIP);
+		assertTrue(bRet);
 
-		/* Check A ststus */
-		check_sync(MASTERIP, clusterAIP, STATUS_NORMAL);
+		/* Read file */
+		bRet = chkFinalRetSuc();
+		Assert.assertTrue(bRet);
 
+		/* set write/read/unlink cluster addr */
+		bRet = setClusterAddr(clusterCIP);
+		assertTrue(bRet);
+
+		/* Read file */
+		bRet = chkFinalRetSuc();
+		Assert.assertTrue(bRet);
+	
+		/* set write/read/unlink cluster addr */
+		bRet = setClusterAddr(clusterAIP);
+		assertTrue(bRet);
+		
 		/* delete from clusterA */
 		bRet = unlinkCmd();
 		assertTrue(bRet);
-
-		/* start DS ofB kill_9 */
-		killOneDsForce(tfsGrid2);
 		
-		/* wait 10s */
-		sleep(10);
+		/* Monitor the unlink process */
+		bRet = unlinkCmdMon();
+		Assert.assertTrue(bRet);
 		
-		startOneDs(tfsGrid2);
-
-		/* Check AB data */
-		check_sync(MASTERIP, clusterBIP, STATUS_NORMAL);
+		/* Check sync */
+		bRet = check_sync(MASTERIP, clusterBIP, STATUS_DELETED);
+		assertTrue(bRet);
+		
+		/* Check sync */
+		bRet = check_sync(MASTERIP, clusterCIP, STATUS_DELETED);
+		assertTrue(bRet);		
+		
 	}
 
 	// @Test
 	public void Function_10_sync_while_restartDS() {
 		/*
-		 * 1.ÅäÖÃË«¼¯Èº¡£¼¯ÈºAºÍ¼¯ÈºB¡£ 2.¼¯ÈºAÖÐÐ´ÈëÉ¾³ýÊý¾Ý¡£ 3.ÖØÆôµ¥Ì¨(¶àÌ¨)DS
+		 * 1.ï¿½ï¿½ï¿½ï¿½Ë«ï¿½ï¿½Èºï¿½ï¿½ï¿½ï¿½ÈºAï¿½Í¼ï¿½ÈºBï¿½ï¿½ 2.ï¿½ï¿½ÈºAï¿½ï¿½Ð´ï¿½ï¿½É¾ï¿½ï¿½ï¿½ï¿½Ý¡ï¿½ 3.ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ì¨(ï¿½ï¿½Ì¨)DS
 		 */
 		boolean bRet = false;
 
@@ -832,14 +1016,14 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 	}
 
 	/*
-	 * 1.ÅäÖÃË«¼¯Èº¡£¼¯ÈºAºÍ¼¯ÈºB¡£ 2.×èÈû¼¯ÈºAÖÐµÄÄ³Ì¨dsµ½¼¯ÈºBÖÐµÄDS 3.¼¯ÈºAÖÐÐ´ÈëÉ¾³ýÊý¾Ý¡£ 4.Ò»¶ÎÊ±¼äºó£¬½â³ýÍøÂç×èÈû¡£
+	 * 1.ï¿½ï¿½ï¿½ï¿½Ë«ï¿½ï¿½Èºï¿½ï¿½ï¿½ï¿½ÈºAï¿½Í¼ï¿½ÈºBï¿½ï¿½ 2.ï¿½ï¿½ï¿½ï¿½ÈºAï¿½Ðµï¿½Ä³Ì¨dsï¿½ï¿½ï¿½ï¿½ÈºBï¿½Ðµï¿½DS 3.ï¿½ï¿½ÈºAï¿½ï¿½Ð´ï¿½ï¿½É¾ï¿½ï¿½ï¿½ï¿½Ý¡ï¿½ 4.Ò»ï¿½ï¿½Ê±ï¿½ï¿½ó£¬½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 	 */
-	// @Test
+	//@Test
 	public void Function_11_sync_while_block_one_ds() {
 
 		boolean bRet = false;
 
-		caseName = " Function_10_sync_while_block_one_ds()";
+		caseName = "Function_11_sync_while_block_one_ds";
 		log.info(caseName + "===> start");
 
 		/* Block clusterB DS net */
@@ -887,7 +1071,7 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 
 	}
 	/*
-	 * 1.ÅäÖÃË«¼¯Èº¡£¼¯ÈºAºÍ¼¯ÈºB¡£ 2.×èÈû¼¯È¨AÖÐµÄÄ³Ì¨dsµ½¼¯ÈºCÖÐµÄDS 3.¼¯ÈºAÖÐÐ´ÈëÉ¾³ýÊý¾Ý¡£ 4.Ò»¶ÎÊ±¼äºó£¬½â³ýÍøÂç×èÈû¡£
+	 * 1.ï¿½ï¿½ï¿½ï¿½Ë«ï¿½ï¿½Èºï¿½ï¿½ï¿½ï¿½ÈºAï¿½Í¼ï¿½ÈºBï¿½ï¿½ 2.ï¿½ï¿½ï¿½ï¿½È¨Aï¿½Ðµï¿½Ä³Ì¨dsï¿½ï¿½ï¿½ï¿½ÈºCï¿½Ðµï¿½DS 3.ï¿½ï¿½ÈºAï¿½ï¿½Ð´ï¿½ï¿½É¾ï¿½ï¿½ï¿½ï¿½Ý¡ï¿½ 4.Ò»ï¿½ï¿½Ê±ï¿½ï¿½ó£¬½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 	 */
 	// @Test
 	public void Function_12_sync_while_block_one_ds() {
@@ -942,7 +1126,7 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 	}
 
 	/*
-	 * 1.ÅäÖÃË«¼¯Èº¡£¼¯ÈºAºÍ¼¯ÈºB¡£ 2.×èÈû¼¯È¨AÖÐµÄÄ³Ì¨dsµ½¼¯ÈºCÖÐµÄnS 3.¼¯ÈºAÖÐÐ´ÈëÉ¾³ýÊý¾Ý¡£ 4.Ò»¶ÎÊ±¼äºó£¬½â³ýÍøÂç×èÈû¡£
+	 * 1.ï¿½ï¿½ï¿½ï¿½Ë«ï¿½ï¿½Èºï¿½ï¿½ï¿½ï¿½ÈºAï¿½Í¼ï¿½ÈºBï¿½ï¿½ 2.ï¿½ï¿½ï¿½ï¿½È¨Aï¿½Ðµï¿½Ä³Ì¨dsï¿½ï¿½ï¿½ï¿½ÈºCï¿½Ðµï¿½nS 3.ï¿½ï¿½ÈºAï¿½ï¿½Ð´ï¿½ï¿½É¾ï¿½ï¿½ï¿½ï¿½Ý¡ï¿½ 4.Ò»ï¿½ï¿½Ê±ï¿½ï¿½ó£¬½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 	 */
 	// @Test
 	public void Function_13_sync_clusterA_blocknet_ns() {
@@ -994,11 +1178,11 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		/* verification */
 		check_sync(MASTERIP, clusterBIP, STATUS_NORMAL);
 	}
-	@Test
+	//@Test
 	public void Function_14_sync_while__shutBC_startBC() {
 		/*
-		 * 1.ÅäÖÃ¶à¼¯Èº¡£¼¯ÈºAºÍ¼¯ÈºBºÍ¼¯ÈºC 2.¹Ø±Õ¼¯ÈºBC 3.²»Ó°Ïì¼¯ÈºAµÄ·ÃÎÊ£¬µ«ÊÇÍ¬²½»áÊ§°Ü£¨¿ÉÓÃ½Å±¾¼ì²âµ½£©¡£
-		 * 4.ÔÙ´ÎÆô¶¯¼¯ÈºBC£¬Í¬²½»Ö¸´£¨Èý¸ö¼¯Èº£©
+		 * 1.ï¿½ï¿½ï¿½Ã¶à¼¯Èºï¿½ï¿½ï¿½ï¿½ÈºAï¿½Í¼ï¿½ÈºBï¿½Í¼ï¿½ÈºC 2.ï¿½Ø±Õ¼ï¿½ÈºBC 3.ï¿½ï¿½Ó°ï¿½ì¼¯ÈºAï¿½Ä·ï¿½ï¿½Ê£ï¿½ï¿½ï¿½ï¿½ï¿½Í¬ï¿½ï¿½ï¿½ï¿½Ê§ï¿½Ü£ï¿½ï¿½ï¿½ï¿½Ã½Å±ï¿½ï¿½ï¿½âµ½ï¿½ï¿½ï¿½ï¿½
+		 * 4.ï¿½Ù´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ÈºBCï¿½ï¿½Í¬ï¿½ï¿½ï¿½Ö¸ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Èºï¿½ï¿½
 		 */
 
 		boolean bRet = false;
@@ -1044,7 +1228,7 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		assertTrue(bRet);
 		
 
-        /*½Å±¾¼ì²â²»Í¬²½*/
+        /*ï¿½Å±ï¿½ï¿½ï¿½â²»Í¬ï¿½ï¿½*/
 		
 		/* start cluster B */
 		startNs(tfsGrid2);
