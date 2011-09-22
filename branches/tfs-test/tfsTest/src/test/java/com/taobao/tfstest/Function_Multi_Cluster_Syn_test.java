@@ -27,44 +27,24 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 	final public int STATUS_NORMAL = 0;
 	final public int STATUS_DELETED = 1;
 
-	final public String clusterAIP = tfsGrid.getCluster(NSINDEX).getServer(0)
-			.getVip();
-	final public String clusterBIP = tfsGrid2.getCluster(NSINDEX).getServer(0)
-			.getVip();
-	 final public String clusterCIP =tfsGrid3.getCluster(NSINDEX).getServer(0).getVip();
+	final public String clusterAIP = tfsGrid.getCluster(NSINDEX).getServer(0).getVip();
+	final public String clusterBIP = tfsGrid2.getCluster(NSINDEX).getServer(0).getVip(); 
+	final public String clusterCIP =tfsGrid3.getCluster(NSINDEX).getServer(0).getVip(); 
 
-
-	public void my_test_1()
-	{		
-			String strSubCmd;
-			boolean bRet;
-			ArrayList<String> chkResult = new ArrayList<String>(50);
-			strSubCmd = "/home/admin/tfs_bin/bin/tfstool -s ";
-			strSubCmd += clusterBIP;
-			strSubCmd += ":3100 -n -i \\\"stat ";
-			strSubCmd += "L1.RZTByhT1RXrhCrK.jpg\\\"";
-			strSubCmd += " |grep STATUS | awk '{print $2}'";
-			log.info("Executed command is :" + strSubCmd);
-			//bRet = Proc.cmdOutBase(clusterAIP, strSubCmd, "STATUS", 2, null, chkResult);
-			bRet = Proc.proStartBase(clusterBIP, strSubCmd, chkResult);
-			assertTrue("Check file on cluster B failure!!!!", bRet);
-			log.info("-------------------------->chkResult size is:" + chkResult.size());
-			for(int j = 0; j < chkResult.size(); j++)
-			{
-				log.info("-------------------------->chkResult is:" + chkResult.get(j));
-			}
-				
-
-	}
+	final public String clusterAAddr = clusterAIP
+	                        + ":" + tfsGrid.getCluster(NSINDEX).getServer(0).getPort();
+	final public String clusterBAddr = clusterBIP 
+	                        + ":" + tfsGrid2.getCluster(NSINDEX).getServer(0).getPort();
+	final public String clusterCAddr = clusterCIP 
+	                        + ":" + tfsGrid3.getCluster(NSINDEX).getServer(0).getPort();
 
 	/* Other */
-	public String caseName = "";
 	private List<AppServer> serverList;
 	protected static Logger log = Logger.getLogger("Cluster");
 	HelpBase helpBase = new HelpBase();
 
-	public boolean check_sync(String clusterAIP, String clusterBIP, int chkVal) {
-		log.info("Start to check_sync:" + clusterAIP + ", " + clusterBIP);
+	public boolean check_sync(String targetIP, String clusterAddr, int chkVal) {
+		log.info("Start to check_sync:" + targetIP + ", " + clusterAddr);
 		ArrayList<String> result = new ArrayList<String>(500);
 
 		String strCmd = "cat ";
@@ -72,7 +52,7 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 				+ "/tfsseed_file_list.txt | sed 's/\\(.*\\) \\(.*\\)/\\1/g'";
 		boolean bRet = false;
 
-		bRet = helpBase.proStartBase(clusterAIP, strCmd, result);
+		bRet = helpBase.proStartBase(targetIP, strCmd, result);
 		if (bRet == false)
 		{
 			log.error("Get write file list on cluster B failure!");
@@ -81,13 +61,11 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		for (int i = 0; i < result.size(); i++) {
 			ArrayList<String> chkResult = new ArrayList<String>(20);
 			strCmd = "/home/admin/tfs_bin/bin/tfstool -s ";
-			strCmd += clusterBIP;
-			strCmd += ":3100 -n -i\\\"stat ";
+			strCmd += clusterAAddr;
+			strCmd += " -n -i \\\"stat ";
 			strCmd += result.get(i) + "\\\"";
-			strCmd += " |grep STATUS | awk '{print $2}'";
 			log.info("Executed command is :" + strCmd);
-			bRet = helpBase.proStartBase(clusterBIP, strCmd, chkResult);
-		//  bRet = Proc.cmdOutBase(clusterAIP, strSubCmd, "STATUS", 2, null, chkResult);
+			bRet = Proc.cmdOutBase(targetIP, strCmd, "STATUS", 2, null, chkResult);
 			if (bRet == false || chkResult.size() <= 0)
 			{
 				log.error("Check file on cluster B failure!!!!");
@@ -285,14 +263,14 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		return bRet;
 	}
 
-	public boolean setClusterAddr(String nsIp) {
+	public boolean setClusterAddr(String nsAddr) {
 		boolean bRet = false;
 		bRet = conf.confReplaceSingleByPart(CLIENTIP, CLIENTCONF, "public",
-				NSIP, nsIp);
+				NSIP, nsAddr);
 		return bRet;
 	}
 
-	@Test
+	//@Test
 	public void Function_01_clusterA_sync_clusterB() {
 
 		boolean bRet = false;
@@ -312,7 +290,7 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		Assert.assertTrue(bRet);
 		
 		/* set write/read/unlink cluster addr */
-		bRet = setClusterAddr(clusterAIP);
+		bRet = setClusterAddr(clusterAAddr);
 		assertTrue(bRet);
 
 		/* write process */
@@ -320,18 +298,20 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		assertTrue(bRet);
 
 		/* wait100 s */
-		sleep(100);
+		sleep(10);
 
 		/* stop write proccess */
 		bRet = writeCmdStop();
 		assertTrue(bRet);
 
+		sleep(50);
+
 		/* verify */
-		bRet = check_sync(MASTERIP, clusterBIP, STATUS_NORMAL);
+		bRet = check_sync(MASTERIP, clusterBAddr, STATUS_NORMAL);
 		assertTrue(bRet);
 		
 		/* set write/read/unlink cluster addr */
-		bRet = setClusterAddr(clusterBIP);
+		bRet = setClusterAddr(clusterBAddr);
 		assertTrue(bRet);
 
 		/* Read file */
@@ -339,7 +319,7 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		Assert.assertTrue(bRet);
 		
 		/* set write/read/unlink cluster addr */
-		bRet = setClusterAddr(clusterAIP);
+		bRet = setClusterAddr(clusterAAddr);
 		assertTrue(bRet);
 		
 		/* unlink from cluster A */
@@ -350,18 +330,18 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		Assert.assertTrue(bRet);
 		
 		/* verify */
-		bRet = check_sync(MASTERIP, clusterBIP, STATUS_DELETED);
+		bRet = check_sync(MASTERIP, clusterBAddr, STATUS_DELETED);
 		assertTrue(bRet);
 		
 		/* set write/read/unlink cluster addr */
-		bRet = setClusterAddr(clusterAIP);
+		bRet = setClusterAddr(clusterAAddr);
 		assertTrue(bRet);
 	}
 
 	/*
 	 * 1.����˫��Ⱥ����ȺA�ͼ�ȺB�� 2.��ȺA��д����ݡ� 3.��ȺB���޷�ɾ��ȺAд�����ݡ�
 	 */
-	@Test
+//	@Test
 	public void Function_02_duplex_write_independent() {
 
 		boolean bRet = false;
@@ -374,18 +354,19 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		assertTrue(bRet);
 
 		/* wait 100 s */
-		sleep(100);
+		sleep(10);
 
 		/* stop write process */
 		bRet = writeCmdStop();
 		assertTrue(bRet);
 
+		sleep(50);
 		/* verify */
-		bRet = check_sync(MASTERIP, clusterBIP, STATUS_NORMAL);
+		bRet = check_sync(MASTERIP, clusterBAddr, STATUS_NORMAL);
 		assertTrue(bRet);
 		
 		/* set write/read/unlink cluster addr */
-		bRet = setClusterAddr(clusterBIP);
+		bRet = setClusterAddr(clusterBAddr);
 		assertTrue(bRet);
 
 		/* Read file */
@@ -404,12 +385,13 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 //		bRet = checkRateEnd(FAILRATE, UNLINK);
 //		Assert.assertTrue(bRet);
 
+		sleep(50);
 		/* verify */
-		bRet = check_sync(MASTERIP, clusterAIP, STATUS_DELETED);
+		bRet = check_sync(MASTERIP, clusterAAddr, STATUS_DELETED);
 		assertTrue(bRet);
 		
 		/* set write/read/unlink cluster addr */
-		bRet = setClusterAddr(clusterAIP);
+		bRet = setClusterAddr(clusterAAddr);
 		assertTrue(bRet);
 	}
 
@@ -435,11 +417,12 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		assertTrue(bRet);
 
 		/* stop 100 s */
-		sleep(100);
+		sleep(10);
 
 		/* stop write process */
 		bRet = writeCmdStop();
 		assertTrue(bRet);
+		sleep(50);
 
 		/* Start one ds */
 		bRet = startOneDs(tfsGrid2);
@@ -449,11 +432,11 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		sleep(60);
 		
 		/* verify */
-		bRet = check_sync(MASTERIP, clusterBIP, STATUS_NORMAL);
+		bRet = check_sync(MASTERIP, clusterBAddr, STATUS_NORMAL);
 		assertTrue(bRet);
 		
 		/* set write/read/unlink cluster addr */
-		bRet = setClusterAddr(clusterBIP);
+		bRet = setClusterAddr(clusterBAddr);
 		assertTrue(bRet);
 		
 		/* Read file */
@@ -461,7 +444,7 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		Assert.assertTrue(bRet);
 		
 		/* set write/read/unlink cluster addr */
-		bRet = setClusterAddr(clusterAIP);
+		bRet = setClusterAddr(clusterAAddr);
 		assertTrue(bRet);
 		
 		/* delete from cluster A */
@@ -472,8 +455,10 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		bRet = unlinkCmdMon();
 		Assert.assertTrue(bRet);
 
+		sleep(50);
+
 		/* verify */
-		bRet = check_sync(MASTERIP, clusterBIP, STATUS_DELETED);
+		bRet = check_sync(MASTERIP, clusterBAddr, STATUS_DELETED);
 		assertTrue(bRet);
 	}
 
@@ -493,19 +478,20 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		killMasterNs(tfsGrid2);
 		killSlaveNs(tfsGrid2);
 		killAllDs(tfsGrid2);
-
-		/* check cluster B shut */
-		bRet = tfsGrid2.isAlive(); 
-		Assert.assertFalse(bRet);
+                sleep(10);
+	
+         	/* check cluster B shut */
+	//	bRet = tfsGrid2.isAlive(); 
+	//	Assert.assertFalse(bRet);
 
 		/* kill cluster C */
 		 killMasterNs(tfsGrid3);
 		 killSlaveNs(tfsGrid3);
 		 killAllDs(tfsGrid3);
-
+                  sleep(20);
 		/* check cluster C status */
-		 bRet = tfsGrid3.isAlive(); 
-		Assert.assertFalse(bRet);
+	//	 bRet = tfsGrid3.isAlive(); 
+	//	Assert.assertFalse(bRet);
 
 		/* check cluster A status */
 		bRet = chkAlive();
@@ -537,8 +523,8 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		sleep(100);
 
 		/* check cluster B start */
-		bRet = tfsGrid2.isAlive();
-		Assert.assertTrue(bRet);
+	//	bRet = tfsGrid2.isAlive();
+	//	Assert.assertTrue(bRet);
 
 		/* shut cluster C */
 		startNs(tfsGrid3);
@@ -549,15 +535,15 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		sleep(100);
 
 		/* check cluster C start */
-		bRet = tfsGrid3.isAlive();
-		Assert.assertTrue(bRet);
-
+	//	bRet = tfsGrid3.isAlive();
+	//	Assert.assertTrue(bRet);
+sleep(40);
 		/* set write/read/unlink cluster addr */
-		bRet = setClusterAddr(clusterBIP);
+		bRet = setClusterAddr(clusterBAddr);
 		assertTrue(bRet);
 	
 		/* verification */
-		bRet = check_sync(MASTERIP, clusterBIP, STATUS_NORMAL);
+		bRet = check_sync(MASTERIP, clusterBAddr, STATUS_NORMAL);
 		Assert.assertTrue(bRet);
 		
 		/* Read file */
@@ -565,10 +551,10 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		Assert.assertTrue(bRet);
 		
 		/* set write/read/unlink cluster addr */
-		bRet = setClusterAddr(clusterCIP);
+		bRet = setClusterAddr(clusterCAddr);
 		assertTrue(bRet);
 	
-		bRet = check_sync(MASTERIP, clusterCIP, STATUS_NORMAL);
+		bRet = check_sync(MASTERIP, clusterCAddr, STATUS_NORMAL);
 		Assert.assertTrue(bRet);	
 		
 		/* Read file */
@@ -576,7 +562,7 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		Assert.assertTrue(bRet);
 		
 		/* set write/read/unlink cluster addr */
-		bRet = setClusterAddr(clusterAIP);
+		bRet = setClusterAddr(clusterAAddr);
 		assertTrue(bRet);
 		
 		/* delete from cluster A */
@@ -586,15 +572,15 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		/* Monitor the unlink process */
 		bRet = unlinkCmdMon();
 		Assert.assertTrue(bRet);
-	
-		bRet = check_sync(MASTERIP, clusterBIP, STATUS_DELETED);
+               	sleep(50);
+		bRet = check_sync(MASTERIP, clusterBAddr, STATUS_DELETED);
 		Assert.assertTrue(bRet);	
 		
-		bRet = check_sync(MASTERIP, clusterCIP, STATUS_DELETED);
+		bRet = check_sync(MASTERIP, clusterCAddr, STATUS_DELETED);
 		Assert.assertTrue(bRet);			
 	}
 
-	@Test
+//	@Test
 	public void Function_05_sync_while_shutB_startB() {
 
 		/*
@@ -612,7 +598,7 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		killAllDs(tfsGrid2);
 		
 		/* set write/read/unlink cluster addr */
-		bRet = setClusterAddr(clusterAIP);
+		bRet = setClusterAddr(clusterAAddr);
 		assertTrue(bRet);
 		
 		/* write to cluster A */
@@ -631,11 +617,11 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		startAllDs(tfsGrid2);
 		startSlaveNs(tfsGrid2);
 		
-		bRet = check_sync(MASTERIP, clusterCIP, STATUS_DELETED);
+		bRet = check_sync(MASTERIP, clusterCAddr, STATUS_DELETED);
 		Assert.assertTrue(bRet);
 		
 		/* set write/read/unlink cluster addr */
-		bRet = setClusterAddr(clusterCIP);
+		bRet = setClusterAddr(clusterCAddr);
 		assertTrue(bRet);
 		
 		/* Read file */
@@ -643,11 +629,11 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		Assert.assertTrue(bRet);
 		
 		/* verify B */
-		bRet = check_sync(MASTERIP, clusterBIP, STATUS_NORMAL);
+		bRet = check_sync(MASTERIP, clusterBAddr, STATUS_NORMAL);
 		assertTrue(bRet);
 		
 		/* set write/read/unlink cluster addr */
-		bRet = setClusterAddr(clusterBIP);
+		bRet = setClusterAddr(clusterBAddr);
 		assertTrue(bRet);
 		
 		/* Read file */
@@ -655,7 +641,7 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		Assert.assertTrue(bRet);
 		
 		/* set write/read/unlink cluster addr */
-		bRet = setClusterAddr(clusterAIP);
+		bRet = setClusterAddr(clusterAAddr);
 		assertTrue(bRet);
 		
 		/* delete from cluster A */
@@ -666,14 +652,14 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		bRet = unlinkCmdMon();
 		Assert.assertTrue(bRet);
 	
-		bRet = check_sync(MASTERIP, clusterBIP, STATUS_DELETED);
+		bRet = check_sync(MASTERIP, clusterBAddr, STATUS_DELETED);
 		Assert.assertTrue(bRet);
 		
-		bRet = check_sync(MASTERIP, clusterCIP, STATUS_DELETED);
+		bRet = check_sync(MASTERIP, clusterCAddr, STATUS_DELETED);
 		Assert.assertTrue(bRet);
 	}
 
-	@Test
+//	@Test
 	public void Function_06_sync_while_netunblockB() {
 		/*
 		 * 1.���ö༯Ⱥ����ȺA�ͼ�ȺB�ͼ�ȺC 2.����ȺB�뼯ȺC 4.��ȺAд���  5.һ��ʱ�����BC������6����֤���ͬ��
@@ -694,7 +680,7 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		sleep(100);
 		
 		/* set write/read/unlink cluster addr */
-		bRet = setClusterAddr(clusterAIP);
+		bRet = setClusterAddr(clusterAAddr);
 		assertTrue(bRet);
 
 		/* write to cluster A */
@@ -715,22 +701,22 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		sleep(100);
 		
 		/* verification */
-		bRet = check_sync(MASTERIP, clusterBIP, STATUS_NORMAL);
+		bRet = check_sync(MASTERIP, clusterBAddr, STATUS_NORMAL);
 		assertTrue(bRet);
 		
 		/* set write/read/unlink cluster addr */
-		bRet = setClusterAddr(clusterBIP);
+		bRet = setClusterAddr(clusterBAddr);
 		assertTrue(bRet);
 
 		/* Read file */
 		bRet = chkFinalRetSuc();
 		Assert.assertTrue(bRet);
 		
-		bRet = check_sync(MASTERIP, clusterCIP, STATUS_NORMAL);
+		bRet = check_sync(MASTERIP, clusterCAddr, STATUS_NORMAL);
 		assertTrue(bRet);
 		
 		/* set write/read/unlink cluster addr */
-		bRet = setClusterAddr(clusterCIP);
+		bRet = setClusterAddr(clusterCAddr);
 		assertTrue(bRet);
 
 		/* Read file */
@@ -738,7 +724,7 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		Assert.assertTrue(bRet);
 		
 		/* set write/read/unlink cluster addr */
-		bRet = setClusterAddr(clusterAIP);
+		bRet = setClusterAddr(clusterAAddr);
 		assertTrue(bRet);
 		
 		/* delete from cluster A */
@@ -749,10 +735,10 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		bRet = unlinkCmdMon();
 		Assert.assertTrue(bRet);
 	
-		bRet = check_sync(MASTERIP, clusterBIP, STATUS_DELETED);
+		bRet = check_sync(MASTERIP, clusterBAddr, STATUS_DELETED);
 		Assert.assertTrue(bRet);	
 		
-		bRet = check_sync(MASTERIP, clusterCIP, STATUS_DELETED);
+		bRet = check_sync(MASTERIP, clusterCAddr, STATUS_DELETED);
 		Assert.assertTrue(bRet);		
 	}
 
@@ -767,7 +753,7 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		log.info(caseName + "===> start");
 
 		/* set write/read/unlink cluster addr */
-		bRet = setClusterAddr(clusterAIP);
+		bRet = setClusterAddr(clusterAAddr);
 		assertTrue(bRet);
 
 		/* write to cluster A */
@@ -782,22 +768,22 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		assertTrue(bRet);
 
 		/* verify */
-		bRet = check_sync(MASTERIP, clusterBIP, STATUS_NORMAL);
+		bRet = check_sync(MASTERIP, clusterBAddr, STATUS_NORMAL);
 		assertTrue(bRet);
 		
 		/* set write/read/unlink cluster addr */
-		bRet = setClusterAddr(clusterBIP);
+		bRet = setClusterAddr(clusterBAddr);
 		assertTrue(bRet);
 
 		/* Read file */
 		bRet = chkFinalRetSuc();
 		Assert.assertTrue(bRet);
 		
-		bRet = check_sync(MASTERIP, clusterCIP, STATUS_NORMAL);
+		bRet = check_sync(MASTERIP, clusterCAddr, STATUS_NORMAL);
 		assertTrue(bRet);
 
 		/* set write/read/unlink cluster addr */
-		bRet = setClusterAddr(clusterCIP);
+		bRet = setClusterAddr(clusterCAddr);
 		assertTrue(bRet);
 
 		/* Read file */
@@ -805,7 +791,7 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		Assert.assertTrue(bRet);
 
 		/* set write/read/unlink cluster addr */
-		bRet = setClusterAddr(clusterAIP);
+		bRet = setClusterAddr(clusterAAddr);
 		assertTrue(bRet);
 		
 		/* delete from clusterA */
@@ -821,10 +807,10 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 	//	Assert.assertTrue(bRet);
 
 		/* Check sync */
-		bRet = check_sync(MASTERIP, clusterBIP, STATUS_DELETED);
+		bRet = check_sync(MASTERIP, clusterBAddr, STATUS_DELETED);
 		assertTrue(bRet);
 		
-		bRet = check_sync(MASTERIP, clusterCIP, STATUS_DELETED);
+		bRet = check_sync(MASTERIP, clusterCAddr, STATUS_DELETED);
 		assertTrue(bRet);
 	}
 	
@@ -878,13 +864,13 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 
 		/* verification */
 	
-		check_sync(MASTERIP, clusterBIP, STATUS_NORMAL);
+		check_sync(MASTERIP, clusterBAddr, STATUS_NORMAL);
 	
-		check_sync(MASTERIP, clusterCIP, STATUS_NORMAL);
+		check_sync(MASTERIP, clusterCAddr, STATUS_NORMAL);
 	
 	}
 
-	@Test
+//	@Test
 	public void Function_09_sync_while_AB_restartDS_Kill_9() {
 		/*
 		 * 1.����˫��Ⱥ����ȺA�ͼ�ȺB�� 2.��ȺA��д��ɾ����ݡ� 3.������̨(��̨)DS��kill -9��
@@ -895,7 +881,7 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		log.info(caseName + "===> start");
 
 		/* set write/read/unlink cluster addr */
-		bRet = setClusterAddr(clusterAIP);
+		bRet = setClusterAddr(clusterAAddr);
 		assertTrue(bRet);
 
 		/* write to cluster A */
@@ -918,31 +904,31 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		assertTrue(bRet);	
 		
 		/* Check B ststus */
-		bRet = check_sync(MASTERIP, clusterBIP, STATUS_NORMAL);
+		bRet = check_sync(MASTERIP, clusterBAddr, STATUS_NORMAL);
 		assertTrue(bRet);
 		
 		/* Check C ststus */
-		bRet = check_sync(MASTERIP, clusterCIP, STATUS_NORMAL);
+		bRet = check_sync(MASTERIP, clusterCAddr, STATUS_NORMAL);
 		assertTrue(bRet);
 		
 		/* set write/read/unlink cluster addr */
-		bRet = setClusterAddr(clusterBIP);
+		bRet = setClusterAddr(clusterBAddr);
 		assertTrue(bRet);
 
 		/* Read file */
-		bRet = chkFinalRetSuc();
-		Assert.assertTrue(bRet);
+	//	bRet = chkFinalRetSuc();
+	//	Assert.assertTrue(bRet);
 
 		/* set write/read/unlink cluster addr */
-		bRet = setClusterAddr(clusterCIP);
+		bRet = setClusterAddr(clusterCAddr);
 		assertTrue(bRet);
 
 		/* Read file */
-		bRet = chkFinalRetSuc();
-		Assert.assertTrue(bRet);
+	//	bRet = chkFinalRetSuc();
+	//	Assert.assertTrue(bRet);
 	
 		/* set write/read/unlink cluster addr */
-		bRet = setClusterAddr(clusterAIP);
+		bRet = setClusterAddr(clusterAAddr);
 		assertTrue(bRet);
 		
 		/* delete from clusterA */
@@ -954,11 +940,11 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		Assert.assertTrue(bRet);
 		
 		/* Check sync */
-		bRet = check_sync(MASTERIP, clusterBIP, STATUS_DELETED);
+		bRet = check_sync(MASTERIP, clusterBAddr, STATUS_DELETED);
 		assertTrue(bRet);
 		
 		/* Check sync */
-		bRet = check_sync(MASTERIP, clusterCIP, STATUS_DELETED);
+		bRet = check_sync(MASTERIP, clusterCAddr, STATUS_DELETED);
 		assertTrue(bRet);		
 		
 	}
@@ -981,7 +967,7 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		sleep(100);
 
 		/* Check A ststus */
-		check_sync(MASTERIP, clusterAIP, STATUS_NORMAL);
+		check_sync(MASTERIP, clusterAAddr, STATUS_NORMAL);
 
 		/* delete from clusterA */
 		bRet = unlinkCmd();
@@ -999,7 +985,7 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		//Assert.assertTrue(bRet);
 
 		/* Check A ststus */
-		check_sync(MASTERIP, clusterAIP, STATUS_NORMAL);
+		check_sync(MASTERIP, clusterAAddr, STATUS_NORMAL);
 
 		/* kill DS ofB kill_9 */
 		killOneDs(tfsGrid2);
@@ -1011,7 +997,7 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		startOneDs(tfsGrid2);
 
 		/* Check AB data */
-		check_sync(MASTERIP, clusterBIP, STATUS_NORMAL);
+		check_sync(MASTERIP, clusterBAddr, STATUS_NORMAL);
 
 	}
 
@@ -1032,7 +1018,7 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 				.getServer(0).getPort());
 
 		/* set write/read/unlink cluster addr */
-		bRet = setClusterAddr(clusterAIP);
+		bRet = setClusterAddr(clusterAAddr);
 		assertTrue(bRet);
 
 		/* write to cluster A */
@@ -1059,7 +1045,7 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 	//	Assert.assertTrue(bRet);
 
 		/* Check A ststus */
-		check_sync(MASTERIP, clusterAIP, STATUS_NORMAL);
+		check_sync(MASTERIP, clusterAAddr, STATUS_NORMAL);
 
 		/* netUnblock Cluster DS */
 		helpBase.portOutputBlock(MASTERSER.getIp(), tfsGrid2
@@ -1067,7 +1053,7 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 				tfsGrid2.getCluster(NSINDEX).getServer(0).getPort());
 
 		/* verification */
-		check_sync(MASTERIP, clusterBIP, STATUS_NORMAL);
+		check_sync(MASTERIP, clusterBAddr, STATUS_NORMAL);
 
 	}
 	/*
@@ -1087,7 +1073,7 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 				.getServer(0).getPort());
 
 		/* set write/read/unlink cluster addr */
-		bRet = setClusterAddr(clusterAIP);
+		bRet = setClusterAddr(clusterAAddr);
 		assertTrue(bRet);
 
 		/* write to cluster A */
@@ -1113,7 +1099,7 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 	//	Assert.assertTrue(bRet);
 
 		/* Check A ststus */
-		check_sync(MASTERIP, clusterAIP, STATUS_NORMAL);
+		check_sync(MASTERIP, clusterAAddr, STATUS_NORMAL);
 
 		/* netUnblock Cluster DS */
 		helpBase.portOutputBlock(MASTERSER.getIp(), tfsGrid2
@@ -1121,7 +1107,7 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 				tfsGrid2.getCluster(NSINDEX).getServer(0).getPort());
 
 		/* verification */
-		check_sync(MASTERIP, clusterBIP, STATUS_NORMAL);
+		check_sync(MASTERIP, clusterBAddr, STATUS_NORMAL);
 
 	}
 
@@ -1142,7 +1128,7 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 				.getServer(0).getIp(), 1, 5);
 
 		/* set write/read/unlink cluster addr */
-		bRet = setClusterAddr(clusterAIP);
+		bRet = setClusterAddr(clusterAAddr);
 		assertTrue(bRet);
 
 		/* write to cluster A */
@@ -1176,9 +1162,9 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		helpBase.netUnblockBase(MASTERSER.getIp());
 
 		/* verification */
-		check_sync(MASTERIP, clusterBIP, STATUS_NORMAL);
+		check_sync(MASTERIP, clusterBAddr, STATUS_NORMAL);
 	}
-	//@Test
+//	@Test
 	public void Function_14_sync_while__shutBC_startBC() {
 		/*
 		 * 1.���ö༯Ⱥ����ȺA�ͼ�ȺB�ͼ�ȺC 2.�رռ�ȺBC 3.��Ӱ�켯ȺA�ķ��ʣ�����ͬ����ʧ�ܣ����ýű���⵽����
@@ -1196,8 +1182,8 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		killAllDs(tfsGrid2);
 
 		/* check cluster B status */
-		bRet = tfsGrid2.isAlive(); 
-		Assert.assertFalse(bRet);
+	//	bRet = tfsGrid2.isAlive(); 
+	//	Assert.assertFalse(bRet);
 
 		/* kill cluster C */
 		 killMasterNs(tfsGrid3);
@@ -1205,15 +1191,15 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		 killAllDs(tfsGrid3);
 
 		/* check cluster C status */
-		 bRet = tfsGrid3.isAlive(); 
-		Assert.assertFalse(bRet);
+	//	 bRet = tfsGrid3.isAlive(); 
+	//	Assert.assertFalse(bRet);
 
 		/* check cluster A status */
-		bRet = tfsGrid.isAlive();
-		Assert.assertTrue(bRet);
+	//	bRet = tfsGrid.isAlive();
+	//	Assert.assertTrue(bRet);
 		
 		/* set write/read/unlink cluster addr */
-		bRet = setClusterAddr(clusterAIP);
+		bRet = setClusterAddr(clusterAAddr);
 		assertTrue(bRet);
 
 		/* write to cluster A */
@@ -1239,8 +1225,8 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		sleep(100);
 
 		/* check cluster B status*/
-		bRet = tfsGrid2.isAlive();
-		Assert.assertTrue(bRet);
+	//	bRet = tfsGrid2.isAlive();
+	//	Assert.assertTrue(bRet);
 
 		/* start cluster C */
 		 startNs(tfsGrid3);
@@ -1251,12 +1237,12 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		sleep(100);
 
 		/* check cluster C status */
-		bRet = tfsGrid3.isAlive();
-		Assert.assertTrue(bRet);
-
-//		/* Read file */
-//		bRet = chkFinalRetSuc();
+//		bRet = tfsGrid3.isAlive();
 //		Assert.assertTrue(bRet);
+
+		/* Read file */
+		bRet = chkFinalRetSuc();
+		Assert.assertTrue(bRet);
 
 		/* Check block copys */
 		bRet = chkBlockCntBothNormal(1);
@@ -1268,9 +1254,9 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 
 		/* verification */
 	
-		check_sync(MASTERIP, clusterBIP, STATUS_NORMAL);
+		check_sync(MASTERIP, clusterBAddr, STATUS_NORMAL);
 	
-		check_sync(MASTERIP, clusterCIP, STATUS_NORMAL);
+		check_sync(MASTERIP, clusterCAddr, STATUS_NORMAL);
 	
 	}
 
