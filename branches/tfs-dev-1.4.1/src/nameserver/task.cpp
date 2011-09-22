@@ -108,15 +108,15 @@ namespace tfs
 
     void LayoutManager::Task::dump(int32_t level, const char* const format)
     {
-      std::string runer;
-      std::vector<ServerCollect*>::iterator iter = runer_.begin();
-      for (; iter != runer_.end(); ++iter)
+      if (level >= TBSYS_LOGGER._level)
       {
-        runer += CNetUtil::addrToString((*iter)->id());
-        runer += "/";
-      }
-      if (level <= TBSYS_LOGGER._level)
-      {
+        std::string runer;
+        std::vector<ServerCollect*>::iterator iter = runer_.begin();
+        for (; iter != runer_.end(); ++iter)
+        {
+          runer += CNetUtil::addrToString((*iter)->id());
+          runer += "/";
+        }
         TBSYS_LOGGER.logMessage(level, __FILE__, __LINE__, __FUNCTION__, "pointer %p, %s plan seqno: %"PRI64_PREFIX"d, type: %s ,status: %s, priority: %s , block_id: %u, begin: %"PRI64_PREFIX"d, end: %"PRI64_PREFIX"d, runer: %s",
             this,
             format == NULL ? "" : format,
@@ -199,28 +199,27 @@ namespace tfs
 
     void LayoutManager::CompactTask::dump(int32_t level, const char* const format)
     {
-      std::string runer;
-      std::vector<ServerCollect*>::iterator iter = runer_.begin();
-      for (; iter != runer_.end(); ++iter)
+      if (level >= TBSYS_LOGGER._level)
       {
-        runer += CNetUtil::addrToString((*iter)->id());
-        runer += "/";
-      }
-      PlanStatus plan_status = PLAN_STATUS_NONE;
-      std::string status;
-      std::vector< std::pair <uint64_t, PlanStatus> >::iterator it= complete_status_.begin();
-      for (; it != complete_status_.end(); ++it)
-      {
-        status += CNetUtil::addrToString((*it).first);
-        status += ":";
-        plan_status = (*it).second;
-        status += plan_status == PLAN_STATUS_BEGIN ? "begin" : plan_status == PLAN_STATUS_TIMEOUT ? "timeout" : plan_status == PLAN_STATUS_END
-          ? "finish" : plan_status == PLAN_STATUS_FAILURE ? "failure": "unknow",
-          status += "/";
-      }
-
-      if (level <= TBSYS_LOGGER._level)
-      {
+        std::string runer;
+        std::vector<ServerCollect*>::iterator iter = runer_.begin();
+        for (; iter != runer_.end(); ++iter)
+        {
+          runer += CNetUtil::addrToString((*iter)->id());
+          runer += "/";
+        }
+        PlanStatus plan_status = PLAN_STATUS_NONE;
+        std::string status;
+        std::vector< std::pair <uint64_t, PlanStatus> >::iterator it= complete_status_.begin();
+        for (; it != complete_status_.end(); ++it)
+        {
+          status += CNetUtil::addrToString((*it).first);
+          status += ":";
+          plan_status = (*it).second;
+          status += plan_status == PLAN_STATUS_BEGIN ? "begin" : plan_status == PLAN_STATUS_TIMEOUT ? "timeout" : plan_status == PLAN_STATUS_END
+            ? "finish" : plan_status == PLAN_STATUS_FAILURE ? "failure": "unknow",
+            status += "/";
+        }
         TBSYS_LOGGER.logMessage(level, __FILE__, __LINE__, __FUNCTION__, "pointer: %p, %s plan seqno: %"PRI64_PREFIX"d, type: %s ,status: %s, priority: %s , block_id: %u, begin: %"PRI64_PREFIX"d, end: %"PRI64_PREFIX"d, runer: %s, complete status: %s",
             this,
             format == NULL ? "" : format,

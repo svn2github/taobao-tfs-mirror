@@ -885,7 +885,7 @@ namespace tfs
       else
       {
         char data[32] = {'\0'};
-        snprintf(data, 32, "%d.%d", info.value3_, info.value4_);
+        snprintf(data, 32, "%d.%06d", info.value3_, info.value4_);
         SYSPARAM_NAMESERVER.balance_percent_ = strtod(data, NULL);
       }
       return iret;

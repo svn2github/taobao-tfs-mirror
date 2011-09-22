@@ -51,10 +51,10 @@ namespace nameserver
     bool bret = server != NULL;
     if (bret)
     {
-      dump();
+      dump(TBSYS_LOG_LEVEL(DEBUG));
       last_update_time_ = now;
       writable = !is_full();
-      bool can_be_master = ((writable && hold_master_ == HOLD_MASTER_FLAG_NO 
+      bool can_be_master = ((writable && hold_master_ == HOLD_MASTER_FLAG_NO
                 && server->can_be_master(SYSPARAM_NAMESERVER.max_write_file_count_)) );
       TBSYS_LOG(DEBUG, "server: %s can_be_master: %d, block: %u writable: %d", tbsys::CNetUtil::addrToString(server->id()).c_str(), can_be_master, id(), writable);
       std::vector<ServerCollect*>::iterator where = 
@@ -455,19 +455,23 @@ namespace nameserver
     return has_dump ? TFS_SUCCESS : TFS_ERROR;
   }
 
-  void BlockCollect::dump() const
+  void BlockCollect::dump(int32_t level, const char* file, const int32_t line, const char* function) const
   {
-#ifndef TFS_NS_DEBUG
-    std::string str;
-    std::vector<ServerCollect*>::const_iterator iter = hold_.begin();
-    for (; iter != hold_.end(); ++iter)
+    if (level >= TBSYS_LOGGER._level)
     {
-      str += CNetUtil::addrToString((*iter)->id());
-      str += "/";
+      std::string str;
+      std::vector<ServerCollect*>::const_iterator iter = hold_.begin();
+      for (; iter != hold_.end(); ++iter)
+      {
+        str += CNetUtil::addrToString((*iter)->id());
+        str += "/";
+      }
+      TBSYS_LOGGER.logMessage(level, file, line, function,
+          "block_id: %u, version: %d, file_count: %d, size: %d, del_file_count: %d, del_size: %d, seq_no: %d, servers: %s, hold_master: %d",
+          info_.block_id_, info_.version_, info_.file_count_,
+          info_.size_, info_.del_file_count_, info_.del_size_,
+          info_.seq_no_, str.c_str(), hold_master_);
     }
-    TBSYS_LOG(INFO, "block_id: %u, version: %d, file_count: %d, size: %d, del_file_count: %d, del_size: %d, seq_no: %d, servers: %s, hold_master: %d",
-        info_.block_id_, info_.version_, info_.file_count_, info_.size_, info_.del_file_count_, info_.del_size_, info_.seq_no_, str.c_str(), hold_master_);
-#endif
   }
 }
 }
