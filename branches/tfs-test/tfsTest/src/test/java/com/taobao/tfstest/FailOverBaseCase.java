@@ -3,6 +3,8 @@
  */
 package com.taobao.tfstest;
 
+import static org.junit.Assert.assertEquals;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.HashMap;
@@ -392,13 +394,13 @@ public class FailOverBaseCase {
 	
 	/**
 	 * 
-	 * @param nsIp
+	 * @param nsAddr
 	 * @return
 	 */	
-	public boolean setClusterAddr(String nsIp)
+	public boolean setClusterAddr(String nsAddr)
 	{
 		boolean bRet = false;
-		bRet = conf.confReplaceSingleByPart(CLIENTIP, CLIENTCONF, "public", NSIP, nsIp);
+		bRet = conf.confReplaceSingleByPart(CLIENTIP, CLIENTCONF, "public", NSIP, nsAddr);
 		return bRet;
 	}
 
@@ -2493,6 +2495,87 @@ public class FailOverBaseCase {
 		
 		bRet = true;
     
+		return bRet;
+	}
+	
+	/**
+	 * @author lexin 
+	 * @param srcClusterAddr
+	 * @param destClusterAddr
+	 * @param chkVal
+	 * @return
+	 */
+	public boolean check_sync(String srcClusterAddr, String destClusterAddr, int chkVal) 
+	{
+		log.info("Start to check_sync: " + srcClusterAddr + " ==> " + destClusterAddr);
+		ArrayList<String> result = new ArrayList<String>(500);
+
+		String strCmd = "cat ";
+		strCmd += TEST_HOME
+				+ "/tfsseed_file_list.txt | sed 's/\\(.*\\) \\(.*\\)/\\1/g'";
+		boolean bRet = false;
+
+		bRet = Proc.proStartBase(CLIENTIP, strCmd, result);
+		if (bRet == false)
+		{
+			log.error("Get write file list on cluster " + destClusterAddr + " failure!");
+			return bRet;
+		}
+		for (int i = 0; i < result.size(); i++) {
+			ArrayList<String> chkResult = new ArrayList<String>(20);
+			strCmd = TEST_HOME + "/tfstool -s ";
+			strCmd += destClusterAddr;
+			strCmd += " -n -i \\\"stat ";
+			strCmd += result.get(i) + "\\\"";
+			log.info("Executed command is:" + strCmd);
+			bRet = Proc.cmdOutBase(CLIENTIP, strCmd, "STATUS", 2, null, chkResult);
+			if (bRet == false || chkResult.size() <= 0)
+			{
+				log.error("Check file on cluster " + destClusterAddr + " failure!!!!");
+				return bRet;
+			}
+			log.info("-------------->Executed tfstool result is: " + chkResult.get(0));
+			assertEquals(chkVal, Integer.parseInt(chkResult.get(0)));
+		}
+		return bRet;
+	}
+	public boolean killOneDsForce(AppGrid tfsAppGrid) {
+		boolean bRet = false;
+		log.info("Kill one ds start ===>");
+		AppServer cs = tfsAppGrid.getCluster(DSINDEX).getServer(0);
+		bRet = cs.stop(KillTypeEnum.FORCEKILL, WAITTIME);
+		log.info("Kill one ds end ===>");
+		return bRet;
+	}
+
+	public boolean cleanOneDs(AppGrid tfsAppGrid) {
+		boolean bRet = false;
+		log.info("Clean one ds start ===>");
+		AppServer cs = tfsAppGrid.getCluster(DSINDEX).getServer(0);
+		bRet = cs.stop(KillTypeEnum.NORMALKILL, WAITTIME);
+		if (bRet == false)
+			return bRet;
+
+		bRet = cs.clean();
+		log.info("Clean one ds end ===>");
+		return bRet;
+	}
+
+	public boolean startOneDs(AppGrid tfsAppGrid) {
+		boolean bRet = false;
+		log.info("Start one ds start ===>");
+		AppServer cs = tfsAppGrid.getCluster(DSINDEX).getServer(0);
+		bRet = cs.start();
+		log.info("Start one ds end ===>");
+		return bRet;
+	}
+
+	public boolean killOneDs(AppGrid tfsAppGrid) {
+		boolean bRet = false;
+		log.info("Kill one ds start ===>");
+		AppServer cs = tfsAppGrid.getCluster(DSINDEX).getServer(0);
+		bRet = cs.stop(KillTypeEnum.NORMALKILL, WAITTIME);
+		log.info("Kill one ds end ===>");
 		return bRet;
 	}
 	
