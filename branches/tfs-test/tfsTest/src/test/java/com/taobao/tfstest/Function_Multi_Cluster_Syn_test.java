@@ -211,7 +211,7 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		sleep(50);
 		
 		/* verify */
-		bRet = check_sync(MASTERIP, clusterBAddr, STATUS_NORMAL);
+		bRet = check_sync(clusterAAddr, clusterBAddr, STATUS_NORMAL);
 		assertTrue(bRet);
 		
 		/* set write/read/unlink cluster addr */
@@ -237,7 +237,7 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		sleep(50);
 
 		/* verify */
-		bRet = check_sync(MASTERIP, clusterBAddr, STATUS_DELETED);
+		bRet = check_sync(clusterAAddr, clusterBAddr, STATUS_DELETED);
 		assertTrue(bRet);
 	}
 	
@@ -310,11 +310,11 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		sleep(50);
 
 		/* verify */
-		bRet = check_sync(MASTERIP, clusterBAddr, STATUS_DELETED);
+		bRet = check_sync(clusterAAddr, clusterBAddr, STATUS_DELETED);
 		assertTrue(bRet);
 		
 		/* verify */
-		bRet = check_sync(MASTERIP, clusterCAddr, STATUS_DELETED);
+		bRet = check_sync(clusterAAddr, clusterCAddr, STATUS_DELETED);
 		assertTrue(bRet);
 		
 		/* Set unlink ratio */
@@ -348,15 +348,15 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		Assert.assertTrue(bRet);
 		
 		/* Modify MinReplication */
-		bRet = setMinReplication(2);
+		bRet = setMinReplication(BLOCKCOPYCNT-1);
 		Assert.assertTrue(bRet);
 		
 		/* Modify MaxReplication */
-		bRet = setMaxReplication(2);
+		bRet = setMaxReplication(BLOCKCOPYCNT-1);
 		Assert.assertTrue(bRet);
 		
 		/* Check block copys */
-		bRet = chkBlockCntBothNormal(2);
+		bRet = chkBlockCntBothNormal(BLOCKCOPYCNT-1);
 		Assert.assertTrue(bRet);
 
 		/* Check the rate of write process */
@@ -371,7 +371,7 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		sleep(50);
 		
 		/* verify */
-		bRet = check_sync(MASTERIP, clusterBAddr, STATUS_NORMAL);
+		bRet = check_sync(clusterAAddr, clusterBAddr, STATUS_NORMAL);
 		assertTrue(bRet);
 		
 		/* set write/read/unlink cluster addr */
@@ -405,11 +405,11 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		sleep(50);
 
 		/* verify */
-		bRet = check_sync(MASTERIP, clusterBAddr, STATUS_DELETED);
+		bRet = check_sync(clusterAAddr, clusterBAddr, STATUS_DELETED);
 		assertTrue(bRet);
 		
 		/* verify */
-		bRet = check_sync(MASTERIP, clusterCAddr, STATUS_DELETED);
+		bRet = check_sync(clusterAAddr, clusterCAddr, STATUS_DELETED);
 		assertTrue(bRet);
 		
 		/* Modify MinReplication */
@@ -429,18 +429,6 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 
 		caseName = "Function_06_sync_while_copy";
 		log.info(caseName + "===> start");
-		
-		/* Modify MinReplication */
-		bRet = setMinReplication(2);
-		Assert.assertTrue(bRet);
-		
-		/* Modify MaxReplication */
-		bRet = setMaxReplication(2);
-		Assert.assertTrue(bRet);
-
-		/* Check block copys */
-		bRet = chkBlockCntBothNormal(2);
-		Assert.assertTrue(bRet);
 		
 		/* set write/read/unlink cluster addr */
 		bRet = setClusterAddr(clusterAAddr);
@@ -462,13 +450,13 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		bRet = checkRateRun(SUCCESSRATE, WRITEONLY|READ|UNLINK);
 		Assert.assertTrue(bRet);
 		
-		/* Stop write cmd */
-		bRet = writeCmdStop();
+		/* Check block copys */
+		bRet = chkBlockCntBothNormal(BLOCKCOPYCNT);
 		Assert.assertTrue(bRet);
 		
-		/* Check block copys */
-		bRet = chkBlockCntBothNormal(2);
-		Assert.assertTrue(bRet);
+		/* Stop write cmd */
+		bRet = writeCmdStop();
+		Assert.assertTrue(bRet);	
 		
 		/* Start one ds */
 		bRet = startOneDs();
@@ -478,7 +466,7 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		sleep(50);
 		
 		/* verify */
-		bRet = check_sync(MASTERIP, clusterBAddr, STATUS_NORMAL);
+		bRet = check_sync(clusterAAddr, clusterBAddr, STATUS_NORMAL);
 		assertTrue(bRet);
 		
 		/* set write/read/unlink cluster addr */
@@ -512,11 +500,11 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		sleep(50);
 
 		/* verify */
-		bRet = check_sync(MASTERIP, clusterBAddr, STATUS_DELETED);
+		bRet = check_sync(clusterAAddr, clusterBAddr, STATUS_DELETED);
 		assertTrue(bRet);
 		
 		/* verify */
-		bRet = check_sync(MASTERIP, clusterCAddr, STATUS_DELETED);
+		bRet = check_sync(clusterAAddr, clusterCAddr, STATUS_DELETED);
 		assertTrue(bRet);
 		
 		/* Modify MinReplication */
@@ -549,7 +537,7 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		assertTrue(bRet);
 
 		/* wait 120 s */
-		sleep(120);
+		sleep(300);
 
 		/* Stop write cmd */
 		bRet = writeCmdStop();
@@ -561,7 +549,7 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		
 		sleep(50);
 		
-		bRet = check_sync(MASTERIP,clusterCAddr, STATUS_NORMAL);
+		bRet = check_sync(clusterAAddr,clusterCAddr, STATUS_NORMAL);
 		Assert.assertTrue(bRet);
 		
 		/* set write/read/unlink cluster addr */
@@ -573,7 +561,7 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		Assert.assertTrue(bRet);
 		
 		/* verify C */
-		bRet = check_sync(MASTERIP, clusterBAddr, STATUS_NORMAL);
+		bRet = check_sync(clusterAAddr, clusterBAddr, STATUS_NORMAL);
 		assertTrue(bRet);
 		
 		/* set write/read/unlink cluster addr */
@@ -598,10 +586,10 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
               
 		sleep(50);
 	 
-		bRet = check_sync(MASTERIP, clusterBAddr, STATUS_DELETED);
+		bRet = check_sync(clusterAAddr, clusterBAddr, STATUS_DELETED);
 		Assert.assertTrue(bRet);
 		
-		bRet = check_sync(MASTERIP, clusterCAddr, STATUS_DELETED);
+		bRet = check_sync(clusterAAddr, clusterCAddr, STATUS_DELETED);
 		Assert.assertTrue(bRet);
 	}
 	
@@ -610,7 +598,7 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 
 		boolean bRet = false;
 
-		caseName = "Function_08_sync_while__shutBC_startBC()";
+		caseName = "Function_08_sync_while_shutBC_startBC()";
 		log.info(caseName + "===> start");
 		
 		/* set write/read/unlink cluster addr */
@@ -640,31 +628,21 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		/* check cluster A status */
 		bRet = chkAlive();
 		Assert.assertTrue(bRet);
-		
-		/* Check block copys */
-		bRet = chkBlockCntBothNormal(BLOCKCOPYCNT);
-		assertTrue(bRet);
 
 		/* write to cluster A */
 		bRet = writeCmd();
 		assertTrue(bRet);
 
 		/* sleep 50 s */
-		sleep(50);
+		sleep(300);
 
 		/* Stop write cmd */
 		bRet = writeCmdStop();
 		assertTrue(bRet);
-		
-		/* sleep 10 s */
-		sleep(20);
 
 		/* start cluster B */
 		bRet = tfsGrid2.start();
 		Assert.assertTrue(bRet);
-
-		/* sleep 150 s */
-		sleep(150);
 
 		/* check cluster B alive */
 		bRet = tfsGrid2.isAlive();
@@ -674,9 +652,6 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		bRet = tfsGrid3.start();
 		Assert.assertTrue(bRet);
 
-		/* sleep 50 s */
-		sleep(50);
-
 		/* check cluster C start */
 		bRet = tfsGrid3.isAlive();
 		Assert.assertTrue(bRet);
@@ -684,7 +659,7 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		sleep(120);
 
 		/* verification */
-		bRet = check_sync(MASTERIP, clusterBAddr, STATUS_NORMAL);
+		bRet = check_sync(clusterAAddr, clusterBAddr, STATUS_NORMAL);
 		Assert.assertTrue(bRet);
 
 		/* set write/read/unlink cluster addr */
@@ -695,7 +670,7 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		bRet = chkFinalRetSuc();
 		Assert.assertTrue(bRet);
 		
-		bRet = check_sync(MASTERIP, clusterCAddr, STATUS_NORMAL);
+		bRet = check_sync(clusterAAddr, clusterCAddr, STATUS_NORMAL);
 		Assert.assertTrue(bRet);	
 		
 		/* set write/read/unlink cluster addr */
@@ -720,10 +695,10 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 
 		sleep(50);
 
-		bRet = check_sync(MASTERIP, clusterBAddr, STATUS_DELETED);
+		bRet = check_sync(clusterAAddr, clusterBAddr, STATUS_DELETED);
 		Assert.assertTrue(bRet);	
 		
-		bRet = check_sync(MASTERIP, clusterCAddr, STATUS_DELETED);
+		bRet = check_sync(clusterAAddr, clusterCAddr, STATUS_DELETED);
 		Assert.assertTrue(bRet);
 	}
 
@@ -741,7 +716,7 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 				.getServer(0).getIp(), 1, 5);
 	
 		/* wait 120s */
-		sleep(120);
+		sleep(300);
 		
 		/* set write/read/unlink cluster addr */
 		bRet = setClusterAddr(clusterAAddr);
@@ -832,7 +807,7 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		assertTrue(bRet);
 
 		/* wait 100s */
-		sleep(120);
+		sleep(300);
 
 		/* delete from clusterA */
 		bRet = unlinkCmd();
@@ -882,7 +857,7 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		bRet = writeCmd();
 		assertTrue(bRet);
 
-		sleep(120);
+		sleep(300);
 
 		/* kill one ds of A */
 		bRet = killOneDs();
