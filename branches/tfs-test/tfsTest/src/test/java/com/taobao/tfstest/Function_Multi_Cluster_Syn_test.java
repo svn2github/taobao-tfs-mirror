@@ -8,6 +8,7 @@ import org.apache.log4j.Logger;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Test;
 
 import com.taobao.gaia.AppGrid;
 import com.taobao.gaia.AppServer;
@@ -118,7 +119,7 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		return bRet;
 	}
 
-//	@Test
+	@Test
 	public void Function_01_clusterA_sync_clusterB() {
 
 		boolean bRet = false;
