@@ -59,6 +59,6 @@ class TestTfsSeed : public TestTfsCase {
 
     static tbsys::CThreadMutex _lock;
     static int _have_display_statis;
-    bool _alreadyUnlinked;
+    bool unlinked_;
 };
 #endif

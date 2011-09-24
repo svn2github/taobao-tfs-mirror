@@ -1,5 +1,5 @@
 /*
- * (C) 2007-2011 Alibaba Group Holding Limited.
+ * (C) 2007-2010 Alibaba Group Holding Limited.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -40,8 +40,8 @@ int TestTfsSeed::setUp()
   _unlinkRatio = CConfig::getCConfig().getInt("tfsseed","unlinkRatio");
 
   /* Init */ 
-  memset( (char *)_localKey, 0x00, LOCALKEYLEN );
-  sprintf( _localKey, "%s%d", "./localkey/",TestGFactory::_index );
+  memset((char *)_localKey, 0, LOCALKEYLEN);
+  sprintf( _localKey, "%s%d", "./localkey/", TestGFactory::_index );
 
   TestTfsSeed::_lock.unlock();
 
@@ -57,21 +57,22 @@ int TestTfsSeed::setUp()
 
 int TestTfsSeed::retryOpen(int retry_count)
 {
-
 	int retry = 0; 
 	int ret = -1;
 
 	TBSYS_LOG(DEBUG,"local key:%s",_localKey);
 
   /* Init */
-  memset( (char *)_fileName, 0x00, TFSNAMELEN );
+  memset((char *)_fileName, 0x00, TFSNAMELEN);
 
-	while ( retry++ < retry_count ) 
+	while (retry++ < retry_count) 
   {
     if (_largeFlag == 1)
     {
 	  	ret = _tfsFile->open((char *)NULL, (char *)".jpg", (char *)NULL, T_WRITE|T_LARGE, _localKey);
-    } else {
+    }
+    else
+    {
 	  	ret = _tfsFile->open((char *)NULL, (char *)".jpg", (char *)NULL, T_WRITE);
     }
 		if (ret > 0)
@@ -94,15 +95,19 @@ int TestTfsSeed::writeData(char *data,int size)
 
 	while(left > 0)
   {
-		ret = _tfsFile->write( _fd, data + nwrite, left);
+		ret = _tfsFile->write(_fd, data + nwrite, left);
 		if(ret < 0)
     {
 			TBSYS_LOG(ERROR,"write failed:%d",ret);
 			break;
-		} else if(ret > left){
+		}
+    else if(ret > left)
+    {
 			ret = left;
 			break;
-		} else {
+		}
+    else 
+    {
 			left -= ret;
 			nwrite += ret;
 		}
@@ -126,7 +131,7 @@ int TestTfsSeed::testWrite()
   for(int iLoop = 0; iLoop < _writeCount; iLoop ++)
   {
 	  _preCrc = Func::crc(_preCrc, _data, _unit);
-    ret = writeData( _data, _unit );
+    ret = writeData(_data, _unit);
     if(ret < 0 )
     {
       TBSYS_LOG(ERROR,"tfs_write failed:%d",ret);
@@ -147,7 +152,7 @@ int TestTfsSeed::testRead()
 	int64_t _totalSize = 0;
 	TfsFileStat info;
 
-  memset( (char *)&info, 0x00, sizeof(TfsFileStat) );
+  memset((char *)&info, 0, sizeof(TfsFileStat));
 
   int ret;
   if (_largeFlag == 1)
@@ -161,7 +166,9 @@ int TestTfsSeed::testRead()
   {
 		TBSYS_LOG(ERROR,"tfs_open failed:%d",ret);
 		return ret;
-	} else {
+	}
+  else
+  {
     _fd = ret;
   }
 
@@ -200,7 +207,7 @@ int TestTfsSeed::testRead()
     ret = -1;
   }
 
-	if(_totalSize != info.size_){
+	if (_totalSize != info.size_){
     TBSYS_LOG( ERROR, "File size is different: %d <> %d", _totalSize, info.size_ );
 		ret = -1;
 	}
@@ -227,10 +234,9 @@ int TestTfsSeed::testUnlink()
 
   if (ret != 0)
   {
-    TBSYS_LOG(ERROR, "Unlink failed:%d, filesize:%d", ret, fileSize);
+    TBSYS_LOG(ERROR, "Unlink file: %s failed: %d, filesize: %d", _fileName, ret, fileSize);
     return ret;
   }
-  _alreadyUnlinked = true;
 #if 0
   int fd = 0;
   if (_largeFlag)
@@ -271,17 +277,21 @@ int TestTfsSeed::testUnlink()
 int TestTfsSeed::run()
 {
 	int ret = -1;
+	int tmp_ret = -1;
 	int64_t start_time = 0;
 	int64_t end_time = 0;
-  char strCrc[ CRCSIZE ];
-  _alreadyUnlinked = false;
+  char strCrc[CRCSIZE];
+  unlinked_ = false;
 
-  memset( (char *)strCrc, 0x00, CRCSIZE );
+  memset((char *)strCrc, 0, CRCSIZE);
 
 	//start_time = CTimeUtil::getTime();
-	if( (ret = testWrite()) != 0 ){
+	if ((ret = testWrite()) != 0)
+  {
 		TBSYS_LOG(ERROR,"TestSeed::testWrite: FAILED: %d", ret);
-	} else {
+	}
+  else
+  {
 		TBSYS_LOG(INFO,"TestSeed::testWrite: SUCCESSFUL(%s)", _fileName);
   }
 
@@ -297,11 +307,12 @@ int TestTfsSeed::run()
   if (_writeVerifyFlag)
   {
     start_time = CTimeUtil::getTime();
-    if ( (ret = testRead()) != 0)
+    if ( (tmp_ret = testRead()) != 0)
     {
       TBSYS_LOG(ERROR,"TestSeed::testRead: FAILED: %d", ret);
-    }  else {
-      ret = 0;
+    }
+    else 
+    {
       TBSYS_LOG(INFO,"TestSeed::testRead: SUCCESSFUL");
     }
 
@@ -317,11 +328,13 @@ int TestTfsSeed::run()
     int randNo = rand() % 100;
     if (randNo < _unlinkRatio)
     {
-      if ( (ret = testUnlink()) != 0)
+      unlinked_ = true;
+      if ((tmp_ret = testUnlink()) != 0)
       {
         TBSYS_LOG(ERROR,"TestSeed::testUnlink: FAILED: %d", ret);
-      }  else {
-        ret = 0;
+      }
+      else
+      {
         TBSYS_LOG(INFO,"TestSeed::testUnlink: SUCCESSFUL");
       }
 
@@ -331,14 +344,14 @@ int TestTfsSeed::run()
     }
   }
 
-  if (_alreadyUnlinked == false && _fileName[0] != 0)
+  if (unlinked_ == false && TFS_SUCCESS == ret && _fileName[0] != 0)
   { 
     /* Edit the filename and crc */
-    snprintf( strCrc, CRCSIZE, "%u", _preCrc );
+    snprintf(strCrc, CRCSIZE, "%u", _preCrc);
     std::string record = _fileName;
     record = record + ".jpg " + strCrc;
     /* Save it */
-    _recordSet.insert( record );
+    _recordSet.insert(record);
   }
 
 out:
@@ -356,11 +369,12 @@ int TestTfsSeed::saveFilename()
   char *filelist = (char *)CConfig::getCConfig().getString("tfsseed",
          "seedlist_name");
 
-  if(filelist == NULL){
+  if (filelist == NULL)
+  {
     filelist = "./tfsseed_file_list.txt";                                                                                                                
   }
 
-  if((fp = fopen(filelist, "w")) == NULL)
+  if((fp = fopen(filelist, "a")) == NULL)
   {
       TBSYS_LOG(ERROR,"open write_file_list failed.");
       return -1;
@@ -368,7 +382,7 @@ int TestTfsSeed::saveFilename()
   std::set<std::string>::iterator it=_recordSet.begin();
   for(; it != _recordSet.end(); it++)
   {
-    fprintf(fp,"%s\n",it->c_str());
+    fprintf(fp, "%s\n", it->c_str());
   }
 
   fflush(fp);
@@ -385,7 +399,7 @@ void TestTfsSeed::tearDown()
 	bool need_display = false;
 
 	TestTfsSeed::_lock.lock();
-	if(_have_display_statis == 0)
+	if (_have_display_statis == 0)
 	{
 		TBSYS_LOG(INFO,"Statis will be displayed.");
 		_have_display_statis += 1;
@@ -400,9 +414,10 @@ void TestTfsSeed::tearDown()
   }
 	TestTfsSeed::_lock.unlock();
 
-	if(need_display){
-		TBSYS_LOG(INFO,"-------------------------------write statis-------------------------------------");
-		TestGFactory::_statisForWrite.displayStatis("write statis");
+	if (need_display)
+  {
+    TBSYS_LOG(INFO,"-------------------------------write statis-------------------------------------");
+  	TestGFactory::_statisForWrite.displayStatis("write statis");
     if (_writeVerifyFlag)
     {
 	    TBSYS_LOG(INFO,"-------------------------------read statis-------------------------------------");
