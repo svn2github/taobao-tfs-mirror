@@ -98,6 +98,9 @@ public class FailOverBaseCase {
 	final public String EMERGENCY        = "emergency";
 	final public String NORMAL           = "normal";
 	final public String DELETEBLOCK		 = "delete block! logic blockid";
+	/* file status, used in check_sync */
+	final public int STATUS_NORMAL = 0;
+	final public int STATUS_DELETED = 1;
 
 	/* Plan type */
 	enum PlanType 
@@ -2535,10 +2538,47 @@ public class FailOverBaseCase {
 				return bRet;
 			}
 			log.info("-------------->Executed tfstool result is: " + chkResult.get(0));
-			assertEquals(chkVal, Integer.parseInt(chkResult.get(0)));
+			// if the deleted file has been compacted, will return 8025
+			if (chkResult.get(0).contains("8025") && STATUS_DELETED == chkVal)
+				return true;
+			else
+				assertEquals(chkVal, Integer.parseInt(chkResult.get(0)));
 		}
 		return bRet;
 	}
+	
+	/**
+	 * @author mingyan 
+	 * @param tfsAppGrid
+	 * @param exist
+	 * @return
+	 */
+	public boolean chkSecondQueue(AppGrid tfsAppGrid, boolean exist) 
+	{
+		boolean bRet = false;
+		AppServer cs = tfsAppGrid.getCluster(DSINDEX).getServer(0);
+		String targetIp = cs.getIp();
+		String dir = cs.getDir() + "/dataserver_1/mirror/secondqueue";
+		
+		/* wait for secondqueue created */
+		int check_times = BLOCK_CHK_TIME;
+		for (int i = 0; i < check_times; i++)
+		{
+			bRet = File.checkDirBase(targetIp, dir);
+			if (true == exist)
+			{
+				if (true == bRet)
+					return bRet;			
+			}
+			else
+			{
+				if (false == bRet)
+					return true;
+			}
+		}
+		return false;
+	}
+	
 	public boolean killOneDsForce(AppGrid tfsAppGrid) {
 		boolean bRet = false;
 		log.info("Kill one ds start ===>");
@@ -2576,6 +2616,32 @@ public class FailOverBaseCase {
 		AppServer cs = tfsAppGrid.getCluster(DSINDEX).getServer(0);
 		bRet = cs.stop(KillTypeEnum.NORMALKILL, WAITTIME);
 		log.info("Kill one ds end ===>");
+		return bRet;
+	}
+	
+	public boolean restoreOneDs(AppGrid tfsAppGrid) {
+		boolean bRet = false;
+		log.info("Restore one ds start ===>");
+		String src_bin_file = tfsAppGrid.getCluster(DSINDEX).getServer(0).getDir() + "/bin/dataserver132";
+		String dest_bin_file = tfsAppGrid.getCluster(DSINDEX).getServer(0).getDir() + "/bin/dataserver";
+		
+		bRet = File.fileCopy(tfsAppGrid.getCluster(DSINDEX).getServer(0).getIp(), src_bin_file, dest_bin_file);
+		log.info("Restore one ds end ===>");
+		return bRet;
+	}
+	
+	public boolean replaceOneDs(AppGrid tfsAppGrid) {
+		boolean bRet = false;
+		log.info("Replace one ds start ===>");
+		String bak_bin_file = tfsAppGrid.getCluster(DSINDEX).getServer(0).getDir() + "/bin/dataserver132";
+		String src_bin_file = tfsAppGrid.getCluster(DSINDEX).getServer(0).getDir() + "/bin/dataserver14";
+		String dest_bin_file = tfsAppGrid.getCluster(DSINDEX).getServer(0).getDir() + "/bin/dataserver";
+		
+		bRet = File.fileCopy(tfsAppGrid.getCluster(DSINDEX).getServer(0).getIp(), dest_bin_file, bak_bin_file);
+		if (false == bRet)
+			return bRet;
+		bRet = File.fileCopy(tfsAppGrid.getCluster(DSINDEX).getServer(0).getIp(), src_bin_file, dest_bin_file);
+		log.info("Replace one ds end ===>");
 		return bRet;
 	}
 	
