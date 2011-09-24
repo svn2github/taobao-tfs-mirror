@@ -142,7 +142,7 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		Assert.assertTrue(bRet);
 
 		/* rename log */
-		bRet = mvLogFile(tfsReadClient.getLogs(), clusterBAddr);
+		bRet = mvLogFile(tfsReadClient.getLogs(), clusterBIP);
 		Assert.assertTrue(bRet);
 		
 		/* verify */
@@ -158,7 +158,7 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		Assert.assertTrue(bRet);
 		
 		/* rename log */
-		bRet = mvLogFile(tfsReadClient.getLogs(), clusterCAddr);
+		bRet = mvLogFile(tfsReadClient.getLogs(), clusterCIP);
 		Assert.assertTrue(bRet);
 		
 		/* delete from cluster C */
@@ -297,7 +297,7 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		Assert.assertTrue(bRet);
 		
 		/* rename log */
-		bRet = mvLogFile(tfsReadClient.getLogs(), clusterBAddr);
+		bRet = mvLogFile(tfsReadClient.getLogs(), clusterBIP);
 		Assert.assertTrue(bRet);
 		
 		/* set write/read/unlink cluster addr */
@@ -309,7 +309,7 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		Assert.assertTrue(bRet);
 		
 		/* rename log */
-		bRet = mvLogFile(tfsReadClient.getLogs(), clusterCAddr);
+		bRet = mvLogFile(tfsReadClient.getLogs(), clusterCIP);
 		Assert.assertTrue(bRet);
 		
 		/* set write/read/unlink cluster addr */
@@ -402,7 +402,7 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		Assert.assertTrue(bRet);
 		
 		/* rename log */
-		bRet = mvLogFile(tfsReadClient.getLogs(), clusterBAddr);
+		bRet = mvLogFile(tfsReadClient.getLogs(), clusterBIP);
 		Assert.assertTrue(bRet);
 		
 		/* set write/read/unlink cluster addr */
@@ -414,7 +414,7 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		Assert.assertTrue(bRet);
 		
 		/* rename log */
-		bRet = mvLogFile(tfsReadClient.getLogs(), clusterCAddr);
+		bRet = mvLogFile(tfsReadClient.getLogs(), clusterCIP);
 		Assert.assertTrue(bRet);
 		
 		/* set write/read/unlink cluster addr */
@@ -509,7 +509,7 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		Assert.assertTrue(bRet);
 		
 		/* rename log */
-		bRet = mvLogFile(tfsReadClient.getLogs(), clusterBAddr);
+		bRet = mvLogFile(tfsReadClient.getLogs(), clusterBIP);
 		Assert.assertTrue(bRet);
 		
 		/* set write/read/unlink cluster addr */
@@ -521,7 +521,7 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		Assert.assertTrue(bRet);
 		
 		/* rename log */
-		bRet = mvLogFile(tfsReadClient.getLogs(), clusterCAddr);
+		bRet = mvLogFile(tfsReadClient.getLogs(), clusterCIP);
 		Assert.assertTrue(bRet);
 		
 		/* set write/read/unlink cluster addr */
@@ -600,7 +600,7 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		Assert.assertTrue(bRet);
 		
 		/* rename log */
-		bRet = mvLogFile(tfsReadClient.getLogs(), clusterBAddr);
+		bRet = mvLogFile(tfsReadClient.getLogs(), clusterBIP);
 		Assert.assertTrue(bRet);
 		
 		/* verify C */
@@ -616,7 +616,7 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		Assert.assertTrue(bRet);
 		
 		/* rename log */
-		bRet = mvLogFile(tfsReadClient.getLogs(), clusterCAddr);
+		bRet = mvLogFile(tfsReadClient.getLogs(), clusterCIP);
 		Assert.assertTrue(bRet);
 		
 		/* set write/read/unlink cluster addr */
@@ -718,7 +718,7 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		Assert.assertTrue(bRet);
 		
 		/* rename log */
-		bRet = mvLogFile(tfsReadClient.getLogs(), clusterBAddr);
+		bRet = mvLogFile(tfsReadClient.getLogs(), clusterBIP);
 		Assert.assertTrue(bRet);
 		
 		bRet = check_sync(clusterAAddr, clusterCAddr, STATUS_NORMAL);
@@ -733,7 +733,7 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		Assert.assertTrue(bRet);
 		
 		/* rename log */
-		bRet = mvLogFile(tfsReadClient.getLogs(), clusterCAddr);
+		bRet = mvLogFile(tfsReadClient.getLogs(), clusterCIP);
 		Assert.assertTrue(bRet);
 		
 		/* set write/read/unlink cluster addr */
@@ -809,7 +809,7 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		Assert.assertTrue(bRet);
 		
 		/* rename log */
-		bRet = mvLogFile(tfsReadClient.getLogs(), clusterBAddr);
+		bRet = mvLogFile(tfsReadClient.getLogs(), clusterBIP);
 		Assert.assertTrue(bRet);
 		
 		bRet = check_sync(MASTERIP, clusterCAddr, STATUS_NORMAL);
@@ -824,7 +824,7 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		Assert.assertTrue(bRet);
 		
 		/* rename log */
-		bRet = mvLogFile(tfsReadClient.getLogs(), clusterCAddr);
+		bRet = mvLogFile(tfsReadClient.getLogs(), clusterCIP);
 		Assert.assertTrue(bRet);
 		
 		/* set write/read/unlink cluster addr */
@@ -951,7 +951,7 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		Assert.assertTrue(bRet);
 		
 		/* rename log */
-		bRet = mvLogFile(tfsReadClient.getLogs(), clusterBAddr);
+		bRet = mvLogFile(tfsReadClient.getLogs(), clusterBIP);
 		Assert.assertTrue(bRet);
 		
 		/* verify */
@@ -967,7 +967,7 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		Assert.assertTrue(bRet);
 		
 		/* rename log */
-		bRet = mvLogFile(tfsReadClient.getLogs(), clusterCAddr);
+		bRet = mvLogFile(tfsReadClient.getLogs(), clusterCIP);
 		Assert.assertTrue(bRet);
 	}
 	
@@ -1018,7 +1018,7 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		Assert.assertTrue(bRet);
 		
 		/* rename log */
-		bRet = mvLogFile(tfsReadClient.getLogs(), clusterBAddr);
+		bRet = mvLogFile(tfsReadClient.getLogs(), clusterBIP);
 		Assert.assertTrue(bRet);
 		
 		/* verify */
@@ -1034,7 +1034,7 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		Assert.assertTrue(bRet);
 		
 		/* rename log */
-		bRet = mvLogFile(tfsReadClient.getLogs(), clusterCAddr);
+		bRet = mvLogFile(tfsReadClient.getLogs(), clusterCIP);
 		Assert.assertTrue(bRet);
 		
 	}
