@@ -1055,6 +1055,16 @@ public class FailOverBaseCase {
 		return bRet;
 	}
 	
+	public boolean mvUnlinkFile()
+	{
+		boolean bRet = false;
+		String UnlinkFile = TEST_HOME + "/tfsunlinked_file_list.txt";
+		bRet = File.fileCopy(CLIENTIP, UnlinkFile, UnlinkFile + caseName);
+		if (bRet == false) return bRet;
+		bRet = File.fileDel(CLIENTIP, UnlinkFile);
+		return bRet;
+	}
+	
 	public boolean mvLogFile(String logName, String suffix)
 	{
 		boolean bRet = false;

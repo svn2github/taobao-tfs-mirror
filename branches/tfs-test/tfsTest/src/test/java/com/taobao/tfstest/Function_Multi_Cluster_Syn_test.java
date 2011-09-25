@@ -1358,6 +1358,10 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		bRet = mvSeedFile();
 		Assert.assertTrue(bRet);
 
+		/* Move the seed file list */
+		bRet = mvUnlinkFile();
+		Assert.assertTrue(bRet);
+		
 		/* Clean the caseName */
 		caseName = "";
 	}
