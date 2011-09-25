@@ -1076,13 +1076,80 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		
 	}
 	
-	/* make sure the first ds of cluster B(1.3ns) has dataserver(132) and dataserver14 in bin dir*/
 	@Test
-	public void Function_12_happy_compatibility() {
+	public void Function_12_happy_132ds_to_141ds_sync() {
 
 		boolean bRet = false;
 
-		caseName = "Function_12_happy_compatibility";
+		caseName = "Function_12_happy_132ds_to_141ds_sync";
+		log.info(caseName + "===> start");
+
+		/* set write/read/unlink cluster addr */
+		bRet = setClusterAddr(clusterBAddr);
+		assertTrue(bRet);
+
+		/* write process */
+		bRet = writeCmd();
+		assertTrue(bRet);
+
+		/* wait120 s */
+		sleep(120);
+
+		/* stop write proccess */
+		bRet = writeCmdStop();
+		assertTrue(bRet);
+
+		sleep(50);
+		
+		/* set write/read/unlink cluster addr */
+		bRet = setClusterAddr(clusterAAddr);
+		assertTrue(bRet);
+
+		/* Read file */
+		bRet = chkFinalRetSuc();
+		Assert.assertTrue(bRet);
+		
+		/* set write/read/unlink cluster addr */
+		bRet = setClusterAddr(clusterBAddr);
+		assertTrue(bRet);
+		
+		/* unlink from cluster B */
+		bRet = unlinkCmd();
+
+		/* Monitor the unlink process */
+		bRet = unlinkCmdMon();
+		Assert.assertTrue(bRet);
+		
+		sleep(50);
+		
+		/* set read file list */
+		bRet = setReadFileList(UNLINKEDFILELISTNAME);
+		assertTrue(bRet);
+		
+		/* set write/read/unlink cluster addr */
+		bRet = setClusterAddr(clusterAAddr);
+		assertTrue(bRet);
+		
+		/* Read file */
+		bRet = chkFinalRetFail();
+		Assert.assertTrue(bRet);
+		
+		/* set read file list */
+		bRet = setReadFileList(SEEDFILELISTNAME);
+		assertTrue(bRet);
+		
+		/* Move the unlink file list */
+		bRet = mvUnlinkFile();
+		Assert.assertTrue(bRet);
+	}
+	
+	/* make sure the first ds of cluster B(1.3ns) has dataserver(132) and dataserver14 in bin dir*/
+	@Test
+	public void Function_13_happy_compatibility() {
+
+		boolean bRet = false;
+
+		caseName = "Function_13_happy_compatibility";
 		log.info(caseName + "===> start");
 		
 		/* set write/read/unlink cluster addr */
@@ -1094,7 +1161,7 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		assertTrue(bRet);
 
 		/* wait120 s */
-		sleep(300);
+		sleep(120);
 		
 		/* kill one ds of B */
 		bRet = killAllDsOneSide(tfsGrid2);
@@ -1112,7 +1179,7 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		bRet = startAllDsOneSide(tfsGrid2);
 		assertTrue(bRet);
 		
-		sleep(50);
+		sleep(360);
 		
 		/* set write/read/unlink cluster addr */
 		bRet = setClusterAddr(clusterAAddr);
@@ -1170,11 +1237,11 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 	
 	/* make sure the first ds of cluster B(1.3ns) has dataserver(132) and dataserver14 in bin dir*/
 	//@Test
-	public void Function_13_unhappy_compatibility() {
+	public void Function_14_unhappy_compatibility() {
 
 		boolean bRet = false;
 
-		caseName = "Function_13_unhappy_compatibility";
+		caseName = "Function_14_unhappy_compatibility";
 		log.info(caseName + "===> start");
 		
 		/* set write/read/unlink cluster addr */
@@ -1186,7 +1253,7 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		assertTrue(bRet);
 
 		/* wait120 s */
-		sleep(150);
+		sleep(120);
 		
 		/* block B ds with A ns TODO*/
 		bRet = Proc.portOutputBlock(tfsGrid2.getCluster(DSINDEX).getServer(0).getIp(),
@@ -1225,7 +1292,7 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		bRet = chkSecondQueue(tfsGrid2, false);
 		assertTrue(bRet);
 		
-		sleep(50);
+		sleep(360);
 		
 		/* set write/read/unlink cluster addr */
 		bRet = setClusterAddr(clusterAAddr);
