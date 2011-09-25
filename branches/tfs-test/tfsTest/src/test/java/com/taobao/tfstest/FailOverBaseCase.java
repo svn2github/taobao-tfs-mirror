@@ -152,6 +152,9 @@ public class FailOverBaseCase {
 	final public String UNITSIZEMAX = "unit_max";
 	final public String READTYPE = "largeFlag";
 	final public String UNLINKRATIO = "unlinkRatio";
+	final public String FILELISTNAME = "filelist_name";
+	final public String SEEDFILELISTNAME = "tfsseed_file_list.txt";
+	final public String UNLINKEDFILELISTNAME = "tfsunlinked_file_list.txt";	
 	final public int LOOPON = 1;
 	final public int LOOPOFF = 0;
 	
@@ -348,6 +351,7 @@ public class FailOverBaseCase {
 		return bRet;
 	}
 	
+	/********************** modify tfsControlPress config file functions begin*************/
 	/**
 	 * 
 	 * @param iSize
@@ -397,6 +401,18 @@ public class FailOverBaseCase {
 	
 	/**
 	 * 
+	 * @param iUnlinkRatio
+	 * @return
+	 */
+	public boolean setReadFileList(String filelist_name)
+	{
+		boolean bRet = false;
+		bRet = conf.confReplaceSingleByPart(CLIENTIP, CLIENTCONF, "tfsread", FILELISTNAME, filelist_name);
+		return bRet;
+	}
+	
+	/**
+	 * 
 	 * @param nsAddr
 	 * @return
 	 */	
@@ -406,6 +422,8 @@ public class FailOverBaseCase {
 		bRet = conf.confReplaceSingleByPart(CLIENTIP, CLIENTCONF, "public", NSIP, nsAddr);
 		return bRet;
 	}
+	
+	/********************** modify tfsControlPress config file functions end*************/
 
 	/**
 	 * 

@@ -58,10 +58,6 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		assertTrue(bRet);
 
 		sleep(50);
-
-		/* verify */
-		//bRet = check_sync(clusterAAddr, clusterBAddr, STATUS_NORMAL);
-		//assertTrue(bRet);
 		
 		/* set write/read/unlink cluster addr */
 		bRet = setClusterAddr(clusterBAddr);
@@ -70,10 +66,6 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		/* Read file */
 		bRet = chkFinalRetSuc();
 		Assert.assertTrue(bRet);
-		
-		/* verify */
-		//bRet = check_sync(clusterAAddr, clusterCAddr, STATUS_NORMAL);
-		//assertTrue(bRet);
 		
 		/* set write/read/unlink cluster addr */
 		bRet = setClusterAddr(clusterCAddr);
@@ -96,8 +88,28 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		
 		sleep(50);
 		
-		/* verify */
-		bRet = check_sync(clusterAAddr, clusterBAddr, STATUS_DELETED);
+		/* set read file list */
+		bRet = setReadFileList(UNLINKEDFILELISTNAME);
+		assertTrue(bRet);
+		
+		/* set write/read/unlink cluster addr */
+		bRet = setClusterAddr(clusterBAddr);
+		assertTrue(bRet);
+		
+		/* Read file */
+		bRet = chkFinalRetFail();
+		Assert.assertTrue(bRet);
+
+		/* set write/read/unlink cluster addr */
+		bRet = setClusterAddr(clusterCAddr);
+		assertTrue(bRet);
+		
+		/* Read file */
+		bRet = chkFinalRetFail();
+		Assert.assertTrue(bRet);
+		
+		/* set read file list */
+		bRet = setReadFileList(SEEDFILELISTNAME);
 		assertTrue(bRet);
 	}
 
@@ -126,10 +138,6 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 
 		sleep(50);
 		
-		/* verify */
-		//bRet = check_sync(clusterAAddr, clusterBAddr, STATUS_NORMAL);
-		//assertTrue(bRet);
-		
 		/* set write/read/unlink cluster addr */
 		bRet = setClusterAddr(clusterBAddr);
 		assertTrue(bRet);
@@ -141,10 +149,6 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		/* rename log */
 		bRet = mvLogFile(tfsReadClient.getLogs() + caseName, clusterBIP);
 		Assert.assertTrue(bRet);
-		
-		/* verify */
-		//bRet = check_sync(clusterAAddr, clusterCAddr, STATUS_NORMAL);
-		//assertTrue(bRet);
 		
 		/* set write/read/unlink cluster addr */
 		bRet = setClusterAddr(clusterCAddr);
@@ -166,18 +170,30 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		bRet = unlinkCmdMon();
 		Assert.assertTrue(bRet);
 
-		/* Check rate */
-//		bRet = checkRateEnd(FAILRATE, UNLINK);
-//		Assert.assertTrue(bRet);
-
 		sleep(100);
 		
-		/* verify */
-		bRet = check_sync(clusterCAddr, clusterAAddr, STATUS_DELETED);
+		/* set read file list */
+		bRet = setReadFileList(UNLINKEDFILELISTNAME);
 		assertTrue(bRet);
 		
-		/* verify */
-		bRet = check_sync(clusterCAddr, clusterBAddr, STATUS_DELETED);
+		/* set write/read/unlink cluster addr */
+		bRet = setClusterAddr(clusterBAddr);
+		assertTrue(bRet);
+		
+		/* Read file */
+		bRet = chkFinalRetFail();
+		Assert.assertTrue(bRet);
+
+		/* set write/read/unlink cluster addr */
+		bRet = setClusterAddr(clusterAAddr);
+		assertTrue(bRet);
+		
+		/* Read file */
+		bRet = chkFinalRetFail();
+		Assert.assertTrue(bRet);
+		
+		/* set read file list */
+		bRet = setReadFileList(SEEDFILELISTNAME);
 		assertTrue(bRet);
 	}
 
@@ -215,10 +231,6 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		/* wait for balance */
 		sleep(50);
 		
-		/* verify */
-		//bRet = check_sync(clusterAAddr, clusterBAddr, STATUS_NORMAL);
-		//assertTrue(bRet);
-		
 		/* set write/read/unlink cluster addr */
 		bRet = setClusterAddr(clusterBAddr);
 		assertTrue(bRet);
@@ -241,8 +253,28 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 
 		sleep(50);
 
-		/* verify */
-		bRet = check_sync(clusterAAddr, clusterBAddr, STATUS_DELETED);
+		/* set read file list */
+		bRet = setReadFileList(UNLINKEDFILELISTNAME);
+		assertTrue(bRet);
+		
+		/* set write/read/unlink cluster addr */
+		bRet = setClusterAddr(clusterBAddr);
+		assertTrue(bRet);
+		
+		/* Read file */
+		bRet = chkFinalRetFail();
+		Assert.assertTrue(bRet);
+
+		/* set write/read/unlink cluster addr */
+		bRet = setClusterAddr(clusterCAddr);
+		assertTrue(bRet);
+		
+		/* Read file */
+		bRet = chkFinalRetFail();
+		Assert.assertTrue(bRet);
+		
+		/* set read file list */
+		bRet = setReadFileList(SEEDFILELISTNAME);
 		assertTrue(bRet);
 	}
 	
@@ -275,10 +307,6 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		/* wait  */
 		sleep(50);
 		
-		/* verify */
-		//bRet = check_sync(MASTERIP, clusterBAddr, STATUS_NORMAL);
-		//assertTrue(bRet);
-		
 		/* set write/read/unlink cluster addr */
 		bRet = setClusterAddr(clusterBAddr);
 		assertTrue(bRet);
@@ -317,13 +345,28 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 
 		sleep(50);
 
-		/* TODO: may be compacted tfstoo stat will return 8025*/
-		/* verify */
-		bRet = check_sync(clusterAAddr, clusterBAddr, STATUS_DELETED);
+		/* set read file list */
+		bRet = setReadFileList(UNLINKEDFILELISTNAME);
 		assertTrue(bRet);
 		
-		/* verify */
-		bRet = check_sync(clusterAAddr, clusterCAddr, STATUS_DELETED);
+		/* set write/read/unlink cluster addr */
+		bRet = setClusterAddr(clusterBAddr);
+		assertTrue(bRet);
+		
+		/* Read file */
+		bRet = chkFinalRetFail();
+		Assert.assertTrue(bRet);
+
+		/* set write/read/unlink cluster addr */
+		bRet = setClusterAddr(clusterCAddr);
+		assertTrue(bRet);
+		
+		/* Read file */
+		bRet = chkFinalRetFail();
+		Assert.assertTrue(bRet);
+		
+		/* set read file list */
+		bRet = setReadFileList(SEEDFILELISTNAME);
 		assertTrue(bRet);
 		
 		/* Set unlink ratio */
@@ -353,9 +396,6 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		assertTrue(bRet);
 
 		sleep(300);
-		/* Check the rate of write process */
-		//bRet = checkRateRun(SUCCESSRATE, WRITEONLY|READ|UNLINK);
-		//Assert.assertTrue(bRet);
 		
 		/* Modify MinReplication */
 		bRet = setMinReplication(BLOCKCOPYCNT-1);
@@ -369,7 +409,6 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		bRet = chkBlockCntBothNormal(BLOCKCOPYCNT-1);
 		Assert.assertTrue(bRet);
 
-		sleep(300);
 		/* Check the rate of write process */
 		//bRet = checkRateRun(SUCCESSRATE, WRITEONLY|READ|UNLINK);
 		//Assert.assertTrue(bRet);
@@ -380,10 +419,6 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		
 		/* wait  */
 		sleep(50);
-		
-		/* verify */
-		//bRet = check_sync(clusterAAddr, clusterBAddr, STATUS_NORMAL);
-		//assertTrue(bRet);
 		
 		/* set write/read/unlink cluster addr */
 		bRet = setClusterAddr(clusterBAddr);
@@ -423,12 +458,28 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 
 		sleep(50);
 
-		/* verify */
-		bRet = check_sync(clusterAAddr, clusterBAddr, STATUS_DELETED);
+		/* set read file list */
+		bRet = setReadFileList(UNLINKEDFILELISTNAME);
 		assertTrue(bRet);
 		
-		/* verify */
-		bRet = check_sync(clusterAAddr, clusterCAddr, STATUS_DELETED);
+		/* set write/read/unlink cluster addr */
+		bRet = setClusterAddr(clusterBAddr);
+		assertTrue(bRet);
+		
+		/* Read file */
+		bRet = chkFinalRetFail();
+		Assert.assertTrue(bRet);
+
+		/* set write/read/unlink cluster addr */
+		bRet = setClusterAddr(clusterCAddr);
+		assertTrue(bRet);
+		
+		/* Read file */
+		bRet = chkFinalRetFail();
+		Assert.assertTrue(bRet);
+		
+		/* set read file list */
+		bRet = setReadFileList(SEEDFILELISTNAME);
 		assertTrue(bRet);
 		
 		/* Modify MinReplication */
@@ -459,19 +510,11 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 
 		sleep(300);
 		
-		/* Check the rate of write process */
-		//bRet = checkRateRun(SUCCESSRATE, WRITEONLY|READ|UNLINK);
-		//Assert.assertTrue(bRet);
-		
 		/* Kill one ds */
 		bRet = killOneDs();
 		Assert.assertTrue(bRet);
 		
 		sleep(300);
-		
-		/* Check the rate of write process */
-		//bRet = checkRateRun(SUCCESSRATE, WRITEONLY|READ|UNLINK);
-		//Assert.assertTrue(bRet);
 		
 		/* Check block copys */
 		bRet = chkBlockCntBothNormal(BLOCKCOPYCNT);
@@ -487,10 +530,6 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		
 		/* wait  */
 		sleep(50);
-		
-		/* verify */
-		//bRet = check_sync(clusterAAddr, clusterBAddr, STATUS_NORMAL);
-		//assertTrue(bRet);
 		
 		/* set write/read/unlink cluster addr */
 		bRet = setClusterAddr(clusterBAddr);
@@ -530,12 +569,28 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 
 		sleep(50);
 
-		/* verify */
-		bRet = check_sync(clusterAAddr, clusterBAddr, STATUS_DELETED);
+		/* set read file list */
+		bRet = setReadFileList(UNLINKEDFILELISTNAME);
 		assertTrue(bRet);
 		
-		/* verify */
-		bRet = check_sync(clusterAAddr, clusterCAddr, STATUS_DELETED);
+		/* set write/read/unlink cluster addr */
+		bRet = setClusterAddr(clusterBAddr);
+		assertTrue(bRet);
+		
+		/* Read file */
+		bRet = chkFinalRetFail();
+		Assert.assertTrue(bRet);
+
+		/* set write/read/unlink cluster addr */
+		bRet = setClusterAddr(clusterCAddr);
+		assertTrue(bRet);
+		
+		/* Read file */
+		bRet = chkFinalRetFail();
+		Assert.assertTrue(bRet);
+		
+		/* set read file list */
+		bRet = setReadFileList(SEEDFILELISTNAME);
 		assertTrue(bRet);
 		
 		/* Modify MinReplication */
@@ -580,9 +635,6 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		
 		sleep(50);
 		
-		//bRet = check_sync(clusterAAddr,clusterCAddr, STATUS_NORMAL);
-		//Assert.assertTrue(bRet);
-		
 		/* set write/read/unlink cluster addr */
 		bRet = setClusterAddr(clusterCAddr);
 		assertTrue(bRet);
@@ -594,10 +646,6 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		/* rename log */
 		bRet = mvLogFile(tfsReadClient.getLogs() + caseName, clusterBIP);
 		Assert.assertTrue(bRet);
-		
-		/* verify C */
-		//bRet = check_sync(clusterAAddr, clusterBAddr, STATUS_NORMAL);
-		//assertTrue(bRet);
 		
 		/* set write/read/unlink cluster addr */
 		bRet = setClusterAddr(clusterBAddr);
@@ -625,11 +673,29 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
               
 		sleep(50);
 	 
-		bRet = check_sync(clusterAAddr, clusterBAddr, STATUS_DELETED);
+		/* set read file list */
+		bRet = setReadFileList(UNLINKEDFILELISTNAME);
+		assertTrue(bRet);
+		
+		/* set write/read/unlink cluster addr */
+		bRet = setClusterAddr(clusterBAddr);
+		assertTrue(bRet);
+		
+		/* Read file */
+		bRet = chkFinalRetFail();
+		Assert.assertTrue(bRet);
+
+		/* set write/read/unlink cluster addr */
+		bRet = setClusterAddr(clusterCAddr);
+		assertTrue(bRet);
+		
+		/* Read file */
+		bRet = chkFinalRetFail();
 		Assert.assertTrue(bRet);
 		
-		bRet = check_sync(clusterAAddr, clusterCAddr, STATUS_DELETED);
-		Assert.assertTrue(bRet);
+		/* set read file list */
+		bRet = setReadFileList(SEEDFILELISTNAME);
+		assertTrue(bRet);
 	}
 	
 //	@Test
@@ -697,10 +763,6 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
    
 		sleep(120);
 
-		/* verification */
-		//bRet = check_sync(clusterAAddr, clusterBAddr, STATUS_NORMAL);
-		//Assert.assertTrue(bRet);
-
 		/* set write/read/unlink cluster addr */
 		bRet = setClusterAddr(clusterBAddr);
 		assertTrue(bRet);
@@ -711,10 +773,7 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		
 		/* rename log */
 		bRet = mvLogFile(tfsReadClient.getLogs() + caseName, clusterBIP);
-		Assert.assertTrue(bRet);
-		
-		//bRet = check_sync(clusterAAddr, clusterCAddr, STATUS_NORMAL);
-		//Assert.assertTrue(bRet);	
+		Assert.assertTrue(bRet);	
 		
 		/* set write/read/unlink cluster addr */
 		bRet = setClusterAddr(clusterCAddr);
@@ -742,11 +801,29 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 
 		sleep(50);
 
-		bRet = check_sync(clusterAAddr, clusterBAddr, STATUS_DELETED);
-		Assert.assertTrue(bRet);	
+		/* set read file list */
+		bRet = setReadFileList(UNLINKEDFILELISTNAME);
+		assertTrue(bRet);
 		
-		bRet = check_sync(clusterAAddr, clusterCAddr, STATUS_DELETED);
+		/* set write/read/unlink cluster addr */
+		bRet = setClusterAddr(clusterBAddr);
+		assertTrue(bRet);
+		
+		/* Read file */
+		bRet = chkFinalRetFail();
 		Assert.assertTrue(bRet);
+
+		/* set write/read/unlink cluster addr */
+		bRet = setClusterAddr(clusterCAddr);
+		assertTrue(bRet);
+		
+		/* Read file */
+		bRet = chkFinalRetFail();
+		Assert.assertTrue(bRet);
+		
+		/* set read file list */
+		bRet = setReadFileList(SEEDFILELISTNAME);
+		assertTrue(bRet);
 	}
 
 //	@Test
@@ -788,10 +865,6 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		/* wait 100 s */
 		sleep(100);
 		
-		/* verification */
-		//bRet = check_sync(MASTERIP, clusterBAddr, STATUS_NORMAL);
-		//assertTrue(bRet);
-		
 		/* set write/read/unlink cluster addr */
 		bRet = setClusterAddr(clusterBAddr);
 		assertTrue(bRet);
@@ -803,9 +876,6 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		/* rename log */
 		bRet = mvLogFile(tfsReadClient.getLogs() + caseName, clusterBIP);
 		Assert.assertTrue(bRet);
-		
-		//bRet = check_sync(MASTERIP, clusterCAddr, STATUS_NORMAL);
-		//assertTrue(bRet);
 		
 		/* set write/read/unlink cluster addr */
 		bRet = setClusterAddr(clusterCAddr);
@@ -833,11 +903,29 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		
 		sleep(50);
 	
-		bRet = check_sync(MASTERIP, clusterBAddr, STATUS_DELETED);
-		Assert.assertTrue(bRet);	
+		/* set read file list */
+		bRet = setReadFileList(UNLINKEDFILELISTNAME);
+		assertTrue(bRet);
 		
-		bRet = check_sync(MASTERIP, clusterCAddr, STATUS_DELETED);
-		Assert.assertTrue(bRet);		
+		/* set write/read/unlink cluster addr */
+		bRet = setClusterAddr(clusterBAddr);
+		assertTrue(bRet);
+		
+		/* Read file */
+		bRet = chkFinalRetFail();
+		Assert.assertTrue(bRet);
+
+		/* set write/read/unlink cluster addr */
+		bRet = setClusterAddr(clusterCAddr);
+		assertTrue(bRet);
+		
+		/* Read file */
+		bRet = chkFinalRetFail();
+		Assert.assertTrue(bRet);
+		
+		/* set read file list */
+		bRet = setReadFileList(SEEDFILELISTNAME);
+		assertTrue(bRet);	
 	}
 
 	//@Test
@@ -874,10 +962,6 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		/* Monitor the unlink process */
 		bRet = unlinkCmdMon();
 		Assert.assertTrue(bRet);
-
-		/* Check rate */
-	//	bRet = checkRateEnd(FAILRATE, UNLINK);
-	//	Assert.assertTrue(bRet);
 
 		sleep(50);
 		
@@ -929,10 +1013,6 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		assertTrue(bRet);
 		
 		sleep(50); //TODO: should be longer?
-		
-		/* verify */
-		//bRet = check_sync(clusterAAddr, clusterBAddr, STATUS_NORMAL);
-		//assertTrue(bRet);
 
 		/* set write/read/unlink cluster addr */
 		bRet = setClusterAddr(clusterBAddr);
@@ -945,10 +1025,6 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		/* rename log */
 		bRet = mvLogFile(tfsReadClient.getLogs() + caseName, clusterBIP);
 		Assert.assertTrue(bRet);
-		
-		/* verify */
-		//bRet = check_sync(clusterAAddr, clusterCAddr, STATUS_NORMAL);
-		//assertTrue(bRet);
 		
 		/* set write/read/unlink cluster addr */
 		bRet = setClusterAddr(clusterCAddr);
@@ -996,10 +1072,6 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		assertTrue(bRet);
 		
 		sleep(50); //TODO: should be longer?
-		
-		/* verify */
-		//bRet = check_sync(clusterAAddr, clusterBAddr, STATUS_NORMAL);
-		//assertTrue(bRet);
 
 		/* set write/read/unlink cluster addr */
 		bRet = setClusterAddr(clusterBAddr);
@@ -1012,10 +1084,6 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		/* rename log */
 		bRet = mvLogFile(tfsReadClient.getLogs() + caseName, clusterBIP);
 		Assert.assertTrue(bRet);
-		
-		/* verify */
-		//bRet = check_sync(clusterAAddr, clusterCAddr, STATUS_NORMAL);
-		//assertTrue(bRet);
 		
 		/* set write/read/unlink cluster addr */
 		bRet = setClusterAddr(clusterCAddr);
@@ -1068,10 +1136,6 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		assertTrue(bRet);
 		
 		sleep(50);
-
-		/* verify */
-		//bRet = check_sync(clusterAAddr, clusterBAddr, STATUS_NORMAL);
-		//assertTrue(bRet);
 		
 		/* set write/read/unlink cluster addr */
 		bRet = setClusterAddr(clusterBAddr);
@@ -1084,10 +1148,6 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		/* rename log */
 		bRet = mvLogFile(tfsReadClient.getLogs() + caseName, clusterBIP);
 		Assert.assertTrue(bRet);
-		
-		/* verify */
-		//bRet = check_sync(clusterAAddr, clusterCAddr, STATUS_NORMAL);
-		//assertTrue(bRet);
 		
 		/* set write/read/unlink cluster addr */
 		bRet = setClusterAddr(clusterCAddr);
@@ -1114,8 +1174,28 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		
 		sleep(50);
 		
-		/* verify */
-		bRet = check_sync(clusterAAddr, clusterBAddr, STATUS_DELETED);
+		/* set read file list */
+		bRet = setReadFileList(UNLINKEDFILELISTNAME);
+		assertTrue(bRet);
+		
+		/* set write/read/unlink cluster addr */
+		bRet = setClusterAddr(clusterBAddr);
+		assertTrue(bRet);
+		
+		/* Read file */
+		bRet = chkFinalRetFail();
+		Assert.assertTrue(bRet);
+
+		/* set write/read/unlink cluster addr */
+		bRet = setClusterAddr(clusterCAddr);
+		assertTrue(bRet);
+		
+		/* Read file */
+		bRet = chkFinalRetFail();
+		Assert.assertTrue(bRet);
+		
+		/* set read file list */
+		bRet = setReadFileList(SEEDFILELISTNAME);
 		assertTrue(bRet);
 		
 		/* set write/read/unlink cluster addr */
@@ -1187,10 +1267,6 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		assertTrue(bRet);
 		
 		sleep(50);
-
-		/* verify */
-		//bRet = check_sync(clusterAAddr, clusterBAddr, STATUS_NORMAL);
-		//assertTrue(bRet);
 		
 		/* set write/read/unlink cluster addr */
 		bRet = setClusterAddr(clusterBAddr);
@@ -1203,10 +1279,6 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		/* rename log */
 		bRet = mvLogFile(tfsReadClient.getLogs() + caseName, clusterBIP);
 		Assert.assertTrue(bRet);
-		
-		/* verify */
-		//bRet = check_sync(clusterAAddr, clusterCAddr, STATUS_NORMAL);
-		//assertTrue(bRet);
 		
 		/* set write/read/unlink cluster addr */
 		bRet = setClusterAddr(clusterCAddr);
@@ -1233,8 +1305,28 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		
 		sleep(50);
 		
-		/* verify */
-		bRet = check_sync(clusterAAddr, clusterBAddr, STATUS_DELETED);
+		/* set read file list */
+		bRet = setReadFileList(UNLINKEDFILELISTNAME);
+		assertTrue(bRet);
+		
+		/* set write/read/unlink cluster addr */
+		bRet = setClusterAddr(clusterBAddr);
+		assertTrue(bRet);
+		
+		/* Read file */
+		bRet = chkFinalRetFail();
+		Assert.assertTrue(bRet);
+
+		/* set write/read/unlink cluster addr */
+		bRet = setClusterAddr(clusterCAddr);
+		assertTrue(bRet);
+		
+		/* Read file */
+		bRet = chkFinalRetFail();
+		Assert.assertTrue(bRet);
+		
+		/* set read file list */
+		bRet = setReadFileList(SEEDFILELISTNAME);
 		assertTrue(bRet);
 		
 		/* set write/read/unlink cluster addr */
