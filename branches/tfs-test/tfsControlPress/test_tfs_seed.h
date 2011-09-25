@@ -23,7 +23,6 @@
 #include "test_tfs_case.h"
 #include "dataserver_define.h"
 
-#define TFSNAMELEN 19
 #define LOCALKEYLEN 64
 #define CRCSIZE 12
 
@@ -54,7 +53,7 @@ class TestTfsSeed : public TestTfsCase {
     int writeData(char *data,int size);
     uint32_t _preCrc;
     char *_data;
-    char _fileName[ TFSNAMELEN ];
+    char _fileName[TFSNAMELEN];
     std::set<std::string> _recordSet; // a record = tfs_filename + suffix + crc
 
     static tbsys::CThreadMutex _lock;

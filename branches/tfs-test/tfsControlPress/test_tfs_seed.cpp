@@ -410,7 +410,7 @@ void TestTfsSeed::tearDown()
   int iRet = saveFilename();  
   if (iRet != 0)
   {
-        TBSYS_LOG(ERROR,"It's failed to save file name list !!!");
+    TBSYS_LOG(ERROR,"It's failed to save file name list !!!");
   }
 	TestTfsSeed::_lock.unlock();
 

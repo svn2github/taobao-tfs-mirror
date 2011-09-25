@@ -26,6 +26,7 @@ class TestTfsUnlink : public TestTfsCase {
     ~TestTfsUnlink() {};
     int setUp();
     int testUnlink();
+    int saveFilename();
     int run();
     void tearDown();
 
@@ -40,5 +41,7 @@ class TestTfsUnlink : public TestTfsCase {
     static int _partSize;  /* partition size */
     static int _count;
     static bool _hasReadFilelist;
+    char* file_name_;
+    std::set<std::string> _recordSet; // a record = tfs_filename + suffix + crc
 };
 #endif

@@ -32,6 +32,8 @@
 #define NOLEASE_MODE 32
 #define THREAD_COUNT_MAX 300
 
+#define TFSNAMELEN 19
+
 using namespace tfs::client;
 using namespace tfs::common;
 using namespace tfs::dataserver;

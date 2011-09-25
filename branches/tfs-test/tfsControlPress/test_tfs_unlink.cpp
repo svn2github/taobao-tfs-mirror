@@ -66,7 +66,7 @@ int TestTfsUnlink::testUnlink()
   int ret = 0;
   TfsFileStat info;
 
-  memset( (char *)&info, 0x00, sizeof(TfsFileStat) );
+  memset((char *)&info, 0x00, sizeof(TfsFileStat));
   _totalSize = 0;
 
   if(_filenameSetPerThread.size() == 0){
@@ -74,15 +74,15 @@ int TestTfsUnlink::testUnlink()
     return 0;
   }
   
-  const char *file_name = _filenameSetPerThread.at(_currentFile).c_str();
-  const char *postfix = strlen(file_name) > 18 ? (char *)(file_name + 18) : NULL;
+  file_name_ =  const_cast<char*>(_filenameSetPerThread.at(_currentFile).c_str());
+  const char *postfix = strlen(file_name_) > 18 ? (char *)(file_name_ + 18) : NULL;
   int64_t fileSize = 0;
 #if defined(VER_132)
-  ret = _tfsFile->unlink(file_name, postfix);
+  ret = _tfsFile->unlink(file_name_, postfix);
 #elif defined(VER_140)
-  ret = _tfsFile->unlink(file_name, postfix, fileSize);
+  ret = _tfsFile->unlink(file_name_, postfix, fileSize);
 #elif defined(VER_141)
-  ret = _tfsFile->unlink(fileSize, file_name, postfix);
+  ret = _tfsFile->unlink(fileSize, file_name_, postfix);
 #endif
 
   if (ret != 0)
@@ -140,20 +140,31 @@ int TestTfsUnlink::run()
     if (iRet == 0)
     {
       TBSYS_LOG( INFO, "Unlink file SUCCESS." );
-    } else {
+    }
+    else
+    {
       TBSYS_LOG( ERROR, "Unlink file ERROR!!!" );
     }
     end_time = CTimeUtil::getTime();
-    TestTfsUnlink::_lock.lock();
-    TestGFactory::_statisForUnlink.addStatis(start_time,end_time,iRet,"unlinkFile");
+    TestGFactory::_statisForUnlink.addStatis(start_time, end_time, iRet, "unlinkFile");
 
-    TestTfsUnlink::_lock.unlock();
+    if (0 == iRet)
+    {
+      /* Edit the filename and crc */
+      std::string record = file_name_;
+      record += " 1";
+      TBSYS_LOG(ERROR, "record: %s", record.c_str());
+      /* Save it */
+      _recordSet.insert(record);
+    }
     ++_currentFile;
     if (_loopFlag && _currentFile == fileNo)
     {
       _currentFile = 0;
     }
-  } else {
+  } 
+  else
+  {
    if ((_lockFlag == 0) && TestTfsUnlink::_lock.trylock())
    {
       _count ++;
@@ -171,6 +182,34 @@ int TestTfsUnlink::run()
   return 0;
 }
 
+int TestTfsUnlink::saveFilename()
+{
+  FILE *fp = NULL;
+  char *filelist = (char *)CConfig::getCConfig().getString("tfsunlink",
+         "unlinkedlist_name");
+
+  if (filelist == NULL)
+  {
+    filelist = "./tfsunlinked_file_list.txt";                                                                                                                
+  }
+
+  if((fp = fopen(filelist, "a")) == NULL)
+  {
+      TBSYS_LOG(ERROR, "open unlinked_file_list failed.");
+      return -1;
+  }
+  std::set<std::string>::iterator it=_recordSet.begin();
+  for(; it != _recordSet.end(); it++)
+  {
+    fprintf(fp, "%s\n", it->c_str());
+  }
+
+  fflush(fp);
+  fclose(fp);
+
+  return 0;
+}
+
 void TestTfsUnlink::tearDown()
 {
   TBSYS_LOG(DEBUG,"tearDown");
@@ -180,6 +219,13 @@ void TestTfsUnlink::tearDown()
   if(TestTfsUnlink::_have_display_statis == 0){
     TestTfsUnlink::_have_display_statis += 1;
     need_display = true;
+  }
+
+  /* Save the record to file */
+  int iRet = saveFilename();  
+  if (iRet != 0)
+  {
+    TBSYS_LOG(ERROR,"It's failed to save file name list !!!");
   }
   TestTfsUnlink::_lock.unlock();
   
