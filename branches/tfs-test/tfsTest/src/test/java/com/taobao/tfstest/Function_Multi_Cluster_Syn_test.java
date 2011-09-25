@@ -858,10 +858,10 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		log.info(caseName + "===> start");
 
 		/* block  A ds with B ns TODO*/
-		Proc.netBlockBase(MASTERSER.getIp(), tfsGrid2.getCluster(DSINDEX)
-				.getServer(0).getIp(), 1, 5);
-		Proc.netBlockBase(MASTERSER.getIp(), tfsGrid3.getCluster(DSINDEX)
-				.getServer(0).getIp(), 1, 5);
+		bRet = Proc.portOutputBlock(tfsGrid.getCluster(DSINDEX).getServer(0).getIp(),
+				tfsGrid2.getCluster(NSINDEX).getServer(0).getIp(),
+				tfsGrid2.getCluster(NSINDEX).getServer(0).getPort());
+		assertTrue(bRet);		
 	
 		/* wait 120s */
 		sleep(300);
@@ -883,9 +883,10 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 
 		sleep(50);
  
-		/* netUnblock Cluster B and cluster C */
-		Proc.netUnblockBase(MASTERSER.getIp());
-
+		/* netUnblock */
+		bRet = Proc.netUnblockBase(tfsGrid.getCluster(DSINDEX).getServer(0).getIp());
+		assertTrue(bRet);
+		
 		/* wait 100 s */
 		sleep(100);
 		
@@ -956,64 +957,12 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		Assert.assertTrue(bRet);
 	}
 
-	//@Test
-	public void Function_10_sync_while_block_A_ds_with_B_ds() {
-
-		boolean bRet = false;
-
-		caseName = "Function_10_sync_while_block_A_ds_with_B_ds";
-		log.info(caseName + "===> start");
-
-		/* Block A ds with B ds TODO*/
-		Proc.portBlockBase(MASTERSER.getIp(), tfsGrid2.getCluster(NSINDEX)
-				.getServer(0).getIp(), tfsGrid2.getCluster(NSINDEX)
-				.getServer(0).getPort());
-
-		/* set write/read/unlink cluster addr */
-		bRet = setClusterAddr(clusterAAddr);
-		assertTrue(bRet);
-
-		/* write to cluster A */
-		bRet = writeCmd();
-		assertTrue(bRet);
-
-		/* wait 100s */
-		sleep(300);
-
-		/* delete from clusterA */
-		bRet = unlinkCmd();
-		assertTrue(bRet);
-
-		/* wait 50s */
-		sleep(50);
-		
-		/* Monitor the unlink process */
-		bRet = unlinkCmdMon();
-		Assert.assertTrue(bRet);
-
-		sleep(50);
-		
-		/* Check A ststus */
-		check_sync(MASTERIP, clusterAAddr, STATUS_NORMAL);
-
-		/* netUnblock Cluster DS */
-		Proc.portOutputBlock(MASTERSER.getIp(), tfsGrid2
-				.getCluster(NSINDEX).getServer(0).getIp(),
-				tfsGrid2.getCluster(NSINDEX).getServer(0).getPort());
-
-		sleep(50);
-		
-		/* verification */
-		check_sync(MASTERIP, clusterBAddr, STATUS_NORMAL);
-
-	}
-
 	// @Test
-	public void Function_11_sync_while_restart_ds() {
+	public void Function_10_sync_while_restart_ds() {
 
 		boolean bRet = false;
 
-		caseName = "Function_11_sync_while_restart_ds";
+		caseName = "Function_10_sync_while_restart_ds";
 		log.info(caseName + "===> start");
 
 		/* set write/read/unlink cluster addr */
@@ -1068,11 +1017,11 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 	}
 	
 //	@Test
-	public void Function_12_sync_while_restart_A_ds_force() {
+	public void Function_11_sync_while_restart_A_ds_force() {
 
 		boolean bRet = false;
 
-		caseName = "Function_12_sync_while_restart_A_ds_force";
+		caseName = "Function_11_sync_while_restart_A_ds_force";
 		log.info(caseName + "===> start");
 
 		/* set write/read/unlink cluster addr */
@@ -1129,11 +1078,11 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 	
 	/* make sure the first ds of cluster B(1.3ns) has dataserver(132) and dataserver14 in bin dir*/
 	@Test
-	public void Function_13_happy_compatibility() {
+	public void Function_12_happy_compatibility() {
 
 		boolean bRet = false;
 
-		caseName = "Function_13_happy_compatibility";
+		caseName = "Function_12_happy_compatibility";
 		log.info(caseName + "===> start");
 		
 		/* set write/read/unlink cluster addr */
@@ -1221,11 +1170,11 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 	
 	/* make sure the first ds of cluster B(1.3ns) has dataserver(132) and dataserver14 in bin dir*/
 	//@Test
-	public void Function_14_unhappy_compatibility() {
+	public void Function_13_unhappy_compatibility() {
 
 		boolean bRet = false;
 
-		caseName = "Function_14_unhappy_compatibility";
+		caseName = "Function_13_unhappy_compatibility";
 		log.info(caseName + "===> start");
 		
 		/* set write/read/unlink cluster addr */
@@ -1241,7 +1190,8 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		
 		/* block B ds with A ns TODO*/
 		bRet = Proc.portOutputBlock(tfsGrid2.getCluster(DSINDEX).getServer(0).getIp(),
-				tfsGrid.getCluster(NSINDEX).getServer(0).getIp(), tfsGrid.getCluster(NSINDEX).getServer(0).getPort());
+				tfsGrid.getCluster(NSINDEX).getServer(0).getIp(),
+				tfsGrid.getCluster(NSINDEX).getServer(0).getPort());
 		assertTrue(bRet);
 		
 		/* wait120 s */
