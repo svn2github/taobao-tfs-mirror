@@ -306,7 +306,7 @@ int TfsClientImpl::open(const char* file_name, const char* suffix, const char* n
 
     if (ret != TFS_SUCCESS)
     {
-      ret_fd = EXIT_INVALIDFD_ERROR;
+      ret_fd = (ret < 0) ? ret : EXIT_INVALIDFD_ERROR; // return true error code except TFS_ERROR
       tbsys::gDelete(tfs_file);
     }
   }

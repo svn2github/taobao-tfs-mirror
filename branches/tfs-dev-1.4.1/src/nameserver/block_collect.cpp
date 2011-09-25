@@ -337,7 +337,7 @@ namespace nameserver
       TBSYS_LOG(DEBUG, "size: %d, block: %u", size, this->info_.block_id_);
       if (size <= 0)
       {
-        TBSYS_LOG(ERROR, "block: %u has been lost, do not replicate", info_.block_id_);
+        TBSYS_LOG(DEBUG, "block: %u has been lost, do not replicate", info_.block_id_);
       }
       else
       {
