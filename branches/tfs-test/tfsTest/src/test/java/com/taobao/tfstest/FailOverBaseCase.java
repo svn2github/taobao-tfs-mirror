@@ -2646,6 +2646,42 @@ public class FailOverBaseCase {
 		log.info("Kill one ds end ===>");
 		return bRet;
 	}
+
+	public boolean killAllDsOneSide(AppGrid tfsAppGrid)
+	{
+		boolean bRet = false;
+		log.info("Kill all ds on one side start ===>");
+		AppCluster csCluster = tfsAppGrid.getCluster(DSINDEX);
+		for(int iLoop = 0; iLoop < csCluster.getServerList().size(); iLoop ++)
+		{
+			AppServer cs = csCluster.getServer(iLoop);
+			bRet = cs.stop(KillTypeEnum.NORMALKILL, WAITTIME);
+			if (bRet == false)
+			{
+				break;
+			}
+		}
+		log.info("Kill all ds on one side end ===>");
+		return bRet;
+	}
+
+	public boolean startAllDsOneSide(AppGrid tfsAppGrid)
+	{
+		boolean bRet = false;
+		log.info("Start all ds on one side start ===>");
+		AppCluster csCluster = tfsAppGrid.getCluster(DSINDEX);
+		for(int iLoop = 0; iLoop < csCluster.getServerList().size(); iLoop ++)
+		{
+			AppServer cs = csCluster.getServer(iLoop);
+			bRet = cs.start();
+			if (bRet == false)
+			{
+				break;
+			}
+		}
+		log.info("Start all ds on one side end ===>");
+		return bRet;
+	}
 	
 	public boolean restoreOneDs(AppGrid tfsAppGrid) {
 		boolean bRet = false;

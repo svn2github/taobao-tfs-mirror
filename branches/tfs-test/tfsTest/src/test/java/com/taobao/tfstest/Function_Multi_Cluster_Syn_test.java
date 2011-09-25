@@ -1148,7 +1148,7 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		sleep(300);
 		
 		/* kill one ds of B */
-		bRet = killOneDs(tfsGrid2);
+		bRet = killAllDsOneSide(tfsGrid2);
 		assertTrue(bRet);
 		
 		/* stop write proccess */
@@ -1160,7 +1160,7 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		assertTrue(bRet);
 		
 		/* restart the killed ds of B */
-		bRet = startOneDs(tfsGrid2);
+		bRet = startAllDsOneSide(tfsGrid2);
 		assertTrue(bRet);
 		
 		sleep(50);
@@ -1207,7 +1207,7 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		assertTrue(bRet);
 		
 		/* kill one ds of B */
-		bRet = killOneDs(tfsGrid2);
+		bRet = killAllDsOneSide(tfsGrid2);
 		assertTrue(bRet);
 		
 		/* restore 1.4.1ds with 1.3.2ds */
@@ -1215,7 +1215,7 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		assertTrue(bRet);
 		
 		/* start the killed ds of B */
-		bRet = startOneDs(tfsGrid2);
+		bRet = startAllDsOneSide(tfsGrid2);
 		assertTrue(bRet);
 	}
 	
@@ -1240,8 +1240,9 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		sleep(150);
 		
 		/* block B ds with A ns TODO*/
-		Proc.netBlockBase(MASTERSER.getIp(), tfsGrid2.getCluster(DSINDEX)
-				.getServer(0).getIp(), 1, 5);
+		bRet = Proc.portOutputBlock(tfsGrid2.getCluster(DSINDEX).getServer(0).getIp(),
+				tfsGrid.getCluster(NSINDEX).getServer(0).getIp(), tfsGrid.getCluster(NSINDEX).getServer(0).getPort());
+		assertTrue(bRet);
 		
 		/* wait120 s */
 		sleep(150);	
@@ -1251,7 +1252,7 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		assertTrue(bRet);
 		
 		/* kill one ds of B */
-		bRet = killOneDs(tfsGrid2);
+		bRet = killAllDsOneSide(tfsGrid2);
 		assertTrue(bRet);
 		
 		/* stop write proccess */
@@ -1262,8 +1263,12 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		bRet = replaceOneDs(tfsGrid2);
 		assertTrue(bRet);
 		
+		/* unblock net */
+		bRet = Proc.netUnblockBase(tfsGrid2.getCluster(DSINDEX).getServer(0).getIp());
+		assertTrue(bRet);
+		
 		/* restart the killed ds of B */
-		bRet = startOneDs(tfsGrid2);
+		bRet = startAllDsOneSide(tfsGrid2);
 		assertTrue(bRet);
 		
 		/* make sure the old retry sync queue has been deleted */
@@ -1314,7 +1319,7 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		assertTrue(bRet);
 		
 		/* kill one ds of B */
-		bRet = killOneDs(tfsGrid2);
+		bRet = killAllDsOneSide(tfsGrid2);
 		assertTrue(bRet);
 		
 		/* restore 1.4.1ds with 1.3.2ds */
@@ -1322,7 +1327,7 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		assertTrue(bRet);
 		
 		/* start the killed ds of B */
-		bRet = startOneDs(tfsGrid2);
+		bRet = startAllDsOneSide(tfsGrid2);
 		assertTrue(bRet);
 	}
 	
