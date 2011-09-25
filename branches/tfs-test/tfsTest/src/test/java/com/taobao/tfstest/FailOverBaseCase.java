@@ -2650,10 +2650,21 @@ public class FailOverBaseCase {
 	public boolean restoreOneDs(AppGrid tfsAppGrid) {
 		boolean bRet = false;
 		log.info("Restore one ds start ===>");
+		
+		/* restore bin */
 		String src_bin_file = tfsAppGrid.getCluster(DSINDEX).getServer(0).getDir() + "/bin/dataserver132";
 		String dest_bin_file = tfsAppGrid.getCluster(DSINDEX).getServer(0).getDir() + "/bin/dataserver";
 		
 		bRet = File.fileCopy(tfsAppGrid.getCluster(DSINDEX).getServer(0).getIp(), src_bin_file, dest_bin_file);
+		if (false == bRet)
+			return bRet;
+		
+		/* replace conf */
+		String src_conf_file = tfsAppGrid.getCluster(DSINDEX).getServer(0).getDir() + "/conf/ds_2.conf.132";
+		String dest_conf_file = tfsAppGrid.getCluster(DSINDEX).getServer(0).getDir() + "/conf/ds_2.conf";
+
+		bRet = File.fileCopy(tfsAppGrid.getCluster(DSINDEX).getServer(0).getIp(), src_conf_file, dest_conf_file);		
+
 		log.info("Restore one ds end ===>");
 		return bRet;
 	}
@@ -2661,14 +2672,29 @@ public class FailOverBaseCase {
 	public boolean replaceOneDs(AppGrid tfsAppGrid) {
 		boolean bRet = false;
 		log.info("Replace one ds start ===>");
+		
+		/* replace bin */
 		String bak_bin_file = tfsAppGrid.getCluster(DSINDEX).getServer(0).getDir() + "/bin/dataserver132";
 		String src_bin_file = tfsAppGrid.getCluster(DSINDEX).getServer(0).getDir() + "/bin/dataserver14";
 		String dest_bin_file = tfsAppGrid.getCluster(DSINDEX).getServer(0).getDir() + "/bin/dataserver";
-		
+	
 		bRet = File.fileCopy(tfsAppGrid.getCluster(DSINDEX).getServer(0).getIp(), dest_bin_file, bak_bin_file);
 		if (false == bRet)
 			return bRet;
 		bRet = File.fileCopy(tfsAppGrid.getCluster(DSINDEX).getServer(0).getIp(), src_bin_file, dest_bin_file);
+		if (false == bRet)
+			return bRet;
+		
+		/* replace conf */
+		String bak_conf_file = tfsAppGrid.getCluster(DSINDEX).getServer(0).getDir() + "/conf/ds_2.conf.132";
+		String src_conf_file = tfsAppGrid.getCluster(DSINDEX).getServer(0).getDir() + "/conf/ds_2.conf.14";
+		String dest_conf_file = tfsAppGrid.getCluster(DSINDEX).getServer(0).getDir() + "/conf/ds_2.conf";
+	
+		bRet = File.fileCopy(tfsAppGrid.getCluster(DSINDEX).getServer(0).getIp(), dest_conf_file, bak_conf_file);
+		if (false == bRet)
+			return bRet;
+		bRet = File.fileCopy(tfsAppGrid.getCluster(DSINDEX).getServer(0).getIp(), src_conf_file, dest_conf_file);
+		
 		log.info("Replace one ds end ===>");
 		return bRet;
 	}
