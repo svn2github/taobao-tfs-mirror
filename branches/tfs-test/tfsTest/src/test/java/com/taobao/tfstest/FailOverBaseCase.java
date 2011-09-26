@@ -2688,8 +2688,8 @@ public class FailOverBaseCase {
 		log.info("Restore one ds start ===>");
 		
 		/* restore bin */
-		String src_bin_file = tfsAppGrid.getCluster(DSINDEX).getServer(0).getDir() + "/bin/dataserver132";
-		String dest_bin_file = tfsAppGrid.getCluster(DSINDEX).getServer(0).getDir() + "/bin/dataserver";
+		String src_bin_file = tfsAppGrid.getCluster(DSINDEX).getServer(0).getBinPath() + "/dataserver132";
+		String dest_bin_file = tfsAppGrid.getCluster(DSINDEX).getServer(0).getBinPath() + "/dataserver";
 		
 		bRet = File.fileCopy(tfsAppGrid.getCluster(DSINDEX).getServer(0).getIp(), src_bin_file, dest_bin_file);
 		if (false == bRet)
@@ -2710,9 +2710,9 @@ public class FailOverBaseCase {
 		log.info("Replace one ds start ===>");
 		
 		/* replace bin */
-		String bak_bin_file = tfsAppGrid.getCluster(DSINDEX).getServer(0).getDir() + "/bin/dataserver132";
-		String src_bin_file = tfsAppGrid.getCluster(DSINDEX).getServer(0).getDir() + "/bin/dataserver14";
-		String dest_bin_file = tfsAppGrid.getCluster(DSINDEX).getServer(0).getDir() + "/bin/dataserver";
+		String bak_bin_file = tfsAppGrid.getCluster(DSINDEX).getServer(0).getBinPath() + "/dataserver132";
+		String src_bin_file = tfsAppGrid.getCluster(DSINDEX).getServer(0).getBinPath() + "/dataserver14";
+		String dest_bin_file = tfsAppGrid.getCluster(DSINDEX).getServer(0).getBinPath() + "/dataserver";
 	
 		bRet = File.fileCopy(tfsAppGrid.getCluster(DSINDEX).getServer(0).getIp(), dest_bin_file, bak_bin_file);
 		if (false == bRet)
@@ -2738,8 +2738,9 @@ public class FailOverBaseCase {
 	public boolean renameFileQueue(AppGrid tfsAppGrid) {
 		boolean bRet = false;
 		log.info("Rename file queue start ===>");
-		String bin_dir = tfsAppGrid.getCluster(DSINDEX).getServer(0).getDir() + "/bin";
-		String startCmd = bin_dir + "/filequeue_rename -f ../conf/ds_2.conf -i 1-4";
+		String bin_dir = tfsAppGrid.getCluster(DSINDEX).getServer(0).getBinPath();
+		String conf_name = tfsAppGrid.getCluster(DSINDEX).getServer(0).getDir() + tfsAppGrid.getCluster(DSINDEX).getServer(0).getConfname();
+		String startCmd = bin_dir + "/filequeue_rename -f " + conf_name + " -i 1-4";
 		bRet = Proc.proStartBase(tfsAppGrid.getCluster(DSINDEX).getServer(0).getIp(),
 				startCmd);
 
