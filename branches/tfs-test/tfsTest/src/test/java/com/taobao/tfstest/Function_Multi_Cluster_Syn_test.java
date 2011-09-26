@@ -1172,6 +1172,10 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		/* replace 1.3.2ds with 1.4.1ds */
 		bRet = replaceOneDs(tfsGrid2);
 		assertTrue(bRet);
+
+		/* rename file queue */
+		bRet = renameFileQueue(tfsGrid2);
+		assertTrue(bRet);
 		
 		/* restart the killed ds of B */
 		bRet = startAllDsOneSide(tfsGrid2);
@@ -1276,6 +1280,10 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		
 		/* replace 1.3.2ds with 1.4.1ds */
 		bRet = replaceOneDs(tfsGrid2);
+		assertTrue(bRet);
+
+		/* rename file queue */
+		bRet = renameFileQueue(tfsGrid2);
 		assertTrue(bRet);
 		
 		/* unblock net */

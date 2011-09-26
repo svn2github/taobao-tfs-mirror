@@ -2734,6 +2734,18 @@ public class FailOverBaseCase {
 		log.info("Replace one ds end ===>");
 		return bRet;
 	}
+
+	public boolean renameFileQueue(AppGrid tfsAppGrid) {
+		boolean bRet = false;
+		log.info("Rename file queue start ===>");
+		String bin_dir = tfsAppGrid.getCluster(DSINDEX).getServer(0).getDir() + "/bin";
+		String startCmd = bin_dir + "/filequeue_rename -f ../conf/ds_2.conf -i 1-4";
+		bRet = Proc.proStartBase(tfsAppGrid.getCluster(DSINDEX).getServer(0).getIp(),
+				startCmd);
+
+		log.info("Rename file queue end ===>");
+		return bRet;
+	}
 	
 	public boolean killOneDs()
 	{
