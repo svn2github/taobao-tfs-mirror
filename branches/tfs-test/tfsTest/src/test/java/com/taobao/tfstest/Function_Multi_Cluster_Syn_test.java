@@ -51,7 +51,7 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		assertTrue(bRet);
 
 		/* wait120 s */
-		sleep(120);
+		sleep(300);
 
 		/* stop write proccess */
 		bRet = writeCmdStop();
@@ -67,12 +67,20 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		bRet = chkFinalRetSuc();
 		Assert.assertTrue(bRet);
 		
+		/* rename log */
+		bRet = mvLogFile(tfsReadClient.getLogs() + caseName, clusterBIP);
+		Assert.assertTrue(bRet);
+		
 		/* set write/read/unlink cluster addr */
 		bRet = setClusterAddr(clusterCAddr);
 		assertTrue(bRet);
 
 		/* Read file */
 		bRet = chkFinalRetSuc();
+		Assert.assertTrue(bRet);
+		
+		/* rename log */
+		bRet = mvLogFile(tfsReadClient.getLogs() + caseName, clusterCIP);
 		Assert.assertTrue(bRet);
 		
 		/* set write/read/unlink cluster addr */
@@ -134,7 +142,7 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		assertTrue(bRet);
 
 		/* wait 120 s */
-		sleep(120);
+		sleep(300);
 
 		/* stop write process */
 		bRet = writeCmdStop();
@@ -607,14 +615,6 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		
 		/* Move the unlink file list */
 		bRet = mvUnlinkFile();
-		Assert.assertTrue(bRet);
-		
-		/* Modify MinReplication */
-		bRet = setMinReplication(BLOCKCOPYCNT);
-		Assert.assertTrue(bRet);
-		
-		/* Modify MaxReplication */
-		bRet = setMaxReplication(BLOCKCOPYCNT);
 		Assert.assertTrue(bRet);
 	}
 	
