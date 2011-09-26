@@ -857,7 +857,7 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		caseName = "Function_09_sync_while_block_A_ds_with_B_ns";
 		log.info(caseName + "===> start");
 
-		/* block  A ds with B ns TODO*/
+		/* block  A ds with B ns */
 		bRet = Proc.portOutputBlock(tfsGrid.getCluster(DSINDEX).getServer(0).getIp(),
 				tfsGrid2.getCluster(NSINDEX).getServer(0).getIp(),
 				tfsGrid2.getCluster(NSINDEX).getServer(0).getPort());
@@ -880,8 +880,6 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		/* stop write */
 		bRet = writeCmdStop();
 		assertTrue(bRet);
-
-		sleep(50);
  
 		/* netUnblock */
 		bRet = Proc.netUnblockBase(tfsGrid.getCluster(DSINDEX).getServer(0).getIp());
@@ -1255,14 +1253,14 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		/* wait120 s */
 		sleep(120);
 		
-		/* block B ds with A ns TODO*/
+		/* block B ds with A ns */
 		bRet = Proc.portOutputBlock(tfsGrid2.getCluster(DSINDEX).getServer(0).getIp(),
 				tfsGrid.getCluster(NSINDEX).getServer(0).getIp(),
 				tfsGrid.getCluster(NSINDEX).getServer(0).getPort());
 		assertTrue(bRet);
 		
 		/* wait120 s */
-		sleep(150);	
+		sleep(120);	
 		
 		/* make sure sync retry happened*/
 		bRet = chkSecondQueue(tfsGrid2, true);
