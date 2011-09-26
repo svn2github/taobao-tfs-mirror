@@ -31,7 +31,6 @@ int TestCommonUtils::generateData(char *data, int size)
 
 int TestCommonUtils::readFilelist(char *filelist, VUINT32& crc_set, VSTRING& filename_set)
 {
-
   FILE *fp = NULL;
   if((fp = fopen(filelist, "r")) == NULL)
   {
@@ -42,19 +41,23 @@ int TestCommonUtils::readFilelist(char *filelist, VUINT32& crc_set, VSTRING& fil
   char filename[64];
   while (fgets(filename, sizeof(filename), fp))
   {
-    if(filename[strlen(filename)-1] == '\n')
+    if (filename[strlen(filename) - 1] == '\n')
     {
-      filename[strlen(filename)-1] = '\0';
+      filename[strlen(filename) - 1] = '\0';
     }
-    else {
+    else 
+    {
       filename[strlen(filename)] = '\0';
     }
     char *p = strchr(filename, ' ');
-    *p++ = '\0';
-    sscanf(p, "%u", &crc);
+    if (NULL != p)
+    {
+      *p++ = '\0';
+      sscanf(p, "%u", &crc);
 
-    filename_set.push_back(filename);
-    crc_set.push_back(crc);
+      filename_set.push_back(filename);
+      crc_set.push_back(crc);
+    }
   }
   return 0;
 }

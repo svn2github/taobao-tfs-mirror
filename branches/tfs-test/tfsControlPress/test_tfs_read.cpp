@@ -33,6 +33,7 @@ VSTRING TestTfsRead::_filenameSet;
 
 int TestTfsRead::setUp()
 {
+  int ret = TFS_SUCCESS;
   srand(time(NULL) + pthread_self());
   TestTfsCase::setUp();
   _currentFile = 0;
@@ -52,7 +53,12 @@ int TestTfsRead::setUp()
   _threadNo = TestGFactory::_threadNo++;
   if (TestTfsRead::_hasReadFilelist == false)
   {
-    TestCommonUtils::readFilelist(filelist, _crcSet, _filenameSet);
+    ret = TestCommonUtils::readFilelist(filelist, _crcSet, _filenameSet);
+    if (TFS_SUCCESS != ret)
+    {
+      TBSYS_LOG(ERROR, "read file list error! ret: %d", ret);
+      return ret;
+    }
     TestTfsRead::_hasReadFilelist = true;
   }
   TestTfsRead::_partSize = _crcSet.size() / TestGFactory::_threadCount;
@@ -61,7 +67,7 @@ int TestTfsRead::setUp()
   TestCommonUtils::getFilelist(_threadNo, _partSize, _crcSet, _crcSetPerThread,
     _filenameSet, _filenameSetPerThread);
 
-  return 0;
+  return ret;
 }
 
 int TestTfsRead::testRead()

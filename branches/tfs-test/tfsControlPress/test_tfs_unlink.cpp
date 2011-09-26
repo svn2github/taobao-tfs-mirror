@@ -87,7 +87,7 @@ int TestTfsUnlink::testUnlink()
 
   if (ret != 0)
   {
-    TBSYS_LOG(ERROR, "Unlink failed:%d, fileSize:%d", ret, fileSize);
+    TBSYS_LOG(ERROR, "Unlink failed: %d, fileSize: %d", ret, fileSize);
     return ret;
   }
 #if 0
@@ -153,7 +153,6 @@ int TestTfsUnlink::run()
       /* Edit the filename and crc */
       std::string record = file_name_;
       record += " 1";
-      TBSYS_LOG(ERROR, "record: %s", record.c_str());
       /* Save it */
       _recordSet.insert(record);
     }

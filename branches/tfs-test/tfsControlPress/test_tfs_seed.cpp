@@ -122,7 +122,7 @@ int TestTfsSeed::testWrite()
 	_preCrc = 0;
 
 	ret = retryOpen(3);
-	if(ret <= 0)
+	if (ret <= 0)
   {
 		TBSYS_LOG(ERROR,"open failed:%d",ret);
 		return ret;
@@ -132,14 +132,14 @@ int TestTfsSeed::testWrite()
   {
 	  _preCrc = Func::crc(_preCrc, _data, _unit);
     ret = writeData(_data, _unit);
-    if(ret < 0 )
+    if (ret < 0)
     {
       TBSYS_LOG(ERROR,"tfs_write failed:%d",ret);
       return ret;
     }
   }
 
-	ret = _tfsFile->close( _fd , _fileName, TFSNAMELEN );
+	ret = _tfsFile->close(_fd , _fileName, TFSNAMELEN);
   
 	return ret;
 }

@@ -37,16 +37,20 @@ void TestTfsAPI::setTestIndex(const char *testIndex)
 
 void TestTfsAPI::run(tbsys::CThread *thread, void *arg)
 {
+  int ret = 0;
   TestTfsCase *tcase = TestCaseFactory::getTestCase(_testIndex);
   if (tcase == NULL) {
     return;
   }
-  tcase->setUp();
-  while (!_stop) {
-    tcase->run();
-    usleep(_timeInter);
+  ret = tcase->setUp();
+  if (TFS_SUCCESS == ret)
+  {
+    while (!_stop) {
+      tcase->run();
+      usleep(_timeInter);
+    }
   }
-  tcase->tearDown();;
+  tcase->tearDown();
   return;
 }
 
