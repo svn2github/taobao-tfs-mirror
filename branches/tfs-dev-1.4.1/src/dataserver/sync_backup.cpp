@@ -446,7 +446,7 @@ namespace tfs
         ret = logic_block->read_file(file_id, data, length, offset, READ_DATA_OPTION_FLAG_NORMAL);//read first data & fileinfo
         if (TFS_SUCCESS != ret)
         {
-          // if file is local deleted or not existslocal, need not sync
+          // if file is local deleted or not exists in local, need not sync
           if (EXIT_FILE_INFO_ERROR != ret && EXIT_META_NOT_FOUND_ERROR != ret)
           {
             TBSYS_LOG(ERROR, "read file fail. blockid: %u, fileid: %"PRI64_PREFIX"u, offset: %d, ret: %d",
@@ -635,8 +635,8 @@ namespace tfs
               EXIT_FILE_STATUS_ERROR == ret)
           {
             ret = TFS_SUCCESS;
-            TBSYS_LOG(DEBUG, "blockid: %u, fileid: %" PRI64_PREFIX "u not exists in src: %s, ret: %d, need not sync",
-                      block_id, file_id, src_addr_, ret);
+            TBSYS_LOG(DEBUG, "blockid: %u, fileid: %" PRI64_PREFIX "u not exists in dest: %s, ret: %d, need not sync",
+                      block_id, file_id, dest_addr_, ret);
 
           }
           else
