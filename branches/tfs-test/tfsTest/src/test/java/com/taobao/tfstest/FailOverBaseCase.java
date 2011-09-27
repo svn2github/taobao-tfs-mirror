@@ -2738,14 +2738,11 @@ public class FailOverBaseCase {
 	public boolean renameFileQueue(AppGrid tfsAppGrid) {
 		boolean bRet = false;
 		log.info("Rename file queue start ===>");
-		for (int i = 0; i < 2; i++)
-		{
-			String bin_dir = tfsAppGrid.getCluster(DSINDEX).getServer(i).getBinPath();
-			String conf_name = tfsAppGrid.getCluster(DSINDEX).getServer(i).getDir() + tfsAppGrid.getCluster(DSINDEX).getServer(i).getConfname();
-			String startCmd = bin_dir + "/filequeue_rename -f " + conf_name + " -i 1-4";
-			bRet = Proc.proStartBase(tfsAppGrid.getCluster(DSINDEX).getServer(i).getIp(),
-					startCmd);
-		}
+		String bin_dir = tfsAppGrid.getCluster(DSINDEX).getServer(0).getBinPath();
+		String conf_name = tfsAppGrid.getCluster(DSINDEX).getServer(0).getDir() + tfsAppGrid.getCluster(DSINDEX).getServer(0).getConfname();
+		String startCmd = bin_dir + "/filequeue_rename -f " + conf_name + " -i 1-4";
+		bRet = Proc.proStartBase(tfsAppGrid.getCluster(DSINDEX).getServer(0).getIp(),
+				startCmd);
 		
 		log.info("Rename file queue end ===>");
 		return bRet;
