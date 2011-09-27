@@ -307,9 +307,9 @@ int TestTfsSeed::run()
   if (_writeVerifyFlag)
   {
     start_time = CTimeUtil::getTime();
-    if ( (tmp_ret = testRead()) != 0)
+    if ((tmp_ret = testRead()) != 0)
     {
-      TBSYS_LOG(ERROR,"TestSeed::testRead: FAILED: %d", ret);
+      TBSYS_LOG(ERROR,"TestSeed::testRead: FAILED: %d", tmp_ret);
     }
     else 
     {
@@ -318,7 +318,7 @@ int TestTfsSeed::run()
 
     end_time = CTimeUtil::getTime();
 
-    TestGFactory::_statisForRead.addStatis(start_time, end_time, ret, "readFile");
+    TestGFactory::_statisForRead.addStatis(start_time, end_time, tmp_ret, "readFile");
   }
 
   if (_unlinkRatio > 0 )
@@ -331,7 +331,7 @@ int TestTfsSeed::run()
       unlinked_ = true;
       if ((tmp_ret = testUnlink()) != 0)
       {
-        TBSYS_LOG(ERROR,"TestSeed::testUnlink: FAILED: %d", ret);
+        TBSYS_LOG(ERROR,"TestSeed::testUnlink: FAILED: %d", tmp_ret);
       }
       else
       {
@@ -340,7 +340,7 @@ int TestTfsSeed::run()
 
       end_time = CTimeUtil::getTime();
 
-      TestGFactory::_statisForUnlink.addStatis(start_time, end_time, ret, "unlinkFile");
+      TestGFactory::_statisForUnlink.addStatis(start_time, end_time, tmp_ret, "unlinkFile");
     }
   }
 
