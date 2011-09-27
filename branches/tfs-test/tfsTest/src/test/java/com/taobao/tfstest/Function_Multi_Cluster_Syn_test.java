@@ -1377,50 +1377,45 @@ public class Function_Multi_Cluster_Syn_test extends FailOverBaseCase {
 		/* Reset case name */
 		caseName = "";
 
-		if (!grid_started) {
-			/* Set the failcount */
-			bRet = setAllFailCnt();
-			Assert.assertTrue(bRet);
+		/* Set the failcount */
+		bRet = setAllFailCnt();
+		Assert.assertTrue(bRet);
 
-			/* Kill the grid */
-			bRet = tfsGrid.stop(KillTypeEnum.FORCEKILL, WAITTIME);
-			Assert.assertTrue(bRet);
+		/* Kill the grid */
+		bRet = tfsGrid.stop(KillTypeEnum.FORCEKILL, WAITTIME);
+		Assert.assertTrue(bRet);
 
-			bRet = tfsGrid2.stop(KillTypeEnum.FORCEKILL, WAITTIME);
-			Assert.assertTrue(bRet);
-			
-			bRet = tfsGrid3.stop(KillTypeEnum.FORCEKILL, WAITTIME);
-			Assert.assertTrue(bRet);
-			
-			/* Set Vip */
-			bRet = migrateVip();
-			Assert.assertTrue(bRet);
+		bRet = tfsGrid2.stop(KillTypeEnum.FORCEKILL, WAITTIME);
+		Assert.assertTrue(bRet);
+		
+		bRet = tfsGrid3.stop(KillTypeEnum.FORCEKILL, WAITTIME);
+		Assert.assertTrue(bRet);
+		
+		/* Set Vip */
+		bRet = migrateVip();
+		Assert.assertTrue(bRet);
 
-			/* Clean the log file */
-			bRet = tfsGrid.clean();
-			Assert.assertTrue(bRet);
+		/* Clean the log file */
+		bRet = tfsGrid.clean();
+		Assert.assertTrue(bRet);
 
-			bRet = tfsGrid.start();
-			Assert.assertTrue(bRet);
+		bRet = tfsGrid.start();
+		Assert.assertTrue(bRet);
 
-			bRet = tfsGrid2.clean();
-			Assert.assertTrue(bRet);
+		bRet = tfsGrid2.clean();
+		Assert.assertTrue(bRet);
 
-			bRet = tfsGrid2.start();
-			Assert.assertTrue(bRet);
+		bRet = tfsGrid2.start();
+		Assert.assertTrue(bRet);
 
-			bRet = tfsGrid3.clean();
-			Assert.assertTrue(bRet);
+		bRet = tfsGrid3.clean();
+		Assert.assertTrue(bRet);
 
-			bRet = tfsGrid3.start();
-			Assert.assertTrue(bRet);
+		bRet = tfsGrid3.start();
+		Assert.assertTrue(bRet);
 
-			/* Set failcount */
-			bRet = resetAllFailCnt();
-			Assert.assertTrue(bRet);
-
-			grid_started = true;
-		}
-
+		/* Set failcount */
+		bRet = resetAllFailCnt();
+		Assert.assertTrue(bRet);
 	}
 }
