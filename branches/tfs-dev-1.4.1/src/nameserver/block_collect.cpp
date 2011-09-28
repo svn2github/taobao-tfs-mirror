@@ -245,7 +245,7 @@ namespace nameserver
           {
             TBSYS_LOG(WARN, "block: %u in dataserver: %s version error %d:%d",
                 new_block_info.block_id_, tbsys::CNetUtil::addrToString(server->id()).c_str(),
-                info_.version_, new_block_info.block_id_);
+                info_.version_, new_block_info.version_);
             if (role == NS_ROLE_MASTER)
             {
               register_expire_block(expires, server, this);
@@ -256,7 +256,7 @@ namespace nameserver
           {
             TBSYS_LOG(WARN, "block: %u in dataserver: %s version error %d:%d, but not found dataserver",
                 new_block_info.block_id_, tbsys::CNetUtil::addrToString(server->id()).c_str(),
-                info_.version_, new_block_info.block_id_);
+                info_.version_, new_block_info.version_);
             memcpy(&info_,&new_block_info, sizeof(info_));
           }
         }

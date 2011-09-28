@@ -1886,7 +1886,7 @@ namespace tfs
         {
           snprintf(retstr, 256, "%d", *current_value);
         }
-        TBSYS_LOG(INFO, "index: %d set: %d name: %s value: %d", index, set, dynamic_parameter_str[index - 1].c_str(), *current_value);
+        TBSYS_LOG(INFO, "index: %d %s name: %s value: %d", index, set ? "set" : "get", dynamic_parameter_str[index - 1].c_str(), *current_value);
       }
       return bret ? TFS_SUCCESS : TFS_ERROR;
     }

@@ -1013,6 +1013,7 @@ namespace tfs
             && pcode != MASTER_AND_SLAVE_HEART_MESSAGE
             && pcode != HEARTBEAT_AND_NS_HEART_MESSAGE
             && pcode != MASTER_AND_SLAVE_HEART_RESPONSE_MESSAGE
+            && pcode != SET_DATASERVER_MESSAGE
             && pcode != CLIENT_CMD_MESSAGE)
           {
             if (ngi.owner_status_ <= NS_STATUS_ACCEPT_DS_INFO)
