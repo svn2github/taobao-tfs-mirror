@@ -85,7 +85,7 @@ namespace tfs
         bool need_reload();
 
       private:
-        int get_base_info(const int32_t app_id, common::BaseInfo& base_info);
+        int get_base_info(const int32_t app_id, const int64_t modify_time, common::BaseInfo& base_info);
         void clean_resource();
 
       protected:

@@ -77,7 +77,7 @@ namespace tfs
 
     struct BaseInfo
     {
-      BaseInfo() : report_interval_(0)
+      BaseInfo() : report_interval_(0), modify_time_(0)
       {
       }
 
@@ -89,12 +89,14 @@ namespace tfs
       std::vector<uint64_t> rc_server_infos_;
       std::vector<ClusterRackData> cluster_infos_;
       int32_t report_interval_;
+      int64_t modify_time_;
 
       BaseInfo& operator= (const BaseInfo& right)
       {
         rc_server_infos_ = right.rc_server_infos_;
         cluster_infos_ = right.cluster_infos_;
         report_interval_ = right.report_interval_;
+        modify_time_ = right.modify_time_;
         return *this;
       }
     };
