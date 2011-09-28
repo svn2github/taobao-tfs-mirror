@@ -22,7 +22,9 @@ namespace tfs
   namespace message
   {
     BaseMetaParameter::BaseMetaParameter() :
-      app_id_(0), user_id_(0), file_path_()
+      app_id_(0), user_id_(0),
+      version_(common::INVALID_TABLE_VERSION),
+      file_path_()
     {
     }
     BaseMetaParameter::~BaseMetaParameter()
@@ -42,6 +44,10 @@ namespace tfs
       {
         ret = input.get_string(file_path_);
       }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = input.get_int64(&version_);
+      }
       return ret;
     }
     int64_t BaseMetaParameter::length() const
@@ -59,6 +65,10 @@ namespace tfs
       if (TFS_SUCCESS == ret)
       {
         ret = output.set_string(file_path_);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = output.set_int64(version_);
       }
       return ret;
     }
@@ -298,7 +308,8 @@ namespace tfs
     }
 
     RespLsFilepathMessage::RespLsFilepathMessage() :
-      still_have_(false)
+      still_have_(false),
+      version_(common::INVALID_TABLE_VERSION)
     {
       meta_infos_.clear();
       _packetHeader._pcode = RESP_LS_FILEPATH_MESSAGE;
@@ -334,6 +345,10 @@ namespace tfs
           ret = it->serialize(output);
         }
       }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = output.set_int64(version_);
+      }
       return ret;
     }
 
@@ -357,6 +372,10 @@ namespace tfs
           }
           meta_infos_.push_back(file_meta_info);
         }
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = input.get_int64(&version_);
       }
       return ret;
     }

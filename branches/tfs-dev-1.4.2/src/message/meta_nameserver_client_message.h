@@ -59,9 +59,12 @@ namespace tfs
         {
           return file_path_.c_str();
         }
+        inline int64_t get_version(void) const { return version_;}
+        inline void set_version(const int64_t version) { version_ = version;}
       protected:
         int64_t app_id_;
         int64_t user_id_;
+        int64_t version_;
         std::string file_path_;
     };
     class FilepathActionMessage: public BaseMetaParameter
@@ -244,10 +247,13 @@ namespace tfs
       {
         return meta_infos_;
       }
+      inline int64_t get_version(void) const { return version_;}
+      inline void set_version(const int64_t version) { version_ = version;}
 
     private:
       bool still_have_;
       std::vector<MetaInfo> meta_infos_;
+      int64_t version_;
     };
   }
 }

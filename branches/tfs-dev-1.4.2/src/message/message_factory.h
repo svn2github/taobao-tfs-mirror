@@ -41,6 +41,9 @@
 #include "rc_session_message.h"
 #include "get_dataserver_information_message.h"
 #include "meta_nameserver_client_message.h"
+#include "rts_ms_heart_message.h"
+#include "get_tables_from_rts_message.h"
+#include "update_table_message.h"
 
 namespace tfs
 {

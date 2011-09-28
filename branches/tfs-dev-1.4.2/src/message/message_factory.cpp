@@ -234,6 +234,24 @@ namespace tfs
           case common::RESP_LS_FILEPATH_MESSAGE:
             packet = new RespLsFilepathMessage();
             break;
+          case common::REQ_RT_MS_KEEPALIVE_MESSAGE:
+            packet =  new RtsMsHeartMessage();
+            break;
+          case common::RSP_RT_MS_KEEPALIVE_MESSAGE:
+            packet = new RtsMsHeartResponseMessage();
+            break;
+          case common::REQ_RT_GET_TABLE_MESSAGE:
+            packet = new GetTableFromRtsMessage();
+            break;
+          case common::RSP_RT_GET_TABLE_MESSAGE:
+            packet = new GetTableFromRtsResponseMessage();
+            break;
+          case common::REQ_RT_UPDATE_TABLE_MESSAGE:
+            packet = new UpdateTableMessage();
+            break;
+          case common::RSP_RT_UPDATE_TABLE_MESSAGE:
+            packet = new UpdateTableResponseMessage();
+            break;
           default:
             TBSYS_LOG(ERROR, "pcode: %d not found in message factory", real_pcode);
             break;
