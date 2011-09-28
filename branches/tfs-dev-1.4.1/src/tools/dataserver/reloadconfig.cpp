@@ -19,6 +19,9 @@
 #include <string>
 
 #include "common/internal.h"
+#include "common/base_packet_factory.h"
+#include "common/base_packet_streamer.h"
+#include "message/message_factory.h"
 #include "common/new_client.h"
 #include "common/client_manager.h"
 #include "common/status_message.h"
@@ -88,8 +91,17 @@ int main(int argc, char* argv[])
     flag = strtoul(argv[2], reinterpret_cast<char**>(NULL), 10);
   }
 
-  int ret = reload_config(server_ip, flag);
-  if (ret == TFS_SUCCESS)
+  MessageFactory packet_factory;
+  BasePacketStreamer packet_streamer(&packet_factory);
+  int ret = NewClientManager::get_instance().initialize(&packet_factory, &packet_streamer);
+  if (TFS_SUCCESS != ret)
+  {
+    printf("initialize NewClientManager fail, must exit, ret: %d\n", ret);
+    return ret;
+  }
+
+  ret = reload_config(server_ip, flag);
+  if (TFS_SUCCESS == ret)
   {
     printf("reload Config Success.\n\n");
   }
@@ -97,6 +109,6 @@ int main(int argc, char* argv[])
   {
     printf("reload Config Fail ret=%d.\n\n", ret);
   }
-
+  NewClientManager::get_instance().destroy();
   return ret;
 }
