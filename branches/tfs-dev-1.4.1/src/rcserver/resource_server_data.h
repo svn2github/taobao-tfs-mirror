@@ -156,12 +156,12 @@ namespace tfs
         {
           if (common::OPER_WRITE == sit->first || common::OPER_UNIQUE_WRITE == sit->first)
           {
-            file_count_ += sit->second.oper_times_;
+            file_count_ += sit->second.oper_succ_;
             used_capacity_ += sit->second.oper_size_;
           }
           else if (common::OPER_UNLINK == sit->first || common::OPER_UNIQUE_UNLINK == sit->first)
           {
-            file_count_ -= sit->second.oper_times_;
+            file_count_ -= sit->second.oper_succ_;
             used_capacity_ -= sit->second.oper_size_;
           }
         }
