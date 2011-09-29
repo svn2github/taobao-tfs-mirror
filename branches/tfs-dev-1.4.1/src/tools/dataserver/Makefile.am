@@ -10,8 +10,7 @@ bin_PROGRAMS = clear_file_system\
                format_file_system\
                read_super_block\
                recover_disk_data_to_cluster\
-               recover_sync_file_queue\
-               filequeue_rename
+               recover_sync_file_queue
 
 noinst_PROGRAMS = convert_name\
                   reloadconfig\
@@ -58,5 +57,3 @@ view_local_key_SOURCES = view_local_key.cpp
 recover_disk_data_to_cluster_SOURCES = recover_disk_data_to_cluster.cpp
 
 recover_sync_file_queue_SOURCES = recover_sync_file_queue.cpp
-
-filequeue_rename_SOURCES = filequeue_rename.cpp
