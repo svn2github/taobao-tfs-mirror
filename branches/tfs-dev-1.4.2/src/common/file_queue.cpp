@@ -90,12 +90,12 @@ FileQueue::~FileQueue()
   write_header();
   if (information_fd_ != -1)
   {
-    close( information_fd_);
+    close(information_fd_);
     information_fd_ = -1;
   }
   if (read_fd_ != -1)
   {
-    close( read_fd_);
+    close(read_fd_);
     read_fd_ = -1;
   }
   if (write_fd_ != -1)

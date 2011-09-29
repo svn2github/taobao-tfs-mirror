@@ -65,7 +65,7 @@ namespace nameserver
     inline bool in_master_set() const { return BLOCK_IN_MASTER_SET_YES == in_master_set_;}
 
     int scan(common::SSMScanParameter& param) const;
-    void dump() const;
+    void dump(int32_t level, const char* file = __FILE__, const int32_t line = __LINE__, const char* function = __FUNCTION__) const;
 
     static const int8_t HOLD_MASTER_FLAG_NO;
     static const int8_t HOLD_MASTER_FLAG_YES;

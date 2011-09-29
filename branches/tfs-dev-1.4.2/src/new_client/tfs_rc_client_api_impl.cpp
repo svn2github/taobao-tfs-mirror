@@ -221,8 +221,8 @@ namespace tfs
         {
           TBSYS_LOG(ERROR, "should use save_file");
           fd = -1;
-        } 
-        else 
+        }
+        else
         {
           fdInfo fd_info(-1, uid, name);
           int32_t cluster_id = 0;
@@ -401,7 +401,7 @@ namespace tfs
           int64_t start_time = tbsys::CTimeUtil::getTime();
           if (fd_info.raw_tfs_fd_ < 0)
           {
-            read_count = name_meta_client_->read(fd_info.ns_addr_.c_str(), app_id_, fd_info.uid_, 
+            read_count = name_meta_client_->read(fd_info.ns_addr_.c_str(), app_id_, fd_info.uid_,
                 fd_info.name_.c_str(), buf, offset, count);
           }
           else
@@ -640,8 +640,8 @@ namespace tfs
         if (TFS_SUCCESS == ret)
         {
           int64_t start_time = tbsys::CTimeUtil::getTime();
-          saved_size = TfsClient::Instance()->save_unique(tfs_name_buff, buff_len, local_file,
-              flag, NULL, ns_addr);
+          saved_size = TfsClient::Instance()->save_file_unique(tfs_name_buff, buff_len, local_file,
+              NULL, ns_addr);
           int64_t response_time = tbsys::CTimeUtil::getTime() - start_time;
           add_stat_info(OPER_UNIQUE_WRITE, saved_size, response_time, saved_size >= 0);
         }
@@ -674,7 +674,7 @@ namespace tfs
         if (TFS_SUCCESS == ret)
         {
           int64_t start_time = tbsys::CTimeUtil::getTime();
-          saved_size = TfsClient::Instance()->save_unique(tfs_name_buff, buff_len, source_data, data_len,
+          saved_size = TfsClient::Instance()->save_buf_unique(tfs_name_buff, buff_len, source_data, data_len,
               NULL, ns_addr);
           int64_t response_time = tbsys::CTimeUtil::getTime() - start_time;
           add_stat_info(OPER_UNIQUE_WRITE, saved_size, response_time, saved_size >= 0);
@@ -686,7 +686,7 @@ namespace tfs
       else
       {
         int64_t start_time = tbsys::CTimeUtil::getTime();
-        saved_size = TfsClient::Instance()->save_file(tfs_name_buff, buff_len, source_data, data_len,
+        saved_size = TfsClient::Instance()->save_buf(tfs_name_buff, buff_len, source_data, data_len,
             T_DEFAULT, NULL, ns_addr);
         int64_t response_time = tbsys::CTimeUtil::getTime() - start_time;
         add_stat_info(OPER_WRITE, saved_size, response_time, saved_size >= 0);
@@ -1002,7 +1002,7 @@ namespace tfs
       }
       return iret;
     }
-    /////////////////////// for name meta 
+    /////////////////////// for name meta
     TfsRetType RcClientImpl::create_dir(const int64_t uid, const char* dir_path)
     {
       int ret = check_init_stat(true);
@@ -1032,7 +1032,7 @@ namespace tfs
       return ret;
     }
 
-    TfsRetType RcClientImpl::mv_dir(const int64_t uid, const char* src_dir_path, 
+    TfsRetType RcClientImpl::mv_dir(const int64_t uid, const char* src_dir_path,
         const char* dest_dir_path)
     {
       int ret = check_init_stat(true);
@@ -1042,7 +1042,7 @@ namespace tfs
       }
       return ret;
     }
-    TfsRetType RcClientImpl::mv_file(const int64_t uid, const char* src_file_path, 
+    TfsRetType RcClientImpl::mv_file(const int64_t uid, const char* src_file_path,
         const char* dest_file_path)
     {
       int ret = check_init_stat(true);
@@ -1058,7 +1058,7 @@ namespace tfs
         bool ret = false;
         if (NULL != name)
         {
-          //TODO 
+          //TODO
           ret = (*name == 'T' || *name == 'L');
         }
         return ret;
@@ -1095,12 +1095,12 @@ namespace tfs
         }
         else
         {
-          while(1) 
+          while(1)
           {
-            if (MAX_FILE_FD == my_fd_) 
-            {    
-              my_fd_ = 1; 
-            }    
+            if (MAX_FILE_FD == my_fd_)
+            {
+              my_fd_ = 1;
+            }
             gen_fd = my_fd_++;
             it = fd_infos_.find(gen_fd);
             if (it == fd_infos_.end())

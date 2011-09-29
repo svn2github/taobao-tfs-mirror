@@ -70,7 +70,7 @@ namespace tfs
 
     int DataService::parse_common_line_args(int argc, char* argv[], std::string& errmsg)
     {
-      char buf[256];
+      char buf[256] = {'\0'};
       int32_t index = 0;
       while ((index = getopt(argc, argv, "i:")) != EOF)
       {

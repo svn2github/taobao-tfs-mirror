@@ -13,6 +13,6 @@ cd $temppath
 chmod +x build.sh
 ./build.sh init
 export TBLIB_ROOT=/opt/csr/common
-./configure
+./configure 
 make PREFIX=/home/admin/tfs rpms
 mv *.rpm rpm/

@@ -37,8 +37,12 @@ public class Failover_ha_test extends FailOverBaseCase {
 		bRet = setSeedSize(1);
 		Assert.assertTrue(bRet);
 		
+		/* Set unlink ratio */
+		bRet = setUnlinkRatio(50);
+		Assert.assertTrue(bRet);
+		
 		/* Check block copys */
-		bRet = chkBlockCntBothNormal(2);
+		bRet = chkBlockCntBothNormal(BLOCKCOPYCNT);
 		Assert.assertTrue(bRet);
 		
 		/* Check block copy count */
@@ -48,13 +52,15 @@ public class Failover_ha_test extends FailOverBaseCase {
 		/* Write file */
 		bRet = writeCmd();
 		Assert.assertTrue(bRet);
+	
+		sleep (30);
 		
 		/* Check the rate of write process */
-		bRet = checkRateRun(SUCCESSRATE, WRITEONLY|READ);
+		bRet = checkRateRun(SUCCESSRATE, WRITEONLY|READ|UNLINK);
 		Assert.assertTrue(bRet);
 		
 		/* Check block copys */
-		bRet = chkBlockCntBothNormal(2);
+		bRet = chkBlockCntBothNormal(BLOCKCOPYCNT);
 		Assert.assertTrue(bRet);
 		
 		/* Kill master ns */
@@ -62,10 +68,10 @@ public class Failover_ha_test extends FailOverBaseCase {
 		Assert.assertTrue(bRet);
 		
 		/* Wait 20s for recover */
-		sleep (10);
+		sleep (20);
 		
 		/* Check the rate of write process */
-		bRet = checkRateRun(SUCCESSRATE, WRITEONLY|READ);
+		bRet = checkRateRun(SUCCESSRATE, WRITEONLY|READ|UNLINK);
 		Assert.assertTrue(bRet);
 		
 		/* Restart ns */
@@ -73,7 +79,7 @@ public class Failover_ha_test extends FailOverBaseCase {
 		Assert.assertTrue(bRet);
 		
 		/* Check block copys */
-		bRet = chkBlockCntBothNormal(2);
+		bRet = chkBlockCntBothNormal(BLOCKCOPYCNT);
 		Assert.assertTrue(bRet);
 		
 		/* Stop write cmd */
@@ -85,7 +91,7 @@ public class Failover_ha_test extends FailOverBaseCase {
 		Assert.assertTrue(bRet);
 		
 		/* Check block copys */
-		bRet = chkBlockCntBothNormal(2);
+		bRet = chkBlockCntBothNormal(BLOCKCOPYCNT);
 		Assert.assertTrue(bRet);
 		
 		/* Check block copy count */
@@ -111,16 +117,8 @@ public class Failover_ha_test extends FailOverBaseCase {
 		caseName = "Failover_02_ns_ha_switch_serval_times";
 		log.info(caseName + "===> start");
 		
-		/* Set loop flag */
-		bRet = setSeedFlag(LOOPON);
-		Assert.assertTrue(bRet);
-		
-		/* Set seed size */
-		bRet = setSeedSize(1);
-		Assert.assertTrue(bRet);
-		
 		/* Check block copys */
-		bRet = chkBlockCntBothNormal(2);
+		bRet = chkBlockCntBothNormal(BLOCKCOPYCNT);
 		Assert.assertTrue(bRet);
 		
 		/* Check block copy count */
@@ -132,11 +130,11 @@ public class Failover_ha_test extends FailOverBaseCase {
 		Assert.assertTrue(bRet);
 		
 		/* Check the rate of write process */
-		bRet = checkRateRun(SUCCESSRATE, WRITEONLY|READ);
+		bRet = checkRateRun(SUCCESSRATE, WRITEONLY|READ|UNLINK);
 		Assert.assertTrue(bRet);
 		
 		/* Check block copys */
-		bRet = chkBlockCntBothNormal(2);
+		bRet = chkBlockCntBothNormal(BLOCKCOPYCNT);
 		Assert.assertTrue(bRet);
 		
 		for (int iLoop = 0; iLoop < 10; iLoop ++)
@@ -156,11 +154,11 @@ public class Failover_ha_test extends FailOverBaseCase {
 		sleep (10);
 		
 		/* Check the rate of write process */
-		bRet = checkRateRun(SUCCESSRATE, WRITEONLY|READ);
+		bRet = checkRateRun(SUCCESSRATE, WRITEONLY|READ|UNLINK);
 		Assert.assertTrue(bRet);
 		
 		/* Check block copys */
-		bRet = chkBlockCntBothNormal(2);
+		bRet = chkBlockCntBothNormal(BLOCKCOPYCNT);
 		Assert.assertTrue(bRet);
 		
 		/* Stop write cmd */
@@ -172,7 +170,7 @@ public class Failover_ha_test extends FailOverBaseCase {
 		Assert.assertTrue(bRet);
 		
 		/* Check block copys */
-		bRet = chkBlockCntBothNormal(2);
+		bRet = chkBlockCntBothNormal(BLOCKCOPYCNT);
 		Assert.assertTrue(bRet);
 		
 		/* Check block copy count */
@@ -198,16 +196,8 @@ public class Failover_ha_test extends FailOverBaseCase {
 		caseName = "Failover_03_ns_ha_slave_restart_once";
 		log.info(caseName + "===> start");
 		
-		/* Set loop flag */
-		bRet = setSeedFlag(LOOPON);
-		Assert.assertTrue(bRet);
-		
-		/* Set seed size */
-		bRet = setSeedSize(1);
-		Assert.assertTrue(bRet);
-		
 		/* Check block copys */
-		bRet = chkBlockCntBothNormal(2);
+		bRet = chkBlockCntBothNormal(BLOCKCOPYCNT);
 		Assert.assertTrue(bRet);
 		
 		/* Check block copy count */
@@ -221,11 +211,11 @@ public class Failover_ha_test extends FailOverBaseCase {
 		sleep (30);
 		
 		/* Check the rate of write process */
-		bRet = checkRateRun(SUCCESSRATE, WRITEONLY|READ);
+		bRet = checkRateRun(SUCCESSRATE, WRITEONLY|READ|UNLINK);
 		Assert.assertTrue(bRet);
 		
 		/* Check block copys */
-		bRet = chkBlockCntBothNormal(2);
+		bRet = chkBlockCntBothNormal(BLOCKCOPYCNT);
 		Assert.assertTrue(bRet);
 		
 		/* Kill master ns */
@@ -236,11 +226,11 @@ public class Failover_ha_test extends FailOverBaseCase {
 		sleep (30);
 		
 		/* Check the rate of write process */
-		bRet = checkRateRun(SUCCESSRATE, WRITEONLY|READ);
+		bRet = checkRateRun(SUCCESSRATE, WRITEONLY|READ|UNLINK);
 		Assert.assertTrue(bRet);
 		
 		/* Check block copys */
-		bRet = chkBlockCntBothNormal(2);
+		bRet = chkBlockCntBothNormal(BLOCKCOPYCNT);
 		Assert.assertTrue(bRet);
 		
 		/* Start slave ns */
@@ -248,11 +238,11 @@ public class Failover_ha_test extends FailOverBaseCase {
 		Assert.assertTrue(bRet);
 		
 		/* Check the rate of write process */
-		bRet = checkRateRun(SUCCESSRATE, WRITEONLY|READ);
+		bRet = checkRateRun(SUCCESSRATE, WRITEONLY|READ|UNLINK);
 		Assert.assertTrue(bRet);
 		
 		/* Check block copys */
-		bRet = chkBlockCntBothNormal(2);
+		bRet = chkBlockCntBothNormal(BLOCKCOPYCNT);
 		Assert.assertTrue(bRet);
 		
 		/* Stop write cmd */
@@ -260,7 +250,7 @@ public class Failover_ha_test extends FailOverBaseCase {
 		Assert.assertTrue(bRet);
 		
 		/* Check the rate of write process */
-		bRet = checkRateEnd(SUCCESSRATE, WRITEONLY|READ);
+		bRet = checkRateEnd(SUCCESSRATE, WRITEONLY|READ|UNLINK);
 		Assert.assertTrue(bRet);
 		
 		/* Read file */
@@ -268,7 +258,7 @@ public class Failover_ha_test extends FailOverBaseCase {
 		Assert.assertTrue(bRet);
 		
 		/* Check block copys */
-		bRet = chkBlockCntBothNormal(2);
+		bRet = chkBlockCntBothNormal(BLOCKCOPYCNT);
 		Assert.assertTrue(bRet);
 		
 		/* Check block copy count */
@@ -293,14 +283,6 @@ public class Failover_ha_test extends FailOverBaseCase {
 		caseName = "Failover_04_ns_ha_slave_restart_serval_times";
 		log.info(caseName + "===> start");
 		
-		/* Set loop flag */
-		bRet = setSeedFlag(LOOPON);
-		Assert.assertTrue(bRet);
-		
-		/* Set seed size */
-		bRet = setSeedSize(1);
-		Assert.assertTrue(bRet);
-		
 		/* Write file */
 		bRet = writeCmd();
 		Assert.assertTrue(bRet);
@@ -308,11 +290,11 @@ public class Failover_ha_test extends FailOverBaseCase {
 		sleep (30);
 		
 		/* Check the rate of write process */
-		bRet = checkRateRun(SUCCESSRATE, WRITEONLY|READ);
+		bRet = checkRateRun(SUCCESSRATE, WRITEONLY|READ|UNLINK);
 		Assert.assertTrue(bRet);
 		
 		/* Check block copys */
-		bRet = chkBlockCntBothNormal(2);
+		bRet = chkBlockCntBothNormal(BLOCKCOPYCNT);
 		Assert.assertTrue(bRet);
 		
 		for (int iLoop = 0; iLoop < 10; iLoop ++)
@@ -332,11 +314,11 @@ public class Failover_ha_test extends FailOverBaseCase {
 		sleep (30);
 		
 		/* Check the rate of write process */
-		bRet = checkRateRun(SUCCESSRATE, WRITEONLY|READ);
+		bRet = checkRateRun(SUCCESSRATE, WRITEONLY|READ|UNLINK);
 		Assert.assertTrue(bRet);
 		
 		/* Check block copys */
-		bRet = chkBlockCntBothNormal(2);
+		bRet = chkBlockCntBothNormal(BLOCKCOPYCNT);
 		Assert.assertTrue(bRet);
 		
 		/* Stop write cmd */
@@ -344,7 +326,7 @@ public class Failover_ha_test extends FailOverBaseCase {
 		Assert.assertTrue(bRet);
 		
 		/* Check the rate of write process */
-		bRet = checkRateEnd(SUCCESSRATE, WRITEONLY|READ);
+		bRet = checkRateEnd(SUCCESSRATE, WRITEONLY|READ|UNLINK);
 		Assert.assertTrue(bRet);
 		
 		/* Read file */
@@ -370,16 +352,8 @@ public class Failover_ha_test extends FailOverBaseCase {
 		caseName = "Failover_05_ns_ha_ns_restart_once";
 		log.info(caseName + "===> start");
 		
-		/* Set loop flag */
-		bRet = setSeedFlag(LOOPON);
-		Assert.assertTrue(bRet);
-		
-		/* Set seed size */
-		bRet = setSeedSize(1);
-		Assert.assertTrue(bRet);
-		
 		/* Check block copys */
-		bRet = chkBlockCntBothNormal(2);
+		bRet = chkBlockCntBothNormal(BLOCKCOPYCNT);
 		Assert.assertTrue(bRet);
 		
 		/* Check block copy count */
@@ -393,11 +367,11 @@ public class Failover_ha_test extends FailOverBaseCase {
 		sleep (30);
 		
 		/* Check the rate of write process */
-		bRet = checkRateRun(SUCCESSRATE, WRITEONLY|READ);
+		bRet = checkRateRun(SUCCESSRATE, WRITEONLY|READ|UNLINK);
 		Assert.assertTrue(bRet);
 		
 		/* Check block copys */
-		bRet = chkBlockCntBothNormal(2);
+		bRet = chkBlockCntBothNormal(BLOCKCOPYCNT);
 		Assert.assertTrue(bRet);
 		
 		/* Kill master ns */
@@ -418,11 +392,11 @@ public class Failover_ha_test extends FailOverBaseCase {
 		sleep (60);
 		
 		/* Check the rate of write process */
-		bRet = checkRateRun(SUCCESSRATE, WRITEONLY|READ);
+		bRet = checkRateRun(SUCCESSRATE, WRITEONLY|READ|UNLINK);
 		Assert.assertTrue(bRet);
 		
 		/* Check block copys */
-		bRet = chkBlockCntBothNormal(2);
+		bRet = chkBlockCntBothNormal(BLOCKCOPYCNT);
 		Assert.assertTrue(bRet);
 		
 		/* Stop write cmd */
@@ -434,7 +408,7 @@ public class Failover_ha_test extends FailOverBaseCase {
 		Assert.assertTrue(bRet);
 		
 		/* Check block copys */
-		bRet = chkBlockCntBothNormal(2);
+		bRet = chkBlockCntBothNormal(BLOCKCOPYCNT);
 		Assert.assertTrue(bRet);
 		
 		/* Check block copy count */
@@ -459,14 +433,6 @@ public class Failover_ha_test extends FailOverBaseCase {
 		caseName = "Failover_06_ns_ha_ns_restart_serval_times";
 		log.info(caseName + "===> start");
 		
-		/* Set loop flag */
-		bRet = setSeedFlag(LOOPON);
-		Assert.assertTrue(bRet);
-		
-		/* Set seed size */
-		bRet = setSeedSize(1);
-		Assert.assertTrue(bRet);
-		
 		/* Write file */
 		bRet = writeCmd();
 		Assert.assertTrue(bRet);
@@ -474,11 +440,11 @@ public class Failover_ha_test extends FailOverBaseCase {
 		sleep (30);
 		
 		/* Check the rate of write process */
-		bRet = checkRateRun(SUCCESSRATE, WRITEONLY|READ);
+		bRet = checkRateRun(SUCCESSRATE, WRITEONLY|READ|UNLINK);
 		Assert.assertTrue(bRet);
 		
 		/* Check block copys */
-		bRet = chkBlockCntBothNormal(2);
+		bRet = chkBlockCntBothNormal(BLOCKCOPYCNT);
 		Assert.assertTrue(bRet);
 		
 		for (int iLoop = 0; iLoop < 10; iLoop ++)
@@ -502,11 +468,11 @@ public class Failover_ha_test extends FailOverBaseCase {
 		sleep (60);
 		
 		/* Check the rate of write process */
-		bRet = checkRateRun(SUCCESSRATE, WRITEONLY|READ);
+		bRet = checkRateRun(SUCCESSRATE, WRITEONLY|READ|UNLINK);
 		Assert.assertTrue(bRet);
 		
 		/* Check block copys */
-		bRet = chkBlockCntBothNormal(2);
+		bRet = chkBlockCntBothNormal(BLOCKCOPYCNT);
 		Assert.assertTrue(bRet);
 		
 		/* Stop write cmd */
@@ -535,14 +501,6 @@ public class Failover_ha_test extends FailOverBaseCase {
 		caseName = "Failover_07_ns_ha_slave_down";
 		log.info(caseName + "===> start");
 		
-		/* Set loop flag */
-		bRet = setSeedFlag(LOOPON);
-		Assert.assertTrue(bRet);
-		
-		/* Set seed size */
-		bRet = setSeedSize(1);
-		Assert.assertTrue(bRet);
-		
 		/* Write file */
 		bRet = writeCmd();
 		Assert.assertTrue(bRet);
@@ -550,11 +508,11 @@ public class Failover_ha_test extends FailOverBaseCase {
 		sleep (30);
 		
 		/* Check the rate of write process */
-		bRet = checkRateRun(SUCCESSRATE, WRITEONLY|READ);
+		bRet = checkRateRun(SUCCESSRATE, WRITEONLY|READ|UNLINK);
 		Assert.assertTrue(bRet);
 		
 		/* Check block copys */
-		bRet = chkBlockCntBothNormal(2);
+		bRet = chkBlockCntBothNormal(BLOCKCOPYCNT);
 		Assert.assertTrue(bRet);
 		
 		/* Kill master ns */
@@ -562,11 +520,11 @@ public class Failover_ha_test extends FailOverBaseCase {
 		Assert.assertTrue(bRet);
 		
 		/* Check the rate of write process */
-		bRet = checkRateRun(SUCCESSRATE, WRITEONLY|READ);
+		bRet = checkRateRun(SUCCESSRATE, WRITEONLY|READ|UNLINK);
 		Assert.assertTrue(bRet);
 		
 		/* Check block copys */
-		bRet = chkBlockCntBothNormal(2);
+		bRet = chkBlockCntBothNormal(BLOCKCOPYCNT);
 		Assert.assertTrue(bRet);
 		
 		/* Stop write cmd */
@@ -574,7 +532,7 @@ public class Failover_ha_test extends FailOverBaseCase {
 		Assert.assertTrue(bRet);
 		
 		/* Check the rate of write process */
-		bRet = checkRateEnd(SUCCESSRATE, WRITEONLY|READ);
+		bRet = checkRateEnd(SUCCESSRATE, WRITEONLY|READ|UNLINK);
 		Assert.assertTrue(bRet);
 		
 		/* Read file */
@@ -599,14 +557,6 @@ public void Failover_08_one_ds_out_copy_block_switch(){
 		caseName = "Failover_08_one_ds_out_copy_block_switch";
 		log.info(caseName + "===> start");
 		
-		/* Set loop flag */
-		bRet = setSeedFlag(LOOPON);
-		Assert.assertTrue(bRet);
-		
-		/* Set seed size */
-		bRet = setSeedSize(1);
-		Assert.assertTrue(bRet);
-		
 		/* Write file */
 		bRet = writeCmd();
 		Assert.assertTrue(bRet);
@@ -614,11 +564,11 @@ public void Failover_08_one_ds_out_copy_block_switch(){
 		sleep (30);
 		
 		/* Check the rate of write process */
-		bRet = checkRateRun(SUCCESSRATE, WRITEONLY|READ);
+		bRet = checkRateRun(SUCCESSRATE, WRITEONLY|READ|UNLINK);
 		Assert.assertTrue(bRet);
 		
 		/* Check block copys */
-		bRet = chkBlockCntBothNormal(2);
+		bRet = chkBlockCntBothNormal(BLOCKCOPYCNT);
 		Assert.assertTrue(bRet);
 		
 		/* Kill one ds */
@@ -629,7 +579,7 @@ public void Failover_08_one_ds_out_copy_block_switch(){
 		sleep (20);
 		
 		/* Check the rate of write process */
-		bRet = checkRateRun(SUCCESSRATE, WRITEONLY|READ);
+		bRet = checkRateRun(SUCCESSRATE, WRITEONLY|READ|UNLINK);
 		Assert.assertTrue(bRet);
 		
 		/* Kill master ns */
@@ -637,11 +587,11 @@ public void Failover_08_one_ds_out_copy_block_switch(){
 		Assert.assertTrue(bRet);
 		
 		/* Check block copys */
-		bRet = chkBlockCntBothNormal(2);
+		bRet = chkBlockCntBothNormal(BLOCKCOPYCNT);
 		Assert.assertTrue(bRet);
 		
 		/* Check the rate of write process */
-		bRet = checkRateRun(SUCCESSRATE, WRITEONLY|READ);
+		bRet = checkRateRun(SUCCESSRATE, WRITEONLY|READ|UNLINK);
 		Assert.assertTrue(bRet);
 		
 		/* Stop write cmd */
@@ -662,20 +612,12 @@ public void Failover_08_one_ds_out_copy_block_switch(){
 		caseName = "Failover_09_one_ds_in_switch";
 		log.info(caseName + "===> start");
 		
-		/* Set loop flag */
-		bRet = setSeedFlag(LOOPON);
-		Assert.assertTrue(bRet);
-		
-		/* Set seed size */
-		bRet = setSeedSize(1);
-		Assert.assertTrue(bRet);
-		
 		/* Kill one ds */
 		bRet = killOneDs();
 		Assert.assertTrue(bRet);
 		
 		/* Check block copys */
-		bRet = chkBlockCntBothNormal(2);
+		bRet = chkBlockCntBothNormal(BLOCKCOPYCNT);
 		Assert.assertTrue(bRet);
 		
 		/* Write file */
@@ -685,7 +627,7 @@ public void Failover_08_one_ds_out_copy_block_switch(){
 		sleep (30);
 		
 		/* Check the rate of write process */
-		bRet = checkRateRun(SUCCESSRATE, WRITEONLY|READ);
+		bRet = checkRateRun(SUCCESSRATE, WRITEONLY|READ|UNLINK);
 		Assert.assertTrue(bRet);
 		
 		/* One ds in */
@@ -693,7 +635,7 @@ public void Failover_08_one_ds_out_copy_block_switch(){
 		Assert.assertTrue(bRet);
 		
 		/* Check the rate of write process */
-		bRet = checkRateRun(SUCCESSRATE, WRITEONLY|READ);
+		bRet = checkRateRun(SUCCESSRATE, WRITEONLY|READ|UNLINK);
 		Assert.assertTrue(bRet);
 		
 		/* Kill master ns */
@@ -701,11 +643,11 @@ public void Failover_08_one_ds_out_copy_block_switch(){
 		Assert.assertTrue(bRet);
 		
 		/* Check block copys */
-		bRet = chkBlockCntBothNormal(2);
+		bRet = chkBlockCntBothNormal(BLOCKCOPYCNT);
 		Assert.assertTrue(bRet);
 		
 		/* Check the rate of write process */
-		bRet = checkRateRun(SUCCESSRATE, WRITEONLY|READ);
+		bRet = checkRateRun(SUCCESSRATE, WRITEONLY|READ|UNLINK);
 		Assert.assertTrue(bRet);
 		
 		/* Stop write cmd */
@@ -726,14 +668,6 @@ public void Failover_08_one_ds_out_copy_block_switch(){
 		caseName = "Failover_10_compact_switch";
 		log.info(caseName + "===> start");
 		
-		/* Set loop flag */
-		bRet = setSeedFlag(LOOPON);
-		Assert.assertTrue(bRet);
-		
-		/* Set seed size */
-		bRet = setSeedSize(1);
-		Assert.assertTrue(bRet);
-		
 		/* Set unlink ratio */
 		bRet = setUnlinkRatio(70);
 		Assert.assertTrue(bRet);	
@@ -742,7 +676,7 @@ public void Failover_08_one_ds_out_copy_block_switch(){
 		bRet = writeCmd();
 		Assert.assertTrue(bRet);
 		
-		sleep (30);
+		sleep (400);
 		
 		/* Check the rate of write process */
 		bRet = checkRateRun(SUCCESSRATE, WRITEONLY|READ|UNLINK);
@@ -756,11 +690,11 @@ public void Failover_08_one_ds_out_copy_block_switch(){
 		Assert.assertTrue(bRet);
 		
 		/* Check block copys */
-		bRet = chkBlockCntBothNormal(2);
+		bRet = chkBlockCntBothNormal(BLOCKCOPYCNT);
 		Assert.assertTrue(bRet);
 		
 		/* Check the rate of write process */
-		bRet = checkRateRun(SUCCESSRATE, WRITEONLY|READ);
+		bRet = checkRateRun(SUCCESSRATE, WRITEONLY|READ|UNLINK);
 		Assert.assertTrue(bRet);
 		
 		/* Stop write cmd */
@@ -775,6 +709,10 @@ public void Failover_08_one_ds_out_copy_block_switch(){
 		bRet = chkFinalRetSuc();
 		Assert.assertTrue(bRet);
 		
+		/* Set unlink ratio */
+		bRet = setUnlinkRatio(50);
+		Assert.assertTrue(bRet);
+		
 		log.info(caseName + "===> end");
 		return ;
 	}
@@ -785,16 +723,8 @@ public void Failover_08_one_ds_out_copy_block_switch(){
 		caseName = "Failover_11_ns_ha_switch_once_without_press";
 		log.info(caseName + "===> start");
 		
-		/* Set loop flag */
-		bRet = setSeedFlag(LOOPON);
-		Assert.assertTrue(bRet);
-		
-		/* Set seed size */
-		bRet = setSeedSize(1);
-		Assert.assertTrue(bRet);
-		
 		/* Check block copys */
-		bRet = chkBlockCntBothNormal(2);
+		bRet = chkBlockCntBothNormal(BLOCKCOPYCNT);
 		Assert.assertTrue(bRet);
 		
 		/* Kill master ns */
@@ -809,7 +739,7 @@ public void Failover_08_one_ds_out_copy_block_switch(){
 		Assert.assertTrue(bRet);
 		
 		/* Check block copys */
-		bRet = chkBlockCntBothNormal(2);
+		bRet = chkBlockCntBothNormal(BLOCKCOPYCNT);
 		Assert.assertTrue(bRet);
 		
 		/* Check vip */
@@ -830,18 +760,6 @@ public void Failover_08_one_ds_out_copy_block_switch(){
 		caseName = "Failover_12_ns_ha_switch_serval_times_without_press";
 		log.info(caseName + "===> start");
 		
-		/* Set loop flag */
-		bRet = setSeedFlag(LOOPON);
-		Assert.assertTrue(bRet);
-		
-		/* Set seed size */
-		bRet = setSeedSize(1);
-		Assert.assertTrue(bRet);
-		
-		/* Check the rate of write process */
-		bRet = checkRateRun(SUCCESSRATE, WRITEONLY|READ);
-		Assert.assertTrue(bRet);
-		
 		for (int iLoop = 0; iLoop < 10; iLoop ++)
 		{
 			/* Kill master ns */
@@ -859,7 +777,7 @@ public void Failover_08_one_ds_out_copy_block_switch(){
 		sleep (10);
 		
 		/* Check block copys */
-		bRet = chkBlockCntBothNormal(2);
+		bRet = chkBlockCntBothNormal(BLOCKCOPYCNT);
 		Assert.assertTrue(bRet);
 		
 		/* Check vip */
@@ -880,20 +798,12 @@ public void Failover_08_one_ds_out_copy_block_switch(){
 		caseName = "Failover_13_ns_ha_slave_restart_once_without_press";
 		log.info(caseName + "===> start");
 		
-		/* Set loop flag */
-		bRet = setSeedFlag(LOOPON);
-		Assert.assertTrue(bRet);
-		
-		/* Set seed size */
-		bRet = setSeedSize(1);
-		Assert.assertTrue(bRet);
-		
 		/* Put the seed */
 		bRet = putSeed();
 		Assert.assertTrue(bRet);
 		
 		/* Check block copys */
-		bRet = chkBlockCntBothNormal(2);
+		bRet = chkBlockCntBothNormal(BLOCKCOPYCNT);
 		Assert.assertTrue(bRet);
 		
 		/* Kill master ns */
@@ -908,7 +818,7 @@ public void Failover_08_one_ds_out_copy_block_switch(){
 		Assert.assertTrue(bRet);
 		
 		/* Check the rate of write process */
-		bRet = checkRateEnd(SUCCESSRATE, WRITEONLY|READ);
+		bRet = checkRateEnd(SUCCESSRATE, WRITEONLY|READ|UNLINK);
 		Assert.assertTrue(bRet);
 		
 		/* Read file */
@@ -933,14 +843,6 @@ public void Failover_08_one_ds_out_copy_block_switch(){
 		caseName = "Failover_14_ns_ha_slave_restart_serval_times_whitout_press";
 		log.info(caseName + "===> start");
 		
-		/* Set loop flag */
-		bRet = setSeedFlag(LOOPON);
-		Assert.assertTrue(bRet);
-		
-		/* Set seed size */
-		bRet = setSeedSize(1);
-		Assert.assertTrue(bRet);
-		
 		/* Put seed */
 		bRet = putSeed();
 		Assert.assertTrue(bRet);
@@ -962,11 +864,11 @@ public void Failover_08_one_ds_out_copy_block_switch(){
 		sleep (10);
 		
 		/* Check block copys */
-		bRet = chkBlockCntBothNormal(2);
+		bRet = chkBlockCntBothNormal(BLOCKCOPYCNT);
 		Assert.assertTrue(bRet);
 		
 		/* Check the rate of write process */
-		bRet = checkRateEnd(SUCCESSRATE, WRITEONLY|READ);
+		bRet = checkRateEnd(SUCCESSRATE, WRITEONLY|READ|UNLINK);
 		Assert.assertTrue(bRet);
 		
 		/* Read file */
@@ -991,20 +893,12 @@ public void Failover_08_one_ds_out_copy_block_switch(){
 		caseName = "Failover_15_ns_ha_ns_restart_once_without_press";
 		log.info(caseName + "===> start");
 		
-		/* Set loop flag */
-		bRet = setSeedFlag(LOOPON);
-		Assert.assertTrue(bRet);
-		
-		/* Set seed size */
-		bRet = setSeedSize(1);
-		Assert.assertTrue(bRet);
-		
 		/* Write file */
 		bRet = putSeed();
 		Assert.assertTrue(bRet);
 		
 		/* Check block copys */
-		bRet = chkBlockCntBothNormal(2);
+		bRet = chkBlockCntBothNormal(BLOCKCOPYCNT);
 		Assert.assertTrue(bRet);
 		
 		/* Kill master ns */
@@ -1021,7 +915,7 @@ public void Failover_08_one_ds_out_copy_block_switch(){
 		sleep (20);
 		
 		/* Check block copys */
-		bRet = chkBlockCntBothNormal(2);
+		bRet = chkBlockCntBothNormal(BLOCKCOPYCNT);
 		Assert.assertTrue(bRet);
 		
 		/* Read file */
@@ -1046,20 +940,12 @@ public void Failover_08_one_ds_out_copy_block_switch(){
 		caseName = "Failover_16_ns_ha_ns_restart_serval_times_without_press";
 		log.info(caseName + "===> start");
 		
-		/* Set loop flag */
-		bRet = setSeedFlag(LOOPON);
-		Assert.assertTrue(bRet);
-		
-		/* Set seed size */
-		bRet = setSeedSize(1);
-		Assert.assertTrue(bRet);
-		
 		/* Write file */
 		bRet = putSeed();
 		Assert.assertTrue(bRet);
 		
 		/* Check block copys */
-		bRet = chkBlockCntBothNormal(2);
+		bRet = chkBlockCntBothNormal(BLOCKCOPYCNT);
 		Assert.assertTrue(bRet);
 		
 		for (int iLoop = 0; iLoop < 10; iLoop ++)
@@ -1079,7 +965,7 @@ public void Failover_08_one_ds_out_copy_block_switch(){
 		sleep (20);
 		
 		/* Check block copys */
-		bRet = chkBlockCntBothNormal(2);
+		bRet = chkBlockCntBothNormal(BLOCKCOPYCNT);
 		Assert.assertTrue(bRet);
 		
 		/* Read file */
@@ -1104,20 +990,12 @@ public void Failover_08_one_ds_out_copy_block_switch(){
 		caseName = "Failover_17_ns_ha_slave_down_without_press";
 		log.info(caseName + "===> start");
 		
-		/* Set loop flag */
-		bRet = setSeedFlag(LOOPON);
-		Assert.assertTrue(bRet);
-		
-		/* Set seed size */
-		bRet = setSeedSize(1);
-		Assert.assertTrue(bRet);
-		
 		/* Write file */
 		bRet = putSeed();	
 		Assert.assertTrue(bRet);
 		
 		/* Check block copys */
-		bRet = chkBlockCntBothNormal(2);
+		bRet = chkBlockCntBothNormal(BLOCKCOPYCNT);
 		Assert.assertTrue(bRet);
 		
 		/* Kill master ns */
@@ -1125,7 +1003,7 @@ public void Failover_08_one_ds_out_copy_block_switch(){
 		Assert.assertTrue(bRet);
 		
 		/* Check block copys */
-		bRet = chkBlockCntBothNormal(2);
+		bRet = chkBlockCntBothNormal(BLOCKCOPYCNT);
 		Assert.assertTrue(bRet);
 		
 		/* Stop write cmd */
@@ -1133,7 +1011,7 @@ public void Failover_08_one_ds_out_copy_block_switch(){
 		Assert.assertTrue(bRet);
 		
 		/* Check the rate of write process */
-		bRet = checkRateEnd(SUCCESSRATE, WRITEONLY|READ);
+		bRet = checkRateEnd(SUCCESSRATE, WRITEONLY|READ|UNLINK);
 		Assert.assertTrue(bRet);
 		
 		/* Read file */
@@ -1158,20 +1036,12 @@ public void Failover_18_one_ds_out_copy_block_switch_without_press(){
 		caseName = "Failover_18_one_ds_out_copy_block_switch_without_press";
 		log.info(caseName + "===> start");
 		
-		/* Set loop flag */
-		bRet = setSeedFlag(LOOPON);
-		Assert.assertTrue(bRet);
-		
-		/* Set seed size */
-		bRet = setSeedSize(1);
-		Assert.assertTrue(bRet);
-		
 		/* Write file */
 		bRet = putSeed();	
 		Assert.assertTrue(bRet);
 		
 		/* Check block copys */
-		bRet = chkBlockCntBothNormal(2);
+		bRet = chkBlockCntBothNormal(BLOCKCOPYCNT);
 		Assert.assertTrue(bRet);
 		
 		/* Kill one ds */
@@ -1186,7 +1056,7 @@ public void Failover_18_one_ds_out_copy_block_switch_without_press(){
 		Assert.assertTrue(bRet);
 		
 		/* Check block copys */
-		bRet = chkBlockCntBothNormal(2);
+		bRet = chkBlockCntBothNormal(BLOCKCOPYCNT);
 		Assert.assertTrue(bRet);
 		
 		/* Read file */
@@ -1203,20 +1073,12 @@ public void Failover_18_one_ds_out_copy_block_switch_without_press(){
 		caseName = "Failover_19_one_ds_in_switch_without_press";
 		log.info(caseName + "===> start");
 		
-		/* Set loop flag */
-		bRet = setSeedFlag(LOOPON);
-		Assert.assertTrue(bRet);
-		
-		/* Set seed size */
-		bRet = setSeedSize(1);
-		Assert.assertTrue(bRet);
-		
 		/* Kill one ds */
 		bRet = killOneDs();
 		Assert.assertTrue(bRet);
 		
 		/* Check block copys */
-		bRet = chkBlockCntBothNormal(2);
+		bRet = chkBlockCntBothNormal(BLOCKCOPYCNT);
 		Assert.assertTrue(bRet);
 		
 		/* Write file */
@@ -1232,7 +1094,7 @@ public void Failover_18_one_ds_out_copy_block_switch_without_press(){
 		Assert.assertTrue(bRet);
 		
 		/* Check block copys */
-		bRet = chkBlockCntBothNormal(2);
+		bRet = chkBlockCntBothNormal(BLOCKCOPYCNT);
 		Assert.assertTrue(bRet);
 	
 		/* Read file */
@@ -1249,12 +1111,8 @@ public void Failover_18_one_ds_out_copy_block_switch_without_press(){
 		caseName = "Failover_20_compact_switch_without_press";
 		log.info(caseName + "===> start");
 		
-		/* Set loop flag */
-		bRet = setSeedFlag(LOOPON);
-		Assert.assertTrue(bRet);
-		
-		/* Set seed size */
-		bRet = setSeedSize(1);
+		/* Set unlink ratio */
+		bRet = setUnlinkRatio(70);
 		Assert.assertTrue(bRet);
 		
 		/* Start write cmd */
@@ -1269,7 +1127,7 @@ public void Failover_18_one_ds_out_copy_block_switch_without_press(){
 		Assert.assertTrue(bRet);
 		
 		/* Check block copys */
-		bRet = chkBlockCntBothNormal(2);
+		bRet = chkBlockCntBothNormal(BLOCKCOPYCNT);
 		Assert.assertTrue(bRet);
 		
 		/* Stop write cmd */
@@ -1277,19 +1135,20 @@ public void Failover_18_one_ds_out_copy_block_switch_without_press(){
 		Assert.assertTrue(bRet);
 		
 		/* Check the final rate */
-		bRet = checkRateEnd(SUCCESSRATE, WRITEONLY|READ);
+		bRet = checkRateEnd(SUCCESSRATE, WRITEONLY|READ|UNLINK);
 		Assert.assertTrue(bRet);
 		
 		/* Read file */
 		bRet = chkFinalRetSuc();
 		Assert.assertTrue(bRet);
 		
+		/* Set unlink ratio */
+		bRet = setUnlinkRatio(50);
+		Assert.assertTrue(bRet);
+		
 		log.info(caseName + "===> end");
 		return ;
 	}
-	
-	
-	
 	
 	//@After
 	public void tearDown(){

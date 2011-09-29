@@ -97,6 +97,11 @@ namespace tfs
             {
               manager_.get_heart_management().add_report_server(ds_info.id_);
               manager_.get_heart_management().del_uncomplete_report_server(ds_info.id_);
+              server = lay_out_manager_.get_server(ds_info.id_);
+              if (NULL != server)
+              {
+                server->update(now);
+              }
             }
           }
         }
@@ -858,11 +863,32 @@ namespace tfs
       return TFS_SUCCESS;
     }
 
-
     int ClientRequestServer::handle_control_set_runtime_param(const common::ClientCmdInformation& info, const int64_t buf_length, char* buf)
     {
       UNUSED(buf_length);
       return lay_out_manager_.set_runtime_param(info.value3_, info.value4_, buf);
+    }
+
+    int ClientRequestServer::handle_control_get_balance_percent(const int64_t buf_length, char* buf)
+    {
+      snprintf(buf, buf_length, "%.6f", SYSPARAM_NAMESERVER.balance_percent_);
+      return TFS_SUCCESS;
+    }
+
+    int ClientRequestServer::handle_control_set_balance_percent(const common::ClientCmdInformation& info, const int64_t buf_length, char* buf)
+    {
+      int32_t iret = info.value3_ > 1 || info.value3_ < 0 || info.value4_ < 0 ? EXIT_PARAMETER_ERROR : TFS_SUCCESS; 
+      if (TFS_SUCCESS != iret)
+      {
+        snprintf(buf, buf_length, "parameter is invalid, value3: %d, value4: %d", info.value3_, info.value4_);
+      }
+      else
+      {
+        char data[32] = {'\0'};
+        snprintf(data, 32, "%d.%06d", info.value3_, info.value4_);
+        SYSPARAM_NAMESERVER.balance_percent_ = strtod(data, NULL);
+      }
+      return iret;
     }
 
     int ClientRequestServer::handle_control_cmd(const ClientCmdInformation& info, common::BasePacket* msg, const int64_t buf_length, char* buf)
@@ -891,6 +917,12 @@ namespace tfs
           break;
         case CLIENT_CMD_ROTATE_LOG:
           iret = handle_control_rotate_log();
+          break;
+        case CLIENT_CMD_GET_BALANCE_PERCENT:
+          iret = handle_control_get_balance_percent(buf_length, buf);
+          break;
+        case CLIENT_CMD_SET_BALANCE_PERCENT:
+          iret = handle_control_set_balance_percent(info, buf_length, buf);
           break;
         default:
           snprintf(buf, buf_length, "unknow client cmd: %d", info.cmd_);

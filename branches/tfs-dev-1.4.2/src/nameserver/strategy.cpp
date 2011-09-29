@@ -268,7 +268,7 @@ namespace tfs
     {
       std::vector<ServerCollect*> except;
       WriteStrategy strategy(GFactory::get_global_info().get_elect_seq_num(), GFactory::get_global_info());
-      return elect_ds(strategy, ExcludeGroupElectOperation(), meta, except, elect_count,false, result);
+      return elect_ds(strategy, ExcludeGroupElectOperation(), meta, except, elect_count, false, result);
     }
 
     int elect_replicate_source_ds(LayoutManager& meta, vector<ServerCollect*>& source, vector<ServerCollect*>& except, int32_t elect_count, vector<ServerCollect*>& result)

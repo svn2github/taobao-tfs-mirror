@@ -19,7 +19,6 @@ import com.taobao.gaia.HelpHA;
 import com.taobao.gaia.HelpLog;
 import com.taobao.gaia.HelpProc;
 import com.taobao.gaia.KillTypeEnum;
-import com.taobao.tfstest.NameServerPlanTestCase.PlanType;
 
 import org.apache.log4j.Logger;
 import org.springframework.context.ApplicationContext;
@@ -50,18 +49,16 @@ public class FailOverBaseCase {
 	final public boolean DEFINE_NS13 = false;
 	final public int NSINDEX = 0;
 	final public int DSINDEX = 1;
-	final public int DSINDEXI = 2;
 	final public int FAILCOUNTNOR = 0;
 	final public int FAILCOUNTERR = 1;
 	final public int BLOCKCOPYCNT = 2;
 	final public int BLOCKCOPYCNT13 = 3;
+	final public int DS_CLUSTER_NUM = tfsGrid.getClusterList().size() - 1;
 	final public String NSVIP = tfsGrid.getCluster(NSINDEX).getServer(0).getVip();
 	final public String MASTERIP = tfsGrid.getCluster(NSINDEX).getServer(0).getIp();
 	final public String SLAVEIP = tfsGrid.getCluster(NSINDEX).getServer(1).getIp();
 	final public int NSPORT = tfsGrid.getCluster(NSINDEX).getServer(0).getPort();
 	final public String NSCONF = tfsGrid.getCluster(NSINDEX).getServer(0).getConfname();	
-	final public String DSIPA = tfsGrid.getCluster(DSINDEX).getServer(0).getIp();
-	final public String DSIPB = tfsGrid.getCluster(DSINDEXI).getServer(0).getIp();
 	final public String CLIENTIP = tfsSeedClient.getIp();
 	final public String CLIENTCONF = tfsSeedClient.getConfname();
 	
@@ -74,8 +71,6 @@ public class FailOverBaseCase {
 	final public String DP_LOG_NAME     = TFS_LOG_HOME + "/dumpplan.log";
 	final public String BL_LOG_NAME     = TFS_LOG_HOME + "/blocklist.log";
 	final public String CURR_LOG_NAME   = "nameserver.log";	
-	public String SAR_DSA_LOG     		= TFS_HOME + "/sar_";	
-	public String SAR_DSB_LOG     		= TFS_HOME + "/sar_";
 	
 	/* Key word */
 	final public String WRITEFILE        = "writeFile :";
@@ -161,7 +156,7 @@ public class FailOverBaseCase {
 	final public int RUNRATECOL = 13;
 	final public int TAILTPSCOL = 13;
 	final public int RUNTPSCOL = 11;
-	final public int SCANTIME = 300;
+	final public int SCANTIME = 400;
 	final public int MIGRATETIME = 20;
 	
 	/* Thread count on client */
@@ -324,7 +319,7 @@ public class FailOverBaseCase {
 	public boolean unlinkCmdMon()
 	{
 		boolean bRet = false;
-		log.info("Read command monitor start ===>");
+		log.info("Unlink command monitor start ===>");
 		for (;;)
 		{
 			int iRet = Proc.proMonitorBase(CLIENTIP, UNLINKCMD + caseName);
@@ -340,7 +335,7 @@ public class FailOverBaseCase {
 				break;
 			}
 		}
-		log.info("Read command monitor end ===>");
+		log.info("Unlink command monitor end ===>");
 		return bRet;
 	}
 	
@@ -2230,28 +2225,30 @@ public class FailOverBaseCase {
 	}
 	
 	/**
-	 * @author mingyan 
+	 * @author mingyan
 	 * @param interval
 	 * @param count
 	 * @return
 	 */
-	public boolean networkTrafMonStart(int interval, int count)
-	{	
+	public boolean networkTrafMonStart(int interval, int count, ArrayList<String> ds_ip_list)
+	{
 		boolean bRet = false;
-		Date date = new Date();
-		SAR_DSA_LOG += date.toString() + ".log";
-		String strCmd = "sar -n DEV -o " + SAR_DSA_LOG + " " + interval + " " + count;
-		log.info("Sar command start ===>");
-		bRet = Proc.proStartBackroundBase(DSIPA, strCmd);
-		if (bRet == false) return bRet;
-
-		date = new Date();
-		SAR_DSB_LOG += date.toString() + ".log";
-		strCmd = "sar -n DEV -o " + SAR_DSB_LOG + " " + interval + " " + count;
-		bRet = Proc.proStartBackroundBase(DSIPB, strCmd);		
-		log.info("Sar command end ===>");		
-
-		return bRet;		
+		
+		for (int i = DSINDEX; i <= DS_CLUSTER_NUM; i++)
+		{
+			String ds_ip = tfsGrid.getCluster(i).getServer(0).getIp();
+			ds_ip_list.add(ds_ip);
+			String sar_log = TFS_HOME + "/sar_" + ds_ip + ".log";
+			String strCmd = "sar -n DEV -o " + sar_log + " " + interval + " " + count;
+			log.info("Sar command start ===>");
+			bRet = Proc.proStartBackroundBase(ds_ip, strCmd);
+			log.info("Sar command end ===>");
+			if (bRet == false) return bRet;
+		}
+		
+		//Date date = new Date();
+		//SAR_DSA_LOG += date.toString() + ".log";
+		return bRet;
 	}
 	
 	/**
@@ -2260,55 +2257,47 @@ public class FailOverBaseCase {
 	 * @param col
 	 * @return
 	 */
-	public boolean chkNetworkTrafBalance(String ethIndex, int col)
+	public boolean chkNetworkTrafBalance(String ethIndex, int col, ArrayList<String> ds_ip_list)
 	{	
 		boolean bRet = false;
 		
-		String strCmd = "sar -n DEV -f " + SAR_DSA_LOG;
+		ArrayList<Double> rtx_bps_list = new ArrayList<Double>();
 		ArrayList<String> keyWords = new ArrayList<String>();
 		ArrayList<String> output = new ArrayList<String>();
-		keyWords.add("Average");
-		keyWords.add(ethIndex);
-		bRet = Proc.cmdOutBase2(DSIPA, strCmd, keyWords, col, null, output);
-		if (bRet == false) return bRet;
-		
-		if (output.size() == 0)
-			return false;
-		double rtxbytPerSecDSA = Double.parseDouble(output.get(0));	
-		if (col == RXBYTPERSEC_SD_COL)
-			log.debug("rxbytPerSecDSA: " + output.get(0));
-		else if (col == TXBYTPERSEC_SD_COL)
-			log.debug("txbytPerSecDSA: " + output.get(0));
-		
-		strCmd = "sar -n DEV -f " + SAR_DSB_LOG;
-		output.clear();
-		bRet = Proc.cmdOutBase2(DSIPB, strCmd, keyWords, col, null, output);
-		if (bRet == false) return bRet;		
-		
-		if (output.size() == 0)
-			return false;
-		double rtxbytPerSecDSB = Double.parseDouble(output.get(0));	
-		if (col == RXBYTPERSEC_SD_COL)
-			log.debug("rxbytPerSecDSB: " + output.get(0));
-		else if (col == TXBYTPERSEC_SD_COL)
-			log.debug("txbytPerSecDSB: " + output.get(0));
-		
-		double temp;
-		if (rtxbytPerSecDSA < rtxbytPerSecDSB)
+		double sum_bps = 0.0;
+		for (int i = 0; i < ds_ip_list.size(); i++)
 		{
-			temp = rtxbytPerSecDSA;
-			rtxbytPerSecDSA = rtxbytPerSecDSB;
-			rtxbytPerSecDSB = temp;
+			String ds_ip = ds_ip_list.get(i);
+			String sar_log = TFS_HOME + "/sar_" + ds_ip + ".log";
+			String strCmd = "sar -n DEV -f " + sar_log;
+			keyWords.clear();
+			output.clear();
+			keyWords.add("Average");
+			keyWords.add(ethIndex);
+			bRet = Proc.cmdOutBase2(ds_ip, strCmd, keyWords, col, null, output);
+			if (bRet == false || output.size() == 0) return false;
+			
+			double bps = Double.parseDouble(output.get(0));
+			rtx_bps_list.add(bps);
+			sum_bps += bps;
+			if (col == RXBYTPERSEC_SD_COL)
+				log.debug(ds_ip + " rx bytes per sec: " + output.get(0));
+			else if (col == TXBYTPERSEC_SD_COL)
+				log.debug(ds_ip + " tx bytes per sec: " + output.get(0));			
 		}
 		
-		double diff = rtxbytPerSecDSA - rtxbytPerSecDSB;
-		if (col == RXBYTPERSEC_SD_COL)
-			log.debug("diff of rxbytPerSecDs: " + diff);
-		else if (col == TXBYTPERSEC_SD_COL)
-			log.debug("diff of txbytPerSecDs: " + diff);
-		
-		if (diff > NETWORKTRAF_IMBALANCE_THRESHOLD)
-			bRet = false;
+		// get the average bps
+		double average_bps = sum_bps/rtx_bps_list.size();
+		for (int i = 0; i < rtx_bps_list.size(); i++)
+		{
+			double diff = Math.abs(rtx_bps_list.get(i) - average_bps);
+			if (col == RXBYTPERSEC_SD_COL)
+				log.debug(ds_ip_list.get(i) + " diff of rx bytes per sec: " + diff);
+			else if (col == TXBYTPERSEC_SD_COL)
+				log.debug(ds_ip_list.get(i) + " diff of rx bytes per sec: " + diff);
+			if (diff > NETWORKTRAF_IMBALANCE_THRESHOLD)
+				return false;
+		}
 		
 		return bRet;
 	}
@@ -2323,13 +2312,19 @@ public class FailOverBaseCase {
 		boolean bRet = false;
     
 		/* Use ssm to query */
-		String strCmd = TFS_BIN_HOME + "/ssm -s " + NSVIP + 
-			":" + NSPORT + " -i server";
+		String strCmd;
+		if (DEFINE_NS13) {
+			strCmd = TFS_BIN_HOME + "/showssm -f ../conf/ns.conf -t 2";
+		}
+		else {
+			strCmd = TFS_BIN_HOME + "/ssm -s " + NSVIP + 
+				":" + NSPORT + " -i server";
+		}
 		ArrayList<String> result = new ArrayList<String>();
 		String strPreValue;
 		String strValue = "";
 		do {
-			bRet = Proc.cmdOutBase(MASTERIP, strCmd, "TOTAL:", USED_CAP_COL, null, result);
+			bRet = Proc.cmdOutBase(MASTERIP, strCmd, "TOTAL[: ]", USED_CAP_COL, null, result);
 			if (bRet == false) return bRet;
 			
 			if (result.size() != 1) return false;
@@ -2370,12 +2365,18 @@ public class FailOverBaseCase {
 		boolean bRet = false;
     
 		/* Use ssm to query */
-		String strCmd = TFS_BIN_HOME + "/ssm -s " + NSVIP + 
-			":" + NSPORT + " -i server";
+		String strCmd;
+		if (DEFINE_NS13) {
+			strCmd = TFS_BIN_HOME + "/showssm -f ../conf/ns.conf -t 2";
+		}
+		else {
+			strCmd = TFS_BIN_HOME + "/ssm -s " + NSVIP + 
+				":" + NSPORT + " -i server";
+		}
 		ArrayList<String> result = new ArrayList<String>();
 		double value;
 		do {
-			bRet = Proc.cmdOutBase(MASTERIP, strCmd, "TOTAL:", USED_CAP_COL, null, result);
+			bRet = Proc.cmdOutBase(MASTERIP, strCmd, "TOTAL[: ]", USED_CAP_COL, null, result);
 			if (bRet == false) return bRet;
 			
 			if (result.size() != 1) return false;
@@ -2412,13 +2413,19 @@ public class FailOverBaseCase {
 		boolean bRet = false;
     
 		/* Use ssm to query */
-		String strCmd = TFS_BIN_HOME + "/ssm -s " + NSVIP + 
-			":" + NSPORT + " -i server";
+		String strCmd;
+		if (DEFINE_NS13) {
+			strCmd = TFS_BIN_HOME + "/showssm -f ../conf/ns.conf -t 2";
+		}
+		else {
+			strCmd = TFS_BIN_HOME + "/ssm -s " + NSVIP + 
+				":" + NSPORT + " -i server";
+		}
 		ArrayList<String> result = new ArrayList<String>();
 		String strValue = "";
 		String strPreValue;
 		do {
-			bRet = Proc.cmdOutBase(MASTERIP, strCmd, "TOTAL:", CURR_BLKCNT_COL, null, result);
+			bRet = Proc.cmdOutBase(MASTERIP, strCmd, "TOTAL[: ]", CURR_BLKCNT_COL, null, result);
 			if (bRet == false) return bRet;
 			
 			if (result.size() != 1) return false;
@@ -2446,12 +2453,18 @@ public class FailOverBaseCase {
 		boolean bRet = false;
     
 		/* Use ssm to query */
-		String strCmd = TFS_BIN_HOME + "/ssm -s " + NSVIP + 
-			":" + NSPORT + " -i server";
+		String strCmd;
+		if (DEFINE_NS13) {
+			strCmd = TFS_BIN_HOME + "/showssm -f ../conf/ns.conf -t 2";
+		}
+		else {
+			strCmd = TFS_BIN_HOME + "/ssm -s " + NSVIP + 
+				":" + NSPORT + " -i server";
+		}
 		ArrayList<String> result = new ArrayList<String>();
 		int value;
 		do {
-			bRet = Proc.cmdOutBase(MASTERIP, strCmd, "TOTAL:", CURR_BLKCNT_COL, null, result);
+			bRet = Proc.cmdOutBase(MASTERIP, strCmd, "TOTAL[: ]", CURR_BLKCNT_COL, null, result);
 			if (bRet == false) return bRet;
 			
 			if (result.size() != 1) return false;
@@ -2541,7 +2554,7 @@ public class FailOverBaseCase {
 		for(int iLoop = 0; iLoop < csCluster.getServerList().size(); iLoop ++)
 		{
 			AppServer cs = csCluster.getServer(iLoop);
-			bRet = cs.stop(KillTypeEnum.NORMALKILL, WAITTIME);
+			bRet = cs.start();
 			if (bRet == false)
 			{
 				break;
@@ -2555,7 +2568,7 @@ public class FailOverBaseCase {
 	{
 		boolean bRet = false;
 		log.info("Kill all ds start ===>");
-		for (int iLoop = DSINDEX; iLoop <= DSINDEXI; iLoop ++)
+		for (int iLoop = DSINDEX; iLoop <= DS_CLUSTER_NUM; iLoop ++)
 		{
 			AppCluster csCluster = tfsGrid.getCluster(iLoop);
 			for(int jLoop = 0; jLoop < csCluster.getServerList().size(); jLoop ++)
@@ -2576,7 +2589,7 @@ public class FailOverBaseCase {
 	{
 		boolean bRet = false;
 		log.info("Kill all ds start ===>");
-		for (int iLoop = DSINDEX; iLoop <= DSINDEXI; iLoop ++)
+		for (int iLoop = DSINDEX; iLoop <= DS_CLUSTER_NUM; iLoop ++)
 		{
 			AppCluster csCluster = tfsGrid.getCluster(iLoop);
 			for(int jLoop = 0; jLoop < csCluster.getServerList().size(); jLoop ++)
@@ -2597,7 +2610,7 @@ public class FailOverBaseCase {
 	{
 		boolean bRet = false;
 		log.info("Start all ds start ===>");
-		for (int iLoop = DSINDEX; iLoop <= DSINDEXI; iLoop ++)
+		for (int iLoop = DSINDEX; iLoop <= DS_CLUSTER_NUM; iLoop ++)
 		{
 			AppCluster csCluster = tfsGrid.getCluster(iLoop);
 			for(int jLoop = 0; jLoop < csCluster.getServerList().size(); jLoop ++)
@@ -2649,7 +2662,7 @@ public class FailOverBaseCase {
 	{
 		boolean bRet = false;
 		log.info("Clean all ds start ===>");
-		for (int iLoop = DSINDEX; iLoop <= DSINDEXI; iLoop ++)
+		for (int iLoop = DSINDEX; iLoop <= DS_CLUSTER_NUM; iLoop ++)
 		{
 			AppCluster csCluster = tfsGrid.getCluster(iLoop);
 			for(int jLoop = 0; jLoop < csCluster.getServerList().size(); jLoop ++)
@@ -2721,7 +2734,7 @@ public class FailOverBaseCase {
 		if (bRet == false) return bRet;
 		
 		/* Check block copys */
-		bRet = chkBlockCntBothNormal(2);
+		bRet = chkBlockCntBothNormal(BLOCKCOPYCNT);
 		if (bRet == false) return bRet;
 		
 		/* Check the rate of write process */
@@ -2769,7 +2782,7 @@ public class FailOverBaseCase {
 		ArrayList<String> listOut = new ArrayList<String>();
 		String cmd;
 		if (DEFINE_NS13) {
-			cmd = "cd " + TFS_BIN_HOME + "; ./showssm -f ../conf/tfs.conf -t 1 | grep -v \\\"TOTAL\\\" | grep \\\"" + 
+			cmd = "cd " + TFS_BIN_HOME + "; ./showssm -f ../conf/ns.conf -t 1 | grep -v \\\"TOTAL\\\" | grep \\\"" + 
 				iBlockCnt + "$\\\" | wc -l";
 		}
 		else {
@@ -2906,7 +2919,7 @@ public class FailOverBaseCase {
 		ArrayList<String> listOut = new ArrayList<String>(); 
 		String cmd;
 		if (DEFINE_NS13) {
-			cmd = "cd " + TFS_BIN_HOME + "; ./showssm -f ../conf/tfs.conf -t 2 |grep -v \\\"TOTAL\\\"| grep \\\"G\\\" | wc -l";
+			cmd = "cd " + TFS_BIN_HOME + "; ./showssm -f ../conf/ns.conf -t 2 |grep -v \\\"TOTAL\\\"| grep \\\"G\\\" | wc -l";
 		}
 		else {
 			cmd = "cd " + TFS_BIN_HOME + "; ./ssm -s " + ip + 

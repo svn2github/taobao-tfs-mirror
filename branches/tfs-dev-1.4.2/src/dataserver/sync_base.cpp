@@ -42,15 +42,11 @@ namespace tfs
         mirror_dir_ = dynamic_cast<DataService*>(DataService::instance())->get_real_work_dir() + "/mirror";
         uint64_t dest_ns_id = Func::get_host_ip(dest_addr); 
         char queue_name[20];
+        sprintf(queue_name, "queue_%"PRI64_PREFIX"u", dest_ns_id);
         // the 1st one is the master
         if (index == 0)
         {
           is_master_ = true;
-          sprintf(queue_name, "firstqueue");  // for compactibility
-        }
-        else
-        {
-          sprintf(queue_name, "queue_%"PRI64_PREFIX"u", dest_ns_id);
         }
         file_queue_ = new FileQueue(mirror_dir_, queue_name);
         file_queue_->load_queue_head();
@@ -322,10 +318,10 @@ namespace tfs
             retry_wait_monitor_.timedWait(tbutil::Time::seconds(wait_second));
             retry_wait_monitor_.unlock();
           }
-          if (stop_)
+          /*if (stop_)
           {
             return TFS_ERROR;
-          }
+          }*/
           retry_time_ = time(NULL);
         }
       }while (TFS_SUCCESS != ret);

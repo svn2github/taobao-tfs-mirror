@@ -313,21 +313,21 @@ namespace tfs
 
     uint64_t Func::get_host_ip(const char *s)
     {
-     char addr[100];
-     strncpy(addr, s, 100);
-     addr[99] = '\0';
-     char* pos = strchr(addr, ':');
+      char addr[100];
+      strncpy(addr, s, 100);
+      addr[99] = '\0';
+      char* pos = strchr(addr, ':');
 
-     if (pos)
-     {
-         *pos++ = '\0';
-     }
-     else
-     {
-       return 0;
-     }
+      if (pos)
+      {
+          *pos++ = '\0';
+      }
+      else
+      {
+        return 0;
+      }
 
-     return Func::str_to_addr(addr, atoi(pos));
+      return Func::str_to_addr(addr, atoi(pos));
     }
 
     // convert to lower

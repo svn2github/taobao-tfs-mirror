@@ -8,7 +8,10 @@ AM_LDFLAGS=-lrt -lpthread -ldl $(READLINE_LIB)
 bin_PROGRAMS = clear_file_system\
                ds_client\
                format_file_system\
-               read_super_block
+               read_super_block\
+               recover_disk_data_to_cluster\
+               recover_sync_file_queue\
+               filequeue_rename
 
 noinst_PROGRAMS = convert_name\
                   reloadconfig\
@@ -51,3 +54,9 @@ format_file_system_SOURCES = format_file_system.cpp
 read_index_tool_SOURCES = read_index_tool.cpp
 
 view_local_key_SOURCES = view_local_key.cpp
+
+recover_disk_data_to_cluster_SOURCES = recover_disk_data_to_cluster.cpp
+
+recover_sync_file_queue_SOURCES = recover_sync_file_queue.cpp
+
+filequeue_rename_SOURCES = filequeue_rename.cpp

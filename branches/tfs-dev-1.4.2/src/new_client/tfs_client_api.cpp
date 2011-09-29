@@ -113,19 +113,19 @@ int TfsClient::init_unique_store(const char* master_addr, const char* slave_addr
   return TfsClientImpl::Instance()->init_unique_store(master_addr, slave_addr, group_name, area, ns_addr);
 }
 
-int64_t TfsClient::save_unique(char* ret_tfs_name, const int32_t ret_tfs_name_len,
+int64_t TfsClient::save_buf_unique(char* ret_tfs_name, const int32_t ret_tfs_name_len,
                                const char* buf, const int64_t count,
                                const char* suffix, const char* ns_addr)
 {
-  return TfsClientImpl::Instance()->save_unique(ret_tfs_name, ret_tfs_name_len,
+  return TfsClientImpl::Instance()->save_buf_unique(ret_tfs_name, ret_tfs_name_len,
                                                 buf, count, suffix, ns_addr);
 }
 
-int64_t TfsClient::save_unique(char* ret_tfs_name, const int32_t ret_tfs_name_len,
+int64_t TfsClient::save_file_unique(char* ret_tfs_name, const int32_t ret_tfs_name_len,
                                const char* local_file,
                                const char* suffix, const char* ns_addr)
 {
-  return TfsClientImpl::Instance()->save_unique(ret_tfs_name, ret_tfs_name_len,
+  return TfsClientImpl::Instance()->save_file_unique(ret_tfs_name, ret_tfs_name_len,
                                                 local_file, suffix, ns_addr);
 }
 
@@ -271,11 +271,11 @@ int32_t TfsClient::get_cluster_id(const char* ns_addr)
   return TfsClientImpl::Instance()->get_cluster_id(ns_addr);
 }
 
-int64_t TfsClient::save_file(char* ret_tfs_name, const int32_t ret_tfs_name_len,
+int64_t TfsClient::save_buf(char* ret_tfs_name, const int32_t ret_tfs_name_len,
                              const char* buf, const int64_t count,
                              const int32_t flag, const char* suffix, const char* ns_addr, const char* key)
 {
-  return TfsClientImpl::Instance()->save_file(ret_tfs_name, ret_tfs_name_len,
+  return TfsClientImpl::Instance()->save_buf(ret_tfs_name, ret_tfs_name_len,
                                               buf, count, flag, suffix, ns_addr, key);
 }
 

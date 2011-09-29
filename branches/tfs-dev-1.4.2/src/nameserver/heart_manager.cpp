@@ -286,34 +286,21 @@ namespace tfs
     int HeartManagement::add_uncomplete_report_server(std::vector<uint64_t>& servers)
     {
       RWLock::Lock lock(mutex_, WRITE_LOCKER);
+      std::vector<uint64_t> vec;
       std::vector<uint64_t>::iterator iter = servers.begin();
       std::vector<uint64_t>::iterator it;
-      for (; iter != servers.end();)
+      std::vector<uint64_t>::iterator uit;
+      for (; iter != servers.end(); ++iter)
       {
         it = std::find(current_report_servers_.begin(), current_report_servers_.end(), (*iter));
-        if (current_report_servers_.end() != it)
+        uit = std::find(uncomplete_report_servers_.begin(), uncomplete_report_servers_.end(), (*iter));
+        if (current_report_servers_.end() == it
+          && uncomplete_report_servers_.end() == uit)
         {
-          servers.erase(++iter);
-        }
-        else
-        {
-          iter++;
+          vec.push_back((*iter));
         }
       }
-      iter = servers.begin();
-      for (; iter != servers.end();)
-      {
-        it = std::find(uncomplete_report_servers_.begin(), uncomplete_report_servers_.end(), (*iter));
-        if (uncomplete_report_servers_.end() != it)
-        {
-          servers.erase(++iter);
-        }
-        else
-        {
-          iter++;
-        }
-      }
-      uncomplete_report_servers_.insert(uncomplete_report_servers_.end(), servers.begin(), servers.end());
+      uncomplete_report_servers_.insert(uncomplete_report_servers_.end(), vec.begin(), vec.end());
       return TFS_SUCCESS;
     }
 
@@ -374,6 +361,7 @@ namespace tfs
 
     void HeartManagement::TimeReportBlockTimerTask::runTimerTask()
     {
+      TBSYS_LOG(DEBUG, "TimeReportBlockTimerTask::runTimerTask...........");
       manager_.get_layout_manager().register_report_servers();
     }
 
