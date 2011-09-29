@@ -102,10 +102,10 @@ namespace tfs
 #ifdef WITH_UNIQUE_STORE
       int init_unique_store(const char* master_addr, const char* slave_addr,
                             const char* group_name, const int32_t area, const char* ns_addr = NULL);
-      int64_t save_unique(char* ret_tfs_name, const int32_t ret_tfs_name_len,
+      int64_t save_buf_unique(char* ret_tfs_name, const int32_t ret_tfs_name_len,
                           const char* buf, const int64_t count,
                           const char* suffix = NULL, const char* ns_addr = NULL);
-      int64_t save_unique(char* ret_tfs_name, const int32_t ret_tfs_name_len,
+      int64_t save_file_unique(char* ret_tfs_name, const int32_t ret_tfs_name_len,
                           const char* local_file,
                           const char* suffix = NULL, const char* ns_addr = NULL);
       int32_t unlink_unique(int64_t& file_size, const char* file_name, const char* suffix = NULL,
@@ -115,7 +115,7 @@ namespace tfs
       uint64_t get_server_id();
       int32_t get_cluster_id(const char* ns_addr = NULL);
 
-      int64_t save_file(char* ret_tfs_name, const int32_t ret_tfs_name_len,
+      int64_t save_buf(char* ret_tfs_name, const int32_t ret_tfs_name_len,
                         const char* buf, const int64_t count,
                         const int32_t flag, const char* suffix = NULL,
                         const char* ns_addr = NULL, const char* key = NULL);

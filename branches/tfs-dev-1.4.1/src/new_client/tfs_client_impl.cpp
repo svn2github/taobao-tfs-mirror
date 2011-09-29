@@ -411,7 +411,7 @@ int TfsClientImpl::init_unique_store(const char* master_addr, const char* slave_
   return ret;
 }
 
-int64_t TfsClientImpl::save_unique(char* ret_tfs_name, const int32_t ret_tfs_name_len,
+int64_t TfsClientImpl::save_buf_unique(char* ret_tfs_name, const int32_t ret_tfs_name_len,
                                    const char* buf, const int64_t count,
                                    const char* suffix, const char* ns_addr)
 {
@@ -423,13 +423,13 @@ int64_t TfsClientImpl::save_unique(char* ret_tfs_name, const int32_t ret_tfs_nam
   }
   else
   {
-    ret = save_unique_ex(ret_tfs_name, ret_tfs_name_len, buf, count, NULL, suffix, ns_addr);
+    ret = save_buf_unique_ex(ret_tfs_name, ret_tfs_name_len, buf, count, NULL, suffix, ns_addr);
   }
 
   return ret;
 }
 
-int64_t TfsClientImpl::save_unique(char* ret_tfs_name, const int32_t ret_tfs_name_len,
+int64_t TfsClientImpl::save_file_unique(char* ret_tfs_name, const int32_t ret_tfs_name_len,
                                    const char* local_file,
                                    const char* suffix, const char* ns_addr)
 {
@@ -442,13 +442,13 @@ int64_t TfsClientImpl::save_unique(char* ret_tfs_name, const int32_t ret_tfs_nam
   }
   else
   {
-    ret = save_unique_ex(ret_tfs_name, ret_tfs_name_len, local_file, NULL, suffix, ns_addr);
+    ret = save_file_unique_ex(ret_tfs_name, ret_tfs_name_len, local_file, NULL, suffix, ns_addr);
   }
 
   return ret;
 }
 
-int64_t TfsClientImpl::save_unique_update(const char* buf, const int64_t count,
+int64_t TfsClientImpl::save_buf_unique_update(const char* buf, const int64_t count,
                                           const char* file_name, const char* suffix, const char* ns_addr)
 {
   int64_t ret =  INVALID_FILE_SIZE;
@@ -460,13 +460,13 @@ int64_t TfsClientImpl::save_unique_update(const char* buf, const int64_t count,
   }
   else
   {
-    ret = save_unique_ex(NULL, 0, buf, count, file_name, suffix, ns_addr);
+    ret = save_buf_unique_ex(NULL, 0, buf, count, file_name, suffix, ns_addr);
   }
 
   return ret;
 }
 
-int64_t TfsClientImpl::save_unique_update(const char* local_file,
+int64_t TfsClientImpl::save_file_unique_update(const char* local_file,
                                           const char* file_name, const char* suffix, const char* ns_addr)
 {
   int64_t ret =  INVALID_FILE_SIZE;
@@ -478,7 +478,7 @@ int64_t TfsClientImpl::save_unique_update(const char* local_file,
   }
   else
   {
-    ret = save_unique_ex(NULL, 0, local_file, file_name, suffix, ns_addr);
+    ret = save_file_unique_ex(NULL, 0, local_file, file_name, suffix, ns_addr);
   }
 
   return ret;
@@ -502,7 +502,7 @@ int32_t TfsClientImpl::unlink_unique(int64_t& file_size, const char* file_name, 
   return ret;
 }
 
-int64_t TfsClientImpl::save_unique_ex(char* ret_tfs_name, const int32_t ret_tfs_name_len,
+int64_t TfsClientImpl::save_buf_unique_ex(char* ret_tfs_name, const int32_t ret_tfs_name_len,
                                       const char* buf, const int64_t count,
                                       const char* file_name, const char* suffix, const char* ns_addr)
 {
@@ -528,7 +528,7 @@ int64_t TfsClientImpl::save_unique_ex(char* ret_tfs_name, const int32_t ret_tfs_
   return ret;
 }
 
-int64_t TfsClientImpl::save_unique_ex(char* ret_tfs_name, const int32_t ret_tfs_name_len,
+int64_t TfsClientImpl::save_file_unique_ex(char* ret_tfs_name, const int32_t ret_tfs_name_len,
                                       const char* local_file,
                                       const char* file_name, const char* suffix, const char* ns_addr)
 {
@@ -832,7 +832,7 @@ int32_t TfsClientImpl::get_cluster_id(const char* ns_addr)
   return cluster_id;
 }
 
-int64_t TfsClientImpl::save_file(char* ret_tfs_name, const int32_t ret_tfs_name_len,
+int64_t TfsClientImpl::save_buf(char* ret_tfs_name, const int32_t ret_tfs_name_len,
                                  const char* buf, const int64_t count,
                                  const int32_t flag, const char* suffix,
                                  const char* ns_addr, const char* key)
@@ -846,7 +846,7 @@ int64_t TfsClientImpl::save_file(char* ret_tfs_name, const int32_t ret_tfs_name_
   }
   else
   {
-    ret = save_file_ex(ret_tfs_name, ret_tfs_name_len, buf, count, flag, NULL, suffix, ns_addr, key);
+    ret = save_buf_ex(ret_tfs_name, ret_tfs_name_len, buf, count, flag, NULL, suffix, ns_addr, key);
   }
 
   return ret;
@@ -883,7 +883,7 @@ int64_t TfsClientImpl::save_file_update(const char* buf, const int64_t count, co
   }
   else
   {
-    ret = save_file_ex(NULL, 0, buf, count, flag, file_name, suffix, ns_addr, key);
+    ret = save_buf_ex(NULL, 0, buf, count, flag, file_name, suffix, ns_addr, key);
   }
 
   return ret;
@@ -993,7 +993,7 @@ int64_t TfsClientImpl::save_file_ex(char* ret_tfs_name, const int32_t ret_tfs_na
   return ret != TFS_SUCCESS ? INVALID_FILE_SIZE : file_size;
 }
 
-int64_t TfsClientImpl::save_file_ex(char* ret_tfs_name, const int32_t ret_tfs_name_len,
+int64_t TfsClientImpl::save_buf_ex(char* ret_tfs_name, const int32_t ret_tfs_name_len,
                                     const char* buf, const int64_t count, const int32_t flag,
                                     const char* file_name, const char* suffix,
                                     const char* ns_addr,const char* key)

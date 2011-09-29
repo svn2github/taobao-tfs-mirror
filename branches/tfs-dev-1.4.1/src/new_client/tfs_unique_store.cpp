@@ -363,7 +363,7 @@ namespace tfs
                                   char* ret_tfs_name, const int32_t ret_tfs_name_len)
     {
       int ret = TfsClientImpl::Instance()->
-        save_file_ex(ret_tfs_name, ret_tfs_name_len, unique_key.data_, unique_key.data_len_, T_DEFAULT,
+        save_buf_ex(ret_tfs_name, ret_tfs_name_len, unique_key.data_, unique_key.data_len_, T_DEFAULT,
                      tfs_name, suffix, ns_addr_.c_str()) < 0 ? TFS_ERROR : TFS_SUCCESS;
 
       TBSYS_LOG(DEBUG, "write tfs data ret: %d, name: %s", ret, ret != TFS_SUCCESS ? "NULL" : ret_tfs_name);

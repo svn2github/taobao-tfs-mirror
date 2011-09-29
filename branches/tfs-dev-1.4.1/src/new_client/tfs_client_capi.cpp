@@ -260,7 +260,7 @@ int64_t t_save_unique_buf(char* ret_tfs_name, const int32_t ret_tfs_name_len,
                           const char* buf, const int64_t count,
                           const char* suffix, const char* ns_addr)
 {
-  return TfsClient::Instance()->save_unique(ret_tfs_name, ret_tfs_name_len,
+  return TfsClient::Instance()->save_buf_unique(ret_tfs_name, ret_tfs_name_len,
                                             buf, count, suffix, ns_addr);
 }
 
@@ -268,7 +268,7 @@ int64_t t_save_unique_file(char* ret_tfs_name, const int32_t ret_tfs_name_len,
                           const char* local_file,
                           const char* suffix, const char* ns_addr)
 {
-  return TfsClient::Instance()->save_unique(ret_tfs_name, ret_tfs_name_len,
+  return TfsClient::Instance()->save_file_unique(ret_tfs_name, ret_tfs_name_len,
                                             local_file, suffix, ns_addr);
 }
 
@@ -301,7 +301,7 @@ int64_t t_save_buf(char* ret_tfs_name, const int32_t ret_tfs_name_len,
                    const char* buf, const int64_t count,
                    const char* suffix, const int32_t flag, const char* ns_addr, const char* key)
 {
-  return TfsClient::Instance()->save_file(ret_tfs_name, ret_tfs_name_len, buf, count, flag, suffix,
+  return TfsClient::Instance()->save_buf(ret_tfs_name, ret_tfs_name_len, buf, count, flag, suffix,
                                           ns_addr, key);
 }
 
