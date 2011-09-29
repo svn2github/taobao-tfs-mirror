@@ -132,9 +132,9 @@ namespace tfs
           }
         }
       }
-      TBSYS_LOG(DEBUG, "send msg to server: %s %s, seq_id: %u, send_id: %d, pcode: %d", 
-                 tbsys::CNetUtil::addrToString(server).c_str(), TFS_SUCCESS == ret ? "successful" : "fail",
-                 seq_id_, send_id, packet->getPCode());
+      //TBSYS_LOG(DEBUG, "send msg to server: %s %s, seq_id: %u, send_id: %d, pcode: %d", 
+      //           tbsys::CNetUtil::addrToString(server).c_str(), TFS_SUCCESS == ret ? "successful" : "fail",
+      //           seq_id_, send_id, packet->getPCode());
       return ret;
     }
 
@@ -359,7 +359,7 @@ namespace tfs
       int32_t iret = servers > 0 && NULL != client && NULL != msg  && NULL != func? common::TFS_SUCCESS : common::TFS_ERROR;
       if (TFS_SUCCESS == iret)
       {
-        std::vector<uint64_t> tmp(1);
+        std::vector<uint64_t> tmp;
         tmp.push_back(servers);
         iret = client->async_post_request(tmp, msg, func, save_msg);
       }

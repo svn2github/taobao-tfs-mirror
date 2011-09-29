@@ -18,6 +18,7 @@
 
 #include <vector>
 #include <string>
+#include "rts_define.h"
 
 namespace tfs
 {
@@ -101,8 +102,8 @@ namespace tfs
 
       // name format.
       // ----------------------
-      // | namelen |   name   |
-      // |   char  | namelen  |
+      // | length  |   name   |
+      // | uint8_t |   char*  |
       // ----------------------
       const char* get_real_name() const;
       bool is_file() const;
@@ -161,8 +162,15 @@ namespace tfs
       FragInfo frag_info_;
     };
 
-    const int32_t MAX_FILE_PATH_LEN = 512;
-    const int32_t MAX_META_FILE_NAME_LEN = 255;
+    struct MsRuntimeGlobalInformation
+    {
+      MetaServer server_;
+      static MsRuntimeGlobalInformation& instance();
+      static MsRuntimeGlobalInformation instance_;
+    };
+
+    const int32_t MAX_FILE_PATH_LEN = 256;
+    //const int32_t MAX_META_FILE_NAME_LEN = 255;
     // threshhold count when should split
     //const int32_t SOFT_MAX_FRAG_META_COUNT = 1024;
     const int32_t SOFT_MAX_FRAG_META_COUNT = 5;

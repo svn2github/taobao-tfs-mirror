@@ -21,6 +21,7 @@
 #include "error_msg.h"
 #include "func.h"
 #include "internal.h"
+#include "rts_define.h"
 namespace
 {
   const int PORT_PER_PROCESS = 2;
@@ -307,6 +308,10 @@ namespace tfs
     {
       int ret = TFS_SUCCESS;
       max_pool_size_ = TBSYS_CONFIG.getInt(CONF_SN_NAMEMETASERVER, CONF_MAX_SPOOL_SIZE, 10);
+      max_cache_size_ = TBSYS_CONFIG.getInt(CONF_SN_NAMEMETASERVER, CONF_MAX_CACHE_SIZE, 1024);
+      max_mutex_size_ = TBSYS_CONFIG.getInt(CONF_SN_NAMEMETASERVER, CONF_MAX_MUTEX_SIZE, 16);
+      const char* gc_ratio = TBSYS_CONFIG.getString(CONF_SN_NAMEMETASERVER, CONF_GC_RATIO, "0.1"); 
+      gc_ratio_ = strtod(gc_ratio, NULL);
       std::string db_infos = TBSYS_CONFIG.getString(CONF_SN_NAMEMETASERVER, CONF_META_DB_INFOS, "");
       std::vector<std::string> fields;
       Func::split_string(db_infos.c_str(), ';', fields);
@@ -331,13 +336,40 @@ namespace tfs
         TBSYS_LOG(ERROR, "can not find dbinfos");
         ret = TFS_ERROR;
       }
+      if (TFS_SUCCESS == ret)
+      {
+        std::string ips = TBSYS_CONFIG.getString(CONF_SN_NAMEMETASERVER, CONF_IP_ADDR, "");
+        std::vector<std::string> items;
+        Func::split_string(ips.c_str(), ':', items);
+        if (items.size() != 2U)
+        {
+          TBSYS_LOG(ERROR, "%s is invalid", ips.c_str());
+          ret = TFS_ERROR;
+        }
+        else
+        {
+          int32_t port = atoi(items[1].c_str());
+          if (port <= 1024 || port >= 65535)
+          {
+            TBSYS_LOG(ERROR, "%s is invalid", ips.c_str());
+            ret = TFS_ERROR;
+          }
+          else
+          {
+            rs_ip_port_ = tbsys::CNetUtil::strToAddr(items[0].c_str(), atoi(items[1].c_str()));
+          }
+          TBSYS_LOG(INFO, "root server ip addr: %s", ips.c_str());
+        }
+      }
       return ret;
     }
 
     int RtServerParameter::initialize(void)
     {
       int32_t iret = TFS_SUCCESS;
-      mts_rts_lease_expired_time_ = TBSYS_CONFIG.getInt(CONF_SN_ROOTSERVER, CONF_MTS_RTS_LEASE_EXPIRED_TIME, 0);
+      mts_rts_lease_expired_time_ = 
+        TBSYS_CONFIG.getInt(CONF_SN_ROOTSERVER, CONF_MTS_RTS_LEASE_EXPIRED_TIME,
+          RTS_MS_LEASE_EXPIRED_TIME_DEFAULT);
       if (mts_rts_lease_expired_time_ <= 0)
       {
         TBSYS_LOG(ERROR, "mts_rts_lease_expired_time: %d is invalid", mts_rts_lease_expired_time_);
@@ -345,17 +377,41 @@ namespace tfs
       }
       if (TFS_SUCCESS == iret)
       {
-        mts_rts_lease_expired_interval_
-        = TBSYS_CONFIG.getInt(CONF_SN_ROOTSERVER, CONF_MTS_RTS_LEASE_EXPIRED_INTERVAL, 1);
-        if (mts_rts_lease_expired_interval_ > mts_rts_lease_expired_time_ / 2 )
+        mts_rts_renew_lease_interval_
+        = TBSYS_CONFIG.getInt(CONF_SN_ROOTSERVER, CONF_MTS_RTS_LEASE_INTERVAL,
+            RTS_MS_RENEW_LEASE_INTERVAL_TIME_DEFAULT);
+        if (mts_rts_renew_lease_interval_ > mts_rts_lease_expired_time_ / 2 )
         {
           TBSYS_LOG(ERROR, "mts_rts_lease_expired_interval: %d is invalid, less than: %d",
-            mts_rts_lease_expired_interval_, mts_rts_lease_expired_time_ / 2 + 1);
+            mts_rts_renew_lease_interval_, mts_rts_lease_expired_time_ / 2 + 1);
           iret = TFS_ERROR;
         }
         if (TFS_SUCCESS == iret)
         {
           safe_mode_time_ = TBSYS_CONFIG.getInt(CONF_SN_ROOTSERVER, CONF_SAFE_MODE_TIME, 60);
+        }
+      }
+      if (TFS_SUCCESS == iret)
+      {
+        rts_rts_lease_expired_time_ = 
+          TBSYS_CONFIG.getInt(CONF_SN_ROOTSERVER, CONF_RTS_RTS_LEASE_EXPIRED_TIME,
+            RTS_RS_LEASE_EXPIRED_TIME_DEFAULT);
+        if (rts_rts_lease_expired_time_ <= 0)
+        {
+          TBSYS_LOG(ERROR, "rts_rts_lease_expired_time: %d is invalid", mts_rts_lease_expired_time_);
+          iret = TFS_ERROR;
+        }
+        if (TFS_SUCCESS == iret)
+        {
+          rts_rts_renew_lease_interval_
+            = TBSYS_CONFIG.getInt(CONF_SN_ROOTSERVER, CONF_RTS_RTS_LEASE_INTERVAL,
+                RTS_RS_RENEW_LEASE_INTERVAL_TIME_DEFAULT);
+          if (rts_rts_renew_lease_interval_ > rts_rts_lease_expired_time_ / 2 )
+          {
+            TBSYS_LOG(ERROR, "rts_rts_lease_expired_interval: %d is invalid, less than: %d",
+                rts_rts_renew_lease_interval_, rts_rts_lease_expired_time_ / 2 + 1);
+            iret = TFS_ERROR;
+          }
         }
       }
       return iret;

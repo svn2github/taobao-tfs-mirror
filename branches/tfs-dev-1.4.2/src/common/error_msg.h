@@ -142,6 +142,11 @@ namespace tfs
     const int32_t EXIT_REGISTER_ERROR = -15000;// server register fail
     const int32_t EXIT_REGISTER_EXIST_ERROR = -15001;// server register fail, server is existed
     const int32_t EXIT_REGISTER_NOT_EXIST_ERROR = -15002;// renew lease fail, server is not existed
+    const int32_t EXIT_TABLE_VERSION_ERROR = -15003;//table version error
+    const int32_t EXIT_BUCKET_ID_INVLAID= -15004;//bucket id invalid 
+    const int32_t EXIT_BUCKET_NOT_EXIST= -15005;//bucket not exist 
+    const int32_t EXIT_NEW_TABLE_NOT_EXIST= -15005;//new table not exist 
+    const int32_t EXIT_NEW_TABLE_INVALID = -15005;//new table invalid 
 
     const int32_t EXIT_MOVE_TO_SUB_DIR_ERROR = -222222;//TODO
   }

@@ -409,6 +409,12 @@ namespace tfs
     {
       return file_info_.deserialize(input);
     }
+    
+    MsRuntimeGlobalInformation MsRuntimeGlobalInformation::instance_;
+    MsRuntimeGlobalInformation& MsRuntimeGlobalInformation::instance()
+    {
+      return instance_;
+    }
   }
 }
 

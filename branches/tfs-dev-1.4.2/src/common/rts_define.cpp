@@ -16,28 +16,32 @@
 
 #include "internal.h"
 #include "rts_define.h"
+#include "parameter.h"
 #include "serialization.h"
 
 namespace tfs
 {
   namespace common
   {
-    bool MetaServerLease::has_valid_lease(const int64_t now) 
+    bool RSLease::has_valid_lease(const int64_t now) 
     {
+      TBSYS_LOG(DEBUG, "lease_id: %"PRI64_PREFIX"d, lease_expired_time: %"PRI64_PREFIX"d, now: %"PRI64_PREFIX"d",
+          lease_id_, lease_expired_time_, now);
       return ((lease_id_ != INVALID_LEASE_ID) && lease_expired_time_ > now);
     }
 
-    bool MetaServerLease::renew(const int32_t step, const int64_t now)
+    bool RSLease::renew(const int32_t step, const int64_t now)
     {
       bool bret = has_valid_lease(now);
       if (bret)
       {
         lease_expired_time_ = now + step;
+        TBSYS_LOG(DEBUG, "now: %"PRI64_PREFIX"d, lease_time: %"PRI64_PREFIX"d", now, lease_expired_time_);
       }
       return bret;
     }
 
-    int MetaServerLease::deserialize(const char* data, const int64_t data_len, int64_t& pos)
+    int RSLease::deserialize(const char* data, const int64_t data_len, int64_t& pos)
     {
       int32_t iret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
       if (TFS_SUCCESS == iret)
@@ -51,7 +55,7 @@ namespace tfs
       return iret;
     }
 
-    int MetaServerLease::serialize(char* data, const int64_t data_len, int64_t& pos) const
+    int RSLease::serialize(char* data, const int64_t data_len, int64_t& pos) const
     {
       int32_t iret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
       if (TFS_SUCCESS == iret)
@@ -65,7 +69,7 @@ namespace tfs
       return iret;
     }
 
-    int64_t MetaServerLease::length() const
+    int64_t RSLease::length() const
     {
       return INT64_SIZE + INT64_SIZE;
     }
@@ -372,6 +376,146 @@ namespace tfs
     {
       return lease_.length() + tables_.length() + throughput_.length()
         + net_work_stat_.length() + capacity_.length() + base_info_.length();
+    }
+
+
+    int RootServerBaseInformation::deserialize(const char* data, const int64_t data_len, int64_t& pos)
+    {
+      int32_t iret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
+      if (TFS_SUCCESS == iret)
+      {
+        iret = Serialization::get_int64(data, data_len, pos, reinterpret_cast<int64_t*>(&id_));
+      }
+      if (TFS_SUCCESS == iret)
+      {
+        iret = Serialization::get_int64(data, data_len, pos, &start_time_);
+      }
+      if (TFS_SUCCESS == iret)
+      {
+        iret = Serialization::get_int64(data, data_len, pos, &last_update_time_);
+      }
+      if (TFS_SUCCESS == iret)
+      {
+        iret = Serialization::get_int8(data, data_len, pos, &status_);
+      }
+      if (TFS_SUCCESS == iret)
+      {
+        iret = Serialization::get_int8(data, data_len, pos, &role_);
+      }
+      return iret;
+    }
+
+    int RootServerBaseInformation::serialize(char* data, const int64_t data_len, int64_t& pos) const
+    {
+      int32_t iret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
+      if (TFS_SUCCESS == iret)
+      {
+        iret = Serialization::set_int64(data, data_len, pos, id_);
+      }
+      if (TFS_SUCCESS == iret)
+      {
+        iret = Serialization::set_int64(data, data_len, pos, start_time_);
+      }
+
+      if (TFS_SUCCESS == iret)
+      {
+        iret = Serialization::set_int64(data, data_len, pos, last_update_time_);
+      }
+
+      if (TFS_SUCCESS == iret)
+      {
+        iret = Serialization::set_int8(data, data_len, pos, status_);
+      }
+      if (TFS_SUCCESS == iret)
+      {
+        iret = Serialization::set_int8(data, data_len, pos, role_);
+      }
+      return iret;
+    }
+
+    int64_t RootServerBaseInformation::length() const
+    {
+      return INT64_SIZE * 3 + INT8_SIZE * 2;
+    }
+
+    int RootServerTableVersion::deserialize(const char* data, const int64_t data_len, int64_t& pos)
+    {
+      int32_t iret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
+      if (TFS_SUCCESS == iret)
+      {
+        iret = Serialization::get_int64(data, data_len, pos, &active_table_version_);
+      }
+      return iret;
+    }
+
+    int RootServerTableVersion::serialize(char* data, const int64_t data_len, int64_t& pos) const
+    {
+      int32_t iret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
+      if (TFS_SUCCESS == iret)
+      {
+        iret = Serialization::set_int64(data, data_len, pos, active_table_version_);
+      }
+      return iret;
+    }
+
+    int64_t RootServerTableVersion::length() const
+    {
+      return INT64_SIZE;
+    }
+
+    int RootServerInformation::deserialize(const char* data, const int64_t data_len, int64_t& pos)
+    {
+      int32_t iret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
+      if (TFS_SUCCESS == iret)
+      {
+        iret = lease_.deserialize(data, data_len, pos);
+      }
+      if (TFS_SUCCESS == iret)
+      {
+        iret = version_.deserialize(data, data_len, pos);
+      }
+      if (TFS_SUCCESS == iret)
+      {
+        iret = base_info_.deserialize(data, data_len, pos);
+      }
+      return iret;
+    }
+
+    int RootServerInformation::serialize(char* data, const int64_t data_len, int64_t& pos) const
+    {
+      int32_t iret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
+      if (TFS_SUCCESS == iret)
+      {
+        iret = lease_.serialize(data, data_len, pos);
+      }
+      if (TFS_SUCCESS == iret)
+      {
+        iret = version_.serialize(data, data_len, pos);
+      }
+      if (TFS_SUCCESS == iret)
+      {
+        iret = base_info_.serialize(data, data_len, pos);
+      }
+      return iret;
+    }
+
+    int64_t RootServerInformation::length() const
+    {
+      return lease_.length() + version_.length() + base_info_.length();
+    }
+
+    bool RsRuntimeGlobalInformation::in_safe_mode_time(const int64_t now) const
+    {
+      return now - switch_time_ > SYSPARAM_RTSERVER.safe_mode_time_;
+    }
+ 
+    RsRuntimeGlobalInformation::RsRuntimeGlobalInformation():
+      other_id_(0),
+      switch_time_(0),
+      vip_(0),
+      destroy_flag_(NS_DESTROY_FLAGS_NO)
+    {
+
     }
 
     RsRuntimeGlobalInformation RsRuntimeGlobalInformation::instance_; 

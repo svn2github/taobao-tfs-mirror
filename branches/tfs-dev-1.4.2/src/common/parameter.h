@@ -149,7 +149,11 @@ namespace tfs
       };
       int initialize(void);
       std::vector<DbInfo> db_infos_;
+      uint64_t rs_ip_port_;
+      double gc_ratio_;
       int32_t max_pool_size_;
+      int32_t max_cache_size_;
+      int32_t max_mutex_size_;
 
       static NameMeatServerParameter meta_parameter_;
       static NameMeatServerParameter& instance()
@@ -161,7 +165,9 @@ namespace tfs
     struct RtServerParameter
     {
       int32_t mts_rts_lease_expired_time_;
-      int32_t mts_rts_lease_expired_interval_;
+      int32_t mts_rts_renew_lease_interval_;
+      int32_t rts_rts_lease_expired_time_;
+      int32_t rts_rts_renew_lease_interval_;
       int32_t safe_mode_time_;
       
       int initialize(void);

@@ -151,11 +151,16 @@ namespace tfs
 //name_meta_server
 #define CONF_MAX_SPOOL_SIZE                            "max_spool_size"
 #define CONF_META_DB_INFOS                             "meta_db_infos"
-
+#define CONF_MAX_CACHE_SIZE                            "max_cache_size"
+#define CONF_MAX_MUTEX_SIZE                            "max_mutex_size"
+#define CONF_GC_RATIO                                  "gc_ratio"
+#define CONF_GC_INTERVAL                               "gc_interval"
 
 //root server
 #define CONF_MTS_RTS_LEASE_EXPIRED_TIME               "mts_rts_lease_expired_time" //(s)
-#define CONF_MTS_RTS_LEASE_EXPIRED_INTERVAL           "mts_rts_lease_expired_interval" //(s)
+#define CONF_MTS_RTS_LEASE_INTERVAL                   "mts_rts_lease_interval" //(s)
+#define CONF_RTS_RTS_LEASE_EXPIRED_TIME               "rts_rts_lease_expired_time" //(s)
+#define CONF_RTS_RTS_LEASE_INTERVAL                   "rts_rts_lease_interval" //(s)
 
 #define CONF_RT_TABLE_FILE_PATH                       "table_file_path"
 #define CONF_UPDATE_TABLE_THREAD_COUNT                "update_table_thread_count"

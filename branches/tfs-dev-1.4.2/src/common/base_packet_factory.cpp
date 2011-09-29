@@ -45,7 +45,7 @@ namespace tfs
         if (NULL != clone_packet)
         {
           BasePacket* bpacket = dynamic_cast<BasePacket*>(clone_packet);
-          TBSYS_LOG(DEBUG, "pcode: %d, length: %d", bpacket->getPCode(), bpacket->length());
+          //TBSYS_LOG(DEBUG, "pcode: %d, length: %d", bpacket->getPCode(), bpacket->length());
           bool bret = bpacket->copy(dynamic_cast<BasePacket*>(packet), version, deserialize);
           if (!bret)
           {

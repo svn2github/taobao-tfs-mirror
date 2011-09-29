@@ -685,12 +685,12 @@ namespace tfs
       }
     }
 
-    int32_t Func::set_bit(int32_t data, int32_t index)
+    int32_t Func::set_bit(int32_t& data, int32_t index)
     {
       return (data |= (1 << index));
     }
 
-    int32_t Func::clr_bit(int32_t data, int32_t index)
+    int32_t Func::clr_bit(int32_t& data, int32_t index)
     {
       return (data &= ~(1 << index));
     }
