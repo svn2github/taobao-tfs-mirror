@@ -17,12 +17,15 @@
 #ifndef TFS_NAMEMETASERVER_NAMEMETASERVERSERVICE_H_
 #define TFS_NAMEMETASERVER_NAMEMETASERVERSERVICE_H_
 
+#include "common/parameter.h"
 #include "common/base_service.h"
 #include "common/status_message.h"
 #include "message/message_factory.h"
 #include "message/meta_nameserver_client_message.h"
 
 #include "meta_store_manager.h"
+#include "meta_bucket_manager.h"
+#include "meta_heart_manager.h"
 
 namespace tfs
 {
@@ -50,6 +53,7 @@ namespace tfs
       int do_write(common::BasePacket* packet);
       int do_read(common::BasePacket* packet);
       int do_ls(common::BasePacket* packet);
+      int do_update_bucket(common::BasePacket* packet);
 
       int create(const int64_t app_id, const int64_t uid,
                  const char* file_path, const common::FileType type);
@@ -77,7 +81,7 @@ namespace tfs
       //for test 
       CacheRootNode* get_root_node(const int64_t app_id, const int64_t uid)
       {
-        return store_manager_->get_root_node(app_id, uid);
+        return store_manager_.get_root_node(app_id, uid);
       }
 
     private:
@@ -125,10 +129,27 @@ namespace tfs
         }
 
       static bool is_sub_dir(const char* sub_dir, const char* parents_dir);
+
+      int check_permission(common::BucketStatus& status, const int64_t pid, const int64_t uid,
+              const int64_t version, const uint64_t server) const;
+
+      class GcTimerTask: public tbutil::TimerTask
+      {
+      public:
+        GcTimerTask(MetaServerService& service) : service_(service) {}
+        virtual ~GcTimerTask() {}
+        virtual void runTimerTask() { service_.store_manager_.do_lru_gc(common::SYSPARAM_NAMEMETASERVER.gc_ratio_);}
+      private:
+        MetaServerService& service_;
+      };
+      typedef tbutil::Handle<GcTimerTask> GcTimerTaskPtr;
+
     private:
       DISALLOW_COPY_AND_ASSIGN(MetaServerService);
 
-      MetaStoreManager* store_manager_;
+      BucketManager bucket_manager_;
+      HeartManager heart_manager_;
+      MetaStoreManager store_manager_;
       tbutil::Mutex mutex_;
     };
   }

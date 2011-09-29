@@ -14,10 +14,12 @@
  *
  */
 
+#include <zlib.h>
+#include "common/config_item.h"
+#include "common/parameter.h"
 #include "meta_server_service.h"
 
 #include "common/base_packet.h"
-#include "common/parameter.h"
 using namespace tfs::common;
 using namespace tfs::message;
 using namespace std;
@@ -26,14 +28,13 @@ namespace tfs
 {
   namespace namemetaserver
   {
-    MetaServerService::MetaServerService() : store_manager_(NULL)
+    MetaServerService::MetaServerService():
+      heart_manager_(bucket_manager_)
     {
-      store_manager_ =  new MetaStoreManager();
     }
 
     MetaServerService::~MetaServerService()
     {
-      tbsys::gDelete(store_manager_);
     }
 
     tbnet::IPacketStreamer* MetaServerService::create_packet_streamer()
@@ -77,12 +78,28 @@ namespace tfs
       }
       else
       {
-        //TODO get cache size and mutex count from config file
-        ret = store_manager_->init(SYSPARAM_NAMEMETASERVER.max_pool_size_,
-            1024, 0.1, 10);
+        ret = store_manager_.init(SYSPARAM_NAMEMETASERVER.max_pool_size_, SYSPARAM_NAMEMETASERVER.max_cache_size_,
+              SYSPARAM_NAMEMETASERVER.gc_ratio_, SYSPARAM_NAMEMETASERVER.max_mutex_size_);
         if (TFS_SUCCESS != ret)
         {
           TBSYS_LOG(ERROR, "init store_manager error");
+        }
+        else
+        {
+          MsRuntimeGlobalInformation& rgi = MsRuntimeGlobalInformation::instance();
+          rgi.server_.base_info_.id_ = tbsys::CNetUtil::strToAddr(get_ip_addr(), get_port());
+          rgi.server_.base_info_.start_time_ = time(NULL);
+          ret = heart_manager_.initialize();
+          if (TFS_SUCCESS != ret)
+          {
+            TBSYS_LOG(ERROR, "init heart_manager error");
+          }
+          else
+          {
+            GcTimerTaskPtr task = new GcTimerTask(*this);
+            int32_t gc_interval = TBSYS_CONFIG.getInt(CONF_SN_NAMEMETASERVER, CONF_GC_INTERVAL, 10);
+            get_timer()->scheduleRepeated(task, tbutil::Time::seconds(gc_interval));
+          }
         }
       }
       return ret;
@@ -90,6 +107,7 @@ namespace tfs
 
     int MetaServerService::destroy_service()
     {
+      heart_manager_.destroy();
       return TFS_SUCCESS;
     }
 
@@ -117,6 +135,9 @@ namespace tfs
           break;
         case LS_FILEPATH_MESSAGE:
           ret = do_ls(base_packet);
+          break;
+        case REQ_RT_UPDATE_TABLE_MESSAGE:
+          ret = do_update_bucket(base_packet);
           break;
         default:
           ret = EXIT_UNKNOWN_MSGTYPE;
@@ -152,34 +173,44 @@ namespace tfs
         const char* new_file_path = req_fa_msg->get_new_file_path();
         common::MetaActionOp action = req_fa_msg->get_action();
         TBSYS_LOG(DEBUG, "call FilepathActionMessage::do action start. app_id: %"PRI64_PREFIX"d, uid: %"
-                  PRI64_PREFIX"d, file_path: %s, new_file_path: %s, action: %d ret: %d",
-                  app_id, uid, file_path, new_file_path, action, ret);
+            PRI64_PREFIX"d, file_path: %s, new_file_path: %s, action: %d ret: %d",
+            app_id, uid, file_path, new_file_path, action, ret);
 
-        switch (action)
+        BucketStatus permission = BUCKET_STATUS_NONE;
+        MsRuntimeGlobalInformation& rgi = MsRuntimeGlobalInformation::instance();
+        ret = check_permission(permission, app_id, uid,
+            req_fa_msg->get_version(), rgi.server_.base_info_.id_);
+        if (ret == TFS_SUCCESS)
         {
-        case CREATE_DIR:
-          ret = create(app_id, uid, file_path, DIRECTORY);
-          break;
-        case CREATE_FILE:
-          ret = create(app_id, uid, file_path, NORMAL_FILE);
-          break;
-        case REMOVE_DIR:
-          ret = rm(app_id, uid, file_path, DIRECTORY);
-          break;
-        case REMOVE_FILE:
-          ret = rm(app_id, uid, file_path, NORMAL_FILE);
-          break;
-        case MOVE_DIR:
-          ret = mv(app_id, uid, file_path, new_file_path, DIRECTORY);
-          break;
-        case MOVE_FILE:
-          ret = mv(app_id, uid, file_path, new_file_path, NORMAL_FILE);
-          break;
-        default:
-          TBSYS_LOG(INFO, "unknown action type: %d", action);
-          break;
+          ret = permission >= BUCKET_STATUS_RW ? TFS_SUCCESS : EXIT_NOT_PERM_OPER; 
+          if (ret == TFS_SUCCESS )
+          {
+            switch (action)
+            {
+              case CREATE_DIR:
+                ret = create(app_id, uid, file_path, DIRECTORY);
+                break;
+              case CREATE_FILE:
+                ret = create(app_id, uid, file_path, NORMAL_FILE);
+                break;
+              case REMOVE_DIR:
+                ret = rm(app_id, uid, file_path, DIRECTORY);
+                break;
+              case REMOVE_FILE:
+                ret = rm(app_id, uid, file_path, NORMAL_FILE);
+                break;
+              case MOVE_DIR:
+                ret = mv(app_id, uid, file_path, new_file_path, DIRECTORY);
+                break;
+              case MOVE_FILE:
+                ret = mv(app_id, uid, file_path, new_file_path, NORMAL_FILE);
+                break;
+              default:
+                TBSYS_LOG(INFO, "unknown action type: %d", action);
+                break;
+            }
+          }
         }
-
         if (ret != TFS_SUCCESS)
         {
           ret = req_fa_msg->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret, "execute message failed");
@@ -213,9 +244,20 @@ namespace tfs
         RespReadFilepathMessage* resp_rf_msg = new RespReadFilepathMessage();
         bool still_have;
 
-        ret = read(req_rf_msg->get_app_id(), req_rf_msg->get_user_id(), req_rf_msg->get_file_path(),
+        BucketStatus permission = BUCKET_STATUS_NONE;
+        MsRuntimeGlobalInformation& rgi = MsRuntimeGlobalInformation::instance();
+        ret = check_permission(permission, req_rf_msg->get_app_id(), req_rf_msg->get_user_id(),
+              req_rf_msg->get_version(), rgi.server_.base_info_.id_);
+        if (ret == TFS_SUCCESS)
+        {
+          ret = permission >= BUCKET_STATUS_READ_ONLY ? TFS_SUCCESS : EXIT_NOT_PERM_OPER; 
+          if (ret == TFS_SUCCESS )
+          {
+            ret = read(req_rf_msg->get_app_id(), req_rf_msg->get_user_id(), req_rf_msg->get_file_path(),
                    req_rf_msg->get_offset(), req_rf_msg->get_size(),
                    resp_rf_msg->get_frag_info(), still_have);
+          }
+        }
 
         if (ret != TFS_SUCCESS)
         {
@@ -248,8 +290,19 @@ namespace tfs
                   req_wf_msg->get_app_id(), req_wf_msg->get_user_id(), req_wf_msg->get_file_path(),
                   req_wf_msg->get_frag_info().v_frag_meta_.size(), ret);
 
-        ret = write(req_wf_msg->get_app_id(), req_wf_msg->get_user_id(),
+        BucketStatus permission = BUCKET_STATUS_NONE;
+        MsRuntimeGlobalInformation& rgi = MsRuntimeGlobalInformation::instance();
+        ret = check_permission(permission, req_wf_msg->get_app_id(), req_wf_msg->get_user_id(),
+              req_wf_msg->get_version(), rgi.server_.base_info_.id_);
+        if (ret == TFS_SUCCESS)
+        {
+          ret = permission >= BUCKET_STATUS_RW ? TFS_SUCCESS : EXIT_NOT_PERM_OPER; 
+          if (ret == TFS_SUCCESS )
+          {
+            ret = write(req_wf_msg->get_app_id(), req_wf_msg->get_user_id(),
                     req_wf_msg->get_file_path(), req_wf_msg->get_frag_info());
+          }
+        }
 
         if (ret != TFS_SUCCESS)
         {
@@ -284,9 +337,20 @@ namespace tfs
         bool still_have;
         RespLsFilepathMessage* resp_lf_msg = new RespLsFilepathMessage();
 
-        ret = ls(req_lf_msg->get_app_id(), req_lf_msg->get_user_id(), req_lf_msg->get_pid(),
+        BucketStatus permission = BUCKET_STATUS_NONE;
+        MsRuntimeGlobalInformation& rgi = MsRuntimeGlobalInformation::instance();
+        ret = check_permission(permission, req_lf_msg->get_app_id(), req_lf_msg->get_user_id(),
+              req_lf_msg->get_version(), rgi.server_.base_info_.id_);
+        if (ret == TFS_SUCCESS)
+        {
+          ret = permission >= BUCKET_STATUS_READ_ONLY ? TFS_SUCCESS : EXIT_NOT_PERM_OPER; 
+          if (ret == TFS_SUCCESS )
+          {
+            ret = ls(req_lf_msg->get_app_id(), req_lf_msg->get_user_id(), req_lf_msg->get_pid(),
                  req_lf_msg->get_file_path(), static_cast<FileType>(req_lf_msg->get_file_type()),
                  resp_lf_msg->get_meta_infos(), still_have);
+          }
+        }
 
         if (ret != TFS_SUCCESS)
         {
@@ -301,12 +365,64 @@ namespace tfs
       return ret;
     }
 
+    int MetaServerService::do_update_bucket(common::BasePacket* packet)
+    {
+      int ret = TFS_SUCCESS;
+      if (NULL == packet)
+      {
+        ret = EXIT_INVALID_ARGU;
+        TBSYS_LOG(ERROR, "MetaNameService::do update bucket fail. input packet invaild. ret: %d", ret);
+      }
+      else
+      {
+        ret = TFS_ERROR;
+        UpdateTableResponseMessage* reply = new UpdateTableResponseMessage();
+        UpdateTableMessage* msg = dynamic_cast<UpdateTableMessage*>(packet);
+        MsRuntimeGlobalInformation& rgi = MsRuntimeGlobalInformation::instance();
+        if (UPDATE_TABLE_PHASE_1 == msg->get_phase())
+        {
+          uint64_t dest_length = common::MAX_BUCKET_DATA_LENGTH;
+          unsigned char* dest = new unsigned char[common::MAX_BUCKET_DATA_LENGTH];
+          ret = uncompress(dest, &dest_length, (unsigned char*)msg->get_table(), msg->get_table_length()); 
+          if (Z_OK != ret)
+          {
+            TBSYS_LOG(ERROR, "uncompress error: ret : %d, version: %"PRI64_PREFIX"d, dest length: %"PRI64_PREFIX"d, lenght: %"PRI64_PREFIX"d",
+              ret, msg->get_version(), dest_length, msg->get_table_length());
+            ret = TFS_ERROR;
+          }
+          else
+          {
+            ret = bucket_manager_.update_table((const char*)dest, dest_length, msg->get_version(), rgi.server_.base_info_.id_);
+          }
+          tbsys::gDeleteA(dest);
+        }
+        else if (UPDATE_TABLE_PHASE_2 == msg->get_phase())
+        {
+          ret = bucket_manager_.switch_table(rgi.server_.base_info_.id_, msg->get_version());
+        }
+
+        TBSYS_LOG(DEBUG, "MetaNameService::do version: %ld, phase: %d, status: %d",
+            msg->get_version(), msg->get_phase(), ret);
+        reply->set_version(msg->get_version());
+        reply->set_phase(msg->get_phase());
+        reply->set_status(ret == TFS_SUCCESS ?  NEW_TABLE_ITEM_UPDATE_STATUS_END : NEW_TABLE_ITEM_UPDATE_STATUS_FAILED);
+        if (TFS_SUCCESS != ret)
+        {
+          TBSYS_LOG(ERROR, "MetaNameService::update bucket fail, ret: %d", ret);
+        }
+        ret = msg->reply(reply);
+      }
+      return ret;
+    }
+
+
+
     int MetaServerService::create(const int64_t app_id, const int64_t uid,
                                   const char* file_path, const FileType type)
     {
       PROFILER_START("create");
       int ret = TFS_SUCCESS;
-      char name[MAX_META_FILE_NAME_LEN];
+      char name[MAX_FILE_PATH_LEN];
       int32_t name_len = 0;
 
       // not use parse_file_path to avoid dummy reparse.
@@ -317,9 +433,9 @@ namespace tfs
       {
         TBSYS_LOG(INFO, "file_path(%s) is invalid", file_path);
       }
-      tbsys::CThreadMutex* mutex = store_manager_->get_mutex(app_id, uid);
+      tbsys::CThreadMutex* mutex = store_manager_.get_mutex(app_id, uid);
       tbsys::CThreadGuard mutex_guard(mutex);
-      CacheRootNode* root_node = store_manager_->get_root_node(app_id, uid);
+      CacheRootNode* root_node = store_manager_.get_root_node(app_id, uid);
       if (NULL == root_node)
       {
         TBSYS_LOG(ERROR, "get NULL root node");
@@ -333,7 +449,7 @@ namespace tfs
           {
             TBSYS_LOG(DEBUG, "create top dir. appid: %"PRI64_PREFIX"d, uid: %"PRI64_PREFIX"d, filepath: %s",
                 app_id, uid, file_path);
-            ret = store_manager_->create_top_dir(app_id, uid, root_node);
+            ret = store_manager_.create_top_dir(app_id, uid, root_node);
           }
         }
         if (TFS_SUCCESS == ret)
@@ -357,20 +473,20 @@ namespace tfs
         if (TFS_SUCCESS == ret)
         {
           PROFILER_BEGIN("insert");
-          ret = get_name(v_name[get_depth(v_name)].c_str(), name, MAX_META_FILE_NAME_LEN, name_len);
+          ret = get_name(v_name[get_depth(v_name)].c_str(), name, MAX_FILE_PATH_LEN, name_len);
           if (TFS_SUCCESS != ret)
           {
             TBSYS_LOG(INFO, "get name fail. ret: %d", ret);
           }
           void* ret_node = NULL;
-          store_manager_->select(app_id, uid, p_dir_node, name,
+          store_manager_.select(app_id, uid, p_dir_node, name,
               false, ret_node);
           if (NULL != ret_node)
           {
             TBSYS_LOG(INFO, "name is a exist dir");
             ret = TFS_ERROR;
           }
-          store_manager_->select(app_id, uid, p_dir_node, name,
+          store_manager_.select(app_id, uid, p_dir_node, name,
               true, ret_node);
           if (NULL != ret_node)
           {
@@ -379,7 +495,7 @@ namespace tfs
           }
           if (TFS_SUCCESS == ret)
           {
-            ret = store_manager_->insert(app_id, uid, pp_id, p_dir_node, name, FileName::length(name), type);
+            ret = store_manager_.insert(app_id, uid, pp_id, p_dir_node, name, FileName::length(name), type);
             if (TFS_SUCCESS != ret)
             {
               TBSYS_LOG(ERROR, "create fail: %s, type: %d, ret: %d", file_path, type, ret);
@@ -390,7 +506,7 @@ namespace tfs
 
         TBSYS_LOG(DEBUG, "create %s, type: %d, appid: %"PRI64_PREFIX"d, uid: %"PRI64_PREFIX"d, filepath: %s",
             TFS_SUCCESS == ret ? "success" : "fail", type, app_id, uid, file_path);
-        store_manager_->revert_root_node(app_id, uid);
+        store_manager_.revert_root_node(app_id, uid);
       }
       PROFILER_DUMP();
       PROFILER_STOP();
@@ -401,13 +517,13 @@ namespace tfs
                               const char* file_path, const FileType type)
     {
       PROFILER_START("rm");
-      char name[MAX_META_FILE_NAME_LEN];
+      char name[MAX_FILE_PATH_LEN];
       int32_t name_len = 0;
       int ret = TFS_SUCCESS;
 
-      tbsys::CThreadMutex* mutex = store_manager_->get_mutex(app_id, uid);
+      tbsys::CThreadMutex* mutex = store_manager_.get_mutex(app_id, uid);
       tbsys::CThreadGuard mutex_guard(mutex);
-      CacheRootNode* root_node = store_manager_->get_root_node(app_id, uid);
+      CacheRootNode* root_node = store_manager_.get_root_node(app_id, uid);
       CacheDirMetaNode* p_dir_node = NULL;
       int64_t pp_id = 0;
       if (NULL == root_node)
@@ -428,7 +544,7 @@ namespace tfs
           PROFILER_BEGIN("select");
 
           void* ret_node = NULL;
-          ret = store_manager_->select(app_id, uid, p_dir_node, name,
+          ret = store_manager_.select(app_id, uid, p_dir_node, name,
               type != DIRECTORY, ret_node);
           PROFILER_END();
 
@@ -440,7 +556,7 @@ namespace tfs
           else
           {
             PROFILER_BEGIN("remove");
-            if ((ret = store_manager_->remove(app_id, uid, pp_id, p_dir_node, ret_node, type)) != TFS_SUCCESS)
+            if ((ret = store_manager_.remove(app_id, uid, pp_id, p_dir_node, ret_node, type)) != TFS_SUCCESS)
             {
               TBSYS_LOG(DEBUG, "rm fail: %s, type: %d, ret: %d", file_path, type, ret);
             }
@@ -450,7 +566,7 @@ namespace tfs
 
         TBSYS_LOG(DEBUG, "rm %s, type: %d, appid: %"PRI64_PREFIX"d, uid: %"PRI64_PREFIX"d, filepath: %s",
             TFS_SUCCESS == ret ? "success" : "fail", type, app_id, uid, file_path);
-        store_manager_->revert_root_node(app_id, uid);
+        store_manager_.revert_root_node(app_id, uid);
       }
 
       PROFILER_DUMP();
@@ -462,12 +578,12 @@ namespace tfs
                               const char* file_path, const char* dest_file_path,
                               const FileType type)
     {
-      char name[MAX_META_FILE_NAME_LEN], dest_name[MAX_META_FILE_NAME_LEN];
+      char name[MAX_FILE_PATH_LEN], dest_name[MAX_FILE_PATH_LEN];
       int32_t name_len = 0, dest_name_len = 0;
       int ret = TFS_SUCCESS;
-      tbsys::CThreadMutex* mutex = store_manager_->get_mutex(app_id, uid);
+      tbsys::CThreadMutex* mutex = store_manager_.get_mutex(app_id, uid);
       tbsys::CThreadGuard mutex_guard(mutex);
-      CacheRootNode* root_node = store_manager_->get_root_node(app_id, uid);
+      CacheRootNode* root_node = store_manager_.get_root_node(app_id, uid);
 
       CacheDirMetaNode* p_dir_node = NULL;
       CacheDirMetaNode* dest_p_dir_node = NULL;
@@ -502,7 +618,7 @@ namespace tfs
           }
           else
           {
-            if ((ret = store_manager_->update(app_id, uid,
+            if ((ret = store_manager_.update(app_id, uid,
                     pp_id, p_dir_node,
                     dest_pp_id, dest_p_dir_node,
                     name, dest_name, type)) != TFS_SUCCESS)
@@ -511,7 +627,7 @@ namespace tfs
             }
           }
         }
-        store_manager_->revert_root_node(app_id, uid);
+        store_manager_.revert_root_node(app_id, uid);
 
         TBSYS_LOG(DEBUG, "mv %s, type: %d, appid: %"PRI64_PREFIX"d, uid: %"PRI64_PREFIX"d, filepath: %s",
             TFS_SUCCESS == ret ? "success" : "fail", type, app_id, uid, file_path);
@@ -524,14 +640,14 @@ namespace tfs
                                 const int64_t offset, const int64_t size,
                                 FragInfo& frag_info, bool& still_have)
     {
-      char name[MAX_META_FILE_NAME_LEN];
+      char name[MAX_FILE_PATH_LEN];
       int32_t name_len = 0;
       int ret = TFS_SUCCESS;
       still_have = false;
 
-      tbsys::CThreadMutex* mutex = store_manager_->get_mutex(app_id, uid);
+      tbsys::CThreadMutex* mutex = store_manager_.get_mutex(app_id, uid);
       tbsys::CThreadGuard mutex_guard(mutex);
-      CacheRootNode* root_node = store_manager_->get_root_node(app_id, uid);
+      CacheRootNode* root_node = store_manager_.get_root_node(app_id, uid);
       CacheDirMetaNode* p_dir_node = NULL;
       int64_t pp_id = 0;
       if (NULL == root_node)
@@ -548,11 +664,11 @@ namespace tfs
           std::vector<std::string> v_name;
           int64_t last_offset = 0;
           void* ret_file_node = NULL;
-          ret = store_manager_->select(app_id, uid, p_dir_node, name, true, ret_file_node);
+          ret = store_manager_.select(app_id, uid, p_dir_node, name, true, ret_file_node);
           if (TFS_SUCCESS == ret && NULL != ret_file_node)
           {
             CacheFileMetaNode* file_node = (CacheFileMetaNode*)ret_file_node;
-            ret = store_manager_->get_file_frag_info(app_id, uid, p_dir_node, file_node,
+            ret = store_manager_.get_file_frag_info(app_id, uid, p_dir_node, file_node,
                 offset, tmp_v_meta_info, frag_info.cluster_id_, last_offset);
 
             if (TFS_SUCCESS == ret)
@@ -565,7 +681,7 @@ namespace tfs
             }
           }
         }
-        store_manager_->revert_root_node(app_id, uid);
+        store_manager_.revert_root_node(app_id, uid);
       }
       return ret;
     }
@@ -573,13 +689,13 @@ namespace tfs
     int MetaServerService::write(const int64_t app_id, const int64_t uid,
                                  const char* file_path, const FragInfo& frag_info)
     {
-      char name[MAX_META_FILE_NAME_LEN];
+      char name[MAX_FILE_PATH_LEN];
       int32_t name_len = 0;
       int ret = TFS_SUCCESS;
 
-      tbsys::CThreadMutex* mutex = store_manager_->get_mutex(app_id, uid);
+      tbsys::CThreadMutex* mutex = store_manager_.get_mutex(app_id, uid);
       tbsys::CThreadGuard mutex_guard(mutex);
-      CacheRootNode* root_node = store_manager_->get_root_node(app_id, uid);
+      CacheRootNode* root_node = store_manager_.get_root_node(app_id, uid);
       CacheDirMetaNode* p_dir_node = NULL;
       int64_t pp_id = 0;
       if (NULL == root_node)
@@ -604,7 +720,7 @@ namespace tfs
             int32_t in_cluster_id = -1;
             int64_t last_offset = 0;
             void* ret_file_node = NULL;
-            ret = store_manager_->select(app_id, uid, p_dir_node, name, true, ret_file_node);
+            ret = store_manager_.select(app_id, uid, p_dir_node, name, true, ret_file_node);
             if (TFS_SUCCESS == ret && NULL == ret_file_node)
             {
               TBSYS_LOG(DEBUG, "file do not exist");
@@ -613,7 +729,7 @@ namespace tfs
             if (TFS_SUCCESS == ret)
             {
               CacheFileMetaNode* file_node = (CacheFileMetaNode*)ret_file_node;
-              ret = store_manager_->get_file_frag_info(app_id, uid, p_dir_node, file_node,
+              ret = store_manager_.get_file_frag_info(app_id, uid, p_dir_node, file_node,
                   write_frag_meta_it->offset_, tmp_v_meta_info, in_cluster_id, last_offset);
               if (TFS_SUCCESS != ret)
               {
@@ -641,8 +757,8 @@ namespace tfs
               std::vector<MetaInfo>::iterator v_meta_info_it = tmp_v_meta_info.begin();
               for (; v_meta_info_it != tmp_v_meta_info.end(); v_meta_info_it++)
               {
-                if (!v_meta_info_it->frag_info_.had_been_split_ ||
-                    (write_frag_meta_it->offset_ != -1 &&
+                if (!v_meta_info_it->frag_info_.had_been_split_ ||//没有分裂
+                    (write_frag_meta_it->offset_ != -1 && // offset_ == -1:表示数据追加
                      v_meta_info_it->get_last_offset() > write_frag_meta_it->offset_))
                 {
                   found_meta_info_should_be_updated = true;
@@ -664,7 +780,7 @@ namespace tfs
               else
               {
                 int64_t orig_last_offset = v_meta_info_it->get_last_offset();
-                while(write_frag_meta_it != frag_info.v_frag_meta_.end())
+                while(write_frag_meta_it != frag_info.v_frag_meta_.end())//补全空洞
                 {
                   if (write_frag_meta_it->offset_ >= orig_last_offset)
                   {
@@ -686,8 +802,8 @@ namespace tfs
                   ret = EXIT_FRAG_META_OVERFLOW_ERROR;
                   break;
                 }
-
               }
+
               if (TFS_SUCCESS == ret)
               {
                 //resort it
@@ -702,7 +818,7 @@ namespace tfs
                 {
                   //update this info;
                   v_meta_info_it->file_info_.size_ = v_meta_info_it->get_last_offset();
-                  ret = store_manager_->insert(app_id, uid, pp_id,
+                  ret = store_manager_.insert(app_id, uid, pp_id,
                       p_dir_node, v_meta_info_it->get_name(), 
                       v_meta_info_it->get_name_len(), PWRITE_FILE, &(*v_meta_info_it));
                 }
@@ -712,7 +828,7 @@ namespace tfs
           } while (write_frag_meta_it != v_frag_meta.end() && TFS_SUCCESS == ret);
 
         }
-        store_manager_->revert_root_node(app_id, uid);
+        store_manager_.revert_root_node(app_id, uid);
       }
       return ret;
     }
@@ -722,7 +838,7 @@ namespace tfs
                               std::vector<MetaInfo>& v_meta_info, bool& still_have)
     {
       // for inner name data struct
-      char name[MAX_META_FILE_NAME_LEN] = {'\0'};
+      char name[MAX_FILE_PATH_LEN] = {'\0'};
       int32_t name_len = 1;
       int ret = TFS_SUCCESS;
       FileType my_file_type = file_type;
@@ -747,7 +863,7 @@ namespace tfs
         {
           if (DIRECTORY == file_type) // ls directory, should get current directory info
           {
-            if ((ret = store_manager_->get_dir_meta_info(app_id, uid, p_meta_info.get_id(),
+            if ((ret = store_manager_.get_dir_meta_info(app_id, uid, p_meta_info.get_id(),
                     name, name_len, p_meta_info)) == TFS_SUCCESS)
             {
               // start over
@@ -759,15 +875,15 @@ namespace tfs
       }
       else                        // pid is not -1 means continue last ls
       {
-        int32_t file_len = (NULL == file_path ? 0 : strlen(file_path));
-        if (file_len >= MAX_META_FILE_NAME_LEN)
+        int32_t file_len = (NULL == file_path ? 0 : strlen(file_path));//file_path：不是全路径
+        if (file_len >= MAX_FILE_PATH_LEN)
         {
           TBSYS_LOG(WARN, "file_path(%s) is invalid", file_path);
           ret = TFS_ERROR;
         }
         else if (file_len > 0)  // continue from file_path
         {
-          ret = get_name(file_path, name, MAX_META_FILE_NAME_LEN, name_len);
+          ret = get_name(file_path, name, MAX_FILE_PATH_LEN, name_len);
           if (TFS_SUCCESS == ret)
           {
             next_file_name(name, name_len);
@@ -789,7 +905,7 @@ namespace tfs
 
           // return dir and file separately
           // first dir type, then file type
-          ret = store_manager_->ls(app_id, uid, p_meta_info.get_id(), 
+          ret = store_manager_.ls(app_id, uid, p_meta_info.get_id(), 
               name, name_len, NULL, 0,
               my_file_type != DIRECTORY, tmp_v_meta_info, still_have);
 
@@ -876,11 +992,11 @@ namespace tfs
       else if (get_depth(v_name) == 0)
       {
         p_meta_info.file_info_.id_ = 0;
-        ret = get_name(v_name[0].c_str(), name, MAX_META_FILE_NAME_LEN, name_len);
+        ret = get_name(v_name[0].c_str(), name, MAX_FILE_PATH_LEN, name_len);
       }
       else if ((ret = get_p_meta_info(app_id, uid, v_name, p_meta_info)) == TFS_SUCCESS)
       {
-        ret = get_name(v_name[get_depth(v_name)].c_str(), name, MAX_META_FILE_NAME_LEN, name_len);
+        ret = get_name(v_name[get_depth(v_name)].c_str(), name, MAX_FILE_PATH_LEN, name_len);
       }
 
       return ret;
@@ -906,7 +1022,7 @@ namespace tfs
       {
         if (root_ok) // file_path only has "/"
         {
-          ret = get_name(v_name[0].c_str(), name, MAX_META_FILE_NAME_LEN, name_len);
+          ret = get_name(v_name[0].c_str(), name, MAX_FILE_PATH_LEN, name_len);
         }
         else
         {
@@ -926,7 +1042,7 @@ namespace tfs
         }
         else
         {
-          ret = get_name(v_name[get_depth(v_name)].c_str(), name, MAX_META_FILE_NAME_LEN, name_len);
+          ret = get_name(v_name[get_depth(v_name)].c_str(), name, MAX_FILE_PATH_LEN, name_len);
         }
       }
 
@@ -942,19 +1058,19 @@ namespace tfs
       int ret = TFS_ERROR;
       int32_t depth = get_depth(v_name);
 
-      char name[MAX_META_FILE_NAME_LEN];
+      char name[MAX_FILE_PATH_LEN];
       int32_t name_len = 0;
       std::vector<MetaInfo> tmp_v_meta_info;
       int64_t pid = 0;
 
       for (int32_t i = 0; i < depth; i++)
       {
-        if ((ret = get_name(v_name[i].c_str(), name, MAX_META_FILE_NAME_LEN, name_len)) != TFS_SUCCESS)
+        if ((ret = get_name(v_name[i].c_str(), name, MAX_FILE_PATH_LEN, name_len)) != TFS_SUCCESS)
         {
           break;
         }
 
-        ret = store_manager_->select(app_id, uid, pid, name, name_len, false, tmp_v_meta_info);
+        ret = store_manager_.select(app_id, uid, pid, name, name_len, false, tmp_v_meta_info);
 
         if (ret != TFS_SUCCESS)
         {
@@ -994,7 +1110,7 @@ namespace tfs
       assert(NULL != root_node);
       int32_t depth = get_depth(v_name);
 
-      char name[MAX_META_FILE_NAME_LEN];
+      char name[MAX_FILE_PATH_LEN];
       int32_t name_len = 0;
 
       out_pp_dir_node = NULL;
@@ -1003,12 +1119,12 @@ namespace tfs
 
       for (int32_t i = 1; i < depth; i++)
       {
-        if ((ret = get_name(v_name[i].c_str(), name, MAX_META_FILE_NAME_LEN, name_len)) != TFS_SUCCESS)
+        if ((ret = get_name(v_name[i].c_str(), name, MAX_FILE_PATH_LEN, name_len)) != TFS_SUCCESS)
         {
           break;
         }
 
-        ret = store_manager_->select(root_node->app_id_, root_node->user_id_, 
+        ret = store_manager_.select(root_node->app_id_, root_node->user_id_, 
             out_p_dir_node, name, false, dir_node);
 
         if (ret != TFS_SUCCESS)
@@ -1112,9 +1228,9 @@ namespace tfs
       tmp.file_info_.pid_ = pid;
       tmp.frag_info_.cluster_id_ = cluster_id;
       tmp.frag_info_.had_been_split_ = false;
-      char tmp_name[MAX_META_FILE_NAME_LEN];
+      char tmp_name[MAX_FILE_PATH_LEN];
       memcpy(tmp_name, name, name_len);
-      Serialization::int64_to_char(tmp_name + name_len, MAX_META_FILE_NAME_LEN - name_len,
+      Serialization::int64_to_char(tmp_name + name_len, MAX_FILE_PATH_LEN - name_len,
           last_offset);
       tmp.file_info_.name_.assign(tmp_name, name_len + 8);
       tmp_v_meta_info.push_back(tmp);
@@ -1214,7 +1330,7 @@ namespace tfs
       //[len]xxxxxxxxxxxxxxxx[off_set]
       name_len = strlen(name) + 1;
 
-      if (name_len + 8 > MAX_META_FILE_NAME_LEN || name_len + 8 >= buffer_len || buffer == NULL)
+      if (name_len + 8 > MAX_FILE_PATH_LEN || name_len + 8 >= buffer_len || buffer == NULL)
       {
         TBSYS_LOG(ERROR, "buffer is not enough or buffer is null, %d < %d", buffer_len, name_len);
         ret = TFS_ERROR;
@@ -1233,7 +1349,7 @@ namespace tfs
       // TODO. no need check all over..
       int ret = TFS_SUCCESS;
 
-      if (frag_info.v_frag_meta_.size() > 0 && frag_info.cluster_id_ <= 0)
+      if (frag_info.v_frag_meta_.size() > 0 && frag_info.cluster_id_ > 0) 
       {
         TBSYS_LOG(ERROR, "cluster id error %d", frag_info.cluster_id_);
         ret = TFS_ERROR;
@@ -1331,5 +1447,28 @@ namespace tfs
       }
       return ret;
     }
-  }
-}
+
+    int MetaServerService::check_permission(BucketStatus& status, const int64_t app_id,
+              const int64_t uid, const int64_t version, const uint64_t server) const
+    {
+      status = BUCKET_STATUS_NONE;
+      int32_t iret = app_id > 0 && uid > 0 ? TFS_SUCCESS : TFS_ERROR;
+      if (TFS_SUCCESS == iret)
+      {
+        iret = heart_manager_.has_valid_lease() ? TFS_SUCCESS : EXIT_LEASE_EXPIRED;
+        if (TFS_SUCCESS == iret)
+        {
+          int64_t bucket_size = bucket_manager_.get_table_size();
+          iret = bucket_size > 0 && bucket_size <= common::MAX_BUCKET_ITEM_DEFAULT ? TFS_SUCCESS : TFS_ERROR;
+          if (TFS_SUCCESS == iret)
+          {
+            HashHelper helper(app_id, uid);
+            int32_t bucket_id  = tbsys::CStringUtil::murMurHash((const char*)&helper, sizeof(HashHelper)) % bucket_size;
+            iret = bucket_manager_.query(status, bucket_id, version, server); 
+          }
+        }
+      }
+      return iret;
+    }
+  }/** namemetaserver **/
+}/** tfs **/
