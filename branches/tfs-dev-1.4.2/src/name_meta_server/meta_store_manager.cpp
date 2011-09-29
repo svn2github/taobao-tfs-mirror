@@ -322,7 +322,7 @@ namespace tfs
         {
           vector<MetaInfo> out_v_meta_info;
           bool still_have;
-          char name_end[MAX_META_FILE_NAME_LEN];
+          char name_end[MAX_FILE_PATH_LEN];
           int32_t name_end_len = 0;
           MetaServerService::next_file_name_base_on(name_end, name_end_len, name, name_len);
           TBSYS_LOG(DEBUG, "ls %ld %ld %ld %.*s", app_id, uid, p_dir_node->id_, name_len-1, name+1);
@@ -572,9 +572,9 @@ namespace tfs
         int32_t& cluster_id, int64_t& last_offset)
     {
       int ret = TFS_ERROR;
-      char search_name[MAX_META_FILE_NAME_LEN];
+      char search_name[MAX_FILE_PATH_LEN];
       int32_t search_name_len = name_len;
-      assert(name_len <= MAX_META_FILE_NAME_LEN);
+      assert(name_len <= MAX_FILE_PATH_LEN);
       memcpy(search_name, name, search_name_len);
       bool still_have = false;
       last_offset = 0;
@@ -619,8 +619,8 @@ namespace tfs
       int ret = TFS_ERROR;
       out_v_meta_info.clear();
       bool still_have = false;
-      char name_end[MAX_META_FILE_NAME_LEN];
-      if (NULL == name || FileName::length(name) > MAX_META_FILE_NAME_LEN)
+      char name_end[MAX_FILE_PATH_LEN];
+      if (NULL == name || FileName::length(name) > MAX_FILE_PATH_LEN)
       {
         TBSYS_LOG(ERROR, "parameters error");
       }
@@ -902,7 +902,7 @@ namespace tfs
       assert (NULL != p_dir_node);
       std::vector<MetaInfo> tmp_v_meta_info;
       vector<MetaInfo>::iterator tmp_v_meta_info_it;
-      char name[MAX_META_FILE_NAME_LEN];
+      char name[MAX_FILE_PATH_LEN];
       int32_t name_len = 1;
       name[0] = '\0';
       bool still_have = false;
