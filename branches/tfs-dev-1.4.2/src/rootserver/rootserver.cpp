@@ -23,6 +23,7 @@
 #include "common/directory_op.h"
 #include "common/status_message.h"
 #include "common/client_manager.h"
+#include "message/heart_message.h"
 #include "rootserver.h"
 #include "global_factory.h"
 
@@ -34,7 +35,9 @@ namespace tfs
   namespace rootserver
   {
     RootServer::RootServer():
-      rt_ms_heartbeat_handler_(*this)
+      rt_ms_heartbeat_handler_(*this),
+      rt_rs_heartbeat_handler_(*this),
+      rs_heart_manager_(manager_)
     {
 
     }
@@ -92,7 +95,7 @@ namespace tfs
           {
             uint32_t local_ip = Func::get_local_addr(dev_name);
             RsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
-            ngi.owner_ip_port_  = tbsys::CNetUtil::ipToAddr(local_ip, get_port());
+            ngi.info_.base_info_.id_  = tbsys::CNetUtil::ipToAddr(local_ip, get_port());
             bool find_ip_in_dev = Func::is_local_addr(ip_addr_id);
             if (!find_ip_in_dev)
             {
@@ -110,17 +113,6 @@ namespace tfs
           TBSYS_LOG(ERROR, "%s", "initialize rootserver global information error, must be exit");
           iret = EXIT_GENERAL_ERROR;
         }
-      }
-
-      //initialize rootserver ==> rootserver heartbeat
-      if (TFS_SUCCESS == iret)
-      {
-        //TODO
-        RsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
-        ngi.destroy_flag_ = NS_DESTROY_FLAGS_NO;
-        ngi.owner_role_ = Func::is_local_addr(ngi.vip_) == true ? RS_ROLE_MASTER : RS_ROLE_SLAVE;
-        ngi.other_side_role_ = RS_ROLE_SLAVE;
-        TBSYS_LOG(INFO, "i %s the master server", ngi.owner_role_ == RS_ROLE_MASTER ? "am" : "am not");
       }
 
       //initialize metaserver manager
@@ -144,11 +136,23 @@ namespace tfs
         }
       }
 
+      //initialize rootserver ==> rootserver heartbeat
+      if (TFS_SUCCESS == iret)
+      {
+        iret = rs_heart_manager_.initialize();
+        if (TFS_SUCCESS != iret)
+        {
+          TBSYS_LOG(ERROR, "%s", "initialize rootserver heart manager error, must be exit");
+          iret = EXIT_GENERAL_ERROR;
+        }
+      }
+
       // initialize update table worker threads
       if (TFS_SUCCESS == iret)
       {
         int32_t up_table_thread_count = TBSYS_CONFIG.getInt(CONF_SN_ROOTSERVER, CONF_UPDATE_TABLE_THREAD_COUNT, 1);
         update_tables_workers_.setThreadParameter(up_table_thread_count, this, NULL);
+        update_tables_workers_.start();
       }
 
       //initialize metaserver ==> rootserver heartbeat 
@@ -156,8 +160,11 @@ namespace tfs
       {
         int32_t heart_thread_count = TBSYS_CONFIG.getInt(CONF_SN_ROOTSERVER, CONF_HEART_THREAD_COUNT, 1);
         ms_rs_heartbeat_workers_.setThreadParameter(heart_thread_count, &rt_ms_heartbeat_handler_, this);
+        ms_rs_heartbeat_workers_.start();
+        rs_rs_heartbeat_workers_.setThreadParameter(1, &rt_rs_heartbeat_handler_, this);
+        rs_rs_heartbeat_workers_.start();
         RsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
-        ngi.owner_status_ = RS_STATUS_INITIALIZED;
+        ngi.info_.base_info_.status_ = RS_STATUS_INITIALIZED;
       }
       return iret;
     }
@@ -172,6 +179,9 @@ namespace tfs
         update_tables_workers_.wait();
         ms_rs_heartbeat_workers_.stop();
         ms_rs_heartbeat_workers_.wait();
+        rs_rs_heartbeat_workers_.stop();
+        rs_rs_heartbeat_workers_.wait();
+        rs_heart_manager_.destroy();
         manager_.destroy();
       }
       return TFS_SUCCESS;
@@ -186,7 +196,7 @@ namespace tfs
       assert(NULL != client->get_source_msg());
       bool bret = false;
       int32_t pcode = client->get_source_msg()->getPCode();
-      if (RSP_RT_UPDATE_TABLE_MESSAGE == pcode)
+      if (REQ_RT_UPDATE_TABLE_MESSAGE == pcode)
       {
         bret = update_tables_workers_.push(packet, 0 /*no limit */, false/*no block */);
       }
@@ -205,7 +215,7 @@ namespace tfs
       bool bret = NULL != connection && NULL != packet;
       if (bret)
       {
-        TBSYS_LOG(DEBUG, "receive pcode : %d", packet->getPCode());
+        //TBSYS_LOG(DEBUG, "receive pcode : %d", packet->getPCode());
         if (!packet->isRegularPacket())
         {
           bret = false;
@@ -225,7 +235,7 @@ namespace tfs
           int32_t pcode = bpacket->getPCode();
           int32_t iret = common::TFS_ERROR;
           RsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
-          if (ngi.owner_role_ == RS_ROLE_MASTER)
+          if (ngi.info_.base_info_.role_ == RS_ROLE_MASTER)
             iret = do_master_msg_helper(bpacket);
           else
             iret = do_slave_msg_helper(bpacket);
@@ -236,6 +246,9 @@ namespace tfs
             {
             case REQ_RT_MS_KEEPALIVE_MESSAGE:
               ms_rs_heartbeat_workers_.push(bpacket, 0/* no limit */, false/* no block */);
+              break;
+            case REQ_RT_RS_KEEPALIVE_MESSAGE:
+              rs_rs_heartbeat_workers_.push(bpacket, 0/* no limit */, false/* no block */);
               break;
             default:
               if (!main_workers_.push(bpacket, work_queue_size_))
@@ -300,7 +313,7 @@ namespace tfs
           tbnet::Packet* packet = client->get_source_msg();
           assert(NULL != packet);
           int32_t pcode = packet->getPCode();
-          if (RSP_RT_UPDATE_TABLE_MESSAGE == pcode)
+          if (REQ_RT_UPDATE_TABLE_MESSAGE == pcode)
           {
             if (!sresponse->empty())
             {
@@ -372,13 +385,14 @@ namespace tfs
             for (;iter != ip_list.end(); ++iter)
             {
               if (local_ip == (*iter))
-                ngi.owner_ip_port_ = tbsys::CNetUtil::ipToAddr((*iter), get_port());
+                ngi.info_.base_info_.id_ = tbsys::CNetUtil::ipToAddr((*iter), get_port());
               else
-                ngi.other_side_ip_port_ = tbsys::CNetUtil::ipToAddr((*iter), get_port());
+                ngi.other_id_ = tbsys::CNetUtil::ipToAddr((*iter), get_port());
             }
-            ngi.switch_time_ = time(NULL);
-            ngi.owner_status_ = RS_STATUS_UNINITIALIZE;
+            ngi.info_.base_info_.status_ = RS_STATUS_UNINITIALIZE;
             ngi.vip_ = Func::get_addr(get_ip_addr());
+            ngi.info_.base_info_.start_time_ = time(NULL);
+            ngi.info_.base_info_.last_update_time_ = time(NULL);
           }
         }
       }
@@ -392,15 +406,16 @@ namespace tfs
       {
         int32_t pcode = packet->getPCode();
         RsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
-        iret = ngi.owner_status_ >= RS_STATUS_UNINITIALIZE //service status is valid, we'll receive message
-               && ngi.owner_status_ <= RS_STATUS_INITIALIZED ? common::TFS_SUCCESS : common::TFS_ERROR;
+        iret = ngi.info_.base_info_.status_ >= RS_STATUS_UNINITIALIZE //service status is valid, we'll receive message
+               && ngi.info_.base_info_.status_ <= RS_STATUS_INITIALIZED ? common::TFS_SUCCESS : common::TFS_ERROR;
         if (common::TFS_SUCCESS == iret)
         {
           //receive all owner check message , master and slave heart message, dataserver heart message
-          if (pcode != REQ_RT_RT_KEEPALIVE_MESSAGE
-            && pcode != RSP_RT_RT_KEEPALIVE_MESSAGE)
+          if (pcode != REQ_RT_RS_KEEPALIVE_MESSAGE
+            && pcode != REQ_RT_MS_KEEPALIVE_MESSAGE 
+            && pcode != HEARTBEAT_AND_NS_HEART_MESSAGE)
           {
-            iret = ngi.owner_status_ < RS_STATUS_INITIALIZED ? common::TFS_ERROR : common::TFS_SUCCESS;
+            iret = ngi.info_.base_info_.status_ < RS_STATUS_INITIALIZED ? common::TFS_ERROR : common::TFS_SUCCESS;
           }
         }
       }
@@ -414,15 +429,15 @@ namespace tfs
       {
         int32_t pcode = packet->getPCode();
         RsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
-        iret = ngi.owner_status_ >= RS_STATUS_UNINITIALIZE //service status is valid, we'll receive message
-               && ngi.owner_status_ <= RS_STATUS_INITIALIZED ? common::TFS_SUCCESS : common::TFS_ERROR;
+        iret = ngi.info_.base_info_.status_ >= RS_STATUS_UNINITIALIZE //service status is valid, we'll receive message
+               && ngi.info_.base_info_.status_ <= RS_STATUS_INITIALIZED ? common::TFS_SUCCESS : common::TFS_ERROR;
         if (common::TFS_SUCCESS == iret)
         {
           //receive all owner check message , master and slave heart message, dataserver heart message
-          if (pcode != REQ_RT_RT_KEEPALIVE_MESSAGE
-            && pcode != RSP_RT_RT_KEEPALIVE_MESSAGE)
+          if ((pcode != HEARTBEAT_AND_NS_HEART_MESSAGE)
+            && (pcode != RSP_RT_RS_KEEPALIVE_MESSAGE))
           {
-            iret = ngi.owner_status_ < RS_STATUS_INITIALIZED ? common::TFS_ERROR : common::TFS_SUCCESS;
+            iret = ngi.info_.base_info_.status_ < RS_STATUS_INITIALIZED ? common::TFS_ERROR : common::TFS_SUCCESS;
           }
         }
       }
@@ -443,9 +458,34 @@ namespace tfs
         {
           reply_msg->set_active_table_version(server.tables_.version_);
           reply_msg->set_lease_expired_time(server.lease_.lease_expired_time_);
+          reply_msg->set_renew_lease_interval_time(SYSPARAM_RTSERVER.mts_rts_renew_lease_interval_);
         }
         iret = packet->reply(reply_msg);
         TBSYS_LOG(DEBUG, "%s keepalive %s",
+          tbsys::CNetUtil::addrToString(server.base_info_.id_).c_str(),
+          iret == TFS_SUCCESS ? "successful" : "failed");
+      }
+      return iret;
+    }
+
+    int RootServer::rs_keepalive(common::BasePacket* packet)
+    {
+      int32_t iret = NULL != packet? TFS_SUCCESS : TFS_ERROR;
+      if (TFS_SUCCESS == iret)
+      {
+        RtsRsHeartMessage* msg  = dynamic_cast<RtsRsHeartMessage*>(packet);
+        common::RootServerInformation& server = msg->get_rs();
+        iret = rs_heart_manager_.keepalive(msg->get_type(), server);
+        RtsRsHeartResponseMessage* reply_msg = new RtsRsHeartResponseMessage();
+        reply_msg->set_ret_value(iret);
+        if (TFS_SUCCESS == iret)
+        {
+          reply_msg->set_active_table_version(manager_.get_active_table_version());
+          reply_msg->set_lease_expired_time(server.lease_.lease_expired_time_);
+          reply_msg->set_renew_lease_interval_time(SYSPARAM_RTSERVER.rts_rts_renew_lease_interval_);
+        }
+        iret = packet->reply(reply_msg);
+        TBSYS_LOG(DEBUG, "slave rootserver %s keepalive %s",
           tbsys::CNetUtil::addrToString(server.base_info_.id_).c_str(),
           iret == TFS_SUCCESS ? "successful" : "failed");
       }
@@ -457,12 +497,25 @@ namespace tfs
       int32_t iret = NULL != packet? TFS_SUCCESS : TFS_ERROR;
       if (TFS_SUCCESS == iret)
       {
-        GetTablesFromRtsResponseMessage* reply_msg = new GetTablesFromRtsResponseMessage();
-        iret = manager_.get_tables(reply_msg->get_tables(), reply_msg->get_table_length());
+        GetTableFromRtsResponseMessage* reply_msg = new GetTableFromRtsResponseMessage();
+        iret = manager_.get_tables(reply_msg->get_table(), reply_msg->get_table_length(), reply_msg->get_version());
         if (TFS_SUCCESS == iret)
         {
           iret = packet->reply(reply_msg);
         }
+      }
+      return iret;
+    }
+
+    int RootServer::rs_ha_ping(common::BasePacket* packet)
+    {
+      int32_t iret = NULL != packet? TFS_SUCCESS : TFS_ERROR;
+      if (TFS_SUCCESS == iret)
+      {
+        RsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
+        HeartBeatAndNSHeartMessage* reply_msg = new HeartBeatAndNSHeartMessage();
+        reply_msg->set_ns_switch_flag_and_status(0 /*no use*/ , ngi.info_.base_info_.status_);
+        iret = packet->reply(reply_msg);
       }
       return iret;
     }
@@ -486,7 +539,45 @@ namespace tfs
       {
         //if return TFS_SUCCESS, packet had been delete in this func
         //if handlePacketQueue return true, tbnet will delete this packet
+        assert(packet->getPCode() == REQ_RT_MS_KEEPALIVE_MESSAGE); 
         manager_.ms_keepalive(dynamic_cast<BasePacket*>(packet));
+      }
+      return bret;
+    }
+
+    bool RootServer::RsKeepAliveIPacketQueueHandlerHelper::handlePacketQueue(tbnet::Packet *packet, void *args)
+    {
+      UNUSED(args);
+      bool bret = packet != NULL;
+      if (bret)
+      {
+        //if return TFS_SUCCESS, packet had been delete in this func
+        //if handlePacketQueue return true, tbnet will delete this packet
+        int32_t pcode = packet->getPCode();
+        int32_t iret = LOCAL_PACKET == pcode ? TFS_ERROR : common::TFS_SUCCESS;
+        if (TFS_SUCCESS == iret)
+        {
+          TBSYS_LOG(DEBUG, "PCODE: %d", pcode);
+          common::BasePacket* msg = dynamic_cast<common::BasePacket*>(packet);
+          switch (pcode)
+          {
+            case REQ_RT_RS_KEEPALIVE_MESSAGE:
+            case RSP_RT_RS_KEEPALIVE_MESSAGE:
+              iret = manager_.rs_keepalive(msg);
+              break;
+            case HEARTBEAT_AND_NS_HEART_MESSAGE:
+              iret = manager_.rs_ha_ping(msg);
+              break;
+            default:
+              iret = EXIT_UNKNOWN_MSGTYPE;
+              TBSYS_LOG(ERROR, "unknown msg type: %d", pcode);
+              break;
+          }
+          if (common::TFS_SUCCESS != iret)
+          {
+            msg->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), iret, "execute message failed");
+          }
+        }
       }
       return bret;
     }

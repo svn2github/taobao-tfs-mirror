@@ -6,7 +6,7 @@
  * published by the Free Software Foundation.
  *
  *
- * Version: $Id: rootserver.h 590 2011-08-17 16:36:13Z duanfei@taobao.com $
+ * Version: $Id: meta_server_manager.h 590 2011-08-17 16:36:13Z duanfei@taobao.com $
  *
  * Authors:
  *   duanfei <duanfei@taobao.com>
@@ -25,14 +25,15 @@
 #include "common/rts_define.h"
 
 #include "build_table.h"
-#include "lru.h"
 
 namespace tfs
 {
   namespace rootserver
   {
+    class RootServerHeartManager;
     class MetaServerManager
     {
+      friend class RootServerHeartManager;
       friend class MetaServerManagerTest;
       FRIEND_TEST(MetaServerManagerTest, exist);
       FRIEND_TEST(MetaServerManagerTest, lease_exist);
@@ -54,7 +55,9 @@ namespace tfs
       int switch_table(common::NEW_TABLE& tables);
       int update_tables_item_status(const uint64_t server, const int64_t version,
                                     const int8_t status, const int8_t phase);
-      int get_tables(char* table, int64_t& length);
+      int get_tables(char* table, int64_t& length, int64_t& version);
+      int64_t get_active_table_version() const;
+
     private:
       int register_(common::MetaServer& server);
       int unregister(const uint64_t id);
@@ -62,10 +65,12 @@ namespace tfs
       void build_table(void);
       uint64_t new_lease_id(void);
       void interrupt(void) ;
-      void check_ms_lease_expired_helper(const tbutil::Time& now, std::vector<uint64_t>& servers);
+      void check_ms_lease_expired_helper(const tbutil::Time& now, bool& interrupt);
       int build_table_helper(int8_t& phase, common::NEW_TABLE& tables, bool& update_complete);
       int update_table_helper(int8_t& phase, common::NEW_TABLE& tables, bool& update_complete);
 
+      int update_active_tables(const unsigned char* tables, const int64_t length, const int64_t version);
+      
       //debug helper
       common::MetaServer* get(const uint64_t id);
     private:
@@ -102,9 +107,9 @@ namespace tfs
       BuildTableThreadHelperPtr build_table_thread_;
       CheckMetaServerLeaseThreadHelperPtr check_ms_lease_thread_;
       common::NEW_TABLE new_tables_;
+      int32_t interrupt_;
       bool initialize_;
       bool destroy_;
-      int8_t interrupt_;
     private:
       DISALLOW_COPY_AND_ASSIGN(MetaServerManager);
    };

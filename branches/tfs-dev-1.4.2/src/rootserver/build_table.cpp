@@ -21,13 +21,20 @@
  * ------------------------------------------------------------------
  * |server item(8)  | bucket_item(8)                                |
  * ------------------------------------------------------------------
- * |build table version(8) | reserve(8)                             |
+ * |build table version(8) | compress build table length(8)         |
+ * ------------------------------------------------------------------
+ * |compress active table length(8) | reserve(8)                    |
  * ------------------------------------------------------------------
  * |       active bucket tables                                     | 
  * ------------------------------------------------------------------
  * |       bucket tables                                            | 
  * ------------------------------------------------------------------
+ * |       compress build tables                                    | 
+ * ------------------------------------------------------------------
+ * |       compress active tables                                   | 
+ * ------------------------------------------------------------------
  */
+#include <zlib.h>
 #include <unistd.h>
 #include <stdint.h>
 #include <sstream>
@@ -51,7 +58,7 @@ namespace tfs
   {
     const int64_t BuildTable::MAX_SERVER_COUNT = 1024;
     const int64_t BuildTable::MAGIC_NUMBER = 0x4e534654;//TFSN
-    const int8_t BuildTable::BUCKET_TABLES_COUNT = 2;
+    const int8_t BuildTable::BUCKET_TABLES_COUNT = 4;
     const int64_t BuildTable::MIN_BUCKET_ITEM = 1024;
     const int64_t BuildTable::MAX_BUCKET_ITEM = 102400;
 
@@ -70,7 +77,9 @@ namespace tfs
         pos += INT64_SIZE;
         memcpy((data + pos), &build_table_version_, INT64_SIZE);
         pos += INT64_SIZE;
-        memcpy((data + pos), &reserve_, INT64_SIZE);
+        memcpy((data + pos), &compress_table_length_, INT64_SIZE);
+        pos += INT64_SIZE;
+        memcpy((data + pos), &compress_active_table_length_, INT64_SIZE);
         pos += INT64_SIZE;
       }
       return iret;
@@ -91,7 +100,9 @@ namespace tfs
         pos += INT64_SIZE;
         build_table_version_= (*reinterpret_cast<const int64_t*>(data + pos));
         pos += INT64_SIZE;
-        reserve_= (*reinterpret_cast<const int64_t*>(data + pos));
+        compress_table_length_= (*reinterpret_cast<const int64_t*>(data + pos));
+        pos += INT64_SIZE;
+        compress_active_table_length_= (*reinterpret_cast<const int64_t*>(data + pos));
         pos += INT64_SIZE;
       }
       return iret;
@@ -99,16 +110,15 @@ namespace tfs
 
     int64_t BuildTable::TablesHeader::length() const
     {
-      return common::INT64_SIZE * 6;
+      return common::INT64_SIZE * 8;
     }
 
     BuildTable::BuildTable():
       tables_(NULL),
-      tables_end_(NULL),
       active_tables_(NULL),
-      active_tables_end_(NULL),
       server_tables_(NULL),
-      server_tables_end_(NULL),
+      compress_tables_(NULL),
+      compress_active_tables_(NULL),
       header_(NULL),
       fd_(-1),
       file_(NULL)
@@ -191,8 +201,8 @@ namespace tfs
             memset(file_->get_data(), 0, size);
             iret = set_tables_pointer(max_bucket_item, max_server_item);
             header_->bucket_item_ = max_bucket_item;
-            header_->build_table_version_ = INVALID_TABLE_VERSION;
-            header_->active_table_version_ = INVALID_TABLE_VERSION;
+            header_->build_table_version_ = TABLE_VERSION_MAGIC;
+            header_->active_table_version_ = TABLE_VERSION_MAGIC;
             header_->magic_number_  = MAGIC_NUMBER;
             header_->server_item_   = max_server_item;
             iret = file_->sync_file() ? TFS_SUCCESS : TFS_ERROR;
@@ -413,22 +423,39 @@ namespace tfs
               change = new_count > 0 && !Func::test_bit(interrupt, BUILD_TABLE_INTERRUPT_ALL);
               if (change)
               {
-                NEW_TABLE_ITER iter;
-                std::pair<NEW_TABLE_ITER, bool> res;
-                std::set<uint64_t>::const_iterator it = servers.begin();
-                for (; it != servers.end(); ++it)
+                dump_tables(TBSYS_LOG_LEVEL_DEBUG,DUMP_TABLE_TYPE_TABLE);
+                unsigned char* dest = new unsigned char[MAX_BUCKET_DATA_LENGTH];
+                uint64_t dest_length = MAX_BUCKET_DATA_LENGTH;
+                iret = compress(dest, &dest_length, reinterpret_cast<unsigned char*>(tables_), MAX_BUCKET_DATA_LENGTH); 
+                if (Z_OK != iret)
                 {
-                  iter = new_tables.find((*it));
-                  if (iter == new_tables.end())
-                  {
-                    res = new_tables.insert(NEW_TABLE::value_type((*it),
-                        NewTableItem()));
-                    res.first->second.phase_  = UPDATE_TABLE_PHASE_1;
-                    res.first->second.status_ = NEW_TABLE_ITEM_UPDATE_STATUS_BEGIN;
-                  }
+                  TBSYS_LOG(ERROR, "compress error: %d, build version: %"PRI64_PREFIX"d", iret, header_->build_table_version_);
+                  iret = TFS_ERROR;
                 }
-                inc_build_version(); 
-                iret = file_->sync_file() ? TFS_SUCCESS : TFS_ERROR;
+                else
+                {
+                  TBSYS_LOG(DEBUG, "compress dest_length: %"PRI64_PREFIX"d, length: %"PRI64_PREFIX"d",
+                    dest_length, MAX_BUCKET_DATA_LENGTH);
+                  NEW_TABLE_ITER iter;
+                  std::pair<NEW_TABLE_ITER, bool> res;
+                  std::set<uint64_t>::const_iterator it = servers.begin();
+                  for (; it != servers.end(); ++it)
+                  {
+                    iter = new_tables.find((*it));
+                    if (iter == new_tables.end())
+                    {
+                      res = new_tables.insert(NEW_TABLE::value_type((*it),
+                            NewTableItem()));
+                      res.first->second.phase_  = UPDATE_TABLE_PHASE_1;
+                      res.first->second.status_ = NEW_TABLE_ITEM_UPDATE_STATUS_BEGIN;
+                    }
+                  }
+                  inc_build_version(); 
+                  header_->compress_table_length_ = dest_length;
+                  memcpy(compress_tables_, dest, dest_length);
+                  iret = file_->sync_file() ? TFS_SUCCESS : TFS_ERROR;
+                }
+                tbsys::gDeleteA(dest);
               }
             }
           }
@@ -543,43 +570,47 @@ namespace tfs
       int32_t iret = NULL != file_ ? TFS_SUCCESS : TFS_ERROR;
       if (TFS_SUCCESS == iret)
       {
+        header_->compress_active_table_length_ = header_->compress_table_length_;
         memcpy(reinterpret_cast<unsigned char*>(active_tables_), reinterpret_cast<unsigned char*>(tables_),
             header_->bucket_item_ * INT64_SIZE);
+        memcpy(compress_active_tables_, compress_tables_, header_->compress_table_length_);
         inc_active_version();
         iret = file_->sync_file() ? TFS_SUCCESS : TFS_ERROR;
       }
       return iret;
     }
-
-    int BuildTable::dump_tables(const int8_t type)
+    void BuildTable::dump_tables(int32_t level,const int8_t type,
+        const char* file, const int32_t line,
+        const char* function) const
     {
-      int64_t i = 0;
-      uint64_t server = 0;
-      std::map<uint64_t, std::vector<uint64_t> > map;
-      std::map<uint64_t, std::vector<uint64_t> > ::iterator iter;
-      for (i = 0; i < header_->bucket_item_; ++i)
+      if (level >= TBSYS_LOGGER._level)
       {
-        server = type == DUMP_TABLE_TYPE_ACTIVE_TABLE ? active_tables_[i] : tables_[i];
-        iter = map.find(server);
-        if (iter == map.end())
-          map.insert(std::map<uint64_t, std::vector<uint64_t> >::value_type(server, std::vector<uint64_t>()));
-        else
-          iter->second.push_back(i);
-      }
-      iter = map.begin();
-      std::vector<uint64_t>::const_iterator it;
-      for (; iter != map.end(); ++iter)
-      {
-        std::stringstream tstr;
-        tstr << tbsys::CNetUtil::addrToString(iter->first) << ": " << "[ " <<iter->second.size() <<" ] ";
-        for (it = iter->second.begin(); it != iter->second.end(); ++it)
+        int64_t i = 0;
+        uint64_t server = 0;
+        std::map<uint64_t, std::vector<uint64_t> > map;
+        std::map<uint64_t, std::vector<uint64_t> > ::iterator iter;
+        for (i = 0; i < header_->bucket_item_; i++)
         {
-          tstr << " " << (*it) << " ";
+          server = type == DUMP_TABLE_TYPE_ACTIVE_TABLE ? active_tables_[i] : tables_[i];
+          iter = map.find(server);
+          if (iter == map.end())
+            iter = map.insert(std::map<uint64_t, std::vector<uint64_t> >::value_type(server, std::vector<uint64_t>())).first;
+          iter->second.push_back(i);
         }
-        tstr << std::endl;
-        TBSYS_LOG(INFO, "%s\n", tstr.str().c_str());
+        iter = map.begin();
+        std::vector<uint64_t>::const_iterator it;
+        for (; iter != map.end(); ++iter)
+        {
+          std::stringstream tstr;
+          tstr << tbsys::CNetUtil::addrToString(iter->first) << ": " << "[ " <<iter->second.size() <<" ] ";
+          for (i = 0, it = iter->second.begin(); it != iter->second.end(); ++it, ++i)
+          {
+            tstr << " " << (*it) << " ";
+          }
+          tstr << std::endl;
+          TBSYS_LOGGER.logMessage(level, file, line, function, "%s", tstr.str().c_str());
+        }
       }
-      return TFS_SUCCESS;
     }
 
     int BuildTable::dump_tables(common::Buffer& buf, const int8_t type)
@@ -605,12 +636,12 @@ namespace tfs
 
     const char* BuildTable::get_active_table() const
     {
-      return (NULL != file_) ? reinterpret_cast<const char*>(active_tables_) : NULL;
+      return (NULL != file_) ? reinterpret_cast<const char*>(compress_active_tables_) : NULL;
     }
 
     const char* BuildTable::get_build_table() const
     {
-      return (NULL != file_) ? reinterpret_cast<const char*>(tables_) : NULL;
+      return (NULL != file_) ? reinterpret_cast<const char*>(compress_tables_) : NULL;
     }
 
     int BuildTable::set_tables_pointer( const int64_t max_bucket_item, const int64_t max_server_item)
@@ -624,12 +655,12 @@ namespace tfs
         server_tables_ = data + offset;
         offset += max_server_item ;
         active_tables_ = data + offset; 
-        server_tables_end_ = active_tables_;
         offset += max_bucket_item ;
         tables_ = data + offset; 
-        active_tables_end_ = tables_;
         offset += max_bucket_item ;
-        tables_end_ = data + offset;
+        compress_tables_ = reinterpret_cast<unsigned char*>(data + offset); 
+        offset += max_bucket_item;
+        compress_active_tables_ = reinterpret_cast<unsigned char*>(data + offset); 
       }
       return iret;
     }
@@ -662,10 +693,26 @@ namespace tfs
       return iret;
     }
 
+    int BuildTable::update_active_tables(const unsigned char* tables, const int64_t length, const int64_t version)
+    {
+      int32_t iret = NULL == tables || length != MAX_BUCKET_DATA_LENGTH ? TFS_ERROR : TFS_SUCCESS;
+      if (TFS_SUCCESS == iret)
+      {
+        iret =  version > header_->active_table_version_ ? TFS_SUCCESS : EXIT_TABLE_VERSION_ERROR;
+        if (TFS_SUCCESS == iret)
+        {
+          header_->active_table_version_ = version;
+          header_->build_table_version_  = version;
+          memcpy((unsigned char*)active_tables_, tables, length);
+        }
+      }
+      return iret;
+    }
+
     void BuildTable::inc_build_version()
     {
       if (INVALID_TABLE_VERSION == header_->build_table_version_
-          || header_->build_table_version_ >= INT64_MAX - 1)
+          || header_->build_table_version_ >= TABLE_VERSION_MAGIC)
       {
         header_->build_table_version_ = 1;
       }
@@ -678,7 +725,7 @@ namespace tfs
     void BuildTable::inc_active_version()
     {
       if (INVALID_TABLE_VERSION == header_->active_table_version_
-          || header_->active_table_version_ >= INT64_MAX - 1)
+          || header_->active_table_version_ >= TABLE_VERSION_MAGIC)
       {
         header_->active_table_version_ = 1;
       }

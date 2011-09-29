@@ -21,6 +21,8 @@
 #include "common/base_service.h"
 
 #include "meta_server_manager.h"
+#include "root_server_heart_manager.h"
+
 namespace tfs
 {
   namespace rootserver
@@ -87,22 +89,37 @@ namespace tfs
       class KeepAliveIPacketQueueHandlerHelper : public tbnet::IPacketQueueHandler
       {
       public:
-        explicit KeepAliveIPacketQueueHandlerHelper(RootServer& manager): manager_(manager){ };
+        explicit KeepAliveIPacketQueueHandlerHelper(RootServer& manager): manager_(manager){ }
         virtual ~KeepAliveIPacketQueueHandlerHelper() {}
         virtual bool handlePacketQueue(tbnet::Packet* packet, void *args);
       private:
         DISALLOW_COPY_AND_ASSIGN(KeepAliveIPacketQueueHandlerHelper);
         RootServer& manager_;
       };
+      class RsKeepAliveIPacketQueueHandlerHelper : public tbnet::IPacketQueueHandler
+      {
+        public:
+          explicit RsKeepAliveIPacketQueueHandlerHelper(RootServer& manager): manager_(manager){ }
+          virtual ~RsKeepAliveIPacketQueueHandlerHelper() {}
+          virtual bool handlePacketQueue(tbnet::Packet* packet, void *args);
+        private:
+          DISALLOW_COPY_AND_ASSIGN(RsKeepAliveIPacketQueueHandlerHelper);
+          RootServer& manager_;
+      };
     private:
       int ms_keepalive(common::BasePacket* packet);
+      int rs_keepalive(common::BasePacket* packet);
+      int rs_ha_ping(common::BasePacket* packet);
       int get_tables(common::BasePacket* packet);
 
     private:
       tbnet::PacketQueueThread update_tables_workers_;
       tbnet::PacketQueueThread ms_rs_heartbeat_workers_;
+      tbnet::PacketQueueThread rs_rs_heartbeat_workers_;
       KeepAliveIPacketQueueHandlerHelper rt_ms_heartbeat_handler_;
+      RsKeepAliveIPacketQueueHandlerHelper rt_rs_heartbeat_handler_;
       MetaServerManager manager_;
+      RootServerHeartManager rs_heart_manager_;
     };
   }/** rootserver **/
 }/** tfs **/

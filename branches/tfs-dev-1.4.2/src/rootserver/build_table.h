@@ -6,7 +6,7 @@
  * published by the Free Software Foundation.
  *
  *
- * Version: $Id: rootserver.h 590 2011-08-18 13:36:13Z duanfei@taobao.com $
+ * Version: $Id: build_table.h 590 2011-08-18 13:36:13Z duanfei@taobao.com $
  *
  * Authors:
  *   duanfei <duanfei@taobao.com>
@@ -27,9 +27,11 @@ namespace tfs
   namespace rootserver
   {
     extern int rs_async_callback(common::NewClient* client);
+    //class MetaServerManager;
     class BuildTable
     {
       friend class BuildTableTest;
+      friend class MetaServerManager;
       FRIEND_TEST(BuildTableTest, initialize);
       FRIEND_TEST(BuildTableTest, build_table);
       FRIEND_TEST(BuildTableTest, update_table);
@@ -47,7 +49,8 @@ namespace tfs
         int64_t server_item_;
         int64_t build_table_version_;
         int64_t bucket_item_;
-        int64_t reserve_;
+        int64_t compress_table_length_;
+        int64_t compress_active_table_length_;
         int serialize(char* data, const int64_t data_len, int64_t& pos) const;
         int deserialize(const char* data, const int64_t data_len, int64_t& pos);
         int64_t length() const;
@@ -66,15 +69,17 @@ namespace tfs
       int check_update_table_complete(const int8_t interrupt, const int8_t phase,
                        common::NEW_TABLE& new_tables, bool& update_complete);
       int switch_table(void);
-      int dump_tables(const int8_t type = common::DUMP_TABLE_TYPE_ACTIVE_TABLE);
+      void dump_tables(int32_t level,const int8_t type = common::DUMP_TABLE_TYPE_ACTIVE_TABLE,
+             const char* file = __FILE__, const int32_t line = __LINE__,
+             const char* function = __FUNCTION__) const;
       int dump_tables(common::Buffer& buf, const int8_t type = common::DUMP_TABLE_TYPE_ACTIVE_TABLE);
 
       int64_t get_build_table_version() const;
       int64_t get_active_table_version() const;
       const char* get_active_table() const;
       const char* get_build_table() const;
-      int64_t get_build_table_length() const { return common::MAX_BUCKET_ITEM_DEFAULT * common::INT64_SIZE;}
-      int64_t get_active_table_length() const { return common::MAX_BUCKET_ITEM_DEFAULT * common::INT64_SIZE;}
+      int64_t get_build_table_length() const { return header_->compress_table_length_;}
+      int64_t get_active_table_length() const { return header_->compress_active_table_length_;}
     private:
       int load_tables(const int64_t file_size, const int64_t size, const int64_t max_bucket_item = common::MAX_BUCKET_ITEM_DEFAULT,
                     const int64_t max_server_item = common::MAX_SERVER_ITEM_DEFAULT);
@@ -91,6 +96,8 @@ namespace tfs
       int fill_new_tables(const int8_t interrupt, const std::set<uint64_t>& servers,
                           std::vector<uint64_t>& news, std::vector<uint64_t>& deads);
       int send_msg_to_server(const uint64_t server, const int8_t phase);
+
+      int update_active_tables(const unsigned char* tables, const int64_t length, const int64_t version);
     public:
       static const int64_t MIN_BUCKET_ITEM;
       static const int64_t MAX_BUCKET_ITEM;
@@ -99,12 +106,12 @@ namespace tfs
       static const int8_t BUCKET_TABLES_COUNT;
     private:
       uint64_t* tables_;
-      uint64_t* tables_end_;
       uint64_t* active_tables_;
-      uint64_t* active_tables_end_;
       uint64_t* server_tables_;
-      uint64_t* server_tables_end_;
+      unsigned char* compress_tables_;
+      unsigned char* compress_active_tables_;
       TablesHeader* header_;
+      int64_t compress_length_;
       int64_t fd_; 
       common::MMapFile* file_;
       volatile uint8_t interrupt_;

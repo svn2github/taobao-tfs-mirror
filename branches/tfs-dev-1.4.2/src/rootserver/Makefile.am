@@ -1,5 +1,5 @@
 #AM_CPPFLAGS=-fprofile-arcs -ftest-coverage -Wall -I$(top_srcdir)/src
-AM_CPPFLAGS= -e -Wall -I$(top_srcdir)/src\
+AM_CPPFLAGS=-Wall -I$(top_srcdir)/src\
             -I$(TBLIB_ROOT)/include/tbsys\
             -I$(TBLIB_ROOT)/include/tbnet
 
@@ -13,10 +13,11 @@ LDADD=$(top_builddir)/src/message/libtfsmessage.a \
 
 noinst_LIBRARIES=librootserver.a
 
-NAMESERVER_SOURCE_LIST_HEADER=rootserver.h meta_server_manager.h build_tables.h global_factory.h
+NAMESERVER_SOURCE_LIST_HEADER=rootserver.h meta_server_manager.h build_tables.h global_factory.h\
+	root_server_heart_manager.h
 
 ROOTSERVER_SOURCE_LIST=rootserver.cpp meta_server_manager.cpp build_table.cpp\
-	global_factory.cpp $(NAMESERVER_SOURCE_LIST_HEADER)
+	global_factory.cpp root_server_heart_manager.cpp $(NAMESERVER_SOURCE_LIST_HEADER)
 
 
 librootserver_a_SOURCES=$(ROOTSERVER_SOURCE_LIST)

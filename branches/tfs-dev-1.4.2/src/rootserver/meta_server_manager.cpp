@@ -6,7 +6,7 @@
  * published by the Free Software Foundation.
  *
  *
- * Version: $Id: rootserver.h 590 2011-08-17 16:36:13Z duanfei@taobao.com $
+ * Version: $Id: meta_server_manager.cpp 590 2011-08-17 16:36:13Z duanfei@taobao.com $
  *
  * Authors:
  *   duanfei <duanfei@taobao.com>
@@ -24,6 +24,7 @@
 #include "common/atomic.h"
 #include "common/parameter.h"
 #include "meta_server_manager.h"
+#include "global_factory.h"
 
 using namespace tfs::common;
 
@@ -35,9 +36,9 @@ namespace tfs
       lease_id_factory_(INVALID_LEASE_ID),
       build_table_thread_(0),
       check_ms_lease_thread_(0),
+      interrupt_(INTERRUPT_NONE),
       initialize_(false),
-      destroy_(false),
-      interrupt_(INTERRUPT_NONE)
+      destroy_(false)
     {
 
     }
@@ -164,10 +165,10 @@ namespace tfs
         {
           memcpy(pserver, &server, sizeof(MetaServer));
           pserver->lease_.lease_id_ = new_lease_id();
-          pserver->lease_.lease_expired_time_ = now.toSeconds() + SYSPARAM_RTSERVER.mts_rts_lease_expired_time_;
+          pserver->lease_.lease_expired_time_ = now.toSeconds() + SYSPARAM_RTSERVER.mts_rts_lease_expired_time_ ;
           pserver->base_info_.last_update_time_ = now.toSeconds();
           server.tables_.version_ = build_tables_.get_active_table_version();
-          server.lease_.lease_expired_time_ = SYSPARAM_RTSERVER.mts_rts_lease_expired_time_; 
+          server.lease_.lease_expired_time_ = SYSPARAM_RTSERVER.mts_rts_lease_expired_time_ ; 
         }
       }
       if (TFS_SUCCESS == iret)
@@ -236,26 +237,29 @@ namespace tfs
 
     int MetaServerManager::check_ms_lease_expired(void)
     {
-      {
-        tbutil::Monitor<tbutil::Mutex>::Lock lock(check_ms_lease_monitor_);
-        check_ms_lease_monitor_.timedWait(tbutil::Time::seconds(SYSPARAM_RTSERVER.safe_mode_time_));//safe mode time
-      }
-      std::vector<uint64_t> servers;
       tbutil::Time now;
+      bool interrupt_flag = false;
       while (!destroy_)
       {
-        {
-          tbutil::Monitor<tbutil::Mutex>::Lock lock(check_ms_lease_monitor_);
-          check_ms_lease_monitor_.timedWait(tbutil::Time::seconds(10));
-        }
+        RsRuntimeGlobalInformation& rgi = GFactory::get_runtime_info();
         now = tbutil::Time::now(tbutil::Time::Monotonic);
-        check_ms_lease_expired_helper(now, servers);
-        if (!servers.empty())
+        if (rgi.in_safe_mode_time(now.toSeconds()))
         {
-          servers.clear();
-          interrupt();
+          Func::sleep(SYSPARAM_RTSERVER.safe_mode_time_, destroy_);
         }
-      }
+        else
+        {
+          now = tbutil::Time::now(tbutil::Time::Monotonic);
+          check_ms_lease_expired_helper(now, interrupt_flag);
+          if (interrupt_flag)
+          {
+            interrupt_flag = false;
+            interrupt();
+          }
+          tbutil::Monitor<tbutil::Mutex>::Lock lock(check_ms_lease_monitor_);
+          check_ms_lease_monitor_.timedWait(tbutil::Time::milliSeconds(500));
+        }
+     }
       return TFS_SUCCESS;
     }
 
@@ -276,49 +280,69 @@ namespace tfs
       if (TFS_SUCCESS == iret)
       {
         tbutil::Monitor<tbutil::Mutex>::Lock lock(build_table_monitor_);
+        TBSYS_LOG(DEBUG, "update tables item status: version: %d, status: %d, phase: %d", version, status, phase);
         iret = build_tables_.update_tables_item_status(server, version, status, phase, new_tables_);
       }
       return iret;
     }
 
-    int MetaServerManager::get_tables(char* tables, int64_t& length)
+    int MetaServerManager::get_tables(char* tables, int64_t& length, int64_t& version)
     {
       tbutil::Monitor<tbutil::Mutex>::Lock lock(build_table_monitor_);
       int32_t iret = NULL == tables || length < build_tables_.get_active_table_length()
         ? TFS_ERROR : TFS_SUCCESS;
       if (TFS_SUCCESS == iret)
       {
+        version = build_tables_.get_active_table_version();
         memcpy(tables, build_tables_.get_active_table(), build_tables_.get_active_table_length());
       }
       return iret;
     }
 
+    int MetaServerManager::update_active_tables(const unsigned char* tables, const int64_t length, const int64_t version)
+    {
+      tbutil::Monitor<tbutil::Mutex>::Lock lock(build_table_monitor_);
+      return build_tables_.update_active_tables(tables, length, version);
+    }
+
+    int64_t MetaServerManager::get_active_table_version() const
+    {
+      tbutil::Monitor<tbutil::Mutex>::Lock lock(build_table_monitor_);
+      return build_tables_.get_active_table_version();
+    }
+
     void MetaServerManager::build_table(void)
     {
-      {
-        tbutil::Monitor<tbutil::Mutex>::Lock lock(build_table_monitor_);
-        build_table_monitor_.timedWait(tbutil::Time::seconds(SYSPARAM_RTSERVER.safe_mode_time_));//safe mode time
-      }
-      std::set<uint64_t> servers;
+      tbutil::Time now;
       bool update_complete = false;
       int8_t phase = UPDATE_TABLE_PHASE_1;
       while (!destroy_)
       {
-        tbutil::Monitor<tbutil::Mutex>::Lock lock(build_table_monitor_);
-        if(!Func::test_bit(interrupt_, BUILD_TABLE_INTERRUPT_ALL)//no rebuild && no update tables, wait
-            && new_tables_.empty())
+        RsRuntimeGlobalInformation& rgi = GFactory::get_runtime_info();
+        now = tbutil::Time::now(tbutil::Time::Monotonic);
+        if (rgi.in_safe_mode_time(now.toSeconds()))
         {
-          build_table_monitor_.wait();
+          Func::sleep(SYSPARAM_RTSERVER.safe_mode_time_, destroy_);
+          interrupt();
         }
+        else
+        {
+          tbutil::Monitor<tbutil::Mutex>::Lock lock(build_table_monitor_);
+          if(!Func::test_bit(interrupt_, BUILD_TABLE_INTERRUPT_ALL)//no rebuild && no update tables, wait
+              && new_tables_.empty())
+          {
+            build_table_monitor_.timedWait(tbutil::Time::milliSeconds(500));//100ms
+          }
 
-        if (Func::test_bit(interrupt_, BUILD_TABLE_INTERRUPT_ALL))//rebuild
-        {
-          build_table_helper(phase, new_tables_, update_complete);
-        }
-        else if (!new_tables_.empty())//check update tables status
-        {
-          build_table_monitor_.timedWait(tbutil::Time::milliSeconds(100));//100ms
-          update_table_helper(phase, new_tables_, update_complete);
+          if (Func::test_bit(interrupt_, BUILD_TABLE_INTERRUPT_ALL))//rebuild
+          {
+            build_table_helper(phase, new_tables_, update_complete);
+          }
+          else if (!new_tables_.empty())//check update tables status
+          {
+            build_table_monitor_.timedWait(tbutil::Time::milliSeconds(100));//100ms
+            update_table_helper(phase, new_tables_, update_complete);
+          }
         }
       }
       return;
@@ -338,7 +362,7 @@ namespace tfs
       build_table_monitor_.notifyAll();
     }
 
-    void MetaServerManager::check_ms_lease_expired_helper(const tbutil::Time& now, std::vector<uint64_t>& servers)
+    void MetaServerManager::check_ms_lease_expired_helper(const tbutil::Time& now, bool& interrupt)
     {
       RWLock::Lock lock(mutex_, WRITE_LOCKER);
       META_SERVER_MAPS_ITER iter = servers_.begin();
@@ -346,7 +370,7 @@ namespace tfs
       {
         if (!iter->second.lease_.has_valid_lease(now.toSeconds()))
         {
-          servers.push_back(iter->first);
+          interrupt = true;
           servers_.erase(iter++);
         }
         else
@@ -377,6 +401,7 @@ namespace tfs
         {
           build_tables_.update_table(interrupt_, phase, tables, update_complete);
         }
+        TBSYS_LOG(INFO, "build table complete, change: %s", change ? "true" : "false");
       }
       return iret;
     }
@@ -396,7 +421,7 @@ namespace tfs
               iret = switch_table(tables);
               if (TFS_SUCCESS == iret)
               {
-                TBSYS_LOG(INFO, "update table complete, version: %"PRI64_PREFIX"d, phase: %hh",
+                TBSYS_LOG(INFO, "update table complete, version: %"PRI64_PREFIX"d, phase: %d",
                   build_tables_.get_active_table_version(), phase);
                 update_complete = false;
                 phase = UPDATE_TABLE_PHASE_2;
@@ -406,7 +431,7 @@ namespace tfs
             else
             {
               tables.clear();
-              TBSYS_LOG(INFO, "update table complete, version: %"PRI64_PREFIX"d, phase: %hh",
+              TBSYS_LOG(INFO, "update table complete, version: %"PRI64_PREFIX"d, phase: %d",
                   build_tables_.get_active_table_version(), phase);
             }
           }
