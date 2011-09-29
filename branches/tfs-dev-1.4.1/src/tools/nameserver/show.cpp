@@ -400,7 +400,7 @@ namespace tfs
       {
         return TFS_ERROR;
       }
-      int32_t block_chunk_num = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_BLOCK_CHUNK_NUM, 32);
+      int32_t block_chunk_num = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_BLOCK_CHUNK_NUM, 512);
 
       while ((count > 0 || is_loop_) && !interrupt_)
       {
