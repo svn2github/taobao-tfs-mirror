@@ -240,6 +240,12 @@ namespace tfs
           case common::RSP_RT_MS_KEEPALIVE_MESSAGE:
             packet = new RtsMsHeartResponseMessage();
             break;
+          case common::REQ_RT_RS_KEEPALIVE_MESSAGE:
+            packet =  new RtsRsHeartMessage();
+            break;
+          case common::RSP_RT_RS_KEEPALIVE_MESSAGE:
+            packet = new RtsRsHeartResponseMessage();
+            break;
           case common::REQ_RT_GET_TABLE_MESSAGE:
             packet = new GetTableFromRtsMessage();
             break;

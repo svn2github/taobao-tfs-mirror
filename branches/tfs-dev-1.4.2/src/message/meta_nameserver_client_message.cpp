@@ -282,6 +282,10 @@ namespace tfs
       {
         ret = output.set_int8(static_cast<char>(file_type_));
       }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = output.set_int64(version_);
+      }
       return ret;
     }
 
@@ -303,6 +307,10 @@ namespace tfs
       if (TFS_SUCCESS == ret)
       {
         ret = input.get_int8(reinterpret_cast<int8_t*>(&file_type_));
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = input.get_int64(&version_);
       }
       return ret;
     }
