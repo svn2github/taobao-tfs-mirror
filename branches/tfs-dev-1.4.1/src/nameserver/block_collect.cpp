@@ -337,7 +337,7 @@ namespace nameserver
       TBSYS_LOG(DEBUG, "size: %d, block: %u", size, this->info_.block_id_);
       if (size <= 0)
       {
-        TBSYS_LOG(DEBUG, "block: %u has been lost, do not replicate", info_.block_id_);
+        TBSYS_LOG(ERROR, "block: %u has been lost, do not replicate", info_.block_id_);
       }
       else
       {
@@ -346,7 +346,7 @@ namespace nameserver
           TBSYS_LOG(DEBUG, "last update time: %"PRI64_PREFIX"d, now: %"PRI64_PREFIX"d", last_update_time_, now);
           if ((last_update_time_ + SYSPARAM_NAMESERVER.replicate_wait_time_) <= now)
           {
-            TBSYS_LOG(DEBUG, "emergency replicate block: %u", info_.block_id_);
+            TBSYS_LOG(INFO, "emergency replicate block: %u", info_.block_id_);
             priority = PLAN_PRIORITY_EMERGENCY;
           }
         } 
@@ -359,7 +359,7 @@ namespace nameserver
           if ((last_update_time_ + SYSPARAM_NAMESERVER.replicate_wait_time_) <= now
               && replicate)
           {
-            TBSYS_LOG(DEBUG, "replicate block: %u", info_.block_id_);
+            TBSYS_LOG(INFO, "replicate block: %u", info_.block_id_);
             priority = PLAN_PRIORITY_NORMAL;
           }
         }
