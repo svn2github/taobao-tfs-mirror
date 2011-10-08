@@ -252,7 +252,8 @@ namespace tfs
                   mysql_stmt_error(stmt_), mysql_stmt_errno(stmt_));
               ret = TFS_ERROR;
               break;
-            }else if (MYSQL_NO_DATA == status)
+            }
+            else if (MYSQL_NO_DATA == status)
             {
               break;
             }
@@ -261,20 +262,20 @@ namespace tfs
               TBSYS_LOG(ERROR, "MYSQL_DATA_TRUNCATED");
               break;
             }
-            MetaInfo tmp;
-            tmp.file_info_.name_.assign(o_name, o_name_len);
-            tmp.file_info_.pid_ = o_pid;
-            tmp.file_info_.id_ = o_id;
-            tmp.file_info_.create_time_ = o_create_time;
-            tmp.file_info_.modify_time_ = o_modify_time;
-            tmp.file_info_.size_ = o_size;
-            tmp.file_info_.ver_no_ = o_ver_no;
+            out_v_meta_info.push_back(MetaInfo());
+            std::vector<MetaInfo>::iterator iter = out_v_meta_info.end() - 1;
+            (*iter).file_info_.name_.assign(o_name, o_name_len);
+            (*iter).file_info_.pid_ = o_pid;
+            (*iter).file_info_.id_ = o_id;
+            (*iter).file_info_.create_time_ = o_create_time;
+            (*iter).file_info_.modify_time_ = o_modify_time;
+            (*iter).file_info_.size_ = o_size;
+            (*iter).file_info_.ver_no_ = o_ver_no;
             if (!is_null[7])
             {
               int64_t pos = 0;
-              tmp.frag_info_.deserialize(o_slide_info, o_slide_info_len, pos);
+              (*iter).frag_info_.deserialize(o_slide_info, o_slide_info_len, pos);
             }
-            out_v_meta_info.push_back(tmp);
           }
           mysql_next_result(&mysql_.mysql); //mysql bugs, we must have this
         }

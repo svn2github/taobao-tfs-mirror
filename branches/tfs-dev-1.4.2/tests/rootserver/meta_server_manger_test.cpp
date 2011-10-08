@@ -171,15 +171,13 @@ namespace tfs
       iret = manager.register_(info);
       EXPECT_EQ(TFS_SUCCESS, iret);
 
-      std::vector<uint64_t> servers;
+      bool interrupt = false;
       tbutil::Time current = tbutil::Time::now(tbutil::Time::Monotonic); 
-      manager.check_ms_lease_expired_helper(current,servers);
-      EXPECT_EQ(0U, servers.size());
+      manager.check_ms_lease_expired_helper(current, interrupt);
 
       sleep(3);
       current = tbutil::Time::now(tbutil::Time::Monotonic); 
-      manager.check_ms_lease_expired_helper(current,servers);
-      EXPECT_EQ(3U, servers.size());
+      manager.check_ms_lease_expired_helper(current, interrupt);
     }
   }
 }

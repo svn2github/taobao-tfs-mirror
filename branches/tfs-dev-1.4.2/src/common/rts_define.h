@@ -22,6 +22,7 @@
 #include <Time.h>
 
 #include "internal.h"
+#include "lock.h"
 
 #ifndef INT64_MAX
 #define INT64_MAX 0x7fffffffffffffffLL
@@ -203,7 +204,7 @@ namespace tfs
       NS_DESTROY_FLAGS_YES = 1
     }RsDestroyFlag;
 
-    struct RsRuntimeGlobalInformation
+    struct RsRuntimeGlobalInformation : public RWLock
     {
       uint64_t other_id_;
       int64_t  switch_time_;
@@ -211,7 +212,7 @@ namespace tfs
       RsDestroyFlag destroy_flag_;
       RootServerInformation info_;
       RsRuntimeGlobalInformation();
-      bool in_safe_mode_time(const int64_t now) const;
+      bool in_safe_mode_time(const int64_t now);
       static RsRuntimeGlobalInformation& instance();
       static RsRuntimeGlobalInformation instance_;
     };
@@ -230,7 +231,7 @@ namespace tfs
       RTS_RS_KEEPALIVE_TYPE_LOGOUT = 2 
     }RtsRsKeepAliveType;
 
-    static const int64_t MAX_BUCKET_ITEM_DEFAULT = 1024;
+    static const int64_t MAX_BUCKET_ITEM_DEFAULT = 10240;
     static const int64_t MAX_SERVER_ITEM_DEFAULT = 1024;
     static const int64_t MAX_BUCKET_DATA_LENGTH = MAX_BUCKET_ITEM_DEFAULT * INT64_SIZE;
 

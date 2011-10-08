@@ -28,7 +28,7 @@ namespace tfs
   {
     using namespace std;
     MetaStoreManager::MetaStoreManager():
-      cache_size_(1024), gc_ratio_(0.1), mutex_count_(5), app_id_uid_mutex_(NULL)
+      cache_size_(1024), gc_ratio_(0.1), mutex_count_(16), app_id_uid_mutex_(NULL)
     {
        database_pool_ = new DataBasePool();
        top_dir_name_[0] = 1; 
@@ -53,7 +53,7 @@ namespace tfs
       }
       TBSYS_LOG(INFO, "set cache size %d MB", cache_size_);
       gc_ratio_ = gc_ratio;
-      if (gc_ratio_ >= 1 || gc_ratio_ < 0)
+      if (gc_ratio_ >= 1.0 || gc_ratio_ < 0.0)
       {
         gc_ratio_ = 0.1;
         TBSYS_LOG(WARN, "change gc_ratio to 0.1");
@@ -172,7 +172,7 @@ namespace tfs
           tmp_root_node->user_id_ = uid;
           tmp_root_node->dir_meta_ = NULL;
 
-          //if root not exit in lru, we need ls '/' and put the result ro lru
+          //if root not exist in lru, we need ls '/' and put the result ro lru
           ls_top_dir(app_id, uid, tmp_root_node, false);
           {
             tbsys::CThreadGuard mutex_guard(&lru_mutex_);

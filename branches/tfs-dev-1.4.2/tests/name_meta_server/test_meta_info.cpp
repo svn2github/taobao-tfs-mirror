@@ -14,6 +14,7 @@
  *
  */
 #include <gtest/gtest.h>
+#include "define.h"
 #include "meta_server_service.h"
 
 using namespace tfs::namemetaserver;

@@ -25,9 +25,7 @@ namespace tfs
   {
     bool RSLease::has_valid_lease(const int64_t now) 
     {
-      TBSYS_LOG(DEBUG, "lease_id: %"PRI64_PREFIX"d, lease_expired_time: %"PRI64_PREFIX"d, now: %"PRI64_PREFIX"d",
-          lease_id_, lease_expired_time_, now);
-      return ((lease_id_ != INVALID_LEASE_ID) && lease_expired_time_ > now);
+      return ((lease_id_ != INVALID_LEASE_ID) && lease_expired_time_ >= now);
     }
 
     bool RSLease::renew(const int32_t step, const int64_t now)
@@ -36,7 +34,6 @@ namespace tfs
       if (bret)
       {
         lease_expired_time_ = now + step;
-        TBSYS_LOG(DEBUG, "now: %"PRI64_PREFIX"d, lease_time: %"PRI64_PREFIX"d", now, lease_expired_time_);
       }
       return bret;
     }
@@ -504,9 +501,10 @@ namespace tfs
       return lease_.length() + version_.length() + base_info_.length();
     }
 
-    bool RsRuntimeGlobalInformation::in_safe_mode_time(const int64_t now) const
+    bool RsRuntimeGlobalInformation::in_safe_mode_time(const int64_t now)
     {
-      return now - switch_time_ > SYSPARAM_RTSERVER.safe_mode_time_;
+      RWLock::Lock lock(*this, READ_LOCKER);
+      return now + SYSPARAM_RTSERVER.safe_mode_time_ < switch_time_;
     }
  
     RsRuntimeGlobalInformation::RsRuntimeGlobalInformation():
@@ -515,7 +513,9 @@ namespace tfs
       vip_(0),
       destroy_flag_(NS_DESTROY_FLAGS_NO)
     {
-
+      memset(&info_, 0, sizeof(info_));
+      info_.base_info_.status_ = RS_STATUS_NONE;
+      info_.base_info_.role_   = RS_ROLE_SLAVE;
     }
 
     RsRuntimeGlobalInformation RsRuntimeGlobalInformation::instance_; 

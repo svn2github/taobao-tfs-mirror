@@ -88,7 +88,8 @@ namespace tfs
         now = tbutil::Time::now(tbutil::Time::Monotonic);
         has_valid_lease_ = ((now < lease_expired));
                             //&& bucket_manager_.bucket_version_valid(new_version));
-        if (has_valid_lease_)
+        if (has_valid_lease_
+            || (!has_valid_lease_ && TFS_SUCCESS == iret))
         {
           tbutil::Monitor<tbutil::Mutex>::Lock lock(monitor_);
           monitor_.timedWait(tbutil::Time::seconds(wait_time_ms <= 0 ? 
@@ -97,15 +98,20 @@ namespace tfs
         else
         {
           bucket_manager_.cleanup();
+          keepalive_type_ = RTS_MS_KEEPALIVE_TYPE_LOGIN;
         }
       }
       while (!destroy_);
+
+      keepalive_type_ = RTS_MS_KEEPALIVE_TYPE_LOGOUT;
+      keepalive(keepalive_type_, new_version, wait_time_ms, lease_expired/*, server*/);
     }
 
     int HeartManager::keepalive(RtsMsKeepAliveType& type, int64_t& new_version,
           int32_t& wait_time, tbutil::Time& lease_expired/*, const uint64_t server*/)
     {
       uint64_t server =  SYSPARAM_NAMEMETASERVER.rs_ip_port_; 
+      uint64_t current_server = MsRuntimeGlobalInformation::instance().server_.base_info_.id_;
       RtsMsHeartMessage msg;
       msg.set_type(type);
       msg.set_ms(MsRuntimeGlobalInformation::instance().server_);
@@ -117,37 +123,31 @@ namespace tfs
       {
         ++retry_count;
         client = NewClientManager::get_instance().create_client();
+        tbutil::Time start = tbutil::Time::now();
         iret = send_msg_to_server(server, client, &msg, response, MAX_TIMEOUT_MS);
+        tbutil::Time end = tbutil::Time::now();
+        //TBSYS_LOG(DEBUG, "MAX_TIMEOUT_MS: %ld, cost: %ld, type: %d", MAX_TIMEOUT_MS, (end - start).toMilliSeconds(), type);
         if (TFS_SUCCESS == iret)
         {
           assert(NULL != response);
           RtsMsHeartResponseMessage* rmsg = dynamic_cast<RtsMsHeartResponseMessage*>(response);
           iret = rmsg->get_ret_value();
+          new_version = rmsg->get_active_table_version();
+          wait_time = iret == EXIT_REGISTER_EXIST_ERROR ? rmsg->get_renew_lease_interval_time() * 2 : rmsg->get_renew_lease_interval_time();
+          lease_expired = tbutil::Time::now(tbutil::Time::Monotonic) + tbutil::Time::seconds(rmsg->get_lease_expired_time());
           if (TFS_SUCCESS == iret)
           {
             if (RTS_MS_KEEPALIVE_TYPE_LOGIN == type)
             {
               type = RTS_MS_KEEPALIVE_TYPE_RENEW;
-              int32_t count = 0;
-              do
-              {
-                ++count;
-                iret = get_buckets_from_rs();
-              } 
-              while ((count < MAX_RETRY_COUNT)
-                  && (TFS_SUCCESS != iret));
+            }
+            if (bucket_manager_.get_table_size() <= 0)
+            {
+              iret = get_buckets_from_rs();
               if (TFS_SUCCESS != iret)
               {
-                lease_expired = 0;
-                type = RTS_MS_KEEPALIVE_TYPE_LOGIN;
-                TBSYS_LOG(ERROR, "%s get buckets failed", tbsys::CNetUtil::addrToString(server).c_str());
+                TBSYS_LOG(ERROR, "failed to get buckets form %s", tbsys::CNetUtil::addrToString(server).c_str());
               }
-            }
-            if (TFS_SUCCESS == iret)
-            {
-              new_version = rmsg->get_active_table_version();
-              lease_expired = tbutil::Time::now(tbutil::Time::Monotonic) + tbutil::Time::seconds(rmsg->get_lease_expired_time());
-              wait_time = rmsg->get_renew_lease_interval_time();
             }
           }
           else if (EXIT_REGISTER_EXIST_ERROR == iret)
@@ -155,14 +155,13 @@ namespace tfs
             lease_expired = 0;
             iret = TFS_SUCCESS;
             type = RTS_MS_KEEPALIVE_TYPE_LOGIN;
-            TBSYS_LOG(WARN, "%s register failed because %s is existed", 
-              tbsys::CNetUtil::addrToString(server).c_str(), tbsys::CNetUtil::addrToString(server).c_str());
+            TBSYS_LOG(WARN, "register failed because %s is existed", 
+              tbsys::CNetUtil::addrToString(current_server).c_str());
           }
           else if (EXIT_LEASE_EXPIRED == iret)
           {
             lease_expired = 0;
-            type = RTS_MS_KEEPALIVE_TYPE_LOGIN;
-            TBSYS_LOG(WARN, "%s lease expired", tbsys::CNetUtil::addrToString(server).c_str());
+            TBSYS_LOG(WARN, "%s lease expired", tbsys::CNetUtil::addrToString(current_server).c_str());
           }
         }
         NewClientManager::get_instance().destroy_client(client);

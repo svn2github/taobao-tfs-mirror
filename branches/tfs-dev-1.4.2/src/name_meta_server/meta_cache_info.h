@@ -66,11 +66,11 @@ namespace tfs
       }
 
       int64_t id_;
-      int32_t create_time_;
-      int32_t modify_time_;
       char* name_;
       void* child_dir_infos_;
       void* child_file_infos_;
+      int32_t create_time_;
+      int32_t modify_time_;
       int16_t version_;
       int16_t flag_;    //we will set lowest bit if we got all  children in cache
     };
@@ -90,10 +90,10 @@ namespace tfs
       bool operator == (const CacheFileMetaNode& right) const;
       bool operator != (const CacheFileMetaNode& right) const;
       int64_t size_;    //init as -1, if we can not get the real size we use -1 for this;
-      int32_t create_time_;
-      int32_t modify_time_;
       char* name_;
       char* meta_info_;
+      int32_t create_time_;
+      int32_t modify_time_;
       int16_t version_;
     };
     template<class T>

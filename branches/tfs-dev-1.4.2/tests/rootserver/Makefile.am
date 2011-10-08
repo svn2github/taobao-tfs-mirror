@@ -4,7 +4,7 @@ AM_CPPFLAGS=-fprofile-arcs -ftest-coverage -I${top_srcdir}/src/rootserver \
 	    -I$(TBLIB_ROOT)/include/tbsys \
 	    -I$(TBLIB_ROOT)/include/tbnet
 
-AM_LDFLAGS=-lpthread -lrt -lc -lm -lgtest -lgcov
+AM_LDFLAGS=-lpthread -lrt -lc -lm -lgtest -lgcov -lz
 
 LDADD=$(top_builddir)/src/rootserver/librootserver.a \
 			$(top_builddir)/src/message/libtfsmessage.a\

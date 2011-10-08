@@ -2,10 +2,10 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.59)
-AC_INIT([tfs], 1.4.1, duolong@taobao.com)
+AC_INIT([tfs], 1.4.2, duolong@taobao.com)
 AC_CONFIG_SRCDIR([src/common/config_item.h])
 
-AM_INIT_AUTOMAKE(tfs, 1.4.1)
+AM_INIT_AUTOMAKE(tfs, 1.4.2)
 # Checks for programs.
 AC_PROG_AWK
 AC_PROG_CXX
@@ -184,6 +184,7 @@ AC_CONFIG_FILES([Makefile
                  src/nameserver/Makefile
                  src/rcserver/Makefile
                  src/name_meta_server/Makefile
+                 src/rootserver/Makefile
                  src/tools/Makefile
                  src/tools/util/Makefile
                  src/tools/dataserver/Makefile
@@ -197,6 +198,7 @@ AC_CONFIG_FILES([Makefile
                  tests/rcserver/Makefile
                  tests/name_meta_server/Makefile
                  tests/common/Makefile
+                 tests/rootserver/Makefile
                  tests/dataserver/Makefile
                  tests/intergrate/Makefile])
 AC_OUTPUT
