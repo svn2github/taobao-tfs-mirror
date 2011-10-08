@@ -26,7 +26,7 @@
 
 # OCF instance parameters
 #       OCF_RESKEY_basedir
-#	OCF_RESKEY_pidfile [optional, default=$basedir/logs/nameserver.pid]
+#	OCF_RESKEY_pidfile [optional, default=$basedir/logs/rootserver.pid]
 #       OCF_RESKEY_user [optional, default=admin]
 #       OCF_RESKEY_stop_timeout 
 #       OCF_RESKEY_nsip
@@ -52,13 +52,13 @@ getpid() {
         grep -o '[0-9]*' $1
 }
 
-monitor_nameserver() {
+monitor_rootserver() {
 	if ! test -x $montool  
 	then	
 		return $OCF_ERR_PERM
 	fi
 	ocf_log debug "begin to monitor $binfile service with command $cmd"
-	cmd="$montool -i $nsip -p $nsport -n"
+	cmd="$montool -i $rsip -p $rsport -n"
 	eval $cmd
 	if [ $? -ne 0 ]
 	then
@@ -68,17 +68,17 @@ monitor_nameserver() {
 	fi
 }
 
-switch_nameserver() {
-    cmd="$montool -i $nsip -p $nsport -n -s 1"
+switch_rootserver() {
+    cmd="$montool -i $rsip -p $rsport -n -s 1"
     eval $cmd
 }
 
-nameserver_status() {
+rootserver_status() {
 	if test -f "$pidfile"
 	then
 		if pid=`getpid $pidfile` && [ "$pid" ] && kill -0 $pid
 		then
-			#status=`check_nameserver_running_status`
+			#status=`check_rootserver_running_status`
 			return $OCF_RUNNING
 		else
 			# pidfile w/o process means the process died
@@ -89,8 +89,8 @@ nameserver_status() {
 	fi
 }
 
-nameserver_start() {
-	if ! nameserver_status
+rootserver_start() {
+	if ! rootserver_status
 	then
 		if [ -f "$binfile" ]
 		then
@@ -101,10 +101,10 @@ nameserver_start() {
 		eval $cmd
 		sleep 1
 
-		if nameserver_status
+		if rootserver_status
 		then
 			ocf_log debug "$process: $cmd started successfully"
-            switch_nameserver
+      switch_rootserver
 			return $OCF_SUCCESS
 		else 
 			ocf_log err "$process: $cmd could not be started"
@@ -113,12 +113,12 @@ nameserver_start() {
 	else
 		# If already running, consider start successful
 		ocf_log debug "$process: $cmd is already running"
-        switch_nameserver
+        switch_rootserver
 		return $OCF_SUCCESS
 	fi
 }
 
-nameserver_stop() {
+rootserver_stop() {
         if [ -n "$OCF_RESKEY_stop_timeout" ]
         then
                 stop_timeout=$OCF_RESKEY_stop_timeout
@@ -130,14 +130,14 @@ nameserver_stop() {
                 stop_timeout=10
         fi
 
-	if nameserver_status
+	if rootserver_status
 	then
                 pid=`getpid $pidfile`
                 kill $pid
                 i=0
                 while [ $i -lt $stop_timeout ]
                 do
-                        if ! nameserver_status
+                        if ! rootserver_status
                         then
                         	rm -f $pidfile
                                 return $OCF_SUCCESS
@@ -149,7 +149,7 @@ nameserver_stop() {
                 ocf_log warn "Stop with SIGTERM failed/timed out, now sending SIGKILL."
                 kill -9 $pid
                 rm -f $pidfile
-                if ! nameserver_status
+                if ! rootserver_status
                 then
                         ocf_log warn "SIGKILL did the job."
                         return $OCF_SUCCESS
@@ -159,19 +159,19 @@ nameserver_stop() {
                 fi
 	else
 		# was not running, so stop can be considered successful
-		ocf_log warn "nameserver not running."
+		ocf_log warn "rootserver not running."
 		rm -f $pidfile 
 		return $OCF_SUCCESS
 	fi
 }
 
-nameserver_monitor() {
-	nameserver_status
+rootserver_monitor() {
+	rootserver_status
 	ret=$?
 	if [ $ret -eq $OCF_SUCCESS ]
 	then
-		#ocf_log debug "nameserver_monitor hook func: $OCF_RESKEY_monitor_hook"
-		OCF_RESKEY_monitor_hook="monitor_nameserver"
+		#ocf_log debug "rootserver_monitor hook func: $OCF_RESKEY_monitor_hook"
+		OCF_RESKEY_monitor_hook="monitor_rootserver"
 		if [ -n "$OCF_RESKEY_monitor_hook" ]; then
 			eval "$OCF_RESKEY_monitor_hook"
                         if [ $? -ne $OCF_SUCCESS ]; then
@@ -188,21 +188,21 @@ nameserver_monitor() {
 
 # FIXME: Attributes special meaning to the resource id
 process="$OCF_RESOURCE_INSTANCE"
-binfile="$OCF_RESKEY_basedir/bin/nameserver"
-cmdline_options="-f $OCF_RESKEY_basedir/conf/ns.conf -d"
+binfile="$OCF_RESKEY_basedir/bin/rootserver"
+cmdline_options="-f $OCF_RESKEY_basedir/conf/rs.conf -d"
 pidfile="$OCF_RESKEY_pidfile"
-[ -z "$pidfile" ] && pidfile="$OCF_RESKEY_basedir/logs/nameserver.pid"
+[ -z "$pidfile" ] && pidfile="$OCF_RESKEY_basedir/logs/rootserver.pid"
 
 user="$OCF_RESKEY_user"
 [ -z "$user" ] && user=admin
 
 ### monitor namserver parameters ########
-nsip="$OCF_RESKEY_nsip"
-nsport="$OCF_RESKEY_nsport"
+nsip="$OCF_RESKEY_rsip"
+nsport="$OCF_RESKEY_rsport"
 montool="$OCF_RESKEY_montool"
-[ -z "$montool" ] && montool="$OCF_RESKEY_basedir/bin/nameserver_ha_monitor"
+[ -z "$montool" ] && montool="$OCF_RESKEY_basedir/bin/rootserver_ha_monitor"
 
-nameserver_validate() {
+rootserver_validate() {
 	if ! su - $user -c "test -x $binfile"
 	then
 		ocf_log err "binfile $binfile does not exist or is not executable by $user."
@@ -216,20 +216,20 @@ nameserver_validate() {
 	return $OCF_SUCCESS
 }
 
-nameserver_meta() {
+rootserver_meta() {
 cat <<END
 <?xml version="1.0"?>
 <!DOCTYPE resource-agent SYSTEM "ra-api-1.dtd">
-<resource-agent name="nameserver">
+<resource-agent name="rootserver">
 <version>1.0</version>
 <longdesc lang="en">
-This is a OCF RA to manage tfsv1.4 ha nameserver.
+This is a OCF RA to manage tfsv1.4 ha rootserver.
 </longdesc>
-<shortdesc lang="en">Manages an tfs nameserver service</shortdesc>
+<shortdesc lang="en">Manages an tfs rootserver service</shortdesc>
 
 <parameters>
 <parameter name="basedir" required="1" unique="1">
-<longdesc lang="en">nameserver root directory </longdesc>
+<longdesc lang="en">rootserver root directory </longdesc>
 <shortdesc lang="en">Full path name of the binary to be executed</shortdesc>
 <content type="string"/>
 </parameter>
@@ -255,19 +255,19 @@ before sending kill -SIGKILL. Defaults to 2/3 of the stop operation timeout.
 <shortdesc lang="en">Seconds to wait after having sent SIGTERM before sending SIGKILL in stop operation</shortdesc>
 <content type="string" default=""/>
 </parameter>
-<parameter name="nsip">
-<longdesc lang="en"> nameserver ipaddr or hostname </longdesc>
-<shortdesc lang="en">nameserver ipaddr or hostname </shortdesc>
+<parameter name="rsip">
+<longdesc lang="en"> rootserver ipaddr or hostname </longdesc>
+<shortdesc lang="en">rootserver ipaddr or hostname </shortdesc>
 <content type="string" default="localhost"/>
 </parameter>
-<parameter name="nsport">
-<longdesc lang="en"> nameserver port </longdesc>
-<shortdesc lang="en">nameserver port </shortdesc>
-<content type="integer" default="3100"/>
+<parameter name="rsport">
+<longdesc lang="en"> rootserver port </longdesc>
+<shortdesc lang="en">rootserver port </shortdesc>
+<content type="integer" default="3400"/>
 </parameter>
 <parameter name="montool">
-<longdesc lang="en"> check nameserver if working well, run as -i ip -p port </longdesc>
-<shortdesc lang="en"> check nameserver status </shortdesc>
+<longdesc lang="en"> check rootserver if working well, run as -i ip -p port </longdesc>
+<shortdesc lang="en"> check rootserver status </shortdesc>
 <content type="string"/>
 </parameter>
 </parameters>
@@ -285,19 +285,19 @@ exit 0
 
 case "$1" in
 	meta-data|metadata|meta_data)
-		nameserver_meta
+		rootserver_meta
 	;;
 	start)
-		nameserver_start
+		rootserver_start
 	;;
 	stop)
-		nameserver_stop
+		rootserver_stop
 	;;
 	monitor)
-		nameserver_monitor
+		rootserver_monitor
 	;;
 	validate-all)
-		nameserver_validate
+		rootserver_validate
 	;;
 	*)
 		ocf_log err "$0 was called with unsupported arguments: $*"
