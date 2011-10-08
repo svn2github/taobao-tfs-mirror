@@ -95,6 +95,7 @@ namespace tfs
           {
             uint32_t local_ip = Func::get_local_addr(dev_name);
             RsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
+            RWLock::Lock lock(ngi, WRITE_LOCKER);
             ngi.info_.base_info_.id_  = tbsys::CNetUtil::ipToAddr(local_ip, get_port());
             bool find_ip_in_dev = Func::is_local_addr(ip_addr_id);
             if (!find_ip_in_dev)
@@ -164,6 +165,7 @@ namespace tfs
         rs_rs_heartbeat_workers_.setThreadParameter(1, &rt_rs_heartbeat_handler_, this);
         rs_rs_heartbeat_workers_.start();
         RsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
+        RWLock::Lock lock(ngi, WRITE_LOCKER);
         ngi.info_.base_info_.status_ = RS_STATUS_INITIALIZED;
       }
       return iret;
@@ -174,7 +176,11 @@ namespace tfs
       RsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
       if (ngi.destroy_flag_ == NS_DESTROY_FLAGS_NO)
       {
-        ngi.destroy_flag_ = NS_DESTROY_FLAGS_YES;
+
+        {
+          RWLock::Lock lock(ngi, WRITE_LOCKER);
+          ngi.destroy_flag_ = NS_DESTROY_FLAGS_YES;
+        }
         update_tables_workers_.stop();
         update_tables_workers_.wait();
         ms_rs_heartbeat_workers_.stop();
@@ -235,10 +241,13 @@ namespace tfs
           int32_t pcode = bpacket->getPCode();
           int32_t iret = common::TFS_ERROR;
           RsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
-          if (ngi.info_.base_info_.role_ == RS_ROLE_MASTER)
-            iret = do_master_msg_helper(bpacket);
-          else
-            iret = do_slave_msg_helper(bpacket);
+          {
+            RWLock::Lock lock(ngi, READ_LOCKER);
+            if (ngi.info_.base_info_.role_ == RS_ROLE_MASTER)
+              iret = do_master_msg_helper(bpacket);
+            else
+              iret = do_slave_msg_helper(bpacket);
+          }
           if (common::TFS_SUCCESS == iret)
           {
             hret = tbnet::IPacketHandler::KEEP_CHANNEL;
@@ -381,6 +390,7 @@ namespace tfs
           else
           {
             RsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
+            RWLock::Lock lock(ngi, WRITE_LOCKER);
             iter = ip_list.begin();
             for (;iter != ip_list.end(); ++iter)
             {
@@ -454,12 +464,9 @@ namespace tfs
         iret = manager_.keepalive(msg->get_type(), server);
         RtsMsHeartResponseMessage* reply_msg = new RtsMsHeartResponseMessage();
         reply_msg->set_ret_value(iret);
-        if (TFS_SUCCESS == iret)
-        {
-          reply_msg->set_active_table_version(server.tables_.version_);
-          reply_msg->set_lease_expired_time(server.lease_.lease_expired_time_);
-          reply_msg->set_renew_lease_interval_time(SYSPARAM_RTSERVER.mts_rts_renew_lease_interval_);
-        }
+        reply_msg->set_active_table_version(server.tables_.version_);
+        reply_msg->set_lease_expired_time(server.lease_.lease_expired_time_);
+        reply_msg->set_renew_lease_interval_time(SYSPARAM_RTSERVER.mts_rts_renew_lease_interval_);
         iret = packet->reply(reply_msg);
         TBSYS_LOG(DEBUG, "%s keepalive %s",
           tbsys::CNetUtil::addrToString(server.base_info_.id_).c_str(),
@@ -514,6 +521,7 @@ namespace tfs
       {
         RsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
         HeartBeatAndNSHeartMessage* reply_msg = new HeartBeatAndNSHeartMessage();
+        RWLock::Lock lock(ngi, READ_LOCKER);
         reply_msg->set_ns_switch_flag_and_status(0 /*no use*/ , ngi.info_.base_info_.status_);
         iret = packet->reply(reply_msg);
       }

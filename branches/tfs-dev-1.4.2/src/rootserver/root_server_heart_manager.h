@@ -56,8 +56,6 @@ namespace tfs
       bool check_vip_helper(common::RsRuntimeGlobalInformation& rgi);
       void check(void);
 
-      int keepalive(common::RsRuntimeGlobalInformation& rgi, int32_t& wait_time);
-
       int keepalive(common::RtsRsKeepAliveType& type, int32_t& wait_time, tbutil::Time& lease_expired,
           common::RsRuntimeGlobalInformation& rgi, const tbutil::Time& now);
       int get_tables_from_rs(const uint64_t server);

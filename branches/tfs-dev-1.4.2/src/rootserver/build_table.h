@@ -51,8 +51,8 @@ namespace tfs
         int64_t bucket_item_;
         int64_t compress_table_length_;
         int64_t compress_active_table_length_;
-        int serialize(char* data, const int64_t data_len, int64_t& pos) const;
-        int deserialize(const char* data, const int64_t data_len, int64_t& pos);
+        /*int serialize(char* data, const int64_t data_len, int64_t& pos) const;
+        int deserialize(const char* data, const int64_t data_len, int64_t& pos);*/
         int64_t length() const;
       };
     public:
@@ -61,12 +61,12 @@ namespace tfs
       int intialize(const std::string& file_path, const int64_t max_bucket_item = common::MAX_BUCKET_ITEM_DEFAULT,
                     const int64_t max_server_item = common::MAX_SERVER_ITEM_DEFAULT);
       int destroy();
-      int build_table(const int8_t interrupt, bool& change, common::NEW_TABLE& new_tables,
+      int build_table( bool& change, common::NEW_TABLE& new_tables,
                       const std::set<uint64_t>& servers);
       int update_tables_item_status(const uint64_t server, const int64_t version,
                                     const int8_t status, const int8_t phase, common::NEW_TABLE& new_tables);
-      int update_table(const int8_t interrupt, const int8_t phase, common::NEW_TABLE& new_tables, bool& update_complete);
-      int check_update_table_complete(const int8_t interrupt, const int8_t phase,
+      int update_table( const int8_t phase, common::NEW_TABLE& new_tables, bool& update_complete);
+      int check_update_table_complete( const int8_t phase,
                        common::NEW_TABLE& new_tables, bool& update_complete);
       int switch_table(void);
       void dump_tables(int32_t level,const int8_t type = common::DUMP_TABLE_TYPE_ACTIVE_TABLE,
@@ -86,14 +86,14 @@ namespace tfs
       int set_tables_pointer(const int64_t max_bucket_item, const int64_t max_server_item);
       void inc_build_version();
       void inc_active_version();
-      void get_old_servers(const int8_t interrupt, std::set<uint64_t>& servers);
-      int64_t get_difference(const int8_t interrupt, std::set<uint64_t>& old_servers,
+      void get_old_servers( std::set<uint64_t>& servers);
+      int64_t get_difference( std::set<uint64_t>& old_servers,
                             const std::set<uint64_t>& new_servers,std::vector<uint64_t>& news,
                             std::vector<uint64_t>& deads);
-      int64_t get_difference(const int8_t interrupt, int64_t& new_count, int64_t& old_count);
-      int fill_old_tables(const int8_t interrupt, std::vector<uint64_t>& news,
+      int64_t get_difference( int64_t& new_count, int64_t& old_count);
+      int fill_old_tables( std::vector<uint64_t>& news,
                           std::vector<uint64_t>& deads);
-      int fill_new_tables(const int8_t interrupt, const std::set<uint64_t>& servers,
+      int fill_new_tables( const std::set<uint64_t>& servers,
                           std::vector<uint64_t>& news, std::vector<uint64_t>& deads);
       int send_msg_to_server(const uint64_t server, const int8_t phase);
 

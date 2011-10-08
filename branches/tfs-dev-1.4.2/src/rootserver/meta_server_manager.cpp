@@ -173,6 +173,7 @@ namespace tfs
       }
       if (TFS_SUCCESS == iret)
       {
+        TBSYS_LOG(DEBUG, "%s register successful", tbsys::CNetUtil::addrToString(server.base_info_.id_).c_str());
         interrupt();
       }
       return iret;
@@ -305,6 +306,13 @@ namespace tfs
       return build_tables_.update_active_tables(tables, length, version);
     }
 
+    void MetaServerManager::dump_tables(int32_t level,const int8_t type,
+        const char* file, const int32_t line,
+        const char* function) const
+    {
+      build_tables_.dump_tables(level, type, file, line, function);
+    }
+
     int64_t MetaServerManager::get_active_table_version() const
     {
       tbutil::Monitor<tbutil::Mutex>::Lock lock(build_table_monitor_);
@@ -331,7 +339,7 @@ namespace tfs
           if(!Func::test_bit(interrupt_, BUILD_TABLE_INTERRUPT_ALL)//no rebuild && no update tables, wait
               && new_tables_.empty())
           {
-            build_table_monitor_.timedWait(tbutil::Time::milliSeconds(500));//100ms
+            build_table_monitor_.wait();
           }
 
           if (Func::test_bit(interrupt_, BUILD_TABLE_INTERRUPT_ALL))//rebuild
@@ -394,12 +402,12 @@ namespace tfs
       {
         servers.insert(iter->first);
       }
-      int32_t iret = build_tables_.build_table(interrupt_, change, tables, servers);
+      int32_t iret = build_tables_.build_table(change, tables, servers);
       if (TFS_SUCCESS == iret)
       {
         if (change)
         {
-          build_tables_.update_table(interrupt_, phase, tables, update_complete);
+          build_tables_.update_table(phase, tables, update_complete);
         }
         TBSYS_LOG(INFO, "build table complete, change: %s", change ? "true" : "false");
       }
@@ -411,7 +419,7 @@ namespace tfs
       int32_t iret = tables.empty() ? TFS_ERROR : TFS_SUCCESS;
       if (TFS_SUCCESS == iret)
       {
-        iret = build_tables_.check_update_table_complete(interrupt_, phase, tables, update_complete);//check update status
+        iret = build_tables_.check_update_table_complete(phase, tables, update_complete);//check update status
         if (TFS_SUCCESS == iret)
         {
           if (update_complete)
@@ -425,7 +433,7 @@ namespace tfs
                   build_tables_.get_active_table_version(), phase);
                 update_complete = false;
                 phase = UPDATE_TABLE_PHASE_2;
-                build_tables_.update_table(interrupt_, phase, tables, update_complete);
+                build_tables_.update_table(phase, tables, update_complete);
               }
             }
             else

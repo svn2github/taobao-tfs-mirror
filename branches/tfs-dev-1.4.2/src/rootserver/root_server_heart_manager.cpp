@@ -228,7 +228,12 @@ namespace tfs
       for (; iter != servers_.end(); )
       {
         if (!iter->second.lease_.has_valid_lease(now.toSeconds()))
+        {
+          TBSYS_LOG(DEBUG, "%s lease expired: %"PRI64_PREFIX"d, now: %"PRI64_PREFIX"d",
+            tbsys::CNetUtil::addrToString(iter->second.base_info_.id_).c_str(),
+            iter->second.lease_.lease_expired_time_, now.toSeconds());
           servers_.erase(iter++);
+        }
         else
           ++iter;
       }
@@ -240,20 +245,33 @@ namespace tfs
       tbutil::Time now = tbutil::Time::now(tbutil::Time::Monotonic);
       int32_t wait_time = RTS_RS_RENEW_LEASE_INTERVAL_TIME_DEFAULT;
       tbutil::Time lease_expired;
+      int32_t iret = TFS_SUCCESS;
       while (!destroy_)
       {
         now = tbutil::Time::now(tbutil::Time::Monotonic);
         RsRuntimeGlobalInformation& rgi = RsRuntimeGlobalInformation::instance();
-        rs_role_establish_helper(rgi, now.toSeconds());
-        TBSYS_LOG(DEBUG, "ROLE: %s", rgi.info_.base_info_.role_== RS_ROLE_MASTER ? "master" : "slave");
+        {
+          RWLock::Lock lock(rgi, WRITE_LOCKER);
+          rs_role_establish_helper(rgi, now.toSeconds());
+        }
 
-        keepalive(keepalive_type_, wait_time, lease_expired, rgi, now); 
-
-        check_rs_lease_expired_helper(now);
-
-        tbutil::Monitor<tbutil::Mutex>::Lock lock(monitor_);
-        monitor_.timedWait(tbutil::Time::seconds(wait_time));
+        if (RS_ROLE_MASTER == rgi.info_.base_info_.role_)
+        {
+          check_rs_lease_expired_helper(now);
+          tbutil::Monitor<tbutil::Mutex>::Lock lock(monitor_);
+          monitor_.timedWait(tbutil::Time::milliSeconds(100));
+        }
+        else
+        {
+          iret = keepalive(keepalive_type_, wait_time, lease_expired, rgi, now); 
+          tbutil::Monitor<tbutil::Mutex>::Lock lock(monitor_);
+          monitor_.timedWait(tbutil::Time::seconds(wait_time));
+        }
       }
+      
+      keepalive_type_ = RTS_RS_KEEPALIVE_TYPE_LOGOUT;
+      RsRuntimeGlobalInformation& rgi = RsRuntimeGlobalInformation::instance();
+      iret = keepalive(keepalive_type_, wait_time, lease_expired, rgi, now); 
     }
 
     int RootServerHeartManager::rs_role_establish_helper(common::RsRuntimeGlobalInformation& rgi, const int64_t now)
@@ -297,78 +315,67 @@ namespace tfs
           common::RsRuntimeGlobalInformation& rgi, const tbutil::Time& now)
     {
       int32_t iret = TFS_SUCCESS;
-      if (RS_ROLE_SLAVE == rgi.info_.base_info_.role_)
-      {
-        bool has_valid_lease = ((now < lease_expired));  
-        if (has_valid_lease)//relogin
-          type = RTS_RS_KEEPALIVE_TYPE_LOGIN;
+      bool has_valid_lease = ((now < lease_expired));  
+      if (!has_valid_lease)//relogin
+        type = RTS_RS_KEEPALIVE_TYPE_LOGIN;
 
-        RtsRsHeartMessage msg;
-        msg.set_type(type);
+      uint64_t id = 0;
+      uint64_t server = 0;
+      RtsRsHeartMessage msg;
+      msg.set_type(type);
+      {
+        RWLock::Lock lock(rgi, READ_LOCKER);
+        server = rgi.other_id_;
+        id = rgi.info_.base_info_.id_;
         msg.set_rs(rgi.info_);
-        NewClient* client = NULL;
-        int32_t retry_count = 0;
-        tbnet::Packet* response = NULL;
-        do
+      }
+      NewClient* client = NULL;
+      int32_t retry_count = 0;
+      tbnet::Packet* response = NULL;
+      do
+      {
+        ++retry_count;
+        client = NewClientManager::get_instance().create_client();
+        iret = send_msg_to_server(server, client, &msg, response, MAX_TIMEOUT_MS);
+        if (TFS_SUCCESS == iret)
         {
-          ++retry_count;
-          client = NewClientManager::get_instance().create_client();
-          iret = send_msg_to_server(rgi.other_id_, client, &msg, response, MAX_TIMEOUT_MS);
+          assert(NULL != response);
+          RtsRsHeartResponseMessage* rmsg = dynamic_cast<RtsRsHeartResponseMessage*>(response);
+          iret = rmsg->get_ret_value();
           if (TFS_SUCCESS == iret)
           {
-            assert(NULL != response);
-            RtsRsHeartResponseMessage* rmsg = dynamic_cast<RtsRsHeartResponseMessage*>(response);
-            iret = rmsg->get_ret_value();
-            if (TFS_SUCCESS == iret)
+            lease_expired = tbutil::Time::now(tbutil::Time::Monotonic) + tbutil::Time::seconds(rmsg->get_lease_expired_time());
+            wait_time = rmsg->get_renew_lease_interval_time();
+            if (RTS_RS_KEEPALIVE_TYPE_LOGIN == type)
+              type = RTS_RS_KEEPALIVE_TYPE_RENEW;
+            if (manager_.get_active_table_version() != rmsg->get_active_table_version())
             {
-              if (RTS_RS_KEEPALIVE_TYPE_LOGIN == type
-                || manager_.get_active_table_version() != rmsg->get_active_table_version())
+              iret = get_tables_from_rs(server);
+              if (TFS_SUCCESS != iret)
               {
-                type = RTS_RS_KEEPALIVE_TYPE_RENEW;
-                int32_t count = 0;
-                do
-                {
-                  ++count;
-                  iret = get_tables_from_rs(rgi.other_id_);
-                } 
-                while ((count < MAX_RETRY_COUNT)
-                    && (TFS_SUCCESS != iret));
-                if (TFS_SUCCESS != iret)
-                {
-                  lease_expired = 0;
-                  type = RTS_RS_KEEPALIVE_TYPE_LOGIN;
-                  TBSYS_LOG(ERROR, "%s, get buckets failed from %s",
-                      tbsys::CNetUtil::addrToString(rgi.info_.base_info_.id_).c_str(), tbsys::CNetUtil::addrToString(rgi.other_id_).c_str());
-                }
+                TBSYS_LOG(ERROR, "failed to get buckets from %s",tbsys::CNetUtil::addrToString(server).c_str());
               }
-              if (TFS_SUCCESS == iret)
-              {
-                lease_expired = tbutil::Time::now(tbutil::Time::Monotonic) + tbutil::Time::seconds(rmsg->get_lease_expired_time());
-                wait_time = rmsg->get_renew_lease_interval_time();
-              }
-            }
-            else if (EXIT_REGISTER_EXIST_ERROR == iret)
-            {
-              lease_expired = 0;
-              iret = TFS_SUCCESS;
-              type = RTS_RS_KEEPALIVE_TYPE_LOGIN;
-              TBSYS_LOG(WARN, "%s register to %s failed because %s is existed", 
-                tbsys::CNetUtil::addrToString(rgi.info_.base_info_.id_).c_str(), tbsys::CNetUtil::addrToString(rgi.other_id_).c_str(),
-                tbsys::CNetUtil::addrToString(rgi.info_.base_info_.id_).c_str());
-            }
-            else if (EXIT_LEASE_EXPIRED == iret)
-            {
-              lease_expired = 0;
-              type = RTS_RS_KEEPALIVE_TYPE_LOGIN;
-              TBSYS_LOG(WARN, "%s lease expired", tbsys::CNetUtil::addrToString(rgi.info_.base_info_.id_).c_str());
             }
           }
-          NewClientManager::get_instance().destroy_client(client);
+          else if (EXIT_REGISTER_EXIST_ERROR == iret)
+          {
+            lease_expired = 0;
+            iret = TFS_SUCCESS;
+            TBSYS_LOG(WARN, "%s register to %s failed because %s is existed", 
+              tbsys::CNetUtil::addrToString(id).c_str(), tbsys::CNetUtil::addrToString(server).c_str(),
+              tbsys::CNetUtil::addrToString(id).c_str());
+          }
+          else if (EXIT_LEASE_EXPIRED == iret)
+          {
+            lease_expired = 0;
+            TBSYS_LOG(WARN, "%s lease expired", tbsys::CNetUtil::addrToString(id).c_str());
+          }
         }
-        while ((retry_count < MAX_RETRY_COUNT)
-              && (TFS_SUCCESS != iret)
-              && (!destroy_));
+        NewClientManager::get_instance().destroy_client(client);
       }
+      while ((retry_count < MAX_RETRY_COUNT)
+            && (TFS_SUCCESS != iret)
+            && (!destroy_));
       return iret;
     }
 
@@ -394,10 +401,14 @@ namespace tfs
           }
           else
           {
-            iret = manager_.update_active_tables(dest, reply->get_table_length(), reply->get_version());            
+            iret = manager_.update_active_tables(dest, dest_length, reply->get_version());            
             if (TFS_SUCCESS != iret)
             {
               TBSYS_LOG(ERROR, "update_active_tables error: %d", iret);
+            }
+            else
+            {
+              manager_.dump_tables(TBSYS_LOG_LEVEL_DEBUG, DUMP_TABLE_TYPE_ACTIVE_TABLE);
             }
           }
           tbsys::gDeleteA(dest);

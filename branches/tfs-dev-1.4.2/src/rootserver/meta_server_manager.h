@@ -70,7 +70,9 @@ namespace tfs
       int update_table_helper(int8_t& phase, common::NEW_TABLE& tables, bool& update_complete);
 
       int update_active_tables(const unsigned char* tables, const int64_t length, const int64_t version);
-      
+      void dump_tables(int32_t level,const int8_t type = common::DUMP_TABLE_TYPE_ACTIVE_TABLE,
+             const char* file = __FILE__, const int32_t line = __LINE__,
+             const char* function = __FUNCTION__) const;
       //debug helper
       common::MetaServer* get(const uint64_t id);
     private:

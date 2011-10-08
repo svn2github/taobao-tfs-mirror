@@ -62,7 +62,7 @@ namespace tfs
     const int64_t BuildTable::MIN_BUCKET_ITEM = 1024;
     const int64_t BuildTable::MAX_BUCKET_ITEM = 102400;
 
-    int BuildTable::TablesHeader::serialize(char* data, const int64_t data_len, int64_t& pos) const
+    /*int BuildTable::TablesHeader::serialize(char* data, const int64_t data_len, int64_t& pos) const
     {
       int32_t iret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
       if (TFS_SUCCESS == iret)
@@ -106,7 +106,7 @@ namespace tfs
         pos += INT64_SIZE;
       }
       return iret;
-    }
+    }*/
 
     int64_t BuildTable::TablesHeader::length() const
     {
@@ -258,29 +258,25 @@ namespace tfs
       return iret;
     }
 
-    void BuildTable::get_old_servers(const int8_t interrupt, std::set<uint64_t>& servers)
+    void BuildTable::get_old_servers(std::set<uint64_t>& servers)
     {
       int64_t i = 0;
       NEW_TABLE_ITER iter;
       std::pair<NEW_TABLE_ITER, bool> res;
       std::set<uint64_t>::const_iterator it;
-      for (i = 0; i < header_->bucket_item_ 
-                    && !Func::test_bit(interrupt, BUILD_TABLE_INTERRUPT_ALL); ++i)
+      for (i = 0; i < header_->bucket_item_ ; ++i)
       {
         if (0 != active_tables_[i])
         {
-          it = servers.find(active_tables_[i]);
-          if (servers.end() == it)
-            servers.insert(active_tables_[i]);
+          servers.insert(active_tables_[i]);
         }
       }
     }
 
-   int64_t BuildTable::get_difference(const int8_t interrupt, std::set<uint64_t>& old_servers,
+   int64_t BuildTable::get_difference(std::set<uint64_t>& old_servers,
                             const std::set<uint64_t>& new_servers, std::vector<uint64_t>& news,
                             std::vector<uint64_t>& deads)
    {
-     UNUSED(interrupt);
      deads.resize(old_servers.size());
      news.resize(new_servers.size());
      std::vector<uint64_t>::const_iterator iter = std::set_difference(
@@ -294,7 +290,7 @@ namespace tfs
      return news.size() + deads.size();
    }
 
-   int BuildTable::fill_old_tables(const int8_t interrupt, std::vector<uint64_t>& news,
+   int BuildTable::fill_old_tables( std::vector<uint64_t>& news,
                                   std::vector<uint64_t>& deads)
    {
      if (!news.empty() && !deads.empty())
@@ -303,21 +299,20 @@ namespace tfs
         std::vector<uint64_t>::iterator deads_end = deads.end();
         std::vector<uint64_t>::iterator news_iter = news.begin();
         std::vector<uint64_t>::iterator deads_iter = deads.begin();
+        std::vector<uint64_t>::iterator iter;
+        
         int32_t diff = news.size() - deads.size();
         if (diff >= 0)
           news_end = news.begin() + deads.size();
         else
           deads_end = deads.begin() + news.size();
         int64_t index = 0;
-        for (index = 0; index < header_->bucket_item_ && !Func::test_bit(interrupt, BUILD_TABLE_INTERRUPT_ALL); ++index)
+        for (index = 0; index < header_->bucket_item_; ++index)
         {
-          if (tables_[index] == (*deads_iter))
+          iter = std::find(deads.begin(), deads_end, tables_[index]);
+          if (deads_end != iter)
           {
-            tables_[index] = (*news_iter);
-            deads_iter++;
-            if (deads_end == deads_iter)
-              deads_iter = deads.begin();
-            news_iter++;
+            tables_[index] = (*news_iter++);
             if (news_end == news_iter)
               news_iter = news.begin();
           }
@@ -328,7 +323,7 @@ namespace tfs
      return TFS_SUCCESS;
    }
 
-    int BuildTable::fill_new_tables(const int8_t interrupt, const std::set<uint64_t>& servers,
+    int BuildTable::fill_new_tables( const std::set<uint64_t>& servers,
                                     std::vector<uint64_t>& news, std::vector<uint64_t>& deads)
     {
       assert(!(!news.empty()&& !deads.empty()));
@@ -341,45 +336,80 @@ namespace tfs
         if (news.empty()
             && !deads.empty())
         {
-          iter = deads.begin();
-          for (index = 0; index < header_->bucket_item_ && !Func::test_bit(interrupt, BUILD_TABLE_INTERRUPT_ALL); ++index)
+          for (index = 0; index < header_->bucket_item_ ; ++index)
           {
-            if (tables_[index] == (*iter))
+            iter = std::find(deads.begin(), deads.end(), tables_[index]);
+            if (deads.end() != iter)
             {
-              tables_[index] = (*it);
-              it++;
+              tables_[index] = *it++;
               if (it == servers.end())
                 it = servers.begin();
-              iter++;
-              if (iter == deads.end())
-                iter = deads.begin();
             }
           }
         }
         if (!news.empty()
             && deads.empty())
         {
-          int64_t offset = 0;
           iter = news.begin();
-          uint32_t server_size = servers.size();
-          for (; iter != news.end() && !Func::test_bit(interrupt, BUILD_TABLE_INTERRUPT_ALL); ++iter, ++offset)
+          int32_t new_min_bucket_count = header_->bucket_item_ / servers.size();
+          int64_t replace_count = news.size() * (new_min_bucket_count + 1);
+          int32_t diff = servers.size() - news.size();
+          int32_t inc_bucket_count = diff <= 0 ? 0 : header_->bucket_item_ / diff - new_min_bucket_count;
+          int32_t old_max_bucket_count = diff <= 0 ? 0 : header_->bucket_item_ / diff + 1;
+ 
+          TBSYS_LOG(DEBUG, "new_min_bucket: %d, diff: %d, inc_bucket: %d, old_max_bucket_count: %d",
+            new_min_bucket_count, diff, inc_bucket_count, old_max_bucket_count);
+          std::map<uint64_t, std::vector<int32_t> > maps;
+          std::map<uint64_t, std::vector<int32_t> >::iterator it;
+          std::pair<std::map<uint64_t, std::vector<int32_t> >::iterator, bool> res;
+          for (index = 0; index < header_->bucket_item_ ; ++index)
           {
-            for (index = offset; index < header_->bucket_item_; index += server_size)
+            if (0 == tables_[index])
             {
-              tables_[index] = (*iter);
-            } 
+              tables_[index] = *iter++;
+              if (news.end() == iter)
+                iter = news.begin();
+            }
+            else
+            {
+              it = maps.find(tables_[index]);
+              if (maps.end() == it)
+                it = maps.insert(std::map<uint64_t, std::vector<int32_t> >::value_type(
+                  tables_[index], std::vector<int32_t>())).first;
+              it->second.push_back(index);
+            }
+          }
+          if (news.end() == iter)
+              iter = news.begin();
+
+          int64_t round = 0;
+          while (replace_count > 0
+            && !maps.empty())
+          {
+            it = maps.begin();
+            for (; it != maps.end() && replace_count > 0; ++it, --replace_count)
+            {
+              if (round < static_cast<int64_t>(it->second.size()))
+              {
+                index = it->second[round];
+                tables_[index] = *iter++;
+                if (news.end() == iter)
+                  iter = news.begin();
+              }
+            }
+            ++round;
           }
         }
       }
       return iret;
     }
 
-    int64_t BuildTable::get_difference(const int8_t interrupt, int64_t& new_count, int64_t& old_count)
+    int64_t BuildTable::get_difference( int64_t& new_count, int64_t& old_count)
     {
       new_count = 0;
       old_count = 0;
       int64_t index = 0; 
-      for (index = 0; index < header_->bucket_item_ && !Func::test_bit(interrupt, BUILD_TABLE_INTERRUPT_ALL); ++index)
+      for (index = 0; index < header_->bucket_item_; ++index)
       {
         if (tables_[index] == active_tables_[index])
           ++old_count;
@@ -389,7 +419,7 @@ namespace tfs
       return (old_count + new_count);
     }
 
-    int BuildTable::build_table(const int8_t interrupt,bool& change, NEW_TABLE& new_tables, const std::set<uint64_t>& servers)
+    int BuildTable::build_table(bool& change, NEW_TABLE& new_tables, const std::set<uint64_t>& servers)
     {
       change = false;
       new_tables.clear();
@@ -398,32 +428,32 @@ namespace tfs
       {
         std::set<uint64_t> old_servers;
 
-        get_old_servers(interrupt, old_servers);
+        get_old_servers(old_servers);
 
         std::vector<uint64_t> news;
         std::vector<uint64_t> deads;
 
-        int64_t diff = get_difference(interrupt, old_servers, servers, news, deads);
+        int64_t diff = get_difference(old_servers, servers, news, deads);
         if (diff > 0)
         {
           memcpy(reinterpret_cast<unsigned char*>(tables_), reinterpret_cast<unsigned char*>(active_tables_),
               header_->bucket_item_ * INT64_SIZE);
           if (!news.empty() && !deads.empty())
           {
-            iret = fill_old_tables(interrupt, news, deads);
+            iret = fill_old_tables(news, deads);
           }
           if (TFS_SUCCESS == iret)
           {
-            iret = fill_new_tables(interrupt, servers, news, deads);
+            iret = fill_new_tables(servers, news, deads);
             if (TFS_SUCCESS == iret)
             {
               int64_t new_count = 0;
               int64_t old_count = 0;
-              get_difference(interrupt, new_count, old_count);
-              change = new_count > 0 && !Func::test_bit(interrupt, BUILD_TABLE_INTERRUPT_ALL);
+              get_difference(new_count, old_count);
+              change = new_count > 0;
               if (change)
               {
-                dump_tables(TBSYS_LOG_LEVEL_DEBUG,DUMP_TABLE_TYPE_TABLE);
+                //dump_tables(TBSYS_LOG_LEVEL_DEBUG,DUMP_TABLE_TYPE_TABLE);
                 unsigned char* dest = new unsigned char[MAX_BUCKET_DATA_LENGTH];
                 uint64_t dest_length = MAX_BUCKET_DATA_LENGTH;
                 iret = compress(dest, &dest_length, reinterpret_cast<unsigned char*>(tables_), MAX_BUCKET_DATA_LENGTH); 
@@ -492,7 +522,7 @@ namespace tfs
       return iret;
     }
 
-    int BuildTable::update_table(const int8_t interrupt, const int8_t phase, common::NEW_TABLE& tables, bool& update_complete)
+    int BuildTable::update_table( const int8_t phase, common::NEW_TABLE& tables, bool& update_complete)
     {
       if (UPDATE_TABLE_PHASE_2 == phase)
       {
@@ -505,10 +535,10 @@ namespace tfs
           iter->second.phase_ = UPDATE_TABLE_PHASE_2;
         } 
       }
-      return check_update_table_complete(interrupt, phase, tables, update_complete);
+      return check_update_table_complete(phase, tables, update_complete);
     }
 
-    int BuildTable::check_update_table_complete(const int8_t interrupt, const int8_t phase,
+    int BuildTable::check_update_table_complete(const int8_t phase,
                     common::NEW_TABLE& tables, bool& update_complete)
     {
       uint64_t success_count = 0;
@@ -521,7 +551,7 @@ namespace tfs
             tbutil::Time::milliSeconds(SYSPARAM_RTSERVER.mts_rts_lease_expired_time_ * 1000);
         tbutil::Time send_msg_expired_time = tbutil::Time::milliSeconds(500);
         NEW_TABLE_ITER iter = tables.begin();
-        for (; iter != tables.end() && !Func::test_bit(interrupt, BUILD_TABLE_INTERRUPT_ALL); ++iter)
+        for (; iter != tables.end(); ++iter)
         {
           if (phase == iter->second.phase_)
           {
@@ -698,7 +728,10 @@ namespace tfs
       int32_t iret = NULL == tables || length != MAX_BUCKET_DATA_LENGTH ? TFS_ERROR : TFS_SUCCESS;
       if (TFS_SUCCESS == iret)
       {
-        iret =  version > header_->active_table_version_ ? TFS_SUCCESS : EXIT_TABLE_VERSION_ERROR;
+        TBSYS_LOG(DEBUG, "master version: %ld, slave version: %ld", version, header_->active_table_version_);
+        iret = header_->active_table_version_  >= TABLE_VERSION_MAGIC ?
+            version > INVALID_TABLE_VERSION ? TFS_SUCCESS : EXIT_TABLE_VERSION_ERROR :
+            version >= header_->active_table_version_ ? TFS_SUCCESS : EXIT_TABLE_VERSION_ERROR;
         if (TFS_SUCCESS == iret)
         {
           header_->active_table_version_ = version;
