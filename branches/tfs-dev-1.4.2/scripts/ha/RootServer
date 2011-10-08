@@ -200,7 +200,7 @@ user="$OCF_RESKEY_user"
 nsip="$OCF_RESKEY_rsip"
 nsport="$OCF_RESKEY_rsport"
 montool="$OCF_RESKEY_montool"
-[ -z "$montool" ] && montool="$OCF_RESKEY_basedir/bin/rootserver_ha_monitor"
+[ -z "$montool" ] && montool="$OCF_RESKEY_basedir/bin/ha_monitor"
 
 rootserver_validate() {
 	if ! su - $user -c "test -x $binfile"

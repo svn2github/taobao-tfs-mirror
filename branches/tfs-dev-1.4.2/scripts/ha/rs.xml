@@ -3,7 +3,7 @@
     <primitive class="ocf" id="ip-alias" provider="heartbeat" type="IPaddr2">
       <instance_attributes id="ip-alias-instance_attributes">
         <nvpair id="ip-alias-instance_attributes-ip" name="ip" value="192.168.208.230"/>
-        <nvpair id="ip-alias-instance_attributes-nic" name="nic" value="bond0:0"/>
+        <nvpair id="ip-alias-instance_attributes-nic" name="nic" value="bond0:1"/>
       </instance_attributes>
       <operations>
         <op id="ip-alias-monitor-2s" interval="2s" name="monitor"/>
@@ -12,11 +12,11 @@
         <nvpair id="ip-alias-meta_attributes-target-role" name="target-role" value="Started"/>
       </meta_attributes>
     </primitive>
-    <primitive class="ocf" id="tfs-root-server" provider="heartbeat" type="NameServer">
+    <primitive class="ocf" id="tfs-root-server" provider="heartbeat" type="RootServer">
       <instance_attributes id="tfs-root-server-instance_attributes">
         <nvpair id="tfs-root-server-instance_attributes-basedir" name="basedir" value="/home/admin/tfs"/>
         <nvpair id="tfs-root-server-instance_attributes-rsip" name="rsip" value="localhost"/>
-        <nvpair id="tfs-root-server-instance_attributes-rsport" name="rsport" value="3100"/>
+        <nvpair id="tfs-root-server-instance_attributes-rsport" name="rsport" value="3500"/>
         <nvpair id="tfs-root-server-instance_attributes-user" name="user" value="admin"/>
       </instance_attributes>
       <operations>

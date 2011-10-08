@@ -200,7 +200,7 @@ user="$OCF_RESKEY_user"
 nsip="$OCF_RESKEY_nsip"
 nsport="$OCF_RESKEY_nsport"
 montool="$OCF_RESKEY_montool"
-[ -z "$montool" ] && montool="$OCF_RESKEY_basedir/bin/nameserver_ha_monitor"
+[ -z "$montool" ] && montool="$OCF_RESKEY_basedir/bin/ha_monitor"
 
 nameserver_validate() {
 	if ! su - $user -c "test -x $binfile"
