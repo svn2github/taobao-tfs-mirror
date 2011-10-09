@@ -80,7 +80,7 @@ int TfsFile::open_ex(const char* file_name, const char* suffix, const int32_t fl
   }
   else if (0 == (flags & T_WRITE) && (NULL == file_name || file_name[0] == '\0'))
   {
-    TBSYS_LOG(ERROR, "null tfs name for flag: %s", flags);
+    TBSYS_LOG(ERROR, "null tfs name for flag: %d", flags);
     ret = TFS_ERROR;
   }
   else

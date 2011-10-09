@@ -120,6 +120,19 @@ namespace tfs
     TfsRetType RcClientImpl::initialize(const char* str_rc_ip, const char* app_key, const char* str_app_ip,
         const int32_t cache_times, const int32_t cache_items, const char* dev_name)
     {
+      if (str_rc_ip == NULL || app_key == NULL || str_app_ip == NULL)
+      {
+        TBSYS_LOG(WARN, "input parameter is invalid. rc_ip: %s, app_key: %s, app_ip: %s",
+            str_rc_ip == NULL ? "null":str_rc_ip,
+            app_key == NULL ? "null":app_key,
+            str_app_ip == NULL ? "null":str_app_ip);
+        return TFS_ERROR;
+      }
+      if (cache_times < 0 || cache_items < 0)
+      {
+        TBSYS_LOG(WARN, "invalid cache setting. cache_times: %d, cache_items: %d", cache_times, cache_items);
+        return TFS_ERROR;
+      }
       uint64_t rc_ip = Func::get_host_ip(str_rc_ip);
       uint64_t app_ip = Func::str_to_addr(str_app_ip, 0);
       return initialize(rc_ip, app_key, app_ip, cache_times, cache_items, dev_name);
@@ -376,7 +389,7 @@ namespace tfs
           if (fd_info.raw_tfs_fd_ >= 0)
           {
             int64_t start_time = tbsys::CTimeUtil::getTime();
-            read_count = TfsClient::Instance()->readv2(fd, buf, count, tfs_stat_buf);
+            read_count = TfsClient::Instance()->readv2(fd_info.raw_tfs_fd_, buf, count, tfs_stat_buf);
             int64_t response_time = tbsys::CTimeUtil::getTime() - start_time;
             add_stat_info(OPER_READ, read_count, response_time, read_count >= 0);
           }
@@ -555,7 +568,7 @@ namespace tfs
       {
         int64_t start_time = tbsys::CTimeUtil::getTime();
         int64_t data_size = 0;
-        int32_t ref_count = TfsClient::Instance()->unlink(data_size, file_name, suffix,
+        ret = TfsClient::Instance()->unlink(data_size, file_name, suffix,
             ns_addr,action);
         int64_t response_time = tbsys::CTimeUtil::getTime() - start_time;
         switch (action)
@@ -569,11 +582,7 @@ namespace tfs
             data_size = 0;
             break;
         }
-        add_stat_info(OPER_UNLINK, data_size, response_time, ref_count >= 0);
-        if (ref_count < 0)
-        {
-          ret = TFS_ERROR;
-        }
+        add_stat_info(OPER_UNLINK, data_size, response_time, ret == TFS_SUCCESS);
       }
       return ret;
     }
