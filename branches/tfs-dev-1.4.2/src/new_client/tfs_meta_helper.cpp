@@ -12,6 +12,7 @@
  *      - initial release
  *
  */
+#include <zlib.h>
 #include "tfs_meta_helper.h"
 #include "common/meta_server_define.h"
 #include "common/new_client.h"
@@ -31,7 +32,8 @@ using namespace std;
 static tfs::common::BasePacketStreamer gstreamer;
 static tfs::message::MessageFactory gfactory;
 
-int NameMetaHelper::do_file_action(const uint64_t server_id, const int64_t app_id, const int64_t user_id, const MetaActionOp action, const char* path, const char* new_path)
+int NameMetaHelper::do_file_action(const uint64_t server_id, const int64_t app_id, const int64_t user_id,
+    const MetaActionOp action, const char* path, const char* new_path, const int64_t version_id)
 {
   gstreamer.set_packet_factory(&gfactory);
   NewClientManager::get_instance().initialize(&gfactory, &gstreamer);
@@ -40,6 +42,7 @@ int NameMetaHelper::do_file_action(const uint64_t server_id, const int64_t app_i
   req_fa_msg.set_app_id(app_id);
   req_fa_msg.set_user_id(user_id);
   req_fa_msg.set_file_path(path);
+  req_fa_msg.set_version(version_id);
   if (new_path != NULL)
   {
     req_fa_msg.set_new_file_path(new_path);
@@ -76,7 +79,7 @@ int NameMetaHelper::do_file_action(const uint64_t server_id, const int64_t app_i
   return ret;
 }
 int NameMetaHelper::do_write_file(const uint64_t server_id, const int64_t app_id, const int64_t user_id,
-    const char* path, const FragInfo& frag_info)
+    const char* path, const int64_t version_id, const FragInfo& frag_info)
 {
   gstreamer.set_packet_factory(&gfactory);
   NewClientManager::get_instance().initialize(&gfactory, &gstreamer);
@@ -86,6 +89,7 @@ int NameMetaHelper::do_write_file(const uint64_t server_id, const int64_t app_id
   req_fa_msg.set_user_id(user_id);
   req_fa_msg.set_file_path(path);
   req_fa_msg.set_frag_info(frag_info);
+  req_fa_msg.set_version(version_id);
 
   tbnet::Packet* rsp = NULL;
   NewClient* client = NewClientManager::get_instance().create_client();
@@ -117,7 +121,7 @@ int NameMetaHelper::do_write_file(const uint64_t server_id, const int64_t app_id
   return ret;
 }
 int NameMetaHelper::do_read_file(const uint64_t server_id, const int64_t app_id, const int64_t user_id,
-          const char* path, const int64_t offset, const int64_t size,
+          const char* path, const int64_t offset, const int64_t size, const int64_t version_id,
           common::FragInfo& frag_info, bool& still_have)
 {
   gstreamer.set_packet_factory(&gfactory);
@@ -129,6 +133,7 @@ int NameMetaHelper::do_read_file(const uint64_t server_id, const int64_t app_id,
   req_fa_msg.set_file_path(path);
   req_fa_msg.set_offset(offset);
   req_fa_msg.set_size(size);
+  req_fa_msg.set_version(version_id);
 
   tbnet::Packet* rsp = NULL;
   NewClient* client = NewClientManager::get_instance().create_client();
@@ -159,7 +164,7 @@ int NameMetaHelper::do_read_file(const uint64_t server_id, const int64_t app_id,
 }
 
 int NameMetaHelper::do_ls(const uint64_t server_id, const int64_t app_id, const int64_t user_id,
-          const char* path, const common::FileType file_type, const int64_t pid,
+          const char* path, const common::FileType file_type, const int64_t pid, const int64_t version_id,
           std::vector<common::MetaInfo>& meta_infos, bool& still_have)
 {
   gstreamer.set_packet_factory(&gfactory);
@@ -171,6 +176,7 @@ int NameMetaHelper::do_ls(const uint64_t server_id, const int64_t app_id, const 
   req_fa_msg.set_pid(pid);
   req_fa_msg.set_file_path(path);
   req_fa_msg.set_file_type(file_type);
+  req_fa_msg.set_version(version_id);
 
   tbnet::Packet* rsp = NULL;
   NewClient* client = NewClientManager::get_instance().create_client();
@@ -195,6 +201,49 @@ int NameMetaHelper::do_ls(const uint64_t server_id, const int64_t app_id, const 
         "server_id: %"PRI64_PREFIX"u, app_id: %"PRI64_PREFIX"d, user_id: %"PRI64_PREFIX"d "
         "path: %s ret: %d: msg type: %d",
         server_id, app_id, user_id, path, ret, rsp->getPCode());
+  }
+  NewClientManager::get_instance().destroy_client(client);
+  return ret;
+}
+
+int NameMetaHelper::get_table(const uint64_t server_id,
+          char* table_info, uint64_t& table_length, int64_t& version_id)
+{
+  gstreamer.set_packet_factory(&gfactory);
+  NewClientManager::get_instance().initialize(&gfactory, &gstreamer);
+
+  GetTableFromRtsMessage req_gtfr_msg;
+
+  tbnet::Packet* rsp = NULL;
+  NewClient* client = NewClientManager::get_instance().create_client();
+  int ret = send_msg_to_server(server_id, client, &req_gtfr_msg, rsp, ClientConfig::wait_timeout_);
+  if (TFS_SUCCESS != ret)
+  {
+    TBSYS_LOG(ERROR, "call get table fail,"
+        "server_id: %"PRI64_PREFIX"u, ret: %d", server_id, ret);
+  }
+  else if (RSP_RT_GET_TABLE_MESSAGE == rsp->getPCode())
+  {
+    GetTableFromRtsResponseMessage* resp_msg = dynamic_cast<GetTableFromRtsResponseMessage*>(rsp);
+    ret = uncompress(reinterpret_cast<unsigned char*> (table_info), &table_length, (unsigned char*)resp_msg->get_table(), resp_msg->get_table_length());
+    if (Z_OK != ret)
+    {
+      TBSYS_LOG(ERROR, "uncompress error: ret : %d, version: %"PRI64_PREFIX"d, dest length: %"PRI64_PREFIX"d, lenght: %"PRI64_PREFIX"d",
+        ret, resp_msg->get_version(), table_length, resp_msg->get_table_length());
+      ret = TFS_ERROR;
+    }
+    else
+    {
+      version_id = resp_msg->get_version();
+      ret = TFS_SUCCESS;
+    }
+  }
+  else
+  {
+    ret = EXIT_UNKNOWN_MSGTYPE;
+    TBSYS_LOG(ERROR, "call get table fail,"
+        "server_id: %"PRI64_PREFIX"u, ret: %d: msg type: %d",
+        server_id, ret, rsp->getPCode());
   }
   NewClientManager::get_instance().destroy_client(client);
   return ret;

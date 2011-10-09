@@ -35,9 +35,9 @@ namespace tfs
       impl_ = NULL;
     }
 
-    void NameMetaClient::set_meta_servers(const char* meta_server_str)
+    int NameMetaClient::initialize(const char* rs_addr)
     {
-      impl_->set_meta_servers(meta_server_str);
+      return impl_->initialize(rs_addr);
     }
 
     TfsRetType NameMetaClient::create_dir(const int64_t app_id, const int64_t uid,

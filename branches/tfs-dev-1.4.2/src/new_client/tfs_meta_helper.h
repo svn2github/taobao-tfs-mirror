@@ -28,18 +28,20 @@ namespace tfs
     {
     public:
       static int do_file_action(const uint64_t server_id, const int64_t app_id, const int64_t user_id,
-          const common::MetaActionOp action, const char* path, const char* new_path);
+          const common::MetaActionOp action, const char* path, const char* new_path, const int64_t version_id);
 
       static int do_write_file(const uint64_t server_id, const int64_t app_id, const int64_t user_id,
-          const char* path, const common::FragInfo& frag_info);
+          const char* path, const int64_t version_id, const common::FragInfo& frag_info);
 
       static int do_read_file(const uint64_t server_id, const int64_t app_id, const int64_t user_id,
-          const char* path, const int64_t offset, const int64_t size,
+          const char* path, const int64_t offset, const int64_t size, const int64_t version_id,
           common::FragInfo& frag_info, bool& still_have);
 
       static int do_ls(const uint64_t server_id, const int64_t app_id, const int64_t user_id,
-          const char* path, const common::FileType file_type, const int64_t pid,
+          const char* path, const common::FileType file_type, const int64_t pid, const int64_t version_id,
           std::vector<common::MetaInfo>& meta_info, bool& still_have);
+      static int get_table(const uint64_t server_id,
+          char* table_info, uint64_t& table_length, int64_t& version_id);
     };
   }
 }

@@ -17,6 +17,7 @@
 #include <Memory.hpp>
 #include "tfs_meta_client_api_impl.h"
 #include "common/func.h"
+#include "common/meta_hash_helper.h"
 #include "tfs_client_api.h"
 #include "tfs_meta_helper.h"
 #include "tfs_meta_manager.h"
@@ -29,37 +30,36 @@ namespace tfs
     using namespace tfs::common;
     using namespace std;
 
+    void MetaTable::dump()
+    {
+      TBSYS_LOG(DEBUG, "version_id: %"PRI64_PREFIX"d", version_id_);
+      std::vector<uint64_t>::iterator iter = v_meta_table_.begin();
+      for(; iter != v_meta_table_.end(); iter++)
+      {
+        TBSYS_LOG(DEBUG, "meta server addr: %s", tbsys::CNetUtil::addrToString(*iter).c_str());
+      }
+    }
+
     NameMetaClientImpl::NameMetaClientImpl()
     {
-      v_meta_server_.clear();
     }
 
     NameMetaClientImpl::~NameMetaClientImpl()
     {
     }
 
-    int NameMetaClientImpl::set_meta_servers(const char* meta_server_str)
+    int NameMetaClientImpl::initialize(const char* rs_addr)
     {
       int ret = TFS_SUCCESS;
-      vector<std::string> fields;
-      Func::split_string(meta_server_str, ',', fields);
-      vector<std::string>::iterator iter = fields.begin();
-      for (; iter != fields.end(); iter++)
+      if (rs_addr == NULL)
       {
-        uint64_t meta_server_id = Func::get_host_ip((*iter).c_str());
-        if (meta_server_id == 0)
-        {
-          TBSYS_LOG(WARN, "invalid meta server ip: %s", (*iter).c_str());
-        }
-        else
-        {
-          v_meta_server_.push_back(Func::get_host_ip((*iter).c_str()));
-        }
-      }
-      if(v_meta_server_.size() <= 0)
-      {
-        TBSYS_LOG(ERROR, "no meta server has been configed");
+        TBSYS_LOG(WARN, "rs_addr is null");
         ret = TFS_ERROR;
+      }
+      else
+      {
+        rs_id_ = Func::get_host_ip(rs_addr);
+        update_table_from_rootserver();
       }
       return ret;
     }
@@ -164,6 +164,7 @@ namespace tfs
             != TFS_SUCCESS)
         {
           TBSYS_LOG(ERROR, "read file failed, path: %s, ret: %d", file_path, tmp_ret);
+          update_table_from_rootserver(tmp_ret);
           if (left_length == length)
           {
             ret = TFS_ERROR;
@@ -260,6 +261,7 @@ namespace tfs
                 "write_length(%"PRI64_PREFIX"d) => real_length(%"PRI64_PREFIX"d), ret: %d",
                 cur_pos, write_length, real_write_length, ret);
             unlink_file(frag_info);
+            update_table_from_rootserver(ret);
             break;
           }
           cur_pos += real_write_length;
@@ -411,9 +413,10 @@ namespace tfs
       {
         TBSYS_LOG(WARN, "source file path equals to destination file path: %s == %s", path, new_path);
       }
-      else if ((ret = NameMetaHelper::do_file_action(meta_server_id, app_id, uid, action, path, new_path)) != TFS_SUCCESS)
+      else if ((ret = NameMetaHelper::do_file_action(meta_server_id, app_id, uid, action, path, new_path, meta_table_.version_id_)) != TFS_SUCCESS)
       {
         TBSYS_LOG(ERROR, "do file action error occured, path: %s, new_path: %s, action: %d, ret: %d", path, (new_path == NULL? "null":new_path), action, ret);
+        update_table_from_rootserver(ret);
       }
       return ret;
     }
@@ -492,10 +495,11 @@ namespace tfs
         std::vector<MetaInfo>::iterator iter;
 
         if ((ret = NameMetaHelper::do_ls(meta_server_id, app_id, uid, last_file_path, last_file_type, last_pid,
-              tmp_v_meta_info, still_have)) != TFS_SUCCESS)
+              meta_table_.version_id_, tmp_v_meta_info, still_have)) != TFS_SUCCESS)
         {
           TBSYS_LOG(ERROR, "do ls info failed, file_path: %s, file_type: %d, ret: %d",
               last_file_path, last_file_type, ret);
+          update_table_from_rootserver(ret);
           break;
         }
 
@@ -533,13 +537,13 @@ namespace tfs
         FragInfo& frag_info, bool& still_have)
     {
         return NameMetaHelper::do_read_file(meta_server_id, app_id, uid,
-            path, offset, size, frag_info, still_have);
+            path, offset, size, meta_table_.version_id_, frag_info, still_have);
     }
 
     int NameMetaClientImpl::do_write(const uint64_t meta_server_id, const int64_t app_id, const int64_t uid,
         const char* path, FragInfo& frag_info)
     {
-      return NameMetaHelper::do_write_file(meta_server_id, app_id, uid, path, frag_info);
+      return NameMetaHelper::do_write_file(meta_server_id, app_id, uid, path, meta_table_.version_id_, frag_info);
     }
 
     bool NameMetaClientImpl::is_valid_file_path(const char* file_path)
@@ -549,17 +553,21 @@ namespace tfs
 
     uint64_t NameMetaClientImpl::get_meta_server_id(const int64_t app_id, const int64_t uid)
     {
-      UNUSED(app_id);
-      UNUSED(uid);
       uint64_t meta_server_id = 0;
-      if (v_meta_server_.size() <= 0)
+      HashHelper helper(app_id, uid);
+      int32_t hash_value = tbsys::CStringUtil::murMurHash((const void*)&helper, sizeof(HashHelper));
       {
-        meta_server_id = 0;
-        TBSYS_LOG(WARN, "no meta server has been configed");
-      }
-      else
-      {
-        meta_server_id = v_meta_server_[0];
+        tbsys::CRLockGuard guard(meta_table_mutex_);
+        int32_t table_size = meta_table_.v_meta_table_.size();
+        if (table_size <= 0)
+        {
+          meta_server_id = 0;
+          TBSYS_LOG(WARN, "no meta server is available");
+        }
+        else
+        {
+          meta_server_id = meta_table_.v_meta_table_.at(hash_value % table_size);
+        }
       }
       return meta_server_id;
     }
@@ -575,9 +583,10 @@ namespace tfs
       {
         tmp_frag_info.v_frag_meta_.clear();
         if ((ret = NameMetaHelper::do_read_file(meta_server_id, app_id, uid, file_path,
-            offset, MAX_READ_FRAG_SIZE, tmp_frag_info, still_have)) != TFS_SUCCESS)
+            offset, MAX_READ_FRAG_SIZE, meta_table_.version_id_, tmp_frag_info, still_have)) != TFS_SUCCESS)
         {
           TBSYS_LOG(ERROR, "read frag info error, ret: %d", ret);
+          update_table_from_rootserver(ret);
         }
         offset = tmp_frag_info.get_last_offset();
         frag_info.cluster_id_ = tmp_frag_info.cluster_id_;
@@ -602,6 +611,7 @@ namespace tfs
       if ((ret = do_read(meta_server_id, app_id, uid, path, 0, 0, frag_info, still_have)) != TFS_SUCCESS)
       {
         TBSYS_LOG(ERROR, "get cluster id failed, ret: %d", ret);
+        update_table_from_rootserver(ret);
       }
       else
       {
@@ -743,6 +753,40 @@ namespace tfs
       while(left_length > 0);
 
       return length - left_length;
+    }
+
+    int NameMetaClientImpl::update_table_from_rootserver(const int ret_status)
+    {
+      int ret = TFS_ERROR;
+      if (ret_status == EXIT_TABLE_VERSION_ERROR || ret_status == 0)
+      {
+        char table_info[MAX_BUCKET_DATA_LENGTH];
+        int64_t version_id = -1;
+        uint64_t table_length = common::MAX_BUCKET_DATA_LENGTH;
+        if ((ret = NameMetaHelper::get_table(rs_id_, table_info, table_length, version_id)) != TFS_SUCCESS)
+        {
+          TBSYS_LOG(ERROR, "get tables from rootserver failed. ret: %d", ret);
+        }
+        else
+        {
+          int64_t table_size = table_length / INT64_SIZE;
+          if (table_size != common::MAX_BUCKET_ITEM_DEFAULT)
+          {
+            TBSYS_LOG(ERROR, "tables size is not correct. table size: %d", table_size);
+          }
+          else
+          {
+            tbsys::CWLockGuard guard(meta_table_mutex_);
+            meta_table_.v_meta_table_.clear();
+            uint64_t* meta_servers = reinterpret_cast<uint64_t*> (table_info);
+            meta_table_.v_meta_table_.assign(meta_servers, meta_servers + table_size);
+            meta_table_.version_id_ = version_id;
+            //meta_table_.dump();
+            ret = TFS_SUCCESS;
+          }
+        }
+      }
+      return ret;
     }
   }
 }

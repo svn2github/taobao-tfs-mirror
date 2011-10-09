@@ -29,6 +29,20 @@ namespace tfs
   {
     const int64_t MAX_BATCH_DATA_LENGTH = 1 << 23;
     const int64_t MAX_SEGMENT_LENGTH = 1 << 21;
+    struct MetaTable
+    {
+      MetaTable(): version_id_(-1)
+      {
+      }
+      ~MetaTable() {}
+
+      std::vector<uint64_t> v_meta_table_;
+      int64_t version_id_;
+
+      void dump();
+
+    };
+
     class NameMetaClientImpl
     {
       public:
@@ -36,7 +50,7 @@ namespace tfs
         ~NameMetaClientImpl();
 
         //TODO set in conf file, change to private
-        int set_meta_servers(const char* meta_server_str);
+        int initialize(const char* rs_addr);
 
         int create_dir(const int64_t app_id, const int64_t uid, const char* dir_path);
         int create_file(const int64_t app_id, const int64_t uid, const char* file_path);
@@ -100,9 +114,14 @@ namespace tfs
         int64_t write_data(const char* ns_addr, int32_t cluster_id, const void* buffer, int64_t pos, int64_t length,
             common::FragInfo& frag_info);
 
+        // root server related
+        int update_table_from_rootserver(const int ret_status = 0);
+
       private:
         DISALLOW_COPY_AND_ASSIGN(NameMetaClientImpl);
-        std::vector<uint64_t> v_meta_server_;
+        tbsys::CRWLock meta_table_mutex_;
+        MetaTable meta_table_;
+        uint64_t rs_id_;
     };
   }
 }
