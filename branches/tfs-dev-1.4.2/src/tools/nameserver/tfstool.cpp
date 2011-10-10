@@ -122,7 +122,7 @@ int cmd_ls_file_meta(const VSTRING& param);
 int cmd_create_dir_meta(const VSTRING& param);
 int cmd_rm_dir_meta(const VSTRING& param);
 
-const char* g_meta_server_list = NULL;
+const char* rs_addr = NULL;
 
 int main(int argc, char* argv[])
 {
@@ -132,7 +132,7 @@ int main(int argc, char* argv[])
   const char* nsip = NULL;
 
   // analyze arguments
-  while ((i = getopt(argc, argv, "s:m:nih")) != EOF)
+  while ((i = getopt(argc, argv, "s:r:nih")) != EOF)
   {
     switch (i)
     {
@@ -142,8 +142,8 @@ int main(int argc, char* argv[])
       case 's':
         nsip = optarg;
         break;
-      case 'm':
-        g_meta_server_list = optarg;
+      case 'r':
+        rs_addr = optarg;
         break;
       case 'i':
         directly = true;
@@ -160,7 +160,7 @@ int main(int argc, char* argv[])
     TBSYS_LOGGER.setLogLevel("ERROR");
   }
 
-  if (NULL == nsip)
+  if (NULL == nsip && NULL == rs_addr)
   {
     usage(argv[0]);
     return TFS_ERROR;
@@ -210,9 +210,9 @@ int main(int argc, char* argv[])
 static void usage(const char* name)
 {
   fprintf(stderr,
-          "Usage: %s -s [-n] [-i] [-h]\n"
+          "Usage: %s -s [-n] [-r] [-i] [-h]\n"
           "       -s nameserver ip port\n"
-          "       -m meta_server_list /will be changed to root server when ready\n"
+          "       -r rootserver ip port\n"
           "       -n set log level\n"
           "       -i directly execute the command\n"
           "       -h help\n",
@@ -847,7 +847,7 @@ int cmd_ls_dir_meta(const VSTRING& param)
   NameMetaClientImpl impl;
   int64_t app_id = strtoll(param[0].c_str(), NULL, 10);
   int64_t uid = strtoll(param[1].c_str(), NULL, 10);
-  ret = impl.set_meta_servers(g_meta_server_list);
+  ret = impl.initialize(rs_addr);
 
   std::vector<FileMetaInfo> meta_info;
   std::vector<FileMetaInfo>::const_iterator it;
@@ -874,7 +874,7 @@ int cmd_ls_file_meta(const VSTRING& param)
   NameMetaClientImpl impl;
   int64_t app_id = strtoll(param[0].c_str(), NULL, 10);
   int64_t uid = strtoll(param[1].c_str(), NULL, 10);
-  ret = impl.set_meta_servers(g_meta_server_list);
+  ret = impl.initialize(rs_addr);
   FileMetaInfo file_info;
   ret = impl.ls_file(app_id, uid, param[2].c_str(), file_info);
   if (TFS_SUCCESS == ret)
@@ -900,7 +900,7 @@ int cmd_create_dir_meta(const VSTRING& param)
   NameMetaClientImpl impl;
   int64_t app_id = strtoll(param[0].c_str(), NULL, 10);
   int64_t uid = strtoll(param[1].c_str(), NULL, 10);
-  ret = impl.set_meta_servers(g_meta_server_list);
+  ret = impl.initialize(rs_addr);
   if (TFS_SUCCESS == ret)
   {
     ret = impl.create_dir(app_id, uid, param[2].c_str());
@@ -913,7 +913,7 @@ int cmd_rm_dir_meta(const VSTRING& param)
   NameMetaClientImpl impl;
   int64_t app_id = strtoll(param[0].c_str(), NULL, 10);
   int64_t uid = strtoll(param[1].c_str(), NULL, 10);
-  ret = impl.set_meta_servers(g_meta_server_list);
+  ret = impl.initialize(rs_addr);
   if (TFS_SUCCESS == ret)
   {
     ret = impl.rm_dir(app_id, uid, param[2].c_str());
