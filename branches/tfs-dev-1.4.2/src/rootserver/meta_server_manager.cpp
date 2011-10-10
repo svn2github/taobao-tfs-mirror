@@ -100,7 +100,7 @@ namespace tfs
 
     bool MetaServerManager::exist(const uint64_t id)
     {
-      RWLock::Lock lock(mutex_, READ_LOCKER);
+      tbutil::Monitor<tbutil::Mutex>::Lock lock(build_table_monitor_);
       META_SERVER_MAPS_ITER iter = servers_.find(id);
       return (initialize_ && (servers_.end() != iter));
     }
@@ -108,7 +108,7 @@ namespace tfs
     bool MetaServerManager::lease_exist(const uint64_t id)
     {
       tbutil::Time now = tbutil::Time::now(tbutil::Time::Monotonic);
-      RWLock::Lock lock(mutex_, READ_LOCKER);
+      tbutil::Monitor<tbutil::Mutex>::Lock lock(build_table_monitor_);
       META_SERVER_MAPS_ITER iter = servers_.find(id);
       return initialize_
               && servers_.end() != iter
@@ -144,7 +144,7 @@ namespace tfs
       if (TFS_SUCCESS == iret)
       {
         MetaServer* pserver = NULL;
-        RWLock::Lock lock(mutex_, WRITE_LOCKER);
+        tbutil::Monitor<tbutil::Mutex>::Lock lock(build_table_monitor_);
         META_SERVER_MAPS_ITER iter = servers_.find(server.base_info_.id_);
         if (servers_.end() == iter)
         {
@@ -152,7 +152,14 @@ namespace tfs
             servers_.insert(META_SERVER_MAPS::value_type(server.base_info_.id_, server));
           pserver =  &res.first->second;
         }
-        else
+        memcpy(pserver, &server, sizeof(MetaServer));
+        pserver->lease_.lease_id_ = new_lease_id();
+        pserver->lease_.lease_expired_time_ = now.toSeconds() + SYSPARAM_RTSERVER.mts_rts_lease_expired_time_ ;
+        pserver->base_info_.last_update_time_ = now.toSeconds();
+        server.tables_.version_ = build_tables_.get_active_table_version();
+        server.lease_.lease_expired_time_ = SYSPARAM_RTSERVER.mts_rts_lease_expired_time_ ; 
+
+        /*else
         {
           iret = !iter->second.lease_.has_valid_lease(now.toSeconds()) ? TFS_SUCCESS : EXIT_REGISTER_EXIST_ERROR;
           if (TFS_SUCCESS == iret)
@@ -160,8 +167,8 @@ namespace tfs
             pserver = &iter->second;
             memset(pserver, 0, sizeof(MetaServer));
           }
-        }
-        if (TFS_SUCCESS == iret)
+        }*/
+        /*if (TFS_SUCCESS == iret)
         {
           memcpy(pserver, &server, sizeof(MetaServer));
           pserver->lease_.lease_id_ = new_lease_id();
@@ -169,7 +176,7 @@ namespace tfs
           pserver->base_info_.last_update_time_ = now.toSeconds();
           server.tables_.version_ = build_tables_.get_active_table_version();
           server.lease_.lease_expired_time_ = SYSPARAM_RTSERVER.mts_rts_lease_expired_time_ ; 
-        }
+        }*/
       }
       if (TFS_SUCCESS == iret)
       {
@@ -181,7 +188,7 @@ namespace tfs
 
     int MetaServerManager::unregister(const uint64_t id)
     {
-      RWLock::Lock lock(mutex_, WRITE_LOCKER);
+      tbutil::Monitor<tbutil::Mutex>::Lock lock(build_table_monitor_);
       META_SERVER_MAPS_ITER iter = servers_.find(id);
       if (servers_.end() != iter)
       {
@@ -197,7 +204,8 @@ namespace tfs
       {
         MetaServer* pserver = NULL;
         tbutil::Time now = tbutil::Time::now(tbutil::Time::Monotonic);
-        RWLock::Lock lock(mutex_, WRITE_LOCKER);
+        //RWLock::Lock lock(mutex_, WRITE_LOCKER);
+        tbutil::Monitor<tbutil::Mutex>::Lock lock(build_table_monitor_);
         META_SERVER_MAPS_ITER iter = servers_.find(server.base_info_.id_);
         if (servers_.end() == iter)
         {
@@ -250,15 +258,23 @@ namespace tfs
         }
         else
         {
-          now = tbutil::Time::now(tbutil::Time::Monotonic);
-          check_ms_lease_expired_helper(now, interrupt_flag);
-          if (interrupt_flag)
+          if (!rgi.is_master())
           {
-            interrupt_flag = false;
-            interrupt();
+            tbutil::Monitor<tbutil::Mutex>::Lock lock(check_ms_lease_monitor_);
+            check_ms_lease_monitor_.wait();
           }
-          tbutil::Monitor<tbutil::Mutex>::Lock lock(check_ms_lease_monitor_);
-          check_ms_lease_monitor_.timedWait(tbutil::Time::milliSeconds(500));
+          else
+          {
+            now = tbutil::Time::now(tbutil::Time::Monotonic);
+            check_ms_lease_expired_helper(now, interrupt_flag);
+            if (interrupt_flag)
+            {
+              interrupt_flag = false;
+              interrupt();
+            }
+            tbutil::Monitor<tbutil::Mutex>::Lock lock(check_ms_lease_monitor_);
+            check_ms_lease_monitor_.timedWait(tbutil::Time::milliSeconds(500));
+          }
         }
      }
       return TFS_SUCCESS;
@@ -294,8 +310,13 @@ namespace tfs
         ? TFS_ERROR : TFS_SUCCESS;
       if (TFS_SUCCESS == iret)
       {
-        version = build_tables_.get_active_table_version();
-        memcpy(tables, build_tables_.get_active_table(), build_tables_.get_active_table_length());
+        iret = NULL == build_tables_.get_active_table() ? TFS_ERROR : TFS_SUCCESS;
+        if (TFS_SUCCESS == iret)
+        {
+          version = build_tables_.get_active_table_version();
+          length  = build_tables_.get_active_table_length();
+          memcpy(tables, build_tables_.get_active_table(), build_tables_.get_active_table_length());
+        }
       }
       return iret;
     }
@@ -335,21 +356,29 @@ namespace tfs
         }
         else
         {
-          tbutil::Monitor<tbutil::Mutex>::Lock lock(build_table_monitor_);
-          if(!Func::test_bit(interrupt_, BUILD_TABLE_INTERRUPT_ALL)//no rebuild && no update tables, wait
-              && new_tables_.empty())
+          if (!rgi.is_master())
           {
+            tbutil::Monitor<tbutil::Mutex>::Lock lock(build_table_monitor_);
             build_table_monitor_.wait();
           }
+          else
+          {
+            tbutil::Monitor<tbutil::Mutex>::Lock lock(build_table_monitor_);
+            if(!Func::test_bit(interrupt_, BUILD_TABLE_INTERRUPT_ALL)//no rebuild && no update tables, wait
+                && new_tables_.empty())
+            {
+              build_table_monitor_.wait();
+            }
 
-          if (Func::test_bit(interrupt_, BUILD_TABLE_INTERRUPT_ALL))//rebuild
-          {
-            build_table_helper(phase, new_tables_, update_complete);
-          }
-          else if (!new_tables_.empty())//check update tables status
-          {
-            build_table_monitor_.timedWait(tbutil::Time::milliSeconds(100));//100ms
-            update_table_helper(phase, new_tables_, update_complete);
+            if (Func::test_bit(interrupt_, BUILD_TABLE_INTERRUPT_ALL))//rebuild
+            {
+              build_table_helper(phase, new_tables_, update_complete);
+            }
+            else if (!new_tables_.empty())//check update tables status
+            {
+              build_table_monitor_.timedWait(tbutil::Time::milliSeconds(100));//100ms
+              update_table_helper(phase, new_tables_, update_complete);
+            }
           }
         }
       }
@@ -372,13 +401,15 @@ namespace tfs
 
     void MetaServerManager::check_ms_lease_expired_helper(const tbutil::Time& now, bool& interrupt)
     {
-      RWLock::Lock lock(mutex_, WRITE_LOCKER);
+      //RWLock::Lock lock(mutex_, WRITE_LOCKER);
+      tbutil::Monitor<tbutil::Mutex>::Lock lock(build_table_monitor_);
       META_SERVER_MAPS_ITER iter = servers_.begin();
       for (; iter != servers_.end(); )
       {
         if (!iter->second.lease_.has_valid_lease(now.toSeconds()))
         {
           interrupt = true;
+          TBSYS_LOG(INFO, "%s lease expired, must be delete", tbsys::CNetUtil::addrToString(iter->first).c_str());
           servers_.erase(iter++);
         }
         else
@@ -396,7 +427,7 @@ namespace tfs
       phase = UPDATE_TABLE_PHASE_1;
       std::set<uint64_t> servers;
       Func::clr_bit(interrupt_, BUILD_TABLE_INTERRUPT_ALL);
-      RWLock::Lock lock(mutex_, READ_LOCKER);
+      //RWLock::Lock lock(mutex_, READ_LOCKER);
       META_SERVER_MAPS_CONST_ITER iter = servers_.begin();
       for (; iter != servers_.end(); ++iter)
       {
@@ -450,9 +481,23 @@ namespace tfs
 
     common::MetaServer* MetaServerManager::get(const uint64_t id)
     {
-      RWLock::Lock lock(mutex_, READ_LOCKER);
+      //RWLock::Lock lock(mutex_, READ_LOCKER);
+      tbutil::Monitor<tbutil::Mutex>::Lock lock(build_table_monitor_);
       META_SERVER_MAPS_ITER iter = servers_.find(id);
       return servers_.end() != iter && initialize_ ? &iter->second : NULL;
+    }
+
+    void MetaServerManager::notifyAll(void)
+    {
+      {
+        tbutil::Monitor<tbutil::Mutex>::Lock lock(check_ms_lease_monitor_);
+        check_ms_lease_monitor_.notifyAll();
+      }
+
+      {
+        tbutil::Monitor<tbutil::Mutex>::Lock lock(build_table_monitor_);
+        build_table_monitor_.notifyAll();
+      }
     }
 
     void MetaServerManager::BuildTableThreadHelper::run()

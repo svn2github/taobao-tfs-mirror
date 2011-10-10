@@ -431,13 +431,12 @@ namespace tfs
       std::set<uint64_t> servers;
       std::vector<uint64_t> news;
       std::vector<uint64_t> deads;
-      iret = tables.fill_new_tables(servers, news, deads);
-      EXPECT_EQ(EXIT_PARAMETER_ERROR, iret);
       for (i = 1; i <= SERVER_COUNT; ++i)
       {
         servers.insert(i);
         news.push_back(i);
       }
+      memset(tables.tables_, 0, common::MAX_BUCKET_DATA_LENGTH);
       iret = tables.fill_new_tables(servers, news, deads);
       EXPECT_EQ(TFS_SUCCESS, iret);
       //tables.dump_tables(TBSYS_LOG_LEVEL_INFO,DUMP_TABLE_TYPE_TABLE);

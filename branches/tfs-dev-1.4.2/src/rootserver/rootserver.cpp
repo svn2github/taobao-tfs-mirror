@@ -257,6 +257,7 @@ namespace tfs
               ms_rs_heartbeat_workers_.push(bpacket, 0/* no limit */, false/* no block */);
               break;
             case REQ_RT_RS_KEEPALIVE_MESSAGE:
+            case HEARTBEAT_AND_NS_HEART_MESSAGE:
               rs_rs_heartbeat_workers_.push(bpacket, 0/* no limit */, false/* no block */);
               break;
             default:
@@ -416,8 +417,8 @@ namespace tfs
       {
         int32_t pcode = packet->getPCode();
         RsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
-        iret = ngi.info_.base_info_.status_ >= RS_STATUS_UNINITIALIZE //service status is valid, we'll receive message
-               && ngi.info_.base_info_.status_ <= RS_STATUS_INITIALIZED ? common::TFS_SUCCESS : common::TFS_ERROR;
+        iret = (ngi.info_.base_info_.status_ >= RS_STATUS_UNINITIALIZE //service status is valid, we'll receive message
+               && ngi.info_.base_info_.status_ <= RS_STATUS_INITIALIZED) || (pcode == RS_STATUS_UNINITIALIZE) ? common::TFS_SUCCESS : common::TFS_ERROR;
         if (common::TFS_SUCCESS == iret)
         {
           //receive all owner check message , master and slave heart message, dataserver heart message
@@ -467,10 +468,10 @@ namespace tfs
         reply_msg->set_active_table_version(server.tables_.version_);
         reply_msg->set_lease_expired_time(server.lease_.lease_expired_time_);
         reply_msg->set_renew_lease_interval_time(SYSPARAM_RTSERVER.mts_rts_renew_lease_interval_);
-        iret = packet->reply(reply_msg);
-        TBSYS_LOG(DEBUG, "%s keepalive %s",
+        TBSYS_LOG(DEBUG, "%s keepalive %s, type: %d, iret: %d",
           tbsys::CNetUtil::addrToString(server.base_info_.id_).c_str(),
-          iret == TFS_SUCCESS ? "successful" : "failed");
+          iret == TFS_SUCCESS ? "successful" : "failed", msg->get_type(), iret);
+        iret = packet->reply(reply_msg);
       }
       return iret;
     }

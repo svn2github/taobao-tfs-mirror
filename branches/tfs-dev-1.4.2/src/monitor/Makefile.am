@@ -9,6 +9,6 @@ LDADD=$(top_builddir)/src/message/libtfsmessage.a \
 	$(TBLIB_ROOT)/lib/libtbnet.a \
 	$(TBLIB_ROOT)/lib/libtbsys.a
 
-bin_PROGRAMS = nameserver_ha_monitor
+bin_PROGRAMS = ha_monitor
 
-nameserver_ha_monitor_SOURCES = nameserver_ha_monitor.cpp
+ha_monitor_SOURCES = ha_monitor.cpp

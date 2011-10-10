@@ -17,6 +17,7 @@
 #include "common/parameter.h"
 #include "common/base_service.h"
 #include "common/client_manager.h"
+#include "common/status_message.h"
 #include "common/meta_server_define.h"
 #include "message/rts_ms_heart_message.h"
 #include "message/get_tables_from_rts_message.h"
@@ -133,7 +134,7 @@ namespace tfs
           RtsMsHeartResponseMessage* rmsg = dynamic_cast<RtsMsHeartResponseMessage*>(response);
           iret = rmsg->get_ret_value();
           new_version = rmsg->get_active_table_version();
-          wait_time = iret == EXIT_REGISTER_EXIST_ERROR ? rmsg->get_renew_lease_interval_time() * 2 : rmsg->get_renew_lease_interval_time();
+          wait_time = rmsg->get_renew_lease_interval_time();
           lease_expired = tbutil::Time::now(tbutil::Time::Monotonic) + tbutil::Time::seconds(rmsg->get_lease_expired_time());
           if (TFS_SUCCESS == iret)
           {
@@ -146,17 +147,9 @@ namespace tfs
               iret = get_buckets_from_rs();
               if (TFS_SUCCESS != iret)
               {
-                TBSYS_LOG(ERROR, "failed to get buckets form %s", tbsys::CNetUtil::addrToString(server).c_str());
+                TBSYS_LOG(ERROR, "failed to get buckets form %s, iret: %d", tbsys::CNetUtil::addrToString(server).c_str(), iret);
               }
             }
-          }
-          else if (EXIT_REGISTER_EXIST_ERROR == iret)
-          {
-            lease_expired = 0;
-            iret = TFS_SUCCESS;
-            type = RTS_MS_KEEPALIVE_TYPE_LOGIN;
-            TBSYS_LOG(WARN, "register failed because %s is existed", 
-              tbsys::CNetUtil::addrToString(current_server).c_str());
           }
           else if (EXIT_LEASE_EXPIRED == iret)
           {
@@ -182,29 +175,45 @@ namespace tfs
       if (TFS_SUCCESS == iret)
       {
         assert(NULL != response);
-        GetTableFromRtsResponseMessage* reply = dynamic_cast<GetTableFromRtsResponseMessage*>(response);
-        if (TABLE_VERSION_MAGIC != reply->get_version())
+        iret = response->getPCode() == RSP_RT_GET_TABLE_MESSAGE ? TFS_SUCCESS : TFS_ERROR;
+        if (TFS_SUCCESS != iret)
         {
-          uint64_t dest_length = common::MAX_BUCKET_DATA_LENGTH;
-          unsigned char* dest = new unsigned char[common::MAX_BUCKET_DATA_LENGTH];
-          iret = uncompress(dest, &dest_length, (unsigned char*)reply->get_table(), reply->get_table_length()); 
-          if (Z_OK != iret)
+          if (response->getPCode() == STATUS_MESSAGE)
           {
-            TBSYS_LOG(ERROR, "uncompress error: ret : %d, version: %"PRI64_PREFIX"d", iret, reply->get_version());
-            iret = TFS_ERROR;
+            StatusMessage* reply = dynamic_cast<StatusMessage*>(response);
+            TBSYS_LOG(ERROR, "get tables failed: %s", reply->get_error());
           }
           else
           {
-            MsRuntimeGlobalInformation& rgi = MsRuntimeGlobalInformation::instance();
-            iret = bucket_manager_.update_table((const char*)dest, dest_length,
-                      reply->get_version(), rgi.server_.base_info_.id_);
-            if (TFS_SUCCESS == iret)
-            {
-              iret = bucket_manager_.switch_table(rgi.server_.base_info_.id_, reply->get_version());
-             // bucket_manager_.dump(TBSYS_LOG_LEVEL_DEBUG);
-            }
+            TBSYS_LOG(ERROR, "get tables failed: invalid packet", response->getPCode());
           }
-          tbsys::gDeleteA(dest);
+        }
+        else
+        {
+          GetTableFromRtsResponseMessage* reply = dynamic_cast<GetTableFromRtsResponseMessage*>(response);
+          if (TABLE_VERSION_MAGIC != reply->get_version())
+          {
+            uint64_t dest_length = common::MAX_BUCKET_DATA_LENGTH;
+            unsigned char* dest = new unsigned char[common::MAX_BUCKET_DATA_LENGTH];
+            iret = uncompress(dest, &dest_length, (unsigned char*)reply->get_table(), reply->get_table_length()); 
+            if (Z_OK != iret)
+            {
+              TBSYS_LOG(ERROR, "uncompress error: ret : %d, version: %"PRI64_PREFIX"d", iret, reply->get_version());
+              iret = TFS_ERROR;
+            }
+            else
+            {
+              MsRuntimeGlobalInformation& rgi = MsRuntimeGlobalInformation::instance();
+              iret = bucket_manager_.update_table((const char*)dest, dest_length,
+                        reply->get_version(), rgi.server_.base_info_.id_);
+              if (TFS_SUCCESS == iret)
+              {
+                iret = bucket_manager_.switch_table(rgi.server_.base_info_.id_, reply->get_version());
+               // bucket_manager_.dump(TBSYS_LOG_LEVEL_DEBUG);
+              }
+            }
+            tbsys::gDeleteA(dest);
+          }
         }
       }
       NewClientManager::get_instance().destroy_client(client);

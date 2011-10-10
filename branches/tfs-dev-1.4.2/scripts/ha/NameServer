@@ -79,7 +79,7 @@ nameserver_status() {
 		if pid=`getpid $pidfile` && [ "$pid" ] && kill -0 $pid
 		then
 			#status=`check_nameserver_running_status`
-			return $OCF_RUNNING
+			return $OCF_SUCCESS
 		else
 			# pidfile w/o process means the process died
 			return $OCF_ERR_GENERIC

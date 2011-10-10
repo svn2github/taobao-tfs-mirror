@@ -75,6 +75,7 @@ namespace tfs
              const char* function = __FUNCTION__) const;
       //debug helper
       common::MetaServer* get(const uint64_t id);
+      void notifyAll(void);
     private:
       class BuildTableThreadHelper: public tbutil::Thread
       {
@@ -100,7 +101,7 @@ namespace tfs
       };
       typedef tbutil::Handle<CheckMetaServerLeaseThreadHelper> CheckMetaServerLeaseThreadHelperPtr;
     private:
-      common::RWLock mutex_;
+      //common::RWLock mutex_;
       common::META_SERVER_MAPS servers_;
       tbutil::Monitor<tbutil::Mutex> build_table_monitor_;
       tbutil::Monitor<tbutil::Mutex> check_ms_lease_monitor_;

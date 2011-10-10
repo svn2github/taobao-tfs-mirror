@@ -139,7 +139,13 @@ namespace tfs
             servers_.insert(ROOT_SERVER_MAPS::value_type(server.base_info_.id_, server));
           pserver =  &res.first->second;
         }
-        else
+        memcpy(pserver, &server, sizeof(RootServerInformation));
+        pserver->lease_.lease_id_ = new_lease_id();
+        pserver->lease_.lease_expired_time_ = now.toSeconds() + SYSPARAM_RTSERVER.rts_rts_lease_expired_time_ ;
+        pserver->base_info_.last_update_time_ = now.toSeconds();
+        server.lease_.lease_expired_time_ = SYSPARAM_RTSERVER.rts_rts_lease_expired_time_; 
+
+        /*else
         {
           iret = !iter->second.lease_.has_valid_lease(now.toSeconds()) ? TFS_SUCCESS : EXIT_REGISTER_EXIST_ERROR;
           if (TFS_SUCCESS == iret)
@@ -155,7 +161,7 @@ namespace tfs
           pserver->lease_.lease_expired_time_ = now.toSeconds() + SYSPARAM_RTSERVER.rts_rts_lease_expired_time_ ;
           pserver->base_info_.last_update_time_ = now.toSeconds();
           server.lease_.lease_expired_time_ = SYSPARAM_RTSERVER.rts_rts_lease_expired_time_; 
-        }
+        }*/
       }
       return iret;
     }
@@ -282,6 +288,7 @@ namespace tfs
         {
           rgi.info_.base_info_.role_ = RS_ROLE_MASTER;
           rgi.switch_time_ = now;
+          manager_.notifyAll();
           TBSYS_LOG(INFO, "rootserver switch, old role: slave, current role: master");
         }
       }
@@ -356,14 +363,6 @@ namespace tfs
                 TBSYS_LOG(ERROR, "failed to get buckets from %s",tbsys::CNetUtil::addrToString(server).c_str());
               }
             }
-          }
-          else if (EXIT_REGISTER_EXIST_ERROR == iret)
-          {
-            lease_expired = 0;
-            iret = TFS_SUCCESS;
-            TBSYS_LOG(WARN, "%s register to %s failed because %s is existed", 
-              tbsys::CNetUtil::addrToString(id).c_str(), tbsys::CNetUtil::addrToString(server).c_str(),
-              tbsys::CNetUtil::addrToString(id).c_str());
           }
           else if (EXIT_LEASE_EXPIRED == iret)
           {

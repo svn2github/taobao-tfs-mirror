@@ -307,14 +307,24 @@ namespace tfs
         else
           deads_end = deads.begin() + news.size();
         int64_t index = 0;
+        assert((news_end - news_iter) == (deads_end - deads_iter)); 
+        std::map<uint64_t, uint64_t> map_table;
+        std::map<uint64_t, uint64_t>::const_iterator it;
+        while (news_iter != news_end && deads_iter != deads_end)
+        {
+          map_table[*deads_iter++] = *news_iter++;
+        }
+        news_iter = news.begin();
+        deads_iter = deads.begin();
+        
         for (index = 0; index < header_->bucket_item_; ++index)
         {
           iter = std::find(deads.begin(), deads_end, tables_[index]);
           if (deads_end != iter)
           {
-            tables_[index] = (*news_iter++);
-            if (news_end == news_iter)
-              news_iter = news.begin();
+            it = map_table.find(tables_[index]);
+            assert(it != map_table.end());
+            tables_[index] = it->second;
           }
         }
         news.erase(news.begin(), news_end);
@@ -389,13 +399,11 @@ namespace tfs
             it = maps.begin();
             for (; it != maps.end() && replace_count > 0; ++it, --replace_count)
             {
-              if (round < static_cast<int64_t>(it->second.size()))
-              {
-                index = it->second[round];
-                tables_[index] = *iter++;
-                if (news.end() == iter)
-                  iter = news.begin();
-              }
+              assert(round < static_cast<int64_t>(it->second.size()));
+              index = it->second[round];
+              tables_[index] = *iter++;
+              if (news.end() == iter)
+                iter = news.begin();
             }
             ++round;
           }
@@ -436,6 +444,7 @@ namespace tfs
         int64_t diff = get_difference(old_servers, servers, news, deads);
         if (diff > 0)
         {
+          TBSYS_LOG(INFO, "total server size: %u, new server size: %u, dead server size: %u", servers.size(), news.size(), deads.size());
           memcpy(reinterpret_cast<unsigned char*>(tables_), reinterpret_cast<unsigned char*>(active_tables_),
               header_->bucket_item_ * INT64_SIZE);
           if (!news.empty() && !deads.empty())

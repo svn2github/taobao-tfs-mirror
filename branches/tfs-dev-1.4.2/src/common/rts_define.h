@@ -213,6 +213,7 @@ namespace tfs
       RootServerInformation info_;
       RsRuntimeGlobalInformation();
       bool in_safe_mode_time(const int64_t now);
+      bool is_master(void);
       static RsRuntimeGlobalInformation& instance();
       static RsRuntimeGlobalInformation instance_;
     };

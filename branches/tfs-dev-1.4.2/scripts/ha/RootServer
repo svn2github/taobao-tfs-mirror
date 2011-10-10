@@ -29,8 +29,8 @@
 #	OCF_RESKEY_pidfile [optional, default=$basedir/logs/rootserver.pid]
 #       OCF_RESKEY_user [optional, default=admin]
 #       OCF_RESKEY_stop_timeout 
-#       OCF_RESKEY_nsip
-#       OCF_RESKEY_nsport
+#       OCF_RESKEY_rsip
+#       OCF_RESKEY_rsport
 #
 #
 # This RA starts $binfile with $cmdline_options as $user and writes a $pidfile from that. 
@@ -79,7 +79,7 @@ rootserver_status() {
 		if pid=`getpid $pidfile` && [ "$pid" ] && kill -0 $pid
 		then
 			#status=`check_rootserver_running_status`
-			return $OCF_RUNNING
+			return $OCF_SUCCESS
 		else
 			# pidfile w/o process means the process died
 			return $OCF_ERR_GENERIC
@@ -196,9 +196,9 @@ pidfile="$OCF_RESKEY_pidfile"
 user="$OCF_RESKEY_user"
 [ -z "$user" ] && user=admin
 
-### monitor namserver parameters ########
-nsip="$OCF_RESKEY_rsip"
-nsport="$OCF_RESKEY_rsport"
+### monitor rootserver parameters ########
+rsip="$OCF_RESKEY_rsip"
+rsport="$OCF_RESKEY_rsport"
 montool="$OCF_RESKEY_montool"
 [ -z "$montool" ] && montool="$OCF_RESKEY_basedir/bin/ha_monitor"
 
@@ -249,7 +249,7 @@ User to run the command as
 </parameter>
 <parameter name="stop_timeout">
 <longdesc lang="en">
-In the stop operation: Seconds to wait for kill -TERM to succeed
+In the stop operation: Seconds to wait for kill -SIGTERM to succeed
 before sending kill -SIGKILL. Defaults to 2/3 of the stop operation timeout.
 </longdesc>
 <shortdesc lang="en">Seconds to wait after having sent SIGTERM before sending SIGKILL in stop operation</shortdesc>

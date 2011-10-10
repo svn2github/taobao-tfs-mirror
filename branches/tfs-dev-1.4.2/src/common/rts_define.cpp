@@ -504,7 +504,13 @@ namespace tfs
     bool RsRuntimeGlobalInformation::in_safe_mode_time(const int64_t now)
     {
       RWLock::Lock lock(*this, READ_LOCKER);
-      return now + SYSPARAM_RTSERVER.safe_mode_time_ < switch_time_;
+      return now < switch_time_ + SYSPARAM_RTSERVER.safe_mode_time_;
+    }
+
+    bool RsRuntimeGlobalInformation::is_master(void)
+    {
+      RWLock::Lock lock(*this, READ_LOCKER);
+      return info_.base_info_.role_ == RS_ROLE_MASTER;
     }
  
     RsRuntimeGlobalInformation::RsRuntimeGlobalInformation():
