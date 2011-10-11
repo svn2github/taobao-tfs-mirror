@@ -95,7 +95,6 @@ namespace tfs
       private:
         RcClient(const RcClient&);
         RcClientImpl* impl_;
-
     };
   }
 }

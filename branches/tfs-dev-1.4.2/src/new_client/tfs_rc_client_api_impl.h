@@ -52,12 +52,14 @@ namespace tfs
         TfsRetType initialize(const char* str_rc_ip, const char* app_key, const char* str_app_ip,
             const int32_t cache_times = common::DEFAULT_BLOCK_CACHE_TIME,
             const int32_t cache_items = common::DEFAULT_BLOCK_CACHE_ITEMS,
-            const char* dev_name = NULL);
+            const char* dev_name = NULL,
+            const char* rs_addr = NULL);
         //return value :TFS_SUCCESS/TFS_ERROR;
         TfsRetType initialize(const uint64_t rc_ip, const char* app_key, const uint64_t app_ip,
             const int32_t cache_times = common::DEFAULT_BLOCK_CACHE_TIME,
             const int32_t cache_items = common::DEFAULT_BLOCK_CACHE_ITEMS,
-            const char* dev_name = NULL);
+            const char* dev_name = NULL,
+            const char* rs_addr = NULL);
 
         void set_wait_timeout(const int64_t timeout_ms);
         void set_log_level(const char* level);
@@ -66,7 +68,7 @@ namespace tfs
         //return value fd
         int open(const char* file_name, const char* suffix, const RcClient::RC_MODE mode,
             const bool large = false, const char* local_key = NULL);
-        int open(const int64_t uid, const char* name, const RcClient::RC_MODE mode);
+        int open(const int64_t app_id, const int64_t uid, const char* name, const RcClient::RC_MODE mode);
         TfsRetType close(const int fd, char* tfs_name_buff = NULL, const int32_t buff_len = 0);
 
         int64_t read(const int fd, void* buf, const int64_t count);
@@ -80,7 +82,7 @@ namespace tfs
         TfsRetType fstat(const int fd, common::TfsFileStat* buf);
 
         TfsRetType unlink(const char* file_name, const char* suffix = NULL,
-            const common::TfsUnlinkType action = common::DELETE);
+           const common::TfsUnlinkType action = common::DELETE);
         int64_t save_file(const char* local_file, char* tfs_name_buff, const int32_t buff_len,
             const bool is_large_file = false);
 
@@ -177,13 +179,17 @@ namespace tfs
       private:
         struct fdInfo
         {
-          fdInfo(const int raw_tfs_fd, const int64_t uid, const char* name = NULL)
-            :raw_tfs_fd_(raw_tfs_fd), uid_(uid) 
+          fdInfo():raw_tfs_fd_(-1), app_id_(0), uid_(0)
+          {
+          }
+          fdInfo(const int raw_tfs_fd, const int64_t app_id, const int64_t uid, const char* name = NULL)
+            :raw_tfs_fd_(raw_tfs_fd), app_id_(app_id), uid_(uid) 
           {
             if (NULL != name)
               name_ = name;
           }
           int raw_tfs_fd_;
+          int64_t app_id_;
           int64_t uid_;
           std::string name_;
           std::string ns_addr_;
