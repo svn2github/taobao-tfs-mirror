@@ -194,7 +194,8 @@ namespace tfs
       if (TFS_SUCCESS == iret)
       {
         tbutil::Monitor<tbutil::Mutex>::Lock lock(monitor_);
-        iret = version <= active_table_.version_ ? EXIT_TABLE_VERSION_ERROR : TFS_SUCCESS;
+        iret = version < active_table_.version_ ? EXIT_TABLE_VERSION_ERROR : TFS_SUCCESS;
+        TBSYS_LOG(DEBUG, "version: %ld, table version: %ld", version, active_table_.version_);
         if (TFS_SUCCESS == iret)
         {
           iret = active_table_.query(status, bucket_id, version, server);

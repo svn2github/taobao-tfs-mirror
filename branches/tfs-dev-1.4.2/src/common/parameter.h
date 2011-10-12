@@ -135,7 +135,7 @@ namespace tfs
       }
     };
 
-    struct NameMeatServerParameter
+    struct NameMetaServerParameter
     {
       struct DbInfo
       {
@@ -154,9 +154,10 @@ namespace tfs
       int32_t max_pool_size_;
       int32_t max_cache_size_;
       int32_t max_mutex_size_;
+      int32_t free_list_count_;
 
-      static NameMeatServerParameter meta_parameter_;
-      static NameMeatServerParameter& instance()
+      static NameMetaServerParameter meta_parameter_;
+      static NameMetaServerParameter& instance()
       {
         return meta_parameter_;
       }
@@ -183,7 +184,7 @@ namespace tfs
 #define SYSPARAM_DATASERVER DataServerParameter::instance()
 #define SYSPARAM_FILESYSPARAM FileSystemParameter::instance()
 #define SYSPARAM_RCSERVER RcServerParameter::instance()
-#define SYSPARAM_NAMEMETASERVER NameMeatServerParameter::instance()
+#define SYSPARAM_NAMEMETASERVER NameMetaServerParameter::instance()
 #define SYSPARAM_RTSERVER RtServerParameter::instance()
   }/** common **/
 }/** tfs **/

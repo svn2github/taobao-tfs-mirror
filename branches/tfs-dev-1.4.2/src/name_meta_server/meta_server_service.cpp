@@ -78,27 +78,39 @@ namespace tfs
       }
       else
       {
-        ret = store_manager_.init(SYSPARAM_NAMEMETASERVER.max_pool_size_, SYSPARAM_NAMEMETASERVER.max_cache_size_,
-              SYSPARAM_NAMEMETASERVER.gc_ratio_, SYSPARAM_NAMEMETASERVER.max_mutex_size_);
-        if (TFS_SUCCESS != ret)
+        bool bret = MemHelper::init(SYSPARAM_NAMEMETASERVER.free_list_count_, SYSPARAM_NAMEMETASERVER.free_list_count_,
+              SYSPARAM_NAMEMETASERVER.free_list_count_);
+        TBSYS_LOG(INFO, "MemHelper init. r_free_list_count: %d, d_free_list_count: %d, f_free_list_count: %d",
+                  SYSPARAM_NAMEMETASERVER.free_list_count_, SYSPARAM_NAMEMETASERVER.free_list_count_, SYSPARAM_NAMEMETASERVER.free_list_count_);
+        if (true != bret)
         {
-          TBSYS_LOG(ERROR, "init store_manager error");
+          TBSYS_LOG(ERROR, "init MemHelper error");
+          ret = TFS_ERROR;
         }
         else
         {
-          MsRuntimeGlobalInformation& rgi = MsRuntimeGlobalInformation::instance();
-          rgi.server_.base_info_.id_ = tbsys::CNetUtil::strToAddr(get_ip_addr(), get_port());
-          rgi.server_.base_info_.start_time_ = time(NULL);
-          ret = heart_manager_.initialize();
+          ret = store_manager_.init(SYSPARAM_NAMEMETASERVER.max_pool_size_, SYSPARAM_NAMEMETASERVER.max_cache_size_,
+                SYSPARAM_NAMEMETASERVER.gc_ratio_, SYSPARAM_NAMEMETASERVER.max_mutex_size_);
           if (TFS_SUCCESS != ret)
           {
-            TBSYS_LOG(ERROR, "init heart_manager error");
+            TBSYS_LOG(ERROR, "init store_manager error");
           }
           else
           {
-            GcTimerTaskPtr task = new GcTimerTask(*this);
-            int32_t gc_interval = TBSYS_CONFIG.getInt(CONF_SN_NAMEMETASERVER, CONF_GC_INTERVAL, 10);
-            get_timer()->scheduleRepeated(task, tbutil::Time::seconds(gc_interval));
+            MsRuntimeGlobalInformation& rgi = MsRuntimeGlobalInformation::instance();
+            rgi.server_.base_info_.id_ = tbsys::CNetUtil::strToAddr(get_ip_addr(), get_port());
+            rgi.server_.base_info_.start_time_ = time(NULL);
+            ret = heart_manager_.initialize();
+            if (TFS_SUCCESS != ret)
+            {
+              TBSYS_LOG(ERROR, "init heart_manager error");
+            }
+            else
+            {
+              GcTimerTaskPtr task = new GcTimerTask(*this);
+              int32_t gc_interval = TBSYS_CONFIG.getInt(CONF_SN_NAMEMETASERVER, CONF_GC_INTERVAL, 10);
+              get_timer()->scheduleRepeated(task, tbutil::Time::seconds(gc_interval));
+            }
           }
         }
       }

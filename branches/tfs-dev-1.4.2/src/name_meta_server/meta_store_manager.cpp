@@ -77,7 +77,7 @@ namespace tfs
       for (int i = 0; i < pool_size; i++)
       {
         int data_base_index = i % SYSPARAM_NAMEMETASERVER.db_infos_.size();
-        const NameMeatServerParameter::DbInfo& dbinfo = SYSPARAM_NAMEMETASERVER.db_infos_[data_base_index];
+        const NameMetaServerParameter::DbInfo& dbinfo = SYSPARAM_NAMEMETASERVER.db_infos_[data_base_index];
 
         conn_str[i] = (char*)::malloc(100);
         snprintf(conn_str[i], 100, "%s", dbinfo.conn_str_.c_str());

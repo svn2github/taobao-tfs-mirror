@@ -34,7 +34,7 @@ namespace tfs
     FileSystemParameter FileSystemParameter::fs_parameter_;
     DataServerParameter DataServerParameter::ds_parameter_;
     RcServerParameter RcServerParameter::rc_parameter_;
-    NameMeatServerParameter NameMeatServerParameter::meta_parameter_;
+    NameMetaServerParameter NameMetaServerParameter::meta_parameter_;
     RtServerParameter RtServerParameter::rt_parameter_;
 
     int NameServerParameter::initialize(void)
@@ -304,12 +304,13 @@ namespace tfs
       return TFS_SUCCESS;
     }
 
-    int NameMeatServerParameter::initialize(void)
+    int NameMetaServerParameter::initialize(void)
     {
       int ret = TFS_SUCCESS;
       max_pool_size_ = TBSYS_CONFIG.getInt(CONF_SN_NAMEMETASERVER, CONF_MAX_SPOOL_SIZE, 10);
       max_cache_size_ = TBSYS_CONFIG.getInt(CONF_SN_NAMEMETASERVER, CONF_MAX_CACHE_SIZE, 1024);
       max_mutex_size_ = TBSYS_CONFIG.getInt(CONF_SN_NAMEMETASERVER, CONF_MAX_MUTEX_SIZE, 16);
+      free_list_count_ = TBSYS_CONFIG.getInt(CONF_SN_NAMEMETASERVER, CONF_FREE_LIST_COUNT, 256);
       const char* gc_ratio = TBSYS_CONFIG.getString(CONF_SN_NAMEMETASERVER, CONF_GC_RATIO, "0.1"); 
       gc_ratio_ = strtod(gc_ratio, NULL);
       std::string db_infos = TBSYS_CONFIG.getString(CONF_SN_NAMEMETASERVER, CONF_META_DB_INFOS, "");

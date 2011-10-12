@@ -153,6 +153,7 @@ namespace tfs
 #define CONF_META_DB_INFOS                             "meta_db_infos"
 #define CONF_MAX_CACHE_SIZE                            "max_cache_size"
 #define CONF_MAX_MUTEX_SIZE                            "max_mutex_size"
+#define CONF_FREE_LIST_COUNT                           "free_list_count"
 #define CONF_GC_RATIO                                  "gc_ratio"
 #define CONF_GC_INTERVAL                               "gc_interval"
 
