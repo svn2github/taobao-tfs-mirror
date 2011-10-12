@@ -115,7 +115,8 @@ namespace tfs
             common::FragInfo& frag_info);
 
         // root server related
-        int update_table_from_rootserver(const int ret_status = 0);
+        bool need_update_table(const int ret_status);
+        int update_table_from_rootserver();
 
       private:
         DISALLOW_COPY_AND_ASSIGN(NameMetaClientImpl);
