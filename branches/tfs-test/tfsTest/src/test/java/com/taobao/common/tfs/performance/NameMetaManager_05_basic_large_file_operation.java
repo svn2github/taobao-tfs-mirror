@@ -18,7 +18,7 @@ import org.junit.Test;
 
 import com.taobao.common.tfs.namemeta.FileMetaInfo;
 
-public class NameMetaManager_05_basic_large_file_operation extends  tfsNameBaseCase{
+public class NameMetaManager_05_basic_large_file_operation extends tfsNameBaseCase{
 	
 	public  static List<FileMetaInfo>  file_info_list ;
 	public  static FileMetaInfo file_info;

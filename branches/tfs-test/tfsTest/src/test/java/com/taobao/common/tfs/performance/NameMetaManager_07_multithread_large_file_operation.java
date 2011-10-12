@@ -18,10 +18,10 @@ import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
 
-import com.taobao.common.tfs.tfsNameBaseCase;
+import com.taobao.common.tfs.performance.tfsNameBaseCase;
 import com.taobao.common.tfs.namemeta.FileMetaInfo;
 import com.taobao.common.tfs.namemeta.NameMetaManager;
-import com.taobao.common.tfs.namemeta.NameMetaManager;
+
 public class NameMetaManager_07_multithread_large_file_operation  extends  tfsNameBaseCase {
 
     public static NameMetaManager MetaManager1 = new NameMetaManager();
