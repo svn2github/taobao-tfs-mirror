@@ -1,9 +1,8 @@
 package com.taobao.common.tfs.testcaseForInterface;
 
-import java.com.taobao.common.tfs.namemeta.FileMetaInfo;
+import com.taobao.common.tfs.namemeta.FileMetaInfo;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Random;
 
 import org.junit.After;
 import org.junit.Before;
