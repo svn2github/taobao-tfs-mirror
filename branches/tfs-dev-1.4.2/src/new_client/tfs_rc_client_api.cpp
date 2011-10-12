@@ -35,18 +35,18 @@ namespace tfs
       impl_ = NULL;
     }
     TfsRetType RcClient::initialize(const char* str_rc_ip, const char* app_key, const char* str_app_ip,
-        const int32_t cache_times, const int32_t cache_items, const char* dev_name)
+        const int32_t cache_times, const int32_t cache_items, const char* dev_name, const char* rs_addr)
     {
-      int32_t real_cache_times = (cache_times > 0) ? cache_times : common::DEFAULT_BLOCK_CACHE_TIME;
-      int32_t real_cache_items = (cache_items > 0) ? cache_items : common::DEFAULT_BLOCK_CACHE_ITEMS;
-      return impl_->initialize(str_rc_ip, app_key, str_app_ip, real_cache_times, real_cache_items, dev_name);
+      int32_t real_cache_times = (cache_times >= 0) ? cache_times : common::DEFAULT_BLOCK_CACHE_TIME;
+      int32_t real_cache_items = (cache_items >= 0) ? cache_items : common::DEFAULT_BLOCK_CACHE_ITEMS;
+      return impl_->initialize(str_rc_ip, app_key, str_app_ip, real_cache_times, real_cache_items, dev_name, rs_addr);
     }
     TfsRetType RcClient::initialize(const uint64_t rc_ip, const char* app_key, const uint64_t app_ip,
-        const int32_t cache_times, const int32_t cache_items, const char* dev_name)
+        const int32_t cache_times, const int32_t cache_items, const char* dev_name, const char* rs_addr)
     {
-      int32_t real_cache_times = (cache_times > 0) ? cache_times : common::DEFAULT_BLOCK_CACHE_TIME;
-      int32_t real_cache_items = (cache_items > 0) ? cache_items : common::DEFAULT_BLOCK_CACHE_ITEMS;
-      return impl_->initialize(rc_ip, app_key, app_ip, real_cache_times, real_cache_items, dev_name);
+      int32_t real_cache_times = (cache_times >= 0) ? cache_times : common::DEFAULT_BLOCK_CACHE_TIME;
+      int32_t real_cache_items = (cache_items >= 0) ? cache_items : common::DEFAULT_BLOCK_CACHE_ITEMS;
+      return impl_->initialize(rc_ip, app_key, app_ip, real_cache_times, real_cache_items, dev_name, rs_addr);
     }
 
 
@@ -75,6 +75,11 @@ namespace tfs
           const bool large, const char* local_key)
     {
       return impl_->open(file_name, suffix, mode, large, local_key);
+    }
+    int RcClient::open(const int64_t app_id, const int64_t uid, 
+        const char* name, const RcClient::RC_MODE mode)
+    {
+      return impl_->open(app_id, uid, name, mode);
     }
 
     TfsRetType RcClient::close(const int fd, char* tfs_name_buff, const int32_t buff_len)
@@ -153,17 +158,17 @@ namespace tfs
       return impl_->mv_file(uid, src_file_path, dest_file_path);
     }
 
-    TfsRetType RcClient::ls_dir(const int64_t uid, const char* dir_path,
+    TfsRetType RcClient::ls_dir(const int64_t app_id, const int64_t uid, const char* dir_path,
         std::vector<common::FileMetaInfo>& v_file_meta_info)
     {
-      return impl_->ls_dir(uid, dir_path, v_file_meta_info);
+      return impl_->ls_dir(app_id, uid, dir_path, v_file_meta_info);
     }
 
-    TfsRetType RcClient::ls_file(const int64_t uid,
+    TfsRetType RcClient::ls_file(const int64_t app_id, const int64_t uid,
         const char* file_path,
         common::FileMetaInfo& file_meta_info)
     {
-      return impl_->ls_file(uid, file_path, file_meta_info);
+      return impl_->ls_file(app_id, uid, file_path, file_meta_info);
     }
   }
 }

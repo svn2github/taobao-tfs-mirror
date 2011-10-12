@@ -1084,24 +1084,24 @@ namespace tfs
         }
         return ret;
       }
-      TfsRetType RcClientImpl::ls_dir(const int64_t uid, const char* dir_path,
+      TfsRetType RcClientImpl::ls_dir(const int64_t app_id, const int64_t uid, const char* dir_path,
           std::vector<common::FileMetaInfo>& v_file_meta_info)
       {
         int ret = check_init_stat(true);
         if (TFS_SUCCESS == ret)
         {
-          ret = name_meta_client_->ls_dir(app_id_, uid, dir_path, v_file_meta_info);
+          ret = name_meta_client_->ls_dir(app_id, uid, dir_path, v_file_meta_info);
         }
         return ret;
       }
-      TfsRetType RcClientImpl::ls_file(const int64_t uid,
+      TfsRetType RcClientImpl::ls_file(const int64_t app_id, const int64_t uid,
           const char* file_path,
           common::FileMetaInfo& file_meta_info)
       {
         int ret = check_init_stat(true);
         if (TFS_SUCCESS == ret)
         {
-          ret = name_meta_client_->ls_file(app_id_, uid, file_path, file_meta_info);
+          ret = name_meta_client_->ls_file(app_id, uid, file_path, file_meta_info);
         }
         return ret;
       }

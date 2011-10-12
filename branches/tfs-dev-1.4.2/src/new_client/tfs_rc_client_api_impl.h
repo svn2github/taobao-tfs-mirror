@@ -100,9 +100,9 @@ namespace tfs
         TfsRetType mv_dir(const int64_t uid, const char* src_dir_path, const char* dest_dir_path);
         TfsRetType mv_file(const int64_t uid, const char* src_file_path, const char* dest_file_path);
 
-        TfsRetType ls_dir(const int64_t uid, const char* dir_path,
+        TfsRetType ls_dir(const int64_t app_id, const int64_t uid, const char* dir_path,
             std::vector<common::FileMetaInfo>& v_file_meta_info);
-        TfsRetType ls_file(const int64_t uid,
+        TfsRetType ls_file(const int64_t app_id, const int64_t uid,
             const char* file_path,
             common::FileMetaInfo& file_meta_info);
 
