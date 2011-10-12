@@ -484,14 +484,14 @@ namespace tfs
           if (NULL != ret_node)
           {
             TBSYS_LOG(INFO, "name is a exist dir");
-            ret = TFS_ERROR;
+            ret = EXIT_TARGET_EXIST_ERROR;
           }
           store_manager_.select(app_id, uid, p_dir_node, name,
               true, ret_node);
           if (NULL != ret_node)
           {
             TBSYS_LOG(INFO, "name is a exist file");
-            ret = TFS_ERROR;
+            ret = EXIT_TARGET_EXIST_ERROR;
           }
           if (TFS_SUCCESS == ret)
           {
@@ -551,7 +551,7 @@ namespace tfs
           // file not exist
           if (TFS_SUCCESS != ret || NULL == ret_node)
           {
-            ret = TFS_ERROR;
+            ret = EXIT_TARGET_EXIST_ERROR;
           }
           else
           {
@@ -665,21 +665,29 @@ namespace tfs
           int64_t last_offset = 0;
           void* ret_file_node = NULL;
           ret = store_manager_.select(app_id, uid, p_dir_node, name, true, ret_file_node);
-          if (TFS_SUCCESS == ret && NULL != ret_file_node)
+          if (TFS_SUCCESS == ret)
           {
-            CacheFileMetaNode* file_node = (CacheFileMetaNode*)ret_file_node;
-            ret = store_manager_.get_file_frag_info(app_id, uid, p_dir_node, file_node,
-                offset, tmp_v_meta_info, frag_info.cluster_id_, last_offset);
-
-            if (TFS_SUCCESS == ret)
+            if (NULL != ret_file_node)
             {
-              if ((ret = read_frag_info(tmp_v_meta_info, offset, size,
-                      frag_info.cluster_id_, frag_info.v_frag_meta_, still_have)) != TFS_SUCCESS)
+              CacheFileMetaNode* file_node = (CacheFileMetaNode*)ret_file_node;
+              ret = store_manager_.get_file_frag_info(app_id, uid, p_dir_node, file_node,
+                  offset, tmp_v_meta_info, frag_info.cluster_id_, last_offset);
+
+              if (TFS_SUCCESS == ret)
               {
-                TBSYS_LOG(WARN, "parse read frag info fail. ret: %d", ret);
+                if ((ret = read_frag_info(tmp_v_meta_info, offset, size,
+                        frag_info.cluster_id_, frag_info.v_frag_meta_, still_have)) != TFS_SUCCESS)
+                {
+                  TBSYS_LOG(WARN, "parse read frag info fail. ret: %d", ret);
+                }
               }
             }
+            else
+            {
+              ret = EXIT_TARGET_EXIST_ERROR;
+            }
           }
+          
         }
         store_manager_.revert_root_node(app_id, uid);
       }
@@ -724,7 +732,7 @@ namespace tfs
             if (TFS_SUCCESS == ret && NULL == ret_file_node)
             {
               TBSYS_LOG(DEBUG, "file do not exist");
-              ret = TFS_ERROR;
+              ret = EXIT_NOT_CREATE_ERROR;
             }
             if (TFS_SUCCESS == ret)
             {
@@ -880,6 +888,7 @@ namespace tfs
         {
           TBSYS_LOG(WARN, "file_path(%s) is invalid", file_path);
           ret = TFS_ERROR;
+          
         }
         else if (file_len > 0)  // continue from file_path
         {
@@ -1038,7 +1047,7 @@ namespace tfs
         if (NULL == p_dir_node)
         {
           //we can not find parent info;
-          ret = TFS_ERROR;
+          ret = EXIT_PARENT_EXIST_ERROR;
         }
         else
         {
@@ -1080,7 +1089,7 @@ namespace tfs
 
         if (tmp_v_meta_info.empty())
         {
-          ret = TFS_ERROR;
+          ret = EXIT_PARENT_EXIST_ERROR;
           TBSYS_LOG(DEBUG, "file(%s) not found, ret: %d", name, ret);
           break;
         }
@@ -1135,7 +1144,7 @@ namespace tfs
 
         if (NULL == dir_node)
         {
-          ret = TFS_ERROR;
+          ret = EXIT_PARENT_EXIST_ERROR;
           TBSYS_LOG(DEBUG, "file(%s) not found, ret: %d", name, ret);
           break;
         }
@@ -1349,7 +1358,7 @@ namespace tfs
       // TODO. no need check all over..
       int ret = TFS_SUCCESS;
 
-      if (frag_info.v_frag_meta_.size() > 0 && frag_info.cluster_id_ > 0) 
+      if (frag_info.v_frag_meta_.size() > 0 && frag_info.cluster_id_ <= 0) 
       {
         TBSYS_LOG(ERROR, "cluster id error %d", frag_info.cluster_id_);
         ret = TFS_ERROR;
