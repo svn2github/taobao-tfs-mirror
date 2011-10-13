@@ -102,6 +102,7 @@ namespace tfs
 #define CONF_GROUP_SEQ                                "group_seq"
 #define CONF_GROUP_COUNT                              "group_count"
 #define CONF_TIME_REPORT_BLOCK_INTERVAL               "time_report_block_interval" //
+#define CONF_REPORT_BLOCK_EXPIRED_TIME                "report_block_expired_time"
 
   //dataserver
 #define CONF_DATA_THREAD_COUNT                        "data_thread_count"

@@ -173,7 +173,10 @@ namespace tfs
     {
       HEART_MESSAGE_OK = 0,
       HEART_NEED_SEND_BLOCK_INFO = 1,
-      HEART_EXP_BLOCK_ID = 2
+      HEART_EXP_BLOCK_ID = 2,
+      HEART_MESSAGE_FAILED = 3,
+      HEART_REPORT_BLOCK_SERVER_OBJECT_NOT_FOUND = 4,
+      HEART_REPORT_UPDATE_RELATION_ERROR = 5 
     };
     enum TfsPacketVersion
     {

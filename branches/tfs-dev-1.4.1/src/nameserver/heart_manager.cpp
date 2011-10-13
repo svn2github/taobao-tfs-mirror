@@ -176,7 +176,7 @@ namespace tfs
         else
 			  {
 			  	TBSYS_LOG(ERROR, "dataserver: %s keepalive failed, iret: %d", CNetUtil::addrToString(ds_info.id_).c_str(), iret);
-          result_msg->set_status(STATUS_MESSAGE_ERROR);
+          result_msg->set_status(HEART_MESSAGE_FAILED);
 			  }
 			  iret = message->reply(result_msg);
         TBSYS_LOG(DEBUG,"server: %s keepalive %s, iret: %d,result msg status: %d,  need_sent_block: %s", 
@@ -226,8 +226,10 @@ namespace tfs
         }
         else
 			  {
+          int status = iret == EIXT_SERVER_OBJECT_NOT_FOUND ? HEART_REPORT_BLOCK_SERVER_OBJECT_NOT_FOUND  :
+                           iret == EXIT_UPDATE_RELATION_ERROR ? HEART_REPORT_UPDATE_RELATION_ERROR : HEART_MESSAGE_FAILED;
 			  	TBSYS_LOG(ERROR, "dataserver: %s report block failed, iret: %d", CNetUtil::addrToString(ds_info.id_).c_str(), iret);
-			  	result_msg->set_status(STATUS_MESSAGE_ERROR);
+			  	result_msg->set_status(status);
 			  }
 
         #ifdef TFS_NS_DEBUG
@@ -240,25 +242,41 @@ namespace tfs
       return iret;
     }
 
-
-    int HeartManagement::add_report_server(const uint64_t server)
+    void HeartManagement::cleanup_expired_report_server(const int64_t now)
     {
       RWLock::Lock lock(mutex_, WRITE_LOCKER);
-      std::vector<uint64_t>::iterator iter = 
-          std::find(current_report_servers_.begin(), current_report_servers_.end(), server);
-      int32_t iret = current_report_servers_.end() == iter ? TFS_SUCCESS : TFS_ERROR;
-      if (TFS_SUCCESS == iret)
+      std::map<uint64_t, int64_t>::iterator iter = current_report_servers_.begin();
+      while (iter != current_report_servers_.end())
       {
-        current_report_servers_.push_back(server);
+        if (iter->second <= now)
+          current_report_servers_.erase(iter++);
+        else
+          ++iter;
       }
-      return iret;
+    }
+
+    bool HeartManagement::add_report_server(const uint64_t server, const int64_t now)
+    {
+      RWLock::Lock lock(mutex_, WRITE_LOCKER);
+      bool can_be_report = current_report_servers_.size() < report_block_queue_size_;
+      if (can_be_report)
+      {
+        std::pair<std::map<uint64_t, int64_t>::iterator, bool> res;
+        res.first = current_report_servers_.find(server);
+        can_be_report = current_report_servers_.end() == res.first;
+        if (can_be_report)
+        {
+          res = current_report_servers_.insert(
+            std::map<uint64_t, int64_t>::value_type(server, now + SYSPARAM_NAMESERVER.report_block_expired_time_));
+        }
+      }
+      return can_be_report;
     }
 
     int HeartManagement::del_report_server(const uint64_t server)
     {
       RWLock::Lock lock(mutex_, WRITE_LOCKER);
-      std::vector<uint64_t>::iterator iter = 
-          std::find(current_report_servers_.begin(), current_report_servers_.end(), server);
+      std::map<uint64_t, int64_t>::iterator iter = current_report_servers_.find(server);
       if (current_report_servers_.end() != iter)
       {
         current_report_servers_.erase(iter);
@@ -266,102 +284,24 @@ namespace tfs
       return TFS_SUCCESS;
     }
 
-    int HeartManagement::add_uncomplete_report_server(const uint64_t server)
-    {
-      RWLock::Lock lock(mutex_, WRITE_LOCKER);
-      int32_t iret = server > 0 ? TFS_SUCCESS : TFS_ERROR;
-      if (TFS_SUCCESS == iret)
-      {
-        std::vector<uint64_t>::iterator iter = 
-            std::find(uncomplete_report_servers_.begin(), uncomplete_report_servers_.end(), server);
-        iret = uncomplete_report_servers_.end() == iter ? TFS_SUCCESS : TFS_ERROR;
-        if (TFS_SUCCESS == iret)
-        {
-          uncomplete_report_servers_.push_back(server);
-        }
-      }
-      return iret;
-    }
-
-    int HeartManagement::add_uncomplete_report_server(std::vector<uint64_t>& servers)
-    {
-      RWLock::Lock lock(mutex_, WRITE_LOCKER);
-      std::vector<uint64_t> vec;
-      std::vector<uint64_t>::iterator iter = servers.begin();
-      std::vector<uint64_t>::iterator it;
-      std::vector<uint64_t>::iterator uit;
-      for (; iter != servers.end(); ++iter)
-      {
-        it = std::find(current_report_servers_.begin(), current_report_servers_.end(), (*iter));
-        uit = std::find(uncomplete_report_servers_.begin(), uncomplete_report_servers_.end(), (*iter));
-        if (current_report_servers_.end() == it
-          && uncomplete_report_servers_.end() == uit)
-        {
-          vec.push_back((*iter));
-        }
-      }
-      uncomplete_report_servers_.insert(uncomplete_report_servers_.end(), vec.begin(), vec.end());
-      return TFS_SUCCESS;
-    }
-
-    int HeartManagement::del_uncomplete_report_server(const uint64_t server)
-    {
-      RWLock::Lock lock(mutex_, WRITE_LOCKER);
-      int32_t iret = server > 0 ? TFS_SUCCESS : TFS_ERROR;
-      if (TFS_SUCCESS == iret)
-      {
-        std::vector<uint64_t>::iterator iter = 
-            std::find(uncomplete_report_servers_.begin(), uncomplete_report_servers_.end(), server);
-        if (uncomplete_report_servers_.end() != iter)
-        {
-          uncomplete_report_servers_.erase(iter);
-        }
-      }
-      return TFS_SUCCESS;
-    }
-
-    bool HeartManagement::exist_uncomplete_report_server(const uint64_t server)
+    bool HeartManagement::empty_report_server(const int64_t now)
     {
       RWLock::Lock lock(mutex_, READ_LOCKER);
-      std::vector<uint64_t>::iterator iter = 
-           std::find(current_report_servers_.begin(), current_report_servers_.end(), server);
-      bool exist = current_report_servers_.end() != iter;
-      if (!exist)
+      bool ret = current_report_servers_.empty();
+      if (!ret)
       {
-        iter = std::find(uncomplete_report_servers_.begin(), uncomplete_report_servers_.end(), server);
-        exist = uncomplete_report_servers_.end() != iter;
-      }
-      return exist;
-    }
-
-    bool HeartManagement::empty_uncomplete_report_server(void)
-    {
-      RWLock::Lock lock(mutex_, READ_LOCKER);
-      return ((uncomplete_report_servers_.empty())
-              && (current_report_servers_.empty()));
-    }
-
-    bool HeartManagement::can_be_report(const uint64_t server)
-    {
-      RWLock::Lock lock(mutex_, READ_LOCKER);
-      bool can_be_report = current_report_servers_.size() < report_block_queue_size_;
-      if (can_be_report)
-      {
-        std::vector<uint64_t>::iterator iter = 
-        std::find(current_report_servers_.begin(), current_report_servers_.end(), server);
-        can_be_report = current_report_servers_.end() == iter;
-        if (can_be_report)
+        ret = true;
+        std::map<uint64_t, int64_t>::iterator iter = current_report_servers_.begin();
+        for (; iter != current_report_servers_.end() && !ret; ++iter)
         {
-          iter = std::find(uncomplete_report_servers_.begin(), uncomplete_report_servers_.end(), server);
-          can_be_report = uncomplete_report_servers_.end() != iter;
+          ret = !iter->second < now;
         }
       }
-      return can_be_report;
+      return ret;
     }
 
     void HeartManagement::TimeReportBlockTimerTask::runTimerTask()
     {
-      TBSYS_LOG(DEBUG, "TimeReportBlockTimerTask::runTimerTask...........");
       manager_.get_layout_manager().register_report_servers();
     }
 

@@ -42,6 +42,8 @@ namespace tfs
       int32_t iret = TFS_ERROR;
       DataServerLiveStatus status = ds_info.status_;
 
+      manager_.get_heart_management().cleanup_expired_report_server(now); 
+
       //check dataserver status
       if (DATASERVER_STATUS_DEAD== status)//dataserver dead
       {
@@ -68,40 +70,16 @@ namespace tfs
             #if defined(TFS_NS_GTEST) || defined(TFS_NS_INTEGRATION) || defined(TFS_NS_DEBUG)
             server->dump();
             #endif
-            bool exist = manager_.get_heart_management().exist_uncomplete_report_server(ds_info.id_);
-            if (isnew)
+            if (!server->is_report_block_complete())
             {
-              if (!exist)
-              {
-                iret = manager_.get_heart_management().add_uncomplete_report_server(ds_info.id_);
-                if (TFS_SUCCESS == iret)
-                {
-                  need_sent_block = manager_.get_heart_management().can_be_report(ds_info.id_);
-                }
-              }
+              server->update(now);
+              need_sent_block = manager_.get_heart_management().add_report_server(ds_info.id_, now); 
             }
             else
             {
-              if (exist)
-              {
-                need_sent_block = manager_.get_heart_management().can_be_report(ds_info.id_);
-              }
-              else
-              {
-                #if !defined(TFS_NS_GTEST) && !defined(TFS_NS_INTEGRATION)
-                lay_out_manager_.touch(server,now);
-                #endif
-              }
-            }
-            if (need_sent_block)
-            {
-              manager_.get_heart_management().add_report_server(ds_info.id_);
-              manager_.get_heart_management().del_uncomplete_report_server(ds_info.id_);
-              server = lay_out_manager_.get_server(ds_info.id_);
-              if (NULL != server)
-              {
-                server->update(now);
-              }
+              #if !defined(TFS_NS_GTEST) && !defined(TFS_NS_INTEGRATION)
+              lay_out_manager_.touch(server,now);
+              #endif
             }
           }
         }
@@ -124,7 +102,7 @@ namespace tfs
     {
       int32_t iret = TFS_ERROR;
       ServerCollect* server = lay_out_manager_.get_server(ds_info.id_);
-      iret = NULL == server ? TFS_ERROR : TFS_SUCCESS;
+      iret = NULL == server ? EIXT_SERVER_OBJECT_NOT_FOUND : TFS_SUCCESS;
       if (TFS_SUCCESS == iret)
       {
         #if defined(TFS_NS_GTEST) || defined(TFS_NS_INTEGRATION) || defined(TFS_NS_DEBUG)
@@ -177,9 +155,15 @@ namespace tfs
             lay_out_manager_.touch(server,now);
             #endif
           }
+
+          iret = NULL == server ? EIXT_SERVER_OBJECT_NOT_FOUND : TFS_SUCCESS;
+          if (TFS_SUCCESS == iret)
+            server->set_report_block_complete_satus();
+          manager_.get_heart_management().del_report_server(ds_info.id_);
         }
         else
         {
+          iret = EXIT_UPDATE_RELATION_ERROR;
           TBSYS_LOG(ERROR, "%s", "update relationship failed between block and dataserver");
         }
       }
@@ -187,7 +171,6 @@ namespace tfs
       {
         TBSYS_LOG(ERROR, "ServerCollect object not found by : %s", CNetUtil::addrToString(ds_info.id_).c_str());
       }
-      manager_.get_heart_management().del_report_server(ds_info.id_);
       TBSYS_LOG(INFO, "dataserver: %s report block %s, iret: %d, blocks: %u, expires: %u",
           CNetUtil::addrToString(ds_info.id_).c_str(),
           TFS_SUCCESS == iret ? "successful" : "fail", iret, blocks.size(), expires.size());

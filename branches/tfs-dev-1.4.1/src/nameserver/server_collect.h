@@ -100,6 +100,17 @@ namespace tfs
         return (static_cast<int32_t>((id % common::SYSPARAM_NAMESERVER.group_count_)) == common::SYSPARAM_NAMESERVER.group_seq_);
       }
 
+      inline void set_report_block_complete_satus(const int8_t status = REPORT_BLOCK_STATUS_COMPLETE)
+      {
+        RWLock::Lock lock(*this, common::WRITE_LOCKER);
+        rb_status_ = status;
+      }
+
+      inline bool is_report_block_complete(void)
+      {
+        RWLock::Lock lock(*this, common::READ_LOCKER);
+        return rb_status_ == REPORT_BLOCK_STATUS_COMPLETE;
+      } 
       static const int8_t MULTIPLE;
       static const int8_t MAX_LOAD_DOUBLE;
       static const int8_t DUMP_FLAG_HOLD;
@@ -139,6 +150,7 @@ namespace tfs
       int32_t block_count_;
       int32_t write_index_;
       int8_t  status_;
+      int8_t  rb_status_;//report block complete status
       volatile uint8_t  elect_flag_;
     };
   }/** nameserver **/

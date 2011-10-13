@@ -2255,20 +2255,33 @@ namespace tfs
           if (RESP_HEART_MESSAGE == message->getPCode())
           {
             RespHeartMessage* resp_hb_msg = dynamic_cast<RespHeartMessage*>(message);
-            if (reset_need_send_blockinfo_flag
-                && need_send_blockinfo_[who])
+            int32_t status = resp_hb_msg->get_status();
+            if (HEART_MESSAGE_FAILED != status)
             {
-              need_send_blockinfo_[who] = false;
-            }
-            if (resp_hb_msg->get_status() == HEART_NEED_SEND_BLOCK_INFO)
-            {
-              TBSYS_LOG(DEBUG, "nameserver %d ask for send block\n", who + 1);
-              need_send_blockinfo_[who] = true;
-            }
-            else if (resp_hb_msg->get_status() == HEART_EXP_BLOCK_ID)
-            {
-              TBSYS_LOG(INFO, "nameserver %d ask for expire block\n", who + 1);
-              data_management_.add_new_expire_block(resp_hb_msg->get_expire_blocks(), NULL, resp_hb_msg->get_new_blocks());
+              if (reset_need_send_blockinfo_flag
+                  && need_send_blockinfo_[who])
+              {
+                need_send_blockinfo_[who] = false;
+              }
+              if (HEART_NEED_SEND_BLOCK_INFO == status)
+              {
+                TBSYS_LOG(DEBUG, "nameserver %d ask for send block\n", who + 1);
+                need_send_blockinfo_[who] = true;
+              }
+              else if (HEART_EXP_BLOCK_ID == status)
+              {
+                TBSYS_LOG(INFO, "nameserver %d ask for expire block\n", who + 1);
+                data_management_.add_new_expire_block(resp_hb_msg->get_expire_blocks(), NULL, resp_hb_msg->get_new_blocks());
+              }
+              else if (HEART_REPORT_BLOCK_SERVER_OBJECT_NOT_FOUND == status)
+              {
+                TBSYS_LOG(INFO, "nameserver %d ask for expire block\n", who + 1);
+                need_send_blockinfo_[who] = false;
+              }
+              else if (HEART_REPORT_UPDATE_RELATION_ERROR == status)
+              {
+                need_send_blockinfo_[who] = true;
+              }
             }
           }
         }

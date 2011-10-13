@@ -325,16 +325,12 @@ namespace tfs
 
     void LayoutManager::register_report_servers(void)
     {
-      std::vector<uint64_t> servers;
+      RWLock::Lock lock(server_mutex_, READ_LOCKER);
+      SERVER_MAP::const_iterator iter = servers_.begin();
+      for (; iter != servers_.end(); ++iter)
       {
-        RWLock::Lock lock(server_mutex_, READ_LOCKER);
-        SERVER_MAP::const_iterator iter = servers_.begin();
-        for (; iter != servers_.end(); ++iter)
-        {
-          servers.push_back(iter->first);
-        }
+        iter->second->set_report_block_complete_satus(REPORT_BLOCK_STATUS_UNCOMPLETE);
       }
-      manager_.get_heart_management().add_uncomplete_report_server(servers);
     }
 
     int LayoutManager::update_block_info(
@@ -922,27 +918,31 @@ namespace tfs
     {
       TBSYS_LOG(WARN, "server: %s exit", CNetUtil::addrToString(server).c_str());
       //remove ServerCollect
-      ScopedRWLock scoped_lock(server_mutex_, WRITE_LOCKER);
-      SERVER_MAP::iterator iter = servers_.find(server);
-      if (iter != servers_.end())
       {
-        std::vector<stat_int_t> stat(1, iter->second->block_count());
-        GFactory::get_stat_mgr().update_entry(GFactory::tfs_ns_stat_block_count_, stat, false);
-
-        //release all relations of blocks belongs to it
-        relieve_relation(iter->second, now);
-        iter->second->dead();
-        std::vector<ServerCollect*>::iterator where =
-          std::find(servers_index_.begin(), servers_index_.end(), iter->second);
-        if (where != servers_index_.end())
+        ScopedRWLock scoped_lock(server_mutex_, WRITE_LOCKER);
+        SERVER_MAP::iterator iter = servers_.find(server);
+        if (iter != servers_.end())
         {
-          servers_index_.erase(where);
+          std::vector<stat_int_t> stat(1, iter->second->block_count());
+          GFactory::get_stat_mgr().update_entry(GFactory::tfs_ns_stat_block_count_, stat, false);
+
+          //release all relations of blocks belongs to it
+          relieve_relation(iter->second, now);
+          iter->second->dead();
+          std::vector<ServerCollect*>::iterator where =
+            std::find(servers_index_.begin(), servers_index_.end(), iter->second);
+          if (where != servers_index_.end())
+          {
+            servers_index_.erase(where);
+          }
+          iter->second->set_dead_time(now);
+          GFactory::get_gc_manager().add(iter->second);
+          servers_.erase(iter);
+          --alive_server_size_;
         }
-        iter->second->set_dead_time(now);
-        GFactory::get_gc_manager().add(iter->second);
-        servers_.erase(iter);
-        --alive_server_size_;
       }
+
+      manager_.get_heart_management().del_report_server(server);
       return TFS_SUCCESS;
     }
 
@@ -1915,7 +1915,7 @@ namespace tfs
         int64_t adjust = 0;
         int64_t total = 0;
         {
-          bool has_report_server = manager_.get_heart_management().empty_uncomplete_report_server();
+          bool has_report_server = manager_.get_heart_management().empty_report_server(now);
           time_t wait_time = has_report_server ? SYSPARAM_NAMESERVER.build_plan_default_wait_time_ : interrupt
                                                ? 0  : !bwait 
                                                ? SYSPARAM_NAMESERVER.build_plan_default_wait_time_ : ngi.switch_time_ > now 

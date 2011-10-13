@@ -64,6 +64,7 @@ namespace tfs
       block_count_(info.block_count_),
       write_index_(0),
       status_(info.status_),
+      rb_status_(REPORT_BLOCK_STATUS_UNCOMPLETE),
       elect_flag_(1)
       {
       }

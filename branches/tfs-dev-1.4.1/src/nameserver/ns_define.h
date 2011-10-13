@@ -70,6 +70,12 @@ namespace tfs
       NS_SWITCH_FLAG_NO = 0x00,
       NS_SWITCH_FLAG_YES
     };
+
+    enum ReportBlockStatus
+    {
+      REPORT_BLOCK_STATUS_COMPLETE = 0x00,
+      REPORT_BLOCK_STATUS_UNCOMPLETE
+    };
     class LayoutManager;
     class GCObject
     {
