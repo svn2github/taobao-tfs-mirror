@@ -28,6 +28,7 @@ using namespace std;
 
 static TfsClient* g_tfs_client = NULL;
 static STR_FUNC_MAP g_cmd_map;
+static const int32_t CMD_MAX_LEN = 4096;
 
 int usage(const char *name);
 static void sign_handler(const int32_t sig);
