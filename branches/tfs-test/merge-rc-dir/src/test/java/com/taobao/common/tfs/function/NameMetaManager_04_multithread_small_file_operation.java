@@ -1,4 +1,4 @@
-package com.taobao.common.tfs.performance;
+package com.taobao.common.tfs.function;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -17,7 +17,7 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import com.taobao.common.tfs.tfsNameBaseCase;
+import com.taobao.common.tfs.function.tfsNameBaseCase;
 import com.taobao.common.tfs.namemeta.FileMetaInfo;
 import com.taobao.common.tfs.namemeta.NameMetaManager;
 
@@ -37,12 +37,12 @@ public class NameMetaManager_04_multithread_small_file_operation  extends  tfsNa
 	    @Before
 		public  void Before()  {
 			 	
-	    	Assert.assertTrue(MetaManager1.createDir(userId,"/public"));
+	    	Assert.assertTrue(MetaManager1.createDir(appId, userId,"/public"));
 		}
 		@After
 		public  void After() 
 		{
-			MetaManager1.rmDir(userId,"/public");
+			MetaManager1.createDir(appId, userId,"/public");
 		}
 		@Test
 		public void test_01_multi_threads_create_and_delete_different_small_files() throws Throwable {
@@ -202,7 +202,7 @@ public class NameMetaManager_04_multithread_small_file_operation  extends  tfsNa
 	         
 	         log.info("filepath"+filepath);
 	         
-			 ret = MetaManager1.createDir(userId,"/public/"+filepath);
+			 ret = MetaManager1.createDir(appId, userId,"/public/"+filepath);
 	         Assert.assertTrue(ret);
 	         
 			 ret = MetaManager1.saveFile(userId,resourcesPath+"1m.jpg","/public/"+filepath+"/newfile");
@@ -211,7 +211,7 @@ public class NameMetaManager_04_multithread_small_file_operation  extends  tfsNa
 			 ret = MetaManager1.rmFile(userId,"/public/"+filepath+"/newfile");
 			 Assert.assertTrue(ret);
 
-			 ret = MetaManager1.rmDir(userId,"/public/"+filepath);
+			 ret = MetaManager1.createDir(appId, userId,"/public/"+filepath);
 			 Assert.assertTrue(ret);
 
 		}
@@ -219,14 +219,14 @@ public class NameMetaManager_04_multithread_small_file_operation  extends  tfsNa
 		{    	 
 			 log.info("线程===" + Thread.currentThread().getId() + "执行开始");
 	         //cannot verify the result of every single step ,do that in the last step
-			 MetaManager1.createDir(userId,"/public/bus");
+			 MetaManager1.createDir(appId, userId,"/public/bus");
              
 			 MetaManager1.saveFile(userId,resourcesPath+"1m.jpg", "/public/bus/blogbus");
 
 			 
              MetaManager1.rmFile(userId,"/public/bus/blogbus");
 			 
-             MetaManager1.rmDir(userId,"/public/bus");
+             MetaManager1.createDir(appId, userId,"/public/bus");
 
 
 		}
@@ -239,7 +239,7 @@ public class NameMetaManager_04_multithread_small_file_operation  extends  tfsNa
 	         
 	         log.info("filepath"+filepath);
 	         
-			 ret = MetaManager1.createDir(userId,"/public/"+filepath);
+			 ret = MetaManager1.createDir(appId, userId,"/public/"+filepath);
 	         Assert.assertTrue(ret);
 	         
 			 ret = MetaManager1.createFile(userId,"/public/"+filepath+"/newfile");
@@ -251,7 +251,7 @@ public class NameMetaManager_04_multithread_small_file_operation  extends  tfsNa
 	         ret = MetaManager1.rmFile(userId,"/public/"+filepath+"/renamed");
 			 Assert.assertTrue(ret);
 
-			 ret = MetaManager1.rmDir(userId,"/public/"+filepath);
+			 ret = MetaManager1.createDir(appId, userId,"/public/"+filepath);
 			 Assert.assertTrue(ret);
 
 		
@@ -260,7 +260,7 @@ public class NameMetaManager_04_multithread_small_file_operation  extends  tfsNa
 		{    	 
 			 log.info("线程===" + Thread.currentThread().getId() + "执行开始");
 	        
-			 MetaManager1.createDir(userId,"/public/test");
+			 MetaManager1.createDir(appId, userId,"/public/test");
 			 
 			 MetaManager1.saveFile(userId,resourcesPath+"1m.jpg", "/public/test/bus");
 	         
@@ -268,7 +268,7 @@ public class NameMetaManager_04_multithread_small_file_operation  extends  tfsNa
 	         
 	         MetaManager1.rmFile(userId,"/public/test/renamed");
 	         
-	         MetaManager1.rmDir(userId,"/public/test");
+	         MetaManager1.createDir(appId, userId,"/public/test");
 		}
 		public void move_different_files() 
 		{    	 
@@ -280,7 +280,7 @@ public class NameMetaManager_04_multithread_small_file_operation  extends  tfsNa
 	         
 	         log.info("filepath"+filepath);
 	         
-			 ret = MetaManager1.createDir(userId,"/public"+"/"+filepath);
+			 ret = MetaManager1.createDir(appId, userId,"/public"+"/"+filepath);
 	         Assert.assertTrue(ret);
      
 			 ret = MetaManager1.createFile(userId,"/public"+"/"+filepath+"/"+filename);
@@ -292,7 +292,7 @@ public class NameMetaManager_04_multithread_small_file_operation  extends  tfsNa
 			 ret = MetaManager1.rmFile(userId,"/public/"+filename);
 	         Assert.assertTrue(ret);
 	         
-	         ret = MetaManager1.rmDir(userId,"/public/"+filepath);
+	         ret = MetaManager1.createDir(appId, userId,"/public/"+filepath);
 			 Assert.assertTrue(ret);
 
 	 	     
@@ -301,7 +301,7 @@ public class NameMetaManager_04_multithread_small_file_operation  extends  tfsNa
 		{    	 
 			 log.info("线程===" + Thread.currentThread().getId() + "执行开始");
 		        
-			 MetaManager1.createDir(userId,"/public/test");
+			 MetaManager1.createDir(appId, userId,"/public/test");
 			 
 			 MetaManager1.saveFile(userId,resourcesPath+"1m.jpg", "/public/test/bus");
 	         
@@ -309,7 +309,7 @@ public class NameMetaManager_04_multithread_small_file_operation  extends  tfsNa
 	         
 	         MetaManager1.rmFile(userId,"/public/bus");
 	         
-	         MetaManager1.rmDir(userId,"/public/test");
+	         MetaManager1.createDir(appId, userId,"/public/test");
 			 
 	     
 		}

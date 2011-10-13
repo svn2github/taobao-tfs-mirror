@@ -1,4 +1,4 @@
-package com.taobao.common.tfs.performance;
+package com.taobao.common.tfs.function;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -107,15 +107,15 @@ public class NameMetaManager_05_basic_large_file_operation extends  tfsNameBaseC
 		 boolean ret = false;
          String filepath1 = "/one";
 		
-		 ret = tfsManager.createDir(userId,filepath1);
+		 ret = tfsManager.createDir(appId, userId,filepath1);
          Assert.assertTrue(ret);
          
          String filepath2 = "/one/two";
-		 ret = tfsManager.createDir(userId,filepath2);
+		 ret = tfsManager.createDir(appId, userId,filepath2);
          Assert.assertTrue(ret);
          
          String filepath3 = "/one/two/three";
-		 ret = tfsManager.createDir(userId,filepath3);
+		 ret = tfsManager.createDir(appId, userId,filepath3);
          Assert.assertTrue(ret);
          
          ret = tfsManager.createFile(userId,filepath3+"/largefile");
@@ -154,13 +154,13 @@ public class NameMetaManager_05_basic_large_file_operation extends  tfsNameBaseC
          file_info_list = tfsManager.lsDir(userId,filepath3);
 		 Assert.assertEquals(file_info_list.size(), 0);
          
-         ret = tfsManager.rmDir(userId,filepath3);
+         ret = tfsManager.createDir(appId, userId,filepath3);
          Assert.assertTrue(ret);
          
-         ret = tfsManager.rmDir(userId,filepath2);
+         ret = tfsManager.createDir(appId, userId,filepath2);
          Assert.assertTrue(ret);
          
-         ret = tfsManager.rmDir(userId,filepath1);
+         ret = tfsManager.createDir(appId, userId,filepath1);
          Assert.assertTrue(ret);
    
 	}
@@ -171,15 +171,15 @@ public class NameMetaManager_05_basic_large_file_operation extends  tfsNameBaseC
 		 boolean ret = false;
          String filepath1 = "/one";
 		 
-		 ret = tfsManager.createDir(userId,filepath1);
+		 ret = tfsManager.createDir(appId, userId,filepath1);
          Assert.assertTrue(ret);
          
          String filepath2 = "/one/two";
-		 ret = tfsManager.createDir(userId,filepath2);
+		 ret = tfsManager.createDir(appId, userId,filepath2);
          Assert.assertTrue(ret);
          
          String filepath3 = "/one/two/three";
-		 ret = tfsManager.createDir(userId,filepath3);
+		 ret = tfsManager.createDir(appId, userId,filepath3);
          Assert.assertTrue(ret);
          
          ret = tfsManager.createFile(userId,filepath3+"/largefile");
@@ -220,13 +220,13 @@ public class NameMetaManager_05_basic_large_file_operation extends  tfsNameBaseC
          file_info_list = tfsManager.lsDir(userId,filepath3);
 		 Assert.assertEquals(file_info_list.size(), 0);
          
-         ret = tfsManager.rmDir(userId,filepath3);
+         ret = tfsManager.createDir(appId, userId,filepath3);
          Assert.assertTrue(ret);
          
-         ret = tfsManager.rmDir(userId,filepath2);
+         ret = tfsManager.createDir(appId, userId,filepath2);
          Assert.assertTrue(ret);
          
-         ret = tfsManager.rmDir(userId,filepath1);
+         ret = tfsManager.createDir(appId, userId,filepath1);
          Assert.assertTrue(ret);
    
 	}

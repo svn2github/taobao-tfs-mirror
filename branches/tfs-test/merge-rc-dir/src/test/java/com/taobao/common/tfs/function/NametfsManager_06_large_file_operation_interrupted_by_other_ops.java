@@ -1,4 +1,4 @@
-package com.taobao.common.tfs.performance;
+package com.taobao.common.tfs.function;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -108,7 +108,7 @@ public class NametfsManager_06_large_file_operation_interrupted_by_other_ops ext
          String filepath3 = "/one";
 		 
 		 
-		 ret = tfsManager.createDir(userId,filepath3);
+		 ret = tfsManager.createDir(appId, userId,filepath3);
          Assert.assertTrue(ret);
         
          ret = tfsManager.createFile(userId,filepath3+"/largefile");
@@ -167,7 +167,7 @@ public class NametfsManager_06_large_file_operation_interrupted_by_other_ops ext
          ret = tfsManager.rmFile(userId,filepath3+"/renamed");
          Assert.assertTrue(ret);
          
-         ret = tfsManager.rmDir(userId,filepath3);
+         ret = tfsManager.createDir(appId, userId,filepath3);
          Assert.assertTrue(ret);
          
 }
@@ -178,7 +178,7 @@ public class NametfsManager_06_large_file_operation_interrupted_by_other_ops ext
 		 boolean ret = false;
          String filepath3 = "/one";
 		
-		 ret = tfsManager.createDir(userId,filepath3);
+		 ret = tfsManager.createDir(appId, userId,filepath3);
          Assert.assertTrue(ret);
         
          ret = tfsManager.createFile(userId,filepath3+"/largefile");
@@ -237,7 +237,7 @@ public class NametfsManager_06_large_file_operation_interrupted_by_other_ops ext
          ret = tfsManager.rmFile(userId,"/largefile");
          Assert.assertTrue(ret);
          
-         ret = tfsManager.rmDir(userId,filepath3);
+         ret = tfsManager.createDir(appId, userId,filepath3);
          Assert.assertTrue(ret);
          
 }
