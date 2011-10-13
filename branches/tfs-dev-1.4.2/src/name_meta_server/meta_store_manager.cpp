@@ -135,7 +135,7 @@ namespace tfs
     {
       int64_t used_size = MemHelper::get_used_size();
       used_size = used_size >> 10;
-      TBSYS_LOG(DEBUG, "do_lru_gc");
+      //TBSYS_LOG(DEBUG, "do_lru_gc");
       BaseStrategy<AppIdUid, CacheRootNode> strategy(lru_);
       vector<CacheRootNode*> v_root_node;
       if ((double)used_size/(double)cache_size_ > (1 - ratio/2))
@@ -146,7 +146,7 @@ namespace tfs
           TBSYS_LOG(ERROR, "lru gc error");
         }
       }
-      TBSYS_LOG(DEBUG, "gc %d root", v_root_node.size());
+      //TBSYS_LOG(DEBUG, "gc %d root", v_root_node.size());
       vector<CacheRootNode*>::iterator it = v_root_node.begin();
       for (; it != v_root_node.end(); it++)
       {

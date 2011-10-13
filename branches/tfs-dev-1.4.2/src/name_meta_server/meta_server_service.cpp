@@ -712,6 +712,8 @@ namespace tfs
       char name[MAX_FILE_PATH_LEN];
       int32_t name_len = 0;
       int ret = TFS_SUCCESS;
+      TBSYS_LOG(DEBUG, "write file_path %s frag_info:", file_path);
+      frag_info.dump();
 
       tbsys::CThreadMutex* mutex = store_manager_.get_mutex(app_id, uid);
       tbsys::CThreadGuard mutex_guard(mutex);
@@ -800,11 +802,13 @@ namespace tfs
               else
               {
                 int64_t orig_last_offset = v_meta_info_it->get_last_offset();
-                while(write_frag_meta_it != frag_info.v_frag_meta_.end())//补全空洞
+                while(write_frag_meta_it != v_frag_meta.end())//补全空洞
                 {
                   if (write_frag_meta_it->offset_ >= orig_last_offset)
                   {
-                    ret = TFS_ERROR;
+                    TBSYS_LOG(DEBUG, "write_frag_meta_it->offset_ %"PRI64_PREFIX"d orig_last_offset %"PRI64_PREFIX"d",
+                        write_frag_meta_it->offset_, orig_last_offset);
+                    ret = EXIT_WRITE_EXIST_POS_ERROR;
                     break;
                   }
                   v_meta_info_it->frag_info_.v_frag_meta_.push_back(*write_frag_meta_it);
