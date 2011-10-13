@@ -11,6 +11,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+import com.taobao.common.tfs.function.tfsNameBaseCase;
 import com.taobao.common.tfs.namemeta.FileMetaInfo;
 
 
