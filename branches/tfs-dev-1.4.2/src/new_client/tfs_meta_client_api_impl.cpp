@@ -117,6 +117,7 @@ namespace tfs
             std::vector<common::FileMetaInfo>& v_file_meta_info, bool is_recursive)
      {
        uint64_t meta_server_id = get_meta_server_id(app_id, uid);
+       v_file_meta_info.clear();
        return ls_dir(meta_server_id, app_id, uid, dir_path, -1, v_file_meta_info, is_recursive);
      }
 
@@ -135,6 +136,7 @@ namespace tfs
         if (v_file_meta_info.size() <= 0)
         {
           TBSYS_LOG(WARN, "ls file returns no file meta info, file_path: %s", file_path);
+          ret = EXIT_TARGET_EXIST_ERROR;
         }
         else
         {

@@ -57,7 +57,7 @@ int TfsClientImpl::initialize(const char* ns_addr, const int32_t cache_time, con
   tbutil::Mutex::Lock lock(mutex_);
   if (is_init_)
   {
-    TBSYS_LOG(INFO, "tfsclient already initialized");
+    //TBSYS_LOG(INFO, "tfsclient already initialized");
   }
   else if (cache_items <= 0 || cache_time <= 0)
   {
@@ -82,7 +82,7 @@ int TfsClientImpl::initialize(const char* ns_addr, const int32_t cache_time, con
     }
   }
 
-  if (TFS_SUCCESS == ret)
+  if (TFS_SUCCESS == ret && !is_init_)
   {
     set_cache_time(cache_time);
     set_cache_items(cache_items);
