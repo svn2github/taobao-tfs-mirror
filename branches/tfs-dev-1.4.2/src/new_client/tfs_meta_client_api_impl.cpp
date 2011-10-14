@@ -393,7 +393,10 @@ namespace tfs
           }
           while(left_length > 0);
         }
-        ret = length - left_length;
+        if (TFS_SUCCESS == ret)
+        {
+          ret = length - left_length;
+        }
       }
       return ret;
     }

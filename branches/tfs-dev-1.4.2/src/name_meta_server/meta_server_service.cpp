@@ -1132,13 +1132,13 @@ namespace tfs
       return ret;
     }
 
-    //get parent's info return TFS_ERROR if we can not find parent
+    //get parent's info return EXIT_PARENT_EXIST_ERROR if we can not find parent
     int MetaServerService::get_p_meta_info(CacheRootNode* root_node,
         const std::vector<std::string>& v_name,
         CacheDirMetaNode*& out_pp_dir_node,
         CacheDirMetaNode*& out_p_dir_node)
     {
-      int ret = EXIT_PARENT_EXIST_ERROR;
+      int ret = TFS_SUCCESS;
       assert(NULL != root_node);
       int32_t depth = get_depth(v_name);
 
@@ -1404,9 +1404,9 @@ namespace tfs
         {
           if (frag_info.v_frag_meta_[i].offset_ < last_offset)
           {
-            TBSYS_LOG(ERROR, "frag info have some error, %"PRI64_PREFIX"d < %"PRI64_PREFIX"d",
+            TBSYS_LOG(WARN, "frag info have some error, %"PRI64_PREFIX"d < %"PRI64_PREFIX"d",
                 frag_info.v_frag_meta_[i].offset_, last_offset);
-            ret = TFS_ERROR;
+            ret = EXIT_WRITE_EXIST_POS_ERROR;
             break;
           }
 
