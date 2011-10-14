@@ -217,10 +217,14 @@ namespace tfs
     int64_t NameMetaClientImpl::read(const char* ns_addr, int64_t app_id, int64_t uid,
         const char* file_path, void* buffer, const int64_t offset, const int64_t length)
     {
-      int ret = TFS_SUCCESS;
+      int64_t ret = TFS_SUCCESS;
       if (NULL == file_path)
       {
         ret = EXIT_INVALID_FILE_NAME;
+      }
+      if (offset < 0 )
+      {
+        ret = EXIT_INVALID_ARGU_ERROR;
       }
       if (TFS_SUCCESS == ret)
       {
@@ -253,7 +257,7 @@ namespace tfs
           // file not exist
           if (tmp_ret != TFS_SUCCESS && left_length == length)
           {
-            ret = TFS_ERROR;
+            ret = EXIT_TARGET_EXIST_ERROR;
             break;
           }
           frag_info.dump();
@@ -261,6 +265,7 @@ namespace tfs
           if (frag_info.v_frag_meta_.size() <= 0)
           {
             TBSYS_LOG(ERROR, "get frag info failed");
+            ret = EXIT_TARGET_EXIST_ERROR;
             break;
           }
 
@@ -271,7 +276,7 @@ namespace tfs
           if (read_length < 0)
           {
             TBSYS_LOG(WARN, "read data from tfs failed, read_length: %"PRI64_PREFIX"d", read_length);
-            ret = TFS_ERROR;
+            ret = read_length;
             break;
           }
           // one tfs file read data error, should break
@@ -287,7 +292,7 @@ namespace tfs
           cur_pos += read_length;
         }
         while((left_length > 0) && still_have);
-        ret = TFS_SUCCESS? (length - left_length): -1;
+        ret = TFS_SUCCESS? (length - left_length): ret;
       }
       return ret;
     }
@@ -323,14 +328,17 @@ namespace tfs
         uint64_t meta_server_id = get_meta_server_id(app_id, uid);
         if (!is_valid_file_path(file_path) || (offset < 0 && offset != -1))
         {
+          ret = EXIT_INVALID_ARGU_ERROR;
           TBSYS_LOG(ERROR, "file path is invalid or offset less then 0, offset: %"PRI64_PREFIX"d", offset);
         }
         else if (buffer == NULL || length < 0)
         {
+          ret = EXIT_INVALID_ARGU_ERROR;
           TBSYS_LOG(ERROR, "invalid buffer, length %"PRI64_PREFIX"d", length);
         }
         else if((cluster_id = get_cluster_id(meta_server_id, app_id, uid, file_path)) == -1)
         {
+          ret = EXIT_INVALID_FILE_NAME;
           TBSYS_LOG(ERROR, "get cluster id error, cluster_id: %d", cluster_id);
         }
         else
@@ -472,6 +480,10 @@ namespace tfs
       {
         TBSYS_LOG(ERROR, "local file is null");
         ret = EXIT_INVALID_ARGU_ERROR;
+      }
+      else if (NULL == tfs_name)
+      {
+        ret = EXIT_INVALID_FILE_NAME;
       }
       else if ((fd = ::open(local_file, O_WRONLY|O_CREAT, 0644)) < 0)
       {
