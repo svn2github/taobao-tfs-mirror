@@ -445,80 +445,87 @@ namespace tfs
       {
         TBSYS_LOG(INFO, "file_path(%s) is invalid", file_path);
       }
-      tbsys::CThreadMutex* mutex = store_manager_.get_mutex(app_id, uid);
-      tbsys::CThreadGuard mutex_guard(mutex);
-      CacheRootNode* root_node = store_manager_.get_root_node(app_id, uid);
-      if (NULL == root_node)
+      if (TFS_SUCCESS == ret && NORMAL_FILE == type && 0 == get_depth(v_name))
       {
-        TBSYS_LOG(ERROR, "get NULL root node");
-        ret = TFS_ERROR;
+        ret = EXIT_INVALID_FILE_NAME;
       }
-      else
+      if (TFS_SUCCESS == ret)
       {
-        if (TFS_SUCCESS == ret)
+        tbsys::CThreadMutex* mutex = store_manager_.get_mutex(app_id, uid);
+        tbsys::CThreadGuard mutex_guard(mutex);
+        CacheRootNode* root_node = store_manager_.get_root_node(app_id, uid);
+        if (NULL == root_node)
         {
-          if (1 == get_depth(v_name) && NULL == root_node->dir_meta_)
-          {
-            TBSYS_LOG(DEBUG, "create top dir. appid: %"PRI64_PREFIX"d, uid: %"PRI64_PREFIX"d, filepath: %s",
-                app_id, uid, file_path);
-            ret = store_manager_.create_top_dir(app_id, uid, root_node);
-          }
+          TBSYS_LOG(ERROR, "get NULL root node");
+          ret = TFS_ERROR;
         }
-        if (TFS_SUCCESS == ret)
+        else
         {
-          ret = get_p_meta_info(root_node, v_name, p_p_dir_node, p_dir_node);
-          if (ret != TFS_SUCCESS)
+          if (TFS_SUCCESS == ret)
           {
-            TBSYS_LOG(INFO, "get info fail. appid: %"PRI64_PREFIX"d, uid: %"PRI64_PREFIX"d, %s",
-                app_id, uid, file_path);
-          }
-          else
-          {
-            assert(NULL != p_dir_node);
-            if (NULL != p_p_dir_node)
+            if (1 == get_depth(v_name) && NULL == root_node->dir_meta_)
             {
-              pp_id = p_p_dir_node->id_;
+              TBSYS_LOG(DEBUG, "create top dir. appid: %"PRI64_PREFIX"d, uid: %"PRI64_PREFIX"d, filepath: %s",
+                  app_id, uid, file_path);
+              ret = store_manager_.create_top_dir(app_id, uid, root_node);
             }
-          }
-        }
-
-        if (TFS_SUCCESS == ret)
-        {
-          PROFILER_BEGIN("insert");
-          ret = get_name(v_name[get_depth(v_name)].c_str(), name, MAX_FILE_PATH_LEN, name_len);
-          if (TFS_SUCCESS != ret)
-          {
-            TBSYS_LOG(INFO, "get name fail. ret: %d", ret);
-          }
-          void* ret_node = NULL;
-          store_manager_.select(app_id, uid, p_dir_node, name,
-              false, ret_node);
-          if (NULL != ret_node)
-          {
-            TBSYS_LOG(INFO, "name is a exist dir");
-            ret = EXIT_TARGET_EXIST_ERROR;
-          }
-          store_manager_.select(app_id, uid, p_dir_node, name,
-              true, ret_node);
-          if (NULL != ret_node)
-          {
-            TBSYS_LOG(INFO, "name is a exist file");
-            ret = EXIT_TARGET_EXIST_ERROR;
           }
           if (TFS_SUCCESS == ret)
           {
-            ret = store_manager_.insert(app_id, uid, pp_id, p_dir_node, name, FileName::length(name), type);
-            if (TFS_SUCCESS != ret)
+            ret = get_p_meta_info(root_node, v_name, p_p_dir_node, p_dir_node);
+            if (ret != TFS_SUCCESS)
             {
-              TBSYS_LOG(ERROR, "create fail: %s, type: %d, ret: %d", file_path, type, ret);
+              TBSYS_LOG(INFO, "get info fail. appid: %"PRI64_PREFIX"d, uid: %"PRI64_PREFIX"d, %s",
+                  app_id, uid, file_path);
+            }
+            else
+            {
+              assert(NULL != p_dir_node);
+              if (NULL != p_p_dir_node)
+              {
+                pp_id = p_p_dir_node->id_;
+              }
             }
           }
-          PROFILER_END();
-        }
 
-        TBSYS_LOG(DEBUG, "create %s, type: %d, appid: %"PRI64_PREFIX"d, uid: %"PRI64_PREFIX"d, filepath: %s",
-            TFS_SUCCESS == ret ? "success" : "fail", type, app_id, uid, file_path);
-        store_manager_.revert_root_node(app_id, uid);
+          if (TFS_SUCCESS == ret)
+          {
+            PROFILER_BEGIN("insert");
+            ret = get_name(v_name[get_depth(v_name)].c_str(), name, MAX_FILE_PATH_LEN, name_len);
+            if (TFS_SUCCESS != ret)
+            {
+              TBSYS_LOG(INFO, "get name fail. ret: %d", ret);
+            }
+            void* ret_node = NULL;
+            store_manager_.select(app_id, uid, p_dir_node, name,
+                false, ret_node);
+            if (NULL != ret_node)
+            {
+              TBSYS_LOG(INFO, "name is a exist dir");
+              ret = EXIT_TARGET_EXIST_ERROR;
+            }
+            store_manager_.select(app_id, uid, p_dir_node, name,
+                true, ret_node);
+            if (NULL != ret_node)
+            {
+              TBSYS_LOG(INFO, "name is a exist file");
+              ret = EXIT_TARGET_EXIST_ERROR;
+            }
+            if (TFS_SUCCESS == ret)
+            {
+              ret = store_manager_.insert(app_id, uid, pp_id, p_dir_node, name, FileName::length(name), type);
+              if (TFS_SUCCESS != ret)
+              {
+                TBSYS_LOG(ERROR, "create fail: %s, type: %d, ret: %d", file_path, type, ret);
+              }
+            }
+            PROFILER_END();
+          }
+
+          TBSYS_LOG(DEBUG, "create %s, type: %d, appid: %"PRI64_PREFIX"d, uid: %"PRI64_PREFIX"d, filepath: %s",
+              TFS_SUCCESS == ret ? "success" : "fail", type, app_id, uid, file_path);
+          store_manager_.revert_root_node(app_id, uid);
+        }
       }
       PROFILER_DUMP();
       PROFILER_STOP();
@@ -1080,7 +1087,7 @@ namespace tfs
         const std::vector<std::string>& v_name,
         MetaInfo& out_meta_info)
     {
-      int ret = TFS_ERROR;
+      int ret = EXIT_PARENT_EXIST_ERROR;
       int32_t depth = get_depth(v_name);
 
       char name[MAX_FILE_PATH_LEN];
@@ -1131,7 +1138,7 @@ namespace tfs
         CacheDirMetaNode*& out_pp_dir_node,
         CacheDirMetaNode*& out_p_dir_node)
     {
-      int ret = TFS_SUCCESS;
+      int ret = EXIT_PARENT_EXIST_ERROR;
       assert(NULL != root_node);
       int32_t depth = get_depth(v_name);
 
@@ -1325,7 +1332,7 @@ namespace tfs
 
     int MetaServerService::parse_name(const char* file_path, std::vector<std::string>& v_name)
     {
-      int ret = TFS_ERROR;
+      int ret = EXIT_INVALID_FILE_NAME;
 
       if ((file_path[0] != '/') || (strlen(file_path) > (MAX_FILE_PATH_LEN -1)))
       {

@@ -138,6 +138,8 @@ namespace tfs
     const int32_t EXIT_CLUSTER_ID_ERROR = -14006;
     const int32_t EXIT_FRAG_META_OVERFLOW_ERROR = -14007;
     const int32_t EXIT_UPDATE_FRAG_INFO_ERROR = -14008;
+    const int32_t EXIT_WRITE_EXIST_POS_ERROR = -14009;
+    const int32_t EXIT_INVALID_FILE_NAME = 14010;
 
     const int32_t EXIT_REGISTER_ERROR = -15000;// server register fail
     const int32_t EXIT_REGISTER_EXIST_ERROR = -15001;// server register fail, server is existed

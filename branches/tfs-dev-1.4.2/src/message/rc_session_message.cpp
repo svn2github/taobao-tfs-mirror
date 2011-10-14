@@ -45,7 +45,7 @@ namespace tfs
       else
       {
         length_ = strlen(app_key) + 1; // add '\0'
-        if (length_ > MAX_PATH_LENGTH)
+        if (length_ >= MAX_PATH_LENGTH)
         {
           ret = EXIT_INVALID_ARGU;
           TBSYS_LOG(ERROR, "set_app_key fail. app_key: %s, len: %d, ret: %d", app_key, length_, ret);
@@ -66,15 +66,16 @@ namespace tfs
     int ReqRcLoginMessage::serialize(common::Stream& output) const
     {
       int ret = TFS_SUCCESS;
-      if (length_ > 0)
+      ret = output.set_int32(length_);
+      if (TFS_SUCCESS == ret)
       {
-        ret = output.set_int32(length_);
+        if (length_ > 0)
+        {
+          ret = output.set_bytes(app_key_, length_);
+        }
         if (TFS_SUCCESS == ret)
         {
-          if ((ret = output.set_bytes(app_key_, length_)) == TFS_SUCCESS)
-          {
-            ret = output.set_int64(app_ip_);
-          }
+          ret = output.set_int64(app_ip_);
         }
       }
       return ret;
@@ -85,7 +86,7 @@ namespace tfs
       int ret = input.get_int32(&length_);
       if (TFS_SUCCESS == ret)
       {
-        if (length_ > MAX_PATH_LENGTH || length_ <= 0)
+        if (length_ >= MAX_PATH_LENGTH || length_ <= 0)
         {
           ret = TFS_ERROR;
           TBSYS_LOG(ERROR, "error msg length: %d invalid. define length: %d", length_, MAX_ERROR_MSG_LENGTH);

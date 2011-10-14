@@ -255,17 +255,17 @@ namespace tfs
 
     void FragInfo::dump() const
     {
-      fprintf(stderr, "cluster_id: %d\n", cluster_id_);
-      fprintf(stderr, "had_been_split: %d\n", had_been_split_);
-      fprintf(stderr, "frag_size : %zd\n", v_frag_meta_.size());
+      TBSYS_LOG(DEBUG, "cluster_id: %d\n", cluster_id_);
+      TBSYS_LOG(DEBUG, "had_been_split: %d\n", had_been_split_);
+      TBSYS_LOG(DEBUG, "frag_size : %zd\n", v_frag_meta_.size());
 
       std::vector<FragMeta>::const_iterator iter = v_frag_meta_.begin();
       for (; iter != v_frag_meta_.end(); iter++)
       {
-        fprintf(stderr, "offset: %"PRI64_PREFIX"d  ", (*iter).offset_);
-        fprintf(stderr, "file_id: %"PRI64_PREFIX"u  ", (*iter).file_id_);
-        fprintf(stderr, "size: %d  ", (*iter).size_);
-        fprintf(stderr, "block_id: %u\n", (*iter).block_id_);
+        TBSYS_LOG(DEBUG, "offset: %"PRI64_PREFIX"d  ", (*iter).offset_);
+        TBSYS_LOG(DEBUG, "file_id: %"PRI64_PREFIX"u  ", (*iter).file_id_);
+        TBSYS_LOG(DEBUG, "size: %d  ", (*iter).size_);
+        TBSYS_LOG(DEBUG, "block_id: %u\n", (*iter).block_id_);
       }
     }
 
