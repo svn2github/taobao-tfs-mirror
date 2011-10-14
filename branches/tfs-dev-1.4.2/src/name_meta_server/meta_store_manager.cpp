@@ -28,14 +28,15 @@ namespace tfs
   {
     using namespace std;
     MetaStoreManager::MetaStoreManager():
-      cache_size_(1024), gc_ratio_(0.1), mutex_count_(16), app_id_uid_mutex_(NULL)
+      cache_size_(1024), cache_get_times_(0), cache_hit_times_(0),
+      gc_ratio_(0.1), mutex_count_(16), app_id_uid_mutex_(NULL)
     {
        database_pool_ = new DataBasePool();
-       top_dir_name_[0] = 1; 
-       top_dir_name_[1] = '/'; 
+       top_dir_name_[0] = 1;
+       top_dir_name_[1] = '/';
        top_dir_size_ = 2;
     }
-    int MetaStoreManager::init(const int32_t pool_size, const int32_t cache_size, 
+    int MetaStoreManager::init(const int32_t pool_size, const int32_t cache_size,
         const double gc_ratio, const int32_t mutex_count)
     {
       char* conn_str[DataBasePool::MAX_POOL_SIZE];
@@ -162,6 +163,7 @@ namespace tfs
       {
         tbsys::CThreadGuard mutex_guard(&lru_mutex_);
         root_node = lru_.get(lru_key);
+        cache_get_times_++;
       }
       if (NULL == root_node)
       {
@@ -189,6 +191,10 @@ namespace tfs
             MetaCacheHelper::free(tmp_root_node);
           }
         }
+      }
+      else
+      {
+        cache_hit_times_++;
       }
       return root_node;
     }
@@ -326,7 +332,7 @@ namespace tfs
           int32_t name_end_len = 0;
           MetaServerService::next_file_name_base_on(name_end, name_end_len, name, name_len);
           TBSYS_LOG(DEBUG, "ls %ld %ld %ld %.*s", app_id, uid, p_dir_node->id_, name_len-1, name+1);
-          ret = ls(app_id, uid, p_dir_node->id_, name, name_len, 
+          ret = ls(app_id, uid, p_dir_node->id_, name, name_len,
               name_end, name_end_len,
               type != DIRECTORY, out_v_meta_info, still_have);
           if (TFS_SUCCESS == ret )
@@ -420,8 +426,8 @@ namespace tfs
     }
 
     int MetaStoreManager::update(const int64_t app_id, const int64_t uid,
-        const int64_t s_ppid, CacheDirMetaNode* s_p_dir_node, 
-        const int64_t d_ppid, CacheDirMetaNode* d_p_dir_node, 
+        const int64_t s_ppid, CacheDirMetaNode* s_p_dir_node,
+        const int64_t d_ppid, CacheDirMetaNode* d_p_dir_node,
         const char* s_name, const char* d_name,
         const common::FileType type)
     {
@@ -449,7 +455,7 @@ namespace tfs
         if (TFS_SUCCESS == ret)
         {
           //db_update
-          ret = update(app_id, uid, s_ppid, 
+          ret = update(app_id, uid, s_ppid,
               s_p_dir_node->id_, s_p_dir_node->name_, FileName::length(s_p_dir_node->name_),
               d_ppid, d_p_dir_node->id_, d_p_dir_node->name_, FileName::length(d_p_dir_node->name_),
               s_name, FileName::length(s_name),
@@ -545,7 +551,7 @@ namespace tfs
       return ret;
     }
 
-    int MetaStoreManager::get_file_frag_info(const int64_t app_id, const int64_t uid, 
+    int MetaStoreManager::get_file_frag_info(const int64_t app_id, const int64_t uid,
         CacheDirMetaNode* p_dir_node, CacheFileMetaNode* file_node,
         const int64_t offset, std::vector<common::MetaInfo>& out_v_meta_info,
         int32_t& cluster_id, int64_t& last_offset)
@@ -561,14 +567,14 @@ namespace tfs
       int64_t pos = 0;
       meta_info.frag_info_.deserialize(file_node->meta_info_, MAX_FRAG_INFO_SIZE, pos);
       cluster_id = meta_info.frag_info_.cluster_id_;
-      if ((offset >= meta_info.frag_info_.get_last_offset() || -1 == offset) 
+      if ((offset >= meta_info.frag_info_.get_last_offset() || -1 == offset)
           && meta_info.frag_info_.had_been_split_)
       {
         int32_t name_len = FileName::length(file_node->name_);
-        ret = get_meta_info_from_db(app_id, uid, p_dir_node->id_, 
+        ret = get_meta_info_from_db(app_id, uid, p_dir_node->id_,
             file_node->name_, name_len, offset, out_v_meta_info, cluster_id, last_offset);
       }
-      else 
+      else
       {
         meta_info.file_info_.name_.assign(file_node->name_, FileName::length(file_node->name_));
         meta_info.file_info_.ver_no_ = file_node->version_;
@@ -641,20 +647,20 @@ namespace tfs
       }
       else
       {
-        //make name_end [len]xxxxxxxx[max_offset] 
+        //make name_end [len]xxxxxxxx[max_offset]
         memcpy(name_end, name, name_len);
         char* p = name_end + FileName::length(name);
         int32_t name_end_len = name_len;
         name_end_len = FileName::length(name) + 8;
         Serialization::int64_to_char(p, 8, -1L);
-        ret = ls(app_id, uid, pid, name, name_len, name_end, name_end_len, 
+        ret = ls(app_id, uid, pid, name, name_len, name_end, name_end_len,
             is_file, out_v_meta_info, still_have);
       }
       return ret;
     }
 
-    int MetaStoreManager::ls(const int64_t app_id, const int64_t uid, const int64_t pid, 
-        const char* name, const int32_t name_len, 
+    int MetaStoreManager::ls(const int64_t app_id, const int64_t uid, const int64_t pid,
+        const char* name, const int32_t name_len,
         const char* name_end, const int32_t name_end_len,
         const bool is_file, std::vector<MetaInfo>& out_v_meta_info, bool& still_have)
     {
@@ -676,7 +682,7 @@ namespace tfs
       database_helper = database_pool_->get(database_pool_->get_hash_flag(app_id, uid));
       if (NULL != database_helper)
       {
-        ret = database_helper->ls_meta_info(out_v_meta_info, app_id, uid, real_pid, 
+        ret = database_helper->ls_meta_info(out_v_meta_info, app_id, uid, real_pid,
             name, name_len, name_end, name_end_len);
         database_pool_->release(database_helper);
       }
@@ -928,7 +934,7 @@ namespace tfs
       {
         tmp_v_meta_info.clear();
         still_have = false;
-        ret = ls(app_id, uid, p_dir_node->id_, 
+        ret = ls(app_id, uid, p_dir_node->id_,
             name, name_len, NULL, 0,
             my_file_type != DIRECTORY, tmp_v_meta_info, still_have);
 
@@ -985,7 +991,7 @@ namespace tfs
       for (; meta_info_begin != meta_info_end; meta_info_begin++)
       {
         CacheFileMetaNode* file_meta;
-        ret = MetaCacheHelper::find_file(p_dir_node, 
+        ret = MetaCacheHelper::find_file(p_dir_node,
             meta_info_begin->file_info_.name_.c_str(), file_meta);
         if (TFS_SUCCESS != ret)
         {
@@ -1001,7 +1007,7 @@ namespace tfs
             file_meta = (CacheFileMetaNode*)malloc(sizeof(CacheFileMetaNode), CACHE_FILE_META_NODE);
             assert(NULL != file_meta);
             file_meta->name_ = (char*)malloc(meta_info_begin->file_info_.name_.length());
-            memcpy(file_meta->name_, meta_info_begin->file_info_.name_.c_str(), 
+            memcpy(file_meta->name_, meta_info_begin->file_info_.name_.c_str(),
                 meta_info_begin->file_info_.name_.length());
             file_meta->version_ = meta_info_begin->file_info_.ver_no_;
 
@@ -1011,7 +1017,7 @@ namespace tfs
             buff_len = meta_info_begin->frag_info_.get_length();
             file_meta->meta_info_ = (char*)malloc(buff_len);
             assert(NULL != file_meta->meta_info_);
-            assert(TFS_SUCCESS == 
+            assert(TFS_SUCCESS ==
                 meta_info_begin->frag_info_.serialize(file_meta->meta_info_, buff_len, pos));
 
             ret = MetaCacheHelper::insert_file(p_dir_node, file_meta);
@@ -1039,7 +1045,7 @@ namespace tfs
       for (; meta_info_begin != meta_info_end; meta_info_begin++)
       {
         CacheDirMetaNode* dir_meta;
-        ret = MetaCacheHelper::find_dir(p_dir_node, 
+        ret = MetaCacheHelper::find_dir(p_dir_node,
             meta_info_begin->file_info_.name_.c_str(), dir_meta);
         if (TFS_SUCCESS != ret)
         {
@@ -1052,7 +1058,7 @@ namespace tfs
           assert(NULL != dir_meta);
           dir_meta->id_= meta_info_begin->file_info_.id_;
           dir_meta->name_ = (char*)malloc(meta_info_begin->file_info_.name_.length());
-          memcpy(dir_meta->name_, meta_info_begin->file_info_.name_.c_str(), 
+          memcpy(dir_meta->name_, meta_info_begin->file_info_.name_.c_str(),
               meta_info_begin->file_info_.name_.length());
 
           dir_meta->flag_ = 0;

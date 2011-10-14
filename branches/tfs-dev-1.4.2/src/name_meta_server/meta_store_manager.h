@@ -104,6 +104,9 @@ namespace tfs
             const char* pname, const int64_t pname_len, const int64_t pid, const int64_t id,
             const char* name, const int64_t name_len,
             const common::FileType type);
+        uint64_t get_cache_get_times() const {return cache_get_times_;}
+        uint64_t get_cache_hit_times() const {return cache_hit_times_;}
+
       private:
         void* malloc(const int64_t size, const int32_t type = CACHE_NONE_NODE);
         int ls_top_dir(const int64_t app_id, const int64_t uid, CacheRootNode* root_node,
@@ -125,6 +128,8 @@ namespace tfs
         char top_dir_name_[10];
         int32_t top_dir_size_;
         int32_t cache_size_;   //MB
+        uint64_t cache_get_times_;
+        uint64_t cache_hit_times_;
         double gc_ratio_;
         DISALLOW_COPY_AND_ASSIGN(MetaStoreManager);
         DataBasePool* database_pool_;
