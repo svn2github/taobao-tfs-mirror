@@ -353,18 +353,33 @@ namespace tfs
             }
             else
             {
+              int64_t file_size = file_info.size_;
+              int32_t file_create_time = file_info.create_time_;
+              int32_t file_modify_time = file_info.modify_time_;
               int64_t buff_len = 0;
+              //calculate file info;
+              MetaInfo last_meta_info;
+              vector<MetaInfo> v_meta_info;
+              vector<MetaInfo>::iterator tmp_v_meta_info_it = out_v_meta_info.begin();
+              calculate_file_meta_info(tmp_v_meta_info_it, out_v_meta_info.end(),
+                  true, v_meta_info, last_meta_info);
+              if (!v_meta_info.empty())
+              {
+                file_size = v_meta_info[0].file_info_.size_;
+                file_create_time = v_meta_info[0].file_info_.create_time_;
+                file_modify_time = v_meta_info[0].file_info_.modify_time_;
+              }
               //find file info
               CacheFileMetaNode* file_node;
               ret = MetaCacheHelper::find_file(p_dir_node, name, file_node);
               if (TFS_SUCCESS == ret && NULL != file_node)
               {
-                file_node->size_ = -1;
+                file_node->size_ = file_size;
+                file_node->create_time_ = file_create_time;
+                file_node->modify_time_ = file_modify_time;
                 //replace info if cur is the first line
                 if (FileName::length(name) == name_len)
                 {
-                  file_node->create_time_ = file_info.create_time_;
-                  file_node->modify_time_ = file_info.modify_time_;
                   file_node->version_ = file_info.ver_no_;
                   buff_len = out_v_meta_info[0].frag_info_.get_length();
                   MemHelper::free(file_node->meta_info_);
@@ -379,9 +394,9 @@ namespace tfs
               {
                 file_node =
                   static_cast<CacheFileMetaNode*>(malloc(sizeof(CacheFileMetaNode), CACHE_FILE_META_NODE));
-                file_node->size_ = -1;
-                file_node->create_time_ = file_info.create_time_;
-                file_node->modify_time_ = file_info.modify_time_;
+                file_node->size_ = file_size;
+                file_node->create_time_ = file_create_time;
+                file_node->modify_time_ = file_modify_time;
                 buff_len = out_v_meta_info[0].frag_info_.get_length();
                 file_node->meta_info_ = (char*)malloc(buff_len);
                 assert(NULL != file_node->meta_info_);
@@ -1055,6 +1070,63 @@ namespace tfs
         dir_meta->version_ = meta_info_begin->file_info_.ver_no_;
       }
       return ret;
+    }
+
+    void MetaStoreManager::calculate_file_meta_info(std::vector<common::MetaInfo>::iterator& meta_info_begin,
+        const std::vector<common::MetaInfo>::iterator meta_info_end,
+        const bool ls_file,
+        std::vector<common::MetaInfo>& v_meta_info,
+        common::MetaInfo& last_meta_info)
+    {
+      for (; meta_info_begin != meta_info_end; meta_info_begin++)
+      {
+        if (last_meta_info.empty()) // no last file
+        {
+          last_meta_info.copy_no_frag(*meta_info_begin);
+          TBSYS_LOG(DEBUG, "copy meta_info to last_meta_info");
+          if (!meta_info_begin->frag_info_.had_been_split_) // had NOT split, this is a completed file recored
+          {
+            v_meta_info.push_back(last_meta_info);
+            last_meta_info.file_info_.name_.clear(); // empty last file
+          }
+        }
+        else                    // have last file, need check whether this metainfo is of last file or not.
+        {
+          // this metaInfo is also of last file.
+          if (0 == memcmp(last_meta_info.get_name(), meta_info_begin->get_name(),
+                last_meta_info.get_name_len()))
+          {
+            // get_size() is the max file size that current recored hold
+            last_meta_info.file_info_.size_ = meta_info_begin->get_size();
+            if (!meta_info_begin->frag_info_.had_been_split_) // had NOT split, last file is completed
+            {
+              v_meta_info.push_back(last_meta_info);
+              last_meta_info.file_info_.name_.clear();
+            }
+          }
+          else                  // this metainfo is not of last file,
+            {
+              v_meta_info.push_back(last_meta_info); // then last file is completed
+              last_meta_info.copy_no_frag(*meta_info_begin);
+              if (!meta_info_begin->frag_info_.had_been_split_) // had NOT split, thie metainfo is completed
+              {
+                v_meta_info.push_back(last_meta_info);
+                last_meta_info.file_info_.name_.clear();
+              }
+            }
+        }
+
+        if (ls_file && !v_meta_info.empty()) // if list file, only need one metainfo.
+        {
+          break;
+        }
+      }
+      if (!last_meta_info.file_info_.name_.empty())
+      {
+        v_meta_info.push_back(last_meta_info);
+        last_meta_info.file_info_.name_.clear();
+      }
+      return;
     }
     MetaStoreManager::AppIdUid::AppIdUid(const int64_t app_id, const int64_t uid)
       :app_id_(app_id), uid_(uid)

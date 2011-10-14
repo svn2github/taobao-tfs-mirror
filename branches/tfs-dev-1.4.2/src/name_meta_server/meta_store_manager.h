@@ -64,6 +64,9 @@ namespace tfs
 
         int get_dir_meta_info(const int64_t app_id, const int64_t uid, const int64_t pid,
             const char* name, const int32_t name_len, common::MetaInfo& out_meta_info);
+        static void calculate_file_meta_info(std::vector<common::MetaInfo>::iterator& meta_info_begin,
+          const std::vector<common::MetaInfo>::iterator meta_info_end, const bool ls_file,
+          std::vector<common::MetaInfo>& v_meta_info, common::MetaInfo& last_meta_info);
       public:
         int get_file_frag_info(const int64_t app_id, const int64_t uid, 
             CacheDirMetaNode* p_dir_node, CacheFileMetaNode* file_node, 

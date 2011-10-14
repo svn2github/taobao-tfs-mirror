@@ -864,7 +864,80 @@ namespace tfs
       return ret;
     }
 
+    int MetaServerService::ls_file_from_cache(const int64_t app_id, const int64_t uid, const char* file_path,
+                              std::vector<MetaInfo>& v_meta_info)
+    {
+      char name[MAX_FILE_PATH_LEN];
+      int32_t name_len = 0;
+      int ret = TFS_SUCCESS;
+
+      tbsys::CThreadMutex* mutex = store_manager_.get_mutex(app_id, uid);
+      tbsys::CThreadGuard mutex_guard(mutex);
+      CacheRootNode* root_node = store_manager_.get_root_node(app_id, uid);
+      CacheDirMetaNode* p_dir_node = NULL;
+      int64_t pp_id = 0;
+      if (NULL == root_node)
+      {
+        TBSYS_LOG(ERROR, "get NULL root node");
+        ret = TFS_ERROR;
+      }
+      else
+      {
+        if ((ret = parse_file_path(root_node, file_path, p_dir_node, pp_id, name, name_len)) != TFS_SUCCESS)
+        {
+          TBSYS_LOG(INFO, "get info fail. appid: %"PRI64_PREFIX"d, uid: %"PRI64_PREFIX"d, %s",
+              app_id, uid, file_path);
+        }
+        else
+        {
+
+          void* ret_node = NULL;
+          ret = store_manager_.select(app_id, uid, p_dir_node, name, true, ret_node);
+
+          // file not exist
+          if (TFS_SUCCESS != ret || NULL == ret_node)
+          {
+            ret = EXIT_TARGET_EXIST_ERROR;
+          }
+          else
+          {
+            MetaInfo meta_info;
+            CacheFileMetaNode* cache_file_node = (CacheFileMetaNode*)ret_node;
+            if (NULL != p_dir_node)
+            {
+              meta_info.file_info_.pid_ = p_dir_node->id_;
+            }
+            meta_info.file_info_.create_time_ = cache_file_node->create_time_;
+            meta_info.file_info_.modify_time_ = cache_file_node->modify_time_;
+            meta_info.file_info_.size_ = cache_file_node->size_;
+            v_meta_info.push_back(meta_info);
+          }
+        }
+
+        store_manager_.revert_root_node(app_id, uid);
+      }
+
+      return ret;
+    }
+
     int MetaServerService::ls(const int64_t app_id, const int64_t uid, const int64_t pid,
+                              const char* file_path, const common::FileType file_type,
+                              std::vector<MetaInfo>& v_meta_info, bool& still_have)
+    {
+      int ret = 0;
+      if (NORMAL_FILE == file_type)
+      {
+        still_have = false;
+        ret = ls_file_from_cache(app_id, uid, file_path, v_meta_info);
+      }
+      else
+      {
+        ret = ls_from_db(app_id, uid, pid, file_path, file_type, v_meta_info, still_have);
+      }
+      return ret;
+    }
+
+    int MetaServerService::ls_from_db(const int64_t app_id, const int64_t uid, const int64_t pid,
                               const char* file_path, const common::FileType file_type,
                               std::vector<MetaInfo>& v_meta_info, bool& still_have)
     {
@@ -947,7 +1020,7 @@ namespace tfs
             if (my_file_type != DIRECTORY)
             {
               // caclulate file meta info
-              calculate_file_meta_info(tmp_v_meta_info_it, tmp_v_meta_info.end(),
+              store_manager_.calculate_file_meta_info(tmp_v_meta_info_it, tmp_v_meta_info.end(),
                   ls_file, v_meta_info, last_meta_info);
               // ls file only need one meta info
               if (ls_file && !v_meta_info.empty())
@@ -1174,64 +1247,6 @@ namespace tfs
         out_p_dir_node = reinterpret_cast<CacheDirMetaNode*>(dir_node);
       }
       return ret;
-    }
-
-
-    void MetaServerService::calculate_file_meta_info(std::vector<common::MetaInfo>::iterator& meta_info_begin,
-        const std::vector<common::MetaInfo>::iterator meta_info_end,
-        const bool ls_file,
-        std::vector<common::MetaInfo>& v_meta_info,
-        common::MetaInfo& last_meta_info)
-    {
-      for (; meta_info_begin != meta_info_end && check_not_out_over(v_meta_info); meta_info_begin++)
-      {
-        if (last_meta_info.empty()) // no last file
-        {
-          last_meta_info.copy_no_frag(*meta_info_begin);
-          TBSYS_LOG(DEBUG, "copy meta_info to last_meta_info");
-          if (!meta_info_begin->frag_info_.had_been_split_) // had NOT split, this is a completed file recored
-          {
-            v_meta_info.push_back(last_meta_info);
-            last_meta_info.file_info_.name_.clear(); // empty last file
-          }
-        }
-        else                    // have last file, need check whether this metainfo is of last file or not.
-        {
-          // this metaInfo is also of last file.
-          if (0 == memcmp(last_meta_info.get_name(), meta_info_begin->get_name(),
-                last_meta_info.get_name_len()))
-          {
-            // get_size() is the max file size that current recored hold
-            last_meta_info.file_info_.size_ = meta_info_begin->get_size();
-            if (!meta_info_begin->frag_info_.had_been_split_) // had NOT split, last file is completed
-            {
-              v_meta_info.push_back(last_meta_info);
-              last_meta_info.file_info_.name_.clear();
-            }
-          }
-          else                  // this metainfo is not of last file,
-            {
-              v_meta_info.push_back(last_meta_info); // then last file is completed
-              last_meta_info.copy_no_frag(*meta_info_begin);
-              if (!meta_info_begin->frag_info_.had_been_split_) // had NOT split, thie metainfo is completed
-              {
-                v_meta_info.push_back(last_meta_info);
-                last_meta_info.file_info_.name_.clear();
-              }
-            }
-        }
-
-        if (ls_file && !v_meta_info.empty()) // if list file, only need one metainfo.
-        {
-          break;
-        }
-      }
-      if (!last_meta_info.file_info_.name_.empty())
-      {
-        v_meta_info.push_back(last_meta_info);
-        last_meta_info.file_info_.name_.clear();
-      }
-      return;
     }
 
     void MetaServerService::add_frag_to_meta(vector<FragMeta>::iterator& frag_meta_begin,

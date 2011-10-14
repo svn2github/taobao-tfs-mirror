@@ -71,8 +71,13 @@ namespace tfs
                common::FragInfo& frag_info, bool& still_have);
 
       int ls(const int64_t app_id, const int64_t uid, const int64_t pid,
-             const char* file_path, const common::FileType,
-             std::vector<common::MetaInfo>& meta_info, bool& still_have);
+          const char* file_path, const common::FileType,
+          std::vector<common::MetaInfo>& meta_info, bool& still_have);
+      int ls_from_db(const int64_t app_id, const int64_t uid, const int64_t pid,
+          const char* file_path, const common::FileType,
+          std::vector<common::MetaInfo>& meta_info, bool& still_have);
+      int ls_file_from_cache(const int64_t app_id, const int64_t uid, const char* file_path,
+          std::vector<MetaInfo>& v_meta_info);
 
       static int check_frag_info(const common::FragInfo& frag_info);
       static void next_file_name(char* name, int32_t& name_len);
@@ -110,9 +115,6 @@ namespace tfs
           const int64_t offset, const int64_t size,
           int32_t& cluster_id, std::vector<common::FragMeta>& v_out_frag_info, bool& still_have);
 
-      void calculate_file_meta_info(std::vector<common::MetaInfo>::iterator& meta_info_begin,
-          const std::vector<common::MetaInfo>::iterator meta_info_end, const bool ls_file,
-          std::vector<common::MetaInfo>& v_meta_info, common::MetaInfo& last_meta_info);
 
       void add_new_meta_info(const int64_t pid, const int32_t cluster_id,
           const char* name, const int32_t name_len, const int64_t last_offset,
