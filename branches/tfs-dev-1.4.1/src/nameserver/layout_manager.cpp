@@ -813,7 +813,7 @@ namespace tfs
     int LayoutManager::rm_block_from_ds(const uint64_t ds_id, const std::vector<uint32_t>& blocks,
                         const common::RemoveBlockResponseFlag flag)
     {
-      TBSYS_LOG(INFO, "remove  block count: %u on server : %s", blocks.size(),
+      TBSYS_LOG(INFO, "remove  block count: %zd on server : %s", blocks.size(),
           tbsys::CNetUtil::addrToString(ds_id).c_str());
 #if !defined(TFS_NS_GTEST) && !defined(TFS_NS_INTEGRATION)
       RemoveBlockMessage rbmsg;
@@ -2060,7 +2060,7 @@ namespace tfs
         {
           interrupt = true;
           tbutil::Monitor<tbutil::Mutex>::Lock lock(run_plan_monitor_);
-          TBSYS_LOG(INFO, "receive interrupt: %d, pending plan list size: %u", interrupt_, pending_plan_list_.size());
+          TBSYS_LOG(INFO, "receive interrupt: %d, pending plan list size: %zd", interrupt_, pending_plan_list_.size());
           std::set<TaskPtr, TaskCompare>::iterator iter = pending_plan_list_.begin();
           for (; iter != pending_plan_list_.end(); ++iter)
             finish_plan_list_.push_back((*iter));
@@ -2490,7 +2490,7 @@ namespace tfs
 
             split_servers(need, average_load, total_capacity, total_block_count, average_block_size, source, target);
 
-            TBSYS_LOG(INFO, "need: %"PRI64_PREFIX"d, source size: %u, target: %u", need, source.size(), target.size());
+            TBSYS_LOG(INFO, "need: %"PRI64_PREFIX"d, source size: %zd, target: %zd", need, source.size(), target.size());
 
             bool has_move = false;
             uint32_t block_id = 0;

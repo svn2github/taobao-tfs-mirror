@@ -171,7 +171,7 @@ namespace tfs
       {
         TBSYS_LOG(ERROR, "ServerCollect object not found by : %s", CNetUtil::addrToString(ds_info.id_).c_str());
       }
-      TBSYS_LOG(INFO, "dataserver: %s report block %s, iret: %d, blocks: %u, expires: %u",
+      TBSYS_LOG(INFO, "dataserver: %s report block %s, iret: %d, blocks: %zd, expires: %zd",
           CNetUtil::addrToString(ds_info.id_).c_str(),
           TFS_SUCCESS == iret ? "successful" : "fail", iret, blocks.size(), expires.size());
       return iret;
@@ -442,7 +442,8 @@ namespace tfs
             }
           }
         }
-        else if (mode & T_NEWBLK)
+        if ((mode & T_NEWBLK)
+           && (NULL == block))
         {
           iret = 0 == block_id ? TFS_ERROR : TFS_SUCCESS;
           if (TFS_SUCCESS == iret)
@@ -494,7 +495,7 @@ namespace tfs
               }
               else
               {
-                TBSYS_LOG(ERROR, "block is invalid because there's any dataserver was found", block_id);
+                TBSYS_LOG(ERROR, "block: %u is invalid because there's any dataserver was found", block_id);
               }
             }
             else

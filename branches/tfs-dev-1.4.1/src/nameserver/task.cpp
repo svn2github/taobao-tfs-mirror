@@ -351,7 +351,7 @@ namespace tfs
         }
       }
 
-      TBSYS_LOG(DEBUG, "complete_count: %d, success_count: %d, complete_status size: %u",
+      TBSYS_LOG(DEBUG, "complete_count: %d, success_count: %d, complete_status size: %zd",
           complete_count, success_count, complete_status_.size());
 
       value.is_complete_ = complete_count == static_cast<int32_t>(complete_status_.size());
@@ -491,7 +491,7 @@ namespace tfs
       int32_t iret = runer_.size() >= 0x2U ? TFS_SUCCESS : TFS_ERROR;
       if (TFS_SUCCESS != iret)
       {
-        TBSYS_LOG(WARN, "task (replicate) block: %u, type: %d, priority: %d, runer size: %u is invalid", block_id_, type_, priority_, runer_.size());
+        TBSYS_LOG(WARN, "task (replicate) block: %u, type: %d, priority: %d, runer size: %zd is invalid", block_id_, type_, priority_, runer_.size());
       }
       else
       {

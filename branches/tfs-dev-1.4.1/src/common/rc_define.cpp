@@ -184,7 +184,7 @@ namespace tfs
     {
       for (size_t i = 0; i < rc_server_infos_.size(); ++i)
       {
-        TBSYS_LOG(DEBUG, "rc_server %u: %"PRI64_PREFIX"u", i, rc_server_infos_[i]);
+        TBSYS_LOG(DEBUG, "rc_server %zd: %"PRI64_PREFIX"u", i, rc_server_infos_[i]);
       }
       for (size_t i = 0; i < cluster_infos_.size(); ++i)
       {

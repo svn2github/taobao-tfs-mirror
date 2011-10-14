@@ -252,7 +252,7 @@ namespace tfs
     {
       RWLock::Lock lock(*this, READ_LOCKER);
       BlockCollect* result = NULL;
-      TBSYS_LOG(DEBUG, "write_index: %d, hold_master size: %u", write_index_, hold_master_.size());
+      TBSYS_LOG(DEBUG, "write_index: %d, hold_master size: %zd", write_index_, hold_master_.size());
       uint32_t size = hold_master_.size();
       if (size > 0U)
       {
@@ -308,7 +308,7 @@ namespace tfs
 
       if (scan_flag & SSM_CHILD_SERVER_TYPE_MASTER)
       {
-        TBSYS_LOG(DEBUG,"server : %s, hold_master_: %u", CNetUtil::addrToString(id_).c_str(),hold_master_.size());
+        TBSYS_LOG(DEBUG,"server : %s, hold_master_: %zd", CNetUtil::addrToString(id_).c_str(),hold_master_.size());
         param.data_.writeInt32(hold_master_.size());
         std::vector<BlockCollect*>::const_iterator iter = hold_master_.begin();
         for (; iter != hold_master_.end(); ++iter)

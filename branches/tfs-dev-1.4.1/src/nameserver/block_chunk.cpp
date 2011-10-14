@@ -146,7 +146,7 @@ namespace tfs
         iter = block_map_.find(param.addition_param1_);
       }
 
-      TBSYS_LOG(DEBUG, "block_map_size: : %u", block_map_.size());
+      TBSYS_LOG(DEBUG, "block_map_size: : %zd", block_map_.size());
       bool has_block = iter != block_map_.end();
       if (has_block)
       {

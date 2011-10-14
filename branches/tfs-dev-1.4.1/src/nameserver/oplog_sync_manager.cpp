@@ -228,7 +228,7 @@ namespace tfs
       if (oplog_->finish(now, true))
       {
         register_slots(oplog_->get_buffer(), oplog_->get_slots_offset());
-        TBSYS_LOG(DEBUG, "oplog size: %d", oplog_->get_slots_offset());
+        TBSYS_LOG(DEBUG, "oplog size: %"PRI64_PREFIX"d", oplog_->get_slots_offset());
         oplog_->reset(now);
       }
       return TFS_SUCCESS;

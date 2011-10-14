@@ -218,7 +218,7 @@ namespace nameserver
         if ((info_.file_count_ > new_block_info.file_count_)
             || (info_.size_ != new_block_info.size_)) 
         {
-          TBSYS_LOG(WARN, "block: %u info not match");
+          TBSYS_LOG(WARN, "block: %u info not match", id());
           if (role == NS_ROLE_MASTER)
           {
             register_expire_block(expires, server, this);
@@ -334,7 +334,7 @@ namespace nameserver
     else
     {
       int32_t size = static_cast<int32_t>(hold_.size());
-      TBSYS_LOG(DEBUG, "size: %d, block: %u", size, this->info_.block_id_);
+      //TBSYS_LOG(DEBUG, "size: %d, block: %u", size, this->info_.block_id_);
       if (size <= 0)
       {
         TBSYS_LOG(ERROR, "block: %u has been lost, do not replicate", info_.block_id_);

@@ -940,7 +940,7 @@ namespace tfs
               VUINT64 peer_list(response->get_ds_list()->begin(), response->get_ds_list()->end());
               VUINT64 local_list;
               meta_mgr_.get_alive_server(local_list);
-              TBSYS_LOG(DEBUG, "local size:%u,peer size:%u", local_list.size(), peer_list.size());
+              TBSYS_LOG(DEBUG, "local size: %zd, peer size: %zd", local_list.size(), peer_list.size());
               complete = peer_list.size() == 0U;
               if (!complete)
               {

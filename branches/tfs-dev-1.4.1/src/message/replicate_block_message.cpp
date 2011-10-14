@@ -89,7 +89,7 @@ namespace tfs
 
     void ReplicateBlockMessage::dump(void) const
     {
-      TBSYS_LOG(DEBUG, "command(%d) expire(%u) id(%u) source_id(%llu) dest_id(%llu) start_time(%d) is_move(%d) server_count(%d)",
+      TBSYS_LOG(DEBUG, "command: %d expire: %d id: %u source_id: %"PRI64_PREFIX"u dest_id: %"PRI64_PREFIX"u start_time: %d is_move: %d server_count: %d",
           command_, expire_, repl_block_.block_id_, repl_block_.source_id_, repl_block_.destination_id_,
           repl_block_.start_time_, repl_block_.is_move_, repl_block_.server_count_);
     }

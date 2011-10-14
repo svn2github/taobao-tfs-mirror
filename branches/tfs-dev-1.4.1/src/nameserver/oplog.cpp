@@ -135,7 +135,7 @@ namespace tfs
       std::string sstr;
       print_servers(servers_, sstr);
       print_blocks(blocks_, bstr);
-      TBSYS_LOG(DEBUG, "cmd: %s, block_ids: %s version: %u file_count: %u size: %u delfile_count: %u del_size: %u seqno: %u, ds_size: %u, dataserver: %s",
+      TBSYS_LOG(DEBUG, "cmd: %s, block_ids: %s version: %u file_count: %u size: %u delfile_count: %u del_size: %u seqno: %u, ds_size: %zd, dataserver: %s",
         cmd_ == common::OPLOG_INSERT ? "insert" : cmd_ == common::OPLOG_REMOVE ? "remove" : cmd_ == common::OPLOG_RELIEVE_RELATION ? "release" : cmd_ == common::OPLOG_RENAME ? "rename" : "update",
         bstr.c_str(), info_.version_, info_.file_count_, info_.size_, info_.del_file_count_, info_.del_size_,
         info_.seq_no_, servers_.size(), sstr.c_str());
@@ -360,7 +360,7 @@ namespace tfs
         const int64_t offset = slots_offset_ + header.length() + length;
         if (offset > MAX_LOG_BUFFER_SIZE)
         {
-          TBSYS_LOG(DEBUG, "(slots_offset_ + size): %d > MAX_LOG_BUFFER_SIZE: %d",
+          TBSYS_LOG(DEBUG, "(slots_offset_ + size): %"PRI64_PREFIX"d > MAX_LOG_BUFFER_SIZE: %d",
               offset, MAX_LOG_BUFFER_SIZE);
           iret = common::EXIT_SLOTS_OFFSET_SIZE_ERROR;
         }

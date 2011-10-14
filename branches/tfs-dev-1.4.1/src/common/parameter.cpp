@@ -310,12 +310,12 @@ namespace tfs
       std::string db_infos = TBSYS_CONFIG.getString(CONF_SN_NAMEMETASERVER, CONF_META_DB_INFOS, "");
       std::vector<std::string> fields;
       Func::split_string(db_infos.c_str(), ';', fields);
-      TBSYS_LOG(DEBUG, "fields.size = %d", fields.size());
+      TBSYS_LOG(DEBUG, "fields.size = %zd", fields.size());
       for (size_t i = 0; i < fields.size(); i++)
       {
         std::vector<std::string> items;
         Func::split_string(fields[i].c_str(), ',', items);
-        TBSYS_LOG(DEBUG, "items.size = %d", items.size());
+        TBSYS_LOG(DEBUG, "items.size = %zd", items.size());
         DbInfo tmp_db_info;
         if (items.size() >= 3)
         {
