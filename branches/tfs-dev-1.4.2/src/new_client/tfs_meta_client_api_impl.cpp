@@ -622,7 +622,7 @@ namespace tfs
     {
       int ret = TFS_ERROR;
 
-      if (pid == -1 && !is_valid_file_path(file_path))
+      if (pid != -1 && !is_valid_file_path(file_path))
       {
         TBSYS_LOG(ERROR, "pid and file_path is invalid");
         return ret;
@@ -830,7 +830,7 @@ namespace tfs
 
     int64_t NameMetaClientImpl::read_data(const char* ns_addr, const FragInfo& frag_info, void* buffer, int64_t offset, int64_t length)
     {
-      int ret = TFS_SUCCESS;
+      int64_t ret = TFS_SUCCESS;
       int64_t cur_offset = offset;
       int64_t cur_length = 0;
       int64_t left_length = length;
@@ -873,7 +873,7 @@ namespace tfs
         {
           TBSYS_LOG(ERROR, "read tfs data failed, block_id: %u, file_id: %"PRI64_PREFIX"u",
               iter->block_id_, iter->file_id_);
-          ret = TFS_ERROR;
+          ret = read_length;
           break;
         }
 
@@ -895,14 +895,14 @@ namespace tfs
           break;
         }
       }
-      return (ret == TFS_SUCCESS) ? (length - left_length):-1;
+      return (ret == TFS_SUCCESS) ? (length - left_length):ret;
     }
 
     int64_t NameMetaClientImpl::write_data(const char* ns_addr, int32_t cluster_id,
         const void* buffer, int64_t offset, int64_t length,
         FragInfo& frag_info)
     {
-      int ret = TFS_SUCCESS;
+      int64_t ret = TFS_SUCCESS;
       int64_t write_length = 0;
       int64_t left_length = length;
       int64_t cur_offset = offset;
@@ -930,6 +930,10 @@ namespace tfs
         {
           TBSYS_LOG(ERROR, "write segment data failed, cur_pos, write_length, ret_length: %d, ret: %d",
               cur_pos, write_length, real_length, ret);
+          if (real_length < 0)
+          {
+            ret = real_length;
+          }
           break;
         }
         else
@@ -941,8 +945,11 @@ namespace tfs
         }
       }
       while(left_length > 0);
-
-      return length - left_length;
+      if (TFS_SUCCESS == ret)
+      {
+        ret = length - left_length;
+      }
+      return ret;
     }
 
     bool NameMetaClientImpl::need_update_table(const int ret_status)

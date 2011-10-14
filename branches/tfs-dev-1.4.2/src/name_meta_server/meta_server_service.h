@@ -77,7 +77,7 @@ namespace tfs
       static int check_frag_info(const common::FragInfo& frag_info);
       static void next_file_name(char* name, int32_t& name_len);
       static void next_file_name_base_on(char* name, int32_t& name_len,
-                                         const char* base_name, const int32_t base_name_len);
+          const char* base_name, const int32_t base_name_len);
       //for test 
       CacheRootNode* get_root_node(const int64_t app_id, const int64_t uid)
       {
@@ -86,9 +86,9 @@ namespace tfs
 
     private:
       int get_p_meta_info(CacheRootNode* root_node,
-                          const std::vector<std::string>& v_name,
-                          CacheDirMetaNode*& out_p_dir_node,
-                          CacheDirMetaNode*& out_dir_node);
+          const std::vector<std::string>& v_name,
+          CacheDirMetaNode*& out_p_dir_node,
+          CacheDirMetaNode*& out_dir_node);
 
     private:
 
@@ -97,7 +97,7 @@ namespace tfs
       static int get_name(const char* name, char* buffer, const int32_t buffer_len, int32_t& name_len);
 
       int parse_file_path(const int64_t app_id, const int64_t uid, const char* file_path,
-                          common::MetaInfo& p_meta_info, char* name, int32_t& name_len);
+          common::MetaInfo& p_meta_info, char* name, int32_t& name_len);
 
       int parse_file_path(CacheRootNode* root_node, const char* file_path,
           CacheDirMetaNode*& p_dir_node, int64_t& pp_id, char* name, int32_t& name_len,
@@ -131,16 +131,16 @@ namespace tfs
       static bool is_sub_dir(const char* sub_dir, const char* parents_dir);
 
       int check_permission(common::BucketStatus& status, const int64_t pid, const int64_t uid,
-              const int64_t version, const uint64_t server) const;
+          const int64_t version, const uint64_t server) const;
 
       class GcTimerTask: public tbutil::TimerTask
       {
-      public:
-        GcTimerTask(MetaServerService& service) : service_(service) {}
-        virtual ~GcTimerTask() {}
-        virtual void runTimerTask() { service_.store_manager_.do_lru_gc(common::SYSPARAM_NAMEMETASERVER.gc_ratio_);}
-      private:
-        MetaServerService& service_;
+        public:
+          GcTimerTask(MetaServerService& service) : service_(service) {}
+          virtual ~GcTimerTask() {}
+          virtual void runTimerTask() { service_.store_manager_.do_lru_gc(common::SYSPARAM_NAMEMETASERVER.gc_ratio_);}
+        private:
+          MetaServerService& service_;
       };
       typedef tbutil::Handle<GcTimerTask> GcTimerTaskPtr;
 

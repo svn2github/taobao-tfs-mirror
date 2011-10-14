@@ -432,7 +432,7 @@ namespace tfs
     int MetaServerService::create(const int64_t app_id, const int64_t uid,
                                   const char* file_path, const FileType type)
     {
-      PROFILER_START("create");
+      //PROFILER_START("create");
       int ret = TFS_SUCCESS;
       char name[MAX_FILE_PATH_LEN];
       int32_t name_len = 0;
@@ -490,7 +490,7 @@ namespace tfs
 
           if (TFS_SUCCESS == ret)
           {
-            PROFILER_BEGIN("insert");
+            //PROFILER_BEGIN("insert");
             ret = get_name(v_name[get_depth(v_name)].c_str(), name, MAX_FILE_PATH_LEN, name_len);
             if (TFS_SUCCESS != ret)
             {
@@ -519,7 +519,7 @@ namespace tfs
                 TBSYS_LOG(ERROR, "create fail: %s, type: %d, ret: %d", file_path, type, ret);
               }
             }
-            PROFILER_END();
+            //PROFILER_END();
           }
 
           TBSYS_LOG(DEBUG, "create %s, type: %d, appid: %"PRI64_PREFIX"d, uid: %"PRI64_PREFIX"d, filepath: %s",
@@ -527,15 +527,15 @@ namespace tfs
           store_manager_.revert_root_node(app_id, uid);
         }
       }
-      PROFILER_DUMP();
-      PROFILER_STOP();
+      //PROFILER_DUMP();
+      //PROFILER_STOP();
       return ret;
     }
 
     int MetaServerService::rm(const int64_t app_id, const int64_t uid,
                               const char* file_path, const FileType type)
     {
-      PROFILER_START("rm");
+      //PROFILER_START("rm");
       char name[MAX_FILE_PATH_LEN];
       int32_t name_len = 0;
       int ret = TFS_SUCCESS;
@@ -560,12 +560,12 @@ namespace tfs
         else
         {
           std::vector<MetaInfo> v_meta_info;
-          PROFILER_BEGIN("select");
+          //PROFILER_BEGIN("select");
 
           void* ret_node = NULL;
           ret = store_manager_.select(app_id, uid, p_dir_node, name,
               type != DIRECTORY, ret_node);
-          PROFILER_END();
+          //PROFILER_END();
 
           // file not exist
           if (TFS_SUCCESS != ret || NULL == ret_node)
@@ -574,12 +574,12 @@ namespace tfs
           }
           else
           {
-            PROFILER_BEGIN("remove");
+            //PROFILER_BEGIN("remove");
             if ((ret = store_manager_.remove(app_id, uid, pp_id, p_dir_node, ret_node, type)) != TFS_SUCCESS)
             {
               TBSYS_LOG(DEBUG, "rm fail: %s, type: %d, ret: %d", file_path, type, ret);
             }
-            PROFILER_END();
+            //PROFILER_END();
           }
         }
 
@@ -588,8 +588,8 @@ namespace tfs
         store_manager_.revert_root_node(app_id, uid);
       }
 
-      PROFILER_DUMP();
-      PROFILER_STOP();
+      //PROFILER_DUMP();
+      //PROFILER_STOP();
       return ret;
     }
 
@@ -865,7 +865,7 @@ namespace tfs
     }
 
     int MetaServerService::ls(const int64_t app_id, const int64_t uid, const int64_t pid,
-                              const char* file_path, const FileType file_type,
+                              const char* file_path, const common::FileType file_type,
                               std::vector<MetaInfo>& v_meta_info, bool& still_have)
     {
       // for inner name data struct
@@ -876,7 +876,6 @@ namespace tfs
       bool ls_file = false;
       still_have = true;
       MetaInfo p_meta_info;
-
 
       // first ls. parse file info
       if (-1 == pid)
@@ -1189,6 +1188,7 @@ namespace tfs
         if (last_meta_info.empty()) // no last file
         {
           last_meta_info.copy_no_frag(*meta_info_begin);
+          TBSYS_LOG(DEBUG, "copy meta_info to last_meta_info");
           if (!meta_info_begin->frag_info_.had_been_split_) // had NOT split, this is a completed file recored
           {
             v_meta_info.push_back(last_meta_info);
@@ -1225,6 +1225,11 @@ namespace tfs
         {
           break;
         }
+      }
+      if (!last_meta_info.file_info_.name_.empty())
+      {
+        v_meta_info.push_back(last_meta_info);
+        last_meta_info.file_info_.name_.clear();
       }
       return;
     }

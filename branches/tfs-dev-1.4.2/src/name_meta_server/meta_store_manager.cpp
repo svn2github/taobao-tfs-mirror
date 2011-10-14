@@ -282,8 +282,8 @@ namespace tfs
       {
         if (NULL == ret_node && !got_all)
         {
-          assert (app_id != 0);
-          assert (uid != 0);
+          //assert (app_id != 0);
+          //assert (uid != 0);
           ret = get_all_children_from_db(app_id, uid, p_dir_node);
           if (TFS_SUCCESS == ret)
           {
@@ -655,6 +655,7 @@ namespace tfs
       {
         real_pid = pid & ~(1L<<63);
       }
+      TBSYS_LOG(DEBUG, "ls real_pid %"PRI64_PREFIX"d is_file %d", real_pid, is_file);
 
       DatabaseHelper* database_helper = NULL;
       database_helper = database_pool_->get(database_pool_->get_hash_flag(app_id, uid));
@@ -669,6 +670,7 @@ namespace tfs
       {
         still_have = true;
       }
+      TBSYS_LOG(DEBUG, "out_v_meta_info.size() %d", out_v_meta_info.size());
       return ret;
     }
 
