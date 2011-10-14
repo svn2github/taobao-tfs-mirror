@@ -54,7 +54,7 @@ namespace tfs
       if (rs_addr == NULL)
       {
         TBSYS_LOG(WARN, "rs_addr is null");
-        ret = TFS_ERROR;
+        ret = EXIT_INVALID_ARGU_ERROR;
       }
       else
       {
@@ -67,80 +67,148 @@ namespace tfs
     int NameMetaClientImpl::create_dir(const int64_t app_id, const int64_t uid,
         const char* dir_path)
     {
-      return do_file_action(app_id, uid, CREATE_DIR, dir_path);
+      int ret = 0;
+      if (NULL == dir_path)
+      {
+        ret = EXIT_INVALID_FILE_NAME;
+      }
+      else
+      {
+        ret = do_file_action(app_id, uid, CREATE_DIR, dir_path);
+      }
+      return ret;
     }
 
     int NameMetaClientImpl::create_file(const int64_t app_id, const int64_t uid,
         const char* file_path)
     {
-      return do_file_action(app_id, uid, CREATE_FILE, file_path);
+      int ret = 0;
+      if (NULL == file_path)
+      {
+        ret = EXIT_INVALID_FILE_NAME;
+      }
+      else
+      {
+        ret = do_file_action(app_id, uid, CREATE_FILE, file_path);
+      }
+      return ret;
     }
 
     int NameMetaClientImpl::mv_dir(const int64_t app_id, const int64_t uid,
         const char* src_dir_path, const char* dest_dir_path)
     {
-      return do_file_action(app_id, uid, MOVE_DIR, src_dir_path, dest_dir_path);
+      int ret = 0;
+      if (NULL == src_dir_path || NULL == dest_dir_path)
+      {
+        ret = EXIT_INVALID_FILE_NAME;
+      }
+      else
+      {
+        ret = do_file_action(app_id, uid, MOVE_DIR, src_dir_path, dest_dir_path);
+      }
+      return ret;
     }
 
     int NameMetaClientImpl::mv_file(const int64_t app_id, const int64_t uid,
         const char* src_file_path, const char* dest_file_path)
     {
-      return do_file_action(app_id, uid, MOVE_FILE, src_file_path, dest_file_path);
+      int ret = 0;
+      if (NULL == src_file_path || NULL == dest_file_path)
+      {
+        ret = EXIT_INVALID_FILE_NAME;
+      }
+      else
+      {
+        ret = do_file_action(app_id, uid, MOVE_FILE, src_file_path, dest_file_path);
+      }
+      return ret;
     }
 
     int NameMetaClientImpl::rm_dir(const int64_t app_id, const int64_t uid,
         const char* dir_path)
     {
-      return do_file_action(app_id, uid, REMOVE_DIR, dir_path);
+      int ret = 0;
+      if (NULL == dir_path)
+      {
+        ret = EXIT_INVALID_FILE_NAME;
+      }
+      else
+      {
+        ret = do_file_action(app_id, uid, REMOVE_DIR, dir_path);
+      }
+      return ret;
     }
 
     int NameMetaClientImpl::rm_file(const int64_t app_id, const int64_t uid,
         const char* file_path)
     {
-      int ret = TFS_ERROR;
       FragInfo frag_info;
-      uint64_t meta_server_id = get_meta_server_id(app_id, uid);
-      if ((ret = read_frag_info(meta_server_id, app_id, uid, file_path, frag_info)) != TFS_SUCCESS)
+      int ret = TFS_SUCCESS;
+      if (NULL == file_path)
       {
-        TBSYS_LOG(ERROR, "read frag info error, ret: %d", ret);
+        ret = EXIT_INVALID_FILE_NAME;
       }
-      else if ((ret = do_file_action(app_id, uid, REMOVE_FILE, file_path)) != TFS_SUCCESS)
+      if (TFS_SUCCESS == ret)
       {
-        TBSYS_LOG(ERROR, "remove file failed, file_path: %s, ret: %d", file_path, ret);
+        uint64_t meta_server_id = get_meta_server_id(app_id, uid);
+        if ((ret = read_frag_info(meta_server_id, app_id, uid, file_path, frag_info)) != TFS_SUCCESS)
+        {
+          TBSYS_LOG(ERROR, "read frag info error, ret: %d", ret);
+        }
+        else if ((ret = do_file_action(app_id, uid, REMOVE_FILE, file_path)) != TFS_SUCCESS)
+        {
+          TBSYS_LOG(ERROR, "remove file failed, file_path: %s, ret: %d", file_path, ret);
+        }
+        unlink_file(frag_info);
       }
-      unlink_file(frag_info);
       return ret;
     }
 
-     int NameMetaClientImpl::ls_dir(const int64_t app_id, const int64_t uid,
-            const char* dir_path,
-            std::vector<common::FileMetaInfo>& v_file_meta_info, bool is_recursive)
-     {
-       uint64_t meta_server_id = get_meta_server_id(app_id, uid);
-       v_file_meta_info.clear();
-       return ls_dir(meta_server_id, app_id, uid, dir_path, -1, v_file_meta_info, is_recursive);
-     }
+    int NameMetaClientImpl::ls_dir(const int64_t app_id, const int64_t uid,
+        const char* dir_path,
+        std::vector<common::FileMetaInfo>& v_file_meta_info, bool is_recursive)
+    {
+      int ret = 0;
+      if (NULL == dir_path)
+      {
+        ret = EXIT_INVALID_FILE_NAME;
+      }
+      else
+      {
+        uint64_t meta_server_id = get_meta_server_id(app_id, uid);
+        v_file_meta_info.clear();
+        ret = ls_dir(meta_server_id, app_id, uid, dir_path, -1, v_file_meta_info, is_recursive);
+      }
+      return ret;
+    }
 
     int NameMetaClientImpl::ls_file(int64_t app_id, int64_t uid,
         const char* file_path, FileMetaInfo& file_meta_info)
     {
       int ret = TFS_SUCCESS;
-      vector<FileMetaInfo> v_file_meta_info;
-      uint64_t meta_server_id = get_meta_server_id(app_id, uid);
-      if ((ret = do_ls_ex(meta_server_id, app_id, uid, file_path, NORMAL_FILE, -1, v_file_meta_info)) != TFS_SUCCESS)
+      if (NULL == file_path)
       {
-        TBSYS_LOG(ERROR, "ls file failed, file_path: %s, ret: %d", file_path, ret);
+        ret = EXIT_INVALID_FILE_NAME;
       }
-      else
+      if (TFS_SUCCESS == ret)
       {
-        if (v_file_meta_info.size() <= 0)
+        vector<FileMetaInfo> v_file_meta_info;
+        uint64_t meta_server_id = get_meta_server_id(app_id, uid);
+        if ((ret = do_ls_ex(meta_server_id, app_id, uid, file_path, NORMAL_FILE, -1, v_file_meta_info)) != TFS_SUCCESS)
         {
-          TBSYS_LOG(WARN, "ls file returns no file meta info, file_path: %s", file_path);
-          ret = EXIT_TARGET_EXIST_ERROR;
+          TBSYS_LOG(ERROR, "ls file failed, file_path: %s, ret: %d", file_path, ret);
         }
         else
         {
-          file_meta_info = v_file_meta_info[0];
+          if (v_file_meta_info.size() <= 0)
+          {
+            TBSYS_LOG(WARN, "ls file returns no file meta info, file_path: %s", file_path);
+            ret = EXIT_TARGET_EXIST_ERROR;
+          }
+          else
+          {
+            file_meta_info = v_file_meta_info[0];
+          }
         }
       }
       return ret;
@@ -150,151 +218,176 @@ namespace tfs
         const char* file_path, void* buffer, const int64_t offset, const int64_t length)
     {
       int ret = TFS_SUCCESS;
-      bool still_have = false;
-      int64_t left_length = length;
-      int64_t read_length = 0;
-      int64_t cur_offset = offset;
-      int64_t cur_length = 0;
-      int64_t cur_pos = 0;
-      uint64_t meta_server_id = get_meta_server_id(app_id, uid);
-
-      do
+      if (NULL == file_path)
       {
-        FragInfo frag_info;
-        int32_t retry = 3;
-        int tmp_ret = TFS_SUCCESS;
+        ret = EXIT_INVALID_FILE_NAME;
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        bool still_have = false;
+        int64_t left_length = length;
+        int64_t read_length = 0;
+        int64_t cur_offset = offset;
+        int64_t cur_length = 0;
+        int64_t cur_pos = 0;
+        uint64_t meta_server_id = get_meta_server_id(app_id, uid);
+
         do
         {
-          if ((tmp_ret = do_read(meta_server_id, app_id, uid, file_path, cur_offset, left_length, frag_info, still_have))
-              != TFS_SUCCESS)
+          FragInfo frag_info;
+          int32_t retry = 3;
+          int tmp_ret = TFS_SUCCESS;
+          do
           {
-            TBSYS_LOG(ERROR, "read file failed, path: %s, ret: %d, retry: %d", file_path, tmp_ret, retry);
+            if ((tmp_ret = do_read(meta_server_id, app_id, uid, file_path, cur_offset, left_length, frag_info, still_have))
+                != TFS_SUCCESS)
+            {
+              TBSYS_LOG(ERROR, "read file failed, path: %s, ret: %d, retry: %d", file_path, tmp_ret, retry);
+            }
           }
-        }
-        while(tmp_ret == EXIT_NETWORK_ERROR && --retry);
-        if (need_update_table(tmp_ret))
-        {
-          update_table_from_rootserver();
-        }
-        // file not exist
-        if (tmp_ret != TFS_SUCCESS && left_length == length)
-        {
-          ret = TFS_ERROR;
-          break;
-        }
-        frag_info.dump();
+          while(tmp_ret == EXIT_NETWORK_ERROR && --retry);
+          if (need_update_table(tmp_ret))
+          {
+            update_table_from_rootserver();
+          }
+          // file not exist
+          if (tmp_ret != TFS_SUCCESS && left_length == length)
+          {
+            ret = TFS_ERROR;
+            break;
+          }
+          frag_info.dump();
 
-        if (frag_info.v_frag_meta_.size() <= 0)
-        {
-          TBSYS_LOG(ERROR, "get frag info failed");
-          break;
-        }
+          if (frag_info.v_frag_meta_.size() <= 0)
+          {
+            TBSYS_LOG(ERROR, "get frag info failed");
+            break;
+          }
 
-        cur_length = min(frag_info.get_last_offset() - cur_offset, left_length);
+          cur_length = min(frag_info.get_last_offset() - cur_offset, left_length);
 
-        read_length = read_data(ns_addr, frag_info, reinterpret_cast<char*>(buffer) + cur_pos, cur_offset, cur_length);
-        // tfs error occurs, maybe server is down, break and return error
-        if (read_length < 0)
-        {
-          TBSYS_LOG(WARN, "read data from tfs failed, read_length: %"PRI64_PREFIX"d", read_length);
-          ret = TFS_ERROR;
-          break;
-        }
-        // one tfs file read data error, should break
-        if (read_length == 0)
-        {
-          break;
-        }
+          read_length = read_data(ns_addr, frag_info, reinterpret_cast<char*>(buffer) + cur_pos, cur_offset, cur_length);
+          // tfs error occurs, maybe server is down, break and return error
+          if (read_length < 0)
+          {
+            TBSYS_LOG(WARN, "read data from tfs failed, read_length: %"PRI64_PREFIX"d", read_length);
+            ret = TFS_ERROR;
+            break;
+          }
+          // one tfs file read data error, should break
+          if (read_length == 0)
+          {
+            break;
+          }
 
-        left_length -= read_length;
-        TBSYS_LOG(DEBUG, "@@ read once, offset: %ld, length %ld, read_length: %ld, left: %ld",
-            cur_offset, cur_length, read_length, left_length);
-        cur_offset += read_length;
-        cur_pos += read_length;
+          left_length -= read_length;
+          TBSYS_LOG(DEBUG, "@@ read once, offset: %ld, length %ld, read_length: %ld, left: %ld",
+              cur_offset, cur_length, read_length, left_length);
+          cur_offset += read_length;
+          cur_pos += read_length;
+        }
+        while((left_length > 0) && still_have);
+        ret = TFS_SUCCESS? (length - left_length): -1;
       }
-      while((left_length > 0) && still_have);
-
-      return ret == TFS_SUCCESS? (length - left_length): -1;
+      return ret;
     }
 
     int64_t NameMetaClientImpl::write(const char* ns_addr, int64_t app_id, int64_t uid,
         const char* file_path, const void* buffer, const int64_t length)
     {
-      return write(ns_addr, app_id, uid, file_path, buffer, -1, length);
+      int64_t ret = 0;
+      if (NULL == file_path)
+      {
+        ret = EXIT_INVALID_FILE_NAME;
+      }
+      else
+      {
+        ret = write(ns_addr, app_id, uid, file_path, buffer, -1, length);
+      }
+      return ret;
     }
 
     int64_t NameMetaClientImpl::write(const char* ns_addr, int64_t app_id, int64_t uid,
         const char* file_path, const void* buffer, const int64_t offset, const int64_t length)
     {
-      int ret = TFS_SUCCESS;
-      int32_t cluster_id = -1;
-      int64_t left_length = length;
-      uint64_t meta_server_id = get_meta_server_id(app_id, uid);
-      if (!is_valid_file_path(file_path) || (offset < 0 && offset != -1))
+      int64_t ret = TFS_SUCCESS;
+      if (NULL == file_path)
       {
-        TBSYS_LOG(ERROR, "file path is invalid or offset less then 0, offset: %"PRI64_PREFIX"d", offset);
-      }
-      else if (buffer == NULL || length < 0)
-      {
-        TBSYS_LOG(ERROR, "invalid buffer, length %"PRI64_PREFIX"d", length);
-      }
-      else if((cluster_id = get_cluster_id(meta_server_id, app_id, uid, file_path)) == -1)
-      {
-        TBSYS_LOG(ERROR, "get cluster id error, cluster_id: %d", cluster_id);
+        ret = EXIT_INVALID_FILE_NAME;
       }
       else
       {
-        int64_t cur_offset = offset;
-        int64_t cur_pos = 0;
-        do
-        {
-          // write MAX_BATCH_DATA_LENGTH(8M) to tfs cluster
-          int64_t write_length = min(left_length, MAX_BATCH_DATA_LENGTH);
-          FragInfo frag_info;
-          int64_t real_write_length = write_data(ns_addr, cluster_id, reinterpret_cast<const char*>(buffer) + cur_pos,
-              cur_offset, write_length, frag_info);
-          if (real_write_length != write_length)
-          {
-            TBSYS_LOG(ERROR, "write tfs data error, cur_pos: %"PRI64_PREFIX"d"
-                "write_length(%"PRI64_PREFIX"d) => real_length(%"PRI64_PREFIX"d)",
-                cur_pos, write_length, real_write_length);
-            unlink_file(frag_info);
-            break;
-          }
-          TBSYS_LOG(DEBUG, "write tfs data, cluster_id, cur_offset: %"PRI64_PREFIX"d, write_length: %"PRI64_PREFIX"d",
-              cluster_id, cur_offset, write_length);
-          frag_info.dump();
 
-          // then write to meta server
-          int32_t retry = 3;
+        int32_t cluster_id = -1;
+        int64_t left_length = length;
+        uint64_t meta_server_id = get_meta_server_id(app_id, uid);
+        if (!is_valid_file_path(file_path) || (offset < 0 && offset != -1))
+        {
+          TBSYS_LOG(ERROR, "file path is invalid or offset less then 0, offset: %"PRI64_PREFIX"d", offset);
+        }
+        else if (buffer == NULL || length < 0)
+        {
+          TBSYS_LOG(ERROR, "invalid buffer, length %"PRI64_PREFIX"d", length);
+        }
+        else if((cluster_id = get_cluster_id(meta_server_id, app_id, uid, file_path)) == -1)
+        {
+          TBSYS_LOG(ERROR, "get cluster id error, cluster_id: %d", cluster_id);
+        }
+        else
+        {
+          int64_t cur_offset = offset;
+          int64_t cur_pos = 0;
           do
           {
-            if ((ret = do_write(meta_server_id, app_id, uid, file_path, frag_info)) != TFS_SUCCESS)
+            // write MAX_BATCH_DATA_LENGTH(8M) to tfs cluster
+            int64_t write_length = min(left_length, MAX_BATCH_DATA_LENGTH);
+            FragInfo frag_info;
+            int64_t real_write_length = write_data(ns_addr, cluster_id, reinterpret_cast<const char*>(buffer) + cur_pos,
+                cur_offset, write_length, frag_info);
+            if (real_write_length != write_length)
             {
-              TBSYS_LOG(ERROR, "write meta info error, cur_pos: %"PRI64_PREFIX"d, "
-                  "write_length(%"PRI64_PREFIX"d) => real_length(%"PRI64_PREFIX"d), ret: %d",
-                  cur_pos, write_length, real_write_length, ret);
+              TBSYS_LOG(ERROR, "write tfs data error, cur_pos: %"PRI64_PREFIX"d"
+                  "write_length(%"PRI64_PREFIX"d) => real_length(%"PRI64_PREFIX"d)",
+                  cur_pos, write_length, real_write_length);
+              unlink_file(frag_info);
+              break;
             }
-          }
-          while(ret == EXIT_NETWORK_ERROR && --retry);
+            TBSYS_LOG(DEBUG, "write tfs data, cluster_id, cur_offset: %"PRI64_PREFIX"d, write_length: %"PRI64_PREFIX"d",
+                cluster_id, cur_offset, write_length);
+            frag_info.dump();
 
-          if (need_update_table(ret))
-          {
-            update_table_from_rootserver();
-          }
+            // then write to meta server
+            int32_t retry = 3;
+            do
+            {
+              if ((ret = do_write(meta_server_id, app_id, uid, file_path, frag_info)) != TFS_SUCCESS)
+              {
+                TBSYS_LOG(ERROR, "write meta info error, cur_pos: %"PRI64_PREFIX"d, "
+                    "write_length(%"PRI64_PREFIX"d) => real_length(%"PRI64_PREFIX"d), ret: %d",
+                    cur_pos, write_length, real_write_length, ret);
+              }
+            }
+            while(ret == EXIT_NETWORK_ERROR && --retry);
 
-          if (ret != TFS_SUCCESS)
-          {
-            unlink_file(frag_info);
-            break;
+            if (need_update_table(ret))
+            {
+              update_table_from_rootserver();
+            }
+
+            if (ret != TFS_SUCCESS)
+            {
+              unlink_file(frag_info);
+              break;
+            }
+            cur_pos += real_write_length;
+            cur_offset += (offset == -1 ? 0 : real_write_length);
+            left_length -= real_write_length;
           }
-          cur_pos += real_write_length;
-          cur_offset += (offset == -1 ? 0 : real_write_length);
-          left_length -= real_write_length;
+          while(left_length > 0);
         }
-        while(left_length > 0);
+        ret = length - left_length;
       }
-      return (length - left_length);
+      return ret;
     }
 
     int64_t NameMetaClientImpl::save_file(const char* ns_addr, int64_t app_id, int64_t uid, const char* local_file, const char* tfs_name)
@@ -305,18 +398,21 @@ namespace tfs
       if (!is_valid_file_path(tfs_name))
       {
         TBSYS_LOG(ERROR, "file name is invalid ");
+        ret = EXIT_INVALID_FILE_NAME;
       }
       else if (NULL == local_file)
       {
         TBSYS_LOG(ERROR, "local file is null");
+        ret = EXIT_INVALID_ARGU_ERROR;
       }
       else if ((fd = ::open(local_file, O_RDONLY)) < 0)
       {
         TBSYS_LOG(ERROR, "open local file %s fail: %s", local_file, strerror(errno));
+        ret = EXIT_INVALID_ARGU_ERROR;
       }
       else if (TFS_SUCCESS != (ret = create_file(app_id, uid, tfs_name)))
       {
-          TBSYS_LOG(ERROR, "create file error ret is %d", ret);
+        TBSYS_LOG(ERROR, "create file error ret is %d", ret);
       }
       else
       {
@@ -327,7 +423,7 @@ namespace tfs
         {
           if ((read_len = ::read(fd, buf, MAX_BATCH_DATA_LENGTH)) < 0)
           {
-            ret = TFS_ERROR;
+            ret = EXIT_INVALID_ARGU_ERROR;
             TBSYS_LOG(ERROR, "read local file %s fail, error: %s", local_file, strerror(errno));
             break;
           }
@@ -343,7 +439,7 @@ namespace tfs
             if (write_len <= 0)
             {
               TBSYS_LOG(ERROR, "write to tfs fail");
-              ret = TFS_ERROR;
+              ret = write_len;
               break;
             }
             off_set += write_len;
@@ -364,7 +460,7 @@ namespace tfs
         ::close(fd);
       }
 
-      return ret != TFS_SUCCESS ? INVALID_FILE_SIZE : off_set;
+      return ret != TFS_SUCCESS ? ret : off_set;
     }
 
     int64_t NameMetaClientImpl::fetch_file(const char* ns_addr, int64_t app_id, int64_t uid, const char* local_file, const char* tfs_name)
@@ -375,10 +471,12 @@ namespace tfs
       if (NULL == local_file)
       {
         TBSYS_LOG(ERROR, "local file is null");
+        ret = EXIT_INVALID_ARGU_ERROR;
       }
       else if ((fd = ::open(local_file, O_WRONLY|O_CREAT, 0644)) < 0)
       {
         TBSYS_LOG(ERROR, "open local file %s to write fail: %s", local_file, strerror(errno));
+        ret = EXIT_INVALID_ARGU_ERROR;
       }
       else
       {
@@ -391,7 +489,7 @@ namespace tfs
         {
           if ((read_len = read(ns_addr, app_id, uid, tfs_name, buf, off_set, io_size)) < 0)
           {
-            ret = TFS_ERROR;
+            ret = EXIT_INVALID_ARGU_ERROR;
             TBSYS_LOG(ERROR, "read tfs file fail. tfsname: %s", tfs_name);
             break;
           }
@@ -405,7 +503,7 @@ namespace tfs
           {
             TBSYS_LOG(ERROR, "write local file %s fail, write len: %"PRI64_PREFIX"d, ret: %"PRI64_PREFIX"d, error: %s",
                 local_file, read_len, write_len, strerror(errno));
-            ret = TFS_ERROR;
+            ret = write_len;
             break;
           }
           off_set += read_len;
@@ -414,7 +512,7 @@ namespace tfs
         ::close(fd);
       }
 
-      return ret != TFS_SUCCESS ? INVALID_FILE_SIZE : off_set;
+      return ret != TFS_SUCCESS ? ret : off_set;
     }
 
     int NameMetaClientImpl::read_frag_info(const int64_t app_id, const int64_t uid,
@@ -535,7 +633,7 @@ namespace tfs
         do
         {
           if ((ret = NameMetaHelper::do_ls(meta_server_id, app_id, uid, last_file_path, last_file_type, last_pid,
-              meta_table_.version_id_, tmp_v_meta_info, still_have)) != TFS_SUCCESS)
+                  meta_table_.version_id_, tmp_v_meta_info, still_have)) != TFS_SUCCESS)
           {
             TBSYS_LOG(ERROR, "do ls info failed, file_path: %s, file_type: %d, ret: %d, retry: %d",
                 last_file_path, last_file_type, ret, retry);
@@ -586,8 +684,8 @@ namespace tfs
         const char* path, const int64_t offset, const int64_t size,
         FragInfo& frag_info, bool& still_have)
     {
-        return NameMetaHelper::do_read_file(meta_server_id, app_id, uid,
-            path, offset, size, meta_table_.version_id_, frag_info, still_have);
+      return NameMetaHelper::do_read_file(meta_server_id, app_id, uid,
+          path, offset, size, meta_table_.version_id_, frag_info, still_have);
     }
 
     int NameMetaClientImpl::do_write(const uint64_t meta_server_id, const int64_t app_id, const int64_t uid,
@@ -626,33 +724,40 @@ namespace tfs
         const char* file_path, FragInfo& frag_info)
     {
       int ret = TFS_SUCCESS;
-      bool still_have = true;
-      FragInfo tmp_frag_info;
-      int64_t offset = 0;
-      do
+      if (NULL == file_path)
       {
-        tmp_frag_info.v_frag_meta_.clear();
-        int32_t retry = 3;
+        ret = EXIT_INVALID_FILE_NAME;
+      }
+      else
+      {
+        bool still_have = true;
+        FragInfo tmp_frag_info;
+        int64_t offset = 0;
         do
         {
-          if ((ret = NameMetaHelper::do_read_file(meta_server_id, app_id, uid, file_path,
-            offset, MAX_READ_FRAG_SIZE, meta_table_.version_id_, tmp_frag_info, still_have)) != TFS_SUCCESS)
+          tmp_frag_info.v_frag_meta_.clear();
+          int32_t retry = 3;
+          do
           {
-            TBSYS_LOG(ERROR, "read frag info error, ret: %d, retry: %d", ret, retry);
+            if ((ret = NameMetaHelper::do_read_file(meta_server_id, app_id, uid, file_path,
+                    offset, MAX_READ_FRAG_SIZE, meta_table_.version_id_, tmp_frag_info, still_have)) != TFS_SUCCESS)
+            {
+              TBSYS_LOG(ERROR, "read frag info error, ret: %d, retry: %d", ret, retry);
+            }
           }
-        }
-        while(ret == EXIT_NETWORK_ERROR && --retry);
+          while(ret == EXIT_NETWORK_ERROR && --retry);
 
-        if (need_update_table(ret))
-        {
-          update_table_from_rootserver();
-        }
+          if (need_update_table(ret))
+          {
+            update_table_from_rootserver();
+          }
 
-        offset = tmp_frag_info.get_last_offset();
-        frag_info.cluster_id_ = tmp_frag_info.cluster_id_;
-        frag_info.push_back(tmp_frag_info);
+          offset = tmp_frag_info.get_last_offset();
+          frag_info.cluster_id_ = tmp_frag_info.cluster_id_;
+          frag_info.push_back(tmp_frag_info);
+        }
+        while ((offset != 0) && still_have);
       }
-      while ((offset != 0) && still_have);
       return ret;
     }
 
@@ -763,7 +868,7 @@ namespace tfs
           TBSYS_LOG(WARN, "read tfs data return wrong length,"
               " cur_offset: %"PRI64_PREFIX"d, cur_length: %"PRI64_PREFIX"d, "
               "read_length(%"PRI64_PREFIX"d) => cur_length(%"PRI64_PREFIX"d), left_length: %"PRI64_PREFIX"d",
-             cur_offset, cur_length, read_length, cur_length, left_length);
+              cur_offset, cur_length, read_length, cur_length, left_length);
           break;
         }
         cur_pos += read_length;
