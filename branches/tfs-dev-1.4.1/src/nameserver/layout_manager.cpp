@@ -2446,7 +2446,7 @@ namespace tfs
                           SYSPARAM_NAMESERVER.balance_max_diff_block_num_;
             if (diff > 0)
             {
-              int64_t value = static_cast<int64_t>(percent * PERCENTAGE_MAGIC);
+              int64_t value = static_cast<int64_t>(fabs(percent) * PERCENTAGE_MAGIC);
               source.insert(std::multimap<int64_t, ServerCollect*>::value_type(value, server));
             }
           }

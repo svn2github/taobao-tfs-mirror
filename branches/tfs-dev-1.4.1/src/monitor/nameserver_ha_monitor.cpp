@@ -62,7 +62,7 @@ namespace tfs
           NewClientManager::get_instance().destroy_client(client);
         }
       }
-      while (count < 3 && -1 != status);
+      while (count < 3 && -1 == status);
       return status;
     }
   }
