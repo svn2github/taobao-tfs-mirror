@@ -264,8 +264,8 @@ namespace tfs
 
           if (frag_info.v_frag_meta_.size() <= 0)
           {
-            TBSYS_LOG(ERROR, "get frag info failed");
-            ret = EXIT_TARGET_EXIST_ERROR;
+            //TBSYS_LOG(ERROR, "get frag info failed");
+            //ret = EXIT_TARGET_EXIST_ERROR;
             break;
           }
 
@@ -292,7 +292,10 @@ namespace tfs
           cur_pos += read_length;
         }
         while((left_length > 0) && still_have);
-        ret = TFS_SUCCESS? (length - left_length): ret;
+        if (TFS_SUCCESS ==ret) 
+        {
+          ret = (length - left_length);
+        }
       }
       return ret;
     }
