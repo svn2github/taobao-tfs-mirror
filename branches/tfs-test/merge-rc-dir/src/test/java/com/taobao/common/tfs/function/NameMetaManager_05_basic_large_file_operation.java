@@ -15,26 +15,24 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-
 import com.taobao.common.tfs.namemeta.FileMetaInfo;
 
-public class NameMetaManager_05_basic_large_file_operation extends  tfsNameBaseCase{
+public class NameMetaManager_05_basic_large_file_operation extends  NameMetaBaseCase{
 	
-	public  static List<FileMetaInfo>  file_info_list ;
-	public  static FileMetaInfo file_info;
+    public  static List<FileMetaInfo>  file_info_list ;
+    public  static FileMetaInfo file_info;
     public  static File large_file =new File("src/test/resources/1g.jpg");	
-    
-	public  static InputStream In = null;  
-
+      
+    public  static InputStream In = null;  
     
     public  static byte[] data= new byte[1<<22];
    
     public  static void get_local_data() 
     {	 
     	 int read_length = 0;
-	 	 int ret = 0;
+	 	   int ret = 0;
 	     try{
-         	    while((ret = In.read(data)) != -1)
+         	   while((ret = In.read(data)) != -1)
 		        {
 	    	    	read_length += ret;
 		        }
@@ -48,38 +46,26 @@ public class NameMetaManager_05_basic_large_file_operation extends  tfsNameBaseC
 		        
 		        }
     }
+
     public  static void get_local_data_with_offset(int data_offset,int len)
     {
    	 int read_length = 0;
- 	 int ret = 0;
-     try{
-     	    while((ret = In.read(data, data_offset, len)) != -1)
-	        {
- 	    		read_length += ret;
-     	    	if(read_length == len)
-     	    	{
-     	    		break;
-     	    	}
-     	    }
-	        }catch(Exception e){
-	           e.printStackTrace();
-	        }finally{
-	        
-	        }
+ 	   int ret = 0;
+       try{
+         while((ret = In.read(data, data_offset, len)) != -1) {
+           read_length += ret;
+           if(read_length == len) {
+             break;
+           }
+         }
+       }catch(Exception e){
+         e.printStackTrace();
+       }finally{
+       }
     }
-    @BeforeClass
-	public  static void setUp() throws Exception {
 
-	}
-	@AfterClass
-	public static void tearDown() throws Exception 
-	{
-
-	}
 	@Before
-	public void Before(){
-       
-		
+	public void setUp(){
 		try {
 			In = new FileInputStream(large_file);
 		} catch (FileNotFoundException e) {
@@ -89,7 +75,7 @@ public class NameMetaManager_05_basic_large_file_operation extends  tfsNameBaseC
 	}
 	
 	@After
-	public void After() {
+	public void tearDown() {
         if(In!= null)
         {
           try {
@@ -118,7 +104,7 @@ public class NameMetaManager_05_basic_large_file_operation extends  tfsNameBaseC
 		 ret = tfsManager.createDir(appId, userId,filepath3);
          Assert.assertTrue(ret);
          
-         ret = tfsManager.createFile(userId,filepath3+"/largefile");
+         ret = tfsManager.createFile(appId, userId,filepath3+"/largefile");
          Assert.assertTrue(ret);
          
          long total_ret =0 ,write_ret =0, offset=0 ,data_offset = 0;
@@ -128,39 +114,39 @@ public class NameMetaManager_05_basic_large_file_operation extends  tfsNameBaseC
            get_local_data();
            if( total_ret!= 1<<30)
            {
-             write_ret = tfsManager.write(userId,filepath3+"/largefile", offset, data, data_offset, 1<<22);
+             write_ret = tfsManager.write(appId, userId,filepath3+"/largefile", offset, data, data_offset, 1<<22);
              Assert.assertEquals(write_ret, 1<<22);
              offset += write_ret;
              total_ret += write_ret;
            }
          }
          Assert.assertEquals(total_ret, 1<<30);
-         ret = tfsManager.fetchFile(userId,resourcesPath+"empty.jpg", filepath3+"/largefile");
+         ret = tfsManager.fetchFile(appId, userId,resourcesPath+"empty.jpg", filepath3+"/largefile");
          Assert.assertTrue(ret);
          
          //verify the file by crc
-         Assert.assertEquals(getCrc(resourcesPath+"1g.jpg").getValue(),getCrc(resourcesPath+"empty.jpg").getValue() );
+         Assert.assertEquals(getCrc(resourcesPath+"1g.jpg"),getCrc(resourcesPath+"empty.jpg"));
          
-         file_info = tfsManager.lsFile(userId,filepath3+"/largefile");
+         file_info = tfsManager.lsFile(appId, userId,filepath3+"/largefile");
          
          Assert.assertEquals(file_info.getLength(), 1<<30);
          Assert.assertTrue(file_info.isFile());
          Assert.assertEquals("largefile", file_info.getFileName());
         
          
-         ret = tfsManager.rmFile(userId,filepath3+"/largefile");
+         ret = tfsManager.rmFile(appId, userId,filepath3+"/largefile");
          Assert.assertTrue(ret);
          
-         file_info_list = tfsManager.lsDir(userId,filepath3);
+         file_info_list = tfsManager.lsDir(appId, userId,filepath3);
 		 Assert.assertEquals(file_info_list.size(), 0);
          
-         ret = tfsManager.createDir(appId, userId,filepath3);
+         ret = tfsManager.rmDir(appId, userId,filepath3);
          Assert.assertTrue(ret);
          
-         ret = tfsManager.createDir(appId, userId,filepath2);
+         ret = tfsManager.rmDir(appId, userId,filepath2);
          Assert.assertTrue(ret);
          
-         ret = tfsManager.createDir(appId, userId,filepath1);
+         ret = tfsManager.rmDir(appId, userId,filepath1);
          Assert.assertTrue(ret);
    
 	}
@@ -182,7 +168,7 @@ public class NameMetaManager_05_basic_large_file_operation extends  tfsNameBaseC
 		 ret = tfsManager.createDir(appId, userId,filepath3);
          Assert.assertTrue(ret);
          
-         ret = tfsManager.createFile(userId,filepath3+"/largefile");
+         ret = tfsManager.createFile(appId, userId,filepath3+"/largefile");
          Assert.assertTrue(ret);
          
          //从本地文件末尾开始倒序写
@@ -195,41 +181,37 @@ public class NameMetaManager_05_basic_large_file_operation extends  tfsNameBaseC
 
            if( total_ret!= 1<<30)
            {
-             write_ret = tfsManager.write(userId,filepath3+"/largefile", -1, data, data_offset, 1<<22);
+             write_ret = tfsManager.write(appId, userId,filepath3+"/largefile", -1, data, data_offset, 1<<22);
              Assert.assertEquals(write_ret, 1<<22);
              total_ret += write_ret;
            }
          }
          Assert.assertEquals(total_ret, 1<<30);
-         ret = tfsManager.fetchFile(userId,resourcesPath+"empty.jpg", filepath3+"/largefile");
+         ret = tfsManager.fetchFile(appId, userId,resourcesPath+"empty.jpg", filepath3+"/largefile");
          Assert.assertTrue(ret);
          
          //verify the file
-         Assert.assertEquals(getCrc(resourcesPath+"1g.jpg").getValue(),getCrc(resourcesPath+"empty.jpg").getValue() );
+         Assert.assertEquals(getCrc(resourcesPath+"1g.jpg"),getCrc(resourcesPath+"empty.jpg"));
          
-         
-         file_info = tfsManager.lsFile(userId,filepath3+"/largefile");
+         file_info = tfsManager.lsFile(appId, userId,filepath3+"/largefile");
          
          Assert.assertEquals(file_info.getLength(), 1<<30);
          Assert.assertTrue(file_info.isFile());
          Assert.assertEquals("largefile", file_info.getFileName());
          
-         ret = tfsManager.rmFile(userId,filepath3+"/largefile");
+         ret = tfsManager.rmFile(appId, userId,filepath3+"/largefile");
          Assert.assertTrue(ret);
          
-         file_info_list = tfsManager.lsDir(userId,filepath3);
-		 Assert.assertEquals(file_info_list.size(), 0);
+         file_info_list = tfsManager.lsDir(appId, userId,filepath3);
+		     Assert.assertEquals(file_info_list.size(), 0);
          
-         ret = tfsManager.createDir(appId, userId,filepath3);
+         ret = tfsManager.rmDir(appId, userId,filepath3);
          Assert.assertTrue(ret);
          
-         ret = tfsManager.createDir(appId, userId,filepath2);
+         ret = tfsManager.rmDir(appId, userId,filepath2);
          Assert.assertTrue(ret);
          
-         ret = tfsManager.createDir(appId, userId,filepath1);
+         ret = tfsManager.rmDir(appId, userId,filepath1);
          Assert.assertTrue(ret);
-   
 	}
-
-
 }

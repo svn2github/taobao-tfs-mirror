@@ -17,154 +17,139 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import com.taobao.common.tfs.function.tfsNameBaseCase;
+import com.taobao.common.tfs.function.NameMetaBaseCase;
 import com.taobao.common.tfs.namemeta.FileMetaInfo;
-import com.taobao.common.tfs.namemeta.NameMetaManager;
-public class NameMetaManager_02_multithread_directory_operation extends  tfsNameBaseCase{
+
+public class NameMetaManager_02_multithread_directory_operation extends  NameMetaBaseCase{
 
 	public static List<FileMetaInfo> file_info = null;
-	public static boolean suc_flag=false;
+  public static boolean suc_flag = false;
   public int count = 10;
-  public static List<String> nameMetaServerAddrList = new ArrayList<String>();
-  @BeforeClass
-    public  static void setUp() throws Exception {
+  public static String rootDir = "/NameMetaTest2";
 
-	 	// tfsManager = (NameMetaManagerLite)appContext.getBean("tfsManager1");
-		// tfsManager.init();
-		 
-	 //	 Assert.assertTrue(tfsManager.createDir("/public"));
-	}
-	@AfterClass
-	public static void tearDown() throws Exception 
-	{
-	//	tfsManager.rmDir("/public");
-	}
-	
+  @BeforeClass
+  public  static void setUpOnce() throws Exception {
+    NameMetaBaseCase.setUpOnce();
+    rmDirRecursive(appId, userId, rootDir); 
+  }
+
+  @AfterClass
+  public static void tearDownOnce() throws Exception {
+    NameMetaBaseCase.tearDownOnce();
+    rmDirRecursive(appId, userId, rootDir); 
+  }
+
+
 	@Test
 	public void test_01_multi_threads_create_different_directories() throws Throwable {
+		TestRunnable tr1, tr2, tr3, tr4, tr5, tr6;
+		tr1 = new ThreadCreateDir();
+		tr2 = new ThreadCreateDir();
+		tr3 = new ThreadCreateDir();
+		tr4 = new ThreadCreateDir();
+		tr5 = new ThreadCreateDir();
+		tr6 = new ThreadCreateDir();
 
-		TestRunnable tr1 ,tr2, tr3,tr4 ,tr5, tr6;
-		tr1 = new Thread1();
-		tr2 = new Thread1();
-		tr3 = new Thread1();
-		tr4 = new Thread1();
-		tr5 = new Thread1();
-		tr6 = new Thread1();
-		TestRunnable[] trs = {tr1,tr2,tr3,tr4,tr5,tr6};
+		TestRunnable[] trs = {tr1, tr2, tr3, tr4, tr5, tr6};
 		MultiThreadedTestRunner mttr = new MultiThreadedTestRunner(trs);
 		mttr.runTestRunnables();
 	}
 	
-	@Test
+	//@Test
 	public void test_02_multi_threads_rename_differernt_directories_in_same_dir() throws Throwable {
+		TestRunnable tr1, tr2, tr3;
+		tr1 = new ThreadRenameDirs();
+		tr2 = new ThreadRenameDirs();
+		tr3 = new ThreadRenameDirs();
 
-		TestRunnable tr1 ,tr2, tr3;
-		tr1 = new Thread2();
-		tr2 = new Thread2();
-		tr3 = new Thread2();
-		TestRunnable[] trs = { tr1,tr2,tr3};
+		TestRunnable[] trs = {tr1, tr2, tr3};
 		MultiThreadedTestRunner mttr = new MultiThreadedTestRunner(trs);
 		mttr.runTestRunnables();
 	}
 	
-	@Test
+	//@Test
 	public void test_03_multi_threads_move_differernt_directories_in_same_dir() throws Throwable {
+		TestRunnable tr1, tr2, tr3;
+		tr1 = new ThreadMoveDirs();
+		tr2 = new ThreadMoveDirs();
+		tr3 = new ThreadMoveDirs();
 
-		TestRunnable tr1 ,tr2, tr3;
-		tr1 = new Thread3();
-		tr2 = new Thread3();
-		tr3 = new Thread3();
-
-		TestRunnable[] trs = {tr1,tr2,tr3};
+		TestRunnable[] trs = {tr1, tr2, tr3};
 		MultiThreadedTestRunner mttr = new MultiThreadedTestRunner(trs);
 		mttr.runTestRunnables();
 	}
   
-	@Test
+	//@Test
 	public void test_04_multi_threads_delete_different_directories() throws Throwable {
+		TestRunnable tr1, tr2, tr3, tr4, tr5, tr6;
+		tr1 = new ThreadRmDirs();
+		tr2 = new ThreadRmDirs();
+		tr3 = new ThreadRmDirs();
+		tr4 = new ThreadRmDirs();
+		tr5 = new ThreadRmDirs();
+		tr6 = new ThreadRmDirs();
 
-		TestRunnable tr1 ,tr2, tr3,tr4 ,tr5, tr6;
-		tr1 = new Thread4();
-		tr2 = new Thread4();
-		tr3 = new Thread4();
-		tr4 = new Thread4();
-		tr5 = new Thread4();
-		tr6 = new Thread4();
-		TestRunnable[] trs = {tr1,tr2,tr3,tr4,tr5,tr6};
+		TestRunnable[] trs = {tr1, tr2, tr3, tr4, tr5, tr6};
 		MultiThreadedTestRunner mttr = new MultiThreadedTestRunner(trs);
 		mttr.runTestRunnables();
 	}
     
-	@Test
+	//@Test
 	public void test_05_multi_threads_create_and_delete_one_directory() throws Throwable {
-
-		TestRunnable tr1 ,tr2;
-		tr1 = new Thread5();
-		tr2 = new Thread5();
+		TestRunnable tr1, tr2;
+		tr1 = new ThreadCreateRmDir();
+		tr2 = new ThreadCreateRmDir();
 	
-		TestRunnable[] trs = {tr1,tr2};
+		TestRunnable[] trs = {tr1, tr2};
 		MultiThreadedTestRunner mttr = new MultiThreadedTestRunner(trs);
 		mttr.runTestRunnables();
 	}
     
-	@Test
+	//@Test
 	public void test_06_multi_threads_move_one_directory() throws Throwable {
-
-		TestRunnable tr1 ,tr2;
-		tr1 = new Thread6();
-		tr2 = new Thread6();
+		TestRunnable tr1, tr2;
+		tr1 = new ThreadMoveOneDir();
+		tr2 = new ThreadMoveOneDir();
 	
-		TestRunnable[] trs = {tr1,tr2};
+		TestRunnable[] trs = {tr1, tr2};
 		MultiThreadedTestRunner mttr = new MultiThreadedTestRunner(trs);
 		mttr.runTestRunnables();
 	}
 	
-	@Test
+	//@Test
 	public void test_07_multi_threads_rename_one_directory() throws Throwable {
-
-		TestRunnable tr1 ,tr2;
-		tr1 = new Thread7();
-		tr2 = new Thread7();
+		TestRunnable tr1, tr2;
+		tr1 = new ThreadRenameOneDir();
+		tr2 = new ThreadRenameOneDir();
 	
-		TestRunnable[] trs = {tr1,tr2};
+		TestRunnable[] trs = {tr1, tr2};
 		MultiThreadedTestRunner mttr = new MultiThreadedTestRunner(trs);
 		mttr.runTestRunnables();
 	}
 	
 	//Threads for every test case to call
-  private class Thread1 extends TestRunnable {
-    public long count=1000;
-    @Override
+  private class ThreadCreateDir extends TestRunnable {
+      public long count = 1000;
+      @Override
       public void runTest() throws Throwable {
         //线程要调用的方法或者要执行的操作
         log.info("线程===" + Thread.currentThread().getId() + "执行开始");
-        NameMetaManager tfsManager = new NameMetaManager();
-        boolean ret;
-        if(nameMetaServerAddrList.isEmpty())
-        {
-          nameMetaServerAddrList.add("10.232.36.208:5100");
-        }
-        // tfsManager.setAppId(Thread.currentThread().getId());
-        tfsManager.setUserId(10);
-        tfsManager.setNameMetaServerAddrList(nameMetaServerAddrList);
-        tfsManager.setNsAddr("10.232.36.206:3100");
-        tfsManager.setTimeout(3000);
-        tfsManager.init();
-        while(--count>0){
-          ret = tfsManager.createDir("/"+String.valueOf(count));
+        while (--count > 0) {
+          boolean ret = false;
+          ret = tfsManager.createDir(appId, userId, "/" + String.valueOf(count));
           Assert.assertTrue(ret);
         }
-
       }
   }
-  private class Thread2 extends TestRunnable {
+  private class ThreadRenameDirs extends TestRunnable {
     @Override
       public void runTest() throws Throwable {
         //线程要调用的方法或者要执行的操作
         rename_different_directories();
       }
   }
-  private class Thread3 extends TestRunnable {
+
+  private class ThreadMoveDirs extends TestRunnable {
 
     @Override
       public void runTest() throws Throwable {
@@ -172,28 +157,28 @@ public class NameMetaManager_02_multithread_directory_operation extends  tfsName
         move_different_directories();
       }
   }
-  private class Thread4 extends TestRunnable {
+  private class ThreadRmDirs extends TestRunnable {
     @Override
       public void runTest() throws Throwable {
         //线程要调用的方法或者要执行的操作
         delete_different_directories();
       }
   }
-  private class Thread5 extends TestRunnable {
+  private class ThreadCreateRmDir extends TestRunnable {
     @Override
       public void runTest() throws Throwable {
         //线程要调用的方法或者要执行的操作
         create_and_delete_one_directory();
       }
   }
-  private class Thread6 extends TestRunnable {
+  private class ThreadMoveOneDir extends TestRunnable {
     @Override
       public void runTest() throws Throwable {
         //线程要调用的方法或者要执行的操作
         move_one_directory();
       }
   }
-  private class Thread7 extends TestRunnable {
+  private class ThreadRenameOneDir extends TestRunnable {
     @Override
       public void runTest() throws Throwable {
         //线程要调用的方法或者要执行的操作
@@ -201,169 +186,112 @@ public class NameMetaManager_02_multithread_directory_operation extends  tfsName
       }
   }
 
-
-  public void create_different_directories() throws Exception 
-  {    	 
-    log.info("线程===" + Thread.currentThread().getId() + "执行开始");
-    NameMetaManager tfsManager = new NameMetaManager();
-    boolean ret;
-    if(nameMetaServerAddrList.isEmpty())
-    {
-      nameMetaServerAddrList.add("10.232.36.208:5100");
-    }
-
-    tfsManager.init();
-    while(--count>0){
-      ret = tfsManager.createDir(appId, userId,"/"+String.valueOf(1));
-      Assert.assertTrue(ret);
-    }
-
-
-    // ret = tfsManager.rmDir("/"+String.valueOf(count));
-    // Assert.assertTrue(ret);
-    /* long temp = Thread.currentThread().getId();
-
-       String filepath =String.valueOf(temp);
-
-       log.info("filepath"+filepath);
-
-       ret = tfsManager.createDir("/"+filepath);
-       Assert.assertTrue(ret);
-
-       ret = tfsManager.createDir("/"+filepath+"/newdir");
-       Assert.assertTrue(ret);
-
-       ret = tfsManager.rmDir("/"+filepath+"/newdir");
-       Assert.assertTrue(ret);
-
-       ret = tfsManager.rmDir("/"+filepath);
-       Assert.assertTrue(ret);*/
-
-  }
   public void create_and_delete_one_directory() throws Exception 
-  {    	 
+  {
     log.info("线程===" + Thread.currentThread().getId() + "执行开始");
-    //cannot verify the result of every single step ,do that in the last step
-    tfsManager.createDir(appId, userId,"/bus");
 
-    tfsManager.createDir(appId, userId,"/bus/test");
+    String filepath = rootDir + "/public";
+    String subDir = filepath + "/subdir";
+    String suberDir = subDir + "/suberdir";
 
-    tfsManager.createDir(appId, userId,"/bus/test/bike");
+    tfsManager.createDir(appId, userId, filepath);
 
-    tfsManager.mvDir(userId,"/bus/test/bike","/bus/test/rebike");
+    tfsManager.createDir(appId, userId, subDir);
 
-    tfsManager.createDir(appId, userId,"/bus/test/rebike");
+    tfsManager.createDir(appId, userId, suberDir);
 
-    tfsManager.createDir(appId, userId,"/bus/test");
+    tfsManager.rmDir(appId, userId, suberDir);
 
-    tfsManager.createDir(appId, userId,"/bus");
+    tfsManager.rmDir(appId, userId, subDir);
 
-
+    tfsManager.rmDir(appId, userId, filepath);
   }
-  public void rename_different_directories() throws Exception 
-  {    	 
+
+  public void rename_different_directories() throws Exception {
     log.info("线程===" + Thread.currentThread().getId() + "执行开始");
-    boolean ret;
 
-    long temp = Thread.currentThread().getId();
+    boolean ret = false;
+    long threadId = Thread.currentThread().getId();
+    String filepath = rootDir + "/" + String.valueOf(threadId);
+    String subDir = filepath + "/subdir";
+    String renamedDir = filepath + "/renamed";
 
-    String filepath =String.valueOf(temp);
-    log.info("filepath"+filepath);
-
-    ret = tfsManager.createDir(appId, userId,"/"+filepath);
+    ret = tfsManager.createDir(appId, userId, filepath);
     Assert.assertTrue(ret);
 
-    ret = tfsManager.createDir(appId, userId,"/"+filepath+"/newdir");
+    ret = tfsManager.createDir(appId, userId, subDir);
     Assert.assertTrue(ret);
 
-
-    ret = tfsManager.mvDir(userId,"/"+filepath+"/newdir", "/"+filepath+"/renamed");
+    ret = tfsManager.mvDir(appId, userId, subDir, renamedDir);
     Assert.assertTrue(ret);
 
-
-    ret = tfsManager.createDir(appId, userId,"/"+filepath+"/renamed");
+    ret = tfsManager.rmDir(appId, userId, renamedDir);
     Assert.assertTrue(ret);
 
-    ret = tfsManager.createDir(appId, userId,"/"+filepath);
+    ret = tfsManager.rmDir(appId, userId, filepath);
     Assert.assertTrue(ret);
-
   }
+
   public void rename_one_directory() throws Exception 
   {    	 
     log.info("线程===" + Thread.currentThread().getId() + "执行开始");
+    String filepath = rootDir + "/public/test";
+    String newpath = rootDir + "/public/renamed";
 
-    tfsManager.createDir(appId, userId,"/public/test");
+    tfsManager.createDir(appId, userId, filepath);
 
-    tfsManager.mvDir(userId,"/public/test","/public/retest");
+    tfsManager.mvDir(appId, userId, filepath, newpath);
 
-    tfsManager.createDir(appId, userId,"/public/retest");
-
-
-
-
+    tfsManager.rmDir(appId, userId, newpath);
   }
+
   public void move_different_directories() throws Exception 
   {    	 
     log.info("线程===" + Thread.currentThread().getId() + "执行开始");
-    boolean ret;
 
-    long temp = Thread.currentThread().getId();
+    boolean ret = false;
+    long threadId = Thread.currentThread().getId();
+    String filepath = rootDir + "/public/" + String.valueOf(threadId);
+    String newpath = rootDir + "/moved_" + String.valueOf(threadId);
 
-    String filepath =String.valueOf(temp);
-
-    ret = tfsManager.createDir(appId, userId,"/public/"+filepath);
+    ret = tfsManager.createDir(appId, userId, filepath);
     Assert.assertTrue(ret);
 
-    //	 ret = tfsManager.createDir("/move/"+filepath+"/"+filepath);
-    //   Assert.assertTrue(ret);
-
-    ret= tfsManager.mvDir(userId,"/public/"+filepath, "/"+filepath);
+    ret= tfsManager.mvDir(appId, userId, filepath, newpath);
     Assert.assertTrue(ret);
 
-    ret = tfsManager.createDir(appId, userId,"/"+filepath);
+    ret = tfsManager.rmDir(appId, userId, newpath);
     Assert.assertTrue(ret);   
   }
+
   public void move_one_directory() throws Exception 
   {    	 
     log.info("线程===" + Thread.currentThread().getId() + "执行开始");
-    boolean ret;
 
-    ret = tfsManager.createDir(appId, userId,"/public/test");
+    boolean ret = false;
+    String filepath = rootDir + "/public/test";
+    String newpath = rootDir + "/moved";
 
-    ret=  tfsManager.mvDir(userId,"/public/test", "/test");
+    ret = tfsManager.createDir(appId, userId, filepath);
 
-    ret = tfsManager.createDir(appId, userId,"/test");
+    ret=  tfsManager.mvDir(appId, userId, filepath, newpath);
 
+    ret = tfsManager.rmDir(appId, userId, newpath);
   }
+
   public void delete_different_directories() throws Exception 
   {    	 
     log.info("线程===" + Thread.currentThread().getId() + "执行开始");
-    boolean ret;
 
-    long temp = Thread.currentThread().getId();
+    boolean ret = false;
+    long threadId = Thread.currentThread().getId();
 
-    String filepath =String.valueOf(temp);
+    String filepath = rootDir + "/" + String.valueOf(threadId);
 
-    log.info("filepath"+filepath);
-
-    ret = tfsManager.createDir(appId, userId,"/"+filepath);
+    ret = tfsManager.createDir(appId, userId, filepath);
     Assert.assertTrue(ret);
 
-    ret = tfsManager.createDir(appId, userId,"/"+filepath+"/newdir");
+    ret = tfsManager.rmDir(appId, userId, filepath);
     Assert.assertTrue(ret);
-
-    ret = tfsManager.createDir(appId, userId,"/"+filepath+"/newdir/"+filepath);
-    Assert.assertTrue(ret);
-
-    ret = tfsManager.createDir(appId, userId,"/"+filepath+"/newdir/"+filepath);
-    Assert.assertTrue(ret);
-
-    ret = tfsManager.createDir(appId, userId,"/"+filepath+"/newdir");
-    Assert.assertTrue(ret);
-
-    ret = tfsManager.createDir(appId, userId,"/"+filepath);
-    Assert.assertTrue(ret);
-
   }
-
 }

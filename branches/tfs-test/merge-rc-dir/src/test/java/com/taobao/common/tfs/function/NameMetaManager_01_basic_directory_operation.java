@@ -18,85 +18,97 @@ import org.junit.Test;
 import com.taobao.common.tfs.TfsManager;
 import com.taobao.common.tfs.namemeta.FileMetaInfo;
 
-public class NameMetaManager_01_basic_directory_operation extends  tfsNameBaseCase{
+public class NameMetaManager_01_basic_directory_operation extends  NameMetaBaseCase{
 	
-	public static List<FileMetaInfo>  file_info_list ;
-	public static FileMetaInfo file_info;
-	public static String local_file = "src/test/resources/200k.jpg";
-	
-  @BeforeClass
-	public  static void setUp() throws Exception {
+	public static List<FileMetaInfo>  fileInfoList;
+	public static FileMetaInfo fileInfo;
+	public static String localFile = "src/test/resources/100K";
+  public static String rootDir = "/NameMetaTest1";
 
-	}
-	@AfterClass
-	public static void tearDown() throws Exception 
-	{
-	}
+	@BeforeClass
+  public  static void setUpOnce() throws Exception {
+    NameMetaBaseCase.setUpOnce();
+		boolean ret = tfsManager.createDir(appId, userId, "/ ");
+    Assert.assertTrue(ret);
+    rmDirRecursive(appId, userId, rootDir); 
+  }
+
+  @AfterClass
+  public static void tearDownOnce() throws Exception {
+    NameMetaBaseCase.tearDownOnce();
+    rmDirRecursive(appId, userId, rootDir); 
+  }
+
 	@Test
 	public void test_00_ls_top_directory()
 	{
-		 boolean ret = false;
-     String filepath1 = "/dddd";
-         
-		 ret = TfsManager.createDir(appId, userId, filepath1);
+     boolean ret = false;
+     int oldSize = 0;
+     int newSize = 0;
+
+     fileInfoList = tfsManager.lsDir(appId, userId, "/");
+     oldSize = fileInfoList.size();
+
+		 ret = tfsManager.createDir(appId, userId, rootDir);
      Assert.assertTrue(ret);
 
-     file_info_list= tfsManager.lsDir(appId, userId, "/");
-     Assert.assertEquals(1, file_info_list.size()); 
+     fileInfoList = tfsManager.lsDir(appId, userId, "/");
+     newSize = fileInfoList.size();
+     Assert.assertEquals(1, newSize - oldSize); 
      
-     ret = tfsManager.rmDir(appId, userId, filepath1);
+     ret = tfsManager.rmDir(appId, userId, rootDir);
      Assert.assertTrue(ret);
 	}
 	
-	@Test
+	//@Test
 	public void test_01_create_directory()
 	{
     boolean ret = false;
-    String filepath1 = "/dddd";
+    String filepath1 = rootDir + "/dddd";
 
     ret = tfsManager.createDir(appId, userId, filepath1);
     Assert.assertTrue(ret);
 
-    String filepath2 = "/dddd/ffff";
+    String filepath2 = filepath1 + "/ffff";
     ret = tfsManager.createDir(appId, userId, filepath2);
     Assert.assertTrue(ret);
 
-    file_info_list= tfsManager.lsDir(appId, userId, filepath1);
-    Assert.assertFalse(file_info_list.isEmpty()); 
+    fileInfoList= tfsManager.lsDir(appId, userId, filepath1);
+    Assert.assertFalse(fileInfoList.isEmpty()); 
 
     ret = tfsManager.rmDir(appId, userId, filepath2);
     Assert.assertTrue(ret);
 
     ret = tfsManager.rmDir(appId, userId, filepath1);
-    Assert.assertTrue(ret); /**/
+    Assert.assertTrue(ret);
 	}
 	
-	@Test
+	//@Test
 	public void test_02_remove_directory()
 	{
     boolean ret = false;
-    String filepath1 = "/eeee";
+    String filepath1 = rootDir + "/eeee";
 
     ret = tfsManager.createDir(appId, userId, filepath1);
     Assert.assertTrue(ret);
 
-    String filepath2 = "/eeee/gggg";
+    String filepath2 = filepath1 + "/gggg";
     ret = tfsManager.createDir(appId, userId, filepath2);
     Assert.assertTrue(ret);  
 
-    file_info_list= tfsManager.lsDir(appId, userId, filepath1);
-    Assert.assertFalse(file_info_list.isEmpty());
+    fileInfoList= tfsManager.lsDir(appId, userId, filepath1);
+    Assert.assertFalse(fileInfoList.isEmpty());
 
-    file_info_list= tfsManager.lsDir(appId, userId, filepath2);
-    Assert.assertTrue(file_info_list.isEmpty()); 
+    fileInfo = fileInfoList.get(0);
 
-    file_info = file_info_list.get(0);
+    long  pid  = fileInfo.getPid();
+    Assert.assertTrue(pid > 0);
 
-    long  pid  = file_info.getPid();
-    Assert.assertTrue(pid >0);
-
-    String dirname = file_info.getFileName();
+    String dirname = fileInfo.getFileName();
     Assert.assertNotNull(dirname);
+
+    fileInfoList= tfsManager.lsDir(appId, userId, filepath2);
+    Assert.assertTrue(fileInfoList.isEmpty()); 
 
     ret = tfsManager.rmDir(appId, userId, filepath2);
     Assert.assertTrue(ret);
@@ -105,12 +117,12 @@ public class NameMetaManager_01_basic_directory_operation extends  tfsNameBaseCa
     Assert.assertTrue(ret);
 	}
 
-	@Test
+	//@Test
 	public void test_03_rename_directory()
   {
     boolean ret = false;
-    String filepath1 = "/dddd";
-    String filepath2 = "/cccc";
+    String filepath1 = rootDir + "/dddd";
+    String filepath2 = rootDir + "/cccc";
 
     ret = tfsManager.createDir(appId, userId, filepath1);
     Assert.assertTrue(ret);
@@ -125,43 +137,55 @@ public class NameMetaManager_01_basic_directory_operation extends  tfsNameBaseCa
     Assert.assertTrue(ret);
 	}
 	
-	@Test
+	//@Test
 	public void test_04_move_directory()
   {
     boolean ret = false;
-    String filepath1 = "/dddd";
+    String filepath1 = rootDir + "/dddd";
 
     ret = tfsManager.createDir(appId, userId, filepath1);
     Assert.assertTrue(ret);
 
-    String filepath2 = "/dddd/ffff";
+    String filepath2 = filepath1 + "/ffff";
     ret = tfsManager.createDir(appId, userId, filepath2);
     Assert.assertTrue(ret);
 
-    String filepath3 = "/dddd/ffff/ttt";
+    String filepath3 = filepath2 + "/ttt";
     ret = tfsManager.createDir(appId, userId, filepath3);
     Assert.assertTrue(ret);
 
-    ret = tfsManager.mvDir(appId, userId, "/dddd/ffff/ttt","/dddd/ttt");
-
-    ret = tfsManager.rmDir(appId, userId, filepath2);
+    String filepath4 = filepath1 + "/ttt";
+    ret = tfsManager.mvDir(appId, userId, filepath3, filepath4);
     Assert.assertTrue(ret);
 
-    ret = tfsManager.rmDir(appId, userId, "/dddd/ttt");
+    ret = tfsManager.rmDir(appId, userId, filepath3);
+    Assert.assertFalse(ret);
+
+    ret = tfsManager.rmDir(appId, userId, filepath4);
+    Assert.assertTrue(ret);
+
+    ret = tfsManager.rmDir(appId, userId, filepath2);
     Assert.assertTrue(ret);
 
     ret = tfsManager.rmDir(appId, userId, filepath1);
     Assert.assertTrue(ret);
   }
 	
-	@Test
-	public void test_05_create()
+	//@Test
+	public void test_05_save_file()
 	{
-		boolean ret= tfsManager.createDir(appId, userId, "/teaa");
+    boolean ret = false;
+    String filepath1 = rootDir + "/dddd";
+    String filepath2 = filepath1 + "/ffff";
+    String filepath3 = filepath2 + "/file";
+
+    ret= tfsManager.createDir(appId, userId, filepath1);
 		Assert.assertTrue(ret);
-		ret= tfsManager.createDir(appId, userId, "/teaa/among");
+
+		ret= tfsManager.createDir(appId, userId, filepath2);
 		Assert.assertTrue(ret);
-		ret = tfsManager.saveFile(userId, "D:\\workspace\\tfs-client-java-with-name-meta\\src\\test\\resources\\100k.jpg", "/teaa/among/lys");
+
+		ret = tfsManager.saveFile(appId, userId, localFile, filepath3);
 		Assert.assertTrue(ret);
 
 	}

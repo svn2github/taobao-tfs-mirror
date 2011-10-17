@@ -17,7 +17,7 @@ import org.junit.Test;
 
 import com.taobao.common.tfs.namemeta.FileMetaInfo;
 
-public class NametfsManager_03_basic_small_file_operation extends  tfsNameBaseCase{
+public class NameMetaManager_03_basic_small_file_operation extends  NameMetaBaseCase{
 
   public  static List<FileMetaInfo>  file_info_list ;
   public  static FileMetaInfo file_info;
@@ -28,11 +28,12 @@ public class NametfsManager_03_basic_small_file_operation extends  tfsNameBaseCa
   public  static byte[] data= new byte[(int)small_file.length()];
   public  static CRC32 local_crc ;
   public  static CRC32 tfs_crc;
+
   @BeforeClass
-  public  static void setUp() throws Exception {
+  public  static void setUpOnce() throws Exception {
+    NameMetaBaseCase.setUpOnce();
     int read_length = 0;
     int ret = 0;
-    tfsManager = (MetatfsManager)appContext.getBean("tfsManager1");
     try{
       In=new FileInputStream(small_file);
 
@@ -53,9 +54,9 @@ public class NametfsManager_03_basic_small_file_operation extends  tfsNameBaseCa
       }
     }
   }
+
 	@AfterClass
-	public  static void tearDown() throws Exception 
-	{
+	public  static void tearDownOnce() throws Exception {
 	}
 
 	@Test
@@ -63,7 +64,6 @@ public class NametfsManager_03_basic_small_file_operation extends  tfsNameBaseCa
   {
     boolean ret = false;
     String filepath1 = "/one";
-
 
     ret = tfsManager.createDir(appId, userId,filepath1);
     Assert.assertTrue(ret);
@@ -76,14 +76,14 @@ public class NametfsManager_03_basic_small_file_operation extends  tfsNameBaseCa
     ret = tfsManager.createDir(appId, userId,filepath3);
     Assert.assertTrue(ret);
 
-    ret = tfsManager.createFile(userId,filepath3+"/smallfile");
+    ret = tfsManager.createFile(appId, userId,filepath3+"/smallfile");
     Assert.assertTrue(ret);
 
     long total_ret =0 ,write_ret =0, offset=0;
 
     while( total_ret!= 1<<20)
     {
-      write_ret = tfsManager.write(userId,filepath3+"/smallfile", offset, data, offset, 1<<15);
+      write_ret = tfsManager.write(appId, userId,filepath3+"/smallfile", offset, data, offset, 1<<15);
       Assert.assertEquals(write_ret, 1<<15);
       offset += write_ret;
       total_ret += write_ret;
@@ -91,23 +91,22 @@ public class NametfsManager_03_basic_small_file_operation extends  tfsNameBaseCa
     /*ret = tfsManager.saveFile(res_path+"1m.jpg", filepath3+"/smallfile");
       Assert.assertTrue(ret);*/
 
-    ret = tfsManager.fetchFile(userId,resourcesPath+"empty.jpg", filepath3+"/smallfile");
+    ret = tfsManager.fetchFile(appId, userId,resourcesPath+"empty.jpg", filepath3+"/smallfile");
     Assert.assertTrue(ret);
 
     //verify the file
-    Assert.assertEquals(getCrc(resourcesPath+"1m.jpg").getValue(),getCrc(resourcesPath+"empty.jpg").getValue() );
+    Assert.assertEquals(getCrc(resourcesPath+"1m.jpg"), getCrc(resourcesPath+"empty.jpg"));
 
-
-    ret = tfsManager.rmFile(userId,filepath3+"/smallfile");
+    ret = tfsManager.rmFile(appId, userId,filepath3+"/smallfile");
     Assert.assertTrue(ret);
 
-    ret = tfsManager.createDir(appId, userId,filepath3);
+    ret = tfsManager.rmDir(appId, userId,filepath3);
     Assert.assertTrue(ret);
 
-    ret = tfsManager.createDir(appId, userId,filepath2);
+    ret = tfsManager.rmDir(appId, userId,filepath2);
     Assert.assertTrue(ret);
 
-    ret = tfsManager.createDir(appId, userId,filepath1);
+    ret = tfsManager.rmDir(appId, userId,filepath1);
     Assert.assertTrue(ret);
 
   }
@@ -117,7 +116,6 @@ public class NametfsManager_03_basic_small_file_operation extends  tfsNameBaseCa
       boolean ret = false;
       String filepath1 = "/one";
 
-
       ret = tfsManager.createDir(appId, userId,filepath1);
       Assert.assertTrue(ret);
 
@@ -129,7 +127,7 @@ public class NametfsManager_03_basic_small_file_operation extends  tfsNameBaseCa
       ret = tfsManager.createDir(appId, userId,filepath3);
       Assert.assertTrue(ret);
 
-      ret = tfsManager.createFile(userId,filepath3+"/smallfile");
+      ret = tfsManager.createFile(appId, userId,filepath3+"/smallfile");
       Assert.assertTrue(ret);
 
       long total_ret =0 ;
@@ -138,7 +136,7 @@ public class NametfsManager_03_basic_small_file_operation extends  tfsNameBaseCa
 
       while( total_ret!= 1<<20)
       {
-        write_ret = tfsManager.write(userId,filepath3+"/smallfile", -1, data, offset, 1<<15);
+        write_ret = tfsManager.write(appId, userId,filepath3+"/smallfile", -1, data, offset, 1<<15);
         Assert.assertEquals(write_ret, 1<<15);
         offset -= 1<<15;
         total_ret += write_ret;
@@ -146,30 +144,29 @@ public class NametfsManager_03_basic_small_file_operation extends  tfsNameBaseCa
       //verify the file
       Assert.assertEquals(total_ret, 1<<20);
 
-      ret = tfsManager.fetchFile(userId,resourcesPath+"empty.jpg", filepath3+"/smallfile");
+      ret = tfsManager.fetchFile(appId, userId,resourcesPath+"empty.jpg", filepath3+"/smallfile");
       Assert.assertTrue(ret);
       //get the files' crc to  verify
-      Assert.assertEquals(getCrc(resourcesPath+"1m.jpg").getValue(),getCrc(resourcesPath+"empty.jpg").getValue() );
+      Assert.assertEquals(getCrc(resourcesPath+"1m.jpg"),getCrc(resourcesPath+"empty.jpg") );
 
-
-      ret = tfsManager.rmFile(userId,filepath3+"/smallfile");
+      ret = tfsManager.rmFile(appId, userId,filepath3+"/smallfile");
       Assert.assertTrue(ret);
 
-      ret = tfsManager.createDir(appId, userId,filepath3);
+      ret = tfsManager.rmDir(appId, userId,filepath3);
       Assert.assertTrue(ret);
 
-      ret = tfsManager.createDir(appId, userId,filepath2);
+      ret = tfsManager.rmDir(appId, userId,filepath2);
       Assert.assertTrue(ret);
 
-      ret = tfsManager.createDir(appId, userId,filepath1);
+      ret = tfsManager.rmDir(appId, userId,filepath1);
       Assert.assertTrue(ret);
     }
+
   @Test
     public void test_03_write_small_file_by_parts()
     {
       boolean ret = false;
       String filepath1 = "/one";
-
 
       ret = tfsManager.createDir(appId, userId,filepath1);
       Assert.assertTrue(ret);
@@ -182,14 +179,14 @@ public class NametfsManager_03_basic_small_file_operation extends  tfsNameBaseCa
       ret = tfsManager.createDir(appId, userId,filepath3);
       Assert.assertTrue(ret);
 
-      ret = tfsManager.createFile(userId,filepath3+"/smallfile");
+      ret = tfsManager.createFile(appId, userId,filepath3+"/smallfile");
       Assert.assertTrue(ret);
 
       long total_ret =0 ,write_ret =0, offset=0;
 
       while( total_ret!= 1<<20)
       {
-        write_ret = tfsManager.write(userId,filepath3+"/smallfile", offset, data, offset, 1<<15);
+        write_ret = tfsManager.write(appId, userId,filepath3+"/smallfile", offset, data, offset, 1<<15);
         Assert.assertEquals(write_ret, 1<<15);
         offset += write_ret;
         total_ret += write_ret;
@@ -197,23 +194,22 @@ public class NametfsManager_03_basic_small_file_operation extends  tfsNameBaseCa
       /*ret = tfsManager.saveFile(res_path+"1m.jpg", filepath3+"/smallfile");
         Assert.assertTrue(ret);*/
 
-      ret = tfsManager.fetchFile(userId,resourcesPath+"empty.jpg", filepath3+"/smallfile");
+      ret = tfsManager.fetchFile(appId, userId,resourcesPath+"empty.jpg", filepath3+"/smallfile");
       Assert.assertTrue(ret);
 
       //verify the file
-      Assert.assertEquals(getCrc(resourcesPath+"1m.jpg").getValue(),getCrc(resourcesPath+"empty.jpg").getValue() );
+      Assert.assertEquals(getCrc(resourcesPath+"1m.jpg"),getCrc(resourcesPath+"empty.jpg") );
 
-
-      ret = tfsManager.rmFile(userId,filepath3+"/smallfile");
+      ret = tfsManager.rmFile(appId, userId,filepath3+"/smallfile");
       Assert.assertTrue(ret);
 
-      ret = tfsManager.createDir(appId, userId,filepath3);
+      ret = tfsManager.rmDir(appId, userId,filepath3);
       Assert.assertTrue(ret);
 
-      ret = tfsManager.createDir(appId, userId,filepath2);
+      ret = tfsManager.rmDir(appId, userId,filepath2);
       Assert.assertTrue(ret);
 
-      ret = tfsManager.createDir(appId, userId,filepath1);
+      ret = tfsManager.rmDir(appId, userId,filepath1);
       Assert.assertTrue(ret);
 
     }
@@ -227,8 +223,7 @@ public class NametfsManager_03_basic_small_file_operation extends  tfsNameBaseCa
       ret = tfsManager.createDir(appId, userId,filepath1);
       Assert.assertTrue(ret);
 
-
-      ret = tfsManager.createFile(userId,filepath1+"/smallfile");
+      ret = tfsManager.createFile(appId, userId,filepath1+"/smallfile");
       Assert.assertTrue(ret);
 
       long total_ret =0 ,write_ret =0;
@@ -254,31 +249,28 @@ public class NametfsManager_03_basic_small_file_operation extends  tfsNameBaseCa
                }
                }
                */       
-      write_ret = tfsManager.write(userId,filepath1+"/smallfile", 0, data, 1<<18, 1<<18);
+      write_ret = tfsManager.write(appId, userId,filepath1+"/smallfile", 0, data, 1<<18, 1<<18);
       Assert.assertEquals(write_ret, 1<<18);
-      write_ret = tfsManager.write(userId,filepath1+"/smallfile", 1<<18, data, 1<<18, 1<<18);
+      write_ret = tfsManager.write(appId, userId,filepath1+"/smallfile", 1<<18, data, 1<<18, 1<<18);
       Assert.assertEquals(write_ret, 1<<18);
 
-      ret = tfsManager.mvFile(userId,filepath1+"/smallfile", filepath1+"/renamed");
+      ret = tfsManager.mvFile(appId, userId,filepath1+"/smallfile", filepath1+"/renamed");
       Assert.assertTrue(ret);
 
-      write_ret = tfsManager.write(userId,filepath1+"/renamed",1<<19, data, 1<<19, 1<<19);
+      write_ret = tfsManager.write(appId, userId,filepath1+"/renamed",1<<19, data, 1<<19, 1<<19);
       Assert.assertEquals(write_ret, 1<<19);
 
-
-
-      ret = tfsManager.fetchFile(userId,resourcesPath+"empty.jpg", filepath1+"/renamed");
+      ret = tfsManager.fetchFile(appId, userId,resourcesPath+"empty.jpg", filepath1+"/renamed");
       Assert.assertTrue(ret);
 
       //verify the file
-      Assert.assertEquals(getCrc(resourcesPath+"1m.jpg").getValue(),getCrc(resourcesPath+"empty.jpg").getValue() );
+      Assert.assertEquals(getCrc(resourcesPath+"1m.jpg"), getCrc(resourcesPath+"empty.jpg"));
 
-
-      ret = tfsManager.rmFile(userId,filepath1+"/renamed");
+      ret = tfsManager.rmFile(appId, userId,filepath1+"/renamed");
       Assert.assertTrue(ret);
 
 
-      ret = tfsManager.createDir(appId, userId,filepath1);
+      ret = tfsManager.rmDir(appId, userId,filepath1);
       Assert.assertTrue(ret);
 
     }
@@ -299,37 +291,37 @@ public class NametfsManager_03_basic_small_file_operation extends  tfsNameBaseCa
       ret = tfsManager.createDir(appId, userId,filepath3);
       Assert.assertTrue(ret);
 
-      ret = tfsManager.createFile(userId,filepath3+"/smallfile");
+      ret = tfsManager.createFile(appId, userId,filepath3+"/smallfile");
       Assert.assertTrue(ret);
 
-      long  write_ret = tfsManager.write(userId,filepath3+"/smallfile", 0, data, 0, 1<<19);
+      long  write_ret = tfsManager.write(appId, userId,filepath3+"/smallfile", 0, data, 0, 1<<19);
       Assert.assertEquals(write_ret, 1<<19);
 
 
-      ret = tfsManager.mvFile(userId,filepath3+"/smallfile", filepath3+"/renamed");
+      ret = tfsManager.mvFile(appId, userId,filepath3+"/smallfile", filepath3+"/renamed");
       Assert.assertTrue(ret);
 
-      write_ret = tfsManager.write(userId,filepath3+"/renamed", 1<<19, data, 1<<19, 1<<19);
+      write_ret = tfsManager.write(appId, userId,filepath3+"/renamed", 1<<19, data, 1<<19, 1<<19);
       Assert.assertEquals(write_ret, 1<<19);
 
 
-      ret = tfsManager.fetchFile(userId,resourcesPath+"empty.jpg", filepath3+"/renamed");
+      ret = tfsManager.fetchFile(appId, userId,resourcesPath+"empty.jpg", filepath3+"/renamed");
       Assert.assertTrue(ret);
 
       //verify the file
-      Assert.assertEquals(getCrc(resourcesPath+"1m.jpg").getValue(),getCrc(resourcesPath+"empty.jpg").getValue() );
+      Assert.assertEquals(getCrc(resourcesPath+"1m.jpg"), getCrc(resourcesPath+"empty.jpg"));
 
 
-      ret = tfsManager.rmFile(userId,filepath3+"/renamed");
+      ret = tfsManager.rmFile(appId, userId,filepath3+"/renamed");
       Assert.assertTrue(ret);
 
-      ret = tfsManager.createDir(appId, userId,filepath3);
+      ret = tfsManager.rmDir(appId, userId,filepath3);
       Assert.assertTrue(ret);
 
-      ret = tfsManager.createDir(appId, userId,filepath2);
+      ret = tfsManager.rmDir(appId, userId,filepath2);
       Assert.assertTrue(ret);
 
-      ret = tfsManager.createDir(appId, userId,filepath1);
+      ret = tfsManager.rmDir(appId, userId,filepath1);
       Assert.assertTrue(ret);
 
     }
@@ -339,7 +331,6 @@ public class NametfsManager_03_basic_small_file_operation extends  tfsNameBaseCa
       boolean ret = false;
       String filepath1 = "/one";
 
-
       ret = tfsManager.createDir(appId, userId,filepath1);
       Assert.assertTrue(ret);
 
@@ -351,37 +342,34 @@ public class NametfsManager_03_basic_small_file_operation extends  tfsNameBaseCa
       ret = tfsManager.createDir(appId, userId,filepath3);
       Assert.assertTrue(ret);
 
-      ret = tfsManager.createFile(userId,filepath3+"/smallfile");
+      ret = tfsManager.createFile(appId, userId,filepath3+"/smallfile");
       Assert.assertTrue(ret);
 
-      long  write_ret = tfsManager.write(userId,filepath3+"/smallfile", 0, data, 0, 1<<19);
+      long  write_ret = tfsManager.write(appId, userId,filepath3+"/smallfile", 0, data, 0, 1<<19);
       Assert.assertEquals(write_ret, 1<<19);
 
-
-      ret = tfsManager.mvFile(userId,filepath3+"/smallfile", filepath1+"/renamed");
+      ret = tfsManager.mvFile(appId, userId,filepath3+"/smallfile", filepath1+"/renamed");
       Assert.assertTrue(ret);
 
-      write_ret = tfsManager.write(userId,filepath1+"/renamed", 1<<19, data, 1<<19, 1<<19);
+      write_ret = tfsManager.write(appId, userId,filepath1+"/renamed", 1<<19, data, 1<<19, 1<<19);
       Assert.assertEquals(write_ret, 1<<19);
 
-
-      ret = tfsManager.fetchFile(userId,resourcesPath+"empty.jpg", filepath1+"/renamed");
+      ret = tfsManager.fetchFile(appId, userId,resourcesPath+"empty.jpg", filepath1+"/renamed");
       Assert.assertTrue(ret);
 
       //verify the file
-      Assert.assertEquals(getCrc(resourcesPath+"1m.jpg").getValue(),getCrc(resourcesPath+"empty.jpg").getValue() );
+      Assert.assertEquals(getCrc(resourcesPath+"1m.jpg"),getCrc(resourcesPath+"empty.jpg") );
 
-
-      ret = tfsManager.rmFile(userId,filepath1+"/renamed");
+      ret = tfsManager.rmFile(appId, userId,filepath1+"/renamed");
       Assert.assertTrue(ret);
 
-      ret = tfsManager.createDir(appId, userId,filepath3);
+      ret = tfsManager.rmDir(appId, userId,filepath3);
       Assert.assertTrue(ret);
 
-      ret = tfsManager.createDir(appId, userId,filepath2);
+      ret = tfsManager.rmDir(appId, userId,filepath2);
       Assert.assertTrue(ret);
 
-      ret = tfsManager.createDir(appId, userId,filepath1);
+      ret = tfsManager.rmDir(appId, userId,filepath1);
       Assert.assertTrue(ret);
 
     }
@@ -391,7 +379,6 @@ public class NametfsManager_03_basic_small_file_operation extends  tfsNameBaseCa
       boolean ret = false;
       String filepath1 = "/one";
 
-
       ret = tfsManager.createDir(appId, userId,filepath1);
       Assert.assertTrue(ret);
 
@@ -403,47 +390,43 @@ public class NametfsManager_03_basic_small_file_operation extends  tfsNameBaseCa
       ret = tfsManager.createDir(appId, userId,filepath3);
       Assert.assertTrue(ret);
 
-      ret = tfsManager.createFile(userId,filepath3+"/smallfile");
+      ret = tfsManager.createFile(appId, userId,filepath3+"/smallfile");
       Assert.assertTrue(ret);
 
-      long  write_ret = tfsManager.write(userId,filepath3+"/smallfile", -1, data, 1<<19, 1<<19);
+      long  write_ret = tfsManager.write(appId, userId,filepath3+"/smallfile", -1, data, 1<<19, 1<<19);
       Assert.assertEquals(write_ret, 1<<19);
 
-
-      ret = tfsManager.mvFile(userId,filepath3+"/smallfile", filepath3+"/renamed");
+      ret = tfsManager.mvFile(appId, userId,filepath3+"/smallfile", filepath3+"/renamed");
       Assert.assertTrue(ret);
 
-      write_ret = tfsManager.write(userId,filepath3+"/renamed", -1, data, 0, 1<<19);
+      write_ret = tfsManager.write(appId, userId,filepath3+"/renamed", -1, data, 0, 1<<19);
       Assert.assertEquals(write_ret, 1<<19);
 
-
-      ret = tfsManager.fetchFile(userId,resourcesPath+"empty.jpg", filepath3+"/renamed");
+      ret = tfsManager.fetchFile(appId, userId,resourcesPath+"empty.jpg", filepath3+"/renamed");
       Assert.assertTrue(ret);
 
       //verify the file
-      Assert.assertEquals(getCrc(resourcesPath+"1m.jpg").getValue(),getCrc(resourcesPath+"empty.jpg").getValue() );
+      Assert.assertEquals(getCrc(resourcesPath+"1m.jpg"),getCrc(resourcesPath+"empty.jpg") );
 
-
-      ret = tfsManager.rmFile(userId,filepath3+"/renamed");
+      ret = tfsManager.rmFile(appId, userId,filepath3+"/renamed");
       Assert.assertTrue(ret);
 
-      ret = tfsManager.createDir(appId, userId,filepath3);
+      ret = tfsManager.rmDir(appId, userId,filepath3);
       Assert.assertTrue(ret);
 
-      ret = tfsManager.createDir(appId, userId,filepath2);
+      ret = tfsManager.rmDir(appId, userId,filepath2);
       Assert.assertTrue(ret);
 
-      ret = tfsManager.createDir(appId, userId,filepath1);
+      ret = tfsManager.rmDir(appId, userId,filepath1);
       Assert.assertTrue(ret);
-
     }
+
   @Test
     public void test_08_backward_write_part_of_small_file_and_move_then_go_on()
     {
       boolean ret = false;
       String filepath1 = "/one";
 
-
       ret = tfsManager.createDir(appId, userId,filepath1);
       Assert.assertTrue(ret);
 
@@ -455,41 +438,35 @@ public class NametfsManager_03_basic_small_file_operation extends  tfsNameBaseCa
       ret = tfsManager.createDir(appId, userId,filepath3);
       Assert.assertTrue(ret);
 
-      ret = tfsManager.createFile(userId,filepath3+"/smallfile");
+      ret = tfsManager.createFile(appId, userId,filepath3+"/smallfile");
       Assert.assertTrue(ret);
 
-      long  write_ret = tfsManager.write(userId,filepath3+"/smallfile", -1, data, 1<<19, 1<<19);
+      long  write_ret = tfsManager.write(appId, userId,filepath3+"/smallfile", -1, data, 1<<19, 1<<19);
       Assert.assertEquals(write_ret, 1<<19);
 
-
-      ret = tfsManager.mvFile(userId,filepath3+"/smallfile", filepath1+"/renamed");
+      ret = tfsManager.mvFile(appId, userId,filepath3+"/smallfile", filepath1+"/renamed");
       Assert.assertTrue(ret);
 
-      write_ret = tfsManager.write(userId,filepath1+"/renamed", -1, data, 0, 1<<19);
+      write_ret = tfsManager.write(appId, userId,filepath1+"/renamed", -1, data, 0, 1<<19);
       Assert.assertEquals(write_ret, 1<<19);
 
-
-      ret = tfsManager.fetchFile(userId,res_path+"empty.jpg", filepath1+"/renamed");
+      ret = tfsManager.fetchFile(appId, userId,resourcesPath+"empty.jpg", filepath1+"/renamed");
       Assert.assertTrue(ret);
 
       //verify the file
-      Assert.assertEquals(getCrc(res_path+"1m.jpg").getValue(),getCrc(res_path+"empty.jpg").getValue() );
+      Assert.assertEquals(getCrc(resourcesPath+"1m.jpg"), getCrc(resourcesPath+"empty.jpg"));
 
 
-      ret = tfsManager.rmFile(userId,filepath1+"/renamed");
+      ret = tfsManager.rmFile(appId, userId,filepath1+"/renamed");
       Assert.assertTrue(ret);
 
-      ret = tfsManager.createDir(appId, userId,filepath3);
+      ret = tfsManager.rmDir(appId, userId,filepath3);
       Assert.assertTrue(ret);
 
-      ret = tfsManager.createDir(appId, userId,filepath2);
+      ret = tfsManager.rmDir(appId, userId,filepath2);
       Assert.assertTrue(ret);
 
-      ret = tfsManager.createDir(appId, userId,filepath1);
+      ret = tfsManager.rmDir(appId, userId,filepath1);
       Assert.assertTrue(ret);
-
     }
-
-
-
 }

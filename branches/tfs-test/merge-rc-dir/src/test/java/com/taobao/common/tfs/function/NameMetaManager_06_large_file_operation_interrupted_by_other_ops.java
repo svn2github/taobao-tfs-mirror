@@ -17,14 +17,13 @@ import org.junit.Test;
 
 import com.taobao.common.tfs.namemeta.FileMetaInfo;
 
-public class NametfsManager_06_large_file_operation_interrupted_by_other_ops extends  tfsNameBaseCase{
+public class NameMetaManager_06_large_file_operation_interrupted_by_other_ops extends  NameMetaBaseCase{
 	
 	public  static List<FileMetaInfo>  file_info_list ;
 	public  static FileMetaInfo file_info;
     public  static File large_file =new File("src/test/resources/10M.jpg");	
     
 	public  static InputStream In = null;  
-
     
     public  static byte[] data= new byte[1<<21];
    
@@ -66,21 +65,9 @@ public class NametfsManager_06_large_file_operation_interrupted_by_other_ops ext
 	        
 	        }
     }
-    @BeforeClass
-	public  static void setUp() throws Exception {
 
-
- 
-	}
-	@AfterClass
-	public static void tearDown() throws Exception 
-	{
-
-	}
 	@Before
-	public void Before(){
-       
-		
+	public void setUp(){
 		try {
 			In = new FileInputStream(large_file);
 		} catch (FileNotFoundException e) {
@@ -88,8 +75,9 @@ public class NametfsManager_06_large_file_operation_interrupted_by_other_ops ext
 			e.printStackTrace();
 		}
 	}
+
 	@After
-	public void After() {
+	public void tearDown() {
         if(In!= null)
         {
           try {
@@ -111,7 +99,7 @@ public class NametfsManager_06_large_file_operation_interrupted_by_other_ops ext
 		 ret = tfsManager.createDir(appId, userId,filepath3);
          Assert.assertTrue(ret);
         
-         ret = tfsManager.createFile(userId,filepath3+"/largefile");
+         ret = tfsManager.createFile(appId, userId,filepath3+"/largefile");
          Assert.assertTrue(ret);
          
          long total_ret =0 ;
@@ -125,7 +113,7 @@ public class NametfsManager_06_large_file_operation_interrupted_by_other_ops ext
         	 log.info("第"+i+"次写入,buffer长度："+data.length+" dataoffset:"+ offset);
              if( total_ret!= 10*(1<<20))
              {
-               write_ret = tfsManager.write(userId,filepath3+"/largefile", offset, data, 0, 1<<21);
+               write_ret = tfsManager.write(appId, userId,filepath3+"/largefile", offset, data, 0, 1<<21);
                Assert.assertEquals(write_ret, 1<<21);
                log.info("第"+i+"次写入"+write_ret);
                
@@ -138,7 +126,7 @@ public class NametfsManager_06_large_file_operation_interrupted_by_other_ops ext
            {   
         	   if (i == 3 )
         	   {
-        	     ret = tfsManager.mvFile(userId,filepath3+"/largefile", filepath3+"/renamed");
+        	     ret = tfsManager.mvFile(appId, userId,filepath3+"/largefile", filepath3+"/renamed");
                  Assert.assertTrue(ret);
                  log.info("改名成功？："+ret);
                }
@@ -146,7 +134,7 @@ public class NametfsManager_06_large_file_operation_interrupted_by_other_ops ext
           	   log.info("第"+i+"次写入,buffer长度："+data.length+" dataoffset:"+ offset);
                if( total_ret!= 10*(1<<20))
                {
-                 write_ret = tfsManager.write(userId,filepath3+"/renamed", offset, data, 0, 1<<21);
+                 write_ret = tfsManager.write(appId, userId,filepath3+"/renamed", offset, data, 0, 1<<21);
                  Assert.assertEquals(write_ret, 1<<21);
                  log.info("第"+i+"次写入"+write_ret);
                  offset += write_ret;
@@ -157,14 +145,14 @@ public class NametfsManager_06_large_file_operation_interrupted_by_other_ops ext
          }
          log.info("最后共写入"+total_ret);
          Assert.assertEquals(total_ret, 10*(1<<20));
-         ret = tfsManager.fetchFile(userId,resourcesPath+"empty.jpg", filepath3+"/renamed");
+         ret = tfsManager.fetchFile(appId, userId,resourcesPath+"empty.jpg", filepath3+"/renamed");
          Assert.assertTrue(ret);
          
          //verify the file
-         Assert.assertEquals(getCrc(res_path+"10M.jpg").getValue(),getCrc(res_path+"empty.jpg").getValue() );
+         Assert.assertEquals(getCrc(resourcesPath+"10M.jpg"),getCrc(resourcesPath+"empty.jpg") );
          
         
-         ret = tfsManager.rmFile(userId,filepath3+"/renamed");
+         ret = tfsManager.rmFile(appId, userId,filepath3+"/renamed");
          Assert.assertTrue(ret);
          
          ret = tfsManager.createDir(appId, userId,filepath3);
@@ -181,7 +169,7 @@ public class NametfsManager_06_large_file_operation_interrupted_by_other_ops ext
 		 ret = tfsManager.createDir(appId, userId,filepath3);
          Assert.assertTrue(ret);
         
-         ret = tfsManager.createFile(userId,filepath3+"/largefile");
+         ret = tfsManager.createFile(appId, userId,filepath3+"/largefile");
          Assert.assertTrue(ret);
          
          long total_ret =0 ;
@@ -195,7 +183,7 @@ public class NametfsManager_06_large_file_operation_interrupted_by_other_ops ext
         	 log.info("第"+i+"次写入,buffer长度："+data.length+" dataoffset:"+ offset);
              if( total_ret!= 10*(1<<20))
              {
-               write_ret = tfsManager.write(userId,filepath3+"/largefile", offset, data, 0, 1<<21);
+               write_ret = tfsManager.write(appId, userId,filepath3+"/largefile", offset, data, 0, 1<<21);
                Assert.assertEquals(write_ret, 1<<21);
                log.info("第"+i+"次写入"+write_ret);
                
@@ -208,7 +196,7 @@ public class NametfsManager_06_large_file_operation_interrupted_by_other_ops ext
            {   
         	   if (i == 3 )
         	   {
-        	     ret = tfsManager.mvFile(userId,filepath3+"/largefile", "/largefile");
+        	     ret = tfsManager.mvFile(appId, userId,filepath3+"/largefile", "/largefile");
                  Assert.assertTrue(ret);
                  log.info("改名成功？："+ret);
                }
@@ -216,7 +204,7 @@ public class NametfsManager_06_large_file_operation_interrupted_by_other_ops ext
           	   log.info("第"+i+"次写入,buffer长度："+data.length+" dataoffset:"+ offset);
                if( total_ret!= 10*(1<<20))
                {
-                 write_ret = tfsManager.write(userId,"/largefile", offset, data, 0, 1<<21);
+                 write_ret = tfsManager.write(appId, userId,"/largefile", offset, data, 0, 1<<21);
                  Assert.assertEquals(write_ret, 1<<21);
                  log.info("第"+i+"次写入"+write_ret);
                  offset += write_ret;
@@ -227,14 +215,14 @@ public class NametfsManager_06_large_file_operation_interrupted_by_other_ops ext
          }
          log.info("最后共写入"+total_ret);
          Assert.assertEquals(total_ret, 10*(1<<20));
-         ret = tfsManager.fetchFile(userId,resourcesPath+"empty.jpg", "/largefile");
+         ret = tfsManager.fetchFile(appId, userId,resourcesPath+"empty.jpg", "/largefile");
          Assert.assertTrue(ret);
          
          //verify the file
-         Assert.assertEquals(getCrc(userId,resourcesPath+"10M.jpg").getValue(),getCrc(resourcesPath+"empty.jpg").getValue() );
+         Assert.assertEquals(getCrc(resourcesPath+"10M.jpg"),getCrc(resourcesPath+"empty.jpg") );
          
         
-         ret = tfsManager.rmFile(userId,"/largefile");
+         ret = tfsManager.rmFile(appId, userId,"/largefile");
          Assert.assertTrue(ret);
          
          ret = tfsManager.createDir(appId, userId,filepath3);

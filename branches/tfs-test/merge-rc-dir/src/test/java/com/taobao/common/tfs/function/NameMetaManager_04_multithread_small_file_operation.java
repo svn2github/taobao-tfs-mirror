@@ -17,33 +17,24 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import com.taobao.common.tfs.function.tfsNameBaseCase;
+import com.taobao.common.tfs.function.NameMetaBaseCase;
 import com.taobao.common.tfs.namemeta.FileMetaInfo;
-import com.taobao.common.tfs.namemeta.NameMetaManager;
 
-public class NameMetaManager_04_multithread_small_file_operation  extends  tfsNameBaseCase{
+public class NameMetaManager_04_multithread_small_file_operation  extends  NameMetaBaseCase{
 
-        public static NameMetaManager MetaManager1 = new NameMetaManager();
 		public static List<FileMetaInfo>  file_info    = null;
 		public static boolean suc_flag=false;
-	    @BeforeClass
-		public  static void setUp() throws Exception {
-			
+
+	  @Before
+		public  void setUp()  {
+	    Assert.assertTrue(tfsManager.createDir(appId, userId,"/public"));
 		}
-		@AfterClass
-		public static void tearDown() throws Exception 
-		{
-		}
-	    @Before
-		public  void Before()  {
-			 	
-	    	Assert.assertTrue(MetaManager1.createDir(appId, userId,"/public"));
-		}
+
 		@After
-		public  void After() 
-		{
-			MetaManager1.createDir(appId, userId,"/public");
+		public  void tearDown() {
+			tfsManager.createDir(appId, userId,"/public");
 		}
+
 		@Test
 		public void test_01_multi_threads_create_and_delete_different_small_files() throws Throwable {
 
@@ -57,7 +48,7 @@ public class NameMetaManager_04_multithread_small_file_operation  extends  tfsNa
 			TestRunnable[] trs = {tr1,tr2,tr3,tr4,tr5,tr6};
 			MultiThreadedTestRunner mttr = new MultiThreadedTestRunner(trs);
 			mttr.runTestRunnables();
-			file_info = MetaManager1.lsDir(userId,"/public");
+			file_info = tfsManager.lsDir(appId, userId,"/public");
 			Assert.assertEquals(file_info.size(), 0);
 		}
 		
@@ -74,7 +65,7 @@ public class NameMetaManager_04_multithread_small_file_operation  extends  tfsNa
 			TestRunnable[] trs = {tr1,tr2,tr3,tr4,tr5,tr6};
 			MultiThreadedTestRunner mttr = new MultiThreadedTestRunner(trs);
 			mttr.runTestRunnables();
-			file_info = MetaManager1.lsDir(userId,"/public");
+			file_info = tfsManager.lsDir(appId, userId,"/public");
 			Assert.assertEquals(file_info.size(), 0);
 		}
 		
@@ -91,7 +82,7 @@ public class NameMetaManager_04_multithread_small_file_operation  extends  tfsNa
 			TestRunnable[] trs = {tr1,tr2,tr3,tr4,tr5,tr6};
 			MultiThreadedTestRunner mttr = new MultiThreadedTestRunner(trs);
 			mttr.runTestRunnables();
-			file_info = MetaManager1.lsDir(userId,"/public");
+			file_info = tfsManager.lsDir(appId, userId,"/public");
 			Assert.assertEquals(file_info.size(), 0);
 		}
 	  
@@ -110,7 +101,7 @@ public class NameMetaManager_04_multithread_small_file_operation  extends  tfsNa
 			MultiThreadedTestRunner mttr = new MultiThreadedTestRunner(trs);
 			mttr.runTestRunnables();
 			
-			file_info = MetaManager1.lsDir(userId,"/public");
+			file_info = tfsManager.lsDir(appId, userId,"/public");
 			Assert.assertEquals(file_info.size(), 0);
 			
 		}
@@ -129,7 +120,7 @@ public class NameMetaManager_04_multithread_small_file_operation  extends  tfsNa
 			MultiThreadedTestRunner mttr = new MultiThreadedTestRunner(trs);
 			mttr.runTestRunnables();
 			
-			file_info = MetaManager1.lsDir(userId,"/public");
+			file_info = tfsManager.lsDir(appId, userId,"/public");
 			Assert.assertEquals(file_info.size(), 0);
 		}
 		
@@ -143,7 +134,7 @@ public class NameMetaManager_04_multithread_small_file_operation  extends  tfsNa
 			TestRunnable[] trs = {tr1,tr2};
 			MultiThreadedTestRunner mttr = new MultiThreadedTestRunner(trs);
 			mttr.runTestRunnables();
-			file_info = MetaManager1.lsDir(userId,"/public");
+			file_info = tfsManager.lsDir(appId, userId,"/public");
 			Assert.assertEquals(file_info.size(), 0);
 		}
 		
@@ -191,42 +182,40 @@ public class NameMetaManager_04_multithread_small_file_operation  extends  tfsNa
 				rename_one_file();
 			}
 		}
-	     
-	    
+
 	    public void create_different_files() throws Exception 
 		{    	 
 			 log.info("线程===" + Thread.currentThread().getId() + "执行开始");
 			 boolean ret;
 
-	         String filepath =String.valueOf(Thread.currentThread().getId());
+	     String filepath =String.valueOf(Thread.currentThread().getId());
 	         
-	         log.info("filepath"+filepath);
+	     log.info("filepath"+filepath);
 	         
-			 ret = MetaManager1.createDir(appId, userId,"/public/"+filepath);
-	         Assert.assertTrue(ret);
+			 ret = tfsManager.createDir(appId, userId,"/public/"+filepath);
+	     Assert.assertTrue(ret);
 	         
-			 ret = MetaManager1.saveFile(userId,resourcesPath+"1m.jpg","/public/"+filepath+"/newfile");
-	         Assert.assertTrue(ret);
+			 ret = tfsManager.saveFile(appId, userId,resourcesPath+"1m.jpg","/public/"+filepath+"/newfile");
+	     Assert.assertTrue(ret);
 	         
-			 ret = MetaManager1.rmFile(userId,"/public/"+filepath+"/newfile");
+			 ret = tfsManager.rmFile(appId, userId,"/public/"+filepath+"/newfile");
 			 Assert.assertTrue(ret);
 
-			 ret = MetaManager1.createDir(appId, userId,"/public/"+filepath);
+			 ret = tfsManager.rmDir(appId, userId,"/public/"+filepath);
 			 Assert.assertTrue(ret);
 
 		}
 		public void create_and_save_and_delete_one_file() throws Exception 
 		{    	 
 			 log.info("线程===" + Thread.currentThread().getId() + "执行开始");
-	         //cannot verify the result of every single step ,do that in the last step
-			 MetaManager1.createDir(appId, userId,"/public/bus");
+	     //cannot verify the result of every single step ,do that in the last step
+			 tfsManager.createDir(appId, userId,"/public/bus");
              
-			 MetaManager1.saveFile(userId,resourcesPath+"1m.jpg", "/public/bus/blogbus");
-
+			 tfsManager.saveFile(appId, userId,resourcesPath+"1m.jpg", "/public/bus/blogbus");
 			 
-             MetaManager1.rmFile(userId,"/public/bus/blogbus");
+       tfsManager.rmFile(appId, userId,"/public/bus/blogbus");
 			 
-             MetaManager1.createDir(appId, userId,"/public/bus");
+       tfsManager.rmDir(appId, userId,"/public/bus");
 
 
 		}
@@ -235,85 +224,80 @@ public class NameMetaManager_04_multithread_small_file_operation  extends  tfsNa
 			 log.info("线程===" + Thread.currentThread().getId() + "执行开始");
 			 boolean ret;
 
-	         String filepath =String.valueOf(Thread.currentThread().getId());
+	     String filepath =String.valueOf(Thread.currentThread().getId());
 	         
-	         log.info("filepath"+filepath);
+	     log.info("filepath"+filepath);
 	         
-			 ret = MetaManager1.createDir(appId, userId,"/public/"+filepath);
-	         Assert.assertTrue(ret);
+			 ret = tfsManager.createDir(appId, userId,"/public/"+filepath);
+	     Assert.assertTrue(ret);
 	         
-			 ret = MetaManager1.createFile(userId,"/public/"+filepath+"/newfile");
-	         Assert.assertTrue(ret);
+			 ret = tfsManager.createFile(appId, userId,"/public/"+filepath+"/newfile");
+	     Assert.assertTrue(ret);
 	         
-			 ret = MetaManager1.mvFile(userId,"/public/"+filepath+"/newfile","/public/"+filepath+"/renamed");
-	         Assert.assertTrue(ret);
+			 ret = tfsManager.mvFile(appId, userId,"/public/"+filepath+"/newfile","/public/"+filepath+"/renamed");
+	     Assert.assertTrue(ret);
 			 
-	         ret = MetaManager1.rmFile(userId,"/public/"+filepath+"/renamed");
+	     ret = tfsManager.rmFile(appId, userId,"/public/"+filepath+"/renamed");
 			 Assert.assertTrue(ret);
 
-			 ret = MetaManager1.createDir(appId, userId,"/public/"+filepath);
+			 ret = tfsManager.rmDir(appId, userId,"/public/"+filepath);
 			 Assert.assertTrue(ret);
-
-		
 		}
+
 		public void rename_one_file() throws Exception 
 		{    	 
-			 log.info("线程===" + Thread.currentThread().getId() + "执行开始");
+      log.info("线程===" + Thread.currentThread().getId() + "执行开始");
 	        
-			 MetaManager1.createDir(appId, userId,"/public/test");
+			tfsManager.createDir(appId, userId,"/public/test");
 			 
-			 MetaManager1.saveFile(userId,resourcesPath+"1m.jpg", "/public/test/bus");
+			tfsManager.saveFile(appId, userId,resourcesPath+"1m.jpg", "/public/test/bus");
 	         
-	         MetaManager1.mvFile(userId,"/public/test/bus","/public/test/renamed");
+	    tfsManager.mvFile(appId, userId,"/public/test/bus","/public/test/renamed");
 	         
-	         MetaManager1.rmFile(userId,"/public/test/renamed");
+	    tfsManager.rmFile(appId, userId,"/public/test/renamed");
 	         
-	         MetaManager1.createDir(appId, userId,"/public/test");
+	    tfsManager.rmDir(appId, userId,"/public/test");
 		}
+
 		public void move_different_files() 
 		{    	 
 			 log.info("线程===" + Thread.currentThread().getId() + "执行开始");
 			 boolean ret;
 
-	         String filepath = String.valueOf(Thread.currentThread().getId());
-	         String filename = String.valueOf(Thread.currentThread().getId());
+	     String filepath = String.valueOf(Thread.currentThread().getId());
+	     String filename = String.valueOf(Thread.currentThread().getId());
 	         
-	         log.info("filepath"+filepath);
+	     log.info("filepath"+filepath);
 	         
-			 ret = MetaManager1.createDir(appId, userId,"/public"+"/"+filepath);
-	         Assert.assertTrue(ret);
+			 ret = tfsManager.createDir(appId, userId,"/public"+"/"+filepath);
+	     Assert.assertTrue(ret);
      
-			 ret = MetaManager1.createFile(userId,"/public"+"/"+filepath+"/"+filename);
-	         Assert.assertTrue(ret);
+			 ret = tfsManager.createFile(appId, userId,"/public"+"/"+filepath+"/"+filename);
+	     Assert.assertTrue(ret);
 	         
-			 ret = MetaManager1.mvFile(userId,"/public"+"/"+filepath+"/"+filename,"/public/"+filename);
-	         Assert.assertTrue(ret);
+			 ret = tfsManager.mvFile(appId, userId,"/public"+"/"+filepath+"/"+filename,"/public/"+filename);
+	     Assert.assertTrue(ret);
 			 
-			 ret = MetaManager1.rmFile(userId,"/public/"+filename);
-	         Assert.assertTrue(ret);
+			 ret = tfsManager.rmFile(appId, userId,"/public/"+filename);
+	     Assert.assertTrue(ret);
 	         
-	         ret = MetaManager1.createDir(appId, userId,"/public/"+filepath);
+	     ret = tfsManager.rmDir(appId, userId,"/public/"+filepath);
 			 Assert.assertTrue(ret);
-
-	 	     
 		}
+
 		public void move_one_file() throws Exception 
 		{    	 
 			 log.info("线程===" + Thread.currentThread().getId() + "执行开始");
 		        
-			 MetaManager1.createDir(appId, userId,"/public/test");
+			 tfsManager.createDir(appId, userId,"/public/test");
 			 
-			 MetaManager1.saveFile(userId,resourcesPath+"1m.jpg", "/public/test/bus");
+			 tfsManager.saveFile(appId, userId,resourcesPath+"1m.jpg", "/public/test/bus");
 	         
-	         MetaManager1.mvFile(userId,"/public/test/bus","/public/bus");
+	     tfsManager.mvFile(appId, userId,"/public/test/bus","/public/bus");
 	         
-	         MetaManager1.rmFile(userId,"/public/bus");
+	     tfsManager.rmFile(appId, userId,"/public/bus");
 	         
-	         MetaManager1.createDir(appId, userId,"/public/test");
-			 
-	     
+	     tfsManager.rmDir(appId, userId,"/public/test");
 		}
-
-
 	}
 
