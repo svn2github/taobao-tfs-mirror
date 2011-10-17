@@ -136,41 +136,33 @@ namespace tfs
     void* MemHelper::malloc(const int64_t size, const int32_t type)
     {
       void* ret_p = NULL;
-      if (size > 500)
       {
-        TBSYS_LOG(ERROR, "why you need so much mem ?");
-        assert(1);
-      }
-      else
-      {
+        tbsys::CThreadGuard mutex_guard(&mutex_);
+        used_size_ += size;
+        if (type != CACHE_NONE_NODE)
         {
-          tbsys::CThreadGuard mutex_guard(&mutex_);
-          used_size_ += size;
-          if (type != CACHE_NONE_NODE)
+          assert(NULL != instance_);
+          switch (type)
           {
-            assert(NULL != instance_);
-            switch (type)
-            {
-              case CACHE_ROOT_NODE:
-                ret_p = instance_->root_node_free_list_->get();
-                break;
-              case CACHE_DIR_META_NODE:
-                ret_p = instance_->dir_node_free_list_->get();
-                break;
-              case CACHE_FILE_META_NODE:
-                ret_p = instance_->file_node_free_list_->get();
-                break;
-              default:
-                break;
-            }
+            case CACHE_ROOT_NODE:
+              ret_p = instance_->root_node_free_list_->get();
+              break;
+            case CACHE_DIR_META_NODE:
+              ret_p = instance_->dir_node_free_list_->get();
+              break;
+            case CACHE_FILE_META_NODE:
+              ret_p = instance_->file_node_free_list_->get();
+              break;
+            default:
+              break;
           }
         }
-        if (NULL == ret_p)
-        {
-          ret_p = ::malloc(size + sizeof(int16_t));
-          *((int16_t*)ret_p) = size;
-          ret_p = (char*)ret_p + sizeof(int16_t);
-        }
+      }
+      if (NULL == ret_p)
+      {
+        ret_p = ::malloc(size + sizeof(int16_t));
+        *((int16_t*)ret_p) = size;
+        ret_p = (char*)ret_p + sizeof(int16_t);
       }
       return ret_p;
     }
