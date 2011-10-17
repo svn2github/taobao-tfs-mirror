@@ -155,11 +155,14 @@ namespace tfs
         {
           TBSYS_LOG(ERROR, "read frag info error, ret: %d", ret);
         }
-        else if ((ret = do_file_action(app_id, uid, REMOVE_FILE, file_path)) != TFS_SUCCESS)
+        if (TFS_SUCCESS == ret)
         {
-          TBSYS_LOG(ERROR, "remove file failed, file_path: %s, ret: %d", file_path, ret);
+          if ((ret = do_file_action(app_id, uid, REMOVE_FILE, file_path)) != TFS_SUCCESS)
+          {
+            TBSYS_LOG(ERROR, "remove file failed, file_path: %s, ret: %d", file_path, ret);
+          }
+          unlink_file(frag_info);
         }
-        unlink_file(frag_info);
       }
       return ret;
     }
@@ -257,7 +260,7 @@ namespace tfs
           // file not exist
           if (tmp_ret != TFS_SUCCESS && left_length == length)
           {
-            ret = EXIT_TARGET_EXIST_ERROR;
+            ret = tmp_ret;
             break;
           }
           frag_info.dump();
@@ -292,7 +295,7 @@ namespace tfs
           cur_pos += read_length;
         }
         while((left_length > 0) && still_have);
-        if (TFS_SUCCESS ==ret) 
+        if (TFS_SUCCESS == ret) 
         {
           ret = (length - left_length);
         }
@@ -583,8 +586,7 @@ namespace tfs
       {
         TBSYS_LOG(WARN, "ls directory failed, dir_path: %s", dir_path);
       }
-
-      if (is_recursive)
+      else if (is_recursive)
       {
         vector<FileMetaInfo>::iterator iter = v_file_meta_info.begin();
         vector<FileMetaInfo> sub_v_file_meta_info;
@@ -598,6 +600,7 @@ namespace tfs
             if ((ret = ls_dir(meta_server_id, app_id, uid, NULL, iter->id_, tmp_v_file_meta_info, is_recursive)) != TFS_SUCCESS)
             {
               TBSYS_LOG(WARN, "ls sub directory failed, pid: %"PRI64_PREFIX"d", iter->pid_);
+              break;
             }
             if (static_cast<int32_t>(tmp_v_file_meta_info.size()) <= 0)
             {
