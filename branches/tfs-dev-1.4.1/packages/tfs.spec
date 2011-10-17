@@ -17,6 +17,8 @@ BuildRequires: t-csrd-tbnet-devel = 1.4.0
 #BuildRequires: tair-devel = 2.3
 #BuildRequires: gcc = 4.1
 
+%define __os_install_post %{nil}
+
 %description
 TFS is a distributed file system.
 

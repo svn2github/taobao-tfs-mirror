@@ -110,6 +110,7 @@ namespace tfs
   static const uint64_t MB = 1 * 1024 * 1024;
   static const double PERCENTAGE_MIN = 0.000001;
   static const double PERCENTAGE_MAX = 1.000000;
+  static const double PERCENTAGE_MAGIC = 1000000.0;
   static double calc_capacity_percentage(const uint64_t capacity, const uint64_t total_capacity)
   {
     double ret = PERCENTAGE_MIN;
@@ -1054,28 +1055,28 @@ namespace tfs
             if (TFS_SUCCESS != iret)
             {
               send_msg_fail.push_back((*iter));
-              TBSYS_LOG(DEBUG, "send 'New block: %u' msg to server : %s fail",
+              TBSYS_LOG(ERROR, "send 'New block: %u' msg to server : %s fail",
                   block_id, CNetUtil::addrToString((*iter)->id()).c_str());
               break;
             }
             else
             {
               send_msg_success.push_back((*iter));
-              TBSYS_LOG(DEBUG, "send 'New block: %u' msg to server : %s successful",
+              TBSYS_LOG(INFO, "send 'New block: %u' msg to server : %s successful",
                   block_id, CNetUtil::addrToString((*iter)->id()).c_str());
             }
 #endif
           }
 
 #if !defined(TFS_NS_GTEST) && !defined(TFS_NS_INTEGRATION)
-          if (!send_msg_success.empty())
+          iret = send_msg_success.empty() ? TFS_ERROR : TFS_SUCCESS;
+          if (TFS_SUCCESS == iret)
           {
             std::vector<ServerCollect*> success;
             client->wait();
             NewClient::RESPONSE_MSG_MAP* sresponse = client->get_success_response();
             NewClient::RESPONSE_MSG_MAP* fresponse = client->get_fail_response();
-            if (TFS_SUCCESS == iret
-                && send_msg_success.size() == servers.size())//post all message successful
+            if (send_msg_success.size() == servers.size())//post all message successful
             {
               iret = NULL != sresponse && NULL != fresponse ? TFS_SUCCESS : TFS_ERROR;
               if (TFS_SUCCESS == iret)
@@ -1886,7 +1887,7 @@ namespace tfs
         {
           snprintf(retstr, 256, "%d", *current_value);
         }
-        TBSYS_LOG(INFO, "index: %d %s name: %s value: %d", index, set ? "set" : "get", dynamic_parameter_str[index - 1].c_str(), *current_value);
+        TBSYS_LOG(DEBUG, "index: %d %s name: %s value: %d", index, set ? "set" : "get", dynamic_parameter_str[index - 1].c_str(), *current_value);
       }
       return bret ? TFS_SUCCESS : TFS_ERROR;
     }
@@ -1916,16 +1917,11 @@ namespace tfs
         int64_t total = 0;
         {
           bool has_report_server = manager_.get_heart_management().empty_report_server(now);
-          time_t wait_time = has_report_server ? SYSPARAM_NAMESERVER.build_plan_default_wait_time_ : interrupt
+          time_t wait_time = ngi.owner_role_ == NS_ROLE_SLAVE ? SYSPARAM_NAMESERVER.safe_mode_time_ :  has_report_server
+                                               ? SYSPARAM_NAMESERVER.build_plan_default_wait_time_ : interrupt
                                                ? 0  : !bwait 
                                                ? SYSPARAM_NAMESERVER.build_plan_default_wait_time_ : ngi.switch_time_ > now 
                                                ? ngi.switch_time_ - now : SYSPARAM_NAMESERVER.build_plan_interval_;
-          tbutil::Monitor<tbutil::Mutex>::Lock lock(build_plan_monitor_);
-          if (ngi.owner_role_ == NS_ROLE_SLAVE)
-          {
-            build_plan_monitor_.wait();
-          }
-
           bwait = true;
           interrupt = false;
           build_plan_monitor_.timedWait(tbutil::Time::seconds(wait_time));
@@ -1945,6 +1941,9 @@ namespace tfs
 #if defined(TFS_NS_GTEST) || defined(TFS_NS_INTEGRATION) || defined(TFS_NS_DEBUG)
         TBSYS_LOG(DEBUG, "SYSPARAM_NAMESERVER.run_plan_ratio_: %d, alive_server_size_: %d", SYSPARAM_NAMESERVER.run_plan_ratio_, alive_server_size_);
 #endif
+
+        if (ngi.owner_role_ == NS_ROLE_SLAVE)
+          continue;
 
         if (need <= 0)
         {
@@ -2380,7 +2379,7 @@ namespace tfs
         const uint64_t total_capacity,
         const int64_t total_block_count,
         const int64_t average_block_size,
-        std::multimap<int32_t, ServerCollect*>& source,
+        std::multimap<int64_t, ServerCollect*>& source,
         //std::set<ServerCollect*>& source,
         std::set<ServerCollect*>& target)
     {
@@ -2412,7 +2411,7 @@ namespace tfs
         const uint64_t total_capacity,
         const int64_t total_block_count,
         ServerCollect* server,
-        std::multimap<int32_t, ServerCollect*>& source,
+        std::multimap<int64_t, ServerCollect*>& source,
         //std::set<ServerCollect*>& source,
         std::set<ServerCollect*>& target)
     {
@@ -2447,7 +2446,8 @@ namespace tfs
                           SYSPARAM_NAMESERVER.balance_max_diff_block_num_;
             if (diff > 0)
             {
-              source.insert(std::multimap<int32_t, ServerCollect*>::value_type(diff, server));
+              int64_t value = static_cast<int64_t>(percent * PERCENTAGE_MAGIC);
+              source.insert(std::multimap<int64_t, ServerCollect*>::value_type(value, server));
             }
           }
         }
@@ -2484,7 +2484,7 @@ namespace tfs
           else
           {
             std::set<ServerCollect*> target;
-            std::multimap<int32_t, ServerCollect*> source;
+            std::multimap<int64_t, ServerCollect*> source;
             //std::set<ServerCollect*> source;
             int64_t average_load = total_load / alive_server_size;
 
@@ -2497,7 +2497,7 @@ namespace tfs
             std::vector<ServerCollect*> except;
             std::vector<ServerCollect*> servers;
             //std::set<ServerCollect*>::const_iterator it = source.begin();
-            std::multimap<int32_t, ServerCollect*>::const_reverse_iterator it = source.rbegin();
+            std::multimap<int64_t, ServerCollect*>::const_reverse_iterator it = source.rbegin();
             //for (; it != source.end() && !(interrupt_ & INTERRUPT_ALL) && need > 0 && !target.empty(); ++it)
             for (; it != source.rend() && !(interrupt_ & INTERRUPT_ALL) && need > 0 && !target.empty(); ++it)
             {

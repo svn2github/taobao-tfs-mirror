@@ -407,7 +407,7 @@ namespace nameserver
         const int64_t total_block_count,
         const int64_t average_block_size,
         //std::set<ServerCollect*>& source,
-        std::multimap<int32_t, ServerCollect*>& source,
+        std::multimap<int64_t, ServerCollect*>& source,
         std::set<ServerCollect*>& target);
 
     void split_servers_helper(const int64_t average_load,
@@ -415,7 +415,7 @@ namespace nameserver
         const int64_t total_block_count,
         ServerCollect* server,
         //std::set<ServerCollect*>& source,
-        std::multimap<int32_t, ServerCollect*>& source,
+        std::multimap<int64_t, ServerCollect*>& source,
         std::set<ServerCollect*>& target);
 
     bool add_task(const TaskPtr& task);

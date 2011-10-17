@@ -22,42 +22,47 @@
 #include "common/base_packet_factory.h"
 #include "message/heart_message.h"
 #include "message/message_factory.h"
-#include "nameserver/ns_define.h"
 
 using namespace tfs::message;
 using namespace tfs::common;
-using namespace tfs::nameserver;
 namespace tfs
 {
   namespace monitor
   {
-    static NsStatus get_name_server_running_status(const uint64_t ip_port, const int32_t switch_flag)
+    static int8_t get_server_running_status(const uint64_t ip_port, const int32_t switch_flag)
     {
+      int8_t status = -1;
+      int32_t count = 0;
+      NewClient* client = NULL;
       const int64_t TIMEOUT = 500;
-      NsStatus status = NS_STATUS_NONE;
-      NewClient* client = NewClientManager::get_instance().create_client();
-      if (NULL != client)
+      do
       {
-        HeartBeatAndNSHeartMessage heart_msg;
-        heart_msg.set_ns_switch_flag_and_status(switch_flag, 0);
-        tbnet::Packet* rsp_msg = NULL;
-        if (TFS_SUCCESS == send_msg_to_server(ip_port, client, &heart_msg, rsp_msg, TIMEOUT))
+        ++count;
+        client = NewClientManager::get_instance().create_client();
+        if (NULL != client)
         {
-          if (HEARTBEAT_AND_NS_HEART_MESSAGE == rsp_msg->getPCode())
+          HeartBeatAndNSHeartMessage heart_msg;
+          heart_msg.set_ns_switch_flag_and_status(switch_flag, 0);
+          tbnet::Packet* rsp_msg = NULL;
+          if (TFS_SUCCESS == send_msg_to_server(ip_port, client, &heart_msg, rsp_msg, TIMEOUT))
           {
-            status = static_cast<NsStatus> (dynamic_cast<HeartBeatAndNSHeartMessage*> (rsp_msg)->get_ns_status());
+            if (HEARTBEAT_AND_NS_HEART_MESSAGE == rsp_msg->getPCode())
+            {
+              status = dynamic_cast<HeartBeatAndNSHeartMessage*> (rsp_msg)->get_ns_status();
+            }
+            else
+            {
+              TBSYS_LOG(ERROR, "unknow packet pcode %d", rsp_msg->getPCode());
+            }
           }
           else
           {
-            TBSYS_LOG(ERROR, "unknow packet pcode %d", rsp_msg->getPCode());
+            TBSYS_LOG(ERROR, "send packet error");
           }
+          NewClientManager::get_instance().destroy_client(client);
         }
-        else
-        {
-          TBSYS_LOG(ERROR, "send packet error");
-        }
-        NewClientManager::get_instance().destroy_client(client);
       }
+      while (count < 3 && -1 != status);
       return status;
     }
   }
@@ -98,37 +103,34 @@ int main(int argc, char *argv[])
       return TFS_ERROR;
     }
   }
+  int32_t iret  = ip.empty() || ip == " " ? -1 : 0;
+  if (0 == iret)
+  {
+    iret = port <= 0 || port >= 0xffff ? -1 : 0;
+  }
+  if (0 == iret)
+  {
+    if (set_log_level)
+    {
+      TBSYS_LOGGER.setLogLevel("ERROR");
+    }
+    static MessageFactory packet_factory;
+    static BasePacketStreamer packet_streamer;
+    packet_streamer.set_packet_factory(&packet_factory);
+    NewClientManager::get_instance().initialize(&packet_factory, &packet_streamer);
 
-  if (ip.empty() || ip == " ")
-  {
-    usage(argv[0]);
-    return TFS_ERROR;
+    uint64_t hostid = tbsys::CNetUtil::strToAddr(const_cast<char*> (ip.c_str()), port);
+    int8_t status = get_server_running_status(hostid, switch_flag);
+    if ((status > 0) && (status <= 4))
+    {
+      iret = 0;
+    }
+    else
+    {
+      TBSYS_LOG(ERROR, "ping server failed, get status: %d", status);
+      iret = status;
+    }
   }
-  if (port <= 0 || port > 0xffff)
-  {
-    usage(argv[0]);
-    return TFS_ERROR;
-  }
-  if (set_log_level)
-  {
-    TBSYS_LOGGER.setLogLevel("ERROR");
-  }
-  static MessageFactory packet_factory;
-  static BasePacketStreamer packet_streamer;
-  packet_streamer.set_packet_factory(&packet_factory);
-  NewClientManager::get_instance().initialize(&packet_factory, &packet_streamer);
-
-  uint64_t hostid = tbsys::CNetUtil::strToAddr(const_cast<char*> (ip.c_str()), port);
-  int32_t iret  = NS_STATUS_NONE;
-  NsStatus status = get_name_server_running_status(hostid, switch_flag);
-  if ((status > NS_STATUS_UNINITIALIZE) && (status <= NS_STATUS_INITIALIZED))
-  {
-    iret = 0;
-  }
-  else
-  {
-    TBSYS_LOG(ERROR, "ping nameserver failed, get status(none)");
-    iret = status;
-  }
+  TBSYS_LOG(DEBUG, "iret: %d", iret);
   return iret;
 }
