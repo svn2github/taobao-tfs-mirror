@@ -160,7 +160,7 @@ TEST_F(MetaInfoTest, check_frag_info_overerite)
   fm.size_ = 2;
   fi.v_frag_meta_.push_back(fm);  //8 - 10
 
-  EXPECT_EQ(TFS_ERROR, MetaServerService::check_frag_info(fi));
+  EXPECT_NE(TFS_SUCCESS, MetaServerService::check_frag_info(fi));
 }
 TEST_F(MetaInfoTest, check_frag_info_no_sort)
 {
@@ -179,7 +179,7 @@ TEST_F(MetaInfoTest, check_frag_info_no_sort)
   fm.size_ = 2;
   fi.v_frag_meta_.push_back(fm);  
 
-  EXPECT_EQ(TFS_ERROR, MetaServerService::check_frag_info(fi));
+  EXPECT_NE(TFS_SUCCESS, MetaServerService::check_frag_info(fi));
 }
 
 TEST_F(MetaInfoTest, check_frag_info_error_cross)
@@ -199,7 +199,7 @@ TEST_F(MetaInfoTest, check_frag_info_error_cross)
   fm.size_ = 5;
   fi.v_frag_meta_.push_back(fm);  
 
-  EXPECT_EQ(TFS_ERROR, MetaServerService::check_frag_info(fi));
+  EXPECT_NE(TFS_SUCCESS, MetaServerService::check_frag_info(fi));
 }
 
 int main(int argc, char* argv[])

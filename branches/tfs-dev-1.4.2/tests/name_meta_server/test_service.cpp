@@ -54,8 +54,8 @@ void dump_frag_meta(const FragMeta& fm)
       fm.offset_, fm.file_id_, fm.size_, fm.block_id_);
 }
 tfs::namemetaserver::MetaServerService service;
-NameMeatServerParameter::DbInfo dbinfo;
-int64_t app_id = 18;
+NameMetaServerParameter::DbInfo dbinfo;
+int64_t app_id = 19;
 int64_t uid = 5;
 
 TEST_F(ServiceTest, create_dir)
@@ -71,7 +71,7 @@ TEST_F(ServiceTest, create_dir)
   TBSYS_LOG(INFO, "create /test1/");
   sprintf(new_dir_path, "/test1/");
   ret = service.create(app_id, uid, new_dir_path, DIRECTORY);
-  EXPECT_EQ(TFS_ERROR, ret);
+  EXPECT_NE(TFS_SUCCESS, ret);
 
   TBSYS_LOG(INFO, "create /test1/ff/");
   sprintf(new_dir_path, "/test1/ff/");
@@ -81,7 +81,7 @@ TEST_F(ServiceTest, create_dir)
   TBSYS_LOG(INFO, "create /test2/ff");
   sprintf(new_dir_path, "/test2/ff");
   ret = service.create(app_id, uid, new_dir_path, DIRECTORY);
-  EXPECT_EQ(TFS_ERROR, ret);
+  EXPECT_NE(TFS_SUCCESS, ret);
 
   TBSYS_LOG(INFO, "create /test2");
   sprintf(new_dir_path, "/test2");
@@ -109,12 +109,12 @@ TEST_F(ServiceTest, create_file)
   TBSYS_LOG(INFO, "create /test3/f1");
   sprintf(new_dir_path, "/test3/f1");
   ret = service.create(app_id, uid, new_dir_path, NORMAL_FILE);
-  EXPECT_EQ(TFS_ERROR, ret);
+  EXPECT_NE(TFS_SUCCESS, ret);
 
   TBSYS_LOG(INFO, "create /test1/ff/");
   sprintf(new_dir_path, "/test1/ff/");
   ret = service.create(app_id, uid, new_dir_path, NORMAL_FILE);
-  EXPECT_EQ(TFS_ERROR, ret);
+  EXPECT_NE(TFS_SUCCESS, ret);
 
   TBSYS_LOG(INFO, "create /test2/ff");
   sprintf(new_dir_path, "/test2/ff");
@@ -124,7 +124,7 @@ TEST_F(ServiceTest, create_file)
   TBSYS_LOG(INFO, "create /test2");
   sprintf(new_dir_path, "/test2");
   ret = service.create(app_id, uid, new_dir_path, NORMAL_FILE);
-  EXPECT_EQ(TFS_ERROR, ret);
+  EXPECT_NE(TFS_SUCCESS, ret);
   //now we have  /test1/   /test1/ff/  /test2/ff
 }
 TEST_F(ServiceTest, rm_dir)
@@ -324,7 +324,7 @@ TEST_F(ServiceTest, read_file)
   TBSYS_LOG(INFO, "read /test1/test3");
   sprintf(new_dir_path, "/test1/test3");
   ret = service.read(app_id, uid, new_dir_path, 10, 50, frag_info_out, still_have);
-  EXPECT_EQ(TFS_SUCCESS, ret);
+  EXPECT_NE(TFS_SUCCESS, ret);
   for (int i = 0; i < frag_info_out.v_frag_meta_.size(); i++)
   {
     TBSYS_LOG(INFO, "block_id %d file_id %ld off_set %ld size %d", 
@@ -428,19 +428,15 @@ TEST_F(ServiceTest, ls)
 } 
 int main(int argc, char* argv[])
 {
+  
   {
-  MemHelper::init(5,5,5);
-  dbinfo.conn_str_ = "10.232.36.205:3306:tfs_name_db";
-  dbinfo.user_ = "root";
-  dbinfo.passwd_ = "root";
-
-  SYSPARAM_NAMEMETASERVER.db_infos_.push_back(dbinfo);
-  SYSPARAM_NAMEMETASERVER.max_pool_size_ = 5;
-  service.initialize(0, NULL);
-  printf("app_id %lu, uid: %lu\n", app_id, uid);
-  //TBSYS_LOGGER.setLogLevel("debug");
-  PROFILER_SET_STATUS(0);
-  testing::InitGoogleTest(&argc, argv);
+    MemHelper::init(5,5,5);
+    TBSYS_CONFIG.load("./test_service.conf");
+    service.initialize(100, NULL);
+    printf("app_id %lu, uid: %lu\n", app_id, uid);
+    //TBSYS_LOGGER.setLogLevel("debug");
+    PROFILER_SET_STATUS(0);
+    testing::InitGoogleTest(&argc, argv);
   }
   return RUN_ALL_TESTS();
 }

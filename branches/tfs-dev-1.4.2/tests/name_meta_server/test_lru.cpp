@@ -162,7 +162,8 @@ namespace tfs
           lru.get(key);
       }
       double ratio = 0.2;
-      uint64_t gc_count = static_cast<uint64_t>(MAX_COUNT * ratio);
+      uint64_t gc_count = static_cast<uint64_t>(MAX_COUNT * ratio) + 1;
+      TBSYS_LOG(INFO, "gc_count %ld", gc_count);
       BaseStrategy<Key, RootNode> bs(lru);
       iret = lru.gc(ratio, &bs, rs);
       EXPECT_EQ(TFS_SUCCESS, iret);
