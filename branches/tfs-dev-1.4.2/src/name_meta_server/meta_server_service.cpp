@@ -23,6 +23,10 @@
 using namespace tfs::common;
 using namespace tfs::message;
 using namespace std;
+namespace 
+{
+  const int TEST_NO_ROOT = 100;
+}
 
 namespace tfs
 {
@@ -97,19 +101,22 @@ namespace tfs
           }
           else
           {
-            MsRuntimeGlobalInformation& rgi = MsRuntimeGlobalInformation::instance();
-            rgi.server_.base_info_.id_ = tbsys::CNetUtil::strToAddr(get_ip_addr(), get_port());
-            rgi.server_.base_info_.start_time_ = time(NULL);
-            ret = heart_manager_.initialize();
-            if (TFS_SUCCESS != ret)
+            if (TEST_NO_ROOT != argc)
             {
-              TBSYS_LOG(ERROR, "init heart_manager error");
-            }
-            else
-            {
-              GcTimerTaskPtr task = new GcTimerTask(*this);
-              int32_t gc_interval = TBSYS_CONFIG.getInt(CONF_SN_NAMEMETASERVER, CONF_GC_INTERVAL, 10);
-              get_timer()->scheduleRepeated(task, tbutil::Time::seconds(gc_interval));
+              MsRuntimeGlobalInformation& rgi = MsRuntimeGlobalInformation::instance();
+              rgi.server_.base_info_.id_ = tbsys::CNetUtil::strToAddr(get_ip_addr(), get_port());
+              rgi.server_.base_info_.start_time_ = time(NULL);
+              ret = heart_manager_.initialize();
+              if (TFS_SUCCESS != ret)
+              {
+                TBSYS_LOG(ERROR, "init heart_manager error");
+              }
+              else
+              {
+                GcTimerTaskPtr task = new GcTimerTask(*this);
+                int32_t gc_interval = TBSYS_CONFIG.getInt(CONF_SN_NAMEMETASERVER, CONF_GC_INTERVAL, 10);
+                get_timer()->scheduleRepeated(task, tbutil::Time::seconds(gc_interval));
+              }
             }
           }
         }
@@ -445,7 +452,7 @@ namespace tfs
       {
         TBSYS_LOG(INFO, "file_path(%s) is invalid", file_path);
       }
-      if (TFS_SUCCESS == ret && NORMAL_FILE == type && 0 == get_depth(v_name))
+      if (TFS_SUCCESS == ret && 0 == get_depth(v_name))
       {
         ret = EXIT_INVALID_FILE_NAME;
       }
