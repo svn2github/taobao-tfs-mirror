@@ -152,31 +152,16 @@ namespace tfs
             servers_.insert(META_SERVER_MAPS::value_type(server.base_info_.id_, server));
           pserver =  &res.first->second;
         }
+        else
+        {
+          pserver = &iter->second;
+        }
         memcpy(pserver, &server, sizeof(MetaServer));
         pserver->lease_.lease_id_ = new_lease_id();
         pserver->lease_.lease_expired_time_ = now.toSeconds() + SYSPARAM_RTSERVER.mts_rts_lease_expired_time_ ;
         pserver->base_info_.last_update_time_ = now.toSeconds();
         server.tables_.version_ = build_tables_.get_active_table_version();
         server.lease_.lease_expired_time_ = SYSPARAM_RTSERVER.mts_rts_lease_expired_time_ ; 
-
-        /*else
-        {
-          iret = !iter->second.lease_.has_valid_lease(now.toSeconds()) ? TFS_SUCCESS : EXIT_REGISTER_EXIST_ERROR;
-          if (TFS_SUCCESS == iret)
-          {
-            pserver = &iter->second;
-            memset(pserver, 0, sizeof(MetaServer));
-          }
-        }*/
-        /*if (TFS_SUCCESS == iret)
-        {
-          memcpy(pserver, &server, sizeof(MetaServer));
-          pserver->lease_.lease_id_ = new_lease_id();
-          pserver->lease_.lease_expired_time_ = now.toSeconds() + SYSPARAM_RTSERVER.mts_rts_lease_expired_time_ ;
-          pserver->base_info_.last_update_time_ = now.toSeconds();
-          server.tables_.version_ = build_tables_.get_active_table_version();
-          server.lease_.lease_expired_time_ = SYSPARAM_RTSERVER.mts_rts_lease_expired_time_ ; 
-        }*/
       }
       if (TFS_SUCCESS == iret)
       {

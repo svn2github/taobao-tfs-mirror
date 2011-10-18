@@ -133,11 +133,11 @@ namespace tfs
           assert(NULL != response);
           RtsMsHeartResponseMessage* rmsg = dynamic_cast<RtsMsHeartResponseMessage*>(response);
           iret = rmsg->get_ret_value();
-          new_version = rmsg->get_active_table_version();
           wait_time = rmsg->get_renew_lease_interval_time();
-          lease_expired = tbutil::Time::now(tbutil::Time::Monotonic) + tbutil::Time::seconds(rmsg->get_lease_expired_time());
           if (TFS_SUCCESS == iret)
           {
+            new_version = rmsg->get_active_table_version();
+            lease_expired = tbutil::Time::now(tbutil::Time::Monotonic) + tbutil::Time::seconds(rmsg->get_lease_expired_time());
             if (RTS_MS_KEEPALIVE_TYPE_LOGIN == type)
             {
               type = RTS_MS_KEEPALIVE_TYPE_RENEW;
@@ -155,6 +155,11 @@ namespace tfs
           {
             lease_expired = 0;
             TBSYS_LOG(WARN, "%s lease expired", tbsys::CNetUtil::addrToString(current_server).c_str());
+          }
+          else if (EXIT_REGISTER_NOT_EXIST_ERROR == iret)
+          {
+            TBSYS_LOG(WARN, "%s relogin", tbsys::CNetUtil::addrToString(current_server).c_str());
+            type = RTS_MS_KEEPALIVE_TYPE_LOGIN;
           }
         }
         NewClientManager::get_instance().destroy_client(client);

@@ -139,29 +139,15 @@ namespace tfs
             servers_.insert(ROOT_SERVER_MAPS::value_type(server.base_info_.id_, server));
           pserver =  &res.first->second;
         }
+        else
+        {
+          pserver =  &iter->second;
+        }
         memcpy(pserver, &server, sizeof(RootServerInformation));
         pserver->lease_.lease_id_ = new_lease_id();
         pserver->lease_.lease_expired_time_ = now.toSeconds() + SYSPARAM_RTSERVER.rts_rts_lease_expired_time_ ;
         pserver->base_info_.last_update_time_ = now.toSeconds();
         server.lease_.lease_expired_time_ = SYSPARAM_RTSERVER.rts_rts_lease_expired_time_; 
-
-        /*else
-        {
-          iret = !iter->second.lease_.has_valid_lease(now.toSeconds()) ? TFS_SUCCESS : EXIT_REGISTER_EXIST_ERROR;
-          if (TFS_SUCCESS == iret)
-          {
-            pserver = &iter->second;
-            memset(pserver, 0, sizeof(RootServerInformation));
-          }
-        }
-        if (TFS_SUCCESS == iret)
-        {
-          memcpy(pserver, &server, sizeof(RootServerInformation));
-          pserver->lease_.lease_id_ = new_lease_id();
-          pserver->lease_.lease_expired_time_ = now.toSeconds() + SYSPARAM_RTSERVER.rts_rts_lease_expired_time_ ;
-          pserver->base_info_.last_update_time_ = now.toSeconds();
-          server.lease_.lease_expired_time_ = SYSPARAM_RTSERVER.rts_rts_lease_expired_time_; 
-        }*/
       }
       return iret;
     }
