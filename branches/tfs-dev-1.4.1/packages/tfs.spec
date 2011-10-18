@@ -13,11 +13,12 @@ BuildRoot: %{_tmppath}/%{name}-root
 
 BuildRequires: t-csrd-tbnet-devel = 1.4.0
 #BuildRequires: MySQL-devel-community,MySQL-client-community
-#BuildRequires: mysql-server >= 5.0.7, mysql-devel >= 5.0.7
+BuildRequires: mysql-server >= 5.0.7, mysql-devel >= 5.0.7
 #BuildRequires: tair-devel = 2.3
 #BuildRequires: gcc = 4.1
 
 %define __os_install_post %{nil}
+%define debug_package %{nil}
 
 %description
 TFS is a distributed file system.
@@ -36,8 +37,8 @@ files for developing applications that use the %name package.
 %build
 chmod u+x build.sh
 ./build.sh init
+./configure --prefix=%{_prefix}
 #./configure --prefix=%{_prefix} --enable-uniquestore --with-tair-root=/opt/csr/tair-2.3
-./configure --prefix=%{_prefix} 
 make %{?_smp_mflags}
 
 %install

@@ -109,8 +109,8 @@ namespace tfs
         {
           //threadpool busy..cannot handle it
           iret = message->reply_error_packet(TBSYS_LOG_LEVEL(WARN), STATUS_MESSAGE_ERROR, 
-              "nameserver heartbeat busy! cannot accept this request from : %s",
-              tbsys::CNetUtil::addrToString( message->get_connection()->getPeerId()).c_str());
+              "nameserver heartbeat busy! cannot accept this request from : %s, has_block_type: %d, status: %d",
+              tbsys::CNetUtil::addrToString(message->get_ds().id_).c_str(), message->get_has_block(), status);
           // already repsonse, now can free this message object.
           msg->free();
         }

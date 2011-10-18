@@ -256,7 +256,7 @@ namespace tfs
           char spec[32];
           int32_t second_listen_port = adr->port_ + 1;
           snprintf(spec, 32, "tcp::%d", second_listen_port);
-          tbnet::IOComponent* com = transport_.listen(spec, get_packet_streamer(), this);
+          tbnet::IOComponent* com = transport_->listen(spec, get_packet_streamer(), this);
           if (NULL == com)
           {
             TBSYS_LOG(ERROR, "listen port: %d fail", second_listen_port);

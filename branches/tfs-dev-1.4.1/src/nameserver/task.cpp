@@ -549,40 +549,26 @@ namespace tfs
           message->get_command() == PLAN_STATUS_FAILURE ? "failure" : "unknow");
       if (success)
       {
-        BlockChunkPtr ptr = manager_->get_chunk(blocks.block_id_);
-        BlockCollect* block = NULL;
         {
-          RWLock::Lock lock(*ptr, READ_LOCKER);
-          block = ptr->find(blocks.block_id_);//find block
-        }
+          ServerCollect* dest   = manager_->get_server(blocks.destination_id_);// find destination dataserver
+          ServerCollect* source = manager_->get_server(blocks.source_id_);// find source dataserver
+          BlockChunkPtr ptr = manager_->get_chunk(blocks.block_id_);//find block
+          RWLock::Lock lock(*ptr, WRITE_LOCKER);
+          BlockCollect* block = ptr->find(blocks.block_id_);
 
-        if (block != NULL)
-        {
-          ServerCollect* server = NULL;
+          if (NULL != block)
           {
-            server = manager_->get_server(blocks.destination_id_);// find destination dataserver
-          }
-          if (server != NULL)
-          {
-            RWLock::Lock lock(*ptr, WRITE_LOCKER);
-            manager_->build_relation(block, server, false);//build relation between block and dest dataserver
-          }
-
-          bool has_relieve_relation = false;
-          {
-            RWLock::Lock lock(*ptr, READ_LOCKER);
-            block = ptr->find(blocks.block_id_);
-            has_relieve_relation = blocks.is_move_ == REPLICATE_BLOCK_MOVE_FLAG_YES
-              && block->get_hold_size() > SYSPARAM_NAMESERVER.max_replication_;
-          }
-          if (has_relieve_relation)
-          {
+            if (NULL != dest)
             {
-              server = manager_->get_server(blocks.source_id_);
+              manager_->build_relation(block, dest, false);//build relation between block and dest dataserver
             }
-            RWLock::Lock lock(*ptr, WRITE_LOCKER);
-            manager_->relieve_relation(block, server, now);
-            iret = STATUS_MESSAGE_REMOVE;
+            if ((blocks.is_move_ == REPLICATE_BLOCK_MOVE_FLAG_YES)
+              && (block->get_hold_size() > SYSPARAM_NAMESERVER.max_replication_)
+              && (NULL != source))
+            {
+              manager_->relieve_relation(block, source, now);
+              iret = STATUS_MESSAGE_REMOVE;
+            }
           }
         }
 
@@ -590,8 +576,7 @@ namespace tfs
         if (ngi.owner_role_ == NS_ROLE_MASTER)
         {
           common::Stream stream(message->length());
-          int32_t iret = message->serialize(stream);
-          if (common::TFS_SUCCESS != iret)
+          if (common::TFS_SUCCESS != message->serialize(stream))
           {
             TBSYS_LOG(ERROR, "%s complete msg serialize error", blocks.is_move_ == REPLICATE_BLOCK_MOVE_FLAG_YES ? "move" : "replicate");
           }
