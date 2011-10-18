@@ -179,7 +179,6 @@ namespace tfs
       return ret;
     }
 
-
     TfsRetType RcClientImpl::logout()
     {
       int ret = TFS_ERROR;
@@ -224,57 +223,6 @@ namespace tfs
     {
       TBSYS_LOGGER.setFileName(log_file);
     }
-    int RcClientImpl::open(const int64_t app_id, const int64_t uid, const char* name, const RcClient::RC_MODE mode)
-    {
-      int tfs_ret = check_init_stat(true);
-      int fd = -1;
-      if (TFS_SUCCESS == tfs_ret)
-      {
-        if (RcClient::CREATE == mode && need_use_unique_)
-        {
-          TBSYS_LOG(ERROR, "should use save_file");
-          fd = -1;
-        } 
-        else if ((RcClient::CREATE == mode || RcClient::WRITE == mode) && app_id != app_id_)
-        {
-          TBSYS_LOG(ERROR, "can not write other app_id");
-          fd = -1;
-        }
-        else
-        {
-          fdInfo fd_info(-1, app_id, uid, name);
-          int32_t cluster_id = 0;
-          cluster_id = name_meta_client_->get_cluster_id(app_id, uid, name);
-          if (-1 == cluster_id)
-          {
-            cluster_id = 0;
-          }
-          fd_info.ns_addr_ = get_ns_addr_by_cluster_id(cluster_id, mode, 0);
-          if (fd_info.ns_addr_.empty())
-          {
-            TBSYS_LOG(ERROR, "can not do this operator in cluseter %d", cluster_id);
-          }
-          else
-          {
-            fd = gen_fdinfo(fd_info);
-            if (fd >= 0)
-            {
-              if (RcClient::CREATE == mode)
-              {
-                tfs_ret = name_meta_client_->create_file(app_id, uid, name);
-                if (TFS_SUCCESS != tfs_ret)
-                {
-                  remove_fdinfo(fd, fd_info);
-                  fd = -1;
-                }
-              }
-            }
-          }
-        }
-      }
-      return fd;
-    }
-
     int RcClientImpl::open(const char* file_name, const char* suffix, const RcClient::RC_MODE mode,
         const bool large, const char* local_key)
     {
@@ -304,7 +252,7 @@ namespace tfs
           if (raw_tfs_fd >= 0)
           {
             fdInfo fd_info(raw_tfs_fd, 0, 0);
-            fd = gen_fdinfo(fd_info); 
+            fd = gen_fdinfo(fd_info);
             if (fd < 0)
             {
               TfsClient::Instance()->close(raw_tfs_fd, NULL, 0);
@@ -314,35 +262,6 @@ namespace tfs
         }
       }
       return fd;
-    }
-
-    int RcClientImpl::open(const char* ns_addr, const char* file_name, const char* suffix, const RcClient::RC_MODE mode,
-        const bool large, const char* local_key)
-    {
-      int flag = 0;
-      int ret = -1;
-      if (RcClient::CREATE == mode)
-      {
-        flag = common::T_WRITE;
-      }
-      else if (RcClient::STAT == mode)
-      {
-        flag = common::T_STAT;
-      }
-      else
-      {
-        flag = common::T_READ;
-      }
-      if (large)
-      {
-        flag |= common::T_LARGE;
-        ret = TfsClient::Instance()->open(file_name, suffix, ns_addr, flag, local_key);
-      }
-      else
-      {
-        ret = TfsClient::Instance()->open(file_name, suffix, ns_addr, flag);
-      }
-      return ret;
     }
 
     TfsRetType RcClientImpl::close(const int fd, char* tfs_name_buff, const int32_t buff_len)
@@ -380,7 +299,7 @@ namespace tfs
           }
           else
           {
-            TBSYS_LOG(ERROR, "name meta file should use pread");
+            TBSYS_LOG(ERROR, "name meta file not support read");
 
           }
         }
@@ -413,32 +332,6 @@ namespace tfs
       }
       return read_count;
     }
-    int64_t RcClientImpl::pread(const int fd, void* buf, const int64_t count, const int64_t offset)
-    {
-      int64_t read_count = -1;
-      int ret = check_init_stat();
-      if (TFS_SUCCESS == ret)
-      {
-        fdInfo fd_info;
-        ret = get_fdinfo(fd, fd_info);
-        if (TFS_SUCCESS == ret)
-        {
-          int64_t start_time = tbsys::CTimeUtil::getTime();
-          if (fd_info.raw_tfs_fd_ < 0)
-          {
-            read_count = name_meta_client_->read(fd_info.ns_addr_.c_str(), fd_info.app_id_, fd_info.uid_,
-                fd_info.name_.c_str(), buf, offset, count);
-          }
-          else
-          {
-            read_count = TfsClient::Instance()->pread(fd_info.raw_tfs_fd_, buf, count, offset);
-          }
-          int64_t response_time = tbsys::CTimeUtil::getTime() - start_time;
-          add_stat_info(OPER_READ, read_count, response_time, read_count >= 0);
-        }
-      }
-      return read_count;
-    }
 
     int64_t RcClientImpl::write(const int fd, const void* buf, const int64_t count)
     {
@@ -451,40 +344,13 @@ namespace tfs
         if (TFS_SUCCESS == ret)
         {
           int64_t start_time = tbsys::CTimeUtil::getTime();
-          if (fd_info.raw_tfs_fd_ < 0)
-          {
-            write_count = name_meta_client_->write(fd_info.ns_addr_.c_str(), fd_info.app_id_, fd_info.uid_,
-                fd_info.name_.c_str(), buf, count);
-          }
-          else
+          if (fd_info.raw_tfs_fd_ >= 0)
           {
             write_count = TfsClient::Instance()->write(fd_info.raw_tfs_fd_, buf, count);
           }
-          int64_t response_time = tbsys::CTimeUtil::getTime() - start_time;
-          add_stat_info(OPER_WRITE, write_count, response_time, write_count >= 0);
-        }
-      }
-      return write_count;
-    }
-    int64_t RcClientImpl::pwrite(const int fd, const void* buf, const int64_t count, const int64_t offset)
-    {
-      int64_t write_count = -1;
-      int ret = check_init_stat();
-      if (TFS_SUCCESS == ret)
-      {
-        fdInfo fd_info;
-        ret = get_fdinfo(fd, fd_info);
-        if (TFS_SUCCESS == ret)
-        {
-          int64_t start_time = tbsys::CTimeUtil::getTime();
-          if (fd_info.raw_tfs_fd_ < 0)
-          {
-            write_count = name_meta_client_->write(fd_info.ns_addr_.c_str(), fd_info.app_id_, fd_info.uid_,
-                fd_info.name_.c_str(), buf, offset, count);
-          }
           else
           {
-            write_count = TfsClient::Instance()->pwrite(fd_info.raw_tfs_fd_, buf, count, offset);
+            TBSYS_LOG(ERROR, "name meta file not support write");
           }
           int64_t response_time = tbsys::CTimeUtil::getTime() - start_time;
           add_stat_info(OPER_WRITE, write_count, response_time, write_count >= 0);
@@ -511,6 +377,7 @@ namespace tfs
       }
       return off_set;
     }
+
     TfsRetType RcClientImpl::fstat(const int fd, common::TfsFileStat* buf)
     {
       fdInfo fd_info;
@@ -620,7 +487,8 @@ namespace tfs
       }
       return saved_size;
     }
-    int64_t RcClientImpl::save_file(const char* source_data, const int32_t data_len,
+
+    int64_t RcClientImpl::save_buf(const char* source_data, const int32_t data_len,
         char* tfs_name_buff, const int32_t buff_len)
     {
       int ret = check_init_stat();
@@ -642,6 +510,49 @@ namespace tfs
       }
       return saved_size;
     }
+
+    int RcClientImpl::fetch_file(const char* local_file,
+                       const char* file_name, const char* suffix)
+    {
+      int ret = check_init_stat();
+      if (TFS_SUCCESS == ret)
+      {
+        int ns_get_index = 0;
+        string ns_addr;
+        do
+        {
+          ns_addr = get_ns_addr(NULL, RcClient::READ, ns_get_index++);
+          if (ns_addr.empty())
+          {
+            break;
+          }
+          ret = fetch_file(ns_addr.c_str(), local_file, file_name, suffix);
+        } while(ret != TFS_SUCCESS);
+      }
+      return ret;
+    }
+
+    int RcClientImpl::fetch_buf(int64_t& ret_count, char* buf, const int64_t count,
+                     const char* file_name, const char* suffix)
+    {
+      int ret = check_init_stat();
+      if (TFS_SUCCESS == ret)
+      {
+        int ns_get_index = 0;
+        string ns_addr;
+        do
+        {
+          ns_addr = get_ns_addr(NULL, RcClient::READ, ns_get_index++);
+          if (ns_addr.empty())
+          {
+            break;
+          }
+          ret = fetch_buf(ns_addr.c_str(), ret_count, buf, count, file_name, suffix);
+        } while(ret != TFS_SUCCESS);
+      }
+      return ret;
+    }
+
     int64_t RcClientImpl::save_file(const char* ns_addr, const char* local_file, char* tfs_name_buff,
         const int32_t buff_len, const bool is_large_file)
     {
@@ -713,6 +624,29 @@ namespace tfs
         add_stat_info(OPER_WRITE, saved_size, response_time, saved_size >= 0);
       }
       return saved_size;
+    }
+    int RcClientImpl::fetch_file(const char* ns_addr, const char* local_file,
+        const char* file_name, const char* suffix)
+    {
+      //TODO change tfs_client_api.h, return fetch_file size to do stat.
+      UNUSED(ns_addr);
+      UNUSED(local_file);
+      UNUSED(file_name);
+      UNUSED(suffix);
+      return TFS_SUCCESS;
+    }
+
+    int RcClientImpl::fetch_buf(const char* ns_addr, int64_t& ret_count, char* buf, const int64_t count,
+        const char* file_name, const char* suffix)
+    {
+      //TODO change tfs_client_api.h, return fetch_file size to do stat.
+      UNUSED(ns_addr);
+      UNUSED(ret_count);
+      UNUSED(buf);
+      UNUSED(count);
+      UNUSED(file_name);
+      UNUSED(suffix);
+      return TFS_SUCCESS;
     }
 
     TfsRetType RcClientImpl::login(const uint64_t rc_ip, const char* app_key, const uint64_t app_ip)
@@ -786,6 +720,35 @@ namespace tfs
       }
       tbsys::CThreadGuard mutex_guard(&mutex_);
       stat_.app_oper_info_[oper_type] += appinfo;
+    }
+
+    int RcClientImpl::open(const char* ns_addr, const char* file_name, const char* suffix, const RcClient::RC_MODE mode,
+        const bool large, const char* local_key)
+    {
+      int flag = 0;
+      int ret = -1;
+      if (RcClient::CREATE == mode)
+      {
+        flag = common::T_WRITE;
+      }
+      else if (RcClient::STAT == mode)
+      {
+        flag = common::T_STAT;
+      }
+      else
+      {
+        flag = common::T_READ;
+      }
+      if (large)
+      {
+        flag |= common::T_LARGE;
+        ret = TfsClient::Instance()->open(file_name, suffix, ns_addr, flag, local_key);
+      }
+      else
+      {
+        ret = TfsClient::Instance()->open(file_name, suffix, ns_addr, flag);
+      }
+      return ret;
     }
 
     string RcClientImpl::get_ns_addr(const char* file_name, const RcClient::RC_MODE mode, const int index) const
@@ -1023,13 +986,23 @@ namespace tfs
       }
       return iret;
     }
-    /////////////////////// for name meta
+    // for name meta
     TfsRetType RcClientImpl::create_dir(const int64_t uid, const char* dir_path)
     {
       int ret = check_init_stat(true);
       if (TFS_SUCCESS == ret)
       {
         ret = name_meta_client_->create_dir(app_id_, uid, dir_path);
+      }
+      return ret;
+    }
+
+    TfsRetType RcClientImpl::create_file(const int64_t uid, const char* file_path)
+    {
+      int ret = check_init_stat(true);
+      if (TFS_SUCCESS == ret)
+      {
+        ret = name_meta_client_->create_file(app_id_, uid, file_path);
       }
       return ret;
     }
@@ -1074,7 +1047,7 @@ namespace tfs
       return ret;
     }
 
-      bool RcClientImpl::is_raw_ftsname(const char* name)
+      bool RcClientImpl::is_raw_tfsname(const char* name)
       {
         bool ret = false;
         if (NULL != name)
@@ -1084,6 +1057,7 @@ namespace tfs
         }
         return ret;
       }
+
       TfsRetType RcClientImpl::ls_dir(const int64_t app_id, const int64_t uid, const char* dir_path,
           std::vector<common::FileMetaInfo>& v_file_meta_info)
       {
@@ -1094,6 +1068,7 @@ namespace tfs
         }
         return ret;
       }
+
       TfsRetType RcClientImpl::ls_file(const int64_t app_id, const int64_t uid,
           const char* file_path,
           common::FileMetaInfo& file_meta_info)
@@ -1105,6 +1080,7 @@ namespace tfs
         }
         return ret;
       }
+
       int RcClientImpl::gen_fdinfo(const fdInfo& fdinfo)
       {
         int gen_fd = -1;
@@ -1132,6 +1108,164 @@ namespace tfs
           }
         }
         return gen_fd;
+      }
+
+      int RcClientImpl::open(const int64_t app_id, const int64_t uid, const char* name, const RcClient::RC_MODE mode)
+      {
+        int tfs_ret = check_init_stat(true);
+        int fd = -1;
+        if (TFS_SUCCESS == tfs_ret)
+        {
+          if (RcClient::CREATE == mode && need_use_unique_)
+          {
+            TBSYS_LOG(ERROR, "should use save_file");
+            fd = -1;
+          }
+          else if ((RcClient::CREATE == mode || RcClient::WRITE == mode) && (app_id_ != app_id))
+          {
+            TBSYS_LOG(ERROR, "can not write other app_id");
+            fd = -1;
+          }
+          else
+          {
+            fdInfo fd_info(-1, app_id, uid, name);
+            int32_t cluster_id = 0;
+            cluster_id = name_meta_client_->get_cluster_id(app_id, uid, name);
+            if (-1 == cluster_id)
+            {
+              cluster_id = 0;
+            }
+            fd_info.ns_addr_ = get_ns_addr_by_cluster_id(cluster_id, mode, 0);
+            if (fd_info.ns_addr_.empty())
+            {
+              TBSYS_LOG(ERROR, "can not do this operator in cluseter %d", cluster_id);
+            }
+            else
+            {
+              fd = gen_fdinfo(fd_info);
+              if (fd >= 0)
+              {
+                if (RcClient::CREATE == mode)
+                {
+                  tfs_ret = name_meta_client_->create_file(app_id, uid, name);
+                  if (TFS_SUCCESS != tfs_ret)
+                  {
+                    remove_fdinfo(fd, fd_info);
+                    fd = -1;
+                  }
+                }
+              }
+            }
+          }
+        }
+        return fd;
+      }
+
+      int64_t RcClientImpl::pwrite(const int fd, const void* buf, const int64_t count, const int64_t offset)
+      {
+        int64_t write_count = -1;
+        int ret = check_init_stat();
+        if (TFS_SUCCESS == ret)
+        {
+          fdInfo fd_info;
+          ret = get_fdinfo(fd, fd_info);
+          if (TFS_SUCCESS == ret)
+          {
+            int64_t start_time = tbsys::CTimeUtil::getTime();
+            if (fd_info.raw_tfs_fd_ < 0)
+            {
+              write_count = name_meta_client_->write(fd_info.ns_addr_.c_str(), fd_info.app_id_, fd_info.uid_,
+                  fd_info.name_.c_str(), buf, offset, count);
+            }
+            else
+            {
+              TBSYS_LOG(WARN, "sorry, raw tfs client not support pwrite.");
+              //write_count = TfsClient::Instance()->pwrite(fd_info.raw_tfs_fd_, buf, count, offset);
+            }
+            int64_t response_time = tbsys::CTimeUtil::getTime() - start_time;
+            add_stat_info(OPER_WRITE, write_count, response_time, write_count >= 0);
+          }
+        }
+        return write_count;
+      }
+
+      int64_t RcClientImpl::pread(const int fd, void* buf, const int64_t count, const int64_t offset)
+      {
+        int64_t read_count = -1;
+        int ret = check_init_stat();
+        if (TFS_SUCCESS == ret)
+        {
+          fdInfo fd_info;
+          ret = get_fdinfo(fd, fd_info);
+          if (TFS_SUCCESS == ret)
+          {
+            int64_t start_time = tbsys::CTimeUtil::getTime();
+            if (fd_info.raw_tfs_fd_ < 0)
+            {
+              read_count = name_meta_client_->read(fd_info.ns_addr_.c_str(), fd_info.app_id_, fd_info.uid_,
+                  fd_info.name_.c_str(), buf, offset, count);
+            }
+            else
+            {
+              TBSYS_LOG(WARN, "sorry, raw tfs client not support pread.");
+              //read_count = TfsClient::Instance()->pread(fd_info.raw_tfs_fd_, buf, count, offset);
+            }
+            int64_t response_time = tbsys::CTimeUtil::getTime() - start_time;
+            add_stat_info(OPER_READ, read_count, response_time, read_count >= 0);
+          }
+        }
+        return read_count;
+      }
+
+      int64_t RcClientImpl::save_file(const int64_t app_id, const int64_t uid,
+          const char* local_file, const char* file_path)
+      {
+        int64_t saved_size = -1;
+        if (app_id_ != app_id)
+        {
+          saved_size = EXIT_APPID_PERMISSION_DENY;
+          TBSYS_LOG(ERROR, "can not write other app_id");
+        }
+        else
+        {
+          int ret = check_init_stat();
+          if (TFS_SUCCESS == ret)
+          {
+            int ns_get_index = 0;
+            string ns_addr;
+            do
+            {
+              ns_addr = get_ns_addr(NULL, RcClient::WRITE, ns_get_index++);
+              if (ns_addr.empty())
+              {
+                break;
+              }
+              saved_size = name_meta_client_->save_file(ns_addr.c_str(), app_id, uid, local_file, file_path);
+            } while(saved_size < 0);
+          }
+        }
+        return saved_size;
+      }
+
+      int RcClientImpl::fetch_file(const int64_t app_id, const int64_t uid,
+          const char* local_file, const char* file_path)
+      {
+        int ret = check_init_stat();
+        if (TFS_SUCCESS == ret)
+        {
+          int ns_get_index = 0;
+          string ns_addr;
+          do
+          {
+            ns_addr = get_ns_addr(NULL, RcClient::READ, ns_get_index++);
+            if (ns_addr.empty())
+            {
+              break;
+            }
+            ret = name_meta_client_->fetch_file(ns_addr.c_str(), app_id, uid, local_file, file_path);
+          } while(ret != TFS_SUCCESS);
+        }
+        return ret;
       }
 
       TfsRetType RcClientImpl::remove_fdinfo(const int fd, fdInfo& fdinfo)

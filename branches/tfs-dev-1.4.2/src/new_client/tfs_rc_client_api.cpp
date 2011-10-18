@@ -49,12 +49,6 @@ namespace tfs
       return impl_->initialize(rc_ip, app_key, app_ip, real_cache_times, real_cache_items, dev_name, rs_addr);
     }
 
-
-    TfsRetType RcClient::logout()
-    {
-      return impl_->logout();
-    }
-
     void RcClient::set_wait_timeout(const int64_t timeout_ms)
     {
       impl_->set_wait_timeout(timeout_ms);
@@ -71,15 +65,16 @@ namespace tfs
       impl_->set_log_file(log_file);
     }
 
+    TfsRetType RcClient::logout()
+    {
+      return impl_->logout();
+    }
+
+    // for raw tfs
     int RcClient::open(const char* file_name, const char* suffix, const RC_MODE mode,
           const bool large, const char* local_key)
     {
       return impl_->open(file_name, suffix, mode, large, local_key);
-    }
-    int RcClient::open(const int64_t app_id, const int64_t uid, 
-        const char* name, const RcClient::RC_MODE mode)
-    {
-      return impl_->open(app_id, uid, name, mode);
     }
 
     TfsRetType RcClient::close(const int fd, char* tfs_name_buff, const int32_t buff_len)
@@ -96,19 +91,11 @@ namespace tfs
     {
       return impl_->readv2(fd, buf, count, tfs_stat_buf);
     }
-    int64_t RcClient::pread(const int fd, void* buf, const int64_t count, const int64_t offset)
-    {
-      return impl_->pread(fd, buf, count, offset);
-    }
 
     int64_t RcClient::write(const int fd, const void* buf, const int64_t count)
     {
       return impl_->write(fd, buf, count);
     }
-    //int64_t RcClient::pwrite(const int fd, const void* buf, const int64_t count, const int64_t offset)
-    //{
-    //  return impl_->pwrite(fd, buf, count, offset);
-    //}
 
     int64_t RcClient::lseek(const int fd, const int64_t offset, const int whence)
     {
@@ -130,19 +117,41 @@ namespace tfs
     {
       return impl_->save_file(local_file, tfs_name_buff, buff_len, is_large_file);
     }
-    int64_t RcClient::save_file(const char* source_data, const int32_t data_len,
+
+    int64_t RcClient::save_buf(const char* source_data, const int32_t data_len,
         char* tfs_name_buff, const int32_t buff_len)
     {
-      return impl_->save_file(source_data, data_len, tfs_name_buff, buff_len);
+      return impl_->save_buf(source_data, data_len, tfs_name_buff, buff_len);
     }
+
+    int RcClient::fetch_file(const char* local_file,
+        const char* file_name, const char* suffix)
+    {
+      return impl_->fetch_file(local_file, file_name, suffix);
+    }
+
+    int RcClient::fetch_buf(int64_t& ret_count, char* buf, const int64_t count,
+        const char* file_name, const char* suffix)
+    {
+      return impl_->fetch_buf(ret_count, buf, count, file_name, suffix);
+    }
+
+    // for name meta
     TfsRetType RcClient::create_dir(const int64_t uid, const char* dir_path)
     {
       return impl_->create_dir(uid, dir_path);
     }
+
+    TfsRetType RcClient::create_file(const int64_t uid, const char* file_path)
+    {
+      return impl_->create_file(uid, file_path);
+    }
+
     TfsRetType RcClient::rm_dir(const int64_t uid, const char* dir_path)
     {
       return impl_->rm_dir(uid, dir_path);
     }
+
     TfsRetType RcClient::rm_file(const int64_t uid, const char* file_path)
     {
       return impl_->rm_file(uid, file_path);
@@ -152,7 +161,7 @@ namespace tfs
     {
       return impl_->mv_dir(uid, src_dir_path, dest_dir_path);
     }
-    TfsRetType RcClient::mv_file(const int64_t uid, const char* src_file_path, 
+    TfsRetType RcClient::mv_file(const int64_t uid, const char* src_file_path,
         const char* dest_file_path)
     {
       return impl_->mv_file(uid, src_file_path, dest_file_path);
@@ -169,6 +178,38 @@ namespace tfs
         common::FileMetaInfo& file_meta_info)
     {
       return impl_->ls_file(app_id, uid, file_path, file_meta_info);
+    }
+
+    int RcClient::open(const int64_t app_id, const int64_t uid,
+        const char* name, const RcClient::RC_MODE mode)
+    {
+      return impl_->open(app_id, uid, name, mode);
+    }
+
+    int64_t RcClient::pread(const int fd, void* buf, const int64_t count, const int64_t offset)
+    {
+      return impl_->pread(fd, buf, count, offset);
+    }
+
+    int64_t RcClient::pwrite(const int fd, const void* buf, const int64_t count, const int64_t offset)
+    {
+      return impl_->pwrite(fd, buf, count, offset);
+    }
+
+    TfsRetType RcClient::close(const int fd)
+    {
+      return impl_->close(fd, NULL, 0);
+    }
+
+    int64_t RcClient::save_file(const int64_t app_id, const int64_t uid,
+        const char* local_file, const char* file_path)
+    {
+      return impl_->save_file(app_id, uid, local_file, file_path);
+    }
+    int64_t RcClient::fetch_file(const int64_t app_id, const int64_t uid,
+        const char* local_file, const char* file_path)
+    {
+      return impl_->fetch_file(app_id, uid, local_file, file_path);
     }
   }
 }

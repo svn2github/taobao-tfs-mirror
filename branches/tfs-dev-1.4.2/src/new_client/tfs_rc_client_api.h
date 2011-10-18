@@ -34,7 +34,7 @@ namespace tfs
           READ = 2,
           STAT = 3,
           WRITE = 4, //raw tfs will not use this. only CREATE.
-                     //this for name meta tfs. 
+                     //this for name meta tfs.
                      //use create create a tfs_file, use write for writing or appendding
         };
       public:
@@ -56,18 +56,17 @@ namespace tfs
         void set_log_level(const char* level);
         void set_log_file(const char* log_file);
 
+        TfsRetType logout();
+
+        // for raw tfs
         int open(const char* file_name, const char* suffix, const RC_MODE mode,
             const bool large = false, const char* local_key = NULL);
-        int open(const int64_t app_id, const int64_t uid, const char* name, const RcClient::RC_MODE mode);
         TfsRetType close(const int fd, char* tfs_name_buff = NULL, const int32_t buff_len = 0);
 
         int64_t read(const int fd, void* buf, const int64_t count);
         int64_t readv2(const int fd, void* buf, const int64_t count, common::TfsFileStat* tfs_stat_buf);
-        int64_t pread(const int fd, void* buf, const int64_t count, const int64_t offset);
 
         int64_t write(const int fd, const void* buf, const int64_t count);
-        //not support pwrite for now
-        //int64_t pwrite(const int fd, const void* buf, const int64_t count, const int64_t offset);
 
         int64_t lseek(const int fd, const int64_t offset, const int whence);
         TfsRetType fstat(const int fd, common::TfsFileStat* buf);
@@ -76,25 +75,45 @@ namespace tfs
             const common::TfsUnlinkType action = common::DELETE);
         int64_t save_file(const char* local_file, char* tfs_name_buff, const int32_t buff_len,
             const bool is_large_file = false);
-        int64_t save_file(const char* source_data, const int32_t data_len,
+        int64_t save_buf(const char* source_data, const int32_t data_len,
             char* tfs_name_buff, const int32_t buff_len);
+        int fetch_file(const char* local_file,
+                       const char* file_name, const char* suffix = NULL);
+        int fetch_buf(int64_t& ret_count, char* buf, const int64_t count,
+                     const char* file_name, const char* suffix = NULL);
 
-        TfsRetType logout();
-        ///////////////// for name meta
-
+        // for name meta
         TfsRetType create_dir(const int64_t uid, const char* dir_path);
+        TfsRetType create_file(const int64_t uid, const char* file_path);
+
         TfsRetType rm_dir(const int64_t uid, const char* dir_path);
         TfsRetType rm_file(const int64_t uid, const char* file_path);
 
-        TfsRetType mv_dir(const int64_t uid, const char* src_dir_path, const char* dest_dir_path);
-        TfsRetType mv_file(const int64_t uid, const char* src_file_path, const char* dest_file_path);
+        TfsRetType mv_dir(const int64_t uid,
+            const char* src_dir_path, const char* dest_dir_path);
+        TfsRetType mv_file(const int64_t uid,
+            const char* src_file_path, const char* dest_file_path);
 
-        TfsRetType ls_dir(const int64_t app_id, const int64_t uid, const char* dir_path,
+        TfsRetType ls_dir(const int64_t app_id, const int64_t uid,
+            const char* dir_path,
             std::vector<common::FileMetaInfo>& v_file_meta_info);
+
         TfsRetType ls_file(const int64_t app_id, const int64_t uid,
             const char* file_path,
             common::FileMetaInfo& file_meta_info);
-        
+
+        int open(const int64_t app_id, const int64_t uid, const char* name, const RcClient::RC_MODE mode);
+        int64_t pread(const int fd, void* buf, const int64_t count, const int64_t offset);
+        // when do append operation, set offset = -1
+        int64_t pwrite(const int fd, const void* buf, const int64_t count, const int64_t offset);
+        TfsRetType close(const int fd);
+
+        int64_t save_file(const int64_t app_id, const int64_t uid,
+            const char* local_file, const char* file_path);
+
+        int64_t fetch_file(const int64_t app_id, const int64_t uid,
+            const char* local_file, const char* file_path);
+
       private:
         RcClient(const RcClient&);
         RcClientImpl* impl_;

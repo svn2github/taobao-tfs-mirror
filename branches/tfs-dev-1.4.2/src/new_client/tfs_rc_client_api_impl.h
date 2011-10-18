@@ -65,34 +65,37 @@ namespace tfs
         void set_log_level(const char* level);
         void set_log_file(const char* log_file);
 
-        //return value fd
+        TfsRetType logout();
+
+        // for raw tfs
         int open(const char* file_name, const char* suffix, const RcClient::RC_MODE mode,
             const bool large = false, const char* local_key = NULL);
-        int open(const int64_t app_id, const int64_t uid, const char* name, const RcClient::RC_MODE mode);
         TfsRetType close(const int fd, char* tfs_name_buff = NULL, const int32_t buff_len = 0);
 
         int64_t read(const int fd, void* buf, const int64_t count);
         int64_t readv2(const int fd, void* buf, const int64_t count, common::TfsFileStat* tfs_stat_buf);
-        int64_t pread(const int fd, void* buf, const int64_t count, const int64_t offset);
 
         int64_t write(const int fd, const void* buf, const int64_t count);
-        int64_t pwrite(const int fd, const void* buf, const int64_t count, const int64_t offset);
 
         int64_t lseek(const int fd, const int64_t offset, const int whence);
         TfsRetType fstat(const int fd, common::TfsFileStat* buf);
 
         TfsRetType unlink(const char* file_name, const char* suffix = NULL,
            const common::TfsUnlinkType action = common::DELETE);
+
         int64_t save_file(const char* local_file, char* tfs_name_buff, const int32_t buff_len,
             const bool is_large_file = false);
-
-        int64_t save_file(const char* source_data, const int32_t data_len,
+        int64_t save_buf(const char* source_data, const int32_t data_len,
             char* tfs_name_buff, const int32_t buff_len);
 
-        TfsRetType logout();
+        int fetch_file(const char* local_file,
+                       const char* file_name, const char* suffix = NULL);
+        int fetch_buf(int64_t& ret_count, char* buf, const int64_t count,
+                     const char* file_name, const char* suffix = NULL);
 
-        ////////////////  for name meta
+        // for name meta
         TfsRetType create_dir(const int64_t uid, const char* dir_path);
+        TfsRetType create_file(const int64_t uid, const char* file_path);
 
         TfsRetType rm_dir(const int64_t uid, const char* dir_path);
         TfsRetType rm_file(const int64_t uid, const char* file_path);
@@ -105,6 +108,16 @@ namespace tfs
         TfsRetType ls_file(const int64_t app_id, const int64_t uid,
             const char* file_path,
             common::FileMetaInfo& file_meta_info);
+
+        int open(const int64_t app_id, const int64_t uid, const char* name, const RcClient::RC_MODE mode);
+        int64_t pread(const int fd, void* buf, const int64_t count, const int64_t offset);
+        int64_t pwrite(const int fd, const void* buf, const int64_t count, const int64_t offset);
+        TfsRetType close(const int fd);
+
+        int64_t save_file(const int64_t app_id, const int64_t uid,
+            const char* local_file, const char* file_path);
+        int fetch_file(const int64_t app_id, const int64_t uid,
+            const char* local_file, const char* file_path);
 
       private:
         DISALLOW_COPY_AND_ASSIGN(RcClientImpl);
@@ -132,6 +145,12 @@ namespace tfs
         int64_t save_file(const char* ns_addr, const char* source_data, const int32_t data_len,
             char* tfs_name_buff, const int32_t buff_len);
 
+        int fetch_file(const char* ns_addr, const char* local_file,
+                       const char* file_name, const char* suffix);
+
+        int fetch_buf(const char* ns_addr, int64_t& ret_count, char* buf, const int64_t count,
+                     const char* file_name, const char* suffix);
+
         std::string get_ns_addr(const char* file_name, const RcClient::RC_MODE mode, const int index) const;
         std::string get_ns_addr_by_cluster_id(int32_t cluster_id, const RcClient::RC_MODE mode, const int index) const;
 
@@ -146,7 +165,7 @@ namespace tfs
       public:
 
         int add_ns_into_write_ns(const std::string& ip_str, const uint32_t addr);
-      
+
         int add_ns_into_choice(const std::string& ip_str, const uint32_t addr, const int32_t cluster_id);
 
       private:
@@ -183,7 +202,7 @@ namespace tfs
           {
           }
           fdInfo(const int raw_tfs_fd, const int64_t app_id, const int64_t uid, const char* name = NULL)
-            :raw_tfs_fd_(raw_tfs_fd), app_id_(app_id), uid_(uid) 
+            :raw_tfs_fd_(raw_tfs_fd), app_id_(app_id), uid_(uid)
           {
             if (NULL != name)
               name_ = name;
@@ -200,7 +219,7 @@ namespace tfs
         int64_t app_id_;
         int my_fd_;
       private:
-        static bool is_raw_ftsname(const char* name);
+        static bool is_raw_tfsname(const char* name);
         int gen_fdinfo(const fdInfo& fdinfo);
         TfsRetType remove_fdinfo(const int fd, fdInfo& fdinfo);
         TfsRetType get_fdinfo(const int fd, fdInfo& fdinfo) const;
