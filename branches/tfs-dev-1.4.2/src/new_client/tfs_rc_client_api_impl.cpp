@@ -504,7 +504,7 @@ namespace tfs
           {
             break;
           }
-          saved_size = save_file(ns_addr.c_str(), source_data, data_len,
+          saved_size = save_buf(ns_addr.c_str(), source_data, data_len,
               tfs_name_buff, buff_len);
         } while(saved_size < 0);
       }
@@ -592,7 +592,7 @@ namespace tfs
       }
       return saved_size;
     }
-    int64_t RcClientImpl::save_file(const char* ns_addr, const char* source_data, const int32_t data_len,
+    int64_t RcClientImpl::save_buf(const char* ns_addr, const char* source_data, const int32_t data_len,
         char* tfs_name_buff, const int32_t buff_len)
     {
       int64_t saved_size = -1;
@@ -628,25 +628,27 @@ namespace tfs
     int RcClientImpl::fetch_file(const char* ns_addr, const char* local_file,
         const char* file_name, const char* suffix)
     {
-      //TODO change tfs_client_api.h, return fetch_file size to do stat.
-      UNUSED(ns_addr);
-      UNUSED(local_file);
-      UNUSED(file_name);
-      UNUSED(suffix);
-      return TFS_SUCCESS;
+      int ret = TFS_SUCCESS;
+      int64_t start_time = tbsys::CTimeUtil::getTime();
+      ret = TfsClient::Instance()->fetch_file(local_file,
+          file_name, suffix, ns_addr);
+      int64_t response_time = tbsys::CTimeUtil::getTime() - start_time;
+      int64_t file_size = 0;
+      //TODO get file_size 
+      add_stat_info(OPER_READ, file_size, response_time, TFS_SUCCESS == ret); 
+      return ret;
     }
 
     int RcClientImpl::fetch_buf(const char* ns_addr, int64_t& ret_count, char* buf, const int64_t count,
         const char* file_name, const char* suffix)
     {
-      //TODO change tfs_client_api.h, return fetch_file size to do stat.
-      UNUSED(ns_addr);
-      UNUSED(ret_count);
-      UNUSED(buf);
-      UNUSED(count);
-      UNUSED(file_name);
-      UNUSED(suffix);
-      return TFS_SUCCESS;
+      int ret = TFS_SUCCESS;
+      int64_t start_time = tbsys::CTimeUtil::getTime();
+      ret = TfsClient::Instance()->fetch_file(ret_count, buf, count,
+          file_name, suffix, ns_addr);
+      int64_t response_time = tbsys::CTimeUtil::getTime() - start_time;
+      add_stat_info(OPER_READ, ret_count, response_time, TFS_SUCCESS == ret); 
+      return ret;
     }
 
     TfsRetType RcClientImpl::login(const uint64_t rc_ip, const char* app_key, const uint64_t app_ip)
@@ -1217,56 +1219,56 @@ namespace tfs
         return read_count;
       }
 
-      int64_t RcClientImpl::save_file(const int64_t app_id, const int64_t uid,
-          const char* local_file, const char* file_path)
-      {
-        int64_t saved_size = -1;
-        if (app_id_ != app_id)
-        {
-          saved_size = EXIT_APPID_PERMISSION_DENY;
-          TBSYS_LOG(ERROR, "can not write other app_id");
-        }
-        else
-        {
-          int ret = check_init_stat();
-          if (TFS_SUCCESS == ret)
-          {
-            int ns_get_index = 0;
-            string ns_addr;
-            do
-            {
-              ns_addr = get_ns_addr(NULL, RcClient::WRITE, ns_get_index++);
-              if (ns_addr.empty())
-              {
-                break;
-              }
-              saved_size = name_meta_client_->save_file(ns_addr.c_str(), app_id, uid, local_file, file_path);
-            } while(saved_size < 0);
-          }
-        }
-        return saved_size;
-      }
+      //int64_t RcClientImpl::save_file(const int64_t app_id, const int64_t uid,
+      //    const char* local_file, const char* file_path)
+      //{
+      //  int64_t saved_size = -1;
+      //  if (app_id_ != app_id)
+      //  {
+      //    saved_size = EXIT_APPID_PERMISSION_DENY;
+      //    TBSYS_LOG(ERROR, "can not write other app_id");
+      //  }
+      //  else
+      //  {
+      //    int ret = check_init_stat();
+      //    if (TFS_SUCCESS == ret)
+      //    {
+      //      int ns_get_index = 0;
+      //      string ns_addr;
+      //      do
+      //      {
+      //        ns_addr = get_ns_addr(NULL, RcClient::WRITE, ns_get_index++);
+      //        if (ns_addr.empty())
+      //        {
+      //          break;
+      //        }
+      //        saved_size = name_meta_client_->save_file(ns_addr.c_str(), app_id, uid, local_file, file_path);
+      //      } while(saved_size < 0);
+      //    }
+      //  }
+      //  return saved_size;
+      //}
 
-      int RcClientImpl::fetch_file(const int64_t app_id, const int64_t uid,
-          const char* local_file, const char* file_path)
-      {
-        int ret = check_init_stat();
-        if (TFS_SUCCESS == ret)
-        {
-          int ns_get_index = 0;
-          string ns_addr;
-          do
-          {
-            ns_addr = get_ns_addr(NULL, RcClient::READ, ns_get_index++);
-            if (ns_addr.empty())
-            {
-              break;
-            }
-            ret = name_meta_client_->fetch_file(ns_addr.c_str(), app_id, uid, local_file, file_path);
-          } while(ret != TFS_SUCCESS);
-        }
-        return ret;
-      }
+      //int RcClientImpl::fetch_file(const int64_t app_id, const int64_t uid,
+      //    const char* local_file, const char* file_path)
+      //{
+      //  int ret = check_init_stat();
+      //  if (TFS_SUCCESS == ret)
+      //  {
+      //    int ns_get_index = 0;
+      //    string ns_addr;
+      //    do
+      //    {
+      //      ns_addr = get_ns_addr(NULL, RcClient::READ, ns_get_index++);
+      //      if (ns_addr.empty())
+      //      {
+      //        break;
+      //      }
+      //      ret = name_meta_client_->fetch_file(ns_addr.c_str(), app_id, uid, local_file, file_path);
+      //    } while(ret != TFS_SUCCESS);
+      //  }
+      //  return ret;
+      //}
 
       TfsRetType RcClientImpl::remove_fdinfo(const int fd, fdInfo& fdinfo)
       {

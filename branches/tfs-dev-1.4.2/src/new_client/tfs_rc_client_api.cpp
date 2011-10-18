@@ -196,20 +196,5 @@ namespace tfs
       return impl_->pwrite(fd, buf, count, offset);
     }
 
-    TfsRetType RcClient::close(const int fd)
-    {
-      return impl_->close(fd, NULL, 0);
-    }
-
-    int64_t RcClient::save_file(const int64_t app_id, const int64_t uid,
-        const char* local_file, const char* file_path)
-    {
-      return impl_->save_file(app_id, uid, local_file, file_path);
-    }
-    int64_t RcClient::fetch_file(const int64_t app_id, const int64_t uid,
-        const char* local_file, const char* file_path)
-    {
-      return impl_->fetch_file(app_id, uid, local_file, file_path);
-    }
   }
 }

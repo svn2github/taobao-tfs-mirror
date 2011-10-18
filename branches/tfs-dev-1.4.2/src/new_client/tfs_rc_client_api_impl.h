@@ -112,12 +112,12 @@ namespace tfs
         int open(const int64_t app_id, const int64_t uid, const char* name, const RcClient::RC_MODE mode);
         int64_t pread(const int fd, void* buf, const int64_t count, const int64_t offset);
         int64_t pwrite(const int fd, const void* buf, const int64_t count, const int64_t offset);
-        TfsRetType close(const int fd);
+        //use the same close func as raw tfs
 
-        int64_t save_file(const int64_t app_id, const int64_t uid,
-            const char* local_file, const char* file_path);
-        int fetch_file(const int64_t app_id, const int64_t uid,
-            const char* local_file, const char* file_path);
+        //int64_t save_file(const int64_t app_id, const int64_t uid,
+        //    const char* local_file, const char* file_path);
+        //int fetch_file(const int64_t app_id, const int64_t uid,
+        //    const char* local_file, const char* file_path);
 
       private:
         DISALLOW_COPY_AND_ASSIGN(RcClientImpl);
@@ -142,7 +142,7 @@ namespace tfs
         int64_t save_file(const char* ns_addr, const char* local_file, char* tfs_name_buff,
             const int32_t buff_len, const bool is_large_file = false);
 
-        int64_t save_file(const char* ns_addr, const char* source_data, const int32_t data_len,
+        int64_t save_buf(const char* ns_addr, const char* source_data, const int32_t data_len,
             char* tfs_name_buff, const int32_t buff_len);
 
         int fetch_file(const char* ns_addr, const char* local_file,

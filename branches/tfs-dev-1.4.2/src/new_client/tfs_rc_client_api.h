@@ -106,13 +106,8 @@ namespace tfs
         int64_t pread(const int fd, void* buf, const int64_t count, const int64_t offset);
         // when do append operation, set offset = -1
         int64_t pwrite(const int fd, const void* buf, const int64_t count, const int64_t offset);
-        TfsRetType close(const int fd);
 
-        int64_t save_file(const int64_t app_id, const int64_t uid,
-            const char* local_file, const char* file_path);
-
-        int64_t fetch_file(const int64_t app_id, const int64_t uid,
-            const char* local_file, const char* file_path);
+        //close use the same close func as raw tfs
 
       private:
         RcClient(const RcClient&);
