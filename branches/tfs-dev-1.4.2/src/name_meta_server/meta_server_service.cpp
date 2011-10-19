@@ -792,6 +792,12 @@ namespace tfs
 
               bool found_meta_info_should_be_updated = false;
               std::vector<MetaInfo>::iterator v_meta_info_it = tmp_v_meta_info.begin();
+              TBSYS_LOG(DEBUG, "tmp_v_meta_info.size() = %d", tmp_v_meta_info.size());
+              for (; v_meta_info_it != tmp_v_meta_info.end(); v_meta_info_it++)
+              {
+                v_meta_info_it->frag_info_.dump();
+              }
+              v_meta_info_it = tmp_v_meta_info.begin();
               for (; v_meta_info_it != tmp_v_meta_info.end(); v_meta_info_it++)
               {
                 if (!v_meta_info_it->frag_info_.had_been_split_ ||//没有分裂
@@ -820,10 +826,10 @@ namespace tfs
                 int64_t orig_last_offset = v_meta_info_it->get_last_offset();
                 while(write_frag_meta_it != v_frag_meta.end())//补全空洞
                 {
+                  TBSYS_LOG(DEBUG, "write_frag_meta_it->offset_ %"PRI64_PREFIX"d orig_last_offset %"PRI64_PREFIX"d",
+                        write_frag_meta_it->offset_, orig_last_offset);
                   if (write_frag_meta_it->offset_ >= orig_last_offset)
                   {
-                    TBSYS_LOG(DEBUG, "write_frag_meta_it->offset_ %"PRI64_PREFIX"d orig_last_offset %"PRI64_PREFIX"d",
-                        write_frag_meta_it->offset_, orig_last_offset);
                     ret = EXIT_WRITE_EXIST_POS_ERROR;
                     break;
                   }
@@ -1264,11 +1270,17 @@ namespace tfs
     {
       while(frag_meta_begin != frag_meta_end)
       {
+        TBSYS_LOG(DEBUG, "last offset = %"PRI64_PREFIX"d %"PRI64_PREFIX"d %"PRI64_PREFIX"d",
+            last_offset, frag_meta_begin->offset_, frag_meta_begin->size_);
         if (-1 == frag_meta_begin->offset_) // new metainfo
         {
           frag_meta_begin->offset_ = last_offset;
-          last_offset += frag_meta_begin->size_;
         }
+        else
+        {
+          last_offset = frag_meta_begin->offset_;
+        }
+        last_offset += frag_meta_begin->size_;
         meta_info.frag_info_.v_frag_meta_.push_back(*frag_meta_begin);
         frag_meta_begin++;
       }
@@ -1285,6 +1297,7 @@ namespace tfs
         const char* name, const int32_t name_len, const int64_t last_offset,
         std::vector<MetaInfo>& tmp_v_meta_info)
     {
+      TBSYS_LOG(DEBUG, "add_new_meta_info last_offset = %"PRI64_PREFIX"d", last_offset);
       MetaInfo tmp;
       tmp.file_info_.pid_ = pid;
       tmp.frag_info_.cluster_id_ = cluster_id;
@@ -1431,6 +1444,8 @@ namespace tfs
         int64_t last_offset = -1;
         for (size_t i = 0; i < frag_info.v_frag_meta_.size(); i++)
         {
+          TBSYS_LOG(DEBUG, "frag info %d off_set %"PRI64_PREFIX"d size %"PRI64_PREFIX"d",
+                i, frag_info.v_frag_meta_[i].offset_, frag_info.v_frag_meta_[i].size_);
           if (frag_info.v_frag_meta_[i].offset_ < last_offset)
           {
             TBSYS_LOG(WARN, "frag info have some error, %"PRI64_PREFIX"d < %"PRI64_PREFIX"d",

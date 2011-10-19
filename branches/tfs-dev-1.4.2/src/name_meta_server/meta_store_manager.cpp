@@ -181,7 +181,8 @@ namespace tfs
             root_node = lru_.get(lru_key);
             if (NULL == root_node)
             {
-              assert (TFS_SUCCESS == lru_.insert(lru_key, tmp_root_node));
+              int tmp_ret = lru_.insert(lru_key, tmp_root_node);
+              assert (TFS_SUCCESS == tmp_ret);
               tmp_root_node = NULL;
               root_node = lru_.get(lru_key);
             }
@@ -332,6 +333,7 @@ namespace tfs
           int32_t name_end_len = 0;
           MetaServerService::next_file_name_base_on(name_end, name_end_len, name, name_len);
           TBSYS_LOG(DEBUG, "ls %ld %ld %ld %.*s", app_id, uid, p_dir_node->id_, name_len-1, name+1);
+          //use ls so we can get create time, modify time from db;
           ret = ls(app_id, uid, p_dir_node->id_, name, name_len,
               name_end, name_end_len,
               type != DIRECTORY, out_v_meta_info, still_have);
@@ -339,6 +341,7 @@ namespace tfs
           {
             assert(!out_v_meta_info.empty());
             FileMetaInfo& file_info = out_v_meta_info[0].file_info_;
+            out_v_meta_info[0].frag_info_.dump();
             if (DIRECTORY == type)
             {
               CacheDirMetaNode* dir_node =
@@ -367,6 +370,7 @@ namespace tfs
               MetaInfo last_meta_info;
               vector<MetaInfo> v_meta_info;
               vector<MetaInfo>::iterator tmp_v_meta_info_it = out_v_meta_info.begin();
+              assert(!still_have);
               calculate_file_meta_info(tmp_v_meta_info_it, out_v_meta_info.end(),
                   true, v_meta_info, last_meta_info);
               if (!v_meta_info.empty())
@@ -386,14 +390,17 @@ namespace tfs
                 //replace info if cur is the first line
                 if (FileName::length(name) == name_len)
                 {
+                  TBSYS_LOG(DEBUG, "replace current info");
+                  out_v_meta_info[0].frag_info_.dump();
                   file_node->version_ = file_info.ver_no_;
                   buff_len = out_v_meta_info[0].frag_info_.get_length();
                   MemHelper::free(file_node->meta_info_);
                   file_node->meta_info_ = (char*)malloc(buff_len);
                   assert(NULL != file_node->meta_info_);
                   int64_t pos = 0;
-                  assert(TFS_SUCCESS == out_v_meta_info[0].frag_info_.serialize(
-                        file_node->meta_info_, buff_len, pos));
+                  int tmp_ret = out_v_meta_info[0].frag_info_.serialize(file_node->meta_info_, 
+                      buff_len, pos);
+                  assert(TFS_SUCCESS == tmp_ret);
                 }
               }
               else
@@ -403,12 +410,16 @@ namespace tfs
                 file_node->size_ = file_size;
                 file_node->create_time_ = file_create_time;
                 file_node->modify_time_ = file_modify_time;
+                TBSYS_LOG(DEBUG, "insert new file node");
+                out_v_meta_info[0].frag_info_.dump();
                 buff_len = out_v_meta_info[0].frag_info_.get_length();
                 file_node->meta_info_ = (char*)malloc(buff_len);
                 assert(NULL != file_node->meta_info_);
                 int64_t pos = 0;
-                assert(TFS_SUCCESS == out_v_meta_info[0].frag_info_.serialize(
-                      file_node->meta_info_, buff_len, pos));
+                int tmp_ret = out_v_meta_info[0].frag_info_.serialize(
+                    file_node->meta_info_, buff_len, pos);
+
+                assert(TFS_SUCCESS == tmp_ret);
                 file_node->version_ = file_info.ver_no_;
                 file_node->name_ = static_cast<char*>(malloc(name_len));
                 memcpy(file_node->name_, name, name_len);
@@ -470,7 +481,8 @@ namespace tfs
             MetaCacheHelper::find_file(s_p_dir_node, s_name, ret_node);
             if (NULL != ret_node)
             {
-              assert(TFS_SUCCESS == MetaCacheHelper::rm_file(s_p_dir_node, ret_node));
+              int tmp_ret = MetaCacheHelper::rm_file(s_p_dir_node, ret_node);
+              assert(TFS_SUCCESS == tmp_ret);
               MemHelper::free(ret_node->name_);
               ret_node->name_ = (char*)malloc(FileName::length(d_name));
               assert(NULL != ret_node->name_);
@@ -489,7 +501,8 @@ namespace tfs
             MetaCacheHelper::find_dir(s_p_dir_node, s_name, ret_node);
             if (NULL != ret_node)
             {
-              assert(TFS_SUCCESS == MetaCacheHelper::rm_dir(s_p_dir_node, ret_node));
+              int tmp_ret = MetaCacheHelper::rm_dir(s_p_dir_node, ret_node);
+              assert(TFS_SUCCESS == tmp_ret);
               MemHelper::free(ret_node->name_);
               ret_node->name_ = (char*)malloc(FileName::length(d_name));
               assert(NULL != ret_node->name_);
@@ -535,15 +548,18 @@ namespace tfs
             p_dir_node->id_, id, name, FileName::length(name), type);
         if (TFS_SUCCESS == ret)
         {
+          int tmp_ret = 0;
           //remove from mem
           if (DIRECTORY != type)
           {
-            assert(TFS_SUCCESS == MetaCacheHelper::rm_file(p_dir_node, file_node));
+            tmp_ret = MetaCacheHelper::rm_file(p_dir_node, file_node);
+            assert(TFS_SUCCESS == tmp_ret);
             MetaCacheHelper::free(file_node);
           }
           else
           {
-            assert(TFS_SUCCESS == MetaCacheHelper::rm_dir(p_dir_node, dir_node));
+            tmp_ret = MetaCacheHelper::rm_dir(p_dir_node, dir_node);
+            assert(TFS_SUCCESS == tmp_ret);
             MetaCacheHelper::free(dir_node);
           }
         }
@@ -566,6 +582,8 @@ namespace tfs
       MetaInfo meta_info;
       int64_t pos = 0;
       meta_info.frag_info_.deserialize(file_node->meta_info_, MAX_FRAG_INFO_SIZE, pos);
+      TBSYS_LOG(DEBUG, "will dump meta_info.frag_info_");
+      meta_info.frag_info_.dump();
       cluster_id = meta_info.frag_info_.cluster_id_;
       if ((offset >= meta_info.frag_info_.get_last_offset() || -1 == offset)
           && meta_info.frag_info_.had_been_split_)
@@ -626,6 +644,8 @@ namespace tfs
             MetaServerService::next_file_name_base_on(search_name, search_name_len,
                 last_metaInfo.get_name(), last_metaInfo.get_name_len());
           }
+          TBSYS_LOG(DEBUG, "still have %d", still_have);
+          last_metaInfo.frag_info_.dump();
         }
       } while(TFS_SUCCESS == ret && still_have);
 
@@ -682,9 +702,15 @@ namespace tfs
       database_helper = database_pool_->get(database_pool_->get_hash_flag(app_id, uid));
       if (NULL != database_helper)
       {
+        TBSYS_LOG(DEBUG, "ls_meta_info appid %"PRI64_PREFIX"d uis %"PRI64_PREFIX"d", 
+            app_id, uid);
         ret = database_helper->ls_meta_info(out_v_meta_info, app_id, uid, real_pid,
             name, name_len, name_end, name_end_len);
         database_pool_->release(database_helper);
+      }
+      if (out_v_meta_info.size() > 0)
+      {
+        out_v_meta_info[0].frag_info_.dump();
       }
 
       if (static_cast<int32_t>(out_v_meta_info.size()) >= ROW_LIMIT)
@@ -740,6 +766,7 @@ namespace tfs
         }
         else if (type == PWRITE_FILE)
         {
+          TBSYS_LOG(DEBUG, "PWRITE_FILE");
           if (NULL == meta_info)
           {
             TBSYS_LOG(ERROR, "meta_info should not be NULL");
@@ -764,6 +791,8 @@ namespace tfs
               else
               {
                 status = meta_info->frag_info_.serialize(frag_info, frag_len, pos);
+                TBSYS_LOG(DEBUG, "will dump meta_info->frag_info_");
+                meta_info->frag_info_.dump();
                 if (TFS_SUCCESS != status)
                 {
                   TBSYS_LOG(ERROR, "get meta info failed, status: %d ", status);
@@ -1017,8 +1046,8 @@ namespace tfs
             buff_len = meta_info_begin->frag_info_.get_length();
             file_meta->meta_info_ = (char*)malloc(buff_len);
             assert(NULL != file_meta->meta_info_);
-            assert(TFS_SUCCESS ==
-                meta_info_begin->frag_info_.serialize(file_meta->meta_info_, buff_len, pos));
+            int tmp_ret =  meta_info_begin->frag_info_.serialize(file_meta->meta_info_, buff_len, pos);
+            assert(TFS_SUCCESS == tmp_ret);
 
             ret = MetaCacheHelper::insert_file(p_dir_node, file_meta);
             if (TFS_SUCCESS != ret)
