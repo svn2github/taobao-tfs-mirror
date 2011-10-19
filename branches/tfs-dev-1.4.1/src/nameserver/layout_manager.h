@@ -423,6 +423,8 @@ namespace nameserver
     TaskPtr find_task(const uint32_t block_id);
     void find_server_in_plan_helper(std::vector<ServerCollect*>& servers, std::vector<ServerCollect*>& except);
     bool expire();
+    bool remove_task_mapping(std::vector<TaskPtr>& tasks);
+    bool remove_task_mapping(TaskPtr task);
 
     int64_t get_running_plan_size() const
     {

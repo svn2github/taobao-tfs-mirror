@@ -698,31 +698,19 @@ namespace tfs
 
           std::vector<TaskPtr>::iterator iter = complete.begin();
           {
-            RWLock::Lock tlock(maping_mutex_, WRITE_LOCKER);
-            for (; iter != complete.end(); ++iter)//relieve reliation
+            tbutil::Monitor<tbutil::Mutex>::Lock lock(run_plan_monitor_);
+            for (; iter != complete.end(); ++iter)
             {
-              task = *iter;
-              block_to_task_.erase(task->block_id_);
-              std::vector<ServerCollect*>::iterator r_iter = task->runer_.begin();
-              for (; r_iter != task->runer_.end(); ++r_iter)
-              {
-                server_to_task_.erase((*r_iter));
-              }
+              finish_plan_list_.push_back((*iter));
+
+              GFactory::get_timer()->cancel((*iter));
+
+              std::set<TaskPtr, TaskCompare>::iterator r_iter = running_plan_list_.find((*iter));
+              if (r_iter != running_plan_list_.end())
+                running_plan_list_.erase(r_iter);//remove task from running_plan_list
             }
           }
-
-          tbutil::Monitor<tbutil::Mutex>::Lock lock(run_plan_monitor_);
-          iter = complete.begin();
-          for (; iter != complete.end(); ++iter)
-          {
-            finish_plan_list_.push_back((*iter));
-
-            GFactory::get_timer()->cancel((*iter));
-
-            std::set<TaskPtr, TaskCompare>::iterator r_iter = running_plan_list_.find((*iter));
-            if (r_iter != running_plan_list_.end())
-              running_plan_list_.erase(r_iter);//remove task from running_plan_list
-          }
+          remove_task_mapping(complete);
         }
         else if (ngi.owner_role_ == NS_ROLE_SLAVE)//slave
         {
@@ -2058,12 +2046,19 @@ namespace tfs
         if((interrupt_ & INTERRUPT_ALL))
         {
           interrupt = true;
+          std::vector<TaskPtr> del_list;
           tbutil::Monitor<tbutil::Mutex>::Lock lock(run_plan_monitor_);
           TBSYS_LOG(INFO, "receive interrupt: %d, pending plan list size: %zd", interrupt_, pending_plan_list_.size());
           std::set<TaskPtr, TaskCompare>::iterator iter = pending_plan_list_.begin();
+          iter = pending_plan_list_.begin();
           for (; iter != pending_plan_list_.end(); ++iter)
+          {
+            del_list.push_back((*iter));
             finish_plan_list_.push_back((*iter));
+          }
           pending_plan_list_.clear();
+
+          remove_task_mapping(del_list);
         }
         interrupt_ = INTERRUPT_NONE;
         TBSYS_LOG(INFO, "build plan complete, complete: %"PRI64_PREFIX"d", ((total  + adjust)- need));
@@ -2112,13 +2107,7 @@ namespace tfs
           if (TFS_SUCCESS != iret)
           {
             task->dump(TBSYS_LOG_LEVEL_ERROR, "task handle fail");
-            RWLock::Lock tlock(maping_mutex_, WRITE_LOCKER);
-            block_to_task_.erase(task->block_id_);
-            std::vector<ServerCollect*>::iterator i_iter = task->runer_.begin();
-            for (; i_iter != task->runer_.end(); ++i_iter)
-            {
-              server_to_task_.erase((*i_iter));
-            }
+            remove_task_mapping(task);
           }
 
           run_plan_monitor_.lock();
@@ -2208,7 +2197,8 @@ namespace tfs
 
         find_need_replicate_blocks(need, now, emergency_replicate_count, middle);
 
-        TBSYS_LOG(INFO, "block count: %"PRI64_PREFIX"d, emergency_replicate_count: %"PRI64_PREFIX"d, need: %"PRI64_PREFIX"d", calc_all_block_count(), emergency_replicate_count, need);
+        TBSYS_LOG(INFO, "block count: %"PRI64_PREFIX"d, emergency_replicate_count: %"PRI64_PREFIX"d, need: %"PRI64_PREFIX"d, middle: %zd, block_to_task size: %zd server_to_task size: %zd",
+              calc_all_block_count(), emergency_replicate_count, need, middle.size(), block_to_task_.size(), server_to_task_.size());
 
         //adjust plan size
         if (emergency_replicate_count > need)
@@ -2648,33 +2638,42 @@ namespace tfs
 
     bool LayoutManager::add_task(const TaskPtr& task)
     {
-      tbutil::Monitor<tbutil::Mutex>::Lock lock(run_plan_monitor_);
-      std::pair<std::set<TaskPtr, TaskCompare>::iterator, bool> res = pending_plan_list_.insert(task);
-      if (!res.second)
+      std::pair<std::set<TaskPtr, TaskCompare>::iterator, bool> res;
       {
-        TBSYS_LOG(ERROR, "object was found by task in plan, block: %u, type: %d", task->block_id_, task->type_);
-        return true;
+        tbutil::Monitor<tbutil::Mutex>::Lock lock(run_plan_monitor_);
+        res = pending_plan_list_.insert(task);
+        if (!res.second)
+        {
+          TBSYS_LOG(ERROR, "object was found by task in plan, block: %u, type: %d", task->block_id_, task->type_);
+          return true;
+        }
       }
 
-      RWLock::Lock tlock(maping_mutex_, WRITE_LOCKER);
-      std::pair<std::map<uint32_t, TaskPtr>::iterator, bool> rs =
-        block_to_task_.insert(std::map<uint32_t, TaskPtr>::value_type(task->block_id_, task));
-      if (!rs.second)
       {
-        TBSYS_LOG(ERROR, "object was found by block: %u in block list", task->block_id_);
-        pending_plan_list_.erase(res.first);
-        return false;
-      }
-      std::pair<std::map<ServerCollect*,TaskPtr>::iterator, bool> iter;
-      std::vector<ServerCollect*>::iterator index = task->runer_.begin();
-      for (; index != task->runer_.end(); ++index)
-      {
-        iter = server_to_task_.insert(std::map<ServerCollect*,TaskPtr>::value_type((*index), task));
+        RWLock::Lock tlock(maping_mutex_, WRITE_LOCKER);
+        std::pair<std::map<uint32_t, TaskPtr>::iterator, bool> rs =
+          block_to_task_.insert(std::map<uint32_t, TaskPtr>::value_type(task->block_id_, task));
+        if (!rs.second)
+        {
+          TBSYS_LOG(ERROR, "object was found by block: %u in block list", task->block_id_);
+          pending_plan_list_.erase(res.first);
+          return false;
+        }
+        std::pair<std::map<ServerCollect*,TaskPtr>::iterator, bool> iter;
+        std::vector<ServerCollect*>::iterator index = task->runer_.begin();
+        for (; index != task->runer_.end(); ++index)
+        {
+          iter = server_to_task_.insert(std::map<ServerCollect*,TaskPtr>::value_type((*index), task));
 #if defined(TFS_NS_GTEST) || defined(TFS_NS_INTEGRATION) || defined(TFS_NS_DEBUG)
         //TBSYS_LOG(DEBUG, "server: %"PRI64_PREFIX"d, server: %"PRI64_PREFIX"d", (*index)->id(), (iter.first->first)->id());
 #endif
+        }
       }
-      run_plan_monitor_.notify();
+
+      {
+        tbutil::Monitor<tbutil::Mutex>::Lock lock(run_plan_monitor_);
+        run_plan_monitor_.notify();
+      }
 #if defined(TFS_NS_GTEST) || defined(TFS_NS_INTEGRATION) || defined(TFS_NS_DEBUG)
       std::stringstream out;
       out << task->type_ << " " ;
@@ -2758,5 +2757,39 @@ namespace tfs
       finish_plan_list_.clear();
       return true;
     }
-  }
-}
+
+    bool LayoutManager::remove_task_mapping(std::vector<TaskPtr>& tasks)
+    {
+      RWLock::Lock tlock(maping_mutex_, WRITE_LOCKER);
+      std::vector<TaskPtr>::iterator iter = tasks.begin();
+      TaskPtr task = 0;
+      for (; iter != tasks.end(); ++iter)//relieve reliation
+      {
+        task = *iter;
+        block_to_task_.erase(task->block_id_);
+        std::vector<ServerCollect*>::iterator r_iter = task->runer_.begin();
+        for (; r_iter != task->runer_.end(); ++r_iter)
+        {
+          server_to_task_.erase((*r_iter));
+        }
+      }
+      return true;
+    }
+
+    bool LayoutManager::remove_task_mapping(TaskPtr task)
+    {
+      bool bret = 0 != task;
+      if (bret)
+      {
+        RWLock::Lock tlock(maping_mutex_, WRITE_LOCKER);
+        block_to_task_.erase(task->block_id_);
+        std::vector<ServerCollect*>::iterator r_iter = task->runer_.begin();
+        for (; r_iter != task->runer_.end(); ++r_iter)
+        {
+          server_to_task_.erase((*r_iter));
+        }
+      }
+      return bret;
+    }
+  } /** nameserver **/
+}/** tfs **/

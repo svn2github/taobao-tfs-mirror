@@ -56,7 +56,7 @@ namespace nameserver
       writable = !is_full();
       bool can_be_master = ((writable && hold_master_ == HOLD_MASTER_FLAG_NO
                 && server->can_be_master(SYSPARAM_NAMESERVER.max_write_file_count_)) );
-      TBSYS_LOG(DEBUG, "server: %s can_be_master: %d, block: %u writable: %d", tbsys::CNetUtil::addrToString(server->id()).c_str(), can_be_master, id(), writable);
+      //TBSYS_LOG(DEBUG, "server: %s can_be_master: %d, block: %u writable: %d", tbsys::CNetUtil::addrToString(server->id()).c_str(), can_be_master, id(), writable);
       std::vector<ServerCollect*>::iterator where = 
           std::find(hold_.begin(), hold_.end(), server);
       if (force 
@@ -70,7 +70,7 @@ namespace nameserver
       {
         if (where != hold_.end())
         {
-          TBSYS_LOG(DEBUG,"server: %p: %s object is exist", server, CNetUtil::addrToString(server->id()).c_str());
+          TBSYS_LOG(WARN,"server: %p: %s object is exist", server, CNetUtil::addrToString(server->id()).c_str());
           hold_.erase(where);
         }
         hold_.insert(hold_.begin(), server);
@@ -84,7 +84,7 @@ namespace nameserver
         }
         else
         {
-          TBSYS_LOG(DEBUG,"server: %p: %s object is exist", server, CNetUtil::addrToString(server->id()).c_str());
+          TBSYS_LOG(WARN,"server: %p: %s object is exist", server, CNetUtil::addrToString(server->id()).c_str());
         }
 
       }
@@ -343,7 +343,7 @@ namespace nameserver
       {
         if (size < SYSPARAM_NAMESERVER.min_replication_)// 1 ~ min_replication_
         {
-          TBSYS_LOG(DEBUG, "last update time: %"PRI64_PREFIX"d, now: %"PRI64_PREFIX"d", last_update_time_, now);
+          //TBSYS_LOG(DEBUG, "last update time: %"PRI64_PREFIX"d, now: %"PRI64_PREFIX"d", last_update_time_, now);
           if ((last_update_time_ + SYSPARAM_NAMESERVER.replicate_wait_time_) <= now)
           {
             TBSYS_LOG(INFO, "emergency replicate block: %u", info_.block_id_);
