@@ -141,6 +141,7 @@ namespace tfs
     const int32_t EXIT_UPDATE_FRAG_INFO_ERROR = -14008;
     const int32_t EXIT_WRITE_EXIST_POS_ERROR = -14009;
     const int32_t EXIT_INVALID_FILE_NAME = -14010;
+    const int32_t EXIT_MOVE_TO_SUB_DIR_ERROR = -14011;
 
     const int32_t EXIT_REGISTER_ERROR = -15000;// server register fail
     const int32_t EXIT_REGISTER_EXIST_ERROR = -15001;// server register fail, server is existed
@@ -151,7 +152,6 @@ namespace tfs
     const int32_t EXIT_NEW_TABLE_NOT_EXIST= -15005;//new table not exist
     const int32_t EXIT_NEW_TABLE_INVALID = -15005;//new table invalid
 
-    const int32_t EXIT_MOVE_TO_SUB_DIR_ERROR = -222222;//TODO
   }
 }
 #endif //TFS_COMMON_ERRMSG_H_
