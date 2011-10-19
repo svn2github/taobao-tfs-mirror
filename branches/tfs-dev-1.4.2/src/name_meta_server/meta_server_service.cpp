@@ -14,11 +14,11 @@
  *
  */
 
+#include "meta_server_service.h"
+
 #include <zlib.h>
 #include "common/config_item.h"
 #include "common/parameter.h"
-#include "meta_server_service.h"
-
 #include "common/base_packet.h"
 using namespace tfs::common;
 using namespace tfs::message;
@@ -779,6 +779,7 @@ namespace tfs
               }
               if (in_cluster_id != 0 && frag_info.cluster_id_ != in_cluster_id)
               {
+                TBSYS_LOG(ERROR, "cluster id error check client code");
                 ret = EXIT_CLUSTER_ID_ERROR;
                 break;
               }
@@ -804,6 +805,7 @@ namespace tfs
 
               if (!found_meta_info_should_be_updated)
               {
+                TBSYS_LOG(ERROR, "could not found meta info, bug!!");
                 ret = EXIT_UPDATE_FRAG_INFO_ERROR;
                 break;
               }
