@@ -634,8 +634,8 @@ namespace tfs
           file_name, suffix, ns_addr);
       int64_t response_time = tbsys::CTimeUtil::getTime() - start_time;
       int64_t file_size = 0;
-      //TODO get file_size 
-      add_stat_info(OPER_READ, file_size, response_time, TFS_SUCCESS == ret); 
+      //TODO get file_size
+      add_stat_info(OPER_READ, file_size, response_time, TFS_SUCCESS == ret);
       return ret;
     }
 
@@ -647,7 +647,7 @@ namespace tfs
       ret = TfsClient::Instance()->fetch_file(ret_count, buf, count,
           file_name, suffix, ns_addr);
       int64_t response_time = tbsys::CTimeUtil::getTime() - start_time;
-      add_stat_info(OPER_READ, ret_count, response_time, TFS_SUCCESS == ret); 
+      add_stat_info(OPER_READ, ret_count, response_time, TFS_SUCCESS == ret);
       return ret;
     }
 
@@ -1023,7 +1023,24 @@ namespace tfs
       int ret = check_init_stat(true);
       if (TFS_SUCCESS == ret)
       {
-        ret = name_meta_client_->rm_file(app_id_, uid, file_path);
+        int cluster_id = name_meta_client_->get_cluster_id(app_id_, uid, file_path);
+        if (-1 == cluster_id)
+        {
+          TBSYS_LOG(DEBUG, "file not exsit, file_path: ", file_path);
+        }
+        else
+        {
+          // treat as write oper
+          string ns_addr = get_ns_addr_by_cluster_id(cluster_id, RcClient::WRITE, 0);
+          if (ns_addr.empty())
+          {
+            TBSYS_LOG(ERROR, "can not do this operator in cluster %d", cluster_id);
+          }
+          else
+          {
+            ret = name_meta_client_->rm_file(ns_addr.c_str(), app_id_, uid, file_path);
+          }
+        }
       }
       return ret;
     }
@@ -1140,7 +1157,7 @@ namespace tfs
             fd_info.ns_addr_ = get_ns_addr_by_cluster_id(cluster_id, mode, 0);
             if (fd_info.ns_addr_.empty())
             {
-              TBSYS_LOG(ERROR, "can not do this operator in cluseter %d", cluster_id);
+              TBSYS_LOG(ERROR, "can not do this operator in cluster %d", cluster_id);
             }
             else
             {

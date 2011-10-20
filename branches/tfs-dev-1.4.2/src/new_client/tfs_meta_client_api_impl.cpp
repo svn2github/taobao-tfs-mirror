@@ -139,7 +139,7 @@ namespace tfs
       return ret;
     }
 
-    int NameMetaClientImpl::rm_file(const int64_t app_id, const int64_t uid,
+    int NameMetaClientImpl::rm_file(const char* ns_addr, const int64_t app_id, const int64_t uid,
         const char* file_path)
     {
       FragInfo frag_info;
@@ -161,7 +161,7 @@ namespace tfs
           {
             TBSYS_LOG(ERROR, "remove file failed, file_path: %s, ret: %d", file_path, ret);
           }
-          unlink_file(frag_info);
+          unlink_file(frag_info, ns_addr);
         }
       }
       return ret;
@@ -295,7 +295,7 @@ namespace tfs
           cur_pos += read_length;
         }
         while((left_length > 0) && still_have);
-        if (TFS_SUCCESS == ret) 
+        if (TFS_SUCCESS == ret)
         {
           ret = (length - left_length);
         }
@@ -363,7 +363,7 @@ namespace tfs
               TBSYS_LOG(ERROR, "write tfs data error, cur_pos: %"PRI64_PREFIX"d"
                   "write_length(%"PRI64_PREFIX"d) => real_length(%"PRI64_PREFIX"d)",
                   cur_pos, write_length, real_write_length);
-              unlink_file(frag_info);
+              unlink_file(frag_info, ns_addr);
               break;
             }
             TBSYS_LOG(DEBUG, "write tfs data, cluster_id, cur_offset: %"PRI64_PREFIX"d, write_length: %"PRI64_PREFIX"d",
@@ -390,7 +390,7 @@ namespace tfs
 
             if (ret != TFS_SUCCESS)
             {
-              unlink_file(frag_info);
+              unlink_file(frag_info, ns_addr);
               break;
             }
             cur_pos += real_write_length;
@@ -467,7 +467,7 @@ namespace tfs
 
         if (TFS_SUCCESS != ret)
         {
-          rm_file(app_id, uid, tfs_name);
+          rm_file(ns_addr, app_id, uid, tfs_name);
         }
         tbsys::gDeleteA(buf);
       }
@@ -816,7 +816,7 @@ namespace tfs
       return cluster_id;
     }
 
-    int NameMetaClientImpl::unlink_file(FragInfo& frag_info)
+    int NameMetaClientImpl::unlink_file(FragInfo& frag_info, const char* ns_addr)
     {
       int ret = TFS_SUCCESS;
       int tmp_ret = TFS_ERROR;
@@ -825,7 +825,7 @@ namespace tfs
       for(; iter != frag_info.v_frag_meta_.end(); iter++)
       {
         FSName fsname(iter->block_id_, iter->file_id_, frag_info.cluster_id_);
-        if ((tmp_ret = TfsClient::Instance()->unlink(file_size, fsname.get_name(), NULL, NULL)) != TFS_SUCCESS)
+        if ((tmp_ret = TfsClient::Instance()->unlink(file_size, fsname.get_name(), NULL, ns_addr)) != TFS_SUCCESS)
         {
           ret = TFS_ERROR;
           TBSYS_LOG(ERROR, "unlink tfs file failed, file: %s, ret: %d", fsname.get_name(), tmp_ret);

@@ -56,7 +56,7 @@ namespace tfs
         int create_file(const int64_t app_id, const int64_t uid, const char* file_path);
 
         int rm_dir(const int64_t app_id, const int64_t uid, const char* dir_path);
-        int rm_file(const int64_t app_id, const int64_t uid, const char* file_path);
+        int rm_file(const char* ns_addr, const int64_t app_id, const int64_t uid, const char* file_path);
 
         int mv_dir(const int64_t app_id, const int64_t uid,
             const char* src_dir_path, const char* dest_dir_path);
@@ -109,7 +109,7 @@ namespace tfs
             const char* path);
 
         // tfs cluster related
-        int unlink_file(common::FragInfo& frag_info);
+        int unlink_file(common::FragInfo& frag_info, const char* ns_addr);
         int64_t read_data(const char* ns_addr, const common::FragInfo& frag_info, void* buffer, int64_t pos, int64_t length);
         int64_t write_data(const char* ns_addr, int32_t cluster_id, const void* buffer, int64_t pos, int64_t length,
             common::FragInfo& frag_info);

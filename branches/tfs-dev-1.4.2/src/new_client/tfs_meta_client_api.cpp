@@ -58,10 +58,10 @@ namespace tfs
       return impl_->rm_dir(app_id, uid, dir_path);
     }
 
-    TfsRetType NameMetaClient::rm_file(const int64_t app_id, const int64_t uid,
+    TfsRetType NameMetaClient::rm_file(const char* ns_addr, const int64_t app_id, const int64_t uid,
         const char* file_path)
     {
-      return impl_->rm_file(app_id, uid, file_path);
+      return impl_->rm_file(ns_addr, app_id, uid, file_path);
     }
 
     TfsRetType NameMetaClient::mv_dir(const int64_t app_id, const int64_t uid,

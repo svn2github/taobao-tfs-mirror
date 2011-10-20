@@ -39,7 +39,7 @@ namespace tfs
         TfsRetType create_file(const int64_t app_id, const int64_t uid, const char* file_path);
 
         TfsRetType rm_dir(const int64_t app_id, const int64_t uid, const char* dir_path);
-        TfsRetType rm_file(const int64_t app_id, const int64_t uid, const char* file_path);
+        TfsRetType rm_file(const char* ns_addr, const int64_t app_id, const int64_t uid, const char* file_path);
 
         TfsRetType mv_dir(const int64_t app_id, const int64_t uid,
             const char* src_dir_path, const char* dest_dir_path);
