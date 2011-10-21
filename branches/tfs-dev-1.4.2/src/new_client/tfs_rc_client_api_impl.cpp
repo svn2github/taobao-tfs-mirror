@@ -271,7 +271,6 @@ namespace tfs
       {
         fdInfo fd_info;
         remove_fdinfo(fd, fd_info);
-        ret = TFS_ERROR;
         if (fd_info.raw_tfs_fd_ >= 0)
         {
           ret = TfsClient::Instance()->close(fd_info.raw_tfs_fd_, tfs_name_buff, buff_len);
