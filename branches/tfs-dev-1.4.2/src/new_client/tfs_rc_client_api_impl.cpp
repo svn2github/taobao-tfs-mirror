@@ -763,14 +763,19 @@ namespace tfs
     {
       string ns_addr;
       if ((index >= CHOICE_CLUSTER_NS_TYPE_LENGTH)
-          || ((RcClient::READ == mode || RcClient::STAT == mode) && 0 == cluster_id))
+          || -1 == cluster_id)
       {
+        TBSYS_LOG(DEBUG, "wrong index or file not exist, index: %d, cluster_id: %d", index, cluster_id);
         //null ;
       }
       else
       {
         tbsys::CThreadGuard mutex_guard(&mutex_);
-        if (RcClient::CREATE == mode || RcClient::WRITE == mode)
+        if ((RcClient::READ == mode || RcClient::STAT == mode) && cluster_id == 0)
+        {
+          ns_addr = choice[index].begin()->second;
+        }
+        else if (RcClient::CREATE == mode || RcClient::WRITE == mode)
         {
           ns_addr = write_ns_[index];
         }
@@ -1150,10 +1155,6 @@ namespace tfs
             fdInfo fd_info(-1, app_id, uid, name);
             int32_t cluster_id = 0;
             cluster_id = name_meta_client_->get_cluster_id(app_id, uid, name);
-            if (-1 == cluster_id)
-            {
-              cluster_id = 0;
-            }
             fd_info.ns_addr_ = get_ns_addr_by_cluster_id(cluster_id, mode, 0);
             if (fd_info.ns_addr_.empty())
             {
