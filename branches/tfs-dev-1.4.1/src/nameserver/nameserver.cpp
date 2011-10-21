@@ -810,7 +810,7 @@ namespace tfs
                   ngi.other_side_ip_port_ = tbsys::CNetUtil::ipToAddr((*iter), get_port());
               }
 
-              ngi.switch_time_ = time(NULL);
+              ngi.set_switch_time();
               ngi.owner_status_ = NS_STATUS_UNINITIALIZE;
               ngi.vip_ = Func::get_addr(get_ip_addr());
               ngi.owner_role_ = Func::is_local_addr(ngi.vip_) == true ? NS_ROLE_MASTER : NS_ROLE_SLAVE;

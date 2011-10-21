@@ -73,13 +73,14 @@ namespace tfs
       return bret;
     }
 
-    bool BlockChunk::remove(const uint32_t block_id)
+    bool BlockChunk::remove(const uint32_t block_id, std::vector<GCObject*>& vec)
     {
       BLOCK_MAP::iterator iter = block_map_.find(block_id);
       if (iter != block_map_.end())
       {
+        vec.push_back(iter->second);
         iter->second->set_dead_time();
-        GFactory::get_gc_manager().add(iter->second);
+        //GFactory::get_gc_manager().add(iter->second);
         block_map_.erase(iter);
       }
       return true;

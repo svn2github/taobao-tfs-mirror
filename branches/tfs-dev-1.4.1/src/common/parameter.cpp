@@ -158,6 +158,7 @@ namespace tfs
         return EXIT_SYSTEM_PARAMETER_ERROR;
       }
       report_block_expired_time_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_REPORT_BLOCK_EXPIRED_TIME, heart_interval_ * 2);
+      discard_newblk_safe_mode_time_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_DISCARD_NEWBLK_SAFE_MODE_TIME, safe_mode_time_ * 2); 
       return TFS_SUCCESS;
     }
 

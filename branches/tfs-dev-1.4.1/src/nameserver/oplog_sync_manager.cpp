@@ -515,6 +515,7 @@ namespace tfs
           }
           else if (OPLOG_INSERT == oplog.cmd_)
           {
+            std::vector<GCObject*> rms;
             for (; iter != oplog.blocks_.end(); ++iter)
             {
               uint32_t block_id = (*iter);
@@ -562,7 +563,7 @@ namespace tfs
                         block_id, CNetUtil::addrToString((*s_iter)).c_str());
                   RWLock::Lock lock(*ptr, WRITE_LOCKER);
                   block = ptr->find(block_id);
-                  if (meta_mgr_.build_relation(block, server, now) != TFS_SUCCESS)
+                  if (meta_mgr_.build_relation(block, server, rms, now) != TFS_SUCCESS)
                   {
                     TBSYS_LOG(WARN, "build relation between block: %u and server: %s failed",
                         block_id, CNetUtil::addrToString((*s_iter)).c_str());
@@ -570,16 +571,19 @@ namespace tfs
                 }
               }
             }
+            GFactory::get_gc_manager().add(rms);
           }
           else if (OPLOG_REMOVE== oplog.cmd_)
           {
+            std::vector<GCObject*> rms;
             for (; iter != oplog.blocks_.end(); ++iter)
             {
               uint32_t block_id = (*iter);
               BlockChunkPtr ptr = meta_mgr_.get_chunk(block_id);
               RWLock::Lock lock(*ptr, WRITE_LOCKER);
-              ptr->remove(block_id);
+              ptr->remove(block_id, rms);
             }
+            GFactory::get_gc_manager().add(rms);
           }
           else if (OPLOG_RELIEVE_RELATION == oplog.cmd_)
           {

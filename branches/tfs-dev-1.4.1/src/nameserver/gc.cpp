@@ -44,52 +44,91 @@ namespace nameserver
     if (bret)
     {
       tbutil::Mutex::Lock lock(mutex_);
-      std::list<GCObject*>::const_iterator iter = std::find(object_list_.begin(), object_list_.end(), object);
-      if (iter == object_list_.end())
+      TBSYS_LOG(INFO, "gc object list size: %zd", object_list_.size());
+      std::pair<std::set<GCObject*>::iterator, bool> res = object_list_.insert(object);
+      bret = res.second;
+      if (!bret)
       {
-        object_list_.push_back(object);
+        TBSYS_LOG(ERROR, "%p is exist", object);
       }
     }
     return bret ? TFS_SUCCESS : TFS_ERROR;
+  }
+
+
+  int GCObjectManager::add(const std::vector<GCObject*>& objects)
+  {
+    int32_t iret = TFS_SUCCESS;
+    if (!objects.empty())
+    {
+      tbutil::Mutex::Lock lock(mutex_);
+      TBSYS_LOG(INFO, "gc object list size: %zd", object_list_.size());
+      std::pair<std::set<GCObject*>::iterator, bool> res; 
+      std::vector<GCObject*>::const_iterator iter = objects.begin();
+      for (; iter != objects.end(); ++iter)
+      {
+        res = object_list_.insert((*iter));
+        if (!res.second)
+        {
+          TBSYS_LOG(ERROR, "%p is exist", (*iter));
+        }
+      }
+    }
+    return iret;
   }
 
   void GCObjectManager::run()
   {
     int64_t now = time(NULL); 
     GCObject* obj = NULL;
-    tbutil::Mutex::Lock lock(mutex_);
-    std::list<GCObject*>::iterator iter = object_list_.begin();
-    while (iter != object_list_.end() && !destroy_)
+    int32_t total = 0;
+    int32_t gc_count = 0;
+    std::vector<GCObject*> tmp;
     {
-      if ((*iter)->can_be_clear(now))
+      tbutil::Mutex::Lock lock(mutex_);
+      total = object_list_.size();
+      std::set<GCObject*>::iterator iter = object_list_.begin();
+      while (iter != object_list_.end() && !destroy_)
       {
-        (*iter)->callback(manager_);
-        ++iter;
+        if ((*iter)->can_be_clear(now))
+        {
+          tmp.push_back((*iter));
+          ++iter;
+        }
+        else if ((*iter)->is_dead(now))
+        {
+          ++gc_count;
+          obj = (*iter);
+          obj->free();
+          object_list_.erase(iter++);
+        }
+        else
+        {
+          ++iter;
+        }
       }
-      else if ((*iter)->is_dead(now))
-      {
-        obj = (*iter);
-        obj->free();
-        object_list_.erase(iter++);
-      }
-      else
-      {
-        ++iter;
-      }
+    }
+
+    TBSYS_LOG(INFO, "GC object total: %d, gc: %d", total, gc_count);
+
+    std::vector<GCObject*>::iterator iter = tmp.begin();
+    for (; iter != tmp.begin(); ++iter)
+    {
+      (*iter)->callback(manager_);
     }
   }
 
   int GCObjectManager::initialize()
   {
     ExpireTimerTaskPtr task = new ExpireTimerTask(*this);
-    int iret = GFactory::get_timer()->scheduleRepeated(task, tbutil::Time::seconds(SYSPARAM_NAMESERVER.object_dead_max_time_));
+    int iret = GFactory::get_timer()->scheduleRepeated(task, tbutil::Time::seconds(SYSPARAM_NAMESERVER.object_clear_max_time_));
     return iret < 0 ? TFS_ERROR : TFS_SUCCESS;
   }
   
   int GCObjectManager::wait_for_shut_down()
   {
     tbutil::Mutex::Lock lock(mutex_);
-    std::list<GCObject*>::iterator iter = object_list_.begin();
+    std::set<GCObject*>::iterator iter = object_list_.begin();
     for (; iter != object_list_.end(); ++iter)
     {
       (*iter)->free();

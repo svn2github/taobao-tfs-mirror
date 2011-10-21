@@ -457,6 +457,17 @@ namespace tfs
       }
     }
 
+    void Func::sleep(const float f_heart_interval, int32_t& stop)
+    {
+      TBSYS_LOG(DEBUG, "stop: %d", stop);
+      int32_t heart_interval = static_cast<int32_t>(((f_heart_interval + 0.01) * 10));
+      while (!stop && heart_interval > 0)
+      {
+        usleep(100000);
+        heart_interval--;
+      }
+    }
+
     char* Func::subright(char* dst, char* src, int32_t n)
     {
       if (dst == NULL || src == NULL)

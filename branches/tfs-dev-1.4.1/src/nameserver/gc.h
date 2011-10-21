@@ -32,6 +32,7 @@ namespace nameserver
     GCObjectManager();
     virtual ~GCObjectManager();
     int add(GCObject* object);
+    int add(const std::vector<GCObject*>& objects);
     void run();
     int initialize();
     int wait_for_shut_down();
@@ -47,7 +48,7 @@ namespace nameserver
   private:
   #endif
     DISALLOW_COPY_AND_ASSIGN(GCObjectManager);
-    std::list<GCObject*> object_list_;
+    std::set<GCObject*> object_list_;
     tbutil::Mutex mutex_;
     static GCObjectManager instance_;
     LayoutManager* manager_;

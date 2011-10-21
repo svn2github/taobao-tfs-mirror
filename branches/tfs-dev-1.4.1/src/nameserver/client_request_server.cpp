@@ -448,15 +448,21 @@ namespace tfs
           iret = 0 == block_id ? TFS_ERROR : TFS_SUCCESS;
           if (TFS_SUCCESS == iret)
           {
-            //create new block by block_id
-            iret = lay_out_manager_.open_helper_create_new_block_by_id(block_id);
-            if (iret != TFS_SUCCESS)
+            NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
+            iret = ngi.in_discard_newblk_safe_mode_time(time(NULL)) ? EXIT_DISCARD_NEWBLK_ERROR: TFS_SUCCESS;
+            if (TFS_SUCCESS == iret)
             {
-              TBSYS_LOG(ERROR, "create new block by block id: %u failed", block_id);
+              //create new block by block_id
+              iret = lay_out_manager_.open_helper_create_new_block_by_id(block_id);
+              if (iret != TFS_SUCCESS)
+              {
+                TBSYS_LOG(ERROR, "create new block by block id: %u failed", block_id);
+              }
             }
           }
         }
-        if (TFS_SUCCESS == iret)
+        if (TFS_SUCCESS == iret
+          || EXIT_DISCARD_NEWBLK_ERROR == iret)
         {
           iret = block_id == 0 ? EXIT_NO_BLOCK : TFS_SUCCESS;
           if (TFS_SUCCESS == iret)
@@ -468,7 +474,7 @@ namespace tfs
               block = ptr->find(block_id);
             }
             // now check blockcollect object if has any dataserver.
-            iret = NULL == block ? EXIT_NO_BLOCK : TFS_SUCCESS;
+            iret = NULL == block ? block_id == 0 ? EXIT_NO_BLOCK : EXIT_DISCARD_NEWBLK_ERROR : TFS_SUCCESS;
             if (TFS_SUCCESS == iret)
             {
               iret = 0 == block->get_hold_size() ? EXIT_NO_DATASERVER : TFS_SUCCESS;
@@ -581,6 +587,7 @@ namespace tfs
 
     int ClientRequestServer::handle_control_load_block(const common::ClientCmdInformation& info, common::BasePacket* message, const int64_t buf_length, char* buf)
     {
+      std::vector<GCObject*> rms;
       int32_t iret = NULL != buf && buf_length > 0 ? TFS_SUCCESS : TFS_ERROR;
       if (TFS_SUCCESS == iret)
       {
@@ -618,7 +625,7 @@ namespace tfs
 
               if (TFS_SUCCESS == iret)
               {
-                iret = lay_out_manager_.build_relation(block, server, time(NULL));
+                iret = lay_out_manager_.build_relation(block, server, rms, time(NULL));
                 if (TFS_SUCCESS != iret)
                 {
                   snprintf(buf, buf_length, " build relation fail, block: %u dataserver: %s",
@@ -647,6 +654,8 @@ namespace tfs
           TBSYS_LOG(ERROR, "%s", buf);
         }
       }
+
+      GFactory::get_gc_manager().add(rms);
       return iret;
     }
 
@@ -656,25 +665,30 @@ namespace tfs
       UNUSED(buf_length);
       uint64_t id = info.value1_;
       uint32_t block_id = info.value3_;
+      std::vector<GCObject*> rms;
       ServerCollect* server = lay_out_manager_.get_server(id);
+      int32_t iret = TFS_ERROR;
       BlockChunkPtr ptr = lay_out_manager_.get_chunk(block_id);
-      RWLock::Lock lock(*ptr, WRITE_LOCKER);
-      BlockCollect* block = ptr->find(block_id);
-      int32_t iret = TFS_SUCCESS;
-      if (NULL != block)
       {
-        if (block->get_hold_size() <= 0)
+        RWLock::Lock lock(*ptr, WRITE_LOCKER);
+        BlockCollect* block = ptr->find(block_id);
+        if (NULL != block)
         {
-          ptr->remove(block_id);
-        }
-        else
-        {
-          if (NULL != server)
+          if (block->get_hold_size() <= 0)
           {
-            iret = lay_out_manager_.relieve_relation(block, server, now) ? TFS_SUCCESS : TFS_ERROR;
+            ptr->remove(block_id, rms);
+          }
+          else
+          {
+            if (NULL != server)
+            {
+              iret = lay_out_manager_.relieve_relation(block, server, now) ? TFS_SUCCESS : TFS_ERROR;
+            }
           }
         }
       }
+
+      GFactory::get_gc_manager().add(rms);
       return iret;
     }
 

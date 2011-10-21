@@ -319,7 +319,7 @@ namespace tfs
         tbutil::Mutex::Lock lock(ngi);
         ngi.owner_role_ = NS_ROLE_SLAVE;
         ngi.sync_oplog_flag_ = NS_SYNC_DATA_FLAG_NO;
-        ngi.switch_time_ = time(NULL) + SYSPARAM_NAMESERVER.safe_mode_time_;
+        ngi.set_switch_time();
         meta_mgr_->destroy_plan();
       }
       return;
@@ -371,7 +371,7 @@ namespace tfs
               ngi.owner_role_ = NS_ROLE_MASTER;
               ngi.other_side_role_ = NS_ROLE_SLAVE;
               ngi.sync_oplog_flag_ = NS_SYNC_DATA_FLAG_YES;
-              ngi.switch_time_ = time(NULL) + SYSPARAM_NAMESERVER.safe_mode_time_;
+              ngi.set_switch_time();
               meta_mgr_->destroy_plan();
               meta_mgr_->register_report_servers();
               ns_force_modify_other_side();
@@ -427,7 +427,7 @@ namespace tfs
       ngi.other_side_status_ = other_side_status;
       ngi.sync_oplog_flag_ = ns_sync_flag;
       meta_mgr_->destroy_plan();
-      ngi.switch_time_ = time(NULL) + SYSPARAM_NAMESERVER.safe_mode_time_;
+      ngi.set_switch_time();
       meta_mgr_->get_oplog_sync_mgr().notify_all();
       meta_mgr_->register_report_servers();
       TBSYS_LOG(INFO, "%s", "notify all oplog thread");
@@ -632,7 +632,7 @@ namespace tfs
               ngi.owner_role_ = NS_ROLE_MASTER;
               ngi.other_side_role_ = NS_ROLE_SLAVE;
               ngi.other_side_status_ = NS_STATUS_OTHERSIDEDEAD;
-              ngi.switch_time_ = time(NULL) + SYSPARAM_NAMESERVER.safe_mode_time_;
+              ngi.set_switch_time();
               meta_mgr_->destroy_plan();
               meta_mgr_->register_report_servers();  
               switch_flag = true;
@@ -661,7 +661,7 @@ namespace tfs
               ngi.owner_role_ = NS_ROLE_MASTER;
               ngi.other_side_role_ = NS_ROLE_SLAVE;
               ngi.other_side_status_ = NS_STATUS_OTHERSIDEDEAD;
-              ngi.switch_time_ = time(NULL) + SYSPARAM_NAMESERVER.safe_mode_time_;
+              ngi.set_switch_time();
               meta_mgr_->destroy_plan();
               meta_mgr_->register_report_servers();  
               break;
@@ -901,7 +901,7 @@ namespace tfs
               ngi.owner_status_ = NS_STATUS_INITIALIZED;
               ngi.other_side_role_ = NS_ROLE_SLAVE;
               ngi.other_side_status_ = NS_STATUS_OTHERSIDEDEAD;
-              ngi.switch_time_ = time(NULL) + SYSPARAM_NAMESERVER.safe_mode_time_;
+              ngi.set_switch_time();
               meta_mgr_->destroy_plan();
               break;
             }
