@@ -85,7 +85,8 @@ namespace tfs
                     const int64_t max_server_item = common::MAX_SERVER_ITEM_DEFAULT);
       int set_tables_pointer(const int64_t max_bucket_item, const int64_t max_server_item);
       void inc_build_version();
-      void inc_active_version();
+      void set_active_version();
+      //void inc_active_version();
       void get_old_servers( std::set<uint64_t>& servers);
       int64_t get_difference( std::set<uint64_t>& old_servers,
                             const std::set<uint64_t>& new_servers,std::vector<uint64_t>& news,

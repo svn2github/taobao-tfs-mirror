@@ -613,7 +613,9 @@ namespace tfs
         memcpy(reinterpret_cast<unsigned char*>(active_tables_), reinterpret_cast<unsigned char*>(tables_),
             header_->bucket_item_ * INT64_SIZE);
         memcpy(compress_active_tables_, compress_tables_, header_->compress_table_length_);
-        inc_active_version();
+        TBSYS_LOG(DEBUG, "old active version: %"PRI64_PREFIX"d", this->get_active_table_version());
+        set_active_version();
+        TBSYS_LOG(DEBUG, "new active version: %"PRI64_PREFIX"d", this->get_active_table_version());
         iret = file_->sync_file() ? TFS_SUCCESS : TFS_ERROR;
       }
       return iret;
@@ -763,8 +765,13 @@ namespace tfs
         ++header_->build_table_version_;
       }
     }
+
+    void BuildTable::set_active_version()
+    {
+      header_->active_table_version_ = header_->build_table_version_;
+    }
     
-    void BuildTable::inc_active_version()
+    /*void BuildTable::inc_active_version()
     {
       if (INVALID_TABLE_VERSION == header_->active_table_version_
           || header_->active_table_version_ >= TABLE_VERSION_MAGIC)
@@ -775,6 +782,6 @@ namespace tfs
       {
         ++header_->active_table_version_;
       }
-    }
+    }*/
   } /** root server **/
 }/** tfs **/

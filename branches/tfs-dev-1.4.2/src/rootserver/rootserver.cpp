@@ -303,7 +303,7 @@ namespace tfs
           }
           if (common::TFS_SUCCESS != iret)
           {
-            msg->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), iret, "execute message failed");
+            msg->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), iret, "execute message failed, pcode: %d", pcode);
           }
         }
       }
