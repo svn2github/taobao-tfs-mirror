@@ -17,20 +17,17 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import com.taobao.common.tfs.function.NameMetaBaseCase;
 import com.taobao.common.tfs.namemeta.FileMetaInfo;
 
-public class NameMetaManager_02_multithread_directory_operation extends  NameMetaBaseCase{
+public class NameMetaManager_02_multithread_directory_operation extends  NameMetaManagerBaseCase{
 
-	public static List<FileMetaInfo> file_info = null;
-  public static boolean suc_flag = false;
-  public int count = 10;
   public static String rootDir = "/NameMetaTest2";
 
   @BeforeClass
   public  static void setUpOnce() throws Exception {
-    NameMetaBaseCase.setUpOnce();
     rmDirRecursive(appId, userId, rootDir); 
+    NameMetaBaseCase.setUpOnce();
+    tfsManager.createDir(appId, userId, rootDir); 
   }
 
   @AfterClass
@@ -40,7 +37,7 @@ public class NameMetaManager_02_multithread_directory_operation extends  NameMet
   }
 
 
-	@Test
+	//@Test
 	public void test_01_multi_threads_create_different_directories() throws Throwable {
 		TestRunnable tr1, tr2, tr3, tr4, tr5, tr6;
 		tr1 = new ThreadCreateDir();
@@ -105,7 +102,7 @@ public class NameMetaManager_02_multithread_directory_operation extends  NameMet
 		mttr.runTestRunnables();
 	}
     
-	//@Test
+	@Test
 	public void test_06_multi_threads_move_one_directory() throws Throwable {
 		TestRunnable tr1, tr2;
 		tr1 = new ThreadMoveOneDir();
@@ -116,7 +113,7 @@ public class NameMetaManager_02_multithread_directory_operation extends  NameMet
 		mttr.runTestRunnables();
 	}
 	
-	//@Test
+	@Test
 	public void test_07_multi_threads_rename_one_directory() throws Throwable {
 		TestRunnable tr1, tr2;
 		tr1 = new ThreadRenameOneDir();
@@ -136,11 +133,12 @@ public class NameMetaManager_02_multithread_directory_operation extends  NameMet
         log.info("线程===" + Thread.currentThread().getId() + "执行开始");
         while (--count > 0) {
           boolean ret = false;
-          ret = tfsManager.createDir(appId, userId, "/" + String.valueOf(count));
+          ret = tfsManager.createDir(appId, userId, rootDir + "/" + Thread.currentThread().getId() + "/" + String.valueOf(count));
           Assert.assertTrue(ret);
         }
       }
   }
+
   private class ThreadRenameDirs extends TestRunnable {
     @Override
       public void runTest() throws Throwable {
@@ -251,7 +249,7 @@ public class NameMetaManager_02_multithread_directory_operation extends  NameMet
 
     boolean ret = false;
     long threadId = Thread.currentThread().getId();
-    String filepath = rootDir + "/public/" + String.valueOf(threadId);
+    String filepath = rootDir + "/" + String.valueOf(threadId);
     String newpath = rootDir + "/moved_" + String.valueOf(threadId);
 
     ret = tfsManager.createDir(appId, userId, filepath);

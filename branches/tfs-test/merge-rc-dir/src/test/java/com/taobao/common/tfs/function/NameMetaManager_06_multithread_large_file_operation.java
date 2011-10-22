@@ -19,10 +19,10 @@ import org.junit.Test;
 
 import com.taobao.common.tfs.namemeta.FileMetaInfo;
 
-public class NameMetaManager_04_multithread_small_file_operation  extends  NameMetaManagerBaseCase{
+public class NameMetaManager_06_multithread_large_file_operation  extends  NameMetaManagerBaseCase{
 
-    public static String rootDir = "/NameMetaTest4";
-    public static String localFile = resourcesPath + "/2M";
+    public static String rootDir = "/NameMetaTest6";
+    public static String localFile = resourcesPath + "/1G";
 
     @BeforeClass
     public static void setUpOnce() throws Exception {
@@ -40,7 +40,7 @@ public class NameMetaManager_04_multithread_small_file_operation  extends  NameM
     }
 
     @Test
-    public void test_01_multi_threads_create_and_delete_different_small_files() throws Throwable {
+    public void test_01_multi_threads_create_and_delete_different_large_files() throws Throwable {
         TestRunnable tr1 ,tr2, tr3,tr4 ,tr5, tr6;
         tr1 = new ThreadCreateFiles();
         tr2 = new ThreadCreateFiles();
@@ -168,6 +168,5 @@ public class NameMetaManager_04_multithread_small_file_operation  extends  NameM
             rename_one_file(rootDir, localFile);
         }
     }
-
 }
 

@@ -18,7 +18,7 @@ import org.junit.Test;
 import com.taobao.common.tfs.TfsManager;
 import com.taobao.common.tfs.namemeta.FileMetaInfo;
 
-public class NameMetaManager_01_basic_directory_operation extends  NameMetaBaseCase{
+public class NameMetaManager_01_basic_directory_operation extends  NameMetaManagerBaseCase{
 	
 	public static List<FileMetaInfo>  fileInfoList;
 	public static FileMetaInfo fileInfo;
@@ -27,10 +27,9 @@ public class NameMetaManager_01_basic_directory_operation extends  NameMetaBaseC
 
 	@BeforeClass
   public  static void setUpOnce() throws Exception {
-    NameMetaBaseCase.setUpOnce();
-		boolean ret = tfsManager.createDir(appId, userId, "/ ");
-    Assert.assertTrue(ret);
     rmDirRecursive(appId, userId, rootDir); 
+    NameMetaBaseCase.setUpOnce();
+		tfsManager.createDir(appId, userId, rootDir);
   }
 
   @AfterClass
@@ -45,22 +44,23 @@ public class NameMetaManager_01_basic_directory_operation extends  NameMetaBaseC
      boolean ret = false;
      int oldSize = 0;
      int newSize = 0;
+     String filepath1 = rootDir + "/dddd";
 
-     fileInfoList = tfsManager.lsDir(appId, userId, "/");
+     fileInfoList = tfsManager.lsDir(appId, userId, rootDir);
      oldSize = fileInfoList.size();
 
-		 ret = tfsManager.createDir(appId, userId, rootDir);
+		 ret = tfsManager.createDir(appId, userId, filepath1);
      Assert.assertTrue(ret);
 
-     fileInfoList = tfsManager.lsDir(appId, userId, "/");
+     fileInfoList = tfsManager.lsDir(appId, userId, rootDir);
      newSize = fileInfoList.size();
      Assert.assertEquals(1, newSize - oldSize); 
      
-     ret = tfsManager.rmDir(appId, userId, rootDir);
+     ret = tfsManager.rmDir(appId, userId, filepath1);
      Assert.assertTrue(ret);
 	}
 	
-	//@Test
+	@Test
 	public void test_01_create_directory()
 	{
     boolean ret = false;
@@ -83,7 +83,7 @@ public class NameMetaManager_01_basic_directory_operation extends  NameMetaBaseC
     Assert.assertTrue(ret);
 	}
 	
-	//@Test
+	@Test
 	public void test_02_remove_directory()
 	{
     boolean ret = false;
@@ -117,7 +117,7 @@ public class NameMetaManager_01_basic_directory_operation extends  NameMetaBaseC
     Assert.assertTrue(ret);
 	}
 
-	//@Test
+	@Test
 	public void test_03_rename_directory()
   {
     boolean ret = false;
@@ -137,7 +137,7 @@ public class NameMetaManager_01_basic_directory_operation extends  NameMetaBaseC
     Assert.assertTrue(ret);
 	}
 	
-	//@Test
+	@Test
 	public void test_04_move_directory()
   {
     boolean ret = false;
@@ -171,7 +171,7 @@ public class NameMetaManager_01_basic_directory_operation extends  NameMetaBaseC
     Assert.assertTrue(ret);
   }
 	
-	//@Test
+	@Test
 	public void test_05_save_file()
 	{
     boolean ret = false;

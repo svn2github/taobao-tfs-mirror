@@ -35,7 +35,7 @@ public class mergeRcMetaManager_01_rc_saveFile_operation extends RcBaseCase {
   public void tearDown(){
   }
   
-  @Test
+  @Ignore
   public void Function_05_saveFile_1k(){
 
     caseName = "Function_05_saveFile_1k";
@@ -94,7 +94,7 @@ public class mergeRcMetaManager_01_rc_saveFile_operation extends RcBaseCase {
     log.info(caseName + "===> end");
   }
   
-  @Test
+  @Ignore
   public void Function_06_saveFile_2M(){
 
     caseName = "Function_06_saveFile_2M";
@@ -155,7 +155,7 @@ public class mergeRcMetaManager_01_rc_saveFile_operation extends RcBaseCase {
     log.info(caseName + "===> end");
   }
 
-  @Test
+  @Ignore
   public void Function_07_saveFile_3M(){
 
     caseName = "Function_07_saveFile_3M";
@@ -215,7 +215,7 @@ public class mergeRcMetaManager_01_rc_saveFile_operation extends RcBaseCase {
     log.info(caseName + "===> end");
   }
 
-  @Test
+  @Ignore
   public void Function_08_saveFile_6G(){
 
     caseName = "Function_08_saveFile_6G";
@@ -276,7 +276,7 @@ public class mergeRcMetaManager_01_rc_saveFile_operation extends RcBaseCase {
     log.info(caseName + "===> end");
   }
 
-  @Test
+  @Ignore
   public void Function_13_update_file_2M_to_3M(){
 
     caseName = "Function_13_update_file_2M_to_3M";
@@ -345,7 +345,7 @@ public class mergeRcMetaManager_01_rc_saveFile_operation extends RcBaseCase {
   }
 
 
-  @Test
+  @Ignore
   public void Function_14_update_file_3M_to_2M(){
 
     caseName = "Function_14_update_file_3M_to_2M";
@@ -409,6 +409,72 @@ public class mergeRcMetaManager_01_rc_saveFile_operation extends RcBaseCase {
     savecrc = getCrc(localFile);
     readcrc =  getCrc(retLocalFile);
     Assert.assertEquals(savecrc,readcrc);
+    tfsManager.destroy();
+
+    log.info(caseName + "===> end");
+  }
+
+  @Test
+  public void Function_08_saveMetaFile_1k(){
+
+    caseName = "Function_08_saveMetaFile_1k";
+    log.info(caseName + "===> start");
+
+    String localFile = "1k.jpg";
+    boolean bRet = false;
+    List<String> rootServerAddrList = new ArrayList<String>();
+    rootServerAddrList.add(rsAddr);
+
+    long oldUsedCapacity = getUsedCapacity(appKey);
+    long oldFileCount = getFileCount(appKey);
+    log.debug("oldUsedCapacity: " + oldUsedCapacity + ", oldFileCount: " + oldFileCount);
+
+    tfsManager = new DefaultTfsManager();
+    tfsManager.setRcAddr(rcAddr);
+    tfsManager.setAppKey(appKey);
+    tfsManager.setAppIp(appIp);
+    tfsManager.setUseNameMeta(true);
+    tfsManager.setRootServerAddrList(rootServerAddrList);
+    bRet = tfsManager.init();
+    Assert.assertTrue(bRet);
+
+    boolean sRet = false;
+    sRet=tfsManager.saveFile(appId, userId, localFile, "/cymetatest_new");
+    Assert.assertTrue(sRet);
+    sleep(MAX_STAT_TIME);
+
+    String sessionId = tfsManager.getSessionId();
+    log.debug("sessionId: " + sessionId);
+    Assert.assertTrue(getOperTimes(sessionId, 2) == 1);
+    Assert.assertTrue(getSuccTimes(sessionId, 2) == 1);
+    Assert.assertTrue(getFileSize(sessionId, 2) == 1024);
+    //tfsManager.rmFile(appId, userId, "/cymetatest_yes");
+
+    long newUsedCapacity = getUsedCapacity(appKey);
+    long newFileCount = getFileCount(appKey);
+    log.debug("newUsedCapacity: " + newUsedCapacity + ", newFileCount: " + newFileCount);
+    Assert.assertEquals(oldUsedCapacity + 1024, newUsedCapacity);
+    Assert.assertEquals(oldFileCount + 1, newFileCount);
+    //tfsManager.destroy();
+
+    //int savecrc = 0;
+    //int readcrc = 1;
+    //savecrc = getCrc(localFile);
+    //tfsManager.setRcAddr(rcAddr);
+    //tfsManager.setAppKey(appKey);
+    //tfsManager.setAppIp(appIp);
+    //tfsManager.setRootServerAddrList(rootServerAddrList);
+    //bRet = tfsManager.init();
+    //Assert.assertTrue(bRet);
+    //sessionId = tfsManager.getSessionId();
+    //bRet = tfsManager.fetchFile(sRet, null, retLocalFile);
+    //Assert.assertTrue(bRet);
+    //sleep(MAX_STAT_TIME);
+    //Assert.assertTrue(getOperTimes(sessionId, 1) == 1);
+    //Assert.assertTrue(getSuccTimes(sessionId, 1) == 1);
+    //Assert.assertTrue(getFileSize(sessionId, 1) == 1024);
+    //readcrc = getCrc(retLocalFile);
+    //Assert.assertEquals(savecrc,readcrc);
     tfsManager.destroy();
 
     log.info(caseName + "===> end");

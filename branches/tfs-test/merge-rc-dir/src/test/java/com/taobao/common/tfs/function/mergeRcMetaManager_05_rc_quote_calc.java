@@ -42,7 +42,7 @@ public class mergeRcMetaManager_05_rc_quote_calc extends RcBaseCase {
       tfsManager.destroy();
     }
 
-  @Test
+  @Ignore
     public void Function_01_quote_less_than_max(){
 
       caseName = "Function_01_quote_less_than_max";

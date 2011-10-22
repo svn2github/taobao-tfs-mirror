@@ -1,344 +1,273 @@
 package com.taobao.common.tfs.function;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-
-import java.util.List;
-import java.util.ArrayList;
-import java.util.Stack;
-import java.util.Random;
-import java.util.zip.CRC32;
-
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import java.util.ArrayList;
+
+import com.taobao.gaia.AppCluster;
+import com.taobao.gaia.AppGrid;
+import com.taobao.gaia.AppServer;
+import com.taobao.gaia.HelpConf;
+import com.taobao.gaia.HelpFile;
+import com.taobao.gaia.HelpHA;
+import com.taobao.gaia.HelpLog;
+import com.taobao.gaia.HelpProc;
+import com.taobao.gaia.KillTypeEnum;
+
+import org.apache.log4j.Logger;
 import org.springframework.context.support.ClassPathXmlApplicationContext;
 
-import com.taobao.common.tfs.DefaultTfsManager;
-import com.taobao.common.tfs.namemeta.FileMetaInfo;
-import com.taobao.common.tfs.function.NameMetaDirHelper;
+public class NameMetaBaseCase extends TfsBaseCase{
 
-public class NameMetaBaseCase
-{
-	  public static DefaultTfsManager tfsManager = null;
-	  public static String resourcesPath="src/test/resources/";
-    public static final Log log = LogFactory.getLog(NameMetaBaseCase.class);
-    public static long appId=7815;
-    public static long userId=8561;
+    final static ClassPathXmlApplicationContext serverFactory = new ClassPathXmlApplicationContext("nameMetaServer.xml");
+    final static AppGrid nameMetaGrid = (AppGrid)serverFactory.getBean("nameMetaGrid");
+    final static ClassPathXmlApplicationContext clientFactory = new ClassPathXmlApplicationContext("nameMetaClient.xml");
+    //final static AppGrid nameMetaGrid = (AppGrid)serverFactory.getBean("nameMetaGrid");
+
+    // Define
+    // server related
+    final public int RSINDEX = 0;
+    final public int MSINDEX = 1;
+    final public String RSVIP = nameMetaGrid.getCluster(RSINDEX).getServer(0).getVip();
+    final public String MASTER_RS_IP = nameMetaGrid.getCluster(RSINDEX).getServer(0).getIp();
+    //final public String SLAVE_RS_IP = nameMetaGrid.getCluster(RSINDEX).getServer(1).getIp();
+    final public String SLAVE_RS_IP = "";
+    final public int RSPORT = nameMetaGrid.getCluster(RSINDEX).getServer(0).getPort();
+    final public int MSPORT = nameMetaGrid.getCluster(MSINDEX).getServer(0).getPort();
+    final public String MSCONF = nameMetaGrid.getCluster(MSINDEX).getServer(0).getConfname();    
+    public AppServer MASTER_RS = nameMetaGrid.getCluster(RSINDEX).getServer(0);
+    //public AppServer SLAVE_RS = nameMetaGrid.getCluster(RSINDEX).getServer(1);
+    public AppServer SLAVE_RS = null;
+
+    // ha related
+    final public String VIP_ETH_NAME = "eth0:1";
+
+    // client related
+    final public String CLIENT_IP = "10.232.36.208";
+
+    // Keywords
+    final public String KW_SERVING_MS_IP = "to metaServer";
+    final public String KW_APP_ID = "appId: ";
+    final public String KW_USER_ID = "userId: ";
+
+    // columns
+    final public int MS_IP_COL = 12; //TODO: 
 
     @BeforeClass
-	  public  static void setUpOnce() throws Exception {
-      ClassPathXmlApplicationContext appContext = new ClassPathXmlApplicationContext(new String[] { "tfs.xml" });
-      System.out.println("@@@@@@@@@@@get bean begin");
-      tfsManager = (DefaultTfsManager) appContext.getBean("tfsManager");
-      appId = tfsManager.getAppId();
+    public  static void setUpOnce() throws Exception {
+      boolean bRet = false;
+      /* Kill the grid */
+      //bRet = nameMetaGrid.stop(KillTypeEnum.FORCEKILL, WAIT_TIME);
+      //Assert.assertTrue(bRet);
+
+      ///* Clean the log file */
+      //bRet = nameMetaGrid.clean();
+      //Assert.assertTrue(bRet);
+
+      //bRet = nameMetaGrid.start();
+      //Assert.assertTrue(bRet);
     }
 
     @AfterClass
     public static void tearDownOnce() throws Exception {
     }
 
-    public void deleteDir(String s,int n,DefaultTfsManager tfsManager)
-    {
-      if(n==0)
-        tfsManager.rmDir(appId, userId,s);
-      else
-      {
-        s="/text"+s;
-        n=n-1;
-        deleteDir(s,n,tfsManager);
-        tfsManager.rmDir(appId, userId,s);
-      }  
-    }
-
-    public static String getParentDir(String filePath) {
-        if (null == filePath) {
-            log.error("file name null!");
-            return null;
-        }
-        String strSlash = "/";
-        if (filePath.equals(strSlash)) {
-            return filePath;
-        }
-        String tmpPath = filePath;
-        if (filePath.endsWith(strSlash)) {
-            tmpPath = filePath.substring(0, filePath.length() - 1);
-            log.debug("filePath: " + filePath + ", ends with '/', remove the last '/'!, name now: " + tmpPath);
-        }
-        int lastPos = filePath.lastIndexOf(strSlash);
-        if (-1 == lastPos) {
-            log.error("invalid file name: " + filePath); 
-            return null;
-        }
-        String parentDir = null;
-        // parent is "/"
-        if (0 == lastPos) {
-            parentDir = strSlash;
-        }
-        else {
-            parentDir = tmpPath.substring(0, lastPos);
-        }
-        log.debug("parent dir of: \"" + filePath + "\" is: " + parentDir);
-        return parentDir;
-    }
-
-    public static String getBaseName(String filePath) {
-        if (null == filePath) {
-            log.error("file name null!");
-            return null;
-        }
-        String strSlash = "/";
-        if (filePath.equals(strSlash)) {
-            return filePath;
-        }
-        String tmpPath = filePath;
-        if (filePath.endsWith(strSlash)) {
-            tmpPath = filePath.substring(0, filePath.length() - 1);
-            log.debug("filePath: " + filePath + ", ends with '/', remove the last '/'!, name now: " + tmpPath);
-        }
-        int lastPos = filePath.lastIndexOf(strSlash);
-        if (-1 == lastPos) {
-            log.error("invalid file name: " + filePath); 
-            return null;
-        }
-        String baseName = null;
-        baseName = tmpPath.substring(lastPos + 1, tmpPath.length());
-        log.debug("base name of: \"" + filePath + "\" is: " + baseName);
-        return baseName;
-    }
-
-    public static ArrayList<String> split(String filePath) {
-        if (null == filePath) {
-            log.error("file name null!");
-            return null;
-        }
-        ArrayList<String> result = new ArrayList<String>();
-        String strSlash = "/";
-        // in case of "/", will return "/" and ""
-        if (filePath.equals(strSlash)) {
-            result.add(strSlash);
-            result.add(""); 
-            return result;
-        }
-        String tmpPath = filePath;
-        if (filePath.endsWith(strSlash)) {
-            tmpPath = filePath.substring(0, filePath.length() - 1);
-            log.debug("filePath: " + filePath + ", ends with '/', remove the last '/'!, name now: " + tmpPath);
-        }
-        int lastPos = filePath.lastIndexOf(strSlash);
-        if (-1 == lastPos) {
-            log.error("invalid file name: " + filePath); 
-            return null;
-        }
-        String parentDir = null;
-        // parent is "/"
-        if (0 == lastPos) {
-            parentDir = strSlash;
-        }
-        else {
-            parentDir = tmpPath.substring(0, lastPos);
-        }
-        String baseName = null;
-        baseName = tmpPath.substring(lastPos + 1, tmpPath.length());
-        log.debug("parent dir of: \"" + filePath + "\" is: " + parentDir);
-        log.debug("base name of: \"" + filePath + "\" is: " + baseName);
-        result.add(parentDir);
-        result.add(baseName);
-        return result;
-    }
-
-    //TODO: no deal with dir acutally is a file
-    public static boolean rmDirRecursive(long appId, long userId, String dir) {
+    // fuctions
+    public String getServingMSIp(long appId, long userId) {
         boolean bRet = false;
-        List<FileMetaInfo>  fileInfoList;
-        FileMetaInfo  fileMetaInfo;
-        // make sure this dir exist, check its parent
-        boolean dirExist = false;
-        ArrayList<String> dirComponent = split(dir);
-        if (null == dirComponent || 2 != dirComponent.size()) {
-            log.error("split dir: \"" + dir + "\" failed!");
-            return false;
+        ArrayList<String> keyWords = new ArrayList<String>();
+        keyWords.add(KW_SERVING_MS_IP); 
+        keyWords.add(KW_APP_ID + appId); 
+        keyWords.add(KW_USER_ID + userId); 
+        String logName = ""; //TODO: client log
+        ArrayList<String> filter = new ArrayList<String>();
+        filter.add("/");
+        ArrayList<String> result = new ArrayList<String>();
+        String cmd = "cat " + logName;
+        bRet = Proc.cmdOutBase2(CLIENT_IP, cmd, keyWords, MS_IP_COL, filter, result); 
+        if (false == bRet || result.size() < 1) return null;
+        return result.get(result.size() - 1);
+    }
+
+    // block network related
+    public boolean blockClientrToMS(String metaServerIp) {
+        boolean bRet = Proc.portOutputBlock(CLIENT_IP, metaServerIp, MSPORT); 
+        return bRet;
+    }
+
+    public boolean unblockClientToMS() {
+        boolean bRet = Proc.netUnblockBase(CLIENT_IP); 
+        return bRet;
+    }
+
+    public boolean blockMetaServerToRS(String metaServerIp) {
+        boolean bRet = Proc.portOutputBlock(metaServerIp, MASTER_RS_IP, RSPORT); 
+        return bRet;
+    } 
+
+    public boolean unblockMetaServerToRS(String metaServerIp) {
+        boolean bRet = Proc.netUnblockBase(metaServerIp); 
+        return bRet;
+    }
+
+    // HA related
+    public boolean killMasterRs() {
+        boolean bRet = false;
+        AppServer tmpMaster = null;
+        AppServer tmpSlave = null;
+
+        /* Find the master rootserver */
+        bRet = HA.chkVipBase(MASTER_RS_IP, VIP_ETH_NAME);
+        if (bRet) { // vip on master
+            bRet = MASTER_RS.stop(KillTypeEnum.NORMALKILL, WAIT_TIME);
+            if (bRet == false) return bRet;
+            tmpMaster = SLAVE_RS;
+            tmpSlave = MASTER_RS;
         }
-        String parentDir = dirComponent.get(0);
-        String baseName = dirComponent.get(1);
-        if (null == parentDir || null == baseName) {
-            log.error("parent dir or base name of dir: " + dir + "\" null!");
-            return false;
-        }
-        fileInfoList = tfsManager.lsDir(appId, userId, parentDir);
-        for (int i = 0; i < fileInfoList.size(); i++) {
-            fileMetaInfo = fileInfoList.get(i);
-            if (!fileMetaInfo.isFile() && fileMetaInfo.getFileName().equals(baseName)) {
-                dirExist = true;
-                break;
-            }
-        }
-        if (false == dirExist) {
-            log.warn("dir: \"" + dir + "\" not exists!");
-            return true;
+        else { // vip on slave
+            bRet = SLAVE_RS.stop(KillTypeEnum.NORMALKILL, WAIT_TIME);
+            if (bRet == false) return bRet;
+            tmpMaster = MASTER_RS;
+            tmpSlave = SLAVE_RS;
         }
         
-        // do the things
-        Stack<NameMetaDirHelper> dirStack = new Stack<NameMetaDirHelper>();
-        NameMetaDirHelper dirHelper = new NameMetaDirHelper(dir);
-        dirStack.push(dirHelper);
-        while (!dirStack.empty()) {
-            NameMetaDirHelper top = dirStack.peek();
-            if (top.canBeDeleted()) {
-                tfsManager.rmDir(appId, userId, top.getDirName()); 
-                dirStack.pop();
-            }
-            else {
-                fileInfoList = tfsManager.lsDir(appId, userId, top.getDirName());
-                log.debug("fileInfoList size: " + fileInfoList.size());
-                for (int i = 0; i < fileInfoList.size(); i++) {
-                    fileMetaInfo = fileInfoList.get(i);
-                    if (fileMetaInfo.isFile()) {
-                        bRet = tfsManager.rmFile(appId, userId, top.getDirName() + "/" + fileMetaInfo.getFileName());
-                        if (false == bRet) {
-                            return bRet;
-                        }
-                    }
-                    else {
-                        dirHelper = new NameMetaDirHelper(top.getDirName() + "/" + fileMetaInfo.getFileName());
-                        dirStack.push(dirHelper);                 
-                    }
-                }
-                top.setCanBeDeleted(true);
-            }
+        /* Wait for vip migrate */
+        sleep (MIGRATE_TIME);
+        
+        /* Check vip */
+        bRet = HA.chkVipBase(tmpSlave.getIp(), VIP_ETH_NAME);
+        if (bRet == true) {
+            log.error("VIP is not migrate yet!!!");
+            return false;
         }
-        return true;
+        
+        /* Reset the failcount */
+        bRet = resetFailCount(tmpSlave);
+        if (bRet == false) return bRet;
+        
+        /* Set the new vip */
+        MASTER_RS = tmpMaster;
+        SLAVE_RS = tmpSlave;
+        
+        return bRet;
     }
 
-    protected int getCrc(OutputStream opstream) 
-    {
-      try 
-      {
-        String str = opstream.toString();        
-        byte [] data = str.getBytes();
-        CRC32 crc = new CRC32();
-        crc.reset();
-        crc.update(data);
-        System.out.println(crc.getValue());
-        return (int)crc.getValue();
-      } 
-      catch (Exception e) 
-      {
-        e.printStackTrace();
-      }
-      return 0;
-    }
+    public boolean cleanMasterRs() {
+        boolean bRet = false;
+        AppServer tmpMaster = null;
+        AppServer tmpSlave = null;
 
-    protected int getCrc(String fileName) 
-    {
-      try 
-      {
-        FileInputStream input = new FileInputStream(fileName);        
-        int readLength;
-        byte[] data = new byte[102400];
-        CRC32 crc = new CRC32();
-        crc.reset();
-        while ((readLength = input.read(data, 0, 102400)) > 0) 
-        {
-          crc.update(data, 0, readLength);
+        /* Find the master rootserver */
+        bRet = HA.chkVipBase(MASTER_RS_IP, VIP_ETH_NAME);
+        if (bRet) { // vip on master
+            bRet = MASTER_RS.stop(KillTypeEnum.NORMALKILL, WAIT_TIME);
+            if (bRet == false) return bRet;
+            bRet = MASTER_RS.clean();
+            if (bRet == false) return bRet;
+            tmpMaster = SLAVE_RS;
+            tmpSlave = MASTER_RS;
         }
-        input.close();
-        System.out.println(" file name crc " + fileName + " c " + crc.getValue());
+        else { // vip on slave
+            bRet = SLAVE_RS.stop(KillTypeEnum.NORMALKILL, WAIT_TIME);
+            if (bRet == false) return bRet;
+            bRet = SLAVE_RS.clean();
+            if (bRet == false) return bRet;
+            tmpMaster = MASTER_RS;
+            tmpSlave = SLAVE_RS;
+        }
+        
+        /* Wait for vip migrate */
+        sleep (MIGRATE_TIME);
+        
+        /* Check vip */
+        bRet = HA.chkVipBase(tmpSlave.getIp(), VIP_ETH_NAME);
+        if (bRet == true) {
+            log.error("VIP is not migrate yet!!!");
+            return false;
+        }
+        
+        /* Reset the failcount */
+        bRet = resetFailCount(tmpSlave);
+        if (bRet == false) return bRet;
+        
+        /* Set the new vip */
+        MASTER_RS = tmpMaster;
+        SLAVE_RS = tmpSlave;
+        
+        return bRet;
+    }
+    
+    public boolean killSlaveRs() {
+        boolean bRet = false;
+        AppServer tmpMaster = null;
+        AppServer tmpSlave = null;
 
-        return (int)crc.getValue();
-      } 
-      catch (Exception e) 
-      {
-        e.printStackTrace();
-      }
-      return 0;
+        /* Find the master rootserver */
+        bRet = HA.chkVipBase(MASTER_RS_IP, VIP_ETH_NAME);
+        if (bRet) { // vip on master
+            bRet = SLAVE_RS.stop(KillTypeEnum.NORMALKILL, WAIT_TIME);
+            if (bRet == false) return bRet;
+            tmpMaster = MASTER_RS;
+            tmpSlave = SLAVE_RS;
+        }
+        else { // vip on slave
+            bRet = MASTER_RS.stop(KillTypeEnum.NORMALKILL, WAIT_TIME);
+            if (bRet == false) return bRet;
+            tmpMaster = SLAVE_RS;
+            tmpSlave = MASTER_RS;
+        }
+        
+        /* Reset the failcount */
+        bRet = resetFailCount(tmpSlave);
+        if (bRet == false) return bRet;
+
+        /* Set the new vip */
+        MASTER_RS = tmpMaster;
+        SLAVE_RS = tmpSlave;
+
+        return bRet;
     }
 
-    protected byte[]  getByte(String fileName) throws IOException
-    {
-      InputStream in = new FileInputStream(fileName);
-      byte[] data= new byte[in.available()];
-      in.read(data);
-      return data;
-    }
+    public boolean cleanSlaveRs() {
+        boolean bRet = false;
+        AppServer tmpMaster = null;
+        AppServer tmpSlave = null;
 
-    static protected void createFile(String name, long length ) throws FileNotFoundException, IOException
-    {
-      Random rd = new Random();
-      File file = new File(name);
-      FileOutputStream output = new FileOutputStream(file);
-      int len = 1024*1024*8;
-      byte[] data = new byte[len];
-      long totalLength=length;
-      while (totalLength > 0)
-      {
-        len = (int)Math.min(len, totalLength);
-        rd.nextBytes(data);
-        output.write(data, 0, len);
-        totalLength -= len;
-      }
-      System.out.println("Succeed create file"+name);
-    }
-    /*  static // create resources files
-    {
-    	try {
-			createFile(resourcesPath+"100K",100*(1<<10));
-		} catch (FileNotFoundException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		
-    	try {
-			createFile(resourcesPath+"1G",1<<30);
-		} catch (FileNotFoundException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		
-    	try {
-			createFile(resourcesPath+"2M",2*(1<<20));
-		} catch (FileNotFoundException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		
-	 	try {
-			createFile(resourcesPath+"3M",3*(1<<20));
-		} catch (FileNotFoundException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		
-	  	try {
-			createFile(resourcesPath+"10K",10*(1<<10));
-		} catch (FileNotFoundException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-    	
-    }*/
+        /* Find the master rootserver */
+        bRet = HA.chkVipBase(MASTER_RS_IP, VIP_ETH_NAME);
+        if (bRet) { // vip on master
+            bRet = SLAVE_RS.stop(KillTypeEnum.NORMALKILL, WAIT_TIME);
+            if (bRet == false) return bRet;
+            bRet = SLAVE_RS.clean();
+            if (bRet == false) return bRet;
+            tmpMaster = MASTER_RS;
+            tmpSlave = SLAVE_RS;
+        }
+        else { // vip on slave
+            bRet = MASTER_RS.stop(KillTypeEnum.NORMALKILL, WAIT_TIME);
+            if (bRet == false) return bRet;
+            bRet = MASTER_RS.clean();
+            if (bRet == false) return bRet;
+            tmpMaster = SLAVE_RS;
+            tmpSlave = MASTER_RS;
+        }
 
+        /* Reset the failcount */
+        bRet = resetFailCount(tmpSlave);
+        if (bRet == false) return bRet;
+
+        /* Set the new vip */
+        MASTER_RS = tmpMaster;
+        SLAVE_RS = tmpSlave;
+
+        return bRet;
+    }
+    
+    public boolean startSlaveRs() {
+        boolean bRet = false;
+        bRet = SLAVE_RS.start();
+        return bRet;
+    }
 }
