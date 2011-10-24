@@ -154,16 +154,18 @@ namespace tfs
       int load(const std::string& tfsfile);
       int load_data_server(const std::string& tfsfile, const std::string& index);
       int load_mock_dataserver(const std::string& conf);
+      int load_filesystem_param(const std::string& index);
+      FileSystemParam filesystem_param_;
 
     private:
       static const int32_t PARAM_BUF_LEN = 64;
     private:
-      int load_filesystem_param(const std::string& index);
+      //int load_filesystem_param(const std::string& index);
 
     private:
       NameServer nameserver_;
       DataServer dataserver_;
-      FileSystemParam filesystem_param_;
+      //FileSystemParam filesystem_param_;
       MockDataServer mock_dataserver_;
       static SysParam instance_;
 
