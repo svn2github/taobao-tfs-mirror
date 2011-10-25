@@ -157,8 +157,8 @@ public class NameMetaBaseCase extends TfsBaseCase{
     public boolean createDirCmd() {
         boolean bRet = false;
         log.debug("Create dir cmd start ===>");
-        String cmd = CLIENT_HOME + "/meta_oper.sh start_oper > log." + caseName + " &";
-        bRet = Proc.proStartBase(CLIENT_IP, cmd);
+        String cmd = "./meta_oper.sh start_oper >log." + caseName;
+        bRet = Proc.proStartBackroundBase(CLIENT_IP, cmd, CLIENT_HOME);
         log.debug("Create dir cmd end ===>");
         return bRet;
     }
@@ -166,8 +166,8 @@ public class NameMetaBaseCase extends TfsBaseCase{
     public boolean createDirCmdStop() {
         boolean bRet = false;
         log.debug("Create dir cmd stop start ===>");
-        String cmd = CLIENT_HOME + "/meta_oper.sh stop_oper";
-        bRet = Proc.proStartBase(CLIENT_IP, cmd);
+        String cmd = "./meta_oper.sh stop_oper";
+        bRet = Proc.proStartBase(CLIENT_IP, cmd, CLIENT_HOME);
         log.debug("Create dir cmd stop end ===>");
         return bRet;
     }
@@ -175,7 +175,8 @@ public class NameMetaBaseCase extends TfsBaseCase{
     public boolean lsDirCmd() {
         boolean bRet = false;
         log.debug("Ls dir cmd start ===>");
-        bRet = lsDirClient.start();
+        String cmd = "./meta_oper.sh start_oper >log." + caseName;
+        bRet = Proc.proStartBackroundBase(CLIENT_IP, cmd, CLIENT_HOME);
         log.debug("Ls dir cmd end ===>");
         return bRet;
     }
@@ -183,7 +184,6 @@ public class NameMetaBaseCase extends TfsBaseCase{
     public boolean lsDirMon() {
         boolean bRet = false;
         log.debug("Ls dir mon start ===>");
-        bRet = lsDirClient.stop(KillTypeEnum.FORCEKILL, WAIT_TIME);
         log.debug("Ls dir mon end ===>");
         return bRet;
     }
@@ -191,7 +191,8 @@ public class NameMetaBaseCase extends TfsBaseCase{
     public boolean mixOpCmd() {
         boolean bRet = false;
         log.debug("Mix operation cmd start ===>");
-        bRet = mixOpClient.start();
+        String cmd = "./meta_oper.sh start_oper >log." + caseName;
+        bRet = Proc.proStartBackroundBase(CLIENT_IP, cmd, CLIENT_HOME);
         log.debug("Mix operation cmd end ===>");
         return bRet;
     }
@@ -199,7 +200,8 @@ public class NameMetaBaseCase extends TfsBaseCase{
     public boolean mixOpCmdStop() {
         boolean bRet = false;
         log.debug("Mix operation cmd stop start ===>");
-        bRet = mixOpClient.stop(KillTypeEnum.FORCEKILL, WAIT_TIME);
+        String cmd = "./meta_oper.sh stop_oper";
+        bRet = Proc.proStartBase(CLIENT_IP, cmd, CLIENT_HOME);
         log.debug("Mix operation cmd stop end ===>");
         return bRet;
     }
@@ -208,7 +210,7 @@ public class NameMetaBaseCase extends TfsBaseCase{
     public boolean queryDB(String fileListName) {
         boolean bRet = false;
         // execute script
-        String cmd = CLIENT_HOME + "/get_mysql_result.sh query_exist " + fileListName;
+        String cmd = "cd " + CLIENT_HOME + "; sh get_mysql_result.sh query_exist " + fileListName;
         ArrayList<String> result = new ArrayList<String>();
         bRet = Proc.proStartBase(CLIENT_IP, cmd, result);
         if (false == bRet || result.size() > 0)
@@ -220,7 +222,7 @@ public class NameMetaBaseCase extends TfsBaseCase{
     public boolean cleanDB(String fileListName) {
         boolean bRet = false;
         // execute script
-        String cmd = CLIENT_HOME + "/get_mysql_result.sh clean " + fileListName;
+        String cmd = "cd " + CLIENT_HOME + "; sh get_mysql_result.sh clean " + fileListName;
         ArrayList<String> result = new ArrayList<String>();
         bRet = Proc.proStartBase(CLIENT_IP, cmd, result);
         if (false == bRet || result.size() > 0)
