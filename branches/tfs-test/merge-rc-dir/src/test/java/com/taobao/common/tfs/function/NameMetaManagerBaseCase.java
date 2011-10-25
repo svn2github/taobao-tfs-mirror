@@ -139,6 +139,20 @@ public class NameMetaManagerBaseCase {
         return result;
     }
 
+    public static String join(String parentDir, String baseName) {
+        if (null == parentDir || null == baseName) {
+            log.error("parentDir or baseName null!");
+            return null;
+        }
+        String strSlash = "/";
+        if (parentDir.endsWith(strSlash)) {
+            return parentDir + baseName;
+        }
+        else {
+            return parentDir + "/" + baseName;
+        }
+    }
+
     //TODO: no deal with dir acutally is a file
     public static boolean rmDirRecursive(long appId, long userId, String dir) {
         boolean bRet = false;

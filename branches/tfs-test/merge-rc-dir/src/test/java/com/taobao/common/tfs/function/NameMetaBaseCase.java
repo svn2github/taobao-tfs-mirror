@@ -24,7 +24,9 @@ public class NameMetaBaseCase extends TfsBaseCase{
     final static ClassPathXmlApplicationContext serverFactory = new ClassPathXmlApplicationContext("nameMetaServer.xml");
     final static AppGrid nameMetaGrid = (AppGrid)serverFactory.getBean("nameMetaGrid");
     final static ClassPathXmlApplicationContext clientFactory = new ClassPathXmlApplicationContext("nameMetaClient.xml");
-    //final static AppGrid nameMetaGrid = (AppGrid)serverFactory.getBean("nameMetaGrid");
+    final static AppServer createDirClient = (AppServer)clientFactory.getBean("createDirClient");
+    final static AppServer lsDirClient = (AppServer)clientFactory.getBean("lsDirClient");
+    final static AppServer mixOpClient = (AppServer)clientFactory.getBean("mixOpClient");
 
     // Define
     // server related
@@ -45,12 +47,26 @@ public class NameMetaBaseCase extends TfsBaseCase{
     final public String VIP_ETH_NAME = "eth0:1";
 
     // client related
-    final public String CLIENT_IP = "10.232.36.208";
+    final public String CLIENT_IP = createDirClient.getIp();
+    final public String CLIENT_HOME = createDirClient.getDir();
+    final public String CLIENT_LOG = createDirClient.getLogs();
 
+    // time
+    final public int LEASE_TIME = 6;
+
+    // operation type
+    public int OPER_CREATE_DIR = 1;
+    public int OPER_LS_DIR = 2;
+    public int OPER_FETCH = 4;
+    public int OPER_SAVE = 8;
+    public int OPER_UNLINK = 16;
+ 
     // Keywords
     final public String KW_SERVING_MS_IP = "to metaServer";
     final public String KW_APP_ID = "appId: ";
     final public String KW_USER_ID = "userId: ";
+    final public String KW_LS_DIR_STATIS = "ls_dir statis: ";
+    final public String KW_CREATE_DIR_STATIS = "create_dir statis: ";
 
     // columns
     final public int MS_IP_COL = 12; //TODO: 
@@ -89,6 +105,121 @@ public class NameMetaBaseCase extends TfsBaseCase{
         bRet = Proc.cmdOutBase2(CLIENT_IP, cmd, keyWords, MS_IP_COL, filter, result); 
         if (false == bRet || result.size() < 1) return null;
         return result.get(result.size() - 1);
+    }
+
+    public boolean createDirCmd() {
+        boolean bRet = false;
+        log.debug("Create dir cmd start ===>");
+        bRet = createDirClient.start();
+        log.debug("Create dir cmd end ===>");
+        return bRet;
+    }
+
+    public boolean createDirCmdStop() {
+        boolean bRet = false;
+        log.debug("Create dir cmd stop start ===>");
+        bRet = createDirClient.stop();
+        log.debug("Create dir cmd stop end ===>");
+        return bRet;
+    }
+
+    public boolean lsDirCmd() {
+        boolean bRet = false;
+        log.debug("Ls dir cmd start ===>");
+        bRet = lsDirClient.start();
+        log.debug("Ls dir cmd end ===>");
+        return bRet;
+    }
+
+    public boolean lsDirMon() {
+        boolean bRet = false;
+        log.debug("Ls dir mon start ===>");
+        bRet = lsDirClient.stop();
+        log.debug("Ls dir mon end ===>");
+        return bRet;
+    }
+
+    public boolean mixOpCmd() {
+        boolean bRet = false;
+        log.debug("Mix operation cmd start ===>");
+        bRet = mixOpClient.start();
+        log.debug("Mix operation cmd end ===>");
+        return bRet;
+    }
+
+    public boolean mixOpCmdStop() {
+        boolean bRet = false;
+        log.debug("Mix operation cmd stop start ===>");
+        bRet = mixOpClient.stop();
+        log.debug("Mix operation cmd stop end ===>");
+        return bRet;
+    }
+
+    // query db, check entry exist
+    public boolean verifyDb() {
+        boolean bRet = false;
+        // execute script
+        String cmd = "";
+        ArrayList<String> result = new ArrayList<String>();
+        bRet = Proc.proStartBase(CLIENT_IP, cmd, result);
+        return bRet;
+    }
+
+    // clean entry from db
+    public boolean cleanDb() {
+        boolean bRet = false;
+        // execute script
+        String cmd = "";
+        ArrayList<String> result = new ArrayList<String>();
+        bRet = Proc.proStartBase(CLIENT_IP, cmd, result);
+        return bRet;
+    }
+
+    public boolean chkRateEnd(float std, int operType) {
+        float result = 0;
+        if (operType & OPER_LS_DIR) {
+            result = getRateEnd(CLIENT_IP, CLIENT_LOG + caseName, KW_LS_DIR_STATIS);
+        }
+        if (result == -1) {
+            return false;
+        }
+        if (result < std) {
+            log.error("ls dir success rate(" + result + "%) is lower than " + std + "% !!!");
+            return bRet;
+        }
+        else {
+            log.info("ls dir success rate(" + result + "%) is higher than " + std + "% !!!");
+        }
+
+        return true;
+    }
+
+
+    // start & kill meta server related
+    public boolean killOneMetaserver(int index)
+    {
+      boolean bRet = false;
+      log.info("Kill one meta start ===>");
+      if (nameMetaGrid == null)
+      {
+        log.debug("nameMetaGrid is null");
+      }
+      bRet = killOneServer(nameMetaGrid, MSINDEX, index);
+      log.info("Kill one meta end ===>");
+      return bRet;
+    }
+
+    public boolean startOneMetaserver(int index)
+    {
+      boolean bRet = false;
+      log.info("start one meta start ===>");
+      if (nameMetaGrid == null)
+      {
+        log.debug("nameMetaGrid is null");
+      }
+      bRet = startOneServer(nameMetaGrid, MSINDEX, index);
+      log.info("start one meta end ===>");
+      return bRet;
     }
 
     // block network related

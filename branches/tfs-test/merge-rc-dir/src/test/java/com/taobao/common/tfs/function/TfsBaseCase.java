@@ -30,6 +30,8 @@ public class TfsBaseCase {
     public HelpLog Log = new HelpLog();
     public HelpProc Proc = new HelpProc();
     public HelpFile File = new HelpFile();
+
+    String caseName;
     
     // Define
     final public int FAIL_COUNT_NOR = 0;
@@ -37,6 +39,11 @@ public class TfsBaseCase {
 
     final public static int WAIT_TIME = 30;
     final public int MIGRATE_TIME = 20;
+
+    final public float SUCCESS_RATE = 100;
+    final public float HIGH_RATE = 99.99;
+    final public float HALF_RATE = 50;
+    final public float FAIL_RATE = 0;
 
     /**
      * 
@@ -138,47 +145,38 @@ public class TfsBaseCase {
     
     public boolean killOneServerForce(AppGrid appGrid, int clusterIdx, int serverIdx) {
         boolean bRet = false;
-        log.info("Kill one server force start ===>");
         AppServer cs = appGrid.getCluster(clusterIdx).getServer(serverIdx);
         bRet = cs.stop(KillTypeEnum.FORCEKILL, WAIT_TIME);
-        log.info("Kill one server force end ===>");
         return bRet;
     }
 
     public boolean cleanOneServer(AppGrid appGrid, int clusterIdx, int serverIdx) {
         boolean bRet = false;
-        log.info("Clean one server start ===>");
         AppServer cs = appGrid.getCluster(clusterIdx).getServer(serverIdx);
         bRet = cs.stop(KillTypeEnum.NORMALKILL, WAIT_TIME);
         if (bRet == false)
             return bRet;
 
         bRet = cs.clean();
-        log.info("Clean one server end ===>");
         return bRet;
     }
 
     public boolean startOneServer(AppGrid appGrid, int clusterIdx, int serverIdx) {
         boolean bRet = false;
-        log.info("Start one server start ===>");
         AppServer cs = appGrid.getCluster(clusterIdx).getServer(serverIdx);
         bRet = cs.start();
-        log.info("Start one server end ===>");
         return bRet;
     }
 
     public boolean killOneServer(AppGrid appGrid, int clusterIdx, int serverIdx) {
         boolean bRet = false;
-        log.info("Kill one server start ===>");
         AppServer cs = appGrid.getCluster(clusterIdx).getServer(serverIdx);
         bRet = cs.stop(KillTypeEnum.NORMALKILL, WAIT_TIME);
-        log.info("Kill one server end ===>");
         return bRet;
     }
 
     public boolean killOneCluster(AppGrid appGrid, int clusterIdx) {
         boolean bRet = false;
-        log.info("Kill one cluster start ===>");
         AppCluster csCluster = appGrid.getCluster(clusterIdx);
         for(int iLoop = 0; iLoop < csCluster.getServerList().size(); iLoop ++) {
             AppServer cs = csCluster.getServer(iLoop);
@@ -187,14 +185,12 @@ public class TfsBaseCase {
                 break;
             }
         }
-        log.info("Kill one cluster end ===>");
         return bRet;
     }
 
     public boolean startOneCluster(AppGrid appGrid, int clusterIdx)
     {
         boolean bRet = false;
-        log.info("Start one cluster start ===>");
         AppCluster csCluster = appGrid.getCluster(clusterIdx);
         for(int iLoop = 0; iLoop < csCluster.getServerList().size(); iLoop ++) {
             AppServer cs = csCluster.getServer(iLoop);
@@ -203,13 +199,11 @@ public class TfsBaseCase {
                 break;
             }
         }
-        log.info("Start one cluster end ===>");
         return bRet;
     }
     
     public boolean cleanOneCluster(AppGrid appGrid, int clusterIdx) {
         boolean bRet = false;
-        log.info("Clean one cluster start ===>");
         AppCluster csCluster = appGrid.getCluster(clusterIdx);
         for(int iLoop = 0; iLoop < csCluster.getServerList().size(); iLoop ++) {
             AppServer cs = csCluster.getServer(iLoop);
@@ -219,7 +213,6 @@ public class TfsBaseCase {
             bRet = cs.clean();
             if (bRet == false) break;
         }
-        log.info("Clean one cluster end ===>");
         return bRet;
     }
 }
