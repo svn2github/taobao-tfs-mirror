@@ -10,7 +10,7 @@ import org.junit.Before;
 
 public class Function_name_meta_cache_test extends NameMetaBaseCase{
 
-  @Test
+  //@Test
   public void Function_01_happy_path() {
     boolean bRet = false;
     caseName = "Function_01_happy_path";
@@ -30,7 +30,7 @@ public class Function_name_meta_cache_test extends NameMetaBaseCase{
     log.info(caseName + "====> end");
   }
 
-  //@Test
+  @Test
   public void Function_02_clean_db_read() {
     boolean bRet = false;
     caseName = "Function_02_clean_db_read";

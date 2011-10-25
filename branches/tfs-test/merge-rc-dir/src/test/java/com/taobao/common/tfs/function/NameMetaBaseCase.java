@@ -51,6 +51,8 @@ public class NameMetaBaseCase extends TfsBaseCase{
     final public String CLIENT_IP = createDirClient.getIp();
     final public String CLIENT_HOME = createDirClient.getDir();
     final public String CLIENT_LOG = createDirClient.getLogs();
+    final public String MYSQL_SCRIPT = "do_mysql.sh";
+    final public String LS_DIR_CMD = "/bin/bash ./meta_oper.sh start_oper";
 
     // time
     final public int LEASE_TIME = 6;
@@ -157,7 +159,7 @@ public class NameMetaBaseCase extends TfsBaseCase{
     public boolean createDirCmd() {
         boolean bRet = false;
         log.debug("Create dir cmd start ===>");
-        String cmd = "./meta_oper.sh start_oper >log." + caseName;
+        String cmd = "sh meta_oper.sh start_oper >log." + caseName;
         bRet = Proc.proStartBackroundBase(CLIENT_IP, cmd, CLIENT_HOME);
         log.debug("Create dir cmd end ===>");
         return bRet;
@@ -166,7 +168,7 @@ public class NameMetaBaseCase extends TfsBaseCase{
     public boolean createDirCmdStop() {
         boolean bRet = false;
         log.debug("Create dir cmd stop start ===>");
-        String cmd = "./meta_oper.sh stop_oper";
+        String cmd = "sh meta_oper.sh stop_oper";
         bRet = Proc.proStartBase(CLIENT_IP, cmd, CLIENT_HOME);
         log.debug("Create dir cmd stop end ===>");
         return bRet;
@@ -175,8 +177,8 @@ public class NameMetaBaseCase extends TfsBaseCase{
     public boolean lsDirCmd() {
         boolean bRet = false;
         log.debug("Ls dir cmd start ===>");
-        String cmd = "./meta_oper.sh start_oper >log." + caseName;
-        bRet = Proc.proStartBackroundBase(CLIENT_IP, cmd, CLIENT_HOME);
+        String cmd = LS_DIR_CMD + " >log." + caseName;
+        bRet = Proc.proStartBackroundBase(CLIENT_IP, LS_DIR_CMD, CLIENT_HOME);
         log.debug("Ls dir cmd end ===>");
         return bRet;
     }
@@ -184,6 +186,17 @@ public class NameMetaBaseCase extends TfsBaseCase{
     public boolean lsDirMon() {
         boolean bRet = false;
         log.debug("Ls dir mon start ===>");
+        for(;;) {
+          int iRet = Proc.proMonitorBase(CLIENT_IP, LS_DIR_CMD);
+          if (0 == iRet) {
+            bRet = true;
+            break;
+          }
+          else if (iRet < 0) {
+            bRet = false;
+            break;
+          }
+        }
         log.debug("Ls dir mon end ===>");
         return bRet;
     }
@@ -191,7 +204,7 @@ public class NameMetaBaseCase extends TfsBaseCase{
     public boolean mixOpCmd() {
         boolean bRet = false;
         log.debug("Mix operation cmd start ===>");
-        String cmd = "./meta_oper.sh start_oper >log." + caseName;
+        String cmd = "sh meta_oper.sh start_oper >log." + caseName;
         bRet = Proc.proStartBackroundBase(CLIENT_IP, cmd, CLIENT_HOME);
         log.debug("Mix operation cmd end ===>");
         return bRet;
@@ -200,7 +213,7 @@ public class NameMetaBaseCase extends TfsBaseCase{
     public boolean mixOpCmdStop() {
         boolean bRet = false;
         log.debug("Mix operation cmd stop start ===>");
-        String cmd = "./meta_oper.sh stop_oper";
+        String cmd = "sh meta_oper.sh stop_oper";
         bRet = Proc.proStartBase(CLIENT_IP, cmd, CLIENT_HOME);
         log.debug("Mix operation cmd stop end ===>");
         return bRet;
@@ -210,7 +223,7 @@ public class NameMetaBaseCase extends TfsBaseCase{
     public boolean queryDB(String fileListName) {
         boolean bRet = false;
         // execute script
-        String cmd = "cd " + CLIENT_HOME + "; sh get_mysql_result.sh query_exist " + fileListName;
+        String cmd = "cd " + CLIENT_HOME + "; ./" + MYSQL_SCRIPT + " query " + fileListName;
         ArrayList<String> result = new ArrayList<String>();
         bRet = Proc.proStartBase(CLIENT_IP, cmd, result);
         if (false == bRet || result.size() > 0)
@@ -219,13 +232,12 @@ public class NameMetaBaseCase extends TfsBaseCase{
     }
 
     // clean entry from db
-    public boolean cleanDB(String fileListName) {
+    public boolean clearDB(String fileListName) {
         boolean bRet = false;
         // execute script
-        String cmd = "cd " + CLIENT_HOME + "; sh get_mysql_result.sh clean " + fileListName;
-        ArrayList<String> result = new ArrayList<String>();
-        bRet = Proc.proStartBase(CLIENT_IP, cmd, result);
-        if (false == bRet || result.size() > 0)
+        String cmd = "./" + MYSQL_SCRIPT + " clear " + fileListName;
+        bRet = Proc.proStartBase(CLIENT_IP, cmd, CLIENT_HOME);
+        if (false == bRet)
           return false;
         return bRet;
     }
