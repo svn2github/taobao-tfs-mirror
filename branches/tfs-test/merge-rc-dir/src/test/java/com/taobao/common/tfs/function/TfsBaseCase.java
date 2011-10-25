@@ -41,7 +41,7 @@ public class TfsBaseCase {
     final public int MIGRATE_TIME = 20;
 
     final public float SUCCESS_RATE = 100;
-    final public float HIGH_RATE = 99.99;
+    //final public float HIGH_RATE = 99.9;
     final public float HALF_RATE = 50;
     final public float FAIL_RATE = 0;
 

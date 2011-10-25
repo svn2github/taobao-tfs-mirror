@@ -32,6 +32,7 @@ public class NameMetaBaseCase extends TfsBaseCase{
     // server related
     final public int RSINDEX = 0;
     final public int MSINDEX = 1;
+    final public int META_COUNT = 1;
     final public String RSVIP = nameMetaGrid.getCluster(RSINDEX).getServer(0).getVip();
     final public String MASTER_RS_IP = nameMetaGrid.getCluster(RSINDEX).getServer(0).getIp();
     //final public String SLAVE_RS_IP = nameMetaGrid.getCluster(RSINDEX).getServer(1).getIp();
@@ -61,7 +62,7 @@ public class NameMetaBaseCase extends TfsBaseCase{
     public int OPER_SAVE = 8;
     public int OPER_UNLINK = 16;
  
-    // Keywords
+    // keywords
     final public String KW_SERVING_MS_IP = "to metaServer";
     final public String KW_APP_ID = "appId: ";
     final public String KW_USER_ID = "userId: ";
@@ -70,6 +71,10 @@ public class NameMetaBaseCase extends TfsBaseCase{
 
     // columns
     final public int MS_IP_COL = 12; //TODO: 
+    final public int TAIL_RATE_COL = 12; //TODO: 
+
+    // other
+    final public int TAIL_LINE = 1000;
 
     @BeforeClass
     public  static void setUpOnce() throws Exception {
@@ -107,10 +112,53 @@ public class NameMetaBaseCase extends TfsBaseCase{
         return result.get(result.size() - 1);
     }
 
+    public String getUnServingMSIp(long appId, long userId) {
+        String retMsAddr = null;
+        String targetMsAddr = getServingMSIp(appId, userId);
+        for (int i = 0; i < META_COUNT; i++)
+        {
+          String msIp = nameMetaGrid.getCluster(RSINDEX).getServer(i).getIp(); 
+          int msPort = nameMetaGrid.getCluster(RSINDEX).getServer(i).getPort(); 
+          String msAddr = msIp + ":" + msPort;
+          if (targetMsAddr != msAddr)
+          {
+            retMsAddr = msAddr;
+            break; 
+          }
+        }
+        return retMsAddr;
+    }
+
+    public long getServingMSIndex(long appId, long userId) {
+        return getMsIndex(getServingMSIp(appId, userId));
+    }
+
+    public long getUnServingMSIndex(long appId, long userId) {
+        return getMsIndex(getUnServingMSIp(appId, userId));
+    }
+
+    private long getMsIndex(String targetMsAddr)
+    {
+        int index = -1;
+        for (int i = 0; i < META_COUNT; i++)
+        {
+          String msIp = nameMetaGrid.getCluster(RSINDEX).getServer(i).getIp(); 
+          int msPort = nameMetaGrid.getCluster(RSINDEX).getServer(i).getPort(); 
+          String msAddr = msIp + ":" + msPort;
+          if (targetMsAddr == msAddr)
+          {
+            index = i;
+            break; 
+          }
+        }
+        return index;
+    }
+
     public boolean createDirCmd() {
         boolean bRet = false;
         log.debug("Create dir cmd start ===>");
-        bRet = createDirClient.start();
+        String cmd = CLIENT_HOME + "/meta_oper.sh start_oper > log." + caseName + " &";
+        bRet = Proc.proStartBase(CLIENT_IP, cmd);
         log.debug("Create dir cmd end ===>");
         return bRet;
     }
@@ -118,7 +166,8 @@ public class NameMetaBaseCase extends TfsBaseCase{
     public boolean createDirCmdStop() {
         boolean bRet = false;
         log.debug("Create dir cmd stop start ===>");
-        bRet = createDirClient.stop();
+        String cmd = CLIENT_HOME + "/meta_oper.sh stop_oper";
+        bRet = Proc.proStartBase(CLIENT_IP, cmd);
         log.debug("Create dir cmd stop end ===>");
         return bRet;
     }
@@ -134,7 +183,7 @@ public class NameMetaBaseCase extends TfsBaseCase{
     public boolean lsDirMon() {
         boolean bRet = false;
         log.debug("Ls dir mon start ===>");
-        bRet = lsDirClient.stop();
+        bRet = lsDirClient.stop(KillTypeEnum.FORCEKILL, WAIT_TIME);
         log.debug("Ls dir mon end ===>");
         return bRet;
     }
@@ -150,34 +199,38 @@ public class NameMetaBaseCase extends TfsBaseCase{
     public boolean mixOpCmdStop() {
         boolean bRet = false;
         log.debug("Mix operation cmd stop start ===>");
-        bRet = mixOpClient.stop();
+        bRet = mixOpClient.stop(KillTypeEnum.FORCEKILL, WAIT_TIME);
         log.debug("Mix operation cmd stop end ===>");
         return bRet;
     }
 
     // query db, check entry exist
-    public boolean verifyDb() {
+    public boolean queryDB(String fileListName) {
         boolean bRet = false;
         // execute script
-        String cmd = "";
+        String cmd = CLIENT_HOME + "/get_mysql_result.sh query_exist " + fileListName;
         ArrayList<String> result = new ArrayList<String>();
         bRet = Proc.proStartBase(CLIENT_IP, cmd, result);
+        if (false == bRet || result.size() > 0)
+          return false;
         return bRet;
     }
 
     // clean entry from db
-    public boolean cleanDb() {
+    public boolean cleanDB(String fileListName) {
         boolean bRet = false;
         // execute script
-        String cmd = "";
+        String cmd = CLIENT_HOME + "/get_mysql_result.sh clean " + fileListName;
         ArrayList<String> result = new ArrayList<String>();
         bRet = Proc.proStartBase(CLIENT_IP, cmd, result);
+        if (false == bRet || result.size() > 0)
+          return false;
         return bRet;
     }
 
     public boolean chkRateEnd(float std, int operType) {
         float result = 0;
-        if (operType & OPER_LS_DIR) {
+        if ((operType & OPER_LS_DIR) != 0) {
             result = getRateEnd(CLIENT_IP, CLIENT_LOG + caseName, KW_LS_DIR_STATIS);
         }
         if (result == -1) {
@@ -185,7 +238,7 @@ public class NameMetaBaseCase extends TfsBaseCase{
         }
         if (result < std) {
             log.error("ls dir success rate(" + result + "%) is lower than " + std + "% !!!");
-            return bRet;
+            return false;
         }
         else {
             log.info("ls dir success rate(" + result + "%) is higher than " + std + "% !!!");
@@ -194,6 +247,89 @@ public class NameMetaBaseCase extends TfsBaseCase{
         return true;
     }
 
+    public float getRateEnd(String tarIp, String fileName, String keyWord)
+    {
+      boolean bRet = false;
+      float fRet = -1;
+      ArrayList<String> filter = new ArrayList<String>();
+      ArrayList<Float> context = new ArrayList<Float>();
+      filter.add("%");
+      filter.add(",");
+      filter.add("rate:");
+      bRet = Log.scanTailFloat(tarIp, fileName, keyWord, TAIL_LINE, TAIL_RATE_COL, filter, context);
+      if ((bRet == false) || (context.size() != 1))
+      {
+        return fRet;
+      }
+      fRet = context.get(0);
+      return fRet;  
+    }
+ 
+    public long getClientCurrentTime()
+    {
+        boolean bRet = false;
+        long iRet = 0;
+        String logName = CLIENT_LOG + caseName;
+        ArrayList<String> result = new ArrayList<String>();
+        String cmd = "head -1 " + logName + " | awk -F '[[]' '{print $2}' | awk -F '[]]' '{print $1}' | date +%s";
+        bRet = Proc.cmdOutBase(CLIENT_IP, cmd, null, 1, null, result);
+        if (bRet == false) return -1;
+        try{
+          iRet = Long.valueOf(result.get(result.size() - 1));			
+          if (iRet > 0)
+          {
+            bRet = true;
+            return iRet;
+          }
+        } catch (Exception e){
+          e.printStackTrace();
+        }
+        return iRet;
+    }
+
+    public long getFailStartTime()
+    {
+        boolean bRet = false;
+        long iRet = 0;
+        String logName = CLIENT_LOG + caseName;
+        ArrayList<String> result = new ArrayList<String>();
+        String cmd = "grep ERROR " + logName + " | head -1 | awk -F '[[]' '{print $2}' | awk -F '[]]' '{print $1}' | date +%s";
+        bRet = Proc.cmdOutBase(CLIENT_IP, cmd, null, 1, null, result);
+        if (bRet == false) return -1;
+        try{
+          iRet = Long.valueOf(result.get(result.size() - 1));			
+          if (iRet > 0)
+          {
+            bRet = true;
+            return iRet;
+          }
+        } catch (Exception e){
+          e.printStackTrace();
+        }
+        return iRet;
+    }
+
+    public long getFailEndTime()
+    {
+        boolean bRet = false;
+        long iRet = 0;
+        String logName = CLIENT_LOG + caseName;
+        ArrayList<String> result = new ArrayList<String>();
+        String cmd = "grep ERROR " + logName + " | tail -1 | awk -F '[[]' '{print $2}' | awk -F '[]]' '{print $1}' | date +%s";
+        bRet = Proc.cmdOutBase(CLIENT_IP, cmd, null, 1, null, result);
+        if (bRet == false) return -1;
+        try{
+          iRet = Long.valueOf(result.get(result.size() - 1));			
+          if (iRet > 0)
+          {
+            bRet = true;
+            return iRet;
+          }
+        } catch (Exception e){
+          e.printStackTrace();
+        }
+        return iRet;
+    }
 
     // start & kill meta server related
     public boolean killOneMetaserver(int index)

@@ -3,6 +3,7 @@ package com.taobao.common.tfs.function;
 
 import org.junit.AfterClass;
 import org.junit.Assert;
+import org.junit.Test;
 import org.junit.BeforeClass;
 import org.junit.After;
 import org.junit.Before;
@@ -23,7 +24,7 @@ public class Function_name_meta_cache_test extends NameMetaBaseCase{
     bRet = createDirCmdStop();
     Assert.assertTrue(bRet);
 
-    bRet = verifyDb();
+    bRet = queryDB("created_dir_list.log");
     Assert.assertTrue(bRet);
 
     log.info(caseName + "====> end");
@@ -43,7 +44,7 @@ public class Function_name_meta_cache_test extends NameMetaBaseCase{
     bRet = createDirCmdStop();
     Assert.assertTrue(bRet);
 
-    bRet = cleanDb();
+    bRet = cleanDB("created_dir_list.log");
     Assert.assertTrue(bRet);
 
     bRet = lsDirCmd();
