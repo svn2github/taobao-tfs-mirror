@@ -7,7 +7,9 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import java.io.File;
 import java.io.FileWriter;
+import java.io.FileReader;
 import java.io.BufferedWriter;
+import java.io.BufferedReader;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
@@ -49,10 +51,31 @@ public class mixOpController{
 
     Operation oper = null;
     //int operType = OPER_MIX_OP;
-    int operType = OPER_CREATE_DIR;
+    //int operType = OPER_CREATE_DIR;
+    int operType = OPER_LS_DIR;
     switch (operType) {
       case OPER_CREATE_DIR:
         oper = new CreateDirOp(gStatInfo, inputList, outputList, lock);
+      break;
+      case OPER_LS_DIR:
+        String inputFile = "created_dir_list.log";
+        BufferedReader buffReader = null;
+        try {
+          buffReader = new BufferedReader(new FileReader(inputFile));
+          String line = null;
+          while ((line = buffReader.readLine()) != null) {
+             inputList.add(line);
+          }
+       } catch (Exception e) {
+         e.printStackTrace();
+       } finally {
+         try {
+           buffReader.close();
+         } catch (Exception e) {
+           e.printStackTrace();
+         }
+       }
+        oper = new LsDirOp(gStatInfo, inputList, outputList, lock);
       break;
       case OPER_MIX_OP:
         oper = new MixOp(gStatInfo, inputList, outputList, lock);
@@ -156,8 +179,8 @@ class CreateDirOp extends Operation {
           log.debug("@@ create Dir dirPath: " + currDirPath + (ret ? " success": "failed"));
           addStatInfo(ret);
           if (ret) { // success
-            String result = appId + " " + userId + " " + getBaseName(currDirPath);
-            outputList.add(result); 
+            String record = appId + " " + userId + " " + currDirPath + " " + Path.getBaseName(currDirPath);
+            outputList.add(record); 
           }
           count++;
           genNextDirPath();
@@ -210,7 +233,7 @@ class CreateDirOp extends Operation {
     int randomVal = random.nextInt(100);
     // if path is too long, back to the top level
     if (currDirPath.length() > 240) {
-      currDirPath = join("/", dirNamePrefix + nameIndex);
+      currDirPath = Path.join("/", dirNamePrefix + nameIndex);
       // still too long, change the dirNamePrefix
       if (currDirPath.length() > 240) {
         dirNamePrefix += "e_";
@@ -220,85 +243,66 @@ class CreateDirOp extends Operation {
     }
     else if (randomVal <= 50) { // width expand
       String parentDir;
-      parentDir = getParentDir(currDirPath);
+      parentDir = Path.getParentDir(currDirPath);
       if (parentDir == null) {
         parentDir = "/";
       }
       for (int i = 0; i < randomVal % 5; i++) {
-        parentDir = getParentDir(parentDir);
+        parentDir = Path.getParentDir(parentDir);
         if (parentDir == null) {
           parentDir = "/";
         }
       }
-      currDirPath = join(parentDir, dirNamePrefix + nameIndex);
+      currDirPath = Path.join(parentDir, dirNamePrefix + nameIndex);
     }
     else {  // depth expand
-      currDirPath = join(currDirPath, dirNamePrefix + nameIndex); 
-    }
-  }
-
-  public static String getBaseName(String filePath) {
-      if (null == filePath) {
-          return null;
-      }
-      String strSlash = "/";
-      if (filePath.equals(strSlash)) {
-          return filePath;
-      }
-      String tmpPath = filePath;
-      if (filePath.endsWith(strSlash)) {
-          tmpPath = filePath.substring(0, filePath.length() - 1);
-      }
-      int lastPos = filePath.lastIndexOf(strSlash);
-      if (-1 == lastPos) {
-          return null;
-      }
-      String baseName = null;
-      baseName = tmpPath.substring(lastPos + 1, tmpPath.length());
-      return baseName;
-  }
-
-  public static String getParentDir(String filePath) {
-    if (null == filePath) {
-      return null;
-    }
-    String strSlash = "/";
-    if (filePath.equals(strSlash)) {
-      return filePath;
-    }
-    String tmpPath = filePath;
-    if (filePath.endsWith(strSlash)) {
-      tmpPath = filePath.substring(0, filePath.length() - 1);
-    }
-    int lastPos = filePath.lastIndexOf(strSlash);
-    if (-1 == lastPos) {
-      return null;
-    }
-    String parentDir = null;
-    // parent is "/"
-    if (0 == lastPos) {
-      parentDir = strSlash;
-    }
-    else {
-      parentDir = tmpPath.substring(0, lastPos);
-    }
-    return parentDir;
-  }
-
-  public static String join(String parentDir, String baseName) {
-    if (null == parentDir || null == baseName) {
-      return null;
-    }
-    String strSlash = "/";
-    if (parentDir.endsWith(strSlash)) {
-      return parentDir + baseName;
-    }
-    else {
-      return parentDir + "/" + baseName;
+      currDirPath = Path.join(currDirPath, dirNamePrefix + nameIndex); 
     }
   }
 
 }
+
+class LsDirOp extends Operation { 
+
+  List<FileMetaInfo> fileMetaInfo = null;
+
+  LsDirOp(StatInfo gStatInfo, ArrayList<String> inputList, ArrayList<String> outputList, ReadWriteLock myLock) {
+     super(gStatInfo, inputList, outputList, myLock);
+  }
+
+  @Override
+  void execute() { 
+    long appId = tfsManager.getAppId();
+    long userId = 361;
+
+    long tid = Thread.currentThread().getId();
+    log.info("start diroperation ==" + tid + "== thread");
+    long count = 0;
+    boolean ret = false;
+
+    for (int i = 0; i < inputList.size(); i++) {
+      String record = inputList.get(i);
+      String [] tmp = record.split(" ");
+      if (tmp.length != 4) {
+        continue;
+      }
+      appId = Long.parseLong(tmp[0]);
+      userId = Long.parseLong(tmp[1]);
+      String dirPath = tmp[2];
+      fileMetaInfo = tfsManager.lsDir(appId, userId, dirPath);
+      ret = (fileMetaInfo == null) ? false : true; 
+      log.debug("@@ ls appId: " + appId + ", userId: " + userId + ", dirPath: " + dirPath + (ret ? " success": "failed"));
+      addStatInfo(ret);
+      count++;
+      if (count % 100 == 0) {
+        myLock.writeLock().lock(); 
+        doStat(statInfo);
+        myLock.writeLock().unlock();
+      }
+    }
+  }
+}
+
 class MixOp extends Operation { 
 
   MixOp(StatInfo gStatInfo, ArrayList<String> inputList, ArrayList<String> outputList, ReadWriteLock myLock) {
@@ -364,15 +368,17 @@ class DumpStat implements Runnable {
   @Override
     public void run() { 
       log.info("start dumpstat ===" + Thread.currentThread().getId() + " === thread");
-      myLock.readLock().lock();
+      //myLock.readLock().lock();
       if (gStatInfo.totalCount != 0) {
         gStatInfo.succRate = ((float)gStatInfo.succCount/(float)gStatInfo.totalCount) * 100;
       }
       log.debug("@ client stat info, succCount: " + gStatInfo.succCount + ", failCount: " + gStatInfo.failCount
           + ", totalCount: " + gStatInfo.totalCount + ", succRate: " + gStatInfo.succRate + "%");
-      myLock.readLock().unlock();
+      //myLock.readLock().unlock();
       try {
+        log.debug("before sleep");
         Thread.sleep(dumpInterval);
+        log.debug("sleep 10s");
       }
       catch(Exception e)
       {}
@@ -397,4 +403,70 @@ class StatInfo{
         "succRate='" + succRate + '\'' + 
         '}'; 
     } 
+}
+
+
+// path methods
+class Path {
+  public static String getBaseName(String filePath) {
+      if (null == filePath) {
+          return null;
+      }
+      String strSlash = "/";
+      if (filePath.equals(strSlash)) {
+          return filePath;
+      }
+      String tmpPath = filePath;
+      if (filePath.endsWith(strSlash)) {
+          tmpPath = filePath.substring(0, filePath.length() - 1);
+      }
+      int lastPos = filePath.lastIndexOf(strSlash);
+      if (-1 == lastPos) {
+          return null;
+      }
+      String baseName = null;
+      baseName = tmpPath.substring(lastPos + 1, tmpPath.length());
+      return baseName;
+  }
+
+  public static String getParentDir(String filePath) {
+    if (null == filePath) {
+      return null;
+    }
+    String strSlash = "/";
+    if (filePath.equals(strSlash)) {
+      return filePath;
+    }
+    String tmpPath = filePath;
+    if (filePath.endsWith(strSlash)) {
+      tmpPath = filePath.substring(0, filePath.length() - 1);
+    }
+    int lastPos = filePath.lastIndexOf(strSlash);
+    if (-1 == lastPos) {
+      return null;
+    }
+    String parentDir = null;
+    // parent is "/"
+    if (0 == lastPos) {
+      parentDir = strSlash;
+    }
+    else {
+      parentDir = tmpPath.substring(0, lastPos);
+    }
+    return parentDir;
+  }
+
+  public static String join(String parentDir, String baseName) {
+    if (null == parentDir || null == baseName) {
+      return null;
+    }
+    String strSlash = "/";
+    if (parentDir.endsWith(strSlash)) {
+      return parentDir + baseName;
+    }
+    else {
+      return parentDir + "/" + baseName;
+    }
+  }
+
 }
