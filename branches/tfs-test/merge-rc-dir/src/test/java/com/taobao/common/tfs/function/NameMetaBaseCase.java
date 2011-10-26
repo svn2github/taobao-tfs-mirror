@@ -32,7 +32,7 @@ public class NameMetaBaseCase extends TfsBaseCase{
     // server related
     final public int RSINDEX = 0;
     final public int MSINDEX = 1;
-    final public int META_COUNT = 1;
+    final public int META_COUNT = 3;
     final public String RSVIP = nameMetaGrid.getCluster(RSINDEX).getServer(0).getVip();
     final public String MASTER_RS_IP = nameMetaGrid.getCluster(RSINDEX).getServer(0).getIp();
     //final public String SLAVE_RS_IP = nameMetaGrid.getCluster(RSINDEX).getServer(1).getIp();
@@ -68,12 +68,12 @@ public class NameMetaBaseCase extends TfsBaseCase{
     final public String KW_SERVING_MS_IP = "to metaServer";
     final public String KW_APP_ID = "appId: ";
     final public String KW_USER_ID = "userId: ";
-    final public String KW_LS_DIR_STATIS = "ls_dir statis: ";
-    final public String KW_CREATE_DIR_STATIS = "create_dir statis: ";
+    final public String KW_LS_DIR_STATIS = "oper_ls_dir stat info";
+    final public String KW_CREATE_DIR_STATIS = "oper_create_dir stat info";
 
     // columns
     final public int MS_IP_COL = 12; //TODO: 
-    final public int TAIL_RATE_COL = 12; //TODO: 
+    final public int TAIL_RATE_COL = 18;
 
     // other
     final public int TAIL_LINE = 1000;
@@ -104,12 +104,12 @@ public class NameMetaBaseCase extends TfsBaseCase{
         keyWords.add(KW_SERVING_MS_IP); 
         keyWords.add(KW_APP_ID + appId); 
         keyWords.add(KW_USER_ID + userId); 
-        String logName = ""; //TODO: client log
+        String logName = CLIENT_HOME + "/log." + caseName; //TODO: client log
         ArrayList<String> filter = new ArrayList<String>();
         filter.add("/");
         ArrayList<String> result = new ArrayList<String>();
-        String cmd = "cat " + logName;
-        bRet = Proc.cmdOutBase2(CLIENT_IP, cmd, keyWords, MS_IP_COL, filter, result); 
+        String cmd = "head -1000 " + logName;
+        bRet = Proc.cmdOutBase2(CLIENT_IP, cmd, keyWords, 12 , filter, result); 
         if (false == bRet || result.size() < 1) return null;
         return result.get(result.size() - 1);
     }
@@ -119,35 +119,38 @@ public class NameMetaBaseCase extends TfsBaseCase{
         String targetMsAddr = getServingMSIp(appId, userId);
         for (int i = 0; i < META_COUNT; i++)
         {
-          String msIp = nameMetaGrid.getCluster(RSINDEX).getServer(i).getIp(); 
-          int msPort = nameMetaGrid.getCluster(RSINDEX).getServer(i).getPort(); 
+          String msIp = nameMetaGrid.getCluster(MSINDEX).getServer(i).getIp(); 
+          int msPort = nameMetaGrid.getCluster(MSINDEX).getServer(i).getPort(); 
           String msAddr = msIp + ":" + msPort;
-          if (targetMsAddr != msAddr)
+          log.debug("source: " + targetMsAddr + ", dest: " + msAddr);
+          if (! targetMsAddr.equals(msAddr))
           {
             retMsAddr = msAddr;
             break; 
           }
         }
+        log.debug("@@@ unservering metaserver: " + retMsAddr);
         return retMsAddr;
     }
 
-    public long getServingMSIndex(long appId, long userId) {
+    public int getServingMSIndex(long appId, long userId) {
         return getMsIndex(getServingMSIp(appId, userId));
     }
 
-    public long getUnServingMSIndex(long appId, long userId) {
+    public int getUnServingMSIndex(long appId, long userId) {
         return getMsIndex(getUnServingMSIp(appId, userId));
     }
 
-    private long getMsIndex(String targetMsAddr)
+    private int getMsIndex(String targetMsAddr)
     {
         int index = -1;
+        log.debug("msIp: " + targetMsAddr);
         for (int i = 0; i < META_COUNT; i++)
         {
-          String msIp = nameMetaGrid.getCluster(RSINDEX).getServer(i).getIp(); 
-          int msPort = nameMetaGrid.getCluster(RSINDEX).getServer(i).getPort(); 
+          String msIp = nameMetaGrid.getCluster(MSINDEX).getServer(i).getIp(); 
+          int msPort = nameMetaGrid.getCluster(MSINDEX).getServer(i).getPort(); 
           String msAddr = msIp + ":" + msPort;
-          if (targetMsAddr == msAddr)
+          if (targetMsAddr.equals(msAddr))
           {
             index = i;
             break; 
@@ -204,7 +207,7 @@ public class NameMetaBaseCase extends TfsBaseCase{
     public boolean mixOpCmd() {
         boolean bRet = false;
         log.debug("Mix operation cmd start ===>");
-        String cmd = "sh meta_oper.sh start_oper >log." + caseName;
+        String cmd = "./meta_oper.sh start_oper &>log." + caseName;
         bRet = Proc.proStartBackroundBase(CLIENT_IP, cmd, CLIENT_HOME);
         log.debug("Mix operation cmd end ===>");
         return bRet;
@@ -269,13 +272,12 @@ public class NameMetaBaseCase extends TfsBaseCase{
       ArrayList<Float> context = new ArrayList<Float>();
       filter.add("%");
       filter.add(",");
-      filter.add("rate:");
       bRet = Log.scanTailFloat(tarIp, fileName, keyWord, TAIL_LINE, TAIL_RATE_COL, filter, context);
-      if ((bRet == false) || (context.size() != 1))
+      if ((bRet == false) || (context.size() < 1))
       {
         return fRet;
       }
-      fRet = context.get(0);
+      fRet = context.get(context.size() - 1);
       return fRet;  
     }
  
@@ -285,7 +287,7 @@ public class NameMetaBaseCase extends TfsBaseCase{
         long iRet = 0;
         String logName = CLIENT_LOG + caseName;
         ArrayList<String> result = new ArrayList<String>();
-        String cmd = "head -1 " + logName + " | awk -F '[[]' '{print $2}' | awk -F '[]]' '{print $1}' | date +%s";
+        String cmd = CLIENT_HOME + "/meta_oper.sh get_cur_time " + logName;
         bRet = Proc.cmdOutBase(CLIENT_IP, cmd, null, 1, null, result);
         if (bRet == false) return -1;
         try{
@@ -307,7 +309,7 @@ public class NameMetaBaseCase extends TfsBaseCase{
         long iRet = 0;
         String logName = CLIENT_LOG + caseName;
         ArrayList<String> result = new ArrayList<String>();
-        String cmd = "grep ERROR " + logName + " | head -1 | awk -F '[[]' '{print $2}' | awk -F '[]]' '{print $1}' | date +%s";
+        String cmd = CLIENT_HOME + "/meta_oper.sh get_fail_start " + logName;
         bRet = Proc.cmdOutBase(CLIENT_IP, cmd, null, 1, null, result);
         if (bRet == false) return -1;
         try{
@@ -329,7 +331,7 @@ public class NameMetaBaseCase extends TfsBaseCase{
         long iRet = 0;
         String logName = CLIENT_LOG + caseName;
         ArrayList<String> result = new ArrayList<String>();
-        String cmd = "grep ERROR " + logName + " | tail -1 | awk -F '[[]' '{print $2}' | awk -F '[]]' '{print $1}' | date +%s";
+        String cmd = CLIENT_HOME + "/meta_oper.sh get_fail_end " + logName;
         bRet = Proc.cmdOutBase(CLIENT_IP, cmd, null, 1, null, result);
         if (bRet == false) return -1;
         try{
