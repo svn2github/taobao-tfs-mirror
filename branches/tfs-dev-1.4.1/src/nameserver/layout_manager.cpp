@@ -479,27 +479,34 @@ namespace tfs
       {
         GFactory::get_lease_factory().cancel(block_id);
         ServerCollect* dest_server = get_server(server);
-        runer.push_back(dest_server);
-
-        BlockChunkPtr ptr = get_chunk(block_id);
-        RWLock::Lock lock(*ptr, WRITE_LOCKER);
-        BlockCollect* block = ptr->find(block_id);
-        iret = relieve_relation(block, dest_server, now) ? TFS_SUCCESS : TFS_ERROR;
-        if (TFS_SUCCESS != iret)
+        iret = NULL == dest_server ? EXIT_NO_DATASERVER : TFS_SUCCESS;
+        if (TFS_SUCCESS == iret)
         {
-          TBSYS_LOG(WARN, "relieve relation failed between block: %u and server: %s", block_id, CNetUtil::addrToString(dest_server->id()).c_str());
-        }
-        else
-        {
-          ReplicateTaskPtr task = new ReplicateTask(this, PLAN_PRIORITY_EMERGENCY, block_id, now, now, runer, 0);
-          iret = add_task(task) ? TFS_SUCCESS : TFS_ERROR;
-          if (TFS_SUCCESS != iret)
+          runer.push_back(dest_server);
+          BlockChunkPtr ptr = get_chunk(block_id);
+          RWLock::Lock lock(*ptr, WRITE_LOCKER);
+          BlockCollect* block = ptr->find(block_id);
+          iret = NULL == block ? EXIT_NO_BLOCK : TFS_SUCCESS;
+          if (TFS_SUCCESS == iret)
           {
-            TBSYS_LOG(WARN, "add task(ReplicateTask) failed, block: %u", block_id);
-          }
-          else
-          {
-            task->dump(TBSYS_LOG_LEVEL_DEBUG, "repair,");
+            iret = relieve_relation(block, dest_server, now) ? TFS_SUCCESS : TFS_ERROR;
+            if (TFS_SUCCESS != iret)
+            {
+              TBSYS_LOG(WARN, "relieve relation failed between block: %u and server: %s", block_id, CNetUtil::addrToString(server).c_str());
+            }
+            else
+            {
+              ReplicateTaskPtr task = new ReplicateTask(this, PLAN_PRIORITY_EMERGENCY, block_id, now, now, runer, 0);
+              iret = add_task(task) ? TFS_SUCCESS : TFS_ERROR;
+              if (TFS_SUCCESS != iret)
+              {
+                TBSYS_LOG(WARN, "add task(ReplicateTask) failed, block: %u", block_id);
+              }
+              else
+              {
+                task->dump(TBSYS_LOG_LEVEL_DEBUG, "repair,");
+              }
+            }
           }
         }
       }
@@ -1282,6 +1289,7 @@ namespace tfs
                     if (TFS_SUCCESS == iret)
                     {
                       add_new_block_helper_write_log(block_id, servers);
+                      oplog_sync_mgr_.generation(block_id);
                     }
                   }//end send message to dataserver successful
                   else
@@ -1540,9 +1548,13 @@ namespace tfs
 
     int LayoutManager::touch(uint64_t server, time_t now, bool promote)
     {
-      ServerCollect* object = NULL;
-      object = get_server(server);
-      return touch(object, now, promote);
+      ServerCollect* object = get_server(server);
+      int32_t iret = NULL == object ? EXIT_NO_DATASERVER : TFS_SUCCESS;
+      if (TFS_SUCCESS == iret)
+      {
+        iret = touch(object, now, promote);
+      }
+      return iret;
     }
 
     int64_t LayoutManager::calc_all_block_bytes() const
@@ -1719,18 +1731,17 @@ namespace tfs
 #if defined(TFS_NS_GTEST) || defined(TFS_NS_INTEGRATION) || defined(TFS_NS_DEBUG)
         GFactory::get_global_info().dump();
 #endif
+        iter = actual_dead_servers.begin();
+        for (; iter != actual_dead_servers.end(); ++iter)
+        {
+          remove_server((*iter), now);
+        }
 
         std::list<ServerCollect*>::iterator it = alive_servers.begin();
         for (; it != alive_servers.end(); ++it)
         {
           TBSYS_LOG(DEBUG, "server touch, block count: %u, master block count: %u", (*it)->block_count(), (*it)->get_hold_master_size());
           touch((*it), now, true);
-        }
-
-        iter = actual_dead_servers.begin();
-        for (; iter != actual_dead_servers.end(); ++iter)
-        {
-          remove_server((*iter), now);
         }
 
 #if !defined(TFS_NS_GTEST) && !defined(TFS_NS_INTEGRATION)

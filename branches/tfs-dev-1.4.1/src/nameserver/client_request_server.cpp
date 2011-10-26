@@ -602,10 +602,7 @@ namespace tfs
           if (TFS_SUCCESS == iret)
           {
             uint64_t id = info.value1_;
-            ServerCollect* server = NULL;
-            {
-              server = lay_out_manager_.get_server(id);
-            }
+            ServerCollect* server = lay_out_manager_.get_server(id);
             iret = NULL == server ? TFS_ERROR : TFS_SUCCESS;
             if (TFS_SUCCESS == iret)
             {

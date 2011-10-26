@@ -563,10 +563,14 @@ namespace tfs
                         block_id, CNetUtil::addrToString((*s_iter)).c_str());
                   RWLock::Lock lock(*ptr, WRITE_LOCKER);
                   block = ptr->find(block_id);
-                  if (meta_mgr_.build_relation(block, server, rms, now) != TFS_SUCCESS)
+                  iret = NULL == block ? EXIT_NO_BLOCK : TFS_SUCCESS;
+                  if (TFS_SUCCESS == iret)
                   {
-                    TBSYS_LOG(WARN, "build relation between block: %u and server: %s failed",
-                        block_id, CNetUtil::addrToString((*s_iter)).c_str());
+                    if (meta_mgr_.build_relation(block, server, rms, now) != TFS_SUCCESS)
+                    {
+                      TBSYS_LOG(WARN, "build relation between block: %u and server: %s failed",
+                          block_id, CNetUtil::addrToString((*s_iter)).c_str());
+                    }
                   }
                 }
               }
@@ -605,6 +609,11 @@ namespace tfs
 
                 RWLock::Lock lock(*ptr, WRITE_LOCKER);
                 block = ptr->find(block_id);
+                if (NULL == block)
+                {
+                  TBSYS_LOG(WARN, "block object not found by : %u", block_id);
+                  continue;
+                }
                 if (!meta_mgr_.relieve_relation(block, server, now))
                 {
                   TBSYS_LOG(WARN, "relieve relation between block: %u and server: %s failed",

@@ -387,11 +387,7 @@ namespace tfs
         std::vector<uint64_t>::iterator iter = servers.begin();
         for (; iter != servers.end(); ++iter)
         {
-          ServerCollect* server = NULL;
-          {
-            server = manager_->get_server((*iter));
-          }
-
+          ServerCollect* server = manager_->get_server((*iter));
           BlockChunkPtr ptr = manager_->get_chunk(value.block_id_);
           RWLock::Lock lock(*ptr, WRITE_LOCKER);
           BlockCollect* block = ptr->find(value.block_id_);
