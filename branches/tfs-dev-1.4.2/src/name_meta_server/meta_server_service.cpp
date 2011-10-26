@@ -23,7 +23,7 @@
 using namespace tfs::common;
 using namespace tfs::message;
 using namespace std;
-namespace 
+namespace
 {
   const int TEST_NO_ROOT = 100;
 }
@@ -167,7 +167,7 @@ namespace tfs
 
       if (ret != TFS_SUCCESS && NULL != base_packet)
       {
-        base_packet->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret, "execute message failed");
+        base_packet->reply_error_packet(TBSYS_LOG_LEVEL(INFO), ret, "execute message failed");
       }
 
       // always return true. packet will be freed by caller
@@ -201,7 +201,7 @@ namespace tfs
             req_fa_msg->get_version(), rgi.server_.base_info_.id_);
         if (ret == TFS_SUCCESS)
         {
-          ret = permission >= BUCKET_STATUS_RW ? TFS_SUCCESS : EXIT_NOT_PERM_OPER; 
+          ret = permission >= BUCKET_STATUS_RW ? TFS_SUCCESS : EXIT_NOT_PERM_OPER;
           if (ret == TFS_SUCCESS )
           {
             switch (action)
@@ -232,7 +232,7 @@ namespace tfs
         }
         if (ret != TFS_SUCCESS)
         {
-          ret = req_fa_msg->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret, "execute message failed");
+          ret = req_fa_msg->reply_error_packet(TBSYS_LOG_LEVEL(INFO), ret, "execute message failed");
         }
         else
         {
@@ -269,7 +269,7 @@ namespace tfs
               req_rf_msg->get_version(), rgi.server_.base_info_.id_);
         if (ret == TFS_SUCCESS)
         {
-          ret = permission >= BUCKET_STATUS_READ_ONLY ? TFS_SUCCESS : EXIT_NOT_PERM_OPER; 
+          ret = permission >= BUCKET_STATUS_READ_ONLY ? TFS_SUCCESS : EXIT_NOT_PERM_OPER;
           if (ret == TFS_SUCCESS )
           {
             ret = read(req_rf_msg->get_app_id(), req_rf_msg->get_user_id(), req_rf_msg->get_file_path(),
@@ -280,7 +280,7 @@ namespace tfs
 
         if (ret != TFS_SUCCESS)
         {
-          ret = req_rf_msg->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret, "execute message failed");
+          ret = req_rf_msg->reply_error_packet(TBSYS_LOG_LEVEL(INFO), ret, "execute message failed");
         }
         else
         {
@@ -315,7 +315,7 @@ namespace tfs
               req_wf_msg->get_version(), rgi.server_.base_info_.id_);
         if (ret == TFS_SUCCESS)
         {
-          ret = permission >= BUCKET_STATUS_RW ? TFS_SUCCESS : EXIT_NOT_PERM_OPER; 
+          ret = permission >= BUCKET_STATUS_RW ? TFS_SUCCESS : EXIT_NOT_PERM_OPER;
           if (ret == TFS_SUCCESS )
           {
             ret = write(req_wf_msg->get_app_id(), req_wf_msg->get_user_id(),
@@ -325,7 +325,7 @@ namespace tfs
 
         if (ret != TFS_SUCCESS)
         {
-          ret = req_wf_msg->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret, "execute message failed");
+          ret = req_wf_msg->reply_error_packet(TBSYS_LOG_LEVEL(INFO), ret, "execute message failed");
         }
         else
         {
@@ -362,7 +362,7 @@ namespace tfs
               req_lf_msg->get_version(), rgi.server_.base_info_.id_);
         if (ret == TFS_SUCCESS)
         {
-          ret = permission >= BUCKET_STATUS_READ_ONLY ? TFS_SUCCESS : EXIT_NOT_PERM_OPER; 
+          ret = permission >= BUCKET_STATUS_READ_ONLY ? TFS_SUCCESS : EXIT_NOT_PERM_OPER;
           if (ret == TFS_SUCCESS )
           {
             ret = ls(req_lf_msg->get_app_id(), req_lf_msg->get_user_id(), req_lf_msg->get_pid(),
@@ -373,7 +373,7 @@ namespace tfs
 
         if (ret != TFS_SUCCESS)
         {
-          ret = req_lf_msg->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret, "execute message failed");
+          ret = req_lf_msg->reply_error_packet(TBSYS_LOG_LEVEL(INFO), ret, "execute message failed");
         }
         else
         {
@@ -402,7 +402,7 @@ namespace tfs
         {
           uint64_t dest_length = common::MAX_BUCKET_DATA_LENGTH;
           unsigned char* dest = new unsigned char[common::MAX_BUCKET_DATA_LENGTH];
-          ret = uncompress(dest, &dest_length, (unsigned char*)msg->get_table(), msg->get_table_length()); 
+          ret = uncompress(dest, &dest_length, (unsigned char*)msg->get_table(), msg->get_table_length());
           if (Z_OK != ret)
           {
             TBSYS_LOG(ERROR, "uncompress error: ret : %d, version: %"PRI64_PREFIX"d, dest length: %"PRI64_PREFIX"d, lenght: %"PRI64_PREFIX"d",
@@ -713,7 +713,7 @@ namespace tfs
               ret = EXIT_TARGET_EXIST_ERROR;
             }
           }
-          
+
         }
         store_manager_.revert_root_node(app_id, uid);
       }
@@ -865,7 +865,7 @@ namespace tfs
                   //update this info;
                   v_meta_info_it->file_info_.size_ = v_meta_info_it->get_last_offset();
                   ret = store_manager_.insert(app_id, uid, pp_id,
-                      p_dir_node, v_meta_info_it->get_name(), 
+                      p_dir_node, v_meta_info_it->get_name(),
                       v_meta_info_it->get_name_len(), PWRITE_FILE, &(*v_meta_info_it));
                 }
               }
@@ -998,7 +998,7 @@ namespace tfs
         {
           TBSYS_LOG(WARN, "file_path(%s) is invalid", file_path);
           ret = TFS_ERROR;
-          
+
         }
         else if (file_len > 0)  // continue from file_path
         {
@@ -1024,7 +1024,7 @@ namespace tfs
 
           // return dir and file separately
           // first dir type, then file type
-          ret = store_manager_.ls(app_id, uid, p_meta_info.get_id(), 
+          ret = store_manager_.ls(app_id, uid, p_meta_info.get_id(),
               name, name_len, NULL, 0,
               my_file_type != DIRECTORY, tmp_v_meta_info, still_have);
 
@@ -1243,7 +1243,7 @@ namespace tfs
           break;
         }
 
-        ret = store_manager_.select(root_node->app_id_, root_node->user_id_, 
+        ret = store_manager_.select(root_node->app_id_, root_node->user_id_,
             out_p_dir_node, name, false, dir_node);
 
         if (ret != TFS_SUCCESS)
@@ -1423,7 +1423,7 @@ namespace tfs
       // TODO. no need check all over..
       int ret = TFS_SUCCESS;
 
-      if (frag_info.v_frag_meta_.size() > 0 && frag_info.cluster_id_ <= 0) 
+      if (frag_info.v_frag_meta_.size() > 0 && frag_info.cluster_id_ <= 0)
       {
         TBSYS_LOG(ERROR, "cluster id error %d", frag_info.cluster_id_);
         ret = TFS_ERROR;
@@ -1540,7 +1540,7 @@ namespace tfs
           {
             HashHelper helper(app_id, uid);
             int32_t bucket_id  = tbsys::CStringUtil::murMurHash((const char*)&helper, sizeof(HashHelper)) % bucket_size;
-            iret = bucket_manager_.query(status, bucket_id, version, server); 
+            iret = bucket_manager_.query(status, bucket_id, version, server);
           }
         }
       }
