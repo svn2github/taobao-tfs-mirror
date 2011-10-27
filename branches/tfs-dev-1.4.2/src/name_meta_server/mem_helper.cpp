@@ -136,9 +136,13 @@ namespace tfs
     void* MemHelper::malloc(const int64_t size, const int32_t type)
     {
       void* ret_p = NULL;
+      if (size > MAX_FRAG_INFO_SIZE)
+      {
+        TBSYS_LOG(WARN, "size larger then MAX_FRAG_INFO_SIZE");
+      }
       {
         tbsys::CThreadGuard mutex_guard(&mutex_);
-        used_size_ += size + sizeof(int64_t);
+        used_size_ += size + sizeof(int32_t);
         if (type != CACHE_NONE_NODE)
         {
           assert(NULL != instance_);
@@ -160,9 +164,9 @@ namespace tfs
       }
       if (NULL == ret_p)
       {
-        ret_p = ::malloc(size + sizeof(int64_t));
-        *((int64_t*)ret_p) = size;
-        ret_p = (char*)ret_p + sizeof(int64_t);
+        ret_p = ::malloc(size + sizeof(int32_t));
+        *((int32_t*)ret_p) = size;
+        ret_p = (char*)ret_p + sizeof(int32_t);
       }
       return ret_p;
     }
@@ -171,12 +175,12 @@ namespace tfs
       if (p != NULL)
       {
         char* real_p = (char*)p;
-        real_p -= sizeof(int64_t);
-        int64_t size = *((int64_t*)real_p);
+        real_p -= sizeof(int32_t);
+        int64_t size = *((int32_t*)real_p);
         bool ret = false;
         {
           tbsys::CThreadGuard mutex_guard(&mutex_);
-          used_size_ -= size + sizeof(int64_t);
+          used_size_ -= size + sizeof(int32_t);
           if (type != CACHE_NONE_NODE)
           {
             assert(NULL != instance_);
