@@ -67,7 +67,7 @@ namespace tfs
         dir_node_free_list_(NULL), file_node_free_list_(NULL)
     {
     }
-    MemHelper::MemHelper(const int32_t r_free_list_count, const int32_t d_free_list_count, 
+    MemHelper::MemHelper(const int32_t r_free_list_count, const int32_t d_free_list_count,
           const int32_t f_free_list_count)
     {
       root_node_free_list_ = new MemNodeList(r_free_list_count);
@@ -138,7 +138,7 @@ namespace tfs
       void* ret_p = NULL;
       {
         tbsys::CThreadGuard mutex_guard(&mutex_);
-        used_size_ += size;
+        used_size_ += size + sizeof(int64_t);
         if (type != CACHE_NONE_NODE)
         {
           assert(NULL != instance_);
@@ -160,9 +160,9 @@ namespace tfs
       }
       if (NULL == ret_p)
       {
-        ret_p = ::malloc(size + sizeof(int16_t));
-        *((int16_t*)ret_p) = size;
-        ret_p = (char*)ret_p + sizeof(int16_t);
+        ret_p = ::malloc(size + sizeof(int64_t));
+        *((int64_t*)ret_p) = size;
+        ret_p = (char*)ret_p + sizeof(int64_t);
       }
       return ret_p;
     }
@@ -171,12 +171,12 @@ namespace tfs
       if (p != NULL)
       {
         char* real_p = (char*)p;
-        real_p -= sizeof(int16_t);
-        int16_t size = *((int16_t*)real_p);
+        real_p -= sizeof(int64_t);
+        int64_t size = *((int64_t*)real_p);
         bool ret = false;
         {
           tbsys::CThreadGuard mutex_guard(&mutex_);
-          used_size_ -= size;
+          used_size_ -= size + sizeof(int64_t);
           if (type != CACHE_NONE_NODE)
           {
             assert(NULL != instance_);
