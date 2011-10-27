@@ -316,6 +316,11 @@ namespace tfs
       max_sub_dirs_deep_ = TBSYS_CONFIG.getInt(CONF_SN_NAMEMETASERVER, CONF_MAX_SUB_DIRS_DEEP, 10);
       const char* gc_ratio = TBSYS_CONFIG.getString(CONF_SN_NAMEMETASERVER, CONF_GC_RATIO, "0.1");
       gc_ratio_ = strtod(gc_ratio, NULL);
+      if (gc_ratio_ <= 0 || gc_ratio_ > 1)
+      {
+        TBSYS_LOG(ERROR, "gc ration error %f set it to 0.1", gc_ratio_);
+        gc_ratio_ = 0.1;
+      }
       std::string db_infos = TBSYS_CONFIG.getString(CONF_SN_NAMEMETASERVER, CONF_META_DB_INFOS, "");
       std::vector<std::string> fields;
       Func::split_string(db_infos.c_str(), ';', fields);
