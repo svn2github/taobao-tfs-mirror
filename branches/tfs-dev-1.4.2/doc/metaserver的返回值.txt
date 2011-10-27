@@ -22,4 +22,8 @@ EXIT_NOT_CREATE_ERROR        	//写一个没有create过的文件
 EXIT_WRITE_EXIST_POS_ERROR   	//发生了覆盖写操作.
 EXIT_FRAG_META_OVERFLOW_ERROR	//分片太多, 超过额定值
 EXIT_DELETE_DIR_WITH_FILE_ERROR //删除的目录中还有文件或子目录
+EXIT_OVER_MAX_SUB_DIRS_COUNT    //我们限制每个目录下子目录的个数, 这个错误表示子目录超过限制
+EXIT_OVER_MAX_SUB_DIRS_DEEP     //超过目录层次深度限制
+EXIT_OVER_MAX_SUB_FILES_COUNT   //超过子目录最大文件数限制
+
 
