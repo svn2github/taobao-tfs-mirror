@@ -154,6 +154,9 @@ namespace tfs
 #define CONF_MAX_CACHE_SIZE                            "max_cache_size"
 #define CONF_MAX_MUTEX_SIZE                            "max_mutex_size"
 #define CONF_FREE_LIST_COUNT                           "free_list_count"
+#define CONF_MAX_SUB_DIRS_COUNT                        "max_sub_dirs_count"
+#define CONF_MAX_SUB_FILES_COUNT                       "max_sub_files_count"
+#define CONF_MAX_SUB_DIRS_DEEP                         "max_sub_dirs_deep"
 #define CONF_GC_RATIO                                  "gc_ratio"
 #define CONF_GC_INTERVAL                               "gc_interval"
 

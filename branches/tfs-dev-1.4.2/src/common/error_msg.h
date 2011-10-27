@@ -142,6 +142,9 @@ namespace tfs
     const int32_t EXIT_WRITE_EXIST_POS_ERROR = -14009;
     const int32_t EXIT_INVALID_FILE_NAME = -14010;
     const int32_t EXIT_MOVE_TO_SUB_DIR_ERROR = -14011;
+    const int32_t EXIT_OVER_MAX_SUB_DIRS_COUNT = -14012;
+    const int32_t EXIT_OVER_MAX_SUB_DIRS_DEEP = -14013;
+    const int32_t EXIT_OVER_MAX_SUB_FILES_COUNT = -14014;
 
     const int32_t EXIT_REGISTER_ERROR = -15000;// server register fail
     const int32_t EXIT_REGISTER_EXIST_ERROR = -15001;// server register fail, server is existed

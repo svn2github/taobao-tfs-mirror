@@ -40,7 +40,7 @@ namespace tfs
     int NameServerParameter::initialize(void)
     {
       const char* index = TBSYS_CONFIG.getString(CONF_SN_NAMESERVER, CONF_CLUSTER_ID);
-      if (index == NULL 
+      if (index == NULL
           || strlen(index) < 1
           || !isdigit(index[0]))
       {
@@ -115,7 +115,7 @@ namespace tfs
       max_wait_write_lease_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_MAX_WAIT_WRITE_LEASE, 5);
       if (max_wait_write_lease_ >= thread_count)
         max_wait_write_lease_ = thread_count / 2;
-        
+
       add_primary_block_count_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_ADD_PRIMARY_BLOCK_COUNT, 3);
       if (add_primary_block_count_ <= 0)
         add_primary_block_count_ = 3;
@@ -153,7 +153,7 @@ namespace tfs
         return EXIT_SYSTEM_PARAMETER_ERROR;
       }
       group_seq_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_GROUP_SEQ, 0);
-      if ((group_seq_ < 0) 
+      if ((group_seq_ < 0)
         || (group_seq_ >= group_count_))
       {
         TBSYS_LOG(ERROR, "%s in [%s] is invalid, value: %d", CONF_GROUP_SEQ, CONF_SN_NAMESERVER, group_seq_);
@@ -218,7 +218,7 @@ namespace tfs
       return SYSPARAM_FILESYSPARAM.initialize(index);
     }
 
-    std::string DataServerParameter::get_real_file_name(const std::string& src_file, 
+    std::string DataServerParameter::get_real_file_name(const std::string& src_file,
         const std::string& index, const std::string& suffix)
     {
       return src_file + "_" + index + "." + suffix;
@@ -311,7 +311,10 @@ namespace tfs
       max_cache_size_ = TBSYS_CONFIG.getInt(CONF_SN_NAMEMETASERVER, CONF_MAX_CACHE_SIZE, 1024);
       max_mutex_size_ = TBSYS_CONFIG.getInt(CONF_SN_NAMEMETASERVER, CONF_MAX_MUTEX_SIZE, 16);
       free_list_count_ = TBSYS_CONFIG.getInt(CONF_SN_NAMEMETASERVER, CONF_FREE_LIST_COUNT, 256);
-      const char* gc_ratio = TBSYS_CONFIG.getString(CONF_SN_NAMEMETASERVER, CONF_GC_RATIO, "0.1"); 
+      max_sub_files_count_ = TBSYS_CONFIG.getInt(CONF_SN_NAMEMETASERVER, CONF_MAX_SUB_FILES_COUNT, 1000);
+      max_sub_dirs_count_ = TBSYS_CONFIG.getInt(CONF_SN_NAMEMETASERVER, CONF_MAX_SUB_DIRS_COUNT, 100);
+      max_sub_dirs_deep_ = TBSYS_CONFIG.getInt(CONF_SN_NAMEMETASERVER, CONF_MAX_SUB_DIRS_DEEP, 10);
+      const char* gc_ratio = TBSYS_CONFIG.getString(CONF_SN_NAMEMETASERVER, CONF_GC_RATIO, "0.1");
       gc_ratio_ = strtod(gc_ratio, NULL);
       std::string db_infos = TBSYS_CONFIG.getString(CONF_SN_NAMEMETASERVER, CONF_META_DB_INFOS, "");
       std::vector<std::string> fields;
@@ -368,7 +371,7 @@ namespace tfs
     int RtServerParameter::initialize(void)
     {
       int32_t iret = TFS_SUCCESS;
-      mts_rts_lease_expired_time_ = 
+      mts_rts_lease_expired_time_ =
         TBSYS_CONFIG.getInt(CONF_SN_ROOTSERVER, CONF_MTS_RTS_LEASE_EXPIRED_TIME,
           RTS_MS_LEASE_EXPIRED_TIME_DEFAULT);
       if (mts_rts_lease_expired_time_ <= 0)
@@ -394,7 +397,7 @@ namespace tfs
       }
       if (TFS_SUCCESS == iret)
       {
-        rts_rts_lease_expired_time_ = 
+        rts_rts_lease_expired_time_ =
           TBSYS_CONFIG.getInt(CONF_SN_ROOTSERVER, CONF_RTS_RTS_LEASE_EXPIRED_TIME,
             RTS_RS_LEASE_EXPIRED_TIME_DEFAULT);
         if (rts_rts_lease_expired_time_ <= 0)

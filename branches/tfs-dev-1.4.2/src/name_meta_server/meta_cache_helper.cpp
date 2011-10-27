@@ -148,6 +148,48 @@ namespace tfs
       }
       return ret;
     }
+
+    int32_t MetaCacheHelper::get_sub_dirs_count(CacheDirMetaNode* p_dir_node)
+    {
+      int32_t ret = 0;
+      if (NULL == p_dir_node)
+      {
+        TBSYS_LOG(ERROR,"parameters err");
+        ret = -1;
+      }
+      if (0 <= ret)
+      {
+        InfoArray<CacheDirMetaNode>* child_dir_infos = get_sub_dirs_array_info(p_dir_node);
+        if (NULL != child_dir_infos)
+        {
+          ret = child_dir_infos->get_size();
+        }
+
+      }
+      return ret;
+
+    }
+    int32_t MetaCacheHelper::get_sub_files_count(CacheDirMetaNode* p_dir_node)
+    {
+      int32_t ret = 0;
+      if (NULL == p_dir_node)
+      {
+        TBSYS_LOG(ERROR,"parameters err");
+        ret = -1;
+      }
+      if (0 <= ret)
+      {
+        InfoArray<CacheFileMetaNode>* file_dir_infos = get_sub_files_array_info(p_dir_node);
+        if (NULL != file_dir_infos)
+        {
+          ret = file_dir_infos->get_size();
+        }
+
+      }
+      return ret;
+
+    }
+
     int MetaCacheHelper::insert_dir(CacheDirMetaNode* p_dir_node, CacheDirMetaNode* node)
     {
       int ret = TFS_SUCCESS;

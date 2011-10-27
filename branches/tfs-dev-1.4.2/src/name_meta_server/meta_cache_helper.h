@@ -104,6 +104,9 @@ namespace tfs
         static int insert_dir(CacheDirMetaNode* p_dir_node, CacheDirMetaNode* node);
         static int insert_file(CacheDirMetaNode* p_dir_node, CacheFileMetaNode* node);
 
+        static int32_t get_sub_dirs_count(CacheDirMetaNode* p_dir_node);
+        static int32_t get_sub_files_count(CacheDirMetaNode* p_dir_node);
+
         static int free(CacheDirMetaNode* dir_meta_node, const bool is_root_dir = false);
         static int free(CacheFileMetaNode* dir_meta_node);
         static int free(CacheRootNode* root_node);

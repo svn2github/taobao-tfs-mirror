@@ -135,7 +135,7 @@ namespace tfs
     void MetaStoreManager::do_lru_gc(const double ratio)
     {
       int64_t used_size = MemHelper::get_used_size();
-      used_size = used_size >> 10;
+      used_size = used_size >> 20;
       //TBSYS_LOG(DEBUG, "do_lru_gc");
       BaseStrategy<AppIdUid, CacheRootNode> strategy(lru_);
       vector<CacheRootNode*> v_root_node;
@@ -317,6 +317,26 @@ namespace tfs
       }
       if (TFS_SUCCESS == ret)
       {
+        if (NORMAL_FILE == type)
+        {
+          int32_t files_count = MetaCacheHelper::get_sub_files_count(p_dir_node);
+          if (files_count > SYSPARAM_NAMEMETASERVER.max_sub_files_count)
+          {
+            ret = EXIT_OVER_MAX_SUB_FILES_COUNT;
+          }
+        }
+        else if(DIRECTORY == type)
+        {
+          int32_t dirs_count = MetaCacheHelper::get_sub_dirs_count(p_dir_node);
+          if (dirs_count > SYSPARAM_NAMEMETASERVER.max_sub_dirs_count_)
+          {
+            ret = EXIT_OVER_MAX_SUB_DIRS_COUNT;
+          }
+        }
+
+      }
+      if (TFS_SUCCESS == ret)
+      {
         p_name_len = FileName::length(p_dir_node->name_);
         ret = insert(app_id, uid, pp_id, p_dir_node->name_,
                      p_name_len, p_dir_node->id_,
@@ -398,7 +418,7 @@ namespace tfs
                   file_node->meta_info_ = (char*)malloc(buff_len);
                   assert(NULL != file_node->meta_info_);
                   int64_t pos = 0;
-                  int tmp_ret = out_v_meta_info[0].frag_info_.serialize(file_node->meta_info_, 
+                  int tmp_ret = out_v_meta_info[0].frag_info_.serialize(file_node->meta_info_,
                       buff_len, pos);
                   assert(TFS_SUCCESS == tmp_ret);
                 }
@@ -702,7 +722,7 @@ namespace tfs
       database_helper = database_pool_->get(database_pool_->get_hash_flag(app_id, uid));
       if (NULL != database_helper)
       {
-        TBSYS_LOG(DEBUG, "ls_meta_info appid %"PRI64_PREFIX"d uis %"PRI64_PREFIX"d", 
+        TBSYS_LOG(DEBUG, "ls_meta_info appid %"PRI64_PREFIX"d uid %"PRI64_PREFIX"d",
             app_id, uid);
         ret = database_helper->ls_meta_info(out_v_meta_info, app_id, uid, real_pid,
             name, name_len, name_end, name_end_len);

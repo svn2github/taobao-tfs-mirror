@@ -107,7 +107,7 @@ namespace tfs
       int32_t object_dead_max_time_;
       int32_t object_clear_max_time_;
       int32_t dump_stat_info_interval_;
-      static std::string get_real_file_name(const std::string& src_file, 
+      static std::string get_real_file_name(const std::string& src_file,
           const std::string& index, const std::string& suffix);
       static int get_real_ds_port(const int ds_port, const std::string& index);
       static DataServerParameter ds_parameter_;
@@ -155,6 +155,9 @@ namespace tfs
       int32_t max_cache_size_;
       int32_t max_mutex_size_;
       int32_t free_list_count_;
+      int32_t max_sub_files_count_;
+      int32_t max_sub_dirs_count_;
+      int32_t max_sub_dirs_deep_;
 
       static NameMetaServerParameter meta_parameter_;
       static NameMetaServerParameter& instance()
@@ -170,7 +173,7 @@ namespace tfs
       int32_t rts_rts_lease_expired_time_;
       int32_t rts_rts_renew_lease_interval_;
       int32_t safe_mode_time_;
-      
+
       int initialize(void);
 
       static RtServerParameter rt_parameter_;
