@@ -18,6 +18,7 @@
 #include <stdlib.h>
 #include <tbsys.h>
 #include "meta_cache_helper.h"
+#include "common/meta_server_define.h"
 
 namespace tfs
 {
@@ -136,7 +137,7 @@ namespace tfs
     void* MemHelper::malloc(const int64_t size, const int32_t type)
     {
       void* ret_p = NULL;
-      if (size > MAX_FRAG_INFO_SIZE)
+      if (size > common::MAX_FRAG_INFO_SIZE)
       {
         TBSYS_LOG(WARN, "size larger then MAX_FRAG_INFO_SIZE");
       }
