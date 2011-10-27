@@ -72,6 +72,7 @@ namespace tfs
       "group_count",
       "group_seq",
       "discard_newblk_safe_mode_time",
+      "discard_max_count"
   };
 
   static int find_servers_difference(const std::vector<ServerCollect*>& first,
@@ -1054,6 +1055,7 @@ namespace tfs
 #if defined(TFS_NS_GTEST) || defined(TFS_NS_INTEGRATION)
         iret = TFS_SUCCESS;
 #else
+        int64_t begin = tbsys::CTimeUtil::getTime();
         NewClient* client = NewClientManager::get_instance().create_client();
         iret = NULL != client ? TFS_SUCCESS : TFS_ERROR;
 #endif
@@ -1180,6 +1182,8 @@ namespace tfs
           }
 #endif
         }
+        int64_t end = tbsys::CTimeUtil::getTime();
+        TBSYS_LOG(INFO, "add new block: cost: %"PRI64_PREFIX"d", end - begin);
 #if !defined(TFS_NS_GTEST) && !defined(TFS_NS_INTEGRATION)
         NewClientManager::get_instance().destroy_client(client);
 #endif
@@ -1847,6 +1851,7 @@ namespace tfs
           &SYSPARAM_NAMESERVER.group_count_,
           &SYSPARAM_NAMESERVER.group_seq_,
           &SYSPARAM_NAMESERVER.discard_newblk_safe_mode_time_,
+          &SYSPARAM_NAMESERVER.discard_max_count_
         };
         int32_t size = sizeof(param) / sizeof(int32_t*);
         if (index < 0x01 || index > size)

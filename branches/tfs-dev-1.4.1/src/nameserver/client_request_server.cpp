@@ -30,7 +30,7 @@ namespace tfs
     using namespace tbsys;
     using namespace message;
     ClientRequestServer::ClientRequestServer(LayoutManager& lay_out_manager, NameServer& manager)
-      :lay_out_manager_(lay_out_manager),
+      :ref_count_(0), lay_out_manager_(lay_out_manager),
        manager_(manager)
     {
 
@@ -449,7 +449,7 @@ namespace tfs
           if (TFS_SUCCESS == iret)
           {
             NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
-            iret = ngi.in_discard_newblk_safe_mode_time(time(NULL)) ? EXIT_DISCARD_NEWBLK_ERROR: TFS_SUCCESS;
+            iret = ngi.in_discard_newblk_safe_mode_time(time(NULL)) || is_discard() ? EXIT_DISCARD_NEWBLK_ERROR: TFS_SUCCESS;
             if (TFS_SUCCESS == iret)
             {
               //create new block by block_id
@@ -952,6 +952,17 @@ namespace tfs
     int ClientRequestServer::dump_plan(tbnet::DataBuffer& output)
     {
       return lay_out_manager_.dump_plan(output);
+    }
+
+    bool ClientRequestServer::is_discard(void)
+    {
+      bool ret = true;
+      if (atomic_inc(&ref_count_) >= static_cast<uint32_t>(SYSPARAM_NAMESERVER.discard_max_count_))
+      {
+        ret = false;
+        atomic_exchange(&ref_count_, 0); 
+      }
+      return ret;
     }
   }
 }
