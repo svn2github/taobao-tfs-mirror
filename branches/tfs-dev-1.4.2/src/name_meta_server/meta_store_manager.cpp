@@ -320,7 +320,7 @@ namespace tfs
         if (NORMAL_FILE == type)
         {
           int32_t files_count = MetaCacheHelper::get_sub_files_count(p_dir_node);
-          if (files_count > SYSPARAM_NAMEMETASERVER.max_sub_files_count)
+          if (files_count > SYSPARAM_NAMEMETASERVER.max_sub_files_count_)
           {
             ret = EXIT_OVER_MAX_SUB_FILES_COUNT;
           }

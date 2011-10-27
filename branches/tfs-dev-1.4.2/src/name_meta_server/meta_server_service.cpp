@@ -1385,7 +1385,7 @@ namespace tfs
         v_name.clear();
         v_name.push_back("/");
         Func::split_string(file_path, '/', v_name);
-        if (v_name.size() >= SYSPARAM_NAMEMETASERVER.max_sub_dirs_deep_)
+        if (static_cast<int32_t>(v_name.size()) >= SYSPARAM_NAMEMETASERVER.max_sub_dirs_deep_)
         {
           ret = EXIT_OVER_MAX_SUB_DIRS_DEEP;
         }
