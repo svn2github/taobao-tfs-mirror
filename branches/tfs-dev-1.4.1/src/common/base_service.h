@@ -86,7 +86,7 @@ namespace tfs
       virtual int async_callback(NewClient* client, void* args);
 
       /** push workitem to workers*/
-      bool push(BasePacket* packet);
+      bool push(BasePacket* packet, bool block = true);
 
       /** get listen port*/
       int32_t get_port() const;

@@ -362,13 +362,13 @@ namespace tfs
               break;
             case MASTER_AND_SLAVE_HEART_MESSAGE:
             case HEARTBEAT_AND_NS_HEART_MESSAGE:
-              master_slave_heart_mgr_.push(bpacket);
+              master_slave_heart_mgr_.push(bpacket, 0, false);
               break;
             case OPLOG_SYNC_MESSAGE:
               meta_mgr_.get_oplog_sync_mgr().push(bpacket, 0, false);
               break;
             default:
-              if (!main_workers_.push(bpacket, work_queue_size_))
+              if (!main_workers_.push(bpacket, work_queue_size_, false))
               {
                 hret = tbnet::IPacketHandler::FREE_CHANNEL;
                 bpacket->reply_error_packet(TBSYS_LOG_LEVEL(ERROR),STATUS_MESSAGE_ERROR, "%s, task message beyond max queue size, discard", get_ip_addr());

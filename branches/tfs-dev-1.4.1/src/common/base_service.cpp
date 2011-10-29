@@ -83,9 +83,9 @@ namespace tfs
       return TFS_SUCCESS;
     }
 
-    bool BaseService::push(BasePacket* packet)
+    bool BaseService::push(BasePacket* packet, bool block)
     {
-      return main_workers_.push(packet, work_queue_size_);
+      return main_workers_.push(packet, work_queue_size_, block);
     }
 
     tbnet::IPacketHandler::HPRetCode BaseService::handlePacket(tbnet::Connection *connection, tbnet::Packet *packet)
