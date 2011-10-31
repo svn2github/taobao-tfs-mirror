@@ -131,7 +131,9 @@ namespace tfs
     {
       int ret = TFS_ERROR;
       out_v_meta_info.clear();
+      int retry_time = 0;
       tbutil::Mutex::Lock lock(mutex_);
+retry:
       if (!is_connected_)
       {
         connect();
@@ -167,6 +169,11 @@ namespace tfs
         status = mysql_stmt_execute(stmt_);
         if (status)
         {
+          if (2006 == mysql_stmt_errno(stmt_) && retry_time++ < 3)
+          {
+            close();
+            goto retry;
+          }
           TBSYS_LOG(ERROR, "Error: %s (errno: %d)\n",
               mysql_stmt_error(stmt_), mysql_stmt_errno(stmt_));
           ret = TFS_ERROR;
@@ -301,8 +308,10 @@ namespace tfs
       const char* str = "CALL create_dir(?, ?, ?, ?, ?, ?, ?)";
 
       mysql_proc_ret = 0;
+      int retry_time = 0;
 
       tbutil::Mutex::Lock lock(mutex_);
+retry:
       if (!is_connected_)
       {
         connect();
@@ -314,6 +323,11 @@ namespace tfs
         status = mysql_stmt_prepare(stmt, str, strlen(str));
         if (status)
         {
+          if (2006 == mysql_stmt_errno(stmt_) && retry_time++ < 3)
+          {
+            close();
+            goto retry;
+          }
           TBSYS_LOG(ERROR, "Error: %s (errno: %d)\n",
               mysql_stmt_error(stmt), mysql_stmt_errno(stmt));
           ret = TFS_ERROR;
@@ -398,7 +412,9 @@ namespace tfs
 
       mysql_proc_ret = 0;
 
+      int retry_time = 0;
       tbutil::Mutex::Lock lock(mutex_);
+retry:
       if (!is_connected_)
       {
         connect();
@@ -410,6 +426,11 @@ namespace tfs
         status = mysql_stmt_prepare(stmt, str, strlen(str));
         if (status)
         {
+          if (2006 == mysql_stmt_errno(stmt_) && retry_time++ < 3)
+          {
+            close();
+            goto retry;
+          }
           TBSYS_LOG(ERROR, "Error: %s (errno: %d)\n",
               mysql_stmt_error(stmt), mysql_stmt_errno(stmt));
           ret = TFS_ERROR;
@@ -495,7 +516,9 @@ namespace tfs
 
       mysql_proc_ret = 0;
 
+      int retry_time = 0;
       tbutil::Mutex::Lock lock(mutex_);
+retry:
       if (!is_connected_)
       {
         connect();
@@ -507,6 +530,11 @@ namespace tfs
         status = mysql_stmt_prepare(stmt, str, strlen(str));
         if (status)
         {
+          if (2006 == mysql_stmt_errno(stmt_) && retry_time++ < 3)
+          {
+            close();
+            goto retry;
+          }
           TBSYS_LOG(ERROR, "Error: %s (errno: %d)\n",
               mysql_stmt_error(stmt), mysql_stmt_errno(stmt));
           ret = TFS_ERROR;
@@ -602,7 +630,9 @@ namespace tfs
 
       mysql_proc_ret = 0;
 
+      int retry_time = 0;
       tbutil::Mutex::Lock lock(mutex_);
+retry:
       if (!is_connected_)
       {
         connect();
@@ -614,6 +644,11 @@ namespace tfs
         status = mysql_stmt_prepare(stmt, str, strlen(str));
         if (status)
         {
+          if (2006 == mysql_stmt_errno(stmt_) && retry_time++ < 3)
+          {
+            close();
+            goto retry;
+          }
           TBSYS_LOG(ERROR, "Error: %s (errno: %d)\n",
               mysql_stmt_error(stmt), mysql_stmt_errno(stmt));
           ret = TFS_ERROR;
@@ -688,7 +723,9 @@ namespace tfs
 
       mysql_proc_ret = 0;
 
+      int retry_time = 0;
       tbutil::Mutex::Lock lock(mutex_);
+retry:
       if (!is_connected_)
       {
         connect();
@@ -700,6 +737,11 @@ namespace tfs
         status = mysql_stmt_prepare(stmt, str, strlen(str));
         if (status)
         {
+          if (2006 == mysql_stmt_errno(stmt_) && retry_time++ < 3)
+          {
+            close();
+            goto retry;
+          }
           TBSYS_LOG(ERROR, "Error: %s (errno: %d)\n",
               mysql_stmt_error(stmt), mysql_stmt_errno(stmt));
           ret = TFS_ERROR;
@@ -777,7 +819,9 @@ namespace tfs
 
         mysql_proc_ret = 0;
 
+        int retry_time = 0;
         tbutil::Mutex::Lock lock(mutex_);
+retry:
         if (!is_connected_)
         {
           connect();
@@ -789,6 +833,11 @@ namespace tfs
           status = mysql_stmt_prepare(stmt, str, strlen(str));
           if (status)
           {
+            if (2006 == mysql_stmt_errno(stmt_) && retry_time++ < 3)
+            {
+              close();
+              goto retry;
+            }
             TBSYS_LOG(ERROR, "Error: %s (errno: %d)\n",
                 mysql_stmt_error(stmt), mysql_stmt_errno(stmt));
             ret = TFS_ERROR;
@@ -878,7 +927,9 @@ namespace tfs
 
       mysql_proc_ret = 0;
 
+      int retry_time = 0;
       tbutil::Mutex::Lock lock(mutex_);
+retry:
       if (!is_connected_)
       {
         connect();
@@ -890,6 +941,11 @@ namespace tfs
         status = mysql_stmt_prepare(stmt, str, strlen(str));
         if (status)
         {
+          if (2006 == mysql_stmt_errno(stmt_) && retry_time++ < 3)
+          {
+            close();
+            goto retry;
+          }
           TBSYS_LOG(ERROR, "Error: %s (errno: %d)\n",
               mysql_stmt_error(stmt), mysql_stmt_errno(stmt));
           ret = TFS_ERROR;
@@ -980,7 +1036,9 @@ namespace tfs
 
       next_val = 0;
 
+      int retry_time = 0;
       tbutil::Mutex::Lock lock(mutex_);
+retry:
       if (!is_connected_)
       {
         connect();
@@ -992,6 +1050,11 @@ namespace tfs
         status = mysql_stmt_prepare(stmt, str, strlen(str));
         if (status)
         {
+          if (2006 == mysql_stmt_errno(stmt_) && retry_time++ < 3)
+          {
+            close();
+            goto retry;
+          }
           TBSYS_LOG(ERROR, "Error: %s (errno: %d)\n",
               mysql_stmt_error(stmt), mysql_stmt_errno(stmt));
           ret = TFS_ERROR;
