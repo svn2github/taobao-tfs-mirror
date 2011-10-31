@@ -70,9 +70,13 @@ namespace tfs
             #if defined(TFS_NS_GTEST) || defined(TFS_NS_INTEGRATION) || defined(TFS_NS_DEBUG)
             server->dump();
             #endif
-            if (!server->is_report_block_complete())
+            bool report_complete = false;
             {
-              server->update(now);
+              RWLock::Lock lock(*server, READ_LOCKER);
+              report_complete = server->is_report_block_complete();
+            }
+            if (!report_complete)
+            {
               need_sent_block = manager_.get_heart_management().add_report_server(ds_info.id_, now); 
             }
             else

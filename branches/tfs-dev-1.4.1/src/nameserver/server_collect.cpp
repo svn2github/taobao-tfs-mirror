@@ -59,7 +59,6 @@ namespace tfs
       elect_seq_(NsGlobalStatisticsInfo::ELECT_SEQ_NO_INITIALIZE),
       startup_time_(now),
       last_update_time_(now),
-      report_time_(now),
       current_load_(info.current_load_ <= 0 ? 1 : info.current_load_),
       block_count_(info.block_count_),
       write_index_(0),
@@ -347,7 +346,8 @@ namespace tfs
     bool ServerCollect::touch(LayoutManager& manager, const time_t now, bool& promote, int32_t& count)
     {
       bool bret = true;
-      if (in_safe_mode_time(now))
+      //if (in_safe_mode_time(now))
+      if (!is_report_block_complete())
       {
         count = 0;
       }
@@ -495,8 +495,6 @@ namespace tfs
       block_count_ = info.block_count_;
       last_update_time_ = now;
       startup_time_ = is_new ? now : info.startup_time_;
-      if (is_new)
-        report_time_ = now;
       status_ = info.status_;
       read_count_ = info.total_tp_.read_file_count_;
       read_byte_ = info.total_tp_.read_byte_;
@@ -508,12 +506,6 @@ namespace tfs
       TBSYS_LOG(DEBUG, "server: %s use_capacity: %"PRI64_PREFIX"d, total_capacity: %"PRI64_PREFIX"d, current_load: %d, block_count: %d,startup_time: %s, read_count: %"PRI64_PREFIX"d, read_byte: %"PRI64_PREFIX"d, write_count: %"PRI64_PREFIX"d, write_byte: %"PRI64_PREFIX"d",
           tbsys::CNetUtil::addrToString(id()).c_str(), use_capacity_, total_capacity_, current_load_, block_count_, buf, read_count_, read_byte_, write_count_, write_byte_); 
 #endif
-    }
-
-    void ServerCollect::update(const time_t now)
-    {
-      RWLock::Lock lock(*this, WRITE_LOCKER);
-      report_time_ = now ;
     }
 
     bool ServerCollect::can_be_master(const int32_t max_write_block_count)

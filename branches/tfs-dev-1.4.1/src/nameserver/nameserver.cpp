@@ -69,7 +69,7 @@ namespace tfs
               && (ngi.owner_status_ == NS_STATUS_INITIALIZED)
               && current < end.toMicroSeconds())
           {
-            bret = server_->push(message);
+            bret = server_->push(message, false);
             if (!bret)
             {
               current = tbutil::Time::now().toMicroSeconds();

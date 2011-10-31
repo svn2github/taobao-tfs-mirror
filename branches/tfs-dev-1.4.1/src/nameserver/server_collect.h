@@ -46,7 +46,6 @@ namespace tfs
       bool remove(BlockCollect* block);
       bool exist(BlockCollect* block);
       void update(const common::DataServerStatInfo& info, const time_t now, const bool is_new);
-      void update(const time_t now);
       void statistics(NsGlobalStatisticsInfo& stat, const bool is_new);
       bool add_writable(BlockCollect* block);
       bool add_master(BlockCollect* block);
@@ -78,11 +77,6 @@ namespace tfs
         RWLock::Lock lock(*this, common::WRITE_LOCKER);
         elect_num_ <  NsGlobalStatisticsInfo::ELECT_SEQ_NO_INITIALIZE ? elect_num_ = GFactory::get_global_info().calc_elect_seq_num_average() : ++elect_num_;
       }
-      inline bool in_safe_mode_time(const time_t now = time(NULL)) const 
-      {
-        return (now - startup_time_ <= common::SYSPARAM_NAMESERVER.safe_mode_time_ )
-              || (now - report_time_ <=  common::SYSPARAM_NAMESERVER.safe_mode_time_);
-      }  
 #ifdef TFS_NS_DEBUG
       inline void total_elect_num_inc()
       {
@@ -106,9 +100,8 @@ namespace tfs
         rb_status_ = status;
       }
 
-      inline bool is_report_block_complete(void)
+      inline bool is_report_block_complete(void) const
       {
-        RWLock::Lock lock(*this, common::READ_LOCKER);
         return rb_status_ == REPORT_BLOCK_STATUS_COMPLETE;
       } 
       static const int8_t MULTIPLE;
@@ -145,7 +138,6 @@ namespace tfs
       int64_t elect_seq_;
       time_t  startup_time_;
       time_t  last_update_time_;
-      time_t  report_time_;
       int32_t current_load_;
       int32_t block_count_;
       int32_t write_index_;

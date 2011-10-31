@@ -150,7 +150,7 @@ namespace tfs
       int initialize();
       int wait_for_shut_down();
       int destroy();
-      int push(common::BasePacket* message, const int32_t max_queue_size = 0, const bool block = true);
+      int push(common::BasePacket* message, const int32_t max_queue_size = 0, const bool block = false);
       virtual bool handlePacketQueue(tbnet::Packet *packet, void *args);
 
     private:
