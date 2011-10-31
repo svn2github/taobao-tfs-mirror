@@ -97,7 +97,7 @@ namespace tfs
       LRU_MAP_ITERATOR iter = index_.find(key);
       if (index_.end() != iter)
       {
-        list_.splice(list_.begin(), list_, iter->second);
+        list_.splice(list_.end(), list_, iter->second);
         iter->second->inc_visit_count();
         iter->second->inc_ref();
         TBSYS_LOG(DEBUG, "ref_count_ = %l"PRI64_PREFIX"d", iter->second->ref_count_);
