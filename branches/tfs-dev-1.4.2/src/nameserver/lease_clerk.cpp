@@ -200,7 +200,7 @@ namespace tfs
         size = leases_.size();
      }
       tbutil::Time end = tbutil::Time::now();
-      TBSYS_LOG(INFO, "cleanup lease complete, current lease map size: %u, consume: %" PRI64_PREFIX "d",
+      TBSYS_LOG(INFO, "cleanup lease complete, current lease map size: %zd, consume: %" PRI64_PREFIX "d",
           leases_.size(), (end - now).toMicroSeconds());
     }
 
@@ -360,7 +360,7 @@ namespace tfs
       LeaseEntryPtr lease = find(id);
       if (lease == 0)
       {
-        TBSYS_LOG(ERROR, "lease not found by block id: %u", id);
+        TBSYS_LOG(ERROR, "lease not found by block id: %"PRI64_PREFIX"d", id);
         return false;
       }
       tbutil::Monitor<tbutil::Mutex>::Lock lock(*lease);
@@ -411,7 +411,7 @@ namespace tfs
 
       lease->change(status);
       lease->notifyAll();
-      TBSYS_LOG(DEBUG, "cancel ---------%"PRI64_PREFIX"d", lease->id());
+      TBSYS_LOG(DEBUG, "cancel ---------%u", lease->id());
       GFactory::get_timer()->cancel(lease);
       return true;
     }

@@ -113,7 +113,7 @@ void init()
   g_cmd_map["exit"] = CmdNode("exit", "exit", 0, 0, cmd_quit);
   g_cmd_map["param"] = CmdNode("param name [set value [extravalue]]", "set/get param value", 1, 4, cmd_set_run_param);
   g_cmd_map["addblk"] = CmdNode("addblk blockid", "add block", 1, 1, cmd_add_block);
-  g_cmd_map["removeblk"] = CmdNode("removeblock blockid serverip:port", "remove block", 2, 2, cmd_remove_block);
+  g_cmd_map["removeblk"] = CmdNode("removeblock blockid serverip:port", "remove block", 1, 2, cmd_remove_block);
   g_cmd_map["loadblk"] = CmdNode("loadblk blockid serverip:port", "load block", 2, 2, cmd_load_block);
   g_cmd_map["compactblk"] = CmdNode("compactblk blockid", "compact block", 1, 1, cmd_compact_block);
   g_cmd_map["replblk"] = CmdNode("replblk blockid [src dest action]", "replicate block", 1, 4, cmd_replicate_block);
@@ -232,7 +232,10 @@ int cmd_set_run_param(const VSTRING& param)
       "cluster_index",
       "build_plan_default_wait_time",
       "group_count",
-      "group_seq"
+      "group_seq",
+      "discard_newblk_safe_mode_time",
+      "discard_max_count",
+      ""
   };
   static int32_t param_strlen = sizeof(param_str) / sizeof(char*);
 
@@ -338,7 +341,7 @@ int cmd_remove_block(const VSTRING& param)
 {
   uint32_t block_id = atoi(param[0].c_str());
   uint64_t server_id = Func::get_host_ip(param[1].c_str());
-  if (0 == server_id || 0 == block_id)
+  if (/*0 == server_id || */0 == block_id)
   {
     fprintf(stderr, "invalid blockid or address: %s %s\n", param[0].c_str(), param[1].c_str());
     return TFS_ERROR;

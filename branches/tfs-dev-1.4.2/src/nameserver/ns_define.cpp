@@ -18,6 +18,7 @@
  *
  */
 #include "ns_define.h"
+#include "common/parameter.h"
 #include "server_collect.h"
 
 namespace tfs
@@ -84,6 +85,11 @@ namespace tfs
           elect_seq_num_, use_capacity_, total_capacity_, total_block_count_, total_load_, max_load_, max_block_count_, alive_server_count_); 
     }
 
+    NsRuntimeGlobalInformation::NsRuntimeGlobalInformation()
+    {
+      initialize();
+    }
+
     void NsRuntimeGlobalInformation::initialize()
     {
       memset(this, 0, sizeof(*this));
@@ -93,6 +99,22 @@ namespace tfs
       owner_status_ = NS_STATUS_NONE;
       other_side_status_ = NS_STATUS_NONE;
       sync_oplog_flag_ = NS_SYNC_DATA_FLAG_NONE;
+    }
+
+    void NsRuntimeGlobalInformation::set_switch_time(const int64_t now)
+    {
+      switch_time_ = now + common::SYSPARAM_NAMESERVER.safe_mode_time_;
+      discard_newblk_safe_mode_time_ =  now + common::SYSPARAM_NAMESERVER.discard_newblk_safe_mode_time_;
+    }
+
+    bool NsRuntimeGlobalInformation::in_safe_mode_time(const int64_t now) const
+    {
+      return  now < switch_time_;
+    }
+
+    bool NsRuntimeGlobalInformation::in_discard_newblk_safe_mode_time(const int64_t now) const
+    {
+      return  now < discard_newblk_safe_mode_time_;
     }
 
     void NsRuntimeGlobalInformation::dump(int32_t level, const char* file , const int32_t line , const char* function ) const

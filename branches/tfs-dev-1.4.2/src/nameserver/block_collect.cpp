@@ -56,7 +56,7 @@ namespace nameserver
       writable = !is_full();
       bool can_be_master = ((writable && hold_master_ == HOLD_MASTER_FLAG_NO
                 && server->can_be_master(SYSPARAM_NAMESERVER.max_write_file_count_)) );
-      TBSYS_LOG(DEBUG, "server: %s can_be_master: %d, block: %u writable: %d", tbsys::CNetUtil::addrToString(server->id()).c_str(), can_be_master, id(), writable);
+      //TBSYS_LOG(DEBUG, "server: %s can_be_master: %d, block: %u writable: %d", tbsys::CNetUtil::addrToString(server->id()).c_str(), can_be_master, id(), writable);
       std::vector<ServerCollect*>::iterator where = 
           std::find(hold_.begin(), hold_.end(), server);
       if (force 
@@ -70,7 +70,7 @@ namespace nameserver
       {
         if (where != hold_.end())
         {
-          TBSYS_LOG(DEBUG,"server: %p: %s object is exist", server, CNetUtil::addrToString(server->id()).c_str());
+          TBSYS_LOG(WARN,"server: %p: %s object is exist", server, CNetUtil::addrToString(server->id()).c_str());
           hold_.erase(where);
         }
         hold_.insert(hold_.begin(), server);
@@ -84,7 +84,7 @@ namespace nameserver
         }
         else
         {
-          TBSYS_LOG(DEBUG,"server: %p: %s object is exist", server, CNetUtil::addrToString(server->id()).c_str());
+          TBSYS_LOG(WARN,"server: %p: %s object is exist", server, CNetUtil::addrToString(server->id()).c_str());
         }
 
       }
@@ -218,7 +218,7 @@ namespace nameserver
         if ((info_.file_count_ > new_block_info.file_count_)
             || (info_.size_ != new_block_info.size_)) 
         {
-          TBSYS_LOG(WARN, "block: %u info not match");
+          TBSYS_LOG(WARN, "block: %u info not match", id());
           if (role == NS_ROLE_MASTER)
           {
             register_expire_block(expires, server, this);
@@ -334,19 +334,19 @@ namespace nameserver
     else
     {
       int32_t size = static_cast<int32_t>(hold_.size());
-      TBSYS_LOG(DEBUG, "size: %d, block: %u", size, this->info_.block_id_);
+      //TBSYS_LOG(DEBUG, "size: %d, block: %u", size, this->info_.block_id_);
       if (size <= 0)
       {
-        TBSYS_LOG(DEBUG, "block: %u has been lost, do not replicate", info_.block_id_);
+        TBSYS_LOG(ERROR, "block: %u has been lost, do not replicate", info_.block_id_);
       }
       else
       {
         if (size < SYSPARAM_NAMESERVER.min_replication_)// 1 ~ min_replication_
         {
-          TBSYS_LOG(DEBUG, "last update time: %"PRI64_PREFIX"d, now: %"PRI64_PREFIX"d", last_update_time_, now);
+          //TBSYS_LOG(DEBUG, "last update time: %"PRI64_PREFIX"d, now: %"PRI64_PREFIX"d", last_update_time_, now);
           if ((last_update_time_ + SYSPARAM_NAMESERVER.replicate_wait_time_) <= now)
           {
-            TBSYS_LOG(DEBUG, "emergency replicate block: %u", info_.block_id_);
+            TBSYS_LOG(INFO, "emergency replicate block: %u", info_.block_id_);
             priority = PLAN_PRIORITY_EMERGENCY;
           }
         } 
@@ -359,7 +359,7 @@ namespace nameserver
           if ((last_update_time_ + SYSPARAM_NAMESERVER.replicate_wait_time_) <= now
               && replicate)
           {
-            TBSYS_LOG(DEBUG, "replicate block: %u", info_.block_id_);
+            TBSYS_LOG(INFO, "replicate block: %u", info_.block_id_);
             priority = PLAN_PRIORITY_NORMAL;
           }
         }

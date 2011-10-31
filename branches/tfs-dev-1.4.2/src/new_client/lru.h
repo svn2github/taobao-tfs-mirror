@@ -37,8 +37,7 @@ namespace tfs
       lru()
       {
         size_ = 1000;
-        index_.resize(size_);
-        list_.resize(size_);
+        resize(size_);
       }
 
       ~lru()
@@ -48,10 +47,10 @@ namespace tfs
 
       void resize(int32_t size)
       {
-        assert (size > 0);
-        size_ = size;
-        index_.resize(size_);
-        list_.resize(size_);
+        if (size > 0)
+        {
+          size_ = size;
+        }
       }
 
       T2* find(const T1& first)
@@ -96,7 +95,7 @@ namespace tfs
           n->second = second;
           index_[first] = n;
         }
-        else if ((int) list_.size() >= size_)
+        else if (size() >= size_)
         { // erase the last element
           typename List::iterator n = list_.end();
           --n; // the last element

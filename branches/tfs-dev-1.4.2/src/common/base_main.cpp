@@ -16,6 +16,7 @@
 
 #include <tbsys.h>
 
+#include "func.h"
 #include "define.h"
 #include "base_main.h"
 #include "error_msg.h"
@@ -174,7 +175,8 @@ static const char _g_build_description[] = "unknown";
         int32_t pid = 0;
         if (daemon)
         {
-          pid = tbsys::CProcess::startDaemon(pid_file_path_.c_str(), log_file_path_.c_str());
+          //pid = tbsys::CProcess::startDaemon(pid_file_path_.c_str(), log_file_path_.c_str());
+          pid = Func::start_daemon(pid_file_path_.c_str(), log_file_path_.c_str());
         }
 
         if (0 == pid)//child process

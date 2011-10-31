@@ -39,6 +39,7 @@ namespace tfs
 
     int NameServerParameter::initialize(void)
     {
+      discard_max_count_ = 0;
       const char* index = TBSYS_CONFIG.getString(CONF_SN_NAMESERVER, CONF_CLUSTER_ID);
       if (index == NULL
           || strlen(index) < 1
@@ -159,6 +160,8 @@ namespace tfs
         TBSYS_LOG(ERROR, "%s in [%s] is invalid, value: %d", CONF_GROUP_SEQ, CONF_SN_NAMESERVER, group_seq_);
         return EXIT_SYSTEM_PARAMETER_ERROR;
       }
+      report_block_expired_time_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_REPORT_BLOCK_EXPIRED_TIME, heart_interval_ * 2);
+      discard_newblk_safe_mode_time_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_DISCARD_NEWBLK_SAFE_MODE_TIME, safe_mode_time_ * 2); 
       return TFS_SUCCESS;
     }
 
@@ -324,12 +327,12 @@ namespace tfs
       std::string db_infos = TBSYS_CONFIG.getString(CONF_SN_NAMEMETASERVER, CONF_META_DB_INFOS, "");
       std::vector<std::string> fields;
       Func::split_string(db_infos.c_str(), ';', fields);
-      TBSYS_LOG(DEBUG, "fields.size = %d", fields.size());
+      TBSYS_LOG(DEBUG, "fields.size = %zd", fields.size());
       for (size_t i = 0; i < fields.size(); i++)
       {
         std::vector<std::string> items;
         Func::split_string(fields[i].c_str(), ',', items);
-        TBSYS_LOG(DEBUG, "items.size = %d", items.size());
+        TBSYS_LOG(DEBUG, "items.size = %zd", items.size());
         DbInfo tmp_db_info;
         if (items.size() >= 3)
         {

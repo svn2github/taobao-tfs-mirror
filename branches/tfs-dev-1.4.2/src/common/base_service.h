@@ -47,7 +47,7 @@ namespace tfs
       inline tbnet::IPacketStreamer* get_packet_streamer() { return  streamer_;}
 
       /** get transport*/
-      tbnet::Transport& get_transport() const;
+      tbnet::Transport* get_transport() const { return transport_;}
 
       /** stop this service*/
       bool destroy();
@@ -86,7 +86,7 @@ namespace tfs
       virtual int async_callback(NewClient* client, void* args);
 
       /** push workitem to workers*/
-      bool push(BasePacket* packet);
+      bool push(BasePacket* packet, bool block = false);
 
       /** get listen port*/
       int32_t get_port() const;
@@ -115,7 +115,7 @@ namespace tfs
       BasePacketStreamer* streamer_;
       tbutil::TimerPtr timer_;
     protected:
-      tbnet::Transport transport_;
+      tbnet::Transport* transport_;
       tbnet::PacketQueueThread main_workers_;
       int32_t work_queue_size_;
     };

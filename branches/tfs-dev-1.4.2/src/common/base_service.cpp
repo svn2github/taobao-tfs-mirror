@@ -52,7 +52,8 @@ namespace tfs
 
     bool BaseService::destroy()
     {
-      transport_.stop();
+      if (NULL != transport_)
+        transport_->stop();
       main_workers_.stop();
       destroy_service();
       NewClientManager::get_instance().destroy();
@@ -61,11 +62,13 @@ namespace tfs
         timer_->destroy();
       }
 
-      transport_.wait();
+      if (NULL != transport_)
+        transport_->wait();
       main_workers_.wait();
 
       destroy_packet_factory(packet_factory_);
       destroy_packet_streamer(streamer_);
+      tbsys::gDelete(transport_);
       return true;
     }
 
@@ -80,9 +83,9 @@ namespace tfs
       return TFS_SUCCESS;
     }
 
-    bool BaseService::push(BasePacket* packet)
+    bool BaseService::push(BasePacket* packet, bool block)
     {
-      return main_workers_.push(packet, work_queue_size_);
+      return main_workers_.push(packet, work_queue_size_, block);
     }
 
     tbnet::IPacketHandler::HPRetCode BaseService::handlePacket(tbnet::Connection *connection, tbnet::Packet *packet)
@@ -107,7 +110,7 @@ namespace tfs
           {
             bpacket->dump();
           }
-          if (!main_workers_.push(bpacket, work_queue_size_))
+          if (!main_workers_.push(bpacket, work_queue_size_, false))
           {
             bpacket->reply_error_packet(TBSYS_LOG_LEVEL(ERROR),STATUS_MESSAGE_ERROR, "%s, task message beyond max queue size, discard", get_ip_addr());
           }
@@ -247,8 +250,9 @@ namespace tfs
           }
           else
           {
+            transport_ = new tbnet::Transport();
             streamer_->set_packet_factory(packet_factory_);
-            tbnet::IOComponent* com = transport_.listen(spec, streamer_, this);
+            tbnet::IOComponent* com = transport_->listen(spec, streamer_, this);
             if (NULL == com)
             {
               TBSYS_LOG(ERROR, "%s listen port: %d fail", app_name, port);
@@ -256,7 +260,7 @@ namespace tfs
             }
             else
             {
-              transport_.start();
+              transport_->start();
             }
           }
         }
@@ -266,7 +270,7 @@ namespace tfs
       if (TFS_SUCCESS == iret)
       {
         iret = NewClientManager::get_instance().initialize(packet_factory_, streamer_,
-                &transport_, &BaseService::golbal_async_callback_func, this);
+                transport_, &BaseService::golbal_async_callback_func, this);
         if (TFS_SUCCESS != iret)
         {
           TBSYS_LOG(ERROR, "%s start client manager fail", app_name);

@@ -63,11 +63,11 @@ namespace tfs
 
     bool BaseStrategy::check(const ServerCollect* server) const
     {
-      bool bret = !server->in_safe_mode_time();
+      bool bret = server->is_report_block_complete();
       if (!bret)
       {
 #if defined(TFS_NS_GTEST) || defined(TFS_NS_INTEGRATION) || defined(TFS_NS_DEBUG)
-        TBSYS_LOG(DEBUG, "dataserver: %s in SAFE_MODE_TIME status , can't join ",
+        TBSYS_LOG(DEBUG, "dataserver: %s in report block status , can't join ",
             CNetUtil::addrToString(server->id()).c_str());
 #endif
       }
@@ -222,7 +222,7 @@ namespace tfs
 
       DS_WEIGHT::const_iterator iter = weights.begin();
       int32_t need_elect_count = elect_count;
-      TBSYS_LOG(DEBUG, "weights.size: %u, need_elect_count: %d", weights.size(), need_elect_count);
+      TBSYS_LOG(DEBUG, "weights.size: %zd, need_elect_count: %d", weights.size(), need_elect_count);
       while (iter != weights.end() && need_elect_count > 0)
       {
         uint32_t dlan = Func::get_lan(iter->second->id(), SYSPARAM_NAMESERVER.group_mask_);

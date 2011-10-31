@@ -19,6 +19,7 @@
 
 #include <pthread.h>
 #include <Timer.h>
+#include "gc.h"
 #include "common/lock.h"
 #include "block_chunk.h"
 #include "block_collect.h"
@@ -53,7 +54,7 @@ namespace nameserver
     int add_server(const common::DataServerStatInfo& info, const time_t now, bool& isnew);
     int remove_server(const uint64_t id, const time_t now);
     int update_relation(ServerCollect* server, const std::vector<common::BlockInfo>& blocks, EXPIRE_BLOCK_LIST& expires, const time_t now);
-    int build_relation(BlockCollect* block, ServerCollect* server, const time_t now, const bool force = false);
+    int build_relation(BlockCollect* block, ServerCollect* server, std::vector<GCObject*>& rms, const time_t now, const bool force = false);
 
     BlockCollect* elect_write_block();
 
@@ -407,7 +408,7 @@ namespace nameserver
         const int64_t total_block_count,
         const int64_t average_block_size,
         //std::set<ServerCollect*>& source,
-        std::multimap<int32_t, ServerCollect*>& source,
+        std::multimap<int64_t, ServerCollect*>& source,
         std::set<ServerCollect*>& target);
 
     void split_servers_helper(const int64_t average_load,
@@ -415,7 +416,7 @@ namespace nameserver
         const int64_t total_block_count,
         ServerCollect* server,
         //std::set<ServerCollect*>& source,
-        std::multimap<int32_t, ServerCollect*>& source,
+        std::multimap<int64_t, ServerCollect*>& source,
         std::set<ServerCollect*>& target);
 
     bool add_task(const TaskPtr& task);
@@ -423,6 +424,8 @@ namespace nameserver
     TaskPtr find_task(const uint32_t block_id);
     void find_server_in_plan_helper(std::vector<ServerCollect*>& servers, std::vector<ServerCollect*>& except);
     bool expire();
+    bool remove_task_mapping(std::vector<TaskPtr>& tasks);
+    bool remove_task_mapping(TaskPtr task);
 
     int64_t get_running_plan_size() const
     {

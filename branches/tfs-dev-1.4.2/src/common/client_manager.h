@@ -77,7 +77,7 @@ namespace tfs
         async_callback_func_entry async_callback_entry_;
         void* args_;
         static const uint32_t MAX_SEQ_ID = 0xFFFFFF - 1;
-        static const int32_t  DEFAULT_CLIENT_CONNTION_QUEUE_LIMIT = 10240;
+        static const int32_t  DEFAULT_CLIENT_CONNTION_QUEUE_LIMIT = 256;
         uint32_t seq_id_;
 
         bool initialize_;

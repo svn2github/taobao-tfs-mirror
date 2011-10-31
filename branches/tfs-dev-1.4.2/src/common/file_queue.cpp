@@ -147,7 +147,7 @@ int FileQueue::push(const void* const data, const int64_t len)
 
   if (ret != size)
   {
-    TBSYS_LOG(WARN, "write filed, path: %s, fd: %d, lenght: %d, ret: %d, size: %d", queue_path_.c_str(), write_fd_,
+    TBSYS_LOG(WARN, "write filed, path: %s, fd: %d, lenght: %"PRI64_PREFIX"d, ret: %d, size: %d", queue_path_.c_str(), write_fd_,
         len, ret, size);
     ret = size - ret;
     if (ret > 0 && ret <= size)
@@ -238,7 +238,7 @@ QueueItem *FileQueue::pop(int index)
         item = NULL;
       }
       TBSYS_LOG(ERROR,
-          "read file failed length %d : %d form fd: %d, read_seqno_: %d, read_offset_: %d, current pos_tion: %d",
+          "read file failed length %d : %d form fd: %d, read_seqno_: %d, read_offset_: %d, current pos_tion: %"PRI64_PREFIX"d",
           iret, size, read_fd_, queue_information_header_.read_seqno_, queue_information_header_.read_offset_, curpos_);
       ::lseek(read_fd_, 0, SEEK_END);
       if (queue_information_header_.write_seqno_ > queue_information_header_.read_seqno_)

@@ -76,7 +76,10 @@ namespace nameserver
       int  handle_control_get_balance_percent(const int64_t buf_length, char* error_buf);
       int  handle_control_set_balance_percent(const common::ClientCmdInformation& info, const int64_t buf_length, char* error_buf);
 
+      bool is_discard(void);
+
     private:
+      volatile uint64_t ref_count_;
       LayoutManager& lay_out_manager_;
       NameServer& manager_;
   };

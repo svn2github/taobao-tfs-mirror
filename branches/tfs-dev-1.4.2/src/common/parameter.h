@@ -51,6 +51,9 @@ namespace tfs
       int32_t balance_max_diff_block_num_;
       int32_t group_seq_;
       int32_t group_count_;
+      int32_t report_block_expired_time_;
+      int32_t discard_newblk_safe_mode_time_;
+      int32_t discard_max_count_;
       double  balance_percent_;
 
       static NameServerParameter ns_parameter_;

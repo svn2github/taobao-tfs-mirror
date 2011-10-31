@@ -55,9 +55,10 @@ namespace tfs
 #define CONF_MIN_REPLICATION                          "min_replication"
 #define CONF_USE_CAPACITY_RATIO                       "use_capacity_ratio"
 #define CONF_TASK_MAX_QUEUE_SIZE                      "task_max_queue_size"
+#define CONF_DISCARD_NEWBLK_SAFE_MODE_TIME            "discard_newblk_safe_mode_time"
 
 
-  //adminserver, only monitor ds
+//adminserver, only monitor ds
 #define CONF_DS_SCRIPT                                "ds_script"
 #define CONF_DS_FKILL_WAITTIME                        "ds_fkill_waittime"
 #define CONF_CHECK_INTERVAL                           "check_interval"
@@ -103,6 +104,7 @@ namespace tfs
 #define CONF_GROUP_SEQ                                "group_seq"
 #define CONF_GROUP_COUNT                              "group_count"
 #define CONF_TIME_REPORT_BLOCK_INTERVAL               "time_report_block_interval" //
+#define CONF_REPORT_BLOCK_EXPIRED_TIME                "report_block_expired_time"
 
   //dataserver
 #define CONF_DATA_THREAD_COUNT                        "data_thread_count"

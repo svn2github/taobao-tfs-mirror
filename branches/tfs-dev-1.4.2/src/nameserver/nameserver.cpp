@@ -69,7 +69,7 @@ namespace tfs
               && (ngi.owner_status_ == NS_STATUS_INITIALIZED)
               && current < end.toMicroSeconds())
           {
-            bret = server_->push(message);
+            bret = server_->push(message, false);
             if (!bret)
             {
               current = tbutil::Time::now().toMicroSeconds();
@@ -362,14 +362,15 @@ namespace tfs
               break;
             case MASTER_AND_SLAVE_HEART_MESSAGE:
             case HEARTBEAT_AND_NS_HEART_MESSAGE:
-              master_slave_heart_mgr_.push(bpacket);
+              master_slave_heart_mgr_.push(bpacket, 0, false);
               break;
             case OPLOG_SYNC_MESSAGE:
               meta_mgr_.get_oplog_sync_mgr().push(bpacket, 0, false);
               break;
             default:
-              if (!main_workers_.push(bpacket, work_queue_size_))
+              if (!main_workers_.push(bpacket, work_queue_size_, false))
               {
+                hret = tbnet::IPacketHandler::FREE_CHANNEL;
                 bpacket->reply_error_packet(TBSYS_LOG_LEVEL(ERROR),STATUS_MESSAGE_ERROR, "%s, task message beyond max queue size, discard", get_ip_addr());
                 bpacket->free();
               }
@@ -810,7 +811,7 @@ namespace tfs
                   ngi.other_side_ip_port_ = tbsys::CNetUtil::ipToAddr((*iter), get_port());
               }
 
-              ngi.switch_time_ = time(NULL);
+              ngi.set_switch_time();
               ngi.owner_status_ = NS_STATUS_UNINITIALIZE;
               ngi.vip_ = Func::get_addr(get_ip_addr());
               ngi.owner_role_ = Func::is_local_addr(ngi.vip_) == true ? NS_ROLE_MASTER : NS_ROLE_SLAVE;
@@ -940,7 +941,7 @@ namespace tfs
               VUINT64 peer_list(response->get_ds_list()->begin(), response->get_ds_list()->end());
               VUINT64 local_list;
               meta_mgr_.get_alive_server(local_list);
-              TBSYS_LOG(DEBUG, "local size:%u,peer size:%u", local_list.size(), peer_list.size());
+              TBSYS_LOG(DEBUG, "local size: %zd, peer size: %zd", local_list.size(), peer_list.size());
               complete = peer_list.size() == 0U;
               if (!complete)
               {

@@ -392,7 +392,7 @@ namespace tfs
           if (!bret)
           {
             ret = common::TFS_ERROR;
-            TBSYS_LOG(ERROR, "%s", "new client wait server: %s response fail",
+            TBSYS_LOG(ERROR,"new client wait server: %s response fail",
               tbsys::CNetUtil::addrToString(server_id).c_str());
           }
           else

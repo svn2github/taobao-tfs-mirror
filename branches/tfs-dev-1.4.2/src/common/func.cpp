@@ -432,7 +432,7 @@ namespace tfs
     {
       if (len <= 0 || len > TFS_MALLOC_MAX_SIZE)
       {
-        TBSYS_LOG(ERROR, "allocate to large memory: len: %u > maxlen: %u", len, TFS_MALLOC_MAX_SIZE);
+        TBSYS_LOG(ERROR, "allocate to large memory: len: %d > maxlen: %"PRI64_PREFIX"d", len, TFS_MALLOC_MAX_SIZE);
         return NULL;
       }
       if (data == NULL)
@@ -447,6 +447,17 @@ namespace tfs
 
     // sleep
     void Func::sleep(const float f_heart_interval, bool& stop)
+    {
+      TBSYS_LOG(DEBUG, "stop: %d", stop);
+      int32_t heart_interval = static_cast<int32_t>(((f_heart_interval + 0.01) * 10));
+      while (!stop && heart_interval > 0)
+      {
+        usleep(100000);
+        heart_interval--;
+      }
+    }
+
+    void Func::sleep(const float f_heart_interval, int32_t& stop)
     {
       TBSYS_LOG(DEBUG, "stop: %d", stop);
       int32_t heart_interval = static_cast<int32_t>(((f_heart_interval + 0.01) * 10));

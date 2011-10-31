@@ -269,44 +269,47 @@ namespace tfs
 
     int LayoutManager::CompactTask::handle_complete(common::BasePacket* msg, bool& all_complete_flag)
     {
-      dump(TBSYS_LOG_LEVEL_INFO, "handle compact complete message");
       CompactBlockCompleteMessage* message = dynamic_cast<CompactBlockCompleteMessage*>(msg);
-      PlanStatus status = status_transform_compact_to_plan(static_cast<CompactStatus>(message->get_success()));
-      CompactComplete value(message->get_server_id(), message->get_block_id(), status);
-      memcpy(&value.block_info_, &message->get_block_info(), sizeof(block_info_));
-      int32_t iret = TFS_SUCCESS;
-      VUINT64 servers;
-      NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
-      if (ngi.owner_role_ == NS_ROLE_MASTER)//master handle
+      int32_t iret = message != NULL ? TFS_SUCCESS : TFS_ERROR;
+      if (TFS_SUCCESS == iret)
       {
-        check_complete(value, servers);
-        iret = do_complete(value, servers);
-        if (iret != TFS_SUCCESS)
+        dump(TBSYS_LOG_LEVEL_INFO, "handle compact complete message");
+        PlanStatus status = status_transform_compact_to_plan(static_cast<CompactStatus>(message->get_success()));
+        CompactComplete value(message->get_server_id(), message->get_block_id(), status);
+        memcpy(&value.block_info_, &message->get_block_info(), sizeof(block_info_));
+        VUINT64 servers;
+        NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
+        if (ngi.owner_role_ == NS_ROLE_MASTER)//master handle
         {
-          TBSYS_LOG(ERROR, "block: %u compact, do compact complete fail: %d", value.block_id_, iret);
-        }
+          check_complete(value, servers);
+          iret = do_complete(value, servers);
+          if (iret != TFS_SUCCESS)
+          {
+            TBSYS_LOG(ERROR, "block: %u compact, do compact complete fail: %d", value.block_id_, iret);
+          }
 #if !defined(TFS_NS_GTEST) && !defined(TFS_NS_INTEGRATION)
-        iret = message->reply(new StatusMessage(iret));
+          iret = message->reply(new StatusMessage(iret));
 #endif
 
-        all_complete_flag = value.is_complete_;
-        if (all_complete_flag)
-          status_ = PLAN_STATUS_END;
-      }
-      else
-      {
-        //slave
-        std::bitset < 3 > bset(message->get_flag());
-        value.all_success_ = bset[0];
-        value.has_success_ = bset[1];
-        value.is_complete_ = bset[2];
-        TBSYS_LOG(DEBUG, "check compact complete flag: %u", message->get_flag());
-        servers.clear();
-        servers.assign(message->get_ds_list().begin(), message->get_ds_list().end());
-        iret = do_complete(value, servers);
-        if (iret != TFS_SUCCESS)
+          all_complete_flag = value.is_complete_;
+          if (all_complete_flag)
+            status_ = PLAN_STATUS_END;
+        }
+        else
         {
-          TBSYS_LOG(ERROR, "block: %u compact, do compact complete fail: %d", value.block_id_, iret);
+          //slave
+          std::bitset < 3 > bset(message->get_flag());
+          value.all_success_ = bset[0];
+          value.has_success_ = bset[1];
+          value.is_complete_ = bset[2];
+          TBSYS_LOG(DEBUG, "check compact complete flag: %u", message->get_flag());
+          servers.clear();
+          servers.assign(message->get_ds_list().begin(), message->get_ds_list().end());
+          iret = do_complete(value, servers);
+          if (iret != TFS_SUCCESS)
+          {
+            TBSYS_LOG(ERROR, "block: %u compact, do compact complete fail: %d", value.block_id_, iret);
+          }
         }
       }
       return iret;
@@ -351,7 +354,7 @@ namespace tfs
         }
       }
 
-      TBSYS_LOG(DEBUG, "complete_count: %d, success_count: %d, complete_status size: %u",
+      TBSYS_LOG(DEBUG, "complete_count: %d, success_count: %d, complete_status size: %zd",
           complete_count, success_count, complete_status_.size());
 
       value.is_complete_ = complete_count == static_cast<int32_t>(complete_status_.size());
@@ -384,11 +387,7 @@ namespace tfs
         std::vector<uint64_t>::iterator iter = servers.begin();
         for (; iter != servers.end(); ++iter)
         {
-          ServerCollect* server = NULL;
-          {
-            server = manager_->get_server((*iter));
-          }
-
+          ServerCollect* server = manager_->get_server((*iter));
           BlockChunkPtr ptr = manager_->get_chunk(value.block_id_);
           RWLock::Lock lock(*ptr, WRITE_LOCKER);
           BlockCollect* block = ptr->find(value.block_id_);
@@ -491,7 +490,7 @@ namespace tfs
       int32_t iret = runer_.size() >= 0x2U ? TFS_SUCCESS : TFS_ERROR;
       if (TFS_SUCCESS != iret)
       {
-        TBSYS_LOG(WARN, "task (replicate) block: %u, type: %d, priority: %d, runer size: %u is invalid", block_id_, type_, priority_, runer_.size());
+        TBSYS_LOG(WARN, "task (replicate) block: %u, type: %d, priority: %d, runer size: %zd is invalid", block_id_, type_, priority_, runer_.size());
       }
       else
       {
@@ -538,83 +537,74 @@ namespace tfs
     {
       time_t now = time(NULL);
       ReplicateBlockMessage* message = dynamic_cast<ReplicateBlockMessage*>(msg);
-      const ReplBlock blocks = *message->get_repl_block();
-      bool success = message->get_command() == PLAN_STATUS_END;
-      int32_t iret = STATUS_MESSAGE_OK;
-      TBSYS_LOG(INFO, "block: %u %s complete status: %s", blocks.block_id_,
-          blocks.is_move_ == REPLICATE_BLOCK_MOVE_FLAG_YES ? "move" : "replicate",
-          message->get_command() == PLAN_STATUS_END ? "end" :
-          message->get_command() == PLAN_STATUS_TIMEOUT ? "timeout" :
-          message->get_command() == PLAN_STATUS_BEGIN ? "begin" :
-          message->get_command() == PLAN_STATUS_FAILURE ? "failure" : "unknow");
-      if (success)
+      int32_t iret = NULL != message ? STATUS_MESSAGE_OK : STATUS_MESSAGE_REMOVE;
+      if (STATUS_MESSAGE_OK == iret)
       {
-        BlockChunkPtr ptr = manager_->get_chunk(blocks.block_id_);
-        BlockCollect* block = NULL;
-        {
-          RWLock::Lock lock(*ptr, READ_LOCKER);
-          block = ptr->find(blocks.block_id_);//find block
-        }
-
-        if (block != NULL)
-        {
-          ServerCollect* server = NULL;
-          {
-            server = manager_->get_server(blocks.destination_id_);// find destination dataserver
-          }
-          if (server != NULL)
-          {
-            RWLock::Lock lock(*ptr, WRITE_LOCKER);
-            manager_->build_relation(block, server, false);//build relation between block and dest dataserver
-          }
-
-          bool has_relieve_relation = false;
-          {
-            RWLock::Lock lock(*ptr, READ_LOCKER);
-            block = ptr->find(blocks.block_id_);
-            has_relieve_relation = blocks.is_move_ == REPLICATE_BLOCK_MOVE_FLAG_YES
-              && block->get_hold_size() > SYSPARAM_NAMESERVER.max_replication_;
-          }
-          if (has_relieve_relation)
-          {
-            {
-              server = manager_->get_server(blocks.source_id_);
-            }
-            RWLock::Lock lock(*ptr, WRITE_LOCKER);
-            manager_->relieve_relation(block, server, now);
-            iret = STATUS_MESSAGE_REMOVE;
-          }
-        }
-
-        NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
-        if (ngi.owner_role_ == NS_ROLE_MASTER)
-        {
-          common::Stream stream(message->length());
-          int32_t iret = message->serialize(stream);
-          if (common::TFS_SUCCESS != iret)
-          {
-            TBSYS_LOG(ERROR, "%s complete msg serialize error", blocks.is_move_ == REPLICATE_BLOCK_MOVE_FLAG_YES ? "move" : "replicate");
-          }
-          else
-          {
-            manager_->get_oplog_sync_mgr().log(OPLOG_TYPE_REPLICATE_MSG, stream.get_data(), stream.get_data_length());
-          }
-#if !defined(TFS_NS_GTEST) && !defined(TFS_NS_INTEGRATION)
-          message->reply(new StatusMessage(iret));
-#endif
-        }
-      }
-      else
-      {
+        const ReplBlock blocks = *message->get_repl_block();
+        bool success = message->get_command() == PLAN_STATUS_END;
         TBSYS_LOG(INFO, "block: %u %s complete status: %s", blocks.block_id_,
             blocks.is_move_ == REPLICATE_BLOCK_MOVE_FLAG_YES ? "move" : "replicate",
             message->get_command() == PLAN_STATUS_END ? "end" :
             message->get_command() == PLAN_STATUS_TIMEOUT ? "timeout" :
             message->get_command() == PLAN_STATUS_BEGIN ? "begin" :
             message->get_command() == PLAN_STATUS_FAILURE ? "failure" : "unknow");
+        if (success)
+        {
+          std::vector<GCObject*> rms;
+          {
+            ServerCollect* dest   = manager_->get_server(blocks.destination_id_);// find destination dataserver
+            ServerCollect* source = manager_->get_server(blocks.source_id_);// find source dataserver
+            BlockChunkPtr ptr = manager_->get_chunk(blocks.block_id_);//find block
+            RWLock::Lock lock(*ptr, WRITE_LOCKER);
+            BlockCollect* block = ptr->find(blocks.block_id_);
+
+            if (NULL != block)
+            {
+              if (NULL != dest)
+              {
+                manager_->build_relation(block, dest, rms, now, false);//build relation between block and dest dataserver
+              }
+              if ((blocks.is_move_ == REPLICATE_BLOCK_MOVE_FLAG_YES)
+                && (block->get_hold_size() > SYSPARAM_NAMESERVER.max_replication_)
+                && (NULL != source))
+              {
+                manager_->relieve_relation(block, source, now);
+                iret = STATUS_MESSAGE_REMOVE;
+              }
+            }
+          }
+
+          NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
+          if (ngi.owner_role_ == NS_ROLE_MASTER)
+          {
+            common::Stream stream(message->length());
+            if (common::TFS_SUCCESS != message->serialize(stream))
+            {
+              TBSYS_LOG(ERROR, "%s complete msg serialize error", blocks.is_move_ == REPLICATE_BLOCK_MOVE_FLAG_YES ? "move" : "replicate");
+            }
+            else
+            {
+              manager_->get_oplog_sync_mgr().log(OPLOG_TYPE_REPLICATE_MSG, stream.get_data(), stream.get_data_length());
+            }
+#if !defined(TFS_NS_GTEST) && !defined(TFS_NS_INTEGRATION)
+            message->reply(new StatusMessage(iret));
+#endif
+          }
+
+          GFactory::get_gc_manager().add(rms);
+        }
+        else
+        {
+          TBSYS_LOG(INFO, "block: %u %s complete status: %s", blocks.block_id_,
+              blocks.is_move_ == REPLICATE_BLOCK_MOVE_FLAG_YES ? "move" : "replicate",
+              message->get_command() == PLAN_STATUS_END ? "end" :
+              message->get_command() == PLAN_STATUS_TIMEOUT ? "timeout" :
+              message->get_command() == PLAN_STATUS_BEGIN ? "begin" :
+              message->get_command() == PLAN_STATUS_FAILURE ? "failure" : "unknow");
+        }
+        all_complete_flag = true;
+        status_ = PLAN_STATUS_END;
       }
-      all_complete_flag = true;
-      status_ = PLAN_STATUS_END;
       return (iret == STATUS_MESSAGE_OK || iret == STATUS_MESSAGE_REMOVE) ? TFS_SUCCESS : iret;
     }
 
@@ -665,11 +655,15 @@ namespace tfs
 
     int LayoutManager::DeleteBlockTask::handle_complete(common::BasePacket* msg, bool& all_complete_flag)
     {
-      all_complete_flag = true;
-      status_ = PLAN_STATUS_END;
       RemoveBlockResponseMessage* message = dynamic_cast<RemoveBlockResponseMessage*>(msg);
-      TBSYS_LOG(INFO, "block: %u remove complete status end", message->get_block_id());
-      return TFS_SUCCESS;
+      int32_t iret =  message != NULL  ? TFS_SUCCESS : TFS_ERROR;
+      if (TFS_SUCCESS == iret)
+      {
+        all_complete_flag = true;
+        status_ = PLAN_STATUS_END;
+        TBSYS_LOG(INFO, "block: %u remove complete status end", message->get_block_id());
+      }
+      return iret;
     }
 
     LayoutManager::MoveTask::MoveTask(LayoutManager* manager, const PlanPriority priority,

@@ -39,14 +39,10 @@ namespace tfs
       void destroy();
       int push(common::BasePacket* msg);
 
-      int add_report_server(const uint64_t server);
+      bool add_report_server(const uint64_t server, const int64_t now);
       int del_report_server(const uint64_t server);
-      int add_uncomplete_report_server(std::vector<uint64_t>& servers);
-      int add_uncomplete_report_server(const uint64_t server);
-      int del_uncomplete_report_server(const uint64_t server);
-      bool exist_uncomplete_report_server(const uint64_t server);
-      bool empty_uncomplete_report_server(void);
-      bool can_be_report(const uint64_t server);
+      void cleanup_expired_report_server(const int64_t now);
+      bool empty_report_server(const int64_t now);
     private:
       class KeepAliveIPacketQueueHeaderHelper : public tbnet::IPacketQueueHandler
       {
@@ -91,8 +87,7 @@ namespace tfs
       KeepAliveIPacketQueueHeaderHelper keepalive_queue_header_;
       ReportBlockIPacketQueueHeaderHelper report_block_queue_header_;
       common::RWLock mutex_;
-      std::vector<uint64_t> current_report_servers_;
-      std::vector<uint64_t> uncomplete_report_servers_;
+      std::map<uint64_t, int64_t> current_report_servers_;
     };
 
     class CheckOwnerIsMasterTimerTask: public tbutil::TimerTask

@@ -127,14 +127,14 @@ namespace tfs
         {
           if (packet->isRegularPacket())//data packet
           {
-            TBSYS_LOG(INFO, "no client waiting this packet.code: %d", packet->getPCode());
+            TBSYS_LOG(WARN, "no client waiting this packet.code: %d", packet->getPCode());
             packet->free();
           }
           else
           {
-            //TBSYS_LOG(DEBUG, "packet pcode: %d is not regular packet, command: %d, discard anyway. "
-            //    "args is NULL, maybe post channel timeout packet ",
-            //    packet->getPCode(), dynamic_cast<tbnet::ControlPacket*>(packet)->getCommand());
+            TBSYS_LOG(WARN, "packet pcode: %d is not regular packet, command: %d, discard anyway. "
+                "args is NULL, maybe post channel timeout packet ",
+                packet->getPCode(), dynamic_cast<tbnet::ControlPacket*>(packet)->getCommand());
           }
         }
       }

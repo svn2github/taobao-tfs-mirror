@@ -103,9 +103,14 @@ namespace tfs
         tbutil::Mutex::Lock lock(mutex_);
         ++count_;
         if (id == 0)
+        {
           ret_id = ++global_id_;
+        }
         else
+        {
           ret_id = id;
+          global_id_ = std::max(global_id_, id);
+        }
         if (count_ >= SKIP_BLOCK_NUMBER)
         {
           update_flag = true;

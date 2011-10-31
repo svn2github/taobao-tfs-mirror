@@ -59,7 +59,7 @@ int TfsClientImpl::initialize(const char* ns_addr, const int32_t cache_time, con
   {
     //TBSYS_LOG(INFO, "tfsclient already initialized");
   }
-  else if (cache_items <= 0 || cache_time <= 0)
+  else if (cache_items < 0 || cache_time <= 0)
   {
     TBSYS_LOG(ERROR, "invalid cache config. cache_time: %d, cache_items: %d", cache_time, cache_items);
     ret = TFS_ERROR;
@@ -556,7 +556,7 @@ int64_t TfsClientImpl::save_file_unique_ex(char* ret_tfs_name, const int32_t ret
 
 void TfsClientImpl::set_cache_items(const int64_t cache_items)
 {
-  if (cache_items > 0)
+  if (cache_items >= 0)
   {
     ClientConfig::cache_items_ = cache_items;
     TBSYS_LOG(INFO, "set cache items: %"PRI64_PREFIX"d", ClientConfig::cache_items_);

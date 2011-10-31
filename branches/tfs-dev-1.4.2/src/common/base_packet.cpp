@@ -108,7 +108,7 @@ namespace tfs
         bret = length > 0 && input->getDataLen() >= length;
         if (!bret)
         {
-          TBSYS_LOG(ERROR, "invalid packet: %d, length: %"PRI64_PREFIX"d  input buffer length: %"PRI64_PREFIX"d",
+          TBSYS_LOG(ERROR, "invalid packet: %d, length: %"PRI64_PREFIX"d  input buffer length: %d",
             header->_pcode, length, input->getDataLen());
           input->clear();
         }

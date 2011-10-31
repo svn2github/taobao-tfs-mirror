@@ -30,9 +30,10 @@ using namespace std;
 
 TfsSession::TfsSession(const std::string& nsip, const int64_t cache_time, const int64_t cache_items)
   :ns_addr_(0), ns_addr_str_(nsip), block_cache_time_(cache_time), block_cache_items_(cache_items),
-		cluster_id_(0), use_cache_(USE_CACHE_FLAG_YES)
+		cluster_id_(0), use_cache_(cache_items <= 0 ? USE_CACHE_FLAG_NO : USE_CACHE_FLAG_YES)
 {
-  block_cache_map_.resize(block_cache_items_);
+  if (USE_CACHE_FLAG_YES == use_cache_)
+    block_cache_map_.resize(block_cache_items_);
 #ifdef WITH_UNIQUE_STORE
   unique_store_ = NULL;
 #endif
