@@ -73,8 +73,8 @@ namespace tfs
 
     int MetaServerService::initialize(int argc, char* argv[])
     {
-      PROFILER_SET_STATUS(1);
-      PROFILER_SET_THRESHOLD(100);
+      PROFILER_SET_STATUS(0);
+      PROFILER_SET_THRESHOLD(20000);
       UNUSED(argc);
       UNUSED(argv);
       int ret = TFS_SUCCESS;
