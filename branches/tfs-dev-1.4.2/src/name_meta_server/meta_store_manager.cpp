@@ -75,7 +75,7 @@ namespace tfs
             DataBasePool::MAX_POOL_SIZE);
         my_pool_size = DataBasePool::MAX_POOL_SIZE;
       }
-      for (int i = 0; i < pool_size; i++)
+      for (int i = 0; i < my_pool_size; i++)
       {
         int data_base_index = i % SYSPARAM_NAMEMETASERVER.db_infos_.size();
         const NameMetaServerParameter::DbInfo& dbinfo = SYSPARAM_NAMEMETASERVER.db_infos_[data_base_index];
@@ -88,7 +88,7 @@ namespace tfs
         snprintf(passwd[i], 100, "%s", dbinfo.passwd_.c_str());
         hash_flag[i] = dbinfo.hash_value_;
       }
-      bool pool_ret = database_pool_->init_pool(pool_size,
+      bool pool_ret = database_pool_->init_pool(my_pool_size,
           conn_str, user_name, passwd, hash_flag);
 
       if(!pool_ret)
@@ -96,7 +96,7 @@ namespace tfs
         TBSYS_LOG(ERROR, "database pool init error");
         ret = TFS_ERROR;
       }
-      for (int i = 0; i < pool_size; i++)
+      for (int i = 0; i < my_pool_size; i++)
       {
         ::free(conn_str[i]);
         conn_str[i] = NULL;

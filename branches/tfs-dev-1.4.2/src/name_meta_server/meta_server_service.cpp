@@ -73,6 +73,8 @@ namespace tfs
 
     int MetaServerService::initialize(int argc, char* argv[])
     {
+      PROFILER_SET_STATUS(1);
+      PROFILER_SET_THRESHOLD(100);
       UNUSED(argc);
       UNUSED(argv);
       int ret = TFS_SUCCESS;
@@ -439,7 +441,7 @@ namespace tfs
     int MetaServerService::create(const int64_t app_id, const int64_t uid,
                                   const char* file_path, const FileType type)
     {
-      //PROFILER_START("create");
+      PROFILER_START("create");
       int ret = TFS_SUCCESS;
       char name[MAX_FILE_PATH_LEN];
       int32_t name_len = 0;
@@ -497,7 +499,7 @@ namespace tfs
 
           if (TFS_SUCCESS == ret)
           {
-            //PROFILER_BEGIN("insert");
+            PROFILER_BEGIN("insert");
             ret = get_name(v_name[get_depth(v_name)].c_str(), name, MAX_FILE_PATH_LEN, name_len);
             if (TFS_SUCCESS != ret)
             {
@@ -526,7 +528,7 @@ namespace tfs
                 TBSYS_LOG(ERROR, "create fail: %s, type: %d, ret: %d", file_path, type, ret);
               }
             }
-            //PROFILER_END();
+            PROFILER_END();
           }
 
           TBSYS_LOG(DEBUG, "create %s, type: %d, appid: %"PRI64_PREFIX"d, uid: %"PRI64_PREFIX"d, filepath: %s",
@@ -534,8 +536,8 @@ namespace tfs
           store_manager_.revert_root_node(app_id, uid);
         }
       }
-      //PROFILER_DUMP();
-      //PROFILER_STOP();
+      PROFILER_DUMP();
+      PROFILER_STOP();
       return ret;
     }
 
