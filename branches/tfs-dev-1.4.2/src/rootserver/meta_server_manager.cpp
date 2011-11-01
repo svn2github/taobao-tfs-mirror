@@ -173,11 +173,20 @@ namespace tfs
 
     int MetaServerManager::unregister(const uint64_t id)
     {
-      tbutil::Monitor<tbutil::Mutex>::Lock lock(build_table_monitor_);
-      META_SERVER_MAPS_ITER iter = servers_.find(id);
-      if (servers_.end() != iter)
+      int32_t iret = TFS_SUCCESS;
       {
-        servers_.erase(iter);
+        tbutil::Monitor<tbutil::Mutex>::Lock lock(build_table_monitor_);
+        META_SERVER_MAPS_ITER iter = servers_.find(id);
+        iret = (servers_.end() != iter) ? TFS_SUCCESS : TFS_ERROR;
+        if (TFS_SUCCESS == iret)
+        {
+          servers_.erase(iter);
+        }
+      }
+      if (TFS_SUCCESS == iret)
+      {
+        TBSYS_LOG(DEBUG, "%s unregister successful", tbsys::CNetUtil::addrToString(id).c_str());
+        interrupt();
       }
       return TFS_SUCCESS;
     }
