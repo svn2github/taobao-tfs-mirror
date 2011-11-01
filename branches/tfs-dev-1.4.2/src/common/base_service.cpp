@@ -113,6 +113,7 @@ namespace tfs
           if (!main_workers_.push(bpacket, work_queue_size_, false))
           {
             bpacket->reply_error_packet(TBSYS_LOG_LEVEL(ERROR),STATUS_MESSAGE_ERROR, "%s, task message beyond max queue size, discard", get_ip_addr());
+            bpacket->free();
           }
         }
       }
