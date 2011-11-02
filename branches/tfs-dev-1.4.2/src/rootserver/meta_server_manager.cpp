@@ -301,16 +301,24 @@ namespace tfs
     {
       tbutil::Monitor<tbutil::Mutex>::Lock lock(build_table_monitor_);
       int32_t iret = NULL == tables || length < build_tables_.get_active_table_length()
-        ? TFS_ERROR : TFS_SUCCESS;
+        ? EXIT_PARAMETER_ERROR: TFS_SUCCESS;
       if (TFS_SUCCESS == iret)
       {
-        iret = NULL == build_tables_.get_active_table() ? TFS_ERROR : TFS_SUCCESS;
-        if (TFS_SUCCESS == iret)
-        {
-          version = build_tables_.get_active_table_version();
-          length  = build_tables_.get_active_table_length();
-          memcpy(tables, build_tables_.get_active_table(), build_tables_.get_active_table_length());
-        }
+        iret = NULL == build_tables_.get_active_table() ? EXIT_NEW_TABLE_NOT_EXIST : TFS_SUCCESS;
+      }
+      if (TFS_SUCCESS == iret)
+      {
+        iret = build_tables_.get_active_table_version() <= INVALID_TABLE_VERSION ? EXIT_TABLE_VERSION_ERROR : TFS_SUCCESS;
+      }
+      if (TFS_SUCCESS == iret)
+      {
+        iret = build_tables_.get_active_table_length() <= 0 ? EXIT_NEW_TABLE_NOT_EXIST : TFS_SUCCESS;
+      }
+      if (TFS_SUCCESS == iret)
+      {
+        version = build_tables_.get_active_table_version();
+        length  = build_tables_.get_active_table_length();
+        memcpy(tables, build_tables_.get_active_table(), build_tables_.get_active_table_length());
       }
       return iret;
     }
