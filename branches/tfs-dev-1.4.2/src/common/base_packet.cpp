@@ -177,8 +177,7 @@ namespace tfs
         if (0 == getChannelId())
         {
           TBSYS_LOG(ERROR, "message : %d channel is null, reply message : %d", getPCode(), packet->getPCode());
-          packet->free();
-          iret = TFS_ERROR;
+          iret = EXIT_CHANNEL_ID_INVALID;
         }
         if (TFS_SUCCESS == iret)
         {
@@ -186,8 +185,7 @@ namespace tfs
                 && (tbsys::CTimeUtil::getTime() > _expireTime))
           {
             TBSYS_LOG(ERROR, "message : %d, timeout for response, reply message : %d", getPCode(), packet->getPCode());
-            iret = TFS_ERROR;
-            packet->free();
+            iret = EXIT_DATA_PACKET_TIMEOUT;
           }
         }
 
@@ -216,14 +214,22 @@ namespace tfs
             }
             //post message
             bool bret= connection_->postPacket(packet);
-            iret = bret ? TFS_SUCCESS : TFS_ERROR;
+            iret = bret ? TFS_SUCCESS : EXIT_SENDMSG_ERROR;
             if (TFS_SUCCESS != iret)
             {
               TBSYS_LOG(ERROR, "post packet failure, server: %s, pcode:%d",
                   tbsys::CNetUtil::addrToString(connection_->getServerId()).c_str(), packet->getPCode());
-              packet->free();
             }
           }
+          else
+          {
+            iret = EXIT_SERIALIZE_ERROR;
+            TBSYS_LOG(ERROR, "reply message failure, %d:%d, iret: %d", getPCode(), packet->getPCode(), iret);
+          }
+        }
+        if (TFS_SUCCESS != iret)
+        {
+          packet->free();
         }
       }
       return iret;
