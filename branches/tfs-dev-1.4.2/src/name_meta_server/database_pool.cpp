@@ -39,7 +39,7 @@ namespace tfs
           base_info_[i].database_helper_ = NULL;
         }
       }
-      mysql_thread_end();
+      //mysql_thread_end();
     }
     bool DataBasePool::init_pool(const int32_t pool_size,
         char** conn_str,  char** user_name,
@@ -82,6 +82,12 @@ namespace tfs
         }
       }
       return ret;
+    }
+
+    bool DataBasePool::destroy_pool(void)
+    {
+      mysql_thread_end();
+      return true;
     }
     DatabaseHelper* DataBasePool::get(const int32_t hash_flag)
     {

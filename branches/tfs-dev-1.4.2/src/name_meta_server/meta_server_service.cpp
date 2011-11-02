@@ -129,6 +129,7 @@ namespace tfs
     int MetaServerService::destroy_service()
     {
       heart_manager_.destroy();
+      store_manager_.destroy();
       return TFS_SUCCESS;
     }
 

@@ -36,6 +36,7 @@ namespace tfs
         bool init_pool(const int32_t pool_size,
             char** conn_str, char** user_name,
             char** passwd, int32_t* hash_flag);
+        bool destroy_pool(void);
         DatabaseHelper* get(const int32_t hash_flag);
         void release(DatabaseHelper* database_helper);
         static int32_t get_hash_flag(const int64_t app_id, const int64_t uid);

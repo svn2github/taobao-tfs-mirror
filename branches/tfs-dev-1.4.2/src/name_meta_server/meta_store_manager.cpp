@@ -109,6 +109,15 @@ namespace tfs
       return ret;
     }
 
+    int MetaStoreManager::destroy(void)
+    {
+      if (NULL != database_pool_)
+      {
+        database_pool_->destroy_pool();
+      }
+      return TFS_SUCCESS;
+    }
+
     MetaStoreManager::~MetaStoreManager()
     {
       vector<CacheRootNode*> v_root_node;

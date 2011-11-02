@@ -34,6 +34,7 @@ namespace tfs
         ~MetaStoreManager();  
         int init(const int32_t pool_size, const int32_t cache_size, 
             const double gc_ratio, const int32_t mutex_count);
+        int destroy(void);
         tbsys::CThreadMutex* get_mutex(const int64_t app_id, const int64_t uid);
 
         void do_lru_gc(const double ratio);
