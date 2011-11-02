@@ -421,7 +421,7 @@ int TfsFile::close_ex()
   {
     if (!(flags_ & T_WRITE))
     {
-      TBSYS_LOG(INFO, "close tfs file successful");
+      //TBSYS_LOG(INFO, "close tfs file successful");
     }
     else// write mode
     {
