@@ -15,14 +15,14 @@
 */
 #include "mysql_database_helper.h"
 
-#include <mysql/mysql.h>
-#include <mysql/errmsg.h>
+#include <mysql.h>
+#include <errmsg.h>
 #include <vector>
 #include "common/define.h"
 #include "common/func.h"
 
 using namespace std;
-namespace 
+namespace
 {
 struct mysql_ex {
     string host;
@@ -36,12 +36,12 @@ struct mysql_ex {
 };
 
 static mysql_ex  mysql_;
-static bool init_mysql(const char* mysqlconn, const char* user_name, const char* passwd) 
+static bool init_mysql(const char* mysqlconn, const char* user_name, const char* passwd)
 {
     vector<string> fields;
     tfs::common::Func::split_string(mysqlconn, ':', fields);
     mysql_.isopen = false;
-    if (fields.size() < 3 || NULL == user_name || NULL == passwd) 
+    if (fields.size() < 3 || NULL == user_name || NULL == passwd)
       return false;
     mysql_.host = fields[0];
     mysql_.port = atoi(fields[1].c_str());
@@ -69,7 +69,7 @@ static bool open_mysql()
             mysql_.pass.c_str(),
             mysql_.database.c_str(),
             mysql_.port, NULL, CLIENT_MULTI_STATEMENTS);
-    if (!conn) 
+    if (!conn)
     {
         TBSYS_LOG(ERROR, "connect mysql database (%s:%d:%s:%s:%s) error(%s)",
                 mysql_.host.c_str(), mysql_.port, mysql_.user.c_str(), mysql_.database.c_str(), mysql_.pass.c_str(),
@@ -82,7 +82,7 @@ static bool open_mysql()
 
 static int close_mysql()
 {
-    if (mysql_.isopen) 
+    if (mysql_.isopen)
     {
         mysql_close(&mysql_.mysql);
     }
@@ -172,7 +172,7 @@ namespace tfs
         snprintf(table, 256, "%s", "T_RESOURCE_SERVER_INFO");
         snprintf(sql, 1024, "select ADDR_INFO, STAT, REM from %s", table);
         ret = mysql_query(&mysql_.mysql, sql);
-        if (ret) 
+        if (ret)
         {
           TBSYS_LOG(ERROR, "query (%s) failure: %s %s", sql,  mysql_.host.c_str(), mysql_error(&mysql_.mysql));
           close();
@@ -182,7 +182,7 @@ namespace tfs
         MYSQL_ROW row;
         ResourceServerInfo tmp;
         MYSQL_RES *mysql_ret = mysql_store_result(&mysql_.mysql);
-        if (mysql_ret == NULL) 
+        if (mysql_ret == NULL)
         {
           TBSYS_LOG(ERROR, "mysql_store_result failure: %s %s", mysql_.host.c_str(), mysql_error(&mysql_.mysql));
           close();
@@ -246,7 +246,7 @@ error:
         snprintf(sql, 1024, "select cluster_rack_id, cluster_id, ns_vip, "
             "cluster_stat, rem from %s", table);
         ret = mysql_query(&mysql_.mysql, sql);
-        if (ret) 
+        if (ret)
         {
           TBSYS_LOG(ERROR, "query (%s) failure: %s %s", sql,  mysql_.host.c_str(), mysql_error(&mysql_.mysql));
           close();
@@ -257,7 +257,7 @@ error:
         ClusterRackInfo tmp;
 
         MYSQL_RES *mysql_ret = mysql_store_result(&mysql_.mysql);
-        if (mysql_ret == NULL) 
+        if (mysql_ret == NULL)
         {
           TBSYS_LOG(ERROR, "mysql_store_result failure: %s %s", mysql_.host.c_str(), mysql_error(&mysql_.mysql));
           close();
@@ -298,7 +298,7 @@ error:
         snprintf(sql, 1024, "select cluster_group_id, cluster_rack_id, cluster_rack_access_type, "
             "rem from %s", table);
         ret = mysql_query(&mysql_.mysql, sql);
-        if (ret) 
+        if (ret)
         {
           TBSYS_LOG(ERROR, "query (%s) failure: %s %s", sql,  mysql_.host.c_str(), mysql_error(&mysql_.mysql));
           close();
@@ -309,7 +309,7 @@ error:
         ClusterRackGroup tmp;
 
         MYSQL_RES *mysql_ret = mysql_store_result(&mysql_.mysql);
-        if (mysql_ret == NULL) 
+        if (mysql_ret == NULL)
         {
           TBSYS_LOG(ERROR, "mysql_store_result failure: %s %s", mysql_.host.c_str(), mysql_error(&mysql_.mysql));
           close();
@@ -348,7 +348,7 @@ error:
         snprintf(table, 256, "%s", "T_CLUSTER_RACK_DUPLICATE_SERVER");
         snprintf(sql, 1024, "select cluster_rack_id, dupliate_server_addr from %s", table);
         ret = mysql_query(&mysql_.mysql, sql);
-        if (ret) 
+        if (ret)
         {
           TBSYS_LOG(ERROR, "query (%s) failure: %s %s", sql,  mysql_.host.c_str(), mysql_error(&mysql_.mysql));
           close();
@@ -359,7 +359,7 @@ error:
         ClusterRackDuplicateServer tmp;
 
         MYSQL_RES *mysql_ret = mysql_store_result(&mysql_.mysql);
-        if (mysql_ret == NULL) 
+        if (mysql_ret == NULL)
         {
           TBSYS_LOG(ERROR, "mysql_store_result failure: %s %s", mysql_.host.c_str(), mysql_error(&mysql_.mysql));
           close();
@@ -395,7 +395,7 @@ error:
         snprintf(table, 256, "%s", "T_BASE_INFO_UPDATE_TIME");
         snprintf(sql, 1024, "select UNIX_TIMESTAMP(base_last_update_time), UNIX_TIMESTAMP(app_last_update_time) from %s", table);
         ret = mysql_query(&mysql_.mysql, sql);
-        if (ret) 
+        if (ret)
         {
           TBSYS_LOG(ERROR, "query (%s) failure: %s %s", sql,  mysql_.host.c_str(), mysql_error(&mysql_.mysql));
           close();
@@ -405,7 +405,7 @@ error:
         MYSQL_ROW row;
 
         MYSQL_RES *mysql_ret = mysql_store_result(&mysql_.mysql);
-        if (mysql_ret == NULL) 
+        if (mysql_ret == NULL)
         {
           TBSYS_LOG(ERROR, "mysql_store_result failure: %s %s", mysql_.host.c_str(), mysql_error(&mysql_.mysql));
           close();
@@ -473,7 +473,7 @@ error:
             "app_name, app_owner, report_interval, "
             "need_duplicate, rem, UNIX_TIMESTAMP(modify_time) from %s", table);
         ret = mysql_query(&mysql_.mysql, sql);
-        if (ret) 
+        if (ret)
         {
           TBSYS_LOG(ERROR, "query (%s) failure: %s %s", sql,  mysql_.host.c_str(), mysql_error(&mysql_.mysql));
           close();
@@ -484,7 +484,7 @@ error:
         AppInfo tmp;
 
         MYSQL_RES *mysql_ret = mysql_store_result(&mysql_.mysql);
-        if (mysql_ret == NULL) 
+        if (mysql_ret == NULL)
         {
           TBSYS_LOG(ERROR, "mysql_store_result failure: %s %s", mysql_.host.c_str(), mysql_error(&mysql_.mysql));
           close();
@@ -538,7 +538,7 @@ error:
           }
           pos += snprintf(sql + pos, 1024, "insert into t_session_info "
               "(session_id,cache_size,cache_time,client_version,log_out_time,create_time,modify_time) "
-              "values ('%s',%"PRI64_PREFIX"d,%"PRI64_PREFIX"d,'%s',%s,now(),now())", 
+              "values ('%s',%"PRI64_PREFIX"d,%"PRI64_PREFIX"d,'%s',%s,now(),now())",
               session.session_id_.c_str(), session.cache_size_, session.cache_time_,
               session.client_version_.c_str(), log_out_time);
           if (session.is_logout_)
@@ -582,16 +582,16 @@ error:
 
           pos += snprintf(sql + pos, 1024, "insert into t_session_stat "
               "(session_id,oper_type,oper_times,file_size,response_time,succ_times,create_time,modify_time) "
-              "values ('%s',%d,%"PRI64_PREFIX"d,%"PRI64_PREFIX"d,%"PRI64_PREFIX"d,%"PRI64_PREFIX"d,now(),now())", 
-              it->first.c_str(), inner_it->first, 
-              inner_it->second.oper_times_, inner_it->second.oper_size_, 
+              "values ('%s',%d,%"PRI64_PREFIX"d,%"PRI64_PREFIX"d,%"PRI64_PREFIX"d,%"PRI64_PREFIX"d,now(),now())",
+              it->first.c_str(), inner_it->first,
+              inner_it->second.oper_times_, inner_it->second.oper_size_,
               inner_it->second.oper_rt_, inner_it->second.oper_succ_);
 
           pos += snprintf(sql + pos, 1024, " on duplicate key update "
               "oper_times=oper_times+%"PRI64_PREFIX"d,file_size=file_size+%"PRI64_PREFIX"d,"
               "response_time=response_time+%"PRI64_PREFIX"d,succ_times=succ_times+%"PRI64_PREFIX"d,"
-              "modify_time=now();", 
-              inner_it->second.oper_times_, inner_it->second.oper_size_, 
+              "modify_time=now();",
+              inner_it->second.oper_times_, inner_it->second.oper_size_,
               inner_it->second.oper_rt_, inner_it->second.oper_succ_);
           done++;
           if (done >= SQLS_IN_STR)
@@ -629,7 +629,7 @@ error:
         {
           pos += snprintf(sql + pos, 512, "insert into t_app_stat"
               "(app_id, used_capacity, file_count, create_time, modify_time) "
-              "values (%d,%"PRI64_PREFIX"d,%"PRI64_PREFIX"d,now(),now())", 
+              "values (%d,%"PRI64_PREFIX"d,%"PRI64_PREFIX"d,now(),now())",
               it->first, it->second.used_capacity_, it->second.file_count_);
           pos += snprintf(sql + pos, 512, " on duplicate key update "
               "used_capacity=used_capacity+%"PRI64_PREFIX"d,file_count=file_count+%"PRI64_PREFIX"d, modify_time=now();",
@@ -661,7 +661,7 @@ error:
         {
           MYSQL_RES *mysql_ret = mysql_store_result(&mysql_.mysql);
           mysql_free_result(mysql_ret);
-          if (ret) 
+          if (ret)
           {
             TBSYS_LOG(ERROR, "error is %s sql is ",  mysql_error(&mysql_.mysql), sql);
             close();

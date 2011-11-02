@@ -1,6 +1,8 @@
 AM_CPPFLAGS=$(MYSQL_CXXFLAGS) -Wall -I$(top_srcdir)/src\
             -I$(TBLIB_ROOT)/include/tbsys\
-            -I$(TBLIB_ROOT)/include/tbnet
+            -I$(TBLIB_ROOT)/include/tbnet \
+						$(MYSQL_CFLAGS)
+
  
 AM_LDFLAGS= $(MYSQL_LDFLAGS) -lz -lrt -lpthread -ldl -luuid
 

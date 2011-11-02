@@ -15,7 +15,7 @@
 */
 #ifndef TFS_NAMEMETASERVER_MYSQL_DATABASE_HELPER_H_
 #define TFS_NAMEMETASERVER_MYSQL_DATABASE_HELPER_H_
-#include <mysql/mysql.h>
+#include <mysql.h>
 #include <tbsys.h>
 #include <Mutex.h>
 #include "database_helper.h"
