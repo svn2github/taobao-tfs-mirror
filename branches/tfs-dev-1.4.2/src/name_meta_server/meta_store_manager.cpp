@@ -724,8 +724,10 @@ namespace tfs
       {
         TBSYS_LOG(DEBUG, "ls_meta_info appid %"PRI64_PREFIX"d uid %"PRI64_PREFIX"d",
             app_id, uid);
+        PROFILER_BEGIN("ls_meta_info");
         ret = database_helper->ls_meta_info(out_v_meta_info, app_id, uid, real_pid,
             name, name_len, name_end, name_end_len);
+        PROFILER_END();
         database_pool_->release(database_helper);
       }
       if (out_v_meta_info.size() > 0)
@@ -765,7 +767,9 @@ namespace tfs
       {
         if (type == NORMAL_FILE)
         {
+          PROFILER_BEGIN("create_file");
           status = database_helper->create_file(app_id, uid, ppid, pid, pname, pname_len, name, name_len, proc_ret);
+          PROFILER_END();
           if (TFS_SUCCESS != status)
           {
             TBSYS_LOG(DEBUG, "database helper create file, status: %d", status);
@@ -819,8 +823,10 @@ namespace tfs
                 }
                 else
                 {
+                  PROFILER_BEGIN("pwrite_file");
                   status = database_helper->pwrite_file(app_id, uid, pid, name, name_len,
                       meta_info->file_info_.size_, meta_info->file_info_.ver_no_, frag_info, frag_len, proc_ret);
+                  PROFILER_END();
                   if (TFS_SUCCESS != status)
                   {
                     TBSYS_LOG(DEBUG, "database helper pwrite file, status: %d", status);
@@ -856,8 +862,10 @@ namespace tfs
       {
         if (type & NORMAL_FILE)
         {
+          PROFILER_BEGIN("mv_file");
           status = database_helper->mv_file(app_id, uid, s_ppid, s_pid, s_pname, s_pname_len,
               d_ppid, d_pid, d_pname, d_pname_len, s_name, s_name_len, d_name, d_name_len, proc_ret);
+          PROFILER_END();
           if (TFS_SUCCESS != status)
           {
             TBSYS_LOG(DEBUG, "database helper mv file, status: %d", status);
@@ -865,8 +873,10 @@ namespace tfs
         }
         else if (type & DIRECTORY)
         {
+          PROFILER_BEGIN("mv_dir");
           status = database_helper->mv_dir(app_id, uid, s_ppid, s_pid, s_pname, s_pname_len,
               d_ppid, d_pid, d_pname, d_pname_len, s_name, s_name_len, d_name, d_name_len, proc_ret);
+          PROFILER_END();
           if (TFS_SUCCESS != status)
           {
             TBSYS_LOG(DEBUG, "database helper mv dir, status: %d", status);
@@ -895,7 +905,9 @@ namespace tfs
       {
         if (type & NORMAL_FILE)
         {
+          PROFILER_BEGIN("rm_file");
           status = database_helper->rm_file(app_id, uid, ppid, pid, pname, pname_len, name, name_len, proc_ret);
+          PROFILER_END();
           if (TFS_SUCCESS != status)
           {
             TBSYS_LOG(DEBUG, "database helper rm file, status: %d", status);
