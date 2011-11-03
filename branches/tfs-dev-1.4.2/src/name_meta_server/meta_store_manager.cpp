@@ -998,7 +998,7 @@ namespace tfs
       vector<MetaInfo>::iterator tmp_v_meta_info_it;
       int32_t name_len = FileName::length(name);
       bool still_have = false;
-      do
+      do  //we use do while so we can break, no loop here
       {
         tmp_v_meta_info.clear();
         still_have = false;
@@ -1041,7 +1041,7 @@ namespace tfs
         //  name[0] = '\0';
         //  name_len = 1;
         //}
-      } while (TFS_SUCCESS == ret );
+      } while (false);
       //if (TFS_SUCCESS == ret && !still_have)
       //{
       //  p_dir_node->set_got_all_children();
