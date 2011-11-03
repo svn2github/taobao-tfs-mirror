@@ -87,11 +87,11 @@ namespace tfs
       bool bucket_version_valid(const int64_t new_version) const;
 
       int64_t get_table_size(void) const;
-    private:
-      int update_new_table_status(const uint64_t server);
       void dump(int32_t level,const int8_t type = common::DUMP_TABLE_TYPE_ACTIVE_TABLE,
              const char* file = __FILE__, const int32_t line = __LINE__,
              const char* function = __FUNCTION__) const;
+    private:
+      int update_new_table_status(const uint64_t server);
     private:
       tbutil::Monitor<tbutil::Mutex> monitor_;
       Bucket update_table_;

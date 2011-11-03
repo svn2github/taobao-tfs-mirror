@@ -13,8 +13,8 @@ LDADD=$(top_builddir)/src/message/libtfsmessage.a \
 
 noinst_LIBRARIES=librootserver.a
 
-NAMESERVER_SOURCE_LIST_HEADER=rootserver.h meta_server_manager.h build_tables.h global_factory.h\
-	root_server_heart_manager.h
+NAMESERVER_SOURCE_LIST_HEADER=rootserver.h meta_server_manager.h build_table.h global_factory.h\
+	root_server_heart_manager.h 
 
 ROOTSERVER_SOURCE_LIST=rootserver.cpp meta_server_manager.cpp build_table.cpp\
 	global_factory.cpp root_server_heart_manager.cpp $(NAMESERVER_SOURCE_LIST_HEADER)

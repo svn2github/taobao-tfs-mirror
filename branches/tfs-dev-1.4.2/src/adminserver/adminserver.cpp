@@ -146,7 +146,6 @@ namespace tfs
         param->adr_.ip_ = Func::get_addr("127.0.0.1"); // just monitor local stuff
         param->script_ = TBSYS_CONFIG.getString(CONF_SN_ADMINSERVER, CONF_DS_SCRIPT, "");
         param->script_ += " -i " + index;
-        param->script_ += " -d ";
         param->description_ = TBSYS_CONFIG.getString(CONF_SN_DATASERVER, CONF_MOUNT_POINT_NAME, "");
         param->description_ = FileSystemParameter::get_real_mount_name(param->description_, index);
         param->adr_.port_ = TBSYS_CONFIG.getInt(CONF_SN_DATASERVER, CONF_PORT);

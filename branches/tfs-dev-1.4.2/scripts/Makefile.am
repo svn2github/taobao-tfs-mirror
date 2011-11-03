@@ -5,7 +5,7 @@ SUBDIRS = ha
 
 DIST_SUBDIRS = ha
 
-EXTRA_DIST=ha/authkeys.sh ha/deploy.sh ha/ha.cf ha/NameServer ha/nsdep.sh ha/ns.xml
+EXTRA_DIST=ha/authkeys.sh ha/deploy.sh ha/ha.cf ha/NameServer ha/nsdep.sh ha/ns.xml ha/RootServer ha/rsdep.sh ha/rs.xml
 
 install-data-hook:
 	mv ${DESTDIR}/${prefix}/scripts/stfs.sh ${DESTDIR}/${prefix}/scripts/stfs
