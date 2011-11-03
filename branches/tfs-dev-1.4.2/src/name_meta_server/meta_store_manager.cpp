@@ -297,14 +297,14 @@ namespace tfs
       }
       if (TFS_SUCCESS == ret)
       {
-        if (NULL == ret_node && !got_all)
+        if (NULL == ret_node && !got_all && !(app_id == -1 && uid == -1))
         {
           //assert (app_id != 0);
           //assert (uid != 0);
-          ret = get_all_children_from_db(app_id, uid, p_dir_node);
+          ret = get_children_from_db(app_id, uid, p_dir_node, name, is_file);
           if (TFS_SUCCESS == ret)
           {
-            ret = select(0, 0, p_dir_node, name, is_file, ret_node);
+            ret = select(-1, -1, p_dir_node, name, is_file, ret_node);
           }
         }
       }
@@ -987,33 +987,30 @@ namespace tfs
       return ret;
     }
 
-    int MetaStoreManager::get_all_children_from_db(const int64_t app_id, const int64_t uid,
-        CacheDirMetaNode* p_dir_node)
+    int MetaStoreManager::get_children_from_db(const int64_t app_id, const int64_t uid,
+        CacheDirMetaNode* p_dir_node, const char* name, bool is_file)
     {
-      TBSYS_LOG(DEBUG, "get_all_children_from_db app_id %"PRI64_PREFIX"d uid %"PRI64_PREFIX"d",
+      TBSYS_LOG(DEBUG, "get_children_from_db app_id %"PRI64_PREFIX"d uid %"PRI64_PREFIX"d",
           app_id, uid);
       int ret = TFS_ERROR;
       assert (NULL != p_dir_node);
       std::vector<MetaInfo> tmp_v_meta_info;
       vector<MetaInfo>::iterator tmp_v_meta_info_it;
-      char name[MAX_FILE_PATH_LEN];
-      int32_t name_len = 1;
-      name[0] = '\0';
+      int32_t name_len = FileName::length(name);
       bool still_have = false;
-      int my_file_type = DIRECTORY;
       do
       {
         tmp_v_meta_info.clear();
         still_have = false;
         ret = ls(app_id, uid, p_dir_node->id_,
             name, name_len, NULL, 0,
-            my_file_type != DIRECTORY, tmp_v_meta_info, still_have);
+            is_file, tmp_v_meta_info, still_have);
 
         if (!tmp_v_meta_info.empty())
         {
           tmp_v_meta_info_it = tmp_v_meta_info.begin();
 
-          if (my_file_type != DIRECTORY)
+          if (is_file)
           {
             // fill file meta info
             ret = fill_file_meta_info(tmp_v_meta_info_it, tmp_v_meta_info.end(), p_dir_node);
@@ -1027,28 +1024,28 @@ namespace tfs
             ret = fill_dir_info(tmp_v_meta_info_it, tmp_v_meta_info.end(), p_dir_node);
           }
 
-          // still have and need continue
-          if (still_have)
-          {
-            tmp_v_meta_info_it--;
-            MetaServerService::next_file_name_base_on(name, name_len,
-                tmp_v_meta_info_it->get_name(), tmp_v_meta_info_it->get_name_len());
-          }
+          //// still have and need continue
+          //if (still_have)
+          //{
+          //  tmp_v_meta_info_it--;
+          //  MetaServerService::next_file_name_base_on(name, name_len,
+          //      tmp_v_meta_info_it->get_name(), tmp_v_meta_info_it->get_name_len());
+          //}
         }
 
         // directory over, continue list file
-        if (my_file_type == DIRECTORY && !still_have)
-        {
-          my_file_type = NORMAL_FILE;
-          still_have = true;
-          name[0] = '\0';
-          name_len = 1;
-        }
-      } while (TFS_SUCCESS == ret && still_have);
-      if (TFS_SUCCESS == ret)
-      {
-        p_dir_node->set_got_all_children();
-      }
+        //if (my_file_type == DIRECTORY && !still_have)
+        //{
+        //  my_file_type = NORMAL_FILE;
+        //  still_have = true;
+        //  name[0] = '\0';
+        //  name_len = 1;
+        //}
+      } while (TFS_SUCCESS == ret );
+      //if (TFS_SUCCESS == ret && !still_have)
+      //{
+      //  p_dir_node->set_got_all_children();
+      //}
 
       return ret;
     }

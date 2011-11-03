@@ -513,32 +513,32 @@ namespace tfs
             {
               TBSYS_LOG(INFO, "get name fail. ret: %d", ret);
             }
-            void* ret_node = NULL;
-            PROFILER_BEGIN("select1");
-            store_manager_.select(app_id, uid, p_dir_node, name,
-                false, ret_node);
-            PROFILER_END();
-            if (NULL != ret_node)
-            {
-              TBSYS_LOG(INFO, "name is a exist dir");
-              ret = EXIT_TARGET_EXIST_ERROR;
-            }
-            PROFILER_BEGIN("select2");
-            store_manager_.select(app_id, uid, p_dir_node, name,
-                true, ret_node);
-            PROFILER_END();
-            if (NULL != ret_node)
-            {
-              TBSYS_LOG(INFO, "name is a exist file");
-              ret = EXIT_TARGET_EXIST_ERROR;
-            }
+            //void* ret_node = NULL;
+            //PROFILER_BEGIN("select1");
+            //store_manager_.select(app_id, uid, p_dir_node, name,
+            //    false, ret_node);
+            //PROFILER_END();
+            //if (NULL != ret_node)
+            //{
+            //  TBSYS_LOG(INFO, "name is a exist dir");
+            //  ret = EXIT_TARGET_EXIST_ERROR;
+            //}
+            //PROFILER_BEGIN("select2");
+            //store_manager_.select(app_id, uid, p_dir_node, name,
+            //    true, ret_node);
+            //PROFILER_END();
+            //if (NULL != ret_node)
+            //{
+            //  TBSYS_LOG(INFO, "name is a exist file");
+            //  ret = EXIT_TARGET_EXIST_ERROR;
+            //}
             PROFILER_BEGIN("store_insert");
             if (TFS_SUCCESS == ret)
             {
               ret = store_manager_.insert(app_id, uid, pp_id, p_dir_node, name, FileName::length(name), type);
               if (TFS_SUCCESS != ret)
               {
-                TBSYS_LOG(ERROR, "create fail: %s, type: %d, ret: %d", file_path, type, ret);
+                TBSYS_LOG(INFO, "create fail: %s, type: %d, ret: %d", file_path, type, ret);
               }
             }
             PROFILER_END();

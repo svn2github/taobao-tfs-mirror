@@ -31,15 +31,15 @@ namespace tfs
     {
       public:
         MetaStoreManager();
-        ~MetaStoreManager();  
-        int init(const int32_t pool_size, const int32_t cache_size, 
+        ~MetaStoreManager();
+        int init(const int32_t pool_size, const int32_t cache_size,
             const double gc_ratio, const int32_t mutex_count);
         int destroy(void);
         tbsys::CThreadMutex* get_mutex(const int64_t app_id, const int64_t uid);
 
         void do_lru_gc(const double ratio);
         //this func will get root_node from lru cache
-        //when we gen a new root node we will ls '/' 
+        //when we gen a new root node we will ls '/'
         //so dir_meta_ == NULL means no top dir;
         CacheRootNode* get_root_node(const int64_t app_id, const int64_t uid);
         void revert_root_node(const int64_t app_id, const int64_t uid);
@@ -55,8 +55,8 @@ namespace tfs
             const common::FileType type, common::MetaInfo* meta_info = NULL);
 
         int update(const int64_t app_id, const int64_t uid,
-            const int64_t s_ppid, CacheDirMetaNode* s_p_dir_node, 
-            const int64_t d_ppid, CacheDirMetaNode* d_p_dir_node, 
+            const int64_t s_ppid, CacheDirMetaNode* s_p_dir_node,
+            const int64_t d_ppid, CacheDirMetaNode* d_p_dir_node,
             const char* s_name, const char* d_name,
             const common::FileType type);
 
@@ -69,8 +69,8 @@ namespace tfs
           const std::vector<common::MetaInfo>::iterator meta_info_end, const bool ls_file,
           std::vector<common::MetaInfo>& v_meta_info, common::MetaInfo& last_meta_info);
       public:
-        int get_file_frag_info(const int64_t app_id, const int64_t uid, 
-            CacheDirMetaNode* p_dir_node, CacheFileMetaNode* file_node, 
+        int get_file_frag_info(const int64_t app_id, const int64_t uid,
+            CacheDirMetaNode* p_dir_node, CacheFileMetaNode* file_node,
             const int64_t offset, std::vector<common::MetaInfo>& out_v_meta_info,
             int32_t& cluster_id, int64_t& last_offset);
 
@@ -83,9 +83,9 @@ namespace tfs
             const int64_t pid, const char* name, const int32_t name_len, const bool is_file,
             std::vector<common::MetaInfo>& out_v_meta_info);
 
-        int ls(const int64_t app_id, const int64_t uid, const int64_t pid, 
-            const char* name, const int32_t name_len, 
-            const char* name_end, const int32_t name_end_len, 
+        int ls(const int64_t app_id, const int64_t uid, const int64_t pid,
+            const char* name, const int32_t name_len,
+            const char* name_end, const int32_t name_end_len,
             const bool is_file,
             std::vector<common::MetaInfo>& out_v_meta_info, bool& still_have);
 
@@ -112,7 +112,8 @@ namespace tfs
         void* malloc(const int64_t size, const int32_t type = CACHE_NONE_NODE);
         int ls_top_dir(const int64_t app_id, const int64_t uid, CacheRootNode* root_node,
             const bool is_new_dir);
-        int get_all_children_from_db(const int64_t app_id, const int64_t uid, CacheDirMetaNode* p_dir_node);
+        int get_children_from_db(const int64_t app_id, const int64_t uid,
+            CacheDirMetaNode* p_dir_node, const char* name, bool is_file);
 
         int fill_file_meta_info(std::vector<common::MetaInfo>::iterator& meta_info_begin,
             const std::vector<common::MetaInfo>::iterator meta_info_end,
