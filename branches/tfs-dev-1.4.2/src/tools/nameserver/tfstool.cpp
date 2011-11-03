@@ -121,15 +121,17 @@ int cmd_ls_dir_meta(const VSTRING& param);
 int cmd_ls_file_meta(const VSTRING& param);
 int cmd_create_dir_meta(const VSTRING& param);
 int cmd_rm_dir_meta(const VSTRING& param);
+int cmd_put_file_meta(const VSTRING& param);
+int cmd_get_file_meta(const VSTRING& param);
 
 const char* rs_addr = NULL;
+const char* nsip = NULL;
 
 int main(int argc, char* argv[])
 {
   int32_t i;
   bool directly = false;
   bool set_log_level = false;
-  const char* nsip = NULL;
 
   // analyze arguments
   while ((i = getopt(argc, argv, "s:r:nih")) != EOF)
@@ -265,6 +267,10 @@ void init()
       "create full_path_dir_name", 3, 3, cmd_create_dir_meta);
   g_cmd_map["rm_dir_meta"] = CmdNode("rm_dir_meta app_id uid full_path_dir_name",
       "rm full_path_dir_name", 3, 3, cmd_rm_dir_meta);
+  g_cmd_map["put_meta"] = CmdNode("put_meta app_id uid localfile remotefile",
+      "put localfile to remotefile", 4, 4, cmd_put_file_meta);
+  g_cmd_map["get_meta"] = CmdNode("get_meta app_id uid remotefile localfile",
+      "get remotefile to localfile", 4, 4, cmd_get_file_meta);
 }
 
 int main_loop()
@@ -919,5 +925,51 @@ int cmd_rm_dir_meta(const VSTRING& param)
     ret = impl.rm_dir(app_id, uid, param[2].c_str());
   }
 
+  return ret;
+}
+int cmd_put_file_meta(const VSTRING& param)
+{
+  const char* local_file = expand_path(const_cast<string&>(param[2]));
+  const char* remote_file = expand_path(const_cast<string&>(param[3]));
+  int ret = TFS_ERROR;
+  struct stat stat_buf;  
+  ret = stat(local_file, &stat_buf);
+  if (TFS_SUCCESS == ret)
+  {
+    NameMetaClientImpl impl;
+    int64_t app_id = strtoll(param[0].c_str(), NULL, 10);
+    int64_t uid = strtoll(param[1].c_str(), NULL, 10);
+    ret = impl.initialize(rs_addr);
+
+    if (TFS_SUCCESS == ret)
+    {
+      ret = impl.save_file(nsip, app_id, uid, local_file, remote_file);
+    }
+     
+    ret = ret == stat_buf.st_size ? TFS_SUCCESS : TFS_ERROR;
+  }
+
+  ToolUtil::print_info(ret, "put %s => %s", local_file, remote_file);
+  return ret;
+}
+int cmd_get_file_meta(const VSTRING& param)
+{
+  const char* remote_file = expand_path(const_cast<string&>(param[2]));
+  const char* local_file = expand_path(const_cast<string&>(param[3]));
+  int ret = TFS_ERROR;
+  NameMetaClientImpl impl;
+  int64_t app_id = strtoll(param[0].c_str(), NULL, 10);
+  int64_t uid = strtoll(param[1].c_str(), NULL, 10);
+  ret = impl.initialize(rs_addr);
+
+  if (TFS_SUCCESS == ret)
+  {
+    ret = impl.fetch_file(nsip, app_id, uid, local_file, remote_file);
+  }
+  fprintf(stderr, "%d\n", ret);
+   
+  ret = (ret >= 0 && TFS_ERROR != ret) ? TFS_SUCCESS : TFS_ERROR;
+
+  ToolUtil::print_info(ret, "get %s => %s", remote_file, local_file);
   return ret;
 }

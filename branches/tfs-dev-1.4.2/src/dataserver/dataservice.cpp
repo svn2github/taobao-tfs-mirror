@@ -562,6 +562,7 @@ namespace tfs
       tbsys::gDelete(repl_block_);
       tbsys::gDelete(compact_block_);
       GCObjectManager::instance().destroy();
+      GCObjectManager::instance().wait_for_shut_down();
       return TFS_SUCCESS;
     }
 

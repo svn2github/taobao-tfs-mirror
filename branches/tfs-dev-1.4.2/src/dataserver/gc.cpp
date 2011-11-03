@@ -87,6 +87,7 @@ namespace dataserver
     std::list<GCObject*>::iterator iter = object_list_.begin();
     for (; iter != object_list_.end(); ++iter)
     {
+      (*iter)->callback();
       (*iter)->free();
     }
     object_list_.clear();

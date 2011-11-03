@@ -138,6 +138,7 @@ namespace tfs
       HashHelper helper(app_id, uid);
       int32_t hash_value = tbsys::CStringUtil::murMurHash((const void*)&helper, sizeof(HashHelper))
         % mutex_count_;
+      TBSYS_LOG(DEBUG, "app_id: %"PRI64_PREFIX"d, uid: %"PRI64_PREFIX"d get mutex: %d", app_id, uid, hash_value);
       return app_id_uid_mutex_ + hash_value;
     }
 

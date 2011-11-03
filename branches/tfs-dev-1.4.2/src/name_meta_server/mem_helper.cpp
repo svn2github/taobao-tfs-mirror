@@ -56,6 +56,7 @@ namespace tfs
         p_root_ = (void**)p;
         ret = true;
       }
+      TBSYS_LOG(DEBUG, "put MemNodeList %s, size: %d, capacity: %d", ret ? "success" : "fail", size_, capacity_);
       return ret;
     }
 
