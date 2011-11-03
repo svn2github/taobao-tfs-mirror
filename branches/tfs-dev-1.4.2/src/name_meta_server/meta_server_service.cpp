@@ -972,7 +972,7 @@ namespace tfs
                               std::vector<MetaInfo>& v_meta_info, bool& still_have)
     {
       int ret = 0;
-      if (NORMAL_FILE == file_type)
+      if (NORMAL_FILE == file_type && -1 == pid)
       {
         still_have = false;
         ret = ls_file_from_cache(app_id, uid, file_path, v_meta_info);
