@@ -14,7 +14,7 @@
  *
  */
 
-#include <Time.h> 
+#include <Time.h>
 #include "common/define.h"
 #include "common/func.h"
 #include "common/lock.h"
@@ -42,12 +42,12 @@ namespace tfs
     {
 
     }
-    
+
     MetaServerManager::~MetaServerManager()
     {
 
     }
-    
+
     int MetaServerManager::initialize(const std::string& table_file_path)
     {
       int32_t iret = !initialize_ ? TFS_SUCCESS : TFS_ERROR;
@@ -130,7 +130,7 @@ namespace tfs
         iret = unregister(server.base_info_.id_);
         break;
       default:
-        TBSYS_LOG(ERROR, "%s keepalive, type: %hh not found", 
+        TBSYS_LOG(ERROR, "%s keepalive, type: %hh not found",
             tbsys::CNetUtil::addrToString(server.base_info_.id_).c_str(), type);
         break;
       }
@@ -139,6 +139,7 @@ namespace tfs
 
     int MetaServerManager::register_(common::MetaServer& server)
     {
+      bool exist = false;
       tbutil::Time now = tbutil::Time::now(tbutil::Time::Monotonic);
       int32_t iret = initialize_ ? TFS_SUCCESS : TFS_ERROR;
       if (TFS_SUCCESS == iret)
@@ -148,22 +149,24 @@ namespace tfs
         META_SERVER_MAPS_ITER iter = servers_.find(server.base_info_.id_);
         if (servers_.end() == iter)
         {
-          std::pair<META_SERVER_MAPS_ITER, bool> res = 
+          std::pair<META_SERVER_MAPS_ITER, bool> res =
             servers_.insert(META_SERVER_MAPS::value_type(server.base_info_.id_, server));
           pserver =  &res.first->second;
         }
         else
         {
           pserver = &iter->second;
+          exist = pserver->lease_.has_valid_lease(now.toSeconds());
         }
         memcpy(pserver, &server, sizeof(MetaServer));
         pserver->lease_.lease_id_ = new_lease_id();
         pserver->lease_.lease_expired_time_ = now.toSeconds() + SYSPARAM_RTSERVER.mts_rts_lease_expired_time_ ;
         pserver->base_info_.last_update_time_ = now.toSeconds();
         server.tables_.version_ = build_tables_.get_active_table_version();
-        server.lease_.lease_expired_time_ = SYSPARAM_RTSERVER.mts_rts_lease_expired_time_ ; 
+        server.lease_.lease_expired_time_ = SYSPARAM_RTSERVER.mts_rts_lease_expired_time_ ;
       }
-      if (TFS_SUCCESS == iret)
+      if (TFS_SUCCESS == iret
+          && !exist)
       {
         TBSYS_LOG(DEBUG, "%s register successful", tbsys::CNetUtil::addrToString(server.base_info_.id_).c_str());
         interrupt();
@@ -219,7 +222,7 @@ namespace tfs
               memcpy(&pserver->net_work_stat_, &server.net_work_stat_, sizeof(NetWorkStatInformation));
               memcpy(&pserver->capacity_, &server.capacity_, sizeof(MetaServerCapacity));
               server.tables_.version_ = build_tables_.get_active_table_version();
-              server.lease_.lease_expired_time_ = SYSPARAM_RTSERVER.mts_rts_lease_expired_time_; 
+              server.lease_.lease_expired_time_ = SYSPARAM_RTSERVER.mts_rts_lease_expired_time_;
             }
           }
         }
@@ -394,7 +397,7 @@ namespace tfs
       return lease_id;
     }
 
-    void MetaServerManager::interrupt(void) 
+    void MetaServerManager::interrupt(void)
     {
       tbutil::Monitor<tbutil::Mutex>::Lock lock(build_table_monitor_);
       Func::set_bit(interrupt_, BUILD_TABLE_INTERRUPT_ALL);
@@ -403,11 +406,13 @@ namespace tfs
 
     void MetaServerManager::check_ms_lease_expired_helper(const tbutil::Time& now, bool& interrupt)
     {
+      TBSYS_LOG(INFO, "check_ms_lease_expired_helper start");
       //RWLock::Lock lock(mutex_, WRITE_LOCKER);
       tbutil::Monitor<tbutil::Mutex>::Lock lock(build_table_monitor_);
       META_SERVER_MAPS_ITER iter = servers_.begin();
       for (; iter != servers_.end(); )
       {
+        TBSYS_LOG(INFO, "now time: %ld, lease_id: %lu, lease_expired_time: %ld", now.toSeconds(), iter->second.lease_.lease_id_, iter->second.lease_.lease_expired_time_);
         if (!iter->second.lease_.has_valid_lease(now.toSeconds()))
         {
           interrupt = true;

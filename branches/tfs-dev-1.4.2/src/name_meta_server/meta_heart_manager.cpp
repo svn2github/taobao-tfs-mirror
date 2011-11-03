@@ -31,7 +31,7 @@ namespace tfs
 {
   namespace namemetaserver
   {
-    const int8_t  HeartManager::MAX_RETRY_COUNT = 4;
+    const int8_t  HeartManager::MAX_RETRY_COUNT = 2;
     const int16_t HeartManager::MAX_TIMEOUT_MS  = 500;//ms
     HeartManager::HeartManager(BucketManager& bucket_manager):
       bucket_manager_(bucket_manager),
@@ -89,11 +89,11 @@ namespace tfs
         now = tbutil::Time::now(tbutil::Time::Monotonic);
         has_valid_lease_ = ((now < lease_expired));
                             //&& bucket_manager_.bucket_version_valid(new_version));
-        if (has_valid_lease_
-            || (!has_valid_lease_ && TFS_SUCCESS == iret))
+        TBSYS_LOG(DEBUG, "has_valid_lease: %d", has_valid_lease_);
+        if (has_valid_lease_)
         {
           tbutil::Monitor<tbutil::Mutex>::Lock lock(monitor_);
-          monitor_.timedWait(tbutil::Time::seconds(wait_time_ms <= 0 ? 
+          monitor_.timedWait(tbutil::Time::seconds(wait_time_ms <= 0 ?
           RTS_MS_RENEW_LEASE_INTERVAL_TIME_DEFAULT : wait_time_ms));
         }
         else
@@ -111,7 +111,7 @@ namespace tfs
     int HeartManager::keepalive(RtsMsKeepAliveType& type, int64_t& new_version,
           int32_t& wait_time, tbutil::Time& lease_expired/*, const uint64_t server*/)
     {
-      uint64_t server =  SYSPARAM_NAMEMETASERVER.rs_ip_port_; 
+      uint64_t server =  SYSPARAM_NAMEMETASERVER.rs_ip_port_;
       uint64_t current_server = MsRuntimeGlobalInformation::instance().server_.base_info_.id_;
       RtsMsHeartMessage msg;
       msg.set_type(type);
@@ -127,40 +127,49 @@ namespace tfs
         tbutil::Time start = tbutil::Time::now();
         iret = send_msg_to_server(server, client, &msg, response, MAX_TIMEOUT_MS);
         tbutil::Time end = tbutil::Time::now();
-        //TBSYS_LOG(DEBUG, "MAX_TIMEOUT_MS: %ld, cost: %ld, type: %d", MAX_TIMEOUT_MS, (end - start).toMilliSeconds(), type);
         if (TFS_SUCCESS == iret)
         {
           assert(NULL != response);
-          RtsMsHeartResponseMessage* rmsg = dynamic_cast<RtsMsHeartResponseMessage*>(response);
-          iret = rmsg->get_ret_value();
-          wait_time = rmsg->get_renew_lease_interval_time();
+          iret = response->getPCode() == RSP_RT_MS_KEEPALIVE_MESSAGE ? TFS_SUCCESS : TFS_ERROR;
           if (TFS_SUCCESS == iret)
           {
-            new_version = rmsg->get_active_table_version();
-            lease_expired = tbutil::Time::now(tbutil::Time::Monotonic) + tbutil::Time::seconds(rmsg->get_lease_expired_time());
-            if (RTS_MS_KEEPALIVE_TYPE_LOGIN == type)
+            RtsMsHeartResponseMessage* rmsg = dynamic_cast<RtsMsHeartResponseMessage*>(response);
+            iret = rmsg->get_ret_value();
+            wait_time = rmsg->get_renew_lease_interval_time();
+            if (TFS_SUCCESS == iret)
             {
-              type = RTS_MS_KEEPALIVE_TYPE_RENEW;
-            }
-            if (bucket_manager_.get_table_size() <= 0)
-            {
-              iret = get_buckets_from_rs();
-              if (TFS_SUCCESS != iret)
+              new_version = rmsg->get_active_table_version();
+              lease_expired = tbutil::Time::now(tbutil::Time::Monotonic) + tbutil::Time::seconds(rmsg->get_lease_expired_time());
+              if (RTS_MS_KEEPALIVE_TYPE_LOGIN == type)
               {
-                TBSYS_LOG(ERROR, "failed to get buckets form %s, iret: %d", tbsys::CNetUtil::addrToString(server).c_str(), iret);
+                type = RTS_MS_KEEPALIVE_TYPE_RENEW;
+              }
+              if (bucket_manager_.get_table_size() <= 0)
+              {
+                int32_t ret = get_buckets_from_rs();
+                if (TFS_SUCCESS != ret)
+                {
+                  TBSYS_LOG(ERROR, "failed to get buckets form %s, iret: %d", tbsys::CNetUtil::addrToString(server).c_str(), ret);
+                }
               }
             }
+            else if (EXIT_LEASE_EXPIRED == iret)
+            {
+              lease_expired = 0;
+              TBSYS_LOG(WARN, "%s lease expired", tbsys::CNetUtil::addrToString(current_server).c_str());
+            }
+            else if (EXIT_REGISTER_NOT_EXIST_ERROR == iret)
+            {
+              TBSYS_LOG(WARN, "%s relogin", tbsys::CNetUtil::addrToString(current_server).c_str());
+              type = RTS_MS_KEEPALIVE_TYPE_LOGIN;
+            }
           }
-          else if (EXIT_LEASE_EXPIRED == iret)
-          {
-            lease_expired = 0;
-            TBSYS_LOG(WARN, "%s lease expired", tbsys::CNetUtil::addrToString(current_server).c_str());
-          }
-          else if (EXIT_REGISTER_NOT_EXIST_ERROR == iret)
-          {
-            TBSYS_LOG(WARN, "%s relogin", tbsys::CNetUtil::addrToString(current_server).c_str());
-            type = RTS_MS_KEEPALIVE_TYPE_LOGIN;
-          }
+        }
+        TBSYS_LOG(DEBUG, "MAX_TIMEOUT_MS: %ld, cost: %ld, type: %d, iret: %d", MAX_TIMEOUT_MS, (end - start).toMilliSeconds(), type, iret);
+        if ((TFS_SUCCESS != iret)
+            && (lease_expired != 0))
+        {
+          usleep(500000);
         }
         NewClientManager::get_instance().destroy_client(client);
       }
@@ -173,7 +182,7 @@ namespace tfs
     int HeartManager::get_buckets_from_rs(void)
     {
       NewClient* client = NewClientManager::get_instance().create_client();
-      uint64_t server =  SYSPARAM_NAMEMETASERVER.rs_ip_port_; 
+      uint64_t server =  SYSPARAM_NAMEMETASERVER.rs_ip_port_;
       GetTableFromRtsMessage msg;
       tbnet::Packet* response = NULL;
       int32_t iret = send_msg_to_server(server, client, &msg, response, MAX_TIMEOUT_MS);
@@ -200,7 +209,7 @@ namespace tfs
           {
             uint64_t dest_length = common::MAX_BUCKET_DATA_LENGTH;
             unsigned char* dest = new unsigned char[common::MAX_BUCKET_DATA_LENGTH];
-            iret = uncompress(dest, &dest_length, (unsigned char*)reply->get_table(), reply->get_table_length()); 
+            iret = uncompress(dest, &dest_length, (unsigned char*)reply->get_table(), reply->get_table_length());
             if (Z_OK != iret)
             {
               TBSYS_LOG(ERROR, "uncompress error: ret : %d, version: %"PRI64_PREFIX"d", iret, reply->get_version());
