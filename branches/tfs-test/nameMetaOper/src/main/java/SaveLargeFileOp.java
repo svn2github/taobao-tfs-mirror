@@ -11,14 +11,20 @@ import com.taobao.common.tfs.DefaultTfsManager;
 class SaveLargeFileOp extends Operation { 
  
   private static StatInfo opStatInfo = new StatInfo();
-  private static String localLargeFile = "/home/admin/workspace/nameMetaOper/2.1G";
-  private static String largeFileName = "largefile";
+  private static boolean autoGenDir = true;
+  private static String localLargeFile;
+  private static String largeFileName;
   private static int crc = 0;
   private static ReadWriteLock myLock = new ReentrantReadWriteLock(false);
 
-  SaveLargeFileOp(long userId, DefaultTfsManager tfsManager) {
-     super(userId, tfsManager);
-     this.operType = "oper_save_large_file";
+  SaveLargeFileOp(SectProp operConf, long userId, DefaultTfsManager tfsManager) {
+    super(operConf, userId, tfsManager);
+    this.operType = "oper_save_large_file";
+    localLargeFile = operConf.getPropValue(CONF_SAVE_LARGE_FILE, "localLargeFile", "/home/admin/workspace/nameMetaOper/2.1G");
+    largeFileName = operConf.getPropValue(CONF_SAVE_LARGE_FILE, "largeFileName", "largefile");
+    String tmp = operConf.getPropValue(CONF_SAVE_LARGE_FILE, "autoGenDir", "true");
+    autoGenDir = tmp.equals("true") ? true : false;
+    statCount = Integer.parseInt(operConf.getPropValue(CONF_SAVE_LARGE_FILE, "statCount", "10"));
   }
 
   @Override
@@ -28,11 +34,7 @@ class SaveLargeFileOp extends Operation {
     long tid = Thread.currentThread().getId();
     log.info("start save large file operation ==" + tid + "== thread");
     boolean ret = false;
-    boolean autoGenDir = true;
 
-    if (0 != inputList.size()) {
-      autoGenDir = false;
-    }
     if (autoGenDir) {
         outputFile = "oper_save_file.fileList." + userId;
         BufferedWriter buffWriter = null;
@@ -56,7 +58,7 @@ class SaveLargeFileOp extends Operation {
             }
           }
           addStatInfo(statInfo, ret, operTime);
-          if (statInfo.totalCount % 10 == 0) {
+          if (statInfo.totalCount % statCount == 0) {
             for (int i = 0; i < outputList.size(); i++) {
               buffWriter.write(outputList.get(i));
               buffWriter.newLine();
@@ -95,7 +97,7 @@ class SaveLargeFileOp extends Operation {
         operTime = System.nanoTime() - startTime;
         log.debug("@@ save local file: " + localLargeFile + " to: " + inputList.get(i) + (ret ? " success": " failed"));
         addStatInfo(statInfo, ret, operTime);
-        if (statInfo.totalCount % 10 == 0) {
+        if (statInfo.totalCount % statCount == 0) {
           myLock.writeLock().lock(); 
           doStat(statInfo, opStatInfo);
           myLock.writeLock().unlock();

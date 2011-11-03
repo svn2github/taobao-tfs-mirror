@@ -10,9 +10,10 @@ class MixOp extends Operation {
   private static StatInfo opStatInfo = new StatInfo();
   private static ReadWriteLock myLock = new ReentrantReadWriteLock(false);
 
-  MixOp(long userId, DefaultTfsManager tfsManager) {
-     super(userId, tfsManager);
-     this.operType = "oper_mix";
+  MixOp(SectProp operConf, long userId, DefaultTfsManager tfsManager) {
+    super(operConf, userId, tfsManager);
+    this.operType = "oper_mix";
+    statCount = Integer.parseInt(operConf.getPropValue(CONF_MIX, "statCount", "1000"));
   }
 
   @Override
@@ -59,7 +60,7 @@ class MixOp extends Operation {
         operTime = System.nanoTime() - startTime;
         addStatInfo(statInfo, ret, operTime);
       }
-      if (statInfo.totalCount % 1000 == 0) {
+      if (statInfo.totalCount % statCount == 0) {
         myLock.writeLock().lock(); 
         doStat(statInfo, opStatInfo);
         myLock.writeLock().unlock();

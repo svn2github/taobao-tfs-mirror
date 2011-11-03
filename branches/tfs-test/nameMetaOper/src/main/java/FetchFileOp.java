@@ -8,13 +8,15 @@ import com.taobao.common.tfs.DefaultTfsManager;
 class FetchFileOp extends Operation { 
 
   private static StatInfo opStatInfo = new StatInfo();
-  String fetchedFile = "/home/admin/workspace/nameMetaOper/fetchedFile";
+  String fetchedFile;
   private static ReadWriteLock myLock = new ReentrantReadWriteLock(false);
 
-  FetchFileOp(long userId, DefaultTfsManager tfsManager) {
-    super(userId, tfsManager);
+  FetchFileOp(SectProp operConf, long userId, DefaultTfsManager tfsManager) {
+    super(operConf, userId, tfsManager);
     this.operType = "oper_fetch_file";
     inputFile = "oper_save_file.fileList." + userId;
+    fetchedFile = operConf.getPropValue(CONF_FETCH_FILE, "fetchedFile", "/home/admin/workspace/nameMetaOper/fetchedFile");
+    statCount = Integer.parseInt(operConf.getPropValue(CONF_FETCH_FILE, "statCount", "1000"));
   }
 
   @Override
@@ -45,7 +47,7 @@ class FetchFileOp extends Operation {
       }
       log.debug("@@ fetchFile appId: " + appId + ", userId: " + userId + ", filePath: " + filePath + (ret ? " success": " failed"));
       addStatInfo(statInfo, ret, operTime);
-      if (statInfo.totalCount % 100 == 0) {
+      if (statInfo.totalCount % statCount == 0) {
         myLock.writeLock().lock(); 
         doStat(statInfo, opStatInfo);
         myLock.writeLock().unlock();

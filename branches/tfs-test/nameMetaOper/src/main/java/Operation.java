@@ -31,6 +31,17 @@ class Operation implements Runnable {
   protected String currFilePath;
   protected long userId = 381;
   protected DefaultTfsManager tfsManager;
+  protected static int statCount = 1000;
+  final static String CONF_CREATE_DIR = "CreateDir";
+  final static String CONF_LS_DIR = "LsDir";
+  final static String CONF_RM_DIR = "RmDir";
+  final static String CONF_CREATE_FILE = "CreateFile";
+  final static String CONF_SAVE_SMALL_FILE = "SaveSmallFile";
+  final static String CONF_SAVE_LARGE_FILE = "SaveLargeFile";
+  final static String CONF_FETCH_FILE = "FetchFile";
+  final static String CONF_LS_FILE = "LsFile";
+  final static String CONF_RM_FILE = "RmFile";
+  final static String CONF_MIX = "Mix";
 
   long startTime = 0;
   long operTime = 0;
@@ -38,7 +49,7 @@ class Operation implements Runnable {
   void execute() {
   }
 
-  Operation(long userId, DefaultTfsManager tfsManager) {
+  Operation(SectProp operConf, long userId, DefaultTfsManager tfsManager) {
     if (userId != 0) {
       this.userId = userId;
     }

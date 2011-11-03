@@ -12,10 +12,15 @@ class CreateDirOp extends Operation {
 
   private static StatInfo opStatInfo = new StatInfo();
   private static ReadWriteLock myLock = new ReentrantReadWriteLock(false);
+  private static boolean autoGenDir = true;
+  private static int statCount = 1000;
  
-  CreateDirOp(long userId, DefaultTfsManager tfsManager) {
-     super(userId, tfsManager);
-     this.operType = "oper_create_dir";
+  CreateDirOp(SectProp operConf, long userId, DefaultTfsManager tfsManager) {
+    super(operConf, userId, tfsManager);
+    this.operType = "oper_create_dir";
+    String tmp = operConf.getPropValue(CONF_CREATE_DIR, "autoGenDir", "true");
+    autoGenDir = tmp.equals("true") ? true : false;
+    statCount = Integer.parseInt(operConf.getPropValue(CONF_CREATE_DIR, "statCount", "1000"));
   }
 
   @Override
@@ -25,9 +30,6 @@ class CreateDirOp extends Operation {
     long tid = Thread.currentThread().getId();
     log.info("start create dir operation ==" + tid + "== thread");
     boolean ret = false;
-    boolean autoGenDir = true; //TODO: read from conf
-    //boolean autoGenDir = false; //TODO: read from conf
-
     if (autoGenDir) {
       outputFile = operType + ".fileList." + userId;
       BufferedWriter buffWriter = null;
@@ -43,7 +45,7 @@ class CreateDirOp extends Operation {
             String record = appId + " " + userId + " " + currDirPath + " " + Path.getBaseName(currDirPath);
             outputList.add(record); 
           }
-          if (statInfo.totalCount % 100 == 0) {
+          if (statInfo.totalCount % statCount == 0) {
             for (int i = 0; i < outputList.size(); i++) {
               buffWriter.write(outputList.get(i));
               buffWriter.newLine();

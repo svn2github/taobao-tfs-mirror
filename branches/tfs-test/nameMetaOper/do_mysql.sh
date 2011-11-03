@@ -49,6 +49,13 @@ clear()
   done
 }
 
+#$2 app_id
+clear_app_id()
+{
+  app_id=$1
+  result=$(mysql_op "delete from t_meta_info where app_id=$app_id")
+}
+
 #---------------------------------------------------------
 #------------------------- main --------------------------
 #---------------------------------------------------------
@@ -58,6 +65,9 @@ case $1 in
   ;;
   clear)
   clear $2
+  ;;
+  clear_app_id)
+  clear_app_id $2
   ;;
   *)
   ;;

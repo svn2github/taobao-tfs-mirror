@@ -11,14 +11,18 @@ import com.taobao.common.tfs.DefaultTfsManager;
 class SaveSmallFileOp extends Operation { 
  
   private static StatInfo opStatInfo = new StatInfo();
-  private static String localSmallFile = "/home/admin/workspace/nameMetaOper/100K";
-  private static String smallFileName = "smallfile";
+  private static boolean autoGenDir = true;
+  private static String localSmallFile;
+  private static String smallFileName;
   private static int crc = 0;
   private static ReadWriteLock myLock = new ReentrantReadWriteLock(false);
 
-  SaveSmallFileOp(long userId, DefaultTfsManager tfsManager) {
-     super(userId, tfsManager);
-     this.operType = "oper_save_small_file";
+  SaveSmallFileOp(SectProp operConf, long userId, DefaultTfsManager tfsManager) {
+    super(operConf, userId, tfsManager);
+    this.operType = "oper_save_small_file";
+    localSmallFile = operConf.getPropValue(CONF_SAVE_SMALL_FILE, "localSmallFile", "/home/admin/workspace/nameMetaOper/100K");
+    smallFileName = operConf.getPropValue(CONF_SAVE_SMALL_FILE, "smallFileName", "smallfile");
+    statCount = Integer.parseInt(operConf.getPropValue(CONF_SAVE_SMALL_FILE, "statCount", "1000"));
   }
 
   @Override
@@ -54,7 +58,7 @@ class SaveSmallFileOp extends Operation {
             }
           }
           addStatInfo(statInfo, ret, operTime);
-          if (statInfo.totalCount % 100 == 0) {
+          if (statInfo.totalCount % statCount == 0) {
             for (int i = 0; i < outputList.size(); i++) {
               buffWriter.write(outputList.get(i));
               buffWriter.newLine();
