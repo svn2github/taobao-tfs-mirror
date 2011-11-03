@@ -31,31 +31,38 @@ namespace tfs
   {
     static int8_t get_server_running_status(const uint64_t ip_port, const int32_t switch_flag)
     {
-      const int64_t TIMEOUT = 500;
       int8_t status = -1;
-      NewClient* client = NewClientManager::get_instance().create_client();
-      if (NULL != client)
+      int32_t count = 0;
+      NewClient* client = NULL;
+      const int64_t TIMEOUT = 500;
+      do
       {
-        HeartBeatAndNSHeartMessage heart_msg;
-        heart_msg.set_ns_switch_flag_and_status(switch_flag, 0);
-        tbnet::Packet* rsp_msg = NULL;
-        if (TFS_SUCCESS == send_msg_to_server(ip_port, client, &heart_msg, rsp_msg, TIMEOUT))
+        ++count;
+        client = NewClientManager::get_instance().create_client();
+        if (NULL != client)
         {
-          if (HEARTBEAT_AND_NS_HEART_MESSAGE == rsp_msg->getPCode())
+          HeartBeatAndNSHeartMessage heart_msg;
+          heart_msg.set_ns_switch_flag_and_status(switch_flag, 0);
+          tbnet::Packet* rsp_msg = NULL;
+          if (TFS_SUCCESS == send_msg_to_server(ip_port, client, &heart_msg, rsp_msg, TIMEOUT))
           {
-            status = dynamic_cast<HeartBeatAndNSHeartMessage*> (rsp_msg)->get_ns_status();
+            if (HEARTBEAT_AND_NS_HEART_MESSAGE == rsp_msg->getPCode())
+            {
+              status = dynamic_cast<HeartBeatAndNSHeartMessage*> (rsp_msg)->get_ns_status();
+            }
+            else
+            {
+              TBSYS_LOG(ERROR, "unknow packet pcode %d", rsp_msg->getPCode());
+            }
           }
           else
           {
-            TBSYS_LOG(ERROR, "unknow packet pcode %d", rsp_msg->getPCode());
+            TBSYS_LOG(ERROR, "send packet error");
           }
+          NewClientManager::get_instance().destroy_client(client);
         }
-        else
-        {
-          TBSYS_LOG(ERROR, "send packet error");
-        }
-        NewClientManager::get_instance().destroy_client(client);
       }
+      while (count < 3 && -1 != status);
       return status;
     }
   }
@@ -124,6 +131,9 @@ int main(int argc, char *argv[])
       iret = status;
     }
   }
-  TBSYS_LOG(DEBUG, "iret: %d", iret);
+  else
+  {
+    usage(argv[0]);
+  }
   return iret;
 }
