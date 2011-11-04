@@ -167,8 +167,7 @@ AC_FUNC_STAT
 AC_CHECK_FUNCS([fdatasync ftruncate gethostbyname getpagesize gettimeofday memset mkdir munmap rmdir socket strcasecmp strchr strdup strerror strstr strtoul strtoull tzset])
 
 m4_include([ax_lib_mysql.m4])
-
-AX_LIB_MYSQL([5.1.4])
+AX_LIB_MYSQL([5.1.48])
 
 AC_CONFIG_FILES([Makefile
                  conf/Makefile

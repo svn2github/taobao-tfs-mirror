@@ -136,6 +136,7 @@ AC_DEFUN([AX_LIB_MYSQL],
             AC_MSG_RESULT([yes])
         else
             AC_MSG_RESULT([no])
+	    exit
         fi
     fi
 
