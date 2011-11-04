@@ -278,16 +278,8 @@ retry:
             (*iter).file_info_.modify_time_ = o_modify_time;
             (*iter).file_info_.size_ = o_size;
             (*iter).file_info_.ver_no_ = o_ver_no;
-		TBSYS_LOG(DEBUG, "appid = %ld uid = %ld pid = %ld", app_id_,uid_, pid_);
             if (!is_null[7])
             {
-	TBSYS_LOG(DEBUG, "get frag info from db-------------");
-for (size_t i = 0 ; i < o_slide_info_len; i++)
-{
-	TBSYS_LOG(DEBUG, "%d %d", i, o_slide_info[i]);
-}
-	TBSYS_LOG(DEBUG, "get frag info from db over-------------");
-			TBSYS_LOG(DEBUG, "o_slide_info_len = %d", o_slide_info_len);
               int64_t pos = 0;
               (*iter).frag_info_.deserialize(o_slide_info, o_slide_info_len, pos);
             }
@@ -888,12 +880,6 @@ retry:
             ps_params[6].length = &_meta_len;
             ps_params[6].is_null = 0;
 
-	TBSYS_LOG(DEBUG, "insert frag info into db %ld %ld %ld-------------", app_id, uid, pid);
-		for (size_t i = 0; i < _meta_len; i ++)
-{
-	TBSYS_LOG(DEBUG, "%d %d",i, meta_info[i]);
-}
-	TBSYS_LOG(DEBUG, "insert frag info into db-------------");
             status = mysql_stmt_bind_param(stmt, ps_params);
             if (status)
             {
