@@ -11,10 +11,10 @@ Prefix:%{_prefix}
 Source:%{NAME}-%{VERSION}.tar.gz
 BuildRoot: %{_tmppath}/%{name}-root
 
-BuildRequires: t-csrd-tbnet-devel = 1.4.0
+#BuildRequires: t-csrd-tbnet-devel = 1.4.0
 #BuildRequires: MySQL-devel-community,MySQL-client-community
-BuildRequires: mysql-server >= 5.0.7, mysql-devel >= 5.0.7
-BuildRequires: tair-devel = 2.3
+#BuildRequires: mysql-server >= 5.1.48, mysql-devel >= 5.1.48
+#BuildRequires: tair-devel = 2.3
 #BuildRequires: gcc = 4.1
 
 %define __os_install_post %{nil}
@@ -68,6 +68,7 @@ rm  -f /etc/ld.so.conf.d/tfs-%{VERSION}.conf
 %{_prefix}/conf
 %{_prefix}/scripts
 %{_prefix}/logs
+%{_prefix}/sql
 
 %files devel
 %{_prefix}/include
