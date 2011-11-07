@@ -181,7 +181,7 @@ namespace tfs
 
     int64_t BaseInfo::length() const
     {
-      int64_t length = INT_SIZE + INT64_SIZE + Serialization::get_vint64_length(rc_server_infos_) + Serialization::get_list_length(cluster_infos_);
+      int64_t length = INT_SIZE + INT64_SIZE + Serialization::get_vint64_length(rc_server_infos_) + Serialization::get_list_length(cluster_infos_) + INT64_SIZE;
       //TBSYS_LOG(DEBUG, "BaseInfo::length: %"PRI64_PREFIX"d, rc_server_infos_ length: %"PRI64_PREFIX"d, cluster_infos_ length: %"PRI64_PREFIX"d",
       //    length, Serialization::get_vint64_length(rc_server_infos_), Serialization::get_list_length(cluster_infos_));
       return length;
