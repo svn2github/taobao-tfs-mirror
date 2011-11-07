@@ -16,12 +16,18 @@ public class nameMetaOper{
   // operation type
   final static int OPER_CREATE_DIR = 1;
   final static int OPER_LS_DIR = 2;
-  final static int OPER_SAVE_SMALL_FILE = 4;
-  final static int OPER_SAVE_LARGE_FILE = 8;
-  final static int OPER_FETCH_FILE = 16;
+  final static int OPER_MV_DIR = 4;
+  final static int OPER_RM_DIR = 8;
+  final static int OPER_CREATE_FILE = 16;
   final static int OPER_LS_FILE = 32;
-  final static int OPER_REMOVE_FILE = 64;
-  final static int OPER_MIX = 128;
+  final static int OPER_SAVE_SMALL_FILE = 64;
+  final static int OPER_SAVE_LARGE_FILE = 128;
+  final static int OPER_FETCH_FILE = 256;
+  final static int OPER_READ = 512;
+  final static int OPER_WRITE = 1024;
+  final static int OPER_MV_FILE = 2048;
+  final static int OPER_RM_FILE = 4096;
+  final static int OPER_MIX = 8192;
 
   final static String CONF_PUBLIC = "public";
 
@@ -59,6 +65,15 @@ public class nameMetaOper{
         case OPER_LS_DIR:
          oper = new LsDirOp(operConf, userId, tfsManager);
         break;
+        case OPER_MV_DIR:
+         oper = new MvDirOp(operConf, userId, tfsManager);
+        break;
+         case OPER_RM_DIR:
+         oper = new RmDirOp(operConf, userId, tfsManager);
+        break;
+        case OPER_CREATE_FILE:
+          oper = new CreateFileOp(operConf, userId, tfsManager);
+        break;
         case OPER_SAVE_SMALL_FILE:
           oper = new SaveSmallFileOp(operConf, userId, tfsManager);
         break;
@@ -71,6 +86,13 @@ public class nameMetaOper{
         case OPER_LS_FILE:
          oper = new LsFileOp(operConf, userId, tfsManager);
         break;
+        case OPER_MV_FILE:
+         oper = new MvFileOp(operConf, userId, tfsManager);
+        break;
+        case OPER_RM_FILE:
+         oper = new RmFileOp(operConf, userId, tfsManager);
+        break;
+ 
         case OPER_MIX:
           oper = new MixOp(operConf, userId, tfsManager);
         break;

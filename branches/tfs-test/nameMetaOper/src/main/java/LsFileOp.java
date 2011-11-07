@@ -33,7 +33,7 @@ class LsFileOp extends Operation {
     for (int i = 0; i < inputList.size(); i++) {
       String record = inputList.get(i);
       String [] tmp = record.split(" ");
-      if (tmp.length != 4) {
+      if (tmp.length != 5) {
         continue;
       }
       appId = Long.parseLong(tmp[0]);

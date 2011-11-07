@@ -32,16 +32,22 @@ class Operation implements Runnable {
   protected long userId = 381;
   protected DefaultTfsManager tfsManager;
   protected static int statCount = 1000;
+
   final static String CONF_CREATE_DIR = "CreateDir";
   final static String CONF_LS_DIR = "LsDir";
+  final static String CONF_MV_DIR = "MvDir";
   final static String CONF_RM_DIR = "RmDir";
   final static String CONF_CREATE_FILE = "CreateFile";
   final static String CONF_SAVE_SMALL_FILE = "SaveSmallFile";
   final static String CONF_SAVE_LARGE_FILE = "SaveLargeFile";
   final static String CONF_FETCH_FILE = "FetchFile";
   final static String CONF_LS_FILE = "LsFile";
+  final static String CONF_MV_FILE = "MvFile";
   final static String CONF_RM_FILE = "RmFile";
   final static String CONF_MIX = "Mix";
+
+  final static int DIR_LIST_COL_COUNT = 4;
+  final static int FILE_LIST_COL_COUNT = 5;
 
   long startTime = 0;
   long operTime = 0;
@@ -63,6 +69,7 @@ class Operation implements Runnable {
   }
 
   public static void readFromInputFile(String inputFile, ArrayList<String> inputList) {
+    log.debug("@@ read from input file: " + inputFile + " start!");
     BufferedReader buffReader = null;
     try {
       buffReader = new BufferedReader(new FileReader(inputFile));
@@ -78,6 +85,7 @@ class Operation implements Runnable {
       } catch (Exception e) {
         e.printStackTrace();
       }
+      log.debug("@@ read from input file: " + inputFile + " end! InputList size: " + inputList.size());
     }
   }
 
