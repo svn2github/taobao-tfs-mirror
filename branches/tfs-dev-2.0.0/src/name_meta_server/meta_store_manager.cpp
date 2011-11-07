@@ -353,7 +353,7 @@ namespace tfs
                      name, name_len, type, meta_info);
         if (TFS_SUCCESS != ret)
         {
-          TBSYS_LOG(ERROR, "insert into db error");
+          TBSYS_LOG(INFO, "insert into db error");
         }
         else
         {
