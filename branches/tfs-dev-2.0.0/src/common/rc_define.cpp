@@ -64,7 +64,7 @@ namespace tfs
     void ClusterData::dump() const
     {
       TBSYS_LOG(DEBUG, "cluster_stat: %d, access_type: %d, cluster_id: %s, ns_vip: %s",
-          cluster_stat_, access_type_, cluster_id_.c_str(), ns_vip_.c_str()); 
+          cluster_stat_, access_type_, cluster_id_.c_str(), ns_vip_.c_str());
     }
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     int ClusterRackData::serialize(char* data, const int64_t data_len, int64_t& pos) const
@@ -146,6 +146,10 @@ namespace tfs
       {
         ret = Serialization::set_int64(data, data_len, pos, modify_time_);
       }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int64(data, data_len, pos, meta_root_server_);
+      }
       return ret;
     }
 
@@ -167,6 +171,10 @@ namespace tfs
       if (TFS_SUCCESS == ret)
       {
         ret = Serialization::get_int64(data, data_len, pos, &modify_time_);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::get_int64(data, data_len, pos, &meta_root_server_);
       }
       return ret;
     }

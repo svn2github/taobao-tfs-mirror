@@ -48,6 +48,21 @@ namespace tfs
       }
     };
     typedef std::vector<ResourceServerInfo> VResourceServerInfo;
+    struct MetaRootServerInfo
+    {
+      int32_t app_id_;
+      int32_t stat_;
+      char addr_info_[ADDR_INFO_LEN];
+      char rem_[REM_LEN];
+      MetaRootServerInfo()
+      {
+        app_id_ = -1;
+        stat_ = -1;
+        addr_info_[0] = '\0';
+        rem_[0] = '\0';
+      }
+    };
+    typedef std::vector<MetaRootServerInfo> VMetaRootServerInfo;
 
     struct ClusterRackInfo
     {

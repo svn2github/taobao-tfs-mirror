@@ -35,18 +35,23 @@ namespace tfs
       impl_ = NULL;
     }
     TfsRetType RcClient::initialize(const char* str_rc_ip, const char* app_key, const char* str_app_ip,
-        const int32_t cache_times, const int32_t cache_items, const char* dev_name, const char* rs_addr)
+        const int32_t cache_times, const int32_t cache_items, const char* dev_name)
     {
       int32_t real_cache_times = (cache_times >= 0) ? cache_times : common::DEFAULT_BLOCK_CACHE_TIME;
       int32_t real_cache_items = (cache_items >= 0) ? cache_items : common::DEFAULT_BLOCK_CACHE_ITEMS;
-      return impl_->initialize(str_rc_ip, app_key, str_app_ip, real_cache_times, real_cache_items, dev_name, rs_addr);
+      return impl_->initialize(str_rc_ip, app_key, str_app_ip, real_cache_times, real_cache_items, dev_name, NULL);
     }
     TfsRetType RcClient::initialize(const uint64_t rc_ip, const char* app_key, const uint64_t app_ip,
-        const int32_t cache_times, const int32_t cache_items, const char* dev_name, const char* rs_addr)
+        const int32_t cache_times, const int32_t cache_items, const char* dev_name)
     {
       int32_t real_cache_times = (cache_times >= 0) ? cache_times : common::DEFAULT_BLOCK_CACHE_TIME;
       int32_t real_cache_items = (cache_items >= 0) ? cache_items : common::DEFAULT_BLOCK_CACHE_ITEMS;
-      return impl_->initialize(rc_ip, app_key, app_ip, real_cache_times, real_cache_items, dev_name, rs_addr);
+      return impl_->initialize(rc_ip, app_key, app_ip, real_cache_times, real_cache_items, dev_name, NULL);
+    }
+
+    int64_t RcClient::get_app_id() const
+    {
+      return impl_->get_app_id();
     }
 
     void RcClient::set_wait_timeout(const int64_t timeout_ms)

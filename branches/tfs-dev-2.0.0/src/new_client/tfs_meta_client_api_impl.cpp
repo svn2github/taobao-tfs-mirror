@@ -58,9 +58,15 @@ namespace tfs
       }
       else
       {
-        rs_id_ = Func::get_host_ip(rs_addr);
-        update_table_from_rootserver();
+        ret = initialize(Func::get_host_ip(rs_addr));
       }
+      return ret;
+    }
+    int NameMetaClientImpl::initialize(const int64_t rs_addr)
+    {
+      int ret = TFS_SUCCESS;
+      rs_id_ = rs_addr;
+      update_table_from_rootserver();
       return ret;
     }
 

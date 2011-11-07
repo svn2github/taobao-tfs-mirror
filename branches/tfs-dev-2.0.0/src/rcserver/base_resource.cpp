@@ -17,7 +17,7 @@
 #include <algorithm>
 #include <tbsys.h>
 #include "mysql_database_helper.h"
-namespace 
+namespace
 {
   const int SERVER_STAT_AVALIABLE = 1;
   const int GROUP_ACCESS_TYPE_FORBIDEN = 0;
@@ -36,6 +36,7 @@ namespace tfs
     int BaseResource::load()
     {
       v_resource_server_info_.clear();
+      v_meta_root_server_info_.clear();
       v_cluster_rack_info_.clear();
       v_cluster_rack_group_.clear();
       v_cluster_rack_duplicate_server_.clear();
@@ -44,6 +45,14 @@ namespace tfs
       if (TFS_SUCCESS != ret)
       {
         TBSYS_LOG(ERROR, "load resource_server_info error ret is %d", ret);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = database_helper_.scan(v_meta_root_server_info_);
+        if (TFS_SUCCESS != ret)
+        {
+          TBSYS_LOG(ERROR, "load meta_root_server_info error ret is %d", ret);
+        }
       }
       if (TFS_SUCCESS == ret)
       {
@@ -89,6 +98,30 @@ namespace tfs
     {
       return update_time_in_db > base_last_update_time_;
     }
+
+    int BaseResource::get_meta_root_server(const int32_t app_id, int64_t& root_server) const
+    {
+      int ret = TFS_SUCCESS;
+      root_server = 0;
+      VMetaRootServerInfo::const_iterator it = v_meta_root_server_info_.begin();
+      for (; it != v_meta_root_server_info_.end(); it++)
+      {
+        if (1 != it->stat_) continue;
+        if (0 == it->app_id_)
+        {
+          if (0 == root_server)
+          {
+            root_server = tbsys::CNetUtil::strToAddr(it->addr_info_, 0);
+          }
+        }
+        if (app_id == it->app_id_)
+        {
+          root_server = tbsys::CNetUtil::strToAddr(it->addr_info_, 0);
+          break;
+        }
+      }
+      return ret;
+    }
     int BaseResource::get_resource_servers(std::vector<uint64_t>& resource_servers) const
     {
       int ret = TFS_SUCCESS;
@@ -120,7 +153,7 @@ namespace tfs
       return ret;
     }
 
-    int BaseResource::get_cluster_infos(const int32_t cluster_group_id, 
+    int BaseResource::get_cluster_infos(const int32_t cluster_group_id,
         std::vector<ClusterRackData>& cluster_rack_datas) const
     {
       cluster_rack_datas.clear();

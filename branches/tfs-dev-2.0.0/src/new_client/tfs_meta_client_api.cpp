@@ -40,6 +40,11 @@ namespace tfs
       return impl_->initialize(rs_addr);
     }
 
+    int NameMetaClient::initialize(const int64_t rs_addr)
+    {
+      return impl_->initialize(rs_addr);
+    }
+
     TfsRetType NameMetaClient::create_dir(const int64_t app_id, const int64_t uid,
         const char* dir_path)
     {

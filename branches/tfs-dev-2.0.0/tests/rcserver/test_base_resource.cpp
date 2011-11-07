@@ -47,6 +47,20 @@ TEST_F(BaseResourceTest, get_resource_servers)
   EXPECT_EQ(tbsys::CNetUtil::strToAddr("10.232.35.41:2123",0), *(resource_servers.begin()));
 
 }
+TEST_F(BaseResourceTest, get_meta_root_servers)
+{
+  TestDatabaseHelper data_helper;
+  BaseResource tester(data_helper);
+  EXPECT_EQ(TFS_SUCCESS, tester.load());
+  int64_t root_server = 0;
+  EXPECT_EQ(TFS_SUCCESS, tester.get_meta_root_server(5, root_server));
+  EXPECT_EQ(tbsys::CNetUtil::strToAddr("10.232.35.42:2123",0), root_server);
+  root_server = 0;
+  EXPECT_EQ(TFS_SUCCESS, tester.get_meta_root_server(6, root_server));
+  EXPECT_EQ(tbsys::CNetUtil::strToAddr("10.232.35.40:2123",0), root_server);
+
+
+}
 
 TEST_F(BaseResourceTest, get_cluster_infos)
 {

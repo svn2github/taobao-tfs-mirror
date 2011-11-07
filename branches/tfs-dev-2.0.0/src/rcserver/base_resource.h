@@ -42,6 +42,7 @@ namespace tfs
       public:
         virtual int load();
         bool need_reload(const int64_t update_time_in_db) const;
+        int get_meta_root_server(const int32_t app_id, int64_t& roo_server) const;
         int get_resource_servers(std::vector<uint64_t>& resource_servers) const;
         int get_cluster_infos(const int32_t cluster_group_id,
             std::vector<common::ClusterRackData>& cluster_rack_datas) const;
@@ -50,6 +51,7 @@ namespace tfs
       private:
         int64_t base_last_update_time_;
         VResourceServerInfo v_resource_server_info_;
+        VMetaRootServerInfo v_meta_root_server_info_;
         VClusterRackInfo v_cluster_rack_info_;
         VClusterRackGroup v_cluster_rack_group_;
         VClusterRackDuplicateServer v_cluster_rack_duplicate_server_;

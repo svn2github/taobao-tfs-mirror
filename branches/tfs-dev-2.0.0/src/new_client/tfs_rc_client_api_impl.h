@@ -61,6 +61,7 @@ namespace tfs
             const char* dev_name = NULL,
             const char* rs_addr = NULL);
 
+        int64_t get_app_id() const { return app_id_;}
         void set_wait_timeout(const int64_t timeout_ms);
         void set_log_level(const char* level);
         void set_log_file(const char* log_file);

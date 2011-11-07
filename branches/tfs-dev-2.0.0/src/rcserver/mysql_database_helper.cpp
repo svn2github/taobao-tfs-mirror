@@ -204,6 +204,55 @@ error:
       return ret;
     }
 
+    int MysqlDatabaseHelper::scan(VMetaRootServerInfo& outparam)
+    {
+      outparam.clear();
+      tbutil::Mutex::Lock lock(mutex_);
+      int ret = TFS_ERROR;
+      if (!is_connected_)
+      {
+        connect();
+      }
+      if (is_connected_)
+      {
+        char sql[1024];
+        char table[256];
+        snprintf(table, 256, "%s", "T_META_ROOT_INFO");
+        snprintf(sql, 1024, "select APP_ID, ADDR_INFO, STAT, REM from %s", table);
+        ret = mysql_query(&mysql_.mysql, sql);
+        if (ret)
+        {
+          TBSYS_LOG(ERROR, "query (%s) failure: %s %s", sql,  mysql_.host.c_str(), mysql_error(&mysql_.mysql));
+          close();
+          return TFS_ERROR;
+        }
+
+        MYSQL_ROW row;
+        MetaRootServerInfo tmp;
+        MYSQL_RES *mysql_ret = mysql_store_result(&mysql_.mysql);
+        if (mysql_ret == NULL)
+        {
+          TBSYS_LOG(ERROR, "mysql_store_result failure: %s %s", mysql_.host.c_str(), mysql_error(&mysql_.mysql));
+          close();
+          ret = TFS_ERROR;
+          goto error;
+        }
+
+        while(NULL != (row = mysql_fetch_row(mysql_ret)))
+        {
+          tmp.app_id_ = atoi(row[0]);
+          snprintf(tmp.addr_info_, ADDR_INFO_LEN, "%s", row[1]);
+          tmp.stat_ = atoi(row[2]);
+          snprintf(tmp.rem_, REM_LEN, "%s", row[3]);
+          outparam.push_back(tmp);
+        }
+
+error:
+        mysql_free_result(mysql_ret);
+      }
+      return ret;
+    }
+
     int MysqlDatabaseHelper::select(const ClusterRackInfo& inparam, ClusterRackInfo& outparam)
     {
       UNUSED(inparam);

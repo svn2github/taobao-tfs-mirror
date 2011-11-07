@@ -44,13 +44,13 @@ namespace tfs
         TfsRetType initialize(const char* str_rc_ip, const char* app_key, const char* str_app_ip,
             const int32_t cache_times = -1,
             const int32_t cache_items = -1,
-            const char* dev_name = NULL,
-            const char* rs_addr = NULL);
+            const char* dev_name = NULL);
         TfsRetType initialize(const uint64_t rc_ip, const char* app_key, const uint64_t app_ip,
             const int32_t cache_times = -1,
             const int32_t cache_items = -1,
-            const char* dev_name = NULL,
-            const char* rs_addr = NULL);
+            const char* dev_name = NULL);
+
+        int64_t get_app_id() const;
 
         void set_wait_timeout(const int64_t timeout_ms);
         void set_log_level(const char* level);

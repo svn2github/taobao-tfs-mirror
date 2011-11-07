@@ -167,10 +167,13 @@ namespace tfs
 
           active_rc_ip_ = rc_ip;
           init_stat_ = INIT_LOGINED;
-          //TODO get meta_server_root from rc
           if (NULL != rs_addr)
           {
             name_meta_client_->initialize(rs_addr);
+          }
+          else
+          {
+            name_meta_client_->initialize(base_info_.meta_root_server_);
           }
           keepalive_timer_->scheduleRepeated(stat_update_task_,
               tbutil::Time::seconds(base_info_.report_interval_));

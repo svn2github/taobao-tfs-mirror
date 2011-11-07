@@ -18,7 +18,7 @@
 #include "rcserver/i_resource_manager.h"
 #include "rcserver/resource_server_data.h"
 #include "rcserver/mocked_resource_manager.h"
-#include "rcserver/session_util.h"
+#include "common/session_util.h"
 #include "common/define.h"
 #include <time.h>
 #include <Timer.h>
@@ -30,7 +30,7 @@ using namespace tfs::common;
 using namespace tbutil;
 using namespace std;
 
-class SessionManagerTest : public ::testing::Test 
+class SessionManagerTest : public ::testing::Test
 {
   public:
     SessionManagerTest()
@@ -46,7 +46,7 @@ class SessionManagerTest : public ::testing::Test
     {
     }
 
-    virtual void SetUp() 
+    virtual void SetUp()
     {
     }
     virtual void TearDown()
@@ -81,7 +81,7 @@ void SessionManagerTest::gene_info(int sleep_interval)
   string app1_session1;
   ASSERT_EQ(session_manager_->login(app1_key, session_ip, app1_session1, input_info), TFS_SUCCESS);
 
-  // app2<->app2_session1 : login keepalive 
+  // app2<->app2_session1 : login keepalive
   string app2_key = "dc";
   string app2_session1;
   ASSERT_EQ(session_manager_->login(app2_key, session_ip, app2_session1, input_info), TFS_SUCCESS);
@@ -102,7 +102,7 @@ void SessionManagerTest::gene_info(int sleep_interval)
   app_info_2_1.oper_size_ = 300000;
   app_info_2_1.oper_rt_= 200000;
   app_info_2_1.oper_succ_ = 9997;
-  
+
   AppOperInfo app_info_2_2;
   app_info_2_2.oper_type_ = OPER_UNLINK;
   app_info_2_2.oper_times_ = 500;
@@ -136,7 +136,7 @@ void SessionManagerTest::gene_info(int sleep_interval)
   app_info_3_1.oper_size_ = 600000;
   app_info_3_1.oper_rt_= 400000;
   app_info_3_1.oper_succ_ = 19000;
-  
+
   AppOperInfo app_info_3_2;
   app_info_3_2.oper_type_ = OPER_WRITE;
   app_info_3_2.oper_times_ = 1000;
@@ -173,7 +173,7 @@ void SessionManagerTest::gene_info(int sleep_interval)
   app_info_3_4.oper_size_ = 500000;
   app_info_3_4.oper_rt_= 300000;
   app_info_3_4.oper_succ_ = 15000;
-  
+
   ka_info_app3_2.s_stat_.app_oper_info_[OPER_READ] = app_info_3_4;
   ka_info_app3_2.s_stat_.app_oper_info_[OPER_UNIQUE_WRITE] = app_info_3_3;
   ka_info_app3_2.s_stat_.cache_hit_ratio_ = 89;
@@ -202,7 +202,7 @@ void SessionManagerTest::gene_info(int sleep_interval)
   app_info_4_1.oper_size_ = 6000;
   app_info_4_1.oper_rt_= 40000;
   app_info_4_1.oper_succ_ = 1000;
-  
+
   AppOperInfo app_info_4_2;
   app_info_4_2.oper_type_ = OPER_WRITE;
   app_info_4_2.oper_times_ = 2000;
@@ -239,7 +239,7 @@ void SessionManagerTest::gene_info(int sleep_interval)
   app_info_4_4.oper_size_ = 900000;
   app_info_4_4.oper_rt_= 500000;
   app_info_4_4.oper_succ_ = 25000;
-  
+
   ka_info_app4_2.s_stat_.app_oper_info_[OPER_READ] = app_info_4_4;
   ka_info_app4_2.s_stat_.app_oper_info_[OPER_UNIQUE_WRITE] = app_info_4_3;
   ka_info_app4_2.s_stat_.cache_hit_ratio_ = 98;
@@ -277,7 +277,7 @@ void SessionManagerTest::gene_info(int sleep_interval)
   BaseInfo base_input_info;
   base_input_info.report_interval_ = 1;
   ASSERT_EQ(session_manager_->login(app6_key, session_ip_6, app6_session1, base_input_info), TFS_SUCCESS);
-  // app6<->app6_session2 : login keepalive 
+  // app6<->app6_session2 : login keepalive
   string app6_session2;
   ASSERT_EQ(session_manager_->login(app6_key, session_ip_6, app6_session2, base_input_info), TFS_SUCCESS);
 
@@ -304,7 +304,7 @@ void SessionManagerTest::gene_info(int sleep_interval)
   app_info_6_2_2.oper_size_ = 800000;
   app_info_6_2_2.oper_rt_= 400000;
   app_info_6_2_2.oper_succ_ = 23000;
-  
+
   ka_info_app6_1.s_stat_.app_oper_info_[OPER_UNIQUE_WRITE] = app_info_6_2_1;
   ka_info_app6_1.s_stat_.app_oper_info_[OPER_READ] = app_info_6_2_2;
   ka_info_app6_1.s_stat_.cache_hit_ratio_ = 95;
@@ -337,13 +337,13 @@ void SessionManagerTest::gene_info(int sleep_interval)
   app_info_6_3_2.oper_size_ = 800000;
   app_info_6_3_2.oper_rt_= 400000;
   app_info_6_3_2.oper_succ_ = 23000;
-  
+
   ka_info_app6_2.s_stat_.app_oper_info_[OPER_WRITE] = app_info_6_3_1;
   ka_info_app6_2.s_stat_.app_oper_info_[OPER_READ] = app_info_6_3_2;
   ka_info_app6_2.s_stat_.cache_hit_ratio_ = 96;
 
   ASSERT_EQ(session_manager_->keep_alive(app6_session3, ka_info_app6_2, update_flag, base_input_info), TFS_SUCCESS);
-  
+
   KeepAliveInfo ka_info_app6_3;
   ka_info_app6_3.last_report_time_ = time(NULL) + 200;
 
@@ -390,13 +390,13 @@ void SessionManagerTest::gene_info(int sleep_interval)
   app_info_6_4_2.oper_size_ = 800000;
   app_info_6_4_2.oper_rt_= 400000;
   app_info_6_4_2.oper_succ_ = 23000;
-  
+
   ka_info_app6_4_1.s_stat_.app_oper_info_[OPER_WRITE] = app_info_6_4_1;
   ka_info_app6_4_1.s_stat_.app_oper_info_[OPER_READ] = app_info_6_4_2;
   ka_info_app6_4_1.s_stat_.cache_hit_ratio_ = 95;
 
   ASSERT_EQ(session_manager_->keep_alive(app6_session4, ka_info_app6_4_1, update_flag, base_input_info), TFS_SUCCESS);
-  
+
   KeepAliveInfo ka_info_app6_4_2;
   ka_info_app6_4_2.last_report_time_ = time(NULL) + 200;
 
@@ -418,7 +418,7 @@ void SessionManagerTest::gene_info(int sleep_interval)
   ka_info_app6_4_2.s_stat_.cache_hit_ratio_ = 93;
   ASSERT_EQ(session_manager_->logout(app6_session3, ka_info_app6_4_2), TFS_SUCCESS);
   // app6<->app6_session4 : login keepalive keepalive logout
-  
+
   cout << "first sleep " << sleep_interval << "s" << endl;
   sleep(sleep_interval);
   cout << "end first sleep " << sleep_interval << "s" << endl;
@@ -589,7 +589,7 @@ TEST_F(SessionManagerTest, testKeepAliveInfo)
   app_info_1.oper_size_ = 300000;
   app_info_1.oper_rt_= 200000;
   app_info_1.oper_succ_ = 9997;
-  
+
   AppOperInfo app_info_2;
   app_info_2.oper_type_ = OPER_UNLINK;
   app_info_2.oper_times_ = 500;
@@ -616,7 +616,7 @@ TEST_F(SessionManagerTest, testKeepAliveInfo)
   app_info_3.oper_size_ = 450000;
   app_info_3.oper_rt_= 380000;
   app_info_3.oper_succ_ = 19999;
-  
+
   AppOperInfo app_info_4;
   app_info_4.oper_type_ = OPER_WRITE;
   app_info_4.oper_times_ = 400;
@@ -655,7 +655,7 @@ TEST_F(SessionManagerTest, testKeepAliveInfo)
 }
 
 TEST_F(SessionManagerTest, testInit)
-{  
+{
   // test invalid argu
   SessionManager* inval_rc_session_manager = new SessionManager(NULL, timer_);
   ASSERT_EQ(inval_rc_session_manager->initialize(), EXIT_INVALID_ARGU);
@@ -715,7 +715,7 @@ TEST_F(SessionManagerTest, testKeepAlive)
 {
   //ignore test keepalive info now
   ASSERT_EQ(session_manager_->initialize(), TFS_SUCCESS);
-  
+
   KeepAliveInfo ka_info;
   bool update_flag = false;
   BaseInfo input_info;
@@ -756,10 +756,10 @@ TEST_F(SessionManagerTest, testKeepAlive)
 }
 
 TEST_F(SessionManagerTest, testLogout)
-{  
+{
   //ignore test keepalive info now
   ASSERT_EQ(session_manager_->initialize(), TFS_SUCCESS);
-  
+
   KeepAliveInfo ka_info;
   bool update_flag = false;
   BaseInfo input_info;

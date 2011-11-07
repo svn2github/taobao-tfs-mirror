@@ -7,6 +7,16 @@ CREATE TABLE t_resource_server_info (
   PRIMARY KEY (addr_info)
 );
 
+CREATE TABLE t_meta_root_info (
+  app_id INT,
+  addr_info VARCHAR(64) NOT NULL,
+  stat INT NOT NULL DEFAULT 1,
+  rem VARCHAR(255),
+  create_time DATETIME,
+  modify_time DATETIME,
+  PRIMARY KEY (app_id)
+);
+
 CREATE TABLE t_cluster_rack_info (
   cluster_rack_id INT,
   cluster_id   VARCHAR(8),

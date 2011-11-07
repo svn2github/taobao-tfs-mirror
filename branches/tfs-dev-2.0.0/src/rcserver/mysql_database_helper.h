@@ -35,6 +35,8 @@ namespace tfs
         virtual int remove(const ResourceServerInfo& inparam);
         virtual int scan(VResourceServerInfo& outparam);
 
+        virtual int scan(VMetaRootServerInfo& outparam);
+
         //ClusterRackInfo
         virtual int select(const ClusterRackInfo& inparam, ClusterRackInfo& outparam);
         virtual int update(const ClusterRackInfo& inparam);

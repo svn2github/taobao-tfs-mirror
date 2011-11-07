@@ -51,6 +51,7 @@ namespace tfs
 
         //TODO set in conf file, change to private
         int initialize(const char* rs_addr);
+        int initialize(const int64_t rs_addr);
 
         int create_dir(const int64_t app_id, const int64_t uid, const char* dir_path);
         int create_file(const int64_t app_id, const int64_t uid, const char* file_path);

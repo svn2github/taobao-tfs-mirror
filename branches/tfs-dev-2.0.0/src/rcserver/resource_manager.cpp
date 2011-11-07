@@ -259,6 +259,10 @@ EXIT:
         }
         if (TFS_SUCCESS == ret)
         {
+          ret = base_resource_manager_->get_meta_root_server(app_id, base_info.meta_root_server_);
+        }
+        if (TFS_SUCCESS == ret)
+        {
           base_info.report_interval_ = app_info.report_interval_;
           base_info.modify_time_ = modify_time;
           std::vector<ClusterRackData>::iterator it = base_info.cluster_infos_.begin();
