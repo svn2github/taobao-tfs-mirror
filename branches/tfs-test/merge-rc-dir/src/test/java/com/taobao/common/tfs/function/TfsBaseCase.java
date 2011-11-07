@@ -161,6 +161,17 @@ public class TfsBaseCase {
         return bRet;
     }
 
+    public boolean cleanOneServerForce(AppGrid appGrid, int clusterIdx, int serverIdx) {
+        boolean bRet = false;
+        AppServer cs = appGrid.getCluster(clusterIdx).getServer(serverIdx);
+        bRet = cs.stop(KillTypeEnum.FORCEKILL, WAIT_TIME);
+        if (bRet == false)
+            return bRet;
+
+        bRet = cs.clean();
+        return bRet;
+    }
+
     public boolean startOneServer(AppGrid appGrid, int clusterIdx, int serverIdx) {
         boolean bRet = false;
         AppServer cs = appGrid.getCluster(clusterIdx).getServer(serverIdx);
@@ -201,7 +212,28 @@ public class TfsBaseCase {
         }
         return bRet;
     }
-    
+
+    public boolean restartOneCluster(AppGrid appGrid, int clusterIdx)
+    {
+        boolean bRet = false;
+        AppCluster csCluster = appGrid.getCluster(clusterIdx);
+        for(int iLoop = 0; iLoop < csCluster.getServerList().size(); iLoop ++) {
+            AppServer cs = csCluster.getServer(iLoop);
+            bRet = cs.stop(KillTypeEnum.NORMALKILL, WAIT_TIME);
+            if (bRet == false) {
+                break;
+            }
+        }
+        for(int iLoop = 0; iLoop < csCluster.getServerList().size(); iLoop ++) {
+            AppServer cs = csCluster.getServer(iLoop);
+            bRet = cs.start();
+            if (bRet == false) {
+                break;
+            }
+        }
+        return bRet;
+    }   
+
     public boolean cleanOneCluster(AppGrid appGrid, int clusterIdx) {
         boolean bRet = false;
         AppCluster csCluster = appGrid.getCluster(clusterIdx);
@@ -215,4 +247,24 @@ public class TfsBaseCase {
         }
         return bRet;
     }
+
+    // move log name
+    public boolean mvLogFile(String targetIp, String logName, String suffix) {
+        boolean bRet = false;
+        bRet = File.checkFileBase(targetIp, logName);
+        if (bRet == false) return bRet;
+        bRet = File.fileCopy(targetIp, logName, logName + "." + suffix);
+        if (bRet == false) return bRet;
+        bRet = File.fileDel(targetIp, logName);
+        return bRet;
+    }
+
+    public boolean cpLogFile(String targetIp, String logName, String suffix) {
+        boolean bRet = false;
+        bRet = File.checkFileBase(targetIp, logName);
+        if (bRet == false) return bRet;
+        bRet = File.fileCopy(targetIp, logName, logName + "." + suffix);
+        return bRet;
+    }
+
 }

@@ -27,14 +27,12 @@ public class NameMetaManager_01_basic_directory_operation extends  NameMetaManag
 
 	@BeforeClass
   public  static void setUpOnce() throws Exception {
-    rmDirRecursive(appId, userId, rootDir); 
-    NameMetaBaseCase.setUpOnce();
+    //rmDirRecursive(appId, userId, rootDir); 
 		tfsManager.createDir(appId, userId, rootDir);
   }
 
   @AfterClass
   public static void tearDownOnce() throws Exception {
-    NameMetaBaseCase.tearDownOnce();
     rmDirRecursive(appId, userId, rootDir); 
   }
 

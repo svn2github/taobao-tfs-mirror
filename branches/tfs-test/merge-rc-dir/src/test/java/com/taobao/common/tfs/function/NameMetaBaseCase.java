@@ -28,13 +28,13 @@ public class NameMetaBaseCase extends TfsBaseCase{
 
     // Define
     // server related
-    final public int RSINDEX = 0;
-    final public int MSINDEX = 1;
+    final public static int RSINDEX = 0;
+    final public static int MSINDEX = 1;
     final public int META_COUNT = 3;
     final public String RSVIP = nameMetaGrid.getCluster(RSINDEX).getServer(0).getVip();
-    final public String MASTER_RS_IP = nameMetaGrid.getCluster(RSINDEX).getServer(0).getIp();
+    public String MASTER_RS_IP = nameMetaGrid.getCluster(RSINDEX).getServer(0).getIp();
     //final public String SLAVE_RS_IP = nameMetaGrid.getCluster(RSINDEX).getServer(1).getIp();
-    final public String SLAVE_RS_IP = "";
+    public String SLAVE_RS_IP = "";
     final public int RSPORT = nameMetaGrid.getCluster(RSINDEX).getServer(0).getPort();
     final public int MSPORT = nameMetaGrid.getCluster(MSINDEX).getServer(0).getPort();
     final public String MSCONF = nameMetaGrid.getCluster(MSINDEX).getServer(0).getConfname();    
@@ -48,21 +48,44 @@ public class NameMetaBaseCase extends TfsBaseCase{
     final public String VIP_ETH_NAME = "eth0:1";
 
     // client related
+    final public static String CLIENT_CONF = nameMetaClient.getConfname();    
 
     // operation type
     public int OPER_CREATE_DIR = 1;
     public int OPER_LS_DIR = 2;
-    public int OPER_SAVE_SMALL_FILE = 4;
-    public int OPER_SAVE_LARGE_FILE = 8;
-    public int OPER_FETCH_FILE = 16;
+    public int OPER_MV_DIR = 4;
+    public int OPER_RM_DIR = 8;
+    public int OPER_CREATE_FILE = 16;
     public int OPER_LS_FILE = 32;
-    public int OPER_UNLINK = 64;
-    public int OPER_MIX = 128;
+    public int OPER_SAVE_SMALL_FILE = 64;
+    public int OPER_SAVE_LARGE_FILE = 128;
+    public int OPER_FETCH_FILE = 256;
+    public int OPER_READ = 512;
+    public int OPER_WRITE = 1024;
+    public int OPER_MV_FILE = 2048;
+    public int OPER_RM_FILE = 4096;
+    public int OPER_MIX = 8192;
+
+    public String STR_OPER_CREATE_DIR = "CreateDir";
+    public String STR_OPER_LS_DIR = "LsDir";
+    public String STR_OPER_MV_DIR = "MvDir";
+    public String STR_OPER_RM_DIR = "RmDir";
+    public String STR_OPER_CREATE_FILE = "CreateFile";
+    public String STR_OPER_LS_FILE = "LsFile";
+    public String STR_OPER_SAVE_SMALL_FILE = "SavaSmallFile";
+    public String STR_OPER_SAVE_LARGE_FILE = "SaveLargeFile";
+    public String STR_OPER_FETCH_FILE = "FetchFile";
+    public String STR_OPER_MV_FILE = "MvFile";
+    public String STR_OPER_RM_FILE = "RmFile";
+    public String STR_OPER_MIX = "Mix";
  
-    final public String CLIENT_IP = nameMetaClient.getIp();
-    final public String CLIENT_HOME = nameMetaClient.getDir();
-    final public String CLIENT_LOG = nameMetaClient.getLogs();
+ 
+    final public static String CLIENT_IP = nameMetaClient.getIp();
+    final public static String CLIENT_HOME = nameMetaClient.getDir();
+    final public static String CLIENT_LOG = nameMetaClient.getLogs();
     final public String MYSQL_SCRIPT = "do_mysql.sh";
+    final public String PERF_SCRIPT = "gen_perf_report.sh";
+    final public String START_CLIENT_CMD = "/bin/bash meta_oper.sh start_oper " + CLIENT_CONF;
     final public String CREATE_DIR_CMD = "/bin/bash meta_oper.sh start_oper " + OPER_CREATE_DIR;
     final public String LS_DIR_CMD = "/bin/bash meta_oper.sh start_oper " + OPER_LS_DIR;
     final public String SAVE_SMALL_FILE_CMD = "/bin/bash meta_oper.sh start_oper " + OPER_SAVE_SMALL_FILE;
@@ -70,6 +93,7 @@ public class NameMetaBaseCase extends TfsBaseCase{
     final public String FETCH_FILE_CMD = "/bin/bash meta_oper.sh start_oper " + OPER_FETCH_FILE;
     final public String LS_FILE_CMD = "/bin/bash meta_oper.sh start_oper " + OPER_LS_FILE;
     final public String STOP_OPER_CMD = "/bin/bash meta_oper.sh stop_oper";
+    final public String GEN_DIR_TREE_CMD = "/bin/bash gen_dir_tree.sh";
 
     final public String SAVED_FILE_LIST = "oper_save_file.fileList.";
     final public String CREATED_DIR_LIST = "oper_create_dir.fileList.";
@@ -83,17 +107,18 @@ public class NameMetaBaseCase extends TfsBaseCase{
     final public String KW_USER_ID = "userId: ";
     final public String KW_LS_DIR_STATIS = "oper_ls_dir stat info";
     final public String KW_LS_FILE_STATIS = "oper_ls_file stat info";
+    final public String KW_SAVE_SMALL_FILE_STATIS = "oper_save_small_file stat info";
     final public String KW_FETCH_FILE_STATIS = "oper_fetch_file stat info";
     final public String KW_CREATE_DIR_STATIS = "oper_create_dir stat info";
     final public String KW_CACHE_SIZE = "malloc size";
     final public String KW_CACHE_GC = "gc app_id ";
 
     // columns
-    final public int MS_IP_COL = 12; //TODO: 
-    final public int TAIL_RATE_COL = 15;
-    final public int CACHE_SIZE_COL = 13;
-    final public int USED_SIZE_COL = 17;
-    final public int GC_USER_COL = 10;
+    final public int COL_MS_IP = 12; //TODO: 
+    final public int COL_TAIL_RATE = 16;
+    final public int COL_CACHE_SIZE = 13;
+    final public int COL_USED_SIZE = 17;
+    final public int COL_GC_USER = 10;
 
     // metaServer config items
     final public String CONF_MAX_CACHE_SIZE = "max_cache_size";
@@ -112,6 +137,29 @@ public class NameMetaBaseCase extends TfsBaseCase{
     final public String CONF_RTS_RTS_LEASE_EXPIRED_TIME = "rts_rts_lease_expired_time";
     final public String CONF_RTS_RTS_LEASE_INTERVAL = "rts_rts_lease_interval";
 
+    // client config items
+    final public String CONF_CLIENT_PUBLIC = "public";
+    final static String CONF_CREATE_DIR = "CreateDir";
+    final static String CONF_LS_DIR = "LsDir";
+    final static String CONF_MV_DIR = "MvDir";
+    final static String CONF_RM_DIR = "RmDir";
+    final static String CONF_CREATE_FILE = "CreateFile";
+    final static String CONF_SAVE_SMALL_FILE = "SaveSmallFile";
+    final static String CONF_SAVE_LARGE_FILE = "SaveLargeFile";
+    final static String CONF_FETCH_FILE = "FetchFile";
+    final static String CONF_LS_FILE = "LsFile";
+    final static String CONF_MV_FILE = "MvFile";
+    final static String CONF_RM_FILE = "RmFile";
+    final static String CONF_MIX = "Mix";
+
+    final public String CONF_CLIENT_OPER_TYPE = "operType";
+    final public String CONF_CLIENT_USER_ID = "userId";
+    final public String CONF_CLIENT_THREAD_COUNT = "threadCount";
+    final public String CONF_CLIENT_AUTO_GEN_DIR = "autoGenDir";
+
+    // limits
+    final public int LIMIT_MAX_SPOOL_SIZE = 20;
+
     // other
     final public int TAIL_LINE = 1000;
 
@@ -119,15 +167,15 @@ public class NameMetaBaseCase extends TfsBaseCase{
     public  static void setUpOnce() throws Exception {
       boolean bRet = false;
       /* Kill the grid */
-      //bRet = nameMetaGrid.stop(KillTypeEnum.FORCEKILL, WAIT_TIME);
-      //Assert.assertTrue(bRet);
+      bRet = nameMetaGrid.stop(KillTypeEnum.FORCEKILL, WAIT_TIME);
+      Assert.assertTrue(bRet);
 
-      ///* Clean the log file */
-      //bRet = nameMetaGrid.clean();
-      //Assert.assertTrue(bRet);
+      /* Clean the log file */
+      bRet = nameMetaGrid.clean();
+      Assert.assertTrue(bRet);
 
-      //bRet = nameMetaGrid.start();
-      //Assert.assertTrue(bRet);
+      bRet = nameMetaGrid.start();
+      Assert.assertTrue(bRet);
     }
 
     @AfterClass
@@ -167,6 +215,49 @@ public class NameMetaBaseCase extends TfsBaseCase{
         return bRet;
     }
 
+    public boolean setMaxMutexSize(String metaServerIp, int maxMutexSize) {
+        boolean bRet = false;
+        bRet = conf.confReplaceSingleByPart(metaServerIp, MSCONF, "metaserver", CONF_MAX_MUTEX_SIZE, String.valueOf(maxMutexSize));
+        return bRet;
+    }
+
+    public boolean setFreeListCount(String metaServerIp, int freeListCount) {
+        boolean bRet = false;
+        bRet = conf.confReplaceSingleByPart(metaServerIp, MSCONF, "metaserver", CONF_FREE_LIST_COUNT, String.valueOf(freeListCount));
+        return bRet;
+    }
+
+    public boolean setMaxSpoolSize(String metaServerIp, int maxSpoolSize) {
+        boolean bRet = false;
+        bRet = conf.confReplaceSingleByPart(metaServerIp, MSCONF, "metaserver", CONF_MAX_SPOOL_SIZE, String.valueOf(maxSpoolSize));
+        return bRet;
+    }
+
+    public boolean setClientOperType(int operType) {
+        boolean bRet = false;
+        bRet = conf.confReplaceSingleByPart(CLIENT_IP, CLIENT_CONF, CONF_CLIENT_PUBLIC, CONF_CLIENT_OPER_TYPE, String.valueOf(operType));
+        return bRet;
+    }
+
+    public boolean setClientUserId(long userId) {
+        boolean bRet = false;
+        bRet = conf.confReplaceSingleByPart(CLIENT_IP, CLIENT_CONF, CONF_CLIENT_PUBLIC, CONF_CLIENT_USER_ID, String.valueOf(userId));
+        return bRet;
+    }
+
+    public boolean setClientThreadCount(int threadCount) {
+        boolean bRet = false;
+        bRet = conf.confReplaceSingleByPart(CLIENT_IP, CLIENT_CONF, CONF_CLIENT_PUBLIC, CONF_CLIENT_THREAD_COUNT, String.valueOf(threadCount));
+        return bRet;
+    }
+
+    public boolean setClientAutoGenDir(String operConf, boolean autoGenDir) {
+        boolean bRet = false;
+        String strAutoGenDir = autoGenDir ? "true" : "false";
+        bRet = conf.confReplaceSingleByPart(CLIENT_IP, CLIENT_CONF, operConf, CONF_CLIENT_AUTO_GEN_DIR, strAutoGenDir);
+        return bRet;
+    }
+
     public String getServingMSIp(long appId, long userId) {
         String metaServerAddr;
         metaServerAddr = getServingMSAddr(appId, userId);
@@ -192,7 +283,7 @@ public class NameMetaBaseCase extends TfsBaseCase{
         filter.add("/");
         ArrayList<String> result = new ArrayList<String>();
         String cmd = "head -1000 " + logName;
-        bRet = Proc.cmdOutBase2(CLIENT_IP, cmd, keyWords, MS_IP_COL, filter, result); 
+        bRet = Proc.cmdOutBase2(CLIENT_IP, cmd, keyWords, COL_MS_IP, filter, result); 
         if (false == bRet || result.size() < 1) return null;
         return result.get(result.size() - 1);
     }
@@ -245,7 +336,11 @@ public class NameMetaBaseCase extends TfsBaseCase{
     public boolean createDirCmd(long userId) {
         boolean bRet = false;
         log.debug("Create dir cmd start ===>");
-        String cmd = CREATE_DIR_CMD + " " + userId + " >log." + caseName;
+        bRet = setClientOperType(OPER_CREATE_DIR);
+        if (false == bRet) return false;
+        bRet = setClientUserId(userId);
+        if (false == bRet) return false;
+        String cmd = START_CLIENT_CMD + " >log." + caseName + "." + userId;
         bRet = Proc.proStartBackroundBase(CLIENT_IP, cmd, CLIENT_HOME);
         log.debug("Create dir cmd end ===>");
         return bRet;
@@ -259,10 +354,116 @@ public class NameMetaBaseCase extends TfsBaseCase{
         return bRet;
     }
 
+    // generate a dir tree with specific subdirs and subfiles and deep in a file
+    public boolean genDirTree(String metaServerIp, long userId, int maxSubDirsCount, int maxSubFilesCount, int maxSubDirsDeep) {
+        boolean bRet = false;
+        log.debug("Gen dir tree cmd start ===>");
+        String cmd = GEN_DIR_TREE_CMD + " " + userId + " " + maxSubDirsCount + " " + maxSubFilesCount + " " + maxSubDirsDeep;
+        bRet = Proc.proStartBase(CLIENT_IP, cmd, CLIENT_HOME);
+        log.debug("Gen dir tree cmd end ===>");
+        return bRet;
+    }
+
+    public boolean createDirMon() {
+        boolean bRet = false;
+        log.debug("Create dir mon start ===>");
+        bRet = operMon();
+        log.debug("Create dir mon end ===>");
+        return bRet;
+    }
+
+    public boolean lsDirCmd(long userId) {
+        boolean bRet = false;
+        log.debug("Ls dir cmd start ===>");
+        bRet = setClientOperType(OPER_LS_DIR);
+        if (false == bRet) return false;
+        bRet = setClientUserId(userId);
+        if (false == bRet) return false;
+        String cmd = START_CLIENT_CMD + " >log." + caseName + "." + userId;
+        bRet = Proc.proStartBackroundBase(CLIENT_IP, cmd, CLIENT_HOME);
+        log.debug("Ls dir cmd end ===>");
+        return bRet;
+    }
+
+    public boolean lsDirMon() {
+        boolean bRet = false;
+        log.debug("Ls dir mon start ===>");
+        bRet = operMon();
+        log.debug("Ls dir mon end ===>");
+        return bRet;
+    }
+
+    public boolean mvDirCmd(long userId) {
+        boolean bRet = false;
+        log.debug("Mv dir cmd start ===>");
+        bRet = setClientOperType(OPER_MV_DIR);
+        if (false == bRet) return false;
+        bRet = setClientUserId(userId);
+        if (false == bRet) return false;
+        String cmd = START_CLIENT_CMD + " >log." + caseName + "." + userId;
+        bRet = Proc.proStartBackroundBase(CLIENT_IP, cmd, CLIENT_HOME);
+        log.debug("Mv dir cmd end ===>");
+        return bRet;
+    }
+
+    public boolean mvDirMon() {
+        boolean bRet = false;
+        log.debug("Mv dir mon start ===>");
+        bRet = operMon();
+        log.debug("Mv dir mon end ===>");
+        return bRet;
+    }
+
+    public boolean rmDirCmd(long userId) {
+        boolean bRet = false;
+        log.debug("Rm dir cmd start ===>");
+        bRet = setClientOperType(OPER_RM_DIR);
+        if (false == bRet) return false;
+        bRet = setClientUserId(userId);
+        if (false == bRet) return false;
+        String cmd = START_CLIENT_CMD + " >log." + caseName + "." + userId;
+        bRet = Proc.proStartBackroundBase(CLIENT_IP, cmd, CLIENT_HOME);
+        log.debug("Rm dir cmd end ===>");
+        return bRet;
+    }
+
+    public boolean rmDirMon() {
+        boolean bRet = false;
+        log.debug("Rm dir mon start ===>");
+        bRet = operMon();
+        log.debug("Rm dir mon end ===>");
+        return bRet;
+    }
+
+    public boolean createFileCmd(long userId) {
+        boolean bRet = false;
+        log.debug("Create file cmd start ===>");
+        bRet = setClientOperType(OPER_CREATE_FILE);
+        if (false == bRet) return false;
+        bRet = setClientUserId(userId);
+        if (false == bRet) return false;
+        String cmd = START_CLIENT_CMD + " >log." + caseName + "." + userId;
+        bRet = Proc.proStartBackroundBase(CLIENT_IP, cmd, CLIENT_HOME);
+        log.debug("Create file cmd end ===>");
+        return bRet;
+    }
+
+    public boolean createFileCmdStop() {
+        boolean bRet = false;
+        log.debug("Create file cmd stop start ===>");
+        bRet = Proc.proStartBase(CLIENT_IP, STOP_OPER_CMD, CLIENT_HOME);
+        log.debug("Create file cmd stop end ===>");
+        return bRet;
+    }
+
     public boolean saveSmallFileCmd(long userId) {
         boolean bRet = false;
         log.debug("Save small file cmd start ===>");
-        String cmd = SAVE_SMALL_FILE_CMD + " " + userId + " >log." + caseName;
+        bRet = setClientOperType(OPER_SAVE_SMALL_FILE);
+        if (false == bRet) return false;
+        bRet = setClientUserId(userId);
+        if (false == bRet) return false;
+        String cmd = START_CLIENT_CMD + " >log." + caseName + "." + userId;
         bRet = Proc.proStartBackroundBase(CLIENT_IP, cmd, CLIENT_HOME);
         log.debug("Save file cmd end ===>");
         return bRet;
@@ -276,10 +477,22 @@ public class NameMetaBaseCase extends TfsBaseCase{
         return bRet;
     }
 
+    public boolean saveSmallFileMon() {
+        boolean bRet = false;
+        log.debug("Save small file mon start ===>");
+        bRet = operMon();
+        log.debug("Save small file mon end ===>");
+        return bRet;
+    }
+
     public boolean saveLargeFileCmd(long userId) {
         boolean bRet = false;
         log.debug("Save large file cmd start ===>");
-        String cmd = SAVE_LARGE_FILE_CMD + " " + userId + " >log." + caseName;
+        bRet = setClientOperType(OPER_SAVE_LARGE_FILE);
+        if (false == bRet) return false;
+        bRet = setClientUserId(userId);
+        if (false == bRet) return false;
+        String cmd = START_CLIENT_CMD + " >log." + caseName + "." + userId;
         bRet = Proc.proStartBackroundBase(CLIENT_IP, cmd, CLIENT_HOME);
         log.debug("Save file cmd end ===>");
         return bRet;
@@ -293,65 +506,14 @@ public class NameMetaBaseCase extends TfsBaseCase{
         return bRet;
     }
 
-    public boolean fetchFileCmd(long userId) {
-        boolean bRet = false;
-        log.debug("Fetch file cmd start ===>");
-        String cmd = FETCH_FILE_CMD + " " + userId + " >log." + caseName;
-        bRet = Proc.proStartBackroundBase(CLIENT_IP, cmd, CLIENT_HOME);
-        log.debug("Fetch file cmd end ===>");
-        return bRet;
-    }
-
-    public boolean fetchFileMon() {
-        boolean bRet = false;
-        log.debug("Fetch file mon start ===>");
-        for(;;) {
-          int iRet = Proc.proMonitorBase(CLIENT_IP, FETCH_FILE_CMD);
-          if (0 == iRet) {
-            bRet = true;
-            break;
-          }
-          else if (iRet < 0) {
-            bRet = false;
-            break;
-          }
-        }
-        log.debug("Fetch file mon end ===>");
-        return bRet;
-    }
-
-
-    public boolean lsDirCmd() {
-        boolean bRet = false;
-        log.debug("Ls dir cmd start ===>");
-        String cmd = LS_DIR_CMD + " >log." + caseName;
-        bRet = Proc.proStartBackroundBase(CLIENT_IP, cmd, CLIENT_HOME);
-        log.debug("Ls dir cmd end ===>");
-        return bRet;
-    }
-
-    public boolean lsDirMon() {
-        boolean bRet = false;
-        log.debug("Ls dir mon start ===>");
-        for(;;) {
-          int iRet = Proc.proMonitorBase(CLIENT_IP, LS_DIR_CMD);
-          if (0 == iRet) {
-            bRet = true;
-            break;
-          }
-          else if (iRet < 0) {
-            bRet = false;
-            break;
-          }
-        }
-        log.debug("Ls dir mon end ===>");
-        return bRet;
-    }
-
     public boolean lsFileCmd(long userId) {
         boolean bRet = false;
         log.debug("Ls file cmd start ===>");
-        String cmd = LS_FILE_CMD + " " + userId + " >log." + caseName;
+        bRet = setClientOperType(OPER_LS_FILE);
+        if (false == bRet) return false;
+        bRet = setClientUserId(userId);
+        if (false == bRet) return false;
+        String cmd = START_CLIENT_CMD + " >log." + caseName + "." + userId;
         bRet = Proc.proStartBackroundBase(CLIENT_IP, cmd, CLIENT_HOME);
         log.debug("Ls file cmd end ===>");
         return bRet;
@@ -360,8 +522,77 @@ public class NameMetaBaseCase extends TfsBaseCase{
     public boolean lsFileMon() {
         boolean bRet = false;
         log.debug("Ls file mon start ===>");
+        bRet = operMon();
+        log.debug("Ls file mon end ===>");
+        return bRet;
+    }
+    public boolean fetchFileCmd(long userId) {
+        boolean bRet = false;
+        log.debug("Fetch file cmd start ===>");
+        bRet = setClientOperType(OPER_FETCH_FILE);
+        if (false == bRet) return false;
+        bRet = setClientUserId(userId);
+        if (false == bRet) return false;
+        String cmd = START_CLIENT_CMD + " >log." + caseName + "." + userId;
+        bRet = Proc.proStartBackroundBase(CLIENT_IP, cmd, CLIENT_HOME);
+        log.debug("Fetch file cmd end ===>");
+        return bRet;
+    }
+
+    public boolean fetchFileMon() {
+        boolean bRet = false;
+        log.debug("Fetch file mon start ===>");
+        bRet = operMon();
+        log.debug("Fetch file mon end ===>");
+        return bRet;
+    }
+
+    public boolean mvFileCmd(long userId) {
+        boolean bRet = false;
+        log.debug("Mv file cmd start ===>");
+        bRet = setClientOperType(OPER_MV_FILE);
+        if (false == bRet) return false;
+        bRet = setClientUserId(userId);
+        if (false == bRet) return false;
+        String cmd = START_CLIENT_CMD + " >log." + caseName + "." + userId;
+        bRet = Proc.proStartBackroundBase(CLIENT_IP, cmd, CLIENT_HOME);
+        log.debug("Mv file cmd end ===>");
+        return bRet;
+    }
+
+    public boolean mvFileMon() {
+        boolean bRet = false;
+        log.debug("Mv file mon start ===>");
+        bRet = operMon();
+        log.debug("Mv file mon end ===>");
+        return bRet;
+    }
+
+    public boolean rmFileCmd(long userId) {
+        boolean bRet = false;
+        log.debug("Rm file cmd start ===>");
+        bRet = setClientOperType(OPER_RM_FILE);
+        if (false == bRet) return false;
+        bRet = setClientUserId(userId);
+        if (false == bRet) return false;
+        String cmd = START_CLIENT_CMD + " >log." + caseName + "." + userId;
+        bRet = Proc.proStartBackroundBase(CLIENT_IP, cmd, CLIENT_HOME);
+        log.debug("Rm file cmd end ===>");
+        return bRet;
+    }
+
+    public boolean rmFileMon() {
+        boolean bRet = false;
+        log.debug("Rm file mon start ===>");
+        bRet = operMon();
+        log.debug("Rm file mon end ===>");
+        return bRet;
+    }
+
+    public boolean operMon() {
+        boolean bRet = false;
         for(;;) {
-          int iRet = Proc.proMonitorBase(CLIENT_IP, LS_FILE_CMD);
+          int iRet = Proc.proMonitorBase(CLIENT_IP, START_CLIENT_CMD);
           if (0 == iRet) {
             bRet = true;
             break;
@@ -371,7 +602,6 @@ public class NameMetaBaseCase extends TfsBaseCase{
             break;
           }
         }
-        log.debug("Ls file mon end ===>");
         return bRet;
     }
 
@@ -391,6 +621,15 @@ public class NameMetaBaseCase extends TfsBaseCase{
         log.debug("Mix operation cmd stop end ===>");
         return bRet;
     }
+
+   public boolean genPerfReport(String operType, long userId, long processCount) {
+       boolean bRet = false;
+       log.debug("Gen performance report cmd start ===>");
+       String cmd = "/bin/bash " + PERF_SCRIPT + " log." + caseName + " " + userId + " " +  processCount + " >log." + caseName + "." + operType + ".perf_report";
+       bRet = Proc.proStartBase(CLIENT_IP, cmd, CLIENT_HOME);
+       log.debug("Gen performance report cmd end ===>");
+       return bRet;
+   }
 
     // query db, check entry exist
     public boolean queryDB(String listName, long userId) {
@@ -436,23 +675,13 @@ public class NameMetaBaseCase extends TfsBaseCase{
       return bRet;
     }
 
-    // move log name
-    public boolean mvLog(String operType) {
-      boolean bRet = false;
-      String filePath = CLIENT_LOG + caseName;
-      bRet = File.fileCopy(CLIENT_IP, filePath, filePath + "." + operType);
-      if (bRet == false) return bRet;
-      bRet = File.fileDel(CLIENT_IP, filePath);
-      return bRet;
-    }
-
     // get cache size
     public int getCacheSize(String metaServerIp) {
         int cacheSize;
         boolean bRet = false;
         String keyWord = KW_CACHE_SIZE;
         ArrayList<String> result = new ArrayList<String>();
-        bRet = Proc.scanTailBase(metaServerIp, MS_LOG, KW_CACHE_SIZE, TAIL_LINE, CACHE_SIZE_COL, null, result);
+        bRet = Proc.scanTailBase(metaServerIp, MS_LOG, KW_CACHE_SIZE, TAIL_LINE, COL_CACHE_SIZE, null, result);
         if (false == bRet || result.size() < 1)
           return 0;
         return Integer.parseInt(result.get(result.size() - 1));
@@ -462,7 +691,7 @@ public class NameMetaBaseCase extends TfsBaseCase{
         boolean bRet = false;
         String keyWord = KW_CACHE_SIZE;
         ArrayList<String> result = new ArrayList<String>();
-        bRet = Proc.scanTailBase(metaServerIp, MS_LOG, KW_CACHE_SIZE, TAIL_LINE, USED_SIZE_COL, null, result);
+        bRet = Proc.scanTailBase(metaServerIp, MS_LOG, KW_CACHE_SIZE, TAIL_LINE, COL_USED_SIZE, null, result);
         if (false == bRet || result.size() < 1)
           return 0;
         return Integer.parseInt(result.get(result.size() - 1));
@@ -478,7 +707,7 @@ public class NameMetaBaseCase extends TfsBaseCase{
         usedSizeLast = usedSize;
 
         while (usedSize < gcPoint) {
-          sleep(360);
+          sleep(250);
           usedSize = getUsedSize(metaServerIp);
           if (usedSize <= 0) return false;
           log.debug("used cache size: " + usedSize + ", cache gc point: " + gcPoint);
@@ -518,7 +747,7 @@ public class NameMetaBaseCase extends TfsBaseCase{
         usedSizeLast = usedSize;
 
         while (usedSize < gcPoint) {
-          sleep(360);
+          sleep(250);
           usedSize = getUsedSize(metaServerIp);
           if (usedSize <= 0) return false;
 
@@ -543,7 +772,7 @@ public class NameMetaBaseCase extends TfsBaseCase{
         sleep(10);
 
         // check
-        String cmd = "grep \\\"gc app_id " + appId + " uid " + userId + " root\\\" " + MS_LOG + "*" + "| wc -l";
+        String cmd = "grep \\\"gc app_id " + appId + " uid " + userId + " root\\\" " + MS_LOG + "| wc -l";
         ArrayList<String> result = new ArrayList<String>();
         bRet = Proc.proStartBase(metaServerIp, cmd, result);
         if (false == bRet || 1 != result.size())
@@ -561,12 +790,13 @@ public class NameMetaBaseCase extends TfsBaseCase{
         sleep(10);
 
         // check
-        String cmd = "grep \\\"gc app_id " + appId + " \\\" " + MS_LOG + "*" + "| wc -l";
+        String cmd = "grep \\\"gc app_id " + appId + " \\\" " + MS_LOG + "| wc -l";
         ArrayList<String> result = new ArrayList<String>();
         bRet = Proc.proStartBase(metaServerIp, cmd, result);
         if (false == bRet || 1 != result.size())
           return false;
         int actualCount = Integer.parseInt(result.get(0));
+        log.debug("actual gc count: " + actualCount + ", should be: " + gcCount);
         if (actualCount != gcCount)
           return false;
         return true;
@@ -582,7 +812,7 @@ public class NameMetaBaseCase extends TfsBaseCase{
         ArrayList<String> keywords = new ArrayList<String>();
         keywords.add(KW_CACHE_GC + appId);
         ArrayList<String> result = new ArrayList<String>();
-        bRet = Proc.scanAllBase(metaServerIp, MS_LOG + "*", keywords, GC_USER_COL, null, result);
+        bRet = Proc.scanAllBase(metaServerIp, MS_LOG, keywords, COL_GC_USER, null, result);
         if (false == bRet || result.size() != gcUsers.length)
           return false;
         for (int i = 0; i < gcUsers.length; i++) {
@@ -593,10 +823,79 @@ public class NameMetaBaseCase extends TfsBaseCase{
         return true;
     } 
 
-    public boolean chkRateEnd(float std, int operType) {
+    // get mutex result
+    public boolean getMutexResult(String metaServerIp, int maxMutexSize) {
+        boolean bRet = false;
+        String cmd = "grep \\\"get mutex\\\" " + MS_LOG + " \"|awk '{print $NF}'|sort|uniq|wc -l\"";
+        ArrayList<String> result = new ArrayList<String>();
+        bRet = Proc.proStartBase(metaServerIp, cmd, result);
+        if (false == bRet || 1 != result.size())
+          return false;
+        int actualMutexSize = Integer.parseInt(result.get(0));
+        log.debug("actual mutex size: " + actualMutexSize + ", max mutex size: " + maxMutexSize);
+        if (actualMutexSize < 2 || actualMutexSize > maxMutexSize)
+          return false;
+        return true;
+    }
+
+    public boolean chkFreeListCap(String metaServerIp, int freeListCount) {
+        boolean bRet = false;
+        String cmd = "grep \\\"put MemNodeList success\\\" " + MS_LOG + "\"|wc -l\"";
+        ArrayList<String> result = new ArrayList<String>();
+        bRet = Proc.proStartBase(metaServerIp, cmd, result);
+        if (false == bRet || 1 != result.size())
+          return false;
+        int iResult = Integer.parseInt(result.get(0));
+        if (iResult < 1)
+          return false;
+
+        result.clear();
+        cmd = "grep \\\"put MemNodeList fail, size: " + freeListCount + ", capacity: " + freeListCount + "\\\" " + MS_LOG + "\"|wc -l\"";
+        bRet = Proc.proStartBase(metaServerIp, cmd, result);
+        if (false == bRet || 1 != result.size())
+          return false;
+        iResult = Integer.parseInt(result.get(0));
+        if (iResult < 1)
+          return false;
+
+        return true;
+    }
+
+    public boolean chkDbPoolSize(String metaServerIp, int maxSpoolSize) {
+        boolean bRet = false;
+        String cmd = "grep \\\"database_helper\\\" " + MS_LOG + " \"|wc -l\"";
+        ArrayList<String> result = new ArrayList<String>();
+        bRet = Proc.proStartBase(metaServerIp, cmd, result);
+        if (false == bRet || 1 != result.size())
+          return false;
+        int actualDbPoolSize = Integer.parseInt(result.get(0));
+        if (maxSpoolSize > LIMIT_MAX_SPOOL_SIZE) {
+           maxSpoolSize = LIMIT_MAX_SPOOL_SIZE;
+        }
+        if (actualDbPoolSize != maxSpoolSize)
+          return false;
+        return true;
+    }
+
+   public boolean chkRateEnd(float std, int operType, long userId) {
         float result = 0;
+        if ((operType & OPER_CREATE_DIR) != 0) {
+            result = getRateEnd(CLIENT_IP, CLIENT_LOG + caseName + "." + userId, KW_CREATE_DIR_STATIS);
+            if (result == -1) {
+                return false;
+            }
+            if (result != std) {
+                log.error("create dir success rate(" + result + "%) is not " + std + "% !!!");
+                return false;
+            }
+            else {
+                log.info("create dir success rate(" + result + "%) is " + std + "% !!!");
+            }
+            return true;
+        }
+
         if ((operType & OPER_LS_DIR) != 0) {
-            result = getRateEnd(CLIENT_IP, CLIENT_LOG + caseName, KW_LS_DIR_STATIS);
+            result = getRateEnd(CLIENT_IP, CLIENT_LOG + caseName + "." + userId, KW_LS_DIR_STATIS);
             if (result == -1) {
                 return false;
             }
@@ -611,7 +910,7 @@ public class NameMetaBaseCase extends TfsBaseCase{
         }
 
         if ((operType & OPER_LS_FILE) != 0) {
-            result = getRateEnd(CLIENT_IP, CLIENT_LOG + caseName, KW_LS_FILE_STATIS);
+            result = getRateEnd(CLIENT_IP, CLIENT_LOG + caseName + "." + userId, KW_LS_FILE_STATIS);
             if (result == -1) {
                 return false;
             }
@@ -625,8 +924,24 @@ public class NameMetaBaseCase extends TfsBaseCase{
             return true;
         }
 
+        if ((operType & OPER_SAVE_SMALL_FILE) != 0) {
+            result = getRateEnd(CLIENT_IP, CLIENT_LOG + caseName + "." + userId, KW_SAVE_SMALL_FILE_STATIS);
+            if (result == -1) {
+                return false;
+            }
+            if (result != std) {
+                log.error("save small file success rate(" + result + "%) is not " + std + "% !!!");
+                return false;
+            }
+            else {
+                log.info("save small file success rate(" + result + "%) is " + std + "% !!!");
+            }
+            return true;
+        }
+
+
         if ((operType & OPER_FETCH_FILE) != 0) {
-            result = getRateEnd(CLIENT_IP, CLIENT_LOG + caseName, KW_FETCH_FILE_STATIS);
+            result = getRateEnd(CLIENT_IP, CLIENT_LOG + caseName + "." + userId, KW_FETCH_FILE_STATIS);
             if (result == -1) {
                 return false;
             }
@@ -652,7 +967,7 @@ public class NameMetaBaseCase extends TfsBaseCase{
       ArrayList<Float> result = new ArrayList<Float>();
       filter.add("%");
       filter.add(",");
-      bRet = Log.scanTailFloat(tarIp, fileName, keyWord, TAIL_LINE, TAIL_RATE_COL, filter, result);
+      bRet = Log.scanTailFloat(tarIp, fileName, keyWord, TAIL_LINE, COL_TAIL_RATE, filter, result);
       if ((bRet == false) || (result.size() < 1))
       {
         return fRet;
@@ -738,7 +1053,7 @@ public class NameMetaBaseCase extends TfsBaseCase{
       return bRet;
     }
 
-    public boolean killOneMetaserver(int index)
+    public boolean killOneMetaServer(int index)
     {
       boolean bRet = false;
       log.info("Kill one meta start ===>");
@@ -751,7 +1066,7 @@ public class NameMetaBaseCase extends TfsBaseCase{
       return bRet;
     }
 
-    public boolean startOneMetaserver(int index)
+    public boolean startOneMetaServer(int index)
     {
       boolean bRet = false;
       log.info("start one meta start ===>");
@@ -768,8 +1083,23 @@ public class NameMetaBaseCase extends TfsBaseCase{
       boolean bRet = false;
       log.info("Clean one meta start ===>");
       bRet = cleanOneServer(nameMetaGrid, MSINDEX, index);
-      if (bRet == false) return bRet;
       log.info("Clean one meta end ===>");
+      return bRet;
+    }
+
+    public boolean cleanOneMetaServerForce(int index) {
+      boolean bRet = false;
+      log.info("Clean one meta force start ===>");
+      bRet = cleanOneServerForce(nameMetaGrid, MSINDEX, index);
+      log.info("Clean one meta force end ===>");
+      return bRet;
+    }
+
+    public boolean restartMetaServerCluster() {
+      boolean bRet = false;
+      log.info("restart meta server cluster start ===>");
+      bRet = restartOneCluster(nameMetaGrid, MSINDEX);
+      log.info("restart meta server cluster end ===>");
       return bRet;
     }
 
@@ -838,6 +1168,9 @@ public class NameMetaBaseCase extends TfsBaseCase{
         MASTER_RS = tmpMaster;
         SLAVE_RS = tmpSlave;
         
+        MASTER_RS_IP = MASTER_RS.getIp();
+        SLAVE_RS_IP = SLAVE_RS.getIp();
+ 
         return bRet;
     }
 
@@ -883,6 +1216,9 @@ public class NameMetaBaseCase extends TfsBaseCase{
         MASTER_RS = tmpMaster;
         SLAVE_RS = tmpSlave;
         
+        MASTER_RS_IP = MASTER_RS.getIp();
+        SLAVE_RS_IP = SLAVE_RS.getIp();
+ 
         return bRet;
     }
     
@@ -914,6 +1250,9 @@ public class NameMetaBaseCase extends TfsBaseCase{
         MASTER_RS = tmpMaster;
         SLAVE_RS = tmpSlave;
 
+        MASTER_RS_IP = MASTER_RS.getIp();
+        SLAVE_RS_IP = SLAVE_RS.getIp();
+ 
         return bRet;
     }
 
@@ -949,6 +1288,9 @@ public class NameMetaBaseCase extends TfsBaseCase{
         MASTER_RS = tmpMaster;
         SLAVE_RS = tmpSlave;
 
+        MASTER_RS_IP = MASTER_RS.getIp();
+        SLAVE_RS_IP = SLAVE_RS.getIp();
+ 
         return bRet;
     }
     

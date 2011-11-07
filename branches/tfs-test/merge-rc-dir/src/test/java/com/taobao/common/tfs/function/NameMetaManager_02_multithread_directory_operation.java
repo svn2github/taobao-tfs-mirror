@@ -25,14 +25,12 @@ public class NameMetaManager_02_multithread_directory_operation extends  NameMet
 
   @BeforeClass
   public  static void setUpOnce() throws Exception {
-    rmDirRecursive(appId, userId, rootDir); 
-    NameMetaBaseCase.setUpOnce();
+    //rmDirRecursive(appId, userId, rootDir); 
     tfsManager.createDir(appId, userId, rootDir); 
   }
 
   @AfterClass
   public static void tearDownOnce() throws Exception {
-    NameMetaBaseCase.tearDownOnce();
     rmDirRecursive(appId, userId, rootDir); 
   }
 

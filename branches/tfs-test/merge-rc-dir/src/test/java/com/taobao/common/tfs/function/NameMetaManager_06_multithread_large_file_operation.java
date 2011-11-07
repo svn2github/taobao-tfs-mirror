@@ -27,9 +27,8 @@ public class NameMetaManager_06_multithread_large_file_operation  extends  NameM
     @BeforeClass
     public static void setUpOnce() throws Exception {
         boolean bret = false;
-        rmDirRecursive(appId, userId, rootDir); 
+        //rmDirRecursive(appId, userId, rootDir); 
 
-        NameMetaBaseCase.setUpOnce();
         bret = tfsManager.createDir(appId, userId, rootDir);
         Assert.assertTrue(bret);
     }

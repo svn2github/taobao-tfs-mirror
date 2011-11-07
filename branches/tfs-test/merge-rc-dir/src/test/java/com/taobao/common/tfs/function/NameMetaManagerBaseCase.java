@@ -33,7 +33,7 @@ public class NameMetaManagerBaseCase {
     public static String resourcesPath="src/test/resources";
 
     public static long appId = tfsManager.getAppId();
-    public static long userId = 61;
+    public static long userId = 361;
 
     @BeforeClass
     public  static void setUpOnce() throws Exception {
