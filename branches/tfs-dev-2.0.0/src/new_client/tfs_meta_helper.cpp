@@ -177,6 +177,14 @@ int NameMetaHelper::do_read_file(const uint64_t server_id, const int64_t app_id,
       frag_info = resp_msg->get_frag_info();
       still_have = resp_msg->get_still_have();
     }
+    else if (STATUS_MESSAGE == rsp->getPCode())
+    {
+      StatusMessage* resp_status_msg = dynamic_cast<StatusMessage*>(rsp);
+      if ((ret = resp_status_msg->get_status()) != STATUS_MESSAGE_OK)
+      {
+        TBSYS_LOG(ERROR, "read file return error, ret: %d", ret);
+      }
+    }
     else
     {
       ret = EXIT_UNKNOWN_MSGTYPE;
@@ -228,6 +236,14 @@ int NameMetaHelper::do_ls(const uint64_t server_id, const int64_t app_id, const 
       RespLsFilepathMessage* resp_msg = dynamic_cast<RespLsFilepathMessage*>(rsp);
       meta_infos = resp_msg->get_meta_infos();
       still_have = resp_msg->get_still_have();
+    }
+    else if (STATUS_MESSAGE == rsp->getPCode())
+    {
+      StatusMessage* resp_status_msg = dynamic_cast<StatusMessage*>(rsp);
+      if ((ret = resp_status_msg->get_status()) != STATUS_MESSAGE_OK)
+      {
+        TBSYS_LOG(ERROR, "ls return error, ret: %d", ret);
+      }
     }
     else
     {

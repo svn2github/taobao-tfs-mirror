@@ -1034,6 +1034,7 @@ namespace tfs
         if (-1 == cluster_id)
         {
           TBSYS_LOG(DEBUG, "file not exsit, file_path: ", file_path);
+          ret = EXIT_TARGET_EXIST_ERROR;
         }
         else
         {
