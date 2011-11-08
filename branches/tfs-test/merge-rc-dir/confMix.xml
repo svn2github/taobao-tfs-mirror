@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<config>
+	<interval>5000</interval>
+	<workers>
+		<server address="10.232.36.207" port="6261" timeout="5000"></server>			
+		<worker name="TfsRc-perfdir" className="com.taobao.test.base.worker.perf_createDir" threadCount="30" 
+			verify="off" seedUnit="1000" 
+			configClassName="com.taobao.test.base.worker.perf_config">
+		</worker>
+	</workers>
+</config>
