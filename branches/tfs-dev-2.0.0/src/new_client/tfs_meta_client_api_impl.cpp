@@ -13,11 +13,14 @@
  *      - initial release
  *
  */
+#include "tfs_meta_client_api_impl.h"
+
 #include <algorithm>
 #include <Memory.hpp>
-#include "tfs_meta_client_api_impl.h"
 #include "common/func.h"
 #include "common/meta_hash_helper.h"
+#include "common/client_manager.h"
+#include "message/message_factory.h"
 #include "tfs_client_api.h"
 #include "tfs_meta_helper.h"
 #include "tfs_meta_manager.h"
@@ -42,10 +45,14 @@ namespace tfs
 
     NameMetaClientImpl::NameMetaClientImpl()
     {
+      packet_factory_ = new message::MessageFactory();
+      packet_streamer_ = new common::BasePacketStreamer(packet_factory_);
     }
 
     NameMetaClientImpl::~NameMetaClientImpl()
     {
+      tbsys::gDelete(packet_factory_);
+      tbsys::gDelete(packet_streamer_);
     }
 
     int NameMetaClientImpl::initialize(const char* rs_addr)
@@ -65,8 +72,12 @@ namespace tfs
     int NameMetaClientImpl::initialize(const int64_t rs_addr)
     {
       int ret = TFS_SUCCESS;
-      rs_id_ = rs_addr;
-      update_table_from_rootserver();
+      ret = common::NewClientManager::get_instance().initialize(packet_factory_, packet_streamer_);
+      if (TFS_SUCCESS == ret)
+      {
+        rs_id_ = rs_addr;
+        update_table_from_rootserver();
+      }
       return ret;
     }
 

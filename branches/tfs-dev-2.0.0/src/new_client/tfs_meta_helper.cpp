@@ -29,9 +29,9 @@ using namespace tfs::message;
 using namespace std;
 
 
-static tfs::common::BasePacketStreamer gstreamer;
-static tfs::message::MessageFactory gfactory;
-
+//static tfs::common::BasePacketStreamer gstreamer;
+//static tfs::message::MessageFactory gfactory;
+//
 int NameMetaHelper::do_file_action(const uint64_t server_id, const int64_t app_id, const int64_t user_id,
     const MetaActionOp action, const char* path, const char* new_path, const int64_t version_id)
 {
@@ -42,8 +42,8 @@ int NameMetaHelper::do_file_action(const uint64_t server_id, const int64_t app_i
   }
   else
   {
-    gstreamer.set_packet_factory(&gfactory);
-    NewClientManager::get_instance().initialize(&gfactory, &gstreamer);
+    //gstreamer.set_packet_factory(&gfactory);
+    //NewClientManager::get_instance().initialize(&gfactory, &gstreamer);
 
     FilepathActionMessage req_fa_msg;
     req_fa_msg.set_app_id(app_id);
@@ -97,8 +97,8 @@ int NameMetaHelper::do_write_file(const uint64_t server_id, const int64_t app_id
   }
   else
   {
-    gstreamer.set_packet_factory(&gfactory);
-    NewClientManager::get_instance().initialize(&gfactory, &gstreamer);
+    //gstreamer.set_packet_factory(&gfactory);
+    //NewClientManager::get_instance().initialize(&gfactory, &gstreamer);
 
     WriteFilepathMessage req_fa_msg;
     req_fa_msg.set_app_id(app_id);
@@ -149,8 +149,8 @@ int NameMetaHelper::do_read_file(const uint64_t server_id, const int64_t app_id,
   }
   else
   {
-    gstreamer.set_packet_factory(&gfactory);
-    NewClientManager::get_instance().initialize(&gfactory, &gstreamer);
+    //gstreamer.set_packet_factory(&gfactory);
+    //NewClientManager::get_instance().initialize(&gfactory, &gstreamer);
 
     ReadFilepathMessage req_fa_msg;
     req_fa_msg.set_app_id(app_id);
@@ -209,8 +209,8 @@ int NameMetaHelper::do_ls(const uint64_t server_id, const int64_t app_id, const 
   }
   else
   {
-    gstreamer.set_packet_factory(&gfactory);
-    NewClientManager::get_instance().initialize(&gfactory, &gstreamer);
+    //gstreamer.set_packet_factory(&gfactory);
+    //NewClientManager::get_instance().initialize(&gfactory, &gstreamer);
 
     LsFilepathMessage req_fa_msg;
     req_fa_msg.set_app_id(app_id);
@@ -261,8 +261,8 @@ int NameMetaHelper::do_ls(const uint64_t server_id, const int64_t app_id, const 
 int NameMetaHelper::get_table(const uint64_t server_id,
     char* table_info, uint64_t& table_length, int64_t& version_id)
 {
-  gstreamer.set_packet_factory(&gfactory);
-  NewClientManager::get_instance().initialize(&gfactory, &gstreamer);
+  //gstreamer.set_packet_factory(&gfactory);
+  //NewClientManager::get_instance().initialize(&gfactory, &gstreamer);
 
   GetTableFromRtsMessage req_gtfr_msg;
 

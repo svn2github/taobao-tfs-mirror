@@ -21,6 +21,8 @@
 #include <Timer.h>
 #include "common/define.h"
 #include "common/meta_server_define.h"
+#include "common/base_packet_streamer.h"
+#include "common/base_packet_factory.h"
 #include "tfs_meta_client_api.h"
 
 namespace tfs
@@ -124,6 +126,8 @@ namespace tfs
         tbsys::CRWLock meta_table_mutex_;
         MetaTable meta_table_;
         uint64_t rs_id_;
+        common::BasePacketFactory* packet_factory_;
+        common::BasePacketStreamer* packet_streamer_;
     };
   }
 }
