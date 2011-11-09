@@ -1,4 +1,4 @@
-AM_CPPFLAGS=-I${top_srcdir}/src/name_meta_server \
+AM_CPPFLAGS=`mysql_config --cflags`  -I${top_srcdir}/src/name_meta_server \
             -I$(top_srcdir)/src \
 						-I${top_srcdir}/src/common \
 						-I$(TBLIB_ROOT)/include/tbsys \
