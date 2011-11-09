@@ -20,7 +20,8 @@ test: check
 TESTS=
 check_PROGRAMS=
 
-noinst_PROGRAMS=test_session_manager test_app_resource test_base_resource test_resource_manager
+noinst_PROGRAMS=test_session_manager test_app_resource test_base_resource test_resource_manager \
+								test_ip_replace_helper
 
 TESTS+=test_session_manager
 check_PROGRAMS+=test_session_manager
@@ -37,3 +38,7 @@ test_base_resource_SOURCES=test_base_resource.cpp
 TESTS+=test_resource_manager
 check_PROGRAMS+=test_resource_manager
 test_resource_manager_SOURCES=test_resource_manager.cpp
+
+TESTS+=test_ip_replace_helper
+check_PROGRAMS+=test_ip_replace_helper
+test_ip_replace_helper_SOURCES=test_ip_replace_helper.cpp

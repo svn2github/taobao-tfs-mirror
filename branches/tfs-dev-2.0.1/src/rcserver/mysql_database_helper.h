@@ -46,6 +46,12 @@ namespace tfs
         //ClusterRackGroup
         virtual int scan(VClusterRackGroup& outparam);
 
+        //ip transfer info
+        virtual int scan(IpReplaceHelper::VIpTransferItem& outparam);
+
+        //app ip turn info
+        virtual int scan(std::map<int32_t, IpReplaceHelper::VIpTransferItem>& outparam);
+
         //ClusterRackDuplicateServer
         virtual int scan(VClusterRackDuplicateServer& outparam);
 

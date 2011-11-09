@@ -104,3 +104,14 @@ CREATE TABLE t_app_stat (
   PRIMARY KEY (app_id)
 );
 
+CREATE TABLE t_caculate_ip_info (
+  source_ip VARCHAR(64),
+  caculate_ip VARCHAR(64),
+  PRIMARY KEY (source_ip)
+);
+CREATE TABLE t_app_ip_replace (
+  app_id INT,
+  source_ip VARCHAR(64),
+  turn_ip VARCHAR(64),
+  PRIMARY KEY (app_id, source_ip)
+);

@@ -157,7 +157,6 @@ namespace tfs
 
         static int32_t get_cluster_id(const char* file_name);
         static void parse_cluster_id(const std::string& cluster_id_str, int32_t& id, bool& is_master);
-        static uint32_t calculate_distance(const std::string& ip_str, const uint32_t addr);
 
         void calculate_ns_info(const common::BaseInfo& base_info, const uint32_t local_addr);
 

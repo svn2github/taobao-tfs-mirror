@@ -83,7 +83,7 @@ namespace tfs
       static void next_file_name(char* name, int32_t& name_len);
       static void next_file_name_base_on(char* name, int32_t& name_len,
           const char* base_name, const int32_t base_name_len);
-      //for test 
+      //for test
       CacheRootNode* get_root_node(const int64_t app_id, const int64_t uid)
       {
         return store_manager_.get_root_node(app_id, uid);
@@ -140,7 +140,7 @@ namespace tfs
         public:
           GcTimerTask(MetaServerService& service) : service_(service) {}
           virtual ~GcTimerTask() {}
-          virtual void runTimerTask() { service_.store_manager_.do_lru_gc(common::SYSPARAM_NAMEMETASERVER.gc_ratio_);}
+          virtual void runTimerTask() { service_.store_manager_.do_lru_gc(common::SYSPARAM_NAMEMETASERVER.gc_ratio_);TBSYS_LOG(INFO, "cache hit ratio %f", service_.store_manager_.get_cache_hit_ratio());}
         private:
           MetaServerService& service_;
       };

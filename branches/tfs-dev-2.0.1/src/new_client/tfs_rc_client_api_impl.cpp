@@ -120,7 +120,7 @@ namespace tfs
     TfsRetType RcClientImpl::initialize(const char* str_rc_ip, const char* app_key, const char* str_app_ip,
         const int32_t cache_times, const int32_t cache_items, const char* dev_name, const char* rs_addr)
     {
-      if (str_rc_ip == NULL || app_key == NULL || str_app_ip == NULL)
+      if (str_rc_ip == NULL || app_key == NULL)
       {
         TBSYS_LOG(WARN, "input parameter is invalid. rc_ip: %s, app_key: %s, app_ip: %s",
             str_rc_ip == NULL ? "null":str_rc_ip,
@@ -134,7 +134,11 @@ namespace tfs
         return TFS_ERROR;
       }
       uint64_t rc_ip = Func::get_host_ip(str_rc_ip);
-      uint64_t app_ip = Func::str_to_addr(str_app_ip, 0);
+      uint64_t app_ip = 0;
+      if (NULL != str_app_ip)
+      {
+        app_ip = Func::str_to_addr(str_app_ip, 0);
+      }
       return initialize(rc_ip, app_key, app_ip, cache_times, cache_items, dev_name, rs_addr);
     }
 
@@ -152,9 +156,16 @@ namespace tfs
         TBSYS_LOG(DEBUG, "TfsClient::Instance()->initialize ret %d", ret);
         if (TFS_SUCCESS == ret)
         {
-          local_addr_ = Func::get_local_addr(dev_name);
-          TBSYS_LOG(DEBUG, "local_addr_ = %d", local_addr_);
-          ret = login(rc_ip, app_key, app_ip);
+          if (app_ip != 0)
+          {
+            local_addr_ = app_ip & 0xffffffff;
+          }
+          else
+          {
+            local_addr_ = Func::get_local_addr(dev_name);
+          }
+          TBSYS_LOG(DEBUG, "local_addr_ = %s", tbsys::CNetUtil::addrToString(local_addr_).c_str());
+          ret = login(rc_ip, app_key, local_addr_);
         }
         TBSYS_LOG(DEBUG, "login ret %d", ret);
         if (TFS_SUCCESS == ret)
@@ -815,10 +826,12 @@ namespace tfs
       std::vector<ClusterData>::const_iterator cluster_data_it;
       for (; it != base_info.cluster_infos_.end(); it++)
       {
+        //every cluster rack
         bool can_write = false;
         cluster_data_it = it->cluster_data_.begin();
         for (; cluster_data_it != it->cluster_data_.end(); cluster_data_it++)
         {
+          //every cluster
           assert(0 != cluster_data_it->cluster_stat_);
           //rc server should not give the cluster which stat is 0
           assert(0 != cluster_data_it->access_type_);
@@ -870,34 +883,6 @@ namespace tfs
         is_master = (cluster_id_str[2] == 'M' || cluster_id_str[2] == 'm');
       }
     }
-    uint32_t RcClientImpl::calculate_distance(const std::string& ip_str, const uint32_t addr)
-    {
-      uint32_t ip1 = Func::get_addr(ip_str.c_str());
-      uint32_t ip2 = addr;
-      uint32_t mask = 0xff;
-      uint32_t n1 = 0;
-      uint32_t n2 = 0;
-      for (int i = 0; i < 4; i++)
-      {
-        n1 <<=  8;
-        n2 <<= 8;
-        n1 |= ip1 & mask;
-        n2 |= ip2 & mask;
-        ip1 >>= 8;
-        ip2 >>= 8;
-      }
-      uint32_t result = 0;
-      if (n1 > n2)
-      {
-        result = n1 - n2;
-      }
-      else
-      {
-        result = n2 - n1;
-      }
-
-      return result;
-    }
     void RcClientImpl::parse_duplicate_info(const std::string& duplicate_info)
     {
       char tmp[512];
@@ -927,28 +912,16 @@ namespace tfs
       {
         int8_t index = 0;
         //calculate who will be the first choice;
-        uint32_t distance2 = calculate_distance(ip_str, addr);
+        //uint32_t distance2 = calculate_distance(ip_str, addr);
         for (; index < CHOICE_CLUSTER_NS_TYPE_LENGTH; index++)
         {
           if (write_ns_[index].empty())
           {
             break;
           }
-          else
-          {
-            uint32_t distance1 = calculate_distance(write_ns_[index], addr);
-            if (distance1 > distance2)
-            {
-              break;
-            }
-          }
         }
         if (index < CHOICE_CLUSTER_NS_TYPE_LENGTH)
         {
-          for (int8_t i = CHOICE_CLUSTER_NS_TYPE_LENGTH - 1; i > index; i--)
-          {
-            write_ns_[i] = write_ns_[i - 1];
-          }
           write_ns_[index] = ip_str;
         }
       }
@@ -961,8 +934,6 @@ namespace tfs
       if (TFS_SUCCESS == iret)
       {
         int8_t index = 0;
-        //calculate who will be the first choice;
-        uint32_t distance2 = calculate_distance(ip_str, addr);
         for (; index < CHOICE_CLUSTER_NS_TYPE_LENGTH; index++)
         {
           if (choice[index].empty())
@@ -971,25 +942,16 @@ namespace tfs
           }
           else
           {
-            ClusterNsType::const_iterator it = choice[index].begin();
-            if (!(*it).second.empty())
+            ClusterNsType::const_iterator it = choice[index].find(cluster_id);
+            if (it == choice[index].end())
             {
-              uint32_t distance1 = calculate_distance((*it).second, addr);
-              if (distance1 > distance2)
-              {
-                break;
-              }
+              break;
             }
           }
         }
 
         if (index < CHOICE_CLUSTER_NS_TYPE_LENGTH)
         {
-          for (int8_t i = CHOICE_CLUSTER_NS_TYPE_LENGTH - 1; i > index ; i--)
-          {
-            choice[i] = choice[i - 1];
-            choice[i - 1].clear();
-          }
           choice[index][cluster_id] = ip_str;
         }
       }

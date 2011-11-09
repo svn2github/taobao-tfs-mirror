@@ -43,6 +43,8 @@ namespace tfs
 
         virtual int login(const std::string& app_key, int32_t& app_id, common::BaseInfo& base_info) = 0;
         virtual int check_update_info(const int32_t app_id, const int64_t modify_time, bool& update_flag, common::BaseInfo& base_info) = 0;
+        virtual int sort_ns_by_distance(const int32_t app_id, const std::string& app_ip,
+            common::BaseInfo& in_base_info, common::BaseInfo& out_base_info) = 0;
         virtual int get_app_name(const int32_t app_id, std::string& app_name) const
         {
           UNUSED(app_id);

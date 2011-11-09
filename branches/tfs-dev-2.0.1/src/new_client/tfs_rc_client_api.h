@@ -41,11 +41,11 @@ namespace tfs
         RcClient();
         ~RcClient();
 
-        TfsRetType initialize(const char* str_rc_ip, const char* app_key, const char* str_app_ip,
+        TfsRetType initialize(const char* str_rc_ip, const char* app_key, const char* str_app_ip = NULL,
             const int32_t cache_times = -1,
             const int32_t cache_items = -1,
             const char* dev_name = NULL);
-        TfsRetType initialize(const uint64_t rc_ip, const char* app_key, const uint64_t app_ip,
+        TfsRetType initialize(const uint64_t rc_ip, const char* app_key, const uint64_t app_ip = 0,
             const int32_t cache_times = -1,
             const int32_t cache_items = -1,
             const char* dev_name = NULL);

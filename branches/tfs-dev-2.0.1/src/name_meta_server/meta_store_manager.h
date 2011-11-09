@@ -107,6 +107,7 @@ namespace tfs
             const common::FileType type);
         uint64_t get_cache_get_times() const {return cache_get_times_;}
         uint64_t get_cache_hit_times() const {return cache_hit_times_;}
+        float get_cache_hit_ratio() { return cache_get_times_ == 0? cache_hit_times_ = 0: (float)cache_hit_times_/(float)cache_get_times_;}
 
       private:
         void* malloc(const int64_t size, const int32_t type = CACHE_NONE_NODE);

@@ -70,6 +70,14 @@ namespace tfs
           outparam.push_back(tmp);
           return TFS_SUCCESS;
         }
+        virtual int scan(IpReplaceHelper::VIpTransferItem& outparam)
+        {
+          return TFS_SUCCESS;
+        }
+        virtual int scan(std::map<int32_t, IpReplaceHelper::VIpTransferItem>& outparam)
+        {
+          return TFS_SUCCESS;
+        }
         virtual int scan(VMetaRootServerInfo& outparam)
         {
           MetaRootServerInfo tmp;

@@ -56,6 +56,7 @@ namespace tfs
       static bool is_local_addr(const uint32_t ip);
       static uint32_t get_addr(const char* ip);
       static uint64_t str_to_addr(const char* ip, const int32_t port);
+      static std::string addr_to_str(const uint64_t ipport, bool with_port);
       static uint64_t get_host_ip(const char *s);
       //static uint64_t addr_inc_port(const uint64_t ipport, const int32_t inc);
       static uint32_t get_lan(uint64_t ipport, uint32_t ipmask);

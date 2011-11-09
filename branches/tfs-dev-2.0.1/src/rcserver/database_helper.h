@@ -18,6 +18,7 @@
 #define TFS_RCSERVER_DATABASE_HELPER_H_
 #include "common/internal.h"
 #include "resource_server_data.h"
+#include "ip_replace_helper.h"
 namespace tfs
 {
   namespace rcserver
@@ -51,6 +52,10 @@ namespace tfs
 
         //ClusterRackGroup
         virtual int scan(VClusterRackGroup& outparam) = 0;
+        //ip transfer info
+        virtual int scan(IpReplaceHelper::VIpTransferItem& outparam) = 0;
+        //app ip turn info
+        virtual int scan(std::map<int32_t, IpReplaceHelper::VIpTransferItem>& outparam) = 0;
 
         //ClusterRackDuplicateServer
         virtual int scan(VClusterRackDuplicateServer& outparam) = 0;

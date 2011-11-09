@@ -173,7 +173,6 @@ namespace tfs
       {
         tbsys::CThreadGuard mutex_guard(&lru_mutex_);
         root_node = lru_.get(lru_key);
-        cache_get_times_++;
       }
       if (NULL == root_node)
       {
@@ -203,10 +202,6 @@ namespace tfs
           }
         }
       }
-      else
-      {
-        cache_hit_times_++;
-      }
       return root_node;
     }
     void MetaStoreManager::revert_root_node(const int64_t app_id, const int64_t uid)
@@ -231,7 +226,7 @@ namespace tfs
       int64_t used_size = MemHelper::get_used_size();
       TBSYS_LOG(DEBUG, "malloc size %"PRI64_PREFIX"d type %d cache size %d MB used size %"PRI64_PREFIX"d",
           size, type, cache_size_, used_size);
-      used_size = used_size >> 10;
+      used_size = used_size >> 20;
       if (cache_size_ <= used_size)
       {
         do_lru_gc(gc_ratio_);
@@ -281,6 +276,7 @@ namespace tfs
       bool got_all = false;
       if (TFS_SUCCESS == ret)
       {
+        if (!(app_id == -1 && uid == -1)) cache_get_times_++;
         if (is_file)
         {
           CacheFileMetaNode* ret_file_node = NULL;
@@ -293,6 +289,7 @@ namespace tfs
           ret = MetaCacheHelper::find_dir(p_dir_node, name, ret_dir_node);
           ret_node = ret_dir_node;
         }
+        if (!(app_id == -1 && uid == -1) && NULL != ret_node) cache_hit_times_++;
         got_all = p_dir_node->is_got_all_children();
       }
       if (TFS_SUCCESS == ret)
@@ -615,6 +612,7 @@ namespace tfs
       TBSYS_LOG(DEBUG, "will dump meta_info.frag_info_");
       meta_info.frag_info_.dump();
       cluster_id = meta_info.frag_info_.cluster_id_;
+      cache_get_times_++;
       if ((offset >= meta_info.frag_info_.get_last_offset() || -1 == offset)
           && meta_info.frag_info_.had_been_split_)
       {
@@ -631,6 +629,7 @@ namespace tfs
         meta_info.file_info_.size_ = file_node->size_;
         last_offset = meta_info.frag_info_.get_last_offset();
         out_v_meta_info.push_back(meta_info);
+        cache_hit_times_++;
       }
       return ret;
     }

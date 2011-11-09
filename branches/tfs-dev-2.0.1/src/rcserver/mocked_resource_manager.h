@@ -147,7 +147,7 @@ namespace tfs
         int update_session_stat(const std::map<std::string, common::SessionStat>& session_stats)
         {
           int ret = common::TFS_SUCCESS;
-          std::map<std::string, common::SessionStat>::const_iterator stat_it = session_stats.begin(); 
+          std::map<std::string, common::SessionStat>::const_iterator stat_it = session_stats.begin();
           for ( ; stat_it != session_stats.end(); ++stat_it)
           {
             std::map<common::OperType, common::AppOperInfo>::const_iterator mit = stat_it->second.app_oper_info_.begin();
@@ -174,6 +174,12 @@ namespace tfs
           }
           flag_ = false;
           return ret;
+        }
+        int sort_ns_by_distance(const int32_t app_id, const std::string& app_ip,
+            common::BaseInfo& in_base_info, common::BaseInfo& out_base_info)
+        {
+          out_base_info = in_base_info;
+          return common::TFS_SUCCESS;
         }
       private:
         DISALLOW_COPY_AND_ASSIGN(MockedResourceManager);

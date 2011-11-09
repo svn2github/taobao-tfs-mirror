@@ -16,6 +16,7 @@
 #include "session_manager.h"
 #include "common/parameter.h"
 #include "common/error_msg.h"
+#include "common/func.h"
 #include "common/session_util.h"
 
 namespace tfs
@@ -139,7 +140,8 @@ namespace tfs
     {
       int ret = TFS_SUCCESS;
       int32_t app_id = 0;
-      if ((ret = resource_manager_->login(app_key, app_id, base_info)) == TFS_SUCCESS)
+      BaseInfo base_info_befor_sort;
+      if ((ret = resource_manager_->login(app_key, app_id, base_info_befor_sort)) == TFS_SUCCESS)
       {
         // gene session id
         SessionUtil::gene_session_id(app_id, session_ip, session_id);
@@ -151,6 +153,9 @@ namespace tfs
               " session_id: %s, modify time: %"PRI64_PREFIX"d, update_flag: %d, ret: %d",
               session_id.c_str(), keep_alive_info.s_base_info_.modify_time_, LOGIN_FLAG, ret);
         }
+        resource_manager_->sort_ns_by_distance(app_id, common::Func::addr_to_str(session_ip, false),
+            base_info_befor_sort, base_info);
+
       }
       else
       {
@@ -167,17 +172,23 @@ namespace tfs
       // get app_id from session_id
       int32_t app_id = 0;
       int64_t session_ip = 0;
+      BaseInfo base_info_befor_sort;
       if ((ret = SessionUtil::parse_session_id(session_id, app_id, session_ip)) == TFS_SUCCESS)
       {
         // first check update info, then update session info
         if ((ret = resource_manager_->check_update_info(app_id, keep_alive_info.s_base_info_.modify_time_,
-                update_flag, base_info)) != TFS_SUCCESS)
+                update_flag, base_info_befor_sort)) != TFS_SUCCESS)
         {
           TBSYS_LOG(ERROR, "call IResourceManager::check_update_info failed. app_id: %d, modify_time: %"PRI64_PREFIX"d, ret: %d",
               app_id, keep_alive_info.s_base_info_.modify_time_, ret);
         }
         else
         {
+          if (update_flag)
+          {
+            resource_manager_->sort_ns_by_distance(app_id,
+                Func::addr_to_str(session_ip, false), base_info_befor_sort, base_info);
+          }
           if ((ret = update_session_info(app_id, session_id, keep_alive_info, KA_FLAG)) != TFS_SUCCESS)
           {
             TBSYS_LOG(ERROR, "call SessionMonitorTask::update_session_info failed, this will not be happen!"

@@ -380,6 +380,122 @@ error:
       }
       return ret;
     }
+    int MysqlDatabaseHelper::scan(IpReplaceHelper::VIpTransferItem& outparam)
+    {
+      outparam.clear();
+      tbutil::Mutex::Lock lock(mutex_);
+      int ret = TFS_ERROR;
+      if (!is_connected_)
+      {
+        connect();
+      }
+      if (is_connected_)
+      {
+        char sql[1024];
+        char table[256];
+        snprintf(table, 256, "%s", "t_caculate_ip_info");
+        snprintf(sql, 1024, "select source_ip, caculate_ip from %s", table);
+        ret = mysql_query(&mysql_.mysql, sql);
+        if (ret)
+        {
+          TBSYS_LOG(ERROR, "query (%s) failure: %s %s", sql,  mysql_.host.c_str(), mysql_error(&mysql_.mysql));
+          close();
+          return TFS_ERROR;
+        }
+
+        MYSQL_ROW row;
+
+        MYSQL_RES *mysql_ret = mysql_store_result(&mysql_.mysql);
+        if (mysql_ret == NULL)
+        {
+          TBSYS_LOG(ERROR, "mysql_store_result failure: %s %s", mysql_.host.c_str(), mysql_error(&mysql_.mysql));
+          close();
+          ret = TFS_ERROR;
+          goto error;
+        }
+
+        while(NULL != (row = mysql_fetch_row(mysql_ret)))
+        {
+          IpReplaceHelper::IpTransferItem item;
+          int r = TFS_SUCCESS;
+          r = item.set_source_ip(row[0]);
+          if (TFS_SUCCESS != r)
+          {
+            TBSYS_LOG(WARN, "read a invalid source ip from t_caculate_ip_info ip is %s", row[0]);
+            continue;
+          }
+          r = item.set_dest_ip(row[1]);
+          if (TFS_SUCCESS != r)
+          {
+            TBSYS_LOG(WARN, "read a invalid dest ip from t_caculate_ip_info ip is %s", row[1]);
+            continue;
+          }
+          outparam.push_back(item);
+        }
+
+error:
+        mysql_free_result(mysql_ret);
+      }
+      return ret;
+    }
+    int MysqlDatabaseHelper::scan(std::map<int32_t, IpReplaceHelper::VIpTransferItem>& outparam)
+    {
+      outparam.clear();
+      tbutil::Mutex::Lock lock(mutex_);
+      int ret = TFS_ERROR;
+      if (!is_connected_)
+      {
+        connect();
+      }
+      if (is_connected_)
+      {
+        char sql[1024];
+        char table[256];
+        snprintf(table, 256, "%s", "t_app_ip_replace");
+        snprintf(sql, 1024, "select app_id, source_ip, turn_ip from %s", table);
+        ret = mysql_query(&mysql_.mysql, sql);
+        if (ret)
+        {
+          TBSYS_LOG(ERROR, "query (%s) failure: %s %s", sql,  mysql_.host.c_str(), mysql_error(&mysql_.mysql));
+          close();
+          return TFS_ERROR;
+        }
+
+        MYSQL_ROW row;
+
+        MYSQL_RES *mysql_ret = mysql_store_result(&mysql_.mysql);
+        if (mysql_ret == NULL)
+        {
+          TBSYS_LOG(ERROR, "mysql_store_result failure: %s %s", mysql_.host.c_str(), mysql_error(&mysql_.mysql));
+          close();
+          ret = TFS_ERROR;
+          goto error;
+        }
+
+        while(NULL != (row = mysql_fetch_row(mysql_ret)))
+        {
+          IpReplaceHelper::IpTransferItem item;
+          int r = TFS_SUCCESS;
+          r = item.set_source_ip(row[1]);
+          if (TFS_SUCCESS != r)
+          {
+            TBSYS_LOG(WARN, "read a invalid source ip from t_app_ip_replace ip is %s", row[1]);
+            continue;
+          }
+          r = item.set_dest_ip(row[2]);
+          if (TFS_SUCCESS != r)
+          {
+            TBSYS_LOG(WARN, "read a invalid turn ip from t_app_ip_replace ip is %s", row[2]);
+            continue;
+          }
+          int32_t app_id = atoi(row[0]);
+          outparam[app_id].push_back(item);
+        }
+error:
+        mysql_free_result(mysql_ret);
+      }
+      return ret;
+    }
 
     int MysqlDatabaseHelper::scan(VClusterRackDuplicateServer& outparam)
     {

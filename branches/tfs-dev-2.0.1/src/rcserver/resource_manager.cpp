@@ -231,6 +231,19 @@ EXIT:
       return ret;
     }
 
+    int ResourceManager::sort_ns_by_distance(const int32_t app_id, const std::string& app_ip,
+            common::BaseInfo& in_base_info, common::BaseInfo& out_base_info)
+    {
+      int ret = EXIT_NOT_INIT_ERROR;
+      if (have_inited_ && NULL != base_resource_manager_)
+      {
+        tbsys::CRLockGuard guard(resorce_mutex_);
+        ret = base_resource_manager_->sort_ns_by_distance(app_id,
+            app_ip, in_base_info, out_base_info);
+      }
+      return ret;
+    }
+
     int ResourceManager::get_app_name(const int32_t app_id, std::string& app_name) const
     {
       int ret = EXIT_NOT_INIT_ERROR;

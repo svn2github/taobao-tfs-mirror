@@ -20,8 +20,10 @@
 #include <set>
 #include <string>
 #include "common/internal.h"
+#include "common/rc_define.h"
 #include "resource.h"
 #include "resource_server_data.h"
+#include "ip_replace_helper.h"
 
 namespace tfs
 {
@@ -47,6 +49,8 @@ namespace tfs
         int get_cluster_infos(const int32_t cluster_group_id,
             std::vector<common::ClusterRackData>& cluster_rack_datas) const;
         int get_last_modify_time(int64_t& last_modify_time) const;
+        int sort_ns_by_distance(const int32_t app_id, const std::string& app_ip,
+            const common::BaseInfo& in_base_info, common::BaseInfo& out_base_info);
 
       private:
         int64_t base_last_update_time_;
@@ -55,6 +59,11 @@ namespace tfs
         VClusterRackInfo v_cluster_rack_info_;
         VClusterRackGroup v_cluster_rack_group_;
         VClusterRackDuplicateServer v_cluster_rack_duplicate_server_;
+      private:
+        IpReplaceHelper::VIpTransferItem v_ip_transfer_table_;
+        std::map<int32_t, IpReplaceHelper::VIpTransferItem> m_app_ip_turn_table_;
+        std::map<std::string, std::string> m_ns_caculate_ip_;
+        void fill_ip_caculate_map();
     };
   }
 }
