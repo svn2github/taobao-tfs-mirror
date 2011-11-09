@@ -288,17 +288,17 @@ namespace tfs
       out_base_info = in_base_info;
       out_base_info.cluster_infos_.clear();
 
-      std::vector<ClusterRackData>::const_iterator clusert_rack_it = in_base_info.cluster_infos_.begin();
-      for (; clusert_rack_it != in_base_info.cluster_infos_.end(); clusert_rack_it++)
+      std::vector<ClusterRackData>::const_iterator cluster_rack_it = in_base_info.cluster_infos_.begin();
+      for (; cluster_rack_it != in_base_info.cluster_infos_.end(); cluster_rack_it++)
       {
         //every cluster rack
-        ClusterRackData out_rack_dat(*clusert_rack_it);
+        ClusterRackData out_rack_dat(*cluster_rack_it);
         //remove all cluster_data, so we can put soreted cluster_data into out_rack_dat.cluster_data_
         out_rack_dat.cluster_data_.clear();
 
-        std::vector<ClusterData>::const_iterator cluster_it = clusert_rack_it->cluster_data_.begin();
+        std::vector<ClusterData>::const_iterator cluster_it = cluster_rack_it->cluster_data_.begin();
         std::multimap<int32_t, std::vector<ClusterData>::const_iterator> sorted_helper;
-        for (; cluster_it != clusert_rack_it->cluster_data_.end(); cluster_it++)
+        for (; cluster_it != cluster_rack_it->cluster_data_.end(); cluster_it++)
         {
           int32_t distance = 0;
           std::string caculate_ns_ip;
