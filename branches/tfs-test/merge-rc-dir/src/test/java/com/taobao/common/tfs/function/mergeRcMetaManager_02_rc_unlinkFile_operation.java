@@ -35,7 +35,7 @@ public class mergeRcMetaManager_02_rc_unlinkFile_operation extends RcBaseCase {
   public void tearDown(){
   }
 
-  @Test
+  @Ignore
   public void Function_09_unlinkFile_1k(){
 
     caseName = "Function_09_unlinkFile_1k";
@@ -98,7 +98,7 @@ public class mergeRcMetaManager_02_rc_unlinkFile_operation extends RcBaseCase {
     log.info(caseName + "===> end");
   }
 
-  @Test
+  @Ignore
   public void Function_10_unlinkFile_2M(){
 
     caseName = "Function_10_unlinkFile_2M";
@@ -161,7 +161,7 @@ public class mergeRcMetaManager_02_rc_unlinkFile_operation extends RcBaseCase {
     log.info(caseName + "===> end");
   }
 
-  @Test
+  @Ignore
   public void Function_11_unlinkFile_3M(){
 
     caseName = "Function_11_unlinkFile_3M";
@@ -223,7 +223,7 @@ public class mergeRcMetaManager_02_rc_unlinkFile_operation extends RcBaseCase {
     log.info(caseName + "===> end");
   }
 
-  @Test
+  @Ignore
   public void Function_12_unlinkFile_6G(){
 
     caseName = "Function_12_unlinkFile_6G";
@@ -286,5 +286,56 @@ public class mergeRcMetaManager_02_rc_unlinkFile_operation extends RcBaseCase {
 
     log.info(caseName + "===> end");
   }
+  @Test
+    public void Function_04_rmFile_6G()  {
+      caseName = "Function_04_rmFile_6G";
+      log.info(caseName + "===> start");
 
+      boolean bRet = false;
+      String localFile = "6G.jpg";
+      String filePath = "/daodaoanan";
+      long expectSize = (long) (6 * ((long) 1 << 30));
+      List<String> rootServerAddrList = new ArrayList<String>();
+      rootServerAddrList.add(rsAddr);
+
+      tfsManager = new DefaultTfsManager();
+      long oldUsedCapacity = getUsedCapacity(appKey);
+      long oldFileCount = getFileCount(appKey);
+      tfsManager.setRcAddr(rcAddr);
+      tfsManager.setAppKey(appKey);
+      tfsManager.setAppIp(appIp);
+      tfsManager.setUseNameMeta(true);
+      tfsManager.setRootServerAddrList(rootServerAddrList);
+      bRet = tfsManager.init();
+      Assert.assertTrue(bRet);
+      log.debug(" oldUsedCapacity: " + oldUsedCapacity + " oldFileCount: " + oldFileCount);
+
+      bRet=tfsManager.saveFile(appId,userId,localFile, filePath);
+      Assert.assertTrue(bRet);
+
+      sleep(MAX_STAT_TIME);
+      String sessionId = tfsManager.getSessionId();
+      Assert.assertEquals(expectSize, getFileSize(sessionId, 2));
+      long newUsedCapacity = getUsedCapacity(appKey);
+      long newFileCount = getFileCount(appKey);
+      log.debug(" newUsedCapacity: " + newUsedCapacity + " newFileCount: " + newFileCount);
+      tfsManager.destroy();
+
+      tfsManager.setRcAddr(rcAddr);
+      tfsManager.setAppKey(appKey);
+      tfsManager.setAppIp(appIp);
+      tfsManager.setUseNameMeta(true);
+      tfsManager.setRootServerAddrList(rootServerAddrList);
+      bRet = tfsManager.init();
+      Assert.assertTrue(bRet);
+
+      bRet = tfsManager.rmFile(appId,userId,filePath);
+      Assert.assertTrue(bRet);
+
+      sleep(MAX_STAT_TIME);
+      tfsManager.destroy();
+
+      log.info(caseName + "===> end");
+
+    }
 }
