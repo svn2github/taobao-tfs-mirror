@@ -248,6 +248,7 @@ namespace tfs
     // get file frag info to read
     int MetaServerService::do_read(common::BasePacket* packet)
     {
+      stat_[STAT_READ_FILE]++;
       int ret = TFS_SUCCESS;
       if (NULL == packet)
       {
@@ -283,6 +284,7 @@ namespace tfs
 
         if (ret != TFS_SUCCESS)
         {
+          tbsys::gDelete(resp_rf_msg);
           ret = req_rf_msg->reply_error_packet(TBSYS_LOG_LEVEL(INFO), ret, "execute message failed");
         }
         else
@@ -297,6 +299,7 @@ namespace tfs
     // write frag info
     int MetaServerService::do_write(common::BasePacket* packet)
     {
+      stat_[STAT_WRITE_FILE]++;
       int ret = TFS_SUCCESS;
       PROFILER_START("do_write");
       if (NULL == packet)
@@ -375,6 +378,14 @@ namespace tfs
           ret = permission >= BUCKET_STATUS_READ_ONLY ? TFS_SUCCESS : EXIT_NOT_PERM_OPER;
           if (ret == TFS_SUCCESS )
           {
+            if (DIRECTORY == static_cast<FileType>(req_lf_msg->get_file_type()))
+            {
+              stat_[STAT_LS_DIR]++;
+            }
+            else
+            {
+              stat_[STAT_LS_FILE]++;
+            }
             ret = ls(req_lf_msg->get_app_id(), req_lf_msg->get_user_id(), req_lf_msg->get_pid(),
                  req_lf_msg->get_file_path(), static_cast<FileType>(req_lf_msg->get_file_type()),
                  resp_lf_msg->get_meta_infos(), still_have);
@@ -383,6 +394,7 @@ namespace tfs
 
         if (ret != TFS_SUCCESS)
         {
+          tbsys::gDelete(resp_lf_msg);
           ret = req_lf_msg->reply_error_packet(TBSYS_LOG_LEVEL(INFO), ret, "execute message failed");
         }
         else
@@ -449,6 +461,14 @@ namespace tfs
     int MetaServerService::create(const int64_t app_id, const int64_t uid,
                                   const char* file_path, const FileType type)
     {
+      if (DIRECTORY == type)
+      {
+        stat_[STAT_CREATE_DIR]++;
+      }
+      else
+      {
+        stat_[STAT_CREATE_FILE]++;
+      }
       PROFILER_START("create");
       int ret = TFS_SUCCESS;
       char name[MAX_FILE_PATH_LEN];
@@ -558,6 +578,14 @@ namespace tfs
     int MetaServerService::rm(const int64_t app_id, const int64_t uid,
                               const char* file_path, const FileType type)
     {
+      if (DIRECTORY == type)
+      {
+        stat_[STAT_RM_DIR]++;
+      }
+      else
+      {
+        stat_[STAT_RM_FILE]++;
+      }
       PROFILER_START("rm");
       char name[MAX_FILE_PATH_LEN];
       int32_t name_len = 0;
@@ -620,6 +648,14 @@ namespace tfs
                               const char* file_path, const char* dest_file_path,
                               const FileType type)
     {
+      if (DIRECTORY == type)
+      {
+        stat_[STAT_MV_DIR]++;
+      }
+      else
+      {
+        stat_[STAT_MV_FILE]++;
+      }
       PROFILER_START("mv");
       char name[MAX_FILE_PATH_LEN], dest_name[MAX_FILE_PATH_LEN];
       int32_t name_len = 0, dest_name_len = 0;
@@ -1584,6 +1620,36 @@ namespace tfs
         }
       }
       return iret;
+    }
+    void MetaServerService::dump_stat()
+    {
+      TBSYS_LOG(INFO, "cache hit ratio %f", store_manager_.get_cache_hit_ratio());
+      TBSYS_LOG(INFO, "CREATE_DIR %"PRI64_PREFIX"d CREATE_FILE %"PRI64_PREFIX"d "
+          "MV_DIR %"PRI64_PREFIX"d MV_FILE %"PRI64_PREFIX"d "
+          "LS_DIR %"PRI64_PREFIX"d LS_FILE %"PRI64_PREFIX"d "
+          "READ %"PRI64_PREFIX"d WRITE %"PRI64_PREFIX"d "
+          "RM_DIR %"PRI64_PREFIX"d RM_FILE %"PRI64_PREFIX"d ",
+          stat_[STAT_CREATE_DIR], stat_[STAT_CREATE_FILE],
+          stat_[STAT_MV_DIR], stat_[STAT_MV_FILE],
+          stat_[STAT_LS_DIR], stat_[STAT_LS_FILE],
+          stat_[STAT_READ_FILE], stat_[STAT_WRITE_FILE],
+          stat_[STAT_RM_DIR], stat_[STAT_RM_FILE]);
+
+          stat_[STAT_CREATE_DIR] = 0;
+          stat_[STAT_CREATE_FILE] = 0;
+          stat_[STAT_MV_DIR] = 0;
+          stat_[STAT_MV_FILE] = 0;
+          stat_[STAT_LS_DIR] = 0;
+          stat_[STAT_LS_FILE] = 0;
+          stat_[STAT_READ_FILE] = 0;
+          stat_[STAT_WRITE_FILE] = 0;
+          stat_[STAT_RM_DIR] = 0;
+          stat_[STAT_RM_FILE] = 0;
+    }
+    void MetaServerService::GcTimerTask::runTimerTask()
+    {
+      service_.store_manager_.do_lru_gc(common::SYSPARAM_NAMEMETASERVER.gc_ratio_);
+      service_.dump_stat();
     }
   }/** namemetaserver **/
 }/** tfs **/

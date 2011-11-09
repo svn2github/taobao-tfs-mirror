@@ -156,10 +156,17 @@ namespace tfs
       {
         key.app_id_ = i;
         key.user_id_ = i + MAX_COUNT;
-        iret = lru.insert(key, new RootNode());
+        RootNode *rn = new RootNode();
+        rn->key_ = i;
+        iret = lru.insert(key, rn);
         EXPECT_EQ(TFS_SUCCESS, iret);
-        if (i > MAX_COUNT / 2)
+        if (i <= MAX_COUNT /2) {  // these are gc possible
           lru.get(key);
+          lru.put(key);
+        }
+        else {
+          lru.get(key);
+        }
       }
       double ratio = 0.2;
       uint64_t gc_count = static_cast<uint64_t>(MAX_COUNT * ratio) + 1;
@@ -170,8 +177,10 @@ namespace tfs
       EXPECT_EQ(gc_count, rs.size());
       EXPECT_EQ(MAX_COUNT - gc_count, lru.list_.size());
       std::vector<RootNode*>::iterator iter = rs.begin();
+      int32_t i = 0;
       for(; iter != rs.end();++iter)
       {
+        EXPECT_EQ((*iter)->key_, i++);  // check the gc sequence, should start from 0
         tbsys::gDelete((*iter));
       }
     }

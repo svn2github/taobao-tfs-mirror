@@ -134,13 +134,14 @@ namespace tfs
 
       int check_permission(common::BucketStatus& status, const int64_t pid, const int64_t uid,
           const int64_t version, const uint64_t server) const;
+      void dump_stat();
 
       class GcTimerTask: public tbutil::TimerTask
       {
         public:
           GcTimerTask(MetaServerService& service) : service_(service) {}
           virtual ~GcTimerTask() {}
-          virtual void runTimerTask() { service_.store_manager_.do_lru_gc(common::SYSPARAM_NAMEMETASERVER.gc_ratio_);TBSYS_LOG(INFO, "cache hit ratio %f", service_.store_manager_.get_cache_hit_ratio());}
+          virtual void runTimerTask();
         private:
           MetaServerService& service_;
       };
@@ -153,6 +154,20 @@ namespace tfs
       HeartManager heart_manager_;
       MetaStoreManager store_manager_;
       tbutil::Mutex mutex_;
+      enum {
+        STAT_CREATE_DIR = 0,
+        STAT_CREATE_FILE = 1,
+        STAT_MV_DIR = 2,
+        STAT_MV_FILE = 3,
+        STAT_LS_DIR = 4,
+        STAT_LS_FILE = 5,
+        STAT_READ_FILE = 6,
+        STAT_WRITE_FILE = 7,
+        STAT_RM_DIR = 8,
+        STAT_RM_FILE = 9,
+        STAT_SUM = 10,
+      };
+      uint64_t stat_[STAT_SUM];
     };
   }
 }
