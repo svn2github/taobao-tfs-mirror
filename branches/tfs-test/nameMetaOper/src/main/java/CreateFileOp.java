@@ -91,7 +91,7 @@ class CreateFileOp extends Operation {
         operTime = System.nanoTime() - startTime;
         log.debug("@@ create file filePath: " + inputList.get(i) + (ret ? " success": " failed"));
         addStatInfo(statInfo, ret, operTime);
-        if (statInfo.totalCount % 5 == 0) {
+        if (statInfo.totalCount % statCount == 0) {
           myLock.writeLock().lock(); 
           doStat(statInfo, opStatInfo);
           myLock.writeLock().unlock();

@@ -5,8 +5,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.locks.ReadWriteLock; 
 import java.util.concurrent.locks.ReentrantReadWriteLock; 
 
-import org.apache.log4j.Logger;
-import org.apache.log4j.Level;
 import org.springframework.context.support.ClassPathXmlApplicationContext;
 
 import com.taobao.common.tfs.DefaultTfsManager;

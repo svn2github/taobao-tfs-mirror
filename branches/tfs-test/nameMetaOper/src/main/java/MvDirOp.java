@@ -47,7 +47,7 @@ class MvDirOp extends Operation {
       operTime = System.nanoTime() - startTime;
       log.debug("@@ mv appId: " + appId + ", userId: " + userId + ", dirPath: " + dirPath + " to " + newDirPath + (ret ? " success": " failed"));
       addStatInfo(statInfo, ret, operTime);
-      // remove back
+      // move back
       ret = tfsManager.mvDir(appId, userId, newDirPath, dirPath);
       if (statInfo.totalCount % statCount == 0) {
         myLock.writeLock().lock(); 

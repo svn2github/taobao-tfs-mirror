@@ -3,6 +3,9 @@
 HOST="10.232.31.33"
 DB_USER="tfs_name"
 DB_PASS="name_app"
+#HOST="10.232.36.208"
+#DB_USER="root"
+#DB_PASS="123"
 DB_NAME="tfs_name_db"
 
 mysql_op()

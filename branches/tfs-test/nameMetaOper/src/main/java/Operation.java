@@ -10,8 +10,8 @@ import java.io.FileReader;
 import java.io.BufferedReader;
 import java.io.FileInputStream;
 
-import org.apache.log4j.Logger;
-import org.apache.log4j.Level;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 import com.taobao.common.tfs.DefaultTfsManager;
 
@@ -22,7 +22,7 @@ class Operation implements Runnable {
   protected ArrayList<String> inputList = new ArrayList<String>();
   protected ArrayList<String> outputList = new ArrayList<String>();
   protected StatInfo statInfo = new StatInfo();
-  protected static Logger log = Logger.getLogger("nameMetaOper");
+  protected static Log log = LogFactory.getLog(Operation.class);
   protected Random random = new Random();
   protected String dirNamePrefix = "dir_";
   protected int nameIndex = 0;
@@ -64,7 +64,6 @@ class Operation implements Runnable {
 
   @Override
   public void run() {
-    log.setLevel(Level.DEBUG);
     execute();
   }
 

@@ -32,7 +32,7 @@ class RmDirOp extends Operation {
     log.info("start rm dir operation ==" + tid + "== thread");
     boolean ret = false;
 
-    for (int i = 0; i <inputList.size(); i++) {
+    for (int i = inputList.size()-1; i >= 0; i--) {
       String record = inputList.get(i);
       String [] tmp = record.split(" ");
       if (tmp.length != DIR_LIST_COL_COUNT) {
