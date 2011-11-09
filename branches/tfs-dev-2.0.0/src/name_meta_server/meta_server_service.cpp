@@ -283,6 +283,7 @@ namespace tfs
 
         if (ret != TFS_SUCCESS)
         {
+          tbsys::gDelete(resp_rf_msg);
           ret = req_rf_msg->reply_error_packet(TBSYS_LOG_LEVEL(INFO), ret, "execute message failed");
         }
         else
@@ -383,6 +384,7 @@ namespace tfs
 
         if (ret != TFS_SUCCESS)
         {
+          tbsys::gDelete(resp_lf_msg);
           ret = req_lf_msg->reply_error_packet(TBSYS_LOG_LEVEL(INFO), ret, "execute message failed");
         }
         else

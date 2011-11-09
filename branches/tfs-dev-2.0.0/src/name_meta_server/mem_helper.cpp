@@ -62,19 +62,12 @@ namespace tfs
 
 
     tbsys::CThreadMutex MemHelper::mutex_;
-    MemHelper* MemHelper::instance_ = NULL;
+    MemHelper MemHelper::instance_;
     int64_t MemHelper::used_size_ = 0;
 
     MemHelper::MemHelper(): root_node_free_list_(NULL),
         dir_node_free_list_(NULL), file_node_free_list_(NULL)
     {
-    }
-    MemHelper::MemHelper(const int32_t r_free_list_count, const int32_t d_free_list_count,
-          const int32_t f_free_list_count)
-    {
-      root_node_free_list_ = new MemNodeList(r_free_list_count);
-      dir_node_free_list_ = new MemNodeList(d_free_list_count);
-      file_node_free_list_ = new MemNodeList(f_free_list_count);
     }
 
     bool MemHelper::init(const int32_t r_free_list_count, const int32_t d_free_list_count,
@@ -82,16 +75,17 @@ namespace tfs
     {
       bool ret = false;
       tbsys::CThreadGuard mutex_guard(&mutex_);
-      if (NULL == instance_)
-      {
-        instance_ = new MemHelper(r_free_list_count, d_free_list_count, f_free_list_count);
-      }
-      ret = (NULL != instance_);
+      instance_.destroy();
+      instance_.clear();
+      instance_.root_node_free_list_ = new MemNodeList(r_free_list_count);
+      instance_.dir_node_free_list_ = new MemNodeList(d_free_list_count);
+      instance_.file_node_free_list_ = new MemNodeList(f_free_list_count);
+      ret = (NULL != instance_.root_node_free_list_ && NULL != instance_.dir_node_free_list_ &&
+             NULL != instance_.file_node_free_list_) ? true : false;
       return ret;
     }
-    MemHelper::~MemHelper()
+    void MemHelper::clear()
     {
-      destroy();
       if (NULL != root_node_free_list_)
       {
         delete root_node_free_list_;
@@ -107,11 +101,11 @@ namespace tfs
         delete file_node_free_list_;
         file_node_free_list_ = NULL;
       }
-      if (NULL != instance_)
-      {
-        delete instance_;
-        instance_ = NULL;
-      }
+    }
+    MemHelper::~MemHelper()
+    {
+      destroy();
+      clear();
     }
 
     void MemHelper::destroy()
@@ -147,17 +141,16 @@ namespace tfs
         used_size_ += size + sizeof(int32_t);
         if (type != CACHE_NONE_NODE)
         {
-          assert(NULL != instance_);
           switch (type)
           {
             case CACHE_ROOT_NODE:
-              ret_p = instance_->root_node_free_list_->get();
+              ret_p = instance_.root_node_free_list_->get();
               break;
             case CACHE_DIR_META_NODE:
-              ret_p = instance_->dir_node_free_list_->get();
+              ret_p = instance_.dir_node_free_list_->get();
               break;
             case CACHE_FILE_META_NODE:
-              ret_p = instance_->file_node_free_list_->get();
+              ret_p = instance_.file_node_free_list_->get();
               break;
             default:
               break;
@@ -185,17 +178,16 @@ namespace tfs
           used_size_ -= size + sizeof(int32_t);
           if (type != CACHE_NONE_NODE)
           {
-            assert(NULL != instance_);
             switch (type)
             {
               case CACHE_ROOT_NODE:
-                ret = instance_->root_node_free_list_->put(p);
+                ret = instance_.root_node_free_list_->put(p);
                 break;
               case CACHE_DIR_META_NODE:
-                ret = instance_->dir_node_free_list_->put(p);
+                ret = instance_.dir_node_free_list_->put(p);
                 break;
               case CACHE_FILE_META_NODE:
-                ret = instance_->file_node_free_list_->put(p);
+                ret = instance_.file_node_free_list_->put(p);
                 break;
               default:
                 break;

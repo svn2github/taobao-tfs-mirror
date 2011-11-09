@@ -231,7 +231,7 @@ namespace tfs
       int64_t used_size = MemHelper::get_used_size();
       TBSYS_LOG(DEBUG, "malloc size %"PRI64_PREFIX"d type %d cache size %d MB used size %"PRI64_PREFIX"d",
           size, type, cache_size_, used_size);
-      used_size = used_size >> 10;
+      used_size = used_size >> 20;
       if (cache_size_ <= used_size)
       {
         do_lru_gc(gc_ratio_);

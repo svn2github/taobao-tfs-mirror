@@ -65,12 +65,11 @@ namespace tfs
       static int64_t get_used_size();
     private:
       MemHelper();
-      MemHelper(const int32_t r_free_list_count, const int32_t d_free_list_count, 
-          const int32_t f_free_list_count);
       void destroy();
+      void clear();
     private:
       static tbsys::CThreadMutex mutex_;
-      static MemHelper* instance_;
+      static MemHelper instance_;
       static int64_t used_size_;
     private:
       MemNodeList* root_node_free_list_;
