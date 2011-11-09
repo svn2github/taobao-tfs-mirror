@@ -32,7 +32,7 @@ public class perf_save extends AbstractWorker {
 		while (count >= 100) {
 			count = count / 100;
 			path += "/" + count % 100;
-			if ((num - flag) >= 100 && count < 100) {
+			if ((num - flag) >= 100 && count <= 100) {
 				// log.info("Create dir :" + path);
 				if (tfsManager.createDir(appId, userId, path) == false) {
 					log.error("Create dir fail: " + path);
