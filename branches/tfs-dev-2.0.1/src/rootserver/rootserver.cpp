@@ -511,6 +511,10 @@ namespace tfs
         {
           iret = packet->reply(reply_msg);
         }
+        else
+        {
+          tbsys::gDelete(reply_msg);
+        }
       }
       return iret;
     }
