@@ -1196,13 +1196,13 @@ public class NameMetaBaseCase extends TfsBaseCase{
         String rsLog = nameMetaGrid.getCluster(RSINDEX).getServer(index).getLogs();
         int type = 0;
         bRet = HA.chkVipBase(rsIp, VIP_ETH_NAME);
+        String cmd = "";
         if (bRet) { // vip on master
-          type = 0;
+          cmd = "egrep -o 'update table complete.*' " + rsLog + " | grep 'phase: 1' | tail -1 | awk -F '[ ,]' '{print $6}'";
         }
         else {
-          type = 1;
+          cmd = "grep 'update active tables version complete' " + rsLog + " | tail -1 | awk -F '[ ,]' '{print $NF}'";
         }
-        String cmd = "/home/admin/workspace/chuyu/meta_oper.sh get_cur_version " + rsIp + " " + rsLog + " " + type;
         bRet = Proc.cmdOutBase(rsIp, cmd, null, 1, null, result);
         if (bRet == false) return -1;
         try{
@@ -1220,23 +1220,7 @@ public class NameMetaBaseCase extends TfsBaseCase{
 
     public long getRsCurrentVersion()
     {
-        boolean bRet = false;
-        long iRet = 0;
-        ArrayList<String> result = new ArrayList<String>();
-        String cmd = "/home/admin/workspace/chuyu/meta_oper.sh get_cur_version " + MASTER_RS_IP + " " + RS_LOG;
-        bRet = Proc.cmdOutBase(MASTER_RS_IP, cmd, null, 1, null, result);
-        if (bRet == false) return -1;
-        try{
-          iRet = Long.valueOf(result.get(result.size() - 1));			
-          if (iRet > 0)
-          {
-            bRet = true;
-            return iRet;
-          }
-        } catch (Exception e){
-          e.printStackTrace();
-        }
-        return iRet;
+        return getRsCurrentVersion(getHaMasterRsIndex());
     }
 
     public boolean clearOneRs(int index)

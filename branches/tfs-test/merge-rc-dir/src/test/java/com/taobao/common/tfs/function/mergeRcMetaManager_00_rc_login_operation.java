@@ -73,7 +73,7 @@ public class mergeRcMetaManager_00_rc_login_operation extends RcBaseCase {
 
   }
   
-  @Ignore
+  @Test
   public void Function_02_init_several_clients_with_same_key(){
 
     caseName = "Function_02_init_several_clients_with_same_key";

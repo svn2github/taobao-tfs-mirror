@@ -7,12 +7,13 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import java.util.Date;
 
 import com.taobao.common.tfs.DefaultTfsManager;
 
 
 
-public class mergeRcMetaManager_02_meta_rmFile_operation extends RcBaseCase 
+public class mergeRcMetaManager_02_meta_unlinkFile_operation extends RcBaseCase 
 {
   @Before
     public void setUp()
