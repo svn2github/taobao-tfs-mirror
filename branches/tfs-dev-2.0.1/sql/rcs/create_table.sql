@@ -28,8 +28,6 @@ CREATE TABLE t_cluster_rack_info (
   PRIMARY KEY (cluster_rack_id, cluster_id)
 );
 
-ALTER TABLE t_cluster_rack_info ADD UNIQUE KEY un_cluster_id (cluster_id);
-ALTER TABLE t_cluster_rack_info ADD UNIQUE KEY un_ns_vip  (ns_vip);
 
 CREATE TABLE t_cluster_rack_group (
   cluster_group_id INT,
