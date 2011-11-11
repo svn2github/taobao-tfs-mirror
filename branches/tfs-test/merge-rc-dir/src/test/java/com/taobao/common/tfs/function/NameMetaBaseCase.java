@@ -88,12 +88,6 @@ public class NameMetaBaseCase extends TfsBaseCase{
     final public String MYSQL_SCRIPT = "do_mysql.sh";
     final public String PERF_SCRIPT = "gen_perf_report.sh";
     final public String START_CLIENT_CMD = "/bin/bash meta_oper.sh start_oper " + CLIENT_CONF;
-    final public String CREATE_DIR_CMD = "/bin/bash meta_oper.sh start_oper " + OPER_CREATE_DIR;
-    final public String LS_DIR_CMD = "/bin/bash meta_oper.sh start_oper " + OPER_LS_DIR;
-    final public String SAVE_SMALL_FILE_CMD = "/bin/bash meta_oper.sh start_oper " + OPER_SAVE_SMALL_FILE;
-    final public String SAVE_LARGE_FILE_CMD = "/bin/bash meta_oper.sh start_oper " + OPER_SAVE_LARGE_FILE;
-    final public String FETCH_FILE_CMD = "/bin/bash meta_oper.sh start_oper " + OPER_FETCH_FILE;
-    final public String LS_FILE_CMD = "/bin/bash meta_oper.sh start_oper " + OPER_LS_FILE;
     final public String STOP_OPER_CMD = "/bin/bash meta_oper.sh stop_oper";
     final public String GEN_DIR_TREE_CMD = "/bin/bash gen_dir_tree.sh";
 
@@ -102,23 +96,30 @@ public class NameMetaBaseCase extends TfsBaseCase{
 
     // time
     final public int LEASE_TIME = 6;
+    final public int SCAN_TIME = 15;
 
     // keywords
     final public String KW_SERVING_MS_IP = "to metaServer";
     final public String KW_APP_ID = "appId: ";
     final public String KW_USER_ID = "userId: ";
-    final public String KW_APP_ID_MS= "app_id: ";                                                                                                                       
-    final public String KW_USER_ID_MS= "user_id: ";
-    final public String KW_LS_DIR_STATIS = "oper_ls_dir stat info";
-    final public String KW_LS_FILE_STATIS = "oper_ls_file stat info";
-    final public String KW_SAVE_SMALL_FILE_STATIS = "oper_save_small_file stat info";
-    final public String KW_FETCH_FILE_STATIS = "oper_fetch_file stat info";
-    final public String KW_CREATE_DIR_STATIS = "oper_create_dir stat info";
+    // operation accumulative statis
+    final public String KW_LS_DIR_A_STATIS = "oper_ls_dir accumulative stat info";
+    final public String KW_LS_FILE_A_STATIS = "oper_ls_file accumulative stat info";
+    final public String KW_SAVE_SMALL_FILE_A_STATIS = "oper_save_small_file accumulative stat info";
+    final public String KW_FETCH_FILE_A_STATIS = "oper_fetch_file accumulative stat info";
+    final public String KW_CREATE_DIR_A_STATIS = "oper_create_dir accumulative stat info";
+    // operation periodical statis
+    final public String KW_LS_DIR_P_STATIS = "oper_ls_dir periodical stat info";
+    final public String KW_LS_FILE_P_STATIS = "oper_ls_file periodical stat info";
+    final public String KW_SAVE_SMALL_FILE_P_STATIS = "oper_save_small_file periodical stat info";
+    final public String KW_FETCH_FILE_P_STATIS = "oper_fetch_file periodical stat info";
+    final public String KW_CREATE_DIR_P_STATIS = "oper_create_dir periodical stat info";
+ 
     final public String KW_CACHE_SIZE = "malloc size";
     final public String KW_CACHE_GC = "gc app_id ";
 
     // columns
-    final public int COL_MS_IP = 12; //TODO: 
+    final public int COL_MS_IP = 12;
     final public int COL_TAIL_RATE = 15;
     final public int COL_CACHE_SIZE = 13;
     final public int COL_USED_SIZE = 17;
@@ -912,7 +913,7 @@ public class NameMetaBaseCase extends TfsBaseCase{
    public boolean chkRateEnd(float std, int operType, long userId) {
         float result = 0;
         if ((operType & OPER_CREATE_DIR) != 0) {
-            result = getRateEnd(CLIENT_IP, CLIENT_LOG + caseName + "." + userId, KW_CREATE_DIR_STATIS);
+            result = getRateEnd(CLIENT_IP, CLIENT_LOG + caseName + "." + userId, KW_CREATE_DIR_A_STATIS);
             if (result == -1) {
                 return false;
             }
@@ -927,7 +928,7 @@ public class NameMetaBaseCase extends TfsBaseCase{
         }
 
         if ((operType & OPER_LS_DIR) != 0) {
-            result = getRateEnd(CLIENT_IP, CLIENT_LOG + caseName + "." + userId, KW_LS_DIR_STATIS);
+            result = getRateEnd(CLIENT_IP, CLIENT_LOG + caseName + "." + userId, KW_LS_DIR_A_STATIS);
             if (result == -1) {
                 return false;
             }
@@ -942,7 +943,7 @@ public class NameMetaBaseCase extends TfsBaseCase{
         }
 
         if ((operType & OPER_LS_FILE) != 0) {
-            result = getRateEnd(CLIENT_IP, CLIENT_LOG + caseName + "." + userId, KW_LS_FILE_STATIS);
+            result = getRateEnd(CLIENT_IP, CLIENT_LOG + caseName + "." + userId, KW_LS_FILE_A_STATIS);
             if (result == -1) {
                 return false;
             }
@@ -957,7 +958,7 @@ public class NameMetaBaseCase extends TfsBaseCase{
         }
 
         if ((operType & OPER_SAVE_SMALL_FILE) != 0) {
-            result = getRateEnd(CLIENT_IP, CLIENT_LOG + caseName + "." + userId, KW_SAVE_SMALL_FILE_STATIS);
+            result = getRateEnd(CLIENT_IP, CLIENT_LOG + caseName + "." + userId, KW_SAVE_SMALL_FILE_A_STATIS);
             if (result == -1) {
                 return false;
             }
@@ -973,7 +974,7 @@ public class NameMetaBaseCase extends TfsBaseCase{
 
 
         if ((operType & OPER_FETCH_FILE) != 0) {
-            result = getRateEnd(CLIENT_IP, CLIENT_LOG + caseName + "." + userId, KW_FETCH_FILE_STATIS);
+            result = getRateEnd(CLIENT_IP, CLIENT_LOG + caseName + "." + userId, KW_FETCH_FILE_A_STATIS);
             if (result == -1) {
                 return false;
             }
@@ -991,8 +992,7 @@ public class NameMetaBaseCase extends TfsBaseCase{
         return false;
     }
 
-    public float getRateEnd(String tarIp, String fileName, String keyWord)
-    {
+    public float getRateEnd(String tarIp, String fileName, String keyWord) {
       boolean bRet = false;
       float fRet = -1;
       ArrayList<String> filter = new ArrayList<String>();
@@ -1007,7 +1007,108 @@ public class NameMetaBaseCase extends TfsBaseCase{
       fRet = result.get(result.size() - 1);
       return fRet;  
     }
+
+    public boolean chkRateRunByLog(float std, int operType, String logName) {
+        float result = 0;
+        if ((operType & OPER_CREATE_DIR) != 0) {
+            result = getRateEnd(CLIENT_IP, logName, KW_CREATE_DIR_P_STATIS);
+            if (result == -1) {
+                return false;
+            }
+            if (result != std) {
+                log.error("create dir success rate(" + result + "%) is not " + std + "% !!!");
+                return false;
+            }
+            else {
+                log.info("create dir success rate(" + result + "%) is " + std + "% !!!");
+            }
+            return true;
+        }
+
+        if ((operType & OPER_LS_DIR) != 0) {
+            result = getRateEnd(CLIENT_IP, logName, KW_LS_DIR_P_STATIS);
+            if (result == -1) {
+                return false;
+            }
+            if (result != std) {
+                log.error("ls dir success rate(" + result + "%) is not " + std + "% !!!");
+                return false;
+            }
+            else {
+                log.info("ls dir success rate(" + result + "%) is " + std + "% !!!");
+            }
+            return true;
+        }
+
+        if ((operType & OPER_LS_FILE) != 0) {
+            result = getRateEnd(CLIENT_IP, logName, KW_LS_FILE_P_STATIS);
+            if (result == -1) {
+                return false;
+            }
+            if (result != std) {
+                log.error("ls file success rate(" + result + "%) is not " + std + "% !!!");
+                return false;
+            }
+            else {
+                log.info("ls file success rate(" + result + "%) is " + std + "% !!!");
+            }
+            return true;
+        }
+
+        if ((operType & OPER_SAVE_SMALL_FILE) != 0) {
+            result = getRateEnd(CLIENT_IP, logName, KW_SAVE_SMALL_FILE_P_STATIS);
+            if (result == -1) {
+                return false;
+            }
+            if (result != std) {
+                log.error("save small file success rate(" + result + "%) is not " + std + "% !!!");
+                return false;
+            }
+            else {
+                log.info("save small file success rate(" + result + "%) is " + std + "% !!!");
+            }
+            return true;
+        }
+
+
+        if ((operType & OPER_FETCH_FILE) != 0) {
+            result = getRateEnd(CLIENT_IP, logName, KW_FETCH_FILE_P_STATIS);
+            if (result == -1) {
+                return false;
+            }
+            if (result != std) {
+                log.error("fetch file success rate(" + result + "%) is not " + std + "% !!!");
+                return false;
+            }
+            else {
+                log.info("fetch file success rate(" + result + "%) is " + std + "% !!!");
+            }
+            return true;
+        }
+
  
+        return false;
+    }
+
+    public boolean chkRateRun(float std, int operType, long userId) {
+        boolean bRet = false;
+        String sorLog = CLIENT_LOG + caseName + "." + userId;
+        String tmpLog = CLIENT_LOG + caseName + ".tmp." + userId;
+        String cmd = "tail -f " + sorLog;
+        bRet = Proc.proStartBack(CLIENT_IP, cmd + " > " + tarLog);
+        if (bRet == false) return bRet;
+
+        /* Wait */
+        sleep(SCANTIME);
+        
+        bRet = Proc.proStopByCmd(CLIENTIP, cmd);
+        if (bRet == false) return bRet;
+
+        /* check the result */
+        bRet = chkRateRunByLog(std, operType, tmpLog);    
+        return bRet;
+    }
+
     public long getClientCurrentTime()
     {
         boolean bRet = false;
@@ -1063,6 +1164,91 @@ public class NameMetaBaseCase extends TfsBaseCase{
         if (bRet == false) return -1;
         try{
           iRet = Long.valueOf(result.get(result.size() - 1));     
+          if (iRet > 0)
+          {
+            bRet = true;
+            return iRet;
+          }
+        } catch (Exception e){
+          e.printStackTrace();
+        }
+        return iRet;
+    }
+
+    public long getRsCurrentVersion(int index)
+    {
+        boolean bRet = false;
+        long iRet = 0;
+        ArrayList<String> result = new ArrayList<String>();
+        String rsIp = nameMetaGrid.getCluster(RSINDEX).getServer(index).getIp();
+        String rsLog = nameMetaGrid.getCluster(RSINDEX).getServer(index).getLogs();
+        int type = 0;
+        bRet = HA.chkVipBase(rsIp, VIP_ETH_NAME);
+        if (bRet) { // vip on master
+          type = 0;
+        }
+        else {
+          type = 1;
+        }
+        String cmd = "/home/admin/workspace/chuyu/meta_oper.sh get_cur_version " + rsIp + " " + rsLog + " " + type;
+        bRet = Proc.cmdOutBase(rsIp, cmd, null, 1, null, result);
+        if (bRet == false) return -1;
+        try{
+          iRet = Long.valueOf(result.get(result.size() - 1));
+          if (iRet > 0)
+          {
+            bRet = true;
+            return iRet;
+          }
+        } catch (Exception e){
+          e.printStackTrace();
+        }
+        return iRet;
+    }
+
+    public long getRsCurrentVersion()
+    {
+        boolean bRet = false;
+        long iRet = 0;
+        ArrayList<String> result = new ArrayList<String>();
+        String cmd = "/home/admin/workspace/chuyu/meta_oper.sh get_cur_version " + MASTER_RS_IP + " " + RS_LOG;
+        bRet = Proc.cmdOutBase(MASTER_RS_IP, cmd, null, 1, null, result);
+        if (bRet == false) return -1;
+        try{
+          iRet = Long.valueOf(result.get(result.size() - 1));			
+          if (iRet > 0)
+          {
+            bRet = true;
+            return iRet;
+          }
+        } catch (Exception e){
+          e.printStackTrace();
+        }
+        return iRet;
+    }
+
+    public boolean clearOneRs(int index)
+    {
+        boolean bRet = false;
+        String rsIp = nameMetaGrid.getCluster(RSINDEX).getServer(index).getIp();
+        String logName = CLIENT_HOME + "/rootserver/table";
+        ArrayList<String> result = new ArrayList<String>();
+        String cmd = CLIENT_HOME + "/meta_oper.sh clear_rs " + logName;
+        bRet = Proc.cmdOutBase(rsIp, cmd, null, 1, null, result);
+        return bRet;
+    }
+
+    public long getClientCurrentRowNum()
+    {
+        boolean bRet = false;
+        long iRet = 0;
+        String logName = CLIENT_LOG + caseName;
+        ArrayList<String> result = new ArrayList<String>();
+        String cmd = CLIENT_HOME + "/meta_oper.sh get_cur_row " + logName;
+        bRet = Proc.cmdOutBase(CLIENT_IP, cmd, null, 1, null, result);
+        if (bRet == false) return -1;
+        try{
+          iRet = Long.valueOf(result.get(result.size() - 1));			
           if (iRet > 0)
           {
             bRet = true;
