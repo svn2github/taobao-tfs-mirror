@@ -36,8 +36,8 @@ files for developing applications that use the %name package.
 %build
 chmod u+x build.sh
 ./build.sh init
-./configure --prefix=%{_prefix}
-#./configure --prefix=%{_prefix} --enable-uniquestore --with-tair-root=/opt/csr/tair-2.3
+#./configure --prefix=%{_prefix}
+./configure --prefix=%{_prefix} --enable-uniquestore --with-tair-root=/opt/csr/tair-2.3
 make %{?_smp_mflags}
 
 %install
