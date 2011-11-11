@@ -50,7 +50,7 @@ namespace tfs
       uint32_t calc_size() const;
       int scan(common::SSMScanParameter& param, int32_t& actual, bool& end, int32_t should, bool cutover_chunk);
 
-#if defined(TFS_NS_GTEST) || defined(TFS_NS_INTEGRATION)
+#if defined(TFS_GTEST) || defined(TFS_NS_INTEGRATION)
       public:
 #else
       private:

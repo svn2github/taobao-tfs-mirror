@@ -45,14 +45,14 @@ namespace tfs
     {
       if (alive_ds_count == 0)
       {
-#if defined(TFS_NS_GTEST) || defined(TFS_NS_INTEGRATION) || defined(TFS_NS_DEBUG)
+#if defined(TFS_GTEST) || defined(TFS_NS_INTEGRATION) || defined(TFS_NS_DEBUG)
         TBSYS_LOG(DEBUG, "alive dataserver not found alive_ds_count: %"PRI64_PREFIX"d", alive_ds_count);
 #endif
         return false;
       }
       int64_t average_load = total_load / alive_ds_count;
       int64_t average_use = total_use_capacity / alive_ds_count;
-#if defined(TFS_NS_GTEST) || defined(TFS_NS_INTEGRATION) || defined(TFS_NS_DEBUG)
+#if defined(TFS_GTEST) || defined(TFS_NS_INTEGRATION) || defined(TFS_NS_DEBUG)
       TBSYS_LOG(DEBUG, "alive_ds_count: %"PRI64_PREFIX"d, total_load: %d, average_load: %"PRI64_PREFIX"d current_load: %d, total_use_capacity: %"PRI64_PREFIX"d,average_use: %"PRI64_PREFIX"d",
           alive_ds_count, total_load, average_load, current_load, total_use_capacity, average_use); 
 #endif
@@ -66,7 +66,7 @@ namespace tfs
       bool bret = server->is_report_block_complete();
       if (!bret)
       {
-#if defined(TFS_NS_GTEST) || defined(TFS_NS_INTEGRATION) || defined(TFS_NS_DEBUG)
+#if defined(TFS_GTEST) || defined(TFS_NS_INTEGRATION) || defined(TFS_NS_DEBUG)
         TBSYS_LOG(DEBUG, "dataserver: %s in report block status , can't join ",
             CNetUtil::addrToString(server->id()).c_str());
 #endif
@@ -76,7 +76,7 @@ namespace tfs
         bret = server->is_alive();
         if (!bret)
         {
-#if defined(TFS_NS_GTEST) || defined(TFS_NS_INTEGRATION) || defined(TFS_NS_DEBUG)
+#if defined(TFS_GTEST) || defined(TFS_NS_INTEGRATION) || defined(TFS_NS_DEBUG)
           TBSYS_LOG(DEBUG, "dataserver: %s is dead, can't join ",
             CNetUtil::addrToString(server->id()).c_str());
 #endif
@@ -84,7 +84,7 @@ namespace tfs
       }
       if (bret)
       {
-#if defined(TFS_NS_GTEST) || defined(TFS_NS_INTEGRATION) || defined(TFS_NS_DEBUG)
+#if defined(TFS_GTEST) || defined(TFS_NS_INTEGRATION) || defined(TFS_NS_DEBUG)
       TBSYS_LOG(DEBUG, "server: %s,elect_seq_num: %"PRI64_PREFIX"d",
           tbsys::CNetUtil::addrToString(server->id()).c_str(), server->get_elect_num());
 #endif
@@ -112,7 +112,7 @@ namespace tfs
         load_ = percent(server->load(), 3000);
       else
         load_ = percent(server->load(), global_info_.max_load_);
-#if defined(TFS_NS_GTEST) || defined(TFS_NS_INTEGRATION) || defined(TFS_NS_DEBUG)
+#if defined(TFS_GTEST) || defined(TFS_NS_INTEGRATION) || defined(TFS_NS_DEBUG)
       TBSYS_LOG(DEBUG, "server: %s, elect_seq_num: %"PRI64_PREFIX"d, load: %d, use_: %d, elect_average_num_: %"PRI64_PREFIX"d, seqno_average_num_: %"PRI64_PREFIX"d",
           tbsys::CNetUtil::addrToString(server->id()).c_str(), server->get_elect_num(), load_, use_,elect_average_num_, seqno_average_num_);
 #endif
@@ -125,7 +125,7 @@ namespace tfs
     {
       if (server->is_full())
       {
-#if defined(TFS_NS_GTEST) || defined(TFS_NS_INTEGRATION) || defined(TFS_NS_DEBUG)
+#if defined(TFS_GTEST) || defined(TFS_NS_INTEGRATION) || defined(TFS_NS_DEBUG)
         TBSYS_LOG(INFO, "dataserver: %s is full , can't join elect list", CNetUtil::addrToString(
               server->id()).c_str());
 #endif
@@ -133,7 +133,7 @@ namespace tfs
       }
       if (!BaseStrategy::check(server))
       {
-#if defined(TFS_NS_GTEST) || defined(TFS_NS_INTEGRATION) || defined(TFS_NS_DEBUG)
+#if defined(TFS_GTEST) || defined(TFS_NS_INTEGRATION) || defined(TFS_NS_DEBUG)
         TBSYS_LOG(INFO, "server: %s can't join elect list", CNetUtil::addrToString(server->id()).c_str());
 #endif
         return 0;
@@ -147,7 +147,7 @@ namespace tfs
     {
       if (server->is_full())
       {
-#if defined(TFS_NS_GTEST) || defined(TFS_NS_INTEGRATION) || defined(TFS_NS_DEBUG)
+#if defined(TFS_GTEST) || defined(TFS_NS_INTEGRATION) || defined(TFS_NS_DEBUG)
         TBSYS_LOG(INFO, "dataserver: %s is full , can't join elect list", CNetUtil::addrToString(
               server->id()).c_str());
 #endif
@@ -155,7 +155,7 @@ namespace tfs
       }
       if (!BaseStrategy::check(server))
       {
-#if defined(TFS_NS_GTEST) || defined(TFS_NS_INTEGRATION) || defined(TFS_NS_DEBUG)
+#if defined(TFS_GTEST) || defined(TFS_NS_INTEGRATION) || defined(TFS_NS_DEBUG)
         TBSYS_LOG(INFO, "server: %s can't join elect list", CNetUtil::addrToString(server->id()).c_str());
 #endif
         return 0;

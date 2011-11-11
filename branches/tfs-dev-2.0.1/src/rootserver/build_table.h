@@ -15,7 +15,10 @@
  */
 
 #include <ext/hash_map>
+
+#ifdef TFS_GTEST
 #include <gtest/gtest.h>
+#endif
 
 #include "common/buffer.h"
 #include "common/mmap_file.h"
@@ -30,8 +33,9 @@ namespace tfs
     //class MetaServerManager;
     class BuildTable
     {
-      friend class BuildTableTest;
       friend class MetaServerManager;
+      #ifdef TFS_GTEST
+      friend class BuildTableTest;
       FRIEND_TEST(BuildTableTest, initialize);
       FRIEND_TEST(BuildTableTest, build_table);
       FRIEND_TEST(BuildTableTest, update_table);
@@ -42,6 +46,7 @@ namespace tfs
       FRIEND_TEST(BuildTableTest, get_difference);
       FRIEND_TEST(BuildTableTest, fill_old_tables);
       FRIEND_TEST(BuildTableTest, fill_new_tables);
+      #endif
       struct TablesHeader
       {
         int64_t magic_number_;
@@ -113,7 +118,7 @@ namespace tfs
       unsigned char* compress_active_tables_;
       TablesHeader* header_;
       int64_t compress_length_;
-      int64_t fd_; 
+      int64_t fd_;
       common::MMapFile* file_;
       volatile uint8_t interrupt_;
     private:

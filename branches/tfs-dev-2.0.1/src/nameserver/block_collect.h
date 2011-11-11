@@ -81,7 +81,7 @@ namespace nameserver
     BlockCollect();
     DISALLOW_COPY_AND_ASSIGN(BlockCollect);
 
-#if defined(TFS_NS_GTEST) || defined(TFS_NS_INTEGRATION)
+#if defined(TFS_GTEST) || defined(TFS_NS_INTEGRATION)
   public:
 #else
   private:

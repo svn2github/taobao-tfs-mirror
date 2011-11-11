@@ -107,7 +107,7 @@ namespace tfs
 
     private:
       bool change(int64_t id, LeaseStatus status);
-#if defined(TFS_NS_GTEST) || defined(TFS_NS_INTEGRATION)
+#if defined(TFS_GTEST) || defined(TFS_NS_INTEGRATION)
   public:
 #else
   private:
@@ -144,7 +144,7 @@ namespace tfs
     public:
       static volatile uint16_t gwait_count_;
 
-    #if defined(TFS_NS_GTEST) || defined(TFS_NS_INTEGRATION)
+    #if defined(TFS_GTEST) || defined(TFS_NS_INTEGRATION)
     public:
     #else
     private:

@@ -42,7 +42,7 @@ namespace nameserver
     {
       return instance_;
     }
-  #if defined(TFS_NS_GTEST) || defined(TFS_NS_INTEGRATION)
+  #if defined(TFS_GTEST) || defined(TFS_NS_INTEGRATION)
   public:
   #else
   private:
@@ -54,7 +54,7 @@ namespace nameserver
     LayoutManager* manager_;
     bool destroy_;
 
-  #if defined(TFS_NS_GTEST) || defined(TFS_NS_INTEGRATION)
+  #if defined(TFS_GTEST) || defined(TFS_NS_INTEGRATION)
   public:
   #else
   private:

@@ -21,7 +21,10 @@
 #include <Mutex.h>
 #include <Monitor.h>
 #include <TbThread.h>
+
+#ifdef TFS_GTEST
 #include <gtest/gtest.h>
+#endif
 
 #include "common/lock.h"
 #include "common/buffer.h"
@@ -34,7 +37,9 @@ namespace tfs
     class MetaServerManager;
     class RootServerHeartManager
     {
+      #ifdef TFS_GTEST
       friend class RootServerHeartManagerTest;
+      #endif
       //FRIEND_TEST(RootServerHeartManagerTest, exist);
     public:
       explicit RootServerHeartManager(MetaServerManager& manager);
@@ -78,7 +83,7 @@ namespace tfs
       common::ROOT_SERVER_MAPS servers_;
       tbutil::Monitor<tbutil::Mutex> monitor_;
       CheckThreadHelperPtr check_thread_;
-      volatile uint64_t lease_id_factory_; 
+      volatile uint64_t lease_id_factory_;
       common::RtsRsKeepAliveType keepalive_type_;
       bool initialize_;
       bool destroy_;

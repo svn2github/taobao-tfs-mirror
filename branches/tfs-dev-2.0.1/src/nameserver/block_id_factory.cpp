@@ -117,7 +117,7 @@ namespace tfs
           count_ = 0;
         }
       }
-#if !defined(TFS_NS_GTEST)
+#if !defined(TFS_GTEST)
       if (update_flag)
       {
         int32_t iret = update(ret_id);

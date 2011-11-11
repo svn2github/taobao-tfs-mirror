@@ -247,7 +247,7 @@ namespace tfs
         res.first = (*iter)->id();
         res.second = PLAN_STATUS_BEGIN;
         msg.set_owner( index == 0 ? 1 : 0);
-#if !defined(TFS_NS_GTEST) && !defined(TFS_NS_INTEGRATION)
+#if !defined(TFS_GTEST) && !defined(TFS_NS_INTEGRATION)
         int32_t status = STATUS_MESSAGE_ERROR;
         iret = send_msg_to_server(res.first, &msg, status);
         if (TFS_SUCCESS != iret
@@ -287,7 +287,7 @@ namespace tfs
           {
             TBSYS_LOG(ERROR, "block: %u compact, do compact complete fail: %d", value.block_id_, iret);
           }
-#if !defined(TFS_NS_GTEST) && !defined(TFS_NS_INTEGRATION)
+#if !defined(TFS_GTEST) && !defined(TFS_NS_INTEGRATION)
           iret = message->reply(new StatusMessage(iret));
 #endif
 
@@ -505,7 +505,7 @@ namespace tfs
         block.server_count_ = 0;
         msg.set_repl_block(&block);
         msg.set_command(PLAN_STATUS_BEGIN);
-#if !defined(TFS_NS_GTEST) && !defined(TFS_NS_INTEGRATION)
+#if !defined(TFS_GTEST) && !defined(TFS_NS_INTEGRATION)
         int32_t status = STATUS_MESSAGE_ERROR;
         iret = send_msg_to_server(block.source_id_, &msg, status);
         if (TFS_SUCCESS != iret
@@ -586,7 +586,7 @@ namespace tfs
             {
               manager_->get_oplog_sync_mgr().log(OPLOG_TYPE_REPLICATE_MSG, stream.get_data(), stream.get_data_length());
             }
-#if !defined(TFS_NS_GTEST) && !defined(TFS_NS_INTEGRATION)
+#if !defined(TFS_GTEST) && !defined(TFS_NS_INTEGRATION)
             message->reply(new StatusMessage(iret));
 #endif
           }

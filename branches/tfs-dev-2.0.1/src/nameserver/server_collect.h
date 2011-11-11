@@ -113,7 +113,7 @@ namespace tfs
       static const int8_t AVERAGE_USED_CAPACITY_MULTIPLE;
       static const uint16_t DUMP_SLOTS_MAX;
 
-#if defined(TFS_NS_GTEST) || defined(TFS_NS_INTEGRATION)
+#if defined(TFS_GTEST) || defined(TFS_NS_INTEGRATION)
       public:
 #else
       private:

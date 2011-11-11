@@ -29,14 +29,13 @@ namespace tfs
     template<typename Key, typename Value>
     class Lru
     {
-#ifndef GTEST_INCLUDE_GTEST_GTEST_H_
-#else
+      #ifdef TFS_GTEST
       friend class LruTest;
       FRIEND_TEST(LruTest, insert);
       FRIEND_TEST(LruTest, get);
       FRIEND_TEST(LruTest, put);
       FRIEND_TEST(LruTest, gc);
-#endif
+      #endif
 
       template <typename T3>
       struct Node;
@@ -77,7 +76,7 @@ namespace tfs
       LRU_MAP  index_;
       DISALLOW_COPY_AND_ASSIGN(Lru);
     };
-    
+
     template<typename Key, typename Value>
     class BaseStrategy
     {
@@ -105,7 +104,7 @@ namespace tfs
       }
       return value;
     }
-    
+
     template<typename Key, typename Value>
     int Lru<Key, Value>::put(const Key& key)
     {
@@ -143,7 +142,7 @@ namespace tfs
       int32_t iret = NULL == st ? common::TFS_ERROR : common::TFS_SUCCESS;
       if (common::TFS_SUCCESS == iret)
       {
-        iret = st->gc(ratio, values); 
+        iret = st->gc(ratio, values);
       }
       return iret;
     }

@@ -67,7 +67,7 @@ namespace tfs
           iret = NULL == server ? TFS_ERROR : TFS_SUCCESS;
           if (TFS_SUCCESS == iret)
           {
-            #if defined(TFS_NS_GTEST) || defined(TFS_NS_INTEGRATION) || defined(TFS_NS_DEBUG)
+            #if defined(TFS_GTEST) || defined(TFS_NS_INTEGRATION) || defined(TFS_NS_DEBUG)
             server->dump();
             #endif
             bool report_complete = false;
@@ -81,7 +81,7 @@ namespace tfs
             }
             else
             {
-              #if !defined(TFS_NS_GTEST) && !defined(TFS_NS_INTEGRATION)
+              #if !defined(TFS_GTEST) && !defined(TFS_NS_INTEGRATION)
               lay_out_manager_.touch(server,now);
               #endif
             }
@@ -109,12 +109,12 @@ namespace tfs
       iret = NULL == server ? EIXT_SERVER_OBJECT_NOT_FOUND : TFS_SUCCESS;
       if (TFS_SUCCESS == iret)
       {
-        #if defined(TFS_NS_GTEST) || defined(TFS_NS_INTEGRATION) || defined(TFS_NS_DEBUG)
+        #if defined(TFS_GTEST) || defined(TFS_NS_INTEGRATION) || defined(TFS_NS_DEBUG)
         server->dump();
         #endif
         //update all relations of blocks belongs to it
         EXPIRE_BLOCK_LIST current_expires;
-        #if defined(TFS_NS_GTEST) || defined(TFS_NS_INTEGRATION) || defined(TFS_NS_DEBUG)
+        #if defined(TFS_GTEST) || defined(TFS_NS_INTEGRATION) || defined(TFS_NS_DEBUG)
         TBSYS_LOG(DEBUG, "server: %s update_relation", tbsys::CNetUtil::addrToString(ds_info.id_).c_str());
         #endif
         iret = lay_out_manager_.update_relation(server, blocks, current_expires, now);
@@ -155,7 +155,7 @@ namespace tfs
                 lay_out_manager_.rm_block_from_ds(iter->first->id(), rm_list);
               }
             }//end for
-            #if !defined(TFS_NS_GTEST) && !defined(TFS_NS_INTEGRATION)
+            #if !defined(TFS_GTEST) && !defined(TFS_NS_INTEGRATION)
             lay_out_manager_.touch(server,now);
             #endif
           }
@@ -610,7 +610,7 @@ namespace tfs
             iret = NULL == server ? TFS_ERROR : TFS_SUCCESS;
             if (TFS_SUCCESS == iret)
             {
-#if !defined(TFS_NS_GTEST) && !defined(TFS_NS_INTEGRATION)
+#if !defined(TFS_GTEST) && !defined(TFS_NS_INTEGRATION)
               int32_t status = STATUS_MESSAGE_ERROR;
               iret = send_msg_to_server(id, message, status);
               if (STATUS_MESSAGE_OK != status

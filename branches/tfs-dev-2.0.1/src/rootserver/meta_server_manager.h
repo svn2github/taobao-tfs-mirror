@@ -18,7 +18,10 @@
 #include <Mutex.h>
 #include <Monitor.h>
 #include <TbThread.h>
+
+#ifdef TFS_GTEST
 #include <gtest/gtest.h>
+#endif
 
 #include "common/lock.h"
 #include "common/buffer.h"
@@ -34,6 +37,7 @@ namespace tfs
     class MetaServerManager
     {
       friend class RootServerHeartManager;
+      #ifdef TFS_GTEST
       friend class MetaServerManagerTest;
       FRIEND_TEST(MetaServerManagerTest, exist);
       FRIEND_TEST(MetaServerManagerTest, lease_exist);
@@ -41,6 +45,7 @@ namespace tfs
       FRIEND_TEST(MetaServerManagerTest, unregister);
       FRIEND_TEST(MetaServerManagerTest, renew);
       FRIEND_TEST(MetaServerManagerTest, check_ms_lease_expired);
+      #endif
     public:
       MetaServerManager();
       virtual ~MetaServerManager();
@@ -106,7 +111,7 @@ namespace tfs
       tbutil::Monitor<tbutil::Mutex> build_table_monitor_;
       tbutil::Monitor<tbutil::Mutex> check_ms_lease_monitor_;
       BuildTable build_tables_;
-      volatile uint64_t lease_id_factory_; 
+      volatile uint64_t lease_id_factory_;
       BuildTableThreadHelperPtr build_table_thread_;
       CheckMetaServerLeaseThreadHelperPtr check_ms_lease_thread_;
       common::NEW_TABLE new_tables_;

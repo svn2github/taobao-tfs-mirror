@@ -206,7 +206,7 @@ namespace tfs
       }
       int32_t iret = TFS_ERROR;
 
-#if !defined(TFS_NS_GTEST) && !defined(TFS_NS_INTEGRATION)
+#if !defined(TFS_GTEST) && !defined(TFS_NS_INTEGRATION)
       iret = oplog_sync_mgr_.initialize();
       if (iret != TFS_SUCCESS)
       {
@@ -786,7 +786,7 @@ namespace tfs
                         const common::RemoveBlockResponseFlag flag)
     {
       TBSYS_LOG(INFO, "remove  block: %u on server : %s", block_id, tbsys::CNetUtil::addrToString(ds_id).c_str());
-#if !defined(TFS_NS_GTEST) && !defined(TFS_NS_INTEGRATION)
+#if !defined(TFS_GTEST) && !defined(TFS_NS_INTEGRATION)
       RemoveBlockMessage rbmsg;
       rbmsg.add_remove_id(block_id);
       rbmsg.set_response_flag(flag);
@@ -818,7 +818,7 @@ namespace tfs
     {
       TBSYS_LOG(INFO, "remove  block count: %zd on server : %s", blocks.size(),
           tbsys::CNetUtil::addrToString(ds_id).c_str());
-#if !defined(TFS_NS_GTEST) && !defined(TFS_NS_INTEGRATION)
+#if !defined(TFS_GTEST) && !defined(TFS_NS_INTEGRATION)
       RemoveBlockMessage rbmsg;
       rbmsg.set_remove_list(blocks);
       rbmsg.set_response_flag(flag);
@@ -1052,7 +1052,7 @@ namespace tfs
       int32_t iret = !servers.empty() && block_id != 0 ? TFS_SUCCESS : TFS_ERROR;
       if (TFS_SUCCESS == iret)
       {
-#if defined(TFS_NS_GTEST) || defined(TFS_NS_INTEGRATION)
+#if defined(TFS_GTEST) || defined(TFS_NS_INTEGRATION)
         iret = TFS_SUCCESS;
 #else
         int64_t begin = tbsys::CTimeUtil::getTime();
@@ -1063,7 +1063,7 @@ namespace tfs
         {
           NewBlockMessage msg;
           msg.add_new_id(block_id);
-#if !defined(TFS_NS_GTEST) && !defined(TFS_NS_INTEGRATION)
+#if !defined(TFS_GTEST) && !defined(TFS_NS_INTEGRATION)
           uint8_t send_id = 0;
 #endif
           std::vector<ServerCollect*> send_msg_success;
@@ -1071,7 +1071,7 @@ namespace tfs
           std::vector<ServerCollect*>::const_iterator iter = servers.begin();
           for (; iter != servers.end(); ++iter)
           {
-#if defined(TFS_NS_GTEST) || defined(TFS_NS_INTEGRATION)
+#if defined(TFS_GTEST) || defined(TFS_NS_INTEGRATION)
             send_msg_success.push_back((*iter));
 #else
             //send add new block message to dataserver
@@ -1092,7 +1092,7 @@ namespace tfs
 #endif
           }
 
-#if !defined(TFS_NS_GTEST) && !defined(TFS_NS_INTEGRATION)
+#if !defined(TFS_GTEST) && !defined(TFS_NS_INTEGRATION)
           iret = send_msg_success.empty() ? TFS_ERROR : TFS_SUCCESS;
           if (TFS_SUCCESS == iret)
           {
@@ -1184,7 +1184,7 @@ namespace tfs
         }
         int64_t end = tbsys::CTimeUtil::getTime();
         TBSYS_LOG(INFO, "add new block: cost: %"PRI64_PREFIX"d", end - begin);
-#if !defined(TFS_NS_GTEST) && !defined(TFS_NS_INTEGRATION)
+#if !defined(TFS_GTEST) && !defined(TFS_NS_INTEGRATION)
         NewClientManager::get_instance().destroy_client(client);
 #endif
       }
@@ -1604,7 +1604,7 @@ namespace tfs
         }
         server = servers_index_[index];
         block = server->elect_write_block();
-#if defined(TFS_NS_GTEST) || defined(TFS_NS_INTEGRATION) || defined(TFS_NS_DEBUG)
+#if defined(TFS_GTEST) || defined(TFS_NS_INTEGRATION) || defined(TFS_NS_DEBUG)
         TBSYS_LOG(DEBUG, "block: %u server: %s, write_index: %"PRI64_PREFIX"d, count: %u", block != NULL ? block->id() : 1, tbsys::CNetUtil::addrToString(server->id()).c_str(), index, count);
 #endif
       }
@@ -1622,7 +1622,7 @@ namespace tfs
         }
         server = servers_index_[index];
         block = server->force_elect_write_block();
-#if defined(TFS_NS_GTEST) || defined(TFS_NS_INTEGRATION) || defined(TFS_NS_DEBUG)
+#if defined(TFS_GTEST) || defined(TFS_NS_INTEGRATION) || defined(TFS_NS_DEBUG)
         TBSYS_LOG(DEBUG, "block: %u server: %s, second_write_index: %"PRI64_PREFIX"d, count: %u", block != NULL ? block->id() : 0, tbsys::CNetUtil::addrToString(server->id()).c_str(), index, count);
 #endif
       }
@@ -1665,7 +1665,7 @@ namespace tfs
     void LayoutManager::check_server()
     {
       NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
-#if !defined(TFS_NS_GTEST) && !defined(TFS_NS_INTEGRATION)
+#if !defined(TFS_GTEST) && !defined(TFS_NS_INTEGRATION)
       Func::sleep(SYSPARAM_NAMESERVER.safe_mode_time_, ngi.destroy_flag_);
 #endif
       bool isnew = true;
@@ -1674,7 +1674,7 @@ namespace tfs
       NsGlobalStatisticsInfo stat_info;
       ServerCollect *server = NULL;
       std::list<ServerCollect*> alive_servers;
-#if !defined(TFS_NS_GTEST) && !defined(TFS_NS_INTEGRATION)
+#if !defined(TFS_GTEST) && !defined(TFS_NS_INTEGRATION)
       while (ngi.destroy_flag_ != NS_DESTROY_FLAGS_YES)
 #endif
       {
@@ -1712,7 +1712,7 @@ namespace tfs
           server = get_server((*iter));
           if (NULL != server)
           {
-#if !defined(TFS_NS_GTEST) && !defined(TFS_NS_INTEGRATION)
+#if !defined(TFS_GTEST) && !defined(TFS_NS_INTEGRATION)
             if (test_server_alive((*iter)) == TFS_SUCCESS)
             {
               server->statistics(stat_info, isnew);
@@ -1727,12 +1727,12 @@ namespace tfs
         }
 
         // write global information
-#if defined(TFS_NS_GTEST) || defined(TFS_NS_INTEGRATION) || defined(TFS_NS_DEBUG)
+#if defined(TFS_GTEST) || defined(TFS_NS_INTEGRATION) || defined(TFS_NS_DEBUG)
         TBSYS_LOG(INFO, "dead dataserver size: %u, alive dataserver size: %u", dead_servers.size(), alive_servers.size());
         GFactory::get_global_info().dump();
 #endif
         GFactory::get_global_info().update(stat_info);
-#if defined(TFS_NS_GTEST) || defined(TFS_NS_INTEGRATION) || defined(TFS_NS_DEBUG)
+#if defined(TFS_GTEST) || defined(TFS_NS_INTEGRATION) || defined(TFS_NS_DEBUG)
         GFactory::get_global_info().dump();
 #endif
         iter = actual_dead_servers.begin();
@@ -1748,7 +1748,7 @@ namespace tfs
           touch((*it), now, true);
         }
 
-#if !defined(TFS_NS_GTEST) && !defined(TFS_NS_INTEGRATION)
+#if !defined(TFS_GTEST) && !defined(TFS_NS_INTEGRATION)
         if (!actual_dead_servers.empty())
         {
           interrupt(INTERRUPT_ALL, now);
@@ -1881,10 +1881,10 @@ namespace tfs
       int64_t emergency_replicate_count = 0;
       int64_t current_plan_seqno = 1;
       NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
-#if !defined(TFS_NS_GTEST) && !defined(TFS_NS_INTEGRATION)
+#if !defined(TFS_GTEST) && !defined(TFS_NS_INTEGRATION)
         Func::sleep(SYSPARAM_NAMESERVER.safe_mode_time_, ngi.destroy_flag_);
 #endif
-#if (!defined(TFS_NS_GTEST))
+#if (!defined(TFS_GTEST))
       while (ngi.destroy_flag_ != NS_DESTROY_FLAGS_YES)
 #endif
       {
@@ -1912,7 +1912,7 @@ namespace tfs
           need    = should - current;
           total   = need;
 
-#if defined(TFS_NS_GTEST) || defined(TFS_NS_INTEGRATION) || defined(TFS_NS_DEBUG)
+#if defined(TFS_GTEST) || defined(TFS_NS_INTEGRATION) || defined(TFS_NS_DEBUG)
           TBSYS_LOG(DEBUG, "wait_time: %"PRI64_PREFIX"d, switch_time: %"PRI64_PREFIX"d, now: %"PRI64_PREFIX"d", wait_time, ngi.switch_time_, now);
 #endif
         }
@@ -1920,7 +1920,7 @@ namespace tfs
         //checkpoint
         rotate(now);
 
-#if defined(TFS_NS_GTEST) || defined(TFS_NS_INTEGRATION) || defined(TFS_NS_DEBUG)
+#if defined(TFS_GTEST) || defined(TFS_NS_INTEGRATION) || defined(TFS_NS_DEBUG)
         TBSYS_LOG(DEBUG, "SYSPARAM_NAMESERVER.run_plan_ratio_: %d, alive_server_size_: %d", SYSPARAM_NAMESERVER.run_plan_ratio_, alive_server_size_);
 #endif
 
@@ -1936,7 +1936,7 @@ namespace tfs
         TBSYS_LOG(INFO, "current plan size: %"PRI64_PREFIX"d, should: %"PRI64_PREFIX"d, need: %"PRI64_PREFIX"d",
             current, should, need);
 
-#if defined(TFS_NS_GTEST) || defined(TFS_NS_INTEGRATION)
+#if defined(TFS_GTEST) || defined(TFS_NS_INTEGRATION)
         std::vector<uint32_t> blocks;
         bool bret = false;
         if ((plan_run_flag_ & PLAN_RUN_FLAG_REPLICATE)
@@ -2066,14 +2066,14 @@ namespace tfs
     void LayoutManager::run_plan()
     {
       NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
-#if !defined(TFS_NS_GTEST) && !defined(TFS_NS_INTEGRATION)
+#if !defined(TFS_GTEST) && !defined(TFS_NS_INTEGRATION)
       Func::sleep(SYSPARAM_NAMESERVER.safe_mode_time_, ngi.destroy_flag_);
 #endif
 
       int32_t iret = TFS_ERROR;
       time_t now = 0;
       TaskPtr task = 0;
-#if !defined(TFS_NS_GTEST)
+#if !defined(TFS_GTEST)
       while (ngi.destroy_flag_ != NS_DESTROY_FLAGS_YES)
 #endif
       {
@@ -2176,7 +2176,7 @@ namespace tfs
       }
     }
 
-#if defined(TFS_NS_GTEST) || defined(TFS_NS_INTEGRATION)
+#if defined(TFS_GTEST) || defined(TFS_NS_INTEGRATION)
     bool LayoutManager::build_replicate_plan(const int64_t plan_seqno,
         const time_t now,
         int64_t& need,
@@ -2260,7 +2260,7 @@ namespace tfs
             }
             runer.push_back(target.back());
             ReplicateTaskPtr task = new ReplicateTask(this, iter->first, block_id,now, now, runer, plan_seqno);
-#if defined(TFS_NS_GTEST) || defined(TFS_NS_INTEGRATION) || defined(TFS_NS_DEBUG)
+#if defined(TFS_GTEST) || defined(TFS_NS_INTEGRATION) || defined(TFS_NS_DEBUG)
             task->dump(TBSYS_LOG_LEVEL_DEBUG);
 #endif
             if (!add_task(task))
@@ -2270,12 +2270,12 @@ namespace tfs
               continue;
             }
 
-#if defined(TFS_NS_GTEST) || defined(TFS_NS_INTEGRATION) || defined(TFS_NS_DEBUG)
+#if defined(TFS_GTEST) || defined(TFS_NS_INTEGRATION) || defined(TFS_NS_DEBUG)
             TBSYS_LOG(DEBUG, "add task, type: %d", task->type_);
 #endif
             --need;
             --emergency_replicate_count;
-#if defined(TFS_NS_GTEST) || defined(TFS_NS_INTEGRATION)
+#if defined(TFS_GTEST) || defined(TFS_NS_INTEGRATION)
             blocks.push_back(task->block_id_);
 #endif
           }
@@ -2283,7 +2283,7 @@ namespace tfs
         return true;
       }
 
-#if defined(TFS_NS_GTEST) || defined(TFS_NS_INTEGRATION)
+#if defined(TFS_GTEST) || defined(TFS_NS_INTEGRATION)
     bool LayoutManager::build_compact_plan(const int64_t plan_seqno,const time_t now, int64_t& need, std::vector<uint32_t>& plans)
 #else
       bool LayoutManager::build_compact_plan(const int64_t plan_seqno, const time_t now, int64_t& need)
@@ -2314,11 +2314,11 @@ namespace tfs
                 TBSYS_LOG(ERROR, "add task(compact) fail, block: %u", iter->second->id());
                 continue;
               }
-#if defined(TFS_NS_GTEST) || defined(TFS_NS_INTEGRATION) || defined(TFS_NS_DEBUG)
+#if defined(TFS_GTEST) || defined(TFS_NS_INTEGRATION) || defined(TFS_NS_DEBUG)
               TBSYS_LOG(DEBUG, "add task, type: %d", task->type_);
 #endif
               --need;
-#if defined(TFS_NS_GTEST) || defined(TFS_NS_INTEGRATION)
+#if defined(TFS_GTEST) || defined(TFS_NS_INTEGRATION)
               plans.push_back(task->block_id_);
 #endif
             }
@@ -2382,7 +2382,7 @@ namespace tfs
           has_move = ((iter->second->is_alive())
               && (!find_server_in_plan(iter->second)));
 
-#if defined(TFS_NS_GTEST) || defined(TFS_NS_INTEGRATION) || defined(TFS_NS_DEBUG)
+#if defined(TFS_GTEST) || defined(TFS_NS_INTEGRATION) || defined(TFS_NS_DEBUG)
           TBSYS_LOG(DEBUG, "server: %s, alive: %d find: %d", CNetUtil::addrToString(iter->first).c_str(),
               iter->second->is_alive(), !find_server_in_plan(iter->second));
 #endif
@@ -2445,7 +2445,7 @@ namespace tfs
       }
     }
 
-#if defined(TFS_NS_GTEST) || defined(TFS_NS_INTEGRATION)
+#if defined(TFS_GTEST) || defined(TFS_NS_INTEGRATION)
     bool LayoutManager::build_balance_plan(const int64_t plan_seqno, const time_t now, int64_t& need, std::vector<uint32_t>& plans)
 #else
     bool LayoutManager::build_balance_plan(const int64_t plan_seqno, const time_t now, int64_t& need)
@@ -2505,7 +2505,7 @@ namespace tfs
                       && (block_collect->check_balance())
                       && (!find_server_in_plan(it->second))
                       && (!find_block_in_plan(block_collect->id())));
-#if defined(TFS_NS_GTEST) || defined(TFS_NS_INTEGRATION) || defined(TFS_NS_DEBUG)
+#if defined(TFS_GTEST) || defined(TFS_NS_INTEGRATION) || defined(TFS_NS_DEBUG)
                   TBSYS_LOG(DEBUG, "block: %u check balance has_move: %s", block_collect->id(), has_move ? "true" : "false");
 #endif
                   if (has_move)
@@ -2539,7 +2539,7 @@ namespace tfs
                   runer.push_back(target_ds);
                   MoveTaskPtr task = new MoveTask(this, PLAN_PRIORITY_NORMAL,  block_id, now , now, runer, plan_seqno);
 
-#if defined(TFS_NS_GTEST) || defined(TFS_NS_INTEGRATION) || defined(TFS_NS_DEBUG)
+#if defined(TFS_GTEST) || defined(TFS_NS_INTEGRATION) || defined(TFS_NS_DEBUG)
                   task->dump(TBSYS_LOG_LEVEL_DEBUG);
 #endif
 
@@ -2550,7 +2550,7 @@ namespace tfs
                     TBSYS_LOG(ERROR, "add task(balance) fail, block: %u", block_id);
                     continue;
                   }
-#if defined(TFS_NS_GTEST) || defined(TFS_NS_INTEGRATION) || defined(TFS_NS_DEBUG)
+#if defined(TFS_GTEST) || defined(TFS_NS_INTEGRATION) || defined(TFS_NS_DEBUG)
                   TBSYS_LOG(DEBUG, "add task, type: %d", task->type_);
 #endif
                   --need;
@@ -2564,7 +2564,7 @@ namespace tfs
                   {
                     target.erase(tmp);
                   }
-#if defined(TFS_NS_GTEST) || defined(TFS_NS_INTEGRATION)
+#if defined(TFS_GTEST) || defined(TFS_NS_INTEGRATION)
                   plans.push_back(task->block_id_);
 #endif
                   break;
@@ -2576,7 +2576,7 @@ namespace tfs
         return true;
       }
 
-#if defined(TFS_NS_GTEST) || defined(TFS_NS_INTEGRATION)
+#if defined(TFS_GTEST) || defined(TFS_NS_INTEGRATION)
     bool LayoutManager::build_redundant_plan(const int64_t plan_seqno, const time_t now, int64_t& need, std::vector<uint32_t>& plans)
 #else
     bool LayoutManager::build_redundant_plan(const int64_t plan_seqno, const time_t now, int64_t& need)
@@ -2621,10 +2621,10 @@ namespace tfs
                 continue;
               }
               --need;
-#if defined(TFS_NS_GTEST) || defined(TFS_NS_INTEGRATION) || defined(TFS_NS_DEBUG)
+#if defined(TFS_GTEST) || defined(TFS_NS_INTEGRATION) || defined(TFS_NS_DEBUG)
               TBSYS_LOG(DEBUG, "add task, type: %d", task->type_);
 #endif
-#if defined(TFS_NS_GTEST) || defined(TFS_NS_INTEGRATION)
+#if defined(TFS_GTEST) || defined(TFS_NS_INTEGRATION)
               plans.push_back(task->block_id_);
 #endif
             }
@@ -2662,7 +2662,7 @@ namespace tfs
         for (; index != task->runer_.end(); ++index)
         {
           iter = server_to_task_.insert(std::map<ServerCollect*,TaskPtr>::value_type((*index), task));
-#if defined(TFS_NS_GTEST) || defined(TFS_NS_INTEGRATION) || defined(TFS_NS_DEBUG)
+#if defined(TFS_GTEST) || defined(TFS_NS_INTEGRATION) || defined(TFS_NS_DEBUG)
         //TBSYS_LOG(DEBUG, "server: %"PRI64_PREFIX"d, server: %"PRI64_PREFIX"d", (*index)->id(), (iter.first->first)->id());
 #endif
         }
@@ -2672,7 +2672,7 @@ namespace tfs
         tbutil::Monitor<tbutil::Mutex>::Lock lock(run_plan_monitor_);
         run_plan_monitor_.notify();
       }
-#if defined(TFS_NS_GTEST) || defined(TFS_NS_INTEGRATION) || defined(TFS_NS_DEBUG)
+#if defined(TFS_GTEST) || defined(TFS_NS_INTEGRATION) || defined(TFS_NS_DEBUG)
       std::stringstream out;
       out << task->type_ << " " ;
       out << task->block_id_ << " " ;

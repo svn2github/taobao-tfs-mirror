@@ -94,7 +94,7 @@ namespace nameserver
 
     void register_report_servers(void);
 
-#if defined(TFS_NS_GTEST) || defined(TFS_NS_INTEGRATION)
+#if defined(TFS_GTEST) || defined(TFS_NS_INTEGRATION)
   public:
 #else
   private:
@@ -154,7 +154,7 @@ namespace nameserver
       common::VUINT64& servers_;
     };
 
-#if defined(TFS_NS_GTEST) || defined(TFS_NS_INTEGRATION)
+#if defined(TFS_GTEST) || defined(TFS_NS_INTEGRATION)
   public:
 #else
   private:
@@ -174,7 +174,7 @@ namespace nameserver
       virtual void dump(const int32_t level, const char* const format = NULL);
       virtual void runTimerTask();
       bool operator < (const Task& task) const;
-#if defined(TFS_NS_GTEST) || defined(TFS_NS_INTEGRATION)
+#if defined(TFS_GTEST) || defined(TFS_NS_INTEGRATION)
       public:
 #else
       protected:
@@ -203,7 +203,7 @@ namespace nameserver
     };
     class CompactTask: public Task 
     {
-#if defined(TFS_NS_GTEST) || defined(TFS_NS_INTEGRATION)
+#if defined(TFS_GTEST) || defined(TFS_NS_INTEGRATION)
       public:
 #endif
         struct CompactComplete
@@ -231,7 +231,7 @@ namespace nameserver
         virtual void runTimerTask();
         virtual void dump(tbnet::DataBuffer& stream);
         virtual void dump(const int32_t level, const char* const format = NULL);
-#if defined(TFS_NS_GTEST) || defined(TFS_NS_INTEGRATION)
+#if defined(TFS_GTEST) || defined(TFS_NS_INTEGRATION)
       public:
 #else
       private:
@@ -240,7 +240,7 @@ namespace nameserver
         int do_complete(CompactComplete& value, common::VUINT64& ds_list);
         common::CompactStatus status_transform_plan_to_compact(const common::PlanStatus status) const;
         common::PlanStatus status_transform_compact_to_plan(const common::CompactStatus status) const;
-#if defined(TFS_NS_GTEST) || defined(TFS_NS_INTEGRATION)
+#if defined(TFS_GTEST) || defined(TFS_NS_INTEGRATION)
       public:
 #else
       private:
@@ -263,7 +263,7 @@ namespace nameserver
         virtual ~ReplicateTask(){}
         virtual int handle();
         virtual int handle_complete(common::BasePacket* msg, bool& all_complete_flag);
-#if defined(TFS_NS_GTEST) || defined(TFS_NS_INTEGRATION)
+#if defined(TFS_GTEST) || defined(TFS_NS_INTEGRATION)
       public:
 #else
       protected:
@@ -360,7 +360,7 @@ namespace nameserver
         DISALLOW_COPY_AND_ASSIGN(CheckDataServerThreadHelper);
     };
     typedef tbutil::Handle<CheckDataServerThreadHelper> CheckDataServerThreadHelperPtr;
-#if defined(TFS_NS_GTEST) || defined(TFS_NS_INTEGRATION)
+#if defined(TFS_GTEST) || defined(TFS_NS_INTEGRATION)
   public:
 #else
   private:
@@ -371,13 +371,13 @@ namespace nameserver
   public:
     void destroy_plan();
 
-#if defined(TFS_NS_GTEST) || defined(TFS_NS_INTEGRATION)
+#if defined(TFS_GTEST) || defined(TFS_NS_INTEGRATION)
   public:
 #else
   private:
 #endif
 
-#if defined(TFS_NS_GTEST) || defined(TFS_NS_INTEGRATION)
+#if defined(TFS_GTEST) || defined(TFS_NS_INTEGRATION)
     bool build_replicate_plan(const int64_t plan_seqno, const time_t now, int64_t& need, int64_t& adjust, int64_t& emergency_replicate_count, std::vector<uint32_t>& blocks);
     bool build_compact_plan(const int64_t plan_seqno, const time_t now, int64_t& need, std::vector<uint32_t>& blocks);
     bool build_balance_plan(const int64_t plan_seqno, const time_t now, int64_t& need, std::vector<uint32_t>& blocks);
@@ -436,7 +436,7 @@ namespace nameserver
     {
       return pending_plan_list_.size();
     }
-#if defined(TFS_NS_GTEST) || defined(TFS_NS_INTEGRATION)
+#if defined(TFS_GTEST) || defined(TFS_NS_INTEGRATION)
   public:
 #else
   private:

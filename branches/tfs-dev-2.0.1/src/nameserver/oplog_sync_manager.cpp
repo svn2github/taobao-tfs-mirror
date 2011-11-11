@@ -242,7 +242,7 @@ namespace tfs
          && (ngi.owner_status_ == NS_STATUS_INITIALIZED)
          && (ngi.sync_oplog_flag_ == NS_SYNC_DATA_FLAG_YES))
       {
-        #if !defined(TFS_NS_GTEST) && !defined(TFS_NS_INTEGRATION)
+        #if !defined(TFS_GTEST) && !defined(TFS_NS_INTEGRATION)
         int count = 0;
         tbutil::Mutex::Lock lock(mutex_);
         do
