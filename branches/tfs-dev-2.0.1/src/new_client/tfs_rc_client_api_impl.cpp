@@ -252,8 +252,16 @@ namespace tfs
         }
         else//check mode
         {
-          flag = RcClient::CREATE == mode ? common::T_WRITE
-                : RcClient::READ == mode  ? common::T_READ | common::T_STAT : -1; 
+          flag = -1;
+          if (RcClient::CREATE == mode)
+          {
+            flag = common::T_WRITE;
+          }
+          else if (RcClient::READ == mode)
+          {
+            flag = common::T_READ | common::T_STAT;
+          }
+
         }
         ret = flag != -1 ? TFS_SUCCESS : TFS_ERROR;
         if (TFS_SUCCESS != ret)
@@ -747,15 +755,15 @@ namespace tfs
       stat_.app_oper_info_[oper_type] += appinfo;
     }
 
-    int RcClientImpl::open(const char* ns_addr, const char* file_name, const char* suffix, const RcClient::RC_MODE mode,
-        const bool large, const char* local_key)
+    int RcClientImpl::open(const char* ns_addr, const char* file_name, const char* suffix,
+        const int flag, const bool large, const char* local_key)
     {
       int ret = NULL == ns_addr || NULL == file_name ? -1 : 0;
       if (0 == ret)
       {
-        int flag = large ? mode | common::T_LARGE : mode;
-        ret = large ? TfsClient::Instance()->open(file_name, suffix, ns_addr, flag, local_key)
-                    : TfsClient::Instance()->open(file_name, suffix, ns_addr, flag);
+        int tfs_flag = large ? flag | common::T_LARGE : flag;
+        ret = large ? TfsClient::Instance()->open(file_name, suffix, ns_addr, tfs_flag, local_key)
+                    : TfsClient::Instance()->open(file_name, suffix, ns_addr, tfs_flag);
       }
       return ret;
     }
@@ -778,7 +786,7 @@ namespace tfs
       else
       {
         tbsys::CThreadGuard mutex_guard(&mutex_);
-        if ((RcClient::READ == mode || RcClient::STAT == mode) && cluster_id == 0)
+        if ((RcClient::READ == mode) && cluster_id == 0)
         {
           ns_addr = choice[index].begin()->second;
         }

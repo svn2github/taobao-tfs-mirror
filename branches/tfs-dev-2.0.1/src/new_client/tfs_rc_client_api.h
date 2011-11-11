@@ -32,7 +32,7 @@ namespace tfs
         {
           CREATE = 1,
           READ = 2,
-          STAT = 3,
+          //STAT = 3,
           WRITE = 4, //raw tfs will not use this. only CREATE.
                      //this for name meta tfs.
                      //use create create a tfs_file, use write for writing or appendding

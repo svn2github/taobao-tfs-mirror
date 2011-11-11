@@ -69,7 +69,7 @@ namespace tfs
         TfsRetType logout();
 
         // for raw tfs
-        int open(const char* file_name, const char* suffix, const RcClient::RC_MODE mode,
+        int open(const char* file_name, const char* suffix, RcClient::RC_MODE mode,
             const bool large = false, const char* local_key = NULL);
         TfsRetType close(const int fd, char* tfs_name_buff = NULL, const int32_t buff_len = 0);
 
@@ -135,7 +135,7 @@ namespace tfs
             const int64_t response_time, const bool is_success);
 
         int open(const char* ns_addr, const char* file_name, const char* suffix,
-            const RcClient::RC_MODE mode, const bool large, const char* local_key);
+            const int flag, const bool large, const char* local_key);
 
         TfsRetType unlink(const char* ns_addr, const char* file_name,
             const char* suffix, const common::TfsUnlinkType action);
