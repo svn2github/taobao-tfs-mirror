@@ -42,7 +42,6 @@ public class mergeRcMetaManager_04_meta_write_operation extends RcBaseCase
 	    tfsManager.setAppKey(appKey);
 	    tfsManager.setAppIp(appIp);
             tfsManager.setUseNameMeta(true);
-	    tfsManager.setRootServerAddrList(rootServerAddrList);
 	    bRet = tfsManager.init();
 	    Assert.assertTrue(bRet);
  
@@ -77,7 +76,6 @@ public class mergeRcMetaManager_04_meta_write_operation extends RcBaseCase
 	    tfsManager.setRcAddr(rcAddr);
 	    tfsManager.setAppKey(appKey);
 	    tfsManager.setAppIp(appIp);
-	    tfsManager.setRootServerAddrList(rootServerAddrList);
 	    bRet = tfsManager.init();
 	    Assert.assertTrue(bRet);
 	    sessionId = tfsManager.getSessionId();
@@ -115,7 +113,6 @@ public class mergeRcMetaManager_04_meta_write_operation extends RcBaseCase
 	    tfsManager.setAppKey(appKey);
 	    tfsManager.setAppIp(appIp);
             tfsManager.setUseNameMeta(true);
-	    tfsManager.setRootServerAddrList(rootServerAddrList);
 	    bRet = tfsManager.init();
 	    Assert.assertTrue(bRet);	    
 	   
@@ -150,7 +147,6 @@ public class mergeRcMetaManager_04_meta_write_operation extends RcBaseCase
 	    tfsManager.setRcAddr(rcAddr);
 	    tfsManager.setAppKey(appKey);
 	    tfsManager.setAppIp(appIp);
-	    tfsManager.setRootServerAddrList(rootServerAddrList);
 	    bRet = tfsManager.init();
 	    Assert.assertTrue(bRet);
 	    
@@ -191,7 +187,6 @@ public class mergeRcMetaManager_04_meta_write_operation extends RcBaseCase
 	    tfsManager.setAppKey(appKey);
 	    tfsManager.setAppIp(appIp);
             tfsManager.setUseNameMeta(true);
-	    tfsManager.setRootServerAddrList(rootServerAddrList);
 	    bRet = tfsManager.init();
 	    Assert.assertTrue(bRet);
 	    
@@ -226,7 +221,6 @@ public class mergeRcMetaManager_04_meta_write_operation extends RcBaseCase
 	    tfsManager.setRcAddr(rcAddr);
 	    tfsManager.setAppKey(appKey);
 	    tfsManager.setAppIp(appIp);
-	    tfsManager.setRootServerAddrList(rootServerAddrList);
 	    bRet = tfsManager.init();
 	    Assert.assertTrue(bRet);
 	    

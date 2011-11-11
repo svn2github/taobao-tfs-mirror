@@ -68,7 +68,6 @@ public class mergeRcMetaManager_11_visit_meta_server extends NameMetaBaseCase {
       tfsManager.setAppKey(newAppKey);
       tfsManager.setAppIp(appIp);
       tfsManager.setUseNameMeta(true);
-      tfsManager.setRootServerAddrList(rootServerAddrList);
       bRet = tfsManager.init();
       Assert.assertTrue(bRet);
       bRet=tfsManager.saveFile(appId, userId, localFile, filePath);
@@ -86,7 +85,6 @@ public class mergeRcMetaManager_11_visit_meta_server extends NameMetaBaseCase {
       tfsManager.setAppKey(newAppKey);
       tfsManager.setAppIp(appIp);
       tfsManager.setUseNameMeta(true);
-      tfsManager.setRootServerAddrList(rootServerAddrList);
       bRet = tfsManager.init();
       Assert.assertTrue(bRet);
       bRet=tfsManager.saveFile(appId, userId, localFile, filePath);
@@ -118,7 +116,6 @@ public class mergeRcMetaManager_11_visit_meta_server extends NameMetaBaseCase {
       tfsManager.setAppKey(newAppKey);
       tfsManager.setAppIp(appIp);
       tfsManager.setUseNameMeta(true);
-      tfsManager.setRootServerAddrList(rootServerAddrList);
       bRet = tfsManager.init();
       Assert.assertTrue(bRet);
       bRet=tfsManager.saveFile(appId, userId, localFile, filePath);
@@ -135,7 +132,6 @@ public class mergeRcMetaManager_11_visit_meta_server extends NameMetaBaseCase {
       tfsManager.setAppKey(newAppKey);
       tfsManager.setAppIp(appIp);
       tfsManager.setUseNameMeta(true);
-      tfsManager.setRootServerAddrList(rootServerAddrList);
       bRet = tfsManager.init();
       Assert.assertTrue(bRet);
       bRet=tfsManager.saveFile(appId, userId, localFile, filePath);

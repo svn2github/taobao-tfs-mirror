@@ -52,7 +52,6 @@ public class mergeRcMetaManager_03_rc_operation_info extends RcBaseCase {
     tfsManager.setRcAddr(rcAddr);
     tfsManager.setAppKey(appKey);
     tfsManager.setAppIp(appIp);
-    tfsManager.setRootServerAddrList(rootServerAddrList);
     bRet = tfsManager.init();
     Assert.assertTrue(bRet);
     String sRet = null;
@@ -72,7 +71,6 @@ public class mergeRcMetaManager_03_rc_operation_info extends RcBaseCase {
     tfsManager.setRcAddr(rcAddr);
     tfsManager.setAppKey(appKey);
     tfsManager.setAppIp(appIp);
-    tfsManager.setRootServerAddrList(rootServerAddrList);
     bRet = tfsManager.init();
     Assert.assertTrue(bRet);
     sessionId = tfsManager.getSessionId();
@@ -136,7 +134,6 @@ public class mergeRcMetaManager_03_rc_operation_info extends RcBaseCase {
     tfsManager.setRcAddr(rcAddr);
     tfsManager.setAppKey(appKey);
     tfsManager.setAppIp(appIp);
-    tfsManager.setRootServerAddrList(rootServerAddrList);
     long oldUsedCapacity = getUsedCapacity(appKey);
     long oldFileCount = getFileCount(appKey);
     bRet = tfsManager.init();
@@ -158,7 +155,6 @@ public class mergeRcMetaManager_03_rc_operation_info extends RcBaseCase {
     tfsManager2.setRcAddr(rcAddr);
     tfsManager2.setAppKey(appKey);
     tfsManager2.setAppIp(appIp);
-    tfsManager2.setRootServerAddrList(rootServerAddrList);
     bRet = tfsManager2.init();
     Assert.assertTrue(bRet);
     sessionId = tfsManager2.getSessionId();
@@ -228,7 +224,6 @@ public class mergeRcMetaManager_03_rc_operation_info extends RcBaseCase {
     tfsManager.setRcAddr(rcAddr);
     tfsManager.setAppKey(appKey);
     tfsManager.setAppIp(appIp);
-    tfsManager.setRootServerAddrList(rootServerAddrList);
     long oldUsedCapacity = getUsedCapacity(appKey);
     long oldFileCount = getFileCount(appKey);
     long newUsedCapacity = 0; 
@@ -292,7 +287,6 @@ public class mergeRcMetaManager_03_rc_operation_info extends RcBaseCase {
     tfsManager.setRcAddr(rcAddr);
     tfsManager.setAppKey(appKey);
     tfsManager.setAppIp(appIp);
-    tfsManager.setRootServerAddrList(rootServerAddrList);
 
     oldUsedCapacity = getUsedCapacity(appKey);
     oldFileCount = getFileCount(appKey);
@@ -359,7 +353,6 @@ public class mergeRcMetaManager_03_rc_operation_info extends RcBaseCase {
     tfsManager.setRcAddr(rcAddr);
     tfsManager.setAppKey(appKey);
     tfsManager.setAppIp(appIp);
-    tfsManager.setRootServerAddrList(rootServerAddrList);
     bRet = tfsManager.init();
     Assert.assertTrue(bRet);
     String []sRet = new String[10];

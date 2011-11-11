@@ -43,7 +43,7 @@ public class Function_name_meta_parameter_test extends NameMetaBaseCase {
       bRet = cleanOneMetaServer(metaServerIndex);
       Assert.assertTrue(bRet);
 
-      bRet = startOneMetaServer(metaServerIndex);
+      bRet = startOneMetaserver(metaServerIndex);
       Assert.assertTrue(bRet);
 
       bRet = createDirCmd(userId);
@@ -102,7 +102,7 @@ public class Function_name_meta_parameter_test extends NameMetaBaseCase {
       bRet = cleanOneMetaServer(metaServerIndex);
       Assert.assertTrue(bRet);
 
-      bRet = startOneMetaServer(metaServerIndex);
+      bRet = startOneMetaserver(metaServerIndex);
       Assert.assertTrue(bRet);
 
       // set client config so that autoGenDir is off 
@@ -179,7 +179,7 @@ public class Function_name_meta_parameter_test extends NameMetaBaseCase {
       bRet = cleanOneMetaServer(metaServerIndex);
       Assert.assertTrue(bRet);
 
-      bRet = startOneMetaServer(metaServerIndex);
+      bRet = startOneMetaserver(metaServerIndex);
       Assert.assertTrue(bRet);
 
       bRet = setClientThreadCount(threadCount);
@@ -217,7 +217,7 @@ public class Function_name_meta_parameter_test extends NameMetaBaseCase {
       bRet = cleanOneMetaServer(metaServerIndex);
       Assert.assertTrue(bRet);
 
-      bRet = startOneMetaServer(metaServerIndex);
+      bRet = startOneMetaserver(metaServerIndex);
       Assert.assertTrue(bRet);
 
       bRet = setClientThreadCount(threadCount);
@@ -231,7 +231,7 @@ public class Function_name_meta_parameter_test extends NameMetaBaseCase {
       bRet = createDirCmdStop();
       Assert.assertTrue(bRet);
 
-      bRet = killOneMetaServer(metaServerIndex);
+      bRet = killOneMetaserver(metaServerIndex);
       Assert.assertTrue(bRet);
 
       bRet = chkFreeListCap(metaServerIp, freeListCount[i]);
@@ -257,7 +257,7 @@ public class Function_name_meta_parameter_test extends NameMetaBaseCase {
       bRet = cleanOneMetaServer(metaServerIndex);
       Assert.assertTrue(bRet);
 
-      bRet = startOneMetaServer(metaServerIndex);
+      bRet = startOneMetaserver(metaServerIndex);
       Assert.assertTrue(bRet);
 
       bRet = chkDbPoolSize(metaServerIp, maxSpoolSize[i]);
@@ -280,7 +280,7 @@ public class Function_name_meta_parameter_test extends NameMetaBaseCase {
     bRet = cleanOneMetaServer(metaServerIndex);
     Assert.assertTrue(bRet);
 
-    bRet = startOneMetaServer(metaServerIndex);
+    bRet = startOneMetaserver(metaServerIndex);
     Assert.assertTrue(bRet);
 
   }

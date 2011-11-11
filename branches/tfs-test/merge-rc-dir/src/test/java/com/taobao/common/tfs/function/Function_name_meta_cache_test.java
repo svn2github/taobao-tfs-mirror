@@ -316,7 +316,7 @@ public class Function_name_meta_cache_test extends NameMetaBaseCase{
     bRet = cleanOneMetaServerForce(metaServerIndex);
     Assert.assertTrue(bRet);
 
-    bRet = startOneMetaServer(metaServerIndex);
+    bRet = startOneMetaserver(metaServerIndex);
     Assert.assertTrue(bRet);
 
   }

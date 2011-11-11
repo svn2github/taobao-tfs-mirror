@@ -26,6 +26,7 @@ import java.io.InputStream;
 import java.util.Random;
 import java.util.zip.CRC32;
 import java.io.*; 
+import java.text.SimpleDateFormat;
 
 import com.taobao.gaia.AppCluster;
 import com.taobao.gaia.AppGrid;
@@ -66,6 +67,7 @@ public class RcBaseCase extends TfsBaseCase {
   public int UNLINK_OPER = 4;
 	
   public DefaultTfsManager tfsManager = null;
+  public static SimpleDateFormat d = new SimpleDateFormat("yyyyMMddhhmm");
   public static String appKey = "tappkey00003";
   public static String rcAddr = "10.232.36.203:6100";
   public static String rsAddr = "10.232.36.203:3500";

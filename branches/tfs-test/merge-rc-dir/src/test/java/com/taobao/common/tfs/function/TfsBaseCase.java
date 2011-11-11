@@ -10,6 +10,15 @@ import java.util.Iterator;
 import java.util.Map.Entry;
 import java.util.Date;
 
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.Random;
+import java.util.zip.CRC32;
+import java.io.*;
+
 import com.taobao.gaia.AppCluster;
 import com.taobao.gaia.AppGrid;
 import com.taobao.gaia.AppServer;
@@ -265,6 +274,29 @@ public class TfsBaseCase {
         if (bRet == false) return bRet;
         bRet = File.fileCopy(targetIp, logName, logName + "." + suffix);
         return bRet;
+    }
+    
+    protected static boolean createFile(String filePath, long size) {                                                                                                   
+      boolean ret = true;
+      try
+      {
+        RandomAccessFile f = new RandomAccessFile(filePath, "rw");
+        f.setLength(size);
+      }
+      catch (Exception e)
+      {
+        ret = false;
+        e.printStackTrace();
+      }
+      return ret;
+    }
+    //add new function
+    protected byte[]  getByte(String fileName) throws IOException
+    {
+      InputStream in = new FileInputStream(fileName);
+      byte[] data= new byte[in.available()];
+      in.read(data);
+      return data;
     }
 
 }

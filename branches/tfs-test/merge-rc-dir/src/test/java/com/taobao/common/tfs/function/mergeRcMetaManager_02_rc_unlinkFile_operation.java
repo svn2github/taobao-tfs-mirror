@@ -52,7 +52,6 @@ public class mergeRcMetaManager_02_rc_unlinkFile_operation extends RcBaseCase {
     tfsManager.setRcAddr(rcAddr);
     tfsManager.setAppKey(appKey);
     tfsManager.setAppIp(appIp);
-    tfsManager.setRootServerAddrList(rootServerAddrList);
     bRet = tfsManager.init();
     Assert.assertTrue(bRet);
     String sRet = null;
@@ -72,7 +71,6 @@ public class mergeRcMetaManager_02_rc_unlinkFile_operation extends RcBaseCase {
     tfsManager.setRcAddr(rcAddr);
     tfsManager.setAppKey(appKey);
     tfsManager.setAppIp(appIp);
-    tfsManager.setRootServerAddrList(rootServerAddrList);
     bRet = tfsManager.init();
     Assert.assertTrue(bRet);
     bRet = tfsManager.unlinkFile(sRet, null);
@@ -115,7 +113,6 @@ public class mergeRcMetaManager_02_rc_unlinkFile_operation extends RcBaseCase {
     tfsManager.setRcAddr(rcAddr);
     tfsManager.setAppKey(appKey);
     tfsManager.setAppIp(appIp);
-    tfsManager.setRootServerAddrList(rootServerAddrList);
     bRet = tfsManager.init();
     Assert.assertTrue(bRet);
     String sRet = null;
@@ -135,7 +132,6 @@ public class mergeRcMetaManager_02_rc_unlinkFile_operation extends RcBaseCase {
     tfsManager.setRcAddr(rcAddr);
     tfsManager.setAppKey(appKey);
     tfsManager.setAppIp(appIp);
-    tfsManager.setRootServerAddrList(rootServerAddrList);
     bRet = tfsManager.init();
     Assert.assertTrue(bRet);
     bRet = tfsManager.unlinkFile(sRet, null);
@@ -178,7 +174,6 @@ public class mergeRcMetaManager_02_rc_unlinkFile_operation extends RcBaseCase {
     tfsManager.setRcAddr(rcAddr);
     tfsManager.setAppKey(appKey);
     tfsManager.setAppIp(appIp);
-    tfsManager.setRootServerAddrList(rootServerAddrList);
     bRet = tfsManager.init();
     Assert.assertTrue(bRet);
     String sRet = null;
@@ -198,7 +193,6 @@ public class mergeRcMetaManager_02_rc_unlinkFile_operation extends RcBaseCase {
     tfsManager.setRcAddr(rcAddr);
     tfsManager.setAppKey(appKey);
     tfsManager.setAppIp(appIp);
-    tfsManager.setRootServerAddrList(rootServerAddrList);
     bRet = tfsManager.init();
     Assert.assertTrue(bRet);
     bRet = tfsManager.unlinkFile(sRet, null);
@@ -241,7 +235,6 @@ public class mergeRcMetaManager_02_rc_unlinkFile_operation extends RcBaseCase {
     tfsManager.setRcAddr(rcAddr);
     tfsManager.setAppKey(appKey);
     tfsManager.setAppIp(appIp);
-    tfsManager.setRootServerAddrList(rootServerAddrList);
     bRet = tfsManager.init();
     Assert.assertTrue(bRet);
     String sRet = null;
@@ -261,7 +254,6 @@ public class mergeRcMetaManager_02_rc_unlinkFile_operation extends RcBaseCase {
     tfsManager.setRcAddr(rcAddr);
     tfsManager.setAppKey(appKey);
     tfsManager.setAppIp(appIp);
-    tfsManager.setRootServerAddrList(rootServerAddrList);
     bRet = tfsManager.init();
     Assert.assertTrue(bRet);
     bRet = tfsManager.unlinkFile(sRet, null);
@@ -305,7 +297,6 @@ public class mergeRcMetaManager_02_rc_unlinkFile_operation extends RcBaseCase {
       tfsManager.setAppKey(appKey);
       tfsManager.setAppIp(appIp);
       tfsManager.setUseNameMeta(true);
-      tfsManager.setRootServerAddrList(rootServerAddrList);
       bRet = tfsManager.init();
       Assert.assertTrue(bRet);
       log.debug(" oldUsedCapacity: " + oldUsedCapacity + " oldFileCount: " + oldFileCount);
@@ -325,7 +316,6 @@ public class mergeRcMetaManager_02_rc_unlinkFile_operation extends RcBaseCase {
       tfsManager.setAppKey(appKey);
       tfsManager.setAppIp(appIp);
       tfsManager.setUseNameMeta(true);
-      tfsManager.setRootServerAddrList(rootServerAddrList);
       bRet = tfsManager.init();
       Assert.assertTrue(bRet);
 

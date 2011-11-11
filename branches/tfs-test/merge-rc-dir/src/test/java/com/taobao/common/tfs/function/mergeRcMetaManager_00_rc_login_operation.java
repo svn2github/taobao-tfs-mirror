@@ -49,7 +49,6 @@ public class mergeRcMetaManager_00_rc_login_operation extends RcBaseCase {
     tfsManager.setRcAddr(rcAddr);
     tfsManager.setAppKey(appKey);
     tfsManager.setAppIp(appIp);
-    tfsManager.setRootServerAddrList(rootServerAddrList);
     bRet = tfsManager.init();
     Assert.assertTrue(bRet);
     sleep(MAX_STAT_TIME);
@@ -62,7 +61,6 @@ public class mergeRcMetaManager_00_rc_login_operation extends RcBaseCase {
     tfsManager.setRcAddr(rcAddr);
     tfsManager.setAppKey(appKey);
     tfsManager.setAppIp(appIp);
-    tfsManager.setRootServerAddrList(rootServerAddrList);
     bRet = tfsManager.init();
     Assert.assertTrue(bRet);
     sleep(MAX_STAT_TIME);
@@ -89,7 +87,6 @@ public class mergeRcMetaManager_00_rc_login_operation extends RcBaseCase {
     tfsManager.setRcAddr(rcAddr);
     tfsManager.setAppKey(appKey);
     tfsManager.setAppIp(appIp);
-    tfsManager.setRootServerAddrList(rootServerAddrList);
     bRet = tfsManager.init();
     Assert.assertTrue(bRet);
     sleep(MAX_STAT_TIME);
@@ -100,7 +97,6 @@ public class mergeRcMetaManager_00_rc_login_operation extends RcBaseCase {
     tfsManager2.setRcAddr(rcAddr);
     tfsManager2.setAppKey(appKey);
     tfsManager2.setAppIp(appIp);
-    tfsManager2.setRootServerAddrList(rootServerAddrList);
     bRet = tfsManager2.init();
     Assert.assertTrue(bRet);
     sleep(MAX_STAT_TIME);
@@ -130,7 +126,6 @@ public class mergeRcMetaManager_00_rc_login_operation extends RcBaseCase {
     tfsManager.setRcAddr(rcAddr);
     tfsManager.setAppKey(appKey);
     tfsManager.setAppIp(appIp);
-    tfsManager.setRootServerAddrList(rootServerAddrList);
     bRet = tfsManager.init();
     Assert.assertTrue(bRet);
     String sessionId = tfsManager.getSessionId();
@@ -138,7 +133,6 @@ public class mergeRcMetaManager_00_rc_login_operation extends RcBaseCase {
     tfsManager.setRcAddr(rcAddr);
     tfsManager.setAppKey(appKey);
     tfsManager.setAppIp(appIp);
-    tfsManager.setRootServerAddrList(rootServerAddrList);
     bRet = tfsManager.init();
     Assert.assertTrue(bRet); // with log info: rc manager is already inited
     String sessionId2 = tfsManager.getSessionId();
@@ -161,7 +155,6 @@ public class mergeRcMetaManager_00_rc_login_operation extends RcBaseCase {
     tfsManager.setRcAddr(rcAddr);
     tfsManager.setAppKey(appKey);
     tfsManager.setAppIp(appIp);
-    tfsManager.setRootServerAddrList(rootServerAddrList);
     bRet = tfsManager.init();
     Assert.assertTrue(bRet);
     String sessionId = tfsManager.getSessionId();
@@ -170,7 +163,6 @@ public class mergeRcMetaManager_00_rc_login_operation extends RcBaseCase {
     tfsManager.setRcAddr(rcAddr);
     tfsManager.setAppKey(appKey2);
     tfsManager.setAppIp(appIp);
-    tfsManager.setRootServerAddrList(rootServerAddrList);
     bRet = tfsManager.init();
     Assert.assertTrue(bRet); // with log info: rc manager is already inited
     String sessionId2 = tfsManager.getSessionId();

@@ -31,9 +31,11 @@ public class NameMetaBaseCase extends TfsBaseCase{
     final public static int RSINDEX = 0;
     final public static int MSINDEX = 1;
     final public int META_COUNT = 3;
+    final public int RS_MAX_COUNT = 2;
     final public String RSVIP = nameMetaGrid.getCluster(RSINDEX).getServer(0).getVip();
     public String MASTER_RS_IP = nameMetaGrid.getCluster(RSINDEX).getServer(0).getIp();
     //final public String SLAVE_RS_IP = nameMetaGrid.getCluster(RSINDEX).getServer(1).getIp();
+    final public String RS_LOG = nameMetaGrid.getCluster(RSINDEX).getServer(0).getLogs();
     public String SLAVE_RS_IP = "";
     final public int RSPORT = nameMetaGrid.getCluster(RSINDEX).getServer(0).getPort();
     final public int MSPORT = nameMetaGrid.getCluster(MSINDEX).getServer(0).getPort();
@@ -105,6 +107,8 @@ public class NameMetaBaseCase extends TfsBaseCase{
     final public String KW_SERVING_MS_IP = "to metaServer";
     final public String KW_APP_ID = "appId: ";
     final public String KW_USER_ID = "userId: ";
+    final public String KW_APP_ID_MS= "app_id: ";                                                                                                                       
+    final public String KW_USER_ID_MS= "user_id: ";
     final public String KW_LS_DIR_STATIS = "oper_ls_dir stat info";
     final public String KW_LS_FILE_STATIS = "oper_ls_file stat info";
     final public String KW_SAVE_SMALL_FILE_STATIS = "oper_save_small_file stat info";
@@ -115,12 +119,13 @@ public class NameMetaBaseCase extends TfsBaseCase{
 
     // columns
     final public int COL_MS_IP = 12; //TODO: 
-    final public int COL_TAIL_RATE = 16;
+    final public int COL_TAIL_RATE = 15;
     final public int COL_CACHE_SIZE = 13;
     final public int COL_USED_SIZE = 17;
     final public int COL_GC_USER = 10;
 
     // metaServer config items
+    final public String CONF_LOG_LEVEL = "log_level";
     final public String CONF_MAX_CACHE_SIZE = "max_cache_size";
     final public String CONF_MAX_SPOOL_SIZE = "max_spool_size";
     final public String CONF_MAX_MUTEX_SIZE = "max_mutex_size";
@@ -185,6 +190,12 @@ public class NameMetaBaseCase extends TfsBaseCase{
     // fuctions
 
     // set metaServer conf
+    public boolean setLogLevel(String metaServerIp, String logLevel) {
+        boolean bRet = false;
+        bRet = conf.confReplaceSingleByPart(metaServerIp, MSCONF, "public", CONF_LOG_LEVEL, logLevel);
+        return bRet;
+    }
+
     public boolean setMaxCacheSize(String metaServerIp, int maxCacheSize) {
         boolean bRet = false;
         bRet = conf.confReplaceSingleByPart(metaServerIp, MSCONF, "metaserver", CONF_MAX_CACHE_SIZE, String.valueOf(maxCacheSize));
@@ -282,7 +293,7 @@ public class NameMetaBaseCase extends TfsBaseCase{
         ArrayList<String> filter = new ArrayList<String>();
         filter.add("/");
         ArrayList<String> result = new ArrayList<String>();
-        String cmd = "head -1000 " + logName;
+        String cmd = "tail -1000 " + logName;
         bRet = Proc.cmdOutBase2(CLIENT_IP, cmd, keyWords, COL_MS_IP, filter, result); 
         if (false == bRet || result.size() < 1) return null;
         return result.get(result.size() - 1);
@@ -305,6 +316,27 @@ public class NameMetaBaseCase extends TfsBaseCase{
         }
         log.debug("@@@ unservering metaserver: " + retMsAddr);
         return retMsAddr;
+    }
+
+    public int getServingIndexFromMS(long appId, long userId) {
+        int index = -1;
+        boolean bRet = false;
+        for (int i = 0; i < META_COUNT; i++)
+        {
+          String msIp = nameMetaGrid.getCluster(MSINDEX).getServer(i).getIp(); 
+          String logName = nameMetaGrid.getCluster(MSINDEX).getServer(i).getLogs(); 
+          ArrayList<String> keyWords = new ArrayList<String>();
+          keyWords.add(KW_APP_ID_MS + appId); 
+          keyWords.add(KW_USER_ID_MS + userId); 
+          String cmd = "cat " + logName;
+          ArrayList<String> result = new ArrayList<String>();
+          bRet = Proc.cmdOutBase2(msIp, cmd, keyWords, 1 , null, result); 
+          if (true == bRet && result.size() > 0) {
+            index = i;
+            break;
+          }
+        }
+        return index;
     }
 
     public int getServingMSIndex(long appId, long userId) {
@@ -998,14 +1030,88 @@ public class NameMetaBaseCase extends TfsBaseCase{
         return iRet;
     }
 
-    public long getFailStartTime()
+    public long getFailStartTime(long fromRowNum)
     {
         boolean bRet = false;
         long iRet = 0;
         String logName = CLIENT_LOG + caseName;
         ArrayList<String> result = new ArrayList<String>();
-        String cmd = CLIENT_HOME + "/meta_oper.sh get_fail_start " + logName;
+        String cmd = CLIENT_HOME + "/meta_oper.sh get_fail_start " + logName + " " + fromRowNum;
         bRet = Proc.cmdOutBase(CLIENT_IP, cmd, null, 1, null, result);
+        if (bRet == false) return -1;
+        try{
+          iRet = Long.valueOf(result.get(result.size() - 1));
+          if (iRet > 0)
+          {
+            bRet = true;
+            return iRet;
+          }
+        } catch (Exception e){
+          e.printStackTrace();
+        }
+        return iRet;
+    }
+
+    public long getFailEndTime(long fromRowNum)
+    {
+        boolean bRet = false;
+        long iRet = 0;
+        String logName = CLIENT_LOG + caseName;
+        ArrayList<String> result = new ArrayList<String>();
+        String cmd = CLIENT_HOME + "/meta_oper.sh get_fail_end " + logName + " " + fromRowNum;
+        bRet = Proc.cmdOutBase(CLIENT_IP, cmd, null, 1, null, result);
+        if (bRet == false) return -1;
+        try{
+          iRet = Long.valueOf(result.get(result.size() - 1));     
+          if (iRet > 0)
+          {
+            bRet = true;
+            return iRet;
+          }
+        } catch (Exception e){
+          e.printStackTrace();
+        }
+        return iRet;
+    }
+
+    public long getRsCurrentVersion(int index)
+    {
+        boolean bRet = false;
+        long iRet = 0;
+        ArrayList<String> result = new ArrayList<String>();
+        String rsIp = nameMetaGrid.getCluster(RSINDEX).getServer(index).getIp();
+        String rsLog = nameMetaGrid.getCluster(RSINDEX).getServer(index).getLogs();
+        int type = 0;
+        bRet = HA.chkVipBase(rsIp, VIP_ETH_NAME);
+        if (bRet) { // vip on master
+          type = 0;
+        }
+        else {
+          type = 1;
+        }
+        String cmd = "/home/admin/workspace/chuyu/meta_oper.sh get_cur_version " + rsIp + " " + rsLog + " " + type;
+        bRet = Proc.cmdOutBase(rsIp, cmd, null, 1, null, result);
+        if (bRet == false) return -1;
+        try{
+          iRet = Long.valueOf(result.get(result.size() - 1));
+          if (iRet > 0)
+          {
+            bRet = true;
+            return iRet;
+          }
+        } catch (Exception e){
+          e.printStackTrace();
+        }
+        return iRet;
+    }
+
+    public long getRsCurrentVersion()
+    {
+        boolean bRet = false;
+        long iRet = 0;
+        ArrayList<String> result = new ArrayList<String>();
+        String cmd = "/home/admin/workspace/chuyu/meta_oper.sh get_cur_version " + MASTER_RS_IP + " " + RS_LOG;
+        bRet = Proc.cmdOutBase(MASTER_RS_IP, cmd, null, 1, null, result);
         if (bRet == false) return -1;
         try{
           iRet = Long.valueOf(result.get(result.size() - 1));			
@@ -1020,13 +1126,24 @@ public class NameMetaBaseCase extends TfsBaseCase{
         return iRet;
     }
 
-    public long getFailEndTime()
+    public boolean clearOneRs(int index)
+    {
+        boolean bRet = false;
+        String rsIp = nameMetaGrid.getCluster(RSINDEX).getServer(index).getIp();
+        String logName = CLIENT_HOME + "/rootserver/table";
+        ArrayList<String> result = new ArrayList<String>();
+        String cmd = CLIENT_HOME + "/meta_oper.sh clear_rs " + logName;
+        bRet = Proc.cmdOutBase(rsIp, cmd, null, 1, null, result);
+        return bRet;
+    }
+
+    public long getClientCurrentRowNum()
     {
         boolean bRet = false;
         long iRet = 0;
         String logName = CLIENT_LOG + caseName;
         ArrayList<String> result = new ArrayList<String>();
-        String cmd = CLIENT_HOME + "/meta_oper.sh get_fail_end " + logName;
+        String cmd = CLIENT_HOME + "/meta_oper.sh get_cur_row " + logName;
         bRet = Proc.cmdOutBase(CLIENT_IP, cmd, null, 1, null, result);
         if (bRet == false) return -1;
         try{
@@ -1052,8 +1169,8 @@ public class NameMetaBaseCase extends TfsBaseCase{
       log.info("Restart one meta end ===>");
       return bRet;
     }
-
-    public boolean killOneMetaServer(int index)
+    // start & kill meta server related                                                                                                                                 
+    public boolean killOneMetaserver(int index)
     {
       boolean bRet = false;
       log.info("Kill one meta start ===>");
@@ -1066,7 +1183,7 @@ public class NameMetaBaseCase extends TfsBaseCase{
       return bRet;
     }
 
-    public boolean startOneMetaServer(int index)
+    public boolean startOneMetaserver(int index)
     {
       boolean bRet = false;
       log.info("start one meta start ===>");
@@ -1104,8 +1221,9 @@ public class NameMetaBaseCase extends TfsBaseCase{
     }
 
     // block network related
-    public boolean blockClientrToMS(String metaServerIp) {
-        boolean bRet = Proc.portOutputBlock(CLIENT_IP, metaServerIp, MSPORT); 
+    public boolean blockClientrToMS(int msIndex) {
+        String msIp = nameMetaGrid.getCluster(MSINDEX).getServer(msIndex).getIp(); 
+        boolean bRet = Proc.portOutputBlock(CLIENT_IP, msIp, MSPORT); 
         return bRet;
     }
 
@@ -1114,22 +1232,108 @@ public class NameMetaBaseCase extends TfsBaseCase{
         return bRet;
     }
 
-    public boolean blockMetaServerToRS(String metaServerIp) {
-        boolean bRet = Proc.portOutputBlock(metaServerIp, MASTER_RS_IP, RSPORT); 
+    public boolean blockMetaServerToRS(int msIndex) {
+        String msIp = nameMetaGrid.getCluster(MSINDEX).getServer(msIndex).getIp(); 
+        boolean bRet = Proc.portOutputBlock(msIp, MASTER_RS_IP, RSPORT); 
         return bRet;
     } 
 
-    public boolean unblockMetaServerToRS(String metaServerIp) {
-        boolean bRet = Proc.netUnblockBase(metaServerIp); 
+    public boolean unblockMetaServerToRS(int msIndex) {
+        String msIp = nameMetaGrid.getCluster(MSINDEX).getServer(msIndex).getIp(); 
+        boolean bRet = Proc.netUnblockBase(msIp); 
         return bRet;
     }
 
-    public boolean fullBlockMetaServerAndRS(String metaServerIp) {
-        boolean bRet = Proc.netFullBlockBase(metaServerIp, RSVIP); 
+    public boolean fullBlockMetaServerAndRS(int msIndex) {
+        String msIp = nameMetaGrid.getCluster(MSINDEX).getServer(msIndex).getIp(); 
+        boolean bRet = Proc.netFullBlockBase(msIp, RSVIP); 
+        return bRet;
+    }
+
+    public boolean fullBlockClientrToMS(int msIndex) {
+        String msIp = nameMetaGrid.getCluster(MSINDEX).getServer(msIndex).getIp(); 
+        boolean bRet = Proc.netFullBlockBase(CLIENT_IP, msIp); 
         return bRet;
     }
 
     // HA related
+
+    public int getHaMasterRsIndex() {
+      int index = -1;
+      for (int i = 0; i < RS_MAX_COUNT; i++) {
+        String rsIp = nameMetaGrid.getCluster(RSINDEX).getServer(i).getIp();
+        boolean bRet = HA.chkVipBase(rsIp, VIP_ETH_NAME);
+        if (bRet) { // vip on master
+          index = i;
+        }
+      }
+      return index;
+    }
+
+    public int getHaSlaveRsIndex() {
+      int index = -1;
+      for (int i = 0; i < RS_MAX_COUNT; i++) {
+        String rsIp = nameMetaGrid.getCluster(RSINDEX).getServer(i).getIp();
+        boolean bRet = HA.chkVipBase(rsIp, VIP_ETH_NAME);
+        if (!bRet) { // vip on master
+          index = i;
+        }
+      }
+      return index;
+    }
+
+    public boolean killOneRs(int index) {
+        boolean bRet = false;
+        log.info("Kill one rs start ===>");
+        if (nameMetaGrid == null)
+        {
+          log.debug("nameMetaGrid is null");
+        }
+        bRet = killOneServer(nameMetaGrid, RSINDEX, index);
+        log.info("Kill one rs end ===>");
+        return bRet;
+    }
+
+    public boolean startOneRs(int index) {
+        boolean bRet = false;
+        log.info("start one rs start ===>");
+        if (nameMetaGrid == null)
+        {
+          log.debug("nameMetaGrid is null");
+        }
+        bRet = startOneServer(nameMetaGrid, RSINDEX, index);
+        log.info("start one rs end ===>");
+        return bRet;
+    }
+
+    public boolean migrateHaVip(int masterRsIndex, int slaveRsIndex) {
+        boolean bRet = false;
+        String rsVip = nameMetaGrid.getCluster(RSINDEX).getServer(masterRsIndex).getVip();
+        String masterRsIp = nameMetaGrid.getCluster(RSINDEX).getServer(masterRsIndex).getIp();
+        String slaveRsIp = nameMetaGrid.getCluster(RSINDEX).getServer(slaveRsIndex).getIp();
+        log.debug("masterRsIp: " + masterRsIp + ", slaveRsIp: " + slaveRsIp);
+        String cmd = "";
+        cmd = "/sbin/ifconfig bond0:1 down";
+        bRet = Proc.proStartBaseByRoot(slaveRsIp, cmd);
+        if (!bRet) {
+          log.debug("stop master process failed");
+        }
+        else {
+          cmd = "/sbin/ifconfig bond0:1 " + rsVip + " netmask 255.255.255.255";
+          bRet = Proc.proStartBaseByRoot(masterRsIp, cmd);
+          if (!bRet) {
+            log.debug("stop slave process failed");
+          }
+        }
+        return bRet; 
+    }
+
+    public boolean resetRsFailCount(int index) {
+        AppServer rs = nameMetaGrid.getCluster(RSINDEX).getServer(index);
+        return resetFailCount(rs);
+    }
+
+
     public boolean killMasterRs() {
         boolean bRet = false;
         AppServer tmpMaster = null;
