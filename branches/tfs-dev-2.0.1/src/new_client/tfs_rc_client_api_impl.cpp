@@ -240,14 +240,25 @@ namespace tfs
     int RcClientImpl::open(const char* file_name, const char* suffix, const RcClient::RC_MODE mode,
         const bool large, const char* local_key)
     {
-      int tfs_ret = check_init_stat();
       int fd = -1;
-      if (TFS_SUCCESS == tfs_ret)
+      int ret = check_init_stat();
+      if (TFS_SUCCESS == ret)
       {
-        if (RcClient::CREATE == mode && need_use_unique_)
+        int flag = -1;
+        ret = (RcClient::CREATE == mode && need_use_unique_) ? TFS_ERROR : TFS_SUCCESS;
+        if (TFS_SUCCESS != ret)
         {
           TBSYS_LOG(ERROR, "should use save_file");
-          fd = -1;
+        }
+        else//check mode
+        {
+          flag = RcClient::CREATE == mode ? common::T_WRITE
+                : RcClient::READ == mode  ? common::T_READ | common::T_STAT : -1; 
+        }
+        ret = flag != -1 ? TFS_SUCCESS : TFS_ERROR;
+        if (TFS_SUCCESS != ret)
+        {
+          TBSYS_LOG(ERROR, "mode %d not support", mode);
         }
         else
         {
@@ -272,7 +283,6 @@ namespace tfs
               TfsClient::Instance()->close(raw_tfs_fd, NULL, 0);
             }
           }
-
         }
       }
       return fd;
@@ -740,28 +750,12 @@ namespace tfs
     int RcClientImpl::open(const char* ns_addr, const char* file_name, const char* suffix, const RcClient::RC_MODE mode,
         const bool large, const char* local_key)
     {
-      int flag = 0;
-      int ret = -1;
-      if (RcClient::CREATE == mode)
+      int ret = NULL == ns_addr || NULL == file_name ? -1 : 0;
+      if (0 == ret)
       {
-        flag = common::T_WRITE;
-      }
-      else if (RcClient::STAT == mode)
-      {
-        flag = common::T_STAT;
-      }
-      else
-      {
-        flag = common::T_READ;
-      }
-      if (large)
-      {
-        flag |= common::T_LARGE;
-        ret = TfsClient::Instance()->open(file_name, suffix, ns_addr, flag, local_key);
-      }
-      else
-      {
-        ret = TfsClient::Instance()->open(file_name, suffix, ns_addr, flag);
+        int flag = large ? mode | common::T_LARGE : mode;
+        ret = large ? TfsClient::Instance()->open(file_name, suffix, ns_addr, flag, local_key)
+                    : TfsClient::Instance()->open(file_name, suffix, ns_addr, flag);
       }
       return ret;
     }

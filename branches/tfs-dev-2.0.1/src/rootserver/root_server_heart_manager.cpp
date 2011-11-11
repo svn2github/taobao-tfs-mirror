@@ -373,30 +373,38 @@ namespace tfs
       if (TFS_SUCCESS == iret)
       {
         assert(NULL != response);
-        GetTableFromRtsResponseMessage* reply = dynamic_cast<GetTableFromRtsResponseMessage*>(response);
-        if (TABLE_VERSION_MAGIC != reply->get_version())
+        iret = response->getPCode() == RSP_RT_GET_TABLE_MESSAGE ? TFS_SUCCESS : TFS_ERROR;
+        if (TFS_SUCCESS == iret)
         {
-          uint64_t dest_length = common::MAX_BUCKET_DATA_LENGTH;
-          unsigned char* dest = new unsigned char[common::MAX_BUCKET_DATA_LENGTH];
-          iret = uncompress(dest, &dest_length, (unsigned char*)reply->get_table(), reply->get_table_length()); 
-          if (Z_OK != iret)
+          GetTableFromRtsResponseMessage* reply = dynamic_cast<GetTableFromRtsResponseMessage*>(response);
+          if (TABLE_VERSION_MAGIC != reply->get_version())
           {
-            TBSYS_LOG(ERROR, "uncompress error: ret : %d, version: %"PRI64_PREFIX"d", iret, reply->get_version());
-            iret = TFS_ERROR;
-          }
-          else
-          {
-            iret = manager_.update_active_tables(dest, dest_length, reply->get_version());            
-            if (TFS_SUCCESS != iret)
+            uint64_t dest_length = common::MAX_BUCKET_DATA_LENGTH;
+            unsigned char* dest = new unsigned char[common::MAX_BUCKET_DATA_LENGTH];
+            iret = uncompress(dest, &dest_length, (unsigned char*)reply->get_table(), reply->get_table_length()); 
+            if (Z_OK != iret)
             {
-              TBSYS_LOG(ERROR, "update_active_tables error: %d", iret);
+              TBSYS_LOG(ERROR, "uncompress error: ret : %d, version: %"PRI64_PREFIX"d", iret, reply->get_version());
+              iret = TFS_ERROR;
             }
             else
             {
-              manager_.dump_tables(TBSYS_LOG_LEVEL_DEBUG, DUMP_TABLE_TYPE_ACTIVE_TABLE);
+              iret = manager_.update_active_tables(dest, dest_length, reply->get_version());            
+              if (TFS_SUCCESS != iret)
+              {
+                TBSYS_LOG(ERROR, "update_active_tables error: %d", iret);
+              }
+              else
+              {
+                manager_.dump_tables(TBSYS_LOG_LEVEL_DEBUG, DUMP_TABLE_TYPE_ACTIVE_TABLE);
+              }
             }
+            tbsys::gDeleteA(dest);
           }
-          tbsys::gDeleteA(dest);
+        }
+        else
+        {
+          TBSYS_LOG(ERROR,"get table failed, response message is status message");
         }
       }
       NewClientManager::get_instance().destroy_client(client);
