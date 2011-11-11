@@ -82,12 +82,14 @@ namespace tfs
 
       inline void set_file_id(const uint64_t id)
       {
-        *(reinterpret_cast<uint64_t*> (const_cast<int32_t*> (&file_.seq_id_))) = id;
+        file_.seq_id_ = (id >> 32);
+        file_.suffix_ = (id & 0xFFFFFFFF);
       }
 
-      inline uint64_t get_file_id() const
+      inline uint64_t get_file_id()
       {
-        return *(reinterpret_cast<uint64_t*> (const_cast<int32_t*> (&file_.seq_id_)));
+        uint64_t id = file_.seq_id_;
+        return (((id << 32) & 0xFFFFFFFF) | file_.suffix_);
       }
 
       inline void set_cluster_id(const int32_t cluster_id)
