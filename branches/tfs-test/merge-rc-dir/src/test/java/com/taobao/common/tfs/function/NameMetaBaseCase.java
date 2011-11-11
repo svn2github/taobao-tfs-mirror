@@ -102,19 +102,12 @@ public class NameMetaBaseCase extends TfsBaseCase{
     final public String KW_SERVING_MS_IP = "to metaServer";
     final public String KW_APP_ID = "appId: ";
     final public String KW_USER_ID = "userId: ";
-    // operation accumulative statis
-    final public String KW_LS_DIR_A_STATIS = "oper_ls_dir accumulative stat info";
-    final public String KW_LS_FILE_A_STATIS = "oper_ls_file accumulative stat info";
-    final public String KW_SAVE_SMALL_FILE_A_STATIS = "oper_save_small_file accumulative stat info";
-    final public String KW_FETCH_FILE_A_STATIS = "oper_fetch_file accumulative stat info";
-    final public String KW_CREATE_DIR_A_STATIS = "oper_create_dir accumulative stat info";
-    // operation periodical statis
-    final public String KW_LS_DIR_P_STATIS = "oper_ls_dir periodical stat info";
-    final public String KW_LS_FILE_P_STATIS = "oper_ls_file periodical stat info";
-    final public String KW_SAVE_SMALL_FILE_P_STATIS = "oper_save_small_file periodical stat info";
-    final public String KW_FETCH_FILE_P_STATIS = "oper_fetch_file periodical stat info";
-    final public String KW_CREATE_DIR_P_STATIS = "oper_create_dir periodical stat info";
- 
+    final public String KW_LS_DIR_STATIS = "oper_ls_dir stat info";
+    final public String KW_LS_FILE_STATIS = "oper_ls_file stat info";
+    final public String KW_SAVE_SMALL_FILE_STATIS = "oper_save_small_file stat info";
+    final public String KW_FETCH_FILE_STATIS = "oper_fetch_file stat info";
+    final public String KW_CREATE_DIR_STATIS = "oper_create_dir stat info";
+
     final public String KW_CACHE_SIZE = "malloc size";
     final public String KW_CACHE_GC = "gc app_id ";
 
@@ -913,7 +906,7 @@ public class NameMetaBaseCase extends TfsBaseCase{
    public boolean chkRateEnd(float std, int operType, long userId) {
         float result = 0;
         if ((operType & OPER_CREATE_DIR) != 0) {
-            result = getRateEnd(CLIENT_IP, CLIENT_LOG + caseName + "." + userId, KW_CREATE_DIR_A_STATIS);
+            result = getRateEnd(CLIENT_IP, CLIENT_LOG + caseName + "." + userId, KW_CREATE_DIR_STATIS);
             if (result == -1) {
                 return false;
             }
@@ -928,7 +921,7 @@ public class NameMetaBaseCase extends TfsBaseCase{
         }
 
         if ((operType & OPER_LS_DIR) != 0) {
-            result = getRateEnd(CLIENT_IP, CLIENT_LOG + caseName + "." + userId, KW_LS_DIR_A_STATIS);
+            result = getRateEnd(CLIENT_IP, CLIENT_LOG + caseName + "." + userId, KW_LS_DIR_STATIS);
             if (result == -1) {
                 return false;
             }
@@ -943,7 +936,7 @@ public class NameMetaBaseCase extends TfsBaseCase{
         }
 
         if ((operType & OPER_LS_FILE) != 0) {
-            result = getRateEnd(CLIENT_IP, CLIENT_LOG + caseName + "." + userId, KW_LS_FILE_A_STATIS);
+            result = getRateEnd(CLIENT_IP, CLIENT_LOG + caseName + "." + userId, KW_LS_FILE_STATIS);
             if (result == -1) {
                 return false;
             }
@@ -958,7 +951,7 @@ public class NameMetaBaseCase extends TfsBaseCase{
         }
 
         if ((operType & OPER_SAVE_SMALL_FILE) != 0) {
-            result = getRateEnd(CLIENT_IP, CLIENT_LOG + caseName + "." + userId, KW_SAVE_SMALL_FILE_A_STATIS);
+            result = getRateEnd(CLIENT_IP, CLIENT_LOG + caseName + "." + userId, KW_SAVE_SMALL_FILE_STATIS);
             if (result == -1) {
                 return false;
             }
@@ -974,7 +967,7 @@ public class NameMetaBaseCase extends TfsBaseCase{
 
 
         if ((operType & OPER_FETCH_FILE) != 0) {
-            result = getRateEnd(CLIENT_IP, CLIENT_LOG + caseName + "." + userId, KW_FETCH_FILE_A_STATIS);
+            result = getRateEnd(CLIENT_IP, CLIENT_LOG + caseName + "." + userId, KW_FETCH_FILE_STATIS);
             if (result == -1) {
                 return false;
             }
@@ -1008,10 +1001,29 @@ public class NameMetaBaseCase extends TfsBaseCase{
       return fRet;  
     }
 
+    public float getRateRun(String tarIp, String fileName, String keyWord) {
+      boolean bRet = false;
+      float fRet = 0;
+      ArrayList<String> filter = new ArrayList<String>();
+      ArrayList<Float> result = new ArrayList<Float>();
+      filter.add("%");
+      filter.add(",");
+      bRet = Log.scanTailFloat(tarIp, fileName, keyWord, TAIL_LINE, COL_FAIL_COUNT, filter, result);
+      if ((bRet == false) || (result.size() < 2))
+      {
+        return fRet;
+      }
+      int failCount = result.get(result.size() - 1) - result.get(result.size() - 2);
+      if (failCount == 0) {
+        fRet = 100;
+      }
+      return fRet;  
+    }
+
     public boolean chkRateRunByLog(float std, int operType, String logName) {
         float result = 0;
         if ((operType & OPER_CREATE_DIR) != 0) {
-            result = getRateEnd(CLIENT_IP, logName, KW_CREATE_DIR_P_STATIS);
+            result = getRateRun(CLIENT_IP, logName, KW_CREATE_DIR_STATIS);
             if (result == -1) {
                 return false;
             }
@@ -1026,7 +1038,7 @@ public class NameMetaBaseCase extends TfsBaseCase{
         }
 
         if ((operType & OPER_LS_DIR) != 0) {
-            result = getRateEnd(CLIENT_IP, logName, KW_LS_DIR_P_STATIS);
+            result = getRateRun(CLIENT_IP, logName, KW_LS_DIR_STATIS);
             if (result == -1) {
                 return false;
             }
@@ -1041,7 +1053,7 @@ public class NameMetaBaseCase extends TfsBaseCase{
         }
 
         if ((operType & OPER_LS_FILE) != 0) {
-            result = getRateEnd(CLIENT_IP, logName, KW_LS_FILE_P_STATIS);
+            result = getRateRun(CLIENT_IP, logName, KW_LS_FILE_STATIS);
             if (result == -1) {
                 return false;
             }
@@ -1056,7 +1068,7 @@ public class NameMetaBaseCase extends TfsBaseCase{
         }
 
         if ((operType & OPER_SAVE_SMALL_FILE) != 0) {
-            result = getRateEnd(CLIENT_IP, logName, KW_SAVE_SMALL_FILE_P_STATIS);
+            result = getRateRun(CLIENT_IP, logName, KW_SAVE_SMALL_FILE_STATIS);
             if (result == -1) {
                 return false;
             }
@@ -1072,7 +1084,7 @@ public class NameMetaBaseCase extends TfsBaseCase{
 
 
         if ((operType & OPER_FETCH_FILE) != 0) {
-            result = getRateEnd(CLIENT_IP, logName, KW_FETCH_FILE_P_STATIS);
+            result = getRateRun(CLIENT_IP, logName, KW_FETCH_FILE_STATIS);
             if (result == -1) {
                 return false;
             }
@@ -1105,7 +1117,7 @@ public class NameMetaBaseCase extends TfsBaseCase{
         if (bRet == false) return bRet;
 
         /* check the result */
-        bRet = chkRateRunByLog(std, operType, tmpLog);    
+        bRet = chkRateRunByLog(std, operType, tmpLog);
         return bRet;
     }
 
