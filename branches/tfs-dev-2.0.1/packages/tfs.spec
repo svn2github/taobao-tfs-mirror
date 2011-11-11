@@ -12,8 +12,7 @@ Source:%{NAME}-%{VERSION}.tar.gz
 BuildRoot: %{_tmppath}/%{name}-root
 
 BuildRequires: t-csrd-tbnet-devel = 1.4.0
-#BuildRequires: MySQL-devel-community,MySQL-client-community
-BuildRequires: mysql-server >= 5.1.48, mysql-devel >= 5.1.48
+BuildRequires: MySQL-devel-community >= 5.1.48
 BuildRequires: tair-devel = 2.3
 
 %define __os_install_post %{nil}
