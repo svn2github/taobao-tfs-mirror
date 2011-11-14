@@ -134,7 +134,7 @@ PHP_FUNCTION(tfs_client)
   }
   if (SUCCESS == ret)
   {
-    ret = NULL == app_ip || NULL == rc_ip || NULL == app_key 
+    ret = NULL == app_ip || NULL == rc_ip || NULL == app_key
                   || app_ip_length <= 0 || rc_ip_length <= 0 || app_key_length <= 0 ? FAILURE : SUCCESS;
     if (SUCCESS != ret)
     {
@@ -320,51 +320,37 @@ PHP_FUNCTION(tfs_client_write)
 PHP_FUNCTION(tfs_client_read)
 {
   int32_t fd = -1;
-  int32_t ret = zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "l", &fd);
+  int32_t count = 0;
+  int32_t ret = zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "ll", &fd, &count);
   if (FAILURE == ret)
   {
 		php_error(E_WARNING, "tfs_client: can't parse parameters");
   }
   if (SUCCESS == ret)
   {
-    ret = fd <= 0 ?  FAILURE : SUCCESS;
+    ret = fd <= 0  || count <= 0 ?  FAILURE : SUCCESS;
     if (SUCCESS != ret)
     {
 		  php_error(E_WARNING, "tfs_client: parameters is invalid");
     }
   }
+  int64_t offset = -1;
   array_init(return_value);
   if (SUCCESS == ret)
   {
-    TfsFileStat finfo;
-    ret = gclient.fstat(fd, &finfo);
-    ret = TFS_SUCCESS == ret && finfo.size_ > 0 ? SUCCESS : FAILURE;
+    char* data = (char*)emalloc(count);
+    ret = NULL == data ? FAILURE : SUCCESS;
     if (SUCCESS == ret)
     {
-      char* data = (char*)emalloc(finfo.size_);
-      int64_t offset = 0;
-      while (offset < finfo.size_)
-      {
-        int32_t length = gclient.read(fd, (data + offset), finfo.size_);
-        if (length < 0 )
-        {
-          php_error(E_WARNING, "read data failed, fd: %d, ret: %d", fd, length);
-          break;
-        }
-        else if (length == 0)
-          continue;
-        else
-          offset += length;
-      }
-      ret = offset == finfo.size_ ? SUCCESS : FAILURE;
+      offset = gclient.read(fd, data, count);
+      ret = offset < 0 ? SUCCESS : FAILURE;
       if (SUCCESS != ret)
       {
-        add_next_index_long(return_value, 0);
-        php_error(E_WARNING, "read data failed, fd: %d, length %"PRI64_PREFIX"d <> %"PRI64_PREFIX"d", fd, finfo.size_, offset);
+        php_error(E_WARNING, "read data failed, fd: %d, count: %"PRI64_PREFIX"d", fd, offset);
       }
       else
       {
-        add_next_index_long(return_value, finfo.size_);
+        add_next_index_long(return_value, offset);
         add_next_index_string(return_value, data, 1);
       }
       efree(data);
@@ -373,7 +359,7 @@ PHP_FUNCTION(tfs_client_read)
   }
   if (SUCCESS != ret)
   {
-    add_next_index_long(return_value, 0);
+    add_next_index_long(return_value, offset);
   }
 }
 /* }}} */
@@ -414,8 +400,8 @@ PHP_FUNCTION(tfs_client_stat)
   {
 	  char tmpStr[128];
     add_next_index_string(return_value, (char*)(boost::lexical_cast<string>(finfo.size_).c_str()), 1);
-    add_next_index_string(return_value,(char*)(tbsys::CTimeUtil::timeToStr(finfo.modify_time_,tmpStr)), 1); 
-    add_next_index_string(return_value,(char*)(tbsys::CTimeUtil::timeToStr(finfo.create_time_,tmpStr)), 1); 
+    add_next_index_string(return_value,(char*)(tbsys::CTimeUtil::timeToStr(finfo.modify_time_,tmpStr)), 1);
+    add_next_index_string(return_value,(char*)(tbsys::CTimeUtil::timeToStr(finfo.create_time_,tmpStr)), 1);
     add_next_index_string(return_value, (char*)(boost::lexical_cast<string>(finfo.crc_).c_str()), 1);
   }
   if (SUCCESS != ret)
@@ -496,7 +482,7 @@ PHP_FUNCTION(tfs_client_create_dir)
 /* }}} */
 
 /* {{{ $tfs_client->create_file(const int uid, const char* file_path)
- * create file 
+ * create file
  */
 PHP_FUNCTION(tfs_client_create_file)
 {
@@ -692,40 +678,31 @@ PHP_FUNCTION(tfs_client_pread)
 		  php_error(E_WARNING, "tfs_client: parameters is invalid");
     }
   }
+  int64_t off = -1;
   array_init(return_value);
   if (SUCCESS == ret)
   {
     char* data = (char*)emalloc(length);
-    int32_t off = 0;
-    while (off < length)
+    ret = NULL == data ? FAILURE : SUCCESS;
+    if (SUCCESS == ret)
     {
-      ret = gclient.pread(fd, (data + off), length, offset);
-      if (ret < 0 )
+      off = gclient.pread(fd, data, length, offset);
+      ret = off < 0 ? SUCCESS: FAILURE;
+      if (SUCCESS != ret)
       {
-        php_error(E_WARNING, "read data failed, fd: %d, ret: %"PRI64_PREFIX"d", fd, ret);
-        break;
+		    php_error(E_ERROR, "tfs_client: read data failed, fd: %d ret: %"PRI64_PREFIX"d", fd, off);
       }
-      else if (ret == 0)
-        continue;
       else
-        off += ret;
+      {
+        add_next_index_long(return_value, off);
+        add_next_index_string(return_value, data, 1);
+      }
+      efree(data);
+      data = NULL;
     }
-    ret = off == length ? SUCCESS: FAILURE; 
-    
-    if (SUCCESS != ret)
-    {
-		  php_error(E_ERROR, "tfs_client: read data failed, fd: %d ret: %"PRI64_PREFIX"d", fd, ret);
-    }
-    else
-    {
-      add_next_index_long(return_value, length);
-      add_next_index_string(return_value, data, 1);
-    }
-    efree(data);
-    data = NULL;
   }
   if (SUCCESS != ret)
-    add_next_index_long(return_value, 0);
+    add_next_index_long(return_value, off);
 }
 /* }}} */
 
