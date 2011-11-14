@@ -27,17 +27,6 @@ public class mergeRcMetaManager_00_rc_login_operation extends RcBaseCase {
 		tfsManager.destroy();
 	}
 
-	public DefaultTfsManager CreateTfsManager()
-	{
-		DefaultTfsManager dtTfsManager;
-		ClassPathXmlApplicationContext appContext = new ClassPathXmlApplicationContext(
-				new String[] { "tfs.xml" });
-		dtTfsManager = (DefaultTfsManager) appContext.getBean("tfsManager");
-		appId = dtTfsManager.getAppId();
-
-		return dtTfsManager;
-	}
-
 	@Test
 	public void Function_01_init_with_client_restart() {
 
