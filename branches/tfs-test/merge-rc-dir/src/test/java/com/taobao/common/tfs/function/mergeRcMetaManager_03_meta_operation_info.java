@@ -15,6 +15,8 @@ import org.junit.Before;
 import org.junit.Test;
 
 import com.taobao.common.tfs.DefaultTfsManager;
+import static org.junit.Assert.*;
+
 
 public class mergeRcMetaManager_03_meta_operation_info extends RcBaseCase {
 	@Before
@@ -25,14 +27,34 @@ public class mergeRcMetaManager_03_meta_operation_info extends RcBaseCase {
 	public void tearDown() {
 	}
 
+	private void WriteData2TfsFile(String srcFile, String targetFile, long offset, boolean bSuccess)
+	{
+		byte data[] = null;
+		try{
+			data = getByte(srcFile);
+		}catch(IOException e){
+			log.error(e.toString());
+		}
+		long len = data.length;
+		long writeLen = tfsManager.write(appId, userId, targetFile, 
+										offset, data, 0, len);
+		assertEquals( (writeLen ==len), bSuccess );
+	}
+
 	@Test
-	public void Function_01_write_many_time_parts() throws IOException {
+	public void Function_01_write_many_time_parts(){
 		caseName = "Function_01_write_many_time_parts";
 		log.info(caseName + "===> start");
-
+		/*
+		*file written structure
+		*+----------+----------+--+----------+----------------------- 
+		*|  10K     |  10K     |1B|  10K     |EOF
+		*|----------+----------+--+----------+-----------------------
+		*/
 		String localFile = "10k.jpg";
 		String filePath = "/pwirte_10k" + d.format(new Date());
 		boolean bRet = false;
+		long offset = 0;
 		long oldUsedCapacity = getUsedCapacity(appKey);
 		long oldFileCount = getFileCount(appKey);
 
@@ -43,15 +65,7 @@ public class mergeRcMetaManager_03_meta_operation_info extends RcBaseCase {
 		Assert.assertTrue(bRet);
 
 		/* write one part of data 10K */
-		byte data[] = null;
-		data = getByte(localFile);
-		long len = data.length;
-		long offset = 0;
-		long dataOffset = 0;
-		long Ret;
-		Ret = tfsManager.write(appId, userId, filePath, offset, data,
-				dataOffset, len);
-		Assert.assertEquals(Ret, len);
+		WriteData2TfsFile(localFile, filePath, offset, true);
 
 		sleep(MAX_UPDATE_TIME);
 		String sessionId = tfsManager.getSessionId();
@@ -67,14 +81,8 @@ public class mergeRcMetaManager_03_meta_operation_info extends RcBaseCase {
 		oldFileCount = newFileCount;
 
 		/* write one part of data again 10K */
-		data = getByte(localFile);
-		len = data.length;
-		offset = 10 * (1 << 10);
-		dataOffset = 0;
-		Ret = tfsManager.write(appId, userId, filePath, offset, data,
-				dataOffset, len);
-		Assert.assertEquals(Ret, len);
-
+		offset = 10 * (1<<10);
+		WriteData2TfsFile(localFile, filePath, offset, true);
 		sleep(MAX_UPDATE_TIME);
 		sessionId = tfsManager.getSessionId();
 		Assert.assertTrue(getFileSize(sessionId, 2) == 2 * 10 * 1024);
@@ -88,14 +96,8 @@ public class mergeRcMetaManager_03_meta_operation_info extends RcBaseCase {
 		oldFileCount = newFileCount;
 
 		/* write one part of data the third time 10K */
-		data = getByte(localFile);
-		len = data.length;
 		offset = 20 * (1 << 10) + 1;
-		dataOffset = 0;
-		Ret = tfsManager.write(appId, userId, filePath, offset, data,
-				dataOffset, len);
-		Assert.assertEquals(Ret, len);
-
+		WriteData2TfsFile(localFile, filePath, offset, true);
 		sleep(MAX_UPDATE_TIME);
 		sessionId = tfsManager.getSessionId();
 		log.debug("sessionId: " + sessionId);
@@ -107,19 +109,12 @@ public class mergeRcMetaManager_03_meta_operation_info extends RcBaseCase {
 //		Assert.assertEquals(oldFileCount, newFileCount);
 
 		localFile = "1b.jpg";
-
 		oldUsedCapacity = newUsedCapacity;
 		oldFileCount = newFileCount;
 
 		/* write one part of data the third time 1B */
-		data = getByte(localFile);
-		len = data.length;
 		offset = 20 * (1 << 10);
-		dataOffset = 0;
-		Ret = tfsManager.write(appId, userId, filePath, offset, data,
-				dataOffset, len);
-		Assert.assertEquals(Ret, len);
-
+		WriteData2TfsFile(localFile, filePath, offset, true);
 		sleep(MAX_UPDATE_TIME);
 		sessionId = tfsManager.getSessionId();
 		log.debug("sessionId: " + sessionId);
@@ -135,18 +130,11 @@ public class mergeRcMetaManager_03_meta_operation_info extends RcBaseCase {
 		oldUsedCapacity = getUsedCapacity(appKey);
 		oldFileCount = getFileCount(appKey);
 		/* write one part of data the third time 1B */
-		data = getByte(localFile);
-		len = data.length;
 		offset = 20 * (1 << 10);
-		dataOffset = 0;
-		Ret = tfsManager.write(appId, userId, filePath, offset, data,
-				dataOffset, len);
-		Assert.assertTrue(Ret == 0);
-
+		WriteData2TfsFile(localFile, filePath, offset, false);
 		sleep(MAX_UPDATE_TIME);
 		sessionId = tfsManager.getSessionId();
 		log.debug("sessionId: " + sessionId);
-		Assert.assertTrue(getFileSize(sessionId, 2) == (3 * 10 * 1024 + 2));
 
 		newUsedCapacity = getUsedCapacity(appKey);
 		newFileCount = getFileCount(appKey);
@@ -161,189 +149,89 @@ public class mergeRcMetaManager_03_meta_operation_info extends RcBaseCase {
 	public void Function_02_write_large_many_times_parts() throws IOException {
 		caseName = "Function_02_write_large_many_times_parts";
 		log.info(caseName + "===> start");
-
-		/******************************************/
+		/*
+		*file written structure
+		*+----------+----------+--+----------+----------------------- 
+		*|  3M      |  3M      |1B|  3M      |EOF
+		*|----------+----------+--+----------+-----------------------
+		*/
 		String localFile = "3M.jpg";
 		String filePath = "/pwite_3M" + d.format(new Date());
 		boolean bRet = false;
-		List<String> rootServerAddrList = new ArrayList<String>();
-		rootServerAddrList.add(rsAddr);
-		tfsManager = new DefaultTfsManager();
-
+		long offset = 0;
 		long oldUsedCapacity = getUsedCapacity(appKey);
 		long oldFileCount = getFileCount(appKey);
-		tfsManager.setRcAddr(rcAddr);
-		tfsManager.setAppKey(appKey);
-		tfsManager.setAppIp(appIp);
-		tfsManager.setUseNameMeta(true);
-		bRet = tfsManager.init();
-		Assert.assertTrue(bRet);
+
+		tfsManager = CreateTfsManager();
+		appId = tfsManager.getAppId();
 		bRet = tfsManager.createFile(appId, userId, filePath);
 		Assert.assertTrue(bRet);
 
-		byte data[] = null;
-		data = getByte(localFile);
-		long len = data.length;
-		long offset = 0;
-		long dataOffset = 0;
-		long Ret;
-		Ret = tfsManager.write(appId, userId, filePath, offset, data,
-				dataOffset, len);
-		Assert.assertEquals(Ret, len);
-
+		/* Start to write tfs file 3M */
+		WriteData2TfsFile(localFile, filePath, offset, true);
 		sleep(MAX_STAT_TIME);
+
+		/* check written length, used capacity and */
 		String sessionId = tfsManager.getSessionId();
 		log.debug("sessionId: " + sessionId);
-		// Assert.assertTrue(getOperTimes(sessionId, 2) == 2);
-		// Assert.assertTrue(getSuccTimes(sessionId, 2) == 2);
-		Assert.assertTrue(getFileSize(sessionId, 2) == 3 * 1024 * 1024);
+		assertTrue(getFileSize(sessionId, 2) == 3 * 1024 * 1024);
 
 		long newUsedCapacity = getUsedCapacity(appKey);
 		long newFileCount = getFileCount(appKey);
 		Assert.assertEquals(oldUsedCapacity + 3 * 1024 * 1024, newUsedCapacity);
-		// Assert.assertEquals(oldFileCount + 1, newFileCount);
-		tfsManager.destroy();
-		/******************************************/
 
-		localFile = "3M.jpg";
-		bRet = false;
-		tfsManager = new DefaultTfsManager();
-
-		oldUsedCapacity = getUsedCapacity(appKey);
-		oldFileCount = getFileCount(appKey);
-		tfsManager.setRcAddr(rcAddr);
-		tfsManager.setAppKey(appKey);
-		tfsManager.setAppIp(appIp);
-		tfsManager.setUseNameMeta(true);
-		bRet = tfsManager.init();
-		Assert.assertTrue(bRet);
-
-		data = getByte(localFile);
-		len = data.length;
+		/* Start to write tfs file 3M */
 		offset = 3 * (1 << 20);
-		dataOffset = 0;
-		Ret = tfsManager.write(appId, userId, filePath, offset, data,
-				dataOffset, len);
-		Assert.assertEquals(Ret, len);
-
+		WriteData2TfsFile(localFile, filePath, offset, true);
 		sleep(MAX_STAT_TIME);
+
 		sessionId = tfsManager.getSessionId();
 		log.debug("sessionId: " + sessionId);
-		// Assert.assertTrue(getOperTimes(sessionId, 2) == 1);
-		// Assert.assertTrue(getSuccTimes(sessionId, 2) == 1);
-		Assert.assertTrue(getFileSize(sessionId, 2) == 3 * 1024 * 1024);
+		Assert.assertTrue(getFileSize(sessionId, 2) == 6 * 1024 * 1024);
 
 		newUsedCapacity = getUsedCapacity(appKey);
 		newFileCount = getFileCount(appKey);
 		Assert.assertEquals(oldUsedCapacity + 3 * 1024 * 1024, newUsedCapacity);
 		// Assert.assertEquals(oldFileCount, newFileCount);
-		tfsManager.destroy();
-		/******************************************/
 
-		localFile = "3M.jpg";
-		bRet = false;
-		tfsManager = new DefaultTfsManager();
-
-		oldUsedCapacity = getUsedCapacity(appKey);
-		oldFileCount = getFileCount(appKey);
-		tfsManager.setRcAddr(rcAddr);
-		tfsManager.setAppKey(appKey);
-		tfsManager.setAppIp(appIp);
-		tfsManager.setUseNameMeta(true);
-		bRet = tfsManager.init();
-		Assert.assertTrue(bRet);
-
-		data = getByte(localFile);
-		len = data.length;
+		/* Start to write tfs file 3M */
 		offset = 6 * (1 << 20) + 1;
-		dataOffset = 0;
-		Ret = tfsManager.write(appId, userId, filePath, offset, data,
-				dataOffset, len);
-		Assert.assertEquals(Ret, len);
-
+		WriteData2TfsFile(localFile, filePath, offset, true);
 		sleep(MAX_STAT_TIME);
+
 		sessionId = tfsManager.getSessionId();
 		log.debug("sessionId: " + sessionId);
-		// Assert.assertTrue(getOperTimes(sessionId, 2) == 1);
-		// Assert.assertTrue(getSuccTimes(sessionId, 2) == 1);
-		Assert.assertTrue(getFileSize(sessionId, 2) == 3 * 1024 * 1024);
+		Assert.assertTrue(getFileSize(sessionId, 2) == 9 * 1024 * 1024);
 
 		newUsedCapacity = getUsedCapacity(appKey);
 		newFileCount = getFileCount(appKey);
 		Assert.assertEquals(oldUsedCapacity + 3 * 1024 * 1024, newUsedCapacity);
 		// Assert.assertEquals(oldFileCount, newFileCount);
-		tfsManager.destroy();
-		/******************************************/
 
 		localFile = "1b.jpg";
-		bRet = false;
-		tfsManager = new DefaultTfsManager();
-
-		oldUsedCapacity = getUsedCapacity(appKey);
-		oldFileCount = getFileCount(appKey);
-		tfsManager.setRcAddr(rcAddr);
-		tfsManager.setAppKey(appKey);
-		tfsManager.setAppIp(appIp);
-		tfsManager.setUseNameMeta(true);
-		bRet = tfsManager.init();
-		Assert.assertTrue(bRet);
-
-		data = getByte(localFile);
-		len = data.length;
 		offset = 6 * (1 << 20);
-		dataOffset = 0;
-		Ret = tfsManager.write(appId, userId, filePath, offset, data,
-				dataOffset, len);
-		Assert.assertEquals(Ret, len);
-
+		/* Start to write tfs file 1B */
+		WriteData2TfsFile(localFile, filePath, offset, true);
 		sleep(MAX_STAT_TIME);
+
 		sessionId = tfsManager.getSessionId();
 		log.debug("sessionId: " + sessionId);
-		// Assert.assertTrue(getOperTimes(sessionId, 2) == 1);
-		// Assert.assertTrue(getSuccTimes(sessionId, 2) == 1);
-		// Assert.assertTrue(getFileSize(sessionId, 2) == 1);
+		Assert.assertTrue(getFileSize(sessionId, 2) == (9 * 1024 * 1024 + 1) );
 
 		newUsedCapacity = getUsedCapacity(appKey);
 		newFileCount = getFileCount(appKey);
 		Assert.assertEquals(oldUsedCapacity + 1, newUsedCapacity);
 		// Assert.assertEquals(oldFileCount, newFileCount);
-		tfsManager.destroy();
-		/******************************************/
 
+		
 		localFile = "1b.jpg";
-		bRet = false;
-		tfsManager = new DefaultTfsManager();
-
-		oldUsedCapacity = getUsedCapacity(appKey);
-		oldFileCount = getFileCount(appKey);
-		tfsManager.setRcAddr(rcAddr);
-		tfsManager.setAppKey(appKey);
-		tfsManager.setAppIp(appIp);
-		tfsManager.setUseNameMeta(true);
-		bRet = tfsManager.init();
-		Assert.assertTrue(bRet);
-
-		data = getByte(localFile);
-		len = data.length;
 		offset = 6 * (1 << 20);
-		dataOffset = 0;
-
-		Ret = tfsManager.write(appId, userId, filePath, offset, data,
-				dataOffset, len);
-		Assert.assertTrue(Ret == 0);
-
+		/* Start to write tfs file 1B */
+		WriteData2TfsFile(localFile, filePath, offset, false);
 		sleep(MAX_STAT_TIME);
-		sessionId = tfsManager.getSessionId();
-		log.debug("sessionId: " + sessionId);
-		// Assert.assertTrue(getOperTimes(sessionId, 2) == 1);
-		// Assert.assertTrue(getSuccTimes(sessionId, 2) == 0);
-		// Assert.assertTrue(getFileSize(sessionId, 2) == 0);
 
-		newUsedCapacity = getUsedCapacity(appKey);
-		newFileCount = getFileCount(appKey);
-		Assert.assertEquals(oldUsedCapacity, newUsedCapacity);
-		// Assert.assertEquals(oldFileCount, newFileCount);
-		// tfsManager.destroy();
+		sessionId = tfsManager.getSessionId();
+		tfsManager.destroy();
 		/******************************************/
 		log.info(caseName + "===> end");
 	}
