@@ -1,11 +1,11 @@
-package com.taobao.common.tfs.test.new.tfs.testcase;
+package com.taobao.common.tfs.itest.updated.tfs.testcase;
 
 
 import org.junit.Test;
 
 import junit.framework.Assert;
 
-import com.taobao.common.tfs.tfsNameBaseCase;
+import com.taobao.common.tfs.itest.updated.tfs.tfsNameBaseCase;
 
 
 public class tfsManager_02_mvDir extends tfsNameBaseCase 

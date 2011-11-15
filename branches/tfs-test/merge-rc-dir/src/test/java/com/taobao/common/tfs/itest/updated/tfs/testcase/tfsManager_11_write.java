@@ -1,4 +1,5 @@
-package com.taobao.common.tfs.test.new.tfs.testcase;
+package com.taobao.common.tfs.itest.updated.tfs.testcase;
+
 
 
 import java.io.IOException;
@@ -7,7 +8,7 @@ import org.junit.Test;
 
 import junit.framework.Assert;
 
-import com.taobao.common.tfs.tfsNameBaseCase;
+import com.taobao.common.tfs.itest.updated.tfs.tfsNameBaseCase;
 
 
 public class tfsManager_11_write extends tfsNameBaseCase 

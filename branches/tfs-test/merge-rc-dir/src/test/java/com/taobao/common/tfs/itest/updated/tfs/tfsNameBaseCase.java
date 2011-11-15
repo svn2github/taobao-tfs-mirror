@@ -1,4 +1,4 @@
-package com.taobao.common.tfs.test.new.tfs;
+package com.taobao.common.tfs.itest.updated.tfs;
 
 
 
@@ -22,8 +22,7 @@ import com.taobao.common.tfs.DefaultTfsManager;
 
 public class tfsNameBaseCase
 {
-	public static TfsManager tfsManager=null ;
-	public static DefaultTfsManager DftfsManager=null ;
+	public static DefaultTfsManager tfsManager=null ;
 	public static String resourcesPath="D:/workspace/merge-rc-dir/src/test/resources/";
     public static final Log log = LogFactory.getLog(tfsNameBaseCase.class);
     public static long appId;
@@ -37,9 +36,8 @@ public class tfsNameBaseCase
     	System.out.println("!!!!!!!!!!!!!!!!!!get bean begin");
         ClassPathXmlApplicationContext appContext = new ClassPathXmlApplicationContext(new String[] { "tfs.xml" });
         System.out.println("@@@@@@@@@@@get bean end");
-        tfsManager = (TfsManager) appContext.getBean("tfsManager");
-        DftfsManager = (DefaultTfsManager)tfsManager;
-        appId = DftfsManager.getAppId();
+        tfsManager = (DefaultTfsManager) appContext.getBean("tfsManager");
+        appId = tfsManager.getAppId();
         System.out.println("#####################"+appId);
     }
     

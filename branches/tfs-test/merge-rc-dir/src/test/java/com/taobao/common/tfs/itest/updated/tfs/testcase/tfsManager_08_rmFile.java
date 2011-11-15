@@ -1,4 +1,4 @@
-package com.taobao.common.tfs.test.new.tfs.testcase;
+package com.taobao.common.tfs.itest.updated.tfs.testcase;
 
 import java.util.Random;
 
@@ -6,8 +6,7 @@ import org.junit.Test;
 
 import junit.framework.Assert;
 
-import com.taobao.common.tfs.tfsNameBaseCase;
-
+import com.taobao.common.tfs.itest.updated.tfs.tfsNameBaseCase;
 
 public class tfsManager_08_rmFile extends tfsNameBaseCase 
 {
