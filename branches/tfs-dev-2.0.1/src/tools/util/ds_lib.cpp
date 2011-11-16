@@ -450,9 +450,9 @@ namespace tfs
       rd_message.set_offset(offset);
 
       int ret_status = TFS_SUCCESS;
+      NewClient* client = NewClientManager::get_instance().create_client();
       while (TFS_SUCCESS == ret_status)
       {
-        NewClient* client = NewClientManager::get_instance().create_client();
         tbnet::Packet* ret_msg = NULL;
         ret_status = send_msg_to_server(server_id, client, &rd_message, ret_msg);
         if (TFS_SUCCESS == ret_status && RESP_READ_DATA_MESSAGE != ret_msg->getPCode())
@@ -477,7 +477,7 @@ namespace tfs
         {
           if (len_tmp == 0)
           {
-            ret_status = TFS_ERROR;
+            break;
           }
         }
         ssize_t write_len = 0;
@@ -495,19 +495,20 @@ namespace tfs
         {
           if (len_tmp < MAX_READ_SIZE)
           {
-            ret_status = TFS_ERROR;
+            break;
           }
         }
         if (TFS_SUCCESS == ret_status)
         {
           offset += write_len;
+          read_len -= write_len;
           rd_message.set_block_id(block_id);
           rd_message.set_file_id(file_id);
           rd_message.set_length(read_len);
           rd_message.set_offset(offset);
         }
-        NewClientManager::get_instance().destroy_client(client);
       }
+      NewClientManager::get_instance().destroy_client(client);
 
       if (ret_status == TFS_SUCCESS)
       {
@@ -545,7 +546,6 @@ namespace tfs
       ret = TFS_SUCCESS;
       while ((read_len = read(fd, data, MAX_READ_SIZE)) > 0)
       {
-
         if (write_data(server_id, block_id, data, read_len, offset, file_id, file_num) != read_len)
         {
           ret = TFS_ERROR;
@@ -555,10 +555,10 @@ namespace tfs
         crc = Func::crc(crc, data, read_len);
       }
 
-      if (ret == TFS_SUCCESS)
+      if (TFS_SUCCESS == ret)
       {
         ret = close_data(server_id, block_id, crc, file_id, file_num);
-        if (ret)
+        if (TFS_SUCCESS == ret)
         {
           printf("Write local file to tfs success\n\n");
         }
@@ -706,7 +706,7 @@ namespace tfs
           if (mode != 0)
           {
             printf(
-              "FILE_NAME          FILE_ID             OFFSET        SIZE        USIZE       M_TIME               C_TIME              FLAG CRC\n");
+              "FILE_NAME                  FILE_ID           OFFSET       SIZE        USIZE    M_TIME               C_TIME      FLAG       CRC\n");
             printf(
               "---------- ---------- ---------- ---------- ----------  ---------- ---------- ---------- ---------- ---------- ---------- ----------\n");
 
@@ -719,7 +719,7 @@ namespace tfs
             printf(
               "---------- ---------- ---------- ---------- ----------  ---------- ---------- ---------- ---------- ---------- ---------- ----------\n");
             printf(
-              "FILE_NAME          FILE_ID             OFFSET        SIZE        USIZE       M_TIME               C_TIME              FLAG CRC\n");
+              "FILE_NAME                  FILE_ID           OFFSET       SIZE        USIZE    M_TIME               C_TIME      FLAG       CRC\n");
 
           }
           else
@@ -948,7 +948,7 @@ namespace tfs
           }
           else
           {
-            fprintf(stderr, "Close file %s\n", s_msg->get_error());
+            fprintf(stderr, "Close file %s, ret_status: %d\n", s_msg->get_error(), s_msg->get_status());
           }
         }
       }
@@ -1013,7 +1013,6 @@ namespace tfs
         fprintf(stderr, "send crc error fail!\n");
       }
       return ret_status;
-
     }
     void print_bitmap(const int32_t map_len, const int32_t used_len, const char* data)
     {
@@ -1046,7 +1045,7 @@ namespace tfs
     {
       uint64_t server_id = ds_task.server_id_;
       int32_t type = ds_task.list_block_type_;
-      if (type >= 1)
+      if (type > 1)
       {
         printf("usage: list_bitmap ip type\n type 0: normal bitmap\n type 1: error bitmap\n");
         return TFS_ERROR;

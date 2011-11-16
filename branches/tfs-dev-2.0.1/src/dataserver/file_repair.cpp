@@ -65,7 +65,15 @@ namespace tfs
 
         dataserver_id_ = dataserver_id;
         init_status_ = true;
-        ret = true;
+      
+        tfs_client_ = TfsClientImpl::Instance();
+        ret =
+          tfs_client_->initialize(NULL, DEFAULT_BLOCK_CACHE_TIME, DEFAULT_BLOCK_CACHE_ITEMS, false) == TFS_SUCCESS ?
+          true : false;
+        if (ret)
+        {
+          init_status_ = true;
+        }
       }
 
       return ret;
@@ -172,7 +180,7 @@ namespace tfs
       }
 
       FSName fsname(crc_check_record.block_id_, crc_check_record.file_id_);
-      int ret = tfs_client_->save_file_update(tmp_file, T_DEFAULT, fsname.get_name(), NULL) < 0 ? TFS_ERROR : TFS_SUCCESS;
+      int ret = tfs_client_->save_file_update(tmp_file, T_DEFAULT, fsname.get_name(), NULL, src_addr_) < 0 ? TFS_ERROR : TFS_SUCCESS;
       // int ret = tfs_client_->save_file(tmp_file, fsname.get_name()) < 0 ? TFS_ERROR : TFS_SUCCESS;
 
       if (TFS_SUCCESS != ret)
@@ -182,7 +190,7 @@ namespace tfs
       }
       else
       {
-        TBSYS_LOG(INFO, "%s repair file fail, blockid: %u fileid: %" PRI64_PREFIX "u",
+        TBSYS_LOG(INFO, "%s repair file success, blockid: %u fileid: %" PRI64_PREFIX "u",
                   fsname.get_name(), crc_check_record.block_id_, crc_check_record.file_id_);
       }
 
