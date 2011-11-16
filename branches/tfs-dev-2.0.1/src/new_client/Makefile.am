@@ -38,7 +38,7 @@ libtfsclient_la_LIBADD = ${ld_fg}
 libtfsclient_c_la_SOURCES = ${api_source_list} tfs_client_capi.cpp tfs_client_capi.h
 libtfsclient_c_la_LIBADD = ${ld_fg}
 
-include_HEADERS = tfs_client_api.h tfs_client_capi.h tfs_rc_client_api.h
+include_HEADERS = tfs_client_api.h tfs_client_capi.h tfs_rc_client_api.h tfs_meta_client_api.h
 
 # hardcode to extract static library in destinate static library
 # consider libtool compatibility,do change in destinate directory

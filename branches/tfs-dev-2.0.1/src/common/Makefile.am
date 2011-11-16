@@ -19,4 +19,4 @@ libtfscommon_a_SOURCES = internal.cpp parameter.cpp func.cpp file_queue.cpp \
 			 statistics.h status_message.h stream.h session_util.h rts_define.h mmap_file.h meta_hash_helper.h
 
 
-include_HEADERS = define.h cdefine.h
+include_HEADERS = define.h cdefine.h lock.h  func.h internal.h meta_server_define.h rts_define.h
