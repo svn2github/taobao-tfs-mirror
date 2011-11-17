@@ -1,5 +1,6 @@
 package com.taobao.tfstest;
 
+import static org.junit.Assert.*;
 import static org.junit.Assert.assertTrue;
 
 import java.util.ArrayList;
@@ -159,6 +160,106 @@ public class Function_Report_On_Time extends FailOverBaseCase {
 		assertTrue(checkOnTimeReportLog(targetIp));
 	}
 
+	/*
+	[步骤]
+	1.配置10个ds，其中9个ds在一台物理机，另1个ds单独在另一台物理机，
+	ns配置1个汇报线程，1个汇报队列，副本数为2，
+	ns配置max_write_file_count为10，配置block_max_size为10M，
+	设置定时汇报时间间隔为5分钟
+	2.限制ns与那台只有1个ds的物理机的网络带宽
+	3.启动客户端测试工具指定blockId带创建block标志位打开文件，执行写操作，写单位为1M
+	
+	[验证]
+	每隔5分钟，当轮到该ds汇报时可以看到写失败，汇报过后写成功
+	[备注]
+	*/
+	@Test
+	public void test_1()
+	{
+		
+	}
+	/*
+	步骤
+	[步骤]
+	1.配置4个ds，ds挂载容量相同，副本数为2，配置max_write_filecount为10，配置block_max_size为10MB
+	2.启动客户端测试工具执行写操作，写单位为1M，持续较长时间
+	
+	[验证]
+	写完毕后检测各ds上新增的block数差不多
+	[备注]
+	*/
+	@Test
+	public void ds_situation_is_same_with_conditions()
+	{
+		int maxWriteFilecount = 10;
+		boolean bRet = false;
+		caseName = "ds_situation_is_same_with_conditions";
+		log.info(caseName + "===> start");
+		String targetIp = MASTERIP;
+
+
+		/* set max_write_filecount and block_max_size */
+		bRet = conf.confReplaceSingle(targetIp, NSCONF, "max_write_filecount", String.valueOf(maxWriteFilecount));
+		assertTrue(bRet);
+
+		/* both ds.conf and ns.conf exist block_max_size, which one will take effect */
+		for(int i = DSINDEX; i <= DS_CLUSTER_NUM; i++)
+		{
+			for(int j = 0; j < tfsGrid.getCluster(i).getServerList().size(); j++)
+			{
+				String strDsConf = tfsGrid.getCluster(i).getServer(j).getDir() + 
+							tfsGrid.getCluster(i).getServer(j).getConfname();
+				targetIp = tfsGrid.getCluster(i).getServer(j).getIp();
+				bRet = conf.confReplaceSingle(targetIp, strDsConf, "block_max_size", String.valueOf(maxWriteFilecount));
+				assertTrue(bRet);
+			}
+		}
+
+		/* set write file size to 1M */
+		bRet = conf.confReplaceSingle(CLIENTIP, CLIENTCONF, "size", String.valueOf(1<<20));
+		assertTrue(bRet);
+	
+		/* start grid */
+		startOneGrid(tfsGrid);
+		sleep(30);
+		
+		/* write for 500s */
+		writeCmd();
+		sleep(500);
+		writeCmdStop();
+
+		/* check block number */
+		String strCmd;
+		ArrayList<String> result = new ArrayList<String>();
+		
+		strCmd = TFS_HOME + "bin/ssm -s ";
+		strCmd += MASTERIP + ":" + MASTERSER.getPort();
+		strCmd += " -i 'machine -a'";
+		bRet = Proc.cmdOutBase(CLIENTIP, strCmd, "[ 0-9]*", 5, null, result);
+		assertTrue(bRet);
+		
+		for(int i = 0; i < result.size() - 1; i++)
+		{
+			assertEquals(Integer.parseInt(result.get(i))/10, Integer.parseInt(result.get(i+1))/10);
+		}
+
+	}
+	/*
+	步骤
+	[步骤]
+	1.配置4个ds，ds挂载容量相同，副本数为2，配置max_write_filecount为10，配置block_max_size为10MB
+	2.启动客户端测试工具执行写操作，写单位为1M，持续较长时间
+	
+	[验证]
+	写完毕后检测各ds上新增的block数差不多
+	[备注]
+	*/
+	@Test
+	public void test_3()
+	{
+		
+	}
+	
 	private void startOneGrid(AppGrid appGrid) {
 		boolean bRet = false;
 		/* Set the failcount */
@@ -198,8 +299,10 @@ public class Function_Report_On_Time extends FailOverBaseCase {
 
 		if(result.size() > 0)
 			return true;
+
 		return false;
 	}
+
 	@Before
 	public void setUp() {
 		/* Reset case name */
