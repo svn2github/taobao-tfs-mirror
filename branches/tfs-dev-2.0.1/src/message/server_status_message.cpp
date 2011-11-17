@@ -48,7 +48,7 @@ namespace tfs
       return common::INT_SIZE * 3;
     }
 
-    int GetServerStatusMessage::serialize(common::Stream& output) const 
+    int GetServerStatusMessage::serialize(common::Stream& output) const
     {
       int32_t iret = output.set_int32(status_type_);
       if (common::TFS_SUCCESS == iret)
@@ -73,7 +73,7 @@ namespace tfs
 
     }
 
-    int AccessStatInfoMessage::serialize(common::Stream& output) const 
+    int AccessStatInfoMessage::serialize(common::Stream& output) const
     {
       int32_t size = stats_.size();
       size -= from_row_;
@@ -117,9 +117,9 @@ namespace tfs
           COUNTER_TYPE::const_iterator iter = map.begin();
           for (; iter != map.end(); ++iter, ++count)
           {
-            if (count <= from_row)
+            if (count < from_row)
               continue;
-            if (count > from_row + return_row)
+            if (count >= from_row + return_row)
               break;
             iret = output.set_int32(iter->first);
             if (common::TFS_SUCCESS != iret)
@@ -200,7 +200,7 @@ namespace tfs
       return iret;
     }
 
-    int ShowServerInformationMessage::serialize(common::Stream& output) const 
+    int ShowServerInformationMessage::serialize(common::Stream& output) const
     {
       int64_t pos = 0;
       int32_t iret = param.serialize(output.get_free(), output.get_free_length(), pos);
