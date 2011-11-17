@@ -391,7 +391,7 @@ namespace tfs
 
     }
 
-    int ShowInfo::show_block(const int8_t type, const int32_t num, const uint32_t block_id, int32_t count, const int32_t interval, const string& filename)
+    int ShowInfo::show_block(const int8_t type, const int32_t num, const uint32_t block_id, const int32_t block_chunk_num, int32_t count, const int32_t interval, const string& filename)
     {
       interrupt_ = false;
       is_loop_ = (count == 0);
@@ -400,7 +400,6 @@ namespace tfs
       {
         return TFS_ERROR;
       }
-      int32_t block_chunk_num = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_BLOCK_CHUNK_NUM, 512);
 
       while ((count > 0 || is_loop_) && !interrupt_)
       {

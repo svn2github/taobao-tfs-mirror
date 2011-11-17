@@ -53,6 +53,7 @@ namespace tfs
       CMD_BLOCK_MASTER,
       CMD_ALL,
       CMD_PART,
+      CMD_FOR_MONITOR,
       CMD_COUNT,
       CMD_INTERVAL,
       CMD_REDIRECT
@@ -73,7 +74,8 @@ namespace tfs
     enum SubCmdMachine
     {
       MACHINE_TYPE_ALL = 1,
-      MACHINE_TYPE_PART = 2
+      MACHINE_TYPE_PART = 2,
+      MACHINE_TYPE_FOR_MONITOR = 4
     };
     enum CmpBlockType
     {
@@ -109,10 +111,10 @@ namespace tfs
     struct ParamInfo
     {
       ParamInfo() :
-        type_(CMD_NOP), num_(MAX_READ_NUM), count_(1), interval_(2), filename_(""), block_id_(0), server_ip_port_("")
+        type_(CMD_NOP), num_(MAX_READ_NUM), count_(1), interval_(2), filename_(""), block_id_(0), block_chunk_num_(512), server_ip_port_("")
       {}
       ParamInfo(const int8_t type) :
-        type_(type), num_(MAX_READ_NUM), count_(1), interval_(2), filename_(""), block_id_(0), server_ip_port_("")
+        type_(type), num_(MAX_READ_NUM), count_(1), interval_(2), filename_(""), block_id_(0), block_chunk_num_(512), server_ip_port_("")
       {}
       ~ParamInfo(){}
       int8_t type_;
@@ -121,6 +123,7 @@ namespace tfs
       int32_t interval_;
       std::string filename_;
       uint32_t block_id_;
+      int32_t block_chunk_num_;
       std::string server_ip_port_;
     };
 

@@ -325,7 +325,7 @@ namespace tfs
       if (fp == NULL) { return; }
       if (flag & MACHINE_TYPE_ALL)
       {
-        fprintf(fp, "  %-12s  %4d %5s %7s  %2d%%  %6d  %2d %6s %5"PRI64_PREFIX"d %5s %5"PRI64_PREFIX"d %5s %5"PRI64_PREFIX"d %4s %5"PRI64_PREFIX"d %3s %5"PRI64_PREFIX"d %3s %5"PRI64_PREFIX"d",
+        fprintf(fp, "  %-12s  %4d %5s %7s  %2d%%  %6d  %2d %6s %5"PRI64_PREFIX"d %5s %5"PRI64_PREFIX"d %5s %5"PRI64_PREFIX"d %4s %5"PRI64_PREFIX"d %3s %5"PRI64_PREFIX"d %3s %5"PRI64_PREFIX"d\n",
             tbsys::CNetUtil::addrToString(machine_id_).c_str(),
             index_,
             Func::format_size(use_capacity_).c_str(),
@@ -349,7 +349,7 @@ namespace tfs
       }
       else if (flag & MACHINE_TYPE_PART)
       {
-        fprintf(fp, "  %-12s  %4d %6s %7s  %2d%%  %6d  %2d %5s %4"PRI64_PREFIX"d %5s %5"PRI64_PREFIX"d %5s %5"PRI64_PREFIX"d %4s %5"PRI64_PREFIX"d %-19s",
+        fprintf(fp, "  %-12s  %4d %6s %7s  %2d%%  %6d  %2d %5s %4"PRI64_PREFIX"d %5s %5"PRI64_PREFIX"d %5s %5"PRI64_PREFIX"d %4s %5"PRI64_PREFIX"d %-19s\n",
             tbsys::CNetUtil::addrToString(machine_id_).c_str(),
             index_,
             Func::format_size(use_capacity_).c_str(),
@@ -368,7 +368,6 @@ namespace tfs
             Func::time_to_str(last_startup_time_).c_str()
             );
       }
-      fprintf(fp, "\n");
     }
     StatStruct::StatStruct() :
       server_count_(0), machine_count_(0), use_capacity_(0), total_capacity_(0), current_load_(0), block_count_(0),
@@ -414,6 +413,7 @@ namespace tfs
       block_del_size_ += block.info_.del_size_;
       return TFS_SUCCESS;
     }
+
     void StatStruct::dump(const int8_t type, const int8_t sub_type, FILE* fp) const
     {
       if (fp == NULL) { return; }
@@ -428,7 +428,7 @@ namespace tfs
               Func::format_size(total_capacity_).c_str(),
               total_capacity_ > 0 ? static_cast<int32_t> (use_capacity_ * 100 / total_capacity_):0,
               block_count_,
-              static_cast<int32_t> (current_load_),
+              server_count_ > 0 ? static_cast<int32_t> (current_load_/server_count_) : 0,
               Func::format_size(total_tp_.write_byte_).c_str(),
               total_tp_.write_file_count_,
               Func::format_size(total_tp_.read_byte_).c_str(),
@@ -444,13 +444,13 @@ namespace tfs
       {
         if (sub_type & BLOCK_TYPE_BLOCK_INFO)
         {
-          fprintf(fp, "TOTAL: %-2d %18"PRI64_PREFIX"d %10s %9"PRI64_PREFIX"d %12s PRE_FILE(%"PRI64_PREFIX"d)\n\n",
+          fprintf(fp, "TOTAL: %-2d %18"PRI64_PREFIX"d %10s %9"PRI64_PREFIX"d %12s PRE_FILE(%s)\n\n",
               block_count_,
               file_count_,
               Func::format_size(block_size_).c_str(),
               delfile_count_,
               Func::format_size(block_del_size_).c_str(),
-              file_count_ > 0 ? (block_size_ / file_count_) : 0
+              Func::format_size(file_count_ > 0 ? (block_size_ / file_count_) : 0).c_str()
               );
         }
       }
@@ -487,6 +487,15 @@ namespace tfs
               total_capacity_ > 0 ? static_cast<int32_t> (use_capacity_ * 100 / total_capacity_) : 0,
               block_count_,
               server_count_ > 0 ? static_cast<int32_t> (current_load_/server_count_) : 0,
+              Func::format_size(last_tp_.write_byte_).c_str(),
+              last_tp_.write_file_count_,
+              Func::format_size(last_tp_.read_byte_).c_str(),
+              last_tp_.read_file_count_
+              );
+        }
+        if (sub_type & MACHINE_TYPE_FOR_MONITOR)
+        {
+          fprintf(fp, "write flow(MBps):%s, write tps:%"PRI64_PREFIX"d, read flow(MBps):%s, read tps:%"PRI64_PREFIX"d\n",
               Func::format_size(last_tp_.write_byte_).c_str(),
               last_tp_.write_file_count_,
               Func::format_size(last_tp_.read_byte_).c_str(),

@@ -252,6 +252,14 @@ int parse_param(const VSTRING& param, ComType com_type, ParamInfo& ret_param)
             {
               ret_param.block_id_ = static_cast< uint32_t > (tmp);
             }
+            if (ret == TFS_SUCCESS && ((iter + 1) != param.end()) && ((*(iter + 1)).substr(0, 1) != "-"))
+            {
+              if ((ret = get_value((*(iter + 1)).c_str(), tmp)) == TFS_SUCCESS)
+              {
+                ret_param.block_chunk_num_ = static_cast< int32_t > (tmp);
+                iter++;
+              }
+            }
             break;
           case CMD_SERVER_LIST:
             g_need_cmp ? (ret_param.type_ = BLOCK_CMP_SERVER) : (ret_param.type_ = BLOCK_TYPE_SERVER_LIST);
@@ -276,6 +284,9 @@ int parse_param(const VSTRING& param, ComType com_type, ParamInfo& ret_param)
             break;
           case CMD_PART:
             ret_param.type_ = MACHINE_TYPE_PART;
+            break;
+          case CMD_FOR_MONITOR:
+            ret_param.type_ = MACHINE_TYPE_FOR_MONITOR;
             break;
           default:
             ret = CMD_UNKNOWN;
@@ -318,6 +329,7 @@ void init()
   g_sub_cmd_map["-server"] = CmdInfo(CMD_SERVER_LIST, false);
   g_sub_cmd_map["-all"] = CmdInfo(CMD_ALL, false);
   g_sub_cmd_map["-part"] = CmdInfo(CMD_PART, false);
+  g_sub_cmd_map["-monitor"] = CmdInfo(CMD_FOR_MONITOR, false);
   g_sub_cmd_map["-count"] = CmdInfo(CMD_COUNT, true);
   g_sub_cmd_map["-interval"] = CmdInfo(CMD_INTERVAL, true);
 
@@ -330,6 +342,7 @@ void init()
   g_sub_cmd_map["-s"] = CmdInfo(CMD_SERVER_LIST, false);
   g_sub_cmd_map["-a"] = CmdInfo(CMD_ALL, false);
   g_sub_cmd_map["-p"] = CmdInfo(CMD_PART, false);
+  g_sub_cmd_map["-f"] = CmdInfo(CMD_FOR_MONITOR, false);
   g_sub_cmd_map["-c"] = CmdInfo(CMD_COUNT, true);
   g_sub_cmd_map["-i"] = CmdInfo(CMD_INTERVAL, true);
   g_sub_cmd_map[">"] = CmdInfo(CMD_REDIRECT, true);
@@ -355,9 +368,10 @@ void print_help()
         "  -c execute times, optional.\n"
         "  -i interval time, optional.\n"
         "  > redirect to file, optional.\n");
-    fprintf(stderr, "machine [-a] [-p] [-c] [-i] [> filename]   show machine info.\n"
+    fprintf(stderr, "machine [-a] [-p] [-f] [-c] [-i] [> filename]   show machine info.\n"
         "  -a print all info, optional.\n"
         "  -p print part of infos, optional.\n"
+        "  -f print stat of certain infos, for monitor, optional.\n"
         "  -c execute times, optional.\n"
         "  -i interval\n"
         "  > redirect to file, optional.\n");
@@ -403,7 +417,7 @@ int cmd_show_block(VSTRING& param)
   {
     if (!g_need_cmp)
     {
-      g_show_info.show_block(ret_param.type_, ret_param.num_, ret_param.block_id_, ret_param.count_, ret_param.interval_, ret_param.filename_);
+      g_show_info.show_block(ret_param.type_, ret_param.num_, ret_param.block_id_, ret_param.block_chunk_num_, ret_param.count_, ret_param.interval_, ret_param.filename_);
     }
     else
     {
