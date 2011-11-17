@@ -124,7 +124,7 @@ namespace tfs
               if (common::TFS_SUCCESS != iret)
                 break;
               else
-                index_.push_back(tmp); 
+                index_.push_back(tmp);
             }
           }
           else
@@ -138,7 +138,7 @@ namespace tfs
               if (common::TFS_SUCCESS == iret)
               {
                 input.drain(status.length());
-                monitor_status_.push_back(status);         
+                monitor_status_.push_back(status);
               }
               else
               {
@@ -151,7 +151,7 @@ namespace tfs
       return iret;
     }
 
-    int AdminCmdMessage::serialize(common::Stream& output) const 
+    int AdminCmdMessage::serialize(common::Stream& output) const
     {
       int32_t iret= output.set_int32(type_);
       if (common::TFS_SUCCESS == iret)
@@ -172,10 +172,10 @@ namespace tfs
           }
           else
           {
-            int64_t pos = 0;
             std::vector<MonitorStatus>::const_iterator iter = monitor_status_.begin();
             for (; iter != monitor_status_.end(); ++iter)
             {
+              int64_t pos = 0;
               iret = (*iter).serialize(output.get_free(), output.get_free_length(), pos);
               if (common::TFS_SUCCESS == iret)
                 output.pour((*iter).length());
@@ -202,7 +202,7 @@ namespace tfs
       else
       {
         MonitorStatus st;
-        size += st.length() * monitor_status_.size(); 
+        size += st.length() * monitor_status_.size();
       }
       return size;
     }
