@@ -29,6 +29,7 @@
 #include "common/lock.h"
 #include "common/internal.h"
 #include "common/base_service.h"
+#include "message/message_factory.h"
 
 namespace tfs
 {
@@ -52,7 +53,7 @@ public:
   virtual ~MockDataService();
 
   /** application parse args*/
-  virtual int parse_common_line_args(int argc, char* argv[]);
+  virtual int parse_common_line_args(int argc, char* argv[], std::string& errmsg);
 
   /** get listen port*/
   virtual int get_listen_port() const ;
@@ -82,7 +83,7 @@ public:
   /** create the packet streamer, this is used to create packet*/
   virtual common::BasePacketFactory* create_packet_factory()
   {
-    return new common::BasePacketFactory();
+    return new message::MessageFactory();
   }
 
   /** destroy packet factory*/
@@ -122,7 +123,6 @@ private:
   common::HasBlockFlag need_send_block_to_ns_;
   int32_t MAX_WRITE_FILE_SIZE;
 
-  std::string log_file_path_;
   std::string server_index_;
 };
 

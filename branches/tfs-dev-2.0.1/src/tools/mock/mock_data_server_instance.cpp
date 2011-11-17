@@ -14,20 +14,25 @@
  *
  */
 
+#include "mock_data_server_instance.h"
+
 #include <tbsys.h>
 
 #include "common/status_message.h"
 #include "common/config_item.h"
 #include "common/client_manager.h"
 
-#include "message/message_factory.h"
-
-#include "mock_data_server_instance.h"
-
 using namespace tbsys;
 using namespace tfs::mock;
 using namespace tfs::message;
 using namespace tfs::common;
+namespace
+{
+  std::string get_ns_ip_addr()
+  {
+    return TBSYS_CONFIG.getString(CONF_SN_MOCK_DATASERVER, "ns_vip", "");
+  }
+}
 static FileInfo gfile_info;
 static const int8_t BUF_LEN = 32;
 static char BUF[BUF_LEN] = {'1'};
@@ -51,10 +56,10 @@ MockDataService::~MockDataService()
 
 }
 
-int MockDataService::parse_common_line_args(int argc, char* argv[])
+int MockDataService::parse_common_line_args(int argc, char* argv[], std::string& errmsg)
 {
   int32_t i = 0;
-  while ((i = getopt(argc, argv, "l:")) != EOF)
+  while ((i = getopt(argc, argv, "l:c:")) != EOF)
   {
     switch (i)
     {
@@ -65,11 +70,15 @@ int MockDataService::parse_common_line_args(int argc, char* argv[])
         information_.total_capacity_ = atoi(optarg);
         break;
       default:
-        TBSYS_LOG(ERROR, "%s", "invalid parameter");
         break;
     }
   }
-  return server_index_.empty() && information_.total_capacity_ > 0 ? TFS_ERROR : TFS_SUCCESS;
+  int ret = server_index_.empty() && information_.total_capacity_ > 0 ? TFS_ERROR : TFS_SUCCESS;
+  if (ret != TFS_SUCCESS)
+  {
+    errmsg = "use -i index -c capacity";
+  }
+  return ret;
 }
 
 int32_t MockDataService::get_listen_port() const
@@ -91,13 +100,14 @@ const char* MockDataService::get_log_file_path()
   if (work_dir != NULL)
   {
     log_file_path_ = work_dir;
-    log_file_path_ += "/logs/moc_dataserver_"+server_index_;
+    log_file_path_ += "/logs/mock_dataserver_";
+    log_file_path_ += server_index_;
     log_file_path_ += ".log";
     log_file_path = log_file_path_.c_str();
   }
   return log_file_path;
 }
- 
+
 
 int MockDataService::keepalive()
 {
@@ -206,7 +216,7 @@ int MockDataService::initialize(int argc, char* argv[])
   int32_t iret = get_ns_port() > 0 ? TFS_SUCCESS : TFS_ERROR;
   if (TFS_SUCCESS == iret)
   {
-    ns_ip_port_ = tbsys::CNetUtil::strToAddr(get_ip_addr(), get_ns_port());
+    ns_ip_port_ = tbsys::CNetUtil::strToAddr(get_ns_ip_addr().c_str(), get_ns_port());
 
     IpAddr* adr = reinterpret_cast<IpAddr*>(&information_.id_);
     adr->ip_ = Func::get_local_addr(get_dev());
@@ -410,7 +420,7 @@ int MockDataService::create_file_number(common::BasePacket* msg)
     if (iter == blocks_.end())
     {
       TBSYS_LOG(DEBUG, "create file number failed, blockid : %u", block_id);
-      iret = message->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), iret, 
+      iret = message->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), iret,
             "create file failed. blockid: %u, fileid: %" PRI64_PREFIX "u.", block_id, file_id);
     }
     else
@@ -571,7 +581,3 @@ int ns_async_callback(NewClient* client)
   }
   return iret;
 }
-
-
-
-
