@@ -23,7 +23,7 @@
 #include "config_item.h"
 #include "directory_op.h"
 
-namespace tfs 
+namespace tfs
 {
   namespace common
   {
@@ -147,7 +147,7 @@ static const char _g_build_description[] = "unknown";
         std::cerr << "load config error config file is " << config_file_ << std::endl;
         iret = TFS_ERROR;
       }
-      
+
       //initilaize work dir
       if (TFS_SUCCESS == iret)
       {
@@ -238,7 +238,7 @@ static const char _g_build_description[] = "unknown";
     int BaseMain::handle_interrupt(int32_t sig)
     {
       TBSYS_LOG(INFO, "receive sig: %d", sig);
-      switch (sig) 
+      switch (sig)
       {
         case SIGHUP:
           break;
@@ -251,11 +251,11 @@ static const char _g_build_description[] = "unknown";
           break;
         case 41:
         case 42:
-          if(sig == 41) 
+          if(sig == 41)
           {
             TBSYS_LOGGER._level++;
           }
-          else 
+          else
           {
             TBSYS_LOGGER._level--;
           }
@@ -361,8 +361,8 @@ static const char _g_build_description[] = "unknown";
           }
           log_path += std::string::npos == pos || name.empty() ? "base_service" : name;
           log_path += ".log";
-          log_file_path_ = log_path;
         }
+        log_file_path_ = log_path;
 
         if (0 == access(log_path.c_str(), R_OK))
         {
@@ -412,8 +412,8 @@ static const char _g_build_description[] = "unknown";
           }
           pid_path += std::string::npos == pos || name.empty() ? "base_main" : name;
           pid_path += ".pid";
-          pid_file_path_ = pid_path;
         }
+        pid_file_path_ = pid_path;
 
         if (0 != access(pid_path.c_str(), R_OK))
         {
