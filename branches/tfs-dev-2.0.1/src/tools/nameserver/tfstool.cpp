@@ -37,7 +37,7 @@
 #include "tools/util/ds_lib.h"
 #include "new_client/fsname.h"
 #include "new_client/tfs_client_impl.h"
-#include "new_client/tfs_meta_client_api_impl.h"
+#include "new_client/tfs_rc_client_api_impl.h"
 
 using namespace std;
 using namespace tfs::client;
@@ -47,6 +47,12 @@ using namespace tfs::tools;
 
 static TfsClientImpl* g_tfs_client = NULL;
 static STR_FUNC_MAP g_cmd_map;
+static int64_t app_id = 1;
+static int64_t uid = 1234;
+static const char* dev_name = "bond0";
+static const char* app_ip = tbsys::CNetUtil::addrToString(static_cast<uint64_t>(tbsys::CNetUtil::getLocalAddr(dev_name))).c_str();
+static const char* default_app_key = "tfscom";
+char app_key[256];
 
 #ifdef _WITH_READ_LINE
 #include "readline/readline.h"
@@ -120,16 +126,20 @@ int cmd_list_block(const VSTRING& param);
 int cmd_ls_dir_meta(const VSTRING& param);
 int cmd_ls_file_meta(const VSTRING& param);
 int cmd_create_dir_meta(const VSTRING& param);
+int cmd_create_file_meta(const VSTRING& param);
 int cmd_rm_dir_meta(const VSTRING& param);
+int cmd_rm_file_meta(const VSTRING& param);
 int cmd_put_file_meta(const VSTRING& param);
 int cmd_get_file_meta(const VSTRING& param);
 
-const char* rs_addr = NULL;
+const char* rc_addr = NULL;
 const char* nsip = NULL;
+bool g_use_meta = false;
 
 int main(int argc, char* argv[])
 {
   int32_t i;
+  int ret = TFS_SUCCESS;
   bool directly = false;
   bool set_log_level = false;
 
@@ -145,7 +155,7 @@ int main(int argc, char* argv[])
         nsip = optarg;
         break;
       case 'r':
-        rs_addr = optarg;
+        rc_addr = optarg;
         break;
       case 'i':
         directly = true;
@@ -162,20 +172,29 @@ int main(int argc, char* argv[])
     TBSYS_LOGGER.setLogLevel("ERROR");
   }
 
-  if (NULL == nsip && NULL == rs_addr)
+  if (NULL == nsip && NULL == rc_addr)
   {
     usage(argv[0]);
     return TFS_ERROR;
   }
 
-  g_tfs_client = TfsClientImpl::Instance();
-  int ret = g_tfs_client->initialize(nsip, DEFAULT_BLOCK_CACHE_TIME, 1000, false);
-
-  if (ret != TFS_SUCCESS)
+  if (nsip != NULL)
   {
-    fprintf(stderr, "init tfs client fail, ret: %d\n", ret);
-    return ret;
+    g_tfs_client = TfsClientImpl::Instance();
+    ret = g_tfs_client->initialize(nsip, DEFAULT_BLOCK_CACHE_TIME, 1000, false);
+    if (ret != TFS_SUCCESS)
+    {
+      fprintf(stderr, "init tfs client fail, ret: %d\n", ret);
+      return ret;
+    }
+    g_use_meta = false;
   }
+  else if (rc_addr != NULL)
+  {
+    strcpy(app_key, default_app_key);
+    g_use_meta = true;
+  }
+
 
   init();
 
@@ -206,19 +225,24 @@ int main(int argc, char* argv[])
       }
     }
   }
+  if (g_tfs_client != NULL)
+  {
+    g_tfs_client->destroy();
+  }
   return TFS_SUCCESS;
 }
 
 static void usage(const char* name)
 {
   fprintf(stderr,
-          "Usage: %s -s [-n] [-r] [-i] [-h]\n"
+          "Usage: a) %s -s nsip [-n] [-i] [-h] raw tfs client interface(without rc). \n"
+          "       b) %s -r rcip [-n] [-i] [-h] name meta client interface(with rc). \n"
           "       -s nameserver ip port\n"
-          "       -r rootserver ip port\n"
+          "       -r rcserver ip port\n"
           "       -n set log level\n"
           "       -i directly execute the command\n"
           "       -h help\n",
-          name);
+          name, name);
 }
 
 static void sign_handler(const int32_t sig)
@@ -237,40 +261,49 @@ void init()
   g_cmd_map["help"] = CmdNode("help", "show help info", 0, 0, cmd_show_help);
   g_cmd_map["quit"] = CmdNode("quit", "quit", 0, 0, cmd_quit);
   g_cmd_map["exit"] = CmdNode("exit", "exit", 0, 0, cmd_quit);
-  g_cmd_map["cd"] = CmdNode("cd [directory]", "change work directory", 0, 1, cmd_cd);
-  g_cmd_map["ls"] = CmdNode("ls [directory]", "list directory content", 0, 1, cmd_ls);
-  g_cmd_map["pwd"] = CmdNode("pwd", "print current directory", 0, 0, cmd_pwd);
-  g_cmd_map["put"] = CmdNode("put localfile [tfsname [suffix] [force]]", "put file to tfs", 1, 4, cmd_put_file);
-  g_cmd_map["uput"] = CmdNode("uput localfile [tfsname [suffix] [force]]", "unique put file to tfs", 1, 4, cmd_uput_file);
-  // put large file not support update now
-  g_cmd_map["putl"] = CmdNode("putl localfile [suffix]", "put file to tfs large file", 1, 2, cmd_put_large_file);
-  g_cmd_map["get"] = CmdNode("get tfsname localfile", "get file from tfs", 2, 2, cmd_get_file);
-  g_cmd_map["rm"] = CmdNode("rm tfsname", "remove tfs file", 1, 1, cmd_remove_file);
-  g_cmd_map["urm"] = CmdNode("urm tfsname", "unique remove tfs file", 1, 1, cmd_uremove_file);
-  g_cmd_map["undel"] = CmdNode("undel tfsname", "undelete tfs file", 1, 1, cmd_undel_file);
-  g_cmd_map["hide"] = CmdNode("hide tfsname [action]", "hide tfs file", 1, 2, cmd_hide_file);
-  g_cmd_map["rename"] = CmdNode("rename tfsname newsuffix", "rename tfs file to new suffix", 2, 2, cmd_rename_file);
-  g_cmd_map["stat"] = CmdNode("stat tfsname", "stat tfs file", 1, 1, cmd_stat_file);
-  g_cmd_map["statblk"] = CmdNode("statblk blockid serverip:port", "stat a block", 2, 2, cmd_stat_blk);
-  g_cmd_map["vcblk"] = CmdNode("vcblk serverip:port count", "visit count block", 2, 2, cmd_visit_count_blk);
-  g_cmd_map["lsf"] = CmdNode("lsf blockid serverip:port [detail]", "list file list in block", 2, 3, cmd_list_file_info);
-  g_cmd_map["listblock"] = CmdNode("listblock blockid", "list block server list", 1, 1, cmd_list_block);
-  g_cmd_map["cfi"] = CmdNode("cfi tfsname", "check file info", 1, 1, cmd_check_file_info);
   g_cmd_map["@"] = CmdNode("@ file", "batch run command in file", 1, 1, cmd_batch_file);
   g_cmd_map["batch"] = CmdNode("batch file", "batch run command in file", 1, 1, cmd_batch_file);
-
-  g_cmd_map["ls_dir_meta"] = CmdNode("ls_dir_meta app_id uid full_path_dir_name",
-      "ls files and dirs in full_path_dir_name", 3, 3, cmd_ls_dir_meta);
-  g_cmd_map["ls_file_meta"] = CmdNode("ls_file_meta app_id uid full_path_file_name",
-      "ls file info and frag infos of full_path_file_name", 3, 3, cmd_ls_file_meta);
-  g_cmd_map["create_dir_meta"] = CmdNode("create_dir_meta app_id uid full_path_dir_name",
-      "create full_path_dir_name", 3, 3, cmd_create_dir_meta);
-  g_cmd_map["rm_dir_meta"] = CmdNode("rm_dir_meta app_id uid full_path_dir_name",
-      "rm full_path_dir_name", 3, 3, cmd_rm_dir_meta);
-  g_cmd_map["put_meta"] = CmdNode("put_meta app_id uid localfile remotefile",
-      "put localfile to remotefile", 4, 4, cmd_put_file_meta);
-  g_cmd_map["get_meta"] = CmdNode("get_meta app_id uid remotefile localfile",
-      "get remotefile to localfile", 4, 4, cmd_get_file_meta);
+  if (!g_use_meta)
+  {
+    g_cmd_map["cd"] = CmdNode("cd [directory]", "change work directory", 0, 1, cmd_cd);
+    g_cmd_map["ls"] = CmdNode("ls [directory]", "list directory content", 0, 1, cmd_ls);
+    g_cmd_map["pwd"] = CmdNode("pwd", "print current directory", 0, 0, cmd_pwd);
+    g_cmd_map["put"] = CmdNode("put localfile [tfsname [suffix] [force]]", "put file to tfs", 1, 4, cmd_put_file);
+    g_cmd_map["uput"] = CmdNode("uput localfile [tfsname [suffix] [force]]", "unique put file to tfs", 1, 4, cmd_uput_file);
+    // put large file not support update now
+    g_cmd_map["putl"] = CmdNode("putl localfile [suffix]", "put file to tfs large file", 1, 2, cmd_put_large_file);
+    g_cmd_map["get"] = CmdNode("get tfsname localfile", "get file from tfs", 2, 2, cmd_get_file);
+    g_cmd_map["rm"] = CmdNode("rm tfsname", "remove tfs file", 1, 1, cmd_remove_file);
+    g_cmd_map["urm"] = CmdNode("urm tfsname", "unique remove tfs file", 1, 1, cmd_uremove_file);
+    g_cmd_map["undel"] = CmdNode("undel tfsname", "undelete tfs file", 1, 1, cmd_undel_file);
+    g_cmd_map["hide"] = CmdNode("hide tfsname [action]", "hide tfs file", 1, 2, cmd_hide_file);
+    g_cmd_map["rename"] = CmdNode("rename tfsname newsuffix", "rename tfs file to new suffix", 2, 2, cmd_rename_file);
+    g_cmd_map["stat"] = CmdNode("stat tfsname", "stat tfs file", 1, 1, cmd_stat_file);
+    g_cmd_map["statblk"] = CmdNode("statblk blockid serverip:port", "stat a block", 2, 2, cmd_stat_blk);
+    g_cmd_map["vcblk"] = CmdNode("vcblk serverip:port count", "visit count block", 2, 2, cmd_visit_count_blk);
+    g_cmd_map["lsf"] = CmdNode("lsf blockid serverip:port [detail]", "list file list in block", 2, 3, cmd_list_file_info);
+    g_cmd_map["listblock"] = CmdNode("listblock blockid", "list block server list", 1, 1, cmd_list_block);
+    g_cmd_map["cfi"] = CmdNode("cfi tfsname", "check file info", 1, 1, cmd_check_file_info);
+  }
+  else
+  {
+    g_cmd_map["ls_dir_meta"] = CmdNode("ls_dir_meta full_path_dir_name [ app_key app_id uid ], optional param should be in order",
+        "ls files and dirs in full_path_dir_name", 1, 4, cmd_ls_dir_meta);
+    g_cmd_map["ls_file_meta"] = CmdNode("ls_file_meta full_path_file_name [ app_key app_id uid ], optional param should be in order",
+        "ls file info and frag infos of full_path_file_name", 1, 4, cmd_ls_file_meta);
+    g_cmd_map["create_dir_meta"] = CmdNode("create_dir_meta full_path_dir_name [ app_key uid ], optional param should be in order",
+        "create full_path_dir_name", 1, 3, cmd_create_dir_meta);
+    g_cmd_map["create_file_meta"] = CmdNode("create_file_meta full_path_file_name [ app_key uid ], optional param should be in order",
+        "create full_path_file_name", 1, 3, cmd_create_file_meta);
+    g_cmd_map["rm_dir_meta"] = CmdNode("rm_dir_meta full_path_dir_name [ app_key uid ], optional param should be in order",
+        "rm full_path_dir_name", 1, 3, cmd_rm_dir_meta);
+    g_cmd_map["rm_file_meta"] = CmdNode("rm_file_meta full_path_file_name [ app_key uid ], optional param should be in order",
+        "rm full_path_file_name", 1, 3, cmd_rm_file_meta);
+    g_cmd_map["put_meta"] = CmdNode("put_meta localfile remotefile [ app_key app_id uid ], optional param should be in order",
+        "put localfile to remotefile", 2, 5, cmd_put_file_meta);
+    g_cmd_map["get_meta"] = CmdNode("get_meta remotefile localfile [ app_key app_id uid ], optional param should be in order",
+        "get remotefile to localfile", 2, 5, cmd_get_file_meta);
+  }
 }
 
 int main_loop()
@@ -297,8 +330,7 @@ int main_loop()
     }
     ret = do_cmd(cmd_line);
 #ifdef _WITH_READ_LINE
-    delete cmd_line;
-    cmd_line = NULL;
+    free(cmd_line);
 #endif
     if (TFS_CLIENT_QUIT == ret)
     {
@@ -850,26 +882,45 @@ int cmd_check_file_info(const VSTRING& param)
 int cmd_ls_dir_meta(const VSTRING& param)
 {
   int ret = TFS_SUCCESS;
-  NameMetaClientImpl impl;
-  int64_t app_id = strtoll(param[0].c_str(), NULL, 10);
-  int64_t uid = strtoll(param[1].c_str(), NULL, 10);
-  ret = impl.initialize(rs_addr);
-
-  std::vector<FileMetaInfo> meta_info;
-  std::vector<FileMetaInfo>::const_iterator it;
-  if (TFS_SUCCESS == ret)
+  const char* dir_path = expand_path(const_cast<string&>(param[0]));
+  int size = param.size();
+  TBSYS_LOG(DEBUG, "size: %d", size);
+  if (size > 1)
   {
-    ret = impl.ls_dir(app_id, uid, param[2].c_str(), meta_info);
+    TBSYS_LOG(DEBUG, "appkey: %s", param[1].c_str());
+    strcpy(app_key, param[1].c_str());
   }
-  if (TFS_SUCCESS == ret)
+  if (size > 2)
   {
-    for (it = meta_info.begin(); it != meta_info.end(); it++)
+    app_id = strtoll(param[2].c_str(), NULL, 10);
+  }
+  if (size > 3)
+  {
+    uid = strtoll(param[3].c_str(), NULL, 10);
+  }
+
+  RcClientImpl impl;
+  ret = impl.initialize(rc_addr, app_key, app_ip);
+
+  if (TFS_SUCCESS != ret)
+  {
+    TBSYS_LOG(DEBUG, "meta client init failed, ret: %d", ret);
+  }
+  else
+  {
+    std::vector<FileMetaInfo> meta_info;
+    std::vector<FileMetaInfo>::const_iterator it;
+    ret = impl.ls_dir(app_id, uid, dir_path, meta_info);
+    if (TFS_SUCCESS == ret)
     {
-      if (it->name_.size() > 0)
-        fprintf(stdout, "name:%s\n", it->name_.data());
-      fprintf(stdout, "pid %"PRI64_PREFIX"d id %"PRI64_PREFIX
-          "d create_time %d modify_time %d size %"PRI64_PREFIX"d ver_no %d\n",
-          it->pid_, it->id_, it->create_time_, it->modify_time_, it->size_, it->ver_no_);
+      for (it = meta_info.begin(); it != meta_info.end(); it++)
+      {
+        if (it->name_.size() > 0)
+          fprintf(stdout, "name:%s\n", it->name_.data());
+        fprintf(stdout, "pid %"PRI64_PREFIX"d id %"PRI64_PREFIX
+            "d create_time %d modify_time %d size %"PRI64_PREFIX"d ver_no %d\n",
+            it->pid_, it->id_, it->create_time_, it->modify_time_, it->size_, it->ver_no_);
+      }
     }
   }
   return ret;
@@ -877,99 +928,329 @@ int cmd_ls_dir_meta(const VSTRING& param)
 int cmd_ls_file_meta(const VSTRING& param)
 {
   int ret = TFS_SUCCESS;
-  NameMetaClientImpl impl;
-  int64_t app_id = strtoll(param[0].c_str(), NULL, 10);
-  int64_t uid = strtoll(param[1].c_str(), NULL, 10);
-  ret = impl.initialize(rs_addr);
-  FileMetaInfo file_info;
-  ret = impl.ls_file(app_id, uid, param[2].c_str(), file_info);
-  if (TFS_SUCCESS == ret)
+  if (!g_use_meta)
   {
-    if (file_info.name_.size() > 0)
-      fprintf(stdout, "name:%s\n", file_info.name_.data());
-    fprintf(stdout, "pid %"PRI64_PREFIX"d id %"PRI64_PREFIX
-        "d create_time %d modify_time %d size %"PRI64_PREFIX"d ver_no %d\n",
-        file_info.pid_, file_info.id_, file_info.create_time_,
-        file_info.modify_time_, file_info.size_, file_info.ver_no_);
-    FragInfo fraginfo;
-    ret = impl.read_frag_info(app_id, uid, param[2].c_str(), fraginfo);
-    if (TFS_SUCCESS == ret)
+    TBSYS_LOG(WARN, "sorry, this commond is for name meta!!!");
+  }
+  else
+  {
+    const char* file_path = expand_path(const_cast<string&>(param[0]));
+    int size = param.size();
+    if (size > 1)
     {
-      fraginfo.dump();
+      strcpy(app_key, param[1].c_str());
+    }
+    if (size > 2)
+    {
+      app_id = strtoll(param[2].c_str(), NULL, 10);
+    }
+    if (size > 3)
+    {
+      uid = strtoll(param[3].c_str(), NULL, 10);
+    }
+
+    RcClientImpl impl;
+    ret = impl.initialize(rc_addr, app_key, app_ip);
+
+    if (TFS_SUCCESS != ret)
+    {
+      TBSYS_LOG(DEBUG, "meta client init failed, ret: %d", ret);
+    }
+    else
+    {
+      FileMetaInfo file_info;
+      ret = impl.ls_file(app_id, uid, file_path, file_info);
+      if (TFS_SUCCESS == ret)
+      {
+        if (file_info.name_.size() > 0)
+          fprintf(stdout, "name:%s\n", file_info.name_.data());
+        fprintf(stdout, "pid %"PRI64_PREFIX"d id %"PRI64_PREFIX
+            "d create_time %d modify_time %d size %"PRI64_PREFIX"d ver_no %d\n",
+            file_info.pid_, file_info.id_, file_info.create_time_,
+            file_info.modify_time_, file_info.size_, file_info.ver_no_);
+      }
     }
   }
   return ret;
 }
+
 int cmd_create_dir_meta(const VSTRING& param)
 {
   int ret = TFS_SUCCESS;
-  NameMetaClientImpl impl;
-  int64_t app_id = strtoll(param[0].c_str(), NULL, 10);
-  int64_t uid = strtoll(param[1].c_str(), NULL, 10);
-  ret = impl.initialize(rs_addr);
-  if (TFS_SUCCESS == ret)
+  const char* dir_path = expand_path(const_cast<string&>(param[0]));
+  int size = param.size();
+  if (size > 1)
   {
-    ret = impl.create_dir(app_id, uid, param[2].c_str());
+    strcpy(app_key, param[1].c_str());
+  }
+  if (size > 2)
+  {
+    uid = strtoll(param[2].c_str(), NULL, 10);
+  }
+
+  RcClientImpl impl;
+  ret = impl.initialize(rc_addr, app_key, app_ip);
+
+  if (TFS_SUCCESS != ret)
+  {
+    TBSYS_LOG(DEBUG, "meta client init failed, ret: %d", ret);
+  }
+  else
+  {
+    ret = impl.create_dir(uid, dir_path);
   }
   return ret;
 }
+
+int cmd_create_file_meta(const VSTRING& param)
+{
+  int ret = TFS_SUCCESS;
+  const char* file_path = expand_path(const_cast<string&>(param[0]));
+  int size = param.size();
+  if (size > 1)
+  {
+    strcpy(app_key, param[1].c_str());
+  }
+  if (size > 2)
+  {
+    uid = strtoll(param[2].c_str(), NULL, 10);
+  }
+
+  RcClientImpl impl;
+  ret = impl.initialize(rc_addr, app_key, app_ip);
+
+  if (TFS_SUCCESS != ret)
+  {
+    TBSYS_LOG(DEBUG, "meta client init failed, ret: %d", ret);
+  }
+  else
+  {
+    ret = impl.create_file(uid, file_path);
+  }
+  return ret;
+}
+
 int cmd_rm_dir_meta(const VSTRING& param)
 {
   int ret = TFS_SUCCESS;
-  NameMetaClientImpl impl;
-  int64_t app_id = strtoll(param[0].c_str(), NULL, 10);
-  int64_t uid = strtoll(param[1].c_str(), NULL, 10);
-  ret = impl.initialize(rs_addr);
-  if (TFS_SUCCESS == ret)
+  const char* dir_path = expand_path(const_cast<string&>(param[0]));
+  int size = param.size();
+  if (size > 1)
   {
-    ret = impl.rm_dir(app_id, uid, param[2].c_str());
+    strcpy(app_key, param[1].c_str());
+  }
+  if (size > 2)
+  {
+    uid = strtoll(param[2].c_str(), NULL, 10);
+  }
+
+  RcClientImpl impl;
+  ret = impl.initialize(rc_addr, app_key, app_ip);
+
+  if (TFS_SUCCESS != ret)
+  {
+    TBSYS_LOG(DEBUG, "meta client init failed, ret: %d", ret);
+  }
+  else
+  {
+    ret = impl.rm_dir(uid, dir_path);
   }
 
   return ret;
 }
-int cmd_put_file_meta(const VSTRING& param)
-{
-  const char* local_file = expand_path(const_cast<string&>(param[2]));
-  const char* remote_file = expand_path(const_cast<string&>(param[3]));
-  int ret = TFS_ERROR;
-  struct stat stat_buf;  
-  ret = stat(local_file, &stat_buf);
-  if (TFS_SUCCESS == ret)
-  {
-    NameMetaClientImpl impl;
-    int64_t app_id = strtoll(param[0].c_str(), NULL, 10);
-    int64_t uid = strtoll(param[1].c_str(), NULL, 10);
-    ret = impl.initialize(rs_addr);
 
-    if (TFS_SUCCESS == ret)
-    {
-      ret = impl.save_file(nsip, app_id, uid, local_file, remote_file);
-    }
-     
-    ret = ret == stat_buf.st_size ? TFS_SUCCESS : TFS_ERROR;
+int cmd_rm_file_meta(const VSTRING& param)
+{
+  int ret = TFS_SUCCESS;
+  const char* file_path = expand_path(const_cast<string&>(param[0]));
+  int size = param.size();
+  if (size > 1)
+  {
+    strcpy(app_key, param[1].c_str());
+  }
+  if (size > 2)
+  {
+    uid = strtoll(param[2].c_str(), NULL, 10);
   }
 
-  ToolUtil::print_info(ret, "put %s => %s", local_file, remote_file);
+  RcClientImpl impl;
+  ret = impl.initialize(rc_addr, app_key, app_ip);
+
+  if (TFS_SUCCESS != ret)
+  {
+    TBSYS_LOG(DEBUG, "meta client init failed, ret: %d", ret);
+  }
+  else
+  {
+    ret = impl.rm_file(uid, file_path);
+  }
+
+  return ret;
+}
+
+int cmd_put_file_meta(const VSTRING& param)
+{
+  int ret = TFS_SUCCESS;
+  const char* local_file = expand_path(const_cast<string&>(param[0]));
+  const char* file_path = expand_path(const_cast<string&>(param[1]));
+  int size = param.size();
+  if (size > 2)
+  {
+    strcpy(app_key, param[2].c_str());
+  }
+  if (size > 3)
+  {
+    app_id = strtoll(param[3].c_str(), NULL, 10);
+  }
+  if (size > 4)
+  {
+    uid = strtoll(param[4].c_str(), NULL, 10);
+  }
+
+  RcClientImpl impl;
+  ret = impl.initialize(rc_addr, app_key, app_ip);
+
+  if (TFS_SUCCESS != ret)
+  {
+    TBSYS_LOG(DEBUG, "meta client init failed, ret: %d", ret);
+  }
+  else
+  {
+    FILE* fp=fopen(local_file,"r");
+    if(fp == NULL)
+    {
+      TBSYS_LOG(WARN, "open local file failed. local_file: %s, ret: %d", local_file, fp);
+      ret = TFS_ERROR;
+    }
+    else
+    {
+      // create file if not exist
+      FileMetaInfo file_meta_info;
+      ret = impl.ls_file(app_id, uid, file_path, file_meta_info);
+      if (ret != TFS_SUCCESS)
+      {
+        ret = impl.create_file(uid, file_path);
+      }
+
+      if (ret != TFS_SUCCESS)
+      {
+        TBSYS_LOG(DEBUG, "create file failed. file_path: %s, ret: %d", file_path, ret);
+      }
+      else
+      {
+        int fd = impl.open(app_id, uid, file_path, RcClient::WRITE);
+        if (fd < 0)
+        {
+          TBSYS_LOG(WARN, "open file path failed. file_path: %s, ret: %d", file_path, fd);
+          ret = TFS_ERROR;
+        }
+        else
+        {
+          int64_t offset = 0;
+          char buffer[MAX_READ_SIZE];
+          while (true)
+          {
+            int rlen = fread(buffer,sizeof(char),MAX_READ_SIZE,fp);
+            if (rlen <= 0)
+            {
+              break;
+            }
+
+            int64_t wlen = impl.pwrite(fd, buffer, rlen, offset);
+            if (wlen != rlen)
+            {
+              TBSYS_LOG(ERROR, "write meta data failed. expect len: %"PRI64_PREFIX"d, return len: %"PRI64_PREFIX"d", rlen, wlen);
+              ret = TFS_ERROR;
+              break;
+            }
+            offset = -1;
+            if (rlen < MAX_READ_SIZE)
+            {
+              break;
+            }
+          }
+          impl.close(fd);
+        }
+      }
+      fclose(fp);
+    }
+  }
+
+  ToolUtil::print_info(ret, "put %s => %s", local_file, file_path);
   return ret;
 }
 int cmd_get_file_meta(const VSTRING& param)
 {
-  const char* remote_file = expand_path(const_cast<string&>(param[2]));
-  const char* local_file = expand_path(const_cast<string&>(param[3]));
-  int ret = TFS_ERROR;
-  NameMetaClientImpl impl;
-  int64_t app_id = strtoll(param[0].c_str(), NULL, 10);
-  int64_t uid = strtoll(param[1].c_str(), NULL, 10);
-  ret = impl.initialize(rs_addr);
-
-  if (TFS_SUCCESS == ret)
+  int ret = TFS_SUCCESS;
+  const char* local_file = expand_path(const_cast<string&>(param[1]));
+  const char* file_path = expand_path(const_cast<string&>(param[0]));
+  int size = param.size();
+  if (size > 2)
   {
-    ret = impl.fetch_file(nsip, app_id, uid, local_file, remote_file);
+    strcpy(app_key, param[2].c_str());
   }
-  fprintf(stderr, "%d\n", ret);
-   
-  ret = (ret >= 0 && TFS_ERROR != ret) ? TFS_SUCCESS : TFS_ERROR;
+  if (size > 3)
+  {
+    app_id = strtoll(param[3].c_str(), NULL, 10);
+  }
+  if (size > 4)
+  {
+    uid = strtoll(param[4].c_str(), NULL, 10);
+  }
 
-  ToolUtil::print_info(ret, "get %s => %s", remote_file, local_file);
+  RcClientImpl impl;
+  ret = impl.initialize(rc_addr, app_key, app_ip);
+
+  if (TFS_SUCCESS != ret)
+  {
+    TBSYS_LOG(DEBUG, "meta client init failed, ret: %d", ret);
+  }
+  else
+  {
+    int fd = impl.open(app_id, uid, file_path, RcClient::READ);
+    if (fd < 0)
+    {
+      TBSYS_LOG(WARN, "open file path failed. file_path: %s, ret: %d", file_path, fd);
+      ret = TFS_ERROR;
+    }
+    else
+    {
+      FILE* fp=fopen(local_file,"w+b");
+      if(fp == NULL)
+      {
+        TBSYS_LOG(WARN, "open local file failed. local_file: %s, ret: %d", local_file, fp);
+        ret = TFS_ERROR;
+      }
+      else
+      {
+        int64_t offset = 0;
+        char buffer[MAX_READ_SIZE];
+        while (true)
+        {
+          int64_t rlen = impl.pread(fd, buffer, MAX_READ_SIZE, offset);
+          if (rlen <= 0)
+          {
+            break;
+          }
+
+          offset += rlen;
+          int wlen = fwrite(buffer,sizeof(char),rlen,fp);
+          if (wlen != rlen)
+          {
+            TBSYS_LOG(ERROR, "write to local file error, expect len: %d, return len: %d", rlen, wlen);
+            ret= TFS_ERROR;
+            break;
+          }
+          if (rlen < MAX_READ_SIZE)
+          {
+            break;
+          }
+        }
+        fclose(fp);
+      }
+      impl.close(fd);
+    }
+  }
+  ToolUtil::print_info(ret, "get %s => %s", file_path, local_file);
   return ret;
 }
