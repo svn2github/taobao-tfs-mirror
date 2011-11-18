@@ -20,14 +20,6 @@
     <property name="useNameMeta">
       <value>true</value>
     </property>
-    <!-- 使用自定义目录文件名功能时，rootServer地址列表-->
-    <!-- (TODO: 此配置为临时配置项,。-->
-    <!-- Rootserver地址会从RcServer获得？)-->
-    <property name="rootServerAddrList">
-      <list>
-        <value>10.232.36.203:3500</value>
-      </list>
-    </property>
     <!-- 超时时间（可选配置）-->
     <property name="timeout">
       <value>2000</value>
