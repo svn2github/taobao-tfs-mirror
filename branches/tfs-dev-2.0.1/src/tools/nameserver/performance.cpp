@@ -345,7 +345,7 @@ class WorkThread : public tbutil::Thread
 
     virtual void run()
     {
-      int iret = TfsClient::Instance()->initialize(ns_ip_port_.c_str(), 0, 0);
+      int iret = TfsClient::Instance()->initialize(ns_ip_port_.c_str());
       if (iret != TFS_SUCCESS)
       {
         TBSYS_LOG(ERROR, "tfsclient initialize failed");
@@ -559,7 +559,7 @@ int main(int argc, char* argv[])
 {
   std::string ns_ip_port;
   std::string file_path;
-  std::string ratio("10:1");
+  std::string ratio("5:1");
   std::string pid_file;
   std::string log_file;
   int32_t loop_max = 100;
