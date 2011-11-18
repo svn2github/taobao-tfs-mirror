@@ -323,7 +323,7 @@ retry:
         status = mysql_stmt_prepare(stmt, str, strlen(str));
         if (status)
         {
-          if (2006 == mysql_stmt_errno(stmt_) && retry_time++ < 3)
+          if (2006 == mysql_stmt_errno(stmt) && retry_time++ < 3)
           {
             close();
             goto retry;
@@ -426,7 +426,7 @@ retry:
         status = mysql_stmt_prepare(stmt, str, strlen(str));
         if (status)
         {
-          if (2006 == mysql_stmt_errno(stmt_) && retry_time++ < 3)
+          if (2006 == mysql_stmt_errno(stmt) && retry_time++ < 3)
           {
             close();
             goto retry;
@@ -530,7 +530,7 @@ retry:
         status = mysql_stmt_prepare(stmt, str, strlen(str));
         if (status)
         {
-          if (2006 == mysql_stmt_errno(stmt_) && retry_time++ < 3)
+          if (2006 == mysql_stmt_errno(stmt) && retry_time++ < 3)
           {
             close();
             goto retry;
@@ -644,7 +644,7 @@ retry:
         status = mysql_stmt_prepare(stmt, str, strlen(str));
         if (status)
         {
-          if (2006 == mysql_stmt_errno(stmt_) && retry_time++ < 3)
+          if (2006 == mysql_stmt_errno(stmt) && retry_time++ < 3)
           {
             close();
             goto retry;
@@ -737,7 +737,7 @@ retry:
         status = mysql_stmt_prepare(stmt, str, strlen(str));
         if (status)
         {
-          if (2006 == mysql_stmt_errno(stmt_) && retry_time++ < 3)
+          if (2006 == mysql_stmt_errno(stmt) && retry_time++ < 3)
           {
             close();
             goto retry;
@@ -833,7 +833,7 @@ retry:
           status = mysql_stmt_prepare(stmt, str, strlen(str));
           if (status)
           {
-            if (2006 == mysql_stmt_errno(stmt_) && retry_time++ < 3)
+            if (2006 == mysql_stmt_errno(stmt) && retry_time++ < 3)
             {
               close();
               goto retry;
@@ -941,7 +941,7 @@ retry:
         status = mysql_stmt_prepare(stmt, str, strlen(str));
         if (status)
         {
-          if (2006 == mysql_stmt_errno(stmt_) && retry_time++ < 3)
+          if (2006 == mysql_stmt_errno(stmt) && retry_time++ < 3)
           {
             close();
             goto retry;
@@ -1050,7 +1050,7 @@ retry:
         status = mysql_stmt_prepare(stmt, str, strlen(str));
         if (status)
         {
-          if (2006 == mysql_stmt_errno(stmt_) && retry_time++ < 3)
+          if (2006 == mysql_stmt_errno(stmt) && retry_time++ < 3)
           {
             close();
             goto retry;
