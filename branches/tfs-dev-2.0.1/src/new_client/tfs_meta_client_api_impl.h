@@ -24,6 +24,7 @@
 #include "common/base_packet_streamer.h"
 #include "common/base_packet_factory.h"
 #include "tfs_meta_client_api.h"
+#include "tfs_meta_manager.h"
 
 namespace tfs
 {
@@ -128,6 +129,7 @@ namespace tfs
         uint64_t rs_id_;
         common::BasePacketFactory* packet_factory_;
         common::BasePacketStreamer* packet_streamer_;
+        TfsMetaManager tfs_meta_manager_;
     };
   }
 }

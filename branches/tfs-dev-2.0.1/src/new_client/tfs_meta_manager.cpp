@@ -19,15 +19,20 @@ using namespace tfs::client;
 using namespace tfs::common;
 using namespace std;
 
-int TfsMetaManager::initialize(const char* ns_addr)
+int TfsMetaManager::initialize()
 {
   int ret = TFS_SUCCESS;
-  tfs_client_ = TfsClient::Instance();
-  if ((ret = tfs_client_->initialize(ns_addr, DEFAULT_BLOCK_CACHE_TIME, 1000, false)) != TFS_SUCCESS)
+  tfs_client_ = TfsClientImpl::Instance();
+  if ((ret = tfs_client_->initialize(NULL, DEFAULT_BLOCK_CACHE_TIME, 1000, false)) != TFS_SUCCESS)
   {
-    TBSYS_LOG(ERROR, "initialize tfs client failed, ns_addr: %s", ns_addr);
+    TBSYS_LOG(ERROR, "initialize tfs client failed, ret: %d", ret);
   }
   return ret;
+}
+
+int TfsMetaManager::destroy()
+{
+  return tfs_client_->destroy();
 }
 
 int32_t TfsMetaManager::get_cluster_id(const char* ns_addr)

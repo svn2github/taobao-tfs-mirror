@@ -18,7 +18,7 @@
 
 #include <string>
 #include "common/meta_server_define.h"
-#include "tfs_client_api.h"
+#include "tfs_client_impl.h"
 
 namespace tfs
 {
@@ -28,7 +28,8 @@ namespace tfs
     class TfsMetaManager
     {
     public:
-      int initialize(const char* ns_addr);
+      int initialize();
+      int destroy();
       int32_t get_cluster_id(const char* ns_addr);
       int64_t read_data(const char* ns_addr, const uint32_t block_id, const uint64_t file_id,
           void* buffer, const int32_t pos, const int64_t length);
@@ -37,7 +38,7 @@ namespace tfs
           common::FragMeta& frag_meta);
 
     private:
-      TfsClient* tfs_client_;
+      TfsClientImpl* tfs_client_;
     };
   }
 }

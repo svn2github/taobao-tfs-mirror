@@ -114,6 +114,7 @@ namespace tfs
       keepalive_timer_->destroy();
       stat_update_task_ = 0;
       keepalive_timer_ = 0;
+      TfsClient::Instance()->destroy();
       delete name_meta_client_;
       logout();
     }

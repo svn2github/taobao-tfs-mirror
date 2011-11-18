@@ -18,8 +18,6 @@
 #include <stdio.h>
 #include <tbsys.h>
 #include <Timer.h>
-#include "common/define.h"
-#include "common/cdefine.h"
 #include "common/rc_define.h"
 #include "tfs_rc_client_api.h"
 

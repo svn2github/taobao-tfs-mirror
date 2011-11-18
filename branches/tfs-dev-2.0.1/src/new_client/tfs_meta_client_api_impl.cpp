@@ -23,7 +23,6 @@
 #include "message/message_factory.h"
 #include "tfs_client_api.h"
 #include "tfs_meta_helper.h"
-#include "tfs_meta_manager.h"
 #include "fsname.h"
 
 namespace tfs
@@ -53,6 +52,7 @@ namespace tfs
     {
       tbsys::gDelete(packet_factory_);
       tbsys::gDelete(packet_streamer_);
+      tfs_meta_manager_.destroy();
     }
 
     int NameMetaClientImpl::initialize(const char* rs_addr)
@@ -77,6 +77,7 @@ namespace tfs
       {
         rs_id_ = rs_addr;
         update_table_from_rootserver();
+        ret = tfs_meta_manager_.initialize();
       }
       return ret;
     }
@@ -383,7 +384,7 @@ namespace tfs
               unlink_file(frag_info, ns_addr);
               break;
             }
-            TBSYS_LOG(DEBUG, "write tfs data, cluster_id, cur_offset: %"PRI64_PREFIX"d, write_length: %"PRI64_PREFIX"d",
+            TBSYS_LOG(DEBUG, "write tfs data, cluster_id: %d, cur_offset: %"PRI64_PREFIX"d, write_length: %"PRI64_PREFIX"d",
                 cluster_id, cur_offset, write_length);
             frag_info.dump();
 
@@ -859,9 +860,6 @@ namespace tfs
       int64_t left_length = length;
       int64_t cur_pos = 0;
 
-      TfsMetaManager tfs_meta_manager;
-      tfs_meta_manager.initialize(ns_addr);
-
       const vector<FragMeta>& v_frag_meta = frag_info.v_frag_meta_;
       vector<FragMeta>::const_iterator iter = v_frag_meta.begin();
       for(; iter != v_frag_meta.end(); iter++)
@@ -889,7 +887,7 @@ namespace tfs
         }
 
         cur_length = min(iter->size_ - (cur_offset - iter->offset_), left_length);
-        int32_t read_length = tfs_meta_manager.read_data(ns_addr, iter->block_id_, iter->file_id_,
+        int32_t read_length = tfs_meta_manager_.read_data(ns_addr, iter->block_id_, iter->file_id_,
             reinterpret_cast<char*>(buffer) + cur_pos, (cur_offset - iter->offset_), cur_length);
 
         if (read_length < 0)
@@ -931,23 +929,20 @@ namespace tfs
       int64_t cur_offset = offset;
       int64_t cur_pos = 0;
 
-      TfsMetaManager tfs_meta_manager;
-      tfs_meta_manager.initialize(ns_addr);
-
       if (cluster_id != 0)
       {
         frag_info.cluster_id_ = cluster_id;
       }
       else
       {
-        frag_info.cluster_id_ = tfs_meta_manager.get_cluster_id(ns_addr);
+        frag_info.cluster_id_ = tfs_meta_manager_.get_cluster_id(ns_addr);
       }
       do
       {
         // write to tfs, and get frag meta
         write_length = min(left_length, MAX_SEGMENT_LENGTH);
         FragMeta frag_meta;
-        int64_t real_length = tfs_meta_manager.write_data(ns_addr, reinterpret_cast<const char*>(buffer) + cur_pos, cur_offset, write_length, frag_meta);
+        int64_t real_length = tfs_meta_manager_.write_data(ns_addr, reinterpret_cast<const char*>(buffer) + cur_pos, cur_offset, write_length, frag_meta);
 
         if (real_length != write_length)
         {
