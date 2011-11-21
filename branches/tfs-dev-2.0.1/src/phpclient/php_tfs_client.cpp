@@ -343,7 +343,7 @@ PHP_FUNCTION(tfs_client_read)
     if (SUCCESS == ret)
     {
       offset = gclient.read(fd, data, count);
-      ret = offset < 0 ? SUCCESS : FAILURE;
+      ret = offset > 0 ? SUCCESS : FAILURE;
       if (SUCCESS != ret)
       {
         php_error(E_WARNING, "read data failed, fd: %d, count: %"PRI64_PREFIX"d", fd, offset);
@@ -687,7 +687,7 @@ PHP_FUNCTION(tfs_client_pread)
     if (SUCCESS == ret)
     {
       off = gclient.pread(fd, data, length, offset);
-      ret = off < 0 ? SUCCESS: FAILURE;
+      ret = off > 0 ? SUCCESS: FAILURE;
       if (SUCCESS != ret)
       {
 		    php_error(E_ERROR, "tfs_client: read data failed, fd: %d ret: %"PRI64_PREFIX"d", fd, off);
