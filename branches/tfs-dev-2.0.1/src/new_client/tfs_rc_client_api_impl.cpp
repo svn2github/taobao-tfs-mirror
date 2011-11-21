@@ -245,6 +245,14 @@ namespace tfs
       int ret = check_init_stat();
       if (TFS_SUCCESS == ret)
       {
+        if (RcClient::READ == mode && NULL == file_name)
+        {
+          ret = TFS_ERROR;
+        }
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
         int flag = -1;
         ret = (RcClient::CREATE == mode && need_use_unique_) ? TFS_ERROR : TFS_SUCCESS;
         if (TFS_SUCCESS != ret)
@@ -759,7 +767,7 @@ namespace tfs
     int RcClientImpl::open(const char* ns_addr, const char* file_name, const char* suffix,
         const int flag, const bool large, const char* local_key)
     {
-      int ret = NULL == ns_addr || NULL == file_name ? -1 : 0;
+      int ret = NULL == ns_addr ? -1 : 0;
       if (0 == ret)
       {
         int tfs_flag = large ? flag | common::T_LARGE : flag;
@@ -789,7 +797,10 @@ namespace tfs
         tbsys::CThreadGuard mutex_guard(&mutex_);
         if ((RcClient::READ == mode) && cluster_id == 0)
         {
-          ns_addr = choice[index].begin()->second;
+          if (!choice[0].empty())
+          {
+            ns_addr = choice[0].begin()->second;
+          }
         }
         else if (RcClient::CREATE == mode || RcClient::WRITE == mode)
         {
