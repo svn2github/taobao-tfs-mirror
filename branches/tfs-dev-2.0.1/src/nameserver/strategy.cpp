@@ -368,7 +368,8 @@ namespace tfs
       return (*result != NULL);
     }
 
-    int delete_excess_backup(const std::vector<ServerCollect*> & source, int32_t count, std::vector<ServerCollect*> & result, DeleteExcessBackupStrategy flag)
+    int delete_excess_backup(const std::vector<ServerCollect*> & source, const std::vector<ServerCollect*> & except,
+                             int32_t count, std::vector<ServerCollect*> & result, DeleteExcessBackupStrategy flag)
     {
       bool bret = flag == DELETE_EXCESS_BACKUP_STRATEGY_BY_GROUP ? SYSPARAM_NAMESERVER.group_mask_ == 0 ? false : true : true; 
       if (bret)
@@ -394,15 +395,39 @@ namespace tfs
         else
         {
           uint32_t lanip = 0;
-          std::set<uint32_t> groups;
+          std::map<uint32_t, ServerCollect*> groups;
           std::multimap<int32_t, ServerCollect*>::const_reverse_iterator iter = tmp.rbegin();
           for (; iter != tmp.rend(); ++iter)
           {
             lanip = Func::get_lan(iter->second->id(), SYSPARAM_NAMESERVER.group_mask_);
-            std::pair<std::set<uint32_t>::iterator, bool> res = groups.insert(lanip);
+            std::pair<std::map<uint32_t, ServerCollect*>::iterator, bool> res = groups.insert(pair<uint32_t, ServerCollect*>(lanip, iter->second));
+            // ds in the same lan already exist
             if (!res.second)
             {
-              result.push_back(iter->second);
+              std::vector<ServerCollect*>::const_iterator e_iter = std::find(except.begin(), except.end(), (iter->second));
+              // if itself not in plan
+              if (e_iter == except.end())
+              {
+                result.push_back(iter->second);
+              }
+              else
+              {
+                // we should push ds in the same lan either he is in plan or not, or the guy in the other lan will be picked
+                // remove it from middle_result first
+                ServerCollect* ds_in_lan = res.first->second;
+                TBSYS_LOG(DEBUG, "got here ds: %s", Func::addr_to_str(ds_in_lan->id(), true).c_str());
+                std::multimap<int32_t, ServerCollect*>::iterator tmp_iter = middle_result.begin();
+                for (; tmp_iter != middle_result.end(); ++tmp_iter)
+                {
+                  if (tmp_iter->second == ds_in_lan)
+                  {
+                    TBSYS_LOG(DEBUG, "got here remove");
+                    middle_result.erase(tmp_iter); 
+                    break;
+                  }
+                }
+                result.push_back(ds_in_lan);
+              }
             }
             else
             {
@@ -412,13 +437,14 @@ namespace tfs
         }
 
         count -= result.size();
-        if (count <= 0)
-          return result.size();;
 
-        std::multimap<int32_t, ServerCollect*>::const_reverse_iterator iter = middle_result.rbegin();
-        for (; iter != middle_result.rend() && count > 0; ++iter, count--)
+        if (count > 0)
         {
-          result.push_back(iter->second);
+          std::multimap<int32_t, ServerCollect*>::const_reverse_iterator iter = middle_result.rbegin();
+          for (; iter != middle_result.rend() && count > 0; ++iter, count--)
+          {
+            result.push_back(iter->second);
+          }
         }
       }
       return result.size();;

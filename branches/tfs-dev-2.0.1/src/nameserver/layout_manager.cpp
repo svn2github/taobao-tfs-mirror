@@ -2476,6 +2476,7 @@ namespace tfs
             //std::set<ServerCollect*> source;
             int64_t average_load = total_load / alive_server_size;
 
+            // find move src and dest ds list
             split_servers(need, average_load, total_capacity, total_block_count, average_block_size, source, target);
 
             TBSYS_LOG(INFO, "need: %"PRI64_PREFIX"d, source size: %zd, target: %zd", need, source.size(), target.size());
@@ -2485,6 +2486,7 @@ namespace tfs
             std::vector<ServerCollect*> except;
             std::vector<ServerCollect*> servers;
             //std::set<ServerCollect*>::const_iterator it = source.begin();
+            // we'd better start from the most needed ds
             std::multimap<int64_t, ServerCollect*>::const_reverse_iterator it = source.rbegin();
             //for (; it != source.end() && !(interrupt_ & INTERRUPT_ALL) && need > 0 && !target.empty(); ++it)
             for (; it != source.rend() && !(interrupt_ & INTERRUPT_ALL) && need > 0 && !target.empty(); ++it)
@@ -2608,8 +2610,9 @@ namespace tfs
           if (has_delete)
           {
             std::vector<ServerCollect*> result;
-            find_server_in_plan_helper(servers, except);
-            if ((delete_excess_backup(servers, count, result) > 0)
+            count = delete_excess_backup(servers, except, count, result);
+            find_server_in_plan_helper(result, except);
+            if ((count > 0)
                 && (!result.empty()))
             {
               TBSYS_LOG(INFO, "we will need delete less than block: %u", iter->second->id());

@@ -209,7 +209,7 @@ namespace tfs
     int elect_replicate_source_ds(LayoutManager& meta, std::vector<ServerCollect*>& source, std::vector<ServerCollect*>& except, int32_t elect_count, std::vector<ServerCollect*>& result);
     int elect_replicate_dest_ds(LayoutManager& meta, std::vector<ServerCollect*>& except, int32_t elect_count, std::vector<ServerCollect*> & result); 
     bool elect_move_dest_ds(const std::set<ServerCollect*>& targets, const std::vector<ServerCollect*> & source, const ServerCollect* mover, ServerCollect** result);
-    int delete_excess_backup(const std::vector<ServerCollect*> & ds_list, int32_t count, std::vector<ServerCollect*> & result, common::DeleteExcessBackupStrategy falg = common::DELETE_EXCESS_BACKUP_STRATEGY_NORMAL);
+    int delete_excess_backup(const std::vector<ServerCollect*> & ds_list, const std::vector<ServerCollect*> & except, int32_t count, std::vector<ServerCollect*> & result, common::DeleteExcessBackupStrategy falg = common::DELETE_EXCESS_BACKUP_STRATEGY_NORMAL);
   }
 }
 #endif 
