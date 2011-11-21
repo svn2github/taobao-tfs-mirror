@@ -415,13 +415,11 @@ namespace tfs
                 // we should push ds in the same lan either he is in plan or not, or the guy in the other lan will be picked
                 // remove it from middle_result first
                 ServerCollect* ds_in_lan = res.first->second;
-                TBSYS_LOG(DEBUG, "got here ds: %s", Func::addr_to_str(ds_in_lan->id(), true).c_str());
                 std::multimap<int32_t, ServerCollect*>::iterator tmp_iter = middle_result.begin();
                 for (; tmp_iter != middle_result.end(); ++tmp_iter)
                 {
                   if (tmp_iter->second == ds_in_lan)
                   {
-                    TBSYS_LOG(DEBUG, "got here remove");
                     middle_result.erase(tmp_iter); 
                     break;
                   }
