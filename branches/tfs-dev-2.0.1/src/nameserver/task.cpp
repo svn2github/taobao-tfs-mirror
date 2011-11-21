@@ -158,14 +158,17 @@ namespace tfs
         }
       }
 
-      std::vector< std::pair <uint64_t, PlanStatus> >::iterator iter = complete_status_.begin();
-      for (; iter != complete_status_.end(); ++iter)
       {
-        std::pair<uint64_t, PlanStatus>& status = (*iter);
-        if (status.second != PLAN_STATUS_END
-            || (status.second !=  PLAN_STATUS_FAILURE))
+        tbutil::Mutex::Lock lock(mutex_);
+        std::vector< std::pair <uint64_t, PlanStatus> >::iterator iter = complete_status_.begin();
+        for (; iter != complete_status_.end(); ++iter)
         {
-          status.second = PLAN_STATUS_TIMEOUT;
+          std::pair<uint64_t, PlanStatus>& status = (*iter);
+          if (status.second != PLAN_STATUS_END
+              || (status.second !=  PLAN_STATUS_FAILURE))
+          {
+            status.second = PLAN_STATUS_TIMEOUT;
+          }
         }
       }
       CompactComplete value(INVALID_SERVER_ID, INVALID_SERVER_ID, PLAN_STATUS_NONE);
@@ -188,6 +191,7 @@ namespace tfs
     void LayoutManager::CompactTask::dump(tbnet::DataBuffer& stream)
     {
       Task::dump(stream);
+      tbutil::Mutex::Lock lock(mutex_);
       stream.writeInt8(complete_status_.size());
       std::vector< std::pair <uint64_t, PlanStatus> >::iterator iter = complete_status_.begin();
       for (; iter != complete_status_.end(); ++iter)
@@ -210,15 +214,19 @@ namespace tfs
         }
         PlanStatus plan_status = PLAN_STATUS_NONE;
         std::string status;
-        std::vector< std::pair <uint64_t, PlanStatus> >::iterator it= complete_status_.begin();
-        for (; it != complete_status_.end(); ++it)
+
         {
-          status += CNetUtil::addrToString((*it).first);
-          status += ":";
-          plan_status = (*it).second;
-          status += plan_status == PLAN_STATUS_BEGIN ? "begin" : plan_status == PLAN_STATUS_TIMEOUT ? "timeout" : plan_status == PLAN_STATUS_END
-            ? "finish" : plan_status == PLAN_STATUS_FAILURE ? "failure": "unknow",
-            status += "/";
+          tbutil::Mutex::Lock lock(mutex_);
+          std::vector< std::pair <uint64_t, PlanStatus> >::iterator it= complete_status_.begin();
+          for (; it != complete_status_.end(); ++it)
+          {
+            status += CNetUtil::addrToString((*it).first);
+            status += ":";
+            plan_status = (*it).second;
+            status += plan_status == PLAN_STATUS_BEGIN ? "begin" : plan_status == PLAN_STATUS_TIMEOUT ? "timeout" : plan_status == PLAN_STATUS_END
+              ? "finish" : plan_status == PLAN_STATUS_FAILURE ? "failure": "unknow",
+              status += "/";
+          }
         }
         TBSYS_LOGGER.logMessage(level, __FILE__, __LINE__, __FUNCTION__, "pointer: %p, %s plan seqno: %"PRI64_PREFIX"d, type: %s ,status: %s, priority: %s , block_id: %u, begin: %"PRI64_PREFIX"d, end: %"PRI64_PREFIX"d, runer: %s, complete status: %s",
             this,
@@ -258,6 +266,7 @@ namespace tfs
               block_id_, index == 0 ? 1 : 0, CNetUtil::addrToString(res.first).c_str(), iret);
         }
 #endif
+        tbutil::Mutex::Lock lock(mutex_);
         complete_status_.push_back(res);
       }
 
@@ -319,6 +328,8 @@ namespace tfs
     {
       int32_t complete_count = 0;
       int32_t success_count = 0;
+
+      tbutil::Mutex::Lock lock(mutex_);
       std::vector< std::pair <uint64_t, PlanStatus> >::iterator iter = complete_status_.begin();
       for (; iter != complete_status_.end(); ++iter)
       {
@@ -465,15 +476,15 @@ namespace tfs
 
     CompactStatus LayoutManager::CompactTask::status_transform_plan_to_compact(const PlanStatus status) const
     {
-      return status == PLAN_STATUS_END ? COMPACT_STATUS_SUCCESS : 
+      return status == PLAN_STATUS_END ? COMPACT_STATUS_SUCCESS :
              status == PLAN_STATUS_BEGIN ? COMPACT_STATUS_START : COMPACT_STATUS_FAILED;
     }
 
     PlanStatus LayoutManager::CompactTask::status_transform_compact_to_plan(const CompactStatus status) const
     {
-      return status == COMPACT_STATUS_SUCCESS ? PLAN_STATUS_END : 
+      return status == COMPACT_STATUS_SUCCESS ? PLAN_STATUS_END :
              status == COMPACT_STATUS_START ? PLAN_STATUS_BEGIN :
-             status == COMPACT_STATUS_FAILED ? PLAN_STATUS_FAILURE : PLAN_STATUS_NONE; 
+             status == COMPACT_STATUS_FAILED ? PLAN_STATUS_FAILURE : PLAN_STATUS_NONE;
     }
 
     LayoutManager::ReplicateTask::ReplicateTask(LayoutManager* manager, const PlanPriority priority,

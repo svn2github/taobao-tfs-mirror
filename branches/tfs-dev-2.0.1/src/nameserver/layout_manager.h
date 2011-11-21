@@ -9,7 +9,7 @@
  * Version: $Id
  *
  * Authors:
- *   duanfei <duanfei@taobao.com> 
+ *   duanfei <duanfei@taobao.com>
  *      - initial release
  *
  */
@@ -163,8 +163,8 @@ namespace nameserver
     {
       friend class LayoutManager;
       public:
-      Task(LayoutManager* manager, const common::PlanType type, 
-          const common::PlanPriority priority, const uint32_t block_id, 
+      Task(LayoutManager* manager, const common::PlanType type,
+          const common::PlanPriority priority, const uint32_t block_id,
           const time_t begin, const time_t end, const std::vector<ServerCollect*>& runer,
           const int64_t seqno);
       virtual ~ Task(){};
@@ -201,7 +201,7 @@ namespace nameserver
         return (*lhs) < (*rhs);
       }
     };
-    class CompactTask: public Task 
+    class CompactTask: public Task
     {
 #if defined(TFS_GTEST) || defined(TFS_NS_INTEGRATION)
       public:
@@ -249,12 +249,13 @@ namespace nameserver
         static const int8_t INVALID_BLOCK_ID;
         std::vector< std::pair <uint64_t, common::PlanStatus> > complete_status_;
         common::BlockInfo block_info_;
+        tbutil::Mutex mutex_;
       private:
         DISALLOW_COPY_AND_ASSIGN(CompactTask);
     };
     typedef tbutil::Handle<CompactTask> CompactTaskPtr;
 
-    class ReplicateTask : public Task 
+    class ReplicateTask : public Task
     {
       public:
         ReplicateTask(LayoutManager* manager, common::PlanPriority priority,
@@ -274,7 +275,7 @@ namespace nameserver
     };
     typedef tbutil::Handle<ReplicateTask> ReplicateTaskPtr;
 
-    class DeleteBlockTask : public Task 
+    class DeleteBlockTask : public Task
     {
       public:
         DeleteBlockTask(LayoutManager* manager, const common::PlanPriority priority,
@@ -397,7 +398,7 @@ namespace nameserver
 
     void statistic_all_server_info(const int64_t need,
         const int64_t average_block_size,
-        uint64_t & total_capacity, 
+        uint64_t & total_capacity,
         int64_t& total_block_count,
         int64_t& total_load,
         int64_t& alive_server_size);
@@ -447,7 +448,7 @@ namespace nameserver
     BuildPlanThreadHelperPtr build_plan_thread_;
     RunPlanThreadHelperPtr run_plan_thread_;
     CheckDataServerThreadHelperPtr check_dataserver_thread_;
-    std::map<ServerCollect*, TaskPtr> server_to_task_; 
+    std::map<ServerCollect*, TaskPtr> server_to_task_;
     std::map<uint32_t, TaskPtr> block_to_task_;
     std::set<TaskPtr, TaskCompare> pending_plan_list_;
     std::set<TaskPtr, TaskCompare> running_plan_list_;
