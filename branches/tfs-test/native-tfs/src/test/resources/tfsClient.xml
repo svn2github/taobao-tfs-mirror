@@ -5,12 +5,12 @@
     <bean id="seedClient" class="com.taobao.gaia.AppServer">
         <property name="ip" value="10.232.4.4"/>
        	<property name="pid" value="-1"/>
-       	<property name="confname" value="/home/admin/workspace/mingyan.zc/tfstest_new/test_tfs.conf" />
-       	<property name="dir" value="/home/admin/workspace/mingyan.zc/tfstest_new" />
-       	<property name="logs" value="/home/admin/workspace/mingyan.zc/tfstest_new/tfsSeed." />
+       	<property name="confname" value="/home/admin/workspace/mingyan.zc/tfsControlPress/test_tfs.conf" />
+       	<property name="dir" value="/home/admin/workspace/mingyan.zc/tfsControlPress" />
+       	<property name="logs" value="/home/admin/workspace/mingyan.zc/tfsControlPress/tfsSeed." />
         <property name="isBackground" value="true" />
 		<property name="startcmd">
-		<value>/home/admin/workspace/mingyan.zc/tfstest_new/tfsControlPress -f /home/admin/workspace/mingyan.zc/tfstest_new/test_tfs.conf -i tfsSeed -l /home/admin/workspace/mingyan.zc/tfstest_new/tfsSeed.log</value>
+		<value>/home/admin/workspace/mingyan.zc/tfsControlPress/tfsControlPress -f /home/admin/workspace/mingyan.zc/tfsControlPress/test_tfs.conf -i tfsSeed -l /home/admin/workspace/mingyan.zc/tfsControlPress/tfsSeed.log</value>
 		</property>
 		<property name="stopcmd" value="killall tfsControlPress" />
 		<property name="cleancmd">
@@ -23,12 +23,12 @@
     <bean id="readClient" class="com.taobao.gaia.AppServer">
         <property name="ip" value="10.232.4.4"/>
        	<property name="pid" value="-1"/>
-       	<property name="confname" value="/home/admin/workspace/mingyan.zc/tfstest_new/test_tfs.conf" />
-       	<property name="dir" value="/home/admin/workspace/mingyan.zc/tfstest_new" />
-       	<property name="logs" value="/home/admin/workspace/mingyan.zc/tfstest_new/tfsRead." />
+       	<property name="confname" value="/home/admin/workspace/mingyan.zc/tfsControlPress/test_tfs.conf" />
+       	<property name="dir" value="/home/admin/workspace/mingyan.zc/tfsControlPress" />
+       	<property name="logs" value="/home/admin/workspace/mingyan.zc/tfsControlPress/tfsRead." />
        	<property name="isBackground" value="true" />
 		<property name="startcmd">
-		<value>/home/admin/workspace/mingyan.zc/tfstest_new/tfsControlPress -f /home/admin/workspace/mingyan.zc/tfstest_new/test_tfs.conf -i tfsRead -l /home/admin/workspace/mingyan.zc/tfstest_new/tfsRead.log</value>
+		<value>/home/admin/workspace/mingyan.zc/tfsControlPress/tfsControlPress -f /home/admin/workspace/mingyan.zc/tfsControlPress/test_tfs.conf -i tfsRead -l /home/admin/workspace/mingyan.zc/tfsControlPress/tfsRead.log</value>
 		</property>
 		<property name="stopcmd" value="killall tfsControlPress" />
 		<property name="cleancmd">
@@ -41,12 +41,12 @@
     <bean id="unlinkClient" class="com.taobao.gaia.AppServer">
         <property name="ip" value="10.232.4.4"/>
        	<property name="pid" value="-1"/>
-       	<property name="confname" value="/home/admin/workspace/mingyan.zc/tfstest_new/test_tfs.conf" />
-       	<property name="dir" value="/home/admin/workspace/mingyan.zc/tfstest_new" />
-       	<property name="logs" value="/home/admin/workspace/mingyan.zc/tfstest_new/tfsUnlink." />
+       	<property name="confname" value="/home/admin/workspace/mingyan.zc/tfsControlPress/test_tfs.conf" />
+       	<property name="dir" value="/home/admin/workspace/mingyan.zc/tfsControlPress" />
+       	<property name="logs" value="/home/admin/workspace/mingyan.zc/tfsControlPress/tfsUnlink." />
        	<property name="isBackground" value="true" />
 		<property name="startcmd">
-		<value>/home/admin/workspace/mingyan.zc/tfstest_new/tfsControlPress -f /home/admin/workspace/mingyan.zc/tfstest_new/test_tfs.conf -i tfsUnlink -l /home/admin/workspace/mingyan.zc/tfstest_new/tfsUnlink.log</value>
+		<value>/home/admin/workspace/mingyan.zc/tfsControlPress/tfsControlPress -f /home/admin/workspace/mingyan.zc/tfsControlPress/test_tfs.conf -i tfsUnlink -l /home/admin/workspace/mingyan.zc/tfsControlPress/tfsUnlink.log</value>
 		</property>
 		<property name="stopcmd" value="killall tfsControlPress" />
 		<property name="cleancmd">
