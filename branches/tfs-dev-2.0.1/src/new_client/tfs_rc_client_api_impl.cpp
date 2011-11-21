@@ -289,7 +289,7 @@ namespace tfs
             {
               break;
             }
-            raw_tfs_fd = open(ns_addr.c_str(), file_name, suffix, mode, large, local_key);
+            raw_tfs_fd = open(ns_addr.c_str(), file_name, suffix, flag, large, local_key);
           } while(raw_tfs_fd < 0);
           if (raw_tfs_fd >= 0)
           {
