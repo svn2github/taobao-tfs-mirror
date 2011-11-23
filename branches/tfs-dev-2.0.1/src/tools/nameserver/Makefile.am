@@ -3,7 +3,7 @@ AM_CPPFLAGS=-I$(top_srcdir)/src\
             -I$(TBLIB_ROOT)/include/tbnet\
 	    $(READLINE_INCLUDE)
 
-AM_LDFLAGS=-lz -lrt -lpthread -ldl $(READLINE_LIB)
+AM_LDFLAGS=-lz -lrt -lpthread -ldl $(READLINE_LIB) -luuid
 
 bin_PROGRAMS = admintool showsyncoplog rmsyncoplog ssm tfstool performance syncbyfile
 
