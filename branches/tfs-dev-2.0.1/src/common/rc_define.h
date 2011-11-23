@@ -91,6 +91,7 @@ namespace tfs
       int32_t report_interval_;
       int64_t modify_time_;
       int64_t meta_root_server_;
+      std::string ns_cache_info_;
 
       BaseInfo& operator= (const BaseInfo& right)
       {
@@ -99,6 +100,7 @@ namespace tfs
         report_interval_ = right.report_interval_;
         modify_time_ = right.modify_time_;
         meta_root_server_ = right.meta_root_server_;
+        ns_cache_info_ = right.ns_cache_info_;
         return *this;
       }
     };

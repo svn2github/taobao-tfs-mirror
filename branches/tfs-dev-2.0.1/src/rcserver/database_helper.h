@@ -73,6 +73,9 @@ namespace tfs
         virtual int update_session_stat(const std::map<std::string, common::SessionStat>& session_stats) = 0;
         virtual int update_app_stat(const MIdAppStat& app_stats) = 0;
 
+        //ns cache info
+        virtual int scan_cache_info(std::vector<std::string>& outparam) = 0;
+
 
       protected:
         enum {

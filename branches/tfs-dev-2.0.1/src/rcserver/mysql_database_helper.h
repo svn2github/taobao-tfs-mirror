@@ -69,6 +69,8 @@ namespace tfs
         virtual int update_session_stat(const std::map<std::string, common::SessionStat>& session_stats);
         virtual int update_app_stat(const MIdAppStat& app_stats);
 
+        virtual int scan_cache_info(std::vector<std::string>& outparam);
+
       private:
         int exect_update_sql(const char* sql);
 

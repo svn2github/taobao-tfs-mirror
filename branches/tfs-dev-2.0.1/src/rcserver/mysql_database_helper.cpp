@@ -169,8 +169,8 @@ namespace tfs
       {
         char sql[1024];
         char table[256];
-        snprintf(table, 256, "%s", "T_RESOURCE_SERVER_INFO");
-        snprintf(sql, 1024, "select ADDR_INFO, STAT, REM from %s", table);
+        snprintf(table, 256, "%s", "t_resource_server_info");
+        snprintf(sql, 1024, "select addr_info, stat, rem from %s", table);
         ret = mysql_query(&mysql_.mysql, sql);
         if (ret)
         {
@@ -217,8 +217,8 @@ error:
       {
         char sql[1024];
         char table[256];
-        snprintf(table, 256, "%s", "T_META_ROOT_INFO");
-        snprintf(sql, 1024, "select APP_ID, ADDR_INFO, STAT, REM from %s", table);
+        snprintf(table, 256, "%s", "t_meta_root_info");
+        snprintf(sql, 1024, "select app_id, addr_info, stat, rem from %s", table);
         ret = mysql_query(&mysql_.mysql, sql);
         if (ret)
         {
@@ -291,7 +291,7 @@ error:
       {
         char sql[1024];
         char table[256];
-        snprintf(table, 256, "%s", "T_CLUSTER_RACK_INFO");
+        snprintf(table, 256, "%s", "t_cluster_rack_info");
         snprintf(sql, 1024, "select cluster_rack_id, cluster_id, ns_vip, "
             "cluster_stat, rem from %s", table);
         ret = mysql_query(&mysql_.mysql, sql);
@@ -343,7 +343,7 @@ error:
       {
         char sql[1024];
         char table[256];
-        snprintf(table, 256, "%s", "T_CLUSTER_RACK_GROUP");
+        snprintf(table, 256, "%s", "t_cluster_rack_group");
         snprintf(sql, 1024, "select cluster_group_id, cluster_rack_id, cluster_rack_access_type, "
             "rem from %s", table);
         ret = mysql_query(&mysql_.mysql, sql);
@@ -510,7 +510,7 @@ error:
       {
         char sql[1024];
         char table[256];
-        snprintf(table, 256, "%s", "T_CLUSTER_RACK_DUPLICATE_SERVER");
+        snprintf(table, 256, "%s", "t_cluster_rack_duplicate_server");
         snprintf(sql, 1024, "select cluster_rack_id, dupliate_server_addr from %s", table);
         ret = mysql_query(&mysql_.mysql, sql);
         if (ret)
@@ -557,7 +557,7 @@ error:
       {
         char sql[1024];
         char table[256];
-        snprintf(table, 256, "%s", "T_BASE_INFO_UPDATE_TIME");
+        snprintf(table, 256, "%s", "t_base_info_update_time");
         snprintf(sql, 1024, "select UNIX_TIMESTAMP(base_last_update_time), UNIX_TIMESTAMP(app_last_update_time) from %s", table);
         ret = mysql_query(&mysql_.mysql, sql);
         if (ret)
@@ -633,7 +633,7 @@ error:
       {
         char sql[1024];
         char table[256];
-        snprintf(table, 256, "%s", "T_APP_INFO");
+        snprintf(table, 256, "%s", "t_app_info");
         snprintf(sql, 1024, "select app_key, id, quto, cluster_group_id, "
             "app_name, app_owner, report_interval, "
             "need_duplicate, rem, UNIX_TIMESTAMP(modify_time) from %s", table);
@@ -808,6 +808,52 @@ error:
         }
       }
       delete []sql;
+      return ret;
+    }
+
+    int MysqlDatabaseHelper::scan_cache_info(std::vector<std::string>& outparam)
+    {
+      outparam.clear();
+      tbutil::Mutex::Lock lock(mutex_);
+      int ret = TFS_ERROR;
+      if (!is_connected_)
+      {
+        connect();
+      }
+      if (is_connected_)
+      {
+        char sql[1024];
+        char table[256];
+        snprintf(table, 256, "%s", "t_cluster_cache_info");
+        snprintf(sql, 1024, "select cache_server_addr from %s", table);
+        ret = mysql_query(&mysql_.mysql, sql);
+        if (ret)
+        {
+          TBSYS_LOG(ERROR, "query (%s) failure: %s %s", sql,  mysql_.host.c_str(), mysql_error(&mysql_.mysql));
+          close();
+          return TFS_ERROR;
+        }
+
+        MYSQL_ROW row;
+        std::string tmp;
+        MYSQL_RES *mysql_ret = mysql_store_result(&mysql_.mysql);
+        if (mysql_ret == NULL)
+        {
+          TBSYS_LOG(ERROR, "mysql_store_result failure: %s %s", mysql_.host.c_str(), mysql_error(&mysql_.mysql));
+          close();
+          ret = TFS_ERROR;
+          goto error;
+        }
+
+        while(NULL != (row = mysql_fetch_row(mysql_ret)))
+        {
+          tmp = row[0];
+          outparam.push_back(tmp);
+        }
+
+error:
+        mysql_free_result(mysql_ret);
+      }
       return ret;
     }
 

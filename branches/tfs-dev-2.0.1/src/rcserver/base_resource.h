@@ -19,6 +19,7 @@
 #include <map>
 #include <set>
 #include <string>
+#include <vector>
 #include "common/internal.h"
 #include "common/rc_define.h"
 #include "resource.h"
@@ -59,6 +60,10 @@ namespace tfs
         VClusterRackInfo v_cluster_rack_info_;
         VClusterRackGroup v_cluster_rack_group_;
         VClusterRackDuplicateServer v_cluster_rack_duplicate_server_;
+      private:
+        //vector<pair<tair_info, tair_caculate_ip> >
+        typedef std::vector<std::pair<std::string, std::string> > VNsCacheInfo;
+        VNsCacheInfo v_ns_cache_info_;
       private:
         IpReplaceHelper::VIpTransferItem v_ip_transfer_table_;
         std::map<int32_t, IpReplaceHelper::VIpTransferItem> m_app_ip_turn_table_;

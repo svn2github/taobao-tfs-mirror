@@ -113,3 +113,10 @@ CREATE TABLE t_app_ip_replace (
   turn_ip VARCHAR(64),
   PRIMARY KEY (app_id, source_ip)
 );
+
+CREATE TABLE  t_cluster_cache_info (
+  cache_server_addr VARCHAR(128),
+  create_time DATETIME,
+  modify_time DATETIME,
+  PRIMARY KEY (cache_server_addr)
+);

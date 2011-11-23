@@ -45,6 +45,7 @@ namespace tfs
       v_ip_transfer_table_.clear();
       m_app_ip_turn_table_.clear();
       m_ns_caculate_ip_.clear();
+      v_ns_cache_info_.clear();
       int ret = TFS_SUCCESS;
       ret = database_helper_.scan(v_resource_server_info_);
       if (TFS_SUCCESS != ret)
@@ -97,6 +98,22 @@ namespace tfs
         if (TFS_SUCCESS != ret)
         {
           TBSYS_LOG(ERROR, "load app_ip_turn_table error ret is %d", ret);
+        }
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        std::vector<std::string> tmp;
+        ret = database_helper_.scan_cache_info(tmp);
+        if (TFS_SUCCESS != ret)
+        {
+          TBSYS_LOG(ERROR, "load cache info error ret is %d", ret);
+        }
+        else
+        {
+          for (size_t i = 0; i < tmp.size(); i++)
+          {
+            v_ns_cache_info_.push_back(std::make_pair(tmp[i], std::string()));
+          }
         }
       }
       if (TFS_SUCCESS == ret)
@@ -324,9 +341,23 @@ namespace tfs
           TBSYS_LOG(DEBUG, "cluster_data_  %s", (sorted_it->second)->ns_vip_.c_str());
           out_rack_dat.cluster_data_.push_back(*(sorted_it->second));
         }
-
-
         out_base_info.cluster_infos_.push_back(out_rack_dat);
+
+        VNsCacheInfo::const_iterator ns_cache_info_it = v_ns_cache_info_.begin();
+        int32_t distance = 0;
+        int32_t min_distance = -1;
+        out_base_info.ns_cache_info_.clear();
+        for (; ns_cache_info_it != v_ns_cache_info_.end(); ns_cache_info_it++)
+        {
+          distance = IpReplaceHelper::calculate_distance(app_caculate_ip, ns_cache_info_it->second);
+          TBSYS_LOG(DEBUG, "mindistance %d app_caculate_ip %s cache_caculate_ip %s distance %d",
+              min_distance, app_caculate_ip.c_str(), ns_cache_info_it->second.c_str(), distance);
+          if (-1 == min_distance || distance < min_distance)
+          {
+            min_distance = distance;
+            out_base_info.ns_cache_info_ = ns_cache_info_it->first;
+          }
+        }
       }
 
       return TFS_SUCCESS;
@@ -356,6 +387,23 @@ namespace tfs
       {
         TBSYS_LOG(INFO, "ns_ip %s will be used as %s for distance caculate",
             mit->first.c_str(), mit->second.c_str());
+      }
+      VNsCacheInfo::iterator ns_cache_it = v_ns_cache_info_.begin();
+      for (; ns_cache_it != v_ns_cache_info_.end(); ns_cache_it++)
+      {
+        std::string dest;
+        std::vector<std::string> ip_items;
+        common::Func::split_string(ns_cache_it->first.c_str(), ':', ip_items);
+        if (!ip_items.empty())
+        {
+          if (TFS_SUCCESS != IpReplaceHelper::replace_ip(v_ip_transfer_table_, ip_items[0], dest))
+          {
+            TBSYS_LOG(WARN, "can not get caculate ip by cache ip :%s will use the original value", ip_items[0].c_str());
+            dest = ip_items[0];
+          }
+          ns_cache_it->second = dest;
+        }
+
       }
 
     }

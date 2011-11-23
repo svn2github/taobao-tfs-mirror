@@ -697,6 +697,7 @@ namespace tfs
       if (TFS_SUCCESS == (ret = RcHelper::login(rc_ip, app_key, app_ip,
               session_base_info_.session_id_, base_info_)))
       {
+        TBSYS_LOG(DEBUG, "base_info_.ns_cache_info_ = %s", base_info_.ns_cache_info_.c_str());
         calculate_ns_info(base_info_, local_addr_);
         int32_t app_id = 0;
         int64_t session_ip = 0;

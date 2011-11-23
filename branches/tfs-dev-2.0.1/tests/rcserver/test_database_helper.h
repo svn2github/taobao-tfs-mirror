@@ -232,6 +232,8 @@ namespace tfs
           outparam[tmp.id_] = tmp;
           return TFS_SUCCESS;
         }
+        virtual int scan_cache_info(std::vector<std::string>& outparam)
+        {UNUSED(outparam); return TFS_SUCCESS;}
         virtual int update_session_info(const std::vector<SessionBaseInfo>& session_infos)
         {UNUSED(session_infos); return TFS_SUCCESS;}
         virtual int update_session_stat(const std::map<std::string, SessionStat>& session_stats)
