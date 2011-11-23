@@ -119,7 +119,7 @@ namespace tfs
     uint64_t unit = capacity > GB ? GB : MB;
     uint64_t tmp_capacity = capacity / unit;
     uint64_t tmp_total_capacity = total_capacity / unit;
-    if ((tmp_capacity != 0) 
+    if ((tmp_capacity != 0)
         && (tmp_total_capacity != 0))
     {
       ret = (double)tmp_capacity / (double)tmp_total_capacity;
@@ -1303,7 +1303,7 @@ namespace tfs
                     if ((new_create_block_collect)
                         || ((NULL != block)
                            && (!new_create_block_collect)
-                           && (block->get_creating_flag() == BlockCollect::BLOCK_CREATE_FLAG_NO) 
+                           && (block->get_creating_flag() == BlockCollect::BLOCK_CREATE_FLAG_NO)
                            && (block->get_hold_size() <= 0)))
                     {
                       ptr->remove(block_id, rms);
@@ -1364,7 +1364,7 @@ namespace tfs
             RWLock::Lock lock(server_mutex_, READ_LOCKER);
             elect_write_server(*this, count, need);
           }
-          iret = static_cast<int32_t>(need.size()) >= SYSPARAM_NAMESERVER.min_replication_ ? TFS_SUCCESS : TFS_ERROR; 
+          iret = static_cast<int32_t>(need.size()) >= SYSPARAM_NAMESERVER.min_replication_ ? TFS_SUCCESS : TFS_ERROR;
           if (TFS_SUCCESS == iret)//add block collect object successful
           {
             iret = add_new_block_helper_send_msg(block_id, need);
@@ -1900,8 +1900,8 @@ namespace tfs
           bool has_report_server = manager_.get_heart_management().empty_report_server(now);
           time_t wait_time = ngi.owner_role_ == NS_ROLE_SLAVE ? SYSPARAM_NAMESERVER.safe_mode_time_ :  has_report_server
                                                ? SYSPARAM_NAMESERVER.build_plan_default_wait_time_ : interrupt
-                                               ? 0  : !bwait 
-                                               ? SYSPARAM_NAMESERVER.build_plan_default_wait_time_ : ngi.switch_time_ > now 
+                                               ? 0  : !bwait
+                                               ? SYSPARAM_NAMESERVER.build_plan_default_wait_time_ : ngi.switch_time_ > now
                                                ? ngi.switch_time_ - now : SYSPARAM_NAMESERVER.build_plan_interval_;
           bwait = true;
           interrupt = false;
@@ -2339,39 +2339,31 @@ namespace tfs
      * statistic all dataserver 's information(capactiy, block count, load && alive server size)
      */
     void LayoutManager::statistic_all_server_info(const int64_t need,
-        const int64_t average_block_size,
         uint64_t& total_capacity,
-        int64_t& total_block_count,
+        uint64_t& total_use_capacity,
         int64_t& total_load,
         int64_t& alive_server_size)
     {
-      UNUSED(average_block_size);
       RWLock::Lock lock(server_mutex_, READ_LOCKER);
       SERVER_MAP::const_iterator iter = servers_.begin();
       for (; iter != servers_.end() && !(interrupt_ & INTERRUPT_ALL) && need > 0; ++iter)
       {
         if (iter->second->is_alive())
         {
-          total_block_count += iter->second->block_count();
           total_capacity += (iter->second->total_capacity() * SYSPARAM_NAMESERVER.max_use_capacity_ratio_) / 100;
-          //total_capacity -= iter->second->use_capacity();
+          total_use_capacity += iter->second->use_capacity();
           total_load     += iter->second->load();
           ++alive_server_size;
         }
       }
-      //total_capacity += total_block_count * average_block_size;
     }
 
     void LayoutManager::split_servers(const int64_t need,
         const int64_t average_load,
-        const uint64_t total_capacity,
-        const int64_t total_block_count,
-        const int64_t average_block_size,
+        const double percent,
         std::multimap<int64_t, ServerCollect*>& source,
-        //std::set<ServerCollect*>& source,
         std::set<ServerCollect*>& target)
     {
-      UNUSED(average_block_size);
       bool has_move = false;
       RWLock::Lock lock(server_mutex_, READ_LOCKER);
       SERVER_MAP::const_iterator iter = servers_.begin();
@@ -2389,59 +2381,36 @@ namespace tfs
         }
         if (has_move)
         {
-          split_servers_helper(average_load, total_capacity,
-                              total_block_count, iter->second, source, target);
+          split_servers_helper(average_load, percent, iter->second, source, target);
         }
       }
     }
 
     void LayoutManager::split_servers_helper(const int64_t average_load,
-        const uint64_t total_capacity,
-        const int64_t total_block_count,
+        const double percent,
         ServerCollect* server,
         std::multimap<int64_t, ServerCollect*>& source,
-        //std::set<ServerCollect*>& source,
         std::set<ServerCollect*>& target)
     {
       if (NULL != server)
       {
-        const int64_t current_block_count = server->block_count();
         const uint64_t current_total_capacity = server->total_capacity() * SYSPARAM_NAMESERVER.max_use_capacity_ratio_ / 100;
-        double pt = calc_capacity_percentage(current_total_capacity, total_capacity);
-        int64_t should_block_count = static_cast<int64_t>(pt * total_block_count); 
-        double percent = PERCENTAGE_MAX - (static_cast<double>(current_block_count) / static_cast<double>(should_block_count));
-        if (percent > PERCENTAGE_MIN)
+        const double current_percent = calc_capacity_percentage(server->use_capacity(), current_total_capacity);
+        if ((current_percent > percent + SYSPARAM_NAMESERVER.balance_percent_)
+            || (current_percent >= 1.0))
         {
-          if (percent > SYSPARAM_NAMESERVER.balance_percent_)
-          {
-            int32_t diff = should_block_count - current_block_count - 
-              SYSPARAM_NAMESERVER.balance_max_diff_block_num_;
-            if (diff > 0)
-            {
-              if ((average_load <= 0)
-                  || (server->load() < average_load * LOAD_BASE_MULTIPLE))
-              {
-                target.insert(server);
-              }
-            }
-          }
+          source.insert(std::multimap<int64_t, ServerCollect*>::value_type(
+                static_cast<int64_t>(current_percent * PERCENTAGE_MAGIC), server));
         }
-        else
+        if ((current_percent < percent - SYSPARAM_NAMESERVER.balance_percent_)
+            && ((server->load() < average_load * LOAD_BASE_MULTIPLE)
+                || (average_load <= 0)))
         {
-          if (fabs(percent) > SYSPARAM_NAMESERVER.balance_percent_)
-          {
-            int32_t diff = current_block_count - should_block_count -
-                          SYSPARAM_NAMESERVER.balance_max_diff_block_num_;
-            if (diff > 0)
-            {
-              int64_t value = static_cast<int64_t>(fabs(percent) * PERCENTAGE_MAGIC);
-              source.insert(std::multimap<int64_t, ServerCollect*>::value_type(value, server));
-            }
-          }
+          target.insert(server);
         }
-        TBSYS_LOG(DEBUG, "server: %s, current_block_count: %"PRI64_PREFIX"d, should_block_count: %"PRI64_PREFIX"d\
-                          pt: %e, percent: %e, balance_percent_: %e", CNetUtil::addrToString(server->id()).c_str(),
-                          current_block_count, should_block_count, pt, percent, SYSPARAM_NAMESERVER.balance_percent_);
+        TBSYS_LOG(DEBUG, "server: %s, current_percent: %e, percent: %e, balance_percent_: %e",
+                  CNetUtil::addrToString(server->id()).c_str(), current_percent, percent,
+                  SYSPARAM_NAMESERVER.balance_percent_);
       }
     }
 
@@ -2452,16 +2421,17 @@ namespace tfs
 #endif
       {
         uint64_t total_capacity  = 0;
-        int64_t total_block_count = 0;
+        uint64_t total_use_capacity = 0;
         int64_t total_load = 1;
         int64_t alive_server_size = 0;
-        int64_t average_block_size = calc_average_block_size();
 
-        statistic_all_server_info(need, average_block_size,total_capacity, total_block_count, total_load, alive_server_size);
+        statistic_all_server_info(need, total_capacity, total_use_capacity, total_load, alive_server_size);
 
-        if (total_capacity <= 0)
+        if ((total_capacity <= 0)
+          || (total_use_capacity <= 0))
         {
-          TBSYS_LOG(INFO, "total_capacity: %"PRI64_PREFIX"d <= 0, we'll doesn't build moveing plan", total_capacity);
+          TBSYS_LOG(INFO, "total_capacity: %"PRI64_PREFIX"u <= 0 or total_use_capacity: %"PRI64_PREFIX"u <= 0, we'll doesn't build moveing plan",
+              total_capacity, total_use_capacity);
         }
         else
         {
@@ -2471,24 +2441,24 @@ namespace tfs
           }
           else
           {
+            double percent = calc_capacity_percentage(total_use_capacity, total_capacity);
             std::set<ServerCollect*> target;
             std::multimap<int64_t, ServerCollect*> source;
             //std::set<ServerCollect*> source;
             int64_t average_load = total_load / alive_server_size;
 
             // find move src and dest ds list
-            split_servers(need, average_load, total_capacity, total_block_count, average_block_size, source, target);
+            split_servers(need, average_load, percent, source, target);
 
-            TBSYS_LOG(INFO, "need: %"PRI64_PREFIX"d, source size: %zd, target: %zd", need, source.size(), target.size());
+            TBSYS_LOG(INFO, "need: %"PRI64_PREFIX"d, source size: %zd, target: %zd, percent: %e",
+                need, source.size(), target.size(), percent);
 
             bool has_move = false;
             uint32_t block_id = 0;
             std::vector<ServerCollect*> except;
             std::vector<ServerCollect*> servers;
-            //std::set<ServerCollect*>::const_iterator it = source.begin();
             // we'd better start from the most needed ds
             std::multimap<int64_t, ServerCollect*>::const_reverse_iterator it = source.rbegin();
-            //for (; it != source.end() && !(interrupt_ & INTERRUPT_ALL) && need > 0 && !target.empty(); ++it)
             for (; it != source.rend() && !(interrupt_ & INTERRUPT_ALL) && need > 0 && !target.empty(); ++it)
             {
               it->second->rdlock();
