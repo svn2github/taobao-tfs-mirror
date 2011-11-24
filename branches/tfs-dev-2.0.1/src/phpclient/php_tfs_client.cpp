@@ -123,9 +123,9 @@ PHP_FUNCTION(tfs_client)
   char* app_ip = NULL;
   char* app_key = NULL;
   char* rc_ip  = NULL;
-  int32_t app_ip_length = 0;
-  int32_t app_key_length = 0;
-  int32_t rc_ip_length = 0;
+  long app_ip_length = 0;
+  long app_key_length = 0;
+  long rc_ip_length = 0;
   int32_t ret = zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "sss",
             &rc_ip, &rc_ip_length, &app_key, &app_key_length, &app_ip, &app_ip_length);
   if (FAILURE == ret)
@@ -163,11 +163,11 @@ PHP_FUNCTION(tfs_client_open)
   char* filename = NULL;
   char* suffix   = NULL;
   char* local_key= NULL;
-  int32_t file_name_length = 0;
-  int32_t suffix_length = 0;
-  int32_t mode = -1;
-  int32_t local_key_length = 0;
-  int32_t fd = -1;
+  long file_name_length = 0;
+  long suffix_length = 0;
+  long mode = -1;
+  long local_key_length = 0;
+  long fd = -1;
   bool    large = false;
   int32_t ret = zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s!s!l|bs!",
             &filename, &file_name_length, &suffix, &suffix_length , &mode, &large, &local_key, &local_key_length);
@@ -189,24 +189,24 @@ PHP_FUNCTION(tfs_client_open)
     ret = fd > 0 ? SUCCESS : FAILURE;
     if (SUCCESS != ret)
     {
-		  php_error(E_ERROR, "tfs_client: open file %s failed, ret: %d", filename, fd);
+		  php_error(E_ERROR, "tfs_client: open file %s failed, ret: %ld", filename, fd);
     }
   }
   RETURN_LONG(fd);
 }
 /* }}} */
 
-/* {{{ int $tfs_client->fopen(const int64_t app_id, const int64_t uid, const char* file_path,int mode)
+/* {{{ int $tfs_client->fopen(const long app_id, const long uid, const char* file_path,int mode)
  *  open a file via tfs_client
  */
 PHP_FUNCTION(tfs_client_fopen)
 {
-  int64_t app_id = -1;
-  int64_t uid = -1;
+  long app_id = -1;
+  long uid = -1;
   char* filename = NULL;
-  int32_t file_name_length = 0;
-  int32_t mode = -1;
-  int32_t fd   = -1;
+  long file_name_length = 0;
+  long mode = -1;
+  long fd   = -1;
   int32_t ret = zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "llsl",
             &app_id, &uid, &filename, &file_name_length, &mode);
   if (FAILURE == ret)
@@ -227,7 +227,7 @@ PHP_FUNCTION(tfs_client_fopen)
     ret = fd > 0 ? SUCCESS : FAILURE;
     if (SUCCESS != ret)
     {
-		  php_error(E_ERROR, "tfs_client: open file %s failed, ret: %d", filename, fd);
+		  php_error(E_ERROR, "tfs_client: open file %s failed, ret: %ld", filename, fd);
     }
   }
   RETURN_LONG(fd);
@@ -240,7 +240,7 @@ PHP_FUNCTION(tfs_client_fopen)
  */
 PHP_FUNCTION(tfs_client_close)
 {
-  int32_t fd = -1;
+  long fd = -1;
   int32_t ret = zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "l",
             &fd);
   if (FAILURE == ret)
@@ -262,7 +262,7 @@ PHP_FUNCTION(tfs_client_close)
     ret = gclient.close(fd, name, MAX_FILE_NAME_LEN);
     if (TFS_SUCCESS != ret)
     {
-		  php_error(E_ERROR, "tfs_client: close file failed, fd: %d, ret: %d", fd, ret);
+		  php_error(E_ERROR, "tfs_client: close file failed, fd: %ld, ret: %d", fd, ret);
     }
     else
     {
@@ -283,10 +283,10 @@ PHP_FUNCTION(tfs_client_close)
 PHP_FUNCTION(tfs_client_write)
 {
   char* data = NULL;
-  int32_t data_length = 0;
-  int32_t length = -1;
-  int32_t fd = -1;
-  int32_t ret_length = -1;
+  long data_length = 0;
+  long length = -1;
+  long fd = -1;
+  long ret_length = -1;
   int32_t ret = zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "lsl",
             &fd, &data, &data_length, &length);
   if (FAILURE == ret)
@@ -307,7 +307,7 @@ PHP_FUNCTION(tfs_client_write)
     ret = ret_length <= 0 ? FAILURE : SUCCESS;
     if (ret_length <= 0)
     {
-		  php_error(E_ERROR, "tfs_client: write data failed, fd: %d, ret: %d", fd, ret_length);
+		  php_error(E_ERROR, "tfs_client: write data failed, fd: %ld, ret: %ld", fd, ret_length);
     }
   }
   RETURN_LONG(ret_length);
@@ -319,8 +319,8 @@ PHP_FUNCTION(tfs_client_write)
  */
 PHP_FUNCTION(tfs_client_read)
 {
-  int32_t fd = -1;
-  int32_t count = 0;
+  long fd = -1;
+  long count = 0;
   int32_t ret = zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "ll", &fd, &count);
   if (FAILURE == ret)
   {
@@ -334,7 +334,7 @@ PHP_FUNCTION(tfs_client_read)
 		  php_error(E_WARNING, "tfs_client: parameters is invalid");
     }
   }
-  int64_t offset = -1;
+  long offset = -1;
   array_init(return_value);
   if (SUCCESS == ret)
   {
@@ -346,7 +346,7 @@ PHP_FUNCTION(tfs_client_read)
       ret = offset > 0 ? SUCCESS : FAILURE;
       if (SUCCESS != ret)
       {
-        php_error(E_WARNING, "read data failed, fd: %d, count: %"PRI64_PREFIX"d", fd, offset);
+        php_error(E_WARNING, "read data failed, fd: %ld, count: %ld", fd, offset);
       }
       else
       {
@@ -369,7 +369,7 @@ PHP_FUNCTION(tfs_client_read)
  */
 PHP_FUNCTION(tfs_client_stat)
 {
-  int32_t fd = -1;
+  long fd = -1;
   array_init(return_value);
   int32_t ret = zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "l",
             &fd);
@@ -392,7 +392,7 @@ PHP_FUNCTION(tfs_client_stat)
     ret = gclient.fstat(fd, &finfo);
     if (TFS_SUCCESS != ret)
     {
-		  php_error(E_ERROR, "tfs_client: stat failed, fd: %d, ret: %d", fd, ret);
+		  php_error(E_ERROR, "tfs_client: stat failed, fd: %ld, ret: %d", fd, ret);
     }
     ret = ret == TFS_SUCCESS ? SUCCESS  : FAILURE;
   }
@@ -417,9 +417,9 @@ PHP_FUNCTION(tfs_client_unlink)
 {
   char* filename = NULL;
   char* suffix   = NULL;
-  int32_t file_name_length = 0;
-  int32_t suffix_length = 0;
-  int32_t action = -1;
+  long file_name_length = 0;
+  long suffix_length = 0;
+  long action = -1;
   int32_t ret = zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "ss!l",
             &filename, &file_name_length, &suffix, &suffix_length, &action);
   if (FAILURE == ret)
@@ -453,8 +453,8 @@ PHP_FUNCTION(tfs_client_unlink)
 PHP_FUNCTION(tfs_client_create_dir)
 {
   char* dir_path = NULL;
-  int32_t dir_path_length = 0;
-  int64_t uid = 0;
+  long dir_path_length = 0;
+  long uid = 0;
   int32_t ret = zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "ls",
             &uid, &dir_path, &dir_path_length);
   if (FAILURE == ret)
@@ -487,8 +487,8 @@ PHP_FUNCTION(tfs_client_create_dir)
 PHP_FUNCTION(tfs_client_create_file)
 {
   char* file_path = NULL;
-  int32_t file_path_length = 0;
-  int64_t uid = 0;
+  long file_path_length = 0;
+  long uid = 0;
   int32_t ret = zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "ls",
             &uid, &file_path, &file_path_length);
   if (FAILURE == ret)
@@ -521,8 +521,8 @@ PHP_FUNCTION(tfs_client_create_file)
 PHP_FUNCTION(tfs_client_rm_dir)
 {
   char* dir_path = NULL;
-  int32_t dir_path_length = 0;
-  int64_t uid = 0;
+  long dir_path_length = 0;
+  long uid = 0;
   int32_t ret = zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "ls",
             &uid, &dir_path, &dir_path_length);
   if (FAILURE == ret)
@@ -555,8 +555,8 @@ PHP_FUNCTION(tfs_client_rm_dir)
 PHP_FUNCTION(tfs_client_rm_file)
 {
   char* file_path = NULL;
-  int32_t file_path_length = 0;
-  int64_t uid = 0;
+  long file_path_length = 0;
+  long uid = 0;
   int32_t ret = zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "ls",
             &uid, &file_path, &file_path_length);
   if (FAILURE == ret)
@@ -589,10 +589,10 @@ PHP_FUNCTION(tfs_client_rm_file)
 PHP_FUNCTION(tfs_client_mv_dir)
 {
   char* dir_path = NULL;
-  int32_t dir_path_length = 0;
+  long dir_path_length = 0;
   char* dest_dir_path = NULL;
-  int32_t dest_dir_path_length = 0;
-  int64_t uid = 0;
+  long dest_dir_path_length = 0;
+  long uid = 0;
   int32_t ret = zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "lss",
             &uid, &dir_path, &dir_path_length, &dest_dir_path, &dest_dir_path_length);
   if (FAILURE == ret)
@@ -625,10 +625,10 @@ PHP_FUNCTION(tfs_client_mv_dir)
 PHP_FUNCTION(tfs_client_mv_file)
 {
   char* file_path = NULL;
-  int32_t file_path_length = 0;
+  long file_path_length = 0;
   char* dest_file_path = NULL;
-  int32_t dest_file_path_length = 0;
-  int64_t uid = 0;
+  long dest_file_path_length = 0;
+  long uid = 0;
   int32_t ret = zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "lss",
             &uid, &file_path, &file_path_length, &dest_file_path, &dest_file_path_length);
   if (FAILURE == ret)
@@ -661,10 +661,10 @@ PHP_FUNCTION(tfs_client_mv_file)
  */
 PHP_FUNCTION(tfs_client_pread)
 {
-  int32_t fd = -1;
-  int64_t length = 0;
-  int64_t offset = 0;
-  int64_t ret = zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "lll",
+  long fd = -1;
+  long length = 0;
+  long offset = 0;
+  long ret = zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "lll",
             &fd, &length, &offset);
   if (FAILURE == ret)
   {
@@ -678,7 +678,7 @@ PHP_FUNCTION(tfs_client_pread)
 		  php_error(E_WARNING, "tfs_client: parameters is invalid");
     }
   }
-  int64_t off = -1;
+  long off = -1;
   array_init(return_value);
   if (SUCCESS == ret)
   {
@@ -690,7 +690,7 @@ PHP_FUNCTION(tfs_client_pread)
       ret = off > 0 ? SUCCESS: FAILURE;
       if (SUCCESS != ret)
       {
-		    php_error(E_ERROR, "tfs_client: read data failed, fd: %d ret: %"PRI64_PREFIX"d", fd, off);
+		    php_error(E_ERROR, "tfs_client: read data failed, fd: %ld ret: %"PRI64_PREFIX"d", fd, off);
       }
       else
       {
@@ -711,12 +711,12 @@ PHP_FUNCTION(tfs_client_pread)
  */
 PHP_FUNCTION(tfs_client_pwrite)
 {
-  int32_t fd = -1;
+  long fd = -1;
   char* data= NULL;
-  int64_t data_length = 0;
-  int64_t length = 0;
-  int64_t offset = 0;
-  int64_t ret = zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "lsll",
+  long data_length = 0;
+  long length = 0;
+  long offset = 0;
+  long ret = zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "lsll",
             &fd, &data, &data_length, &length, &offset);
   if (FAILURE == ret)
   {
@@ -735,14 +735,14 @@ PHP_FUNCTION(tfs_client_pwrite)
     ret = gclient.pwrite(fd, data, length, offset);
     if (ret < 0)
     {
-		  php_error(E_ERROR, "tfs_client: write data failed, fd: %d ret: %"PRI64_PREFIX"d", fd, ret);
+		  php_error(E_ERROR, "tfs_client: write data failed, fd: %ld ret: %ld", fd, ret);
     }
   }
   RETURN_LONG(ret);
 }
 /* }}} */
 
-/* {{{ int64_t $tfs_client->get_app_id()
+/* {{{ long $tfs_client->get_app_id()
  * get app id
  */
 PHP_FUNCTION(tfs_client_get_app_id)
@@ -751,15 +751,15 @@ PHP_FUNCTION(tfs_client_get_app_id)
 }
 /* }}} */
 
-/* {{{ int $tfs_client->fstat(const int64_t app_id, const int64_t uid, const char* file_path)
+/* {{{ int $tfs_client->fstat(const long app_id, const long uid, const char* file_path)
  * stat file
  */
 PHP_FUNCTION(tfs_client_fstat)
 {
   char* file_path = NULL;
-  int64_t app_id = -1;
-  int64_t uid    = -1;
-  int64_t file_path_length = -1;
+  long app_id = -1;
+  long uid    = -1;
+  long file_path_length = -1;
   int32_t ret = zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "lls",
             &app_id, &uid, &file_path, &file_path_length);
   if (FAILURE == ret)
@@ -797,15 +797,15 @@ PHP_FUNCTION(tfs_client_fstat)
 }
 /* }}} */
 
-/* {{{ mixed $tfs_client->ls_dir(const int64_t app_id, const int64_t uid, const char* file_path)
+/* {{{ mixed $tfs_client->ls_dir(const long app_id, const long uid, const char* file_path)
  * ls directory
  */
 PHP_FUNCTION(tfs_client_ls_dir)
 {
   char* file_path = NULL;
-  int64_t app_id = -1;
-  int64_t uid    = -1;
-  int64_t file_path_length = -1;
+  long app_id = -1;
+  long uid    = -1;
+  long file_path_length = -1;
   int32_t ret = zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "lls",
             &app_id, &uid, &file_path, &file_path_length);
   if (FAILURE == ret)
