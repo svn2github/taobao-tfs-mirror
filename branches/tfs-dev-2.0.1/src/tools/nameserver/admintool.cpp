@@ -43,6 +43,7 @@ int cmd_quit(const VSTRING&);
 int cmd_set_run_param(const VSTRING& param);
 int cmd_add_block(const VSTRING& param);
 int cmd_remove_block(const VSTRING& param);
+int cmd_list_block(const VSTRING& param);
 int cmd_load_block(const VSTRING& param);
 int cmd_compact_block(const VSTRING& param);
 int cmd_replicate_block(const VSTRING& param);
@@ -53,6 +54,7 @@ int cmd_rotate_log(const VSTRING& param);
 int cmd_dump_plan(const VSTRING &param);
 int cmd_set_bpr(const VSTRING &param);
 int cmd_get_bpr(const VSTRING &param);
+int cmd_batch_file(const VSTRING& param);
 
 #ifdef _WITH_READ_LINE
 #include "readline/readline.h"
@@ -111,19 +113,82 @@ void init()
   g_cmd_map["help"] = CmdNode("help", "show help info", 0, 0, cmd_show_help);
   g_cmd_map["quit"] = CmdNode("quit", "quit", 0, 0, cmd_quit);
   g_cmd_map["exit"] = CmdNode("exit", "exit", 0, 0, cmd_quit);
-  g_cmd_map["param"] = CmdNode("param name [set value [extravalue]]", "set/get param value", 1, 4, cmd_set_run_param);
+  g_cmd_map["param"] = CmdNode("param name [set value [extravalue]]", "set/get param value", 0, 4, cmd_set_run_param);
   g_cmd_map["addblk"] = CmdNode("addblk blockid", "add block", 1, 1, cmd_add_block);
-  g_cmd_map["removeblk"] = CmdNode("removeblock blockid serverip:port", "remove block", 1, 2, cmd_remove_block);
+  g_cmd_map["removeblk"] = CmdNode("removeblk blockid serverip:port", "remove block", 1, 2, cmd_remove_block);
+  g_cmd_map["listblk"] = CmdNode("listblk blockid", "list block server list", 1, 1, cmd_list_block);
   g_cmd_map["loadblk"] = CmdNode("loadblk blockid serverip:port", "load block", 2, 2, cmd_load_block);
   g_cmd_map["compactblk"] = CmdNode("compactblk blockid", "compact block", 1, 1, cmd_compact_block);
   g_cmd_map["replblk"] = CmdNode("replblk blockid [src dest action]", "replicate block", 1, 4, cmd_replicate_block);
   g_cmd_map["repairgrp"] = CmdNode("repairgrp blockid", "repair group block", 1, 1, cmd_repair_group_block);
   g_cmd_map["aci"] = CmdNode("aci ip:port [startrow returnrow]", "access control", 1, 3, cmd_access_stat_info);
-  g_cmd_map["setacl"] = CmdNode("setacl ip:port type [v1 [v2]]","set access control", 1, 4, cmd_access_control_flag);
+  g_cmd_map["setacl"] = CmdNode("setacl ip:port type [v1 [v2]]",
+      "set access control. "
+      "type: 1--ACL_FLAG, 2--ACL_IPMASK, 3--ACL_IPLIST, 4--ACL_CLEAR, 5--ACL_RELOAD",
+      2, 4, cmd_access_control_flag);
   g_cmd_map["rotatelog"] = CmdNode("rotatelog ip:port","rotate log", 1, 1, cmd_rotate_log);
   g_cmd_map["dumpplan"] = CmdNode("dumpplan [serverip:port [action]]", "dump plan server", 0, 2, cmd_dump_plan);
   g_cmd_map["setbpr"] = CmdNode("setbpr value1 value2", "set balance percent ratio", 2, 2, cmd_set_bpr);
   g_cmd_map["getbpr"] = CmdNode("getbpr", "get balance percent ratio", 0, 0, cmd_get_bpr);
+  g_cmd_map["batch"] = CmdNode("batch file", "batch run command in file", 1, 1, cmd_batch_file);
+}
+
+// expand ~ to HOME. modify argument
+const char* expand_path(string& path)
+{
+  if (path.size() > 0 && '~' == path.at(0) &&
+      (1 == path.size() ||                      // just one ~
+       (path.size() > 1 && '/' == path.at(1)))) // like ~/xxx
+  {
+    char* home_path = getenv("HOME");
+    if (NULL == home_path)
+    {
+      fprintf(stderr, "can't get HOME path: %s\n", strerror(errno));
+    }
+    else
+    {
+      path.replace(0, 1, home_path);
+    }
+  }
+  return path.c_str();
+}
+
+int cmd_batch_file(const VSTRING& param)
+{
+  const char* batch_file = expand_path(const_cast<string&>(param[0]));
+  FILE* fp = fopen(batch_file, "rb");
+  int ret = TFS_SUCCESS;
+  if (fp == NULL)
+  {
+    fprintf(stderr, "open file error: %s\n\n", batch_file);
+    ret = TFS_ERROR;
+  }
+  else
+  {
+    int32_t error_count = 0;
+    int32_t count = 0;
+    VSTRING params;
+    char buffer[MAX_CMD_SIZE];
+    while (fgets(buffer, MAX_CMD_SIZE, fp))
+    {
+      if ((ret = do_cmd(buffer)) == TFS_ERROR)
+      {
+        error_count++;
+      }
+      if (++count % 100 == 0)
+      {
+        fprintf(stdout, "tatol: %d, %d errors.\r", count, error_count);
+        fflush(stdout);
+      }
+      if (TFS_CLIENT_QUIT == ret)
+      {
+        break;
+      }
+    }
+    fprintf(stdout, "tatol: %d, %d errors.\n\n", count, error_count);
+    fclose(fp);
+  }
+  return TFS_SUCCESS;
 }
 
 int cmd_get_bpr(const VSTRING& param)
@@ -361,6 +426,34 @@ int cmd_remove_block(const VSTRING& param)
   return status;
 }
 
+int cmd_list_block(const VSTRING& param)
+{
+  uint32_t block_id = atoi(param[0].c_str());
+  int ret = TFS_ERROR;
+
+  if (block_id <= 0)
+  {
+    fprintf(stderr, "invalid block id: %u\n", block_id);
+  }
+  else
+  {
+    VUINT64 ds_list;
+    ret = ToolUtil::get_block_ds_list(g_tfs_client->get_server_id(), block_id, ds_list);
+    ToolUtil::print_info(ret, "list block %u", block_id);
+
+    if (TFS_SUCCESS == ret)
+    {
+      int32_t ds_size = ds_list.size();
+      fprintf(stdout, "------block: %u, has %d replicas------\n", block_id, ds_size);
+      for (int32_t i = 0; i < ds_size; ++i)
+      {
+        fprintf(stdout, "block: %u, (%d)th server: %s \n", block_id, i, tbsys::CNetUtil::addrToString(ds_list[i]).c_str());
+      }
+    }
+  }
+  return ret;
+}
+
 int cmd_load_block(const VSTRING& param)
 {
   uint32_t block_id = atoi(param[0].c_str());
@@ -596,6 +689,10 @@ int cmd_access_control_flag(const VSTRING& param)
     if (!value1)
     {
       fprintf(stderr, "setacl ip:port 1 flag\n");
+      fprintf(stderr, "flag: 0 -- set mode, when you can set ip mask or ip port\n");
+      fprintf(stderr, "      1 -- control mode, when those in ip list will be denied to do read or readV2 operation\n");
+      fprintf(stderr, "      2 -- control mode, when those in ip list will be denied to do write or close operation\n");
+      fprintf(stderr, "      4 -- control mode, when those in ip list will be denied to do unlink operation\n");
       return TFS_ERROR;
     }
     v1 = atoi(value1);
@@ -1028,7 +1125,7 @@ int cmd_dump_plan(const VSTRING& param)
         plan_seqno = data_buff.readInt64();
         server_num = data_buff.readInt8();
         runer = "";
- 
+
         for (uint32_t j=0; j<server_num; j++)
         {
           runer += tbsys::CNetUtil::addrToString(data_buff.readInt64());
