@@ -5,15 +5,24 @@ TFS_NS_CONF=${TFS_HOME}/conf/ns.conf
 TFS_DS_CONF=${TFS_HOME}/conf/ds.conf
 TFS_MOCK_DS_CONF=${TFS_HOME}/conf/mock_ds.conf
 TFS_ADMIN_CONF=${TFS_HOME}/conf/ads.conf
+TFS_RC_CONF=${TFS_HOME}/conf/rc.conf
+TFS_RS_CONF=${TFS_HOME}/conf/rs.conf
+TFS_META_CONF=${TFS_HOME}/conf/meta.conf
 BIN_DIR=${TFS_HOME}/bin
 NS_BIN=${BIN_DIR}/nameserver
 DS_BIN=${BIN_DIR}/dataserver
 ADMIN_BIN=${BIN_DIR}/adminserver
 MOCK_DS_BIN=${BIN_DIR}/mock_data_server
+RC_BIN=${BIN_DIR}/rcserver
+RS_BIN=${BIN_DIR}/rootserver
+META_BIN=${BIN_DIR}/metaserver
 NS_CMD="${NS_BIN} -f ${TFS_NS_CONF} -d"
 DS_CMD="${DS_BIN} -f ${TFS_DS_CONF} -d -i"
 ADMIN_CMD="${ADMIN_BIN} -f ${TFS_ADMIN_CONF} -d -s"
 MOCK_DS_CMD="${MOCK_DS_BIN} -f ${TFS_MOCK_DS_CONF} -d -i"
+RC_CMD="${RC_BIN} -f ${TFS_RC_CONF} -d"
+RS_CMD="${RS_BIN} -f ${TFS_RS_CONF} -d"
+META_CMD="${META_BIN} -f ${TFS_META_CONF} -d"
 UP_TIME=4
 DOWN_TIME=8
 
@@ -36,7 +45,7 @@ succ_echo()
 
 print_usage()
 {
-    warn_echo "Usage: $0 [start_ns | stop_ns | start_ds ds_index | stop_ds ds_index | stop_ds_all | check_ns | check_ds | admin_ns | admin_ds | check_admin | stop_admin]"
+    warn_echo "Usage: $0 [start_ns | check_ns | stop_ns | start_ds ds_index | check_ds | stop_ds ds_index | stop_ds_all | admin_ns | admin_ds | check_admin | stop_admin | start_rc | check_rc | stop_rc | start_rs | check_rs | stop_rs | start_meta | check_meta | stop_meta]"
     warn_echo "ds_index format : 2-4 OR 2,4,3 OR 2-4,6,7 OR '2-4 5,7,8'"
 }
 
@@ -91,6 +100,30 @@ get_info()
                 echo "mock ds $3"
             fi
             ;;
+        rc)
+            if [ $2 -gt 0 ]
+            then
+                echo "${RC_CMD}"
+            else
+                echo "rcserver"
+            fi
+            ;;
+        rs)
+            if [ $2 -gt 0 ]
+            then
+                echo "${RS_CMD}"
+            else
+                echo "rootserver"
+            fi
+            ;;
+        meta)
+            if [ $2 -gt 0 ]
+            then
+                echo "${META_CMD}"
+            else
+                echo "metaserver"
+            fi
+            ;;
         *)
             exit 1
     esac
@@ -143,6 +176,15 @@ check_run()
             ;;
         mock_ds)
             grep_cmd="${MOCK_DS_CMD} +$2\b"
+            ;;
+        rc)
+            grep_cmd="${RC_CMD}"
+            ;;
+        rs)
+            grep_cmd="${RS_CMD}"
+            ;;
+        meta)
+            grep_cmd="${META_CMD}"
             ;;
         *)
             exit 1
@@ -402,6 +444,78 @@ stop_mock_ds()
 }
 #### for test mock end ####
 
+start_rc()
+{
+    do_start "rc" 0
+}
+
+check_rc()
+{
+    ret_pid=`check_run rc`
+    if [ $ret_pid -gt 0 ]
+    then
+        succ_echo "rcserver is running pid: $ret_pid"
+    elif [ $ret_pid -eq 0 ]
+    then
+        fail_echo "rcserver is NOT running"
+    else
+        fail_echo "more than one same rcserver is running"
+    fi
+}
+
+stop_rc()
+{
+    do_stop "rc" 0
+}
+
+start_rs()
+{
+    do_start "rs" 0
+}
+
+check_rs()
+{
+    ret_pid=`check_run rs`
+    if [ $ret_pid -gt 0 ]
+    then
+        succ_echo "rootserver is running pid: $ret_pid"
+    elif [ $ret_pid -eq 0 ]
+    then
+        fail_echo "rootserver is NOT running"
+    else
+        fail_echo "more than one same rootserver is running"
+    fi
+}
+
+stop_rs()
+{
+    do_stop "rs" 0
+}
+
+start_meta()
+{
+    do_start "meta" 0
+}
+
+check_meta()
+{
+    ret_pid=`check_run meta`
+    if [ $ret_pid -gt 0 ]
+    then
+        succ_echo "metaserver is running pid: $ret_pid"
+    elif [ $ret_pid -eq 0 ]
+    then
+        fail_echo "metaserver is NOT running"
+    else
+        fail_echo "more than one same metaserver is running"
+    fi
+}
+
+stop_meta()
+{
+    do_stop "meta" 0
+}
+
 ########################
 case "$1" in
     start_ns)
@@ -452,6 +566,33 @@ case "$1" in
         ;;
     stop_mock_ds)
         stop_mock_ds "$2"
+        ;;
+    start_rc)
+        start_rc
+        ;;
+    check_rc)
+        check_rc
+        ;;
+    stop_rc)
+        stop_rc
+        ;;
+    start_rs)
+        start_rs
+        ;;
+    check_rs)
+        check_rs
+        ;;
+    stop_rs)
+        stop_rs
+        ;;
+    start_meta)
+        start_meta
+        ;;
+    check_meta)
+        check_meta
+        ;;
+    stop_meta)
+        stop_meta
         ;;
     *)
         print_usage
