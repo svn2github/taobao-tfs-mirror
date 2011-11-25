@@ -220,7 +220,7 @@ int TestTfsSeed::testUnlink()
   int ret = 0;
 
   TfsFileStat info;
-  memset( (char *)&info, 0x00, sizeof(TfsFileStat) );
+  memset((char *)&info, 0x00, sizeof(TfsFileStat));
 
   const char *postfix = strlen(_fileName) > 18 ? (char *)(_fileName + 18) : NULL;
   int64_t fileSize = 0;
@@ -276,8 +276,8 @@ int TestTfsSeed::testUnlink()
 
 int TestTfsSeed::run()
 {
-	int ret = -1;
-	int tmp_ret = -1;
+	int ret = TFS_ERROR;
+	int tmp_ret = TFS_ERROR;
 	int64_t start_time = 0;
 	int64_t end_time = 0;
   char strCrc[CRCSIZE];
@@ -285,8 +285,8 @@ int TestTfsSeed::run()
 
   memset((char *)strCrc, 0, CRCSIZE);
 
-	//start_time = CTimeUtil::getTime();
-	if ((ret = testWrite()) != 0)
+  ret = testWrite();
+	if (TFS_SUCCESS != ret)
   {
 		TBSYS_LOG(ERROR,"TestSeed::testWrite: FAILED: %d", ret);
 	}
@@ -299,21 +299,16 @@ int TestTfsSeed::run()
 
 	TestGFactory::_statisForWrite.addStatis(start_time, end_time, ret, "writeFile");
 
-  if (ret != 0)
+  if (TFS_SUCCESS == ret && _writeVerifyFlag)
   {
-    goto out;
-  }
- 
-  if (_writeVerifyFlag)
-  {
-    start_time = CTimeUtil::getTime();
-    if ((tmp_ret = testRead()) != 0)
+    tmp_ret = testRead();
+    if (TFS_SUCCESS != tmp_ret)
     {
-      TBSYS_LOG(ERROR,"TestSeed::testRead: FAILED: %d", tmp_ret);
+      TBSYS_LOG(ERROR, "TestSeed::testRead: FAILED: %d", tmp_ret);
     }
     else 
     {
-      TBSYS_LOG(INFO,"TestSeed::testRead: SUCCESSFUL");
+      TBSYS_LOG(INFO, "TestSeed::testRead: SUCCESSFUL");
     }
 
     end_time = CTimeUtil::getTime();
@@ -321,15 +316,20 @@ int TestTfsSeed::run()
     TestGFactory::_statisForRead.addStatis(start_time, end_time, tmp_ret, "readFile");
   }
 
-  if (_unlinkRatio > 0 )
+  if (TFS_SUCCESS == ret && _unlinkRatio > 0 )
   {
-    start_time = CTimeUtil::getTime();
-    srand(time(NULL)+rand()+pthread_self());
+    srand(time(NULL) + rand() + pthread_self());
     int randNo = rand() % 100;
     if (randNo < _unlinkRatio)
     {
       unlinked_ = true;
-      if ((tmp_ret = testUnlink()) != 0)
+      std::string record = _fileName;
+      record = record + ".jpg ";
+      /* Save it */
+      _unlinked_recordSet.insert(record);
+
+      tmp_ret = testUnlink();
+      if (TFS_SUCCESS != tmp_ret)
       {
         TBSYS_LOG(ERROR,"TestSeed::testUnlink: FAILED: %d", tmp_ret);
       }
@@ -344,7 +344,7 @@ int TestTfsSeed::run()
     }
   }
 
-  if (unlinked_ == false && TFS_SUCCESS == ret && _fileName[0] != 0)
+  if (false == unlinked_ && TFS_SUCCESS == ret && 0 != _fileName[0])
   { 
     /* Edit the filename and crc */
     snprintf(strCrc, CRCSIZE, "%u", _preCrc);
@@ -354,7 +354,6 @@ int TestTfsSeed::run()
     _recordSet.insert(record);
   }
 
-out:
   if (_loopFlag == 0)
   {
 	  TestGFactory::_tfsTest.stop();
@@ -381,6 +380,29 @@ int TestTfsSeed::saveFilename()
   }
   std::set<std::string>::iterator it=_recordSet.begin();
   for(; it != _recordSet.end(); it++)
+  {
+    fprintf(fp, "%s\n", it->c_str());
+  }
+
+  fflush(fp);
+  fclose(fp);
+
+  // write unlinked file list
+  filelist = (char *)CConfig::getCConfig().getString("tfsseed",
+         "unlinkedlist_name");
+  if (filelist == NULL)
+  {
+    filelist = "./tfsunlinked_file_list.txt";                                                                                                                
+  }
+
+  if((fp = fopen(filelist, "a")) == NULL)
+  {
+      TBSYS_LOG(ERROR,"open unlinked_file_list failed.");
+      return -1;
+  }
+
+  it=_unlinked_recordSet.begin();
+  for(; it != _unlinked_recordSet.end(); it++)
   {
     fprintf(fp, "%s\n", it->c_str());
   }

@@ -55,6 +55,7 @@ class TestTfsSeed : public TestTfsCase {
     char *_data;
     char _fileName[TFSNAMELEN];
     std::set<std::string> _recordSet; // a record = tfs_filename + suffix + crc
+    std::set<std::string> _unlinked_recordSet; // a record = tfs_filename + suffix + crc
 
     static tbsys::CThreadMutex _lock;
     static int _have_display_statis;
