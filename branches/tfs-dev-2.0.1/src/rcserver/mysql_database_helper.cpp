@@ -583,7 +583,7 @@ error:
         {
           outparam.base_last_update_time_ = atoi(row[0]);
           outparam.base_last_update_time_ *= 1000 * 1000;
-          outparam.app_last_update_time_ = atoi(row[0]);
+          outparam.app_last_update_time_ = atoi(row[1]);
           outparam.app_last_update_time_ *= 1000 * 1000;
           ret = TFS_SUCCESS;
           break;
