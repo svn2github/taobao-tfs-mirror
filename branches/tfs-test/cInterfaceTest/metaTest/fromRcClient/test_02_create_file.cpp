@@ -77,8 +77,10 @@ TEST_F(TfsInit,test_09_createFile_with_same_Dir)
    ret=tfsclient->create_dir(uid,"/test");
    EXPECT_EQ(0,ret);
    ret=tfsclient->create_file(uid,"/test");
-   EXPECT_GT(0,ret);
+   EXPECT_EQ(0,ret);
    ret=tfsclient->rm_dir(uid,"/test");
+   EXPECT_EQ(0,ret);
+   ret=tfsclient->rm_file(uid,"/test");
    EXPECT_EQ(0,ret);
 }
 
