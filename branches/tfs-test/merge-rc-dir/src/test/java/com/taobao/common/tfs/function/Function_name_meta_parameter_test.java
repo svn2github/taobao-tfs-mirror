@@ -8,6 +8,7 @@ import org.junit.BeforeClass;
 import org.junit.After;
 import org.junit.Before;
 
+import com.taobao.common.tfs.NameMetaBaseCase;
 import com.taobao.gaia.AppCluster;
 import com.taobao.gaia.AppServer;
 import com.taobao.gaia.KillTypeEnum;

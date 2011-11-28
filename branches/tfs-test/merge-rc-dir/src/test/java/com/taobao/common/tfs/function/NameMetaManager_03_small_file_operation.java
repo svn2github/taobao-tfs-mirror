@@ -13,6 +13,8 @@ import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
 
+import com.taobao.common.tfs.NameMetaManagerBaseCase;
+
 public class NameMetaManager_03_small_file_operation extends  NameMetaManagerBaseCase{
 
     public static String rootDir = "/NameMetaTest3";

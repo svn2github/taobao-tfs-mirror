@@ -1,4 +1,4 @@
-package com.taobao.common.tfs.disastertest;
+package com.taobao.common.tfs;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -23,17 +23,16 @@ import org.springframework.context.support.ClassPathXmlApplicationContext;
 
 import com.taobao.common.tfs.DefaultTfsManager;
 import com.taobao.common.tfs.namemeta.FileMetaInfo;
-import com.taobao.common.tfs.disastertest.NameMetaDirHelper;
 
 public class NameMetaManagerBaseCase {
 
     protected static Logger log = Logger.getLogger(NameMetaManagerBaseCase.class.getName());
-    final static ClassPathXmlApplicationContext clientFactory = new ClassPathXmlApplicationContext("tfsJavaClient.xml");
+    final static ClassPathXmlApplicationContext clientFactory = new ClassPathXmlApplicationContext("tfsClient.xml");
     public static DefaultTfsManager tfsManager = (DefaultTfsManager) clientFactory.getBean("tfsManager");
     public static String resourcesPath="src/test/resources";
 
     public static long appId = tfsManager.getAppId();
-    public static long userId = 61;
+    public static long userId = 361;
 
     @BeforeClass
     public  static void setUpOnce() throws Exception {

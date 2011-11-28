@@ -15,6 +15,7 @@ import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
 
+import com.taobao.common.tfs.NameMetaManagerBaseCase;
 import com.taobao.common.tfs.TfsManager;
 import com.taobao.common.tfs.namemeta.FileMetaInfo;
 

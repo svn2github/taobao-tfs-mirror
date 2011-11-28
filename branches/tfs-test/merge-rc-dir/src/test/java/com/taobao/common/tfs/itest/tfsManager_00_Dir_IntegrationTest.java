@@ -1,6 +1,7 @@
 package com.taobao.common.tfs.itest;
 
 import com.taobao.common.tfs.DefaultTfsManager;
+import com.taobao.common.tfs.tfsNameBaseCase;
 import com.taobao.common.tfs.namemeta.FileMetaInfo;
 import java.util.ArrayList;
 import java.util.List;
@@ -9,10 +10,8 @@ import java.util.Random;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-
+import org.junit.Ignore;
 import junit.framework.Assert;
-
-import com.taobao.common.tfs.function.tfsNameBaseCase;
 
 public class tfsManager_00_Dir_IntegrationTest extends tfsNameBaseCase {
 
@@ -51,7 +50,7 @@ public class tfsManager_00_Dir_IntegrationTest extends tfsNameBaseCase {
 
 		log.info("test_01_mvDir_right");
 		bRet = tfsManager.createDir (appId, userId, "/text1");
-		bRet = tfsManager.mvDir (userId, "/text1", "/text2");
+		bRet = tfsManager.mvDir (appId, userId, "/text1", "/text2");
 		Assert.assertTrue("mvDir with right path should be true", bRet);
 		tfsManager.rmDir (appId, userId, "/text2");
 		bRet = tfsManager.rmDir (appId, userId, "/text1");
@@ -61,7 +60,7 @@ public class tfsManager_00_Dir_IntegrationTest extends tfsNameBaseCase {
 
 		log.info("test_01_ls_Dir_Twice");
 		metaInfoList = null;
-		metaInfoList = tfsManager.lsDir (userId, "/text1");
+		metaInfoList = tfsManager.lsDir (appId, userId, "/text1");
 		Assert.assertNotNull(metaInfoList);
 		Assert.assertEquals(num, metaInfoList.size());
 		for (int i = 0; i < num; i++) {
@@ -86,7 +85,7 @@ public class tfsManager_00_Dir_IntegrationTest extends tfsNameBaseCase {
 
 		log.info("test_01_ls_Dir_Third");
 		// metaInfoList = null;
-		metaInfoList = tfsManager.lsDir (userId, "/text1");
+		metaInfoList = tfsManager.lsDir (appId, userId, "/text1");
 		Assert.assertNotNull(metaInfoList);
 		Assert.assertEquals(num, metaInfoList.size());
 
@@ -119,7 +118,7 @@ public class tfsManager_00_Dir_IntegrationTest extends tfsNameBaseCase {
 		metaInfoList = null;
 		FileMetaInfo metaInfo;
 		int num = 11;
-		metaInfoList = tfsManager.lsDir (userId, "/text1");
+		metaInfoList = tfsManager.lsDir (appId, userId, "/text1");
 		Assert.assertNotNull(metaInfoList);
 		Assert.assertEquals(num, metaInfoList.size());
 		int i;
@@ -144,7 +143,7 @@ public class tfsManager_00_Dir_IntegrationTest extends tfsNameBaseCase {
 
 		log.info("test_02_ls_Dir_Twice");
 		metaInfoList = null;
-		metaInfoList = tfsManager.lsDir (userId, "/text1");
+		metaInfoList = tfsManager.lsDir (appId, userId, "/text1");
 		Assert.assertNotNull(metaInfoList);
 		Assert.assertEquals(num, metaInfoList.size());
 
@@ -163,7 +162,7 @@ public class tfsManager_00_Dir_IntegrationTest extends tfsNameBaseCase {
 
 		log.info("test_02_mvDir_right");
 		bRet = tfsManager.createDir (appId, userId, "/text1");
-		bRet = tfsManager.mvDir (userId, "/text1", "/text2");
+		bRet = tfsManager.mvDir (appId, userId, "/text1", "/text2");
 		Assert.assertTrue("mvDir with right path should be true", bRet);
 		tfsManager.rmDir (appId, userId, "/text2");
 		bRet = tfsManager.rmDir (appId, userId, "/text1");
@@ -173,7 +172,7 @@ public class tfsManager_00_Dir_IntegrationTest extends tfsNameBaseCase {
 
 		log.info("test_02_ls_Third_Dir");
 		metaInfoList = null;
-		metaInfoList = tfsManager.lsDir (userId, "/text1");
+		metaInfoList = tfsManager.lsDir (appId, userId, "/text1");
 		Assert.assertNotNull(metaInfoList);
 		Assert.assertEquals(num, metaInfoList.size());
 		for (i = 0; i < num; i++) {
@@ -201,7 +200,7 @@ public class tfsManager_00_Dir_IntegrationTest extends tfsNameBaseCase {
 		/* mv dir */
 		log.info("test_03_mvDir_right");
 		bRet = tfsManager.createDir (appId, userId, "/text1");
-		bRet = tfsManager.mvDir (userId, "/text1", "/text2");
+		bRet = tfsManager.mvDir (appId, userId, "/text1", "/text2");
 		Assert.assertTrue("mvDir with right path should be true", bRet);
 
 		tfsManager.rmDir (appId, userId, "/text2");
@@ -215,7 +214,7 @@ public class tfsManager_00_Dir_IntegrationTest extends tfsNameBaseCase {
 		metaInfoList = null;
 		FileMetaInfo metaInfo;
 		int num = 11;
-		metaInfoList = tfsManager.lsDir (userId, "/text1");
+		metaInfoList = tfsManager.lsDir (appId, userId, "/text1");
 		Assert.assertNotNull(metaInfoList);
 		Assert.assertEquals(num, metaInfoList.size());
 		int i;
@@ -241,7 +240,7 @@ public class tfsManager_00_Dir_IntegrationTest extends tfsNameBaseCase {
 
 		log.info("test_03_ls_Dir_Twice");
 		metaInfoList = null;
-		metaInfoList = tfsManager.lsDir (userId, "/text1");
+		metaInfoList = tfsManager.lsDir (appId, userId, "/text1");
 		Assert.assertNotNull(metaInfoList);
 		Assert.assertEquals(num, metaInfoList.size());
 
@@ -283,7 +282,7 @@ public class tfsManager_00_Dir_IntegrationTest extends tfsNameBaseCase {
 		metaInfoList = null;
 		FileMetaInfo metaInfo;
 		int num = 11;
-		metaInfoList = tfsManager.lsDir (userId, "/text1");
+		metaInfoList = tfsManager.lsDir (appId, userId, "/text1");
 		Assert.assertNotNull(metaInfoList);
 		Assert.assertEquals(num, metaInfoList.size());
 		int i;
@@ -302,7 +301,7 @@ public class tfsManager_00_Dir_IntegrationTest extends tfsNameBaseCase {
 
 		log.info("test_04_mvDir_right");
 		bRet = tfsManager.createDir (appId, userId, "/text1");
-		bRet = tfsManager.mvDir (userId, "/text1", "/text2");
+		bRet = tfsManager.mvDir (appId, userId, "/text1", "/text2");
 		Assert.assertTrue("mvDir with right path should be true", bRet);
 		tfsManager.rmDir (appId, userId, "/text2");
 		bRet = tfsManager.rmDir (appId, userId, "/text1");
@@ -319,7 +318,7 @@ public class tfsManager_00_Dir_IntegrationTest extends tfsNameBaseCase {
 
 		log.info("test_04_ls_Dir_Twice");
 		metaInfoList = null;
-		metaInfoList = tfsManager.lsDir (userId, "/text1");
+		metaInfoList = tfsManager.lsDir (appId, userId, "/text1");
 		Assert.assertNotNull(metaInfoList);
 		Assert.assertEquals(num, metaInfoList.size());
 

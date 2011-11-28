@@ -17,6 +17,7 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import com.taobao.common.tfs.NameMetaManagerBaseCase;
 import com.taobao.common.tfs.namemeta.FileMetaInfo;
 
 public class NameMetaManager_04_multithread_small_file_operation  extends  NameMetaManagerBaseCase{

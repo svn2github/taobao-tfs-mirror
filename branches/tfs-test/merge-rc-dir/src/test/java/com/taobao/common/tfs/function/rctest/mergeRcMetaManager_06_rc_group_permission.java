@@ -1,7 +1,7 @@
 /**
  * 
  */
-package com.taobao.common.tfs.function;
+package com.taobao.common.tfs.function.rctest;
 
 import java.util.HashMap;
 import java.util.ArrayList;
@@ -18,6 +18,7 @@ import java.io.File;
 import org.springframework.context.support.ClassPathXmlApplicationContext;
 import com.taobao.gaia.KillTypeEnum;
 import com.taobao.common.tfs.DefaultTfsManager; 
+import com.taobao.common.tfs.RcBaseCase;
 
 
 /**

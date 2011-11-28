@@ -1,7 +1,7 @@
 /**
  * 
  */
-package com.taobao.common.tfs.function;
+package com.taobao.common.tfs.function.rctest;
 
 import java.util.HashMap;
 import java.util.ArrayList;
@@ -18,6 +18,7 @@ import java.io.File;
 import org.springframework.context.support.ClassPathXmlApplicationContext;
 import com.taobao.gaia.KillTypeEnum;
 import com.taobao.common.tfs.DefaultTfsManager; 
+import com.taobao.common.tfs.RcBaseCase;
 
 
 /**
@@ -31,7 +32,7 @@ public class mergeRcMetaManager_05_rc_quote_calc extends RcBaseCase {
 
       tfsManager= new DefaultTfsManager();
       ClassPathXmlApplicationContext appContext =
-        new ClassPathXmlApplicationContext(new String[] { "tfs.xml" }); 
+      new ClassPathXmlApplicationContext(new String[] { "tfs.xml" }); 
       System.out.println("@@@@@@@@@@@get bean begin");
       tfsManager = (DefaultTfsManager) appContext.getBean("tfsManager");
 
@@ -42,7 +43,7 @@ public class mergeRcMetaManager_05_rc_quote_calc extends RcBaseCase {
       tfsManager.destroy();
     }
 
-  @Ignore
+  @Test
     public void Function_01_quote_less_than_max(){
 
       caseName = "Function_01_quote_less_than_max";
@@ -157,7 +158,7 @@ public class mergeRcMetaManager_05_rc_quote_calc extends RcBaseCase {
       return ;
     }
 
-  @Ignore
+  @Test
     public void Function_02_quote_more_than_max(){
 
       caseName = "Function_02_quote_more_than_max";
@@ -197,7 +198,7 @@ public class mergeRcMetaManager_05_rc_quote_calc extends RcBaseCase {
       return ;
     }
 
-  @Ignore
+  @Test
     public void Function_03_modify_quote(){
 
       caseName = "Function_03_modify_quote";

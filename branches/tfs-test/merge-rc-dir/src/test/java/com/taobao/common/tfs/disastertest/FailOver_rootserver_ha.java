@@ -1,7 +1,7 @@
 /**
  * 
  */
-package com.taobao.common.tfs.function;
+package com.taobao.common.tfs.disastertest;
 
 import java.util.HashMap;
 import java.util.ArrayList;
@@ -18,15 +18,15 @@ import java.io.File;
 import org.springframework.context.support.ClassPathXmlApplicationContext;
 import com.taobao.gaia.KillTypeEnum;
 import com.taobao.common.tfs.DefaultTfsManager; 
-
+import com.taobao.common.tfs.NameMetaBaseCase;
 
 /**
  * @author Administrator/chuyu
  *
  */
-public class mergeRcMetaManager_12_rootserver_ha extends NameMetaBaseCase {
+public class FailOver_rootserver_ha extends NameMetaBaseCase {
 
-  public int CHECK_TIME = 3;
+   public int CHECK_TIME = 3;
 
   @Before
     public void setUp(){

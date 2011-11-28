@@ -1,7 +1,7 @@
 /**
  * 
  */
-package com.taobao.common.tfs.function;
+package com.taobao.common.tfs;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -40,7 +40,7 @@ public class TfsBaseCase {
     public HelpProc Proc = new HelpProc();
     public HelpFile File = new HelpFile();
 
-    String caseName;
+    public String caseName;
     
     // Define
     final public int FAIL_COUNT_NOR = 0;

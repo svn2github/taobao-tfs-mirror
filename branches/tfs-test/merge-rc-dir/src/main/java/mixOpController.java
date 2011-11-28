@@ -1,4 +1,3 @@
-package com.taobao.common.tfs.function;
 
 import java.util.concurrent.ExecutorService; 
 import java.util.concurrent.Executors; 
@@ -117,7 +116,7 @@ class Operation implements Runnable {
     this.outputList = outputList;
   }
 
-  @Override
+  //@Override
   public void run() {
     log = Logger.getLogger("mergeRcDirClient");
     clientFactory = new ClassPathXmlApplicationContext("tfs.xml");
@@ -365,7 +364,7 @@ class DumpStat implements Runnable {
     this.myLock = myLock;
   }
 
-  @Override
+//  @Override
     public void run() { 
       log.info("start dumpstat ===" + Thread.currentThread().getId() + " === thread");
       //myLock.readLock().lock();

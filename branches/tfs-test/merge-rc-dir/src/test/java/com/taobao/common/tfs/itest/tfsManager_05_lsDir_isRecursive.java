@@ -11,7 +11,7 @@ import org.junit.Test;
 
 import junit.framework.Assert;
 
-import com.taobao.common.tfs.function.tfsNameBaseCase;
+import com.taobao.common.tfs.tfsNameBaseCase;
 import com.taobao.common.tfs.namemeta.FileMetaInfo;
 
 
@@ -24,16 +24,16 @@ public class tfsManager_05_lsDir_isRecursive extends tfsNameBaseCase
 		 int n=0;
 		 for(i=1;i<=5;i++)
 		 {
-			 tfsManager.createDir( userId, "/text"+i);
-			 tfsManager.createFile( userId, "/textFile"+i);
+			 tfsManager.createDir(appId, userId, "/text"+i);
+			 tfsManager.createFile(appId, userId, "/textFile"+i);
 			 ++n;
 		 }
 		 System.out.println("!!!!!!!!!!!!!!!!!!!!!!"+n);
 		 for(i=1;i<=5;i++)
 		 for(j=1;j<=5;j++)
 		 {
-			tfsManager.createDir( userId, "/text"+i+"/text"+j);
-			tfsManager.createFile( userId, "/text"+i+"/textFile"+j);
+			tfsManager.createDir(appId, userId, "/text"+i+"/text"+j);
+			tfsManager.createFile(appId, userId, "/text"+i+"/textFile"+j);
 			++n;
 		 }
 		 System.out.println("!!!!!!!!!!!!!!!!!!!!!!"+n);
@@ -41,8 +41,8 @@ public class tfsManager_05_lsDir_isRecursive extends tfsNameBaseCase
 		 for(j=1;j<=5;j++)
 	     for(k=1;k<=5;k++)
 		 {
-			tfsManager.createDir( userId, "/text"+i+"/text"+j+"/text"+k);
-			tfsManager.createFile( userId, "/text"+i+"/text"+j+"/textFile"+k);
+			tfsManager.createDir(appId, userId, "/text"+i+"/text"+j+"/text"+k);
+			tfsManager.createFile(appId, userId, "/text"+i+"/text"+j+"/textFile"+k);
 			++n;
 		 }
 		 
@@ -53,25 +53,27 @@ public class tfsManager_05_lsDir_isRecursive extends tfsNameBaseCase
 	 public void AfterClass()
 	 {
 		 int i,j,k;
+		 
+		 
 		 for(i=1;i<=5;i++)
 		 for(j=1;j<=5;j++)
 		 for(k=1;k<=5;k++)
 		 {
-			tfsManager.rmDir( userId, "/text"+i+"/text"+j+"/text"+k);
-			tfsManager.rmFile( userId, "/text"+i+"/text"+j+"/textFile"+k);
+			tfsManager.rmDir(appId, userId, "/text"+i+"/text"+j+"/text"+k);
+			tfsManager.rmFile(appId, userId, "/text"+i+"/text"+j+"/textFile"+k);
 			
 		 }
 		 for(i=1;i<=5;i++)
 		 for(j=1;j<=5;j++)
 		 {
-			tfsManager.rmDir(userId, "/text"+i+"/text"+j);
-			tfsManager.rmFile(userId, "/text"+i+"/textFile"+j);
+			tfsManager.rmDir(appId, userId, "/text"+i+"/text"+j);
+			tfsManager.rmFile(appId, userId, "/text"+i+"/textFile"+j);
 		 }
 		 
 		 for(i=1;i<=5;i++)
 		 {
-			 tfsManager.rmDir(userId, "/text"+i);
-			 tfsManager.rmFile(userId, "/textFile"+i);
+			 tfsManager.rmDir(appId, userId, "/text"+i);
+			 tfsManager.rmFile(appId, userId, "/textFile"+i);
 		 }
 		 
 	 }
@@ -82,8 +84,8 @@ public class tfsManager_05_lsDir_isRecursive extends tfsNameBaseCase
 		List<FileMetaInfo> metaInfoList = new ArrayList<FileMetaInfo>();
 		metaInfoList=null;
 		FileMetaInfo metaInfo;
-		int num=60;
-		metaInfoList=tfsManager.lsDir( userId, "/text1",true);
+		int num=310;
+		metaInfoList=tfsManager.lsDir(appId, userId, "/",true);
 	    Assert.assertNotNull(metaInfoList);//why
 	    System.out.println("!!!!!!!!!!!!!!!!"+metaInfoList.size());
 		Assert.assertEquals(num, metaInfoList.size());
@@ -93,10 +95,10 @@ public class tfsManager_05_lsDir_isRecursive extends tfsNameBaseCase
 		{
 		   log.info( "The"+i+"file" );
 		   metaInfo=metaInfoList.get(i);
-		   log.info( "The fileName is"+metaInfo.getFileName());
-		   log.info( "The pid is"+metaInfo.getPid());
-		   log.info( "The id is"+metaInfo.getId());
-		   log.info( "The length is"+metaInfo.getLength());
+		   log.info( "The fileName is "+metaInfo.getFileName());
+		   log.info( "The pid is "+metaInfo.getPid());
+		   log.info( "The id is "+metaInfo.getId());
+		   log.info( "The length is "+metaInfo.getLength());
 		   log.info( "*****************************************************" );
 		}
 		log.info( "test_01_lsDir_right_isRecursive_filePath" );

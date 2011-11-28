@@ -1,4 +1,4 @@
-package com.taobao.common.tfs.function;
+package com.taobao.common.tfs;
 
 public class NameMetaDirHelper {
     private String dirName;

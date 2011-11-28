@@ -20,6 +20,7 @@ import org.junit.Ignore;
 import org.springframework.context.support.ClassPathXmlApplicationContext;
 import com.taobao.gaia.KillTypeEnum;
 import com.taobao.common.tfs.DefaultTfsManager; 
+import com.taobao.common.tfs.NameMetaBaseCase;
 
 
 /**
