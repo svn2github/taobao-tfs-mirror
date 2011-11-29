@@ -279,65 +279,67 @@ namespace tfs
         }
       }
 
-      //use read index file direct maybe faster
-      RawMetaVec raw_meta_vec;
-      ret = logic_block->get_meta_infos(raw_meta_vec);
-      if (TFS_SUCCESS != ret)
+      if (TFS_SUCCESS == ret)
       {
-        TBSYS_LOG(ERROR, "replicate get meta info fail, blockid: %u, ret: %d",
-            tbsys::CNetUtil::addrToString(ds_ip).c_str(), block_id, ret);
-        return TFS_ERROR;
-      }
-
-      WriteInfoBatchMessage req_wib_msg;
-      req_wib_msg.set_block_id(block_id);
-      req_wib_msg.set_offset(0);
-      req_wib_msg.set_length(raw_meta_vec.size());
-      req_wib_msg.set_raw_meta_list(&raw_meta_vec);
-      req_wib_msg.set_block_info(logic_block->get_block_info());
-      if (COPY_BETWEEN_CLUSTER == b->server_count_)
-      {
-        req_wib_msg.set_cluster(COPY_BETWEEN_CLUSTER);
-      }
-
-      TBSYS_LOG(DEBUG, "replicate get meta info. blockid: %u, meta info size: %u, cluster flag: %d\n", block_id,
-          raw_meta_vec.size(), req_wib_msg.get_cluster());
-
-      ret = TFS_SUCCESS;
-      NewClient* client = NewClientManager::get_instance().create_client();
-      if (NULL != client)
-      {
-        tbnet::Packet* rsp_msg = NULL;
-        if (TFS_SUCCESS == send_msg_to_server(ds_ip, client, &req_wib_msg, rsp_msg))
+        //use read index file direct maybe faster
+        RawMetaVec raw_meta_vec;
+        ret = logic_block->get_meta_infos(raw_meta_vec);
+        if (TFS_SUCCESS != ret)
         {
-          if (STATUS_MESSAGE == rsp_msg->getPCode())
+          TBSYS_LOG(ERROR, "replicate get meta info fail, blockid: %u, ret: %d",
+              tbsys::CNetUtil::addrToString(ds_ip).c_str(), block_id, ret);
+          return TFS_ERROR;
+        }
+
+        WriteInfoBatchMessage req_wib_msg;
+        req_wib_msg.set_block_id(block_id);
+        req_wib_msg.set_offset(0);
+        req_wib_msg.set_length(raw_meta_vec.size());
+        req_wib_msg.set_raw_meta_list(&raw_meta_vec);
+        req_wib_msg.set_block_info(logic_block->get_block_info());
+        if (COPY_BETWEEN_CLUSTER == b->server_count_)
+        {
+          req_wib_msg.set_cluster(COPY_BETWEEN_CLUSTER);
+        }
+
+        TBSYS_LOG(DEBUG, "replicate get meta info. blockid: %u, meta info size: %u, cluster flag: %d\n", block_id,
+            raw_meta_vec.size(), req_wib_msg.get_cluster());
+
+        ret = TFS_SUCCESS;
+        NewClient* client = NewClientManager::get_instance().create_client();
+        if (NULL != client)
+        {
+          tbnet::Packet* rsp_msg = NULL;
+          if (TFS_SUCCESS == send_msg_to_server(ds_ip, client, &req_wib_msg, rsp_msg))
           {
-            StatusMessage* sm = dynamic_cast<StatusMessage*> (rsp_msg);
-            if (STATUS_MESSAGE_OK != sm->get_status())
+            if (STATUS_MESSAGE == rsp_msg->getPCode())
             {
-              TBSYS_LOG(ERROR, "write meta info to %s fail, blockid: %u", tbsys::CNetUtil::addrToString(ds_ip).c_str(),
-                  block_id);
-              ret = TFS_ERROR;
+              StatusMessage* sm = dynamic_cast<StatusMessage*> (rsp_msg);
+              if (STATUS_MESSAGE_OK != sm->get_status())
+              {
+                TBSYS_LOG(ERROR, "write meta info to %s fail, blockid: %u", tbsys::CNetUtil::addrToString(ds_ip).c_str(),
+                    block_id);
+                ret = TFS_ERROR;
+              }
+            }
+            else
+            {
+              TBSYS_LOG(ERROR, "unknow packet pcode :%d", rsp_msg->getPCode());
             }
           }
           else
           {
-            TBSYS_LOG(ERROR, "unknow packet pcode :%d", rsp_msg->getPCode());
+            TBSYS_LOG(ERROR, "write meta info to %s fail, blockid: %u", tbsys::CNetUtil::addrToString(ds_ip).c_str(),
+                block_id);
+            ret = TFS_ERROR;
           }
+          NewClientManager::get_instance().destroy_client(client);
         }
         else
         {
-          TBSYS_LOG(ERROR, "write meta info to %s fail, blockid: %u", tbsys::CNetUtil::addrToString(ds_ip).c_str(),
-              block_id);
-          ret = TFS_ERROR;
+          TBSYS_LOG(ERROR, "create client error");
         }
-        NewClientManager::get_instance().destroy_client(client);
       }
-      else
-      {
-        TBSYS_LOG(ERROR, "create client error");
-      }
-
       return ret;
     }
 
