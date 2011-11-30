@@ -36,9 +36,6 @@ namespace tfs
 
       int64_t write_data(const char* ns_addr, const void* buffer, const int64_t pos, const int64_t length,
           common::FragMeta& frag_meta);
-
-    private:
-      TfsClientImpl* tfs_client_;
     };
   }
 }
