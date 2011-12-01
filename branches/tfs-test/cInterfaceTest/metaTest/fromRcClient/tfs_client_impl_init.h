@@ -14,15 +14,16 @@
 
 
 
+#define a1B       "/home/*/resource/1b.jpg"
 
-#define a1G       "/home/chenzewei.pt/testrcmeta/resource/1g.jpg"
-#define a6M       "/home/chenzewei.pt/testrcmeta/resource/6m.jpg"
-#define a3M       "/home/chenzewei.pt/testrcmeta/resource/3m.jpg"
-#define a2M       "/home/chenzewei.pt/testrcmeta/resource/2m.jpg"
-#define a100M     "/home/chenzewei.pt/testrcmeta/resource/100m.jpg"
-#define a10K      "/home/chenzewei.pt/testrcmeta/resource/10k.jpg"
-#define a100K     "/home/chenzewei.pt/testrcmeta/resource/100k.jpg"
-#define a1B       "/home/chenzewei.pt/testrcmeta/resource/1b.jpg"
+
+#define a1G       "/home/*/resource/1g.jpg"
+#define a6M       "/home/*/resource/6m.jpg"
+#define a3M       "/home/*/resource/3m.jpg"
+#define a2M       "/home/*/resource/2m.jpg"
+#define a100M     "/home/*/resource/100m.jpg"
+#define a10K      "/home/*/resource/10k.jpg"
+#define a100K     "/home/*/resource/100k.jpg"
 
 
 using namespace std;
@@ -43,7 +44,7 @@ class TfsInit: public testing::Test
      int32_t cache_time;
      int32_t cache_items;
 	 
-     static const int64_t appId = 8 ;
+     static const int64_t appId = 3 ;
      static const int64_t uid = 727 ;
 
      virtual void SetUp()
@@ -57,7 +58,7 @@ class TfsInit: public testing::Test
 		
 	tfsclient=new RcClient();
 
-        ret = tfsclient->initialize(str_rc_ip,app_key,str_app_ip,cache_time,cache_items,NULL,"10.232.36.206:8765");
+        ret = tfsclient->initialize(str_rc_ip,app_key,str_app_ip,cache_time,cache_items,NULL);
 
         if(ret!=0)
         {

@@ -4,27 +4,27 @@
 TEST_F(TfsInit,test_01_createDir_right_filePath)
 {
    int ret;
-   ret=tfsclient->create_dir(uid,"/test");
+   ret=tfsclient->create_dir(uid,"/metarcgtestcreateDir1");
    EXPECT_EQ(0,ret);
-   ret=tfsclient->rm_dir(uid,"/test");
+   ret=tfsclient->rm_dir(uid,"/metarcgtestcreateDir1");
    EXPECT_EQ(0,ret);
 }
 
 TEST_F(TfsInit,test_02_createDir_leap_filePath)
 {
    int ret;
-   ret=tfsclient->create_dir(uid,"/test/test");
+   ret=tfsclient->create_dir(uid,"/metarcgtestcreateDir2/test");
    EXPECT_GT(0,ret);
 }
 
 TEST_F(TfsInit,test_03_createDir_double_time)
 {
    int ret;
-   ret=tfsclient->create_dir(uid,"/test");
+   ret=tfsclient->create_dir(uid,"/metarcgtestcreateDir3");
    EXPECT_EQ(0,ret);
-   ret=tfsclient->create_dir(uid,"/test");
+   ret=tfsclient->create_dir(uid,"/metarcgtestcreateDir3");
    EXPECT_GT(0,ret);
-   ret=tfsclient->rm_dir(uid,"/test");
+   ret=tfsclient->rm_dir(uid,"/metarcgtestcreateDir3");
    EXPECT_EQ(0,ret);
 }
 
@@ -46,29 +46,29 @@ TEST_F(TfsInit,test_05_createDir_empty_filePath)
 TEST_F(TfsInit,test_06_createDir_with_same_fileName)
 {
    int ret;
-   ret=tfsclient->create_file(uid,"/test");
+   ret=tfsclient->create_file(uid,"/metarcgtestcreateDir6");
    EXPECT_EQ(0,ret);
-   ret=tfsclient->create_dir(uid,"/test");
+   ret=tfsclient->create_dir(uid,"/metarcgtestcreateDir6");
    EXPECT_EQ(0,ret);
-   ret=tfsclient->rm_file(uid,"/test");
+   ret=tfsclient->rm_file(uid,"/metarcgtestcreateDir6");
    EXPECT_EQ(0,ret);
-   ret=tfsclient->rm_dir(uid,"/test");
+   ret=tfsclient->rm_dir(uid,"/metarcgtestcreateDir6");
    EXPECT_EQ(0,ret);
 }
 
 TEST_F(TfsInit,test_07_createDir_wrong_filePath_1)
 {
    int ret;
-   ret=tfsclient->create_dir(uid,"test");
+   ret=tfsclient->create_dir(uid,"metarcgtestcreateDir7");
    EXPECT_GT(ret,0);
 }
 
 TEST_F(TfsInit,test_08_createDir_wrong_filePath_2)
 {
    int ret;
-   ret=tfsclient->create_dir(uid,"/////test//////");
+   ret=tfsclient->create_dir(uid,"/////metarcgtestcreateDir8//////");
    EXPECT_EQ(0,ret);
-   ret=tfsclient->rm_dir(uid,"/test");
+   ret=tfsclient->rm_dir(uid,"/metarcgtestcreateDir8");
 }
 
 TEST_F(TfsInit,test_09_createDir_wrong_filePath_3)
@@ -84,7 +84,7 @@ TEST_F(TfsInit,test_10_createDir_width_100)
    int i;
    char*name=new char[512];
    int p;
-   char*test="/test";
+   char*test="/metarcgtestcreateDir10";
    char num[4];
    for(i=1;i<=100;i++)
     {
@@ -110,7 +110,7 @@ TEST_F(TfsInit,test_10_createDir_width_100)
         name[0]='\0';
         strcat(name, test);
         strcat(name, num);
-	ret=tfsclient->rm_dir(uid,name);
+	    ret=tfsclient->rm_dir(uid,name);
         EXPECT_EQ(0,ret);
         cout<<name<<endl;
         delete [] name;
@@ -125,7 +125,7 @@ TEST_F(TfsInit,test_11_createDir_deep_50)
    int ret;
    int i;
    char name[512];
-   char*test="/test";
+   char*test="/metarcgtestcreateDir11";
    name[0]='\0';
    for(i=1;i<=50;i++)
    {
@@ -151,7 +151,7 @@ TEST_F(TfsInit,test_11_createDir_deep_50)
 //   int i;
 //   char*name=new char[512];
 //   int p;
-//   char*test="/test"
+//   char*test="/metarcgtestcreateDir12"
 //   char num[4];
 //   for(i=1;i<=100;i++)
 //   {     p=change(i,num);
@@ -199,11 +199,11 @@ TEST_F(TfsInit,test_14_createDir_empty)
 TEST_F(TfsInit,test_15_createDir_the_same)
 {
    int ret;
-   ret=tfsclient->create_dir(uid,"/test");
+   ret=tfsclient->create_dir(uid,"/metarcgtestcreateDir15");
    EXPECT_EQ(0,ret);
-   ret=tfsclient->create_dir(uid,"/test");
+   ret=tfsclient->create_dir(uid,"/metarcgtestcreateDir15");
    EXPECT_GT(0,ret);
-   ret=tfsclient->rm_dir(uid,"/test");
+   ret=tfsclient->rm_dir(uid,"/metarcgtestcreateDir15");
    EXPECT_EQ(0,ret);
 }
 
@@ -212,24 +212,3 @@ int main(int argc,char**argv)
     testing::InitGoogleTest(&argc,argv);
     return RUN_ALL_TESTS();
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

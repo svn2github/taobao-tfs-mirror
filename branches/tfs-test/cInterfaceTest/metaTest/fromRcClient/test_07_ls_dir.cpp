@@ -10,7 +10,7 @@ TEST_F(TfsInit,01_ls_dir_right)
     char num3[4];
     char*name_dir=new char [512];
     char*name_file=new char[512];
-    char*test="/test";
+    char*test="/metarcgtestlsDir";
     char*file="/file";
 
     int i,j,k;
@@ -124,7 +124,7 @@ TEST_F(TfsInit,01_ls_dir_right)
                 ++n;
         }
 		
-    ret=tfsclient->ls_dir(appId, uid,"/test1", v_file_meta_info);
+    ret=tfsclient->ls_dir(appId, uid,"/metarcgtestlsDir1", v_file_meta_info);
     EXPECT_EQ(0,ret);
     EXPECT_EQ(10,v_file_meta_info.size());
 	

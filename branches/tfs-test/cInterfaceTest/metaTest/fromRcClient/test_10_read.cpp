@@ -6,10 +6,10 @@ TEST_F(TfsInit,test_01_read_right)
    int ret;
    int64_t Ret;
    
-   ret=tfsclient->create_file(uid,"/test");
+   ret=tfsclient->create_file(uid,"/metarcgtestread1");
    EXPECT_EQ(0,ret);
    
-   char*name="/test"; 
+   char*name="/metarcgtestread1"; 
    ret=tfsclient->open(appId, uid,name,tfsclient->WRITE);
    EXPECT_GT(ret,0);
    
@@ -35,7 +35,7 @@ TEST_F(TfsInit,test_01_read_right)
    ret=tfsclient->close(fd);
    EXPECT_EQ(0,ret);
    
-   ret=tfsclient->rm_file(uid,"/test");
+   ret=tfsclient->rm_file(uid,"/metarcgtestread1");
    EXPECT_EQ(0,ret);
 }
 
@@ -44,10 +44,10 @@ TEST_F(TfsInit,test_02_read_with_offset)
    int ret;
    int64_t Ret;
    
-   ret=tfsclient->create_file(uid,"/test");
+   ret=tfsclient->create_file(uid,"/metarcgtestread2");
    EXPECT_EQ(0,ret);
    
-   char*name="/test"; 
+   char*name="/metarcgtestread2"; 
    ret=tfsclient->open(appId, uid,name,tfsclient->WRITE);
    EXPECT_GT(ret,0);
    
@@ -73,7 +73,7 @@ TEST_F(TfsInit,test_02_read_with_offset)
    ret=tfsclient->close(fd);
    EXPECT_EQ(0,ret);
    
-   ret=tfsclient->rm_file(uid,"/test");
+   ret=tfsclient->rm_file(uid,"/metarcgtestread2");
    EXPECT_EQ(0,ret);
 }
 
@@ -82,10 +82,10 @@ TEST_F(TfsInit,test_03_read_more_offset)
    int ret;
    int64_t Ret;
    
-   ret=tfsclient->create_file(uid,"/test");
+   ret=tfsclient->create_file(uid,"/metarcgtestread3");
    EXPECT_EQ(0,ret);
    
-   char*name="/test"; 
+   char*name="/metarcgtestread3"; 
    ret=tfsclient->open(appId, uid,name,tfsclient->WRITE);
    EXPECT_GT(ret,0);
    
@@ -111,7 +111,7 @@ TEST_F(TfsInit,test_03_read_more_offset)
    ret=tfsclient->close(fd);
    EXPECT_EQ(0,ret);
    
-   ret=tfsclient->rm_file(uid,"/test");
+   ret=tfsclient->rm_file(uid,"/metarcgtestread3");
    EXPECT_EQ(0,ret);
 }
 
@@ -120,10 +120,10 @@ TEST_F(TfsInit,test_04_read_wrong_offset)
    int ret;
    int64_t Ret;
    
-   ret=tfsclient->create_file(uid,"/test");
+   ret=tfsclient->create_file(uid,"/metarcgtestread4");
    EXPECT_EQ(0,ret);
    
-   char*name="/test"; 
+   char*name="/metarcgtestread4"; 
    ret=tfsclient->open(appId, uid,name,tfsclient->WRITE);
    EXPECT_GT(ret,0);
    
@@ -149,7 +149,7 @@ TEST_F(TfsInit,test_04_read_wrong_offset)
    ret=tfsclient->close(fd);
    EXPECT_EQ(0,ret);
    
-   ret=tfsclient->rm_file(uid,"/test");
+   ret=tfsclient->rm_file(uid,"/metarcgtestread4");
    EXPECT_EQ(0,ret);
 }
 
@@ -158,10 +158,10 @@ TEST_F(TfsInit,test_05_read_null_buffer)
    int ret;
    int64_t Ret;
    
-   ret=tfsclient->create_file(uid,"/test");
+   ret=tfsclient->create_file(uid,"/metarcgtestread5");
    EXPECT_EQ(0,ret);
    
-   char*name="/test"; 
+   char*name="/metarcgtestread5"; 
    ret=tfsclient->open(appId, uid,name,tfsclient->WRITE);
    EXPECT_GT(ret,0);
    
@@ -186,7 +186,7 @@ TEST_F(TfsInit,test_05_read_null_buffer)
    ret=tfsclient->close(fd);
    EXPECT_EQ(0,ret);
    
-   ret=tfsclient->rm_file(uid,"/test");
+   ret=tfsclient->rm_file(uid,"/metarcgtestread5");
    EXPECT_EQ(0,ret);
 }
 
@@ -225,10 +225,10 @@ TEST_F(TfsInit,test_09_read_large)
    int ret;
    int64_t Ret;
    
-   ret=tfsclient->create_file(uid,"/test");
+   ret=tfsclient->create_file(uid,"/metarcgtestread9");
    EXPECT_EQ(0,ret);
    
-   char*name="/test"; 
+   char*name="/metarcgtestread9"; 
    ret=tfsclient->open(appId, uid,name,tfsclient->WRITE);
    EXPECT_GT(ret,0);
    
@@ -253,7 +253,7 @@ TEST_F(TfsInit,test_09_read_large)
    ret=tfsclient->close(fd);
    EXPECT_EQ(0,ret);
    
-   ret=tfsclient->rm_file(uid,"/test");
+   ret=tfsclient->rm_file(uid,"/metarcgtestread9");
    EXPECT_EQ(0,ret);
 }
 

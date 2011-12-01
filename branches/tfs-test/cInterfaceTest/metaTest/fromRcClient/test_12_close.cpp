@@ -4,10 +4,10 @@
 TEST_F(TfsInit,test_01_close_open_right_read)
 {
    int ret;
-   ret=tfsclient->create_file(uid,"/test");
+   ret=tfsclient->create_file(uid,"/metarcgtestclose1");
    EXPECT_EQ(0,ret);
    
-   const char*name="/test";
+   const char*name="/metarcgtestclose1";
    ret=tfsclient->open(appId, uid,name,tfsclient->READ);
    EXPECT_GT(ret,0);
    
@@ -15,17 +15,17 @@ TEST_F(TfsInit,test_01_close_open_right_read)
    ret=tfsclient->close(fd);
    EXPECT_EQ(0,ret);
    
-   ret=tfsclient->rm_file(uid,"/test");
+   ret=tfsclient->rm_file(uid,"/metarcgtestclose1");
    EXPECT_EQ(0,ret);
 }
 
 TEST_F(TfsInit,test_02_close_open_right_write)
 {
    int ret;
-   ret=tfsclient->create_file(uid,"/test");
+   ret=tfsclient->create_file(uid,"/metarcgtestclose2");
    EXPECT_EQ(0,ret);
    
-   const char*name="/test";
+   const char*name="/metarcgtestclose2";
    ret=tfsclient->open(appId, uid,name,tfsclient->WRITE);
    EXPECT_GT(ret,0);
    
@@ -33,21 +33,21 @@ TEST_F(TfsInit,test_02_close_open_right_write)
    ret=tfsclient->close(fd);
    EXPECT_EQ(0,ret);
    
-   ret=tfsclient->rm_file(uid,"/test");
+   ret=tfsclient->rm_file(uid,"/metarcgtestclose2");
    EXPECT_EQ(0,ret);
 }
 
 TEST_F(TfsInit,test_03_rm_and_close)
 {
    int ret;
-   ret=tfsclient->create_file(uid,"/test");
+   ret=tfsclient->create_file(uid,"/metarcgtestclose3");
    EXPECT_EQ(0,ret);
    
-   const char*name="/test";
+   const char*name="/metarcgtestclose3";
    ret=tfsclient->open(appId, uid,name,tfsclient->READ);
    EXPECT_GT(ret,0);
    
-   ret=tfsclient->rm_file(uid,"/test");
+   ret=tfsclient->rm_file(uid,"/metarcgtestclose3");
    EXPECT_EQ(0,ret);
    
    int fd=ret;   
@@ -61,7 +61,7 @@ TEST_F(TfsInit,test_04_close_wrong_fd_1)
    
    int fd=-1;   
    ret=tfsclient->close(fd);
-   EXPECT_GT(0,ret);
+   EXPECT_EQ(0,ret);
 }
 
 TEST_F(TfsInit,test_05_close_wrong_fd_2)
@@ -70,7 +70,7 @@ TEST_F(TfsInit,test_05_close_wrong_fd_2)
    
    int fd=0;   
    ret=tfsclient->close(fd);
-   EXPECT_GT(0,ret);
+   EXPECT_EQ(0,ret);
 }
 
 TEST_F(TfsInit,test_06_close_not_exist_fd)
@@ -79,27 +79,8 @@ TEST_F(TfsInit,test_06_close_not_exist_fd)
    
    int fd=1;   
    ret=tfsclient->close(fd);
-   EXPECT_GT(0,ret);
+   EXPECT_EQ(0,ret);
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 int main(int argc,char**argv)

@@ -1,13 +1,12 @@
 #include"tfs_client_impl_init.h"
 
-
 TEST_F(TfsInit,test_01_rmDir_right_filePath)
 {
    int ret;
 
-   ret=tfsclient->create_dir(uid,"/test");
+   ret=tfsclient->create_dir(uid,"/metarcgtestrmDir1");
    EXPECT_EQ(0,ret);
-   ret=tfsclient->rm_dir(uid,"/test");
+   ret=tfsclient->rm_dir(uid,"/metarcgtestrmDir1");
    EXPECT_EQ(0,ret);
 }
 
@@ -15,18 +14,18 @@ TEST_F(TfsInit,test_02_rmDir_double_times)
 {
    int ret;
 
-   ret=tfsclient->create_dir(uid,"/test");
+   ret=tfsclient->create_dir(uid,"/metarcgtestrmDir2");
    EXPECT_EQ(0,ret);
-   ret=tfsclient->rm_dir(uid,"/test");
+   ret=tfsclient->rm_dir(uid,"/metarcgtestrmDir2");
    EXPECT_EQ(0,ret);
-   ret=tfsclient->rm_dir(uid,"/test");
+   ret=tfsclient->rm_dir(uid,"/metarcgtestrmDir2");
    EXPECT_GT(0,ret);
 }
 
 TEST_F(TfsInit,test_03_rmDir_not_exist_filePath)
 {
    int ret;
-   ret=tfsclient->rm_dir(uid,"/test");
+   ret=tfsclient->rm_dir(uid,"/metarcgtestrmDir3");
    EXPECT_GT(0,ret);
 }
 
@@ -49,11 +48,11 @@ TEST_F(TfsInit,test_06_rmDir_wrong_filePath_1)
 {
    int ret;
 
-   ret=tfsclient->create_dir(uid,"/test");
+   ret=tfsclient->create_dir(uid,"/metarcgtestrmDir6");
    EXPECT_EQ(0,ret);
-   ret=tfsclient->rm_dir(uid,"test");
+   ret=tfsclient->rm_dir(uid,"metarcgtestrmDir6");
    EXPECT_GT(ret,0);
-   ret=tfsclient->rm_dir(uid,"/test");
+   ret=tfsclient->rm_dir(uid,"/metarcgtestrmDir6");
    EXPECT_EQ(0,ret);
 }
 
@@ -68,9 +67,9 @@ TEST_F(TfsInit,test_08_rmDir_wrong_filePath_3)
 {
    int ret;
 
-   ret=tfsclient->create_dir(uid,"/test");
+   ret=tfsclient->create_dir(uid,"/metarcgtestrmDir8");
    EXPECT_EQ(0,ret);
-   ret=tfsclient->rm_dir(uid,"///test////");
+   ret=tfsclient->rm_dir(uid,"///metarcgtestrmDir8////");
    EXPECT_EQ(0,ret);
 }
 
@@ -78,28 +77,28 @@ TEST_F(TfsInit,test_09_rmDir_filePath_with_File)
 {
    int ret;
 
-   ret=tfsclient->create_dir(uid,"/test");
+   ret=tfsclient->create_dir(uid,"/metarcgtestrmDir9");
    EXPECT_EQ(0,ret);
-   ret=tfsclient->create_file(uid,"/test/test");
+   ret=tfsclient->create_file(uid,"/metarcgtestrmDir9/testfile");
    EXPECT_EQ(0,ret);
-   ret=tfsclient->rm_dir(uid,"/test");
+   ret=tfsclient->rm_dir(uid,"/metarcgtestrmDir9");
    EXPECT_GT(0,ret);
-   tfsclient->rm_file(uid,"/test/test");
-   tfsclient->rm_dir(uid,"/test");
+   tfsclient->rm_file(uid,"/metarcgtestrmDir9/testfile");
+   tfsclient->rm_dir(uid,"/metarcgtestrmDir9");
 }
 
 TEST_F(TfsInit,test_10_rmDir_filePath_with_Dir)
 {
    int ret;
 
-   ret=tfsclient->create_dir(uid,"/test");
+   ret=tfsclient->create_dir(uid,"/metarcgtestrmDir10");
    EXPECT_EQ(0,ret);
-   ret=tfsclient->create_dir(uid,"/test/test");
+   ret=tfsclient->create_dir(uid,"/metarcgtestrmDir10/testdir");
    EXPECT_EQ(0,ret);
-   ret=tfsclient->rm_dir(uid,"/test");
+   ret=tfsclient->rm_dir(uid,"/metarcgtestrmDir10");
    EXPECT_GT(0,ret);
-   tfsclient->rm_dir(uid,"/test/test");
-   tfsclient->rm_dir(uid,"/test");
+   tfsclient->rm_dir(uid,"/metarcgtestrmDir10/testdir");
+   tfsclient->rm_dir(uid,"/metarcgtestrmDir10");
 }
 
 int main(int argc,char**argv)
