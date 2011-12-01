@@ -25,10 +25,9 @@ public class RcBaseCase extends TfsBaseCase {
 
 	boolean grid_started = false;
 
-	final ApplicationContext rcBeanFactory = new ClassPathXmlApplicationContext(
-			"rcServer.xml");
+	final ApplicationContext rcBeanFactory = new ClassPathXmlApplicationContext("rcServer.xml");
 	final AppGrid rcGrid = (AppGrid) rcBeanFactory.getBean("rcGrid");
-
+	
 	protected Logger log = Logger.getLogger("TfsTest");
 	public HelpProc Proc = new HelpProc();
 
@@ -50,11 +49,11 @@ public class RcBaseCase extends TfsBaseCase {
 	public static String appKey = "foobarRcAA";
 	public static String rcAddr = "10.232.36.206:6261";
 	public static String rsAddr = "10.232.36.206:8766";
-	public static String appIp = "10.232.36.206";
+	public static String appIp = "10.13.88.118";
 	public static long appId = 3;
 	public static long userId = 7;
-	public static int MAX_UPDATE_TIME = 30;
-	public static int MAX_STAT_TIME = 10;
+	public static int MAX_UPDATE_TIME = 20;
+	public static int MAX_STAT_TIME = 40;
 	public static int INVALID_MODE = 0;
 	public static int R_MODE = 1;
 	public static int RW_MODE = 2;
@@ -83,7 +82,7 @@ public class RcBaseCase extends TfsBaseCase {
 		if (createFile(localFile, 1 << 10)) {
 			testFileList.add(localFile);
 		}
-		// 1k file
+		// 10k file
 		localFile = "10k.jpg";
 		if (createFile(localFile, 10 * (1 << 10)) ) {
 			testFileList.add(localFile);
@@ -97,6 +96,11 @@ public class RcBaseCase extends TfsBaseCase {
 		// 3M file
 		localFile = "3M.jpg";
 		if (createFile(localFile, 3 * (1 << 20))) {
+			testFileList.add(localFile);
+		}
+		// 6G file
+		localFile = "6G.jpg";
+		if (createFile(localFile, (long)6 * (1 << 30))) {
 			testFileList.add(localFile);
 		}
 	}
@@ -352,7 +356,6 @@ public class RcBaseCase extends TfsBaseCase {
 	}
 
 	public boolean checkSessionId(String sessionId) {
-		long lRet = -1;
 		boolean bRet = false;
 		ArrayList<String> listOut = new ArrayList<String>();
 		String cmd;
@@ -387,26 +390,26 @@ public class RcBaseCase extends TfsBaseCase {
 	}
 
 	public long getUsedCapacity(String appKey) {
-		long lRet = -1;
+		long lRet = 0;
 		boolean bRet = false;
 		ArrayList<String> listOut = new ArrayList<String>();
 		String cmd;
 		cmd = "sh " + SCRIPT_PATH + " get_used_capacity '" + appKey + "'";
 		bRet = Proc.cmdOutBase(MYSQLADDR, cmd, null, 1, null, listOut);
-		if (bRet) {
+		if (bRet && (listOut.size() > 0)) {
 			lRet = Long.valueOf(listOut.get(0));
 		}
 		return lRet;
 	}
 
 	public long getFileCount(String appKey) {
-		long lRet = -1;
+		long lRet = 0;
 		boolean bRet = false;
 		ArrayList<String> listOut = new ArrayList<String>();
 		String cmd;
 		cmd = "sh " + SCRIPT_PATH + " get_file_count '" + appKey + "'";
 		bRet = Proc.cmdOutBase(MYSQLADDR, cmd, null, 1, null, listOut);
-		if (bRet) {
+		if (bRet&& (listOut.size() > 0 )) {
 			lRet = Long.valueOf(listOut.get(0));
 		}
 		return lRet;
@@ -414,14 +417,14 @@ public class RcBaseCase extends TfsBaseCase {
 
 	// get OPER_TIMES from t_session_stat
 	public long getOperTimes(String sessionId, int operType) {
-		long lRet = -1;
+		long lRet = 0;
 		boolean bRet = false;
 		ArrayList<String> listOut = new ArrayList<String>();
 		String cmd;
 		cmd = "sh " + SCRIPT_PATH + " get_oper_times '" + sessionId + "' "
 				+ operType;
 		bRet = Proc.cmdOutBase(MYSQLADDR, cmd, null, 1, null, listOut);
-		if (bRet) {
+		if (bRet&& (listOut.size() > 0 )) {
 			lRet = Long.valueOf(listOut.get(0));
 		}
 		return lRet;
@@ -429,14 +432,14 @@ public class RcBaseCase extends TfsBaseCase {
 
 	// get SUCC_TIMES from t_session_stat
 	public long getSuccTimes(String sessionId, int operType) {
-		long lRet = -1;
+		long lRet = 0;
 		boolean bRet = false;
 		ArrayList<String> listOut = new ArrayList<String>();
 		String cmd;
 		cmd = "sh " + SCRIPT_PATH + " get_succ_times '" + sessionId + "' "
 				+ operType;
 		bRet = Proc.cmdOutBase(MYSQLADDR, cmd, null, 1, null, listOut);
-		if (bRet) {
+		if (bRet&& (listOut.size() > 0 )) {
 			lRet = Long.valueOf(listOut.get(0));
 		}
 		return lRet;
@@ -444,7 +447,7 @@ public class RcBaseCase extends TfsBaseCase {
 
 	// get FILE_SIZE from t_session_stat
 	public long getFileSize(String sessionId, int operType) {
-		long lRet = -1;
+		long lRet = 0;
 		boolean bRet = false;
 		ArrayList<String> listOut = new ArrayList<String>();
 		String cmd;
@@ -453,7 +456,7 @@ public class RcBaseCase extends TfsBaseCase {
 		bRet = Proc.cmdOutBase(MYSQLADDR, cmd, null, 1, null, listOut);
 //		bRet = Proc.proStartBase(MYSQLADDR, cmd, listOut);
 		log.info("listOut is: " + listOut.toString());
-		if (bRet) {
+		if (bRet&& (listOut.size() > 0 )) {
 			lRet = Long.valueOf(listOut.get(0));
 		}
 		return lRet;
