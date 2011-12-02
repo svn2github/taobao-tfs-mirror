@@ -384,7 +384,7 @@ namespace tfs
       {
         if ((flag & READ_DATA_OPTION_FLAG_FORCE))
         {
-          if ((((FileInfo *) buf)->id_ != inner_file_id) 
+          if ((((FileInfo *) buf)->id_ != inner_file_id)
               || (((((FileInfo *) buf)->flag_) & (FI_DELETED | FI_INVALID )) != 0))
           {
             TBSYS_LOG(WARN,
@@ -395,7 +395,7 @@ namespace tfs
         }
         else
         {
-          if ((((FileInfo *) buf)->id_ != inner_file_id) 
+          if ((((FileInfo *) buf)->id_ != inner_file_id)
               || (((((FileInfo *) buf)->flag_) & (FI_DELETED | FI_INVALID | FI_CONCEAL)) != 0))
           {
             TBSYS_LOG(WARN,
@@ -733,8 +733,10 @@ namespace tfs
       {
         int ret = fit->next();
         if (TFS_SUCCESS != ret)
+        {
+          delete fit;
           return ret;
-
+        }
         const FileInfo* pfi = fit->current_file_info();
         fileinfos.push_back(*pfi);
       }
