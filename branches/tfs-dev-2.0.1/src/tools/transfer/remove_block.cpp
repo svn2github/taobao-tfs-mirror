@@ -28,6 +28,16 @@ using namespace tfs::common;
 using namespace tfs::message;
 using namespace tfs::tools;
 
+void print_servers(const std::vector<uint64_t>& servers, std::string& result)
+{
+  std::vector<uint64_t>::const_iterator iter = servers.begin();
+  for (; iter != servers.end(); ++iter)
+  {
+    result += "/";
+    result += tbsys::CNetUtil::addrToString((*iter));
+  }
+}
+
 int remove_block(const string& ns_ip, const string& file_path, const string& out_file_path)
 {
   int ret = TFS_ERROR;
@@ -70,26 +80,29 @@ int remove_block(const string& ns_ip, const string& file_path, const string& out
             ret = NULL != client ? TFS_SUCCESS : TFS_ERROR;
             if (TFS_SUCCESS == ret)
             {
-              TBSYS_LOG(ERROR, "remove block: %u failed from nameserver: %s", block_id, ns_ip.c_str());
+              TBSYS_LOG(ERROR, "remove block: %u failed from nameserver: %s, dataserver: %s", block_id, ns_ip.c_str(),
+                tbsys::CNetUtil::addrToString((*iter)).c_str());
             }
             else
             {
               ret = send_msg_to_server((*iter), client, &ns_req_msg, ret_msg);
               if (TFS_SUCCESS != ret)
               {
-                TBSYS_LOG(ERROR, "remove block: %u failed from nameserver: %s, send msg error: ret: %d", block_id, ns_ip.c_str(), ret);
+                TBSYS_LOG(ERROR, "remove block: %u failed from nameserver: %s, send msg error: ret: %d, dataserver: %s", block_id, ns_ip.c_str(), ret,
+                tbsys::CNetUtil::addrToString((*iter)).c_str());
               }
               else
               {
                 ret = ret_msg->getPCode() == STATUS_MESSAGE ? TFS_SUCCESS : TFS_ERROR;
                 if (TFS_SUCCESS != ret)
                 {
-                  TBSYS_LOG(ERROR, "remove block: %u failed from nameserver: %s, get error response, pcode: %d",
-                    block_id, ns_ip.c_str(), ret_msg->getPCode());
+                  TBSYS_LOG(ERROR, "remove block: %u failed from nameserver: %s, get error response, pcode: %d, dataserver: %s",
+                    block_id, ns_ip.c_str(), ret_msg->getPCode(),tbsys::CNetUtil::addrToString((*iter)).c_str());
                 }
                 else
                 {
-                  TBSYS_LOG(INFO, "remove block: %u successful from nameserver: %s", block_id, ns_ip.c_str());
+                  TBSYS_LOG(INFO, "remove block: %u successful from nameserver: %s, dataserver: %s", block_id, ns_ip.c_str(),
+                  tbsys::CNetUtil::addrToString((*iter)).c_str());
                 }
               }
               NewClientManager::get_instance().destroy_client(client);
@@ -122,6 +135,13 @@ int remove_block(const string& ns_ip, const string& file_path, const string& out
               NewClientManager::get_instance().destroy_client(client);
             }
           }
+        }
+
+        if (TFS_SUCCESS != ret)
+        {
+          std::string result;
+          print_servers(ds_list, result);
+          TBSYS_LOG(ERROR, "remove block : %u on %s", block_id, result.c_str());
         }
       }
       fclose(fp_out);
