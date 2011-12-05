@@ -132,7 +132,7 @@ namespace tfs
 
       if (TFS_SUCCESS == iret)
       {
-        const char *dev_name = get_dev();                                                          
+        const char *dev_name = get_dev();
         if (NULL == dev_name)//get dev name
         {
           iret =  EXIT_CONFIG_ERROR;
@@ -220,7 +220,7 @@ namespace tfs
           iret = EXIT_GENERAL_ERROR;
         }
       }
-     
+
       if (TFS_SUCCESS == iret)
       {
         NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
@@ -234,7 +234,7 @@ namespace tfs
         {
           //if we're the slave ns, we must sync data from the master ns.
           ngi.owner_status_ = NS_STATUS_ACCEPT_DS_INFO;
-          iret = wait_for_ds_report();//in wait_for_ds_report,someone killed me, 
+          iret = wait_for_ds_report();//in wait_for_ds_report,someone killed me,
                                       //the signal handler have already called stop()
           if (TFS_SUCCESS == iret)
             ngi.owner_status_ = NS_STATUS_INITIALIZED;
@@ -343,7 +343,7 @@ namespace tfs
 
           if (bpacket->is_enable_dump())
           {
-            bpacket->dump(); 
+            bpacket->dump();
           }
           int32_t pcode = bpacket->getPCode();
           int32_t iret = common::TFS_ERROR;
@@ -520,7 +520,7 @@ namespace tfs
           if(iret == EXIT_NO_DATASERVER)
           {
             iret = message->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), EXIT_NO_DATASERVER,
-                            "not found dataserver, dataserver size equal 0");
+                            "got error, when get block: %u mode: %d, result: %d information", block_id, mode, iret);
           }
           else if (iret == EXIT_ACCESS_PERMISSION_ERROR)
           {
@@ -529,7 +529,7 @@ namespace tfs
           }
           else
           {
-            iret = message->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), iret, 
+            iret = message->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), iret,
                             "got error, when get block: %u mode: %d, result: %d information", block_id, mode, iret);
           }
         }
@@ -784,7 +784,7 @@ namespace tfs
           {
             uint32_t local_ip = 0;
             bool bfind_flag = false;
-            std::vector<uint32_t>::iterator iter = ns_ip_list.begin(); 
+            std::vector<uint32_t>::iterator iter = ns_ip_list.begin();
             for (; iter != ns_ip_list.end(); ++iter)
             {
               bfind_flag = Func::is_local_addr((*iter));
@@ -1029,7 +1029,7 @@ namespace tfs
                 && pcode != GET_BLOCK_INFO_MESSAGE
                 && pcode != GET_BLOCK_INFO_MESSAGE
                 && pcode != SET_DATASERVER_MESSAGE
-                && pcode != BATCH_GET_BLOCK_INFO_MESSAGE 
+                && pcode != BATCH_GET_BLOCK_INFO_MESSAGE
                 && pcode != SHOW_SERVER_INFORMATION_MESSAGE)
               {
                 iret = common::TFS_ERROR;

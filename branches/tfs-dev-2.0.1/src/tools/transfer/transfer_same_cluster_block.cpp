@@ -61,6 +61,7 @@ static int read_data(const Record& rd, ReadDataStruct& info)
     req_msg.set_block_id(name.get_block_id());
     req_msg.set_file_id(name.get_file_id());
     req_msg.set_offset(info.offset);
+    req_msg.set_length(info.size);
     req_msg.set_flag(info.flag);
     NewClient* client = NewClientManager::get_instance().create_client();
     ret = NULL != client ? 0: -1;
@@ -109,12 +110,15 @@ int transfer_file(const string& file_path)
     Record rd;
     ReadDataStruct info;
     memset(&info, 0, sizeof(info));
-    while (fscanf(fp, "%s:%s:%s:%d:%d:%d\n",rd.name,rd.src,rd.dest,&rd.usize, &rd.size, &rd.flag) != EOF)
+    while (fscanf(fp, "%s %s %s %d %d %d\n",rd.name,rd.src,rd.dest,&rd.usize, &rd.size, &rd.flag) != EOF)
     {
+      rd.name[18]='\0';
+      TBSYS_LOG(DEBUG, "============================%d", strlen(rd.name));
       tbsys::gDelete(info.buf);
       info.buf = new char[rd.usize];
       info.buf_len = rd.usize;
       info.offset  = 0;
+      info.size = rd.usize;
       info.flag    = READ_DATA_OPTION_FLAG_FORCE;
       int64_t len = 0;
       uint32_t crc = 0;
@@ -125,7 +129,7 @@ int transfer_file(const string& file_path)
           break;
         else
         {
-          Func::crc(crc, (info.buf + info.offset), len);
+          crc = Func::crc(crc, (info.buf + info.offset), len);
           info.offset += len;
         }
       }
@@ -145,10 +149,14 @@ int transfer_file(const string& file_path)
         }
         else
         {
-          //len = TfsClient::Instance()->write(fd, info.buf, rd.usize);
+          len = TfsClient::Instance()->write(fd, info.buf, rd.usize);
           if (len != rd.usize)
           {
             TBSYS_LOG(ERROR, "transfer file: %s failed, write data failed %ld <> %d", rd.name, len, rd.usize);
+          }
+          else
+          {
+            TBSYS_LOG(INFO, "transfer file: %s successful, write data successful %ld == %d", rd.name, len, rd.usize);
           }
           TfsClient::Instance()->close(fd);
         }
@@ -180,9 +188,9 @@ int main(int argc, char** argv)
   string ns_ip;
   string file_path;
   string out_file_path;
-  string log_level("error");
+  string log_level("debug");
   int i ;
-  while ((i = getopt(argc, argv, "s:f:lh")) != EOF)
+  while ((i = getopt(argc, argv, "s:f:l:h")) != EOF)
   {
     switch (i)
     {

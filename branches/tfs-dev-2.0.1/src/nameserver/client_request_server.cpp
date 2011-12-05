@@ -42,7 +42,7 @@ namespace tfs
       int32_t iret = TFS_ERROR;
       DataServerLiveStatus status = ds_info.status_;
 
-      manager_.get_heart_management().cleanup_expired_report_server(now); 
+      manager_.get_heart_management().cleanup_expired_report_server(now);
 
       //check dataserver status
       if (DATASERVER_STATUS_DEAD== status)//dataserver dead
@@ -77,7 +77,7 @@ namespace tfs
             }
             if (!report_complete)
             {
-              need_sent_block = manager_.get_heart_management().add_report_server(ds_info.id_, now); 
+              need_sent_block = manager_.get_heart_management().add_report_server(ds_info.id_, now);
             }
             else
             {
@@ -93,9 +93,9 @@ namespace tfs
         }
       }
       TBSYS_LOG(DEBUG, "dataserver: %s %s %s, iret: %d, need sent block: %s",
-          CNetUtil::addrToString(ds_info.id_).c_str(), 
+          CNetUtil::addrToString(ds_info.id_).c_str(),
           DATASERVER_STATUS_DEAD == status ? "logout" :
-          DATASERVER_STATUS_ALIVE  == status ? "keepalive" : 
+          DATASERVER_STATUS_ALIVE  == status ? "keepalive" :
           "unknow", TFS_SUCCESS == iret ? "successful" : "failed", iret,
           need_sent_block ? "yes" : "no");
       return iret;
@@ -669,23 +669,17 @@ namespace tfs
       std::vector<GCObject*> rms;
       ServerCollect* server = lay_out_manager_.get_server(id);
       int32_t iret = TFS_ERROR;
-      BlockChunkPtr ptr = lay_out_manager_.get_chunk(block_id);
       {
+        BlockChunkPtr ptr = lay_out_manager_.get_chunk(block_id);
         RWLock::Lock lock(*ptr, WRITE_LOCKER);
         BlockCollect* block = ptr->find(block_id);
-        if (NULL != block)
+        iret = NULL != block ? TFS_SUCCESS : EXIT_NO_BLOCK;
+        if (TFS_SUCCESS == iret)
         {
+          if (NULL != server)
+            iret = lay_out_manager_.relieve_relation(block, server, now) ? TFS_SUCCESS : TFS_ERROR;
           if (block->get_hold_size() <= 0)
-          {
             ptr->remove(block_id, rms);
-          }
-          else
-          {
-            if (NULL != server)
-            {
-              iret = lay_out_manager_.relieve_relation(block, server, now) ? TFS_SUCCESS : TFS_ERROR;
-            }
-          }
         }
       }
 
@@ -732,28 +726,7 @@ namespace tfs
       int32_t iret = NULL == block ? TFS_ERROR : TFS_SUCCESS;
       if (TFS_SUCCESS == iret)
       {
-        bool bret = false;
-        if (REPLICATE_BLOCK_MOVE_FLAG_YES == flag)
-        {
-          if ( 0 != source
-              && 0 != target
-              && 0 != block_id
-              && target != source)
-          {
-            bret = true;
-          }
-        }
-        else
-        {
-          if ((0 != block_id)
-              && ((source != target)
-                || ((source == target)
-                  && (0 == target))))
-          {
-            bret = true;
-          }
-        }
-        iret = bret ? TFS_SUCCESS : TFS_ERROR;
+        iret = 0 != block_id ? TFS_SUCCESS : TFS_ERROR;
         if (TFS_SUCCESS == iret)
         {
           ServerCollect* source_collect = NULL;
@@ -876,7 +849,7 @@ namespace tfs
 
     int ClientRequestServer::handle_control_set_balance_percent(const common::ClientCmdInformation& info, const int64_t buf_length, char* buf)
     {
-      int32_t iret = info.value3_ > 1 || info.value3_ < 0 || info.value4_ < 0 ? EXIT_PARAMETER_ERROR : TFS_SUCCESS; 
+      int32_t iret = info.value3_ > 1 || info.value3_ < 0 || info.value4_ < 0 ? EXIT_PARAMETER_ERROR : TFS_SUCCESS;
       if (TFS_SUCCESS != iret)
       {
         snprintf(buf, buf_length, "parameter is invalid, value3: %d, value4: %d", info.value3_, info.value4_);
@@ -964,7 +937,7 @@ namespace tfs
       if (atomic_inc(&ref_count_) >= static_cast<uint32_t>(SYSPARAM_NAMESERVER.discard_max_count_))
       {
         ret = false;
-        atomic_exchange(&ref_count_, 0); 
+        atomic_exchange(&ref_count_, 0);
       }
       return ret;
     }

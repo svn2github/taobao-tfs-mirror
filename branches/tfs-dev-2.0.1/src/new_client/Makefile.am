@@ -11,7 +11,7 @@ AM_CPPFLAGS=-fPIC -I${top_srcdir}/src\
 	    -I$(TBLIB_ROOT)/include/tbnet\
 	    $(UNIQUE_STORE_CPPFLAGS)
 
-AM_LDFLAGS=-lrt -lpthread -ldl
+AM_LDFLAGS=-lrt -lpthread -ldl -luuid
 
 lib_LTLIBRARIES= libtfsclient.la libtfsclient_c.la
 
@@ -37,6 +37,7 @@ libtfsclient_la_LIBADD = ${ld_fg}
 
 libtfsclient_c_la_SOURCES = ${api_source_list} tfs_client_capi.cpp tfs_client_capi.h
 libtfsclient_c_la_LIBADD = ${ld_fg}
+
 
 include_HEADERS = tfs_client_api.h tfs_client_capi.h tfs_rc_client_api.h tfs_meta_client_api.h
 

@@ -31,11 +31,10 @@ using namespace tfs::tools;
 static bool compare(const FileInfo& src, const FileInfo& dest)
 {
   return src.crc_ == dest.crc_
-          && src.size_ == dest.size_
-          && src.modify_time_ == dest.modify_time_;
+          && src.size_ == dest.size_;
 }
 
-int compare_block(const string& ns_ip, const string& file_path, const string& out_file_path)
+int compare_block(const string& ns_ip, const string& file_path, const string& out_file_path, const string& block_out_file_path)
 {
   int ret = TFS_ERROR;
   FILE* fp = fopen(file_path.c_str(), "r");
@@ -53,114 +52,147 @@ int compare_block(const string& ns_ip, const string& file_path, const string& ou
     }
     else
     {
-      uint32_t block_id = 0;
-      while (fscanf(fp, "%u\n", &block_id) != EOF)
+      FILE* block_out_fp = fopen(block_out_file_path.c_str(), "rw+");
+      if (NULL == block_out_fp)
       {
-        VUINT64 ds_list;
-        ToolUtil::get_block_ds_list(Func::get_host_ip(ns_ip.c_str()), block_id, ds_list);
-        if (ds_list.empty())
+        TBSYS_LOG(ERROR, "open %s failed, %s %d", block_out_file_path.c_str(), strerror(errno), errno);
+      }
+      else
+      {
+        uint32_t block_id = 0;
+        while (fscanf(fp, "%u\n", &block_id) != EOF)
         {
-          TBSYS_LOG(ERROR, "compacre block: %u failed, ds_list empty");
-        }
-        else if (1 == ds_list.size())
-        {
-          TBSYS_LOG(ERROR, "compacre block: %u failed, ds_list.size() == 1");
-        }
-        else
-        {
-          int32_t index = 0;
-          NewClient* client = NULL;
-          tbnet::Packet* ret_msg= NULL;
-          FILE_INFO_LIST file_list;
-          GetServerStatusMessage req_msg;
-          req_msg.set_status_type(GSS_BLOCK_FILE_INFO);
-          req_msg.set_return_row(block_id);
-          const uint32_t size = ds_list.size();
-          std::map<uint64_t, FileInfo> files[size];
-          VUINT64::const_iterator iter = ds_list.begin();
-          for (ret = TFS_SUCCESS; iter != ds_list.end() && TFS_SUCCESS == ret;
-                ++iter, ++index)
+          sleep(2);
+          VUINT64 ds_list;
+          ToolUtil::get_block_ds_list(Func::get_host_ip(ns_ip.c_str()), block_id, ds_list);
+          if (ds_list.empty())
           {
-            client = NewClientManager::get_instance().create_client();
-            ret = NULL != client ? TFS_SUCCESS : TFS_ERROR;
-            if (TFS_SUCCESS != ret)
+            TBSYS_LOG(ERROR, "compacre block: %u failed, ds_list empty", block_id);
+          }
+          else if (1 == ds_list.size())
+          {
+            TBSYS_LOG(ERROR, "compacre block: %u failed, ds_list.size() == 1", block_id);
+          }
+          else
+          {
+            int32_t index = 0;
+            NewClient* client = NULL;
+            tbnet::Packet* ret_msg= NULL;
+            FILE_INFO_LIST file_list;
+            GetServerStatusMessage req_msg;
+            req_msg.set_status_type(GSS_BLOCK_FILE_INFO);
+            req_msg.set_return_row(block_id);
+            const uint32_t size = ds_list.size();
+            std::map<uint64_t, FileInfo> files[size];
+            VUINT64::const_iterator iter = ds_list.begin();
+            for (ret = TFS_SUCCESS; iter != ds_list.end() && TFS_SUCCESS == ret;
+                  ++iter, ++index)
             {
-              TBSYS_LOG(ERROR, "compacre block: %u failed");
-            }
-            else
-            {
-              ret_msg = NULL;
-              TBSYS_LOG(ERROR, "server ===> %s", tbsys::CNetUtil::addrToString((*iter)).c_str());
-              ret = send_msg_to_server((*iter), client, &req_msg, ret_msg);
+              client = NewClientManager::get_instance().create_client();
+              ret = NULL != client ? TFS_SUCCESS : TFS_ERROR;
               if (TFS_SUCCESS != ret)
               {
-                TBSYS_LOG(ERROR, "compacre block: %u failed, ret: %d", block_id, ret);
+                TBSYS_LOG(ERROR, "compacre block: %u failed", block_id);
               }
               else
               {
-                ret = ret_msg->getPCode() == BLOCK_FILE_INFO_MESSAGE ? TFS_SUCCESS : TFS_ERROR;
+                ret_msg = NULL;
+                TBSYS_LOG(INFO, "server ===> %s", tbsys::CNetUtil::addrToString((*iter)).c_str());
+                ret = send_msg_to_server((*iter), client, &req_msg, ret_msg);
                 if (TFS_SUCCESS != ret)
                 {
-                  TBSYS_LOG(ERROR, "compacre block: %u failed");
+                  TBSYS_LOG(ERROR, "compacre block: %u failed, ret: %d", block_id, ret);
                 }
                 else
                 {
-                  BlockFileInfoMessage *bfi_message = dynamic_cast<BlockFileInfoMessage*>(ret_msg);
-                  FILE_INFO_LIST* file_info_list = bfi_message->get_fileinfo_list();
-                  FILE_INFO_LIST::iterator vit = file_info_list->begin();
-                  for (; vit != file_info_list->end();++vit)
+                  ret = ret_msg->getPCode() == BLOCK_FILE_INFO_MESSAGE ? TFS_SUCCESS : TFS_ERROR;
+                  if (TFS_SUCCESS != ret)
                   {
-                    files[index].insert(std::map<uint64_t, FileInfo>::value_type((*vit).id_, (*vit)));
-                  }
-                  NewClientManager::get_instance().destroy_client(client);
-                }
-              }
-            }
-          }
-          if (TFS_SUCCESS == ret)
-          {
-            std::map<uint64_t, FileInfo>::iterator it;
-            for (uint32_t i = 0; i < size; i++)
-            {
-              std::map<uint64_t, FileInfo>::iterator iter = files[i].begin();
-              while (iter != files[i].end())
-              {
-                const FileInfo& info = (iter->second);
-                for (uint32_t index = 0; index < size; index++)
-                {
-                  if (index == i)
-                    continue;
-                  it = files[index].find(iter->first);
-                  if (it == files[index].end())
-                  {
-                    tfs::client::FSName name(block_id, iter->first);
-                    fprintf(out_fp, "%s:%s:%s:%d:%d:%d",name.get_name(),
-                      tbsys::CNetUtil::addrToString(iter->first).c_str(), tbsys::CNetUtil::addrToString(it->first).c_str(),
-                      iter->second.size_,it->second.size_, 0);
+                    TBSYS_LOG(ERROR, "compacre block: %u failed", block_id);
                   }
                   else
                   {
-                    const FileInfo& tmp = (it->second);
-                    if (!compare(info, tmp))
+                    BlockFileInfoMessage *bfi_message = dynamic_cast<BlockFileInfoMessage*>(ret_msg);
+                    FILE_INFO_LIST* file_info_list = bfi_message->get_fileinfo_list();
+                    FILE_INFO_LIST::iterator vit = file_info_list->begin();
+                    for (; vit != file_info_list->end();++vit)
                     {
-                      tfs::client::FSName name(block_id, iter->first);
-                      fprintf(out_fp, "%s:%s:%s:%d:%d:%d",name.get_name(),
-                        tbsys::CNetUtil::addrToString(iter->first).c_str(), tbsys::CNetUtil::addrToString(it->first).c_str(),
-                        iter->second.size_,it->second.size_,1);
+                      files[index].insert(std::map<uint64_t, FileInfo>::value_type((*vit).id_, (*vit)));
                     }
-                    files[index].erase(it++);
                   }
                 }
-                files[i].erase(iter++);
+                NewClientManager::get_instance().destroy_client(client);
+              }
+            }
+            if (TFS_SUCCESS == ret)
+            {
+              bool bfind = false;
+              ret = size == 0U ? TFS_ERROR : TFS_SUCCESS;
+              if (TFS_SUCCESS == ret)
+              {
+                for (uint32_t i = 0; i < size; i++)
+                {
+                  if (!files[i].empty())
+                  {
+                    bfind = true;
+                    break;
+                  }
+                }
+              }
+              if (TFS_ERROR == ret
+                || !bfind)
+              {
+                ret = TFS_ERROR;
+                fprintf(block_out_fp, "%u", block_id);
+              }
+            }
+            if (TFS_SUCCESS == ret)
+            {
+              std::map<uint64_t, FileInfo>::iterator it;
+              for (uint32_t i = 0; i < size; i++)
+              {
+                std::map<uint64_t, FileInfo>::iterator iter = files[i].begin();
+                while (iter != files[i].end())
+                {
+                  const FileInfo& info = (iter->second);
+                  for (uint32_t index = 0; index < size; index++)
+                  {
+                    if (index == i)
+                      continue;
+                    it = files[index].find(iter->first);
+                    if (it == files[index].end())
+                    {
+                      tfs::client::FSName name(block_id, iter->first);
+                      fprintf(out_fp, "%s %s %s %d %d %d\n",name.get_name(),
+                        tbsys::CNetUtil::addrToString(ds_list[i]).c_str(), tbsys::CNetUtil::addrToString(ds_list[index]).c_str(),
+                        iter->second.size_,it->second.size_, 0);
+                    }
+                    else
+                    {
+                      const FileInfo& tmp = (it->second);
+                      if (!compare(info, tmp))
+                      {
+                        tfs::client::FSName name(block_id, iter->first);
+                        fprintf(out_fp, "%s %s %s %d %d %d\n",name.get_name(),
+                          tbsys::CNetUtil::addrToString(ds_list[i]).c_str(), tbsys::CNetUtil::addrToString(ds_list[index]).c_str(),
+                          iter->second.size_,it->second.size_,1);
+                      }
+                      files[index].erase(it++);
+                    }
+                  }
+                  files[i].erase(iter++);
+                }
               }
             }
           }
         }
+        fclose(block_out_fp);
       }
       fclose(out_fp);
     }
     fclose(fp);
   }
+  TBSYS_LOG(INFO, " process exit!!!!");
   return ret;
 }
 
@@ -186,9 +218,10 @@ int main(int argc, char** argv)
   string ns_ip;
   string file_path;
   string out_file_path;
+  string block_out_file_path;
   string log_level("error");
   int i ;
-  while ((i = getopt(argc, argv, "s:f:o:lh")) != EOF)
+  while ((i = getopt(argc, argv, "s:f:o:b:l:h")) != EOF)
   {
     switch (i)
     {
@@ -204,13 +237,16 @@ int main(int argc, char** argv)
       case 'o':
         out_file_path = optarg;
         break;
+      case 'b':
+        block_out_file_path = optarg;
+        break;
       case 'h':
       default:
         usage(argv[0]);
     }
   }
 
-  iret = !ns_ip.empty() && !file_path.empty() && !out_file_path.empty() ? TFS_SUCCESS : TFS_ERROR;
+  iret = !ns_ip.empty() && !file_path.empty() && !out_file_path.empty() && block_out_file_path.c_str() ? TFS_SUCCESS : TFS_ERROR;
   if (TFS_SUCCESS != iret)
   {
     usage(argv[0]);
@@ -232,13 +268,21 @@ int main(int argc, char** argv)
     }
     else
     {
-      MessageFactory* factory = new MessageFactory();
-      BasePacketStreamer* streamer = new BasePacketStreamer(factory);
-      NewClientManager::get_instance().initialize(factory, streamer);
-      iret = compare_block(ns_ip, file_path, out_file_path);
-      NewClientManager::get_instance().destroy();
-      tbsys::gDelete(factory);
-      tbsys::gDelete(streamer);
+      iret = access(block_out_file_path.c_str(), R_OK|F_OK);
+      if (0 != iret)
+      {
+        TBSYS_LOG(ERROR, "open %s failed, error: %s ", block_out_file_path.c_str(), strerror(errno));
+      }
+      else
+      {
+        MessageFactory* factory = new MessageFactory();
+        BasePacketStreamer* streamer = new BasePacketStreamer(factory);
+        NewClientManager::get_instance().initialize(factory, streamer);
+        iret = compare_block(ns_ip, file_path, out_file_path, block_out_file_path);
+        NewClientManager::get_instance().destroy();
+        tbsys::gDelete(factory);
+        tbsys::gDelete(streamer);
+      }
     }
   }
   return iret;

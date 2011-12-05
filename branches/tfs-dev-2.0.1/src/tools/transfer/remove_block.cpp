@@ -73,12 +73,13 @@ int remove_block(const string& ns_ip, const string& file_path, const string& out
           VUINT64::const_iterator iter = ds_list.begin();
           for (ret = TFS_SUCCESS; iter != ds_list.end() && TFS_SUCCESS == ret; ++iter)
           {
+            ret_msg = NULL;
             ClientCmdMessage ns_req_msg;
             ns_req_msg.set_value3(block_id);
             ns_req_msg.set_value1((*iter));
             client = NewClientManager::get_instance().create_client();
             ret = NULL != client ? TFS_SUCCESS : TFS_ERROR;
-            if (TFS_SUCCESS == ret)
+            if (TFS_SUCCESS != ret)
             {
               TBSYS_LOG(ERROR, "remove block: %u failed from nameserver: %s, dataserver: %s", block_id, ns_ip.c_str(),
                 tbsys::CNetUtil::addrToString((*iter)).c_str());
@@ -109,15 +110,15 @@ int remove_block(const string& ns_ip, const string& file_path, const string& out
             }
           }
 
-          ret_msg = NULL;
           iter = ds_list.begin();
-          for (ret = TFS_SUCCESS; iter != ds_list.end() - 1 && TFS_SUCCESS == ret; ++iter)
+          for (;iter != ds_list.end() - 1 && TFS_SUCCESS == ret; ++iter)
           {
+            ret_msg = NULL;
             RemoveBlockMessage req_msg;
             req_msg.add_remove_id(block_id);
             client = NewClientManager::get_instance().create_client();
             ret = NULL != client ? TFS_SUCCESS : TFS_ERROR;
-            if (TFS_SUCCESS == ret)
+            if (TFS_SUCCESS != ret)
             {
               TBSYS_LOG(ERROR, "remove block: %u failed from dataserver: %s", block_id, tbsys::CNetUtil::addrToString((*iter)).c_str());
             }

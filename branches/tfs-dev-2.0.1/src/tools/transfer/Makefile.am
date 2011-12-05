@@ -5,7 +5,8 @@ AM_CPPFLAGS=-I$(top_srcdir)/src\
 
 AM_LDFLAGS=-lrt -lpthread -ldl
 
-bin_PROGRAMS = transfer_block split_block_tool compare_crc compare_same_cluster transfer_same_cluster_block
+bin_PROGRAMS = transfer_block split_block_tool compare_crc compare_same_cluster \
+transfer_same_cluster_block compare_same_cluster_ext  remove_block
 
 LDADD = $(top_builddir)/src/tools/util/libtfstoolsutil.a\
         $(top_builddir)/src/dataserver/libdataserver.a\
@@ -20,4 +21,6 @@ transfer_block_SOURCES = transfer_block.cpp block_console.cpp block_console.h
 split_block_tool_SOURCES = split_block_tool.cpp
 compare_crc_SOURCES=compare_crc.cpp compare_crc.h
 compare_same_cluster_SOURCES=compare_same_cluster.cpp
+compare_same_cluster_ext_SOURCES=compare_same_cluster_ext.cpp
 transfer_same_cluster_block_SOURCES=transfer_same_cluster_block.cpp
+remove_block_SOURCES=remove_block.cpp

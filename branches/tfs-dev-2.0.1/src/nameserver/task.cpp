@@ -70,22 +70,26 @@ namespace tfs
     void LayoutManager::Task::runTimerTask()
     {
       dump(TBSYS_LOG_LEVEL_INFO, "task expired");
-      tbutil::Monitor<tbutil::Mutex>::Lock lock(manager_->run_plan_monitor_);
-      TaskPtr task = TaskPtr::dynamicCast(this);
-      status_ = PLAN_STATUS_TIMEOUT;
-      manager_->finish_plan_list_.push_back(task);
-      std::set<TaskPtr, TaskCompare>::iterator r_iter = manager_->running_plan_list_.find(task);
-      if (r_iter != manager_->running_plan_list_.end())
       {
-        TBSYS_LOG(INFO, "%s", "task expired erase");
-        manager_->running_plan_list_.erase(r_iter);
+        tbutil::Monitor<tbutil::Mutex>::Lock lock(manager_->run_plan_monitor_);
+        TaskPtr task = TaskPtr::dynamicCast(this);
+        status_ = PLAN_STATUS_TIMEOUT;
+        manager_->finish_plan_list_.push_back(task);
+        std::set<TaskPtr, TaskCompare>::iterator r_iter = manager_->running_plan_list_.find(task);
+        if (r_iter != manager_->running_plan_list_.end())
+        {
+          TBSYS_LOG(INFO, "%s", "task expired erase");
+          manager_->running_plan_list_.erase(r_iter);
+        }
       }
-      RWLock::Lock tlock(manager_->maping_mutex_, WRITE_LOCKER);
-      manager_->block_to_task_.erase(block_id_);
-      std::vector<ServerCollect*>::iterator iter = runer_.begin();
-      for (; iter != runer_.end(); ++iter)
       {
-        manager_->server_to_task_.erase((*iter));
+        RWLock::Lock tlock(manager_->maping_mutex_, WRITE_LOCKER);
+        manager_->block_to_task_.erase(block_id_);
+        std::vector<ServerCollect*>::iterator iter = runer_.begin();
+        for (; iter != runer_.end(); ++iter)
+        {
+          manager_->server_to_task_.erase((*iter));
+        }
       }
     }
 
@@ -148,7 +152,9 @@ namespace tfs
         {
           manager_->running_plan_list_.erase(r_iter);
         }
+      }
 
+      {
         RWLock::Lock tlock(manager_->maping_mutex_, WRITE_LOCKER);
         manager_->block_to_task_.erase(block_id_);
         std::vector<ServerCollect*>::iterator iter = runer_.begin();
@@ -360,7 +366,8 @@ namespace tfs
           else if (status.second != PLAN_STATUS_BEGIN)
           {
             ++complete_count;
-            servers.push_back(status.first);
+            if (status.second == PLAN_STATUS_FAILURE)
+              servers.push_back(status.first);
           }
         }
       }

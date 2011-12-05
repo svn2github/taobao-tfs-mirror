@@ -280,7 +280,7 @@ namespace tfs
       if (TFS_SUCCESS == iret)
       {
         //init gcobject manager
-        iret = GCObjectManager::instance().initialize(get_timer());                                                                                          
+        iret = GCObjectManager::instance().initialize(get_timer());
         if (TFS_SUCCESS != iret)
         {
           TBSYS_LOG(ERROR, "%s", "initialize gcobject manager fail");
@@ -416,7 +416,7 @@ namespace tfs
           common::Func::split_string(SYSPARAM_DATASERVER.slave_ns_ip_, '|', slave_ns_ip);
           for (uint8_t i = 0; i < slave_ns_ip.size(); i++)
           {
-            // check slave_ns_ip valid 
+            // check slave_ns_ip valid
             snprintf(dest_addr, MAX_ADDRESS_LENGTH, "%s", slave_ns_ip.at(i).c_str());
             SyncBase* sync_base = new SyncBase(*this, backup_type, i, src_addr, dest_addr);
             // SyncBase init, will create thread
@@ -2184,7 +2184,7 @@ namespace tfs
 
     int DataService::get_dataserver_information(common::BasePacket* packet)
     {
-      int32_t iret = NULL != packet ? TFS_SUCCESS : TFS_ERROR; 
+      int32_t iret = NULL != packet ? TFS_SUCCESS : TFS_ERROR;
       if (TFS_SUCCESS == iret)
       {
         GetDataServerInformationMessage* message = dynamic_cast<GetDataServerInformationMessage*>(packet);
