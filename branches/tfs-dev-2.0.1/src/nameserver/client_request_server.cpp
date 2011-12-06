@@ -478,7 +478,7 @@ namespace tfs
               block = ptr->find(block_id);
             }
             // now check blockcollect object if has any dataserver.
-            iret = NULL == block ? block_id == 0 ? EXIT_NO_BLOCK : EXIT_DISCARD_NEWBLK_ERROR : TFS_SUCCESS;
+            iret = NULL == block ? EXIT_NO_BLOCK : TFS_SUCCESS;
             if (TFS_SUCCESS == iret)
             {
               iret = 0 == block->get_hold_size() ? EXIT_NO_DATASERVER : TFS_SUCCESS;
