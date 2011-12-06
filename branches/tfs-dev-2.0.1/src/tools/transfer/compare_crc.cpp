@@ -16,6 +16,7 @@
 #include "common/status_message.h"
 #include "message/server_status_message.h"
 #include "message/block_info_message.h"
+#include "new_client/tfs_client_impl.h"
 #include "tools/util/tool_util.h"
 #include "compare_crc.h"
 
@@ -25,7 +26,7 @@ using namespace tfs::client;
 using namespace tfs::message;
 using namespace tfs::tools;
 
-TfsClient* g_tfs_client = NULL;
+TfsClientImpl* g_tfs_client = NULL;
 FILE *g_succ_file = NULL, *g_fail_file = NULL, *g_error_file = NULL, *g_unsync_file = NULL;
 
 static const int32_t META_FLAG_ABNORMAL = -9800;
@@ -324,7 +325,7 @@ int get_crc_from_block_list(const string& old_tfs_client, const string& new_tfs_
   fp = fopen(block_list, "r");
   if (fp != NULL)
   {
-    TBSYS_LOG(INFO,"open block list %s", block_list);
+    TBSYS_LOG(INFO,"open block list file: %s", block_list);
     uint32_t block_id = 0;
     while (fscanf(fp, "%u\n", &block_id) != EOF)
     {
@@ -343,7 +344,7 @@ int get_crc_from_block_list(const string& old_tfs_client, const string& new_tfs_
         tbnet::Packet* ret_message = NULL;
         if (NULL != client)
         {
-          if (TFS_SUCCESS == send_msg_to_server(ds_id, client, &gss_message, ret_message))
+          if ((ret = send_msg_to_server(ds_id, client, &gss_message, ret_message)) == TFS_SUCCESS)
           {
             if (ret_message->getPCode() == BLOCK_FILE_INFO_MESSAGE)
             {
@@ -361,8 +362,14 @@ int get_crc_from_block_list(const string& old_tfs_client, const string& new_tfs_
               if (sm->get_error() != NULL)
               {
                 TBSYS_LOG(ERROR, "%s", sm->get_error());
+                ret = TFS_ERROR;
               }
             }
+          }
+          else
+          {
+            TBSYS_LOG(ERROR, "send message to server failed. ds_addr: %s, pcode: %d, ret: %d",
+                tbsys::CNetUtil::addrToString(ds_id).c_str(), gss_message.getPCode(), ret);
           }
           NewClientManager::get_instance().destroy_client(client);
         }
@@ -371,16 +378,14 @@ int get_crc_from_block_list(const string& old_tfs_client, const string& new_tfs_
           TBSYS_LOG(ERROR,"create client error");
         }
 
-        if (TFS_ERROR != ret)
+        if (ret == TFS_SUCCESS)
         {
           FILE_INFO_LIST::iterator vit = file_list.begin();
           int i = 0;
           for ( ; vit != file_list.end(); ++vit)
           {
             ++i;
-            FSName fsname;
-            fsname.set_block_id(block_id);
-            fsname.set_file_id(vit->id_);
+            FSName fsname(block_id, vit->id_, g_tfs_client->get_cluster_id(old_tfs_client.c_str()));
             TBSYS_LOG(DEBUG, "gene file i: %d, blockid: %u, fileid: %"PRI64_PREFIX"u, %s",
                 i, block_id, (vit)->id_, fsname.get_name());
             get_crc_from_filename(old_tfs_client, new_tfs_client, fsname.get_name(), modify_time);
@@ -473,25 +478,22 @@ int main(int argc, char** argv)
   string old_tfs_client, new_tfs_client;
   old_tfs_client = old_ns_ip;
   new_tfs_client = new_ns_ip;
-  g_tfs_client = TfsClient::Instance();
-  iret = g_tfs_client->initialize(old_ns_ip.c_str());
+  g_tfs_client = TfsClientImpl::Instance();
+  iret = g_tfs_client->initialize(NULL, DEFAULT_BLOCK_CACHE_TIME, DEFAULT_BLOCK_CACHE_ITEMS, false);
   if (iret != TFS_SUCCESS)
   {
-    if (iret != TFS_SUCCESS)
-    {
-      if ((!block_list.empty()) && (block_list != " "))
-      {
-        get_crc_from_block_list(old_tfs_client, new_tfs_client, block_list.c_str(), modify_time);
-      }
-      else if((!tfs_file_name.empty()) && (tfs_file_name != " "))
-      {
-        get_crc_from_tfsname_list(old_tfs_client, new_tfs_client, tfs_file_name.c_str(), modify_time);
-      }
-    }
+    TBSYS_LOG(ERROR, "initialize tfs client failed, ret: %d", iret);
   }
   else
   {
-    TBSYS_LOG(ERROR, "initialize old nameserver(%s) client failed", old_ns_ip.c_str());
+    if ((!block_list.empty()) && (block_list != " "))
+    {
+      get_crc_from_block_list(old_tfs_client, new_tfs_client, block_list.c_str(), modify_time);
+    }
+    else if((!tfs_file_name.empty()) && (tfs_file_name != " "))
+    {
+      get_crc_from_tfsname_list(old_tfs_client, new_tfs_client, tfs_file_name.c_str(), modify_time);
+    }
   }
 
   for (i = 0; g_log_fp[i].fp_; i++)

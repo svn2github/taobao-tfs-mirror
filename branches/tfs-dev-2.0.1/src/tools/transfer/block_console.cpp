@@ -27,9 +27,10 @@
 #include "message/block_info_message.h"
 #include "message/read_data_message.h"
 #include "message/write_data_message.h"
+#include "message/client_cmd_message.h"
 #include "dataserver/dataserver_define.h"
 #include "dataserver/visit_stat.h"
-#include "new_client/tfs_client_api.h"
+#include "new_client/tfs_client_impl.h"
 
 #include "block_console.h"
 
@@ -265,9 +266,9 @@ int BlockConsole::locate_cur_pos()
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 TranBlock::TranBlock(const uint32_t blockid, const std::string& dest_ns_addr,
-    const uint64_t dest_ds_addr, const int64_t traffic, TfsSession* src_session) :
+    const uint64_t dest_ds_addr, const int64_t traffic, TfsSession* src_session, TfsSession* dest_session) :
     block_id_(blockid), dest_ns_addr_(dest_ns_addr), dest_ds_id_(dest_ds_addr),
-    cur_offset_(0), total_tran_size_(0), traffic_(traffic), src_session_(src_session)
+    cur_offset_(0), total_tran_size_(0), traffic_(traffic), src_session_(src_session), dest_session_(dest_session)
 {
   rds_.clear();
   file_set_.clear();
@@ -299,6 +300,10 @@ int TranBlock::run()
       break;
     }
     if ((ret = recombine_data()) != TFS_SUCCESS)
+    {
+      break;
+    }
+    if ((ret = check_dest_blk()) != TFS_SUCCESS)
     {
       break;
     }
@@ -415,7 +420,7 @@ int TranBlock::read_data()
         int len = rsp_rrd_msg->get_length();
         if (len >= 0)
         {
-          if (len < read_size)
+          if (len < read_size || len == 0)
           {
             eof_flag = true;
           }
@@ -564,6 +569,7 @@ int TranBlock::recombine_data()
       new_info.flag_ = finfo.flag_;
       new_info.crc_ = finfo.crc_;
 
+
       // write to dest buf
       dest_content_buf_.writeBytes(&new_info, FILEINFO_SIZE);
       dest_content_buf_.writeBytes(src_content_buf_.getData() + finfo.offset_ + FILEINFO_SIZE, finfo.size_);
@@ -585,6 +591,38 @@ int TranBlock::recombine_data()
   dest_block_info_.del_size_ = 0;
   dest_block_info_.seq_no_ = dest_raw_meta_.size();
 
+  return ret;
+}
+
+int TranBlock::check_dest_blk()
+{
+  VUINT64 dest_ds;
+  int ret = dest_session_->get_block_info(block_id_, dest_ds, T_READ);
+  if (TFS_SUCCESS == ret)
+  {
+    int32_t ds_size = static_cast<int32_t>(dest_ds.size());
+    if (ds_size > 0)
+    {
+      TBSYS_LOG(ERROR, "block exists in dest cluster. block list size is %d, blockid: %u", ds_size, block_id_);
+      int i = 0;
+      for (i = 0; i < ds_size; i++)
+      {
+        if ((ret = rm_block_from_ns(dest_ds[i])) != TFS_SUCCESS)
+        {
+          break;
+        }
+        if ((ret = rm_block_from_ds(dest_ds[i])) != TFS_SUCCESS)
+        {
+          break;
+        }
+      }
+      rm_block_from_ns(dest_ds[0]);
+    }
+  }
+  else
+  {
+    ret = TFS_SUCCESS;
+  }
   return ret;
 }
 
@@ -713,9 +751,9 @@ int TranBlock::check_integrity()
   char data[MAX_READ_SIZE];
   int ret = TFS_SUCCESS;
   RawMetaVecIter vit = dest_raw_meta_.begin();
-  if ((ret = TfsClient::Instance()->initialize(dest_ns_addr_.c_str())) != TFS_SUCCESS)
+  if ((ret = TfsClientImpl::Instance()->initialize(NULL, DEFAULT_BLOCK_CACHE_TIME, DEFAULT_BLOCK_CACHE_ITEMS, false)) != TFS_SUCCESS)
   {
-    TBSYS_LOG(ERROR, "TfsClient::Instance().initialize error");
+    TBSYS_LOG(ERROR, "TfsClientImpl::Instance().initialize error");
   }
   else
   {
@@ -731,7 +769,7 @@ int TranBlock::check_integrity()
             block_id_, vit->get_file_id());
         continue;
       }
-      else if ((fd = TfsClient::Instance()->open(fname_helper.get_name(), NULL, T_READ)) != TFS_SUCCESS)
+      else if ((fd = TfsClientImpl::Instance()->open(fname_helper.get_name(), NULL, dest_ns_addr_.c_str(), T_READ)) != TFS_SUCCESS)
       {
         TBSYS_LOG(ERROR, "read data from dest fail, blockid: %u, fileid: %"PRI64_PREFIX"u, ret: %d",
             block_id_, vit->get_file_id(), ret);
@@ -744,7 +782,7 @@ int TranBlock::check_integrity()
         data[0] = '\0';
         while (true)
         {
-          int32_t read_len = TfsClient::Instance()->readv2(fd, data, MAX_READ_SIZE, &dest_info);
+          int32_t read_len = TfsClientImpl::Instance()->readv2(fd, data, MAX_READ_SIZE, &dest_info);
           if (read_len < 0)
           {
             TBSYS_LOG(ERROR, "read data from dest fail, blockid: %u, fileid: %"PRI64_PREFIX"u, ret: %d",
@@ -786,7 +824,7 @@ int TranBlock::check_integrity()
           }
         }
       }
-      TfsClient::Instance()->close(fd);
+      TfsClientImpl::Instance()->close(fd);
 
       if (TFS_SUCCESS != ret)
       {
@@ -806,5 +844,86 @@ int TranBlock::check_integrity()
     }
   }
 
+  return ret;
+}
+int TranBlock::rm_block_from_ns(uint64_t ds_id)
+{
+  int ret = TFS_SUCCESS;
+  ClientCmdMessage req_cc_msg;
+  req_cc_msg.set_cmd(CLIENT_CMD_EXPBLK);
+  req_cc_msg.set_value1(ds_id);
+  req_cc_msg.set_value3(block_id_);
+
+  NewClient* client = NewClientManager::get_instance().create_client();
+  tbnet::Packet* rsp = NULL;
+  if((ret = send_msg_to_server(Func::get_host_ip(dest_ns_addr_.c_str()), client, &req_cc_msg, rsp)) != TFS_SUCCESS)
+  {
+    TBSYS_LOG(ERROR, "send remove block from ns command failed. block_id: %u, ret: %d", block_id_, ret);
+    rsp = NULL;
+  }
+  else
+  {
+    if (rsp != NULL && STATUS_MESSAGE == rsp->getPCode())
+    {
+      StatusMessage* sm = dynamic_cast<StatusMessage*>(rsp);
+      if (STATUS_MESSAGE_OK == sm->get_status())
+      {
+        TBSYS_LOG(INFO, "remove block from ns success, ds_addr: %s, blockid: %u",
+            tbsys::CNetUtil::addrToString(ds_id).c_str(), block_id_);
+      }
+      else
+      {
+        TBSYS_LOG(ERROR, "remove block from ns fail, ds_addr: %s, blockid: %u, ret: %d",
+            tbsys::CNetUtil::addrToString(ds_id).c_str(), block_id_, sm->get_status());
+        ret = TFS_ERROR;
+      }
+    }
+    else
+    {
+      TBSYS_LOG(ERROR, "remove block from ns: %s fail, blockid: %u, unkonw msg type",
+          tbsys::CNetUtil::addrToString(ds_id).c_str(), block_id_);
+      ret = TFS_ERROR;
+    }
+  }
+  NewClientManager::get_instance().destroy_client(client);
+  return ret;
+}
+int TranBlock::rm_block_from_ds(uint64_t ds_id)
+{
+  int ret = TFS_SUCCESS;
+  RemoveBlockMessage req_rb_msg;
+  req_rb_msg.add_remove_id(block_id_);
+  NewClient* client = NewClientManager::get_instance().create_client();
+  tbnet::Packet* rsp = NULL;
+  if((ret = send_msg_to_server(ds_id, client, &req_rb_msg, rsp)) != TFS_SUCCESS)
+  {
+    TBSYS_LOG(ERROR, "send remove block from ds command failed. block_id: %u, ret: %d", block_id_, ret);
+    rsp = NULL;
+  }
+  else
+  {
+    if (rsp != NULL && STATUS_MESSAGE == rsp->getPCode())
+    {
+      StatusMessage* sm = dynamic_cast<StatusMessage*>(rsp);
+      if (STATUS_MESSAGE_OK == sm->get_status())
+      {
+        TBSYS_LOG(INFO, "remove block from dest ds success, ds_addr: %s, blockid: %u",
+            tbsys::CNetUtil::addrToString(ds_id).c_str(), block_id_);
+      }
+      else
+      {
+        TBSYS_LOG(ERROR, "remove block from dest ds fail, ds_addr: %s, blockid: %u, ret: %d",
+            tbsys::CNetUtil::addrToString(ds_id).c_str(), block_id_, sm->get_status());
+        ret = TFS_ERROR;
+      }
+    }
+    else
+    {
+      TBSYS_LOG(ERROR, "write raw data to ds: %s fail, blockid: %u, unkonw msg type",
+          tbsys::CNetUtil::addrToString(ds_id).c_str(), block_id_);
+      ret = TFS_ERROR;
+    }
+  }
+  NewClientManager::get_instance().destroy_client(client);
   return ret;
 }

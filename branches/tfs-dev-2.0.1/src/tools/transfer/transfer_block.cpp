@@ -26,22 +26,29 @@
 #include "common/func.h"
 #include "common/internal.h"
 #include "common/error_msg.h"
+#include "common/base_packet_streamer.h"
+#include "message/message_factory.h"
+#include "common/client_manager.h"
 #include "dataserver/visit_stat.h"
 #include "new_client/tfs_client_api.h"
 #include "block_console.h"
 
+using namespace tbsys;
 using namespace tfs::common;
 using namespace tfs::client;
-using namespace tbsys;
+using namespace tfs::message;
 using namespace tfs::dataserver;
+
+static BasePacketStreamer g_packet_streamer_;
+static MessageFactory g_packet_factory_;
 
 class WorkThread : public tbutil::Thread
 {
   public:
     WorkThread();
-    WorkThread(BlockConsole* blk_console, tfs::client::TfsSession* src_session,
+    WorkThread(BlockConsole* blk_console, tfs::client::TfsSession* src_session, tfs::client::TfsSession* dest_session,
         const std::string& dest_ns_addr, const int64_t max_traffic) :
-      blk_console_(blk_console), src_session_(src_session),
+      blk_console_(blk_console), src_session_(src_session), dest_session_(dest_session),
       dest_ns_addr_(dest_ns_addr), traffic_(max_traffic * 1024), destroy_(false)
     {
     }
@@ -96,7 +103,7 @@ class WorkThread : public tbutil::Thread
         {
           TBSYS_LOG(INFO, "get transfer param succ, blockid: %u, ds: %s, thread id: %"PRI64_PREFIX"d",
               block_id, tbsys::CNetUtil::addrToString(ds_id).c_str(), id());
-          TranBlock tran_block(block_id, dest_ns_addr_, ds_id, traffic_, src_session_);
+          TranBlock tran_block(block_id, dest_ns_addr_, ds_id, traffic_, src_session_, dest_session_);
           if ((ret = tran_block.run()) != TFS_SUCCESS)
           {
             TBSYS_LOG(ERROR, "tran block run fail, ret: %d, thread id: %"PRI64_PREFIX"d", ret, id());
@@ -118,6 +125,7 @@ class WorkThread : public tbutil::Thread
   private:
     BlockConsole* blk_console_;
     tfs::client::TfsSession* src_session_;
+    tfs::client::TfsSession* dest_session_;
     std::string dest_ns_addr_;
 
     volatile int64_t traffic_;
@@ -191,8 +199,8 @@ int main(int argc, char* argv[])
   std::string ts_input_blocks_file;
   std::string log_file = "./tranblk.log";
   std::string pid_file = "./tranblk.pid";
-  int64_t traffic_threshold = 0;
-  bool daemon_flag = true;
+  int64_t traffic_threshold = 1024;
+  bool daemon_flag = false;
   bool help = false;
 
   int32_t index = 0;
@@ -271,40 +279,58 @@ int main(int argc, char* argv[])
     else
     {
       // init src tfs session
-      TfsSession* src_session = new TfsSession(src_ns_ip_port,
-          tfs::common::DEFAULT_BLOCK_CACHE_TIME, tfs::common::DEFAULT_BLOCK_CACHE_ITEMS);
-      if ((ret = src_session->initialize()) != TFS_SUCCESS)
+      g_packet_streamer_.set_packet_factory(&g_packet_factory_);
+      if (TFS_SUCCESS != (ret = NewClientManager::get_instance().initialize(&g_packet_factory_, &g_packet_streamer_)))
       {
-        TBSYS_LOG(ERROR, "init src session failed, src ns ip: %s, ret: %d",
-            src_ns_ip_port.c_str(), ret);
+        TBSYS_LOG(ERROR, "initialize NewClientManager fail, must exit, ret: %d", ret);
       }
       else
       {
-        gworks = new WorkThreadPtr[thread_count];
-        int i = 0;
-        for ( ; i < thread_count; ++i)
+        TfsSession* src_session = new TfsSession(src_ns_ip_port,
+            tfs::common::DEFAULT_BLOCK_CACHE_TIME, tfs::common::DEFAULT_BLOCK_CACHE_ITEMS);
+        TfsSession* dest_session = new TfsSession(dest_ns_ip_port,
+            tfs::common::DEFAULT_BLOCK_CACHE_TIME, tfs::common::DEFAULT_BLOCK_CACHE_ITEMS);
+        if ((ret = src_session->initialize()) != TFS_SUCCESS)
         {
-          gworks[i] = new WorkThread(blk_console, src_session, dest_ns_ip_port, traffic_threshold);
+          tbsys::gDelete(src_session);
+          TBSYS_LOG(ERROR, "init src session failed, src ns ip: %s, ret: %d",
+              src_ns_ip_port.c_str(), ret);
         }
-
-        for (i = 0; i < thread_count; ++i)
+        else if ((ret = dest_session->initialize()) != TFS_SUCCESS)
         {
-          gworks[i]->start();
+          tbsys::gDelete(dest_session);
+          TBSYS_LOG(ERROR, "init dest session failed, dest ns ip: %s, ret: %d",
+              dest_ns_ip_port.c_str(), ret);
         }
-
-        signal(SIGPIPE, SIG_IGN);
-        signal(SIGHUP, SIG_IGN);
-        signal(SIGINT, interruptcallback);
-        signal(SIGTERM, interruptcallback);
-        signal(SIGUSR1, interruptcallback);
-        signal(SIGUSR2, interruptcallback);
-
-        for (i = 0; i < thread_count; ++i)
+        else
         {
-          gworks[i]->wait_for_shut_down();
+          gworks = new WorkThreadPtr[thread_count];
+          int i = 0;
+          for ( ; i < thread_count; ++i)
+          {
+            gworks[i] = new WorkThread(blk_console, src_session, dest_session, dest_ns_ip_port, traffic_threshold);
+          }
+
+          for (i = 0; i < thread_count; ++i)
+          {
+            gworks[i]->start();
+          }
+
+          signal(SIGPIPE, SIG_IGN);
+          signal(SIGHUP, SIG_IGN);
+          signal(SIGINT, interruptcallback);
+          signal(SIGTERM, interruptcallback);
+          signal(SIGUSR1, interruptcallback);
+          signal(SIGUSR2, interruptcallback);
+
+          for (i = 0; i < thread_count; ++i)
+          {
+            gworks[i]->wait_for_shut_down();
+          }
+          tbsys::gDeleteA(gworks);
+          tbsys::gDelete(src_session);
+          tbsys::gDelete(dest_session);
         }
-        tbsys::gDeleteA(gworks);
-        tbsys::gDelete(src_session);
       }
     }
     tbsys::gDelete(blk_console);
