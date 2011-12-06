@@ -144,14 +144,10 @@ function test_fopenFile_10($tfsobj, $app_id, $uid)
  *@param app_key: application key
  *@param local ip : local ip
 */
-//   $rcServerIp="10.232.36.210:5632";
-//   $appKey="tappkey00002";
-//   $localIp="10.13.88.118";
-//   $tfsobj = new tfs_client($rcServerIp, $appKey, $localIp);
    $tfsobj = new tfs_client($argv[1], $argv[2], $argv[3]);
    $app_id = $tfsobj->get_app_id();
    $uid = 15;
-//   echo "\n<---------------rcServer:$rcServerIp , appkey:$appKey , app_id: $app_id--------->\n";
+
    echo "\n-----rcServer:$$argv[1] , appkey:$argv[2] , app_id: $app_id-----\n";
 
    switch($argv[4])
