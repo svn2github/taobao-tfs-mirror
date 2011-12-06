@@ -41,7 +41,7 @@ TEST_F(TfsInit,test_04_lsFile_wrong_filePath_1)
 
    FileMetaInfo file_meta_info;
    ret=tfsclient->ls_file(appId,uid,"/",file_meta_info);
-   EXPECT_GT(0,ret);
+   EXPECT_LT(0,ret);
 }
 
 TEST_F(TfsInit,test_05_lsFile_wrong_filePath_2)

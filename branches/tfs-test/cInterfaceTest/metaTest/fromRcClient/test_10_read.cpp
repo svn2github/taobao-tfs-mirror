@@ -106,7 +106,7 @@ TEST_F(TfsInit,test_03_read_more_offset)
    char Rbuffer[small_len];
    offset=small_len+1;
    Ret=tfsclient->pread(fd,Rbuffer,small_len,offset);
-   EXPECT_GT(0,Ret);
+   EXPECT_EQ(0,Ret);
    
    ret=tfsclient->close(fd);
    EXPECT_EQ(0,ret);
