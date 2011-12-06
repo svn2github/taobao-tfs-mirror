@@ -163,8 +163,8 @@ namespace tfs
         ret = data_handle_->read_segment_info(&old_file_info, file_meta.get_offset());
         if (TFS_SUCCESS != ret)
         {
-          TBSYS_LOG(ERROR, "read FileInfo fail, blockid: %u, fileid: %" PRI64_PREFIX "u, ret: %d", logic_block_id_,
-              inner_file_id, ret);
+          TBSYS_LOG(ERROR, "read FileInfo fail, blockid: %u, fileid: %" PRI64_PREFIX "u, ret: %d, offset: %d", logic_block_id_,
+              inner_file_id, ret, file_meta.get_offset());
         }
         else // read successful
         {

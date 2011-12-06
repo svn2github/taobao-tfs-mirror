@@ -48,101 +48,63 @@ int remove_block(const string& ns_ip, const string& file_path, const string& out
   }
   else
   {
-    FILE* fp_out = fopen(out_file_path.c_str(), "r");
+    FILE* fp_out = fopen(out_file_path.c_str(), "w+");
     if (NULL == fp_out)
     {
       TBSYS_LOG(ERROR, "open %s failed, %s %d", out_file_path.c_str(), strerror(errno), errno);
     }
     else
     {
+      uint64_t ns_ip_port = Func::get_host_ip(ns_ip.c_str());
       uint32_t block_id = 0;
       while (fscanf(fp, "%u\n", &block_id) != EOF)
       {
+        int count = 0;
         sleep(2);
-        VUINT64 ds_list;
-        ToolUtil::get_block_ds_list(Func::get_host_ip(ns_ip.c_str()), block_id, ds_list);
-        if (ds_list.empty())
+        do
         {
-          TBSYS_LOG(ERROR, "remove block: %u failed, ds_list empty", block_id);
-        }
-        else
-        {
-          NewClient* client = NULL;
+          count++;
           tbnet::Packet* ret_msg= NULL;
-          ds_list.push_back(tbsys::CNetUtil::strToAddr("172.24.80.8", 38000));
-          VUINT64::const_iterator iter = ds_list.begin();
-          for (ret = TFS_SUCCESS; iter != ds_list.end() && TFS_SUCCESS == ret; ++iter)
+          ClientCmdMessage ns_req_msg;
+          ns_req_msg.set_cmd(CLIENT_CMD_EXPBLK);
+          ns_req_msg.set_value3(block_id);
+          ns_req_msg.set_value4(1);
+          NewClient* client = NewClientManager::get_instance().create_client();
+          ret = NULL != client ? TFS_SUCCESS : TFS_ERROR;
+          if (TFS_SUCCESS != ret)
           {
-            ret_msg = NULL;
-            ClientCmdMessage ns_req_msg;
-            ns_req_msg.set_value3(block_id);
-            ns_req_msg.set_value1((*iter));
-            client = NewClientManager::get_instance().create_client();
-            ret = NULL != client ? TFS_SUCCESS : TFS_ERROR;
-            if (TFS_SUCCESS != ret)
-            {
-              TBSYS_LOG(ERROR, "remove block: %u failed from nameserver: %s, dataserver: %s", block_id, ns_ip.c_str(),
-                tbsys::CNetUtil::addrToString((*iter)).c_str());
-            }
-            else
-            {
-              ret = send_msg_to_server((*iter), client, &ns_req_msg, ret_msg);
-              if (TFS_SUCCESS != ret)
-              {
-                TBSYS_LOG(ERROR, "remove block: %u failed from nameserver: %s, send msg error: ret: %d, dataserver: %s", block_id, ns_ip.c_str(), ret,
-                tbsys::CNetUtil::addrToString((*iter)).c_str());
-              }
-              else
-              {
-                ret = ret_msg->getPCode() == STATUS_MESSAGE ? TFS_SUCCESS : TFS_ERROR;
-                if (TFS_SUCCESS != ret)
-                {
-                  TBSYS_LOG(ERROR, "remove block: %u failed from nameserver: %s, get error response, pcode: %d, dataserver: %s",
-                    block_id, ns_ip.c_str(), ret_msg->getPCode(),tbsys::CNetUtil::addrToString((*iter)).c_str());
-                }
-                else
-                {
-                  TBSYS_LOG(INFO, "remove block: %u successful from nameserver: %s, dataserver: %s", block_id, ns_ip.c_str(),
-                  tbsys::CNetUtil::addrToString((*iter)).c_str());
-                }
-              }
-              NewClientManager::get_instance().destroy_client(client);
-            }
+            TBSYS_LOG(ERROR, "remove block: %u failed from nameserver: %s", block_id, ns_ip.c_str());
           }
-
-          iter = ds_list.begin();
-          for (;iter != ds_list.end() - 1 && TFS_SUCCESS == ret; ++iter)
+          else
           {
-            ret_msg = NULL;
-            RemoveBlockMessage req_msg;
-            req_msg.add_remove_id(block_id);
-            client = NewClientManager::get_instance().create_client();
-            ret = NULL != client ? TFS_SUCCESS : TFS_ERROR;
+            ret = send_msg_to_server(ns_ip_port, client, &ns_req_msg, ret_msg);
             if (TFS_SUCCESS != ret)
             {
-              TBSYS_LOG(ERROR, "remove block: %u failed from dataserver: %s", block_id, tbsys::CNetUtil::addrToString((*iter)).c_str());
+              TBSYS_LOG(ERROR, "remove block: %u failed from nameserver: %s", block_id, ns_ip.c_str());
             }
             else
             {
-              ret = send_msg_to_server((*iter), client, &req_msg, ret_msg);
+              ret = ret_msg->getPCode() == STATUS_MESSAGE ? TFS_SUCCESS : TFS_ERROR;
               if (TFS_SUCCESS != ret)
               {
-                TBSYS_LOG(ERROR, "remove block: %u failed from dataserver: %s,send msg error", block_id, tbsys::CNetUtil::addrToString((*iter)).c_str());
+                TBSYS_LOG(ERROR, "remove block: %u failed from nameserver: %s, response pcode: %d", block_id, ns_ip.c_str(), ret_msg->getPCode());
               }
               else
               {
-                TBSYS_LOG(INFO, "remove block: %u successful from nameserver: %s", block_id, ns_ip.c_str());
+                StatusMessage* msg = dynamic_cast<StatusMessage*>(ret_msg);
+                ret = msg->get_status() == TFS_SUCCESS || msg->get_status() == EXIT_NO_BLOCK ? TFS_SUCCESS : TFS_ERROR;
+                if (TFS_SUCCESS != ret)
+                  TBSYS_LOG(ERROR, "remove block: %u failed from nameserver: %s, response pcode: %d, status: %d", block_id, ns_ip.c_str(), ret_msg->getPCode(), msg->get_status());
               }
-              NewClientManager::get_instance().destroy_client(client);
             }
+            NewClientManager::get_instance().destroy_client(client);
           }
         }
+        while (count < 2 && TFS_SUCCESS == ret);
 
-        if (TFS_SUCCESS != ret)
+        if (TFS_SUCCESS == ret)
         {
-          std::string result;
-          print_servers(ds_list, result);
-          TBSYS_LOG(ERROR, "remove block : %u on %s", block_id, result.c_str());
+          fprintf(fp_out, "%u\n", block_id);
         }
       }
       fclose(fp_out);
@@ -213,21 +175,13 @@ int main(int argc, char** argv)
   }
   else
   {
-    iret = access(out_file_path.c_str(), R_OK|F_OK);
-    if (0 != iret)
-    {
-      TBSYS_LOG(ERROR, "open %s failed, error: %s ", out_file_path.c_str(), strerror(errno));
-    }
-    else
-    {
-      MessageFactory* factory = new MessageFactory();
-      BasePacketStreamer* streamer = new BasePacketStreamer(factory);
-      NewClientManager::get_instance().initialize(factory, streamer);
-      iret = remove_block(dest_ns_ip, file_path, out_file_path);
-      NewClientManager::get_instance().destroy();
-      tbsys::gDelete(factory);
-      tbsys::gDelete(streamer);
-    }
+    MessageFactory* factory = new MessageFactory();
+    BasePacketStreamer* streamer = new BasePacketStreamer(factory);
+    NewClientManager::get_instance().initialize(factory, streamer);
+    iret = remove_block(dest_ns_ip, file_path, out_file_path);
+    NewClientManager::get_instance().destroy();
+    tbsys::gDelete(factory);
+    tbsys::gDelete(streamer);
   }
   return iret;
 }

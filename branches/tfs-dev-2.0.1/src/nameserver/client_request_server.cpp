@@ -662,41 +662,105 @@ namespace tfs
 
     int ClientRequestServer::handle_control_delete_block(const time_t now, const common::ClientCmdInformation& info,const int64_t buf_length, char* buf)
     {
-      UNUSED(buf);
-      UNUSED(buf_length);
+      int32_t iret = TFS_ERROR;
       uint64_t id = info.value1_;
       uint32_t block_id = info.value3_;
+      uint32_t flag     = info.value4_;
+      TBSYS_LOG(INFO, "delete block : %u, flag: %d", block_id, flag);
       std::vector<GCObject*> rms;
-      ServerCollect* server = lay_out_manager_.get_server(id);
-      int32_t iret = TFS_ERROR;
+      BlockChunkPtr ptr = lay_out_manager_.get_chunk(block_id);
+      if (flag & 1)
       {
-        BlockChunkPtr ptr = lay_out_manager_.get_chunk(block_id);
+        std::vector<ServerCollect*> runer;
+        {
+          RWLock::Lock lock(*ptr, WRITE_LOCKER);
+          BlockCollect* block = ptr->find(block_id);
+          iret = NULL != block ? TFS_SUCCESS : EXIT_NO_BLOCK;
+          if (TFS_SUCCESS == iret)
+          {
+            runer = block->get_hold();
+          }
+          else
+          {
+            snprintf(buf, buf_length, " block: %u no exist", block_id);
+            TBSYS_LOG(ERROR, "%s", buf);
+          }
+        }
+        if (TFS_SUCCESS == iret)
+        {
+          if (!runer.empty())
+          {
+            LayoutManager::DeleteBlockTaskPtr task = new LayoutManager::DeleteBlockTask(&lay_out_manager_, PLAN_PRIORITY_NORMAL, block_id, now, now, runer, 0);
+            if (!lay_out_manager_.add_task(task))
+            {
+              task = 0;
+              iret = TFS_ERROR;
+              snprintf(buf, buf_length, " add task(delete) failed, block: %u", block_id);
+              TBSYS_LOG(ERROR, "%s", buf);
+            }
+          }
+          else
+          {
+            RWLock::Lock lock(*ptr, WRITE_LOCKER);
+            ptr->remove(block_id, rms);
+          }
+        }
+      }
+      else
+      {
         RWLock::Lock lock(*ptr, WRITE_LOCKER);
         BlockCollect* block = ptr->find(block_id);
         iret = NULL != block ? TFS_SUCCESS : EXIT_NO_BLOCK;
         if (TFS_SUCCESS == iret)
         {
-          if (NULL != server)
-            iret = lay_out_manager_.relieve_relation(block, server, now) ? TFS_SUCCESS : TFS_ERROR;
-          if (block->get_hold_size() <= 0)
+          if (flag & 2 )
+          {
+            block->relieve_relation();
             ptr->remove(block_id, rms);
+          }
+          else
+          {
+            ServerCollect* server = lay_out_manager_.get_server(id);
+            if (NULL != server)
+               iret = lay_out_manager_.relieve_relation(block, server, now) ? TFS_SUCCESS : TFS_ERROR;
+             if (block->get_hold_size() <= 0)
+               ptr->remove(block_id, rms);
+          }
+        }
+        else
+        {
+          snprintf(buf, buf_length, " block: %u no exist", block_id);
+          TBSYS_LOG(ERROR, "%s", buf);
         }
       }
-
       GFactory::get_gc_manager().add(rms);
       return iret;
     }
 
     int ClientRequestServer::handle_control_compact_block(const time_t now, const common::ClientCmdInformation& info, const int64_t buf_length, char* buf)
     {
+      std::vector<ServerCollect*> runer;
       uint32_t block_id = info.value3_;
+      int32_t iret  = TFS_ERROR;
       BlockChunkPtr ptr = lay_out_manager_.get_chunk(block_id);
-      RWLock::Lock lock(*ptr, READ_LOCKER);
-      BlockCollect* block = ptr->find(block_id);
-      int32_t iret = NULL == block ? TFS_ERROR : TFS_SUCCESS;
-      if (TFS_SUCCESS == iret)
       {
-        LayoutManager::CompactTaskPtr task = new LayoutManager::CompactTask(&lay_out_manager_, PLAN_PRIORITY_NORMAL, block_id, now, now, block->get_hold(), 0);
+        RWLock::Lock lock(*ptr, READ_LOCKER);
+        BlockCollect* block = ptr->find(block_id);
+        iret = NULL == block ? TFS_ERROR : TFS_SUCCESS;
+        if (TFS_SUCCESS == iret)
+        {
+          runer = block->get_hold();
+        }
+        else
+        {
+          snprintf(buf, buf_length, " block: %u no exist", block_id);
+          TBSYS_LOG(ERROR, "%s", buf);
+        }
+      }
+      if (TFS_SUCCESS == iret
+          && !runer.empty())
+      {
+        LayoutManager::CompactTaskPtr task = new LayoutManager::CompactTask(&lay_out_manager_, PLAN_PRIORITY_NORMAL, block_id, now, now, runer, 0);
         if (!lay_out_manager_.add_task(task))
         {
           task = 0;
@@ -704,11 +768,6 @@ namespace tfs
           snprintf(buf, buf_length, " add task(compact) failed, block: %u", block_id);
           TBSYS_LOG(ERROR, "%s", buf);
         }
-      }
-      else
-      {
-        snprintf(buf, buf_length, " block: %u no exist", block_id);
-        TBSYS_LOG(ERROR, "%s", buf);
       }
       return iret;
     }

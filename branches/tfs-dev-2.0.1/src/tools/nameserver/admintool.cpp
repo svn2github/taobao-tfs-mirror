@@ -115,7 +115,7 @@ void init()
   g_cmd_map["exit"] = CmdNode("exit", "exit", 0, 0, cmd_quit);
   g_cmd_map["param"] = CmdNode("param name [set value [extravalue]]", "set/get param value", 0, 4, cmd_set_run_param);
   g_cmd_map["addblk"] = CmdNode("addblk blockid", "add block", 1, 1, cmd_add_block);
-  g_cmd_map["removeblk"] = CmdNode("removeblk blockid serverip:port", "remove block", 1, 2, cmd_remove_block);
+  g_cmd_map["removeblk"] = CmdNode("removeblk blockid [serverip:port|flag]", "remove block", 1, 2, cmd_remove_block);
   g_cmd_map["listblk"] = CmdNode("listblk blockid", "list block server list", 1, 1, cmd_list_block);
   g_cmd_map["loadblk"] = CmdNode("loadblk blockid serverip:port", "load block", 2, 2, cmd_load_block);
   g_cmd_map["compactblk"] = CmdNode("compactblk blockid", "compact block", 1, 1, cmd_compact_block);
@@ -404,11 +404,33 @@ int cmd_add_block(const VSTRING& param)
 
 int cmd_remove_block(const VSTRING& param)
 {
+  uint32_t flag = 0;
   uint32_t block_id = atoi(param[0].c_str());
-  uint64_t server_id = Func::get_host_ip(param[1].c_str());
-  if (/*0 == server_id || */0 == block_id)
+  uint64_t server_id = 0;
+  if (param.empty())
   {
-    fprintf(stderr, "invalid blockid or address: %s %s\n", param[0].c_str(), param[1].c_str());
+    fprintf(stderr, "invalid parameter, param.empty\n");
+    return TFS_ERROR;
+  }
+  if (param.size() == 1)
+  {
+    flag = 1;
+  }
+  else if (param.size() == 2 )
+  {
+    if (param[1].length() == 1)
+      flag = atoi(param[1].c_str());
+    else
+      server_id = Func::get_host_ip(param[1].c_str());
+    if (0 == server_id)
+    {
+      fprintf(stderr, "invalid addr %s\n", param[1].c_str());
+      return TFS_ERROR;
+    }
+  }
+  if (0 == block_id)
+  {
+    fprintf(stderr, "invalid blockid %s\n", param[0].c_str());
     return TFS_ERROR;
   }
 
@@ -416,13 +438,16 @@ int cmd_remove_block(const VSTRING& param)
   req_cc_msg.set_cmd(CLIENT_CMD_EXPBLK);
   req_cc_msg.set_value1(server_id);
   req_cc_msg.set_value3(block_id);
+  req_cc_msg.set_value4(flag);
 
   int32_t status = TFS_ERROR;
 
   send_msg_to_server(g_tfs_client->get_server_id(), &req_cc_msg, status);
 
-  ToolUtil::print_info(status, "removeblock %s %s", param[0].c_str(), param[1].c_str());
-
+  if (param.size() == 1)
+    ToolUtil::print_info(status, "removeblock %s", param[0].c_str());
+  else if (param.size() == 2)
+    ToolUtil::print_info(status, "removeblock %s %s", param[0].c_str(), param[1].c_str());
   return status;
 }
 

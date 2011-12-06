@@ -17,6 +17,9 @@
 #define TFS_COMMON_LOCK_H_
 
 #include <pthread.h>
+#include <tbsys.h>
+#include <tblog.h>
+
 
 namespace tfs
 {
@@ -24,11 +27,11 @@ namespace tfs
   {
 
     enum ELockMode
-    {   
+    {
       NO_PRIORITY,
       WRITE_PRIORITY,
       READ_PRIORITY
-    }; 
+    };
 
     class ScopedRWLock;
     class RWLock
@@ -44,7 +47,7 @@ namespace tfs
         int trywrlock();
         int unlock();
 
-      private:    
+      private:
         pthread_rwlock_t rwlock_;
     };
 
@@ -62,17 +65,29 @@ namespace tfs
         {
           if (lock_type == READ_LOCKER)
           {
-            locker_.rdlock();
+            int ret = locker_.rdlock();
+            if (0 !=ret)
+            {
+              TBSYS_LOG(WARN , "lock failed, ret: %d", ret);
+            }
           }
           else
           {
-            locker_.wrlock();
+            int ret = locker_.wrlock();
+            if (0 !=ret)
+            {
+              TBSYS_LOG(WARN , "lock failed, ret: %d", ret);
+            }
           }
         }
 
         ~ScopedRWLock()
         {
-          locker_.unlock();
+          int ret = locker_.unlock();
+          if (0 !=ret)
+          {
+            TBSYS_LOG(WARN , "unlock failed, ret: %d", ret);
+          }
         }
 
       private:
