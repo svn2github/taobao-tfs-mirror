@@ -1,19 +1,31 @@
 
-USER=admin
+USER=chuyu
 
-LOG_NAME=sync_log
+EXEC_NAME=sync_by_log
 SCRIPT_NAME=sync.sh
 CMD_HOME=`dirname $(readlink -f $0)`
-SOURCE_SYNC_LOG=${CMD_HOME}/${LOG_NAME}
+SOURCE_SYNC_LOG=${CMD_HOME}/${EXEC_NAME}
 SOURCE_SYNC_SCRIPT=${CMD_HOME}/${SCRIPT_NAME}
 DISPATCH_DS_FILE=$CMD_HOME/ds_list
+TMP_FILE=$CMD_HOME/tmp_file
 
 
 print_usage()
 {
-  echo "$0 source_ns_ip dest_ns_ip log_path [thread_count] [sync day] [modify time]"
+  echo "$0 source_ns_ip dest_ns_ip log_path [sync day] [force_flag] [modify_time] [thread_count]"
+  echo "    sync day: the day of log to be synced, default is yesterday"
+  echo "  force flag: yes or no, need strong consistency, default is no"
+  echo " modify time: modify time"
+  echo "thread count: thread count, default is 2"
 }
 
+#$1 source addr
+#$2 dest addr
+#$3 log file path
+#$4 log day
+#$5 force flag
+#$6 modify time
+#$7 thread count
 start_sync()
 {
   for ds in `cat $DISPATCH_DS_FILE`
@@ -22,10 +34,11 @@ start_sync()
     scp -oStrictHostKeyChecking=no ${SOURCE_SYNC_LOG} $USER@$ds:${DEST_SYNC_LOG}
     scp -oStrictHostKeyChecking=no ${SOURCE_SYNC_SCRIPT} $USER@$ds:${DEST_SYNC_SCRIPT}
     ssh -o ConnectTimeout=3 -oStrictHostKeyChecking=no $USER@$ds \
-    "cd $6;" \
+    "cd $3;" \
     "chmod +x ${DEST_SYNC_LOG};" \
     "chmod +x ${DEST_SYNC_SCRIPT};" \
-    "nohup sh $DEST_SYNC_SCRIPT $1 $2 $3 $4 $5 >tmp_start_log 2>&1 &"
+    "nohup sh $DEST_SYNC_SCRIPT $1 $2 $4 $5 $6 $7 > $TMP_FILE 2>&1 &"
+    echo "nohup sh $DEST_SYNC_SCRIPT $1 $2 $4 $5 $6 $7 > $TMP_FILE 2>&1 &"
     echo "start sync done"
   done
 }
@@ -47,24 +60,32 @@ DEST_SYNC_SCRIPT=$3/${SCRIPT_NAME}
 
 if [ -z $4 ]
 then
-  THREAD_COUNT=2
+  DAY=`date -d yesterday +%Y%m%d`
 else
-  THREAD_COUNT=$4
+  DAY=$4
 fi
 
 if [ -z $5 ]
 then
-  DAY=`date -d yesterday +%Y%m%d`
+  FORCE_FLAG=no
 else
-  DAY=$5
+  FORCE_FLAG=$5
 fi
 
 if [ -z $6 ]
 then
-  MODIFY=`date +%Y%m%d`
+  MODIFY_TIME=`date -d tomorrow +%Y%m%d`
 else
-  MODIFY=$6
+  MODIFY_TIME=$6
 fi
 
-echo "start_sync $1 $2 $THREAD_COUNT $DAY $MODIFY $3"
-start_sync $1 $2 $THREAD_COUNT $DAY $MODIFY $3
+if [ -z $7 ]
+then
+  THREAD_COUNT=2
+else
+  THREAD_COUNT=$7
+fi
+
+
+echo "start_sync $1 $2 $3 $DAY $FORCE_FLAG $MODIFY_TIME $THREAD_COUNT"
+start_sync $1 $2 $3 $DAY $FORCE_FLAG $MODIFY_TIME $THREAD_COUNT

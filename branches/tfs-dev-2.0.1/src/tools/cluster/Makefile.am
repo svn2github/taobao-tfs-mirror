@@ -5,7 +5,7 @@ AM_CPPFLAGS=-I$(top_srcdir)/src\
 
 AM_LDFLAGS=-lrt -lpthread -ldl $(READLINE_LIB)
 
-bin_PROGRAMS = blocktool sync_log get_diff_block
+bin_PROGRAMS = sync_by_blk sync_by_log sync_by_file
 LDADD = $(top_builddir)/src/tools/util/libtfstoolsutil.a\
 	$(top_builddir)/src/new_client/.libs/libtfsclient.a\
 	$(top_builddir)/src/message/libtfsmessage.a\
@@ -15,6 +15,6 @@ LDADD = $(top_builddir)/src/tools/util/libtfstoolsutil.a\
 	$(TBLIB_ROOT)/lib/libtbsys.a
 
 
-blocktool_SOURCES =  blocktool.cpp
-sync_log_SOURCES =  sync_log.cpp
-get_diff_block_SOURCES =  get_diff_block.cpp
+sync_by_blk_SOURCES =  sync_by_blk.cpp sync_file_base.cpp
+sync_by_log_SOURCES =  sync_by_log.cpp sync_file_base.cpp
+sync_by_file_SOURCES =  sync_by_file.cpp sync_file_base.cpp

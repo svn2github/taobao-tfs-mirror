@@ -45,7 +45,7 @@ get_log_name()
 {
   if [ "$1" = "write" ]
   then
-    all_log=`ls dataserver_*_write_stat.log*`
+    all_log=`ls write_stat_*.log*`
   elif [ "$1" = "unlink" ]
   then
     all_log=`ls dataserver_*.log* | egrep 'dataserver_[^_]*.log.*'`
@@ -78,24 +78,22 @@ delete_file()
   fi
 }
 
-#$1 source ns ip
-#$2 dest ns ip
-#$3 op type: write|unlink
-#$4 sync day 
+#$1 op type: write|unlink
+#$2 sync day
 sync_file_by_log()
 {
   if [ -e "$LOG_FILE" ]
   then
-    mv $LOG_FILE $LOG_FILE'.'$4
+    mv $LOG_FILE $LOG_FILE'.'$2
   fi
-  
-  LOG_NAME=`get_log_name $3 $4`
+
+  LOG_NAME=`get_log_name $1 $2`
   for log in $LOG_NAME
   do
-    if [ $3 = "write" ]
+    if [ $1 = "write" ]
     then
       cat $log >> $FILE_NAME
-    elif [ $3 = "unlink" ]
+    elif [ $1 = "unlink" ]
     then
       ret=`grep "master unlink file success" $log`
       if [ -z "$ret" ]
@@ -120,35 +118,47 @@ fi
 
 if [ -z $3 ]
 then
-  THREAD_COUNT=2
+  DAY=`date -d yesterday +%Y%m%d`
 else
-  THREAD_COUNT=$3
+  DAY=$3
 fi
 
 if [ -z $4 ]
 then
-  DAY=`date -d yesterday +%Y%m%d`
+  FORCE_FLAG=no
 else
-  DAY=$4
+  FORCE_FLAG=$4
 fi
 
 if [ -z $5 ]
 then
-  MODIFY=`date -d tomorrow +%Y%m%d`
+  MODIFY_TIME=`date -d tomorrow +%Y%m%d`
 else
-  MODIFY=$5
+  MODIFY_TIME=$5
+fi
+
+if [ -z $6 ]
+then
+  THREAD_COUNT=2
+else
+  THREAD_COUNT=$6
 fi
 
 if [ -e "$FILE_NAME" ]
 then
-  mv $FILE_NAME $FILE_NAME'.'$4
+  rm $FILE_NAME -f
 fi
 
-sync_file_by_log $1 $2 "write" $DAY 
-sync_file_by_log $1 $2 "unlink" $DAY
+sync_file_by_log "write" $DAY
+sync_file_by_log "unlink" $DAY
 
 if [ -e "$FILE_NAME" ]
 then
-  nohup $BASE_HOME/sync_log -s $1 -d $2 -t $THREAD_COUNT -f $FILE_NAME -m $MODIFY -l debug >tmp_log 2>&1 &
- #delete_file $FILE_NAME
+  if [ "$FORCE_FLAG" = "no" ]
+  then
+    nohup $BASE_HOME/sync_by_log -s $1 -d $2 -f $FILE_NAME -m $MODIFY_TIME -t $THREAD_COUNT -l debug 2>&1 &
+  else
+    nohup $BASE_HOME/sync_by_log -s $1 -d $2 -f $FILE_NAME -m $MODIFY_TIME -e -t $THREAD_COUNT -l debug 2>&1 &
+  fi
 fi
+
