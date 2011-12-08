@@ -1,7 +1,7 @@
 /**
  * 
  */
-package com.taobao.common.tfs.function;
+package com.taobao.common.tfs.nativetest;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -10,6 +10,7 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import com.taobao.common.tfs.NativeTfsBaseCase;
 import com.taobao.gaia.KillTypeEnum;
 
 /**

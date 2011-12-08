@@ -301,6 +301,28 @@ public class Function_report_on_time extends NativeTfsBaseCase {
 		assertTrue(checkOnTimeReportLog(MASTERIP));
 	}
 
+	/*
+	1ns删除多余block之后的副本分布  步骤
+	[步骤]
+	1. 配置副本数为2/2,8个ds（4个ds/1物理机）
+	2. kill掉一台ds，部分block副本数变为1，触发block复制
+	3. 等待block全部复制成2个副本之后，重启被kill的ds，这时候部分block变为3
+	4. 等待多余副本删除完毕，检查副本分布
+
+	[验证]
+	同一block的副本不应该出现在物理ip相同的ds上
+	*/
+	@Test
+	public void test_04(){
+		startOneGrid(tfsGrid);
+
+	}
+	
+	
+	
+	
+	
+	
 	private void changeNsConf(AppGrid appGrid, String strFieldName, String strValue)
 	{
 		boolean bRet = false;
