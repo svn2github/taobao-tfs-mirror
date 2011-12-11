@@ -1,9 +1,0 @@
-#Mon Nov 28 10:04:37 CST 2011
-activeProfiles=test-tfs
-eclipse.preferences.version=1
-fullBuildGoals=process-test-resources
-includeModules=false
-resolveWorkspaceProjects=true
-resourceFilterGoals=process-resources resources\:testResources
-skipCompilerPlugin=true
-version=1
