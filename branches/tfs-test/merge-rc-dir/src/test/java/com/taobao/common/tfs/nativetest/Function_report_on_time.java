@@ -178,6 +178,7 @@ public class Function_report_on_time extends NativeTfsBaseCase {
 	@Test
 	public void test_1()
 	{
+		String targetIp = MASTERIP;
 		boolean bRet = false;
 
 		/* set max_write_filecount to 10, safe_mode_time to 300s */
@@ -214,7 +215,7 @@ public class Function_report_on_time extends NativeTfsBaseCase {
 		assertTrue(bRet);
 		
 		/* verify */
-
+		assertTrue(checkOnTimeReportLog(targetIp));
 	}
 
 	/*
@@ -233,7 +234,7 @@ public class Function_report_on_time extends NativeTfsBaseCase {
 	public void tes_2()
 	{
 		boolean bRet = false;
-
+		String targetIp = MASTERIP;
 		/* set max_write_filecount to 10, safe_mode_time to 300s */
 		changeNsConf(tfsGrid, "max_write_filecount", String.valueOf(10));
 		changeNsConf(tfsGrid, "safe_mode_time", String.valueOf(5*60));
@@ -268,6 +269,7 @@ public class Function_report_on_time extends NativeTfsBaseCase {
 		assertTrue(bRet);
 
 		/* verify */
+		assertTrue(checkOnTimeReportLog(targetIp));
 	}
 
 	/*
@@ -300,7 +302,258 @@ public class Function_report_on_time extends NativeTfsBaseCase {
 		/* verify - check the report log in nameserver.log */
 		assertTrue(checkOnTimeReportLog(MASTERIP));
 	}
+		/*  1.配置10个ds，其中9个ds在一台物理机，另1个ds单独在另一台物理机，ns配置1个汇报线程，1个汇报队列，副本数为2，
+		 *    ns配置max_write_file_count为10，
+		 *    配置block_max_size为10M，设置定时汇报时间间隔为5分钟
+			2.限制ns与那台只有1个ds的物理机的网络带宽
+			3.启动客户端测试工具指定blockId带创建block标志位打开文件，执行写操作，写单位为1M
+	    */
+	@Test
+	public void test_4(){
+		boolean bRet = false;
+		
+		/*set max_write_filecount to 10*/
+		
+		changNSconf(tfsGrid,"max_write_filecount",String.valueOf(10));
+		/* set block_max_size to 10M */
+		changeDsConf(tfsGrid, "block_max_size", String.valueOf(10 * (1<<20) ));
+		startOneGrid(tfsGrid);
+		
+		AppServer appServer = tfsGrid.getCluster(DS_CLUSTER_NUM).getServer(0);
+		bRet = Proc.netBlockBase(MASTERIP, appServer.getIp(), 5, 5);
+		assertTrue(bRet);
+		
+		/* Write file */
+		bRet = writeCmd();
+		Assert.assertTrue(bRet);
+		
+		/* Check the rate of write process */
+		bRet = checkRateRun(SUCCESSRATE, WRITEONLY|READ|UNLINK);
+		Assert.assertTrue(bRet);
+	
+		/* Stop write cmd */
+		bRet = writeCmdStop();
+		Assert.assertTrue(bRet);
+		
+		
+	
+	}
+		/*	1.配置4个ds，ds挂载容量相同，副本数为2，配置max_write_filecount为10，配置block_max_size为10MB
+			2.启动客户端测试工具执行写操作，写单位为1M，持续较长时间
+		 * */
+	
+	@Test
+	public void test_5(){
+		boolean bRet = false;
+	
+		/*set max_write_filecount to 10*/
+		
+		changNSconf(tfsGrid,"max_write_filecount",String.valueOf(10));
+	
+		/* Check block copys */
+		bRet = chkBlockCntBothNormal(2);
+		Assert.assertTrue(bRet);
+		
+		
+		/* set block_max_size to 10M */
+		changeDsConf(tfsGrid, "block_max_size", String.valueOf(10 * (1<<20) ));
+		startOneGrid(tfsGrid);
+		
+		AppServer appServer = tfsGrid.getCluster(DS_CLUSTER_NUM).getServer(0);
+		bRet = Proc.netBlockBase(MASTERIP, appServer.getIp(), 5, 5);
+		assertTrue(bRet);
+		
+		/* Write file */
+		bRet = writeCmd();
+		Assert.assertTrue(bRet);
+		
+		sleep(3600);
+		
+		/* Check the rate of write process */
+		bRet = checkRateRun(SUCCESSRATE, WRITEONLY|READ|UNLINK);
+		Assert.assertTrue(bRet);
+	
+		/* Stop write cmd */
+		bRet = writeCmdStop();
+		Assert.assertTrue(bRet);
+		
+		/* Wait 10s for ssm to update the latest info */
+		sleep (10);
+		
+		/* Wait for completion of deletion */
+		bRet = chkBlockCntBothNormal(BLOCKCOPYCNT);
+		Assert.assertTrue(bRet);
+		
+		/*TODO chk block distribute */
+		bRet = chkFinalRetSuc();
+		Assert.assertTrue(bRet);
+	
+		/* Read file */
+		bRet = chkFinalRetSuc();
+		Assert.assertTrue(bRet);
+		
+		log.info(caseName + "===> end");
+		return ;
+	}
+	
+	   /*
+		    1.  将delete任务和balance任务关闭，配置4个ds，
+		    其中2个ds挂载容量正常，1个是正常容量的1.5倍，一个是正常容量的50%，副本数为2，
+		    配置max_write_filecount为10，配置block_max_size为10MB
+		    2.  启动客户端测试工具执行写操作，写单位为1M，持续较长时间
+	   */
 
+		@Test
+		public void test_6(){
+		boolean bRet = false;
+		
+		/* set max_write_filecount to 10 */
+		changNSconf(tfsGrid,"max_write_filecount",String.valueOf(10));
+		
+		/* set block_max_size to 10M */
+		changeDsConf(tfsGrid, "block_max_size", String.valueOf(10 * (1<<20) ));
+		bRet = chkBlockCntBothNormal(2);
+		Assert.assertTrue(bRet);
+		
+		/* Write file */
+		bRet = writeCmd();
+		Assert.assertTrue(bRet);
+		
+		/* Check the rate of write process */
+		bRet = checkRateRun(SUCCESSRATE, WRITEONLY|READ|UNLINK);
+		Assert.assertTrue(bRet);
+		
+		/* Stop write cmd */
+		bRet = writeCmdStop();
+		Assert.assertTrue(bRet);
+		
+		/* verify - check the report log in nameserver.log */
+		assertTrue(checkOnTimeReportLog(MASTERIP));
+
+		/* Wait 10s for ssm to update the latest info */
+		sleep (10);
+		
+		/* Wait for completion of deletion */
+		bRet = chkBlockCntBothNormal(BLOCKCOPYCNT);
+		Assert.assertTrue(bRet);
+		
+		/*TODO chk block distribute */
+		bRet = chkFinalRetSuc();
+		Assert.assertTrue(bRet);
+		
+		log.info(caseName + "===> end");
+		return ;
+}
+
+		/* 1.将delete任务关闭，配置4个ds，其中2个ds挂载容量正常，1个是正常容量的1.5倍，1个是正常容量的50%，ds的ip分布为1:3，即正常容量的ds单独一个ip，其他3个ds使用相同的ip，
+		 *  副本数为2，配置迁移参数balance_max_diff_block_num_为1，配置block_max_size为10MB
+	     * 2.启动客户端测试工具执行写操作，写单位为1M，持续较长时间
+		*/
+	
+			@Test
+			public void test_7(){
+				boolean bRet = false;
+				
+				/* set delete to closed*/
+				 
+				/* set mount count */
+				//2个ds挂载容量正常，1个是正常容量的1.5倍，1个是正常容量的50%
+				
+				/*set ip 1:3*/
+				
+				
+				 /*set block copy*/
+				
+				bRet = chkBlockCntBothNormal(2);
+				Assert.assertTrue(bRet);
+				
+				
+				/* Modify balance_max_diff_block_num */
+				bRet = setBalanceMaxDiffBlockNum(1);
+				Assert.assertTrue(bRet);
+				
+				
+				/* set block_max_size to 10M */
+				changeDsConf(tfsGrid, "block_max_size", String.valueOf(10 * (1<<20) ));
+				startOneGrid(tfsGrid);
+				
+				/* Write file */
+				bRet = writeCmd();
+				Assert.assertTrue(bRet);
+				
+				/* Check the rate of write process */
+				bRet = checkRateRun(SUCCESSRATE, WRITEONLY|READ|UNLINK);
+				Assert.assertTrue(bRet);
+			
+				/* Stop write cmd */
+				bRet = writeCmdStop();
+				Assert.assertTrue(bRet);
+			
+				/* Wait 10s for ssm to update the latest info */
+				sleep (10);
+				
+				/* Wait for completion of deletion */
+				bRet = chkBlockCntBothNormal(BLOCKCOPYCNT);
+				Assert.assertTrue(bRet);
+				
+				/*TODO chk block distribute */
+				bRet = chkFinalRetSuc();
+				Assert.assertTrue(bRet);
+				
+				
+				
+				
+		//检测1.检测ns日志，应该很快就能看到move任务的创建，并且move的源ds是低于正常容量的那台ds，目的ds是容量高于正常容量的那个ds
+		//2.move之后源ds上的block删除，目的ds上新增了该block
+			
+				log.info(caseName + "===> end");
+				return ;
+	}
+	
+	    /*1. 配置副本数为2/2,8个ds（4个ds/1物理机）
+          2. kill掉一台ds，部分block副本数变为1，触发block复制
+	  	  3. 等待block全部复制成2个副本之后，重启被kill的ds，这时候部分block变为3
+	      4. 等待多余副本删除完毕，检查副本分布*/
+
+				@Test
+				public void test_8(){
+					
+					boolean bRet = false;
+					caseName = "test_8";
+					log.info(caseName + "===> start");
+					
+					/* Kill the 1st ds */
+					bRet = killOneDs();
+					Assert.assertTrue(bRet);
+					
+					/* Wait for completion of replication */
+					bRet = chkBlockCntBothNormal(BLOCKCOPYCNT);
+					Assert.assertTrue(bRet);
+					
+					/* Start the killed ds */
+					bRet = startOneDs();
+					Assert.assertTrue(bRet);
+				
+					/* Wait 10s for ssm to update the latest info */
+					sleep (10);
+					
+					/* Wait for completion of deletion */
+					bRet = chkBlockCntBothNormal(BLOCKCOPYCNT);
+					Assert.assertTrue(bRet);
+					
+					/*TODO chk block distribute */
+					bRet = chkFinalRetSuc();
+					Assert.assertTrue(bRet);
+				
+					/* Read file */
+					bRet = chkFinalRetSuc();
+					Assert.assertTrue(bRet);
+					
+					log.info(caseName + "===> end");
+					return ;
+					
+					
+				}
 	/*
 	1ns删除多余block之后的副本分布  步骤
 	[步骤]
@@ -313,12 +566,10 @@ public class Function_report_on_time extends NativeTfsBaseCase {
 	同一block的副本不应该出现在物理ip相同的ds上
 	*/
 	@Test
-	public void test_04(){
+	public void test___test(){
 		startOneGrid(tfsGrid);
 
 	}
-	
-	
 	
 	
 	
