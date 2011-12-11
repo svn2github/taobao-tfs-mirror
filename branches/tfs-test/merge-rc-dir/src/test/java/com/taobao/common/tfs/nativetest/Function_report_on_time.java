@@ -314,7 +314,7 @@ public class Function_report_on_time extends NativeTfsBaseCase {
 		
 		/*set max_write_filecount to 10*/
 		
-		changNSconf(tfsGrid,"max_write_filecount",String.valueOf(10));
+		changeNsConf(tfsGrid,"max_write_filecount",String.valueOf(10));
 		/* set block_max_size to 10M */
 		changeDsConf(tfsGrid, "block_max_size", String.valueOf(10 * (1<<20) ));
 		startOneGrid(tfsGrid);
@@ -348,7 +348,7 @@ public class Function_report_on_time extends NativeTfsBaseCase {
 	
 		/*set max_write_filecount to 10*/
 		
-		changNSconf(tfsGrid,"max_write_filecount",String.valueOf(10));
+		changeNsConf(tfsGrid,"max_write_filecount",String.valueOf(10));
 	
 		/* Check block copys */
 		bRet = chkBlockCntBothNormal(2);
@@ -408,7 +408,7 @@ public class Function_report_on_time extends NativeTfsBaseCase {
 		boolean bRet = false;
 		
 		/* set max_write_filecount to 10 */
-		changNSconf(tfsGrid,"max_write_filecount",String.valueOf(10));
+		changeNsConf(tfsGrid,"max_write_filecount",String.valueOf(10));
 		
 		/* set block_max_size to 10M */
 		changeDsConf(tfsGrid, "block_max_size", String.valueOf(10 * (1<<20) ));
