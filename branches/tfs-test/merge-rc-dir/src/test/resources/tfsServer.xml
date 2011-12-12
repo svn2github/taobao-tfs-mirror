@@ -155,7 +155,7 @@
 		<property name="port" value="9106"/>
 		<property name="confname" value="/conf/ds.conf" />
 		<property name="logs" value="/logs/dataserver_4.log" />
-		<property name="dir" value="/home/admin/tfs_bin" />
+		<property name="dir" value="/home/admin//workspace/lexin.wxxtfs_bin" />
 		<property name="startcmd" value="/home/admin/workspace/lexin.wxx/tfs_bin/bin/dataserver -f /home/admin/workspace/lexin.wxx/tfs_bin/conf/ds.conf -d -i 4" />
 		<property name="stopcmd" value="" />
 		<property name="cleancmd">
