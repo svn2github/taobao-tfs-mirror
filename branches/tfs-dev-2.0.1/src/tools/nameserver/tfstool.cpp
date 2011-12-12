@@ -279,7 +279,7 @@ void init()
     g_cmd_map["hide"] = CmdNode("hide tfsname [action]", "hide tfs file", 1, 2, cmd_hide_file);
     g_cmd_map["rename"] = CmdNode("rename tfsname newsuffix", "rename tfs file to new suffix", 2, 2, cmd_rename_file);
     g_cmd_map["stat"] = CmdNode("stat tfsname", "stat tfs file", 1, 1, cmd_stat_file);
-    g_cmd_map["statblk"] = CmdNode("statblk blockid serverip:port", "stat a block", 2, 2, cmd_stat_blk);
+    g_cmd_map["statblk"] = CmdNode("statblk blockid [serverip:port]", "stat a block", 1, 2, cmd_stat_blk);
     g_cmd_map["vcblk"] = CmdNode("vcblk serverip:port count", "visit count block", 2, 2, cmd_visit_count_blk);
     g_cmd_map["lsf"] = CmdNode("lsf blockid [detail] [serverip:port]" , "list file list in block", 1, 3, cmd_list_file_info);
     g_cmd_map["listblock"] = CmdNode("listblock blockid", "list block server list", 1, 1, cmd_list_block);
@@ -751,16 +751,26 @@ int cmd_stat_blk(const VSTRING& param)
   {
     fprintf(stderr, "invalid blockid: %u\n", block_id);
   }
-  else if ((server_id = Func::get_host_ip(param[1].c_str())) <= 0)
+
+  if (param.size() > 2)
   {
-    fprintf(stderr, "invalid ds address: %s\n", param[0].c_str());
+    server_id = Func::get_host_ip(param[1].c_str());
   }
   else
   {
-    DsTask ds_task(server_id, g_tfs_client->get_cluster_id());
-    ds_task.block_id_ = block_id;
-    ret = DsLib::get_block_info(ds_task);
+    VUINT64 ds_list;
+    ret = ToolUtil::get_block_ds_list(g_tfs_client->get_server_id(), block_id, ds_list);
+    if (ret != TFS_SUCCESS)
+    {
+      fprintf(stderr, "get ds list failed. block_id: %u, ret: %d\n", block_id, ret);
+      return ret;
+    }
+    server_id = ds_list[0];
   }
+
+  DsTask ds_task(server_id, g_tfs_client->get_cluster_id());
+  ds_task.block_id_ = block_id;
+  ret = DsLib::get_block_info(ds_task);
 
   return ret;
 }
