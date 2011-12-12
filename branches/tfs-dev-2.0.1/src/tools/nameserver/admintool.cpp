@@ -115,11 +115,11 @@ void init()
   g_cmd_map["exit"] = CmdNode("exit", "exit", 0, 0, cmd_quit);
   g_cmd_map["param"] = CmdNode("param name [set value [extravalue]]", "set/get param value", 0, 4, cmd_set_run_param);
   g_cmd_map["addblk"] = CmdNode("addblk blockid", "add block", 1, 1, cmd_add_block);
-  g_cmd_map["removeblk"] = CmdNode("removeblk blockid [serverip:port|flag]", "remove block", 1, 2, cmd_remove_block);
+  g_cmd_map["removeblk"] = CmdNode("removeblk blockid [serverip:port|flag]", "remove block, flag: 0--relieve relation from ns, 1--remove block from ds and ns, default is 0", 1, 2, cmd_remove_block);
   g_cmd_map["listblk"] = CmdNode("listblk blockid", "list block server list", 1, 1, cmd_list_block);
   g_cmd_map["loadblk"] = CmdNode("loadblk blockid serverip:port", "load block", 2, 2, cmd_load_block);
   g_cmd_map["compactblk"] = CmdNode("compactblk blockid", "compact block", 1, 1, cmd_compact_block);
-  g_cmd_map["replblk"] = CmdNode("replblk blockid [src dest action]", "replicate block", 1, 4, cmd_replicate_block);
+  g_cmd_map["replblk"] = CmdNode("replblk blockid type [action src dest]", "replicate block. type: 1--action, 2--src, 3--dest, 4--action src, 5--action dest, 6--src dest, 7--action src dest", 2, 5, cmd_replicate_block);
   g_cmd_map["repairgrp"] = CmdNode("repairgrp blockid", "repair group block", 1, 1, cmd_repair_group_block);
   g_cmd_map["aci"] = CmdNode("aci ip:port [startrow returnrow]", "access control", 1, 3, cmd_access_stat_info);
   g_cmd_map["setacl"] = CmdNode("setacl ip:port type [v1 [v2]]",
@@ -421,11 +421,13 @@ int cmd_remove_block(const VSTRING& param)
     if (param[1].length() == 1)
       flag = atoi(param[1].c_str());
     else
-      server_id = Func::get_host_ip(param[1].c_str());
-    if (0 == server_id)
     {
-      fprintf(stderr, "invalid addr %s\n", param[1].c_str());
-      return TFS_ERROR;
+      server_id = Func::get_host_ip(param[1].c_str());
+      if (0 == server_id)
+      {
+        fprintf(stderr, "invalid addr %s\n", param[1].c_str());
+        return TFS_ERROR;
+      }
     }
   }
   if (0 == block_id)
@@ -525,30 +527,127 @@ int cmd_compact_block(const VSTRING& param)
 
 int cmd_replicate_block(const VSTRING& param)
 {
-  int32_t size = param.size();
-  ReplicateBlockMoveFlag action = REPLICATE_BLOCK_MOVE_FLAG_NO;
-  if (size != 1 && size != 4)
-  {
-    fprintf(stderr, "replblk block_id [source dest action]\n\n");
-    return TFS_ERROR;
-  }
   uint32_t block_id = atoi(param[0].c_str());
-  if (0 == block_id)
+  int32_t op_type = atoi(param[1].c_str());
+  if (0 == block_id || op_type > 7 || op_type < 1)
   {
-    fprintf(stderr, "invalid blockid: %u\n", block_id);
+    fprintf(stderr, "invalid param. blockid > 0, type in [1, 7]. blockid: %u, op_type: %d\n", block_id, op_type);
     return TFS_ERROR;
   }
 
+  ReplicateBlockMoveFlag flag = REPLICATE_BLOCK_MOVE_FLAG_NO;
   uint64_t src_id = 0;
   uint64_t dest_id = 0;
-  if (4 == size)
+  string action = "no";
+
+  int32_t size = param.size();
+  switch (op_type)
   {
-    src_id = Func::get_host_ip(param[1].c_str());
-    dest_id = Func::get_host_ip(param[2].c_str());
-    if (param[3] == "move")
+  case 1:
+    if (size != 3)
     {
-      action = REPLICATE_BLOCK_MOVE_FLAG_YES;
+      fprintf(stderr, "replblk blockid 1 action\n");
+      fprintf(stderr, "action: yes -- move block\n");
+      fprintf(stderr, "        no -- replicate block\n");
+      return TFS_ERROR;
     }
+    action = param[2];
+    break;
+  case 2:
+    if (size != 3)
+    {
+      fprintf(stderr, "replblk blockid 2 src\n");
+      return TFS_ERROR;
+    }
+    src_id = Func::get_host_ip(param[2].c_str());
+    if (src_id == 0)
+    {
+      fprintf(stderr, "src addr is not correct, please check it\n");
+      return TFS_ERROR;
+    }
+    break;
+  case 3:
+    if (size != 3)
+    {
+      fprintf(stderr, "replblk blockid 3 dest\n");
+      return TFS_ERROR;
+    }
+    dest_id = Func::get_host_ip(param[2].c_str());
+    if (dest_id == 0)
+    {
+      fprintf(stderr, "src addr is not correct, please check it\n");
+      return TFS_ERROR;
+    }
+    break;
+  case 4:
+    if (size != 4)
+    {
+      fprintf(stderr, "replblk blockid 4 action src\n");
+      fprintf(stderr, "action: yes -- move block\n");
+      fprintf(stderr, "        no -- replicate block\n");
+      return TFS_ERROR;
+    }
+    action = param[2];
+    src_id = Func::get_host_ip(param[3].c_str());
+    if (src_id == 0)
+    {
+      fprintf(stderr, "src addr is not correct, please check it\n");
+      return TFS_ERROR;
+    }
+    break;
+  case 5:
+    if (size != 4)
+    {
+      fprintf(stderr, "replblk blockid 5 action dest\n");
+      fprintf(stderr, "action: yes -- move block\n");
+      fprintf(stderr, "        no -- replicate block\n");
+      return TFS_ERROR;
+    }
+    action = param[2];
+    dest_id = Func::get_host_ip(param[3].c_str());
+    if (dest_id == 0)
+    {
+      fprintf(stderr, "dest addr is not correct, please check it\n");
+      return TFS_ERROR;
+    }
+    break;
+  case 6:
+    if (size != 4)
+    {
+      fprintf(stderr, "replblk blockid 6 src dest\n");
+      return TFS_ERROR;
+    }
+    src_id = Func::get_host_ip(param[2].c_str());
+    dest_id = Func::get_host_ip(param[3].c_str());
+    if (src_id == 0 || dest_id == 0)
+    {
+      fprintf(stderr, "src or dest addr is not correct, please check it\n");
+      return TFS_ERROR;
+    }
+    break;
+  case 7:
+    if (size != 5)
+    {
+      fprintf(stderr, "replblk blockid 7 action src dest\n");
+      return TFS_ERROR;
+    }
+    action = param[2];
+    src_id = Func::get_host_ip(param[3].c_str());
+    dest_id = Func::get_host_ip(param[4].c_str());
+    if (src_id == 0 || dest_id == 0)
+    {
+      fprintf(stderr, "src or dest addr is not correct, please check it\n");
+      return TFS_ERROR;
+    }
+    break;
+  default:
+    fprintf(stderr, "error type %d must in [1,7]\n\n", op_type);
+    return TFS_ERROR;
+  }
+
+  if (action == "yes")
+  {
+    flag = REPLICATE_BLOCK_MOVE_FLAG_YES;
   }
 
   ClientCmdMessage req_cc_msg;
@@ -556,7 +655,7 @@ int cmd_replicate_block(const VSTRING& param)
   req_cc_msg.set_value1(src_id);
   req_cc_msg.set_value2(dest_id);
   req_cc_msg.set_value3(block_id);
-  req_cc_msg.set_value4(action);
+  req_cc_msg.set_value4(flag);
 
   int32_t status = TFS_ERROR;
   send_msg_to_server(g_tfs_client->get_server_id(), &req_cc_msg, status);
