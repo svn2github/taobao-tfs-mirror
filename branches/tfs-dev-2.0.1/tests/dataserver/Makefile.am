@@ -10,6 +10,7 @@ LDADD=$(top_builddir)/src/dataserver/libdataserver.a \
       $(top_builddir)/src/new_client/.libs/libtfsclient.a \
 			$(top_builddir)/src/message/libtfsmessage.a \
       $(top_builddir)/src/common/libtfscommon.a \
+      $(TAIR_CACHE_LDFLAGS)\
 			$(TBLIB_ROOT)/lib/libtbnet.a \
 			$(TBLIB_ROOT)/lib/libtbsys.a
 
@@ -21,7 +22,7 @@ check_PROGRAMS=
 
 noinst_PROGRAMS=test_file_op test_bit_map test_mmap_file test_index_handle test_mmap_file_op \
 						 test_logic_block test_meta test_blockfile_format test_logic_block_and_compact \
-						 test_blockfile_manager test_physical_block test_superblock_impl test_data_handle
+						 test_blockfile_manager test_physical_block test_superblock_impl test_data_handle test_sync_mirror
 
 TESTS+=test_file_op
 check_PROGRAMS+=test_file_op
@@ -87,3 +88,8 @@ TESTS+=test_data_handle
 check_PROGRAMS+=test_data_handle
 test_data_handle_SOURCES=test_data_handle.cpp
 test_data_handle_LDFLAGS=${AM_LDFLAGS} -static-libgcc -lgtest
+
+TESTS+=test_sync_mirror
+check_PROGRAMS+=test_sync_mirror
+test_sync_mirror_SOURCES=test_sync_mirror.cpp
+test_sync_mirror_LDFLAGS=${AM_LDFLAGS} -static-libgcc -lgtest

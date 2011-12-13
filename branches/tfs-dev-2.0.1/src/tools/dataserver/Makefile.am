@@ -12,11 +12,10 @@ bin_PROGRAMS = clear_file_system\
                recover_disk_data_to_cluster\
                recover_sync_file_queue\
 							 convert_name\
-               reloadconfig\
+               reload_config\
                read_index_tool\
                reverse_name\
                modify_super_block\
-               replblk\
                tfsping\
                view_local_key
 
@@ -24,6 +23,7 @@ LDADD =	$(top_builddir)/src/tools/util/libtfstoolsutil.a\
 				$(top_builddir)/src/dataserver/libdataserver.a\
 				$(top_builddir)/src/new_client/.libs/libtfsclient.a\
 				$(UNIQUE_STORE_LDFLAGS)\
+        $(TAIR_CACHE_LDFLAGS) \
 				$(top_builddir)/src/message/libtfsmessage.a\
         $(top_builddir)/src/common/libtfscommon.a\
         $(TBLIB_ROOT)/lib/libtbnet.a\
@@ -35,13 +35,11 @@ read_super_block_SOURCES = read_super_block.cpp
 
 convert_name_SOURCES = convert_name.cpp
 
-reloadconfig_SOURCES = reloadconfig.cpp
+reload_config_SOURCES = reload_config.cpp
 
 tfsping_SOURCES = tfsping.cpp
 
 ds_client_SOURCES = ds_client.cpp
-
-replblk_SOURCES = replblk.cpp
 
 modify_super_block_SOURCES = modify_super_block.cpp
 

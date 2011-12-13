@@ -91,6 +91,23 @@ AM_CONDITIONAL([WITH_UNIQUE_STORE],[test x$enable_uniquestore = xyes])
 AC_SUBST([UNIQUE_STORE_CPPFLAGS])
 AC_SUBST([UNIQUE_STORE_LDFLAGS])
 
+AC_ARG_ENABLE([taircache],
+           AS_HELP_STRING([--enable-taircache],
+           [enable tair cache feature. need TaoBao Tair library support, use --with-tair-root to specify path]),
+           [enable_taircache=${enableval}],
+           [enable_taircache="no"])
+if test "${enable_taircache}" = "yes"; then
+        if ! test -d "${TAIR_ROOT}/include" -a -d "${TBLIB_ROOT}/lib"; then
+                AC_MSG_ERROR([TAIR_ROOT is not work! expect TAIR_ROOT/include and TAIR_ROOT/lib directory])
+                exit 1;
+        fi
+        TAIR_CACHE_CPPFLAGS="-DWITH_TAIR_CACHE -I${TAIR_ROOT}/include"
+        TAIR_CACHE_LDFLAGS="${TAIR_ROOT}/lib/libtairclientapi.a -lboost_thread -lz"
+fi
+AM_CONDITIONAL([WITH_TAIR_CACHE],[test x$enable_taircache = xyes])
+AC_SUBST([TAIR_CACHE_CPPFLAGS])
+AC_SUBST([TAIR_CACHE_LDFLAGS])
+
 AC_CACHE_CHECK(if fallocate is implemented, ac_cv_func_fallocate,
   AC_TRY_RUN([
     #include <fcntl.h>

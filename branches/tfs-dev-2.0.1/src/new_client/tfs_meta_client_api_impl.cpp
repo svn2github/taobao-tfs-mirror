@@ -179,7 +179,10 @@ namespace tfs
           {
             TBSYS_LOG(ERROR, "remove file failed, file_path: %s, ret: %d", file_path, ret);
           }
-          unlink_file(frag_info, ns_addr);
+          else
+          {
+            unlink_file(frag_info, ns_addr);
+          }
         }
       }
       return ret;
@@ -233,6 +236,55 @@ namespace tfs
         }
       }
       return ret;
+    }
+
+    bool NameMetaClientImpl::is_dir_exist(const int64_t app_id, const int64_t uid,
+        const char* dir_path)
+    {
+      int bRet = false;
+      if (NULL != dir_path)
+      {
+        uint64_t meta_server_id = get_meta_server_id(app_id, uid);
+        std::vector<common::FileMetaInfo> v_file_meta_info;
+        int ret = do_ls_ex(meta_server_id, app_id, uid, dir_path, DIRECTORY, -1, v_file_meta_info, true);
+
+        if(TFS_SUCCESS == ret)
+        {
+          bRet = true;
+        }
+        else if (EXIT_TARGET_EXIST_ERROR != ret && EXIT_PARENT_EXIST_ERROR != ret)
+        {
+          TBSYS_LOG(WARN, "some other error occur, not sure whether dir: %s is exist or not, ret: %d", dir_path, ret);
+        }
+      }
+      return bRet;
+    }
+
+    bool NameMetaClientImpl::is_file_exist(const int64_t app_id, const int64_t uid,
+        const char* file_path)
+    {
+      int bRet = false;
+      if (NULL != file_path)
+      {
+        uint64_t meta_server_id = get_meta_server_id(app_id, uid);
+        vector<FileMetaInfo> v_file_meta_info;
+        int ret = do_ls_ex(meta_server_id, app_id, uid, file_path, NORMAL_FILE, -1, v_file_meta_info, true);
+        if (TFS_SUCCESS != ret)
+        {
+          if (EXIT_TARGET_EXIST_ERROR != ret && EXIT_PARENT_EXIST_ERROR != ret)
+          {
+            TBSYS_LOG(WARN, "some other error occur, not sure whether file: %s is exist or not, ret: %d", file_path, ret);
+          }
+        }
+        else
+        {
+          if (v_file_meta_info.size() > 0)
+          {
+            bRet = true;
+          }
+        }
+      }
+      return bRet;
     }
 
     int64_t NameMetaClientImpl::read(const char* ns_addr, int64_t app_id, int64_t uid,
@@ -642,7 +694,8 @@ namespace tfs
     }
 
     int NameMetaClientImpl::do_ls_ex(const uint64_t meta_server_id, const int64_t app_id, const int64_t uid,
-        const char* file_path, const FileType file_type, const int64_t pid, std::vector<FileMetaInfo>& v_file_meta_info)
+        const char* file_path, const FileType file_type, const int64_t pid,
+        std::vector<FileMetaInfo>& v_file_meta_info, bool is_chk_exist)
     {
       int ret = TFS_ERROR;
 
@@ -715,7 +768,7 @@ namespace tfs
           strcpy(last_file_path, last_file_meta_info.name_.c_str());
         }
       }
-      while (meta_size > 0 && still_have);
+      while (meta_size > 0 && still_have && !is_chk_exist);
       return ret;
     }
 

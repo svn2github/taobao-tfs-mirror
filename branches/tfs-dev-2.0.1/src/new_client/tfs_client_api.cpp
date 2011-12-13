@@ -136,6 +136,11 @@ int32_t TfsClient::unlink_unique(int64_t& file_size, const char* file_name, cons
 }
 #endif
 
+void TfsClient::set_use_cache(const int32_t flag)
+{
+  return TfsClientImpl::Instance()->set_use_cache(flag);
+}
+
 void TfsClient::set_cache_items(const int64_t cache_items)
 {
   return TfsClientImpl::Instance()->set_cache_items(cache_items);
@@ -155,6 +160,16 @@ int64_t TfsClient::get_cache_time() const
 {
   return TfsClientImpl::Instance()->get_cache_time();
 }
+
+#ifdef WITH_TAIR_CACHE
+void TfsClient::set_remote_cache_info(const char * remote_cache_master_addr,
+       const char* remote_cache_slave_addr, const char* remote_cache_group_name,
+       const int32_t remote_cache_area)
+{
+  return TfsClientImpl::Instance()->set_remote_cache_info(remote_cache_master_addr,
+           remote_cache_slave_addr, remote_cache_group_name, remote_cache_area);
+}
+#endif
 
 void TfsClient::set_segment_size(const int64_t segment_size)
 {
@@ -236,6 +251,11 @@ int64_t TfsClient::get_client_retry_count() const
   return TfsClientImpl::Instance()->get_client_retry_count();
 }
 
+void TfsClient::set_client_retry_flag(bool retry_flag)
+{
+  return TfsClientImpl::Instance()->set_client_retry_flag(retry_flag);
+}
+
 void TfsClient::set_log_level(const char* level)
 {
   return TfsClientImpl::Instance()->set_log_level(level);
@@ -256,9 +276,9 @@ int32_t TfsClient::get_block_cache_items() const
   return TfsClientImpl::Instance()->get_block_cache_items();
 }
 
-int32_t TfsClient::get_cache_hit_ratio() const
+int32_t TfsClient::get_cache_hit_ratio(CacheType cache_type) const
 {
-  return TfsClientImpl::Instance()->get_cache_hit_ratio();
+  return TfsClientImpl::Instance()->get_cache_hit_ratio(cache_type);
 }
 
 uint64_t TfsClient::get_server_id()

@@ -73,6 +73,9 @@ namespace tfs
         int ls_file(const int64_t app_id, const int64_t uid,
             const char* file_path, common::FileMetaInfo& frag_info);
 
+        bool is_dir_exist(const int64_t app_id, const int64_t uid, const char* dir_path);
+        bool is_file_exist(const int64_t app_id, const int64_t uid, const char* file_path);
+
         int64_t read(const char* ns_addr, const int64_t app_id, const int64_t uid,
             const char* file_path, void* buffer, const int64_t offset, const int64_t length);
         int64_t write(const char* ns_addr, const int64_t app_id, const int64_t uid,
@@ -98,7 +101,7 @@ namespace tfs
             std::vector<common::FileMetaInfo>& v_file_meta_info, bool is_recursive = false);
         int do_ls_ex(const uint64_t meta_server_id, const int64_t app_id, const int64_t uid,
             const char* file_path, const common::FileType file_type, const int64_t pid,
-            std::vector<common::FileMetaInfo>& v_file_meta_info);
+            std::vector<common::FileMetaInfo>& v_file_meta_info, bool is_chk_exist = false);
         int do_read(const uint64_t meta_server_id, const int64_t app_id, const int64_t uid,
             const char* path, const int64_t offset, const int64_t size,
             common::FragInfo& frag_info, bool& still_have);

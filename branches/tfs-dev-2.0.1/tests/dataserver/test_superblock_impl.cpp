@@ -40,15 +40,15 @@ class SuperBlockImplTest: public ::testing::Test
 TEST_F(SuperBlockImplTest, testWriteRead)
 {
   uint32_t super_start_offset = 0;
-  MMapOption mmap_option;
+  tfs::common::MMapOption mmap_option;
   mmap_option.max_mmap_size_ = 256;
   mmap_option.first_mmap_size_ = 128;
   mmap_option.per_mmap_size_ = 4;
   char* block_tag = "taobao";
 
   int32_t fd = open(FILE_NAME, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
-  SuperBlock super_block;
-  SuperBlock read_super_block;
+  tfs::common::SuperBlock super_block;
+  tfs::common::SuperBlock read_super_block;
 
   for (super_start_offset = 0; super_start_offset < 256; ++super_start_offset)
   {

@@ -21,12 +21,13 @@
 #include <string>
 #include <stdint.h>
 #include <limits.h>
+#include <map>
 
 #define THREAD_SIZE 500
 #define BUFFER_SIZE 4096 * 1000
 #define RETRY_TIMES 3
 #define FILE_COUNT  100
-#define MAX_READ_SIZE 1048576
+//#define MAX_READ_SIZE 1048576
 typedef unsigned int uint32;
 
 using tfs::client::TfsClient;
@@ -95,15 +96,15 @@ struct TimeConsumed
   void display();
 };
 
-int retry_open_file(TfsClient* tfsclient, char* filename, char* prefix, int mode);
+int retry_open_file(TfsClient* tfsclient, char* filename, char* prefix, int mode, int& fd);
 void print_rate(unsigned int num, double time_taken);
 uint32_t generate_data(char* buf, uint32_t size);
 int read_local_file(const char* filename, char* data, uint32_t& length);
-int write_data(TfsClient* tfsclient, char* data, int length);
+int write_data(TfsClient* tfsclient, int fd, char* data, uint32_t length);
 int read_data(TfsClient* tfsclient, char* filename);
-int copy_file_v2(TfsClient &tfsclient, char* tfsname, int local_fd);
-int copy_file_v3(TfsClient &tfsclient, char* tfsname, uint32_t width, uint32_t height, int local_fd, bool & zoomed);
-int copy_file(TfsClient &tfsclient, char* tfsname, int local_fd);
+int copy_file_v2(TfsClient* tfsclient, char* tfsname, int local_fd);
+//int copy_file_v3(TfsClient &tfsclient, char* tfsname, uint32_t width, uint32_t height, int local_fd, bool & zoomed);
+int copy_file(TfsClient* tfsclient, char* tfsname, int local_fd);
 int fetch_input_opt(int argc, char** argv, ThreadParam& param, int& thread_count);
 uint32_t convname(const char* tfsname, char* prefix, uint32_t& blockid, uint64_t& fileid);
 double calc_iops(int32_t count, int64_t consumed);

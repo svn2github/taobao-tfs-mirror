@@ -45,8 +45,16 @@ namespace tfs
       SEG_STATUS_ALL_OVER           // all is completed
     };
 
+    enum CacheHitStatus
+    {
+      CACHE_HIT_NONE = 0,           // all cache miss
+      CACHE_HIT_LOCAL,              // hit local cache
+      CACHE_HIT_REMOTE,             // hit tair cache
+    };
+
     struct SegmentData
     {
+      int32_t cache_hit_;
       bool delete_flag_;        // delete flag
       common::SegmentInfo seg_info_;
       char* buf_;                   // buffer start
@@ -64,8 +72,8 @@ namespace tfs
       int32_t status_;
       TfsFileEofFlag eof_;
 
-      SegmentData() : delete_flag_(true), buf_(NULL), inner_offset_(0), file_info_(NULL),
-                      pri_ds_index_(PRI_DS_NOT_INIT),
+      SegmentData() : cache_hit_(CACHE_HIT_NONE), delete_flag_(true), buf_(NULL),
+                      inner_offset_(0), file_info_(NULL), pri_ds_index_(PRI_DS_NOT_INIT),
                       status_(SEG_STATUS_NOT_INIT), eof_(TFS_FILE_EOF_FLAG_NO)
       {
         write_file_number_ = 0;
@@ -73,6 +81,7 @@ namespace tfs
 
       SegmentData(const SegmentData& seg_data)
       {
+        cache_hit_ = seg_data.cache_hit_;
         delete_flag_ = false;
         memcpy(&seg_info_, &seg_data.seg_info_, sizeof(seg_info_));
         buf_ = seg_data.buf_;
@@ -136,7 +145,7 @@ namespace tfs
 
 #define SEG_DATA_SELF_FMT                                               \
     ", blockid: %u, fileid: %"PRI64_PREFIX"u, offset: %"PRI64_PREFIX"d, " \
-    "size: %d, crc: %d, inneroffset: %d, filenumber: %"PRI64_PREFIX"d, " \
+    "size: %d, crc: %d, inneroffset: %d, filenumber: %"PRI64_PREFIX"u, " \
     "status: %d, rserver: %s, wserver: %s."
 
 #define SEG_DATA_SELF_ARGS(SEG)                                              \

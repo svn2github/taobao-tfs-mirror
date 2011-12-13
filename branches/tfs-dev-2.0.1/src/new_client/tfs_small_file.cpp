@@ -50,14 +50,7 @@ int64_t TfsSmallFile::readv2(void* buf, const int64_t count, TfsFileStat* file_i
 
     if (0 == offset && ret >= 0 && meta_seg_->file_info_ != NULL)
     {
-      file_info->file_id_ = meta_seg_->file_info_->id_;
-      file_info->offset_ = meta_seg_->file_info_->offset_;
-      file_info->size_ = meta_seg_->file_info_->size_;
-      file_info->usize_ = meta_seg_->file_info_->usize_;
-      file_info->modify_time_ = meta_seg_->file_info_->modify_time_;
-      file_info->create_time_ = meta_seg_->file_info_->create_time_;
-      file_info->flag_ = meta_seg_->file_info_->flag_;
-      file_info->crc_ = meta_seg_->file_info_->crc_;
+      wrap_file_info(file_info, meta_seg_->file_info_);
     }
   }
   return ret;
@@ -161,8 +154,13 @@ int64_t TfsSmallFile::get_segment_for_write(const int64_t offset, const char* bu
 
 int TfsSmallFile::read_process(int64_t& read_size, const InnerFilePhase read_file_phase)
 {
+  int ret = read_process_ex(read_size, read_file_phase);
+  if (TFS_SUCCESS != ret)
+  {
+    get_block_info(*meta_seg_, flags_);
+  }
   meta_seg_->reset_status();
-  return read_process_ex(read_size, read_file_phase);
+  return ret;
 }
 
 int TfsSmallFile::write_process()
@@ -221,7 +219,8 @@ int32_t TfsSmallFile::finish_write_process(const int status)
 
 int TfsSmallFile::close_process()
 {
-  int ret = TFS_SUCCESS;
+  int ret = TFS_ERROR;
+
   get_meta_segment(0, NULL, 0);
 
   if ((ret = process(FILE_PHASE_CLOSE_FILE)) != TFS_SUCCESS)

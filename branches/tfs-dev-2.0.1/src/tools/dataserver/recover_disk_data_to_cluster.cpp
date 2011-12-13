@@ -34,101 +34,6 @@ using namespace std;
 
 TfsClientImpl* g_tfs_client = NULL;
 
-/*int get_block_info_from_ds(uint64_t server_id, uint32_t block_id, BlockInfo& block_info)
-{
-  int ret = (server_id > 0 && block_id > 0 ) ? TFS_SUCCESS : TFS_ERROR;
-  if (TFS_SUCCESS == ret)
-  {
-    GetBlockInfoMessage req_gbi_msg;
-    req_gbi_msg.set_block_id(block_id);
-
-    NewClient* client = NewClientManager::get_instance().create_client();
-    tbnet::Packet* ret_msg = NULL;
-    ret = send_msg_to_server(server_id, client, &req_gbi_msg, ret_msg);
-    if(TFS_SUCCESS == ret)
-    {
-      if (UPDATE_BLOCK_INFO_MESSAGE == ret_msg->getPCode())
-      {
-        UpdateBlockInfoMessage *rsp_ubi_msg = dynamic_cast<UpdateBlockInfoMessage*> (ret_msg);
-        block_info = *(rsp_ubi_msg->get_block());
-      }
-      else
-      {
-        ret= TFS_ERROR;
-        if (STATUS_MESSAGE == ret_msg->getPCode())
-        {
-          StatusMessage* s_msg = dynamic_cast<StatusMessage*> (ret_msg);
-          if (s_msg->get_error() != NULL)
-          {
-            fprintf(stderr, "get block %u info fail, error: %s, status: %d\n", block_id, s_msg->get_error(), s_msg->get_status());
-          }
-        }
-        else
-        {
-          fprintf(stderr, "get block %u info fail, unknown msg type: %d\n", block_id, ret_msg->getPCode());
-        }
-      }
-    }
-    else
-    {
-      fprintf(stderr, "send message to Data Server failure\n");
-      ret= TFS_ERROR;
-    }
-    NewClientManager::get_instance().destroy_client(client);
-  }
-  return ret;
-}
-
-int get_file_infos_from_ds(uint64_t server_id, uint32_t block_id, FILE_INFO_LIST& file_infos)
-{
-  int ret = (server_id > 0 && block_id > 0 ) ? TFS_SUCCESS : TFS_ERROR;
-  if (TFS_SUCCESS == ret)
-  {
-    GetServerStatusMessage req_gss_msg;
-    req_gss_msg.set_status_type(GSS_BLOCK_FILE_INFO);
-    req_gss_msg.set_return_row(block_id);
-
-    NewClient* client = NewClientManager::get_instance().create_client();
-    tbnet::Packet* ret_msg = NULL;
-    ret = send_msg_to_server(server_id, client, &req_gss_msg, ret_msg);
-    if(TFS_SUCCESS == ret)
-    {
-      if (BLOCK_FILE_INFO_MESSAGE == ret_msg->getPCode())
-      {
-        BlockFileInfoMessage *rsp_bfi_msg = dynamic_cast<BlockFileInfoMessage*> (ret_msg);
-        FILE_INFO_LIST* file_info_list = rsp_bfi_msg->get_fileinfo_list();
-        for (uint32_t i = 0; i < file_info_list->size(); i++)
-        {
-          file_infos.push_back(file_info_list->at(i));
-        }
-      }
-      else
-      {
-        ret= TFS_ERROR;
-        if (STATUS_MESSAGE == ret_msg->getPCode())
-        {
-          StatusMessage* s_msg = dynamic_cast<StatusMessage*> (ret_msg);
-          if (s_msg->get_error() != NULL)
-          {
-            fprintf(stderr, "get block %u file info list fail, error: %s, status: %d\n", block_id, s_msg->get_error(), s_msg->get_status());
-          }
-        }
-        else
-        {
-          fprintf(stderr, "get block %u file info list fail, unknown rsp msg type: %d\n", block_id, ret_msg->getPCode());
-        }
-      }
-    }
-    else
-    {
-      fprintf(stderr, "send message to Data Server failure\n");
-      ret= TFS_ERROR;
-    }
-    NewClientManager::get_instance().destroy_client(client);
-  }
-  return ret;
-}*/
-
 int remove_block(const uint32_t block_id)
 {
   int ret = block_id > 0 ? TFS_SUCCESS : TFS_ERROR;
@@ -405,6 +310,7 @@ int main(int argc,char* argv[])
   VUINT32 success_block_list;
   VUINT32 no_need_recover_block_list;
   map<uint32_t, uint64_t> fail_block_file_list;
+  fprintf(stderr, "this disk has logic block num: %u\n", (unsigned int)logic_block_list.size());
   for (; iter != logic_block_list.end(); iter++)
   {
     logic_block = (*iter);
@@ -449,6 +355,7 @@ int main(int argc,char* argv[])
       {
         bool all_success = true;
         // for each file in the block, copyfile
+        fprintf(stderr, "block: %u has file num: %u\n", block_id, (unsigned int)file_info_list.size());
         for (uint32_t i = 0; i < file_info_list.size(); i++)
         {
           // skip deleted file
@@ -485,10 +392,11 @@ int main(int argc,char* argv[])
   {
     fprintf(stderr, "%u ", success_block_list.at(i));
   }
-  fprintf(stderr, "\n********************** sum: %u **********************\n", static_cast<uint32_t>(success_block_list.size()));
+  fprintf(stderr, "\n************************************* sum: %u *******************************************\n",
+          static_cast<uint32_t>(success_block_list.size()));
   if (fail_block_file_list.size() > 0)
   {
-    fprintf(stderr, "********************** failed block-file: **********************\n");
+    fprintf(stderr, "*********************************** failed block-file: ************************************\n");
     map<uint32_t, uint64_t>::iterator mit = fail_block_file_list.begin();
     for (; mit != fail_block_file_list.end(); mit++)
     {
@@ -497,14 +405,16 @@ int main(int argc,char* argv[])
       else
         fprintf(stderr, "block_id: %u\n", mit->first);
     }
-    fprintf(stderr, "********************** sum: %u **********************\n", static_cast<uint32_t>(fail_block_file_list.size()));
+    fprintf(stderr, "*************************************** sum: %u ********************************************\n",
+            static_cast<uint32_t>(fail_block_file_list.size()));
   }
-  fprintf(stderr, "********************** no need to recover block: **********************\n");
+  fprintf(stderr, "********************************* no need to recover block: *************************************\n");
   for (uint32_t i = 0; i < no_need_recover_block_list.size(); i++)
   {
     fprintf(stderr, "%u ", no_need_recover_block_list.at(i));
   }
-  fprintf(stderr, "\n********************** sum: %u **********************\n", static_cast<uint32_t>(no_need_recover_block_list.size()));
+  fprintf(stderr, "\n************************************* sum: %u ******************************************\n",
+          static_cast<uint32_t>(no_need_recover_block_list.size()));
   return 0;
 }
 

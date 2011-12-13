@@ -116,7 +116,7 @@ class TranBlock
     static const int64_t RETRY_TIMES;
 
   private:
-    uint32_t block_id_;
+    //uint32_t block_id_;
     std::string dest_ns_addr_;
     uint64_t dest_ds_id_;
     int32_t cur_offset_;
@@ -124,7 +124,8 @@ class TranBlock
     int64_t traffic_;
     tfs::client::TfsSession* src_session_;
     tfs::client::TfsSession* dest_session_;
-    tfs::common::VUINT64 rds_;
+    tfs::client::SegmentData seg_data_;
+    //tfs::common::VUINT64 rds_;
     FileInfoSet file_set_;
     tbnet::DataBuffer src_content_buf_;
     tbnet::DataBuffer dest_content_buf_;

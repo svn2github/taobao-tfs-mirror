@@ -14,7 +14,7 @@
  *
  */
 #include "util.h"
-#include "client/fsname.h"
+#include "new_client/fsname.h"
 #include "common/func.h"
 
 using namespace tfs::client;
@@ -68,7 +68,7 @@ int fetch_input_opt(int argc, char** argv, ThreadParam& param, int& thread_count
         param.min_size_ = atoi(mins.c_str());
         param.max_size_ = atoi(maxs.c_str());
         printf("%d:%d\n", param.min_size_, param.max_size_);
-        //		printf("range : %s,mins : %s, maxs : %s,min_size : %d,max_size : %d\n",range.c_str(),mins.c_str(),maxs.c_str(),param.min_size,param.max_size);
+        //printf("range : %s,mins : %s, maxs : %s,min_size : %d,max_size : %d\n",range.c_str(),mins.c_str(),maxs.c_str(),param.min_size,param.max_size);
       }
       break;
     case 'p':
@@ -132,15 +132,17 @@ int read_local_file(const char* filename, char* data, uint32_t& length)
   return 0;
 }
 
-int retry_open_file(TfsClient* tfsfile, char* filename, char* prefix, int mode)
+int retry_open_file(TfsClient* tfsclient, char* filename, char* prefix, int mode, int& fd)
 {
   int retry = 0;
-  int ret = EXIT_SUCCESS;
+  int ret;
   while (retry++ < RETRY_TIMES)
   {
-    ret = tfsfile->tfs_open(filename, prefix, mode);
-    if (ret == EXIT_SUCCESS)
+    ret = tfsclient->open(filename, prefix, mode);
+    if (ret > 0)
     {
+      fd = ret;
+      ret = EXIT_SUCCESS;
       break;
     }
     //else return ret;
@@ -163,7 +165,7 @@ uint32 convname(const char* tfsname, char* prefix, uint32_t& blockid, uint64_t& 
   return blockid;
 }
 
-int write_data(TfsClient* tfsfile, char* data, int length)
+int write_data(TfsClient* tfsclient, int fd, char* data, uint32_t length)
 {
   int num_wrote = 0;
   int left = length - num_wrote;
@@ -173,7 +175,7 @@ int write_data(TfsClient* tfsfile, char* data, int length)
   while (left > 0)
   {
     //printf("begin write data(%d)\n", left);
-    ret = tfsfile->tfs_write(data + num_wrote, left);
+    ret = tfsclient->write(fd, data + num_wrote, left);
     //printf("write data completed(%d)\n", ret);
     if (ret < 0)
     {
@@ -194,42 +196,43 @@ int write_data(TfsClient* tfsfile, char* data, int length)
   return num_wrote;
 }
 
-int copy_file(TfsClient &tfsfile, char* tfsname, int local_fd)
+int copy_file(TfsClient* tfsclient, char* tfsname, int local_fd)
 {
 
   //char tmpstr[32];
   char *prefix = NULL;
-  if (static_cast<int32_t> (strlen(tfsname)) < FILE_NAME_LEN || tfsname[0] != 'T')
+  if (static_cast<int32_t> (strlen(tfsname)) < FILE_NAME_LEN || (tfsname[0] != 'T' && tfsname[0] != 'L'))
   {
     fprintf(stderr, "TFS �ļ���Ƿ�%s\n", tfsname);
     return EXIT_FAILURE;
   }
   prefix = tfsname + FILE_NAME_LEN;
 
-  if (tfsfile.tfs_open(tfsname, prefix, READ_MODE) != EXIT_SUCCESS)
+  int fd;
+  if ((fd = tfsclient->open(tfsname, prefix, T_READ)) <= 0 )
   {
-    fprintf(stderr, "open tfsfile fail: %s\n", tfsfile.get_error_message());
+    fprintf(stderr, "open tfsfile fail\n");
     return EXIT_FAILURE;
   }
 
-  FileInfo finfo;
-  if (tfsfile.tfs_stat(&finfo) == EXIT_FAILURE)
+  TfsFileStat fstat;
+  if (tfsclient->fstat(fd, &fstat) == TFS_ERROR)
   {
-    tfsfile.tfs_close();
-    fprintf(stderr, "fstat tfsfile fail: %s\n", tfsfile.get_error_message());
+    tfsclient->close(fd);
+    fprintf(stderr, "fstat tfsfile fail\n");
     return EXIT_FAILURE;
   }
 
   char data[MAX_READ_SIZE];
   uint32_t crc = 0;
-  int total_size = 0;
+  int64_t total_size = 0;
   for (;;)
   {
-    int rlen = tfsfile.tfs_read(data, MAX_READ_SIZE);
+    int rlen = tfsclient->read(fd, data, MAX_READ_SIZE);
     if (rlen < 0)
     {
-      fprintf(stderr, "read tfsfile fail: %s\n", tfsfile.get_error_message());
-      tfsfile.tfs_close();
+      fprintf(stderr, "read tfsfile fail\n");
+      tfsclient->close(fd);
       return EXIT_FAILURE;
     }
 
@@ -241,7 +244,7 @@ int copy_file(TfsClient &tfsfile, char* tfsname, int local_fd)
     if (local_fd != -1 && write(local_fd, data, rlen) != rlen)
     {
       fprintf(stderr, "write local file fail.\n");
-      tfsfile.tfs_close();
+      tfsclient->close(fd);
       return EXIT_FAILURE;
     }
 
@@ -251,36 +254,37 @@ int copy_file(TfsClient &tfsfile, char* tfsname, int local_fd)
       break;
   }
 
-  tfsfile.tfs_close();
-  if (crc != finfo.crc_ || total_size != finfo.size_)
+  tfsclient->close(fd);
+  if (crc != fstat.crc_ || total_size != fstat.size_)
   {
-    fprintf(stderr, "%s, crc error: %u <> %u, size: %u <> %u\n", tbsys::CNetUtil::addrToString(
-        tfsfile.get_last_elect_ds_id()).c_str(), crc, finfo.crc_, total_size, finfo.size_);
+    fprintf(stderr, "crc error: %u <> %u, size: %"PRI64_PREFIX"d <> %"PRI64_PREFIX"d\n",
+        crc, fstat.crc_, total_size, fstat.size_);
     return EXIT_FAILURE;
   }
 
   return EXIT_SUCCESS;
 }
 
-int copy_file_v3(TfsClient &tfsfile, char* tfsname, uint32_t width, uint32_t height, int local_fd, bool& zoomed)
+/*int copy_file_v3(TfsClient &tfsclient, char* tfsname, uint32_t width, uint32_t height, int local_fd, bool& zoomed)
 {
   //char tmpstr[32];
   char *prefix = NULL;
-  if (static_cast<int32_t> (strlen(tfsname)) < FILE_NAME_LEN || tfsname[0] != 'T')
+  if (static_cast<int32_t> (strlen(tfsname)) < FILE_NAME_LEN || tfsname[0] != 'T' || tfsname[0] != 'L')
   {
     fprintf(stderr, "TFS �ļ���Ƿ�%s\n", tfsname);
     return EXIT_FAILURE;
   }
   prefix = tfsname + FILE_NAME_LEN;
 
-  if (tfsfile.tfs_open(tfsname, prefix, READ_MODE) != EXIT_SUCCESS)
+  int fd;
+  if (fd = tfsclient.open(tfsname, prefix, T_READ) <= 0)
   {
-    fprintf(stderr, "open tfsfile fail: %s\n", tfsfile.get_error_message());
+    fprintf(stderr, "open tfsfile fail\n");
     return EXIT_FAILURE;
   }
 
-  FileInfo finfo;
-  memset(&finfo, 0, sizeof(FileInfo));
+  TfsFileStat fstat;
+  memset(&fstat, 0, sizeof(TfsFileStat));
   char data[MAX_READ_SIZE];
   uint32_t crc = 0;
   int total_size = 0;
@@ -342,37 +346,38 @@ int copy_file_v3(TfsClient &tfsfile, char* tfsname, uint32_t width, uint32_t hei
 
   return EXIT_SUCCESS;
 }
-
-int copy_file_v2(TfsClient &tfsfile, char* tfsname, int local_fd)
+*/
+int copy_file_v2(TfsClient* tfsclient, char* tfsname, int local_fd)
 {
 
   //char tmpstr[32];
   char *prefix = NULL;
-  if (static_cast<int32_t> (strlen(tfsname)) < FILE_NAME_LEN || tfsname[0] != 'T')
+  if (static_cast<int32_t> (strlen(tfsname)) < FILE_NAME_LEN || (tfsname[0] != 'T' && tfsname[0] != 'L'))
   {
     fprintf(stderr, "TFS �ļ���Ƿ�%s\n", tfsname);
     return EXIT_FAILURE;
   }
   prefix = tfsname + FILE_NAME_LEN;
 
-  if (tfsfile.tfs_open(tfsname, prefix, READ_MODE) != EXIT_SUCCESS)
+  int fd;
+  if ((fd = tfsclient->open(tfsname, prefix, T_READ)) <= 0)
   {
-    fprintf(stderr, "open tfsfile fail: %s\n", tfsfile.get_error_message());
+    fprintf(stderr, "open tfsfile fail\n");
     return EXIT_FAILURE;
   }
 
-  FileInfo finfo;
-  memset(&finfo, 0, sizeof(FileInfo));
+  TfsFileStat fstat;
+  memset(&fstat, 0, sizeof(TfsFileStat));
   char data[MAX_READ_SIZE];
   uint32_t crc = 0;
-  int total_size = 0;
+  int64_t total_size = 0;
   for (;;)
   {
-    int32_t rlen = tfsfile.tfs_read_v2(data, MAX_READ_SIZE, &finfo);
+    int32_t rlen = tfsclient->readv2(fd, data, MAX_READ_SIZE, &fstat);
     if (rlen < 0)
     {
-      fprintf(stderr, "read tfsfile fail: %s\n", tfsfile.get_error_message());
-      tfsfile.tfs_close();
+      fprintf(stderr, "read tfsfile fail\n");
+      tfsclient->close(fd);
       return EXIT_FAILURE;
     }
     if (rlen == 0)
@@ -380,51 +385,52 @@ int copy_file_v2(TfsClient &tfsfile, char* tfsname, int local_fd)
     if (local_fd != -1 && write(local_fd, data, rlen) != rlen)
     {
       fprintf(stderr, "write local file fail.\n");
-      tfsfile.tfs_close();
+      tfsclient->close(fd);
       return EXIT_FAILURE;
     }
     crc = Func::crc(crc, data, rlen);
     total_size += rlen;
     if (rlen != (int) MAX_READ_SIZE)
       break;
-    if (total_size >= finfo.size_)
+    if (total_size >= fstat.size_)
       break;
   }
 
-  tfsfile.tfs_close();
-  if (crc != finfo.crc_ || total_size != finfo.size_)
+  tfsclient->close(fd);
+  if (crc != fstat.crc_ || total_size != fstat.size_)
   {
-    fprintf(stderr, "%s, crc error: %u <> %u, size: %u <> %u\n", tbsys::CNetUtil::addrToString(
-        tfsfile.get_last_elect_ds_id()).c_str(), crc, finfo.crc_, total_size, finfo.size_);
+    fprintf(stderr, "crc error: %u <> %u, size: %"PRI64_PREFIX"d <> %"PRI64_PREFIX"d\n", 
+        crc, fstat.crc_, total_size, fstat.size_);
     return EXIT_FAILURE;
   }
 
   return EXIT_SUCCESS;
 }
 
-int read_data(TfsClient* tfsfile, char* filename)
+int read_data(TfsClient* tfsclient, char* filename)
 {
 
   int ret = 0;
 
-  ret = tfsfile->tfs_open(filename, NULL, READ_MODE);
-  if (ret != EXIT_SUCCESS)
+  int fd;
+  fd = tfsclient->open(filename, NULL, T_READ);
+  if (fd <= 0)
   {
-    printf("tfsopen failed:(%s), (%d)\n", filename, ret);
-    return ret;
+    printf("tfsopen failed:(%s)\n", filename);
+    return fd;
   }
 
-  FileInfo finfo;
-  ret = tfsfile->tfs_stat(&finfo);
+  TfsFileStat fstat;
+  ret = tfsclient->fstat(fd, &fstat);
 
   if (ret == EXIT_FAILURE)
   {
     printf("tfsstat failed:(%d)\n", ret);
-    tfsfile->tfs_close();
+    tfsclient->close(fd);
     return ret;
   }
 
-  int file_size = finfo.size_;
+  int file_size = fstat.size_;
   char* buffer = new char[file_size + 1];
   memset(buffer, 0, file_size + 1);
 
@@ -434,7 +440,7 @@ int read_data(TfsClient* tfsfile, char* filename)
 
   do
   {
-    ret = tfsfile->tfs_read(buffer + num_readed, num_per_read);
+    ret = tfsclient->read(fd, buffer + num_readed, num_per_read);
     if (ret < 0)
       break;
     //if (ret != num_per_read) break;
@@ -453,15 +459,15 @@ int read_data(TfsClient* tfsfile, char* filename)
     goto error;
   }
 
-  if (crc != finfo.crc_)
+  if (crc != fstat.crc_)
   {
-    printf("crc check failed (%d), info.crc(%d)\n", crc, finfo.crc_);
+    printf("crc check failed (%d), info.crc(%d)\n", crc, fstat.crc_);
     ret = EXIT_FAILURE;
     goto error;
   }
 
   error: delete[] buffer;
-  tfsfile->tfs_close();
+  tfsclient->close(fd);
   if (ret < 0)
     return ret;
   return num_readed;
@@ -497,7 +503,6 @@ double calc_iops(int32_t count, int64_t consumed)
   if (consumed == 0)
   {
     return 0.0;
-
   }
   return (double) count / ((double) consumed / 1000000);
 }
@@ -505,13 +510,9 @@ double calc_iops(int32_t count, int64_t consumed)
 double calc_rate(int32_t count, int64_t consumed)
 {
   if (count == 0)
-
   {
-
     return 0.0;
-
   }
-
   return (double) consumed / count;
 }
 

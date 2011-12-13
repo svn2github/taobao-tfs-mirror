@@ -44,9 +44,9 @@ struct log_file
   const char* file_;
 };
 
-int get_crc_from_tfsname_list(tfs::client::TfsClient& old_tfs_client, tfs::client::TfsClient& new_tfs_client,
+int get_crc_from_tfsname_list(const std::string& old_tfs_client, const std::string& new_tfs_client,
     const char* filename_list, std::string& modify_time);
-int get_crc_from_blockid(tfs::client::TfsClient& old_tfs_client, tfs::client::TfsClient& new_tfs_client,
+int get_crc_from_block_list(const std::string& old_tfs_client, const std::string& new_tfs_client,
     const char* block_list, std::string& modify_time);
 
 static StatStruct cmp_stat_;

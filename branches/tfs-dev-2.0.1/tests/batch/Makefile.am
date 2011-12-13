@@ -1,4 +1,4 @@
-AM_CPPFLAGS=-I${top_srcdir}/src/client \
+AM_CPPFLAGS=-I${top_srcdir}/src/new_client \
             -I$(top_srcdir)/src \
 			-I${top_srcdir}/src/common \
 			-I$(TBLIB_ROOT)/include/tbsys \
@@ -7,7 +7,7 @@ AM_CPPFLAGS=-I${top_srcdir}/src/client \
 AM_LDFLAGS=-lpthread -lrt -lc -lm
 
 LDADD=$(top_builddir)/src/dataserver/libdataserver.a \
-      $(top_builddir)/src/client/.libs/libtfsclient.a \
+      $(top_builddir)/src/new_client/.libs/libtfsclient.a \
 			$(top_builddir)/src/message/libtfsmessage.a \
       $(top_builddir)/src/common/libtfscommon.a \
 			$(TBLIB_ROOT)/lib/libtbnet.a \

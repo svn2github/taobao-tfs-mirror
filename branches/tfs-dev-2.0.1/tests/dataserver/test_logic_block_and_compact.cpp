@@ -47,6 +47,7 @@ protected:
     TBSYS_LOGGER.setLogLevel("error");
     mkdir("index", 10705);
     mkdir("extend", 10705);
+    mkdir("tmp", 10705);
   }
 
   static void TearDownTestCase()
@@ -54,6 +55,7 @@ protected:
     TBSYS_LOGGER.setLogLevel("debug");
     rmdir("index");
     rmdir("extend");
+    rmdir("tmp");
   }
 
 public:
@@ -256,6 +258,7 @@ TEST_F(TestLogicBlock, testFileOP)
   int32_t offset = 0;
   DataFile* data_file;
   int32_t data_size = data_length * sizeof(int32_t) + sizeof(FileInfo);
+  int64_t file_size;
   main_block->set_block_prefix(logical_block_id, 0, 0);
   logic_block->add_physic_block(main_block);
   for(int32_t i = 0; i < 10; i++)
@@ -277,7 +280,7 @@ TEST_F(TestLogicBlock, testFileOP)
   for(int32_t i = 0; i < 10; i++)
   {
     offset = 0;
-    logic_block->read_file(file_id[i], reinterpret_cast<char*>(buf), data_size, offset);
+    logic_block->read_file(file_id[i], reinterpret_cast<char*>(buf), data_size, offset, READ_DATA_OPTION_FLAG_NORMAL);
     FileInfo* raad_info = (FileInfo*)buf;
     EXPECT_EQ(file_id[i], raad_info->id_);
     EXPECT_EQ(raad_info->offset_, static_cast<int32_t>((file_id[i] - 1) * data_size));
@@ -326,30 +329,30 @@ TEST_F(TestLogicBlock, testFileOP)
 
   // unlink
   // delete
-  EXPECT_EQ(logic_block->unlink_file(old_id, DELETE), EXIT_META_NOT_FOUND_ERROR);
-  logic_block->unlink_file(new_id, DELETE);
+  EXPECT_EQ(logic_block->unlink_file(old_id, DELETE, file_size), EXIT_META_NOT_FOUND_ERROR);
+  logic_block->unlink_file(new_id, DELETE, file_size);
   memset(&exist, 0, sizeof(exist));
   logic_block->read_file_info(new_id, exist);
   EXPECT_EQ(exist.flag_&FI_DELETED, FI_DELETED);
   //undelete
-  EXPECT_EQ(logic_block->unlink_file(file_id[1], UNDELETE), EXIT_FILE_STATUS_ERROR);
-  logic_block->unlink_file(new_id, UNDELETE);
+  EXPECT_EQ(logic_block->unlink_file(file_id[1], UNDELETE, file_size), EXIT_FILE_STATUS_ERROR);
+  logic_block->unlink_file(new_id, UNDELETE, file_size);
   memset(&exist, 0, sizeof(exist));
   logic_block->read_file_info(new_id, exist);
   EXPECT_EQ(exist.flag_&FI_DELETED, 0);
   // conceal
-  logic_block->unlink_file(file_id[1], DELETE);
-  EXPECT_EQ(logic_block->unlink_file(file_id[1], CONCEAL), EXIT_FILE_STATUS_ERROR);
-  logic_block->unlink_file(file_id[1], UNDELETE);
-  logic_block->unlink_file(file_id[1], CONCEAL);
-  EXPECT_EQ(logic_block->unlink_file(file_id[1], CONCEAL), EXIT_FILE_STATUS_ERROR);
-  logic_block->unlink_file(new_id, CONCEAL);
+  logic_block->unlink_file(file_id[1], DELETE, file_size);
+  EXPECT_EQ(logic_block->unlink_file(file_id[1], CONCEAL, file_size), EXIT_FILE_STATUS_ERROR);
+  logic_block->unlink_file(file_id[1], UNDELETE, file_size);
+  logic_block->unlink_file(file_id[1], CONCEAL, file_size);
+  EXPECT_EQ(logic_block->unlink_file(file_id[1], CONCEAL, file_size), EXIT_FILE_STATUS_ERROR);
+  logic_block->unlink_file(new_id, CONCEAL, file_size);
   memset(&exist, 0, sizeof(exist));
   logic_block->read_file_info(new_id, exist);
   EXPECT_EQ(exist.flag_&FI_CONCEAL, FI_CONCEAL);
   // unconceal
-  EXPECT_EQ(logic_block->unlink_file(file_id[2], REVEAL), EXIT_FILE_STATUS_ERROR);
-  logic_block->unlink_file(new_id, REVEAL);
+  EXPECT_EQ(logic_block->unlink_file(file_id[2], REVEAL, file_size), EXIT_FILE_STATUS_ERROR);
+  logic_block->unlink_file(new_id, REVEAL, file_size);
   memset(&exist, 0, sizeof(exist));
   logic_block->read_file_info(new_id, exist);
   EXPECT_EQ(exist.flag_&FI_CONCEAL, 0);
@@ -858,9 +861,10 @@ TEST_F(TestLogicBlock,testRealCompact)
   dest_block->add_physic_block(m2);
 
   // delete even ones
+  int64_t file_size;
   for (int32_t i = 0; i < INSERT_FILE_NUM; i += 2)
   {
-    EXPECT_EQ(0, logic_block->unlink_file(file_id[i], DELETE));
+    EXPECT_EQ(0, logic_block->unlink_file(file_id[i], DELETE, file_size));
   }
   // compact
   CompactBlock compact;
@@ -940,9 +944,10 @@ TEST_F(TestLogicBlock, testComplexCompact)
   }
 
   // 2) delete even(500) ones
+  int64_t file_size;
   for (int32_t i = 0; i < INSERT_FILE_NUM; i += 2)
   {
-    EXPECT_EQ(0, logic_block->unlink_file(file_id[i], DELETE));
+    EXPECT_EQ(0, logic_block->unlink_file(file_id[i], DELETE, file_size));
   }
   for (int32_t i = 1; i < INSERT_FILE_NUM; i += 2)
   {
@@ -966,7 +971,7 @@ TEST_F(TestLogicBlock, testComplexCompact)
   // 4) delete 3x ones
   for (int32_t i = 0; i < INSERT_FILE_NUM; i += 3)
   {
-    EXPECT_EQ(0, logic_block->unlink_file(file_id[i], DELETE));
+    EXPECT_EQ(0, logic_block->unlink_file(file_id[i], DELETE, file_size));
   }
   
   delete(tmp_data);

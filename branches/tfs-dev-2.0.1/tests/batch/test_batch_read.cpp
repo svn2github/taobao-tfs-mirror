@@ -16,7 +16,7 @@
 #include "util.h"
 #include "thread.h"
 #include "common/func.h"
-#include "client/tfs_client_api.h"
+#include "new_client/tfs_client_api.h"
 #include <vector>
 #include <algorithm>
 #include <functional>
@@ -61,8 +61,8 @@ void* read_worker(void* arg)
      tfs_file.set_session(&session);
      */
   printf("init connection to nameserver:%s\n", param.ns_ip_port_.c_str());
-  TfsClient tfsclient;
-  int iret = tfsclient.initialize(param.ns_ip_port_);
+  TfsClient* tfsclient = TfsClient::Instance();
+  int iret = tfsclient->initialize(param.ns_ip_port_.c_str());
   if (iret == TFS_ERROR)
   {
     return NULL;
@@ -99,7 +99,7 @@ void* read_worker(void* arg)
     random_shuffle(start, end);
   }
 
-  bool read_image = false;
+  /*bool read_image = false;
   bool image_scale_random = false;
   if ((param.max_size_ != 0) && (param.min_size_ != 0))
   {
@@ -108,7 +108,7 @@ void* read_worker(void* arg)
   if (param.max_size_ != param.min_size_)
   {
     image_scale_random = true;
-  }
+  }*/
 
   vector<std::string>::iterator vit = write_file_list.begin();
   for (; vit != write_file_list.end(); vit++)
@@ -123,7 +123,7 @@ void* read_worker(void* arg)
     }
     timer.start();
     int32_t ret = 0;
-    bool zoomed = true;
+    /*bool zoomed = true;
     if (read_image)
     {
       if (image_scale_random)
@@ -140,7 +140,7 @@ void* read_worker(void* arg)
         }
       }
     }
-    else
+    else*/
     {
       ret = copy_file_v2(tfsclient, (char *) (*vit).c_str(), -1);
     }
@@ -180,14 +180,14 @@ void* read_worker(void* arg)
   int64_t time_stop = Func::curr_time();
   time_consumed = time_stop - time_start;
 
-  double iops = static_cast<double> (total_succ_count) / (static_cast<double> (time_consumed) / 1000000);
-  double rate = static_cast<double> (time_consumed) / total_succ_count;
-  double aiops = static_cast<double> (total_succ_count) / (static_cast<double> (accumlate_time_consumed) / 1000000);
-  double arate = static_cast<double> (accumlate_time_consumed) / total_succ_count;
+  double iops = calc_iops(total_succ_count, time_consumed);
+  double rate = calc_rate(total_succ_count, time_consumed);
+  double aiops = calc_iops(total_succ_count, accumlate_time_consumed);
+  double arate = calc_rate(total_succ_count, accumlate_time_consumed);
 
   printf("thread index:%5d   count:%5d  failed:%5d, zoomed:%5d, filesize:%6d  iops:%10.3f  rate:%10.3f ,"
       " min:%" PRI64_PREFIX "d, max:%" PRI64_PREFIX "d,avg:%" PRI64_PREFIX "d aiops:%10.3f, arate:%10.3f \n", param.index_, total_count, failed_count, zoomed_count,
-      param.file_size_, iops, rate, min_time_consumed, max_time_consumed, accumlate_time_consumed / total_succ_count,
+      param.file_size_, iops, rate, min_time_consumed, max_time_consumed, (!total_succ_count)? 0:(accumlate_time_consumed / total_succ_count),
       aiops, arate);
   stater.dump_time_stat();
   return NULL;

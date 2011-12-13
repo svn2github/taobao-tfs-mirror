@@ -54,6 +54,9 @@ namespace tfs
             const char* file_path,
             common::FileMetaInfo& file_meta_info);
 
+        bool is_dir_exist(const int64_t app_id, const int64_t uid, const char* dir_path);
+        bool is_file_exist(const int64_t app_id, const int64_t uid, const char* file_path);
+
         int32_t get_cluster_id(const int64_t app_id, const int64_t uid, const char* path);
 
         int64_t read(const char* ns_addr, const int64_t app_id, const int64_t uid,

@@ -5,10 +5,10 @@ AM_CPPFLAGS=-fprofile-arcs -ftest-coverage -I${top_srcdir}/src/nameserver \
 	    -I$(TBLIB_ROOT)/include/tbnet
 
 AM_LDFLAGS=-lpthread -lrt -lc -lm -lgtest -lgcov
-
+ 
 LDADD=$(top_builddir)/src/nameserver/libnameserver.a \
-      $(top_builddir)/src/common/libtfscommon.a \
 			$(top_builddir)/src/message/libtfsmessage.a\
+      $(top_builddir)/src/common/libtfscommon.a \
       $(TBLIB_ROOT)/lib/libtbnet.a \
       $(TBLIB_ROOT)/lib/libtbsys.a
 
@@ -16,7 +16,7 @@ LDADD=$(top_builddir)/src/nameserver/libnameserver.a \
 #.PHONY: test
 
 noinst_PROGRAMS= test_layout_manager test_block_collect test_server_collect\
-		test_block_chunk test_lease test_task test_gc integration #test_strategy
+		test_block_chunk test_lease test_task test_gc integration test_strategy
 
 #noinst_PROGRAMS= test_block_collect test_server_collect test_block_chunk \
 #		 test_strategy

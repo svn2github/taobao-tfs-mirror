@@ -62,11 +62,17 @@ namespace tfs
                  const common::TfsUnlinkType action = common::DELETE,
                  const common::OptionFlag option_flag = common::TFS_FILE_DEFAULT_OPTION);
 
+      void set_use_cache(const int32_t flag);
       void set_cache_items(const int64_t cache_items);
       int64_t get_cache_items() const;
 
       void set_cache_time(const int64_t cache_time);
       int64_t get_cache_time() const;
+
+#ifdef WITH_TAIR_CACHE
+      void set_remote_cache_info(const char* remote_cache_master_addr, const char* remote_cache_slave_addr,
+             const char* remote_cache_group_name, const int32_t remote_cache_area);
+#endif
 
       void set_segment_size(const int64_t segment_size);
       int64_t get_segment_size() const;
@@ -91,13 +97,14 @@ namespace tfs
 
       void set_client_retry_count(const int64_t count);
       int64_t get_client_retry_count() const;
+      void set_client_retry_flag(bool retry_flag = true);
 
       void set_log_level(const char* level);
       void set_log_file(const char* file);
 
       int32_t get_block_cache_time() const;
       int32_t get_block_cache_items() const;
-      int32_t get_cache_hit_ratio() const;
+      int32_t get_cache_hit_ratio(common::CacheType cache_type = common::LOCAL_CACHE) const;
 
 #ifdef WITH_UNIQUE_STORE
       int init_unique_store(const char* master_addr, const char* slave_addr,

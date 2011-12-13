@@ -112,6 +112,7 @@ namespace tfs
       int64_t get_meta_segment(const int64_t offset, const char* buf, const int64_t count, const bool force_check = true);
       int process(const InnerFilePhase file_phase);
       int read_process_ex(int64_t& read_size, const InnerFilePhase read_file_phase);
+      int stat_process();
       int32_t finish_read_process(const int status, int64_t& read_size);
 
       int get_block_info(SegmentData& seg_data, const int32_t flags);
@@ -156,6 +157,9 @@ namespace tfs
 
       int async_req_unlink_file(common::NewClient* client, const uint16_t index);
       int async_rsp_unlink_file(common::BasePacket* packet, const uint16_t index);
+#ifdef TFS_TEST
+      bool get_process_result(uint32_t block_id, common::VUINT64& ds);
+#endif
 
     public:
       common::RWLock rw_lock_;

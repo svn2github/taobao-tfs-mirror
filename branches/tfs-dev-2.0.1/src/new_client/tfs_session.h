@@ -22,6 +22,10 @@
 #include "lru.h"
 #include "local_key.h"
 
+#ifdef WITH_TAIR_CACHE
+#include "tair_cache_helper.h"
+#endif
+
 #ifdef WITH_UNIQUE_STORE
 #include "tfs_unique_store.h"
 #endif
@@ -34,11 +38,6 @@ namespace tfs
     {
       time_t last_time_;
       common::VUINT64 ds_;
-    };
-    enum UseCacheFlag
-    {
-      USE_CACHE_FLAG_YES = 0x00,
-      USE_CACHE_FLAG_NO
     };
 
     class TfsSession
@@ -53,9 +52,10 @@ namespace tfs
       virtual ~TfsSession();
 
       int initialize();
-      int get_block_info(uint32_t& block_id, common::VUINT64& rds, int32_t flag);
+      int get_block_info(SegmentData& seg_data, int32_t flag);
       int get_block_info(SEG_DATA_LIST& seg_list, const int32_t flag);
 
+      void insert_block_cache(const uint32_t block_id, const common::VUINT64& rds);
       void remove_block_cache(const uint32_t block_id);
 
       inline int32_t get_cluster_id() const
@@ -83,11 +83,6 @@ namespace tfs
         return block_cache_items_;
       }
 
-      inline void set_use_cache(const UseCacheFlag flag = USE_CACHE_FLAG_YES)
-      {
-        use_cache_ = flag;
-      }
-
 #ifdef WITH_UNIQUE_STORE
     private:
       TfsUniqueStore* unique_store_;
@@ -105,6 +100,12 @@ namespace tfs
       {
         return &block_cache_map_;
       }
+#ifdef WITH_TAIR_CACHE
+      TairCacheHelper* get_remote_cache_helper()
+      {
+        return remote_cache_helper_;
+      }
+#endif
 #endif
 
     private:
@@ -113,16 +114,33 @@ namespace tfs
       int get_block_info_ex(SEG_DATA_LIST& seg_list, const int32_t flag);
       int get_block_info_ex(uint32_t& block_id, common::VUINT64& rds, const int32_t flag);
       int get_cluster_id_from_ns();
-      void insert_block_cache(const uint32_t block_id, const common::VUINT64& rds);
 
     private:
       tbutil::Mutex mutex_;
+#ifdef TFS_TEST
+    public:
+      std::map<uint32_t, common::VUINT64> block_ds_map_; // fake meta info on ns
+#endif
       uint64_t ns_addr_;
       std::string ns_addr_str_;
+      int32_t cluster_id_;
+
+#ifdef WITH_TAIR_CACHE
+    private:
+      bool remote_cache_is_init_;
+      TairCacheHelper* remote_cache_helper_;
+    public:
+      int init_remote_cache_helper();
+      bool check_init();
+      void insert_remote_block_cache(const uint32_t block_id, const common::VUINT64& rds);
+      int query_remote_block_cache(const uint32_t block_id, common::VUINT64& rds);
+      int query_remote_block_cache(const std::map<uint32_t, size_t> & block_list, std::map<size_t, common::VUINT64> & blk_ds_list);
+      void remove_remote_block_cache(const uint32_t block_id);
+#endif
+
+    private:
       const int64_t block_cache_time_;
       const int64_t block_cache_items_;
-      int32_t cluster_id_;
-      UseCacheFlag use_cache_;
       BLOCK_CACHE_MAP block_cache_map_;
     };
   }

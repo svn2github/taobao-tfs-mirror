@@ -37,6 +37,11 @@ int main(int argc, char* argv[])
   string file = argv[1];
   FileOperation* file_op = new FileOperation(argv[1]);
   int32_t read_size = file_op->get_file_size();
+  if (read_size <= 0) 
+  {
+    cout << "open index file " << argv[1] << "failed!" << endl;
+    return read_size;
+  }
   char* buf = new char[read_size];
   memset(buf, 0, read_size);
 

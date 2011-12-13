@@ -187,6 +187,20 @@ namespace tfs
           {
             name_meta_client_->initialize(base_info_.meta_root_server_);
           }
+#ifdef WITH_TAIR_CACHE
+          std::vector<std::string> ns_cache_info;
+          common::Func::split_string(base_info_.ns_cache_info_.c_str(), ';', ns_cache_info);
+          if (ns_cache_info.size() == 4)
+          {
+            TfsClient::Instance()->set_remote_cache_info(ns_cache_info[0].c_str(),
+              ns_cache_info[1].c_str(), ns_cache_info[2].c_str(),
+              atoi(ns_cache_info[3].c_str()));
+          }
+          else
+          {
+            TBSYS_LOG(WARN, "invalid ns_cache_info(size: %d), remote cache will not initialize", ns_cache_info.size());
+          }
+#endif
           keepalive_timer_->scheduleRepeated(stat_update_task_,
               tbutil::Time::seconds(base_info_.report_interval_));
         }
@@ -1083,6 +1097,26 @@ namespace tfs
           ret = name_meta_client_->ls_file(app_id, uid, file_path, file_meta_info);
         }
         return ret;
+      }
+
+      bool RcClientImpl::is_dir_exist(const int64_t app_id, const int64_t uid, const char* dir_path)
+      {
+        bool bRet = (TFS_SUCCESS == check_init_stat(true)) ? true : false;
+        if (bRet)
+        {
+          bRet = name_meta_client_->is_dir_exist(app_id, uid, dir_path);
+        }
+        return bRet;
+      }
+
+      bool RcClientImpl::is_file_exist(const int64_t app_id, const int64_t uid, const char* file_path)
+      {
+        bool bRet = (TFS_SUCCESS == check_init_stat(true)) ? true : false;
+        if (bRet)
+        {
+          bRet = name_meta_client_->is_file_exist(app_id, uid, file_path);
+        }
+        return bRet;
       }
 
       int RcClientImpl::gen_fdinfo(const fdInfo& fdinfo)

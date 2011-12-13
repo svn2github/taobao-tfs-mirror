@@ -6,7 +6,7 @@
  * published by the Free Software Foundation.
  *
  *
- * Version: $Id: test_blockfile_manager.cpp 155 2011-02-21 07:33:27Z zongdai@taobao.com $
+ * Version: $Id: test_blockfile_manager.cpp 155 2011-07-26 14:33:27Z mingyan.zc@taobao.com $
  *
  * Authors:
  *   yangye
@@ -15,6 +15,7 @@
  */
 #include <gtest/gtest.h>
 #include "blockfile_manager.h"
+#include "gc.h"
 #include <unistd.h>
 
 using namespace tfs::dataserver;
@@ -55,7 +56,7 @@ int clearfile(SuperBlock super_block)
   return 0;
 }
 
-int set_fs_param(SysParam::FileSystemParam &fs_param)
+int set_fs_param(FileSystemParameter &fs_param)
 {
   fs_param.mount_name_.assign("./disk");
   fs_param.max_mount_size_ = 20971520;
@@ -96,14 +97,20 @@ int32_t clear_blocks(BlockFileManager *blockfile_manager, std::list<uint32_t>& i
     num++;
   }
   id_list.clear();
+  EXPECT_NE(GCObjectManager::instance().object_list_.size(), 0U);
+  while(GCObjectManager::instance().object_list_.size() > 0 ) {
+    printf("remain gcobject num: %u\n", static_cast<uint32_t>(GCObjectManager::instance().object_list_.size()));
+    sleep(SYSPARAM_DATASERVER.object_dead_max_time_);
+  }
+  EXPECT_EQ(GCObjectManager::instance().object_list_.size(), 0U);
   return num;
 }
 
 TEST(BlockFileManagerIniTest, InitOP)
 {
   TBSYS_LOGGER.setLogLevel("error");
-  BlockFileManager * blockfile_manager=BlockFileManager::get_instance();//infact nothing has been done 
-  SysParam::FileSystemParam fs_param;
+  BlockFileManager * blockfile_manager=BlockFileManager::get_instance();//infact nothing has been done
+  FileSystemParameter fs_param;
   set_fs_param(fs_param);
 
   int32_t ret = blockfile_manager->format_block_file_system(fs_param);
@@ -131,7 +138,7 @@ TEST(BlockFileManagerIniTest, InitOP)
       ADD_FAILURE();
     }
     //head is not being writen
-    EXPECT_EQ(buf.st_size, 16777216); 
+    EXPECT_EQ(buf.st_size, 16777216);
     read_blk = fopen(str, "r");
     fread(reinterpret_cast<char*>(&block_prefix), sizeof(BlockPrefix), 1, read_blk);
     EXPECT_EQ(block_prefix.logic_blockid_, static_cast<uint32_t>(0));
@@ -164,15 +171,22 @@ TEST(BlockFileManagerIniTest, InitOP)
 class BlockFileManagerTest: public ::testing::Test
 {
 protected:
-  static void SetUpTestCase()
-  {
-    TBSYS_LOGGER.setLogLevel("error");
-  }
+  static void SetUpTestCase();
+  //{
+  //  TBSYS_LOGGER.setLogLevel("debug");
+  //  timer = new tbutil::Timer();
+  //  SYSPARAM_DATASERVER.object_dead_max_time_ = 3;
+  //  EXPECT_EQ(GCObjectManager::instance().initialize(timer), 0);
+  //}
 
-  static void TearDownTestCase()
-  {
-    TBSYS_LOGGER.setLogLevel("debug");
-  }
+  static void TearDownTestCase();
+  //{
+  //  TBSYS_LOGGER.setLogLevel("debug");
+  //  if (0 != timer)
+  //  {
+  //    timer->destroy();
+  //  }
+  //}
 
 public:
   virtual void SetUp() //init op
@@ -189,9 +203,31 @@ public:
   }
 protected:
   BlockFileManager* blockfile_manager;
-  SysParam::FileSystemParam fs_param;
+  FileSystemParameter fs_param;
   SuperBlock super_block;
+  static tbutil::Timer* timer;
 };
+
+tbutil::Timer* BlockFileManagerTest::timer;
+
+void BlockFileManagerTest::SetUpTestCase()
+{
+  TBSYS_LOGGER.setLogLevel("debug");
+  timer = new tbutil::Timer();
+  SYSPARAM_DATASERVER.object_dead_max_time_ = 3;
+  EXPECT_EQ(GCObjectManager::instance().initialize(timer), 0);
+}
+
+void BlockFileManagerTest::TearDownTestCase()
+{
+  TBSYS_LOGGER.setLogLevel("debug");
+  if (0 != timer)
+  {
+    timer->destroy();
+  }
+}
+
+
 
 TEST_F(BlockFileManagerTest, NewBlocktest)
 {
@@ -199,9 +235,12 @@ TEST_F(BlockFileManagerTest, NewBlocktest)
   uint32_t logic_id = 123;
   blockfile_manager->new_block(logic_id, physic_id, C_MAIN_BLOCK);
   // check index handle info
-  chdir("./disk/index");
   char index_name[20];
-  sprintf(index_name, "%d", physic_id);
+  char blk_name[20];
+  char ext_blk_name[20];
+  sprintf(index_name, "./disk/index/%d", physic_id);
+  sprintf(blk_name, "./disk/%d", physic_id);
+  ASSERT_EQ(access(index_name, 0), 0);
   FILE* fp = fopen(index_name, "r");
   IndexHeader index_header;
   memset(reinterpret_cast<char*>(&index_header), 0, sizeof(IndexHeader));
@@ -215,33 +254,32 @@ TEST_F(BlockFileManagerTest, NewBlocktest)
   EXPECT_EQ(index_header.block_info_.seq_no_, static_cast<uint32_t>(1));
   EXPECT_EQ(index_header.flag_, C_DATA_CLEAN);
   fclose(fp);
-  chdir("..");
   // check physic block info
   BlockPrefix block_prefix;
-  fp = fopen(index_name, "r");
+  ASSERT_EQ(access(blk_name, 0), 0);
+  fp = fopen(blk_name, "r");
   fread(reinterpret_cast<char*>(&block_prefix), sizeof(BlockPrefix), 1, fp);
   EXPECT_EQ(block_prefix.logic_blockid_, logic_id);
   EXPECT_EQ(block_prefix.prev_physic_blockid_, static_cast<uint32_t>(0));
   EXPECT_EQ(block_prefix.next_physic_blockid_, static_cast<uint32_t>(0));
   fclose(fp);
-  chdir("..");
+  // new ext block
   uint32_t ext_id = 0;
   PhysicalBlock* physic_block;
   blockfile_manager->new_ext_block(logic_id, physic_id, ext_id, &physic_block);
   LogicBlock* logic_block = blockfile_manager->get_logic_block(logic_id, C_MAIN_BLOCK);
   logic_block->add_physic_block(physic_block);
   EXPECT_EQ(logic_block->get_physic_block_list()->size(), static_cast<uint32_t>(2));
-  // new ext block
-  chdir("./disk");
-  fp = fopen(index_name, "r");
+  ASSERT_EQ(access(blk_name, 0), 0);
+  fp = fopen(blk_name, "r");
   fread(reinterpret_cast<char*>(&block_prefix), sizeof(BlockPrefix), 1, fp);
   EXPECT_EQ(block_prefix.logic_blockid_, logic_id);
   EXPECT_EQ(block_prefix.prev_physic_blockid_, static_cast<uint32_t>(0));
   EXPECT_EQ(block_prefix.next_physic_blockid_, ext_id);
   fclose(fp);
-  chdir("./extend");
-  sprintf(index_name, "%d", ext_id);
-  fp = fopen(index_name, "r");
+  sprintf(ext_blk_name, "./disk/extend/%d", ext_id);
+  ASSERT_EQ(access(ext_blk_name, 0), 0);
+  fp = fopen(ext_blk_name, "r");
   fread(reinterpret_cast<char*>(&block_prefix), sizeof(BlockPrefix), 1, fp);
   EXPECT_EQ(block_prefix.logic_blockid_, logic_id);
   EXPECT_EQ(block_prefix.prev_physic_blockid_, physic_id);
@@ -249,15 +287,23 @@ TEST_F(BlockFileManagerTest, NewBlocktest)
   fclose(fp);
   ext_id = 0;
 
-  chdir("../..");
+  // check gc
+  uint32_t old_size = GCObjectManager::instance().object_list_.size();
   blockfile_manager->del_block(logic_id, C_MAIN_BLOCK);
+  uint32_t new_size = GCObjectManager::instance().object_list_.size();
+  EXPECT_EQ(new_size - old_size, 1U);
+  EXPECT_NE(access(index_name, 0), 0);
+  sleep(1);
+  //sleep(2*SYSPARAM_DATASERVER.object_dead_max_time_);
+  //EXPECT_EQ(GCObjectManager::instance().object_list_.size(), 0U);
 
   uint32_t compact_id = 0;
   blockfile_manager->new_block(logic_id, compact_id, C_COMPACT_BLOCK);
 
   // check index handle info
-  chdir("./disk/index");
-  sprintf(index_name, "%d", compact_id);
+  sprintf(index_name, "./disk/index/%d", compact_id);
+  sprintf(blk_name, "./disk/%d", compact_id);
+  ASSERT_EQ(access(index_name, 0), 0);
   fp = fopen(index_name, "r");
   memset(reinterpret_cast<char*>(&index_header), 0, sizeof(IndexHeader));
   fread(reinterpret_cast<char*>(&index_header), sizeof(IndexHeader), 1, fp);
@@ -270,18 +316,25 @@ TEST_F(BlockFileManagerTest, NewBlocktest)
   EXPECT_EQ(index_header.block_info_.seq_no_, static_cast<uint32_t>(1));
   EXPECT_EQ(index_header.flag_, C_DATA_COMPACT);
   fclose(fp);
-  chdir("..");
 
   // check physic block info
   memset(reinterpret_cast<char*>(&block_prefix), 0, sizeof(BlockPrefix));
-  fp = fopen(index_name, "r");
+  ASSERT_EQ(access(blk_name, 0), 0);
+  fp = fopen(blk_name, "r");
   fread(reinterpret_cast<char*>(&block_prefix), sizeof(BlockPrefix), 1, fp);
   EXPECT_EQ(block_prefix.logic_blockid_, logic_id);
   EXPECT_EQ(block_prefix.prev_physic_blockid_, static_cast<uint32_t>(0));
   EXPECT_EQ(block_prefix.next_physic_blockid_, static_cast<uint32_t>(0));
   fclose(fp);
-  chdir("..");
+
+  // check gc
+  old_size = GCObjectManager::instance().object_list_.size();
   blockfile_manager->del_block(logic_id, C_COMPACT_BLOCK);
+  new_size = GCObjectManager::instance().object_list_.size();
+  EXPECT_EQ(new_size - old_size, 1U);
+  EXPECT_NE(access(index_name, 0), 0);
+  sleep(2*SYSPARAM_DATASERVER.object_dead_max_time_);
+  EXPECT_EQ(GCObjectManager::instance().object_list_.size(), 0U);
 }
 
 TEST_F(BlockFileManagerTest, DelBlocktest)
@@ -291,9 +344,10 @@ TEST_F(BlockFileManagerTest, DelBlocktest)
   uint32_t logic_id = 223;
   blockfile_manager->new_block(logic_id, physic_id, C_MAIN_BLOCK);
   // check the index_header
-  chdir("./disk/index");
   char index_name[20];
-  sprintf(index_name, "%d", physic_id);
+
+  sprintf(index_name, "./disk/index/%d", physic_id);
+
   FILE* fp = fopen(index_name, "r");
   IndexHeader index_header;
   memset(reinterpret_cast<char*>(&index_header), 0, sizeof(IndexHeader));
@@ -307,19 +361,19 @@ TEST_F(BlockFileManagerTest, DelBlocktest)
   EXPECT_EQ(index_header.block_info_.seq_no_, static_cast<uint32_t>(1));
   EXPECT_EQ(index_header.flag_, C_DATA_CLEAN);
   fclose(fp);
-  chdir("../..");
   // delete it
-  blockfile_manager->del_block(logic_id, C_MAIN_BLOCK); 
-  // check again
-  chdir("./disk/index");
+  uint32_t old_size = GCObjectManager::instance().object_list_.size();
+  blockfile_manager->del_block(logic_id, C_MAIN_BLOCK);
+  uint32_t new_size = GCObjectManager::instance().object_list_.size();
+  EXPECT_EQ(new_size - old_size, 1U);
   EXPECT_NE(access(index_name, 0), 0);
-  chdir("../..");
+  sleep(2*SYSPARAM_DATASERVER.object_dead_max_time_);
+  EXPECT_EQ(GCObjectManager::instance().object_list_.size(), 0U);
 
   uint32_t compact_id = 0;
   blockfile_manager->new_block(logic_id, compact_id, C_COMPACT_BLOCK);
   // check the index_header
-  chdir("./disk/index");
-  sprintf(index_name, "%d", compact_id);
+  sprintf(index_name, "./disk/index/%d", compact_id);
   fp=fopen(index_name, "r");
   memset(reinterpret_cast<char*>(&index_header), 0, sizeof(IndexHeader));
   fread(reinterpret_cast<char*>(&index_header), sizeof(IndexHeader), 1, fp);
@@ -332,13 +386,15 @@ TEST_F(BlockFileManagerTest, DelBlocktest)
   EXPECT_EQ(index_header.block_info_.seq_no_, static_cast<uint32_t>(1));
   EXPECT_EQ(index_header.flag_, C_DATA_COMPACT);
   fclose(fp);
-  chdir("../..");
   //delete it
+  old_size = GCObjectManager::instance().object_list_.size();
   blockfile_manager->del_block(logic_id, C_COMPACT_BLOCK); //type :3
-  //check again
-  chdir("./disk/index");
+  new_size = GCObjectManager::instance().object_list_.size();
+  EXPECT_EQ(new_size - old_size, 1U);
+  // check gc
   EXPECT_NE(access(index_name, 0), 0);
-  chdir("../..");
+  sleep(2*SYSPARAM_DATASERVER.object_dead_max_time_);
+  EXPECT_EQ(GCObjectManager::instance().object_list_.size(), 0U);
 }
 
 TEST_F(BlockFileManagerTest, GetLogicBlocktest)
@@ -511,7 +567,7 @@ TEST_F(BlockFileManagerTest, QueryInfotest)
   int64_t used_size = 100;
   used_size *= 16777216;
   // ratio=0.5, so 2*main_block_count*ext_block_size
-  used_size += 104857600L; 
+  used_size += 104857600L;
   used_size += 104857600L;
   EXPECT_EQ(used_bytes, used_size);
   EXPECT_EQ(total_bytes, 21347958784LL);
@@ -520,7 +576,7 @@ TEST_F(BlockFileManagerTest, QueryInfotest)
 
 TEST_F(BlockFileManagerTest, LoadSuperBlocktest)
 {
-  SysParam::FileSystemParam fs_param;
+  FileSystemParameter fs_param;
   fs_param.mount_name_ = "./disk";
   fs_param.super_block_reserve_offset_ = 0;
   blockfile_manager->load_super_blk(fs_param);
@@ -568,6 +624,10 @@ TEST_F(BlockFileManagerTest, CompactBlocktest)
   // delete block
   blockfile_manager->del_block(logic_id, C_MAIN_BLOCK);
   blockfile_manager->del_block(logic_id, C_COMPACT_BLOCK);
+  // check gc
+  EXPECT_EQ(GCObjectManager::instance().object_list_.size(), 2U);
+  sleep(3*SYSPARAM_DATASERVER.object_dead_max_time_);
+  EXPECT_EQ(GCObjectManager::instance().object_list_.size(), 0U);
 }
 
 TEST_F(BlockFileManagerTest, BitMaptest)
@@ -641,6 +701,7 @@ TEST_F(BlockFileManagerTest, BitMaptest)
 
 int main(int argc, char* argv[])
 {
+  testing::GTEST_FLAG(catch_exceptions) = 1;
   testing::InitGoogleTest(&argc, argv);
   return RUN_ALL_TESTS();
 }

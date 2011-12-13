@@ -54,22 +54,23 @@ int serialize(char* oper, vector<std::string>& operlist, int32_t index, int32_t 
   return 0;
 }
 
-int write_file(ThreadParam& param, TfsClient* tfs_file, char* tfs_name, vector<std::string>& file_list,
+int write_file(ThreadParam& param, TfsClient* tfsclient, char* tfs_name, vector<std::string>& file_list,
     TimeConsumed& write_time_consumed, Stater& write_stater, const char* data)
 {
-  uint32_t block_id = 0;
-  uint64_t file_id = 0;
+  //uint32_t block_id = 0;
+  //uint64_t file_id = 0;
   bool random = param.max_size_ > param.min_size_;
   uint32_t write_size = param.max_size_;
   Timer timer;
   timer.start();
-  int ret = retry_open_file(tfs_file, tfs_name, (char*) ".jpg", WRITE_MODE);
-  convname(tfs_file->get_file_name(), (char*) ".jpg", block_id, file_id);
-  if (ret == TFS_ERROR)
+  int fd;
+  int ret = retry_open_file(tfsclient, tfs_name, (char*) ".jpg", T_WRITE, fd);
+  //convname(tfs_file->get_file_name(), (char*) ".jpg", block_id, file_id);
+  if (ret != EXIT_SUCCESS)
   {
-    fprintf(stderr, "index:%d, tfsopen failed(%u), (%" PRI64_PREFIX "u), (%s), err(%s)\n", param.index_, block_id, file_id,
-        tfs_file->get_file_name(), tfs_file->get_error_message());
+    fprintf(stderr, "index:%d, tfsopen failed\n", param.index_); 
     ++write_time_consumed.fail_count_;
+    ++write_time_consumed.total_count_;
     return ret;
   }
   else
@@ -77,7 +78,7 @@ int write_file(ThreadParam& param, TfsClient* tfs_file, char* tfs_name, vector<s
     write_time_consumed.time_consumed_ = timer.consume();
     if (param.profile_)
     {
-      printf("index:%d, tfsopen ok.(%s), spend (%" PRI64_PREFIX "d)\n", param.index_, tfs_file->get_file_name(),
+      printf("index:%d, tfsopen ok. spend (%" PRI64_PREFIX "d)\n", param.index_, 
           write_time_consumed.time_consumed_);
     }
   }
@@ -91,13 +92,13 @@ int write_file(ThreadParam& param, TfsClient* tfs_file, char* tfs_name, vector<s
   }
 
   param.file_size_ += write_size;
-  ret = write_data(tfs_file, (char*) data, write_size);
+  ret = write_data(tfsclient, fd, const_cast<char*>(data), write_size);
   if (ret < 0)
   {
-    fprintf(stderr, "index:%d, tfswrite failed(%u), (%" PRI64_PREFIX "u), (%s), err(%s)\n", param.index_, block_id, file_id,
-        tfs_file->get_file_name(), tfs_file->get_error_message());
-    tfs_file->tfs_close();
+    fprintf(stderr, "index:%d, tfswrite failed\n", param.index_); 
+    tfsclient->close(fd);
     ++write_time_consumed.fail_count_;
+    ++write_time_consumed.total_count_;
     return ret;
   }
   else
@@ -105,12 +106,15 @@ int write_file(ThreadParam& param, TfsClient* tfs_file, char* tfs_name, vector<s
     write_time_consumed.time_consumed_ = timer.consume();
     if (param.profile_)
     {
-      printf("index:%d, tfswrite(%u), (%" PRI64_PREFIX "u), (%s) completed, spend (%" PRI64_PREFIX "d)\n", param.index_, block_id, file_id,
-          tfs_file->get_file_name(), write_time_consumed.time_consumed_);
-      print_rate(ret, write_time_consumed.time_consumed_);
+      printf("index:%d, tfswrite completed, spend (%" PRI64_PREFIX "d)\n", param.index_, 
+        write_time_consumed.time_consumed_);
     }
 
-    ret = tfs_file->tfs_close();
+    char ret_name[FILE_NAME_LEN+1];
+    if (!tfs_name)
+      ret = tfsclient->close(fd, ret_name, FILE_NAME_LEN+1);
+    else
+      ret = tfsclient->close(fd);
     if (ret == TFS_SUCCESS)
     {
       write_time_consumed.time_consumed_ = timer.consume();
@@ -119,20 +123,20 @@ int write_file(ThreadParam& param, TfsClient* tfs_file, char* tfs_name, vector<s
 
       if (param.profile_)
       {
-        printf("index:%d, tfs_close(%u), (%" PRI64_PREFIX "u), (%s) completed, spend (%" PRI64_PREFIX "d)\n", param.index_, block_id, file_id,
-            tfs_file->get_file_name(), write_time_consumed.time_consumed_);
+        printf("index:%d, tfs_close, completed, spend (%" PRI64_PREFIX "d)\n", param.index_,
+            write_time_consumed.time_consumed_);
       }
       if (!tfs_name)
       {
-        file_list.push_back(tfs_file->get_file_name());
+        file_list.push_back(ret_name);
       }
     }
     else
     {
       std::string type = (!tfs_name) ? "writeop" : "updateop";
-      fprintf(stderr, "index:%d, tfs_close failed. type: %s. (%u): (%" PRI64_PREFIX "u), (%s), err(%s)\n", param.index_,
-          type.c_str(), block_id, file_id, tfs_file->get_file_name(), tfs_file->get_error_message());
+      fprintf(stderr, "index:%d, tfs_close failed. type: %s.\n", param.index_, type.c_str());
       ++write_time_consumed.fail_count_;
+      ++write_time_consumed.total_count_;
       return ret;
     }
   }
@@ -221,8 +225,8 @@ void* mix_worker(void* arg)
    tfs_file.set_session(&session);
    */
   printf("init connection to nameserver:%s\n", param.ns_ip_port_.c_str());
-  TfsClient tfsclient;
-	int iret = tfsclient.initialize(param.ns_ip_port_);
+  TfsClient *tfsclient = TfsClient::Instance();
+	int iret = tfsclient->initialize(param.ns_ip_port_.c_str());
 	if (iret != TFS_SUCCESS)
 	{
 		return NULL;
@@ -289,7 +293,7 @@ void* mix_worker(void* arg)
 
     for (i = 0; i < PER_WRITE; i++)
     {
-      write_file(param, &tfsclient, NULL, write_file_list, write_time_consumed, write_stater, data);
+      write_file(param, tfsclient, NULL, write_file_list, write_time_consumed, write_stater, data);
     }
 
     for (i = 0; i < PER_UPDATE; i++)
@@ -300,7 +304,7 @@ void* mix_worker(void* arg)
         vit = read_file_list.begin();
       }
 
-      int ret = write_file(param, &tfsclient, (char*) (*vit).c_str(), write_file_list, update_time_consumed,
+      int ret = write_file(param, tfsclient, (char*) (*vit).c_str(), write_file_list, update_time_consumed,
           update_stater, data);
       if (0 == ret)
       {
@@ -318,7 +322,8 @@ void* mix_worker(void* arg)
       }
 
       timer.start();
-      int ret = tfsclient.unlink((char*) (*vit).c_str(), ".jpg", 0);
+      int64_t file_size;
+      int ret = tfsclient->unlink(file_size, (char*) (*vit).c_str(), ".jpg");
       if (ret != TFS_SUCCESS)
       {
         printf("thread (%d) unlink file fail (%s)\n", param.index_, (*vit).c_str());

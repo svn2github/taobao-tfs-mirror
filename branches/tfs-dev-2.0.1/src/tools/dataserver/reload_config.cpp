@@ -6,7 +6,7 @@
  * published by the Free Software Foundation.
  *
  *
- * Version: $Id: reloadconfig.cpp 868 2011-09-29 05:07:38Z duanfei@taobao.com $
+ * Version: $Id: reload_config.cpp 868 2011-09-29 05:07:38Z duanfei@taobao.com $
  *
  * Authors:
  *   duolong <duolong@taobao.com>
@@ -76,7 +76,7 @@ int main(int argc, char* argv[])
 {
   if (argc < 2)
   {
-    printf("Usage: %s srcip:port switchclusterflag(default:1 switch. 0: no switch)\n\n", argv[0]);
+    printf("Usage: %s ds_ip:port switch_cluster_flag(default:1 switch. 0: no switch)\n\n", argv[0]);
     return TFS_ERROR;
   }
 

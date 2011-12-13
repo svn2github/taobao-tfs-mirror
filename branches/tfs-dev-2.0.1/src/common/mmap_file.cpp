@@ -11,9 +11,9 @@
  * Authors:
  *   duolong <duolong@taobao.com>
  *      - initial release
- *   qushan<qushan@taobao.com> 
+ *   qushan<qushan@taobao.com>
  *      - modify 2009-03-27
- *   zongdai <zongdai@taobao.com> 
+ *   zongdai <zongdai@taobao.com>
  *      - modify 2010-04-23
  *
  */
@@ -23,7 +23,7 @@
 
 namespace tfs
 {
-  namespace common 
+  namespace common
   {
     MMapFile::MMapFile() :
       size_(0), fd_(-1), data_(NULL)

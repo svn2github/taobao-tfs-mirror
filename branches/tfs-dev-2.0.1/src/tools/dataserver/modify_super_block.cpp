@@ -32,7 +32,7 @@ int main(int argc, char* argv[])
   int32_t i;
   string server_index;
 
-  while ((i = getopt(argc, argv, "f:vh")) != EOF) 
+  while ((i = getopt(argc, argv, "f:i:vh")) != EOF) 
   {
     switch (i) 
     {

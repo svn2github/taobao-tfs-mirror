@@ -51,7 +51,7 @@ class MMapFileOperationTest: public ::testing::Test
     {
     }
   protected:   
-     MMapOption mmap_option;
+     tfs::common::MMapOption mmap_option;
 };
 
 TEST_F(MMapFileOperationTest, testWriteRead) 

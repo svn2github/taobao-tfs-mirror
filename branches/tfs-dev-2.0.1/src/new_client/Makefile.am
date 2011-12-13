@@ -6,12 +6,17 @@ else
 trim_cmd=sed -i -n -e '/ifdef \+WITH_UNIQUE_STORE/{h;d}' -e '/endif/{x;/ifdef \+WITH_UNIQUE_STORE/d;x;p;d}' -e 'x;/ifdef \+WITH_UNIQUE_STORE/{x;d};x;p'
 endif
 
+if WITH_TAIR_CACHE
+tair_cache_source=tair_cache_helper.cpp tair_cache_helper.h
+endif
+
 AM_CPPFLAGS=-fPIC -I${top_srcdir}/src\
 	    -I$(TBLIB_ROOT)/include/tbsys\
 	    -I$(TBLIB_ROOT)/include/tbnet\
-	    $(UNIQUE_STORE_CPPFLAGS)
+	    $(UNIQUE_STORE_CPPFLAGS)\
+	    $(TAIR_CACHE_CPPFLAGS)
 
-AM_LDFLAGS=-lrt -lpthread -ldl -luuid
+AM_LDFLAGS=-lrt -lpthread -ldl -luuid $(TAIR_CACHE_LDFLAGS)
 
 lib_LTLIBRARIES= libtfsclient.la libtfsclient_c.la
 
@@ -26,7 +31,8 @@ api_source_list = tfs_file.cpp tfs_large_file.cpp tfs_small_file.cpp tfs_session
 									tfs_client_impl.h tfs_client_metrics.h tfs_file.h tfs_large_file.h\
 									tfs_rc_client_api.h tfs_rc_client_api_impl.h tfs_rc_helper.h tfs_session.h \
 									tfs_meta_client_api.h tfs_meta_client_api_impl.h tfs_meta_helper.h tfs_meta_manager.h \
-									tfs_session_pool.h tfs_small_file.h ${unique_store_source}
+									tfs_session_pool.h tfs_small_file.h ${unique_store_source} \
+                  ${tair_cache_source}
 
 ld_fg = $(AM_LDFLAGS) \
         $(top_srcdir)/src/message/libtfsmessage.a \

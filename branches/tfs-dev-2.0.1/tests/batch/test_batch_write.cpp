@@ -18,8 +18,8 @@
 #include <stdio.h>
 #include "common/func.h"
 #include "common/define.h"
-#include "client/tfs_session.h"
-#include "client/tfs_file.h"
+#include "new_client/tfs_session.h"
+#include "new_client/tfs_file.h"
 #include "util.h"
 #include "thread.h"
 
@@ -58,8 +58,8 @@ void* write_worker(void* arg)
   }
 */
   printf("init connection to nameserver:%s\n", param.ns_ip_port_.c_str());
-  TfsClient tfsclient;
-	int iret = tfsclient.initialize(param.ns_ip_port_);
+  TfsClient* tfsclient = TfsClient::Instance();
+	int iret = tfsclient->initialize(param.ns_ip_port_.c_str());
 	if (iret != TFS_SUCCESS)
 	{
 		return NULL;
@@ -74,8 +74,8 @@ void* write_worker(void* arg)
 
   int32_t ret = TFS_SUCCESS;
   int64_t time_consumed = 0;
-  uint32_t block_id = 0;
-  uint64_t file_id = 0;
+  //uint32_t block_id = 0;
+  //uint64_t file_id = 0;
   uint32_t failed_count = 0;
   char name_buf[50];
 
@@ -86,18 +86,19 @@ void* write_worker(void* arg)
   total_timer.start();
 
   int32_t i = 0;
+  int fd;
+  char ret_name[FILE_NAME_LEN+1];
   for (i = 0; i < param.file_count_; ++i)
   {
     timer.start();
 
     // open a remote file
-    ret = retry_open_file(&tfsclient, NULL, (char*)".jpg", WRITE_MODE);
+    ret = retry_open_file(tfsclient, NULL, (char*)".jpg", T_WRITE, fd);
     // get block id and file id from remote file name
-    convname(tfsclient.get_file_name(), (char*)".jpg", block_id, file_id);
-    if (ret == TFS_ERROR)
+    //convname(tfsclient.get_file_name(), (char*)".jpg", block_id, file_id);
+    if (ret != EXIT_SUCCESS)
     {
-      fprintf(stderr, "index:%d, tfsopen failed(%u),(%" PRI64_PREFIX "u),(%s),err(%s)\n", param.index_, block_id, file_id,
-          tfsclient.get_file_name(), tfsclient.get_error_message());
+      fprintf(stderr, "index:%d, tfsopen failed\n", param.index_);
       ++failed_count;
       continue;
     }
@@ -106,7 +107,7 @@ void* write_worker(void* arg)
       time_consumed = timer.consume();
       if (param.profile_)
       {
-        printf("index:%d, tfsopen ok.(%s), spend (%" PRI64_PREFIX "d)\n", param.index_, tfsclient.get_file_name(), time_consumed);
+        printf("index:%d, tfsopen ok, spend (%" PRI64_PREFIX "d)\n", param.index_, time_consumed);
       }
     }
 
@@ -117,12 +118,11 @@ void* write_worker(void* arg)
     }
     param.file_size_ += write_size;
 
-    ret = write_data(&tfsclient, data, write_size);
+    ret = write_data(tfsclient, fd, data, write_size);
     if (ret < 0)
     {
-      fprintf(stderr, "index:%d, tfswrite failed(%u), (%" PRI64_PREFIX "u),(%s), err(%s)\n", param.index_, block_id, file_id,
-          tfsclient.get_file_name(), tfsclient.get_error_message());
-      tfsclient.tfs_close();
+      fprintf(stderr, "index:%d, tfswrite failed\n", param.index_); 
+      tfsclient->close(fd);
       ++failed_count;
     }
     else
@@ -130,11 +130,10 @@ void* write_worker(void* arg)
       time_consumed = timer.consume();
       if (param.profile_)
       {
-        printf("index:%d, tfswrite(%u), (%" PRI64_PREFIX "u), (%s) completed, spend (%" PRI64_PREFIX "d)\n", param.index_, block_id, file_id,
-            tfsclient.get_file_name(), time_consumed);
+        printf("index:%d, tfswrite completed, spend (%" PRI64_PREFIX "d)\n", param.index_, time_consumed);
         print_rate(ret, time_consumed);
       }
-      ret = tfsclient.tfs_close();
+      ret = tfsclient->close(fd, ret_name, FILE_NAME_LEN+1);
       if (ret == TFS_SUCCESS)
       {
         time_consumed = timer.consume();
@@ -155,26 +154,25 @@ void* write_worker(void* arg)
 
         if (param.profile_)
         {
-          printf("index:%d, tfs_close(%u), (%" PRI64_PREFIX "u), (%s) completed, spend (%" PRI64_PREFIX "d)\n", param.index_, block_id, file_id,
-              tfsclient.get_file_name(), time_consumed);
+          printf("index:%d, tfs_close (%s) completed, spend (%" PRI64_PREFIX "d)\n", param.index_, 
+              ret_name, time_consumed);
         }
 
-        std::string filename = tfsclient.get_file_name();
-        if (file_name_set.find(filename) != file_name_set.end())
+        //std::string filename = tfsclient.get_file_name();
+        if (file_name_set.find(ret_name) != file_name_set.end())
         {
-          fprintf(stderr, "error ! filename (%s) duplicate\n", filename.c_str());
+          fprintf(stderr, "error ! filename (%s) duplicate\n", ret_name);
         }
         else
         {
-          file_name_set.insert(filename);
-          sprintf(name_buf, "%s\n", tfsclient.get_file_name());
+          file_name_set.insert(ret_name);
+          sprintf(name_buf, "%s\n", ret_name);
           write(write_fd, name_buf, strlen(name_buf));
         }
       }
       else
       {
-        fprintf(stderr, "index:%d, tfsclose failed(%u),(%" PRI64_PREFIX "u),(%s), err(%s)\n", param.index_, block_id, file_id,
-            tfsclient.get_file_name(), tfsclient.get_error_message());
+        fprintf(stderr, "index:%d, tfsclose failed\n", param.index_); 
         ++failed_count;
       }
     }
@@ -187,21 +185,17 @@ void* write_worker(void* arg)
   ((ThreadParam*) arg)->fail_time_consumed_ = time_consumed - accumlate_time_consumed;
   ((ThreadParam*) arg)->file_size_ = param.file_size_;
 
-  if (0 == success_count)
-  {
-    success_count = INT_MAX;
-  }
-  double iops = static_cast<double> (success_count) / (static_cast<double> (time_consumed) / 1000000);
-  double rate = static_cast<double> (time_consumed) / success_count;
+  double iops = calc_iops(success_count, time_consumed);
+  double rate = calc_rate(success_count, time_consumed);
 
-  double aiops = static_cast<double> (success_count) / (static_cast<double> (accumlate_time_consumed) / 1000000);
-  double arate = static_cast<double> (accumlate_time_consumed) / success_count;
+  double aiops = calc_iops(success_count, accumlate_time_consumed);
+  double arate = calc_rate(success_count, accumlate_time_consumed);
 
   printf(
       "index  count  succ   fail   succ_time  fail_time  min      max      avg      iops     rate      aiops    arate \n");
   printf("%-6d %-6d %-6d %-6d %-10" PRI64_PREFIX "d %-10" PRI64_PREFIX "d %-8" PRI64_PREFIX "d %-8" PRI64_PREFIX "d %-8" PRI64_PREFIX "d %-8.3f %-8.3f %-8.3f %-8.3f\n", param.index_,
       param.file_count_, success_count, failed_count, accumlate_time_consumed, time_consumed - accumlate_time_consumed,
-      min_time_consumed, max_time_consumed, accumlate_time_consumed / success_count, iops, rate, aiops, arate);
+      min_time_consumed, max_time_consumed, (!success_count)? 0 : (accumlate_time_consumed / success_count), iops, rate, aiops, arate);
   stater.dump_time_stat();
   close(write_fd);
 
@@ -216,13 +210,13 @@ int main(int argc, char** argv)
   int32_t ret = fetch_input_opt(argc, argv, input_param, thread_count);
   if (ret != TFS_SUCCESS || input_param.ns_ip_port_.empty() || input_param.file_count_ == 0 || thread_count > THREAD_SIZE)
   {
-    printf("usage: -d -c -r\n");
+    printf("usage: -d nsip:port -c file_count -r size_range\n");
     exit(-1);
   }
 
   if ((input_param.min_size_ > input_param.max_size_) || (0 == input_param.max_size_))
   {
-    printf("usage: -d -c -r, must size range. \n");
+    printf("usage: -d nsip:port -c file_count -r size_range, must size range. \n");
     exit(-1);
   }
 

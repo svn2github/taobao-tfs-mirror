@@ -108,6 +108,9 @@ namespace tfs
             const char* file_path,
             common::FileMetaInfo& file_meta_info);
 
+        bool is_dir_exist(const int64_t app_id, const int64_t uid, const char* dir_path);
+        bool is_file_exist(const int64_t app_id, const int64_t uid, const char* file_path);
+
         int open(const int64_t app_id, const int64_t uid, const char* name, const RcClient::RC_MODE mode);
         int64_t pread(const int fd, void* buf, const int64_t count, const int64_t offset);
         int64_t pwrite(const int fd, const void* buf, const int64_t count, const int64_t offset);

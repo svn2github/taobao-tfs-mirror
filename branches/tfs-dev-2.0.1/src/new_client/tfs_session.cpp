@@ -16,6 +16,7 @@
 #include <tbsys.h>
 #include <Memory.hpp>
 #include "tfs_session.h"
+#include "bg_task.h"
 #include "common/client_manager.h"
 #include "common/new_client.h"
 #include "common/status_message.h"
@@ -28,11 +29,23 @@ using namespace tfs::common;
 using namespace tfs::message;
 using namespace std;
 
-TfsSession::TfsSession(const std::string& nsip, const int64_t cache_time, const int64_t cache_items)
-  :ns_addr_(0), ns_addr_str_(nsip), block_cache_time_(cache_time), block_cache_items_(cache_items),
-		cluster_id_(0), use_cache_(cache_items <= 0 ? USE_CACHE_FLAG_NO : USE_CACHE_FLAG_YES)
+TfsSession::TfsSession(const std::string& nsip,
+           const int64_t cache_time, const int64_t cache_items)
+  :ns_addr_(0), ns_addr_str_(nsip), cluster_id_(0),
+#ifdef WITH_TAIR_CACHE
+    remote_cache_is_init_(false), remote_cache_helper_(NULL),
+#endif
+    block_cache_time_(cache_time), block_cache_items_(cache_items)
 {
-  if (USE_CACHE_FLAG_YES == use_cache_)
+  if (cache_items <= 0)
+  {
+    ClientConfig::use_cache_ &= ~USE_CACHE_FLAG_LOCAL;
+  }
+  else
+  {
+    ClientConfig::use_cache_ |= USE_CACHE_FLAG_LOCAL;
+  }
+  if (USE_CACHE_FLAG_LOCAL & ClientConfig::use_cache_)
     block_cache_map_.resize(block_cache_items_);
 #ifdef WITH_UNIQUE_STORE
   unique_store_ = NULL;
@@ -42,6 +55,9 @@ TfsSession::TfsSession(const std::string& nsip, const int64_t cache_time, const 
 TfsSession::~TfsSession()
 {
   block_cache_map_.clear();
+#ifdef WITH_TAIR_CACHE
+  tbsys::gDelete(remote_cache_helper_);
+#endif
 #ifdef WITH_UNIQUE_STORE
   tbsys::gDelete(unique_store_);
 #endif
@@ -67,12 +83,205 @@ int TfsSession::initialize()
 
     if (TFS_SUCCESS == ret)
     {
+#ifndef TFS_TEST
       ret = get_cluster_id_from_ns();
+#endif
     }
   }
 
   return ret;
 }
+
+#ifdef WITH_TAIR_CACHE
+int TfsSession::init_remote_cache_helper()
+{
+  int ret = TFS_ERROR;
+  tbutil::Mutex::Lock lock(mutex_);
+
+  if (NULL == remote_cache_helper_)
+  {
+    remote_cache_helper_ = new TairCacheHelper();
+    ret = remote_cache_helper_->initialize(ClientConfig::remote_cache_master_addr_.c_str(),
+            ClientConfig::remote_cache_slave_addr_.c_str(), ClientConfig::remote_cache_group_name_.c_str(),
+            ClientConfig::remote_cache_area_);
+    if (TFS_SUCCESS != ret)
+    {
+      tbsys::gDelete(remote_cache_helper_);
+    }
+    remote_cache_is_init_ = TFS_SUCCESS == ret ? true: false;
+    TBSYS_LOG(DEBUG, "init remote cache helper(master: %s, slave: %s, group_name: %s, area: %d) %s",
+              ClientConfig::remote_cache_master_addr_.c_str(), ClientConfig::remote_cache_slave_addr_.c_str(),
+              ClientConfig::remote_cache_group_name_.c_str(), ClientConfig::remote_cache_area_,
+              remote_cache_is_init_ ? "success" : "fail");
+  }
+  else
+  {
+    TBSYS_LOG(DEBUG, "remote cache helper already init");
+    ret = TFS_SUCCESS;
+  }
+  return ret;
+}
+
+bool TfsSession::check_init()
+{
+  if (!remote_cache_is_init_)
+  {
+    TBSYS_LOG(WARN, "remote cache helper not initialized.");
+  }
+
+  return remote_cache_is_init_;
+}
+
+void TfsSession::insert_remote_block_cache(const uint32_t block_id, const VUINT64& rds)
+{
+  if (USE_CACHE_FLAG_REMOTE & ClientConfig::use_cache_)
+  {
+    int ret = TFS_SUCCESS;
+    if (!check_init())
+    {
+      ret = init_remote_cache_helper();
+    }
+    if (TFS_SUCCESS == ret)
+    {
+      BlockCacheKey block_cache_key;
+      BlockCacheValue block_cache_value;
+      block_cache_key.set_key(ns_addr_, block_id);
+      block_cache_value.set_ds_list(rds);
+      ret = remote_cache_helper_->put(block_cache_key, block_cache_value);
+      if (TFS_SUCCESS == ret)
+      {
+        TBSYS_LOG(DEBUG, "remote cache insert, blockid: %u", block_id);
+      }
+      else
+      {
+        TBSYS_LOG(WARN, "remote cache insert fail, blockid: %u, ret: %d", block_id, ret);
+      }
+    }
+  }
+}
+
+int TfsSession::query_remote_block_cache(const uint32_t block_id, VUINT64& rds)
+{
+  int ret = TFS_SUCCESS;
+  if (USE_CACHE_FLAG_REMOTE & ClientConfig::use_cache_)
+  {
+    if (!check_init())
+    {
+      ret = init_remote_cache_helper();
+    }
+    if (TFS_SUCCESS == ret)
+    {
+      BlockCacheKey block_cache_key;
+      BlockCacheValue block_cache_value;
+      block_cache_key.set_key(ns_addr_, block_id);
+      ret = remote_cache_helper_->get(block_cache_key, block_cache_value);
+      if (TFS_SUCCESS == ret)
+      {
+        if (block_cache_value.ds_.size() > 0)
+        {
+          rds = block_cache_value.ds_;
+          TBSYS_LOG(DEBUG, "query remote cache, blockid: %u", block_id);
+        }
+        else
+        {
+          ret = TFS_ERROR;
+        }
+      }
+    }
+  }
+  else
+  {
+    ret = TFS_ERROR;
+  }
+  return ret;
+}
+
+int TfsSession::query_remote_block_cache(const std::map<uint32_t, size_t> & block_list,
+                std::map<size_t, VUINT64> & blk_ds_list)
+{
+  int ret = TFS_SUCCESS;
+  if (USE_CACHE_FLAG_REMOTE & ClientConfig::use_cache_)
+  {
+    if (!check_init())
+    {
+      ret = init_remote_cache_helper();
+    }
+    if (TFS_SUCCESS == ret)
+    {
+      tbutil::Mutex::Lock lock(mutex_);
+      std::vector<BlockCacheKey*> keys;
+      BLK_CACHE_KV_MAP kv_data;
+      std::map<uint32_t, size_t>::const_iterator blk_iter = block_list.begin();
+      for (; block_list.end() != blk_iter; blk_iter++)
+      {
+        BlockCacheKey* block_cache_key = new BlockCacheKey();
+        block_cache_key->set_key(ns_addr_, blk_iter->first);
+        keys.push_back(block_cache_key);
+      }
+      ret = remote_cache_helper_->mget(keys, kv_data);
+      if (TFS_SUCCESS == ret)
+      {
+        uint32_t block_id = 0;
+        size_t seg_idx = 0;
+        BLK_CACHE_KV_MAP_ITER kv_iter = kv_data.begin();
+        for (; kv_data.end() != kv_iter; kv_iter++)
+        {
+          const BlockCacheKey& key = kv_iter->first;
+          const BlockCacheValue& value = kv_iter->second;
+          block_id = key.block_id_;
+          std::map<uint32_t, size_t>::const_iterator iter = block_list.find(block_id);
+          if (block_list.end() != iter)
+          {
+            if (value.ds_.size() > 0)
+            {
+              seg_idx = iter->second;
+              blk_ds_list.insert(std::map<size_t, VUINT64>::value_type(seg_idx, value.ds_));
+            }
+          }
+          else
+          {
+            TBSYS_LOG(WARN, "get an unexpected block's ds list, something must be wrong!");
+          }
+        }
+      }
+      // release block cache keys
+      std::vector<BlockCacheKey*>::iterator key_iter = keys.begin();
+      for (; keys.end() != key_iter; key_iter++)
+      {
+        tbsys::gDelete(*key_iter);
+      }
+    }
+  }
+  else
+  {
+    ret = TFS_ERROR;
+  }
+  return ret;
+}
+
+void TfsSession::remove_remote_block_cache(const uint32_t block_id)
+{
+  if (USE_CACHE_FLAG_REMOTE & ClientConfig::use_cache_)
+  {
+    int ret = TFS_SUCCESS;
+    if (!check_init())
+    {
+      ret = init_remote_cache_helper();
+    }
+    if (TFS_SUCCESS == ret)
+    {
+      BlockCacheKey block_cache_key;
+      block_cache_key.set_key(ns_addr_, block_id);
+      int ret = remote_cache_helper_->remove(block_cache_key);
+      if (TFS_SUCCESS == ret)
+      {
+        TBSYS_LOG(DEBUG, "remote cache remove, blockid: %u", block_id);
+        BgTask::get_stat_mgr().update_entry(StatItem::client_cache_stat_, StatItem::remote_remove_count_, 1);
+      }
+    }
+  }
+}
+#endif
 
 #ifdef WITH_UNIQUE_STORE
 int TfsSession::init_unique_store(const char* master_addr, const char* slave_addr,
@@ -102,12 +311,13 @@ int TfsSession::init_unique_store(const char* master_addr, const char* slave_add
 }
 #endif
 
-int TfsSession::get_block_info(uint32_t& block_id, VUINT64& rds, int32_t flag)
+int TfsSession::get_block_info(SegmentData& seg_data, int32_t flag)
 {
   int ret = TFS_SUCCESS;
+  uint32_t& block_id = seg_data.seg_info_.block_id_;
   if (flag & T_UNLINK)
   {
-    ret = get_block_info_ex(block_id, rds, T_WRITE);
+    ret = get_block_info_ex(block_id, seg_data.ds_, T_WRITE);
   }
   else if (flag & T_WRITE)
   {
@@ -115,7 +325,7 @@ int TfsSession::get_block_info(uint32_t& block_id, VUINT64& rds, int32_t flag)
     {
       flag |= T_CREATE;
     }
-    ret = get_block_info_ex(block_id, rds, flag);
+    ret = get_block_info_ex(block_id, seg_data.ds_, flag);
   }
   else // read
   {
@@ -126,34 +336,81 @@ int TfsSession::get_block_info(uint32_t& block_id, VUINT64& rds, int32_t flag)
     }
     else
     {
-      // search in the local cache
-      bool flag = false;
-      if (USE_CACHE_FLAG_YES == use_cache_)
+      if (ClientConfig::use_cache_ & USE_CACHE_FLAG_LOCAL)
       {
+        // search in the local cache
         tbutil::Mutex::Lock lock(mutex_);
         BlockCache* block_cache = block_cache_map_.find(block_id);
         if (block_cache &&
-            (block_cache->last_time_ >= time(NULL) - block_cache_time_))
+            (block_cache->last_time_ >= time(NULL) - block_cache_time_) &&
+            (block_cache->ds_.size() > 0))
         {
-          TBSYS_LOG(DEBUG, "cache hit, blockid: %u", block_id);
-          rds = block_cache->ds_;
-          flag = true;
+          TBSYS_LOG(DEBUG, "local cache hit, blockid: %u", block_id);
+          BgTask::get_stat_mgr().update_entry(StatItem::client_cache_stat_, StatItem::local_cache_hit_, 1);
+          seg_data.ds_ = block_cache->ds_;
+          seg_data.reset_status();
+          seg_data.cache_hit_ = CACHE_HIT_LOCAL;
+        }
+        else
+        {
+          TBSYS_LOG(DEBUG, "local cache miss, blockid: %u", block_id);
+          BgTask::get_stat_mgr().update_entry(StatItem::client_cache_stat_, StatItem::local_cache_miss_, 1);
         }
       }
 
-      if (!flag)
+#ifdef WITH_TAIR_CACHE
+      if (ClientConfig::use_cache_ & USE_CACHE_FLAG_REMOTE)
       {
-        TBSYS_LOG(DEBUG, "cache miss, blockid: %u", block_id);
-        if ((ret = get_block_info_ex(block_id, rds, T_READ)) == TFS_SUCCESS)
+        if (CACHE_HIT_NONE == seg_data.cache_hit_)
         {
-          if (rds.size() <= 0)
+          // query remote tair cache
+          ret = query_remote_block_cache(block_id, seg_data.ds_);
+          if (TFS_SUCCESS == ret)
           {
-            TBSYS_LOG(ERROR, "get block %u info failed, dataserver size %u <= 0", block_id, rds.size());
+            TBSYS_LOG(DEBUG, "remote cache hit, blockid: %u", block_id);
+            BgTask::get_stat_mgr().update_entry(StatItem::client_cache_stat_, StatItem::remote_cache_hit_, 1);
+            if (ClientConfig::use_cache_ & USE_CACHE_FLAG_LOCAL)
+            {
+              insert_block_cache(block_id, seg_data.ds_);
+            }
+            seg_data.reset_status();
+            seg_data.cache_hit_ = CACHE_HIT_REMOTE;
+          }
+          else
+          {
+            TBSYS_LOG(DEBUG, "remote cache miss, blockid: %u", block_id);
+            BgTask::get_stat_mgr().update_entry(StatItem::client_cache_stat_, StatItem::remote_cache_miss_, 1);
+          }
+        }
+      }
+#endif
+
+      // get block info from ns
+      if (CACHE_HIT_NONE == seg_data.cache_hit_)
+      {
+        if ((ret = get_block_info_ex(block_id, seg_data.ds_, T_READ)) == TFS_SUCCESS)
+        {
+          if (seg_data.ds_.size() <= 0)
+          {
+            TBSYS_LOG(ERROR, "get block %u info failed, dataserver size %u <= 0", block_id, seg_data.ds_.size());
             ret = TFS_ERROR;
           }
           else
           {
-            insert_block_cache(block_id, rds);
+            seg_data.reset_status();
+            // update cache
+            if (ClientConfig::use_cache_ & USE_CACHE_FLAG_LOCAL)
+            {
+              insert_block_cache(block_id, seg_data.ds_);
+              seg_data.cache_hit_ = CACHE_HIT_LOCAL;
+            }
+#ifdef WITH_TAIR_CACHE
+            if (ClientConfig::use_cache_ & USE_CACHE_FLAG_REMOTE)
+            {
+              insert_remote_block_cache(block_id, seg_data.ds_);
+              seg_data.cache_hit_ = CACHE_HIT_REMOTE;
+            }
+#endif
           }
         }
       }
@@ -177,10 +434,13 @@ int TfsSession::get_block_info(SEG_DATA_LIST& seg_list, int32_t flag)
   {
     TBSYS_LOG(DEBUG, "get block info for read. seg size: %d", seg_list.size());
     bool found = false;
-    // search in the local cache
-    if (USE_CACHE_FLAG_YES == use_cache_)
+    size_t cached_block_count = 0;
+#ifdef WITH_TAIR_CACHE
+    std::map<uint32_t, size_t> local_missed_block;
+#endif
+    if (USE_CACHE_FLAG_LOCAL & ClientConfig::use_cache_)
     {
-      size_t block_count = 0;
+      // search in the local cache
       for (size_t i = 0; i < seg_list.size(); i++)
       {
         uint32_t block_id = seg_list[i]->seg_info_.block_id_;
@@ -195,20 +455,69 @@ int TfsSession::get_block_info(SEG_DATA_LIST& seg_list, int32_t flag)
         tbutil::Mutex::Lock lock(mutex_);
         BlockCache* block_cache = block_cache_map_.find(block_id);
         if (block_cache &&
-            (block_cache->last_time_ >= time(NULL) - block_cache_time_))
+            (block_cache->last_time_ >= time(NULL) - block_cache_time_) &&
+            (block_cache->ds_.size() > 0))
         {
-            seg_list[i]->ds_ = block_cache->ds_;
-            seg_list[i]->reset_status();
-            block_count++;
+          seg_list[i]->ds_ = block_cache->ds_;
+          seg_list[i]->reset_status();
+          seg_list[i]->cache_hit_ = CACHE_HIT_LOCAL;
+          cached_block_count++;
+          BgTask::get_stat_mgr().update_entry(StatItem::client_cache_stat_, StatItem::local_cache_hit_, 1);
+        }
+        else
+        {
+          BgTask::get_stat_mgr().update_entry(StatItem::client_cache_stat_, StatItem::local_cache_miss_, 1);
+#ifdef WITH_TAIR_CACHE
+          if (USE_CACHE_FLAG_REMOTE & ClientConfig::use_cache_)
+          {
+            local_missed_block.insert(std::map<uint32_t, size_t>::value_type(block_id, i));
+          }
+#endif
         }
       }
-      if (block_count == seg_list.size())
+      if (cached_block_count == seg_list.size())
       {
-        TBSYS_LOG(DEBUG, "all block id cached. count: %d", block_count);
+        TBSYS_LOG(DEBUG, "all block local cached. count: %d", cached_block_count);
         found = true;
       }
     }
+#ifdef WITH_TAIR_CACHE
+    if (TFS_SUCCESS == ret && (USE_CACHE_FLAG_REMOTE & ClientConfig::use_cache_) && cached_block_count != seg_list.size())
+    {
+      // query remote tair cache
+      TBSYS_LOG(DEBUG, "partial block local cached. count: %d", cached_block_count);
+      std::map<size_t, VUINT64> blk_ds_list;
+      ret = query_remote_block_cache(local_missed_block, blk_ds_list);
+      if (TFS_SUCCESS == ret)
+      {
+        TBSYS_LOG(DEBUG, "partial block remote cached, count: %u", blk_ds_list.size());
+        std::map<size_t, VUINT64>::iterator m_iter = blk_ds_list.begin();
+        for (; blk_ds_list.end() != m_iter; m_iter++)
+        {
+          if (USE_CACHE_FLAG_LOCAL & ClientConfig::use_cache_)
+          {
+            insert_block_cache(seg_list[m_iter->first]->seg_info_.block_id_, m_iter->second);
+          }
+          seg_list[m_iter->first]->cache_hit_ = CACHE_HIT_REMOTE;
+          seg_list[m_iter->first]->ds_ = m_iter->second;
+          seg_list[m_iter->first]->reset_status();
+          BgTask::get_stat_mgr().update_entry(StatItem::client_cache_stat_, StatItem::remote_cache_hit_, 1);
+        }
+        cached_block_count += blk_ds_list.size();
+        if (cached_block_count == seg_list.size())
+        {
+          TBSYS_LOG(DEBUG, "all block cached. count: %d", cached_block_count);
+          found = true;
+        }
+      }
+      else
+      {
+        ret = TFS_SUCCESS;
+      }
+    }
+#endif
 
+    // get block info from ns
     if (TFS_SUCCESS == ret && !found)
     {
       ret = get_block_info_ex(seg_list, T_READ);
@@ -219,12 +528,40 @@ int TfsSession::get_block_info(SEG_DATA_LIST& seg_list, int32_t flag)
 
 int TfsSession::get_block_info_ex(uint32_t& block_id, VUINT64& rds, const int32_t flag)
 {
+  int ret = TFS_ERROR;
+#ifdef TFS_TEST
+  UNUSED(flag);
+  if (0 == block_id) // write
+  {
+    if (block_ds_map_.size() > 0)
+    {
+      block_id = (block_ds_map_.begin())->first;
+      rds = (block_ds_map_.begin())->second;
+      ret = TFS_SUCCESS;
+    }
+    else
+    {
+      ret = EXIT_NO_BLOCK;
+    }
+  }
+  else // read
+  {
+    std::map<uint32_t, VUINT64>::iterator iter = block_ds_map_.find(block_id);
+    if (block_ds_map_.end() != iter)
+    {
+      rds = iter->second;
+      ret = TFS_SUCCESS;
+    }
+    else
+      ret = EXIT_BLOCK_NOT_FOUND;
+  }
+#else
   GetBlockInfoMessage gbi_message(flag);
   gbi_message.set_block_id(block_id);
 
   tbnet::Packet* rsp = NULL;
   NewClient* client = NewClientManager::get_instance().create_client();
-  int ret = send_msg_to_server(ns_addr_, client, &gbi_message, rsp);
+  ret = send_msg_to_server(ns_addr_, client, &gbi_message, rsp);
 
   if (TFS_SUCCESS != ret)
   {
@@ -263,11 +600,53 @@ int TfsSession::get_block_info_ex(uint32_t& block_id, VUINT64& rds, const int32_
     }
   }
   NewClientManager::get_instance().destroy_client(client);
+#endif
   return ret;
 }
 
 int TfsSession::get_block_info_ex(SEG_DATA_LIST& seg_list, const int32_t flag)
 {
+  int ret = TFS_ERROR;
+#ifdef TFS_TEST
+  if (flag & T_READ) // read
+  {
+    size_t block_count = seg_list.size();
+    for (size_t i = 0; i < block_count; i++)
+    {
+      // only query those miss from cache
+      if (CACHE_HIT_NONE == seg_list[i]->cache_hit_)
+      {
+        uint32_t block_id = seg_list[i]->seg_info_.block_id_;
+        std::map<uint32_t, VUINT64>::iterator iter = block_ds_map_.find(block_id);
+        if (block_ds_map_.end() != iter)
+        {
+          seg_list[i]->ds_ = iter->second;
+          seg_list[i]->reset_status();
+          // update cache
+          if (USE_CACHE_FLAG_LOCAL & ClientConfig::use_cache_)
+          {
+            insert_block_cache(block_id, iter->second);
+            seg_list[i]->cache_hit_ = CACHE_HIT_LOCAL;
+          }
+#ifdef WITH_TAIR_CACHE
+          if (USE_CACHE_FLAG_REMOTE & ClientConfig::use_cache_)
+          {
+            insert_remote_block_cache(block_id, iter->second);
+            seg_list[i]->cache_hit_ = CACHE_HIT_REMOTE;
+          }
+#endif
+          ret = TFS_SUCCESS;
+        }
+        else // should never happen
+        {
+          ret = EXIT_BLOCK_NOT_FOUND;
+          break;
+        }
+      }
+    }
+    ret = TFS_SUCCESS;
+  }
+#else
   size_t block_count = 0;
   BatchGetBlockInfoMessage bgbi_message(flag);
   if (flag & T_WRITE)
@@ -279,18 +658,19 @@ int TfsSession::get_block_info_ex(SEG_DATA_LIST& seg_list, const int32_t flag)
   {
     for (size_t i = 0; i < seg_list.size(); i++)
     {
-      if (seg_list[i]->ds_.size() == 0)
+      // only query those miss from cache
+      if (CACHE_HIT_NONE == seg_list[i]->cache_hit_)
       {
         bgbi_message.add_block_id(seg_list[i]->seg_info_.block_id_);
         block_count++;
-        TBSYS_LOG(DEBUG, "get blockinfo add getblock message, blockid: %d, count: %d", seg_list[i]->seg_info_.block_id_, block_count);
+        TBSYS_LOG(DEBUG, "batch get block info, add block: %d, count: %d", seg_list[i]->seg_info_.block_id_, block_count);
       }
     }
   }
 
   tbnet::Packet* rsp = NULL;
   NewClient* client = NewClientManager::get_instance().create_client();
-  int ret = send_msg_to_server(ns_addr_, client, &bgbi_message, rsp, ClientConfig::wait_timeout_);
+  ret = send_msg_to_server(ns_addr_, client, &bgbi_message, rsp, ClientConfig::wait_timeout_);
   if (TFS_SUCCESS != ret)
   {
     TBSYS_LOG(ERROR, "get blockinfo failed, ret: %d", ret);
@@ -307,7 +687,7 @@ int TfsSession::get_block_info_ex(SEG_DATA_LIST& seg_list, const int32_t flag)
       for (size_t i = 0; i < seg_list.size(); ++i)
       {
         block_id = seg_list[i]->seg_info_.block_id_;
-        if (seg_list[i]->ds_.empty())
+        if (CACHE_HIT_NONE == seg_list[i]->cache_hit_)
         {
           if ((it = block_info.find(block_id)) == block_info.end())
           {
@@ -327,7 +707,18 @@ int TfsSession::get_block_info_ex(SEG_DATA_LIST& seg_list, const int32_t flag)
             seg_list[i]->ds_ = it->second.ds_;
             seg_list[i]->reset_status();
 
-            insert_block_cache(block_id, it->second.ds_);
+            if (USE_CACHE_FLAG_LOCAL & ClientConfig::use_cache_)
+            {
+              insert_block_cache(block_id, it->second.ds_);
+              seg_list[i]->cache_hit_ = CACHE_HIT_LOCAL;
+            }
+#ifdef WITH_TAIR_CACHE
+            if (USE_CACHE_FLAG_REMOTE & ClientConfig::use_cache_)
+            {
+              insert_remote_block_cache(block_id, it->second.ds_);
+              seg_list[i]->cache_hit_ = CACHE_HIT_REMOTE;
+            }
+#endif
             TBSYS_LOG(DEBUG, "get block %u info, ds size: %d",
                       block_id, seg_list[i]->ds_.size());
           }
@@ -388,6 +779,7 @@ int TfsSession::get_block_info_ex(SEG_DATA_LIST& seg_list, const int32_t flag)
     }
   }
   NewClientManager::get_instance().destroy_client(client);
+#endif
   return ret;
 }
 
@@ -435,9 +827,9 @@ int TfsSession::get_cluster_id_from_ns()
 
 void TfsSession::insert_block_cache(const uint32_t block_id, const VUINT64& rds)
 {
-  if (USE_CACHE_FLAG_YES == use_cache_)
+  if (USE_CACHE_FLAG_LOCAL & ClientConfig::use_cache_)
   {
-    TBSYS_LOG(DEBUG, "cache insert, blockid: %u", block_id);
+    TBSYS_LOG(DEBUG, "local cache insert, blockid: %u", block_id);
     BlockCache block_cache;
     block_cache.last_time_ = time(NULL);
     block_cache.ds_ = rds;
@@ -448,9 +840,10 @@ void TfsSession::insert_block_cache(const uint32_t block_id, const VUINT64& rds)
 
 void TfsSession::remove_block_cache(const uint32_t block_id)
 {
-  if (USE_CACHE_FLAG_YES == use_cache_)
+  if (USE_CACHE_FLAG_LOCAL & ClientConfig::use_cache_)
   {
-    TBSYS_LOG(DEBUG, "cache remove, blockid: %u", block_id);
+    TBSYS_LOG(DEBUG, "local cache remove, blockid: %u", block_id);
+    BgTask::get_stat_mgr().update_entry(StatItem::client_cache_stat_, StatItem::local_remove_count_, 1);
     tbutil::Mutex::Lock lock(mutex_);
     block_cache_map_.remove(block_id);
   }

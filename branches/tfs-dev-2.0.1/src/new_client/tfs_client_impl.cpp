@@ -24,6 +24,7 @@
 #include "tfs_large_file.h"
 #include "tfs_small_file.h"
 #include "gc_worker.h"
+#include "bg_task.h"
 
 using namespace tfs::common;
 using namespace tfs::message;
@@ -560,6 +561,7 @@ void TfsClientImpl::set_cache_items(const int64_t cache_items)
   {
     ClientConfig::cache_items_ = cache_items;
     TBSYS_LOG(INFO, "set cache items: %"PRI64_PREFIX"d", ClientConfig::cache_items_);
+    ClientConfig::use_cache_ |= USE_CACHE_FLAG_LOCAL;
   }
   else
   {
@@ -578,6 +580,7 @@ void TfsClientImpl::set_cache_time(const int64_t cache_time)
   {
     ClientConfig::cache_time_ = cache_time;
     TBSYS_LOG(INFO, "set cache time: %"PRI64_PREFIX"d", ClientConfig::cache_time_);
+    ClientConfig::use_cache_ |= USE_CACHE_FLAG_LOCAL;
   }
   else
   {
@@ -589,6 +592,23 @@ int64_t TfsClientImpl::get_cache_time() const
 {
   return ClientConfig::cache_time_;
 }
+
+void TfsClientImpl::set_use_cache(const int32_t flag)
+{
+   ClientConfig::use_cache_ = flag;
+}
+
+#ifdef WITH_TAIR_CACHE
+void TfsClientImpl::set_remote_cache_info(const char* remote_cache_master_addr, const char* remote_cache_slave_addr,
+       const char* remote_cache_group_name, const int32_t remote_cache_area)
+{
+  ClientConfig::remote_cache_master_addr_ = remote_cache_master_addr;
+  ClientConfig::remote_cache_slave_addr_ = remote_cache_slave_addr;
+  ClientConfig::remote_cache_group_name_ = remote_cache_group_name;
+  ClientConfig::remote_cache_area_ = remote_cache_area;
+  ClientConfig::use_cache_ |= USE_CACHE_FLAG_REMOTE;
+}
+#endif
 
 void TfsClientImpl::set_segment_size(const int64_t segment_size)
 {
@@ -741,6 +761,12 @@ int64_t TfsClientImpl::get_client_retry_count() const
   return ClientConfig::client_retry_count_;
 }
 
+void TfsClientImpl::set_client_retry_flag(bool retry_flag)
+{
+  ClientConfig::client_retry_flag_ = retry_flag;
+  TBSYS_LOG(INFO, "set client retry flag: %d", ClientConfig::client_retry_flag_);
+}
+
 void TfsClientImpl::set_log_level(const char* level)
 {
   TBSYS_LOG(INFO, "set log level: %s", level);
@@ -788,9 +814,9 @@ int32_t TfsClientImpl::get_block_cache_items() const
   return ret;
 }
 
-int32_t TfsClientImpl::get_cache_hit_ratio() const
+int32_t TfsClientImpl::get_cache_hit_ratio(CacheType cache_type) const
 {
-  return BgTask::get_cache_hit_ratio();
+  return BgTask::get_cache_hit_ratio(cache_type);
 }
 
 uint64_t TfsClientImpl::get_server_id()

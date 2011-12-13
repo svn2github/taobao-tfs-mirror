@@ -260,8 +260,24 @@ int TfsLargeFile::unlink(const char* file_name, const char* suffix, int64_t& fil
 
 int64_t TfsLargeFile::get_segment_for_read(const int64_t offset, char* buf, const int64_t count)
 {
+  int ret = 0;
   destroy_seg();
-  return local_key_.get_segment_for_read(offset, buf, count, processing_seg_list_);
+#ifdef TFS_TEST
+  UNUSED(offset);
+  UNUSED(buf);
+  std::map<uint32_t, VUINT64>::iterator iter = tfs_session_->block_ds_map_.begin();
+  for (int i = 0; tfs_session_->block_ds_map_.end() != iter && i < 3 ; i++, iter++)
+  {
+    SegmentData* seg_data = new SegmentData();
+    seg_data->seg_info_.block_id_ = iter->first;
+    seg_data->seg_info_.file_id_ = 1 + rand() % 32768;
+    processing_seg_list_.push_back(seg_data);
+  }
+  ret = count;
+#else
+  ret = local_key_.get_segment_for_read(offset, buf, count, processing_seg_list_);
+#endif
+  return ret;
 }
 
 int64_t TfsLargeFile::get_segment_for_write(const int64_t offset, const char* buf, const int64_t count)
@@ -272,14 +288,14 @@ int64_t TfsLargeFile::get_segment_for_write(const int64_t offset, const char* bu
 
 int TfsLargeFile::read_process(int64_t& read_size, const InnerFilePhase read_file_phase)
 {
-  int ret = TFS_SUCCESS;
-  if ((ret = get_block_info(processing_seg_list_, flags_)) != TFS_SUCCESS)
+  int ret = get_block_info(processing_seg_list_, flags_);
+  if (TFS_SUCCESS == ret)
   {
-    TBSYS_LOG(ERROR, "get block info fail, ret: %d", ret);
+    ret = read_process_ex(read_size, read_file_phase);
   }
   else
   {
-    ret = read_process_ex(read_size, read_file_phase);
+    TBSYS_LOG(ERROR, "get block info fail, ret: %d", ret);
   }
   return ret;
 }
@@ -466,6 +482,7 @@ int TfsLargeFile::upload_key()
     {
       get_meta_segment(0, buf, size, false);
 
+      // TODO: retry need?
       if ((ret = process(FILE_PHASE_WRITE_DATA)) != TFS_SUCCESS)
       {
         TBSYS_LOG(ERROR, "upload key fail, write data fail, ret: %d", ret);
@@ -506,10 +523,20 @@ int TfsLargeFile::load_meta(int32_t flags)
 
   // read all meta file once at best
   // should succeed in nearly all cases
-  if ((ret = read_process_ex(read_size, FILE_PHASE_READ_FILE_V2)) != TFS_SUCCESS)
+  int retry_count = ClientConfig::client_retry_count_;
+  do {
+    ret = read_process_ex(read_size, FILE_PHASE_READ_FILE_V2);
+    if (TFS_SUCCESS != ret)
+    {
+      get_block_info(*meta_seg_, flags_);
+      meta_seg_->reset_status();
+    }
+  } while (TFS_SUCCESS != ret && ClientConfig::client_retry_flag_ && --retry_count);
+  if (TFS_SUCCESS != ret)
   {
     TBSYS_LOG(ERROR, "read meta file fail, ret: %d", ret);
   }
+#ifndef TFS_TEST
   else if (meta_seg_->file_info_->size_ > size) // meta file is large than MAX_META_SIZE
   {
     TBSYS_LOG(WARN, "load meta file size large than MAX_META_SIZE: %d > %"PRI64_PREFIX"d",
@@ -548,6 +575,7 @@ int TfsLargeFile::load_meta(int32_t flags)
       TBSYS_LOG(ERROR, "local key validate fail when read file, ret: %d", ret);
     }
   }
+#endif
 
   tbsys::gDeleteA(seg_buf);
 

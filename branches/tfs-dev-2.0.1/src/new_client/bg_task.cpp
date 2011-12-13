@@ -52,9 +52,14 @@ int BgTask::initialize()
 
     StatEntry<string, string>::StatEntryPtr cache_ptr =
       new StatEntry<string, string>(StatItem::client_cache_stat_, current, true);
-    cache_ptr->add_sub_key(StatItem::cache_hit_);
-    cache_ptr->add_sub_key(StatItem::cache_miss_);
-    cache_ptr->add_sub_key(StatItem::remove_count_);
+    cache_ptr->add_sub_key(StatItem::local_cache_hit_);
+    cache_ptr->add_sub_key(StatItem::local_cache_miss_);
+    cache_ptr->add_sub_key(StatItem::local_remove_count_);
+#ifdef WITH_TAIR_CACHE
+    cache_ptr->add_sub_key(StatItem::remote_cache_hit_);
+    cache_ptr->add_sub_key(StatItem::remote_cache_miss_);
+    cache_ptr->add_sub_key(StatItem::remote_remove_count_);
+#endif
 
     stat_mgr_.add_entry(access_ptr, ClientConfig::stat_interval_ * 1000);
     stat_mgr_.add_entry(cache_ptr, ClientConfig::stat_interval_ * 1000);
@@ -67,7 +72,7 @@ int BgTask::initialize()
   return ret;
 }
 
-int32_t BgTask::get_cache_hit_ratio()
+int32_t BgTask::get_cache_hit_ratio(CacheType cache_type)
 {
   uint64_t cache_hit = 0;
   uint64_t cache_miss = 0;
@@ -78,8 +83,19 @@ int32_t BgTask::get_cache_hit_ratio()
   }
   else
   {
-    cache_hit = stat_mgr_.get_stat_value(StatItem::client_cache_stat_, StatItem::cache_hit_);
-    cache_miss = stat_mgr_.get_stat_value(StatItem::client_cache_stat_, StatItem::cache_miss_);
+    if (LOCAL_CACHE == cache_type)
+    {
+      cache_hit = stat_mgr_.get_stat_value(StatItem::client_cache_stat_, StatItem::local_cache_hit_);
+      cache_miss = stat_mgr_.get_stat_value(StatItem::client_cache_stat_, StatItem::local_cache_miss_);
+    }
+#ifdef WITH_TAIR_CACHE
+    else if (REMOTE_CACHE == cache_type)
+    {
+      cache_hit = stat_mgr_.get_stat_value(StatItem::client_cache_stat_, StatItem::remote_cache_hit_);
+      cache_miss = stat_mgr_.get_stat_value(StatItem::client_cache_stat_, StatItem::remote_cache_miss_);
+    }
+#endif
+
   }
 
   uint64_t cache_count = cache_hit + cache_miss;

@@ -18,7 +18,7 @@
 #include <set>
 #include "server_collect.h"
 #include "block_collect.h"
-#include "layout_manager.h"
+#include "nameserver.h"
 #include "global_factory.h"
 
 using namespace tfs::nameserver;
@@ -68,12 +68,12 @@ TEST_F(ServerCollectTest, is_full)
 
   // is full
   ds_stat_info.use_capacity_ = 65;
-  server_collect.update(ds_stat_info, time(NULL));
+  server_collect.update(ds_stat_info, time(NULL), false);
   EXPECT_EQ(true, server_collect.is_full());
 
   // is not full
   ds_stat_info.use_capacity_ = 35;
-  server_collect.update(ds_stat_info, time(NULL));
+  server_collect.update(ds_stat_info, time(NULL), false);
   EXPECT_EQ(false, server_collect.is_full());
 }
 
@@ -96,7 +96,7 @@ TEST_F(ServerCollectTest, is_alive_by_stat)
 
   EXPECT_EQ(true, server_collect.is_alive());
   ds_stat_info.status_ = DATASERVER_STATUS_DEAD;
-  server_collect.update(ds_stat_info, time(NULL));
+  server_collect.update(ds_stat_info, time(NULL), false);
   EXPECT_EQ(false, server_collect.is_alive());
 }
 TEST_F(ServerCollectTest, dead)
@@ -133,7 +133,7 @@ TEST_F(ServerCollectTest, add)
   EXPECT_EQ(false, iter != server_collect.hold_master_.end());
   TBSYS_LOG(DEBUG, "***************************************");
   EXPECT_EQ(true, server_collect.add(&block_collect_1, false));// warn
-  EXPECT_EQ(0x01U, server_collect.block_count());
+  EXPECT_EQ(0x01, server_collect.block_count());
   TBSYS_LOG(DEBUG, "***************************************");
 
   // block is full, master
@@ -250,7 +250,7 @@ TEST_F(ServerCollectTest, update)
   ds_stat_info.total_tp_.write_byte_ = 1290706721;
 
   // update
-  server_collect.update(ds_stat_info, time(NULL));
+  server_collect.update(ds_stat_info, time(NULL), true);
   EXPECT_EQ(12769289U, server_collect.id_);
   EXPECT_EQ(1024, server_collect.use_capacity_);
   EXPECT_EQ(104824, server_collect.total_capacity_);
@@ -266,7 +266,7 @@ TEST_F(ServerCollectTest, update)
 }
 TEST_F(ServerCollectTest, statistics)
 {
-  NsGlobalInfo global_info;
+  NsGlobalStatisticsInfo global_info;
   memset(&global_info, 0, sizeof(global_info));
 
   global_info.use_capacity_ = 1024;
@@ -284,7 +284,7 @@ TEST_F(ServerCollectTest, statistics)
   ds_stat_info.total_capacity_ = 10000;
   ds_stat_info.current_load_ = 44824;
   ds_stat_info.block_count_ = 458;
-  server_collect.update(ds_stat_info, time(NULL));
+  server_collect.update(ds_stat_info, time(NULL), true);
 
   // not new server
   server_collect.statistics(global_info, false);
@@ -388,13 +388,14 @@ TEST_F(ServerCollectTest, clear)
   ServerCollect server_collect(ds_stat_info, time(NULL));
 
   //LayerManager is null
-  LayoutManager manager;
+  NameServer nameserver;
+  LayoutManager* manager = &nameserver.get_layout_manager();
 
   // hold list is null, return true
-  EXPECT_EQ(true, server_collect.clear(manager, time(NULL)));
+  EXPECT_EQ(true, server_collect.clear(*manager, time(NULL)));
 
   // construct two blocks
-  manager.initialize();
+  manager->initialize();
   bool master = false;
   BlockCollect block_collect_1(1001, time(NULL));// delete success
   ServerCollect server_collect_1(ds_stat_info, time(NULL));
@@ -410,13 +411,13 @@ TEST_F(ServerCollectTest, clear)
   server_collect.add(&block_collect_3, true);
 
   TBSYS_LOG(DEBUG, "***************************************");
-  EXPECT_EQ(true, server_collect.clear(manager, time(NULL)));
+  EXPECT_EQ(true, server_collect.clear(*manager, time(NULL)));
   TBSYS_LOG(DEBUG, "***************************************");
   EXPECT_EQ(false, block_collect_1.exist(&server_collect));
   EXPECT_EQ(false, block_collect_2.exist(&server_collect));
 
-  manager.destroy();
-  manager.wait_for_shut_down();
+  manager->destroy();
+  manager->wait_for_shut_down();
 }
 TEST_F(ServerCollectTest, is_writable)
 {
@@ -427,14 +428,14 @@ TEST_F(ServerCollectTest, is_writable)
   // disk is full
   ds_stat_info.total_capacity_ = 100;
   ds_stat_info.use_capacity_ = 65;
-  server_collect.update(ds_stat_info, time(NULL));
+  server_collect.update(ds_stat_info, time(NULL), false);
   EXPECT_EQ(true, server_collect.is_full());
   EXPECT_EQ(false, server_collect.is_writable(50));
 
   // disk is not full && use_capacity_ > average_used_capacity
   ds_stat_info.total_capacity_ = 100;
   ds_stat_info.use_capacity_ = 55;
-  server_collect.update(ds_stat_info, time(NULL));
+  server_collect.update(ds_stat_info, time(NULL), false);
   EXPECT_EQ(false, server_collect.is_full());
   EXPECT_EQ(false, server_collect.is_writable(50));
 
@@ -449,12 +450,12 @@ TEST_F(ServerCollectTest, is_readable)
 
   // less than
   ds_stat_info.current_load_ = 65;
-  server_collect.update(ds_stat_info, time(NULL));
+  server_collect.update(ds_stat_info, time(NULL), false);
   EXPECT_EQ(true, server_collect.is_readable(50));
 
   // more than
   ds_stat_info.current_load_ = 65;
-  server_collect.update(ds_stat_info, time(NULL));
+  server_collect.update(ds_stat_info, time(NULL), false);
   EXPECT_EQ(false, server_collect.is_readable(30));
 }
 TEST_F(ServerCollectTest, touch)
@@ -463,28 +464,30 @@ TEST_F(ServerCollectTest, touch)
   ServerCollect server_collect(ds_stat_info, time(NULL));
   BlockInfo block_info;
   std::vector<BlockCollect*>::iterator iter;
-  uint32_t max_block_id = 1006;
   int32_t count = 0;
 
-  LayoutManager manager;
-  manager.initialize();
+  NameServer nameserver;
+  LayoutManager* manager = &nameserver.get_layout_manager();
+  manager->initialize();
   ds_stat_info.total_capacity_ = 100;
   // promote is false
-  EXPECT_EQ(true, server_collect.touch(manager, time(NULL), max_block_id, 3, false, count));
+  bool promote = false;
+  EXPECT_EQ(true, server_collect.touch(*manager, time(NULL), promote, count));
 
   // is full
   ds_stat_info.use_capacity_ = 65;
-  server_collect.update(ds_stat_info, time(NULL));
+  server_collect.update(ds_stat_info, time(NULL), false);
   EXPECT_EQ(true, server_collect.is_full());
   TBSYS_LOG(DEBUG, "***************************************");
-  EXPECT_EQ(true, server_collect.touch(manager,time(NULL), max_block_id, 3, true, count));
+  promote = true;
+  EXPECT_EQ(true, server_collect.touch(*manager,time(NULL), promote, count));
   TBSYS_LOG(DEBUG, "***************************************");
 
   // not full
   // current < SYSPARAM_NAMESERVER.max_write_file_count_
   // && alive_server_size > SYSPARAM_NAMESERVER.add_primary_block_count_
   ds_stat_info.use_capacity_ = 35;
-  server_collect.update(ds_stat_info, time(NULL));
+  server_collect.update(ds_stat_info, time(NULL), false);
 
   BlockCollect block_collect_1(1001, time(NULL));//both in writable and hold_master
   block_info.block_id_ = 1001;
@@ -521,7 +524,8 @@ TEST_F(ServerCollectTest, touch)
   // diff < count
   count = 5;
   TBSYS_LOG(DEBUG, "---------------------------------------");
-  EXPECT_EQ(true, server_collect.touch(manager, time(NULL), max_block_id, 25, true, count));
+  promote = true;
+  EXPECT_EQ(true, server_collect.touch(*manager, time(NULL), promote, count));
   iter = find(server_collect.hold_master_.begin(), server_collect.hold_master_.end(), &block_collect_1);
   EXPECT_EQ(true, iter != server_collect.hold_master_.end());
   iter = find(server_collect.hold_master_.begin(), server_collect.hold_master_.end(), &block_collect_2);
@@ -538,7 +542,8 @@ TEST_F(ServerCollectTest, touch)
   count = 3;
   server_collect.remove_master(&block_collect_2);
   server_collect.remove_master(&block_collect_3);
-  EXPECT_EQ(true, server_collect.touch(manager, time(NULL), max_block_id, 25, true, count));
+  promote = true;
+  EXPECT_EQ(true, server_collect.touch(*manager, time(NULL), promote, count));
   iter = find(server_collect.hold_master_.begin(), server_collect.hold_master_.end(), &block_collect_1);
   EXPECT_EQ(true, iter != server_collect.hold_master_.end());
   iter = find(server_collect.hold_master_.begin(), server_collect.hold_master_.end(), &block_collect_2);
@@ -556,7 +561,8 @@ TEST_F(ServerCollectTest, touch)
   count = 7;
   server_collect.remove_master(&block_collect_2);
   server_collect.remove_master(&block_collect_3);
-  EXPECT_EQ(true, server_collect.touch(manager, time(NULL), max_block_id, 10, true, count));
+  promote = true;
+  EXPECT_EQ(true, server_collect.touch(*manager, time(NULL), promote, count));
   iter = find(server_collect.hold_master_.begin(), server_collect.hold_master_.end(), &block_collect_1);
   EXPECT_EQ(true, iter != server_collect.hold_master_.end());
   iter = find(server_collect.hold_master_.begin(), server_collect.hold_master_.end(), &block_collect_2);
@@ -582,11 +588,12 @@ TEST_F(ServerCollectTest, touch)
   EXPECT_EQ(true, server_collect.add(&block_collect_6, true));
 
   TBSYS_LOG(DEBUG, "***************************************");
-  EXPECT_EQ(true, server_collect.touch(manager, time(NULL), max_block_id, 3, true, count));
+  promote = true;
+  EXPECT_EQ(true, server_collect.touch(*manager, time(NULL), promote, count));
   TBSYS_LOG(DEBUG, "***************************************");
 
-  manager.destroy();
-  manager.wait_for_shut_down();
+  manager->destroy();
+  manager->wait_for_shut_down();
 }
 TEST_F(ServerCollectTest, elect_write_block)
 {
@@ -706,18 +713,18 @@ TEST_F(ServerCollectTest, scan)
 
   EXPECT_EQ(TFS_SUCCESS, server.scan(param, scan_flag));
   EXPECT_TRUE(info.id_ == param.data_.readInt64());
-  EXPECT_TRUE(info.use_capacity_ == param.data_.readInt64());
-  EXPECT_TRUE(info.total_capacity_ == param.data_.readInt64());
-  EXPECT_TRUE(info.current_load_ == param.data_.readInt32());
-  EXPECT_TRUE(info.block_count_ == param.data_.readInt32());
-  EXPECT_TRUE(now == param.data_.readInt64());
-  EXPECT_TRUE(now == param.data_.readInt64());
+  EXPECT_TRUE(info.use_capacity_ == static_cast<int64_t>(param.data_.readInt64()));
+  EXPECT_TRUE(info.total_capacity_ == static_cast<int64_t>(param.data_.readInt64()));
+  EXPECT_TRUE(info.current_load_ == static_cast<int32_t>(param.data_.readInt32()));
+  EXPECT_TRUE(info.block_count_ == static_cast<int32_t>(param.data_.readInt32()));
+  EXPECT_TRUE(now == static_cast<int64_t>(param.data_.readInt64()));
+  EXPECT_TRUE(now == static_cast<int64_t>(param.data_.readInt64()));
   EXPECT_TRUE(0 == param.data_.readInt64());
   EXPECT_TRUE(0 == param.data_.readInt64());
   EXPECT_TRUE(0 == param.data_.readInt64());
   EXPECT_TRUE(0 == param.data_.readInt64());
   param.data_.readInt64();
-  EXPECT_TRUE(info.status_ == param.data_.readInt32());
+  EXPECT_TRUE(info.status_ == static_cast<int32_t>(param.data_.readInt32()));
 
   EXPECT_TRUE(1 == param.data_.readInt32());
   EXPECT_TRUE(block_id == param.data_.readInt32());

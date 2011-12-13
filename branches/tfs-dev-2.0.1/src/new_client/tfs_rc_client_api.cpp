@@ -185,6 +185,18 @@ namespace tfs
       return impl_->ls_file(app_id, uid, file_path, file_meta_info);
     }
 
+    bool RcClient::is_dir_exist(const int64_t app_id, const int64_t uid,
+         const char* dir_path)
+    {
+      return impl_->is_dir_exist(app_id, uid, dir_path);
+    }
+
+    bool RcClient::is_file_exist(const int64_t app_id, const int64_t uid,
+         const char* file_path)
+    {
+      return impl_->is_file_exist(app_id, uid, file_path);
+    }
+
     int RcClient::open(const int64_t app_id, const int64_t uid,
         const char* name, const RcClient::RC_MODE mode)
     {

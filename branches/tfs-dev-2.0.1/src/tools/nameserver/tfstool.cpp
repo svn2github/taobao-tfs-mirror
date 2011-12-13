@@ -131,6 +131,8 @@ int cmd_rm_dir_meta(const VSTRING& param);
 int cmd_rm_file_meta(const VSTRING& param);
 int cmd_put_file_meta(const VSTRING& param);
 int cmd_get_file_meta(const VSTRING& param);
+int cmd_is_dir_exist_meta(const VSTRING& param);
+int cmd_is_file_exist_meta(const VSTRING& param);
 
 const char* rc_addr = NULL;
 const char* nsip = NULL;
@@ -303,6 +305,10 @@ void init()
         "put localfile to remotefile", 2, 5, cmd_put_file_meta);
     g_cmd_map["get_meta"] = CmdNode("get_meta remotefile localfile [ app_key app_id uid ], optional param should be in order",
         "get remotefile to localfile", 2, 5, cmd_get_file_meta);
+    g_cmd_map["is_dir_exist_meta"] = CmdNode("is_dir_exist_meta full_path_dir_name [ app_key app_id uid ], optional param should be in order",
+        "check if dir exist", 1, 4, cmd_is_dir_exist_meta);
+    g_cmd_map["is_file_exist_meta"] = CmdNode("is_file_exist_meta full_path_file_name [ app_key app_id uid ], optional param should be in order",
+        "check if file exist", 1, 4, cmd_is_file_exist_meta);
   }
 }
 
@@ -903,6 +909,7 @@ int cmd_check_file_info(const VSTRING& param)
   }
   return ret;
 }
+
 int cmd_ls_dir_meta(const VSTRING& param)
 {
   int ret = TFS_SUCCESS;
@@ -1276,5 +1283,76 @@ int cmd_get_file_meta(const VSTRING& param)
     }
   }
   ToolUtil::print_info(ret, "get %s => %s", file_path, local_file);
+  return ret;
+}
+
+int cmd_is_dir_exist_meta(const VSTRING& param)
+{
+  int ret = TFS_SUCCESS;
+  const char* dir_path = expand_path(const_cast<string&>(param[0]));
+  int size = param.size();
+  TBSYS_LOG(DEBUG, "size: %d", size);
+  if (size > 1)
+  {
+    TBSYS_LOG(DEBUG, "appkey: %s", param[1].c_str());
+    strcpy(app_key, param[1].c_str());
+  }
+  if (size > 2)
+  {
+    app_id = strtoll(param[2].c_str(), NULL, 10);
+  }
+  if (size > 3)
+  {
+    uid = strtoll(param[3].c_str(), NULL, 10);
+  }
+
+  RcClientImpl impl;
+  ret = impl.initialize(rc_addr, app_key, app_ip);
+
+  if (TFS_SUCCESS != ret)
+  {
+    TBSYS_LOG(DEBUG, "meta client init failed, ret: %d", ret);
+  }
+  else
+  {
+    std::vector<FileMetaInfo> meta_info;
+    std::vector<FileMetaInfo>::const_iterator it;
+    bool bRet = impl.is_dir_exist(app_id, uid, dir_path);
+    fprintf(stdout, "dir: %s %s exist \n", dir_path, bRet ? "" : "not ");
+  }
+  return ret;
+}
+int cmd_is_file_exist_meta(const VSTRING& param)
+{
+  int ret = TFS_SUCCESS;
+  const char* file_path = expand_path(const_cast<string&>(param[0]));
+  int size = param.size();
+  TBSYS_LOG(DEBUG, "size: %d", size);
+  if (size > 1)
+  {
+    TBSYS_LOG(DEBUG, "appkey: %s", param[1].c_str());
+    strcpy(app_key, param[1].c_str());
+  }
+  if (size > 2)
+  {
+    app_id = strtoll(param[2].c_str(), NULL, 10);
+  }
+  if (size > 3)
+  {
+    uid = strtoll(param[3].c_str(), NULL, 10);
+  }
+
+  RcClientImpl impl;
+  ret = impl.initialize(rc_addr, app_key, app_ip);
+
+  if (TFS_SUCCESS != ret)
+  {
+    TBSYS_LOG(DEBUG, "meta client init failed, ret: %d", ret);
+  }
+  else
+  {
+    bool bRet = impl.is_file_exist(app_id, uid, file_path);
+    fprintf(stdout, "file: %s %s exist \n", file_path, bRet ? "" : "not ");
+  }
   return ret;
 }

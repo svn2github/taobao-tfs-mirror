@@ -55,6 +55,14 @@ namespace tfs
 
     bool NewClient::wait(const int64_t timeout_in_ms)
     {
+#ifdef TFS_TEST
+      tbnet::Packet* packet = NULL;
+      for (uint32_t i = 0 ; i < send_id_sign_.size(); i++)
+      {
+        success_response_.insert(RESPONSE_MSG_MAP::value_type(send_id_sign_[i].first,
+          std::pair<uint64_t, tbnet::Packet*>(send_id_sign_[i].second, packet)));
+      }
+#endif
       int64_t timeout_ms = timeout_in_ms;
       bool ret = true;
       if (timeout_ms <= 0)
@@ -103,6 +111,7 @@ namespace tfs
         }
         else
         {
+#ifndef TFS_TEST
           WaitId id;
           id.seq_id_ = seq_id_;
           id.send_id_= send_id;
@@ -130,9 +139,10 @@ namespace tfs
               monitor_.unlock();
             }
           }
+#endif
         }
       }
-      //TBSYS_LOG(DEBUG, "send msg to server: %s %s, seq_id: %u, send_id: %d, pcode: %d", 
+      //TBSYS_LOG(DEBUG, "send msg to server: %s %s, seq_id: %u, send_id: %d, pcode: %d",
       //           tbsys::CNetUtil::addrToString(server).c_str(), TFS_SUCCESS == ret ? "successful" : "fail",
       //           seq_id_, send_id, packet->getPCode());
       return ret;

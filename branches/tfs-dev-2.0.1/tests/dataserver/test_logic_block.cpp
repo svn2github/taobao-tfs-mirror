@@ -6,7 +6,7 @@
  * published by the Free Software Foundation.
  *
  *
- * Version: $Id: test_logic_block.cpp 32 2010-10-29 08:02:25Z zongdai@taobao.com $
+ * Version: $Id: test_logic_block.cpp 32 2011-07-26 08:02:25Z mingyan.zc@taobao.com $
  *
  * Authors:
  *   daozong
@@ -21,6 +21,7 @@ const std::string BASE_PATH = ".";
 const std::string MOUNT_PATH = "./mount";
 const std::string MOUNT_SUB_PATH = "./mount/tmp";
 const std::string INDEX_PATH = "./index";
+const std::string TMP_PATH = "./tmp";
 
 using namespace tfs::dataserver;
 using namespace tfs::common;
@@ -57,12 +58,14 @@ class LogicBlockTest:public::testing::Test
       mkdir(path, 0775);
       mkdir(MOUNT_SUB_PATH.c_str(), 0775);
       mkdir(INDEX_PATH.c_str(), 0775);
+      mkdir(TMP_PATH.c_str(), 0775);
     }
     virtual void TearDown()
     {
       rmdir(MOUNT_SUB_PATH.c_str());
       rmdir(path);
       rmdir(INDEX_PATH.c_str());
+      rmdir(TMP_PATH.c_str());
     }
   protected:
     MMapOption mmap_option;
@@ -273,7 +276,7 @@ TEST_F(LogicBlockTest, testCloseWriteFile)
 
   int32_t len = strlen(data) + 1 + sizeof(FileInfo);
   char* tmp_data = new char[len];
-  EXPECT_EQ(logic_block->read_file(inner_file_id, tmp_data, len, 0), 0);
+  EXPECT_EQ(logic_block->read_file(inner_file_id, tmp_data, len, 0, READ_DATA_OPTION_FLAG_NORMAL), 0);
 
   char read_data[sizeof(FileInfo)];
   memcpy(read_data, tmp_data + sizeof(FileInfo), strlen(data) + 1);
@@ -350,7 +353,7 @@ TEST_F(LogicBlockTest, testCloseWriteDatFile)
   char* read_file_data = new char[read_data_len];
 
   EXPECT_EQ(logic_block->close_write_file(inner_file_id, &data_file, crc), 0);
-  EXPECT_EQ(logic_block->read_file(inner_file_id, read_file_data, read_data_len, 0), 0);
+  EXPECT_EQ(logic_block->read_file(inner_file_id, read_file_data, read_data_len, 0, READ_DATA_OPTION_FLAG_NORMAL), 0);
   read_file_data[sizeof(FileInfo) + data_len] = '\0';
   EXPECT_STREQ(read_file_data + sizeof(FileInfo), write_data);
 
@@ -595,38 +598,39 @@ TEST_F(LogicBlockTest, testUnlinkFile)
   EXPECT_EQ(m_block_info->del_file_count_, 0);
 
   FileInfo file_info;
+  int64_t file_size;
 
-  logic_block->unlink_file(1, DELETE);
+  logic_block->unlink_file(1, DELETE, file_size);
   m_block_info = logic_block->get_block_info();
   EXPECT_EQ(m_block_info->del_file_count_, 1);
   EXPECT_EQ(logic_block->read_file_info(1, file_info), 0);
   EXPECT_EQ(file_info.flag_ & FI_DELETED, 1);
 
-  logic_block->unlink_file(2, DELETE);
+  logic_block->unlink_file(2, DELETE, file_size);
   m_block_info = logic_block->get_block_info();
   EXPECT_EQ(m_block_info->del_file_count_, 2);
   EXPECT_EQ(logic_block->read_file_info(2, file_info), 0);
   EXPECT_EQ(file_info.flag_ & FI_DELETED, 1);
 
-  logic_block->unlink_file(1, UNDELETE);
+  logic_block->unlink_file(1, UNDELETE, file_size);
   m_block_info = logic_block->get_block_info();
   EXPECT_EQ(m_block_info->del_file_count_, 1);
   EXPECT_EQ(logic_block->read_file_info(1, file_info), 0);
   EXPECT_EQ(file_info.flag_ & FI_DELETED, 0);
 
-  logic_block->unlink_file(2, UNDELETE);
+  logic_block->unlink_file(2, UNDELETE, file_size);
   m_block_info = logic_block->get_block_info();
   EXPECT_EQ(m_block_info->del_file_count_, 0);
   EXPECT_EQ(logic_block->read_file_info(1, file_info), 0);
   EXPECT_EQ(file_info.flag_ & FI_DELETED, 0);
 
-  logic_block->unlink_file(1, CONCEAL);
+  logic_block->unlink_file(1, CONCEAL, file_size);
   m_block_info = logic_block->get_block_info();
   EXPECT_EQ(m_block_info->del_file_count_, 0);
   EXPECT_EQ(logic_block->read_file_info(1, file_info), 0);
   EXPECT_EQ(file_info.flag_ & FI_CONCEAL, 4);
 
-  logic_block->unlink_file(1, REVEAL);
+  logic_block->unlink_file(1, REVEAL, file_size);
   m_block_info = logic_block->get_block_info();
   EXPECT_EQ(m_block_info->del_file_count_, 0);
   EXPECT_EQ(logic_block->read_file_info(1, file_info), 0);

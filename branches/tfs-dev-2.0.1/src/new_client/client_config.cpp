@@ -30,16 +30,29 @@ string StatItem::write_fail_ = "write_fail";
 string StatItem::unlink_success_ = "unlink_success";
 string StatItem::unlink_fail_ = "unlink_fail";
 string StatItem::client_cache_stat_ = "client_cache_stat";
-string StatItem::cache_hit_ = "cache_hit";
-string StatItem::cache_miss_ = "cache_miss";
-string StatItem::remove_count_ = "remove_count";
+string StatItem::local_cache_hit_ = "local_cache_hit";
+string StatItem::local_cache_miss_ = "local_cache_miss";
+string StatItem::local_remove_count_ = "local_remove_count";
+#ifdef WITH_TAIR_CACHE
+string StatItem::remote_cache_hit_ = "remote_cache_hit";
+string StatItem::remote_cache_miss_ = "remote_cache_miss";
+string StatItem::remote_remove_count_ = "remote_remove_count";
+#endif
 
+int32_t ClientConfig::use_cache_ = USE_CACHE_FLAG_LOCAL;
 int64_t ClientConfig::cache_items_ = DEFAULT_BLOCK_CACHE_ITEMS;
 int64_t ClientConfig::cache_time_ = DEFAULT_BLOCK_CACHE_TIME;
+#ifdef WITH_TAIR_CACHE
+string ClientConfig::remote_cache_master_addr_ = "";
+string ClientConfig::remote_cache_slave_addr_ = "";
+string ClientConfig::remote_cache_group_name_ = "";
+int32_t ClientConfig::remote_cache_area_ = 0;
+#endif
 int64_t ClientConfig::segment_size_ = MAX_SEGMENT_SIZE;
 int64_t ClientConfig::batch_count_ = MAX_BATCH_COUNT / 2;
 int64_t ClientConfig::batch_size_ = ClientConfig::segment_size_ * ClientConfig::batch_count_;
 int64_t ClientConfig::client_retry_count_ = DEFAULT_CLIENT_RETRY_COUNT; // retry times to read or write
+bool ClientConfig::client_retry_flag_ = true;
 // interval unit: ms
 int64_t ClientConfig::stat_interval_ = DEFAULT_STAT_INTERNAL;
 int64_t ClientConfig::gc_interval_ = DEFAULT_GC_INTERNAL;

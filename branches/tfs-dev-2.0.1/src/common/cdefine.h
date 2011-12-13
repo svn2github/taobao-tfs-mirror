@@ -122,7 +122,20 @@ typedef enum
 typedef enum
 {
   READ_DATA_OPTION_FLAG_NORMAL = 0,
-  READ_DATA_OPTION_FLAG_FORCE = 1 
+  READ_DATA_OPTION_FLAG_FORCE = 1
 } ReadDataOptionFlag;
+
+typedef enum
+{
+  LOCAL_CACHE = 0,
+  REMOTE_CACHE = 1
+} CacheType;
+
+typedef enum
+{
+  USE_CACHE_FLAG_NO = 0x00,
+  USE_CACHE_FLAG_LOCAL = 0x01,
+  USE_CACHE_FLAG_REMOTE = 0x02
+} UseCacheFlag;
 
 #endif

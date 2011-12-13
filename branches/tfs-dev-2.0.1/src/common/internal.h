@@ -36,6 +36,8 @@
 
 #include "define.h"
 
+//#define TFS_TEST
+
 #if __WORDSIZE == 32
 namespace __gnu_cxx
 {
@@ -117,12 +119,13 @@ namespace tfs
     static const int32_t ADMIN_WARN_DEAD_COUNT = 1;
 
     static const int64_t DEFAULT_NETWORK_CALL_TIMEOUT  = 3000;//3s
+    static const int64_t DEFAULT_TAIR_TIMEOUT  = 10;//10ms
 
     static const int64_t MAX_META_SIZE = 1 << 21; // 2M
     static const int64_t INVALID_FILE_SIZE = -1;
 
     // client config
-    static const int64_t DEFAULT_CLIENT_RETRY_COUNT = 2;
+    static const int64_t DEFAULT_CLIENT_RETRY_COUNT = 3;
     // unit ms
     static const int64_t DEFAULT_STAT_INTERNAL = 60000; // 1min
     static const int64_t DEFAULT_GC_INTERNAL = 43200000; // 12h

@@ -93,6 +93,19 @@ namespace tfs
     {
       return impl_->ls_file(app_id, uid, file_path, file_meta_info);
     }
+
+    bool NameMetaClient::is_dir_exist(const int64_t app_id, const int64_t uid,
+        const char* dir_path)
+    {
+      return impl_->is_dir_exist(app_id, uid, dir_path);
+    }
+
+    bool NameMetaClient::is_file_exist(const int64_t app_id, const int64_t uid,
+        const char* file_path)
+    {
+      return impl_->is_file_exist(app_id, uid, file_path);
+    }
+
     int32_t NameMetaClient::get_cluster_id(const int64_t app_id, const int64_t uid, const char* path)
     {
       return impl_->get_cluster_id(app_id, uid, path);
