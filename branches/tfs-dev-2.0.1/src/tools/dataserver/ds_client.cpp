@@ -41,7 +41,6 @@ enum CmdSet
 {
   CMD_GET_SERVER_STATUS,
   CMD_GET_PING_STATUS,
-  CMD_NEW_BLOCK,
   CMD_REMOVE_BlOCK,
   CMD_LIST_BLOCK,
   CMD_GET_BLOCK_INFO,
@@ -191,7 +190,6 @@ void init()
 {
   cmd_map["get_server_status"] = CMD_GET_SERVER_STATUS;
   cmd_map["get_ping_status"] = CMD_GET_PING_STATUS;
-  cmd_map["new_block"] = CMD_NEW_BLOCK;
   cmd_map["remove_block"] = CMD_REMOVE_BlOCK;
   cmd_map["list_block"] = CMD_LIST_BLOCK;
   cmd_map["get_block_info"] = CMD_GET_BLOCK_INFO;
@@ -320,19 +318,6 @@ int switch_cmd(const int cmd, VSTRING & param)
       ret = DsLib::get_ping_status(ds_task);
       break;
     }
-  case CMD_NEW_BLOCK:
-    {
-      if (param.size() != 1)
-      {
-        printf("Usage:new_block block_id\n");
-        printf("create a new block in dataserver.\n");
-        break;
-      }
-      uint32_t ds_block_id = strtoul(const_cast<char*> (param[0].c_str()), reinterpret_cast<char**> (NULL), 10);
-      ds_task.block_id_ = ds_block_id;
-      ret = DsLib::new_block(ds_task);
-      break;
-    }
   case CMD_REMOVE_BlOCK:
     {
       if (param.size() != 1)
@@ -348,20 +333,16 @@ int switch_cmd(const int cmd, VSTRING & param)
     }
   case CMD_LIST_BLOCK:
     {
-      if (param.size() > 1)
+      if (param.size() != 1)
       {
-        printf("Usage:list_block [type]\n");
-        printf("      type  1|2|4,  1(default) => show all blockid\n\
+        printf("Usage:list_block type\n");
+        printf("      type  1|2|4,  1          => show all blockid\n\
                                     2          => show the map between logical and physical blockid\n\
                                     4          => show detail info of block on this dataserver\n");
         printf("list all the blocks in a dataserver.\n");
         break;
       }
-      int type = 1;
-      if (1 == param.size())
-      {
-        type = atoi(const_cast<char*> (param[0].c_str()));
-      }
+      int type = atoi(const_cast<char*> (param[0].c_str()));
       ds_task.list_block_type_ = type;
       ret = DsLib::list_block(ds_task);
       break;
@@ -587,19 +568,15 @@ int switch_cmd(const int cmd, VSTRING & param)
     }
   case CMD_LIST_BITMAP:
     {
-      if (param.size() > 2)
+      if (param.size() != 1)
       {
-        printf("Usage:list_bitmap [type]\n");
-        printf("      type  0|1,  0(default) => normal bitmap\n\
+        printf("Usage:list_bitmap type\n");
+        printf("      type  0|1,  0          => normal bitmap\n\
                                   1          => error bitmap\n");
         printf("list the bitmap of the server.\n");
         break;
       }
-      int type = 0;
-      if ( 1 == param.size())
-      {
-        type = atoi(const_cast<char*> (param[0].c_str()));
-      }
+      int type = atoi(const_cast<char*> (param[0].c_str()));
       ds_task.list_block_type_ = type;
       ret = DsLib::list_bitmap(ds_task);
       break;
@@ -661,15 +638,14 @@ int show_help(VSTRING &)
   printf("COMMAND SET:\n"
     "get_server_status  nums                                                     get the information of the nums most frequently visited blocks in dataserver.\n"
     "get_ping_status                                                             get the ping status of dataServer.\n"
-    "list_block  [type]                                                          list all the blocks in a dataserver.\n"
+    "list_block  type                                                            list all the blocks in a dataserver.\n"
     "get_block_info  block_id                                                    get the information of a block in the dataserver.\n"
     "list_file  block_id                                                         list all the files in a block.\n"
     "read_file_data  blockid fileid local_file_name                              download a tfs file to local.\n"
     "write_file_data block_id file_id local_file_name                            upload a local file to tfs\n"
     "unlink_file  block_id file_id [unlink_type] [option_flag] [is_master]       delete a file.\n"
     "read_file_info  block_id file_id [ds_mode]                                  get the file information.\n"
-    "list_bitmap [type]                                                          list the bitmap of the server\n"
-    "new_block  block_id                                                         create a new block on this dataserver\n"
+    "list_bitmap  type                                                           list the bitmap of the server\n"
     "create_file_id block_id file_id                                             create a new file_id\n"
     "remove_block block_id                                                       remove a block\n"
     "reset_block_version block_id                                                 reset block version to 1, will not affect files in the block\n"

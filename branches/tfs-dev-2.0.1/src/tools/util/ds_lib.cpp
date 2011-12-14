@@ -594,14 +594,14 @@ namespace tfs
       ret_status = send_msg_to_server(server_id, &req_uf_msg, status_value);
       if ((ret_status == TFS_SUCCESS) )
       {
-        if (STATUS_MESSAGE_ERROR == status_value)
+        if (STATUS_MESSAGE_OK == status_value)
         {
-          ret_status = TFS_SUCCESS;
-          fprintf(stderr, "Unlink file fail!\n");
+          printf("unlink file success\n");
         }
         else
         {
-          printf("unlink file success\n");
+          ret_status = TFS_SUCCESS;
+          fprintf(stderr, "Unlink file fail!\n");
         }
       }
       else
@@ -656,12 +656,12 @@ namespace tfs
         }
         else if (STATUS_MESSAGE == ret_msg->getPCode())
         {
-          printf("Read file info error:%s", (dynamic_cast<StatusMessage*> (ret_msg))->get_error());
+          printf("Read file info error:%s\n", (dynamic_cast<StatusMessage*> (ret_msg))->get_error());
           ret_status = TFS_ERROR;
         }
         else
         {
-          printf("message type is error.");
+          printf("message type is error.\n");
           ret_status = TFS_ERROR;
         }
       }
