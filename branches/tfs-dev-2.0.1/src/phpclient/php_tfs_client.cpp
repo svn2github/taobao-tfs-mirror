@@ -27,7 +27,7 @@ using namespace tfs::common;
 
 /* True global resources - no need for thread safety here */
 static zend_class_entry *tfs_client_class_entry_ptr;
-static RcClient gclient;
+static RcClient* gclient;
 
 /* {{{ tfs_client_functions[]
  *
@@ -71,7 +71,7 @@ zend_module_entry tfs_client_module_entry = {
 	"tfs_client",
 	tfs_client_functions,
 	PHP_MINIT(tfs_client),
-	NULL,
+	PHP_MSHUTDOWN(tfs_client),
 	NULL,
 	NULL,
 	PHP_MINFO(tfs_client),
@@ -102,6 +102,19 @@ PHP_MINIT_FUNCTION(tfs_client)
 	return SUCCESS;
 }
 /* }}} */
+
+/* {{{ PHP_MSHUTDOWN_FUNCTION
+ */
+PHP_MSHUTDOWN_FUNCTION(tfs_client)
+{
+  if (NULL != gclient)
+  {
+    delete gclient;
+  }
+	return SUCCESS;
+}
+/* }}} */
+
 
 /* {{{ PHP_MINFO_FUNCTION
  */
@@ -143,7 +156,8 @@ PHP_FUNCTION(tfs_client)
   }
   if (SUCCESS == ret)
   {
-    ret = gclient.initialize(rc_ip, app_key, app_ip);
+    gclient = new RcClient();
+    ret = gclient->initialize(rc_ip, app_key, app_ip);
     if (TFS_SUCCESS != ret)
     {
 		  php_error(E_WARNING, "tfs_client: initialize failed, ret: %d", ret);
@@ -185,7 +199,7 @@ PHP_FUNCTION(tfs_client_open)
   }
   if (SUCCESS == ret)
   {
-    fd = gclient.open(filename, suffix, static_cast<RcClient::RC_MODE>(mode), large, local_key);
+    fd = gclient->open(filename, suffix, static_cast<RcClient::RC_MODE>(mode), large, local_key);
     ret = fd > 0 ? SUCCESS : FAILURE;
     if (SUCCESS != ret)
     {
@@ -223,7 +237,7 @@ PHP_FUNCTION(tfs_client_fopen)
   }
   if (SUCCESS == ret)
   {
-    fd = gclient.open(app_id, uid, filename, static_cast<RcClient::RC_MODE>(mode));
+    fd = gclient->open(app_id, uid, filename, static_cast<RcClient::RC_MODE>(mode));
     ret = fd > 0 ? SUCCESS : FAILURE;
     if (SUCCESS != ret)
     {
@@ -259,7 +273,7 @@ PHP_FUNCTION(tfs_client_close)
   if (SUCCESS == ret)
   {
     char name[MAX_FILE_NAME_LEN];
-    ret = gclient.close(fd, name, MAX_FILE_NAME_LEN);
+    ret = gclient->close(fd, name, MAX_FILE_NAME_LEN);
     if (TFS_SUCCESS != ret)
     {
 		  php_error(E_ERROR, "tfs_client: close file failed, fd: %ld, ret: %d", fd, ret);
@@ -303,7 +317,7 @@ PHP_FUNCTION(tfs_client_write)
   }
   if (SUCCESS == ret)
   {
-    ret_length = gclient.write(fd, data, length);
+    ret_length = gclient->write(fd, data, length);
     ret = ret_length <= 0 ? FAILURE : SUCCESS;
     if (ret_length <= 0)
     {
@@ -342,7 +356,7 @@ PHP_FUNCTION(tfs_client_read)
     ret = NULL == data ? FAILURE : SUCCESS;
     if (SUCCESS == ret)
     {
-      offset = gclient.read(fd, data, count);
+      offset = gclient->read(fd, data, count);
       ret = offset > 0 ? SUCCESS : FAILURE;
       if (SUCCESS != ret)
       {
@@ -389,7 +403,7 @@ PHP_FUNCTION(tfs_client_stat)
   TfsFileStat finfo;
   if (SUCCESS == ret)
   {
-    ret = gclient.fstat(fd, &finfo);
+    ret = gclient->fstat(fd, &finfo);
     if (TFS_SUCCESS != ret)
     {
 		  php_error(E_ERROR, "tfs_client: stat failed, fd: %ld, ret: %d", fd, ret);
@@ -437,7 +451,7 @@ PHP_FUNCTION(tfs_client_unlink)
 
   if (SUCCESS == ret)
   {
-    ret = gclient.unlink(filename, suffix, static_cast<TfsUnlinkType>(action));
+    ret = gclient->unlink(filename, suffix, static_cast<TfsUnlinkType>(action));
     if (TFS_SUCCESS != ret)
     {
 		  php_error(E_WARNING, "tfs_client: remove file %s, ret: %d", filename, ret);
@@ -471,7 +485,7 @@ PHP_FUNCTION(tfs_client_create_dir)
   }
   if (SUCCESS == ret)
   {
-    ret = gclient.create_dir(uid, dir_path);
+    ret = gclient->create_dir(uid, dir_path);
     if (TFS_SUCCESS != ret)
     {
 		  php_error(E_ERROR, "tfs_client: create directory %s failed, ret: %d", dir_path, ret);
@@ -505,7 +519,7 @@ PHP_FUNCTION(tfs_client_create_file)
   }
   if (SUCCESS == ret)
   {
-    ret = gclient.create_file(uid, file_path);
+    ret = gclient->create_file(uid, file_path);
     if (TFS_SUCCESS != ret)
     {
 		  php_error(E_ERROR, "tfs_client: create file %s failed, ret: %d", file_path, ret);
@@ -539,7 +553,7 @@ PHP_FUNCTION(tfs_client_rm_dir)
   }
   if (SUCCESS == ret)
   {
-    ret = gclient.rm_dir(uid, dir_path);
+    ret = gclient->rm_dir(uid, dir_path);
     if (TFS_SUCCESS != ret)
     {
 		  php_error(E_ERROR, "tfs_client: remove directory %s failed, ret: %d", dir_path, ret);
@@ -573,7 +587,7 @@ PHP_FUNCTION(tfs_client_rm_file)
   }
   if (SUCCESS == ret)
   {
-    ret = gclient.rm_file(uid, file_path);
+    ret = gclient->rm_file(uid, file_path);
     if (TFS_SUCCESS != ret)
     {
 		  php_error(E_ERROR, "tfs_client: remove file %s failed, ret: %d", file_path, ret);
@@ -609,7 +623,7 @@ PHP_FUNCTION(tfs_client_mv_dir)
   }
   if (SUCCESS == ret)
   {
-    ret = gclient.mv_dir(uid, dir_path, dest_dir_path);
+    ret = gclient->mv_dir(uid, dir_path, dest_dir_path);
     if (TFS_SUCCESS != ret)
     {
 		  php_error(E_ERROR, "tfs_client: mv directory %s to %s failed, ret: %d", dir_path, dest_dir_path, ret);
@@ -645,7 +659,7 @@ PHP_FUNCTION(tfs_client_mv_file)
   }
   if (SUCCESS == ret)
   {
-    ret = gclient.mv_dir(uid, file_path, dest_file_path);
+    ret = gclient->mv_dir(uid, file_path, dest_file_path);
     if (TFS_SUCCESS != ret)
     {
 		  php_error(E_ERROR, "tfs_client: mv file %s to %s failed, ret: %d", file_path, dest_file_path, ret);
@@ -686,7 +700,7 @@ PHP_FUNCTION(tfs_client_pread)
     ret = NULL == data ? FAILURE : SUCCESS;
     if (SUCCESS == ret)
     {
-      off = gclient.pread(fd, data, length, offset);
+      off = gclient->pread(fd, data, length, offset);
       ret = off > 0 ? SUCCESS: FAILURE;
       if (SUCCESS != ret)
       {
@@ -732,7 +746,7 @@ PHP_FUNCTION(tfs_client_pwrite)
   }
   if (SUCCESS == ret)
   {
-    ret = gclient.pwrite(fd, data, length, offset);
+    ret = gclient->pwrite(fd, data, length, offset);
     if (ret < 0)
     {
 		  php_error(E_ERROR, "tfs_client: write data failed, fd: %ld ret: %ld", fd, ret);
@@ -747,7 +761,7 @@ PHP_FUNCTION(tfs_client_pwrite)
  */
 PHP_FUNCTION(tfs_client_get_app_id)
 {
-  RETURN_LONG(gclient.get_app_id());
+  RETURN_LONG(gclient->get_app_id());
 }
 /* }}} */
 
@@ -777,7 +791,7 @@ PHP_FUNCTION(tfs_client_fstat)
   if (SUCCESS == ret)
   {
     FileMetaInfo info;
-    ret = gclient.ls_file(app_id, uid, file_path, info);
+    ret = gclient->ls_file(app_id, uid, file_path, info);
     if (TFS_SUCCESS != ret)
     {
 		  php_error(E_ERROR, "tfs_client: fstat %s failed, ret: %d", file_path, ret);
@@ -823,7 +837,7 @@ PHP_FUNCTION(tfs_client_ls_dir)
   if (SUCCESS == ret)
   {
     std::vector<FileMetaInfo> vinfo;
-    ret = gclient.ls_dir(app_id, uid, file_path, vinfo);
+    ret = gclient->ls_dir(app_id, uid, file_path, vinfo);
     if (TFS_SUCCESS != ret)
     {
 		  php_error(E_ERROR, "tfs_client: ls %s failed, ret: %d", file_path, ret);

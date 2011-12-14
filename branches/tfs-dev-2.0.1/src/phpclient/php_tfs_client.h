@@ -15,6 +15,7 @@ extern zend_module_entry tfs_client_module_entry;
 #endif
 
 PHP_MINIT_FUNCTION(tfs_client);
+PHP_MSHUTDOWN_FUNCTION(tfs_client);
 PHP_MINFO_FUNCTION(tfs_client);
 
 PHP_FUNCTION(tfs_client);
