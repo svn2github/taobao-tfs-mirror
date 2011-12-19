@@ -54,6 +54,11 @@ namespace tfs
       int32_t report_block_expired_time_;
       int32_t discard_newblk_safe_mode_time_;
       int32_t discard_max_count_;
+      int32_t strategy_write_capacity_weigth_;
+      int32_t strategy_write_elect_num_weigth_;
+      int32_t strategy_replicate_capacity_weigth_;
+      int32_t strategy_replicate_load_weigth_;
+      int32_t strategy_replicate_elect_num_weigth_;
       double  balance_percent_;
 
       static NameServerParameter ns_parameter_;

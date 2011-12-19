@@ -11,9 +11,9 @@
  * Authors:
  *   duolong <duolong@taobao.com>
  *      - initial release
- *   qushan<qushan@taobao.com> 
+ *   qushan<qushan@taobao.com>
  *      - modify 2009-03-27
- *   duanfei <duanfei@taobao.com> 
+ *   duanfei <duanfei@taobao.com>
  *      - modify 2010-04-23
  *
  */
@@ -54,7 +54,7 @@ namespace tfs
       int64_t average_use = total_use_capacity / alive_ds_count;
 #if defined(TFS_GTEST) || defined(TFS_NS_INTEGRATION) || defined(TFS_NS_DEBUG)
       TBSYS_LOG(DEBUG, "alive_ds_count: %"PRI64_PREFIX"d, total_load: %d, average_load: %"PRI64_PREFIX"d current_load: %d, total_use_capacity: %"PRI64_PREFIX"d,average_use: %"PRI64_PREFIX"d",
-          alive_ds_count, total_load, average_load, current_load, total_use_capacity, average_use); 
+          alive_ds_count, total_load, average_load, current_load, total_use_capacity, average_use);
 #endif
 
       return (((current_load < average_load * BASE_MULTIPLE) || (total_load == 0)) && ((use_capacity <= average_use * BASE_MULTIPLE)
@@ -119,7 +119,7 @@ namespace tfs
     }
 
     //---------------------------------------------------------
-    // WriteStrategy 
+    // WriteStrategy
     //---------------------------------------------------------
     int64_t WriteStrategy::calc(const ServerCollect* server) const
     {
@@ -138,7 +138,9 @@ namespace tfs
 #endif
         return 0;
       }
-      return server->get_elect_num();
+      BaseStrategy::normalize(server);
+      return server->get_elect_num() * SYSPARAM_NAMESERVER.strategy_write_elect_num_weigth_ +
+            use_ * SYSPARAM_NAMESERVER.strategy_write_capacity_weigth_;
     }
 
     // ReplicateDestStrategy
@@ -161,7 +163,9 @@ namespace tfs
         return 0;
       }
       BaseStrategy::normalize(server);
-      return elect_average_num_ * 80 + use_ * 15 + load_ * 5;
+      return elect_average_num_ * SYSPARAM_NAMESERVER.strategy_replicate_elect_num_weigth_
+              + use_ * SYSPARAM_NAMESERVER.strategy_replicate_capacity_weigth_
+              + load_ * SYSPARAM_NAMESERVER.strategy_replicate_load_weigth_;
     }
 
     //---------------------------------------------------------
@@ -175,7 +179,7 @@ namespace tfs
 
     void dump_weigths(const DS_WEIGHT& weights)
     {
-      TBSYS_LOG(INFO,"-----------------------dump_weigths: %"PRI64_PREFIX"u----------------------\n", weights.size());
+      TBSYS_LOG(DEBUG,"-----------------------dump_weigths: %"PRI64_PREFIX"u----------------------\n", weights.size());
       DS_WEIGHT::const_iterator it = weights.begin();
       while (it != weights.end())
       {
@@ -288,7 +292,7 @@ namespace tfs
       return elect_ds(strategy, NormalElectOperation(), meta, source, except, elect_count, true, result);
     }
 
-    int elect_replicate_dest_ds(LayoutManager& meta, vector<ServerCollect*>& except, int32_t elect_count, vector<ServerCollect*> & result) 
+    int elect_replicate_dest_ds(LayoutManager& meta, vector<ServerCollect*>& except, int32_t elect_count, vector<ServerCollect*> & result)
     {
       ReplicateDestStrategy strategy(GFactory::get_global_info().get_elect_seq_num(), GFactory::get_global_info());
       return elect_ds(strategy, ExcludeGroupElectOperation(), meta, except, elect_count,true, result);
@@ -339,7 +343,7 @@ namespace tfs
         lan = Func::get_lan(id, SYSPARAM_NAMESERVER.group_mask_);
         TBSYS_LOG(DEBUG, "server: %s find: %d", tbsys::CNetUtil::addrToString(id).c_str(),
             existlan.find(lan) == existlan.end()/*, exist_server.find(iter->second) == exist_server.end()*/);
-        if ((first_result == NULL) 
+        if ((first_result == NULL)
             && (existlan.find(lan) == existlan.end()))
           //&& (exist_server.find(iter->second) == exist_server.end()))
         {
@@ -371,7 +375,7 @@ namespace tfs
     int delete_excess_backup(const std::vector<ServerCollect*> & source, const std::vector<ServerCollect*> & except,
                              int32_t count, std::vector<ServerCollect*> & result, DeleteExcessBackupStrategy flag)
     {
-      bool bret = flag == DELETE_EXCESS_BACKUP_STRATEGY_BY_GROUP ? SYSPARAM_NAMESERVER.group_mask_ == 0 ? false : true : true; 
+      bool bret = flag == DELETE_EXCESS_BACKUP_STRATEGY_BY_GROUP ? SYSPARAM_NAMESERVER.group_mask_ == 0 ? false : true : true;
       if (bret)
       {
         if (flag == DELETE_EXCESS_BACKUP_STRATEGY_BY_GROUP)
@@ -420,7 +424,7 @@ namespace tfs
                 {
                   if (tmp_iter->second == ds_in_lan)
                   {
-                    middle_result.erase(tmp_iter); 
+                    middle_result.erase(tmp_iter);
                     break;
                   }
                 }

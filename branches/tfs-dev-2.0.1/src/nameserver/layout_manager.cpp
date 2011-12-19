@@ -72,7 +72,12 @@ namespace tfs
       "group_count",
       "group_seq",
       "discard_newblk_safe_mode_time",
-      "discard_max_count"
+      "discard_max_count",
+      "strategy_write_capacity_weigth",
+      "strategy_write_elect_num_weigth",
+      "strategy_replicate_capactiy_weigth",
+      "strategy_replicate_load_weigth",
+      "strategy_replicate_elect_num_weigth",
   };
 
   static int find_servers_difference(const std::vector<ServerCollect*>& first,
@@ -1851,7 +1856,12 @@ namespace tfs
           &SYSPARAM_NAMESERVER.group_count_,
           &SYSPARAM_NAMESERVER.group_seq_,
           &SYSPARAM_NAMESERVER.discard_newblk_safe_mode_time_,
-          &SYSPARAM_NAMESERVER.discard_max_count_
+          &SYSPARAM_NAMESERVER.discard_max_count_,
+          &SYSPARAM_NAMESERVER.strategy_write_capacity_weigth_,
+          &SYSPARAM_NAMESERVER.strategy_write_elect_num_weigth_,
+          &SYSPARAM_NAMESERVER.strategy_replicate_capacity_weigth_,
+          &SYSPARAM_NAMESERVER.strategy_replicate_load_weigth_,
+          &SYSPARAM_NAMESERVER.strategy_replicate_elect_num_weigth_
         };
         int32_t size = sizeof(param) / sizeof(int32_t*);
         if (index < 0x01 || index > size)
@@ -2466,7 +2476,7 @@ namespace tfs
               it->second->unlock();
 
               std::set<BlockCollect*, ServerCollect::BlockIdComp>::const_iterator cn_iter = blocks.begin();
-              for (; cn_iter != blocks.end() && !(interrupt_ & INTERRUPT_ALL) && need > 0; ++cn_iter)
+              for (; cn_iter != blocks.end() && !(interrupt_ & INTERRUPT_ALL) && need > 0; ++cn_iter, ++index)
               {
                 except.clear();
                 BlockCollect* block_collect = *cn_iter;
