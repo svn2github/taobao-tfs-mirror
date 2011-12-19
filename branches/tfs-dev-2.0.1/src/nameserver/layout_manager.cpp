@@ -2464,7 +2464,9 @@ namespace tfs
                 need, source.size(), target.size(), percent);
 
             bool has_move = false;
+            bool force    = false;
             uint32_t block_id = 0;
+            int32_t index = 0, random_value = 0;
             std::vector<ServerCollect*> except;
             std::vector<ServerCollect*> servers;
             // we'd better start from the most needed ds
@@ -2473,9 +2475,19 @@ namespace tfs
             {
               it->second->rdlock();
               std::set<BlockCollect*, ServerCollect::BlockIdComp> blocks(it->second->hold_);
+              force = it->second->is_full();
               it->second->unlock();
 
               std::set<BlockCollect*, ServerCollect::BlockIdComp>::const_iterator cn_iter = blocks.begin();
+              if (force)
+              {
+                random_value = random() % blocks.size();
+                while (index < random_value && cn_iter != blocks.end())
+                {
+                  ++index;
+                  ++cn_iter;
+                }
+              }
               for (; cn_iter != blocks.end() && !(interrupt_ & INTERRUPT_ALL) && need > 0; ++cn_iter, ++index)
               {
                 except.clear();
@@ -2484,7 +2496,8 @@ namespace tfs
                   BlockChunkPtr ptr = get_chunk(block_collect->id());
                   RWLock::Lock r_lock(*ptr, READ_LOCKER);
                   has_move = ((block_collect != NULL)
-                      && (block_collect->check_balance())
+                      &&((force && (!GFactory::get_lease_factory().has_valid_lease(block_collect->id())))
+                          ||(block_collect->check_balance()))
                       && (!find_server_in_plan(it->second))
                       && (!find_block_in_plan(block_collect->id())));
 #if defined(TFS_GTEST) || defined(TFS_NS_INTEGRATION) || defined(TFS_NS_DEBUG)
