@@ -802,7 +802,7 @@ namespace tfs
     {
       string ns_addr;
       if ((index >= CHOICE_CLUSTER_NS_TYPE_LENGTH)
-          || -1 == cluster_id)
+          || (-1 == cluster_id && RcClient::CREATE != mode))
       {
         TBSYS_LOG(DEBUG, "wrong index or file not exist, index: %d, cluster_id: %d", index, cluster_id);
         //null ;
