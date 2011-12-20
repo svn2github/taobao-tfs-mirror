@@ -19,12 +19,21 @@
 #include "new_client/fsname.h"
 #include "new_client/tfs_client_api.h"
 #include "tools/util/tool_util.h"
+#ifdef _WITH_READ_LINE
+#include "readline/readline.h"
+#include "readline/history.h"
 
 using namespace tfs::common;
 using namespace tfs::message;
 using namespace tfs::client;
 using namespace tfs::tools;
 using namespace std;
+
+#if defined(__DATE__) && defined(__TIME__) && defined(PACKAGE) && defined(VERSION)
+static const char g_build_description[] = "Taobao file system(TFS), Version: " VERSION ", Build time: "__DATE__ " "__TIME__;
+#else
+static const char _g_build_description[] = "unknown";
+#endif
 
 static TfsClient* g_tfs_client = NULL;
 static STR_FUNC_MAP g_cmd_map;
@@ -35,6 +44,7 @@ static void sign_handler(const int32_t sig);
 int main_loop();
 int do_cmd(char* buf);
 void init();
+void version();
 int get_file_retry(char* tfs_name, char* local_file);
 
 /* cmd func */
@@ -56,9 +66,6 @@ int cmd_set_bpr(const VSTRING &param);
 int cmd_get_bpr(const VSTRING &param);
 int cmd_batch_file(const VSTRING& param);
 
-#ifdef _WITH_READ_LINE
-#include "readline/readline.h"
-#include "readline/history.h"
 template<class T> const char* get_str(T it)
 {
   return it->first.c_str();
@@ -115,22 +122,34 @@ void init()
   g_cmd_map["exit"] = CmdNode("exit", "exit", 0, 0, cmd_quit);
   g_cmd_map["param"] = CmdNode("param name [set value [extravalue]]", "set/get param value", 0, 4, cmd_set_run_param);
   g_cmd_map["addblk"] = CmdNode("addblk blockid", "add block", 1, 1, cmd_add_block);
-  g_cmd_map["removeblk"] = CmdNode("removeblk blockid [serverip:port|flag]", "remove block, flag: 0--relieve relation from ns, 1--remove block from ds and ns, default is 0", 1, 2, cmd_remove_block);
+  g_cmd_map["removeblk"] = CmdNode("removeblk blockid [serverip:port|flag]",
+      "remove block. flag: 1--remove block from both ds and ns, 2--just relieve relation from ns, default is 1.",
+      1, 2, cmd_remove_block);
   g_cmd_map["listblk"] = CmdNode("listblk blockid", "list block server list", 1, 1, cmd_list_block);
-  g_cmd_map["loadblk"] = CmdNode("loadblk blockid serverip:port", "load block", 2, 2, cmd_load_block);
+  g_cmd_map["loadblk"] = CmdNode("loadblk blockid dsip:port", "build relationship between block and dataserver.", 2, 2, cmd_load_block);
   g_cmd_map["compactblk"] = CmdNode("compactblk blockid", "compact block", 1, 1, cmd_compact_block);
-  g_cmd_map["replblk"] = CmdNode("replblk blockid type [action src dest]", "replicate block. type: 1--action, 2--src, 3--dest, 4--action src, 5--action dest, 6--src dest, 7--action src dest", 2, 5, cmd_replicate_block);
-  g_cmd_map["repairgrp"] = CmdNode("repairgrp blockid", "repair group block", 1, 1, cmd_repair_group_block);
-  g_cmd_map["aci"] = CmdNode("aci ip:port [startrow returnrow]", "access control", 1, 3, cmd_access_stat_info);
-  g_cmd_map["setacl"] = CmdNode("setacl ip:port type [v1 [v2]]",
-      "set access control. "
+  g_cmd_map["replblk"] = CmdNode("replblk blockid type [[action] [src] [dest]]",
+      "replicate block. type: 1--action, 2--src, 3--dest, 4--action src, 5--action dest, 6--src dest, 7--action src dest",
+      2, 5, cmd_replicate_block);
+  g_cmd_map["aci"] = CmdNode("aci dsip:port [startrow returnrow]", "get dataserver access information, such as write or read times", 1, 3, cmd_access_stat_info);
+  g_cmd_map["setacl"] = CmdNode("setacl dsip:port type [v1 [v2]]",
+      "set dataserver access control. it can reject the request of certain ip or network segment"
       "type: 1--ACL_FLAG, 2--ACL_IPMASK, 3--ACL_IPLIST, 4--ACL_CLEAR, 5--ACL_RELOAD",
       2, 4, cmd_access_control_flag);
-  g_cmd_map["rotatelog"] = CmdNode("rotatelog ip:port","rotate log", 1, 1, cmd_rotate_log);
-  g_cmd_map["dumpplan"] = CmdNode("dumpplan [serverip:port [action]]", "dump plan server", 0, 2, cmd_dump_plan);
-  g_cmd_map["setbpr"] = CmdNode("setbpr value1 value2", "set balance percent ratio", 2, 2, cmd_set_bpr);
-  g_cmd_map["getbpr"] = CmdNode("getbpr", "get balance percent ratio", 0, 0, cmd_get_bpr);
+  g_cmd_map["rotatelog"] = CmdNode("rotatelog","rotate log file. it will move nameserver.log to nameserver.log.currenttime, and create new nameserver.log",
+      0, 0, cmd_rotate_log);
+  g_cmd_map["dumpplan"] = CmdNode("dumpplan [nsip:port]", "dump plan server", 0, 1, cmd_dump_plan);
+  g_cmd_map["setbpr"] = CmdNode("setbpr value1 value2",
+      "set balance percent ratio. value1: integer part, 0 or 1, value2 should be 0 if value1 is 1. value2: float part.",
+      2, 2, cmd_set_bpr);
+  g_cmd_map["getbpr"] = CmdNode("getbpr", "get balance percent ratio, float value, ex: 1.000000 or 0.000005", 0, 0, cmd_get_bpr);
   g_cmd_map["batch"] = CmdNode("batch file", "batch run command in file", 1, 1, cmd_batch_file);
+}
+
+void version()
+{
+  std::cerr << g_build_description << std::endl;
+  exit(TFS_SUCCESS);
 }
 
 // expand ~ to HOME. modify argument
@@ -235,7 +254,7 @@ int cmd_set_bpr(const VSTRING& param)
     iret = (value3 > 1 || value3 < 0 || param[1].length() > 6 || ((value4 = atoi(param[1].c_str())) != 0 && 1 == value3)) ? EXIT_PARAMETER_ERROR : TFS_SUCCESS;
     if (TFS_SUCCESS != iret)
     {
-      fprintf(stderr, "parameter is invalid, value3: %d, value4: %s\n", value3, param[1].c_str());
+      fprintf(stderr, "parameter is invalid, value1: (0|1), value2.length < 6. value1: %d, value2: %s\n", value3, param[1].c_str());
     }
     else
     {
@@ -869,13 +888,13 @@ int cmd_access_control_flag(const VSTRING& param)
 
 int cmd_rotate_log(const VSTRING& param)
 {
-  uint64_t server_id = Func::get_host_ip(param[0].c_str());
+  UNUSED(param);
   ClientCmdMessage req_cc_msg;
   req_cc_msg.set_cmd(CLIENT_CMD_ROTATE_LOG);
   int32_t status = TFS_ERROR;
 
-  send_msg_to_server(server_id, &req_cc_msg, status);
-  ToolUtil::print_info(status, "rotatelog %s", param[0].c_str());
+  send_msg_to_server(g_tfs_client->get_server_id(), &req_cc_msg, status);
+  ToolUtil::print_info(status, "rotate nameserver log, %s", tbsys::CNetUtil::addrToString(g_tfs_client->get_server_id()).c_str());
   return status;
 }
 
@@ -980,34 +999,39 @@ int main(int argc,char** argv)
   bool set_log_level = false;
   const char* ns_ip = NULL;
 
-  while ((i = getopt(argc, argv, "s:d:nih")) != EOF)
+  init();
+
+  while ((i = getopt(argc, argv, "s:invh")) != EOF)
   {
     switch (i)
     {
-    case 'n':
+      case 's':
+        ns_ip = optarg;
+        break;
+      case 'i':
+        directly = true;
+        break;
+      case 'n':
         set_log_level = true;
         break;
-    case 's':
-      ns_ip = optarg;
-      break;
-    case 'i':
-      directly = true;
-      break;
-    case 'h':
-    default:
-      usage(argv[0]);
+      case 'v':
+        version();
+        break;
+      case 'h':
+      default:
+        usage(argv[0]);
     }
-  }
-
-  if (set_log_level)
-  {
-    TBSYS_LOGGER.setLogLevel("ERROR");
   }
 
   if (NULL == ns_ip)
   {
     fprintf(stderr, "please input nameserver ip and port.\n");
     usage(argv[0]);
+  }
+
+  if (set_log_level)
+  {
+    TBSYS_LOGGER.setLogLevel("ERROR");
   }
 
   g_tfs_client = TfsClient::Instance();
@@ -1018,7 +1042,6 @@ int main(int argc,char** argv)
     return ret;
   }
 
-  init();
 
   if (optind >= argc)
   {
@@ -1048,9 +1071,10 @@ int usage(const char *name)
           "\n****************************************************************************** \n"
           "You can operate nameserver by this tool.\n"
           "Usage: \n"
-          "  %s -s ns_ip_port [-i 'command'] [-h help]\n"
+          "  %s -s ns_ip_port [-i 'command'] [-v version] [-h help]\n"
           "****************************************************************************** \n\n",
           name);
+  ToolUtil::show_help(g_cmd_map);
   exit(TFS_ERROR);
 }
 
@@ -1075,16 +1099,37 @@ inline bool is_whitespace(char c)
 
 inline char* strip_line(char* line)
 {
-  while (is_whitespace(*line))
+  // trim start postion
+  while(is_whitespace(*line))
   {
     line++;
   }
-  int32_t end = strlen(line);
-  while (end && (is_whitespace(line[end-1]) || '\n' == line[end-1] || '\r' == line[end-1]))
+
+  // trim end postion
+  int end_pos = strlen(line);
+  while (end_pos && (is_whitespace(line[end_pos-1]) || '\n' == line[end_pos-1] || '\r' == line[end_pos-1]))
   {
-    end--;
+    end_pos--;
   }
-  line[end] = '\0';
+  line[end_pos] = '\0';
+
+  // merge whitespace
+  char new_line[CMD_MAX_LEN];
+  snprintf(new_line, CMD_MAX_LEN + 1, "%s", line);
+
+  int j = 0;
+  for (int i = 0; i < end_pos; i++)
+  {
+    if (i+1 <= end_pos && line[i] == ' ' && line[i+1] == ' ')
+    {
+      continue;
+    }
+    new_line[j] = line[i];
+    j++;
+  }
+  new_line[j] = '\0';
+  snprintf(line, end_pos + 1, "%s", new_line);
+
   return line;
 }
 
@@ -1138,6 +1183,7 @@ int32_t do_cmd(char* key)
   add_history(key);
 #endif
 
+  // check the validation of sub command
   char* token = strchr(key, ' ');
   if (token != NULL)
   {
@@ -1162,6 +1208,7 @@ int32_t do_cmd(char* key)
     key = NULL;
   }
 
+  // get param of sub command
   VSTRING param;
   param.clear();
   while ((token = strsep(&key, " ")) != NULL)
@@ -1186,17 +1233,11 @@ int32_t do_cmd(char* key)
 int cmd_dump_plan(const VSTRING& param)
 {
   int32_t size = param.size();
-  int32_t action = 0;
   uint64_t server_id = g_tfs_client->get_server_id();
 
   if (size >= 1)
   {
     server_id = Func::get_host_ip(param[0].c_str());
-  }
-
-  if (size == 2)
-  {
-    action = atoi(param[1].c_str());
   }
 
   DumpPlanMessage req_dp_msg;
