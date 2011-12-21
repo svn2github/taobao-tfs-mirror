@@ -7,7 +7,10 @@ AM_CPPFLAGS=-I$(top_srcdir)/src\
 AM_LDFLAGS=-lz -lrt -lpthread -ldl $(READLINE_LIB) -luuid
 
 bin_PROGRAMS = admintool showsyncoplog rmsyncoplog ssm tfstool performance syncbyfile\
-               read_syncoplog_header clear_remote_block_cache
+if WITH_TAIR_CACHE
+               clear_remote_block_cache\
+endif
+               read_syncoplog_header
 
 LDADD = $(top_builddir)/src/tools/util/libtfstoolsutil.a\
 	$(top_builddir)/src/dataserver/libdataserver.a\
@@ -32,4 +35,6 @@ read_syncoplog_header_SOURCES=read_syncoplog_header.cpp
 admintool_SOURCES = admintool.cpp
 performance_SOURCES = performance.cpp
 syncbyfile_SOURCES=sync_by_file.cpp
+if WITH_TAIR_CACHE
 clear_remote_block_cache_SOURCES=clear_remote_block_cache.cpp
+endif
