@@ -319,6 +319,11 @@ int cmd_set_run_param(const VSTRING& param)
       "group_seq",
       "discard_newblk_safe_mode_time",
       "discard_max_count",
+      "strategy_write_capacity_weigth",
+      "strategy_write_elect_num_weigth",
+      "strategy_replicate_capactiy_weigth",
+      "strategy_replicate_load_weigth",
+      "strategy_replicate_elect_num_weigth"
       ""
   };
   static int32_t param_strlen = sizeof(param_str) / sizeof(char*);
