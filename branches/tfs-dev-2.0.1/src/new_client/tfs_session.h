@@ -55,8 +55,8 @@ namespace tfs
       int get_block_info(SegmentData& seg_data, int32_t flag);
       int get_block_info(SEG_DATA_LIST& seg_list, const int32_t flag);
 
-      void insert_block_cache(const uint32_t block_id, const common::VUINT64& rds);
-      void remove_block_cache(const uint32_t block_id);
+      void insert_local_block_cache(const uint32_t block_id, const common::VUINT64& rds);
+      void remove_local_block_cache(const uint32_t block_id);
 
       inline int32_t get_cluster_id() const
       {

@@ -371,7 +371,7 @@ int TfsSession::get_block_info(SegmentData& seg_data, int32_t flag)
             BgTask::get_stat_mgr().update_entry(StatItem::client_cache_stat_, StatItem::remote_cache_hit_, 1);
             if (ClientConfig::use_cache_ & USE_CACHE_FLAG_LOCAL)
             {
-              insert_block_cache(block_id, seg_data.ds_);
+              insert_local_block_cache(block_id, seg_data.ds_);
             }
             seg_data.reset_status();
             seg_data.cache_hit_ = CACHE_HIT_REMOTE;
@@ -401,7 +401,7 @@ int TfsSession::get_block_info(SegmentData& seg_data, int32_t flag)
             // update cache
             if (ClientConfig::use_cache_ & USE_CACHE_FLAG_LOCAL)
             {
-              insert_block_cache(block_id, seg_data.ds_);
+              insert_local_block_cache(block_id, seg_data.ds_);
               seg_data.cache_hit_ = CACHE_HIT_LOCAL;
             }
 #ifdef WITH_TAIR_CACHE
@@ -496,7 +496,7 @@ int TfsSession::get_block_info(SEG_DATA_LIST& seg_list, int32_t flag)
         {
           if (USE_CACHE_FLAG_LOCAL & ClientConfig::use_cache_)
           {
-            insert_block_cache(seg_list[m_iter->first]->seg_info_.block_id_, m_iter->second);
+            insert_local_block_cache(seg_list[m_iter->first]->seg_info_.block_id_, m_iter->second);
           }
           seg_list[m_iter->first]->cache_hit_ = CACHE_HIT_REMOTE;
           seg_list[m_iter->first]->ds_ = m_iter->second;
@@ -625,7 +625,7 @@ int TfsSession::get_block_info_ex(SEG_DATA_LIST& seg_list, const int32_t flag)
           // update cache
           if (USE_CACHE_FLAG_LOCAL & ClientConfig::use_cache_)
           {
-            insert_block_cache(block_id, iter->second);
+            insert_local_block_cache(block_id, iter->second);
             seg_list[i]->cache_hit_ = CACHE_HIT_LOCAL;
           }
 #ifdef WITH_TAIR_CACHE
@@ -709,7 +709,7 @@ int TfsSession::get_block_info_ex(SEG_DATA_LIST& seg_list, const int32_t flag)
 
             if (USE_CACHE_FLAG_LOCAL & ClientConfig::use_cache_)
             {
-              insert_block_cache(block_id, it->second.ds_);
+              insert_local_block_cache(block_id, it->second.ds_);
               seg_list[i]->cache_hit_ = CACHE_HIT_LOCAL;
             }
 #ifdef WITH_TAIR_CACHE
@@ -825,7 +825,7 @@ int TfsSession::get_cluster_id_from_ns()
   return ret;
 }
 
-void TfsSession::insert_block_cache(const uint32_t block_id, const VUINT64& rds)
+void TfsSession::insert_local_block_cache(const uint32_t block_id, const VUINT64& rds)
 {
   if (USE_CACHE_FLAG_LOCAL & ClientConfig::use_cache_)
   {
@@ -838,7 +838,7 @@ void TfsSession::insert_block_cache(const uint32_t block_id, const VUINT64& rds)
   }
 }
 
-void TfsSession::remove_block_cache(const uint32_t block_id)
+void TfsSession::remove_local_block_cache(const uint32_t block_id)
 {
   if (USE_CACHE_FLAG_LOCAL & ClientConfig::use_cache_)
   {

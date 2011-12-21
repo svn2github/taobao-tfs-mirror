@@ -555,12 +555,12 @@ int TfsFile::process(const InnerFilePhase file_phase)
                       i, processing_seg_list_[i]->status_, phase_status[file_phase].pre_status_);
             if (CACHE_HIT_LOCAL == processing_seg_list_[i]->cache_hit_)
             {
-              tfs_session_->remove_block_cache(processing_seg_list_[i]->seg_info_.block_id_);
+              tfs_session_->remove_local_block_cache(processing_seg_list_[i]->seg_info_.block_id_);
             }
 #ifdef WITH_TAIR_CACHE
             else if (CACHE_HIT_REMOTE == processing_seg_list_[i]->cache_hit_)
             {
-              tfs_session_->remove_block_cache(processing_seg_list_[i]->seg_info_.block_id_);
+              tfs_session_->remove_local_block_cache(processing_seg_list_[i]->seg_info_.block_id_);
               tfs_session_->remove_remote_block_cache(processing_seg_list_[i]->seg_info_.block_id_);
             }
 #endif
@@ -622,13 +622,13 @@ int TfsFile::process_fail_response(NewClient* client)
                   processing_seg_list_[index_it->second]->seg_info_.block_id_);
         if (CACHE_HIT_LOCAL == processing_seg_list_[index_it->second]->cache_hit_)
         {
-          tfs_session_->remove_block_cache(
+          tfs_session_->remove_local_block_cache(
             processing_seg_list_[index_it->second]->seg_info_.block_id_);
         }
 #ifdef WITH_TAIR_CACHE
         else if (CACHE_HIT_REMOTE == processing_seg_list_[index_it->second]->cache_hit_)
         {
-          tfs_session_->remove_block_cache(
+          tfs_session_->remove_local_block_cache(
             processing_seg_list_[index_it->second]->seg_info_.block_id_);
           tfs_session_->remove_remote_block_cache(
             processing_seg_list_[index_it->second]->seg_info_.block_id_);
@@ -820,7 +820,7 @@ int TfsFile::async_req_create_file(NewClient* client, const uint16_t index)
 
   if (TFS_SUCCESS != ret)
   {
-    tfs_session_->remove_block_cache(seg_data->seg_info_.block_id_);
+    tfs_session_->remove_local_block_cache(seg_data->seg_info_.block_id_);
     BgTask::get_stat_mgr().update_entry(StatItem::client_access_stat_, StatItem::write_fail_, 1);
   }
 
@@ -876,7 +876,7 @@ int TfsFile::async_rsp_create_file(common::BasePacket* rsp, const uint16_t index
 
   if (remove_flag)
   {
-    tfs_session_->remove_block_cache(seg_data->seg_info_.block_id_);
+    tfs_session_->remove_local_block_cache(seg_data->seg_info_.block_id_);
   }
 
   if (TFS_SUCCESS != ret)
@@ -906,7 +906,7 @@ int TfsFile::async_req_write_data(NewClient* client, const uint16_t index)
   int ret = client->post_request(seg_data->get_write_pri_ds(), &wd_message, send_id);
   if (TFS_SUCCESS != ret)
   {
-    tfs_session_->remove_block_cache(seg_data->seg_info_.block_id_);
+    tfs_session_->remove_local_block_cache(seg_data->seg_info_.block_id_);
     BgTask::get_stat_mgr().update_entry(StatItem::client_access_stat_, StatItem::write_fail_, 1);
   }
   else
@@ -973,7 +973,7 @@ int TfsFile::async_rsp_write_data(common::BasePacket* rsp, const uint16_t index)
 
   if (remove_flag)
   {
-    tfs_session_->remove_block_cache(seg_data->seg_info_.block_id_);
+    tfs_session_->remove_local_block_cache(seg_data->seg_info_.block_id_);
   }
 
   if (TFS_SUCCESS != ret)
@@ -1003,7 +1003,7 @@ int TfsFile::async_req_close_file(NewClient* client, const uint16_t index)
   int ret = client->post_request(seg_data->get_write_pri_ds(), &cf_message, send_id);
   if (TFS_SUCCESS != ret)
   {
-    tfs_session_->remove_block_cache(seg_data->seg_info_.block_id_);
+    tfs_session_->remove_local_block_cache(seg_data->seg_info_.block_id_);
     BgTask::get_stat_mgr().update_entry(StatItem::client_access_stat_, StatItem::write_fail_, 1);
   }
   else
@@ -1054,7 +1054,7 @@ int TfsFile::async_rsp_close_file(common::BasePacket* rsp, const uint16_t index)
 
   if (remove_flag)
   {
-    tfs_session_->remove_block_cache(seg_data->seg_info_.block_id_);
+    tfs_session_->remove_local_block_cache(seg_data->seg_info_.block_id_);
   }
 
   if (TFS_SUCCESS != ret)
@@ -1113,12 +1113,12 @@ int TfsFile::async_req_read_file(NewClient* client, const uint16_t index,
       {
         if (CACHE_HIT_LOCAL == seg_data.cache_hit_)
         {
-          tfs_session_->remove_block_cache(seg_data.seg_info_.block_id_);
+          tfs_session_->remove_local_block_cache(seg_data.seg_info_.block_id_);
         }
 #ifdef WITH_TAIR_CACHE
         else if (CACHE_HIT_REMOTE == seg_data.cache_hit_)
         {
-          tfs_session_->remove_block_cache(seg_data.seg_info_.block_id_);
+          tfs_session_->remove_local_block_cache(seg_data.seg_info_.block_id_);
           tfs_session_->remove_remote_block_cache(seg_data.seg_info_.block_id_);
         }
 #endif
@@ -1243,12 +1243,12 @@ int TfsFile::async_rsp_read_file(common::BasePacket* rsp, const uint16_t index)
   {
     if (CACHE_HIT_LOCAL == seg_data->cache_hit_)
     {
-      tfs_session_->remove_block_cache(seg_data->seg_info_.block_id_);
+      tfs_session_->remove_local_block_cache(seg_data->seg_info_.block_id_);
     }
 #ifdef WITH_TAIR_CACHE
     if (CACHE_HIT_REMOTE == seg_data->cache_hit_)
     {
-      tfs_session_->remove_block_cache(seg_data->seg_info_.block_id_);
+      tfs_session_->remove_local_block_cache(seg_data->seg_info_.block_id_);
       tfs_session_->remove_remote_block_cache(seg_data->seg_info_.block_id_);
     }
 #endif
@@ -1405,12 +1405,12 @@ int TfsFile::async_rsp_read_file_v2(common::BasePacket* rsp, const uint16_t inde
   {
     if (CACHE_HIT_LOCAL == seg_data->cache_hit_)
     {
-      tfs_session_->remove_block_cache(seg_data->seg_info_.block_id_);
+      tfs_session_->remove_local_block_cache(seg_data->seg_info_.block_id_);
     }
 #ifdef WITH_TAIR_CACHE
     else if (CACHE_HIT_REMOTE == seg_data->cache_hit_)
     {
-      tfs_session_->remove_block_cache(seg_data->seg_info_.block_id_);
+      tfs_session_->remove_local_block_cache(seg_data->seg_info_.block_id_);
       tfs_session_->remove_remote_block_cache(seg_data->seg_info_.block_id_);
     }
 #endif
@@ -1482,12 +1482,12 @@ int TfsFile::async_req_stat_file(NewClient* client, const uint16_t index)
       {
         if (CACHE_HIT_LOCAL == seg_data->cache_hit_)
         {
-          tfs_session_->remove_block_cache(seg_data->seg_info_.block_id_);
+          tfs_session_->remove_local_block_cache(seg_data->seg_info_.block_id_);
         }
 #ifdef WITH_TAIR_CACHE
         else if (CACHE_HIT_REMOTE == seg_data->cache_hit_)
         {
-          tfs_session_->remove_block_cache(seg_data->seg_info_.block_id_);
+          tfs_session_->remove_local_block_cache(seg_data->seg_info_.block_id_);
           tfs_session_->remove_remote_block_cache(seg_data->seg_info_.block_id_);
         }
 #endif
@@ -1591,12 +1591,12 @@ int TfsFile::async_rsp_stat_file(common::BasePacket* rsp, const uint16_t index)
   {
     if (CACHE_HIT_LOCAL == seg_data->cache_hit_)
     {
-      tfs_session_->remove_block_cache(seg_data->seg_info_.block_id_);
+      tfs_session_->remove_local_block_cache(seg_data->seg_info_.block_id_);
     }
 #ifdef WITH_TAIR_CACHE
     else if (CACHE_HIT_REMOTE == seg_data->cache_hit_)
     {
-      tfs_session_->remove_block_cache(seg_data->seg_info_.block_id_);
+      tfs_session_->remove_local_block_cache(seg_data->seg_info_.block_id_);
       tfs_session_->remove_remote_block_cache(seg_data->seg_info_.block_id_);
     }
 #endif
@@ -1630,7 +1630,7 @@ int TfsFile::async_req_unlink_file(NewClient* client, const uint16_t index)
   int ret = client->post_request(seg_data->get_write_pri_ds(), &uf_message, send_id);
   if (TFS_SUCCESS != ret)
   {
-    tfs_session_->remove_block_cache(seg_data->seg_info_.block_id_);
+    tfs_session_->remove_local_block_cache(seg_data->seg_info_.block_id_);
     BgTask::get_stat_mgr().update_entry(StatItem::client_access_stat_, StatItem::unlink_fail_, 1);
   }
   else
@@ -1694,7 +1694,7 @@ int TfsFile::async_rsp_unlink_file(common::BasePacket* rsp, const uint16_t index
 
   if (remove_flag)
   {
-    tfs_session_->remove_block_cache(seg_data->seg_info_.block_id_);
+    tfs_session_->remove_local_block_cache(seg_data->seg_info_.block_id_);
   }
 
   if (TFS_SUCCESS != ret)

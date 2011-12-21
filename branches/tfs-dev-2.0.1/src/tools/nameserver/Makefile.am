@@ -1,11 +1,13 @@
 AM_CPPFLAGS=-I$(top_srcdir)/src\
+      $(TAIR_CACHE_CPPFLAGS)\
 	    -I$(TBLIB_ROOT)/include/tbsys\
             -I$(TBLIB_ROOT)/include/tbnet\
 	    $(READLINE_INCLUDE)
 
 AM_LDFLAGS=-lz -lrt -lpthread -ldl $(READLINE_LIB) -luuid
 
-bin_PROGRAMS = admintool showsyncoplog rmsyncoplog ssm tfstool performance syncbyfile read_syncoplog_header
+bin_PROGRAMS = admintool showsyncoplog rmsyncoplog ssm tfstool performance syncbyfile\
+               read_syncoplog_header clear_remote_block_cache
 
 LDADD = $(top_builddir)/src/tools/util/libtfstoolsutil.a\
 	$(top_builddir)/src/dataserver/libdataserver.a\
@@ -30,3 +32,4 @@ read_syncoplog_header_SOURCES=read_syncoplog_header.cpp
 admintool_SOURCES = admintool.cpp
 performance_SOURCES = performance.cpp
 syncbyfile_SOURCES=sync_by_file.cpp
+clear_remote_block_cache_SOURCES=clear_remote_block_cache.cpp

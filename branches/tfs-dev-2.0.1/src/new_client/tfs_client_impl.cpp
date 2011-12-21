@@ -606,7 +606,68 @@ void TfsClientImpl::set_remote_cache_info(const char* remote_cache_master_addr, 
   ClientConfig::remote_cache_slave_addr_ = remote_cache_slave_addr;
   ClientConfig::remote_cache_group_name_ = remote_cache_group_name;
   ClientConfig::remote_cache_area_ = remote_cache_area;
-  ClientConfig::use_cache_ |= USE_CACHE_FLAG_REMOTE;
+}
+
+void TfsClientImpl::insert_local_block_cache(const char* ns_addr, const uint32_t block_id,
+       const common::VUINT64& ds_list)
+{
+  TfsSession *tfs_session = NULL;
+  if (ns_addr != NULL && strlen(ns_addr) > 0)
+  {
+    tfs_session = SESSION_POOL.get(ns_addr);
+  }
+  else
+  {
+    if (NULL != default_tfs_session_)
+    {
+      tfs_session = default_tfs_session_;
+    }
+  }
+  if (NULL != tfs_session)
+  {
+    tfs_session->insert_local_block_cache(block_id, ds_list);
+  }
+}
+
+void TfsClientImpl::insert_remote_block_cache(const char* ns_addr, const uint32_t block_id,
+       const common::VUINT64& ds_list)
+{
+  TfsSession *tfs_session = NULL;
+  if (ns_addr != NULL && strlen(ns_addr) > 0)
+  {
+    tfs_session = SESSION_POOL.get(ns_addr);
+  }
+  else
+  {
+    if (NULL != default_tfs_session_)
+    {
+      tfs_session = default_tfs_session_;
+    }
+  }
+  if (NULL != tfs_session)
+  {
+    tfs_session->insert_remote_block_cache(block_id, ds_list);
+  }
+}
+
+void TfsClientImpl::remove_remote_block_cache(const char* ns_addr, const uint32_t block_id)
+{
+  TfsSession *tfs_session = NULL;
+  if (ns_addr != NULL && strlen(ns_addr) > 0)
+  {
+    tfs_session = SESSION_POOL.get(ns_addr);
+  }
+  else
+  {
+    if (NULL != default_tfs_session_)
+    {
+      tfs_session = default_tfs_session_;
+    }
+  }
+  if (NULL != tfs_session)
+  {
+    tfs_session->remove_remote_block_cache(block_id);
+  }
 }
 #endif
 
