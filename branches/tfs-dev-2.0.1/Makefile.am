@@ -7,7 +7,7 @@ pkgdata_data_DATA=
 DIST_SUBDIRS = src conf scripts tests sql
 EXTRA_DIST=build.sh \
 	   conf/Makefile.am Makefile.am sql/Makefile.am\
-	   scripts/Makefile.am scripts/Makefile.in scripts/tfs.sh scripts/stfs.sh \
+	   scripts/Makefile.am scripts/Makefile.in scripts/tfs.sh scripts/stfs.sh scripts/start_sync_log.sh scripts/sync.sh\
 	   libtool ax_lib_mysql.m4\
 	   packages/tfs.spec
 
