@@ -973,10 +973,13 @@ namespace tfs
     {
       std::vector<MetaInfo> tmp_v_meta_info;
       int ret = select(app_id, uid, pid, name, name_len, false, tmp_v_meta_info);
-      if (ret != TFS_SUCCESS || tmp_v_meta_info.empty())
+      if (TFS_SUCCESS != ret || tmp_v_meta_info.empty())
       {
         TBSYS_LOG(INFO, "get dir meta info fail. %s, ret: %d", name, ret);
-        ret = TFS_ERROR;
+        if (TFS_SUCCESS == ret && tmp_v_meta_info.empty())
+        {
+          ret = EXIT_TARGET_EXIST_ERROR;
+        }
       }
       else
       {
