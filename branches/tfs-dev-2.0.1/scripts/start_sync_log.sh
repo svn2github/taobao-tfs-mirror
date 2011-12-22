@@ -1,8 +1,7 @@
-
-USER=chuyu
+USER=admin
 
 EXEC_NAME=sync_by_log
-SCRIPT_NAME=sync.sh
+SCRIPT_NAME=sync
 CMD_HOME=`dirname $(readlink -f $0)`
 SOURCE_SYNC_LOG=${CMD_HOME}/${EXEC_NAME}
 SOURCE_SYNC_SCRIPT=${CMD_HOME}/${SCRIPT_NAME}
@@ -15,7 +14,7 @@ print_usage()
   echo "$0 source_ns_ip dest_ns_ip log_path [sync day] [force_flag] [modify_time] [thread_count]"
   echo "    sync day: the day of log to be synced, default is yesterday"
   echo "  force flag: yes or no, need strong consistency, default is no"
-  echo " modify time: modify time"
+  echo " modify time: modify time, change after modify time will be ignored."
   echo "thread count: thread count, default is 2"
 }
 
