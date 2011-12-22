@@ -27,7 +27,7 @@ namespace tfs
   {
     enum { TAIR_TAG_LENGTH = 2 }; // tair tag length, for compatible with tair java client in serialization
 
-    inline void add_tair_tag(char* buf, int64_t& pos)
+    inline void add_tair_cache_tag(char* buf, int64_t& pos)
     {
       if (buf != NULL)
       {

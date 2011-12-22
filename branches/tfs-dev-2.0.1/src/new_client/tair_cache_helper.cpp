@@ -44,7 +44,7 @@ namespace tfs
       int ret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;;
       if (TFS_SUCCESS == ret)
       {
-        add_tair_tag(data, pos);
+        add_tair_cache_tag(data, pos);
         ret = Serialization::set_int64(data, data_len, pos, ns_addr_);
       }
       if (TFS_SUCCESS == ret)
@@ -100,7 +100,7 @@ namespace tfs
       int ret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;;
       if (TFS_SUCCESS == ret)
       {
-        add_tair_tag(data, pos);
+        add_tair_cache_tag(data, pos);
 
         int32_t ds_count = ds_.size();
         ret = Serialization::set_int32(data, data_len, pos, ds_count);
