@@ -1,5 +1,5 @@
 pkgdata_datadir=${prefix}/scripts
-pkgdata_data_DATA=stfs.sh tfs.sh  start_sync_log.sh sync.sh
+pkgdata_data_DATA=stfs.sh tfs.sh start_sync_log.sh sync.sh
 
 SUBDIRS = ha
 
