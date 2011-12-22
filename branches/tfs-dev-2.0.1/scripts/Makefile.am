@@ -1,5 +1,5 @@
 pkgdata_datadir=${prefix}/scripts
-pkgdata_data_DATA=stfs.sh tfs.sh 
+pkgdata_data_DATA=stfs.sh tfs.sh  start_sync_log.sh sync.sh
 
 SUBDIRS = ha
 
@@ -10,6 +10,10 @@ EXTRA_DIST=ha/authkeys.sh ha/deploy.sh ha/ha.cf ha/NameServer ha/nsdep.sh ha/ns.
 install-data-hook:
 	mv ${DESTDIR}/${prefix}/scripts/stfs.sh ${DESTDIR}/${prefix}/scripts/stfs
 	mv ${DESTDIR}/${prefix}/scripts/tfs.sh ${DESTDIR}/${prefix}/scripts/tfs
+	mv ${DESTDIR}/${prefix}/scripts/sync.sh ${DESTDIR}/${prefix}/scripts/sync
+	mv ${DESTDIR}/${prefix}/scripts/start_sync_log.sh ${DESTDIR}/${prefix}/scripts/start_sync_log
 	chmod u+x ${DESTDIR}/${prefix}/scripts/stfs
 	chmod u+x ${DESTDIR}/${prefix}/scripts/tfs
+	chmod u+x ${DESTDIR}/${prefix}/scripts/sync
+	chmod u+x ${DESTDIR}/${prefix}/scripts/start_sync_log
 	sed -i 's#\(TFS_HOME=\).*$$#\1${prefix}#g' ${DESTDIR}/${prefix}/scripts/stfs ${DESTDIR}/${prefix}/scripts/tfs
