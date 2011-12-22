@@ -16,6 +16,6 @@ LDADD = $(top_builddir)/src/tools/util/libtfstoolsutil.a\
 	$(TBLIB_ROOT)/lib/libtbsys.a
 
 
-sync_by_blk_SOURCES =  sync_by_blk.cpp sync_file_base.cpp
-sync_by_log_SOURCES =  sync_by_log.cpp sync_file_base.cpp
-sync_by_file_SOURCES =  sync_by_file.cpp sync_file_base.cpp
+sync_by_blk_SOURCES =  sync_by_blk.cpp sync_file_base.cpp sync_file_base.h
+sync_by_log_SOURCES =  sync_by_log.cpp sync_file_base.cpp sync_file_base.h
+sync_by_file_SOURCES =  sync_by_file.cpp sync_file_base.cpp sync_file_base.h
