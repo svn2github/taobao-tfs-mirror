@@ -113,7 +113,7 @@ namespace tfs
     return result.size();
   }
 
-  static const uint64_t GB = 1 * 1024 * 1024 * 1024;
+  /*static const uint64_t GB = 1 * 1024 * 1024 * 1024;
   static const uint64_t MB = 1 * 1024 * 1024;
   static const double PERCENTAGE_MIN = 0.000001;
   static const double PERCENTAGE_MAX = 1.000000;
@@ -124,13 +124,15 @@ namespace tfs
     uint64_t unit = capacity > GB ? GB : MB;
     uint64_t tmp_capacity = capacity / unit;
     uint64_t tmp_total_capacity = total_capacity / unit;
+    if (0 == tmp_total_capactiy)
+      ret = PERCENTAGE_MAX;
     if ((tmp_capacity != 0)
         && (tmp_total_capacity != 0))
     {
       ret = (double)tmp_capacity / (double)tmp_total_capacity;
     }
     return ret;
-  }
+  }*/
 
   LayoutManager::LayoutManager(NameServer& manager):
       build_plan_thread_(0),
@@ -2405,7 +2407,7 @@ namespace tfs
       if (NULL != server)
       {
         const uint64_t current_total_capacity = server->total_capacity() * SYSPARAM_NAMESERVER.max_use_capacity_ratio_ / 100;
-        const double current_percent = calc_capacity_percentage(server->use_capacity(), current_total_capacity);
+        double current_percent = calc_capacity_percentage(server->use_capacity(), current_total_capacity);
         if ((current_percent > percent + SYSPARAM_NAMESERVER.balance_percent_)
             || (current_percent >= 1.0))
         {

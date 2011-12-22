@@ -30,6 +30,12 @@ namespace tfs
 {
   namespace nameserver
   {
+    static const uint64_t GB = 1 * 1024 * 1024 * 1024;
+    static const uint64_t MB = 1 * 1024 * 1024;
+    static const double PERCENTAGE_MIN = 0.000001;
+    static const double PERCENTAGE_MAX = 1.000000;
+    static const double PERCENTAGE_MAGIC = 1000000.0;
+    double calc_capacity_percentage(const uint64_t capacity, const uint64_t total_capacity);
     static bool exist(std::vector<ServerCollect*>& table,ServerCollect* except)
     {
       return table.empty() ? false : find(table.begin(), table.end(), except) != table.end();
@@ -52,13 +58,13 @@ namespace tfs
       }
     };
 
-    struct CompareBlockCount
+    /*struct CompareBlockCount
     {
       uint32_t operator()(const ServerCollect* l, const ServerCollect* r) const
       {
         return l->block_count() < r->block_count();
       }
-    };
+    };*/
 
     class BaseStrategy
     {

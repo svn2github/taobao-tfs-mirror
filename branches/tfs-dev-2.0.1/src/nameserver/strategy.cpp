@@ -32,6 +32,22 @@ namespace tfs
   namespace nameserver
   {
     static const int8_t BASE_MULTIPLE = 2;
+    double calc_capacity_percentage(const uint64_t capacity, const uint64_t total_capacity)
+    {
+      double ret = PERCENTAGE_MIN;
+      uint64_t unit = capacity > GB ? GB : MB;
+      uint64_t tmp_capacity = capacity / unit;
+      uint64_t tmp_total_capacity = total_capacity / unit;
+      if (0 == tmp_total_capacity)
+        ret = PERCENTAGE_MAX;
+      if ((tmp_capacity != 0)
+          && (tmp_total_capacity != 0))
+      {
+        ret = (double)tmp_capacity / (double)tmp_total_capacity;
+      }
+      return ret;
+    }
+
     template<typename T1, typename T2>
       int32_t percent(T1 v, T2 total)
       {
@@ -100,13 +116,9 @@ namespace tfs
 
       primary_writable_block_count_ = percent(primary_writable_block_count, SYSPARAM_NAMESERVER.max_write_file_count_);
 
-      //seqno_average_num_ = percent(server->get_elect_seq(), total_elect_num_);
       elect_average_num_ = percent(server->get_elect_num(), total_elect_num_);
 
-      if (global_info_.max_block_count_ == 0)
-        use_ = percent(server->use_capacity(), server->total_capacity());
-      else
-        use_ = percent(server->block_count(), global_info_.max_block_count_);
+      use_ = static_cast<int32_t>(calc_capacity_percentage(server->use_capacity(), server->total_capacity()) *  PERCENTAGE_MAGIC);
 
       if (global_info_.max_load_ < 10)
         load_ = percent(server->load(), 3000);
@@ -386,10 +398,16 @@ namespace tfs
         std::multimap<int32_t, ServerCollect*> tmp;
         std::multimap<int32_t, ServerCollect*> middle_result;
 
+        ServerCollect* server = NULL;
         std::vector<ServerCollect*>::const_iterator r_iter = source.begin();
         for (; r_iter != source.end(); ++r_iter)
         {
-          tmp.insert(std::multimap<int32_t, ServerCollect*>::value_type((*r_iter)->block_count(), (*r_iter)));
+          server = (*r_iter);
+          if (server->total_capacity() > 0)
+          {
+            int32_t use = static_cast<int32_t>(calc_capacity_percentage(server->use_capacity(), server->total_capacity()) *  PERCENTAGE_MAGIC);
+            tmp.insert(std::multimap<int32_t, ServerCollect*>::value_type(use, server));
+          }
         }
 
         if (SYSPARAM_NAMESERVER.group_mask_ == 0)
@@ -433,7 +451,11 @@ namespace tfs
             }
             else
             {
-              middle_result.insert(std::multimap<int32_t, ServerCollect*>::value_type(iter->second->block_count(), iter->second));
+              if (iter->second->total_capacity() > 0)
+              {
+                int32_t use = static_cast<int32_t>(calc_capacity_percentage(iter->second->use_capacity(), iter->second->total_capacity()) *  PERCENTAGE_MAGIC);
+                middle_result.insert(std::multimap<int32_t, ServerCollect*>::value_type(use, iter->second));
+              }
             }
           }
         }
