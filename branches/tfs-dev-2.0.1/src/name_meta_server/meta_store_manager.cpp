@@ -958,9 +958,9 @@ namespace tfs
       {
         TBSYS_LOG(ERROR, "ret is %d when we ask data from database");
         // // TODO. maybe do sth.
-        // ret = status;
+        ret = TFS_ERROR;
       }
-      if (proc_ret < 0)
+      if (TFS_SUCCESS == ret && proc_ret < 0)
       {
         ret = proc_ret;
       }
