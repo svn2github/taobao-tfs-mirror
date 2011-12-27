@@ -346,39 +346,52 @@ int TranBlock::read_index()
 
   // fetch data from the first ds
   int index = 0;
-  int ret = TFS_SUCCESS;
+  int ret = TFS_ERROR;
   NewClient* client = NewClientManager::get_instance().create_client();
   if (NULL != client)
   {
     tbnet::Packet* rsp = NULL;
-    if (TFS_SUCCESS == send_msg_to_server(seg_data_.ds_[index], client, &gfl_msg, rsp))
+    if ((ret = send_msg_to_server(seg_data_.ds_[index], client, &gfl_msg, rsp)) == TFS_SUCCESS)
     {
-      if (BLOCK_FILE_INFO_MESSAGE == rsp->getPCode())
+      if (rsp == NULL)
       {
-        BlockFileInfoMessage *bfi_msg = dynamic_cast<BlockFileInfoMessage*>(rsp);
-        FILE_INFO_LIST* tmp_file_vector = bfi_msg->get_fileinfo_list();
-        for (FILE_INFO_LIST::iterator fit = tmp_file_vector->begin(); fit != tmp_file_vector->end(); ++fit)
-        {
-          FileInfo finfo = (*fit);
-          file_set_.insert(finfo);
-        }
-
-        total_tran_size_ += file_set_.size() * FILEINFO_SIZE;
+        ret = TFS_ERROR;
+        TBSYS_LOG(ERROR, "read index from ds: %s failed, blockid: %u, rsp is null.",
+            tbsys::CNetUtil::addrToString(seg_data_.ds_[index]).c_str(), seg_data_.seg_info_.block_id_);
       }
       else
       {
-        ret = TFS_ERROR;
+        if (BLOCK_FILE_INFO_MESSAGE == rsp->getPCode())
+        {
+          BlockFileInfoMessage *bfi_msg = dynamic_cast<BlockFileInfoMessage*>(rsp);
+          FILE_INFO_LIST* tmp_file_vector = bfi_msg->get_fileinfo_list();
+          for (FILE_INFO_LIST::iterator fit = tmp_file_vector->begin(); fit != tmp_file_vector->end(); ++fit)
+          {
+            FileInfo finfo = (*fit);
+            file_set_.insert(finfo);
+          }
+
+          total_tran_size_ += file_set_.size() * FILEINFO_SIZE;
+        }
+        else
+        {
+          TBSYS_LOG(ERROR, "read index from ds: %s failed, blockid: %u, offset: %d, unknow msg type: %d",
+              tbsys::CNetUtil::addrToString(seg_data_.ds_[index]).c_str(), seg_data_.seg_info_.block_id_, rsp->getPCode());
+          ret = TFS_ERROR;
+        }
       }
     }
     else
     {
-      ret = TFS_ERROR;
+      TBSYS_LOG(ERROR, "read index from ds: %s failed, blockid: %u, ret: %d.",
+            tbsys::CNetUtil::addrToString(seg_data_.ds_[index]).c_str(), seg_data_.seg_info_.block_id_, ret);
     }
     NewClientManager::get_instance().destroy_client(client);
   }
   else
   {
-    ret = TFS_ERROR;
+    TBSYS_LOG(ERROR, "read index from ds: %s failed, blockid: %u, create client failed.",
+        tbsys::CNetUtil::addrToString(seg_data_.ds_[index]).c_str(), seg_data_.seg_info_.block_id_);
   }
 
   return ret;
@@ -598,10 +611,9 @@ int TranBlock::recombine_data()
 
 int TranBlock::check_dest_blk()
 {
-  VUINT64 save_ds = seg_data_.ds_;
-  int ret = dest_session_->get_block_info(seg_data_, T_READ);
-  VUINT64 dest_ds = seg_data_.ds_;
-  seg_data_.ds_ = save_ds;
+  SegmentData dest_seg_data;
+  int ret = dest_session_->get_block_info(dest_seg_data, T_READ);
+  VUINT64 dest_ds = dest_seg_data.ds_;
   if (TFS_SUCCESS == ret)
   {
     int32_t ds_size = static_cast<int32_t>(dest_ds.size());
@@ -660,45 +672,54 @@ int TranBlock::write_data()
       tbnet::Packet* rsp = NULL;
       if(TFS_SUCCESS != send_msg_to_server(dest_ds_id_, client, &req_wrd_msg, rsp))
       {
-          rsp = NULL;
+        rsp = NULL;
       }
-      if (STATUS_MESSAGE == rsp->getPCode())
-      {
-        StatusMessage* sm = dynamic_cast<StatusMessage*>(rsp);
-        if (STATUS_MESSAGE_OK != sm->get_status())
-        {
-          TBSYS_LOG(ERROR, "write raw data to ds: %s fail, blockid: %u, offset: %d, ret: %d",
-              tbsys::CNetUtil::addrToString(dest_ds_id_).c_str(), seg_data_.seg_info_.block_id_, cur_write_offset, sm->get_status());
-          ret = TFS_ERROR;
-        }
-      }
-      else
-      {
-        TBSYS_LOG(ERROR, "write raw data to ds: %s fail, blockid: %u, offset: %d, unkonw msg type",
-            tbsys::CNetUtil::addrToString(dest_ds_id_).c_str(), seg_data_.seg_info_.block_id_, cur_write_offset);
-        ret = TFS_ERROR;
-      }
-
-      dest_content_buf_.drainData(cur_len);
-      block_len = dest_content_buf_.getDataLen();
-      cur_write_offset += cur_len;
-      NewClientManager::get_instance().destroy_client(client);
-
       if (NULL == rsp)
       {
-        --remainder_retrys;
-        continue;
+        TBSYS_LOG(ERROR, "write data failed, blockid: %u, dest_ds: %s, cur_write_offset: %d, cur_len: %d, ret: %d",
+            seg_data_.seg_info_.block_id_, tbsys::CNetUtil::addrToString(dest_ds_id_).c_str(), cur_write_offset, cur_len, ret);
+        ret = TFS_ERROR;
       }
       else
       {
-        if (cur_len != TRAN_BUFFER_SIZE)
+        if (STATUS_MESSAGE == rsp->getPCode())
         {
-          // quit
-          block_len = 0;
+          StatusMessage* sm = dynamic_cast<StatusMessage*>(rsp);
+          if (STATUS_MESSAGE_OK != sm->get_status())
+          {
+            TBSYS_LOG(ERROR, "write raw data to ds: %s fail, blockid: %u, offset: %d, ret: %d",
+                tbsys::CNetUtil::addrToString(dest_ds_id_).c_str(), seg_data_.seg_info_.block_id_, cur_write_offset, sm->get_status());
+            ret = TFS_ERROR;
+          }
         }
-        TBSYS_LOG(INFO, "write raw data to ds: %s successful, blockid: %u",
-            tbsys::CNetUtil::addrToString(dest_ds_id_).c_str(), seg_data_.seg_info_.block_id_);
-        break;
+        else
+        {
+          TBSYS_LOG(ERROR, "write raw data to ds: %s fail, blockid: %u, offset: %d, unkonw msg type",
+              tbsys::CNetUtil::addrToString(dest_ds_id_).c_str(), seg_data_.seg_info_.block_id_, cur_write_offset);
+          ret = TFS_ERROR;
+        }
+
+        dest_content_buf_.drainData(cur_len);
+        block_len = dest_content_buf_.getDataLen();
+        cur_write_offset += cur_len;
+        NewClientManager::get_instance().destroy_client(client);
+
+        if (NULL == rsp)
+        {
+          --remainder_retrys;
+          continue;
+        }
+        else
+        {
+          if (cur_len != TRAN_BUFFER_SIZE)
+          {
+            // quit
+            block_len = 0;
+          }
+          TBSYS_LOG(INFO, "write raw data to ds: %s successful, blockid: %u",
+              tbsys::CNetUtil::addrToString(dest_ds_id_).c_str(), seg_data_.seg_info_.block_id_);
+          break;
+        }
       }
     }
 
@@ -729,21 +750,30 @@ int TranBlock::write_index()
     rsp = NULL;
   }
 
-  if (STATUS_MESSAGE == rsp->getPCode())
+  if (NULL == rsp)
   {
-    StatusMessage* sm = dynamic_cast<StatusMessage*>(rsp);
-    if (STATUS_MESSAGE_OK != sm->get_status())
-    {
-      TBSYS_LOG(ERROR, "write raw index to ds: %s fail, blockid: %u, file count: %d, ret: %d",
-          tbsys::CNetUtil::addrToString(dest_ds_id_).c_str(), seg_data_.seg_info_.block_id_, static_cast<int32_t>(dest_raw_meta_.size()), sm->get_status());
-      ret = TFS_ERROR;
-    }
+    TBSYS_LOG(ERROR, "write index failed, blockid: %u, length: %zd, ret: %d",
+        seg_data_.seg_info_.block_id_, dest_raw_meta_.size(), ret);
+    ret = TFS_ERROR;
   }
   else
   {
-    TBSYS_LOG(ERROR, "write raw index to ds: %s fail, blockid: %u, file count: %d, unkonw msg type",
-        tbsys::CNetUtil::addrToString(dest_ds_id_).c_str(), seg_data_.seg_info_.block_id_, static_cast<int32_t>(dest_raw_meta_.size()));
-    ret = TFS_ERROR;
+    if (STATUS_MESSAGE == rsp->getPCode())
+    {
+      StatusMessage* sm = dynamic_cast<StatusMessage*>(rsp);
+      if (STATUS_MESSAGE_OK != sm->get_status())
+      {
+        TBSYS_LOG(ERROR, "write raw index to ds: %s fail, blockid: %u, file count: %d, ret: %d",
+            tbsys::CNetUtil::addrToString(dest_ds_id_).c_str(), seg_data_.seg_info_.block_id_, static_cast<int32_t>(dest_raw_meta_.size()), sm->get_status());
+        ret = TFS_ERROR;
+      }
+    }
+    else
+    {
+      TBSYS_LOG(ERROR, "write raw index to ds: %s fail, blockid: %u, file count: %d, unkonw msg type",
+          tbsys::CNetUtil::addrToString(dest_ds_id_).c_str(), seg_data_.seg_info_.block_id_, static_cast<int32_t>(dest_raw_meta_.size()));
+      ret = TFS_ERROR;
+    }
   }
   NewClientManager::get_instance().destroy_client(client);
 
