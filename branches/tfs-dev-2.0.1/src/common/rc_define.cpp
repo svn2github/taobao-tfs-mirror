@@ -201,7 +201,7 @@ namespace tfs
     {
       for (size_t i = 0; i < rc_server_infos_.size(); ++i)
       {
-        TBSYS_LOG(DEBUG, "rc_server %zd: %"PRI64_PREFIX"u", i, rc_server_infos_[i]);
+        TBSYS_LOG(DEBUG, "rc_server %zd: %s", i, tbsys::CNetUtil::addrToString(rc_server_infos_[i]).c_str());
       }
       for (size_t i = 0; i < cluster_infos_.size(); ++i)
       {
@@ -209,6 +209,8 @@ namespace tfs
       }
       TBSYS_LOG(DEBUG, "report_interval: %d", report_interval_);
       TBSYS_LOG(DEBUG, "modify_time: %"PRI64_PREFIX"d", modify_time_);
+      TBSYS_LOG(DEBUG, "root_server: %s", tbsys::CNetUtil::addrToString(meta_root_server_).c_str());
+      TBSYS_LOG(DEBUG, "ns_cache_info: %s", ns_cache_info_.c_str());
     }
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
