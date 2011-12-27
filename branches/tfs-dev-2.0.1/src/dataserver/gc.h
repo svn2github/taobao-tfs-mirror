@@ -39,7 +39,7 @@ namespace dataserver
     {
       return instance_;
     }
-  #if defined(TFS_DS_GTEST) || defined(TFS_DS_INTEGRATION)
+  #if defined(TFS_GTEST) || defined(TFS_DS_INTEGRATION)
   public:
   #else
   private:
@@ -51,7 +51,7 @@ namespace dataserver
     bool is_init_;
     bool destroy_;
 
-  #if defined(TFS_DS_GTEST) || defined(TFS_DS_INTEGRATION)
+  #if defined(TFS_GTEST) || defined(TFS_DS_INTEGRATION)
   public:
   #else
   private:

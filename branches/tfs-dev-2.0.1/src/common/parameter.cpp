@@ -170,57 +170,64 @@ namespace tfs
       return TFS_SUCCESS;
     }
 
-    int DataServerParameter::initialize(const std::string& index)
+    int DataServerParameter::initialize(const std::string& config_file, const std::string& index)
     {
-      heart_interval_ = TBSYS_CONFIG.getInt(CONF_SN_DATASERVER, CONF_HEART_INTERVAL, 5);
-      check_interval_ = TBSYS_CONFIG.getInt(CONF_SN_DATASERVER, CONF_CHECK_INTERVAL, 2);
-      expire_data_file_time_ = TBSYS_CONFIG.getInt(CONF_SN_DATASERVER, CONF_EXPIRE_DATAFILE_TIME, 20);
-      expire_cloned_block_time_
-        = TBSYS_CONFIG.getInt(CONF_SN_DATASERVER, CONF_EXPIRE_CLONEDBLOCK_TIME, 300);
-      expire_compact_time_ = TBSYS_CONFIG.getInt(CONF_SN_DATASERVER, CONF_EXPIRE_COMPACTBLOCK_TIME, 86400);
-      replicate_thread_count_ = TBSYS_CONFIG.getInt(CONF_SN_DATASERVER, CONF_REPLICATE_THREADCOUNT, 3);
-      //default use O_SYNC
-      sync_flag_ = TBSYS_CONFIG.getInt(CONF_SN_DATASERVER, CONF_WRITE_SYNC_FLAG, 1);
-      max_block_size_ = TBSYS_CONFIG.getInt(CONF_SN_DATASERVER, CONF_BLOCK_MAX_SIZE);
-      dump_vs_interval_ = TBSYS_CONFIG.getInt(CONF_SN_DATASERVER, CONF_VISIT_STAT_INTERVAL, -1);
+      tbsys::CConfig config;
+      int32_t ret = config.load(config_file.c_str());
+      if (EXIT_SUCCESS != ret)
+      {
+        return TFS_ERROR;
+      }
 
-      const char* max_io_time = TBSYS_CONFIG.getString(CONF_SN_DATASERVER, CONF_IO_WARN_TIME, "0");
+      heart_interval_ = config.getInt(CONF_SN_DATASERVER, CONF_HEART_INTERVAL, 5);
+      check_interval_ = config.getInt(CONF_SN_DATASERVER, CONF_CHECK_INTERVAL, 2);
+      expire_data_file_time_ = config.getInt(CONF_SN_DATASERVER, CONF_EXPIRE_DATAFILE_TIME, 20);
+      expire_cloned_block_time_
+        = config.getInt(CONF_SN_DATASERVER, CONF_EXPIRE_CLONEDBLOCK_TIME, 300);
+      expire_compact_time_ = config.getInt(CONF_SN_DATASERVER, CONF_EXPIRE_COMPACTBLOCK_TIME, 86400);
+      replicate_thread_count_ = config.getInt(CONF_SN_DATASERVER, CONF_REPLICATE_THREADCOUNT, 3);
+      //default use O_SYNC
+      sync_flag_ = config.getInt(CONF_SN_DATASERVER, CONF_WRITE_SYNC_FLAG, 1);
+      max_block_size_ = config.getInt(CONF_SN_DATASERVER, CONF_BLOCK_MAX_SIZE);
+      dump_vs_interval_ = config.getInt(CONF_SN_DATASERVER, CONF_VISIT_STAT_INTERVAL, -1);
+
+      const char* max_io_time = config.getString(CONF_SN_DATASERVER, CONF_IO_WARN_TIME, "0");
       max_io_warn_time_ = strtoll(max_io_time, NULL, 10);
       if (max_io_warn_time_ < 200000 || max_io_warn_time_ > 2000000)
         max_io_warn_time_ = 1000000;
 
-      tfs_backup_type_ = TBSYS_CONFIG.getInt(CONF_SN_DATASERVER, CONF_BACKUP_TYPE, 1);
-      local_ns_ip_ = TBSYS_CONFIG.getString(CONF_SN_DATASERVER, CONF_IP_ADDR);
-      if (NULL == local_ns_ip_)
+      tfs_backup_type_ = config.getInt(CONF_SN_DATASERVER, CONF_BACKUP_TYPE, 1);
+      local_ns_ip_ = config.getString(CONF_SN_DATASERVER, CONF_IP_ADDR, "");
+      if (local_ns_ip_.length() <= 0)
       {
         TBSYS_LOG(ERROR, "can not find %s in [%s]", CONF_IP_ADDR, CONF_SN_DATASERVER);
         return EXIT_SYSTEM_PARAMETER_ERROR;
       }
-      local_ns_port_ = TBSYS_CONFIG.getInt(CONF_SN_DATASERVER, CONF_PORT);
-      ns_addr_list_ = TBSYS_CONFIG.getString(CONF_SN_DATASERVER, CONF_IP_ADDR_LIST);
-      if (NULL == ns_addr_list_)
+      local_ns_port_ = config.getInt(CONF_SN_DATASERVER, CONF_PORT);
+      ns_addr_list_ = config.getString(CONF_SN_DATASERVER, CONF_IP_ADDR_LIST, "");
+      if (ns_addr_list_.length() <= 0)
       {
         TBSYS_LOG(ERROR, "can not find %s in [%s]", CONF_IP_ADDR_LIST, CONF_SN_DATASERVER);
         return EXIT_SYSTEM_PARAMETER_ERROR;
       }
-      slave_ns_ip_ = TBSYS_CONFIG.getString(CONF_SN_DATASERVER, CONF_SLAVE_NSIP);
+      slave_ns_ip_ = config.getString(CONF_SN_DATASERVER, CONF_SLAVE_NSIP, "");
       /*if (NULL == slave_ns_ip_)
       {
         TBSYS_LOG(ERROR, "can not find %s in [%s]", CONF_SLAVE_NSIP, CONF_SN_DATASERVER);
         return EXIT_SYSTEM_PARAMETER_ERROR;
       }*/
-      //config_log_file_ = TBSYS_CONFIG.getString(CONF_SN_DATASERVER, CONF_LOG_FILE);
-      max_datafile_nums_ = TBSYS_CONFIG.getInt(CONF_SN_DATASERVER, CONF_DATA_FILE_NUMS, 50);
-      max_crc_error_nums_ = TBSYS_CONFIG.getInt(CONF_SN_DATASERVER, CONF_MAX_CRCERROR_NUMS, 4);
-      max_eio_error_nums_ = TBSYS_CONFIG.getInt(CONF_SN_DATASERVER, CONF_MAX_EIOERROR_NUMS, 6);
+      //config_log_file_ = config.getString(CONF_SN_DATASERVER, CONF_LOG_FILE);
+      max_datafile_nums_ = config.getInt(CONF_SN_DATASERVER, CONF_DATA_FILE_NUMS, 50);
+      max_crc_error_nums_ = config.getInt(CONF_SN_DATASERVER, CONF_MAX_CRCERROR_NUMS, 4);
+      max_eio_error_nums_ = config.getInt(CONF_SN_DATASERVER, CONF_MAX_EIOERROR_NUMS, 6);
       expire_check_block_time_
-        = TBSYS_CONFIG.getInt(CONF_SN_DATASERVER, CONF_EXPIRE_CHECKBLOCK_TIME, 86400);
-      max_cpu_usage_ = TBSYS_CONFIG.getInt(CONF_SN_DATASERVER, CONF_MAX_CPU_USAGE, 60);
-      dump_stat_info_interval_ = TBSYS_CONFIG.getInt(CONF_SN_DATASERVER, CONF_DUMP_STAT_INFO_INTERVAL, 60000000);
-      object_dead_max_time_ = TBSYS_CONFIG.getInt(CONF_SN_DATASERVER, CONF_OBJECT_DEAD_MAX_TIME, 86400);
+        = config.getInt(CONF_SN_DATASERVER, CONF_EXPIRE_CHECKBLOCK_TIME, 86400);
+      max_cpu_usage_ = config.getInt(CONF_SN_DATASERVER, CONF_MAX_CPU_USAGE, 60);
+      dump_stat_info_interval_ = config.getInt(CONF_SN_DATASERVER, CONF_DUMP_STAT_INFO_INTERVAL, 60000000);
+      object_dead_max_time_ = config.getInt(CONF_SN_DATASERVER, CONF_OBJECT_DEAD_MAX_TIME, 86400);
       if (object_dead_max_time_ <=  0)
         object_dead_max_time_ = 86400;
-      object_clear_max_time_ = TBSYS_CONFIG.getInt(CONF_SN_DATASERVER, CONF_OBJECT_CLEAR_MAX_TIME, 300);
+      object_clear_max_time_ = config.getInt(CONF_SN_DATASERVER, CONF_OBJECT_CLEAR_MAX_TIME, 300);
       if (object_clear_max_time_ <= 0)
         object_clear_max_time_ = 300;
       return SYSPARAM_FILESYSPARAM.initialize(index);

@@ -18,7 +18,7 @@
 #ifndef TFS_DATASERVER_SYNCBASE_H_
 #define TFS_DATASERVER_SYNCBASE_H_
 
-//#define TFS_DS_GTEST
+//#define TFS_GTEST
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -49,7 +49,7 @@ namespace tfs
         int disable_log();
         void set_pause(const int32_t v);
         int run_sync_mirror();
-#if defined(TFS_DS_GTEST)
+#if defined(TFS_GTEST)
         std::string src_block_file_;
         std::string dest_block_file_;
 #endif
@@ -72,7 +72,7 @@ namespace tfs
         int32_t retry_time_;
         tbutil::Monitor<tbutil::Mutex> sync_mirror_monitor_;
         tbutil::Monitor<tbutil::Mutex> retry_wait_monitor_;
-#if defined(TFS_DS_GTEST)
+#if defined(TFS_GTEST)
       public:
 #else
 #endif

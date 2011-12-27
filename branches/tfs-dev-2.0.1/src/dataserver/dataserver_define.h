@@ -22,6 +22,8 @@
 #include "common/parameter.h"
 #include "common/new_client.h"
 
+//#define TFS_GTEST
+
 namespace tfs
 {
   namespace dataserver
@@ -73,7 +75,7 @@ namespace tfs
       C_OPER_UPDATE
     };
 
-    #pragma pack(4) 
+    #pragma pack(4)
     struct BlockPrefix
     {
       uint32_t logic_blockid_;

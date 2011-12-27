@@ -187,12 +187,12 @@ namespace tfs
       return TFS_SUCCESS;
     }
 
-    int DataManagement::close_write_file(const CloseFileInfo& closefileInfo, int32_t& write_file_size)
+    int DataManagement::close_write_file(const CloseFileInfo& colse_file_info, int32_t& write_file_size)
     {
-      uint32_t block_id = closefileInfo.block_id_;
-      uint64_t file_id = closefileInfo.file_id_;
-      uint64_t file_number = closefileInfo.file_number_;
-      uint32_t crc = closefileInfo.crc_;
+      uint32_t block_id = colse_file_info.block_id_;
+      uint64_t file_id = colse_file_info.file_id_;
+      uint64_t file_number = colse_file_info.file_number_;
+      uint32_t crc = colse_file_info.crc_;
       TBSYS_LOG(DEBUG,
           "close write file, blockid: %u, fileid: %" PRI64_PREFIX "u, filenumber: %" PRI64_PREFIX "u, crc: %u",
           block_id, file_id, file_number, crc);
@@ -350,7 +350,7 @@ namespace tfs
       }
 
       // if mode is 0 and file is not in nomal status, return error.
-      if ((0 == finfo.id_) 
+      if ((0 == finfo.id_)
           || (finfo.id_ != file_id )
           || ((finfo.flag_ & (FI_DELETED | FI_INVALID | FI_CONCEAL)) != 0 && NORMAL_STAT == mode))
       {

@@ -167,7 +167,7 @@ namespace tfs
         }
         else
         {
-          TBSYS_LOG(ERROR, "send_msg_to_server error");
+          TBSYS_LOG(ERROR, "send repl block complete info to ns error, ret: %d", ret);
         }
         NewClientManager::get_instance().destroy_client(client);
       }

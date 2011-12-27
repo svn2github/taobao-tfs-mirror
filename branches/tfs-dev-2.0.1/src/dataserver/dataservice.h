@@ -50,7 +50,7 @@ namespace tfs
 #define READ_STAT_LOG(level, ...) (TBSYS_LOG_LEVEL_##level>READ_STAT_LOGGER._level) ? (void)0 : READ_STAT_PRINT(level, __VA_ARGS__)
     class DataService: public common::BaseService
     {
-    
+
       friend int SyncBase::run_sync_mirror();
 
       public:
@@ -247,7 +247,7 @@ namespace tfs
 
         ReplicateBlock* repl_block_; //replicate
         CompactBlock* compact_block_; //compact
-#if defined(TFS_DS_GTEST)
+#if defined(TFS_GTEST)
       public:
 #else
 #endif

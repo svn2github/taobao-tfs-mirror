@@ -150,7 +150,7 @@ namespace tfs
     int DataService::initialize(int argc, char* argv[])
     {
       UNUSED(argc);
-      int32_t iret = SYSPARAM_DATASERVER.initialize(server_index_);
+      int32_t iret = SYSPARAM_DATASERVER.initialize(config_file_, server_index_);
       if (TFS_SUCCESS != iret)
       {
         TBSYS_LOG(ERROR, "load dataserver parameter failed: %d", iret);
@@ -391,11 +391,9 @@ namespace tfs
       // sync to tfs
       if (backup_type == SYNC_TO_TFS_MIRROR)
       {
-        if (SYSPARAM_DATASERVER.local_ns_ip_ != NULL &&
-            strlen(SYSPARAM_DATASERVER.local_ns_ip_) > 0 &&
+        if (SYSPARAM_DATASERVER.local_ns_ip_.length() > 0 &&
             SYSPARAM_DATASERVER.local_ns_port_ != 0 &&
-            SYSPARAM_DATASERVER.slave_ns_ip_ != NULL &&
-            strlen(SYSPARAM_DATASERVER.slave_ns_ip_) > 0)
+            SYSPARAM_DATASERVER.slave_ns_ip_.length() > 0)
         {
           // 1.if sync_mirror_ not empty, stop & clean
           sync_mirror_mutex_.lock();
@@ -411,9 +409,9 @@ namespace tfs
           }
           // 2.init SyncBase
           snprintf(src_addr, MAX_ADDRESS_LENGTH, "%s:%d",
-                   SYSPARAM_DATASERVER.local_ns_ip_, SYSPARAM_DATASERVER.local_ns_port_);
+                   SYSPARAM_DATASERVER.local_ns_ip_.c_str(), SYSPARAM_DATASERVER.local_ns_port_);
           std::vector<std::string> slave_ns_ip;
-          common::Func::split_string(SYSPARAM_DATASERVER.slave_ns_ip_, '|', slave_ns_ip);
+          common::Func::split_string(SYSPARAM_DATASERVER.slave_ns_ip_.c_str(), '|', slave_ns_ip);
           for (uint8_t i = 0; i < slave_ns_ip.size(); i++)
           {
             // check slave_ns_ip valid
@@ -439,7 +437,7 @@ namespace tfs
     {
       ns_ip_port_ = 0;
       IpAddr* adr = reinterpret_cast<IpAddr*> (&ns_ip_port_);
-      uint32_t ip = Func::get_addr(SYSPARAM_DATASERVER.local_ns_ip_);
+      uint32_t ip = Func::get_addr(SYSPARAM_DATASERVER.local_ns_ip_.c_str());
       if (0 == ip)
       {
         TBSYS_LOG(ERROR, "dataserver ip is error.");
@@ -450,7 +448,7 @@ namespace tfs
         adr->port_ = SYSPARAM_DATASERVER.local_ns_port_;
       }
 
-      const char* ip_list = SYSPARAM_DATASERVER.ns_addr_list_;
+      const char* ip_list = SYSPARAM_DATASERVER.ns_addr_list_.c_str();
       if (NULL == ip_list)
       {
         TBSYS_LOG(ERROR, "dataserver real ip list is error");
@@ -1062,7 +1060,7 @@ namespace tfs
             TBSYS_LOG(ERROR, "create file: blockid: %u is null. req update BlockInfo failed", block_id);
           }
         }
-        ret = message->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret,
+        message->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret,
             "create file failed. blockid: %u, fileid: %" PRI64_PREFIX "u, ret: %d.", block_id, file_id, ret);
       }
       else
@@ -1071,7 +1069,7 @@ namespace tfs
         resp_cfn_msg->set_block_id(block_id);
         resp_cfn_msg->set_file_id(file_id);
         resp_cfn_msg->set_file_number(file_number);
-        ret = message->reply(resp_cfn_msg);
+        message->reply(resp_cfn_msg);
       }
 
       TIMER_END();
@@ -1083,7 +1081,7 @@ namespace tfs
       {
         stat_mgr_.update_entry(tfs_ds_stat_, "write-failed", 1);
       }
-      return ret;
+      return TFS_SUCCESS;
     }
 
     int DataService::write_data(WriteDataMessage* message)
@@ -1153,7 +1151,7 @@ namespace tfs
               stat_mgr_.update_entry(tfs_ds_stat_, "write-failed", 1);
             }
           }
-          else if ( ret < 0)
+          else if (ret < 0)
           {
             ds_requester_.req_block_write_complete(write_info.block_id_, lease_id, EXIT_SENDMSG_ERROR);
             message->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret,
@@ -1353,6 +1351,7 @@ namespace tfs
 
     int DataService::read_data_extra(ReadDataMessageV2* message, int32_t version)
     {
+      int ret = TFS_ERROR;
       TIMER_START();
       RespReadDataMessageV2* resp_rd_v2_msg = NULL;
       if (READ_VERSION_2 == version)
@@ -1390,58 +1389,68 @@ namespace tfs
         read_offset += FILEINFO_SIZE;
       }
 
-      char* tmp_data_buffer = new char[real_read_len];
-      int ret = data_management_.read_data(block_id, file_id, read_offset, flag, real_read_len, tmp_data_buffer);
-      if (TFS_SUCCESS != ret)
+      if (real_read_len > 0)
       {
-        try_add_repair_task(block_id, ret);
-        tbsys::gDeleteA(tmp_data_buffer);
-        resp_rd_v2_msg->set_length(ret);
-        message->reply(resp_rd_v2_msg);
-      }
-      else
-      {
-        if (0 == read_offset)
+        char* tmp_data_buffer = new char[real_read_len];
+        ret = data_management_.read_data(block_id, file_id, read_offset, flag, real_read_len, tmp_data_buffer);
+        if (TFS_SUCCESS != ret)
         {
-          real_read_len -= FILEINFO_SIZE;
+          try_add_repair_task(block_id, ret);
+          tbsys::gDeleteA(tmp_data_buffer);
+          resp_rd_v2_msg->set_length(ret);
+          message->reply(resp_rd_v2_msg);
         }
-
-        int32_t visit_file_size = reinterpret_cast<FileInfo*>(tmp_data_buffer)->size_;
-        char* packet_data = resp_rd_v2_msg->alloc_data(real_read_len);
-        if (0 != real_read_len)
+        else
         {
-          if (NULL == packet_data)
+          if (0 == read_offset)
           {
-            tbsys::gDelete(resp_rd_v2_msg);
-            tbsys::gDeleteA(tmp_data_buffer);
-            TBSYS_LOG(ERROR, "alloc data failed, blockid: %u, fileid: %" PRI64_PREFIX "u, real len: %d", block_id,
-                      file_id, real_read_len);
-            ret = TFS_ERROR;
+            real_read_len -= FILEINFO_SIZE;
+          }
+
+          int32_t visit_file_size = reinterpret_cast<FileInfo*>(tmp_data_buffer)->size_;
+          char* packet_data = resp_rd_v2_msg->alloc_data(real_read_len);
+          if (0 != real_read_len)
+          {
+            if (NULL == packet_data)
+            {
+              tbsys::gDelete(resp_rd_v2_msg);
+              tbsys::gDeleteA(tmp_data_buffer);
+              TBSYS_LOG(ERROR, "alloc data failed, blockid: %u, fileid: %" PRI64_PREFIX "u, real len: %d", block_id,
+                        file_id, real_read_len);
+              ret = TFS_ERROR;
+              message->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret, "dataserver memory insufficient");
+            }
+
+            if (TFS_SUCCESS == ret)
+            {
+              if (0 == read_offset)
+              {
+                //set FileInfo
+                reinterpret_cast<FileInfo*>(tmp_data_buffer)->size_ -= FILEINFO_SIZE;
+                resp_rd_v2_msg->set_file_info(reinterpret_cast<FileInfo*>(tmp_data_buffer));
+                memcpy(packet_data, tmp_data_buffer + FILEINFO_SIZE, real_read_len);
+              }
+              else
+              {
+                memcpy(packet_data, tmp_data_buffer, real_read_len);
+              }
+            }
           }
 
           if (TFS_SUCCESS == ret)
           {
-            if (0 == read_offset)
-            {
-              //set FileInfo
-              reinterpret_cast<FileInfo*>(tmp_data_buffer)->size_ -= FILEINFO_SIZE;
-              resp_rd_v2_msg->set_file_info(reinterpret_cast<FileInfo*>(tmp_data_buffer));
-              memcpy(packet_data, tmp_data_buffer + FILEINFO_SIZE, real_read_len);
-            }
-            else
-            {
-              memcpy(packet_data, tmp_data_buffer, real_read_len);
-            }
+            //set to connection
+            message->reply(resp_rd_v2_msg);
+            tbsys::gDeleteA(tmp_data_buffer);
+            do_stat(peer_id, visit_file_size, real_read_len, read_offset, AccessStat::READ_BYTES);
           }
         }
-
-        if (TFS_SUCCESS == ret)
-        {
-          //set to connection
-          message->reply(resp_rd_v2_msg);
-          tbsys::gDeleteA(tmp_data_buffer);
-          do_stat(peer_id, visit_file_size, real_read_len, read_offset, AccessStat::READ_BYTES);
-        }
+      }
+      else
+      {
+        ret = EXIT_INVALID_ARGU_ERROR;
+        resp_rd_v2_msg->set_length(ret);
+        message->reply(resp_rd_v2_msg);
       }
 
       TIMER_END();
@@ -1457,11 +1466,12 @@ namespace tfs
       read_stat_mutex_.lock();
       read_stat_buffer_.push_back(make_pair(block_id, file_id));
       read_stat_mutex_.unlock();
-      return ret;
+      return TFS_SUCCESS;
     }
 
     int DataService::read_data(ReadDataMessage* message)
     {
+      int ret = TFS_ERROR;
       TIMER_START();
       RespReadDataMessage* resp_rd_msg = new RespReadDataMessage();
       uint32_t block_id = message->get_block_id();
@@ -1483,55 +1493,65 @@ namespace tfs
         read_offset += FILEINFO_SIZE;
       }
 
-      char* tmp_data_buffer = new char[real_read_len];
-      int ret = data_management_.read_data(block_id, file_id, read_offset, flag, real_read_len, tmp_data_buffer);
-      if (TFS_SUCCESS != ret)
+      if (real_read_len > 0)
       {
-        try_add_repair_task(block_id, ret);
-        tbsys::gDeleteA(tmp_data_buffer);
-        resp_rd_msg->set_length(ret);
-        message->reply(resp_rd_msg);
-      }
-      else
-      {
-        if (0 == read_offset)
+        char* tmp_data_buffer = new char[real_read_len];
+        ret = data_management_.read_data(block_id, file_id, read_offset, flag, real_read_len, tmp_data_buffer);
+        if (TFS_SUCCESS != ret)
         {
-          real_read_len -= FILEINFO_SIZE;
+          try_add_repair_task(block_id, ret);
+          tbsys::gDeleteA(tmp_data_buffer);
+          resp_rd_msg->set_length(ret);
+          message->reply(resp_rd_msg);
         }
-
-        int32_t visit_file_size = reinterpret_cast<FileInfo *>(tmp_data_buffer)->size_;
-        char* packet_data = resp_rd_msg->alloc_data(real_read_len);
-        if (0 != real_read_len)
+        else
         {
-          if (NULL == packet_data)
+          if (0 == read_offset)
           {
-            tbsys::gDelete(resp_rd_msg);
-            tbsys::gDeleteA(tmp_data_buffer);
-            TBSYS_LOG(ERROR, "alloc data failed, blockid: %u, fileid: %" PRI64_PREFIX "u, real len: %d",
-                block_id, file_id, real_read_len);
-            ret = TFS_ERROR;
+            real_read_len -= FILEINFO_SIZE;
+          }
+
+          int32_t visit_file_size = reinterpret_cast<FileInfo *>(tmp_data_buffer)->size_;
+          char* packet_data = resp_rd_msg->alloc_data(real_read_len);
+          if (0 != real_read_len)
+          {
+            if (NULL == packet_data)
+            {
+              tbsys::gDelete(resp_rd_msg);
+              tbsys::gDeleteA(tmp_data_buffer);
+              TBSYS_LOG(ERROR, "alloc data failed, blockid: %u, fileid: %" PRI64_PREFIX "u, real len: %d",
+                  block_id, file_id, real_read_len);
+              ret = TFS_ERROR;
+              message->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret, "dataserver memory insufficient");
+            }
+
+            if (TFS_SUCCESS == ret)
+            {
+              if (0 == read_offset)
+              {
+                memcpy(packet_data, tmp_data_buffer + FILEINFO_SIZE, real_read_len);
+              }
+              else
+              {
+                memcpy(packet_data, tmp_data_buffer, real_read_len);
+              }
+            }
           }
 
           if (TFS_SUCCESS == ret)
           {
-            if (0 == read_offset)
-            {
-              memcpy(packet_data, tmp_data_buffer + FILEINFO_SIZE, real_read_len);
-            }
-            else
-            {
-              memcpy(packet_data, tmp_data_buffer, real_read_len);
-            }
+            // set to connection
+            message->reply(resp_rd_msg);
+            tbsys::gDeleteA(tmp_data_buffer);
+            do_stat(peer_id, visit_file_size, real_read_len, read_offset, AccessStat::READ_BYTES);
           }
         }
-
-        if (TFS_SUCCESS == ret)
-        {
-          // set to connection
-          message->reply(resp_rd_msg);
-          tbsys::gDeleteA(tmp_data_buffer);
-          do_stat(peer_id, visit_file_size, real_read_len, read_offset, AccessStat::READ_BYTES);
-        }
+      }
+      else
+      {
+        ret = EXIT_INVALID_ARGU_ERROR;
+        resp_rd_msg->set_length(ret);
+        message->reply(resp_rd_msg);
       }
 
       TIMER_END();
@@ -1547,7 +1567,7 @@ namespace tfs
       read_stat_buffer_.push_back(make_pair(block_id, file_id));
       read_stat_mutex_.unlock();
 
-      return ret;
+      return TFS_SUCCESS;
     }
 
     int DataService::read_raw_data(ReadRawDataMessage* message)
@@ -1568,7 +1588,7 @@ namespace tfs
         tbsys::gDeleteA(tmp_data_buffer);
         resp_rrd_msg->set_length(ret);
         message->reply(resp_rrd_msg);
-        return ret;
+        return TFS_SUCCESS;
       }
 
       char* packet_data = resp_rrd_msg->alloc_data(real_read_len);
@@ -2055,28 +2075,24 @@ namespace tfs
 
     int DataService::reload_config(ReloadConfigMessage* message)
     {
-      int32_t ret = TBSYS_CONFIG.load(config_file_.c_str());
-      if (EXIT_SUCCESS == ret)
+      int32_t ret = SYSPARAM_DATASERVER.initialize(config_file_, server_index_);
+      if (TFS_SUCCESS != ret)
       {
-        ret = SYSPARAM_DATASERVER.initialize(server_index_);
-        if (TFS_SUCCESS != ret)
+        TBSYS_LOG(ERROR, "reload config failed \n");
+      }
+      else
+      {
+        // reply first, or maybe timeout
+        ret = message->reply(new StatusMessage(STATUS_MESSAGE_OK));
+        if (message->get_switch_cluster_flag())
         {
-          TBSYS_LOG(ERROR, "reload config failed \n");
-        }
-        else
-        {
-          // reply first, or will timeout
-          ret = message->reply(new StatusMessage(STATUS_MESSAGE_OK));
-          if (message->get_switch_cluster_flag())
+          ret = init_sync_mirror();
+          if (TFS_SUCCESS != ret)
           {
-            ret = init_sync_mirror();
-            if (TFS_SUCCESS != ret)
-            {
-              TBSYS_LOG(ERROR, "reload config failed, init sync mirror fail!\n");
-            }
+            TBSYS_LOG(ERROR, "reload config failed, init sync mirror fail!\n");
           }
-          TBSYS_LOG(INFO, "reload config ret: %d\n", ret);
         }
+        TBSYS_LOG(INFO, "reload config ret: %d\n", ret);
       }
       return ret;
     }

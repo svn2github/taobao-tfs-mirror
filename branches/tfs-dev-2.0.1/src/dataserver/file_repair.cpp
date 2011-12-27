@@ -51,16 +51,15 @@ namespace tfs
       }
 
       TBSYS_LOG(INFO, "file repair init ns address: %s:%d",
-                SYSPARAM_DATASERVER.local_ns_ip_ != NULL ? SYSPARAM_DATASERVER.local_ns_ip_ : "none",
+                SYSPARAM_DATASERVER.local_ns_ip_.length() > 0 ? SYSPARAM_DATASERVER.local_ns_ip_.c_str() : "none",
                 SYSPARAM_DATASERVER.local_ns_port_);
 
       int ret = false;
-      if (SYSPARAM_DATASERVER.local_ns_ip_ != NULL &&
-          strlen(SYSPARAM_DATASERVER.local_ns_ip_) > 0 &&
+      if (SYSPARAM_DATASERVER.local_ns_ip_.length() > 0 &&
           SYSPARAM_DATASERVER.local_ns_port_ > 0)
       {
         snprintf(src_addr_, MAX_ADDRESS_LENGTH, "%s:%d",
-                 SYSPARAM_DATASERVER.local_ns_ip_,
+                 SYSPARAM_DATASERVER.local_ns_ip_.c_str(),
                  SYSPARAM_DATASERVER.local_ns_port_);
 
         dataserver_id_ = dataserver_id;

@@ -135,7 +135,7 @@ int remote_copy_file(const char* dest_addr, const uint32_t block_id, const uint6
       ret = g_tfs_client->fstat(src_fd, &file_stat);
       if (TFS_SUCCESS != ret)
       {
-        // if block not found or the file is deleted, need not sync 
+        // if block not found or the file is deleted, need not sync
         if (EXIT_NO_LOGICBLOCK_ERROR != ret &&
             EXIT_META_NOT_FOUND_ERROR != ret &&
             EXIT_FILE_STATUS_ERROR != ret)
@@ -239,7 +239,7 @@ int remote_copy_file(const char* dest_addr, const uint32_t block_id, const uint6
     }
     else
     {
-      // if block not found or the file is deleted, need not sync 
+      // if block not found or the file is deleted, need not sync
       if (EXIT_NO_LOGICBLOCK_ERROR == ret ||
           EXIT_META_NOT_FOUND_ERROR == ret ||
           EXIT_FILE_STATUS_ERROR == ret)
@@ -339,7 +339,7 @@ int copy_file(const char* dest_addr, const uint32_t block_id, const uint64_t fil
           write_length = g_tfs_client->write(dest_fd, (data + FILEINFO_SIZE), (length - FILEINFO_SIZE));
           if (write_length != (length - FILEINFO_SIZE))
           {
-            ret = EXIT_WRITE_FILE_ERROR; 
+            ret = EXIT_WRITE_FILE_ERROR;
             TBSYS_LOG(ERROR,
                     "write dest tfsfile fail. blockid: %u, fileid: %"PRI64_PREFIX"u, write len: %d <> %d, file size: %d",
                     block_id, file_id, write_length, (length - FILEINFO_SIZE), finfo.size_);
@@ -369,7 +369,7 @@ int copy_file(const char* dest_addr, const uint32_t block_id, const uint64_t fil
                 write_length = g_tfs_client->write(dest_fd, data, length);
                 if (write_length != length )
                 {
-                  ret = EXIT_WRITE_FILE_ERROR; 
+                  ret = EXIT_WRITE_FILE_ERROR;
                   TBSYS_LOG(ERROR,
                       "write dest tfsfile fail. blockid: %u, fileid: %"PRI64_PREFIX"u, write len: %d <> %d, file size: %d",
                       block_id, file_id, write_length, length, finfo.size_);
@@ -384,7 +384,7 @@ int copy_file(const char* dest_addr, const uint32_t block_id, const uint64_t fil
             }
           }
 
-          //write successful & check file size & check crc 
+          //write successful & check file size & check crc
           if (TFS_SUCCESS == ret)
           {
             ret = total_length == finfo.size_ ? TFS_SUCCESS : EXIT_SYNC_FILE_ERROR; // check file size
@@ -542,10 +542,10 @@ int do_sync(const char* dest_addr, const char* data, const int32_t len)
         g_retry_wait_monitor.timedWait(tbutil::Time::seconds(wait_second));
         g_retry_wait_monitor.unlock();
       }
-      if (g_stop)
+      /*if (g_stop)
       {
         return TFS_ERROR;
-      }
+      }*/
       retry_time = time(NULL);
     }
   }while (TFS_SUCCESS != ret);
@@ -596,7 +596,7 @@ void* thread_func(void *args)
   int sync_success_count = 0;
 
   // init file queue
-  uint64_t dest_ns_id = Func::get_host_ip(thread_param->dest_addr_); 
+  uint64_t dest_ns_id = Func::get_host_ip(thread_param->dest_addr_);
   char file_queue_name[20];
   sprintf(file_queue_name, "queue_%"PRI64_PREFIX"u", dest_ns_id);
   FileQueue* file_queue = new FileQueue(g_mirror_dir, file_queue_name);
@@ -636,6 +636,7 @@ void* thread_func(void *args)
   {
     fprintf(stderr, "Sync thread %d stopped. Sync success count: %d\n", thread_param->thread_index_, sync_success_count);
   }
+  tbsys::gDelete(file_queue);
   return (void*)NULL;
 }
 
@@ -713,7 +714,7 @@ int main(int argc,char* argv[])
 
   // load config
   TBSYS_CONFIG.load(g_conf_file);
-  int32_t ret = SYSPARAM_DATASERVER.initialize(g_server_index);
+  int32_t ret = SYSPARAM_DATASERVER.initialize(g_conf_file, g_server_index);
   if (TFS_SUCCESS != ret)
   {
     fprintf(stderr, "SysParam::loadDataServerParam failed: %s\n", g_conf_file);
@@ -722,7 +723,7 @@ int main(int argc,char* argv[])
 
   //get work directory
   string work_dir = "";
-  const char* root_work_dir = TBSYS_CONFIG.getString(CONF_SN_PUBLIC, CONF_WORK_DIR, ".");
+  const char* root_work_dir = TBSYS_CONFIG.getString(CONF_SN_PUBLIC, CONF_WORK_DIR, "/tmp");
   if (NULL != root_work_dir)
   {
     work_dir = string(root_work_dir) + "/dataserver_" + g_server_index;
@@ -742,7 +743,7 @@ int main(int argc,char* argv[])
 
   // init TfsClient
   g_tfs_client = TfsClientImpl::Instance();
-  ret = g_tfs_client->initialize(NULL, DEFAULT_BLOCK_CACHE_TIME, 1000, false);
+  ret = g_tfs_client->initialize(NULL, DEFAULT_BLOCK_CACHE_TIME, DEFAULT_BLOCK_CACHE_ITEMS, false);
   if (TFS_SUCCESS != ret)
   {
     fprintf(stderr, "init tfs client fail, ret: %d\n", ret);
@@ -758,19 +759,17 @@ int main(int argc,char* argv[])
   }
 
   // sync to tfs
-  if (SYSPARAM_DATASERVER.local_ns_ip_ != NULL &&
-      strlen(SYSPARAM_DATASERVER.local_ns_ip_) > 0 &&
+  if (SYSPARAM_DATASERVER.local_ns_ip_.length() > 0 &&
       SYSPARAM_DATASERVER.local_ns_port_ != 0 &&
-      SYSPARAM_DATASERVER.slave_ns_ip_ != NULL &&
-      strlen(SYSPARAM_DATASERVER.slave_ns_ip_) > 0)
+      SYSPARAM_DATASERVER.slave_ns_ip_.length() > 0)
   {
     // get local ns ip
     snprintf(g_src_addr, MAX_ADDRESS_LENGTH, "%s:%d",
-             SYSPARAM_DATASERVER.local_ns_ip_, SYSPARAM_DATASERVER.local_ns_port_);
+             SYSPARAM_DATASERVER.local_ns_ip_.c_str(), SYSPARAM_DATASERVER.local_ns_port_);
 
     // get slave ns ip
     vector<std::string> slave_ns_ip;
-    Func::split_string(SYSPARAM_DATASERVER.slave_ns_ip_, '|', slave_ns_ip);
+    Func::split_string(SYSPARAM_DATASERVER.slave_ns_ip_.c_str(), '|', slave_ns_ip);
 
    // new sync thread
     vector<pthread_t> thread_ids;

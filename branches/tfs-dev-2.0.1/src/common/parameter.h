@@ -91,7 +91,7 @@ namespace tfs
 
     struct DataServerParameter
     {
-      int initialize(const std::string& index);
+      int initialize(const std::string& config_file, const std::string& index);
       int32_t heart_interval_;
       int32_t check_interval_;
       int32_t expire_data_file_time_;
@@ -103,10 +103,10 @@ namespace tfs
       int32_t dump_vs_interval_;
       int64_t max_io_warn_time_;
       int32_t tfs_backup_type_;
-      const char* local_ns_ip_;
+      std::string local_ns_ip_;
       int32_t local_ns_port_;
-      const char* slave_ns_ip_;
-      const char* ns_addr_list_;
+      std::string slave_ns_ip_;
+      std::string ns_addr_list_;
       int32_t max_datafile_nums_;
       int32_t max_crc_error_nums_;
       int32_t max_eio_error_nums_;
