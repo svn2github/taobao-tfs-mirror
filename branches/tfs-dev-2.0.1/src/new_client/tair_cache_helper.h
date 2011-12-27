@@ -100,7 +100,7 @@ namespace tfs
 
     private:
       DISALLOW_COPY_AND_ASSIGN(TairCacheHelper);
-      const static int32_t TAIR_CLIENT_TRY_COUNT = 1;
+      const static int32_t TAIR_CLIENT_TRY_COUNT = 2;
       const static int32_t DEFAULT_EXPIRE_TIME = 0;
 
     private:

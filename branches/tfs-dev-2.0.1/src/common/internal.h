@@ -119,7 +119,7 @@ namespace tfs
     static const int32_t ADMIN_WARN_DEAD_COUNT = 1;
 
     static const int64_t DEFAULT_NETWORK_CALL_TIMEOUT  = 3000;//3s
-    static const int64_t DEFAULT_TAIR_TIMEOUT  = 10;//10ms
+    static const int64_t DEFAULT_TAIR_TIMEOUT  = 15;//15ms
 
     static const int64_t MAX_META_SIZE = 1 << 21; // 2M
     static const int64_t INVALID_FILE_SIZE = -1;

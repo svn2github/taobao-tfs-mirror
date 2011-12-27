@@ -134,7 +134,7 @@ namespace tfs
       bool check_init();
       void insert_remote_block_cache(const uint32_t block_id, const common::VUINT64& rds);
       int query_remote_block_cache(const uint32_t block_id, common::VUINT64& rds);
-      int query_remote_block_cache(const std::map<uint32_t, size_t> & block_list, std::map<size_t, common::VUINT64> & blk_ds_list);
+      int query_remote_block_cache(const SEG_DATA_LIST& seg_list, int& remote_hit_count);
       void remove_remote_block_cache(const uint32_t block_id);
 #endif
 
