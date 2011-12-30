@@ -510,7 +510,7 @@ namespace tfs
           if (TFS_SUCCESS == ret)
           {
             ret = get_p_meta_info(root_node, v_name, p_p_dir_node, p_dir_node);
-            if (ret != TFS_SUCCESS)
+            if (TFS_SUCCESS != ret)
             {
               TBSYS_LOG(INFO, "get info fail. appid: %"PRI64_PREFIX"d, uid: %"PRI64_PREFIX"d, %s",
                   app_id, uid, file_path);
@@ -1302,32 +1302,40 @@ namespace tfs
 
       out_pp_dir_node = NULL;
       out_p_dir_node = root_node->dir_meta_;
-      void* dir_node = NULL;
-
-      for (int32_t i = 1; i < depth; i++)
+      if (NULL == out_p_dir_node)
       {
-        if ((ret = get_name(v_name[i].c_str(), name, MAX_FILE_PATH_LEN, name_len)) != TFS_SUCCESS)
-        {
-          break;
-        }
+        TBSYS_LOG(INFO, "\"/\" dir not exist");
+        ret = EXIT_PARENT_EXIST_ERROR;
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        void* dir_node = NULL;
 
-        ret = store_manager_.select(root_node->app_id_, root_node->user_id_,
-            out_p_dir_node, name, false, dir_node);
-
-        if (ret != TFS_SUCCESS)
+        for (int32_t i = 1; i < depth; i++)
         {
-          TBSYS_LOG(ERROR, "select name(%s) failed, ret: %d", name, ret);
-          break;
-        }
+          if ((ret = get_name(v_name[i].c_str(), name, MAX_FILE_PATH_LEN, name_len)) != TFS_SUCCESS)
+          {
+            break;
+          }
 
-        if (NULL == dir_node)
-        {
-          ret = EXIT_PARENT_EXIST_ERROR;
-          TBSYS_LOG(DEBUG, "file(%s) not found, ret: %d", name, ret);
-          break;
+          ret = store_manager_.select(root_node->app_id_, root_node->user_id_,
+              out_p_dir_node, name, false, dir_node);
+
+          if (TFS_SUCCESS != ret)
+          {
+            TBSYS_LOG(ERROR, "select name(%s) failed, ret: %d", name, ret);
+            break;
+          }
+
+          if (NULL == dir_node)
+          {
+            ret = EXIT_PARENT_EXIST_ERROR;
+            TBSYS_LOG(DEBUG, "file(%s) not found, ret: %d", name, ret);
+            break;
+          }
+          out_pp_dir_node = out_p_dir_node;
+          out_p_dir_node = reinterpret_cast<CacheDirMetaNode*>(dir_node);
         }
-        out_pp_dir_node = out_p_dir_node;
-        out_p_dir_node = reinterpret_cast<CacheDirMetaNode*>(dir_node);
       }
       return ret;
     }
