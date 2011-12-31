@@ -78,11 +78,12 @@ namespace tfs
       int64_t get_cache_time() const;
 
       void set_use_cache(const int32_t flag = common::USE_CACHE_FLAG_LOCAL);
+     // for test
+      void insert_local_block_cache(const char* ns_addr, const uint32_t block_id, const common::VUINT64& ds_list);
+      void remove_local_block_cache(const char* ns_addr, const uint32_t block_id);
 #ifdef WITH_TAIR_CACHE
       void set_remote_cache_info(const char* remote_cache_master_addr, const char* remote_cache_slave_addr,
              const char* remote_cache_group_name, const int32_t area);
-      // for test
-      void insert_local_block_cache(const char* ns_addr, const uint32_t block_id, const common::VUINT64& ds_list);
       void insert_remote_block_cache(const char* ns_addr, const uint32_t block_id, const common::VUINT64& ds_list);
       void remove_remote_block_cache(const char* ns_addr, const uint32_t block_id);
 #endif
