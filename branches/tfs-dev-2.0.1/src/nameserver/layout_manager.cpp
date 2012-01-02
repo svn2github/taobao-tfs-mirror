@@ -2481,7 +2481,7 @@ namespace tfs
               it->second->unlock();
 
               std::set<BlockCollect*, ServerCollect::BlockIdComp>::const_iterator cn_iter = blocks.begin();
-              if (force)
+              if (force && !blocks.empty())
               {
                 random_value = random() % blocks.size();
                 while (index < random_value && cn_iter != blocks.end())
