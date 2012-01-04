@@ -144,6 +144,7 @@ namespace tfs
 
     void MetaStoreManager::do_lru_gc(const double ratio)
     {
+      /*
       int64_t used_size = MemHelper::get_used_size();
       used_size = used_size >> 20;
       //TBSYS_LOG(DEBUG, "do_lru_gc");
@@ -158,6 +159,15 @@ namespace tfs
         }
       }
       //TBSYS_LOG(DEBUG, "gc %d root", v_root_node.size());
+      */
+      //for tmp use
+      vector<CacheRootNode*> v_root_node;
+      UNUSED(ratio);
+      {
+        tbsys::CThreadGuard mutex_guard(&lru_mutex_);
+        lru_.gc(v_root_node);
+      }
+      ///////////////////////////////////
       vector<CacheRootNode*>::iterator it = v_root_node.begin();
       for (; it != v_root_node.end(); it++)
       {
