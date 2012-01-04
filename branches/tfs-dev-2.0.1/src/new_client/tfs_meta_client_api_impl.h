@@ -91,6 +91,7 @@ namespace tfs
         //for tools
         int read_frag_info(const int64_t app_id, const int64_t uid,
             const char* file_path, common::FragInfo& frag_info);
+        uint64_t get_meta_server_id(int64_t app_id, int64_t uid);
 
       private:
         //meta server related
@@ -109,7 +110,6 @@ namespace tfs
             const char* path, common::FragInfo& frag_info);
 
         static bool is_valid_file_path(const char* file_path);
-        uint64_t get_meta_server_id(int64_t app_id, int64_t uid);
         int read_frag_info(const uint64_t meta_server_id, const int64_t app_id, const int64_t uid,
             const char* file_path, common::FragInfo& frag_info);
         int32_t get_cluster_id(const uint64_t meta_server_id, const int64_t app_id, const int64_t uid,

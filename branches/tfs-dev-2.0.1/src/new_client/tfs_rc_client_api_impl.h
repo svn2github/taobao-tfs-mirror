@@ -129,6 +129,9 @@ namespace tfs
 
         TfsRetType check_init_stat(const bool check_app_id = false) const;
 
+        void destory();
+
+
         uint64_t get_active_rc_ip(size_t& retry_index) const;
         void get_ka_info(common::KeepAliveInfo& kainfo);
 

@@ -101,21 +101,31 @@ namespace tfs
 
     RcClientImpl::RcClientImpl()
       :need_use_unique_(false), local_addr_(0),
-      init_stat_(INIT_INVALID), active_rc_ip_(0), next_rc_index_(0), app_id_(0), my_fd_(1)
+      init_stat_(INIT_INVALID), active_rc_ip_(0), next_rc_index_(0),
+      name_meta_client_(NULL), app_id_(0), my_fd_(1)
     {
-      stat_update_task_ = new StatUpdateTask(*this);
-      keepalive_timer_ = new tbutil::Timer();
-      name_meta_client_ = new NameMetaClient();
+    }
+
+    void RcClientImpl::destory()
+    {
+      if (0 != keepalive_timer_)
+      {
+        keepalive_timer_->cancel(stat_update_task_);
+        keepalive_timer_->destroy();
+        stat_update_task_ = 0;
+        keepalive_timer_ = 0;
+      }
+      if (NULL != name_meta_client_)
+      {
+        delete name_meta_client_;
+        name_meta_client_ = NULL;
+      }
     }
 
     RcClientImpl::~RcClientImpl()
     {
-      keepalive_timer_->cancel(stat_update_task_);
-      keepalive_timer_->destroy();
-      stat_update_task_ = 0;
-      keepalive_timer_ = 0;
+      destory();
       TfsClient::Instance()->destroy();
-      delete name_meta_client_;
       logout();
     }
     TfsRetType RcClientImpl::initialize(const char* str_rc_ip, const char* app_key, const char* str_app_ip,
@@ -150,6 +160,10 @@ namespace tfs
       tbsys::CThreadGuard mutex_guard(&mutex_);
       if (init_stat_ != INIT_LOGINED)
       {
+        destory();
+        stat_update_task_ = new StatUpdateTask(*this);
+        keepalive_timer_ = new tbutil::Timer();
+        name_meta_client_ = new NameMetaClient();
         if (TFS_SUCCESS == ret)
         {
           ret = TfsClient::Instance()->initialize(NULL, cache_times, cache_items);
@@ -193,8 +207,8 @@ namespace tfs
           if (ns_cache_info.size() == 4)
           {
             TfsClient::Instance()->set_remote_cache_info(ns_cache_info[0].c_str(),
-              ns_cache_info[1].c_str(), ns_cache_info[2].c_str(),
-              atoi(ns_cache_info[3].c_str()));
+                ns_cache_info[1].c_str(), ns_cache_info[2].c_str(),
+                atoi(ns_cache_info[3].c_str()));
           }
           else
           {

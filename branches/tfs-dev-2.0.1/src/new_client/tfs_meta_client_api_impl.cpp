@@ -218,6 +218,7 @@ namespace tfs
       {
         vector<FileMetaInfo> v_file_meta_info;
         uint64_t meta_server_id = get_meta_server_id(app_id, uid);
+        TBSYS_LOG(DEBUG, "meta server is %s",tbsys::CNetUtil::addrToString(meta_server_id).c_str());
         if ((ret = do_ls_ex(meta_server_id, app_id, uid, file_path, NORMAL_FILE, -1, v_file_meta_info)) != TFS_SUCCESS)
         {
           TBSYS_LOG(ERROR, "ls file failed, file_path: %s, ret: %d", file_path, ret);
