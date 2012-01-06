@@ -171,7 +171,7 @@ namespace tfs
       vector<CacheRootNode*>::iterator it = v_root_node.begin();
       for (; it != v_root_node.end(); it++)
       {
-        TBSYS_LOG(DEBUG, "gc app_id %ld uid %ld root", (*it)->app_id_, (*it)->user_id_);
+        TBSYS_LOG(INFO, "gc app_id %ld uid %ld root", (*it)->app_id_, (*it)->user_id_);
         MetaCacheHelper::free(*it);
       }
       return ;
@@ -360,7 +360,8 @@ namespace tfs
                      name, name_len, type, meta_info);
         if (TFS_SUCCESS != ret)
         {
-          TBSYS_LOG(INFO, "insert into db error");
+          TBSYS_LOG(INFO, "insert into db error, ret : %d, app_id: %"PRI64_PREFIX"d,uid: %"PRI64_PREFIX"d, name: %s", ret,
+            app_id, uid, name);
         }
         else
         {
