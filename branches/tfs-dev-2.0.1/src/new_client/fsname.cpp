@@ -64,7 +64,7 @@ namespace tfs
       memset(&file_, 0, sizeof(FileBits));
     }
 
-    FSName::FSName(const uint32_t block_id, const int64_t file_id, const int32_t cluster_id) :
+    FSName::FSName(const uint32_t block_id, const uint64_t file_id, const int32_t cluster_id) :
       is_valid_(true), cluster_id_(cluster_id)
     {
       file_.block_id_ = block_id;
@@ -204,6 +204,5 @@ namespace tfs
         xor_mask(buffer, FILE_NAME_EXCEPT_SUFFIX_LEN, output);
       }
     }
-
   }
 }

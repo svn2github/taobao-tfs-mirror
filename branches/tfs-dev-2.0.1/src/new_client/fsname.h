@@ -26,15 +26,15 @@ namespace tfs
     struct FileBits
     {
       uint32_t block_id_;
-      int32_t seq_id_;
-      int32_t suffix_;
+      uint32_t seq_id_;
+      uint32_t suffix_;
     };
 
     class FSName
     {
     public:
       FSName();
-      FSName(const uint32_t block_id, const int64_t file_id, const int32_t cluster_id = 0);
+      FSName(const uint32_t block_id, const uint64_t file_id, const int32_t cluster_id = 0);
       FSName(const char *file_name, const char* suffix = NULL, const int32_t cluster_id = 0);
       virtual ~FSName();
 
@@ -60,22 +60,22 @@ namespace tfs
         return file_.block_id_;
       }
 
-      inline void set_seq_id(const int32_t id)
+      inline void set_seq_id(const uint32_t id)
       {
         file_.seq_id_ = id;
       }
 
-      inline int32_t get_seq_id() const
+      inline uint32_t get_seq_id() const
       {
         return file_.seq_id_;
       }
 
-      inline void set_suffix(const int32_t id)
+      inline void set_suffix(const uint32_t id)
       {
         file_.suffix_ = id;
       }
 
-      inline int32_t get_suffix() const
+      inline uint32_t get_suffix() const
       {
         return file_.suffix_;
       }
