@@ -154,7 +154,10 @@ namespace tfs
             {
               TBSYS_LOG(DEBUG, "refcnt less than unlink count. %d <= %d",unique_value.ref_count_, count);
 
-              ret = TfsClientImpl::Instance()->unlink(file_size, tfs_name, suffix, ns_addr_.c_str());
+              // CAUTION: comment this unlink for histroy problem, avoid unlinking file on line,
+              // uncomment this unlink for normal use
+              //ret = TfsClientImpl::Instance()->unlink(file_size, tfs_name, suffix, ns_addr_.c_str());
+              ret = TFS_SUCCUSS;
 
               if (ret != TFS_SUCCESS)
               {

@@ -341,7 +341,9 @@ namespace tfs
       }
       else if (value.ref_count_ <= count)
       {
-        ret = erase(key);
+        // CAUTION: comment this line for histroy problem, avoid unlinking file on line,
+        // uncomment this line for normal use
+        //ret = erase(key);
         value.ref_count_ = 0;
       }
       else
