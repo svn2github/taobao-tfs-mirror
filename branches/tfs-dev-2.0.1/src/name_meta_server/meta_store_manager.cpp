@@ -161,11 +161,15 @@ namespace tfs
       //TBSYS_LOG(DEBUG, "gc %d root", v_root_node.size());
       */
       //for tmp use
-      vector<CacheRootNode*> v_root_node;
       UNUSED(ratio);
+      BaseStrategy<AppIdUid, CacheRootNode> strategy(lru_);
+      vector<CacheRootNode*> v_root_node;
       {
         tbsys::CThreadGuard mutex_guard(&lru_mutex_);
-        lru_.gc(v_root_node);
+        if (TFS_SUCCESS != lru_.gc(1.0, &strategy, v_root_node))
+        {
+          TBSYS_LOG(ERROR, "lru gc error");
+        }
       }
       ///////////////////////////////////
       vector<CacheRootNode*>::iterator it = v_root_node.begin();
