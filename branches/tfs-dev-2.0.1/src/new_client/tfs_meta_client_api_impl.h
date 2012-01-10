@@ -57,6 +57,7 @@ namespace tfs
         int initialize(const int64_t rs_addr);
 
         int create_dir(const int64_t app_id, const int64_t uid, const char* dir_path);
+        int create_dir_with_parents(const int64_t app_id, const int64_t uid, const char* dir_path);
         int create_file(const int64_t app_id, const int64_t uid, const char* file_path);
 
         int rm_dir(const int64_t app_id, const int64_t uid, const char* dir_path);
@@ -109,7 +110,6 @@ namespace tfs
         int do_write(const uint64_t meta_server_id, const int64_t app_id, const int64_t uid,
             const char* path, common::FragInfo& frag_info);
 
-        static bool is_valid_file_path(const char* file_path);
         int read_frag_info(const uint64_t meta_server_id, const int64_t app_id, const int64_t uid,
             const char* file_path, common::FragInfo& frag_info);
         int32_t get_cluster_id(const uint64_t meta_server_id, const int64_t app_id, const int64_t uid,
@@ -124,6 +124,12 @@ namespace tfs
         // root server related
         bool need_update_table(const int ret_status);
         int update_table_from_rootserver();
+
+        static bool is_valid_file_path(const char* file_path);
+#ifdef TFS_TEST
+      public:
+#endif
+        static int get_parent_dir(char* dir_path, char*& parent_dir_path);
 
       private:
         DISALLOW_COPY_AND_ASSIGN(NameMetaClientImpl);

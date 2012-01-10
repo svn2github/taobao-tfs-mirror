@@ -97,6 +97,38 @@ namespace tfs
       return ret;
     }
 
+    int NameMetaClientImpl::create_dir_with_parents(const int64_t app_id, const int64_t uid,
+        const char* dir_path)
+    {
+      int ret = 0;
+      if (NULL == dir_path)
+      {
+        ret = EXIT_INVALID_FILE_NAME;
+      }
+      else
+      {
+        ret = do_file_action(app_id, uid, CREATE_DIR, dir_path);
+        // parent not exist, recursive create it
+        if (EXIT_PARENT_EXIST_ERROR == ret)
+        {
+          char tmp_path[MAX_FILE_PATH_LEN];
+          strncpy(tmp_path, dir_path, MAX_FILE_PATH_LEN);
+          tmp_path[MAX_FILE_PATH_LEN - 1] = '\0';
+          char* parent_dir_path = NULL;
+          ret = get_parent_dir(tmp_path, parent_dir_path);
+          if (TFS_SUCCESS == ret && NULL != parent_dir_path)
+          {
+            ret = create_dir_with_parents(app_id, uid, parent_dir_path);
+            if (TFS_SUCCESS == ret || EXIT_TARGET_EXIST_ERROR == ret)
+            {
+              ret = do_file_action(app_id, uid, CREATE_DIR, dir_path);
+            }
+          }
+        }
+      }
+      return ret;
+    }
+
     int NameMetaClientImpl::create_file(const int64_t app_id, const int64_t uid,
         const char* file_path)
     {
@@ -1062,5 +1094,33 @@ namespace tfs
 
       return ret;
     }
+
+    int NameMetaClientImpl::get_parent_dir(char* dir_path, char*& parent_dir_path)
+    {
+      int ret = TFS_SUCCESS;
+      // trim tailing "/"
+      dir_path = tbsys::CStringUtil::trim(dir_path, "/", 2);
+
+      if (strlen(dir_path) > 1)
+      {
+       char *last_slash = strrchr(dir_path, '/');
+        if (NULL != last_slash)
+        {
+           *(last_slash + 1) = '\0';
+        }
+        parent_dir_path = dir_path;
+      }
+      // case of "/"
+      else if (0 == strlen(dir_path))
+      {
+        parent_dir_path = NULL;
+      }
+      else
+      {
+        ret = EXIT_INVALID_FILE_NAME;
+      }
+      return ret;
+    }
+
   }
 }

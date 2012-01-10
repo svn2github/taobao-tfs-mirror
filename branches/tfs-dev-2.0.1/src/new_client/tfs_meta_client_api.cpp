@@ -51,6 +51,12 @@ namespace tfs
       return impl_->create_dir(app_id, uid, dir_path);
     }
 
+    TfsRetType NameMetaClient::create_dir_with_parents(const int64_t app_id, const int64_t uid,
+        const char* dir_path)
+    {
+      return impl_->create_dir_with_parents(app_id, uid, dir_path);
+    }
+
     TfsRetType NameMetaClient::create_file(const int64_t app_id, const int64_t uid,
         const char* file_path)
     {

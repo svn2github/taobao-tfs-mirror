@@ -1011,6 +1011,16 @@ namespace tfs
       return ret;
     }
 
+    TfsRetType RcClientImpl::create_dir_with_parents(const int64_t uid, const char* dir_path)
+    {
+      int ret = check_init_stat(true);
+      if (TFS_SUCCESS == ret)
+      {
+        ret = name_meta_client_->create_dir_with_parents(app_id_, uid, dir_path);
+      }
+      return ret;
+    }
+
     TfsRetType RcClientImpl::create_file(const int64_t uid, const char* file_path)
     {
       int ret = check_init_stat(true);

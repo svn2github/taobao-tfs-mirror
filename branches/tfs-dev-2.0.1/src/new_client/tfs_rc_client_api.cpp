@@ -147,6 +147,11 @@ namespace tfs
       return impl_->create_dir(uid, dir_path);
     }
 
+    TfsRetType RcClient::create_dir_with_parents(const int64_t uid, const char* dir_path)
+    {
+      return impl_->create_dir_with_parents(uid, dir_path);
+    }
+
     TfsRetType RcClient::create_file(const int64_t uid, const char* file_path)
     {
       return impl_->create_file(uid, file_path);
