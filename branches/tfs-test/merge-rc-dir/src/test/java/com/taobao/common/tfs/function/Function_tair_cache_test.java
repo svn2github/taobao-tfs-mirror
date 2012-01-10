@@ -20,7 +20,7 @@ import com.taobao.common.tfs.RcBaseCase;
 import com.taobao.common.tfs.impl.FSName;
 
 /**
- * @author Administrator/mazhentong.pt
+ * @author Administrator/lexin
  */
 public class Function_tair_cache_test extends RcBaseCase{
 	public String appIp1 = "11.232.3.12";
