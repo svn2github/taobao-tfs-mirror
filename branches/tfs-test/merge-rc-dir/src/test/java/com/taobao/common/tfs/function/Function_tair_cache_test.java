@@ -38,7 +38,7 @@ public class Function_tair_cache_test extends RcBaseCase{
 	
     public List<Long> dsList = new ArrayList<Long>();
     
-	/* 加入cache后读写文件都正常 */
+	/* 加入local/tair cache后读写文件都正常 */
 	
 	@Test
 	public void Function_01_happy_path() throws Exception {
@@ -87,12 +87,12 @@ public class Function_tair_cache_test extends RcBaseCase{
 
 	/* test local cache */
 	@Test
-	public void Function_02_localcache_switch() throws Exception {
+	public void Function_02_localcache_switch_OK() throws Exception {
 		boolean bRet = false;
 		OutputStream output = new FileOutputStream("tmp");
 		byte [] data = getByte(localFile);
 
-		caseName = "Function_02_cache_switch";
+		caseName = "Function_02_cache_switch_OK";
 		log.info(caseName + "===> start");
 		
 		String sRet = null;
@@ -128,7 +128,7 @@ public class Function_tair_cache_test extends RcBaseCase{
 		log.info(caseName+"==============>");
 	}
 
-	/* test remotecache */
+	/* test remote cache */
 	@Test
 	public void Function_03_remotecache_switch() throws Exception {
 		
@@ -138,7 +138,7 @@ public class Function_tair_cache_test extends RcBaseCase{
 		boolean bRet = false;
 		String sRet = null;
 		
-		caseName = "Function_02_remotecache_switch";
+		caseName = "Function_03_remotecache_switch";
 		log.info(caseName + "===> start");
 
 		tfsManager = new DefaultTfsManager();
@@ -177,7 +177,7 @@ public class Function_tair_cache_test extends RcBaseCase{
 
 	/* test local_cache and remote_cache */
 	@Test
-	public void Function_03_remote_cache_and_local_cache_switch() throws Exception {
+	public void Function_04_remote_cache_and_local_cache_switch() throws Exception {
 		
 		OutputStream output = new FileOutputStream("tmp");
 		byte [] data = getByte(localFile);
@@ -185,7 +185,7 @@ public class Function_tair_cache_test extends RcBaseCase{
 		boolean bRet = false;
 		String sRet = null;
 		
-		caseName = "Function_03_remote_cache_and_local_cache_switch";
+		caseName = "Function_04_remote_cache_and_local_cache_switch";
 		log.info(caseName + "===> start");
 		
 		tfsManager = new DefaultTfsManager();
@@ -273,7 +273,7 @@ public class Function_tair_cache_test extends RcBaseCase{
 	 */
 
 	@Test
-	public void Function_06_remote_cache_and_local_cache_nonhit_switch() throws Exception {
+	public void Function_06_remote_cache_hit_and_local_cache_nonhit_switch() throws Exception {
 		
 		OutputStream output = new FileOutputStream("tmp");
 		byte [] data = getByte(localFile);
@@ -332,7 +332,7 @@ public class Function_tair_cache_test extends RcBaseCase{
 	/*local_cache_nonhit remote_cache_hit*/
 	
 	@Test
-	public void Function_07_local_cache_nonhit_and_remote_cache_hit_valid() throws Exception {
+	public void Function_07_local_cache_nonhit_and_remote_cache_hit_invalid() throws Exception {
 		
 		OutputStream output = new FileOutputStream("tmp");
 		byte [] data = getByte(localFile);
@@ -455,10 +455,131 @@ public class Function_tair_cache_test extends RcBaseCase{
 		tfsManager.destroy();		
 		log.info(caseName+"==============>");
 	}
+	@Test
+	public void Function_09_local_cache_hit_and_remote_cache_nonhit() throws Exception {
+		
+		OutputStream output = new FileOutputStream("tmp");
+		byte [] data = getByte(localFile);
+		
+		boolean bRet = false;
+		String sRet = null;
+		
+		caseName = "Function_09_local_cache_hit_and_remote_cache_nonhit";
+		log.info(caseName + "===> start");
+		
+		tfsManager = new DefaultTfsManager();
+		tfsManager.setRcAddr(rcAddr);
+		tfsManager.setAppKey(appKey);
+		tfsManager.setAppIp(appIp);
+		bRet = tfsManager.init();
+		Assert.assertTrue(bRet);
+		
+		/*start local and remote cache switch*/   
+		tfsManager.setEnableLocalCache(true);
+		tfsManager.setEnableRemoteCache(true);
+
+		tfsManager.setRemoteCacheInfo(tairMasterAddr, tairSlaveAddr, tairGroupName, 1);
+		
+		/* Write file */
+		sRet = tfsManager.saveFile(data, null, null);
+		Assert.assertNotNull(sRet);
+		
+		/* sleep */
+		sleep(60);
+		
+		/* Read file */		
+		bRet = tfsManager.fetchFile(sRet, null, output);
+		Assert.assertTrue(bRet);
+		
+		Assert.assertEquals(getCrc(localFile), getCrc("tmp"));
+
+		/* Read file */		
+		bRet = tfsManager.fetchFile(sRet, null, output);
+		Assert.assertTrue(bRet);
+		
+		/*clear remote cache
+		 * set remote cache miss hit
+		 * */
+		tfsManager.removeRemoteBlockCache(sRet);
+		output = null;
+		output = new FileOutputStream("tmp");
+		/* Read file */		
+		bRet = tfsManager.fetchFile(sRet, null, output);
+		Assert.assertTrue(bRet);
+		Assert.assertEquals(getCrc(localFile), getCrc("tmp"));
+		
+		/* Unlink file */
+		bRet = tfsManager.unlinkFile(sRet, null);
+		Assert.assertTrue(bRet);
+		
+		tfsManager.destroy();		
+		log.info(caseName+"==============>");
+	}
+	@Test
+	public void Function_10_local_cache_hit_and_remote_cache_invalid() throws Exception {
+		
+		OutputStream output = new FileOutputStream("tmp");
+		byte [] data = getByte(localFile);
+		
+		boolean bRet = false;
+		String sRet = null;
+		
+		caseName = "Function_10_local_cache_hit_and_remote_cache_invalid";
+		log.info(caseName + "===> start");
+		/* tfsManger init*/
+		tfsManager = new DefaultTfsManager();
+		tfsManager.setRcAddr(rcAddr);
+		tfsManager.setAppKey(appKey);
+		tfsManager.setAppIp(appIp);
+		bRet = tfsManager.init();
+		Assert.assertTrue(bRet);
+		
+		/*start local and remote cache switch*/   
+		tfsManager.setEnableLocalCache(true);
+		tfsManager.setEnableRemoteCache(true);
+
+		tfsManager.setRemoteCacheInfo(tairMasterAddr, tairSlaveAddr, tairGroupName, 1);
+		
+		/* Write file */
+		sRet = tfsManager.saveFile(data, null, null);
+		Assert.assertNotNull(sRet);
+		
+		/* sleep */
+		sleep(60);
+		
+		/* Read file */		
+		bRet = tfsManager.fetchFile(sRet, null, output);
+		Assert.assertTrue(bRet);
+		
+		Assert.assertEquals(getCrc(localFile), getCrc("tmp"));
+
+		/* Read file */		
+		bRet = tfsManager.fetchFile(sRet, null, output);
+		Assert.assertTrue(bRet);
+		
+		/*
+		 * set remote cache invalid
+		 * */
+		tfsManager.insertRemoteBlockCache(sRet, dsList);
+		
+		output = null;
+		output = new FileOutputStream("tmp");
+		/* Read file */		
+		bRet = tfsManager.fetchFile(sRet, null, output);
+		Assert.assertTrue(bRet);
+		Assert.assertEquals(getCrc(localFile), getCrc("tmp"));
+		
+		/* Unlink file */
+		bRet = tfsManager.unlinkFile(sRet, null);
+		Assert.assertTrue(bRet);
+		
+		tfsManager.destroy();		
+		log.info(caseName+"==============>");
+	}
 
 	/*local_cache_valid remote_cache_valid*/
 	@Test
-	public void Function_09_local_cache_valid_and_remote_cache_valid() throws Exception {
+	public void Function_11_local_cache_valid_and_remote_cache_invalid() throws Exception {
 
 		OutputStream output = new FileOutputStream("tmp");
 		byte [] data = getByte(localFile);
@@ -466,7 +587,7 @@ public class Function_tair_cache_test extends RcBaseCase{
 		boolean bRet = false;
 		String sRet = null;
 		
-		caseName = "Function_09_local_cache_valid_and_remote_cache_valid";
+		caseName = "Function_11_local_cache_valid_and_remote_cache_invalid";
 		log.info(caseName + "===> start");
 
 		tfsManager = new DefaultTfsManager();
@@ -518,9 +639,9 @@ public class Function_tair_cache_test extends RcBaseCase{
 		log.info(caseName+"==============>");
 	}
 	
-	/*use tair cache read two ns and different file*/
+	/* use tair_cache to read two ns_file and different file*/
 	@Test
-	public void test_10_tair_cache_with_read_different_file_from_two_ns() throws Exception {
+	public void test_12_tair_cache_with_read_different_file_from_two_ns() throws Exception {
 
 		OutputStream output = new FileOutputStream("tmp");
 		byte [] data = getByte(localFile);
@@ -528,7 +649,7 @@ public class Function_tair_cache_test extends RcBaseCase{
 		boolean bRet = false;
 		String[] sRet = new String[2];
 		
-		caseName = "Function_09_local_cache_valid_and_remote_cache_valid";
+		caseName = "test_12_tair_cache_with_read_different_file_from_two_ns";
 		log.info(caseName + "===> start");
 	/*init first ns*/
 		tfsManager = new DefaultTfsManager();
