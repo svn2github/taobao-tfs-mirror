@@ -98,6 +98,13 @@ public class RcBaseCase extends TfsBaseCase {
 		if (createFile(localFile, 3 * (1 << 20))) {
 			testFileList.add(localFile);
 		}
+
+		// 10M file
+		localFile = "10M.jpg";
+		if (createFile(localFile, 10 * (1 << 20))) {
+			testFileList.add(localFile);
+		}
+		
 		// 6G file
 		localFile = "6G.jpg";
 		if (createFile(localFile, (long)6 * (1 << 30))) {

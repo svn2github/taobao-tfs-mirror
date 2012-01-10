@@ -15,6 +15,7 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import com.taobao.common.tfs.ClassPathXmlApplicationContext;
 import com.taobao.common.tfs.DefaultTfsManager;
 import com.taobao.common.tfs.RcBaseCase;
 import com.taobao.common.tfs.impl.FSName;
@@ -651,7 +652,7 @@ public class Function_tair_cache_test extends RcBaseCase{
 		
 		caseName = "test_12_tair_cache_with_read_different_file_from_two_ns";
 		log.info(caseName + "===> start");
-	/*init first ns*/
+		/*init first ns*/
 		tfsManager = new DefaultTfsManager();
 		tfsManager.setRcAddr(rcAddr);
 		tfsManager.setAppKey(appKey);
@@ -713,7 +714,7 @@ public class Function_tair_cache_test extends RcBaseCase{
 		bRet = tfsManager.fetchFile(sRet[1], null, output);
 		Assert.assertTrue(bRet);
 		Assert.assertEquals(getCrc(localFile), getCrc("tmp"));
-	/*read file remote cache hit*/	
+		/*read file remote cache hit*/	
 		bRet = tfsManager.fetchFile(sRet[0], null, output);
 		Assert.assertTrue(bRet);
 		Assert.assertEquals(getCrc(localFile), getCrc("tmp"));
@@ -722,5 +723,60 @@ public class Function_tair_cache_test extends RcBaseCase{
 		Assert.assertTrue(bRet);
 		Assert.assertEquals(getCrc(localFile), getCrc("tmp"));
 	}
+
+	/**
+	 * 在cache情况下，读写large file
+	 * @throws Exception
+	 */
+	@Test
+	public void Function_13_with_large_file_happy_path() throws Exception {
+		
+		OutputStream output = new FileOutputStream("tmp.jpg");
+		byte [] data = getByte(localFile);
+		
+		boolean bRet = false;
+		String sRet = null;
+		caseName = "Function_13_with_large_file_happy_path";
+		log.info(caseName + "===> start");
+
+		initTfsManager();
+
+		/*start local and remote cache switch*/   
+		tfsManager.setEnableLocalCache(false);
+		tfsManager.setEnableRemoteCache(true);
+		tfsManager.setRemoteCacheInfo(tairMasterAddr, tairSlaveAddr, tairGroupName, 1);
+
+		/* save one 10M large file, then fetch it */
+		String sFileName = tfsManager.saveLargeFile("10M.jpg", null, null);
+		sFileName = sFileName.replaceFirst("T", "L");
+		bRet = tfsManager.fetchFile(sFileName, null, output);
+
+		/* get segment info */
+		String cmd = "/home/admin/workspace/tfs-dev-2.0.1/src/dataserver/view_local_key -f ";
+		cmd += sFileName + " | grep block";
+		String machine = "10.232.36.206";
+		ArrayList<String> result = new ArrayList<String>(500);
+		assertTrue(Proc.proStartBase(machine, cmd, result));
+	
+		if(result != null && result.size() > 0){
+			for(String s:result){
+				s=s.replaceAll("\\D+", " ");
+				s=s.trim();
+				String[] strNum = s.split(" ");
+				
+				FSName fsName = new FSName(Integer.parseInt(strNum[0]), Integer.parseInt(strNum[1]));
+			}
+		}
+		
+	}
+
+	private void initTfsManager()
+	{
+		boolean bRet = false;
+        ClassPathXmlApplicationContext appContext = new ClassPathXmlApplicationContext(new String[] { "tfs.xml" });
+        tfsManager = (DefaultTfsManager) appContext.getBean("tfsManager");
+        appId = tfsManager.getAppId();
+	}
+
 }
 
