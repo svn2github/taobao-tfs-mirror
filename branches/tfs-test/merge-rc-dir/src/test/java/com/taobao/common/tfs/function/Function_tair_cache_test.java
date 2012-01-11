@@ -8,6 +8,7 @@ import java.io.OutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.TreeSet;
 
 import java.util.HashMap;
 import org.junit.After;
@@ -19,6 +20,8 @@ import org.springframework.context.support.ClassPathXmlApplicationContext;
 import com.taobao.common.tfs.DefaultTfsManager;
 import com.taobao.common.tfs.RcBaseCase;
 import com.taobao.common.tfs.impl.FSName;
+import com.taobao.common.tfs.impl.LocalKey;
+import com.taobao.common.tfs.impl.SegmentInfo;
 
 /**
  * @author Administrator/lexin
@@ -730,12 +733,10 @@ public class Function_tair_cache_test extends RcBaseCase{
 	 */
 	@Test
 	public void Function_13_with_large_file_happy_path() throws Exception {
-		
-		OutputStream output = new FileOutputStream("tmp.jpg");
-		byte [] data = getByte(localFile);
-		
+		String segmentFile = "segment_info.jpg";
+		OutputStream output = new FileOutputStream(segmentFile);
+
 		boolean bRet = false;
-		String sRet = null;
 		caseName = "Function_13_with_large_file_happy_path";
 		log.info(caseName + "===> start");
 
@@ -748,28 +749,27 @@ public class Function_tair_cache_test extends RcBaseCase{
 
 		/* save one 10M large file, then fetch it */
 		String sFileName = tfsManager.saveLargeFile("10M.jpg", null, null);
-		sFileName = sFileName.replaceFirst("T", "L");
+		sFileName = "T" + sFileName.substring(1);
 		bRet = tfsManager.fetchFile(sFileName, null, output);
-
+		assertTrue(bRet);
+		output.flush();
+		output.close();
 		/* get segment info */
-		String cmd = "/home/admin/workspace/tfs-dev-2.0.1/src/dataserver/view_local_key -f ";
-		cmd += sFileName + " | grep block";
-		String machine = "10.232.36.206";
-		ArrayList<String> result = new ArrayList<String>(500);
-		assertTrue(Proc.proStartBase(machine, cmd, result));
-	
-		if(result != null && result.size() > 0){
-			for(String s:result){
-				s=s.replaceAll("\\D+", " ");
-				s=s.trim();
-				String[] strNum = s.split(" ");
-				
-				FSName fsName = new FSName(Integer.parseInt(strNum[0]), Integer.parseInt(strNum[1]));
-				String fileName = fsName.get();
-				tfsManager.fetchFile(fileName, null, output);
-			}
+		LocalKey localKey = new LocalKey();
+		localKey.loadFile(segmentFile);
+		TreeSet<SegmentInfo> segmengInfoSet = localKey.getSegmentInfos();
+		int count = 0;
+		for(SegmentInfo segInfo:segmengInfoSet){
+			OutputStream filePartOut = new FileOutputStream("tmp_" + count + ".jpg");
+			FSName fsName = new FSName(segInfo.getBlockId(), segInfo.getFileId());
+			String fileName = fsName.get();
+			assertTrue(tfsManager.fetchFile(fileName, null, filePartOut));
+			
+			filePartOut.flush();
+			filePartOut.close();
+			
+			count++;
 		}
-		
 	}
 
 	private void initTfsManager()
