@@ -14,8 +14,8 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.springframework.context.support.ClassPathXmlApplicationContext;
 
-import com.taobao.common.tfs.ClassPathXmlApplicationContext;
 import com.taobao.common.tfs.DefaultTfsManager;
 import com.taobao.common.tfs.RcBaseCase;
 import com.taobao.common.tfs.impl.FSName;
@@ -765,6 +765,8 @@ public class Function_tair_cache_test extends RcBaseCase{
 				String[] strNum = s.split(" ");
 				
 				FSName fsName = new FSName(Integer.parseInt(strNum[0]), Integer.parseInt(strNum[1]));
+				String fileName = fsName.get();
+				tfsManager.fetchFile(fileName, null, output);
 			}
 		}
 		
@@ -772,7 +774,6 @@ public class Function_tair_cache_test extends RcBaseCase{
 
 	private void initTfsManager()
 	{
-		boolean bRet = false;
         ClassPathXmlApplicationContext appContext = new ClassPathXmlApplicationContext(new String[] { "tfs.xml" });
         tfsManager = (DefaultTfsManager) appContext.getBean("tfsManager");
         appId = tfsManager.getAppId();
