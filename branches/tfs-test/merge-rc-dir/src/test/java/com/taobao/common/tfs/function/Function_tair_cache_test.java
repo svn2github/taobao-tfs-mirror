@@ -760,14 +760,9 @@ public class Function_tair_cache_test extends RcBaseCase{
 		TreeSet<SegmentInfo> segmengInfoSet = localKey.getSegmentInfos();
 		int count = 0;
 		for(SegmentInfo segInfo:segmengInfoSet){
-			OutputStream filePartOut = new FileOutputStream("tmp_" + count + ".jpg");
 			FSName fsName = new FSName(segInfo.getBlockId(), segInfo.getFileId());
 			String fileName = fsName.get();
-			assertTrue(tfsManager.fetchFile(fileName, null, filePartOut));
-			
-			filePartOut.flush();
-			filePartOut.close();
-			
+			assertTrue(tfsManager.fetchFile(fileName, null, "10M_part_" + count + ".jpg"));
 			count++;
 		}
 	}
