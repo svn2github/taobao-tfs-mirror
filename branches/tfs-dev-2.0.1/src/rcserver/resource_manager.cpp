@@ -268,7 +268,7 @@ EXIT:
         }
         if (TFS_SUCCESS == ret)
         {
-          ret = base_resource_manager_->get_cluster_infos(app_info.cluster_group_id_, base_info.cluster_infos_);
+          ret = base_resource_manager_->get_cluster_infos(app_info.cluster_group_id_, base_info.cluster_infos_, base_info.cluster_infos_for_update_);
         }
         if (TFS_SUCCESS == ret)
         {

@@ -196,9 +196,10 @@ namespace tfs
     }
 
     int BaseResource::get_cluster_infos(const int32_t cluster_group_id,
-        std::vector<ClusterRackData>& cluster_rack_datas) const
+        std::vector<ClusterRackData>& cluster_rack_datas, std::vector<ClusterData>& cluster_datas_for_update) const
     {
       cluster_rack_datas.clear();
+      cluster_datas_for_update.clear();
       int ret = TFS_SUCCESS;
       VClusterRackDuplicateServer::const_iterator rack_duplicate_it;
       VClusterRackInfo::const_iterator rack_info_it;
@@ -236,6 +237,10 @@ namespace tfs
                 read_only = false;
               }
               tmp_rack.cluster_data_.push_back(tmp_cluster);
+              if (GROUP_ACCESS_TYPE_READ_AND_WRITE == rack_group_it->cluster_rack_access_type_)
+              {
+                cluster_datas_for_update.push_back(tmp_cluster);
+              }
             }
           }
           if (!tmp_rack.cluster_data_.empty())

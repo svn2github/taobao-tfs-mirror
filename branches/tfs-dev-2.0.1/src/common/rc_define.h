@@ -92,6 +92,7 @@ namespace tfs
       int64_t modify_time_;
       int64_t meta_root_server_;
       std::string ns_cache_info_;
+      std::vector<ClusterData> cluster_infos_for_update_;
 
       BaseInfo& operator= (const BaseInfo& right)
       {
@@ -101,6 +102,7 @@ namespace tfs
         modify_time_ = right.modify_time_;
         meta_root_server_ = right.meta_root_server_;
         ns_cache_info_ = right.ns_cache_info_;
+        cluster_infos_for_update_ = right.cluster_infos_for_update_;
         return *this;
       }
     };

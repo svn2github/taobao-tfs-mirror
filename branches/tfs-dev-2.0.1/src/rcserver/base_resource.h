@@ -48,7 +48,8 @@ namespace tfs
         int get_meta_root_server(const int32_t app_id, int64_t& roo_server) const;
         int get_resource_servers(std::vector<uint64_t>& resource_servers) const;
         int get_cluster_infos(const int32_t cluster_group_id,
-            std::vector<common::ClusterRackData>& cluster_rack_datas) const;
+            std::vector<common::ClusterRackData>& cluster_rack_datas,
+            std::vector<common::ClusterData>& cluster_datas_for_update) const;
         int get_last_modify_time(int64_t& last_modify_time) const;
         int sort_ns_by_distance(const int32_t app_id, const std::string& app_ip,
             const common::BaseInfo& in_base_info, common::BaseInfo& out_base_info);
