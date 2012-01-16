@@ -37,6 +37,7 @@ namespace tfs
         int initialize(const int64_t rs_addr);
 
         TfsRetType create_dir(const int64_t app_id, const int64_t uid, const char* dir_path);
+        TfsRetType create_dir_with_parents(const int64_t app_id, const int64_t uid, const char* dir_path);
         TfsRetType create_file(const int64_t app_id, const int64_t uid, const char* file_path);
 
         TfsRetType rm_dir(const int64_t app_id, const int64_t uid, const char* dir_path);
