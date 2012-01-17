@@ -60,7 +60,7 @@ namespace tfs
     int Bucket::destroy(void)
     {
       tables_.clear();
-      version_ = INVALID_TABLE_VERSION; 
+      version_ = INVALID_TABLE_VERSION;
       return TFS_SUCCESS;
     }
 
@@ -71,13 +71,13 @@ namespace tfs
           ? EXIT_BUCKET_ID_INVLAID : TFS_SUCCESS;
       if (TFS_SUCCESS == iret)
       {
-        iret = bucket_id < static_cast<int64_t>(tables_.size()) && !tables_.empty()  ? TFS_SUCCESS : EXIT_NEW_TABLE_INVALID; 
+        iret = bucket_id < static_cast<int64_t>(tables_.size()) && !tables_.empty()  ? TFS_SUCCESS : EXIT_NEW_TABLE_INVALID;
         if (TFS_SUCCESS == iret)
         {
           iret = version != version_ ? EXIT_TABLE_VERSION_ERROR : TFS_SUCCESS;
           if (TFS_SUCCESS == iret)
           {
-            status = (TFS_SUCCESS == iret  && tables_[bucket_id].server_ == server) 
+            status = (TFS_SUCCESS == iret  && tables_[bucket_id].server_ == server)
                 ? tables_[bucket_id].status_: BUCKET_STATUS_NONE;
           }
         }
@@ -120,6 +120,20 @@ namespace tfs
       }
     }
 
+    int Bucket::get_table(std::set<int64_t>& table, const uint64_t server)
+    {
+      int32_t index = 0;
+      std::vector<BucketItem>::const_iterator iter = tables_.begin();
+      for (; iter != tables_.end(); ++iter, ++index)
+      {
+        if ((*iter).server_ == server)
+        {
+          table.insert(index);
+        }
+      }
+      return TFS_SUCCESS;
+    }
+
     BucketManager::BucketManager()
     {
 
@@ -137,13 +151,13 @@ namespace tfs
       update_table_.destroy();
     }
 
-    int BucketManager::switch_table(const uint64_t server, const int64_t version)
+    int BucketManager::switch_table(std::set<int64_t>& change, const uint64_t server, const int64_t version)
     {
       tbutil::Monitor<tbutil::Mutex>::Lock lock(monitor_);
       int32_t iret = server > 0 ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == iret)
       {
-        iret = ((version != update_table_.version_)  
+        iret = ((version != update_table_.version_)
             || version <= active_table_.version_ ) ? EXIT_TABLE_VERSION_ERROR : TFS_SUCCESS;
         if (TFS_SUCCESS == iret)
         {
@@ -159,6 +173,8 @@ namespace tfs
             else
               (*iter).status_ = BUCKET_STATUS_NONE;
           }
+          change = change_;
+          change_.clear();
           update_table_.destroy();
         }
       }
@@ -210,19 +226,21 @@ namespace tfs
       int32_t iret = update_table_.empty() ? EXIT_NEW_TABLE_NOT_EXIST : TFS_SUCCESS;
       if (TFS_SUCCESS == iret)
       {
-        iret = update_table_.tables_.size() != active_table_.tables_.size() 
+        iret = update_table_.tables_.size() != active_table_.tables_.size()
                && !active_table_.tables_.empty() ? EXIT_NEW_TABLE_INVALID : TFS_SUCCESS;
         if (TFS_SUCCESS == iret)
         {
+          int64_t index = 0;
           Bucket::TABLES_ITERATOR it = active_table_.tables_.begin();
           Bucket::TABLES_ITERATOR iter = update_table_.tables_.begin();
           if (!active_table_.tables_.empty())
           {
+            change_.clear();
             assert(!active_table_.empty());
             assert(!update_table_.empty());
             assert(update_table_.tables_.size() == active_table_.tables_.size());
-            for (; iter != update_table_.tables_.end() 
-                && it != active_table_.tables_.end(); ++iter, ++it)
+            for (; iter != update_table_.tables_.end()
+                && it != active_table_.tables_.end(); ++iter, ++it, ++index)
             {
               if ((*iter).server_ == (*it).server_)
               {
@@ -232,11 +250,18 @@ namespace tfs
               else
               {
                 if ((*iter).server_ == server)//move in
+                {
                   (*it).status_ = BUCKET_STATUS_READ_ONLY;
+                }
                 else if ((*it).server_ == server)//move out
+                {
                   (*it).status_ = BUCKET_STATUS_READ_ONLY;
+                  change_.insert(index);
+                }
                 else
+                {
                   (*it).status_ = BUCKET_STATUS_NONE;
+                }
               }
             }
           }
@@ -266,12 +291,18 @@ namespace tfs
       }
     }
 
+
+    int BucketManager::get_table(std::set<int64_t>& table, const uint64_t server)
+    {
+      return active_table_.get_table(table, server);
+    }
+
     int64_t BucketManager::get_table_size(void) const
     {
       tbutil::Monitor<tbutil::Mutex>::Lock lock(monitor_);
-      return active_table_.empty() ? update_table_.empty() 
+      return active_table_.empty() ? update_table_.empty()
                                    ? 0 : update_table_.size() : active_table_.size();
-    } 
+    }
   }/** namemetaserver **/
 }/** tfs **/
 

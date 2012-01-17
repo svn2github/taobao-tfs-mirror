@@ -33,8 +33,9 @@ namespace tfs
   {
     const int8_t  HeartManager::MAX_RETRY_COUNT = 2;
     const int16_t HeartManager::MAX_TIMEOUT_MS  = 500;//ms
-    HeartManager::HeartManager(BucketManager& bucket_manager):
+    HeartManager::HeartManager(BucketManager& bucket_manager, MetaStoreManager& store_manager):
       bucket_manager_(bucket_manager),
+      store_manager_(store_manager),
       heart_thread_(0),
       keepalive_type_(RTS_MS_KEEPALIVE_TYPE_LOGIN),
       has_valid_lease_(false)
@@ -98,8 +99,13 @@ namespace tfs
         }
         else
         {
+          TBSYS_LOG(INFO, "lease invalid, now: %"PRI64_PREFIX"d, lease_expired: %"PRI64_PREFIX"d", now.toMilliSeconds(), lease_expired.toMilliSeconds());
+          uint64_t current_server = MsRuntimeGlobalInformation::instance().server_.base_info_.id_;
+          std::set<int64_t> tables;
+          bucket_manager_.get_table(tables, current_server);
           bucket_manager_.cleanup();
           keepalive_type_ = RTS_MS_KEEPALIVE_TYPE_LOGIN;
+          store_manager_.do_lru_gc(tables);//free CacheRootNode, erase form map
         }
       }
       while (!destroy_);
@@ -222,7 +228,8 @@ namespace tfs
                         reply->get_version(), rgi.server_.base_info_.id_);
               if (TFS_SUCCESS == iret)
               {
-                iret = bucket_manager_.switch_table(rgi.server_.base_info_.id_, reply->get_version());
+                std::set<int64_t> change;
+                iret = bucket_manager_.switch_table(change, rgi.server_.base_info_.id_, reply->get_version());
                // bucket_manager_.dump(TBSYS_LOG_LEVEL_DEBUG);
               }
             }

@@ -22,6 +22,7 @@
 #include <Handle.h>
 #include "common/rts_define.h"
 #include "common/error_msg.h"
+#include "meta_store_manager.h"
 
 namespace tfs
 {
@@ -31,12 +32,12 @@ namespace tfs
     class HeartManager
     {
     public:
-      explicit HeartManager(BucketManager& bucket_manager);
+      HeartManager(BucketManager& bucket_manager, MetaStoreManager& store_manager);
       virtual ~HeartManager();
 
       int initialize(void);
       void destroy();
-      
+
       inline bool has_valid_lease(void) const { return has_valid_lease_;}
 
     private:
@@ -61,6 +62,7 @@ namespace tfs
       static const int8_t MAX_RETRY_COUNT;
       static const int16_t MAX_TIMEOUT_MS;
       BucketManager& bucket_manager_;
+      MetaStoreManager& store_manager_;
       MSHeartBeatThreadHelperPtr heart_thread_;
       tbutil::Monitor<tbutil::Mutex> monitor_;
       common::RtsMsKeepAliveType keepalive_type_;

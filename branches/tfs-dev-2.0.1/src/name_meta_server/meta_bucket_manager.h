@@ -56,12 +56,13 @@ namespace tfs
       int initialize(const char* table, const int64_t length, const int64_t version);
       int destroy(void);
       int query(common::BucketStatus& status, const int64_t bucket_id,
-                const int64_t version, const uint64_t server) const; 
+                const int64_t version, const uint64_t server) const;
       void dump(int32_t level, const char* file = __FILE__,
              const int32_t line = __LINE__,
              const char* function = __FUNCTION__) const;
       inline bool empty() const { return tables_.empty();}
       inline int64_t size() const { return tables_.size();}
+      int get_table(std::set<int64_t>& table, const uint64_t server);
     private:
       TABLES tables_;
       int64_t version_;
@@ -80,12 +81,13 @@ namespace tfs
       BucketManager();
       virtual ~BucketManager();
       void cleanup(void);
-      int switch_table(const uint64_t server, const int64_t version);
+      int switch_table(std::set<int64_t>& change, const uint64_t server, const int64_t version);
       int update_table(const char* table, const int64_t length, const int64_t version, const uint64_t server);
       int query(common::BucketStatus& status, const int64_t bucket_id,
                 const int64_t version, const uint64_t server) const;
       bool bucket_version_valid(const int64_t new_version) const;
 
+      int get_table(std::set<int64_t>& table, const uint64_t server);
       int64_t get_table_size(void) const;
       void dump(int32_t level,const int8_t type = common::DUMP_TABLE_TYPE_ACTIVE_TABLE,
              const char* file = __FILE__, const int32_t line = __LINE__,
@@ -96,6 +98,7 @@ namespace tfs
       tbutil::Monitor<tbutil::Mutex> monitor_;
       Bucket update_table_;
       Bucket active_table_;
+      std::set<int64_t> change_;
     };
   }/** namemetaserver **/
 }/** tfs **/

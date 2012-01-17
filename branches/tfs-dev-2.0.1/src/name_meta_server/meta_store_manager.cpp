@@ -175,11 +175,17 @@ namespace tfs
       vector<CacheRootNode*>::iterator it = v_root_node.begin();
       for (; it != v_root_node.end(); it++)
       {
-        TBSYS_LOG(INFO, "gc app_id %ld uid %ld root", (*it)->app_id_, (*it)->user_id_);
+        TBSYS_LOG(INFO, "gc app_id %ld uid %ld root", (*it)->key_.app_id_, (*it)->key_.uid_);
         MetaCacheHelper::free(*it);
       }
       return ;
     }
+
+    void MetaStoreManager::do_lru_gc(const std::set<int64_t>& change)
+    {
+      lru_.gc(change);
+    }
+
     CacheRootNode* MetaStoreManager::get_root_node(const int64_t app_id, const int64_t uid)
     {
       AppIdUid lru_key(app_id, uid);
@@ -193,8 +199,8 @@ namespace tfs
         CacheRootNode* tmp_root_node = (CacheRootNode*)malloc(sizeof(CacheRootNode), CACHE_ROOT_NODE);
         if(NULL != tmp_root_node)
         {
-          tmp_root_node->app_id_ = app_id;
-          tmp_root_node->user_id_ = uid;
+          tmp_root_node->key_.app_id_ = app_id;
+          tmp_root_node->key_.uid_ = uid;
           tmp_root_node->dir_meta_ = NULL;
 
           //if root not exist in lru, we need ls '/' and put the result ro lru
@@ -218,10 +224,10 @@ namespace tfs
       }
       return root_node;
     }
-    void MetaStoreManager::revert_root_node(const int64_t app_id, const int64_t uid)
+    void MetaStoreManager::revert_root_node(CacheRootNode* root_node)
     {
       tbsys::CThreadGuard mutex_guard(&lru_mutex_);
-      lru_.put(AppIdUid(app_id, uid));
+      lru_.put(root_node);
       return;
     }
     int MetaStoreManager::create_top_dir(const int64_t app_id, const int64_t uid, CacheRootNode* root_node)
@@ -1219,23 +1225,5 @@ namespace tfs
       }
       return;
     }
-    MetaStoreManager::AppIdUid::AppIdUid(const int64_t app_id, const int64_t uid)
-      :app_id_(app_id), uid_(uid)
-    {
-    }
-    bool MetaStoreManager::AppIdUid::operator < (const MetaStoreManager::AppIdUid& right) const
-    {
-      if (app_id_ < right.app_id_)
-      {
-        return true;
-      }
-      if (app_id_ > right.app_id_)
-      {
-        return false;
-      }
-      return uid_ < right.uid_;
-    }
-
-
   }
 }
