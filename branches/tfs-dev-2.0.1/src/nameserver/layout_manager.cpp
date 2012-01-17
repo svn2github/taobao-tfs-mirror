@@ -1189,9 +1189,9 @@ namespace tfs
           }
 #endif
         }
+#if !defined(TFS_GTEST) && !defined(TFS_NS_INTEGRATION)
         int64_t end = tbsys::CTimeUtil::getTime();
         TBSYS_LOG(INFO, "add new block: cost: %"PRI64_PREFIX"d", end - begin);
-#if !defined(TFS_GTEST) && !defined(TFS_NS_INTEGRATION)
         NewClientManager::get_instance().destroy_client(client);
 #endif
       }
@@ -1936,8 +1936,10 @@ namespace tfs
         TBSYS_LOG(DEBUG, "SYSPARAM_NAMESERVER.run_plan_ratio_: %d, alive_server_size_: %d", SYSPARAM_NAMESERVER.run_plan_ratio_, alive_server_size_);
 #endif
 
+#ifndef TFS_GTEST
         if (ngi.owner_role_ == NS_ROLE_SLAVE)
           continue;
+#endif
 
         if (need <= 0)
         {
@@ -2644,7 +2646,7 @@ namespace tfs
           return true;
         }
       }
-
+      std::vector<ServerCollect*>::iterator index;
       {
         RWLock::Lock tlock(maping_mutex_, WRITE_LOCKER);
         std::pair<std::map<uint32_t, TaskPtr>::iterator, bool> rs =
@@ -2656,7 +2658,7 @@ namespace tfs
           return false;
         }
         std::pair<std::map<ServerCollect*,TaskPtr>::iterator, bool> iter;
-        std::vector<ServerCollect*>::iterator index = task->runer_.begin();
+        index = task->runer_.begin();
         for (; index != task->runer_.end(); ++index)
         {
           iter = server_to_task_.insert(std::map<ServerCollect*,TaskPtr>::value_type((*index), task));
