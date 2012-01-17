@@ -115,7 +115,10 @@ int BlockConsole::initialize(const string& ts_input_blocks_file, const std::stri
     }
     cur_ds_sit_ = dest_ds_ids_.begin();
   }
-  fclose(dest_ds_file_ptr);
+  if (NULL != dest_ds_file_ptr)
+  {
+    fclose(dest_ds_file_ptr);
+  }
 
   if (TFS_SUCCESS == ret)
   {
