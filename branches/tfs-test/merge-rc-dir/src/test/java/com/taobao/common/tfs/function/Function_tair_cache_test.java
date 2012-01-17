@@ -31,7 +31,7 @@ public class Function_tair_cache_test extends RcBaseCase{
     public String appIp1 = "11.232.3.12";
     public String appIp2 = "11.232.5.21";
 
-    public String localFile = resourcesPath+"1k.jpg";
+    public String localFile = "1k.jpg";
     public int offset = 0;
     public int length = 1024;
     
@@ -85,7 +85,7 @@ public class Function_tair_cache_test extends RcBaseCase{
         Assert.assertNotNull(sRet);
         
         /* sleep */
-        sleep(60);
+        sleep(5);
         
         /* Read file */     
         bRet = tfsManager.fetchFile(sRet, null, output);
@@ -128,7 +128,7 @@ public class Function_tair_cache_test extends RcBaseCase{
         Assert.assertNotNull(sRet);
         
         /* sleep */
-        sleep(60);
+        sleep(5);
         
         /* Read file */     
         bRet = tfsManager.fetchFile(sRet, null, output);
@@ -182,7 +182,7 @@ public class Function_tair_cache_test extends RcBaseCase{
         Assert.assertNotNull(sRet);
         
         /* sleep */
-        sleep(60);
+        sleep(5);
         
         /* Read file */     
         bRet = tfsManager.fetchFile(sRet, null, output);
@@ -236,7 +236,7 @@ public class Function_tair_cache_test extends RcBaseCase{
         Assert.assertNotNull(sRet);
         
         /* sleep */
-        sleep(60);
+        sleep(5);
         
         /* Read file */     
         bRet = tfsManager.fetchFile(sRet, null, output);
@@ -290,7 +290,7 @@ public class Function_tair_cache_test extends RcBaseCase{
         Assert.assertNotNull(sRet);
         
         /* sleep */
-        sleep(60);
+        sleep(5);
         
         /* Read file */     
         bRet = tfsManager.fetchFile(sRet, null, output);
@@ -348,7 +348,7 @@ public class Function_tair_cache_test extends RcBaseCase{
         Assert.assertNotNull(sRet);
         
         /* sleep */
-        sleep(60);
+        sleep(5);
         
         /* Read file */     
         bRet = tfsManager.fetchFile(sRet, null, output);
@@ -415,7 +415,7 @@ public class Function_tair_cache_test extends RcBaseCase{
         Assert.assertNotNull(sRet);
         
         /* sleep */
-        sleep(60);
+        sleep(5);
         
         /* Read file */     
         bRet = tfsManager.fetchFile(sRet, null, output);
@@ -479,7 +479,7 @@ public class Function_tair_cache_test extends RcBaseCase{
         Assert.assertNotNull(sRet);
         
         /* sleep */
-        sleep(60);
+        sleep(5);
         
         /* Read file */     
         bRet = tfsManager.fetchFile(sRet, null, output);
@@ -539,7 +539,7 @@ public class Function_tair_cache_test extends RcBaseCase{
         Assert.assertNotNull(sRet);
         
         /* sleep */
-        sleep(60);
+        sleep(5);
         
         /* Read file */     
         bRet = tfsManager.fetchFile(sRet, null, output);
@@ -600,7 +600,7 @@ public class Function_tair_cache_test extends RcBaseCase{
         Assert.assertNotNull(sRet);
         
         /* sleep */
-        sleep(60);
+        sleep(5);
         
         /* Read file */     
         bRet = tfsManager.fetchFile(sRet, null, output);
@@ -828,18 +828,75 @@ public class Function_tair_cache_test extends RcBaseCase{
 		for(SegmentInfo segInfo:segmengInfoSet){
 			FSName fsName = new FSName(segInfo.getBlockId(), segInfo.getFileId());
 			String fileName = fsName.get();
-			//try{
-			//assertTrue(tfsManager.fetchFile(fileName, null, "10M_part_" + count + ".jpg"));
-			//}catch(Exception e)
-			System.out.println("@@@FSname is "+fsName.get());
+			try{
+			assertTrue(tfsManager.fetchFile(fileName, null, "10M_part_" + count + ".jpg"));
+			}catch(Exception e){
+				System.out.println("@@@FSname is "+fsName.get());
+			}
+		   
+		   count++;
+		}
 			
+	}
+
+	/**
+	 * 在cache情况下，读写large file，远程cache部分命中
+	 * @throws Exception
+	 */
+	@Test
+	public void Function_14_with_large_file_remote_cache_part_hit() throws Exception {
+		String segmentFile = "segment_info.jpg";
+		OutputStream output = new FileOutputStream(segmentFile);
+
+		boolean bRet = false;
+		caseName = "Function_13_with_large_file_happy_path";
+		log.info(caseName + "===> start");
+
+		initTfsManager();
+
+		/*start local and remote cache switch*/   
+		tfsManager.setEnableLocalCache(false);
+		tfsManager.setEnableRemoteCache(true);
+		tfsManager.setRemoteCacheInfo(tairMasterAddr, tairSlaveAddr, tairGroupName, 1);
+
+		/* save one 10M large file, then fetch it */
+		String sFileName = tfsManager.saveLargeFile("10M.jpg", null, null);
+		sFileName = "T" + sFileName.substring(1);
+		bRet = tfsManager.fetchFile(sFileName, null, output);
+		assertTrue(bRet);
+		output.flush();
+		output.close();
+
+        /* update remote cache */
+        for(int i = 0 ; i < 2; i++){
+            String reFlushFileName = tfsManager.saveLargeFile("10M.jpg", null, null);
+            bRet = tfsManager.fetchFile(reFlushFileName, null, "tmp.jpg");
+    		assertTrue(bRet);
+        }
+
+		/* get segment info */
+		LocalKey localKey = new LocalKey();
+		localKey.loadFile(segmentFile);
+		TreeSet<SegmentInfo> segmengInfoSet = localKey.getSegmentInfos();
+		int count = 0;
+		for(SegmentInfo segInfo:segmengInfoSet){
+			FSName fsName = new FSName(segInfo.getBlockId(), segInfo.getFileId());
+			String fileName = fsName.get();
+			try{
+			assertTrue(tfsManager.fetchFile(fileName, null, "10M_part_" + count + ".jpg"));
+			}catch(Exception e){
+			    log.info("FetchFile fail: " + e.getMessage());
+			}
+			System.out.println("@@@FSname is "+fsName.get());
+
 		    assertTrue(tfsManager.fetchFile(fileName, null, "10M_part_"+count+ ".jpg"));       
 		   
 		   count++;
 		}
 			
 	}
-	
+
+
 
 	private void initTfsManager()
 	{
