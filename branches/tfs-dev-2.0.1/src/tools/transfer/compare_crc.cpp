@@ -410,8 +410,10 @@ int get_crc_from_block_list(const string& old_tfs_client, const string& new_tfs_
 
 void usage(const char* name)
 {
-  TBSYS_LOG(ERROR,"Usage:%s -o old_ns_ip -n new_ns_ip -f file_list -d modify_time (20110315|20110315183500) [-h]", name);
-  TBSYS_LOG(ERROR,"Usage:%s -o old_ns_ip -n new_ns_ip -b block_list -d modify_time(20110315|20110315183500) [-h]", name);
+  fprintf(stderr,"Usage:\n%s -o old_ns_ip:port -n new_ns_ip:port -f file_list "
+      "-m modify_time (20110315|20110315183500) [-h]\n", name);
+  fprintf(stderr,"%s -o old_ns_ip:port -n new_ns_ip:port -b block_list "
+      "-m modify_time(20110315|20110315183500) [-h]\n", name);
   exit(TFS_ERROR);
 }
 
@@ -428,7 +430,7 @@ int main(int argc, char** argv)
   string modify_time = "";
   string block_list = "";
   int i ;
-  while ((i = getopt(argc, argv, "o:n:f:b:d:h")) != EOF)
+  while ((i = getopt(argc, argv, "o:n:f:b:m:h")) != EOF)
   {
     switch (i)
     {
@@ -444,7 +446,7 @@ int main(int argc, char** argv)
       case 'b':
         block_list = optarg;
         break;
-      case 'd':
+      case 'm':
         modify_time = optarg;
         break;
       case 'h':
