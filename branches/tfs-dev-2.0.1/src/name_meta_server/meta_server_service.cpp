@@ -33,7 +33,7 @@ namespace tfs
   namespace namemetaserver
   {
     MetaServerService::MetaServerService():
-      heart_manager_(bucket_manager_)
+      heart_manager_(bucket_manager_,store_manager_)
     {
     }
 
@@ -439,7 +439,13 @@ namespace tfs
         }
         else if (UPDATE_TABLE_PHASE_2 == msg->get_phase())
         {
-          ret = bucket_manager_.switch_table(rgi.server_.base_info_.id_, msg->get_version());
+          std::set<int64_t> change;
+          ret = bucket_manager_.switch_table(change, rgi.server_.base_info_.id_, msg->get_version());
+          if (TFS_SUCCESS == ret)
+          {
+            //free CacheRootNode, erase from map
+            store_manager_.do_lru_gc(change);
+          }
         }
 
         TBSYS_LOG(DEBUG, "MetaNameService::do version: %ld, phase: %d, status: %d",
@@ -455,8 +461,6 @@ namespace tfs
       }
       return ret;
     }
-
-
 
     int MetaServerService::create(const int64_t app_id, const int64_t uid,
                                   const char* file_path, const FileType type)
@@ -567,7 +571,7 @@ namespace tfs
 
           TBSYS_LOG(DEBUG, "create %s, type: %d, appid: %"PRI64_PREFIX"d, uid: %"PRI64_PREFIX"d, filepath: %s",
               TFS_SUCCESS == ret ? "success" : "fail", type, app_id, uid, file_path);
-          store_manager_.revert_root_node(app_id, uid);
+          store_manager_.revert_root_node( root_node);
         }
       }
       PROFILER_DUMP();
@@ -636,7 +640,7 @@ namespace tfs
 
         TBSYS_LOG(DEBUG, "rm %s, type: %d, appid: %"PRI64_PREFIX"d, uid: %"PRI64_PREFIX"d, filepath: %s",
             TFS_SUCCESS == ret ? "success" : "fail", type, app_id, uid, file_path);
-        store_manager_.revert_root_node(app_id, uid);
+        store_manager_.revert_root_node( root_node);
       }
 
       PROFILER_DUMP();
@@ -706,7 +710,7 @@ namespace tfs
             }
           }
         }
-        store_manager_.revert_root_node(app_id, uid);
+        store_manager_.revert_root_node( root_node);
 
         TBSYS_LOG(DEBUG, "mv %s, type: %d, appid: %"PRI64_PREFIX"d, uid: %"PRI64_PREFIX"d, filepath: %s",
             TFS_SUCCESS == ret ? "success" : "fail", type, app_id, uid, file_path);
@@ -771,7 +775,7 @@ namespace tfs
           }
 
         }
-        store_manager_.revert_root_node(app_id, uid);
+        store_manager_.revert_root_node( root_node);
       }
       PROFILER_DUMP();
       PROFILER_STOP();
@@ -942,7 +946,7 @@ namespace tfs
           } while (write_frag_meta_it != v_frag_meta.end() && TFS_SUCCESS == ret);
 
         }
-        store_manager_.revert_root_node(app_id, uid);
+        store_manager_.revert_root_node( root_node);
       }
       return ret;
     }
@@ -997,7 +1001,7 @@ namespace tfs
           }
         }
 
-        store_manager_.revert_root_node(app_id, uid);
+        store_manager_.revert_root_node( root_node);
       }
 
       return ret;
@@ -1318,7 +1322,7 @@ namespace tfs
             break;
           }
 
-          ret = store_manager_.select(root_node->app_id_, root_node->user_id_,
+          ret = store_manager_.select(root_node->key_.app_id_, root_node->key_.uid_,
               out_p_dir_node, name, false, dir_node);
 
           if (TFS_SUCCESS != ret)

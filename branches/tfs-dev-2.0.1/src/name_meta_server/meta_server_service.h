@@ -150,9 +150,9 @@ namespace tfs
     private:
       DISALLOW_COPY_AND_ASSIGN(MetaServerService);
 
+      MetaStoreManager store_manager_;
       BucketManager bucket_manager_;
       HeartManager heart_manager_;
-      MetaStoreManager store_manager_;
       tbutil::Mutex mutex_;
       enum {
         STAT_CREATE_DIR = 0,

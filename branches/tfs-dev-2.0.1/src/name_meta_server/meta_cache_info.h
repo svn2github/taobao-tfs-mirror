@@ -19,6 +19,7 @@
 #include <algorithm>
 #include <tbsys.h>
 #include "common/define.h"
+#include "common/meta_server_define.h"
 #include "mem_helper.h"
 namespace tfs
 {
@@ -27,19 +28,19 @@ namespace tfs
     class CacheDirMetaNode;
     struct CacheRootNode
     {
-      CacheRootNode()
-      {
-        reset();
-      }
-      void reset()
-      {
-        memset(this, 0, sizeof(CacheRootNode));
-      }
+      CacheRootNode(){ reset(); }
+      void reset()   { memset(this, 0, sizeof(CacheRootNode)); }
+      void inc_ref() { ++ref_count_; }
+      void dec_ref() { --ref_count_; }
+      void inc_visit_count() { ++visit_count_; }
+
+      int64_t get_hash() const;
       void dump() const;
-      int64_t app_id_;
-      int64_t user_id_;
+      common::AppIdUid key_;
+      int64_t ref_count_;
+      int64_t visit_count_;
       //int64_t size_;    //the mem size occupied by this user
-      //int64_t visit_count_;
+
       CacheDirMetaNode* dir_meta_; // top dir
     };
     struct CacheDirMetaNode

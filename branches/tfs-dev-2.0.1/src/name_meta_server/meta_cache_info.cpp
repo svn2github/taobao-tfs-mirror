@@ -16,6 +16,7 @@
 #include "meta_cache_info.h"
 
 #include "common/meta_server_define.h"
+#include "common/meta_hash_helper.h"
 #include "meta_cache_helper.h"
 
 namespace tfs
@@ -23,11 +24,16 @@ namespace tfs
   namespace namemetaserver
   {
     using namespace common;
+    int64_t CacheRootNode::get_hash() const
+    {
+      HashHelper helper(key_.app_id_, key_.uid_);
+      return tbsys::CStringUtil::murMurHash((const void*)&helper, sizeof(helper)) % common::MAX_BUCKET_ITEM_DEFAULT;
+    }
     void CacheRootNode::dump() const
     {
       TBSYS_LOG(DEBUG, "CacheRootNode: app_id = %"PRI64_PREFIX"d "
           "user_id_ = %"PRI64_PREFIX"d ",
-          app_id_, user_id_);
+          key_.app_id_, key_.uid_);
       if (NULL != dir_meta_)
         dir_meta_->dump();
       TBSYS_LOG(DEBUG, "dump CacheRootNode over");

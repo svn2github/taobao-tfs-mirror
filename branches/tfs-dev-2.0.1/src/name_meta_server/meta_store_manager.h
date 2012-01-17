@@ -38,11 +38,12 @@ namespace tfs
         tbsys::CThreadMutex* get_mutex(const int64_t app_id, const int64_t uid);
 
         void do_lru_gc(const double ratio);
+        void do_lru_gc(const std::set<int64_t>& change);
         //this func will get root_node from lru cache
         //when we gen a new root node we will ls '/'
         //so dir_meta_ == NULL means no top dir;
         CacheRootNode* get_root_node(const int64_t app_id, const int64_t uid);
-        void revert_root_node(const int64_t app_id, const int64_t uid);
+        void revert_root_node(CacheRootNode* root_node);
 
         int create_top_dir(const int64_t app_id, const int64_t uid, CacheRootNode* root_node);
 
@@ -137,14 +138,7 @@ namespace tfs
         DISALLOW_COPY_AND_ASSIGN(MetaStoreManager);
         DataBasePool* database_pool_;
         tbsys::CThreadMutex lru_mutex_;
-        struct AppIdUid
-        {
-          AppIdUid(const int64_t app_id, const int64_t uid);
-          int64_t app_id_;
-          int64_t uid_;
-          bool operator < (const AppIdUid& right) const;
-        };
-        Lru<AppIdUid, CacheRootNode> lru_;
+        Lru lru_;
         int mutex_count_;
         tbsys::CThreadMutex* app_id_uid_mutex_;
     };
