@@ -316,13 +316,15 @@ namespace tfs
           {
             TBSYS_LOG(ERROR, "dataservice::start, init block files fail! ret: %d\n", iret);
           }
-
-          // sync mirror should init after bootstrap
-          iret = init_sync_mirror();
-          if (TFS_SUCCESS != iret)
+          else
           {
-            TBSYS_LOG(ERROR, "dataservice::start, init sync mirror fail! \n");
-            return iret;
+            // sync mirror should init after bootstrap
+            iret = init_sync_mirror();
+            if (TFS_SUCCESS != iret)
+            {
+              TBSYS_LOG(ERROR, "dataservice::start, init sync mirror fail! \n");
+              return iret;
+            }
           }
         }
 

@@ -32,15 +32,15 @@ namespace tfs
                        const char* src_addr, const char* dest_addr) :
       service_(service), backup_type_(type), src_addr_(src_addr), dest_addr_(dest_addr),
       is_master_(false), stop_(0), pause_(0), need_sync_(0), need_sleep_(0),
-      retry_count_(0), retry_time_(0), file_queue_(NULL), backup_(NULL) 
+      retry_count_(0), retry_time_(0), file_queue_(NULL), backup_(NULL)
     {
-      if (src_addr != NULL && 
+      if (src_addr != NULL &&
           strlen(src_addr) > 0 &&
-          dest_addr != NULL && 
+          dest_addr != NULL &&
           strlen(dest_addr) > 0)
       {
         mirror_dir_ = dynamic_cast<DataService*>(DataService::instance())->get_real_work_dir() + "/mirror";
-        uint64_t dest_ns_id = Func::get_host_ip(dest_addr); 
+        uint64_t dest_ns_id = Func::get_host_ip(dest_addr);
         char queue_name[20];
         sprintf(queue_name, "queue_%"PRI64_PREFIX"u", dest_ns_id);
         // the 1st one is the master
@@ -114,7 +114,7 @@ namespace tfs
         return TFS_SUCCESS;
       }
 
-      // 2.init FileQueue 
+      // 2.init FileQueue
       FileQueue* second_file_queue = new FileQueue(mirror_dir_, "secondqueue");
       second_file_queue->load_queue_head();
       second_file_queue->initialize();
@@ -175,7 +175,7 @@ namespace tfs
           if (is_master_ && !service_.sync_mirror_.empty())
           {
             std::vector<SyncBase*>::const_iterator iter = service_.sync_mirror_.begin();
-            // skip itself 
+            // skip itself
             iter++;
             for (; iter != service_.sync_mirror_.end(); iter++)
             {
@@ -292,19 +292,19 @@ namespace tfs
         return TFS_ERROR;
       }
       SyncData* sf = reinterpret_cast<SyncData*>(const_cast<char*>(data));
-      
+
       int ret = TFS_ERROR;
       // endless retry if fail
-      do 
+      do
       {
-#if defined(TFS_DS_GTEST)
+#if defined(TFS_GTEST)
         ret = backup_->do_sync(sf, src_block_file_.c_str(), dest_block_file_.c_str());
 #else
         ret = backup_->do_sync(sf);
 #endif
         if (TFS_SUCCESS != ret)
         {
-          // for invalid block, not retry 
+          // for invalid block, not retry
           if (EXIT_BLOCKID_ZERO_ERROR == ret)
             break;
           TBSYS_LOG(WARN, "sync error! cmd: %d, blockid: %u, fileid: %" PRI64_PREFIX "u, old fileid: %" PRI64_PREFIX "u, ret: %d, retry_count: %d",
