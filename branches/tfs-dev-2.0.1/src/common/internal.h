@@ -36,7 +36,7 @@
 
 #include "define.h"
 
-//#define TFS_TEST
+#define TFS_GTEST
 
 #if __WORDSIZE == 32
 namespace __gnu_cxx

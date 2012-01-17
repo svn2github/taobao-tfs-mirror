@@ -14,6 +14,7 @@
  *
  */
 
+#include "meta_hash_helper.h"
 #include "meta_server_define.h"
 #include "serialization.h"
 #include "stream.h"
@@ -409,12 +410,35 @@ namespace tfs
     {
       return file_info_.deserialize(input);
     }
-    
+
     MsRuntimeGlobalInformation MsRuntimeGlobalInformation::instance_;
     MsRuntimeGlobalInformation& MsRuntimeGlobalInformation::instance()
     {
       return instance_;
     }
-  }
-}
+
+    AppIdUid::AppIdUid(const int64_t app_id, const int64_t uid)
+      :app_id_(app_id), uid_(uid)
+    {
+    }
+    bool AppIdUid::operator < (const AppIdUid& right) const
+    {
+      if (app_id_ < right.app_id_)
+      {
+        return true;
+      }
+      if (app_id_ > right.app_id_)
+      {
+        return false;
+      }
+      return uid_ < right.uid_;
+    }
+
+    int64_t AppIdUid::get_hash() const
+    {
+      HashHelper helper(app_id_, uid_);
+      return tbsys::CStringUtil::murMurHash((const void*)&helper, sizeof(helper)) % common::MAX_BUCKET_ITEM_DEFAULT;
+    }
+  }/** common **/
+}/** tfs **/
 

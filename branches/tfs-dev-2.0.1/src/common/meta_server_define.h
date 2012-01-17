@@ -169,6 +169,16 @@ namespace tfs
       static MsRuntimeGlobalInformation instance_;
     };
 
+    struct AppIdUid
+    {
+      AppIdUid(){};
+      AppIdUid(const int64_t app_id, const int64_t uid);
+      mutable int64_t app_id_;
+      mutable int64_t uid_;
+      int64_t get_hash() const;
+      bool operator < (const AppIdUid& right) const;
+    };
+
     const int32_t MAX_FILE_PATH_LEN = 256;
     //const int32_t MAX_META_FILE_NAME_LEN = 255;
     // threshhold count when should split

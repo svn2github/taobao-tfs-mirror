@@ -15,7 +15,7 @@
  */
 
 #ifndef TFS_COMMON_ROOT_SERVER_DEFINE_H_
-#define TFS_COMMON_ROOT_SERVER_DEFINE_H_ 
+#define TFS_COMMON_ROOT_SERVER_DEFINE_H_
 
 #include <map>
 #include <ext/hash_map>
@@ -123,7 +123,7 @@ namespace tfs
       NetWorkStatInformation net_work_stat_;
       MetaServerCapacity capacity_;
       MetaServerBaseInformation base_info_;
-    }; 
+    };
 
     struct RootServerBaseInformation
     {
@@ -133,7 +133,7 @@ namespace tfs
       uint64_t id_; /** RootServer id(IP + PORT) **/
       int64_t  start_time_; /** RootServer start time (ms)**/
       int64_t  last_update_time_;/** RootServer last update time (ms)**/
-      int8_t   status_; 
+      int8_t   status_;
       int8_t   role_;
     };
 
@@ -174,7 +174,7 @@ namespace tfs
       tbutil::Time begin_time_;
       tbutil::Time send_msg_time_;
       int8_t status_;
-      int8_t phase_; 
+      int8_t phase_;
     };
 
     typedef enum _DumpTableType
@@ -195,7 +195,7 @@ namespace tfs
       RS_STATUS_UNINITIALIZE = 0,
       RS_STATUS_OTHERSIDEDEAD = 1,
       RS_STATUS_NO_USE = 2,/* no use*/
-      RS_STATUS_INITIALIZED = 3 
+      RS_STATUS_INITIALIZED = 3
     }RsStatus;
 
     typedef enum _RsDestroyFlag
@@ -222,14 +222,14 @@ namespace tfs
     {
       RTS_MS_KEEPALIVE_TYPE_LOGIN = 0,
       RTS_MS_KEEPALIVE_TYPE_RENEW = 1,
-      RTS_MS_KEEPALIVE_TYPE_LOGOUT = 2 
+      RTS_MS_KEEPALIVE_TYPE_LOGOUT = 2
     }RtsMsKeepAliveType;
 
     typedef enum _RtsRsKeepAliveType
     {
       RTS_RS_KEEPALIVE_TYPE_LOGIN = 0,
       RTS_RS_KEEPALIVE_TYPE_RENEW = 1,
-      RTS_RS_KEEPALIVE_TYPE_LOGOUT = 2 
+      RTS_RS_KEEPALIVE_TYPE_LOGOUT = 2
     }RtsRsKeepAliveType;
 
     static const int64_t MAX_BUCKET_ITEM_DEFAULT = 10240;
