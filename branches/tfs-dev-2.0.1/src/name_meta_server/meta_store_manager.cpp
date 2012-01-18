@@ -162,7 +162,7 @@ namespace tfs
       */
       //for tmp use
       UNUSED(ratio);
-      BaseStrategy<AppIdUid, CacheRootNode> strategy(lru_);
+      BaseStrategy strategy(lru_);
       vector<CacheRootNode*> v_root_node;
       {
         tbsys::CThreadGuard mutex_guard(&lru_mutex_);
