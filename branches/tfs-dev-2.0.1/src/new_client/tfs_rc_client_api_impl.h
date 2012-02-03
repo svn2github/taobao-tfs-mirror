@@ -157,33 +157,126 @@ namespace tfs
         int fetch_buf(const char* ns_addr, int64_t& ret_count, char* buf, const int64_t count,
                      const char* file_name, const char* suffix);
 
-        std::string get_ns_addr(const char* file_name, const RcClient::RC_MODE mode, const int index) const;
-        std::string get_ns_addr_by_cluster_id(int32_t cluster_id, const RcClient::RC_MODE mode, const int index) const;
+        std::string get_ns_addr(const char* file_name, const RcClient::RC_MODE mode, const int index);
+        std::string get_ns_addr_by_cluster_id(int32_t cluster_id, const RcClient::RC_MODE mode, const int index, const uint32_t block_id = 0);
 
         static int32_t get_cluster_id(const char* file_name);
+        static uint32_t get_block_id(const char* file_name);
         static void parse_cluster_id(const std::string& cluster_id_str, int32_t& id, bool& is_master);
 
-        void calculate_ns_info(const common::BaseInfo& base_info, const uint32_t local_addr);
+        void calculate_ns_info(const common::BaseInfo& base_info);
 
         void parse_duplicate_info(const std::string& duplicate_info);
 
       public:
 
-        int add_ns_into_write_ns(const std::string& ip_str, const uint32_t addr);
+        int add_ns_into_write_ns(const std::string& ip_str);
 
-        int add_ns_into_choice(const std::string& ip_str, const uint32_t addr, const int32_t cluster_id);
+        int add_ns_into_choice(const std::string& ip_str, const int32_t cluster_id);
+
+        int add_ns_into_update_ns(const std::string& ip_str, const int32_t cluster_id, bool is_master);
 
       private:
         static const int8_t CHOICE_CLUSTER_NS_TYPE_LENGTH = 3;
         typedef std::map<int32_t, std::string> ClusterNsType; //<cluster_id, ns>
         ClusterNsType choice[CHOICE_CLUSTER_NS_TYPE_LENGTH];
         std::string write_ns_[CHOICE_CLUSTER_NS_TYPE_LENGTH];
+        struct GroupInfo
+        {
+          GroupInfo():group_seq_(-1), is_master_(false)
+          {
+          }
+          GroupInfo(const int group_seq, const std::string& ns_addr, const bool is_master):
+            group_seq_(group_seq), ns_addr_(ns_addr), is_master_(is_master)
+          {
+          }
+          int group_seq_;
+          std::string ns_addr_;
+          bool is_master_;
+        };
+        struct ClusterGroupInfo
+        {
+          ClusterGroupInfo():group_count_(-1)
+          {
+          }
+          ~ClusterGroupInfo()
+          {
+            std::vector<GroupInfo*>::iterator iter = group_info_list_.begin();
+            for (; group_info_list_.end() != iter; iter++)
+            {
+              delete (*iter);
+              //tbsys::gDelete(*iter);
+            }
+          }
+          void insert_group_info(const int group_seq, const std::string& ns_addr, const bool is_master)
+          {
+            std::vector<GroupInfo*>::iterator iter = group_info_list_.begin();
+            for (; group_info_list_.end() != iter; iter++)
+            {
+              // exist
+              if (!(*iter)->ns_addr_.compare(ns_addr))
+              {
+                (*iter)->group_seq_ = group_seq;
+                break;
+              }
+            }
+            // new insert
+            if (group_info_list_.end() == iter)
+            {
+              GroupInfo* group_info = new GroupInfo(group_seq, ns_addr, is_master);
+              if (is_master)
+              {
+                group_info_list_.insert(group_info_list_.begin(), group_info);
+              }
+              else
+              {
+                group_info_list_.push_back(group_info);
+              }
+            }
+          }
+          void get_need_update_group_info_list(std::vector<GroupInfo*>& need_group_info_list)
+          {
+            std::vector<GroupInfo*>::iterator iter = group_info_list_.begin();
+            for (; group_info_list_.end() != iter; iter++)
+            {
+              if (-1 == (*iter)->group_seq_)
+              {
+                need_group_info_list.push_back(*iter);
+              }
+            }
+          }
+          bool get_ns_addr(const uint32_t block_id, std::string& ns_addr)
+          {
+            bool bRet = false;
+            if (group_count_ > 0)
+            {
+              int group_seq = block_id % group_count_;
+              std::vector<GroupInfo*>::iterator iter = group_info_list_.begin();
+              for (; group_info_list_.end() != iter; iter++)
+              {
+                if (group_seq == (*iter)->group_seq_)
+                {
+                  ns_addr = (*iter)->ns_addr_;
+                  bRet = true;
+                  break;
+                }
+              }
+            }
+            return bRet;
+          }
+          int group_count_;
+          std::vector<GroupInfo*> group_info_list_;
+        };
+        std::map<int32_t, ClusterGroupInfo*> update_ns_; //<cluster_id, cluster_group_info>
         std::string duplicate_server_master_;
         std::string duplicate_server_slave_;
         std::string duplicate_server_group_;
         int32_t duplicate_server_area_;
         bool need_use_unique_;
         uint32_t local_addr_;
+
+      public:
+        bool update_cluster_group_info(ClusterGroupInfo* cluster_group_info);
 
       private:
         int32_t init_stat_;

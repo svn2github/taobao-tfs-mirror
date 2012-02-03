@@ -817,6 +817,86 @@ int TfsSession::get_cluster_id_from_ns()
   return ret;
 }
 
+int TfsSession::get_cluster_group_count_from_ns()
+{
+  ClientCmdMessage cc_message;
+  cc_message.set_cmd(CLIENT_CMD_SET_PARAM);
+  cc_message.set_value3(22);
+
+  tbnet::Packet* rsp = NULL;
+  NewClient* client = NewClientManager::get_instance().create_client();
+  int ret = send_msg_to_server(ns_addr_, client, &cc_message, rsp, ClientConfig::wait_timeout_);
+  if (TFS_SUCCESS != ret)
+  {
+    TBSYS_LOG(ERROR, "get cluster group count from ns fail, ret: %d", ret);
+    ret = -1;
+  }
+  else if (STATUS_MESSAGE == rsp->getPCode())
+  {
+    StatusMessage* status_msg = dynamic_cast<StatusMessage*>(rsp);
+    if (status_msg->get_status() == STATUS_MESSAGE_OK &&
+        strlen(status_msg->get_error()) > 0)
+    {
+      ret = atoi(status_msg->get_error());
+      if (ret > 0)
+      {
+        TBSYS_LOG(INFO, "get cluster group count from nameserver success. cluster group count: %d", ret);
+      }
+      else
+      {
+        TBSYS_LOG(ERROR, "get cluster group count from nameserver fail. cluster group count: %d", ret);
+      }
+    }
+  }
+  else
+  {
+    TBSYS_LOG(ERROR, "get cluster group count from nameserver failed, msg type error. type: %d", rsp->getPCode());
+    ret = -1;
+  }
+  NewClientManager::get_instance().destroy_client(client);
+  return ret;
+}
+
+int TfsSession::get_cluster_group_seq_from_ns()
+{
+  ClientCmdMessage cc_message;
+  cc_message.set_cmd(CLIENT_CMD_SET_PARAM);
+  cc_message.set_value3(23);
+
+  tbnet::Packet* rsp = NULL;
+  NewClient* client = NewClientManager::get_instance().create_client();
+  int ret = send_msg_to_server(ns_addr_, client, &cc_message, rsp, ClientConfig::wait_timeout_);
+  if (TFS_SUCCESS != ret)
+  {
+    TBSYS_LOG(ERROR, "get cluster group seq from ns fail, ret: %d", ret);
+    ret = -1;
+  }
+  else if (STATUS_MESSAGE == rsp->getPCode())
+  {
+    StatusMessage* status_msg = dynamic_cast<StatusMessage*>(rsp);
+    if (status_msg->get_status() == STATUS_MESSAGE_OK &&
+        strlen(status_msg->get_error()) > 0)
+    {
+      ret = atoi(status_msg->get_error());
+      if (ret >= 0)
+      {
+        TBSYS_LOG(INFO, "get cluster group seq from nameserver success. cluster group seq: %d", ret);
+      }
+      else
+      {
+        TBSYS_LOG(ERROR, "get cluster group seq from nameserver fail. cluster group seq: %d", ret);
+      }
+    }
+  }
+  else
+  {
+    TBSYS_LOG(ERROR, "get cluster group seq from nameserver failed, msg type error. type: %d", rsp->getPCode());
+    ret = -1;
+  }
+  NewClientManager::get_instance().destroy_client(client);
+  return ret;
+}
+
 void TfsSession::insert_local_block_cache(const uint32_t block_id, const VUINT64& rds)
 {
   if (USE_CACHE_FLAG_LOCAL & ClientConfig::use_cache_)

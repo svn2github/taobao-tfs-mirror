@@ -939,6 +939,64 @@ int32_t TfsClientImpl::get_cluster_id(const char* ns_addr)
   return cluster_id;
 }
 
+int32_t TfsClientImpl::get_cluster_group_count(const char* ns_addr)
+{
+  int32_t cluster_group_count = -1;
+  if  (ns_addr != NULL)
+  {
+    TfsSession* tfs_session = NULL;
+    if (!check_init())
+    {
+      TBSYS_LOG(ERROR, "tfs client not init");
+    }
+    else if (NULL == (tfs_session = get_session(ns_addr)))
+    {
+      TBSYS_LOG(ERROR, "can not get tfs session: %s.", NULL == ns_addr ? "default" : ns_addr);
+    }
+    else
+    {
+      cluster_group_count = tfs_session->get_cluster_group_count_from_ns();
+    }
+  }
+  else
+  {
+    if (default_tfs_session_ != NULL)
+    {
+      cluster_group_count = default_tfs_session_->get_cluster_group_count_from_ns();
+    }
+  }
+  return cluster_group_count;
+}
+
+int32_t TfsClientImpl::get_cluster_group_seq(const char* ns_addr)
+{
+  int32_t cluster_group_seq = -1;
+  if  (ns_addr != NULL)
+  {
+    TfsSession* tfs_session = NULL;
+    if (!check_init())
+    {
+      TBSYS_LOG(ERROR, "tfs client not init");
+    }
+    else if (NULL == (tfs_session = get_session(ns_addr)))
+    {
+      TBSYS_LOG(ERROR, "can not get tfs session: %s.", NULL == ns_addr ? "default" : ns_addr);
+    }
+    else
+    {
+      cluster_group_seq = tfs_session->get_cluster_group_seq_from_ns();
+    }
+  }
+  else
+  {
+    if (default_tfs_session_ != NULL)
+    {
+      cluster_group_seq = default_tfs_session_->get_cluster_group_seq_from_ns();
+    }
+  }
+  return cluster_group_seq;
+}
+
 int64_t TfsClientImpl::save_buf(char* ret_tfs_name, const int32_t ret_tfs_name_len,
                                  const char* buf, const int64_t count,
                                  const int32_t flag, const char* suffix,

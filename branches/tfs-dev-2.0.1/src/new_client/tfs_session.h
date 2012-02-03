@@ -114,6 +114,9 @@ namespace tfs
       int get_block_info_ex(SEG_DATA_LIST& seg_list, const int32_t flag);
       int get_block_info_ex(uint32_t& block_id, common::VUINT64& rds, const int32_t flag);
       int get_cluster_id_from_ns();
+    public:
+      int get_cluster_group_count_from_ns();
+      int get_cluster_group_seq_from_ns();
 
     private:
       tbutil::Mutex mutex_;
