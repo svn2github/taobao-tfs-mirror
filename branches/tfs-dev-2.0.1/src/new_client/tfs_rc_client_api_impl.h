@@ -294,21 +294,54 @@ namespace tfs
         mutable tbsys::CThreadMutex mutex_;
 
       private:
+        enum {
+          INVALID_RAW_TFS_FD = -1,
+          NAME_TFS_FD = -2,
+        };
         struct fdInfo
         {
-          fdInfo():raw_tfs_fd_(-1), app_id_(0), uid_(0)
+          fdInfo()
+            :raw_tfs_fd_(INVALID_RAW_TFS_FD), flag_(0),
+            app_id_(0), uid_(0), offset_(0), is_large_(false), cluster_id_(0)
           {
           }
-          fdInfo(const int raw_tfs_fd, const int64_t app_id, const int64_t uid, const char* name = NULL)
-            :raw_tfs_fd_(raw_tfs_fd), app_id_(app_id), uid_(uid)
+          fdInfo(const char* file_name, const char* suffix, const int flag,
+              const bool large, const char* local_key)
+            :raw_tfs_fd_(INVALID_RAW_TFS_FD), flag_(flag), app_id_(0), uid_(0),
+            offset_(0), is_large_(large), cluster_id_(0)
+          {
+            if (NULL != file_name)
+            {
+              name_ = file_name;
+              if (NULL != suffix)
+              {
+                suffix_ = suffix;
+              }
+            }
+            if (NULL != local_key)
+            {
+              local_key_ = local_key;
+            }
+          }
+          fdInfo(const int64_t app_id, const int64_t uid, const int32_t cluster_id, const int flag,
+              const char* name = NULL)
+            :raw_tfs_fd_(NAME_TFS_FD), flag_(flag), app_id_(app_id), uid_(uid), offset_(0), is_large_(false),cluster_id_(cluster_id)
           {
             if (NULL != name)
+            {
               name_ = name;
+            }
           }
           int raw_tfs_fd_;
+          int flag_;
           int64_t app_id_;
           int64_t uid_;
+          int64_t offset_;
+          bool is_large_;
+          int cluster_id_;
+          std::string local_key_;
           std::string name_;
+          std::string suffix_;
           std::string ns_addr_;
         };
         std::map<int, fdInfo> fd_infos_;
@@ -317,10 +350,16 @@ namespace tfs
         int64_t app_id_;
         int my_fd_;
       private:
+        bool have_permission(const char* file_name, const RcClient::RC_MODE mode);
         static bool is_raw_tfsname(const char* name);
         int gen_fdinfo(const fdInfo& fdinfo);
         TfsRetType remove_fdinfo(const int fd, fdInfo& fdinfo);
         TfsRetType get_fdinfo(const int fd, fdInfo& fdinfo) const;
+        TfsRetType update_fdinfo_offset(const int fd, const int64_t offset);
+        TfsRetType update_fdinfo_rawfd(const int fd, const int raw_fd);
+        int64_t real_read(const int raw_tfs_fd, void* buf, const int64_t count,
+            fdInfo& fd_info, common::TfsFileStat* tfs_stat_buf);
+        int64_t read_ex(const int fd, void* buf, const int64_t count, common::TfsFileStat* tfs_stat_buf);
 
     };
   }

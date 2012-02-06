@@ -125,6 +125,7 @@ namespace tfs
       {
         tbsys::gDelete(uit->second);
       }
+      update_ns_.clear();
     }
 
     RcClientImpl::~RcClientImpl()
@@ -282,6 +283,13 @@ namespace tfs
         {
           ret = TFS_ERROR;
         }
+        else if (RcClient::READ == mode)
+        {
+          if (*file_name == 'L' && false == large)
+          {
+            TBSYS_LOG(WARN, "open a tfs large file without large flag");
+          }
+        }
       }
 
       if (TFS_SUCCESS == ret)
@@ -312,26 +320,14 @@ namespace tfs
         }
         else
         {
-          int ns_get_index = 0;
-          int raw_tfs_fd = -1;
-          string ns_addr;
-          do
+          if (have_permission(file_name, mode))
           {
-            ns_addr = get_ns_addr(file_name, mode, ns_get_index++);
-            if (ns_addr.empty())
-            {
-              break;
-            }
-            raw_tfs_fd = open(ns_addr.c_str(), file_name, suffix, flag, large, local_key);
-          } while(raw_tfs_fd < 0);
-          if (raw_tfs_fd >= 0)
-          {
-            fdInfo fd_info(raw_tfs_fd, 0, 0);
+            fdInfo fd_info(file_name, suffix, flag, large, local_key);
             fd = gen_fdinfo(fd_info);
-            if (fd < 0)
-            {
-              TfsClientImpl::Instance()->close(raw_tfs_fd, NULL, 0);
-            }
+          }
+          else
+          {
+            TBSYS_LOG(WARN, "no permission to do this");
           }
         }
       }
@@ -353,7 +349,36 @@ namespace tfs
       return ret;
     }
 
-    int64_t RcClientImpl::read(const int fd, void* buf, const int64_t count)
+    int64_t RcClientImpl::real_read(const int raw_tfs_fd, void* buf, const int64_t count,
+        fdInfo& fd_info, TfsFileStat* tfs_stat_buf)
+    {
+      int64_t read_count = -1;
+      if (raw_tfs_fd >= 0)
+      {
+        int64_t start_time = tbsys::CTimeUtil::getTime();
+        TfsClientImpl::Instance()->lseek(raw_tfs_fd, fd_info.offset_, T_SEEK_SET);
+        if (NULL != tfs_stat_buf)
+        {
+          read_count = TfsClientImpl::Instance()->readv2(raw_tfs_fd, buf, count, tfs_stat_buf);
+        }
+        else
+        {
+          read_count = TfsClientImpl::Instance()->read(raw_tfs_fd, buf, count);
+        }
+        if (read_count > 0)
+        {
+          fd_info.offset_ += read_count;
+          if (TFS_SUCCESS != update_fdinfo_offset(raw_tfs_fd, fd_info.offset_))
+          {
+            TBSYS_LOG(WARN, "update_fdinfo_offset error ");
+          }
+        }
+        int64_t response_time = tbsys::CTimeUtil::getTime() - start_time;
+        add_stat_info(OPER_READ, read_count, response_time, read_count >= 0);
+      }
+      return read_count;
+    }
+    int64_t RcClientImpl::read_ex(const int fd, void* buf, const int64_t count, TfsFileStat* tfs_stat_buf )
     {
       int64_t read_count = -1;
       int ret = check_init_stat();
@@ -365,45 +390,83 @@ namespace tfs
         {
           if (fd_info.raw_tfs_fd_ >= 0)
           {
-            int64_t start_time = tbsys::CTimeUtil::getTime();
-            read_count = TfsClientImpl::Instance()->read(fd_info.raw_tfs_fd_, buf, count);
-            int64_t response_time = tbsys::CTimeUtil::getTime() - start_time;
-            add_stat_info(OPER_READ, read_count, response_time, read_count >= 0);
+            read_count = real_read(fd_info.raw_tfs_fd_, buf, count, fd_info, tfs_stat_buf);
+          }
+          else if (INVALID_RAW_TFS_FD == fd_info.raw_tfs_fd_)
+          {
+            //not open yet,
+            int ns_get_index = 0;
+            string ns_addr;
+            int raw_tfs_fd = -1;
+            RcClient::RC_MODE mode = RcClient::READ;
+            const char* file_name = NULL;
+            const char* suffix = NULL;
+            const char* local_key = NULL;
+            if (!fd_info.name_.empty())
+            {
+              file_name = fd_info.name_.c_str();
+            }
+            if (!fd_info.suffix_.empty())
+            {
+              suffix = fd_info.suffix_.c_str();
+            }
+            if (!fd_info.local_key_.empty())
+            {
+              local_key = fd_info.local_key_.c_str();
+            }
+            if (common::T_WRITE == fd_info.flag_)
+            {
+              mode = RcClient::CREATE;
+            }
+            do
+            {
+              ns_addr = get_ns_addr(file_name, mode, ns_get_index++);
+              if (ns_addr.empty())
+              {
+                break;
+              }
+              raw_tfs_fd = open(ns_addr.c_str(), file_name, suffix,
+                  fd_info.flag_, fd_info.is_large_, local_key);
+              read_count = real_read(raw_tfs_fd, buf, count, fd_info, tfs_stat_buf);
+              if (read_count < 0)
+              {
+                TBSYS_LOG(WARN, "read file from ns %s error ret is %"PRI64_PREFIX"d",
+                    ns_addr.c_str(), read_count);
+                if (raw_tfs_fd >= 0)
+                {
+                  TfsClientImpl::Instance()->close(raw_tfs_fd);
+                }
+                raw_tfs_fd = -1;
+              }
+              else
+              {
+                break;
+              }
+            }while (raw_tfs_fd < 0);
+            if (raw_tfs_fd >= 0)
+            {
+              if (TFS_SUCCESS != update_fdinfo_rawfd(fd, raw_tfs_fd))
+              {
+                TfsClientImpl::Instance()->close(raw_tfs_fd);
+              }
+            }
           }
           else
           {
-            TBSYS_LOG(ERROR, "name meta file not support read");
-
+            TBSYS_LOG(ERROR, "name meta file not support read or readv2");
           }
         }
       }
       return read_count;
     }
+    int64_t RcClientImpl::read(const int fd, void* buf, const int64_t count)
+    {
+      return read_ex(fd, buf, count, NULL);
+    }
 
     int64_t RcClientImpl::readv2(const int fd, void* buf, const int64_t count, TfsFileStat* tfs_stat_buf)
     {
-      int64_t read_count = -1;
-      int ret = check_init_stat();
-      if (TFS_SUCCESS == ret)
-      {
-        fdInfo fd_info;
-        ret = get_fdinfo(fd, fd_info);
-        if (TFS_SUCCESS == ret)
-        {
-          if (fd_info.raw_tfs_fd_ >= 0)
-          {
-            int64_t start_time = tbsys::CTimeUtil::getTime();
-            read_count = TfsClientImpl::Instance()->readv2(fd_info.raw_tfs_fd_, buf, count, tfs_stat_buf);
-            int64_t response_time = tbsys::CTimeUtil::getTime() - start_time;
-            add_stat_info(OPER_READ, read_count, response_time, read_count >= 0);
-          }
-          else
-          {
-            TBSYS_LOG(ERROR, "name meta file not support readv2");
-          }
-        }
-      }
-      return read_count;
+      return read_ex(fd, buf, count, tfs_stat_buf);
     }
 
     int64_t RcClientImpl::write(const int fd, const void* buf, const int64_t count)
@@ -421,6 +484,65 @@ namespace tfs
           {
             write_count = TfsClientImpl::Instance()->write(fd_info.raw_tfs_fd_, buf, count);
           }
+          else if (INVALID_RAW_TFS_FD == fd_info.raw_tfs_fd_)
+          {
+            int ns_get_index = 0;
+            string ns_addr;
+            int raw_tfs_fd = -1;
+            RcClient::RC_MODE mode = RcClient::READ;
+            const char* file_name = NULL;
+            const char* suffix = NULL;
+            const char* local_key = NULL;
+            if (!fd_info.name_.empty())
+            {
+              file_name = fd_info.name_.c_str();
+            }
+            if (!fd_info.suffix_.empty())
+            {
+              suffix = fd_info.suffix_.c_str();
+            }
+            if (!fd_info.local_key_.empty())
+            {
+              local_key = fd_info.local_key_.c_str();
+            }
+            if (common::T_WRITE == fd_info.flag_)
+            {
+              mode = RcClient::CREATE;
+            }
+            do
+            {
+              ns_addr = get_ns_addr(file_name, mode, ns_get_index++);
+              if (ns_addr.empty())
+              {
+                break;
+              }
+              raw_tfs_fd = open(ns_addr.c_str(), file_name, suffix,
+                  fd_info.flag_, fd_info.is_large_, local_key);
+              write_count = TfsClientImpl::Instance()->write(raw_tfs_fd, buf, count);
+              if (write_count < 0)
+              {
+                TBSYS_LOG(WARN, "write file to ns %s error ret is %"PRI64_PREFIX"d",
+                    ns_addr.c_str(), write_count);
+                if (raw_tfs_fd >= 0)
+                {
+                  TfsClientImpl::Instance()->close(raw_tfs_fd);
+                }
+                raw_tfs_fd = -1;
+              }
+              else
+              {
+                break;
+              }
+            }while (raw_tfs_fd < 0);
+            if (raw_tfs_fd >= 0)
+            {
+              if (TFS_SUCCESS != update_fdinfo_rawfd(fd, raw_tfs_fd))
+              {
+                TfsClientImpl::Instance()->close(raw_tfs_fd);
+                write_count = -1;
+              }
+            }
+          }
           else
           {
             TBSYS_LOG(ERROR, "name meta file not support write");
@@ -434,21 +556,59 @@ namespace tfs
 
     int64_t RcClientImpl::lseek(const int fd, const int64_t offset, const int whence)
     {
-      int64_t off_set = -1;
+      int64_t ret_offset = -1;
       fdInfo fd_info;
       int ret = get_fdinfo(fd, fd_info);
       if (TFS_SUCCESS == ret)
       {
-        if (fd_info.raw_tfs_fd_ >= 0)
+        if (fd_info.raw_tfs_fd_ >= 0 || INVALID_RAW_TFS_FD == fd_info.raw_tfs_fd_)
         {
-          off_set = TfsClientImpl::Instance()->lseek(fd_info.raw_tfs_fd_, offset, whence);
+          switch (whence)
+          {
+            case T_SEEK_SET:
+              if (offset < 0)
+              {
+                TBSYS_LOG(ERROR, "wrong offset seek_set, %"PRI64_PREFIX"d", offset);
+                ret_offset = EXIT_PARAMETER_ERROR;
+              }
+              else
+              {
+                fd_info.offset_ = offset;
+                ret_offset = fd_info.offset_;
+              }
+              break;
+            case T_SEEK_CUR:
+              if (fd_info.offset_ + offset < 0)
+              {
+                TBSYS_LOG(ERROR, "wrong offset seek_cur, %"PRI64_PREFIX"d", offset);
+                ret_offset = EXIT_PARAMETER_ERROR;
+              }
+              else
+              {
+                fd_info.offset_ += offset;
+                ret_offset = fd_info.offset_;
+              }
+              break;
+            default:
+              TBSYS_LOG(ERROR, "unknown seek flag: %d", whence);
+              break;
+
+          }
+          if (ret_offset >= 0)
+          {
+            if (TFS_SUCCESS != update_fdinfo_offset(fd, ret_offset))
+            {
+              TBSYS_LOG(WARN, "update_fdinfo_offset error ");
+              ret_offset = -1;
+            }
+          }
         }
         else
         {
           TBSYS_LOG(ERROR, "name meta file not support lseek");
         }
       }
-      return off_set;
+      return ret_offset;
     }
 
     TfsRetType RcClientImpl::fstat(const int fd, common::TfsFileStat* buf)
@@ -460,6 +620,64 @@ namespace tfs
         if (fd_info.raw_tfs_fd_ >= 0)
         {
           ret = TfsClientImpl::Instance()->fstat(fd_info.raw_tfs_fd_, buf);
+        }
+        else if (INVALID_RAW_TFS_FD == fd_info.raw_tfs_fd_)
+        {
+          int ns_get_index = 0;
+          string ns_addr;
+          int raw_tfs_fd = -1;
+          RcClient::RC_MODE mode = RcClient::READ;
+          const char* file_name = NULL;
+          const char* suffix = NULL;
+          const char* local_key = NULL;
+          if (!fd_info.name_.empty())
+          {
+            file_name = fd_info.name_.c_str();
+          }
+          if (!fd_info.suffix_.empty())
+          {
+            suffix = fd_info.suffix_.c_str();
+          }
+          if (!fd_info.local_key_.empty())
+          {
+            local_key = fd_info.local_key_.c_str();
+          }
+          if (common::T_WRITE == fd_info.flag_)
+          {
+            mode = RcClient::CREATE;
+          }
+          do
+          {
+            ns_addr = get_ns_addr(file_name, mode, ns_get_index++);
+            if (ns_addr.empty())
+            {
+              break;
+            }
+            raw_tfs_fd = open(ns_addr.c_str(), file_name, suffix,
+                fd_info.flag_, fd_info.is_large_, local_key);
+            ret = TfsClientImpl::Instance()->fstat(raw_tfs_fd, buf);
+            if (TFS_SUCCESS != ret)
+            {
+              TBSYS_LOG(WARN, "fstat file from ns %s error ret is %"PRI64_PREFIX"d",
+                  ns_addr.c_str(), ret);
+              if (raw_tfs_fd >= 0)
+              {
+                TfsClientImpl::Instance()->close(raw_tfs_fd);
+              }
+              raw_tfs_fd = -1;
+            }
+            else
+            {
+              break;
+            }
+          }while (raw_tfs_fd < 0);
+          if (raw_tfs_fd >= 0)
+          {
+            if (TFS_SUCCESS != update_fdinfo_rawfd(fd, raw_tfs_fd))
+            {
+              TfsClientImpl::Instance()->close(raw_tfs_fd);
+            }
+          }
         }
         else
         {
@@ -1225,6 +1443,11 @@ namespace tfs
       return ret;
     }
 
+    bool RcClientImpl::have_permission(const char* file_name, const RcClient::RC_MODE mode)
+    {
+      return !get_ns_addr(file_name, mode, 0).empty(); //if we can not find a ns, we have no permission
+    }
+
       bool RcClientImpl::is_raw_tfsname(const char* name)
       {
         bool ret = false;
@@ -1326,11 +1549,10 @@ namespace tfs
           }
           else
           {
-            fdInfo fd_info(-1, app_id, uid, name);
             int32_t cluster_id = 0;
             cluster_id = name_meta_client_->get_cluster_id(app_id, uid, name);
-            fd_info.ns_addr_ = get_ns_addr_by_cluster_id(cluster_id, mode, 0);
-            if (fd_info.ns_addr_.empty())
+            fdInfo fd_info(app_id, uid, cluster_id, mode, name);
+            if (get_ns_addr_by_cluster_id(cluster_id, mode, 0).empty())
             {
               TBSYS_LOG(ERROR, "can not do this operator in cluster %d", cluster_id);
             }
@@ -1366,10 +1588,17 @@ namespace tfs
           if (TFS_SUCCESS == ret)
           {
             int64_t start_time = tbsys::CTimeUtil::getTime();
-            if (fd_info.raw_tfs_fd_ < 0)
+            if (NAME_TFS_FD == fd_info.raw_tfs_fd_)
             {
-              write_count = name_meta_client_->write(fd_info.ns_addr_.c_str(), fd_info.app_id_, fd_info.uid_,
-                  fd_info.name_.c_str(), buf, offset, count);
+              int ns_get_index = 0;
+              string ns_addr;
+              RcClient::RC_MODE mode = (RcClient::RC_MODE)fd_info.flag_;
+              ns_addr = get_ns_addr_by_cluster_id(fd_info.cluster_id_, mode, ns_get_index++);
+              if (!ns_addr.empty())
+              {
+                write_count = name_meta_client_->write(ns_addr.c_str(), fd_info.app_id_, fd_info.uid_,
+                    fd_info.name_.c_str(), buf, offset, count);
+              }
             }
             else
             {
@@ -1394,10 +1623,35 @@ namespace tfs
           if (TFS_SUCCESS == ret)
           {
             int64_t start_time = tbsys::CTimeUtil::getTime();
-            if (fd_info.raw_tfs_fd_ < 0)
+            if (NAME_TFS_FD == fd_info.raw_tfs_fd_)
             {
-              read_count = name_meta_client_->read(fd_info.ns_addr_.c_str(), fd_info.app_id_, fd_info.uid_,
+              //not open yet,
+              int ns_get_index = 0;
+              string ns_addr;
+              RcClient::RC_MODE mode = (RcClient::RC_MODE)fd_info.flag_;
+              do
+              {
+                ns_addr = get_ns_addr_by_cluster_id(fd_info.cluster_id_, mode, ns_get_index++);
+                if (ns_addr.empty())
+                {
+                  break;
+                }
+                read_count = name_meta_client_->read(ns_addr.c_str(), fd_info.app_id_, fd_info.uid_,
                   fd_info.name_.c_str(), buf, offset, count);
+                if (EXIT_TARGET_EXIST_ERROR == read_count ||
+                    EXIT_PARENT_EXIST_ERROR == read_count ||
+                    EXIT_INVALID_FILE_NAME == read_count )
+                {
+                  //meta server error do not try other cluster
+                  break;
+                }
+
+                if (read_count < 0)
+                {
+                  TBSYS_LOG(WARN, "read file from ns %s error ret is %"PRI64_PREFIX"d",
+                      ns_addr.c_str(), read_count);
+                }
+              }while (read_count < 0);
             }
             else
             {
@@ -1485,6 +1739,32 @@ namespace tfs
         if (it != fd_infos_.end())
         {
           fdinfo = it->second;
+          ret = TFS_SUCCESS;
+        }
+        return ret;
+      }
+      TfsRetType RcClientImpl::update_fdinfo_offset(const int fd, const int64_t offset)
+      {
+        TfsRetType ret = TFS_ERROR;
+        map<int, fdInfo>::iterator it;
+        tbsys::CThreadGuard mutex_guard(&fd_info_mutex_);
+        it = fd_infos_.find(fd);
+        if (it != fd_infos_.end() && offset >= 0)
+        {
+          it->second.offset_ = offset;
+          ret = TFS_SUCCESS;
+        }
+        return ret;
+      }
+      TfsRetType RcClientImpl::update_fdinfo_rawfd(const int fd, const int raw_fd)
+      {
+        TfsRetType ret = TFS_ERROR;
+        map<int, fdInfo>::iterator it;
+        tbsys::CThreadGuard mutex_guard(&fd_info_mutex_);
+        it = fd_infos_.find(fd);
+        if (it != fd_infos_.end() && INVALID_RAW_TFS_FD == it->second.raw_tfs_fd_)
+        {
+          it->second.raw_tfs_fd_= raw_fd;
           ret = TFS_SUCCESS;
         }
         return ret;

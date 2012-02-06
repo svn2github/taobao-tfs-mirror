@@ -325,7 +325,7 @@ int64_t TfsFile::lseek_ex(const int64_t offset, const int whence)
   int64_t ret = INVALID_FILE_SIZE;
   if (TFS_FILE_OPEN_YES != file_status_)
   {
-    TBSYS_LOG(ERROR, "lseek fail, file status: %d is not open yes", file_status_);
+    TBSYS_LOG(ERROR, "lseek fail, file status: %d is not open yet", file_status_);
     ret = EXIT_NOT_OPEN_ERROR;
   }
   else if ((flags_ & (T_READ|T_WRITE)) == 0)

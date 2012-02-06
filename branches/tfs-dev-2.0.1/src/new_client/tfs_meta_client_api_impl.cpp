@@ -973,7 +973,7 @@ namespace tfs
         }
 
         cur_length = min(iter->size_ - (cur_offset - iter->offset_), left_length);
-        int32_t read_length = tfs_meta_manager_.read_data(ns_addr, iter->block_id_, iter->file_id_,
+        int64_t read_length = tfs_meta_manager_.read_data(ns_addr, iter->block_id_, iter->file_id_,
             reinterpret_cast<char*>(buffer) + cur_pos, (cur_offset - iter->offset_), cur_length);
 
         if (read_length < 0)
@@ -991,6 +991,7 @@ namespace tfs
               " cur_offset: %"PRI64_PREFIX"d, cur_length: %"PRI64_PREFIX"d, "
               "read_length(%"PRI64_PREFIX"d) => cur_length(%"PRI64_PREFIX"d), left_length: %"PRI64_PREFIX"d",
               cur_offset, cur_length, read_length, cur_length, left_length);
+          frag_info.dump();
           break;
         }
         cur_pos += read_length;
