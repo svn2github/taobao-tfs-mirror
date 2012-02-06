@@ -1,4 +1,4 @@
-package com.taobao.common.tfs.function;
+package com.taobao.common.tfs.nativetest;
 
 import static org.junit.Assert.assertTrue;
 
