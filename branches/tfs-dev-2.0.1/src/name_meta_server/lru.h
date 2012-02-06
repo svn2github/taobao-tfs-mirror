@@ -11,7 +11,8 @@
  * Authors:
  *   duanfei<duanfei@taobao.com>
  *      - initial release
- *
+ *   duanfei<duanfei@taobao.com>
+ *      -reconstruction 2012-01-15
  */
 #ifndef TFS_NAMEMETASERVER_LRU_H_
 #define TFS_NAMEMETASERVER_LRU_H_

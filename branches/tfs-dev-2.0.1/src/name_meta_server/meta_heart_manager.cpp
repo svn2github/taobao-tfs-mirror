@@ -5,11 +5,13 @@
  * published by the Free Software Foundation.
  *
  *
- * Version: $Id: table_manager.cpp 381 2011-09-07 14:07:39Z nayan@taobao.com $
+ * Version: $Id: meta_heart_manager.cpp 381 2011-09-07 14:07:39Z nayan@taobao.com $
  *
  * Authors:
  *   duanfei<duanfei@taobao.com>
  *      - initial release
+ *   duanfei<duanfei@taobao.com>
+ *      -fix bug 2012-01-15
  */
 #include <zlib.h>
 #include <Time.h>
@@ -40,7 +42,6 @@ namespace tfs
       keepalive_type_(RTS_MS_KEEPALIVE_TYPE_LOGIN),
       has_valid_lease_(false)
     {
-      heart_thread_ = new MSHeartBeatThreadHelper(*this);
     }
 
     HeartManager::~HeartManager()
@@ -50,12 +51,9 @@ namespace tfs
 
     int HeartManager::initialize(void)
     {
-      int32_t iret = heart_thread_ != 0 ? TFS_SUCCESS : TFS_ERROR;
-      if (TFS_SUCCESS == iret)
-      {
-        heart_thread_->start();
-      }
-      return iret;
+      heart_thread_ = new MSHeartBeatThreadHelper(*this);
+      heart_thread_->start();
+      return TFS_SUCCESS;
     }
 
     void HeartManager::destroy(void)
@@ -230,7 +228,12 @@ namespace tfs
               {
                 std::set<int64_t> change;
                 iret = bucket_manager_.switch_table(change, rgi.server_.base_info_.id_, reply->get_version());
-               // bucket_manager_.dump(TBSYS_LOG_LEVEL_DEBUG);
+                // bucket_manager_.dump(TBSYS_LOG_LEVEL_DEBUG);
+                if (TFS_SUCCESS == iret)
+                {
+                  //free CacheRootNode, erase from map
+                  store_manager_.do_lru_gc(change);
+                }
               }
             }
             tbsys::gDeleteA(dest);

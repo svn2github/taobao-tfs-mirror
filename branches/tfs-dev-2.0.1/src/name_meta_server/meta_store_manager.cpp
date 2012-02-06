@@ -47,11 +47,11 @@ namespace tfs
       int32_t my_pool_size = pool_size;
       int ret = TFS_SUCCESS;
       cache_size_ = cache_size;
-      if (cache_size_ < 200)
+      /*if (cache_size_ < 200)//TODO
       {
         cache_size_ = 200;
         TBSYS_LOG(WARN, "change cache_size to %d MB", cache_size_);
-      }
+      }*/
       TBSYS_LOG(INFO, "set cache size %d MB", cache_size_);
       gc_ratio_ = gc_ratio;
       if (gc_ratio_ >= 1.0 || gc_ratio_ < 0.0)
@@ -131,6 +131,7 @@ namespace tfs
       delete database_pool_;
       delete [] app_id_uid_mutex_;
     }
+
     tbsys::CThreadMutex* MetaStoreManager::get_mutex(const int64_t app_id, const int64_t uid)
     {
       assert(NULL != app_id_uid_mutex_);
@@ -146,7 +147,6 @@ namespace tfs
     {
       int64_t used_size = MemHelper::get_used_size();
       used_size = used_size >> 20;
-      //TBSYS_LOG(DEBUG, "do_lru_gc");
       BaseStrategy strategy(lru_);
       vector<CacheRootNode*> v_root_node;
       if ((double)used_size/(double)cache_size_ > (1 - ratio/2))
@@ -157,12 +157,12 @@ namespace tfs
           TBSYS_LOG(ERROR, "lru gc error");
         }
       }
-      TBSYS_LOG(DEBUG, "gc %d root", v_root_node.size());
-      ///////////////////////////////////
+      TBSYS_LOG(INFO, "gc %d root node", v_root_node.size());
       vector<CacheRootNode*>::iterator it = v_root_node.begin();
       for (; it != v_root_node.end(); it++)
       {
-        TBSYS_LOG(INFO, "gc app_id %ld uid %ld root", (*it)->key_.app_id_, (*it)->key_.uid_);
+        TBSYS_LOG(INFO, "gc app_id: %"PRI64_PREFIX"d uid: %"PRI64_PREFIX"d bucket: %"PRI64_PREFIX"d root node",
+          (*it)->key_.app_id_, (*it)->key_.uid_, (*it)->key_.get_hash());
         MetaCacheHelper::free(*it);
       }
       return ;
@@ -171,6 +171,11 @@ namespace tfs
     void MetaStoreManager::do_lru_gc(const std::set<int64_t>& change)
     {
       lru_.gc(change);
+      std::set<int64_t>::const_iterator iter = change.begin();
+      for (; iter != change.end(); ++iter)
+      {
+        TBSYS_LOG(INFO, "gc bucket: %"PRI64_PREFIX"d", (*iter));
+      }
     }
 
     CacheRootNode* MetaStoreManager::get_root_node(const int64_t app_id, const int64_t uid)
