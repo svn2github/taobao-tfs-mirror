@@ -23,7 +23,7 @@ import com.taobao.common.tfs.impl.FSName;
 /**
  * @author Administrator
  */
-public class Function_tair_cache_test extends RcBaseCase{
+public class Function_tair_cache_large_file_test extends RcBaseCase{
 
 	public String resourcesPath = "/home/admin/workspace/mazhentong.pt/tfs-test/resource/";
 	public String localFile = "1k.jpg";
@@ -45,7 +45,6 @@ public class Function_tair_cache_test extends RcBaseCase{
         appId = tfsManager.getAppId();
 	}
     
-public class Function_tair_cache_large_file_test {
 	/**
 	 * 在cache情况下，读写large file
 	 * @throws Exception
@@ -186,7 +185,7 @@ public void Function_3_with_local_taircache_large_file_part_with_localcache() th
 		
 		/*read part file*/
 	}
-/*nouse local cache and tair cache read OK */
+	/*nouse local cache and tair cache read OK */
 
 public void Function_3_with_local_taircache_large_file_with_localcache() throws Exception {
 		
@@ -330,16 +329,16 @@ public void Function_5_with_Taircache_large_file_part_hitwith_valid() throws Exc
 			}
 		}
 			
-		/*clear tair cache*/
-		bRet=tfsManager.removeRemoteBlockCache(sRet);
+			/*clear tair cache*/
+			tfsManager.removeRemoteBlockCache(sRet);
 		
-		/*set local cache invalid*/
+			/*set local cache invalid*/
 		
-		bRet=tfsManager.insertLocalBlockCache(sRet, dsList);
+			tfsManager.insertLocalBlockCache(sRet, dsList);
 		
-		/*read part file*/
+			/*read part file*/
 }
-}
+
 /* use tair cache  part_file hit and local cache miss hit */
 
 public void Function_6_with_Taircache_part_file_part_hit_localcahe_miss() throws Exception {
@@ -431,7 +430,7 @@ public void Function_7_with_Taircache_part_file_part_hit_localcahe_miss() throws
 			}
 			}
 		
-		/*read part file*/
+			/*read part file*/
 
 }
 }
