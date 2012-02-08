@@ -9,7 +9,7 @@
  * Version: $Id: test_meta.cpp 5 2010-09-29 07:44:56Z duanfei@taobao.com $
  *
  * Authors:
- *   mingyan.zc@taobao.com 
+ *   mingyan.zc@taobao.com
  *      - initial release
  *
  */
@@ -38,7 +38,7 @@ const char* DIR_TMP = "./dataserver_/tmp";
 
 const int32_t WRITE_BUFF_SIZE = 1048576;
 
-class SyncMirrorTest: public ::testing::Test 
+class SyncMirrorTest: public ::testing::Test
 {
   public:
     SyncMirrorTest()
@@ -49,7 +49,7 @@ class SyncMirrorTest: public ::testing::Test
     {
     }
 
-    virtual void SetUp() 
+    virtual void SetUp()
     {
     }
     virtual void TearDown()
@@ -81,16 +81,16 @@ void write_src_block_file(const char* file_name, int32_t file_size)
   while (len_written < file_size)
   {
     len_to_write = (file_size - len_written) > WRITE_BUFF_SIZE ? WRITE_BUFF_SIZE : (file_size - len_written);
-    len_written += write(src_fd, data, len_to_write); 
+    len_written += write(src_fd, data, len_to_write);
   }
   EXPECT_EQ(len_written, file_size);
   close(src_fd);
 }
 
-TEST_F(SyncMirrorTest, testSyncBaseInit)
-{  
+/*TEST_F(SyncMirrorTest, testSyncBaseInit)
+{
   SyncBase* sync_base = new SyncBase(g_data_service, SYNC_TO_TFS_MIRROR, 0, "xx.xx.xx.xx:3200", "xxx.xxx.xxx.xxx:3200");
-  EXPECT_EQ(0, access(DIR_FIRST_QUEUE, 0)); 
+  EXPECT_EQ(0, access(DIR_FIRST_QUEUE, 0));
   EXPECT_EQ(0, access(FILE_FIRST_QUEUE_HEADER, 0));
 
   sync_base->init();
@@ -101,7 +101,7 @@ TEST_F(SyncMirrorTest, testSyncBaseInit)
   }
 
   sync_base->stop();
-  delete sync_base; 
+  delete sync_base;
 }
 
 TEST_F(SyncMirrorTest, testRemoteCopyFile)
@@ -112,7 +112,7 @@ TEST_F(SyncMirrorTest, testRemoteCopyFile)
 
   // init SyncBase
   SyncBase* sync_base = new SyncBase(g_data_service, SYNC_TO_TFS_MIRROR, 0, "xx.xx.xx.xx:3200", "xxx.xxx.xxx.xxx:3200");
-  EXPECT_EQ(0, access(DIR_FIRST_QUEUE, 0)); 
+  EXPECT_EQ(0, access(DIR_FIRST_QUEUE, 0));
   EXPECT_EQ(0, access(FILE_FIRST_QUEUE_HEADER, 0));
 
   sync_base->src_block_file_ = FILE_SRC_BLOCK_FILE;
@@ -138,12 +138,12 @@ TEST_F(SyncMirrorTest, testRemoteCopyFile)
     sleep(3);
   }
 
-  // check dest_block_file's size 
+  // check dest_block_file's size
   struct stat file_stat;
   stat(FILE_DEST_BLOCK_FILE, &file_stat);
   EXPECT_EQ(file_stat.st_size, block_file_size);
 
-  // write src_block_file : 2MB 
+  // write src_block_file : 2MB
   block_file_size = 2097152;
   write_src_block_file(FILE_SRC_BLOCK_FILE, block_file_size);
 
@@ -156,11 +156,11 @@ TEST_F(SyncMirrorTest, testRemoteCopyFile)
     sleep(3);
   }
 
-  // check dest_block_file's size 
+  // check dest_block_file's size
   stat(FILE_DEST_BLOCK_FILE, &file_stat);
   EXPECT_EQ(file_stat.st_size, block_file_size);
 
-  // write src_block_file : 5MB 
+  // write src_block_file : 5MB
   block_file_size = 5242880;
   write_src_block_file(FILE_SRC_BLOCK_FILE, block_file_size);
 
@@ -173,13 +173,13 @@ TEST_F(SyncMirrorTest, testRemoteCopyFile)
     sleep(3);
   }
 
-  // check dest_block_file's size 
+  // check dest_block_file's size
   stat(FILE_DEST_BLOCK_FILE, &file_stat);
   EXPECT_EQ(file_stat.st_size, block_file_size);
 
   sync_base->stop();
   g_data_service.sync_mirror_.clear();
-  delete sync_base; 
+  delete sync_base;
 }
 
 TEST_F(SyncMirrorTest, testCopyFile)
@@ -202,7 +202,7 @@ TEST_F(SyncMirrorTest, testCopyFile)
   uint32_t  main_blk_key = 2;
   int32_t bucket_size = 16;
   MMapOption mmap_option;
-  mmap_option.max_mmap_size_ = 256;                                                                                                                      
+  mmap_option.max_mmap_size_ = 256;
   mmap_option.first_mmap_size_ = 128;
   mmap_option.per_mmap_size_ = 4;
 
@@ -239,7 +239,7 @@ TEST_F(SyncMirrorTest, testCopyFile)
 
   // init SyncBase
   SyncBase* sync_base = new SyncBase(g_data_service, SYNC_TO_TFS_MIRROR, 0, "xx.xx.xx.xx:3200", "xxx.xxx.xxx.xxx:3200");
-  EXPECT_EQ(0, access(DIR_FIRST_QUEUE, 0)); 
+  EXPECT_EQ(0, access(DIR_FIRST_QUEUE, 0));
   EXPECT_EQ(0, access(FILE_FIRST_QUEUE_HEADER, 0));
 
   sync_base->src_block_file_ = FILE_SRC_BLOCK_FILE;
@@ -259,7 +259,7 @@ TEST_F(SyncMirrorTest, testCopyFile)
     sleep(3);
   }
 
-  // check dest_block_file's size 
+  // check dest_block_file's size
   struct stat file_stat;
   stat(FILE_DEST_BLOCK_FILE, &file_stat);
   EXPECT_EQ(file_stat.st_size, data_len);
@@ -281,22 +281,22 @@ TEST_F(SyncMirrorTest, testCopyFile)
 
   // close physical block file
   close(physical_block_fd);
-  
+
   BlockFileManager::get_instance()->logic_blocks_.clear();
   g_data_service.sync_mirror_.clear();
- 
+
   delete physical_block;
   physical_block = NULL;
   delete logic_block;
   logic_block = NULL;
 
-  delete sync_base; 
+  delete sync_base;
 }
 
 TEST_F(SyncMirrorTest, testRemoveFile)
 {
   SyncBase* sync_base = new SyncBase(g_data_service, SYNC_TO_TFS_MIRROR, 0, "xx.xx.xx.xx:3200", "xxx.xxx.xxx.xxx:3200");
-  EXPECT_EQ(0, access(DIR_FIRST_QUEUE, 0)); 
+  EXPECT_EQ(0, access(DIR_FIRST_QUEUE, 0));
   EXPECT_EQ(0, access(FILE_FIRST_QUEUE_HEADER, 0));
 
   sync_base->src_block_file_ = FILE_SRC_BLOCK_FILE;
@@ -333,7 +333,7 @@ TEST_F(SyncMirrorTest, testRemoveFile)
 
   g_data_service.sync_mirror_.clear();
   sync_base->stop();
-  delete sync_base; 
+  delete sync_base;
 }
 
 TEST_F(SyncMirrorTest, testRecoverSecondQueue)
@@ -346,7 +346,7 @@ TEST_F(SyncMirrorTest, testRecoverSecondQueue)
   FileQueue* second_file_queue = new FileQueue(DIR_MIRROR , "secondqueue");
   second_file_queue->load_queue_head();
   second_file_queue->initialize();
-  EXPECT_EQ(0, access(DIR_SECOND_QUEUE, 0)); 
+  EXPECT_EQ(0, access(DIR_SECOND_QUEUE, 0));
   EXPECT_EQ(0, access(FILE_SECOND_QUEUE_HEADER, 0));
 
   // push QueueItems into the second file queue
@@ -365,7 +365,7 @@ TEST_F(SyncMirrorTest, testRecoverSecondQueue)
 
   // init SyncBase
   SyncBase* sync_base = new SyncBase(g_data_service, SYNC_TO_TFS_MIRROR, 0, "xx.xx.xx.xx:3200", "xxx.xxx.xxx.xxx:3200");
-  EXPECT_EQ(0, access(DIR_FIRST_QUEUE, 0)); 
+  EXPECT_EQ(0, access(DIR_FIRST_QUEUE, 0));
   EXPECT_EQ(0, access(FILE_FIRST_QUEUE_HEADER, 0));
 
   sync_base->src_block_file_ = FILE_SRC_BLOCK_FILE;
@@ -374,8 +374,8 @@ TEST_F(SyncMirrorTest, testRecoverSecondQueue)
 
   sync_base->init();
   EXPECT_GT(sync_base->file_queue_->queue_information_header_.queue_size_, 10);
-  EXPECT_EQ(-1, access(DIR_SECOND_QUEUE, 0)); 
- 
+  EXPECT_EQ(-1, access(DIR_SECOND_QUEUE, 0));
+
   // write sync log: INSERT
   int32_t cmd = OPLOG_INSERT;
   int32_t block_id = 101;
@@ -400,7 +400,7 @@ TEST_F(SyncMirrorTest, testRecoverSecondQueue)
 
   g_data_service.sync_mirror_.clear();
   sync_base->stop();
-  delete sync_base; 
+  delete sync_base;
 }
 
 TEST_F(SyncMirrorTest, testSyncToMultiSlaves)
@@ -408,8 +408,8 @@ TEST_F(SyncMirrorTest, testSyncToMultiSlaves)
   SyncBase* sync_base = NULL;
   char queue_path[256];
   std::string queue_header_path = "";
-  std::string file_src_block_file = ""; 
-  std::string file_dest_block_file = ""; 
+  std::string file_src_block_file = "";
+  std::string file_dest_block_file = "";
   int64_t block_file_size = 0;
 
   std::vector<std::string> slave_ns_ip;
@@ -432,7 +432,7 @@ TEST_F(SyncMirrorTest, testSyncToMultiSlaves)
       queue_header_path = queue_path;
       queue_header_path += "/header.dat";
     }
-    EXPECT_EQ(0, access(queue_path, 0)); 
+    EXPECT_EQ(0, access(queue_path, 0));
     EXPECT_EQ(0, access(queue_header_path.c_str(), 0));
 
     file_src_block_file = queue_path;
@@ -478,7 +478,7 @@ TEST_F(SyncMirrorTest, testSyncToMultiSlaves)
     }
     file_dest_block_file = queue_path;
     file_dest_block_file += "/dest_block_file.dat";
-    // check dest_block_file's size 
+    // check dest_block_file's size
     struct stat file_stat;
     stat(file_dest_block_file.c_str(), &file_stat);
     EXPECT_EQ(file_stat.st_size, block_file_size);
@@ -501,7 +501,7 @@ TEST_F(SyncMirrorTest, testResetFileQueue)
 
   // init SyncBase
   SyncBase* sync_base = new SyncBase(g_data_service, SYNC_TO_TFS_MIRROR, 0, "xx.xx.xx.xx:3200", "xxx.xxx.xxx.xxx:3200");
-  EXPECT_EQ(0, access(DIR_FIRST_QUEUE, 0)); 
+  EXPECT_EQ(0, access(DIR_FIRST_QUEUE, 0));
   EXPECT_EQ(0, access(FILE_FIRST_QUEUE_HEADER, 0));
 
   sync_base->src_block_file_ = FILE_SRC_BLOCK_FILE;
@@ -546,7 +546,7 @@ TEST_F(SyncMirrorTest, testResetFileQueue)
 
   sync_base->stop();
   g_data_service.sync_mirror_.clear();
-  delete sync_base; 
+  delete sync_base;
 }
 
 TEST_F(SyncMirrorTest, testDisableFileQueue)
@@ -557,7 +557,7 @@ TEST_F(SyncMirrorTest, testDisableFileQueue)
 
   // init SyncBase
   SyncBase* sync_base = new SyncBase(g_data_service, SYNC_TO_TFS_MIRROR, 0, "xx.xx.xx.xx:3200", "xxx.xxx.xxx.xxx:3200");
-  EXPECT_EQ(0, access(DIR_FIRST_QUEUE, 0)); 
+  EXPECT_EQ(0, access(DIR_FIRST_QUEUE, 0));
   EXPECT_EQ(0, access(FILE_FIRST_QUEUE_HEADER, 0));
 
   sync_base->src_block_file_ = FILE_SRC_BLOCK_FILE;
@@ -597,7 +597,7 @@ TEST_F(SyncMirrorTest, testDisableFileQueue)
 
   sync_base->stop();
   g_data_service.sync_mirror_.clear();
-  delete sync_base; 
+  delete sync_base;
 }
 
 TEST_F(SyncMirrorTest, testSetPause)
@@ -608,7 +608,7 @@ TEST_F(SyncMirrorTest, testSetPause)
 
   // init SyncBase
   SyncBase* sync_base = new SyncBase(g_data_service, SYNC_TO_TFS_MIRROR, 0, "xx.xx.xx.xx:3200", "xxx.xxx.xxx.xxx:3200");
-  EXPECT_EQ(0, access(DIR_FIRST_QUEUE, 0)); 
+  EXPECT_EQ(0, access(DIR_FIRST_QUEUE, 0));
   EXPECT_EQ(0, access(FILE_FIRST_QUEUE_HEADER, 0));
 
   sync_base->src_block_file_ = FILE_SRC_BLOCK_FILE;
@@ -635,8 +635,8 @@ TEST_F(SyncMirrorTest, testSetPause)
 
   // pause the sync
   sync_base->set_pause(1);
- 
-  // queue_size should not change 
+
+  // queue_size should not change
   sleep(1);
   int32_t queue_size = sync_base->file_queue_->queue_information_header_.queue_size_;
   for (int32_t i = 0; i < 5; i++)
@@ -655,8 +655,8 @@ TEST_F(SyncMirrorTest, testSetPause)
 
   sync_base->stop();
   g_data_service.sync_mirror_.clear();
-  delete sync_base; 
-}
+  delete sync_base;
+}*/
 
 int main(int argc, char* argv[])
 {
