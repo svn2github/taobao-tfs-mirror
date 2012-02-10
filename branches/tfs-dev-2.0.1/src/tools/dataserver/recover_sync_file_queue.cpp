@@ -303,7 +303,7 @@ int copy_file(const char* dest_addr, const uint32_t block_id, const uint64_t fil
     FileInfo finfo;
 
     logic_block->rlock();
-    ret = logic_block->read_file(file_id, data, length, offset, READ_DATA_OPTION_FLAG_NORMAL);//read first data & fileinfo
+    ret = logic_block->read_file(file_id, data, length, offset, READ_DATA_OPTION_FLAG_FORCE);//read first data & fileinfo
     if (TFS_SUCCESS != ret)
     {
       // if file is local deleted or not exists, need not sync
@@ -329,7 +329,8 @@ int copy_file(const char* dest_addr, const uint32_t block_id, const uint64_t fil
         int dest_fd = g_tfs_client->open(fsname.get_name(), NULL, dest_addr, T_WRITE|T_NEWBLK);
         if (dest_fd <= 0)
         {
-          TBSYS_LOG(ERROR, "open dest tfsfile fail. ret: %d", dest_fd);
+          TBSYS_LOG(ERROR, "open dest tfsfile: %s(block_id: %u, file_id: %"PRI64_PREFIX"u) fail. ret: %d",
+                    fsname.get_name(), fsname.get_block_id(), fsname.get_file_id(), dest_fd);
           ret = TFS_ERROR;
         }
         else
@@ -458,21 +459,39 @@ int remove_file(const char* dest_addr, const uint32_t block_id,
     ret = g_tfs_client->unlink(file_size, fsname.get_name(), NULL, dest_addr, action, TFS_FILE_NO_SYNC_LOG);
     if (TFS_SUCCESS != ret)
     {
-      // if block not found or the file is deleted, need not sync
+      // if block not found or the action is done
       if (EXIT_NO_BLOCK == ret ||
-          EXIT_META_NOT_FOUND_ERROR == ret ||
-          EXIT_FILE_STATUS_ERROR == ret)
+          EXIT_META_NOT_FOUND_ERROR == ret)
+      {
+        if (CONCEAL == action)
+        {
+          ret = copy_file(dest_addr, block_id, file_id);
+          if (TFS_SUCCESS == ret)
+          {
+            ret = g_tfs_client->unlink(file_size, fsname.get_name(), NULL, dest_addr, action, TFS_FILE_NO_SYNC_LOG);
+          }
+        }
+        else if (REVEAL == action)
+        {
+          ret = copy_file(dest_addr, block_id, file_id);
+        }
+        else // DELETE or UNDELETE
+        {
+          ret = TFS_SUCCESS;
+          TBSYS_LOG(DEBUG, "blockid: %u, fileid: %" PRI64_PREFIX "u not exists in dest: %s, ret: %d, need not sync",
+                    block_id, file_id, dest_addr, ret);
+        }
+      }
+      else if (EXIT_FILE_STATUS_ERROR == ret)
       {
         ret = TFS_SUCCESS;
-        TBSYS_LOG(DEBUG, "tfs file: %s, blockid: %u, fileid: %" PRI64_PREFIX "u not exists in dest: %s, ret: %d, need not sync",
-                  fsname.get_name(), block_id, file_id, dest_addr, ret);
-
       }
-      else
-      {
-        TBSYS_LOG(ERROR, "tfs mirror remove file fail to dest: %s. blockid: %d, fileid: %"PRI64_PREFIX"u, action: %d, ret: %d",
-                  dest_addr, block_id, file_id, action, ret);
-      }
+    }
+    if (TFS_SUCCESS != ret)
+    {
+      TBSYS_LOG(ERROR, "tfs mirror remove file %s(block_id: %u, file_id: %"PRI64_PREFIX"u) fail to dest: %s.\
+                blockid: %d, fileid: %"PRI64_PREFIX"u, action: %d, ret: %d",
+                fsname.get_name(), fsname.get_block_id(), fsname.get_block_id(), dest_addr, block_id, file_id, action, ret);
     }
     else
     {
@@ -550,7 +569,7 @@ int do_sync(const char* dest_addr, const char* data, const int32_t len)
     }
   }while (TFS_SUCCESS != ret);
 
-  return TFS_SUCCESS;
+  return ret;
 }
 
 int recover_second_queue(FileQueue* file_queue)
@@ -564,30 +583,36 @@ int recover_second_queue(FileQueue* file_queue)
 
   // 2.init FileQueue
   FileQueue* second_file_queue = new FileQueue(g_mirror_dir, "secondqueue");
-  second_file_queue->load_queue_head();
-  second_file_queue->initialize();
-
-  // 3.move QueueItems from the 2nd queue to the 1st queue
-  int32_t item_count = 0;
-  while (!second_file_queue->empty())
+  int ret = second_file_queue->load_queue_head();
+  if (TFS_SUCCESS == ret)
   {
-    QueueItem* item = NULL;
-    item = second_file_queue->pop(0);
-    if (NULL != item)
+    ret = second_file_queue->initialize();
+    if (TFS_SUCCESS == ret)
     {
-      file_queue->push(&(item->data_[0]), item->length_);
-      free(item);
-      item = NULL;
-      item_count++;
+      // 3.move QueueItems from the 2nd queue to the 1st queue
+      int32_t item_count = 0;
+      while (!second_file_queue->empty())
+      {
+        QueueItem* item = NULL;
+        item = second_file_queue->pop(0);
+        if (NULL != item)
+        {
+          file_queue->push(&(item->data_[0]), item->length_);
+          free(item);
+          item = NULL;
+          item_count++;
+        }
+      }
+      TBSYS_LOG(DEBUG, "recover %d queue items from the second file queue success", item_count);
+
+      // 4.delete FileQueue
+      tbsys::gDelete(second_file_queue);
+
+      // 5.remove secondqueue directory
+      ret = DirectoryOp::delete_directory_recursively(queue_path.c_str(), true) ? TFS_SUCCESS : TFS_ERROR;
     }
   }
-  TBSYS_LOG(DEBUG, "recover %d queue items from the second file queue success", item_count);
-
-  // 4.delete FileQueue
-  tbsys::gDelete(second_file_queue);
-
-  // 5.remove secondqueue directory
-  return DirectoryOp::delete_directory_recursively(queue_path.c_str(), true) ? TFS_SUCCESS : TFS_ERROR;
+  return ret;
 }
 
 void* thread_func(void *args)
@@ -600,13 +625,24 @@ void* thread_func(void *args)
   char file_queue_name[20];
   sprintf(file_queue_name, "queue_%"PRI64_PREFIX"u", dest_ns_id);
   FileQueue* file_queue = new FileQueue(g_mirror_dir, file_queue_name);
-  file_queue->load_queue_head();
-  file_queue->initialize();
+  int ret = file_queue->load_queue_head();
+  if (TFS_SUCCESS != ret)
+  {
+    fprintf(stderr, "Sync thread %d load queue head failed!\n", thread_param->thread_index_);
+    return (void*)NULL;
+  }
+
+  ret = file_queue->initialize();
+  if (TFS_SUCCESS != ret)
+  {
+    fprintf(stderr, "Sync thread %d inite file queue failed!\n", thread_param->thread_index_);
+    return (void*)NULL;
+  }
 
   // for compatibility, the first thread need to recover the second filequeue(the retry one) if exists
   if (0 == thread_param->thread_index_)
   {
-    int ret = recover_second_queue(file_queue);
+    ret = recover_second_queue(file_queue);
     if (TFS_SUCCESS != ret)
     {
       fprintf(stderr, "Sync thread %d recover second file queue failed!\n", thread_param->thread_index_);
@@ -690,8 +726,8 @@ int main(int argc,char* argv[])
 
   if (NULL == g_conf_file || 0 == g_server_index.size() || help_info)
   {
-    fprintf(stderr, "\nUsage: %s -f conf_file -i index -h -v\n", argv[0]);
-    fprintf(stderr, "  -f configure file\n");
+    fprintf(stderr, "\nUsage: %s -f conf_file -i index -n -h -v\n", argv[0]);
+    fprintf(stderr, "  -f ds.conf\n");
     fprintf(stderr, "  -i server_index  dataserver index number\n");
     fprintf(stderr, "  -n set log level to DEBUG\n");
     fprintf(stderr, "  -v show version info\n");
