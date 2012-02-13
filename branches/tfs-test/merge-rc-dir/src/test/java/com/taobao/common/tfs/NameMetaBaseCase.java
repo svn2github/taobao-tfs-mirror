@@ -1533,23 +1533,6 @@ public class NameMetaBaseCase extends TfsBaseCase{
 
     public boolean migrateHaVip(int masterRsIndex, int slaveRsIndex) {
         boolean bRet = false;
-        String rsVip = nameMetaGrid.getCluster(RSINDEX).getServer(masterRsIndex).getVip();
-        String masterRsIp = nameMetaGrid.getCluster(RSINDEX).getServer(masterRsIndex).getIp();
-        String slaveRsIp = nameMetaGrid.getCluster(RSINDEX).getServer(slaveRsIndex).getIp();
-        log.debug("masterRsIp: " + masterRsIp + ", slaveRsIp: " + slaveRsIp);
-        String cmd = "";
-        cmd = "/sbin/ifconfig "+ VIP_ETH_NAME +" down";
-        bRet = Proc.proStartBaseByRoot(slaveRsIp, cmd);
-        if (!bRet) {
-          log.debug("stop master process failed");
-        }
-        else {
-          cmd = "/sbin/ifconfig "+ VIP_ETH_NAME +" " + rsVip + " netmask 255.255.255.255";
-          bRet = Proc.proStartBaseByRoot(masterRsIp, cmd);
-          if (!bRet) {
-           log.debug("stop slave process failed");
-          }
-        }
         return bRet; 
     }
 

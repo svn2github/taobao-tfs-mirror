@@ -7,10 +7,13 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.io.RandomAccessFile;
 
 import java.util.Random;
 import java.util.zip.CRC32;
-
+import org.junit.BeforeClass;
+import org.junit.AfterClass;
+import java.util.ArrayList;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.springframework.context.support.ClassPathXmlApplicationContext;
@@ -21,7 +24,7 @@ import com.taobao.common.tfs.DefaultTfsManager;
 public class tfsNameBaseCase
 {
 	public static DefaultTfsManager tfsManager=null ;
-	public static String resourcesPath="D:/workspace/merge-rc-dir/src/test/resources/";
+	public static String resourcesPath="";
     public static final Log log = LogFactory.getLog(tfsNameBaseCase.class);
     public static long appId;
     public static long userId=8;
@@ -98,93 +101,70 @@ public class tfsNameBaseCase
            return data;
     }
     
-    static protected void createFile(String name,long num ) throws FileNotFoundException, IOException
-    {
-       Random rd = new Random();
-       File file = new File(name);
-       FileOutputStream output = new FileOutputStream(file);
-       int len = 1024*1024*8;
-       byte[] data = new byte[len];
-       long totalLength=num;
-       while (totalLength > 0)
-       {
-          len = (int)Math.min(len, totalLength);
-          rd.nextBytes(data);
-          output.write(data, 0, len);
-          totalLength -= len;
-       }
-       System.out.println("Succeed create file"+name);
-    }
-//     static // create resources files
-//    {
-//    	try {
-//			createFile(resourcesPath+"100K",100*(1<<10));
-//		} catch (FileNotFoundException e) {
-//			// TODO Auto-generated catch block
-//			e.printStackTrace();
-//		} catch (IOException e) {
-//			// TODO Auto-generated catch block
-//			e.printStackTrace();
-//		}
-//		
-//    	try {
-//			createFile(resourcesPath+"1G",1<<30);
-//		} catch (FileNotFoundException e) {
-//			// TODO Auto-generated catch block
-//			e.printStackTrace();
-//		} catch (IOException e) {
-//			// TODO Auto-generated catch block
-//			e.printStackTrace();
-//		}
-//		
-//    	try {
-//			createFile(resourcesPath+"2M",2*(1<<20));
-//		} catch (FileNotFoundException e) {
-//			// TODO Auto-generated catch block
-//			e.printStackTrace();
-//		} catch (IOException e) {
-//			// TODO Auto-generated catch block
-//			e.printStackTrace();
-//		}
-//		
-//	 	try {
-//			createFile(resourcesPath+"3M",3*(1<<20));
-//		} catch (FileNotFoundException e) {
-//			// TODO Auto-generated catch block
-//			e.printStackTrace();
-//		} catch (IOException e) {
-//			// TODO Auto-generated catch block
-//			e.printStackTrace();
-//		}
-//		
-//	  	try {
-//			createFile(resourcesPath+"10K",10*(1<<10));
-//		} catch (FileNotFoundException e) {
-//			// TODO Auto-generated catch block
-//			e.printStackTrace();
-//		} catch (IOException e) {
-//			// TODO Auto-generated catch block
-//			e.printStackTrace();
-//		}
-//    
-//  	try {
-//			createFile(resourcesPath+"2b",2);
-//		} catch (FileNotFoundException e) {
-//			// TODO Auto-generated catch block
-//			e.printStackTrace();
-//		} catch (IOException e) {
-//			// TODO Auto-generated catch block
-//			e.printStackTrace();
-//		}
-//    
-//  	try {
-//			createFile(resourcesPath+"10M",10*(1<<20));
-//		} catch (FileNotFoundException e) {
-//			// TODO Auto-generated catch block
-//			e.printStackTrace();
-//		} catch (IOException e) {
-//			// TODO Auto-generated catch block
-//			e.printStackTrace();
-//		}
-//  }
+	public static ArrayList<String> testFileList = new ArrayList<String>();
+
+	@BeforeClass
+	public static void BeforeSetup() {
+		System.out.println(" @@ beforeclass begin");
+		String localFile = "";
+		// 1b file
+		localFile = "1B.jpg";
+		if (createFile(localFile, 1)) {
+			testFileList.add(localFile);
+		}
+		// 1k file
+		localFile = "1K.jpg";
+		if (createFile(localFile, 1 << 10)) {
+			testFileList.add(localFile);
+		}
+		// 10k file
+		localFile = "10K.jpg";
+		if (createFile(localFile, 10 * (1 << 10)) ) {
+			testFileList.add(localFile);
+		}
+
+		// 2M file
+		localFile = "2M.jpg";
+		if (createFile(localFile, 2 * (1 << 20))) {
+			testFileList.add(localFile);
+		}
+		// 3M file
+		localFile = "3M.jpg";
+		if (createFile(localFile, 3 * (1 << 20))) {
+			testFileList.add(localFile);
+		}
+
+		// 10M file
+		localFile = "10M.jpg";
+		if (createFile(localFile, 10 * (1 << 20))) {
+			testFileList.add(localFile);
+		}
+		
+	}
+
+	@AfterClass
+	public static void AfterTearDown() {
+
+		System.out.println(" @@ afterclass begin");
+		int size = testFileList.size();
+		for (int i = 0; i < size; i++) {
+			File file = new File(testFileList.get(i));
+			if (file.exists()) {
+				file.delete();
+			}
+		}
+	}
+
+	protected static boolean createFile(String filePath, long size) {
+		boolean ret = true;
+		try {
+			RandomAccessFile f = new RandomAccessFile(filePath, "rw");
+			f.setLength(size);
+		} catch (Exception e) {
+			ret = false;
+			e.printStackTrace();
+		}
+		return ret;
+	}
+
 }
