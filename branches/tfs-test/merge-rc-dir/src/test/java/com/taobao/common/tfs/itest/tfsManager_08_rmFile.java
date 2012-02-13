@@ -85,7 +85,7 @@ public class tfsManager_08_rmFile extends tfsNameBaseCase
 	{	   
 	   boolean bRet;
 	   log.info( "test_01_rmFile_right_filePath" );
-	   tfsManager.saveFile(appId, userId, resourcesPath+"100K","/text");
+	   tfsManager.saveFile(appId, userId, resourcesPath+"100K.jpg","/text");
 	   bRet=tfsManager.rmFile(appId, userId, "/text");
 	   Assert.assertTrue("Remove File with right path should be true", bRet);
 	}

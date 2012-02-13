@@ -45,9 +45,9 @@ public class TfsManager_00_File_IntegrationTest extends tfsNameBaseCase {
 
 		log.info("test_01_write_right");
 		tfsManager.createFile(appId, userId, "/text");
-		int localCrc = getCrc(resourcesPath + "10K");
+		int localCrc = getCrc(resourcesPath + "10K.jpg");
 		byte data[] = null;
-		data = getByte(resourcesPath + "10K");
+		data = getByte(resourcesPath + "10K.jpg");
 		Assert.assertNotNull(data);
 		long len = data.length;
 		long offset = 0;
@@ -121,7 +121,7 @@ public class TfsManager_00_File_IntegrationTest extends tfsNameBaseCase {
 
 		log.info("test_01_write_rightTwice");
 		tfsManager.createFile(appId, userId, "/text");
-		data = getByte(resourcesPath + "10K");
+		data = getByte(resourcesPath + "10K.jpg");
 		Assert.assertNotNull(data);
 		Ret = tfsManager.write(appId, userId, "/text", offset, data,
 				dataOffset, len);
@@ -186,7 +186,7 @@ public class TfsManager_00_File_IntegrationTest extends tfsNameBaseCase {
 
 		log.info("test_01_write_right_Twice");
 		tfsManager.createFile(appId, userId, "/text");
-		data = getByte(resourcesPath + "10K");
+		data = getByte(resourcesPath + "10K.jpg");
 		Assert.assertNotNull(data);
 		Ret = tfsManager.write(appId, userId, "/text", offset, data,
 				dataOffset, len);
@@ -198,14 +198,14 @@ public class TfsManager_00_File_IntegrationTest extends tfsNameBaseCase {
 		/* save file */
 
 		log.info("test_01_saveFile_right");
-		bRet = tfsManager.saveFile(appId, userId, resourcesPath + "100K",
+		bRet = tfsManager.saveFile(appId, userId, resourcesPath + "100K.jpg",
 				"/text");
 		Assert.assertFalse("Save File right path should be true", bRet);
 		bRet = tfsManager.fetchFile(appId, userId, resourcesPath + "temp",
 				"/text");
 		Assert.assertFalse("Fetch File right path should be true", bRet);
 		Assert.assertEquals(getCrc(resourcesPath + "temp"),
-				getCrc(resourcesPath + "100K"));
+				getCrc(resourcesPath + "100K.jpg"));
 		tfsManager.rmFile(appId, userId, "/text");
 	}
 
@@ -283,9 +283,9 @@ public class TfsManager_00_File_IntegrationTest extends tfsNameBaseCase {
 
 		log.info("test_02_write_right");
 		tfsManager.createFile(appId, userId, "/text");
-		int localCrc = getCrc(resourcesPath + "10K");
+		int localCrc = getCrc(resourcesPath + "10K.jpg");
 		byte data[] = null;
-		data = getByte(resourcesPath + "10K");
+		data = getByte(resourcesPath + "10K.jpg");
 		Assert.assertNotNull(data);
 		long len = data.length;
 		long offset = 0;
@@ -302,14 +302,14 @@ public class TfsManager_00_File_IntegrationTest extends tfsNameBaseCase {
 		/* fetch file */
 
 		log.info("test_02_fetchFile_right");
-		bRet = tfsManager.saveFile(appId, userId, resourcesPath + "100K",
+		bRet = tfsManager.saveFile(appId, userId, resourcesPath + "100K.jpg",
 				"/text");
 		Assert.assertTrue("Save File right path should be true", bRet);
 		bRet = tfsManager.fetchFile(appId, userId, resourcesPath + "temp",
 				"/text");
 		Assert.assertTrue("Fetch File right path should be true", bRet);
 		Assert.assertEquals(getCrc(resourcesPath + "temp"),
-				getCrc(resourcesPath + "100K"));
+				getCrc(resourcesPath + "100K.jpg"));
 		tfsManager.rmFile(appId, userId, "/text");
 
 		/* read file */
@@ -363,9 +363,9 @@ public class TfsManager_00_File_IntegrationTest extends tfsNameBaseCase {
 
 		log.info("test_03_write_right_First");
 		tfsManager.createFile(appId, userId, "/text");
-		int localCrc = getCrc(resourcesPath + "10K");
+		int localCrc = getCrc(resourcesPath + "10K.jpg");
 		byte data[] = null;
-		data = getByte(resourcesPath + "10K");
+		data = getByte(resourcesPath + "10K.jpg");
 		Assert.assertNotNull(data);
 		long len = data.length;
 		long offset = 0;
@@ -428,7 +428,7 @@ public class TfsManager_00_File_IntegrationTest extends tfsNameBaseCase {
 
 		log.info("test_03_write_right_twice");
 		tfsManager.createFile(appId, userId, "/text");
-		data = getByte(resourcesPath + "10K");
+		data = getByte(resourcesPath + "10K.jpg");
 		Assert.assertNotNull(data);
 		Ret = tfsManager.write(appId, userId, "/text", offset, data,
 				dataOffset, len);
@@ -455,14 +455,14 @@ public class TfsManager_00_File_IntegrationTest extends tfsNameBaseCase {
 
 		log.info("test_03_saveFile_right");
 
-		bRet = tfsManager.saveFile(appId, userId, resourcesPath + "100K",
+		bRet = tfsManager.saveFile(appId, userId, resourcesPath + "100K.jpg",
 				"/text");
 		Assert.assertFalse("Save File right path should be true", bRet);
 		bRet = tfsManager.fetchFile(appId, userId, resourcesPath + "temp",
 				"/text");
 		Assert.assertFalse("Fetch File right path should be true", bRet);
 		Assert.assertEquals(getCrc(resourcesPath + "temp"),
-				getCrc(resourcesPath + "100K"));
+				getCrc(resourcesPath + "100K.jpg"));
 		tfsManager.rmFile(appId, userId, "/text");
 
 		/* rm file */
@@ -475,14 +475,14 @@ public class TfsManager_00_File_IntegrationTest extends tfsNameBaseCase {
 		/* fetch file */
 
 		log.info("test_03_fetchFile_right");
-		bRet = tfsManager.saveFile(appId, userId, resourcesPath + "100K",
+		bRet = tfsManager.saveFile(appId, userId, resourcesPath + "100K.jpg",
 				"/text");
 		Assert.assertTrue("Save File right path should be true", bRet);
 		bRet = tfsManager.fetchFile(appId, userId, resourcesPath + "temp",
 				"/text");
 		Assert.assertTrue("Fetch File right path should be true", bRet);
 		Assert.assertEquals(getCrc(resourcesPath + "temp"),
-				getCrc(resourcesPath + "100K"));
+				getCrc(resourcesPath + "100K.jpg"));
 		tfsManager.rmFile(appId, userId, "/text");
 	}
 
@@ -516,9 +516,9 @@ public class TfsManager_00_File_IntegrationTest extends tfsNameBaseCase {
 
 		log.info("test_04_write_right");
 		tfsManager.createFile(appId, userId, "/text");
-		int localCrc = getCrc(resourcesPath + "10K");
+		int localCrc = getCrc(resourcesPath + "10K.jpg");
 		byte data[] = null;
-		data = getByte(resourcesPath + "10K");
+		data = getByte(resourcesPath + "10K.jpg");
 		Assert.assertNotNull(data);
 		long len = data.length;
 		long offset = 0;
@@ -612,14 +612,14 @@ public class TfsManager_00_File_IntegrationTest extends tfsNameBaseCase {
 		/* save file */
 
 		log.info("test_04_saveFile_right");
-		bRet = tfsManager.saveFile(appId, userId, resourcesPath + "100K",
+		bRet = tfsManager.saveFile(appId, userId, resourcesPath + "100K.jpg",
 				"/text");
 		Assert.assertFalse("Save File right path should be true", bRet);
 		bRet = tfsManager.fetchFile(appId, userId, resourcesPath + "temp",
 				"/text");
 		Assert.assertFalse("Fetch File right path should be true", bRet);
 		Assert.assertEquals(getCrc(resourcesPath + "temp"),
-				getCrc(resourcesPath + "100K"));
+				getCrc(resourcesPath + "100K.jpg"));
 		tfsManager.rmFile(appId, userId, "/text");
 
 		/* ls file */
@@ -639,14 +639,14 @@ public class TfsManager_00_File_IntegrationTest extends tfsNameBaseCase {
 
 		log.info("test_04_fetchFile_right");
 
-		bRet = tfsManager.saveFile(appId, userId, resourcesPath + "100K",
+		bRet = tfsManager.saveFile(appId, userId, resourcesPath + "100K.jpg",
 				"/text");
 		Assert.assertTrue("Save File right path should be true", bRet);
 		bRet = tfsManager.fetchFile(appId, userId, resourcesPath + "temp",
 				"/text");
 		Assert.assertTrue("Fetch File right path should be true", bRet);
 		Assert.assertEquals(getCrc(resourcesPath + "temp"),
-				getCrc(resourcesPath + "100K"));
+				getCrc(resourcesPath + "100K.jpg"));
 		tfsManager.rmFile(appId, userId, "/text");
 
 		/* ls file */
@@ -694,9 +694,9 @@ public class TfsManager_00_File_IntegrationTest extends tfsNameBaseCase {
 
 		log.info("test_05_write_right");
 		tfsManager.createFile(appId, userId, "/text");
-		int localCrc = getCrc(resourcesPath + "10K");
+		int localCrc = getCrc(resourcesPath + "10K.jpg");
 		byte data[] = null;
-		data = getByte(resourcesPath + "10K");
+		data = getByte(resourcesPath + "10K.jpg");
 		Assert.assertNotNull(data);
 		long len = data.length;
 		long offset = 0;
@@ -768,27 +768,27 @@ public class TfsManager_00_File_IntegrationTest extends tfsNameBaseCase {
 		/* fetch file */
 
 		log.info("test_05_fetchFile_right");
-		bRet = tfsManager.saveFile(appId, userId, resourcesPath + "100K",
+		bRet = tfsManager.saveFile(appId, userId, resourcesPath + "100K.jpg",
 				"/text");
 		Assert.assertTrue("Save File right path should be true", bRet);
 		bRet = tfsManager.fetchFile(appId, userId, resourcesPath + "temp",
 				"/text");
 		Assert.assertTrue("Fetch File right path should be true", bRet);
 		Assert.assertEquals(getCrc(resourcesPath + "temp"),
-				getCrc(resourcesPath + "100K"));
+				getCrc(resourcesPath + "100K.jpg"));
 		tfsManager.rmFile(appId, userId, "/text");
 
 		/* save file */
 
 		log.info("test_05_saveFile_right");
-		bRet = tfsManager.saveFile(appId, userId, resourcesPath + "100K",
+		bRet = tfsManager.saveFile(appId, userId, resourcesPath + "100K.jpg",
 				"/text");
 		Assert.assertFalse("Save File right path should be true", bRet);
 		bRet = tfsManager.fetchFile(appId, userId, resourcesPath + "temp",
 				"/text");
 		Assert.assertFalse("Fetch File right path should be true", bRet);
 		Assert.assertEquals(getCrc(resourcesPath + "temp"),
-				getCrc(resourcesPath + "100K"));
+				getCrc(resourcesPath + "100K.jpg"));
 		tfsManager.rmFile(appId, userId, "/text");
 	}
 
@@ -844,14 +844,14 @@ public class TfsManager_00_File_IntegrationTest extends tfsNameBaseCase {
 		/* fetch file */
 
 		log.info("test_06_fetchFile_right");
-		bRet = tfsManager.saveFile(appId, userId, resourcesPath + "100K",
+		bRet = tfsManager.saveFile(appId, userId, resourcesPath + "100K.jpg",
 				"/text");
 		Assert.assertTrue("Save File right path should be true", bRet);
 		bRet = tfsManager.fetchFile(appId, userId, resourcesPath + "temp",
 				"/text");
 		Assert.assertTrue("Fetch File right path should be true", bRet);
 		Assert.assertEquals(getCrc(resourcesPath + "temp"),
-				getCrc(resourcesPath + "100K"));
+				getCrc(resourcesPath + "100K.jpg"));
 		tfsManager.rmFile(appId, userId, "/text");
 
 		/* rm file */
@@ -924,40 +924,40 @@ public class TfsManager_00_File_IntegrationTest extends tfsNameBaseCase {
 		/* save file */
 
 		log.info("test_07_saveFile_right");
-		bRet = tfsManager.saveFile(appId, userId, resourcesPath + "100K",
+		bRet = tfsManager.saveFile(appId, userId, resourcesPath + "100K.jpg",
 				"/text");
 		Assert.assertFalse("Save File right path should be true", bRet);
 		bRet = tfsManager.fetchFile(appId, userId, resourcesPath + "temp",
 				"/text");
 		Assert.assertFalse("Fetch File right path should be true", bRet);
 		Assert.assertEquals(getCrc(resourcesPath + "temp"),
-				getCrc(resourcesPath + "100K"));
+				getCrc(resourcesPath + "100K.jpg"));
 		tfsManager.rmFile(appId, userId, "/text");
 
 		/* fetch file */
 
 		log.info("test_07_fetchFile_right");
-		bRet = tfsManager.saveFile(appId, userId, resourcesPath + "100K",
+		bRet = tfsManager.saveFile(appId, userId, resourcesPath + "100K.jpg",
 				"/text");
 		Assert.assertTrue("Save File right path should be true", bRet);
 		bRet = tfsManager.fetchFile(appId, userId, resourcesPath + "temp",
 				"/text");
 		Assert.assertTrue("Fetch File right path should be true", bRet);
 		Assert.assertEquals(getCrc(resourcesPath + "temp"),
-				getCrc(resourcesPath + "100K"));
+				getCrc(resourcesPath + "100K.jpg"));
 		tfsManager.rmFile(appId, userId, "/text");
 
 		/* rm file */
 
 		log.info("test_07_saveFile_right");
-		bRet = tfsManager.saveFile(appId, userId, resourcesPath + "100K",
+		bRet = tfsManager.saveFile(appId, userId, resourcesPath + "100K.jpg",
 				"/text");
 		Assert.assertFalse("Save File right path should be true", bRet);
 		bRet = tfsManager.fetchFile(appId, userId, resourcesPath + "temp",
 				"/text");
 		Assert.assertFalse("Fetch File right path should be true", bRet);
 		Assert.assertEquals(getCrc(resourcesPath + "temp"),
-				getCrc(resourcesPath + "100K"));
+				getCrc(resourcesPath + "100K.jpg"));
 		tfsManager.rmFile(appId, userId, "/text");
 
 		/* ls file */
@@ -976,14 +976,14 @@ public class TfsManager_00_File_IntegrationTest extends tfsNameBaseCase {
 		/* save file */
 
 		log.info("test_07_saveFile_right");
-		bRet = tfsManager.saveFile(appId, userId, resourcesPath + "100K",
+		bRet = tfsManager.saveFile(appId, userId, resourcesPath + "100K.jpg",
 				"/text");
 		Assert.assertFalse("Save File right path should be true", bRet);
 		bRet = tfsManager.fetchFile(appId, userId, resourcesPath + "temp",
 				"/text");
 		Assert.assertFalse("Fetch File right path should be true", bRet);
 		Assert.assertEquals(getCrc(resourcesPath + "temp"),
-				getCrc(resourcesPath + "100K"));
+				getCrc(resourcesPath + "100K.jpg"));
 		tfsManager.rmFile(appId, userId, "/text");
 
 		/* ls file */
@@ -1029,14 +1029,14 @@ public class TfsManager_00_File_IntegrationTest extends tfsNameBaseCase {
 		/* fetch file */
 
 		log.info("test_08_fetchFile_right_First");
-		bRet = tfsManager.saveFile(appId, userId, resourcesPath + "100K",
+		bRet = tfsManager.saveFile(appId, userId, resourcesPath + "100K.jpg",
 				"/text");
 		Assert.assertTrue("Save File right path should be true", bRet);
 		bRet = tfsManager.fetchFile(appId, userId, resourcesPath + "temp",
 				"/text");
 		Assert.assertTrue("Fetch File right path should be true", bRet);
 		Assert.assertEquals(getCrc(resourcesPath + "temp"),
-				getCrc(resourcesPath + "100K"));
+				getCrc(resourcesPath + "100K.jpg"));
 		tfsManager.rmFile(appId, userId, "/text");
 
 		/* mv file */
@@ -1052,14 +1052,14 @@ public class TfsManager_00_File_IntegrationTest extends tfsNameBaseCase {
 		/* fetch file */
 
 		log.info("test_08_fetchFile_right_Twice");
-		bRet = tfsManager.saveFile(appId, userId, resourcesPath + "100K",
+		bRet = tfsManager.saveFile(appId, userId, resourcesPath + "100K.jpg",
 				"/text");
 		Assert.assertTrue("Save File right path should be true", bRet);
 		bRet = tfsManager.fetchFile(appId, userId, resourcesPath + "temp",
 				"/text");
 		Assert.assertTrue("Fetch File right path should be true", bRet);
 		Assert.assertEquals(getCrc(resourcesPath + "temp"),
-				getCrc(resourcesPath + "100K"));
+				getCrc(resourcesPath + "100K.jpg"));
 		tfsManager.rmFile(appId, userId, "/text");
 
 		/* rm file */
@@ -1072,14 +1072,14 @@ public class TfsManager_00_File_IntegrationTest extends tfsNameBaseCase {
 		/* fetch file */
 
 		log.info("test_08_fetchFile_right_Third");
-		bRet = tfsManager.saveFile(appId, userId, resourcesPath + "100K",
+		bRet = tfsManager.saveFile(appId, userId, resourcesPath + "100K.jpg",
 				"/text");
 		Assert.assertTrue("Save File right path should be true", bRet);
 		bRet = tfsManager.fetchFile(appId, userId, resourcesPath + "temp",
 				"/text");
 		Assert.assertTrue("Fetch File right path should be true", bRet);
 		Assert.assertEquals(getCrc(resourcesPath + "temp"),
-				getCrc(resourcesPath + "100K"));
+				getCrc(resourcesPath + "100K.jpg"));
 		tfsManager.rmFile(appId, userId, "/text");
 	}
 

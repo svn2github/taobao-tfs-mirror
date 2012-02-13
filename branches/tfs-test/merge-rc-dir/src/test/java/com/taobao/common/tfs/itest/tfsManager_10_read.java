@@ -58,7 +58,7 @@ public class tfsManager_10_read extends tfsNameBaseCase
 	   log.info("test_03_read_with_offset");
 	   boolean Ret;
 	   tfsManager.createFile(appId, userId, "/text3");
-	   Ret=tfsManager.saveFile(appId, userId, resourcesPath+"100K","/text3");
+	   Ret=tfsManager.saveFile(appId, userId, resourcesPath+"100K.jpg","/text3");
 	   Assert.assertTrue(Ret);
 	   ByteArrayOutputStream output = new ByteArrayOutputStream();
 	   long read;
@@ -72,7 +72,7 @@ public class tfsManager_10_read extends tfsNameBaseCase
 	{
 	   log.info("test_04_read_more_offset");
 	   tfsManager.createFile(appId, userId, "/text");
-	   tfsManager.saveFile(appId, userId, resourcesPath+"100K","/text");
+	   tfsManager.saveFile(appId, userId, resourcesPath+"100K.jpg","/text");
 	   ByteArrayOutputStream output = new ByteArrayOutputStream();
 	   Assert.assertEquals(0,tfsManager.read(appId, userId,"/text", 1024*100+100, 100*( 1<<10), output));
 	   tfsManager.rmFile(appId, userId, "/text");
@@ -82,7 +82,7 @@ public class tfsManager_10_read extends tfsNameBaseCase
 	{
 	   log.info("test_05_read_wrong_offset");
 	   tfsManager.createFile(appId, userId, "/text");
-	   tfsManager.saveFile(appId, userId, resourcesPath+"100K","/text");
+	   tfsManager.saveFile(appId, userId, resourcesPath+"100K.jpg","/text");
 	   ByteArrayOutputStream output = new ByteArrayOutputStream();
 	   Assert.assertTrue(tfsManager.read(appId, userId, "/text", -1, 100*(1<<10), output)<0);
 	   tfsManager.rmFile(appId, userId, "/text");
@@ -92,7 +92,7 @@ public class tfsManager_10_read extends tfsNameBaseCase
 	{
 	   log.info("test_06_read_null_output");
 	   tfsManager.createFile(appId, userId, "/text");
-	   tfsManager.saveFile(appId, userId, resourcesPath+"100K","/text");
+	   tfsManager.saveFile(appId, userId, resourcesPath+"100K.jpg","/text");
 	   Assert.assertTrue(tfsManager.read(appId, userId, "/text", 0, 100*(1<<10), null)<0);
 	   tfsManager.rmFile(appId, userId, "/text");
     }
@@ -115,7 +115,7 @@ public class tfsManager_10_read extends tfsNameBaseCase
 	{
 	   log.info("test_09_read_wrong_filePath_1");
 	   tfsManager.createFile(appId, userId, "/text");
-	   tfsManager.saveFile(appId, userId, resourcesPath+"100K","/text");
+	   tfsManager.saveFile(appId, userId, resourcesPath+"100K.jpg","/text");
 	   ByteArrayOutputStream output = new ByteArrayOutputStream();
 	   Assert.assertTrue(tfsManager.read(appId, userId, "text", 0, 100*(1<<10), output)<0);
 	   tfsManager.rmFile(appId, userId, "/text");
@@ -125,7 +125,7 @@ public class tfsManager_10_read extends tfsNameBaseCase
 	{
 	   log.info("test_10_read_wrong_filePath_2");
 	   tfsManager.createFile(appId, userId, "/text");
-	   tfsManager.saveFile(appId, userId, resourcesPath+"100K","/text");
+	   tfsManager.saveFile(appId, userId, resourcesPath+"100K.jpg","/text");
 	   ByteArrayOutputStream output = new ByteArrayOutputStream();
 	   Assert.assertEquals(100*(1<<10),tfsManager.read(appId, userId, "///text///", 0, 100*(1<<10), output));
 	   tfsManager.rmFile(appId, userId, "/text");
@@ -135,11 +135,11 @@ public class tfsManager_10_read extends tfsNameBaseCase
 	{
 	   log.info("test_11_read_large");
 	   tfsManager.createFile(appId, userId, "/text");
-	   tfsManager.saveFile(appId, userId, resourcesPath+"10M","/text");
+	   tfsManager.saveFile(appId, userId, resourcesPath+"10M.jpg","/text");
 	   long Ret;
 	   int localcrc;
 	   int readcrc;
-	   localcrc=getCrc(resourcesPath+"10M");
+	   localcrc=getCrc(resourcesPath+"10M.jpg");
 	   ByteArrayOutputStream output = new ByteArrayOutputStream();
 	   Ret=tfsManager.read(appId, userId, "/text", 0,10*(1<<20), output);
 	   System.out.println("!!!!!!!!!!!!!!!!"+Ret);

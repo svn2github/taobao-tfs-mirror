@@ -15,12 +15,12 @@ public class tfsManager_12_saveFile extends tfsNameBaseCase
 	{  
 		log.info("test_01_saveFile_right");
 		boolean bRet;
-		bRet=tfsManager.saveFile(appId, userId, resourcesPath+"100K","/text1");
+		bRet=tfsManager.saveFile(appId, userId, resourcesPath+"100K.jpg","/text1");
 		Assert.assertTrue("Save File right path should be true", bRet);
 		Thread.sleep(10000);
 	    //bRet=tfsManager.fetchFile(appId, userId, resourcesPath+"temp","/text2");
 		//Assert.assertTrue("Fetch File right path should be true", bRet);
-		//Assert.assertEquals(getCrc(resourcesPath+"temp"),getCrc(resourcesPath+"100K"));
+		//Assert.assertEquals(getCrc(resourcesPath+"temp"),getCrc(resourcesPath+"100K.jpg"));
 		//tfsManager.rmFile(appId, userId, "/text");
 		tfsManager.rmFile(appId, userId, "/text1");
 	}	
@@ -53,7 +53,7 @@ public class tfsManager_12_saveFile extends tfsNameBaseCase
 	{  
 		log.info("test_05_saveFile_null_fileName");
 		boolean bRet;
-		bRet=tfsManager.saveFile(appId, userId, resourcesPath+"100K",null);
+		bRet=tfsManager.saveFile(appId, userId, resourcesPath+"100K.jpg",null);
 		Assert.assertFalse("Save File null fileName should be false", bRet);	    
 	}
 	@Test
@@ -61,7 +61,7 @@ public class tfsManager_12_saveFile extends tfsNameBaseCase
 	{  
 		log.info("test_06_saveFile_empty_fileName");
 		boolean bRet;
-		bRet=tfsManager.saveFile(appId, userId, resourcesPath+"100K","");
+		bRet=tfsManager.saveFile(appId, userId, resourcesPath+"100K.jpg","");
 		Assert.assertFalse("Save File null fileName should be false", bRet);	    
 	}
 	@Test
@@ -69,7 +69,7 @@ public class tfsManager_12_saveFile extends tfsNameBaseCase
 	{  
 		log.info("test_07_saveFile_wrong_fileName_1");
 		boolean bRet;
-		bRet=tfsManager.saveFile(appId, userId, resourcesPath+"100K","/text7/");
+		bRet=tfsManager.saveFile(appId, userId, resourcesPath+"100K.jpg","/text7/");
 		Assert.assertTrue("Save File wrong 1 fileName should be false", bRet);	
 		tfsManager.rmFile(appId, userId, "/text4");
 	}
@@ -78,7 +78,7 @@ public class tfsManager_12_saveFile extends tfsNameBaseCase
 	{  
 		log.info("test_08_saveFile_wrong_fileName_2");
 		boolean bRet;
-		bRet=tfsManager.saveFile(appId, userId, resourcesPath+"100K","text8");
+		bRet=tfsManager.saveFile(appId, userId, resourcesPath+"100K.jpg","text8");
 		Assert.assertFalse("Save File wrong 2 fileName should be false", bRet);	    
 	}
 	@Test
@@ -86,7 +86,7 @@ public class tfsManager_12_saveFile extends tfsNameBaseCase
 	{  
 		log.info("test_09_saveFile_wrong_fileName_3");
 		boolean bRet;
-		bRet=tfsManager.saveFile(appId, userId, resourcesPath+"100K","/");
+		bRet=tfsManager.saveFile(appId, userId, resourcesPath+"100K.jpg","/");
 		Assert.assertFalse("Save File wrong 3 fileName should be false", bRet);	    
 	}
 	@Test
@@ -94,7 +94,7 @@ public class tfsManager_12_saveFile extends tfsNameBaseCase
 	{  
 		log.info("test_10_saveFile_leap_fileName");
 		boolean bRet;
-		bRet=tfsManager.saveFile(appId, userId, resourcesPath+"100K","/text10/text");
+		bRet=tfsManager.saveFile(appId, userId, resourcesPath+"100K.jpg","/text10/text");
 		Assert.assertFalse("Save File leap fileName should be false", bRet);	    
 	}
 	@Test
@@ -103,7 +103,7 @@ public class tfsManager_12_saveFile extends tfsNameBaseCase
 		log.info("test_11_saveFile_with_Dir");
 		boolean bRet;
 		tfsManager.createDir(appId, userId, "/text11");
-		bRet=tfsManager.saveFile(appId, userId, resourcesPath+"100K","/text11");
+		bRet=tfsManager.saveFile(appId, userId, resourcesPath+"100K.jpg","/text11");
 		Assert.assertTrue("Save File with the same name Dir should be true", bRet);
 		tfsManager.rmDir(appId, userId, "/text11");
 		tfsManager.rmFile(appId, userId, "/text11");
@@ -125,9 +125,9 @@ public class tfsManager_12_saveFile extends tfsNameBaseCase
 	{  
 		log.info("test_13_saveFile_many_times");
 		boolean bRet;
-		bRet=tfsManager.saveFile(appId, userId, resourcesPath+"100K","/text13");
+		bRet=tfsManager.saveFile(appId, userId, resourcesPath+"100K.jpg","/text13");
 		Assert.assertTrue("Save File right path should be true", bRet);
-		bRet=tfsManager.saveFile(appId, userId, resourcesPath+"100K","/text13");
+		bRet=tfsManager.saveFile(appId, userId, resourcesPath+"100K.jpg","/text13");
 		Assert.assertFalse("Save File two times should be false", bRet);
 		tfsManager.rmFile(appId, userId, "/text13");
 	}

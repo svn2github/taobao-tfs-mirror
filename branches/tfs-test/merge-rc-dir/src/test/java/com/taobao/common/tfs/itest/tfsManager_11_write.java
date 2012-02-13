@@ -18,9 +18,9 @@ public class tfsManager_11_write extends tfsNameBaseCase
 	{
 	   log.info("test_01_write_right");
 	   tfsManager.createFile(appId, userId, "/text"); 
-	   int localCrc = getCrc(resourcesPath+"10K"); 
+	   int localCrc = getCrc(resourcesPath+"10K.jpg"); 
 	   byte data[]=null;
-	   data=getByte(resourcesPath+"10K");
+	   data=getByte(resourcesPath+"10K.jpg");
 	   Assert.assertNotNull(data);
 	   long len = data.length;
 	   long  offset=0;
@@ -51,9 +51,9 @@ public class tfsManager_11_write extends tfsNameBaseCase
 	{
 	   log.info("test_02_write_more_offset");
 	   tfsManager.createFile(appId, userId, "/text"); 
-	   int localCrc = getCrc(resourcesPath+"10K"); 
+	   int localCrc = getCrc(resourcesPath+"10K.jpg"); 
 	   byte data[]=null;
-	   data=getByte(resourcesPath+"10K");
+	   data=getByte(resourcesPath+"10K.jpg");
 	   long len = data.length;
 	   long offset=0;
 	   long dataOffset=0;
@@ -70,9 +70,9 @@ public class tfsManager_11_write extends tfsNameBaseCase
 	{
 	   log.info("test_03_write_n_1_offset");
 	   tfsManager.createFile(appId, userId, "/text"); 
-	   int localCrc = getCrc(resourcesPath+"10K"); 
+	   int localCrc = getCrc(resourcesPath+"10K.jpg"); 
 	   byte data[]=null;
-	   data=getByte(resourcesPath+"10K");
+	   data=getByte(resourcesPath+"10K.jpg");
 	   long len = 10*(1<<10);
 	   long offset=-1;
 	   long dataOffset=0;
@@ -90,7 +90,7 @@ public class tfsManager_11_write extends tfsNameBaseCase
 	   log.info("test_04_write_wrong_offset");
 	   tfsManager.createFile(appId, userId, "/text"); 
 	   byte data[]=null;
-	   data=getByte(resourcesPath+"10K");
+	   data=getByte(resourcesPath+"10K.jpg");
 	   long len = 10*(1<<10);
 	   long offset=-2;
 	   long dataOffset=0;
@@ -106,7 +106,7 @@ public class tfsManager_11_write extends tfsNameBaseCase
 	   log.info("test_05_write_with_dataOffset");
 	   tfsManager.createFile(appId, userId, "/text");  
 	   byte data[]=null;
-	   data=getByte(resourcesPath+"10K");
+	   data=getByte(resourcesPath+"10K.jpg");
 	   long len = 9*(1<<10);
 	   long offset=0;
 	   long dataOffset=1023;
@@ -123,7 +123,7 @@ public class tfsManager_11_write extends tfsNameBaseCase
 	   log.info("test_06_write_more_dataOffset");
 	   tfsManager.createFile(appId, userId, "/text"); 
 	   byte data[]=null;
-	   data=getByte(resourcesPath+"10K");
+	   data=getByte(resourcesPath+"10K.jpg");
 	   long len = 10*(1<<10);
 	   long offset=0;
 	   long dataOffset=10*(1<<10)+100;
@@ -140,7 +140,7 @@ public class tfsManager_11_write extends tfsNameBaseCase
 	   log.info("test_07_write_wrong_dataOffset");
 	   tfsManager.createFile(appId, userId, "/text"); 
 	   byte data[]=null;
-	   data=getByte(resourcesPath+"10K");
+	   data=getByte(resourcesPath+"10K.jpg");
 	   long len = 10*(1<<10);
 	   long offset=0;
 	   long dataOffset=-1;
@@ -188,7 +188,7 @@ public class tfsManager_11_write extends tfsNameBaseCase
 	   log.info("test_10_write_null_filename");
 	   tfsManager.createFile(appId, userId, "/text"); 
 	   byte data[]=null;
-	   data=getByte(resourcesPath+"10K");
+	   data=getByte(resourcesPath+"10K.jpg");
 	   long len = 10*(1<<10);
 	   long offset=0;
 	   long dataOffset=0;
@@ -205,7 +205,7 @@ public class tfsManager_11_write extends tfsNameBaseCase
 	   log.info("test_11_write_empty_filename");
 	   tfsManager.createFile(appId, userId, "/text"); 
 	   byte data[]=null;
-	   data=getByte(resourcesPath+"10K");
+	   data=getByte(resourcesPath+"10K.jpg");
 	   long len = 10*(1<<10);
 	   long offset=0;
 	   long dataOffset=0;
@@ -221,9 +221,9 @@ public class tfsManager_11_write extends tfsNameBaseCase
 	{
 	   log.info("test_12_write_wrong_filename_1");
 	   tfsManager.createFile(appId, userId, "/text"); 
-	   int localCrc = getCrc(resourcesPath+"10K"); 
+	   int localCrc = getCrc(resourcesPath+"10K.jpg"); 
 	   byte data[]=null;
-	   data=getByte(resourcesPath+"10K");
+	   data=getByte(resourcesPath+"10K.jpg");
 	   long len = 10*(1<<10);
 	   long offset=0;
 	   long dataOffset=0;
@@ -231,7 +231,7 @@ public class tfsManager_11_write extends tfsNameBaseCase
 	   Ret=tfsManager.write(appId, userId, "///text///", offset,data, dataOffset, len);
 	   Assert.assertEquals(Ret,10*(1<<10));
 	   tfsManager.fetchFile(appId, userId, resourcesPath+"temp", "/text");
-	   int TfsCrc = getCrc(resourcesPath+"10K");
+	   int TfsCrc = getCrc(resourcesPath+"10K.jpg");
 	   Assert.assertEquals(TfsCrc,localCrc);
 	   tfsManager.rmFile(appId, userId, "/text");
     }
@@ -241,7 +241,7 @@ public class tfsManager_11_write extends tfsNameBaseCase
 	   log.info("test_13_write_wrong_filename_2");
 	   tfsManager.createFile(appId, userId, "/text"); 
 	   byte data[]=null;
-	   data=getByte(resourcesPath+"10K");
+	   data=getByte(resourcesPath+"10K.jpg");
 	   long len = 10*(1<<10);
 	   long offset=0;
 	   long dataOffset=0;
@@ -258,7 +258,7 @@ public class tfsManager_11_write extends tfsNameBaseCase
 	   log.info("test_14_write_wrong_filename_3");
 	   tfsManager.createFile(appId, userId, "/text"); 
 	   byte data[]=null;
-	   data=getByte(resourcesPath+"10K");
+	   data=getByte(resourcesPath+"10K.jpg");
 	   long len = 10*(1<<10);
 	   long offset=0;
 	   long dataOffset=0;
@@ -275,7 +275,7 @@ public class tfsManager_11_write extends tfsNameBaseCase
 	   log.info("test_15_write_Dir");
 	   tfsManager.createDir(appId, userId, "/text"); 
 	   byte data[]=null;
-	   data=getByte(resourcesPath+"10K");
+	   data=getByte(resourcesPath+"10K.jpg");
 	   long len = 10*(1<<10);
 	   long offset=0;
 	   long dataOffset=0;
@@ -289,9 +289,9 @@ public class tfsManager_11_write extends tfsNameBaseCase
 	{
 	   log.info("test_16_write_many_times");
 	   tfsManager.createFile(appId, userId, "/text"); 
-	   int localCrc = getCrc(resourcesPath+"10K"); 
+	   int localCrc = getCrc(resourcesPath+"10K.jpg"); 
 	   byte data[]=null;
-	   data=getByte(resourcesPath+"10K");
+	   data=getByte(resourcesPath+"10K.jpg");
 	   long len = 10*(1<<10);
 	   long offset=0;
 	   long dataOffset=0;
@@ -302,7 +302,7 @@ public class tfsManager_11_write extends tfsNameBaseCase
 	   System.out.println(Ret);
 	   Assert.assertTrue(Ret==0);
 	   tfsManager.fetchFile(appId, userId, resourcesPath+"temp", "/text");
-	   int TfsCrc = getCrc(resourcesPath+"10K");
+	   int TfsCrc = getCrc(resourcesPath+"10K.jpg");
 	   Assert.assertEquals(TfsCrc,localCrc);
 	   tfsManager.rmFile(appId, userId, "/text");
     }
@@ -311,7 +311,7 @@ public class tfsManager_11_write extends tfsNameBaseCase
 	{
 	   log.info("test_17_write_not_exist"); 
 	   byte data[]=null;
-	   data=getByte(resourcesPath+"10K");
+	   data=getByte(resourcesPath+"10K.jpg");
 	   long len = 10*(1<<10);
 	   long offset=0;
 	   long dataOffset=0;
@@ -324,9 +324,9 @@ public class tfsManager_11_write extends tfsNameBaseCase
 	{
 	   log.info("test_18_write_large");
 	   tfsManager.createFile(appId, userId, "/text"); 
-	   int localCrc = getCrc(resourcesPath+"10M"); 
+	   int localCrc = getCrc(resourcesPath+"10M.jpg"); 
 	   byte data[]=null;
-	   data=getByte(resourcesPath+"10M");
+	   data=getByte(resourcesPath+"10M.jpg");
 	   long len = 10*(1<<20);
 	   long offset=0;
 	   long dataOffset=0;
@@ -334,7 +334,7 @@ public class tfsManager_11_write extends tfsNameBaseCase
 	   Ret=tfsManager.write(appId, userId, "/text", offset,data, dataOffset, len);
 	   Assert.assertEquals(Ret,10*(1<<20));
 	   tfsManager.fetchFile(appId, userId, resourcesPath+"temp", "/text");
-	   int TfsCrc = getCrc(resourcesPath+"10M");
+	   int TfsCrc = getCrc(resourcesPath+"10M.jpg");
 	   Assert.assertEquals(TfsCrc,localCrc);
 	   tfsManager.rmFile(appId, userId, "/text");
     }
@@ -344,7 +344,7 @@ public class tfsManager_11_write extends tfsNameBaseCase
 	   log.info("test_19_write_many_times_parts");
 	   tfsManager.createFile(appId, userId, "/text"); 
        byte data[]=null;
-       data=getByte(resourcesPath+"10K");
+       data=getByte(resourcesPath+"10K.jpg");
 	   long len = 10*(1<<10);
 	   long offset=0;
 	   long dataOffset=0;
@@ -364,14 +364,14 @@ public class tfsManager_11_write extends tfsNameBaseCase
 	   Ret=tfsManager.write(appId, userId, "/text", offset,data, dataOffset, len);
 	   Assert.assertEquals(Ret,10*(1<<10));
 	   
-	   data=getByte(resourcesPath+"1b");
+	   data=getByte(resourcesPath+"1B.jpg");
 	   len = 1;
 	   offset=20*(1<<10);
 	   dataOffset=0;
 	   Ret=tfsManager.write(appId, userId, "/text", offset,data, dataOffset, len);
 	   Assert.assertEquals(Ret,1);
 	   
-	   data=getByte(resourcesPath+"1b");
+	   data=getByte(resourcesPath+"1B.jpg");
 	   len = 1;
 	   offset=20*(1<<10);
 	   dataOffset=0;
@@ -406,7 +406,7 @@ public class tfsManager_11_write extends tfsNameBaseCase
 		   Ret=tfsManager.write(appId, userId, "/text", offset,data, dataOffset, len);
 		   Assert.assertEquals(Ret,3*(1<<20));
 		   
-		   data=getByte(resourcesPath+"1b");
+		   data=getByte(resourcesPath+"1B.jpg");
 		   Assert.assertNotNull(data);
 		   len = 1;
 		   offset=6*(1<<20);
@@ -415,7 +415,7 @@ public class tfsManager_11_write extends tfsNameBaseCase
 		   System.out.println("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"+Ret);
 		   Assert.assertEquals(Ret,1);
 		   
-		   data=getByte(resourcesPath+"1b");
+		   data=getByte(resourcesPath+"1B.jpg");
 		   len = 1;
 		   offset=3*(1<<20);
 		   dataOffset=0;
@@ -430,7 +430,7 @@ public class tfsManager_11_write extends tfsNameBaseCase
 		   log.info("test_21_write_many_times_parts_com");
 		   tfsManager.createFile(appId, userId, "/text"); 
 	       byte data[]=null;
-	       data=getByte(resourcesPath+"10K");
+	       data=getByte(resourcesPath+"10K.jpg");
 		   long len = 10*(1<<10);
 		   long offset=0;
 		   long dataOffset=0;
@@ -453,14 +453,14 @@ public class tfsManager_11_write extends tfsNameBaseCase
 		   Ret=tfsManager.write(appId, userId, "/text", offset,data, dataOffset, len);
 		   Assert.assertEquals(Ret,3*(1<<20));
 		   
-		   data=getByte(resourcesPath+"10K");
+		   data=getByte(resourcesPath+"10K.jpg");
 		   len = 10*(1<<10);
 		   offset=10*(1<<10);
 		   dataOffset=0;
 		   Ret=tfsManager.write(appId, userId, "/text", offset,data, dataOffset, len);
 		   Assert.assertEquals(Ret,10*(1<<10));
 		   
-		   data=getByte(resourcesPath+"10K");
+		   data=getByte(resourcesPath+"10K.jpg");
 		   len = 10*(1<<10);
 		   offset=0;
 		   dataOffset=0;
