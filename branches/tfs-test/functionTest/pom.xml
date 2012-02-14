@@ -1,11 +1,11 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
-	<groupId>com.taobao.tfsTest</groupId>
-	<artifactId>tfsTest</artifactId>
-	<version>2.9-SNAPSHOT</version>
+	<groupId>com.taobao.tfsFunctionTest</groupId>
+	<artifactId>tfsFunctionTest</artifactId>
+	<version>1.0-SNAPSHOT</version>
 	<packaging>jar</packaging>
-	<name>tfsGaia</name>
+	<name>tfsFunctionTest</name>
 	<url>http://maven.apache.org</url>
 	<build>
 		<plugins>
@@ -23,8 +23,7 @@
 				<version>2.7</version>
 				<configuration>
 					<includes>
-						<include>**/Failover_ha_test.java</include>
-						<include>**/Function_ns_test.java</include>
+						<include>**/**.java</include>
 					</includes>
 				</configuration>
 			</plugin>
