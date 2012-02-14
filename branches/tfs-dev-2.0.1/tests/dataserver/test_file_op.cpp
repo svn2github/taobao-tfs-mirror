@@ -16,10 +16,10 @@
 #include <gtest/gtest.h>
 #include "file_op.h"
 
-using namespace tfs::dataserver;
+using namespace tfs::common;
 const std::string FILE_NAME = "file_operation.test";
 
-class FileOperationTest: public ::testing::Test 
+class FileOperationTest: public ::testing::Test
 {
   public:
     FileOperationTest()
@@ -35,7 +35,7 @@ class FileOperationTest: public ::testing::Test
         file_op = NULL;
       }
     }
-    virtual void SetUp() 
+    virtual void SetUp()
     {
     }
     virtual void TearDown()
@@ -46,10 +46,10 @@ class FileOperationTest: public ::testing::Test
 };
 
 TEST_F(FileOperationTest, testOpenappend)
-{  
+{
   char* buf ="wuhan";
   char* buf1 ="beijing";
-  
+
   FileOperation* file_op;
   file_op = new FileOperation(FILE_NAME, O_RDWR | O_LARGEFILE | O_CREAT | O_APPEND);
 
@@ -66,7 +66,7 @@ TEST_F(FileOperationTest, testOpenappend)
 
   EXPECT_EQ(file_op->pwrite_file(buf1, strlen(buf1) + 1, 20), 0);
   EXPECT_EQ(file_op->get_file_size(), static_cast<int64_t>(strlen(buf1) + 1));
-  
+
   delete file_op;
   file_op = NULL;
 }
@@ -75,13 +75,13 @@ TEST_F(FileOperationTest, testOpen)
 {
   FileOperation* file_op = NULL;
   file_op = new FileOperation(FILE_NAME, O_RDWR | O_LARGEFILE | O_CREAT);
-  int32_t fd = file_op->open_file(); 
+  int32_t fd = file_op->open_file();
   EXPECT_GE(fd,0);
   delete file_op;
   file_op = NULL;
 }
 
-TEST_F(FileOperationTest, testWrite) 
+TEST_F(FileOperationTest, testWrite)
 {
   char* buf ="hello";
   char* buf1 ="abc";
@@ -101,7 +101,7 @@ TEST_F(FileOperationTest, testWrite)
 
   EXPECT_EQ(file_op->write_file(buf1, strlen(buf1) + 1), 0);
   EXPECT_EQ(file_op->get_file_size(), static_cast<int64_t>(strlen(buf1) + 1));
- 
+
   delete file_op;
   file_op = NULL;
 }
@@ -110,7 +110,7 @@ TEST_F(FileOperationTest, testPwrite)
 {
   char* buf ="world";
   char* buf1 ="beijing";
-  
+
   FileOperation* file_op = NULL;
   file_op = new FileOperation(FILE_NAME, O_RDWR | O_LARGEFILE | O_CREAT);
 
@@ -127,25 +127,25 @@ TEST_F(FileOperationTest, testPwrite)
 
   EXPECT_EQ(file_op->pwrite_file(buf1, strlen(buf1) + 1, 0), 0);
   EXPECT_EQ(file_op->get_file_size(), static_cast<int64_t>(strlen(buf1) + 1));
-  
+
   delete file_op;
   file_op = NULL;
 }
 
-TEST_F(FileOperationTest, testSeek) 
+TEST_F(FileOperationTest, testSeek)
 {
   FileOperation* file_op = NULL;
   file_op = new FileOperation(FILE_NAME, O_RDWR | O_LARGEFILE | O_CREAT);
 
   EXPECT_EQ(file_op->seek_file(1), 1);
   EXPECT_EQ(file_op->seek_file(2), 2);
-  EXPECT_EQ(file_op->seek_file(0), 0);  
- 
+  EXPECT_EQ(file_op->seek_file(0), 0);
+
   delete file_op;
   file_op = NULL;
 }
 
-TEST_F(FileOperationTest, testRead) 
+TEST_F(FileOperationTest, testRead)
 {
   char buf[100];
   int32_t size = 0;
@@ -169,7 +169,7 @@ TEST_F(FileOperationTest, testRead)
   file_op = NULL;
 }
 
-TEST_F(FileOperationTest, testFlushfile) 
+TEST_F(FileOperationTest, testFlushfile)
 {
   FileOperation* file_op = NULL;
   file_op = new FileOperation(FILE_NAME, O_RDWR | O_LARGEFILE | O_CREAT);
@@ -178,7 +178,7 @@ TEST_F(FileOperationTest, testFlushfile)
   file_op = NULL;
 }
 
-TEST_F(FileOperationTest, testUnlink) 
+TEST_F(FileOperationTest, testUnlink)
 {
   FileOperation* file_op = NULL;
   file_op = new FileOperation(FILE_NAME, O_RDWR | O_LARGEFILE | O_CREAT);

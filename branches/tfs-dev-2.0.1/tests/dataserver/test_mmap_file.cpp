@@ -17,7 +17,7 @@
 #include "mmap_file.h"
 #include <tbsys.h>
 
-using namespace tfs::dataserver;
+using namespace tfs::common;
 const char* MMAP_FILE_NAME = "file_mmap.test";
 
 class MMapFileTest: public ::testing::Test
