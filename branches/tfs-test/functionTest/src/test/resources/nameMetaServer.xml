@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE beans PUBLIC "-//SPRING//DTD BEAN//EN" "http://www.springframework.org/dtd/spring-beans.dtd">
+<beans default-autowire="byName">
+  <bean id="nameMetaGrid" class="com.taobao.gaia.AppGrid">
+    <property name="name" value="nameMetaGrid"/>
+    <property name="clusterList">
+      <list>
+        <ref bean="rootServerCluster" />
+        <ref bean="metaServerCluster" />
+      </list>
+    </property>
+  </bean>
+  
+  <bean id="rootServerCluster" class="com.taobao.gaia.AppCluster">
+    <property name="name" value="rootServerCluster"/>
+    <property name="serverList">
+      <list>
+        <ref bean="rootServer1" />
+      </list>
+    </property>
+  </bean>
+
+  <bean id="metaServerCluster" class="com.taobao.gaia.AppCluster">
+    <property name="name" value="metaServerCluster"/>
+    <property name="serverList">
+      <list>
+        <ref bean="metaServer1" />
+        <ref bean="metaServer2" />
+        <ref bean="metaServer3" />
+      </list>
+    </property>
+  </bean>
+  
+  <bean id="rootServer1" class="com.taobao.gaia.AppServer">
+          <property name="ip" value="10.232.36.203"/>
+          <property name="port" value="3500"/>
+          <property name="confname" value="/home/admin/workspace/tfs_bin/conf/rs.conf" />
+          <property name="logs" value="/home/admin/workspace/tfs_bin/logs/rootserver.log" />
+          <property name="dir" value="/home/admin/workspace/tfs_bin" />
+          <property name="binPath" value="/home/admin/workspace/tfs_bin/bin" />
+          <property name="vip" value="10.232.36.203" />
+          <property name="startcmd" value="/home/admin/workspace/tfs_bin/bin/rootserver -f /home/admin/workspace/tfs_bin/conf/rs.conf -d" />
+          <property name="stopcmd" value="" />
+          <property name="cleancmd">
+            <list>
+            <value>rm -f /home/admin/workspace/tfs_bin/rootserver</value>
+            </list>
+          </property>
+  </bean>
+  <bean id="metaServer1" class="com.taobao.gaia.AppServer">
+          <property name="ip" value="10.232.36.204"/>
+          <property name="port" value="12100"/>
+          <property name="confname" value="/home/admin/workspace/tfs_bin/conf/meta.conf" />
+          <property name="logs" value="/home/admin/workspace/tfs_bin/logs/metaserver.log" />
+          <property name="dir" value="/home/admin/workspace/tfs_bin" />
+          <property name="binPath" value="/home/admin/workspace/tfs_bin/bin" />
+          <property name="startcmd" value="/home/admin/workspace/tfs_bin/bin/metaserver -f /home/admin/workspace/tfs_bin/conf/meta.conf -d" />
+          <property name="stopcmd" value="" />
+          <property name="cleancmd">
+            <list>
+            <value>rm -f /home/admin/workspace/tfs_bin/logs/metaserver.log*</value>
+            </list>
+          </property>
+  </bean>
+  <bean id="metaServer2" class="com.taobao.gaia.AppServer">
+          <property name="ip" value="10.232.36.205"/>
+          <property name="port" value="12100"/>
+          <property name="confname" value="/home/admin/workspace/tfs_bin/conf/meta.conf" />
+          <property name="logs" value="/home/admin/workspace/tfs_bin/logs/metaserver.log" />
+          <property name="dir" value="/home/admin/workspace/tfs_bin" />
+          <property name="binPath" value="/home/admin/workspace/tfs_bin/bin" />
+          <property name="startcmd" value="/home/admin/workspace/tfs_bin/bin/metaserver -f /home/admin/workspace/tfs_bin/conf/meta.conf -d" />
+          <property name="stopcmd" value="" />
+          <property name="cleancmd">
+            <list>
+            <value>rm -f /home/admin/workspace/tfs_bin/logs/metaserver.log*</value>
+            </list>
+          </property>
+  </bean>
+  <bean id="metaServer3" class="com.taobao.gaia.AppServer">
+          <property name="ip" value="10.232.36.206"/>
+          <property name="port" value="12100"/>
+          <property name="confname" value="/home/admin/workspace/tfs_bin/conf/meta.conf" />
+          <property name="logs" value="/home/admin/workspace/tfs_bin/logs/metaserver.log" />
+          <property name="dir" value="/home/admin/workspace/tfs_bin" />
+          <property name="binPath" value="/home/admin/workspace/tfs_bin/bin" />
+          <property name="startcmd" value="/home/admin/workspace/tfs_bin/bin/metaserver -f /home/admin/workspace/tfs_bin/conf/meta.conf -d" />
+          <property name="stopcmd" value="" />
+          <property name="cleancmd">
+            <list>
+            <value>rm -f /home/admin/workspace/tfs_bin/logs/metaserver.log*</value>
+            </list>
+          </property>
+  </bean>
+</beans>

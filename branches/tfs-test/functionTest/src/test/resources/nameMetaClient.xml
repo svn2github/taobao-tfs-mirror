@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE beans PUBLIC "-//SPRING//DTD BEAN//EN" "http://www.springframework.org/dtd/spring-beans.dtd">
+<beans default-autowire="byName">
+	
+    <bean id="nameMetaClient" class="com.taobao.gaia.AppServer">
+        <property name="ip" value="10.232.36.205"/>
+       	<property name="pid" value="-1"/>
+       	<property name="confname" value="/home/admin/workspace/mingyan.zc/tfstest_new/test_tfs.conf" />
+       	<property name="dir" value="/home/admin/workspace/nameMetaOper" />
+       	<property name="logs" value="/home/admin/workspace/nameMetaOper/log." />
+        <property name="isBackground" value="true" />
+        <property name="startcmd">
+        <value>/home/admin/workspace/nameMetaOper/meta_oper.sh start_oper</value>
+        </property>
+        <property name="stopcmd" value="/home/admin/workspace/nameMetaOper/meta_oper.sh stop_oper" />
+        <property name="cleancmd">
+            <list>
+                <value>rm -rf *.log</value>
+            </list>
+        </property>
+    </bean>
+
+</beans>
