@@ -20,7 +20,7 @@ test: check
 TESTS=
 check_PROGRAMS=
 
-noinst_PROGRAMS=test_service test_meta_info test_cache_info test_cache_helper  test_lru meta_bucket_test meta_bucket_manager_test
+noinst_PROGRAMS=test_service test_meta_info test_cache_info test_cache_helper  meta_bucket_test meta_bucket_manager_test
 
 TESTS+=test_meta_info
 check_PROGRAMS+=test_meta_info
@@ -34,9 +34,9 @@ TESTS+=test_cache_helper
 check_PROGRAMS+=test_cache_helper
 test_cache_helper_SOURCES= test_cache_helper.cpp 
 
-TESTS+=test_lru
-check_PROGRAMS+=test_lru
-test_lru_SOURCES=test_lru.cpp
+#TESTS+=test_lru
+#check_PROGRAMS+=test_lru
+#test_lru_SOURCES=test_lru.cpp
 
 TESTS+=meta_bucket_test 
 check_PROGRAMS+=meta_bucket_test
