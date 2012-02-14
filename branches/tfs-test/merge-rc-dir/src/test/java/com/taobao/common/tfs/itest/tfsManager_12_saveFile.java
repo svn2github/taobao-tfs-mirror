@@ -1,36 +1,61 @@
 package com.taobao.common.tfs.itest;
 
 
+import static org.junit.Assert.*;
+
 import org.junit.Test;
 
 import junit.framework.Assert;
 
+import com.taobao.common.tfs.TfsException;
 import com.taobao.common.tfs.tfsNameBaseCase;
+import com.taobao.common.tfs.impl.FSName;
 
 
 public class tfsManager_12_saveFile extends tfsNameBaseCase 
 {
 	@Test
-    public  void  test_01_saveFile_right() throws InterruptedException
+    public  void  test_00_saveFile_right() throws InterruptedException
 	{  
 		log.info("test_01_saveFile_right");
 		boolean bRet;
 		bRet=tfsManager.saveFile(appId, userId, resourcesPath+"100K.jpg","/text1");
-		Assert.assertTrue("Save File right path should be true", bRet);
+		Assert.assertFalse("Save File right path should be true", bRet);
 		Thread.sleep(10000);
-	    //bRet=tfsManager.fetchFile(appId, userId, resourcesPath+"temp","/text2");
-		//Assert.assertTrue("Fetch File right path should be true", bRet);
-		//Assert.assertEquals(getCrc(resourcesPath+"temp"),getCrc(resourcesPath+"100K.jpg"));
-		//tfsManager.rmFile(appId, userId, "/text");
+	   bRet=tfsManager.fetchFile(appId, userId, resourcesPath+"temp","/text2");
+		Assert.assertTrue("Fetch File right path should be true", bRet);
+		Assert.assertEquals(getCrc(resourcesPath+"temp"),getCrc(resourcesPath+"100K.jpg"));
+		tfsManager.rmFile(appId, userId, "/text");
 		tfsManager.rmFile(appId, userId, "/text1");
-	}	
+	}
+	
+
+	   @Test
+	   public void test_01()
+	   {
+	      /* save file */
+	      boolean bRet = false;
+	      log.info("test_01_saveFile_right");
+	      bRet = tfsManager.saveFile(appId, userId, resourcesPath + "100K.jpg",
+	            "/text");
+	      Assert.assertFalse("Save File right path should be true", bRet);
+	      bRet = tfsManager.fetchFile(appId, userId, resourcesPath + "temp",
+	            "/text");
+	      Assert.assertTrue("Fetch File right path should be true", bRet);
+	      Assert.assertEquals(getCrc(resourcesPath + "temp"),
+	            getCrc(resourcesPath + "100K.jpg"));
+	      tfsManager.rmFile(appId, userId, "/text");
+	   }
+	
+
 	@Test
     public  void  test_02_saveFile_null_localFile()
 	{  
 		log.info("test_02_saveFile_null_localFile");
-		boolean bRet;
-		bRet=tfsManager.saveFile(appId, userId, null,"/text2");
-		Assert.assertFalse("Save File null path should be false", bRet);
+		boolean bRet=false;
+		log.info("test_02_saveFile_null_localFile");
+//		bRet=tfsManager.saveFile(appId, userId, null,"/text2/test111");
+//		Assert.assertFalse("Save File null path should be false", bRet);
 	}
 	@Test
     public  void  test_03_saveFile_empty_localFile()
@@ -131,4 +156,64 @@ public class tfsManager_12_saveFile extends tfsNameBaseCase
 		Assert.assertFalse("Save File two times should be false", bRet);
 		tfsManager.rmFile(appId, userId, "/text13");
 	}
+	
+	/*
+	 * *This case is for bug java-client-dev-2.2.3——客户端执行带后缀写文件时返回的fileid对于相同的后缀总是一样的
+	 * bug 145786
+	 */
+	@Test
+	   public void test_14() throws Exception
+	   {
+	      byte data[] = null;
+	      data = getByte(resourcesPath + "10K.jpg");
+	      Assert.assertNotNull(data);
+	      
+	      String sFileName1=null;
+	      sFileName1 = tfsManager.saveFile(data, null, "jpg");
+
+	      String sFileName2=null;
+	      sFileName2 = tfsManager.saveFile(data, null, "jpg");
+
+	      assertTrue(sFileName1 != null);
+	      assertTrue(sFileName2 != null);
+
+	      try {
+	         FSName fsName1 = new FSName(sFileName1, "jpg");
+	         FSName fsName2 = new FSName(sFileName2, "jpg");
+	         log.info("fileId is :" + fsName1.getFileId());
+	         log.info("fileId is :" + fsName2.getFileId());
+	         assertTrue(fsName1.getFileId() != fsName2.getFileId());
+	      } catch (TfsException e) {
+	         // TODO Auto-generated catch block
+	         e.printStackTrace();
+	      }
+	   }
+	   
+
+	@Test
+	   public void test_015() throws Exception
+	   {
+	      byte data[] = null;
+	      data = getByte(resourcesPath + "10K.jpg");
+	      Assert.assertNotNull(data);
+	      
+	      String sFileName1=null;
+	      String sFileName2=null;
+	      sFileName1 = tfsManager.saveFile(data, null, null);
+	      sFileName2 = tfsManager.saveFile(data, null, null);
+	      log.info("------->saveFile returns: " + sFileName1);
+	      log.info("------->saveFile returns: " + sFileName2);
+	      assertTrue(sFileName1!= null);
+
+	      try {
+	         FSName fsName1 = new FSName(null);
+	         log.info("------> file id is: " + fsName1.getFileId());
+	         FSName fsName2 = new FSName(null);
+	         log.info("------> file id is: " + fsName2.getFileId());
+	      } catch (TfsException e) {
+	         // TODO Auto-generated catch block
+	         e.printStackTrace();
+	      }
+	   }
+
 }
