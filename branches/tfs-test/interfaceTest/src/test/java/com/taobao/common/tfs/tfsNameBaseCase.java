@@ -139,9 +139,17 @@ public class tfsNameBaseCase {
 		if (createFile(localFile, 10 * (1 << 20))) {
 			testFileList.add(localFile);
 		}
-
+		clearTempFiles();
+		
 	}
 
+	public static void clearTempFiles(){
+		tfsManager.rmFile(appId, userId, "/text");
+		tfsManager.rmFile(appId, userId, "/text1");
+		tfsManager.rmFile(appId, userId, "/text2");
+		tfsManager.rmFile(appId, userId, "/text3");
+	}
+	
 	@AfterClass
 	public static void AfterTearDown() {
 

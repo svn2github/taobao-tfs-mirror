@@ -23,7 +23,7 @@ public class RcTfsManager_01_saveFile extends tfsNameBaseCase
 	{
 		log.info( "test_02_saveFile_with_empty_suffix" );
 		String Ret=null;
-		Ret=tfsManager.saveFile( resourcesPath+"100K.jpg",null,"",false);
+		Ret=tfsManager.saveFile( resourcesPath+"10K.jpg",null,"",false);
 		Assert.assertNotNull(Ret);
 		System.out.println("The tfs file name is "+ Ret);
 	}
