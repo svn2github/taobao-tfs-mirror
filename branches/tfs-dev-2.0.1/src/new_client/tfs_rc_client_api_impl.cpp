@@ -1665,6 +1665,144 @@ namespace tfs
         return read_count;
       }
 
+			int64_t RcClientImpl::save_file(const int64_t app_id, const int64_t uid,
+					const char* local_file, const char* tfs_file_name)
+			{
+				// tfs_file_name will be checked in sub interface
+				int64_t saved_size = -1;
+				int ret = check_init_stat();
+				if(TFS_SUCCESS != ret)
+				{
+					TBSYS_LOG(ERROR, "not initialized, ret: %d", ret);
+				}
+				else
+				{
+					if (app_id_ != app_id)   // check app_id is matched
+					{
+						saved_size = EXIT_APPID_PERMISSION_DENY;
+						TBSYS_LOG(ERROR, "can't not write other app's data");
+					}
+					else
+					{
+						if (NULL == local_file || NULL == tfs_file_name || '/' != tfs_file_name[0])
+						{
+							TBSYS_LOG(ERROR, "invalid parameter");
+						}
+						else
+						{
+							// parse parent dir and create it
+							char parent_dir[MAX_PATH_LENGTH];
+							if (TFS_SUCCESS != (ret = Func::get_parent_dir(tfs_file_name, parent_dir, MAX_PATH_LENGTH)))
+							{
+								TBSYS_LOG(ERROR, "get parent dir error: %s, ret: %d", tfs_file_name, ret);
+							}
+							else if (TFS_SUCCESS != (ret = create_dir_with_parents(uid, parent_dir)))
+							{
+								TBSYS_LOG(ERROR, "create dir with parents error: %s, ret: %d", parent_dir, ret);
+							}
+							else
+							{
+								int ns_get_index = 0;
+								string ns_addr;
+								while (saved_size < 0)
+								{
+									ns_addr = get_ns_addr(NULL, RcClient::WRITE, ns_get_index);
+									if(ns_addr.empty())
+									{
+										break;
+									}
+									saved_size = name_meta_client_->save_file(ns_addr.c_str(),
+											app_id, uid, local_file, tfs_file_name);
+								}
+							}
+						}
+					}
+				}
+				return saved_size;
+			}
+
+			int64_t RcClientImpl::save_buf(const int64_t app_id, const int64_t uid,
+					const char* buf, const int64_t buf_len, const char* tfs_file_name)
+			{
+				int ret = TFS_SUCCESS;
+				int64_t saved_size = -1;
+
+				ret = check_init_stat();
+				if (TFS_SUCCESS != ret)
+				{
+					TBSYS_LOG(ERROR, "not initialized, ret: %d", ret);
+				}
+				else
+				{
+					if (NULL == tfs_file_name || '/' != tfs_file_name[0])
+					{
+						TBSYS_LOG(ERROR, "invalid parameter");
+					}
+					else
+					{
+						// parse parent dir and create it
+						char parent_dir[MAX_PATH_LENGTH];
+						if (TFS_SUCCESS != (ret = Func::get_parent_dir(tfs_file_name, parent_dir, MAX_PATH_LENGTH)))
+						{
+							TBSYS_LOG(ERROR, "get parent dir error: %s, ret: %d", tfs_file_name, ret);
+						}
+						else if (TFS_SUCCESS != (ret = create_dir_with_parents(uid, parent_dir)) ||
+								TFS_SUCCESS != (ret = create_file(uid, tfs_file_name)))
+						{
+							TBSYS_LOG(ERROR, "create dir with parents error: %s, ret: %d", parent_dir, ret);
+						}
+						else
+						{
+							int ns_get_index = 0;
+							string ns_addr;
+							while (saved_size < 0)
+							{
+								ns_addr = get_ns_addr(NULL, RcClient::WRITE, ns_get_index);
+								if(ns_addr.empty())
+								{
+									break;
+								}
+								saved_size = name_meta_client_->write(ns_addr.c_str(),
+												app_id, uid, tfs_file_name, buf, 0, buf_len);
+							}
+						}
+					}
+				}
+				return saved_size;
+			}
+
+			int64_t RcClientImpl::fetch_file(const int64_t app_id, const int64_t uid,
+					const char* local_file, const char* tfs_file_name)
+			{
+				int64_t fetched_size = -1;
+				int ret = TFS_SUCCESS;
+				if (NULL == local_file || NULL == tfs_file_name
+						|| '/' != tfs_file_name[0])
+				{
+					TBSYS_LOG(ERROR, "invalid parameter");
+				}
+				else
+				{
+					ret = check_init_stat();
+					if (TFS_SUCCESS == ret)
+					{
+						int ns_get_index = 0;
+						string ns_addr;
+						while (fetched_size < 0)
+						{
+							ns_addr = get_ns_addr(NULL, RcClient::WRITE, ns_get_index);
+							if(ns_addr.empty())
+							{
+								break;
+							}
+							fetched_size = name_meta_client_->fetch_file(ns_addr.c_str(),
+									app_id, uid, local_file, tfs_file_name);
+						}
+					}
+				}
+				return fetched_size;
+			}
+
       //int64_t RcClientImpl::save_file(const int64_t app_id, const int64_t uid,
       //    const char* local_file, const char* file_path)
       //{
@@ -1715,6 +1853,8 @@ namespace tfs
       //  }
       //  return ret;
       //}
+
+
 
       TfsRetType RcClientImpl::remove_fdinfo(const int fd, fdInfo& fdinfo)
       {

@@ -52,6 +52,17 @@ namespace tfs
       static int make_directory(char* path);
       static int get_base_name(char* path, char* dirpath);
 
+			/**
+			 * @brief get parent dir by file_path
+			 *
+			 * @param file_path: file path
+			 * @param dir_path: result parent dir
+			 * @param dir_buf_len: dir path buffer length
+			 *
+			 * @return
+			 */
+			static int get_parent_dir(const char* file_path, char* dir_path, const int32_t dir_buf_len);
+
       static uint32_t get_local_addr(const char* dev_name = NULL);
       static bool is_local_addr(const uint32_t ip);
       static uint32_t get_addr(const char* ip);

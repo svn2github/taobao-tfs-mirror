@@ -117,10 +117,14 @@ namespace tfs
         int64_t pwrite(const int fd, const void* buf, const int64_t count, const int64_t offset);
         //use the same close func as raw tfs
 
-        //int64_t save_file(const int64_t app_id, const int64_t uid,
-        //    const char* local_file, const char* file_path);
-        //int fetch_file(const int64_t app_id, const int64_t uid,
-        //    const char* local_file, const char* file_path);
+				int64_t save_file(const int64_t app_id, const int64_t uid,
+						const char* local_file, const char* tfs_file_name);
+				
+				int64_t save_buf(const int64_t app_id, const int64_t uid,
+					const char* buf, const int64_t buf_len, const char* tfs_file_name);
+				
+				int64_t fetch_file(const int64_t app_id, const int64_t uid,
+						const char* local_file, const char* tfs_file_name);
 
       private:
         DISALLOW_COPY_AND_ASSIGN(RcClientImpl);

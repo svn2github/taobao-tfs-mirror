@@ -112,7 +112,48 @@ namespace tfs
 
         //close use the same close func as raw tfs
 
-      private:
+
+				/**
+				 * @brief saved local_file to tfs, named tfs_file_name
+				 *
+				 * @param app_id: app id
+				 * @param uid: user id
+				 * @param local_file: local file name
+				 * @param tfs_file_name: tfs file name
+				 *
+				 * @return data length saved
+				 */
+				int64_t save_file(const int64_t app_id, const int64_t uid,
+						const char* local_file, const char* tfs_file_name);
+
+				/**
+				 * @brief fetch tfs file nemed tfs_file_name, stored to local_file
+				 *
+				 * @param app_id: app id
+				 * @param uid: user id
+				 * @param local_file: local file name
+				 * @param tfs_file_name: tfs file name
+				 *
+				 * @return data length fetched
+				 */
+				int64_t fetch_file(const int64_t app_id, const int64_t uid,
+						const char* local_file, const char* tfs_file_name);
+
+				/**
+				 * @brief save buf as tfs file named tfs_file_name
+				 *
+				 * @param app_id: app id
+				 * @param uid: user id
+				 * @param buf: buf pointer
+				 * @param buf_len: buf length
+				 * @param tfs_file_name: tfs file name
+				 *
+				 * @return data length saved
+				 */
+				int64_t save_buf(const int64_t app_id, const int64_t uid,
+						const char* buf, const int32_t buf_len, const char* tfs_file_name);
+
+			private:
         RcClient(const RcClient&);
         RcClientImpl* impl_;
     };
