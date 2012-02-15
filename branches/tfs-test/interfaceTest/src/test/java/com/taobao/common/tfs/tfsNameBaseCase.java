@@ -114,7 +114,7 @@ public class tfsNameBaseCase {
 
 		// 100k file
 		localFile = "100K.jpg";
-		if (createFile(localFile, 10 * (1 << 10))) {
+		if (createFile(localFile, 100 * (1 << 10))) {
 			testFileList.add(localFile);
 		}
 
@@ -130,11 +130,9 @@ public class tfsNameBaseCase {
 		}
 		// 5M file
 		localFile = "5M.jpg";
-		if (createFile(localFile, 3 * (1 << 20))) {
+		if (createFile(localFile, 5 * (1 << 20))) {
 			testFileList.add(localFile);
 		}
-
-		
 		
 		// 10M file
 		localFile = "10M.jpg";
