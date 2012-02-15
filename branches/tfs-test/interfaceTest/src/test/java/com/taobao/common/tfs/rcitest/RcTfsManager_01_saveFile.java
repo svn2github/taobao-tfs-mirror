@@ -14,12 +14,10 @@ public class RcTfsManager_01_saveFile extends tfsNameBaseCase
 	{
 		log.info( "test_01_saveFile_with_right_suffix" );
 		String Ret=null;
-		Ret=tfsManager.saveFile( resourcesPath+"100K.jpg",null,null,false);
+		Ret=tfsManager.saveFile( resourcesPath+"10K.jpg",null,null,false);
 		Assert.assertNotNull(Ret);
-		System.out.println("The tfs file name is "+ Ret);
-		sleep(10);
 	}
-	
+
 	@Test
     public  void  test_02_saveFile_with_empty_suffix()
 	{
@@ -67,9 +65,8 @@ public class RcTfsManager_01_saveFile extends tfsNameBaseCase
 	{
 		log.info( "test_05_saveFile_with_suffix" );
 		String Ret=null;
-		Ret=tfsManager.saveFile( resourcesPath+"100K.jpg",null,".jpg",false);
+		Ret=tfsManager.saveFile( resourcesPath+"100K.jpg", null, ".jpg",false);
 		Assert.assertNotNull(Ret);
-		System.out.println("The tfs file name is "+ Ret);
 	}
 	
 	@Test
@@ -160,8 +157,9 @@ public class RcTfsManager_01_saveFile extends tfsNameBaseCase
 	{
 		log.info( "test_13_saveFile_with_right_suffix_simpleName" );
 		String Ret=null;
-		Ret=tfsManager.saveFile( resourcesPath+"100K.jpg",null,null,true);
+		Ret=tfsManager.saveFile( resourcesPath+"10K.jpg",null,null,true);
 		Assert.assertNotNull(Ret);
+		tfsManager.rmDir(appId, userId, Ret);
 		System.out.println("The tfs file name is "+ Ret);
 	}
 	
