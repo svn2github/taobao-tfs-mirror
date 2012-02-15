@@ -21,86 +21,75 @@ import org.springframework.context.support.ClassPathXmlApplicationContext;
 import com.taobao.common.tfs.TfsManager;
 import com.taobao.common.tfs.DefaultTfsManager;
 
-public class tfsNameBaseCase
-{
-	public static DefaultTfsManager tfsManager=null ;
-	public static String resourcesPath="";
-    public static final Log log = LogFactory.getLog(tfsNameBaseCase.class);
-    public static long appId;
-    public static long userId=8;
-    public static String key="test_key";
-    
+public class tfsNameBaseCase {
+	public static DefaultTfsManager tfsManager = null;
+	public static String resourcesPath = "";
+	public static final Log log = LogFactory.getLog(tfsNameBaseCase.class);
+	public static long appId;
+	public static long userId = 8;
+	public static String key = "test_key";
 
-    static 
-	{
-        ClassPathXmlApplicationContext appContext = new ClassPathXmlApplicationContext(new String[] { "tfs.xml" });
-        tfsManager = (DefaultTfsManager) appContext.getBean("tfsManager");
-        appId = tfsManager.getAppId();
-    }
-    
-    public void deleteDir(String s,int n,TfsManager tfsManager)
-    {
-    	if(n==0)
-    		tfsManager.rmDir(appId,userId,s);
-    	else
-        {
-    		s="/text"+s;
-    		n=n-1;
-    		deleteDir(s,n,tfsManager);
-    		tfsManager.rmDir(appId,userId,s);
-    	}  
-    }
-    
-    protected int getCrc(OutputStream opstream) 
-	{
-        try 
-		{
-        	String str = opstream.toString();        
-            byte [] data = str.getBytes();
-            CRC32 crc = new CRC32();
-            crc.reset();
-            crc.update(data);
-            System.out.println(crc.getValue());
-            return (int)crc.getValue();
-        } 
-		catch (Exception e) 
-		{
-            e.printStackTrace();
-        }
-        return 0;
-    }
-    protected int getCrc(String fileName) 
-	{
-        try 
-		{
-            FileInputStream input = new FileInputStream(fileName);        
-            int readLength;
-            byte[] data = new byte[102400];
-            CRC32 crc = new CRC32();
-            crc.reset();
-            while ((readLength = input.read(data, 0, 102400)) > 0) 
-			{
-                crc.update(data, 0, readLength);
-            }
-            input.close();
-            System.out.println(" file name crc " + fileName + " c " + crc.getValue());
-            
-            return (int)crc.getValue();
-        } 
-		catch (Exception e) 
-		{
-            e.printStackTrace();
-        }
-        return 0;
-    }  
-    protected byte[]  getByte(String fileName) throws IOException
-    {
-    	   InputStream in = new FileInputStream(fileName);
-           byte[] data= new byte[in.available()];
-           in.read(data);
-           return data;
-    }
-    
+	static {
+		ClassPathXmlApplicationContext appContext = new ClassPathXmlApplicationContext(
+				new String[] { "tfs.xml" });
+		tfsManager = (DefaultTfsManager) appContext.getBean("tfsManager");
+		appId = tfsManager.getAppId();
+	}
+
+	public void deleteDir(String s, int n, TfsManager tfsManager) {
+		if (n == 0)
+			tfsManager.rmDir(appId, userId, s);
+		else {
+			s = "/text" + s;
+			n = n - 1;
+			deleteDir(s, n, tfsManager);
+			tfsManager.rmDir(appId, userId, s);
+		}
+	}
+
+	protected int getCrc(OutputStream opstream) {
+		try {
+			String str = opstream.toString();
+			byte[] data = str.getBytes();
+			CRC32 crc = new CRC32();
+			crc.reset();
+			crc.update(data);
+			System.out.println(crc.getValue());
+			return (int) crc.getValue();
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		return 0;
+	}
+
+	protected int getCrc(String fileName) {
+		try {
+			FileInputStream input = new FileInputStream(fileName);
+			int readLength;
+			byte[] data = new byte[102400];
+			CRC32 crc = new CRC32();
+			crc.reset();
+			while ((readLength = input.read(data, 0, 102400)) > 0) {
+				crc.update(data, 0, readLength);
+			}
+			input.close();
+			System.out.println(" file name crc " + fileName + " c "
+					+ crc.getValue());
+
+			return (int) crc.getValue();
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		return 0;
+	}
+
+	protected byte[] getByte(String fileName) throws IOException {
+		InputStream in = new FileInputStream(fileName);
+		byte[] data = new byte[in.available()];
+		in.read(data);
+		return data;
+	}
+
 	public static ArrayList<String> testFileList = new ArrayList<String>();
 
 	@BeforeClass
@@ -119,7 +108,13 @@ public class tfsNameBaseCase
 		}
 		// 10k file
 		localFile = "10K.jpg";
-		if (createFile(localFile, 10 * (1 << 10)) ) {
+		if (createFile(localFile, 10 * (1 << 10))) {
+			testFileList.add(localFile);
+		}
+
+		// 100k file
+		localFile = "100K.jpg";
+		if (createFile(localFile, 10 * (1 << 10))) {
 			testFileList.add(localFile);
 		}
 
@@ -133,13 +128,20 @@ public class tfsNameBaseCase
 		if (createFile(localFile, 3 * (1 << 20))) {
 			testFileList.add(localFile);
 		}
+		// 5M file
+		localFile = "5M.jpg";
+		if (createFile(localFile, 3 * (1 << 20))) {
+			testFileList.add(localFile);
+		}
 
+		
+		
 		// 10M file
 		localFile = "10M.jpg";
 		if (createFile(localFile, 10 * (1 << 20))) {
 			testFileList.add(localFile);
 		}
-		
+
 	}
 
 	@AfterClass

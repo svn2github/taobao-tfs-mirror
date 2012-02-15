@@ -18,7 +18,7 @@ public class RcTfsManager_13_unlinkFile extends tfsNameBaseCase
 	{
 		log.info( "test_01_saveFile_then_unlinkFile" );
 		String Ret=null;
-		Ret=tfsManager.saveFile( resourcesPath+"100k.jpg",null,null,false);
+		Ret=tfsManager.saveFile( resourcesPath+"100K.jpg",null,null,false);
 		Assert.assertNotNull(Ret);
 		System.out.println("The tfs file name is "+ Ret);
 		
@@ -32,7 +32,7 @@ public class RcTfsManager_13_unlinkFile extends tfsNameBaseCase
 	{
 		log.info( "test_02_saveFile_simpleName_then_unlinkFile" );
 		String Ret=null;
-		Ret=tfsManager.saveFile( resourcesPath+"100k.jpg",null,null,true);
+		Ret=tfsManager.saveFile( resourcesPath+"100K.jpg",null,null,true);
 		Assert.assertNotNull(Ret);
 		System.out.println("The tfs file name is "+ Ret);
 		
@@ -47,7 +47,7 @@ public class RcTfsManager_13_unlinkFile extends tfsNameBaseCase
 		log.info( "test_03_saveFile_byte_then_unlinkFile" );
 		String Ret=null;
 		byte data[]=null;
-		data=getByte(resourcesPath+"100k.jpg");
+		data=getByte(resourcesPath+"100K.jpg");
 		Ret=tfsManager.saveFile(null,null,data,0,100*(1<<10),false);
 		Assert.assertNotNull(Ret);
 		System.out.println("The tfs file name is "+ Ret);
@@ -63,7 +63,7 @@ public class RcTfsManager_13_unlinkFile extends tfsNameBaseCase
 		log.info( "test_04_saveFile_byte_simpleName_then_unlinkFile" );
 		String Ret=null;
 		byte data[]=null;
-		data=getByte(resourcesPath+"100k.jpg");
+		data=getByte(resourcesPath+"100K.jpg");
 		Ret=tfsManager.saveFile(null,null,data,0,100*(1<<10),true);
 		Assert.assertNotNull(Ret);
 		System.out.println("The tfs file name is "+ Ret);
@@ -144,7 +144,7 @@ public class RcTfsManager_13_unlinkFile extends tfsNameBaseCase
 		log.info( "test_10_openReadFile_then_unlinkFile" );
 	
 		String Ret=null;
-		Ret=tfsManager.saveFile( resourcesPath+"100k.jpg",null,null,false);
+		Ret=tfsManager.saveFile( resourcesPath+"100K.jpg",null,null,false);
 		Assert.assertNotNull(Ret);
 		System.out.println("The tfs file name is "+ Ret);
 		
@@ -188,7 +188,7 @@ public class RcTfsManager_13_unlinkFile extends tfsNameBaseCase
 	{
 		log.info( "test_12_saveFile_then_unlinkFile_wrong_suffix" );
 		String Ret=null;
-		Ret=tfsManager.saveFile( resourcesPath+"100k.jpg",null,null,false);
+		Ret=tfsManager.saveFile( resourcesPath+"100K.jpg",null,null,false);
 		Assert.assertNotNull(Ret);
 		System.out.println("The tfs file name is "+ Ret);
 		
@@ -202,7 +202,7 @@ public class RcTfsManager_13_unlinkFile extends tfsNameBaseCase
 	{
 		log.info( "test_13_saveFile_then_unlinkFile_empty_suffix" );
 		String Ret=null;
-		Ret=tfsManager.saveFile( resourcesPath+"100k.jpg",null,null,false);
+		Ret=tfsManager.saveFile( resourcesPath+"100K.jpg",null,null,false);
 		Assert.assertNotNull(Ret);
 		System.out.println("The tfs file name is "+ Ret);
 		
@@ -216,7 +216,7 @@ public class RcTfsManager_13_unlinkFile extends tfsNameBaseCase
 	{
 		log.info( "test_14_saveFile_then_unlinkFile_double" );
 		String Ret=null;
-		Ret=tfsManager.saveFile( resourcesPath+"100k.jpg",null,null,false);
+		Ret=tfsManager.saveFile( resourcesPath+"100K.jpg",null,null,false);
 		Assert.assertNotNull(Ret);
 		System.out.println("The tfs file name is "+ Ret);
 		
@@ -233,7 +233,7 @@ public class RcTfsManager_13_unlinkFile extends tfsNameBaseCase
 	{
 		log.info( "test_15_saveFile_then_linkFile" );
 		String Ret=null;
-		Ret=tfsManager.saveFile( resourcesPath+"100k.jpg",null,null,false);
+		Ret=tfsManager.saveFile( resourcesPath+"100K.jpg",null,null,false);
 		Assert.assertNotNull(Ret);
 		System.out.println("The tfs file name is "+ Ret);
 		
@@ -249,7 +249,7 @@ public class RcTfsManager_13_unlinkFile extends tfsNameBaseCase
 	{
 		log.info( "test_16_saveFile_then_unlinkFile_linkFile" );
 		String Ret=null;
-		Ret=tfsManager.saveFile( resourcesPath+"100k.jpg",null,null,false);
+		Ret=tfsManager.saveFile( resourcesPath+"100K.jpg",null,null,false);
 		Assert.assertNotNull(Ret);
 		System.out.println("The tfs file name is "+ Ret);
 		
@@ -266,7 +266,7 @@ public class RcTfsManager_13_unlinkFile extends tfsNameBaseCase
 	{
 		log.info( "test_17_saveFile_then_unlinkFile_wrong_suffix" );
 		String Ret=null;
-		Ret=tfsManager.saveFile( resourcesPath+"100k.jpg",null,null,false);
+		Ret=tfsManager.saveFile( resourcesPath+"100K.jpg",null,null,false);
 		Assert.assertNotNull(Ret);
 		System.out.println("The tfs file name is "+ Ret);
 		
@@ -280,7 +280,7 @@ public class RcTfsManager_13_unlinkFile extends tfsNameBaseCase
 	{
 		log.info( "test_18_saveFile_with_suffix_then_unlinkFile_with_suffix" );
 		String Ret=null;
-		Ret=tfsManager.saveFile( resourcesPath+"100k.jpg",null,".jpg",false);
+		Ret=tfsManager.saveFile( resourcesPath+"100K.jpg",null,".jpg",false);
 		Assert.assertNotNull(Ret);
 		System.out.println("The tfs file name is "+ Ret);
 		

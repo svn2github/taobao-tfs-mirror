@@ -15,7 +15,7 @@ public class RcTfsManager_08_openReadFile extends tfsNameBaseCase
 	{
 		log.info( "test_01_saveFile_then_openReadFile" );
 		String Ret=null;
-		Ret=tfsManager.saveFile( resourcesPath+"100k.jpg",null,null,false);
+		Ret=tfsManager.saveFile( resourcesPath+"100K.jpg",null,null,false);
 		Assert.assertNotNull(Ret);
 		System.out.println("The tfs file name is "+ Ret);
 		
@@ -29,7 +29,7 @@ public class RcTfsManager_08_openReadFile extends tfsNameBaseCase
 	{
 		log.info( "test_02_saveFile_simpleName_then_openReadFile" );
 		String Ret=null;
-		Ret=tfsManager.saveFile( resourcesPath+"100k.jpg",null,null,true);
+		Ret=tfsManager.saveFile( resourcesPath+"100K.jpg",null,null,true);
 		Assert.assertNotNull(Ret);
 		System.out.println("The tfs file name is "+ Ret);
 		
@@ -43,7 +43,7 @@ public class RcTfsManager_08_openReadFile extends tfsNameBaseCase
 	{
 		log.info( "test_03_saveFile_then_openReadFile_wrong_suffix" );
 		String Ret=null;
-		Ret=tfsManager.saveFile( resourcesPath+"100k.jpg",null,null,false);
+		Ret=tfsManager.saveFile( resourcesPath+"100K.jpg",null,null,false);
 		Assert.assertNotNull(Ret);
 		System.out.println("The tfs file name is "+ Ret);
 		
@@ -57,7 +57,7 @@ public class RcTfsManager_08_openReadFile extends tfsNameBaseCase
 	{
 		log.info( "test_04_saveFile_suffix_then_openReadFile_suffix");
 		String Ret=null;
-		Ret=tfsManager.saveFile( resourcesPath+"100k.jpg",null,".jpg",false);
+		Ret=tfsManager.saveFile( resourcesPath+"100K.jpg",null,".jpg",false);
 		Assert.assertNotNull(Ret);
 		System.out.println("The tfs file name is "+ Ret);
 		
@@ -71,7 +71,7 @@ public class RcTfsManager_08_openReadFile extends tfsNameBaseCase
 	{
 		log.info( "test_05_saveFile_suffix_simpleName_then_openReadFile_suffix");
 		String Ret=null;
-		Ret=tfsManager.saveFile( resourcesPath+"100k.jpg",null,".jpg",true);
+		Ret=tfsManager.saveFile( resourcesPath+"100K.jpg",null,".jpg",true);
 		Assert.assertNotNull(Ret);
 		System.out.println("The tfs file name is "+ Ret);
 		
@@ -119,7 +119,7 @@ public class RcTfsManager_08_openReadFile extends tfsNameBaseCase
 		log.info( "test_09_saveFile_byte_then_openReadFile" );
 		String Ret=null;
 		byte data[]=null;
-		data=getByte(resourcesPath+"100k.jpg");
+		data=getByte(resourcesPath+"100K.jpg");
 		Ret=tfsManager.saveFile(null,null,data,0,100*(1<<10),false);
 		Assert.assertNotNull(Ret);
 		System.out.println("The tfs file name is "+ Ret);
@@ -135,7 +135,7 @@ public class RcTfsManager_08_openReadFile extends tfsNameBaseCase
 		log.info( "test_10_saveFile_byte_simpleName_then_openReadFile" );
 		String Ret=null;
 		byte data[]=null;
-		data=getByte(resourcesPath+"100k.jpg");
+		data=getByte(resourcesPath+"100K.jpg");
 		Ret=tfsManager.saveFile(null,null,data,0,100*(1<<10),true);
 		Assert.assertNotNull(Ret);
 		System.out.println("The tfs file name is "+ Ret);
@@ -151,7 +151,7 @@ public class RcTfsManager_08_openReadFile extends tfsNameBaseCase
 		log.info( "test_11_saveFile_byte_then_openReadFile_wrong_suffix" );
 		String Ret=null;
 		byte data[]=null;
-		data=getByte(resourcesPath+"100k.jpg");
+		data=getByte(resourcesPath+"100K.jpg");
 		Ret=tfsManager.saveFile(null,null,data,0,100*(1<<10),false);
 		Assert.assertNotNull(Ret);
 		System.out.println("The tfs file name is "+ Ret);
@@ -167,7 +167,7 @@ public class RcTfsManager_08_openReadFile extends tfsNameBaseCase
 		log.info( "test_12_saveFile_byte_suffix_then_openReadFile_suffix" );
 		String Ret=null;
 		byte data[]=null;
-		data=getByte(resourcesPath+"100k.jpg");
+		data=getByte(resourcesPath+"100K.jpg");
 		Ret=tfsManager.saveFile(null,".jpg",data,0,100*(1<<10),false);
 		Assert.assertNotNull(Ret);
 		System.out.println("The tfs file name is "+ Ret);
@@ -183,7 +183,7 @@ public class RcTfsManager_08_openReadFile extends tfsNameBaseCase
 		log.info( "test_13_saveFile_byte_simpleName_suffix_then_openReadFile_suffix" );
 		String Ret=null;
 		byte data[]=null;
-		data=getByte(resourcesPath+"100k.jpg");
+		data=getByte(resourcesPath+"100K.jpg");
 		Ret=tfsManager.saveFile(null,".jpg",data,0,100*(1<<10),true);
 		Assert.assertNotNull(Ret);
 		System.out.println("The tfs file name is "+ Ret);

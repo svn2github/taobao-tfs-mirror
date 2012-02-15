@@ -81,7 +81,7 @@ public class RcTfsManager_03_saveLargeFile extends tfsNameBaseCase
 	{
 		log.info( "test_08_saveLargeFile_max_small_size_with_tfsname_and_suffix" );
 		String Ret=null;
-		Ret=tfsManager.saveFile( resourcesPath+"100k.jpg",null,null,false);
+		Ret=tfsManager.saveFile( resourcesPath+"100K.jpg",null,null,false);
 		Assert.assertNotNull(Ret);
 		System.out.println("The tfs file name is "+ Ret);
 		

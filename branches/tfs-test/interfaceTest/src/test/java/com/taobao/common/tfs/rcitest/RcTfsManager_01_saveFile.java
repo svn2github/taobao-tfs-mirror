@@ -14,7 +14,7 @@ public class RcTfsManager_01_saveFile extends tfsNameBaseCase
 	{
 		log.info( "test_01_saveFile_with_right_suffix" );
 		String Ret=null;
-		Ret=tfsManager.saveFile( resourcesPath+"100k.jpg",null,null,false);
+		Ret=tfsManager.saveFile( resourcesPath+"100K.jpg",null,null,false);
 		Assert.assertNotNull(Ret);
 		System.out.println("The tfs file name is "+ Ret);
 		sleep(10);
@@ -25,7 +25,7 @@ public class RcTfsManager_01_saveFile extends tfsNameBaseCase
 	{
 		log.info( "test_02_saveFile_with_empty_suffix" );
 		String Ret=null;
-		Ret=tfsManager.saveFile( resourcesPath+"100k.jpg",null,"",false);
+		Ret=tfsManager.saveFile( resourcesPath+"100K.jpg",null,"",false);
 		Assert.assertNotNull(Ret);
 		System.out.println("The tfs file name is "+ Ret);
 	}
@@ -57,7 +57,7 @@ public class RcTfsManager_01_saveFile extends tfsNameBaseCase
 	{
 		log.info( "test_04_saveFile_with_empty_tfsName" );
 		String Ret=null;
-		Ret=tfsManager.saveFile( resourcesPath+"100k.jpg","",null,false);
+		Ret=tfsManager.saveFile( resourcesPath+"100K.jpg","",null,false);
 		Assert.assertNotNull(Ret);
 		System.out.println("The tfs file name is "+ Ret);
 	}
@@ -67,7 +67,7 @@ public class RcTfsManager_01_saveFile extends tfsNameBaseCase
 	{
 		log.info( "test_05_saveFile_with_suffix" );
 		String Ret=null;
-		Ret=tfsManager.saveFile( resourcesPath+"100k.jpg",null,".jpg",false);
+		Ret=tfsManager.saveFile( resourcesPath+"100K.jpg",null,".jpg",false);
 		Assert.assertNotNull(Ret);
 		System.out.println("The tfs file name is "+ Ret);
 	}
@@ -106,13 +106,13 @@ public class RcTfsManager_01_saveFile extends tfsNameBaseCase
 	{
 		log.info( "test_09_saveFile_to_override_exist_file" );
 		String Ret=null;
-		Ret=tfsManager.saveFile( resourcesPath+"100k.jpg",null,null,false);
+		Ret=tfsManager.saveFile( resourcesPath+"100K.jpg",null,null,false);
 		Assert.assertNotNull(Ret);
 		System.out.println("The tfs file name is "+ Ret);
 		
 		String name=Ret;
 		Ret=null;
-		Ret=tfsManager.saveFile( resourcesPath+"100k.jpg",name,null,false);
+		Ret=tfsManager.saveFile( resourcesPath+"100K.jpg",name,null,false);
 		Assert.assertNotNull(Ret);
 		
 	}
@@ -131,7 +131,7 @@ public class RcTfsManager_01_saveFile extends tfsNameBaseCase
 	{
 		log.info( "test_11_saveFile_with_tfsname_and_suffix" );
 		String Ret=null;
-		Ret=tfsManager.saveFile( resourcesPath+"100k.jpg",null,null,false);
+		Ret=tfsManager.saveFile( resourcesPath+"100K.jpg",null,null,false);
 		Assert.assertNotNull(Ret);
 		System.out.println("The tfs file name is "+ Ret);
 		
@@ -141,7 +141,7 @@ public class RcTfsManager_01_saveFile extends tfsNameBaseCase
 		
 		String name= Ret;
 		Ret=null;
-		Ret=tfsManager.saveFile( resourcesPath+"100k.jpg",name,".jpg",false);
+		Ret=tfsManager.saveFile( resourcesPath+"100K.jpg",name,".jpg",false);
 		Assert.assertNotNull(Ret);
 		System.out.println("The tfs file name is "+ Ret);	
 	}
@@ -151,7 +151,7 @@ public class RcTfsManager_01_saveFile extends tfsNameBaseCase
 	{
 		log.info( "test_12_saveFile_with_wrong_tfsFileName" );
 		String Ret=null;
-		Ret=tfsManager.saveFile( resourcesPath+"100k.jpg","sadhaksjhda",null,false);
+		Ret=tfsManager.saveFile( resourcesPath+"100K.jpg","sadhaksjhda",null,false);
 		Assert.assertNull(Ret);
 	}
 	
@@ -160,7 +160,7 @@ public class RcTfsManager_01_saveFile extends tfsNameBaseCase
 	{
 		log.info( "test_13_saveFile_with_right_suffix_simpleName" );
 		String Ret=null;
-		Ret=tfsManager.saveFile( resourcesPath+"100k.jpg",null,null,true);
+		Ret=tfsManager.saveFile( resourcesPath+"100K.jpg",null,null,true);
 		Assert.assertNotNull(Ret);
 		System.out.println("The tfs file name is "+ Ret);
 	}
@@ -170,7 +170,7 @@ public class RcTfsManager_01_saveFile extends tfsNameBaseCase
 	{
 		log.info( "test_14_saveFile_with_empty_suffix_simpleName" );
 		String Ret=null;
-		Ret=tfsManager.saveFile( resourcesPath+"100k.jpg",null,"",true);
+		Ret=tfsManager.saveFile( resourcesPath+"100K.jpg",null,"",true);
 		Assert.assertNotNull(Ret);
 		System.out.println("The tfs file name is "+ Ret);
 	}
@@ -180,7 +180,7 @@ public class RcTfsManager_01_saveFile extends tfsNameBaseCase
 	{
 		log.info( "test_15_saveFile_with_tfsname_simpleName" );
 		String Ret=null;
-		Ret=tfsManager.saveFile( resourcesPath+"100k.jpg",null,null,true);
+		Ret=tfsManager.saveFile( resourcesPath+"100K.jpg",null,null,true);
 		Assert.assertNotNull(Ret);
 		System.out.println("The tfs file name is "+ Ret);
 		
@@ -190,7 +190,7 @@ public class RcTfsManager_01_saveFile extends tfsNameBaseCase
 		
 		String name= Ret;
 		Ret=null;
-		Ret=tfsManager.saveFile( resourcesPath+"100k.jpg",name,null,false);
+		Ret=tfsManager.saveFile( resourcesPath+"100K.jpg",name,null,false);
 		Assert.assertNotNull(Ret);
 		System.out.println("The tfs file name is "+ Ret);	
 	}
@@ -200,7 +200,7 @@ public class RcTfsManager_01_saveFile extends tfsNameBaseCase
 	{
 		log.info( "test_16_saveFile_with_empty_tfsName_simpleName" );
 		String Ret=null;
-		Ret=tfsManager.saveFile( resourcesPath+"100k.jpg","",null,true);
+		Ret=tfsManager.saveFile( resourcesPath+"100K.jpg","",null,true);
 		Assert.assertNotNull(Ret);
 		System.out.println("The tfs file name is "+ Ret);
 	}
@@ -210,7 +210,7 @@ public class RcTfsManager_01_saveFile extends tfsNameBaseCase
 	{
 		log.info( "test_05_saveFile_with_suffix" );
 		String Ret=null;
-		Ret=tfsManager.saveFile( resourcesPath+"100k.jpg",null,".jpg",true);
+		Ret=tfsManager.saveFile( resourcesPath+"100K.jpg",null,".jpg",true);
 		Assert.assertNotNull(Ret);
 		System.out.println("The tfs file name is "+ Ret);
 	}
@@ -249,13 +249,13 @@ public class RcTfsManager_01_saveFile extends tfsNameBaseCase
 	{
 		log.info( "test_21_saveFile_to_override_exist_file_simpleName" );
 		String Ret=null;
-		Ret=tfsManager.saveFile( resourcesPath+"100k.jpg",null,null,true);
+		Ret=tfsManager.saveFile( resourcesPath+"100K.jpg",null,null,true);
 		Assert.assertNotNull(Ret);
 		System.out.println("The tfs file name is "+ Ret);
 		
 		String name=Ret;
 		Ret=null;
-		Ret=tfsManager.saveFile( resourcesPath+"100k.jpg",name,null,false);
+		Ret=tfsManager.saveFile( resourcesPath+"100K.jpg",name,null,false);
 		Assert.assertNotNull(Ret);
 	}
 	
@@ -273,7 +273,7 @@ public class RcTfsManager_01_saveFile extends tfsNameBaseCase
 	{
 		log.info( "test_23_saveFile_with_tfsname_and_suffix_simpleName" );
 		String Ret=null;
-		Ret=tfsManager.saveFile( resourcesPath+"100k.jpg",null,null,true);
+		Ret=tfsManager.saveFile( resourcesPath+"100K.jpg",null,null,true);
 		Assert.assertNotNull(Ret);
 		System.out.println("The tfs file name is "+ Ret);
 		
@@ -283,7 +283,7 @@ public class RcTfsManager_01_saveFile extends tfsNameBaseCase
 		
 		String name= Ret;
 		Ret=null;
-		Ret=tfsManager.saveFile( resourcesPath+"100k.jpg",name,".jpg",false);
+		Ret=tfsManager.saveFile( resourcesPath+"100K.jpg",name,".jpg",false);
 		Assert.assertNotNull(Ret);
 		System.out.println("The tfs file name is "+ Ret);	
 	}
@@ -293,7 +293,7 @@ public class RcTfsManager_01_saveFile extends tfsNameBaseCase
 	{
 		log.info( "test_24_saveFile_with_wrong_tfsFileName_simpleName" );
 		String Ret=null;
-		Ret=tfsManager.saveFile( resourcesPath+"100k.jpg","sadhaksjhda",null,true);
+		Ret=tfsManager.saveFile( resourcesPath+"100K.jpg","sadhaksjhda",null,true);
 		Assert.assertNull(Ret);
 	}
 	

@@ -18,8 +18,8 @@ public class RcTfsManager_05_fetchFile extends tfsNameBaseCase
 		int savecrc;
 		int fetchcrc;
 		
-		Ret=tfsManager.saveFile( resourcesPath+"100k.jpg",null,null,false);
-		savecrc=getCrc(resourcesPath+"100k.jpg");
+		Ret=tfsManager.saveFile( resourcesPath+"100K.jpg",null,null,false);
+		savecrc=getCrc(resourcesPath+"100K.jpg");
 		Assert.assertNotNull(Ret);
 		System.out.println("The tfs file name is "+ Ret);
 		
@@ -37,7 +37,7 @@ public class RcTfsManager_05_fetchFile extends tfsNameBaseCase
 		log.info( "test_02_saveFile_then_fetchFile_with_wrong_suffix" );
 		String Ret=null;
 		
-		Ret=tfsManager.saveFile( resourcesPath+"100k.jpg",null,null,false);
+		Ret=tfsManager.saveFile( resourcesPath+"100K.jpg",null,null,false);
 		Assert.assertNotNull(Ret);
 		System.out.println("The tfs file name is "+ Ret);
 		
@@ -54,8 +54,8 @@ public class RcTfsManager_05_fetchFile extends tfsNameBaseCase
 		int savecrc;
 		int fetchcrc;
 		
-		Ret=tfsManager.saveFile( resourcesPath+"100k.jpg",null,null,false);
-		savecrc=getCrc(resourcesPath+"100k.jpg");
+		Ret=tfsManager.saveFile( resourcesPath+"100K.jpg",null,null,false);
+		savecrc=getCrc(resourcesPath+"100K.jpg");
 		Assert.assertNotNull(Ret);
 		System.out.println("The tfs file name is "+ Ret);
 		
@@ -103,7 +103,7 @@ public class RcTfsManager_05_fetchFile extends tfsNameBaseCase
 		log.info( "test_07_saveFile_then_fetchFile_with_empty_localPath" );
 		String Ret=null;
 		
-		Ret=tfsManager.saveFile( resourcesPath+"100k.jpg",null,null,false);
+		Ret=tfsManager.saveFile( resourcesPath+"100K.jpg",null,null,false);
 		Assert.assertNotNull(Ret);
 		System.out.println("The tfs file name is "+ Ret);
 		
@@ -118,7 +118,7 @@ public class RcTfsManager_05_fetchFile extends tfsNameBaseCase
 		log.info( "test_08_saveFile_then_fetchFile_with_null_localPath" );
 		String Ret=null;
 		
-		Ret=tfsManager.saveFile( resourcesPath+"100k.jpg",null,null,false);
+		Ret=tfsManager.saveFile( resourcesPath+"100K.jpg",null,null,false);
 		Assert.assertNotNull(Ret);
 		System.out.println("The tfs file name is "+ Ret);
 		
@@ -136,15 +136,15 @@ public class RcTfsManager_05_fetchFile extends tfsNameBaseCase
 		int savecrc;
 		int fetchcrc;
 		
-		Ret=tfsManager.saveFile( resourcesPath+"100k.jpg",null,".jpg",false);
-		savecrc=getCrc(resourcesPath+"100k.jpg");
+		Ret=tfsManager.saveFile( resourcesPath+"100K.jpg",null,".jpg",false);
+		savecrc=getCrc(resourcesPath+"100K.jpg");
 		Assert.assertNotNull(Ret);
 		System.out.println("The tfs file name is "+ Ret);
 		String name =Ret;
 		
 		tfsManager.unlinkFile(Ret, null);
 		
-		Ret=tfsManager.saveFile( resourcesPath+"100k.jpg",name,null,true);
+		Ret=tfsManager.saveFile( resourcesPath+"100K.jpg",name,null,true);
 		boolean Bret;
 		Bret=tfsManager.fetchFile(Ret, ".jpg", resourcesPath+"TEMP");
 		Assert.assertTrue(Bret);
@@ -161,8 +161,8 @@ public class RcTfsManager_05_fetchFile extends tfsNameBaseCase
 		int savecrc;
 		int fetchcrc;
 		
-		Ret=tfsManager.saveFile( resourcesPath+"100k.jpg",null,".jpg",false);
-		savecrc=getCrc(resourcesPath+"100k.jpg");
+		Ret=tfsManager.saveFile( resourcesPath+"100K.jpg",null,".jpg",false);
+		savecrc=getCrc(resourcesPath+"100K.jpg");
 		Assert.assertNotNull(Ret);
 		System.out.println("The tfs file name is "+ Ret);
 		
@@ -183,9 +183,9 @@ public class RcTfsManager_05_fetchFile extends tfsNameBaseCase
 		int fetchcrc;
 		boolean Bret;
 		
-		Ret=tfsManager.saveFile( resourcesPath+"100k.jpg",null,".jpg",false);
+		Ret=tfsManager.saveFile( resourcesPath+"100K.jpg",null,".jpg",false);
 	
-		savecrc=getCrc(resourcesPath+"100k.jpg");
+		savecrc=getCrc(resourcesPath+"100K.jpg");
 		Assert.assertNotNull(Ret);
 		System.out.println("The tfs file 1 name is "+ Ret);
 		String name =Ret;
@@ -197,7 +197,7 @@ public class RcTfsManager_05_fetchFile extends tfsNameBaseCase
 		Bret=tfsManager.unlinkFile(Ret, null);
 		Assert.assertTrue(Bret);
 		
-		Ret=tfsManager.saveFile( resourcesPath+"100k.jpg",name,null,true);
+		Ret=tfsManager.saveFile( resourcesPath+"100K.jpg",name,null,true);
 		System.out.println("The tfs file 2 name is "+ Ret);
 		
 		
@@ -216,8 +216,8 @@ public class RcTfsManager_05_fetchFile extends tfsNameBaseCase
 		int savecrc;
 		int fetchcrc;
 		
-		Ret=tfsManager.saveFile( resourcesPath+"100k.jpg",null,null,true);
-		savecrc=getCrc(resourcesPath+"100k.jpg");
+		Ret=tfsManager.saveFile( resourcesPath+"100K.jpg",null,null,true);
+		savecrc=getCrc(resourcesPath+"100K.jpg");
 		Assert.assertNotNull(Ret);
 		System.out.println("The tfs file name is "+ Ret);
 		
@@ -235,7 +235,7 @@ public class RcTfsManager_05_fetchFile extends tfsNameBaseCase
 		log.info( "test_13_saveFile_simpleName_then_fetchFile_with_wrong_suffix" );
 		String Ret=null;
 		
-		Ret=tfsManager.saveFile( resourcesPath+"100k.jpg",null,null,true);
+		Ret=tfsManager.saveFile( resourcesPath+"100K.jpg",null,null,true);
 		Assert.assertNotNull(Ret);
 		System.out.println("The tfs file name is "+ Ret);
 		
@@ -252,8 +252,8 @@ public class RcTfsManager_05_fetchFile extends tfsNameBaseCase
 		int savecrc;
 		int fetchcrc;
 		
-		Ret=tfsManager.saveFile( resourcesPath+"100k.jpg",null,null,true);
-		savecrc=getCrc(resourcesPath+"100k.jpg");
+		Ret=tfsManager.saveFile( resourcesPath+"100K.jpg",null,null,true);
+		savecrc=getCrc(resourcesPath+"100K.jpg");
 		Assert.assertNotNull(Ret);
 		System.out.println("The tfs file name is "+ Ret);
 		
@@ -271,7 +271,7 @@ public class RcTfsManager_05_fetchFile extends tfsNameBaseCase
 		log.info( "test_15_saveFile_simpleName_then_fetchFile_with_empty_localPath" );
 		String Ret=null;
 		
-		Ret=tfsManager.saveFile( resourcesPath+"100k.jpg",null,null,true);
+		Ret=tfsManager.saveFile( resourcesPath+"100K.jpg",null,null,true);
 		Assert.assertNotNull(Ret);
 		System.out.println("The tfs file name is "+ Ret);
 		
@@ -286,7 +286,7 @@ public class RcTfsManager_05_fetchFile extends tfsNameBaseCase
 		log.info( "test_16_saveFile_simpleName_then_fetchFile_with_null_localPath" );
 		String Ret=null;
 		
-		Ret=tfsManager.saveFile( resourcesPath+"100k.jpg",null,null,true);
+		Ret=tfsManager.saveFile( resourcesPath+"100K.jpg",null,null,true);
 		Assert.assertNotNull(Ret);
 		System.out.println("The tfs file name is "+ Ret);
 		
@@ -304,15 +304,15 @@ public class RcTfsManager_05_fetchFile extends tfsNameBaseCase
 		int savecrc;
 		int fetchcrc;
 		
-		Ret=tfsManager.saveFile( resourcesPath+"100k.jpg",null,null,true);
-		savecrc=getCrc(resourcesPath+"100k.jpg");
+		Ret=tfsManager.saveFile( resourcesPath+"100K.jpg",null,null,true);
+		savecrc=getCrc(resourcesPath+"100K.jpg");
 		Assert.assertNotNull(Ret);
 		System.out.println("The tfs file name is "+ Ret);
 		String name =Ret;
 		
 		tfsManager.unlinkFile(Ret, null);
 		
-		Ret=tfsManager.saveFile( resourcesPath+"100k.jpg",name,".jpg",true);
+		Ret=tfsManager.saveFile( resourcesPath+"100K.jpg",name,".jpg",true);
 		boolean Bret;
 		Bret=tfsManager.fetchFile(Ret, ".jpg", resourcesPath+"TEMP");
 		Assert.assertTrue(Bret);
@@ -329,8 +329,8 @@ public class RcTfsManager_05_fetchFile extends tfsNameBaseCase
 		int savecrc;
 		int fetchcrc;
 		
-		Ret=tfsManager.saveFile( resourcesPath+"100k.jpg",null,".jpg",true);
-		savecrc=getCrc(resourcesPath+"100k.jpg");
+		Ret=tfsManager.saveFile( resourcesPath+"100K.jpg",null,".jpg",true);
+		savecrc=getCrc(resourcesPath+"100K.jpg");
 		Assert.assertNotNull(Ret);
 		System.out.println("The tfs file name is "+ Ret);
 		
@@ -350,15 +350,15 @@ public class RcTfsManager_05_fetchFile extends tfsNameBaseCase
 		int savecrc;
 		int fetchcrc;
 		
-		Ret=tfsManager.saveFile( resourcesPath+"100k.jpg",null,null,true);
-		savecrc=getCrc(resourcesPath+"100k.jpg");
+		Ret=tfsManager.saveFile( resourcesPath+"100K.jpg",null,null,true);
+		savecrc=getCrc(resourcesPath+"100K.jpg");
 		Assert.assertNotNull(Ret);
 		System.out.println("The tfs file name is "+ Ret);
 		String name =Ret;
 		
 		tfsManager.unlinkFile(Ret, null);
 		
-		Ret=tfsManager.saveFile( resourcesPath+"100k.jpg",name,null,true);
+		Ret=tfsManager.saveFile( resourcesPath+"100K.jpg",name,null,true);
 		boolean Bret;
 		Bret=tfsManager.fetchFile(Ret, null, resourcesPath+"TEMP");
 		Assert.assertTrue(Bret);
@@ -376,9 +376,9 @@ public class RcTfsManager_05_fetchFile extends tfsNameBaseCase
 		int fetchcrc;
 		
 		
-		savecrc=getCrc(resourcesPath+"100k.jpg");
+		savecrc=getCrc(resourcesPath+"100K.jpg");
 		byte data[]=null;
-		data=getByte(resourcesPath+"100k.jpg");
+		data=getByte(resourcesPath+"100K.jpg");
 		Ret=tfsManager.saveFile(null,null,data,0,100*(1<<10),false);
 		Assert.assertNotNull(Ret);
 		System.out.println("The tfs file name is "+ Ret);
@@ -397,7 +397,7 @@ public class RcTfsManager_05_fetchFile extends tfsNameBaseCase
 		log.info( "test_21_saveFile_byte_then_fetchFile_with_wrong_suffix" );
 		String Ret=null;
 		byte data[]=null;
-		data=getByte(resourcesPath+"100k.jpg");
+		data=getByte(resourcesPath+"100K.jpg");
 		Ret=tfsManager.saveFile(null,null,data,0,100*(1<<10),false);
 	
 		Assert.assertNotNull(Ret);
@@ -417,9 +417,9 @@ public class RcTfsManager_05_fetchFile extends tfsNameBaseCase
 		int fetchcrc;
 		
 		
-		savecrc=getCrc(resourcesPath+"100k.jpg");
+		savecrc=getCrc(resourcesPath+"100K.jpg");
 		byte data[]=null;
-		data=getByte(resourcesPath+"100k.jpg");
+		data=getByte(resourcesPath+"100K.jpg");
 		Ret=tfsManager.saveFile(null,null,data,0,100*(1<<10),false);
 		Assert.assertNotNull(Ret);
 		System.out.println("The tfs file name is "+ Ret);
@@ -440,7 +440,7 @@ public class RcTfsManager_05_fetchFile extends tfsNameBaseCase
 		
 		
 		byte data[]=null;
-		data=getByte(resourcesPath+"100k.jpg");
+		data=getByte(resourcesPath+"100K.jpg");
 		Ret=tfsManager.saveFile(null,null,data,0,100*(1<<10),false);
 		Assert.assertNotNull(Ret);
 		System.out.println("The tfs file name is "+ Ret);
@@ -458,7 +458,7 @@ public class RcTfsManager_05_fetchFile extends tfsNameBaseCase
 		
 		
 		byte data[]=null;
-		data=getByte(resourcesPath+"100k.jpg");
+		data=getByte(resourcesPath+"100K.jpg");
 		Ret=tfsManager.saveFile(null,null,data,0,100*(1<<10),false);
 		Assert.assertNotNull(Ret);
 		System.out.println("The tfs file name is "+ Ret);
@@ -477,8 +477,8 @@ public class RcTfsManager_05_fetchFile extends tfsNameBaseCase
 		int savecrc;
 		int fetchcrc;
 		
-		Ret=tfsManager.saveFile( resourcesPath+"100k.jpg",null,null,true);
-		savecrc=getCrc(resourcesPath+"100k.jpg");
+		Ret=tfsManager.saveFile( resourcesPath+"100K.jpg",null,null,true);
+		savecrc=getCrc(resourcesPath+"100K.jpg");
 		Assert.assertNotNull(Ret);
 		System.out.println("The tfs file name is "+ Ret);
 		String name =Ret;
@@ -486,7 +486,7 @@ public class RcTfsManager_05_fetchFile extends tfsNameBaseCase
 		tfsManager.unlinkFile(Ret, null);
 		
 		byte data[]=null;
-		data=getByte(resourcesPath+"100k.jpg");
+		data=getByte(resourcesPath+"100K.jpg");
 		Ret=tfsManager.saveFile(name,".jpg",data,0,100*(1<<10),false);
 		Assert.assertNotNull(Ret);
 		System.out.println("The tfs file name is "+ Ret);
@@ -508,10 +508,10 @@ public class RcTfsManager_05_fetchFile extends tfsNameBaseCase
 		int fetchcrc;
 		
 		
-		savecrc=getCrc(resourcesPath+"100k.jpg");
+		savecrc=getCrc(resourcesPath+"100K.jpg");
 		
 		byte data[]=null;
-		data=getByte(resourcesPath+"100k.jpg");
+		data=getByte(resourcesPath+"100K.jpg");
 		Ret=tfsManager.saveFile(null,".jpg",data,0,100*(1<<10),false);
 		Assert.assertNotNull(Ret);
 		System.out.println("The tfs file name is "+ Ret);
@@ -532,8 +532,8 @@ public class RcTfsManager_05_fetchFile extends tfsNameBaseCase
 		int savecrc;
 		int fetchcrc;
 		
-		Ret=tfsManager.saveFile( resourcesPath+"100k.jpg",null,null,true);
-		savecrc=getCrc(resourcesPath+"100k.jpg");
+		Ret=tfsManager.saveFile( resourcesPath+"100K.jpg",null,null,true);
+		savecrc=getCrc(resourcesPath+"100K.jpg");
 		Assert.assertNotNull(Ret);
 		System.out.println("The tfs file name is "+ Ret);
 		String name =Ret;
@@ -541,7 +541,7 @@ public class RcTfsManager_05_fetchFile extends tfsNameBaseCase
 		tfsManager.unlinkFile(Ret, null);
 		
 		byte data[]=null;
-		data=getByte(resourcesPath+"100k.jpg");
+		data=getByte(resourcesPath+"100K.jpg");
 		Ret=tfsManager.saveFile(name,null,data,0,100*(1<<10),false);
 		Assert.assertNotNull(Ret);
 		System.out.println("The tfs file name is "+ Ret);
@@ -563,9 +563,9 @@ public class RcTfsManager_05_fetchFile extends tfsNameBaseCase
 		int fetchcrc;
 		
 		
-		savecrc=getCrc(resourcesPath+"100k.jpg");
+		savecrc=getCrc(resourcesPath+"100K.jpg");
 		byte data[]=null;
-		data=getByte(resourcesPath+"100k.jpg");
+		data=getByte(resourcesPath+"100K.jpg");
 		Ret=tfsManager.saveFile(null,null,data,0,100*(1<<10),true);
 		Assert.assertNotNull(Ret);
 		System.out.println("The tfs file name is "+ Ret);
@@ -584,7 +584,7 @@ public class RcTfsManager_05_fetchFile extends tfsNameBaseCase
 		log.info( "test_29_saveFile_byte_simpleName_then_fetchFile_with_wrong_suffix" );
 		String Ret=null;
 		byte data[]=null;
-		data=getByte(resourcesPath+"100k.jpg");
+		data=getByte(resourcesPath+"100K.jpg");
 		Ret=tfsManager.saveFile(null,null,data,0,100*(1<<10),true);
 	
 		Assert.assertNotNull(Ret);
@@ -604,9 +604,9 @@ public class RcTfsManager_05_fetchFile extends tfsNameBaseCase
 		int fetchcrc;
 		
 		
-		savecrc=getCrc(resourcesPath+"100k.jpg");
+		savecrc=getCrc(resourcesPath+"100K.jpg");
 		byte data[]=null;
-		data=getByte(resourcesPath+"100k.jpg");
+		data=getByte(resourcesPath+"100K.jpg");
 		Ret=tfsManager.saveFile(null,null,data,0,100*(1<<10),true);
 		Assert.assertNotNull(Ret);
 		System.out.println("The tfs file name is "+ Ret);
@@ -627,7 +627,7 @@ public class RcTfsManager_05_fetchFile extends tfsNameBaseCase
 		
 		
 		byte data[]=null;
-		data=getByte(resourcesPath+"100k.jpg");
+		data=getByte(resourcesPath+"100K.jpg");
 		Ret=tfsManager.saveFile(null,null,data,0,100*(1<<10),true);
 		Assert.assertNotNull(Ret);
 		System.out.println("The tfs file name is "+ Ret);
@@ -645,7 +645,7 @@ public class RcTfsManager_05_fetchFile extends tfsNameBaseCase
 		
 		
 		byte data[]=null;
-		data=getByte(resourcesPath+"100k.jpg");
+		data=getByte(resourcesPath+"100K.jpg");
 		Ret=tfsManager.saveFile(null,null,data,0,100*(1<<10),true);
 		Assert.assertNotNull(Ret);
 		System.out.println("The tfs file name is "+ Ret);
@@ -664,8 +664,8 @@ public class RcTfsManager_05_fetchFile extends tfsNameBaseCase
 		int savecrc;
 		int fetchcrc;
 		
-		Ret=tfsManager.saveFile( resourcesPath+"100k.jpg",null,null,true);
-		savecrc=getCrc(resourcesPath+"100k.jpg");
+		Ret=tfsManager.saveFile( resourcesPath+"100K.jpg",null,null,true);
+		savecrc=getCrc(resourcesPath+"100K.jpg");
 		Assert.assertNotNull(Ret);
 		System.out.println("The tfs file name is "+ Ret);
 		String name =Ret;
@@ -673,7 +673,7 @@ public class RcTfsManager_05_fetchFile extends tfsNameBaseCase
 		tfsManager.unlinkFile(Ret, null);
 		
 		byte data[]=null;
-		data=getByte(resourcesPath+"100k.jpg");
+		data=getByte(resourcesPath+"100K.jpg");
 		Ret=tfsManager.saveFile(name,".jpg",data,0,100*(1<<10),true);
 		Assert.assertNotNull(Ret);
 		System.out.println("The tfs file name is "+ Ret);
@@ -695,10 +695,10 @@ public class RcTfsManager_05_fetchFile extends tfsNameBaseCase
 		int fetchcrc;
 		
 		
-		savecrc=getCrc(resourcesPath+"100k.jpg");
+		savecrc=getCrc(resourcesPath+"100K.jpg");
 		
 		byte data[]=null;
-		data=getByte(resourcesPath+"100k.jpg");
+		data=getByte(resourcesPath+"100K.jpg");
 		Ret=tfsManager.saveFile(null,".jpg",data,0,100*(1<<10),true);
 		Assert.assertNotNull(Ret);
 		System.out.println("The tfs file name is "+ Ret);
@@ -719,8 +719,8 @@ public class RcTfsManager_05_fetchFile extends tfsNameBaseCase
 		int savecrc;
 		int fetchcrc;
 		
-		Ret=tfsManager.saveFile( resourcesPath+"100k.jpg",null,null,true);
-		savecrc=getCrc(resourcesPath+"100k.jpg");
+		Ret=tfsManager.saveFile( resourcesPath+"100K.jpg",null,null,true);
+		savecrc=getCrc(resourcesPath+"100K.jpg");
 		Assert.assertNotNull(Ret);
 		System.out.println("The tfs file name is "+ Ret);
 		String name =Ret;
@@ -728,7 +728,7 @@ public class RcTfsManager_05_fetchFile extends tfsNameBaseCase
 		tfsManager.unlinkFile(Ret, null);
 		
 		byte data[]=null;
-		data=getByte(resourcesPath+"100k.jpg");
+		data=getByte(resourcesPath+"100K.jpg");
 		Ret=tfsManager.saveFile(name,null,data,0,100*(1<<10),true);
 		Assert.assertNotNull(Ret);
 		System.out.println("The tfs file name is "+ Ret);
@@ -838,8 +838,8 @@ public class RcTfsManager_05_fetchFile extends tfsNameBaseCase
 		int savecrc;
 		int fetchcrc;
 		
-		Ret=tfsManager.saveFile( resourcesPath+"100k.jpg",null,null,true);
-		savecrc=getCrc(resourcesPath+"100k.jpg");
+		Ret=tfsManager.saveFile( resourcesPath+"100K.jpg",null,null,true);
+		savecrc=getCrc(resourcesPath+"100K.jpg");
 		Assert.assertNotNull(Ret);
 		System.out.println("The tfs file name is "+ Ret);
 		String name =Ret;
@@ -886,8 +886,8 @@ public class RcTfsManager_05_fetchFile extends tfsNameBaseCase
 		int savecrc;
 		int fetchcrc;
 		
-		Ret=tfsManager.saveFile( resourcesPath+"100k.jpg",null,null,true);
-		savecrc=getCrc(resourcesPath+"100k.jpg");
+		Ret=tfsManager.saveFile( resourcesPath+"100K.jpg",null,null,true);
+		savecrc=getCrc(resourcesPath+"100K.jpg");
 		Assert.assertNotNull(Ret);
 		System.out.println("The tfs file name is "+ Ret);
 		String name =Ret;
@@ -1017,8 +1017,8 @@ public class RcTfsManager_05_fetchFile extends tfsNameBaseCase
 		int savecrc;
 		int fetchcrc;
 		
-		Ret=tfsManager.saveFile( resourcesPath+"100k.jpg",null,null,true);
-		savecrc=getCrc(resourcesPath+"100k.jpg");
+		Ret=tfsManager.saveFile( resourcesPath+"100K.jpg",null,null,true);
+		savecrc=getCrc(resourcesPath+"100K.jpg");
 		Assert.assertNotNull(Ret);
 		System.out.println("The tfs file name is "+ Ret);
 		String name =Ret;
@@ -1072,8 +1072,8 @@ public class RcTfsManager_05_fetchFile extends tfsNameBaseCase
 		int savecrc;
 		int fetchcrc;
 		
-		Ret=tfsManager.saveFile( resourcesPath+"100k.jpg",null,null,true);
-		savecrc=getCrc(resourcesPath+"100k.jpg");
+		Ret=tfsManager.saveFile( resourcesPath+"100K.jpg",null,null,true);
+		savecrc=getCrc(resourcesPath+"100K.jpg");
 		Assert.assertNotNull(Ret);
 		System.out.println("The tfs file name is "+ Ret);
 		String name =Ret;
