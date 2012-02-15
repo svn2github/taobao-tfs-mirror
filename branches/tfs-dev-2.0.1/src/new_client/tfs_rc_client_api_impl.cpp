@@ -611,7 +611,7 @@ namespace tfs
       return ret_offset;
     }
 
-    TfsRetType RcClientImpl::fstat(const int fd, common::TfsFileStat* buf)
+    TfsRetType RcClientImpl::fstat(const int fd, common::TfsFileStat* buf, const common::TfsStatType fmode)
     {
       fdInfo fd_info;
       int ret = get_fdinfo(fd, fd_info);
@@ -619,7 +619,7 @@ namespace tfs
       {
         if (fd_info.raw_tfs_fd_ >= 0)
         {
-          ret = TfsClientImpl::Instance()->fstat(fd_info.raw_tfs_fd_, buf);
+          ret = TfsClientImpl::Instance()->fstat(fd_info.raw_tfs_fd_, buf, fmode);
         }
         else if (INVALID_RAW_TFS_FD == fd_info.raw_tfs_fd_)
         {
@@ -655,7 +655,7 @@ namespace tfs
             }
             raw_tfs_fd = open(ns_addr.c_str(), file_name, suffix,
                 fd_info.flag_, fd_info.is_large_, local_key);
-            ret = TfsClientImpl::Instance()->fstat(raw_tfs_fd, buf);
+            ret = TfsClientImpl::Instance()->fstat(raw_tfs_fd, buf, fmode);
             if (TFS_SUCCESS != ret)
             {
               TBSYS_LOG(WARN, "fstat file from ns %s error ret is %"PRI64_PREFIX"d",
@@ -757,8 +757,7 @@ namespace tfs
       return ret;
     }
 
-    int64_t RcClientImpl::save_file(const char* local_file, char* tfs_name_buff, const int32_t buff_len,
-        const bool is_large_file)
+    int64_t RcClientImpl::save_file(const char* local_file, char* tfs_name_buff, const int32_t buff_len, const char* suffix, const bool is_large_file)
     {
       int ret = check_init_stat();
       int64_t saved_size = -1;
@@ -773,14 +772,14 @@ namespace tfs
           {
             break;
           }
-          saved_size = save_file(ns_addr.c_str(), local_file, tfs_name_buff, buff_len, is_large_file);
+          saved_size = save_file(ns_addr.c_str(), local_file, tfs_name_buff, buff_len, suffix, is_large_file);
         } while(saved_size < 0);
       }
       return saved_size;
     }
 
     int64_t RcClientImpl::save_buf(const char* source_data, const int32_t data_len,
-        char* tfs_name_buff, const int32_t buff_len)
+        char* tfs_name_buff, const int32_t buff_len, const char* suffix)
     {
       int ret = check_init_stat();
       int64_t saved_size = -1;
@@ -796,7 +795,7 @@ namespace tfs
             break;
           }
           saved_size = save_buf(ns_addr.c_str(), source_data, data_len,
-              tfs_name_buff, buff_len);
+              tfs_name_buff, buff_len, suffix);
         } while(saved_size < 0);
       }
       return saved_size;
@@ -845,7 +844,7 @@ namespace tfs
     }
 
     int64_t RcClientImpl::save_file(const char* ns_addr, const char* local_file, char* tfs_name_buff,
-        const int32_t buff_len, const bool is_large_file)
+        const int32_t buff_len, const char* suffix, const bool is_large_file)
     {
       int flag = T_DEFAULT;
       if (is_large_file)
@@ -864,7 +863,7 @@ namespace tfs
         {
           int64_t start_time = tbsys::CTimeUtil::getTime();
           saved_size = TfsClientImpl::Instance()->save_file_unique(tfs_name_buff, buff_len, local_file,
-              NULL, ns_addr);
+              suffix, ns_addr);
           int64_t response_time = tbsys::CTimeUtil::getTime() - start_time;
           add_stat_info(OPER_UNIQUE_WRITE, saved_size, response_time, saved_size >= 0);
         }
@@ -877,14 +876,14 @@ namespace tfs
       {
         int64_t start_time = tbsys::CTimeUtil::getTime();
         saved_size = TfsClientImpl::Instance()->save_file(tfs_name_buff, buff_len, local_file,
-            flag, NULL, ns_addr);
+            flag, suffix, ns_addr);
         int64_t response_time = tbsys::CTimeUtil::getTime() - start_time;
         add_stat_info(OPER_WRITE, saved_size, response_time, saved_size >= 0);
       }
       return saved_size;
     }
     int64_t RcClientImpl::save_buf(const char* ns_addr, const char* source_data, const int32_t data_len,
-        char* tfs_name_buff, const int32_t buff_len)
+        char* tfs_name_buff, const int32_t buff_len, const char* suffix)
     {
       int64_t saved_size = -1;
       if (need_use_unique_)
@@ -898,7 +897,7 @@ namespace tfs
         {
           int64_t start_time = tbsys::CTimeUtil::getTime();
           saved_size = TfsClientImpl::Instance()->save_buf_unique(tfs_name_buff, buff_len, source_data, data_len,
-              NULL, ns_addr);
+              suffix, ns_addr);
           int64_t response_time = tbsys::CTimeUtil::getTime() - start_time;
           add_stat_info(OPER_UNIQUE_WRITE, saved_size, response_time, saved_size >= 0);
         }
@@ -910,7 +909,7 @@ namespace tfs
       {
         int64_t start_time = tbsys::CTimeUtil::getTime();
         saved_size = TfsClientImpl::Instance()->save_buf(tfs_name_buff, buff_len, source_data, data_len,
-            T_DEFAULT, NULL, ns_addr);
+            T_DEFAULT, suffix, ns_addr);
         int64_t response_time = tbsys::CTimeUtil::getTime() - start_time;
         add_stat_info(OPER_WRITE, saved_size, response_time, saved_size >= 0);
       }
