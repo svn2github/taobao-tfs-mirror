@@ -32,10 +32,11 @@ public class RcTfsManager_09_readFile extends tfsNameBaseCase
 		Rret=tfsManager.readFile(fd, data,0, 5*(1<<20));
 		Assert.assertEquals(Rret,5*(1<<20));
 		
-		
+		/*
 		datatoFile(resourcesPath+"readtemp",data);
 		readcrc=getCrc(resourcesPath+"readtemp");
-		Assert.assertEquals(savecrc,readcrc);		
+		Assert.assertEquals(savecrc,readcrc);
+		*/		
 	}
 	
 	@Test

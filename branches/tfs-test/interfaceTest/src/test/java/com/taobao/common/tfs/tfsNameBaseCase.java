@@ -28,7 +28,7 @@ public class tfsNameBaseCase
     public static final Log log = LogFactory.getLog(tfsNameBaseCase.class);
     public static long appId;
     public static long userId=8;
-   
+    public static String key="test_key";
     
 
     static 
