@@ -83,7 +83,7 @@ public class RcTfsManager_14_hideFile extends tfsNameBaseCase
 	{
 		log.info( "test_05_saveLargeFile_then_hideFile" );
 		String Ret=null;
-		Ret=tfsManager.saveLargeFile( resourcesPath+"5m.jpg",null,null);
+		Ret=tfsManager.saveLargeFile( resourcesPath+"5M.jpg",null,null);
 		Assert.assertNotNull(Ret);
 		System.out.println("The tfs file name is "+ Ret);
 		
@@ -100,7 +100,7 @@ public class RcTfsManager_14_hideFile extends tfsNameBaseCase
 		log.info( "test_06_saveLargeFile_byte_then_hideFile" );
 		String Ret=null;
 		byte data[]=null;
-		data=getByte(resourcesPath+"5m.jpg");
+		data=getByte(resourcesPath+"5M.jpg");
 		Ret=tfsManager.saveLargeFile(null,null,data,0,data.length,key);
 		Assert.assertNotNull(Ret);
 		System.out.println("The tfs file name is "+ Ret);
@@ -185,7 +185,7 @@ public class RcTfsManager_14_hideFile extends tfsNameBaseCase
 		
 		int Wret;
 		byte []data=null;
-		data=getByte(resourcesPath+"5m.jpg");
+		data=getByte(resourcesPath+"5M.jpg");
 		Wret=tfsManager.writeFile(fd, data, 0, data.length);
 		Assert.assertTrue(Wret<0);
 	}

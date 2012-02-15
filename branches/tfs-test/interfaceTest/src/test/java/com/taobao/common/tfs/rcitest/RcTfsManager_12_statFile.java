@@ -215,7 +215,7 @@ public class RcTfsManager_12_statFile extends tfsNameBaseCase
 		log.info( "test_14_saveLargeFile_statFile" );
 		
 		String Ret=null;
-		Ret=tfsManager.saveLargeFile( resourcesPath+"5m.jpg",null,null);
+		Ret=tfsManager.saveLargeFile( resourcesPath+"5M.jpg",null,null);
 		Assert.assertNotNull(Ret);
 		System.out.println("The tfs file name is "+ Ret);
 		
@@ -231,7 +231,7 @@ public class RcTfsManager_12_statFile extends tfsNameBaseCase
 		log.info( "test_15_saveLargeFile_statFile_wrong_suffix" );
 		
 		String Ret=null;
-		Ret=tfsManager.saveLargeFile( resourcesPath+"5m.jpg",null,null);
+		Ret=tfsManager.saveLargeFile( resourcesPath+"5M.jpg",null,null);
 		Assert.assertNotNull(Ret);
 		System.out.println("The tfs file name is "+ Ret);
 		
@@ -246,7 +246,7 @@ public class RcTfsManager_12_statFile extends tfsNameBaseCase
 		log.info( "test_16_saveLargeFile_suffix_statFile_suffix" );
 		
 		String Ret=null;
-		Ret=tfsManager.saveLargeFile( resourcesPath+"5m.jpg",null,".jpg");
+		Ret=tfsManager.saveLargeFile( resourcesPath+"5M.jpg",null,".jpg");
 		Assert.assertNotNull(Ret);
 		System.out.println("The tfs file name is "+ Ret);
 		
@@ -263,7 +263,7 @@ public class RcTfsManager_12_statFile extends tfsNameBaseCase
 		
 		String Ret=null;
 		byte data[]=null;
-		data=getByte(resourcesPath+"5m.jpg");
+		data=getByte(resourcesPath+"5M.jpg");
 		Ret=tfsManager.saveLargeFile(null,null,data,0,data.length,key);
 		Assert.assertNotNull(Ret);
 		System.out.println("The tfs file name is "+ Ret);
@@ -281,7 +281,7 @@ public class RcTfsManager_12_statFile extends tfsNameBaseCase
 		
 		String Ret=null;
 		byte data[]=null;
-		data=getByte(resourcesPath+"5m.jpg");
+		data=getByte(resourcesPath+"5M.jpg");
 		Ret=tfsManager.saveLargeFile(null,null,data,0,data.length,key);
 		Assert.assertNotNull(Ret);
 		System.out.println("The tfs file name is "+ Ret);
@@ -298,7 +298,7 @@ public class RcTfsManager_12_statFile extends tfsNameBaseCase
 		
 		String Ret=null;
 		byte data[]=null;
-		data=getByte(resourcesPath+"5m.jpg");
+		data=getByte(resourcesPath+"5M.jpg");
 		Ret=tfsManager.saveLargeFile(null,".jpg",data,0,data.length,key);
 		Assert.assertNotNull(Ret);
 		System.out.println("The tfs file name is "+ Ret);

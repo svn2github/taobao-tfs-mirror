@@ -142,7 +142,7 @@ public class RcTfsManager_04_saveLargeFile_byte extends tfsNameBaseCase
     	log.info( "test_12_saveLargeFile_byte_small" );
 		String Ret=null;
 		byte data[]=null;
-		data=getByte(resourcesPath+"10k.jpg");
+		data=getByte(resourcesPath+"10K.jpg");
 		Ret=tfsManager.saveLargeFile(null,null,data,0,data.length,key);
 		Assert.assertNotNull(Ret);
 		System.out.println("The tfs file name is "+ Ret);

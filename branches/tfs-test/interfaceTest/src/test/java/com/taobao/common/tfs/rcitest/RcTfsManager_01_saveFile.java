@@ -300,7 +300,7 @@ public class RcTfsManager_01_saveFile extends tfsNameBaseCase
 	{
 		log.info( "test_25_saveFile_large" );
 		String Ret=null;
-		Ret=tfsManager.saveFile( resourcesPath+"10m.jpg",null,null,false);
+		Ret=tfsManager.saveFile( resourcesPath+"10M.jpg",null,null,false);
 		Assert.assertNull(Ret);
 	//	sleep(20);
 	}

@@ -17,7 +17,7 @@ public class RcTfsManager_10_readFile_fileOffset extends tfsNameBaseCase
 		log.info( "test_01_openReadFile_then_readFile" );
 		String Ret=null;
 
-		Ret=tfsManager.saveLargeFile( resourcesPath+"5m.jpg",null,null);
+		Ret=tfsManager.saveLargeFile( resourcesPath+"5M.jpg",null,null);
 		Assert.assertNotNull(Ret);
 		System.out.println("The tfs file name is "+ Ret);
 		
@@ -38,7 +38,7 @@ public class RcTfsManager_10_readFile_fileOffset extends tfsNameBaseCase
 		log.info( "test_02_openReadFile_then_readFile_less_length" );
 		String Ret=null;
 
-		Ret=tfsManager.saveLargeFile( resourcesPath+"5m.jpg",null,null);
+		Ret=tfsManager.saveLargeFile( resourcesPath+"5M.jpg",null,null);
 		Assert.assertNotNull(Ret);
 		System.out.println("The tfs file name is "+ Ret);
 		
@@ -59,7 +59,7 @@ public class RcTfsManager_10_readFile_fileOffset extends tfsNameBaseCase
 		log.info( "test_03_openReadFile_then_readFile_more_length" );
 		String Ret=null;
 
-		Ret=tfsManager.saveLargeFile( resourcesPath+"5m.jpg",null,null);
+		Ret=tfsManager.saveLargeFile( resourcesPath+"5M.jpg",null,null);
 		Assert.assertNotNull(Ret);
 		System.out.println("The tfs file name is "+ Ret);
 		
@@ -81,7 +81,7 @@ public class RcTfsManager_10_readFile_fileOffset extends tfsNameBaseCase
 		log.info( "test_04_openReadFile_then_readFile_with_offset" );
 		String Ret=null;
 
-		Ret=tfsManager.saveLargeFile( resourcesPath+"5m.jpg",null,null);
+		Ret=tfsManager.saveLargeFile( resourcesPath+"5M.jpg",null,null);
 		Assert.assertNotNull(Ret);
 		System.out.println("The tfs file name is "+ Ret);
 		
@@ -103,7 +103,7 @@ public class RcTfsManager_10_readFile_fileOffset extends tfsNameBaseCase
 		log.info( "test_05_openReadFile_then_readFile_more_offset" );
 		String Ret=null;
 
-		Ret=tfsManager.saveLargeFile( resourcesPath+"5m.jpg",null,null);
+		Ret=tfsManager.saveLargeFile( resourcesPath+"5M.jpg",null,null);
 		Assert.assertNotNull(Ret);
 		System.out.println("The tfs file name is "+ Ret);
 		
@@ -125,7 +125,7 @@ public class RcTfsManager_10_readFile_fileOffset extends tfsNameBaseCase
 		log.info( "test_06_openReadFile_then_readFile_wrong_offset" );
 		String Ret=null;
 
-		Ret=tfsManager.saveLargeFile( resourcesPath+"5m.jpg",null,null);
+		Ret=tfsManager.saveLargeFile( resourcesPath+"5M.jpg",null,null);
 		Assert.assertNotNull(Ret);
 		System.out.println("The tfs file name is "+ Ret);
 		
@@ -146,7 +146,7 @@ public class RcTfsManager_10_readFile_fileOffset extends tfsNameBaseCase
 		log.info( "test_07_openReadFile_then_readFile_more_offset_and_length" );
 		String Ret=null;
 
-		Ret=tfsManager.saveLargeFile( resourcesPath+"5m.jpg",null,null);
+		Ret=tfsManager.saveLargeFile( resourcesPath+"5M.jpg",null,null);
 		Assert.assertNotNull(Ret);
 		System.out.println("The tfs file name is "+ Ret);
 		
@@ -181,7 +181,7 @@ public class RcTfsManager_10_readFile_fileOffset extends tfsNameBaseCase
 		log.info( "test_09_openReadFile_then_readFile_with_wrong_fd_2" );
 	
 		String Ret=null;
-		Ret=tfsManager.saveLargeFile( resourcesPath+"5m.jpg",null,null);
+		Ret=tfsManager.saveLargeFile( resourcesPath+"5M.jpg",null,null);
 		Assert.assertNotNull(Ret);
 		System.out.println("The tfs file name is "+ Ret);
 		
@@ -205,7 +205,7 @@ public class RcTfsManager_10_readFile_fileOffset extends tfsNameBaseCase
 		log.info( "test_10_openReadFile_then_readFile_with_wrong_fd_3" );
 	
 		String Ret=null;
-		Ret=tfsManager.saveLargeFile( resourcesPath+"5m.jpg",null,null);
+		Ret=tfsManager.saveLargeFile( resourcesPath+"5M.jpg",null,null);
 		Assert.assertNotNull(Ret);
 		System.out.println("The tfs file name is "+ Ret);
 		
@@ -230,7 +230,7 @@ public class RcTfsManager_10_readFile_fileOffset extends tfsNameBaseCase
 		log.info( "test_11_openReadFile_then_readFile_with_fileOffset" );
 		String Ret=null;
 
-		Ret=tfsManager.saveLargeFile( resourcesPath+"5m.jpg",null,null);
+		Ret=tfsManager.saveLargeFile( resourcesPath+"5M.jpg",null,null);
 		Assert.assertNotNull(Ret);
 		System.out.println("The tfs file name is "+ Ret);
 		
@@ -251,7 +251,7 @@ public class RcTfsManager_10_readFile_fileOffset extends tfsNameBaseCase
 		log.info( "test_12_openReadFile_then_readFile_with_fileOffset_with_offset" );
 		String Ret=null;
 
-		Ret=tfsManager.saveLargeFile( resourcesPath+"5m.jpg",null,null);
+		Ret=tfsManager.saveLargeFile( resourcesPath+"5M.jpg",null,null);
 		Assert.assertNotNull(Ret);
 		System.out.println("The tfs file name is "+ Ret);
 		
@@ -273,7 +273,7 @@ public class RcTfsManager_10_readFile_fileOffset extends tfsNameBaseCase
 		log.info( "test_13_openReadFile_then_readFile_with_more_fileOffset" );
 		String Ret=null;
 
-		Ret=tfsManager.saveLargeFile( resourcesPath+"5m.jpg",null,null);
+		Ret=tfsManager.saveLargeFile( resourcesPath+"5M.jpg",null,null);
 		Assert.assertNotNull(Ret);
 		System.out.println("The tfs file name is "+ Ret);
 		
@@ -294,7 +294,7 @@ public class RcTfsManager_10_readFile_fileOffset extends tfsNameBaseCase
 		log.info( "test_14_openReadFile_then_readFile_with_wrong_fileOffset" );
 		String Ret=null;
 
-		Ret=tfsManager.saveLargeFile( resourcesPath+"5m.jpg",null,null);
+		Ret=tfsManager.saveLargeFile( resourcesPath+"5M.jpg",null,null);
 		Assert.assertNotNull(Ret);
 		System.out.println("The tfs file name is "+ Ret);
 		
@@ -314,7 +314,7 @@ public class RcTfsManager_10_readFile_fileOffset extends tfsNameBaseCase
 		log.info( "test_15_openReadFile_then_readFile_null_data" );
 		String Ret=null;
 
-		Ret=tfsManager.saveLargeFile( resourcesPath+"5m.jpg",null,null);
+		Ret=tfsManager.saveLargeFile( resourcesPath+"5M.jpg",null,null);
 		Assert.assertNotNull(Ret);
 		System.out.println("The tfs file name is "+ Ret);
 		

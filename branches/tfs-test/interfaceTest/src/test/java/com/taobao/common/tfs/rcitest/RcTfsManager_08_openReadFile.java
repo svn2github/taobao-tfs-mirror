@@ -198,7 +198,7 @@ public class RcTfsManager_08_openReadFile extends tfsNameBaseCase
 	{
 		log.info( "test_14_saveLargeFile_then_openReadFile" );
 		String Ret=null;
-		Ret=tfsManager.saveLargeFile( resourcesPath+"5m.jpg",null,null);
+		Ret=tfsManager.saveLargeFile( resourcesPath+"5M.jpg",null,null);
 		Assert.assertNotNull(Ret);
 		System.out.println("The tfs file name is "+ Ret);
 		
@@ -212,7 +212,7 @@ public class RcTfsManager_08_openReadFile extends tfsNameBaseCase
 	{
 		log.info( "test_15_saveLargeFile_then_openReadFile_wrong_suffix" );
 		String Ret=null;
-		Ret=tfsManager.saveLargeFile( resourcesPath+"5m.jpg",null,null);
+		Ret=tfsManager.saveLargeFile( resourcesPath+"5M.jpg",null,null);
 		Assert.assertNotNull(Ret);
 		System.out.println("The tfs file name is "+ Ret);
 		
@@ -226,7 +226,7 @@ public class RcTfsManager_08_openReadFile extends tfsNameBaseCase
 	{
 		log.info( "test_16_saveLargeFile_Suffix_then_openReadFile_Suffix" );
 		String Ret=null;
-		Ret=tfsManager.saveLargeFile( resourcesPath+"5m.jpg",null,".jpg");
+		Ret=tfsManager.saveLargeFile( resourcesPath+"5M.jpg",null,".jpg");
 		Assert.assertNotNull(Ret);
 		System.out.println("The tfs file name is "+ Ret);
 		
@@ -241,7 +241,7 @@ public class RcTfsManager_08_openReadFile extends tfsNameBaseCase
 		log.info( "test_17_saveLargeFile_byte_then_openReadFile" );
 		String Ret=null;
 		byte data[]=null;
-		data=getByte(resourcesPath+"5m.jpg");
+		data=getByte(resourcesPath+"5M.jpg");
 		Ret=tfsManager.saveLargeFile(null,null,data,0,data.length,key);
 		Assert.assertNotNull(Ret);
 		System.out.println("The tfs file name is "+ Ret);
@@ -257,7 +257,7 @@ public class RcTfsManager_08_openReadFile extends tfsNameBaseCase
 		log.info( "test_18_saveLargeFile_byte_then_openReadFile_wrong_suffix" );
 		String Ret=null;
 		byte data[]=null;
-		data=getByte(resourcesPath+"5m.jpg");
+		data=getByte(resourcesPath+"5M.jpg");
 		Ret=tfsManager.saveLargeFile(null,null,data,0,data.length,key);
 		Assert.assertNotNull(Ret);
 		System.out.println("The tfs file name is "+ Ret);
@@ -273,7 +273,7 @@ public class RcTfsManager_08_openReadFile extends tfsNameBaseCase
 		log.info( "test_19_saveLargeFile_byte_Suffix_then_openReadFile_Suffix" );
 		String Ret=null;
 		byte data[]=null;
-		data=getByte(resourcesPath+"5m.jpg");
+		data=getByte(resourcesPath+"5M.jpg");
 		Ret=tfsManager.saveLargeFile(null,".jpg",data,0,data.length,key);
 		Assert.assertNotNull(Ret);
 		System.out.println("The tfs file name is "+ Ret);

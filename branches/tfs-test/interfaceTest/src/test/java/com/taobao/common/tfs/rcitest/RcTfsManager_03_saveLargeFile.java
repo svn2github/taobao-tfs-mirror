@@ -13,7 +13,7 @@ public class RcTfsManager_03_saveLargeFile extends tfsNameBaseCase
 	{
 		log.info( "test_01_saveLargeFile_small_size" );
 		String Ret=null;
-		Ret=tfsManager.saveLargeFile( resourcesPath+"10m.jpg",null,null);
+		Ret=tfsManager.saveLargeFile( resourcesPath+"10M.jpg",null,null);
 		Assert.assertNotNull(Ret);
 		System.out.println("The tfs file name is "+ Ret);
 	}
@@ -23,7 +23,7 @@ public class RcTfsManager_03_saveLargeFile extends tfsNameBaseCase
 	{
 		log.info( "test_02_saveLargeFile_max_small_size" );
 		String Ret=null;
-		Ret=tfsManager.saveLargeFile( resourcesPath+"2m.jpg",null,null);
+		Ret=tfsManager.saveLargeFile( resourcesPath+"2M.jpg",null,null);
 		Assert.assertNotNull(Ret);
 		System.out.println("The tfs file name is "+ Ret);
 	}
@@ -33,7 +33,7 @@ public class RcTfsManager_03_saveLargeFile extends tfsNameBaseCase
 	{
 		log.info( "test_03_saveLargeFile_large_size" );
 		String Ret=null;
-		Ret=tfsManager.saveLargeFile( resourcesPath+"1g.jpg",null,null);
+		Ret=tfsManager.saveLargeFile( resourcesPath+"1G.jpg",null,null);
 		Assert.assertNotNull(Ret);
 		System.out.println("The tfs file name is "+ Ret);
 	}
@@ -43,7 +43,7 @@ public class RcTfsManager_03_saveLargeFile extends tfsNameBaseCase
 	{
 		log.info( "test_04_saveLargeFile_with_suffix_max_small_size" );
 		String Ret=null;
-		Ret=tfsManager.saveLargeFile( resourcesPath+"2m.jpg",null,"jpg");
+		Ret=tfsManager.saveLargeFile( resourcesPath+"2M.jpg",null,"jpg");
 		Assert.assertNotNull(Ret);
 		System.out.println("The tfs file name is "+ Ret);
 	}
@@ -90,7 +90,7 @@ public class RcTfsManager_03_saveLargeFile extends tfsNameBaseCase
 		Assert.assertTrue(Bret);
 		
 		String name= Ret;
-		Ret=tfsManager.saveFile( resourcesPath+"2m.jpg",name,".jpg");
+		Ret=tfsManager.saveFile( resourcesPath+"2M.jpg",name,".jpg");
 		Assert.assertNotNull(Ret);
 		System.out.println("The tfs file name is "+ Ret);
 	}
