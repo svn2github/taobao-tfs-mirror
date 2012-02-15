@@ -22,7 +22,7 @@ public class tfsManager_12_saveFile extends tfsNameBaseCase
 		bRet=tfsManager.saveFile(appId, userId, resourcesPath+"100K.jpg","/text1");
 		Assert.assertFalse("Save File right path should be true", bRet);
 		Thread.sleep(10000);
-	   bRet=tfsManager.fetchFile(appId, userId, resourcesPath+"temp","/text2");
+		bRet=tfsManager.fetchFile(appId, userId, resourcesPath+"temp","/text2");
 		Assert.assertTrue("Fetch File right path should be true", bRet);
 		Assert.assertEquals(getCrc(resourcesPath+"temp"),getCrc(resourcesPath+"100K.jpg"));
 		tfsManager.rmFile(appId, userId, "/text");
@@ -94,8 +94,8 @@ public class tfsManager_12_saveFile extends tfsNameBaseCase
 	{  
 		log.info("test_07_saveFile_wrong_fileName_1");
 		boolean bRet;
-		bRet=tfsManager.saveFile(appId, userId, resourcesPath+"100K.jpg","/text7/");
-		Assert.assertTrue("Save File wrong 1 fileName should be false", bRet);	
+		bRet=tfsManager.saveFile(appId, userId, resourcesPath+"100K.jpg","/text4/");
+		Assert.assertFalse("Save File wrong 1 fileName should be false", bRet);	
 		tfsManager.rmFile(appId, userId, "/text4");
 	}
 	@Test
@@ -129,7 +129,7 @@ public class tfsManager_12_saveFile extends tfsNameBaseCase
 		boolean bRet;
 		tfsManager.createDir(appId, userId, "/text11");
 		bRet=tfsManager.saveFile(appId, userId, resourcesPath+"100K.jpg","/text11");
-		Assert.assertTrue("Save File with the same name Dir should be true", bRet);
+		Assert.assertFalse("Save File with the same name Dir should be true", bRet);
 		tfsManager.rmDir(appId, userId, "/text11");
 		tfsManager.rmFile(appId, userId, "/text11");
 	}
@@ -188,32 +188,4 @@ public class tfsManager_12_saveFile extends tfsNameBaseCase
 	         e.printStackTrace();
 	      }
 	   }
-	   
-
-	@Test
-	   public void test_015() throws Exception
-	   {
-	      byte data[] = null;
-	      data = getByte(resourcesPath + "10K.jpg");
-	      Assert.assertNotNull(data);
-	      
-	      String sFileName1=null;
-	      String sFileName2=null;
-	      sFileName1 = tfsManager.saveFile(data, null, null);
-	      sFileName2 = tfsManager.saveFile(data, null, null);
-	      log.info("------->saveFile returns: " + sFileName1);
-	      log.info("------->saveFile returns: " + sFileName2);
-	      assertTrue(sFileName1!= null);
-
-	      try {
-	         FSName fsName1 = new FSName(null);
-	         log.info("------> file id is: " + fsName1.getFileId());
-	         FSName fsName2 = new FSName(null);
-	         log.info("------> file id is: " + fsName2.getFileId());
-	      } catch (TfsException e) {
-	         // TODO Auto-generated catch block
-	         e.printStackTrace();
-	      }
-	   }
-
 }

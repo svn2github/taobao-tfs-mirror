@@ -15,10 +15,10 @@ public class tfsManager_01_createDir extends tfsNameBaseCase
 {
 
     @Test
-    public  void  test_01_createDir_right_filePath()
+	public void test_01_createDir_right_filePath()
     {
-	boolean bRet;
-	log.info( "test_01_createDir_right_filePath" );
+		boolean bRet;
+		log.info( "test_01_createDir_right_filePath" );
         bRet=tfsManager.createDir(appId, userId, "/text");
         Assert.assertTrue("Create Dir with right path should be true", bRet);
         tfsManager.rmDir(appId, userId, "/text");
