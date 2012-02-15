@@ -30,7 +30,7 @@ namespace
 {
   std::string get_ns_ip_addr()
   {
-    return TBSYS_CONFIG.getString(CONF_SN_MOCK_DATASERVER, "ns_vip", "");
+    return TBSYS_CONFIG.getString(CONF_SN_PUBLIC, "ns_vip", "");
   }
 }
 static FileInfo gfile_info;
@@ -41,7 +41,10 @@ static int ns_async_callback(NewClient* client);
 
 MockDataService::MockDataService():
   ns_ip_port_(0),
-  need_send_block_to_ns_(HAS_BLOCK_FLAG_YES)
+  need_send_block_to_ns_(HAS_BLOCK_FLAG_NO),
+  MAX_WRITE_FILE_SIZE(1024 * 1024 * 2),
+  block_count(1024),
+  block_start(100)
 {
   memset(&information_, 0, sizeof(information_));
   memset(&gfile_info, 0, sizeof(gfile_info));
@@ -49,6 +52,8 @@ MockDataService::MockDataService():
   gfile_info.crc_  = 0;
   gfile_info.id_ = 0xff;
   gfile_info.crc_  = Func::crc(gfile_info.crc_, BUF, BUF_LEN);
+  information_.total_capacity_ = 0xffffffffff;
+  information_.use_capacity_ = 0xfffffff;
 }
 
 MockDataService::~MockDataService()
@@ -59,15 +64,21 @@ MockDataService::~MockDataService()
 int MockDataService::parse_common_line_args(int argc, char* argv[], std::string& errmsg)
 {
   int32_t i = 0;
-  while ((i = getopt(argc, argv, "l:c:")) != EOF)
+  while ((i = getopt(argc, argv, "i:c:t:s:")) != EOF)
   {
     switch (i)
     {
-      case 'l':
+      case 'i':
         server_index_ = optarg;
         break;
       case 'c':
         information_.total_capacity_ = atoi(optarg);
+        break;
+      case 't':
+        block_count = atoi(optarg);
+        break;
+      case 's':
+        block_start = atoi(optarg);
         break;
       default:
         break;
@@ -89,7 +100,7 @@ int32_t MockDataService::get_listen_port() const
 
 int32_t MockDataService::get_ns_port() const
 {
-  int32_t port = TBSYS_CONFIG.getInt(CONF_SN_MOCK_DATASERVER, CONF_PORT, -1);
+  int32_t port = TBSYS_CONFIG.getInt(CONF_SN_PUBLIC, "ns_vip_port", -1);
   return port <= 1024 || port > 65535 ? -1 : port;
 }
 
@@ -108,6 +119,22 @@ const char* MockDataService::get_log_file_path()
   return log_file_path;
 }
 
+const char* MockDataService::get_pid_file_path()
+{
+  const char* log_file_path = NULL;
+  const char* work_dir = get_work_dir();
+  if (work_dir != NULL)
+  {
+    log_file_path_ = work_dir;
+    log_file_path_ += "/logs/mock_dataserver_";
+    log_file_path_ += server_index_;
+    log_file_path_ += ".pid";
+    log_file_path = log_file_path_.c_str();
+  }
+  return log_file_path;
+}
+
+
 
 int MockDataService::keepalive()
 {
@@ -122,6 +149,7 @@ int MockDataService::keepalive()
   msg.set_ds(&information_);
   if (need_send_block_to_ns_ == HAS_BLOCK_FLAG_YES)
   {
+    msg.set_has_block(HAS_BLOCK_FLAG_YES);
     RWLock::Lock lock(blocks_mutex_, READ_LOCKER);
     std::map<uint32_t, BlockEntry>::iterator iter = blocks_.begin();
     for (; iter != blocks_.end(); ++iter)
@@ -130,7 +158,7 @@ int MockDataService::keepalive()
     }
   }
 
-  TBSYS_LOG(DEBUG, "keepalive, need_send_block_to_ns_(%d)", need_send_block_to_ns_);
+  TBSYS_LOG(DEBUG, "keepalive, need_send_block_to_ns_(%d), block_count : %u", need_send_block_to_ns_, blocks_.size());
 
   NewClient* client = NewClientManager::get_instance().create_client();
   tbnet::Packet* result = NULL;
@@ -155,6 +183,7 @@ int MockDataService::keepalive()
   {
     TBSYS_LOG(ERROR, "%s", "message is null or iret(%d) !=  TFS_SUCCESS");
   }
+  TBSYS_LOG(DEBUG, "report ================== iret : %d", iret);
   NewClientManager::get_instance().destroy_client(client);
   return iret;
 }
@@ -222,7 +251,16 @@ int MockDataService::initialize(int argc, char* argv[])
     adr->ip_ = Func::get_local_addr(get_dev());
     adr->port_ = get_listen_port();
 
-    int32_t heart_interval = TBSYS_CONFIG.getInt(CONF_SN_MOCK_DATASERVER,CONF_HEART_INTERVAL,2);
+    /*for (uint32_t i = block_start; i < block_count + block_start; i++)
+    {
+      BlockEntry entry;
+      entry.info_.block_id_ = i;
+      entry.info_.version_ = 1;
+      std::pair<std::map<uint32_t, BlockEntry>::iterator, bool> res =
+        blocks_.insert(std::map<uint32_t, BlockEntry>::value_type(i, entry));
+    }*/
+
+    int32_t heart_interval = TBSYS_CONFIG.getInt(CONF_SN_PUBLIC,CONF_HEART_INTERVAL,2);
     KeepaliveTimerTaskPtr task = new KeepaliveTimerTask(*this);
     get_timer()->scheduleRepeated(task, tbutil::Time::seconds(heart_interval));
   }

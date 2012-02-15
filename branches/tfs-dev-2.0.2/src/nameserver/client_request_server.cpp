@@ -79,12 +79,6 @@ namespace tfs
             {
               need_sent_block = manager_.get_heart_management().add_report_server(ds_info.id_, now);
             }
-            else
-            {
-              #if !defined(TFS_GTEST) && !defined(TFS_NS_INTEGRATION)
-              lay_out_manager_.touch(server,now);
-              #endif
-            }
           }
         }
         else
@@ -155,9 +149,6 @@ namespace tfs
                 lay_out_manager_.rm_block_from_ds(iter->first->id(), rm_list);
               }
             }//end for
-            #if !defined(TFS_GTEST) && !defined(TFS_NS_INTEGRATION)
-            lay_out_manager_.touch(server,now);
-            #endif
           }
 
           iret = NULL == server ? EIXT_SERVER_OBJECT_NOT_FOUND : TFS_SUCCESS;
@@ -338,7 +329,6 @@ namespace tfs
         }
         else
         {
-          time_t now = time(NULL);
           int32_t last_version = 0;
           BlockCollect* block = NULL;
           BlockChunkPtr ptr = lay_out_manager_.get_chunk(block_id);
@@ -390,7 +380,7 @@ namespace tfs
             if (TFS_SUCCESS == iret)
             {
               //update block information
-              iret = lay_out_manager_.update_block_info(parameter.block_info_, parameter.id_, now, false);
+              iret = lay_out_manager_.update_block_info(parameter.block_info_, parameter.id_, Func::get_monotonic_time(), false);
               if (iret != TFS_SUCCESS)
               {
                 snprintf(parameter.error_msg_,256,"close block: %u successful, but update block information fail, iret: %d", block_id, iret);
@@ -452,8 +442,9 @@ namespace tfs
           iret = 0 == block_id ? TFS_ERROR : TFS_SUCCESS;
           if (TFS_SUCCESS == iret)
           {
+            time_t now = Func::get_monotonic_time();
             NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
-            iret = ngi.in_discard_newblk_safe_mode_time(time(NULL)) || is_discard() ? EXIT_DISCARD_NEWBLK_ERROR: TFS_SUCCESS;
+            iret = ngi.in_discard_newblk_safe_mode_time(now) || is_discard() ? EXIT_DISCARD_NEWBLK_ERROR: TFS_SUCCESS;
             if (TFS_SUCCESS == iret)
             {
               //create new block by block_id
@@ -589,7 +580,7 @@ namespace tfs
       return iret;
     }
 
-    int ClientRequestServer::handle_control_load_block(const common::ClientCmdInformation& info, common::BasePacket* message, const int64_t buf_length, char* buf)
+    int ClientRequestServer::handle_control_load_block(const time_t now, const common::ClientCmdInformation& info, common::BasePacket* message, const int64_t buf_length, char* buf)
     {
       std::vector<GCObject*> rms;
       int32_t iret = NULL != buf && buf_length > 0 ? TFS_SUCCESS : TFS_ERROR;
@@ -626,7 +617,7 @@ namespace tfs
 
               if (TFS_SUCCESS == iret)
               {
-                iret = lay_out_manager_.build_relation(block, server, rms, time(NULL));
+                iret = lay_out_manager_.build_relation(block, server, rms, now);
                 if (TFS_SUCCESS != iret)
                 {
                   snprintf(buf, buf_length, " build relation fail, block: %u dataserver: %s",
@@ -924,12 +915,12 @@ namespace tfs
 
     int ClientRequestServer::handle_control_cmd(const ClientCmdInformation& info, common::BasePacket* msg, const int64_t buf_length, char* buf)
     {
-      time_t now = time(NULL);
+      time_t now = Func::get_monotonic_time();
       int32_t iret = TFS_ERROR;
       switch (info.cmd_)
       {
         case CLIENT_CMD_LOADBLK:
-          iret = handle_control_load_block(info, msg, buf_length, buf);
+          iret = handle_control_load_block(now, info, msg, buf_length, buf);
           break;
         case CLIENT_CMD_EXPBLK:
           iret = handle_control_delete_block(now, info, buf_length, buf);

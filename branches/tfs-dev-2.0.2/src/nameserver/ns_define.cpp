@@ -11,9 +11,9 @@
  * Authors:
  *   duolong <duolong@taobao.com>
  *      - initial release
- *   qushan<qushan@taobao.com> 
+ *   qushan<qushan@taobao.com>
  *      - modify 2009-03-27
- *   duanfei <duanfei@taobao.com> 
+ *   duanfei <duanfei@taobao.com>
  *      - modify 2010-04-23
  *
  */
@@ -79,10 +79,11 @@ namespace tfs
       return instance_;
     }
 
-    void NsGlobalStatisticsInfo::dump()
+    void NsGlobalStatisticsInfo::dump(int32_t level, const char* file , const int32_t line , const char* function ) const
     {
-      TBSYS_LOG(DEBUG, "elect_seq_num: %"PRI64_PREFIX"d, use_capacity: %"PRI64_PREFIX"d, total_capacity: %"PRI64_PREFIX"d, total_block_count: %"PRI64_PREFIX"d, total_load: %d, max_load: %d, max_block_count: %d, alive_server_count: %d",
-          elect_seq_num_, use_capacity_, total_capacity_, total_block_count_, total_load_, max_load_, max_block_count_, alive_server_count_); 
+      TBSYS_LOGGER.logMessage(level, file, line, function,
+          "elect_seq_num: %"PRI64_PREFIX"d, use_capacity: %"PRI64_PREFIX"d, total_capacity: %"PRI64_PREFIX"d, total_block_count: %"PRI64_PREFIX"d, total_load: %d, max_load: %d, max_block_count: %d, alive_server_count: %d",
+          elect_seq_num_, use_capacity_, total_capacity_, total_block_count_, total_load_, max_load_, max_block_count_, alive_server_count_);
     }
 
     NsRuntimeGlobalInformation::NsRuntimeGlobalInformation()
@@ -125,8 +126,8 @@ namespace tfs
           line,
           function,
           "owner ip port: %s, other side ip port: %s, switch time: %s, vip: %s\
-          ,destroy flag: %s, owner role: %s, other side role: %s, owner status: %s, other side status: %s\
-          ,sync oplog flag: %s, last owner check time: %s, last push owner check packet time: %s",
+,destroy flag: %s, owner role: %s, other side role: %s, owner status: %s, other side status: %s\
+,sync oplog flag: %s, last owner check time: %s, last push owner check packet time: %s",
           tbsys::CNetUtil::addrToString(owner_ip_port_).c_str(),
           tbsys::CNetUtil::addrToString(other_side_ip_port_).c_str(),
           common::Func::time_to_str(switch_time_).c_str(), tbsys::CNetUtil::addrToString(vip_).c_str(), destroy_flag_

@@ -87,7 +87,6 @@ namespace nameserver
     bool find_server_in_plan(ServerCollect* server);
     bool find_server_in_plan(const std::vector<ServerCollect*> & servers, bool all_find, std::vector<ServerCollect*>& result);
 
-    int touch(const uint64_t server, const time_t now = time(NULL), const bool promote = true);
     int touch(ServerCollect* server, const time_t now, const bool promote = false);
 
     int open_helper_create_new_block_by_id(const uint32_t block_id);
@@ -101,8 +100,8 @@ namespace nameserver
 #endif
     ServerCollect* get_server_(const uint64_t server_id);
 
-    BlockCollect* add_block(uint32_t& block_id);
-    BlockCollect* add_new_block(uint32_t& block_id, ServerCollect* server = NULL, const time_t now = time(NULL));
+    BlockCollect* add_block(uint32_t& block_id, const time_t now);
+    BlockCollect* add_new_block(uint32_t& block_id, ServerCollect* server = NULL, const time_t now = common::Func::get_monotonic_time());
 
     BlockCollect* add_new_block_helper_create_by_id(const uint32_t block_id, const time_t now);
     BlockCollect* add_new_block_helper_create_by_system(uint32_t& block_id, ServerCollect* server, const time_t now);
@@ -110,7 +109,7 @@ namespace nameserver
     int add_new_block_helper_send_msg(const uint32_t block_id, const std::vector<ServerCollect*>& servers);
     int add_new_block_helper_write_log(const uint32_t block_id, const std::vector<ServerCollect*>& server);
     int add_new_block_helper_rm_block(const uint32_t block_id, std::vector<ServerCollect*>& servers);
-    int add_new_block_helper_build_relation(const uint32_t block_id, const std::vector<ServerCollect*>& server);
+    int add_new_block_helper_build_relation(const uint32_t block_id, const time_t now, const std::vector<ServerCollect*>& server);
     ServerCollect* find_server_in_vec(const std::vector<ServerCollect*>& servers, const uint64_t server_id);
 
     static bool relieve_relation(BlockCollect* block, ServerCollect* server, const time_t now);
@@ -122,7 +121,8 @@ namespace nameserver
     int64_t calc_all_block_bytes() const;
     int64_t calc_all_block_count() const;
 
-    void check_server();
+    void check_all_server_isalive();
+    void add_block_in_all_server();
 
     int set_runtime_param(const uint32_t index, const uint32_t value, char *retstr);
     int block_oplog_write_helper(const int32_t cmd, const common::BlockInfo& info, const std::vector<uint32_t>& blocks, const std::vector<uint64_t>& servers);
@@ -361,6 +361,22 @@ namespace nameserver
         DISALLOW_COPY_AND_ASSIGN(CheckDataServerThreadHelper);
     };
     typedef tbutil::Handle<CheckDataServerThreadHelper> CheckDataServerThreadHelperPtr;
+
+    class AddBlockInAllServerThreadHelper : public tbutil::Thread
+    {
+      public:
+        explicit AddBlockInAllServerThreadHelper(LayoutManager& manager):
+          manager_(manager)
+        {
+          start();
+        }
+        virtual ~AddBlockInAllServerThreadHelper() {}
+        void run();
+      private:
+        LayoutManager& manager_;
+        DISALLOW_COPY_AND_ASSIGN(AddBlockInAllServerThreadHelper);
+    };
+    typedef tbutil::Handle<AddBlockInAllServerThreadHelper> AddBlockInAllServerThreadHelperPtr;
 #if defined(TFS_GTEST) || defined(TFS_NS_INTEGRATION)
   public:
 #else
@@ -442,11 +458,12 @@ namespace nameserver
     BuildPlanThreadHelperPtr build_plan_thread_;
     RunPlanThreadHelperPtr run_plan_thread_;
     CheckDataServerThreadHelperPtr check_dataserver_thread_;
+    AddBlockInAllServerThreadHelperPtr add_block_in_all_server_thread_;
     std::map<ServerCollect*, TaskPtr> server_to_task_;
     std::map<uint32_t, TaskPtr> block_to_task_;
     std::set<TaskPtr, TaskCompare> pending_plan_list_;
     std::set<TaskPtr, TaskCompare> running_plan_list_;
-    std::list<TaskPtr> finish_plan_list_;
+    //std::list<TaskPtr> finish_plan_list_;
 
     OpLogSyncManager oplog_sync_mgr_;
 
@@ -465,7 +482,6 @@ namespace nameserver
     int32_t plan_run_flag_;
     tbutil::Monitor<tbutil::Mutex> build_plan_monitor_;
     tbutil::Monitor<tbutil::Mutex> run_plan_monitor_;
-    tbutil::Monitor<tbutil::Mutex> check_server_monitor_;
     common::RWLock maping_mutex_;
     common::RWLock server_mutex_;
     static const std::string dynamic_parameter_str[];

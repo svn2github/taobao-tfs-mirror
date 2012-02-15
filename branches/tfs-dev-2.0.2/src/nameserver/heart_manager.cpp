@@ -11,9 +11,9 @@
  * Authors:
  *   duolong <duolong@taobao.com>
  *      - initial release
- *   qushan<qushan@taobao.com> 
+ *   qushan<qushan@taobao.com>
  *      - modify 2009-03-27
- *   duanfei <duanfei@taobao.com> 
+ *   duanfei <duanfei@taobao.com>
  *      - modify 2010-04-23
  *
  */
@@ -98,8 +98,8 @@ namespace tfs
            && (HAS_BLOCK_FLAG_YES == message->get_has_block()))
         {
           handled = report_block_threads_.push(msg, report_block_queue_size_, false);
-        } 
-        else//normal or login or logout heartbeat message, just push 
+        }
+        else//normal or login or logout heartbeat message, just push
         {
           //cannot blocking!
           handled = keepalive_threads_.push(msg, keepalive_queue_size_, false);
@@ -108,7 +108,7 @@ namespace tfs
         if (TFS_SUCCESS != iret)
         {
           //threadpool busy..cannot handle it
-          iret = message->reply_error_packet(TBSYS_LOG_LEVEL(WARN), STATUS_MESSAGE_ERROR, 
+          iret = message->reply_error_packet(TBSYS_LOG_LEVEL(WARN), STATUS_MESSAGE_ERROR,
               "nameserver heartbeat busy! cannot accept this request from : %s, has_block_type: %d, status: %d",
               tbsys::CNetUtil::addrToString(message->get_ds().id_).c_str(), message->get_has_block(), status);
           // already repsonse, now can free this message object.
@@ -155,11 +155,12 @@ namespace tfs
         assert(HAS_BLOCK_FLAG_NO == message->get_has_block());
         assert(0 == message->get_blocks().size());
         RespHeartMessage *result_msg = new RespHeartMessage();
+        result_msg->set_heart_interval(SYSPARAM_NAMESERVER.heart_interval_);
         const DataServerStatInfo& ds_info = message->get_ds();
 			  bool need_sent_block = false;
-        time_t now = time(NULL);
+        time_t now = Func::get_monotonic_time();
 
-			  iret = meta_mgr_.get_layout_manager().get_client_request_server().keepalive(ds_info, now, need_sent_block); 
+			  iret = meta_mgr_.get_layout_manager().get_client_request_server().keepalive(ds_info, now, need_sent_block);
         if (TFS_SUCCESS == iret)
         {
 			    //dataserver dead
@@ -179,7 +180,7 @@ namespace tfs
           result_msg->set_status(HEART_MESSAGE_FAILED);
 			  }
 			  iret = message->reply(result_msg);
-        TBSYS_LOG(DEBUG,"server: %s keepalive %s, iret: %d,result msg status: %d,  need_sent_block: %s", 
+        TBSYS_LOG(DEBUG,"server: %s keepalive %s, iret: %d,result msg status: %d,  need_sent_block: %s",
               tbsys::CNetUtil::addrToString(ds_info.id_).c_str(), TFS_SUCCESS == iret ? "successful" : "fail",
               iret, result_msg->get_status(), need_sent_block ? "yes" : "no");
       }
@@ -200,9 +201,10 @@ namespace tfs
         RespHeartMessage *result_msg = new RespHeartMessage();
         const DataServerStatInfo& ds_info = message->get_ds();
 			  VUINT32 expires;
-        time_t now = time(NULL);
+        time_t now = Func::get_monotonic_time();
 
-			  iret = meta_mgr_.get_layout_manager().get_client_request_server().report_block(ds_info, now, message->get_blocks(), expires); 
+			  iret = meta_mgr_.get_layout_manager().get_client_request_server().report_block(ds_info, now, message->get_blocks(), expires);
+        result_msg->set_heart_interval(SYSPARAM_NAMESERVER.heart_interval_);
         if (TFS_SUCCESS == iret)
         {
 			    //dataserver dead
@@ -634,7 +636,7 @@ namespace tfs
               ngi.other_side_status_ = NS_STATUS_OTHERSIDEDEAD;
               ngi.set_switch_time();
               meta_mgr_->destroy_plan();
-              meta_mgr_->register_report_servers();  
+              meta_mgr_->register_report_servers();
               switch_flag = true;
             }
           }
@@ -663,7 +665,7 @@ namespace tfs
               ngi.other_side_status_ = NS_STATUS_OTHERSIDEDEAD;
               ngi.set_switch_time();
               meta_mgr_->destroy_plan();
-              meta_mgr_->register_report_servers();  
+              meta_mgr_->register_report_servers();
               break;
             }
             usleep(0x01);
@@ -740,8 +742,8 @@ namespace tfs
         NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
         ngi.dump(TBSYS_LOG_LEVEL(DEBUG));
         MasterAndSlaveHeartMessage* mashm = dynamic_cast<MasterAndSlaveHeartMessage*> (message);
-        if ((mashm->get_force_flags() == HEART_FORCE_MODIFY_OTHERSIDE_ROLE_FLAGS_YES) 
-            && (ngi.other_side_ip_port_ == mashm->get_ip_port()) 
+        if ((mashm->get_force_flags() == HEART_FORCE_MODIFY_OTHERSIDE_ROLE_FLAGS_YES)
+            && (ngi.other_side_ip_port_ == mashm->get_ip_port())
             && (ngi.owner_role_ != mashm->get_role()))
         {
           tbutil::Mutex::Lock lock(ngi);
@@ -826,8 +828,8 @@ namespace tfs
       {
         NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
         MasterAndSlaveHeartMessage* mashm = dynamic_cast<MasterAndSlaveHeartMessage*> (message);
-        if ((mashm->get_force_flags() == HEART_FORCE_MODIFY_OTHERSIDE_ROLE_FLAGS_YES) 
-            && (ngi.other_side_ip_port_ == mashm->get_ip_port()) 
+        if ((mashm->get_force_flags() == HEART_FORCE_MODIFY_OTHERSIDE_ROLE_FLAGS_YES)
+            && (ngi.other_side_ip_port_ == mashm->get_ip_port())
             && (ngi.owner_role_ != mashm->get_role()))
         {
           tbutil::Mutex::Lock lock(ngi);

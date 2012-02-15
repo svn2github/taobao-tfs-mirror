@@ -11,9 +11,9 @@
  * Authors:
  *   duolong <duolong@taobao.com>
  *      - initial release
- *   qushan<qushan@taobao.com> 
+ *   qushan<qushan@taobao.com>
  *      - modify 2009-03-27
- *   duanfei <duanfei@taobao.com> 
+ *   duanfei <duanfei@taobao.com>
  *      - modify 2010-04-23
  *
  */
@@ -65,7 +65,7 @@ namespace tfs
       int log(uint8_t type, const char* const data, const int64_t length);
       int push(common::BasePacket* msg, int32_t max_queue_size = 0, bool block = false);
       inline common::FileQueueThread* get_file_queue_thread() const { return file_queue_thread_;}
-      int replay_helper(const char* const data, const int64_t data_len, int64_t& pos, const time_t now = time(NULL));
+      int replay_helper(const char* const data, const int64_t data_len, int64_t& pos, const time_t now = common::Func::get_monotonic_time());
       int replay_helper_do_msg(const int32_t type, const char* const data, const int64_t data_len, int64_t& pos);
       int replay_helper_do_oplog(const int32_t type, const char* const data, const int64_t data_len, int64_t& pos, time_t now);
 

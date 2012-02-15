@@ -31,6 +31,7 @@
 #include "common/base_service.h"
 #include "common/status_message.h"
 #include "common/client_manager.h"
+#include "common/array_helper.h"
 #include "message/block_info_message.h"
 #include "message/replicate_block_message.h"
 #include "message/compact_block_message.h"
@@ -138,6 +139,7 @@ namespace tfs
       build_plan_thread_(0),
       run_plan_thread_(0),
       check_dataserver_thread_(0),
+      add_block_in_all_server_thread_(0),
       oplog_sync_mgr_(*this),
       block_chunk_(NULL),
       block_chunk_num_(0),
@@ -163,6 +165,7 @@ namespace tfs
       build_plan_thread_ = 0;
       run_plan_thread_ = 0;
       check_dataserver_thread_ = 0;
+      add_block_in_all_server_thread_ = 0;
 
       for (int32_t i = 0; i < block_chunk_num_; ++i)
       {
@@ -182,7 +185,7 @@ namespace tfs
       {
         pending_plan_list_.clear();
         running_plan_list_.clear();
-        finish_plan_list_.clear();
+        //finish_plan_list_.clear();
       }
 
       {
@@ -225,6 +228,7 @@ namespace tfs
         build_plan_thread_ = new BuildPlanThreadHelper(*this);
         check_dataserver_thread_ = new CheckDataServerThreadHelper(*this);
         run_plan_thread_ = new RunPlanThreadHelper(*this);
+        add_block_in_all_server_thread_ = new AddBlockInAllServerThreadHelper(*this);
 #if defined(TFS_NS_INTEGRATION)
         run_plan_thread_ = new RunPlanThreadHelper(*this);
 #endif
@@ -263,6 +267,11 @@ namespace tfs
         check_dataserver_thread_->join();
       }
 
+      if (add_block_in_all_server_thread_ != 0)
+      {
+        add_block_in_all_server_thread_->join();
+      }
+
       oplog_sync_mgr_.wait_for_shut_down();
     }
 
@@ -278,10 +287,6 @@ namespace tfs
         run_plan_monitor_.notifyAll();
       }
 
-      {
-        tbutil::Monitor<tbutil::Mutex>::Lock lock(check_server_monitor_);
-        check_server_monitor_.notifyAll();
-      }
       oplog_sync_mgr_.destroy();
     }
 
@@ -722,7 +727,7 @@ namespace tfs
             tbutil::Monitor<tbutil::Mutex>::Lock lock(run_plan_monitor_);
             for (; iter != complete.end(); ++iter)
             {
-              finish_plan_list_.push_back((*iter));
+              //finish_plan_list_.push_back((*iter));
 
               GFactory::get_timer()->cancel((*iter));
 
@@ -923,7 +928,7 @@ namespace tfs
 
       //update global statistic information
       GFactory::get_global_info().update(info, isnew);
-      GFactory::get_global_info().dump();
+      GFactory::get_global_info().dump(TBSYS_LOG_LEVEL_DEBUG);
       return TFS_SUCCESS;
     }
 
@@ -982,12 +987,12 @@ namespace tfs
      * @param[in] block_id : block id
      * @return  NULL if not found or add failed
      */
-    BlockCollect* LayoutManager::add_block(uint32_t& block_id)
+    BlockCollect* LayoutManager::add_block(uint32_t& block_id, const time_t now)
     {
       if (block_id == 0)
         return NULL;
       BlockChunkPtr ptr = get_chunk(block_id);
-      return ptr->add(block_id, time(NULL));
+      return ptr->add(block_id, now);
     }
 
     int LayoutManager::add_new_block_helper_rm_block(const uint32_t block_id, std::vector<ServerCollect*>& servers)
@@ -1198,11 +1203,10 @@ namespace tfs
       return iret;
     }
 
-    int LayoutManager::add_new_block_helper_build_relation(const uint32_t block_id, const std::vector<ServerCollect*>& servers)
+    int LayoutManager::add_new_block_helper_build_relation(const uint32_t block_id, const time_t now, const std::vector<ServerCollect*>& servers)
     {
       //build relation
       std::vector<ServerCollect*>::const_iterator iter = servers.begin();
-      time_t now = time(NULL);
       std::vector<GCObject*> rms;
       int32_t iret = TFS_ERROR;
       {
@@ -1296,7 +1300,7 @@ namespace tfs
                   if (TFS_SUCCESS == iret)
                   {
                     //build relation
-                    iret = add_new_block_helper_build_relation(block_id, servers);
+                    iret = add_new_block_helper_build_relation(block_id, now, servers);
                     if (TFS_SUCCESS == iret)
                     {
                       add_new_block_helper_write_log(block_id, servers);
@@ -1378,7 +1382,7 @@ namespace tfs
             if (TFS_SUCCESS == iret)
             {
               //build relation
-              iret = add_new_block_helper_build_relation(block_id, need);
+              iret = add_new_block_helper_build_relation(block_id, now, need);
               if (TFS_SUCCESS == iret)
               {
                 add_new_block_helper_write_log(block_id, need);
@@ -1557,17 +1561,6 @@ namespace tfs
       return block_id;
     }
 
-    int LayoutManager::touch(uint64_t server, time_t now, bool promote)
-    {
-      ServerCollect* object = get_server(server);
-      int32_t iret = NULL == object ? EXIT_NO_DATASERVER : TFS_SUCCESS;
-      if (TFS_SUCCESS == iret)
-      {
-        iret = touch(object, now, promote);
-      }
-      return iret;
-    }
-
     int64_t LayoutManager::calc_all_block_bytes() const
     {
       int64_t ret = 0;
@@ -1669,101 +1662,123 @@ namespace tfs
       return iret;
     }
 
-    void LayoutManager::check_server()
+    void LayoutManager::check_all_server_isalive()
     {
       NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
-#if !defined(TFS_GTEST) && !defined(TFS_NS_INTEGRATION)
       Func::sleep(SYSPARAM_NAMESERVER.safe_mode_time_, ngi.destroy_flag_);
-#endif
+
       bool isnew = true;
-      VUINT64 dead_servers;
-      VUINT64 actual_dead_servers;
+      time_t now = 0;
+      int64_t alive_server_nums = 0;
+      int64_t dead_server_nums  = 0;
+      uint64_t* servers = new uint64_t [MAX_PROCESS_NUMS];
       NsGlobalStatisticsInfo stat_info;
-      ServerCollect *server = NULL;
-      std::list<ServerCollect*> alive_servers;
-#if !defined(TFS_GTEST) && !defined(TFS_NS_INTEGRATION)
+      ArrayHelper<uint64_t> helper(MAX_PROCESS_NUMS, servers);
       while (ngi.destroy_flag_ != NS_DESTROY_FLAGS_YES)
-#endif
       {
-        server = NULL;
-        dead_servers.clear();
-        alive_servers.clear();
-        actual_dead_servers.clear();
+        helper.clear();
+        alive_server_nums = 0;
+        dead_server_nums  = 0;
         memset(&stat_info, 0, sizeof(NsGlobalStatisticsInfo));
-        time_t now = time(NULL);
+        now = Func::get_monotonic_time();
         if (ngi.in_safe_mode_time(now))
+        {
           Func::sleep(SYSPARAM_NAMESERVER.safe_mode_time_, ngi.destroy_flag_);
+        }
 
         {
          //check dataserver is alive
-          RWLock::Lock lock(server_mutex_, WRITE_LOCKER);
+          RWLock::Lock lock(server_mutex_, READ_LOCKER);
           SERVER_MAP_ITER iter = servers_.begin();
-          for (; iter != servers_.end(); ++iter)
+          while (iter != servers_.end())
           {
-            server = iter->second;
-            if (!server->is_alive(now))
+            if (!iter->second->is_alive(now))
             {
-              dead_servers.push_back(server->id());
+              ++dead_server_nums;
+              helper.push_back(iter->second->id());
             }
             else
             {
-              server->statistics(stat_info, isnew);
-              alive_servers.push_back(server);
+              ++alive_server_nums;
+              iter->second->statistics(stat_info, isnew);
             }
-          }
-        }
-
-        VUINT64::iterator iter = dead_servers.begin();
-        for (; iter != dead_servers.end(); ++iter)
-        {
-          server = get_server((*iter));
-          if (NULL != server)
-          {
-#if !defined(TFS_GTEST) && !defined(TFS_NS_INTEGRATION)
-            if (test_server_alive((*iter)) == TFS_SUCCESS)
-            {
-              server->statistics(stat_info, isnew);
-              alive_servers.push_back(server);
-            }
-            else
-#endif
-            {
-              actual_dead_servers.push_back((*iter));
-            }
+            ++iter;
           }
         }
 
         // write global information
-#if defined(TFS_GTEST) || defined(TFS_NS_INTEGRATION) || defined(TFS_NS_DEBUG)
-        TBSYS_LOG(INFO, "dead dataserver size: %u, alive dataserver size: %u", dead_servers.size(), alive_servers.size());
-        GFactory::get_global_info().dump();
-#endif
         GFactory::get_global_info().update(stat_info);
-#if defined(TFS_GTEST) || defined(TFS_NS_INTEGRATION) || defined(TFS_NS_DEBUG)
-        GFactory::get_global_info().dump();
-#endif
-        iter = actual_dead_servers.begin();
-        for (; iter != actual_dead_servers.end(); ++iter)
+        //GFactory::get_global_info().dump(TBSYS_LOG_LEVEL_INFO);
+
+        uint64_t* value = NULL;
+        int32_t size = helper.get_array_index();
+        for (int32_t i = 0; i < size; ++i)
         {
-          remove_server((*iter), now);
+          value = helper.pop();
+          remove_server(*value, now);
         }
 
-        std::list<ServerCollect*>::iterator it = alive_servers.begin();
-        for (; it != alive_servers.end(); ++it)
-        {
-          TBSYS_LOG(DEBUG, "server touch, block count: %u, master block count: %u", (*it)->block_count(), (*it)->get_hold_master_size());
-          touch((*it), now, true);
-        }
-
-#if !defined(TFS_GTEST) && !defined(TFS_NS_INTEGRATION)
-        if (!actual_dead_servers.empty())
+        if (dead_server_nums > 0)
         {
           interrupt(INTERRUPT_ALL, now);
         }
 
-        tbutil::Monitor<tbutil::Mutex>::Lock lock(check_server_monitor_);
-        check_server_monitor_.timedWait(tbutil::Time::seconds(SYSPARAM_NAMESERVER.heart_interval_));
-#endif
+        TBSYS_LOG(DEBUG, "check_all_server_isalive, dead size : %d, alive_size: %d", dead_server_nums, alive_server_nums);
+
+        Func::sleep(SYSPARAM_NAMESERVER.heart_interval_, ngi.destroy_flag_);
+      }
+      tbsys::gDeleteA(servers);
+    }
+
+    void LayoutManager::add_block_in_all_server()
+    {
+      NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
+      Func::sleep(SYSPARAM_NAMESERVER.safe_mode_time_, ngi.destroy_flag_);
+
+      time_t now = 0;
+      int32_t count = 0;
+      bool   promote = true;
+      const int32_t MAX_SLOT_NUMS = 2;
+      ServerCollect* last = NULL;
+      ServerCollect* servers[MAX_SLOT_NUMS];
+      ArrayHelper<ServerCollect*> helper(MAX_SLOT_NUMS, servers);
+      while (ngi.destroy_flag_ != NS_DESTROY_FLAGS_YES)
+      {
+        count = 0;
+        now = Func::get_monotonic_time();
+        helper.clear();
+        if (ngi.in_safe_mode_time(now))
+        {
+          Func::sleep(SYSPARAM_NAMESERVER.safe_mode_time_, ngi.destroy_flag_);
+        }
+
+        {
+          RWLock::Lock lock(server_mutex_, READ_LOCKER);
+          SERVER_MAP_ITER iter = NULL == last ? servers_.begin() : servers_.upper_bound(last->id());
+          for (count = 0; iter != servers_.end() && count < MAX_SLOT_NUMS; ++iter)
+          {
+            if (iter->second->is_alive())
+            {
+              ++count;
+              helper.push_back(iter->second);
+            }
+          }
+        }
+
+        int32_t size = helper.get_array_index();
+
+        for (int32_t i = 0; i < size; ++i)
+        {
+          last = *helper.at(i);
+          touch(last, now, promote);
+        }
+        if (size < MAX_SLOT_NUMS)
+        {
+          last = NULL;
+          Func::sleep(SYSPARAM_NAMESERVER.heart_interval_, ngi.destroy_flag_);
+        }
+
+        TBSYS_LOG(DEBUG, "array index size : %d, last: %ld", size, last == NULL ? 0 : last->id());
       }
     }
 
@@ -1900,7 +1915,7 @@ namespace tfs
       while (ngi.destroy_flag_ != NS_DESTROY_FLAGS_YES)
 #endif
       {
-        time_t now = time(NULL);
+        time_t now = Func::get_monotonic_time();
         if (ngi.in_safe_mode_time(now))
           Func::sleep(SYSPARAM_NAMESERVER.safe_mode_time_, ngi.destroy_flag_);
         int64_t should  = static_cast<int64_t>((alive_server_size_ * SYSPARAM_NAMESERVER.run_plan_ratio_)/ 100);
@@ -2063,7 +2078,7 @@ namespace tfs
             for (; iter != pending_plan_list_.end(); ++iter)
             {
               del_list.push_back((*iter));
-              finish_plan_list_.push_back((*iter));
+              //finish_plan_list_.push_back((*iter));
             }
             pending_plan_list_.clear();
           }
@@ -2091,7 +2106,7 @@ namespace tfs
       while (ngi.destroy_flag_ != NS_DESTROY_FLAGS_YES)
 #endif
       {
-        now = time(NULL);
+        now = Func::get_monotonic_time();
         if (ngi.in_safe_mode_time(now))
           Func::sleep(SYSPARAM_NAMESERVER.safe_mode_time_, ngi.destroy_flag_);
 
@@ -2155,7 +2170,7 @@ namespace tfs
         tbutil::Monitor<tbutil::Mutex>::Lock lock(run_plan_monitor_);
         pending_plan_list_.clear();
         running_plan_list_.clear();
-        finish_plan_list_.clear();
+        //finish_plan_list_.clear();
       }
 
       {
@@ -2751,8 +2766,8 @@ namespace tfs
 
     bool LayoutManager::expire()
     {
-      tbutil::Monitor<tbutil::Mutex>::Lock lock(run_plan_monitor_);
-      finish_plan_list_.clear();
+      //tbutil::Monitor<tbutil::Mutex>::Lock lock(run_plan_monitor_);
+      //finish_plan_list_.clear();
       return true;
     }
 

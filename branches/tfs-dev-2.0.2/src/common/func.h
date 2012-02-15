@@ -86,6 +86,11 @@ namespace tfs
       static int32_t set_bit(int32_t& data, int32_t index);
       static int32_t clr_bit(int32_t& data, int32_t index);
       static int32_t test_bit(int32_t data, int32_t index);
+
+      static int64_t get_monotonic_time();
+      static int64_t get_monotonic_time_ms();
+      static int64_t get_monotonic_time_us();
+
 #ifdef _syscall0
       static _syscall0(pid_t,gettid)
 #else

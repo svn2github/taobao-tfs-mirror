@@ -55,7 +55,7 @@ namespace nameserver
     inline int32_t size() const { return info_.size_;}
     inline std::vector<ServerCollect*>& get_hold() { return hold_;}
     inline int32_t get_hold_size() const { return hold_.size();}
-    inline void update(const common::BlockInfo& info) { memcpy(&info_, &info, sizeof(info_));} 
+    inline void update(const common::BlockInfo& info) { memcpy(&info_, &info, sizeof(info_));}
     inline bool is_full() const { return info_.size_ >= common::SYSPARAM_NAMESERVER.max_block_size_; }
     static bool is_full(int64_t size) { return size >= common::SYSPARAM_NAMESERVER.max_block_size_;}
     inline uint32_t id() const { return info_.block_id_;}

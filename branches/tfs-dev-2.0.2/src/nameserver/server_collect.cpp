@@ -9,7 +9,7 @@
  * Version: $Id
  *
  * Authors:
- *   duanfei <duanfei@taobao.com> 
+ *   duanfei <duanfei@taobao.com>
  *      - initial release
  *
  */
@@ -32,7 +32,7 @@ namespace tfs
     const int8_t ServerCollect::DUMP_FLAG_WRITABLE = 0x4;
     const int8_t ServerCollect::DUMP_FLAG_MASTER = 0x8;
     const uint16_t ServerCollect:: DUMP_SLOTS_MAX = 128;
-    const int8_t ServerCollect::MULTIPLE = 4;
+    const int8_t ServerCollect::MULTIPLE = 2;
     const int8_t ServerCollect::MAX_LOAD_DOUBLE = 2;
     const int8_t ServerCollect::AVERAGE_USED_CAPACITY_MULTIPLE = 2;
 
@@ -43,7 +43,6 @@ namespace tfs
 
     ServerCollect::ServerCollect(const DataServerStatInfo& info, const time_t now):
       GCObject(now),
-      DEAD_TIME(SYSPARAM_NAMESERVER.heart_interval_ * ServerCollect::MULTIPLE),
 #ifdef TFS_NS_DEBUG
       total_elect_num_(0),
 #endif
@@ -384,11 +383,11 @@ namespace tfs
                   while (iter != writable_.end())
                   {
                     block = *iter++;
-                    std::vector<BlockCollect*>::iterator where 
+                    std::vector<BlockCollect*>::iterator where
                       = std::find(hold_master_.begin(), hold_master_.end(), block);
                     if ((where == hold_master_.end())
                         && ((block->is_need_master())
-                          || (block->is_writable() 
+                          || (block->is_writable()
                             && !block->in_master_set())))
                     {
                       writable.push_back(block);
@@ -423,7 +422,7 @@ namespace tfs
                     }
                   }
                   server = block->find_master();
-                  if ((block->is_writable()) 
+                  if ((block->is_writable())
                       && (!block->in_master_set())
                       && (NULL != server)
                       && (this == server))
@@ -438,7 +437,7 @@ namespace tfs
                 while(iter != master.end() && actual < count)
                 {
                   block = *iter++;
-                  std::vector<BlockCollect*>::iterator where 
+                  std::vector<BlockCollect*>::iterator where
                     = find(hold_master_.begin(), hold_master_.end(), block);
                   if (where == hold_master_.end())
                   {
@@ -493,7 +492,7 @@ namespace tfs
       total_capacity_ = info.total_capacity_;
       current_load_ = info.current_load_;
       block_count_ = info.block_count_;
-      last_update_time_ = now;
+      touch(now);
       startup_time_ = is_new ? now : info.startup_time_;
       status_ = info.status_;
       read_count_ = info.total_tp_.read_file_count_;
@@ -504,7 +503,7 @@ namespace tfs
       char buf[128] ={'\0'};
       tbsys::CTimeUtil::timeToStr(startup_time_, buf);
       TBSYS_LOG(DEBUG, "server: %s use_capacity: %"PRI64_PREFIX"d, total_capacity: %"PRI64_PREFIX"d, current_load: %d, block_count: %d,startup_time: %s, read_count: %"PRI64_PREFIX"d, read_byte: %"PRI64_PREFIX"d, write_count: %"PRI64_PREFIX"d, write_byte: %"PRI64_PREFIX"d",
-          tbsys::CNetUtil::addrToString(id()).c_str(), use_capacity_, total_capacity_, current_load_, block_count_, buf, read_count_, read_byte_, write_count_, write_byte_); 
+          tbsys::CNetUtil::addrToString(id()).c_str(), use_capacity_, total_capacity_, current_load_, block_count_, buf, read_count_, read_byte_, write_count_, write_byte_);
 #endif
     }
 
@@ -518,7 +517,7 @@ namespace tfs
     {
       if (manager != NULL)
       {
-        clear(*manager, time(NULL));
+        clear(*manager, Func::get_monotonic_time());
       }
     }
   } /** nameserver **/

@@ -61,8 +61,8 @@ namespace tfs
 
     enum NsDestroyFlag
     {
-      NS_DESTROY_FLAGS_YES = 0x00,
-      NS_DESTROY_FLAGS_NO
+      NS_DESTROY_FLAGS_NO  = 0x00,
+      NS_DESTROY_FLAGS_YES = 0x01
     };
 
     enum NsSwitchFlag
@@ -85,12 +85,12 @@ namespace tfs
       virtual ~GCObject() {}
       virtual void callback(LayoutManager* /**manager*/){}
       inline void free(){ delete this;}
-      inline void set_dead_time(const time_t now = time(NULL)) {dead_time_ = now;}
-      inline bool can_be_clear(const time_t now = time(NULL)) const
+      inline void set_dead_time(const time_t now = common::Func::get_monotonic_time()) {dead_time_ = now;}
+      inline bool can_be_clear(const time_t now) const
       {
         return now >= (dead_time_ + common::SYSPARAM_NAMESERVER.object_clear_max_time_);
       }
-      inline bool is_dead(const time_t now = time(NULL)) const
+      inline bool is_dead(const time_t now = common::Func::get_monotonic_time()) const
       {
         return now >= (dead_time_ + common::SYSPARAM_NAMESERVER.object_dead_max_time_);
       }
@@ -117,7 +117,8 @@ namespace tfs
       }
 
       static NsGlobalStatisticsInfo& instance();
-      void dump();
+      void dump(int32_t level, const char* file = __FILE__, const int32_t line = __LINE__, const char* function =
+          __FUNCTION__) const;
       volatile int64_t elect_seq_num_;
       volatile int64_t use_capacity_;
       volatile int64_t total_capacity_;
@@ -148,7 +149,7 @@ namespace tfs
       NsSyncDataFlag sync_oplog_flag_;
       bool in_safe_mode_time(const int64_t now) const;
       bool in_discard_newblk_safe_mode_time(const int64_t now) const;
-      void set_switch_time(const int64_t now = time(NULL));
+      void set_switch_time(const int64_t now = common::Func::get_monotonic_time());
       void initialize();
       void dump(int32_t level, const char* file = __FILE__, const int32_t line = __LINE__, const char* function =
           __FUNCTION__) const;
@@ -159,7 +160,8 @@ namespace tfs
 
     class BlockCollect;
     class ServerCollect;
-    typedef __gnu_cxx ::hash_map<uint64_t, nameserver::ServerCollect*, __gnu_cxx ::hash<uint64_t> > SERVER_MAP;
+    typedef std::map<uint64_t, nameserver::ServerCollect*> SERVER_MAP;
+    //typedef __gnu_cxx ::hash_map<uint64_t, nameserver::ServerCollect*, __gnu_cxx ::hash<uint64_t> > SERVER_MAP;
     typedef SERVER_MAP::iterator SERVER_MAP_ITER;
     typedef __gnu_cxx ::hash_map<uint32_t, nameserver::BlockCollect*, __gnu_cxx ::hash<uint32_t> > BLOCK_MAP;
     typedef BLOCK_MAP::iterator BLOCK_MAP_ITER;
@@ -168,6 +170,9 @@ namespace tfs
     extern void print_servers(const std::vector<ServerCollect*>& servers, std::string& result);
     extern void print_servers(const std::vector<uint64_t>& servers, std::string& result);
     extern void print_blocks(const std::vector<uint32_t>& blocks, std::string& result);
+
+    static const int32_t MAX_SERVER_NUMS = 3000;
+    static const int32_t MAX_PROCESS_NUMS = MAX_SERVER_NUMS * 12;
 
   }/** nameserver **/
 }/** tfs **/

@@ -461,7 +461,6 @@ namespace tfs
     // sleep
     void Func::sleep(const float f_heart_interval, bool& stop)
     {
-      TBSYS_LOG(DEBUG, "stop: %d", stop);
       int32_t heart_interval = static_cast<int32_t>(((f_heart_interval + 0.01) * 10));
       while (!stop && heart_interval > 0)
       {
@@ -472,7 +471,6 @@ namespace tfs
 
     void Func::sleep(const float f_heart_interval, int32_t& stop)
     {
-      TBSYS_LOG(DEBUG, "stop: %d", stop);
       int32_t heart_interval = static_cast<int32_t>(((f_heart_interval + 0.01) * 10));
       while (!stop && heart_interval > 0)
       {
@@ -722,6 +720,27 @@ namespace tfs
     int32_t Func::test_bit(int32_t data, int32_t index)
     {
       return (data & (1 << index));
+    }
+
+    int64_t Func::get_monotonic_time()
+    {
+      timespec t;
+      clock_gettime(CLOCK_MONOTONIC, &t);
+      return t.tv_sec;
+    }
+
+    int64_t Func::get_monotonic_time_ms()
+    {
+      timespec t;
+      clock_gettime(CLOCK_MONOTONIC, &t);
+      return (static_cast<int64_t>(t.tv_sec) * static_cast<int64_t>(1000)) ;
+    }
+
+    int64_t Func::get_monotonic_time_us()
+    {
+      timespec t;
+      clock_gettime(CLOCK_MONOTONIC, &t);
+      return (static_cast<int64_t>(t.tv_sec) * static_cast<int64_t>(1000000) + static_cast<int64_t>(t.tv_nsec/1000));
     }
   }/** common **/
 }/** tfs **/

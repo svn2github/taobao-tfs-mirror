@@ -9,7 +9,7 @@
  * Version: $Id
  *
  * Authors:
- *   duanfei <duanfei@taobao.com> 
+ *   duanfei <duanfei@taobao.com>
  *      - initial release
  *
  */
@@ -65,10 +65,10 @@ namespace tfs
       inline int64_t total_capacity() const { return total_capacity_;}
       inline int32_t load() const { return current_load_;}
       bool can_be_master(int32_t max_write_block_count);
-      inline void touch(const time_t now) { last_update_time_ = now;} 
+      inline void touch(const time_t now) { last_update_time_ = now;}
       inline uint64_t id() const { return id_;}
       inline bool is_full() const { return use_capacity_ >= total_capacity_ * common::SYSPARAM_NAMESERVER.max_use_capacity_ratio_ / 100;}
-      inline bool is_alive(const time_t now) const { return ((now < last_update_time_+ DEAD_TIME));}
+      inline bool is_alive(const time_t now) const { return ((now < last_update_time_+ common::SYSPARAM_NAMESERVER.heart_interval_ * MULTIPLE));}
       inline bool is_alive() const { return (status_ == common::DATASERVER_STATUS_ALIVE);}
       inline void dead() { status_ = common::DATASERVER_STATUS_DEAD;}
       inline int32_t block_count() const { return hold_.size();}
@@ -103,7 +103,7 @@ namespace tfs
       inline bool is_report_block_complete(void) const
       {
         return rb_status_ == REPORT_BLOCK_STATUS_COMPLETE;
-      } 
+      }
       static const int8_t MULTIPLE;
       static const int8_t MAX_LOAD_DOUBLE;
       static const int8_t DUMP_FLAG_HOLD;
@@ -118,7 +118,6 @@ namespace tfs
 #else
       private:
 #endif
-      const uint8_t DEAD_TIME;
       ServerCollect();
       std::set<BlockCollect*, BlockIdComp> hold_;
       std::set<BlockCollect*, BlockIdComp> writable_;
@@ -138,6 +137,7 @@ namespace tfs
       int64_t elect_seq_;
       time_t  startup_time_;
       time_t  last_update_time_;
+      time_t  rb_expired_time_;
       int32_t current_load_;
       int32_t block_count_;
       int32_t write_index_;

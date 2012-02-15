@@ -63,7 +63,7 @@ namespace nameserver
     {
       tbutil::Mutex::Lock lock(mutex_);
       TBSYS_LOG(INFO, "gc object list size: %zd", object_list_.size());
-      std::pair<std::set<GCObject*>::iterator, bool> res; 
+      std::pair<std::set<GCObject*>::iterator, bool> res;
       std::vector<GCObject*>::const_iterator iter = objects.begin();
       for (; iter != objects.end(); ++iter)
       {
@@ -79,7 +79,7 @@ namespace nameserver
 
   void GCObjectManager::run()
   {
-    int64_t now = time(NULL); 
+    int64_t now = Func::get_monotonic_time();
     GCObject* obj = NULL;
     int32_t total = 0;
     int32_t gc_count = 0;
@@ -124,7 +124,7 @@ namespace nameserver
     int iret = GFactory::get_timer()->scheduleRepeated(task, tbutil::Time::seconds(SYSPARAM_NAMESERVER.object_clear_max_time_));
     return iret < 0 ? TFS_ERROR : TFS_SUCCESS;
   }
-  
+
   int GCObjectManager::wait_for_shut_down()
   {
     tbutil::Mutex::Lock lock(mutex_);

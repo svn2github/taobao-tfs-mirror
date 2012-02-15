@@ -45,7 +45,7 @@ namespace tfs
       TBSYS_LOG(INFO, "owner_check_time: %"PRI64_PREFIX"d(us), max_owner_check_time: %"PRI64_PREFIX"u(us)",
           owner_check_time_, max_owner_check_time_);
       NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
-      ngi.last_push_owner_check_packet_time_ = ngi.last_owner_check_time_ = tbutil::Time::now().toMicroSeconds();//ms
+      ngi.last_push_owner_check_packet_time_ = ngi.last_owner_check_time_ = tbutil::Time::now(tbutil::Time::Monotonic).toMicroSeconds();//ms
     }
 
     OwnerCheckTimerTask::~OwnerCheckTimerTask()
@@ -59,7 +59,7 @@ namespace tfs
       if (ngi.owner_status_ >= NS_STATUS_INITIALIZED)
       {
         bool bret = false;
-        tbutil::Time now = tbutil::Time::now();
+        tbutil::Time now = tbutil::Time::now(tbutil::Time::Monotonic);
         tbutil::Time end = now + MAX_LOOP_TIME;
         if (ngi.last_owner_check_time_ >= ngi.last_push_owner_check_packet_time_)
         {
@@ -72,7 +72,7 @@ namespace tfs
             bret = server_->push(message, false);
             if (!bret)
             {
-              current = tbutil::Time::now().toMicroSeconds();
+              current = tbutil::Time::now(tbutil::Time::Monotonic).toMicroSeconds();
             }
             else
             {
@@ -563,8 +563,11 @@ namespace tfs
         if (param.need_new_ && iret == TFS_SUCCESS)// add new block when block filled complete
         {
           bool promote = true;
-          time_t now = time(NULL);
-          meta_mgr_.touch(param.id_, now, promote);
+          ServerCollect* object = meta_mgr_.get_server(param.id_);
+          if (NULL != object)
+          {
+            meta_mgr_.touch(object, Func::get_monotonic_time(), promote);
+          }
         }
       }
       return iret;
@@ -624,7 +627,7 @@ namespace tfs
         }
         else
         {
-          time_t now = time(NULL);
+          time_t now = Func::get_monotonic_time();
           int32_t repair_flag = message->get_repair();
           uint64_t dest_server = message->get_server_id();
           if (repair_flag == UPDATE_BLOCK_NORMAL)//normal
@@ -693,7 +696,7 @@ namespace tfs
       {
         NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
         tbutil::Mutex::Lock lock(ngi);
-        ngi.last_owner_check_time_ = tbutil::Time::now().toMicroSeconds();//us
+        ngi.last_owner_check_time_ = tbutil::Time::now(tbutil::Time::Monotonic).toMicroSeconds();//us
       }
       return iret;
     }
@@ -923,7 +926,7 @@ namespace tfs
       int32_t iret = TFS_SUCCESS;
       int32_t percent = 0;
       tbnet::Packet* ret_msg = NULL;
-      time_t end_report_time = time(NULL) + SYSPARAM_NAMESERVER.safe_mode_time_;
+      time_t end_report_time = Func::get_monotonic_time() + SYSPARAM_NAMESERVER.safe_mode_time_;
       while (!stop_)
       {
         if (ngi.destroy_flag_ != NS_DESTROY_FLAGS_YES)
@@ -959,12 +962,12 @@ namespace tfs
 
         if (!complete)
         {
-          complete = time(NULL) > end_report_time;
+          complete = Func::get_monotonic_time() > end_report_time;
           if (!complete)
           {
             usleep(500000); //500ms
           }
-          complete = time(NULL) > end_report_time;
+          complete = Func::get_monotonic_time() > end_report_time;
         }
         if (complete)
         {
@@ -990,6 +993,8 @@ namespace tfs
             && pcode != MASTER_AND_SLAVE_HEART_MESSAGE
             && pcode != MASTER_AND_SLAVE_HEART_RESPONSE_MESSAGE
             && pcode != HEARTBEAT_AND_NS_HEART_MESSAGE
+            && pcode != SET_DATASERVER_MESSAGE
+            && pcode != REQ_REPORT_BLOCKS_TO_NS_MESSAGE
             && pcode != CLIENT_CMD_MESSAGE)
           {
             iret = ngi.owner_status_ <= NS_STATUS_ACCEPT_DS_INFO ? common::TFS_ERROR : common::TFS_SUCCESS;
@@ -1015,6 +1020,7 @@ namespace tfs
             && pcode != HEARTBEAT_AND_NS_HEART_MESSAGE
             && pcode != MASTER_AND_SLAVE_HEART_RESPONSE_MESSAGE
             && pcode != SET_DATASERVER_MESSAGE
+            && pcode != REQ_REPORT_BLOCKS_TO_NS_MESSAGE
             && pcode != CLIENT_CMD_MESSAGE)
           {
             if (ngi.owner_status_ <= NS_STATUS_ACCEPT_DS_INFO)
@@ -1029,6 +1035,7 @@ namespace tfs
                 && pcode != GET_BLOCK_INFO_MESSAGE
                 && pcode != GET_BLOCK_INFO_MESSAGE
                 && pcode != SET_DATASERVER_MESSAGE
+                && pcode != REQ_REPORT_BLOCKS_TO_NS_MESSAGE
                 && pcode != BATCH_GET_BLOCK_INFO_MESSAGE
                 && pcode != SHOW_SERVER_INFORMATION_MESSAGE)
               {

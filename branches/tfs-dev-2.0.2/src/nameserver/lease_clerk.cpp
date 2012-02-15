@@ -48,7 +48,7 @@ namespace tfs
 
     LeaseEntry::LeaseEntry(LeaseClerkPtr clerk, uint32_t lease_id, int64_t client, LeaseType type):
       clerk_(clerk),
-      last_update_time_(tbutil::Time::now()),
+      last_update_time_(tbutil::Time::now(tbutil::Time::Monotonic)),
       expire_time_(last_update_time_ + tbutil::Time::milliSeconds(LEASE_EXPIRE_TIME_MS)),
       client_(client),
       lease_id_(lease_id),
@@ -92,7 +92,7 @@ namespace tfs
     void LeaseEntry::reset(uint32_t lease_id, LeaseType type)
     {
       lease_id_ = lease_id;
-      last_update_time_ = tbutil::Time::now();
+      last_update_time_ = tbutil::Time::now(tbutil::Time::Monotonic);
       expire_time_ = last_update_time_ + tbutil::Time::milliSeconds(LEASE_EXPIRE_TIME_MS);
       type_ = type;
       status_ = LEASE_STATUS_RUNNING;
@@ -100,7 +100,7 @@ namespace tfs
 
     bool LeaseEntry::is_valid_lease() const
     {
-      tbutil::Time now = tbutil::Time::now();
+      tbutil::Time now = tbutil::Time::now(tbutil::Time::Monotonic);
       TBSYS_LOG(DEBUG, "is valid lease status %d:%s time: %s" , status_, status_ == LEASE_STATUS_RUNNING ? "true" : "false",
          now < expire_time_ ? "true" : "false");
       return (status_ == LEASE_STATUS_RUNNING
@@ -111,7 +111,7 @@ namespace tfs
     {
       if (status_ > LEASE_STATUS_RUNNING)
         return true;
-      Time time_out = expire_time_ - tbutil::Time::now();
+      Time time_out = expire_time_ - tbutil::Time::now(tbutil::Time::Monotonic);
       if (time_out >= 0 )
       {
         tbutil::Monitor<tbutil::Mutex>::Lock lock(*this);
@@ -145,7 +145,7 @@ namespace tfs
           "now time: %"PRI64_PREFIX"d, lease id: %u, is valid: %s, current wait count: %"PRI64_PREFIX"d,"
           "max wait count: %"PRI64_PREFIX"d status: %s",
           id, last_update_time_.toMicroSeconds(), expire_time_.toMicroSeconds(),
-          tbutil::Time::now().toMicroSeconds(), lease_id_, is_valid ? "true" : "false",
+          tbutil::Time::now(tbutil::Time::Monotonic).toMicroSeconds(), lease_id_, is_valid ? "true" : "false",
           current_wait_count, max_wait_count,
           status_ == LEASE_STATUS_RUNNING? "runing" : status_ == LEASE_STATUS_FINISH? "finsih"
           : status_ == LEASE_STATUS_FAILED ? "failed" : status_ == LEASE_STATUS_EXPIRED ? "expired"
@@ -175,7 +175,7 @@ namespace tfs
       RWLock::Lock lock(mutex_, WRITE_LOCKER);
       int32_t size = static_cast<int32_t>(leases_.size());
       TBSYS_LOG(INFO, "prepare to cleanup lease, current lease map size: %u", size);
-      tbutil::Time now = tbutil::Time::now();
+      tbutil::Time now = tbutil::Time::now(tbutil::Time::Monotonic);
       bool remove = true;
       while (remove)
       {
@@ -199,7 +199,7 @@ namespace tfs
         }
         size = leases_.size();
      }
-      tbutil::Time end = tbutil::Time::now();
+      tbutil::Time end = tbutil::Time::now(tbutil::Time::Monotonic);
       TBSYS_LOG(INFO, "cleanup lease complete, current lease map size: %zd, consume: %" PRI64_PREFIX "d",
           leases_.size(), (end - now).toMicroSeconds());
     }

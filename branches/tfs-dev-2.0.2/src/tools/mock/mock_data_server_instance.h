@@ -62,6 +62,8 @@ public:
 
   virtual const char* get_log_file_path();
 
+  virtual const char* get_pid_file_path();
+
   /** initialize application data*/
   virtual int initialize(int argc, char* argv[]);
 
@@ -122,6 +124,8 @@ private:
   uint64_t ns_ip_port_;
   common::HasBlockFlag need_send_block_to_ns_;
   int32_t MAX_WRITE_FILE_SIZE;
+  uint32_t  block_count;
+  uint32_t block_start;
 
   std::string server_index_;
 };

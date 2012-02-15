@@ -74,7 +74,7 @@ namespace tfs
         tbutil::Monitor<tbutil::Mutex>::Lock lock(manager_->run_plan_monitor_);
         TaskPtr task = TaskPtr::dynamicCast(this);
         status_ = PLAN_STATUS_TIMEOUT;
-        manager_->finish_plan_list_.push_back(task);
+        //manager_->finish_plan_list_.push_back(task);
         std::set<TaskPtr, TaskCompare>::iterator r_iter = manager_->running_plan_list_.find(task);
         if (r_iter != manager_->running_plan_list_.end())
         {
@@ -188,10 +188,10 @@ namespace tfs
         TBSYS_LOG(WARN, "compact task do complete fail: %d", iret);
       }
 
-      {
-        tbutil::Monitor<tbutil::Mutex>::Lock lock(manager_->run_plan_monitor_);
-        manager_->finish_plan_list_.push_back(task);
-      }
+      //{
+      //  tbutil::Monitor<tbutil::Mutex>::Lock lock(manager_->run_plan_monitor_);
+      //  manager_->finish_plan_list_.push_back(task);
+      //}
     }
 
     void LayoutManager::CompactTask::dump(tbnet::DataBuffer& stream)
@@ -277,7 +277,7 @@ namespace tfs
       }
 
       status_ = PLAN_STATUS_BEGIN;
-      begin_time_ = time(NULL);
+      begin_time_ = Func::get_monotonic_time();
       end_time_ = begin_time_ + SYSPARAM_NAMESERVER.run_plan_expire_interval_;
       return iret;
     }
@@ -403,7 +403,7 @@ namespace tfs
           && value.has_success_
           && !servers.empty())
       {
-        time_t now = time(NULL);
+        time_t now =Func::get_monotonic_time();
         //expire block on this failed servers.
         std::vector<uint64_t>::iterator iter = servers.begin();
         for (; iter != servers.end(); ++iter)
@@ -521,7 +521,7 @@ namespace tfs
         block.block_id_ = block_id_;
         block.source_id_ = runer_[0]->id();
         block.destination_id_ = runer_[1]->id();
-        block.start_time_ = time(NULL);
+        block.start_time_ = Func::get_monotonic_time();
         block.is_move_ = flag_;
         block.server_count_ = 0;
         msg.set_repl_block(&block);
@@ -546,7 +546,7 @@ namespace tfs
               tbsys::CNetUtil::addrToString(block.destination_id_).c_str());
 
           status_ = PLAN_STATUS_BEGIN;
-          begin_time_ = time(NULL);
+          begin_time_ = Func::get_monotonic_time();
           end_time_ = begin_time_ + SYSPARAM_NAMESERVER.run_plan_expire_interval_;
         }
 #endif
@@ -562,7 +562,7 @@ namespace tfs
         iret = msg->getPCode() == REPLICATE_BLOCK_MESSAGE ? STATUS_MESSAGE_OK : TFS_ERROR;
         if (STATUS_MESSAGE_OK == iret)
         {
-          time_t now = time(NULL);
+          time_t now = Func::get_monotonic_time();
           ReplicateBlockMessage* message = dynamic_cast<ReplicateBlockMessage*>(msg);
           const ReplBlock blocks = *message->get_repl_block();
           bool success = message->get_command() == PLAN_STATUS_END;
@@ -643,7 +643,7 @@ namespace tfs
 
     int LayoutManager::DeleteBlockTask::handle()
     {
-      time_t now = time(NULL);
+      time_t now = Func::get_monotonic_time();
       BlockChunkPtr ptr = manager_->get_chunk(block_id_);
       RWLock::Lock(*ptr, WRITE_LOCKER);
       BlockCollect* block  = ptr->find(block_id_);
@@ -744,7 +744,23 @@ namespace tfs
     {
       try
       {
-        manager_.check_server();
+        manager_.check_all_server_isalive();
+      }
+      catch(std::exception& e)
+      {
+        TBSYS_LOG(ERROR, "catch exception: %s", e.what());
+      }
+      catch(...)
+      {
+        TBSYS_LOG(ERROR, "%s", "catch exception, unknow message");
+      }
+    }
+
+    void LayoutManager::AddBlockInAllServerThreadHelper::run()
+    {
+      try
+      {
+        manager_.add_block_in_all_server();
       }
       catch(std::exception& e)
       {
