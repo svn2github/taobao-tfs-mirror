@@ -88,26 +88,27 @@ public class tfsManager_09_lsFile extends tfsNameBaseCase
 	   log.info( "test_07_lsFile_not_exist_filePath" );
 	   FileMetaInfo metaInfo;
 	   metaInfo=null;
-	   tfsManager.createFile(appId, userId, "/text");
-	   metaInfo=tfsManager.lsFile(appId, userId, "/text/text");
+	   tfsManager.createFile(appId, userId, "/test_07");
+	   metaInfo=tfsManager.lsFile(appId, userId, "/test_07/text");
 	   Assert.assertNull(metaInfo);
-	   tfsManager.rmFile(appId, userId, "/text");
+	   tfsManager.rmFile(appId, userId, "/test_07");
 	}
 	@Test
 	public void test_08_lsFile_complex_filePath()
 	{
 	   log.info( "test_08_lsFile_complex_filePath" );
+	   String filePath = "/text08";
 	   FileMetaInfo metaInfo;
 	   metaInfo=null;
 	   boolean bRet;
 	   int i;
 	   for(i=1;i<=100;i++)
 	   {
-	       bRet=tfsManager.createFile(appId, userId, "/text"+i);
+	       bRet=tfsManager.createFile(appId, userId, filePath+i);
 	       Assert.assertTrue("Create text"+i+" should be true", bRet);
 	   }
 	   
-	   metaInfo=tfsManager.lsFile(appId, userId, "/text40");
+	   metaInfo=tfsManager.lsFile(appId, userId, "/text0840");
 	   Assert.assertNotNull(metaInfo);
 	   log.info( "The fileName is"+metaInfo.getFileName());
 	   log.info( "The pid is"+metaInfo.getPid());
@@ -117,7 +118,7 @@ public class tfsManager_09_lsFile extends tfsNameBaseCase
 	   
 	   for(i=1;i<=100;i++)
 	   {
-	       bRet=tfsManager.rmFile(appId, userId, "/text"+i);
+	       bRet=tfsManager.rmFile(appId, userId, filePath+i);
 	       Assert.assertTrue("Create text"+i+" should be true", bRet);
 	   }
 	}

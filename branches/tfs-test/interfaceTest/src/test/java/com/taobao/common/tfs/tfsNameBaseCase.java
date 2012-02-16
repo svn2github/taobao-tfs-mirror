@@ -46,6 +46,14 @@ public class tfsNameBaseCase {
 			tfsManager.rmDir(appId, userId, s);
 		}
 	}
+	
+	public void sleep(int msec){
+		try{
+			Thread.sleep(msec);
+		}catch(Exception e){
+			
+		}
+	}
 
 	protected int getCrc(OutputStream opstream) {
 		try {
@@ -139,8 +147,6 @@ public class tfsNameBaseCase {
 		if (createFile(localFile, 10 * (1 << 20))) {
 			testFileList.add(localFile);
 		}
-		clearTempFiles();
-		
 	}
 
 	public static void clearTempFiles(){
