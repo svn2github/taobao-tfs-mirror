@@ -2,6 +2,8 @@ package com.taobao.common.tfs.nativetest;
 
 import static org.junit.Assert.*;
 
+import java.util.ArrayList;
+
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -26,7 +28,43 @@ public class Function_multi_cluster_sync_test extends MultiClusterSyncBaseCase {
 	//final public String clusterCAddr = clusterCIP + ":" + tfsGrid3.getCluster(NSINDEX).getServer(0).getPort();
 	final public String clusterCAddr = "";
 	
-	//@Test
+	
+	
+	public String writeOneTfsFile(String clusterVipAddr, String szFileName){
+	      String strCmd = "/home/admin/tfs_bin/bin/tfstool -s " + clusterVipAddr + " -i 'put ";
+	      strCmd += szFileName + "' | grep success";
+
+	      ArrayList<String> szOutputList = new ArrayList<String>();
+	      assertTrue(Proc.proStartBase(CLIENTIP, strCmd, szOutputList));
+	      assertTrue(szOutputList.size() > 0);
+	      
+	      return szOutputList.get(0);
+	   }
+
+	   public String getOneTfsFile(String clusterVipAddr, String tfsFileName){
+	      String strCmd = "/home/admin/tfs_bin/bin/tfstool -s " + clusterVipAddr + " -i 'get ";
+	      strCmd += tfsFileName + " test_file.jpg" + "' | grep success";
+
+	      ArrayList<String> szOutputList = new ArrayList<String>();
+	      assertTrue(Proc.proStartBase(CLIENTIP, strCmd, szOutputList));
+	      assertTrue(szOutputList.size() > 0);
+
+	      return szOutputList.get(0);
+	   }
+	   /*test case for  */
+	   @Test
+	   public void test_multi_cluster_read(){
+	      String szFileName = "test_sync.jpg";
+	      createFile("test_sync.jpg", 10 * (1<<10));
+	      
+	      String tfsFileName = writeOneTfsFile(clusterAAddr, szFileName);
+	      getOneTfsFile(clusterAAddr, tfsFileName);
+	      
+	      /* we get two file, one is test_sync.jpg, one is test_file.jpg*/
+	      /* what we should do is to check the two file is the same */
+	   }
+/**/
+	@Test
 	public void Function_01_happy_sync() {
 
 		boolean bRet = false;
