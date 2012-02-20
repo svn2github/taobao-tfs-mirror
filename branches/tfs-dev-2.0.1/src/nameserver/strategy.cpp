@@ -151,8 +151,9 @@ namespace tfs
         return 0;
       }
       BaseStrategy::normalize(server);
-      return server->get_elect_num() * SYSPARAM_NAMESERVER.strategy_write_elect_num_weigth_ +
-            use_ * SYSPARAM_NAMESERVER.strategy_write_capacity_weigth_;
+      return random() % 0xFFFFFFF;
+      /*return server->get_elect_num() * SYSPARAM_NAMESERVER.strategy_write_elect_num_weigth_ +
+            use_ * SYSPARAM_NAMESERVER.strategy_write_capacity_weigth_;*/
     }
 
     // ReplicateDestStrategy

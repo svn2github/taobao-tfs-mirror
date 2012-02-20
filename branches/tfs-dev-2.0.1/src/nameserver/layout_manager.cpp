@@ -2406,6 +2406,7 @@ namespace tfs
         std::multimap<int64_t, ServerCollect*>& source,
         std::set<ServerCollect*>& target)
     {
+      UNUSED(average_load);
       if (NULL != server)
       {
         const uint64_t current_total_capacity = server->total_capacity() * SYSPARAM_NAMESERVER.max_use_capacity_ratio_ / 100;
@@ -2416,9 +2417,9 @@ namespace tfs
           source.insert(std::multimap<int64_t, ServerCollect*>::value_type(
                 static_cast<int64_t>(current_percent * PERCENTAGE_MAGIC), server));
         }
-        if ((current_percent < percent - SYSPARAM_NAMESERVER.balance_percent_)
-            && ((server->load() < average_load * LOAD_BASE_MULTIPLE)
-                || (average_load <= 0)))
+        if ((current_percent < percent - SYSPARAM_NAMESERVER.balance_percent_))
+            /*&& ((server->load() < average_load * LOAD_BASE_MULTIPLE)
+                || (average_load <= 0)))*/
         {
           target.insert(server);
         }
