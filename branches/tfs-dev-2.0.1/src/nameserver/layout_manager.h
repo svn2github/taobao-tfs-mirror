@@ -446,7 +446,7 @@ namespace nameserver
     std::map<uint32_t, TaskPtr> block_to_task_;
     std::set<TaskPtr, TaskCompare> pending_plan_list_;
     std::set<TaskPtr, TaskCompare> running_plan_list_;
-    std::list<TaskPtr> finish_plan_list_;
+    //std::list<TaskPtr> finish_plan_list_;
 
     OpLogSyncManager oplog_sync_mgr_;
 

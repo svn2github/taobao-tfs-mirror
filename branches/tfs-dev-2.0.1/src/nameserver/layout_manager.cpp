@@ -182,7 +182,7 @@ namespace tfs
       {
         pending_plan_list_.clear();
         running_plan_list_.clear();
-        finish_plan_list_.clear();
+        //finish_plan_list_.clear();
       }
 
       {
@@ -722,7 +722,7 @@ namespace tfs
             tbutil::Monitor<tbutil::Mutex>::Lock lock(run_plan_monitor_);
             for (; iter != complete.end(); ++iter)
             {
-              finish_plan_list_.push_back((*iter));
+              //finish_plan_list_.push_back((*iter));
 
               GFactory::get_timer()->cancel((*iter));
 
@@ -2063,7 +2063,7 @@ namespace tfs
             for (; iter != pending_plan_list_.end(); ++iter)
             {
               del_list.push_back((*iter));
-              finish_plan_list_.push_back((*iter));
+              //finish_plan_list_.push_back((*iter));
             }
             pending_plan_list_.clear();
           }
@@ -2155,7 +2155,7 @@ namespace tfs
         tbutil::Monitor<tbutil::Mutex>::Lock lock(run_plan_monitor_);
         pending_plan_list_.clear();
         running_plan_list_.clear();
-        finish_plan_list_.clear();
+        //finish_plan_list_.clear();
       }
 
       {
@@ -2752,7 +2752,7 @@ namespace tfs
     bool LayoutManager::expire()
     {
       tbutil::Monitor<tbutil::Mutex>::Lock lock(run_plan_monitor_);
-      finish_plan_list_.clear();
+      //finish_plan_list_.clear();
       return true;
     }
 

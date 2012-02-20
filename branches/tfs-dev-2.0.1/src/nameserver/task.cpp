@@ -74,7 +74,7 @@ namespace tfs
         tbutil::Monitor<tbutil::Mutex>::Lock lock(manager_->run_plan_monitor_);
         TaskPtr task = TaskPtr::dynamicCast(this);
         status_ = PLAN_STATUS_TIMEOUT;
-        manager_->finish_plan_list_.push_back(task);
+        //manager_->finish_plan_list_.push_back(task);
         std::set<TaskPtr, TaskCompare>::iterator r_iter = manager_->running_plan_list_.find(task);
         if (r_iter != manager_->running_plan_list_.end())
         {
@@ -189,8 +189,8 @@ namespace tfs
       }
 
       {
-        tbutil::Monitor<tbutil::Mutex>::Lock lock(manager_->run_plan_monitor_);
-        manager_->finish_plan_list_.push_back(task);
+        //tbutil::Monitor<tbutil::Mutex>::Lock lock(manager_->run_plan_monitor_);
+        //manager_->finish_plan_list_.push_back(task);
       }
     }
 
