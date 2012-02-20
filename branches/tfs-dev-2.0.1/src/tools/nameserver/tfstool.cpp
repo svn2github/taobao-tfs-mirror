@@ -1290,9 +1290,9 @@ int cmd_ls_file_meta(const VSTRING& param)
         if (file_info.name_.size() > 0)
           fprintf(stdout, "name:%s\n", file_info.name_.data());
         fprintf(stdout, "pid %"PRI64_PREFIX"d id %"PRI64_PREFIX
-            "d create_time %d modify_time %d size %"PRI64_PREFIX"d ver_no %d\n",
-            file_info.pid_, file_info.id_, file_info.create_time_,
-            file_info.modify_time_, file_info.size_, file_info.ver_no_);
+            "d create_time %s modify_time %s size %"PRI64_PREFIX"d ver_no %d\n",
+            file_info.pid_, file_info.id_, Func::time_to_str(file_info.create_time_).c_str(),
+            Func::time_to_str(file_info.modify_time_).c_str(), file_info.size_, file_info.ver_no_);
       }
     }
   }
@@ -1329,7 +1329,7 @@ int cmd_create_dir_meta(const VSTRING& param)
   }
   else
   {
-    ret = impl.create_dir(uid, dir_path);
+    ret = impl.create_dir_with_parents(uid, dir_path);
   }
   return ret;
 }
