@@ -302,7 +302,9 @@ int get_crc_from_filename(const string& old_tfs_client, const string& new_tfs_cl
   }
   else if (META_FLAG_ABNORMAL == src_ret)
   {
-    //do nothing
+    TBSYS_LOG(ERROR, "meta flag abnormal");
+    fprintf(g_error_file, "%s\n", tfs_file_name);
+    cmp_stat_.error_count_++;
   }
   else
   {
