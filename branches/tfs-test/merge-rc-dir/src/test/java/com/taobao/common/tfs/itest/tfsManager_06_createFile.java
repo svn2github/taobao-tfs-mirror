@@ -2,6 +2,7 @@ package com.taobao.common.tfs.itest;
 
 
 import org.junit.Test;
+import org.junit.Ignore;
 
 import junit.framework.Assert;
 
@@ -14,9 +15,9 @@ public class tfsManager_06_createFile extends tfsNameBaseCase
 	{
 	   boolean bRet;
 	   log.info( "test_01_createFile_right_filePath" );
-	   bRet=tfsManager.createFile(appId, userId, "/text");
+	   bRet=tfsManager.createFile(appId, userId, "/textcreateFile");
 	   Assert.assertTrue("Create File with right path should be true", bRet);
-	   tfsManager.rmFile(appId, userId, "/text");
+	   tfsManager.rmFile(appId, userId, "/textcreateFile");
 	}
 	@Test
 	public void  test_02_createFile_null_filePath()
@@ -47,7 +48,7 @@ public class tfsManager_06_createFile extends tfsNameBaseCase
 	{
 	   boolean bRet;
 	   log.info( "test_05_createFile_wrong_filePath_2" );
-	   bRet=tfsManager.createFile(appId, userId, "text");
+	   bRet=tfsManager.createFile(appId, userId, "textcreateFile");
 	   Assert.assertFalse("Create File with wrong 2 path should be false", bRet);
 	}
 	@Test
@@ -55,16 +56,16 @@ public class tfsManager_06_createFile extends tfsNameBaseCase
 	{
 	   boolean bRet;
 	   log.info( "test_06_createFile_wrong_filePath_3" );
-	   bRet=tfsManager.createFile(appId, userId, "///text///");
+	   bRet=tfsManager.createFile(appId, userId, "///textcreateFile///");
 	   Assert.assertTrue("Create File with wrong 3 path be true", bRet);
-	   tfsManager.rmFile(appId, userId, "/text");
+	   tfsManager.rmFile(appId, userId, "/textcreateFile");
 	}
 	@Test
 	public void  test_07_createFile_leap_filePath()
 	{
 	   boolean bRet;
 	   log.info( "test_07_createFile_leap_filePath" );
-	   bRet=tfsManager.createFile(appId, userId, "/text/text");
+	   bRet=tfsManager.createFile(appId, userId, "/textcreateFile/textcreateFile");
 	   Assert.assertFalse("Create File with leap path should be false", bRet);
 	}
 	@Test
@@ -72,21 +73,21 @@ public class tfsManager_06_createFile extends tfsNameBaseCase
 	{
 	   boolean bRet;
 	   log.info( "test_08_createFile_same_File_name" );
-	   bRet=tfsManager.createFile(appId, userId, "/text");
+	   bRet=tfsManager.createFile(appId, userId, "/textcreateFile");
 	   Assert.assertTrue("Create File with right path should be true", bRet);
-	   bRet=tfsManager.createFile(appId, userId, "/text");
+	   bRet=tfsManager.createFile(appId, userId, "/textcreateFile");
 	   Assert.assertFalse("Create File two times should be false", bRet);
-	   tfsManager.rmFile(appId, userId, "/text");
+	   tfsManager.rmFile(appId, userId, "/textcreateFile");
 	}
 	@Test
 	public void  test_09_createFile_with_same_Dir()
 	{
 	   boolean bRet;
 	   log.info( "test_09_createFile_with_same_Dir" );
-	   bRet=tfsManager.createDir(appId, userId, "/text");
-	   bRet=tfsManager.createFile(appId, userId, "/text");
-	   //Assert.assertFalse("Create File with the same name to Dirshould be false", bRet);
-	   tfsManager.rmDir(appId, userId, "/text");
-	   tfsManager.rmFile(appId, userId, "/text");
+	   bRet=tfsManager.createDir(appId, userId, "/textcreateFile");
+	   bRet=tfsManager.createFile(appId, userId, "/textcreateFile");
+	   Assert.assertTrue("Create File with the same name to Dir should be true", bRet);
+	   tfsManager.rmDir(appId, userId, "/textcreateFile");
+	   tfsManager.rmFile(appId, userId, "/textcreateFile");
 	}
 }

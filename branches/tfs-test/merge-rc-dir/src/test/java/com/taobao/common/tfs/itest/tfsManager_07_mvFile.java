@@ -1,6 +1,7 @@
 package com.taobao.common.tfs.itest;
 
 import org.junit.Test;
+import org.junit.Ignore;
 
 import junit.framework.Assert;
 
@@ -13,11 +14,12 @@ public class tfsManager_07_mvFile extends tfsNameBaseCase
 	{
 	   boolean bRet;
 	   log.info( "test_01_mvFile_right" );
-	   bRet=tfsManager.createFile(appId, userId, "/text1");
-	   bRet=tfsManager.mvFile(appId, userId, "/text1", "/text2");
+	   bRet=tfsManager.createFile(appId, userId, "/textmvFile1src");
+       Assert.assertTrue(bRet);
+	   bRet=tfsManager.mvFile(appId, userId, "/textmvFile1src", "/textmvFile1tar");
        Assert.assertTrue("mvFile with right path should be true", bRet);
-       tfsManager.rmFile(appId, userId, "/text2");
-	   bRet=tfsManager.rmFile(appId, userId, "/text1");
+       tfsManager.rmFile(appId, userId, "/textmvFile1tar");
+	   bRet=tfsManager.rmFile(appId, userId, "/textmvFile1src");
 	   Assert.assertFalse("mvFile with remove path should be false", bRet);
 	}
 	@Test
@@ -25,10 +27,12 @@ public class tfsManager_07_mvFile extends tfsNameBaseCase
 	{
 	   boolean bRet;
 	   log.info( "test_02_mvFile_null_destFilePath" );
-	   bRet=tfsManager.createFile(appId, userId, "/text1");
-	   bRet=tfsManager.mvFile(appId, userId, "/text1",null);
+	   bRet=tfsManager.createFile(appId, userId, "/textmvFile1src");
+       Assert.assertTrue(bRet);
+	   bRet=tfsManager.mvFile(appId, userId, "/textmvFile1src",null);
        Assert.assertFalse("mvFile with null destFilePath should be false", bRet);
-       bRet=tfsManager.rmFile(appId, userId, "/text1");
+       bRet=tfsManager.rmFile(appId, userId, "/textmvFile1src");
+       Assert.assertTrue(bRet);
 	}
 	@Test
 	public void test_03_mvFile_empty_destFilePath()
@@ -65,10 +69,10 @@ public class tfsManager_07_mvFile extends tfsNameBaseCase
 	{
 	   boolean bRet;
 	   log.info( "test_06_mvFile_wrong_destFilePath_3" );
-	   bRet=tfsManager.createFile(appId, userId, "/text1");
-	   bRet=tfsManager.mvFile(appId, userId, "/text1","///text2///");
+	   bRet=tfsManager.createFile(appId, userId, "/textmvFile6src");
+	   bRet=tfsManager.mvFile(appId, userId, "/textmvFile6src","///textmvFile6tar///");
        Assert.assertTrue("mvFile with wrong_3 destFilePath be true", bRet);
-       bRet=tfsManager.rmFile(appId, userId, "/text2");
+       bRet=tfsManager.rmFile(appId, userId, "/textmvFile6tar");
 	}
 	@Test
 	public void test_07_mvFile_leap_Filename()

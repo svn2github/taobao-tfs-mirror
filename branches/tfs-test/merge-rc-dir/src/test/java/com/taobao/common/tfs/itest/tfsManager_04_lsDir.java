@@ -8,6 +8,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.junit.Ignore;
 
 import junit.framework.Assert;
 
@@ -23,31 +24,31 @@ public class tfsManager_04_lsDir extends tfsNameBaseCase
 		 int i,j;
 		 for(i=1;i<=5;i++)
 		 {
-			 tfsManager.createDir(appId, userId, "/text"+i);
-			 tfsManager.createFile(appId, userId, "/textFile"+i);
+			 tfsManager.createDir(appId, userId, "/textlsDir"+i);
+			 tfsManager.createFile(appId, userId, "/textlsDirFile"+i);
 		 }
 		 for(i=1;i<=5;i++)
 		 for(j=1;j<=5;j++)
 		 {
-			tfsManager.createDir(appId, userId, "/text"+i+"/text"+j);
-			tfsManager.createFile(appId, userId, "/text"+i+"/textFile"+j);
+			tfsManager.createDir(appId, userId, "/textlsDir"+i+"/textlsDir"+j);
+			tfsManager.createFile(appId, userId, "/textlsDir"+i+"/textlsDirFile"+j);
 		 }
 	 }
-	 @After
+ @After
 	 public void After()
 	 {
 		 int i,j;
 		 for(i=1;i<=5;i++)
 		 for(j=1;j<=5;j++)
 		 {
-			tfsManager.rmDir(appId, userId, "/text"+i+"/text"+j);
-			tfsManager.rmFile(appId, userId, "/text"+i+"/textFile"+j);
+			tfsManager.rmDir(appId, userId, "/textlsDir"+i+"/textlsDir"+j);
+			tfsManager.rmFile(appId, userId, "/textlsDir"+i+"/textlsDirFile"+j);
 		 }
 		 
 		 for(i=1;i<=5;i++)
 		 {
-			 tfsManager.rmDir(appId, userId, "/text"+i);
-			 tfsManager.rmFile(appId, userId, "/textFile"+i);
+			 tfsManager.rmDir(appId, userId, "/textlsDir"+i);
+			 tfsManager.rmFile(appId, userId, "/textlsDirFile"+i);
 		 }
 		 
 	 }
@@ -59,7 +60,7 @@ public class tfsManager_04_lsDir extends tfsNameBaseCase
 		metaInfoList=null;
 		FileMetaInfo metaInfo;
 		int num=10;
-		metaInfoList=tfsManager.lsDir(appId, userId, "/text1");
+		metaInfoList=tfsManager.lsDir(appId, userId, "/textlsDir1");
 	    Assert.assertNotNull(metaInfoList);//why
 		Assert.assertEquals(num, metaInfoList.size());
 		int i;
@@ -99,7 +100,7 @@ public class tfsManager_04_lsDir extends tfsNameBaseCase
 		log.info( "test_04_lsDir_wrong_filePath_1" );
 		List<FileMetaInfo> metaInfoList = new ArrayList<FileMetaInfo>();
 		metaInfoList=null;
-		metaInfoList=tfsManager.lsDir(appId, userId, "text1");
+		metaInfoList=tfsManager.lsDir(appId, userId, "textlsDir1");
 	    Assert.assertNull(metaInfoList);
 	 }
 	 @Test 
@@ -110,7 +111,7 @@ public class tfsManager_04_lsDir extends tfsNameBaseCase
 		metaInfoList=null;
 		FileMetaInfo metaInfo;
 		int num=10;
-		metaInfoList=tfsManager.lsDir(appId, userId, "///text1///");
+		metaInfoList=tfsManager.lsDir(appId, userId, "///textlsDir1///");
 	    Assert.assertNotNull(metaInfoList);//why
 		Assert.assertEquals(num, metaInfoList.size());
 		int i;
@@ -133,7 +134,7 @@ public class tfsManager_04_lsDir extends tfsNameBaseCase
 		log.info( "test_07_lsDir_not_exist_filePath" );
 		List<FileMetaInfo> metaInfoList = new ArrayList<FileMetaInfo>();
 		metaInfoList=null;
-		metaInfoList=tfsManager.lsDir(appId, userId, "/text1/text");
+		metaInfoList=tfsManager.lsDir(appId, userId, "/textlsDir1/textlsDir");
 	    Assert.assertNull(metaInfoList);
 	 }
 }
