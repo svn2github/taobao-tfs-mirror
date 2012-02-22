@@ -65,6 +65,8 @@ namespace tfs
         int load(const uint32_t logic_block_id, const int32_t bucket_size, const common::MMapOption map_option);
         // clear memory map, delete blockfile
         int remove(const uint32_t logic_block_id);
+        // rename index file ==> current idex file + "." + current time
+        int rename(const uint32_t logic_block_id);
         // flush file to disk
         int flush();
         int set_block_dirty_type(const DirtyFlag dirty_flag);

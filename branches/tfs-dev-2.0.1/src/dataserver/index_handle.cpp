@@ -225,6 +225,22 @@ namespace tfs
       return ret;
     }
 
+    // rename index file
+    int IndexHandle::rename(const uint32_t logic_block_id)
+    {
+      if (is_load_)
+      {
+        if (logic_block_id != block_info()->block_id_)
+        {
+          TBSYS_LOG(ERROR, "block id conflict. blockid: %d, index blockid: %d", logic_block_id, block_info()->block_id_);
+          return EXIT_BLOCKID_CONFLICT_ERROR;
+        }
+      }
+
+      int ret = file_op_->rename_file();
+      return ret;
+    }
+
     int IndexHandle::flush()
     {
       int ret = file_op_->flush_file();
