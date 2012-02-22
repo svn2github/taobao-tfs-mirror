@@ -13,6 +13,7 @@ import com.taobao.gaia.HelpProc;
 public class bugVerificationSet extends NativeTfsBaseCase {
 
 	public String CLIENTIP = "10.232.36.206";
+	public static String TFS_BIN_HOME = "/home/admin/workspace/mazhentong.pt/tfs_bin/";
 	public HelpProc Proc = new HelpProc();
 
 	public String writeOneTfsFile(String clusterVipAddr, String szFileName) {
@@ -96,7 +97,16 @@ public class bugVerificationSet extends NativeTfsBaseCase {
 				}
 			}
 		}
-		
+
+		return null;
+	}
+	
+	public String closeDataServer(String dsAddr, int index){
+		ArrayList<String> szOutputList = new ArrayList<String>();
+		String strCmd = TFS_BIN_HOME + "scripts/tfs stop_ds " + index;
+		if (Proc.proStartBase(dsAddr, strCmd, szOutputList)) {
+			
+		}
 		return null;
 	}
 	
@@ -134,5 +144,7 @@ public class bugVerificationSet extends NativeTfsBaseCase {
 		szFilter = "compactblock " + szResult + " success.";
 		szResult = exeAdmintollCmd(clusterAAddr, szSubCmd, szFilter);
 		assertNotNull(szResult);
+		
+		closeDataServer("10.232.4.12", 1);
 	}
 }
