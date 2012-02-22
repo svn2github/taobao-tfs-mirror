@@ -92,6 +92,7 @@ public class Function_tair_cache_large_file_test extends RcBaseCase{
 			}
 		}
 		}
+	@Test
 	/*use local cache read OK */
 public void Function_2_with_localcache_large_file_part_with_localcache() throws Exception {
 		
@@ -137,7 +138,7 @@ public void Function_2_with_localcache_large_file_part_with_localcache() throws 
 			}
 		}
 	}
-
+@Test
 /*use local cache read OK */
 public void Function_3_with_local_taircache_large_file_part_with_localcache() throws Exception {
 		
@@ -186,7 +187,7 @@ public void Function_3_with_local_taircache_large_file_part_with_localcache() th
 		/*read part file*/
 	}
 	/*nouse local cache and tair cache read OK */
-
+@Test
 public void Function_3_with_local_taircache_large_file_with_localcache() throws Exception {
 		
 		OutputStream output = new FileOutputStream("tmp.jpg");
@@ -236,7 +237,7 @@ public void Function_3_with_local_taircache_large_file_with_localcache() throws 
 		
 	}
 /*part file hit and invalid use local cache cache */
-
+@Test
 public void Function_4_with_localcache_large_file_part_hitwith_valid() throws Exception {
 		
 		OutputStream output = new FileOutputStream("tmp.jpg");
@@ -284,7 +285,7 @@ public void Function_4_with_localcache_large_file_part_hitwith_valid() throws Ex
 	}
 
 /*part file hit and invalid use tair cache cache */
-
+@Test
 public void Function_5_with_Taircache_large_file_part_hitwith_valid() throws Exception {
 		
 		OutputStream output = new FileOutputStream("tmp.jpg");
@@ -340,7 +341,7 @@ public void Function_5_with_Taircache_large_file_part_hitwith_valid() throws Exc
 }
 
 /* use tair cache  part_file hit and local cache miss hit */
-
+@Test
 public void Function_6_with_Taircache_part_file_part_hit_localcahe_miss() throws Exception {
 		
 		OutputStream output = new FileOutputStream("tmp.jpg");
@@ -387,7 +388,7 @@ public void Function_6_with_Taircache_part_file_part_hit_localcahe_miss() throws
 
 }
 /* use tair cache  part_file miss and local cache hit_invalid */
-
+@Test
 public void Function_7_with_Taircache_part_file_part_hit_localcahe_miss() throws Exception {
 		
 		OutputStream output = new FileOutputStream("tmp.jpg");
@@ -398,7 +399,7 @@ public void Function_7_with_Taircache_part_file_part_hit_localcahe_miss() throws
 		caseName = "Function_6_with_Taircache_part_file_part_hit_localcahe_miss";
 		log.info(caseName + "===> start");
 
-		tfsManager.init();
+		bRet=tfsManager.init();
 
 		/*start local and remote cache switch*/   
 		
