@@ -2306,6 +2306,7 @@ namespace tfs
         bool has_compact = false;
         bool all_find_flag = false;
         std::vector<ServerCollect*> except;
+        std::map<uint32_t, std::vector<ServerCollect*> > middle;
         for (int32_t i = 0; i < block_chunk_num_ && !(interrupt_ & INTERRUPT_ALL) && need > 0; ++i)
         {
           RWLock::Lock lock(*block_chunk_[i], READ_LOCKER);
@@ -2321,21 +2322,18 @@ namespace tfs
 
             if (has_compact)
             {
-              CompactTaskPtr task = new CompactTask(this, PLAN_PRIORITY_NORMAL, iter->second->id(), now, now, iter->second->get_hold(), plan_seqno);
-              if (!add_task(task))
-              {
-                task = 0;
-                TBSYS_LOG(ERROR, "add task(compact) fail, block: %u", iter->second->id());
-                continue;
-              }
-#if defined(TFS_GTEST) || defined(TFS_NS_INTEGRATION) || defined(TFS_NS_DEBUG)
-              TBSYS_LOG(DEBUG, "add task, type: %d", task->type_);
-#endif
+              middle.insert(std::map<uint32_t, std::vector<ServerCollect*> >::value_type(iter->second->id(), iter->second->get_hold()));
               --need;
-#if defined(TFS_GTEST) || defined(TFS_NS_INTEGRATION)
-              plans.push_back(task->block_id_);
-#endif
             }
+          }
+        }
+        std::map<uint32_t, std::vector<ServerCollect*> >::iterator iter = middle.begin();
+        for (; iter != middle.end(); ++iter)
+        {
+          CompactTaskPtr task = new CompactTask(this, PLAN_PRIORITY_NORMAL, iter->first, now, now, iter->second, plan_seqno);
+          if (!add_task(task))
+          {
+            task = 0;
           }
         }
         return true;
@@ -2587,6 +2585,7 @@ namespace tfs
       int32_t  count = 0;
       std::vector<ServerCollect*> except;
       std::vector<ServerCollect*> servers;
+      std::map<uint32_t, std::vector<ServerCollect*> > middle;
       for (int32_t i = 0; i < block_chunk_num_ && !(interrupt_ & INTERRUPT_ALL) && need > 0; ++i)
       {
         RWLock::Lock lock(*block_chunk_[i], READ_LOCKER);
@@ -2613,23 +2612,19 @@ namespace tfs
             if ((count > 0)
                 && (!result.empty()))
             {
-              TBSYS_LOG(INFO, "we will need delete less than block: %u", iter->second->id());
-              DeleteBlockTaskPtr task = new DeleteBlockTask(this, PLAN_PRIORITY_NORMAL, iter->second->id(), now, now, result, plan_seqno);
-              if (!add_task(task))
-              {
-                task = 0;
-                TBSYS_LOG(ERROR, "add task(delete) fail, block: %u", iter->second->id());
-                continue;
-              }
+              middle.insert(std::map<uint32_t, std::vector<ServerCollect* > >::value_type(iter->second->id(), result));
               --need;
-#if defined(TFS_GTEST) || defined(TFS_NS_INTEGRATION) || defined(TFS_NS_DEBUG)
-              TBSYS_LOG(DEBUG, "add task, type: %d", task->type_);
-#endif
-#if defined(TFS_GTEST) || defined(TFS_NS_INTEGRATION)
-              plans.push_back(task->block_id_);
-#endif
             }
           }
+        }
+      }
+      std::map<uint32_t, std::vector<ServerCollect*> >::iterator iter = middle.begin();
+      for (; iter != middle.end(); ++iter)
+      {
+        DeleteBlockTaskPtr task = new DeleteBlockTask(this, PLAN_PRIORITY_NORMAL, iter->first, now, now, iter->second, plan_seqno);
+        if (!add_task(task))
+        {
+          task = 0;
         }
       }
       return true;
@@ -2752,7 +2747,7 @@ namespace tfs
 
     bool LayoutManager::expire()
     {
-      tbutil::Monitor<tbutil::Mutex>::Lock lock(run_plan_monitor_);
+      //tbutil::Monitor<tbutil::Mutex>::Lock lock(run_plan_monitor_);
       //finish_plan_list_.clear();
       return true;
     }
