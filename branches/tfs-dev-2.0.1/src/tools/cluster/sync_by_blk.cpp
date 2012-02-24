@@ -500,7 +500,7 @@ int get_file_list(const string& ns_addr, const uint32_t block_id, BLOCK_FILE_INF
     else if (rsp->getPCode() == STATUS_MESSAGE)
     {
       ret = dynamic_cast<StatusMessage*>(rsp)->get_status();
-      fprintf(stderr, "get block info fail, error: %s\n,", dynamic_cast<StatusMessage*>(rsp)->get_error());
+      fprintf(stderr, "get block info from %s fail, error: %s\n", ns_addr.c_str(), dynamic_cast<StatusMessage*>(rsp)->get_error());
     }
   }
   else
