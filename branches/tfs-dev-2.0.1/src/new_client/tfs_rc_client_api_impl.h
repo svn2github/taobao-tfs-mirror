@@ -361,7 +361,7 @@ namespace tfs
         TfsRetType get_fdinfo(const int fd, fdInfo& fdinfo) const;
         TfsRetType update_fdinfo_offset(const int fd, const int64_t offset);
         TfsRetType update_fdinfo_rawfd(const int fd, const int raw_fd);
-        int64_t real_read(const int raw_tfs_fd, void* buf, const int64_t count,
+        int64_t real_read(const int fd, const int raw_tfs_fd, void* buf, const int64_t count,
             fdInfo& fd_info, common::TfsFileStat* tfs_stat_buf);
         int64_t read_ex(const int fd, void* buf, const int64_t count, common::TfsFileStat* tfs_stat_buf);
 

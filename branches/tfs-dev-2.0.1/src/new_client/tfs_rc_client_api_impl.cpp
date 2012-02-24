@@ -17,6 +17,7 @@
 
 #include "common/func.h"
 #include "common/session_util.h"
+#include "common/client_manager.h"
 #include "tfs_client_impl.h"
 #include "tfs_rc_helper.h"
 #include "fsname.h"
@@ -172,6 +173,7 @@ namespace tfs
         name_meta_client_ = new NameMetaClient();
         if (TFS_SUCCESS == ret)
         {
+          TBSYS_LOG(DEBUG, "next TfsClientImpl will initialize NewClientManager");
           ret = TfsClientImpl::Instance()->initialize(NULL, cache_times, cache_items, true);
         }
         TBSYS_LOG(DEBUG, "TfsClientImpl::Instance()->initialize ret %d", ret);
@@ -189,6 +191,13 @@ namespace tfs
           ret = login(rc_ip, app_key, local_addr_);
         }
         TBSYS_LOG(DEBUG, "login ret %d", ret);
+
+        // confirm NewClientManager is instanced by TfsClientImpl not by NameMetaClientImpl
+        if (NewClientManager::get_instance().is_init())
+        {
+          TBSYS_LOG(DEBUG, "NewClientManager is initialized by TfsClientImpl");
+        }
+
         if (TFS_SUCCESS == ret)
         {
           session_base_info_.client_version_ = RC_CLIENT_VERSION;
@@ -205,6 +214,7 @@ namespace tfs
           }
           else
           {
+            //TBSYS_LOG(DEBUG, "next NameMetaClient will initialize NewClientManager");
             name_meta_client_->initialize(base_info_.meta_root_server_);
           }
 #ifdef WITH_TAIR_CACHE
@@ -349,7 +359,7 @@ namespace tfs
       return ret;
     }
 
-    int64_t RcClientImpl::real_read(const int raw_tfs_fd, void* buf, const int64_t count,
+    int64_t RcClientImpl::real_read(const int fd, const int raw_tfs_fd, void* buf, const int64_t count,
         fdInfo& fd_info, TfsFileStat* tfs_stat_buf)
     {
       int64_t read_count = -1;
@@ -363,12 +373,14 @@ namespace tfs
         }
         else
         {
+          //TBSYS_LOG(DEBUG, "here offset is %d, raw_tfs_fd is %d", fd_info.offset_, raw_tfs_fd);
           read_count = TfsClientImpl::Instance()->read(raw_tfs_fd, buf, count);
         }
         if (read_count > 0)
         {
           fd_info.offset_ += read_count;
-          if (TFS_SUCCESS != update_fdinfo_offset(raw_tfs_fd, fd_info.offset_))
+          // should use rc's fd, not raw_tfs_fd
+          if (TFS_SUCCESS != update_fdinfo_offset(fd, fd_info.offset_))
           {
             TBSYS_LOG(WARN, "update_fdinfo_offset error ");
           }
@@ -390,7 +402,7 @@ namespace tfs
         {
           if (fd_info.raw_tfs_fd_ >= 0)
           {
-            read_count = real_read(fd_info.raw_tfs_fd_, buf, count, fd_info, tfs_stat_buf);
+            read_count = real_read(fd, fd_info.raw_tfs_fd_, buf, count, fd_info, tfs_stat_buf);
           }
           else if (INVALID_RAW_TFS_FD == fd_info.raw_tfs_fd_)
           {
@@ -427,7 +439,7 @@ namespace tfs
               }
               raw_tfs_fd = open(ns_addr.c_str(), file_name, suffix,
                   fd_info.flag_, fd_info.is_large_, local_key);
-              read_count = real_read(raw_tfs_fd, buf, count, fd_info, tfs_stat_buf);
+              read_count = real_read(fd, raw_tfs_fd, buf, count, fd_info, tfs_stat_buf);
               if (read_count < 0)
               {
                 TBSYS_LOG(WARN, "read file from ns %s error ret is %"PRI64_PREFIX"d",
