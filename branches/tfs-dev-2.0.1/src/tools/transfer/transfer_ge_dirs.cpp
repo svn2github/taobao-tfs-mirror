@@ -11,6 +11,8 @@
 * Authors:
 *   duanfei<duanfei@taobao.com>
 *      - initial release
+*   linqing <linqing.zyd@taobao.com>
+*      - modify-2012/02/21
 *
 */
 #include <tbsys.h>
@@ -36,7 +38,7 @@ static int store_helper(const char* pstr)
     iret = res.second ? 0 : -1;
     if (0 == iret)
     {
-      printf("add string: d%s\n", pstr);
+      printf("add string: %s\n", pstr);
     }
   }
   return iret;
@@ -47,24 +49,11 @@ static int store(char* pstart, char* pend)
   int32_t iret = NULL != pstart && NULL != pend  && pend != pstart ? 0 : -1;
   if (0 == iret)
   {
-    while (true)
+    char* p = strrchr(pstart, '/');
+    if(NULL != p && p != pstart)
     {
-      char* p = strrchr(pstart, '/');
-      if (NULL == p)
-      {
-        break;
-      }
-      else if ((p == pstart)
-          && (*pstart == '/'))
-      {
-        store_helper(pstart);
-        break;
-      }
-      else
-      {
-        *p = '\0';
-        store_helper(pstart);
-      }
+      *p = '\0';
+      store_helper(pstart);
     }
   }
   return iret;
@@ -134,20 +123,42 @@ int main(int argc ,char* argv[])
       store(pstart, pend);
     }
     close_file();
+
     int ret = -1;
+    int64_t total_error = 0;
+    int64_t this_error = 0;
+    int64_t i = 0;
     std::set<std::string>::const_iterator iter = sets.begin();
     for (; iter != sets.end(); ++iter)
     {
-      for (int64_t i = 1; i <= user_count; i++)
+      this_error = 0;
+      for (i = 1; i <= user_count; i++)
       {
         ret = meta_client.create_dir_with_parents(app_id, i, (*iter).c_str());
         if (ret != tfs::common::TFS_SUCCESS &&
             ret != tfs::common::EXIT_TARGET_EXIST_ERROR)
         {
-          TBSYS_LOG(WARN, "create dir %s failed, ret: %d", (*iter).c_str(), ret);
+          this_error++;
+        }
+
+        // log every 1000 users
+        if(i % 1000 == 0 || i == user_count)
+        {
+          if(0 == this_error)
+          {
+            printf("%"PRI64_PREFIX"d%s:%s:%d\n", i, (*iter).c_str(), "succeed", ret);
+          }
+          else
+          {
+            printf("%"PRI64_PREFIX"d%s:%s:%d\n", i, (*iter).c_str(), "failed", ret);
+          }
+          total_error += this_error;
+          this_error = 0;
         }
       }
-    }
+     }
+     printf("total errors: %"PRI64_PREFIX"d\n", total_error);
   }
+
   return 0;
 }

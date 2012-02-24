@@ -13,18 +13,20 @@
 *      - initial release
 *   duanfei <duanfei@taobao.com>
 *      -modify-2011/12/29
+*   linqing <linqing.zyd@taobao.com>
+*      -modify-2012/02/24
 *
 */
 #include <tbsys.h>
 #include <unistd.h>
 #include "new_client/tfs_client_api.h"
 #include "new_client/tfs_meta_client_api.h"
+#include "new_client/tfs_rc_client_api.h"
 
 #define buff_size  5 * 1024L * 1024L
 
 using namespace tfs::common;
-tfs::client::NameMetaClient meta_client;
-static char dest_ns_addr[32];
+tfs::client::RcClient rc_client;
 static char source_ns_addr[32];
 static int64_t app_id = 0;
 static int64_t hash_count = 0;
@@ -85,43 +87,43 @@ static int64_t write_dest(const char* dest_name, char* buff, const int64_t size)
   int64_t write_count = -1;
   uint32_t  hash_value = tbsys::CStringUtil::murMurHash((const void*)(dest_name), strlen(dest_name));
   int32_t   uid = (hash_value % hash_count + 1);
-  if (TFS_SUCCESS == meta_client.create_file(app_id, uid, dest_name))
+  if (TFS_SUCCESS == rc_client.save_buf(app_id, uid, buff, size, dest_name))
   {
-    TBSYS_LOG(WARN, "create file %s ok", dest_name);
-    write_count = meta_client.write(dest_ns_addr, app_id, uid, dest_name, buff, size);
+    TBSYS_LOG(INFO, "save file %s ok", dest_name);
   }
   else
   {
-    TBSYS_LOG(WARN, "create file %s error", dest_name);
+    TBSYS_LOG(WARN, "save file %s error", dest_name);
   }
   return write_count;
 }
 
 int main(int argc ,char* argv[])
 {
-  if (argc != 7)
+  if (argc != 6)
   {
-    printf("usage %s input_text dest_ns_addr source_ns_addr rsaddr app_id user_count\n", argv[0]);
+    printf("usage %s input_text source_ns_addr rcaddr app_key user_count\n", argv[0]);
     return 0;
   }
+
   TBSYS_LOGGER.setLogLevel("info");
   tfs::client::TfsClient::Instance()->initialize();
-  int64_t ret = meta_client.initialize(argv[4]);
+  int ret = rc_client.initialize(argv[3], argv[4]);
   if (ret != TFS_SUCCESS)
   {
-    printf("meta_client initialize error %s\n", argv[4]);
+    printf("rc_client initialize error %s\n", argv[3]);
     return 0;
   }
+
   FILE* fd = ::fopen(argv[1], "r");
   if (fd < 0)
   {
     printf("open local file %s error\n", argv[1]);
     return 0;
   }
-  snprintf(dest_ns_addr, 32, "%s", argv[2]);
-  snprintf(dest_ns_addr, 32, "%s", argv[3]);
-  app_id = atoll(argv[5]);
-  hash_count = atoll(argv[6]);
+  snprintf(source_ns_addr, 32, "%s", argv[2]);
+  app_id = rc_client.get_app_id();
+  hash_count = atoll(argv[5]);
   char* buff = (char*)::malloc(buff_size);
   char line_buff[4096];
   char* p_source = NULL;
@@ -130,7 +132,16 @@ int main(int argc ,char* argv[])
   {
     TBSYS_LOG(WARN, "deal %s", line_buff);
     p_source = line_buff;
-    p_dest = strstr(line_buff, ";");
+    p_dest = strstr(line_buff, ":");
+    if (NULL != p_dest)
+    {
+      *(p_dest++) = '\0';
+    }
+    else
+    {
+      TBSYS_LOG(ERROR, "deal error %s", line_buff);
+      continue;
+    }
     size_t count = strlen(p_dest);
     char *end = p_dest + count - 1;
     while (*end == '\n' || *end == '\r' || *end ==' ')
@@ -139,15 +150,6 @@ int main(int argc ,char* argv[])
       end--;
     }
 
-    if (NULL == p_dest)
-    {
-      TBSYS_LOG(ERROR, "deal error %s", line_buff);
-    }
-    else
-    {
-      *p_dest = 0;
-      p_dest++;
-    }
     int64_t source_count = get_source(p_source, buff);
     int64_t dest_count = 0;
     if (source_count >= 0)
@@ -158,6 +160,7 @@ int main(int argc ,char* argv[])
         TBSYS_LOG(ERROR, "have some error");
       }
     }
+
   }
   ::fclose(fd);
   free (buff);
