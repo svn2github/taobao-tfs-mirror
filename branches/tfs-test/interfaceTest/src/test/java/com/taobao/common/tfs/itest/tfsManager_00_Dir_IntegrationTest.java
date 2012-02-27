@@ -1,16 +1,13 @@
 package com.taobao.common.tfs.itest;
 
-import com.taobao.common.tfs.DefaultTfsManager;
 import com.taobao.common.tfs.tfsNameBaseCase;
 import com.taobao.common.tfs.namemeta.FileMetaInfo;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Random;
 
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import org.junit.Ignore;
 import junit.framework.Assert;
 
 public class tfsManager_00_Dir_IntegrationTest extends tfsNameBaseCase {
