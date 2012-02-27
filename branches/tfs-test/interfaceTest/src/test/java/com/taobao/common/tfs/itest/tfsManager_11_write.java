@@ -438,7 +438,7 @@ public class tfsManager_11_write extends tfsNameBaseCase
 		   Ret=tfsManager.write(appId, userId, "/text", offset,data, dataOffset, len);
 		   Assert.assertEquals(Ret,10*(1<<10));
 		   
-		   data=getByte(resourcesPath+"2M");
+		   data=getByte(resourcesPath+"2M.jpg");
 		   len = 2*(1<<20);
 		   offset=20*(1<<10);
 		   dataOffset=0;
