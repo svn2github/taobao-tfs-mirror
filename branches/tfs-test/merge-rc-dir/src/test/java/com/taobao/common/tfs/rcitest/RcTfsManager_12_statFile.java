@@ -264,7 +264,7 @@ public class RcTfsManager_12_statFile extends tfsNameBaseCase
 		String Ret=null;
 		byte data[]=null;
 		data=getByte(resourcesPath+"5m.jpg");
-		Ret=tfsManager.saveLargeFile(null,null,data,0,data.length,key);
+		Ret=tfsManager.saveLargeFile(null,null,data,0,data.length,null);
 		Assert.assertNotNull(Ret);
 		System.out.println("The tfs file name is "+ Ret);
 		
