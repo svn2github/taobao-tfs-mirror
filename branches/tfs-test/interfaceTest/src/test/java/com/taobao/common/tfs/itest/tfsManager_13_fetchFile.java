@@ -60,9 +60,10 @@ public class tfsManager_13_fetchFile extends tfsNameBaseCase
 	{  
 		log.info("test_05_fetchFile_null_fileName");
 		boolean bRet;
+		String filename = null;
 		bRet=tfsManager.saveFile(appId, userId, resourcesPath+"100K.jpg","/text");
 		Assert.assertTrue("Save File right path should be true", bRet);
-	    bRet=tfsManager.fetchFile(appId, userId, resourcesPath+"temp",null);
+	    bRet=tfsManager.fetchFile(appId, userId, resourcesPath+"temp", filename);
 		Assert.assertFalse("Fetch File null fileName should be false", bRet);
 		tfsManager.rmFile(appId, userId, "/text");
 	}
