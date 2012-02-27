@@ -27,7 +27,6 @@ public class TfsManager_00_File_IntegrationTest extends tfsNameBaseCase {
 		tfsManager.rmFile(appId, userId, "/text");
 
 		/* ls file */
-
 		log.info("test_01_lsFile_right_filePath_First");
 		FileMetaInfo metaInfo;
 		metaInfo = null;
@@ -88,10 +87,10 @@ public class TfsManager_00_File_IntegrationTest extends tfsNameBaseCase {
 
 		log.info("test_01_read_right");
 		tfsManager.createFile(appId, userId, "/text");
-		tfsManager.saveFile(appId, userId, resourcesPath + "2b", "/text");
+		tfsManager.saveFile(appId, userId, resourcesPath + "2B.jpg", "/text");
 		int localcrc;
 		int readcrc;
-		localcrc = getCrc(resourcesPath + "2b");
+		localcrc = getCrc(resourcesPath + "2B.jpg");
 		FileInputStream input = new FileInputStream(resourcesPath);
 		System.out.println(input);
 
@@ -148,9 +147,9 @@ public class TfsManager_00_File_IntegrationTest extends tfsNameBaseCase {
 
 		log.info("test_01_read_right");
 		tfsManager.createFile(appId, userId, "/text");
-		tfsManager.saveFile(appId, userId, resourcesPath + "2b", "/text");
+		tfsManager.saveFile(appId, userId, resourcesPath + "2B.jpg", "/text");
 
-		localcrc = getCrc(resourcesPath + "2b");
+		localcrc = getCrc(resourcesPath + "2B.jpg");
 		System.out.println(input);
 
 		Assert.assertEquals(2,
@@ -172,8 +171,8 @@ public class TfsManager_00_File_IntegrationTest extends tfsNameBaseCase {
 
 		log.info("test_01_read_right");
 		tfsManager.createFile(appId, userId, "/text");
-		tfsManager.saveFile(appId, userId, resourcesPath + "2b", "/text");
-		localcrc = getCrc(resourcesPath + "2b");
+		tfsManager.saveFile(appId, userId, resourcesPath + "2B.jpg", "/text");
+		localcrc = getCrc(resourcesPath + "2B.jpg");
 		Assert.assertEquals(2,
 				tfsManager.read(appId, userId, "/text", 0, 2, output));
 		readcrc = getCrc(output);
@@ -224,10 +223,10 @@ public class TfsManager_00_File_IntegrationTest extends tfsNameBaseCase {
 
 		log.info("test_02_read_right_First");
 		tfsManager.createFile(appId, userId, "/text");
-		tfsManager.saveFile(appId, userId, resourcesPath + "2b", "/text");
+		tfsManager.saveFile(appId, userId, resourcesPath + "2B.jpg", "/text");
 		int localcrc;
 		int readcrc;
-		localcrc = getCrc(resourcesPath + "2b");
+		localcrc = getCrc(resourcesPath + "2B.jpg");
 		FileInputStream input = new FileInputStream(resourcesPath);
 		System.out.println(input);
 
@@ -253,9 +252,9 @@ public class TfsManager_00_File_IntegrationTest extends tfsNameBaseCase {
 
 		log.info("test_02_read_right_twice");
 		tfsManager.createFile(appId, userId, "/text");
-		tfsManager.saveFile(appId, userId, resourcesPath + "2b", "/text");
+		tfsManager.saveFile(appId, userId, resourcesPath + "2B.jpg", "/text");
 
-		localcrc = getCrc(resourcesPath + "2b");
+		localcrc = getCrc(resourcesPath + "2B.jpg");
 		Assert.assertEquals(2,
 				tfsManager.read(appId, userId, "/text", 0, 2, output));
 		readcrc = getCrc(output);
@@ -316,8 +315,8 @@ public class TfsManager_00_File_IntegrationTest extends tfsNameBaseCase {
 
 		log.info("test_02_read_right_Fourth");
 		tfsManager.createFile(appId, userId, "/text");
-		tfsManager.saveFile(appId, userId, resourcesPath + "2b", "/text");
-		localcrc = getCrc(resourcesPath + "2b");
+		tfsManager.saveFile(appId, userId, resourcesPath + "2B.jpg", "/text");
+		localcrc = getCrc(resourcesPath + "2B.jpg");
 		System.out.println(input);
 		Assert.assertEquals(2,
 				tfsManager.read(appId, userId, "/text", 0, 2, output));
@@ -337,8 +336,8 @@ public class TfsManager_00_File_IntegrationTest extends tfsNameBaseCase {
 
 		log.info("test_02_read_right_Fifth");
 		tfsManager.createFile(appId, userId, "/text");
-		tfsManager.saveFile(appId, userId, resourcesPath + "2b", "/text");
-		localcrc = getCrc(resourcesPath + "2b");
+		tfsManager.saveFile(appId, userId, resourcesPath + "2B.jpg", "/text");
+		localcrc = getCrc(resourcesPath + "2B.jpg");
 		System.out.println(input);
 		Assert.assertEquals(2,
 				tfsManager.read(appId, userId, "/text", 0, 2, output));
@@ -383,10 +382,10 @@ public class TfsManager_00_File_IntegrationTest extends tfsNameBaseCase {
 
 		log.info("test_03_read_right");
 		tfsManager.createFile(appId, userId, "/text");
-		tfsManager.saveFile(appId, userId, resourcesPath + "2b", "/text");
+		tfsManager.saveFile(appId, userId, resourcesPath + "2B.jpg", "/text");
 		int localcrc;
 		int readcrc;
-		localcrc = getCrc(resourcesPath + "2b");
+		localcrc = getCrc(resourcesPath + "2B.jpg");
 		FileInputStream input = new FileInputStream(resourcesPath);
 		System.out.println(input);
 
@@ -441,8 +440,8 @@ public class TfsManager_00_File_IntegrationTest extends tfsNameBaseCase {
 
 		log.info("test_03_read_right");
 		tfsManager.createFile(appId, userId, "/text");
-		tfsManager.saveFile(appId, userId, resourcesPath + "2b", "/text");
-		localcrc = getCrc(resourcesPath + "2b");
+		tfsManager.saveFile(appId, userId, resourcesPath + "2B.jpg", "/text");
+		localcrc = getCrc(resourcesPath + "2B.jpg");
 		System.out.println(input);
 		Assert.assertEquals(2,
 				tfsManager.read(appId, userId, "/text", 0, 2, output));
@@ -536,10 +535,10 @@ public class TfsManager_00_File_IntegrationTest extends tfsNameBaseCase {
 
 		log.info("test_04_read_right");
 		tfsManager.createFile(appId, userId, "/text");
-		tfsManager.saveFile(appId, userId, resourcesPath + "2b", "/text");
+		tfsManager.saveFile(appId, userId, resourcesPath + "2B.jpg", "/text");
 		int localcrc;
 		int readcrc;
-		localcrc = getCrc(resourcesPath + "2b");
+		localcrc = getCrc(resourcesPath + "2B.jpg");
 		FileInputStream input = new FileInputStream(resourcesPath);
 		System.out.println(input);
 
@@ -714,10 +713,10 @@ public class TfsManager_00_File_IntegrationTest extends tfsNameBaseCase {
 
 		log.info("test_05_read_right_First");
 		tfsManager.createFile(appId, userId, "/text");
-		tfsManager.saveFile(appId, userId, resourcesPath + "2b", "/text");
+		tfsManager.saveFile(appId, userId, resourcesPath + "2B.jpg", "/text");
 		int localcrc;
 		int readcrc;
-		localcrc = getCrc(resourcesPath + "2b");
+		localcrc = getCrc(resourcesPath + "2B.jpg");
 		FileInputStream input = new FileInputStream(resourcesPath);
 		System.out.println(input);
 
@@ -755,8 +754,8 @@ public class TfsManager_00_File_IntegrationTest extends tfsNameBaseCase {
 
 		log.info("test_05_read_right_Twice");
 		tfsManager.createFile(appId, userId, "/text");
-		tfsManager.saveFile(appId, userId, resourcesPath + "2b", "/text");
-		localcrc = getCrc(resourcesPath + "2b");
+		tfsManager.saveFile(appId, userId, resourcesPath + "2B.jpg", "/text");
+		localcrc = getCrc(resourcesPath + "2B.jpg");
 		System.out.println(input);
 		Assert.assertEquals(2,
 				tfsManager.read(appId, userId, "/text", 0, 2, output));

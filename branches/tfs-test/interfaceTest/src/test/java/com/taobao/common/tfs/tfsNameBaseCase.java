@@ -109,6 +109,14 @@ public class tfsNameBaseCase {
 		if (createFile(localFile, 1)) {
 			testFileList.add(localFile);
 		}
+
+		// 1b file
+		localFile = "2B.jpg";
+		if (createFile(localFile, 2)) {
+			testFileList.add(localFile);
+		}
+
+		
 		// 1k file
 		localFile = "1K.jpg";
 		if (createFile(localFile, 1 << 10)) {
