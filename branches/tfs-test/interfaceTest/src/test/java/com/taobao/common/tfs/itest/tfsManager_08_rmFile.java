@@ -103,7 +103,7 @@ public class tfsManager_08_rmFile extends tfsNameBaseCase
 	{	   
 	   boolean bRet;
 	   log.info( "test_10_rmFile_large_File" );
-	   tfsManager.saveFile(appId, userId, resourcesPath+"3M","/text");
+	   tfsManager.saveFile(appId, userId, resourcesPath+"3M.jpg","/text");
 	   int len = 1024*1024*8;
        byte[] data = new byte[len];
        Random rd = new Random();

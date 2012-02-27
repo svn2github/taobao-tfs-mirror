@@ -386,7 +386,7 @@ public class tfsManager_11_write extends tfsNameBaseCase
 		   log.info("test_20_write_large_many_times_parts");
 		   tfsManager.createFile(appId, userId, "/text"); 
 	       byte data[]=null;
-	       data=getByte(resourcesPath+"3M");
+	       data=getByte(resourcesPath+"3M.jpg");
 		   long len = 3*(1<<20);
 		   long offset=0;
 		   long dataOffset=0;
@@ -446,7 +446,7 @@ public class tfsManager_11_write extends tfsNameBaseCase
 		   System.out.println("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"+Ret);
 		   Assert.assertEquals(Ret,2*(1<<20));
 		   
-		   data=getByte(resourcesPath+"3M");
+		   data=getByte(resourcesPath+"3M.jpg");
 		   len = 3*(1<<20);
 		   offset=8*(1<<20)+20*(1<<10);
 		   dataOffset=0;
@@ -468,7 +468,7 @@ public class tfsManager_11_write extends tfsNameBaseCase
 		   System.out.println("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"+Ret);
 		   Assert.assertTrue(Ret==0);
 		   
-		   data=getByte(resourcesPath+"3M");
+		   data=getByte(resourcesPath+"3M.jpg");
 		   len = 3*(1<<20);
 		   offset=2*(1<<20)+20*(1<<10);
 		   dataOffset=0;
@@ -484,7 +484,7 @@ public class tfsManager_11_write extends tfsNameBaseCase
 		   log.info("write");
 		   tfsManager.createFile(appId, userId, "/text"); 
 	       byte data[]=null;
-	       data=getByte(resourcesPath+"3M");
+	       data=getByte(resourcesPath+"3M.jpg");
 		   long len = 3*(1<<20);
 		   long offset=0;
 		   long dataOffset=0;
