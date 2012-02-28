@@ -111,7 +111,7 @@ public class tfsManager_12_saveFile extends tfsNameBaseCase {
 		log.info("test_07_saveFile_wrong_fileName_1");
 		boolean bRet;
 		bRet = tfsManager.saveFile(appId, userId, resourcesPath + "100K.jpg",
-				"/text4/");
+				"text12_07/");
 		Assert.assertFalse("Save File wrong 1 fileName should be false", bRet);
 	}
 
@@ -138,7 +138,7 @@ public class tfsManager_12_saveFile extends tfsNameBaseCase {
 		log.info("test_10_saveFile_leap_fileName");
 		boolean bRet;
 		bRet = tfsManager.saveFile(appId, userId, resourcesPath + "100K.jpg",
-				"/text10/text");
+				"/text12_10/text");
 		Assert.assertFalse("Save File leap fileName should be false", bRet);
 	}
 
@@ -150,7 +150,7 @@ public class tfsManager_12_saveFile extends tfsNameBaseCase {
 		assertTrue(bRet);
 		bRet = tfsManager.saveFile(appId, userId, resourcesPath + "100K.jpg",
 				"/text12_11");
-		Assert.assertFalse("Save File with the same name Dir should be true",
+		Assert.assertTrue("Save File with the same name Dir should be true",
 				bRet);
 		tfsManager.rmDir(appId, userId, "/text12_11");
 		tfsManager.rmFile(appId, userId, "/text12_11");
@@ -161,14 +161,14 @@ public class tfsManager_12_saveFile extends tfsNameBaseCase {
 		log.info("test_12_saveFile_large");
 		boolean bRet;
 		bRet = tfsManager.saveFile(appId, userId, resourcesPath + "1G.jpg",
-				"/text12");
+				"/text12_12");
 		Assert.assertTrue("Save File right path should be true", bRet);
 		bRet = tfsManager.fetchFile(appId, userId, resourcesPath + "temp",
-				"/text12");
+				"/text12_12");
 		Assert.assertTrue("Fetch File right path should be true", bRet);
 		Assert.assertEquals(getCrc(resourcesPath + "temp"),
 				getCrc(resourcesPath + "1G.jpg"));
-		tfsManager.rmFile(appId, userId, "/text12");
+		tfsManager.rmFile(appId, userId, "/text12_12");
 	}
 
 	@Test
