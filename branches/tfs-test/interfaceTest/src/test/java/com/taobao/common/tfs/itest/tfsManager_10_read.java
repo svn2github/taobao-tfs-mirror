@@ -21,11 +21,11 @@ public class tfsManager_10_read extends tfsNameBaseCase
 	{
 	   log.info("test_01_read_right");
 	   tfsManager.createFile(appId, userId, "/text1");
-	   tfsManager.saveFile(appId, userId, resourcesPath+"2b","/text1");
+	   tfsManager.saveFile(appId, userId, resourcesPath+"2B.jpg","/text1");
 	   int localcrc;
 	   int readcrc;
-	   localcrc=getCrc(resourcesPath+"2b");
-	   FileInputStream input = new FileInputStream(resourcesPath+"2b");
+	   localcrc=getCrc(resourcesPath+"2B.jpg");
+	   FileInputStream input = new FileInputStream(resourcesPath+"2B.jpg");
 	   System.out.println(input);
 	   
 	   ByteArrayOutputStream output = new ByteArrayOutputStream();
