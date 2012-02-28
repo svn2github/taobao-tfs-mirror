@@ -136,11 +136,11 @@ public class tfsManager_13_fetchFile extends tfsNameBaseCase
 	{  
 		log.info("test_12_fetchFile_large");
 		boolean bRet;
-		bRet=tfsManager.saveFile(appId, userId, resourcesPath+"1G","/text");
+		bRet=tfsManager.saveFile(appId, userId, resourcesPath+"1G.jpg","/text");
 		Assert.assertTrue("Save File right path should be true", bRet);
 	    bRet=tfsManager.fetchFile(appId, userId, resourcesPath+"temp","/text");
 		Assert.assertTrue("Fetch File right path should be true", bRet);
-		Assert.assertEquals(getCrc(resourcesPath+"temp"),getCrc(resourcesPath+"1G"));
+		Assert.assertEquals(getCrc(resourcesPath+"temp"),getCrc(resourcesPath+"1G.jpg"));
 		tfsManager.rmFile(appId, userId, "/text");
 	}
 	

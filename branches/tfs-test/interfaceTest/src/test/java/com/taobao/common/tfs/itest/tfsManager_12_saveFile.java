@@ -167,7 +167,7 @@ public class tfsManager_12_saveFile extends tfsNameBaseCase {
 				"/text12");
 		Assert.assertTrue("Fetch File right path should be true", bRet);
 		Assert.assertEquals(getCrc(resourcesPath + "temp"),
-				getCrc(resourcesPath + "1G"));
+				getCrc(resourcesPath + "1G.jpg"));
 		tfsManager.rmFile(appId, userId, "/text12");
 	}
 
