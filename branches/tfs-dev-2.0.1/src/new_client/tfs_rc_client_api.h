@@ -74,7 +74,7 @@ namespace tfs
         TfsRetType unlink(const char* file_name, const char* suffix = NULL,
             const common::TfsUnlinkType action = common::DELETE);
         int64_t save_file(const char* local_file, char* tfs_name_buff, const int32_t buff_len,
-						const char* suffix = NULL, const bool is_large_file = false);
+            const char* suffix = NULL, const bool is_large_file = false);
         int64_t save_buf(const char* source_data, const int32_t data_len,
             char* tfs_name_buff, const int32_t buff_len, const char* suffix = NULL);
         int fetch_file(const char* local_file,
@@ -113,47 +113,47 @@ namespace tfs
         //close use the same close func as raw tfs
 
 
-				/**
-				 * @brief saved local_file to tfs, named tfs_file_name
-				 *
-				 * @param app_id: app id
-				 * @param uid: user id
-				 * @param local_file: local file name
-				 * @param tfs_file_name: tfs file name
-				 *
-				 * @return data length saved
-				 */
-				int64_t save_file(const int64_t app_id, const int64_t uid,
-						const char* local_file, const char* tfs_file_name);
+        /**
+         * @brief saved local_file to tfs, named tfs_file_name
+         *
+         * @param app_id: app id
+         * @param uid: user id
+         * @param local_file: local file name
+         * @param tfs_file_name: tfs file name
+         *
+         * @return data length saved
+         */
+        int64_t save_file(const int64_t app_id, const int64_t uid,
+            const char* local_file, const char* tfs_file_name);
 
-				/**
-				 * @brief fetch tfs file nemed tfs_file_name, stored to local_file
-				 *
-				 * @param app_id: app id
-				 * @param uid: user id
-				 * @param local_file: local file name
-				 * @param tfs_file_name: tfs file name
-				 *
-				 * @return data length fetched
-				 */
-				int64_t fetch_file(const int64_t app_id, const int64_t uid,
-						const char* local_file, const char* tfs_file_name);
+        /**
+         * @brief fetch tfs file nemed tfs_file_name, stored to local_file
+         *
+         * @param app_id: app id
+         * @param uid: user id
+         * @param local_file: local file name
+         * @param tfs_file_name: tfs file name
+         *
+         * @return data length fetched
+         */
+        int64_t fetch_file(const int64_t app_id, const int64_t uid,
+            const char* local_file, const char* tfs_file_name);
 
-				/**
-				 * @brief save buf as tfs file named tfs_file_name
-				 *
-				 * @param app_id: app id
-				 * @param uid: user id
-				 * @param buf: buf pointer
-				 * @param buf_len: buf length
-				 * @param tfs_file_name: tfs file name
-				 *
-				 * @return data length saved
-				 */
-				int64_t save_buf(const int64_t app_id, const int64_t uid,
-						const char* buf, const int32_t buf_len, const char* tfs_file_name);
+        /**
+         * @brief save buf as tfs file named tfs_file_name
+         *
+         * @param app_id: app id
+         * @param uid: user id
+         * @param buf: buf pointer
+         * @param buf_len: buf length
+         * @param tfs_file_name: tfs file name
+         *
+         * @return data length saved
+         */
+        int64_t save_buf(const int64_t app_id, const int64_t uid,
+            const char* buf, const int32_t buf_len, const char* tfs_file_name);
 
-			private:
+      private:
         RcClient(const RcClient&);
         RcClientImpl* impl_;
     };
