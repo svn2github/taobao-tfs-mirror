@@ -146,14 +146,14 @@ public class tfsManager_12_saveFile extends tfsNameBaseCase {
 	public void test_11_saveFile_with_Dir() {
 		log.info("test_11_saveFile_with_Dir");
 		boolean bRet;
-		bRet = tfsManager.createDir(appId, userId, "/text1");
+		bRet = tfsManager.createDir(appId, userId, "/text12_11");
 		assertTrue(bRet);
 		bRet = tfsManager.saveFile(appId, userId, resourcesPath + "100K.jpg",
-				"/text1");
+				"/text12_11");
 		Assert.assertFalse("Save File with the same name Dir should be true",
 				bRet);
-		tfsManager.rmDir(appId, userId, "/text1");
-		tfsManager.rmFile(appId, userId, "/text1");
+		tfsManager.rmDir(appId, userId, "/text12_11");
+		tfsManager.rmFile(appId, userId, "/text12_11");
 	}
 
 	//@Test

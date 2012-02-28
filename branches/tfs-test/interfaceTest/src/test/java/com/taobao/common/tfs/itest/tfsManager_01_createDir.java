@@ -164,7 +164,7 @@ public class tfsManager_01_createDir extends tfsNameBaseCase
 	@Test
 	public void test_13_createDir_length_more_512()
     {
- 	    boolean bRet;
+ 	    boolean bRet = false;
 	    log.info( "test_13_createDir_length_more_512" );
 	    int len = 512;
 	    byte[] data = new byte[len];
@@ -172,7 +172,11 @@ public class tfsManager_01_createDir extends tfsNameBaseCase
 	    rd.nextBytes(data);
 	    String s = new String(data);
 	    s="/"+s;
+	    try{
 	    bRet=tfsManager.createDir(appId, userId, s);
+	    }catch(Exception e){
+	    	log.info(e.getMessage());
+	    }
 		Assert.assertFalse("Create Dir with more length should be false", bRet);
     }
     
