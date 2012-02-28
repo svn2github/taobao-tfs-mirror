@@ -87,13 +87,14 @@ static int64_t write_dest(const char* dest_name, char* buff, const int64_t size)
   int64_t write_count = -1;
   uint32_t  hash_value = tbsys::CStringUtil::murMurHash((const void*)(dest_name), strlen(dest_name));
   int32_t   uid = (hash_value % hash_count + 1);
-  if (TFS_SUCCESS == rc_client.save_buf(app_id, uid, buff, size, dest_name))
+  write_count = rc_client.save_buf(app_id, uid, buff, size, dest_name);
+  if (write_count > 0 || write_count == EXIT_TARGET_EXIST_ERROR) // exist or success
   {
-    TBSYS_LOG(INFO, "save file %s ok", dest_name);
+    printf("save file %s ok\n", dest_name);
   }
   else
   {
-    TBSYS_LOG(WARN, "save file %s error", dest_name);
+    printf("save file %s error\n", dest_name);
   }
   return write_count;
 }
@@ -106,9 +107,9 @@ int main(int argc ,char* argv[])
     return 0;
   }
 
-  TBSYS_LOGGER.setLogLevel("info");
+  TBSYS_LOGGER.setLogLevel("debug");
   tfs::client::TfsClient::Instance()->initialize();
-  int ret = rc_client.initialize(argv[3], argv[4]);
+  int ret = rc_client.initialize(argv[3], argv[4], "10.246.123.3");
   if (ret != TFS_SUCCESS)
   {
     printf("rc_client initialize error %s\n", argv[3]);
@@ -130,7 +131,7 @@ int main(int argc ,char* argv[])
   char* p_dest = NULL;
   while(fgets(line_buff, 4096, fd)!= NULL)
   {
-    TBSYS_LOG(WARN, "deal %s", line_buff);
+    // TBSYS_LOG(WARN, "deal %s", line_buff);
     p_source = line_buff;
     p_dest = strstr(line_buff, ":");
     if (NULL != p_dest)
@@ -151,16 +152,10 @@ int main(int argc ,char* argv[])
     }
 
     int64_t source_count = get_source(p_source, buff);
-    int64_t dest_count = 0;
     if (source_count >= 0)
     {
-      dest_count = write_dest(p_dest, buff, source_count);
-      if (source_count != dest_count)
-      {
-        TBSYS_LOG(ERROR, "have some error");
-      }
+      write_dest(p_dest, buff, source_count);
     }
-
   }
   ::fclose(fd);
   free (buff);
