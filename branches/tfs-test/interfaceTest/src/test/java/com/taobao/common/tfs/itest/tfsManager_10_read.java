@@ -41,10 +41,10 @@ public class tfsManager_10_read extends tfsNameBaseCase
 	{
 	   log.info("test_02_read_right_large");
 	   tfsManager.createFile(appId, userId, "/text2");
-	   tfsManager.saveFile(appId, userId, resourcesPath+"1G","/text2");
+	   tfsManager.saveFile(appId, userId, resourcesPath+"1G.jpg","/text2");
 	   int localcrc;
 	   int readcrc;
-	   localcrc=getCrc(resourcesPath+"1G");
+	   localcrc=getCrc(resourcesPath+"1G.jpg");
 	   OutputStream output = new FileOutputStream(resourcesPath+"empty.jpg");
 	   Assert.assertEquals(1*(1<<30),tfsManager.read(appId, userId,"/text2", 0, 1*( 1<<30), output));
 	   //tfsManager.fetchFile(appId, userId, resourcesPath+"TEMP", "/text");

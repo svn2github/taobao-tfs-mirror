@@ -155,6 +155,12 @@ public class tfsNameBaseCase {
 		if (createFile(localFile, 10 * (1 << 20))) {
 			testFileList.add(localFile);
 		}
+		
+		// 1G file
+		localFile = "1G.jpg";
+		if (createFile(localFile, 1 * (1 << 30))) {
+			testFileList.add(localFile);
+		}
 	}
 
 	public static void clearTempFiles(){
