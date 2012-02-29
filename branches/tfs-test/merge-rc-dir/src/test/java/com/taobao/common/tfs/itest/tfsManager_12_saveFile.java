@@ -96,7 +96,7 @@ public class tfsManager_12_saveFile extends tfsNameBaseCase
 		log.info("test_10_saveFile_leap_fileName");
 		boolean bRet;
 		bRet=tfsManager.saveFile(appId, userId, resourcesPath+"100K","/text10/text");
-		Assert.assertFalse("Save File leap fileName should be false", bRet);	    
+		Assert.assertTrue("Save File leap fileName should be false", bRet);	    
 	}
 //the case test_11_saveFile_with_Dir should be error
 	@Test
