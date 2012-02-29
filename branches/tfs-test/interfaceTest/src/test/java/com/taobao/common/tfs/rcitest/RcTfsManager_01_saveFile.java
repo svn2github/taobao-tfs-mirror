@@ -95,7 +95,7 @@ public class RcTfsManager_01_saveFile extends tfsNameBaseCase
 	{
 		log.info( "test_08_saveFile_to_override_exist_file_big" );
 		String Ret=null;
-		Ret=tfsManager.saveFile( resourcesPath+"10M.jpg",null,null,false);
+		Ret=tfsManager.saveFile( resourcesPath+"1g.jpg",null,null,false);
 		Assert.assertNull(Ret);
 	}
 	
@@ -239,7 +239,7 @@ public class RcTfsManager_01_saveFile extends tfsNameBaseCase
 	{
 		log.info( "test_20_saveFile_to_override_exist_file_big_simpleName" );
 		String Ret=null;
-		Ret=tfsManager.saveFile( resourcesPath+"10M.jpg",null,null,true);
+		Ret=tfsManager.saveFile( resourcesPath+"1g.jpg",null,null,true);
 		Assert.assertNull(Ret);
 	}
 	
@@ -301,9 +301,9 @@ public class RcTfsManager_01_saveFile extends tfsNameBaseCase
 	{
 		log.info( "test_25_saveFile_large" );
 		String Ret=null;
-		Ret=tfsManager.saveFile( resourcesPath+"10M.jpg",null,null,false);
+		Ret=tfsManager.saveFile( resourcesPath+"1g.jpg",null,null,false);
 		Assert.assertNull(Ret);
-	//	sleep(20);
+	
 	}
 	
 	public void sleep(int sec){
