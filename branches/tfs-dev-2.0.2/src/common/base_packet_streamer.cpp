@@ -18,7 +18,7 @@
 
 namespace tfs
 {
-  namespace common 
+  namespace common
   {
     BasePacketStreamer::BasePacketStreamer()
     {
@@ -207,7 +207,7 @@ namespace tfs
         bret = TFS_SUCCESS == iret;
         if (bret)
         {
-          TBSYS_LOG(DEBUG, "pcode: %d, header length: %d, body length : %"PRI64_PREFIX"d", bpacket->getPCode(), header_length, bpacket->get_data_length());
+          //TBSYS_LOG(DEBUG, "pcode: %d, header length: %d, body length : %"PRI64_PREFIX"d", bpacket->getPCode(), header_length, bpacket->get_data_length());
           //Func::hex_dump(output->getData(), output->getDataLen());
           output->pourData(header_length);
           bret = bpacket->encode(output);

@@ -49,7 +49,7 @@ namespace tfs
         msg_[length] = '\0';
         length_ = length;
       }
-      TBSYS_LOG(DEBUG, "status msg : status: %d, length: %ld, %p", status_, length_, str);
+      //TBSYS_LOG(DEBUG, "status msg : status: %d, length: %ld, %p", status_, length_, str);
     }
 
     StatusMessage::~StatusMessage()

@@ -358,6 +358,7 @@ namespace tfs
             switch (pcode)
             {
             case SET_DATASERVER_MESSAGE:
+            case REQ_REPORT_BLOCKS_TO_NS_MESSAGE:
               heart_mgr_.push(bpacket);
               break;
             case MASTER_AND_SLAVE_HEART_MESSAGE:

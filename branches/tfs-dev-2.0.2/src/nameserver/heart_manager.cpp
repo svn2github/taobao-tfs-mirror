@@ -60,10 +60,7 @@ namespace tfs
       report_block_threads_.setThreadParameter(report_block_thread_count, &report_block_queue_header_, this);
       keepalive_threads_.start();
       report_block_threads_.start();
-      TimeReportBlockTimerTaskPtr task = new TimeReportBlockTimerTask(meta_mgr_);
-      int32_t time_report_block_interval = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_TIME_REPORT_BLOCK_INTERVAL, 86400);
-      int32_t iret = GFactory::get_timer()->scheduleRepeated(task, tbutil::Time::seconds(time_report_block_interval));
-      return iret < 0 ? TFS_ERROR : TFS_SUCCESS;
+      return TFS_SUCCESS;
     }
 
     void HeartManagement::wait_for_shut_down()
@@ -89,28 +86,38 @@ namespace tfs
       int32_t iret = NULL != msg ? TFS_SUCCESS : EXIT_GENERAL_ERROR;
       if (TFS_SUCCESS == iret)
       {
-        assert(SET_DATASERVER_MESSAGE == msg->getPCode());
-        SetDataserverMessage* message = dynamic_cast<SetDataserverMessage*> (msg);
-        DataServerLiveStatus status = message->get_ds().status_;
         bool handled = false;
-        //dataserver report block heartbeat message
-        if ((DATASERVER_STATUS_ALIVE == status)
-           && (HAS_BLOCK_FLAG_YES == message->get_has_block()))
+        int32_t pcode = msg->getPCode();
+        int32_t status = 0;
+        uint64_t server = 0;
+        //normal or login or logout heartbeat message, just push, cannot blocking!
+        if (pcode == SET_DATASERVER_MESSAGE)
         {
+          SetDataserverMessage* message = dynamic_cast<SetDataserverMessage*>(msg);
+          server = message->get_ds().id_;
+          status = message->get_ds().status_;
+          handled = keepalive_threads_.push(msg, keepalive_queue_size_, false);
+        }
+        else if (pcode == REQ_REPORT_BLOCKS_TO_NS_MESSAGE)
+        {
+          //dataserver report block heartbeat message, cannot blocking!
+          ReportBlocksToNsRequestMessage* message = dynamic_cast<ReportBlocksToNsRequestMessage*>(msg);
+          server = message->get_server();
           handled = report_block_threads_.push(msg, report_block_queue_size_, false);
         }
-        else//normal or login or logout heartbeat message, just push
+        else
         {
-          //cannot blocking!
-          handled = keepalive_threads_.push(msg, keepalive_queue_size_, false);
+          TBSYS_LOG(INFO, "pcode: %d invalid", pcode);
         }
         iret = handled ? TFS_SUCCESS : EXIT_GENERAL_ERROR;
         if (TFS_SUCCESS != iret)
         {
           //threadpool busy..cannot handle it
-          iret = message->reply_error_packet(TBSYS_LOG_LEVEL(WARN), STATUS_MESSAGE_ERROR,
-              "nameserver heartbeat busy! cannot accept this request from : %s, has_block_type: %d, status: %d",
-              tbsys::CNetUtil::addrToString(message->get_ds().id_).c_str(), message->get_has_block(), status);
+          iret = msg->reply_error_packet(TBSYS_LOG_LEVEL(WARN), STATUS_MESSAGE_ERROR,
+              "nameserver heartbeat busy! cannot accept this request from : %s, type: %s, status: %d",
+              tbsys::CNetUtil::addrToString(server).c_str(),
+              pcode == SET_DATASERVER_MESSAGE ? "heartbeat" :
+              pcode == REQ_REPORT_BLOCKS_TO_NS_MESSAGE ? "report block" : "unknown", status);
           // already repsonse, now can free this message object.
           msg->free();
         }
@@ -150,161 +157,76 @@ namespace tfs
       int32_t iret = NULL != packet ? TFS_SUCCESS : EXIT_GENERAL_ERROR;
       if (TFS_SUCCESS == iret)
       {
+        #ifdef TFS_NS_DEBUG
+        tbutil::Time begin = tbutil::Time::now();
+        #endif
         SetDataserverMessage* message = dynamic_cast<SetDataserverMessage*> (packet);
         assert(SET_DATASERVER_MESSAGE == packet->getPCode());
-        assert(HAS_BLOCK_FLAG_NO == message->get_has_block());
-        assert(0 == message->get_blocks().size());
         RespHeartMessage *result_msg = new RespHeartMessage();
         result_msg->set_heart_interval(SYSPARAM_NAMESERVER.heart_interval_);
         const DataServerStatInfo& ds_info = message->get_ds();
-			  bool need_sent_block = false;
         time_t now = Func::get_monotonic_time();
 
-			  iret = meta_mgr_.get_layout_manager().get_client_request_server().keepalive(ds_info, now, need_sent_block);
-        if (TFS_SUCCESS == iret)
+        iret = meta_mgr_.get_layout_manager().get_client_request_server().keepalive(ds_info, now);
+        result_msg->set_status(TFS_SUCCESS == iret ? HEART_MESSAGE_OK : HEART_MESSAGE_FAILED);
+        if (TFS_SUCCESS == iret
+            && DATASERVER_STATUS_DEAD == ds_info.status_)
         {
-			    //dataserver dead
-			    if (ds_info.status_ == DATASERVER_STATUS_DEAD)
-			    {
-			    	TBSYS_LOG(INFO, "dataserver: %s exit", CNetUtil::addrToString(ds_info.id_).c_str());
-            result_msg->set_status(HEART_MESSAGE_OK);
-			    }
-          else
-          {
-            result_msg->set_status(need_sent_block ? HEART_NEED_SEND_BLOCK_INFO : HEART_MESSAGE_OK);
-          }
+          //dataserver exit
+          TBSYS_LOG(INFO, "dataserver: %s exit", CNetUtil::addrToString(ds_info.id_).c_str());
         }
-        else
-			  {
-			  	TBSYS_LOG(ERROR, "dataserver: %s keepalive failed, iret: %d", CNetUtil::addrToString(ds_info.id_).c_str(), iret);
-          result_msg->set_status(HEART_MESSAGE_FAILED);
-			  }
-			  iret = message->reply(result_msg);
-        TBSYS_LOG(DEBUG,"server: %s keepalive %s, iret: %d,result msg status: %d,  need_sent_block: %s",
-              tbsys::CNetUtil::addrToString(ds_info.id_).c_str(), TFS_SUCCESS == iret ? "successful" : "fail",
-              iret, result_msg->get_status(), need_sent_block ? "yes" : "no");
+        iret = message->reply(result_msg);
+        TBSYS_LOG(DEBUG, "dataserver: %s %s %s, ret: %d", CNetUtil::addrToString(ds_info.id_).c_str(),
+          DATASERVER_STATUS_DEAD == ds_info.status_ ? "exit" : DATASERVER_STATUS_ALIVE  == ds_info.status_ ? "keepalive" :
+          "unknow", TFS_SUCCESS == iret ? "successful" : "failed", iret);
+        #ifdef TFS_NS_DEBUG
+        tbutil::Time end = tbutil::Time::now() - begin;
+        TBSYS_LOG(INFO, "dataserver: %s keepalive consume times: %"PRI64_PREFIX"d(us)",
+          CNetUtil::addrToString(ds_info.id_).c_str(), end.toMicroSeconds());
+        #endif
       }
       return iret;
     }
 
     int HeartManagement::report_block(tbnet::Packet* packet)
     {
+      uint64_t server = 0;
+      int32_t block_nums = 0, expires_block_nums = 0;
       int32_t iret = NULL != packet ? TFS_SUCCESS : EXIT_GENERAL_ERROR;
       if (TFS_SUCCESS == iret)
       {
         #ifdef TFS_NS_DEBUG
         tbutil::Time begin = tbutil::Time::now();
         #endif
-        SetDataserverMessage* message = dynamic_cast<SetDataserverMessage*> (packet);
-        assert(SET_DATASERVER_MESSAGE == packet->getPCode());
-        assert(HAS_BLOCK_FLAG_YES == message->get_has_block());
-        RespHeartMessage *result_msg = new RespHeartMessage();
-        const DataServerStatInfo& ds_info = message->get_ds();
-			  VUINT32 expires;
+        ReportBlocksToNsRequestMessage* message = dynamic_cast<ReportBlocksToNsRequestMessage*> (packet);
+        assert(REQ_REPORT_BLOCKS_TO_NS_MESSAGE == packet->getPCode());
+        server = message->get_server();
+        NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
+        ReportBlocksToNsResponseMessage* result_msg = new ReportBlocksToNsResponseMessage();
+        result_msg->set_server(ngi.owner_ip_port_);
         time_t now = Func::get_monotonic_time();
 
-			  iret = meta_mgr_.get_layout_manager().get_client_request_server().report_block(ds_info, now, message->get_blocks(), expires);
-        result_msg->set_heart_interval(SYSPARAM_NAMESERVER.heart_interval_);
-        if (TFS_SUCCESS == iret)
+			  iret = meta_mgr_.get_layout_manager().get_client_request_server().report_block(server, now, message->get_blocks(), result_msg->get_blocks());
+        int8_t status = iret == EIXT_SERVER_OBJECT_NOT_FOUND ? REPORT_BLOCK_SERVER_OBJECT_NOT_FOUND  :
+                     iret == EXIT_UPDATE_RELATION_ERROR ? REPORT_BLOCK_UPDATE_RELATION_ERROR : REPORT_BLOCK_OTHER_ERROR;
+        result_msg->set_status(status);
+        if (TFS_SUCCESS != iret)
         {
-			    //dataserver dead
-			    if (ds_info.status_ == DATASERVER_STATUS_DEAD)
-			    {
-			    	TBSYS_LOG(INFO, "dataserver: %s exit", CNetUtil::addrToString(ds_info.id_).c_str());
-            result_msg->set_status(HEART_MESSAGE_OK);
-			    }
-          else
-          {
-            if (!expires.empty())
-            {
-              result_msg->set_expire_blocks(expires);
-              result_msg->set_status(HEART_EXP_BLOCK_ID);
-            }
-            else
-            {
-              result_msg->set_status(HEART_MESSAGE_OK);
-            }
-          }
+          TBSYS_LOG(INFO, "dataserver %s report block failed, ret: %d", tbsys::CNetUtil::addrToString(server).c_str(), iret);
         }
-        else
-			  {
-          int status = iret == EIXT_SERVER_OBJECT_NOT_FOUND ? HEART_REPORT_BLOCK_SERVER_OBJECT_NOT_FOUND  :
-                           iret == EXIT_UPDATE_RELATION_ERROR ? HEART_REPORT_UPDATE_RELATION_ERROR : HEART_MESSAGE_FAILED;
-			  	TBSYS_LOG(ERROR, "dataserver: %s report block failed, iret: %d", CNetUtil::addrToString(ds_info.id_).c_str(), iret);
-			  	result_msg->set_status(status);
-			  }
-
+        block_nums = message->get_blocks().size();
+        expires_block_nums = result_msg->get_blocks().size();
         #ifdef TFS_NS_DEBUG
         tbutil::Time end = tbutil::Time::now() - begin;
         TBSYS_LOG(INFO, "dataserver: %s report block consume times: %"PRI64_PREFIX"d(us)",
-          CNetUtil::addrToString(ds_info.id_).c_str(), end.toMicroSeconds());
+          CNetUtil::addrToString(server).c_str(), end.toMicroSeconds());
         #endif
 			  iret = message->reply(result_msg);
       }
+      TBSYS_LOG(INFO, "dataserver: %s report block %s, ret: %d, blocks: %d, expires: %d",
+         CNetUtil::addrToString(server).c_str(), TFS_SUCCESS == iret ? "successful" : "failed",
+         iret, block_nums, expires_block_nums);
       return iret;
-    }
-
-    void HeartManagement::cleanup_expired_report_server(const int64_t now)
-    {
-      RWLock::Lock lock(mutex_, WRITE_LOCKER);
-      std::map<uint64_t, int64_t>::iterator iter = current_report_servers_.begin();
-      while (iter != current_report_servers_.end())
-      {
-        if (iter->second <= now)
-          current_report_servers_.erase(iter++);
-        else
-          ++iter;
-      }
-    }
-
-    bool HeartManagement::add_report_server(const uint64_t server, const int64_t now)
-    {
-      RWLock::Lock lock(mutex_, WRITE_LOCKER);
-      bool can_be_report = current_report_servers_.size() < report_block_queue_size_;
-      if (can_be_report)
-      {
-        std::pair<std::map<uint64_t, int64_t>::iterator, bool> res;
-        res.first = current_report_servers_.find(server);
-        can_be_report = current_report_servers_.end() == res.first;
-        if (can_be_report)
-        {
-          res = current_report_servers_.insert(
-            std::map<uint64_t, int64_t>::value_type(server, now + SYSPARAM_NAMESERVER.report_block_expired_time_));
-        }
-      }
-      return can_be_report;
-    }
-
-    int HeartManagement::del_report_server(const uint64_t server)
-    {
-      RWLock::Lock lock(mutex_, WRITE_LOCKER);
-      std::map<uint64_t, int64_t>::iterator iter = current_report_servers_.find(server);
-      if (current_report_servers_.end() != iter)
-      {
-        current_report_servers_.erase(iter);
-      }
-      return TFS_SUCCESS;
-    }
-
-    bool HeartManagement::empty_report_server(const int64_t now)
-    {
-      RWLock::Lock lock(mutex_, READ_LOCKER);
-      bool ret = current_report_servers_.empty();
-      if (!ret)
-      {
-        ret = true;
-        std::map<uint64_t, int64_t>::iterator iter = current_report_servers_.begin();
-        for (; iter != current_report_servers_.end() && !ret; ++iter)
-        {
-          ret = !iter->second < now;
-        }
-      }
-      return ret;
-    }
-
-    void HeartManagement::TimeReportBlockTimerTask::runTimerTask()
-    {
-      manager_.get_layout_manager().register_report_servers();
     }
 
     CheckOwnerIsMasterTimerTask::CheckOwnerIsMasterTimerTask(LayoutManager* mm) :

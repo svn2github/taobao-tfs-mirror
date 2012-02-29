@@ -771,6 +771,23 @@ namespace tfs
         TBSYS_LOG(ERROR, "%s", "catch exception, unknow message");
       }
     }
+
+    void LayoutManager::CheckDataServerReportBlockThreadHelper::run()
+    {
+      try
+      {
+        manager_.check_all_server_report_block();
+      }
+      catch(std::exception& e)
+      {
+        TBSYS_LOG(ERROR, "catch exception: %s", e.what());
+      }
+      catch(...)
+      {
+        TBSYS_LOG(ERROR, "%s", "catch exception, unknow message");
+      }
+    }
+
   }
 }
 

@@ -136,6 +136,9 @@ namespace tfs
 
     static const int32_t MAX_DEV_TAG_LEN = 8;
 
+
+    static const int32_t DEFAULT_HEART_INTERVAL = 2;//2s
+
     enum OplogFlag
     {
       OPLOG_INSERT = 1,
@@ -376,7 +379,7 @@ namespace tfs
       int8_t   type_;
       int8_t   end_flag_;
     };
-// common data structure
+    // common data structure
 #pragma pack(4)
     struct FileInfo
     {
@@ -410,6 +413,11 @@ namespace tfs
       {
         memset(this, 0, sizeof(BlockInfo));
       }
+
+      bool operator < (const BlockInfo& rhs) const
+      {
+        return block_id_ < rhs.block_id_;
+      }
       inline bool operator==(const BlockInfo& rhs) const
       {
         return block_id_ == rhs.block_id_ && version_ == rhs.version_ && file_count_ == rhs.file_count_ && size_
@@ -420,87 +428,87 @@ namespace tfs
 
     struct RawMeta
     {
-    public:
-      RawMeta()
-      {
-        init();
-      }
+      public:
+        RawMeta()
+        {
+          init();
+        }
 
-      void init()
-      {
-        fileid_ = 0;
-        location_.inner_offset_ = 0;
-        location_.size_ = 0;
-      }
+        void init()
+        {
+          fileid_ = 0;
+          location_.inner_offset_ = 0;
+          location_.size_ = 0;
+        }
 
-      RawMeta(const uint64_t file_id, const int32_t in_offset, const int32_t file_size)
-      {
-        fileid_ = file_id;
-        location_.inner_offset_ = in_offset;
-        location_.size_ = file_size;
-      }
+        RawMeta(const uint64_t file_id, const int32_t in_offset, const int32_t file_size)
+        {
+          fileid_ = file_id;
+          location_.inner_offset_ = in_offset;
+          location_.size_ = file_size;
+        }
 
-      RawMeta(const RawMeta& raw_meta)
-      {
-        memcpy(this, &raw_meta, sizeof(RawMeta));
-      }
+        RawMeta(const RawMeta& raw_meta)
+        {
+          memcpy(this, &raw_meta, sizeof(RawMeta));
+        }
 
-      int deserialize(const char* data, const int64_t data_len, int64_t& pos);
-      int serialize(char* data, const int64_t data_len, int64_t& pos) const;
-      int64_t length() const;
-      uint64_t get_key() const
-      {
-        return fileid_;
-      }
+        int deserialize(const char* data, const int64_t data_len, int64_t& pos);
+        int serialize(char* data, const int64_t data_len, int64_t& pos) const;
+        int64_t length() const;
+        uint64_t get_key() const
+        {
+          return fileid_;
+        }
 
-      void set_key(const uint64_t key)
-      {
-        fileid_ = key;
-      }
+        void set_key(const uint64_t key)
+        {
+          fileid_ = key;
+        }
 
-      uint64_t get_file_id() const
-      {
-        return fileid_;
-      }
+        uint64_t get_file_id() const
+        {
+          return fileid_;
+        }
 
-      void set_file_id(const uint64_t file_id)
-      {
-        fileid_ = file_id;
-      }
+        void set_file_id(const uint64_t file_id)
+        {
+          fileid_ = file_id;
+        }
 
-      int32_t get_offset() const
-      {
-        return location_.inner_offset_;
-      }
+        int32_t get_offset() const
+        {
+          return location_.inner_offset_;
+        }
 
-      void set_offset(const int32_t offset)
-      {
-        location_.inner_offset_ = offset;
-      }
+        void set_offset(const int32_t offset)
+        {
+          location_.inner_offset_ = offset;
+        }
 
-      int32_t get_size() const
-      {
-        return location_.size_;
-      }
+        int32_t get_size() const
+        {
+          return location_.size_;
+        }
 
-      void set_size(const int32_t file_size)
-      {
-        location_.size_ = file_size;
-      }
+        void set_size(const int32_t file_size)
+        {
+          location_.size_ = file_size;
+        }
 
-      bool operator==(const RawMeta& rhs) const
-      {
-        return fileid_ == rhs.fileid_ && location_.inner_offset_ == rhs.location_.inner_offset_ && location_.size_
-          == rhs.location_.size_;
-      }
+        bool operator==(const RawMeta& rhs) const
+        {
+          return fileid_ == rhs.fileid_ && location_.inner_offset_ == rhs.location_.inner_offset_ && location_.size_
+            == rhs.location_.size_;
+        }
 
-    private:
-      uint64_t fileid_;
-      struct
-      {
-        int32_t inner_offset_;
-        int32_t size_;
-      } location_;
+      private:
+        uint64_t fileid_;
+        struct
+        {
+          int32_t inner_offset_;
+          int32_t size_;
+        } location_;
     };
 
     struct ReplBlock
@@ -680,7 +688,7 @@ namespace tfs
         ds_.clear();
       }
       BlockInfoSeg(const common::VUINT64& ds,
-                   const uint32_t lease_id = INVALID_LEASE_ID, const int32_t version = 0) :
+          const uint32_t lease_id = INVALID_LEASE_ID, const int32_t version = 0) :
         ds_(ds), lease_id_(lease_id), version_(version)
       {
       }
@@ -776,6 +784,8 @@ namespace tfs
       REMOVE_BLOCK_RESPONSE_FLAG_NO = 0,
       REMOVE_BLOCK_RESPONSE_FLAG_YES = 1
     }RemoveBlockResponseFlag;
+
+    extern const char* dynamic_parameter_str[];
 
     // defined type typedef
     typedef std::vector<BlockInfo> BLOCK_INFO_LIST;

@@ -39,6 +39,8 @@ namespace tfs
 
     int NameServerParameter::initialize(void)
     {
+      report_block_time_upper_ = 2;
+      report_block_time_lower_ = 4;
       discard_max_count_ = 0;
       const char* index = TBSYS_CONFIG.getString(CONF_SN_NAMESERVER, CONF_CLUSTER_ID);
       if (index == NULL
@@ -167,6 +169,13 @@ namespace tfs
       strategy_replicate_capacity_weigth_ = 80;
       strategy_replicate_load_weigth_ = 10;
       strategy_replicate_elect_num_weigth_ = 10;
+
+      int32_t report_block_thread_nums = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_REPORT_BLOCK_THREAD_COUNT, 4);
+      report_block_queue_size_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_REPORT_BLOCK_MAX_QUEUE_SIZE, report_block_thread_nums * 2);
+      if (report_block_queue_size_ < report_block_thread_nums * 2)
+         report_block_queue_size_ = report_block_thread_nums * 2;
+      if (report_block_queue_size_ > report_block_thread_nums * 4)
+        report_block_queue_size_ = report_block_thread_nums * 4;
       return TFS_SUCCESS;
     }
 

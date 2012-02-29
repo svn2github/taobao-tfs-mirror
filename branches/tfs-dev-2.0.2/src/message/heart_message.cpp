@@ -22,7 +22,8 @@ namespace tfs
   namespace message
   {
     RespHeartMessage::RespHeartMessage() :
-      status_(0), sync_mirror_status_(0)
+      status_(0),
+      heart_interval_(common::DEFAULT_HEART_INTERVAL)
     {
       _packetHeader._pcode = common::RESP_HEART_MESSAGE;
       expire_blocks_.clear();
@@ -38,7 +39,7 @@ namespace tfs
       int32_t iret = input.get_int32(&status_);
       if (common::TFS_SUCCESS == iret)
       {
-        iret = input.get_int32(&sync_mirror_status_);
+        iret = input.get_int32(&heart_interval_);
       }
       if (common::TFS_SUCCESS == iret)
       {
@@ -53,17 +54,17 @@ namespace tfs
 
     int64_t RespHeartMessage::length() const
     {
-      return common::INT_SIZE * 2 + 
-                common::Serialization::get_vint32_length(expire_blocks_) + 
+      return common::INT_SIZE * 2 +
+                common::Serialization::get_vint32_length(expire_blocks_) +
                   common::Serialization::get_vint32_length(new_blocks_);
     }
 
-    int RespHeartMessage::serialize(common::Stream& output) const 
+    int RespHeartMessage::serialize(common::Stream& output) const
     {
       int32_t iret = output.set_int32(status_);
       if (common::TFS_SUCCESS == iret)
       {
-        iret = output.set_int32(sync_mirror_status_);
+        iret = output.set_int32(heart_interval_);
       }
       if (common::TFS_SUCCESS == iret)
       {
@@ -155,7 +156,7 @@ namespace tfs
       return iret;
     }
 
-    int MasterAndSlaveHeartMessage::serialize(common::Stream& output) const 
+    int MasterAndSlaveHeartMessage::serialize(common::Stream& output) const
     {
       int64_t pos = 0;
       int32_t iret = ns_identity_.serialize(output.get_free(), output.get_free_length(), pos);
@@ -197,7 +198,7 @@ namespace tfs
       return iret;
     }
 
-    int MasterAndSlaveHeartResponseMessage::serialize(common::Stream& output) const 
+    int MasterAndSlaveHeartResponseMessage::serialize(common::Stream& output) const
     {
       int64_t pos = 0;
       int32_t iret = ns_identity_.serialize(output.get_free(), output.get_free_length(), pos);
@@ -238,7 +239,7 @@ namespace tfs
       return input.get_int32(&flags_);
     }
 
-    int HeartBeatAndNSHeartMessage::serialize(common::Stream& output) const 
+    int HeartBeatAndNSHeartMessage::serialize(common::Stream& output) const
     {
       return output.set_int32(flags_);
     }

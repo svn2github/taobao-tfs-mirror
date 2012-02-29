@@ -31,7 +31,7 @@ namespace tfs
     class BlockCollect;
     class LayoutManager;
     class ServerCollect : public virtual common::RWLock,
-                          public virtual GCObject
+    public virtual GCObject
     {
       friend class BlockCollect;
       friend class LayoutManager;
@@ -59,7 +59,6 @@ namespace tfs
       BlockCollect* force_elect_write_block(void);
 
       int scan(common::SSMScanParameter& param, const int8_t scan_flag);
-      void dump() const;
 
       inline int64_t use_capacity() const { return use_capacity_;}
       inline int64_t total_capacity() const { return total_capacity_;}
@@ -94,16 +93,32 @@ namespace tfs
         return (static_cast<int32_t>((id % common::SYSPARAM_NAMESERVER.group_count_)) == common::SYSPARAM_NAMESERVER.group_seq_);
       }
 
-      inline void set_report_block_complete_satus(const int8_t status = REPORT_BLOCK_STATUS_COMPLETE)
+      inline void set_report_block_status(const int8_t status)
       {
-        RWLock::Lock lock(*this, common::WRITE_LOCKER);
         rb_status_ = status;
+      }
+
+      inline bool is_report_block(bool& rb_expire, const time_t now, const bool isnew)
+      {
+        if (!isnew)
+          rb_expire = now > rb_expired_time_ && rb_status_ == REPORT_BLOCK_STATUS_REPORTING;
+        //TBSYS_LOG(DEBUG, "%s now : %ld, rb_expired_time_: %ld, next : %ld", tbsys::CNetUtil::addrToString(id_).c_str(), now, rb_expired_time_,next_report_block_time_);
+        return isnew || rb_expire ? true : now >= next_report_block_time_;
       }
 
       inline bool is_report_block_complete(void) const
       {
         return rb_status_ == REPORT_BLOCK_STATUS_COMPLETE;
       }
+
+      inline void set_report_block_info(const time_t now, const int8_t status)
+      {
+        rb_expired_time_ = now + common::SYSPARAM_NAMESERVER.report_block_expired_time_;
+        rb_status_ = status;
+      }
+
+      void set_next_report_block_time(const time_t now, const int64_t time_seed, const bool ns_switch);
+
       static const int8_t MULTIPLE;
       static const int8_t MAX_LOAD_DOUBLE;
       static const int8_t DUMP_FLAG_HOLD;
@@ -138,6 +153,7 @@ namespace tfs
       time_t  startup_time_;
       time_t  last_update_time_;
       time_t  rb_expired_time_;
+      time_t  next_report_block_time_;
       int32_t current_load_;
       int32_t block_count_;
       int32_t write_index_;

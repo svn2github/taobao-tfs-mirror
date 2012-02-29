@@ -1,5 +1,4 @@
-/*
- * (C) 2007-2010 Alibaba Group Holding Limited.
+/* * (C) 2007-2010 Alibaba Group Holding Limited.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -58,13 +57,15 @@ namespace tfs
       elect_seq_(NsGlobalStatisticsInfo::ELECT_SEQ_NO_INITIALIZE),
       startup_time_(now),
       last_update_time_(now),
+      next_report_block_time_(0xFFFFFFFF),
       current_load_(info.current_load_ <= 0 ? 1 : info.current_load_),
       block_count_(info.block_count_),
       write_index_(0),
-      status_(info.status_),
-      rb_status_(REPORT_BLOCK_STATUS_UNCOMPLETE),
+      status_(common::DATASERVER_STATUS_ALIVE),
+      rb_status_(REPORT_BLOCK_STATUS_NONE),
       elect_flag_(1)
       {
+
       }
 
     bool ServerCollect::add(BlockCollect* block, const bool writable)
@@ -317,11 +318,6 @@ namespace tfs
       return TFS_SUCCESS;
     }
 
-    void ServerCollect::dump() const
-    {
-
-    }
-
     /**
      * to check a dataserver if writable
      */
@@ -345,7 +341,6 @@ namespace tfs
     bool ServerCollect::touch(LayoutManager& manager, const time_t now, bool& promote, int32_t& count)
     {
       bool bret = true;
-      //if (in_safe_mode_time(now))
       if (!is_report_block_complete())
       {
         count = 0;
@@ -519,6 +514,25 @@ namespace tfs
       {
         clear(*manager, Func::get_monotonic_time());
       }
+    }
+    void ServerCollect::set_next_report_block_time(const time_t now, const int64_t time_seed, const bool ns_switch)
+    {
+      int32_t hour = common::SYSPARAM_NAMESERVER.report_block_time_upper_ - common::SYSPARAM_NAMESERVER.report_block_time_lower_;
+      struct tm* lt = gmtime(&now);
+      if (ns_switch)
+      {
+        lt->tm_hour += time_seed % hour;
+        lt->tm_min  = time_seed % 60;
+        lt->tm_sec  = random() % 60;
+      }
+      else
+      {
+        lt->tm_mday += common::SYSPARAM_NAMESERVER.report_block_time_interval_;
+        lt->tm_hour = time_seed % hour + common::SYSPARAM_NAMESERVER.report_block_time_lower_;
+        lt->tm_min = time_seed % 60;
+        lt->tm_sec = random() % 60;
+      }
+      next_report_block_time_ = mktime(lt);
     }
   } /** nameserver **/
 }/** tfs **/

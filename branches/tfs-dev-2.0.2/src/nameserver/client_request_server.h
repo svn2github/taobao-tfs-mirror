@@ -44,8 +44,8 @@ namespace nameserver
     public:
       ClientRequestServer(LayoutManager& lay_out_manager, NameServer& manager);
 
-      int keepalive(const common::DataServerStatInfo& info, const time_t now, bool& need_send_block);
-      int report_block(const common::DataServerStatInfo& info, const time_t now, common::BLOCK_INFO_LIST& blocks, common::VUINT32& expires);
+      int keepalive(const common::DataServerStatInfo& info, const time_t now);
+      int report_block(const uint64_t server, const time_t now, std::set<common::BlockInfo>& blocks, common::VUINT32& expires);
       int open(uint32_t& block_id, const int32_t mode, uint32_t& lease_id, int32_t& version, common::VUINT64& ds_list);
       int batch_open(const common::VUINT32& blocks, const int32_t mode, const int32_t block_count, std::map<uint32_t, common::BlockInfoSeg>& out);
 

@@ -20,7 +20,7 @@ namespace tfs
 {
   namespace message
   {
-    class SetDataserverMessage: public common::BasePacket 
+    class SetDataserverMessage: public common::BasePacket
     {
       public:
         SetDataserverMessage();
@@ -50,27 +50,87 @@ namespace tfs
         common::DataServerStatInfo ds_;
         common::BLOCK_INFO_LIST blocks_;
         common::HasBlockFlag has_block_;
+        int8_t heart_interval_;
     };
 
-    /*class SuspectDataserverMessage: public common::BasePacket 
+    class CallDsReportBlockRequestMessage: public common::BasePacket
     {
       public:
-        SuspectDataserverMessage();
-        virtual ~SuspectDataserverMessage();
+        CallDsReportBlockRequestMessage();
+        virtual ~CallDsReportBlockRequestMessage();
         virtual int serialize(common::Stream& output) const ;
         virtual int deserialize(common::Stream& input);
         virtual int64_t length() const;
-        inline void set_server_id(const uint64_t server_id)
+        inline uint64_t get_server() const
         {
-          server_id_ = server_id;
+          return server_;
         }
-        inline uint64_t get_server_id() const
+        inline void set_server(const uint64_t server)
         {
-          return server_id_;
+          server_ = server;
+        }
+      private:
+        uint64_t server_;
+    };
+
+    class ReportBlocksToNsRequestMessage: public common::BasePacket
+    {
+      public:
+        ReportBlocksToNsRequestMessage();
+        virtual ~ReportBlocksToNsRequestMessage();
+        virtual int serialize(common::Stream& output) const ;
+        virtual int deserialize(common::Stream& input);
+        virtual int64_t length() const;
+        inline void set_server(const uint64_t server)
+        {
+          server_ = server;
+        }
+        inline uint64_t get_server(void) const
+        {
+          return server_;
+        }
+        inline std::set<common::BlockInfo>& get_blocks()
+        {
+          return blocks_;
         }
       protected:
-        uint64_t server_id_;
-    };*/
-  }
-}
+        std::set<common::BlockInfo> blocks_;
+        uint64_t server_;
+    };
+
+    class ReportBlocksToNsResponseMessage: public common::BasePacket
+    {
+      public:
+        ReportBlocksToNsResponseMessage();
+        virtual ~ReportBlocksToNsResponseMessage();
+        virtual int serialize(common::Stream& output) const ;
+        virtual int deserialize(common::Stream& input);
+        virtual int64_t length() const;
+        inline std::vector<uint32_t>& get_blocks()
+        {
+          return expire_blocks_;
+        }
+        inline void set_server(const uint64_t server)
+        {
+          server_ = server;
+        }
+        inline uint64_t get_server(void) const
+        {
+          return server_;
+        }
+        inline void set_status(const int8_t status)
+        {
+          status_ = status;
+        }
+        inline int8_t get_status(void) const
+        {
+          return status_;
+        }
+      protected:
+        std::vector<uint32_t> expire_blocks_;
+        uint64_t server_;
+        int8_t status_;
+    };
+  }/** end namespace message **/
+}/** end namespace tfs **/
 #endif

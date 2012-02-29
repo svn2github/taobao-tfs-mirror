@@ -22,7 +22,7 @@ namespace tfs
 {
   namespace message
   {
-    class RespHeartMessage: public common::BasePacket 
+    class RespHeartMessage: public common::BasePacket
     {
       public:
         RespHeartMessage();
@@ -51,21 +51,21 @@ namespace tfs
         {
           status_ = status;
         }
-        inline void set_sync_mirror_status(const int32_t mirror_status)
+        inline void set_heart_interval(const int8_t heart_interval)
         {
-          sync_mirror_status_ = mirror_status;
+          heart_interval_ = heart_interval;
+        }
+        inline int8_t get_heart_interval(void) const
+        {
+          return heart_interval_;
         }
         inline int32_t get_status() const
         {
           return status_;
         }
-        inline int32_t get_sync_mirror_status() const
-        {
-          return sync_mirror_status_;
-        }
       protected:
         int32_t status_;
-        int32_t sync_mirror_status_;
+        int32_t heart_interval_;
         common::VUINT32 expire_blocks_;
         common::VUINT32 new_blocks_;
     };
@@ -96,7 +96,7 @@ namespace tfs
       HEART_FORCE_MODIFY_OTHERSIDE_ROLE_FLAGS_YES
     };
 
-    class MasterAndSlaveHeartMessage: public common::BasePacket 
+    class MasterAndSlaveHeartMessage: public common::BasePacket
     {
       public:
         MasterAndSlaveHeartMessage();
@@ -149,7 +149,7 @@ namespace tfs
         NSIdentityNetPacket ns_identity_;
     };
 
-    class MasterAndSlaveHeartResponseMessage: public common::BasePacket 
+    class MasterAndSlaveHeartResponseMessage: public common::BasePacket
     {
       public:
         MasterAndSlaveHeartResponseMessage();
@@ -202,7 +202,7 @@ namespace tfs
         common::VUINT64 ds_list_;
     };
 
-    class HeartBeatAndNSHeartMessage: public common::BasePacket 
+    class HeartBeatAndNSHeartMessage: public common::BasePacket
     {
       public:
         HeartBeatAndNSHeartMessage();
@@ -227,7 +227,7 @@ namespace tfs
         int32_t flags_;
     };
 
-    class OwnerCheckMessage: public common::BasePacket 
+    class OwnerCheckMessage: public common::BasePacket
     {
       public:
         OwnerCheckMessage();

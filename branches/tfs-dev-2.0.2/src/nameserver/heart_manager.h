@@ -11,9 +11,9 @@
  * Authors:
  *   duolong <duolong@taobao.com>
  *      - initial release
- *   qushan<qushan@taobao.com> 
+ *   qushan<qushan@taobao.com>
  *      - modify 2009-03-27
- *   duanfei <duanfei@taobao.com> 
+ *   duanfei <duanfei@taobao.com>
  *      - modify 2010-04-23
  *
  */
@@ -28,7 +28,7 @@ namespace tfs
   namespace nameserver
   {
     class NameServer;
-    class HeartManagement 
+    class HeartManagement
     {
     public:
       explicit HeartManagement(NameServer& manager);
@@ -38,11 +38,6 @@ namespace tfs
       void wait_for_shut_down();
       void destroy();
       int push(common::BasePacket* msg);
-
-      bool add_report_server(const uint64_t server, const int64_t now);
-      int del_report_server(const uint64_t server);
-      void cleanup_expired_report_server(const int64_t now);
-      bool empty_report_server(const int64_t now);
     private:
       class KeepAliveIPacketQueueHeaderHelper : public tbnet::IPacketQueueHandler
       {
@@ -64,17 +59,6 @@ namespace tfs
         DISALLOW_COPY_AND_ASSIGN(ReportBlockIPacketQueueHeaderHelper);
         HeartManagement& manager_;
       };
-      class TimeReportBlockTimerTask: public tbutil::TimerTask
-      {
-      public:
-        TimeReportBlockTimerTask(NameServer& manager):manager_(manager){}
-        virtual ~TimeReportBlockTimerTask() {}
-        void runTimerTask();
-      private:
-        NameServer& manager_;
-        DISALLOW_COPY_AND_ASSIGN(TimeReportBlockTimerTask);
-      };
-      typedef tbutil::Handle<TimeReportBlockTimerTask> TimeReportBlockTimerTaskPtr;
     private:
       DISALLOW_COPY_AND_ASSIGN(HeartManagement);
       int keepalive(tbnet::Packet* packet);
@@ -86,8 +70,6 @@ namespace tfs
       tbnet::PacketQueueThread report_block_threads_;
       KeepAliveIPacketQueueHeaderHelper keepalive_queue_header_;
       ReportBlockIPacketQueueHeaderHelper report_block_queue_header_;
-      common::RWLock mutex_;
-      std::map<uint64_t, int64_t> current_report_servers_;
     };
 
     class CheckOwnerIsMasterTimerTask: public tbutil::TimerTask
@@ -167,5 +149,5 @@ namespace tfs
   }
 }
 
-#endif 
+#endif
 

@@ -48,98 +48,66 @@ namespace tfs
     const int8_t LayoutManager::LOAD_BASE_MULTIPLE = 2;
     const int8_t LayoutManager::ELECT_SEQ_INITIALIE_NUM = 1;
 
-    const std::string LayoutManager::dynamic_parameter_str[] = {
-      "min_replication",
-      "max_replication",
-      "max_write_file_count",
-      "max_use_capacity_ratio",
-      "heart_interval",
-      "replicate_wait_time",
-      "compact_delete_ratio",
-      "compact_max_load",
-      "plan_run_flag",
-      "run_plan_expire_interval",
-      "run_plan_ratio",
-      "object_dead_max_time",
-      "balance_max_diff_block_num",
-      "log_level",
-      "add_primary_block_count",
-      "build_plan_interval",
-      "replicate_ratio",
-      "max_wait_write_lease",
-      "tmp",
-      "cluster_index",
-      "build_plan_default_wait_time",
-      "group_count",
-      "group_seq",
-      "discard_newblk_safe_mode_time",
-      "discard_max_count",
-      "strategy_write_capacity_weigth",
-      "strategy_write_elect_num_weigth",
-      "strategy_replicate_capactiy_weigth",
-      "strategy_replicate_load_weigth",
-      "strategy_replicate_elect_num_weigth",
-  };
-
-  static int find_servers_difference(const std::vector<ServerCollect*>& first,
-                                     const std::vector<ServerCollect*>& second,
-                                     std::vector<ServerCollect*>& result)
-  {
-    if (second.empty())
+    static int find_servers_difference(const std::vector<ServerCollect*>& first,
+        const std::vector<ServerCollect*>& second,
+        std::vector<ServerCollect*>& result)
     {
-      result.assign(first.begin(), first.end());
-    }
-    else
-    {
-      std::vector<ServerCollect*>::const_iterator iter = second.begin();
-      std::vector<ServerCollect*>::const_iterator rt;
-      for (; iter != second.end(); ++iter)
+      if (second.empty())
       {
-        bool bfind = false;
-        rt = first.begin();
-        for (; rt != first.end(); rt++)
+        result.assign(first.begin(), first.end());
+      }
+      else
+      {
+        std::vector<ServerCollect*>::const_iterator iter = second.begin();
+        std::vector<ServerCollect*>::const_iterator rt;
+        for (; iter != second.end(); ++iter)
         {
-          if ((*rt)->id() == (*iter)->id())
+          bool bfind = false;
+          rt = first.begin();
+          for (; rt != first.end(); rt++)
           {
-            bfind = true;
-            break;
+            if ((*rt)->id() == (*iter)->id())
+            {
+              bfind = true;
+              break;
+            }
+          }
+          if (!bfind)
+          {
+            result.push_back((*iter));
           }
         }
-        if (!bfind)
-        {
-          result.push_back((*iter));
-        }
       }
+      return result.size();
     }
-    return result.size();
-  }
 
-  /*static const uint64_t GB = 1 * 1024 * 1024 * 1024;
-  static const uint64_t MB = 1 * 1024 * 1024;
-  static const double PERCENTAGE_MIN = 0.000001;
-  static const double PERCENTAGE_MAX = 1.000000;
-  static const double PERCENTAGE_MAGIC = 1000000.0;
-  static double calc_capacity_percentage(const uint64_t capacity, const uint64_t total_capacity)
-  {
-    double ret = PERCENTAGE_MIN;
-    uint64_t unit = capacity > GB ? GB : MB;
-    uint64_t tmp_capacity = capacity / unit;
-    uint64_t tmp_total_capacity = total_capacity / unit;
-    if (0 == tmp_total_capactiy)
+    /*static const uint64_t GB = 1 * 1024 * 1024 * 1024;
+      static const uint64_t MB = 1 * 1024 * 1024;
+      static const double PERCENTAGE_MIN = 0.000001;
+      static const double PERCENTAGE_MAX = 1.000000;
+      static const double PERCENTAGE_MAGIC = 1000000.0;
+      static double calc_capacity_percentage(const uint64_t capacity, const uint64_t total_capacity)
+      {
+      double ret = PERCENTAGE_MIN;
+      uint64_t unit = capacity > GB ? GB : MB;
+      uint64_t tmp_capacity = capacity / unit;
+      uint64_t tmp_total_capacity = total_capacity / unit;
+      if (0 == tmp_total_capactiy)
       ret = PERCENTAGE_MAX;
-    if ((tmp_capacity != 0)
-        && (tmp_total_capacity != 0))
-    {
+      if ((tmp_capacity != 0)
+      && (tmp_total_capacity != 0))
+      {
       ret = (double)tmp_capacity / (double)tmp_total_capacity;
-    }
-    return ret;
-  }*/
+      }
+      return ret;
+      }*/
 
-  LayoutManager::LayoutManager(NameServer& manager):
+    LayoutManager::LayoutManager(NameServer& manager):
       build_plan_thread_(0),
       run_plan_thread_(0),
       check_dataserver_thread_(0),
       add_block_in_all_server_thread_(0),
+      check_dataserver_report_block_thread_(0),
       oplog_sync_mgr_(*this),
       block_chunk_(NULL),
       block_chunk_num_(0),
@@ -166,6 +134,7 @@ namespace tfs
       run_plan_thread_ = 0;
       check_dataserver_thread_ = 0;
       add_block_in_all_server_thread_ = 0;
+      check_dataserver_report_block_thread_ = 0;
 
       for (int32_t i = 0; i < block_chunk_num_; ++i)
       {
@@ -229,10 +198,11 @@ namespace tfs
         check_dataserver_thread_ = new CheckDataServerThreadHelper(*this);
         run_plan_thread_ = new RunPlanThreadHelper(*this);
         add_block_in_all_server_thread_ = new AddBlockInAllServerThreadHelper(*this);
+        check_dataserver_report_block_thread_ = new CheckDataServerReportBlockThreadHelper(*this);
 #if defined(TFS_NS_INTEGRATION)
         run_plan_thread_ = new RunPlanThreadHelper(*this);
 #endif
-     }
+      }
 #else
       iret = TFS_SUCCESS;
 #endif
@@ -270,6 +240,11 @@ namespace tfs
       if (add_block_in_all_server_thread_ != 0)
       {
         add_block_in_all_server_thread_->join();
+      }
+
+      if (check_dataserver_report_block_thread_ != 0)
+      {
+        check_dataserver_report_block_thread_->join();
       }
 
       oplog_sync_mgr_.wait_for_shut_down();
@@ -340,12 +315,61 @@ namespace tfs
 
     void LayoutManager::register_report_servers(void)
     {
+      time_t now = Func::get_monotonic_time();
       RWLock::Lock lock(server_mutex_, READ_LOCKER);
       SERVER_MAP::const_iterator iter = servers_.begin();
       for (; iter != servers_.end(); ++iter)
       {
-        iter->second->set_report_block_complete_satus(REPORT_BLOCK_STATUS_UNCOMPLETE);
+        iter->second->set_next_report_block_time(now, random() % 0xFFFFFFF, true);
       }
+    }
+
+    int LayoutManager::add_report_block_server(ServerCollect* server, const bool rb_expire)
+    {
+      int32_t iret = NULL != server ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+      if (TFS_SUCCESS == iret)
+      {
+        #ifdef TFS_NS_DEBUG
+        tbutil::Time begin = tbutil::Time::now();
+        #endif
+        tbutil::Mutex::Lock lock(wait_report_block_server_mutex_);
+        #ifdef TFS_NS_DEBUG
+        tbutil::Time end = tbutil::Time::now() - begin;
+        TBSYS_LOG(DEBUG,"add_report_block_server: LOCK : %d", end.toMicroSeconds());
+        #endif
+
+        if (rb_expire)
+        {
+          del_report_block_server_(server);
+          wait_report_block_servers_.push_front(server);
+        }
+        else
+        {
+          wait_report_block_servers_.push_back(server);
+        }
+      }
+      return iret;
+    }
+
+    int LayoutManager::del_report_block_server(ServerCollect* server)
+    {
+      tbutil::Mutex::Lock lock(wait_report_block_server_mutex_);
+      return del_report_block_server_(server);
+    }
+
+    int LayoutManager::del_report_block_server_(ServerCollect* server)
+    {
+      int32_t iret = NULL != server ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+      if (TFS_SUCCESS == iret)
+      {
+        std::vector<ServerCollect*>::iterator iter = std::find(current_reporting_block_servers_.begin(),
+              current_reporting_block_servers_.end(), server);
+        if (current_reporting_block_servers_.end() != iter)
+        {
+          current_reporting_block_servers_.erase(iter);
+        }
+      }
+      return iret;
     }
 
     int LayoutManager::update_block_info(
@@ -795,7 +819,7 @@ namespace tfs
      * @return TFS_SUCCESS success.
      */
     int LayoutManager::rm_block_from_ds(const uint64_t ds_id, const uint32_t block_id,
-                        const common::RemoveBlockResponseFlag flag)
+        const common::RemoveBlockResponseFlag flag)
     {
       TBSYS_LOG(INFO, "remove  block: %u on server : %s", block_id, tbsys::CNetUtil::addrToString(ds_id).c_str());
 #if !defined(TFS_GTEST) && !defined(TFS_NS_INTEGRATION)
@@ -826,7 +850,7 @@ namespace tfs
     }
 
     int LayoutManager::rm_block_from_ds(const uint64_t ds_id, const std::vector<uint32_t>& blocks,
-                        const common::RemoveBlockResponseFlag flag)
+        const common::RemoveBlockResponseFlag flag)
     {
       TBSYS_LOG(INFO, "remove  block count: %zd on server : %s", blocks.size(),
           tbsys::CNetUtil::addrToString(ds_id).c_str());
@@ -916,7 +940,6 @@ namespace tfs
       }
       server_collect->update(info, now, isnew);
 
-
       if (NULL != pgc_object)
       {
         {
@@ -978,7 +1001,7 @@ namespace tfs
         GFactory::get_gc_manager().add(pserver);
       }
 
-      manager_.get_heart_management().del_report_server(server);
+      del_report_block_server(pserver);
       return TFS_SUCCESS;
     }
 
@@ -1140,7 +1163,7 @@ namespace tfs
                   print_servers(servers, needs);
                   print_servers(success, success_servers);
                   TBSYS_LOG(ERROR, "add block: %u fail, we'll rollback, servers: %s, success: %s",
-                    block_id, needs.c_str(), success_servers.c_str());
+                      block_id, needs.c_str(), success_servers.c_str());
                   add_new_block_helper_rm_block(block_id, success);
                 }
                 else
@@ -1313,9 +1336,9 @@ namespace tfs
                     block = ptr->find(block_id);
                     if ((new_create_block_collect)
                         || ((NULL != block)
-                           && (!new_create_block_collect)
-                           && (block->get_creating_flag() == BlockCollect::BLOCK_CREATE_FLAG_NO)
-                           && (block->get_hold_size() <= 0)))
+                          && (!new_create_block_collect)
+                          && (block->get_creating_flag() == BlockCollect::BLOCK_CREATE_FLAG_NO)
+                          && (block->get_hold_size() <= 0)))
                     {
                       ptr->remove(block_id, rms);
                     }
@@ -1425,7 +1448,7 @@ namespace tfs
      * @param [out] expires: need expire blocks
      * @return success or failure
      */
-    int LayoutManager::update_relation(ServerCollect* server, const std::vector<BlockInfo>& blocks, EXPIRE_BLOCK_LIST& expires, const time_t now)
+    int LayoutManager::update_relation(ServerCollect* server, const std::set<BlockInfo>& blocks, EXPIRE_BLOCK_LIST& expires, const time_t now)
     {
       int32_t iret = ((server != NULL && server->is_alive())) ? TFS_SUCCESS : TFS_ERROR;
       if (TFS_SUCCESS == iret)
@@ -1439,11 +1462,12 @@ namespace tfs
         else
         {
           std::vector<GCObject*> rms;
-          uint32_t blocks_size = blocks.size();
           NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
-          for (uint32_t i = 0; i < blocks_size; ++i)
+          std::set<BlockInfo>::const_iterator iter = blocks.begin();
+          for (; iter != blocks.end(); ++iter)
           {
-            if (blocks[i].block_id_ == 0)
+            const BlockInfo& info = (*iter);
+            if (info.block_id_ == 0)
             {
               TBSYS_LOG(WARN, "dataserver: %s report, block == 0", tbsys::CNetUtil::addrToString(server->id()).c_str());
               continue;
@@ -1453,18 +1477,18 @@ namespace tfs
             bool force_be_master = false;
 
             // check block version, rebuilding relation.
-            BlockChunkPtr ptr = get_chunk(blocks[i].block_id_);
+            BlockChunkPtr ptr = get_chunk(info.block_id_);
             RWLock::Lock lock(*ptr, WRITE_LOCKER);
-            BlockCollect* block = ptr->find(blocks[i].block_id_);
+            BlockCollect* block = ptr->find(info.block_id_);
             if (block == NULL)
             {
               TBSYS_LOG(INFO, "block: %u not found in dataserver: %s, must be create",
-                  blocks[i].block_id_, tbsys::CNetUtil::addrToString(server->id()).c_str());
-              block = ptr->add(blocks[i].block_id_, now);
+                  info.block_id_, tbsys::CNetUtil::addrToString(server->id()).c_str());
+              block = ptr->add(info.block_id_, now);
               first = true;
             }
             if (!block->check_version(server, ngi.owner_role_, first,
-                  blocks[i], expires, force_be_master, now))
+                  info, expires, force_be_master, now))
             {
               continue;//version error, not argeed
             }
@@ -1687,7 +1711,7 @@ namespace tfs
         }
 
         {
-         //check dataserver is alive
+          //check dataserver is alive
           RWLock::Lock lock(server_mutex_, READ_LOCKER);
           SERVER_MAP_ITER iter = servers_.begin();
           while (iter != servers_.end())
@@ -1738,7 +1762,7 @@ namespace tfs
       time_t now = 0;
       int32_t count = 0;
       bool   promote = true;
-      const int32_t MAX_SLOT_NUMS = 2;
+      const int32_t MAX_SLOT_NUMS = 32;
       ServerCollect* last = NULL;
       ServerCollect* servers[MAX_SLOT_NUMS];
       ArrayHelper<ServerCollect*> helper(MAX_SLOT_NUMS, servers);
@@ -1765,11 +1789,11 @@ namespace tfs
           }
         }
 
-        int32_t size = helper.get_array_index();
-
-        for (int32_t i = 0; i < size; ++i)
+        int32_t size  = helper.get_array_index();
+        int32_t index = size;
+        while (index-- > 0)
         {
-          last = *helper.at(i);
+          last = *helper.at(index);
           touch(last, now, promote);
         }
         if (size < MAX_SLOT_NUMS)
@@ -1777,8 +1801,75 @@ namespace tfs
           last = NULL;
           Func::sleep(SYSPARAM_NAMESERVER.heart_interval_, ngi.destroy_flag_);
         }
+      }
+    }
 
-        TBSYS_LOG(DEBUG, "array index size : %d, last: %ld", size, last == NULL ? 0 : last->id());
+    void LayoutManager::check_all_server_report_block()
+    {
+      //int32_t get_time_nums = 0;
+      int32_t new_add_nums  = 0;
+      const int32_t MAX_SLOT_NUMS = 64;
+      const int32_t SLEEP_TIME_US = 200;
+      //const int32_t MAX_GET_TIME_NUMS = 10 * 1000 * 1000 / SLEEP_TIME_US;
+      time_t now = 0;//, last_update_time = 0, current = 0;
+      NewClient* client = NULL;
+      ServerCollect* last = NULL;
+      ServerCollect* servers[MAX_SLOT_NUMS];
+      ArrayHelper<ServerCollect*> helper(MAX_SLOT_NUMS, servers);
+      NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
+      while (ngi.destroy_flag_ != NS_DESTROY_FLAGS_YES)
+      {
+        /*if (++get_time_nums > MAX_GET_TIME_NUMS)
+        {
+          current = time(NULL);
+          if (last_update_time < current - 600)
+          {
+            struct tm* lt = gmtime(&current);
+            if (lt->tm_hour >= SYSPARAM_NAMESERVER.report_block_time_lower_
+                && lt->tm_hour < SYSPARAM_NAMESERVER.report_block_time_upper_)
+            {
+              srand(current);
+              last_update_time = current;
+            }
+          }
+        }*/
+
+        helper.clear();
+        wait_report_block_server_mutex_.lock();
+        new_add_nums = SYSPARAM_NAMESERVER.report_block_queue_size_ -  current_reporting_block_servers_.size();
+        new_add_nums = std::min(MAX_SLOT_NUMS, new_add_nums);
+        if (wait_report_block_servers_.empty())
+        {
+          wait_report_block_server_mutex_.unlock();
+          usleep(SLEEP_TIME_US);
+        }
+        else
+        {
+          while (new_add_nums-- > 0
+              && !wait_report_block_servers_.empty())
+          {
+            helper.push_back(wait_report_block_servers_.front());
+            wait_report_block_servers_.pop_front();
+          }
+          wait_report_block_server_mutex_.unlock();
+        }
+
+        now = Func::get_monotonic_time();
+        int32_t ret = TFS_SUCCESS;
+        int32_t index = helper.get_array_index();
+        while (index-- > 0)
+        {
+          last = *helper.at(index);
+          CallDsReportBlockRequestMessage req;
+          req.set_server(ngi.owner_ip_port_);
+          client = NewClientManager::get_instance().create_client();
+          if (NULL != client)
+            ret = post_msg_to_server(last->id(), client, &req, ns_async_callback);
+          if (TFS_SUCCESS != ret)
+            NewClientManager::get_instance().destroy_client(client);
+          last->set_report_block_info(now, REPORT_BLOCK_STATUS_REPORTING);
+          current_reporting_block_servers_.push_back(last);
+        }
       }
     }
 
@@ -1878,7 +1969,11 @@ namespace tfs
           &SYSPARAM_NAMESERVER.strategy_write_elect_num_weigth_,
           &SYSPARAM_NAMESERVER.strategy_replicate_capacity_weigth_,
           &SYSPARAM_NAMESERVER.strategy_replicate_load_weigth_,
-          &SYSPARAM_NAMESERVER.strategy_replicate_elect_num_weigth_
+          &SYSPARAM_NAMESERVER.strategy_replicate_elect_num_weigth_,
+          &SYSPARAM_NAMESERVER.report_block_queue_size_,
+          &SYSPARAM_NAMESERVER.report_block_time_lower_,
+          &SYSPARAM_NAMESERVER.report_block_time_upper_,
+          &SYSPARAM_NAMESERVER.report_block_time_interval_
         };
         int32_t size = sizeof(param) / sizeof(int32_t*);
         if (index < 0x01 || index > size)
@@ -1896,7 +1991,7 @@ namespace tfs
         {
           snprintf(retstr, 256, "%d", *current_value);
         }
-        TBSYS_LOG(DEBUG, "index: %d %s name: %s value: %d", index, set ? "set" : "get", dynamic_parameter_str[index - 1].c_str(), *current_value);
+        TBSYS_LOG(DEBUG, "index: %d %s name: %s value: %d", index, set ? "set" : "get", dynamic_parameter_str[index - 1], *current_value);
       }
       return bret ? TFS_SUCCESS : TFS_ERROR;
     }
@@ -1909,7 +2004,7 @@ namespace tfs
       int64_t current_plan_seqno = 1;
       NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
 #if !defined(TFS_GTEST) && !defined(TFS_NS_INTEGRATION)
-        Func::sleep(SYSPARAM_NAMESERVER.safe_mode_time_, ngi.destroy_flag_);
+      Func::sleep(SYSPARAM_NAMESERVER.safe_mode_time_, ngi.destroy_flag_);
 #endif
 #if (!defined(TFS_GTEST))
       while (ngi.destroy_flag_ != NS_DESTROY_FLAGS_YES)
@@ -1924,12 +2019,12 @@ namespace tfs
         int64_t adjust = 0;
         int64_t total = 0;
         {
-          bool has_report_server = manager_.get_heart_management().empty_report_server(now);
+          bool has_report_server = false/*current_reporting_block_servers_ > 0*/;//TODO
           time_t wait_time = ngi.owner_role_ == NS_ROLE_SLAVE ? SYSPARAM_NAMESERVER.safe_mode_time_ :  has_report_server
-                                               ? SYSPARAM_NAMESERVER.build_plan_default_wait_time_ : interrupt
-                                               ? 0  : !bwait
-                                               ? SYSPARAM_NAMESERVER.build_plan_default_wait_time_ : ngi.switch_time_ > now
-                                               ? ngi.switch_time_ - now : SYSPARAM_NAMESERVER.build_plan_interval_;
+            ? SYSPARAM_NAMESERVER.build_plan_default_wait_time_ : interrupt
+            ? 0  : !bwait
+            ? SYSPARAM_NAMESERVER.build_plan_default_wait_time_ : ngi.switch_time_ > now
+            ? ngi.switch_time_ - now : SYSPARAM_NAMESERVER.build_plan_interval_;
           bwait = true;
           interrupt = false;
           tbutil::Monitor<tbutil::Mutex>::Lock lock(build_plan_monitor_);
@@ -2225,7 +2320,7 @@ namespace tfs
         find_need_replicate_blocks(need, now, emergency_replicate_count, middle);
 
         TBSYS_LOG(INFO, "block count: %"PRI64_PREFIX"d, emergency_replicate_count: %"PRI64_PREFIX"d, need: %"PRI64_PREFIX"d, middle: %zd, block_to_task size: %zd server_to_task size: %zd",
-              calc_all_block_count(), emergency_replicate_count, need, middle.size(), block_to_task_.size(), server_to_task_.size());
+            calc_all_block_count(), emergency_replicate_count, need, middle.size(), block_to_task_.size(), server_to_task_.size());
 
         //adjust plan size
         if (emergency_replicate_count > need)
@@ -2433,20 +2528,20 @@ namespace tfs
         }
         if ((current_percent < percent - SYSPARAM_NAMESERVER.balance_percent_)
             && ((server->load() < average_load * LOAD_BASE_MULTIPLE)
-                || (average_load <= 0)))
+              || (average_load <= 0)))
         {
           target.insert(server);
         }
         TBSYS_LOG(DEBUG, "server: %s, current_percent: %e, percent: %e, balance_percent_: %e",
-                  CNetUtil::addrToString(server->id()).c_str(), current_percent, percent,
-                  SYSPARAM_NAMESERVER.balance_percent_);
+            CNetUtil::addrToString(server->id()).c_str(), current_percent, percent,
+            SYSPARAM_NAMESERVER.balance_percent_);
       }
     }
 
 #if defined(TFS_GTEST) || defined(TFS_NS_INTEGRATION)
     bool LayoutManager::build_balance_plan(const int64_t plan_seqno, const time_t now, int64_t& need, std::vector<uint32_t>& plans)
 #else
-    bool LayoutManager::build_balance_plan(const int64_t plan_seqno, const time_t now, int64_t& need)
+      bool LayoutManager::build_balance_plan(const int64_t plan_seqno, const time_t now, int64_t& need)
 #endif
       {
         uint64_t total_capacity  = 0;
@@ -2457,7 +2552,7 @@ namespace tfs
         statistic_all_server_info(need, total_capacity, total_use_capacity, total_load, alive_server_size);
 
         if ((total_capacity <= 0)
-          || (total_use_capacity <= 0))
+            || (total_use_capacity <= 0))
         {
           TBSYS_LOG(INFO, "total_capacity: %"PRI64_PREFIX"u <= 0 or total_use_capacity: %"PRI64_PREFIX"u <= 0, we'll doesn't build moveing plan",
               total_capacity, total_use_capacity);
@@ -2516,7 +2611,7 @@ namespace tfs
                   RWLock::Lock r_lock(*ptr, READ_LOCKER);
                   has_move = ((block_collect != NULL)
                       &&((force && (!GFactory::get_lease_factory().has_valid_lease(block_collect->id())))
-                          ||(block_collect->check_balance()))
+                        ||(block_collect->check_balance()))
                       && (!find_server_in_plan(it->second))
                       && (!find_block_in_plan(block_collect->id())));
 #if defined(TFS_GTEST) || defined(TFS_NS_INTEGRATION) || defined(TFS_NS_DEBUG)
@@ -2593,61 +2688,61 @@ namespace tfs
 #if defined(TFS_GTEST) || defined(TFS_NS_INTEGRATION)
     bool LayoutManager::build_redundant_plan(const int64_t plan_seqno, const time_t now, int64_t& need, std::vector<uint32_t>& plans)
 #else
-    bool LayoutManager::build_redundant_plan(const int64_t plan_seqno, const time_t now, int64_t& need)
+      bool LayoutManager::build_redundant_plan(const int64_t plan_seqno, const time_t now, int64_t& need)
 #endif
-    {
-      bool all_find_flag = true;
-      bool has_delete = false;
-      int32_t  count = 0;
-      std::vector<ServerCollect*> except;
-      std::vector<ServerCollect*> servers;
-      for (int32_t i = 0; i < block_chunk_num_ && !(interrupt_ & INTERRUPT_ALL) && need > 0; ++i)
       {
-        RWLock::Lock lock(*block_chunk_[i], READ_LOCKER);
-        const BLOCK_MAP& blocks = block_chunk_[i]->block_map_;
-        BLOCK_MAP::const_iterator iter = blocks.begin();
-        for (; iter != blocks.end() && !(interrupt_ & INTERRUPT_ALL) && need > 0; ++iter)
+        bool all_find_flag = true;
+        bool has_delete = false;
+        int32_t  count = 0;
+        std::vector<ServerCollect*> except;
+        std::vector<ServerCollect*> servers;
+        for (int32_t i = 0; i < block_chunk_num_ && !(interrupt_ & INTERRUPT_ALL) && need > 0; ++i)
         {
-          except.clear();
-          count = iter->second->check_redundant();
+          RWLock::Lock lock(*block_chunk_[i], READ_LOCKER);
+          const BLOCK_MAP& blocks = block_chunk_[i]->block_map_;
+          BLOCK_MAP::const_iterator iter = blocks.begin();
+          for (; iter != blocks.end() && !(interrupt_ & INTERRUPT_ALL) && need > 0; ++iter)
           {
-            has_delete = ((count > 0)
-                && (!find_block_in_plan(iter->second->id()))
-                && (!find_server_in_plan(iter->second->get_hold(), all_find_flag, except)));
+            except.clear();
+            count = iter->second->check_redundant();
+            {
+              has_delete = ((count > 0)
+                  && (!find_block_in_plan(iter->second->id()))
+                  && (!find_server_in_plan(iter->second->get_hold(), all_find_flag, except)));
+              if (has_delete)
+              {
+                servers = iter->second->get_hold();
+              }
+            }
             if (has_delete)
             {
-              servers = iter->second->get_hold();
-            }
-          }
-          if (has_delete)
-          {
-            std::vector<ServerCollect*> result;
-            count = delete_excess_backup(servers, except, count, result);
-            find_server_in_plan_helper(result, except);
-            if ((count > 0)
-                && (!result.empty()))
-            {
-              TBSYS_LOG(INFO, "we will need delete less than block: %u", iter->second->id());
-              DeleteBlockTaskPtr task = new DeleteBlockTask(this, PLAN_PRIORITY_NORMAL, iter->second->id(), now, now, result, plan_seqno);
-              if (!add_task(task))
+              std::vector<ServerCollect*> result;
+              count = delete_excess_backup(servers, except, count, result);
+              find_server_in_plan_helper(result, except);
+              if ((count > 0)
+                  && (!result.empty()))
               {
-                task = 0;
-                TBSYS_LOG(ERROR, "add task(delete) fail, block: %u", iter->second->id());
-                continue;
-              }
-              --need;
+                TBSYS_LOG(INFO, "we will need delete less than block: %u", iter->second->id());
+                DeleteBlockTaskPtr task = new DeleteBlockTask(this, PLAN_PRIORITY_NORMAL, iter->second->id(), now, now, result, plan_seqno);
+                if (!add_task(task))
+                {
+                  task = 0;
+                  TBSYS_LOG(ERROR, "add task(delete) fail, block: %u", iter->second->id());
+                  continue;
+                }
+                --need;
 #if defined(TFS_GTEST) || defined(TFS_NS_INTEGRATION) || defined(TFS_NS_DEBUG)
-              TBSYS_LOG(DEBUG, "add task, type: %d", task->type_);
+                TBSYS_LOG(DEBUG, "add task, type: %d", task->type_);
 #endif
 #if defined(TFS_GTEST) || defined(TFS_NS_INTEGRATION)
-              plans.push_back(task->block_id_);
+                plans.push_back(task->block_id_);
 #endif
+              }
             }
           }
         }
+        return true;
       }
-      return true;
-    }
 
     bool LayoutManager::add_task(const TaskPtr& task)
     {
@@ -2678,7 +2773,7 @@ namespace tfs
         {
           iter = server_to_task_.insert(std::map<ServerCollect*,TaskPtr>::value_type((*index), task));
 #if defined(TFS_GTEST) || defined(TFS_NS_INTEGRATION) || defined(TFS_NS_DEBUG)
-        //TBSYS_LOG(DEBUG, "server: %"PRI64_PREFIX"d, server: %"PRI64_PREFIX"d", (*index)->id(), (iter.first->first)->id());
+          //TBSYS_LOG(DEBUG, "server: %"PRI64_PREFIX"d, server: %"PRI64_PREFIX"d", (*index)->id(), (iter.first->first)->id());
 #endif
         }
       }

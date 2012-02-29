@@ -33,4 +33,3 @@ bin_PROGRAMS = nameserver
 
 nameserver_SOURCES=$(NAMSERVER_SOURCE_LIST) service.cpp
 
-

@@ -29,7 +29,7 @@
 #include "common/new_client.h"
 
 //#define TFS_GTEST
-//#define TFS_NS_DEBUG
+#define TFS_NS_DEBUG
 
 namespace tfs
 {
@@ -73,8 +73,10 @@ namespace tfs
 
     enum ReportBlockStatus
     {
-      REPORT_BLOCK_STATUS_COMPLETE = 0x00,
-      REPORT_BLOCK_STATUS_UNCOMPLETE
+      REPORT_BLOCK_STATUS_NONE = 0x0,
+      REPORT_BLOCK_STATUS_IN_REPORT_QUEUE,
+      REPORT_BLOCK_STATUS_REPORTING,
+      REPORT_BLOCK_STATUS_COMPLETE
     };
     class LayoutManager;
     class GCObject
