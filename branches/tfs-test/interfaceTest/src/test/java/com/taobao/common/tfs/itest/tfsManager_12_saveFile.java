@@ -111,7 +111,7 @@ public class tfsManager_12_saveFile extends tfsNameBaseCase {
 		log.info("test_07_saveFile_wrong_fileName_1");
 		boolean bRet;
 		bRet = tfsManager.saveFile(appId, userId, resourcesPath + "100K.jpg",
-				"text12_07/");
+				"/text4/");
 		Assert.assertFalse("Save File wrong 1 fileName should be false", bRet);
 	}
 
@@ -138,22 +138,22 @@ public class tfsManager_12_saveFile extends tfsNameBaseCase {
 		log.info("test_10_saveFile_leap_fileName");
 		boolean bRet;
 		bRet = tfsManager.saveFile(appId, userId, resourcesPath + "100K.jpg",
-				"/text12_10/text");
-		Assert.assertFalse("Save File leap fileName should be false", bRet);
+				"/text10/text");
+		Assert.assertTrue("Save File leap fileName should be false", bRet);
 	}
 
 	@Test
 	public void test_11_saveFile_with_Dir() {
 		log.info("test_11_saveFile_with_Dir");
 		boolean bRet;
-		bRet = tfsManager.createDir(appId, userId, "/text12_11");
+		bRet = tfsManager.createDir(appId, userId, "/text1");
 		assertTrue(bRet);
 		bRet = tfsManager.saveFile(appId, userId, resourcesPath + "100K.jpg",
-				"/text12_11");
-		Assert.assertTrue("Save File with the same name Dir should be true",
+				"/text1");
+		Assert.assertFalse("Save File with the same name Dir should be true",
 				bRet);
-		tfsManager.rmDir(appId, userId, "/text12_11");
-		tfsManager.rmFile(appId, userId, "/text12_11");
+		tfsManager.rmDir(appId, userId, "/text1");
+		tfsManager.rmFile(appId, userId, "/text1");
 	}
 
 	//@Test
@@ -161,14 +161,14 @@ public class tfsManager_12_saveFile extends tfsNameBaseCase {
 		log.info("test_12_saveFile_large");
 		boolean bRet;
 		bRet = tfsManager.saveFile(appId, userId, resourcesPath + "1G.jpg",
-				"/text12_12");
+				"/text12");
 		Assert.assertTrue("Save File right path should be true", bRet);
 		bRet = tfsManager.fetchFile(appId, userId, resourcesPath + "temp",
-				"/text12_12");
+				"/text12");
 		Assert.assertTrue("Fetch File right path should be true", bRet);
 		Assert.assertEquals(getCrc(resourcesPath + "temp"),
-				getCrc(resourcesPath + "1G.jpg"));
-		tfsManager.rmFile(appId, userId, "/text12_12");
+				getCrc(resourcesPath + "1G"));
+		tfsManager.rmFile(appId, userId, "/text12");
 	}
 
 	@Test
