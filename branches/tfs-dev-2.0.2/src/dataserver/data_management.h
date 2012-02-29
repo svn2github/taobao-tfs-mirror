@@ -45,6 +45,7 @@ namespace tfs
         int init_block_files(const common::FileSystemParameter& fs_param);
         void get_ds_filesystem_info(int32_t& block_count, int64_t& use_capacity, int64_t& total_capacity);
         int get_all_logic_block(std::list<LogicBlock*>& logic_block_list);
+        int get_all_block_info(std::set<common::BlockInfo>& blocks);
         int64_t get_all_logic_block_size();
 
         int create_file(const uint32_t block_id, uint64_t& file_id, uint64_t& file_number);

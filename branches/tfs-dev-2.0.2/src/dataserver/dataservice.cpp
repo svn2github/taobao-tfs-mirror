@@ -33,6 +33,11 @@ namespace tfs
     using namespace message;
     using namespace std;
 
+    static const int32_t SEND_BLOCK_TO_NS_PARAMETER_ERROR = -1;
+    static const int32_t SEND_BLOCK_TO_NS_NS_FLAG_NOT_SET = -2;
+    static const int32_t SEND_BLOCK_TO_NS_CREATE_NETWORK_CLIENT_ERROR = -3;
+    static const int32_t SEND_BLOCK_TO_NS_NETWORK_ERROR = -4;
+
     static int send_msg_to_server_helper(const uint64_t server, std::vector<uint64_t>& servers)
     {
       std::vector<uint64_t>::iterator iter = std::find(servers.begin(), servers.end(), server);
@@ -51,7 +56,6 @@ namespace tfs
         sync_mirror_status_(0),
         max_cpu_usage_ (SYSPARAM_DATASERVER.max_cpu_usage_),
         tfs_ds_stat_ ("tfs-ds-stat"),
-        heartbeat_thread_(0),
         do_check_thread_(0),
         replicate_block_threads_(NULL),
         compact_block_thread_(0)
@@ -342,7 +346,10 @@ namespace tfs
 
         if (TFS_SUCCESS == iret)
         {
-          heartbeat_thread_ = new HeartBeatThreadHelper(*this);
+          for (int32_t i = 0; i < 2; i++)
+          {
+            heartbeat_thread_[i] = new HeartBeatThreadHelper(*this, i);
+          }
           do_check_thread_  = new DoCheckThreadHelper(*this);
           compact_block_thread_ = new CompactBlockThreadHelper(*this);
           replicate_block_threads_ =  new ReplicateBlockThreadHelperPtr[SYSPARAM_DATASERVER.replicate_thread_count_];
@@ -532,11 +539,12 @@ namespace tfs
       }
       block_checker_.stop();
 
-      if (0 != heartbeat_thread_)
+      for (int i = 0; i < 2; i++)
       {
-        heartbeat_thread_->join();
-        heartbeat_thread_ = 0;
+        heartbeat_thread_[i]->join();
+        heartbeat_thread_[i] = 0;
       }
+
       if (0 != do_check_thread_)
       {
         do_check_thread_->join();
@@ -566,27 +574,45 @@ namespace tfs
       return TFS_SUCCESS;
     }
 
-    int DataService::run_heart()
+    int DataService::run_heart(const int32_t who)
     {
       //sleep for a while, waiting for listen port establish
-      sleep(SYSPARAM_DATASERVER.heart_interval_);
+      int32_t iret = -1, count = 0;
+      time_t start = 0, end = 0, sleep_time_us = 0;
+      int8_t heart_interval = DEFAULT_HEART_INTERVAL;
+      sleep(heart_interval);
       while (!stop_)
       {
-        data_management_.get_ds_filesystem_info(data_server_info_.block_count_, data_server_info_.use_capacity_,
-            data_server_info_.total_capacity_);
-        data_server_info_.current_load_ = Func::get_load_avg();
-        data_server_info_.current_time_ = time(NULL);
-        send_blocks_to_ns(0);
-        send_blocks_to_ns(1);
-
-        // sleep
-        sleep(SYSPARAM_DATASERVER.heart_interval_);
-        if (DATASERVER_STATUS_DEAD== data_server_info_.status_)
+        if (who % 2 == 0)
         {
-          break;
+          data_management_.get_ds_filesystem_info(data_server_info_.block_count_, data_server_info_.use_capacity_,
+              data_server_info_.total_capacity_);
+          data_server_info_.current_load_ = Func::get_load_avg();
+          data_server_info_.current_time_ = time(NULL);
+          cpu_metrics_.summary();
         }
 
-        cpu_metrics_.summary();
+        if (DATASERVER_STATUS_DEAD== data_server_info_.status_)
+          break;
+
+        start = Func::get_monotonic_time_us();
+        do
+        {
+          //目前超时时间设置成2s，主要是为了跟以及版本兼容，目前在心跳中还没有删除带Block以及其它的功能
+          //这些功能在dataserver换完以后可以想办法将它删除， 然后将超时时间设置短点，失败重试次数多点,
+          //同时目前心跳的间隔时间是写死的， 删除以上功能的同时，可以将心跳间隔由nameserver发给dataserver
+          //也就是每次心跳时带上dataserver心跳的间隔时间
+          iret = send_blocks_to_ns(heart_interval, who, 2000);//2s
+          end  = Func::get_monotonic_time_us();
+          ++count;
+        }
+        while (TFS_SUCCESS != iret && count < 2);
+
+        sleep_time_us = TFS_SUCCESS == iret ? heart_interval * 1000000 - (end - start)
+          : heart_interval * 1000000;
+
+        if (sleep_time_us > 0)
+          usleep(sleep_time_us);
       }
       return TFS_SUCCESS;
     }
@@ -595,8 +621,9 @@ namespace tfs
     {
       TBSYS_LOG(INFO, "stop heartbeat...");
       data_server_info_.status_ = DATASERVER_STATUS_DEAD;
-      send_blocks_to_ns(0);
-      send_blocks_to_ns(1);
+      int8_t heart_interval = DEFAULT_HEART_INTERVAL;
+      send_blocks_to_ns(heart_interval, 0,1500);
+      send_blocks_to_ns(heart_interval, 1,1500);
       return TFS_SUCCESS;
     }
 
@@ -1027,6 +1054,9 @@ namespace tfs
               break;
             case GET_DATASERVER_INFORMATION_MESSAGE:
               ret = get_dataserver_information(dynamic_cast<BasePacket*>(packet));
+              break;
+            case REQ_CALL_DS_REPORT_BLOCK_MESSAGE:
+              ret = send_blocks_to_ns(dynamic_cast<BasePacket*>(packet));
               break;
             default:
               TBSYS_LOG(ERROR, "process packet pcode: %d\n", pcode);
@@ -2245,78 +2275,118 @@ namespace tfs
       return iret;
     }
 
+
     // send blockinfos to dataserver
-    void DataService::send_blocks_to_ns(const int32_t who)
+    int DataService::send_blocks_to_ns(int8_t& heart_interval, const int32_t who, const int64_t timeout)
     {
-      if (0 != who && 1 != who)
-        return;
-
-      // ns who is not set
-      if (!set_flag_[who])
-        return;
-
-      bool reset_need_send_blockinfo_flag = data_management_.get_all_logic_block_size() <= 0;
-      SetDataserverMessage req_sds_msg;
-      req_sds_msg.set_ds(&data_server_info_);
-      if (need_send_blockinfo_[who])
+      int iret = 0 != who && 1 != who ? SEND_BLOCK_TO_NS_PARAMETER_ERROR : TFS_SUCCESS;
+      if (TFS_SUCCESS == iret)
       {
-        reset_need_send_blockinfo_flag = true;
-        req_sds_msg.set_has_block(HAS_BLOCK_FLAG_YES);
-
-        list<LogicBlock*> logic_block_list;
-        data_management_.get_all_logic_block(logic_block_list);
-        for (list<LogicBlock*>::iterator lit = logic_block_list.begin(); lit != logic_block_list.end(); ++lit)
-        {
-          TBSYS_LOG(DEBUG, "send block to ns: %d, blockid: %u\n", who, (*lit)->get_logic_block_id());
-          req_sds_msg.add_block((*lit)->get_block_info());
-        }
+        // ns who is not set
+        iret = !set_flag_[who] ? SEND_BLOCK_TO_NS_NS_FLAG_NOT_SET : TFS_SUCCESS;
       }
-      tbnet::Packet* message = NULL;
-      NewClient* client = NewClientManager::get_instance().create_client();
-      if (NULL != client)
+      if (TFS_SUCCESS == iret)
       {
-        if (TFS_SUCCESS == send_msg_to_server(hb_ip_port_[who], client, &req_sds_msg, message))
+        bool reset_need_send_blockinfo_flag = data_management_.get_all_logic_block_size() <= 0;
+        SetDataserverMessage req_sds_msg;
+        req_sds_msg.set_ds(&data_server_info_);
+        if (need_send_blockinfo_[who])
         {
-          if (RESP_HEART_MESSAGE == message->getPCode())
+          reset_need_send_blockinfo_flag = true;
+          req_sds_msg.set_has_block(HAS_BLOCK_FLAG_YES);
+
+          list<LogicBlock*> logic_block_list;
+          data_management_.get_all_logic_block(logic_block_list);
+          for (list<LogicBlock*>::iterator lit = logic_block_list.begin(); lit != logic_block_list.end(); ++lit)
           {
-            RespHeartMessage* resp_hb_msg = dynamic_cast<RespHeartMessage*>(message);
-            int32_t status = resp_hb_msg->get_status();
-            if (HEART_MESSAGE_FAILED != status)
+            TBSYS_LOG(DEBUG, "send block to ns: %d, blockid: %u\n", who, (*lit)->get_logic_block_id());
+            req_sds_msg.add_block((*lit)->get_block_info());
+          }
+        }
+        tbnet::Packet* message = NULL;
+        NewClient* client = NewClientManager::get_instance().create_client();
+        iret = NULL != client ? TFS_SUCCESS : SEND_BLOCK_TO_NS_CREATE_NETWORK_CLIENT_ERROR;
+        if (TFS_SUCCESS == iret)
+        {
+          iret = send_msg_to_server(hb_ip_port_[who], client, &req_sds_msg, message, timeout);
+          if (TFS_SUCCESS != iret)
+          {
+            TBSYS_LOG(INFO, "send_msg_to_server: %s failed, ret: %d", tbsys::CNetUtil::addrToString(hb_ip_port_[who]).c_str(), iret);
+            iret = SEND_BLOCK_TO_NS_NETWORK_ERROR;
+          }
+          else
+          {
+            iret = RESP_HEART_MESSAGE == message->getPCode() ? TFS_SUCCESS : SEND_BLOCK_TO_NS_NETWORK_ERROR;
+            if (TFS_SUCCESS == iret)
             {
-              if (reset_need_send_blockinfo_flag
-                  && need_send_blockinfo_[who])
+              RespHeartMessage* resp_hb_msg = dynamic_cast<RespHeartMessage*>(message);
+              heart_interval = resp_hb_msg->get_heart_interval();
+              int32_t status = resp_hb_msg->get_status();
+              if (HEART_MESSAGE_FAILED != status)
               {
-                need_send_blockinfo_[who] = false;
-              }
-              if (HEART_NEED_SEND_BLOCK_INFO == status)
-              {
-                TBSYS_LOG(DEBUG, "nameserver %d ask for send block\n", who + 1);
-                need_send_blockinfo_[who] = true;
-              }
-              else if (HEART_EXP_BLOCK_ID == status)
-              {
-                TBSYS_LOG(INFO, "nameserver %d ask for expire block\n", who + 1);
-                data_management_.add_new_expire_block(resp_hb_msg->get_expire_blocks(), NULL, resp_hb_msg->get_new_blocks());
-              }
-              else if (HEART_REPORT_BLOCK_SERVER_OBJECT_NOT_FOUND == status)
-              {
-                TBSYS_LOG(INFO, "nameserver %d ask for expire block\n", who + 1);
-                need_send_blockinfo_[who] = false;
-              }
-              else if (HEART_REPORT_UPDATE_RELATION_ERROR == status)
-              {
-                need_send_blockinfo_[who] = true;
+                if (reset_need_send_blockinfo_flag
+                    && need_send_blockinfo_[who])
+                {
+                  need_send_blockinfo_[who] = false;
+                }
+                if (HEART_NEED_SEND_BLOCK_INFO == status)
+                {
+                  TBSYS_LOG(DEBUG, "nameserver %d ask for send block\n", who + 1);
+                  need_send_blockinfo_[who] = true;
+                }
+                else if (HEART_EXP_BLOCK_ID == status)
+                {
+                  TBSYS_LOG(INFO, "nameserver %d ask for expire block\n", who + 1);
+                  data_management_.add_new_expire_block(resp_hb_msg->get_expire_blocks(), NULL, resp_hb_msg->get_new_blocks());
+                }
+                else if (HEART_REPORT_BLOCK_SERVER_OBJECT_NOT_FOUND == status)
+                {
+                  TBSYS_LOG(INFO, "nameserver %d ask for expire block\n", who + 1);
+                  need_send_blockinfo_[who] = false;
+                }
+                else if (HEART_REPORT_UPDATE_RELATION_ERROR == status)
+                {
+                  need_send_blockinfo_[who] = true;
+                }
               }
             }
           }
         }
         NewClientManager::get_instance().destroy_client(client);
       }
-      else
-      {
-        TBSYS_LOG(ERROR, "create client error");
-      }
-    }
+      return iret;
+   }
+
+   int DataService::send_blocks_to_ns(common::BasePacket* packet)
+   {
+     int32_t iret = NULL != packet ? TFS_SUCCESS : TFS_ERROR;
+     if (TFS_SUCCESS == iret)
+     {
+       iret = packet->getPCode() == REQ_CALL_DS_REPORT_BLOCK_MESSAGE ? TFS_SUCCESS : TFS_ERROR;
+     }
+     if (TFS_SUCCESS == iret)
+     {
+       CallDsReportBlockRequestMessage* msg = dynamic_cast<CallDsReportBlockRequestMessage*>(packet);
+       ReportBlocksToNsRequestMessage req_msg;
+       req_msg.set_server(data_server_info_.id_);
+       data_management_.get_all_block_info(req_msg.get_blocks());
+       NewClient* client = NewClientManager::get_instance().create_client();
+       tbnet::Packet* message = NULL;
+       iret = send_msg_to_server(msg->get_server(), client, &req_msg, message);
+       if (TFS_SUCCESS == iret)
+       {
+         iret = message->getPCode() == RSP_REPORT_BLOCKS_TO_NS_MESSAGE ? TFS_SUCCESS : TFS_ERROR;
+         if (TFS_SUCCESS == iret)
+         {
+           ReportBlocksToNsResponseMessage* msg = dynamic_cast<ReportBlocksToNsResponseMessage*>(message);
+           TBSYS_LOG(INFO, "nameserver %s ask for expire block\n", tbsys::CNetUtil::addrToString(msg->get_server()).c_str());
+           data_management_.add_new_expire_block(&msg->get_blocks(), NULL, NULL);
+         }
+       }
+       NewClientManager::get_instance().destroy_client(client);
+     }
+     return iret;
+   }
 
     void DataService::do_stat(const uint64_t peer_id,
         const int32_t visit_file_size, const int32_t real_len, const int32_t offset, const int32_t mode)
@@ -2384,7 +2454,7 @@ namespace tfs
 
     void DataService::HeartBeatThreadHelper::run()
     {
-      service_.run_heart();
+      service_.run_heart(who_);
     }
 
     void DataService::DoCheckThreadHelper::run()

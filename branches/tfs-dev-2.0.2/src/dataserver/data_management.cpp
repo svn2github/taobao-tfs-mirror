@@ -75,6 +75,11 @@ namespace tfs
       return BlockFileManager::get_instance()->get_all_logic_block(logic_block_list);
     }
 
+    int DataManagement::get_all_block_info(std::set<common::BlockInfo>& blocks)
+    {
+      return BlockFileManager::get_instance()->get_all_block_info(blocks);
+    }
+
     int64_t DataManagement::get_all_logic_block_size()
     {
       return BlockFileManager::get_instance()->get_all_logic_block_size();

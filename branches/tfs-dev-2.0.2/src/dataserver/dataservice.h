@@ -113,7 +113,7 @@ namespace tfs
         virtual const char* get_pid_file_path();
 
       private:
-        int run_heart();
+        int run_heart(const int32_t who);
         int run_check();
 
         int create_file_number(message::CreateFilenameMessage* message);
@@ -152,7 +152,8 @@ namespace tfs
         int client_command(message::ClientCmdMessage* message);
 
         int reload_config(message::ReloadConfigMessage* message);
-        void send_blocks_to_ns(const int32_t who);
+        int send_blocks_to_ns(int8_t& heart_interval, const int32_t who, const int64_t timeout);
+        int send_blocks_to_ns(common::BasePacket* packet);
 
         int get_dataserver_information(common::BasePacket* packet);
 
@@ -169,8 +170,9 @@ namespace tfs
       class HeartBeatThreadHelper: public tbutil::Thread
       {
         public:
-          explicit HeartBeatThreadHelper(DataService& service):
-              service_(service)
+          HeartBeatThreadHelper(DataService& service, const int32_t who):
+              service_(service),
+              who_(who)
           {
             start();
           }
@@ -179,6 +181,7 @@ namespace tfs
         private:
           DISALLOW_COPY_AND_ASSIGN(HeartBeatThreadHelper);
           DataService& service_;
+          int32_t who_;
       };
       typedef tbutil::Handle<HeartBeatThreadHelper> HeartBeatThreadHelperPtr;
 
@@ -278,7 +281,7 @@ namespace tfs
         common::StatManager<std::string, std::string, common::StatEntry > stat_mgr_;
         std::string tfs_ds_stat_;
 
-        HeartBeatThreadHelperPtr heartbeat_thread_;
+        HeartBeatThreadHelperPtr heartbeat_thread_[2];
         DoCheckThreadHelperPtr   do_check_thread_;
         ReplicateBlockThreadHelperPtr* replicate_block_threads_;
         CompactBlockThreadHelperPtr  compact_block_thread_;

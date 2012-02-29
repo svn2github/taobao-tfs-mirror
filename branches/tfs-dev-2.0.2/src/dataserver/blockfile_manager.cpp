@@ -303,7 +303,7 @@ namespace tfs
       TBSYS_LOG(INFO, "logicblock delete %s! logic blockid: %u. physical block size: %d, blocktype: %d, ret: %d",
                 ret ? "fail" : "success", logic_block_id, size, tmp_block_type, ret);
 
-      // 11. clean logic block associate stuff(index handle, physic block) & unlock 
+      // 11. clean logic block associate stuff(index handle, physic block) & unlock
       if (delete_block)
       {
         delete_block->delete_block_file();
@@ -564,6 +564,28 @@ namespace tfs
       }
       return TFS_SUCCESS;
     }
+
+    int BlockFileManager::get_all_block_info(std::set<common::BlockInfo>& blocks, const BlockType block_type)
+    {
+      ScopedRWLock scoped_lock(rw_lock_, READ_LOCKER);
+      blocks.clear();
+      if (C_MAIN_BLOCK == block_type)
+      {
+        for (LogicBlockMapIter mit = logic_blocks_.begin(); mit != logic_blocks_.end(); ++mit)
+        {
+          blocks.insert(*mit->second->get_block_info());
+        }
+      }
+      else                      // compact logic blocks
+      {
+        for (LogicBlockMapIter mit = compact_logic_blocks_.begin(); mit != compact_logic_blocks_.end(); ++mit)
+        {
+          blocks.insert(*mit->second->get_block_info());
+        }
+      }
+      return TFS_SUCCESS;
+    }
+
 
     int64_t BlockFileManager::get_all_logic_block_size(const BlockType block_type)
     {
