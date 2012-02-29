@@ -58,7 +58,7 @@ namespace tfs
     int BlockChecker::add_repair_task(CrcCheckFile* repair_task)
     {
       int check_exist = 0;
-      check_mutex_.lock();
+      tbutil::Mutex::Lock lock(check_mutex_);
       if (check_file_queue_.size() >= static_cast<uint32_t>(MAX_CHECK_BLOCK_SIZE))
       {
         // too much
@@ -87,7 +87,6 @@ namespace tfs
         tbsys::gDelete(repair_task);
       }
 
-      check_mutex_.unlock();
       return check_exist;
     }
 
