@@ -647,7 +647,7 @@ public class RcTfsManager_06_fetchFile_offset extends tfsNameBaseCase
 		Assert.assertEquals(savecrc, fetchcrc);
 	}
 	
-	@Test
+	//@Test
     public  void  test_28_saveFile_byte_with_name_then_fetchFile_offset() throws IOException
 	{
 		log.info( "test_28_saveFile_byte_with_name_then_fetchFile_offset" );
