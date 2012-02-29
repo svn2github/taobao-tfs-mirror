@@ -58,9 +58,9 @@ namespace tfs
 
           int insert(iterator position, const_value_type value);
 
-          const_value_type erase(iterator position);
+          value_type erase(iterator position);
 
-          const_value_type erase(const_value_type value);
+          value_type erase(const_value_type value);
 
           int expand_ratio(const float expand_ratio = 0.1);
 
@@ -117,7 +117,7 @@ namespace tfs
           int insert_unique(const_value_type value);
           int push_back(const_value_type value);
 
-          const_value_type erase(const_value_type value);
+          value_type erase(const_value_type value);
 
           int expand_ratio(const float expand_ratio = 0.1);
 

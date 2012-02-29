@@ -126,7 +126,7 @@ namespace tfs
 
 
     template <typename T>
-      typename TfsVector<T>::const_value_type TfsVector<T>::erase(iterator position)
+      typename TfsVector<T>::value_type TfsVector<T>::erase(iterator position)
       {
         assert(position >= start_);
         assert(position <= finish_);
@@ -136,7 +136,7 @@ namespace tfs
       }
 
     template <typename T>
-      typename TfsVector<T>::const_value_type TfsVector<T>::erase(const_value_type value)
+      typename TfsVector<T>::value_type TfsVector<T>::erase(const_value_type value)
       {
         iterator pos = std::find(start_, finish_, value);
         if (finish_ != pos)
@@ -243,7 +243,7 @@ namespace tfs
       }
 
     template <typename T, typename Compare>
-      typename TfsSortedVector<T, Compare>::const_value_type TfsSortedVector<T, Compare>::erase(const_value_type value)
+      typename TfsSortedVector<T, Compare>::value_type TfsSortedVector<T, Compare>::erase(const_value_type value)
       {
         iterator pos = find(value);
         if (storage_.end() != pos)
