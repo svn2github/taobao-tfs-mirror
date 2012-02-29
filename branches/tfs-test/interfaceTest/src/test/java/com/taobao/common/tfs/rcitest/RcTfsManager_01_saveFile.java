@@ -28,26 +28,27 @@ public class RcTfsManager_01_saveFile extends tfsNameBaseCase
 		System.out.println("The tfs file name is "+ Ret);
 	}
 	
-	//@Test
+    @Test
     public  void  test_03_saveFile_with_tfsname() throws InterruptedException
-	{
-		log.info( "test_03_saveFile_with_tfsname" );
-		String Ret=null;
-		Ret=tfsManager.saveFile( resourcesPath+"1.jpg",null,null);
-		Assert.assertNotNull(Ret);
-		System.out.println("The tfs file name is "+ Ret);
-		
-		boolean Bret;
-		Bret=tfsManager.unlinkFile(Ret, null);
-		Assert.assertTrue(Bret);
-		
-		Thread.sleep(2000);
-		String name= Ret;
-		System.out.println(name);
-		String NRet=null;
-		NRet=tfsManager.saveFile( resourcesPath+"1.jpg",name,null);
-		Assert.assertNotNull(NRet);
-		System.out.println("The tfs file name is "+ NRet);	
+    {
+        log.info( "test_03_saveFile_with_tfsname" );
+        String Ret=null;
+        Ret=tfsManager.saveFile( resourcesPath+"100k.jpg",null,null);
+        Assert.assertNotNull(Ret);
+        System.out.println("The tfs file name is "+ Ret);
+
+        boolean Bret;
+        Bret=tfsManager.unlinkFile(Ret, null);
+        Assert.assertTrue(Bret);
+
+        Thread.sleep(2000);
+        String name= Ret;
+        System.out.println(name);
+        String NRet=null;
+        NRet=tfsManager.saveFile( resourcesPath+"100k.jpg",name,null);
+        Assert.assertNotNull(NRet);
+        System.out.println("The tfs file name is "+ NRet);
+    
 	}
 	
 	@Test
