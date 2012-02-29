@@ -185,7 +185,7 @@ public class RcTfsManager_02_saveFile_byte extends tfsNameBaseCase
 		String Ret=null;
 		byte data[]=null;
 		data=getByte(resourcesPath+"10M.jpg");
-		Ret=tfsManager.saveFile(null,null,data,0,10*(1<<20),false);
+		Ret=tfsManager.saveFile(null,".jpg",data,0,10*(1<<20),false);
 		Assert.assertNull(Ret);
 	}
 	
