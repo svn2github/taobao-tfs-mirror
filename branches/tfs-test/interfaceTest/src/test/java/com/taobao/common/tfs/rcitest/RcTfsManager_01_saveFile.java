@@ -33,7 +33,7 @@ public class RcTfsManager_01_saveFile extends tfsNameBaseCase
     {
         log.info( "test_03_saveFile_with_tfsname" );
         String Ret=null;
-        Ret=tfsManager.saveFile( resourcesPath+"100k.jpg",null,null);
+        Ret=tfsManager.saveFile( resourcesPath+"100K.jpg",null,null);
         Assert.assertNotNull(Ret);
         System.out.println("The tfs file name is "+ Ret);
 
@@ -45,7 +45,7 @@ public class RcTfsManager_01_saveFile extends tfsNameBaseCase
         String name= Ret;
         System.out.println(name);
         String NRet=null;
-        NRet=tfsManager.saveFile( resourcesPath+"100k.jpg",name,null);
+        NRet=tfsManager.saveFile( resourcesPath+"100K.jpg",name,null);
         Assert.assertNotNull(NRet);
         System.out.println("The tfs file name is "+ NRet);
     
