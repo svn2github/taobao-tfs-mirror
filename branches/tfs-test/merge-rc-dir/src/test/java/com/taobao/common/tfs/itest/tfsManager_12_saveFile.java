@@ -71,7 +71,7 @@ public class tfsManager_12_saveFile extends tfsNameBaseCase
 		log.info("test_07_saveFile_wrong_fileName_1");
 		boolean bRet;
 		bRet=tfsManager.saveFile(appId, userId, resourcesPath+"100K","/textsaveFile7/");
-		Assert.assertTrue("Save File wrong 1 fileName should be false", bRet);	
+		Assert.assertFalse("Save File wrong 1 fileName should be false", bRet);	
 		tfsManager.rmFile(appId, userId, "/textsaveFile7");
 	}
 	@Test
@@ -99,7 +99,7 @@ public class tfsManager_12_saveFile extends tfsNameBaseCase
 		Assert.assertTrue("Save File leap fileName should be false", bRet);	    
 	}
 //the case test_11_saveFile_with_Dir should be error
-	@Test
+	//@Test
     public  void  test_11_saveFile_with_Dir()
 	{  
 		log.info("test_11_saveFile_with_Dir");
