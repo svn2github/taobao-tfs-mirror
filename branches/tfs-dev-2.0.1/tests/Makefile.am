@@ -1,2 +1,2 @@
 AUTOMAKE_OPTIONS=foreign
-SUBDIRS = batch intergrate dataserver common rcserver name_meta_server  rootserver
+SUBDIRS = batch intergrate nameserver dataserver common rcserver name_meta_server  rootserver new_client
