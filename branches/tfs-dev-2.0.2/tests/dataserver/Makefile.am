@@ -2,7 +2,7 @@ AM_CPPFLAGS=-I${top_srcdir}/src/dataserver \
             -I$(top_srcdir)/src \
 						-I${top_srcdir}/src/common \
 						-I$(TBLIB_ROOT)/include/tbsys \
-						-I$(TBLIB_ROOT)/include/tbnet
+						-I$(TBLIB_ROOT)/include/tbnet -DTFS_GTEST
 
 AM_LDFLAGS=-lpthread -lrt -lc -lm -lgtest
 

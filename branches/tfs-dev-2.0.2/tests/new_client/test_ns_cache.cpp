@@ -20,7 +20,7 @@
 #include "new_client/tfs_session.h"
 #include "new_client/tfs_client_impl.h"
 #include "new_client/fsname.h"
-#include "new_client/tair_cache_handler.h"
+#include "new_client/tair_cache_helper.h"
 
 using namespace tfs::client;
 using namespace tfs::common;
@@ -1843,9 +1843,10 @@ TEST_F(NsCacheTest, test_cache_switch_remote_cache_only)
 {
   int ret = TFS_ERROR;
 
-  // switch remote cache off
+  // switch local cache off
   g_tfsClientImpl->set_use_cache(USE_CACHE_FLAG_REMOTE);
 
+  // small file stat
   // add writable block
   TfsSession* tfs_session = g_tfsClientImpl->get_tfs_session(ns_addr);
   std::map<uint32_t, VUINT64>& block_ds_map = tfs_session->block_ds_map_;
@@ -1877,6 +1878,40 @@ TEST_F(NsCacheTest, test_cache_switch_remote_cache_only)
 
   test_local_not_exist(ns_addr, block_id);
   test_remote_exist(ns_addr, block_id);
+
+  g_tfsClientImpl->close(fd);
+
+  // large file read
+  // get non-meta segments blockids (first 3 block in block_ds_map)
+  VUINT32 block_ids;
+  std::map<uint32_t, VUINT64>::iterator iter = block_ds_map.begin();
+  for (int i = 0; block_ds_map.end() != iter && i < 3; i++, iter++)
+  {
+    block_ids.push_back(iter->first);
+    // insert remote cache
+    test_insert_remote(ns_addr, iter->first, iter->second);
+    test_remote_exist(ns_addr, iter->first);
+  }
+
+  // open
+  fd = g_tfsClientImpl->open(tfs_name, NULL, NULL, T_READ|T_LARGE);
+  ASSERT_GT(fd, 0);
+  test_local_not_exist(ns_addr, block_id);
+  test_remote_exist(ns_addr, block_id);
+
+  // read
+  char buf[BUF_LEN];
+  ret = g_tfsClientImpl->read(fd, buf, BUF_LEN);
+  ASSERT_GT(ret, 0);
+  TBSYS_LOG(DEBUG, "read file: (%s) success!", tfs_name);
+
+  test_local_not_exist(ns_addr, block_id);
+  test_remote_exist(ns_addr, block_id);
+  for (size_t i = 0; i < block_ids.size(); i++)
+  {
+    test_local_not_exist(ns_addr, block_ids[i]);
+    test_remote_exist(ns_addr, block_ids[i]);
+  }
 
   g_tfsClientImpl->close(fd);
 }

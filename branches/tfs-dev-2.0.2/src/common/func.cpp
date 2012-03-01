@@ -115,6 +115,50 @@ namespace tfs
       return TFS_SUCCESS;
     }
 
+		int Func::get_parent_dir(const char* file_path, char* dir_path, const int32_t dir_buf_len)
+		{
+			int ret = TFS_SUCCESS;
+			if (NULL == file_path || NULL == dir_path || dir_buf_len <= 1) // at least .
+			{
+				ret = EXIT_PARAMETER_ERROR;
+			}
+			else
+			{
+ 				int length = strlen(file_path);
+				while (length > 0 && '/' == file_path[length-1])  // trailing slash
+				{
+					length--;
+				}
+
+      	for (; length > 0; length--)        // find slash
+      	{
+        	if ('/' ==file_path[length - 1])
+        	{
+          	length--;
+          	break;
+        	}
+      	}
+
+
+      	if (0 == length)
+      	{
+					strncpy(dir_path, ".", dir_buf_len);
+      	}
+     	  else
+      	{
+					if (dir_buf_len <= length)
+					{
+						ret = EXIT_PARAMETER_ERROR;
+					}
+					else
+					{
+        		strncpy(dir_path, file_path, dir_buf_len);
+					}
+     		}
+			}
+			return ret;
+		}
+
     // get self ip
     uint32_t Func::get_local_addr(const char* dev_name)
     {

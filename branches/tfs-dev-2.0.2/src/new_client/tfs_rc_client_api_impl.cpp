@@ -17,6 +17,7 @@
 
 #include "common/func.h"
 #include "common/session_util.h"
+#include "common/client_manager.h"
 #include "tfs_client_impl.h"
 #include "tfs_rc_helper.h"
 #include "fsname.h"
@@ -172,6 +173,7 @@ namespace tfs
         name_meta_client_ = new NameMetaClient();
         if (TFS_SUCCESS == ret)
         {
+          TBSYS_LOG(DEBUG, "next TfsClientImpl will initialize NewClientManager");
           ret = TfsClientImpl::Instance()->initialize(NULL, cache_times, cache_items, true);
         }
         TBSYS_LOG(DEBUG, "TfsClientImpl::Instance()->initialize ret %d", ret);
@@ -189,6 +191,13 @@ namespace tfs
           ret = login(rc_ip, app_key, local_addr_);
         }
         TBSYS_LOG(DEBUG, "login ret %d", ret);
+
+        // confirm NewClientManager is instanced by TfsClientImpl not by NameMetaClientImpl
+        if (NewClientManager::get_instance().is_init())
+        {
+          TBSYS_LOG(DEBUG, "NewClientManager is initialized by TfsClientImpl");
+        }
+
         if (TFS_SUCCESS == ret)
         {
           session_base_info_.client_version_ = RC_CLIENT_VERSION;
@@ -205,6 +214,7 @@ namespace tfs
           }
           else
           {
+            //TBSYS_LOG(DEBUG, "next NameMetaClient will initialize NewClientManager");
             name_meta_client_->initialize(base_info_.meta_root_server_);
           }
 #ifdef WITH_TAIR_CACHE
@@ -349,7 +359,7 @@ namespace tfs
       return ret;
     }
 
-    int64_t RcClientImpl::real_read(const int raw_tfs_fd, void* buf, const int64_t count,
+    int64_t RcClientImpl::real_read(const int fd, const int raw_tfs_fd, void* buf, const int64_t count,
         fdInfo& fd_info, TfsFileStat* tfs_stat_buf)
     {
       int64_t read_count = -1;
@@ -363,12 +373,14 @@ namespace tfs
         }
         else
         {
+          //TBSYS_LOG(DEBUG, "here offset is %d, raw_tfs_fd is %d", fd_info.offset_, raw_tfs_fd);
           read_count = TfsClientImpl::Instance()->read(raw_tfs_fd, buf, count);
         }
         if (read_count > 0)
         {
           fd_info.offset_ += read_count;
-          if (TFS_SUCCESS != update_fdinfo_offset(raw_tfs_fd, fd_info.offset_))
+          // should use rc's fd, not raw_tfs_fd
+          if (TFS_SUCCESS != update_fdinfo_offset(fd, fd_info.offset_))
           {
             TBSYS_LOG(WARN, "update_fdinfo_offset error ");
           }
@@ -390,7 +402,7 @@ namespace tfs
         {
           if (fd_info.raw_tfs_fd_ >= 0)
           {
-            read_count = real_read(fd_info.raw_tfs_fd_, buf, count, fd_info, tfs_stat_buf);
+            read_count = real_read(fd, fd_info.raw_tfs_fd_, buf, count, fd_info, tfs_stat_buf);
           }
           else if (INVALID_RAW_TFS_FD == fd_info.raw_tfs_fd_)
           {
@@ -427,7 +439,7 @@ namespace tfs
               }
               raw_tfs_fd = open(ns_addr.c_str(), file_name, suffix,
                   fd_info.flag_, fd_info.is_large_, local_key);
-              read_count = real_read(raw_tfs_fd, buf, count, fd_info, tfs_stat_buf);
+              read_count = real_read(fd, raw_tfs_fd, buf, count, fd_info, tfs_stat_buf);
               if (read_count < 0)
               {
                 TBSYS_LOG(WARN, "read file from ns %s error ret is %"PRI64_PREFIX"d",
@@ -611,7 +623,7 @@ namespace tfs
       return ret_offset;
     }
 
-    TfsRetType RcClientImpl::fstat(const int fd, common::TfsFileStat* buf)
+    TfsRetType RcClientImpl::fstat(const int fd, common::TfsFileStat* buf, const common::TfsStatType fmode)
     {
       fdInfo fd_info;
       int ret = get_fdinfo(fd, fd_info);
@@ -619,7 +631,7 @@ namespace tfs
       {
         if (fd_info.raw_tfs_fd_ >= 0)
         {
-          ret = TfsClientImpl::Instance()->fstat(fd_info.raw_tfs_fd_, buf);
+          ret = TfsClientImpl::Instance()->fstat(fd_info.raw_tfs_fd_, buf, fmode);
         }
         else if (INVALID_RAW_TFS_FD == fd_info.raw_tfs_fd_)
         {
@@ -655,7 +667,7 @@ namespace tfs
             }
             raw_tfs_fd = open(ns_addr.c_str(), file_name, suffix,
                 fd_info.flag_, fd_info.is_large_, local_key);
-            ret = TfsClientImpl::Instance()->fstat(raw_tfs_fd, buf);
+            ret = TfsClientImpl::Instance()->fstat(raw_tfs_fd, buf, fmode);
             if (TFS_SUCCESS != ret)
             {
               TBSYS_LOG(WARN, "fstat file from ns %s error ret is %"PRI64_PREFIX"d",
@@ -757,8 +769,7 @@ namespace tfs
       return ret;
     }
 
-    int64_t RcClientImpl::save_file(const char* local_file, char* tfs_name_buff, const int32_t buff_len,
-        const bool is_large_file)
+    int64_t RcClientImpl::save_file(const char* local_file, char* tfs_name_buff, const int32_t buff_len, const char* suffix, const bool is_large_file)
     {
       int ret = check_init_stat();
       int64_t saved_size = -1;
@@ -773,14 +784,14 @@ namespace tfs
           {
             break;
           }
-          saved_size = save_file(ns_addr.c_str(), local_file, tfs_name_buff, buff_len, is_large_file);
+          saved_size = save_file(ns_addr.c_str(), local_file, tfs_name_buff, buff_len, suffix, is_large_file);
         } while(saved_size < 0);
       }
       return saved_size;
     }
 
     int64_t RcClientImpl::save_buf(const char* source_data, const int32_t data_len,
-        char* tfs_name_buff, const int32_t buff_len)
+        char* tfs_name_buff, const int32_t buff_len, const char* suffix)
     {
       int ret = check_init_stat();
       int64_t saved_size = -1;
@@ -796,7 +807,7 @@ namespace tfs
             break;
           }
           saved_size = save_buf(ns_addr.c_str(), source_data, data_len,
-              tfs_name_buff, buff_len);
+              tfs_name_buff, buff_len, suffix);
         } while(saved_size < 0);
       }
       return saved_size;
@@ -845,7 +856,7 @@ namespace tfs
     }
 
     int64_t RcClientImpl::save_file(const char* ns_addr, const char* local_file, char* tfs_name_buff,
-        const int32_t buff_len, const bool is_large_file)
+        const int32_t buff_len, const char* suffix, const bool is_large_file)
     {
       int flag = T_DEFAULT;
       if (is_large_file)
@@ -864,7 +875,7 @@ namespace tfs
         {
           int64_t start_time = tbsys::CTimeUtil::getTime();
           saved_size = TfsClientImpl::Instance()->save_file_unique(tfs_name_buff, buff_len, local_file,
-              NULL, ns_addr);
+              suffix, ns_addr);
           int64_t response_time = tbsys::CTimeUtil::getTime() - start_time;
           add_stat_info(OPER_UNIQUE_WRITE, saved_size, response_time, saved_size >= 0);
         }
@@ -877,14 +888,14 @@ namespace tfs
       {
         int64_t start_time = tbsys::CTimeUtil::getTime();
         saved_size = TfsClientImpl::Instance()->save_file(tfs_name_buff, buff_len, local_file,
-            flag, NULL, ns_addr);
+            flag, suffix, ns_addr);
         int64_t response_time = tbsys::CTimeUtil::getTime() - start_time;
         add_stat_info(OPER_WRITE, saved_size, response_time, saved_size >= 0);
       }
       return saved_size;
     }
     int64_t RcClientImpl::save_buf(const char* ns_addr, const char* source_data, const int32_t data_len,
-        char* tfs_name_buff, const int32_t buff_len)
+        char* tfs_name_buff, const int32_t buff_len, const char* suffix)
     {
       int64_t saved_size = -1;
       if (need_use_unique_)
@@ -898,7 +909,7 @@ namespace tfs
         {
           int64_t start_time = tbsys::CTimeUtil::getTime();
           saved_size = TfsClientImpl::Instance()->save_buf_unique(tfs_name_buff, buff_len, source_data, data_len,
-              NULL, ns_addr);
+              suffix, ns_addr);
           int64_t response_time = tbsys::CTimeUtil::getTime() - start_time;
           add_stat_info(OPER_UNIQUE_WRITE, saved_size, response_time, saved_size >= 0);
         }
@@ -910,7 +921,7 @@ namespace tfs
       {
         int64_t start_time = tbsys::CTimeUtil::getTime();
         saved_size = TfsClientImpl::Instance()->save_buf(tfs_name_buff, buff_len, source_data, data_len,
-            T_DEFAULT, NULL, ns_addr);
+            T_DEFAULT, suffix, ns_addr);
         int64_t response_time = tbsys::CTimeUtil::getTime() - start_time;
         add_stat_info(OPER_WRITE, saved_size, response_time, saved_size >= 0);
       }
@@ -1614,8 +1625,9 @@ namespace tfs
 
       int64_t RcClientImpl::pread(const int fd, void* buf, const int64_t count, const int64_t offset)
       {
+        int ret = TFS_SUCCESS;
         int64_t read_count = -1;
-        int ret = check_init_stat();
+        ret = check_init_stat();
         if (TFS_SUCCESS == ret)
         {
           fdInfo fd_info;
@@ -1663,6 +1675,149 @@ namespace tfs
           }
         }
         return read_count;
+      }
+
+      int64_t RcClientImpl::save_file(const int64_t app_id, const int64_t uid,
+          const char* local_file, const char* tfs_file_name)
+      {
+        // tfs_file_name will be checked in sub interface
+        int64_t saved_size = -1;
+        int ret = check_init_stat();
+        if(TFS_SUCCESS != ret)
+        {
+          TBSYS_LOG(ERROR, "not initialized, ret: %d", ret);
+        }
+        else
+        {
+          if (app_id_ != app_id)   // check app_id is matched
+          {
+            ret = EXIT_APPID_PERMISSION_DENY;
+            TBSYS_LOG(ERROR, "can't not write other app's data");
+          }
+          else
+          {
+            if (NULL == local_file || NULL == tfs_file_name || '/' != tfs_file_name[0])
+            {
+              ret = EXIT_INVALID_FILE_NAME;
+              TBSYS_LOG(ERROR, "invalid parameter");
+            }
+            else
+            {
+              // parse parent dir and create it
+              char parent_dir[MAX_PATH_LENGTH];
+              if (TFS_SUCCESS != (ret = Func::get_parent_dir(tfs_file_name, parent_dir, MAX_PATH_LENGTH)))
+              {
+                TBSYS_LOG(ERROR, "get parent dir error: %s, ret: %d", tfs_file_name, ret);
+              }
+              else if (TFS_SUCCESS != (ret = create_dir_with_parents(uid, parent_dir)))
+              {
+                TBSYS_LOG(ERROR, "create dir with parents error: %s, ret: %d", parent_dir, ret);
+              }
+              else
+              {
+                int ns_get_index = 0;
+                string ns_addr;
+                while (saved_size < 0)
+                {
+                  ns_addr = get_ns_addr(NULL, RcClient::WRITE, ns_get_index);
+                  if(ns_addr.empty())
+                  {
+                    break;
+                  }
+                  saved_size = name_meta_client_->save_file(ns_addr.c_str(),
+                      app_id, uid, local_file, tfs_file_name);
+                }
+              }
+            }
+          }
+        }
+        return TFS_SUCCESS != ret? ret: saved_size;
+      }
+
+      int64_t RcClientImpl::save_buf(const int64_t app_id, const int64_t uid,
+          const char* buf, const int64_t buf_len, const char* tfs_file_name)
+      {
+        int ret = TFS_SUCCESS;
+        int64_t saved_size = -1;
+        ret = check_init_stat();
+        if (TFS_SUCCESS != ret)
+        {
+          TBSYS_LOG(ERROR, "not initialized, ret: %d", ret);
+        }
+        else
+        {
+          if (NULL == tfs_file_name || '/' != tfs_file_name[0])
+          {
+            ret = EXIT_INVALID_FILE_NAME;
+            TBSYS_LOG(ERROR, "invalid parameter");
+          }
+          else
+          {
+            // parse parent dir and create it
+            char parent_dir[MAX_PATH_LENGTH];
+            if (TFS_SUCCESS != (ret = Func::get_parent_dir(tfs_file_name, parent_dir, MAX_PATH_LENGTH)))
+            {
+              TBSYS_LOG(ERROR, "get parent dir error: %s, ret: %d", tfs_file_name, ret);
+            }
+            else if (TFS_SUCCESS != (ret = create_dir_with_parents(uid, parent_dir)))
+            {
+              TBSYS_LOG(ERROR, "create dir with parents error: %s, ret: %d", parent_dir, ret);
+            }
+            else if (TFS_SUCCESS != (ret = create_file(uid, tfs_file_name)))
+            {
+              TBSYS_LOG(ERROR, "create file error: %s, ret: %d", tfs_file_name, ret);
+            }
+            else
+            {
+              int ns_get_index = 0;
+              string ns_addr;
+              while (saved_size < 0)
+              {
+                ns_addr = get_ns_addr(NULL, RcClient::WRITE, ns_get_index);
+                if(ns_addr.empty())
+                {
+                  break;
+                }
+                saved_size = name_meta_client_->write(ns_addr.c_str(),
+                        app_id, uid, tfs_file_name, buf, 0, buf_len);
+              }
+            }
+          }
+        }
+        return TFS_SUCCESS != ret? ret: saved_size;
+      }
+
+      int64_t RcClientImpl::fetch_file(const int64_t app_id, const int64_t uid,
+          const char* local_file, const char* tfs_file_name)
+      {
+        int64_t fetched_size = -1;
+        int ret = TFS_SUCCESS;
+        if (NULL == local_file || NULL == tfs_file_name
+            || '/' != tfs_file_name[0])
+        {
+          ret = EXIT_INVALID_FILE_NAME;
+          TBSYS_LOG(ERROR, "invalid parameter");
+        }
+        else
+        {
+          ret = check_init_stat();
+          if (TFS_SUCCESS == ret)
+          {
+            int ns_get_index = 0;
+            string ns_addr;
+            while (fetched_size < 0)
+            {
+              ns_addr = get_ns_addr(NULL, RcClient::WRITE, ns_get_index);
+              if(ns_addr.empty())
+              {
+                break;
+              }
+              fetched_size = name_meta_client_->fetch_file(ns_addr.c_str(),
+                  app_id, uid, local_file, tfs_file_name);
+            }
+          }
+        }
+        return TFS_SUCCESS != ret? ret: fetched_size;
       }
 
       //int64_t RcClientImpl::save_file(const int64_t app_id, const int64_t uid,
@@ -1715,6 +1870,8 @@ namespace tfs
       //  }
       //  return ret;
       //}
+
+
 
       TfsRetType RcClientImpl::remove_fdinfo(const int fd, fdInfo& fdinfo)
       {

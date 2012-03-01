@@ -969,7 +969,7 @@ namespace tfs
       // maybe network fail
       if (status != TFS_SUCCESS)
       {
-        TBSYS_LOG(ERROR, "ret is %d when we ask data from database");
+        TBSYS_LOG(ERROR, "ret is %d when we ask data from database", status);
         // // TODO. maybe do sth.
         ret = TFS_ERROR;
       }

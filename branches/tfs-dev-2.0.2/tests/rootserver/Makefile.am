@@ -2,7 +2,7 @@ AM_CPPFLAGS=-fprofile-arcs -ftest-coverage -I${top_srcdir}/src/rootserver \
 	    -I$(top_srcdir)/src \
 	    -I${top_srcdir}/src/common \
 	    -I$(TBLIB_ROOT)/include/tbsys \
-	    -I$(TBLIB_ROOT)/include/tbnet
+	    -I$(TBLIB_ROOT)/include/tbnet -DTFS_GTEST
 
 AM_LDFLAGS=-lpthread -lrt -lc -lm -lgtest -lgcov -lz
 

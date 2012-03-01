@@ -68,7 +68,8 @@ TEST_F(BaseResourceTest, get_cluster_infos)
   BaseResource tester(data_helper);
   EXPECT_EQ(TFS_SUCCESS, tester.load());
   std::vector<ClusterRackData> cluster_rack_datas;
-  EXPECT_EQ(TFS_SUCCESS, tester.get_cluster_infos(1, cluster_rack_datas));
+  std::vector<ClusterData> cluster_datas_for_update;
+  EXPECT_EQ(TFS_SUCCESS, tester.get_cluster_infos(1, cluster_rack_datas, cluster_datas_for_update));
   EXPECT_EQ(2, cluster_rack_datas.size());
 
   EXPECT_STREQ("2.1.1.1:1010", cluster_rack_datas[1].dupliate_server_addr_.c_str());

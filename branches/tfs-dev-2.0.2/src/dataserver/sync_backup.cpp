@@ -320,7 +320,7 @@ namespace tfs
         int64_t total_length = 0;
         FileInfo finfo;
 
-        logic_block->rlock();
+        //logic_block->rlock();
         ret = logic_block->read_file(file_id, data, length, offset, READ_DATA_OPTION_FLAG_FORCE/*READ_DATA_OPTION_FLAG_NORMAL*/);//read first data & fileinfo
         if (TFS_SUCCESS != ret)
         {
@@ -434,7 +434,7 @@ namespace tfs
           }
         }
 
-        logic_block->unlock();
+        //logic_block->unlock();
         if (TFS_SUCCESS != ret)
         {
           // if file is local deleted or not exists, need not sync

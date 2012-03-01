@@ -63,6 +63,7 @@ namespace tfs
       {
         // too much
         tbsys::gDelete(repair_task);
+        check_mutex_.unlock();
         return EXIT_BLOCK_CHECKER_OVERLOAD;
       }
 

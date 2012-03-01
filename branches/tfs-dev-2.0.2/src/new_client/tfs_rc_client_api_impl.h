@@ -77,15 +77,15 @@ namespace tfs
         int64_t write(const int fd, const void* buf, const int64_t count);
 
         int64_t lseek(const int fd, const int64_t offset, const int whence);
-        TfsRetType fstat(const int fd, common::TfsFileStat* buf);
+        TfsRetType fstat(const int fd, common::TfsFileStat* buf, const common::TfsStatType fmode = common::NORMAL_STAT);
 
         TfsRetType unlink(const char* file_name, const char* suffix = NULL,
            const common::TfsUnlinkType action = common::DELETE);
 
         int64_t save_file(const char* local_file, char* tfs_name_buff, const int32_t buff_len,
-            const bool is_large_file = false);
+            const char* suffix = NULL, const bool is_large_file = false);
         int64_t save_buf(const char* source_data, const int32_t data_len,
-            char* tfs_name_buff, const int32_t buff_len);
+            char* tfs_name_buff, const int32_t buff_len, const char* suffix = NULL);
 
         int fetch_file(const char* local_file,
                        const char* file_name, const char* suffix = NULL);
@@ -117,10 +117,14 @@ namespace tfs
         int64_t pwrite(const int fd, const void* buf, const int64_t count, const int64_t offset);
         //use the same close func as raw tfs
 
-        //int64_t save_file(const int64_t app_id, const int64_t uid,
-        //    const char* local_file, const char* file_path);
-        //int fetch_file(const int64_t app_id, const int64_t uid,
-        //    const char* local_file, const char* file_path);
+        int64_t save_file(const int64_t app_id, const int64_t uid,
+            const char* local_file, const char* tfs_file_name);
+
+        int64_t save_buf(const int64_t app_id, const int64_t uid,
+          const char* buf, const int64_t buf_len, const char* tfs_file_name);
+
+        int64_t fetch_file(const int64_t app_id, const int64_t uid,
+            const char* local_file, const char* tfs_file_name);
 
       private:
         DISALLOW_COPY_AND_ASSIGN(RcClientImpl);
@@ -146,10 +150,10 @@ namespace tfs
             const char* suffix, const common::TfsUnlinkType action);
 
         int64_t save_file(const char* ns_addr, const char* local_file, char* tfs_name_buff,
-            const int32_t buff_len, const bool is_large_file = false);
+            const int32_t buff_len, const char* suffix = NULL, const bool is_large_file = false);
 
         int64_t save_buf(const char* ns_addr, const char* source_data, const int32_t data_len,
-            char* tfs_name_buff, const int32_t buff_len);
+            char* tfs_name_buff, const int32_t buff_len, const char* suffix = NULL);
 
         int fetch_file(const char* ns_addr, const char* local_file,
                        const char* file_name, const char* suffix);
@@ -357,7 +361,7 @@ namespace tfs
         TfsRetType get_fdinfo(const int fd, fdInfo& fdinfo) const;
         TfsRetType update_fdinfo_offset(const int fd, const int64_t offset);
         TfsRetType update_fdinfo_rawfd(const int fd, const int raw_fd);
-        int64_t real_read(const int raw_tfs_fd, void* buf, const int64_t count,
+        int64_t real_read(const int fd, const int raw_tfs_fd, void* buf, const int64_t count,
             fdInfo& fd_info, common::TfsFileStat* tfs_stat_buf);
         int64_t read_ex(const int fd, void* buf, const int64_t count, common::TfsFileStat* tfs_stat_buf);
 

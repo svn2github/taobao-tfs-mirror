@@ -11,14 +11,15 @@
  * Authors:
  *   duolong <duolong@taobao.com>
  *      - initial release
- *   qushan<qushan@taobao.com> 
+ *   qushan<qushan@taobao.com>
  *      - modify 2009-03-27
- *   zongdai <zongdai@taobao.com> 
+ *   zongdai <zongdai@taobao.com>
  *      - modify 2010-04-23
  *
  */
 #include "mmap_file_op.h"
 #include "common/error_msg.h"
+#include "common/func.h"
 #include <tbsys.h>
 
 namespace tfs
@@ -68,6 +69,20 @@ namespace tfs
         is_mapped_ = false;
       }
       return TFS_SUCCESS;
+    }
+
+    int MMapFileOperation::rename_file()
+    {
+      int ret = TFS_ERROR;
+      if (is_mapped_ && NULL != map_file_)
+      {
+        std::string new_file_name = file_name_;
+        new_file_name += "." + Func::time_to_str(time(NULL), 1);
+        ret = ::rename(file_name_, new_file_name.c_str());
+        free(file_name_);
+        file_name_ = strdup(new_file_name.c_str());
+      }
+      return ret;
     }
 
     void* MMapFileOperation::get_map_data() const

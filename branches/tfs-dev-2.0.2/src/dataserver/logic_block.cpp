@@ -99,6 +99,11 @@ namespace tfs
       return TFS_SUCCESS;
     }
 
+    int LogicBlock::rename_index_file()
+    {
+      return index_handle_->rename(logic_block_id_);
+    }
+
     void LogicBlock::add_physic_block(PhysicalBlock* physic_block)
     {
       physical_block_list_.push_back(physic_block);
@@ -795,6 +800,9 @@ namespace tfs
 
     void LogicBlock::clear()
     {
+      // clean logic block associate stuff(index handle, physic block)
+      delete_block_file();
+
       // clean physic block
       for (list<PhysicalBlock*>::iterator lit = physical_block_list_.begin(); lit != physical_block_list_.end(); ++lit)
       {

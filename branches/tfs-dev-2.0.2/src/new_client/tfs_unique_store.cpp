@@ -157,7 +157,7 @@ namespace tfs
               // CAUTION: comment this unlink for histroy problem, avoid unlinking file on line,
               // uncomment this unlink for normal use
               //ret = TfsClientImpl::Instance()->unlink(file_size, tfs_name, suffix, ns_addr_.c_str());
-              ret = TFS_SUCCUSS;
+              ret = TFS_SUCCESS;
 
               if (ret != TFS_SUCCESS)
               {

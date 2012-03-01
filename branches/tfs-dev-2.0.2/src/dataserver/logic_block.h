@@ -55,6 +55,7 @@ namespace tfs
         int load_block_file(const int32_t bucket_size, const common::MMapOption mmap_option);
         int init_block_file(const int32_t bucket_size, const common::MMapOption mmap_option, const BlockType block_type);
         int delete_block_file();
+        int rename_index_file();
 
         void add_physic_block(PhysicalBlock* physic_block);
 

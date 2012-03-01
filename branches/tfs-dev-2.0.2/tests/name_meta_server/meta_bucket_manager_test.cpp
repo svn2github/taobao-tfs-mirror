@@ -9,7 +9,7 @@
  * Version: $Id: test_block_chunk.cpp 5 2010-10-21 07:44:56Z
  *
  * Authors:
- *   duanfei 
+ *   duanfei
  *      - initial release
  *
  */
@@ -48,7 +48,7 @@ namespace tfs
     {
       int64_t tables[common::MAX_BUCKET_ITEM_DEFAULT];
       for (int32_t i = 1; i <= common::MAX_BUCKET_ITEM_DEFAULT; ++i)
-        tables[i - 1] = i; 
+        tables[i - 1] = i;
       BucketManager bucket;
       int32_t iret = bucket.update_table(NULL, MAX_BUCKET_DATA_LENGTH, 0, 1);
       EXPECT_EQ(TFS_ERROR, iret);
@@ -67,7 +67,7 @@ namespace tfs
     {
       int64_t tables[common::MAX_BUCKET_ITEM_DEFAULT];
       for (int32_t i = 1; i <= common::MAX_BUCKET_ITEM_DEFAULT; ++i)
-        tables[i - 1] = i; 
+        tables[i - 1] = i;
       BucketManager bucket;
       int32_t iret = bucket.update_table((const char*)tables, MAX_BUCKET_DATA_LENGTH, 0, 1);
       EXPECT_EQ(TFS_SUCCESS, iret);
@@ -86,7 +86,7 @@ namespace tfs
     {
        int64_t tables[common::MAX_BUCKET_ITEM_DEFAULT];
       for (int32_t i = 1; i <= common::MAX_BUCKET_ITEM_DEFAULT; ++i)
-        tables[i - 1] = i; 
+        tables[i - 1] = i;
       BucketManager bucket;
       int32_t iret = bucket.update_table((const char*)tables, MAX_BUCKET_DATA_LENGTH, 0, 1);
       EXPECT_EQ(TFS_SUCCESS, iret);
@@ -101,12 +101,13 @@ namespace tfs
       }
 
       EXPECT_EQ(0, bucket.update_table_.version_);
-      iret = bucket.switch_table(0, -1);
+      std::set<int64_t> tt;
+      iret = bucket.switch_table(tt, 0, -1);
       EXPECT_EQ(EXIT_PARAMETER_ERROR, iret);
-      iret = bucket.switch_table(1, -1);
+      iret = bucket.switch_table(tt, 1, -1);
       EXPECT_EQ(EXIT_TABLE_VERSION_ERROR, iret);
 
-      iret = bucket.switch_table(1, 0);
+      iret = bucket.switch_table(tt, 1, 0);
       EXPECT_EQ(TFS_SUCCESS, iret);
       EXPECT_EQ(INVALID_TABLE_VERSION, bucket.update_table_.version_);
       EXPECT_EQ(0, bucket.active_table_.version_);

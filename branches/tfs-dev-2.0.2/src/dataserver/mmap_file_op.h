@@ -99,6 +99,7 @@ namespace tfs
 
         int mmap_file(const common::MMapOption& mmap_option);
         int munmap_file();
+        int rename_file();
         void* get_map_data() const;
         int flush_file();
 
