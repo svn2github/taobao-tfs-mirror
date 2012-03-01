@@ -365,7 +365,7 @@ PHP_FUNCTION(tfs_client_read)
       else
       {
         add_next_index_long(return_value, offset);
-        add_next_index_string(return_value, data, 1);
+        add_next_index_stringl(return_value, data, offset, 1);
       }
       efree(data);
       data = NULL;
@@ -709,7 +709,7 @@ PHP_FUNCTION(tfs_client_pread)
       else
       {
         add_next_index_long(return_value, off);
-        add_next_index_string(return_value, data, 1);
+        add_next_index_stringl(return_value, data, off, 1);
       }
       efree(data);
       data = NULL;
