@@ -42,14 +42,14 @@ static int64_t get_source(const char* source_name, char* buff)
     int fd = ::open(source_name, O_RDONLY);
     if (fd < 0)
     {
-      TBSYS_LOG(ERROR, " open file %s error", source_name);
+      printf("open local file %s error, errno = %d\n", source_name, errno);
     }
     else
     {
       source_count = ::read(fd, buff, buff_size);
       if (source_count < 0 || source_count >= buff_size)
       {
-        TBSYS_LOG(ERROR, "read file %s error %ld", source_name, source_count);
+        printf("read file %s error %ld, errno = %d\n", source_name, source_count, errno);
         source_count = -1;
       }
       ::close(fd);
@@ -61,14 +61,14 @@ static int64_t get_source(const char* source_name, char* buff)
     int fd = tfs::client::TfsClient::Instance()->open(source_name, NULL, source_ns_addr, T_READ);
     if (fd < 0)
     {
-      TBSYS_LOG(ERROR, " open file %s error", source_name);
+      printf("open tfs file %s error\n", source_name);
     }
     else
     {
       source_count = tfs::client::TfsClient::Instance()->read(fd, buff, buff_size);
       if (source_count < 0 || source_count >= buff_size)
       {
-        TBSYS_LOG(ERROR, "read file %s error %ld", source_name, source_count);
+        printf("read file %s error %ld\n", source_name, source_count);
         source_count = -1;
       }
       tfs::client::TfsClient::Instance()->close(fd);
@@ -76,8 +76,8 @@ static int64_t get_source(const char* source_name, char* buff)
   }
   else
   {
-   TBSYS_LOG(ERROR, "know_source %s", source_name);
-   source_count = -1;
+    printf("unknow_source %s\n", source_name);
+    source_count = -1;
   }
   return source_count;
 }
@@ -88,13 +88,13 @@ static int64_t write_dest(const char* dest_name, char* buff, const int64_t size)
   uint32_t  hash_value = tbsys::CStringUtil::murMurHash((const void*)(dest_name), strlen(dest_name));
   int32_t   uid = (hash_value % hash_count + 1);
   write_count = rc_client.save_buf(app_id, uid, buff, size, dest_name);
-  if (write_count > 0 || write_count == EXIT_TARGET_EXIST_ERROR) // exist or success
+  if (write_count >= 0 || write_count == EXIT_TARGET_EXIST_ERROR) // exist or success
   {
-    printf("save file %s ok\n", dest_name);
+    printf("%s ok\n", dest_name);
   }
   else
   {
-    printf("save file %s error\n", dest_name);
+    printf("%s error\n", dest_name);
   }
   return write_count;
 }
@@ -113,14 +113,16 @@ int main(int argc ,char* argv[])
   if (ret != TFS_SUCCESS)
   {
     printf("rc_client initialize error %s\n", argv[3]);
-    return 0;
+    return -1;
   }
+
+  // rc_client.set_wait_timeout(10000);
 
   FILE* fd = ::fopen(argv[1], "r");
   if (fd < 0)
   {
     printf("open local file %s error\n", argv[1]);
-    return 0;
+    return -1;
   }
   snprintf(source_ns_addr, 32, "%s", argv[2]);
   app_id = rc_client.get_app_id();
@@ -140,7 +142,7 @@ int main(int argc ,char* argv[])
     }
     else
     {
-      TBSYS_LOG(ERROR, "deal error %s", line_buff);
+      printf("deal error %s\n", line_buff);
       continue;
     }
     size_t count = strlen(p_dest);
@@ -157,6 +159,7 @@ int main(int argc ,char* argv[])
       write_dest(p_dest, buff, source_count);
     }
   }
+
   ::fclose(fd);
   free (buff);
   return 0;
