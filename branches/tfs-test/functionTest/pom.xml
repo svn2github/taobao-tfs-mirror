@@ -23,7 +23,7 @@
 				<version>2.7</version>
 				<configuration>
 					<includes>
-						<include>**/**.java</include>
+						<include>**/mergeRcMeta*.java</include>
 					</includes>
 				</configuration>
 			</plugin>
