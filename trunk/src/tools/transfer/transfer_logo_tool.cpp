@@ -17,17 +17,18 @@
 *      -modify-2012/02/24
 *
 */
+
 #include <tbsys.h>
 #include <unistd.h>
 #include "new_client/tfs_client_api.h"
 #include "new_client/tfs_meta_client_api.h"
 #include "new_client/tfs_rc_client_api.h"
 
-#define buff_size  5 * 1024L * 1024L
+#define buff_size  10 * 1024L * 1024L
+#define TFS_MIN_FILE_LEN  18
 
 using namespace tfs::common;
 tfs::client::RcClient rc_client;
-static char source_ns_addr[32];
 static int64_t app_id = 0;
 static int64_t hash_count = 0;
 //iput_file
@@ -55,23 +56,26 @@ static int64_t get_source(const char* source_name, char* buff)
       ::close(fd);
     }
   }
-  else if(*source_name == 'T' || *source_name == 'L')
+  else if(strlen(source_name) >= TFS_MIN_FILE_LEN &&
+        (*source_name == 'T' || *source_name == 'L') &&
+        isdigit(*(source_name + 1)))
   {
+
     //get data from tfs
-    int fd = tfs::client::TfsClient::Instance()->open(source_name, NULL, source_ns_addr, T_READ);
+    int fd = rc_client.open(source_name, NULL, tfs::client::RcClient::READ);
     if (fd < 0)
     {
       printf("open tfs file %s error\n", source_name);
     }
     else
     {
-      source_count = tfs::client::TfsClient::Instance()->read(fd, buff, buff_size);
-      if (source_count < 0 || source_count >= buff_size)
+      source_count = rc_client.read(fd, buff, buff_size);
+      if (source_count < 0 || source_count > buff_size)
       {
         printf("read file %s error %ld\n", source_name, source_count);
         source_count = -1;
       }
-      tfs::client::TfsClient::Instance()->close(fd);
+      rc_client.close(fd);
     }
   }
   else
@@ -94,44 +98,49 @@ static int64_t write_dest(const char* dest_name, char* buff, const int64_t size)
   }
   else
   {
-    printf("%s error\n", dest_name);
+    printf("%s error %"PRI64_PREFIX"d\n", dest_name, write_count);
   }
   return write_count;
 }
 
 int main(int argc ,char* argv[])
 {
-  if (argc != 6)
+  if (argc != 5)
   {
-    printf("usage %s input_text source_ns_addr rcaddr app_key user_count\n", argv[0]);
+    printf("usage %s input_text  rcaddr app_key user_count\n", argv[0]);
     return 0;
   }
 
   TBSYS_LOGGER.setLogLevel("debug");
-  tfs::client::TfsClient::Instance()->initialize();
-  int ret = rc_client.initialize(argv[3], argv[4], "10.246.123.3");
+  int ret = rc_client.initialize(argv[2], argv[3], "10.246.123.3");
   if (ret != TFS_SUCCESS)
   {
-    printf("rc_client initialize error %s\n", argv[3]);
+    printf("rc_client initialize error %s\n", argv[2]);
     return -1;
   }
 
   // rc_client.set_wait_timeout(10000);
 
-  FILE* fd = ::fopen(argv[1], "r");
-  if (fd < 0)
+  FILE* fp = ::fopen(argv[1], "r");
+  if (NULL == fp)
   {
     printf("open local file %s error\n", argv[1]);
     return -1;
   }
-  snprintf(source_ns_addr, 32, "%s", argv[2]);
+
+  // global info for request
   app_id = rc_client.get_app_id();
-  hash_count = atoll(argv[5]);
+  hash_count = atoll(argv[4]);
   char* buff = (char*)::malloc(buff_size);
+  if (buff == NULL)
+  {
+    printf("alloc memory fail\n");
+    return -1;
+  }
   char line_buff[4096];
   char* p_source = NULL;
   char* p_dest = NULL;
-  while(fgets(line_buff, 4096, fd)!= NULL)
+  while(fgets(line_buff, 4096, fp)!= NULL)
   {
     // TBSYS_LOG(WARN, "deal %s", line_buff);
     p_source = line_buff;
@@ -160,7 +169,7 @@ int main(int argc ,char* argv[])
     }
   }
 
-  ::fclose(fd);
+  ::fclose(fp);
   free (buff);
   return 0;
 }
