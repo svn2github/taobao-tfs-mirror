@@ -134,16 +134,18 @@ namespace tfs
       	{
         	if ('/' ==file_path[length - 1])
         	{
-          	length--;
           	break;
         	}
       	}
-
 
       	if (0 == length)
       	{
 					strncpy(dir_path, ".", dir_buf_len);
       	}
+        else if (1 == length)
+        {
+          strncpy(dir_path, "/", dir_buf_len);
+        }
      	  else
       	{
 					if (dir_buf_len <= length)
@@ -152,7 +154,8 @@ namespace tfs
 					}
 					else
 					{
-        		strncpy(dir_path, file_path, dir_buf_len);
+        		strncpy(dir_path, file_path, length - 1);
+            dir_path[length-1] = '\0';
 					}
      		}
 			}

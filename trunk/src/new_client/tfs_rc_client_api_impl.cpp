@@ -1709,7 +1709,8 @@ namespace tfs
               {
                 TBSYS_LOG(ERROR, "get parent dir error: %s, ret: %d", tfs_file_name, ret);
               }
-              else if (TFS_SUCCESS != (ret = create_dir_with_parents(uid, parent_dir)))
+              else if (0 != strcmp("/", parent_dir) &&   // not root, and create dir fail
+                  TFS_SUCCESS != (ret = create_dir_with_parents(uid, parent_dir)))
               {
                 TBSYS_LOG(ERROR, "create dir with parents error: %s, ret: %d", parent_dir, ret);
               }
@@ -1759,7 +1760,8 @@ namespace tfs
             {
               TBSYS_LOG(ERROR, "get parent dir error: %s, ret: %d", tfs_file_name, ret);
             }
-            else if (TFS_SUCCESS != (ret = create_dir_with_parents(uid, parent_dir)))
+            else if (0 != strcmp("/", parent_dir) &&   // not root, and create dir fail
+                TFS_SUCCESS != (ret = create_dir_with_parents(uid, parent_dir)))
             {
               TBSYS_LOG(ERROR, "create dir with parents error: %s, ret: %d", parent_dir, ret);
             }
