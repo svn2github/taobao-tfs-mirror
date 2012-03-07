@@ -28,7 +28,7 @@
 #define TFS_MIN_FILE_LEN  18
 
 using namespace tfs::common;
-tfs::client::RcClient rc_client;
+tfs::client::RcClient *rc_client = NULL;
 static int64_t app_id = 0;
 static int64_t hash_count = 0;
 //iput_file
@@ -62,20 +62,20 @@ static int64_t get_source(const char* source_name, char* buff)
   {
 
     //get data from tfs
-    int fd = rc_client.open(source_name, NULL, tfs::client::RcClient::READ);
+    int fd = rc_client->open(source_name, NULL, tfs::client::RcClient::READ);
     if (fd < 0)
     {
       printf("open tfs file %s error\n", source_name);
     }
     else
     {
-      source_count = rc_client.read(fd, buff, buff_size);
+      source_count = rc_client->read(fd, buff, buff_size);
       if (source_count < 0 || source_count > buff_size)
       {
         printf("read file %s error %ld\n", source_name, source_count);
         source_count = -1;
       }
-      rc_client.close(fd);
+      rc_client->close(fd);
     }
   }
   else
@@ -91,7 +91,7 @@ static int64_t write_dest(const char* dest_name, char* buff, const int64_t size)
   int64_t write_count = -1;
   uint32_t  hash_value = tbsys::CStringUtil::murMurHash((const void*)(dest_name), strlen(dest_name));
   int32_t   uid = (hash_value % hash_count + 1);
-  write_count = rc_client.save_buf(app_id, uid, buff, size, dest_name);
+  write_count = rc_client->save_buf(app_id, uid, buff, size, dest_name);
   if (write_count >= 0 || write_count == EXIT_TARGET_EXIST_ERROR) // exist or success
   {
     printf("%s ok\n", dest_name);
@@ -112,7 +112,8 @@ int main(int argc ,char* argv[])
   }
 
   TBSYS_LOGGER.setLogLevel("debug");
-  int ret = rc_client.initialize(argv[2], argv[3], "10.246.123.3");
+  rc_client = new tfs::client::RcClient();
+  int ret = rc_client->initialize(argv[2], argv[3], "10.246.123.3");
   if (ret != TFS_SUCCESS)
   {
     printf("rc_client initialize error %s\n", argv[2]);
@@ -129,7 +130,7 @@ int main(int argc ,char* argv[])
   }
 
   // global info for request
-  app_id = rc_client.get_app_id();
+  app_id = rc_client->get_app_id();
   hash_count = atoll(argv[4]);
   char* buff = (char*)::malloc(buff_size);
   if (buff == NULL)
@@ -171,5 +172,8 @@ int main(int argc ,char* argv[])
 
   ::fclose(fp);
   free (buff);
+
+  delete rc_client;
+
   return 0;
 }
