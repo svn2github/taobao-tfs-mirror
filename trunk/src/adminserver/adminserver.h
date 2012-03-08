@@ -128,7 +128,6 @@ namespace tfs
       int kill_process(message::MonitorStatus* status, const int32_t wait_time, const bool clear = false);
 
     private:
-      char conf_file_[common::MAX_PATH_LENGTH];
 
       // monitor stuff
       bool stop_;
