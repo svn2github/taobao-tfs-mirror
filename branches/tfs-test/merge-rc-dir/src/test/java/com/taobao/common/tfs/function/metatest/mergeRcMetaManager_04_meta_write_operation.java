@@ -35,6 +35,7 @@ public class mergeRcMetaManager_04_meta_write_operation extends RcBaseCase
 	    String localFile = "1k.jpg";
         String filePath = "/test_1k_01" + d.format(new Date());
 	    boolean bRet = false;
+	    int iRet;
         tfsManager = new DefaultTfsManager();
 	    long oldUsedCapacity = getUsedCapacity(appKey);
 	    long oldFileCount = getFileCount(appKey);
@@ -45,8 +46,8 @@ public class mergeRcMetaManager_04_meta_write_operation extends RcBaseCase
 	    bRet = tfsManager.init();
 	    Assert.assertTrue(bRet);
  
-	    bRet=tfsManager.createFile(appId, userId, filePath);
-	    Assert.assertTrue(bRet);
+	    iRet=tfsManager.createFile(appId, userId, filePath);
+	    Assert.assertEquals(iRet,0);
 	    
 	    byte data[]=null;
 		data=getByte(localFile);
@@ -104,6 +105,8 @@ public class mergeRcMetaManager_04_meta_write_operation extends RcBaseCase
 	    String localFile = "2M.jpg";
         String filePath = "/test_2M_01" + d.format(new Date());
 	    boolean bRet = false;
+	    int iRet;
+	    
 	    tfsManager = new DefaultTfsManager();
 	    long oldUsedCapacity = getUsedCapacity(appKey);
 	    long oldFileCount = getFileCount(appKey);
@@ -114,8 +117,8 @@ public class mergeRcMetaManager_04_meta_write_operation extends RcBaseCase
 	    bRet = tfsManager.init();
 	    Assert.assertTrue(bRet);	    
 	   
-	    bRet=tfsManager.createFile(appId, userId, filePath);
-	    Assert.assertTrue(bRet);
+	    iRet=tfsManager.createFile(appId, userId, filePath);
+	    Assert.assertEquals(iRet,0);
 	    
 	    byte data[]=null;
 		data=getByte(localFile);
@@ -177,6 +180,7 @@ public class mergeRcMetaManager_04_meta_write_operation extends RcBaseCase
 	    String localFile = "3M.jpg";
         String filePath = "/test_3M_01" + d.format(new Date());
 	    boolean bRet = false;
+	    int iRet;
 
 	    tfsManager = new DefaultTfsManager();
 	    long oldUsedCapacity = getUsedCapacity(appKey);
@@ -188,8 +192,8 @@ public class mergeRcMetaManager_04_meta_write_operation extends RcBaseCase
 	    bRet = tfsManager.init();
 	    Assert.assertTrue(bRet);
 	    
-	    bRet=tfsManager.createFile(appId, userId, filePath);
-	    Assert.assertTrue(bRet);
+	    iRet=tfsManager.createFile(appId, userId, filePath);
+	    Assert.assertEquals(iRet,0);
 	    
 	    byte data[]=null;
 		data=getByte(localFile);

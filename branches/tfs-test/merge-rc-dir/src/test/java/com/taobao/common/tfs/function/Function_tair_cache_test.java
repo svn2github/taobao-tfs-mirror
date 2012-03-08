@@ -44,20 +44,23 @@ public class Function_tair_cache_test extends RcBaseCase{
     public List<Long> dsList = new ArrayList<Long>();
    
     @Before 
-    public void setUp(){
+    public void setUp()
+    {
         dsList.add(12345678L);
         dsList.add(22334455L);
         dsList.add(23456789L);
     }
     @After
-    public void tearDown(){
+    public void tearDown()
+    {
         dsList.clear();
     }
     
     /* 加入local/tair cache后读写文件都正常 */
     
     @Test
-    public void Function_01_happy_path() throws Exception {
+    public void Function_01_happy_path() throws Exception 
+    {
         
         OutputStream output = new FileOutputStream("tmp");
         byte [] data = getByte(localFile);
@@ -84,9 +87,6 @@ public class Function_tair_cache_test extends RcBaseCase{
         sRet = tfsManager.saveFile(data, null, null);
         Assert.assertNotNull(sRet);
         
-        /* sleep */
-        sleep(5);
-        
         /* Read file */     
         bRet = tfsManager.fetchFile(sRet, null, output);
         Assert.assertTrue(bRet);
@@ -103,7 +103,8 @@ public class Function_tair_cache_test extends RcBaseCase{
 
     /* test local cache */
     @Test
-    public void Function_02_localcache_switch_OK() throws Exception {
+    public void Function_02_localcache_switch_OK() throws Exception 
+    {
         boolean bRet = false;
         OutputStream output = new FileOutputStream("tmp");
         byte [] data = getByte(localFile);
@@ -821,18 +822,26 @@ public class Function_tair_cache_test extends RcBaseCase{
 		output.flush();
 		output.close();
 		/* get segment info */
+		
+		
 		LocalKey localKey = new LocalKey();
 		localKey.loadFile(segmentFile);
 		TreeSet<SegmentInfo> segmengInfoSet = localKey.getSegmentInfos();
+		
+		
 		int count = 0;
-		for(SegmentInfo segInfo:segmengInfoSet){
+		for(SegmentInfo segInfo:segmengInfoSet)
+		{
 			FSName fsName = new FSName(segInfo.getBlockId(), segInfo.getFileId());
 			String fileName = fsName.get();
-			try{
+			try
+			{
 			assertTrue(tfsManager.fetchFile(fileName, null, "10M_part_" + count + ".jpg"));
-			}catch(Exception e){
-				System.out.println("@@@FSname is "+fsName.get());
 			}
+			catch(Exception e)
+			{
+				System.out.println("@@@FSname is "+fsName.get());
+		}
 		   
 		   count++;
 		}

@@ -35,7 +35,7 @@ public class NativeTfsBaseCase extends TfsBaseCase {
 	final ApplicationContext clientFactory = new ClassPathXmlApplicationContext("tfsClient.xml");
 	
 	final AppServer tfsSeedClient = (AppServer) clientFactory.getBean("seedClient");
-	final AppServer tfsReadClient = (AppServer) clientFactory.getBean("readClient");
+	final AppServer tfsReadClient        = (AppServer) clientFactory.getBean("readClient");
 	final AppServer tfsUnlinkClient = (AppServer) clientFactory.getBean("unlinkClient");
 	
 	//Define
@@ -63,7 +63,7 @@ public class NativeTfsBaseCase extends TfsBaseCase {
 	final public String NS_LOG_NAME     = TFS_LOG_HOME + "/nameserver.log";
 	final public String DP_LOG_NAME     = TFS_LOG_HOME + "/dumpplan.log";
 	final public String BL_LOG_NAME     = TFS_LOG_HOME + "/blocklist.log";
-	final public String CURR_LOG_NAME   = "nameserver.log";	
+	final public String CURR_LOG_NAME   = "nameserver.log";	 
 	
 	/* Key word */
 	final public String WRITEFILE        = "writeFile :";

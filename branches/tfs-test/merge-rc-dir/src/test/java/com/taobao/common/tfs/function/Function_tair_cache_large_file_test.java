@@ -236,7 +236,7 @@ public void Function_3_with_local_taircache_large_file_with_localcache() throws 
 		
 		
 	}
-/*part file hit and invalid use local cache cache */
+/*part file hit and valid use local cache cache */
 @Test
 public void Function_4_with_localcache_large_file_part_hitwith_valid() throws Exception {
 		
@@ -271,7 +271,8 @@ public void Function_4_with_localcache_large_file_part_hitwith_valid() throws Ex
 		assertTrue(Proc.proStartBase(machine, cmd, result));
 		
 		if(result != null && result.size() > 0){
-			for(String s:result){
+			for(String s:result)
+			{
 				s=s.replaceAll("\\D+", " ");
 				s=s.trim();
 				String[] strNum = s.split(" ");

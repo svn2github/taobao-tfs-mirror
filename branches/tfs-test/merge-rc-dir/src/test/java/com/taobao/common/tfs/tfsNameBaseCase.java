@@ -28,6 +28,7 @@ public class tfsNameBaseCase
     public static final Log log = LogFactory.getLog(tfsNameBaseCase.class);
     public static long appId;
     public static long userId=8;
+    public static String key = "D:/staf/STAFReg.inf";
    
     
 
@@ -104,67 +105,122 @@ public class tfsNameBaseCase
 	public static ArrayList<String> testFileList = new ArrayList<String>();
 
 	@BeforeClass
-	public static void BeforeSetup() {
+	public static void BeforeSetup() 
+	{
 		System.out.println(" @@ beforeclass begin");
 		String localFile = "";
 		// 1b file
 		localFile = "1B.jpg";
-		if (createFile(localFile, 1)) {
+		if (createFile(localFile, 1)) 
+		{
+			testFileList.add(localFile);
+		}
+		localFile = "2B.jpg";
+		if (createFile(localFile, 2)) 
+		{
 			testFileList.add(localFile);
 		}
 		// 1k file
 		localFile = "1K.jpg";
-		if (createFile(localFile, 1 << 10)) {
+		if (createFile(localFile, 1 << 10)) 
+		{
 			testFileList.add(localFile);
 		}
 		// 10k file
 		localFile = "10K.jpg";
-		if (createFile(localFile, 10 * (1 << 10)) ) {
+		if (createFile(localFile, 10 * (1 << 10)) ) 
+		{
 			testFileList.add(localFile);
 		}
-
+		// 10k file
+		localFile = "1M.jpg";
+		if (createFile(localFile, 1 << 20) ) 
+		{
+			testFileList.add(localFile);
+		}
+		// 100k file
+		localFile = "100K.jpg";
+		if (createFile(localFile, 100 * (1 << 10)) ) 
+		{
+			testFileList.add(localFile);
+		}
 		// 2M file
 		localFile = "2M.jpg";
-		if (createFile(localFile, 2 * (1 << 20))) {
+		if (createFile(localFile, 2 * (1 << 20))) 
+		{
 			testFileList.add(localFile);
 		}
 		// 3M file
 		localFile = "3M.jpg";
-		if (createFile(localFile, 3 * (1 << 20))) {
+		if (createFile(localFile, 3 * (1 << 20))) 
+		{
 			testFileList.add(localFile);
 		}
-
+		// 5M file
+		localFile = "5M.jpg";
+		if (createFile(localFile, 5 * (1 << 20))) 
+		{
+			testFileList.add(localFile);
+		}
 		// 10M file
 		localFile = "10M.jpg";
-		if (createFile(localFile, 10 * (1 << 20))) {
+		if (createFile(localFile, 10 * (1 << 20))) 
+		{
+			testFileList.add(localFile);
+		}
+		// 100M file
+		localFile = "100M.jpg";
+		if (createFile(localFile, 100 * (1 << 20))) 
+		{
+			testFileList.add(localFile);
+		}
+		// 1G file
+		localFile = "1G.jpg";
+		if (createFile(localFile, 1 << 30)) 
+		{
 			testFileList.add(localFile);
 		}
 		
 	}
 
 	@AfterClass
-	public static void AfterTearDown() {
+	public static void AfterTearDown() 
+	{
 
 		System.out.println(" @@ afterclass begin");
 		int size = testFileList.size();
-		for (int i = 0; i < size; i++) {
+		for (int i = 0; i < size; i++) 
+		{
 			File file = new File(testFileList.get(i));
-			if (file.exists()) {
+			if (file.exists()) 
+			{
 				file.delete();
 			}
 		}
 	}
 
-	protected static boolean createFile(String filePath, long size) {
+	protected static boolean createFile(String filePath, long size) 
+	{
 		boolean ret = true;
-		try {
+		try 
+		{
 			RandomAccessFile f = new RandomAccessFile(filePath, "rw");
 			f.setLength(size);
-		} catch (Exception e) {
+		} 
+		catch (Exception e) 
+		{
 			ret = false;
 			e.printStackTrace();
 		}
 		return ret;
+	}
+	
+	protected static void DataToFile(String filename,byte data[]) throws IOException
+	{
+		File file=new File(filename);  
+        OutputStream out=new FileOutputStream(file);  
+        out.write(data);  
+        out.close();  
 	}
 
 }

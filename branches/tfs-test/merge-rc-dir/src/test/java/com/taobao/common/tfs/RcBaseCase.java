@@ -24,7 +24,8 @@ import com.taobao.common.tfs.DefaultTfsManager;
 public class RcBaseCase extends TfsBaseCase {
 
 	boolean grid_started = false;
-
+    
+	//final ClassPathXmlApplicationContext rcBeanFactory = new ClassPathXmlApplicationContext(new String[] { "D:/cx/src/test/resources/rcServer.xml" });
 	final ApplicationContext rcBeanFactory = new ClassPathXmlApplicationContext("rcServer.xml");
 	final AppGrid rcGrid = (AppGrid) rcBeanFactory.getBean("rcGrid");
 	
@@ -87,7 +88,11 @@ public class RcBaseCase extends TfsBaseCase {
 		if (createFile(localFile, 10 * (1 << 10)) ) {
 			testFileList.add(localFile);
 		}
-
+		// 100k file
+		localFile = "100k.jpg";
+		if (createFile(localFile, 100 * (1 << 10)) ) {
+			testFileList.add(localFile);
+		}
 		// 2M file
 		localFile = "2M.jpg";
 		if (createFile(localFile, 2 * (1 << 20))) {
@@ -104,7 +109,11 @@ public class RcBaseCase extends TfsBaseCase {
 		if (createFile(localFile, 10 * (1 << 20))) {
 			testFileList.add(localFile);
 		}
-		
+		// 10M file
+		localFile = "100M.jpg";
+		if (createFile(localFile, 100 * (1 << 20))) {
+			testFileList.add(localFile);
+		}
 		// 6G file
 		localFile = "6G.jpg";
 		if (createFile(localFile, (long)6 * (1 << 30))) {

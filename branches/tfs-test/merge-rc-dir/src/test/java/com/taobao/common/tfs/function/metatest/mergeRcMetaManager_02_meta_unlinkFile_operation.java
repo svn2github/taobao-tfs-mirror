@@ -31,6 +31,7 @@ public class mergeRcMetaManager_02_meta_unlinkFile_operation extends RcBaseCase
       log.info(caseName + "===> start");
 
       boolean bRet = false;
+      int Ret;
       String localFile = "1k.jpg";
       String filePath = "/rmFile_1k" + d.format(new Date());
       tfsManager = new DefaultTfsManager();
@@ -64,8 +65,8 @@ public class mergeRcMetaManager_02_meta_unlinkFile_operation extends RcBaseCase
       bRet = tfsManager.init();
       Assert.assertTrue(bRet);
 
-      bRet = tfsManager.rmFile(appId,userId, filePath);
-      Assert.assertTrue(bRet);
+      Ret = tfsManager.rmFile(appId,userId, filePath);
+      Assert.assertEquals(Ret,0);
 
       sleep(MAX_STAT_TIME);
       sessionId = tfsManager.getSessionId();
@@ -94,6 +95,7 @@ public class mergeRcMetaManager_02_meta_unlinkFile_operation extends RcBaseCase
       log.info(caseName + "===> start");
 
       boolean bRet = false;
+      int Ret;
       String localFile = "2M.jpg";
       String filePath = "/rmFile_2M" + d.format(new Date());
 //      List<String> rootServerAddrList = new ArrayList<String>();
@@ -129,8 +131,8 @@ public class mergeRcMetaManager_02_meta_unlinkFile_operation extends RcBaseCase
       bRet = tfsManager.init();
       Assert.assertTrue(bRet);
 
-      bRet = tfsManager.rmFile(appId,userId,filePath);
-      Assert.assertTrue(bRet);
+      Ret = tfsManager.rmFile(appId,userId,filePath);
+      Assert.assertEquals(Ret,0);
 
       sleep(MAX_STAT_TIME);
       sessionId = tfsManager.getSessionId();
@@ -160,6 +162,7 @@ public class mergeRcMetaManager_02_meta_unlinkFile_operation extends RcBaseCase
       log.info(caseName + "===> start");
 
       boolean bRet = false;
+      int Ret;
       String localFile = "3M.jpg";
       String filePath = "/rmFile_3M" + d.format(new Date());
       List<String> rootServerAddrList = new ArrayList<String>();
@@ -195,8 +198,8 @@ public class mergeRcMetaManager_02_meta_unlinkFile_operation extends RcBaseCase
       bRet = tfsManager.init();
       Assert.assertTrue(bRet);
 
-      bRet = tfsManager.rmFile(appId,userId,filePath);
-      Assert.assertTrue(bRet);
+      Ret = tfsManager.rmFile(appId,userId,filePath);
+      Assert.assertEquals(Ret,0);
 
       sleep(MAX_STAT_TIME);
       sessionId = tfsManager.getSessionId();
@@ -226,6 +229,7 @@ public class mergeRcMetaManager_02_meta_unlinkFile_operation extends RcBaseCase
       log.info(caseName + "===> start");
 
       boolean bRet = false;
+      int Ret;
       String localFile = "6G.jpg";
       String filePath = "/rmFile_6G" + d.format(new Date());
       long expectSize = (long) (6 * ((long) 1 << 30));
@@ -263,8 +267,8 @@ public class mergeRcMetaManager_02_meta_unlinkFile_operation extends RcBaseCase
       tfsManager.setUseNameMeta(true);
       bRet = tfsManager.init();
       Assert.assertTrue(bRet);
-      bRet = tfsManager.rmFile(appId,userId,filePath);
-      Assert.assertTrue(bRet);
+      Ret = tfsManager.rmFile(appId,userId,filePath);
+      Assert.assertEquals(Ret,0);;
 
       sleep(MAX_STAT_TIME);
       sessionId = tfsManager.getSessionId();

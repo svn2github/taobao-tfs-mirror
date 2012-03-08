@@ -240,34 +240,46 @@ public class mergeRcMetaManager_01_meta_saveFile_operation extends RcBaseCase
       Assert.assertTrue(bRet);
 
       sleep(MAX_STAT_TIME);
-      String sessionId = tfsManager.getSessionId();
-      System.out.println("sessionId is :" + sessionId);
-      //Assert.assertEquals(1, getOperTimes(sessionId, 2));
-      //Assert.assertEquals(1, getSuccTimes(sessionId, 2));
-      Assert.assertEquals(expectSize, getFileSize(sessionId, 2));
-
-      long newUsedCapacity = getUsedCapacity(appKey);
-      long newFileCount = getFileCount(appKey);
-      Assert.assertEquals(oldUsedCapacity + expectSize, newUsedCapacity);
-      //Assert.assertEquals(oldFileCount + 1, newFileCount);
-      tfsManager.destroy();
-
-      tfsManager.setRcAddr(rcAddr);
-      tfsManager.setAppKey(appKey);
-      tfsManager.setAppIp(appIp);
-      tfsManager.setUseNameMeta(true);
-      bRet = tfsManager.init();
+      
+      bRet = Proc.portOutputBlock("10.232.4.11","10.232.4.11",6060);
       Assert.assertTrue(bRet);
-
-      bRet = tfsManager.fetchFile(appId,userId, retLocalFile, filePath);
+      bRet = Proc.portOutputBlock("10.232.4.11","10.232.4.11",6062);
       Assert.assertTrue(bRet);
-
-      sleep(MAX_STAT_TIME);
-
-      sessionId = tfsManager.getSessionId();
-      //Assert.assertEquals(1, getOperTimes(sessionId, 1));
-      //Assert.assertEquals(1, getSuccTimes(sessionId, 1));
-      Assert.assertEquals(expectSize, getFileSize(sessionId, 1));
+      bRet = Proc.portOutputBlock("10.232.4.11","10.232.4.11",6064);
+      Assert.assertTrue(bRet);
+      bRet = Proc.portOutputBlock("10.232.4.11","10.232.4.11",6066);
+      Assert.assertTrue(bRet);
+      bRet = Proc.netUnblockBase("10.232.4.11");
+      Assert.assertTrue(bRet);
+      
+//      String sessionId = tfsManager.getSessionId();
+//      System.out.println("sessionId is :" + sessionId);
+//      //Assert.assertEquals(1, getOperTimes(sessionId, 2));
+//      //Assert.assertEquals(1, getSuccTimes(sessionId, 2));
+//      Assert.assertEquals(expectSize, getFileSize(sessionId, 2));
+//
+//      long newUsedCapacity = getUsedCapacity(appKey);
+//      long newFileCount = getFileCount(appKey);
+//      Assert.assertEquals(oldUsedCapacity + expectSize, newUsedCapacity);
+//      //Assert.assertEquals(oldFileCount + 1, newFileCount);
+//      tfsManager.destroy();
+//
+//      tfsManager.setRcAddr(rcAddr);
+//      tfsManager.setAppKey(appKey);
+//      tfsManager.setAppIp(appIp);
+//      tfsManager.setUseNameMeta(true);
+//      bRet = tfsManager.init();
+//      Assert.assertTrue(bRet);
+//
+//      bRet = tfsManager.fetchFile(appId,userId, retLocalFile, filePath);
+//      Assert.assertTrue(bRet);
+//
+//      sleep(MAX_STAT_TIME);
+//
+//      sessionId = tfsManager.getSessionId();
+//      //Assert.assertEquals(1, getOperTimes(sessionId, 1));
+//      //Assert.assertEquals(1, getSuccTimes(sessionId, 1));
+//      Assert.assertEquals(expectSize, getFileSize(sessionId, 1));
       tfsManager.destroy();
 
       log.info(caseName + "===> end");

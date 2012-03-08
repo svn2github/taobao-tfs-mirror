@@ -395,13 +395,15 @@ public class mergeRcMetaManager_01_rc_saveFile_operation extends RcBaseCase {
   }
 
   @Test
-  public void Function_08_saveMetaFile_1k(){
+  public void Function_08_saveMetaFile_1k()
+  {
 
     caseName = "Function_08_saveMetaFile_1k";
     log.info("<====="+caseName + "=====> start");
     
     String localFile = "1k.jpg";
     boolean bRet = false;
+    int Ret;
     
     long oldUsedCapacity = getUsedCapacity(appKey);
     long oldFileCount = getFileCount(appKey);
@@ -438,8 +440,8 @@ public class mergeRcMetaManager_01_rc_saveFile_operation extends RcBaseCase {
 //    Assert.assertEquals(oldFileCount + 1, newFileCount);
     //Assert.assertEquals(oldUsedCapacity, newUsedCapacity);
     //Assert.assertEquals(oldFileCount, newFileCount);
-    bRet = tfsManager.rmFile(appId, userId, "/mtest_new");
-    Assert.assertTrue(bRet);
+    Ret = tfsManager.rmFile(appId, userId, "/mtest_new");
+    Assert.assertEquals(Ret,0);
     //tfsManager.destroy();
 
     //int savecrc = 0;

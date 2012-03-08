@@ -16,6 +16,7 @@ import org.junit.Test;
 import org.junit.Ignore;
 
 import com.taobao.common.tfs.DefaultTfsManager;
+import com.taobao.common.tfs.ERcBaseCase;
 import com.taobao.common.tfs.RcBaseCase;
 
 public class mergeRcMetaManager_03_meta_operation_info extends RcBaseCase 
@@ -37,6 +38,7 @@ public class mergeRcMetaManager_03_meta_operation_info extends RcBaseCase
       String localFile = "10k.jpg";
       String filePath = "/pwirte_10k" + d.format(new Date());
       boolean bRet = false;
+      int IRet;
       List<String> rootServerAddrList = new ArrayList<String>();
       rootServerAddrList.add(rsAddr);
       tfsManager = new DefaultTfsManager();
@@ -50,8 +52,8 @@ public class mergeRcMetaManager_03_meta_operation_info extends RcBaseCase
       bRet = tfsManager.init();
       Assert.assertTrue(bRet);
 
-      bRet=tfsManager.createFile(appId, userId, filePath);
-      Assert.assertTrue(bRet);
+      IRet=tfsManager.createFile(appId, userId, filePath);
+      Assert.assertEquals(IRet,0);
 
       byte data[]=null;
       data=getByte(localFile);
@@ -198,7 +200,7 @@ public class mergeRcMetaManager_03_meta_operation_info extends RcBaseCase
       offset=20*(1<<10);
       dataOffset=0;
       Ret=tfsManager.write(appId, userId, filePath, offset,data, dataOffset, len);
-      Assert.assertTrue(Ret==0);
+      Assert.assertTrue(Ret<0);
 
       sleep(MAX_STAT_TIME);
       sessionId = tfsManager.getSessionId();
@@ -226,6 +228,7 @@ public class mergeRcMetaManager_03_meta_operation_info extends RcBaseCase
       String localFile = "3M.jpg";
       String filePath = "/pwite_3M" + d.format(new Date());
       boolean bRet = false;
+      int IRet;
       tfsManager = new DefaultTfsManager();
 
       long oldUsedCapacity = getUsedCapacity(appKey);
@@ -236,8 +239,8 @@ public class mergeRcMetaManager_03_meta_operation_info extends RcBaseCase
       tfsManager.setUseNameMeta(true);
       bRet = tfsManager.init();
       Assert.assertTrue(bRet); 
-      bRet=tfsManager.createFile(appId, userId, filePath);
-      Assert.assertTrue(bRet);
+      IRet=tfsManager.createFile(appId, userId, filePath);
+      Assert.assertEquals(IRet,0);
 
       byte data[]=null;
       data=getByte(localFile);
@@ -383,7 +386,7 @@ public class mergeRcMetaManager_03_meta_operation_info extends RcBaseCase
       dataOffset=0;
 
       Ret=tfsManager.write(appId, userId, filePath, offset,data, dataOffset, len);
-      Assert.assertTrue(Ret==0);
+      Assert.assertTrue(Ret<0);
 
       sleep(MAX_STAT_TIME);
       sessionId = tfsManager.getSessionId();
@@ -411,6 +414,7 @@ public class mergeRcMetaManager_03_meta_operation_info extends RcBaseCase
       String localFile = "10k.jpg";
       String filePath = "/pwrite_10k" + d.format(new Date());
       boolean bRet = false;
+      int IRet;
       long dataOffset = 0;
       tfsManager = new DefaultTfsManager();
 
@@ -423,8 +427,8 @@ public class mergeRcMetaManager_03_meta_operation_info extends RcBaseCase
       bRet = tfsManager.init();
       Assert.assertTrue(bRet);
 
-      bRet=tfsManager.createFile(appId, userId, filePath);
-      Assert.assertTrue(bRet);
+      IRet=tfsManager.createFile(appId, userId, filePath);
+      Assert.assertEquals(IRet,0);
 
       byte data[]=null;
       data=getByte(localFile);
@@ -569,7 +573,7 @@ public class mergeRcMetaManager_03_meta_operation_info extends RcBaseCase
       offset=10*(1<<10);
       dataOffset=0;
       Ret=tfsManager.write(appId, userId, filePath, offset,data, dataOffset, len);
-      Assert.assertTrue(Ret==0);
+      Assert.assertTrue(Ret<0);
 
       sleep(MAX_STAT_TIME);
       sessionId = tfsManager.getSessionId();
@@ -851,6 +855,7 @@ public class mergeRcMetaManager_03_meta_operation_info extends RcBaseCase
       log.info(caseName + "===> start");
 
       boolean bRet = false;
+      int Ret;
       String localFile = "2M.jpg";
       String filePath = "/operation_" + d.format(new Date());
 
@@ -900,19 +905,19 @@ public class mergeRcMetaManager_03_meta_operation_info extends RcBaseCase
       sessionId = tfsManager.getSessionId();
       for(int i = 0; i < 5; i++)
       {
-        bRet = tfsManager.rmFile(appId, userId, sRet[i]);
-        Assert.assertTrue(bRet);
+        Ret = tfsManager.rmFile(appId, userId, sRet[i]);
+        Assert.assertEquals(Ret,0);
 
         if(i < 3)
         {
-          bRet = tfsManager.rmFile(appId, userId, sRet[i]);
-          Assert.assertFalse(bRet);
+          Ret = tfsManager.rmFile(appId, userId, sRet[i]);
+          Assert.assertTrue(Ret<0);
         }
       }
-      bRet = tfsManager.rmFile(appId, userId, "unknown1");
-      Assert.assertFalse(bRet);
-      bRet = tfsManager.rmFile(appId, userId, "unknown2");
-      Assert.assertFalse(bRet);
+      Ret = tfsManager.rmFile(appId, userId, "unknown1");
+      Assert.assertEquals(Ret,-14010);
+      Ret = tfsManager.rmFile(appId, userId, "unknown2");
+      Assert.assertEquals(Ret,-14010);
 
       sleep(MAX_STAT_TIME);
       //	    Assert.assertTrue(getOperTimes(sessionId, 4) == 10);
