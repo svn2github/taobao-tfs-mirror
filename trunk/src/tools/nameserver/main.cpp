@@ -71,6 +71,8 @@ int cmd_quit(VSTRING&);
 int cmd_show_block(VSTRING&);
 int cmd_show_server(VSTRING& param);
 int cmd_show_machine(VSTRING& param);
+int cmd_batch(VSTRING& param);
+const char* expand_path(string& path);
 
 typedef map<string, CmdInfo> STR_INT_MAP;
 typedef STR_INT_MAP::iterator STR_INT_MAP_ITER;
@@ -319,6 +321,7 @@ void init()
   g_cmd_map["block"] = CmdNode(0, 13, cmd_show_block);
   g_cmd_map["server"] = CmdNode(0, 11, cmd_show_server);
   g_cmd_map["machine"] = CmdNode(0, 9, cmd_show_machine);
+  g_cmd_map["batch"] = CmdNode(1, 1, cmd_batch);
 
   g_sub_cmd_map["-num"] = CmdInfo(CMD_NUM, true);
   g_sub_cmd_map["-bid"] = CmdInfo(CMD_BLOCK_ID, true);
@@ -390,6 +393,7 @@ void print_help()
         "  default compare server info\n");
   }
 
+  fprintf(stderr, "batch      exec cmd in batch\n");
   fprintf(stderr, "quit(q)      quit\n");
   fprintf(stderr, "exit      exit\n");
   fprintf(stderr, "help(h)      show help info\n");
@@ -456,6 +460,63 @@ int cmd_show_machine(VSTRING& param)
   return ret;
 }
 
+int cmd_batch(VSTRING& param)
+{
+  const char* batch_file = expand_path(const_cast<string&>(param[0]));
+  FILE* fp = fopen(batch_file, "rb");
+  int ret = TFS_SUCCESS;
+  if (fp == NULL)
+  {
+    fprintf(stderr, "open file error: %s\n\n", batch_file);
+    ret = TFS_ERROR;
+  }
+  else
+  {
+    int32_t error_count = 0;
+    int32_t count = 0;
+    VSTRING params;
+    char buffer[MAX_CMD_SIZE];
+    while (fgets(buffer, MAX_CMD_SIZE, fp))
+    {
+      if ((ret = do_cmd(buffer)) == TFS_ERROR)
+      {
+        error_count++;
+      }
+      if (++count % 100 == 0)
+      {
+        fprintf(stdout, "total: %d, %d errors.\r", count, error_count);
+        fflush(stdout);
+      }
+      if (TFS_CLIENT_QUIT == ret)
+      {
+        break;
+      }
+    }
+    fprintf(stdout, "total: %d, %d errors.\n\n", count, error_count);
+    fclose(fp);
+  }
+  return TFS_SUCCESS;
+}
+
+const char* expand_path(string& path)
+{
+  if (path.size() > 0 && '~' == path.at(0) &&
+      (1 == path.size() ||                      // just one ~
+       (path.size() > 1 && '/' == path.at(1)))) // like ~/xxx
+  {
+    char* home_path = getenv("HOME");
+    if (NULL == home_path)
+    {
+      fprintf(stderr, "can't get HOME path: %s\n", strerror(errno));
+    }
+    else
+    {
+      path.replace(0, 1, home_path);
+    }
+  }
+  return path.c_str();
+}
+
 int usage(const char *name)
 {
   fprintf(stderr, "\n****************************************************************************** \n");
@@ -493,16 +554,37 @@ inline bool is_whitespace(char c)
 }
 inline char* strip_line(char* line)
 {
-  while (is_whitespace(*line))
+  // trim start postion
+  while(is_whitespace(*line))
   {
     line++;
   }
-  int32_t end = strlen(line);
-  while (end && (is_whitespace(line[end-1]) || '\n' == line[end-1] || '\r' == line[end-1]))
+
+  // trim end postion
+  int end_pos = strlen(line);
+  while (end_pos && (is_whitespace(line[end_pos-1]) || '\n' == line[end_pos-1] || '\r' == line[end_pos-1]))
   {
-    end--;
+    end_pos--;
   }
-  line[end] = '\0';
+  line[end_pos] = '\0';
+
+  // merge whitespace
+  char new_line[CMD_MAX_LEN];
+  snprintf(new_line, CMD_MAX_LEN + 1, "%s", line);
+
+  int j = 0;
+  for (int i = 0; i < end_pos; i++)
+  {
+    if (i+1 <= end_pos && line[i] == ' ' && line[i+1] == ' ')
+    {
+      continue;
+    }
+    new_line[j] = line[i];
+    j++;
+  }
+  new_line[j] = '\0';
+  snprintf(line, end_pos + 1, "%s", new_line);
+
   return line;
 }
 
@@ -575,7 +657,13 @@ int main(int argc,char** argv)
     }
     else
     {
-      usage(argv[0]);
+      VSTRING param;
+      for (i = optind; i < argc; i++)
+      {
+        param.clear();
+        param.push_back(argv[i]);
+        cmd_batch(param);
+      }
     }
   }
 }
