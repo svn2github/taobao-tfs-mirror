@@ -168,19 +168,30 @@ namespace tfs
 
     int PhysicalBlock::dump_block_prefix()
     {
-      TBSYS_LOG(DEBUG, "dump block prefix. logic blockid: %u, prev physical blockid: %u, next physical blockid: %u",
-          block_prefix_.logic_blockid_, block_prefix_.prev_physic_blockid_, block_prefix_.next_physic_blockid_);
+      int ret = TFS_SUCCESS;
       if (NULL == prefix_op_)
       {
-        return file_op_->pwrite_file((const char*) (&block_prefix_), sizeof(BlockPrefix), 0);
+        ret = file_op_->pwrite_file((const char*) (&block_prefix_), sizeof(BlockPrefix), 0);
+        if (TFS_SUCCESS == ret)
+        {
+          file_op_->flush_file();  // if fail, it will be flushed in background
+        }
       }
       else
       {
         TBSYS_LOG(INFO, "dump block prefix by new interface %d", physical_block_id_);
-        return prefix_op_->pwrite_file((const char*) (&block_prefix_), sizeof(BlockPrefix),
+        ret = prefix_op_->pwrite_file((const char*) (&block_prefix_), sizeof(BlockPrefix),
                 (physical_block_id_ - 1) * sizeof(BlockPrefix));
+        if (TFS_SUCCESS == ret)
+        {
+          file_op_->flush_file();  // if fail, it will be flushed in background
+        }
       }
-      // flush here ???
+
+      TBSYS_LOG(DEBUG, "dump block prefix. logic blockid: %u, prev physical blockid: %u, next physical blockid: %u, ret: %d",
+          block_prefix_.logic_blockid_, block_prefix_.prev_physic_blockid_, block_prefix_.next_physic_blockid_, ret);
+
+      return ret;
     }
 
     void PhysicalBlock::get_block_prefix(BlockPrefix& block_prefix)
