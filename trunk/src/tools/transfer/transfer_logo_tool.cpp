@@ -13,9 +13,6 @@
 *      - initial release
 *   duanfei <duanfei@taobao.com>
 *      -modify-2011/12/29
-*   linqing <linqing.zyd@taobao.com>
-*      -modify-2012/02/24
-*
 */
 
 #include <tbsys.h>
@@ -34,23 +31,35 @@ static int64_t hash_count = 0;
 //iput_file
 //source_file;/dest_file
 
+enum ProcStage
+{
+  PARSE_LINE,
+  OPEN_SOURCE,
+  READ_SOURCE,
+  SAVE_DEST
+};
+
+ProcStage g_stage = PARSE_LINE;
+
 static int64_t get_source(const char* source_name, char* buff)
 {
   int64_t source_count  = -1;
   if (*source_name == '/')
   {
     //get data from local file
+    g_stage = OPEN_SOURCE;
     int fd = ::open(source_name, O_RDONLY);
     if (fd < 0)
     {
-      printf("open local file %s error, errno = %d\n", source_name, errno);
+      fprintf(stderr, "open local file %s error, errno = %d\n", source_name, errno);
     }
     else
     {
+      g_stage = READ_SOURCE;
       source_count = ::read(fd, buff, buff_size);
       if (source_count < 0 || source_count >= buff_size)
       {
-        printf("read file %s error %ld, errno = %d\n", source_name, source_count, errno);
+        fprintf(stderr, "read file %s error %ld, errno = %d\n", source_name, source_count, errno);
         source_count = -1;
       }
       ::close(fd);
@@ -60,19 +69,20 @@ static int64_t get_source(const char* source_name, char* buff)
         (*source_name == 'T' || *source_name == 'L') &&
         isdigit(*(source_name + 1)))
   {
-
+    g_stage = OPEN_SOURCE;
     //get data from tfs
     int fd = rc_client->open(source_name, NULL, tfs::client::RcClient::READ);
     if (fd < 0)
     {
-      printf("open tfs file %s error\n", source_name);
+      fprintf(stderr, "open tfs file %s error\n", source_name);
     }
     else
     {
+      g_stage = READ_SOURCE;
       source_count = rc_client->read(fd, buff, buff_size);
       if (source_count < 0 || source_count > buff_size)
       {
-        printf("read file %s error %ld\n", source_name, source_count);
+        fprintf(stderr, "read file %s error %ld\n", source_name, source_count);
         source_count = -1;
       }
       rc_client->close(fd);
@@ -80,7 +90,7 @@ static int64_t get_source(const char* source_name, char* buff)
   }
   else
   {
-    printf("unknow_source %s\n", source_name);
+    fprintf(stderr, "unknow_source %s\n", source_name);
     source_count = -1;
   }
   return source_count;
@@ -88,17 +98,18 @@ static int64_t get_source(const char* source_name, char* buff)
 
 static int64_t write_dest(const char* dest_name, char* buff, const int64_t size)
 {
+  g_stage = SAVE_DEST;
   int64_t write_count = -1;
   uint32_t  hash_value = tbsys::CStringUtil::murMurHash((const void*)(dest_name), strlen(dest_name));
   int32_t   uid = (hash_value % hash_count + 1);
   write_count = rc_client->save_buf(app_id, uid, buff, size, dest_name);
   if (write_count >= 0 || write_count == EXIT_TARGET_EXIST_ERROR) // exist or success
   {
-    printf("%s ok\n", dest_name);
+    fprintf(stderr, "%s ok\n", dest_name);
   }
   else
   {
-    printf("%s error %"PRI64_PREFIX"d\n", dest_name, write_count);
+    fprintf(stderr, "%s error %"PRI64_PREFIX"d\n", dest_name, write_count);
   }
   return write_count;
 }
@@ -107,7 +118,7 @@ int main(int argc ,char* argv[])
 {
   if (argc != 5)
   {
-    printf("usage %s input_text  rcaddr app_key user_count\n", argv[0]);
+    fprintf(stderr, "usage %s input_text  rcaddr app_key user_count\n", argv[0]);
     return 0;
   }
 
@@ -116,7 +127,7 @@ int main(int argc ,char* argv[])
   int ret = rc_client->initialize(argv[2], argv[3], "10.246.123.3");
   if (ret != TFS_SUCCESS)
   {
-    printf("rc_client initialize error %s\n", argv[2]);
+    fprintf(stderr, "rc_client initialize error %s\n", argv[2]);
     return -1;
   }
 
@@ -125,7 +136,7 @@ int main(int argc ,char* argv[])
   FILE* fp = ::fopen(argv[1], "r");
   if (NULL == fp)
   {
-    printf("open local file %s error\n", argv[1]);
+    fprintf(stderr, "open local file %s error\n", argv[1]);
     return -1;
   }
 
@@ -135,7 +146,7 @@ int main(int argc ,char* argv[])
   char* buff = (char*)::malloc(buff_size);
   if (buff == NULL)
   {
-    printf("alloc memory fail\n");
+    fprintf(stderr, "alloc memory fail\n");
     return -1;
   }
   char line_buff[4096];
@@ -143,6 +154,7 @@ int main(int argc ,char* argv[])
   char* p_dest = NULL;
   while(fgets(line_buff, 4096, fp)!= NULL)
   {
+    g_stage = PARSE_LINE;
     // TBSYS_LOG(WARN, "deal %s", line_buff);
     p_source = line_buff;
     p_dest = strstr(line_buff, ":");
@@ -152,9 +164,10 @@ int main(int argc ,char* argv[])
     }
     else
     {
-      printf("deal error %s\n", line_buff);
+      fprintf(stderr, "deal error %s\n", line_buff);
       continue;
     }
+
     size_t count = strlen(p_dest);
     char *end = p_dest + count - 1;
     while (*end == '\n' || *end == '\r' || *end ==' ')
@@ -164,9 +177,28 @@ int main(int argc ,char* argv[])
     }
 
     int64_t source_count = get_source(p_source, buff);
-    if (source_count >= 0)
+    int64_t dest_count = -1;
+    if (source_count < 0)
     {
-      write_dest(p_dest, buff, source_count);
+      printf("%s:%s fail read, stage=%d source=%"PRI64_PREFIX"d\n", p_source, p_dest, g_stage, source_count);
+    }
+    else
+    {
+      dest_count = write_dest(p_dest, buff, source_count);
+      if (dest_count < 0)
+      {
+        printf("%s:%s fail all, stage=%d source=%"PRI64_PREFIX"d dest=%"PRI64_PREFIX"d\n",
+            p_source, p_dest, g_stage, source_count, dest_count);
+      }
+      else if(source_count != dest_count)
+      {
+        printf("%s:%s fail partial, stage=%d source=%"PRI64_PREFIX"d dest=%"PRI64_PREFIX"d\n",
+            p_source, p_dest, g_stage, source_count, dest_count);
+      }
+      else
+      {
+        printf("%s:%s ok\n", p_source, p_dest);
+      }
     }
   }
 
