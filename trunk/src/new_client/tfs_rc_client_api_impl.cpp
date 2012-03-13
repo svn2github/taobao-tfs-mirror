@@ -823,7 +823,7 @@ namespace tfs
         string ns_addr;
         do
         {
-          ns_addr = get_ns_addr(NULL, RcClient::READ, ns_get_index++);
+          ns_addr = get_ns_addr(file_name, RcClient::READ, ns_get_index++);
           if (ns_addr.empty())
           {
             break;
@@ -844,7 +844,7 @@ namespace tfs
         string ns_addr;
         do
         {
-          ns_addr = get_ns_addr(NULL, RcClient::READ, ns_get_index++);
+          ns_addr = get_ns_addr(file_name, RcClient::READ, ns_get_index++);
           if (ns_addr.empty())
           {
             break;
