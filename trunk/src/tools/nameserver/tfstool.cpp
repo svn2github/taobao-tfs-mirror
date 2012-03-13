@@ -1050,7 +1050,7 @@ int cmd_stat_file_raw(const VSTRING& param)
   if (size > 1)
   {
     //TBSYS_LOG(DEBUG, "app_key: %s", param[1].c_str());
-    strncpy(app_key, param[1].c_str(), 256);
+    strncpy(appkey, param[1].c_str(), 256);
     appkey[256] = '\0';
   }
   else
