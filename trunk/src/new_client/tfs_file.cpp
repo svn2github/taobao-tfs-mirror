@@ -142,6 +142,12 @@ int TfsFile::open_ex(const char* file_name, const char* suffix, const int32_t fl
           file_status_ = TFS_FILE_OPEN_YES;
 
         }
+
+        // check if force_read
+        if ((flags & T_READ) && (flags_ & T_FORCE))
+        {
+            meta_seg_->read_flag_ = READ_DATA_OPTION_FLAG_FORCE;
+        }
       }
     }
   }

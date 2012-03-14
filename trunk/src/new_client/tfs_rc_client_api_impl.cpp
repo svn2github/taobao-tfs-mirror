@@ -321,6 +321,10 @@ namespace tfs
           {
             flag = common::T_READ | common::T_STAT;
           }
+          else if(RcClient::READ_FORCE == mode)
+          {
+            flag = common::T_READ | common::T_STAT | common::T_FORCE;
+          }
 
         }
         ret = flag != -1 ? TFS_SUCCESS : TFS_ERROR;

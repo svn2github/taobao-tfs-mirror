@@ -36,6 +36,7 @@ namespace tfs
           WRITE = 4, //raw tfs will not use this. only CREATE.
                      //this for name meta tfs.
                      //use create create a tfs_file, use write for writing or appendding
+          READ_FORCE = 8
         };
       public:
         RcClient();
