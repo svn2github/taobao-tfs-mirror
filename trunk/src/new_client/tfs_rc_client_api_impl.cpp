@@ -1681,58 +1681,93 @@ namespace tfs
         return read_count;
       }
 
+      int64_t RcClientImpl::save_file_ex(const char* ns_addr, const int64_t app_id, const int64_t uid,
+            const char* local_file, const char* tfs_name)
+      {
+        int64_t start_time = tbsys::CTimeUtil::getTime();
+        int64_t saved_size = name_meta_client_->save_file(ns_addr,
+                    app_id, uid, local_file, tfs_name);
+        int64_t response_time = tbsys::CTimeUtil::getTime() - start_time;
+        add_stat_info(OPER_WRITE, saved_size, response_time, saved_size >= 0);
+        return saved_size;
+      }
+
+      int64_t RcClientImpl::fetch_file_ex(const char* ns_addr, const int64_t app_id, const int64_t uid,
+            const char* local_file, const char* tfs_name)
+      {
+        int64_t start_time = tbsys::CTimeUtil::getTime();
+        int64_t fetched_size = name_meta_client_->fetch_file(ns_addr,
+                  app_id, uid, local_file, tfs_name);
+         int64_t response_time = tbsys::CTimeUtil::getTime() - start_time;
+         add_stat_info(OPER_READ, fetched_size, response_time, fetched_size >= 0);
+         return fetched_size;
+      }
+
+      int64_t RcClientImpl::save_buf_ex(const char* ns_addr, const int64_t app_id, const int64_t uid,
+            const char* file_path, const char* buffer, const int64_t length)
+      {
+        int64_t start_time = tbsys::CTimeUtil::getTime();
+        int64_t saved_size = name_meta_client_->write(ns_addr,
+                  app_id, uid, file_path, buffer, length);
+        int64_t response_time = tbsys::CTimeUtil::getTime() - start_time;
+        add_stat_info(OPER_WRITE, saved_size, response_time, saved_size >= 0);
+        return saved_size;
+      }
+
+      int64_t RcClientImpl::fetch_buf_ex(const char* ns_addr, const int64_t app_id, const int64_t uid,
+            char* buffer, const int64_t offset, const int64_t length, const char* tfs_name)
+      {
+        int64_t start_time = tbsys::CTimeUtil::getTime();
+        int64_t fetched_size = name_meta_client_->read(ns_addr,
+                  app_id, uid, tfs_name, buffer, offset, length);
+        int64_t response_time = tbsys::CTimeUtil::getTime() - start_time;
+        add_stat_info(OPER_READ, fetched_size, response_time, fetched_size >= 0);
+        return fetched_size;
+      }
+
       int64_t RcClientImpl::save_file(const int64_t app_id, const int64_t uid,
           const char* local_file, const char* tfs_file_name)
       {
         // tfs_file_name will be checked in sub interface
         int64_t saved_size = -1;
         int ret = check_init_stat();
-        if(TFS_SUCCESS != ret)
+        if (TFS_SUCCESS != ret)
         {
-          TBSYS_LOG(ERROR, "not initialized, ret: %d", ret);
+          TBSYS_LOG(ERROR, "RcClient not init");
+        }
+        else if (NULL == local_file || NULL == tfs_file_name || '/' != tfs_file_name[0])
+        {
+          ret = EXIT_INVALID_FILE_NAME;
+          TBSYS_LOG(ERROR, "invalid parameter");
         }
         else
         {
-          if (app_id_ != app_id)   // check app_id is matched
+          // parse parent dir and create it
+          char parent_dir[MAX_PATH_LENGTH];
+          if (TFS_SUCCESS != (ret = Func::get_parent_dir(tfs_file_name, parent_dir, MAX_PATH_LENGTH)))
           {
-            ret = EXIT_APPID_PERMISSION_DENY;
-            TBSYS_LOG(ERROR, "can't not write other app's data");
+            TBSYS_LOG(ERROR, "get parent dir error: %s, ret: %d", tfs_file_name, ret);
+          }
+          else if (0 != strcmp("/", parent_dir) &&   // not root, and create dir fail
+              TFS_SUCCESS != (ret = create_dir_with_parents(uid, parent_dir)) &&
+              EXIT_TARGET_EXIST_ERROR != ret)
+          {
+            TBSYS_LOG(ERROR, "create dir with parents error: %s, ret: %d", parent_dir, ret);
           }
           else
           {
-            if (NULL == local_file || NULL == tfs_file_name || '/' != tfs_file_name[0])
+            ret = TFS_SUCCESS;   // here ret may equal to EXIT_TARGET_EXIST_ERROR
+            int ns_get_index = 0;
+            string ns_addr;
+            while (saved_size < 0)
             {
-              ret = EXIT_INVALID_FILE_NAME;
-              TBSYS_LOG(ERROR, "invalid parameter");
-            }
-            else
-            {
-              // parse parent dir and create it
-              char parent_dir[MAX_PATH_LENGTH];
-              if (TFS_SUCCESS != (ret = Func::get_parent_dir(tfs_file_name, parent_dir, MAX_PATH_LENGTH)))
+              ns_addr = get_ns_addr(NULL, RcClient::WRITE, ns_get_index++);
+              if(ns_addr.empty())
               {
-                TBSYS_LOG(ERROR, "get parent dir error: %s, ret: %d", tfs_file_name, ret);
+                break;
               }
-              else if (0 != strcmp("/", parent_dir) &&   // not root, and create dir fail
-                  TFS_SUCCESS != (ret = create_dir_with_parents(uid, parent_dir)))
-              {
-                TBSYS_LOG(ERROR, "create dir with parents error: %s, ret: %d", parent_dir, ret);
-              }
-              else
-              {
-                int ns_get_index = 0;
-                string ns_addr;
-                while (saved_size < 0)
-                {
-                  ns_addr = get_ns_addr(NULL, RcClient::WRITE, ns_get_index);
-                  if(ns_addr.empty())
-                  {
-                    break;
-                  }
-                  saved_size = name_meta_client_->save_file(ns_addr.c_str(),
-                      app_id, uid, local_file, tfs_file_name);
-                }
-              }
+              saved_size = save_file_ex(ns_addr.c_str(),
+                  app_id, uid, local_file, tfs_file_name);
             }
           }
         }
@@ -1742,51 +1777,48 @@ namespace tfs
       int64_t RcClientImpl::save_buf(const int64_t app_id, const int64_t uid,
           const char* buf, const int64_t buf_len, const char* tfs_file_name)
       {
-        int ret = TFS_SUCCESS;
         int64_t saved_size = -1;
-        ret = check_init_stat();
+        int ret = check_init_stat();
         if (TFS_SUCCESS != ret)
         {
-          TBSYS_LOG(ERROR, "not initialized, ret: %d", ret);
+          TBSYS_LOG(ERROR, "RcClient not init");
+        }
+        else if (NULL == tfs_file_name || '/' != tfs_file_name[0])
+        {
+          ret = EXIT_INVALID_FILE_NAME;
+          TBSYS_LOG(ERROR, "invalid parameter");
         }
         else
         {
-          if (NULL == tfs_file_name || '/' != tfs_file_name[0])
+          // parse parent dir and create it
+          char parent_dir[MAX_PATH_LENGTH];
+          if (TFS_SUCCESS != (ret = Func::get_parent_dir(tfs_file_name, parent_dir, MAX_PATH_LENGTH)))
           {
-            ret = EXIT_INVALID_FILE_NAME;
-            TBSYS_LOG(ERROR, "invalid parameter");
+            TBSYS_LOG(ERROR, "get parent dir error: %s, ret: %d", tfs_file_name, ret);
+          }
+          else if (0 != strcmp("/", parent_dir) &&   // not root, and create dir fail
+              TFS_SUCCESS != (ret = create_dir_with_parents(uid, parent_dir)) &&
+              EXIT_TARGET_EXIST_ERROR != ret)
+          {
+            TBSYS_LOG(ERROR, "create dir with parents error: %s, ret: %d", parent_dir, ret);
+          }
+          else if (TFS_SUCCESS != (ret = create_file(uid, tfs_file_name)))
+          {
+            TBSYS_LOG(ERROR, "create file error: %s, ret: %d", tfs_file_name, ret);
           }
           else
           {
-            // parse parent dir and create it
-            char parent_dir[MAX_PATH_LENGTH];
-            if (TFS_SUCCESS != (ret = Func::get_parent_dir(tfs_file_name, parent_dir, MAX_PATH_LENGTH)))
+            int ns_get_index = 0;
+            string ns_addr;
+            while (saved_size < 0)
             {
-              TBSYS_LOG(ERROR, "get parent dir error: %s, ret: %d", tfs_file_name, ret);
-            }
-            else if (0 != strcmp("/", parent_dir) &&   // not root, and create dir fail
-                TFS_SUCCESS != (ret = create_dir_with_parents(uid, parent_dir)))
-            {
-              TBSYS_LOG(ERROR, "create dir with parents error: %s, ret: %d", parent_dir, ret);
-            }
-            else if (TFS_SUCCESS != (ret = create_file(uid, tfs_file_name)))
-            {
-              TBSYS_LOG(ERROR, "create file error: %s, ret: %d", tfs_file_name, ret);
-            }
-            else
-            {
-              int ns_get_index = 0;
-              string ns_addr;
-              while (saved_size < 0)
+              ns_addr = get_ns_addr(NULL, RcClient::WRITE, ns_get_index++);
+              if(ns_addr.empty())
               {
-                ns_addr = get_ns_addr(NULL, RcClient::WRITE, ns_get_index);
-                if(ns_addr.empty())
-                {
-                  break;
-                }
-                saved_size = name_meta_client_->write(ns_addr.c_str(),
-                        app_id, uid, tfs_file_name, buf, 0, buf_len);
+                break;
               }
+              saved_size = save_buf_ex(ns_addr.c_str(),
+                      app_id, uid, tfs_file_name, buf, buf_len);
             }
           }
         }
@@ -1797,8 +1829,12 @@ namespace tfs
           const char* local_file, const char* tfs_file_name)
       {
         int64_t fetched_size = -1;
-        int ret = TFS_SUCCESS;
-        if (NULL == local_file || NULL == tfs_file_name
+        int ret = check_init_stat();
+        if (TFS_SUCCESS != ret)
+        {
+          TBSYS_LOG(ERROR, "RcClient not init");
+        }
+        else if (NULL == local_file || NULL == tfs_file_name
             || '/' != tfs_file_name[0])
         {
           ret = EXIT_INVALID_FILE_NAME;
@@ -1806,78 +1842,59 @@ namespace tfs
         }
         else
         {
-          ret = check_init_stat();
-          if (TFS_SUCCESS == ret)
+          int ns_get_index = 0;
+          string ns_addr;
+          while (fetched_size < 0)
           {
-            int ns_get_index = 0;
-            string ns_addr;
-            while (fetched_size < 0)
+            ns_addr = get_ns_addr(NULL, RcClient::READ, ns_get_index++);
+            if(ns_addr.empty())
             {
-              ns_addr = get_ns_addr(NULL, RcClient::WRITE, ns_get_index);
-              if(ns_addr.empty())
-              {
-                break;
-              }
-              fetched_size = name_meta_client_->fetch_file(ns_addr.c_str(),
-                  app_id, uid, local_file, tfs_file_name);
+              break;
             }
+            fetched_size = fetch_file_ex(ns_addr.c_str(),
+                app_id, uid, local_file, tfs_file_name);
           }
         }
         return TFS_SUCCESS != ret? ret: fetched_size;
       }
 
-      //int64_t RcClientImpl::save_file(const int64_t app_id, const int64_t uid,
-      //    const char* local_file, const char* file_path)
-      //{
-      //  int64_t saved_size = -1;
-      //  if (app_id_ != app_id)
-      //  {
-      //    saved_size = EXIT_APPID_PERMISSION_DENY;
-      //    TBSYS_LOG(ERROR, "can not write other app_id");
-      //  }
-      //  else
-      //  {
-      //    int ret = check_init_stat();
-      //    if (TFS_SUCCESS == ret)
-      //    {
-      //      int ns_get_index = 0;
-      //      string ns_addr;
-      //      do
-      //      {
-      //        ns_addr = get_ns_addr(NULL, RcClient::WRITE, ns_get_index++);
-      //        if (ns_addr.empty())
-      //        {
-      //          break;
-      //        }
-      //        saved_size = name_meta_client_->save_file(ns_addr.c_str(), app_id, uid, local_file, file_path);
-      //      } while(saved_size < 0);
-      //    }
-      //  }
-      //  return saved_size;
-      //}
-
-      //int RcClientImpl::fetch_file(const int64_t app_id, const int64_t uid,
-      //    const char* local_file, const char* file_path)
-      //{
-      //  int ret = check_init_stat();
-      //  if (TFS_SUCCESS == ret)
-      //  {
-      //    int ns_get_index = 0;
-      //    string ns_addr;
-      //    do
-      //    {
-      //      ns_addr = get_ns_addr(NULL, RcClient::READ, ns_get_index++);
-      //      if (ns_addr.empty())
-      //      {
-      //        break;
-      //      }
-      //      ret = name_meta_client_->fetch_file(ns_addr.c_str(), app_id, uid, local_file, file_path);
-      //    } while(ret != TFS_SUCCESS);
-      //  }
-      //  return ret;
-      //}
-
-
+      int64_t RcClientImpl::fetch_buf(const int64_t app_id, const int64_t uid,
+          char* buffer, const int64_t offset, const int64_t length, const char* tfs_file_name)
+      {
+        int64_t fetched_size = -1;
+        int ret = check_init_stat();
+        if (TFS_SUCCESS != ret)
+        {
+          TBSYS_LOG(ERROR, "RcClient not init");
+        }
+        else if (NULL == tfs_file_name
+            || '/' != tfs_file_name[0])
+        {
+          ret = EXIT_INVALID_FILE_NAME;
+          TBSYS_LOG(ERROR, "invalid parameter");
+        }
+        else if (NULL == buffer || length < 0 || offset < 0)
+        {
+          ret = EXIT_INVALID_ARGU;
+          TBSYS_LOG(ERROR, "invalid argument");
+        }
+        else
+        {
+          int ns_get_index = 0;
+          string ns_addr;
+          while (fetched_size < 0)
+          {
+            ns_addr = get_ns_addr(NULL, RcClient::READ, ns_get_index++);
+            if(ns_addr.empty())
+            {
+              break;
+            }
+            fetched_size = fetch_buf_ex(ns_addr.c_str(),
+                app_id, uid, buffer, offset, length, tfs_file_name);
+          }
+        }
+        return TFS_SUCCESS != ret? ret: fetched_size;
+      }
 
       TfsRetType RcClientImpl::remove_fdinfo(const int fd, fdInfo& fdinfo)
       {

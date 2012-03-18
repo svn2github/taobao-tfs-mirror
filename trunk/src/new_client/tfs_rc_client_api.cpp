@@ -218,10 +218,10 @@ namespace tfs
       return impl_->pwrite(fd, buf, count, offset);
     }
 
-    int64_t RcClient::save_file(const int64_t app_id, const int64_t uid,
+    int64_t RcClient::save_file(const int64_t uid,
         const char* local_file, const char* tfs_file_name)
     {
-      return impl_->save_file(app_id, uid, local_file, tfs_file_name);
+      return impl_->save_file(get_app_id(), uid, local_file, tfs_file_name);
     }
 
     int64_t RcClient::fetch_file(const int64_t app_id, const int64_t uid,
@@ -230,10 +230,16 @@ namespace tfs
       return impl_->fetch_file(app_id, uid, local_file, tfs_file_name);
     }
 
-    int64_t RcClient::save_buf(const int64_t app_id, const int64_t uid,
+    int64_t RcClient::save_buf(const int64_t uid,
         const char* buf, const int32_t buf_len, const char* tfs_file_name)
     {
-      return impl_->save_buf(app_id, uid, buf, buf_len, tfs_file_name);
+      return impl_->save_buf(get_app_id(), uid, buf, buf_len, tfs_file_name);
+    }
+
+    int64_t RcClient::fetch_buf(const int64_t app_id, const int64_t uid,
+          char* buffer, const int64_t offset, const int64_t length, const char* tfs_file_name)
+    {
+      return impl_->fetch_buf(app_id, uid, buffer, offset, length, tfs_file_name);
     }
 
   }

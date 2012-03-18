@@ -126,6 +126,9 @@ namespace tfs
         int64_t fetch_file(const int64_t app_id, const int64_t uid,
             const char* local_file, const char* tfs_file_name);
 
+        int64_t fetch_buf(const int64_t app_id, const int64_t uid,
+          char* buffer, const int64_t offset, const int64_t length, const char* tfs_file_name);
+
       private:
         DISALLOW_COPY_AND_ASSIGN(RcClientImpl);
 
@@ -171,6 +174,18 @@ namespace tfs
         void calculate_ns_info(const common::BaseInfo& base_info);
 
         void parse_duplicate_info(const std::string& duplicate_info);
+
+        int64_t save_file_ex(const char* ns_addr, const int64_t app_id, const int64_t uid,
+            const char* local_file, const char* tfs_name);
+
+        int64_t fetch_file_ex(const char* ns_addr, const int64_t app_id, const int64_t uid,
+            const char* local_file, const char* tfs_name);
+
+        int64_t save_buf_ex(const char* ns_addr, const int64_t app_id, const int64_t uid,
+            const char* file_path, const char* buffer, const int64_t length);
+
+        int64_t fetch_buf_ex(const char* ns_addr, const int64_t app_id, const int64_t uid,
+            char* buffer, const int64_t offset, const int64_t length, const char* tfs_name);
 
       public:
 
