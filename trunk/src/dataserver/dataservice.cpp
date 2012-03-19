@@ -1415,10 +1415,14 @@ namespace tfs
       {
         real_read_len = read_len + FILEINFO_SIZE;
       }
-      else //not the first fragment
+      else if (read_offset > 0) //not the first fragment
       {
         real_read_len = read_len;
         read_offset += FILEINFO_SIZE;
+      }
+      else
+      {
+        TBSYS_LOG(ERROR, "read data failed, invalid offset:%d", read_offset);
       }
 
       if (real_read_len > 0)
@@ -1519,10 +1523,14 @@ namespace tfs
       {
         real_read_len = read_len + FILEINFO_SIZE;
       }
-      else //not the first fragment
+      else if (read_offset > 0)//not the first fragment
       {
         real_read_len = read_len;
         read_offset += FILEINFO_SIZE;
+      }
+      else
+      {
+        TBSYS_LOG(ERROR, "read data failed, invalid offset:%d", read_offset);
       }
 
       if (real_read_len > 0)
