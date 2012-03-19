@@ -102,7 +102,7 @@ static int64_t write_dest(const char* dest_name, char* buff, const int64_t size)
   int64_t write_count = -1;
   uint32_t  hash_value = tbsys::CStringUtil::murMurHash((const void*)(dest_name), strlen(dest_name));
   int32_t   uid = (hash_value % hash_count + 1);
-  write_count = rc_client->save_buf(app_id, uid, buff, size, dest_name);
+  write_count = rc_client->save_buf(uid, buff, size, dest_name);
   if (write_count >= 0 || write_count == EXIT_TARGET_EXIST_ERROR) // exist or success
   {
     fprintf(stderr, "%s ok\n", dest_name);
@@ -164,7 +164,7 @@ int main(int argc ,char* argv[])
     }
     else
     {
-      fprintf(stderr, "deal error %s\n", line_buff);
+      printf("parse source:dest error %s\n", line_buff);
       continue;
     }
 
@@ -174,6 +174,12 @@ int main(int argc ,char* argv[])
     {
       *end = 0;
       end--;
+    }
+
+    if (0 == strlen(p_source) || 0 == strlen(p_dest))
+    {
+      printf("parse source:dest error %s\n", line_buff);
+      continue;
     }
 
     int64_t source_count = get_source(p_source, buff);
@@ -197,7 +203,7 @@ int main(int argc ,char* argv[])
       }
       else
       {
-        printf("%s:%s ok\n", p_source, p_dest);
+        printf("%s:%s transfer ok\n", p_source, p_dest);
       }
     }
   }
