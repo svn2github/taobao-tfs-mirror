@@ -38,7 +38,7 @@ namespace tfs
         size_t second_pos = session_id.find_first_of(SEPARATOR_KEY, first_pos + 1);
         if (string::npos != second_pos)
         {
-          session_ip = atoll(session_id.substr(first_pos + 1, second_pos - first_pos).c_str());
+          session_ip = atoll(session_id.substr(first_pos + 1, second_pos - first_pos - 1).c_str());
         }
         else
         {
