@@ -1254,9 +1254,6 @@ namespace tfs
         int ret = file_op->open_file();
         if (ret < 0)
         {
-          tbsys::gDelete(file_op);
-          tbsys::gDeleteA(block_prefix);
-          tbsys::gDelete(file_formater);
           TBSYS_LOG(ERROR, "allocate space error. ret: %d, error: %d, error desc: %s\n", ret, errno, strerror(errno));
           tbsys::gDelete(file_op);
           tbsys::gDeleteA(block_prefix);
@@ -1267,9 +1264,6 @@ namespace tfs
         ret = file_formater->block_file_format(file_op->get_fd(), block_size);
         if (TFS_SUCCESS != ret)
         {
-          tbsys::gDelete(file_op);
-          tbsys::gDeleteA(block_prefix);
-          tbsys::gDelete(file_formater);
           TBSYS_LOG(ERROR, "allocate space error. ret: %d, error: %d, error desc: %s\n", ret, errno, strerror(errno));
           tbsys::gDelete(file_op);
           tbsys::gDeleteA(block_prefix);
@@ -1279,9 +1273,6 @@ namespace tfs
         ret = file_op->pwrite_file(block_prefix, prefix_size, 0);
         if (TFS_SUCCESS != ret)
         {
-          tbsys::gDelete(file_op);
-          tbsys::gDeleteA(block_prefix);
-          tbsys::gDelete(file_formater);
           TBSYS_LOG(ERROR, "write block file error. physcial blockid: %d, block type: %d, ret: %d.", i, block_type,
               ret);
           tbsys::gDelete(file_op);
