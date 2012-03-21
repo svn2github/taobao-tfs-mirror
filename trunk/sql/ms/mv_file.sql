@@ -51,6 +51,8 @@ begin
       select row_count() into aff_row;
       if aff_row >= 1 then
         set o_ret = 1;
+      else 
+        set o_ret = -14001;
       end if;
     else
       set o_ret = -14002;
