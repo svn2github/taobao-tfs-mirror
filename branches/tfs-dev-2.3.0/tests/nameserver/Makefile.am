@@ -14,13 +14,26 @@ LDADD=$(top_builddir)/src/nameserver/libnameserver.a \
       $(TBLIB_ROOT)/lib/libtbnet.a \
       $(TBLIB_ROOT)/lib/libtbsys.a
 
-noinst_PROGRAMS= test_block_collect  test_block_manager
+noinst_PROGRAMS= test_block_collect  test_block_manager test_server_collect test_server_manager\
+test_task test_task_manager
 
 test_block_collect_SOURCES=test_block_collect.cpp
 test_block_collect_LDFLAGS=${AM_LDFLAGS} 
 
 test_block_manager_SOURCES=test_block_manager.cpp
 test_block_manager_LDFLAGS=${AM_LDFLAGS} 
+
+test_server_collect_SOURCES=test_server_collect.cpp
+test_server_collect_LDFLAGS=${AM_LDFLAGS} 
+
+test_server_manager_SOURCES=test_server_manager.cpp
+test_server_manager_LDFLAGS=${AM_LDFLAGS} 
+
+test_task_SOURCES=test_task.cpp
+test_task_LDFLAGS=${AM_LDFLAGS} 
+
+test_task_manager_SOURCES=test_task_manager.cpp
+test_task_manager_LDFLAGS=${AM_LDFLAGS} 
 #test_server_collect_SOURCES=test_server_collect.cpp
 #test_server_collect_LDFLAGS=${AM_LDFLAGS} -static-libgcc -lgtest
 #
