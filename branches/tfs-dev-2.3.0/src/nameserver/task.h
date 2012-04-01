@@ -35,7 +35,7 @@ namespace tfs
   namespace nameserver
   {
     class TaskManager;
-    class Task
+    class Task: public GCObject
     {
       friend class TaskManager;
       #ifdef TFS_GTEST
@@ -66,8 +66,6 @@ namespace tfs
       bool timeout(const time_t now) const;
       protected:
       std::vector<ServerCollect*> runer_;
-      time_t begin_time_;
-      time_t end_time_;
       uint32_t block_id_;
       common::PlanType type_;
       common::PlanStatus status_;

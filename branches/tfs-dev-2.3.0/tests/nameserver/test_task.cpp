@@ -120,8 +120,7 @@ namespace tfs
       EXPECT_EQ(task.status_, stream.readInt8());
       EXPECT_EQ(task.priority_, stream.readInt8());
       EXPECT_EQ(task.block_id_, stream.readInt32());
-      EXPECT_TRUE(task.begin_time_ == (time_t)stream.readInt64());
-      EXPECT_EQ(task.begin_time_, (time_t)stream.readInt64());
+      EXPECT_TRUE(task.last_update_time_ == (time_t)stream.readInt64());
       stream.readInt64();
       uint32_t size = stream.readInt8();
       EXPECT_EQ(task.runer_.size(), size);

@@ -45,9 +45,8 @@ namespace tfs
     Task::Task(TaskManager& manager, const PlanType type,
         const PlanPriority priority, uint32_t block_id,
         const std::vector<ServerCollect*>& runer):
+      GCObject(0xFFFFFFFF),
       runer_(runer),
-      begin_time_(0xFFFFFFFF),
-      end_time_(0xFFFFFFFF),
       block_id_(block_id),
       type_(type),
       status_(PLAN_STATUS_NONE),
@@ -76,7 +75,7 @@ namespace tfs
         return true;
       if (seqno_ > task.seqno_)
         return  false;
-      return (begin_time_ < task.begin_time_);
+      return last_update_time_ < task.last_update_time_;
     }
 
     bool Task::need_add_server_to_map() const
@@ -86,7 +85,7 @@ namespace tfs
 
     bool Task::timeout(const time_t now) const
     {
-      return now > end_time_;
+      return now > last_update_time_;
     }
 
     void Task::runTimerTask()
@@ -101,8 +100,7 @@ namespace tfs
       stream.writeInt8(status_);
       stream.writeInt8(priority_);
       stream.writeInt32(block_id_);
-      stream.writeInt64(begin_time_);
-      stream.writeInt64(end_time_);
+      stream.writeInt64(last_update_time_);
       stream.writeInt64(seqno_);
       stream.writeInt8(runer_.size());
       std::vector<ServerCollect*>::iterator iter = runer_.begin();
@@ -123,7 +121,7 @@ namespace tfs
           runer += tbsys::CNetUtil::addrToString((*iter)->id());
           runer += "/";
         }
-        TBSYS_LOGGER.logMessage(level, __FILE__, __LINE__, __FUNCTION__, "pointer %p, %s plan seqno: %"PRI64_PREFIX"d, type: %s ,status: %s, priority: %s , block_id: %u, begin: %"PRI64_PREFIX"d, end: %"PRI64_PREFIX"d, runer: %s",
+        TBSYS_LOGGER.logMessage(level, __FILE__, __LINE__, __FUNCTION__, "pointer %p, %s plan seqno: %"PRI64_PREFIX"d, type: %s ,status: %s, priority: %s , block_id: %u, expired_time: %"PRI64_PREFIX"d,runer: %s",
             this,
             format == NULL ? "" : format,
             seqno_,
@@ -132,7 +130,7 @@ namespace tfs
             status_ == PLAN_STATUS_BEGIN ? "begin" : status_ == PLAN_STATUS_TIMEOUT ? "timeout" : status_ == PLAN_STATUS_END
             ? "finish" : status_ == PLAN_STATUS_FAILURE ? "failure": "unknow",
             priority_ == PLAN_PRIORITY_NORMAL ? "normal" : priority_ == PLAN_PRIORITY_EMERGENCY ? "emergency": "unknow",
-            block_id_, begin_time_, end_time_, runer.c_str());
+            block_id_, last_update_time_,runer.c_str());
       }
     }
 
@@ -208,7 +206,7 @@ namespace tfs
               status += "/";
           }
         }
-        TBSYS_LOGGER.logMessage(level, __FILE__, __LINE__, __FUNCTION__, "pointer: %p, %s plan seqno: %"PRI64_PREFIX"d, type: %s ,status: %s, priority: %s , block_id: %u, begin: %"PRI64_PREFIX"d, end: %"PRI64_PREFIX"d, runer: %s, complete status: %s",
+        TBSYS_LOGGER.logMessage(level, __FILE__, __LINE__, __FUNCTION__, "pointer: %p, %s plan seqno: %"PRI64_PREFIX"d, type: %s ,status: %s, priority: %s , block_id: %u, expired_time: %"PRI64_PREFIX"d, runer: %s, complete status: %s",
             this,
             format == NULL ? "" : format,
             seqno_,
@@ -217,7 +215,7 @@ namespace tfs
             status_ == PLAN_STATUS_BEGIN ? "begin" : status_ == PLAN_STATUS_TIMEOUT ? "timeout" : status_ == PLAN_STATUS_END
             ? "finish" : status_ == PLAN_STATUS_FAILURE ? "failure" : "unknow",
             priority_ == PLAN_PRIORITY_NORMAL ? "normal" : priority_ == PLAN_PRIORITY_EMERGENCY ? "emergency": "unknow",
-            block_id_, begin_time_, end_time_, runer.c_str(), status.c_str());
+            block_id_, last_update_time_, runer.c_str(), status.c_str());
       }
     }
 
@@ -255,8 +253,7 @@ namespace tfs
       }
 
       status_ = PLAN_STATUS_BEGIN;
-      begin_time_ = Func::get_monotonic_time();
-      end_time_ = begin_time_ + SYSPARAM_NAMESERVER.run_plan_expire_interval_;
+      last_update_time_ = Func::get_monotonic_time() +  SYSPARAM_NAMESERVER.run_plan_expire_interval_;
       return ret;
     }
 
@@ -510,8 +507,7 @@ namespace tfs
               tbsys::CNetUtil::addrToString(block.destination_id_).c_str());
 
           status_ = PLAN_STATUS_BEGIN;
-          begin_time_ = Func::get_monotonic_time();
-          end_time_ = begin_time_ + SYSPARAM_NAMESERVER.run_plan_expire_interval_;
+          last_update_time_ = Func::get_monotonic_time() +  SYSPARAM_NAMESERVER.run_plan_expire_interval_;
         }
       }
       return ret;
@@ -616,8 +612,7 @@ namespace tfs
         GFactory::get_stat_mgr().update_entry(GFactory::tfs_ns_stat_block_count_, stat, false);
 
         status_ = PLAN_STATUS_BEGIN;
-        begin_time_ = now;
-        end_time_ = begin_time_ + SYSPARAM_NAMESERVER.run_plan_expire_interval_;
+        last_update_time_ = now +  SYSPARAM_NAMESERVER.run_plan_expire_interval_;
       }
       return ret;
     }
