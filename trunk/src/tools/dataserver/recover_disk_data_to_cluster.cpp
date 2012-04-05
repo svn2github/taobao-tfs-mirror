@@ -613,43 +613,36 @@ int main(int argc,char* argv[])
   g_tfs_client->destroy();
 
   // print out result
-  fprintf(stdout, "********************** recover process finished **********************\n");
   fprintf(stdout, "********************** succeeded block sum: %u **********************\n",
       static_cast<uint32_t>(success_block_list.size()));
   for (uint32_t i = 0; i < success_block_list.size(); i++)
   {
-    fprintf(stdout, "%u ", success_block_list.at(i));
+    fprintf(stdout, "%u\n", success_block_list.at(i));
   }
-  fprintf(stdout, "\n");
 
   fprintf(stdout, "********************** failed block sum: %u **********************\n",
       static_cast<uint32_t>(fail_block_list.size()));
   for (uint32_t i = 0; i < fail_block_list.size(); i++)
   {
-    fprintf(stdout, "%u ", fail_block_list.at(i));
+    fprintf(stdout, "%u\n", fail_block_list.at(i));
   }
-  fprintf(stdout, "\n");
 
-  if (fail_block_file_list.size() > 0)
+  fprintf(stdout, "*********************************** failed block-file sum : %u ************************************\n",
+          static_cast<uint32_t>(fail_block_file_list.size()));
+  map<uint32_t, uint64_t>::iterator mit = fail_block_file_list.begin();
+  for (; mit != fail_block_file_list.end(); mit++)
   {
-    fprintf(stdout, "*********************************** failed block-file sum : %u ************************************\n",
-            static_cast<uint32_t>(fail_block_file_list.size()));
-    map<uint32_t, uint64_t>::iterator mit = fail_block_file_list.begin();
-    for (; mit != fail_block_file_list.end(); mit++)
-    {
-        FSName fsname(mit->first, mit->second, g_tfs_client->get_cluster_id());
-        fprintf(stdout, "block_id: %u, file_id: %"PRI64_PREFIX"u, file_name: %s\n", mit->first, mit->second, fsname.get_name());
-    }
+      FSName fsname(mit->first, mit->second, g_tfs_client->get_cluster_id());
+      fprintf(stdout, "block_id: %u, file_id: %"PRI64_PREFIX"u, file_name: %s\n", mit->first, mit->second, fsname.get_name());
   }
-  fprintf(stdout, "\n");
 
   fprintf(stdout, "********************************* no need to recover block sum: %u *************************************\n",
           static_cast<uint32_t>(no_need_recover_block_list.size()));
   for (uint32_t i = 0; i < no_need_recover_block_list.size(); i++)
   {
-    fprintf(stdout, "%u ", no_need_recover_block_list.at(i));
+    fprintf(stdout, "%u\n", no_need_recover_block_list.at(i));
   }
-  fprintf(stdout, "\n");
+  fprintf(stdout, "********************** recover process finished **********************\n");
 
   return 0;
 }
