@@ -1,3 +1,15 @@
+/*
+ * (C) 2007-2010 Alibaba Group Holding Limited.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+ *
+ * Authors:
+ *   duanfei<duanfei@taobao.com>
+ *      - initial release
+ *
+ */
 #include "define.h"
 namespace tfs
 {
@@ -8,7 +20,7 @@ namespace tfs
         start_(new T[size]),
         finish_(start_),
         end_of_storage_(start_ + size),
-        expand_ratio_(0.1),
+        expand_ratio_(expand_ratio),
         min_expand_size_(expand_size)
       {
         assert(size > 0);
@@ -124,7 +136,6 @@ namespace tfs
         return ret;
       }
 
-
     template <typename T>
       typename TfsVector<T>::value_type TfsVector<T>::erase(iterator position)
       {
@@ -142,6 +153,13 @@ namespace tfs
         if (finish_ != pos)
           erase(pos);
         return value;
+      }
+
+    template <typename T>
+      typename TfsVector<T>::iterator TfsVector<T>::find(const_value_type value)
+      {
+        iterator pos = std::find(start_, finish_, value);
+        return pos;
       }
 
     template <typename T>
@@ -220,17 +238,19 @@ namespace tfs
       }
 
     template <typename T, typename Compare>
-      int TfsSortedVector<T, Compare>::insert_unique(const_value_type value)
+      bool TfsSortedVector<T, Compare>::insert_unique(value_type& output, const_value_type value)
       {
-        int32_t ret = TFS_SUCCESS;
+        bool ret = false;
         iterator pos = std::lower_bound(storage_.begin(), storage_.end(), value, comp_);
         if (storage_.end() != pos)
         {
-          ret = comp_(*pos, value) || comp_(value, *pos) ? TFS_SUCCESS : TFS_ERROR;
+          output = *pos;
+          ret = (comp_(*pos, value) || comp_(value, *pos)) ? false : true; 
         }
-        if (TFS_SUCCESS == ret)
+        if (!ret)
         {
-          ret = storage_.insert(pos, value);
+          ret = storage_.insert(pos, value) == TFS_SUCCESS;
+          output = value;
         }
         return ret;
       }

@@ -106,13 +106,18 @@ namespace tfs
       bool ret = block != NULL;
       if (ret)
       {
-        RWLock::Lock lock(*this, WRITE_LOCKER);
-        hold_->insert_unique(const_cast<BlockCollect*>(block));
-        if ((writable)
+        RWLock::Lock lock(mutex_, WRITE_LOCKER);
+        BlockCollect* result = NULL;
+        ret = hold_->insert_unique(result, const_cast<BlockCollect*>(block));
+        assert(NULL != result);
+        //TBSYS_LOG(DEBUG, "id: %u, ret: %d master: %d, writable: %d, %d", block->id(), ret, master, writable, is_equal_group(block->id()));
+        if ((ret)
+            && (writable)
             && (master)
             && (is_equal_group(block->id())))
         {
-          writable_->insert_unique(const_cast<BlockCollect*>(block));
+          ret = writable_->insert_unique(result, const_cast<BlockCollect*>(block));
+          assert(NULL != result);
         }
       }
       return ret;
@@ -120,7 +125,7 @@ namespace tfs
 
     bool ServerCollect::remove(BlockCollect* block)
     {
-      RWLock::Lock lock(*this, WRITE_LOCKER);
+      RWLock::Lock lock(mutex_, WRITE_LOCKER);
       return  NULL != block ? remove_(block) : false;
     }
 
@@ -138,7 +143,7 @@ namespace tfs
 
     bool ServerCollect::remove(const common::ArrayHelper<BlockCollect*>& blocks)
     {
-      RWLock::Lock lock(*this, WRITE_LOCKER);
+      RWLock::Lock lock(mutex_, WRITE_LOCKER);
       for (int32_t i = 0; i < blocks.get_array_index(); ++i)
       {
         remove_(*blocks.at(i));
@@ -155,8 +160,9 @@ namespace tfs
         if ((ret)
             && (is_equal_group(block->id())))
         {
-          RWLock::Lock lock(*this, WRITE_LOCKER);
-          writable_->insert_unique(const_cast<BlockCollect*>(block));
+          RWLock::Lock lock(mutex_, WRITE_LOCKER);
+          BlockCollect* result = NULL;
+          ret = writable_->insert_unique(result, const_cast<BlockCollect*>(block));
         }
       }
       return ret;
@@ -172,7 +178,7 @@ namespace tfs
 
     bool ServerCollect::clear(LayoutManager& manager, const time_t now)
     {
-      this->wrlock();
+      mutex_.wrlock();
       int32_t size = hold_->size();
       BlockCollect** blocks = NULL;
       if (size > 0)//这里size大部份情况下都为0,所以拷贝的代价是能接受的
@@ -186,7 +192,7 @@ namespace tfs
         }
       }
       clear_();
-      this->unlock();
+      mutex_.unlock();
 
       BlockCollect* pblock = NULL;
       ArrayHelper<BlockCollect*> helper(size, blocks);
@@ -204,9 +210,9 @@ namespace tfs
 
     int ServerCollect::choose_writable_block(BlockCollect*& result)
     {
-      this->rdlock();
+      mutex_.rdlock();
       int32_t count = hold_master_->size();
-      this->unlock();
+      mutex_.unlock();
       result = NULL;
       int32_t ret = TFS_SUCCESS;
       BlockCollect* blocks[MAX_WRITE_FILE_COUNT];
@@ -235,7 +241,7 @@ namespace tfs
     int ServerCollect::choose_writable_block_(BlockCollect*& result) const
     {
       result = NULL;
-      RWLock::Lock lock(*this, READ_LOCKER);
+      RWLock::Lock lock(mutex_, READ_LOCKER);
       int32_t ret = !hold_master_->empty() ? TFS_SUCCESS : EXIT_BLOCK_NOT_FOUND;
       if (TFS_SUCCESS == ret)
       {
@@ -251,7 +257,7 @@ namespace tfs
     int ServerCollect::choose_writable_block_force(BlockCollect*& result) const
     {
       result = NULL;
-      RWLock::Lock lock(*this, READ_LOCKER);
+      RWLock::Lock lock(mutex_, READ_LOCKER);
       int32_t ret = !hold_master_->empty() ? TFS_SUCCESS : EXIT_BLOCK_NOT_FOUND;
       if (TFS_SUCCESS == ret)
       {
@@ -281,7 +287,7 @@ namespace tfs
         param.data_.writeInt32(status_);
       }
 
-      RWLock::Lock lock(*this, READ_LOCKER);
+      RWLock::Lock lock(mutex_, READ_LOCKER);
       if (scan_flag & SSM_CHILD_SERVER_TYPE_HOLD)
       {
         param.data_.writeInt32(hold_->size());
@@ -316,16 +322,20 @@ namespace tfs
       bool ret = ((is_report_block_complete() || promote) && !is_full() && count > 0);
       if (!ret)
       {
-        if (is_report_block_complete() || is_full())
-          count = 0;
+        count = 0;
       }
       else
       {
         BlockCollect* invalid_blocks[1024];
         ArrayHelper<BlockCollect*> helper(1024, invalid_blocks);
-        RWLock::Lock lock(*this, WRITE_LOCKER);
+        RWLock::Lock lock(mutex_, WRITE_LOCKER);
         int32_t current = hold_master_->size();
-        if (current < SYSPARAM_NAMESERVER.max_write_file_count_)
+        //TBSYS_LOG(DEBUG, "%s touch current %d, writable size: %d", CNetUtil::addrToString(id()).c_str(),current, writable_->size());
+        if (current >= SYSPARAM_NAMESERVER.max_write_file_count_)
+        {
+          count = 0;
+        }
+        else
         {
           count = std::min(count, (SYSPARAM_NAMESERVER.max_write_file_count_ - current));
           if (count <= 0)
@@ -401,7 +411,7 @@ namespace tfs
 
     bool ServerCollect::get_range_blocks(common::ArrayHelper<BlockCollect*>& blocks, const uint32_t begin, const int32_t count) const
     {
-      RWLock::Lock lock(*this, READ_LOCKER);
+      RWLock::Lock lock(mutex_, READ_LOCKER);
       return get_range_blocks_(blocks, begin, count);
     }
 
@@ -456,7 +466,8 @@ namespace tfs
     void ServerCollect::set_next_report_block_time(const time_t now, const int64_t time_seed, const bool ns_switch)
     {
       int32_t hour = common::SYSPARAM_NAMESERVER.report_block_time_upper_ - common::SYSPARAM_NAMESERVER.report_block_time_lower_;
-      struct tm* lt = gmtime(&now);
+      time_t current = time(NULL);
+      struct tm* lt = gmtime(&current);
       if (ns_switch)
       {
         lt->tm_hour += time_seed % hour;
@@ -470,12 +481,13 @@ namespace tfs
         lt->tm_min = time_seed % 60;
         lt->tm_sec = random() % 60;
       }
-      next_report_block_time_ = mktime(lt);
+      time_t diff_sec = mktime(lt) - current;
+      next_report_block_time_ = now + diff_sec;
     }
 
     bool ServerCollect::remove_writable_(const common::ArrayHelper<BlockCollect*>& blocks)
     {
-      RWLock::Lock lock(*this, WRITE_LOCKER);
+      RWLock::Lock lock(mutex_, WRITE_LOCKER);
       BlockCollect* block = NULL;
       for (int32_t i = 0; i < blocks.get_array_index(); ++i)
       {
@@ -491,7 +503,7 @@ namespace tfs
     int ServerCollect::choose_move_block_random(BlockCollect*& result) const
     {
       result = NULL;
-      RWLock::Lock lock(*this, READ_LOCKER);
+      RWLock::Lock lock(mutex_, READ_LOCKER);
       int32_t ret = !hold_->empty() ? TFS_SUCCESS : EXIT_BLOCK_NOT_FOUND;
       if (TFS_SUCCESS == ret)
       {
@@ -503,7 +515,7 @@ namespace tfs
 
     int ServerCollect::expand_ratio(const float expand_ratio)
     {
-      RWLock::Lock lock(*this, WRITE_LOCKER);
+      RWLock::Lock lock(mutex_, WRITE_LOCKER);
       if (hold_->need_expand(expand_ratio))
         hold_->expand_ratio(expand_ratio);
       if (writable_->need_expand(expand_ratio))

@@ -132,7 +132,7 @@ namespace tfs
       BLOCK_TO_TASK block_to_tasks_;
       RUNNING_TASK running_queue_;
       PENDING_TASK pending_queue_;
-      common::RWLock rwmutex_;
+      mutable common::RWLock rwmutex_;
       uint64_t seqno_;
     };
   }/** nameserver **/

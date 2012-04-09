@@ -15,13 +15,13 @@
  */
 #ifndef TFS_MESSAGE_COMPACTBLOCKMESSAGE_H_
 #define TFS_MESSAGE_COMPACTBLOCKMESSAGE_H_
-#include "common/base_packet.h"
+#include "base_task_message.h"
 #include "common/internal.h"
 namespace tfs
 {
   namespace message
   {
-    class CompactBlockMessage: public common::BasePacket 
+    class CompactBlockMessage: public BaseTaskMessage
     {
       public:
         CompactBlockMessage();
@@ -59,7 +59,7 @@ namespace tfs
         int32_t is_owner_;
     };
 
-    class CompactBlockCompleteMessage: public common::BasePacket 
+    class CompactBlockCompleteMessage: public BaseTaskMessage
     {
       public:
         CompactBlockCompleteMessage();
@@ -69,6 +69,7 @@ namespace tfs
         int deserialize(const char* data, const int64_t data_len, int64_t& pos);
         virtual int64_t length() const;
         void dump(void) const;
+        uint64_t get_seqno() const;
         inline void set_block_id(const uint32_t block_id)
         {
           block_id_ = block_id;

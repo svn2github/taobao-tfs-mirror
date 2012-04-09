@@ -40,11 +40,16 @@ namespace tfs
       if (common::TFS_SUCCESS == iret)
       {
         int64_t pos = 0;
-        iret = repl_block_.deserialize(input.get_data(), input.get_data_length(), pos); 
+        iret = repl_block_.deserialize(input.get_data(), input.get_data_length(), pos);
         if (common::TFS_SUCCESS == iret)
         {
           input.drain(repl_block_.length());
         }
+      }
+      if (common::TFS_SUCCESS == iret
+        && input.get_data_length() > 0 )
+      {
+        iret = input.get_int64(&seqno_);
       }
       return iret;
     }
@@ -58,17 +63,22 @@ namespace tfs
       }
       if (common::TFS_SUCCESS == iret)
       {
-        iret = repl_block_.deserialize(data, data_len, pos); 
+        iret = repl_block_.deserialize(data, data_len, pos);
+      }
+      if (common::TFS_SUCCESS == iret
+        && pos + common::INT64_SIZE <= data_len)
+      {
+        iret = common::Serialization::get_int64(data, data_len, pos, &seqno_);
       }
       return iret;
     }
 
     int64_t ReplicateBlockMessage::length() const
     {
-      return common::INT_SIZE * 2 + repl_block_.length();
+      return common::INT_SIZE * 2 + common::INT64_SIZE + repl_block_.length();
     }
 
-    int ReplicateBlockMessage::serialize(common::Stream& output) const 
+    int ReplicateBlockMessage::serialize(common::Stream& output) const
     {
       int32_t iret = output.set_int32(command_);
       if (common::TFS_SUCCESS == iret)
@@ -83,6 +93,10 @@ namespace tfs
         {
           output.pour(repl_block_.length());
         }
+      }
+      if (common::TFS_SUCCESS == iret)
+      {
+        iret = output.set_int64(seqno_);
       }
       return iret;
     }

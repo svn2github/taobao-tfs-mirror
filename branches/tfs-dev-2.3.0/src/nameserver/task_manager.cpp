@@ -168,7 +168,7 @@ namespace tfs
         {
           task->dump(TBSYS_LOG_LEVEL_WARN, "add task failed, rollback");
           block_to_tasks_.erase(res.first);
-          GFactory::get_gc_manager().add(task);
+          manager_.get_gc_manager().add(task);
         }
         else
         {
@@ -192,7 +192,7 @@ namespace tfs
       for (; iter != tasks_.end(); ++iter)
       {
         assert(NULL != iter->second);
-        GFactory::get_gc_manager().add(iter->second);
+        manager_.get_gc_manager().add(iter->second);
       }
       tasks_.clear();
       machine_to_tasks_.clear();
@@ -310,7 +310,7 @@ namespace tfs
       RWLock::Lock lock(rwmutex_, READ_LOCKER);
       int32_t source_size = 0, target_size = 0, total = 0;
       total = get_task_size_in_machine_(source_size, target_size, server);
-      TBSYS_LOG(DEBUG, "total = %d , max_task_in_machine_nums_: %d", total , SYSPARAM_NAMESERVER.max_task_in_machine_nums_);
+      //TBSYS_LOG(DEBUG, "total = %d , max_task_in_machine_nums_: %d", total , SYSPARAM_NAMESERVER.max_task_in_machine_nums_);
       return total < SYSPARAM_NAMESERVER.max_task_in_machine_nums_;
     }
 
@@ -503,7 +503,7 @@ namespace tfs
               server_to_tasks_.erase((*rit)->id());
           }
         }
-        GFactory::get_gc_manager().add(task);
+        manager_.get_gc_manager().add(task);
       }
       return ret;
     }

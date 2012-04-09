@@ -47,6 +47,7 @@ namespace tfs
     {
       #ifdef TFS_GTEST
       friend class BlockManagerTest;
+      friend class LayoutManagerTest;
       FRIEND_TEST(BlockManagerTest, insert_remove_get_exist);
       FRIEND_TEST(BlockManagerTest, get_servers);
       FRIEND_TEST(BlockManagerTest, scan);
@@ -65,7 +66,8 @@ namespace tfs
         explicit BlockManager(LayoutManager& manager);
         virtual ~BlockManager();
         BlockCollect* insert(const uint32_t block, const time_t now, const bool set = false);
-        bool remove(std::vector<GCObject*>& rms, const uint32_t block);
+        //bool remove(std::vector<GCObject*>& rms, const uint32_t block);
+        bool remove(GCObject*& gc_object, const uint32_t block);
 
         bool push_to_delete_queue(const uint32_t block, const uint64_t server);
         bool pop_from_delete_queue(std::pair<uint32_t, uint64_t>& pairs);

@@ -16,6 +16,7 @@
 #ifndef TFS_MESSAGE_GETBLOCKINFOMESSAGE_H_
 #define TFS_MESSAGE_GETBLOCKINFOMESSAGE_H_
 #include "common/base_packet.h"
+#include "base_task_message.h"
 #include "common/error_msg.h"
 namespace tfs
 {
@@ -84,9 +85,7 @@ namespace tfs
         virtual int serialize(common::Stream& output)  const ;
         virtual int deserialize(common::Stream& input);
         virtual int64_t length() const;
-        void set_read_block_ds(const uint32_t block_id, common::VUINT64* ds);
-        void set_write_block_ds(const uint32_t block_id, common::VUINT64* ds, const int32_t version,
-            const int32_t lease_id);
+        void set(const uint32_t block_id, const int32_t version, const uint32_t lease_id);
         inline common::VUINT64& get_block_ds()
         {
           return ds_;
@@ -255,7 +254,7 @@ namespace tfs
         common::VUINT32 new_blocks_;
     };
 
-    class RemoveBlockMessage:  public common::BasePacket
+    class RemoveBlockMessage:  public BaseTaskMessage
     {
      public:
         RemoveBlockMessage();
@@ -263,15 +262,8 @@ namespace tfs
         virtual int serialize(common::Stream& output)  const ;
         virtual int deserialize(common::Stream& input);
         virtual int64_t length() const;
-        void add_remove_id(const uint32_t block_id);
-        inline void set_remove_list(const common::VUINT32& remove_blocks)
-        {
-          remove_blocks_ = remove_blocks;
-        }
-        inline const common::VUINT& get_remove_blocks() const
-        {
-          return remove_blocks_;
-        }
+        inline void set(const uint32_t id) {  id_ = id;}
+        inline uint32_t get() const { return id_;}
         inline void set_response_flag(common::RemoveBlockResponseFlag flag = common::REMOVE_BLOCK_RESPONSE_FLAG_YES)
         {
           response_flag_ = flag;
@@ -281,11 +273,11 @@ namespace tfs
           return response_flag_;
         }
       protected:
-        common::VUINT32 remove_blocks_;
+        uint32_t id_;
         int8_t response_flag_;
     };
 
-    class RemoveBlockResponseMessage :  public common::BasePacket
+    class RemoveBlockResponseMessage :  public BaseTaskMessage
     {
       public:
         RemoveBlockResponseMessage();
@@ -293,16 +285,9 @@ namespace tfs
         virtual int deserialize(common::Stream& input);
         virtual int64_t length() const;
         virtual ~RemoveBlockResponseMessage();
-        void set_block_id(const uint32_t id)
-        {
-          block_id_ = id;
-        }
-        uint32_t get_block_id() const
-        {
-          return block_id_;
-        }
+        inline void set(const uint32_t id) { block_id_ = id;}
+        inline uint32_t get() const { return block_id_;}
       private:
-        uint64_t id_;
         uint32_t block_id_;
     };
 

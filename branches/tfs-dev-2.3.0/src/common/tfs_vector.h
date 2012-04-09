@@ -1,3 +1,15 @@
+/*
+ * (C) 2007-2010 Alibaba Group Holding Limited.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+ *
+ * Authors:
+ *   duanfei<duanfei@taobao.com>
+ *      - initial release
+ *
+ */
 #ifndef TFS_COMMON_TFS_VECTOR_H_
 #define TFS_COMMON_TFS_VECTOR_H_
 
@@ -50,9 +62,9 @@ namespace tfs
           inline size_type capacity() const { return end_of_storage_ - begin();}
           inline size_type remain() const { return end_of_storage_ - end();}
 
-          inline value_type operator[] (size_type index) {return at(index);}
+          inline value_type operator[] (size_type index) const {return at(index);}
 
-          inline value_type at(size_type index) {range_check(index); return *(begin() + index);}
+          inline value_type at(size_type index) const {range_check(index); return *(begin() + index);}
 
           int push_back(const_value_type value);
 
@@ -62,6 +74,10 @@ namespace tfs
 
           value_type erase(const_value_type value);
 
+          iterator find(const_value_type value);
+
+          bool empty() const { return  0 == size(); }
+
           int expand_ratio(const float expand_ratio = 0.1);
 
           bool need_expand(const float reserve_ratio = 0.1);
@@ -69,7 +85,7 @@ namespace tfs
           void clear();
 
         private:
-          inline void range_check(size_type index) {assert(index < size() && index >= 0);}
+          inline void range_check(size_type index) const {assert(index < size() && index >= 0);}
           static iterator fill(iterator dest, const_value_type value);
           static iterator copy(iterator dest, iterator begin, iterator end);
           static iterator move(iterator dest, iterator begin, iterator end);
@@ -104,9 +120,9 @@ namespace tfs
           inline size_type capacity() const { return storage_.capacity();}
           inline size_type remain() const { return storage_.remain();}
 
-          inline value_type operator[] (size_type index) {return storage_.at(index);}
+          inline value_type operator[] (size_type index) const {return storage_.at(index);}
 
-          inline value_type at(size_type index) {return storage_.at(index);}
+          inline value_type at(size_type index) const {return storage_.at(index);}
 
           iterator find(const_value_type value) const;
 
@@ -114,16 +130,18 @@ namespace tfs
           iterator upper_bound(const_value_type value) const;
 
           int insert(const_value_type value);
-          int insert_unique(const_value_type value);
+          bool insert_unique(value_type& output, const_value_type value);
           int push_back(const_value_type value);
 
           value_type erase(const_value_type value);
 
           int expand_ratio(const float expand_ratio = 0.1);
 
-          bool need_expand(const float reserve_ratio = 0.1);
+          bool need_expand(const float expand_ratio = 0.1);
 
           void clear();
+
+          bool empty() const { return storage_.empty(); }
 
         private:
           tfs_vector storage_;

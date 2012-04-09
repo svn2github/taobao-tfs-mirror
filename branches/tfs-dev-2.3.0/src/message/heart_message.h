@@ -145,8 +145,17 @@ namespace tfs
         {
           return ns_identity_.force_;
         }
+        inline void set_lease_id(const int64_t lease_id)
+        {
+          lease_id_ = lease_id;
+        }
+        inline int64_t get_lease_id() const
+        {
+          return lease_id_;
+        }
       private:
         NSIdentityNetPacket ns_identity_;
+        int64_t lease_id_;
     };
 
     class MasterAndSlaveHeartResponseMessage: public common::BasePacket
@@ -189,15 +198,38 @@ namespace tfs
         {
           return ns_identity_.flags_;
         }
-        inline const common::VUINT64* get_ds_list() const
+        inline common::VUINT64& get_servers()
         {
-          return &ds_list_;
+          return ds_list_;
         }
-        inline void set_ds_list(const common::VUINT64& ds_list)
+        inline void set_lease_id(const int64_t lease_id)
         {
-          ds_list_ = ds_list;
+          lease_id_ = lease_id;
+        }
+        inline int64_t get_lease_id() const
+        {
+          return lease_id_;
+        }
+        inline void set_lease_expired_time( const int32_t expired_time)
+        {
+          lease_expired_time_ = expired_time;
+        }
+        inline int32_t get_lease_expired_time() const
+        {
+          return lease_expired_time_;
+        }
+        inline void set_renew_lease_interval_time(const int32_t interval)
+        {
+          renew_lease_interval_time_ = interval;
+        }
+        inline int32_t get_renew_lease_interval_time() const
+        {
+          return renew_lease_interval_time_;
         }
       private:
+        int64_t lease_id_;
+        int32_t lease_expired_time_;
+        int32_t renew_lease_interval_time_;
         NSIdentityNetPacket ns_identity_;
         common::VUINT64 ds_list_;
     };

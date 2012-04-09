@@ -41,7 +41,7 @@ namespace tfs
     class FlushOpLogTimerTask: public tbutil::TimerTask
     {
     public:
-      FlushOpLogTimerTask(OpLogSyncManager& manager);
+      explicit FlushOpLogTimerTask(OpLogSyncManager& manager);
       virtual void runTimerTask();
     private:
       DISALLOW_COPY_AND_ASSIGN( FlushOpLogTimerTask);
@@ -53,7 +53,7 @@ namespace tfs
     {
       friend class FlushOpLogTimerTask;
     public:
-      OpLogSyncManager(LayoutManager& mm);
+      explicit OpLogSyncManager(LayoutManager& mm);
       virtual ~OpLogSyncManager();
       int initialize();
       int wait_for_shut_down();
@@ -61,8 +61,8 @@ namespace tfs
       int register_slots(const char* const data, const int64_t length) const;
       void notify_all();
       void rotate();
-      int flush_oplog(void) const;
-      int log(uint8_t type, const char* const data, const int64_t length);
+      int flush_oplog(const time_t now = common::Func::get_monotonic_time()) const;
+      int log(const uint8_t type, const char* const data, const int64_t length, const time_t now);
       int push(common::BasePacket* msg, int32_t max_queue_size = 0, bool block = false);
       inline common::FileQueueThread* get_file_queue_thread() const { return file_queue_thread_;}
       int replay_helper(const char* const data, const int64_t data_len, int64_t& pos, const time_t now = common::Func::get_monotonic_time());
@@ -80,9 +80,10 @@ namespace tfs
       int do_slave_msg(const common::BasePacket* msg, const void* args);
       int do_sync_oplog(const common::BasePacket* msg, const void* args);
       int replay_all();
+      void reset_();
     private:
       bool is_destroy_;
-      LayoutManager& meta_mgr_;
+      LayoutManager& manager_;
       OpLog* oplog_;
       common::FileQueue* file_queue_;
       common::FileQueueThread* file_queue_thread_;

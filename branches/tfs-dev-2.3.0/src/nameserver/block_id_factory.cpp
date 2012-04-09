@@ -23,7 +23,6 @@ namespace tfs
   {
     const uint16_t BlockIdFactory::BLOCK_START_NUMBER = 100;
     const uint16_t BlockIdFactory::SKIP_BLOCK_NUMBER  = 100;
-    const uint32_t BlockIdFactory::INVALID_BLOCK_ID = 0;
     BlockIdFactory::BlockIdFactory():
       global_id_(BLOCK_START_NUMBER),
       count_(0),
@@ -86,7 +85,7 @@ namespace tfs
 
     int BlockIdFactory::destroy()
     {
-      int32_t iret = common::TFS_SUCCESS; 
+      int32_t iret = common::TFS_SUCCESS;
       if (fd_ > 0)
       {
         iret = update(global_id_);
@@ -98,7 +97,7 @@ namespace tfs
     uint32_t BlockIdFactory::generation(const uint32_t id)
     {
       bool update_flag = false;
-      uint32_t ret_id = INVALID_BLOCK_ID;
+      uint32_t ret_id = common::INVALID_BLOCK_ID;
       {
         tbutil::Mutex::Lock lock(mutex_);
         ++count_;
@@ -117,17 +116,15 @@ namespace tfs
           count_ = 0;
         }
       }
-#if !defined(TFS_GTEST)
       if (update_flag)
       {
         int32_t iret = update(ret_id);
         if (common::TFS_SUCCESS != iret)
         {
           TBSYS_LOG(ERROR, "update global block id failed, id: %u, iret: %d", ret_id, iret);
-          ret_id = INVALID_BLOCK_ID;
+          ret_id = common::INVALID_BLOCK_ID;
         }
       }
-#endif
       return ret_id;
     }
 

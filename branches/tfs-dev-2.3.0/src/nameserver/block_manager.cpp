@@ -71,12 +71,10 @@ namespace tfs
       return insert_(block, now, set);
     }
 
-    bool BlockManager::remove(std::vector<GCObject*>& rms, const uint32_t block)
+    bool BlockManager::remove(GCObject*& gc_object, const uint32_t block)
     {
       RWLock::Lock lock(get_mutex_(block), WRITE_LOCKER);
-      BlockCollect* result = remove_(block);
-      if (NULL != result)
-        rms.push_back(result);
+      gc_object = remove_(block);
       return true;
     }
 
@@ -89,10 +87,11 @@ namespace tfs
     BlockCollect* BlockManager::insert_(const uint32_t block_id, const time_t now, const bool set)
     {
       BlockCollect* block = new (std::nothrow)BlockCollect(block_id, now);
-      assert(block);
-      BlockCollect* result = blocks_[get_chunk_(block_id)]->insert_unique(block);
       assert(NULL != block);
-      if (result != block)
+      BlockCollect* result = NULL;
+      bool ret = blocks_[get_chunk_(block_id)]->insert_unique(result, block);
+      assert(NULL != result);
+      if (!ret)
       {
         tbsys::gDelete(block);
       }
@@ -176,10 +175,15 @@ namespace tfs
           {
             rwmutex_[next].rdlock();
             if (!blocks_[next]->empty())
+            {
               begin = (*blocks_[next]->begin())->id();
+              rwmutex_[next].unlock();
+            }
             else
+            {
+              rwmutex_[next].unlock();
               ++next;
-            rwmutex_[next].unlock();
+            }
           }
         }
         else
@@ -273,6 +277,7 @@ namespace tfs
       int32_t ret = ((NULL != server) && (server->is_alive())) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
+        int32_t i = 0;
         bool isnew = false;
         bool writable = false;
         bool master  = false;
@@ -282,6 +287,7 @@ namespace tfs
         ArrayHelper<ServerCollect*> other_expires(MAX_REPLICATION, other_servers);
         NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
         std::set<BlockInfo>::const_iterator iter = blocks.begin();
+        TBSYS_LOG(DEBUG, "block size: %u", blocks.size());
         for (; iter != blocks.end() && TFS_SUCCESS == ret; ++iter, isnew = false, writable = false, master = false)
         {
           helper.clear();
@@ -304,19 +310,22 @@ namespace tfs
           }
           get_mutex_(info.block_id_).unlock();
 
-          //TODO
-          /*ServerCollect* pserver = NULL;
-            for (int8_t j = 0; j < other_expires.get_array_index(); ++j)
-            {
-            pserver = *other_expires.at(j);
+          ServerCollect* pserver = NULL;
+          for (i = 0; i < other_expires.get_array_index(); ++i)
+          {
+            pserver = *other_expires.at(i);
+            assert(NULL != pserver);
             push_to_delete_queue(info.block_id_, pserver->id());
-            }
+          }
 
-            for (int8_t i = 0; i < helper.get_array_index(); ++i)
-            {
+          for (i = 0; i < helper.get_array_index(); ++i)
+          {
+            pserver = *helper.at(i);
+            assert(NULL != pserver);
             manager_.get_server_manager().relieve_relation(*helper.at(i), block);
-            }
-            manager_.get_server_manager().build_relation(server, block, writable, master);*/
+          }
+          //TBSYS_LOG(DEBUG, "master: %d, writable: %d", master, writable);
+          manager_.get_server_manager().build_relation(server, block, writable, master);
         }
       }
       return ret;
@@ -475,6 +484,7 @@ namespace tfs
     {
       int32_t actual = 0;
       int32_t cleanup_nums = last_wirte_block_nums_ - SYSPARAM_NAMESERVER.cleanup_write_timeout_threshold_;
+      int32_t need_cleanup_nums = cleanup_nums;
       if (cleanup_nums > 0)
       {
         LAST_WRITE_BLOCK_MAP_ITER iter;
@@ -486,6 +496,7 @@ namespace tfs
         {
           index = next % MAX_BLOCK_CHUNK_NUMS;
           RWLock::Lock lock(rwmutex_[index], WRITE_LOCKER);
+          TBSYS_LOG(DEBUG, "last_write_blocks_.size: %u, percent: %u", last_write_blocks_[index].size(), percent);
           if (last_write_blocks_[index].size() >= percent)
           {
             iter = last_write_blocks_[index].begin();
@@ -505,7 +516,7 @@ namespace tfs
           }
         }
         TBSYS_LOG(INFO, "cleanup write block entry, total: %d, need cleanup nums: %d, actual cleanup nums: %d",
-            last_wirte_block_nums_, cleanup_nums, actual);
+            last_wirte_block_nums_, need_cleanup_nums, actual);
       }
     }
 

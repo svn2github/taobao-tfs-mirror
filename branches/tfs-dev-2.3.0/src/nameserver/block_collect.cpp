@@ -61,7 +61,7 @@ namespace tfs
       bool ret = server != NULL;
       if (ret)
       {
-        dump(TBSYS_LOG_LEVEL(DEBUG));
+        //dump(TBSYS_LOG_LEVEL(DEBUG));
         writable = !is_full();
         ServerCollect** result = get_(server);
         if (NULL == result)//not found
@@ -88,7 +88,7 @@ namespace tfs
     {
       update_last_time(now);
       ServerCollect** result = get_(server);
-      if (NULL != result)
+      if ((NULL != result) && (server == *result))
         *result = NULL;
       return true;
     }
@@ -111,6 +111,7 @@ namespace tfs
 
     bool BlockCollect::is_writable() const
     {
+      //TBSYS_LOG(DEBUG, "is_full: %d, size: %d", is_full(), get_servers_size());
       return ((!is_full())
           && get_servers_size() >= SYSPARAM_NAMESERVER.max_replication_);
     }
@@ -265,7 +266,7 @@ namespace tfs
         {
           TBSYS_LOG(WARN, "block: %u has been lost, do not replicate", info_.block_id_);
         }
-        else if (size == 1)
+        else if (size == 1 && SYSPARAM_NAMESERVER.max_replication_ > 1)
         {
           if (last_update_time_ + SYSPARAM_NAMESERVER.replicate_wait_time_ <= now)
           {
@@ -273,8 +274,7 @@ namespace tfs
             priority = PLAN_PRIORITY_EMERGENCY;
           }
         }
-        else if ((size >= 2)
-                && (size < SYSPARAM_NAMESERVER.max_replication_))
+        else if (size < SYSPARAM_NAMESERVER.max_replication_)
         {
           float ratio = 1.0f - static_cast<float>(size) / static_cast<float>(SYSPARAM_NAMESERVER.max_replication_);
           if ((last_update_time_ + SYSPARAM_NAMESERVER.replicate_wait_time_ <= now)

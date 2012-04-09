@@ -41,11 +41,11 @@ namespace tfs
         RWLock(ELockMode lockMode = NO_PRIORITY);
         virtual ~RWLock();
 
-        int rdlock();
-        int wrlock();
-        int tryrdlock();
-        int trywrlock();
-        int unlock();
+        int rdlock() ;
+        int wrlock() ;
+        int tryrdlock() ;
+        int trywrlock() ;
+        int unlock() ;
 
       private:
         pthread_rwlock_t rwlock_;

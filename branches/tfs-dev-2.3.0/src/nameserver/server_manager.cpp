@@ -416,13 +416,13 @@ namespace tfs
       int32_t ret = servers_.empty() ? EXIT_NO_DATASERVER : TFS_SUCCESS;
       if (TFS_SUCCESS == ret)
       {
-        if (write_index_ > servers_.size())
+        if (write_index_ >= servers_.size())
           write_index_ = 0;
         result = servers_.at(write_index_);
         ++write_index_;
         assert(NULL != result);
       }
-      return NULL == result ? TFS_SUCCESS : EXIT_NO_DATASERVER;
+      return NULL != result ? TFS_SUCCESS : EXIT_NO_DATASERVER;
     }
 
     int ServerManager::choose_writable_server_random_lock_(ServerCollect*& result)
@@ -514,11 +514,12 @@ namespace tfs
         random_index = random() % size;
         pserver = sources.at(random_index);
         assert(NULL != pserver);
+        uint32_t lan =  Func::get_lan(pserver->id(), SYSPARAM_NAMESERVER.group_mask_);
+        TBSYS_LOG(DEBUG, "==============addr: %s, lans : %u", tbsys::CNetUtil::addrToString(pserver->id()).c_str(), lan);
         if (manager_.get_task_manager().has_space_do_task_in_machine(pserver->id(), true)
             && !manager_.get_task_manager().exist(pserver->id())
-            && lans.find(pserver->id()) == lans.end())
+            && lans.find(lan) == lans.end())
         {
-          uint32_t lan =  Func::get_lan(pserver->id(), SYSPARAM_NAMESERVER.group_mask_);
           lans.insert(lan);
           sources.erase(pserver);
           result = pserver;
@@ -653,6 +654,7 @@ namespace tfs
           server = *source.at(i);
           assert(NULL != server);
           uint32_t lan =  Func::get_lan(server->id(), SYSPARAM_NAMESERVER.group_mask_);
+          TBSYS_LOG(DEBUG, "addr: %s, lans : %u", tbsys::CNetUtil::addrToString(server->id()).c_str(), lan);
           lans.insert(lan);
         }
       }

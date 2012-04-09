@@ -1,3 +1,15 @@
+/*
+ * (C) 2007-2010 Alibaba Group Holding Limited.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+ *
+ * Authors:
+ *   duanfei<duanfei@taobao.com>
+ *      - initial release
+ *
+ */
 #ifndef TFS_COMMON_ARRAY_HELPER_H_
 #define TFS_COMMON_ARRAY_HELPER_H_
 #include <stdint.h>
@@ -55,6 +67,41 @@ namespace tfs
           {
             return index_;
           }
+
+          bool empty() const
+          {
+            return index_ <= 0;
+          }
+
+          bool remove(const T value)
+          {
+            for (int32_t i = 0; i < index_; i++)
+            {
+              if (p_[i] == value)
+              {
+                T* dest = p_ + i;
+                T* start = p_ + i + 1;
+                int32_t n = index_ - i ;
+                if (n > 0)
+                  memmove(dest, start, n * sizeof(T));
+                --index_;
+              }
+            }
+            return true;
+          }
+
+          bool find(const T value) const
+          {
+            for (int32_t i = 0; i < index_; i++)
+            {
+              if (p_[i] == value)
+              {
+                return true;
+              }
+            }
+            return false;
+          }
+
           T* at(int64_t index) const
           {
             T* res = NULL;

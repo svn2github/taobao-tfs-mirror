@@ -64,6 +64,5 @@ namespace tfs
     {
       return pthread_rwlock_unlock(&rwlock_);
     }
-
   }
 }

@@ -63,6 +63,7 @@ namespace tfs
       FRIEND_TEST(ServerManagerTest, add_remove_get);
       FRIEND_TEST(ServerManagerTest, get_range_servers_);
       FRIEND_TEST(ServerManagerTest, pop_from_dead_queue);
+      FRIEND_TEST(LayoutManagerTest, build_balance_task_);
       #endif
       public:
       explicit ServerManager(LayoutManager& manager);
@@ -135,7 +136,7 @@ namespace tfs
       LayoutManager& manager_;
       SERVER_TABLE servers_;
       SERVER_TABLE dead_servers_;
-      common::RWLock rwmutex_;
+      mutable common::RWLock rwmutex_;
       int32_t write_index_;
     };
   }/** nameserver **/

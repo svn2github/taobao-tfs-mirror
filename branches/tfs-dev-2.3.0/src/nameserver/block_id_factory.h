@@ -31,13 +31,7 @@ namespace tfs
         int initialize(const std::string& path);
         int destroy();
         uint32_t generation(const uint32_t id = 0);
-
-      static const uint32_t INVALID_BLOCK_ID;
-#if defined(TFS_GTEST) || defined(TFS_NS_INTEGRATION)
-      public:
-#else
       private:
-#endif
         int update(const uint32_t id) const;
         DISALLOW_COPY_AND_ASSIGN(BlockIdFactory);
         static BlockIdFactory instance_;

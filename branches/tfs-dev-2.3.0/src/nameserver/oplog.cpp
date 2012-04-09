@@ -11,9 +11,9 @@
  * Authors:
  *   duolong <duolong@taobao.com>
  *      - initial release
- *   qushan<qushan@taobao.com> 
+ *   qushan<qushan@taobao.com>
  *      - modify 2009-03-27
- *   duanfei <duanfei@taobao.com> 
+ *   duanfei <duanfei@taobao.com>
  *      - modify 2010-04-23
  *
  */
@@ -234,16 +234,18 @@ namespace tfs
 
     int64_t BlockOpLog::length(void) const
     {
-      return common::INT8_SIZE + info_.length() + common::INT8_SIZE 
-            + blocks_.size() * common::INT_SIZE + common::INT8_SIZE 
+      return common::INT8_SIZE + info_.length() + common::INT8_SIZE
+            + blocks_.size() * common::INT_SIZE + common::INT8_SIZE
             + servers_.size() * common::INT64_SIZE;
     }
 
     OpLog::OpLog(const std::string& logname, const int32_t max_log_slot_size) :
       MAX_LOG_SLOTS_SIZE(max_log_slot_size), MAX_LOG_BUFFER_SIZE(max_log_slot_size * MAX_LOG_SIZE), path_(logname), seqno_(
-          0), last_flush_time_(0), slots_offset_(0), fd_(-1), buffer_(new char[max_log_slot_size * MAX_LOG_SIZE + 1])
+          0), last_flush_time_(0), slots_offset_(0), fd_(-1), buffer_(NULL)
     {
-      memset(buffer_, 0, max_log_slot_size * MAX_LOG_SIZE + 1); 
+      buffer_ = new (std::nothrow) char[max_log_slot_size * MAX_LOG_SIZE + 1];
+      assert(NULL != buffer_);
+      memset(buffer_, 0, max_log_slot_size * MAX_LOG_SIZE + 1);
       memset(&oplog_rotate_header_, 0, sizeof(oplog_rotate_header_));
     }
 
@@ -304,7 +306,7 @@ namespace tfs
         fd_ = open(path_.c_str(), O_RDWR | O_CREAT, 0600);
         if (fd_ < 0)
         {
-          TBSYS_LOG(ERROR, "open file: %s fail: %s", path_.c_str(), strerror(errno));
+          TBSYS_LOG(WARN, "open file: %s fail: %s", path_.c_str(), strerror(errno));
           iret = common::EXIT_GENERAL_ERROR;
         }
       }
@@ -320,13 +322,13 @@ namespace tfs
           int64_t length = ::write(fd_, buf, oplog_rotate_header_.length());
           if (length != oplog_rotate_header_.length())
           {
-            TBSYS_LOG(ERROR, "wirte data fail: file: %s, erros: %s...", path_.c_str(), strerror(errno));
+            TBSYS_LOG(WARN, "wirte data fail: file: %s, erros: %s...", path_.c_str(), strerror(errno));
             ::close( fd_);
             fd_ = -1;
             fd_ = open(path_.c_str(), O_RDWR | O_CREAT, 0600);
             if (fd_ < 0)
             {
-              TBSYS_LOG(ERROR, "open file: %s fail: %s", path_.c_str(), strerror(errno));
+              TBSYS_LOG(WARN, "open file: %s fail: %s", path_.c_str(), strerror(errno));
               iret = common::EXIT_GENERAL_ERROR;
             }
             else
@@ -335,7 +337,7 @@ namespace tfs
               length = ::write(fd_, buf, oplog_rotate_header_.length());
               if (length != oplog_rotate_header_.length())
               {
-                TBSYS_LOG(ERROR, "wirte data fail: file: %s, erros: %s...", path_.c_str(), strerror(errno));
+                TBSYS_LOG(WARN, "wirte data fail: file: %s, erros: %s...", path_.c_str(), strerror(errno));
                 iret = common::EXIT_GENERAL_ERROR;
               }
             }
@@ -364,14 +366,14 @@ namespace tfs
               offset, MAX_LOG_BUFFER_SIZE);
           iret = common::EXIT_SLOTS_OFFSET_SIZE_ERROR;
         }
-        else 
+        else
         {
           header.crc_  = common::Func::crc(0, data, length);
           header.time_ = time(NULL);
           header.length_ = length;
           header.seqno_  = ++seqno_;
           header.type_ = type;
-          iret = header.serialize(buffer_, MAX_LOG_BUFFER_SIZE, slots_offset_); 
+          iret = header.serialize(buffer_, MAX_LOG_BUFFER_SIZE, slots_offset_);
           if (common::TFS_SUCCESS == iret)
           {
             iret = common::Serialization::set_bytes(buffer_, MAX_LOG_BUFFER_SIZE, slots_offset_, data, length);

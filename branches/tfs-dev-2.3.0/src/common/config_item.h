@@ -56,6 +56,8 @@ namespace tfs
 #define CONF_USE_CAPACITY_RATIO                       "use_capacity_ratio"
 #define CONF_TASK_MAX_QUEUE_SIZE                      "task_max_queue_size"
 #define CONF_DISCARD_NEWBLK_SAFE_MODE_TIME            "discard_newblk_safe_mode_time"
+#define CONF_COMPACT_HOUR_RANGE                       "compact_hour_range"
+#define CONF_REPORT_HOUR_RANGE                        "report_hour_range"
 
 
 //adminserver, only monitor ds
@@ -92,12 +94,13 @@ namespace tfs
 
 #define CONF_MAX_WAIT_WRITE_LEASE                     "max_wait_write_lease"
 #define CONF_MAX_LEASE_TIMEOUT                        "max_lease_timeout"
+#define CONF_MAX_WRITE_TIMEOUT                        "max_write_timeout"
 #define CONF_LEASE_EXPIRED_TIME                       "lease_expired_time"//hour_
 #define CONF_CLEANUP_LEASE_THRESHOLD                  "cleanup_lease_threshold"
+#define CONF_CLEANUP_WRITE_TIMEOUT_THRESHOLD          "cleanup_write_timeout_threshold"
 
 #define CONF_BALANCE_MAX_DIFF_BLOCK_NUM               "balance_max_diff_block_num"
 #define CONF_BALANCE_PERCENT                          "balance_percent"
-
 
 #define CONF_DUMP_STAT_INFO_INTERVAL                  "dump_stat_info_interval"
 
@@ -105,6 +108,7 @@ namespace tfs
 #define CONF_GROUP_COUNT                              "group_count"
 #define CONF_TIME_REPORT_BLOCK_INTERVAL               "time_report_block_interval" //
 #define CONF_REPORT_BLOCK_EXPIRED_TIME                "report_block_expired_time"
+#define CONF_MAX_TASK_IN_MACHINE_NUMS                 "max_task_in_machine_nums"
 
   //dataserver
 #define CONF_DATA_THREAD_COUNT                        "data_thread_count"
@@ -170,6 +174,10 @@ namespace tfs
 
 #define CONF_RT_TABLE_FILE_PATH                       "table_file_path"
 #define CONF_UPDATE_TABLE_THREAD_COUNT                "update_table_thread_count"
+
+
+//mock dataserver
+#define CONF_MK_MAX_WRITE_FILE_SIZE                    "max_write_file_size"
   }
 }
 #endif //TFS_COMMON_CONFDEFINE_H_

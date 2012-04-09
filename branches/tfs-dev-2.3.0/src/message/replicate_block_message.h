@@ -15,20 +15,13 @@
  */
 #ifndef TFS_MESSAGE_REPLICATEBLOCKMESSAGE_H_
 #define TFS_MESSAGE_REPLICATEBLOCKMESSAGE_H_
-#include "common/base_packet.h"
+#include "base_task_message.h"
 
 namespace tfs
 {
   namespace message
   {
-    /*enum CommandStatus
-    {
-      COMMAND_REPLICATE = 1,
-      COMMAND_REPL_COMPLETE,
-      COMMAND_REPL_FAILURE,
-      COMMAND_CLIENT_REPL = 100
-    };*/
-    class ReplicateBlockMessage: public common::BasePacket 
+    class ReplicateBlockMessage: public BaseTaskMessage
     {
       public:
         ReplicateBlockMessage();

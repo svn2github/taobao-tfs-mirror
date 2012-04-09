@@ -36,17 +36,19 @@ namespace tfs
   {
     class BlockCollect;
     class LayoutManager;
-    class ServerCollect : public common::RWLock, public GCObject
+    class ServerCollect : /*public common::RWLock,*/ public GCObject
     {
       friend class BlockCollect;
       friend class LayoutManager;
       typedef common::TfsSortedVector<BlockCollect*, BlockIdCompare>::iterator BLOCKS_ITER;
       #ifdef TFS_GTEST
       friend class ServerCollectTest;
+      friend class LayoutManagerTest;
       FRIEND_TEST(ServerCollectTest, add);
       FRIEND_TEST(ServerCollectTest, remove);
       FRIEND_TEST(ServerCollectTest, get_range_blocks_);
       FRIEND_TEST(ServerCollectTest, touch);
+      FRIEND_TEST(LayoutManagerTest, update_relation);
       public:
       bool exist_writable(const BlockCollect* block);
       #endif
@@ -88,6 +90,8 @@ namespace tfs
       }
       inline bool is_report_block(bool& rb_expire, const time_t now, const bool isnew) const
       {
+        //TBSYS_LOG(DEBUG, "rb_expired: %ld, status: %d, next: %ld",
+        //    rb_expired_time_, rb_status_, next_report_block_time_);
         if (!isnew)
           rb_expire = (now > rb_expired_time_ && rb_status_ == REPORT_BLOCK_STATUS_REPORTING);
         return (isnew || rb_expire) ? true : now >= next_report_block_time_;
@@ -148,6 +152,7 @@ namespace tfs
       common::TfsSortedVector<BlockCollect*, BlockIdCompare>* hold_;
       common::TfsSortedVector<BlockCollect*, BlockIdCompare>* writable_;
       common::TfsVector<BlockCollect*>* hold_master_;
+      mutable common::RWLock mutex_;
     };
   }/** nameserver **/
 }/** tfs **/
