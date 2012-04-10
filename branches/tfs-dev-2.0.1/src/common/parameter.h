@@ -59,6 +59,7 @@ namespace tfs
       int32_t strategy_replicate_capacity_weigth_;
       int32_t strategy_replicate_load_weigth_;
       int32_t strategy_replicate_elect_num_weigth_;
+      int32_t dispatch_oplog_;
       double  balance_percent_;
 
       static NameServerParameter ns_parameter_;
