@@ -808,7 +808,7 @@ namespace tfs
       REMOVE_BLOCK_RESPONSE_FLAG_YES = 1
     }RemoveBlockResponseFlag;
 
-    extern const char* dynamic_parameter_str[29];
+    extern const char* dynamic_parameter_str[28];
 
     // defined type typedef
     typedef std::vector<BlockInfo> BLOCK_INFO_LIST;

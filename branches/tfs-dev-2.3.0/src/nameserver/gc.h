@@ -44,9 +44,9 @@ namespace tfs
       int gc(const time_t now);
       private:
       DISALLOW_COPY_AND_ASSIGN(GCObjectManager);
-      tbutil::Mutex mutex_;
-      std::set<GCObject*> object_list_;
       LayoutManager& manager_;
+      std::set<GCObject*> object_list_;
+      tbutil::Mutex mutex_;
     };
   }/** end namespace nameserver **/
 }/** end namespace tfs **/

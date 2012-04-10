@@ -257,7 +257,6 @@ namespace tfs
       NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
       if (!ngi.is_destroyed())
       {
-        ngi.destroy();
         GFactory::destroy();
         heart_manager_.destroy();
         master_slave_heart_manager_.destroy();

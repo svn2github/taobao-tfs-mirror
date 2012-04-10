@@ -77,7 +77,7 @@ namespace tfs
       common::VUINT32 blocks_;
       common::VUINT64 servers_;
       int8_t cmd_;
-      void dump(void) const;
+      void dump(const int32_t level) const;
     };
 
     class OpLog

@@ -80,13 +80,9 @@ namespace tfs
 
     void NsGlobalStatisticsInfo::dump(int32_t level, const char* file , const int32_t line , const char* function ) const
     {
-      UNUSED(level);
-      UNUSED(file);
-      UNUSED(line);
-      UNUSED(function);
-      /*TBSYS_LOGGER.logMessage(level, file, line, function,
+      TBSYS_LOGGER.logMessage(level, file, line, function,
           "use_capacity: %"PRI64_PREFIX"d, total_capacity: %"PRI64_PREFIX"d, total_block_count: %"PRI64_PREFIX"d, total_load: %d, max_load: %d, max_block_count: %d, alive_server_count: %d",
-          use_capacity_, total_capacity_, total_block_count_, total_load_, max_load_, max_block_count_, alive_server_count_);*/
+          use_capacity_, total_capacity_, total_block_count_, total_load_, max_load_, max_block_count_, alive_server_count_);
     }
 
     NsRuntimeGlobalInformation::NsRuntimeGlobalInformation()

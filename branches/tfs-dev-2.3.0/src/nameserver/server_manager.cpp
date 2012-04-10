@@ -283,11 +283,15 @@ namespace tfs
       {
         const uint64_t current_total_capacity = server->total_capacity() * SYSPARAM_NAMESERVER.max_use_capacity_ratio_ / 100;
         double current_percent = calc_capacity_percentage(server->use_capacity(), current_total_capacity);
-        if ((current_percent > percent + SYSPARAM_NAMESERVER.balance_percent_)
+        TBSYS_LOG(DEBUG, "move_split_server: %s, current_percent: %e, balance_percent: %e, percent: %e",
+           tbsys::CNetUtil::addrToString(server->id()).c_str(), current_percent, SYSPARAM_NAMESERVER.balance_percent_, percent);
+        if ((current_percent > (percent + SYSPARAM_NAMESERVER.balance_percent_))
             || (current_percent >= 1.0))
         {
           source.insert(std::multimap<int64_t, ServerCollect*>::value_type(
                 static_cast<int64_t>(current_percent * PERCENTAGE_MAGIC), const_cast<ServerCollect*>(server)));
+        TBSYS_LOG(DEBUG, "move_split_server: %s, %ld",
+           tbsys::CNetUtil::addrToString(server->id()).c_str(), static_cast<int64_t>(current_percent * PERCENTAGE_MAGIC));
         }
         if (current_percent < percent - SYSPARAM_NAMESERVER.balance_percent_)
         {

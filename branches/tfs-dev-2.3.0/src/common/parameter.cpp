@@ -55,7 +55,8 @@ namespace tfs
     int NameServerParameter::initialize(void)
     {
       discard_max_count_ = 0;
-      report_block_time_interval_ = 1;
+      report_block_time_interval_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_REPORT_BLOCK_TIME_INTERVAL, 1);
+      report_block_time_interval_ = std::max(1, report_block_time_interval_);
       max_write_timeout_= TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_MAX_WRITE_TIMEOUT, 3);
       max_task_in_machine_nums_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_MAX_TASK_IN_MACHINE_NUMS, 14);
       cleanup_write_timeout_threshold_ =
@@ -164,7 +165,7 @@ namespace tfs
          report_block_queue_size_ = report_block_thread_nums * 2;
       if (report_block_queue_size_ > report_block_thread_nums * 4)
         report_block_queue_size_ = report_block_thread_nums * 4;
-      const char* report_hour_str = TBSYS_CONFIG.getString(CONF_SN_NAMESERVER, CONF_REPORT_HOUR_RANGE, "2~4");
+      const char* report_hour_str = TBSYS_CONFIG.getString(CONF_SN_NAMESERVER, CONF_REPORT_BLOCK_HOUR_RANGE, "2~4");
 
       set_hour_range(report_hour_str, report_block_time_upper_, report_block_time_lower_);
       return TFS_SUCCESS;

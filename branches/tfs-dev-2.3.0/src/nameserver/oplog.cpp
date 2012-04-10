@@ -129,16 +129,20 @@ namespace tfs
     {
       return common::INT_SIZE * 3;
     }
-    void BlockOpLog::dump(void) const
+    void BlockOpLog::dump(const int32_t level) const
     {
-      std::string bstr;
-      std::string sstr;
-      print_servers(servers_, sstr);
-      print_blocks(blocks_, bstr);
-      TBSYS_LOG(DEBUG, "cmd: %s, block_ids: %s version: %u file_count: %u size: %u delfile_count: %u del_size: %u seqno: %u, ds_size: %zd, dataserver: %s",
-        cmd_ == common::OPLOG_INSERT ? "insert" : cmd_ == common::OPLOG_REMOVE ? "remove" : cmd_ == common::OPLOG_RELIEVE_RELATION ? "release" : cmd_ == common::OPLOG_RENAME ? "rename" : "update",
-        bstr.c_str(), info_.version_, info_.file_count_, info_.size_, info_.del_file_count_, info_.del_size_,
-        info_.seq_no_, servers_.size(), sstr.c_str());
+      if (level <= TBSYS_LOGGER._level)
+      {
+        std::string bstr;
+        std::string sstr;
+        print_servers(servers_, sstr);
+        print_blocks(blocks_, bstr);
+        TBSYS_LOGGER.logMessage(level, __FILE__, __LINE__, __FUNCTION__,
+          "cmd: %s, block_ids: %s version: %u file_count: %u size: %u delfile_count: %u del_size: %u seqno: %u, ds_size: %zd, dataserver: %s",
+          cmd_ == common::OPLOG_INSERT ? "insert" : cmd_ == common::OPLOG_REMOVE ? "remove" : cmd_ == common::OPLOG_RELIEVE_RELATION ? "release" : cmd_ == common::OPLOG_RENAME ? "rename" : "update",
+          bstr.c_str(), info_.version_, info_.file_count_, info_.size_, info_.del_file_count_, info_.del_size_,
+          info_.seq_no_, servers_.size(), sstr.c_str());
+      }
     }
 
     int BlockOpLog::serialize(char* data, const int64_t data_len, int64_t& pos) const

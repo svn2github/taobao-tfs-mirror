@@ -36,7 +36,7 @@ namespace tfs
   {
     class BlockCollect;
     class LayoutManager;
-    class ServerCollect : /*public common::RWLock,*/ public GCObject
+    class ServerCollect : public GCObject
     {
       friend class BlockCollect;
       friend class LayoutManager;

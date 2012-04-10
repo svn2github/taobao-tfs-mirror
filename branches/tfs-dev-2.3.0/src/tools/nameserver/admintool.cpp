@@ -293,7 +293,7 @@ int cmd_set_bpr(const VSTRING& param)
 
 int cmd_set_run_param(const VSTRING& param)
 {
-  const static char* param_str[] = {
+  /*const static char* param_str[] = {
       "min_replication",
       "max_replication",
       "max_write_file_count",
@@ -325,8 +325,8 @@ int cmd_set_run_param(const VSTRING& param)
       "strategy_replicate_load_weigth",
       "strategy_replicate_elect_num_weigth"
       ""
-  };
-  static int32_t param_strlen = sizeof(param_str) / sizeof(char*);
+  };*/
+  static int32_t param_strlen = sizeof(dynamic_parameter_str) / sizeof(char*);
 
   int32_t size = param.size();
   if (size != 1 && size != 3)
@@ -334,7 +334,7 @@ int cmd_set_run_param(const VSTRING& param)
     fprintf(stderr, "param param_name\n\n");
     for (int32_t i = 0; i < param_strlen; i++)
     {
-      fprintf(stderr, "%s\n", param_str[i]);
+      fprintf(stderr, "%s\n", dynamic_parameter_str[i]);
     }
     return TFS_ERROR;
   }
@@ -343,7 +343,7 @@ int cmd_set_run_param(const VSTRING& param)
   uint32_t index = 0;
   for (int32_t i = 0; i < param_strlen; i++)
   {
-    if (strcmp(param_name, param_str[i]) == 0)
+    if (strcmp(param_name, dynamic_parameter_str[i]) == 0)
     {
       index = i + 1;
       break;

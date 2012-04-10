@@ -497,7 +497,7 @@ namespace tfs
       return ret;
     }
 
-    int LayoutManager::set_runtime_param(uint32_t value1, uint32_t value2, char *retstr)
+    int LayoutManager::set_runtime_param(const uint32_t value1, const uint32_t value2, char *retstr)
     {
       bool bret = NULL != retstr;
       if (bret)
@@ -511,9 +511,9 @@ namespace tfs
           &plan_run_flag_,
           &SYSPARAM_NAMESERVER.run_plan_expire_interval_,
           &SYSPARAM_NAMESERVER.safe_mode_time_,
-          &SYSPARAM_NAMESERVER.max_replication_,
           &SYSPARAM_NAMESERVER.max_write_timeout_,
           &SYSPARAM_NAMESERVER.max_write_file_count_,
+          &SYSPARAM_NAMESERVER.add_primary_block_count_,
           &SYSPARAM_NAMESERVER.cleanup_write_timeout_threshold_,
           &SYSPARAM_NAMESERVER.max_use_capacity_ratio_,
           &SYSPARAM_NAMESERVER.heart_interval_,
@@ -530,7 +530,6 @@ namespace tfs
           &SYSPARAM_NAMESERVER.object_dead_max_time_,
           &SYSPARAM_NAMESERVER.group_count_,
           &SYSPARAM_NAMESERVER.group_seq_,
-          &SYSPARAM_NAMESERVER.add_primary_block_count_,
           &SYSPARAM_NAMESERVER.report_block_queue_size_,
           &SYSPARAM_NAMESERVER.report_block_time_lower_,
           &SYSPARAM_NAMESERVER.report_block_time_upper_,
@@ -582,22 +581,18 @@ namespace tfs
       return block_id;
     }
 
-    static bool in_hour_range(const time_t now, int32_t min, int32_t max)
+    static bool in_hour_range(const time_t now, int32_t& min, int32_t& max)
     {
       struct tm* lt = gmtime(&now);
-      bool reverse =  min > max;
-      if (reverse)
-      {
+      if (min > max)
         std::swap(min, max);
-      }
-      bool inrange = lt->tm_hour >= min && lt->tm_hour <= max;
-      return reverse ? !inrange : inrange;
+      return (lt->tm_hour >= min && lt->tm_hour <= max);
     }
 
     void LayoutManager::build_()
     {
       bool over = false;
-      time_t  now = 0;
+      time_t  now = 0, current = 0;
       int64_t need = 0, index = 0;
       uint32_t start = 0;
       const int32_t MAX_QUERY_BLOCK_NUMS = 2048;
@@ -608,12 +603,13 @@ namespace tfs
       NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
       while (!ngi.is_destroyed())
       {
+        current = time(NULL);
         now = Func::get_monotonic_time();
         if (ngi.in_safe_mode_time(now))
           Func::sleep(SYSPARAM_NAMESERVER.safe_mode_time_, ngi.destroy_flag_);
 
         //checkpoint
-        rotate_(now);
+        rotate_(current);
 
         if (ngi.is_master())
         {
@@ -633,7 +629,7 @@ namespace tfs
 
           if (need > 0)
           {
-            bool range = in_hour_range(now, SYSPARAM_NAMESERVER.compact_time_lower_, SYSPARAM_NAMESERVER.compact_time_upper_);
+            bool range = in_hour_range(current, SYSPARAM_NAMESERVER.compact_time_lower_, SYSPARAM_NAMESERVER.compact_time_upper_);
             over = get_block_manager().scan(results, start, MAX_QUERY_BLOCK_NUMS);
             for (index = 0; index < results.get_array_index(); ++index)
             {
@@ -650,7 +646,7 @@ namespace tfs
               start = 0;
           }
         }
-        usleep(1000);
+        usleep(5000);
       }
     }
 
@@ -696,6 +692,7 @@ namespace tfs
             TBSYS_LOG(INFO, "need: %"PRI64_PREFIX"d, source size: %zd, target: %zd, percent: %e",
                 need, source.size(), targets.size(), percent);
 
+            const int32_t MAX_RETRY_COUNT = 3;
             int32_t ret = TFS_SUCCESS;
             bool complete = false;
             BlockCollect* block = NULL;
@@ -710,7 +707,7 @@ namespace tfs
               if (get_task_manager().has_space_do_task_in_machine(it->second->id(), false)
                   && !get_task_manager().exist(it->second->id()))
               {
-                while (!complete)
+                for (int32_t index = 0; index < MAX_RETRY_COUNT && !complete; ++index)
                 {
                   block = NULL;
                   ret = it->second->choose_move_block_random(block);
@@ -749,7 +746,7 @@ namespace tfs
 
         get_gc_manager().gc(now);
 
-        usleep(1000);
+        usleep(5000);
       }
     }
 
@@ -828,7 +825,7 @@ namespace tfs
       time_t now = 0;
       int32_t new_add_nums  = 0;
       const int32_t MAX_SLOT_NUMS = 64;
-      const int32_t SLEEP_TIME_US = 200;
+      const int32_t SLEEP_TIME_US = 5000;
       NewClient* client = NULL;
       ServerCollect* last = NULL;
       ServerCollect* servers[MAX_SLOT_NUMS];
@@ -873,6 +870,7 @@ namespace tfs
           last->set_report_block_info(now, REPORT_BLOCK_STATUS_REPORTING);
           current_reporting_block_servers_.push_back(last);
         }
+        usleep(100);
       }
     }
 
@@ -1054,13 +1052,13 @@ namespace tfs
       return ret;
     }
 
-    BlockCollect* LayoutManager::add_new_block_(uint32_t& block_id, ServerCollect* server, time_t now)
+    BlockCollect* LayoutManager::add_new_block_(uint32_t& block_id, ServerCollect* server, const time_t now)
     {
       return block_id != 0 ? add_new_block_helper_create_by_id_(block_id, now)
         : add_new_block_helper_create_by_system_(block_id, server, now);
     }
 
-    BlockCollect* LayoutManager::add_new_block_helper_create_by_id_(uint32_t block_id, time_t now)
+    BlockCollect* LayoutManager::add_new_block_helper_create_by_id_(const uint32_t block_id, const time_t now)
     {
       BlockCollect* block = NULL;
       int32_t ret =  (0 != block_id) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
@@ -1129,7 +1127,7 @@ namespace tfs
       return ret == TFS_SUCCESS ? block : NULL;
     }
 
-    BlockCollect* LayoutManager::add_new_block_helper_create_by_system_(uint32_t& block_id, ServerCollect* server, time_t now)
+    BlockCollect* LayoutManager::add_new_block_helper_create_by_system_(uint32_t& block_id, ServerCollect* server, const time_t now)
     {
       BlockCollect* block = NULL;
       int32_t ret =  (0 == block_id) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
@@ -1387,7 +1385,6 @@ namespace tfs
 
     bool LayoutManager::has_report_block_server_() const
     {
-      tbutil::Mutex::Lock lock(wait_report_block_server_mutex_);
       return !wait_report_block_servers_.empty() || !current_reporting_block_servers_.empty();
     }
 

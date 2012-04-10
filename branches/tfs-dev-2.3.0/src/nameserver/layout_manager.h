@@ -55,7 +55,7 @@ namespace tfs
       FRIEND_TEST(LayoutManagerTest, build_redundant_);
       #endif
       friend class ClientRequestServer;
-      friend int OpLogSyncManager::replay_helper_do_oplog(const int32_t type, const char* const data, const int64_t length , int64_t& pos, time_t now);
+      friend int OpLogSyncManager::replay_helper_do_oplog(const time_t now, const int32_t type, const char* const data, const int64_t length , int64_t& pos);
       public:
       explicit LayoutManager(NameServer& manager);
       virtual ~LayoutManager();
@@ -198,7 +198,7 @@ namespace tfs
       class CheckDataServerReportBlockThreadHelper: public tbutil::Thread
       {
         public:
-          CheckDataServerReportBlockThreadHelper(LayoutManager& manager):
+          explicit CheckDataServerReportBlockThreadHelper(LayoutManager& manager):
             manager_(manager)
         {
           start();
@@ -214,7 +214,7 @@ namespace tfs
       class BuildBalanceThreadHelper: public tbutil::Thread
       {
         public:
-          BuildBalanceThreadHelper(LayoutManager& manager):
+          explicit BuildBalanceThreadHelper(LayoutManager& manager):
             manager_(manager) {start();}
           virtual ~BuildBalanceThreadHelper() {}
           void run();
@@ -227,7 +227,7 @@ namespace tfs
       class TimeoutThreadHelper: public tbutil::Thread
       {
         public:
-          TimeoutThreadHelper(LayoutManager& manager):
+          explicit TimeoutThreadHelper(LayoutManager& manager):
             manager_(manager) {start();}
           virtual ~TimeoutThreadHelper() {}
           void run();

@@ -67,7 +67,7 @@ namespace tfs
       inline common::FileQueueThread* get_file_queue_thread() const { return file_queue_thread_;}
       int replay_helper(const char* const data, const int64_t data_len, int64_t& pos, const time_t now = common::Func::get_monotonic_time());
       int replay_helper_do_msg(const int32_t type, const char* const data, const int64_t data_len, int64_t& pos);
-      int replay_helper_do_oplog(const int32_t type, const char* const data, const int64_t data_len, int64_t& pos, time_t now);
+      int replay_helper_do_oplog(const time_t now, const int32_t type, const char* const data, const int64_t data_len, int64_t& pos);
 
       inline uint32_t generation(const uint32_t id = 0) { return id_factory_.generation(id);}
     private:

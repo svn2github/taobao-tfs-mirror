@@ -143,6 +143,7 @@ namespace tfs
 
     int ClientRequestServer::open_read_mode_(common::VUINT64& servers, const uint32_t block) const
     {
+      servers.clear();
       return 0 == block ? EXIT_BLOCK_NOT_FOUND :  manager_.get_block_manager().get_servers(servers, block);
     }
 
@@ -239,7 +240,7 @@ namespace tfs
      * @return: success or failure
      */
     int ClientRequestServer::open_write_mode_(uint32_t& block_id, uint32_t& lease_id,
-        int32_t& version, VUINT64& servers, const int32_t mode, const int32_t now)
+        int32_t& version, VUINT64& servers, const int32_t mode, const time_t now)
     {
       int32_t ret = mode & T_WRITE ? TFS_SUCCESS : EXIT_ACCESS_MODE_ERROR;
       if (TFS_SUCCESS != ret)
@@ -325,7 +326,7 @@ namespace tfs
       VUINT32::const_iterator iter = blocks.begin();
       for (; iter != blocks.end(); ++iter)
       {
-        res = out.insert(std::pair<uint32_t, common::BlockInfoSeg>((*iter), common::BlockInfoSeg()));
+        res = out.insert(std::make_pair((*iter), common::BlockInfoSeg()));
         open_read_mode_(res.first->second.ds_, (*iter));
       }
       return TFS_SUCCESS;
@@ -352,7 +353,6 @@ namespace tfs
 
     int ClientRequestServer::handle_control_load_block(const time_t now, const common::ClientCmdInformation& info, common::BasePacket* message, const int64_t buf_length, char* buf)
     {
-      std::vector<GCObject*> rms;
       int32_t ret = ((NULL != buf) && (buf_length > 0)) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {

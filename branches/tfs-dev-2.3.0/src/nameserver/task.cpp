@@ -112,7 +112,7 @@ namespace tfs
 
     void Task::dump(int32_t level, const char* const format)
     {
-      if (level >= TBSYS_LOGGER._level)
+      if (level <= TBSYS_LOGGER._level)
       {
         std::string runer;
         std::vector<ServerCollect*>::iterator iter = runer_.begin();
@@ -121,16 +121,14 @@ namespace tfs
           runer += tbsys::CNetUtil::addrToString((*iter)->id());
           runer += "/";
         }
-        TBSYS_LOGGER.logMessage(level, __FILE__, __LINE__, __FUNCTION__, "pointer %p, %s plan seqno: %"PRI64_PREFIX"d, type: %s ,status: %s, priority: %s , block_id: %u, expired_time: %"PRI64_PREFIX"d,runer: %s",
-            this,
-            format == NULL ? "" : format,
-            seqno_,
+        TBSYS_LOGGER.logMessage(level, __FILE__, __LINE__, __FUNCTION__, "%s plan seqno: %"PRI64_PREFIX"d, type: %s ,status: %s, priority: %s , block_id: %u, expired_time: %"PRI64_PREFIX"d,runer: %s",
+            format == NULL ? "" : format, seqno_,
             type_ == PLAN_TYPE_REPLICATE ? "replicate" : type_ == PLAN_TYPE_MOVE ? "move" : type_ == PLAN_TYPE_COMPACT
             ? "compact" : type_ == PLAN_TYPE_DELETE ? "delete" : "unknow",
             status_ == PLAN_STATUS_BEGIN ? "begin" : status_ == PLAN_STATUS_TIMEOUT ? "timeout" : status_ == PLAN_STATUS_END
             ? "finish" : status_ == PLAN_STATUS_FAILURE ? "failure": "unknow",
             priority_ == PLAN_PRIORITY_NORMAL ? "normal" : priority_ == PLAN_PRIORITY_EMERGENCY ? "emergency": "unknow",
-            block_id_, last_update_time_,runer.c_str());
+            block_id_, last_update_time_, runer.c_str());
       }
     }
 
@@ -181,7 +179,7 @@ namespace tfs
 
     void CompactTask::dump(const int32_t level, const char* const format)
     {
-      if (level >= TBSYS_LOGGER._level)
+      if (level <= TBSYS_LOGGER._level)
       {
         std::string runer;
         std::vector<ServerCollect*>::iterator iter = runer_.begin();
@@ -263,7 +261,7 @@ namespace tfs
       if (TFS_SUCCESS == ret)
       {
         CompactBlockCompleteMessage* message = dynamic_cast<CompactBlockCompleteMessage*>(msg);
-        dump(TBSYS_LOG_LEVEL_INFO, "handle compact complete message");
+        //dump(TBSYS_LOG_LEVEL_INFO, "handle compact complete message");
         PlanStatus status = status_transform_compact_to_plan(static_cast<CompactStatus>(message->get_success()));
         CompactComplete value(message->get_server_id(), message->get_block_id(), status);
         memcpy(&value.block_info_, &message->get_block_info(), sizeof(block_info_));
@@ -525,7 +523,7 @@ namespace tfs
           ReplicateBlockMessage* message = dynamic_cast<ReplicateBlockMessage*>(msg);
           const ReplBlock blocks = *message->get_repl_block();
           bool success = message->get_command() == PLAN_STATUS_END;
-          TBSYS_LOG(INFO, "block: %u %s complete status: %s", blocks.block_id_,
+          TBSYS_LOG(DEBUG, "block: %u %s complete status: %s", blocks.block_id_,
               blocks.is_move_ == REPLICATE_BLOCK_MOVE_FLAG_YES ? "move" : "replicate",
               message->get_command() == PLAN_STATUS_END ? "end" :
               message->get_command() == PLAN_STATUS_TIMEOUT ? "timeout" :
@@ -536,19 +534,23 @@ namespace tfs
             ServerCollect* dest   = manager_.get_manager().get_server_manager().get(blocks.destination_id_);// find destination dataserver
             ServerCollect* source = manager_.get_manager().get_server_manager().get(blocks.source_id_);// find source dataserver
             BlockCollect* block = manager_.get_manager().get_block_manager().get(blocks.block_id_);
-            if (NULL != block)
+            if ((NULL != block) && (NULL != dest))
             {
-              if (NULL != dest)
+              if (blocks.is_move_ == REPLICATE_BLOCK_MOVE_FLAG_YES)
+              {
+                if ((NULL != source) && block->exist(source))
+                  manager_.get_manager().relieve_relation(block, source, now);
+                manager_.get_manager().build_relation(block, dest, now);
+                ret = block->get_servers_size() > 0 ?  STATUS_MESSAGE_REMOVE : STATUS_MESSAGE_OK;
+                if ((block->get_servers_size() <= 0) && (NULL != source))
+                {
+                  manager_.get_manager().build_relation(block, source, now);
+                }
+              }
+              else
               {
                 //build relation between block and dest dataserver
                 manager_.get_manager().build_relation(block, dest, now);
-              }
-              if ((blocks.is_move_ == REPLICATE_BLOCK_MOVE_FLAG_YES)
-                  && (block->get_servers_size() > SYSPARAM_NAMESERVER.max_replication_)
-                  && (NULL != source))
-              {
-                manager_.get_manager().relieve_relation(block, source, now);
-                ret = STATUS_MESSAGE_REMOVE;
               }
             }
 
@@ -569,7 +571,7 @@ namespace tfs
           }
           else
           {
-            TBSYS_LOG(INFO, "block: %u %s complete status: %s", blocks.block_id_,
+            TBSYS_LOG(WARN, "block: %u %s complete status: %s", blocks.block_id_,
                 blocks.is_move_ == REPLICATE_BLOCK_MOVE_FLAG_YES ? "move" : "replicate",
                 message->get_command() == PLAN_STATUS_END ? "end" :
                 message->get_command() == PLAN_STATUS_TIMEOUT ? "timeout" :

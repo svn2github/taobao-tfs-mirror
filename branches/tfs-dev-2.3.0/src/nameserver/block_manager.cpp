@@ -517,6 +517,7 @@ namespace tfs
         }
         TBSYS_LOG(INFO, "cleanup write block entry, total: %d, need cleanup nums: %d, actual cleanup nums: %d",
             last_wirte_block_nums_, need_cleanup_nums, actual);
+        last_wirte_block_nums_ -= actual;
       }
     }
 

@@ -1126,14 +1126,14 @@ namespace tfs
       std::cout << "max mmap size " << mmap_option_.max_mmap_size_ << std::endl;
       std::cout << "version " << version_ << std::endl;
     }
-    const char* dynamic_parameter_str[29] = {
+    const char* dynamic_parameter_str[28] = {
         "log_level",
         "plan_run_flag",
         "run_plan_expire_interval",
         "safe_mode_time",
-        "max_replication",
         "max_write_timeout",
         "max_write_file_count",
+        "add_primary_block_count",
         "cleanup_write_timeout_threshold",
         "max_use_capacity_ratio",
         "heart_interval",
@@ -1150,7 +1150,6 @@ namespace tfs
         "object_dead_max_time",
         "group_count",
         "group_seq",
-        "add_primary_block_count",
         "report_block_queue_size",
         "report_block_time_lower",
         "report_block_time_upper",

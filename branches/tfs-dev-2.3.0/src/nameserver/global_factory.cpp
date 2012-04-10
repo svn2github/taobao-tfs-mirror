@@ -62,6 +62,7 @@ namespace tfs
 
     int GFactory::destroy()
     {
+      get_runtime_info().destroy();
       stat_mgr_.destroy();
       return common::TFS_SUCCESS;
     }

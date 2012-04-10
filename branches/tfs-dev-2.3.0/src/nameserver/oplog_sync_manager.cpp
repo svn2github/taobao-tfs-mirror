@@ -414,7 +414,7 @@ namespace tfs
       return ret;
     }
 
-    int OpLogSyncManager::replay_helper_do_oplog(const int32_t type, const char* const data, const int64_t data_len, int64_t& pos, time_t now)
+    int OpLogSyncManager::replay_helper_do_oplog(const time_t now, const int32_t type, const char* const data, const int64_t data_len, int64_t& pos)
     {
       int32_t ret = (NULL != data) && (data_len - pos > 0) &&  (pos >= 0) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
@@ -423,7 +423,7 @@ namespace tfs
         ret = oplog.deserialize(data, data_len, pos);
         if (TFS_SUCCESS != ret)
         {
-          oplog.dump();
+          oplog.dump(TBSYS_LOG_LEVEL_DEBUG);
           ret = EXIT_DESERIALIZE_ERROR;
           TBSYS_LOG(INFO, "deserialize error, data: %s, length: %"PRI64_PREFIX"d, offset: %"PRI64_PREFIX"d", data, data_len, pos);
         }
@@ -549,7 +549,7 @@ namespace tfs
                 ret = replay_helper_do_msg(type, data, data_len, pos);
                 break;
               case OPLOG_TYPE_BLOCK_OP:
-                ret = replay_helper_do_oplog(type, data, data_len, pos, now);
+                ret = replay_helper_do_oplog(now, type, data, data_len, pos);
                 break;
               default:
                 TBSYS_LOG(WARN, "type: %d not found", type);

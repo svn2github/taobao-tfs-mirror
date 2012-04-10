@@ -57,7 +57,8 @@ namespace tfs
 #define CONF_TASK_MAX_QUEUE_SIZE                      "task_max_queue_size"
 #define CONF_DISCARD_NEWBLK_SAFE_MODE_TIME            "discard_newblk_safe_mode_time"
 #define CONF_COMPACT_HOUR_RANGE                       "compact_hour_range"
-#define CONF_REPORT_HOUR_RANGE                        "report_hour_range"
+#define CONF_REPORT_BLOCK_HOUR_RANGE                  "report_block_hour_range"
+#define CONF_REPORT_BLOCK_TIME_INTERVAL               "report_block_time_interval"
 
 
 //adminserver, only monitor ds

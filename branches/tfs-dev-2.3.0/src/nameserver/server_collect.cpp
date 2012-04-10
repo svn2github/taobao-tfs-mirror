@@ -193,18 +193,20 @@ namespace tfs
       }
       clear_();
       mutex_.unlock();
-
-      BlockCollect* pblock = NULL;
-      ArrayHelper<BlockCollect*> helper(size, blocks);
-      for (int32_t i = 0; helper.get_array_index(); ++i)
+      if (size > 0)
       {
-        //这里有点问题，如果server刚下线，在上次server结构过期之前又上来了，此时解除了关系是不正确的
-        //这里先在这里简单搞下在block解除关系的时候，如果检测ID和指针都一致时才解除关系
-        pblock = *helper.at(i);
-        assert(NULL != pblock);
-        manager.get_block_manager().relieve_relation(pblock, this, now);
+        BlockCollect* pblock = NULL;
+        ArrayHelper<BlockCollect*> helper(size, blocks);
+        for (int32_t i = 0; helper.get_array_index(); ++i)
+        {
+          //这里有点问题，如果server刚下线，在上次server结构过期之前又上来了，此时解除了关系是不正确的
+          //这里先在这里简单搞下在block解除关系的时候，如果检测ID和指针都一致时才解除关系
+          pblock = *helper.at(i);
+          assert(NULL != pblock);
+          manager.get_block_manager().relieve_relation(pblock, this, now);
+        }
+        tbsys::gDeleteA(blocks);
       }
-      tbsys::gDeleteA(blocks);
       return true;
     }
 
