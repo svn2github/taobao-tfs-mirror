@@ -11,9 +11,9 @@
  * Authors:
  *   duolong <duolong@taobao.com>
  *      - initial release
- *   qushan<qushan@taobao.com> 
+ *   qushan<qushan@taobao.com>
  *      - modify 2009-03-27
- *   duanfei <duanfei@taobao.com> 
+ *   duanfei <duanfei@taobao.com>
  *      - modify 2010-04-23
  *
  */
@@ -126,7 +126,7 @@ namespace tfs
           TBSYS_LOG(ERROR, "replay all oplogs failed, iret: %d", iret);
         }
       }
-    
+
       std::string tmp(path);
       //reset filequeue
       if (TFS_SUCCESS == iret)
@@ -187,8 +187,8 @@ namespace tfs
     int OpLogSyncManager::register_slots(const char* const data, const int64_t length) const
     {
       NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
-      int32_t iret = NULL != data && length > 0 
-                    && ngi.owner_role_ ==  NS_ROLE_MASTER 
+      int32_t iret = NULL != data && length > 0
+                    && ngi.owner_role_ ==  NS_ROLE_MASTER
                     && !is_destroy_ ? TFS_SUCCESS : EXIT_REGISTER_OPLOG_SYNC_ERROR;
       if (TFS_SUCCESS == iret)
       {
@@ -308,7 +308,7 @@ namespace tfs
       }
       else
       {
-        if (ngi.other_side_status_ < NS_STATUS_INITIALIZED 
+        if (ngi.other_side_status_ < NS_STATUS_INITIALIZED
             || ngi.sync_oplog_flag_ < NS_SYNC_DATA_FLAG_YES)
         {
           //wait
@@ -357,7 +357,7 @@ namespace tfs
       return iret;
     }
 
-    bool OpLogSyncManager::handlePacketQueue(tbnet::Packet *packet, void * args) 
+    bool OpLogSyncManager::handlePacketQueue(tbnet::Packet *packet, void * args)
     {
       bool bret = packet != NULL;
       if (bret)
@@ -387,7 +387,8 @@ namespace tfs
         int64_t length = msg->get_length();
         int64_t offset = 0;
         time_t now = time(NULL);
-        while ((offset < length) 
+        while ((offset < length)
+            && (SYSPARAM_NAMESERVER.dispatch_oplog_ == 1)
             && (GFactory::get_runtime_info().destroy_flag_!= NS_DESTROY_FLAGS_YES))
         {
           iret = replay_helper(data, length, offset, now);
@@ -411,7 +412,7 @@ namespace tfs
       if (!is_destroy_)
       {
         NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
-        if (ngi.other_side_status_ < NS_STATUS_INITIALIZED 
+        if (ngi.other_side_status_ < NS_STATUS_INITIALIZED
             || ngi.sync_oplog_flag_ < NS_SYNC_DATA_FLAG_YES)
         {
           //wait
@@ -744,8 +745,8 @@ namespace tfs
                 item = NULL;
               }
             }
-            while (((qhead->read_seqno_ < qhead->write_seqno_) 
-                  || ((qhead->read_seqno_ == qhead->write_seqno_) && (qhead->read_offset_ != qhead->write_filesize_))) 
+            while (((qhead->read_seqno_ < qhead->write_seqno_)
+                  || ((qhead->read_seqno_ == qhead->write_seqno_) && (qhead->read_offset_ != qhead->write_filesize_)))
                  && (GFactory::get_runtime_info().destroy_flag_ != NS_DESTROY_FLAGS_YES));
           }
         }

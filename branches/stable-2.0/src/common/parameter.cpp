@@ -39,6 +39,7 @@ namespace tfs
 
     int NameServerParameter::initialize(void)
     {
+      dispatch_oplog_ = 0;
       discard_max_count_ = 0;
       const char* index = TBSYS_CONFIG.getString(CONF_SN_NAMESERVER, CONF_CLUSTER_ID);
       if (index == NULL

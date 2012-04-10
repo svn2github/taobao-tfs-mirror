@@ -66,7 +66,7 @@ namespace tfs
       "build_plan_interval",
       "replicate_ratio",
       "max_wait_write_lease",
-      "tmp",
+      "dispatch_oplog",
       "cluster_index",
       "build_plan_default_wait_time",
       "group_count",
@@ -1831,7 +1831,7 @@ namespace tfs
         retstr[0] = '\0';
         int32_t index = (value1 & 0x0FFFFFFF);
         int32_t set = (value1& 0xF0000000);
-        int32_t tmp = 0;
+        //int32_t tmp = 0;
         int32_t* param[] =
         {
           &SYSPARAM_NAMESERVER.min_replication_,
@@ -1852,7 +1852,7 @@ namespace tfs
           &SYSPARAM_NAMESERVER.build_plan_interval_,
           &SYSPARAM_NAMESERVER.replicate_ratio_,
           &SYSPARAM_NAMESERVER.max_wait_write_lease_,
-          &tmp,
+          &SYSPARAM_NAMESERVER.dispatch_oplog_,
           &SYSPARAM_NAMESERVER.cluster_index_,
           &SYSPARAM_NAMESERVER.build_plan_default_wait_time_,
           &SYSPARAM_NAMESERVER.group_count_,
@@ -2784,6 +2784,11 @@ namespace tfs
         }
       }
       return bret;
+    }
+    void LayoutManager::test() const
+    {
+      RWLock::Lock lock(maping_mutex_, READ_LOCKER);
+
     }
   } /** nameserver **/
 }/** tfs **/

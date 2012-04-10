@@ -312,7 +312,7 @@ int cmd_set_run_param(const VSTRING& param)
       "build_plan_interval",
       "replicate_ratio",
       "max_wait_write_lease",
-      "tmp",
+      "dispatch_oplog",
       "cluster_index",
       "build_plan_default_wait_time",
       "group_count",

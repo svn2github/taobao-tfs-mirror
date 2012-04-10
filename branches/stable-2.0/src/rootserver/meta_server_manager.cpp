@@ -412,7 +412,9 @@ namespace tfs
       META_SERVER_MAPS_ITER iter = servers_.begin();
       for (; iter != servers_.end(); )
       {
-        TBSYS_LOG(INFO, "now time: %ld, lease_id: %lu, lease_expired_time: %ld", now.toSeconds(), iter->second.lease_.lease_id_, iter->second.lease_.lease_expired_time_);
+        TBSYS_LOG(INFO, "%s now time: %ld, lease_id: %lu, lease_expired_time: %ld",
+          tbsys::CNetUtil::addrToString(iter->first).c_str(), now.toSeconds(),
+          iter->second.lease_.lease_id_, iter->second.lease_.lease_expired_time_);
         if (!iter->second.lease_.has_valid_lease(now.toSeconds()))
         {
           interrupt = true;
