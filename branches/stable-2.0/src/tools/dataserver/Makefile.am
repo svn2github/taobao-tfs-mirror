@@ -17,7 +17,6 @@ bin_PROGRAMS = clear_file_system\
                reverse_name\
                modify_super_block\
                tfsping\
-							 test_load\
                view_local_key
 
 LDADD =	$(top_builddir)/src/tools/util/libtfstoolsutil.a\
@@ -56,4 +55,4 @@ recover_disk_data_to_cluster_SOURCES = recover_disk_data_to_cluster.cpp
 
 recover_sync_file_queue_SOURCES = recover_sync_file_queue.cpp
 
-test_load_SOURCES = test_load.cpp
+#test_load_SOURCES = test_load.cpp
