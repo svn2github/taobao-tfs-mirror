@@ -594,6 +594,7 @@ namespace tfs
     int MockDataService::compact_block(BasePacket* packet)
     {
       int32_t ret = ((NULL != packet) && COMPACT_BLOCK_MESSAGE == packet->getPCode()) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+      TBSYS_LOG(DEBUG, "compact block begin, packet == null : %d, %d, ret:%d", NULL == packet, packet->getPCode(), ret);
       if (TFS_SUCCESS == ret)
       {
         packet->reply(new StatusMessage(STATUS_MESSAGE_OK));
@@ -611,6 +612,7 @@ namespace tfs
           information_.use_capacity_ += entry->info_.size_;
           result.set_block_info(entry->info_);
         }
+        TBSYS_LOG(DEBUG, "compact block: %u", msg->get_block_id());
         NewClient* client = NewClientManager::get_instance().create_client();
         tbnet::Packet* tmp = NULL;
         ret = send_msg_to_server(ns_ip_port_, client, &result, tmp);
@@ -764,8 +766,10 @@ namespace tfs
 
     void MockDataService::random_info(common::BlockInfo& info)
     {
-      info.file_count_ = random() % info.file_count_;
-      info.size_ = random() % info.size_;
+      if (info.file_count_ > 0)
+        info.file_count_ = random() % info.file_count_;
+      if (info.size_ > 0)
+        info.size_ = random() % info.size_;
       info.del_file_count_ = 0;
       info.del_size_ = 0;
     }
