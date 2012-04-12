@@ -21,7 +21,8 @@ test: check
 TESTS=
 check_PROGRAMS=
 
-noinst_PROGRAMS= test_path
+noinst_PROGRAMS= test_rc_save_fetch
+#noinst_PROGRAMS= test_path test_rc_save_fetch
 #noinst_PROGRAMS= test_ns_cache
 #noinst_PROGRAMS= test_meta_client test_distance
 #TESTS+=test_meta_client
@@ -40,7 +41,12 @@ noinst_PROGRAMS= test_path
 #test_ns_cache_SOURCES=test_ns_cache.cpp
 #test_ns_cache_LDFLAGS=${AM_LDFLAGS} -static-libgcc -lgtest
 
-TESTS+=test_path
-check_PROGRAMS+=test_path
-test_path_SOURCES=test_path.cpp
-test_path_LDFLAGS=${AM_LDFLAGS} -static-libgcc -lgtest -lz
+#TESTS+=test_path
+#check_PROGRAMS+=test_path
+#test_path_SOURCES=test_path.cpp
+#test_path_LDFLAGS=${AM_LDFLAGS} -static-libgcc -lgtest -lz
+
+TESTS+=test_rc_save_fetch
+check_PROGRAMS+=test_rc_save_fetch
+test_rc_save_fetch_SOURCES=test_rc_save_fetch.cpp
+test_rc_save_fetch_LDFLAGS=${AM_LDFLAGS} -static-libgcc -lgtest -luuid -lz
