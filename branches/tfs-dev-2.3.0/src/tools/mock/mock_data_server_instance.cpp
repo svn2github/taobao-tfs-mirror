@@ -377,9 +377,8 @@ namespace tfs
         CloseFileMessage* message = dynamic_cast<CloseFileMessage*>(msg);
         CloseFileInfo info = message->get_close_file_info();
         uint32_t lease_id = message->get_lease_id();
-        RWLock::Lock lock(blocks_mutex_, WRITE_LOCKER);
-        std::map<uint32_t, BlockEntry>::iterator iter = blocks_.find(info.block_id_);
-        if (iter == blocks_.end())
+        BlockEntry* entry = get(info.block_id_);
+        if (NULL == entry)
         {
           ret = message->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret,
               "close write file failed. block is not exist. blockid: %u, fileid: %" PRI64_PREFIX "u.", info.block_id_, info.file_id_);
@@ -389,16 +388,16 @@ namespace tfs
           if (CLOSE_FILE_SLAVER != info.mode_)
           {
             message->set_mode(CLOSE_FILE_SLAVER);
-            message->set_block(&iter->second.info_);
+            message->set_block(&entry->info_);
             TBSYS_LOG(DEBUG, "blockid: %u", info.block_id_);
             ret = send_message_to_slave(message, message->get_ds_list());
             if (ret != TFS_SUCCESS)
             {
-              ret = commit_to_nameserver(iter, info.block_id_, lease_id, TFS_ERROR);
+              ret = commit_to_nameserver(entry, info.block_id_, lease_id, TFS_ERROR);
             }
             else
             {
-              ret = commit_to_nameserver(iter, info.block_id_, lease_id, TFS_SUCCESS);
+              ret = commit_to_nameserver(entry, info.block_id_, lease_id, TFS_SUCCESS);
             }
             if (ret == TFS_SUCCESS)
             {
@@ -416,7 +415,7 @@ namespace tfs
             const BlockInfo* copyblk = message->get_block();
             if (NULL != copyblk)
             {
-              iter->second.info_.seq_no_ = copyblk->seq_no_;
+              entry->info_.seq_no_ = copyblk->seq_no_;
             }
             ret = message->reply(new StatusMessage(STATUS_MESSAGE_OK));
           }
@@ -433,9 +432,8 @@ namespace tfs
         CreateFilenameMessage* message = dynamic_cast<CreateFilenameMessage*>(msg);
         uint32_t block_id =  message->get_block_id();
         uint64_t file_id  = message->get_file_id();
-        RWLock::Lock lock(blocks_mutex_, WRITE_LOCKER);
-        std::map<uint32_t, BlockEntry>::iterator iter = blocks_.find(block_id);
-        if (iter == blocks_.end())
+        BlockEntry* entry = get(block_id);
+        if (NULL == entry)
         {
           TBSYS_LOG(DEBUG, "create file number failed, blockid : %u", block_id);
           ret = message->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret,
@@ -443,7 +441,7 @@ namespace tfs
         }
         else
         {
-          file_id = ++iter->second.file_id_factory_;
+          file_id = ++entry->file_id_factory_;
           RespCreateFilenameMessage* rmsg = new RespCreateFilenameMessage();
           rmsg->set_block_id(block_id);
           rmsg->set_file_id(file_id);
@@ -595,25 +593,23 @@ namespace tfs
 
     int MockDataService::compact_block(BasePacket* packet)
     {
-      int32_t ret = NULL != packet ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+      int32_t ret = ((NULL != packet) && COMPACT_BLOCK_MESSAGE == packet->getPCode()) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
+        packet->reply(new StatusMessage(STATUS_MESSAGE_OK));
         CompactBlockMessage* msg = dynamic_cast<CompactBlockMessage*>(packet);
         CompactBlockCompleteMessage result;
         result.set_block_id(msg->get_block_id());
         CompactStatus status = (random() % 32 == 0) ? COMPACT_STATUS_FAILED : COMPACT_STATUS_SUCCESS;
         result.set_success(status);
         result.set_server_id(information_.id_);
+        BlockEntry* entry = get(msg->get_block_id());
+        if (NULL != entry)
         {
-          RWLock::Lock lock(blocks_mutex_, READ_LOCKER);
-          BlockEntry* entry = get_(msg->get_block_id());
-          if (NULL != entry)
-          {
-            information_.use_capacity_ -= entry->info_.size_;
-            random_info(entry->info_);
-            information_.use_capacity_ += entry->info_.size_;
-            result.set_block_info(entry->info_);
-          }
+          information_.use_capacity_ -= entry->info_.size_;
+          random_info(entry->info_);
+          information_.use_capacity_ += entry->info_.size_;
+          result.set_block_info(entry->info_);
         }
         NewClient* client = NewClientManager::get_instance().create_client();
         tbnet::Packet* tmp = NULL;
@@ -736,15 +732,15 @@ namespace tfs
       return ret;
     }
 
-    int MockDataService::commit_to_nameserver(std::map<uint32_t, BlockEntry>::iterator iter, uint32_t block_id, uint32_t lease_id, int32_t status, common::UnlinkFlag flag)
+    int MockDataService::commit_to_nameserver(BlockEntry* entry, uint32_t block_id, uint32_t lease_id, int32_t status, common::UnlinkFlag flag)
     {
       UNUSED(status);
       UNUSED(block_id);
-      int32_t ret = iter == blocks_.end() ? TFS_ERROR : TFS_SUCCESS;
+      int32_t ret = NULL == entry ? TFS_ERROR : TFS_SUCCESS;
       if (TFS_SUCCESS == ret)
       {
         BlockInfo info;
-        memcpy(&info, &iter->second.info_, sizeof(info));
+        memcpy(&info, &entry->info_, sizeof(info));
         ++info.version_;
         BlockWriteCompleteMessage rmsg;
         rmsg.set_block(&info);
@@ -759,7 +755,7 @@ namespace tfs
           ret = STATUS_MESSAGE_OK == ret ? TFS_SUCCESS : TFS_ERROR;
           if (TFS_SUCCESS == ret)
           {
-            iter->second.info_.version_++;
+            ++entry->info_.version_;
           }
         }
       }

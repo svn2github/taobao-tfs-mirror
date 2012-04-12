@@ -115,7 +115,7 @@ namespace tfs
         int report_block(common::BasePacket* msg);
         int post_message_to_server(common::BasePacket* msg, const common::VUINT64& ds_list);
         int send_message_to_slave(common::BasePacket* msg, const common::VUINT64& ds_list);
-        int commit_to_nameserver(std::map<uint32_t, BlockEntry>::iterator, uint32_t block_id, uint32_t lease_id, int32_t status, common::UnlinkFlag flag = common::UNLINK_FLAG_NO);
+        int commit_to_nameserver(BlockEntry* entry, uint32_t block_id, uint32_t lease_id, int32_t status, common::UnlinkFlag flag = common::UNLINK_FLAG_NO);
         int replicate_block(common::BasePacket* msg);
         int compact_block(common::BasePacket* msg);
         int batch_write_info(common::BasePacket* msg);
