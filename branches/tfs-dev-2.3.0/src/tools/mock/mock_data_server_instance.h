@@ -111,6 +111,7 @@ namespace tfs
         int close(common::BasePacket* msg);
         int create_file_number(common::BasePacket* msg);
         int new_block(common::BasePacket* msg);
+        int remove_block(common::BasePacket* msg);
         int get_file_info(common::BasePacket* msg);
         int report_block(common::BasePacket* msg);
         int post_message_to_server(common::BasePacket* msg, const common::VUINT64& ds_list);

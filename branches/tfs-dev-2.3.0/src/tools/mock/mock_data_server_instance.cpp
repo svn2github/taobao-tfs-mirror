@@ -188,6 +188,9 @@ namespace tfs
             case NEW_BLOCK_MESSAGE:
               ret = new_block(msg);
               break;
+            case REMOVE_BLOCK_MESSAGE:
+              ret = remove_block(msg);
+              break;
             case FILE_INFO_MESSAGE:
               ret = get_file_info(msg);
               break;
@@ -273,7 +276,7 @@ namespace tfs
 
     int MockDataService::write(common::BasePacket* msg)
     {
-      int32_t ret = NULL != msg ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+      int32_t ret = ((NULL != msg) && (WRITE_DATA_MESSAGE == msg->getPCode())) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
         WriteDataMessage* message = dynamic_cast<WriteDataMessage*>(msg);
@@ -281,20 +284,15 @@ namespace tfs
         uint32_t lease_id = message->get_lease_id();
         int32_t version = message->get_block_version();
         write_info.length_  = MAX_WRITE_FILE_SIZE != 0 ? MAX_WRITE_FILE_SIZE : write_info.length_;
+        BlockEntry* entry = get(write_info.block_id_);
+        if (NULL == entry)
         {
-          RWLock::Lock lock(blocks_mutex_, WRITE_LOCKER);
-          std::map<uint32_t, BlockEntry>::iterator iter = blocks_.find(write_info.block_id_);
-          if (iter == blocks_.end())
-          {
-            ret = message->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret, "create file failed. blockid: %u, fileid: %" PRI64_PREFIX "u.", write_info.block_id_);
-          }
-          if (TFS_SUCCESS == ret)
-          {
-            iter->second.info_.size_ += write_info.length_;
-          }
+          ret = message->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret, "failed. blockid: %u, fileid: %" PRI64_PREFIX "u.",
+                write_info.block_id_, write_info.file_id_);
         }
-        if (TFS_SUCCESS == ret)
+        else
         {
+          entry->info_.size_ += write_info.length_;
           information_.use_capacity_ += write_info.length_;
           information_.total_tp_.write_byte_ += write_info.length_;
           information_.total_tp_.write_file_count_++;
@@ -326,7 +324,7 @@ namespace tfs
 
     int MockDataService::read(common::BasePacket* msg)
     {
-      int32_t ret = NULL != msg ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+      int32_t ret = ((NULL != msg) && (READ_DATA_MESSAGE == msg->getPCode())) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
         ReadDataMessage* message = dynamic_cast<ReadDataMessage*>(msg);
@@ -335,7 +333,6 @@ namespace tfs
         memcpy(data, BUF, BUF_LEN);
         rmsg->set_length(BUF_LEN);
         ret = message->reply(rmsg);
-        TBSYS_LOG(DEBUG, "read msg");
         information_.total_tp_.read_byte_ += BUF_LEN;
         information_.total_tp_.read_file_count_++;
       }
@@ -344,7 +341,7 @@ namespace tfs
 
     int MockDataService::readv2(common::BasePacket* msg)
     {
-      int32_t ret = NULL != msg ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+      int32_t ret = ((NULL != msg) && (READ_DATA_MESSAGE_V2 == msg->getPCode())) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
         ReadDataMessageV2* message = dynamic_cast<ReadDataMessageV2*>(msg);
@@ -371,7 +368,7 @@ namespace tfs
 
     int MockDataService::close(common::BasePacket* msg)
     {
-      int32_t ret = NULL != msg ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+      int32_t ret = ((NULL != msg) && (CLOSE_FILE_MESSAGE == msg->getPCode())) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
         CloseFileMessage* message = dynamic_cast<CloseFileMessage*>(msg);
@@ -389,7 +386,6 @@ namespace tfs
           {
             message->set_mode(CLOSE_FILE_SLAVER);
             message->set_block(&entry->info_);
-            TBSYS_LOG(DEBUG, "blockid: %u", info.block_id_);
             ret = send_message_to_slave(message, message->get_ds_list());
             if (ret != TFS_SUCCESS)
             {
@@ -426,7 +422,7 @@ namespace tfs
 
     int MockDataService::create_file_number(common::BasePacket* msg)
     {
-      int32_t ret = NULL != msg ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+      int32_t ret = ((NULL != msg) && (CREATE_FILENAME_MESSAGE == msg->getPCode()))? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
         CreateFilenameMessage* message = dynamic_cast<CreateFilenameMessage*>(msg);
@@ -435,7 +431,6 @@ namespace tfs
         BlockEntry* entry = get(block_id);
         if (NULL == entry)
         {
-          TBSYS_LOG(DEBUG, "create file number failed, blockid : %u", block_id);
           ret = message->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret,
               "create file failed. blockid: %u, fileid: %" PRI64_PREFIX "u.", block_id, file_id);
         }
@@ -454,7 +449,7 @@ namespace tfs
 
     int MockDataService::new_block(common::BasePacket* msg)
     {
-      int32_t ret = NULL != msg ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+      int32_t ret = ((NULL != msg) && NEW_BLOCK_MESSAGE == msg->getPCode()) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
         NewBlockMessage* message = dynamic_cast<NewBlockMessage*>(msg);
@@ -476,9 +471,24 @@ namespace tfs
       return ret;
     }
 
+    int MockDataService::remove_block(common::BasePacket* msg)
+    {
+      int32_t ret = ((NULL != msg) && (REMOVE_BLOCK_MESSAGE == msg->getPCode())) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+      if (TFS_SUCCESS == ret)
+      {
+        RemoveBlockMessage* message = dynamic_cast<RemoveBlockMessage*>(msg);
+        remove(message->get());
+        RemoveBlockResponseMessage* result = new RemoveBlockResponseMessage();
+        result->set_seqno(message->get_seqno());
+        result->set(message->get());
+        ret = message->reply(result);
+      }
+      return ret;
+    }
+
     int MockDataService::get_file_info(BasePacket* msg)
     {
-      int32_t ret = NULL != msg ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+      int32_t ret = ((NULL != msg) && (FILE_INFO_MESSAGE == msg->getPCode()))? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
         FileInfoMessage* message = dynamic_cast<FileInfoMessage*>(msg);
@@ -491,7 +501,7 @@ namespace tfs
 
     int MockDataService::report_block(BasePacket* packet)
     {
-      int32_t ret = NULL != packet ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+      int32_t ret = ((NULL != packet) && (REQ_CALL_DS_REPORT_BLOCK_MESSAGE == packet->getPCode())) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
         CallDsReportBlockRequestMessage* msg = dynamic_cast<CallDsReportBlockRequestMessage*>(packet);
@@ -531,14 +541,13 @@ namespace tfs
 
     int MockDataService::replicate_block(BasePacket* packet)
     {
-      int32_t ret = NULL != packet && REPLICATE_BLOCK_MESSAGE == packet->getPCode() ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+      int32_t ret = ((NULL != packet) && (REPLICATE_BLOCK_MESSAGE == packet->getPCode())) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
         ReplicateBlockMessage* msg = dynamic_cast<ReplicateBlockMessage*>(packet);
         ReplBlock info;
         memcpy(&info,  msg->get_repl_block(), sizeof(ReplBlock));
         packet->reply(new StatusMessage(STATUS_MESSAGE_OK));
-        TBSYS_LOG(DEBUG, "info block: %u", info.block_id_);
 
         tbnet::Packet* result = NULL;
         RawMetaVec raw_meta_vec;
@@ -625,7 +634,7 @@ namespace tfs
 
     int MockDataService::batch_write_info(BasePacket* packet)
     {
-      int32_t ret = (NULL != packet  && WRITE_INFO_BATCH_MESSAGE == packet->getPCode())? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+      int32_t ret = ((NULL != packet) && (WRITE_INFO_BATCH_MESSAGE == packet->getPCode()))? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
         WriteInfoBatchMessage* message = dynamic_cast<WriteInfoBatchMessage*>(packet);
@@ -688,7 +697,7 @@ namespace tfs
 
     int MockDataService::post_message_to_server(BasePacket* message, const VUINT64& ds_list)
     {
-      int32_t ret = NULL != message && !ds_list.empty() ? TFS_SUCCESS : TFS_ERROR;
+      int32_t ret = ((NULL != message) && !ds_list.empty())? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
         VUINT64 result;
@@ -712,7 +721,7 @@ namespace tfs
 
     int MockDataService::send_message_to_slave(BasePacket* message, const VUINT64& ds_list)
     {
-      int32_t ret = NULL != message && !ds_list.empty() ? TFS_SUCCESS : TFS_ERROR;
+      int32_t ret = ((NULL != message) && !ds_list.empty())? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
         uint8_t send_id = 0;
