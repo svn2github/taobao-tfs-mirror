@@ -598,6 +598,7 @@ namespace tfs
       if (TFS_SUCCESS == ret)
       {
         packet->reply(new StatusMessage(STATUS_MESSAGE_OK));
+        usleep(200000);
         CompactBlockMessage* msg = dynamic_cast<CompactBlockMessage*>(packet);
         CompactBlockCompleteMessage result;
         result.set_seqno(msg->get_seqno());
