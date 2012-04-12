@@ -600,6 +600,7 @@ namespace tfs
         packet->reply(new StatusMessage(STATUS_MESSAGE_OK));
         CompactBlockMessage* msg = dynamic_cast<CompactBlockMessage*>(packet);
         CompactBlockCompleteMessage result;
+        result.set_seqno(msg->get_seqno());
         result.set_block_id(msg->get_block_id());
         CompactStatus status = (random() % 32 == 0) ? COMPACT_STATUS_FAILED : COMPACT_STATUS_SUCCESS;
         result.set_success(status);

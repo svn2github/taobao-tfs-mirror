@@ -69,7 +69,6 @@ namespace tfs
         int deserialize(const char* data, const int64_t data_len, int64_t& pos);
         virtual int64_t length() const;
         void dump(void) const;
-        uint64_t get_seqno() const;
         inline void set_block_id(const uint32_t block_id)
         {
           block_id_ = block_id;
