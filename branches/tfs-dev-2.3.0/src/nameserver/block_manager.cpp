@@ -144,6 +144,21 @@ namespace tfs
       return ret;
     }
 
+    void BlockManager::dump(const int32_t level) const
+    {
+      UNUSED(level);
+      TBSYS_LOG(DEBUG, "===========================DUMP BEGIN=====================");
+      for (int32_t index = 0; index < MAX_BLOCK_CHUNK_NUMS; ++index)
+      {
+        BLOCK_MAP_ITER iter = blocks_[index]->begin();
+        for (; iter != blocks_[index]->end(); ++iter)
+        {
+          TBSYS_LOG(DEBUG, "index: %d, block: %u", index, (*iter)->id());
+        }
+      }
+      TBSYS_LOG(DEBUG, "===========================DUMP END=====================");
+    }
+
     bool BlockManager::scan(common::ArrayHelper<BlockCollect*>& result, uint32_t& begin, const int32_t count) const
     {
       bool end  = false;
@@ -166,6 +181,8 @@ namespace tfs
         }
         end = (blocks_[next]->end() == iter);
         all_over = ((next == MAX_BLOCK_CHUNK_NUMS - 1) && end);
+        if (!end)
+          begin = (*iter)->id();
         rwmutex_[next].unlock();
         if (end)
         {
@@ -185,10 +202,6 @@ namespace tfs
               ++next;
             }
           }
-        }
-        else
-        {
-          begin = (*iter)->id();
         }
       }
       return all_over;
@@ -236,6 +249,19 @@ namespace tfs
     }
 
     int BlockManager::get_servers(std::vector<uint64_t>& servers, const uint32_t block) const
+    {
+      RWLock::Lock lock(get_mutex_(block), READ_LOCKER);
+      BlockCollect* pblock = get_(block);
+      int32_t ret = NULL == pblock ? EXIT_NO_BLOCK : TFS_SUCCESS;
+      if (TFS_SUCCESS == ret)
+      {
+        pblock->get_servers(servers);
+        ret = servers.empty() ? EXIT_NO_DATASERVER : TFS_SUCCESS;
+      }
+      return ret;
+    }
+
+    int BlockManager::get_servers(std::vector<ServerCollect*>& servers, const uint32_t block) const
     {
       RWLock::Lock lock(get_mutex_(block), READ_LOCKER);
       BlockCollect* pblock = get_(block);
@@ -332,25 +358,27 @@ namespace tfs
     }
 
     int BlockManager::build_relation(BlockCollect* block, bool& writable, bool& master,
-        const ServerCollect* server, const time_t now)
+        const ServerCollect* server, const time_t now, const bool set)
     {
       int32_t ret = ((NULL != block) && (NULL != server)) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
         RWLock::Lock lock(get_mutex_(block->id()), WRITE_LOCKER);
-        ret = build_relation_(block, writable, master, server, now);
+        ret = build_relation_(block, writable, master, server, now, set);
       }
       return ret;
     }
 
     int BlockManager::build_relation_(BlockCollect* block, bool& writable, bool& master,
-        const ServerCollect* server, const time_t now)
+        const ServerCollect* server, const time_t now, const bool set)
     {
       UNUSED(now);
       int32_t ret = ((NULL != block) && (server != NULL) && (server->is_alive())) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
         block->add(writable, master, server);
+        if (set)
+          block->set_create_flag();
       }
       return ret;
     }

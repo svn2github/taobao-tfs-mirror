@@ -223,7 +223,7 @@ namespace tfs
       CompactBlockMessage msg;
       msg.set_block_id(block_id_);
       msg.set_seqno(seqno_);
-      msg.set_preserve_time(SYSPARAM_NAMESERVER.run_plan_expire_interval_);
+      msg.set_preserve_time(SYSPARAM_NAMESERVER.task_expired_time_);
       std::pair<uint64_t, PlanStatus> res;
       std::vector<ServerCollect*>::iterator iter = runer_.begin();
       for (int32_t index = 0; iter != runer_.end(); ++iter, ++index)
@@ -239,19 +239,23 @@ namespace tfs
           ret = send_msg_to_server(res.first, &msg, status);
         #endif
 
-        if (TFS_SUCCESS != ret
-          || STATUS_MESSAGE_OK != status)
+        if ((TFS_SUCCESS != ret)
+          || (STATUS_MESSAGE_OK != status))
         {
           res.second = PLAN_STATUS_TIMEOUT;
           TBSYS_LOG(INFO, "send compact message failed; block : %u owner: %d to server: %s, ret: %d",
               block_id_, index == 0 ? 1 : 0, tbsys::CNetUtil::addrToString(res.first).c_str(), ret);
         }
+        else
+        {
+          TBSYS_LOG(INFO, "send compact message successful; block : %u owner: %d to server: %s, ret: %d",
+              block_id_, index == 0 ? 1 : 0, tbsys::CNetUtil::addrToString(res.first).c_str(), ret);
+        }
         tbutil::Mutex::Lock lock(mutex_);
         complete_status_.push_back(res);
       }
-
       status_ = PLAN_STATUS_BEGIN;
-      last_update_time_ = Func::get_monotonic_time() +  SYSPARAM_NAMESERVER.run_plan_expire_interval_;
+      last_update_time_ = Func::get_monotonic_time() +  SYSPARAM_NAMESERVER.task_expired_time_;
       return ret;
     }
 
@@ -261,7 +265,6 @@ namespace tfs
       if (TFS_SUCCESS == ret)
       {
         CompactBlockCompleteMessage* message = dynamic_cast<CompactBlockCompleteMessage*>(msg);
-        //dump(TBSYS_LOG_LEVEL_INFO, "handle compact complete message");
         PlanStatus status = status_transform_compact_to_plan(static_cast<CompactStatus>(message->get_success()));
         CompactComplete value(message->get_server_id(), message->get_block_id(), status);
         memcpy(&value.block_info_, &message->get_block_info(), sizeof(block_info_));
@@ -505,7 +508,7 @@ namespace tfs
               tbsys::CNetUtil::addrToString(block.destination_id_).c_str());
 
           status_ = PLAN_STATUS_BEGIN;
-          last_update_time_ = Func::get_monotonic_time() +  SYSPARAM_NAMESERVER.run_plan_expire_interval_;
+          last_update_time_ = Func::get_monotonic_time() +  SYSPARAM_NAMESERVER.task_expired_time_;
         }
       }
       return ret;
@@ -544,7 +547,7 @@ namespace tfs
                 ret = block->get_servers_size() > 0 ?  STATUS_MESSAGE_REMOVE : STATUS_MESSAGE_OK;
                 if ((block->get_servers_size() <= 0) && (NULL != source))
                 {
-                  manager_.get_manager().build_relation(block, source, now);
+                  manager_.get_manager().build_relation(block, source, now, true);
                 }
               }
               else
@@ -614,7 +617,7 @@ namespace tfs
         GFactory::get_stat_mgr().update_entry(GFactory::tfs_ns_stat_block_count_, stat, false);
 
         status_ = PLAN_STATUS_BEGIN;
-        last_update_time_ = now +  SYSPARAM_NAMESERVER.run_plan_expire_interval_;
+        last_update_time_ = now +  SYSPARAM_NAMESERVER.task_expired_time_;
       }
       return ret;
     }

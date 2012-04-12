@@ -247,10 +247,13 @@ namespace tfs
       int32_t ret = !hold_master_->empty() ? TFS_SUCCESS : EXIT_BLOCK_NOT_FOUND;
       if (TFS_SUCCESS == ret)
       {
-        ++write_index_;
+        int32_t index = write_index_;
         if (write_index_ >= hold_master_->size())
           write_index_ = 0;
-        result = hold_master_->at(write_index_);
+        if (index >= hold_master_->size())
+          index = 0;
+        ++write_index_;
+        result = hold_master_->at(index);
         assert(NULL != result);
       }
       return NULL != result ? TFS_SUCCESS : EXIT_BLOCK_NOT_FOUND;

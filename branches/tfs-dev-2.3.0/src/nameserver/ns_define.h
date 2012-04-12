@@ -61,6 +61,13 @@ namespace tfs
       REPORT_BLOCK_STATUS_REPORTING,
       REPORT_BLOCK_STATUS_COMPLETE
     };
+
+    enum HandleDeleteBlockFlag
+    {
+      HANDLE_DELETE_BLOCK_FLAG_BOTH = 1,
+      HANDLE_DELETE_BLOCK_FLAG_ONLY_RELATION = 2
+    };
+
     class LayoutManager;
     class GCObject
     {
@@ -142,6 +149,8 @@ namespace tfs
       static NsRuntimeGlobalInformation& instance();
       static NsRuntimeGlobalInformation instance_;
     };
+
+    static const int32_t THREAD_STATCK_SIZE = 16 * 1024 * 1024;
     static const int32_t MAX_SERVER_NUMS = 3000;
     static const int32_t MAX_PROCESS_NUMS = MAX_SERVER_NUMS * 12;
     static const int32_t MAX_BLOCK_CHUNK_NUMS = 512;

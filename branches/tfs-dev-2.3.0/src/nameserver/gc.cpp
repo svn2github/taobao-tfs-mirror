@@ -13,6 +13,7 @@
  *      - initial release
  *
  */
+#include <execinfo.h>
 #include "tbsys.h"
 #include "gc.h"
 #include "common/error_msg.h"
@@ -45,12 +46,23 @@ namespace tfs
     {
       if (NULL != object)
       {
+        const int32_t MAX = 100;
+        void *array[MAX];
+        size_t size = backtrace (array, MAX);
+        char** strings = backtrace_symbols (array, size);
+        TBSYS_LOG(DEBUG, "Obtained %zd stack frames.nm", size);
+        for (size_t i = 0; i < size; i++)
+        {
+          TBSYS_LOG(DEBUG, "%p==> %s", object, strings[i]);
+        }
+        free (strings);
+
         tbutil::Mutex::Lock lock(mutex_);
-        TBSYS_LOG(DEBUG, "gc object list size: %zd", object_list_.size());
+        TBSYS_LOG(DEBUG, "gc object list size: %zd, pointer: %p", object_list_.size(), object);
         std::pair<std::set<GCObject*>::iterator, bool> res = object_list_.insert(object);
         if (!res.second)
         {
-          TBSYS_LOG(INFO, "%p is exist", object);
+          TBSYS_LOG(INFO, "%p %p is exist", object, (*res.first));
         }
       }
       return TFS_SUCCESS;
@@ -84,6 +96,7 @@ namespace tfs
       {
         obj = *helper.at(i);
         assert(NULL != obj);
+        TBSYS_LOG(DEBUG, "gc pointer: %p", obj);
         obj->callback(manager_);
         obj->free();
       }

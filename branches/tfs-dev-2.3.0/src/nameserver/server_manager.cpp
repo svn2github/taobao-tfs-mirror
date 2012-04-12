@@ -420,10 +420,13 @@ namespace tfs
       int32_t ret = servers_.empty() ? EXIT_NO_DATASERVER : TFS_SUCCESS;
       if (TFS_SUCCESS == ret)
       {
-        if (write_index_ >= servers_.size())
-          write_index_ = 0;
-        result = servers_.at(write_index_);
+        int32_t index = write_index_;
         ++write_index_;
+        if (write_index_ >= servers_.size())
+            write_index_ = 0;
+        if (index >= servers_.size())
+            index = 0;
+        result = servers_.at(index);
         assert(NULL != result);
       }
       return NULL != result ? TFS_SUCCESS : EXIT_NO_DATASERVER;

@@ -74,17 +74,19 @@ namespace tfs
 
         BlockCollect* get(const uint32_t block) const;
         bool exist(const uint32_t block) const;
+        void dump(const int32_t level) const;
         bool scan(common::ArrayHelper<BlockCollect*>& result, uint32_t& begin, const int32_t count) const;
         int scan(common::SSMScanParameter& param, int32_t& next, bool& all_over,
             bool& cutover, const int32_t should) const;
         int get_servers(std::vector<uint64_t>& servers, const uint32_t block) const;
+        int get_servers(std::vector<ServerCollect*>& servers, const uint32_t block) const;
         int get_servers(common::ArrayHelper<ServerCollect*>& server, const uint32_t block) const;
         int get_servers(common::ArrayHelper<ServerCollect*>& server, const BlockCollect* block) const;
 
         int update_relation(ServerCollect* server, std::vector<uint32_t>& self_expires,
             const std::set<common::BlockInfo>& blocks, const time_t now);
         int build_relation(BlockCollect* block, bool& writable, bool& master,
-            const ServerCollect* server, const time_t now);
+            const ServerCollect* server, const time_t now, const bool set =false);
         bool relieve_relation(BlockCollect* block, const ServerCollect* server, const time_t now);
         int update_block_info(BlockCollect*& output, bool& isnew, bool& writable, bool& master,
             const common::BlockInfo& info, const ServerCollect* server, const time_t now, const bool addnew);
@@ -111,7 +113,7 @@ namespace tfs
         BlockCollect* remove_(const uint32_t block);
 
         int build_relation_(BlockCollect* block, bool& writable, bool& master,
-            const ServerCollect* server, const time_t now);
+            const ServerCollect* server, const time_t now, const bool set = false);
 
         bool pop_from_delete_queue_(std::pair<uint32_t, uint64_t>& pairs);
 

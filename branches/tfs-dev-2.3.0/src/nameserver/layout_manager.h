@@ -80,7 +80,7 @@ namespace tfs
 
       int update_relation(ServerCollect* server, std::vector<uint32_t>& self_expires,
           const std::set<common::BlockInfo>& blocks, const time_t now);
-      bool build_relation(BlockCollect* block, ServerCollect* server, const time_t now);
+      bool build_relation(BlockCollect* block, ServerCollect* server, const time_t now, const bool set = false);
       bool relieve_relation(BlockCollect* block, ServerCollect* server, const time_t now);
 
       int update_block_info(const common::BlockInfo& info, const uint64_t server, const time_t now, const bool addnew);
@@ -100,7 +100,7 @@ namespace tfs
       int add_report_block_server(ServerCollect* server, const bool rb_expire = false);
       int del_report_block_server(ServerCollect* server);
 
-      int set_runtime_param(const uint32_t index, const uint32_t value, char *retstr);
+      int set_runtime_param(const uint32_t index, const uint32_t value, const int64_t length, char *retstr);
       private:
       void rotate_(const time_t now);
       uint32_t get_alive_block_id_();
@@ -135,10 +135,7 @@ namespace tfs
       {
         public:
           explicit BuildPlanThreadHelper(LayoutManager& manager):
-            manager_(manager)
-        {
-          start();
-        }
+            manager_(manager) {start(THREAD_STATCK_SIZE);}
           virtual ~BuildPlanThreadHelper(){}
           void run();
         private:
@@ -151,10 +148,7 @@ namespace tfs
       {
         public:
           explicit RunPlanThreadHelper(LayoutManager& manager):
-            manager_(manager)
-        {
-          start();
-        }
+            manager_(manager) {start(THREAD_STATCK_SIZE);}
           virtual ~RunPlanThreadHelper(){}
           void run();
         private:
@@ -167,10 +161,7 @@ namespace tfs
       {
         public:
           explicit CheckDataServerThreadHelper(LayoutManager& manager):
-            manager_(manager)
-        {
-          start();
-        }
+            manager_(manager) {start(THREAD_STATCK_SIZE);}
           virtual ~CheckDataServerThreadHelper(){}
           void run();
         private:
@@ -183,10 +174,7 @@ namespace tfs
       {
         public:
           explicit AddBlockInAllServerThreadHelper(LayoutManager& manager):
-            manager_(manager)
-        {
-          start();
-        }
+            manager_(manager) {start(THREAD_STATCK_SIZE);}
           virtual ~AddBlockInAllServerThreadHelper() {}
           void run();
         private:
@@ -199,10 +187,7 @@ namespace tfs
       {
         public:
           explicit CheckDataServerReportBlockThreadHelper(LayoutManager& manager):
-            manager_(manager)
-        {
-          start();
-        }
+            manager_(manager) {start(THREAD_STATCK_SIZE);}
           virtual ~CheckDataServerReportBlockThreadHelper() {}
           void run();
         private:
@@ -215,7 +200,7 @@ namespace tfs
       {
         public:
           explicit BuildBalanceThreadHelper(LayoutManager& manager):
-            manager_(manager) {start();}
+            manager_(manager) {start(THREAD_STATCK_SIZE);}
           virtual ~BuildBalanceThreadHelper() {}
           void run();
         private:
@@ -228,7 +213,7 @@ namespace tfs
       {
         public:
           explicit TimeoutThreadHelper(LayoutManager& manager):
-            manager_(manager) {start();}
+            manager_(manager) {start(THREAD_STATCK_SIZE);}
           virtual ~TimeoutThreadHelper() {}
           void run();
         private:

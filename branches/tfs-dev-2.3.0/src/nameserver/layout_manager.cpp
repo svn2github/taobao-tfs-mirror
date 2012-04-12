@@ -167,14 +167,14 @@ namespace tfs
       return ret;
     }
 
-    bool LayoutManager::build_relation(BlockCollect* block, ServerCollect* server, const time_t now)
+    bool LayoutManager::build_relation(BlockCollect* block, ServerCollect* server, const time_t now, const bool set)
     {
       bool ret = ((NULL != block) && (NULL != server));
       if (ret)
       {
         bool writable = false;
         bool master   = false;
-        int32_t ret = get_block_manager().build_relation(block, writable, master, server, now);
+        int32_t ret = get_block_manager().build_relation(block, writable, master, server, now, set);
         if (TFS_SUCCESS == ret)
         {
           ret = get_server_manager().build_relation(server, block, writable, master);
@@ -497,10 +497,10 @@ namespace tfs
       return ret;
     }
 
-    int LayoutManager::set_runtime_param(const uint32_t value1, const uint32_t value2, char *retstr)
+    int LayoutManager::set_runtime_param(const uint32_t value1, const uint32_t value2, const int64_t length, char *retstr)
     {
-      bool bret = NULL != retstr;
-      if (bret)
+      int32_t ret = ((NULL != retstr) && (length > 0)) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+      if (TFS_SUCCESS == ret)
       {
         retstr[0] = '\0';
         int32_t index = (value1 & 0x0FFFFFFF);
@@ -509,7 +509,7 @@ namespace tfs
         {
           &TBSYS_LOGGER._level,
           &plan_run_flag_,
-          &SYSPARAM_NAMESERVER.run_plan_expire_interval_,
+          &SYSPARAM_NAMESERVER.task_expired_time_,
           &SYSPARAM_NAMESERVER.safe_mode_time_,
           &SYSPARAM_NAMESERVER.max_write_timeout_,
           &SYSPARAM_NAMESERVER.max_write_file_count_,
@@ -537,24 +537,22 @@ namespace tfs
           &SYSPARAM_NAMESERVER.report_block_expired_time_
         };
         int32_t size = sizeof(param) / sizeof(int32_t*);
-        if (index < 0x01 || index > size)
+        ret = (index > 1 && index <= size) ? TFS_SUCCESS : TFS_ERROR;
+        if (TFS_SUCCESS != ret)
         {
-          snprintf(retstr, 256, "index : %d invalid.", index);
-          TBSYS_LOG(ERROR, "index: %d invalid.", index);
-          return TFS_SUCCESS;
-        }
-        int32_t* current_value = param[index - 1];
-        if (set)
-        {
-          *current_value = (int32_t)(value2 & 0xFFFFFFFF);
+          snprintf(retstr, length, "index : %d invalid.", index);
         }
         else
         {
-          snprintf(retstr, 256, "%d", *current_value);
+          int32_t* current_value = param[index - 1];
+          if (set)
+            *current_value = (int32_t)(value2 & 0xFFFFFFFF);
+          else
+            snprintf(retstr, 256, "%d", *current_value);
+          TBSYS_LOG(DEBUG, "index: %d %s name: %s value: %d", index, set ? "set" : "get", dynamic_parameter_str[index - 1], *current_value);
         }
-        TBSYS_LOG(DEBUG, "index: %d %s name: %s value: %d", index, set ? "set" : "get", dynamic_parameter_str[index - 1], *current_value);
       }
-      return bret ? TFS_SUCCESS : TFS_ERROR;
+      return ret;
     }
 
     void LayoutManager::rotate_(time_t now)
@@ -641,12 +639,12 @@ namespace tfs
               if (ret)
                 --need;
             }
-            //TBSYS_LOG(DEBUG, "check over: %d", over);
+            //TBSYS_LOG(DEBUG, "check over: %d, size: %d", over, results.get_array_index());
             if (over)
               start = 0;
           }
         }
-        usleep(5000);
+        usleep(50000);
       }
     }
 
@@ -722,7 +720,7 @@ namespace tfs
             }//end for ...
           }
         }
-        usleep(1000000);
+        usleep(10000000);
       }
     }
 
@@ -1041,7 +1039,7 @@ namespace tfs
           bool writable = false;
           bool master   = false;
           ServerCollect* pserver = *servers.at(i);
-          ret = get_block_manager().build_relation(block, writable, master, pserver, now);
+          ret = get_block_manager().build_relation(block, writable, master, pserver, now, true);
           if (TFS_SUCCESS == ret)
             ret = get_server_manager().build_relation(pserver, block, writable, master);
           else
@@ -1064,7 +1062,6 @@ namespace tfs
       int32_t ret =  (0 != block_id) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
-        GCObject* pgcobject = NULL;
         ServerCollect* exist[SYSPARAM_NAMESERVER.max_replication_];
         ArrayHelper<ServerCollect*> helper(SYSPARAM_NAMESERVER.max_replication_, exist);
         ServerCollect* servers[SYSPARAM_NAMESERVER.max_replication_];
@@ -1083,13 +1080,14 @@ namespace tfs
           int32_t count = SYSPARAM_NAMESERVER.max_replication_ - helper.get_array_index();
           if (count > 0)
           {
+            GCObject* pobject = NULL;
             get_server_manager().choose_create_block_target_server(helper, news, count);
             ret = helper.empty() ? EXIT_CHOOSE_CREATE_BLOCK_TARGET_SERVER_ERROR : TFS_SUCCESS;
             if (TFS_SUCCESS != ret)
             {
               TBSYS_LOG(INFO, "create block: %u by block id fail, dataserver is not enough", block_id);
               if (new_create_block_collect)
-                get_block_manager().remove(pgcobject,block_id);
+                get_block_manager().remove(pobject,block_id);
             }
             else//elect dataserver successful
             {
@@ -1115,12 +1113,13 @@ namespace tfs
                         && (!block->is_creating())
                         && (block->get_servers_size() <= 0)))
                   {
-                    get_block_manager().remove(pgcobject,block_id);
+                    get_block_manager().remove(pobject,block_id);
                   }
                 }
               }
+              if (NULL != pobject)
+                get_gc_manager().add(pobject);
             }//end elect dataserver successful
-            get_gc_manager().add(pgcobject);
           }//end if (count >0)
         }//end find or create block successful
       }//end if (bret)
@@ -1133,7 +1132,6 @@ namespace tfs
       int32_t ret =  (0 == block_id) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
-        GCObject* pgcobject = NULL;
         ServerCollect* result[SYSPARAM_NAMESERVER.max_replication_];
         ArrayHelper<ServerCollect*> helper(SYSPARAM_NAMESERVER.max_replication_, result);
         ServerCollect* news[SYSPARAM_NAMESERVER.max_replication_];
@@ -1157,6 +1155,7 @@ namespace tfs
           {
             get_server_manager().choose_create_block_target_server(helper, news_helper, count);
           }
+          GCObject* pobject = NULL;
           ret = !helper.empty() ? TFS_SUCCESS : EXIT_CHOOSE_CREATE_BLOCK_TARGET_SERVER_ERROR;
           if (TFS_SUCCESS == ret)//add block collect object successful
           {
@@ -1172,14 +1171,15 @@ namespace tfs
             }//end send message to dataserver successful
             else
             {
-              get_block_manager().remove(pgcobject, block_id);//rollback
+              get_block_manager().remove(pobject, block_id);//rollback
             }
           }
           else
           {
-            get_block_manager().remove(pgcobject, block_id);//rollback
+            get_block_manager().remove(pobject, block_id);//rollback
           }
-          get_gc_manager().add(pgcobject);
+          if (NULL != pobject)
+            get_gc_manager().add(pobject);
         }
       }//end if (TFS_SUCCESS == ret) check parameter
       return TFS_SUCCESS == ret ? block : NULL;
@@ -1233,6 +1233,7 @@ namespace tfs
         }
         while (!complete);
         server->update_last_time(now);
+        TBSYS_LOG(DEBUG, "pointer : %p", server);
         get_gc_manager().add(server);
       }
       return true;
@@ -1321,7 +1322,7 @@ namespace tfs
           }
           else
           {
-            helper.remove(const_cast<ServerCollect*>(source));
+            //helper.remove(const_cast<ServerCollect*>(source));
             get_server_manager().choose_move_target_server(result, targets, helper);
             ret = NULL != result;
             if (!ret)

@@ -136,9 +136,9 @@ namespace tfs
       if (safe_mode_time_ <= 0)
         safe_mode_time_ = 300;
 
-      run_plan_expire_interval_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_RUN_PLAN_EXPIRE_INTERVAL, 120);
-      if (run_plan_expire_interval_ <= 0)
-        run_plan_expire_interval_ = 120;
+      task_expired_time_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_TASK_EXPIRED_TIME, 120);
+      if (task_expired_time_ <= 0)
+        task_expired_time_ = 120;
       dump_stat_info_interval_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_DUMP_STAT_INFO_INTERVAL, 10000000);
       if (dump_stat_info_interval_ <= 60000000)
         dump_stat_info_interval_ = 60000000;

@@ -121,21 +121,36 @@ namespace tfs
       return BLOCK_CREATE_FLAG_YES == create_flag_;
     }
 
-    void BlockCollect::get_servers(ArrayHelper<ServerCollect*>& server) const
+    void BlockCollect::get_servers(ArrayHelper<ServerCollect*>& servers) const
     {
+      ServerCollect* pserver = NULL;
       for (int8_t i = 0; i < SYSPARAM_NAMESERVER.max_replication_; ++i)
       {
-        if (NULL != servers_[i] && servers_[i]->is_alive())
-          server.push_back(servers_[i]);
+        pserver = servers_[i];
+        if (NULL != pserver && pserver->is_alive())
+          servers.push_back(pserver);
       }
     }
 
-    void BlockCollect::get_servers(std::vector<uint64_t>& server) const
+    void BlockCollect::get_servers(std::vector<uint64_t>& servers) const
     {
+      ServerCollect* pserver = NULL;
       for (int8_t i = 0; i < SYSPARAM_NAMESERVER.max_replication_; ++i)
       {
-        if (NULL != servers_[i] && servers_[i]->is_alive())
-          server.push_back(servers_[i]->id());
+        pserver = servers_[i];
+        if (NULL != pserver && pserver->is_alive())
+          servers.push_back(pserver->id());
+      }
+    }
+
+    void BlockCollect::get_servers(std::vector<ServerCollect*>& servers) const
+    {
+      ServerCollect* pserver = NULL;
+      for (int8_t i = 0; i < SYSPARAM_NAMESERVER.max_replication_; ++i)
+      {
+        pserver = servers_[i];
+        if (NULL != pserver && pserver->is_alive())
+          servers.push_back(pserver);
       }
     }
 
@@ -262,6 +277,8 @@ namespace tfs
       if (BLOCK_CREATE_FLAG_YES != create_flag_)
       {
         int32_t size = get_servers_size();
+        //TBSYS_LOG(DEBUG, "replicate block %u, size: %d, time: %ld, now: %ld",
+        //  id(), size, last_update_time_, now);
         if (size <= 0)
         {
           TBSYS_LOG(WARN, "block: %u has been lost, do not replicate", info_.block_id_);

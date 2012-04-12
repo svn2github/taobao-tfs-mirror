@@ -4,7 +4,7 @@ AM_CPPFLAGS=-I$(top_srcdir)/src\
             -I$(TBLIB_ROOT)/include/tbnet
 
 #AM_LDFLAGS=-lz -lrt -lpthread -ldl -lgcov
-AM_LDFLAGS=-lz -lrt -lpthread -ldl
+AM_LDFLAGS=-lz -lrt -lpthread -ldl -rdynamic
 
 LDADD=$(top_builddir)/src/message/libtfsmessage.a \
       $(top_builddir)/src/common/libtfscommon.a\

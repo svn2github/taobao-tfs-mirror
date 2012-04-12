@@ -660,13 +660,11 @@ namespace tfs
       {
         char buf[256] = {'\0'};
         ClientCmdMessage* message = dynamic_cast<ClientCmdMessage*>(msg);
-        StatusMessage* rmsg = NULL;
         ret = layout_manager_.get_client_request_server().handle_control_cmd(message->get_cmd_info(), msg, 256, buf);
         if (TFS_SUCCESS == ret)
-          rmsg = new StatusMessage(STATUS_MESSAGE_OK, buf);
+          ret = msg->reply(new StatusMessage(STATUS_MESSAGE_OK, buf));
         else
-          rmsg = new StatusMessage(STATUS_MESSAGE_ERROR, buf);
-        ret = msg->reply(rmsg);
+          ret = msg->reply_error_packet(TBSYS_LOG_LEVEL(INFO), STATUS_MESSAGE_ERROR, buf);
       }
       return ret;
     }
