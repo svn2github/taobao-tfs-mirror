@@ -32,7 +32,7 @@ int TfsLargeFile::open(const char* file_name, const char* suffix, const int flag
 
   if (0 == (flags & T_WRITE))       // not write, load meta first
   {
-    if ((ret = open_ex(file_name, suffix, T_READ)) != TFS_SUCCESS)
+    if ((ret = open_ex(file_name, suffix, flags | T_READ)) != TFS_SUCCESS)
     {
       TBSYS_LOG(ERROR, "open meta file fail, ret: %d", ret);
     }
