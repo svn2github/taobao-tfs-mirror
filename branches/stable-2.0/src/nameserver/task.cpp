@@ -64,7 +64,7 @@ namespace tfs
         return true;
       if (block_id_ > task.block_id_)
         return false;
-      return (begin_time_ < task.begin_time_);
+      return this < &task;
     }
 
     void LayoutManager::Task::runTimerTask()

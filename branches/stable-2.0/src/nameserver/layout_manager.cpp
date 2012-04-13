@@ -2644,12 +2644,14 @@ namespace tfs
       }
       std::vector<ServerCollect*>::iterator index;
       {
-        RWLock::Lock tlock(maping_mutex_, WRITE_LOCKER);
+        maping_mutex_.wrlock();
         std::pair<std::map<uint32_t, TaskPtr>::iterator, bool> rs =
           block_to_task_.insert(std::map<uint32_t, TaskPtr>::value_type(task->block_id_, task));
         if (!rs.second)
         {
+          maping_mutex_.unlock();
           TBSYS_LOG(ERROR, "object was found by block: %u in block list", task->block_id_);
+          tbutil::Monitor<tbutil::Mutex>::Lock lock(run_plan_monitor_);
           pending_plan_list_.erase(res.first);
           return false;
         }
@@ -2662,6 +2664,7 @@ namespace tfs
         //TBSYS_LOG(DEBUG, "server: %"PRI64_PREFIX"d, server: %"PRI64_PREFIX"d", (*index)->id(), (iter.first->first)->id());
 #endif
         }
+        maping_mutex_.unlock();
       }
 
       {
