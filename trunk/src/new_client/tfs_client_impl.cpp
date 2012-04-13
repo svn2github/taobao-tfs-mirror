@@ -1201,7 +1201,7 @@ int64_t TfsClientImpl::save_buf_ex(char* ret_tfs_name, const int32_t ret_tfs_nam
   return ret != TFS_SUCCESS ? INVALID_FILE_SIZE : count;
 }
 
-int TfsClientImpl::fetch_file(const char* local_file, const char* file_name, const char* suffix, const char* ns_addr)
+int TfsClientImpl::fetch_file(const char* local_file, const char* file_name, const char* suffix, const char* ns_addr, const int flags)
 {
   int ret = TFS_ERROR;
   int fd = -1;
@@ -1223,7 +1223,7 @@ int TfsClientImpl::fetch_file(const char* local_file, const char* file_name, con
   }
   else
   {
-    int32_t flag = T_DEFAULT;
+    int32_t flag = T_DEFAULT | flags;
     int32_t io_size = MAX_READ_SIZE;
     if (file_type == LARGE_TFS_FILE_TYPE)
     {
@@ -1282,7 +1282,7 @@ int TfsClientImpl::fetch_file(const char* local_file, const char* file_name, con
 
 int TfsClientImpl::fetch_file(int64_t& ret_count, char* buf, const int64_t count,
                               const char* file_name, const char* suffix,
-                              const char* ns_addr)
+                              const char* ns_addr, const int flags)
 {
   int ret = TFS_ERROR;
   TfsFileType file_type = INVALID_TFS_FILE_TYPE;
@@ -1299,7 +1299,7 @@ int TfsClientImpl::fetch_file(int64_t& ret_count, char* buf, const int64_t count
   }
   else
   {
-    int32_t flag = T_DEFAULT;
+    int32_t flag = T_DEFAULT | flags;
     int32_t io_size = MAX_READ_SIZE;
     if (file_type == LARGE_TFS_FILE_TYPE)
     {

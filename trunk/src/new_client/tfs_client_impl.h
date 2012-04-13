@@ -176,9 +176,10 @@ namespace tfs
                                const char* file_name, const char* suffix = NULL,
                                const char* ns_addr = NULL);
       int fetch_file(int64_t& ret_count, char* buf, const int64_t count,
-                     const char* file_name, const char* suffix = NULL, const char* ns_addr = NULL);
+                     const char* file_name, const char* suffix = NULL, const char* ns_addr = NULL, const int flags = common::T_DEFAULT);
       int fetch_file(const char* local_file,
-                     const char* file_name, const char* suffix = NULL, const char* ns_addr = NULL);
+                     const char* file_name, const char* suffix = NULL, const char* ns_addr = NULL, const int flags = common::T_DEFAULT);
+
       int stat_file(common::TfsFileStat* file_stat, const char* file_name, const char* suffix = NULL,
                     const common::TfsStatType stat_type = common::NORMAL_STAT, const char* ns_addr = NULL);
 
