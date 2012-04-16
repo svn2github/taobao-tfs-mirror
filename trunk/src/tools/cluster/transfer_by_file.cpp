@@ -13,7 +13,22 @@
  *      - initial release
  *
  */
-#include "sync_file_base.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <tbsys.h>
+#include <TbThread.h>
+#include <vector>
+#include <string>
+#include <sys/types.h>
+#include <dirent.h>
+#include <libgen.h>
+#include <Mutex.h>
+#include <Memory.hpp>
+
+#include "common/func.h"
+#include "common/directory_op.h"
+#include "new_client/fsname.h"
+#include "new_client/tfs_client_impl.h"
 #include "dataserver/dataserver_define.h"
 #include "common/internal.h"
 
@@ -21,6 +36,8 @@ using namespace std;
 using namespace tfs::dataserver;
 using namespace tfs::common;
 using namespace tfs::client;
+
+static const int32_t MAX_READ_DATA_SIZE = 81920;
 
 typedef vector<string> VEC_FILE_NAME;
 typedef vector<string>::iterator VEC_FILE_NAME_ITER;
@@ -42,83 +59,15 @@ struct LogFile
 tbutil::Mutex g_mutex_;
 SyncStat g_sync_stat_;
 
+bool b_special = false;
+bool b_suffix = false;
+
 string g_rfile_list("sync_result.txt");
-static SegmentHead g_src_seg_head;
-static SegmentHead g_dest_seg_head;
+string optional_suffix;
 
 int get_file_list(const string& log_file, VEC_FILE_NAME& name_set);
 int sync_file(const string& src_ns_addr, const string& dest_ns_addr, VEC_FILE_NAME& name_set);
 void trim(const char* input, char* output);
-int load_head(const char* buf, const int32_t buf_len, SegmentHead& g_seg_head);
-
-int load_head(const char* buf, const int32_t buf_len, SegmentHead& g_seg_head)
-{
-  int ret = TFS_SUCCESS;
-  if (buf_len < static_cast<int32_t>(sizeof(SegmentHead)))
-  {
-    TBSYS_LOG(ERROR, "buffer length less than base segment head length: %d < %d", buf_len, sizeof(SegmentHead));
-    ret = TFS_ERROR;
-  }
-  else
-  {
-    memcpy(&g_seg_head, buf, sizeof(SegmentHead));
-    TBSYS_LOG(DEBUG, "load segment head, count %d, size: %"PRI64_PREFIX"d", g_seg_head.count_, g_seg_head.size_);
-  }
-  return ret;
-}
-
-bool check_large(char* src_file, char* dest_file, const char* src_ns_addr, const char* dest_ns_addr)
-{
-  bool check = true;
-  int ret = TFS_SUCCESS;
-  int64_t src_size = -1;
-  int64_t dest_size = -1;
-
-  char src_seg_buf[MAX_META_SIZE];
-  char dest_seg_buf[MAX_META_SIZE];
-  src_file[0] = 'T';
-  dest_file[0] = 'T';
-  if ( (ret = TfsClientImpl::Instance()->fetch_file(src_size, src_seg_buf, MAX_META_SIZE, src_file, NULL, src_ns_addr, T_FORCE)) != TFS_SUCCESS)
-  {
-    TBSYS_LOG(ERROR, "read src meta file, size: %"PRI64_PREFIX"d", src_size);
-    src_file[0] = 'L';
-    dest_file[0] = 'L';
-    return false;
-  }
-
-  if ( (ret = load_head(src_seg_buf, src_size, g_src_seg_head)) != TFS_SUCCESS)
-  {
-    src_file[0] = 'L';
-    dest_file[0] = 'L';
-    return false;
-  }
-
-  if ( (ret = TfsClientImpl::Instance()->fetch_file(dest_size, dest_seg_buf, MAX_META_SIZE, dest_file, NULL, dest_ns_addr, T_FORCE)) != TFS_SUCCESS)
-  {
-    TBSYS_LOG(ERROR, "read dest meta file, size: %"PRI64_PREFIX"d", dest_size);
-    src_file[0] = 'L';
-    dest_file[0] = 'L';
-    return false;
-  }
-
-  if ( (ret = load_head(dest_seg_buf, dest_size, g_dest_seg_head)) != TFS_SUCCESS)
-  {
-    src_file[0] = 'L';
-    dest_file[0] = 'L';
-    return false;
-  }
-
-  if (g_src_seg_head.size_ != g_dest_seg_head.size_)
-  {
-    check = false;
-  }
-
-  src_file[0] = 'L';
-  dest_file[0] = 'L';
-
-
-  return check;
-}
 
 class WorkThread : public tbutil::Thread
 {
@@ -198,14 +147,17 @@ int init_log_file(const char* dir_path)
 
 static void usage(const char* name)
 {
-  fprintf(stderr, "Usage: %s -s -d -f -r [-t] [-g] [-l] [-h]\n", name);
+  fprintf(stderr, "Usage: %s -s -d -f -[r] [-t] [-g] [-l] [-x] [-y] [-z] [-h]\n", name);
   fprintf(stderr, "       -s source ns ip port\n");
   fprintf(stderr, "       -d dest ns ip port\n");
   fprintf(stderr, "       -f source file list, assign a path to sync\n");
-  fprintf(stderr, "       -r dest file list, assign a path to return result\n");
+  fprintf(stderr, "       -r dest file list, assign a path to return result, optional, default is sync_result.txt\n");
   fprintf(stderr, "       -t work thread num, assign multi-thread work, optional\n");
   fprintf(stderr, "       -g log file name, redirect log info to log file, optional\n");
   fprintf(stderr, "       -l log file level, set log file level, optional\n");
+  fprintf(stderr, "       -x whether need special tfs name, default is false, optional\n");
+  fprintf(stderr, "       -y whether need suffxi , default is false, optional\n");
+  fprintf(stderr, "       -z suffix, assign optional suffix\n");
   fprintf(stderr, "       -h help\n");
   exit(TFS_ERROR);
 }
@@ -234,7 +186,7 @@ int main(int argc, char* argv[])
   string level("info");
 
   // analyze arguments
-  while ((i = getopt(argc, argv, "s:d:f:r:t:g:l:h")) != EOF)
+  while ((i = getopt(argc, argv, "s:d:f:r:t:g:l:z:xyh")) != EOF)
   {
     switch (i)
     {
@@ -258,6 +210,15 @@ int main(int argc, char* argv[])
         break;
       case 'l':
         level = optarg;
+        break;
+      case 'x':
+        b_special = true;
+        break;
+      case 'y':
+        b_suffix = true;
+        break;
+      case 'z':
+        optional_suffix = optarg;
         break;
       case 'h':
       default:
@@ -312,6 +273,12 @@ int main(int argc, char* argv[])
   if (!g_rfile_list.empty())
   {
     g_fp = fopen (g_rfile_list.c_str(), "w");
+
+    if (g_fp == NULL)
+    {
+      TBSYS_LOG(ERROR, "open file(%s) fail,errors(%s)", g_rfile_list.c_str(), strerror(errno));
+      return TFS_ERROR;
+    }
   }
 
   if (name_set.size() > 0)
@@ -401,9 +368,10 @@ int sync_file(const string& src_ns_addr, const string& dest_ns_addr, VEC_FILE_NA
   int fd  = -1;
   int write_len = 0;
   int32_t rlen = 0;
-  char ret_tfs_name[20];
+  char ret_tfs_name[256];
   char tmp[256];
   char* temp = "tmp";
+  string suffix;
 
   snprintf(tmp, 256, "%s%lu", temp, pthread_self());
 
@@ -422,7 +390,26 @@ int sync_file(const string& src_ns_addr, const string& dest_ns_addr, VEC_FILE_NA
     int64_t dest_size = 0;
     char data[MAX_READ_DATA_SIZE];
     char name_map[256];
+    string real_suffix;
     string file_name = (*iter);
+    int32_t src_name_len = file_name.size();
+
+    // trunc the suffix
+    if (src_name_len > FILE_NAME_LEN)
+    {
+      suffix = file_name.substr(FILE_NAME_LEN, src_name_len - FILE_NAME_LEN);
+      printf("suffix is %s\n", suffix.c_str());
+    }
+
+    // form real_suffix
+    if (suffix != "")
+    {
+      real_suffix = suffix;
+    }
+    else if (optional_suffix != "")
+    {
+      real_suffix = optional_suffix;
+    }
 
     //open source file
     if (file_name[0] == 'L')
@@ -469,6 +456,7 @@ int sync_file(const string& src_ns_addr, const string& dest_ns_addr, VEC_FILE_NA
     // fetch file to tmp file
 
     int source_fd = TfsClientImpl::Instance()->open(file_name.c_str(), NULL, src_ns_addr.c_str(), flag);
+    int read_size = 0;
 
     // open fail
     if (source_fd < 0)
@@ -512,6 +500,8 @@ int sync_file(const string& src_ns_addr, const string& dest_ns_addr, VEC_FILE_NA
           {
             break;
           }
+
+          read_size += rlen;
 
           write_len = write(fd, data, rlen);
 
@@ -562,9 +552,33 @@ int sync_file(const string& src_ns_addr, const string& dest_ns_addr, VEC_FILE_NA
     // write to dest_ns_addr
 
     flag = (file_name[0] == 'L' ? T_LARGE : T_DEFAULT);
-    ret = TfsClientImpl::Instance()->save_file(ret_tfs_name, TFS_FILE_LEN, tmp, flag, NULL, dest_ns_addr.c_str());
 
-    printf("return size: %d\n", ret);
+    //save_file add b_specail param
+
+    if (file_name[0] == 'L')
+    {
+      if (real_suffix == "")
+      {
+        ret = TfsClientImpl::Instance()->save_file(ret_tfs_name, 256, tmp, flag, NULL, dest_ns_addr.c_str(), false);
+      }
+      else
+      {
+        ret = TfsClientImpl::Instance()->save_file(ret_tfs_name, 256, tmp, flag, real_suffix.c_str(), dest_ns_addr.c_str(), false);
+      }
+    }
+    else
+    {
+      if (real_suffix == "")
+      {
+        ret = TfsClientImpl::Instance()->save_file(ret_tfs_name, 256, tmp, flag, NULL, dest_ns_addr.c_str(), b_special);
+      }
+      else
+      {
+        ret = TfsClientImpl::Instance()->save_file(ret_tfs_name, 256, tmp, flag, real_suffix.c_str(), dest_ns_addr.c_str(), b_special);
+      }
+    }
+
+    //printf("return size: %d\n", ret);
 
     if (ret < 0)
     {
@@ -594,6 +608,11 @@ int sync_file(const string& src_ns_addr, const string& dest_ns_addr, VEC_FILE_NA
       // contain hide status
       if (status & FI_CONCEAL)
       {
+        if (file_name[0] == 'L')
+        {
+          source_size = read_size;
+        }
+
         int64_t file_size = 0;
         ret = TfsClientImpl::Instance()->unlink(file_size, ret_tfs_name, NULL, dest_ns_addr.c_str(), CONCEAL);
         if (TFS_SUCCESS != ret)
@@ -622,20 +641,23 @@ int sync_file(const string& src_ns_addr, const string& dest_ns_addr, VEC_FILE_NA
       }
       fprintf(g_sync_succ, "%s\n", file_name.c_str());
 
-      if (g_fp == NULL)
+      if (b_special)
       {
-        TBSYS_LOG(ERROR, "open file(%s) fail,errors(%s)", g_rfile_list.c_str(), strerror(errno));
+        snprintf(name_map, 256, "%s %s\n", file_name.c_str(), ret_tfs_name);
       }
+      else
+      {
+        b_suffix ? snprintf(name_map, 256, "%s %s%s\n", file_name.c_str(), ret_tfs_name, real_suffix.c_str())
+                   : snprintf(name_map, 256, "%s %s\n", file_name.c_str(), ret_tfs_name);
 
-      snprintf(name_map, 256, "%s %s\n", file_name.c_str(), ret_tfs_name);
+      }
       fputs(name_map, g_fp);
     }
     else
     {
       // if is large_file
       if (file_name[0] == 'L' && ret_tfs_name[0] == 'L'
-          &&
-          ( (status == 0 && source_size == dest_size ) || check_large(const_cast<char *>(file_name.c_str()), ret_tfs_name, src_ns_addr.c_str(), dest_ns_addr.c_str())))
+          && source_size == dest_size)
       {
         TBSYS_LOG(INFO, "sync file(%s) succeed.", file_name.c_str());
         {
@@ -643,7 +665,8 @@ int sync_file(const string& src_ns_addr, const string& dest_ns_addr, VEC_FILE_NA
           g_sync_stat_.success_count_++;
         }
         fprintf(g_sync_succ, "%s\n", file_name.c_str());
-        snprintf(name_map, 256, "%s %s\n", file_name.c_str(), ret_tfs_name);
+        b_suffix ? snprintf(name_map, 256, "%s %s%s\n", file_name.c_str(), ret_tfs_name, real_suffix.c_str())
+                   : snprintf(name_map, 256, "%s %s\n", file_name.c_str(), ret_tfs_name);
         fputs(name_map, g_fp);
       }
       else
