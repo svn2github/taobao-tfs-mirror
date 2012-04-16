@@ -91,7 +91,7 @@ namespace tfs
       virtual int64_t get_file_length() = 0;
       virtual int unlink(const char* file_name, const char* suffix, int64_t& file_size, const common::TfsUnlinkType action) = 0;
 
-      const char* get_file_name();
+      const char* get_file_name(const bool simple = false);
       void set_session(TfsSession* tfs_session);
       void set_option_flag(common::OptionFlag option_flag);
 

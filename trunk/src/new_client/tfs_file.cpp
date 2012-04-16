@@ -473,8 +473,13 @@ int TfsFile::close_ex()
   return ret;
 }
 
-const char* TfsFile::get_file_name()
+const char* TfsFile::get_file_name(const bool simple)
 {
+  if (true == simple)
+  {
+    fsname_.set_suffix((uint32_t)0);
+  }
+
   if (flags_ & T_LARGE)
   {
     return fsname_.get_name(true);

@@ -58,7 +58,7 @@ namespace tfs
       int64_t pread(const int fd, void* buf, const int64_t count, const int64_t offset);
       int64_t pwrite(const int fd, const void* buf, const int64_t count, const int64_t offset);
       int fstat(const int fd, common::TfsFileStat* buf, const common::TfsStatType mode = common::NORMAL_STAT);
-      int close(const int fd, char* ret_tfs_name = NULL, const int32_t ret_tfs_name_len = 0);
+      int close(const int fd, char* ret_tfs_name = NULL, const int32_t ret_tfs_name_len = 0, const bool simple = false);
       int64_t get_file_length(const int fd);
 
       int set_option_flag(const int fd, const common::OptionFlag option_flag);
@@ -162,11 +162,11 @@ namespace tfs
       int64_t save_buf(char* ret_tfs_name, const int32_t ret_tfs_name_len,
                         const char* buf, const int64_t count,
                         const int32_t flag, const char* suffix = NULL,
-                        const char* ns_addr = NULL, const char* key = NULL);
+                        const char* ns_addr = NULL, const char* key = NULL, const bool simple = false);
       int64_t save_file(char* ret_tfs_name, const int32_t ret_tfs_name_len,
                         const char* local_file,
                         const int32_t flag, const char* suffix = NULL,
-                        const char* ns_addr = NULL);
+                        const char* ns_addr = NULL, bool simple = false);
       int64_t save_file_update(const char* buf, const int64_t count,
                                const int32_t flag,
                                const char* file_name, const char* suffix = NULL,
@@ -186,11 +186,11 @@ namespace tfs
       int64_t save_file_ex(char* ret_tfs_name, const int32_t ret_tfs_name_len,
                            const char* local_file, const int32_t flag,
                            const char* file_name, const char* suffix = NULL,
-                           const char* ns_addr = NULL);
+                           const char* ns_addr = NULL, bool simple = false);
       int64_t save_buf_ex(char* ret_tfs_name, const int32_t ret_tfs_name_len,
                            const char* buf, const int64_t count, const int32_t flag,
                            const char* file_name, const char* suffix = NULL,
-                           const char* ns_addr = NULL, const char* key = NULL);
+                           const char* ns_addr = NULL, const char* key = NULL, bool simple = false);
       // fetch file to buffer, return count
       // WARNING: user MUST free buf.
       int fetch_file_ex(char*& buf, int64_t& count,
