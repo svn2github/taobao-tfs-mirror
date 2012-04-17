@@ -522,10 +522,8 @@ namespace tfs
       return clerk_[id % clerk_num_]->exist(id);
     }
 
-    void LeaseFactory::clear()
+    void LeaseFactory::clear(bool check_time, bool force)
     {
-      bool check_time = false;
-      bool force = true;
       for (int32_t i = 0; i < clerk_num_; ++i)
       {
         clerk_[i]->clear(check_time, force);
@@ -544,7 +542,7 @@ namespace tfs
 
     void LeaseFactory::ExpireTask::runTimerTask()
     {
-      manager_.clear();
+      manager_.clear(false, false);
     }
   }
 }

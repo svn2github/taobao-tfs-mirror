@@ -138,7 +138,7 @@ namespace tfs
       bool commit(int64_t client, uint32_t lease_id, LeaseStatus status);
       bool has_valid_lease(int64_t client) const;
       bool exist(int64_t client) const;
-      void clear();
+      void clear(bool check_time = true, bool force = false);
 
       static LeaseFactory& instance() { return instance_;}
     public:
