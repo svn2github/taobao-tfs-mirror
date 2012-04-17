@@ -32,13 +32,13 @@ namespace tfs
     std::string GFactory::tfs_ns_stat_ = "tfs-ns-stat";
     std::string GFactory::tfs_ns_stat_block_count_ = "tfs-ns-stat-block-count";
 
-    int GFactory::initialize()
+    int GFactory::initialize(const int32_t chunk_num)
     {
       if (timer_ == 0)
       {
         timer_ = new tbutil::Timer();
       }
-      int32_t iret = LeaseFactory::instance().initialize();
+      int32_t iret = LeaseFactory::instance().initialize(chunk_num);
       if (iret != TFS_SUCCESS)
       {
         TBSYS_LOG(ERROR, "%s", "initialize lease factory fail");
@@ -70,6 +70,8 @@ namespace tfs
       ptr->add_sub_key("tfs-ns-block-count");
       stat_mgr_.add_entry(ptr, SYSPARAM_NAMESERVER.dump_stat_info_interval_);
 
+      LeaseFactory::ExpireTaskPtr task = new LeaseFactory::ExpireTask(LeaseFactory::instance());
+      timer_->scheduleRepeated(task, tbutil::Time::seconds(600));
       return iret;
     }
 

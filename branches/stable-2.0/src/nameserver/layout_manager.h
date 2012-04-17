@@ -472,7 +472,6 @@ namespace nameserver
     tbutil::Mutex elect_index_mutex_;
     NameServer& manager_;
     ClientRequestServer client_request_server_;
-    void test() const;
   };
 }
 }

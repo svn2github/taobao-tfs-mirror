@@ -541,6 +541,11 @@ namespace tfs
       }
       return lease_id;
     }
+
+    void LeaseFactory::ExpireTask::runTimerTask()
+    {
+      manager_.clear();
+    }
   }
 }
 

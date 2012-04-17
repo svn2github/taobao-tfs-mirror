@@ -679,9 +679,9 @@ namespace tfs
         param.end_flag_ = message->get_param().end_flag_;
         iret = meta_mgr_.scan(param);
         if (TFS_SUCCESS == iret)
-        {
           iret = message->reply(resp);
-        }
+        else
+          resp->free();
       }
       return iret;
     }
@@ -726,9 +726,9 @@ namespace tfs
         DumpPlanResponseMessage* rmsg = new DumpPlanResponseMessage();
         iret = meta_mgr_.get_client_request_server().dump_plan(rmsg->get_data());
         if (TFS_SUCCESS == iret)
-        {
           iret = msg->reply(rmsg);
-        }
+        else
+          rmsg->free();
       }
       return iret;
     }
@@ -754,7 +754,8 @@ namespace tfs
 
     int NameServer::initialize_ns_global_info()
     {
-      int32_t iret = GFactory::initialize();
+      int32_t block_chunk_num = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_BLOCK_CHUNK_NUM, 32);
+      int32_t iret = GFactory::initialize(block_chunk_num);
       if (TFS_SUCCESS == iret)
       {
         const char* ns_ip = TBSYS_CONFIG.getString(CONF_SN_NAMESERVER, CONF_IP_ADDR_LIST);

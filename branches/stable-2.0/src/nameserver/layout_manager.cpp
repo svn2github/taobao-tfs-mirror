@@ -2788,10 +2788,5 @@ namespace tfs
       }
       return bret;
     }
-    void LayoutManager::test() const
-    {
-      RWLock::Lock lock(maping_mutex_, READ_LOCKER);
-
-    }
   } /** nameserver **/
 }/** tfs **/

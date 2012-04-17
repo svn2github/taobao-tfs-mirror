@@ -143,6 +143,18 @@ namespace tfs
       static LeaseFactory& instance() { return instance_;}
     public:
       static volatile uint16_t gwait_count_;
+      class ExpireTask : public tbutil::TimerTask
+      {
+        public:
+          explicit ExpireTask(LeaseFactory& manager):
+            manager_(manager) {}
+          virtual ~ExpireTask() {}
+          void runTimerTask();
+        private:
+          DISALLOW_COPY_AND_ASSIGN(ExpireTask);
+          LeaseFactory& manager_;
+      };
+      typedef tbutil::Handle<ExpireTask> ExpireTaskPtr;
 
     #if defined(TFS_GTEST) || defined(TFS_NS_INTEGRATION)
     public:

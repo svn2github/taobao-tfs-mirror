@@ -13,8 +13,8 @@
  *      - initial release
  *
  */
-#ifndef TFS_NAMESERVER_GLOBAL_FACTORY_H_ 
-#define TFS_NAMESERVER_GLOBAL_FACTORY_H_ 
+#ifndef TFS_NAMESERVER_GLOBAL_FACTORY_H_
+#define TFS_NAMESERVER_GLOBAL_FACTORY_H_
 
 #include <string>
 #include <Timer.h>
@@ -29,17 +29,17 @@ namespace tfs
   {
     struct GFactory
     {
-      static int initialize();
+      static int initialize(const int32_t chunk_num);
       static int wait_for_shut_down();
       static int destroy();
       static NsRuntimeGlobalInformation& get_runtime_info()
       {
-        return NsRuntimeGlobalInformation::instance(); 
-      }     
+        return NsRuntimeGlobalInformation::instance();
+      }
       static NsGlobalStatisticsInfo& get_global_info()
       {
         return NsGlobalStatisticsInfo::instance();
-      } 
+      }
       static tbutil::TimerPtr& get_timer()
       {
         return timer_;
