@@ -12,8 +12,9 @@ Source:%{NAME}-%{VERSION}.tar.gz
 BuildRoot: %{_tmppath}/%{name}-root
 
 BuildRequires: t-csrd-tbnet-devel = 1.4.0
-BuildRequires: MySQL-devel-community >= 5.1.48
+BuildRequires: MySQL-devel-community = 5.1.48
 BuildRequires: tair-devel = 2.3
+BuildRequires: boost-devel >= 1.33
 
 %define __os_install_post %{nil}
 %define debug_package %{nil}
@@ -36,7 +37,7 @@ files for developing applications that use the %name package.
 chmod u+x build.sh
 ./build.sh init
 #./configure --prefix=%{_prefix}
-./configure --prefix=%{_prefix} --enable-uniquestore --enable-taircache --with-tair-root=/opt/csr/tair-2.3
+./configure --prefix=%{_prefix} --enable-uniquestore --enable-taircache --with-tair-root=/usr/local/tair-2.3.1.3
 make %{?_smp_mflags}
 
 %install
