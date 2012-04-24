@@ -36,6 +36,8 @@ namespace tfs
     RcServerParameter RcServerParameter::rc_parameter_;
     NameMetaServerParameter NameMetaServerParameter::meta_parameter_;
     RtServerParameter RtServerParameter::rt_parameter_;
+    CheckServerParameter CheckServerParameter::cs_parameter_;
+
 
     int NameServerParameter::initialize(void)
     {
@@ -230,6 +232,8 @@ namespace tfs
       object_clear_max_time_ = config.getInt(CONF_SN_DATASERVER, CONF_OBJECT_CLEAR_MAX_TIME, 300);
       if (object_clear_max_time_ <= 0)
         object_clear_max_time_ = 300;
+      // block stable time, default 5 min
+      block_stable_time_ = config.getInt(CONF_SN_DATASERVER, CONF_BLOCK_STABLE_TIME, 5);
       return SYSPARAM_FILESYSPARAM.initialize(index);
     }
 
@@ -439,6 +443,58 @@ namespace tfs
         }
       }
       return iret;
+    }
+
+    int CheckServerParameter::initialize(const std::string& config_file)
+    {
+      tbsys::CConfig config;
+      int32_t ret = config.load(config_file.c_str());
+      if (EXIT_SUCCESS != ret)
+      {
+        TBSYS_LOG(ERROR, "load config file erro.");
+        return TFS_ERROR;
+      }
+
+      check_interval_ = config.getInt(CONF_SN_CHECKSERVER, CONF_CHECK_INTERVAL, 3600);
+      thread_count_ = config.getInt(CONF_SN_CHECKSERVER, CONF_THREAD_COUNT, 1);
+      cluster_id_ = config.getInt(CONF_SN_CHECKSERVER, CONF_CLUSTER_ID, 1);
+
+      const char* master_ns_ip  = config.getString(CONF_SN_CHECKSERVER, CONF_MASTER_NS_IP, NULL);
+      if (NULL == master_ns_ip)
+      {
+        TBSYS_LOG(ERROR, "master_ns_ip config item not found.");
+        ret = TFS_ERROR;
+      }
+      else
+      {
+        int master_ns_port = config.getInt(CONF_SN_CHECKSERVER, CONF_MASTER_NS_PORT, -1);
+        if (-1 == master_ns_port)
+        {
+          master_ns_id_ = 0;
+          TBSYS_LOG(ERROR, "master_ns_ip config item not found.");
+          ret = TFS_ERROR;
+        }
+        else
+        {
+          master_ns_id_ = Func::str_to_addr(master_ns_ip, master_ns_port);
+        }
+      }
+
+      const char* slave_ns_ip  = config.getString(CONF_SN_CHECKSERVER, CONF_SLAVE_NS_IP, NULL);
+      if (NULL != slave_ns_ip)
+      {
+        int slave_ns_port = config.getInt(CONF_SN_CHECKSERVER, CONF_SLAVE_NS_PORT, -1);
+        if (-1 != slave_ns_port)
+        {
+          slave_ns_id_ = Func::str_to_addr(slave_ns_ip, slave_ns_port);
+        }
+        else
+        {
+          slave_ns_id_ = 0;
+        }
+      }
+
+      return ret;
     }
   }/** common **/
 }/** tfs **/

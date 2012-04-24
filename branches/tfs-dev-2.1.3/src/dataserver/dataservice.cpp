@@ -310,6 +310,7 @@ namespace tfs
         {
           repl_block_ = new ReplicateBlock(ns_ip_port_);
           compact_block_ = new CompactBlock(ns_ip_port_, data_server_info_.id_);
+          check_block_ = new CheckBlock();
 
           iret = data_management_.init_block_files(SYSPARAM_FILESYSPARAM);
           if (TFS_SUCCESS != iret)
@@ -561,6 +562,7 @@ namespace tfs
       tbsys::gDeleteA(replicate_block_threads_);
       tbsys::gDelete(repl_block_);
       tbsys::gDelete(compact_block_);
+      tbsys::gDelete(check_block_);
       GCObjectManager::instance().destroy();
       GCObjectManager::instance().wait_for_shut_down();
       return TFS_SUCCESS;
@@ -1028,6 +1030,9 @@ namespace tfs
             case GET_DATASERVER_INFORMATION_MESSAGE:
               ret = get_dataserver_information(dynamic_cast<BasePacket*>(packet));
               break;
+            case REQ_CHECK_BLOCK_MESSAGE:
+              ret = check_blocks(dynamic_cast<BasePacket*>(packet));
+              break;
             default:
               TBSYS_LOG(ERROR, "process packet pcode: %d\n", pcode);
               ret = TFS_ERROR;
@@ -1348,6 +1353,13 @@ namespace tfs
           }
         }
       }
+
+      // hook to be checked
+      if (TFS_SUCCESS == ret)
+      {
+        check_block_->add_check_task(close_file_info.block_id_);
+      }
+
       return ret;
     }
 
@@ -1795,6 +1807,12 @@ namespace tfs
             "removeblock error, ret: %d", ret);
       }
 
+      // remove logic block from Modified block
+      for (uint32_t i = 0; i < remove_blocks.size(); i++)
+      {
+        check_block_->remove_check_task(remove_blocks[i]);
+      }
+
       if (common::REMOVE_BLOCK_RESPONSE_FLAG_YES == message->get_response_flag())
       {
         RemoveBlockResponseMessage* msg = new RemoveBlockResponseMessage();
@@ -1895,6 +1913,41 @@ namespace tfs
       }
 
       message->reply(resp_lb_msg);
+      return TFS_SUCCESS;
+    }
+
+    int DataService::check_blocks(common::BasePacket* packet)
+    {
+      int32_t ret = (NULL != packet) ? TFS_SUCCESS : TFS_ERROR;
+      if (TFS_SUCCESS == ret)
+      {
+        CheckBlockRequestMessage* message = dynamic_cast<CheckBlockRequestMessage*>(packet);
+        CheckBlockResponseMessage* resp_cb_msg = new CheckBlockResponseMessage();
+        uint32_t block_id = message->get_block_id();
+        if (0 == block_id)  // check all blocks
+        {
+          ret = check_block_->check_all_blocks(resp_cb_msg->get_result_ref(),
+              message->get_check_flag(), message->get_check_time(),
+              message->get_last_check_time());
+        }
+        else  // check specific block
+        {
+          CheckBlockInfo cbi;
+          ret = check_block_->check_one_block(block_id, cbi, message->get_check_flag());
+                  resp_cb_msg->get_result_ref().push_back(cbi);
+        }
+
+        if (TFS_SUCCESS == ret)
+        {
+          ret = packet->reply(resp_cb_msg);
+        }
+        else
+        {
+          tbsys::gDelete(resp_cb_msg);
+          ret = message->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret,
+              "check block fail, ret: %d", ret);
+        }
+      }
       return TFS_SUCCESS;
     }
 
@@ -2197,6 +2250,13 @@ namespace tfs
 
       TBSYS_LOG(DEBUG, "write block fileinfo successful, blockid: %u", block_id);
       message->reply(new StatusMessage(STATUS_MESSAGE_OK));
+
+      // hook to be checked
+      if (TFS_SUCCESS == ret)
+      {
+        check_block_->add_check_task(block_id);
+      }
+
       return TFS_SUCCESS;
     }
 

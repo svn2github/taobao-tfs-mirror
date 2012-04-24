@@ -258,6 +258,12 @@ namespace tfs
           case common::RSP_RT_UPDATE_TABLE_MESSAGE:
             packet = new UpdateTableResponseMessage();
             break;
+          case common::REQ_CHECK_BLOCK_MESSAGE:
+            packet = new CheckBlockRequestMessage();
+            break;
+          case common::RSP_CHECK_BLOCK_MESSAGE:
+            packet = new CheckBlockResponseMessage();
+            break;
           default:
             TBSYS_LOG(ERROR, "pcode: %d not found in message factory", real_pcode);
             break;
