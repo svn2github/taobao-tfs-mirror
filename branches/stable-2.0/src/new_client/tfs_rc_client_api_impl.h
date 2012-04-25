@@ -317,10 +317,10 @@ namespace tfs
             if (NULL != file_name)
             {
               name_ = file_name;
-              if (NULL != suffix)
-              {
-                suffix_ = suffix;
-              }
+            }
+            if (NULL != suffix)
+            {
+              suffix_ = suffix;
             }
             if (NULL != local_key)
             {
