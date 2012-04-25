@@ -14,6 +14,8 @@ BuildRoot: %{_tmppath}/%{name}-root
 BuildRequires: t-csrd-tbnet-devel = 1.4.0
 BuildRequires: MySQL-devel-community >= 5.1.48
 BuildRequires: tair-devel = 2.3
+BuildRequires: readline-devel
+BuildRequires: ncurses-devel
 
 %define __os_install_post %{nil}
 %define debug_package %{nil}
