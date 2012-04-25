@@ -54,7 +54,6 @@ namespace tfs
       stop_(false), running_(false),
       check_interval_(0), check_count_(0), warn_dead_count_(0)
     {
-      conf_file_[0] = '\0';
     }
 
     AdminServer::~AdminServer()
@@ -114,12 +113,12 @@ namespace tfs
       if (1 == type)            // insert, strip trailing ", "
       {
         snprintf(cmd, MAX_PATH_LENGTH, "sed -i 's/\\(%s.*[^ ,]\\)[, ]*$/\\1,%s/g' %s",
-                 CONF_DS_INDEX_LIST, index.c_str(), conf_file_);
+                 CONF_DS_INDEX_LIST, index.c_str(), config_file_.c_str());
       }
       else                      // delete
       {
         snprintf(cmd, MAX_PATH_LENGTH, "sed -i 's/\\(%s.*[, ]*\\)\\b%s\\b[, ]*\\(.*$\\)/\\1\\2/g' %s",
-                 CONF_DS_INDEX_LIST, index.c_str(), conf_file_);
+                 CONF_DS_INDEX_LIST, index.c_str(), config_file_.c_str());
       }
 
       TBSYS_LOG(INFO, "cmd %s", cmd);
@@ -134,12 +133,6 @@ namespace tfs
 
       if (index.size())
       {
-        if (ret != TFS_SUCCESS)
-        {
-          TBSYS_LOG(ERROR, "FileSystemParameter.initialize error index is %s", index.c_str());
-          return TFS_ERROR;
-        }
-
         param->index_ = index;
         param->active_ = 1;
         param->fkill_waittime_ = TBSYS_CONFIG.getInt(CONF_SN_ADMINSERVER, CONF_DS_FKILL_WAITTIME);
@@ -267,7 +260,7 @@ namespace tfs
         const char *index_range = TBSYS_CONFIG.getString(CONF_SN_ADMINSERVER, CONF_DS_INDEX_LIST, NULL);
         if (NULL == index_range)
         {
-          TBSYS_LOG(ERROR, "ds index list not found in config file %s .", conf_file_);
+          TBSYS_LOG(ERROR, "ds index list not found in config file %s .", config_file_.c_str());
           return TFS_ERROR;
         }
         vector<string> ds_index;
@@ -420,7 +413,7 @@ namespace tfs
         tbnet::Packet* message = NULL;
         if(TFS_SUCCESS == send_msg_to_server(ip, client, &ping_msg, message))
         {
-          if (message->getPCode() == STATUS_MESSAGE && 
+          if (message->getPCode() == STATUS_MESSAGE &&
               dynamic_cast<StatusMessage*> (message)->get_status()
               == STATUS_MESSAGE_PING)
           {
@@ -466,7 +459,7 @@ namespace tfs
         return tbnet::IPacketHandler::FREE_CHANNEL;
       }
 
-      if (!packet->isRegularPacket()) 
+      if (!packet->isRegularPacket())
       {
 
         TBSYS_LOG(ERROR, "ControlPacket, cmd: %d", dynamic_cast<tbnet::ControlPacket*>(packet)->getCommand());
@@ -483,10 +476,10 @@ namespace tfs
       bp->set_connection(connection);
       bp->set_direction(DIRECTION_RECEIVE);
       if (!main_workers_.push(bp, work_queue_size_))
-      {   
+      {
         TBSYS_LOG(ERROR, "main_workers is full ignore a packet pcode is %d", packet->getPCode());
         packet->free();
-      }   
+      }
       return tbnet::IPacketHandler::KEEP_CHANNEL;
     }
 
