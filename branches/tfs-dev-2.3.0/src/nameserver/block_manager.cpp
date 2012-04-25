@@ -144,6 +144,12 @@ namespace tfs
       return ret;
     }
 
+    void BlockManager::clear_delete_queue()
+    {
+      tbutil::Mutex::Lock lock(delete_block_queue_muetx_);
+      delete_block_queue_.clear();
+    }
+
     void BlockManager::dump(const int32_t level) const
     {
       UNUSED(level);
@@ -297,8 +303,7 @@ namespace tfs
       return rwmutex_[get_chunk_(block)];
     }
 
-    int BlockManager::update_relation(ServerCollect* server, std::vector<uint32_t>& self_expires,
-        const std::set<common::BlockInfo>& blocks, const time_t now)
+    int BlockManager::update_relation(ServerCollect* server, const std::set<common::BlockInfo>& blocks, const time_t now)
     {
       int32_t ret = ((NULL != server) && (server->is_alive())) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
@@ -307,6 +312,7 @@ namespace tfs
         bool isnew = false;
         bool writable = false;
         bool master  = false;
+        bool expire_self = false;
         ServerCollect* servers[MAX_REPLICATION];
         ArrayHelper<ServerCollect*> helper(MAX_REPLICATION, servers);
         ServerCollect* other_servers[MAX_REPLICATION];
@@ -314,7 +320,8 @@ namespace tfs
         NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
         std::set<BlockInfo>::const_iterator iter = blocks.begin();
         TBSYS_LOG(DEBUG, "block size: %u", blocks.size());
-        for (; iter != blocks.end() && TFS_SUCCESS == ret; ++iter, isnew = false, writable = false, master = false)
+
+        for (; iter != blocks.end() && TFS_SUCCESS == ret; ++iter, isnew = false, writable = false, master = false, expire_self = false)
         {
           helper.clear();
           other_expires.clear();
@@ -329,12 +336,17 @@ namespace tfs
             isnew= true;
           }
 
-          if (block->check_version(manager_, helper, self_expires, other_expires,server, ngi.owner_role_, isnew, info, now))
+          if (block->check_version(manager_, helper, expire_self, other_expires,server, ngi.owner_role_, isnew, info, now))
           {
             //build relation
             build_relation_(block, writable, master, server,now);
           }
           get_mutex_(info.block_id_).unlock();
+
+          if (expire_self)
+          {
+            push_to_delete_queue(info.block_id_, server->id());
+          }
 
           ServerCollect* pserver = NULL;
           for (i = 0; i < other_expires.get_array_index(); ++i)

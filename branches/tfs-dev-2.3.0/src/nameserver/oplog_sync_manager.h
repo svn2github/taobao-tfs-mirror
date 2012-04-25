@@ -37,18 +37,6 @@ namespace tfs
   namespace nameserver
   {
     class LayoutManager;
-    class OpLogSyncManager;
-    class FlushOpLogTimerTask: public tbutil::TimerTask
-    {
-    public:
-      explicit FlushOpLogTimerTask(OpLogSyncManager& manager);
-      virtual void runTimerTask();
-    private:
-      DISALLOW_COPY_AND_ASSIGN( FlushOpLogTimerTask);
-      OpLogSyncManager& manager_;
-    };
-    typedef tbutil::Handle<FlushOpLogTimerTask> FlushOpLogTimerTaskPtr;
-
     class OpLogSyncManager: public tbnet::IPacketQueueHandler
     {
       friend class FlushOpLogTimerTask;
@@ -59,9 +47,7 @@ namespace tfs
       int wait_for_shut_down();
       int destroy();
       int register_slots(const char* const data, const int64_t length) const;
-      void notify_all();
-      void rotate();
-      int flush_oplog(const time_t now = common::Func::get_monotonic_time()) const;
+      void switch_role();
       int log(const uint8_t type, const char* const data, const int64_t length, const time_t now);
       int push(common::BasePacket* msg, int32_t max_queue_size = 0, bool block = false);
       inline common::FileQueueThread* get_file_queue_thread() const { return file_queue_thread_;}
@@ -73,23 +59,18 @@ namespace tfs
     private:
       DISALLOW_COPY_AND_ASSIGN( OpLogSyncManager);
       virtual bool handlePacketQueue(tbnet::Packet *packet, void *args);
-      static int do_sync_oplog(const void* const data, const int64_t len, const int32_t threadIndex, void *arg);
-      int do_sync_oplog(const char* const data, const int64_t length);
-      int execute(const common::BasePacket *msg, const void* args);
-      int do_master_msg(const common::BasePacket* msg, const void* args);
-      int do_slave_msg(const common::BasePacket* msg, const void* args);
-      int do_sync_oplog(const common::BasePacket* msg, const void* args);
-      int replay_all();
-      void reset_();
+      static int sync_log_func(const void* const data, const int64_t len, const int32_t threadIndex, void *arg);
+      int send_log_(const char* const data, const int64_t length);
+      int transfer_log_msg_(common::BasePacket* msg);
+      int recv_log_(common::BasePacket* msg);
+      int replay_all_();
     private:
-      bool is_destroy_;
       LayoutManager& manager_;
       OpLog* oplog_;
       common::FileQueue* file_queue_;
       common::FileQueueThread* file_queue_thread_;
       BlockIdFactory id_factory_;
       tbutil::Mutex mutex_;
-      tbutil::Monitor<tbutil::Mutex> monitor_;
       tbnet::PacketQueueThread work_thread_;
     };
   }//end namespace nameserver

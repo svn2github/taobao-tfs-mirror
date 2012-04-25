@@ -44,7 +44,6 @@ namespace tfs
     {
       NS_STATUS_NONE = -1,
       NS_STATUS_UNINITIALIZE = 0x00,
-      NS_STATUS_ACCEPT_DS_INFO,
       NS_STATUS_INITIALIZED
     };
 
@@ -68,6 +67,13 @@ namespace tfs
       HANDLE_DELETE_BLOCK_FLAG_ONLY_RELATION = 2
     };
 
+    enum NsKeepAliveType
+    {
+      NS_KEEPALIVE_TYPE_LOGIN = 0,
+      NS_KEEPALIVE_TYPE_RENEW = 1,
+      NS_KEEPALIVE_TYPE_LOGOUT = 2
+    };
+
     class LayoutManager;
     class GCObject
     {
@@ -78,6 +84,10 @@ namespace tfs
       virtual void callback(LayoutManager& ) {}
       inline void free(){ delete this;}
       inline void update_last_time(const time_t now = common::Func::get_monotonic_time()) { last_update_time_ = now;}
+      inline bool can_be_clear(const time_t now) const
+      {
+        return now >= (last_update_time_ + common::SYSPARAM_NAMESERVER.object_clear_max_time_);
+      }
       inline bool can_be_free(const time_t now) const
       {
         return now >= (last_update_time_ + common::SYSPARAM_NAMESERVER.object_dead_max_time_);
@@ -129,22 +139,20 @@ namespace tfs
       bool in_discard_newblk_safe_mode_time(const int64_t now) const;
       bool is_master() const;
       bool peer_is_master() const;
-      bool peer_is_initialize_complete() const;
-      bool keepalive(int64_t& lease_id, bool& falg, const uint64_t server,
-         const int8_t role, const int8_t status, const time_t now);
+      bool keepalive(int64_t& lease_id, const uint64_t server,
+         const int8_t role, const int8_t status, const int8_t type, const time_t now);
       bool logout();
       bool has_valid_lease(const time_t now) const;
       bool renew(const int32_t step, const time_t now);
       bool renew(const int64_t lease_id, const int32_t step, const time_t now);
-      void switch_role(const int64_t now = common::Func::get_monotonic_time());
-      void set_own_status(const int8_t status);
+      void switch_role(const bool startup = false, const int64_t now = common::Func::get_monotonic_time());
       void update_peer_info(const uint64_t server, const int8_t role, const int8_t status);
       bool own_is_initialize_complete() const;
-      void update_own_status();
+      bool role_is_conflict() const;
+      void resolve_conflict();
       void initialize();
       void destroy();
-      void dump(int32_t level, const char* file = __FILE__, const int32_t line = __LINE__, const char* function =
-          __FUNCTION__) const;
+      void dump(int32_t level, const char* format = NULL);
       NsRuntimeGlobalInformation();
       static NsRuntimeGlobalInformation& instance();
       static NsRuntimeGlobalInformation instance_;

@@ -119,8 +119,6 @@ namespace tfs
       int do_slave_msg_helper(common::BasePacket* packet);
 
       int initialize_ns_global_info();
-      int get_peer_role();
-      int wait_for_ds_report();
     };
   }/** nameserver **/
 }/** tfs **/

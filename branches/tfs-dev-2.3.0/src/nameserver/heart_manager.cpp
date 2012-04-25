@@ -204,7 +204,7 @@ namespace tfs
         ReportBlocksToNsResponseMessage* result_msg = new ReportBlocksToNsResponseMessage();
         result_msg->set_server(ngi.owner_ip_port_);
         time_t now = Func::get_monotonic_time();
-			  result = ret = manager_.get_layout_manager().get_client_request_server().report_block(server, now, message->get_blocks(), result_msg->get_blocks());
+			  result = ret = manager_.get_layout_manager().get_client_request_server().report_block(server, now, message->get_blocks());
         result_msg->set_status(HEART_MESSAGE_OK);
         block_nums = message->get_blocks().size();
         expires_block_nums = result_msg->get_blocks().size();
@@ -282,29 +282,39 @@ namespace tfs
         ret = message->getPCode() == MASTER_AND_SLAVE_HEART_MESSAGE ? TFS_SUCCESS : EXIT_UNKNOWN_MSGTYPE;
         if (TFS_SUCCESS == ret)
         {
+          time_t now = Func::get_monotonic_time();
           MasterAndSlaveHeartMessage* msg = dynamic_cast<MasterAndSlaveHeartMessage*>(message);
           NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
-          bool  get_server_list_falg = false;
+          bool login = msg->get_type() == NS_KEEPALIVE_TYPE_LOGIN;
+          bool get_peer_role = msg->get_flags() == HEART_GET_PEER_ROLE_FLAG_YES;
           int64_t lease_id = msg->get_lease_id();
-          ret = ngi.keepalive(lease_id, get_server_list_falg,
-                    msg->get_ip_port(), msg->get_role(), msg->get_status(), true) ? TFS_SUCCESS : EXIT_RENEW_LEASE_ERROR;
           MasterAndSlaveHeartResponseMessage* reply_msg = new MasterAndSlaveHeartResponseMessage();
-          bool accept_server_info = msg->get_status() == NS_STATUS_ACCEPT_DS_INFO;
-          reply_msg->set_ip_port(ngi.owner_ip_port_);
-          reply_msg->set_role(ngi.owner_role_);
-          reply_msg->set_status(ngi.owner_status_);
-          if (TFS_SUCCESS == ret)
+          if (get_peer_role)
           {
-            int32_t renew_lease_interval = SYSPARAM_NAMESERVER.heart_interval_ / 2;
-            if (renew_lease_interval <= 0)
-              renew_lease_interval = 1;
-            reply_msg->set_lease_expired_time(SYSPARAM_NAMESERVER.heart_interval_);
-            reply_msg->set_renew_lease_interval_time(renew_lease_interval);
-            if (accept_server_info)
+            reply_msg->set_ip_port(ngi.owner_ip_port_);
+            reply_msg->set_role(ngi.owner_role_);
+            reply_msg->set_status(ngi.owner_status_);
+            reply_msg->set_lease_id(lease_id);
+          }
+          else
+          {
+            ret = ngi.keepalive(lease_id, msg->get_ip_port(), msg->get_role(),
+                      msg->get_status(), msg->get_type(), now) ? TFS_SUCCESS : EXIT_RENEW_LEASE_ERROR;
+            reply_msg->set_ip_port(ngi.owner_ip_port_);
+            reply_msg->set_role(ngi.owner_role_);
+            reply_msg->set_status(ngi.owner_status_);
+            reply_msg->set_lease_id(lease_id);
+            if (TFS_SUCCESS == ret)
             {
-              reply_msg->set_flags(HEART_GET_DATASERVER_LIST_FLAGS_YES);
-              manager_.get_server_manager().get_alive_servers(reply_msg->get_servers());
-              manager_.get_oplog_sync_mgr().get_file_queue_thread()->update_queue_information_header();
+              int32_t renew_lease_interval = SYSPARAM_NAMESERVER.heart_interval_ / 2;
+              if (renew_lease_interval <= 0)
+                renew_lease_interval = 1;
+              reply_msg->set_lease_expired_time(SYSPARAM_NAMESERVER.heart_interval_);
+              reply_msg->set_renew_lease_interval_time(renew_lease_interval);
+              if (login)
+              {
+                manager_.get_oplog_sync_mgr().get_file_queue_thread()->update_queue_information_header();
+              }
             }
           }
           ret = msg->reply(reply_msg);
@@ -332,6 +342,7 @@ namespace tfs
     void NameServerHeartManager::check_()
     {
       time_t now = 0;
+      NsKeepAliveType keepalive_type_ = NS_KEEPALIVE_TYPE_LOGIN;
       int32_t sleep_time = SYSPARAM_NAMESERVER.heart_interval_ / 2;
       NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
       while (!ngi.is_destroyed())
@@ -345,7 +356,11 @@ namespace tfs
         }
         else
         {
-          keepalive_(sleep_time, ngi, now);
+          keepalive_(sleep_time, keepalive_type_, ngi, now);
+          if (!ngi.has_valid_lease(now))
+            keepalive_type_ = NS_KEEPALIVE_TYPE_LOGIN;
+          else
+            keepalive_type_ = NS_KEEPALIVE_TYPE_RENEW;
         }
 
         if (sleep_time <= 0)
@@ -353,8 +368,10 @@ namespace tfs
           sleep_time =  SYSPARAM_NAMESERVER.heart_interval_ / 2;
           sleep_time = std::max(sleep_time, 1);
         }
-        sleep(sleep_time);
+        Func::sleep(sleep_time, ngi.destroy_flag_);
       }
+      keepalive_type_ = NS_KEEPALIVE_TYPE_LOGOUT;
+      keepalive_(sleep_time, keepalive_type_, ngi, now);
     }
 
     bool NameServerHeartManager::check_vip_(const NsRuntimeGlobalInformation& ngi) const
@@ -367,23 +384,36 @@ namespace tfs
       if (check_vip_(ngi))//vip is local ip
       {
         if (!ngi.is_master())//slave, switch
-        {
-          ngi.switch_role();
-          manager_.get_task_manager().clear();
-          manager_.get_server_manager().set_all_server_next_report_time(now);
-          TBSYS_LOG(INFO, "nameserver switch, old role: slave, current role: master");
-        }
+          switch_role_salve_to_master_(ngi, now);
       }
       else
       {
         if (ngi.is_master())
-        {
-          ngi.switch_role();
-          manager_.get_task_manager().clear();
-          TBSYS_LOG(INFO, "nameserver switch, old role: master, current role: salve");
-        }
+          switch_role_master_to_slave_(ngi, now);
       }
       return TFS_SUCCESS;
+    }
+
+    void NameServerHeartManager::switch_role_master_to_slave_(NsRuntimeGlobalInformation& ngi, const time_t now)
+    {
+      if (ngi.is_master())
+      {
+        manager_.switch_role(now);
+        TBSYS_LOG(INFO, "nameserver switch, old role: master, current role: salve");
+      }
+    }
+
+    void NameServerHeartManager::switch_role_salve_to_master_(NsRuntimeGlobalInformation& ngi, const time_t now)
+    {
+      if (!ngi.is_master())//slave, switch
+      {
+        int32_t ret = establish_peer_role_(ngi);
+        if (EXIT_ROLE_ERROR != ret)
+        {
+          manager_.switch_role(now);
+          TBSYS_LOG(INFO, "nameserver switch, old role: slave, current role: master");
+        }
+      }
     }
 
     int NameServerHeartManager::ns_check_lease_expired_(NsRuntimeGlobalInformation& ngi, const time_t now)
@@ -395,24 +425,64 @@ namespace tfs
       return TFS_SUCCESS;
     }
 
-    int NameServerHeartManager::keepalive_(int32_t& sleep_time, NsRuntimeGlobalInformation& ngi, const time_t now)
+    int NameServerHeartManager::establish_peer_role_(NsRuntimeGlobalInformation& ngi)
     {
-      bool accept_info_flag = ngi.owner_status_ == NS_STATUS_ACCEPT_DS_INFO;
       MasterAndSlaveHeartMessage msg;
       msg.set_ip_port(ngi.owner_ip_port_);
       msg.set_role(ngi.owner_role_);
       msg.set_status(ngi.owner_status_);
       msg.set_lease_id(ngi.lease_id_);
-      msg.set_flags(accept_info_flag ? HEART_GET_DATASERVER_LIST_FLAGS_YES : HEART_GET_DATASERVER_LIST_FLAGS_NO);
+      msg.set_flags(HEART_GET_PEER_ROLE_FLAG_YES);
+      int32_t ret = TFS_ERROR;
+      const int32_t TIMEOUT_MS = 500;
+      const int32_t MAX_RETRY_COUNT = 2;
+      NewClient* client = NULL;
+      tbnet::Packet* response = NULL;
+      for (int32_t i = 0; i < MAX_RETRY_COUNT && TFS_SUCCESS != ret; ++i)
+      {
+        client = NewClientManager::get_instance().create_client();
+        ret = send_msg_to_server(ngi.peer_ip_port_, client, &msg, response, TIMEOUT_MS);
+        if (TFS_SUCCESS == ret)
+        {
+          ret = response->getPCode() == MASTER_AND_SLAVE_HEART_RESPONSE_MESSAGE ? TFS_SUCCESS : EXIT_UNKNOWN_MSGTYPE;
+          if (TFS_SUCCESS == ret)
+          {
+            MasterAndSlaveHeartResponseMessage* result = dynamic_cast<MasterAndSlaveHeartResponseMessage*>(response);
+            bool conflict = result->get_role() == NS_ROLE_MASTER;//我将要变成master, 所以对方如果是master，那就有问题
+            if (conflict)
+            {
+              ret = EXIT_ROLE_ERROR;
+              ngi.dump(TBSYS_LOG_LEVEL_ERROR, "nameserver role coflict, own role: master, other role: master, must be exit");
+              NameServer* service = dynamic_cast<NameServer*>(BaseMain::instance());
+              if (NULL != service)
+              {
+                service->stop();
+              }
+            }
+          }
+        }
+        NewClientManager::get_instance().destroy_client(client);
+      }
+      return ret;
+
+    }
+    int NameServerHeartManager::keepalive_(int32_t& sleep_time, NsKeepAliveType& type, NsRuntimeGlobalInformation& ngi, const time_t now)
+    {
+      MasterAndSlaveHeartMessage msg;
+      msg.set_ip_port(ngi.owner_ip_port_);
+      msg.set_role(ngi.owner_role_);
+      msg.set_status(ngi.owner_status_);
+      msg.set_lease_id(ngi.lease_id_);
+      msg.set_type(type);
       int32_t interval = SYSPARAM_NAMESERVER.heart_interval_ / 2;
       interval = std::max(interval, 1);
 
-      int32_t MAX_RETRY_COUNT = accept_info_flag ? 1 : interval * 1000 / 500;
-      int32_t MAX_TIMEOUT_TIME_MS = accept_info_flag ? interval * 1000 : 500;
-      int32_t ret = TFS_SUCCESS;
+      int32_t ret = TFS_ERROR;
+      int32_t MAX_RETRY_COUNT = interval * 1000;
+      int32_t MAX_TIMEOUT_TIME_MS = 1000;
       NewClient* client = NULL;
       tbnet::Packet* response = NULL;
-      for (int32_t i = 0; i < MAX_RETRY_COUNT; ++i)
+      for (int32_t i = 0; i < MAX_RETRY_COUNT && TFS_SUCCESS != ret; ++i)
       {
         client = NewClientManager::get_instance().create_client();
         ret = send_msg_to_server(ngi.peer_ip_port_, client, &msg, response, MAX_TIMEOUT_TIME_MS);
@@ -424,22 +494,11 @@ namespace tfs
             MasterAndSlaveHeartResponseMessage* result = dynamic_cast<MasterAndSlaveHeartResponseMessage*>(response);
             ngi.renew(result->get_lease_id(), result->get_lease_expired_time(), now);
             sleep_time = result->get_renew_lease_interval_time();
-            break;
+            ngi.update_peer_info(result->get_ip_port(), result->get_role(), result->get_status());
           }
         }
         NewClientManager::get_instance().destroy_client(client);
-        if (TFS_SUCCESS == ret)
-        {
-          ret = ngi.has_valid_lease(now) ? TFS_SUCCESS : EXIT_LEASE_EXPIRED;
-          if (TFS_SUCCESS == ret)
-          {
-            ngi.update_own_status();
-          }
-          else
-          {
-            ngi.set_own_status(NS_STATUS_UNINITIALIZE);
-          }
-        }
+        ngi.dump(TBSYS_LOG_LEVEL_DEBUG);
       }
       return ret;
     }
@@ -467,10 +526,7 @@ namespace tfs
             if (check_vip_(ngi))
             {
               if (!ngi.is_master())
-              {
-                TBSYS_LOG(WARN, "%s", "the master ns is dead,i'm going to be the master ns");
-                ngi.switch_role(Func::get_monotonic_time());
-              }
+                switch_role_salve_to_master_(ngi, Func::get_monotonic_time());
             }
           }
         }

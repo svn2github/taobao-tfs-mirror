@@ -21,6 +21,7 @@
 #include <tbsys.h>
 #include <Memory.hpp>
 #include "nameserver.h"
+#include "block_collect.h"
 
 int main(int argc, char* argv[])
 {

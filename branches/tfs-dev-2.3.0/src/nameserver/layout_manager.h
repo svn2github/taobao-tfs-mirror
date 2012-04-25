@@ -78,8 +78,7 @@ namespace tfs
 
       inline GCObjectManager& get_gc_manager() { return gc_manager_;}
 
-      int update_relation(ServerCollect* server, std::vector<uint32_t>& self_expires,
-          const std::set<common::BlockInfo>& blocks, const time_t now);
+      int update_relation(ServerCollect* server,const std::set<common::BlockInfo>& blocks, const time_t now);
       bool build_relation(BlockCollect* block, ServerCollect* server, const time_t now, const bool set = false);
       bool relieve_relation(BlockCollect* block, ServerCollect* server, const time_t now);
 
@@ -101,6 +100,8 @@ namespace tfs
       int del_report_block_server(ServerCollect* server);
 
       int set_runtime_param(const uint32_t index, const uint32_t value, const int64_t length, char *retstr);
+
+      void switch_role(const time_t now = common::Func::get_monotonic_time());
       private:
       void rotate_(const time_t now);
       uint32_t get_alive_block_id_();

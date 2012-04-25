@@ -75,7 +75,7 @@ namespace tfs
     }
 
     int ClientRequestServer::report_block(const uint64_t server, const time_t now,
-        std::set<common::BlockInfo>& blocks, common::VUINT32& expires)
+        std::set<common::BlockInfo>& blocks)
     {
       int32_t ret = TFS_ERROR;
       ServerCollect* pserver = manager_.get_server_manager().get(server);
@@ -83,7 +83,7 @@ namespace tfs
       if (TFS_SUCCESS == ret)
       {
         //update all relations of blocks belongs to it
-        ret = manager_.update_relation(pserver, expires, blocks, now);
+        ret = manager_.update_relation(pserver, blocks, now);
         ret = TFS_SUCCESS != ret ?  EXIT_UPDATE_RELATION_ERROR : TFS_SUCCESS;
         if (TFS_SUCCESS == ret)
         {
@@ -415,7 +415,7 @@ namespace tfs
           }
           else
           {
-            ret = manager_.get_task_manager().add(info.value3_, runer, PLAN_TYPE_DELETE);
+            ret = manager_.get_task_manager().add(info.value3_, runer, PLAN_TYPE_DELETE, now);
             if (TFS_SUCCESS != ret)
               snprintf(buf, buf_length, " add task(delete) failed, block: %u", info.value3_);
           }
@@ -450,7 +450,6 @@ namespace tfs
 
     int ClientRequestServer::handle_control_compact_block(const time_t now, const common::ClientCmdInformation& info, const int64_t buf_length, char* buf)
     {
-      UNUSED(now);
       TBSYS_LOG(INFO, "handle control compact block: %u", info.value3_);
       int32_t ret = ((NULL == buf) || (buf_length <= 0)) ? EXIT_PARAMETER_ERROR : TFS_SUCCESS;
       if (TFS_SUCCESS == ret)
@@ -463,7 +462,7 @@ namespace tfs
         }
         else
         {
-          ret = manager_.get_task_manager().add(info.value3_, runer, PLAN_TYPE_COMPACT);
+          ret = manager_.get_task_manager().add(info.value3_, runer, PLAN_TYPE_COMPACT, now);
           if (TFS_SUCCESS != ret)
           {
             snprintf(buf, buf_length, " add task(compact) failed, block: %u", info.value3_);
@@ -475,7 +474,6 @@ namespace tfs
 
     int ClientRequestServer::handle_control_immediately_replicate_block(const time_t now, const common::ClientCmdInformation& info, const int64_t buf_length, char* buf)
     {
-      UNUSED(now);
       TBSYS_LOG(INFO, "handle control %s block: %u, source: %s, target: %s",
           REPLICATE_BLOCK_MOVE_FLAG_NO == info.value4_ ? "replicate" : "move", info.value3_,
           CNetUtil::addrToString(info.value1_).c_str(), CNetUtil::addrToString(info.value2_).c_str());
@@ -534,7 +532,7 @@ namespace tfs
             runer.push_back(target);
             PlanType type = (info.value4_ == REPLICATE_BLOCK_MOVE_FLAG_NO) ? PLAN_TYPE_REPLICATE : PLAN_TYPE_MOVE;
             PlanPriority priority = (info.value4_ == REPLICATE_BLOCK_MOVE_FLAG_NO) ? PLAN_PRIORITY_EMERGENCY : PLAN_PRIORITY_NORMAL;
-            ret = manager_.get_task_manager().add(info.value3_, runer, type, priority);
+            ret = manager_.get_task_manager().add(info.value3_, runer, type, now,priority);
             if (TFS_SUCCESS != ret)
             {
               snprintf(buf, buf_length, "add task(%s) failed, block: %u",
@@ -654,10 +652,14 @@ namespace tfs
 
     bool ClientRequestServer::is_discard(void)
     {
-      bool ret = !(atomic_inc(&ref_count_) >= static_cast<uint32_t>(SYSPARAM_NAMESERVER.discard_max_count_));
-      if (!ret)
+      bool ret = SYSPARAM_NAMESERVER.discard_max_count_ > 0;
+      if (ret)
       {
-        atomic_exchange(&ref_count_, 0);
+        ret = (atomic_inc(&ref_count_) >= static_cast<uint32_t>(SYSPARAM_NAMESERVER.discard_max_count_));
+        if (ret)
+        {
+          atomic_exchange(&ref_count_, 0);
+        }
       }
       return ret;
     }

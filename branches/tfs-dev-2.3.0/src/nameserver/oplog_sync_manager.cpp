@@ -37,25 +37,8 @@ namespace tfs
 {
   namespace nameserver
   {
-    FlushOpLogTimerTask::FlushOpLogTimerTask(OpLogSyncManager& manager) :
-      manager_(manager)
-    {
-
-    }
-
-    void FlushOpLogTimerTask::runTimerTask()
-    {
-      NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
-      if (!ngi.is_destroyed() && ngi.is_master() && ngi.peer_is_initialize_complete())
-      {
-        int ret = manager_.flush_oplog();
-        if (TFS_SUCCESS != ret)
-          TBSYS_LOG(INFO, "flush oplog to filequeue failed, ret: %d", ret);
-      }
-    }
-
     OpLogSyncManager::OpLogSyncManager(LayoutManager& mm) :
-      is_destroy_(false), manager_(mm), oplog_(NULL), file_queue_(NULL), file_queue_thread_(NULL)
+      manager_(mm), oplog_(NULL), file_queue_(NULL), file_queue_thread_(NULL)
     {
 
     }
@@ -79,6 +62,7 @@ namespace tfs
       std::string file_path(path);
       std::string file_queue_name = "oplogsync";
       ARG_NEW(file_queue_, FileQueue, file_path, file_queue_name, FILE_QUEUE_MAX_FILE_SIZE);
+      file_queue_->set_delete_file_flag(true);
       ARG_NEW(file_queue_thread_, FileQueueThread, file_queue_, this);
 
       //initializeation oplog
@@ -105,7 +89,7 @@ namespace tfs
       // replay all oplog
       if (TFS_SUCCESS == ret)
       {
-        ret = replay_all();
+        ret = replay_all_();
         if (TFS_SUCCESS != ret)
         {
           TBSYS_LOG(ERROR, "replay all oplogs failed, ret: %d", ret);
@@ -116,7 +100,6 @@ namespace tfs
       //reset filequeue
       if (TFS_SUCCESS == ret)
       {
-        file_queue_->set_delete_file_flag(false);
         file_queue_->clear();
         const QueueInformationHeader* qhead = file_queue_->get_queue_information_header();
         OpLogRotateHeader rotmp;
@@ -127,17 +110,9 @@ namespace tfs
         oplog_->update_oplog_rotate_header(rotmp);
       }
 
-      // add flush oplog timer
       if (TFS_SUCCESS == ret)
       {
-        FlushOpLogTimerTaskPtr foltt = new FlushOpLogTimerTask(*this);
-        manager_.get_name_server().get_timer()->scheduleRepeated(foltt, tbutil::Time::seconds(
-              SYSPARAM_NAMESERVER.heart_interval_));
-      }
-
-      if (TFS_SUCCESS == ret)
-      {
-        file_queue_thread_->initialize(1, OpLogSyncManager::do_sync_oplog);
+        file_queue_thread_->initialize(1, OpLogSyncManager::sync_log_func);
         const int queue_thread_num = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_OPLOGSYNC_THREAD_NUM, 1);
         work_thread_.setThreadParameter(queue_thread_num , this, NULL);
         work_thread_.start();
@@ -158,9 +133,6 @@ namespace tfs
 
     int OpLogSyncManager::destroy()
     {
-      tbutil::Monitor<tbutil::Mutex>::Lock lock(monitor_);
-      monitor_.notifyAll();
-      is_destroy_ = true;
       if (file_queue_thread_ != NULL)
       {
         file_queue_thread_->destroy();
@@ -176,76 +148,36 @@ namespace tfs
               ? file_queue_thread_->write(data, length) : EXIT_REGISTER_OPLOG_SYNC_ERROR;
     }
 
-    void OpLogSyncManager::notify_all()
-    {
-      tbutil::Monitor<tbutil::Mutex>::Lock lock(monitor_);
-      monitor_.notifyAll();
-    }
-
-    void OpLogSyncManager::rotate()
+    void OpLogSyncManager::switch_role()
     {
       tbutil::Mutex::Lock lock(mutex_);
-      const QueueInformationHeader* head = file_queue_->get_queue_information_header();
-      OpLogRotateHeader ophead;
-      ophead.rotate_seqno_ = head->write_seqno_;
-      ophead.rotate_offset_ = head->write_filesize_;
-      const OpLogRotateHeader* tmp = oplog_->get_oplog_rotate_header();
-      oplog_->update_oplog_rotate_header(ophead);
-      TBSYS_LOG(
-          INFO,
-          "queue header: readseqno: %d, read_offset: %d, write_seqno: %d,\
-          write_file_size: %d, queuesize: %d. oplogheader:, rotate_seqno: %d\
-          rotate_offset: %d, last_rotate_seqno: %d, last_rotate_offset: %d",
-          head->read_seqno_, head->read_offset_, head->write_seqno_, head->write_filesize_, head->queue_size_,
-          ophead.rotate_seqno_, ophead.rotate_offset_, tmp->rotate_seqno_, tmp->rotate_offset_);
-    }
-
-    int OpLogSyncManager::flush_oplog(const time_t now) const
-    {
-      tbutil::Mutex::Lock lock(mutex_);
-      if (oplog_->finish(now, true))
-      {
-        register_slots(oplog_->get_buffer(), oplog_->get_slots_offset());
-        TBSYS_LOG(DEBUG, "oplog size: %"PRI64_PREFIX"d", oplog_->get_slots_offset());
-        oplog_->reset(now);
-      }
-      return TFS_SUCCESS;
-    }
-
-
-    void OpLogSyncManager::reset_()
-    {
-      register_slots(oplog_->get_buffer(), oplog_->get_slots_offset());
-      oplog_->reset();
+      if (NULL != file_queue_)
+        file_queue_->clear();
+      id_factory_.skip();
     }
 
     int OpLogSyncManager::log(const uint8_t type, const char* const data, const int64_t length, const time_t now)
     {
       NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
-      int32_t ret = TFS_SUCCESS;
-      if (ngi.is_master()
-          && !ngi.is_destroyed()
-          && ngi.has_valid_lease(now)
-          && ngi.own_is_initialize_complete())
+      int32_t ret = ((NULL != data) && (length > 0)) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+      if (TFS_SUCCESS == ret)
       {
-        tbutil::Mutex::Lock lock(mutex_);
-        for (int32_t i = 0; i < 3 && TFS_SUCCESS != ret; i++)
+        ngi.dump(TBSYS_LOG_LEVEL_DEBUG);
+        if (ngi.is_master()
+            && !ngi.is_destroyed()
+            && ngi.has_valid_lease(now))
         {
-          ret = oplog_->write(type, data, length);
-          if (EXIT_SLOTS_OFFSET_SIZE_ERROR == ret)
+          ret = TFS_ERROR;
+          tbutil::Mutex::Lock lock(mutex_);
+          for (int32_t i = 0; i < 3 && TFS_SUCCESS != ret; i++)
           {
-            reset_();
-          }
-        }
-        if (TFS_SUCCESS != ret)
-        {
-          TBSYS_LOG(INFO, "write log file error, type: %d", type);
-        }
-        else
-        {
-          if (oplog_->finish(0))
-          {
-            reset_();
+            ret = oplog_->write(type, data, length);
+            if (EXIT_SLOTS_OFFSET_SIZE_ERROR == ret)
+            {
+              TBSYS_LOG(DEBUG, "ssssssssssssssssssssssssssssssssss");
+              register_slots(oplog_->get_buffer(), oplog_->get_slots_offset());
+              oplog_->reset();
+            }
           }
         }
       }
@@ -257,78 +189,100 @@ namespace tfs
       return  work_thread_.push(msg, max_queue_size, block);
     }
 
-    int OpLogSyncManager::do_sync_oplog(const void* const data, const int64_t len, const int32_t, void *arg)
+    int OpLogSyncManager::sync_log_func(const void* const data, const int64_t len, const int32_t, void *args)
     {
-      OpLogSyncManager* op_log_sync = static_cast<OpLogSyncManager*> (arg);
-      return op_log_sync->do_sync_oplog(static_cast<const char* const > (data), len);
-    }
-
-    int OpLogSyncManager::do_sync_oplog(const char* const data, const int64_t length)
-    {
-      time_t now = Func::get_monotonic_time();
-      NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
-      if ((!ngi.is_master())
-          || (ngi.is_destroyed())
-          || (ngi.is_master() &&
-            (!ngi.peer_is_initialize_complete() || !ngi.has_valid_lease(now))))
+      int32_t ret = ((NULL != data) && (NULL != args) && (len > 0)) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+      if (TFS_SUCCESS == ret)
       {
-        file_queue_->clear();
-        TBSYS_LOG(INFO, "%s", " wait for sync oplog");
-        tbutil::Monitor<tbutil::Mutex>::Lock lock(monitor_);
-        monitor_.wait();
-      }
-      //to send data to the slave & wait
-      OpLogSyncMessage msg;
-      msg.set_data(data, length);
-      tbnet::Packet* rmsg = NULL;
-      int32_t ret = TFS_ERROR;
-      for (int32_t i = 0; i < 3 && TFS_SUCCESS != ret && ngi.has_valid_lease(now); ++i, rmsg = NULL)
-      {
-        NewClient* client = NewClientManager::get_instance().create_client();
-        ret = send_msg_to_server(ngi.peer_ip_port_, client, &msg, rmsg);
-        if (TFS_SUCCESS == ret)
-        {
-          ret = rmsg->getPCode() == OPLOG_SYNC_RESPONSE_MESSAGE ? TFS_SUCCESS : TFS_ERROR;
-          if (TFS_SUCCESS == ret)
-          {
-            OpLogSyncResponeMessage* tmsg = dynamic_cast<OpLogSyncResponeMessage*> (rmsg);
-            ret = tmsg->get_complete_flag() == OPLOG_SYNC_MSG_COMPLETE_YES ? TFS_SUCCESS : TFS_ERROR;
-          }
-        }
-        NewClientManager::get_instance().destroy_client(client);
+        OpLogSyncManager* sync = static_cast<OpLogSyncManager*> (args);
+        ret = sync->send_log_(static_cast<const char* const>(data), len);
       }
       return ret;
     }
 
-    bool OpLogSyncManager::handlePacketQueue(tbnet::Packet *packet, void * args)
+    int OpLogSyncManager::send_log_(const char* const data, const int64_t length)
+    {
+      TBSYS_LOG(DEBUG, "SEND LOG");
+      int32_t ret = ((NULL != data) && (length >  0)) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+      if (TFS_SUCCESS == ret)
+      {
+        const int32_t MAX_SLEEP_TIME_US = 500;
+        NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
+        if (!ngi.is_master())
+        {
+          file_queue_->clear();
+          while (!ngi.is_master())
+            usleep(MAX_SLEEP_TIME_US);
+        }
+        else
+        {
+          time_t now = Func::get_monotonic_time();
+          while (!ngi.has_valid_lease(now))
+          {
+            usleep(MAX_SLEEP_TIME_US);
+            now = Func::get_monotonic_time();
+          }
+
+          if (ngi.is_master())
+          {
+            ret = TFS_ERROR;
+            //to send data to the slave & wait
+            tbnet::Packet* rmsg = NULL;
+            OpLogSyncMessage request_msg;
+            request_msg.set_data(data, length);
+            TBSYS_LOG(DEBUG, "SSSSSSSSSSSSSSSSSSSSSSSSSSSSSS");
+            for (int32_t i = 0; i < 3 && TFS_SUCCESS != ret && ngi.has_valid_lease(now); ++i, rmsg = NULL)
+            {
+              NewClient* client = NewClientManager::get_instance().create_client();
+              ret = send_msg_to_server(ngi.peer_ip_port_, client, &request_msg, rmsg);
+              if (TFS_SUCCESS == ret)
+              {
+                TBSYS_LOG(DEBUG, "SSSSSSSSSSSSSSSSSSSSSSSSSSSSSS");
+                ret = rmsg->getPCode() == OPLOG_SYNC_RESPONSE_MESSAGE ? TFS_SUCCESS : TFS_ERROR;
+                if (TFS_SUCCESS == ret)
+                {
+                  TBSYS_LOG(DEBUG, "SSSSSSSSSSSSSSSSSSSSSSSSSSSSSS");
+                  OpLogSyncResponeMessage* tmsg = dynamic_cast<OpLogSyncResponeMessage*> (rmsg);
+                  ret = tmsg->get_complete_flag() == OPLOG_SYNC_MSG_COMPLETE_YES ? TFS_SUCCESS : TFS_ERROR;
+                }
+              }
+              NewClientManager::get_instance().destroy_client(client);
+            }
+          }
+        }
+      }
+      return ret;
+    }
+
+    bool OpLogSyncManager::handlePacketQueue(tbnet::Packet *packet, void* args)
     {
       bool bret = packet != NULL;
       if (bret)
       {
+        UNUSED(args);
         common::BasePacket* message = dynamic_cast<common::BasePacket*>(packet);
-        NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
-        int32_t ret = ngi.is_master() ? do_master_msg(message, args) : do_slave_msg(message, args);
-        if (TFS_SUCCESS != ret)
+        int32_t ret = GFactory::get_runtime_info().is_master() ? transfer_log_msg_(message) : recv_log_(message);
+        if (TFS_SUCCESS == ret)
         {
-          TBSYS_LOG(ERROR, "do %s message failed, ret: %d", ngi.owner_role_ == NS_ROLE_MASTER ? "master" : "slave", ret);
+          TBSYS_LOG(WARN, "%s log message failed, ret: %d",
+            GFactory::get_runtime_info().is_master() ? "transfer" : "recv", ret);
         }
       }
       return bret;
     }
 
-    int OpLogSyncManager::do_sync_oplog(const common::BasePacket* message, const void*)
+    int OpLogSyncManager::recv_log_(common::BasePacket* message)
     {
-      int32_t ret = TFS_SUCCESS;
-      if (!is_destroy_)
+      int32_t ret = (NULL != message && message->getPCode() == OPLOG_SYNC_MESSAGE ) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+      if (TFS_SUCCESS == ret)
       {
-        const OpLogSyncMessage* msg = dynamic_cast<const OpLogSyncMessage*> (message);
+        OpLogSyncMessage* msg = dynamic_cast<OpLogSyncMessage*> (message);
         const char* data = msg->get_data();
         int64_t length = msg->get_length();
         int64_t offset = 0;
         time_t now = Func::get_monotonic_time();
-        NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
         while ((offset < length)
-            && (!ngi.is_destroyed()))
+            && (!GFactory::get_runtime_info().is_destroyed()))
         {
           ret = replay_helper(data, length, offset, now);
           if ((ret != TFS_SUCCESS)
@@ -337,46 +291,38 @@ namespace tfs
             break;
           }
         }
-        OpLogSyncResponeMessage* rmsg = NULL;
-        ARG_NEW(rmsg, OpLogSyncResponeMessage);
-        rmsg->set_complete_flag();
-        ret = const_cast<common::BasePacket*> (message)->reply(rmsg);
+        OpLogSyncResponeMessage* reply_msg = new (std::nothrow)OpLogSyncResponeMessage();
+        reply_msg->set_complete_flag();
+        msg->reply(reply_msg);
       }
       return ret;
     }
 
-    int OpLogSyncManager::do_master_msg(const common::BasePacket* msg, const void*)
+    int OpLogSyncManager::transfer_log_msg_(common::BasePacket* msg)
     {
-      int32_t ret = TFS_ERROR;
-      if (!is_destroy_)
+      int32_t ret = (NULL != msg && msg->getPCode() == OPLOG_SYNC_MESSAGE ) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+      if (TFS_SUCCESS == ret)
       {
+        const int32_t MAX_SLEEP_TIME_US = 500;
         time_t now = Func::get_monotonic_time();
-        NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
-        if (!ngi.peer_is_initialize_complete()
-            || !ngi.has_valid_lease(now))
+        while (!GFactory::get_runtime_info().has_valid_lease(now)
+              && GFactory::get_runtime_info().is_master())
         {
-          //wait
-          tbutil::Monitor<tbutil::Mutex>::Lock lock(monitor_);
-          monitor_.wait();
+          usleep(MAX_SLEEP_TIME_US);
+          now = Func::get_monotonic_time();
         }
-        int32_t i = 0;
         int32_t status = STATUS_MESSAGE_ERROR;
-        for (i = 0; i < 3 && TFS_SUCCESS != ret && STATUS_MESSAGE_OK != status; i++)
+        for (int32_t i = 0; i < 3 && TFS_SUCCESS != ret && STATUS_MESSAGE_OK != status; i++)
         {
-          ret = send_msg_to_server(ngi.peer_ip_port_, const_cast<common::BasePacket*>(msg), status);
+          ret = send_msg_to_server(GFactory::get_runtime_info().peer_ip_port_, msg, status);
         }
         ret = STATUS_MESSAGE_OK == status ? TFS_SUCCESS : TFS_ERROR;
         if (TFS_ERROR != ret)
         {
-          TBSYS_LOG(INFO, "synchronization operation message failed, count: %d", i);
+          TBSYS_LOG(INFO, "transfer message: %d failed", msg->getPCode());
         }
       }
       return ret;
-    }
-
-    int OpLogSyncManager::do_slave_msg(const common::BasePacket* msg, const void* args)
-    {
-      return do_sync_oplog(msg, args);
     }
 
     int OpLogSyncManager::replay_helper_do_msg(const int32_t type, const char* const data, const int64_t data_len, int64_t& pos)
@@ -395,9 +341,9 @@ namespace tfs
         else
         {
           CompactBlockCompleteMessage* tmp = new (std::nothrow)CompactBlockCompleteMessage();
+          msg = tmp;
           ret = tmp->deserialize(data, data_len, pos);
           assert(NULL != tmp);
-          msg = tmp;
         }
         if (TFS_SUCCESS == ret
             && NULL != msg)
@@ -407,7 +353,8 @@ namespace tfs
         }
         if (TFS_SUCCESS != ret)
         {
-          tbsys::gDelete(msg);
+          if (NULL != msg)
+            msg->free();
           TBSYS_LOG(INFO, "deserialize error, data: %s, length: %"PRI64_PREFIX"d offset: %"PRI64_PREFIX"d", data, data_len, pos);
         }
       }
@@ -416,14 +363,14 @@ namespace tfs
 
     int OpLogSyncManager::replay_helper_do_oplog(const time_t now, const int32_t type, const char* const data, const int64_t data_len, int64_t& pos)
     {
-      int32_t ret = (NULL != data) && (data_len - pos > 0) &&  (pos >= 0) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+      int32_t ret = ((NULL != data) && (data_len - pos > 0) &&  (pos >= 0)) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
         BlockOpLog oplog;
         ret = oplog.deserialize(data, data_len, pos);
         if (TFS_SUCCESS != ret)
         {
-          oplog.dump(TBSYS_LOG_LEVEL_DEBUG);
+          oplog.dump(TBSYS_LOG_LEVEL_INFO);
           ret = EXIT_DESERIALIZE_ERROR;
           TBSYS_LOG(INFO, "deserialize error, data: %s, length: %"PRI64_PREFIX"d, offset: %"PRI64_PREFIX"d", data, data_len, pos);
         }
@@ -525,7 +472,7 @@ namespace tfs
     int OpLogSyncManager::replay_helper(const char* const data, const int64_t data_len, int64_t& pos, const time_t now)
     {
       OpLogHeader header;
-      int32_t ret = (NULL != data && data_len - pos >= header.length()) ? TFS_SUCCESS : TFS_ERROR;
+      int32_t ret = ((NULL != data) && (data_len - pos >= header.length())) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
         ret = header.deserialize(data, data_len, pos);
@@ -562,14 +509,13 @@ namespace tfs
       return ret;
     }
 
-    int OpLogSyncManager::replay_all()
+    int OpLogSyncManager::replay_all_()
     {
       bool has_log = false;
-      file_queue_->set_delete_file_flag(true);
       int32_t ret = file_queue_->load_queue_head();
       if (ret != TFS_SUCCESS)
       {
-        TBSYS_LOG(DEBUG, "load header file of file_queue errors: %s", strerror(errno));
+        TBSYS_LOG(WARN, "load header file of file_queue errors: %s", strerror(errno));
       }
       else
       {
@@ -599,7 +545,7 @@ namespace tfs
         ret = file_queue_->initialize();
         if (ret != TFS_SUCCESS)
         {
-          TBSYS_LOG(DEBUG, "call FileQueue::finishSetup errors: %s", strerror(errno));
+          TBSYS_LOG(WARN, "file queue initialize errors: ret :%d, %s", ret, strerror(errno));
         }
         else
         {

@@ -46,7 +46,7 @@ namespace tfs
         virtual ~ClientRequestServer(){}
 
         int keepalive(const common::DataServerStatInfo& info, const time_t now);
-        int report_block(const uint64_t server, const time_t now, std::set<common::BlockInfo>& blocks, common::VUINT32& expires);
+        int report_block(const uint64_t server, const time_t now, std::set<common::BlockInfo>& blocks);
         int open(uint32_t& block_id, uint32_t& lease_id, int32_t& version,
             common::VUINT64& servers, const int32_t mode, const time_t now);
         int batch_open(const common::VUINT32& blocks, const int32_t mode, const int32_t block_count, std::map<uint32_t, common::BlockInfoSeg>& out);

@@ -125,9 +125,17 @@ namespace tfs
       return peer_role_ == NS_ROLE_MASTER;
     }
 
-    bool NsRuntimeGlobalInformation::peer_is_initialize_complete() const
+    bool NsRuntimeGlobalInformation::role_is_conflict() const
     {
-      return peer_status_ == NS_STATUS_INITIALIZED;
+      return owner_role_ == peer_role_ == NS_ROLE_MASTER;
+    }
+
+    void NsRuntimeGlobalInformation::resolve_conflict()
+    {
+      owner_role_ = NS_ROLE_SLAVE;
+      peer_role_ = NS_ROLE_SLAVE;
+      lease_id_ = common::INVALID_LEASE_ID;
+      lease_expired_time_ = 0;
     }
 
     bool NsRuntimeGlobalInformation::own_is_initialize_complete() const
@@ -142,16 +150,35 @@ namespace tfs
       peer_status_ = status;
     }
 
-    void NsRuntimeGlobalInformation::switch_role(const int64_t now)
+    void NsRuntimeGlobalInformation::switch_role(const bool startup, const int64_t now)
     {
-      owner_role_ = owner_role_ == NS_ROLE_MASTER ? NS_ROLE_SLAVE : NS_ROLE_MASTER;
-      peer_role_ = owner_role_ == NS_ROLE_MASTER ? NS_ROLE_SLAVE : NS_ROLE_MASTER;
-      switch_time_ = now + common::SYSPARAM_NAMESERVER.safe_mode_time_;
-      discard_newblk_safe_mode_time_ =  now + common::SYSPARAM_NAMESERVER.discard_newblk_safe_mode_time_;
       last_owner_check_time_ = tbutil::Time::now(tbutil::Time::Monotonic).toMicroSeconds() + common::SYSPARAM_NAMESERVER.safe_mode_time_ * 1000000;
       last_push_owner_check_packet_time_ = last_owner_check_time_;
       lease_id_ = common::INVALID_LEASE_ID;
       lease_expired_time_ = 0;
+      if (startup)//startup
+      {
+        startup_time_ = now;
+        switch_time_  = now + common::SYSPARAM_NAMESERVER.safe_mode_time_;
+        discard_newblk_safe_mode_time_ =  now + common::SYSPARAM_NAMESERVER.discard_newblk_safe_mode_time_;
+        peer_role_ = NS_ROLE_SLAVE;
+        owner_role_ = common::Func::is_local_addr(vip_) == true ? NS_ROLE_MASTER : NS_ROLE_SLAVE;
+        TBSYS_LOG(INFO, "i %s the master server", owner_role_ == NS_ROLE_MASTER ? "am" : "am not");
+      }
+      else//switch
+      {
+        owner_role_ = owner_role_ == NS_ROLE_MASTER ? NS_ROLE_SLAVE : NS_ROLE_MASTER;
+        peer_role_ = owner_role_ == NS_ROLE_MASTER ? NS_ROLE_SLAVE : NS_ROLE_MASTER;
+        if (now - common::SYSPARAM_NAMESERVER.safe_mode_time_ > startup_time_)
+        {
+          switch_time_  = now + (common::SYSPARAM_NAMESERVER.safe_mode_time_ / 2);
+        }
+        else//这里有可能出现在第一次启动的时候，在safe_mode_time内又发生了切换,这种情况我们按初始状态处理
+        {
+          switch_time_  = now + common::SYSPARAM_NAMESERVER.safe_mode_time_;
+          discard_newblk_safe_mode_time_ =  now + common::SYSPARAM_NAMESERVER.discard_newblk_safe_mode_time_;
+        }
+      }
     }
 
     bool NsRuntimeGlobalInformation::in_safe_mode_time(const int64_t now) const
@@ -161,43 +188,44 @@ namespace tfs
 
     bool NsRuntimeGlobalInformation::in_discard_newblk_safe_mode_time(const int64_t now) const
     {
-      return  now < discard_newblk_safe_mode_time_ && now >= common::SYSPARAM_NAMESERVER.discard_newblk_safe_mode_time_;
+      return now < discard_newblk_safe_mode_time_;
     }
 
-    bool NsRuntimeGlobalInformation::keepalive(int64_t& lease_id, bool& flag, const uint64_t server,
-         const int8_t role, const int8_t status, const time_t now)
+    bool NsRuntimeGlobalInformation::keepalive(int64_t& lease_id, const uint64_t server,
+         const int8_t role, const int8_t status, const int8_t type, const time_t now)
     {
       static uint64_t lease_id_factory = 1;
       bool ret = owner_role_ == NS_ROLE_MASTER;
       if (ret)
       {
-        if (status <= NS_STATUS_UNINITIALIZE)//login
+        peer_status_  = static_cast<NsStatus>(status);
+        peer_role_ = static_cast<NsRole>(role);
+        if (NS_KEEPALIVE_TYPE_LOGIN == type)
         {
-          lease_id = lease_id_ = common::atomic_inc(&lease_id_factory);
           peer_ip_port_ = server;
-          peer_status_  = static_cast<NsStatus>(status);
+          lease_id = lease_id_ = common::atomic_inc(&lease_id_factory);
           lease_expired_time_ = now + common::SYSPARAM_NAMESERVER.heart_interval_;
         }
-        else
+        else if (NS_KEEPALIVE_TYPE_RENEW == type)
         {
-          peer_role_ = static_cast<NsRole>(role);
           ret = lease_id_ == lease_id;
           if (ret)
           {
             ret = renew(now, common::SYSPARAM_NAMESERVER.heart_interval_);
-            if (ret)
-            {
-              if (NS_STATUS_ACCEPT_DS_INFO == status)
-                flag = true;
-            }
           }
         }
+        else if (NS_KEEPALIVE_TYPE_LOGOUT == type)
+        {
+          logout();
+        }
       }
+      TBSYS_LOG(DEBUG, "peer_role: %d, peer_status: %d,status: %d, lease_id: %ld, %ld, type: %d", peer_role_, peer_status_, status, lease_id, lease_id_, type);
       return ret;
     }
 
     bool NsRuntimeGlobalInformation::has_valid_lease(const time_t now) const
     {
+      TBSYS_LOG(DEBUG, "Now: %ld, lease id: %lu, lease_expired_time: %d", now, lease_id_, lease_expired_time_);
       return (lease_id_ != common::INVALID_LEASE_ID && lease_expired_time_ > now);
     }
 
@@ -222,40 +250,26 @@ namespace tfs
       return true;
     }
 
-    void NsRuntimeGlobalInformation::set_own_status(const int8_t status)
-    {
-      owner_status_ = status;
-    }
-
-    void NsRuntimeGlobalInformation::update_own_status()
-    {
-      if (owner_status_ < NS_STATUS_INITIALIZED)
-      {
-        ++owner_status_;
-      }
-    }
-
-    void NsRuntimeGlobalInformation::dump(int32_t level, const char* file , const int32_t line , const char* function ) const
+    void NsRuntimeGlobalInformation::dump(int32_t level, const char* format)
     {
       TBSYS_LOGGER.logMessage(
           level,
-          file,
-          line,
-          function,
-          "owner ip port: %s, other side ip port: %s, switch time: %s, vip: %s\
+          __FILE__,
+          __LINE__,
+          __FUNCTION__,
+          "%s owner ip port: %s, other side ip port: %s, switch time: %s, vip: %s\
 ,destroy flag: %s, owner role: %s, other side role: %s, owner status: %s, other side status: %s\
 , last owner check time: %s, last push owner check packet time: %s",
+          NULL == format ? "" : format,
           tbsys::CNetUtil::addrToString(owner_ip_port_).c_str(),
           tbsys::CNetUtil::addrToString(peer_ip_port_).c_str(),
           common::Func::time_to_str(switch_time_).c_str(), tbsys::CNetUtil::addrToString(vip_).c_str(),
           destroy_flag_ ? "yes" : "no", owner_role_
           == NS_ROLE_MASTER ? "master" : owner_role_ == NS_ROLE_SLAVE ? "slave" : "unknow", peer_role_
-          == NS_ROLE_MASTER ? "master" : peer_role_ == NS_ROLE_SLAVE ? "slave" : "unknow", owner_status_
-          == NS_STATUS_UNINITIALIZE ? "uninitialize"
-          : owner_status_ == NS_STATUS_ACCEPT_DS_INFO ? "accepct ds info"
+          == NS_ROLE_MASTER ? "master" : peer_role_ == NS_ROLE_SLAVE ? "slave" : "unknow",
+          owner_status_ == NS_STATUS_UNINITIALIZE ? "uninitialize"
           : owner_status_ == NS_STATUS_INITIALIZED ? "initialize" : "unknow",
           peer_status_ == NS_STATUS_UNINITIALIZE ? "uninitialize"
-          : peer_status_ == NS_STATUS_ACCEPT_DS_INFO ? "accepct ds info"
           : peer_status_ == NS_STATUS_INITIALIZED ? "initialize" : "unknow",
           common::Func::time_to_str(last_owner_check_time_/1000000).c_str(),
           common::Func::time_to_str(last_push_owner_check_packet_time_/1000000).c_str());

@@ -80,7 +80,7 @@ namespace tfs
       explicit TaskManager(LayoutManager& manager);
       virtual ~TaskManager();
       int add(const uint32_t id, const std::vector<ServerCollect*>& runer,
-            const common::PlanType type, const common::PlanPriority priority = common::PLAN_PRIORITY_NORMAL);
+            const common::PlanType type, const time_t now, const common::PlanPriority priority = common::PLAN_PRIORITY_NORMAL);
       bool remove(const common::ArrayHelper<Task*>& tasks);
       int remove(Task* task);
       void clear();

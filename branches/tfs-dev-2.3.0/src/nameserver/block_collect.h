@@ -57,7 +57,7 @@ namespace tfs
       bool is_writable() const;
       bool is_creating() const;
       bool check_version(LayoutManager& manager, common::ArrayHelper<ServerCollect*>& removes,
-          std::vector<uint32_t>& expires, common::ArrayHelper<ServerCollect*>& other_expires, const ServerCollect* server,
+          bool& expire_self, common::ArrayHelper<ServerCollect*>& other_expires, const ServerCollect* server,
           const int8_t role, const bool isnew, const common::BlockInfo& block_info, const time_t now);
       common::PlanPriority check_replicate(const time_t now) const;
       bool check_compact() const;
@@ -81,7 +81,7 @@ namespace tfs
       static const int8_t BLOCK_CREATE_FLAG_YES;
       static const int8_t VERSION_AGREED_MASK;
       private:
-      ServerCollect** get_(const ServerCollect* const server) const;
+      ServerCollect** get_(const ServerCollect* const server, const bool pointer = true) const;
       DISALLOW_COPY_AND_ASSIGN(BlockCollect);
 
       private:

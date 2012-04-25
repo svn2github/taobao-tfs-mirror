@@ -149,10 +149,8 @@ namespace tfs
      * @param [out] expires: need expire blocks
      * @return success or failure
      */
-    int LayoutManager::update_relation(ServerCollect* server, std::vector<uint32_t>& self_expires,
-        const std::set<BlockInfo>& blocks, const time_t now)
+    int LayoutManager::update_relation(ServerCollect* server,const std::set<BlockInfo>& blocks, const time_t now)
     {
-      self_expires.clear();
       int32_t ret = ((NULL != server) && (server->is_alive())) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
@@ -161,7 +159,7 @@ namespace tfs
         //这里可以放到后面来优化
         server->clear(*this, now);
         TBSYS_LOG(DEBUG, "%s update relation", CNetUtil::addrToString(server->id()).c_str());
-        ret = get_block_manager().update_relation(server, self_expires, blocks, now);
+        ret = get_block_manager().update_relation(server, blocks, now);
         TBSYS_LOG(DEBUG, "%s update relation end", CNetUtil::addrToString(server->id()).c_str());
       }
       return ret;
@@ -226,9 +224,13 @@ namespace tfs
         ret = get_block_manager().update_block_info(block, isnew, writable, master,
             info, pserver, now, addnew);
       }
-      if (TFS_SUCCESS == ret)
+      if ((TFS_SUCCESS == ret)
+          && (isnew))
       {
         get_server_manager().build_relation(pserver, block, writable, master);
+      }
+      if (TFS_SUCCESS == ret)
+      {
         //write oplog
         std::vector<uint32_t> blocks;
         std::vector<uint64_t> servers;
@@ -318,7 +320,7 @@ namespace tfs
                 std::vector<ServerCollect*> runer;
                 runer.push_back(source);
                 runer.push_back(target);
-                ret = get_task_manager().add(block_id, runer, PLAN_TYPE_REPLICATE,PLAN_PRIORITY_EMERGENCY);
+                ret = get_task_manager().add(block_id, runer, PLAN_TYPE_REPLICATE, now, PLAN_PRIORITY_EMERGENCY);
               }
             }
           }
@@ -458,7 +460,8 @@ namespace tfs
       {
         std::vector<ServerCollect*>::iterator iter = std::find(current_reporting_block_servers_.begin(),
             current_reporting_block_servers_.end(), server);
-        if (current_reporting_block_servers_.end() != iter)
+        if ((current_reporting_block_servers_.end() != iter)
+            && ((*iter)->id() == server->id()))
         {
           current_reporting_block_servers_.erase(iter);
         }
@@ -530,6 +533,7 @@ namespace tfs
           &SYSPARAM_NAMESERVER.object_dead_max_time_,
           &SYSPARAM_NAMESERVER.group_count_,
           &SYSPARAM_NAMESERVER.group_seq_,
+          &SYSPARAM_NAMESERVER.object_clear_max_time_,
           &SYSPARAM_NAMESERVER.report_block_queue_size_,
           &SYSPARAM_NAMESERVER.report_block_time_lower_,
           &SYSPARAM_NAMESERVER.report_block_time_upper_,
@@ -555,6 +559,14 @@ namespace tfs
       return ret;
     }
 
+    void LayoutManager::switch_role(time_t now)
+    {
+      get_task_manager().clear();
+      GFactory::get_runtime_info().switch_role(now);
+      get_server_manager().set_all_server_next_report_time(now);
+      oplog_sync_mgr_.switch_role();
+    }
+
     void LayoutManager::rotate_(time_t now)
     {
       if ((now % 86400 >= zonesec_)
@@ -562,7 +574,6 @@ namespace tfs
           && (last_rotate_log_time_ < now - 600))
       {
         last_rotate_log_time_ = now;
-        oplog_sync_mgr_.rotate();
         TBSYS_LOGGER.rotateLog(NULL);
       }
     }
@@ -673,7 +684,7 @@ namespace tfs
             usleep(1000);
 
           while ((!(plan_run_flag_ & PLAN_TYPE_MOVE)) && (!ngi.is_destroyed()))
-            usleep(1000000);
+            usleep(100000);
 
           total_capacity = 0, total_use_capacity = 0, alive_server_nums = 0;
           get_server_manager().move_statistic_all_server_info(total_capacity,
@@ -720,7 +731,7 @@ namespace tfs
             }//end for ...
           }
         }
-        usleep(10000000);
+        usleep(500000);
       }
     }
 
@@ -884,11 +895,13 @@ namespace tfs
       ServerCollect* pserver = NULL;
       uint32_t new_block_id = 0;
       int32_t ret = TFS_SUCCESS;
-      int32_t size = get_server_manager().size();
+      int64_t total_capacity = GFactory::get_global_info().total_capacity_ <= 0
+              ? 1 : GFactory::get_global_info().total_capacity_;
       int64_t use_capacity = GFactory::get_global_info().use_capacity_ <= 0
-        ? size : GFactory::get_global_info().use_capacity_;
-      size = std::max(size, 1);
-      int64_t average_used_capacity = use_capacity / size;
+        ? 0 : GFactory::get_global_info().use_capacity_;
+      if (total_capacity <= 0)
+        total_capacity = 0;
+      double average_used_capacity = use_capacity / total_capacity;
       int32_t count = SYSPARAM_NAMESERVER.add_primary_block_count_;
       for (int32_t i = 0; i < servers.get_array_index(); ++i)
       {
@@ -1271,7 +1284,7 @@ namespace tfs
             std::vector<ServerCollect*> runer;
             runer.push_back(source);
             runer.push_back(target);
-            ret = TFS_SUCCESS == get_task_manager().add(block->id(), runer, PLAN_TYPE_REPLICATE, priority);
+            ret = TFS_SUCCESS == get_task_manager().add(block->id(), runer, PLAN_TYPE_REPLICATE, now, priority);
           }
         }
       }
@@ -1296,7 +1309,7 @@ namespace tfs
             assert(NULL != pserver);
             runer.push_back(pserver);
           }
-          ret = TFS_SUCCESS == get_task_manager().add(block->id(), runer, PLAN_TYPE_COMPACT);
+          ret = TFS_SUCCESS == get_task_manager().add(block->id(), runer, PLAN_TYPE_COMPACT, now);
         }
       }
       return ret;
@@ -1335,7 +1348,7 @@ namespace tfs
               std::vector<ServerCollect*> runer;
               runer.push_back(const_cast<ServerCollect*>(source));
               runer.push_back(result);
-              ret = TFS_SUCCESS == get_task_manager().add(block->id(), runer, PLAN_TYPE_MOVE);
+              ret = TFS_SUCCESS == get_task_manager().add(block->id(), runer, PLAN_TYPE_MOVE, now);
             }
           }
         }
@@ -1364,7 +1377,7 @@ namespace tfs
           {
             std::vector<ServerCollect*> runer;
             runer.push_back(server);
-            ret = (TFS_SUCCESS == get_task_manager().add(block->id(), runer, PLAN_TYPE_DELETE));
+            ret = (TFS_SUCCESS == get_task_manager().add(block->id(), runer, PLAN_TYPE_DELETE, now));
             if (!ret)
             {
               get_block_manager().push_to_delete_queue(output.first, output.second);

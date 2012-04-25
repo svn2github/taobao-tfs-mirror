@@ -42,11 +42,14 @@ namespace tfs
       virtual ~GCObjectManager();
       int add(GCObject* object);
       int gc(const time_t now);
+      int64_t size() const;
       private:
       DISALLOW_COPY_AND_ASSIGN(GCObjectManager);
       LayoutManager& manager_;
-      std::set<GCObject*> object_list_;
+      std::set<GCObject*>  wait_clear_list_;
+      std::list<GCObject*> wait_free_list_;
       tbutil::Mutex mutex_;
+      int64_t wait_free_list_size_;
     };
   }/** end namespace nameserver **/
 }/** end namespace tfs **/

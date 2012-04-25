@@ -70,6 +70,7 @@ namespace tfs
             bret = manager_.push(message, false);
             if (!bret)
             {
+              usleep(500);
               current = tbutil::Time::now(tbutil::Time::Monotonic).toMicroSeconds();
             }
             else
@@ -154,6 +155,23 @@ namespace tfs
         }
       }
 
+      //start clientmanager
+      if (TFS_SUCCESS == ret)
+      {
+        NewClientManager::get_instance().destroy();
+        assert(NULL != get_packet_streamer());
+        assert(NULL != get_packet_factory());
+        BasePacketStreamer* packet_streamer = dynamic_cast<BasePacketStreamer*>(get_packet_streamer());
+        BasePacketFactory* packet_factory   = dynamic_cast<BasePacketFactory*>(get_packet_factory());
+        ret = NewClientManager::get_instance().initialize(packet_factory, packet_streamer,
+                NULL, &BaseService::golbal_async_callback_func, this);
+        if (TFS_SUCCESS != ret)
+        {
+          TBSYS_LOG(ERROR, "start client manager failed, must be exit!!!");
+          ret = EXIT_NETWORK_ERROR;
+        }
+      }
+
       if (TFS_SUCCESS == ret)
       {
         ret = initialize_ns_global_info();
@@ -195,49 +213,11 @@ namespace tfs
         }
       }
 
-      if (TFS_SUCCESS == ret)
-      {
-        //send msg to peer
-        //if we're the slave ns & send msg to master failed,we must wait.
-        //if we're the master ns, just ignore this failure.
-        ret = get_peer_role();
-        //ok,now we can check the role of peer
-        NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
-        if ((TFS_SUCCESS != ret)
-          || (ngi.owner_role_ == ngi.peer_role_))
-        {
-          TBSYS_LOG(ERROR, "ret != TFS_SUCCESS or owner role: %s == peer role: %s, must be exit...",
-              ngi.owner_role_ == NS_ROLE_MASTER ? "master" : "slave", ngi.peer_role_
-              == NS_ROLE_MASTER ? "master" : "slave");
-          ret = EXIT_GENERAL_ERROR;
-        }
-      }
-
-      if (TFS_SUCCESS == ret)
-      {
-        NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
-
-        //if we're the master ns,we can start service now.change status to INITIALIZED.
-        if (ngi.owner_role_ == NS_ROLE_MASTER)
-        {
-          ngi.owner_status_ = NS_STATUS_INITIALIZED;
-        }
-        else
-        {
-          //if we're the slave ns, we must sync data from the master ns.
-          ngi.owner_status_ = NS_STATUS_ACCEPT_DS_INFO;
-          ret = wait_for_ds_report();//in wait_for_ds_report,someone killed me,
-                                      //the signal handler have already called stop()
-          if (TFS_SUCCESS == ret)
-            ngi.owner_status_ = NS_STATUS_INITIALIZED;
-          else
-            TBSYS_LOG(ERROR, "wait for dataserver report failed, must be exit, ret: %d", ret);
-        }
-      }
-
       //start heartbeat loop
       if (TFS_SUCCESS == ret)
       {
+        //if we're the master ns or slave ns ,we can start service now.change status to INITIALIZED.
+         GFactory::get_runtime_info().owner_status_ = NS_STATUS_INITIALIZED;
         int32_t percent_size = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_TASK_PRECENT_SEC_SIZE, 1);
         int64_t owner_check_interval = get_work_queue_size() * percent_size * 1000;
         OwnerCheckTimerTaskPtr owner_check_task = new OwnerCheckTimerTask(*this);
@@ -296,8 +276,7 @@ namespace tfs
           }
           int32_t pcode = bpacket->getPCode();
           int32_t ret = common::TFS_ERROR;
-          NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
-          if (ngi.owner_role_ == NS_ROLE_MASTER)
+          if (GFactory::get_runtime_info().is_master())
             ret = do_master_msg_helper(bpacket);
           else
             ret = do_slave_msg_helper(bpacket);
@@ -330,7 +309,7 @@ namespace tfs
           else
           {
             bpacket->free();
-            ngi.dump(TBSYS_LOG_LEVEL(INFO));
+            GFactory::get_runtime_info().dump(TBSYS_LOG_LEVEL_WARN);
             TBSYS_LOG(WARN, "the msg: %d will be ignored", pcode);
           }
         }
@@ -603,9 +582,9 @@ namespace tfs
         param.end_flag_ = message->get_param().end_flag_;
         ret = layout_manager_.scan(param);
         if (TFS_SUCCESS == ret)
-        {
           ret = message->reply(resp);
-        }
+        else
+          resp->free();
       }
       return ret;
     }
@@ -719,6 +698,9 @@ namespace tfs
             else
             {
               NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
+              ngi.owner_status_ = NS_STATUS_UNINITIALIZE;
+              ngi.peer_status_ = NS_STATUS_UNINITIALIZE;
+              ngi.vip_ = Func::get_addr(get_ip_addr());
               for (iter = ns_ip_list.begin();iter != ns_ip_list.end(); ++iter)
               {
                 if (local_ip == (*iter))
@@ -726,16 +708,7 @@ namespace tfs
                 else
                   ngi.peer_ip_port_ = tbsys::CNetUtil::ipToAddr((*iter), get_port());
               }
-
-              time_t now = Func::get_monotonic_time();
-              ngi.startup_time_ = now;
-              ngi.switch_time_ = now + common::SYSPARAM_NAMESERVER.safe_mode_time_;
-              ngi.discard_newblk_safe_mode_time_ =  now + common::SYSPARAM_NAMESERVER.discard_newblk_safe_mode_time_;
-              ngi.vip_ = Func::get_addr(get_ip_addr());
-              ngi.peer_role_ = NS_ROLE_SLAVE;
-              ngi.owner_role_ = Func::is_local_addr(ngi.vip_) == true ? NS_ROLE_MASTER : NS_ROLE_SLAVE;
-              ngi.owner_status_ = NS_STATUS_UNINITIALIZE;
-              TBSYS_LOG(INFO, "i %s the master server", ngi.owner_role_ == NS_ROLE_MASTER ? "am" : "am not");
+              ngi.switch_role(true);
             }
           }
         }
@@ -743,71 +716,7 @@ namespace tfs
       return ret;
     }
 
-    int NameServer::get_peer_role()
-    {
-      bool complete = false;
-      int32_t ret = TFS_SUCCESS;
-      tbnet::Packet* ret_msg = NULL;
-      NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
-      MasterAndSlaveHeartMessage master_slave_msg;
-      master_slave_msg.set_ip_port(ngi.owner_ip_port_);
-      master_slave_msg.set_role(ngi.owner_role_);
-      master_slave_msg.set_status(ngi.owner_status_);
-      master_slave_msg.set_flags(HEART_GET_DATASERVER_LIST_FLAGS_NO);
-      while (!stop_ && !complete && !ngi.is_destroyed())
-      {
-        TBSYS_LOG(DEBUG, "get peers: %s role, owner role: %s, other side role: %s...", tbsys::CNetUtil::addrToString(
-              ngi.peer_ip_port_).c_str(), ngi.owner_role_ == NS_ROLE_MASTER ? "master"
-            : "slave", ngi.peer_role_ == NS_ROLE_MASTER ? "master" : "slave");
-        ret_msg = NULL;
-        NewClient* client = NewClientManager::get_instance().create_client();
-        ret = send_msg_to_server(ngi.peer_ip_port_, client, &master_slave_msg, ret_msg);
-        if (TFS_SUCCESS == ret)
-        {
-          ret = ret_msg->getPCode() == MASTER_AND_SLAVE_HEART_RESPONSE_MESSAGE ? TFS_SUCCESS : EXIT_UNKNOWN_MSGTYPE;
-          if (TFS_SUCCESS == ret)
-          {
-            MasterAndSlaveHeartResponseMessage* response = dynamic_cast<MasterAndSlaveHeartResponseMessage *> (ret_msg);
-            ngi.update_peer_info(response->get_ip_port(), response->get_role(), response->get_status());
-            if (ngi.peer_ip_port_ != response->get_ip_port())
-            {
-              TBSYS_LOG(WARN, "%s", "peer's id in config file is incorrect?");
-            }
-          }
-        }
-        NewClientManager::get_instance().destroy_client(client);
-        complete = ngi.is_master() && ngi.peer_is_master();
-        if (complete)
-        {
-          stop();
-          TBSYS_LOG(ERROR, "%s", "owner role is master and peer role is master, must be exit...");
-        }
-        else
-        {
-          complete = ngi.is_master() || ngi.peer_is_master();
-          if (!complete)
-          {
-            if (Func::is_local_addr(ngi.vip_))
-            {
-              ngi.switch_role();
-            }
-            complete = ngi.is_master();
-            if (!complete)
-            {
-              //if we're the slave ns,retry
-              TBSYS_LOG(WARN, "%s", "wait master done, sleep 500ms, retry...");
-              usleep(500000); //500ms
-            }
-          }
-        }
-      }
-      ret = ngi.is_master() && ngi.peer_is_master() ? EXIT_ROLE_ERROR
-            : ngi.is_destroyed() ? EXIT_SERVICE_SHUTDOWN
-            : complete ? TFS_SUCCESS : ret;
-      return ret;
-    }
-
-    int NameServer::wait_for_ds_report()
+    /*int NameServer::wait_for_ds_report()
     {
       bool complete = false;
       int32_t ret = TFS_SUCCESS;
@@ -850,7 +759,7 @@ namespace tfs
         }
       }
       return TFS_SUCCESS;
-    }
+    }*/
 
     int NameServer::do_master_msg_helper(common::BasePacket* packet)
     {
@@ -872,7 +781,7 @@ namespace tfs
             && pcode != REQ_REPORT_BLOCKS_TO_NS_MESSAGE
             && pcode != CLIENT_CMD_MESSAGE)
           {
-            ret = ngi.owner_status_ <= NS_STATUS_ACCEPT_DS_INFO ? common::TFS_ERROR : common::TFS_SUCCESS;
+            ret = ngi.owner_status_ < NS_STATUS_INITIALIZED? common::TFS_ERROR : common::TFS_SUCCESS;
           }
         }
       }
@@ -898,7 +807,7 @@ namespace tfs
             && pcode != REQ_REPORT_BLOCKS_TO_NS_MESSAGE
             && pcode != CLIENT_CMD_MESSAGE)
           {
-            if (ngi.owner_status_ <= NS_STATUS_ACCEPT_DS_INFO)
+            if (ngi.owner_status_ < NS_STATUS_INITIALIZED)
             {
               ret = common::TFS_ERROR;
             }

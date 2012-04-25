@@ -87,11 +87,9 @@ namespace tfs
         virtual ~OpLog();
         int initialize();
         int update_oplog_rotate_header(const OpLogRotateHeader& head);
-        bool finish(const time_t now, const bool force = false) const;
         int write(const uint8_t type, const char* const data, const int32_t length);
-        inline void reset(const time_t t = time(NULL))
+        inline void reset()
         {
-          last_flush_time_ = t;
           slots_offset_ = 0;
         }
         inline const char* const get_buffer() const
@@ -114,13 +112,11 @@ namespace tfs
         OpLogRotateHeader oplog_rotate_header_;
         std::string path_;
         uint64_t seqno_;
-        int64_t last_flush_time_;
         int64_t slots_offset_;
         int32_t fd_;
         char* buffer_;
       private:
         DISALLOW_COPY_AND_ASSIGN( OpLog);
-        OpLog();
     };
   }//end namespace nameserver
 }//end namespace tfs

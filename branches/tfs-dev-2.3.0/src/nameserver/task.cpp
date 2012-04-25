@@ -59,23 +59,7 @@ namespace tfs
 
     bool Task::operator < (const Task& task) const
     {
-      if (priority_ < task.priority_)
-        return true;
-      if (priority_ > task.priority_)
-        return false;
-      if (type_ < task.type_)
-        return true;
-      if (type_ > task.type_)
-        return false;
-      if (block_id_ < task.block_id_)
-        return true;
-      if (block_id_ > task.block_id_)
-        return false;
-      if (seqno_ < task.seqno_)
-        return true;
-      if (seqno_ > task.seqno_)
-        return  false;
-      return last_update_time_ < task.last_update_time_;
+      return block_id_ < task.block_id_;
     }
 
     bool Task::need_add_server_to_map() const

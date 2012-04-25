@@ -71,6 +71,7 @@ namespace tfs
 
         bool push_to_delete_queue(const uint32_t block, const uint64_t server);
         bool pop_from_delete_queue(std::pair<uint32_t, uint64_t>& pairs);
+        void clear_delete_queue();
 
         BlockCollect* get(const uint32_t block) const;
         bool exist(const uint32_t block) const;
@@ -83,8 +84,7 @@ namespace tfs
         int get_servers(common::ArrayHelper<ServerCollect*>& server, const uint32_t block) const;
         int get_servers(common::ArrayHelper<ServerCollect*>& server, const BlockCollect* block) const;
 
-        int update_relation(ServerCollect* server, std::vector<uint32_t>& self_expires,
-            const std::set<common::BlockInfo>& blocks, const time_t now);
+        int update_relation(ServerCollect* server, const std::set<common::BlockInfo>& blocks, const time_t now);
         int build_relation(BlockCollect* block, bool& writable, bool& master,
             const ServerCollect* server, const time_t now, const bool set =false);
         bool relieve_relation(BlockCollect* block, const ServerCollect* server, const time_t now);

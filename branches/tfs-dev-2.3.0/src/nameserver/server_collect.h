@@ -64,7 +64,7 @@ namespace tfs
       void statistics(NsGlobalStatisticsInfo& stat, const bool is_new) const;
       bool add_writable(const BlockCollect* block);
       bool clear(LayoutManager& manager, const time_t now);
-      bool touch(bool& promote, int32_t& count, const int64_t average_used_capacity);
+      bool touch(bool& promote, int32_t& count, const double average_used_capacity);
       bool get_range_blocks(common::ArrayHelper<BlockCollect*>& blocks, const uint32_t begin, const int32_t count) const;
       int scan(common::SSMScanParameter& param, const int8_t scan_flag) const;
       void callback(LayoutManager& manager);

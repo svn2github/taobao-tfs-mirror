@@ -31,6 +31,7 @@ namespace tfs
         int initialize(const std::string& path);
         int destroy();
         uint32_t generation(const uint32_t id = 0);
+        uint32_t skip(const int32_t num = SKIP_BLOCK_NUMBER);
       private:
         int update(const uint32_t id) const;
         DISALLOW_COPY_AND_ASSIGN(BlockIdFactory);

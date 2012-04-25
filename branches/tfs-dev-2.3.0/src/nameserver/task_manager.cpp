@@ -100,80 +100,87 @@ namespace tfs
     }
 
     int TaskManager::add(const uint32_t id, const std::vector<ServerCollect*>& runer,
-            const common::PlanType type, const common::PlanPriority priority)
+            const common::PlanType type, const time_t now, const common::PlanPriority priority)
     {
-      RWLock::Lock lock(rwmutex_, WRITE_LOCKER);
-      std::pair<BLOCK_TO_TASK_ITER, bool> res;
-      res.first = block_to_tasks_.find(id);
-      int32_t ret = block_to_tasks_.end() != res.first ? EXIT_TASK_EXIST_ERROR : TFS_SUCCESS;
+      //这里只判断Block是否正在写一次的原因: 因为add task到几个列表是不能被打断的，如果打断了处理的逻辑会很复杂
+      //这里我们只能尽可能的保证同一个Block不同时做写操作，复制/均衡，因为目前这种做是没有办法完全保证同一个
+      //Block不同时发生写，复制等，这个功能点可以放到DataServer去做，这个后期再改进
+      int32_t ret = manager_.get_block_manager().has_write(id,now) ? EXIT_BLOCK_WRITING_ERROR : TFS_SUCCESS;
       if (TFS_SUCCESS == ret)
       {
-        Task* task = generation_(id, runer, type, priority);
-        assert(NULL != task);
-        res = block_to_tasks_.insert(BLOCK_TO_TASK::value_type(task->block_id_, task));
-        std::pair<PENDING_TASK_ITER, bool> rs = pending_queue_.insert(task);
-        ret = !rs.second ? EXIT_TASK_EXIST_ERROR : TFS_SUCCESS;
+        RWLock::Lock lock(rwmutex_, WRITE_LOCKER);
+        std::pair<BLOCK_TO_TASK_ITER, bool> res;
+        res.first = block_to_tasks_.find(id);
+        int32_t ret = block_to_tasks_.end() != res.first ? EXIT_TASK_EXIST_ERROR : TFS_SUCCESS;
         if (TFS_SUCCESS == ret)
         {
-          std::vector<std::pair<ServerCollect*, bool> > success;
-          if (task->need_add_server_to_map())
+          Task* task = generation_(id, runer, type, priority);
+          assert(NULL != task);
+          res = block_to_tasks_.insert(BLOCK_TO_TASK::value_type(task->block_id_, task));
+          std::pair<PENDING_TASK_ITER, bool> rs = pending_queue_.insert(task);
+          ret = !rs.second ? EXIT_TASK_EXIST_ERROR : TFS_SUCCESS;
+          if (TFS_SUCCESS == ret)
           {
-            int8_t index = 0;
-            std::vector<ServerCollect*>::iterator it = task->runer_.begin();
-            for (; it != task->runer_.end() && TFS_SUCCESS == ret; ++it, ++index)
-            {
-              if (task->type_ != PLAN_TYPE_COMPACT)
-              {
-                std::pair<MACHINE_TO_TASK_ITER, bool> mrs;
-                uint64_t machine_ip = ((*it)->id() & 0xFFFFFFFF);
-                MACHINE_TO_TASK_ITER mit = machine_to_tasks_.find(machine_ip);
-                if (machine_to_tasks_.end() == mit)
-                {
-                  mrs = machine_to_tasks_.insert(MACHINE_TO_TASK::value_type(machine_ip, Machine()));
-                  mit = mrs.first;
-                }
-                ret = mit->second.add((*it)->id(), task, is_target(index));
-              }
-              else
-              {
-                SERVER_TO_TASK_ITER mit = server_to_tasks_.find((*it)->id());
-                ret = server_to_tasks_.end() == mit ? TFS_SUCCESS : EXIT_TASK_EXIST_ERROR;
-                if (TFS_SUCCESS == ret)
-                  server_to_tasks_.insert(SERVER_TO_TASK::value_type((*it)->id(), task));
-              }
-              if (TFS_SUCCESS == ret)
-                 success.push_back(std::pair<ServerCollect*, bool>((*it), is_target(index)));
-            }
-          }
-
-          //rollback
-          if (TFS_SUCCESS != ret)
-          {
-            pending_queue_.erase(task);
+            std::vector<std::pair<ServerCollect*, bool> > success;
             if (task->need_add_server_to_map())
             {
-              std::vector<std::pair<ServerCollect*, bool> >::iterator it;
-              for (it = success.begin(); it != success.end(); ++it)
+              int8_t index = 0;
+              std::vector<ServerCollect*>::iterator it = task->runer_.begin();
+              for (; it != task->runer_.end() && TFS_SUCCESS == ret; ++it, ++index)
               {
                 if (task->type_ != PLAN_TYPE_COMPACT)
-                  remove_(it->first->id(), it->second);
+                {
+                  std::pair<MACHINE_TO_TASK_ITER, bool> mrs;
+                  uint64_t machine_ip = ((*it)->id() & 0xFFFFFFFF);
+                  MACHINE_TO_TASK_ITER mit = machine_to_tasks_.find(machine_ip);
+                  if (machine_to_tasks_.end() == mit)
+                  {
+                    mrs = machine_to_tasks_.insert(MACHINE_TO_TASK::value_type(machine_ip, Machine()));
+                    mit = mrs.first;
+                  }
+                  ret = mit->second.add((*it)->id(), task, is_target(index));
+                }
                 else
-                  server_to_tasks_.erase(it->first->id());
+                {
+                  SERVER_TO_TASK_ITER mit = server_to_tasks_.find((*it)->id());
+                  ret = server_to_tasks_.end() == mit ? TFS_SUCCESS : EXIT_TASK_EXIST_ERROR;
+                  if (TFS_SUCCESS == ret)
+                    server_to_tasks_.insert(SERVER_TO_TASK::value_type((*it)->id(), task));
+                }
+                if (TFS_SUCCESS == ret)
+                   success.push_back(std::pair<ServerCollect*, bool>((*it), is_target(index)));
+              }
+            }
+
+            //rollback
+            if (TFS_SUCCESS != ret)
+            {
+              pending_queue_.erase(task);
+              if (task->need_add_server_to_map())
+              {
+                std::vector<std::pair<ServerCollect*, bool> >::iterator it;
+                for (it = success.begin(); it != success.end(); ++it)
+                {
+                  if (task->type_ != PLAN_TYPE_COMPACT)
+                    remove_(it->first->id(), it->second);
+                  else
+                    server_to_tasks_.erase(it->first->id());
+                }
               }
             }
           }
-        }
 
-        if (TFS_SUCCESS != ret)
-        {
-          task->dump(TBSYS_LOG_LEVEL_WARN, "add task failed, rollback");
-          block_to_tasks_.erase(res.first);
-          manager_.get_gc_manager().add(task);
-        }
-        else
-        {
-          task->seqno_ = ++seqno_;
-          tasks_.insert(TASKS::value_type(task->seqno_, task));
+          if (TFS_SUCCESS != ret)
+          {
+            task->dump(TBSYS_LOG_LEVEL_WARN, "add task failed, rollback");
+            block_to_tasks_.erase(res.first);
+            manager_.get_gc_manager().add(task);
+          }
+          else
+          {
+            task->seqno_ = ++seqno_;
+            tasks_.insert(TASKS::value_type(task->seqno_, task));
+          }
         }
       }
       return ret;

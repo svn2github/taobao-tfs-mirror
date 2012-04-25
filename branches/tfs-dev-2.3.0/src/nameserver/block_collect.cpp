@@ -58,14 +58,20 @@ namespace tfs
     {
       master = false;
       writable  = false;
+      bool complete = false;
       bool ret = server != NULL;
       if (ret)
       {
         //dump(TBSYS_LOG_LEVEL(DEBUG));
         writable = !is_full();
-        ServerCollect** result = get_(server);
+        ServerCollect** result = get_(server);//get server by pointer
         if (NULL == result)//not found
         {
+          result = get_(server, false);//get server by id
+          //根据ID能查询到Server结构，说明这个Server才下线不久又上线了，Block与这个Server的关系
+          //还没有解除，有可能是遗漏了，需要等待GC进回调清理,这里我们可以解简单的先进行清理
+          if (NULL != result)
+            *result = NULL;
           int8_t index = 0;
           int8_t random_index = random() % SYSPARAM_NAMESERVER.max_replication_;
           //TBSYS_LOG(DEBUG, "random_index : %d, servers_size: %d", random_index, get_servers_size());
@@ -74,12 +80,16 @@ namespace tfs
             index = random_index % SYSPARAM_NAMESERVER.max_replication_;
             if (servers_[index] == NULL)
             {
+              complete = true;
               servers_[index] = const_cast<ServerCollect*>(server);
               break;
             }
           }
         }
-        master = is_master(server);
+        if (complete)
+          master = is_master(server);
+        else
+          ret = false;
       }
       return ret;
     }
@@ -88,7 +98,7 @@ namespace tfs
     {
       update_last_time(now);
       ServerCollect** result = get_(server);
-      if ((NULL != result) && (server == *result))
+      if ((NULL != result) && (NULL != server))
         *result = NULL;
       return true;
     }
@@ -106,7 +116,8 @@ namespace tfs
 
     bool BlockCollect::is_master(const ServerCollect* const server) const
     {
-      return ((NULL != server) && (NULL != servers_[0])) ? servers_[0]->id() == server->id() : false;
+      ServerCollect* first = servers_[0];
+      return ((NULL != server) && (NULL != first)) ? first->id() == first->id() : false;
     }
 
     bool BlockCollect::is_writable() const
@@ -155,9 +166,10 @@ namespace tfs
     }
 
     bool BlockCollect::check_version(LayoutManager& manager, common::ArrayHelper<ServerCollect*>& removes,
-        std::vector<uint32_t>& self_expires, common::ArrayHelper<ServerCollect*>& other_expires, const ServerCollect* server,
+        bool& expire_self, common::ArrayHelper<ServerCollect*>& other_expires, const ServerCollect* server,
         const int8_t role, const bool isnew, const common::BlockInfo& info, const time_t now)
     {
+      expire_self = false;
       bool ret = NULL != server && info_.block_id_ == info.block_id_;
       if (ret)
       {
@@ -165,14 +177,16 @@ namespace tfs
         ret = NULL == result;
         if (ret)
         {
+          result = get_(server, false);
+          if (NULL != result)//这里处理方式和add一样
+            *result = NULL;
           int8_t size = get_servers_size();
           if (size >= SYSPARAM_NAMESERVER.max_replication_)
           {
             if ((info_.file_count_ > info.file_count_)
                 || (info_.size_ != info.size_))
             {
-              if (role == NS_ROLE_MASTER)
-                self_expires.push_back(info.block_id_);
+              expire_self = (role == NS_ROLE_MASTER);
               ret = false;
             }
             else
@@ -188,8 +202,7 @@ namespace tfs
               if (server == result)
               {
                 ret = false;
-                if (role == NS_ROLE_MASTER)//i'm master, we're going to expire blocks
-                  self_expires.push_back(info.block_id_);
+                expire_self = (role == NS_ROLE_MASTER);//i'm master, we're going to expire blocks
               }
               else
               {
@@ -220,8 +233,7 @@ namespace tfs
                   TBSYS_LOG(INFO, "block: %u in dataserver: %s version error %d:%d",
                       info.block_id_, tbsys::CNetUtil::addrToString(server->id()).c_str(),
                       info_.version_, info.version_);
-                  if (role == NS_ROLE_MASTER)
-                    self_expires.push_back(info.block_id_);
+                  expire_self = (role == NS_ROLE_MASTER);
                   ret = false;
                 }
                 else //we'll accept current version
@@ -293,9 +305,7 @@ namespace tfs
         }
         else if (size < SYSPARAM_NAMESERVER.max_replication_)
         {
-          float ratio = 1.0f - static_cast<float>(size) / static_cast<float>(SYSPARAM_NAMESERVER.max_replication_);
-          if ((last_update_time_ + SYSPARAM_NAMESERVER.replicate_wait_time_ <= now)
-             && ratio > 0.00)
+          if (last_update_time_ + SYSPARAM_NAMESERVER.replicate_wait_time_ <= now)
           {
             TBSYS_LOG(INFO, "replicate block: %u", info_.block_id_);
             priority = PLAN_PRIORITY_NORMAL;
@@ -405,7 +415,7 @@ namespace tfs
       return size;
     }
 
-    ServerCollect** BlockCollect::get_(const ServerCollect* const server) const
+    ServerCollect** BlockCollect::get_(const ServerCollect* const server, const bool pointer) const
     {
       ServerCollect** result = NULL;
       if (NULL != server)
@@ -414,8 +424,16 @@ namespace tfs
         for (int8_t i = 0; i < SYSPARAM_NAMESERVER.max_replication_ && NULL == result; ++i)
         {
           current = servers_[i];
-          if (NULL != current && current->id() == server->id())
-            result = &servers_[i];
+          if (pointer)
+          {
+            if (NULL != current && current == server)
+              result = &servers_[i];
+          }
+          else
+          {
+            if (NULL != current && current->id() == server->id())
+              result = &servers_[i];
+          }
         }
       }
       return result;

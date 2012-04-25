@@ -96,11 +96,15 @@ namespace tfs
         typedef tbutil::Handle<CheckThreadHelper> CheckThreadHelperPtr;
       private:
         int keepalive_(common::BasePacket* message);
-        int keepalive_(int32_t& sleep_time, NsRuntimeGlobalInformation& ngi, const time_t now);
+        int keepalive_(int32_t& sleep_time, NsKeepAliveType& type, NsRuntimeGlobalInformation& ngi, const time_t now);
         void check_();
         bool check_vip_(const NsRuntimeGlobalInformation& ngi) const;
         int ns_role_establish_(NsRuntimeGlobalInformation& ngi, const time_t now);
+        int establish_peer_role_(NsRuntimeGlobalInformation& ngi);
         int ns_check_lease_expired_(NsRuntimeGlobalInformation& ngi, const time_t now);
+
+        void switch_role_master_to_slave_(NsRuntimeGlobalInformation& ngi, const time_t now);
+        void switch_role_salve_to_master_(NsRuntimeGlobalInformation& ngi, const time_t now);
 
         int keepalive_in_heartbeat_(common::BasePacket* message);
       private:

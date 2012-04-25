@@ -322,7 +322,7 @@ namespace tfs
       return TFS_SUCCESS;
     }
 
-    bool ServerCollect::touch(bool& promote, int32_t& count, const int64_t average_used_capacity)
+    bool ServerCollect::touch(bool& promote, int32_t& count, const double average_used_capacity)
     {
       bool ret = ((is_report_block_complete() || promote) && !is_full() && count > 0);
       if (!ret)
@@ -350,6 +350,8 @@ namespace tfs
           else
           {
             int32_t actual = 0;
+            double use_capacity_ratio = use_capacity_ / total_capacity_;
+            double max_average_use_capacity_ratio = average_used_capacity * AVERAGE_USED_CAPACITY_MULTIPLE;
             BlockCollect* block = NULL;
             TfsVector<BlockCollect*>::iterator where;
             while ((!writable_->empty())
@@ -389,10 +391,15 @@ namespace tfs
               writable_->erase(block);
             }
 
-            if (!is_full() && (use_capacity_ < (average_used_capacity * AVERAGE_USED_CAPACITY_MULTIPLE)))
+            if (!is_full() && ((use_capacity_ratio < max_average_use_capacity_ratio)
+                              || max_average_use_capacity_ratio <= PERCENTAGE_MIN))
+            {
               count -= actual;
+            }
             else
+            {
               count = 0;
+            }
           }
         }
       }
