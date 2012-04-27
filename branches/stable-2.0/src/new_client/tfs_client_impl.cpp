@@ -1491,7 +1491,7 @@ TfsFile* TfsClientImpl::get_file(const int fd)
   FILE_MAP::iterator it = tfs_file_map_.find(fd);
   if (tfs_file_map_.end() == it)
   {
-    TBSYS_LOG(ERROR, "invaild fd: %d", fd);
+    TBSYS_LOG(ERROR, "invaild fd, ret: %d", fd);
     return NULL;
   }
   return it->second;

@@ -844,7 +844,8 @@ int TfsSession::get_cluster_group_count_from_ns()
       }
       else
       {
-        TBSYS_LOG(ERROR, "get cluster group count from nameserver fail. cluster group count: %d", ret);
+        TBSYS_LOG(WARN, "get cluster group count from nameserver fail.");
+        return DEFAULT_CLUSTER_GROUP_COUNT;
       }
     }
   }
@@ -884,7 +885,8 @@ int TfsSession::get_cluster_group_seq_from_ns()
       }
       else
       {
-        TBSYS_LOG(ERROR, "get cluster group seq from nameserver fail. cluster group seq: %d", ret);
+        TBSYS_LOG(WARN, "get cluster group seq from nameserver fail.");
+        return DEFAULT_CLUSTER_GROUP_SEQ;
       }
     }
   }

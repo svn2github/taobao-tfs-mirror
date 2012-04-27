@@ -173,7 +173,6 @@ namespace tfs
         name_meta_client_ = new NameMetaClient();
         if (TFS_SUCCESS == ret)
         {
-          TBSYS_LOG(DEBUG, "next TfsClientImpl will initialize NewClientManager");
           ret = TfsClientImpl::Instance()->initialize(NULL, cache_times, cache_items, true);
         }
         TBSYS_LOG(DEBUG, "TfsClientImpl::Instance()->initialize ret %d", ret);
@@ -192,12 +191,6 @@ namespace tfs
         }
         TBSYS_LOG(DEBUG, "login ret %d", ret);
 
-        // confirm NewClientManager is instanced by TfsClientImpl not by NameMetaClientImpl
-        if (NewClientManager::get_instance().is_init())
-        {
-          TBSYS_LOG(DEBUG, "NewClientManager is initialized by TfsClientImpl");
-        }
-
         if (TFS_SUCCESS == ret)
         {
           session_base_info_.client_version_ = RC_CLIENT_VERSION;
@@ -214,7 +207,6 @@ namespace tfs
           }
           else
           {
-            //TBSYS_LOG(DEBUG, "next NameMetaClient will initialize NewClientManager");
             name_meta_client_->initialize(base_info_.meta_root_server_);
           }
 #ifdef WITH_TAIR_CACHE
