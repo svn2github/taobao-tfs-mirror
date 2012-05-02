@@ -49,9 +49,6 @@ namespace tfs
           is_master_ = true;
         }
         file_queue_ = new FileQueue(mirror_dir_, queue_name);
-        file_queue_->load_queue_head();
-        file_queue_->initialize();
-
         if (type == SYNC_TO_TFS_MIRROR)
         {
           backup_ = new TfsMirrorBackup(*this, src_addr, dest_addr);
@@ -73,17 +70,25 @@ namespace tfs
       int32_t ret = (!src_addr_.empty() && !dest_addr_.empty()) ? TFS_SUCCESS : TFS_ERROR;
       if (TFS_SUCCESS == ret)
       {
-        need_sync_ = backup_ ? backup_->init() : false;
-        if (!need_sync_)
+        ret = file_queue_->load_queue_head();
+        if (TFS_SUCCESS == ret)
         {
-          ret = TFS_ERROR;
-        }
-        else
-        {
-          // master need to recover second queue for compatibility
-          if (is_master_)
+          ret = file_queue_->initialize();
+          if (TFS_SUCCESS == ret)
           {
-            ret = recover_second_queue();
+            need_sync_ = backup_ ? backup_->init() : false;
+            if (!need_sync_)
+            {
+              ret = TFS_ERROR;
+            }
+            else
+            {
+              // master need to recover second queue for compatibility
+              if (is_master_)
+              {
+                ret = recover_second_queue();
+              }
+            }
           }
         }
       }
@@ -107,6 +112,7 @@ namespace tfs
 
     int SyncBase::recover_second_queue()
     {
+      int ret = TFS_SUCCESS;
       // 1.check if secondqueue exist
       std::string queue_path = mirror_dir_ + "/secondqueue";
       if (!DirectoryOp::is_directory(queue_path.c_str()))
@@ -116,30 +122,36 @@ namespace tfs
 
       // 2.init FileQueue
       FileQueue* second_file_queue = new FileQueue(mirror_dir_, "secondqueue");
-      second_file_queue->load_queue_head();
-      second_file_queue->initialize();
-
-      // 3.move QueueItems from the 2nd queue to the 1st queue
-      int32_t item_count = 0;
-      while (!second_file_queue->empty())
+      ret = second_file_queue->load_queue_head();
+      if (TFS_SUCCESS == ret)
       {
-        QueueItem* item = NULL;
-        item = second_file_queue->pop(0);
-        if (NULL != item)
+        ret = second_file_queue->initialize();
+        if (TFS_SUCCESS == ret)
         {
-          file_queue_->push(&(item->data_[0]), item->length_);
-          free(item);
-          item = NULL;
-          item_count++;
+          // 3.move QueueItems from the 2nd queue to the 1st queue
+          int32_t item_count = 0;
+          while (!second_file_queue->empty())
+          {
+            QueueItem* item = NULL;
+            item = second_file_queue->pop(0);
+            if (NULL != item)
+            {
+              file_queue_->push(&(item->data_[0]), item->length_);
+              free(item);
+              item = NULL;
+              item_count++;
+            }
+          }
+          TBSYS_LOG(DEBUG, "recover %d queue items from the second file queue success", item_count);
+
+          // 4.delete FileQueue
+          tbsys::gDelete(second_file_queue);
+
+          // 5.remove secondqueue directory
+          ret = DirectoryOp::delete_directory_recursively(queue_path.c_str(), true) ? TFS_SUCCESS : TFS_ERROR;
         }
       }
-      TBSYS_LOG(DEBUG, "recover %d queue items from the second file queue success", item_count);
-
-      // 4.delete FileQueue
-      tbsys::gDelete(second_file_queue);
-
-      // 5.remove secondqueue directory
-      return DirectoryOp::delete_directory_recursively(queue_path.c_str(), true) ? TFS_SUCCESS : TFS_ERROR;
+      return ret;
     }
 
     int SyncBase::run_sync_mirror()
@@ -297,11 +309,7 @@ namespace tfs
       // endless retry if fail
       do
       {
-#if defined(TFS_GTEST)
-        ret = backup_->do_sync(sf, src_block_file_.c_str(), dest_block_file_.c_str());
-#else
         ret = backup_->do_sync(sf);
-#endif
         if (TFS_SUCCESS != ret)
         {
           // for invalid block, not retry

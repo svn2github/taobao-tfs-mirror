@@ -18,8 +18,6 @@
 #ifndef TFS_DATASERVER_SYNCBASE_H_
 #define TFS_DATASERVER_SYNCBASE_H_
 
-//#define TFS_GTEST
-
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -49,10 +47,6 @@ namespace tfs
         int disable_log();
         void set_pause(const int32_t v);
         int run_sync_mirror();
-#if defined(TFS_GTEST)
-        std::string src_block_file_;
-        std::string dest_block_file_;
-#endif
 
       private:
         SyncBase();
