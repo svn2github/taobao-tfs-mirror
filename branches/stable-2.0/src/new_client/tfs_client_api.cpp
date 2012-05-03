@@ -136,9 +136,14 @@ int32_t TfsClient::unlink_unique(int64_t& file_size, const char* file_name, cons
 }
 #endif
 
-void TfsClient::set_use_cache(const int32_t flag)
+void TfsClient::set_use_local_cache(const bool enable)
 {
-  return TfsClientImpl::Instance()->set_use_cache(flag);
+  return TfsClientImpl::Instance()->set_use_local_cache(enable);
+}
+
+void TfsClient::set_use_remote_cache(const bool enable)
+{
+  return TfsClientImpl::Instance()->set_use_remote_cache(enable);
 }
 
 void TfsClient::set_cache_items(const int64_t cache_items)

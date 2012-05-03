@@ -65,7 +65,8 @@ int clear_remote_block_cache(vector<string>& filename_list)
   // set remote cache info
   g_tfs_client->set_remote_cache_info(g_remote_cache_master_addr, g_remote_cache_slave_addr,
                                       g_remote_cache_group_name, g_remote_cache_area);
-  g_tfs_client->set_use_cache(USE_CACHE_FLAG_LOCAL|USE_CACHE_FLAG_REMOTE);
+  g_tfs_client->set_use_local_cache();
+  g_tfs_client->set_use_remote_cache();
 
   // do remove block cache stuff
   vector<string>::iterator iter = filename_list.begin();
