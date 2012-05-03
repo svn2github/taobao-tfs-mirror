@@ -79,54 +79,44 @@ namespace tfs
           break;
         }
 
-        TBSYS_LOG(INFO, "repl block blockid: %d", repl_block_queue_.front()->block_id_);
-        ReplBlock *b = repl_block_queue_.front();
+        ReplBlockExt b = repl_block_queue_.front();
+        TBSYS_LOG(INFO, "repl block blockid: %d", b.info_.block_id_);
         repl_block_queue_.pop_front();
-        replicating_block_map_[b->block_id_] = b;
+        replicating_block_map_[b.info_.block_id_] = b;
         repl_block_monitor_.unlock();
 
         //replicate
         int64_t start_time = Func::curr_time();
         int ret = replicate_block_to_server(b);
-        if (TFS_ERROR == send_repl_block_complete_info(ret, b))
-        {
-          //retry send
-          if (TFS_ERROR == send_repl_block_complete_info(ret, b))
-          {
-            TBSYS_LOG(INFO, "send ReplBlock completeinfo fail: %u", b->block_id_);
-          }
-        }
-
+        int result = send_repl_block_complete_info(ret, b);
         int64_t end_time = Func::curr_time();
-        TBSYS_LOG(INFO, "replicate %s blockid: %u, %s=>%s, cost time: %d (ms)", (ret ? "fail" : "success"),
-            b->block_id_, tbsys::CNetUtil::addrToString(b->source_id_).c_str(), tbsys::CNetUtil::addrToString(
-                b->destination_id_).c_str(), (end_time - start_time) / 1000);
+        TBSYS_LOG(INFO, "replicate %s blockid: %u, %s=>%s, cost time: %d (ms), commit: %s", (ret ? "fail" : "success"),
+            b.info_.block_id_, tbsys::CNetUtil::addrToString(b.info_.source_id_).c_str(), tbsys::CNetUtil::addrToString(
+                b.info_.destination_id_).c_str(), (end_time - start_time) / 1000, TFS_SUCCESS == result ? "successful" : "failed");
 
         repl_block_monitor_.lock();
-        replicating_block_map_.erase(b->block_id_);
+        replicating_block_map_.erase(b.info_.block_id_);
         repl_block_monitor_.unlock();
-
-        tbsys::gDelete(b);
       }
 
       repl_block_monitor_.lock();
       while (!repl_block_queue_.empty())
       {
-        ReplBlock* b = repl_block_queue_.front();
+        ReplBlockExt b = repl_block_queue_.front();
         repl_block_queue_.pop_front();
-        tbsys::gDelete(b);
       }
 
       repl_block_monitor_.unlock();
       return TFS_SUCCESS;
     }
 
-    int ReplicateBlock::send_repl_block_complete_info(const int status, const ReplBlock* b)
+    int ReplicateBlock::send_repl_block_complete_info(const int status, const ReplBlockExt& b)
     {
       ReplicateBlockMessage req_rb_msg;
       int ret = TFS_ERROR;
 
-      req_rb_msg.set_repl_block(b);
+      req_rb_msg.set_seqno(b.seqno_);
+      req_rb_msg.set_repl_block(&b.info_);
       if (TFS_SUCCESS == status)
       {
         req_rb_msg.set_command(PLAN_STATUS_END);
@@ -150,7 +140,7 @@ namespace tfs
           else
           {
             StatusMessage* sm = dynamic_cast<StatusMessage*> (rsp_msg);
-            if (b->is_move_ == REPLICATE_BLOCK_MOVE_FLAG_YES && STATUS_MESSAGE_REMOVE == sm->get_status())
+            if (b.info_.is_move_ == REPLICATE_BLOCK_MOVE_FLAG_YES && STATUS_MESSAGE_REMOVE == sm->get_status())
             {
               need_remove = true;
               ret = TFS_SUCCESS;
@@ -178,26 +168,26 @@ namespace tfs
 
       if (need_remove)
       {
-        int rm_ret = BlockFileManager::get_instance()->del_block(b->block_id_);
-        TBSYS_LOG(INFO, "send repl block complete info: del blockid: %u, result: %d\n", b->block_id_, rm_ret);
+        int rm_ret = BlockFileManager::get_instance()->del_block(b.info_.block_id_);
+        TBSYS_LOG(INFO, "send repl block complete info: del blockid: %u, result: %d\n", b.info_.block_id_, rm_ret);
       }
       return ret;
     }
 
     // replicate one block to other ds
-    int ReplicateBlock::replicate_block_to_server(const ReplBlock* b)
+    int ReplicateBlock::replicate_block_to_server(const ReplBlockExt& b)
     {
-      uint64_t ds_ip = b->destination_id_;
-      uint32_t block_id = b->block_id_;
+      uint64_t ds_ip = b.info_.destination_id_;
+      uint32_t block_id = b.info_.block_id_;
 
-      TBSYS_LOG(INFO, "replicating now, blockid: %u, %s = >%s\n", b->block_id_, tbsys::CNetUtil::addrToString(
-          b->source_id_).c_str(), tbsys::CNetUtil::addrToString(b->destination_id_).c_str());
+      TBSYS_LOG(INFO, "replicating now, blockid: %u, %s = >%s\n", block_id, tbsys::CNetUtil::addrToString(
+          b.info_.source_id_).c_str(), tbsys::CNetUtil::addrToString(ds_ip).c_str());
 
       LogicBlock* logic_block = BlockFileManager::get_instance()->get_logic_block(block_id);
       if (NULL == logic_block)
       {
-        TBSYS_LOG(ERROR, "block is not exist, blockid: %u, %s=>%s\n", b->block_id_, tbsys::CNetUtil::addrToString(
-            b->source_id_).c_str(), tbsys::CNetUtil::addrToString(b->destination_id_).c_str());
+        TBSYS_LOG(ERROR, "block is not exist, blockid: %u, %s=>%s\n", b.info_.block_id_, tbsys::CNetUtil::addrToString(
+            b.info_.source_id_).c_str(), tbsys::CNetUtil::addrToString(ds_ip).c_str());
         return TFS_ERROR;
       }
 
@@ -297,7 +287,7 @@ namespace tfs
         req_wib_msg.set_length(raw_meta_vec.size());
         req_wib_msg.set_raw_meta_list(&raw_meta_vec);
         req_wib_msg.set_block_info(logic_block->get_block_info());
-        if (COPY_BETWEEN_CLUSTER == b->server_count_)
+        if (COPY_BETWEEN_CLUSTER == b.info_.server_count_)
         {
           req_wib_msg.set_cluster(COPY_BETWEEN_CLUSTER);
         }
@@ -343,11 +333,11 @@ namespace tfs
       return ret;
     }
 
-    int ReplicateBlock::add_repl_task(ReplBlock* tmp_rep_blk)
+    int ReplicateBlock::add_repl_task(ReplBlockExt& tmp_rep_blk)
     {
       int repl_exist = 0;
       repl_block_monitor_.lock();
-      if (replicating_block_map_.find(tmp_rep_blk->block_id_) != replicating_block_map_.end())
+      if (replicating_block_map_.find(tmp_rep_blk.info_.block_id_) != replicating_block_map_.end())
       {
         repl_exist = 1;
       }
@@ -355,7 +345,7 @@ namespace tfs
       {
         for (uint32_t i = 0; i < repl_block_queue_.size(); ++i)
         {
-          if (repl_block_queue_[i]->block_id_ == tmp_rep_blk->block_id_)
+          if (repl_block_queue_[i].info_.block_id_ == tmp_rep_blk.info_.block_id_)
           {
             repl_exist = 1;
             break;
@@ -363,16 +353,12 @@ namespace tfs
         }
       }
 
-      TBSYS_LOG(DEBUG, "add repl task. blockid: %u, is exist: %d\n", tmp_rep_blk->block_id_, repl_exist);
+      TBSYS_LOG(DEBUG, "add repl task. blockid: %u, is exist: %d\n", tmp_rep_blk.info_.block_id_, repl_exist);
 
       if (0 == repl_exist)
       {
-        tmp_rep_blk->start_time_ = time(NULL);
+        tmp_rep_blk.info_.start_time_ = time(NULL);
         repl_block_queue_.push_back(tmp_rep_blk);
-      }
-      else
-      {
-        tbsys::gDelete(tmp_rep_blk);
       }
       repl_block_monitor_.unlock();
       repl_block_monitor_.lock();

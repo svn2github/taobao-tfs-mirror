@@ -1821,7 +1821,8 @@ namespace tfs
 
     int DataService::remove_block(RemoveBlockMessage* message)
     {
-      const VUINT32& remove_blocks = message->get_remove_blocks();
+      std::vector<uint32_t> remove_blocks;
+      remove_blocks.push_back(message->get());
       uint64_t peer_id = message->get_connection()->getPeerId();
 
       TBSYS_LOG(DEBUG, "remove block. peer id: %s", tbsys::CNetUtil::addrToString(peer_id).c_str());
@@ -1836,7 +1837,8 @@ namespace tfs
       if (common::REMOVE_BLOCK_RESPONSE_FLAG_YES == message->get_response_flag())
       {
         RemoveBlockResponseMessage* msg = new RemoveBlockResponseMessage();
-        msg->set_block_id(*(remove_blocks.begin()));
+        msg->set_seqno(message->get_seqno());
+        msg->set(message->get());
         message->reply(msg);
       }
       else
@@ -1853,15 +1855,16 @@ namespace tfs
         return TFS_ERROR;
       }
 
-      ReplBlock* b = new ReplBlock();
-      memcpy(b, message->get_repl_block(), sizeof(ReplBlock));
+      ReplBlockExt b;
+      b.seqno_ = message->get_seqno();
+      memcpy(&b.info_, message->get_repl_block(), sizeof(ReplBlock));
       uint64_t peer_id = message->get_connection()->getPeerId();
 
       TBSYS_LOG(
           INFO,
           "receive replicate command. blockid: %u, source_id: %s, destination_id: %s, server_count: %u, peer id: %s\n",
-          b->block_id_, tbsys::CNetUtil::addrToString(b->source_id_).c_str(), tbsys::CNetUtil::addrToString(
-              b->destination_id_).c_str(), b->server_count_, tbsys::CNetUtil::addrToString(peer_id).c_str());
+          b.info_.block_id_, tbsys::CNetUtil::addrToString(b.info_.source_id_).c_str(), tbsys::CNetUtil::addrToString(
+              b.info_.destination_id_).c_str(), b.info_.server_count_, tbsys::CNetUtil::addrToString(peer_id).c_str());
       repl_block_->add_repl_task(b);
 
       message->reply(new StatusMessage(STATUS_MESSAGE_OK));
@@ -1871,6 +1874,7 @@ namespace tfs
     int DataService::compact_block_cmd(CompactBlockMessage* message)
     {
       CompactBlkInfo* cblk = new CompactBlkInfo();
+      cblk->seqno_ = message->get_seqno();
       cblk->block_id_ = message->get_block_id();
       cblk->owner_ = message->get_owner();
       cblk->preserve_time_ = message->get_preserve_time();

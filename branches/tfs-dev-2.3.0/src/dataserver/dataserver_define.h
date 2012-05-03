@@ -233,13 +233,20 @@ namespace tfs
       time_t dead_time_;
     };
 
+    struct ReplBlockExt
+    {
+      common::ReplBlock info_;
+      int64_t seqno_;
+    };
+
     static const int32_t META_INFO_SIZE = sizeof(MetaInfo);
 
     typedef std::vector<MetaInfo> MetaInfoVec;
     typedef std::vector<MetaInfo>::iterator MetaInfoVecIter;
     typedef std::vector<MetaInfo>::const_iterator MetaInfoVecConstIter;
 
-    typedef __gnu_cxx::hash_map<uint32_t, common::ReplBlock*> ReplBlockMap; // blockid => replblock
+    typedef __gnu_cxx::hash_map<uint32_t, ReplBlockExt> ReplBlockMap; // blockid => replblock
+    //typedef __gnu_cxx::hash_map<uint32_t, common::ReplBlock*> ReplBlockMap; // blockid => replblock
     typedef ReplBlockMap::iterator ReplBlockMapIter;
     typedef __gnu_cxx::hash_map<uint32_t, ClonedBlock*> ClonedBlockMap; // blockid => ClonedBlock
     typedef ClonedBlockMap::iterator ClonedBlockMapIter;

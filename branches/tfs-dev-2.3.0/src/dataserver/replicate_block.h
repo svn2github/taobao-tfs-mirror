@@ -34,7 +34,7 @@ namespace tfs
         ~ReplicateBlock();
 
         void stop();
-        int add_repl_task(common::ReplBlock* repl_blk);
+        int add_repl_task(ReplBlockExt& repl_blk);
 
         int add_cloned_block_map(const uint32_t block_id);
         int del_cloned_block_map(const uint32_t block_id);
@@ -43,8 +43,8 @@ namespace tfs
 
       private:
         void init();
-        int replicate_block_to_server(const common::ReplBlock* b);
-        int send_repl_block_complete_info(const int status, const common::ReplBlock* b);
+        int replicate_block_to_server(const ReplBlockExt& b);
+        int send_repl_block_complete_info(const int status, const ReplBlockExt& b);
         int clear_cloned_block_map();
 
       private:
@@ -52,7 +52,7 @@ namespace tfs
         DISALLOW_COPY_AND_ASSIGN(ReplicateBlock);
 
         int stop_;
-        std::deque<common::ReplBlock*> repl_block_queue_; // repl block queue
+        std::deque<ReplBlockExt> repl_block_queue_; // repl block queue
         ReplBlockMap replicating_block_map_; // replicating
         tbutil::Monitor<tbutil::Mutex> repl_block_monitor_;
 

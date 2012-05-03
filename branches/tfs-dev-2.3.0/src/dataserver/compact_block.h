@@ -29,9 +29,10 @@ namespace tfs
 {
   namespace dataserver
   {
-    
+
     struct CompactBlkInfo
     {
+      int64_t seqno_;
       uint32_t block_id_;
       int32_t preserve_time_;
       int32_t owner_;
@@ -62,7 +63,7 @@ namespace tfs
         int clear_compact_block_map();
         int write_big_file(LogicBlock* src, LogicBlock* dest, const common::FileInfo& src_info,
             const common::FileInfo& dest_info, int32_t woffset);
-        int req_block_compact_complete(const uint32_t block_id, const int32_t success);
+        int req_block_compact_complete(const uint32_t block_id, const int32_t success, const int64_t seqno);
 
       private:
         DISALLOW_COPY_AND_ASSIGN(CompactBlock);

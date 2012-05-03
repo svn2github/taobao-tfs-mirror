@@ -91,7 +91,7 @@ namespace tfs
         // compact the first block
         int ret = real_compact(cpt_blk->block_id_);
         // send complete message
-        req_block_compact_complete(cpt_blk->block_id_, ret);
+        req_block_compact_complete(cpt_blk->block_id_, ret, cpt_blk->seqno_);
         // failed, clear compact files
         if (TFS_SUCCESS != ret)
         {
@@ -204,7 +204,7 @@ namespace tfs
       }
 
       TBSYS_LOG(DEBUG, "compact del old blockid: %u\n", block_id);
-      // del serve block 
+      // del serve block
       ret = BlockFileManager::get_instance()->del_block(block_id, C_COMPACT_BLOCK);
       if (TFS_SUCCESS != ret)
       {
@@ -215,7 +215,7 @@ namespace tfs
     }
 
     // send complete message to ns
-    int CompactBlock::req_block_compact_complete(const uint32_t block_id, const int32_t success)
+    int CompactBlock::req_block_compact_complete(const uint32_t block_id, const int32_t success, const int64_t seqno)
     {
       LogicBlock* LogicBlock = BlockFileManager::get_instance()->get_logic_block(block_id);
       if (NULL == LogicBlock)
@@ -231,6 +231,7 @@ namespace tfs
       {
         compact_status = COMPACT_STATUS_FAILED;
       }
+      req_cbc_msg.set_seqno(seqno);
       req_cbc_msg.set_success(compact_status);
       req_cbc_msg.set_server_id(dataserver_id_);
       BlockInfo* blk = LogicBlock->get_block_info();
@@ -323,7 +324,7 @@ namespace tfs
 
         FileInfo dfinfo = *pfinfo;
         dfinfo.offset_ = w_file_offset;
-        // the size returned by FileIterator.current_file_info->size is 
+        // the size returned by FileIterator.current_file_info->size is
         // the size of file content!!!
         dfinfo.size_ = pfinfo->size_ + sizeof(FileInfo);
         dfinfo.usize_ = pfinfo->size_ + sizeof(FileInfo);
