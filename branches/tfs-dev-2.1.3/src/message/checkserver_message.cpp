@@ -9,7 +9,7 @@
  * Version: $Id: dataserver_message.cpp 706 2012-04-12 14:24:41Z linqing.zyd@taobao.com $
  *
  * Authors:
- *   duolong <duolong@taobao.com>
+ *   linqing <linqing.zyd@taobao.com>
  *      - initial release
  *
  */

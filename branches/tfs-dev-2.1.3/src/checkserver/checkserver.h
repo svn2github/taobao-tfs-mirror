@@ -9,7 +9,7 @@
  * Version: $Id: checkserver.h 746 2012-04-13 13:09:59Z linqing.zyd@taobao.com $
  *
  * Authors:
- *   duolong <duolong@taobao.com>
+ *   linqing <linqing.zyd@taobao.com>
  *      - initial release
  *
  */
@@ -31,11 +31,17 @@ namespace tfs
 {
   namespace checkserver
   {
-    class BlockDiff
-    {
-      public:
 
-   };
+    /**
+     * @brief Compare block result type
+     */
+    enum CompType
+    {
+      BLK_SAME,
+      BLK_SIZE,
+      BLK_DIFF,
+      BLK_ERROR,
+    };
 
     /**
      * @brief check dataserver thread
@@ -50,15 +56,14 @@ namespace tfs
           result_map_lock_ = result_map_lock;
         }
 
-        ~CheckThread()
+        virtual ~CheckThread()
         {
-
         }
 
         /**
          * @brief thread loop
          */
-        void run();
+        virtual void run();
 
         /**
          * @brief check all ds i hold
@@ -121,7 +126,8 @@ namespace tfs
     {
       public:
         CheckServer(): master_ns_id_(0), slave_ns_id_(0), thread_count_(0),
-          check_interval_(0), last_check_time_(0), meta_fd_(-1),
+          check_interval_(0), overlap_check_time_(0), block_stable_time_(0),
+          last_check_time_(0), meta_fd_(-1),
           master_fp_(NULL), slave_fp_(NULL), stop_(false)
         {
 
@@ -132,9 +138,9 @@ namespace tfs
           if (meta_fd_ >= 0)
           {
             close(meta_fd_);
+            meta_fd_ = -1;
           }
         }
-
 
         /**
          * @brief init check server
@@ -180,7 +186,7 @@ namespace tfs
         *
         * @return
         */
-        int recheck_block(const VUINT& recheck_block);
+        void recheck_block(const VUINT& recheck_block);
 
       private:
 
@@ -197,7 +203,7 @@ namespace tfs
         *
         * @return
         */
-        int update_meta();
+        void update_meta();
 
         /**
          * @brief init log file
@@ -231,44 +237,35 @@ namespace tfs
          *
          * @return
          */
-        int close_file();
-
-
-        /**
-         * @brief check blocks in cluster
-         *
-         * @param ns_id: cluster ns id
-         * @param block_result: result map
-         */
-        void diff_blocks_in_cluster(const uint64_t ns_id, const CheckBlockInfoMap& block_result);
+        void close_file();
 
         /**
-         * @brief diff logic block in cluster
-         *
-         * @param master_ns_id: block in which cluter, 0 notes between cluster
-         * @param block_result: result to be checked
-         */
-        void diff_logic_block(const uint64_t master_ns_id, const CheckBlockInfoVec& block_result,
-            const bool in_cluter = true, const uint64_t slave_ns_id = 0);
+        * @brief compare block
+        *
+        * @param left: left object
+        * @param right: right object
+        *
+        * @return -1: invalid, 0 same, 1 not same
+        */
+        CompType compare_block(const CheckBlockInfo& left, const CheckBlockInfo& right);
 
-        /**
+         /**
          * @brief diff block between cluster
          *
-         * @param master_ns_id: master ip&port
          * @param master_result: master result
-         * @param slave_ns_id: slave ip&port
          * @param slave_result: slave result
+         * @param recheck_list: blocks need to recheck
          */
-        void diff_blocks_between_cluster(
-            const uint64_t master_ns_id, CheckBlockInfoMap& master_result,
-            const uint64_t slave_ns_id, CheckBlockInfoMap& slave_result,
-            common::VUINT& recheck_list);
+        void compare_cluster(CheckBlockInfoMap& master_result,
+            CheckBlockInfoMap& slave_result, common::VUINT& recheck_list);
 
       private:
         uint64_t master_ns_id_;
         uint64_t slave_ns_id_;
         int thread_count_;
         int check_interval_;
+        int overlap_check_time_;
+        int block_stable_time_;
         uint32_t last_check_time_;
         int32_t meta_fd_;
         FILE* master_fp_;

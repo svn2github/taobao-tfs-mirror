@@ -232,8 +232,6 @@ namespace tfs
       object_clear_max_time_ = config.getInt(CONF_SN_DATASERVER, CONF_OBJECT_CLEAR_MAX_TIME, 300);
       if (object_clear_max_time_ <= 0)
         object_clear_max_time_ = 300;
-      // block stable time, default 5 min
-      block_stable_time_ = config.getInt(CONF_SN_DATASERVER, CONF_BLOCK_STABLE_TIME, 5);
       return SYSPARAM_FILESYSPARAM.initialize(index);
     }
 
@@ -455,10 +453,22 @@ namespace tfs
         return TFS_ERROR;
       }
 
-      check_interval_ = config.getInt(CONF_SN_CHECKSERVER, CONF_CHECK_INTERVAL, 3600);
+      // block stalbe time, default 5min
+      block_stable_time_ = config.getInt(CONF_SN_CHECKSERVER, CONF_BLOCK_STABLE_TIME, 5);
+
+      // default interval: 1 day
+      check_interval_ = config.getInt(CONF_SN_CHECKSERVER, CONF_CHECK_INTERVAL, 1440);
+
+      // default no overlap
+      overlap_check_time_ = config.getInt(CONF_SN_CHECKSERVER, CONF_OVERLAP_CHECK_TIME, 0);
+
+      // thread count to check dataserver
       thread_count_ = config.getInt(CONF_SN_CHECKSERVER, CONF_THREAD_COUNT, 1);
+
+      // cluster id
       cluster_id_ = config.getInt(CONF_SN_CHECKSERVER, CONF_CLUSTER_ID, 1);
 
+      // master and slave address info
       const char* master_ns_ip  = config.getString(CONF_SN_CHECKSERVER, CONF_MASTER_NS_IP, NULL);
       if (NULL == master_ns_ip)
       {

@@ -32,15 +32,6 @@ namespace tfs
     using namespace message;
     using namespace tbutil;
 
-    CheckBlock::CheckBlock()
-    {
-      block_stable_time_ = DataServerParameter::instance().block_stable_time_ * 60;
-    }
-
-    CheckBlock::~CheckBlock()
-    {
-
-    }
 
     void CheckBlock::add_check_task(const uint32_t block_id)
     {
@@ -48,10 +39,17 @@ namespace tfs
       ChangedBlockMapIter iter = changed_block_map_.find(block_id);
       if (iter == changed_block_map_.end())
       {
-        ChangedBlock* changed_block = new ChangedBlock();
-        changed_block->block_id_ = block_id;
-        changed_block->mod_time_ = time(NULL);
-        changed_block_map_.insert(ChangedBlockMap::value_type(block_id, changed_block));
+        ChangedBlock* changed_block = new(std::nothrow) ChangedBlock();
+        if (NULL == changed_block) // just ignore this change
+        {
+          TBSYS_LOG(WARN, "alloc memory fail.");
+        }
+        else
+        {
+          changed_block->block_id_ = block_id;
+          changed_block->mod_time_ = time(NULL);
+          changed_block_map_.insert(std::make_pair(block_id, changed_block));
+        }
       }
       else
       {
@@ -83,10 +81,9 @@ namespace tfs
       changed_block_mutex_.lock();
       for ( ; iter != changed_block_map_.end(); iter++)
       {
-        // check stable block, 5 min overlap
-        if (iter->second->mod_time_ < check_time - block_stable_time_ &&
-            (0 == last_check_time ||
-             iter->second->mod_time_ >= last_check_time - block_stable_time_ - 300))
+
+        if (iter->second->mod_time_ < check_time &&
+            iter->second->mod_time_ >= last_check_time)
         {
           should_check_blocks.push_back(iter->second->block_id_);
         }
@@ -105,6 +102,8 @@ namespace tfs
            check_result.push_back(result);
          }
       }
+
+      // TODO: recheck block
 
       return TFS_SUCCESS;
     }
@@ -132,25 +131,27 @@ namespace tfs
         logic_block->unlock();
         result.block_id_ = block_id;       // block id
         result.version_ = bi->version_;     // version
-        result.file_count_ = meta_infos.size();
+        result.file_count_ = 0;
         result.total_size_ = 0;
         FileInfo fi;
         for (meta_it = meta_infos.begin(); meta_it != meta_infos.end(); meta_it++)
         {
-          if (0 != check_flag)
+          if (0 != check_flag) // check in detail
           {
             int32_t size = sizeof(FileInfo);
             if (TFS_SUCCESS == logic_block->read_raw_data((char*)&fi, size, meta_it->get_offset()))
             {
               // not a deleted file
-              if (0 != (fi.flag_ & FI_DELETED))
+              if (0 == (fi.flag_ & FI_DELETED))
               {
+                result.file_count_++;
                 result.total_size_ += meta_it->get_size();
               }
             }
           }
           else // just check index
           {
+            result.file_count_++;
             result.total_size_ += meta_it->get_size();
           }
         }

@@ -9,7 +9,7 @@
  * Version: $Id: check_block.h 390 2012-04-12 13:58:49Z linqing.zyd@taobao.com $
  *
  * Authors:
- *   duolong <@taobao.com>
+ *   linqing <linqing.zyd@taobao.com>
  *      - initial release
  *
  */
@@ -38,12 +38,17 @@ namespace tfs
       /**
        * @brief construtor
        */
-       CheckBlock();
+       CheckBlock()
+       {
+
+       }
 
        /**
         * @brief destructor
         */
-       ~CheckBlock();
+       ~CheckBlock()
+       {
+       }
 
        /**
        * @brief add modified block

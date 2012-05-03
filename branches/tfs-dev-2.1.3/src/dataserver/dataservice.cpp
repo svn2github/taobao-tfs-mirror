@@ -1934,7 +1934,10 @@ namespace tfs
         {
           CheckBlockInfo cbi;
           ret = check_block_->check_one_block(block_id, cbi, message->get_check_flag());
-                  resp_cb_msg->get_result_ref().push_back(cbi);
+          if (TFS_SUCCESS == ret)
+          {
+            resp_cb_msg->get_result_ref().push_back(cbi);
+          }
         }
 
         if (TFS_SUCCESS == ret)

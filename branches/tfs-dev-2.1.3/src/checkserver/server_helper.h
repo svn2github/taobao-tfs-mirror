@@ -9,7 +9,7 @@
  * Version: $Id: server_helper.h 432 2012-04-13 22:06:11Z linqing.zyd@taobao.com $
  *
  * Authors:
- *   chuyu <chuyu@taobao.com>
+ *   linqing <linqing.zyd@taobao.com>
  *      - initial release
  *
  */
@@ -56,21 +56,6 @@ namespace tfs
    class ServerHelper
    {
      public:
-       static ServerHelper* get_instance()
-       {
-         if (NULL == server_helper_)
-         {
-           server_helper_ = new ServerHelper();
-         }
-         return server_helper_;
-       }
-
-       /**
-       * @brief initialize
-       *
-       * @return 0 on success
-       */
-       int init();
 
        /**
        * @brief get data server list
@@ -80,7 +65,7 @@ namespace tfs
        *
        * @return 0 on success
        */
-       int get_ds_list(const uint64_t ns_ip, common::VUINT64& ds_list);
+       static int get_ds_list(const uint64_t ns_ip, common::VUINT64& ds_list);
 
        /**
        * @brief check dataserver
@@ -90,7 +75,7 @@ namespace tfs
        *
        * @return
        */
-       int check_ds(const uint64_t ds_id, const uint32_t check_time,
+       static int check_ds(const uint64_t ds_id, const uint32_t check_time,
            const uint32_t last_check_time, common::CheckBlockInfoVec& check_result);
 
 
@@ -103,7 +88,7 @@ namespace tfs
        *
        * @return
        */
-       int get_block_ds_list(const uint64_t server_id, const uint32_t block_id, common::VUINT64& ds_list);
+      static int get_block_ds_list(const uint64_t server_id, const uint32_t block_id, common::VUINT64& ds_list);
 
       /**
       * @brief check logic block
@@ -114,18 +99,8 @@ namespace tfs
       *
       * @return
       */
-      int check_block(const uint64_t ns_id, const uint32_t block_id,
+      static int check_block(const uint64_t ns_id, const uint32_t block_id,
             common::CheckBlockInfo& check_result);
-
-      private:
-        ServerHelper();
-        virtual ~ServerHelper();
-        DISALLOW_COPY_AND_ASSIGN(ServerHelper);
-
-      private:
-       common::BasePacketFactory* factory_;
-       common::BasePacketStreamer* streamer_;
-       static ServerHelper* server_helper_;
    };
 
   }

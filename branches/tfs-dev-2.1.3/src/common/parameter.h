@@ -115,7 +115,6 @@ namespace tfs
       int32_t object_dead_max_time_;
       int32_t object_clear_max_time_;
       int32_t dump_stat_info_interval_;
-      int32_t block_stable_time_;
       static std::string get_real_file_name(const std::string& src_file,
           const std::string& index, const std::string& suffix);
       static int get_real_ds_port(const int ds_port, const std::string& index);
@@ -194,7 +193,9 @@ namespace tfs
 
     struct CheckServerParameter
     {
+      int32_t block_stable_time_;
       int32_t check_interval_;
+      int32_t overlap_check_time_;
       int32_t thread_count_;
       int32_t cluster_id_;
       uint64_t master_ns_id_;
