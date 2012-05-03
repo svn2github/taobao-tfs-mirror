@@ -636,7 +636,7 @@ error:
         snprintf(table, 256, "%s", "t_app_info");
         snprintf(sql, 1024, "select app_key, id, quto, cluster_group_id, "
             "app_name, app_owner, report_interval, "
-            "need_duplicate, rem, UNIX_TIMESTAMP(modify_time) from %s", table);
+            "need_duplicate, rem, UNIX_TIMESTAMP(modify_time), use_remote_cache from %s", table);
         ret = mysql_query(&mysql_.mysql, sql);
         if (ret)
         {
@@ -669,6 +669,7 @@ error:
           tmp.need_duplicate_ = atoi(row[7]);
           snprintf(tmp.rem_, REM_LEN, "%s", row[8]);
           tmp.modify_time_ = atoi(row[9]);
+          tmp.use_remote_cache_ = atoi(row[10]);
           tmp.modify_time_ *= 1000 * 1000;
 
           outparam[tmp.id_] = tmp;

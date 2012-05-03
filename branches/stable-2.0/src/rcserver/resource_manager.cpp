@@ -278,6 +278,7 @@ EXIT:
         {
           base_info.report_interval_ = app_info.report_interval_;
           base_info.modify_time_ = modify_time;
+          base_info.use_remote_cache_ = app_info.use_remote_cache_;
           std::vector<ClusterRackData>::iterator it = base_info.cluster_infos_.begin();
           for (; it != base_info.cluster_infos_.end(); it++)
           {
