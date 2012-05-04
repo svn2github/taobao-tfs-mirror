@@ -58,7 +58,7 @@ namespace tfs
       int ret = RcHelper::keep_alive(rc_ip, ka_info, update_flag, new_base_info);
       if (TFS_SUCCESS == ret)
       {
-        TBSYS_LOG(DEBUG, "keep alive ok");
+        TBSYS_LOG(DEBUG, "keep alive ok, update flag: %d", update_flag);
         {
           tbsys::CThreadGuard mutex_guard(&rc_client_.mutex_);
           rc_client_.next_rc_index_ = 0;
@@ -70,6 +70,23 @@ namespace tfs
           last_report_interval = rc_client_.base_info_.report_interval_;
           rc_client_.base_info_ = new_base_info;
           rc_client_.calculate_ns_info(new_base_info);
+#ifdef WITH_TAIR_CACHE
+          std::vector<std::string> ns_cache_info;
+          common::Func::split_string(rc_client_.base_info_.ns_cache_info_.c_str(), ';', ns_cache_info);
+          if (ns_cache_info.size() == 4)
+          {
+            TfsClientImpl::Instance()->set_remote_cache_info(ns_cache_info[0].c_str(),
+                ns_cache_info[1].c_str(), ns_cache_info[2].c_str(),
+                atoi(ns_cache_info[3].c_str()));
+            TfsClientImpl::Instance()->set_use_remote_cache(rc_client_.base_info_.use_remote_cache_);
+          }
+          else
+          {
+            TBSYS_LOG(WARN, "invalid ns_cache_info(size: %d), remote cache will not initialize", ns_cache_info.size());
+            TfsClientImpl::Instance()->set_use_remote_cache(false);
+          }
+#endif
+          rc_client_.session_base_info_.modify_time_ = rc_client_.base_info_.modify_time_;
         }
         if (update_flag && last_report_interval != new_base_info.report_interval_)
         {
@@ -173,7 +190,6 @@ namespace tfs
         name_meta_client_ = new NameMetaClient();
         if (TFS_SUCCESS == ret)
         {
-          TBSYS_LOG(DEBUG, "next TfsClientImpl will initialize NewClientManager");
           ret = TfsClientImpl::Instance()->initialize(NULL, cache_times, cache_items, true);
         }
         TBSYS_LOG(DEBUG, "TfsClientImpl::Instance()->initialize ret %d", ret);
@@ -192,12 +208,6 @@ namespace tfs
         }
         TBSYS_LOG(DEBUG, "login ret %d", ret);
 
-        // confirm NewClientManager is instanced by TfsClientImpl not by NameMetaClientImpl
-        if (NewClientManager::get_instance().is_init())
-        {
-          TBSYS_LOG(DEBUG, "NewClientManager is initialized by TfsClientImpl");
-        }
-
         if (TFS_SUCCESS == ret)
         {
           session_base_info_.client_version_ = RC_CLIENT_VERSION;
@@ -214,7 +224,6 @@ namespace tfs
           }
           else
           {
-            //TBSYS_LOG(DEBUG, "next NameMetaClient will initialize NewClientManager");
             name_meta_client_->initialize(base_info_.meta_root_server_);
           }
 #ifdef WITH_TAIR_CACHE
@@ -225,10 +234,12 @@ namespace tfs
             TfsClientImpl::Instance()->set_remote_cache_info(ns_cache_info[0].c_str(),
                 ns_cache_info[1].c_str(), ns_cache_info[2].c_str(),
                 atoi(ns_cache_info[3].c_str()));
+            TfsClientImpl::Instance()->set_use_remote_cache(base_info_.use_remote_cache_);
           }
           else
           {
             TBSYS_LOG(WARN, "invalid ns_cache_info(size: %d), remote cache will not initialize", ns_cache_info.size());
+            TfsClientImpl::Instance()->set_use_remote_cache(false);
           }
 #endif
           keepalive_timer_->scheduleRepeated(stat_update_task_,

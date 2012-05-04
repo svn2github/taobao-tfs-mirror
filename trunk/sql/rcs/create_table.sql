@@ -57,6 +57,7 @@ CREATE TABLE t_app_info (
   id INT,
   quto BIGINT,
   cluster_group_id INT,
+  use_remote_cache INT default 0,
   app_name VARCHAR(255) NOT NULL,
   app_owner VARCHAR(255),
   report_interval INT,

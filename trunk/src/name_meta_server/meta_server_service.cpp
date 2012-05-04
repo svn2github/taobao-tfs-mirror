@@ -35,6 +35,7 @@ namespace tfs
     MetaServerService::MetaServerService():
       heart_manager_(bucket_manager_,store_manager_)
     {
+      memset(stat_, 0, sizeof(stat_));
     }
 
     MetaServerService::~MetaServerService()
@@ -1647,7 +1648,8 @@ namespace tfs
           stat_[STAT_READ_FILE], stat_[STAT_WRITE_FILE],
           stat_[STAT_RM_DIR], stat_[STAT_RM_FILE]);
 
-          stat_[STAT_CREATE_DIR] = 0;
+          memset(stat_, 0, sizeof(stat_));
+          /*stat_[STAT_CREATE_DIR] = 0;
           stat_[STAT_CREATE_FILE] = 0;
           stat_[STAT_MV_DIR] = 0;
           stat_[STAT_MV_FILE] = 0;
@@ -1656,7 +1658,7 @@ namespace tfs
           stat_[STAT_READ_FILE] = 0;
           stat_[STAT_WRITE_FILE] = 0;
           stat_[STAT_RM_DIR] = 0;
-          stat_[STAT_RM_FILE] = 0;
+          stat_[STAT_RM_FILE] = 0;*/
     }
     void MetaServerService::GcTimerTask::runTimerTask()
     {

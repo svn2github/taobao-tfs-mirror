@@ -320,7 +320,6 @@ namespace tfs
         int64_t total_length = 0;
         FileInfo finfo;
 
-        //logic_block->rlock();
         ret = logic_block->read_file(file_id, data, length, offset, READ_DATA_OPTION_FLAG_FORCE/*READ_DATA_OPTION_FLAG_NORMAL*/);//read first data & fileinfo
         if (TFS_SUCCESS != ret)
         {
@@ -434,7 +433,6 @@ namespace tfs
           }
         }
 
-        //logic_block->unlock();
         if (TFS_SUCCESS != ret)
         {
           // if file is local deleted or not exists, need not sync
@@ -481,7 +479,8 @@ namespace tfs
               if (TFS_SUCCESS == ret)
               {
                 ret = tfs_client_->unlink(file_size, fsname.get_name(), NULL, dest_addr_, action, TFS_FILE_NO_SYNC_LOG);
-                if (EXIT_META_NOT_FOUND_ERROR == ret) // deleted file
+                // must be file not found in src
+                if (EXIT_META_NOT_FOUND_ERROR == ret)
                 {
                   ret = TFS_SUCCESS;
                 }

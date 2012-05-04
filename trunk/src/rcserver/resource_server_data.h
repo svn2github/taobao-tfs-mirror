@@ -121,6 +121,7 @@ namespace tfs
       int64_t quto_;
       int32_t id_;
       int32_t cluster_group_id_;
+      int32_t use_remote_cache_;
       int32_t report_interval_;
       int32_t need_duplicate_;
       int64_t modify_time_;
@@ -133,6 +134,7 @@ namespace tfs
         quto_ = -1;
         id_ = -1;
         cluster_group_id_ = -1;
+        use_remote_cache_ = 0;
         report_interval_ = -1;
         need_duplicate_ = -1;
         modify_time_ = -1;

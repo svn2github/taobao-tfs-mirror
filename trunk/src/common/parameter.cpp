@@ -56,6 +56,7 @@ namespace tfs
 
     int NameServerParameter::initialize(void)
     {
+      dispatch_oplog_ = 0;
       discard_max_count_ = 0;
       report_block_time_interval_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_REPORT_BLOCK_TIME_INTERVAL, 1);
       report_block_time_interval_ = std::max(1, report_block_time_interval_);

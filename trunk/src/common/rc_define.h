@@ -77,7 +77,7 @@ namespace tfs
 
     struct BaseInfo
     {
-      BaseInfo() : report_interval_(0), modify_time_(0), meta_root_server_(0)
+      BaseInfo() : report_interval_(0), modify_time_(0), meta_root_server_(0), use_remote_cache_(0)
       {
       }
 
@@ -93,6 +93,7 @@ namespace tfs
       int64_t meta_root_server_;
       std::string ns_cache_info_;
       std::vector<ClusterData> cluster_infos_for_update_;
+      int32_t use_remote_cache_;
 
       BaseInfo& operator= (const BaseInfo& right)
       {
@@ -103,6 +104,7 @@ namespace tfs
         meta_root_server_ = right.meta_root_server_;
         ns_cache_info_ = right.ns_cache_info_;
         cluster_infos_for_update_ = right.cluster_infos_for_update_;
+        use_remote_cache_ = right.use_remote_cache_;
         return *this;
       }
     };

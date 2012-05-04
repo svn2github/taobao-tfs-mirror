@@ -56,6 +56,7 @@ namespace tfs
       int32_t max_task_in_machine_nums_;
       int32_t max_write_timeout_;
       int32_t cleanup_write_timeout_threshold_;
+      int32_t dispatch_oplog_;
       double  balance_percent_;
 
       static NameServerParameter ns_parameter_;

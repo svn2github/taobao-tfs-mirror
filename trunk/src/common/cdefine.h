@@ -31,6 +31,10 @@ static const int EXIT_INVALIDFD_ERROR = -1005;
 static const int32_t DEFAULT_BLOCK_CACHE_TIME = 1800;
 static const int32_t DEFAULT_BLOCK_CACHE_ITEMS = 500000;
 
+/* cluster group count and group seq default value */
+static const int32_t DEFAULT_CLUSTER_GROUP_COUNT = 1;
+static const int32_t DEFAULT_CLUSTER_GROUP_SEQ = 0;
+
 /* tfs file name standard name length */
 static const int32_t FILE_NAME_LEN = 18;
 static const int32_t TFS_FILE_LEN = FILE_NAME_LEN + 1;

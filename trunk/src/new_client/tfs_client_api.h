@@ -62,7 +62,8 @@ namespace tfs
                  const common::TfsUnlinkType action = common::DELETE,
                  const common::OptionFlag option_flag = common::TFS_FILE_DEFAULT_OPTION);
 
-      void set_use_cache(const int32_t flag);
+      void set_use_local_cache(const bool enable = true);
+      void set_use_remote_cache(const bool enable = true);
       void set_cache_items(const int64_t cache_items);
       int64_t get_cache_items() const;
 

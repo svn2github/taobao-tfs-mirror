@@ -593,9 +593,28 @@ int64_t TfsClientImpl::get_cache_time() const
   return ClientConfig::cache_time_;
 }
 
-void TfsClientImpl::set_use_cache(const int32_t flag)
+void TfsClientImpl::set_use_local_cache(const bool enable)
 {
-   ClientConfig::use_cache_ = flag;
+  if (enable)
+  {
+    ClientConfig::use_cache_ |= USE_CACHE_FLAG_LOCAL;
+  }
+  else
+  {
+    ClientConfig::use_cache_ &= ~USE_CACHE_FLAG_LOCAL;
+  }
+}
+
+void TfsClientImpl::set_use_remote_cache(const bool enable)
+{
+  if (enable)
+  {
+    ClientConfig::use_cache_ |= USE_CACHE_FLAG_REMOTE;
+  }
+  else
+  {
+    ClientConfig::use_cache_ &= ~USE_CACHE_FLAG_REMOTE;
+  }
 }
 
 void TfsClientImpl::insert_local_block_cache(const char* ns_addr, const uint32_t block_id,
@@ -1515,7 +1534,7 @@ TfsFile* TfsClientImpl::get_file(const int fd)
   FILE_MAP::iterator it = tfs_file_map_.find(fd);
   if (tfs_file_map_.end() == it)
   {
-    TBSYS_LOG(ERROR, "invaild fd: %d", fd);
+    TBSYS_LOG(ERROR, "invaild fd, ret: %d", fd);
     return NULL;
   }
   return it->second;

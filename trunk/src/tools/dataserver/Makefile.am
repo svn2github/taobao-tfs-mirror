@@ -56,4 +56,4 @@ recover_disk_data_to_cluster_SOURCES = recover_disk_data_to_cluster.cpp
 
 recover_sync_file_queue_SOURCES = recover_sync_file_queue.cpp
 
-gen_block_prefix_SOURCES = gen_block_prefix.cpp
+#test_load_SOURCES = test_load.cpp

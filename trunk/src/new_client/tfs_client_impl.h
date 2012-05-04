@@ -77,7 +77,8 @@ namespace tfs
       void set_cache_time(const int64_t cache_time);
       int64_t get_cache_time() const;
 
-      void set_use_cache(const int32_t flag = common::USE_CACHE_FLAG_LOCAL);
+      void set_use_local_cache(const bool enable = true);
+      void set_use_remote_cache(const bool enable = true);
      // for test
       void insert_local_block_cache(const char* ns_addr, const uint32_t block_id, const common::VUINT64& ds_list);
       void remove_local_block_cache(const char* ns_addr, const uint32_t block_id);
