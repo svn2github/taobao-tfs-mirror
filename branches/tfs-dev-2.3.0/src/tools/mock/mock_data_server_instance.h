@@ -60,6 +60,8 @@ namespace tfs
 
         int32_t get_ns_port() const;
 
+        std::string get_ns_vip() const;
+
         virtual const char* get_log_file_path();
 
         virtual const char* get_pid_file_path();
@@ -99,7 +101,7 @@ namespace tfs
 
         int callback(common::NewClient* client);
 
-        int keepalive();
+        int keepalive(const uint64_t server);
         bool insert(const BlockEntry& entry);
         bool remove(const uint32_t block);
         BlockEntry* get(const uint32_t block);
@@ -133,7 +135,8 @@ namespace tfs
         common::DataServerStatInfo information_;
         common::RWLock infor_mutex_;
 
-        uint64_t ns_ip_port_;
+        uint64_t ns_ip_port_[2];
+        uint64_t ns_vip_;
         int32_t MAX_WRITE_FILE_SIZE;
         int32_t  block_count;
         int32_t block_start;
@@ -144,12 +147,13 @@ namespace tfs
     class KeepaliveTimerTask: public tbutil::TimerTask
     {
       public:
-        KeepaliveTimerTask(MockDataService& instance);
+        KeepaliveTimerTask(MockDataService& instance, const uint64_t server);
         virtual ~KeepaliveTimerTask();
 
         void runTimerTask();
       private:
         MockDataService& instance_;
+        uint64_t server_;
     };
     typedef tbutil::Handle<KeepaliveTimerTask> KeepaliveTimerTaskPtr;
   }/** end namespace mock**/

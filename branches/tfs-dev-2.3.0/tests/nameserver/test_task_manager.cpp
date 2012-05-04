@@ -52,7 +52,6 @@ namespace tfs
           SYSPARAM_NAMESERVER.max_write_file_count_= 10;
           SYSPARAM_NAMESERVER.replicate_ratio_ = 50;
           SYSPARAM_NAMESERVER.object_dead_max_time_ = 1;
-          SYSPARAM_NAMESERVER.object_clear_max_time_ = 1;
           SYSPARAM_NAMESERVER.group_count_ = 1;
           SYSPARAM_NAMESERVER.group_seq_ = 0;
           SYSPARAM_NAMESERVER.max_task_in_machine_nums_ = 12;
@@ -366,7 +365,14 @@ namespace tfs
       }
       EXPECT_FALSE(manager_.get_task_manager().has_space_do_task_in_machine(BASE_SERVER_ID, true));
       EXPECT_FALSE(manager_.get_task_manager().has_space_do_task_in_machine(BASE_SERVER_ID, false));
-      TBSYS_LOG(DEBUG, "addr 255.255.255.250 === > %x", tbsys::CNetUtil::getAddr("255.255.255.250"));
+      uint32_t mask = tbsys::CNetUtil::getAddr("255.255.255.250");
+      uint32_t mask2 = Func::get_addr("255.255.255.250");
+      uint32_t ip = tbsys::CNetUtil::getAddr("172.24.80.0");
+      uint32_t ip2 = tbsys::CNetUtil::getAddr("172.24.80.1");
+      TBSYS_LOG(DEBUG, "addr 255.255.255.250 === > %u", mask);
+      TBSYS_LOG(DEBUG, "addr 255.255.255.250 === > %u", mask2);
+      TBSYS_LOG(DEBUG, "addr 172.24.80.1 === > %u", ip & mask);
+      TBSYS_LOG(DEBUG, "addr 172.24.80.2 === > %u", ip2 & mask);
     }
   }/** end namespace nameserver **/
 }/** end namespace tfs **/

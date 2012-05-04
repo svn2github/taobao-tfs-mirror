@@ -32,7 +32,7 @@ namespace tfs
   {
     std::string get_ns_ip_addr()
     {
-      return TBSYS_CONFIG.getString(CONF_SN_MOCK_DATASERVER, "ns_vip", "");
+      return TBSYS_CONFIG.getString(CONF_SN_MOCK_DATASERVER, CONF_IP_ADDR, "");
     }
     static FileInfo gfile_info;
     static const int8_t BUF_LEN = 32;
@@ -41,11 +41,12 @@ namespace tfs
     static int ns_async_callback(NewClient* client);
 
     MockDataService::MockDataService():
-      ns_ip_port_(0),
       MAX_WRITE_FILE_SIZE(0),
       block_count(0),
       block_start(0)
     {
+      ns_ip_port_[0] = 0,
+      ns_ip_port_[1] = 0,
       memset(&information_, 0, sizeof(information_));
       memset(&gfile_info, 0, sizeof(gfile_info));
       gfile_info.size_ = BUF_LEN;
@@ -103,8 +104,14 @@ namespace tfs
 
     int32_t MockDataService::get_ns_port() const
     {
-      int32_t port = TBSYS_CONFIG.getInt(CONF_SN_MOCK_DATASERVER, "ns_vip_port", -1);
+      int32_t port = TBSYS_CONFIG.getInt(CONF_SN_MOCK_DATASERVER, CONF_PORT, -1);
       return port <= 1024 || port > 65535 ? -1 : port;
+    }
+
+    #define CONF_NS_VIP "ns_vip"
+    std::string MockDataService::get_ns_vip() const
+    {
+      return TBSYS_CONFIG.getString(CONF_SN_MOCK_DATASERVER, CONF_NS_VIP, "");
     }
 
     const char* MockDataService::get_log_file_path()
@@ -137,8 +144,9 @@ namespace tfs
       return log_file_path;
     }
 
-    int MockDataService::keepalive()
+    int MockDataService::keepalive(const uint64_t server)
     {
+      const int32_t TIMEOUT_MS = 1500;
       information_.current_time_ = time(NULL);
       information_.current_load_ = Func::get_load_avg();
       information_.block_count_  = blocks_.size();
@@ -146,7 +154,7 @@ namespace tfs
       msg.set_ds(&information_);
       NewClient* client = NewClientManager::get_instance().create_client();
       tbnet::Packet* result = NULL;
-      int32_t ret = send_msg_to_server(ns_ip_port_, client, &msg, result);
+      int32_t ret = send_msg_to_server(server, client, &msg, result, TIMEOUT_MS);
       if (ret != TFS_SUCCESS)
       {
         TBSYS_LOG(WARN, "%s", "message is null or ret(%d) !=  TFS_SUCCESS");
@@ -227,7 +235,23 @@ namespace tfs
       int32_t ret = get_ns_port() > 0 ? TFS_SUCCESS : TFS_ERROR;
       if (TFS_SUCCESS == ret)
       {
-        ns_ip_port_ = tbsys::CNetUtil::strToAddr(get_ns_ip_addr().c_str(), get_ns_port());
+        std::vector <std::string> ips;
+        const int32_t LEN = 256;
+        char buf[LEN] = {'\0'};
+        strncpy(buf, get_ns_ip_addr().c_str(), LEN);
+        char* t = NULL, *s = buf;
+        while (NULL != (t = strsep(&s, "|")))
+        {
+          ips.push_back(t);
+        }
+        int32_t index = 0;
+        std::vector<std::string>::iterator iter = ips.begin();
+        for (; iter != ips.end(); ++iter, ++index)
+        {
+          ns_ip_port_[index] = Func::str_to_addr((*iter).c_str(), get_ns_port());
+        }
+
+        ns_vip_ = Func::str_to_addr(get_ns_vip().c_str(), get_ns_port());
 
         IpAddr* adr = reinterpret_cast<IpAddr*>(&information_.id_);
         adr->ip_ = Func::get_local_addr(get_dev());
@@ -242,8 +266,10 @@ namespace tfs
         }
 
         int32_t heart_interval = TBSYS_CONFIG.getInt(CONF_SN_MOCK_DATASERVER,CONF_HEART_INTERVAL,2);
-        KeepaliveTimerTaskPtr task = new KeepaliveTimerTask(*this);
+        KeepaliveTimerTaskPtr task = new KeepaliveTimerTask(*this, ns_ip_port_[0]);
         get_timer()->scheduleRepeated(task, tbutil::Time::seconds(heart_interval));
+        KeepaliveTimerTaskPtr task2 = new KeepaliveTimerTask(*this, ns_ip_port_[1]);
+        get_timer()->scheduleRepeated(task2, tbutil::Time::seconds(heart_interval));
 
         MAX_WRITE_FILE_SIZE = TBSYS_CONFIG.getInt(CONF_SN_MOCK_DATASERVER, CONF_MK_MAX_WRITE_FILE_SIZE, 0);
       }
@@ -384,6 +410,7 @@ namespace tfs
         {
           if (CLOSE_FILE_SLAVER != info.mode_)
           {
+            entry->info_.version_++;
             message->set_mode(CLOSE_FILE_SLAVER);
             message->set_block(&entry->info_);
             ret = send_message_to_slave(message, message->get_ds_list());
@@ -411,7 +438,7 @@ namespace tfs
             const BlockInfo* copyblk = message->get_block();
             if (NULL != copyblk)
             {
-              entry->info_.seq_no_ = copyblk->seq_no_;
+              memcpy(&entry->info_, copyblk, sizeof(BlockInfo));
             }
             ret = message->reply(new StatusMessage(STATUS_MESSAGE_OK));
           }
@@ -573,8 +600,8 @@ namespace tfs
           rreq.set_seqno(msg->get_seqno());
           result = NULL;
           client = NewClientManager::get_instance().create_client();
-          ret = send_msg_to_server(ns_ip_port_, client, &rreq, result);
-          TBSYS_LOG(DEBUG, "replicate block :%u, ns: %s, ret: %d", info.block_id_, CNetUtil::addrToString(ns_ip_port_).c_str(), ret);
+          ret = send_msg_to_server(ns_vip_, client, &rreq, result);
+          TBSYS_LOG(DEBUG, "replicate block :%u, ns: %s, ret: %d", info.block_id_, CNetUtil::addrToString(ns_vip_).c_str(), ret);
           if (TFS_SUCCESS == ret)
           {
             if (STATUS_MESSAGE == result->getPCode())
@@ -626,7 +653,7 @@ namespace tfs
         TBSYS_LOG(DEBUG, "compact block: %u", msg->get_block_id());
         NewClient* client = NewClientManager::get_instance().create_client();
         tbnet::Packet* tmp = NULL;
-        ret = send_msg_to_server(ns_ip_port_, client, &result, tmp);
+        ret = send_msg_to_server(ns_vip_, client, &result, tmp);
         NewClientManager::get_instance().destroy_client(client);
       }
       return ret;
@@ -658,7 +685,7 @@ namespace tfs
           req.set_repair(repair_type);
           tbnet::Packet* result = NULL;
           NewClient* client = NewClientManager::get_instance().create_client();
-          ret = send_msg_to_server(ns_ip_port_, client, &req, result);
+          ret = send_msg_to_server(ns_vip_, client, &req, result);
           if (TFS_SUCCESS == ret)
           {
             bool bremove = false;
@@ -752,24 +779,17 @@ namespace tfs
       int32_t ret = NULL == entry ? TFS_ERROR : TFS_SUCCESS;
       if (TFS_SUCCESS == ret)
       {
-        BlockInfo info;
-        memcpy(&info, &entry->info_, sizeof(info));
-        ++info.version_;
         BlockWriteCompleteMessage rmsg;
-        rmsg.set_block(&info);
+        rmsg.set_block(&entry->info_);
         rmsg.set_server_id(information_.id_);
         rmsg.set_lease_id(lease_id);
         rmsg.set_success(WRITE_COMPLETE_STATUS_YES);
         rmsg.set_unlink_flag(flag);
         int32_t ret = STATUS_MESSAGE_ERROR;
-        ret = send_msg_to_server(ns_ip_port_, &rmsg, ret);
+        ret = send_msg_to_server(ns_vip_, &rmsg, ret);
         if (TFS_SUCCESS == ret)
         {
           ret = STATUS_MESSAGE_OK == ret ? TFS_SUCCESS : TFS_ERROR;
-          if (TFS_SUCCESS == ret)
-          {
-            ++entry->info_.version_;
-          }
         }
       }
       return ret;
@@ -823,8 +843,9 @@ namespace tfs
       return blocks_.end() != iter ? &(iter->second) : NULL;
     }
 
-    KeepaliveTimerTask::KeepaliveTimerTask(MockDataService& instance)
-      :instance_(instance)
+    KeepaliveTimerTask::KeepaliveTimerTask(MockDataService& instance, const uint64_t server)
+      :instance_(instance),
+       server_(server)
     {
 
     }
@@ -836,7 +857,7 @@ namespace tfs
 
     void KeepaliveTimerTask::runTimerTask()
     {
-      instance_.keepalive();
+      instance_.keepalive(server_);
     }
 
     int ns_async_callback(NewClient* client)

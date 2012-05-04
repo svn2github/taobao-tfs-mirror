@@ -41,7 +41,7 @@ namespace tfs
         static void SetUpTestCase()
         {
           TBSYS_LOGGER.setLogLevel("debug");
-          GFactory::initialize();
+          //GFactory::initialize();
         }
         static void TearDownTestCase()
         {
@@ -66,12 +66,11 @@ namespace tfs
           SYSPARAM_NAMESERVER.max_write_file_count_= 10;
           SYSPARAM_NAMESERVER.replicate_ratio_ = 50;
           SYSPARAM_NAMESERVER.object_dead_max_time_ = 1;
-          SYSPARAM_NAMESERVER.object_clear_max_time_ = 1;
           SYSPARAM_NAMESERVER.group_count_ = 1;
           SYSPARAM_NAMESERVER.group_seq_ = 0;
           SYSPARAM_NAMESERVER.heart_interval_ = 2;
           SYSPARAM_NAMESERVER.replicate_wait_time_ = 10;
-          SYSPARAM_NAMESERVER.run_plan_expire_interval_ = 1;
+          SYSPARAM_NAMESERVER.task_expired_time_ = 1;
           SYSPARAM_NAMESERVER.group_mask_= 0xffffffff;
         }
 

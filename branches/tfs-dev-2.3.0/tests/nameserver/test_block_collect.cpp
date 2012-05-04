@@ -51,7 +51,6 @@ namespace tfs
           SYSPARAM_NAMESERVER.max_write_file_count_= 10;
           SYSPARAM_NAMESERVER.replicate_ratio_ = 50;
           SYSPARAM_NAMESERVER.object_dead_max_time_ = 1;
-          SYSPARAM_NAMESERVER.object_clear_max_time_ = 1;
           SYSPARAM_NAMESERVER.group_count_ = 1;
           SYSPARAM_NAMESERVER.group_seq_ = 0;
         }
@@ -97,7 +96,7 @@ namespace tfs
       EXPECT_EQ(now, block.last_update_time_);
 
       //已经存在了
-      EXPECT_TRUE(block.add(writable, master, &server));
+      EXPECT_FALSE(block.add(writable, master, &server));
       result = block.get_(&server);
       EXPECT_TRUE(&server == *result);
       EXPECT_TRUE(server.id() == (*result)->id());
@@ -115,7 +114,7 @@ namespace tfs
       EXPECT_TRUE(block.exist(&other));
       EXPECT_EQ(now, block.last_update_time_);
 
-      EXPECT_TRUE(block.add(writable, master, &other));
+      EXPECT_FALSE(block.add(writable, master, &other));
     }
 
     TEST_F(BlockCollectTest, remove)
@@ -196,7 +195,7 @@ namespace tfs
       // construct block info
       BlockInfo block_info;
       bool isnew = false;
-      std::vector<uint32_t> self_expired;
+      bool expire_self;
       NameServer ns;
       LayoutManager manager(ns);
       NsRole role = NS_ROLE_MASTER;
@@ -207,9 +206,9 @@ namespace tfs
       ServerCollect* other_expired[SYSPARAM_NAMESERVER.max_replication_];
       ArrayHelper<ServerCollect*> helper2(SYSPARAM_NAMESERVER.max_replication_, other_expired);
 
-      EXPECT_FALSE(block.check_version(manager, helper1, self_expired, helper2, NULL, role, isnew, block_info, now));
+      EXPECT_FALSE(block.check_version(manager, helper1, expire_self, helper2, NULL, role, isnew, block_info, now));
 
-      EXPECT_FALSE(block.check_version(manager, helper1, self_expired, helper2, &server, role, isnew, block_info, now));
+      EXPECT_FALSE(block.check_version(manager, helper1, expire_self, helper2, &server, role, isnew, block_info, now));
 
       info.id_++;
       ServerCollect other(info, now);
@@ -219,7 +218,7 @@ namespace tfs
       block_info.size_ = 110;
 
       //新的版本比nameserver上的版本高，接受新的版本并失效老的版本
-      EXPECT_TRUE(block.check_version(manager, helper1, self_expired, helper2, &other, role, isnew, block_info, now));
+      EXPECT_TRUE(block.check_version(manager, helper1, expire_self, helper2, &other, role, isnew, block_info, now));
       EXPECT_EQ(1, helper1.get_array_index());
       EXPECT_EQ(1, helper2.get_array_index());
       EXPECT_TRUE(block_info.version_== block.version());
@@ -229,7 +228,7 @@ namespace tfs
       block_info.version_ = block_info.version_ - BlockCollect::VERSION_AGREED_MASK - 1;
       helper1.clear();
       helper2.clear();
-      EXPECT_TRUE(block.check_version(manager, helper1, self_expired, helper2, &other, role, isnew, block_info, now));
+      EXPECT_TRUE(block.check_version(manager, helper1, expire_self, helper2, &other, role, isnew, block_info, now));
       EXPECT_TRUE(block_info.version_ == block.version());
       EXPECT_TRUE(block_info.size_ ==  block.size());
       EXPECT_EQ(0, helper1.get_array_index());
@@ -239,23 +238,22 @@ namespace tfs
       //当前ataserver在列表，失效前版本
       block_info.version_ = block_info.version_ - BlockCollect::VERSION_AGREED_MASK - 1;
       EXPECT_TRUE(block.add(writable, master, &server));
-      EXPECT_FALSE(block.check_version(manager, helper1, self_expired, helper2, &other, role, isnew, block_info, now));
+      EXPECT_FALSE(block.check_version(manager, helper1, expire_self, helper2, &other, role, isnew, block_info, now));
       EXPECT_TRUE(block_info.version_ != block.version());
       EXPECT_EQ(0, helper1.get_array_index());
       EXPECT_EQ(0, helper2.get_array_index());
-      EXPECT_EQ(1U, self_expired.size());
 
       block_info.version_ += 2;
-      EXPECT_TRUE(block.check_version(manager, helper1, self_expired, helper2, &other, role, isnew, block_info, now));
+      EXPECT_TRUE(block.check_version(manager, helper1, expire_self, helper2, &other, role, isnew, block_info, now));
       EXPECT_TRUE(block_info.version_ != block.version());//nameserver版本
 
       block_info.version_ = block_info.version_ + BlockCollect::VERSION_AGREED_MASK  + 1;
-      EXPECT_TRUE(block.check_version(manager, helper1, self_expired, helper2, &other, role, isnew, block_info, now));
+      EXPECT_TRUE(block.check_version(manager, helper1, expire_self, helper2, &other, role, isnew, block_info, now));
       EXPECT_TRUE(block_info.version_ == block.version());//新版本
 
       block.remove(&server, now);
       block_info.version_ = block_info.version_ + BlockCollect::VERSION_AGREED_MASK  + 1;
-      EXPECT_TRUE(block.check_version(manager, helper1, self_expired, helper2, &other, role, isnew, block_info, now));
+      EXPECT_TRUE(block.check_version(manager, helper1, expire_self, helper2, &other, role, isnew, block_info, now));
       EXPECT_TRUE(block_info.version_ == block.version());//新版本
 
 
@@ -272,24 +270,22 @@ namespace tfs
       block_info.file_count_ -= 1;
       helper1.clear();
       helper2.clear();
-      self_expired.clear();
-      EXPECT_FALSE(block.check_version(manager, helper1, self_expired, helper2, &other2, role, isnew, block_info, now));
+      EXPECT_FALSE(block.check_version(manager, helper1, expire_self, helper2, &other2, role, isnew, block_info, now));
       EXPECT_EQ(0, helper1.get_array_index());
       EXPECT_EQ(0, helper2.get_array_index());
-      EXPECT_EQ(1U, self_expired.size());
 
-      self_expired.clear();
       block_info.file_count_ += 1;
       block_info.size_ -= 1;
-      EXPECT_FALSE(block.check_version(manager, helper1, self_expired, helper2, &other2, role, isnew, block_info, now));
+      EXPECT_FALSE(block.check_version(manager, helper1, expire_self, helper2, &other2, role, isnew, block_info, now));
       EXPECT_EQ(0, helper1.get_array_index());
       EXPECT_EQ(0, helper2.get_array_index());
-      EXPECT_EQ(1U, self_expired.size());
 
+      expire_self = false;
       block_info.file_count_ += 10;
-      self_expired.clear();
-      EXPECT_FALSE(block.check_version(manager, helper1, self_expired, helper2, &other2, role, isnew, block_info, now));
-      EXPECT_TRUE(!self_expired.empty() || (!helper1.empty() && !helper2.empty()));
+      TBSYS_LOG(DEBUG, "expire_self: %d", expire_self);
+      EXPECT_FALSE(block.check_version(manager, helper1, expire_self, helper2, &other2, role, isnew, block_info, now));
+      TBSYS_LOG(DEBUG, "expire_self: %d", expire_self);
+      EXPECT_TRUE(expire_self == true);
     }
 
     TEST_F(BlockCollectTest, check_replicate)

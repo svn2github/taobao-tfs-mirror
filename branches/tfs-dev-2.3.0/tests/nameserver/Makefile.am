@@ -15,7 +15,7 @@ LDADD=$(top_builddir)/src/nameserver/libnameserver.a \
       $(TBLIB_ROOT)/lib/libtbsys.a
 
 noinst_PROGRAMS= test_block_collect  test_block_manager test_server_collect test_server_manager\
-test_task test_task_manager
+test_task test_task_manager test_layout_manager test_gc
 
 test_block_collect_SOURCES=test_block_collect.cpp
 test_block_collect_LDFLAGS=${AM_LDFLAGS} 
@@ -34,17 +34,12 @@ test_task_LDFLAGS=${AM_LDFLAGS}
 
 test_task_manager_SOURCES=test_task_manager.cpp
 test_task_manager_LDFLAGS=${AM_LDFLAGS} 
-#test_server_collect_SOURCES=test_server_collect.cpp
-#test_server_collect_LDFLAGS=${AM_LDFLAGS} -static-libgcc -lgtest
-#
-#test_layout_manager_SOURCES=test_layout_manager.cpp
-#test_layout_manager_LDFLAGS=${AM_LDFLAGS} -static-libgcc -lgtest
-#
-#test_task_SOURCES= test_task.cpp
-#test_task_LDFLAGS=${AM_LDFLAGS} -static-libgcc -lgtest
-#
-#test_gc_SOURCES= test_gc.cpp
-#test_gc_LDFLAGS=${AM_LDFLAGS} -static-libgcc -lgtest
-#
+
+test_layout_manager_SOURCES=test_layout_manager.cpp
+test_layout_manager_LDFLAGS=${AM_LDFLAGS} 
+
+test_gc_SOURCES= test_gc.cpp
+test_gc_LDFLAGS=${AM_LDFLAGS}
+
 #integration_SOURCES= integration.cpp integration_instance.cpp integration_case.cpp
 #integration_LDFLAGS=${AM_LDFLAGS}

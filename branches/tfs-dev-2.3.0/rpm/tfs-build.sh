@@ -14,5 +14,5 @@ chmod +x build.sh
 ./build.sh init
 export TBLIB_ROOT=/opt/csr/common
 ./configure 
-make PREFIX=/home/admin/tfs rpms
+make PREFIX=/home/admin/tfs TMP_DIR=/home/ads/tmp/tfs-tmp.$$ rpms
 mv *.rpm rpm/

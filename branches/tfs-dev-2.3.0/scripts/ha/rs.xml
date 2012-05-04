@@ -16,7 +16,7 @@
       <instance_attributes id="tfs-root-server-instance_attributes">
         <nvpair id="tfs-root-server-instance_attributes-basedir" name="basedir" value="/home/admin/tfs"/>
         <nvpair id="tfs-root-server-instance_attributes-rsip" name="rsip" value="localhost"/>
-        <nvpair id="tfs-root-server-instance_attributes-rsport" name="rsport" value="3500"/>
+        <nvpair id="tfs-root-server-instance_attributes-rsport" name="rsport" value="3400"/>
         <nvpair id="tfs-root-server-instance_attributes-user" name="user" value="admin"/>
       </instance_attributes>
       <operations>
