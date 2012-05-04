@@ -30,6 +30,7 @@ namespace tfs
 #define CONF_SN_RCSERVER                              "rcserver"
 #define CONF_SN_NAMEMETASERVER                        "metaserver"
 #define CONF_SN_ROOTSERVER                            "rootserver"
+#define CONF_SN_CHECKSERVER                           "checkserver"
 
 #define CONF_CLUSTER_ID                               "cluster_id"
 #define CONF_LOCK_FILE                                "lock_file"
@@ -163,6 +164,17 @@ namespace tfs
 
 //mock dataserver
 #define CONF_MK_MAX_WRITE_FILE_SIZE                    "max_write_file_size"
+
+// check server
+#define CONF_THREAD_COUNT                             "thread_count"
+#define CONF_CHECK_INTERVAL                           "check_interval"
+#define CONF_OVERLAP_CHECK_TIME                       "overlap_check_time"
+#define CONF_BLOCK_STABLE_TIME                        "block_stable_time"
+#define CONF_CLUSTER_ID                               "cluster_id"
+#define CONF_MASTER_NS_IP                             "master_ns_ip"
+#define CONF_MASTER_NS_PORT                           "master_ns_port"
+#define CONF_SLAVE_NS_IP                              "slave_ns_ip"
+#define CONF_SLAVE_NS_PORT                            "slave_ns_port"
   }
 }
 #endif //TFS_COMMON_CONFDEFINE_H_

@@ -481,6 +481,10 @@ namespace tfs
               if (TFS_SUCCESS == ret)
               {
                 ret = tfs_client_->unlink(file_size, fsname.get_name(), NULL, dest_addr_, action, TFS_FILE_NO_SYNC_LOG);
+                if (EXIT_META_NOT_FOUND_ERROR == ret) // deleted file
+                {
+                  ret = TFS_SUCCESS;
+                }
               }
             }
             else if (REVEAL == action)

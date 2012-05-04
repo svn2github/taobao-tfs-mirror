@@ -29,6 +29,7 @@
 #include "message/message_factory.h"
 #include "replicate_block.h"
 #include "compact_block.h"
+#include "check_block.h"
 #include "sync_base.h"
 #include "visit_stat.h"
 #include "cpu_metrics.h"
@@ -36,6 +37,7 @@
 #include "requester.h"
 #include "block_checker.h"
 #include "gc.h"
+
 
 namespace tfs
 {
@@ -157,6 +159,9 @@ namespace tfs
 
         int get_dataserver_information(common::BasePacket* packet);
 
+        // check modified blocks
+        int check_blocks(common::BasePacket* packet);
+
       private:
         bool access_deny(common::BasePacket* message);
         void do_stat(const uint64_t peer_id,
@@ -250,6 +255,7 @@ namespace tfs
 
         ReplicateBlock* repl_block_; //replicate
         CompactBlock* compact_block_; //compact
+        CheckBlock* check_block_;  // check
 #if defined(TFS_GTEST)
       public:
 #else

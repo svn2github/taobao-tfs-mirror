@@ -15,5 +15,6 @@ install-data-hook:
 	chmod u+x ${DESTDIR}/${prefix}/scripts/stfs
 	chmod u+x ${DESTDIR}/${prefix}/scripts/tfs
 	chmod u+x ${DESTDIR}/${prefix}/scripts/sync
+	chmod u+x ${DESTDIR}/${prefix}/scripts/cs_sync
 	chmod u+x ${DESTDIR}/${prefix}/scripts/start_sync_log
 	sed -i 's#\(TFS_HOME=\).*$$#\1${prefix}#g' ${DESTDIR}/${prefix}/scripts/stfs ${DESTDIR}/${prefix}/scripts/tfs

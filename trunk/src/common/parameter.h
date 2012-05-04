@@ -188,12 +188,32 @@ namespace tfs
       }
     };
 
+    struct CheckServerParameter
+    {
+      int32_t block_stable_time_;
+      int32_t check_interval_;
+      int32_t overlap_check_time_;
+      int32_t thread_count_;
+      int32_t cluster_id_;
+      uint64_t master_ns_id_;
+      uint64_t slave_ns_id_;
+
+      int initialize(const std::string& config_file);
+
+      static CheckServerParameter cs_parameter_;
+      static CheckServerParameter& instance()
+      {
+        return cs_parameter_;
+      }
+    };
+
 #define SYSPARAM_NAMESERVER NameServerParameter::instance()
 #define SYSPARAM_DATASERVER DataServerParameter::instance()
 #define SYSPARAM_FILESYSPARAM FileSystemParameter::instance()
 #define SYSPARAM_RCSERVER RcServerParameter::instance()
 #define SYSPARAM_NAMEMETASERVER NameMetaServerParameter::instance()
 #define SYSPARAM_RTSERVER RtServerParameter::instance()
+#define SYSPARAM_CHECKSERVER CheckServerParameter::instance()
   }/** common **/
 }/** tfs **/
 #endif //TFS_COMMON_SYSPARAM_H_

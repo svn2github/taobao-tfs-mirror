@@ -45,6 +45,7 @@
 #include "rts_rts_heart_message.h"
 #include "get_tables_from_rts_message.h"
 #include "update_table_message.h"
+#include "checkserver_message.h"
 
 namespace tfs
 {

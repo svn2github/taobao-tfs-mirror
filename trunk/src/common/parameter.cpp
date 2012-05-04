@@ -36,6 +36,7 @@ namespace tfs
     RcServerParameter RcServerParameter::rc_parameter_;
     NameMetaServerParameter NameMetaServerParameter::meta_parameter_;
     RtServerParameter RtServerParameter::rt_parameter_;
+    CheckServerParameter CheckServerParameter::cs_parameter_;
 
     static void set_hour_range(const char *str, int32_t& min, int32_t& max)
     {
@@ -51,6 +52,7 @@ namespace tfs
           max = atoi(p1);
       }
     }
+
 
     int NameServerParameter::initialize(void)
     {
@@ -450,6 +452,70 @@ namespace tfs
         }
       }
       return iret;
+    }
+
+    int CheckServerParameter::initialize(const std::string& config_file)
+    {
+      tbsys::CConfig config;
+      int32_t ret = config.load(config_file.c_str());
+      if (EXIT_SUCCESS != ret)
+      {
+        TBSYS_LOG(ERROR, "load config file erro.");
+        return TFS_ERROR;
+      }
+
+      // block stalbe time, default 5min
+      block_stable_time_ = config.getInt(CONF_SN_CHECKSERVER, CONF_BLOCK_STABLE_TIME, 5);
+
+      // default interval: 1 day
+      check_interval_ = config.getInt(CONF_SN_CHECKSERVER, CONF_CHECK_INTERVAL, 1440);
+
+      // default no overlap
+      overlap_check_time_ = config.getInt(CONF_SN_CHECKSERVER, CONF_OVERLAP_CHECK_TIME, 0);
+
+      // thread count to check dataserver
+      thread_count_ = config.getInt(CONF_SN_CHECKSERVER, CONF_THREAD_COUNT, 1);
+
+      // cluster id
+      cluster_id_ = config.getInt(CONF_SN_CHECKSERVER, CONF_CLUSTER_ID, 1);
+
+      // master and slave address info
+      const char* master_ns_ip  = config.getString(CONF_SN_CHECKSERVER, CONF_MASTER_NS_IP, NULL);
+      if (NULL == master_ns_ip)
+      {
+        TBSYS_LOG(ERROR, "master_ns_ip config item not found.");
+        ret = TFS_ERROR;
+      }
+      else
+      {
+        int master_ns_port = config.getInt(CONF_SN_CHECKSERVER, CONF_MASTER_NS_PORT, -1);
+        if (-1 == master_ns_port)
+        {
+          master_ns_id_ = 0;
+          TBSYS_LOG(ERROR, "master_ns_ip config item not found.");
+          ret = TFS_ERROR;
+        }
+        else
+        {
+          master_ns_id_ = Func::str_to_addr(master_ns_ip, master_ns_port);
+        }
+      }
+
+      const char* slave_ns_ip  = config.getString(CONF_SN_CHECKSERVER, CONF_SLAVE_NS_IP, NULL);
+      if (NULL != slave_ns_ip)
+      {
+        int slave_ns_port = config.getInt(CONF_SN_CHECKSERVER, CONF_SLAVE_NS_PORT, -1);
+        if (-1 != slave_ns_port)
+        {
+          slave_ns_id_ = Func::str_to_addr(slave_ns_ip, slave_ns_port);
+        }
+        else
+        {
+          slave_ns_id_ = 0;
+        }
+      }
+
+      return ret;
     }
   }/** common **/
 }/** tfs **/

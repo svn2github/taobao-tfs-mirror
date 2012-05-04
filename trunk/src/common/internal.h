@@ -547,6 +547,22 @@ namespace tfs
       int32_t server_count_;
     };
 
+    struct CheckBlockInfo
+    {
+      int serialize(char* data, const int64_t data_len, int64_t& pos) const;
+      int deserialize(const char* data, const int64_t data_len, int64_t& pos);
+      int64_t length() const;
+
+      uint32_t block_id_;
+      int32_t version_;
+      uint32_t file_count_;
+      uint32_t total_size_;
+
+      CheckBlockInfo(): block_id_(0), version_(0), file_count_(0), total_size_(0)
+      {
+      }
+    };
+
     struct Throughput
     {
       int deserialize(const char* data, const int64_t data_len, int64_t& pos);
@@ -820,6 +836,14 @@ namespace tfs
     typedef std::vector<RawMeta>::iterator RawMetaVecIter;
 
     typedef std::vector<RawMeta>::const_iterator RawMetaVecConstIter;
+
+    typedef std::vector<CheckBlockInfo> CheckBlockInfoVec;
+    typedef std::vector<CheckBlockInfo>::iterator CheckBlockInfoVecIter;
+    typedef std::vector<CheckBlockInfo>::const_iterator CheckBlockInfoVecConstIter;
+
+    typedef __gnu_cxx::hash_map<uint32_t, CheckBlockInfoVec> CheckBlockInfoMap;
+    typedef __gnu_cxx::hash_map<uint32_t, CheckBlockInfoVec>::iterator CheckBlockInfoMapIter;
+    typedef __gnu_cxx::hash_map<uint32_t, CheckBlockInfoVec>::const_iterator CheckBlockInfoMapConstIter;
 
     static const int32_t FILEINFO_SIZE = sizeof(FileInfo);
     static const int32_t BLOCKINFO_SIZE = sizeof(BlockInfo);

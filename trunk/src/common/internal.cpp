@@ -378,6 +378,55 @@ namespace tfs
       return  INT_SIZE * 4 + INT64_SIZE * 2;
     }
 
+    int CheckBlockInfo::serialize(char* data, const int64_t data_len, int64_t& pos) const
+    {
+      int32_t iret = (NULL != data && data_len - pos >= length()) ? TFS_SUCCESS : TFS_ERROR;
+      if (TFS_SUCCESS == iret)
+      {
+        iret = Serialization::set_int32(data, data_len, pos, block_id_);
+      }
+      if (TFS_SUCCESS == iret)
+      {
+        iret = Serialization::set_int32(data, data_len, pos, version_);
+      }
+      if (TFS_SUCCESS == iret)
+      {
+        iret = Serialization::set_int32(data, data_len, pos, file_count_);
+      }
+      if (TFS_SUCCESS == iret)
+      {
+        iret = Serialization::set_int32(data, data_len, pos, total_size_);
+      }
+      return iret;
+    }
+
+    int CheckBlockInfo::deserialize(const char* data, const int64_t data_len, int64_t& pos)
+    {
+      int32_t iret = (NULL != data && data_len - pos >= length()) ? TFS_SUCCESS : TFS_ERROR;
+      if (TFS_SUCCESS == iret)
+      {
+        iret = Serialization::get_int32(data, data_len, pos, reinterpret_cast<int32_t*>(&block_id_));
+      }
+      if (TFS_SUCCESS == iret)
+      {
+        iret = Serialization::get_int32(data, data_len, pos, &version_);
+      }
+      if (TFS_SUCCESS == iret)
+      {
+        iret = Serialization::get_int32(data, data_len, pos, reinterpret_cast<int32_t*>(&file_count_));
+      }
+      if (TFS_SUCCESS == iret)
+      {
+        iret = Serialization::get_int32(data, data_len, pos, reinterpret_cast<int32_t*>(&total_size_));
+      }
+      return iret;
+    }
+
+    int64_t CheckBlockInfo::length() const
+    {
+      return  INT_SIZE * 4;
+    }
+
     int Throughput::deserialize(const char* data, const int64_t data_len, int64_t& pos)
     {
       int32_t iret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;

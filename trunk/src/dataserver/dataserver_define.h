@@ -205,6 +205,14 @@ namespace tfs
         }
     };
 
+
+
+    struct ChangedBlock
+    {
+      uint32_t block_id_;
+      uint32_t mod_time_;
+    };
+
     struct ClonedBlock
     {
       uint32_t blockid_;
@@ -251,6 +259,8 @@ namespace tfs
     typedef ReplBlockMap::iterator ReplBlockMapIter;
     typedef __gnu_cxx::hash_map<uint32_t, ClonedBlock*> ClonedBlockMap; // blockid => ClonedBlock
     typedef ClonedBlockMap::iterator ClonedBlockMapIter;
+    typedef __gnu_cxx::hash_map<uint32_t, ChangedBlock*> ChangedBlockMap;   // blockid => ChangedBlock
+    typedef ChangedBlockMap::iterator ChangedBlockMapIter;
 
     int ds_async_callback(common::NewClient* client);
   }
