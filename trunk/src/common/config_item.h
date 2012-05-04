@@ -38,7 +38,6 @@ namespace tfs
 #define CONF_LOG_LEVEL                                "log_level"
 #define CONF_WORK_DIR                                 "work_dir"
 #define CONF_OBJECT_DEAD_MAX_TIME                     "object_dead_max_time"
-#define CONF_OBJECT_CLEAR_MAX_TIME                    "object_clear_max_time"
 
 #define CONF_PORT                                     "port"
 #define CONF_THREAD_COUNT                             "thread_count"
@@ -47,12 +46,7 @@ namespace tfs
 #define CONF_BLOCK_MAX_SIZE                           "block_max_size"
 #define CONF_BLOCK_USE_RATIO                          "block_max_use_ratio"
 #define CONF_HEART_INTERVAL                           "heart_interval"
-#define CONF_HEART_MAX_QUEUE_SIZE                     "heart_max_queue_size"
-#define CONF_HEART_THREAD_COUNT												"heart_thread_count"
-#define CONF_REPORT_BLOCK_THREAD_COUNT                "report_block_thread_count"
-#define CONF_REPORT_BLOCK_MAX_QUEUE_SIZE              "report_block_max_queue_size"
 #define CONF_MAX_REPLICATION                          "max_replication"
-#define CONF_MIN_REPLICATION                          "min_replication"
 #define CONF_USE_CAPACITY_RATIO                       "use_capacity_ratio"
 #define CONF_TASK_MAX_QUEUE_SIZE                      "task_max_queue_size"
 #define CONF_DISCARD_NEWBLK_SAFE_MODE_TIME            "discard_newblk_safe_mode_time"
@@ -67,60 +61,56 @@ namespace tfs
 #define CONF_WARN_DEAD_COUNT                          "warn_dead_count"
 
   //nameserver
+  //
 #define CONF_IP_ADDR_LIST                             "ip_addr_list"
 #define CONF_GROUP_MASK                               "group_mask"
+#define CONF_SAFE_MODE_TIME														"safe_mode_time"
 #define CONF_TASK_PRECENT_SEC_SIZE                    "task_percent_sec_size"
 #define CONF_MAX_WRITE_FILECOUNT                      "max_write_filecount"
-
-#define CONF_BLOCK_CHUNK_NUM                          "block_chunk_num"
 #define CONF_ADD_PRIMARY_BLOCK_COUNT                  "add_primary_block_count"
 
-#define CONF_SAFE_MODE_TIME														"safe_mode_time"
+#define CONF_HEART_MAX_QUEUE_SIZE                     "heart_max_queue_size"
+#define CONF_HEART_THREAD_COUNT												"heart_thread_count"
 
-#define CONF_BUILD_PLAN_INTERVAL                      "build_plan_interval"
-#define CONF_RUN_PLAN_EXPIRE_INTERVAL                 "run_plan_expire_interval"
-#define CONF_BUILD_PLAN_RATIO                         "build_plan_ratio"
-#define CONF_BUILD_PLAN_DEFAULT_WAIT_TIME             "build_plan_default_wait_time"
+#define CONF_REPORT_BLOCK_HOUR_RANGE                  "report_block_hour_range"
+#define CONF_REPORT_BLOCK_TIME_INTERVAL               "report_block_time_interval"
+#define CONF_TIME_REPORT_BLOCK_INTERVAL               "timer_report_block_interval" //
+#define CONF_REPORT_BLOCK_EXPIRED_TIME                "report_block_expired_time"
+#define CONF_REPORT_BLOCK_THREAD_COUNT                "report_block_thread_count"
+#define CONF_REPORT_BLOCK_MAX_QUEUE_SIZE              "report_block_max_queue_size"
 
+#define CONF_GROUP_SEQ                                "group_seq"
+#define CONF_GROUP_COUNT                              "group_count"
+
+#define CONF_COMPACT_HOUR_RANGE                       "compact_hour_range"
 #define CONF_COMPACT_DELETE_RATIO                     "compact_delete_ratio"
 #define CONF_COMPACT_MAX_LOAD                         "compact_max_load"
 #define CONF_REPLICATE_RATIO                          "replicate_ratio"
 #define CONF_REPL_WAIT_TIME                           "repl_wait_time"
+#define CONF_BALANCE_PERCENT                          "balance_percent"
+#define CONF_TASK_EXPIRED_TIME                        "task_expired_time"
+#define CONF_MAX_TASK_IN_MACHINE_NUMS                 "max_task_in_machine_nums"
 
 #define CONF_OPLOG_SYSNC_MAX_SLOTS_NUM                "oplog_sync_max_slots_num"
 #define CONF_OPLOGSYNC_THREAD_NUM                     "oplog_sync_thread_num"
 
-#define CONF_MAX_WAIT_WRITE_LEASE                     "max_wait_write_lease"
-#define CONF_MAX_LEASE_TIMEOUT                        "max_lease_timeout"
-#define CONF_LEASE_EXPIRED_TIME                       "lease_expired_time"//hour_
-#define CONF_CLEANUP_LEASE_THRESHOLD                  "cleanup_lease_threshold"
-
-#define CONF_BALANCE_MAX_DIFF_BLOCK_NUM               "balance_max_diff_block_num"
-#define CONF_BALANCE_PERCENT                          "balance_percent"
-
+#define CONF_MAX_WRITE_TIMEOUT                        "max_write_timeout"
+#define CONF_CLEANUP_WRITE_TIMEOUT_THRESHOLD          "cleanup_write_timeout_threshold"
 
 #define CONF_DUMP_STAT_INFO_INTERVAL                  "dump_stat_info_interval"
 
-#define CONF_GROUP_SEQ                                "group_seq"
-#define CONF_GROUP_COUNT                              "group_count"
-#define CONF_TIME_REPORT_BLOCK_INTERVAL               "time_report_block_interval" //
-#define CONF_REPORT_BLOCK_EXPIRED_TIME                "report_block_expired_time"
-
   //dataserver
+#define CONF_OBJECT_CLEAR_MAX_TIME                    "object_clear_max_time"
 #define CONF_DATA_THREAD_COUNT                        "data_thread_count"
 #define CONF_EXPIRE_COMPACTBLOCK_TIME                 "expire_compactblock_time"
 #define CONF_READ_LOG_FILE                            "read_log_file"
 #define CONF_WRITE_LOG_FILE                           "write_log_file"
-//#define CONF_DS_DEAD_TIME                             "ds_dead_time"
-//#define CONF_DS_THREAD_COUNT                          "ds_thread_count"
 #define CONF_EXPIRE_DATAFILE_TIME                     "expire_datafile_time"
 #define CONF_EXPIRE_CLONEDBLOCK_TIME                  "expire_clonedblock_time"
 #define CONF_VISIT_STAT_INTERVAL                      "dump_visit_stat_interval"
 #define CONF_IO_WARN_TIME                             "max_io_warning_time"
-//#define CONF_REMOVE_PRESERVE_TIME                     "remove_preserve_time"
 #define CONF_SLAVE_NSIP                               "slave_nsip"
 #define CONF_SLAVE_NSPORT                             "slave_nsport"
-//#define CONF_SYNC_RETRY_COUNT                         "sync_retry_count"
 #define CONF_MOUNT_POINT_NAME                         "mount_name"             //mount point name
 #define CONF_MOUNT_MAX_USESIZE                        "mount_maxsize"
 #define CONF_BASE_FS_TYPE                             "base_filesystem_type"
@@ -135,7 +125,6 @@ namespace tfs
 #define CONF_DATA_FILE_NUMS                           "max_data_file_nums"
 #define CONF_MAX_CRCERROR_NUMS                        "max_crc_error_nums"
 #define CONF_MAX_EIOERROR_NUMS                        "max_eio_error_nums_"
-//#define CONF_READ_CACHE_SIZE                          "read_cache_size"
 #define CONF_BACKUP_PATH                              "backup_path"
 #define CONF_BACKUP_TYPE                              "backup_type"
 #define CONF_EXPIRE_CHECKBLOCK_TIME                   "expire_checkblock_time"
@@ -170,6 +159,10 @@ namespace tfs
 
 #define CONF_RT_TABLE_FILE_PATH                       "table_file_path"
 #define CONF_UPDATE_TABLE_THREAD_COUNT                "update_table_thread_count"
+
+
+//mock dataserver
+#define CONF_MK_MAX_WRITE_FILE_SIZE                    "max_write_file_size"
   }
 }
 #endif //TFS_COMMON_CONFDEFINE_H_

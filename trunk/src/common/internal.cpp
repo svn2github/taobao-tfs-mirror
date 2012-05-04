@@ -999,6 +999,7 @@ namespace tfs
 
     int SuperBlock::deserialize(const char* data, const int64_t data_len, int64_t& pos)
     {
+      printf("%s", dynamic_parameter_str[0]);
       int32_t iret = NULL != data && data_len - pos >= length() ? common::TFS_SUCCESS : common::TFS_ERROR;
       int32_t str_length = 0;
       if (common::TFS_SUCCESS == iret)
@@ -1125,41 +1126,36 @@ namespace tfs
       std::cout << "max mmap size " << mmap_option_.max_mmap_size_ << std::endl;
       std::cout << "version " << version_ << std::endl;
     }
-    const char* dynamic_parameter_str[] = {
-      "min_replication",
-      "max_replication",
-      "max_write_file_count",
-      "max_use_capacity_ratio",
-      "heart_interval",
-      "replicate_wait_time",
-      "compact_delete_ratio",
-      "compact_max_load",
-      "plan_run_flag",
-      "run_plan_expire_interval",
-      "run_plan_ratio",
-      "object_dead_max_time",
-      "balance_max_diff_block_num",
-      "log_level",
-      "add_primary_block_count",
-      "build_plan_interval",
-      "replicate_ratio",
-      "max_wait_write_lease",
-      "tmp",
-      "cluster_index",
-      "build_plan_default_wait_time",
-      "group_count",
-      "group_seq",
-      "discard_newblk_safe_mode_time",
-      "discard_max_count",
-      "strategy_write_capacity_weigth",
-      "strategy_write_elect_num_weigth",
-      "strategy_replicate_capactiy_weigth",
-      "strategy_replicate_load_weigth",
-      "strategy_replicate_elect_num_weigth",
-      "report_block_queue_size",
-      "report_block_time_lower",
-      "report_block_time_upper",
-      "report_block_time_interval",
+    const char* dynamic_parameter_str[29] = {
+        "log_level",
+        "plan_run_flag",
+        "task_expired_time",
+        "safe_mode_time",
+        "max_write_timeout",
+        "max_write_file_count",
+        "add_primary_block_count",
+        "cleanup_write_timeout_threshold",
+        "max_use_capacity_ratio",
+        "heart_interval",
+        "replicate_ratio",
+        "replicate_wait_time",
+        "compact_delete_ratio",
+        "compact_max_load",
+        "compact_time_lower",
+        "compact_time_upper",
+        "max_task_in_machine_nums",
+        "discard_newblk_safe_mode_time",
+        "discard_max_count",
+        "cluster_index",
+        "object_dead_max_time",
+        "group_count",
+        "group_seq",
+        "object_clear_max_time",
+        "report_block_queue_size",
+        "report_block_time_lower",
+        "report_block_time_upper",
+        "report_block_time_interval",
+        "report_block_expired_time",
     };
   } /** nameserver **/
 }/** tfs **/

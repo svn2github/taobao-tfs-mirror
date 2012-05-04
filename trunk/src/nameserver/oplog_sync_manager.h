@@ -37,58 +37,40 @@ namespace tfs
   namespace nameserver
   {
     class LayoutManager;
-    class OpLogSyncManager;
-    class FlushOpLogTimerTask: public tbutil::TimerTask
-    {
-    public:
-      FlushOpLogTimerTask(OpLogSyncManager& manager);
-      virtual void runTimerTask();
-    private:
-      DISALLOW_COPY_AND_ASSIGN( FlushOpLogTimerTask);
-      OpLogSyncManager& manager_;
-    };
-    typedef tbutil::Handle<FlushOpLogTimerTask> FlushOpLogTimerTaskPtr;
-
     class OpLogSyncManager: public tbnet::IPacketQueueHandler
     {
       friend class FlushOpLogTimerTask;
     public:
-      OpLogSyncManager(LayoutManager& mm);
+      explicit OpLogSyncManager(LayoutManager& mm);
       virtual ~OpLogSyncManager();
       int initialize();
       int wait_for_shut_down();
       int destroy();
       int register_slots(const char* const data, const int64_t length) const;
-      void notify_all();
-      void rotate();
-      int flush_oplog(void) const;
-      int log(uint8_t type, const char* const data, const int64_t length);
+      void switch_role();
+      int log(const uint8_t type, const char* const data, const int64_t length, const time_t now);
       int push(common::BasePacket* msg, int32_t max_queue_size = 0, bool block = false);
       inline common::FileQueueThread* get_file_queue_thread() const { return file_queue_thread_;}
       int replay_helper(const char* const data, const int64_t data_len, int64_t& pos, const time_t now = common::Func::get_monotonic_time());
       int replay_helper_do_msg(const int32_t type, const char* const data, const int64_t data_len, int64_t& pos);
-      int replay_helper_do_oplog(const int32_t type, const char* const data, const int64_t data_len, int64_t& pos, time_t now);
+      int replay_helper_do_oplog(const time_t now, const int32_t type, const char* const data, const int64_t data_len, int64_t& pos);
 
       inline uint32_t generation(const uint32_t id = 0) { return id_factory_.generation(id);}
     private:
       DISALLOW_COPY_AND_ASSIGN( OpLogSyncManager);
       virtual bool handlePacketQueue(tbnet::Packet *packet, void *args);
-      static int do_sync_oplog(const void* const data, const int64_t len, const int32_t threadIndex, void *arg);
-      int do_sync_oplog(const char* const data, const int64_t length);
-      int execute(const common::BasePacket *msg, const void* args);
-      int do_master_msg(const common::BasePacket* msg, const void* args);
-      int do_slave_msg(const common::BasePacket* msg, const void* args);
-      int do_sync_oplog(const common::BasePacket* msg, const void* args);
-      int replay_all();
+      static int sync_log_func(const void* const data, const int64_t len, const int32_t threadIndex, void *arg);
+      int send_log_(const char* const data, const int64_t length);
+      int transfer_log_msg_(common::BasePacket* msg);
+      int recv_log_(common::BasePacket* msg);
+      int replay_all_();
     private:
-      bool is_destroy_;
-      LayoutManager& meta_mgr_;
+      LayoutManager& manager_;
       OpLog* oplog_;
       common::FileQueue* file_queue_;
       common::FileQueueThread* file_queue_thread_;
       BlockIdFactory id_factory_;
       tbutil::Mutex mutex_;
-      tbutil::Monitor<tbutil::Mutex> monitor_;
       tbnet::PacketQueueThread work_thread_;
     };
   }//end namespace nameserver

@@ -30,6 +30,7 @@
 
 int main(int argc, char* argv[])
 {
+  TBSYS_LOG(DEBUG, "EAGAIN : %d, EINVAL: %d, EDEADLK: %d", EAGAIN, EINVAL,EDEADLK);
   tfs::mock::MockDataService service;
   return service.main(argc, argv);
 }

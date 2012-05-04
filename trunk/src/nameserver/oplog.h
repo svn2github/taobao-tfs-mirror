@@ -11,9 +11,9 @@
  * Authors:
  *   duolong <duolong@taobao.com>
  *      - initial release
- *   qushan<qushan@taobao.com> 
+ *   qushan<qushan@taobao.com>
  *      - modify 2009-03-27
- *   duanfei <duanfei@taobao.com> 
+ *   duanfei <duanfei@taobao.com>
  *      - modify 2010-04-23
  *
  */
@@ -66,7 +66,7 @@ namespace tfs
       int32_t rotate_offset_;
     };
 #pragma pack()
- 
+
     struct BlockOpLog
     {
       int serialize(char* data, const int64_t data_len, int64_t& pos) const;
@@ -77,50 +77,46 @@ namespace tfs
       common::VUINT32 blocks_;
       common::VUINT64 servers_;
       int8_t cmd_;
-      void dump(void) const;
+      void dump(const int32_t level) const;
     };
 
-   class OpLog
+    class OpLog
     {
-    public:
-      OpLog(const std::string& path, const int32_t max_log_slot_size = 0x400);
-      virtual ~OpLog();
-      int initialize();
-      int update_oplog_rotate_header(const OpLogRotateHeader& head);
-      bool finish(const time_t now, const bool force = false) const;
-      int write(const uint8_t type, const char* const data, const int32_t length);
-      inline void reset(const time_t t = time(NULL))
-      {
-        last_flush_time_ = t;
-        slots_offset_ = 0;
-      }
-      inline const char* const get_buffer() const
-      {
-        return buffer_;
-      }
-      inline int64_t get_slots_offset() const
-      {
-        return slots_offset_;
-      }
-      inline const OpLogRotateHeader* get_oplog_rotate_header() const
-      {
-        return &oplog_rotate_header_;
-      }
-    public:
-      static int const MAX_LOG_SIZE = sizeof(OpLogHeader) + common::BLOCKINFO_SIZE + 1 + 64 * common::INT64_SIZE;
-      const int MAX_LOG_SLOTS_SIZE;
-      const int MAX_LOG_BUFFER_SIZE;
-    private:
-      OpLogRotateHeader oplog_rotate_header_;
-      std::string path_;
-      uint64_t seqno_;
-      int64_t last_flush_time_;
-      int64_t slots_offset_;
-      int32_t fd_;
-      char* buffer_;
-    private:
-      DISALLOW_COPY_AND_ASSIGN( OpLog);
-      OpLog();
+      public:
+        OpLog(const std::string& path, const int32_t max_log_slot_size = 0x400);
+        virtual ~OpLog();
+        int initialize();
+        int update_oplog_rotate_header(const OpLogRotateHeader& head);
+        int write(const uint8_t type, const char* const data, const int32_t length);
+        inline void reset()
+        {
+          slots_offset_ = 0;
+        }
+        inline const char* const get_buffer() const
+        {
+          return buffer_;
+        }
+        inline int64_t get_slots_offset() const
+        {
+          return slots_offset_;
+        }
+        inline const OpLogRotateHeader* get_oplog_rotate_header() const
+        {
+          return &oplog_rotate_header_;
+        }
+      public:
+        static int const MAX_LOG_SIZE = sizeof(OpLogHeader) + common::BLOCKINFO_SIZE + 1 + 64 * common::INT64_SIZE;
+        const int MAX_LOG_SLOTS_SIZE;
+        const int MAX_LOG_BUFFER_SIZE;
+      private:
+        OpLogRotateHeader oplog_rotate_header_;
+        std::string path_;
+        uint64_t seqno_;
+        int64_t slots_offset_;
+        int32_t fd_;
+        char* buffer_;
+      private:
+        DISALLOW_COPY_AND_ASSIGN( OpLog);
     };
   }//end namespace nameserver
 }//end namespace tfs

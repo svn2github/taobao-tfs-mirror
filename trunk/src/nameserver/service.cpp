@@ -11,9 +11,9 @@
  * Authors:
  *   duolong <duolong@taobao.com>
  *      - initial release
- *   qushan<qushan@taobao.com> 
+ *   qushan<qushan@taobao.com>
  *      - modify 2009-03-27
- *   duanfei <duanfei@taobao.com> 
+ *   duanfei <duanfei@taobao.com>
  *      - modify 2010-04-23
  *
  */
@@ -21,6 +21,7 @@
 #include <tbsys.h>
 #include <Memory.hpp>
 #include "nameserver.h"
+#include "block_collect.h"
 
 int main(int argc, char* argv[])
 {

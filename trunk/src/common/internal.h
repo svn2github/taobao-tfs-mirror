@@ -409,6 +409,29 @@ namespace tfs
       int32_t del_size_;
       uint32_t seq_no_;
 
+      BlockInfo(const BlockInfo& info)
+      {
+        block_id_ = info.block_id_;
+        version_  = info.version_;
+        file_count_ = info.file_count_;
+        size_ = info.size_;
+        del_file_count_ = info.del_file_count_;
+        del_size_ = info.del_size_;
+        seq_no_ = info.seq_no_;
+      }
+
+      BlockInfo& operator=(const BlockInfo& info)
+      {
+        block_id_ = info.block_id_;
+        version_  = info.version_;
+        file_count_ = info.file_count_;
+        size_ = info.size_;
+        del_file_count_ = info.del_file_count_;
+        del_size_ = info.del_size_;
+        seq_no_ = info.seq_no_;
+        return *this;
+      }
+
       BlockInfo()
       {
         memset(this, 0, sizeof(BlockInfo));
@@ -785,7 +808,7 @@ namespace tfs
       REMOVE_BLOCK_RESPONSE_FLAG_YES = 1
     }RemoveBlockResponseFlag;
 
-    extern const char* dynamic_parameter_str[];
+    extern const char* dynamic_parameter_str[29];
 
     // defined type typedef
     typedef std::vector<BlockInfo> BLOCK_INFO_LIST;
@@ -801,7 +824,7 @@ namespace tfs
     static const int32_t FILEINFO_SIZE = sizeof(FileInfo);
     static const int32_t BLOCKINFO_SIZE = sizeof(BlockInfo);
     static const int32_t RAW_META_SIZE = sizeof(RawMeta);
-  }
-}
+  }/** end namespace common*/
+}/** end namespace tfs **/
 
 #endif //TFS_COMMON_INTERNAL_H_

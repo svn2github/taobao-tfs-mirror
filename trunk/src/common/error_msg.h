@@ -45,6 +45,7 @@ namespace tfs
     const int32_t EXIT_CHANNEL_ID_INVALID = -1020;//channel id invalid
     const int32_t EXIT_DATA_PACKET_TIMEOUT = -1021;//data packet timeout
     const int32_t EXIT_LRU_BUCKET_NOT_EXIST = -1022;//lru bucket not found by key
+    const int32_t EXIT_SERVICE_SHUTDOWN = -1023;
 
     const int32_t EXIT_FILE_OP_ERROR = -2000;
     const int32_t EXIT_OPEN_FILE_ERROR = -2001;
@@ -66,6 +67,7 @@ namespace tfs
     const int32_t EXIT_WAITID_EXIST_ERROR = -3006;//waitid exist error
     const int32_t EXIT_WAITID_NOT_FOUND_ERROR = -3007;//waitid not found in waitid set
     const int32_t EXIT_SOCKET_NOT_FOUND_ERROR = -3008;//socket nof found in socket map
+    const int32_t EXIT_SEND_RECV_MSG_COUNT_ERROR = -3009;
 
     const int32_t EXIT_TFS_ERROR = -5000;
     const int32_t EXIT_NO_BLOCK = -5001;
@@ -87,6 +89,21 @@ namespace tfs
     const int32_t EIXT_SERVER_OBJECT_NOT_FOUND = -5017;//server object not found in XXX
     const int32_t EXIT_UPDATE_RELATION_ERROR = -5018;//update relation error
     const int32_t EXIT_DISCARD_NEWBLK_ERROR  = -5019;//nameserver in safe_mode_time, discard newblk packet
+    const int32_t EXIT_BLOCK_REPLICATE_EXIST = -5020;//通过工具加载block时，block的备份已经存在
+    const int32_t EXIT_CHOOSE_CREATE_BLOCK_TARGET_SERVER_ERROR = -5021;
+    const int32_t EXIT_ADD_TASK_ERROR = -5022;
+    const int32_t EXIT_ADD_NEW_BLOCK_ERROR = -5023;
+    const int32_t EXIT_TASK_EXIST_ERROR = -5024;
+    const int32_t EXIT_TASK_NO_EXIST_ERROR = -5025;
+    const int32_t EXIT_CREATE_BLOCK_SEND_MSG_ERROR = -5026;
+    const int32_t EXIT_RENEW_LEASE_ERROR = -5027;
+    const int32_t EXIT_ROLE_ERROR = -5028;
+    const int32_t EXIT_UPDATE_BLOCK_MISSING_ERROR = -5029;
+    const int32_t EXIT_EXECUTE_TASK_ERROR = -5030;
+    const int32_t EXIT_CLIENT_MANAGER_CREATE_CLIENT_ERROR = -5031;
+    const int32_t EXIT_BLOCK_ID_INVALID_ERROR = -5032;
+    const int32_t EXIT_BLOCK_WRITING_ERROR = -5033;
+    const int32_t EXIT_MOVE_OR_REPLICATE_ERROR = -5034;
 
     const int32_t EXIT_WRITE_OFFSET_ERROR = -8001; // write offset error
     const int32_t EXIT_READ_OFFSET_ERROR = -8002; // read offset error

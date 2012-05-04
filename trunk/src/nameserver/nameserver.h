@@ -34,12 +34,12 @@ namespace tfs
     class OwnerCheckTimerTask: public tbutil::TimerTask
     {
     public:
-      OwnerCheckTimerTask(NameServer* server);
+      explicit OwnerCheckTimerTask(NameServer& manager);
       virtual ~OwnerCheckTimerTask();
       virtual void runTimerTask();
     private:
       DISALLOW_COPY_AND_ASSIGN( OwnerCheckTimerTask);
-      NameServer* server_;
+      NameServer& manager_;
       const int64_t MAX_LOOP_TIME;
       int64_t max_owner_check_time_;
       int64_t owner_check_time_;
@@ -90,19 +90,14 @@ namespace tfs
 
       int callback(common::NewClient* client);
 
-      LayoutManager& get_layout_manager() { return meta_mgr_;}
-      HeartManagement& get_heart_management() { return heart_mgr_;}
+      LayoutManager& get_layout_manager() { return layout_manager_;}
+      HeartManagement& get_heart_management() { return heart_manager_;}
 
    private:
       DISALLOW_COPY_AND_ASSIGN(NameServer);
-      LayoutManager meta_mgr_;
-      MasterHeartTimerTaskPtr master_heart_task_;
-      SlaveHeartTimerTaskPtr slave_heart_task_;
-      OwnerCheckTimerTaskPtr owner_check_task_;
-      CheckOwnerIsMasterTimerTaskPtr check_owner_is_master_task_;
-      MasterAndSlaveHeartManager master_slave_heart_mgr_;
-      HeartManagement heart_mgr_;
-
+      LayoutManager layout_manager_;
+      NameServerHeartManager master_slave_heart_manager_;
+      HeartManagement heart_manager_;
     protected:
       /** get log file path*/
       virtual const char* get_log_file_path() { return NULL;}
@@ -124,8 +119,6 @@ namespace tfs
       int do_slave_msg_helper(common::BasePacket* packet);
 
       int initialize_ns_global_info();
-      int get_peer_role();
-      int wait_for_ds_report();
     };
   }/** nameserver **/
 }/** tfs **/

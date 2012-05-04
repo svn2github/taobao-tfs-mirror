@@ -20,7 +20,7 @@
 
 namespace tfs
 {
-  namespace common 
+  namespace common
   {
     BasePacket::BasePacket():
       Packet(),
@@ -39,7 +39,7 @@ namespace tfs
     {
 
     }
-    
+
     bool BasePacket::copy(BasePacket* src, const int32_t version, const bool deserialize)
     {
       bool bret = NULL != src;
@@ -54,7 +54,7 @@ namespace tfs
           _expireTime = 0;
           memcpy(&_packetHeader, &src->_packetHeader, sizeof(tbnet::PacketHeader));
 
-          //self members 
+          //self members
           id_ = src->get_id();
           crc_ = src->get_crc();
           version_ = version >= TFS_PACKET_VERSION_V0 ? version : src->get_version();
@@ -138,7 +138,7 @@ namespace tfs
               {
                 length -= TFS_PACKET_HEADER_DIFF_SIZE;
                 input->drainData(TFS_PACKET_HEADER_DIFF_SIZE);
-                uint32_t crc = Func::crc(TFS_PACKET_FLAG_V1, input->getData(), length); 
+                uint32_t crc = Func::crc(TFS_PACKET_FLAG_V1, input->getData(), length);
                 bret = crc == crc_;
                 if (!bret)
                 {
@@ -181,7 +181,7 @@ namespace tfs
         }
         if (TFS_SUCCESS == iret)
         {
-          if (((direction_ & DIRECTION_RECEIVE) && _expireTime > 0) 
+          if (((direction_ & DIRECTION_RECEIVE) && _expireTime > 0)
                 && (tbsys::CTimeUtil::getTime() > _expireTime))
           {
             TBSYS_LOG(ERROR, "message : %d, timeout for response, reply message : %d", getPCode(), packet->getPCode());
@@ -236,7 +236,7 @@ namespace tfs
     }
 
     int BasePacket::reply_error_packet(const int32_t level, const char* file, const int32_t line,
-               const char* function, const int32_t error_code, const char* fmt, ...) 
+               const char* function, const int32_t error_code, const char* fmt, ...)
     {
       char msgstr[MAX_ERROR_MSG_LENGTH + 1] = {'\0'};/** include '\0'*/
       va_list ap;
@@ -252,7 +252,7 @@ namespace tfs
       int32_t iret = reply(packet);
       if (TFS_SUCCESS != iret)
       {
-        TBSYS_LOG(ERROR, "reply message: %d failed, error code: %d", packet->getPCode(), error_code);
+        TBSYS_LOG(ERROR, "reply message: %d failed, error code: %d", getPCode(), error_code);
       }
       return iret;
     }
@@ -262,7 +262,7 @@ namespace tfs
     bool BasePacket::parse_special_ds(std::vector<uint64_t>& value, int32_t& version, uint32_t& lease)
     {
       bool bret = false;
-      std::vector<uint64_t>::iterator iter = 
+      std::vector<uint64_t>::iterator iter =
               std::find(value.begin(), value.end(),static_cast<uint64_t> (ULONG_LONG_MAX));
       std::vector<uint64_t>::iterator start = iter;
       if ((iter != value.end())

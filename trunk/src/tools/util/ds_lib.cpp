@@ -153,7 +153,7 @@ namespace tfs
       uint32_t block_id = ds_task.block_id_;
 
       RemoveBlockMessage req_rb_msg;
-      req_rb_msg.add_remove_id(block_id);
+      req_rb_msg.set(block_id);
       int ret_status = TFS_ERROR;
       int32_t status_value = 0;
       ret_status = send_msg_to_server(server_id, &req_rb_msg, status_value);

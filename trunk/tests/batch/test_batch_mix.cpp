@@ -35,7 +35,7 @@ int serialize(char* oper, vector<std::string>& operlist, int32_t index, int32_t 
   int fd = open(file_list_name, flag, 0660);
   if (fd == -1)
   {
-    fprintf(stderr, "index(%d) open %s file failed,  exit\n", index, oper);
+    fprintf(stderr, "index(%d) open %s file failed,  exit, %s=============\n", index, oper, strerror(errno));
     return -1;
   }
 
@@ -68,7 +68,7 @@ int write_file(ThreadParam& param, TfsClient* tfsclient, char* tfs_name, vector<
   //convname(tfs_file->get_file_name(), (char*) ".jpg", block_id, file_id);
   if (ret != EXIT_SUCCESS)
   {
-    fprintf(stderr, "index:%d, tfsopen failed\n", param.index_); 
+    fprintf(stderr, "index:%d, tfsopen failed\n", param.index_);
     ++write_time_consumed.fail_count_;
     ++write_time_consumed.total_count_;
     return ret;
@@ -78,7 +78,7 @@ int write_file(ThreadParam& param, TfsClient* tfsclient, char* tfs_name, vector<
     write_time_consumed.time_consumed_ = timer.consume();
     if (param.profile_)
     {
-      printf("index:%d, tfsopen ok. spend (%" PRI64_PREFIX "d)\n", param.index_, 
+      printf("index:%d, tfsopen ok. spend (%" PRI64_PREFIX "d)\n", param.index_,
           write_time_consumed.time_consumed_);
     }
   }
@@ -95,7 +95,7 @@ int write_file(ThreadParam& param, TfsClient* tfsclient, char* tfs_name, vector<
   ret = write_data(tfsclient, fd, const_cast<char*>(data), write_size);
   if (ret < 0)
   {
-    fprintf(stderr, "index:%d, tfswrite failed\n", param.index_); 
+    fprintf(stderr, "index:%d, tfswrite failed\n", param.index_);
     tfsclient->close(fd);
     ++write_time_consumed.fail_count_;
     ++write_time_consumed.total_count_;
@@ -106,7 +106,7 @@ int write_file(ThreadParam& param, TfsClient* tfsclient, char* tfs_name, vector<
     write_time_consumed.time_consumed_ = timer.consume();
     if (param.profile_)
     {
-      printf("index:%d, tfswrite completed, spend (%" PRI64_PREFIX "d)\n", param.index_, 
+      printf("index:%d, tfswrite completed, spend (%" PRI64_PREFIX "d)\n", param.index_,
         write_time_consumed.time_consumed_);
     }
 
@@ -199,10 +199,10 @@ void* mix_worker(void* arg)
       param.file_count_);
   char file_list_name[100];
   sprintf(file_list_name, "wf_%d", param.index_);
-  FILE* input_fd = fopen(file_list_name, "rb");
+  FILE* input_fd = fopen(file_list_name, "rw+");
   if (NULL == input_fd)
   {
-    printf("index(%d) open read file failed, exit\n", param.index_);
+    printf("index(%d) open read file failed, exit, %s\n", param.index_, strerror(errno));
     return NULL;
   }
   const int32_t BUFLEN = 32;

@@ -25,7 +25,6 @@ namespace tfs
     struct NameServerParameter
     {
       int initialize(void);
-      int32_t min_replication_;
       int32_t max_replication_;
       int32_t max_block_size_;
       int32_t max_write_file_count_;
@@ -36,33 +35,27 @@ namespace tfs
       int32_t replicate_wait_time_;
       int32_t compact_delete_ratio_;
       int32_t compact_max_load_;
+      int32_t compact_time_lower_;
+      int32_t compact_time_upper_;
       int32_t cluster_index_;
-      int32_t max_wait_write_lease_;
-      int32_t cleanup_lease_threshold_;
       int32_t add_primary_block_count_;
       int32_t safe_mode_time_;
-      int32_t build_plan_interval_;
-      int32_t run_plan_expire_interval_;
+      int32_t task_expired_time_;
       int32_t object_dead_max_time_;
       int32_t object_clear_max_time_;
-      int32_t run_plan_ratio_;
       int32_t dump_stat_info_interval_;
-      int32_t build_plan_default_wait_time_;
-      int32_t balance_max_diff_block_num_;
       int32_t group_seq_;
       int32_t group_count_;
       int32_t report_block_expired_time_;
       int32_t discard_newblk_safe_mode_time_;
       int32_t discard_max_count_;
-      int32_t strategy_write_capacity_weigth_;
-      int32_t strategy_write_elect_num_weigth_;
-      int32_t strategy_replicate_capacity_weigth_;
-      int32_t strategy_replicate_load_weigth_;
-      int32_t strategy_replicate_elect_num_weigth_;
       int32_t report_block_queue_size_;
       int32_t report_block_time_lower_;
       int32_t report_block_time_upper_;
       int32_t report_block_time_interval_;//day
+      int32_t max_task_in_machine_nums_;
+      int32_t max_write_timeout_;
+      int32_t cleanup_write_timeout_threshold_;
       double  balance_percent_;
 
       static NameServerParameter ns_parameter_;

@@ -19,5 +19,3 @@ BEGIN
 END $$
 delimiter ;
 
-
-

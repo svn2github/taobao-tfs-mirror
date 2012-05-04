@@ -13,69 +13,44 @@
  *      - initial release
  *
  */
-#ifndef TFS_NAMESERVER_GC_H
-#define TFS_NAMESERVER_GC_H
+#ifndef TFS_NAMESERVER_GC_H_
+#define TFS_NAMESERVER_GC_H_
 
 #include <Timer.h>
 #include <Mutex.h>
 #include "ns_define.h"
-#include "lease_clerk.h"
+
+#ifdef TFS_GTEST
+#include <gtest/gtest.h>
+#endif
 
 namespace tfs
 {
-namespace nameserver
-{
-  class LayoutManager;
-  class GCObjectManager
+  namespace nameserver
   {
-  public:
-    GCObjectManager();
-    virtual ~GCObjectManager();
-    int add(GCObject* object);
-    int add(const std::vector<GCObject*>& objects);
-    void run();
-    int initialize();
-    int wait_for_shut_down();
-    void destroy();
-    void set_layout_manager(LayoutManager* manager) { manager_ = manager;}
-    static GCObjectManager& instance()
+    class LayoutManager;
+    class GCObjectManager
     {
-      return instance_;
-    }
-  #if defined(TFS_GTEST) || defined(TFS_NS_INTEGRATION)
-  public:
-  #else
-  private:
-  #endif
-    DISALLOW_COPY_AND_ASSIGN(GCObjectManager);
-    std::set<GCObject*> object_list_;
-    tbutil::Mutex mutex_;
-    static GCObjectManager instance_;
-    LayoutManager* manager_;
-    bool destroy_;
-
-  #if defined(TFS_GTEST) || defined(TFS_NS_INTEGRATION)
-  public:
-  #else
-  private:
-  #endif
-    class ExpireTimerTask: public tbutil::TimerTask
-    {
-    public:
-      explicit ExpireTimerTask(GCObjectManager& manager)
-        :manager_(manager)
-      {
-
-      }
-
-      virtual ~ExpireTimerTask() {}
-      virtual void runTimerTask();
-    private:
-      GCObjectManager& manager_;
+      #ifdef TFS_GTEST
+      friend class GCTest;
+      friend class LayoutManager;
+      FRIEND_TEST(GCTest, add);
+      FRIEND_TEST(GCTest, gc);
+      #endif
+      public:
+      explicit GCObjectManager(LayoutManager& manager);
+      virtual ~GCObjectManager();
+      int add(GCObject* object);
+      int gc(const time_t now);
+      int64_t size() const;
+      private:
+      DISALLOW_COPY_AND_ASSIGN(GCObjectManager);
+      LayoutManager& manager_;
+      std::set<GCObject*>  wait_clear_list_;
+      std::list<GCObject*> wait_free_list_;
+      tbutil::Mutex mutex_;
+      int64_t wait_free_list_size_;
     };
-    typedef tbutil::Handle<ExpireTimerTask> ExpireTimerTaskPtr;
-  };
-}
-}
-
+  }/** end namespace nameserver **/
+}/** end namespace tfs **/
 #endif

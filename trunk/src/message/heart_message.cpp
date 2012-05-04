@@ -15,6 +15,7 @@
  */
 #include "common/serialization.h"
 #include "common/stream.h"
+#include "common/parameter.h"
 #include "heart_message.h"
 
 namespace tfs
@@ -134,7 +135,9 @@ namespace tfs
       return common::INT64_SIZE + common::INT8_SIZE * 4;
     }
 
-    MasterAndSlaveHeartMessage::MasterAndSlaveHeartMessage()
+    MasterAndSlaveHeartMessage::MasterAndSlaveHeartMessage():
+      lease_id_(common::INVALID_LEASE_ID),
+      keepalive_type_(0)
     {
       _packetHeader._pcode = common::MASTER_AND_SLAVE_HEART_MESSAGE;
       memset(&ns_identity_, 0, sizeof(ns_identity_));
@@ -153,6 +156,16 @@ namespace tfs
       {
         input.drain(ns_identity_.length());
       }
+      if (common::TFS_SUCCESS == iret)
+      {
+        if (input.get_data_length() > 0)
+          iret = input.get_int64(&lease_id_);
+      }
+      if (common::TFS_SUCCESS == iret)
+      {
+        if (input.get_data_length() > 0)
+          iret = input.get_int8(&keepalive_type_);
+      }
       return iret;
     }
 
@@ -162,17 +175,28 @@ namespace tfs
       int32_t iret = ns_identity_.serialize(output.get_free(), output.get_free_length(), pos);
       if (common::TFS_SUCCESS == iret)
       {
-        output.pour(length());
+        output.pour(ns_identity_.length());
+      }
+      if (common::TFS_SUCCESS == iret)
+      {
+        iret = output.set_int64(lease_id_);
+      }
+      if (common::TFS_SUCCESS == iret)
+      {
+        iret = output.set_int8(keepalive_type_);
       }
       return iret;
     }
 
     int64_t MasterAndSlaveHeartMessage::length() const
     {
-      return ns_identity_.length();
+      return ns_identity_.length() + common::INT64_SIZE + common::INT8_SIZE;
     }
 
-    MasterAndSlaveHeartResponseMessage::MasterAndSlaveHeartResponseMessage()
+    MasterAndSlaveHeartResponseMessage::MasterAndSlaveHeartResponseMessage():
+      lease_id_(common::INVALID_LEASE_ID),
+      lease_expired_time_(common::SYSPARAM_NAMESERVER.heart_interval_),
+      renew_lease_interval_time_(common::SYSPARAM_NAMESERVER.heart_interval_)
     {
       _packetHeader._pcode = common::MASTER_AND_SLAVE_HEART_RESPONSE_MESSAGE;
       ::memset(&ns_identity_, 0, sizeof(ns_identity_));
@@ -190,10 +214,18 @@ namespace tfs
       if (common::TFS_SUCCESS == iret)
       {
         input.drain(ns_identity_.length());
-        if (ns_identity_.flags_ == HEART_GET_DATASERVER_LIST_FLAGS_YES)
-        {
-          iret = input.get_vint64(ds_list_);
-        }
+      }
+      if (common::TFS_SUCCESS == iret)
+      {
+        iret = input.get_int64(&lease_id_);
+      }
+      if (common::TFS_SUCCESS == iret)
+      {
+        iret = input.get_int32(&lease_expired_time_);
+      }
+      if (common::TFS_SUCCESS == iret)
+      {
+        iret = input.get_int32(&renew_lease_interval_time_);
       }
       return iret;
     }
@@ -205,22 +237,25 @@ namespace tfs
       if (common::TFS_SUCCESS == iret)
       {
         output.pour(ns_identity_.length());
-        if (ns_identity_.flags_ == HEART_GET_DATASERVER_LIST_FLAGS_YES)
-        {
-          iret = output.set_vint64(ds_list_);
-        }
+      }
+      if (common::TFS_SUCCESS == iret)
+      {
+        iret = output.set_int64(lease_id_);
+      }
+      if (common::TFS_SUCCESS == iret)
+      {
+        iret = output.set_int32(lease_expired_time_);
+      }
+      if (common::TFS_SUCCESS == iret)
+      {
+        iret = output.set_int32(renew_lease_interval_time_);
       }
       return iret;
     }
 
     int64_t MasterAndSlaveHeartResponseMessage::length() const
     {
-      int64_t tmp = ns_identity_.length();
-      if (ns_identity_.flags_ == HEART_GET_DATASERVER_LIST_FLAGS_YES)
-      {
-        tmp += common::Serialization::get_vint64_length(ds_list_);
-      }
-      return tmp;
+      return ns_identity_.length() + common::INT64_SIZE + common::INT_SIZE * 2;
     }
 
     HeartBeatAndNSHeartMessage::HeartBeatAndNSHeartMessage() :

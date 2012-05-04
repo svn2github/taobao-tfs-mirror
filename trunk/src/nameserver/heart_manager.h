@@ -42,7 +42,7 @@ namespace tfs
       class KeepAliveIPacketQueueHeaderHelper : public tbnet::IPacketQueueHandler
       {
       public:
-        KeepAliveIPacketQueueHeaderHelper(HeartManagement& manager): manager_(manager){};
+        explicit KeepAliveIPacketQueueHeaderHelper(HeartManagement& manager): manager_(manager){};
         virtual ~KeepAliveIPacketQueueHeaderHelper() {}
         virtual bool handlePacketQueue(tbnet::Packet* packet, void *args);
       private:
@@ -52,7 +52,7 @@ namespace tfs
       class ReportBlockIPacketQueueHeaderHelper: public tbnet::IPacketQueueHandler
       {
       public:
-        ReportBlockIPacketQueueHeaderHelper(HeartManagement& manager): manager_(manager){};
+        explicit ReportBlockIPacketQueueHeaderHelper(HeartManagement& manager): manager_(manager){};
         virtual ~ReportBlockIPacketQueueHeaderHelper(){}
         virtual bool handlePacketQueue(tbnet::Packet* packet, void *args);
       private:
@@ -63,7 +63,7 @@ namespace tfs
       DISALLOW_COPY_AND_ASSIGN(HeartManagement);
       int keepalive(tbnet::Packet* packet);
       int report_block(tbnet::Packet* packet);
-      NameServer& meta_mgr_;
+      NameServer& manager_;
       uint32_t keepalive_queue_size_;
       uint32_t report_block_queue_size_;
       tbnet::PacketQueueThread keepalive_threads_;
@@ -72,82 +72,48 @@ namespace tfs
       ReportBlockIPacketQueueHeaderHelper report_block_queue_header_;
     };
 
-    class CheckOwnerIsMasterTimerTask: public tbutil::TimerTask
+    class NameServerHeartManager: public tbnet::IPacketQueueHandler
     {
-    public:
-      explicit CheckOwnerIsMasterTimerTask(LayoutManager* mm);
-      virtual ~CheckOwnerIsMasterTimerTask()
-      {
-      }
-      virtual void runTimerTask();
+        friend class NameServer;
+     public:
+        explicit NameServerHeartManager(LayoutManager& manager);
+        virtual ~NameServerHeartManager();
+        int initialize();
+        int wait_for_shut_down();
+        int destroy();
+        int push(common::BasePacket* message, const int32_t max_queue_size = 0, const bool block = false);
+        virtual bool handlePacketQueue(tbnet::Packet *packet, void *args);
+      private:
+        class CheckThreadHelper : public tbutil::Thread
+        {
+          public:
+            explicit CheckThreadHelper(NameServerHeartManager& manager): manager_(manager) { start();}
+            virtual ~CheckThreadHelper() {}
+            void run();
+          private:
+            NameServerHeartManager& manager_;
+            DISALLOW_COPY_AND_ASSIGN(CheckThreadHelper);
+        };
+        typedef tbutil::Handle<CheckThreadHelper> CheckThreadHelperPtr;
+      private:
+        int keepalive_(common::BasePacket* message);
+        int keepalive_(int32_t& sleep_time, NsKeepAliveType& type, NsRuntimeGlobalInformation& ngi, const time_t now);
+        void check_();
+        bool check_vip_(const NsRuntimeGlobalInformation& ngi) const;
+        int ns_role_establish_(NsRuntimeGlobalInformation& ngi, const time_t now);
+        int establish_peer_role_(NsRuntimeGlobalInformation& ngi);
+        int ns_check_lease_expired_(NsRuntimeGlobalInformation& ngi, const time_t now);
 
-    private:
-      DISALLOW_COPY_AND_ASSIGN( CheckOwnerIsMasterTimerTask);
-      void master_lost_vip(NsRuntimeGlobalInformation& ngi);
-      void check_when_slave_hold_vip(NsRuntimeGlobalInformation& ngi);
-      void ns_force_modify_other_side();
-      void ns_switch(const NsStatus& other_side_status, const NsSyncDataFlag& ns_sync_flag);
-      LayoutManager* meta_mgr_;
+        void switch_role_master_to_slave_(NsRuntimeGlobalInformation& ngi, const time_t now);
+        void switch_role_salve_to_master_(NsRuntimeGlobalInformation& ngi, const time_t now);
+
+        int keepalive_in_heartbeat_(common::BasePacket* message);
+      private:
+        LayoutManager& manager_;
+        CheckThreadHelperPtr check_thread_;
+        tbnet::PacketQueueThread work_thread_;
     };
-    typedef tbutil::Handle<CheckOwnerIsMasterTimerTask> CheckOwnerIsMasterTimerTaskPtr;
-
-    class MasterHeartTimerTask: public tbutil::TimerTask
-    {
-    public:
-      explicit MasterHeartTimerTask(LayoutManager* mm);
-      virtual ~MasterHeartTimerTask()
-      {
-      }
-      virtual void runTimerTask();
-
-    private:
-      DISALLOW_COPY_AND_ASSIGN(MasterHeartTimerTask);
-      LayoutManager* meta_mgr_;
-    };
-    typedef tbutil::Handle<MasterHeartTimerTask> MasterHeartTimerTaskPtr;
-
-    class SlaveHeartTimerTask: public tbutil::TimerTask
-    {
-    public:
-      SlaveHeartTimerTask(LayoutManager* mm, tbutil::TimerPtr& timer);
-      virtual ~SlaveHeartTimerTask()
-      {
-      }
-      virtual void runTimerTask();
-
-    private:
-      DISALLOW_COPY_AND_ASSIGN(SlaveHeartTimerTask);
-      LayoutManager* meta_mgr_;
-      tbutil::TimerPtr& timer_;
-    };
-    typedef tbutil::Handle<SlaveHeartTimerTask> SlaveHeartTimerTaskPtr;
-
-    class MasterAndSlaveHeartManager: public tbnet::IPacketQueueHandler
-    {
-    public:
-      MasterAndSlaveHeartManager(LayoutManager* mm, tbutil::TimerPtr& timer);
-      virtual ~MasterAndSlaveHeartManager();
-
-    public:
-      int initialize();
-      int wait_for_shut_down();
-      int destroy();
-      int push(common::BasePacket* message, const int32_t max_queue_size = 0, const bool block = false);
-      virtual bool handlePacketQueue(tbnet::Packet *packet, void *args);
-
-    private:
-      int do_master_msg(common::BasePacket* message, void* args);
-      int do_slave_msg(common::BasePacket* message, void* args);
-      int do_heartbeat_and_ns_msg(common::BasePacket* message, void* args);
-
-    private:
-      DISALLOW_COPY_AND_ASSIGN( MasterAndSlaveHeartManager);
-      LayoutManager* meta_mgr_;
-      tbutil::TimerPtr& timer_;
-      tbnet::PacketQueueThread work_thread_;
-    };
-  }
-}
-
+  }/** end namespace nameserver **/
+}/** end namespace tfs **/
 #endif
 

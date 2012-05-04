@@ -41,16 +41,21 @@ namespace tfs
       {
         iret = input.get_int32(&is_owner_);
       }
+      if (common::TFS_SUCCESS == iret
+        && input.get_data_length() > 0)
+      {
+        iret = input.get_int64(&seqno_);
+      }
       return iret;
     }
 
 
     int64_t CompactBlockMessage::length() const
     {
-      return common::INT_SIZE * 3;
+      return common::INT_SIZE * 3 + common::INT64_SIZE;
     }
 
-    int CompactBlockMessage::serialize(common::Stream& output) const 
+    int CompactBlockMessage::serialize(common::Stream& output) const
     {
       int32_t iret = output.set_int32(preserve_time_);
       if (common::TFS_SUCCESS == iret)
@@ -60,6 +65,10 @@ namespace tfs
       if (common::TFS_SUCCESS == iret)
       {
         iret = output.set_int32(is_owner_);
+      }
+      if (common::TFS_SUCCESS == iret)
+      {
+        iret = output.set_int64(seqno_);
       }
       return iret;
     }
@@ -103,6 +112,11 @@ namespace tfs
           input.drain(block_info_.length());
         }
       }
+      if (common::TFS_SUCCESS == iret
+        && input.get_data_length() > 0)
+      {
+        iret = input.get_int64(&seqno_);
+      }
       return iret;
     }
 
@@ -129,15 +143,20 @@ namespace tfs
       {
         iret = block_info_.deserialize(data, data_len, pos);
       }
+      if (common::TFS_SUCCESS == iret
+          && pos + common::INT64_SIZE >= data_len)
+      {
+        iret = common::Serialization::get_int64(data, data_len, pos, &seqno_);
+      }
       return iret;
     }
 
     int64_t CompactBlockCompleteMessage::length() const
     {
-      return  common::INT_SIZE * 3 + common::INT64_SIZE + block_info_.length() + common::Serialization::get_vint64_length(ds_list_);
+      return  common::INT_SIZE * 3 + common::INT64_SIZE * 2 + block_info_.length() + common::Serialization::get_vint64_length(ds_list_);
     }
 
-    int CompactBlockCompleteMessage::serialize(common::Stream& output) const 
+    int CompactBlockCompleteMessage::serialize(common::Stream& output) const
     {
       int32_t iret = output.set_int32(block_id_);
       if (common::TFS_SUCCESS == iret)
@@ -164,6 +183,10 @@ namespace tfs
         {
           output.pour(block_info_.length());
         }
+      }
+      if (common::TFS_SUCCESS == iret)
+      {
+        output.set_int64(seqno_);
       }
       return iret;
     }

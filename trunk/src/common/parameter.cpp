@@ -37,11 +37,30 @@ namespace tfs
     NameMetaServerParameter NameMetaServerParameter::meta_parameter_;
     RtServerParameter RtServerParameter::rt_parameter_;
 
+    static void set_hour_range(const char *str, int32_t& min, int32_t& max)
+    {
+      if (NULL != str)
+      {
+        char *p1, *p2, buffer[64];
+        p1 = buffer;
+        p2 = strsep(&p1, "-~ ");
+        strncpy(buffer, str, 63);
+        if (NULL  != p2 && p2[0] != '\0')
+          min = atoi(p2);
+        if (NULL != p1 && p1[0] != '\0')
+          max = atoi(p1);
+      }
+    }
+
     int NameServerParameter::initialize(void)
     {
-      report_block_time_upper_ = 2;
-      report_block_time_lower_ = 4;
       discard_max_count_ = 0;
+      report_block_time_interval_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_REPORT_BLOCK_TIME_INTERVAL, 1);
+      report_block_time_interval_ = std::max(1, report_block_time_interval_);
+      max_write_timeout_= TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_MAX_WRITE_TIMEOUT, 3);
+      max_task_in_machine_nums_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_MAX_TASK_IN_MACHINE_NUMS, 14);
+      cleanup_write_timeout_threshold_ =
+        TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_CLEANUP_WRITE_TIMEOUT_THRESHOLD, 40960);
       const char* index = TBSYS_CONFIG.getString(CONF_SN_NAMESERVER, CONF_CLUSTER_ID);
       if (index == NULL
           || strlen(index) < 1
@@ -67,11 +86,7 @@ namespace tfs
       max_block_size_ = (writeBlockSize & 0xFFF00000) + 1024 * 1024;
       max_block_size_ = std::max(max_block_size_, max_block_size);
 
-      min_replication_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_MIN_REPLICATION, 2);
       max_replication_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_MAX_REPLICATION, 2);
-      if (min_replication_ <= 0)
-         min_replication_ = 2;
-      max_replication_ = std::max(min_replication_, max_replication_);
 
       replicate_ratio_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_REPLICATE_RATIO, 50);
       if (replicate_ratio_ <= 0)
@@ -84,10 +99,8 @@ namespace tfs
       max_use_capacity_ratio_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_USE_CAPACITY_RATIO, 98);
       max_use_capacity_ratio_ = std::min(max_use_capacity_ratio_, 100);
 
-      TBSYS_LOG(INFO, "load configure::max_block_size_:%u, min_replication_:%u,"
-        "max_replication_:%u,max_write_file_count_:%u,max_use_capacity_ratio_:%u\n", max_block_size_,
-          min_replication_, max_replication_, max_write_file_count_,
-          max_use_capacity_ratio_);
+      TBSYS_LOG(INFO, "load configure::max_block_size_:%u, max_replication_:%u,max_write_file_count_:%u,max_use_capacity_ratio_:%u",
+          max_block_size_,max_replication_, max_write_file_count_,max_use_capacity_ratio_);
 
       const char* group_mask_str = TBSYS_CONFIG.getString(CONF_SN_NAMESERVER, CONF_GROUP_MASK, "255.255.255.255");
       if (group_mask_str == NULL)
@@ -101,23 +114,25 @@ namespace tfs
       replicate_wait_time_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_REPL_WAIT_TIME, 240);
       if (replicate_wait_time_ <= 0)
         replicate_wait_time_ = 240;
+
       compact_delete_ratio_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_COMPACT_DELETE_RATIO, 15);
       if (compact_delete_ratio_ <= 0)
         compact_delete_ratio_ = 15;
       compact_delete_ratio_ = std::min(compact_delete_ratio_, 100);
-
+      const char* compact_time_str = TBSYS_CONFIG.getString(CONF_SN_NAMESERVER, CONF_COMPACT_HOUR_RANGE, "2~6");
+      set_hour_range(compact_time_str, compact_time_lower_, compact_time_upper_);
       compact_max_load_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_COMPACT_MAX_LOAD, 100);
-      object_dead_max_time_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_OBJECT_DEAD_MAX_TIME, 86400);
-      if (object_dead_max_time_ <=  0)
-        object_dead_max_time_ = 86400;
-      object_clear_max_time_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_OBJECT_CLEAR_MAX_TIME, 300);
-      if (object_clear_max_time_ <= 0)
-        object_clear_max_time_ = 300;
 
-     int32_t thread_count = TBSYS_CONFIG.getInt(CONF_SN_PUBLIC, CONF_THREAD_COUNT, 8);
-      max_wait_write_lease_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_MAX_WAIT_WRITE_LEASE, 5);
-      if (max_wait_write_lease_ >= thread_count)
-        max_wait_write_lease_ = thread_count / 2;
+      object_dead_max_time_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_OBJECT_DEAD_MAX_TIME, 300);
+      if (object_dead_max_time_ <=  300)
+        object_dead_max_time_ = 300;
+
+      object_clear_max_time_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_OBJECT_CLEAR_MAX_TIME, 180);
+      if (object_clear_max_time_ <=  180)
+        object_clear_max_time_ = 180;
+
+      if (object_clear_max_time_ > object_dead_max_time_)
+        object_clear_max_time_ = object_dead_max_time_ / 2;
 
       add_primary_block_count_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_ADD_PRIMARY_BLOCK_COUNT, 3);
       if (add_primary_block_count_ <= 0)
@@ -128,25 +143,15 @@ namespace tfs
       if (safe_mode_time_ <= 0)
         safe_mode_time_ = 300;
 
-      build_plan_interval_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_BUILD_PLAN_INTERVAL, 30);
-      if (build_plan_interval_ <= 30)
-        build_plan_interval_ = 30;
-      run_plan_expire_interval_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_RUN_PLAN_EXPIRE_INTERVAL, 120);
-      if (run_plan_expire_interval_ <= 0)
-        run_plan_expire_interval_ = 120;
-      run_plan_ratio_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_BUILD_PLAN_RATIO,25);
-      if (run_plan_ratio_ <= 25)
-        run_plan_ratio_ = 25;
-      run_plan_ratio_ = std::min(run_plan_ratio_, 100);
+      task_expired_time_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_TASK_EXPIRED_TIME, 120);
+      if (task_expired_time_ <= 0)
+        task_expired_time_ = 120;
+      if (task_expired_time_ > object_clear_max_time_)
+        task_expired_time_ = object_clear_max_time_ - 5;
+
       dump_stat_info_interval_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_DUMP_STAT_INFO_INTERVAL, 10000000);
       if (dump_stat_info_interval_ <= 60000000)
         dump_stat_info_interval_ = 60000000;
-      build_plan_default_wait_time_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_BUILD_PLAN_DEFAULT_WAIT_TIME, 2);//s
-      if (build_plan_default_wait_time_ <= 0)
-        build_plan_default_wait_time_ = 2;
-      balance_max_diff_block_num_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_BALANCE_MAX_DIFF_BLOCK_NUM, 5);//s
-      if (balance_max_diff_block_num_ <= 0)
-        balance_max_diff_block_num_ = 5;
       const char* percent = TBSYS_CONFIG.getString(CONF_SN_NAMESERVER, CONF_BALANCE_PERCENT,"0.00001");
       balance_percent_ = strtod(percent, NULL);
       group_count_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_GROUP_COUNT, 1);
@@ -164,18 +169,15 @@ namespace tfs
       }
       report_block_expired_time_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_REPORT_BLOCK_EXPIRED_TIME, heart_interval_ * 2);
       discard_newblk_safe_mode_time_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_DISCARD_NEWBLK_SAFE_MODE_TIME, safe_mode_time_ * 2);
-      strategy_write_capacity_weigth_ = 90;
-      strategy_write_elect_num_weigth_ = 10;
-      strategy_replicate_capacity_weigth_ = 80;
-      strategy_replicate_load_weigth_ = 10;
-      strategy_replicate_elect_num_weigth_ = 10;
-
       int32_t report_block_thread_nums = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_REPORT_BLOCK_THREAD_COUNT, 4);
       report_block_queue_size_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_REPORT_BLOCK_MAX_QUEUE_SIZE, report_block_thread_nums * 2);
       if (report_block_queue_size_ < report_block_thread_nums * 2)
          report_block_queue_size_ = report_block_thread_nums * 2;
       if (report_block_queue_size_ > report_block_thread_nums * 4)
         report_block_queue_size_ = report_block_thread_nums * 4;
+      const char* report_hour_str = TBSYS_CONFIG.getString(CONF_SN_NAMESERVER, CONF_REPORT_BLOCK_HOUR_RANGE, "2~4");
+
+      set_hour_range(report_hour_str, report_block_time_upper_, report_block_time_lower_);
       return TFS_SUCCESS;
     }
 

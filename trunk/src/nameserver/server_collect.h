@@ -22,7 +22,13 @@
 #include "ns_define.h"
 #include "common/lock.h"
 #include "common/parameter.h"
+#include "common/tfs_vector.h"
 #include "global_factory.h"
+#include "block_manager.h"
+
+#ifdef TFS_GTEST
+#include <gtest/gtest.h>
+#endif
 
 namespace tfs
 {
@@ -30,116 +36,101 @@ namespace tfs
   {
     class BlockCollect;
     class LayoutManager;
-    class ServerCollect : public virtual common::RWLock,
-    public virtual GCObject
+    class ServerCollect : public GCObject
     {
       friend class BlockCollect;
       friend class LayoutManager;
+      typedef common::TfsSortedVector<BlockCollect*, BlockIdCompare>::iterator BLOCKS_ITER;
+      #ifdef TFS_GTEST
+      friend class ServerCollectTest;
+      friend class LayoutManagerTest;
+      FRIEND_TEST(ServerCollectTest, add);
+      FRIEND_TEST(ServerCollectTest, remove);
+      FRIEND_TEST(ServerCollectTest, get_range_blocks_);
+      FRIEND_TEST(ServerCollectTest, touch);
+      FRIEND_TEST(LayoutManagerTest, update_relation);
       public:
-      struct BlockIdComp
-      {
-        bool operator () (const BlockCollect* lhs, const BlockCollect* rhs) const;
-      };
+      bool exist_writable(const BlockCollect* block);
+      #endif
       public:
+      explicit ServerCollect(const uint64_t id);
       ServerCollect(const common::DataServerStatInfo& info, const time_t now);
-      bool add(BlockCollect* block, const bool writable);
-      bool remove(BlockCollect* block);
-      bool exist(BlockCollect* block);
-      void update(const common::DataServerStatInfo& info, const time_t now, const bool is_new);
-      void statistics(NsGlobalStatisticsInfo& stat, const bool is_new);
-      bool add_writable(BlockCollect* block);
-      bool add_master(BlockCollect* block);
-      bool remove_master(BlockCollect* block);
-      bool remove_writable(BlockCollect* block);
-      bool clear(LayoutManager& manager, const time_t now);
-      bool is_writable(const int64_t average_used_capacity) const;
-      bool is_readable(const int32_t average_load) const;
-      bool touch(LayoutManager& manager, const time_t now, bool& promote, int32_t& count);
-      BlockCollect* elect_write_block();
-      BlockCollect* force_elect_write_block(void);
+      virtual ~ServerCollect();
 
-      int scan(common::SSMScanParameter& param, const int8_t scan_flag);
+      bool add(const BlockCollect* block, const bool master, const bool writable);
+      bool remove(BlockCollect* block);
+      bool remove(const common::ArrayHelper<BlockCollect*>& blocks);
+      void update(const common::DataServerStatInfo& info, const time_t now, const bool is_new);
+      void statistics(NsGlobalStatisticsInfo& stat, const bool is_new) const;
+      bool add_writable(const BlockCollect* block);
+      bool clear(LayoutManager& manager, const time_t now);
+      bool touch(bool& promote, int32_t& count, const double average_used_capacity);
+      bool get_range_blocks(common::ArrayHelper<BlockCollect*>& blocks, const uint32_t begin, const int32_t count) const;
+      int scan(common::SSMScanParameter& param, const int8_t scan_flag) const;
+      void callback(LayoutManager& manager);
+      void reset(LayoutManager& manager, const common::DataServerStatInfo& info, const time_t now);
 
       inline int64_t use_capacity() const { return use_capacity_;}
       inline int64_t total_capacity() const { return total_capacity_;}
-      inline int32_t load() const { return current_load_;}
-      bool can_be_master(int32_t max_write_block_count);
-      inline void touch(const time_t now) { last_update_time_ = now;}
       inline uint64_t id() const { return id_;}
       inline bool is_full() const { return use_capacity_ >= total_capacity_ * common::SYSPARAM_NAMESERVER.max_use_capacity_ratio_ / 100;}
       inline bool is_alive(const time_t now) const { return ((now < last_update_time_+ common::SYSPARAM_NAMESERVER.heart_interval_ * MULTIPLE));}
       inline bool is_alive() const { return (status_ == common::DATASERVER_STATUS_ALIVE);}
-      inline void dead() { status_ = common::DATASERVER_STATUS_DEAD;}
-      inline int32_t block_count() const { return hold_.size();}
-      inline void elect_num_inc()
-      {
-        RWLock::Lock lock(*this, common::WRITE_LOCKER);
-        elect_num_ <  NsGlobalStatisticsInfo::ELECT_SEQ_NO_INITIALIZE ? elect_num_ = GFactory::get_global_info().calc_elect_seq_num_average() : ++elect_num_;
-      }
-#ifdef TFS_NS_DEBUG
-      inline void total_elect_num_inc()
-      {
-        RWLock::Lock lock(*this, common::WRITE_LOCKER);
-        ++total_elect_num_;
-      }
-#endif
-      inline int64_t get_elect_num() const { return elect_num_;}
-      inline int32_t get_hold_master_size() const { return hold_master_.size();}
-
-      void callback(LayoutManager* manager);
+      inline void update_status() { status_ = common::DATASERVER_STATUS_DEAD;}
+      inline int32_t block_count() const { return block_count_;}
 
       inline bool is_equal_group(const uint32_t id) const
       {
-        return (static_cast<int32_t>((id % common::SYSPARAM_NAMESERVER.group_count_)) == common::SYSPARAM_NAMESERVER.group_seq_);
+        return (static_cast<int32_t>(id % common::SYSPARAM_NAMESERVER.group_count_)
+                == common::SYSPARAM_NAMESERVER.group_seq_);
       }
-
       inline void set_report_block_status(const int8_t status)
       {
         rb_status_ = status;
       }
-
-      inline bool is_report_block(bool& rb_expire, const time_t now, const bool isnew)
+      inline bool is_report_block(bool& rb_expire, const time_t now, const bool isnew) const
       {
+        //TBSYS_LOG(DEBUG, "rb_expired: %ld, status: %d, next: %ld",
+        //    rb_expired_time_, rb_status_, next_report_block_time_);
         if (!isnew)
-          rb_expire = now > rb_expired_time_ && rb_status_ == REPORT_BLOCK_STATUS_REPORTING;
-        //TBSYS_LOG(DEBUG, "%s now : %ld, rb_expired_time_: %ld, next : %ld", tbsys::CNetUtil::addrToString(id_).c_str(), now, rb_expired_time_,next_report_block_time_);
-        return isnew || rb_expire ? true : now >= next_report_block_time_;
+          rb_expire = (now > rb_expired_time_ && rb_status_ == REPORT_BLOCK_STATUS_REPORTING);
+        return (isnew || rb_expire) ? true : now >= next_report_block_time_;
       }
-
       inline bool is_report_block_complete(void) const
       {
         return rb_status_ == REPORT_BLOCK_STATUS_COMPLETE;
       }
-
       inline void set_report_block_info(const time_t now, const int8_t status)
       {
         rb_expired_time_ = now + common::SYSPARAM_NAMESERVER.report_block_expired_time_;
         rb_status_ = status;
       }
+      inline bool is_in_dead_queue_timeout(const time_t now) const
+      {
+        return now >= in_dead_queue_timeout_;
+      }
+      inline void set_in_dead_queue_timeout(const time_t now)
+      {
+        in_dead_queue_timeout_ = now + common::SYSPARAM_NAMESERVER.replicate_wait_time_;
+      }
 
       void set_next_report_block_time(const time_t now, const int64_t time_seed, const bool ns_switch);
+      int choose_writable_block(BlockCollect*& result);
+      int choose_writable_block_force(BlockCollect*& result) const;
+      int choose_move_block_random(BlockCollect*& result) const;
+      int expand_ratio(const float expand_ratio = 0.1);
 
       static const int8_t MULTIPLE;
-      static const int8_t MAX_LOAD_DOUBLE;
-      static const int8_t DUMP_FLAG_HOLD;
-      static const int8_t DUMP_FLAG_WRITABLE;
-      static const int8_t DUMP_FLAG_MASTER;
-      static const int8_t DUMP_FLAG_INFO;
       static const int8_t AVERAGE_USED_CAPACITY_MULTIPLE;
-      static const uint16_t DUMP_SLOTS_MAX;
-
-#if defined(TFS_GTEST) || defined(TFS_NS_INTEGRATION)
-      public:
-#else
       private:
-#endif
-      ServerCollect();
-      std::set<BlockCollect*, BlockIdComp> hold_;
-      std::set<BlockCollect*, BlockIdComp> writable_;
-      std::vector<BlockCollect*> hold_master_;
-#ifdef TFS_NS_DEBUG
-      int64_t total_elect_num_;
-#endif
+      DISALLOW_COPY_AND_ASSIGN(ServerCollect);
+      bool clear_();
+      bool remove_(BlockCollect* block);
+      int choose_writable_block_(BlockCollect*& result) const;
+      bool remove_writable_(const common::ArrayHelper<BlockCollect*>& blocks);
+      bool get_range_blocks_(common::ArrayHelper<BlockCollect*>& blocks, const uint32_t begin, const int32_t count) const;
+
+      private:
       uint64_t id_;
       int64_t write_byte_;
       int64_t read_byte_;
@@ -148,18 +139,20 @@ namespace tfs
       int64_t unlink_count_;
       int64_t use_capacity_;
       int64_t total_capacity_;
-      int64_t elect_num_;
-      int64_t elect_seq_;
       time_t  startup_time_;
-      time_t  last_update_time_;
       time_t  rb_expired_time_;
       time_t  next_report_block_time_;
+      time_t  in_dead_queue_timeout_;
       int32_t current_load_;
       int32_t block_count_;
-      int32_t write_index_;
-      int8_t  status_;
-      int8_t  rb_status_;//report block complete status
-      volatile uint8_t  elect_flag_;
+      mutable int32_t write_index_;
+      int32_t writable_index_;
+      int16_t  status_;
+      int16_t  rb_status_;//report block complete status
+      common::TfsSortedVector<BlockCollect*, BlockIdCompare>* hold_;
+      common::TfsSortedVector<BlockCollect*, BlockIdCompare>* writable_;
+      common::TfsVector<BlockCollect*>* hold_master_;
+      mutable common::RWLock mutex_;
     };
   }/** nameserver **/
 }/** tfs **/

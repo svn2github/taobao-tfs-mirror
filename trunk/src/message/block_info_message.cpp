@@ -200,25 +200,14 @@ namespace tfs
       return iret;
     }
 
-    void SetBlockInfoMessage::set_read_block_ds(const uint32_t block_id, common::VUINT64* ds)
+    void SetBlockInfoMessage::set(const uint32_t block_id, const int32_t version, const uint32_t lease_id)
     {
       block_id_ = block_id;
-      if (NULL != ds)
+      if (lease_id != common::INVALID_LEASE_ID)
       {
-        ds_ = (*ds);
+        version_ = version;
+        lease_id_ = lease_id;
       }
-    }
-
-    void SetBlockInfoMessage::set_write_block_ds(const uint32_t block_id, common::VUINT64* ds, const int32_t version,
-                                                 const int32_t lease_id)
-    {
-      block_id_ = block_id;
-      if (NULL != ds )
-      {
-        ds_ = (*ds);
-      }
-      version_ = version;
-      lease_id_ = lease_id;
     }
 
     BatchGetBlockInfoMessage::BatchGetBlockInfoMessage(int32_t mode) :
@@ -459,10 +448,10 @@ namespace tfs
     }
 
     RemoveBlockMessage::RemoveBlockMessage():
+      id_(0),
       response_flag_(common::REMOVE_BLOCK_RESPONSE_FLAG_NO)
     {
       _packetHeader._pcode = common::REMOVE_BLOCK_MESSAGE;
-      remove_blocks_.clear();
     }
 
     RemoveBlockMessage::~RemoveBlockMessage()
@@ -471,33 +460,46 @@ namespace tfs
 
     int RemoveBlockMessage::deserialize(common::Stream& input)
     {
-      int32_t iret = input.get_vint32(remove_blocks_);
+      int32_t reserve = 0;
+      int32_t iret = input.get_int32(&reserve);
+      if (common::TFS_SUCCESS == iret)
+      {
+        iret = input.get_int32(reinterpret_cast<int32_t*>(&id_));
+      }
       if (common::TFS_SUCCESS == iret
          && input.get_data_length() > 0)
       {
         iret = input.get_int8(&response_flag_);
+      }
+      if (common::TFS_SUCCESS == iret
+         && input.get_data_length() > 0)
+      {
+        iret = input.get_int64(&seqno_);
       }
       return iret;
     }
 
     int64_t RemoveBlockMessage::length() const
     {
-      return  common::Serialization::get_vint32_length(remove_blocks_) + common::INT8_SIZE;
+      return  common::INT_SIZE * 2 + common::INT64_SIZE + common::INT8_SIZE;
     }
 
     int RemoveBlockMessage::serialize(common::Stream& output)  const
     {
-      int32_t iret = output.set_vint32(remove_blocks_);
+      int32_t iret = output.set_int32(0);
+      if (common::TFS_SUCCESS == iret)
+      {
+        iret = output.set_int32(id_);
+      }
       if (common::TFS_SUCCESS == iret)
       {
         output.set_int8(response_flag_);
       }
+      if (common::TFS_SUCCESS == iret)
+      {
+        iret = output.set_int64(seqno_);
+      }
       return iret;
-    }
-
-    void RemoveBlockMessage::add_remove_id(const uint32_t block_id)
-    {
-      remove_blocks_.push_back(block_id);
     }
 
     RemoveBlockResponseMessage::RemoveBlockResponseMessage():
@@ -513,17 +515,27 @@ namespace tfs
 
     int RemoveBlockResponseMessage::deserialize(common::Stream& input)
     {
-      return input.get_int32(reinterpret_cast<int32_t*>(&block_id_));
+      int32_t ret = input.get_int32(reinterpret_cast<int32_t*>(&block_id_));
+      if (common::TFS_SUCCESS == ret)
+      {
+        ret = input.get_int64(&seqno_);
+      }
+      return ret;
     }
 
     int64_t RemoveBlockResponseMessage::length() const
     {
-      return common::INT_SIZE;
+      return common::INT_SIZE + common::INT64_SIZE;
     }
 
     int RemoveBlockResponseMessage::serialize(common::Stream& output)  const
     {
-      return output.set_int32(block_id_);
+      int32_t ret = output.set_int32(block_id_);
+      if (common::TFS_SUCCESS == ret)
+      {
+        output.set_int64(seqno_);
+      }
+      return ret;
     }
 
     ListBlockMessage::ListBlockMessage() :
@@ -534,6 +546,7 @@ namespace tfs
 
     ListBlockMessage::~ListBlockMessage()
     {
+
     }
 
     int ListBlockMessage::deserialize(common::Stream& input)

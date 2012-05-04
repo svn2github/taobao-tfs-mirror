@@ -929,7 +929,7 @@ int TranBlock::rm_block_from_ds(uint64_t ds_id)
 {
   int ret = TFS_SUCCESS;
   RemoveBlockMessage req_rb_msg;
-  req_rb_msg.add_remove_id(seg_data_.seg_info_.block_id_);
+  req_rb_msg.set(seg_data_.seg_info_.block_id_);
   NewClient* client = NewClientManager::get_instance().create_client();
   tbnet::Packet* rsp = NULL;
   if((ret = send_msg_to_server(ds_id, client, &req_rb_msg, rsp)) != TFS_SUCCESS)
