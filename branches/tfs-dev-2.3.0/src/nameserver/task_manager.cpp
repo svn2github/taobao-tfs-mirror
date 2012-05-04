@@ -172,7 +172,8 @@ namespace tfs
 
           if (TFS_SUCCESS != ret)
           {
-            task->dump(TBSYS_LOG_LEVEL_WARN, "add task failed, rollback");
+            TBSYS_LOG(DEBUG, "add task ret: %d, block: %u", ret, id);
+            task->dump(TBSYS_LOG_LEVEL_WARN, "add task failed, rollback,");
             block_to_tasks_.erase(res.first);
             manager_.get_gc_manager().add(task);
           }
@@ -329,10 +330,10 @@ namespace tfs
      */
     int TaskManager::remove_block_from_dataserver(const uint64_t server, const uint32_t block, const int64_t seqno, const time_t now)
     {
-      TBSYS_LOG(INFO, "remove  block: %u on server : %s", block, tbsys::CNetUtil::addrToString(server).c_str());
       RemoveBlockMessage rbmsg;
       rbmsg.set(block);
       rbmsg.set_seqno(seqno);
+      rbmsg.set_response_flag(REMOVE_BLOCK_RESPONSE_FLAG_YES);
       BlockInfo info;
       info.block_id_ = block;
       std::vector<uint32_t> blocks;
@@ -430,15 +431,17 @@ namespace tfs
         ret = NULL != task;
         if (ret)
         {
-          task->handle_complete(msg, all_complete_flag);
+          ret = TFS_SUCCESS == task->handle_complete(msg, all_complete_flag);
           task->dump(TBSYS_LOG_LEVEL_INFO, "handle message complete, show result");
           if (master)
           {
-            Task* complete[SYSPARAM_NAMESERVER.max_replication_];
+            if (all_complete_flag)
+              remove(task);
+            /*Task* complete[SYSPARAM_NAMESERVER.max_replication_];
             ArrayHelper<Task*> helper(SYSPARAM_NAMESERVER.max_replication_, complete);
             if (all_complete_flag)
               helper.push_back(task);
-            ret = remove(helper);
+            remove(helper);*/
           }
           else
           {

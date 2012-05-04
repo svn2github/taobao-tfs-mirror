@@ -17,7 +17,9 @@
  *      - modify 2010-04-23
  *
  */
+#include "common/define.h"
 #include "ns_define.h"
+#include "common/error_msg.h"
 #include "common/parameter.h"
 #include "server_collect.h"
 
@@ -125,19 +127,6 @@ namespace tfs
       return peer_role_ == NS_ROLE_MASTER;
     }
 
-    bool NsRuntimeGlobalInformation::role_is_conflict() const
-    {
-      return owner_role_ == peer_role_ == NS_ROLE_MASTER;
-    }
-
-    void NsRuntimeGlobalInformation::resolve_conflict()
-    {
-      owner_role_ = NS_ROLE_SLAVE;
-      peer_role_ = NS_ROLE_SLAVE;
-      lease_id_ = common::INVALID_LEASE_ID;
-      lease_expired_time_ = 0;
-    }
-
     bool NsRuntimeGlobalInformation::own_is_initialize_complete() const
     {
       return owner_status_ == NS_STATUS_INITIALIZED;
@@ -191,12 +180,12 @@ namespace tfs
       return now < discard_newblk_safe_mode_time_;
     }
 
-    bool NsRuntimeGlobalInformation::keepalive(int64_t& lease_id, const uint64_t server,
+    int NsRuntimeGlobalInformation::keepalive(int64_t& lease_id, const uint64_t server,
          const int8_t role, const int8_t status, const int8_t type, const time_t now)
     {
       static uint64_t lease_id_factory = 1;
-      bool ret = owner_role_ == NS_ROLE_MASTER;
-      if (ret)
+      int32_t ret = owner_role_ == NS_ROLE_MASTER ? common::TFS_SUCCESS : common::EXIT_ROLE_ERROR;
+      if (common::TFS_SUCCESS == ret)
       {
         peer_status_  = static_cast<NsStatus>(status);
         peer_role_ = static_cast<NsRole>(role);
@@ -204,14 +193,18 @@ namespace tfs
         {
           peer_ip_port_ = server;
           lease_id = lease_id_ = common::atomic_inc(&lease_id_factory);
-          lease_expired_time_ = now + common::SYSPARAM_NAMESERVER.heart_interval_;
+          renew(now, common::SYSPARAM_NAMESERVER.heart_interval_);
         }
         else if (NS_KEEPALIVE_TYPE_RENEW == type)
         {
-          ret = lease_id_ == lease_id;
-          if (ret)
+          ret = common::INVALID_LEASE_ID == lease_id_ ? common::EXIT_LEASE_EXPIRED : common::TFS_SUCCESS;
+          if (common::TFS_SUCCESS == ret)
           {
-            ret = renew(now, common::SYSPARAM_NAMESERVER.heart_interval_);
+            ret = lease_id_ == lease_id ? common::TFS_SUCCESS : common::EXIT_RENEW_LEASE_ERROR;
+            if (common::TFS_SUCCESS == ret)
+            {
+              renew(now, common::SYSPARAM_NAMESERVER.heart_interval_);
+            }
           }
         }
         else if (NS_KEEPALIVE_TYPE_LOGOUT == type)
@@ -219,13 +212,14 @@ namespace tfs
           logout();
         }
       }
-      TBSYS_LOG(DEBUG, "peer_role: %d, peer_status: %d,status: %d, lease_id: %ld, %ld, type: %d", peer_role_, peer_status_, status, lease_id, lease_id_, type);
+      TBSYS_LOG(DEBUG, "peer_role: %d, peer_status: %d,status: %d, lease_id: %ld, %ld, type: %d, time: %ld,now: %ld",
+        peer_role_, peer_status_, status, lease_id, lease_id_, type, lease_expired_time_, now);
       return ret;
     }
 
     bool NsRuntimeGlobalInformation::has_valid_lease(const time_t now) const
     {
-      TBSYS_LOG(DEBUG, "Now: %ld, lease id: %lu, lease_expired_time: %d", now, lease_id_, lease_expired_time_);
+      TBSYS_LOG(DEBUG, "Now: %ld, lease id: %ld, lease_expired_time: %ld", now, lease_id_, lease_expired_time_);
       return (lease_id_ != common::INVALID_LEASE_ID && lease_expired_time_ > now);
     }
 

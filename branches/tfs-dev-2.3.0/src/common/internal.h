@@ -38,7 +38,7 @@
 
 //#define TFS_GTEST
 
-/*#if __WORDSIZE == 32
+#if __WORDSIZE == 32
 namespace __gnu_cxx
 {
   template<> struct hash<uint64_t>
@@ -57,7 +57,7 @@ namespace __gnu_cxx
     }
   };
 }
-#endif*/
+#endif
 
 namespace tfs
 {
@@ -808,7 +808,7 @@ namespace tfs
       REMOVE_BLOCK_RESPONSE_FLAG_YES = 1
     }RemoveBlockResponseFlag;
 
-    extern const char* dynamic_parameter_str[28];
+    extern const char* dynamic_parameter_str[29];
 
     // defined type typedef
     typedef std::vector<BlockInfo> BLOCK_INFO_LIST;

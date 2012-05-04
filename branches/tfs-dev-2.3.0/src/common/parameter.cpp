@@ -127,6 +127,13 @@ namespace tfs
       if (object_dead_max_time_ <=  300)
         object_dead_max_time_ = 300;
 
+      object_clear_max_time_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_OBJECT_CLEAR_MAX_TIME, 180);
+      if (object_clear_max_time_ <=  180)
+        object_clear_max_time_ = 180;
+
+      if (object_clear_max_time_ > object_dead_max_time_)
+        object_clear_max_time_ = object_dead_max_time_ / 2;
+
       add_primary_block_count_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_ADD_PRIMARY_BLOCK_COUNT, 3);
       if (add_primary_block_count_ <= 0)
         add_primary_block_count_ = 3;
@@ -139,6 +146,9 @@ namespace tfs
       task_expired_time_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_TASK_EXPIRED_TIME, 120);
       if (task_expired_time_ <= 0)
         task_expired_time_ = 120;
+      if (task_expired_time_ > object_clear_max_time_)
+        task_expired_time_ = object_clear_max_time_ - 5;
+
       dump_stat_info_interval_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_DUMP_STAT_INFO_INTERVAL, 10000000);
       if (dump_stat_info_interval_ <= 60000000)
         dump_stat_info_interval_ = 60000000;

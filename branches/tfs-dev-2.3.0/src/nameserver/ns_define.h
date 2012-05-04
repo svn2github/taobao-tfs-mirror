@@ -139,7 +139,7 @@ namespace tfs
       bool in_discard_newblk_safe_mode_time(const int64_t now) const;
       bool is_master() const;
       bool peer_is_master() const;
-      bool keepalive(int64_t& lease_id, const uint64_t server,
+      int keepalive(int64_t& lease_id, const uint64_t server,
          const int8_t role, const int8_t status, const int8_t type, const time_t now);
       bool logout();
       bool has_valid_lease(const time_t now) const;
@@ -148,8 +148,6 @@ namespace tfs
       void switch_role(const bool startup = false, const int64_t now = common::Func::get_monotonic_time());
       void update_peer_info(const uint64_t server, const int8_t role, const int8_t status);
       bool own_is_initialize_complete() const;
-      bool role_is_conflict() const;
-      void resolve_conflict();
       void initialize();
       void destroy();
       void dump(int32_t level, const char* format = NULL);

@@ -102,7 +102,8 @@ namespace tfs
     const int32_t EXIT_EXECUTE_TASK_ERROR = -5030;
     const int32_t EXIT_CLIENT_MANAGER_CREATE_CLIENT_ERROR = -5031;
     const int32_t EXIT_BLOCK_ID_INVALID_ERROR = -5032;
-
+    const int32_t EXIT_BLOCK_WRITING_ERROR = -5033;
+    const int32_t EXIT_MOVE_OR_REPLICATE_ERROR = -5034;
 
     const int32_t EXIT_WRITE_OFFSET_ERROR = -8001; // write offset error
     const int32_t EXIT_READ_OFFSET_ERROR = -8002; // read offset error

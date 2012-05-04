@@ -84,16 +84,10 @@ namespace tfs
     };
 #pragma pack()
 
-    enum HeartGetDataserverListFlags
+    enum HeartGetPeerRoleFlag
     {
-      HEART_GET_DATASERVER_LIST_FLAGS_NO = 0x00,
-      HEART_GET_DATASERVER_LIST_FLAGS_YES
-    };
-
-    enum HeartForceModifyOthersideRoleAndStatus
-    {
-      HEART_FORCE_MODIFY_OTHERSIDE_ROLE_FLAGS_NO = 0x00,
-      HEART_FORCE_MODIFY_OTHERSIDE_ROLE_FLAGS_YES
+      HEART_GET_PEER_ROLE_FLAG_NO = 0,
+      HEART_GET_PEER_ROLE_FLAG_YES = 1,
     };
 
     class MasterAndSlaveHeartMessage: public common::BasePacket
@@ -129,21 +123,13 @@ namespace tfs
         {
           return ns_identity_.status_;
         }
-        inline void set_flags(const uint8_t flags = HEART_GET_DATASERVER_LIST_FLAGS_YES)
+        inline void set_flags(const uint8_t flags = HEART_GET_PEER_ROLE_FLAG_YES)
         {
           ns_identity_.flags_ = flags;
         }
         inline uint8_t get_flags() const
         {
           return ns_identity_.flags_;
-        }
-        inline void set_force_flags(const uint8_t flags = HEART_FORCE_MODIFY_OTHERSIDE_ROLE_FLAGS_YES)
-        {
-          ns_identity_.force_ = flags;
-        }
-        inline uint8_t get_force_flags() const
-        {
-          return ns_identity_.force_;
         }
         inline void set_lease_id(const int64_t lease_id)
         {
@@ -153,9 +139,18 @@ namespace tfs
         {
           return lease_id_;
         }
+        inline int8_t get_type() const
+        {
+          return keepalive_type_;
+        }
+        inline void set_type(const int8_t type)
+        {
+          keepalive_type_ = type;
+        }
       private:
         NSIdentityNetPacket ns_identity_;
         int64_t lease_id_;
+        int8_t keepalive_type_;
     };
 
     class MasterAndSlaveHeartResponseMessage: public common::BasePacket
@@ -190,17 +185,13 @@ namespace tfs
         {
           return ns_identity_.status_;
         }
-        inline void set_flags(const uint8_t flags = HEART_GET_DATASERVER_LIST_FLAGS_YES)
+        inline void set_flags(const uint8_t flags = HEART_GET_PEER_ROLE_FLAG_YES)
         {
           ns_identity_.flags_ = flags;
         }
         inline uint8_t get_flags() const
         {
           return ns_identity_.flags_;
-        }
-        inline common::VUINT64& get_servers()
-        {
-          return ds_list_;
         }
         inline void set_lease_id(const int64_t lease_id)
         {
@@ -231,7 +222,6 @@ namespace tfs
         int32_t lease_expired_time_;
         int32_t renew_lease_interval_time_;
         NSIdentityNetPacket ns_identity_;
-        common::VUINT64 ds_list_;
     };
 
     class HeartBeatAndNSHeartMessage: public common::BasePacket

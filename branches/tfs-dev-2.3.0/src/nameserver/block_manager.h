@@ -57,7 +57,7 @@ namespace tfs
       FRIEND_TEST(BlockManagerTest, scan_ext);
       void clear_();
       #endif
-      typedef std::map<int64_t, int64_t> LAST_WRITE_BLOCK_MAP;
+      typedef std::map<uint32_t, int64_t> LAST_WRITE_BLOCK_MAP;
       typedef LAST_WRITE_BLOCK_MAP::iterator LAST_WRITE_BLOCK_MAP_ITER;
       typedef LAST_WRITE_BLOCK_MAP::const_iterator LAST_WRITE_BLOCK_MAP_CONST_ITER;
       typedef common::TfsSortedVector<BlockCollect*, BlockIdCompare> BLOCK_MAP;
@@ -76,6 +76,7 @@ namespace tfs
         BlockCollect* get(const uint32_t block) const;
         bool exist(const uint32_t block) const;
         void dump(const int32_t level) const;
+        void dump_write_block(const int32_t level) const;
         bool scan(common::ArrayHelper<BlockCollect*>& result, uint32_t& begin, const int32_t count) const;
         int scan(common::SSMScanParameter& param, int32_t& next, bool& all_over,
             bool& cutover, const int32_t should) const;

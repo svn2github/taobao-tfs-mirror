@@ -211,6 +211,21 @@ namespace tfs
         {
           TBSYS_LOG(ERROR, "initialize master and slave heart manager failed, must be exit, ret: %d", ret);
         }
+        else
+        {
+          if (GFactory::get_runtime_info().is_master())
+          {
+            ret = master_slave_heart_manager_.establish_peer_role_(GFactory::get_runtime_info());
+            if (EXIT_ROLE_ERROR == ret)
+            {
+              TBSYS_LOG(INFO, "nameserve role error, must be exit, ret: %d", ret);
+            }
+            else
+            {
+              ret = TFS_SUCCESS;
+            }
+          }
+        }
       }
 
       //start heartbeat loop
@@ -257,7 +272,7 @@ namespace tfs
       bool bret = (NULL != connection) && (NULL != packet);
       if (bret)
       {
-        //TBSYS_LOG(DEBUG, "receive pcode : %d", packet->getPCode());
+        TBSYS_LOG(DEBUG, "receive pcode : %d", packet->getPCode());
         if (!packet->isRegularPacket())
         {
           bret = false;
@@ -473,6 +488,8 @@ namespace tfs
         {
           TBSYS_LOG(INFO, "%s", param.error_msg_);
         }
+        TBSYS_LOG(DEBUG, "close, block: %u, server: %s, status: %d, lease_id: %u, ret: %d",
+          param.block_info_.block_id_, tbsys::CNetUtil::addrToString(param.id_).c_str(), param.status_, param.lease_id_, ret);
         ret = message->reply(new StatusMessage(ret, param.error_msg_));
       }
       return ret;

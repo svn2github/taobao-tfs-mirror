@@ -62,7 +62,7 @@ namespace tfs
       bool ret = server != NULL;
       if (ret)
       {
-        //dump(TBSYS_LOG_LEVEL(DEBUG));
+        dump(TBSYS_LOG_LEVEL(DEBUG));
         writable = !is_full();
         ServerCollect** result = get_(server);//get server by pointer
         if (NULL == result)//not found
@@ -74,7 +74,7 @@ namespace tfs
             *result = NULL;
           int8_t index = 0;
           int8_t random_index = random() % SYSPARAM_NAMESERVER.max_replication_;
-          //TBSYS_LOG(DEBUG, "random_index : %d, servers_size: %d", random_index, get_servers_size());
+          TBSYS_LOG(DEBUG, "random_index : %d, servers_size: %d", random_index, get_servers_size());
           for (int8_t i = 0; i < SYSPARAM_NAMESERVER.max_replication_; i++, ++random_index)
           {
             index = random_index % SYSPARAM_NAMESERVER.max_replication_;

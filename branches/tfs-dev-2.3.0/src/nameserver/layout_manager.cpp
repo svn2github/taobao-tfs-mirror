@@ -654,8 +654,10 @@ namespace tfs
             if (over)
               start = 0;
           }
+
+          build_redundant_(need, now);
         }
-        usleep(50000);
+        Func::sleep(SYSPARAM_NAMESERVER.heart_interval_, ngi.destroy_flag_);
       }
     }
 
@@ -698,7 +700,7 @@ namespace tfs
             // find move src and dest ds list
             get_server_manager().move_split_servers(source, targets, percent);
 
-            TBSYS_LOG(INFO, "need: %"PRI64_PREFIX"d, source size: %zd, target: %zd, percent: %e",
+            TBSYS_LOG(INFO, "need: %"PRI64_PREFIX"d, source size: %Zd, target: %Zd, percent: %e",
                 need, source.size(), targets.size(), percent);
 
             const int32_t MAX_RETRY_COUNT = 3;
@@ -731,7 +733,7 @@ namespace tfs
             }//end for ...
           }
         }
-        usleep(500000);
+        Func::sleep(SYSPARAM_NAMESERVER.heart_interval_, ngi.destroy_flag_);
       }
     }
 
@@ -755,7 +757,7 @@ namespace tfs
 
         get_gc_manager().gc(now);
 
-        usleep(5000);
+        usleep(50000);
       }
     }
 
@@ -1246,7 +1248,6 @@ namespace tfs
         }
         while (!complete);
         server->update_last_time(now);
-        TBSYS_LOG(DEBUG, "pointer : %p", server);
         get_gc_manager().add(server);
       }
       return true;
@@ -1360,6 +1361,9 @@ namespace tfs
     {
       UNUSED(now);
       bool ret = false;
+      const int32_t MAX_DELETE_NUMS = 10;
+      if (need > MAX_DELETE_NUMS)
+        need = MAX_DELETE_NUMS;
       int32_t count = need * 2;
       std::pair<uint32_t, uint64_t> output;
       while (get_block_manager().pop_from_delete_queue(output) && need > 0 && count-- > 0)

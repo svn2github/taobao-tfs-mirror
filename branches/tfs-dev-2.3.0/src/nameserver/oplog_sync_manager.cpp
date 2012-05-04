@@ -52,8 +52,6 @@ namespace tfs
 
     int OpLogSyncManager::initialize()
     {
-      int ret = TFS_ERROR;
-
       //initializeation filequeue, filequeuethread
       char path[256];
       BaseService* service = dynamic_cast<BaseService*>(BaseService::instance());
@@ -70,7 +68,7 @@ namespace tfs
       max_slots_size = max_slots_size <= 0 ? 1024 : max_slots_size > 4096 ? 4096 : max_slots_size;
       std::string queue_header_path = std::string(path) + "/" + file_queue_name;
       ARG_NEW(oplog_, OpLog, queue_header_path, max_slots_size);
-      ret = oplog_->initialize();
+      int32_t ret = oplog_->initialize();
       if (ret != TFS_SUCCESS)
       {
         TBSYS_LOG(ERROR, "initialize oplog failed, path: %s, ret: %d", queue_header_path.c_str(), ret);

@@ -74,6 +74,7 @@ namespace tfs
 
     class NameServerHeartManager: public tbnet::IPacketQueueHandler
     {
+        friend class NameServer;
      public:
         explicit NameServerHeartManager(LayoutManager& manager);
         virtual ~NameServerHeartManager();

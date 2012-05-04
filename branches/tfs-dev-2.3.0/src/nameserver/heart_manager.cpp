@@ -282,7 +282,6 @@ namespace tfs
         ret = message->getPCode() == MASTER_AND_SLAVE_HEART_MESSAGE ? TFS_SUCCESS : EXIT_UNKNOWN_MSGTYPE;
         if (TFS_SUCCESS == ret)
         {
-          time_t now = Func::get_monotonic_time();
           MasterAndSlaveHeartMessage* msg = dynamic_cast<MasterAndSlaveHeartMessage*>(message);
           NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
           bool login = msg->get_type() == NS_KEEPALIVE_TYPE_LOGIN;
@@ -294,18 +293,18 @@ namespace tfs
             reply_msg->set_ip_port(ngi.owner_ip_port_);
             reply_msg->set_role(ngi.owner_role_);
             reply_msg->set_status(ngi.owner_status_);
-            reply_msg->set_lease_id(lease_id);
           }
           else
           {
+            time_t now = Func::get_monotonic_time();
             ret = ngi.keepalive(lease_id, msg->get_ip_port(), msg->get_role(),
-                      msg->get_status(), msg->get_type(), now) ? TFS_SUCCESS : EXIT_RENEW_LEASE_ERROR;
+                      msg->get_status(), msg->get_type(), now);
             reply_msg->set_ip_port(ngi.owner_ip_port_);
             reply_msg->set_role(ngi.owner_role_);
             reply_msg->set_status(ngi.owner_status_);
-            reply_msg->set_lease_id(lease_id);
             if (TFS_SUCCESS == ret)
             {
+              reply_msg->set_lease_id(lease_id);
               int32_t renew_lease_interval = SYSPARAM_NAMESERVER.heart_interval_ / 2;
               if (renew_lease_interval <= 0)
                 renew_lease_interval = 1;
@@ -492,9 +491,16 @@ namespace tfs
           if (TFS_SUCCESS == ret)
           {
             MasterAndSlaveHeartResponseMessage* result = dynamic_cast<MasterAndSlaveHeartResponseMessage*>(response);
-            ngi.renew(result->get_lease_id(), result->get_lease_expired_time(), now);
-            sleep_time = result->get_renew_lease_interval_time();
-            ngi.update_peer_info(result->get_ip_port(), result->get_role(), result->get_status());
+            if (common::INVALID_LEASE_ID == result->get_lease_id())
+            {
+              ngi.logout();
+            }
+            else
+            {
+              ngi.renew(result->get_lease_id(), result->get_lease_expired_time(), now);
+              sleep_time = result->get_renew_lease_interval_time();
+              ngi.update_peer_info(result->get_ip_port(), result->get_role(), result->get_status());
+            }
           }
         }
         NewClientManager::get_instance().destroy_client(client);

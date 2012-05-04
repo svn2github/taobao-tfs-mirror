@@ -509,14 +509,14 @@ namespace tfs
           time_t now = Func::get_monotonic_time();
           ReplicateBlockMessage* message = dynamic_cast<ReplicateBlockMessage*>(msg);
           const ReplBlock blocks = *message->get_repl_block();
-          bool success = message->get_command() == PLAN_STATUS_END;
+          ret = message->get_command() == PLAN_STATUS_END ? TFS_SUCCESS : EXIT_MOVE_OR_REPLICATE_ERROR;
           TBSYS_LOG(DEBUG, "block: %u %s complete status: %s", blocks.block_id_,
               blocks.is_move_ == REPLICATE_BLOCK_MOVE_FLAG_YES ? "move" : "replicate",
               message->get_command() == PLAN_STATUS_END ? "end" :
               message->get_command() == PLAN_STATUS_TIMEOUT ? "timeout" :
               message->get_command() == PLAN_STATUS_BEGIN ? "begin" :
               message->get_command() == PLAN_STATUS_FAILURE ? "failure" : "unknow");
-          if (success)
+          if (TFS_SUCCESS == ret)
           {
             ServerCollect* dest   = manager_.get_manager().get_server_manager().get(blocks.destination_id_);// find destination dataserver
             ServerCollect* source = manager_.get_manager().get_server_manager().get(blocks.source_id_);// find source dataserver
@@ -591,10 +591,8 @@ namespace tfs
         {
           manager_.get_manager().relieve_relation(block, (*iter), now);
           ret = manager_.get_manager().get_task_manager().remove_block_from_dataserver((*iter)->id(), block_id_, seqno_, now);
-          if (TFS_SUCCESS != ret)
-          {
-            TBSYS_LOG(ERROR, "send remove block: %u command on server: %s failed", block_id_, tbsys::CNetUtil::addrToString((*iter)->id()).c_str());
-          }
+          TBSYS_LOG(INFO, "send remove block: %u command on server : %s %s",
+            block_id_, tbsys::CNetUtil::addrToString((*iter)->id()).c_str(), TFS_SUCCESS == ret ? "successful" : "failed");
         }
 
         std::vector<stat_int_t> stat(1, runer_.size());

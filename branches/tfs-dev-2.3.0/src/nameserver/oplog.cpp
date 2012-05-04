@@ -247,9 +247,9 @@ namespace tfs
       MAX_LOG_SLOTS_SIZE(max_log_slot_size), MAX_LOG_BUFFER_SIZE(max_log_slot_size * MAX_LOG_SIZE), path_(logname), seqno_(
           0), slots_offset_(0), fd_(-1), buffer_(NULL)
     {
-      buffer_ = new (std::nothrow) char[max_log_slot_size * MAX_LOG_SIZE + 1];
+      buffer_ = new (std::nothrow) char[max_log_slot_size * MAX_LOG_SIZE];
       assert(NULL != buffer_);
-      memset(buffer_, 0, max_log_slot_size * MAX_LOG_SIZE + 1);
+      memset(buffer_, 0, max_log_slot_size * MAX_LOG_SIZE);
       memset(&oplog_rotate_header_, 0, sizeof(oplog_rotate_header_));
     }
 

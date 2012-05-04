@@ -32,9 +32,23 @@ namespace tfs
 
     }
 
+    ServerManager::~ServerManager()
+    {
+      SERVER_TABLE_ITER iter = servers_.begin();
+      for (; iter != servers_.end(); ++iter)
+      {
+        tbsys::gDelete((*iter));
+      }
+      iter = dead_servers_.begin();
+      for (; iter != dead_servers_.end(); ++iter)
+      {
+        tbsys::gDelete((*iter));
+      }
+    }
+
     int ServerManager::add(const DataServerStatInfo& info, const time_t now, bool& isnew)
     {
-      bool renew = false;
+      bool reset = false;
       ServerCollect query(info.id_);
 
       rwmutex_.wrlock();
@@ -45,21 +59,21 @@ namespace tfs
       {
         isnew = true;
         iter  = dead_servers_.find(&query);
-        renew = iter != dead_servers_.end();
-        if (renew)
+        if (iter != dead_servers_.end())
+        reset = iter != dead_servers_.end();
+        if (reset)
         {
           server = (*iter);
           dead_servers_.erase(&query);
+        }
+        else
+        {
+          server = new (std::nothrow)ServerCollect(info, now);
         }
       }
       else
       {
         server = (*iter);
-      }
-      if (!alive && !renew)
-      {
-        assert(NULL == server);
-        server = new (std::nothrow)ServerCollect(info, now);
       }
       assert(NULL != server);
       if (isnew)
@@ -71,7 +85,7 @@ namespace tfs
       }
       rwmutex_.unlock();
 
-      if (renew)
+      if (reset)
         server->reset(manager_, info, now);
       else
         server->update(info, now, isnew);
@@ -79,7 +93,7 @@ namespace tfs
       if (isnew)
       {
         std::vector<stat_int_t> stat(1, server->block_count());
-        GFactory::get_stat_mgr().update_entry(GFactory::tfs_ns_stat_block_count_, stat, false);
+        GFactory::get_stat_mgr().update_entry(GFactory::tfs_ns_stat_block_count_, stat);
       }
 
       //update global statistic information
@@ -90,6 +104,7 @@ namespace tfs
 
     int ServerManager::remove(const uint64_t server, const time_t now)
     {
+      TBSYS_LOG(INFO, "dataserver: %s exit", tbsys::CNetUtil::addrToString(server).c_str());
       ServerCollect query(server);
       ServerCollect* object = NULL;
       rwmutex_.wrlock();

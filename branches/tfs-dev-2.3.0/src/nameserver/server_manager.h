@@ -67,6 +67,7 @@ namespace tfs
       #endif
       public:
       explicit ServerManager(LayoutManager& manager);
+      virtual ~ServerManager();
       int add(const common::DataServerStatInfo& info, const time_t now, bool& isnew);
       int remove(const uint64_t server, const time_t now);
       void update_last_time(const uint64_t server, const time_t now);

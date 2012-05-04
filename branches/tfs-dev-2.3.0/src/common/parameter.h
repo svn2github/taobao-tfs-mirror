@@ -42,6 +42,7 @@ namespace tfs
       int32_t safe_mode_time_;
       int32_t task_expired_time_;
       int32_t object_dead_max_time_;
+      int32_t object_clear_max_time_;
       int32_t dump_stat_info_interval_;
       int32_t group_seq_;
       int32_t group_count_;

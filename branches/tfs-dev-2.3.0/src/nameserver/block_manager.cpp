@@ -108,6 +108,7 @@ namespace tfs
 
     bool BlockManager::push_to_delete_queue(const uint32_t block, const uint64_t server)
     {
+      TBSYS_LOG(DEBUG, "push delete queue: block: %u, server: %s", block, tbsys::CNetUtil::addrToString(server).c_str());
       tbutil::Mutex::Lock lock(delete_block_queue_muetx_);
       delete_block_queue_.push_back(std::make_pair(block, server));
       return true;
@@ -121,12 +122,14 @@ namespace tfs
       {
         output = delete_block_queue_.front();
         delete_block_queue_.pop_front();
+        TBSYS_LOG(DEBUG, "pop delete queue: block: %u, server: %s", output.first, tbsys::CNetUtil::addrToString(output.second).c_str());
       }
       return ret;
     }
 
     bool BlockManager::pop_from_delete_queue(std::pair<uint32_t, uint64_t>& output)
     {
+      //这里有可能会出现遗漏，这种状况可以通过下一次汇报来处理
       bool ret = false;
       BlockCollect* block = NULL;
       ServerCollect* server = NULL;
@@ -160,6 +163,21 @@ namespace tfs
         for (; iter != blocks_[index]->end(); ++iter)
         {
           TBSYS_LOG(DEBUG, "index: %d, block: %u", index, (*iter)->id());
+        }
+      }
+      TBSYS_LOG(DEBUG, "===========================DUMP END=====================");
+    }
+
+    void BlockManager::dump_write_block(const int32_t level) const
+    {
+      UNUSED(level);
+      TBSYS_LOG(DEBUG, "===========================DUMP BEGIN=====================");
+      for (int32_t index = 0; index < MAX_BLOCK_CHUNK_NUMS; ++index)
+      {
+        LAST_WRITE_BLOCK_MAP_CONST_ITER iter = last_write_blocks_[index].begin();
+        for (; iter != last_write_blocks_[index].end(); ++iter)
+        {
+          TBSYS_LOG(DEBUG, "has write index: %d, block: %u", index, iter->first);
         }
       }
       TBSYS_LOG(DEBUG, "===========================DUMP END=====================");
@@ -458,6 +476,11 @@ namespace tfs
       {
         get_mutex_(block->id()).rdlock();
         priority = block->check_replicate(now);
+        /*if (priority >= PLAN_PRIORITY_NORMAL)
+        {
+          manager_.get_task_manager().dump(TBSYS_LOG_LEVEL_DEBUG);
+          dump_write_block(TBSYS_LOG_LEVEL_DEBUG);
+        }*/
         ret = ((priority >= PLAN_PRIORITY_NORMAL) && (!has_write_(block->id(), now)));
         if (ret)
           block->get_servers(servers);
