@@ -312,10 +312,9 @@ namespace tfs
       TBSYS_LOG(INFO, "logicblock delete %s! logic blockid: %u. physical block size: %d, blocktype: %d, ret: %d",
                 ret ? "fail" : "success", logic_block_id, size, tmp_block_type, ret);
 
-      // 11. clean logic block associate stuff(index handle, physic block) & unlock
+      // 11. unlock
       if (delete_block)
       {
-        delete_block->delete_block_file();
         delete_block->unlock();
       }
       // 12. if gc init, delay delete pointer, unlock & add logic block into gcobject manager
@@ -325,6 +324,7 @@ namespace tfs
         {
           delete_block->set_dead_time();
           GCObjectManager::instance().add(delete_block);
+          delete_block->rename_index_file();
         }
       }
       // else, delete pointer
