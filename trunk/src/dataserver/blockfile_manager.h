@@ -76,6 +76,8 @@ namespace tfs
         int set_error_bitmap(const std::set<uint32_t>& error_blocks);
         int reset_error_bitmap(const std::set<uint32_t>& reset_error_blocks);
 
+        int create_block_prefix();
+
       private:
         BlockFileManager()
         {
@@ -100,6 +102,7 @@ namespace tfs
         void destruct_physic_blocks();
 
         void rollback_superblock(const uint32_t physical_block_id, const bool modify_flag);
+
 
       private:
         static const int32_t INDEXFILE_SAFE_MULT = 4;

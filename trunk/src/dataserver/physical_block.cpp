@@ -22,8 +22,10 @@ namespace tfs
 {
   namespace dataserver
   {
-
     using namespace common;
+
+    MMapFileOperation* PhysicalBlock::prefix_op_ = NULL;
+
     // physical block initialization, inner format:
     // --------------------------------------------------------------------------------------------
     // |       block meta info prefix       |           file data(current stored data)            |
@@ -65,6 +67,45 @@ namespace tfs
     PhysicalBlock::~PhysicalBlock()
     {
       tbsys::gDelete(file_op_);
+      if (NULL != prefix_op_)
+      {
+        prefix_op_->flush_file();
+        prefix_op_->munmap_file();
+        tbsys::gDelete(prefix_op_);
+      }
+    }
+
+    int PhysicalBlock::init_prefix_op(std::string& mount_path)
+    {
+      // map block_prefix file
+      int ret = TFS_SUCCESS;
+      if (NULL == prefix_op_)
+      {
+        std::string block_prefix_file = mount_path + BLOCK_HEADER_PREFIX;
+        if (0 == access(block_prefix_file.c_str(), F_OK))
+        {
+          struct stat st;
+          if (0 != stat(block_prefix_file.c_str(), &st))
+          {
+            TBSYS_LOG(ERROR, "stat prefix file fail. ret: %d", errno);
+            ret = EXIT_GENERAL_ERROR;
+          }
+          else
+          {
+            prefix_op_ = new MMapFileOperation(block_prefix_file.c_str());
+            MMapOption mmap_option;
+            mmap_option.first_mmap_size_ = st.st_size;
+            mmap_option.max_mmap_size_ = st.st_size;
+            mmap_option.per_mmap_size_= st.st_size;
+            ret = prefix_op_->mmap_file(mmap_option);
+            if (TFS_SUCCESS != ret)
+            {
+              TBSYS_LOG(ERROR, "mmap prefix file fail. ret: %d", ret);
+            }
+          }
+        }
+      }
+      return ret;
     }
 
     int PhysicalBlock::pread_data(char* buf, const int32_t nbytes, const int32_t offset)
@@ -99,7 +140,18 @@ namespace tfs
     int PhysicalBlock::load_block_prefix()
     {
       memset(&block_prefix_, 0, sizeof(BlockPrefix));
-      int ret = file_op_->pread_file((char*) (&block_prefix_), sizeof(BlockPrefix), 0);
+      int ret = 0;
+      if (NULL == prefix_op_)
+      {
+        ret = file_op_->pread_file((char*) (&block_prefix_), sizeof(BlockPrefix), 0);
+      }
+      else
+      {
+        TBSYS_LOG(INFO, "load block prefix by new interface %d", physical_block_id_);
+        ret = prefix_op_->pread_file((char*) (&block_prefix_), sizeof(BlockPrefix),
+            (physical_block_id_ - 1) * sizeof(BlockPrefix));
+      }
+
       TBSYS_LOG(
           DEBUG,
           "load block prefix. physical blockid: %u, logic blockid: %u, prev physical blockid: %u, next physical blockid: %u, ret: %d",
@@ -116,9 +168,30 @@ namespace tfs
 
     int PhysicalBlock::dump_block_prefix()
     {
-      TBSYS_LOG(DEBUG, "dump block prefix. logic blockid: %u, prev physical blockid: %u, next physical blockid: %u",
-          block_prefix_.logic_blockid_, block_prefix_.prev_physic_blockid_, block_prefix_.next_physic_blockid_);
-      return file_op_->pwrite_file((const char*) (&block_prefix_), sizeof(BlockPrefix), 0);
+      int ret = TFS_SUCCESS;
+      if (NULL == prefix_op_)
+      {
+        ret = file_op_->pwrite_file((const char*) (&block_prefix_), sizeof(BlockPrefix), 0);
+        if (TFS_SUCCESS == ret)
+        {
+          file_op_->flush_file();  // if fail, it will be flushed in background
+        }
+      }
+      else
+      {
+        TBSYS_LOG(INFO, "dump block prefix by new interface %d", physical_block_id_);
+        ret = prefix_op_->pwrite_file((const char*) (&block_prefix_), sizeof(BlockPrefix),
+                (physical_block_id_ - 1) * sizeof(BlockPrefix));
+        if (TFS_SUCCESS == ret)
+        {
+          file_op_->flush_file();  // if fail, it will be flushed in background
+        }
+      }
+
+      TBSYS_LOG(DEBUG, "dump block prefix. logic blockid: %u, prev physical blockid: %u, next physical blockid: %u, ret: %d",
+          block_prefix_.logic_blockid_, block_prefix_.prev_physic_blockid_, block_prefix_.next_physic_blockid_, ret);
+
+      return ret;
     }
 
     void PhysicalBlock::get_block_prefix(BlockPrefix& block_prefix)

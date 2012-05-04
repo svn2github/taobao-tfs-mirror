@@ -18,6 +18,7 @@
 
 #include <string>
 #include "common/file_op.h"
+#include "mmap_file_op.h"
 #include "dataserver_define.h"
 //#include "common/config.h"
 #include "common/config_item.h"
@@ -40,6 +41,8 @@ namespace tfs
         int clear_block_prefix();
         void set_block_prefix(const uint32_t block_id, const uint32_t prev_physic_blockid,
             const uint32_t next_physical_blockid);
+
+        static int init_prefix_op(std::string& mount_path);  // mmap block_prefix file
 
         int load_block_prefix();
         int dump_block_prefix();
@@ -79,6 +82,7 @@ namespace tfs
         int32_t total_data_len_; // total data size
         BlockPrefix block_prefix_; // block meta info prefix
         common::FileOperation* file_op_;   // file operation handle
+        static MMapFileOperation* prefix_op_;     // block prefix op
     };
 
   }

@@ -93,6 +93,11 @@ namespace tfs
       if (TFS_SUCCESS != ret)
         return ret;
 
+      // 6. create block_prefix file
+      ret = create_block_prefix();
+      if (TFS_SUCCESS != ret)
+        return ret;
+
       return TFS_SUCCESS;
     }
 
@@ -111,6 +116,10 @@ namespace tfs
         return ret;
 
       // 2. load block file, create logic block map associate stuff
+      std::string mount_path(super_block_.mount_point_);
+      ret = PhysicalBlock::init_prefix_op(mount_path);
+      if (TFS_SUCCESS != ret)
+        return ret;
       return load_block_file();
     }
 
@@ -1287,6 +1296,87 @@ namespace tfs
       tbsys::gDelete(file_formater);
       return TFS_SUCCESS;
     }
+
+    int BlockFileManager::create_block_prefix()
+    {
+      FileFormater* file_formater = NULL;
+
+      if (EXT4 == super_block_.base_fs_type_)
+      {
+        file_formater = new Ext4FileFormater();
+      }
+      else if (EXT3_FULL == super_block_.base_fs_type_)
+      {
+        file_formater = new Ext3FullFileFormater();
+      }
+      else if (EXT3_FTRUN == super_block_.base_fs_type_)
+      {
+        file_formater = new Ext3SimpleFileFormater();
+      }
+      else
+      {
+        TBSYS_LOG(ERROR, "base fs type is not supported. base fs type: %d", super_block_.base_fs_type_);
+        return TFS_ERROR;
+      }
+
+      // set block_prefix name
+      std::string block_prefix_file;
+      block_prefix_file = super_block_.mount_point_ + BLOCK_HEADER_PREFIX;
+      int block_count =  super_block_.main_block_count_ + super_block_.extend_block_count_;
+      int bp_file_size = block_count * sizeof(BlockPrefix);
+
+      FileOperation* file_op = new FileOperation(block_prefix_file, O_RDWR | O_CREAT);
+      int ret = file_op->open_file();
+      if (ret < 0)
+      {
+        tbsys::gDelete(file_op);
+        tbsys::gDelete(file_formater);
+        TBSYS_LOG(ERROR, "create file error. ret: %d, error: %d, error desc: %s\n", ret, errno, strerror(errno));
+        return ret;
+      }
+
+      ret = file_formater->block_file_format(file_op->get_fd(), bp_file_size);
+      if (TFS_SUCCESS != ret)
+      {
+        tbsys::gDelete(file_op);
+        tbsys::gDelete(file_formater);
+        TBSYS_LOG(ERROR, "allocate space error. ret: %d, error: %d, error desc: %s\n", ret, errno, strerror(errno));
+        return ret;
+      }
+
+      // make sure all the bytes set to 0
+      int left = bp_file_size;
+      int wsize = 10240;
+      char* zero_buf = new (std::nothrow) char[wsize];
+      if (NULL == zero_buf)
+      {
+        tbsys::gDelete(file_op);
+        tbsys::gDelete(file_formater);
+        TBSYS_LOG(ERROR, "allocate space error. ret: %d, error: %d, error desc: %s\n", ret, errno, strerror(errno));
+        return EXIT_GENERAL_ERROR;
+     }
+      memset(zero_buf, 0, wsize);
+
+      while (left > 0)
+      {
+        wsize = left < wsize? left: wsize;
+        ret = file_op->pwrite_file(zero_buf, wsize, bp_file_size - left);
+        if (TFS_SUCCESS != ret)
+        {
+          tbsys::gDelete(zero_buf);
+          tbsys::gDelete(file_op);
+          tbsys::gDelete(file_formater);
+          TBSYS_LOG(ERROR, "write block_prefix file error. ret: %d.", ret);
+          return ret;
+        }
+        left -= wsize;
+      }
+
+      tbsys::gDelete(zero_buf);
+      tbsys::gDelete(file_op);
+      tbsys::gDelete(file_formater);
+      return TFS_SUCCESS;
+   }
 
     LogicBlock* BlockFileManager::choose_del_block(const uint32_t logic_block_id, BlockType& block_type)
     {
