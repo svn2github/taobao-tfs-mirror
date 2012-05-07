@@ -103,10 +103,6 @@ namespace tfs
       }
 
     private:
-      void encode(const char * input, char *output);
-      void decode(const char * input, char *output);
-
-    private:
       bool is_valid_;
       FileBits file_;
       int32_t cluster_id_;
