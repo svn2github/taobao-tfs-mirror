@@ -619,6 +619,9 @@ namespace tfs
           }
           else
           {
+            // do nothing , reply OK, avoid DS timeout
+            message->reply(new StatusMessage(STATUS_MESSAGE_OK));
+
             TBSYS_LOG(INFO, "block: %u %s complete status: %s", blocks.block_id_,
                 blocks.is_move_ == REPLICATE_BLOCK_MOVE_FLAG_YES ? "move" : "replicate",
                 message->get_command() == PLAN_STATUS_END ? "end" :
