@@ -605,6 +605,7 @@ namespace tfs
           //同时目前心跳的间隔时间是写死的， 删除以上功能的同时，可以将心跳间隔由nameserver发给dataserver
           //也就是每次心跳时带上dataserver心跳的间隔时间
           iret = send_blocks_to_ns(heart_interval, who, 2000);//2s
+          heart_interval = DEFAULT_HEART_INTERVAL;//这一行换成2.2版本的nameserver时可以删除
           end  = Func::get_monotonic_time_us();
           ++count;
         }

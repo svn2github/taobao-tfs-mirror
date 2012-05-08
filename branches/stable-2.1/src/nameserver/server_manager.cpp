@@ -90,11 +90,11 @@ namespace tfs
       else
         server->update(info, now, isnew);
 
-      if (isnew)
+      /*if (isnew)
       {
         std::vector<stat_int_t> stat(1, server->block_count());
         GFactory::get_stat_mgr().update_entry(GFactory::tfs_ns_stat_block_count_, stat);
-      }
+      }*/
 
       //update global statistic information
       GFactory::get_global_info().update(info, isnew);
@@ -121,8 +121,8 @@ namespace tfs
       {
         object->update_status();
         object->set_in_dead_queue_timeout(now);
-        std::vector<stat_int_t> stat(1, object->block_count());
-        GFactory::get_stat_mgr().update_entry(GFactory::tfs_ns_stat_block_count_, stat, false);
+        /*std::vector<stat_int_t> stat(1, object->block_count());
+        GFactory::get_stat_mgr().update_entry(GFactory::tfs_ns_stat_block_count_, stat, false);*/
 
         //release all relations of blocks belongs to it
         relieve_relation_(object, now);

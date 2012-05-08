@@ -369,8 +369,8 @@ namespace tfs
             }
             if ( GFactory::get_runtime_info().is_master())
             {
-              std::vector<stat_int_t> stat(1, 1);
-              GFactory::get_stat_mgr().update_entry(GFactory::tfs_ns_stat_block_count_, stat, false);
+              /*std::vector<stat_int_t> stat(1, 1);
+              GFactory::get_stat_mgr().update_entry(GFactory::tfs_ns_stat_block_count_, stat, false);*/
               manager_.get_manager().get_task_manager().remove_block_from_dataserver((*iter), value.block_id_, 0, now);
             }
           }
@@ -595,8 +595,8 @@ namespace tfs
             block_id_, tbsys::CNetUtil::addrToString((*iter)->id()).c_str(), TFS_SUCCESS == ret ? "successful" : "failed");
         }
 
-        std::vector<stat_int_t> stat(1, runer_.size());
-        GFactory::get_stat_mgr().update_entry(GFactory::tfs_ns_stat_block_count_, stat, false);
+        /*std::vector<stat_int_t> stat(1, runer_.size());
+        GFactory::get_stat_mgr().update_entry(GFactory::tfs_ns_stat_block_count_, stat, false);*/
 
         status_ = PLAN_STATUS_BEGIN;
         last_update_time_ = now +  SYSPARAM_NAMESERVER.task_expired_time_;

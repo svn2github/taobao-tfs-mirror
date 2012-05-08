@@ -28,7 +28,7 @@ namespace tfs
     NsRuntimeGlobalInformation NsRuntimeGlobalInformation::instance_;
     StatManager<std::string, std::string, StatEntry >GFactory::stat_mgr_;
     std::string GFactory::tfs_ns_stat_ = "tfs-ns-stat";
-    std::string GFactory::tfs_ns_stat_block_count_ = "tfs-ns-stat-block-count";
+    //std::string GFactory::tfs_ns_stat_block_count_ = "tfs-ns-stat-block-count";
 
     int GFactory::initialize(tbutil::TimerPtr timer)
     {
@@ -48,9 +48,9 @@ namespace tfs
 
       stat_mgr_.add_entry(stat_ptr, SYSPARAM_NAMESERVER.dump_stat_info_interval_);
 
-      StatEntry<std::string, std::string>::StatEntryPtr ptr = new StatEntry<std::string, std::string>(tfs_ns_stat_block_count_, current, false);
+      /*StatEntry<std::string, std::string>::StatEntryPtr ptr = new StatEntry<std::string, std::string>(tfs_ns_stat_block_count_, current, false);
       ptr->add_sub_key("tfs-ns-block-count");
-      stat_mgr_.add_entry(ptr, SYSPARAM_NAMESERVER.dump_stat_info_interval_);
+      stat_mgr_.add_entry(ptr, SYSPARAM_NAMESERVER.dump_stat_info_interval_);*/
       return ret;
     }
 

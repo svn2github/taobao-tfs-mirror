@@ -45,7 +45,7 @@ namespace tfs
       }
       static common::StatManager<std::string, std::string, common::StatEntry > stat_mgr_;
       static std::string tfs_ns_stat_;
-      static std::string tfs_ns_stat_block_count_;
+      //static std::string tfs_ns_stat_block_count_;
     };
   }/** end namespace nameserver **/
 }/** end tfs nameserver **/
