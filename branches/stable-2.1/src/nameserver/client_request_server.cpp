@@ -197,6 +197,11 @@ namespace tfs
           if (TFS_SUCCESS == ret)//check version
           {
             ret = block->version() >= parameter.block_info_.version_ ? EXIT_COMMIT_ERROR : TFS_SUCCESS;
+            if (TFS_SUCCESS != ret)
+            {
+              snprintf(parameter.error_msg_, 256, "close block: %u failed, version error: %d:%d",
+                block_id, block->version(),parameter.block_info_.version_);
+            }
           }
           else
           {

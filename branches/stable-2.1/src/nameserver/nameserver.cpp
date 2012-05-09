@@ -486,7 +486,7 @@ namespace tfs
         ret = layout_manager_.get_client_request_server().close(param);
         if (TFS_SUCCESS != ret)
         {
-          TBSYS_LOG(INFO, "%s", param.error_msg_);
+          TBSYS_LOG(INFO, "%s, ret: %d", param.error_msg_, ret);
         }
         TBSYS_LOG(DEBUG, "close, block: %u, server: %s, status: %d, lease_id: %u, ret: %d",
           param.block_info_.block_id_, tbsys::CNetUtil::addrToString(param.id_).c_str(), param.status_, param.lease_id_, ret);

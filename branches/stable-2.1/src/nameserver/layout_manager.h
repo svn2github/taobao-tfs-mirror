@@ -131,6 +131,7 @@ namespace tfs
       bool build_redundant_(int64_t& need, const time_t now);
       int64_t has_space_in_task_queue_() const;
       bool has_report_block_server_() const;
+      bool has_emergency_replicate_in_queue() const;
 
       class BuildPlanThreadHelper: public tbutil::Thread
       {
@@ -238,6 +239,8 @@ namespace tfs
       tbutil::Mutex wait_report_block_server_mutex_;
       std::deque<ServerCollect*> wait_report_block_servers_;
       std::vector<ServerCollect*> current_reporting_block_servers_;
+
+      std::deque<BlockCollect*> emergency_replicate_queue_;
 
       NameServer& manager_;
       BlockManager block_manager_;

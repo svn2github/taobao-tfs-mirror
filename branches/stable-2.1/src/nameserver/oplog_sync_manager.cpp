@@ -260,7 +260,7 @@ namespace tfs
         UNUSED(args);
         common::BasePacket* message = dynamic_cast<common::BasePacket*>(packet);
         int32_t ret = GFactory::get_runtime_info().is_master() ? transfer_log_msg_(message) : recv_log_(message);
-        if (TFS_SUCCESS == ret)
+        if (TFS_SUCCESS != ret)
         {
           TBSYS_LOG(WARN, "%s log message failed, ret: %d",
             GFactory::get_runtime_info().is_master() ? "transfer" : "recv", ret);

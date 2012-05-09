@@ -541,7 +541,7 @@ namespace tfs
           &SYSPARAM_NAMESERVER.report_block_expired_time_
         };
         int32_t size = sizeof(param) / sizeof(int32_t*);
-        ret = (index > 1 && index <= size) ? TFS_SUCCESS : TFS_ERROR;
+        ret = (index >= 1 && index <= size) ? TFS_SUCCESS : TFS_ERROR;
         if (TFS_SUCCESS != ret)
         {
           snprintf(retstr, length, "index : %d invalid.", index);
@@ -608,7 +608,7 @@ namespace tfs
       BlockCollect* pblock = NULL;
       BlockCollect* blocks[MAX_QUERY_BLOCK_NUMS];
       ArrayHelper<BlockCollect*> results(MAX_QUERY_BLOCK_NUMS, blocks);
-      std::deque<BlockCollect*> emergency_replicate_queue;
+      //std::deque<BlockCollect*> emergency_replicate_queue;
       NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
       while (!ngi.is_destroyed())
       {
@@ -630,9 +630,9 @@ namespace tfs
 
           results.clear();
 
-          check_emergency_replicate_(emergency_replicate_queue, results, MAX_QUERY_BLOCK_NUMS, now);
+          check_emergency_replicate_(emergency_replicate_queue_, results, MAX_QUERY_BLOCK_NUMS, now);
 
-          build_emergency_replicate_(need, emergency_replicate_queue, now);
+          build_emergency_replicate_(need, emergency_replicate_queue_, now);
 
           results.clear();
 
@@ -682,6 +682,9 @@ namespace tfs
           while ((has_report_block_server_()) && (!ngi.is_destroyed()))
             usleep(1000);
 
+          while ((has_emergency_replicate_in_queue()) && (!ngi.is_destroyed()))
+            usleep(1000);
+
           while (((need = has_space_in_task_queue_()) <= 0) && (!ngi.is_destroyed()))
             usleep(1000);
 
@@ -700,7 +703,7 @@ namespace tfs
             // find move src and dest ds list
             get_server_manager().move_split_servers(source, targets, percent);
 
-            TBSYS_LOG(INFO, "need: %"PRI64_PREFIX"d, source size: %Zd, target: %Zd, percent: %e",
+            TBSYS_LOG(INFO, "need: %"PRI64_PREFIX"d, source : %Zd, target: %Zd, percent: %e",
                 need, source.size(), targets.size(), percent);
 
             const int32_t MAX_RETRY_COUNT = 3;
@@ -1404,6 +1407,11 @@ namespace tfs
     bool LayoutManager::has_report_block_server_() const
     {
       return !wait_report_block_servers_.empty() || !current_reporting_block_servers_.empty();
+    }
+
+    bool LayoutManager::has_emergency_replicate_in_queue() const
+    {
+      return !emergency_replicate_queue_.empty();
     }
 
     void LayoutManager::BuildPlanThreadHelper::run()
