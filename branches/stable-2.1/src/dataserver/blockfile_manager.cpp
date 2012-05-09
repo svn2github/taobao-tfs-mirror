@@ -1450,7 +1450,8 @@ namespace tfs
 
         if (modify_flag)
         {
-          --super_block_.used_extend_block_count_;
+          //--super_block_.used_extend_block_count_;
+          --super_block_.used_block_count_;
           ret = super_block_impl_->write_super_blk(super_block_);
           if (TFS_SUCCESS != ret)
             TBSYS_LOG(ERROR, "write super block fail. ret: %d", ret);
