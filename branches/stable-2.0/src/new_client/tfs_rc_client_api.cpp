@@ -13,6 +13,7 @@
  *      - initial release
  *
  */
+#include "local_key.h"
 #include "tfs_rc_client_api.h"
 #include "common/define.h"
 #include "tfs_rc_client_api_impl.h"
@@ -68,6 +69,15 @@ namespace tfs
     void RcClient::set_log_file(const char* log_file)
     {
       impl_->set_log_file(log_file);
+    }
+
+    void RcClient::set_local_dev(const char* dev_name)
+    {
+      if (NULL != dev_name)
+      {
+        LocalResource::get_instance()->use_local_dev_ = true;
+        LocalResource::get_instance()->local_dev_ = dev_name;
+      }
     }
 
     TfsRetType RcClient::logout()
