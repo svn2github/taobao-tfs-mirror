@@ -542,8 +542,11 @@ namespace tfs
 
       for (int i = 0; i < 2; i++)
       {
-        heartbeat_thread_[i]->join();
-        heartbeat_thread_[i] = 0;
+        if (0 != heartbeat_thread_[i])
+        {
+          heartbeat_thread_[i]->join();
+          heartbeat_thread_[i] = 0;
+        }
       }
 
       if (0 != do_check_thread_)

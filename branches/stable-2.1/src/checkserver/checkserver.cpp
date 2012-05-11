@@ -532,11 +532,14 @@ namespace tfs
       CheckBlockInfoMapIter target = slave_result.find(m_result.block_id_);
       if (target == slave_result.end())
       {
-        // may not in slave, recheck
-        recheck_list.push_back(iter->first);
-        TBSYS_LOG(DEBUG, "block %u, file count %u, total size %u",
+        // may not in slave, if block not empty, recheck
+        if (0 != m_result.file_count_)
+        {
+          recheck_list.push_back(iter->first);
+          TBSYS_LOG(DEBUG, "block %u, file count %u, total size %u",
             m_result.block_id_, m_result.file_count_, m_result.total_size_);
-        TBSYS_LOG(DEBUG, "block %u may not in slave, recheck", iter->first);
+          TBSYS_LOG(DEBUG, "block %u may not in slave, recheck", iter->first);
+        }
       }
       else
       {
@@ -563,16 +566,19 @@ namespace tfs
       }
     }
 
-    // may not exist in master, recheck
+    // may not exist in master, if not empty block, recheck
     iter = slave_result.begin();
     for ( ; iter != slave_result.end(); iter++)
     {
-      recheck_list.push_back(iter->first);
-      // debug info
       CheckBlockInfo& item = *(iter->second.begin());
-      TBSYS_LOG(DEBUG, "block %u, file count %u, total size %u",
+      if (0 != item.file_count_)
+      {
+        recheck_list.push_back(iter->first);
+        // debug info
+         TBSYS_LOG(DEBUG, "block %u, file count %u, total size %u",
             item.block_id_, item.file_count_, item.total_size_);
-      TBSYS_LOG(DEBUG, "block %u may not in master, recheck", iter->first);
+        TBSYS_LOG(DEBUG, "block %u may not in master, recheck", iter->first);
+      }
     }
   }
 }
@@ -584,7 +590,7 @@ void usage(const char* app_name)
 {
   fprintf(stderr, "Usage: %s -f -i [-d] [-h]\n", app_name);
   fprintf(stderr, "       -f config file path\n");
-  fprintf(stderr, "       -f cluster index\n");
+  fprintf(stderr, "       -i cluster index\n");
   fprintf(stderr, "       -d daemonize\n");
   fprintf(stderr, "       -h help\n");
   exit(TFS_ERROR);

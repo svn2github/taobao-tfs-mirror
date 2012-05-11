@@ -9,7 +9,7 @@
  * Version: $Id: check_block.cpp 476 2012-04-12 14:43:42Z linqing.zyd@taobao.com $
  *
  * Authors:
- *   duolong <duolong@taobao.com>
+ *   linqing <linqing.zyd@taobao.com>
  *      - initial release
  *
  */
@@ -32,7 +32,6 @@ namespace tfs
     using namespace message;
     using namespace tbutil;
 
-
     void CheckBlock::add_check_task(const uint32_t block_id)
     {
       changed_block_mutex_.lock();
@@ -49,11 +48,15 @@ namespace tfs
           changed_block->block_id_ = block_id;
           changed_block->mod_time_ = time(NULL);
           changed_block_map_.insert(std::make_pair(block_id, changed_block));
+          TBSYS_LOG(INFO, "update check task %u, %u",
+            changed_block->block_id_, changed_block->mod_time_);
         }
       }
       else
       {
         iter->second->mod_time_ = time(NULL);
+        TBSYS_LOG(INFO, "update check task %u, %u",
+            iter->second->block_id_, iter->second->mod_time_);
       }
       changed_block_mutex_.unlock();
     }
@@ -68,7 +71,6 @@ namespace tfs
       }
       changed_block_mutex_.unlock();
     }
-
 
     int CheckBlock::check_all_blocks(common::CheckBlockInfoVec& check_result,
         const int32_t check_flag, const uint32_t check_time, const uint32_t last_check_time)
@@ -102,8 +104,6 @@ namespace tfs
            check_result.push_back(result);
          }
       }
-
-      // TODO: recheck block
 
       return TFS_SUCCESS;
     }
@@ -157,7 +157,7 @@ namespace tfs
         }
         TIMER_END();
 
-        TBSYS_LOG(DEBUG, "blockid: %u, file count in block: %u, total file size: %u, cost: %"PRI64_PREFIX"d",
+        TBSYS_LOG(INFO, "check block, blockid: %u, file count in block: %u, total file size: %u, cost: %"PRI64_PREFIX"d",
             result.block_id_, result.file_count_, result.total_size_, TIMER_DURATION());
       }
       return ret;

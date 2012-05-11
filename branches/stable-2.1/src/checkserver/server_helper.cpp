@@ -224,7 +224,7 @@ namespace tfs
               }
               else
               {
-                TBSYS_LOG(WARN, "dataserver %s may down, ret: %d",
+                TBSYS_LOG(WARN, "dataserver %s may down or too old, ret: %d",
                     Func::addr_to_str(ds_list[i], true).c_str(), ret);
               }
             }
