@@ -27,6 +27,8 @@ namespace tfs
       manager_(manager),
       servers_(MAX_PROCESS_NUMS, 1024, 0.1),
       dead_servers_(MAX_PROCESS_NUMS, 1024, 0.1),
+      wait_report_block_servers_(MAX_PROCESS_NUMS, 1024, 0.1),
+      current_reporting_block_servers_(MAX_PROCESS_NUMS, 1024, 0.1),
       write_index_(0)
     {
 
@@ -127,7 +129,7 @@ namespace tfs
         //release all relations of blocks belongs to it
         relieve_relation_(object, now);
 
-        manager_.del_report_block_server(object);
+        del_report_block_server(object);
       }
       return TFS_SUCCESS;
     }
@@ -168,6 +170,92 @@ namespace tfs
     {
       RWLock::Lock lock(rwmutex_, READ_LOCKER);
       return servers_.size();
+    }
+
+    int ServerManager::add_report_block_server(ServerCollect* server, const time_t now, const bool rb_expire)
+    {
+      int32_t ret = (NULL != server) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+      if (TFS_SUCCESS == ret)
+      {
+        ServerCollect* result = NULL;
+        tbutil::Mutex::Lock lock(wait_report_block_server_mutex_);
+        if (rb_expire)
+          del_report_block_server_(server);
+
+        SERVER_TABLE_ITER iter = wait_report_block_servers_.find(server);
+        SERVER_TABLE_ITER it   = current_reporting_block_servers_.find(server);
+        bool insert = iter == wait_report_block_servers_.end();
+        if (insert)
+        {
+          if (it != current_reporting_block_servers_.end())
+          {
+            result = *it;
+            insert = result->is_report_block_expired(now);
+            if (insert)
+            {
+              current_reporting_block_servers_.erase(result);
+            }
+          }
+        }
+        if (insert)
+        {
+          result = NULL;
+          bool insert_ret = wait_report_block_servers_.insert_unique(result, server);
+          assert(insert_ret);
+          assert(result);
+        }
+      }
+      return ret;
+    }
+
+    int ServerManager::del_report_block_server(ServerCollect* server)
+    {
+      tbutil::Mutex::Lock lock(wait_report_block_server_mutex_);
+      return del_report_block_server_(server);
+    }
+
+    int ServerManager::del_report_block_server_(ServerCollect* server)
+    {
+      int32_t ret = (NULL != server) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+      if (TFS_SUCCESS == ret)
+      {
+        SERVER_TABLE_ITER iter = current_reporting_block_servers_.find(server);
+        if (iter != current_reporting_block_servers_.end())
+        {
+          current_reporting_block_servers_.erase((*iter));
+        }
+      }
+      return ret;
+    }
+
+    int ServerManager::get_and_move_report_block_server(common::ArrayHelper<ServerCollect*>& helper, const int64_t max_slot_num)
+    {
+      tbutil::Mutex::Lock lock(wait_report_block_server_mutex_);
+      int64_t new_add_nums = SYSPARAM_NAMESERVER.report_block_queue_size_ -  current_reporting_block_servers_.size();
+      new_add_nums = std::min(max_slot_num, new_add_nums);
+      if (!wait_report_block_servers_.empty())
+      {
+        while (new_add_nums-- > 0
+            && !wait_report_block_servers_.empty())
+        {
+          ServerCollect* result = NULL;
+          ServerCollect* server = wait_report_block_servers_.at(0);
+          wait_report_block_servers_.erase(server);
+          current_reporting_block_servers_.insert_unique(result, server);
+          helper.push_back(server);
+        }
+      }
+      return helper.get_array_index();
+    }
+
+    bool ServerManager::report_block_server_queue_empty() const
+    {
+      return wait_report_block_servers_.empty();
+    }
+
+    bool ServerManager::has_report_block_server() const
+    {
+      return !wait_report_block_servers_.empty() || !current_reporting_block_servers_.empty();
     }
 
     ServerCollect* ServerManager::get_(const uint64_t server) const
@@ -581,11 +669,13 @@ namespace tfs
       }
       else
       {
+        uint32_t nums = 0;
         GROUP_MAP_ITER iter = group.begin();
-        for (; iter != group.end() && NULL == result; ++iter)
+        for (; iter != group.end(); ++iter)
         {
-          if (iter->second.size() > 0)
+          if (iter->second.size() > nums)
           {
+            nums = iter->second.size();
             result = iter->second.rbegin()->second;
           }
         }

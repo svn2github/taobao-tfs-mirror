@@ -66,7 +66,9 @@ namespace tfs
             if (server->is_report_block(rb_expire, now, isnew))
             {
               server->set_report_block_status(REPORT_BLOCK_STATUS_IN_REPORT_QUEUE);
-              manager_.add_report_block_server(server, rb_expire);
+              TBSYS_LOG(DEBUG, "%s add report block server, now: %ld, isnew: %d, rb_expire: %d",
+                tbsys::CNetUtil::addrToString(server->id()).c_str(), now, isnew, rb_expire);
+              manager_.get_server_manager().add_report_block_server(server, now, rb_expire);
             }
           }
         }
@@ -93,7 +95,7 @@ namespace tfs
           {
             pserver->set_report_block_status(REPORT_BLOCK_STATUS_COMPLETE);
             pserver->set_next_report_block_time(now, random() % 0xFFFFFFF, false);
-            manager_.del_report_block_server(pserver);
+            manager_.get_server_manager().del_report_block_server(pserver);
           }
         }
       }
