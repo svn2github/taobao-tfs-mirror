@@ -44,8 +44,8 @@ namespace tfs
       {
         char *p1, *p2, buffer[64];
         p1 = buffer;
-        p2 = strsep(&p1, "-~ ");
         strncpy(buffer, str, 63);
+        p2 = strsep(&p1, "-~ ");
         if (NULL  != p2 && p2[0] != '\0')
           min = atoi(p2);
         if (NULL != p1 && p1[0] != '\0')
@@ -59,7 +59,7 @@ namespace tfs
       dispatch_oplog_ = 0;
       discard_max_count_ = 0;
       report_block_time_interval_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_REPORT_BLOCK_TIME_INTERVAL, 1);
-      report_block_time_interval_ = std::max(1, report_block_time_interval_);
+      report_block_time_interval_min_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_REPORT_BLOCK_TIME_INTERVAL_MIN, 0);
       max_write_timeout_= TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_MAX_WRITE_TIMEOUT, 3);
       max_task_in_machine_nums_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_MAX_TASK_IN_MACHINE_NUMS, 14);
       cleanup_write_timeout_threshold_ =
@@ -180,7 +180,7 @@ namespace tfs
         report_block_queue_size_ = report_block_thread_nums * 4;
       const char* report_hour_str = TBSYS_CONFIG.getString(CONF_SN_NAMESERVER, CONF_REPORT_BLOCK_HOUR_RANGE, "2~4");
 
-      set_hour_range(report_hour_str, report_block_time_upper_, report_block_time_lower_);
+      set_hour_range(report_hour_str, report_block_time_lower_, report_block_time_upper_);
       return TFS_SUCCESS;
     }
 

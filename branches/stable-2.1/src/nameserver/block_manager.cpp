@@ -147,6 +147,11 @@ namespace tfs
       return ret;
     }
 
+    bool BlockManager::delete_queue_empty() const
+    {
+      return delete_block_queue_.empty();
+    }
+
     void BlockManager::clear_delete_queue()
     {
       tbutil::Mutex::Lock lock(delete_block_queue_muetx_);
@@ -337,10 +342,13 @@ namespace tfs
         ArrayHelper<ServerCollect*> other_expires(MAX_REPLICATION, other_servers);
         NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
         std::set<BlockInfo>::const_iterator iter = blocks.begin();
-        TBSYS_LOG(DEBUG, "block size: %u", blocks.size());
 
-        for (; iter != blocks.end() && TFS_SUCCESS == ret; ++iter, isnew = false, writable = false, master = false, expire_self = false)
+        for (; iter != blocks.end(); ++iter)
         {
+          isnew = false;
+          writable = false;
+          master   = false;
+          expire_self = false;
           helper.clear();
           other_expires.clear();
           const BlockInfo& info = (*iter);
@@ -380,7 +388,6 @@ namespace tfs
             assert(NULL != pserver);
             manager_.get_server_manager().relieve_relation(*helper.at(i), block);
           }
-          //TBSYS_LOG(DEBUG, "master: %d, writable: %d", master, writable);
           manager_.get_server_manager().build_relation(server, block, writable, master);
         }
       }
@@ -403,7 +410,7 @@ namespace tfs
         const ServerCollect* server, const time_t now, const bool set)
     {
       UNUSED(now);
-      int32_t ret = ((NULL != block) && (server != NULL) && (server->is_alive())) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+      int32_t ret = ((NULL != block) && (NULL != server) && (server->is_alive())) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
         block->add(writable, master, server);
@@ -464,8 +471,10 @@ namespace tfs
 
     bool BlockManager::need_replicate(const BlockCollect* block, const time_t now) const
     {
+      UNUSED(now);
       RWLock::Lock lock(get_mutex_(block->id()), READ_LOCKER);
-      return (NULL != block) ? (block->check_replicate(now) >= PLAN_PRIORITY_NORMAL) : false;
+      return (NULL != block) ? (block->get_servers_size() < SYSPARAM_NAMESERVER.max_replication_) : false;
+      //return (NULL != block) ? (block->check_replicate(now) >= PLAN_PRIORITY_NORMAL) : false;
     }
 
     bool BlockManager::need_replicate(ArrayHelper<ServerCollect*>& servers, PlanPriority& priority,
@@ -476,11 +485,6 @@ namespace tfs
       {
         get_mutex_(block->id()).rdlock();
         priority = block->check_replicate(now);
-        /*if (priority >= PLAN_PRIORITY_NORMAL)
-        {
-          manager_.get_task_manager().dump(TBSYS_LOG_LEVEL_DEBUG);
-          dump_write_block(TBSYS_LOG_LEVEL_DEBUG);
-        }*/
         ret = ((priority >= PLAN_PRIORITY_NORMAL) && (!has_write_(block->id(), now)));
         if (ret)
           block->get_servers(servers);
@@ -540,7 +544,14 @@ namespace tfs
     bool BlockManager::has_write_(const uint32_t block, const time_t now) const
     {
       LAST_WRITE_BLOCK_MAP_CONST_ITER iter = last_write_blocks_[get_chunk_(block)].find(block);
-      return last_write_blocks_[get_chunk_(block)].end() == iter ? false : iter->second < now;
+      bool ret = last_write_blocks_[get_chunk_(block)].end() == iter ? false : now < iter->second;
+      if (ret)
+      {
+        TBSYS_LOG(INFO, "block : %u, %d, %ld, %ld", block,
+          last_write_blocks_[get_chunk_(block)].end() == iter, iter->second, now);
+      }
+      return ret;
+      //return last_write_blocks_[get_chunk_(block)].end() == iter ? false : iter->second < now;
     }
 
     void BlockManager::timeout(const time_t now)
@@ -582,6 +593,12 @@ namespace tfs
             last_wirte_block_nums_, need_cleanup_nums, actual);
         last_wirte_block_nums_ -= actual;
       }
+    }
+
+    bool BlockManager::has_emergency_replicate_in_queue() const
+    {
+      //TBSYS_LOG(INFO, "emergency_replicate_queue_: %d", emergency_replicate_queue_.size());
+      return !emergency_replicate_queue_.empty();
     }
 
     int BlockManager::update_block_last_wirte_time(uint32_t & id, const uint32_t block, const time_t now)

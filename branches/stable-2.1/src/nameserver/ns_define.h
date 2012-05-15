@@ -175,6 +175,7 @@ namespace tfs
     class ServerCollect;
 
     extern int ns_async_callback(common::NewClient* client);
+    extern std::string& print_servers(const common::ArrayHelper<ServerCollect*>&servers, std::string& result);
     extern void print_servers(const common::ArrayHelper<uint64_t>&servers, std::string& result);
     extern void print_servers(const std::vector<uint64_t>& servers, std::string& result);
     extern void print_blocks(const std::vector<uint32_t>& blocks, std::string& result);

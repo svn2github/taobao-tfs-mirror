@@ -71,6 +71,7 @@ namespace tfs
 
         bool push_to_delete_queue(const uint32_t block, const uint64_t server);
         bool pop_from_delete_queue(std::pair<uint32_t, uint64_t>& pairs);
+        bool delete_queue_empty() const;
         void clear_delete_queue();
 
         BlockCollect* get(const uint32_t block) const;
@@ -103,7 +104,11 @@ namespace tfs
         int update_block_last_wirte_time(uint32_t& id, const uint32_t block, const time_t now);
         bool has_write(const uint32_t block, const time_t now) const;
         void timeout(const time_t now);
-
+        bool has_emergency_replicate_in_queue() const;
+        inline std::deque<BlockCollect*>& get_emergency_replicate_queue()//no lock
+        {
+          return emergency_replicate_queue_;
+        }
       private:
         DISALLOW_COPY_AND_ASSIGN(BlockManager);
         common::RWLock& get_mutex_(const uint32_t block) const;
@@ -133,6 +138,7 @@ namespace tfs
 
         tbutil::Mutex delete_block_queue_muetx_;
         std::deque<std::pair<uint32_t, uint64_t> > delete_block_queue_;
+        std::deque<BlockCollect*> emergency_replicate_queue_;
     };
   }/** nameserver **/
 }/** tfs **/

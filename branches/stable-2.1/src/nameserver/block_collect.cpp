@@ -117,14 +117,13 @@ namespace tfs
     bool BlockCollect::is_master(const ServerCollect* const server) const
     {
       ServerCollect* first = servers_[0];
-      return ((NULL != server) && (NULL != first)) ? first->id() == first->id() : false;
+      return ((NULL != server) && (NULL != first)) ? server->id() == first->id() : false;
     }
 
     bool BlockCollect::is_writable() const
     {
       //TBSYS_LOG(DEBUG, "is_full: %d, size: %d", is_full(), get_servers_size());
-      return ((!is_full())
-          && get_servers_size() >= SYSPARAM_NAMESERVER.max_replication_);
+      return ((!is_full()) && (get_servers_size() >= SYSPARAM_NAMESERVER.max_replication_));
     }
 
     bool BlockCollect::is_creating() const
@@ -184,33 +183,10 @@ namespace tfs
           if (size >= SYSPARAM_NAMESERVER.max_replication_)
           {
             if ((info_.file_count_ > info.file_count_)
-                || (info_.size_ != info.size_))
+               || (info_.file_count_ == info.file_count_ && info_.size_ != info.size_))
             {
               expire_self = (role == NS_ROLE_MASTER);
               ret = false;
-            }
-            else
-            {
-              ServerCollect* servers[SYSPARAM_NAMESERVER.max_replication_ + 1];
-              ArrayHelper<ServerCollect*> helper(SYSPARAM_NAMESERVER.max_replication_ + 1, servers);
-
-              get_servers(helper);
-              helper.push_back(const_cast<ServerCollect*>(server));
-              ServerCollect* result = NULL;
-              manager.get_server_manager().choose_excess_backup_server(result, helper);
-              //这里不可能出现选不出的情况，也就是reuslt始终不会为NULL
-              if (server == result)
-              {
-                ret = false;
-                expire_self = (role == NS_ROLE_MASTER);//i'm master, we're going to expire blocks
-              }
-              else
-              {
-                remove(result, now);//从当前拥有列表中删除
-                removes.push_back(result);//解除与dataserver的关系
-                if (role == NS_ROLE_MASTER)
-                  other_expires.push_back(result);
-              }
             }
           }
           if (ret)
@@ -218,10 +194,36 @@ namespace tfs
             //check block version
             if (__gnu_cxx::abs(info_.version_ - info.version_) <= VERSION_AGREED_MASK)//version agreed
             {
-              if (((info_.version_ > info.version_) && (size <= 0))
-                  || (info_.version_ <= info.version_))
+              if (size >= SYSPARAM_NAMESERVER.max_replication_)
               {
-                memcpy(&info_, &info, sizeof(info_));
+                ServerCollect* servers[SYSPARAM_NAMESERVER.max_replication_ + 1];
+                ArrayHelper<ServerCollect*> helper(SYSPARAM_NAMESERVER.max_replication_ + 1, servers);
+
+                get_servers(helper);
+                helper.push_back(const_cast<ServerCollect*>(server));
+                ServerCollect* result = NULL;
+                manager.get_server_manager().choose_excess_backup_server(result, helper);
+                //这里不可能出现选不出的情况，也就是reuslt始终不会为NULL
+                if (server == result)
+                {
+                  ret = false;
+                  expire_self = (role == NS_ROLE_MASTER);//i'm master, we're going to expire blocks
+                }
+                else
+                {
+                  remove(result, now);//从当前拥有列表中删除
+                  removes.push_back(result);//解除与dataserver的关系
+                  if (role == NS_ROLE_MASTER)
+                    other_expires.push_back(result);
+                }
+              }
+              else
+              {
+                if (((info_.version_ > info.version_) && (size <= 0))
+                    || (info_.version_ <= info.version_))
+                {
+                  memcpy(&info_, &info, sizeof(info_));
+                }
               }
             }
             else

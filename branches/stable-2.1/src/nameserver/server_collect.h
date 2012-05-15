@@ -90,11 +90,16 @@ namespace tfs
       }
       inline bool is_report_block(bool& rb_expire, const time_t now, const bool isnew) const
       {
-        //TBSYS_LOG(DEBUG, "rb_expired: %ld, status: %d, next: %ld",
-        //    rb_expired_time_, rb_status_, next_report_block_time_);
         if (!isnew)
-          rb_expire = (now > rb_expired_time_ && rb_status_ == REPORT_BLOCK_STATUS_REPORTING);
+          rb_expire = is_report_block_expired(now);
+        TBSYS_LOG(DEBUG, "%s, rb_expire: %d,rb_expired: %ld, status: %d, next: %ld, now: %ld, isnew: %d",
+            tbsys::CNetUtil::addrToString(id()).c_str(),
+            rb_expire, rb_expired_time_, rb_status_, next_report_block_time_, now, isnew);
         return (isnew || rb_expire) ? true : now >= next_report_block_time_;
+      }
+      inline bool is_report_block_expired(const time_t now) const
+      {
+        return (now > rb_expired_time_ && rb_status_ == REPORT_BLOCK_STATUS_REPORTING);
       }
       inline bool is_report_block_complete(void) const
       {

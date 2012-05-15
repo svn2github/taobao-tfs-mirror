@@ -75,6 +75,7 @@ namespace tfs
 
 #define CONF_REPORT_BLOCK_HOUR_RANGE                  "report_block_hour_range"
 #define CONF_REPORT_BLOCK_TIME_INTERVAL               "report_block_time_interval"
+#define CONF_REPORT_BLOCK_TIME_INTERVAL_MIN           "report_block_time_interval_min"
 #define CONF_TIME_REPORT_BLOCK_INTERVAL               "timer_report_block_interval" //
 #define CONF_REPORT_BLOCK_EXPIRED_TIME                "report_block_expired_time"
 #define CONF_REPORT_BLOCK_THREAD_COUNT                "report_block_thread_count"

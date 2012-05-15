@@ -525,10 +525,11 @@ namespace tfs
             {
               if (blocks.is_move_ == REPLICATE_BLOCK_MOVE_FLAG_YES)
               {
+                bool result = false;
                 if ((NULL != source) && block->exist(source))
-                  manager_.get_manager().relieve_relation(block, source, now);
+                  result = manager_.get_manager().relieve_relation(block, source, now);
                 manager_.get_manager().build_relation(block, dest, now);
-                ret = block->get_servers_size() > 0 ?  STATUS_MESSAGE_REMOVE : STATUS_MESSAGE_OK;
+                ret = block->get_servers_size() > 0 && result ?  STATUS_MESSAGE_REMOVE : STATUS_MESSAGE_OK;
                 if ((block->get_servers_size() <= 0) && (NULL != source))
                 {
                   manager_.get_manager().build_relation(block, source, now, true);
@@ -564,6 +565,8 @@ namespace tfs
                 message->get_command() == PLAN_STATUS_TIMEOUT ? "timeout" :
                 message->get_command() == PLAN_STATUS_BEGIN ? "begin" :
                 message->get_command() == PLAN_STATUS_FAILURE ? "failure" : "unknow");
+            if (GFactory::get_runtime_info().is_master())
+              message->reply(new StatusMessage(STATUS_MESSAGE_OK));
           }
           all_complete_flag = true;
           status_ = PLAN_STATUS_END;

@@ -53,6 +53,7 @@ namespace tfs
       int32_t report_block_time_lower_;
       int32_t report_block_time_upper_;
       int32_t report_block_time_interval_;//day
+      int32_t report_block_time_interval_min_;//min(debug)
       int32_t max_task_in_machine_nums_;
       int32_t max_write_timeout_;
       int32_t cleanup_write_timeout_threshold_;

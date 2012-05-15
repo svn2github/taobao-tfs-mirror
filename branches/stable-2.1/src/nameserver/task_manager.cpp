@@ -333,7 +333,8 @@ namespace tfs
       RemoveBlockMessage rbmsg;
       rbmsg.set(block);
       rbmsg.set_seqno(seqno);
-      rbmsg.set_response_flag(REMOVE_BLOCK_RESPONSE_FLAG_YES);
+      //rbmsg.set_response_flag(REMOVE_BLOCK_RESPONSE_FLAG_YES);
+      rbmsg.set_response_flag(REMOVE_BLOCK_RESPONSE_FLAG_NO);
       BlockInfo info;
       info.block_id_ = block;
       std::vector<uint32_t> blocks;

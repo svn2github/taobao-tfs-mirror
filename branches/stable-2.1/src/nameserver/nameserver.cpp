@@ -412,9 +412,16 @@ namespace tfs
               NewClient::RESPONSE_MSG_MAP_ITER iter = sresponse->begin();
               for (; iter != sresponse->end(); ++iter)
               {
-                layout_manager_.get_client_request_server().handle(dynamic_cast<BasePacket*>(iter->second.second));
+                if (iter->second.second->getPCode() == STATUS_MESSAGE)
+                {
+                  RemoveBlockMessage* msg = dynamic_cast<RemoveBlockMessage*>(packet);
+                  StatusMessage* sm = dynamic_cast<StatusMessage*>(iter->second.second);
+                  TBSYS_LOG(INFO, "remove block: %u %s", msg->get(),
+                    STATUS_MESSAGE_OK == sm->get_status() ? "successful" : "failure");
+                }
+                //layout_manager_.get_client_request_server().handle(dynamic_cast<BasePacket*>(iter->second.second));
               }
-            }
+           }
           }
         }
       }
