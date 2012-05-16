@@ -75,8 +75,7 @@ namespace tfs
     {
       if (NULL != dev_name)
       {
-        LocalResource::get_instance()->use_local_dev_ = true;
-        LocalResource::get_instance()->local_dev_ = dev_name;
+        LocalResource::get_instance()->local_ip_ = tbsys::CNetUtil::getLocalAddr(dev_name);
       }
     }
 

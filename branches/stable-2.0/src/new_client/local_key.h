@@ -55,7 +55,7 @@ namespace tfs
 
     struct LocalResource
     {
-      LocalResource(): use_local_dev_(false)
+      LocalResource(): local_ip_(0)
       {
       }
       static LocalResource* get_instance()
@@ -64,8 +64,7 @@ namespace tfs
         return &local_resource;
       }
 
-      std::string local_dev_;
-      bool use_local_dev_;
+      uint32_t local_ip_;
     };
 
     struct SegmentData

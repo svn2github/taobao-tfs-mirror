@@ -45,23 +45,14 @@ int32_t SegmentData::get_nearest_ds(uint32_t ip)
 
 void SegmentData::set_pri_ds_index()
 {
-  if (false == LocalResource::get_instance()->use_local_dev_)
+  uint32_t local_ip = LocalResource::get_instance()->local_ip_;
+  if (0 != local_ip)
   {
     pri_ds_index_ = seg_info_.file_id_ % ds_.size();
   }
   else
   {
-    std::string& dev_name = LocalResource::get_instance()->local_dev_;
-    uint32_t local_ip = tbsys::CNetUtil::getLocalAddr(dev_name.c_str());
-    TBSYS_LOG(DEBUG, "local_ip_address: %u", local_ip);
-    if (0 == local_ip)
-    {
-      pri_ds_index_ = seg_info_.file_id_ % ds_.size();
-    }
-    else
-    {
-      pri_ds_index_ = get_nearest_ds(local_ip);
-    }
+    pri_ds_index_ = get_nearest_ds(local_ip);
   }
   TBSYS_LOG(DEBUG, "select ds %d, %"PRI64_PREFIX"u", pri_ds_index_, ds_[pri_ds_index_]);
 }
