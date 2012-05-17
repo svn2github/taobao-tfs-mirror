@@ -30,24 +30,18 @@ public class NameServerConfig extends Config {
 	}
 	
 	public String getVip(){
-		for (Config each : getRefConfigs(NameServerConfig.class)) {
-			if (isMasterCluster() == each.isMasterCluster()) {
-				if (((NameServerConfig) each).isMasterServer()) {
-					return ((NameServerConfig) each).getIp();
-				}
-			}
-		}
-
-		return getIp();
+		return getMasterNsConfig().getIp();
 	}
 	
 	public String getIpAddrList(){
-		
 		String ipList = getIp();
+		
 		for(Config each:getRefConfigs(NameServerConfig.class)){
-			if(isMasterCluster()==each.isMasterCluster()){
 				ipList = ipList+"|"+((NameServerConfig)each).getIp();
-			}
+		}
+		
+		if(ipList.equals(ip)){
+			ipList = ipList+"|"+ipList;
 		}
 		
 		return ipList;
@@ -61,6 +55,7 @@ public class NameServerConfig extends Config {
 		Map<String,String> kvs = new HashMap<String,String>();
 		kvs.put("port", getPort()+"");
 		kvs.put("ip_addr", getVip());
+		kvs.put("dev_name", getDev());
 		kvs.put("work_dir", getWorkDir());
 		serverConf.setValue(section, kvs);
 		
@@ -72,5 +67,19 @@ public class NameServerConfig extends Config {
 		serverConf.setValue(section, kvs);
 		
 		serverConf.save();
+	}
+	
+	public NameServerConfig getMasterNsConfig(){
+		if(isMasterServer()){
+			return this;
+		}
+		
+		for(Config conf:getRefConfigs(NameServerConfig.class)){
+			if(((NameServerConfig)conf).isMasterServer()){
+				return (NameServerConfig)conf;
+			}
+		}
+		
+		return null;
 	}
 }

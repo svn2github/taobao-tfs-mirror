@@ -17,18 +17,9 @@ public abstract class Config {
 	protected String configPath;
 	protected List<Config> refConfigs = new ArrayList<Config>();
 	
-	protected boolean masterCluster = false;
-	
-	//used for save configuration to server
+	//used for saving configuration to server
 	private Configuration serverConfig;
 	
-	public void setMasterCluster(boolean flag){
-		this.masterCluster = flag;
-	}
-	
-	public boolean isMasterCluster(){
-		return masterCluster;
-	}
 	
 	public void setPort(int port){
 		this.port = port;
@@ -109,7 +100,6 @@ public abstract class Config {
 		
 		return serverConfig;
 	}
-	
 	
 	public abstract void init() throws IOException;
 	
