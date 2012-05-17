@@ -13,11 +13,11 @@ import com.taobao.common.tfs.utility.TimeUtility;
 
 public class ClusterPermissionTest extends BaseCase {
 	private int clusterPerssion = 0;
-	
+
 	@Test
-	public void testClusterInvalid(){
+	public void testClusterInvalid() {
 		log.info("begin: " + getCurrentFunctionName());
-		
+
 		boolean result = false;
 
 		String tfsname = "";
@@ -56,12 +56,12 @@ public class ClusterPermissionTest extends BaseCase {
 			result = tfsManager.unlinkFile(nameList.get(i), null);
 			Assert.assertFalse(result);
 		}
-		
+
 		log.info("end: " + getCurrentFunctionName());
 	}
-	
+
 	@Test
-	public void testClusterR(){
+	public void testClusterR() {
 		log.info("begin: " + getCurrentFunctionName());
 
 		boolean result = false;
@@ -105,16 +105,17 @@ public class ClusterPermissionTest extends BaseCase {
 
 		log.info("end: " + getCurrentFunctionName());
 	}
-	
-	@Test //something wrong with this test case
-	public void testClusterRW(){
+
+	@Test
+	// something wrong with this test case
+	public void testClusterRW() {
 		log.info("begin: " + getCurrentFunctionName());
-		
+
 		boolean ret = false;
 		String localFile = "1B.jpg";
 		String newlocalFile = "2M.jpg";
 		String tfsname = "";
-		
+
 		tfsManager = createTfsManager();
 		TfsStatus tfsStatus = new TfsStatus();
 
@@ -138,12 +139,12 @@ public class ClusterPermissionTest extends BaseCase {
 			ret = tfsManager.unlinkFile(tfsname, null);
 			Assert.assertTrue(ret);
 		}
-		
+
 		log.info("end: " + getCurrentFunctionName());
 	}
-	
+
 	@Test
-	public void testChangeClusterModeFromRW2Invalid(){
+	public void testChangeClusterModeFromRW2Invalid() {
 		log.info("begin: " + getCurrentFunctionName());
 
 		boolean result = false;
@@ -196,9 +197,9 @@ public class ClusterPermissionTest extends BaseCase {
 
 		log.info("end: " + getCurrentFunctionName());
 	}
-	
+
 	@Test
-	public void testChangeClusterModeFromRW2R(){
+	public void testChangeClusterModeFromRW2R() {
 		log.info("begin: " + getCurrentFunctionName());
 
 		boolean result = false;
@@ -254,15 +255,15 @@ public class ClusterPermissionTest extends BaseCase {
 
 		log.info("end: " + getCurrentFunctionName());
 	}
-	
+
 	@Test
-	public void testChangeClusterModeFromInvalid2R(){
+	public void testChangeClusterModeFromInvalid2R() {
 		log.info("begin: " + getCurrentFunctionName());
-		
+
 		boolean result = false;
 		String tfsname = "";
 		String localFile = "1B.jpg";
-		
+
 		tfsManager = createTfsManager();
 		TfsStatus tfsStatus = new TfsStatus();
 		ArrayList<String> nameList = new ArrayList<String>();
@@ -296,8 +297,8 @@ public class ClusterPermissionTest extends BaseCase {
 		do {
 			tfsname = tfsManager.saveFile(localFile, null, null);
 			Assert.assertNull(tfsname);
-			result = tfsManager
-					.fetchFile(nameList.get(n % 10), null, "localfile");
+			result = tfsManager.fetchFile(nameList.get(n % 10), null,
+					"localfile");
 			n++;
 		} while (result != true);
 		long endTime = System.currentTimeMillis();
@@ -314,18 +315,18 @@ public class ClusterPermissionTest extends BaseCase {
 			result = tfsManager.unlinkFile(nameList.get(i), null);
 			Assert.assertTrue(result);
 		}
-		
+
 		log.info("end" + getCurrentFunctionName());
 	}
-	
+
 	@Test
-	public void testChangeClusterModeFromInvalid2RW(){
+	public void testChangeClusterModeFromInvalid2RW() {
 		log.info("begin: " + getCurrentFunctionName());
-		
+
 		boolean result = false;
 		String tfsname = "";
 		String localFile = "1B.jpg";
-		
+
 		tfsManager = createTfsManager();
 		TfsStatus tfsStatus = new TfsStatus();
 		ArrayList<String> nameList = new ArrayList<String>();
@@ -358,8 +359,8 @@ public class ClusterPermissionTest extends BaseCase {
 		long startTime = System.currentTimeMillis();
 		do {
 			tfsname = tfsManager.saveFile(localFile, null, null);
-			result = tfsManager
-					.fetchFile(nameList.get(n % 10), null, "localfile");
+			result = tfsManager.fetchFile(nameList.get(n % 10), null,
+					"localfile");
 			n++;
 		} while (tfsname == null && result == false);
 		long endTime = System.currentTimeMillis();
@@ -376,14 +377,14 @@ public class ClusterPermissionTest extends BaseCase {
 			result = tfsManager.unlinkFile(tfsname, null);
 			Assert.assertTrue(result);
 		}
-		
+
 		log.info("end: " + getCurrentFunctionName());
 	}
-	
+
 	@Test
-	public void testChangeClusterModeFromR2Invalid(){
+	public void testChangeClusterModeFromR2Invalid() {
 		log.info("begin: " + getCurrentFunctionName());
-		
+
 		boolean result = false;
 		String tfsname = "";
 		String localFile = "1B.jpg";
@@ -420,8 +421,8 @@ public class ClusterPermissionTest extends BaseCase {
 		long startTime = System.currentTimeMillis();
 		do {
 			tfsname = tfsManager.saveFile(localFile, null, null);
-			result = tfsManager
-					.fetchFile(nameList.get(n % 10), null, "localfile");
+			result = tfsManager.fetchFile(nameList.get(n % 10), null,
+					"localfile");
 			n++;
 		} while (tfsname == null && result == true);
 		long endTime = System.currentTimeMillis();
@@ -438,19 +439,18 @@ public class ClusterPermissionTest extends BaseCase {
 			result = tfsManager.unlinkFile(nameList.get(i), null);
 			Assert.assertFalse(result);
 		}
-		
+
 		log.info("end: " + getCurrentFunctionName());
 	}
-	
-	
+
 	@Test
-	public void testChangeClusterModeFromR2RW(){
+	public void testChangeClusterModeFromR2RW() {
 		log.info("begin: " + getCurrentFunctionName());
-		
+
 		boolean ret = false;
 		String tfsname = "";
 		String localFile = "1B.jpg";
-		
+
 		tfsManager = createTfsManager();
 		TfsStatus tfsStatus = new TfsStatus();
 		ArrayList<String> nameList = new ArrayList<String>();
@@ -483,8 +483,7 @@ public class ClusterPermissionTest extends BaseCase {
 		long startTime = System.currentTimeMillis();
 		do {
 			tfsname = tfsManager.saveFile(localFile, null, null);
-			ret = tfsManager
-					.fetchFile(nameList.get(n % 10), null, "localfile");
+			ret = tfsManager.fetchFile(nameList.get(n % 10), null, "localfile");
 			n++;
 		} while (tfsname == null && ret == true);
 		long endTime = System.currentTimeMillis();
@@ -502,12 +501,11 @@ public class ClusterPermissionTest extends BaseCase {
 			ret = tfsManager.unlinkFile(tfsname, null);
 			Assert.assertTrue(ret);
 		}
-		
+
 		log.info("end: " + getCurrentFunctionName());
-		
+
 	}
-	
-	
+
 	private void backPermission() {
 		TfsStatus tfsStatus = new TfsStatus();
 		clusterPerssion = tfsStatus.getClusterPermission(appKey);
@@ -529,6 +527,5 @@ public class ClusterPermissionTest extends BaseCase {
 		restorePerssion();
 		TimeUtility.sleep(MAX_UPDATE_TIME);
 	}
-	
-	
+
 }

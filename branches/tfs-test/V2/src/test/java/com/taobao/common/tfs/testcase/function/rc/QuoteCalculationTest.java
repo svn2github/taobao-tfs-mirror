@@ -14,41 +14,40 @@ import com.taobao.common.tfs.utility.TimeUtility;
 
 public class QuoteCalculationTest extends BaseCase {
 	private String appKey;
+
 	@Before
-	public void setUp(){
+	public void setUp() {
 		tfsManager = createTfsManager();
 		appKey = tfsManager.getAppKey();
 	}
-	
-	
-	
+
 	@Test
-	public void testQuoteLessThanMax(){
+	public void testQuoteLessThanMax() {
 		log.info("begin: " + getCurrentFunctionName());
-		
+
 		TfsStatus tfsStatus = new TfsStatus();
 		tfsStatus.resetCurrentQuote(appKey);
-		
+
 		TimeUtility.sleep(MAX_STAT_TIME);
-		
+
 		// small file
 		testQuote("3M.jpg");
 		// large file
 		testQuote("1G.jpg");
-		
+
 		log.info("end: " + getCurrentFunctionName());
 	}
-	
-	private void testQuote(String localFile){
+
+	private void testQuote(String localFile) {
 		TfsStatus tfsStatus = new TfsStatus();
 		TimeUtility.sleep(MAX_STAT_TIME);
-		
+
 		boolean result = false;
 		long max_quote = tfsStatus.getMaxQuote(appKey);
-		long old_quote,new_quote,expect_quote,actual_quote;
+		long old_quote, new_quote, expect_quote, actual_quote;
 		ArrayList<String> names = new ArrayList<String>();
 		old_quote = tfsStatus.getCurrentQuote(appKey);
-		
+
 		long fileSize = 0;
 		try {
 			fileSize = FileUtility.getFileSize(localFile);
@@ -56,7 +55,7 @@ public class QuoteCalculationTest extends BaseCase {
 			Assert.assertTrue(false);
 			e.printStackTrace();
 		}
-		
+
 		for (int i = 0; i < 10; i++) {
 			String tfsname = tfsManager.saveLargeFile(localFile, null, null);
 			if (tfsname == null) {

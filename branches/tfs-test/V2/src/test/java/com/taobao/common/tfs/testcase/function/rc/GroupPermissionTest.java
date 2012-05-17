@@ -15,63 +15,61 @@ import com.taobao.common.tfs.utility.TimeUtility;
 public class GroupPermissionTest extends BaseCase {
 	private int groupPermission = 0;
 	private int clusterPerssion = 0;
-	
+
 	@Test
-	public void testGroupInvalidClusterRW(){
-		log.info("begin: " + getCurrentFunctionName());
-		
-		
-		testClusterGroupPermission(INVALID_MODE,RW_MODE);
-		
-		log.info("end: " + getCurrentFunctionName());
-	}
-	
-	@Test
-	public void testGroupInvalidClusterR(){
-		log.info("begin: " + getCurrentFunctionName());
-		
-		testClusterGroupPermission(INVALID_MODE,R_MODE);
-		
-		log.info("end: " + getCurrentFunctionName());
-	}
-	
-	@Test
-	public void testGroupRClusterInvalid(){
+	public void testGroupInvalidClusterRW() {
 		log.info("begin: " + getCurrentFunctionName());
 
-		testClusterGroupPermission(R_MODE,INVALID_MODE);
+		testClusterGroupPermission(INVALID_MODE, RW_MODE);
 
 		log.info("end: " + getCurrentFunctionName());
 	}
-	
+
 	@Test
-	public void testGroupRClusterRW(){
+	public void testGroupInvalidClusterR() {
 		log.info("begin: " + getCurrentFunctionName());
 
-		testClusterGroupPermission(R_MODE,RW_MODE);
+		testClusterGroupPermission(INVALID_MODE, R_MODE);
 
 		log.info("end: " + getCurrentFunctionName());
 	}
-	
+
 	@Test
-	public void testGroupRWClusterInvalid(){
+	public void testGroupRClusterInvalid() {
 		log.info("begin: " + getCurrentFunctionName());
 
-		testClusterGroupPermission(RW_MODE,INVALID_MODE);
+		testClusterGroupPermission(R_MODE, INVALID_MODE);
 
 		log.info("end: " + getCurrentFunctionName());
 	}
-	
+
 	@Test
-	public void testGroupRWClusterR(){
+	public void testGroupRClusterRW() {
 		log.info("begin: " + getCurrentFunctionName());
 
-		testClusterGroupPermission(RW_MODE,R_MODE);
+		testClusterGroupPermission(R_MODE, RW_MODE);
 
 		log.info("end: " + getCurrentFunctionName());
 	}
-	
-	
+
+	@Test
+	public void testGroupRWClusterInvalid() {
+		log.info("begin: " + getCurrentFunctionName());
+
+		testClusterGroupPermission(RW_MODE, INVALID_MODE);
+
+		log.info("end: " + getCurrentFunctionName());
+	}
+
+	@Test
+	public void testGroupRWClusterR() {
+		log.info("begin: " + getCurrentFunctionName());
+
+		testClusterGroupPermission(RW_MODE, R_MODE);
+
+		log.info("end: " + getCurrentFunctionName());
+	}
+
 	private void testClusterGroupPermission(int clusterPermission,
 			int groupPermission) {
 		boolean result = false;
@@ -111,26 +109,26 @@ public class GroupPermissionTest extends BaseCase {
 			Assert.assertFalse(result);
 		}
 	}
-	
-	private void backPermission(){
+
+	private void backPermission() {
 		TfsStatus tfsStatus = new TfsStatus();
 		clusterPerssion = tfsStatus.getClusterPermission(appKey);
 		groupPermission = tfsStatus.getGroupPermission(appKey);
 	}
-	
-	private void restorePerssion(){
+
+	private void restorePerssion() {
 		TfsStatus tfsStatus = new TfsStatus();
 		tfsStatus.setClusterPermissionByAppKey(appKey, clusterPerssion);
 		tfsStatus.setGroupPermission(appKey, groupPermission);
 	}
-	
+
 	@Before
-	public void setUp(){
+	public void setUp() {
 		backPermission();
 	}
-	
+
 	@After
-	public void tearDown(){
+	public void tearDown() {
 		super.tearDown();
 		restorePerssion();
 		TimeUtility.sleep(MAX_UPDATE_TIME);

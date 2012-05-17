@@ -111,7 +111,7 @@ public class RcServerChangeTest extends BaseCase {
 		String tfsname = "";
 		String localFile = "1b.jpg";
 		TfsStatus tfsStatus = new TfsStatus();
-		
+
 		long startTime = 0;
 		long endTime = 0;
 
@@ -164,12 +164,11 @@ public class RcServerChangeTest extends BaseCase {
 
 		log.info("end: " + getCurrentFunctionName());
 	}
-	
-	//@Test
-	public void testAddRcServer(){
+
+	// @Test
+	public void testAddRcServer() {
 		log.info("begin: " + getCurrentFunctionName());
-		
-		
+
 		log.info("end: " + getCurrentFunctionName());
 	}
 
