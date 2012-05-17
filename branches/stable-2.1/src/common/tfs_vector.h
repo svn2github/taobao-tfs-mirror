@@ -130,7 +130,7 @@ namespace tfs
           iterator upper_bound(const_value_type value) const;
 
           int insert(const_value_type value);
-          bool insert_unique(value_type& output, const_value_type value);
+          int insert_unique(value_type& output, const_value_type value);
           int push_back(const_value_type value);
 
           value_type erase(const_value_type value);

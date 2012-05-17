@@ -81,8 +81,8 @@ namespace tfs
       if (isnew)
       {
         ServerCollect* result = NULL;
-        bool ret = servers_.insert_unique(result, server);
-        assert(ret);
+        int ret = servers_.insert_unique(result, server);
+        assert(ret == TFS_SUCCESS);
         assert(NULL != result);
       }
       rwmutex_.unlock();
@@ -200,8 +200,8 @@ namespace tfs
         if (insert)
         {
           result = NULL;
-          bool insert_ret = wait_report_block_servers_.insert_unique(result, server);
-          assert(insert_ret);
+          int insert_ret = wait_report_block_servers_.insert_unique(result, server);
+          assert(TFS_SUCCESS == insert_ret);
           assert(result);
         }
       }

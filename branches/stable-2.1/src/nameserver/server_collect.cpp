@@ -103,24 +103,26 @@ namespace tfs
 
     bool ServerCollect::add(const BlockCollect* block, const bool master, const bool writable)
     {
+      int return_value = TFS_ERROR;
       bool ret = block != NULL;
       if (ret)
       {
         RWLock::Lock lock(mutex_, WRITE_LOCKER);
         BlockCollect* result = NULL;
-        ret = hold_->insert_unique(result, const_cast<BlockCollect*>(block));
+        return_value = hold_->insert_unique(result, const_cast<BlockCollect*>(block));
         assert(NULL != result);
         //TBSYS_LOG(DEBUG, "id: %u, ret: %d master: %d, writable: %d, %d", block->id(), ret, master, writable, is_equal_group(block->id()));
-        if ((ret)
+        if (((TFS_SUCCESS == return_value)
+             ||(EXIT_ELEMENT_EXIST == return_value))
             && (writable)
             && (master)
             && (is_equal_group(block->id())))
         {
-          ret = writable_->insert_unique(result, const_cast<BlockCollect*>(block));
+          return_value = writable_->insert_unique(result, const_cast<BlockCollect*>(block));
           assert(NULL != result);
         }
       }
-      return ret;
+      return ((TFS_SUCCESS == return_value) || (EXIT_ELEMENT_EXIST == return_value));
     }
 
     bool ServerCollect::remove(BlockCollect* block)
@@ -162,7 +164,8 @@ namespace tfs
         {
           RWLock::Lock lock(mutex_, WRITE_LOCKER);
           BlockCollect* result = NULL;
-          ret = writable_->insert_unique(result, const_cast<BlockCollect*>(block));
+          int return_value = writable_->insert_unique(result, const_cast<BlockCollect*>(block));
+          ret = ((TFS_SUCCESS == return_value) || (EXIT_ELEMENT_EXIST == return_value));
           assert(result);
         }
       }

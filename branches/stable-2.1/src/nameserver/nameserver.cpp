@@ -453,18 +453,18 @@ namespace tfs
           result_msg->free();
           if(EXIT_NO_DATASERVER == ret)
           {
-            ret = message->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), EXIT_NO_DATASERVER,
+            ret = message->reply_error_packet(TBSYS_LOG_LEVEL(INFO), EXIT_NO_DATASERVER,
                   "got error, when get block: %u mode: %d, result: %d information, %s",
                   block_id, mode, ret, tbsys::CNetUtil::addrToString(ipport).c_str());
           }
           else if (EXIT_ACCESS_PERMISSION_ERROR == ret)
           {
-            ret = message->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), EXIT_NAMESERVER_ONLY_READ,
+            ret = message->reply_error_packet(TBSYS_LOG_LEVEL(INFO), EXIT_NAMESERVER_ONLY_READ,
                   "current nameserver only read, %s", tbsys::CNetUtil::addrToString(ipport).c_str());
           }
           else
           {
-            ret = message->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret,
+            ret = message->reply_error_packet(TBSYS_LOG_LEVEL(INFO), ret,
                   "got error, when get block: %u mode: %d, result: %d information, %s",
                   block_id, mode, ret,tbsys::CNetUtil::addrToString(ipport).c_str());
           }
@@ -523,17 +523,17 @@ namespace tfs
           reply->free();
           if(EXIT_NO_DATASERVER == ret)
           {
-            ret = message->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), EXIT_NO_DATASERVER,
+            ret = message->reply_error_packet(TBSYS_LOG_LEVEL(INFO), EXIT_NO_DATASERVER,
                 "not found dataserver, dataserver size equal 0");
           }
           else if (EXIT_ACCESS_PERMISSION_ERROR == ret)
           {
-            ret = message->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), EXIT_NAMESERVER_ONLY_READ,
+            ret = message->reply_error_packet(TBSYS_LOG_LEVEL(INFO), EXIT_NAMESERVER_ONLY_READ,
                 "current nameserver only read");
           }
           else
           {
-            ret = message->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret,
+            ret = message->reply_error_packet(TBSYS_LOG_LEVEL(INFO), ret,
                 "batch get get block information error, mode: %d, ret: %d", mode, ret);
           }
         }
@@ -550,7 +550,7 @@ namespace tfs
         uint32_t block = message->get_block_id();
         if (0 == block)
         {
-          ret = msg->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), EXIT_BLOCK_NOT_FOUND,
+          ret = msg->reply_error_packet(TBSYS_LOG_LEVEL(INFO), EXIT_BLOCK_NOT_FOUND,
               "repair block: %u, block object not found", block);
         }
         else

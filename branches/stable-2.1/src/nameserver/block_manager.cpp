@@ -89,14 +89,23 @@ namespace tfs
       BlockCollect* block = new (std::nothrow)BlockCollect(block_id, now);
       assert(NULL != block);
       BlockCollect* result = NULL;
-      bool ret = blocks_[get_chunk_(block_id)]->insert_unique(result, block);
-      assert(NULL != result);
-      if (!ret)
+      int ret = blocks_[get_chunk_(block_id)]->insert_unique(result, block);
+      if (TFS_SUCCESS != ret)
       {
         tbsys::gDelete(block);
+        if (EXIT_ELEMENT_EXIST == ret)
+        {
+          assert(NULL != result);
+          if (set)
+            result->set_create_flag(BlockCollect::BLOCK_CREATE_FLAG_YES);
+        }
       }
-      if (set)
-        result->set_create_flag(BlockCollect::BLOCK_CREATE_FLAG_YES);
+      else
+      {
+        assert(NULL != result);
+        if (set)
+          result->set_create_flag(BlockCollect::BLOCK_CREATE_FLAG_YES);
+      }
       return result;
     }
 
