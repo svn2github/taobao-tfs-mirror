@@ -5,9 +5,6 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 
-import org.junit.Test;
-//import org.junit.Test;
-
 import com.taobao.common.tfs.utility.MySQLConnector;
 
 public class TfsStatus {
@@ -159,10 +156,6 @@ public class TfsStatus {
 		refreshLastUpdateTime();
 	}
 
-	@Test
-	public void testRemoveRc() {
-		removeRc("10.232.36.203:6100");
-	}
 
 	public boolean checkSessionId(String sessionId) {
 		String statement = "select cache_size from t_session_info where session_id=\""
@@ -308,27 +301,27 @@ public class TfsStatus {
 		return null;
 	}
 
-	@Test
+	//@Test
 	public void testGetGroupPermission() {
 
 	}
 
-	@Test
+	//@Test
 	public void testGetClusterPermission() {
 
 	}
 
-	@Test
+	//@Test
 	public void testRefreshLastUpdateTime() {
 		refreshLastUpdateTime();
 	}
 
-	@Test
+	//@Test
 	public void testGetUsedCapacity() {
 		System.out.println(getUsedCapacity("foobarRcAA"));
 	}
 
-	@Test
+	//@Test
 	public void testSetClusterPermission() {
 		setClusterPermissionByAppKey("foobarRcAA", 2);
 	}
