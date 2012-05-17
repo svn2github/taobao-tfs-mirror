@@ -1,7 +1,6 @@
 package com.taobao.common.tfs.utility;
 
 import org.apache.log4j.Logger;
-
 import com.etao.gaia.exception.OperationException;
 import com.etao.gaia.handler.OperationResult;
 import com.etao.gaia.handler.ProcessHandler;
@@ -111,4 +110,13 @@ public class NetworkUtility {
 
 		return bRet;
 	}
+	
+	//@Test
+	public void getPid() throws OperationException{
+		int i = processhandler.getPidByProcName("10.232.128.50", "/usr/local/staf/bin/STAFProc");
+		System.out.println("proc id is: "+i);
+		//OperationResult result = processhandler.executeCmd("10.232.36.206", "su - admin -c \"touch /home/admin/123\"", true);
+		//System.out.println(result.getMsg());
+	}
+	
 }
