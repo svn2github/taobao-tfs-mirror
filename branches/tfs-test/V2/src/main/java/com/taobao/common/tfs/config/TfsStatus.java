@@ -49,8 +49,6 @@ public class TfsStatus {
 				+ appKey + "\"";
 		int appID = parseInt(getColumnValue(statement, "id"));
 
-		// statement =
-		// "update t_app_stat set USED_CAPACITY=0, FILE_COUNT=0 where APP_ID="+appID;
 		statement = "delete from t_app_stat";
 		update(statement);
 

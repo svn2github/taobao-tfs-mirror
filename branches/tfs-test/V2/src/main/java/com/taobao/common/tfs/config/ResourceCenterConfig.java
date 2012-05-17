@@ -77,4 +77,9 @@ public class ResourceCenterConfig extends Config {
 		serverConf.save();
 	}
 
+	@Override
+	public String getVip() {
+		return getIp();
+	}
+
 }

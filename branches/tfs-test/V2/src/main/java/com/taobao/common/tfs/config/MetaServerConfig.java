@@ -79,4 +79,9 @@ public class MetaServerConfig extends Config {
 		serverConf.save();
 	}
 
+	@Override
+	public String getVip() {
+		return getIp();
+	}
+
 }

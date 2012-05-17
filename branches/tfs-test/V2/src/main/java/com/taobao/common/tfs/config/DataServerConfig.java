@@ -58,4 +58,9 @@ public class DataServerConfig extends Config {
 		serverConf.save();
 	}
 
+	@Override
+	public String getVip() {
+		return getIp();
+	}
+
 }

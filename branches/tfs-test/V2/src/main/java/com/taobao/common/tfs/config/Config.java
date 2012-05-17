@@ -101,6 +101,8 @@ public abstract class Config {
 		return serverConfig;
 	}
 	
+	public abstract String getVip();
+	
 	public abstract void init() throws IOException;
 	
 }
