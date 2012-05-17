@@ -12,44 +12,44 @@ import com.taobao.common.tfs.utility.FileUtility;
 import com.taobao.common.tfs.utility.TimeUtility;
 
 public class WriteOperationTest extends BaseCase {
-	
+
 	@Test
-	public void testWrite1KFile(){
+	public void testWrite1KFile() {
 		log.info("begin: " + getCurrentFunctionName());
 
 		String localFile = "1K.jpg";
 		String filePath = "/test_1K_01" + currentDateTime();
-		
-		testWriteFile(localFile,filePath);
-		
+
+		testWriteFile(localFile, filePath);
+
 		log.info("end: " + getCurrentFunctionName());
 	}
-	
+
 	@Test
-	public void testWrite2MFile(){
+	public void testWrite2MFile() {
 		log.info("begin: " + getCurrentFunctionName());
 
 		String localFile = "2M.jpg";
 		String filePath = "/test_2M_01" + currentDateTime();
-		
-		testWriteFile(localFile,filePath);
-		
+
+		testWriteFile(localFile, filePath);
+
 		log.info("end: " + getCurrentFunctionName());
 	}
-	
+
 	@Test
-	public void testWrite3MFile(){
+	public void testWrite3MFile() {
 		log.info("begin: " + getCurrentFunctionName());
 
 		String localFile = "3M.jpg";
 		String filePath = "/test_3M_01" + currentDateTime();
-		
-		testWriteFile(localFile,filePath);
-		
+
+		testWriteFile(localFile, filePath);
+
 		log.info("end: " + getCurrentFunctionName());
 	}
-	
-	private void testWriteFile(String localFile,String filePath){
+
+	private void testWriteFile(String localFile, String filePath) {
 		tfsManager = createTfsManager();
 		TfsStatus tfsStatus = new TfsStatus();
 
@@ -68,30 +68,31 @@ public class WriteOperationTest extends BaseCase {
 			e.printStackTrace();
 			Assert.assertTrue(false);
 		}
-		
-		ret = tfsManager.write(appId, userId, filePath, 0,data, 0, data.length);
-		log.debug("ret is: "+ret);
-		Assert.assertEquals(ret,data.length);
+
+		ret = tfsManager
+				.write(appId, userId, filePath, 0, data, 0, data.length);
+		log.debug("ret is: " + ret);
+		Assert.assertEquals(ret, data.length);
 		TimeUtility.sleep(MAX_STAT_TIME);
 		String sessionId = tfsManager.getSessionId();
 		log.debug("sessionId: " + sessionId);
-		
+
 		Assert.assertEquals(tfsStatus.getFileSize(sessionId, 2), fileSize);
-		
+
 		long newUsedCapacity = tfsStatus.getUsedCapacity(appKey);
 		Assert.assertEquals(oldUsedCapacity + fileSize, newUsedCapacity);
 		tfsManager.destroy();
-		
+
 		tfsManager = createTfsManager();
 		sessionId = tfsManager.getSessionId();
-		
+
 		ByteArrayOutputStream output = new ByteArrayOutputStream();
 		ret = tfsManager.read(appId, userId, filePath, 0, data.length, output);
 		Assert.assertEquals(ret, data.length);
-		
+
 		TimeUtility.sleep(MAX_STAT_TIME);
-		Assert.assertEquals(tfsStatus.getFileSize(sessionId, 1),fileSize);
-		
+		Assert.assertEquals(tfsStatus.getFileSize(sessionId, 1), fileSize);
+
 		tfsManager.destroy();
 	}
 }

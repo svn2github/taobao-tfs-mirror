@@ -24,12 +24,12 @@ public class OperationInfoTest extends BaseCase {
 				{ localFile10K, 20 * (1 << 10) + 1, true },
 				{ localFile1B, 20 * (1 << 10), true },
 				{ localFile1B, 20 * (1 << 10), false } };
-		
+
 		testWriteManyTimes(filePath, fileInfos);
-		
+
 		log.info("end: " + getCurrentFunctionName());
 	}
-	
+
 	@Test
 	public void testWriteLargeManyTimesParts() {
 		log.info("begin: " + getCurrentFunctionName());
@@ -43,12 +43,12 @@ public class OperationInfoTest extends BaseCase {
 				{ localFile3M, 6 * (1 << 20) + 1, true },
 				{ localFile1B, 6 * (1 << 20), true },
 				{ localFile1B, 6 * (1 << 20), false } };
-		
+
 		testWriteManyTimes(filePath, fileInfos);
-		
+
 		log.info("end: " + getCurrentFunctionName());
 	}
-	
+
 	@Test
 	public void testWriteManyTimesPartsCom() {
 		log.info("begin: " + getCurrentFunctionName());
@@ -60,18 +60,18 @@ public class OperationInfoTest extends BaseCase {
 
 		Object[][] fileInfos = { { localFile10K, 0, true },
 				{ localFile2M, 20 * (1 << 10), true },
-				{ localFile3M, 8*(1<<20)+20*(1<<10), true },
-				{ localFile10K, 10*(1<<10), true },
-				{ localFile10K, 10*(1<<10), false },
-				{ localFile3M, 2*(1<<20)+20*(1<<10), true },};
+				{ localFile3M, 8 * (1 << 20) + 20 * (1 << 10), true },
+				{ localFile10K, 10 * (1 << 10), true },
+				{ localFile10K, 10 * (1 << 10), false },
+				{ localFile3M, 2 * (1 << 20) + 20 * (1 << 10), true }, };
 
 		testWriteManyTimes(filePath, fileInfos);
-		
+
 		log.info("end: " + getCurrentFunctionName());
 	}
-	
+
 	@Test
-	public void testReadOperationInfo(){
+	public void testReadOperationInfo() {
 		log.info("begin: " + getCurrentFunctionName());
 
 		String localFile = "100M.jpg";
@@ -132,8 +132,8 @@ public class OperationInfoTest extends BaseCase {
 
 		log.info("end: " + getCurrentFunctionName());
 	}
-	
-	private void testWriteManyTimes(String filePath,Object[][] fileInfos){
+
+	private void testWriteManyTimes(String filePath, Object[][] fileInfos) {
 		TfsStatus tfsStatus = new TfsStatus();
 		tfsManager = createTfsManager();
 
@@ -159,6 +159,8 @@ public class OperationInfoTest extends BaseCase {
 					((Integer) fileInfo[1]).intValue(), data, 0, data.length);
 			TimeUtility.sleep(MAX_STAT_TIME);
 
+			log.debug("filepath is: " + filePath + "; ret=" + ret);
+
 			if (((Boolean) fileInfo[2]).booleanValue()) {
 				Assert.assertEquals(fileLength, ret);
 				Assert.assertEquals(oldUsedCapacity + fileLength,
@@ -171,5 +173,5 @@ public class OperationInfoTest extends BaseCase {
 			tfsManager.destroy();
 		}
 	}
-	
+
 }
