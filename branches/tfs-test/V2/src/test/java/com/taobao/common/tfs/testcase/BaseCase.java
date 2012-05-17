@@ -22,10 +22,18 @@ public class BaseCase {
 	public static DefaultTfsManager tfsManager=null ;
 	public static String resourcesPath="";
 	
+	public static int INVALID_MODE = 0;
+	public static int R_MODE = 1;
+	public static int RW_MODE = 2;
+	public static int RC_VALID_MODE = 1;
+	public static int RC_INVALID_MODE = 2;
+	
     public static long appId;
     public static long userId=8;
+    //public static String appKey = "testKeyYS";
     public static String appKey = "testKeyYS";
-    protected final int MAX_STAT_TIME = 30;
+    protected final int MAX_UPDATE_TIME = 20;
+    protected final int MAX_STAT_TIME = 40;
     
     protected List<String> tfsNames = new ArrayList<String>();
     protected List<String> metaFiles = new ArrayList<String>();
@@ -38,6 +46,8 @@ public class BaseCase {
         ClassPathXmlApplicationContext appContext = new ClassPathXmlApplicationContext(new String[] { "tfs.xml" });
         tfsManager = (DefaultTfsManager) appContext.getBean("tfsManager");
         appId = tfsManager.getAppId();
+        System.out.println("appid is : "+appId);
+        //appKey = tfsManager.getAppKey();
     }
     
     public String currentDateTime(){
@@ -59,7 +69,7 @@ public class BaseCase {
 	}
 
 	@BeforeClass
-	public static void BeforeSetup() 
+	public static void beforeSetup() 
 	{
 		log.debug(" @@ beforeclass begin");
 		
@@ -77,8 +87,9 @@ public class BaseCase {
 				put("3M.jpg",3*(1<<20));
 				put("5M.jpg",5*(1<<20));
 				put("10M.jpg",10*(1<<20));
-				//put("100M.jpg",100*(1<<20));
-				//put("1G.jpg",1<<30);
+				put("100M.jpg",100*(1<<20));
+				put("1G.jpg",1<<30);
+				//put("6G.jpg",6*(1<<30));
 			}
 		};
 		
@@ -90,7 +101,7 @@ public class BaseCase {
 	}
 
 	@AfterClass
-	public static void AfterTearDown() 
+	public static void afterTearDown() 
 	{
 
 		System.out.println(" @@ afterclass begin");
