@@ -48,7 +48,7 @@ namespace tfs
           changed_block->block_id_ = block_id;
           changed_block->mod_time_ = time(NULL);
           changed_block_map_.insert(std::make_pair(block_id, changed_block));
-          TBSYS_LOG(INFO, "update check task %u, %u",
+          TBSYS_LOG(INFO, "add check task %u, %u",
             changed_block->block_id_, changed_block->mod_time_);
         }
       }
@@ -114,25 +114,29 @@ namespace tfs
       TBSYS_LOG(DEBUG, "CHECK_ONE_BLOCK block_id: %u, check_flag: %d", block_id, check_flag);
       int ret = TFS_SUCCESS;
       LogicBlock* logic_block = BlockFileManager::get_instance()->get_logic_block(block_id);
-      if (NULL == logic_block)
+      if (NULL == logic_block)  // already deleted block
       {
-        TBSYS_LOG(ERROR, "blockid: %u is not exist.", block_id);
-        ret =  EXIT_NO_LOGICBLOCK_ERROR;
+        TBSYS_LOG(WARN, "blockid: %u is not exist.", block_id);
+        remove_check_task(block_id);
       }
       else
       {
         TIMER_START();
-        common::BlockInfo *bi;
         common::RawMetaVec meta_infos;  // meta info vector
         common::RawMetaVecIter meta_it;
+        common::BlockInfo bi;
+
         logic_block->rlock();
-        bi = logic_block->get_block_info();
+        // logic_block->copy_block_info(bi);
         logic_block->get_meta_infos(meta_infos);
         logic_block->unlock();
-        result.block_id_ = block_id;       // block id
-        result.version_ = bi->version_;     // version
+
+        result.block_id_ = block_id;        // block id
+        //result.version_ = bi->version_;     // version
+        result.version_ = 0;
         result.file_count_ = 0;
         result.total_size_ = 0;
+
         FileInfo fi;
         for (meta_it = meta_infos.begin(); meta_it != meta_infos.end(); meta_it++)
         {

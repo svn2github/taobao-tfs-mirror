@@ -527,7 +527,7 @@ namespace tfs
     CheckBlockInfoMapIter iter = master_result.begin();
     for ( ; iter != master_result.end(); iter++)
     {
-      // TODO, select master block
+      // simply select the frist copy
       CheckBlockInfo& m_result = *(iter->second.begin());
       CheckBlockInfoMapIter target = slave_result.find(m_result.block_id_);
       if (target == slave_result.end())
@@ -535,10 +535,10 @@ namespace tfs
         // may not in slave, if block not empty, recheck
         if (0 != m_result.file_count_)
         {
-          recheck_list.push_back(iter->first);
           TBSYS_LOG(DEBUG, "block %u, file count %u, total size %u",
             m_result.block_id_, m_result.file_count_, m_result.total_size_);
-          TBSYS_LOG(DEBUG, "block %u may not in slave, recheck", iter->first);
+          TBSYS_LOG(WARN, "block %u NOT_IN_SLAVE", iter->first);
+          fprintf(master_fp_, "%u\n", iter->first);
         }
       }
       else
@@ -566,18 +566,18 @@ namespace tfs
       }
     }
 
-    // may not exist in master, if not empty block, recheck
+    // not exist in master
     iter = slave_result.begin();
     for ( ; iter != slave_result.end(); iter++)
     {
       CheckBlockInfo& item = *(iter->second.begin());
       if (0 != item.file_count_)
       {
-        recheck_list.push_back(iter->first);
         // debug info
          TBSYS_LOG(DEBUG, "block %u, file count %u, total size %u",
             item.block_id_, item.file_count_, item.total_size_);
-        TBSYS_LOG(DEBUG, "block %u may not in master, recheck", iter->first);
+        TBSYS_LOG(WARN, "block %u NOT_IN_MASTER", iter->first);
+        fprintf(slave_fp_, "%u\n", iter->first);
       }
     }
   }
@@ -600,6 +600,7 @@ int main(int argc, char** argv)
 {
   int ret = TFS_SUCCESS;
   std::string config_file;
+  std::string output_dir;
   bool daemon_flag = false;
   int index = 0;
 
@@ -615,6 +616,9 @@ int main(int argc, char** argv)
       case 'f':
         config_file = optarg;
         break;
+      case 'o':
+        output_dir = optarg;
+        break;
       case 'd':
         daemon_flag = true;
         break;
@@ -624,7 +628,9 @@ int main(int argc, char** argv)
     }
   }
 
-  if (0 == config_file.length() || 0 >= index)
+  if (0 == config_file.length()
+      0 == output_dir.length()
+      || index <= 0)
   {
     usage(argv[0]);
   }

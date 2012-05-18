@@ -2300,8 +2300,8 @@ namespace tfs
       TBSYS_LOG(DEBUG, "write block fileinfo successful, blockid: %u", block_id);
       message->reply(new StatusMessage(STATUS_MESSAGE_OK));
 
-      // hook to be checked
-      if (TFS_SUCCESS == ret)
+      // if block not empty, hook to be checked
+      if (TFS_SUCCESS == ret && 0 != blk->file_count_)
       {
         check_block_->add_check_task(block_id);
       }
