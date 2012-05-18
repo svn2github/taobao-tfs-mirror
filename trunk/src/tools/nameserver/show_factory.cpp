@@ -495,12 +495,24 @@ namespace tfs
         }
         if (sub_type & MACHINE_TYPE_FOR_MONITOR)
         {
-          fprintf(fp, "write flow(MBps):%s, write tps:%"PRI64_PREFIX"d, read flow(MBps):%s, read tps:%"PRI64_PREFIX"d\n",
-              Func::format_size(last_tp_.write_byte_).c_str(),
+          time_t t;
+          time(&t);
+          struct tm tm;
+          ::localtime_r((const time_t*)&t, &tm);
+
+          fprintf(fp, "[%04d-%02d-%02d %02d:%02d:%02d] write_flow(MBps)=%s, write_tps=%"PRI64_PREFIX"d, read_flow(MBps)=%s, read_tps=%"PRI64_PREFIX"d\n",
+              tm.tm_year+1900, tm.tm_mon+1, tm.tm_mday,
+              tm.tm_hour, tm.tm_min, tm.tm_sec,
+              Func::format_size(last_tp_.write_byte_, 'M').c_str(),
               last_tp_.write_file_count_,
-              Func::format_size(last_tp_.read_byte_).c_str(),
+              Func::format_size(last_tp_.read_byte_, 'M').c_str(),
               last_tp_.read_file_count_
               );
+
+          if (fp == stdout)
+          {
+            fflush(stdout);
+          }
         }
       }
     }

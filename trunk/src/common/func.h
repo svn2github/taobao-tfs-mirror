@@ -81,7 +81,7 @@ namespace tfs
       static char* subright(char* dst, char* src, int32_t n);
       static int check_pid(const char* lock_file);
       static int write_pid(const char* lock_file);
-      static std::string format_size(const int64_t c);
+      static std::string format_size(const int64_t c, const char unit = '\0');
       static int64_t curr_time();
       static std::string time_to_str(time_t t, int f = 0);
       static char* safe_malloc(const int32_t len, char* data = NULL);
