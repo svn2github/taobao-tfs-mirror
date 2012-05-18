@@ -1,5 +1,7 @@
 package com.taobao.common.tfs.server;
 
+import java.io.IOException;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
@@ -70,6 +72,18 @@ public abstract class DefaultTfsServer implements Server {
 
 	public int getPort() {
 		return conf.getPort();
+	}
+	
+	public boolean init(){
+		boolean result = false;
+		try {
+			getConfiguration().init();
+		} catch (IOException e) {
+			e.printStackTrace();
+			result = false;
+		}
+		
+		return result;
 	}
 
 	abstract public Config getConfiguration();
