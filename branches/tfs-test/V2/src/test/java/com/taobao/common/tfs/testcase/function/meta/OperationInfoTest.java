@@ -1,7 +1,10 @@
 package com.taobao.common.tfs.testcase.function.meta;
 
 import java.io.ByteArrayOutputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -128,6 +131,202 @@ public class OperationInfoTest extends BaseCase {
 			Assert.assertEquals(oldUsedCapacity + 100 * (1 << 20),
 					newUsedCapacity);
 		}
+		tfsManager.destroy();
+
+		log.info("end: " + getCurrentFunctionName());
+	}
+
+	@Test
+	public void testWriteLargeFileInfo() throws FileNotFoundException {
+		log.info("begin: " + getCurrentFunctionName());
+
+		boolean result = false;
+		String localFile = "100M.jpg";
+		String filePath = "/pwite_100M" + currentDateTime();
+
+		TfsStatus tfsStatus = new TfsStatus();
+
+		long oldUsedCapacity = tfsStatus.getUsedCapacity(appKey);
+		// long oldFileCount = tfsStatus.getFileCount(appKey);
+
+		tfsManager = createTfsManager();
+		tfsManager.rmFile(appId, userId, filePath);
+
+		result = tfsManager.saveFile(appId, userId, localFile, filePath);
+		Assert.assertTrue(result);
+
+		TimeUtility.sleep(MAX_STAT_TIME);
+
+		String sessionId = tfsManager.getSessionId();
+		Assert.assertTrue(tfsStatus.getFileSize(sessionId, 2) == 100 * (1 << 20));
+		long newUsedCapacity = tfsStatus.getUsedCapacity(appKey);
+		// long newFileCount = tfsStatus.getFileCount(appKey);
+		Assert.assertEquals(oldUsedCapacity + 100 * (1 << 20), newUsedCapacity);
+		tfsManager.destroy();
+
+		tfsManager = createTfsManager();
+		sessionId = tfsManager.getSessionId();
+		OutputStream output = new FileOutputStream("empty.jpg");
+
+		long totalReadLength = 0;
+		long readLength;
+		long len = 90 * (1 << 20);
+		long dataOffset = 0;
+		for (int i = 0; i < 5; i++) {
+
+			readLength = tfsManager.read(appId, userId, filePath, dataOffset,
+					len, output);
+			Assert.assertEquals(readLength, len);
+
+			totalReadLength += readLength;
+			TimeUtility.sleep(MAX_STAT_TIME);
+
+			Assert.assertTrue(tfsStatus.getFileSize(sessionId, 1) == totalReadLength);
+			newUsedCapacity = tfsStatus.getUsedCapacity(appKey);
+			// newFileCount = tfsStatus.getFileCount(appKey);
+			Assert.assertEquals(oldUsedCapacity + 100 * (1 << 20),
+					newUsedCapacity);
+		}
+		for (int i = 0; i < 5; i++) {
+			readLength = tfsManager.read(appId, userId, "/unknown", dataOffset,
+					len, output);
+			Assert.assertTrue(readLength < 0);
+			TimeUtility.sleep(MAX_STAT_TIME);
+
+			Assert.assertTrue(tfsStatus.getFileSize(sessionId, 1) == totalReadLength);
+			newUsedCapacity = tfsStatus.getUsedCapacity(appKey);
+			// newFileCount = tfsStatus.getFileCount(appKey);
+			Assert.assertEquals(oldUsedCapacity + 100 * (1 << 20),
+					newUsedCapacity);
+		}
+		tfsManager.destroy();
+
+		log.info("end: " + getCurrentFunctionName());
+	}
+
+	@Test
+	public void testSaveSmallFileInfo() {
+		log.info("begin: " + getCurrentFunctionName());
+
+		boolean bRet = false;
+		String localFile = "2M.jpg";
+		String filePath = "/savesmallfile2M" + currentDateTime();
+
+		tfsManager = createTfsManager();
+		TfsStatus tfsStatus = new TfsStatus();
+		tfsManager.rmFile(appId, userId, filePath);
+
+		long oldUsedCapacity = tfsStatus.getUsedCapacity(appKey);
+		// long oldFileCount = tfsStatus.getFileCount(appKey);
+		long newUsedCapacity = 0;
+		// long newFileCount = 0;
+
+		String sessionId = tfsManager.getSessionId();
+		for (int i = 0; i < 5; i++) {
+
+			bRet = tfsManager.saveFile(appId, userId, localFile, filePath + "_"
+					+ i);
+			Assert.assertTrue(bRet);
+
+			TimeUtility.sleep(MAX_STAT_TIME);
+
+			Assert.assertTrue(tfsStatus.getFileSize(sessionId, 2) == (i + 1) * 2 * 1024 * 1024);
+			newUsedCapacity = tfsStatus.getUsedCapacity(appKey);
+			// newFileCount = tfsStatus.getFileCount(appKey);
+			Assert.assertEquals(oldUsedCapacity + (i + 1) * 2 * 1024 * 1024,
+					newUsedCapacity);
+			// Assert.assertEquals(oldFileCount + i + 1, newFileCount);
+		}
+
+		localFile = "unknown";
+		for (int i = 1; i < 6; i++) {
+			TimeUtility.sleep(1);
+			bRet = tfsManager.saveFile(appId, userId, localFile, filePath + "_"
+					+ i);
+			Assert.assertFalse(bRet);
+			TimeUtility.sleep(MAX_STAT_TIME);
+
+			// Assert.assertTrue(getOperTimes(sessionId, 2) == 5+i);//????
+			// Assert.assertTrue(getSuccTimes(sessionId, 2) == 5);
+			Assert.assertTrue(tfsStatus.getFileSize(sessionId, 2) == 5 * 2 * 1024 * 1024);
+			newUsedCapacity = tfsStatus.getUsedCapacity(appKey);
+			// newFileCount = tfsStatus.getFileCount(appKey);
+			Assert.assertEquals(oldUsedCapacity + 5 * 2 * 1024 * 1024,
+					newUsedCapacity);
+		}
+		tfsManager.destroy();
+
+		log.info("end: " + getCurrentFunctionName());
+	}
+
+	@Test
+	public void testUnlinkFile() {
+		log.info("begin: " + getCurrentFunctionName());
+
+		boolean bRet = false;
+		int Ret;
+		String localFile = "2M.jpg";
+		String filePath = "/operation_" + currentDateTime();
+
+		long oldUsedCapacity = 0;
+		// long oldFileCount = 0;
+		long newUsedCapacity = 0;
+		// long newFileCount = 0;
+
+		tfsManager = createTfsManager();
+		TfsStatus tfsStatus = new TfsStatus();
+
+		oldUsedCapacity = tfsStatus.getUsedCapacity(appKey);
+		// oldFileCount = tfsStatus.getFileCount(appKey);
+
+		String sessionId = tfsManager.getSessionId();
+		String[] sRet = new String[5];
+
+		for (int i = 0; i < 5; i++) {
+			TimeUtility.sleep(1);
+			sRet[i] = filePath + "_" + i;
+			bRet = tfsManager.saveFile(appId, userId, localFile, sRet[i]);
+			Assert.assertTrue(bRet);
+			TimeUtility.sleep(MAX_STAT_TIME);
+			// Assert.assertTrue(getOperTimes(sessionId, 2) == i + 1);
+			// Assert.assertTrue(getSuccTimes(sessionId, 2) == i + 1);
+			Assert.assertTrue(tfsStatus.getFileSize(sessionId, 2) == (i + 1)
+					* 2 * (1 << 20));
+			newUsedCapacity = tfsStatus.getUsedCapacity(appKey);
+			// newFileCount = tfsStatus.getFileCount(appKey);
+			Assert.assertEquals(oldUsedCapacity + (i + 1) * 2 * (1 << 20),
+					newUsedCapacity);
+			// Assert.assertEquals(oldFileCount + i + 1, newFileCount);
+		}
+		tfsManager.destroy();
+
+		tfsManager = createTfsManager();
+		oldUsedCapacity = tfsStatus.getUsedCapacity(appKey);
+		// oldFileCount = tfsStatus.getFileCount(appKey);
+		sessionId = tfsManager.getSessionId();
+		for (int i = 0; i < 5; i++) {
+			Ret = tfsManager.rmFile(appId, userId, sRet[i]);
+			Assert.assertEquals(Ret, 0);
+
+			if (i < 3) {
+				Ret = tfsManager.rmFile(appId, userId, sRet[i]);
+				Assert.assertTrue(Ret < 0);
+			}
+		}
+		Ret = tfsManager.rmFile(appId, userId, "unknown1");
+		Assert.assertEquals(Ret, -14010);
+		Ret = tfsManager.rmFile(appId, userId, "unknown2");
+		Assert.assertEquals(Ret, -14010);
+
+		TimeUtility.sleep(MAX_STAT_TIME);
+		// Assert.assertTrue(getOperTimes(sessionId, 4) == 10);
+		// Assert.assertTrue(getSuccTimes(sessionId, 4) == 5);
+		Assert.assertTrue(tfsStatus.getFileSize(sessionId, 4) == 5 * 2 * 1024 * 1024);
+		newUsedCapacity = tfsStatus.getUsedCapacity(appKey);
+		// newFileCount = tfsStatus.getFileCount(appKey);
+		Assert.assertEquals(oldUsedCapacity - 5 * 2 * (1 << 20),
+				newUsedCapacity);
+		// Assert.assertEquals(oldFileCount-5, newFileCount);
 		tfsManager.destroy();
 
 		log.info("end: " + getCurrentFunctionName());
