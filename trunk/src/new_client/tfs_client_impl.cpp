@@ -212,7 +212,7 @@ int TfsClientImpl::fstat(const int fd, TfsFileStat* buf, const TfsStatType mode)
   return ret;
 }
 
-int TfsClientImpl::close(const int fd, char* ret_tfs_name, const int32_t ret_tfs_name_len, const bool simple)
+int TfsClientImpl::close(const int fd, char* ret_tfs_name, const int32_t ret_tfs_name_len)
 {
   int ret = EXIT_INVALIDFD_ERROR;
   TfsFile* tfs_file = get_file(fd);
@@ -236,7 +236,7 @@ int TfsClientImpl::close(const int fd, char* ret_tfs_name, const int32_t ret_tfs
         }
         else
         {
-          memcpy(ret_tfs_name, tfs_file->get_file_name(simple), TFS_FILE_LEN);
+          memcpy(ret_tfs_name, tfs_file->get_file_name(), TFS_FILE_LEN);
         }
       }
     }
@@ -256,6 +256,37 @@ int64_t TfsClientImpl::get_file_length(const int fd)
     ret = tfs_file->get_file_length();
   }
   return ret;
+}
+
+void TfsClientImpl::get_simple_name(char *tfs_name, const uint32_t length, const char* suffix)
+{
+  if (NULL != tfs_name && check_simple(true, suffix, length))
+  {
+    FSName fsname(tfs_name, suffix);
+    fsname.set_suffix((uint32_t)0); // clear suffix
+
+    char type = tfs_name[0];
+    const char *name = fsname.get_name();
+    if (NULL != suffix)
+    {
+      sprintf(tfs_name, "%s%s", name, suffix);
+    }
+    else
+    {
+      sprintf(tfs_name, "%s", name);
+    }
+    tfs_name[0] = type;
+  }
+}
+
+bool TfsClientImpl::check_simple(bool simple, const char* suffix, uint32_t length)
+{
+  bool ok = true;
+  if (simple && NULL != suffix && length < TFS_FILE_LEN + strlen(suffix))
+  {
+    ok = false;
+  }
+  return ok;
 }
 
 int TfsClientImpl::open(const char* file_name, const char* suffix, const char* ns_addr, const int flags, ...)
@@ -414,7 +445,7 @@ int TfsClientImpl::init_unique_store(const char* master_addr, const char* slave_
 
 int64_t TfsClientImpl::save_buf_unique(char* ret_tfs_name, const int32_t ret_tfs_name_len,
                                    const char* buf, const int64_t count,
-                                   const char* suffix, const char* ns_addr)
+                                   const char* suffix, const char* ns_addr, const bool simple)
 {
   int64_t ret = INVALID_FILE_SIZE;
   if (NULL == ret_tfs_name || ret_tfs_name_len < TFS_FILE_LEN)
@@ -422,9 +453,20 @@ int64_t TfsClientImpl::save_buf_unique(char* ret_tfs_name, const int32_t ret_tfs
     TBSYS_LOG(ERROR, "invalid parameter, must be return");
     ret = EXIT_PARAMETER_ERROR;
   }
+  else if (false == check_simple(simple, suffix, ret_tfs_name_len))
+  {
+    TBSYS_LOG(ERROR, "tfs name buffer space not enough.");
+    ret = EXIT_PARAMETER_ERROR;
+  }
   else
   {
     ret = save_buf_unique_ex(ret_tfs_name, ret_tfs_name_len, buf, count, NULL, suffix, ns_addr);
+  }
+
+  // convert to simple name
+  if (ret > 0 && true == simple)
+  {
+    get_simple_name(ret_tfs_name, ret_tfs_name_len, suffix);
   }
 
   return ret;
@@ -432,7 +474,7 @@ int64_t TfsClientImpl::save_buf_unique(char* ret_tfs_name, const int32_t ret_tfs
 
 int64_t TfsClientImpl::save_file_unique(char* ret_tfs_name, const int32_t ret_tfs_name_len,
                                    const char* local_file,
-                                   const char* suffix, const char* ns_addr)
+                                   const char* suffix, const char* ns_addr, const bool simple)
 {
   int64_t ret =  INVALID_FILE_SIZE;
 
@@ -441,9 +483,20 @@ int64_t TfsClientImpl::save_file_unique(char* ret_tfs_name, const int32_t ret_tf
     TBSYS_LOG(ERROR, "invalid parameter, must be return");
     ret = EXIT_PARAMETER_ERROR;
   }
+  else if (false == check_simple(simple, suffix, ret_tfs_name_len))
+  {
+    TBSYS_LOG(ERROR, "tfs name buffer space not enough.");
+    ret = EXIT_PARAMETER_ERROR;
+  }
   else
   {
     ret = save_file_unique_ex(ret_tfs_name, ret_tfs_name_len, local_file, NULL, suffix, ns_addr);
+  }
+
+  // convert to simple name
+  if (ret > 0 && true == simple)
+  {
+    get_simple_name(ret_tfs_name, ret_tfs_name_len, suffix);
   }
 
   return ret;
@@ -1028,14 +1081,20 @@ int64_t TfsClientImpl::save_buf(char* ret_tfs_name, const int32_t ret_tfs_name_l
     TBSYS_LOG(ERROR, "invalid parameter, must be return");
     ret = EXIT_PARAMETER_ERROR;
   }
-  else if (true == simple && ret_tfs_name_len < TFS_FILE_LEN + (int32_t)strlen(suffix))
+  else if (false == check_simple(simple, suffix, ret_tfs_name_len))
   {
     TBSYS_LOG(ERROR, "tfs name buffer space not enough.");
     ret = EXIT_PARAMETER_ERROR;
   }
   else
   {
-    ret = save_buf_ex(ret_tfs_name, ret_tfs_name_len, buf, count, flag, NULL, suffix, ns_addr, key, simple);
+    ret = save_buf_ex(ret_tfs_name, ret_tfs_name_len, buf, count, flag, NULL, suffix, ns_addr, key);
+  }
+
+  // convert to simple name
+  if (ret > 0 && true == simple)
+  {
+    get_simple_name(ret_tfs_name, ret_tfs_name_len, suffix);
   }
 
   return ret;
@@ -1053,15 +1112,22 @@ int64_t TfsClientImpl::save_file(char* ret_tfs_name, const int32_t ret_tfs_name_
     TBSYS_LOG(ERROR, "invalid parameter, must be return");
     ret = EXIT_PARAMETER_ERROR;
   }
-  else if (true == simple && ret_tfs_name_len < TFS_FILE_LEN + (int32_t)strlen(suffix))
+  else if (false == check_simple(simple, suffix, ret_tfs_name_len))
   {
     TBSYS_LOG(ERROR, "tfs name buffer space not enough.");
     ret = EXIT_PARAMETER_ERROR;
   }
   else
   {
-    ret = save_file_ex(ret_tfs_name, ret_tfs_name_len, local_file, flag, NULL, suffix, ns_addr, simple);
- }
+    ret = save_file_ex(ret_tfs_name, ret_tfs_name_len, local_file, flag, NULL, suffix, ns_addr);
+  }
+
+  // convert to simple name
+  if (ret > 0 && true == simple)
+  {
+    get_simple_name(ret_tfs_name, ret_tfs_name_len, suffix);
+  }
+
   return ret;
 }
 
@@ -1104,7 +1170,7 @@ int64_t TfsClientImpl::save_file_update(const char* local_file, const int32_t fl
 int64_t TfsClientImpl::save_file_ex(char* ret_tfs_name, const int32_t ret_tfs_name_len,
                                     const char* local_file, const int32_t flag,
                                     const char* file_name, const char* suffix,
-                                    const char* ns_addr, const bool simple)
+                                    const char* ns_addr)
 {
   int ret = TFS_ERROR;
   int fd = -1;
@@ -1173,16 +1239,9 @@ int64_t TfsClientImpl::save_file_ex(char* ret_tfs_name, const int32_t ret_tfs_na
         }
       }
 
-      if ((ret = close(tfs_fd, ret_tfs_name, ret_tfs_name_len, simple)) != TFS_SUCCESS)
+      if ((ret = close(tfs_fd, ret_tfs_name, ret_tfs_name_len)) != TFS_SUCCESS)
       {
         TBSYS_LOG(ERROR, "close tfs file fail, ret: %d", ret);
-      }
-
-      if (TFS_SUCCESS == ret && true == simple)
-      {
-        // append suffix to returned name
-
-        strncat(ret_tfs_name, suffix, strlen(suffix));
       }
 
       tbsys::gDeleteA(buf);
@@ -1197,7 +1256,7 @@ int64_t TfsClientImpl::save_file_ex(char* ret_tfs_name, const int32_t ret_tfs_na
 int64_t TfsClientImpl::save_buf_ex(char* ret_tfs_name, const int32_t ret_tfs_name_len,
                                     const char* buf, const int64_t count, const int32_t flag,
                                     const char* file_name, const char* suffix,
-                                    const char* ns_addr,const char* key, const bool simple)
+                                    const char* ns_addr,const char* key)
 {
   int ret = TFS_ERROR;
 
@@ -1227,17 +1286,10 @@ int64_t TfsClientImpl::save_buf_ex(char* ret_tfs_name, const int32_t ret_tfs_nam
       }
 
       // close anyway
-      if ((ret = close(tfs_fd, ret_tfs_name, ret_tfs_name_len, simple)) != TFS_SUCCESS)
+      if ((ret = close(tfs_fd, ret_tfs_name, ret_tfs_name_len)) != TFS_SUCCESS)
       {
         TBSYS_LOG(ERROR, "close tfs file fail, ret: %d", ret);
       }
-
-      if (TFS_SUCCESS == ret && true == simple)
-      {
-        // append suffix to returned name
-        strncat(ret_tfs_name, suffix, strlen(suffix));
-      }
-
     }
   }
 

@@ -118,15 +118,15 @@ namespace tfs
     }
 
     int64_t RcClient::save_file(const char* local_file, char* tfs_name_buff, const int32_t buff_len,
-        const char *suffix, const bool is_large_file)
+        const char *suffix, const bool is_large_file, const bool simple)
     {
-      return impl_->save_file(local_file, tfs_name_buff, buff_len, suffix, is_large_file);
+      return impl_->save_file(local_file, tfs_name_buff, buff_len, suffix, is_large_file, simple);
     }
 
     int64_t RcClient::save_buf(const char* source_data, const int32_t data_len,
-        char* tfs_name_buff, const int32_t buff_len, const char* suffix)
+        char* tfs_name_buff, const int32_t buff_len, const char* suffix, const bool simple)
     {
-      return impl_->save_buf(source_data, data_len, tfs_name_buff, buff_len, suffix);
+      return impl_->save_buf(source_data, data_len, tfs_name_buff, buff_len, suffix, simple);
     }
 
     int RcClient::fetch_file(const char* local_file,

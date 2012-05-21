@@ -784,7 +784,7 @@ namespace tfs
       return ret;
     }
 
-    int64_t RcClientImpl::save_file(const char* local_file, char* tfs_name_buff, const int32_t buff_len, const char* suffix, const bool is_large_file)
+    int64_t RcClientImpl::save_file(const char* local_file, char* tfs_name_buff, const int32_t buff_len, const char* suffix, const bool is_large_file, const bool simple)
     {
       int ret = check_init_stat();
       int64_t saved_size = -1;
@@ -799,14 +799,14 @@ namespace tfs
           {
             break;
           }
-          saved_size = save_file(ns_addr.c_str(), local_file, tfs_name_buff, buff_len, suffix, is_large_file);
+          saved_size = save_file(ns_addr.c_str(), local_file, tfs_name_buff, buff_len, suffix, is_large_file, simple);
         } while(saved_size < 0);
       }
       return saved_size;
     }
 
     int64_t RcClientImpl::save_buf(const char* source_data, const int32_t data_len,
-        char* tfs_name_buff, const int32_t buff_len, const char* suffix)
+        char* tfs_name_buff, const int32_t buff_len, const char* suffix, const bool simple)
     {
       int ret = check_init_stat();
       int64_t saved_size = -1;
@@ -822,7 +822,7 @@ namespace tfs
             break;
           }
           saved_size = save_buf(ns_addr.c_str(), source_data, data_len,
-              tfs_name_buff, buff_len, suffix);
+              tfs_name_buff, buff_len, suffix, simple);
         } while(saved_size < 0);
       }
       return saved_size;
@@ -871,7 +871,7 @@ namespace tfs
     }
 
     int64_t RcClientImpl::save_file(const char* ns_addr, const char* local_file, char* tfs_name_buff,
-        const int32_t buff_len, const char* suffix, const bool is_large_file)
+        const int32_t buff_len, const char* suffix, const bool is_large_file, const bool simple)
     {
       int flag = T_DEFAULT;
       if (is_large_file)
@@ -890,7 +890,7 @@ namespace tfs
         {
           int64_t start_time = tbsys::CTimeUtil::getTime();
           saved_size = TfsClientImpl::Instance()->save_file_unique(tfs_name_buff, buff_len, local_file,
-              suffix, ns_addr);
+              suffix, ns_addr, simple);
           int64_t response_time = tbsys::CTimeUtil::getTime() - start_time;
           add_stat_info(OPER_UNIQUE_WRITE, saved_size, response_time, saved_size >= 0);
         }
@@ -903,14 +903,14 @@ namespace tfs
       {
         int64_t start_time = tbsys::CTimeUtil::getTime();
         saved_size = TfsClientImpl::Instance()->save_file(tfs_name_buff, buff_len, local_file,
-            flag, suffix, ns_addr);
+            flag, suffix, ns_addr, simple);
         int64_t response_time = tbsys::CTimeUtil::getTime() - start_time;
         add_stat_info(OPER_WRITE, saved_size, response_time, saved_size >= 0);
       }
       return saved_size;
     }
     int64_t RcClientImpl::save_buf(const char* ns_addr, const char* source_data, const int32_t data_len,
-        char* tfs_name_buff, const int32_t buff_len, const char* suffix)
+        char* tfs_name_buff, const int32_t buff_len, const char* suffix, const bool simple)
     {
       int64_t saved_size = -1;
       if (need_use_unique_)
@@ -924,7 +924,7 @@ namespace tfs
         {
           int64_t start_time = tbsys::CTimeUtil::getTime();
           saved_size = TfsClientImpl::Instance()->save_buf_unique(tfs_name_buff, buff_len, source_data, data_len,
-              suffix, ns_addr);
+              suffix, ns_addr, simple);
           int64_t response_time = tbsys::CTimeUtil::getTime() - start_time;
           add_stat_info(OPER_UNIQUE_WRITE, saved_size, response_time, saved_size >= 0);
         }
@@ -936,7 +936,7 @@ namespace tfs
       {
         int64_t start_time = tbsys::CTimeUtil::getTime();
         saved_size = TfsClientImpl::Instance()->save_buf(tfs_name_buff, buff_len, source_data, data_len,
-            T_DEFAULT, suffix, ns_addr);
+            T_DEFAULT, suffix, ns_addr, NULL, simple);
         int64_t response_time = tbsys::CTimeUtil::getTime() - start_time;
         add_stat_info(OPER_WRITE, saved_size, response_time, saved_size >= 0);
       }
