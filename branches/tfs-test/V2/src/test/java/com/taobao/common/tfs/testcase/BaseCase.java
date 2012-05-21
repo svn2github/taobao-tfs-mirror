@@ -31,7 +31,7 @@ public class BaseCase {
     public static long appId;
     public static long userId=8;
     //public static String appKey = "testKeyYS";
-    public static String appKey = "testKeyYS";
+    public static String appKey = "regression";
     protected final int MAX_UPDATE_TIME = 20;
     protected final int MAX_STAT_TIME = 40;
     
