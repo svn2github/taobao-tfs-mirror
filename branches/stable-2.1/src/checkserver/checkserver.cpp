@@ -628,9 +628,9 @@ int main(int argc, char** argv)
     }
   }
 
-  if (0 == config_file.length()
-      0 == output_dir.length()
-      || index <= 0)
+  if (0 == config_file.length() ||
+      0 == output_dir.length() ||
+      index <= 0)
   {
     usage(argv[0]);
   }
