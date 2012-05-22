@@ -69,6 +69,11 @@ namespace tfs
           return &block_prefix_;
         }
 
+        inline int get_block_fd()
+        {
+          return file_op_->get_fd();
+        }
+
       private:
         PhysicalBlock();
         DISALLOW_COPY_AND_ASSIGN(PhysicalBlock);

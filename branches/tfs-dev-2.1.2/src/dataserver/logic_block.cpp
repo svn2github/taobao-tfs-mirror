@@ -423,6 +423,11 @@ namespace tfs
       {
         return ret;
       }
+
+      // users probably read after stat, do optimise here
+      // we don't care the result here
+      data_handle_->fadvise_readahead(file_meta.get_offset(), file_meta.get_size());
+
       // 2. get fileinfo data
       ret = data_handle_->read_segment_info(&finfo, file_meta.get_offset());
       if (TFS_SUCCESS != ret)
