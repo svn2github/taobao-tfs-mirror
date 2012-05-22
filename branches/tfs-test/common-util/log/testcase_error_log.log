@@ -1,0 +1,3 @@
+[2012-03-28 19:14:49] [main:9568] - [ERROR] IOException: C:\Users\yinshuang.bbx\workspace\common-utilconf\10.232.36.201_ns.conf (¾Ü¾ø·ÃÎÊ¡£)
+[2012-03-28 19:14:49] [main:9582] - [ERROR] can not find section: [public]
+[2012-03-28 19:16:00] [main:9605] - [ERROR] can not find keyword: log_size=123in section: public

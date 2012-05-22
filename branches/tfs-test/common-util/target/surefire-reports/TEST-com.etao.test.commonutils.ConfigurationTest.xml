@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<testsuite failures="0" time="0.046" errors="0" skipped="0" tests="1" name="com.etao.test.commonutils.ConfigurationTest">
+  <properties>
+    <property name="java.runtime.name" value="Java(TM) SE Runtime Environment"/>
+    <property name="sun.boot.library.path" value="C:\Program Files\Java\jdk1.6.0_29\jre\bin"/>
+    <property name="java.vm.version" value="20.4-b02"/>
+    <property name="java.vm.vendor" value="Sun Microsystems Inc."/>
+    <property name="java.vendor.url" value="http://java.sun.com/"/>
+    <property name="path.separator" value=";"/>
+    <property name="java.vm.name" value="Java HotSpot(TM) Client VM"/>
+    <property name="file.encoding.pkg" value="sun.io"/>
+    <property name="user.country" value="CN"/>
+    <property name="sun.java.launcher" value="SUN_STANDARD"/>
+    <property name="sun.os.patch.level" value="Service Pack 1"/>
+    <property name="java.vm.specification.name" value="Java Virtual Machine Specification"/>
+    <property name="user.dir" value="C:\Users\yinshuang.bbx\workspace\common-util"/>
+    <property name="java.runtime.version" value="1.6.0_29-b11"/>
+    <property name="java.awt.graphicsenv" value="sun.awt.Win32GraphicsEnvironment"/>
+    <property name="basedir" value="C:\Users\yinshuang.bbx\workspace\common-util"/>
+    <property name="java.endorsed.dirs" value="C:\Program Files\Java\jdk1.6.0_29\jre\lib\endorsed"/>
+    <property name="os.arch" value="x86"/>
+    <property name="surefire.real.class.path" value="C:\Users\YINSHU~1.BBX\AppData\Local\Temp\surefirebooter8877134444870080931.jar"/>
+    <property name="java.io.tmpdir" value="C:\Users\YINSHU~1.BBX\AppData\Local\Temp\"/>
+    <property name="line.separator" value="
+"/>
+    <property name="java.vm.specification.vendor" value="Sun Microsystems Inc."/>
+    <property name="user.variant" value=""/>
+    <property name="os.name" value="Windows 7"/>
+    <property name="sun.jnu.encoding" value="GBK"/>
+    <property name="java.library.path" value="C:\Program Files\Java\jdk1.6.0_29\jre\bin;C:\Windows\Sun\Java\bin;C:\Windows\system32;C:\Windows;C:\STAF\bin;C:\Windows\SYSTEM32;C:\Windows;C:\Windows\SYSTEM32\WBEM;C:\Windows\SYSTEM32\WINDOWSPOWERSHELL\V1.0\;C:\PROGRAM FILES\THINKPAD\BLUETOOTH SOFTWARE\;C:\Program Files\Broadcom\WHL\;C:\Program Files\Lenovo\Access Connections\;C:\Program Files\TortoiseGit\bin;C:\Program Files\Java\jdk1.6.0_29\bin;D:\Program Files\TortoiseHg\;C:\Program Files\TortoiseSVN\bin;D:\Program Files\Go\bin;C:\Users\yinshuang.bbx\AppData\Local\VanDyke Software\Clients\;C:\cygwin\bin;C:\Program Files\SSH Communications Security\SSH Secure Shell;C:\Program Files\Java\jdk1.7.0\bin;C:\Program Files\apache-maven-2.2.1\bin;D:\Program Files\swigwin-2.0.4\;C:\Users\yinshuang.bbx\TestForOB\cxxapi4j\libs;C:\Python26;D:\Program Files\Go\bin;D:\Program Files\Go\pkg\tool\windows_386;."/>
+    <property name="surefire.test.class.path" value="C:\Users\yinshuang.bbx\workspace\common-util\target\test-classes;C:\Users\yinshuang.bbx\workspace\common-util\target\classes;C:\Users\yinshuang.bbx\.m2\repository\junit\junit\4.8.1\junit-4.8.1.jar;C:\Users\yinshuang.bbx\.m2\repository\com\etao\gaia\gaia\2.0-SNAPSHOT\gaia-2.0-SNAPSHOT.jar;C:\Users\yinshuang.bbx\.m2\repository\org\springframework\spring\2.5.6\spring-2.5.6.jar;C:\Users\yinshuang.bbx\.m2\repository\commons-logging\commons-logging\1.1.1\commons-logging-1.1.1.jar;C:\Users\yinshuang.bbx\.m2\repository\net\sf\staf\jstaf\3.4.4\jstaf-3.4.4.jar;C:\Users\yinshuang.bbx\.m2\repository\apache-log4j\log4j\1.2.14\log4j-1.2.14.jar;C:\Users\yinshuang.bbx\.m2\repository\gnu-getopt\getopt\1.0.13\getopt-1.0.13.jar;C:\Users\yinshuang.bbx\.m2\repository\javax\mail\mail\1.4\mail-1.4.jar;C:\Users\yinshuang.bbx\.m2\repository\javax\activation\activation\1.1\activation-1.1.jar;"/>
+    <property name="java.specification.name" value="Java Platform API Specification"/>
+    <property name="java.class.version" value="50.0"/>
+    <property name="sun.management.compiler" value="HotSpot Client Compiler"/>
+    <property name="os.version" value="6.1"/>
+    <property name="user.home" value="C:\Users\yinshuang.bbx"/>
+    <property name="user.timezone" value=""/>
+    <property name="java.awt.printerjob" value="sun.awt.windows.WPrinterJob"/>
+    <property name="java.specification.version" value="1.6"/>
+    <property name="file.encoding" value="GBK"/>
+    <property name="user.name" value="yinshuang.bbx"/>
+    <property name="java.class.path" value="C:\Users\yinshuang.bbx\workspace\common-util\target\test-classes;C:\Users\yinshuang.bbx\workspace\common-util\target\classes;C:\Users\yinshuang.bbx\.m2\repository\junit\junit\4.8.1\junit-4.8.1.jar;C:\Users\yinshuang.bbx\.m2\repository\com\etao\gaia\gaia\2.0-SNAPSHOT\gaia-2.0-SNAPSHOT.jar;C:\Users\yinshuang.bbx\.m2\repository\org\springframework\spring\2.5.6\spring-2.5.6.jar;C:\Users\yinshuang.bbx\.m2\repository\commons-logging\commons-logging\1.1.1\commons-logging-1.1.1.jar;C:\Users\yinshuang.bbx\.m2\repository\net\sf\staf\jstaf\3.4.4\jstaf-3.4.4.jar;C:\Users\yinshuang.bbx\.m2\repository\apache-log4j\log4j\1.2.14\log4j-1.2.14.jar;C:\Users\yinshuang.bbx\.m2\repository\gnu-getopt\getopt\1.0.13\getopt-1.0.13.jar;C:\Users\yinshuang.bbx\.m2\repository\javax\mail\mail\1.4\mail-1.4.jar;C:\Users\yinshuang.bbx\.m2\repository\javax\activation\activation\1.1\activation-1.1.jar;"/>
+    <property name="java.vm.specification.version" value="1.0"/>
+    <property name="sun.arch.data.model" value="32"/>
+    <property name="java.home" value="C:\Program Files\Java\jdk1.6.0_29\jre"/>
+    <property name="sun.java.command" value="C:\Users\YINSHU~1.BBX\AppData\Local\Temp\surefirebooter8877134444870080931.jar C:\Users\YINSHU~1.BBX\AppData\Local\Temp\surefire2596834469202621825tmp C:\Users\YINSHU~1.BBX\AppData\Local\Temp\surefire6887707392218132516tmp"/>
+    <property name="java.specification.vendor" value="Sun Microsystems Inc."/>
+    <property name="user.language" value="zh"/>
+    <property name="awt.toolkit" value="sun.awt.windows.WToolkit"/>
+    <property name="java.vm.info" value="mixed mode, sharing"/>
+    <property name="java.version" value="1.6.0_29"/>
+    <property name="java.ext.dirs" value="C:\Program Files\Java\jdk1.6.0_29\jre\lib\ext;C:\Windows\Sun\Java\lib\ext"/>
+    <property name="sun.boot.class.path" value="C:\Program Files\Java\jdk1.6.0_29\jre\lib\resources.jar;C:\Program Files\Java\jdk1.6.0_29\jre\lib\rt.jar;C:\Program Files\Java\jdk1.6.0_29\jre\lib\sunrsasign.jar;C:\Program Files\Java\jdk1.6.0_29\jre\lib\jsse.jar;C:\Program Files\Java\jdk1.6.0_29\jre\lib\jce.jar;C:\Program Files\Java\jdk1.6.0_29\jre\lib\charsets.jar;C:\Program Files\Java\jdk1.6.0_29\jre\lib\modules\jdk.boot.jar;C:\Program Files\Java\jdk1.6.0_29\jre\classes"/>
+    <property name="java.vendor" value="Sun Microsystems Inc."/>
+    <property name="localRepository" value="C:\Users\yinshuang.bbx\.m2\repository"/>
+    <property name="file.separator" value="\"/>
+    <property name="java.vendor.url.bug" value="http://java.sun.com/cgi-bin/bugreport.cgi"/>
+    <property name="sun.cpu.endian" value="little"/>
+    <property name="sun.io.unicode.encoding" value="UnicodeLittle"/>
+    <property name="sun.desktop" value="windows"/>
+    <property name="sun.cpu.isalist" value="pentium_pro+mmx pentium_pro pentium+mmx pentium i486 i386 i86"/>
+  </properties>
+  <testcase time="0.007" classname="com.etao.test.commonutils.ConfigurationTest" name="testConfiguration"/>
+</testsuite>
