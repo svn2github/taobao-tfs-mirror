@@ -5,6 +5,8 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 
+import org.junit.Test;
+
 import com.taobao.common.tfs.utility.MySQLConnector;
 
 public class TfsStatus {
@@ -309,7 +311,7 @@ public class TfsStatus {
 
 	}
 
-	//@Test
+	@Test
 	public void testRefreshLastUpdateTime() {
 		refreshLastUpdateTime();
 	}
