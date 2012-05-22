@@ -413,6 +413,7 @@ namespace tfs
         bset[1] = value.has_success_;
         bset[2] = value.is_complete_;
         msg.set_flag(bset.to_ulong());
+        msg.set_seqno(seqno_);
         TBSYS_LOG(DEBUG, "check compact complete flag: %d", msg.get_flag());
 
         common::Stream stream(msg.length());

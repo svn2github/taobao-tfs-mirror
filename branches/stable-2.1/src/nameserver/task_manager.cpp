@@ -433,9 +433,9 @@ namespace tfs
         if (ret)
         {
           ret = TFS_SUCCESS == task->handle_complete(msg, all_complete_flag);
-          task->dump(TBSYS_LOG_LEVEL_INFO, "handle message complete, show result");
           if (master)
           {
+            task->dump(TBSYS_LOG_LEVEL_INFO, "handle message complete, show result");
             if (all_complete_flag)
               remove(task);
             /*Task* complete[SYSPARAM_NAMESERVER.max_replication_];
@@ -446,6 +446,7 @@ namespace tfs
           }
           else
           {
+            msg->dump();
             tbsys::gDelete(task);
           }
         }

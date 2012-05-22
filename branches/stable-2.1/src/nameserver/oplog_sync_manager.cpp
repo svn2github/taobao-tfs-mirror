@@ -172,7 +172,6 @@ namespace tfs
             ret = oplog_->write(type, data, length);
             if (EXIT_SLOTS_OFFSET_SIZE_ERROR == ret)
             {
-              TBSYS_LOG(DEBUG, "ssssssssssssssssssssssssssssssssss");
               register_slots(oplog_->get_buffer(), oplog_->get_slots_offset());
               oplog_->reset();
             }
@@ -200,7 +199,6 @@ namespace tfs
 
     int OpLogSyncManager::send_log_(const char* const data, const int64_t length)
     {
-      TBSYS_LOG(DEBUG, "SEND LOG");
       int32_t ret = ((NULL != data) && (length >  0)) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
@@ -228,18 +226,15 @@ namespace tfs
             tbnet::Packet* rmsg = NULL;
             OpLogSyncMessage request_msg;
             request_msg.set_data(data, length);
-            TBSYS_LOG(DEBUG, "SSSSSSSSSSSSSSSSSSSSSSSSSSSSSS");
             for (int32_t i = 0; i < 3 && TFS_SUCCESS != ret && ngi.has_valid_lease(now); ++i, rmsg = NULL)
             {
               NewClient* client = NewClientManager::get_instance().create_client();
               ret = send_msg_to_server(ngi.peer_ip_port_, client, &request_msg, rmsg);
               if (TFS_SUCCESS == ret)
               {
-                TBSYS_LOG(DEBUG, "SSSSSSSSSSSSSSSSSSSSSSSSSSSSSS");
                 ret = rmsg->getPCode() == OPLOG_SYNC_RESPONSE_MESSAGE ? TFS_SUCCESS : TFS_ERROR;
                 if (TFS_SUCCESS == ret)
                 {
-                  TBSYS_LOG(DEBUG, "SSSSSSSSSSSSSSSSSSSSSSSSSSSSSS");
                   OpLogSyncResponeMessage* tmsg = dynamic_cast<OpLogSyncResponeMessage*> (rmsg);
                   ret = tmsg->get_complete_flag() == OPLOG_SYNC_MSG_COMPLETE_YES ? TFS_SUCCESS : TFS_ERROR;
                 }
@@ -346,6 +341,7 @@ namespace tfs
         if (TFS_SUCCESS == ret
             && NULL != msg)
         {
+          msg->dump();
           BaseService* base = dynamic_cast<BaseService*>(BaseService::instance());
           ret = base->push(msg) ? TFS_SUCCESS : TFS_ERROR;
         }
@@ -486,7 +482,6 @@ namespace tfs
           else
           {
             int8_t type = header.type_;
-            TBSYS_LOG(DEBUG, "type: %d", type);
             switch (type)
             {
               case OPLOG_TYPE_REPLICATE_MSG:

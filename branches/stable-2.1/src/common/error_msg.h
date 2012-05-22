@@ -46,6 +46,7 @@ namespace tfs
     const int32_t EXIT_DATA_PACKET_TIMEOUT = -1021;//data packet timeout
     const int32_t EXIT_LRU_BUCKET_NOT_EXIST = -1022;//lru bucket not found by key
     const int32_t EXIT_SERVICE_SHUTDOWN = -1023;
+    const int32_t EXIT_ELEMENT_EXIST = -1024;
 
     const int32_t EXIT_FILE_OP_ERROR = -2000;
     const int32_t EXIT_OPEN_FILE_ERROR = -2001;

@@ -144,7 +144,7 @@ namespace tfs
         iret = block_info_.deserialize(data, data_len, pos);
       }
       if (common::TFS_SUCCESS == iret
-          && pos + common::INT64_SIZE >= data_len)
+          && pos + common::INT64_SIZE <= data_len)
       {
         iret = common::Serialization::get_int64(data, data_len, pos, &seqno_);
       }
@@ -193,15 +193,15 @@ namespace tfs
     void CompactBlockCompleteMessage::dump(void) const
     {
       std::string ipstr;
-      size_t iSize = ds_list_.size();
-      for (size_t i = 0; i < iSize; ++i)
+      common::VUINT64::const_iterator iter = ds_list_.begin();
+      for (; iter != ds_list_.end(); ++iter)
       {
-        ipstr += tbsys::CNetUtil::addrToString(ds_list_[i]);
+        ipstr += tbsys::CNetUtil::addrToString((*iter));
         ipstr += "/";
       }
-      TBSYS_LOG(DEBUG, "block: %u success: %d serverid: %"PRI64_PREFIX"u flag: %d id: %u version: %u"
-          "file_count: %u size: %u delfile_count: %u del_size: %u seqno: %u, ds_list: %zd, dataserver(%s)",
-          block_id_, success_, server_id_, flag_, block_info_.block_id_, block_info_.version_, block_info_.file_count_, block_info_.size_,
+      TBSYS_LOG(INFO, "compact block: %u, seqno: %"PRI64_PREFIX"d, success: %d, serverid: %"PRI64_PREFIX"u, flag: %d, block: %u, version: %u"
+          "file_count: %u, size: %u, delfile_count: %u, del_size: %u, seqno: %u, ds_list: %zd, servers: %s",
+          block_id_, seqno_, success_, server_id_, flag_, block_info_.block_id_, block_info_.version_, block_info_.file_count_, block_info_.size_,
           block_info_.del_file_count_, block_info_.del_size_, block_info_.seq_no_, ds_list_.size(), ipstr.c_str());
     }
   }
