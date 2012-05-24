@@ -600,7 +600,6 @@ int main(int argc, char** argv)
 {
   int ret = TFS_SUCCESS;
   std::string config_file;
-  std::string output_dir;
   bool daemon_flag = false;
   int index = 0;
 
@@ -616,9 +615,6 @@ int main(int argc, char** argv)
       case 'f':
         config_file = optarg;
         break;
-      case 'o':
-        output_dir = optarg;
-        break;
       case 'd':
         daemon_flag = true;
         break;
@@ -628,9 +624,7 @@ int main(int argc, char** argv)
     }
   }
 
-  if (0 == config_file.length() ||
-      0 == output_dir.length() ||
-      index <= 0)
+  if (0 == config_file.length() || index <= 0)
   {
     usage(argv[0]);
   }
