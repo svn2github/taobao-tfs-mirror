@@ -422,7 +422,7 @@ namespace tfs
           }
           else
           {
-            BlockCollect* block = manager_.get_block_manager().get(info.value1_);
+            BlockCollect* block = manager_.get_block_manager().get(info.value3_);
             ret = NULL == block ? EXIT_BLOCK_NOT_FOUND : TFS_SUCCESS;
             if (TFS_SUCCESS != ret)
             {
