@@ -123,6 +123,7 @@ namespace tfs
       Task* generation_(const uint32_t id, const std::vector<ServerCollect*>& runer,
             const common::PlanType type, const common::PlanPriority priority = common::PLAN_PRIORITY_NORMAL);
 
+      int remove_block_from_dataserver_(const uint64_t server, const uint32_t block, const int64_t seqno, const time_t now);
       private:
       static const int8_t TASK_TYPE_NUMS = 4;
       LayoutManager& manager_;

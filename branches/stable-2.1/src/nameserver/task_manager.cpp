@@ -322,13 +322,21 @@ namespace tfs
       return total < SYSPARAM_NAMESERVER.max_task_in_machine_nums_;
     }
 
+    int TaskManager::remove_block_from_dataserver(const uint64_t server, const uint32_t block, const int64_t seqno, const time_t now)
+    {
+      int32_t ret = remove_block_from_dataserver_(server, block, seqno, now);
+      TBSYS_LOG(INFO, "send remove block: %u command on server : %s %s",
+        block, tbsys::CNetUtil::addrToString(server).c_str(), TFS_SUCCESS == ret ? "successful" : "failed");
+      return ret;
+    }
+
     /*
      * expire blocks on dataserver only post expire message to ds, dont care result.
      * @param [in] server dataserver id the one who post to.
      * @param [in] block, the one need expired.
      * @return TFS_SUCCESS success.
      */
-    int TaskManager::remove_block_from_dataserver(const uint64_t server, const uint32_t block, const int64_t seqno, const time_t now)
+    int TaskManager::remove_block_from_dataserver_(const uint64_t server, const uint32_t block, const int64_t seqno, const time_t now)
     {
       RemoveBlockMessage rbmsg;
       rbmsg.set(block);

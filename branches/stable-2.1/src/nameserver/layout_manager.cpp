@@ -1356,8 +1356,6 @@ namespace tfs
         {
           relieve_relation(block, server, now);
           ret = get_task_manager().remove_block_from_dataserver(server->id(), block->id(), 0, now);
-          TBSYS_LOG(INFO, "send remove block: %u command on server : %s %s",
-              block->id(), tbsys::CNetUtil::addrToString(server->id()).c_str(), TFS_SUCCESS == ret ? "successful" : "failed");
         }
         /*BlockCollect* block = get_block_manager().get(output.first);
         ServerCollect* server = get_server_manager().get(output.second);

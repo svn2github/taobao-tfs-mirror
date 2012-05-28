@@ -405,7 +405,7 @@ namespace tfs
 
     int ClientRequestServer::handle_control_delete_block(const time_t now, const common::ClientCmdInformation& info,const int64_t buf_length, char* buf)
     {
-      TBSYS_LOG(INFO, "handle control delete block: %u, flag: %u, server: %s",
+      TBSYS_LOG(INFO, "handle control remove block: %u, flag: %u, server: %s",
           info.value3_, info.value4_, CNetUtil::addrToString(info.value1_).c_str());
       int32_t ret = ((NULL != buf) && (buf_length > 0)) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
@@ -422,9 +422,22 @@ namespace tfs
           }
           else
           {
-            ret = manager_.get_task_manager().add(info.value3_, runer, PLAN_TYPE_DELETE, now);
+            BlockCollect* block = manager_.get_block_manager().get(info.value1_);
+            ret = NULL == block ? EXIT_BLOCK_NOT_FOUND : TFS_SUCCESS;
             if (TFS_SUCCESS != ret)
-              snprintf(buf, buf_length, " add task(delete) failed, block: %u", info.value3_);
+            {
+              snprintf(buf, buf_length, " block: %u no exist, ret: %d", info.value3_, ret);
+            }
+            else
+            {
+              std::vector<ServerCollect*>::const_iterator iter = runer.begin();
+              for (; iter != runer.end(); ++iter)
+              {
+                manager_.relieve_relation(block, (*iter), now);
+                manager_.get_task_manager().remove_block_from_dataserver((*iter)->id(), info.value3_, 0, now);
+              }
+              manager_.get_block_manager().remove(pobject, info.value3_);
+            }
           }
         }
         else if (info.value4_ & HANDLE_DELETE_BLOCK_FLAG_ONLY_RELATION)
