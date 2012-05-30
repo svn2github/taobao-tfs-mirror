@@ -51,7 +51,7 @@
 		<dependency>
 			<groupId>com.taobao.common.tfs</groupId>
 			<artifactId>common-tfs</artifactId>
-			<version>2.2.5</version>
+			<version>2.2.6</version>
 		</dependency>
 		<dependency>
 			<groupId>mysql</groupId>
@@ -62,6 +62,29 @@
 			<groupId>core-storage</groupId>
 			<artifactId>common-util</artifactId>
 			<version>0.1-SNAPSHOT</version>
+		</dependency>
+		<!-- import org.apache.commons.codec.digest for md5 -->
+		<dependency>
+			<groupId>commons-codec</groupId>
+			<artifactId>commons-codec</artifactId>
+			<version>1.5</version>
+		</dependency>
+		<dependency>
+			<groupId>org.slf4j</groupId>
+			<artifactId>slf4j-api</artifactId>
+			<version>1.5.6</version>
+		</dependency>
+		<dependency>
+			<groupId>org.slf4j</groupId>
+			<artifactId>slf4j-log4j12</artifactId>
+			<version>1.5.6</version>
+			<scope>runtime</scope>
+			<exclusions>
+				<exclusion>
+					<groupId>log4j</groupId>
+					<artifactId>log4j</artifactId>
+				</exclusion>
+			</exclusions>
 		</dependency>
 	</dependencies>
 </project>
