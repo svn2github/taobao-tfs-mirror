@@ -217,7 +217,6 @@ AC_CONFIG_FILES([Makefile
                  tests/Makefile
                  tests/batch/Makefile
                  tests/rcserver/Makefile
-                 tests/nameserver/Makefile
                  tests/name_meta_server/Makefile
                  tests/common/Makefile
                  tests/rootserver/Makefile
