@@ -601,7 +601,7 @@ namespace tfs
 
           check_emergency_replicate_(get_block_manager().get_emergency_replicate_queue(), results, MAX_QUERY_BLOCK_NUMS, now);
 
-          TBSYS_LOG(INFO, "emergency_replicate_queue: %z, need: %"PRI64_PREFIX"d",
+          TBSYS_LOG(INFO, "emergency_replicate_queue: %u, need: %"PRI64_PREFIX"d",
             get_block_manager().get_emergency_replicate_queue().size(), need);
 
           build_emergency_replicate_(need, get_block_manager().get_emergency_replicate_queue(), now);

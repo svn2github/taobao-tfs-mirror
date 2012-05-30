@@ -181,9 +181,17 @@ namespace tfs
       uint32_t block_id = parameter.block_info_.block_id_;
       if (parameter.unlink_flag_ == UNLINK_FLAG_YES)//unlink file
       {
-        std::vector<stat_int_t> stat(6,0);
-        stat[4] = 0x01;
-        GFactory::get_stat_mgr().update_entry(GFactory::tfs_ns_stat_, stat);
+        //这里暂时先这么做， 后面如果我们将Block每一次写操作(包括删除)都加版本的话
+        //这里就可以和普通的写处理方式一样
+        BlockCollect* block = manager_.get_block_manager().get(block_id);
+        ret = (NULL == block) ? EXIT_BLOCK_NOT_FOUND : TFS_SUCCESS;
+        if (TFS_SUCCESS == ret)
+        {
+          block->update(parameter.block_info_);
+          std::vector<stat_int_t> stat(6,0);
+          stat[4] = 0x01;
+          GFactory::get_stat_mgr().update_entry(GFactory::tfs_ns_stat_, stat);
+        }
       }
       else //write file
       {
