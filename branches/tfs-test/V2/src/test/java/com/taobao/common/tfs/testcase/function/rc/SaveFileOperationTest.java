@@ -13,6 +13,12 @@ import com.taobao.common.tfs.utility.TimeUtility;
 public class SaveFileOperationTest extends BaseCase {
 
 	@Test
+	public void testForMysql(){
+		TfsStatus tfsStatus = new TfsStatus();
+		long getsize =tfsStatus.getFileSizeTest();
+		System.out.println(getsize+"diqingfortestdiqingfortest");
+	}
+	@Test
 	public void testSave1KFile() {
 		log.info("begin: " + getCurrentFunctionName());
 
@@ -145,6 +151,8 @@ public class SaveFileOperationTest extends BaseCase {
 	}
 
 	private void testSaveFile(String localFile) {
+		//get localfile md5
+		StringBuilder fileMd5before = super.fileMd5(localFile);
 		TfsStatus tfsStatus = new TfsStatus();
 		DefaultTfsManager tfsManager = createTfsManager();
 
@@ -163,26 +171,30 @@ public class SaveFileOperationTest extends BaseCase {
 			tfsName = tfsManager.saveLargeFile(localFile, null, null);
 		} else {
 			tfsName = tfsManager.saveFile(localFile, null, null, false);
-		}
-		tfsNames.add(tfsName);
+		}	
 		Assert.assertNotNull(tfsName);
+		tfsNames.add(tfsName);
 		log.debug("Saved tfsname is: " + tfsName);
-
 		TimeUtility.sleep(MAX_STAT_TIME);
 		String sessionId = tfsManager.getSessionId();
-		log.debug("sessionId: " + sessionId);
-
+		log.debug("sessionId: " + sessionId +"ddtest");
+		//debug error
+		System.out.println("fortest diiqng"+tfsStatus.getFileSize(sessionId, 2));
+		
 		Assert.assertEquals(fileLength, tfsStatus.getFileSize(sessionId, 2));
 		long newUsedCapacity = tfsStatus.getUsedCapacity(appKey);
-
+		System.out.println("oldUsedCapacity=" + oldUsedCapacity + "newUsedCapacity=" + newUsedCapacity +"fileLength=" +fileLength );
+		
 		Assert.assertEquals(oldUsedCapacity + fileLength, newUsedCapacity);
+		
 		tfsManager.destroy();
-
 		tfsManager = createTfsManager();
 		sessionId = tfsManager.getSessionId();
 		boolean result = tfsManager.fetchFile(tfsName, null, "localfile");
+		//asert localfile md5 and serverfile md5
+		StringBuilder fileMd5after = super.fileMd5("localfile");
+		Assert.assertEquals(fileMd5before.toString(),fileMd5after.toString());
 		Assert.assertTrue(result);
-
 		TimeUtility.sleep(MAX_STAT_TIME);
 		log.debug("expected fileLength is: " + fileLength
 				+ "; actual get size is: "
