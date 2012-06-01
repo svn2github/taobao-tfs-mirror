@@ -215,7 +215,15 @@ public class TfsStatus {
 
 		return parseLong(value);
 	}
+//for test 
+	public long getFileSizeTest() {
+		String statement = "select file_size from t_session_stat where SESSION_ID='1-134539274-8bb217bd-6583-4b2c-977f-53a9840cd5e5' and OPER_TYPE=2";
 
+		Object value = getColumnValue(statement, "file_size");
+
+		return parseLong(value);
+	}
+	
 	public long getFileSize(String sessionId, int operType) {
 		String statement = "select file_size from t_session_stat where "
 				+ "SESSION_ID=\"" + sessionId + "\" and OPER_TYPE=" + operType;
