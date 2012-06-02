@@ -20,6 +20,9 @@
 				<version>2.7</version>
 				<configuration>
 					<encoding>UTF-8</encoding>
+					<includes>
+						<include>** / *Tests.java</include>
+					</includes>
 				</configuration>
 			</plugin>
 			<plugin>
