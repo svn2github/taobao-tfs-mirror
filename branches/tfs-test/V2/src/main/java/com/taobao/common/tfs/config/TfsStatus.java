@@ -13,12 +13,20 @@ public class TfsStatus {
 	private Connection conn;
 
 	public TfsStatus() {
+//		String server = "10.232.36.208:3306";
+//		String dbName = "tfs_stat_diqing";
+//		String user = "foorbar";
+//		String password = "foorbar";
+		
 		String server = "10.232.36.208:3306";
-		String dbName = "tfs_stat_yinshuang";
+		String dbName = "tfs_stat_diqing";
 		String user = "foorbar";
 		String password = "foorbar";
-
 		conn = MySQLConnector.getConnection(server, dbName, user, password);
+		if (conn != null)
+		{
+			System.out.println("can not connect db server: " + server);
+		}
 	}
 
 	public long getCurrentQuote(String appKey) {
