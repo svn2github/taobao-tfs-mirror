@@ -75,7 +75,7 @@ public class SaveFileFetchFileOperationMd5Test extends BaseCase {
 
 			log.info("end: " + getCurrentFunctionName());
 		}
-	 @Test
+	// @Test
 	public void testSave6GFile() {
 		log.info("begin: " + getCurrentFunctionName());
 
