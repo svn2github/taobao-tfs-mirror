@@ -432,9 +432,8 @@ public class SaveFileFetchFileOperationMd5Test extends BaseCase {
 		TimeUtility.sleep(MAX_STAT_TIME);
 		String sessionId = tfsManager.getSessionId();
 		log.debug("sessionId: " + sessionId );
-		tfsManager.destroy();
 		//Assert.assertEquals(fileLength, tfsStatus.getFileSize(sessionId, 2));
-		long newUsedCapacity = tfsStatus.getUsedCapacity(appKey);
+		//long newUsedCapacity = tfsStatus.getUsedCapacity(appKey);
 		//System.out.println("oldUsedCapacity=" + oldUsedCapacity + "newUsedCapacity=" + newUsedCapacity +"fileLength=" +fileLength );
 		//Assert.assertEquals(oldUsedCapacity + fileLength, newUsedCapacity);
 		tfsManager = createTfsManager();
@@ -444,13 +443,12 @@ public class SaveFileFetchFileOperationMd5Test extends BaseCase {
 		StringBuilder fileMd5after = super.fileMd5("localfile");
 		Assert.assertEquals(fileMd5before.toString(),fileMd5after.toString());
 		Assert.assertTrue(result);
-		tfsManager.destroy();
 		TimeUtility.sleep(MAX_STAT_TIME);
 		log.debug("expected fileLength is: " + fileLength
 				+ "; actual get size is: "
 				+ tfsStatus.getFileSize(sessionId, 1));
 		log.debug("sessionId: " + sessionId +"tttest");
-		//System.out.println("fortest diiqng"+tfsStatus.getFileSize(sessionId, 1));
+
 		//Assert.assertEquals(fileLength, tfsStatus.getFileSize(sessionId, 1));
 	}
 
