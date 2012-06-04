@@ -169,6 +169,7 @@ public class BaseCase {
 				put("1M.jpg", 1 << 20);
 				put("2M.jpg", 2 * (1 << 20));
 				put("3M.jpg", 3 * (1 << 20));
+				put("4M.jpg", 4 * (1 << 20));
 				put("5M.jpg", 5 * (1 << 20));
 				put("10M.jpg", 10 * (1 << 20));
 				put("20M.jpg", 20 * (1 << 20));
