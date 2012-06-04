@@ -68,6 +68,7 @@ namespace tfs
       if (iter != changed_block_map_.end())
       {
         changed_block_map_.erase(iter);
+        tbsys::gDelete(iter->second);
       }
       changed_block_mutex_.unlock();
     }
@@ -77,10 +78,10 @@ namespace tfs
     {
       TBSYS_LOG(DEBUG, "[CHECK_ALL_BLOCKS]");
       VUINT should_check_blocks;
-      ChangedBlockMapIter iter = changed_block_map_.begin();
 
       // get the list need to check, then free lock
       changed_block_mutex_.lock();
+      ChangedBlockMapIter iter = changed_block_map_.begin();
       for ( ; iter != changed_block_map_.end(); iter++)
       {
 
