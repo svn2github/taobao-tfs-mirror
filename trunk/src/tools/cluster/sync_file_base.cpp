@@ -44,7 +44,7 @@ int SyncFileBase::cmp_file_info(const uint32_t block_id, const FileInfo& source_
   string file_name = string(fsname.get_name());
 
   cmp_file_info_ex(file_name, source_buf, sync_action, force, modify_time);
-  TBSYS_LOG(INFO, "cmp file finished. filename: %s, action_set: %s, ret: %d", file_name.c_str(), sync_action.dump().c_str(), ret);
+  TBSYS_LOG(DEBUG, "cmp file finished. filename: %s, action_set: %s, ret: %d", file_name.c_str(), sync_action.dump().c_str(), ret);
   return ret;
 }
 
@@ -63,7 +63,7 @@ int SyncFileBase::cmp_file_info(const string& file_name, SyncAction& sync_action
   {
     cmp_file_info_ex(file_name, source_buf, sync_action, force, modify_time);
   }
-  TBSYS_LOG(INFO, "cmp file finished. filename: %s, action_set: %s, ret: %d", file_name.c_str(), sync_action.dump().c_str(), ret);
+  TBSYS_LOG(DEBUG, "cmp file finished. filename: %s, action_set: %s, ret: %d", file_name.c_str(), sync_action.dump().c_str(), ret);
   return ret;
 }
 
@@ -79,7 +79,7 @@ int SyncFileBase::do_action(const string& file_name, const SyncAction& sync_acti
     ret = do_action_ex(file_name, action);
     if (ret == TFS_SUCCESS)
     {
-      TBSYS_LOG(INFO, "tfs file(%s) do (%d)th action(%d) success", file_name.c_str(), index, action);
+      TBSYS_LOG(DEBUG, "tfs file(%s) do (%d)th action(%d) success", file_name.c_str(), index, action);
       index++;
     }
     else
@@ -95,13 +95,13 @@ int SyncFileBase::do_action(const string& file_name, const SyncAction& sync_acti
         file_name.c_str(), action_vec[sync_action.force_index_], tmp_ret);
     ret = TFS_ERROR;
   }
-  TBSYS_LOG(INFO, "do action finished. file_name: %s", file_name.c_str());
+  TBSYS_LOG(DEBUG, "do action finished. file_name: %s", file_name.c_str());
   return ret;
 }
 
 void SyncFileBase::fileinfo_to_filestat(const FileInfo& file_info, TfsFileStat& buf)
 {
-  buf.file_id_ = file_info.id_; 
+  buf.file_id_ = file_info.id_;
   buf.offset_ = file_info.offset_;
   buf.size_ = file_info.size_;
   buf.usize_ = file_info.usize_;
@@ -143,23 +143,24 @@ int SyncFileBase::cmp_file_info_ex(const string& file_name, const TfsFileStat& s
   ret = get_file_info(dest_ns_addr_, file_name, dest_buf);
   if (ret != TFS_SUCCESS)
   {
-    TBSYS_LOG(WARN, "get dest file info failed. filename: %s, ret: %d", file_name.c_str(), ret);
+    TBSYS_LOG(DEBUG, "get dest file info failed. filename: %s, ret: %d", file_name.c_str(), ret);
   }
 
-  TBSYS_LOG(INFO, "file(%s): flag--(%d -> %d), crc--(%d -> %d), size--(%d -> %d)",
+  TBSYS_LOG(DEBUG, "file(%s): flag--(%d -> %d), crc--(%d -> %d), size--(%d -> %d)",
       file_name.c_str(), source_buf.flag_, ((ret == TFS_SUCCESS)? dest_buf.flag_:-1), source_buf.crc_, dest_buf.crc_, source_buf.size_, dest_buf.size_);
 
   // 1. dest file exists and is new file, just skip.
   if (ret == TFS_SUCCESS && dest_buf.modify_time_ > modify_time)
   {
-    TBSYS_LOG(WARN, "dest file(%s) has been modifyed!!! %d->%d", file_name.c_str(), dest_buf.modify_time_, modify_time);
+    TBSYS_LOG(WARN, "dest file(%s) has been modifyed!!! %s->%s",
+        file_name.c_str(), Func::time_to_str(dest_buf.modify_time_).c_str(), Func::time_to_str(modify_time).c_str());
   }
   // 2. source file exists, dest file is not exist or diff from source, rewrite file.
   else if (ret != TFS_SUCCESS || ((dest_buf.size_ != source_buf.size_) || (dest_buf.crc_ != source_buf.crc_))) // dest file exist
   {
     if (ret == TFS_SUCCESS && (! force))
     {
-      TBSYS_LOG(WARN, "crc conflict!! source crc: %d -> dest crc: %d, force: %d", source_buf.crc_, dest_buf.crc_, force);
+      TBSYS_LOG(WARN, "crc conflict!! file_name: %s, source crc: %d -> dest crc: %d, force: %d", file_name.c_str(), source_buf.crc_, dest_buf.crc_, force);
     }
     else
     {
@@ -190,9 +191,10 @@ int SyncFileBase::cmp_file_info_ex(const string& file_name, const TfsFileStat& s
     }
   }
   // 3. source file is the same to dest file, but in diff stat
-  else if (source_buf.flag_ != dest_buf.flag_)
+  else if (source_buf.flag_ != dest_buf.flag_ && source_buf.modify_time_ >= dest_buf.modify_time_)
   {
-    TBSYS_LOG(WARN, "file info flag conflict!! source flag: %d -> dest flag: %d)", source_buf.flag_, dest_buf.flag_);
+    TBSYS_LOG(WARN, "file info flag conflict!! filename: %s, source flag: %d -> dest flag: %d, source modify time: %s -> dest modify time: %s",
+        file_name.c_str(), source_buf.flag_, dest_buf.flag_, Func::time_to_str(source_buf.modify_time_).c_str(), Func::time_to_str(dest_buf.modify_time_).c_str());
     change_stat(source_buf.flag_, dest_buf.flag_, sync_action);
   }
   return TFS_SUCCESS;
