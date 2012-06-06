@@ -207,6 +207,7 @@ AC_CONFIG_FILES([Makefile
                  src/rootserver/Makefile
                  src/checkserver/Makefile
                  src/tools/Makefile
+                 src/tools/rcserver/Makefile
                  src/tools/util/Makefile
                  src/tools/dataserver/Makefile
                  src/tools/nameserver/Makefile
