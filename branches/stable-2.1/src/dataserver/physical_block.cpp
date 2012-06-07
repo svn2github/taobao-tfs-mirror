@@ -67,12 +67,6 @@ namespace tfs
     PhysicalBlock::~PhysicalBlock()
     {
       tbsys::gDelete(file_op_);
-      if (NULL != prefix_op_)
-      {
-        prefix_op_->flush_file();
-        prefix_op_->munmap_file();
-        tbsys::gDelete(prefix_op_);
-      }
     }
 
     int PhysicalBlock::init_prefix_op(std::string& mount_path)

@@ -77,6 +77,15 @@ namespace tfs
           return file_op_->get_fd();
         }
 
+        static void destroy_prefix_op()
+        {
+          if (NULL != prefix_op_)
+          {
+            prefix_op_->munmap_file();
+            tbsys::gDelete(prefix_op_);
+          }
+        }
+
       private:
         PhysicalBlock();
         DISALLOW_COPY_AND_ASSIGN(PhysicalBlock);

@@ -570,6 +570,10 @@ namespace tfs
           }
         }
       }
+
+      // destroy prefix op
+      PhysicalBlock::destroy_prefix_op();
+
       tbsys::gDeleteA(replicate_block_threads_);
       tbsys::gDelete(repl_block_);
       tbsys::gDelete(compact_block_);
