@@ -31,17 +31,7 @@ namespace tfs
 {
   namespace checkserver
   {
-
-    /**
-     * @brief Compare block result type
-     */
-    enum CompType
-    {
-      BLK_SAME,
-      BLK_SIZE,
-      BLK_DIFF,
-      BLK_ERROR,
-    };
+    class CheckServer;
 
     /**
      * @brief check dataserver thread
@@ -50,7 +40,7 @@ namespace tfs
     {
       public:
 
-        CheckThread(CheckBlockInfoMap* result_map, tbutil::Mutex* result_map_lock)
+        explicit CheckThread(CheckBlockInfoMap* result_map, tbutil::Mutex* result_map_lock)
         {
           result_map_ = result_map;
           result_map_lock_ = result_map_lock;
@@ -64,13 +54,6 @@ namespace tfs
          * @brief thread loop
          */
         virtual void run();
-
-        /**
-         * @brief check all ds i hold
-         *
-         * @return 0 on success
-         */
-        int check_ds_list();
 
         /**
          * @brief add ds to check list
@@ -120,17 +103,55 @@ namespace tfs
     typedef tbutil::Handle<CheckThread> CheckThreadPtr;
 
     /**
+     * @brief check dataserver thread
+     */
+    class RecheckThread: public tbutil::Thread
+    {
+      public:
+
+        explicit RecheckThread(CheckServer* check_server)
+        {
+          check_server_ = check_server;
+        }
+
+        virtual ~RecheckThread()
+        {
+        }
+
+        /**
+         * @brief thread loop
+         */
+        virtual void run();
+
+        /**
+         * @brief add ds to check list
+         *
+         * @param ds_id: dataserver id
+         */
+        void add_block(const uint32_t block_id)
+        {
+          block_list_.push_back(block_id);
+        }
+
+      private:
+        CheckServer* check_server_;
+        VUINT64 block_list_;          // block list to check
+    };
+
+    typedef tbutil::Handle<RecheckThread> RecheckThreadPtr;
+
+    /**
      * @brief check server impl
      */
-    class CheckServer
+    class CheckServer: public common::BaseMain
     {
       public:
         CheckServer(): master_ns_id_(0), slave_ns_id_(0), thread_count_(0),
           check_interval_(0), overlap_check_time_(0), block_stable_time_(0),
-          last_check_time_(0), meta_fd_(-1),
-          master_fp_(NULL), slave_fp_(NULL), stop_(false)
+          last_check_time_(0), index_(-1), mfp_(NULL), sfp_(NULL), meta_fd_(-1)
         {
-
+          factory_ = new MessageFactory();
+          streamer_ = new BasePacketStreamer(factory_);
         }
 
         virtual ~CheckServer()
@@ -140,23 +161,62 @@ namespace tfs
             close(meta_fd_);
             meta_fd_ = -1;
           }
+
+          tbsys::gDelete(factory_);
+          tbsys::gDelete(streamer_);
         }
 
         /**
-         * @brief init check server
+        * @brief help implementation
+        */
+        virtual void help();
+
+        /**
+        * @brief version information
+        */
+        virtual void version();
+
+        /**
+        * @brief destroy method
+        *
+        * @return
+        */
+        virtual bool destroy()
+        {
+          NewClientManager::get_instance().destroy();
+          return true;
+        }
+
+        /**
+        * @brief parse command line
+        *
+        * @param argc: number of args
+        * @param argv[]: arg list
+        * @param errmsg: error message
+        *
+        * @return
+        */
+        virtual int parse_common_line_args(int argc, char* argv[], std::string& errmsg);
+
+        /**
+         * @brief work to do
          *
-         * @param config_file: config file
+         * @param argc: number of args
+         * @param argv[]: arg list
          *
          * @return
          */
-        int init(const char* config_file, const int index);
+        virtual int run(int argc , char* argv[]);
+
+        /**
+        * @brief do initialize work
+        */
+        int initialize();
 
         /**
          * @brief main execute line
-         *
-         * @para
          */
-        void run_check();
+        int run_check();
 
         /**
          * @brief check logic cluster
@@ -178,7 +238,6 @@ namespace tfs
         int check_physical_cluster(const uint64_t ns_id, const uint32_t check_time,
               CheckBlockInfoMap& cluster_result);
 
-
         /**
         * @brief recheck different blocks, compact may happen in master
         *
@@ -188,8 +247,55 @@ namespace tfs
         */
         void recheck_block(const VUINT& recheck_block);
 
-      private:
+        /**
+         * @brief get master ns id
+         *
+         * @return
+         */
+        uint64_t get_master_nsid() const
+        {
+          return master_ns_id_;
+        }
 
+        /**
+         * @brief get slave ns id
+         *
+         * @return
+         */
+        uint64_t get_slave_nsid() const
+        {
+          return slave_ns_id_;
+        }
+
+        void add_m_sync_list(const uint32_t block_id)
+        {
+          fprintf(mfp_, "%u\n", block_id);
+        }
+
+        void add_s_sync_list(const uint32_t block_id)
+        {
+          fprintf(sfp_, "%u\n", block_id);
+        }
+
+        /**
+        * @brief decide which block in cluster is main block
+        *
+        * @param block_infos
+        *
+        * @return
+        */
+        CheckBlockInfo& select_main_block(CheckBlockInfoVec& block_infos);
+
+        /**
+        * @brief compare block
+        *
+        * @param left: left object
+        * @param right: right object
+        *
+        */
+        void compare_block(const CheckBlockInfo& left, const CheckBlockInfo& right);
+
+      private:
         /**
         * @brief load last check time
         *
@@ -203,26 +309,8 @@ namespace tfs
         *
         * @return
         */
+
         void update_meta();
-
-        /**
-         * @brief init log file
-         *
-         * @param index
-         *
-         * @return
-         */
-        int init_log(const int index);
-
-        /**
-         * @brief init pid file
-         *
-         * @param index
-         *
-         * @return
-         */
-        int init_pid(const int index);
-
         /**
          * @brief open output file
          *
@@ -240,16 +328,6 @@ namespace tfs
         void close_file();
 
         /**
-        * @brief compare block
-        *
-        * @param left: left object
-        * @param right: right object
-        *
-        * @return -1: invalid, 0 same, 1 not same
-        */
-        CompType compare_block(const CheckBlockInfo& left, const CheckBlockInfo& right);
-
-         /**
          * @brief diff block between cluster
          *
          * @param master_result: master result
@@ -260,20 +338,23 @@ namespace tfs
             CheckBlockInfoMap& slave_result, common::VUINT& recheck_list);
 
       private:
-        uint64_t master_ns_id_;
-        uint64_t slave_ns_id_;
-        int thread_count_;
-        int check_interval_;
-        int overlap_check_time_;
-        int block_stable_time_;
-        uint32_t last_check_time_;
-        int32_t meta_fd_;
-        FILE* master_fp_;
-        FILE* slave_fp_;
-        bool stop_;
+        uint64_t master_ns_id_;     // first cluster ns id
+        uint64_t slave_ns_id_;      // second cluster ns id
+        int thread_count_;          // check thread number
+        int check_interval_;        // check cluster interval
+        int overlap_check_time_;    // overlap time between two checks
+        int block_stable_time_;     // block stable time
+        uint32_t last_check_time_;  // last check time
+        int index_;                 // server index
+        char app_name_[MAX_FILE_NAME_LEN];  // app_name
 
-        std::string log_dir_;
-        std::string meta_dir_;
+        FILE* mfp_;                 // sync to slave file pointer
+        FILE* sfp_;                 // sync to master file pointer
+        std::string meta_dir_;      // meta directory
+        int32_t meta_fd_;
+
+        MessageFactory *factory_;
+        BasePacketStreamer *streamer_;
 
       private:
         DISALLOW_COPY_AND_ASSIGN(CheckServer);
