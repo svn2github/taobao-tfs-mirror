@@ -716,6 +716,29 @@ namespace tfs
       return TFS_SUCCESS;
     }
 
+    int LogicBlock::get_block_info(BlockInfo* blk_info)
+    {
+      int ret = TFS_SUCCESS;
+      if (NULL == blk_info)
+      {
+        ret = EXIT_POINTER_NULL;
+      }
+      else
+      {
+        BlockInfo* info = index_handle_->block_info();
+        if (NULL == info)
+        {
+          ret = EXIT_POINTER_NULL;
+          TBSYS_LOG(ERROR, "get block info fail. blockid: %u, ret: %d", logic_block_id_, ret);
+        }
+        else
+        {
+          memcpy(blk_info, info, sizeof(BlockInfo));
+        }
+      }
+      return ret;
+    }
+
     int LogicBlock::set_block_dirty_type(const DirtyFlag dirty_flag)
     {
       index_handle_->set_block_dirty_type(dirty_flag);

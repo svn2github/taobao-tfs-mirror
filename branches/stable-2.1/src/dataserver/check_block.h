@@ -48,11 +48,6 @@ namespace tfs
         */
        ~CheckBlock()
        {
-          ChangedBlockMapIter iter = changed_block_map_.begin();
-          for ( ; iter != changed_block_map_.end(); iter++)
-          {
-            tbsys::gDelete(iter->second);
-          }
        }
 
        /**

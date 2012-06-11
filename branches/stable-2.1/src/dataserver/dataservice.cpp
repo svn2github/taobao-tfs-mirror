@@ -1392,7 +1392,7 @@ namespace tfs
         }
       }
 
-      // hook to be checked
+      // hook to be checked on write or update
       if (TFS_SUCCESS == ret)
       {
         check_block_->add_check_task(close_file_info.block_id_);
@@ -1720,6 +1720,12 @@ namespace tfs
             block_id, file_id, new_file_id, ret);
       }
 
+      // hook to be checked on rename
+      if (TFS_SUCCESS == ret)
+      {
+        check_block_->add_check_task(block_id);
+      }
+
       //is master
       bool is_master = false;
       if (0 == (message->is_server() & 1))
@@ -1812,6 +1818,15 @@ namespace tfs
         ds_requester_.req_block_write_complete(block_id, message->get_lease_id(), ret, UNLINK_FLAG_YES);
       }
 
+      // hook to be checked on delete or undelete
+      if (TFS_SUCCESS == ret)
+      {
+        if (DELETE == action || UNDELETE == action)
+        {
+          check_block_->add_check_task(block_id);
+        }
+      }
+
       TIMER_END();
       TBSYS_LOG(INFO, "unlink file %s. blockid: %d, fileid: %" PRI64_PREFIX "u, action: %d, isserver: %s, peer ip: %s, cost time: %" PRI64_PREFIX "d",
           TFS_SUCCESS == ret ? "success" : "fail", block_id, file_id, action, is_master ? "master" : "slave",
@@ -1852,12 +1867,6 @@ namespace tfs
       {
         return message->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret,
             "removeblock error, ret: %d", ret);
-      }
-
-      // remove logic block from Modified block
-      for (uint32_t i = 0; i < remove_blocks.size(); i++)
-      {
-        check_block_->remove_check_task(remove_blocks[i]);
       }
 
       if (common::REMOVE_BLOCK_RESPONSE_FLAG_YES == message->get_response_flag())
@@ -2303,13 +2312,6 @@ namespace tfs
 
       TBSYS_LOG(DEBUG, "write block fileinfo successful, blockid: %u", block_id);
       message->reply(new StatusMessage(STATUS_MESSAGE_OK));
-
-      // if block not empty, hook to be checked
-      if (TFS_SUCCESS == ret && 0 != blk->file_count_)
-      {
-        check_block_->add_check_task(block_id);
-      }
-
       return TFS_SUCCESS;
     }
 

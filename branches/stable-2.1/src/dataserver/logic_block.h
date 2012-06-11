@@ -76,6 +76,7 @@ namespace tfs
         int get_meta_infos(common::RawMetaVec& raw_metas);
         int get_sorted_meta_infos(common::RawMetaVec& meta_infos);
         int get_file_infos(std::vector<common::FileInfo>& fileinfos);
+        int get_block_info(common::BlockInfo* blk_info);
 
         //gc callback
         void callback();
