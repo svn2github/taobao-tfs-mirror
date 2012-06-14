@@ -65,6 +65,7 @@ int cmd_dump_plan(const VSTRING &param);
 int cmd_set_bpr(const VSTRING &param);
 int cmd_get_bpr(const VSTRING &param);
 int cmd_batch_file(const VSTRING& param);
+int cmd_clear_system_table(const VSTRING& param);
 
 template<class T> const char* get_str(T it)
 {
@@ -127,6 +128,7 @@ void init()
       1, 2, cmd_remove_block);
   g_cmd_map["listblk"] = CmdNode("listblk blockid", "list block server list", 1, 1, cmd_list_block);
   g_cmd_map["loadblk"] = CmdNode("loadblk blockid dsip:port", "build relationship between block and dataserver.", 2, 2, cmd_load_block);
+  g_cmd_map["clearsystemtable"] = CmdNode("clearsystemtable", "clear system table 1--task, 2--write block, 4--report block server, 8--delete block queue.", 1, 1, cmd_clear_system_table);
   g_cmd_map["compactblk"] = CmdNode("compactblk blockid", "compact block", 1, 1, cmd_compact_block);
   g_cmd_map["replblk"] = CmdNode("replblk blockid type [[action] [src] [dest]]",
       "replicate block. type: 1--action, 2--src, 3--dest, 4--action src, 5--action dest, 6--src dest, 7--action src dest",
@@ -1334,3 +1336,27 @@ int cmd_dump_plan(const VSTRING& param)
 
   return ret;
 }
+
+int cmd_clear_system_table(const VSTRING& param)
+{
+  uint32_t value = atoi(param[0].c_str());
+  if (0 == value)
+  {
+    fprintf(stderr, "invalid parameter, eg 1, 2, 4, 8: %s\n", param[0].c_str());
+    return TFS_ERROR;
+  }
+
+  ClientCmdMessage req_cc_msg;
+  req_cc_msg.set_cmd(CLIENT_CMD_CLEAR_SYSTEM_TABLE);
+  req_cc_msg.set_value3(value);
+
+  int status = TFS_ERROR;
+
+  send_msg_to_server(g_tfs_client->get_server_id(), &req_cc_msg, status);
+
+  ToolUtil::print_info(status, "clear system table %s",param[0].c_str());
+
+  return status;
+}
+
+

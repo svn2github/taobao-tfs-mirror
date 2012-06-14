@@ -258,6 +258,13 @@ namespace tfs
       return !wait_report_block_servers_.empty() || !current_reporting_block_servers_.empty();
     }
 
+    void ServerManager::clear_report_block_server_table()
+    {
+      tbutil::Mutex::Lock lock(wait_report_block_server_mutex_);
+      wait_report_block_servers_.clear();
+      current_reporting_block_servers_.clear();
+    }
+
     ServerCollect* ServerManager::get_(const uint64_t server) const
     {
       ServerCollect query(server);

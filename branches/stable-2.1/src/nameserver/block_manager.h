@@ -78,6 +78,7 @@ namespace tfs
         bool exist(const uint32_t block) const;
         void dump(const int32_t level) const;
         void dump_write_block(const int32_t level) const;
+        void clear_write_block();
         bool scan(common::ArrayHelper<BlockCollect*>& result, uint32_t& begin, const int32_t count) const;
         int scan(common::SSMScanParameter& param, int32_t& next, bool& all_over,
             bool& cutover, const int32_t should) const;

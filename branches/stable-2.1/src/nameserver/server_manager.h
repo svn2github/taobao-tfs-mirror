@@ -81,6 +81,7 @@ namespace tfs
       int get_and_move_report_block_server(common::ArrayHelper<ServerCollect*>& servers, const int64_t max_slot_num);
       bool report_block_server_queue_empty() const;
       bool has_report_block_server() const;
+      void clear_report_block_server_table();
 
       int get_alive_servers(std::vector<uint64_t>& servers) const;
       int get_dead_servers(common::ArrayHelper<uint64_t>& servers, NsGlobalStatisticsInfo& info, const time_t now) const;

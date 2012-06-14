@@ -197,6 +197,15 @@ namespace tfs
       TBSYS_LOG(DEBUG, "===========================DUMP END=====================");
     }
 
+    void BlockManager::clear_write_block()
+    {
+      for (int32_t index = 0; index < MAX_BLOCK_CHUNK_NUMS; ++index)
+      {
+        RWLock::Lock lock(rwmutex_[index], WRITE_LOCKER);
+        last_write_blocks_[index].clear();
+      }
+    }
+
     bool BlockManager::scan(common::ArrayHelper<BlockCollect*>& result, uint32_t& begin, const int32_t count) const
     {
       bool end  = false;
@@ -598,7 +607,7 @@ namespace tfs
             }
           }
         }
-        TBSYS_LOG(INFO, "cleanup write block entry, total: %d, need cleanup nums: %d, actual cleanup nums: %d",
+        TBSYS_LOG(DEBUG, "cleanup write block entry, total: %d, need cleanup nums: %d, actual cleanup nums: %d",
             last_wirte_block_nums_, need_cleanup_nums, actual);
         last_wirte_block_nums_ -= actual;
       }
