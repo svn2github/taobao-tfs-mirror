@@ -630,7 +630,8 @@ namespace tfs
           //TBSYS_LOG(INFO, "emergency_replicate_queue: %ld", get_block_manager().get_emergency_replicate_queue().size());
           //build_redundant_(need, now);
         }
-        Func::sleep(SYSPARAM_NAMESERVER.heart_interval_, ngi.destroy_flag_);
+        //Func::sleep(SYSPARAM_NAMESERVER.heart_interval_, ngi.destroy_flag_);
+        usleep(50000);
       }
     }
 
