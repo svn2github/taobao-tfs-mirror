@@ -118,6 +118,7 @@ int TfsClientImpl::destroy()
   tbutil::Mutex::Lock lock(mutex_);
   if (is_init_)
   {
+    TfsSession::destroy();
     BgTask::destroy();
     BgTask::wait_for_shut_down();
     is_init_ = false;

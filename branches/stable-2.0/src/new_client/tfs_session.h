@@ -52,6 +52,7 @@ namespace tfs
       virtual ~TfsSession();
 
       int initialize();
+      static void destroy();
       int get_block_info(SegmentData& seg_data, int32_t flag);
       int get_block_info(SEG_DATA_LIST& seg_list, const int32_t flag);
 
@@ -130,8 +131,7 @@ namespace tfs
 
 #ifdef WITH_TAIR_CACHE
     private:
-      bool remote_cache_is_init_;
-      TairCacheHelper* remote_cache_helper_;
+      static TairCacheHelper* remote_cache_helper_;
     public:
       int init_remote_cache_helper();
       bool check_init();
