@@ -167,6 +167,33 @@ namespace tfs
       delete_block_queue_.clear();
     }
 
+    bool BlockManager::push_to_emergency_replicate_queue(const uint32_t block)
+    {
+      emergency_replicate_queue_.push_back(block);
+      return true;
+    }
+
+    bool BlockManager::pop_from_emergency_replicate_queue(uint32_t& block)
+    {
+      bool ret = !emergency_replicate_queue_.empty();
+      if (ret)
+      {
+        block = emergency_replicate_queue_.front();
+        emergency_replicate_queue_.pop_front();
+      }
+      return ret;
+    }
+
+    bool BlockManager::has_emergency_replicate_in_queue() const
+    {
+      return !emergency_replicate_queue_.empty();
+    }
+
+    int64_t BlockManager::get_emergency_replicate_queue_size() const
+    {
+      return emergency_replicate_queue_.size();
+    }
+
     void BlockManager::dump(const int32_t level) const
     {
       UNUSED(level);
@@ -487,12 +514,16 @@ namespace tfs
       return ((NULL != block) && (NULL != server)) ? block->remove(server, now) : false;
     }
 
-    bool BlockManager::need_replicate(const BlockCollect* block, const time_t now) const
+    bool BlockManager::need_replicate(const BlockCollect* block) const
     {
-      UNUSED(now);
       RWLock::Lock lock(get_mutex_(block->id()), READ_LOCKER);
       return (NULL != block) ? (block->get_servers_size() < SYSPARAM_NAMESERVER.max_replication_) : false;
-      //return (NULL != block) ? (block->check_replicate(now) >= PLAN_PRIORITY_NORMAL) : false;
+    }
+
+    bool BlockManager::need_replicate(const BlockCollect* block, const time_t now) const
+    {
+      RWLock::Lock lock(get_mutex_(block->id()), READ_LOCKER);
+      return (NULL != block) ? (block->check_replicate(now) >= PLAN_PRIORITY_NORMAL) : false;
     }
 
     bool BlockManager::need_replicate(ArrayHelper<ServerCollect*>& servers, PlanPriority& priority,
@@ -611,12 +642,6 @@ namespace tfs
             last_wirte_block_nums_, need_cleanup_nums, actual);
         last_wirte_block_nums_ -= actual;
       }
-    }
-
-    bool BlockManager::has_emergency_replicate_in_queue() const
-    {
-      //TBSYS_LOG(INFO, "emergency_replicate_queue_: %d", emergency_replicate_queue_.size());
-      return !emergency_replicate_queue_.empty();
     }
 
     int BlockManager::update_block_last_wirte_time(uint32_t & id, const uint32_t block, const time_t now)

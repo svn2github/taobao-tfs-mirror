@@ -74,6 +74,12 @@ namespace tfs
         bool delete_queue_empty() const;
         void clear_delete_queue();
 
+        //emergency replicate method only call by build thread,no lock
+        bool push_to_emergency_replicate_queue(const uint32_t block);
+        bool pop_from_emergency_replicate_queue(uint32_t& block);
+        bool has_emergency_replicate_in_queue() const;
+        int64_t get_emergency_replicate_queue_size() const;
+
         BlockCollect* get(const uint32_t block) const;
         bool exist(const uint32_t block) const;
         void dump(const int32_t level) const;
@@ -94,6 +100,7 @@ namespace tfs
         int update_block_info(BlockCollect*& output, bool& isnew, bool& writable, bool& master,
             const common::BlockInfo& info, const ServerCollect* server, const time_t now, const bool addnew);
 
+        bool need_replicate(const BlockCollect* block) const;
         bool need_replicate(const BlockCollect* block, const time_t now) const;
         bool need_replicate(common::ArrayHelper<ServerCollect*>& servers, common::PlanPriority& priority,
              const BlockCollect* block, const time_t now) const;
@@ -105,11 +112,6 @@ namespace tfs
         int update_block_last_wirte_time(uint32_t& id, const uint32_t block, const time_t now);
         bool has_write(const uint32_t block, const time_t now) const;
         void timeout(const time_t now);
-        bool has_emergency_replicate_in_queue() const;
-        inline std::deque<BlockCollect*>& get_emergency_replicate_queue()//no lock
-        {
-          return emergency_replicate_queue_;
-        }
       private:
         DISALLOW_COPY_AND_ASSIGN(BlockManager);
         common::RWLock& get_mutex_(const uint32_t block) const;
@@ -139,7 +141,8 @@ namespace tfs
 
         tbutil::Mutex delete_block_queue_muetx_;
         std::deque<std::pair<uint32_t, uint64_t> > delete_block_queue_;
-        std::deque<BlockCollect*> emergency_replicate_queue_;
+
+        std::deque<uint32_t> emergency_replicate_queue_;
     };
   }/** nameserver **/
 }/** tfs **/

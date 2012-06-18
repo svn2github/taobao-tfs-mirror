@@ -120,9 +120,8 @@ namespace tfs
       BlockCollect* add_new_block_helper_create_by_id_(const uint32_t block_id, const time_t now);
       BlockCollect* add_new_block_helper_create_by_system_(uint32_t& block_id, ServerCollect* server, const time_t now);
 
-      bool build_emergency_replicate_(int64_t& need, std::deque<BlockCollect*>& queue, const time_t now);
-      bool check_emergency_replicate_(std::deque<BlockCollect*>& queue, common::ArrayHelper<BlockCollect*>& result,
-          const int32_t count, const time_t now);
+      bool build_emergency_replicate_(int64_t& need, const time_t now);
+      bool check_emergency_replicate_(common::ArrayHelper<BlockCollect*>& result,const int32_t count, const time_t now);
       bool build_replicate_task_(int64_t& need, const BlockCollect* block, const time_t now);
       bool build_compact_task_(const BlockCollect* block, const time_t now);
       bool build_balance_task_(int64_t& need, common::TfsSortedVector<ServerCollect*,ServerIdCompare>& targets,

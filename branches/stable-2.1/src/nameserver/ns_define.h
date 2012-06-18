@@ -83,6 +83,7 @@ namespace tfs
       virtual ~GCObject() {}
       virtual void callback(LayoutManager& ) {}
       inline void free(){ delete this;}
+      inline time_t get_last_update_time() const { return last_update_time_;}
       inline void update_last_time(const time_t now = common::Func::get_monotonic_time()) { last_update_time_ = now;}
       inline bool can_be_clear(const time_t now) const
       {
