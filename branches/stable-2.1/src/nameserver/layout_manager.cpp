@@ -571,7 +571,10 @@ namespace tfs
       time_t  now = 0, current = 0;
       int64_t need = 0, index = 0;
       uint32_t start = 0;
+      int32_t loop = 0;
       const int32_t MAX_QUERY_BLOCK_NUMS = 2048;
+      const int32_t MAX_SLEEP_TIME_US = 50000;
+      const int32_t MAX_LOOP_NUMS = 1000000 / MAX_SLEEP_TIME_US;
       BlockCollect* pblock = NULL;
       BlockCollect* blocks[MAX_QUERY_BLOCK_NUMS];
       ArrayHelper<BlockCollect*> results(MAX_QUERY_BLOCK_NUMS, blocks);
@@ -601,8 +604,12 @@ namespace tfs
 
           check_emergency_replicate_(results, MAX_QUERY_BLOCK_NUMS, now);
 
-          TBSYS_LOG(INFO, "emergency_replicate_queue: %"PRI64_PREFIX"d, need: %"PRI64_PREFIX"d",
-            get_block_manager().get_emergency_replicate_queue_size(), need);
+          if (loop >= MAX_LOOP_NUMS)
+          {
+            loop = 0;
+            TBSYS_LOG(INFO, "emergency_replicate_queue: %"PRI64_PREFIX"d, need: %"PRI64_PREFIX"d",
+              get_block_manager().get_emergency_replicate_queue_size(), need);
+          }
 
           build_emergency_replicate_(need, now);
 
@@ -634,8 +641,8 @@ namespace tfs
           //TBSYS_LOG(INFO, "emergency_replicate_queue: %ld", get_block_manager().get_emergency_replicate_queue().size());
           //build_redundant_(need, now);
         }
-        //Func::sleep(SYSPARAM_NAMESERVER.heart_interval_, ngi.destroy_flag_);
-        usleep(50000);
+        ++loop;
+        usleep(MAX_SLEEP_TIME_US);
       }
     }
 
