@@ -29,13 +29,14 @@ using namespace tfs::common;
 using namespace tfs::message;
 using namespace std;
 
+#ifdef WITH_TAIR_CACHE
+TairCacheHelper* TfsSession::remote_cache_helper_ = NULL;
+#endif
+
 TfsSession::TfsSession(const std::string& nsip,
            const int64_t cache_time, const int64_t cache_items)
   :ns_addr_(0), ns_addr_str_(nsip), cluster_id_(0),
-#ifdef WITH_TAIR_CACHE
-    remote_cache_is_init_(false), remote_cache_helper_(NULL),
-#endif
-    block_cache_time_(cache_time), block_cache_items_(cache_items)
+  block_cache_time_(cache_time), block_cache_items_(cache_items)
 {
   if (cache_items <= 0)
   {
@@ -55,9 +56,6 @@ TfsSession::TfsSession(const std::string& nsip,
 TfsSession::~TfsSession()
 {
   block_cache_map_.clear();
-#ifdef WITH_TAIR_CACHE
-  tbsys::gDelete(remote_cache_helper_);
-#endif
 #ifdef WITH_UNIQUE_STORE
   tbsys::gDelete(unique_store_);
 #endif
@@ -92,6 +90,13 @@ int TfsSession::initialize()
   return ret;
 }
 
+void TfsSession::destroy()
+{
+#ifdef WITH_TAIR_CACHE
+  tbsys::gDelete(remote_cache_helper_);
+#endif
+}
+
 #ifdef WITH_TAIR_CACHE
 int TfsSession::init_remote_cache_helper()
 {
@@ -108,11 +113,11 @@ int TfsSession::init_remote_cache_helper()
     {
       tbsys::gDelete(remote_cache_helper_);
     }
-    remote_cache_is_init_ = TFS_SUCCESS == ret ? true: false;
+
     TBSYS_LOG(DEBUG, "init remote cache helper(master: %s, slave: %s, group_name: %s, area: %d) %s",
               ClientConfig::remote_cache_master_addr_.c_str(), ClientConfig::remote_cache_slave_addr_.c_str(),
               ClientConfig::remote_cache_group_name_.c_str(), ClientConfig::remote_cache_area_,
-              remote_cache_is_init_ ? "success" : "fail");
+              TFS_SUCCESS == ret ? "success" : "fail");
   }
   else
   {
@@ -124,12 +129,7 @@ int TfsSession::init_remote_cache_helper()
 
 bool TfsSession::check_init()
 {
-  if (!remote_cache_is_init_)
-  {
-    TBSYS_LOG(WARN, "remote cache helper not initialized.");
-  }
-
-  return remote_cache_is_init_;
+  return (NULL != remote_cache_helper_);
 }
 
 void TfsSession::insert_remote_block_cache(const uint32_t block_id, const VUINT64& rds)

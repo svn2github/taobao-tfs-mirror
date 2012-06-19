@@ -185,7 +185,7 @@ AC_CHECK_FUNCS([fdatasync ftruncate gethostbyname getpagesize gettimeofday memse
 
 m4_include([ax_lib_mysql.m4])
 
-AX_LIB_MYSQL([5.1.48])
+AX_LIB_MYSQL([5.1.40])
 
 AC_CONFIG_FILES([Makefile
                  conf/Makefile

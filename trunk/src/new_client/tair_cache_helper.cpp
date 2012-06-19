@@ -186,7 +186,7 @@ namespace tfs
 
       if (area < 0)
       {
-        TBSYS_LOG(ERROR, "invalid area: %d", area);
+        TBSYS_LOG(WARN, "invalid area: %d", area);
       }
       else
       {
@@ -195,7 +195,7 @@ namespace tfs
 
         if (!tair_client_->startup(master_addr, slave_addr, group_name))
         {
-          TBSYS_LOG(ERROR, "starup tair client fail. master addr: %s, slave addr: %s, group name: %s, area: %d",
+          TBSYS_LOG(WARN, "starup tair client fail. master addr: %s, slave addr: %s, group name: %s, area: %d",
                     master_addr, slave_addr, group_name, area);
         }
         else
@@ -255,13 +255,13 @@ namespace tfs
             ret = value.deserialize(value_buf, value_len, pos);
             if (TFS_SUCCESS != ret)
             {
-              TBSYS_LOG(ERROR, "deserialize value fail. ret: %d", ret);
+              TBSYS_LOG(WARN, "deserialize value fail. ret: %d", ret);
               ret = TFS_ERROR;
             }
           }
           else
           {
-            TBSYS_LOG(INFO, "get value from tair fail, ret: %d", ret);
+            TBSYS_LOG(DEBUG, "get value from tair fail, ret: %d", ret);
             ret = TFS_ERROR;
           }
           tbsys::gDelete(key_entry);
@@ -269,7 +269,7 @@ namespace tfs
         }
         else
         {
-          TBSYS_LOG(ERROR, "serialiaze key fail. ret: %d", ret);
+          TBSYS_LOG(WARN, "serialiaze key fail. ret: %d", ret);
         }
         delete [] key_buf;
       }
@@ -325,7 +325,7 @@ namespace tfs
         }
         else
         {
-          TBSYS_LOG(ERROR, "serialiaze key fail. ret: %d", ret);
+          TBSYS_LOG(WARN, "serialiaze key fail. ret: %d", ret);
         }
         delete [] key_buf;
       }
@@ -363,7 +363,7 @@ namespace tfs
         }
         else
         {
-          TBSYS_LOG(ERROR, "serialiaze key fail. ret: %d", ret);
+          TBSYS_LOG(WARN, "serialize key fail. ret: %d", ret);
         }
         delete [] key_buf;
       }
@@ -466,12 +466,12 @@ namespace tfs
                   }
                   else
                   {
-                    TBSYS_LOG(ERROR, "deserialize value fail. ret: %d", ret);
+                    TBSYS_LOG(WARN, "deserialize value fail. ret: %d", ret);
                   }
                 }
                 else
                 {
-                  TBSYS_LOG(ERROR, "deserialize key fail. ret: %d", ret);
+                  TBSYS_LOG(WARN, "deserialize key fail. ret: %d", ret);
                 }
                 //kv_entries.erase(kv_entries_iter++);
                 kv_entries_iter++;
@@ -481,13 +481,13 @@ namespace tfs
             }
             else
             {
-              TBSYS_LOG(INFO, "get value from tair fail, ret: %d", ret);
+              TBSYS_LOG(DEBUG, "get value from tair fail, ret: %d", ret);
               ret = TFS_ERROR;
             }
           }
           else
           {
-            TBSYS_LOG(ERROR, "serialiaze key fail. ret: %d", ret);
+            TBSYS_LOG(WARN, "serialize key fail. ret: %d", ret);
           }
 
           // release key data_entry
