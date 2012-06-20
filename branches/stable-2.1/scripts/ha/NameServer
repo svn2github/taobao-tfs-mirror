@@ -58,8 +58,10 @@ monitor_nameserver() {
 		return $OCF_ERR_PERM
 	fi
 	ocf_log debug "begin to monitor $binfile service with command $cmd"
-	cmd="$montool -i $nsip -p $nsport -n"
-	eval $cmd
+	#cmd="$montool -i $nsip -p $nsport -n"
+	#eval $cmd
+  cmd="pidof nameserver"
+  eval $cmd >/dev/null 2>&1
 	if [ $? -ne 0 ]
 	then
 		return $OCF_ERR_GENERIC
