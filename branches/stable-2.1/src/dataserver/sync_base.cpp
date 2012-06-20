@@ -305,6 +305,7 @@ namespace tfs
       }
       SyncData* sf = reinterpret_cast<SyncData*>(const_cast<char*>(data));
 
+      const int32_t MAX_RETRY_COUNT = 5;
       int ret = TFS_ERROR;
       // endless retry if fail
       do
@@ -332,7 +333,7 @@ namespace tfs
           }*/
           retry_time_ = time(NULL);
         }
-      }while (TFS_SUCCESS != ret);
+      }while (TFS_SUCCESS != ret && retry_count_ < MAX_RETRY_COUNT);
 
       retry_count_ = 0;
       retry_time_ = 0;
