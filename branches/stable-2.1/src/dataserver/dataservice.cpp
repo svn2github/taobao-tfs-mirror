@@ -347,21 +347,6 @@ namespace tfs
 
         if (TFS_SUCCESS == iret)
         {
-          for (int32_t i = 0; i < 2; i++)
-          {
-            heartbeat_thread_[i] = new HeartBeatThreadHelper(*this, i);
-          }
-          do_check_thread_  = new DoCheckThreadHelper(*this);
-          compact_block_thread_ = new CompactBlockThreadHelper(*this);
-          replicate_block_threads_ =  new ReplicateBlockThreadHelperPtr[SYSPARAM_DATASERVER.replicate_thread_count_];
-          for (int32_t i = 0; i < SYSPARAM_DATASERVER.replicate_thread_count_; ++i)
-          {
-            replicate_block_threads_[i] = new ReplicateBlockThreadHelper(*this);
-          }
-        }
-
-        if (TFS_SUCCESS == iret)
-        {
           //set write and read log
           const char* work_dir = get_work_dir();
           iret = NULL == work_dir ? TFS_ERROR : TFS_SUCCESS;
@@ -380,6 +365,22 @@ namespace tfs
             init_log_file(READ_STAT_LOGGER, read_stat_log_file_);
             init_log_file(WRITE_STAT_LOGGER, write_stat_log_file_);
             TBSYS_LOG(INFO, "dataservice start");
+          }
+        }
+
+        if (TFS_SUCCESS == iret)
+        {
+          data_server_info_.status_ = DATASERVER_STATUS_ALIVE;
+          for (int32_t i = 0; i < 2; i++)
+          {
+            heartbeat_thread_[i] = new HeartBeatThreadHelper(*this, i);
+          }
+          do_check_thread_  = new DoCheckThreadHelper(*this);
+          compact_block_thread_ = new CompactBlockThreadHelper(*this);
+          replicate_block_threads_ =  new ReplicateBlockThreadHelperPtr[SYSPARAM_DATASERVER.replicate_thread_count_];
+          for (int32_t i = 0; i < SYSPARAM_DATASERVER.replicate_thread_count_; ++i)
+          {
+            replicate_block_threads_[i] = new ReplicateBlockThreadHelper(*this);
           }
         }
       }
@@ -518,6 +519,7 @@ namespace tfs
 
     int DataService::destroy_service()
     {
+      data_server_info_.status_ = DATASERVER_STATUS_DEAD;
       //global stat destroy
       stat_mgr_.destroy();
 
@@ -601,8 +603,8 @@ namespace tfs
           cpu_metrics_.summary();
         }
 
-        if (DATASERVER_STATUS_DEAD== data_server_info_.status_)
-          break;
+        //if (DATASERVER_STATUS_DEAD== data_server_info_.status_)
+        //  break;
 
         start = Func::get_monotonic_time_us();
         do
@@ -616,7 +618,7 @@ namespace tfs
           end  = Func::get_monotonic_time_us();
           ++count;
         }
-        while (TFS_SUCCESS != iret && count < 2);
+        while (TFS_SUCCESS != iret && count < 2 && !stop_);
 
         sleep_time_us = TFS_SUCCESS == iret ? heart_interval * 1000000 - (end - start)
           : heart_interval * 1000000;
@@ -627,15 +629,15 @@ namespace tfs
       return TFS_SUCCESS;
     }
 
-    int DataService::stop_heart()
+    /*int DataService::stop_heart()
     {
       TBSYS_LOG(INFO, "stop heartbeat...");
-      data_server_info_.status_ = DATASERVER_STATUS_DEAD;
       int8_t heart_interval = DEFAULT_HEART_INTERVAL;
+      data_server_info_.status_ = DATASERVER_STATUS_DEAD;
       send_blocks_to_ns(heart_interval, 0,1500);
       send_blocks_to_ns(heart_interval, 1,1500);
       return TFS_SUCCESS;
-    }
+    }*/
 
     int DataService::run_check()
     {
@@ -952,7 +954,7 @@ namespace tfs
             bpacket->dump();
           }
           // add access control by message type
-          if (!access_deny(bpacket))
+          if ((!access_deny(bpacket)) && (DATASERVER_STATUS_ALIVE == data_server_info_.status_))
           {
             bret = push(bpacket, false);
             if (bret)
