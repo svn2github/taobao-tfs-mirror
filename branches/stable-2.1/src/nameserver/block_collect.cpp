@@ -404,6 +404,23 @@ namespace tfs
       }
     }
 
+    void BlockCollect::callback(LayoutManager& manager)
+    {
+      clear(manager,Func::get_monotonic_time());
+    }
+
+    bool BlockCollect::clear(LayoutManager& manager, const time_t now)
+    {
+      ServerCollect* server = NULL;
+      for (int8_t i = 0; i < common::SYSPARAM_NAMESERVER.max_replication_; ++i)
+      {
+        server = servers_[i];
+        if (NULL != server)
+          manager.relieve_relation(this, server, now);
+      }
+      return true;
+    }
+
     int8_t BlockCollect::get_servers_size() const
     {
       int8_t size = 0;

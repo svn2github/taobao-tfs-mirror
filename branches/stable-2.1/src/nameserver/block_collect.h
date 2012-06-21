@@ -34,6 +34,7 @@ namespace tfs
   namespace nameserver
   {
     class ServerCollect;
+    class LayoutManager;
     class BlockCollect : public GCObject
     {
       #ifdef TFS_GTEST
@@ -77,6 +78,8 @@ namespace tfs
       void dump(int32_t level, const char* file = __FILE__,
           const int32_t line = __LINE__, const char* function = __FUNCTION__) const;
 
+      void callback(LayoutManager& manager);
+      bool clear(LayoutManager& manager, const time_t now);
       static const int8_t BLOCK_CREATE_FLAG_NO;
       static const int8_t BLOCK_CREATE_FLAG_YES;
       static const int8_t VERSION_AGREED_MASK;
