@@ -77,6 +77,7 @@ namespace tfs
         int get_sorted_meta_infos(common::RawMetaVec& meta_infos);
         int get_file_infos(std::vector<common::FileInfo>& fileinfos);
         int get_block_info(common::BlockInfo* blk_info);
+        int copy_block_info(const common::BlockInfo* blk_info);
 
         //gc callback
         void callback();
@@ -183,7 +184,6 @@ namespace tfs
         }
 
       private:
-        int copy_block_info(const common::BlockInfo* blk_info);
         int extend_block(const int32_t size, const int32_t offset);
 
       private:
