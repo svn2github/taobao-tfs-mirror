@@ -84,8 +84,16 @@ namespace tfs
        *
        * @return: 0 on success
        */
-       int check_one_block(const uint32_t& block_id,
-            common::CheckBlockInfo& result, const int32_t check_flag);
+       int check_one_block(const uint32_t block_id, common::CheckBlockInfo& result);
+
+        /**
+        * @brief repair block information
+        *
+        * @param block_id: block to repair
+        *
+        * @return
+        */
+        int repair_block_info(const uint32_t block_id);
 
       private:
         DISALLOW_COPY_AND_ASSIGN(CheckBlock);
