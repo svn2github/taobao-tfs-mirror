@@ -312,7 +312,7 @@ namespace tfs
             ret = index_handle_->update_block_info(C_OPER_DELETE, old_size);
             if (TFS_SUCCESS != ret)
               break;
-            ret = index_handle_->update_block_info(C_OPER_INSERT, file_meta.get_size());
+            ret = index_handle_->update_block_info(C_OPER_UPDATE, file_meta.get_size());
             if (TFS_SUCCESS != ret)
               break;
           }

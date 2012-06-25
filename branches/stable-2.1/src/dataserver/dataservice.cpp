@@ -1985,26 +1985,19 @@ namespace tfs
         CheckBlockRequestMessage* message = dynamic_cast<CheckBlockRequestMessage*>(packet);
         CheckBlockResponseMessage* resp_cb_msg = new CheckBlockResponseMessage();
         uint32_t block_id = message->get_block_id();
-        if (0 == block_id)  // block_id: 0, check all blocks
+        if (0 == block_id)  // check all blocks
         {
           ret = check_block_->check_all_blocks(resp_cb_msg->get_result_ref(),
               message->get_check_flag(), message->get_check_time(),
               message->get_last_check_time());
         }
-        else
+        else  // check specific block
         {
-          if (0 == message->get_check_flag())  // flag: 0, check specific block
+          CheckBlockInfo cbi;
+          ret = check_block_->check_one_block(block_id, cbi, message->get_check_flag());
+          if (TFS_SUCCESS == ret)
           {
-            CheckBlockInfo cbi;
-            ret = check_block_->check_one_block(block_id, cbi);
-            if (TFS_SUCCESS == ret)
-            {
-              resp_cb_msg->get_result_ref().push_back(cbi);
-            }
-          }
-          else  // flag: !0, repair block
-          {
-            ret = check_block_->repair_block_info(block_id);
+            resp_cb_msg->get_result_ref().push_back(cbi);
           }
         }
 
