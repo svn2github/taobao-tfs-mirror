@@ -289,7 +289,7 @@ namespace tfs
                 GCObject* pobject = NULL;
                 manager_.get_block_manager().remove(pobject,block_id);
                 if (NULL != pobject)
-                  manager_.get_gc_manager().add(pobject);
+                  manager_.get_gc_manager().add(pobject, now);
               }
               //create new block by block_id
               ret = manager_.open_helper_create_new_block_by_id(block_id);
@@ -417,7 +417,7 @@ namespace tfs
           if (block->get_servers_size() <= 0 && new_create_block_collect)
             manager_.get_block_manager().remove(pobject, info.value3_);
           if (NULL != pobject)
-            manager_.get_gc_manager().add(pobject);
+            manager_.get_gc_manager().add(pobject, now);
         }
       }
       return ret;
@@ -483,7 +483,7 @@ namespace tfs
           }
         }
         if (NULL != pobject)
-          manager_.get_gc_manager().add(pobject);
+          manager_.get_gc_manager().add(pobject, now);
       }
       return ret;
     }
@@ -583,7 +583,7 @@ namespace tfs
           if (block->get_servers_size() <= 0 && new_create_block_collect)
             manager_.get_block_manager().remove(pobject, info.value3_);
           if (NULL != pobject)
-            manager_.get_gc_manager().add(pobject);
+            manager_.get_gc_manager().add(pobject, now);
         }
       }
       return ret;

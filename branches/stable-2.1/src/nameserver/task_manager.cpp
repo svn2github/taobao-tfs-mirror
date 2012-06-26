@@ -175,7 +175,7 @@ namespace tfs
             TBSYS_LOG(DEBUG, "add task ret: %d, block: %u", ret, id);
             task->dump(TBSYS_LOG_LEVEL_WARN, "add task failed, rollback,");
             block_to_tasks_.erase(res.first);
-            manager_.get_gc_manager().add(task);
+            manager_.get_gc_manager().add(task, now);
           }
           else
           {

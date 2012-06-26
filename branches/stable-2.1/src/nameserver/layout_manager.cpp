@@ -1137,7 +1137,7 @@ namespace tfs
                 }
               }
               if (NULL != pobject)
-                get_gc_manager().add(pobject);
+                get_gc_manager().add(pobject, now);
             }//end elect dataserver successful
           }//end if (count >0)
         }//end find or create block successful
@@ -1198,7 +1198,7 @@ namespace tfs
             get_block_manager().remove(pobject, block_id);//rollback
           }
           if (NULL != pobject)
-            get_gc_manager().add(pobject);
+            get_gc_manager().add(pobject, now);
         }
       }//end if (TFS_SUCCESS == ret) check parameter
       return TFS_SUCCESS == ret ? block : NULL;
@@ -1256,8 +1256,7 @@ namespace tfs
             start = block->id();
         }
         while (!complete);
-        server->update_last_time(now);
-        get_gc_manager().add(server);
+        get_gc_manager().add(server, now);
       }
       return true;
     }
