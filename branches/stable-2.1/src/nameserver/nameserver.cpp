@@ -385,7 +385,7 @@ namespace tfs
           }
           if (common::TFS_SUCCESS != ret)
           {
-            msg->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret, "execute message failed");
+            msg->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret, "execute message failed, pcode: %d", pcode);
           }
         }
       }

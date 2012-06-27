@@ -74,6 +74,12 @@ namespace tfs
       NS_KEEPALIVE_TYPE_LOGOUT = 2
     };
 
+    enum BlockInReplicateQueueFlag
+    {
+      BLOCK_IN_REPLICATE_QUEUE_NO  = 0,
+      BLOCK_IN_REPLICATE_QUEUE_YES = 1
+    };
+
     class LayoutManager;
     class GCObject
     {

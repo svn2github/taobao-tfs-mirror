@@ -75,8 +75,8 @@ namespace tfs
         void clear_delete_queue();
 
         //emergency replicate method only call by build thread,no lock
-        bool push_to_emergency_replicate_queue(const uint32_t block);
-        bool pop_from_emergency_replicate_queue(uint32_t& block);
+        bool push_to_emergency_replicate_queue(BlockCollect* block);
+        BlockCollect* pop_from_emergency_replicate_queue();
         bool has_emergency_replicate_in_queue() const;
         int64_t get_emergency_replicate_queue_size() const;
 

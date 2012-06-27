@@ -57,6 +57,7 @@ namespace tfs
       bool is_master(const ServerCollect* const server) const;
       bool is_writable() const;
       bool is_creating() const;
+      bool in_replicate_queue() const;
       bool check_version(LayoutManager& manager, common::ArrayHelper<ServerCollect*>& removes,
           bool& expire_self, common::ArrayHelper<ServerCollect*>& other_expires, const ServerCollect* server,
           const int8_t role, const bool isnew, const common::BlockInfo& block_info, const time_t now);
@@ -73,6 +74,7 @@ namespace tfs
       inline uint32_t id() const { return info_.block_id_;}
       inline int32_t version() const { return info_.version_;}
       inline void set_create_flag(const int8_t flag = BLOCK_CREATE_FLAG_NO) { create_flag_ = flag;}
+      inline void set_in_replicate_queue(const int8_t flag = BLOCK_IN_REPLICATE_QUEUE_YES) {in_replicate_queue_ = flag;}
       int8_t get_servers_size() const;
       int scan(common::SSMScanParameter& param) const;
       void dump(int32_t level, const char* file = __FILE__,
@@ -90,7 +92,8 @@ namespace tfs
       private:
       common::BlockInfo info_; //7 * 4 = 28
       ServerCollect** servers_;
-      int8_t create_flag_;
+      int8_t create_flag_:4;
+      int8_t in_replicate_queue_:4;
       int8_t reserve[7];
     };
   }/** end namespace nameserver **/

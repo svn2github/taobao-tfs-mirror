@@ -172,21 +172,32 @@ namespace tfs
       delete_block_queue_.clear();
     }
 
-    bool BlockManager::push_to_emergency_replicate_queue(const uint32_t block)
+    bool BlockManager::push_to_emergency_replicate_queue(BlockCollect* block)
     {
-      emergency_replicate_queue_.push_back(block);
-      return true;
-    }
-
-    bool BlockManager::pop_from_emergency_replicate_queue(uint32_t& block)
-    {
-      bool ret = !emergency_replicate_queue_.empty();
+      bool ret = ((NULL != block) && (!block->in_replicate_queue()));
       if (ret)
       {
-        block = emergency_replicate_queue_.front();
-        emergency_replicate_queue_.pop_front();
+        TBSYS_LOG(INFO, "block %u mybe lack of backup, we'll replicate", block->id());
+        block->set_in_replicate_queue(BLOCK_IN_REPLICATE_QUEUE_YES);
+        emergency_replicate_queue_.push_back(block->id());
       }
       return ret;
+    }
+
+    BlockCollect* BlockManager::pop_from_emergency_replicate_queue()
+    {
+      BlockCollect* block = NULL;
+      if (!emergency_replicate_queue_.empty())
+      {
+        uint32_t id = emergency_replicate_queue_.front();
+        emergency_replicate_queue_.pop_front();
+        block = get(id);
+        if (NULL == block)
+          TBSYS_LOG(INFO, "block: %u maybe lost,don't replicate", id);
+        else
+          block->set_in_replicate_queue(BLOCK_IN_REPLICATE_QUEUE_NO);
+      }
+      return block;
     }
 
     bool BlockManager::has_emergency_replicate_in_queue() const

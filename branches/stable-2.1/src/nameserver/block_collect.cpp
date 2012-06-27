@@ -31,7 +31,8 @@ namespace tfs
     const int8_t BlockCollect::VERSION_AGREED_MASK = 2;
     BlockCollect::BlockCollect(const uint32_t block_id, const time_t now):
       GCObject(now),
-      create_flag_(BLOCK_CREATE_FLAG_NO)
+      create_flag_(BLOCK_CREATE_FLAG_NO),
+      in_replicate_queue_(BLOCK_IN_REPLICATE_QUEUE_NO)
     {
       servers_ = new (std::nothrow)ServerCollect*[SYSPARAM_NAMESERVER.max_replication_];
       assert(servers_);
@@ -129,6 +130,11 @@ namespace tfs
     bool BlockCollect::is_creating() const
     {
       return BLOCK_CREATE_FLAG_YES == create_flag_;
+    }
+
+    bool BlockCollect::in_replicate_queue() const
+    {
+      return BLOCK_IN_REPLICATE_QUEUE_YES == in_replicate_queue_;
     }
 
     void BlockCollect::get_servers(ArrayHelper<ServerCollect*>& servers) const
@@ -301,7 +307,7 @@ namespace tfs
         {
           if (last_update_time_ + SYSPARAM_NAMESERVER.replicate_wait_time_ <= now)
           {
-            TBSYS_LOG(INFO, "emergency replicate block: %u", info_.block_id_);
+            TBSYS_LOG(DEBUG, "emergency replicate block: %u", info_.block_id_);
             priority = PLAN_PRIORITY_EMERGENCY;
           }
         }
@@ -309,7 +315,7 @@ namespace tfs
         {
           if (last_update_time_ + SYSPARAM_NAMESERVER.replicate_wait_time_ <= now)
           {
-            TBSYS_LOG(INFO, "replicate block: %u", info_.block_id_);
+            TBSYS_LOG(DEBUG, "replicate block: %u", info_.block_id_);
             priority = PLAN_PRIORITY_NORMAL;
           }
         }
