@@ -157,7 +157,7 @@ namespace tfs
           TBSYS_LOG(ERROR, "lru gc error");
         }
       }
-      TBSYS_LOG(INFO, "gc %d root node", v_root_node.size());
+      TBSYS_LOG(INFO, "gc %zd root node", v_root_node.size());
       vector<CacheRootNode*>::iterator it = v_root_node.begin();
       for (; it != v_root_node.end(); it++)
       {
@@ -761,7 +761,7 @@ namespace tfs
       {
         still_have = true;
       }
-      TBSYS_LOG(DEBUG, "out_v_meta_info.size() %d", out_v_meta_info.size());
+      TBSYS_LOG(DEBUG, "out_v_meta_info.size() %zd", out_v_meta_info.size());
       return ret;
     }
 
@@ -822,7 +822,7 @@ namespace tfs
             int64_t frag_len = meta_info->frag_info_.get_length();
             if (frag_len > MAX_FRAG_INFO_SIZE)
             {
-              TBSYS_LOG(ERROR, "meta info is too long(%d > %d)", frag_len, MAX_FRAG_INFO_SIZE);
+              TBSYS_LOG(ERROR, "meta info is too long(%"PRI64_PREFIX"d > %d)", frag_len, MAX_FRAG_INFO_SIZE);
               ret = TFS_ERROR;
             }
             else

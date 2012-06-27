@@ -31,7 +31,7 @@ namespace tfs
       int ret = TFS_ERROR;
       if (0 == server_id)
       {
-        TBSYS_LOG(ERROR, "server is is invalid: "PRI64_PREFIX"u", server_id);
+        TBSYS_LOG(ERROR, "server is is invalid: %"PRI64_PREFIX"u", server_id);
       }
       else
       {

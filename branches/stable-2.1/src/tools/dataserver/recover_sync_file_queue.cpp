@@ -197,7 +197,7 @@ int remote_copy_file(const char* dest_addr, const uint32_t block_id, const uint6
               ret = total_length == file_stat.size_ ? TFS_SUCCESS : EXIT_SYNC_FILE_ERROR;//check file size
               if (TFS_SUCCESS != ret)
               {
-                TBSYS_LOG(DEBUG, "file size error. %s, blockid: %u, fileid :%" PRI64_PREFIX "u, size: %d <> %d",
+                TBSYS_LOG(DEBUG, "file size error. %s, blockid: %u, fileid :%" PRI64_PREFIX "u, crc: %u <> %u, size: %"PRI64_PREFIX"d <> %"PRI64_PREFIX"d",
                     fsname.get_name(), block_id, file_id, crc, file_stat.crc_, total_length, file_stat.size_);
               }
               else
@@ -205,7 +205,7 @@ int remote_copy_file(const char* dest_addr, const uint32_t block_id, const uint6
                 ret = crc != file_stat.crc_ ? EXIT_CHECK_CRC_ERROR : TFS_SUCCESS;//check crc
                 if (TFS_SUCCESS != ret)
                 {
-                  TBSYS_LOG(DEBUG, "crc error. %s, blockid: %u, fileid :%" PRI64_PREFIX "u, crc: %u <> %u, size: %d <> %d",
+                  TBSYS_LOG(DEBUG, "crc error. %s, blockid: %u, fileid :%" PRI64_PREFIX "u, crc: %u <> %u, size: %"PRI64_PREFIX"d <> %"PRI64_PREFIX"d",
                       fsname.get_name(), block_id, file_id, crc, file_stat.crc_, total_length, file_stat.size_);
                 }
               }
@@ -391,7 +391,7 @@ int copy_file(const char* dest_addr, const uint32_t block_id, const uint64_t fil
             ret = total_length == finfo.size_ ? TFS_SUCCESS : EXIT_SYNC_FILE_ERROR; // check file size
             if (TFS_SUCCESS != ret)
             {
-               TBSYS_LOG(ERROR, "file size error. %s, blockid: %u, fileid :%" PRI64_PREFIX "u, crc: %u <> %u, size: %d <> %d",
+               TBSYS_LOG(ERROR, "file size error. %s, blockid: %u, fileid :%" PRI64_PREFIX "u, crc: %u <> %u, size: %"PRI64_PREFIX"d <> %d",
                      fsname.get_name(), block_id, file_id, crc, finfo.crc_, total_length, finfo.size_);
             }
             else
@@ -399,7 +399,7 @@ int copy_file(const char* dest_addr, const uint32_t block_id, const uint64_t fil
               ret = crc != finfo.crc_ ? EXIT_CHECK_CRC_ERROR : TFS_SUCCESS; // check crc
               if (TFS_SUCCESS != ret)
               {
-                TBSYS_LOG(ERROR, "crc error. %s, blockid: %u, fileid :%" PRI64_PREFIX "u, crc: %u <> %u, size: %d <> %d",
+                TBSYS_LOG(ERROR, "crc error. %s, blockid: %u, fileid :%" PRI64_PREFIX "u, crc: %u <> %u, size: %"PRI64_PREFIX"d <> %d",
                         fsname.get_name(), block_id, file_id, crc, finfo.crc_, total_length, finfo.size_);
               }
             }
@@ -490,8 +490,8 @@ int remove_file(const char* dest_addr, const uint32_t block_id,
     if (TFS_SUCCESS != ret)
     {
       TBSYS_LOG(ERROR, "tfs mirror remove file %s(block_id: %u, file_id: %"PRI64_PREFIX"u) fail to dest: %s.\
-                blockid: %d, fileid: %"PRI64_PREFIX"u, action: %d, ret: %d",
-                fsname.get_name(), fsname.get_block_id(), fsname.get_block_id(), dest_addr, block_id, file_id, action, ret);
+                blockid: %u, fileid: %"PRI64_PREFIX"u, action: %d, ret: %d",
+                fsname.get_name(), fsname.get_block_id(), fsname.get_file_id(), dest_addr, block_id, file_id, action, ret);
     }
     else
     {
@@ -522,7 +522,7 @@ int do_sync(const char* dest_addr, const char* data, const int32_t len)
   }
   if (NULL == data || len != sizeof(SyncData))
   {
-    TBSYS_LOG(WARN, "SYNC_ERROR: data null or len error, %d <> %d", len, sizeof(SyncData));
+    TBSYS_LOG(WARN, "SYNC_ERROR: data null or len error, %d <> %zd", len, sizeof(SyncData));
     return TFS_ERROR;
   }
   SyncData* sf = reinterpret_cast<SyncData*>(const_cast<char*>(data));

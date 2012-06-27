@@ -32,18 +32,18 @@ int main(int argc, char* argv[])
   int32_t i;
   string server_index;
 
-  while ((i = getopt(argc, argv, "f:i:vh")) != EOF) 
+  while ((i = getopt(argc, argv, "f:i:vh")) != EOF)
   {
-    switch (i) 
+    switch (i)
     {
       case 'f':
-        conf_file = optarg; 
+        conf_file = optarg;
         break;
       case 'i':
         server_index = optarg;
         break;
       case 'v':
-        fprintf(stderr, "modify tfs file system super block tool, version: %s\n", Version::get_build_description()); 
+        fprintf(stderr, "modify tfs file system super block tool, version: %s\n", Version::get_build_description());
         return 0;
       case 'h':
       default:
@@ -67,7 +67,7 @@ int main(int argc, char* argv[])
 
   TBSYS_CONFIG.load(conf_file);
   SYSPARAM_FILESYSPARAM.initialize(server_index);
-  if ((ret = SYSPARAM_FILESYSPARAM.initialize(server_index)) != TFS_SUCCESS) 
+  if ((ret = SYSPARAM_FILESYSPARAM.initialize(server_index)) != TFS_SUCCESS)
   {
     cerr << "SysParam::loadFileSystemParam failed:" << conf_file << endl;
     return ret;
@@ -90,14 +90,16 @@ int main(int argc, char* argv[])
       , SYSPARAM_FILESYSPARAM.super_block_reserve_offset_);
   ret = super_block_impl_->read_super_blk(super_block);
   if (ret)
-  {    
+  {
     TBSYS_LOG(ERROR, "read super block error. ret: %d, desc: %s\n", ret, strerror(errno));
     return ret;
   }
   super_block.mmap_option_.first_mmap_size_ = 122880;
+  super_block.used_block_count_ = 728;
+  super_block.used_extend_block_count_ = 0;
   ret = super_block_impl_->write_super_blk(super_block);
   if (ret)
-  {    
+  {
     TBSYS_LOG(ERROR, "write super block error. ret: %d, desc: %s\n", ret, strerror(errno));
     return ret;
   }

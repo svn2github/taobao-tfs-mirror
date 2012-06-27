@@ -132,7 +132,7 @@ int GcFile::save_gc()
   }
   else                        // write fail, not clear, wait for next chance
   {
-    TBSYS_LOG(DEBUG, "gc save segment success, count: %d, raw size: %d, need gc segment count: %d, size: %"PRI64_PREFIX"d",
+    TBSYS_LOG(DEBUG, "gc save segment success, count: %zd, raw size: %d, need gc segment count: %d, size: %"PRI64_PREFIX"d",
               seg_info_.size(), size, seg_head_.count_, seg_head_.size_);
     file_op_->flush_file();
     file_pos_ += size;

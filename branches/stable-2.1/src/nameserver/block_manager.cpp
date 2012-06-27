@@ -624,7 +624,7 @@ namespace tfs
         {
           index = next % MAX_BLOCK_CHUNK_NUMS;
           RWLock::Lock lock(rwmutex_[index], WRITE_LOCKER);
-          TBSYS_LOG(DEBUG, "last_write_blocks_.size: %u, percent: %u", last_write_blocks_[index].size(), percent);
+          TBSYS_LOG(DEBUG, "last_write_blocks_.size: %zd, percent: %u", last_write_blocks_[index].size(), percent);
           if (last_write_blocks_[index].size() >= percent)
           {
             iter = last_write_blocks_[index].begin();

@@ -664,7 +664,7 @@ int TfsFile::process_success_response(const InnerFilePhase file_phase, NewClient
   else
   {
     int32_t resp_size = res_map->size();
-    TBSYS_LOG(DEBUG, "get success response. client id: %p, request size: %d, get response size: %d",
+    TBSYS_LOG(DEBUG, "get success response. client id: %p, request size: %zd, get response size: %d",
               client, processing_seg_list_.size(), resp_size);
 
     if (0 == resp_size)
@@ -1589,7 +1589,7 @@ int TfsFile::async_rsp_stat_file(common::BasePacket* rsp, const uint16_t index)
       }
       else
       {
-        TBSYS_LOG(ERROR, "tfs stat fail. blockid: %u, fileid: %"PRI64_PREFIX"u is not exist",
+        TBSYS_LOG(ERROR, "tfs stat fail. blockid: %u, fileid: %"PRI64_PREFIX"u is not exist, server: %s",
                   seg_data->seg_info_.block_id_, seg_data->seg_info_.file_id_,
                   tbsys::CNetUtil::addrToString(seg_data->get_last_read_pri_ds()).c_str());
         ret = TFS_ERROR;

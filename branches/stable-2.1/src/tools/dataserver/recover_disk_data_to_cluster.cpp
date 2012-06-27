@@ -164,7 +164,7 @@ int copy_file(LogicBlock* logic_block, const uint32_t block_id, const uint64_t f
         ret = total_length == finfo.size_ ? TFS_SUCCESS : EXIT_SYNC_FILE_ERROR; // check file size
         if (TFS_SUCCESS != ret)
         {
-         TBSYS_LOG(ERROR, "file size error. %s, blockid: %u, fileid :%" PRI64_PREFIX "u, crc: %u <> %u, size: %d <> %d",
+         TBSYS_LOG(ERROR, "file size error. %s, blockid: %u, fileid :%" PRI64_PREFIX "u, crc: %u <> %u, size: %"PRI64_PREFIX"d <> %d",
                fsname.get_name(), block_id, file_id, crc, finfo.crc_, total_length, finfo.size_);
         }
         else
@@ -172,7 +172,7 @@ int copy_file(LogicBlock* logic_block, const uint32_t block_id, const uint64_t f
           ret = crc != finfo.crc_ ? EXIT_CHECK_CRC_ERROR : TFS_SUCCESS; // check crc
           if (TFS_SUCCESS != ret)
           {
-            TBSYS_LOG(ERROR, "crc error. %s, blockid: %u, fileid :%" PRI64_PREFIX "u, crc: %u <> %u, size: %d <> %d",
+            TBSYS_LOG(ERROR, "crc error. %s, blockid: %u, fileid :%" PRI64_PREFIX "u, crc: %u <> %u, size: %"PRI64_PREFIX"d <> %d",
                     fsname.get_name(), block_id, file_id, crc, finfo.crc_, total_length, finfo.size_);
           }
         }

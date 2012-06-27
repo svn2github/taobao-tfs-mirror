@@ -15,7 +15,7 @@
  */
 
 #include <zlib.h>
-#include <Time.h> 
+#include <Time.h>
 #include "common/define.h"
 #include "common/func.h"
 #include "common/lock.h"
@@ -51,12 +51,12 @@ namespace tfs
     {
 
     }
-    
+
     RootServerHeartManager::~RootServerHeartManager()
     {
 
     }
-    
+
     int RootServerHeartManager::initialize(void)
     {
       int32_t iret = !initialize_ ? TFS_SUCCESS : TFS_ERROR;
@@ -117,7 +117,7 @@ namespace tfs
         iret = unregister(server.base_info_.id_);
         break;
       default:
-        TBSYS_LOG(ERROR, "%s keepalive, type: %hh not found", 
+        TBSYS_LOG(ERROR, "%s keepalive, type: %d not found",
             tbsys::CNetUtil::addrToString(server.base_info_.id_).c_str(), type);
         break;
       }
@@ -135,7 +135,7 @@ namespace tfs
         ROOT_SERVER_MAPS_ITER iter = servers_.find(server.base_info_.id_);
         if (servers_.end() == iter)
         {
-          std::pair<ROOT_SERVER_MAPS_ITER, bool> res = 
+          std::pair<ROOT_SERVER_MAPS_ITER, bool> res =
             servers_.insert(ROOT_SERVER_MAPS::value_type(server.base_info_.id_, server));
           pserver =  &res.first->second;
         }
@@ -147,7 +147,7 @@ namespace tfs
         pserver->lease_.lease_id_ = new_lease_id();
         pserver->lease_.lease_expired_time_ = now.toSeconds() + SYSPARAM_RTSERVER.rts_rts_lease_expired_time_ ;
         pserver->base_info_.last_update_time_ = now.toSeconds();
-        server.lease_.lease_expired_time_ = SYSPARAM_RTSERVER.rts_rts_lease_expired_time_; 
+        server.lease_.lease_expired_time_ = SYSPARAM_RTSERVER.rts_rts_lease_expired_time_;
       }
       return iret;
     }
@@ -187,7 +187,7 @@ namespace tfs
             {
               pserver->base_info_.last_update_time_ = now.toSeconds();
               pserver->base_info_.status_ = server.base_info_.status_;
-              server.lease_.lease_expired_time_ = SYSPARAM_RTSERVER.rts_rts_lease_expired_time_; 
+              server.lease_.lease_expired_time_ = SYSPARAM_RTSERVER.rts_rts_lease_expired_time_;
             }
           }
         }
@@ -223,7 +223,7 @@ namespace tfs
         {
           TBSYS_LOG(DEBUG, "%s lease expired: %"PRI64_PREFIX"d, now: %"PRI64_PREFIX"d",
             tbsys::CNetUtil::addrToString(iter->second.base_info_.id_).c_str(),
-            iter->second.lease_.lease_expired_time_, now.toSeconds());
+            iter->second.lease_.lease_expired_time_, (int64_t)now.toSeconds());
           servers_.erase(iter++);
         }
         else
@@ -255,15 +255,15 @@ namespace tfs
         }
         else
         {
-          iret = keepalive(keepalive_type_, wait_time, lease_expired, rgi, now); 
+          iret = keepalive(keepalive_type_, wait_time, lease_expired, rgi, now);
           tbutil::Monitor<tbutil::Mutex>::Lock lock(monitor_);
           monitor_.timedWait(tbutil::Time::seconds(wait_time));
         }
       }
-      
+
       keepalive_type_ = RTS_RS_KEEPALIVE_TYPE_LOGOUT;
       RsRuntimeGlobalInformation& rgi = RsRuntimeGlobalInformation::instance();
-      iret = keepalive(keepalive_type_, wait_time, lease_expired, rgi, now); 
+      iret = keepalive(keepalive_type_, wait_time, lease_expired, rgi, now);
     }
 
     int RootServerHeartManager::rs_role_establish_helper(common::RsRuntimeGlobalInformation& rgi, const int64_t now)
@@ -308,7 +308,7 @@ namespace tfs
           common::RsRuntimeGlobalInformation& rgi, const tbutil::Time& now)
     {
       int32_t iret = TFS_SUCCESS;
-      bool has_valid_lease = ((now < lease_expired));  
+      bool has_valid_lease = ((now < lease_expired));
       if (!has_valid_lease)//relogin
         type = RTS_RS_KEEPALIVE_TYPE_LOGIN;
 
@@ -381,7 +381,7 @@ namespace tfs
           {
             uint64_t dest_length = common::MAX_BUCKET_DATA_LENGTH;
             unsigned char* dest = new unsigned char[common::MAX_BUCKET_DATA_LENGTH];
-            iret = uncompress(dest, &dest_length, (unsigned char*)reply->get_table(), reply->get_table_length()); 
+            iret = uncompress(dest, &dest_length, (unsigned char*)reply->get_table(), reply->get_table_length());
             if (Z_OK != iret)
             {
               TBSYS_LOG(ERROR, "uncompress error: ret : %d, version: %"PRI64_PREFIX"d", iret, reply->get_version());
@@ -389,7 +389,7 @@ namespace tfs
             }
             else
             {
-              iret = manager_.update_active_tables(dest, dest_length, reply->get_version());            
+              iret = manager_.update_active_tables(dest, dest_length, reply->get_version());
               if (TFS_SUCCESS != iret)
               {
                 TBSYS_LOG(ERROR, "update_active_tables error: %d", iret);

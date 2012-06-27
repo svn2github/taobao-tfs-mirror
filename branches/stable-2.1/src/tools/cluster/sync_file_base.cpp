@@ -101,7 +101,7 @@ int SyncFileBase::do_action(const string& file_name, const SyncAction& sync_acti
 
 void SyncFileBase::fileinfo_to_filestat(const FileInfo& file_info, TfsFileStat& buf)
 {
-  buf.file_id_ = file_info.id_; 
+  buf.file_id_ = file_info.id_;
   buf.offset_ = file_info.offset_;
   buf.size_ = file_info.size_;
   buf.usize_ = file_info.usize_;
@@ -146,7 +146,7 @@ int SyncFileBase::cmp_file_info_ex(const string& file_name, const TfsFileStat& s
     TBSYS_LOG(WARN, "get dest file info failed. filename: %s, ret: %d", file_name.c_str(), ret);
   }
 
-  TBSYS_LOG(INFO, "file(%s): flag--(%d -> %d), crc--(%d -> %d), size--(%d -> %d)",
+  TBSYS_LOG(INFO, "file(%s): flag--(%d -> %d), crc--(%u -> %u), size--(%"PRI64_PREFIX"d -> %"PRI64_PREFIX"d)",
       file_name.c_str(), source_buf.flag_, ((ret == TFS_SUCCESS)? dest_buf.flag_:-1), source_buf.crc_, dest_buf.crc_, source_buf.size_, dest_buf.size_);
 
   // 1. dest file exists and is new file, just skip.

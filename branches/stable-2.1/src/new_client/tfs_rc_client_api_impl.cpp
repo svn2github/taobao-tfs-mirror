@@ -82,7 +82,7 @@ namespace tfs
           }
           else
           {
-            TBSYS_LOG(WARN, "invalid ns_cache_info(size: %d), remote cache will not initialize", ns_cache_info.size());
+            TBSYS_LOG(WARN, "invalid ns_cache_info(size: %zd), remote cache will not initialize", ns_cache_info.size());
             TfsClientImpl::Instance()->set_use_remote_cache(false);
           }
 #endif
@@ -238,7 +238,7 @@ namespace tfs
           }
           else
           {
-            TBSYS_LOG(WARN, "invalid ns_cache_info(size: %d), remote cache will not initialize", ns_cache_info.size());
+            TBSYS_LOG(WARN, "invalid ns_cache_info(size: %zd), remote cache will not initialize", ns_cache_info.size());
             TfsClientImpl::Instance()->set_use_remote_cache(false);
           }
 #endif
@@ -685,7 +685,7 @@ namespace tfs
             ret = TfsClientImpl::Instance()->fstat(raw_tfs_fd, buf, fmode);
             if (TFS_SUCCESS != ret)
             {
-              TBSYS_LOG(WARN, "fstat file from ns %s error ret is %"PRI64_PREFIX"d",
+              TBSYS_LOG(WARN, "fstat file from ns %s error ret is %d",
                   ns_addr.c_str(), ret);
               if (raw_tfs_fd >= 0)
               {
@@ -1428,7 +1428,7 @@ namespace tfs
         int cluster_id = name_meta_client_->get_cluster_id(app_id_, uid, file_path);
         if (-1 == cluster_id)
         {
-          TBSYS_LOG(DEBUG, "file not exsit, file_path: ", file_path);
+          TBSYS_LOG(DEBUG, "file not exsit, file_path: %s", file_path);
           ret = EXIT_TARGET_EXIST_ERROR;
         }
         else

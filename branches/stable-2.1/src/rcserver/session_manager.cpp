@@ -159,7 +159,7 @@ namespace tfs
       }
       else
       {
-        TBSYS_LOG(ERROR, "call ResourceManager::login failed, app_key: %s, session_ip: %d, ret: %d",
+        TBSYS_LOG(ERROR, "call ResourceManager::login failed, app_key: %s, session_ip: %"PRI64_PREFIX"u, ret: %d",
             app_key.c_str(), session_ip, ret);
       }
       return ret;
@@ -216,7 +216,7 @@ namespace tfs
         if ((ret = update_session_info(app_id, session_id, keep_alive_info, LOGOUT_FLAG)) != TFS_SUCCESS)
         {
           TBSYS_LOG(ERROR, "call SessionManager::update_session_info failed, this will not be happen!"
-              " session_id: %s, modify time: %"PRI64_PREFIX"d, update_flag, ret: %d",
+              " session_id: %s, modify time: %"PRI64_PREFIX"d, update_flag: %d, ret: %d",
               session_id.c_str(), keep_alive_info.s_base_info_.modify_time_, LOGOUT_FLAG, ret);
         }
       }
@@ -380,7 +380,7 @@ namespace tfs
         if (TFS_SUCCESS != ret)
         {
           //add log
-          TBSYS_LOG(ERROR, "update info to db fail. session info size: %u, session stat size: %u, app stat size: %u, ret: %d",
+          TBSYS_LOG(ERROR, "update info to db fail. session info size: %zd, session stat size: %zd, app stat size: %zd, ret: %d",
               v_session_infos.size(), m_session_stats.size(), m_app_stat.size(), ret);
           //roll back
           rollback(tmp_sessions);

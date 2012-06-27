@@ -510,7 +510,7 @@ namespace tfs
       }
       time_t diff_sec = next - current;
       next_report_block_time_ = now + diff_sec;
-      TBSYS_LOG(DEBUG, "%s next: %u, diff: %u, now: %u, hour: %d",
+      TBSYS_LOG(DEBUG, "%s next: %"PRI64_PREFIX"d, diff: %"PRI64_PREFIX"d, now: %"PRI64_PREFIX"d, hour: %d",
         tbsys::CNetUtil::addrToString(id()).c_str(), next_report_block_time_, diff_sec, now, hour);
     }
 

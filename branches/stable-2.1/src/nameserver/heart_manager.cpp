@@ -208,9 +208,9 @@ namespace tfs
         result_msg->set_status(HEART_MESSAGE_OK);
         block_nums = message->get_blocks().size();
         expires_block_nums = result_msg->get_blocks().size();
-        tbutil::Time end = tbutil::Time::now() - begin;
-        TBSYS_LOG(INFO, "dataserver: %s report block consume times: %"PRI64_PREFIX"d(us)",
-          CNetUtil::addrToString(server).c_str(), end.toMicroSeconds());
+        time_t end = (tbutil::Time::now() - begin).toMicroSeconds();
+        TBSYS_LOG(INFO, "dataserver: %s report block consume times: %"PRI64_PREFIX"u(us)",
+          CNetUtil::addrToString(server).c_str(), end);
 			  ret = message->reply(result_msg);
       }
       TBSYS_LOG(INFO, "dataserver: %s report block %s, ret: %d, blocks: %d, expires: %d",

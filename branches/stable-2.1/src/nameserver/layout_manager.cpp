@@ -165,7 +165,7 @@ namespace tfs
         //是否可以考虑其他方式，例如：做一次for将新加入，删除的，不变化的先找出来,然后再建立关系
         //这里可以放到后面来优化
         server->clear(*this, now);
-        TBSYS_LOG(DEBUG, "%s update relation, block size: %u", CNetUtil::addrToString(server->id()).c_str(), blocks.size());
+        TBSYS_LOG(DEBUG, "%s update relation, block size: %zd", CNetUtil::addrToString(server->id()).c_str(), blocks.size());
         ret = get_block_manager().update_relation(server, blocks, now);
         TBSYS_LOG(DEBUG, "%s update relation end", CNetUtil::addrToString(server->id()).c_str());
       }
@@ -696,7 +696,7 @@ namespace tfs
             // find move src and dest ds list
             get_server_manager().move_split_servers(source, targets, percent);
 
-            TBSYS_LOG(INFO, "need: %"PRI64_PREFIX"d, source : %Zd, target: %Zd, percent: %e",
+            TBSYS_LOG(INFO, "need: %"PRI64_PREFIX"d, source : %zd, target: %d, percent: %e",
                 need, source.size(), targets.size(), percent);
 
             const int32_t MAX_RETRY_COUNT = 3;

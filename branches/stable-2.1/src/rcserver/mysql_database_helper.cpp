@@ -875,7 +875,7 @@ error:
           mysql_free_result(mysql_ret);
           if (ret)
           {
-            TBSYS_LOG(ERROR, "error is %s sql is ",  mysql_error(&mysql_.mysql), sql);
+            TBSYS_LOG(ERROR, "error is %s sql is %s",  mysql_error(&mysql_.mysql), sql);
             close();
             ret = TFS_ERROR;
           }

@@ -48,7 +48,7 @@ int get_block_ds_list(const uint64_t server_id, const uint32_t block_id, VUINT64
   else if (0 == server_id)
   {
     ret = TFS_ERROR;
-    TBSYS_LOG(ERROR, "server is is invalid: "PRI64_PREFIX"u", server_id);
+    TBSYS_LOG(ERROR, "server is is invalid: %"PRI64_PREFIX"u", server_id);
   }
   else
   {
@@ -93,7 +93,7 @@ int repair_block_info(const uint64_t server_id, const uint32_t block_id)
   else if (0 == server_id)
   {
     ret = TFS_ERROR;
-    TBSYS_LOG(ERROR, "server is is invalid: "PRI64_PREFIX"u", server_id);
+    TBSYS_LOG(ERROR, "server is is invalid: %"PRI64_PREFIX"u", server_id);
   }
   else
   {
