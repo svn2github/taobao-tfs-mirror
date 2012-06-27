@@ -26,6 +26,8 @@ AC_CHECK_LIB([m], [main])
 AC_CHECK_LIB([pthread], [main])
 # FIXME: Replace `main' with a function in `-lrt':
 AC_CHECK_LIB([rt], [main])
+# FIXME: Replace `main' with a function in `-ltcmalloc':
+AC_CHECK_LIB([tcmalloc], [main])
 
 AC_CHECK_LIB([mysqlclient], [main])
 
