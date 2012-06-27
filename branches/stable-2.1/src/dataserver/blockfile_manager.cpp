@@ -665,7 +665,7 @@ namespace tfs
       // use super block recorded count, just log confict
       if (super_block_.used_block_count_ != static_cast<int32_t> (logic_blocks_.size()))
       {
-        TBSYS_LOG(WARN, "conflict! used main block: %u, super main block: %u", logic_blocks_.size(),
+        TBSYS_LOG(WARN, "conflict! used main block: %zd, super main block: %u", logic_blocks_.size(),
                   super_block_.used_block_count_);
       }
 

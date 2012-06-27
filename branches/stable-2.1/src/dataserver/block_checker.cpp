@@ -214,7 +214,7 @@ namespace tfs
         TBSYS_LOG(ERROR, "list logic block fail ret: %d", ret);
       }
 
-      TBSYS_LOG(INFO, "BlockChecker get logic block size: %u", logic_blocks.size());
+      TBSYS_LOG(INFO, "BlockChecker get logic block size: %zd", logic_blocks.size());
       int32_t expire_block_nums = 0;
       time_t mark = time(NULL) - SYSPARAM_DATASERVER.expire_check_block_time_;
       int64_t start_time = Func::curr_time();

@@ -300,7 +300,7 @@ namespace tfs
     {
       if (NULL == data || len != sizeof(SyncData))
       {
-        TBSYS_LOG(WARN, "SYNC_ERROR: data null or len error, %d <> %d", len, sizeof(SyncData));
+        TBSYS_LOG(WARN, "SYNC_ERROR: data null or len error, %d <> %zd", len, sizeof(SyncData));
         return TFS_ERROR;
       }
       SyncData* sf = reinterpret_cast<SyncData*>(const_cast<char*>(data));

@@ -619,7 +619,7 @@ namespace tfs
       }
       if (nbytes < 0)
       {
-        TBSYS_LOG(ERROR, "blockid: %u, batch read data offset: %" PRI64_PREFIX "d, block current offset: %d",
+        TBSYS_LOG(ERROR, "blockid: %u, batch read data offset: %d, block current offset: %d",
             logic_block_id_, offset, index_handle_->get_block_data_offset());
         return EXIT_READ_OFFSET_ERROR;
       }
@@ -628,7 +628,7 @@ namespace tfs
       if (TFS_SUCCESS != ret)
       {
         TBSYS_LOG(ERROR,
-            "blockid: %u read data batch fail, size: %" PRI64_PREFIX "d, offset: %" PRI64_PREFIX "d, ret: %d",
+            "blockid: %u read data batch fail, size: %d, offset: %d, ret: %d",
             logic_block_id_, nbytes, offset, ret);
         return ret;
       }
@@ -686,7 +686,7 @@ namespace tfs
       {
         return ret;
       }
-      TBSYS_LOG(DEBUG, "batch write meta list, blockid: %u, meta size: %d", logic_block_id_, meta_list->size());
+      TBSYS_LOG(DEBUG, "batch write meta list, blockid: %u, meta size: %zd", logic_block_id_, meta_list->size());
       // 3. write file meta info
       ret = index_handle_->batch_override_segment_meta(*meta_list);
       if (TFS_SUCCESS != ret)

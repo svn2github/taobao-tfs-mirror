@@ -863,7 +863,7 @@ namespace tfs
 
               bool found_meta_info_should_be_updated = false;
               std::vector<MetaInfo>::iterator v_meta_info_it = tmp_v_meta_info.begin();
-              TBSYS_LOG(DEBUG, "tmp_v_meta_info.size() = %d", tmp_v_meta_info.size());
+              TBSYS_LOG(DEBUG, "tmp_v_meta_info.size() = %zd", tmp_v_meta_info.size());
               for (; v_meta_info_it != tmp_v_meta_info.end(); v_meta_info_it++)
               {
                 v_meta_info_it->frag_info_.dump();
@@ -1351,7 +1351,7 @@ namespace tfs
     {
       while(frag_meta_begin != frag_meta_end)
       {
-        TBSYS_LOG(DEBUG, "last offset = %"PRI64_PREFIX"d %"PRI64_PREFIX"d %"PRI64_PREFIX"d",
+        TBSYS_LOG(DEBUG, "last offset = %"PRI64_PREFIX"d %"PRI64_PREFIX"d %d",
             last_offset, frag_meta_begin->offset_, frag_meta_begin->size_);
         if (-1 == frag_meta_begin->offset_) // new metainfo
         {
@@ -1459,7 +1459,7 @@ namespace tfs
 
       if ((file_path[0] != '/') || (strlen(file_path) > (MAX_FILE_PATH_LEN -1)))
       {
-        TBSYS_LOG(WARN, "file_path(%s) is invalid, length(%d)", file_path, strlen(file_path));
+        TBSYS_LOG(WARN, "file_path(%s) is invalid, length(%zd)", file_path, strlen(file_path));
       }
       else
       {
@@ -1522,7 +1522,7 @@ namespace tfs
             > SOFT_MAX_FRAG_META_COUNT &&
             !frag_info.had_been_split_)
         {
-          TBSYS_LOG(ERROR, "frag_meta count %d, should be split",
+          TBSYS_LOG(ERROR, "frag_meta count %zd, should be split",
               frag_info.v_frag_meta_.size());
           ret = TFS_ERROR;
         }
@@ -1532,7 +1532,7 @@ namespace tfs
         int64_t last_offset = -1;
         for (size_t i = 0; i < frag_info.v_frag_meta_.size(); i++)
         {
-          TBSYS_LOG(DEBUG, "frag info %d off_set %"PRI64_PREFIX"d size %"PRI64_PREFIX"d",
+          TBSYS_LOG(DEBUG, "frag info %zd off_set %"PRI64_PREFIX"d size %d",
                 i, frag_info.v_frag_meta_[i].offset_, frag_info.v_frag_meta_[i].size_);
           if (frag_info.v_frag_meta_[i].offset_ < last_offset)
           {

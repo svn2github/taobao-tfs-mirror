@@ -399,7 +399,7 @@ namespace tfs
       ret = dest->batch_write_meta(&dest_blk, &dest_metas);
       if (TFS_SUCCESS != ret)
       {
-        TBSYS_LOG(ERROR, "compact write segment meta failed. blockid: %u, meta size %d\n", dest->get_logic_block_id(),
+        TBSYS_LOG(ERROR, "compact write segment meta failed. blockid: %u, meta size %zd\n", dest->get_logic_block_id(),
             dest_metas.size());
         return ret;
       }

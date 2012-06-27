@@ -96,7 +96,7 @@ namespace tfs
          }
       }
       TIMER_END();
-      TBSYS_LOG(INFO, "check all blocks. count: %u, cost: %u\n",
+      TBSYS_LOG(INFO, "check all blocks. count: %zd, cost: %"PRI64_PREFIX"d\n",
           should_check_blocks.size(), TIMER_DURATION());
 
       return TFS_SUCCESS;

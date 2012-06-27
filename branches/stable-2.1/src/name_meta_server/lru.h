@@ -96,7 +96,7 @@ namespace tfs
           (*sub_iter->second)->inc_visit_count();
           (*sub_iter->second)->inc_ref();
           value = (*sub_iter->second);
-          TBSYS_LOG(DEBUG, "ref_count_ = %l"PRI64_PREFIX"d", (*sub_iter->second)->ref_count_);
+          TBSYS_LOG(DEBUG, "ref_count_ = %"PRI64_PREFIX"d", (*sub_iter->second)->ref_count_);
         }
       }
       return value;

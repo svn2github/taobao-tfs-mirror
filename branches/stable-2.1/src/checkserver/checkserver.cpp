@@ -104,7 +104,7 @@ namespace tfs
             TBSYS_LOG(DEBUG, "id: %u, version: %d, count: %u, size: %u",
                 m_info.block_id_, m_info.version_, m_info.file_count_, m_info.total_size_);
             check_server_->add_m_sync_list(block_list_[i]);
-            TBSYS_LOG(INFO, "block %u NOT_IN_SLAVE, sync to slave", block_list_[i]);
+            TBSYS_LOG(INFO, "block %"PRI64_PREFIX"d NOT_IN_SLAVE, sync to slave", block_list_[i]);
           }
         }
         else if (TFS_SUCCESS == s_ret)
@@ -117,13 +117,13 @@ namespace tfs
             TBSYS_LOG(DEBUG, "id: %u, version: %d, count: %u, size: %u",
                 s_info.block_id_, s_info.version_, s_info.file_count_, s_info.total_size_);
             check_server_->add_s_sync_list(block_list_[i]);
-            TBSYS_LOG(INFO, "block %u NOT_IN_MASTER, sync to master", block_list_[i]);
+            TBSYS_LOG(INFO, "block %"PRI64_PREFIX"d NOT_IN_MASTER, sync to master", block_list_[i]);
           }
         }
         else
         {
           // or block not in both clusters
-          TBSYS_LOG(WARN, "block %u NOT_IN_CLUSTER", block_list_[i]);
+          TBSYS_LOG(WARN, "block %"PRI64_PREFIX"d NOT_IN_CLUSTER", block_list_[i]);
         }
       }
     }
@@ -568,17 +568,17 @@ namespace tfs
 
       if (ret > 0)
       {
-        TBSYS_LOG(INFO, "block %u DIFF, sync to slave");
+        TBSYS_LOG(INFO, "block %u DIFF, sync to slave", block_id);
         add_m_sync_list(block_id);
       }
       else if (ret < 0)
       {
-        TBSYS_LOG(INFO, "block %u DIFF, sync to master");
+        TBSYS_LOG(INFO, "block %u DIFF, sync to master", block_id);
         add_s_sync_list(block_id);
       }
       else
       {
-        TBSYS_LOG(INFO, "block %u SAME");
+        TBSYS_LOG(INFO, "block %u SAME", block_id);
       }
     }
 

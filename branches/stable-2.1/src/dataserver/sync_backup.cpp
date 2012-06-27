@@ -237,7 +237,7 @@ namespace tfs
                   ret = total_length == file_stat.size_ ? TFS_SUCCESS : EXIT_SYNC_FILE_ERROR;//check file size
                   if (TFS_SUCCESS != ret)
                   {
-                    TBSYS_LOG(ERROR, "file size error. %s, blockid: %u, fileid :%" PRI64_PREFIX "u, size: %d <> %d",
+                    TBSYS_LOG(ERROR, "file size error. %s, blockid: %u, fileid :%" PRI64_PREFIX "u, crc: %u <> %u, size: %"PRI64_PREFIX"d <> %"PRI64_PREFIX"d",
                         fsname.get_name(), block_id, file_id, crc, file_stat.crc_, total_length, file_stat.size_);
                   }
                   else
@@ -245,7 +245,7 @@ namespace tfs
                     ret = crc != file_stat.crc_ ? EXIT_CHECK_CRC_ERROR : TFS_SUCCESS;//check crc
                     if (TFS_SUCCESS != ret)
                     {
-                      TBSYS_LOG(ERROR, "crc error. %s, blockid: %u, fileid :%" PRI64_PREFIX "u, crc: %u <> %u, size: %d <> %d",
+                      TBSYS_LOG(ERROR, "crc error. %s, blockid: %u, fileid :%" PRI64_PREFIX "u, crc: %u <> %u, size: %"PRI64_PREFIX"d <> %"PRI64_PREFIX"d",
                           fsname.get_name(), block_id, file_id, crc, file_stat.crc_, total_length, file_stat.size_);
                     }
                   }
@@ -408,7 +408,7 @@ namespace tfs
                 ret = total_length == finfo.size_ ? TFS_SUCCESS : EXIT_SYNC_FILE_ERROR; // check file size
                 if (TFS_SUCCESS != ret)
                 {
-                   TBSYS_LOG(ERROR, "file size error. %s, blockid: %u, fileid :%" PRI64_PREFIX "u, crc: %u <> %u, size: %d <> %d",
+                   TBSYS_LOG(ERROR, "file size error. %s, blockid: %u, fileid :%" PRI64_PREFIX "u, crc: %u <> %u, size: %"PRI64_PREFIX"d <> %d",
                          fsname.get_name(), block_id, file_id, crc, finfo.crc_, total_length, finfo.size_);
                 }
                 else
@@ -416,7 +416,7 @@ namespace tfs
                   ret = crc != finfo.crc_ ? EXIT_CHECK_CRC_ERROR : TFS_SUCCESS; // check crc
                   if (TFS_SUCCESS != ret)
                   {
-                    TBSYS_LOG(ERROR, "crc error. %s, blockid: %u, fileid :%" PRI64_PREFIX "u, crc: %u <> %u, size: %d <> %d",
+                    TBSYS_LOG(ERROR, "crc error. %s, blockid: %u, fileid :%" PRI64_PREFIX "u, crc: %u <> %u, size: %"PRI64_PREFIX"d <> %d",
                             fsname.get_name(), block_id, file_id, crc, finfo.crc_, total_length, finfo.size_);
                   }
                 }
@@ -505,8 +505,8 @@ namespace tfs
         if (TFS_SUCCESS != ret)
         {
           TBSYS_LOG(ERROR, "tfs mirror remove file %s(block_id: %u, file_id: %"PRI64_PREFIX"u) fail to dest: %s.\
-                    blockid: %d, fileid: %"PRI64_PREFIX"u, action: %d, ret: %d",
-                    fsname.get_name(), fsname.get_block_id(), fsname.get_block_id(), dest_addr_, block_id, file_id, action, ret);
+                    blockid: %u, fileid: %"PRI64_PREFIX"u, action: %d, ret: %d",
+                    fsname.get_name(), fsname.get_block_id(), fsname.get_file_id(), dest_addr_, block_id, file_id, action, ret);
         }
         else
         {
