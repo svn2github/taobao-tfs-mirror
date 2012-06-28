@@ -80,6 +80,13 @@ namespace tfs
       BLOCK_IN_REPLICATE_QUEUE_YES = 1
     };
 
+    enum BlockCompareServerFlag
+    {
+      BLOCK_COMPARE_SERVER_BY_ID = 0,
+      BLOCK_COMPARE_SERVER_BY_POINTER = 1,
+      BLOCK_COMPARE_SERVER_BY_ID_POINTER = 2
+    };
+
     class LayoutManager;
     class GCObject
     {

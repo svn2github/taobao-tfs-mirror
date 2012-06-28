@@ -832,7 +832,7 @@ namespace tfs
       CLEAR_SYSTEM_TABLE_FLAG_DELETE_QUEUE  = 1 << 3
     }ClearSystemTableFlag;
 
-    extern const char* dynamic_parameter_str[29];
+    extern const char* dynamic_parameter_str[30];
 
     // defined type typedef
     typedef std::vector<BlockInfo> BLOCK_INFO_LIST;

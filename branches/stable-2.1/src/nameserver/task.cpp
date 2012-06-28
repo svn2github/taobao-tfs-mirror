@@ -362,7 +362,7 @@ namespace tfs
           BlockCollect* block = manager_.get_manager().get_block_manager().get(value.block_id_);
           if((server != NULL) && (block != NULL))
           {
-            if (!manager_.get_manager().relieve_relation(block, server, now))
+            if (!manager_.get_manager().relieve_relation(block, server, now, BLOCK_COMPARE_SERVER_BY_ID))
             {
               TBSYS_LOG(INFO, "we'll get failed when relive relation between block: %u and server: %s",
                   value.block_id_, tbsys::CNetUtil::addrToString((*iter)).c_str());
@@ -527,8 +527,8 @@ namespace tfs
               if (blocks.is_move_ == REPLICATE_BLOCK_MOVE_FLAG_YES)
               {
                 bool result = false;
-                if ((NULL != source) && block->exist(source))
-                  result = manager_.get_manager().relieve_relation(block, source, now);
+                if ((NULL != source) && block->exist(source, false))
+                  result = manager_.get_manager().relieve_relation(block, source, now,BLOCK_COMPARE_SERVER_BY_ID);
                 manager_.get_manager().build_relation(block, dest, now);
                 ret = block->get_servers_size() > 0 && result ?  STATUS_MESSAGE_REMOVE : STATUS_MESSAGE_OK;
                 if ((block->get_servers_size() <= 0) && (NULL != source))
@@ -593,7 +593,7 @@ namespace tfs
         std::vector<ServerCollect*>::iterator iter = runer_.begin();
         for (; iter != runer_.end(); ++iter)
         {
-          manager_.get_manager().relieve_relation(block, (*iter), now);
+          manager_.get_manager().relieve_relation(block, (*iter), now, BLOCK_COMPARE_SERVER_BY_ID);
           ret = manager_.get_manager().get_task_manager().remove_block_from_dataserver((*iter)->id(), block_id_, seqno_, now);
           TBSYS_LOG(INFO, "send remove block: %u command on server : %s %s",
             block_id_, tbsys::CNetUtil::addrToString((*iter)->id()).c_str(), TFS_SUCCESS == ret ? "successful" : "failed");

@@ -100,6 +100,8 @@ namespace tfs
 
 #define CONF_DUMP_STAT_INFO_INTERVAL                  "dump_stat_info_interval"
 
+#define CONF_CHOOSE_TARGET_SERVER_RANDOM_MAX_NUM      "choose_target_server_random_max_num"
+
   //dataserver
 #define CONF_OBJECT_CLEAR_MAX_TIME                    "object_clear_max_time"
 #define CONF_DATA_THREAD_COUNT                        "data_thread_count"

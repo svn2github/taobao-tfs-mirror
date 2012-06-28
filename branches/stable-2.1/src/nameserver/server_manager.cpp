@@ -797,7 +797,7 @@ namespace tfs
           {
             pblock = *helper.at(i);
             assert(NULL != pblock);
-            manager_.get_block_manager().relieve_relation(pblock, server, now);
+            manager_.get_block_manager().relieve_relation(pblock, server, now,BLOCK_COMPARE_SERVER_BY_POINTER);//pointer
           }
           if (!helper.empty())
           {

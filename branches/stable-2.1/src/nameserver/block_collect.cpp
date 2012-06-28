@@ -95,22 +95,42 @@ namespace tfs
       return ret;
     }
 
-    bool BlockCollect::remove(const ServerCollect* server, const time_t now)
+    bool BlockCollect::remove(const ServerCollect* server, const time_t now, const int8_t flag)
     {
       update_last_time(now);
-      ServerCollect** result = get_(server);
-      if ((NULL != result) && (NULL != server))
-        *result = NULL;
+      if (NULL != server)
+      {
+        bool ret = false;
+        ServerCollect* current = NULL;
+        bool comp_id_result = false;
+        bool comp_pointer_result = false;
+        for (int8_t i = 0; i < SYSPARAM_NAMESERVER.max_replication_; ++i)
+        {
+          current = servers_[i];
+          comp_id_result = ((NULL != current) && (current->id() == server->id()));
+          comp_pointer_result = (current == server);
+          if (BLOCK_COMPARE_SERVER_BY_ID == flag)
+            ret = comp_id_result;
+          else if (BLOCK_COMPARE_SERVER_BY_POINTER == flag)
+            ret = comp_pointer_result;
+          else if (BLOCK_COMPARE_SERVER_BY_ID_POINTER == flag)
+            ret = (comp_id_result && comp_pointer_result);
+          else
+            ret = false;
+          if (NULL != current && ret)
+            servers_[i] = NULL;
+        }
+      }
       return true;
     }
 
-    bool BlockCollect::exist(const ServerCollect* const server) const
+    bool BlockCollect::exist(const ServerCollect* const server, const bool pointer) const
     {
       bool ret = NULL != server;
       if (ret)
       {
-        ServerCollect** result = get_(server);
-        ret = ((NULL != result) && (NULL != *result) && ((*result)->id() == server->id()));
+        ServerCollect** result = get_(server, pointer);
+        ret = ((NULL != result) && (NULL != *result));
       }
       return ret;
     }
@@ -217,7 +237,7 @@ namespace tfs
                 }
                 else
                 {
-                  remove(result, now);//从当前拥有列表中删除
+                  remove(result, now, BLOCK_COMPARE_SERVER_BY_ID_POINTER);//从当前拥有列表中删除
                   removes.push_back(result);//解除与dataserver的关系
                   if (role == NS_ROLE_MASTER)
                     other_expires.push_back(result);
@@ -422,7 +442,7 @@ namespace tfs
       {
         server = servers_[i];
         if (NULL != server)
-          manager.relieve_relation(this, server, now);
+          manager.relieve_relation(this, server, now, BLOCK_COMPARE_SERVER_BY_ID);
       }
       return true;
     }

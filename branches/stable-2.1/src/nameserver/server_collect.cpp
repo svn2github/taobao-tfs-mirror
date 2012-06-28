@@ -207,7 +207,7 @@ namespace tfs
           //这里先在这里简单搞下在block解除关系的时候，如果检测ID和指针都一致时才解除关系
           pblock = *helper.at(i);
           assert(NULL != pblock);
-          manager.get_block_manager().relieve_relation(pblock, this, now);
+          manager.get_block_manager().relieve_relation(pblock, this, now, BLOCK_COMPARE_SERVER_BY_POINTER);
         }
         tbsys::gDeleteA(blocks);
       }

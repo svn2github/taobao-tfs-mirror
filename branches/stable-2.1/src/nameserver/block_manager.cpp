@@ -152,9 +152,9 @@ namespace tfs
         {
           get_mutex_(output.first).rdlock();
           int8_t size = block->get_servers_size();
-          ret = size >= MIN_REPLICATE && !block->exist(server);
+          ret = size >= MIN_REPLICATE && !block->exist(server, false);
           get_mutex_(output.first).unlock();
-          if (!ret && size < MIN_REPLICATE)
+          if (!ret && size < MIN_REPLICATE && size > 0)
             push_to_delete_queue(output.first, output.second);
         }
       }
@@ -524,10 +524,10 @@ namespace tfs
       return ret;
     }
 
-    bool BlockManager::relieve_relation(BlockCollect* block, const ServerCollect* server, const time_t now)
+    bool BlockManager::relieve_relation(BlockCollect* block, const ServerCollect* server, const time_t now, const int8_t flag)
     {
       RWLock::Lock lock(get_mutex_(block->id()), WRITE_LOCKER);
-      return ((NULL != block) && (NULL != server)) ? block->remove(server, now) : false;
+      return ((NULL != block) && (NULL != server)) ? block->remove(server, now, flag) : false;
     }
 
     bool BlockManager::need_replicate(const BlockCollect* block) const

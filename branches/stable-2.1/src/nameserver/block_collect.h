@@ -52,8 +52,8 @@ namespace tfs
       virtual ~BlockCollect();
 
       bool add(bool& writable, bool& master, const ServerCollect* server);
-      bool remove(const ServerCollect* server, const time_t now);
-      bool exist(const ServerCollect* const server) const;
+      bool remove(const ServerCollect* server, const time_t now, const int8_t flag);
+      bool exist(const ServerCollect* const server, const bool pointer /*= true*/) const;
       bool is_master(const ServerCollect* const server) const;
       bool is_writable() const;
       bool is_creating() const;

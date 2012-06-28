@@ -82,7 +82,7 @@ namespace tfs
 
       int update_relation(ServerCollect* server,const std::set<common::BlockInfo>& blocks, const time_t now);
       bool build_relation(BlockCollect* block, ServerCollect* server, const time_t now, const bool set = false);
-      bool relieve_relation(BlockCollect* block, ServerCollect* server, const time_t now);
+      bool relieve_relation(BlockCollect* block, ServerCollect* server, const time_t now, const int8_t flag);
 
       int update_block_info(const common::BlockInfo& info, const uint64_t server, const time_t now, const bool addnew);
 

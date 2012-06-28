@@ -453,7 +453,7 @@ namespace tfs
               std::vector<ServerCollect*>::const_iterator iter = runer.begin();
               for (; iter != runer.end(); ++iter)
               {
-                manager_.relieve_relation(block, (*iter), now);
+                manager_.relieve_relation(block, (*iter), now,BLOCK_COMPARE_SERVER_BY_ID);
                 manager_.get_task_manager().remove_block_from_dataserver((*iter)->id(), info.value3_, 0, now);
               }
               manager_.get_block_manager().remove(pobject, info.value3_);
@@ -473,7 +473,7 @@ namespace tfs
             ServerCollect* server = manager_.get_server_manager().get(info.value1_);
             ret = NULL != server ? TFS_SUCCESS : EIXT_SERVER_OBJECT_NOT_FOUND;
             if (TFS_SUCCESS == ret)
-              manager_.relieve_relation(block, server, now);
+              manager_.relieve_relation(block, server, now, BLOCK_COMPARE_SERVER_BY_ID);
             if (block->get_servers_size() <= 0)
               manager_.get_block_manager().remove(pobject, info.value3_);
           }

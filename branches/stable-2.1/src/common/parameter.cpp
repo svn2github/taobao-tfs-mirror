@@ -56,7 +56,6 @@ namespace tfs
 
     int NameServerParameter::initialize(void)
     {
-      dispatch_oplog_ = 0;
       discard_max_count_ = 0;
       report_block_time_interval_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_REPORT_BLOCK_TIME_INTERVAL, 1);
       report_block_time_interval_min_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_REPORT_BLOCK_TIME_INTERVAL_MIN, 0);
@@ -181,6 +180,8 @@ namespace tfs
       const char* report_hour_str = TBSYS_CONFIG.getString(CONF_SN_NAMESERVER, CONF_REPORT_BLOCK_HOUR_RANGE, "2~4");
 
       set_hour_range(report_hour_str, report_block_time_lower_, report_block_time_upper_);
+
+      choose_target_server_random_max_nums_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER,CONF_CHOOSE_TARGET_SERVER_RANDOM_MAX_NUM, 32);
       return TFS_SUCCESS;
     }
 

@@ -189,13 +189,13 @@ namespace tfs
       return ret;
     }
 
-    bool LayoutManager::relieve_relation(BlockCollect* block, ServerCollect* server, time_t now)
+    bool LayoutManager::relieve_relation(BlockCollect* block, ServerCollect* server, time_t now, const int8_t flag)
     {
       bool ret = ((NULL != block) && (NULL != server));
       if (ret)
       {
         //release relation between block and dataserver
-        bool bremove = get_block_manager().relieve_relation(block, server, now);
+        bool bremove = get_block_manager().relieve_relation(block, server, now, flag);
         if (!bremove)
         {
           TBSYS_LOG(INFO, "failed when relieve between block: %u and dataserver: %s",
@@ -321,7 +321,7 @@ namespace tfs
             }
             if (TFS_SUCCESS == ret)
             {
-              ret = relieve_relation(block, target, now) ? TFS_SUCCESS : TFS_ERROR;
+              ret = relieve_relation(block, target, now,BLOCK_COMPARE_SERVER_BY_ID) ? TFS_SUCCESS : TFS_ERROR;
               if (TFS_SUCCESS != ret)
               {
                 snprintf(msg, length, "relieve relation failed between block: %u and server: %s", block_id, CNetUtil::addrToString(server).c_str());
@@ -1378,7 +1378,7 @@ namespace tfs
         ret = ((NULL != block) && (NULL != server));
         if (ret)
         {
-          relieve_relation(block, server, now);
+          relieve_relation(block, server, now,BLOCK_COMPARE_SERVER_BY_POINTER);
           ret = get_task_manager().remove_block_from_dataserver(server->id(), block->id(), 0, now);
         }
         /*BlockCollect* block = get_block_manager().get(output.first);
