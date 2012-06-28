@@ -131,6 +131,8 @@ namespace tfs
 #define CONF_EXPIRE_CHECKBLOCK_TIME                   "expire_checkblock_time"
 #define CONF_MAX_CPU_USAGE                            "max_cpu_usage"
 #define CONF_REPLICATE_THREADCOUNT                    "replicate_threadcount"
+#define CONF_MAX_SYNC_RETRY_COUNT                     "max_sync_retry_count"
+#define CONF_MAX_SYNC_RETRY_INTERVAL                  "max_sync_retry_interval"
 
 //rc
 #define CONF_RC_MONITOR_INTERVAL                      "rc_monitor_interval"

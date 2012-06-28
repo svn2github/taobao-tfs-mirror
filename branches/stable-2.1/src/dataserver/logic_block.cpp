@@ -390,7 +390,7 @@ namespace tfs
         if ((flag & READ_DATA_OPTION_FLAG_FORCE))
         {
           if ((((FileInfo *) buf)->id_ != inner_file_id)
-              || (((((FileInfo *) buf)->flag_) & (FI_DELETED | FI_INVALID )) != 0))
+              || (((((FileInfo *) buf)->flag_) & FI_INVALID) != 0))
           {
             TBSYS_LOG(WARN,
                 "find FileInfo fail, blockid: %u, fileid: %" PRI64_PREFIX "u, id: %" PRI64_PREFIX "u, flag: %d",
@@ -524,9 +524,34 @@ namespace tfs
       file_size = finfo.size_ - FILEINFO_SIZE;
 
       int32_t oper_type = 0;
-      // 4. dispatch action
-      switch (action)
+      int tmp_flag = 0;
+      int tmp_action = action;
+
+      // ugly impl
+      if (action > REVEAL)
       {
+        // get the 5-7th bit
+        tmp_flag = (action >> 4) & 0x7;
+        tmp_action = SYNC;
+      }
+
+      // 4. dispatch action
+      switch (tmp_action)
+      {
+      case SYNC:
+        if ((finfo.flag_ & FI_DELETED) != (tmp_flag & FI_DELETED))
+        {
+          if (tmp_flag & FI_DELETED)
+          {
+            oper_type = C_OPER_DELETE;
+          }
+          else
+          {
+            oper_type = C_OPER_UNDELETE;
+          }
+        }
+        finfo.flag_ = tmp_flag;
+        break;
       case DELETE:
         if ((finfo.flag_ & (FI_DELETED | FI_INVALID)) != 0)
         {

@@ -62,8 +62,6 @@ namespace tfs
         int32_t pause_;
         int32_t need_sync_;
         int32_t need_sleep_;
-        int32_t retry_count_;
-        int32_t retry_time_;
         tbutil::Monitor<tbutil::Mutex> sync_mirror_monitor_;
         tbutil::Monitor<tbutil::Mutex> retry_wait_monitor_;
 #if defined(TFS_GTEST)

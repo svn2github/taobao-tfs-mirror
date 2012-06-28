@@ -83,6 +83,29 @@ namespace tfs
         int remove_file(const uint32_t block_id, const uint64_t file_id, const common::TfsUnlinkType action);
         int rename_file(const uint32_t block_id, const uint64_t file_id, const uint64_t old_file_id);
         int remote_copy_file(const uint32_t block_id, const uint64_t file_id);
+        int get_file_info(const char* nsip, const char* file_name, common::TfsFileStat& buf);
+
+        /**
+        * @brief sync file by stat
+        *
+        * sync file to same stat in both clusters
+        *
+        * @param block_id: block id
+        * @param file_id:  file id
+        *
+        * @return
+        */
+        int sync_stat(const uint32_t block_id, const uint64_t file_id);
+
+
+        /**
+         * @brief if file not exist
+         *
+         * @param ret: access return value
+         *
+         * @return
+         */
+        bool file_not_exist(int ret);
 
       class DoSyncMirrorThreadHelper: public tbutil::Thread
       {

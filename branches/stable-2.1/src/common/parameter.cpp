@@ -244,6 +244,8 @@ namespace tfs
       object_clear_max_time_ = config.getInt(CONF_SN_DATASERVER, CONF_OBJECT_CLEAR_MAX_TIME, 300);
       if (object_clear_max_time_ <= 0)
         object_clear_max_time_ = 300;
+      max_sync_retry_count_ = config.getInt(CONF_SN_DATASERVER, CONF_MAX_SYNC_RETRY_COUNT, 5);
+      max_sync_retry_interval_ = config.getInt(CONF_SN_DATASERVER, CONF_MAX_SYNC_RETRY_INTERVAL, 30);
       return SYSPARAM_FILESYSPARAM.initialize(index);
     }
 

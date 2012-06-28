@@ -32,7 +32,7 @@ namespace tfs
                        const char* src_addr, const char* dest_addr) :
       service_(service), backup_type_(type), src_addr_(src_addr), dest_addr_(dest_addr),
       is_master_(false), stop_(0), pause_(0), need_sync_(0), need_sleep_(0),
-      retry_count_(0), retry_time_(0), file_queue_(NULL), backup_(NULL)
+      file_queue_(NULL), backup_(NULL)
     {
       if (src_addr != NULL &&
           strlen(src_addr) > 0 &&
@@ -304,39 +304,18 @@ namespace tfs
         return TFS_ERROR;
       }
       SyncData* sf = reinterpret_cast<SyncData*>(const_cast<char*>(data));
-
-      const int32_t MAX_RETRY_COUNT = 5;
-      int ret = TFS_ERROR;
-      // endless retry if fail
-      do
+      int ret = backup_->do_sync(sf);
+      if (TFS_SUCCESS == ret)
       {
-        ret = backup_->do_sync(sf);
-        if (TFS_SUCCESS != ret)
-        {
-          // for invalid block, not retry
-          if (EXIT_BLOCKID_ZERO_ERROR == ret)
-            break;
-          TBSYS_LOG(WARN, "sync error! cmd: %d, blockid: %u, fileid: %" PRI64_PREFIX "u, old fileid: %" PRI64_PREFIX "u, ret: %d, retry_count: %d",
-              sf->cmd_, sf->block_id_, sf->file_id_, sf->old_file_id_, ret, retry_count_);
-          retry_count_++;
-          int32_t wait_second = retry_count_ * retry_count_; // 1, 4, 9, ...
-          wait_second -= (time(NULL) - retry_time_);
-          if (wait_second > 0)
-          {
-            retry_wait_monitor_.lock();
-            retry_wait_monitor_.timedWait(tbutil::Time::seconds(wait_second));
-            retry_wait_monitor_.unlock();
-          }
-          /*if (stop_)
-          {
-            return TFS_ERROR;
-          }*/
-          retry_time_ = time(NULL);
-        }
-      }while (TFS_SUCCESS != ret && retry_count_ < MAX_RETRY_COUNT);
-
-      retry_count_ = 0;
-      retry_time_ = 0;
+        TBSYS_LOG(INFO, "sync block_id: %u, file_id: %"PRI64_PREFIX"u,action: %d, sync_ok",
+            sf->block_id_, sf->file_id_, sf->cmd_);
+      }
+      else
+      {
+        // log to a file???
+        TBSYS_LOG(WARN, "sync block_id: %u, file_id: %"PRI64_PREFIX"u, action: %d, sync_fail",
+            sf->block_id_, sf->file_id_, sf->cmd_);
+       }
 
       return TFS_SUCCESS;
     }
