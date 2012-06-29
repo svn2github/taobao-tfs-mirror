@@ -146,8 +146,9 @@ int SyncFileBase::cmp_file_info_ex(const string& file_name, const TfsFileStat& s
     TBSYS_LOG(DEBUG, "get dest file info failed. filename: %s, ret: %d", file_name.c_str(), ret);
   }
 
-  TBSYS_LOG(DEBUG, "file(%s): flag--(%d -> %d), crc--(%d -> %d), size--(%d -> %d)",
-      file_name.c_str(), source_buf.flag_, ((ret == TFS_SUCCESS)? dest_buf.flag_:-1), source_buf.crc_, dest_buf.crc_, source_buf.size_, dest_buf.size_);
+  TBSYS_LOG(DEBUG, "file(%s): flag--(%d -> %d), crc--(%d -> %d), size--(%d -> %d), source modify time: %s -> dest modify time: %s",
+      file_name.c_str(), source_buf.flag_, ((ret == TFS_SUCCESS)? dest_buf.flag_:-1), source_buf.crc_, dest_buf.crc_, source_buf.size_, dest_buf.size_,
+      Func::time_to_str(source_buf.modify_time_).c_str(), Func::time_to_str(dest_buf.modify_time_).c_str());
 
   // 1. dest file exists and is new file, just skip.
   if (ret == TFS_SUCCESS && dest_buf.modify_time_ > modify_time)
@@ -172,21 +173,13 @@ int SyncFileBase::cmp_file_info_ex(const string& file_name, const TfsFileStat& s
       // if source file has been hided, reveal it and then rewrite
       else if (source_buf.flag_ == 4)
       {
-        sync_action.push_back(UNHIDE_SOURCE);
         sync_action.push_back(WRITE_ACTION);
-        sync_action.push_back(HIDE_SOURCE);
         sync_action.push_back(HIDE_DEST);
-        sync_action.trigger_index_ = 0;
-        sync_action.force_index_ = 2;
       }
       else if (source_buf.flag_ == 1 && force)
       {
-        sync_action.push_back(UNDELE_SOURCE);
         sync_action.push_back(WRITE_ACTION);
-        sync_action.push_back(DELETE_SOURCE);
         sync_action.push_back(DELETE_DEST);
-        sync_action.trigger_index_ = 0;
-        sync_action.force_index_ = 2;
       }
     }
   }
@@ -291,7 +284,7 @@ int SyncFileBase::copy_file(const string& file_name)
   char data[MAX_READ_DATA_SIZE];
   int32_t rlen = 0;
 
-  int source_fd = TfsClientImpl::Instance()->open(file_name.c_str(), NULL, src_ns_addr_.c_str(), T_READ);
+  int source_fd = TfsClientImpl::Instance()->open(file_name.c_str(), NULL, src_ns_addr_.c_str(), T_READ | T_FORCE);
   if (source_fd < 0)
   {
     TBSYS_LOG(ERROR, "open source tfsfile fail when copy file, filename: %s", file_name.c_str());

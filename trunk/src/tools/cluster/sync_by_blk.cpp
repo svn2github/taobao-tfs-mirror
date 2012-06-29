@@ -66,7 +66,6 @@ tbutil::Mutex g_mutex_;
 SyncStat g_sync_stat_;
 static int32_t thread_count = 1;
 static const int32_t MAX_READ_LEN = 256;
-string src_ns_addr = "", dest_ns_addr = "";
 FILE *g_blk_done= NULL;
 FILE *g_file_succ = NULL, *g_file_fail = NULL, *g_file_unsync = NULL, *g_file_del = NULL;
 
@@ -237,6 +236,7 @@ int rename_file(const char* file_path)
   }
   return ret;
 }
+
 int init_log_file(const char* dir_path)
 {
   for (int i = 0; g_log_fp[i].file_; i++)
@@ -393,7 +393,6 @@ int main(int argc, char* argv[])
     TBSYS_LOG(ERROR, "create log file path failed. log_path: %s", log_path.c_str());
     return TFS_ERROR;
   }
-
 
   modify_time += "000000";
   init_log_file(log_path.c_str());
@@ -601,7 +600,7 @@ int sync_file(const string& src_ns_addr, const string& dest_ns_addr, const uint3
   }
   else
   {
-    TBSYS_LOG(ERROR, "sync file(%s) failed.", file_name.c_str());
+    TBSYS_LOG(DEBUG, "sync file(%s) failed.", file_name.c_str());
     {
       tbutil::Mutex::Lock lock(g_mutex_);
       g_sync_stat_.fail_count_++;
