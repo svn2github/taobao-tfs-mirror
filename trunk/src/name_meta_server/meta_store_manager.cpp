@@ -492,7 +492,7 @@ namespace tfs
         if (NULL != ret_node)
         {
           TBSYS_LOG(INFO, "same name file exist");
-          ret = TFS_ERROR;
+          ret = EXIT_TARGET_EXIST_ERROR;
         }
         if (TFS_SUCCESS == ret)
         {
@@ -500,7 +500,7 @@ namespace tfs
           if (NULL != ret_node)
           {
             TBSYS_LOG(INFO, "same name dir exist");
-            ret = TFS_ERROR;
+            ret = EXIT_TARGET_EXIST_ERROR;
           }
         }
         if (TFS_SUCCESS == ret)
