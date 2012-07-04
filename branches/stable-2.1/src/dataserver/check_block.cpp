@@ -40,12 +40,13 @@ namespace tfs
       {
         uint32_t mtime = time(NULL);
         changed_block_map_.insert(std::make_pair(block_id, mtime));
-        TBSYS_LOG(INFO, "add check task %u, %u", block_id, mtime);
+        TBSYS_LOG(INFO, "add check task. block id: %u, modify time: %u", block_id, mtime);
       }
       else
       {
         iter->second = time(NULL);
-        TBSYS_LOG(INFO, "update check task %u, %u", iter->first, iter->second);
+        TBSYS_LOG(INFO, "update check task. block id: %u, modify time: %u",
+            iter->first, iter->second);
       }
       changed_block_mutex_.unlock();
     }

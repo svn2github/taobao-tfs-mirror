@@ -53,6 +53,7 @@ namespace tfs
         ns_ip_port_(0),
         repl_block_(NULL),
         compact_block_(NULL),
+        check_block_(NULL),
         sync_mirror_status_(0),
         max_cpu_usage_ (SYSPARAM_DATASERVER.max_cpu_usage_),
         tfs_ds_stat_ ("tfs-ds-stat"),
@@ -1392,12 +1393,12 @@ namespace tfs
             }
           }
         }
-      }
 
-      // hook to be checked on write or update
-      if (TFS_SUCCESS == ret)
-      {
-        check_block_->add_check_task(close_file_info.block_id_);
+        // hook to be checked on write or update
+        if (TFS_SUCCESS == ret && NULL != check_block_)
+        {
+          check_block_->add_check_task(close_file_info.block_id_);
+        }
       }
 
       return ret;
@@ -1722,12 +1723,6 @@ namespace tfs
             block_id, file_id, new_file_id, ret);
       }
 
-      // hook to be checked on rename
-      if (TFS_SUCCESS == ret)
-      {
-        check_block_->add_check_task(block_id);
-      }
-
       //is master
       bool is_master = false;
       if (0 == (message->is_server() & 1))
@@ -1821,7 +1816,7 @@ namespace tfs
       }
 
       // hook to be checked on delete or undelete
-      if (TFS_SUCCESS == ret)
+      if (TFS_SUCCESS == ret && NULL != check_block_)
       {
         if (DELETE == action || UNDELETE == action)
         {
