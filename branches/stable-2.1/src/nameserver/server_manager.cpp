@@ -61,7 +61,7 @@ namespace tfs
       {
         isnew = true;
         iter  = dead_servers_.find(&query);
-        if (iter != dead_servers_.end())
+        //if (iter != dead_servers_.end())
         reset = iter != dead_servers_.end();
         if (reset)
         {
@@ -578,7 +578,7 @@ namespace tfs
           lans.insert(lan);
         }
       }
-      return result.get_array_index() - count;
+      return news.get_array_index() - count;
     }
 
     //replicate method

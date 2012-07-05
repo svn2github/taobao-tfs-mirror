@@ -105,6 +105,7 @@ namespace tfs
     const int32_t EXIT_BLOCK_ID_INVALID_ERROR = -5032;
     const int32_t EXIT_BLOCK_WRITING_ERROR = -5033;
     const int32_t EXIT_MOVE_OR_REPLICATE_ERROR = -5034;
+    const int32_t EXIT_BUILD_RELATION_ERROR = -5035;//build relation error
 
     const int32_t EXIT_WRITE_OFFSET_ERROR = -8001; // write offset error
     const int32_t EXIT_READ_OFFSET_ERROR = -8002; // read offset error

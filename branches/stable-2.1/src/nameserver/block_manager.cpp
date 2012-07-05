@@ -423,33 +423,40 @@ namespace tfs
             isnew= true;
           }
 
-          if (block->check_version(manager_, helper, expire_self, other_expires,server, ngi.owner_role_, isnew, info, now))
+          ret = NULL != block ? TFS_SUCCESS : EXIT_BLOCK_NOT_FOUND;
+          if (TFS_SUCCESS == ret)
           {
-            //build relation
-            build_relation_(block, writable, master, server,now);
+            if (block->check_version(manager_, helper, expire_self, other_expires,server, ngi.owner_role_, isnew, info, now))
+            {
+              //build relation
+              ret = build_relation_(block, writable, master, server,now);
+            }
           }
           get_mutex_(info.block_id_).unlock();
 
-          if (expire_self)
+          if (TFS_SUCCESS == ret)
           {
-            push_to_delete_queue(info.block_id_, server->id());
-          }
+            if (expire_self)
+            {
+              push_to_delete_queue(info.block_id_, server->id());
+            }
 
-          ServerCollect* pserver = NULL;
-          for (i = 0; i < other_expires.get_array_index(); ++i)
-          {
-            pserver = *other_expires.at(i);
-            assert(NULL != pserver);
-            push_to_delete_queue(info.block_id_, pserver->id());
-          }
+            ServerCollect* pserver = NULL;
+            for (i = 0; i < other_expires.get_array_index(); ++i)
+            {
+              pserver = *other_expires.at(i);
+              assert(NULL != pserver);
+              push_to_delete_queue(info.block_id_, pserver->id());
+            }
 
-          for (i = 0; i < helper.get_array_index(); ++i)
-          {
-            pserver = *helper.at(i);
-            assert(NULL != pserver);
-            manager_.get_server_manager().relieve_relation(*helper.at(i), block);
+            for (i = 0; i < helper.get_array_index(); ++i)
+            {
+              pserver = *helper.at(i);
+              assert(NULL != pserver);
+              manager_.get_server_manager().relieve_relation(*helper.at(i), block);
+            }
+            manager_.get_server_manager().build_relation(server, block, writable, master);
           }
-          manager_.get_server_manager().build_relation(server, block, writable, master);
         }
       }
       return ret;
@@ -474,8 +481,8 @@ namespace tfs
       int32_t ret = ((NULL != block) && (NULL != server) && (server->is_alive())) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
-        block->add(writable, master, server);
-        if (set)
+        ret = block->add(writable, master, server) ? TFS_SUCCESS : EXIT_BUILD_RELATION_ERROR;
+        if (set && TFS_SUCCESS == ret)
           block->set_create_flag();
       }
       return ret;
@@ -503,21 +510,24 @@ namespace tfs
           block = insert_(info.block_id_, now);
           assert(NULL != block);
           isnew = true;
-          build_relation_(block, writable, master, server, now);
+          ret = build_relation_(block, writable, master, server, now);
         }
-        ret = NULL == block ? EXIT_BLOCK_NOT_FOUND : TFS_SUCCESS;
         if (TFS_SUCCESS == ret)
         {
-          if (block->version() > info.version_)//check version
+          ret = NULL == block ? EXIT_BLOCK_NOT_FOUND : TFS_SUCCESS;
+          if (TFS_SUCCESS == ret)
           {
-            TBSYS_LOG(INFO, "it's error that update block: %u information because old version: %d >= new version: %d",
-                info.block_id_, block->version(), info.version_);
-            ret = EXIT_UPDATE_BLOCK_INFO_VERSION_ERROR;//version error
-          }
-          else
-          {
-            output = block;
-            block->update(info);
+            if (block->version() > info.version_)//check version
+            {
+              TBSYS_LOG(INFO, "it's error that update block: %u information because old version: %d >= new version: %d",
+                  info.block_id_, block->version(), info.version_);
+              ret = EXIT_UPDATE_BLOCK_INFO_VERSION_ERROR;//version error
+            }
+            else
+            {
+              output = block;
+              block->update(info);
+            }
           }
         }
       }

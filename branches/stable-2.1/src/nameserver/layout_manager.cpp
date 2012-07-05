@@ -581,8 +581,8 @@ namespace tfs
       int64_t need = 0, index = 0;
       uint32_t start = 0;
       int32_t loop = 0;
-      const int32_t MAX_QUERY_BLOCK_NUMS = 2048;
-      const int32_t MIN_SLEEP_TIME_US= 50000;
+      const int32_t MAX_QUERY_BLOCK_NUMS = 4096;
+      const int32_t MIN_SLEEP_TIME_US= 5000;
       const int32_t MAX_SLEEP_TIME_US = 1000000;//1s
       const int32_t MAX_LOOP_NUMS = 1000000 / MIN_SLEEP_TIME_US;
       BlockCollect* pblock = NULL;
@@ -635,7 +635,6 @@ namespace tfs
             {
               pblock = *results.at(index);
               assert(NULL != pblock);
-              //bool ret = build_replicate_task_(need, pblock, now);
               if ((ret = get_block_manager().need_replicate(pblock, now)))
                 get_block_manager().push_to_emergency_replicate_queue(pblock);
               if (!ret && range)
@@ -643,13 +642,9 @@ namespace tfs
               if (ret)
                 --need;
             }
-            //TBSYS_LOG(DEBUG, "check over: %d, size: %d", over, results.get_array_index());
             if (over)
               start = 0;
           }
-
-          //TBSYS_LOG(INFO, "emergency_replicate_queue: %ld", get_block_manager().get_emergency_replicate_queue().size());
-          //build_redundant_(need, now);
         }
         ++loop;
         usleep(get_block_manager().has_emergency_replicate_in_queue() ? MAX_SLEEP_TIME_US : MIN_SLEEP_TIME_US);
@@ -1058,15 +1053,8 @@ namespace tfs
       {
         for (int32_t i = 0; i < servers.get_array_index() && TFS_SUCCESS == ret; ++i)
         {
-          bool writable = false;
-          bool master   = false;
           ServerCollect* pserver = *servers.at(i);
-          ret = get_block_manager().build_relation(block, writable, master, pserver, now, true);
-          if (TFS_SUCCESS == ret)
-            ret = get_server_manager().build_relation(pserver, block, writable, master);
-          else
-            TBSYS_LOG(INFO, "build relation fail between dataserver: %s and block: %u",
-                CNetUtil::addrToString(pserver->id()).c_str(), block->id());
+          ret = build_relation(block, pserver, now, true) ? TFS_SUCCESS : EXIT_BUILD_RELATION_ERROR;
         }
       }
       return ret;
@@ -1211,8 +1199,9 @@ namespace tfs
     {
       BlockCollect* block = NULL;
       int64_t count = get_block_manager().get_emergency_replicate_queue_size();
-      while (need > 0 && (NULL != (block = get_block_manager().pop_from_emergency_replicate_queue())) && count-- > 0)
+      while (need > 0 && count > 0 && (NULL != (block = get_block_manager().pop_from_emergency_replicate_queue())))
       {
+        --count;
         if (!build_replicate_task_(need, block, now))
         {
           if (get_block_manager().need_replicate(block))
