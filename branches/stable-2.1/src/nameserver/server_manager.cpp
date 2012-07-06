@@ -723,7 +723,7 @@ namespace tfs
         random_index = random() % size;
         pserver = servers_.at(random_index);
         assert(NULL != pserver);
-        valid  = ((!pserver->is_full()) && (!except.find(pserver)));
+        valid  = ((!pserver->is_full()) && (!except.exist(pserver)));
         if (valid && !lans.empty())
         {
           uint32_t lan =  Func::get_lan(pserver->id(), SYSPARAM_NAMESERVER.group_mask_);
@@ -798,11 +798,12 @@ namespace tfs
             pblock = *helper.at(i);
             assert(NULL != pblock);
             manager_.get_block_manager().relieve_relation(pblock, server, now,BLOCK_COMPARE_SERVER_BY_POINTER);//pointer
+            manager_.get_server_manager().relieve_relation(server, pblock);
           }
-          if (!helper.empty())
+          /*if (!helper.empty())
           {
             begin = pblock->id();
-          }
+          }*/
         }
         while (!complete);
       }

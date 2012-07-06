@@ -397,6 +397,8 @@ namespace tfs
         bool writable = false;
         bool master  = false;
         bool expire_self = false;
+        ServerCollect* invalid_server = NULL;
+        ServerCollect* next_invalid_server = NULL;
         ServerCollect* servers[MAX_REPLICATION];
         ArrayHelper<ServerCollect*> helper(MAX_REPLICATION, servers);
         ServerCollect* other_servers[MAX_REPLICATION];
@@ -410,6 +412,8 @@ namespace tfs
           writable = false;
           master   = false;
           expire_self = false;
+          invalid_server = NULL;
+          next_invalid_server = NULL;
           helper.clear();
           other_expires.clear();
           const BlockInfo& info = (*iter);
@@ -426,13 +430,20 @@ namespace tfs
           ret = NULL != block ? TFS_SUCCESS : EXIT_BLOCK_NOT_FOUND;
           if (TFS_SUCCESS == ret)
           {
-            if (block->check_version(manager_, helper, expire_self, other_expires,server, ngi.owner_role_, isnew, info, now))
+            if (block->check_version(manager_, helper, expire_self, other_expires, invalid_server,
+                server, ngi.owner_role_, isnew, info, now))
             {
               //build relation
-              ret = build_relation_(block, writable, master, server,now);
+              ret = build_relation_(block, writable, master, next_invalid_server, server,now);
             }
           }
           get_mutex_(info.block_id_).unlock();
+
+          if (NULL != invalid_server && NULL != block)
+              manager_.get_server_manager().relieve_relation(invalid_server, block);
+
+          if (NULL != next_invalid_server && NULL != block)
+              manager_.get_server_manager().relieve_relation(next_invalid_server, block);
 
           if (TFS_SUCCESS == ret)
           {
@@ -463,25 +474,25 @@ namespace tfs
     }
 
     int BlockManager::build_relation(BlockCollect* block, bool& writable, bool& master,
-        const ServerCollect* server, const time_t now, const bool set)
+        ServerCollect*& invalid_server, const ServerCollect* server, const time_t now, const bool set)
     {
       int32_t ret = ((NULL != block) && (NULL != server)) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
         RWLock::Lock lock(get_mutex_(block->id()), WRITE_LOCKER);
-        ret = build_relation_(block, writable, master, server, now, set);
+        ret = build_relation_(block, writable, master, invalid_server,server, now, set);
       }
       return ret;
     }
 
     int BlockManager::build_relation_(BlockCollect* block, bool& writable, bool& master,
-        const ServerCollect* server, const time_t now, const bool set)
+        ServerCollect*& invalid_server, const ServerCollect* server, const time_t now, const bool set)
     {
       UNUSED(now);
       int32_t ret = ((NULL != block) && (NULL != server) && (server->is_alive())) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
-        ret = block->add(writable, master, server) ? TFS_SUCCESS : EXIT_BUILD_RELATION_ERROR;
+        ret = block->add(writable, master, invalid_server, server) ? TFS_SUCCESS : EXIT_BUILD_RELATION_ERROR;
         if (set && TFS_SUCCESS == ret)
           block->set_create_flag();
       }
@@ -500,6 +511,7 @@ namespace tfs
         const common::BlockInfo& info, const ServerCollect* server, const time_t now, const bool addnew)
     {
       isnew = false;
+      ServerCollect* invalid_server = NULL;
       int32_t ret = (NULL != server) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
@@ -510,8 +522,10 @@ namespace tfs
           block = insert_(info.block_id_, now);
           assert(NULL != block);
           isnew = true;
-          ret = build_relation_(block, writable, master, server, now);
+          ret = build_relation_(block, writable, master, invalid_server, server, now);
         }
+        if (NULL != invalid_server && NULL != block)
+          manager_.get_server_manager().relieve_relation(invalid_server, block);
         if (TFS_SUCCESS == ret)
         {
           ret = NULL == block ? EXIT_BLOCK_NOT_FOUND : TFS_SUCCESS;

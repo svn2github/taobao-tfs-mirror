@@ -179,11 +179,14 @@ namespace tfs
       {
         bool writable = false;
         bool master   = false;
-        int32_t ret = get_block_manager().build_relation(block, writable, master, server, now, set);
+        ServerCollect* invalid_server = NULL;
+        int32_t ret = get_block_manager().build_relation(block, writable, master, invalid_server,server, now, set);
         if (TFS_SUCCESS == ret)
         {
           ret = get_server_manager().build_relation(server, block, writable, master);
         }
+        if (NULL != invalid_server)
+          get_server_manager().relieve_relation(invalid_server, block);
         ret =  TFS_SUCCESS == ret;
       }
       return ret;
@@ -1020,7 +1023,7 @@ namespace tfs
                   message =  dynamic_cast<StatusMessage*>(packet);
                   if (STATUS_MESSAGE_OK == message->get_status())
                   {
-                    if (send_msg_success_helper.find(iter->second.first))
+                    if (send_msg_success_helper.exist(iter->second.first))
                       success_helper.push_back(iter->second.first);
                   }
                 }
@@ -1322,7 +1325,7 @@ namespace tfs
         ret = get_block_manager().need_balance(helper, block, now);
         if (ret)
         {
-          ret = helper.find(const_cast<ServerCollect*>(source));
+          ret = helper.exist(const_cast<ServerCollect*>(source));
           if (!ret)
           {
             TBSYS_LOG(INFO, "cannot choose move source server, block: %u, source: %s",

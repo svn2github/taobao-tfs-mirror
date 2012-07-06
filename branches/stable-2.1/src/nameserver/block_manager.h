@@ -95,7 +95,7 @@ namespace tfs
 
         int update_relation(ServerCollect* server, const std::set<common::BlockInfo>& blocks, const time_t now);
         int build_relation(BlockCollect* block, bool& writable, bool& master,
-            const ServerCollect* server, const time_t now, const bool set =false);
+            ServerCollect*& invalid_server, const ServerCollect* server, const time_t now, const bool set =false);
         bool relieve_relation(BlockCollect* block, const ServerCollect* server, const time_t now, const int8_t flag);
         int update_block_info(BlockCollect*& output, bool& isnew, bool& writable, bool& master,
             const common::BlockInfo& info, const ServerCollect* server, const time_t now, const bool addnew);
@@ -122,7 +122,7 @@ namespace tfs
         BlockCollect* remove_(const uint32_t block);
 
         int build_relation_(BlockCollect* block, bool& writable, bool& master,
-            const ServerCollect* server, const time_t now, const bool set = false);
+            ServerCollect*& invalid_server, const ServerCollect* server, const time_t now, const bool set = false);
 
         bool pop_from_delete_queue_(std::pair<uint32_t, uint64_t>& pairs);
 

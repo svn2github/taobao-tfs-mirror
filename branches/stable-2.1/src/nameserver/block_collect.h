@@ -51,7 +51,7 @@ namespace tfs
       BlockCollect(const uint32_t block_id, const time_t now);
       virtual ~BlockCollect();
 
-      bool add(bool& writable, bool& master, const ServerCollect* server);
+      bool add(bool& writable, bool& master, ServerCollect*& invalid_server, const ServerCollect* server);
       bool remove(const ServerCollect* server, const time_t now, const int8_t flag);
       bool exist(const ServerCollect* const server, const bool pointer /*= true*/) const;
       bool is_master(const ServerCollect* const server) const;
@@ -59,8 +59,9 @@ namespace tfs
       bool is_creating() const;
       bool in_replicate_queue() const;
       bool check_version(LayoutManager& manager, common::ArrayHelper<ServerCollect*>& removes,
-          bool& expire_self, common::ArrayHelper<ServerCollect*>& other_expires, const ServerCollect* server,
-          const int8_t role, const bool isnew, const common::BlockInfo& block_info, const time_t now);
+          bool& expire_self, common::ArrayHelper<ServerCollect*>& other_expires, ServerCollect*& invalid_server,
+          const ServerCollect* server,const int8_t role, const bool isnew, const common::BlockInfo& block_info,
+          const time_t now);
       common::PlanPriority check_replicate(const time_t now) const;
       bool check_compact() const;
       bool check_balance() const;

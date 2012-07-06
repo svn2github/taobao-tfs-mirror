@@ -552,7 +552,7 @@ namespace tfs
           }
           else
           {
-            if (!helper.find(source))
+            if (!helper.exist(source))
               helper.push_back(source);
             if (0 != info.value2_)
               target = manager_.get_server_manager().get(info.value2_);

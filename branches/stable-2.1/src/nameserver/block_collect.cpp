@@ -55,10 +55,11 @@ namespace tfs
       tbsys::gDeleteA(servers_);
     }
 
-    bool BlockCollect::add(bool& writable, bool& master, const ServerCollect* server)
+    bool BlockCollect::add(bool& writable, bool& master, ServerCollect*& invalid_server, const ServerCollect* server)
     {
       master = false;
       writable  = false;
+      invalid_server = NULL;
       bool complete = false;
       bool ret = server != NULL;
       if (ret)
@@ -72,7 +73,10 @@ namespace tfs
           //根据ID能查询到Server结构，说明这个Server才下线不久又上线了，Block与这个Server的关系
           //还没有解除，有可能是遗漏了，需要等待GC进回调清理,这里我们可以解简单的先进行清理
           if (NULL != result)
+          {
+            invalid_server = *result;
             *result = NULL;
+          }
           int8_t index = 0;
           int8_t random_index = random() % SYSPARAM_NAMESERVER.max_replication_;
           TBSYS_LOG(DEBUG, "random_index : %d, servers_size: %d", random_index, get_servers_size());
@@ -191,10 +195,11 @@ namespace tfs
     }
 
     bool BlockCollect::check_version(LayoutManager& manager, common::ArrayHelper<ServerCollect*>& removes,
-        bool& expire_self, common::ArrayHelper<ServerCollect*>& other_expires, const ServerCollect* server,
-        const int8_t role, const bool isnew, const common::BlockInfo& info, const time_t now)
+        bool& expire_self, common::ArrayHelper<ServerCollect*>& other_expires, ServerCollect*& invalid_server,
+        const ServerCollect* server,const int8_t role, const bool isnew, const common::BlockInfo& info, const time_t now)
     {
       expire_self = false;
+      invalid_server = NULL;
       bool ret = NULL != server && info_.block_id_ == info.block_id_;
       if (ret)
       {
@@ -204,7 +209,10 @@ namespace tfs
         {
           result = get_(server, false);
           if (NULL != result)//这里处理方式和add一样
+          {
+            invalid_server = *result;
             *result = NULL;
+          }
           int8_t size = get_servers_size();
           if (size >= SYSPARAM_NAMESERVER.max_replication_)
           {
