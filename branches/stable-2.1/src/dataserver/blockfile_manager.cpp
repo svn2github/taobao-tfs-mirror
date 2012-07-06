@@ -1439,7 +1439,8 @@ namespace tfs
       return TFS_SUCCESS;
     }
 
-    void BlockFileManager::rollback_superblock(const uint32_t physical_block_id, const bool modify_flag)
+    void BlockFileManager::rollback_superblock(const uint32_t physical_block_id, const bool modify_flag,
+        BlockType type)
     {
       if (normal_bit_map_->test(physical_block_id))
       {
@@ -1450,8 +1451,14 @@ namespace tfs
 
         if (modify_flag)
         {
-          //--super_block_.used_extend_block_count_;
-          --super_block_.used_block_count_;
+          if (C_MAIN_BLOCK == type)
+          {
+            --super_block_.used_block_count_;
+          }
+          else if (C_EXT_BLOCK == type)
+          {
+            --super_block_.used_extend_block_count_;
+          }
           ret = super_block_impl_->write_super_blk(super_block_);
           if (TFS_SUCCESS != ret)
             TBSYS_LOG(ERROR, "write super block fail. ret: %d", ret);

@@ -101,7 +101,8 @@ namespace tfs
         void destruct_logic_blocks(const BlockType block_type);
         void destruct_physic_blocks();
 
-        void rollback_superblock(const uint32_t physical_block_id, const bool modify_flag);
+        void rollback_superblock(const uint32_t physical_block_id, const bool modify_flag,
+            BlockType type = C_MAIN_BLOCK);
 
 
       private:
