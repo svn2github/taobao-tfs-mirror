@@ -66,6 +66,9 @@ namespace tfs
       if (C_COMPACT_BLOCK == block_type)
       {
         dirty_flag = C_DATA_COMPACT;
+      } else if (C_HALF_BLOCK == block_type)
+      {
+        dirty_flag = C_DATA_HALF;
       }
 
       // create index handle
@@ -717,6 +720,14 @@ namespace tfs
       if (TFS_SUCCESS != ret)
       {
         TBSYS_LOG(ERROR, "batch override segment meta fail. blockid: %u, ret: %d", logic_block_id_, ret);
+        return ret;
+      }
+
+      // clear HALF BLOCK flag, it will become a normal block
+      ret = set_block_dirty_type(C_DATA_CLEAN);
+      if (TFS_SUCCESS != ret)
+      {
+        TBSYS_LOG(ERROR, "compact blockid: %u set dirty flag fail. ret: %d\n", get_logic_block_id(), ret);
         return ret;
       }
 

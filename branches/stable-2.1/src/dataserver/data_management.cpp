@@ -604,7 +604,7 @@ namespace tfs
       return TFS_SUCCESS;
     }
 
-    int DataManagement::new_single_block(const uint32_t block_id)
+    int DataManagement::new_single_block(const uint32_t block_id, const BlockType type)
     {
       int ret = TFS_SUCCESS;
       // delete if exist
@@ -621,7 +621,7 @@ namespace tfs
       }
 
       uint32_t physic_block_id = 0;
-      ret = BlockFileManager::get_instance()->new_block(block_id, physic_block_id);
+      ret = BlockFileManager::get_instance()->new_block(block_id, physic_block_id, type);
       if (TFS_SUCCESS != ret)
       {
         TBSYS_LOG(ERROR, "block create error, blockid: %u, ret: %d", block_id, ret);

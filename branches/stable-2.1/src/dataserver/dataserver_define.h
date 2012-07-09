@@ -51,7 +51,8 @@ namespace tfs
     {
       C_DATA_CLEAN = 0,
       C_DATA_DIRTY,
-      C_DATA_COMPACT
+      C_DATA_COMPACT,
+      C_DATA_HALF
     };
 
     enum BlockType
@@ -60,6 +61,7 @@ namespace tfs
       C_EXT_BLOCK,
       C_COMPACT_BLOCK,
       C_CONFUSE_BLOCK,
+      C_HALF_BLOCK
     };
 
     enum BitMapType

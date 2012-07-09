@@ -135,7 +135,7 @@ namespace tfs
       {
         selected_logic_blocks = &compact_logic_blocks_;
       }
-      else //main block
+      else //main block, half block
       {
         selected_logic_blocks = &logic_blocks_;
       }
@@ -981,20 +981,22 @@ namespace tfs
 
           // 9. load logic block
           ret = t_logic_block->load_block_file(super_block_.hash_slot_size_, super_block_.mmap_option_);
-          // if these error happened when load block, program should exit
-          if (TFS_SUCCESS != ret && EXIT_COMPACT_BLOCK_ERROR != ret && EXIT_BLOCKID_ZERO_ERROR != ret
-              && EXIT_INDEX_CORRUPT_ERROR != ret)
+          if (TFS_SUCCESS != ret)
           {
-            TBSYS_LOG(ERROR, "logicblock load error! logic blockid: %u. ret: %d", logic_block_id, ret);
-            break;
-          }
-          else if (TFS_SUCCESS != ret) // ret == EXIT_COMPACT_BLOCK_ERROR || ret == EXIT_BLOCKID_CONFLICT_ERROR || EXIT_INDEX_CORRUPT_ERROR
-          {
-            // roll back
             // can not make sure the type of this block, so add to confuse type
-            TBSYS_LOG(WARN, "logicblock status abnormal, need delete! logic blockid: %u. ret: %d", logic_block_id, ret);
-            del_block(logic_block_id, C_CONFUSE_BLOCK);
-            ret = TFS_SUCCESS;
+            if (EXIT_COMPACT_BLOCK_ERROR == ret || EXIT_BLOCKID_ZERO_ERROR == ret ||
+                EXIT_INDEX_CORRUPT_ERROR == ret || EXIT_HALF_BLOCK_ERROR == ret)
+            {
+              TBSYS_LOG(WARN, "logicblock status abnormal, need delete! blockid: %u. ret: %d", logic_block_id, ret);
+              del_block(logic_block_id, C_CONFUSE_BLOCK);
+              ret = TFS_SUCCESS;
+            }
+            else
+            {
+              // if these error happened when load block, program should exit
+              TBSYS_LOG(ERROR, "logicblock load error! logic blockid: %u. ret: %d", logic_block_id, ret);
+              break;
+            }
           }
         }
 

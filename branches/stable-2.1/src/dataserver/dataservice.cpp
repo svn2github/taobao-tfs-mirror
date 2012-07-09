@@ -2262,7 +2262,7 @@ namespace tfs
       int ret = 0;
       if (new_flag)
       {
-        ret = data_management_.new_single_block(block_id);
+        ret = data_management_.new_single_block(block_id, C_HALF_BLOCK);
         if (TFS_SUCCESS != ret)
         {
           return message->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret,

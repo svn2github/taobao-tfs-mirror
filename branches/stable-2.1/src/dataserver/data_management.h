@@ -76,7 +76,7 @@ namespace tfs
         int get_block_meta_info(const uint32_t block_id, common::RawMetaVec& meta_list);
         int reset_block_version(const uint32_t block_id);
 
-        int new_single_block(const uint32_t block_id);
+        int new_single_block(const uint32_t block_id, const BlockType type = C_MAIN_BLOCK);
         int del_single_block(const uint32_t block_id);
         int get_block_curr_size(const uint32_t block_id, int32_t& size);
         int write_raw_data(const uint32_t block_id, const int32_t data_offset, const int32_t msg_len,

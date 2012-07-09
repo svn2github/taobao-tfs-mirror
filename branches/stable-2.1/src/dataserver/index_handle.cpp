@@ -182,17 +182,17 @@ namespace tfs
         return EXIT_BLOCKID_CONFLICT_ERROR;
       }
 
-      // check flag
+      // check flag, if normal state(C_DATA_CLEAN), do nothing
       if (C_DATA_COMPACT == index_header()->flag_)
       {
         //unfinish compact block
         TBSYS_LOG(ERROR, "It is a unfinish compact block. blockid: %u", logic_block_id);
         return EXIT_COMPACT_BLOCK_ERROR;
-      }
-
-      if (C_DATA_CLEAN == index_header()->flag_)
+      } else if (C_DATA_HALF == index_header()->flag_)
       {
-        //do nothing
+        // unfinish repl block, coding block
+        TBSYS_LOG(ERROR, "It is a half state block. blockid: %u", logic_block_id);
+        return EXIT_HALF_BLOCK_ERROR;
       }
 
       is_load_ = true;
