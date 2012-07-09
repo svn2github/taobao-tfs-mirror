@@ -17,6 +17,7 @@ BuildRequires: tair-devel >= 2.3
 BuildRequires: boost-devel >= 1.3 
 BuildRequires: readline-devel
 BuildRequires: ncurses-devel
+Requires: google-perftools >= 1.7
 
 %define __os_install_post %{nil}
 %define debug_package %{nil}
