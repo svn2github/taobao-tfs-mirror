@@ -141,7 +141,7 @@ namespace tfs
         }
       }
       CompactComplete value(INVALID_SERVER_ID, INVALID_SERVER_ID, PLAN_STATUS_NONE);
-      memcpy(&value.block_info_, &block_info_, sizeof(block_info_));
+      value.block_info_ = block_info_;
       VUINT64 servers;
       check_complete(value, servers);
 
@@ -251,7 +251,7 @@ namespace tfs
         CompactBlockCompleteMessage* message = dynamic_cast<CompactBlockCompleteMessage*>(msg);
         PlanStatus status = status_transform_compact_to_plan(static_cast<CompactStatus>(message->get_success()));
         CompactComplete value(message->get_server_id(), message->get_block_id(), status);
-        memcpy(&value.block_info_, &message->get_block_info(), sizeof(block_info_));
+        value.block_info_ = message->get_block_info();
         VUINT64 servers;
         if (GFactory::get_runtime_info().is_master())//master handle
         {
@@ -301,7 +301,7 @@ namespace tfs
           status.second = value.status_;
           if (value.status_ == PLAN_STATUS_END)
           {
-            memcpy(&block_info_, &value.block_info_, sizeof(BlockInfo));
+            block_info_ = value.block_info_;
             value.current_complete_result_ = true;
             ++success_count;
             ++complete_count;

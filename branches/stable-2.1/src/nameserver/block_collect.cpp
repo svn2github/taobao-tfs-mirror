@@ -36,7 +36,7 @@ namespace tfs
     {
       servers_ = new (std::nothrow)ServerCollect*[SYSPARAM_NAMESERVER.max_replication_];
       assert(servers_);
-      memset(servers_, 0, sizeof(servers_) * SYSPARAM_NAMESERVER.max_replication_);
+      memset(servers_, 0, sizeof(ServerCollect*) * SYSPARAM_NAMESERVER.max_replication_);
       memset(&info_, 0, sizeof(info_));
       info_.block_id_ = block_id;
       info_.seq_no_ = 1;
@@ -256,7 +256,8 @@ namespace tfs
                 if (((info_.version_ > info.version_) && (size <= 0))
                     || (info_.version_ <= info.version_))
                 {
-                  memcpy(&info_, &info, sizeof(info_));
+                  info_ = info;
+                  //memcpy(&info_, &info, sizeof(info_));
                 }
               }
             }
@@ -277,13 +278,15 @@ namespace tfs
                   TBSYS_LOG(WARN, "block: %u in dataserver: %s version error %d:%d, but not found dataserver",
                       info.block_id_, tbsys::CNetUtil::addrToString(server->id()).c_str(),
                       info_.version_, info.version_);
-                  memcpy(&info_,&info, sizeof(info_));
+                  info_ = info;
+                  //memcpy(&info_,&info, sizeof(info_));
                 }
               }
               else if ( info_.version_ < info.version_) // nameserver version < dataserver version , we'll accept new version and release all dataserver
               {
                 int32_t old_version = info_.version_;
-                memcpy(&info_, &info, sizeof(info_));
+                info_ = info;
+                //memcpy(&info_, &info, sizeof(info_));
                 if (!isnew)//release dataserver
                 {
                   TBSYS_LOG(INFO, "block: %u in dataserver: %s version error %d:%d,replace ns version, current dataserver size: %u",

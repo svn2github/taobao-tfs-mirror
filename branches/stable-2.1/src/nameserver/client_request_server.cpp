@@ -279,7 +279,7 @@ namespace tfs
             ret = ngi.in_discard_newblk_safe_mode_time(now) || is_discard() ? EXIT_DISCARD_NEWBLK_ERROR: TFS_SUCCESS;
             if (TFS_SUCCESS == ret)
             {
-              block =  manager_.get_block_manager().get(block_id);
+              /*block =  manager_.get_block_manager().get(block_id);
               ret = NULL != block ? TFS_SUCCESS : EXIT_BLOCK_NOT_FOUND;
               if ((TFS_SUCCESS == ret)
                   && (block->get_servers_size() <= 0)
@@ -290,7 +290,7 @@ namespace tfs
                 manager_.get_block_manager().remove(pobject,block_id);
                 if (NULL != pobject)
                   manager_.get_gc_manager().add(pobject, now);
-              }
+              }*/
               //create new block by block_id
               ret = manager_.open_helper_create_new_block_by_id(block_id);
               if (TFS_SUCCESS != ret)
