@@ -219,8 +219,8 @@ public class SaveFileOperationTest extends BaseCase {
 		
 		Assert.assertEquals(oldUsedCapacity + fileLength, newUsedCapacity);
 		
-		tfsManager.destroy();
-		tfsManager = createTfsManager();
+		//tfsManager.destroy();
+		//tfsManager = createTfsManager();
 		sessionId = tfsManager.getSessionId();
 		boolean result = tfsManager.fetchFile(tfsName, null, "localfile");
 		//asert localfile md5 and serverfile md5
