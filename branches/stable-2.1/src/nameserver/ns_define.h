@@ -184,6 +184,8 @@ namespace tfs
     static const double PERCENTAGE_MAGIC = 1000000.0;
     double calc_capacity_percentage(const uint64_t capacity, const uint64_t total_capacity);
 
+    static const int32_t MAX_POP_SERVER_FROM_DEAD_QUEUE_LIMIT = 5;
+
     class BlockCollect;
     class ServerCollect;
 

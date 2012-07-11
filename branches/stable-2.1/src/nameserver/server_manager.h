@@ -73,7 +73,7 @@ namespace tfs
       void update_last_time(const uint64_t server, const time_t now);
 
       ServerCollect* get(const uint64_t server) const;
-      ServerCollect* pop_from_dead_queue(const time_t now);
+      int pop_from_dead_queue(common::ArrayHelper<ServerCollect*>& results, const time_t now);
       int64_t size() const;
 
       int add_report_block_server(ServerCollect* server, const time_t now, const bool rb_expire = false);

@@ -1175,7 +1175,7 @@ namespace tfs
       std::cout << "max mmap size " << mmap_option_.max_mmap_size_ << std::endl;
       std::cout << "version " << version_ << std::endl;
     }
-    const char* dynamic_parameter_str[30] = {
+    const char* dynamic_parameter_str[31] = {
         "log_level",
         "plan_run_flag",
         "task_expired_time",
@@ -1205,7 +1205,8 @@ namespace tfs
         "report_block_time_upper",
         "report_block_time_interval",
         "report_block_expired_time",
-        "choose_target_server_random_max_nums"
+        "choose_target_server_random_max_nums",
+        "max_keepalive_queue_size"
     };
   } /** nameserver **/
 }/** tfs **/

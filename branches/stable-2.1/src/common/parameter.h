@@ -58,6 +58,7 @@ namespace tfs
       int32_t max_write_timeout_;
       int32_t cleanup_write_timeout_threshold_;
       int32_t choose_target_server_random_max_nums_;
+      int32_t keepalive_queue_size_;
       double  balance_percent_;
 
       static NameServerParameter ns_parameter_;

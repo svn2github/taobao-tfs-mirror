@@ -50,58 +50,52 @@ namespace tfs
 
     int ServerManager::add(const DataServerStatInfo& info, const time_t now, bool& isnew)
     {
+      isnew = false;
       bool reset = false;
+      int32_t ret = TFS_SUCCESS;
       ServerCollect query(info.id_);
 
-      rwmutex_.wrlock();
-      ServerCollect* server = NULL;
+      rwmutex_.rdlock();
       SERVER_TABLE_ITER iter = servers_.find(&query);
-      bool alive = iter != servers_.end();
-      if (!alive)
-      {
-        isnew = true;
-        iter  = dead_servers_.find(&query);
-        //if (iter != dead_servers_.end())
-        reset = iter != dead_servers_.end();
-        if (reset)
-        {
-          server = (*iter);
-          dead_servers_.erase(&query);
-        }
-        else
-        {
-          server = new (std::nothrow)ServerCollect(info, now);
-        }
-      }
-      else
-      {
-        server = (*iter);
-      }
-      assert(NULL != server);
-      if (isnew)
-      {
-        ServerCollect* result = NULL;
-        int ret = servers_.insert_unique(result, server);
-        assert(ret == TFS_SUCCESS);
-        assert(NULL != result);
-      }
+      ServerCollect* server  = servers_.end() != iter ? (*iter) : NULL;
       rwmutex_.unlock();
+      if (NULL == server)
+      {
+        rwmutex_.wrlock();
+        iter = servers_.find(&query);
+        server  = servers_.end() != iter ? (*iter) : NULL;
+        if (NULL == server)
+        {
+          isnew = true;
+          iter  = dead_servers_.find(&query);
+          server = dead_servers_.end() != iter ? (*iter) : NULL;
+          reset = NULL != server;
+          if (reset)
+            dead_servers_.erase(&query);
+          else
+            server = new (std::nothrow)ServerCollect(info, now);
+        }
+        assert(NULL != server);
+        if (isnew)
+        {
+          ServerCollect* result = NULL;
+          ret = servers_.insert_unique(result, server);
+          assert(ret == TFS_SUCCESS);
+          assert(NULL != result);
+        }
+        rwmutex_.unlock();
+      }
 
+      assert(NULL != server);
       if (reset)
         server->reset(manager_, info, now);
       else
         server->update(info, now, isnew);
 
-      /*if (isnew)
-      {
-        std::vector<stat_int_t> stat(1, server->block_count());
-        GFactory::get_stat_mgr().update_entry(GFactory::tfs_ns_stat_block_count_, stat);
-      }*/
-
       //update global statistic information
       GFactory::get_global_info().update(info, isnew);
       GFactory::get_global_info().dump(TBSYS_LOG_LEVEL_DEBUG);
-      return TFS_SUCCESS;
+      return ret;
     }
 
     int ServerManager::remove(const uint64_t server, const time_t now)
@@ -123,8 +117,6 @@ namespace tfs
       {
         object->update_status();
         object->set_in_dead_queue_timeout(now);
-        /*std::vector<stat_int_t> stat(1, object->block_count());
-        GFactory::get_stat_mgr().update_entry(GFactory::tfs_ns_stat_block_count_, stat, false);*/
 
         //release all relations of blocks belongs to it
         relieve_relation_(object, now);
@@ -149,26 +141,37 @@ namespace tfs
       return get_(server);
     }
 
-    ServerCollect* ServerManager::pop_from_dead_queue(const time_t now)
+    int ServerManager::pop_from_dead_queue(ArrayHelper<ServerCollect*>& results, const time_t now)
     {
-      ServerCollect* result  = NULL;
-      RWLock::Lock lock(rwmutex_, WRITE_LOCKER);
+      results.clear();
+      ServerCollect* servers[MAX_POP_SERVER_FROM_DEAD_QUEUE_LIMIT];
+      ArrayHelper<ServerCollect*> helper(MAX_POP_SERVER_FROM_DEAD_QUEUE_LIMIT, servers);
+      rwmutex_.rdlock();
       SERVER_TABLE_ITER iter = dead_servers_.begin();
-      while (iter != dead_servers_.end() && NULL == result)
+      for (; iter != dead_servers_.end() && helper.get_array_index() < MAX_POP_SERVER_FROM_DEAD_QUEUE_LIMIT; ++iter)
       {
         if ((*iter)->is_in_dead_queue_timeout(now))
-        {
-          result = (*iter);
-          dead_servers_.erase(result);
-        }
-        ++iter;
+          helper.push_back((*iter));
       }
-      return result;
+      rwmutex_.unlock();
+
+      ServerCollect* server = NULL;
+      ServerCollect* ret = NULL;
+      for (int32_t i = 0; i < helper.get_array_index(); ++i)
+      {
+        server = *helper.at(i);
+        assert(NULL != server);
+        rwmutex_.wrlock();
+        ret = dead_servers_.erase(server);
+        if (NULL != ret)
+          results.push_back(server);
+        rwmutex_.unlock();
+      }
+      return results.get_array_index();
     }
 
     int64_t ServerManager::size() const
     {
-      RWLock::Lock lock(rwmutex_, READ_LOCKER);
       return servers_.size();
     }
 
@@ -720,7 +723,7 @@ namespace tfs
       int32_t index = size, random_index = 0;
       while (index-- > 0 && NULL == result)
       {
-        random_index = random() % size;
+        random_index = random() % servers_.size();
         pserver = servers_.at(random_index);
         assert(NULL != pserver);
         valid  = ((!pserver->is_full()) && (!except.exist(pserver)));

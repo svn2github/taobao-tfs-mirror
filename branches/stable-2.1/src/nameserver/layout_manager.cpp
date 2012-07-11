@@ -516,7 +516,8 @@ namespace tfs
           &SYSPARAM_NAMESERVER.report_block_time_upper_,
           &SYSPARAM_NAMESERVER.report_block_time_interval_,
           &SYSPARAM_NAMESERVER.report_block_expired_time_,
-          &SYSPARAM_NAMESERVER.choose_target_server_random_max_nums_
+          &SYSPARAM_NAMESERVER.choose_target_server_random_max_nums_,
+          &SYSPARAM_NAMESERVER.keepalive_queue_size_
         };
         int32_t size = sizeof(param) / sizeof(int32_t*);
         ret = (index >= 1 && index <= size) ? TFS_SUCCESS : TFS_ERROR;
@@ -574,7 +575,7 @@ namespace tfs
       localtime_r(&now, &lt);
       if (min > max)
         std::swap(min, max);
-      return (lt.tm_hour >= min && lt.tm_hour <= max);
+      return (lt.tm_hour >= min && lt.tm_hour < max);
     }
 
     void LayoutManager::build_()
@@ -762,9 +763,10 @@ namespace tfs
 
     void LayoutManager::redundant_()
     {
-      const int32_t MAX_REDUNDNAT_NUMS = 256;
       int64_t need = 0;
       time_t now = 0;
+      const int32_t MAX_REDUNDNAT_NUMS = 256;
+      const int32_t MAX_SLEEP_TIME_US  = 5000;
       NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
       int32_t hour = common::SYSPARAM_NAMESERVER.report_block_time_upper_ - common::SYSPARAM_NAMESERVER.report_block_time_lower_ ;
       const int32_t SAFE_MODE_TIME = hour > 0 ? hour * 3600 : SYSPARAM_NAMESERVER.safe_mode_time_ * 4;
@@ -777,7 +779,7 @@ namespace tfs
         while ((get_block_manager().delete_queue_empty() && !ngi.is_destroyed()))
           Func::sleep(SYSPARAM_NAMESERVER.heart_interval_, ngi.destroy_flag_);
         build_redundant_(need, 0);
-        usleep(500);
+        usleep(MAX_SLEEP_TIME_US);
       }
     }
 
@@ -1220,13 +1222,16 @@ namespace tfs
 
     bool LayoutManager::check_emergency_replicate_(ArrayHelper<BlockCollect*>& result, const int32_t count, const time_t now)
     {
-      ServerCollect* server = NULL;
-      while (NULL != (server = get_server_manager().pop_from_dead_queue(now)))
+      ServerCollect* servers[MAX_POP_SERVER_FROM_DEAD_QUEUE_LIMIT];
+      ArrayHelper<ServerCollect*> helper(MAX_POP_SERVER_FROM_DEAD_QUEUE_LIMIT, servers);
+      get_server_manager().pop_from_dead_queue(helper, now);
+      for (int32_t j = 0; j < helper.get_array_index(); ++j)
       {
-        result.clear();
         bool complete = false;
         uint32_t start = 0;
         BlockCollect* block = NULL;
+        ServerCollect* server = *helper.at(j);
+        assert(NULL != server);
         do
         {
           result.clear();
@@ -1363,8 +1368,9 @@ namespace tfs
         need = MAX_DELETE_NUMS;
       int32_t count = need * 2;
       std::pair<uint32_t, uint64_t> output;
-      while (get_block_manager().pop_from_delete_queue(output) && need > 0 && count-- > 0)
+      while (count > 0 && get_block_manager().pop_from_delete_queue(output))
       {
+        --count;
         BlockCollect* block = get_block_manager().get(output.first);
         ServerCollect* server = get_server_manager().get(output.second);
         ret = ((NULL != block) && (NULL != server));
@@ -1373,30 +1379,6 @@ namespace tfs
           relieve_relation(block, server, now,BLOCK_COMPARE_SERVER_BY_POINTER);
           ret = get_task_manager().remove_block_from_dataserver(server->id(), block->id(), 0, now);
         }
-        /*BlockCollect* block = get_block_manager().get(output.first);
-        ServerCollect* server = get_server_manager().get(output.second);
-        ret = ((NULL != block) && (NULL != server));
-        if (ret)
-        {
-          if (get_task_manager().exist(output.first))
-          {
-            get_block_manager().push_to_delete_queue(output.first, output.second);
-          }
-          else
-          {
-            std::vector<ServerCollect*> runer;
-            runer.push_back(server);
-            ret = (TFS_SUCCESS == get_task_manager().add(block->id(), runer, PLAN_TYPE_DELETE, now));
-            if (!ret)
-            {
-              get_block_manager().push_to_delete_queue(output.first, output.second);
-            }
-            else
-            {
-              --need;
-            }
-          }
-        }*/
       }
       return true;
     }
