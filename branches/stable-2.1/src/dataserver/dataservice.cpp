@@ -589,8 +589,7 @@ namespace tfs
     int DataService::run_heart(const int32_t who)
     {
       //sleep for a while, waiting for listen port establish
-      int32_t iret = -1, count = 0;
-      time_t start = 0, end = 0, sleep_time_us = 0;
+      int32_t iret = -1;
       int8_t heart_interval = DEFAULT_HEART_INTERVAL;
       sleep(heart_interval);
       while (!stop_)
@@ -607,25 +606,21 @@ namespace tfs
         //if (DATASERVER_STATUS_DEAD== data_server_info_.status_)
         //  break;
 
-        start = Func::get_monotonic_time_us();
-        do
-        {
           //目前超时时间设置成2s，主要是为了跟以及版本兼容，目前在心跳中还没有删除带Block以及其它的功能
           //这些功能在dataserver换完以后可以想办法将它删除， 然后将超时时间设置短点，失败重试次数多点,
           //同时目前心跳的间隔时间是写死的， 删除以上功能的同时，可以将心跳间隔由nameserver发给dataserver
           //也就是每次心跳时带上dataserver心跳的间隔时间
-          iret = send_blocks_to_ns(heart_interval, who, 2000);//2s
-          heart_interval = DEFAULT_HEART_INTERVAL;//这一行换成2.2版本的nameserver时可以删除
-          end  = Func::get_monotonic_time_us();
-          ++count;
+
+        iret = send_blocks_to_ns(heart_interval, who, 2000);//2s
+        heart_interval = DEFAULT_HEART_INTERVAL;//这一行换成2.2版本的nameserver时可以删除
+        if (TFS_SUCCESS != iret)
+        {
+          usleep(500000);  // if fail, sleep 500ms before retry
         }
-        while (TFS_SUCCESS != iret && count < 2 && !stop_);
-
-        sleep_time_us = TFS_SUCCESS == iret ? heart_interval * 1000000 - (end - start)
-          : heart_interval * 1000000;
-
-        if (sleep_time_us > 0)
-          usleep(sleep_time_us);
+        else
+        {
+          usleep(heart_interval * 1000000);
+        }
       }
       return TFS_SUCCESS;
     }
