@@ -12,50 +12,60 @@ import org.apache.log4j.Logger;
 import com.taobao.common.tfs.utility.TimeUtility;
 
 
-public class ConcurrentExecutor {
+public class ConcurrentExecutor 
+{
 	private int threadCount;
-	private Operation operation;
-	
+	private Operation operation;	
 	private ExecutorService es;
 	private ExecutorCompletionService<Object> ecs;
 	
 	private Logger logger = Logger.getLogger(ConcurrentExecutor.class);
 	
-	public ConcurrentExecutor(Operation operation,int threadCount){
+	public ConcurrentExecutor(Operation operation,int threadCount)
+	{
 		this.operation = operation;
-		this.threadCount = threadCount;
-		
+		this.threadCount = threadCount;		
 		es = Executors.newFixedThreadPool(threadCount);
 		ecs = new ExecutorCompletionService<Object>(es);
 	}
 	
-	public void run(){
-		for(int i = 0;i<threadCount;i++){
-			ecs.submit(new Callable<Object>(){
-				public Object call() throws Exception {
-					return operation.run();
-				}	
-			});
+	public void run()
+	{
+		for(int i = 0;i<threadCount;i++)
+		{
+			ecs.submit(new Callable<Object>()
+					{
+						public Object call() throws Exception 
+						{
+							return operation.run();
+						}	
+					});
 		}
 		es.shutdown();
 		
 	}
 	
-	public void runWithDelay(int delayInSeconds){
+	public void runWithDelay(int delayInSeconds)
+	{
 		logger.info("begin sleep");
 		TimeUtility.sleep(delayInSeconds);
 		logger.info("end sleep");
 		run();
 	}
 	
-	public List<Object> waitForComplete(){
+	public List<Object> waitForComplete()
+	{
 		List<Object> result = new ArrayList<Object>();
 		
-		for(int i = 0; i<threadCount;i++){
-			try {
+		for(int i = 0; i<threadCount;i++)
+		{
+			try 
+			{
 				logger.info("waitForCompletetion "+threadCount);
 				result.add(ecs.take().get());
-			} catch (Exception e) {
+			} 
+			catch (Exception e)
+			{
 				logger.error("waitForCompletetion exception",e);
 			}
 		}

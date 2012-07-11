@@ -20,7 +20,8 @@ import com.taobao.common.tfs.rc.TairConfigInfo;
 import com.taobao.common.tfs.unique.TairUniqueStore;
 import com.taobao.common.tfs.unique.UniqueValue;
 
-public class TairRefCounter {
+public class TairRefCounter 
+{
 	private byte[] data;
 	private int offset;
 	private int length;
@@ -29,42 +30,56 @@ public class TairRefCounter {
 	private TairUniqueStore uniqueStore = null;
 	private Logger logger = Logger.getLogger(TairRefCounter.class);
 
-	public TairRefCounter(DefaultTfsManager tfsManager) {
+	public TairRefCounter(DefaultTfsManager tfsManager) 
+	{
 		this.tfsManager = tfsManager;
 		uniqueStore = new TairUniqueStore();
 		initUniqueStore();
 	}
 
-	public int getRefCounter() {
-		try {
+	public int getRefCounter() 
+	{
+		try 
+		{
 			int ret = getUniqueValue().getReferenceCount();
-			if (ret == TfsConstant.UNIQUE_QUERY_NOT_EXIST) {
+			if (ret == TfsConstant.UNIQUE_QUERY_NOT_EXIST) 
+			{
 				return 0;
-			} else {
+			}
+			else 
+			{
 				return ret;
 			}
-		} catch (TfsException e) {
+		}
+		catch (TfsException e) 
+		{
 			logger.error("in getRefCounter exception: " + e.getMessage());
 			return -1;
 		}
 	}
 
-	public String getTfsName() {
-		try {
+	public String getTfsName()
+	{
+		try 
+		{
 			return getUniqueValue().getTfsName();
-		} catch (TfsException e) {
+		} 
+		catch (TfsException e) 
+		{
 			logger.error("in getTfsName exception: " + e.getMessage());
 			return "";
 		}
 	}
 
-	public void setKeyElement(byte[] data, int offset, int length) {
+	public void setKeyElement(byte[] data, int offset, int length) 
+	{
 		this.data = data;
 		this.offset = offset;
 		this.length = length;
 	}
 
-	public void setFileInputStream(FileInputStream input) throws IOException {
+	public void setFileInputStream(FileInputStream input) throws IOException 
+	{
 		int length = (int) input.getChannel().size();
 		byte[] data = new byte[length];
 
@@ -79,65 +94,75 @@ public class TairRefCounter {
 		input.close();
 	}
 
-	private void initUniqueStore() {
+	private void initUniqueStore()
+	{
 		RespRcLoginMessage rrlm = getRrlm();
 
 		RcBaseInfo baseInfo = rrlm.getBaseInfo();
 
-		for (RcClusterRackInfo clusterRackInfo : baseInfo.getClusterRackInfos()) {
+		for (RcClusterRackInfo clusterRackInfo : baseInfo.getClusterRackInfos()) 
+		{
 			boolean writable = false;
-			for (RcClusterInfo clusterInfo : clusterRackInfo.getClusterInfos()) {
-				if (clusterInfo.getAccessType() == RcClusterRackInfo.CLUSTER_ACCESS_TYPE_READ_WRITE) {
+			for (RcClusterInfo clusterInfo : clusterRackInfo.getClusterInfos()) 
+			{
+				if (clusterInfo.getAccessType() == RcClusterRackInfo.CLUSTER_ACCESS_TYPE_READ_WRITE) 
+				{
 					writable = true;
 				}
 			}
 
-			if (writable) {
+			if (writable)
+			{
 				setUniqueStoreInfo(clusterRackInfo.getDuplicateInfo());
 			}
 		}
 		uniqueStore.init();
 	}
 
-	private int getLocalIp() {
+	private int getLocalIp()
+	{
 		String appIp = tfsManager.getAppIp();
-		if (appIp == null) {
+		if (appIp == null) 
+		{
 			appIp = TfsUtil.getLocalIpString();
 		}
 
 		return (int) (TfsUtil.hostToLong(appIp, 381) & 0xffffffffL);
 	}
 
-	private RespRcLoginMessage getRrlm() {
+	private RespRcLoginMessage getRrlm() 
+	{
 		RespRcLoginMessage rrlm = null;
 
-		try {
-			rrlm = RcSessionHelper.login(
-					TfsUtil.hostToLong(tfsManager.getRcAddr()),
-					tfsManager.getAppKey(), getLocalIp());
-		} catch (TfsException e) {
+		try 
+		{
+			rrlm = RcSessionHelper.login(TfsUtil.hostToLong(tfsManager.getRcAddr()),tfsManager.getAppKey(), getLocalIp());
+		} 
+		catch (TfsException e) 
+		{
 			e.printStackTrace();
 		}
 
 		return rrlm;
 	}
 
-	private void setUniqueStoreInfo(TairConfigInfo duplicateInfo) {
+	private void setUniqueStoreInfo(TairConfigInfo duplicateInfo)
+	{
 		List<String> addrList = new ArrayList<String>();
 		addrList.add(duplicateInfo.getMasterAddr());
 		addrList.add(duplicateInfo.getSlaveAddr());
 		((TairUniqueStore) uniqueStore).setConfigServerList(addrList);
-		((TairUniqueStore) uniqueStore).setGroupName(duplicateInfo
-				.getGroupName());
-		((TairUniqueStore) uniqueStore).setNamespace(duplicateInfo
-				.getNamespace());
+		((TairUniqueStore) uniqueStore).setGroupName(duplicateInfo.getGroupName());
+		((TairUniqueStore) uniqueStore).setNamespace(duplicateInfo.getNamespace());
 	}
 
-	private byte[] getKey() {
+	private byte[] getKey() 
+	{
 		return uniqueStore.getKey(data, offset, length);
 	}
 
-	private UniqueValue getUniqueValue() throws TfsException {
+	private UniqueValue getUniqueValue() throws TfsException 
+	{
 		return uniqueStore.query(getKey());
 	}
 }
