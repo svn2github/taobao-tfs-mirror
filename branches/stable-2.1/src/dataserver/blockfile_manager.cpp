@@ -21,6 +21,7 @@
 #include "common/directory_op.h"
 #include <string.h>
 #include <Memory.hpp>
+#include <strings.h>
 
 namespace tfs
 {
@@ -108,6 +109,38 @@ namespace tfs
       return ret ? TFS_SUCCESS : TFS_ERROR;
     }
 
+    int BlockFileManager::index_filter(const struct dirent *entry)
+    {
+      int exist = 0;
+      if (index(entry->d_name, '.'))
+      {
+        exist = 1;
+      }
+      return exist;
+    }
+
+    void BlockFileManager::clear_block_tmp_index(const char* mount_path)
+    {
+      TBSYS_LOG(INFO, "clearing temp index file.");
+      int num = 0;
+      struct dirent** namelist = NULL;
+      string index_dir(mount_path);
+      index_dir += INDEX_DIR_PREFIX;
+      num = scandir(index_dir.c_str(), &namelist, index_filter, NULL);
+      for (int i = 0; i < num; i++)
+      {
+        string filename = index_dir + namelist[i]->d_name;
+        unlink(filename.c_str());  // ignore return value
+      }
+
+      for (int i = 0; i < num; i++)
+      {
+        tbsys::gDelete(namelist[i]);
+      }
+
+      tbsys::gDelete(namelist);
+    }
+
     int BlockFileManager::bootstrap(const FileSystemParameter& fs_param)
     {
       // 1. load super block
@@ -120,6 +153,7 @@ namespace tfs
       ret = PhysicalBlock::init_prefix_op(mount_path);
       if (TFS_SUCCESS != ret)
         return ret;
+      clear_block_tmp_index(mount_path.c_str());
       return load_block_file();
     }
 

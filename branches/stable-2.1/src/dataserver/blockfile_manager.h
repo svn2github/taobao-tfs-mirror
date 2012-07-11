@@ -28,6 +28,7 @@
 #include "superblock_impl.h"
 #include "common/parameter.h"
 #include "common/lock.h"
+#include <dirent.h>
 
 namespace tfs
 {
@@ -77,6 +78,7 @@ namespace tfs
         int reset_error_bitmap(const std::set<uint32_t>& reset_error_blocks);
 
         int create_block_prefix();
+        void clear_block_tmp_index(const char* mount_name);
 
       private:
         BlockFileManager()
@@ -104,6 +106,7 @@ namespace tfs
         void rollback_superblock(const uint32_t physical_block_id, const bool modify_flag,
             BlockType type = C_MAIN_BLOCK);
 
+        static int index_filter(const struct dirent *entry);
 
       private:
         static const int32_t INDEXFILE_SAFE_MULT = 4;
