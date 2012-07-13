@@ -1,13 +1,15 @@
-package com.taobao.common.tfs.RcITest_2_2_3;
+package com.taobao.common.tfs.testcase.Interface.normal.rc;
 
 import junit.framework.Assert;
 
 import org.junit.Test;
 
-import com.taobao.common.tfs.tfsNameBaseCase;
+import com.taobao.common.tfs.testcase.rcTfsBaseCase;
 
 
-public class RcTfsManager_01_saveFile extends tfsNameBaseCase 
+
+
+public class RcTfsManager_01_saveFile extends rcTfsBaseCase 
 {
 	@Test
     public  void  test_01_saveFile_with_right_suffix()
@@ -297,15 +299,4 @@ public class RcTfsManager_01_saveFile extends tfsNameBaseCase
 		Assert.assertNull(Ret);
 	}
 	
-	public void sleep(int sec)
-	{
-		try
-		{
-			Thread.sleep(sec*1000);
-		} 
-		catch(Exception e)
-		{
-			e.printStackTrace();
-		}
-	}
 }

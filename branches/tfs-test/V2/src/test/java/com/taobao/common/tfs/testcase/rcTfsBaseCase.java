@@ -13,14 +13,17 @@ public class rcTfsBaseCase extends BaseCase
 	//...
 	protected static Log log = LogFactory.getLog(rcTfsBaseCase.class);
 	
+    static 
+	{
+        ClassPathXmlApplicationContext appContext = new ClassPathXmlApplicationContext(new String[] { "tfs.xml" });
+        tfsManager = (DefaultTfsManager) appContext.getBean("tfsManager");
+    }
+	
 	// Define
 	final public int RCINDEX = 0;//??
 	final public int RCNSINDEX = 1;//??
 	//mysql连接
 	//...
-	
-	//rc
-	public static long appId = 3;
 	
 	
 	
@@ -68,47 +71,69 @@ public class rcTfsBaseCase extends BaseCase
 	
 	/*___________________________________函数区____________________________________*/
 	
-	public DefaultTfsManager CreateTfsManager() 
-	{
-		DefaultTfsManager dtTfsManager;
-		ClassPathXmlApplicationContext appContext = new ClassPathXmlApplicationContext(new String[] { "tfs.xml" });
-		dtTfsManager = (DefaultTfsManager) appContext.getBean("tfsManager");
-		appId = dtTfsManager.getAppId();
-		return dtTfsManager;
-	}
-	
-	/*server 控制函数*/
-	public boolean killOneRc(int index);
-	public boolean startOneRc(int index);
-	/*Rc 数据库(包括权限)设置和查看函数*/
-	public long getCurrentQuote(String appKey);
-	public long getMaxQuote(String appKey);
-	public void resetCurQuote(String appKey);
-	public void modifyMaxQuote(String appKey, long newQuote);
-	public void setGroupPermission(String appKey, int mode);
-	public void setClusterPermission(String appKey, int mode);
-	public void setClusterPermission(String appKey, int index, int mode);
-	public int getClusterEx(String nsAddr);
-	public int getClusterIndex(String tfsname);
-	public boolean checkSessionId(String sessionId);//错开的
-	public boolean setDuplicateStatus(String appKey, int status);
-	public boolean changeDuplicateServerAddr(int clusterRackID,String duplicateServerAddr);
-	public long getUsedCapacity(String appKey);
-	public long getFileCount(String appKey);
-	public long getOperTimes(String sessionId, int operType);
-	public long getSuccTimes(String sessionId, int operType);
-	public long getFileSize(String sessionId, int operType);
+//	public DefaultTfsManager CreateTfsManager() 
+//	{
+//		DefaultTfsManager dtTfsManager;
+//		ClassPathXmlApplicationContext appContext = new ClassPathXmlApplicationContext(new String[] { "tfs.xml" });
+//		dtTfsManager = (DefaultTfsManager) appContext.getBean("tfsManager");
+//		appId = dtTfsManager.getAppId();
+//		return dtTfsManager;
+//	}
 	
 	
 	
 	
-	/*Rc 机器集群控制*/
-	public void addNewTfsCluster(String appKey, int index, String clusterName);
-	public void removeTfsCluster(String appKey, int index);
-	public void addOneRc(int index, int status);
-	public void removeOneRc(int index);
-	public void modifyRc(int oldIndex, int newIndex);
-	public void setRcMode(int status);
-	public void setRcMode(int index, int status);
+	
+	
+	
+	
+	
+	
+	/*_____________________________________________________________________*/
+	/*_____________________________________________________________________*/
+	/*_____________________________________________________________________*/
+	/*_____________________________________________________________________*/
+	/*_____________________________________________________________________*/
+	/*_____________________________________________________________________*/
+	/*_____________________________________________________________________*/
+	/*_____________________________________________________________________*/
+	/*_____________________________________________________________________*/
+	/*_____________________________________________________________________*/
+	/*_____________________________________________________________________*/
+	
+//	
+//	/*server 控制函数*/
+//	public boolean killOneRc(int index);
+//	public boolean startOneRc(int index);
+//	/*Rc 数据库(包括权限)设置和查看函数*/
+//	public long getCurrentQuote(String appKey);
+//	public long getMaxQuote(String appKey);
+//	public void resetCurQuote(String appKey);
+//	public void modifyMaxQuote(String appKey, long newQuote);
+//	public void setGroupPermission(String appKey, int mode);
+//	public void setClusterPermission(String appKey, int mode);
+//	public void setClusterPermission(String appKey, int index, int mode);
+//	public int getClusterEx(String nsAddr);
+//	public int getClusterIndex(String tfsname);
+//	public boolean checkSessionId(String sessionId);//错开的
+//	public boolean setDuplicateStatus(String appKey, int status);
+//	public boolean changeDuplicateServerAddr(int clusterRackID,String duplicateServerAddr);
+//	public long getUsedCapacity(String appKey);
+//	public long getFileCount(String appKey);
+//	public long getOperTimes(String sessionId, int operType);
+//	public long getSuccTimes(String sessionId, int operType);
+//	public long getFileSize(String sessionId, int operType);
+//	
+//	
+//	
+//	
+//	/*Rc 机器集群控制*/
+//	public void addNewTfsCluster(String appKey, int index, String clusterName);
+//	public void removeTfsCluster(String appKey, int index);
+//	public void addOneRc(int index, int status);
+//	public void removeOneRc(int index);
+//	public void modifyRc(int oldIndex, int newIndex);
+//	public void setRcMode(int status);
+//	public void setRcMode(int index, int status);
 		
 }

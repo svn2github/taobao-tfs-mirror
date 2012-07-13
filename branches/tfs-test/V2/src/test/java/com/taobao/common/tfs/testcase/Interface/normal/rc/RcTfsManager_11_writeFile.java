@@ -1,4 +1,4 @@
-package com.taobao.common.tfs.RcITest_2_2_3;
+package com.taobao.common.tfs.testcase.Interface.normal.rc;
 
 import java.io.IOException;
 
@@ -6,9 +6,12 @@ import junit.framework.Assert;
 
 import org.junit.Test;
 
-import com.taobao.common.tfs.tfsNameBaseCase;
+import com.taobao.common.tfs.testcase.rcTfsBaseCase;
+import com.taobao.common.tfs.utility.FileUtility;
 
-public class RcTfsManager_11_writeFile extends tfsNameBaseCase 
+
+
+public class RcTfsManager_11_writeFile extends rcTfsBaseCase 
 {
 	@Test
     public  void  test_01_openWriteFile_then_writeFile() throws IOException
@@ -22,7 +25,7 @@ public class RcTfsManager_11_writeFile extends tfsNameBaseCase
 		
 		int Wret;
 		byte []data=null;
-		data=getByte(resourcesPath+"5M.jpg");
+		data=FileUtility.getByte(resourcesPath+"5M.jpg");
 		Wret=tfsManager.writeFile(fd, data, 0, data.length);
 		Assert.assertEquals(Wret, data.length);
 	}
@@ -39,7 +42,7 @@ public class RcTfsManager_11_writeFile extends tfsNameBaseCase
 		
 		int Wret;
 		byte []data=null;
-		data=getByte(resourcesPath+"5M.jpg");
+		data=FileUtility.getByte(resourcesPath+"5M.jpg");
 		Wret=tfsManager.writeFile(fd, data, 0, data.length-10*(1<<10));
 		Assert.assertEquals(Wret, data.length-10*(1<<10));
 	}
@@ -56,7 +59,7 @@ public class RcTfsManager_11_writeFile extends tfsNameBaseCase
 		
 		int Wret;
 		byte []data=null;
-		data=getByte(resourcesPath+"5M.jpg");
+		data=FileUtility.getByte(resourcesPath+"5M.jpg");
 		Wret=tfsManager.writeFile(fd, data, 0, data.length+1);
 		Assert.assertTrue(Wret<0);
 	}
@@ -73,7 +76,7 @@ public class RcTfsManager_11_writeFile extends tfsNameBaseCase
 		
 		int Wret;
 		byte []data=null;
-		data=getByte(resourcesPath+"5M.jpg");
+		data=FileUtility.getByte(resourcesPath+"5M.jpg");
 		Wret=tfsManager.writeFile(fd, data, 10*(1<<10), data.length-30*(1<<10));
 		Assert.assertEquals(Wret, data.length-30*(1<<10));
 	}
@@ -90,7 +93,7 @@ public class RcTfsManager_11_writeFile extends tfsNameBaseCase
 		
 		int Wret;
 		byte []data=null;
-		data=getByte(resourcesPath+"5M.jpg");
+		data=FileUtility.getByte(resourcesPath+"5M.jpg");
 		Wret=tfsManager.writeFile(fd, data, data.length+1,1);
 		Assert.assertTrue(Wret<0);
 	}
@@ -107,7 +110,7 @@ public class RcTfsManager_11_writeFile extends tfsNameBaseCase
 		
 		int Wret;
 		byte []data=null;
-		data=getByte(resourcesPath+"5M.jpg");
+		data=FileUtility.getByte(resourcesPath+"5M.jpg");
 		Wret=tfsManager.writeFile(fd, data, -1, data.length);
 		Assert.assertTrue(Wret<0);
 	}
@@ -120,7 +123,7 @@ public class RcTfsManager_11_writeFile extends tfsNameBaseCase
 		int Wret;
 		byte []data=null;
 		int fd =-1;
-		data=getByte(resourcesPath+"5M.jpg");
+		data=FileUtility.getByte(resourcesPath+"5M.jpg");
 		Wret=tfsManager.writeFile(fd, data, 0, data.length);
 		Assert.assertTrue(Wret<0);
 	}
@@ -139,7 +142,7 @@ public class RcTfsManager_11_writeFile extends tfsNameBaseCase
 		
 		int Wret;
 		byte []data=null;
-		data=getByte(resourcesPath+"5M.jpg");
+		data=FileUtility.getByte(resourcesPath+"5M.jpg");
 		Wret=tfsManager.writeFile(fd, data, 0, data.length);
 		Assert.assertTrue(Wret<0);
 	}
@@ -158,7 +161,7 @@ public class RcTfsManager_11_writeFile extends tfsNameBaseCase
 		
 		int Wret;
 		byte []data=null;
-		data=getByte(resourcesPath+"5M.jpg");
+		data=FileUtility.getByte(resourcesPath+"5M.jpg");
 		Wret=tfsManager.writeFile(fd, data, 0, data.length);
 		Assert.assertTrue(Wret<0);
 	}
@@ -178,7 +181,7 @@ public class RcTfsManager_11_writeFile extends tfsNameBaseCase
 		
 		int Wret;
 		byte []data=null;
-		data=getByte(resourcesPath+"5M.jpg");
+		data=FileUtility.getByte(resourcesPath+"5M.jpg");
 		Wret=tfsManager.writeFile(fd, data, 0, data.length);
 		Assert.assertTrue(Wret<0);
 	}
@@ -194,7 +197,7 @@ public class RcTfsManager_11_writeFile extends tfsNameBaseCase
 		
 		int Wret;
 		byte []data=null;
-		data=getByte(resourcesPath+"5M.jpg");
+		data=FileUtility.getByte(resourcesPath+"5M.jpg");
 		Wret=tfsManager.writeFile(fd, data, 0, data.length);
 		Assert.assertEquals(Wret, data.length);
 	}
@@ -228,7 +231,7 @@ public class RcTfsManager_11_writeFile extends tfsNameBaseCase
 		
 		int Wret;
 		byte []data=null;
-		data=getByte(resourcesPath+"5M.jpg");
+		data=FileUtility.getByte(resourcesPath+"5M.jpg");
 		Wret=tfsManager.writeFile(fd, data, 0, data.length);
 		Assert.assertEquals(Wret, data.length);
 	}

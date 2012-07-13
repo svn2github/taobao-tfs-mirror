@@ -1,4 +1,4 @@
-package com.taobao.common.tfs.RcITest_2_2_3;
+package com.taobao.common.tfs.testcase.Interface.normal.rc;
 
 import java.io.IOException;
 
@@ -6,10 +6,11 @@ import junit.framework.Assert;
 
 import org.junit.Test;
 
-import com.taobao.common.tfs.tfsNameBaseCase;
+import com.taobao.common.tfs.testcase.rcTfsBaseCase;
 
 
-public class RcTfsManager_10_readFile_fileOffset extends tfsNameBaseCase 
+
+public class RcTfsManager_10_readFile_fileOffset extends rcTfsBaseCase 
 {
 	@Test
     public  void  test_01_openReadFile_then_readFile() throws IOException

@@ -1,4 +1,4 @@
-package com.taobao.common.tfs.RcITest_2_2_3;
+package com.taobao.common.tfs.testcase.Interface.normal.rc;
 
 import java.io.IOException;
 
@@ -6,9 +6,12 @@ import junit.framework.Assert;
 
 import org.junit.Test;
 
-import com.taobao.common.tfs.tfsNameBaseCase;
+import com.taobao.common.tfs.testcase.rcTfsBaseCase;
+import com.taobao.common.tfs.utility.FileUtility;
 
-public class RcTfsManager_09_readFile extends tfsNameBaseCase 
+
+
+public class RcTfsManager_09_readFile extends rcTfsBaseCase 
 {
 	@Test
     public  void  test_01_openReadFile_then_readFile() throws IOException
@@ -20,7 +23,7 @@ public class RcTfsManager_09_readFile extends tfsNameBaseCase
 		Ret=tfsManager.saveLargeFile( resourcesPath+"5M.jpg",null,null);
 		Assert.assertNotNull(Ret);
 		System.out.println("The tfs file name is "+ Ret);
-		savecrc=getCrc(resourcesPath+"5M.jpg");
+		savecrc=FileUtility.getCrc(resourcesPath+"5M.jpg");
 		
 		int fd=-1;
 		fd=tfsManager.openReadFile(Ret, null);
@@ -33,8 +36,8 @@ public class RcTfsManager_09_readFile extends tfsNameBaseCase
 		Assert.assertEquals(Rret,5*(1<<20));
 		
 		
-		DataToFile(resourcesPath+"readtemp",data);
-		readcrc=getCrc(resourcesPath+"readtemp");
+		FileUtility.dataToFile(resourcesPath+"readtemp",data);
+		readcrc=FileUtility.getCrc(resourcesPath+"readtemp");
 		Assert.assertEquals(savecrc,readcrc);		
 	}
 	

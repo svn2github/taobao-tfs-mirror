@@ -1,12 +1,14 @@
-package com.taobao.common.tfs.RcITest_2_2_3;
+package com.taobao.common.tfs.testcase.Interface.normal.rc;
 
 import junit.framework.Assert;
 
 import org.junit.Test;
 
-import com.taobao.common.tfs.tfsNameBaseCase;
+import com.taobao.common.tfs.testcase.rcTfsBaseCase;
 
-public class RcTfsManager_03_saveLargeFile extends tfsNameBaseCase 
+
+
+public class RcTfsManager_03_saveLargeFile extends rcTfsBaseCase 
 {
 	@Test
     public  void  test_01_saveLargeFile_small_size()

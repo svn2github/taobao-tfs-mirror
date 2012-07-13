@@ -1,18 +1,19 @@
-package com.taobao.common.tfs.RcITest_2_2_3;
+package com.taobao.common.tfs.testcase.Interface.normal.rc;
 
 
 import java.io.IOException;
 
-import com.taobao.common.tfs.tfsNameBaseCase;
 
 import junit.framework.Assert;
 
 import org.junit.Test;
 
 import com.taobao.common.tfs.packet.FileInfo;
+import com.taobao.common.tfs.testcase.rcTfsBaseCase;
+import com.taobao.common.tfs.utility.FileUtility;
 
 
-public class RcTfsManager_12_statFile extends tfsNameBaseCase 
+public class RcTfsManager_12_statFile extends rcTfsBaseCase 
 {
 	@Test
     public  void  test_01_statFile_null_tfsFileName()
@@ -127,7 +128,7 @@ public class RcTfsManager_12_statFile extends tfsNameBaseCase
 		
 		String Ret=null;
 		byte data[]=null;
-		data=getByte(resourcesPath+"100K.jpg");
+		data=FileUtility.getByte(resourcesPath+"100K.jpg");
 		Ret=tfsManager.saveFile(null,null,data,0,100*(1<<10),false);
 		Assert.assertNotNull(Ret);
 		System.out.println("The tfs file name is "+ Ret);
@@ -145,7 +146,7 @@ public class RcTfsManager_12_statFile extends tfsNameBaseCase
 		
 		String Ret=null;
 		byte data[]=null;
-		data=getByte(resourcesPath+"100K.jpg");
+		data=FileUtility.getByte(resourcesPath+"100K.jpg");
 		Ret=tfsManager.saveFile(null,null,data,0,100*(1<<10),true);
 		Assert.assertNotNull(Ret);
 		System.out.println("The tfs file name is "+ Ret);
@@ -163,7 +164,7 @@ public class RcTfsManager_12_statFile extends tfsNameBaseCase
 		
 		String Ret=null;
 		byte data[]=null;
-		data=getByte(resourcesPath+"100K.jpg");
+		data=FileUtility.getByte(resourcesPath+"100K.jpg");
 		Ret=tfsManager.saveFile(null,null,data,0,100*(1<<10),false);
 		Assert.assertNotNull(Ret);
 		System.out.println("The tfs file name is "+ Ret);
@@ -180,7 +181,7 @@ public class RcTfsManager_12_statFile extends tfsNameBaseCase
 		
 		String Ret=null;
 		byte data[]=null;
-		data=getByte(resourcesPath+"100K.jpg");
+		data=FileUtility.getByte(resourcesPath+"100K.jpg");
 		Ret=tfsManager.saveFile(null,".jpg",data,0,100*(1<<10),false);
 		Assert.assertNotNull(Ret);
 		System.out.println("The tfs file name is "+ Ret);
@@ -198,7 +199,7 @@ public class RcTfsManager_12_statFile extends tfsNameBaseCase
 		
 		String Ret=null;
 		byte data[]=null;
-		data=getByte(resourcesPath+"100K.jpg");
+		data=FileUtility.getByte(resourcesPath+"100K.jpg");
 		Ret=tfsManager.saveFile(null,".jpg",data,0,100*(1<<10),true);
 		Assert.assertNotNull(Ret);
 		System.out.println("The tfs file name is "+ Ret);
@@ -263,7 +264,7 @@ public class RcTfsManager_12_statFile extends tfsNameBaseCase
 		
 		String Ret=null;
 		byte data[]=null;
-		data=getByte(resourcesPath+"5M.jpg");
+		data=FileUtility.getByte(resourcesPath+"5M.jpg");
 		Ret=tfsManager.saveLargeFile(null,null,data,0,data.length,key);
 		Assert.assertNotNull(Ret);
 		System.out.println("The tfs file name is "+ Ret);
@@ -281,7 +282,7 @@ public class RcTfsManager_12_statFile extends tfsNameBaseCase
 		
 		String Ret=null;
 		byte data[]=null;
-		data=getByte(resourcesPath+"5M.jpg");
+		data=FileUtility.getByte(resourcesPath+"5M.jpg");
 		Ret=tfsManager.saveLargeFile(null,null,data,0,data.length,key);
 		Assert.assertNotNull(Ret);
 		System.out.println("The tfs file name is "+ Ret);
@@ -298,7 +299,7 @@ public class RcTfsManager_12_statFile extends tfsNameBaseCase
 		
 		String Ret=null;
 		byte data[]=null;
-		data=getByte(resourcesPath+"5M.jpg");
+		data=FileUtility.getByte(resourcesPath+"5M.jpg");
 		Ret=tfsManager.saveLargeFile(null,".jpg",data,0,data.length,key);
 		Assert.assertNotNull(Ret);
 		System.out.println("The tfs file name is "+ Ret);

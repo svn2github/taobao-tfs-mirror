@@ -1,14 +1,17 @@
-package com.taobao.common.tfs.RcITest_2_2_3;
+package com.taobao.common.tfs.testcase.Interface.normal.rc;
 
 import java.io.IOException;
 
 import org.junit.Test;
 
+import com.taobao.common.tfs.testcase.rcTfsBaseCase;
+import com.taobao.common.tfs.utility.FileUtility;
+
 import junit.framework.Assert;
 
-import com.taobao.common.tfs.tfsNameBaseCase;
 
-public class RcTfsManager_04_saveLargeFile_byte extends tfsNameBaseCase 
+
+public class RcTfsManager_04_saveLargeFile_byte extends rcTfsBaseCase 
 {
 	@Test
     public  void  test_01_saveLargeFile_byte() throws IOException
@@ -16,7 +19,7 @@ public class RcTfsManager_04_saveLargeFile_byte extends tfsNameBaseCase
     	log.info( "test_01_saveLargeFile_byte" );
 		String Ret=null;
 		byte data[]=null;
-		data=getByte(resourcesPath+"5M.jpg");
+		data=FileUtility.getByte(resourcesPath+"5M.jpg");
 		Ret=tfsManager.saveLargeFile(null,null,data,0,data.length,key);
 		Assert.assertNotNull(Ret);
 		System.out.println("The tfs file name is "+ Ret);
@@ -28,7 +31,7 @@ public class RcTfsManager_04_saveLargeFile_byte extends tfsNameBaseCase
     	log.info( "test_02_saveLargeFile_byte_less_length" );
 		String Ret=null;
 		byte data[]=null;
-		data=getByte(resourcesPath+"5M.jpg");
+		data=FileUtility.getByte(resourcesPath+"5M.jpg");
 		Ret=tfsManager.saveLargeFile(null,null,data,0,data.length-10*(1<<10),key);
 		Assert.assertNotNull(Ret);
 		System.out.println("The tfs file name is "+ Ret);
@@ -40,7 +43,7 @@ public class RcTfsManager_04_saveLargeFile_byte extends tfsNameBaseCase
     	log.info( "test_03_saveLargeFile_byte_more_length" );
 		String Ret=null;
 		byte data[]=null;
-		data=getByte(resourcesPath+"5M.jpg");
+		data=FileUtility.getByte(resourcesPath+"5M.jpg");
 		Ret=tfsManager.saveLargeFile(null,null,data,0,data.length+10*(1<<20),key);
 		Assert.assertNull(Ret);
 		System.out.println("The tfs file name is "+ Ret);
@@ -52,7 +55,7 @@ public class RcTfsManager_04_saveLargeFile_byte extends tfsNameBaseCase
     	log.info( "test_04_saveLargeFile_byte_wrong_offset" );
 		String Ret=null;
 		byte data[]=null;
-		data=getByte(resourcesPath+"5M.jpg");
+		data=FileUtility.getByte(resourcesPath+"5M.jpg");
 		Ret=tfsManager.saveLargeFile(null,null,data,-1,data.length,key);
 		Assert.assertNull(Ret);
 	}
@@ -63,7 +66,7 @@ public class RcTfsManager_04_saveLargeFile_byte extends tfsNameBaseCase
     	log.info( "test_05_saveLargeFile_byte_more_offset" );
 		String Ret=null;
 		byte data[]=null;
-		data=getByte(resourcesPath+"5M.jpg");
+		data=FileUtility.getByte(resourcesPath+"5M.jpg");
 		Ret=tfsManager.saveLargeFile(null,null,data,data.length+1,1,key);
 		Assert.assertNull(Ret);
 	}
@@ -74,7 +77,7 @@ public class RcTfsManager_04_saveLargeFile_byte extends tfsNameBaseCase
     	log.info( "test_06_saveLargeFile_byte_more_offset_and_length" );
 		String Ret=null;
 		byte data[]=null;
-		data=getByte(resourcesPath+"5M.jpg");
+		data=FileUtility.getByte(resourcesPath+"5M.jpg");
 		Ret=tfsManager.saveLargeFile(null,null,data,1<<20,data.length-2*(1<<20),key);
 		Assert.assertNotNull(Ret);
 		System.out.println("The tfs file name is "+ Ret);
@@ -86,7 +89,7 @@ public class RcTfsManager_04_saveLargeFile_byte extends tfsNameBaseCase
     	log.info( "test_07_saveLargeFile_byte_with_suffix" );
 		String Ret=null;
 		byte data[]=null;
-		data=getByte(resourcesPath+"5M.jpg");
+		data=FileUtility.getByte(resourcesPath+"5M.jpg");
 		Ret=tfsManager.saveLargeFile(null,".txt",data,0,data.length,key);
 		Assert.assertNotNull(Ret);
 		System.out.println("The tfs file name is "+ Ret);
@@ -98,7 +101,7 @@ public class RcTfsManager_04_saveLargeFile_byte extends tfsNameBaseCase
     	log.info( "test_08_saveLargeFile_byte_with_empty_suffix" );
 		String Ret=null;
 		byte data[]=null;
-		data=getByte(resourcesPath+"5M.jpg");
+		data=FileUtility.getByte(resourcesPath+"5M.jpg");
 		Ret=tfsManager.saveLargeFile(null,"",data,0,data.length,key);
 		Assert.assertNotNull(Ret);
 		System.out.println("The tfs file name is "+ Ret);
@@ -131,7 +134,7 @@ public class RcTfsManager_04_saveLargeFile_byte extends tfsNameBaseCase
     	log.info( "test_11_saveLargeFile_byte_with_wrong_length" );
 		String Ret=null;
 		byte data[]=null;
-		data=getByte(resourcesPath+"5M.jpg");
+		data=FileUtility.getByte(resourcesPath+"5M.jpg");
 		Ret=tfsManager.saveLargeFile(null,null,data,0,-1,key);
 		Assert.assertNull(Ret);
 	}
@@ -142,7 +145,7 @@ public class RcTfsManager_04_saveLargeFile_byte extends tfsNameBaseCase
     	log.info( "test_12_saveLargeFile_byte_small" );
 		String Ret=null;
 		byte data[]=null;
-		data=getByte(resourcesPath+"10k.jpg");
+		data=FileUtility.getByte(resourcesPath+"10k.jpg");
 		Ret=tfsManager.saveLargeFile(null,null,data,0,data.length,key);
 		Assert.assertNotNull(Ret);
 		System.out.println("The tfs file name is "+ Ret);
@@ -154,7 +157,7 @@ public class RcTfsManager_04_saveLargeFile_byte extends tfsNameBaseCase
     	log.info( "test_13_saveLargeFile_byte_wrong_tfsname" );
 		String Ret=null;
 		byte data[]=null;
-		data=getByte(resourcesPath+"5M.jpg");
+		data=FileUtility.getByte(resourcesPath+"5M.jpg");
 		Ret=tfsManager.saveLargeFile("soahdksadiusaikjj",null,data,0,data.length,key);
 		Assert.assertNull(Ret);
 		System.out.println("The tfs file name is "+ Ret);
@@ -166,7 +169,7 @@ public class RcTfsManager_04_saveLargeFile_byte extends tfsNameBaseCase
     	log.info( "test_14_saveLargeFile_byte_empty_tfsname" );
 		String Ret=null;
 		byte data[]=null;
-		data=getByte(resourcesPath+"5M.jpg");
+		data=FileUtility.getByte(resourcesPath+"5M.jpg");
 		Ret=tfsManager.saveLargeFile("",null,data,0,data.length,key);
 		Assert.assertNotNull(Ret);
 		System.out.println("The tfs file name is "+ Ret);
@@ -178,7 +181,7 @@ public class RcTfsManager_04_saveLargeFile_byte extends tfsNameBaseCase
     	log.info( "test_15_saveLargeFile_byte_null_key" );
 		String Ret=null;
 		byte data[]=null;
-		data=getByte(resourcesPath+"5M.jpg");
+		data=FileUtility.getByte(resourcesPath+"5M.jpg");
 		Ret=tfsManager.saveLargeFile(null,null,data,0,data.length,null);
 		Assert.assertNull(Ret);
 		System.out.println("The tfs file name is "+ Ret);

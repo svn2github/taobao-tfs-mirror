@@ -1,4 +1,4 @@
-package com.taobao.common.tfs.RcITest_2_2_3;
+package com.taobao.common.tfs.testcase.Interface.normal.rc;
 
 import java.io.IOException;
 
@@ -6,9 +6,12 @@ import junit.framework.Assert;
 
 import org.junit.Test;
 
-import com.taobao.common.tfs.tfsNameBaseCase;
+import com.taobao.common.tfs.testcase.rcTfsBaseCase;
+import com.taobao.common.tfs.utility.FileUtility;
 
-public class RcTfsManager_07_openWriteFile extends tfsNameBaseCase 
+
+
+public class RcTfsManager_07_openWriteFile extends rcTfsBaseCase 
 {
 	
 	@Test
@@ -108,7 +111,7 @@ public class RcTfsManager_07_openWriteFile extends tfsNameBaseCase
 		log.info( "test_07_saveLargeFile_byte_then_openWriteFile" );
 		String Ret=null;
 		byte data[]=null;
-		data=getByte(resourcesPath+"10M.jpg");
+		data=FileUtility.getByte(resourcesPath+"10M.jpg");
 		Ret=tfsManager.saveLargeFile(null,null,data,0,data.length,key);
 		Assert.assertNotNull(Ret);
 		System.out.println("The tfs file name is "+ Ret);
@@ -124,7 +127,7 @@ public class RcTfsManager_07_openWriteFile extends tfsNameBaseCase
 		log.info( "test_08_saveLargeFile_byte_then_openWriteFile_wrong_suffix" );
 		String Ret=null;
 		byte data[]=null;
-		data=getByte(resourcesPath+"10M.jpg");
+		data=FileUtility.getByte(resourcesPath+"10M.jpg");
 		Ret=tfsManager.saveLargeFile(null,null,data,0,data.length,key);
 		Assert.assertNotNull(Ret);
 		System.out.println("The tfs file name is "+ Ret);
@@ -140,7 +143,7 @@ public class RcTfsManager_07_openWriteFile extends tfsNameBaseCase
 		log.info( "test_09_saveLargeFile_byte_Suffix_then_openWriteFile_Suffix" );
 		String Ret=null;
 		byte data[]=null;
-		data=getByte(resourcesPath+"10M.jpg");
+		data=FileUtility.getByte(resourcesPath+"10M.jpg");
 		Ret=tfsManager.saveLargeFile(null,".jpg",data,0,data.length,key);
 		Assert.assertNotNull(Ret);
 		System.out.println("The tfs file name is "+ Ret);
