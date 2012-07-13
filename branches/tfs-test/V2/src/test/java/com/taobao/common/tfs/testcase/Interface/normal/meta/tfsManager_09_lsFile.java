@@ -1,15 +1,16 @@
-package com.taobao.common.tfs.MetaITest_2_2_3;
+package com.taobao.common.tfs.testcase.Interface.normal.meta;
 
 import org.junit.Test;
 import org.junit.Ignore;
 
 import junit.framework.Assert;
 
-import com.taobao.common.tfs.tfsNameBaseCase;
+
 import com.taobao.common.tfs.namemeta.FileMetaInfo;
+import com.taobao.common.tfs.testcase.metaTfsBaseCase;
 
 
-public class tfsManager_09_lsFile extends tfsNameBaseCase 
+public class tfsManager_09_lsFile extends metaTfsBaseCase 
 {
 	@Test
 	public void test_01_lsFile_right_filePath()

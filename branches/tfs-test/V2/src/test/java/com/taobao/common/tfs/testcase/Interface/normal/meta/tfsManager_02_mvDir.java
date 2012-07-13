@@ -1,15 +1,17 @@
-package com.taobao.common.tfs.MetaITest_2_2_3;
+package com.taobao.common.tfs.testcase.Interface.normal.meta;
 
 
 import org.junit.Test;
 import org.junit.Ignore;
 
+import com.taobao.common.tfs.testcase.metaTfsBaseCase;
+
 import junit.framework.Assert;
 
-import com.taobao.common.tfs.tfsNameBaseCase;
 
 
-public class tfsManager_02_mvDir extends tfsNameBaseCase 
+
+public class tfsManager_02_mvDir extends metaTfsBaseCase 
 {
 	@Test
 	public void test_01_mvDir_right()

@@ -1,4 +1,4 @@
-package com.taobao.common.tfs.MetaITest_2_2_3;
+package com.taobao.common.tfs.testcase.Interface.normal.meta;
 
 
 import java.io.ByteArrayOutputStream;
@@ -10,12 +10,15 @@ import java.io.OutputStream;
 import org.junit.Test;
 import org.junit.Ignore;
 
+import com.taobao.common.tfs.testcase.metaTfsBaseCase;
+import com.taobao.common.tfs.utility.FileUtility;
+
 import junit.framework.Assert;
 
-import com.taobao.common.tfs.tfsNameBaseCase;
 
 
-public class tfsManager_10_read extends tfsNameBaseCase 
+
+public class tfsManager_10_read extends metaTfsBaseCase 
 {
 	@Test
     public void test_01_read_right() throws FileNotFoundException
@@ -34,8 +37,8 @@ public class tfsManager_10_read extends tfsNameBaseCase
        
        long localcrc;
        long readcrc;
-       localcrc=getCrc(resourcesPath+"2B.jpg");
-       readcrc=getCrc(resourcesPath+"Crc2b.jpg");     	   
+       localcrc=FileUtility.getCrc(resourcesPath+"2B.jpg");
+       readcrc=FileUtility.getCrc(resourcesPath+"Crc2b.jpg");     	   
 	   Assert.assertEquals(localcrc,readcrc);
 
 	   tfsManager.rmFile(appId, userId, "/textread00001");
@@ -49,12 +52,12 @@ public class tfsManager_10_read extends tfsNameBaseCase
 	   tfsManager.saveFile(appId, userId, resourcesPath+"1G.jpg","/textread2rightlarge");
 	   int localcrc;
 	   int readcrc;
-	   localcrc=getCrc(resourcesPath+"1G.jpg");
+	   localcrc=FileUtility.getCrc(resourcesPath+"1G.jpg");
 	   OutputStream output = new FileOutputStream(resourcesPath+"Crc1G.jpg");
        long temp = tfsManager.read(appId, userId,"/textread2rightlarge", 0, 1*( 1<<30), output);
        System.out.println(temp+"!!!!!!!!!");
 	   Assert.assertEquals(1*(1<<30),temp);
-	   readcrc=getCrc(resourcesPath+"Crc1G.jpg");
+	   readcrc=FileUtility.getCrc(resourcesPath+"Crc1G.jpg");
 	   Assert.assertEquals(localcrc,readcrc);
 	   tfsManager.rmFile(appId, userId, "/textread2rightlarge");
     }
@@ -138,12 +141,12 @@ public class tfsManager_10_read extends tfsNameBaseCase
 	   long Ret;
 	   int localcrc;
 	   int readcrc;
-	   localcrc=getCrc(resourcesPath+"10M.jpg");
+	   localcrc=FileUtility.getCrc(resourcesPath+"10M.jpg");
 	   ByteArrayOutputStream output = new ByteArrayOutputStream();
 	   Ret=tfsManager.read(appId, userId, "/text", 0,10*(1<<20), output);
 	   System.out.println("!!!!!!!!!!!!!!!!"+Ret);
 	   Assert.assertEquals(10*(1<<20),Ret);
-	   readcrc=getCrc(output);
+	   readcrc=FileUtility.getCrc(output);
 	   Assert.assertEquals(localcrc,readcrc);
 	   tfsManager.rmFile(appId, userId, "/text");
     }

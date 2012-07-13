@@ -1,4 +1,4 @@
-package com.taobao.common.tfs.MetaITest_2_2_3;
+package com.taobao.common.tfs.testcase.Interface.normal.meta;
 
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -9,12 +9,15 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Ignore;
 
+import com.taobao.common.tfs.testcase.metaTfsBaseCase;
+import com.taobao.common.tfs.utility.FileUtility;
+
 import junit.framework.Assert;
 
-import com.taobao.common.tfs.tfsNameBaseCase;
 
 
-public class tfsManager_16_fetchFile_offset_output extends tfsNameBaseCase 
+
+public class tfsManager_16_fetchFile_offset_output extends metaTfsBaseCase 
 {
 
 
@@ -30,7 +33,7 @@ public class tfsManager_16_fetchFile_offset_output extends tfsNameBaseCase
         OutputStream output = new FileOutputStream(resourcesPath+"temp.jpg");
         bRet=tfsManager.fetchFile(appId, userId, "/textfetchFile", output);
         Assert.assertTrue("Fetch File right path should be true", bRet);
-        Assert.assertEquals(getCrc(resourcesPath+"temp.jpg"),getCrc(resourcesPath+"100K.jpg"));
+        Assert.assertEquals(FileUtility.getCrc(resourcesPath+"temp.jpg"),FileUtility.getCrc(resourcesPath+"100K.jpg"));
 
         tfsManager.rmFile(appId, userId, "/textfetchFile");
     }
@@ -140,7 +143,7 @@ public class tfsManager_16_fetchFile_offset_output extends tfsNameBaseCase
         OutputStream output = new FileOutputStream(resourcesPath+"temp.jpg");
         bRet=tfsManager.fetchFile(appId, userId, "/textfetchFileLarge", output);
         Assert.assertTrue("Fetch File right path should be true", bRet);
-        Assert.assertEquals(getCrc(resourcesPath+"temp.jpg"),getCrc(resourcesPath+"1G.jpg"));
+        Assert.assertEquals(FileUtility.getCrc(resourcesPath+"temp.jpg"),FileUtility.getCrc(resourcesPath+"1G.jpg"));
         tfsManager.rmFile(appId, userId, "/textfetchFileLarge");
     }
 

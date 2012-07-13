@@ -1,15 +1,16 @@
-package com.taobao.common.tfs.MetaITest_2_2_3;
+package com.taobao.common.tfs.testcase.Interface.normal.meta;
 
 
 import org.junit.Test;
 import org.junit.Ignore;
 import junit.framework.Assert;
 
-import com.taobao.common.tfs.tfsNameBaseCase;
+import com.taobao.common.tfs.testcase.metaTfsBaseCase;
 
 
 
-public class tfsManager_00_createDir extends tfsNameBaseCase 
+
+public class tfsManager_00_createDir extends metaTfsBaseCase 
 {
 
     @Test
@@ -127,8 +128,7 @@ public class tfsManager_00_createDir extends tfsNameBaseCase
 	       Assert.assertEquals("Create text should be true", Ret,0);
 	       s="/text"+s;
 	   }
-	   tfsNameBaseCase BaseCase =new tfsNameBaseCase();
-	   BaseCase.deleteDir("/text", 8, tfsManager);
+?	   metaTfsBaseCase.deleteDir("/text", 8, tfsManager);
 	   tfsManager.rmDir(appId, userId, "/text");
     }
 	@Test
@@ -159,8 +159,8 @@ public class tfsManager_00_createDir extends tfsNameBaseCase
 	   {
 		   tfsManager.rmDir(appId, userId, s+"/text"+i);
 	   }
-	   tfsNameBaseCase BaseCase =new tfsNameBaseCase();
-	   BaseCase.deleteDir("/text", 7, tfsManager);
+	
+?	   metaTfsBaseCase.deleteDir("/text", 7, tfsManager);
 	   tfsManager.rmDir(appId, userId, "/text");
     }
 	@Test

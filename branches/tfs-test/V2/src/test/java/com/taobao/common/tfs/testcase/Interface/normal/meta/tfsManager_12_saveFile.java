@@ -1,15 +1,17 @@
-package com.taobao.common.tfs.MetaITest_2_2_3;
+package com.taobao.common.tfs.testcase.Interface.normal.meta;
 
 
 import org.junit.Test;
 import org.junit.Ignore;
 
+import com.taobao.common.tfs.testcase.metaTfsBaseCase;
+import com.taobao.common.tfs.utility.FileUtility;
+
 import junit.framework.Assert;
 
-import com.taobao.common.tfs.tfsNameBaseCase;
 
 
-public class tfsManager_12_saveFile extends tfsNameBaseCase 
+public class tfsManager_12_saveFile extends metaTfsBaseCase 
 {
 	@Test
     public  void  test_01_saveFile_right() throws InterruptedException
@@ -128,7 +130,7 @@ public class tfsManager_12_saveFile extends tfsNameBaseCase
   	Assert.assertTrue("Save File right path should be true", bRet);
       bRet=tfsManager.fetchFile(appId, userId, resourcesPath+"temp","/textsaveFile12");
   	Assert.assertTrue("Fetch File right path should be true", bRet);
-  	Assert.assertEquals(getCrc(resourcesPath+"temp"),getCrc(resourcesPath+"1G.jpg"));
+  	Assert.assertEquals(FileUtility.getCrc(resourcesPath+"temp"),FileUtility.getCrc(resourcesPath+"1G.jpg"));
   	tfsManager.rmFile(appId, userId, "/textsaveFile12");
   }	
 

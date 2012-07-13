@@ -1,4 +1,5 @@
-package com.taobao.common.tfs.MetaITest_2_2_3;
+package com.taobao.common.tfs.testcase.Interface.normal.meta;
+
 
 import java.io.IOException;
 
@@ -7,9 +8,12 @@ import junit.framework.Assert;
 import org.junit.Test;
 import org.junit.Ignore;
 
-import com.taobao.common.tfs.tfsNameBaseCase;
+import com.taobao.common.tfs.testcase.metaTfsBaseCase;
+import com.taobao.common.tfs.utility.FileUtility;
 
-public class tfsManager_13_saveFile_data extends tfsNameBaseCase 
+
+
+public class tfsManager_13_saveFile_data extends metaTfsBaseCase 
 {
 	@Test
     public  void  test_01_saveFile_byte() throws IOException
@@ -21,7 +25,7 @@ public class tfsManager_13_saveFile_data extends tfsNameBaseCase
 		int Ret ;
 
 		byte data[] = null;    
-		data = getByte(resourcesPath+"100K.jpg");
+		data = FileUtility.getByte(resourcesPath+"100K.jpg");
 
 		bRet = tfsManager.saveFile(appId, userId, data, tfsFile);
 		Assert.assertTrue(bRet);
@@ -72,7 +76,7 @@ public class tfsManager_13_saveFile_data extends tfsNameBaseCase
         boolean bRet = false;
         int Ret;
         byte data[] = null;
-        data = getByte(resourcesPath+"100K.jpg");
+        data = FileUtility.getByte(resourcesPath+"100K.jpg");
 
         bRet = tfsManager.saveFile(appId, userId, data, tfsFile);
         Assert.assertTrue(bRet);
@@ -93,7 +97,7 @@ public class tfsManager_13_saveFile_data extends tfsNameBaseCase
 		boolean bRet = false;
 
 		byte data[] = null;
-		data = getByte(resourcesPath+"100K.jpg");
+		data = FileUtility.getByte(resourcesPath+"100K.jpg");
 
 		bRet = tfsManager.saveFile(appId, userId, data, "test05SFBWWTN");
 		Assert.assertFalse(bRet);
@@ -107,7 +111,7 @@ public class tfsManager_13_saveFile_data extends tfsNameBaseCase
 		boolean bRet = false;
 
 		byte data[] = null;
-		data = getByte(resourcesPath+"100K.jpg");
+		data = FileUtility.getByte(resourcesPath+"100K.jpg");
 
 		bRet = tfsManager.saveFile(appId, userId, data, "/");
 		Assert.assertFalse(bRet);
@@ -121,7 +125,7 @@ public class tfsManager_13_saveFile_data extends tfsNameBaseCase
 		boolean bRet = false;
 
 		byte data[] = null;
-		data = getByte(resourcesPath+"100K.jpg");
+		data = FileUtility.getByte(resourcesPath+"100K.jpg");
 
 		bRet = tfsManager.saveFile(appId, userId, data, "");
 		Assert.assertFalse(bRet);
@@ -135,7 +139,7 @@ public class tfsManager_13_saveFile_data extends tfsNameBaseCase
         boolean bRet = false;
 
         byte data[] = null;
-        data = getByte(resourcesPath+"100K.jpg");
+        data = FileUtility.getByte(resourcesPath+"100K.jpg");
         
         bRet = tfsManager.saveFile(appId, userId, data, null);
         Assert.assertFalse(bRet);
