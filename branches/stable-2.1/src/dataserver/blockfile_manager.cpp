@@ -1393,7 +1393,7 @@ namespace tfs
         tbsys::gDelete(file_formater);
         TBSYS_LOG(ERROR, "allocate space error. ret: %d, error: %d, error desc: %s\n", ret, errno, strerror(errno));
         return EXIT_GENERAL_ERROR;
-     }
+      }
       memset(zero_buf, 0, wsize);
 
       while (left > 0)
@@ -1411,10 +1411,27 @@ namespace tfs
         left -= wsize;
       }
 
+      // set fs version to 2: use block_prefix file to start ds
+      SuperBlock super_block;
+      SuperBlockImpl* super_block_impl = new SuperBlockImpl(SYSPARAM_FILESYSPARAM.mount_name_,
+          SYSPARAM_FILESYSPARAM.super_block_reserve_offset_);
+      ret = super_block_impl->read_super_blk(super_block);
+      if (TFS_SUCCESS == ret)
+      {
+        super_block.version_ = FS_SPEEDUP_VERSION;
+        ret = super_block_impl->write_super_blk(super_block);
+        if (TFS_SUCCESS == ret)
+        {
+          super_block_impl->flush_file();
+        }
+      }
+
+      tbsys::gDelete(super_block_impl);
       tbsys::gDelete(zero_buf);
       tbsys::gDelete(file_op);
       tbsys::gDelete(file_formater);
-      return TFS_SUCCESS;
+
+      return ret;
    }
 
     LogicBlock* BlockFileManager::choose_del_block(const uint32_t logic_block_id, BlockType& block_type)
