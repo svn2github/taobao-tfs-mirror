@@ -19,7 +19,8 @@ bin_PROGRAMS = clear_file_system\
                modify_super_block\
                tfsping\
                view_local_key\
-							 gen_block_prefix
+							 gen_block_prefix\
+							 repair_used_block_count
 
 LDADD =	$(top_builddir)/src/tools/util/libtfstoolsutil.a\
 				$(top_builddir)/src/dataserver/libdataserver.a\
@@ -59,4 +60,5 @@ recover_sync_file_queue_SOURCES = recover_sync_file_queue.cpp
 
 gen_block_prefix_SOURCES = gen_block_prefix.cpp
 read_block_prefix_SOURCES = read_block_prefix.cpp
+repair_used_block_count_SOURCES = repair_used_block_count.cpp
 #test_load_SOURCES = test_load.cpp
