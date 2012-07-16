@@ -67,7 +67,7 @@ namespace tfs
       }
     }
 
-    int BlockFileManager::format_block_file_system(const FileSystemParameter& fs_param)
+    int BlockFileManager::format_block_file_system(const FileSystemParameter& fs_param, const bool speedup)
     {
       // 1. initialize super block parameter
       int ret = init_super_blk_param(fs_param);
@@ -95,9 +95,12 @@ namespace tfs
         return ret;
 
       // 6. create block_prefix file
-      ret = create_block_prefix();
-      if (TFS_SUCCESS != ret)
-        return ret;
+      if (speedup)
+      {
+        ret = create_block_prefix();
+        if (TFS_SUCCESS != ret)
+          return ret;
+      }
 
       return TFS_SUCCESS;
     }
