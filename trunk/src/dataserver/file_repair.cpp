@@ -64,7 +64,7 @@ namespace tfs
 
         dataserver_id_ = dataserver_id;
         init_status_ = true;
-      
+
         tfs_client_ = TfsClientImpl::Instance();
         ret =
           tfs_client_->initialize(NULL, DEFAULT_BLOCK_CACHE_TIME, DEFAULT_BLOCK_CACHE_ITEMS, false) == TFS_SUCCESS ?
@@ -134,7 +134,7 @@ namespace tfs
 
               if ((wlen = write_file(fd, data, rlen)) != rlen)
               {
-                TBSYS_LOG(ERROR, "%s write file fail: blockid: %u, fileid: "PRI64_PREFIX"u, write len: %d, ret: %d",
+                TBSYS_LOG(ERROR, "%s write file fail: blockid: %u, fileid: %"PRI64_PREFIX"u, write len: %d, ret: %d",
                           fsname.get_name(), crc_check_record.block_id_, crc_check_record.file_id_, rlen, wlen);
                   break;
               }

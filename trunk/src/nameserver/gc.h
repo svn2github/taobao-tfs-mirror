@@ -40,7 +40,7 @@ namespace tfs
       public:
       explicit GCObjectManager(LayoutManager& manager);
       virtual ~GCObjectManager();
-      int add(GCObject* object);
+      int add(GCObject* object, const time_t now = common::Func::get_monotonic_time());
       int gc(const time_t now);
       int64_t size() const;
       private:

@@ -49,7 +49,7 @@ namespace tfs
       wait_free_list_.clear();
     }
 
-    int GCObjectManager::add(GCObject* object)
+    int GCObjectManager::add(GCObject* object, const time_t now)
     {
       if (NULL != object)
       {
@@ -57,9 +57,9 @@ namespace tfs
         //TBSYS_LOG(DEBUG, "gc object list size: %zd, pointer: %p", wait_clear_list_.size(), object);
         std::pair<std::set<GCObject*>::iterator, bool> res = wait_clear_list_.insert(object);
         if (!res.second)
-        {
           TBSYS_LOG(INFO, "%p %p is exist", object, (*res.first));
-        }
+        else
+          object->update_last_time(now);
       }
       return TFS_SUCCESS;
     }

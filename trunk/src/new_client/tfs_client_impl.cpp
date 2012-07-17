@@ -1216,7 +1216,7 @@ int64_t TfsClientImpl::save_file_ex(char* ret_tfs_name, const int32_t ret_tfs_na
           {
             continue;
           }
-          TBSYS_LOG(ERROR, "read local file %s fail, ret: %s, error: %s", local_file, read_len, strerror(errno));
+          TBSYS_LOG(ERROR, "read local file %s fail, ret: %"PRI64_PREFIX"d, error: %s", local_file, read_len, strerror(errno));
           break;
         }
 

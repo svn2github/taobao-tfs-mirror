@@ -90,7 +90,7 @@ namespace tfs
             return true;
           }
 
-          bool find(const T value) const
+          bool exist(const T value) const
           {
             for (int32_t i = 0; i < index_; i++)
             {

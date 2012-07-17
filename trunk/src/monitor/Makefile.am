@@ -9,6 +9,8 @@ LDADD=$(top_builddir)/src/message/libtfsmessage.a \
 	$(TBLIB_ROOT)/lib/libtbnet.a \
 	$(TBLIB_ROOT)/lib/libtbsys.a
 
-bin_PROGRAMS = ha_monitor
+bin_PROGRAMS = ha_monitor ns_ping
 
 ha_monitor_SOURCES = ha_monitor.cpp
+
+ns_ping_SOURCES = ns_ping.cpp

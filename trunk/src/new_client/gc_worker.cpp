@@ -224,7 +224,7 @@ int GcWorker::do_gc(const GcType gc_type)
   int ret = TFS_SUCCESS;
   string::size_type id_pos = 0;
 
-  TBSYS_LOG(DEBUG, "gc file count: %d", file_.size());
+  TBSYS_LOG(DEBUG, "gc file count: %zd", file_.size());
   for (size_t i = 0; i < file_.size(); i++)
   {
     string& file_name = file_[i];
@@ -236,8 +236,8 @@ int GcWorker::do_gc(const GcType gc_type)
     {
       int64_t file_size = 0;
       string addr = tbsys::CNetUtil::addrToString(atoll(file_name.substr(id_pos + 1).c_str()));
-      TBSYS_LOG(DEBUG, "id: %s, %"PRI64_PREFIX"u, server address %s",
-                file_name.substr(id_pos).c_str(), atoll(file_name.substr(id_pos + 1).c_str()), addr.c_str());
+      //TBSYS_LOG(DEBUG, "id: %s, %"PRI64_PREFIX"d, server address %s",
+      //          file_name.substr(id_pos).c_str(), atoll(file_name.substr(id_pos + 1)), addr.c_str());
       // expired local key
       if (GC_EXPIRED_LOCAL_KEY == gc_type)
       {

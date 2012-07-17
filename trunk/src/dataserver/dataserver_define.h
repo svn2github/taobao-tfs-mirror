@@ -38,6 +38,7 @@ namespace tfs
     static const char DEV_TAG[common::MAX_DEV_TAG_LEN] = "TAOBAO";
     static const int32_t COPY_BETWEEN_CLUSTER = -1;
     static const int32_t BLOCK_VERSION_MAGIC_NUM = 2;
+    static const int32_t FS_SPEEDUP_VERSION = 2;
 
     // fileinfo flag
     enum FileinfoFlag
@@ -51,7 +52,8 @@ namespace tfs
     {
       C_DATA_CLEAN = 0,
       C_DATA_DIRTY,
-      C_DATA_COMPACT
+      C_DATA_COMPACT,
+      C_DATA_HALF
     };
 
     enum BlockType
@@ -60,6 +62,7 @@ namespace tfs
       C_EXT_BLOCK,
       C_COMPACT_BLOCK,
       C_CONFUSE_BLOCK,
+      C_HALF_BLOCK
     };
 
     enum BitMapType
@@ -205,14 +208,6 @@ namespace tfs
         }
     };
 
-
-
-    struct ChangedBlock
-    {
-      uint32_t block_id_;
-      uint32_t mod_time_;
-    };
-
     struct ClonedBlock
     {
       uint32_t blockid_;
@@ -259,7 +254,7 @@ namespace tfs
     typedef ReplBlockMap::iterator ReplBlockMapIter;
     typedef __gnu_cxx::hash_map<uint32_t, ClonedBlock*> ClonedBlockMap; // blockid => ClonedBlock
     typedef ClonedBlockMap::iterator ClonedBlockMapIter;
-    typedef __gnu_cxx::hash_map<uint32_t, ChangedBlock*> ChangedBlockMap;   // blockid => ChangedBlock
+    typedef __gnu_cxx::hash_map<uint32_t, uint32_t> ChangedBlockMap;   // blockid => last modified time
     typedef ChangedBlockMap::iterator ChangedBlockMapIter;
 
     int ds_async_callback(common::NewClient* client);

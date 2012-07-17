@@ -249,7 +249,7 @@ namespace tfs
 
             // get value version
             value.version_ = value_entry->get_version();
-            TBSYS_LOG(DEBUG, "deserialize value. value len: %d, version: %d", value_len, value.version_);
+            TBSYS_LOG(DEBUG, "deserialize value. value len: %"PRI64_PREFIX"d, version: %d", value_len, value.version_);
 
             pos = 0;
             ret = value.deserialize(value_buf, value_len, pos);
@@ -319,7 +319,7 @@ namespace tfs
           }
           else
           {
-            TBSYS_LOG(ERROR, "serialize value fail. ret: %d", ret);
+            TBSYS_LOG(WARN, "serialize value fail. ret: %d", ret);
           }
           tbsys::gDelete(value_buf);
         }
@@ -445,7 +445,7 @@ namespace tfs
                 get_key_len = key->get_size();
                 get_key_buf = key->get_data();
 
-                TBSYS_LOG(DEBUG, "deserialize key. key len: %d", get_key_len);
+                TBSYS_LOG(DEBUG, "deserialize key. key len: %"PRI64_PREFIX"d", get_key_len);
                 pos = 0;
                 ret = blk_cache_key.deserialize(get_key_buf, get_key_len, pos);
                 if (TFS_SUCCESS == ret)
@@ -456,7 +456,7 @@ namespace tfs
 
                   // get value version
                   blk_cache_value.version_ = value->get_version();
-                  TBSYS_LOG(DEBUG, "deserialize value. value len: %d, version: %d", get_value_len, blk_cache_value.version_);
+                  TBSYS_LOG(DEBUG, "deserialize value. value len: %"PRI64_PREFIX"d, version: %d", get_value_len, blk_cache_value.version_);
 
                   pos = 0;
                   ret = blk_cache_value.deserialize(get_value_buf, get_value_len, pos);

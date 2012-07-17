@@ -46,6 +46,7 @@ namespace tfs
     const int32_t EXIT_DATA_PACKET_TIMEOUT = -1021;//data packet timeout
     const int32_t EXIT_LRU_BUCKET_NOT_EXIST = -1022;//lru bucket not found by key
     const int32_t EXIT_SERVICE_SHUTDOWN = -1023;
+    const int32_t EXIT_ELEMENT_EXIST = -1024;
 
     const int32_t EXIT_FILE_OP_ERROR = -2000;
     const int32_t EXIT_OPEN_FILE_ERROR = -2001;
@@ -104,6 +105,7 @@ namespace tfs
     const int32_t EXIT_BLOCK_ID_INVALID_ERROR = -5032;
     const int32_t EXIT_BLOCK_WRITING_ERROR = -5033;
     const int32_t EXIT_MOVE_OR_REPLICATE_ERROR = -5034;
+    const int32_t EXIT_BUILD_RELATION_ERROR = -5035;//build relation error
 
     const int32_t EXIT_WRITE_OFFSET_ERROR = -8001; // write offset error
     const int32_t EXIT_READ_OFFSET_ERROR = -8002; // read offset error
@@ -143,6 +145,7 @@ namespace tfs
     const int32_t EXIT_BLOCK_CHECKER_OVERLOAD = -8036; // too much block checker
     const int32_t EXIT_FALLOCATE_NOT_IMPLEMENT = -8037; // fallocate is not implement
     const int32_t EXIT_SYNC_FILE_ERROR = -8038;//sync file failed
+    const int32_t EXIT_HALF_BLOCK_ERROR = -8039;  // half state block
 
     const int32_t EXIT_SESSION_EXIST_ERROR = -9001;
     const int32_t EXIT_SESSIONID_INVALID_ERROR = -9002;

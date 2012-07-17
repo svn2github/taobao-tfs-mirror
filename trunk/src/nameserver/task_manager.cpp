@@ -175,7 +175,7 @@ namespace tfs
             TBSYS_LOG(DEBUG, "add task ret: %d, block: %u", ret, id);
             task->dump(TBSYS_LOG_LEVEL_WARN, "add task failed, rollback,");
             block_to_tasks_.erase(res.first);
-            manager_.get_gc_manager().add(task);
+            manager_.get_gc_manager().add(task, now);
           }
           else
           {
@@ -205,7 +205,6 @@ namespace tfs
       tasks_.clear();
       machine_to_tasks_.clear();
       block_to_tasks_.clear();
-      running_queue_.clear();
       pending_queue_.clear();
       server_to_tasks_.clear();
    }
@@ -213,17 +212,11 @@ namespace tfs
     void TaskManager::dump(tbnet::DataBuffer& stream) const
     {
       RWLock::Lock lock(rwmutex_, READ_LOCKER);
-      stream.writeInt32(pending_queue_.size() + running_queue_.size());
+      stream.writeInt32(pending_queue_.size());
       PENDING_TASK_CONST_ITER iter = pending_queue_.begin();
       for (; iter != pending_queue_.end(); ++iter)
       {
         (*iter)->dump(stream);
-      }
-
-      RUNNING_TASK_CONST_ITER it = running_queue_.begin();
-      for (; it != running_queue_.end(); ++it)
-      {
-        (*it)->dump(stream);
       }
     }
 
@@ -234,12 +227,6 @@ namespace tfs
       for (; iter != pending_queue_.end(); ++iter)
       {
         (*iter)->dump(level);
-      }
-
-      RUNNING_TASK_CONST_ITER it = running_queue_.begin();
-      for (; it != running_queue_.end(); ++it)
-      {
-        (*it)->dump(level);
       }
     }
 
@@ -322,18 +309,27 @@ namespace tfs
       return total < SYSPARAM_NAMESERVER.max_task_in_machine_nums_;
     }
 
+    int TaskManager::remove_block_from_dataserver(const uint64_t server, const uint32_t block, const int64_t seqno, const time_t now)
+    {
+      int32_t ret = remove_block_from_dataserver_(server, block, seqno, now);
+      TBSYS_LOG(INFO, "send remove block: %u command on server : %s %s",
+        block, tbsys::CNetUtil::addrToString(server).c_str(), TFS_SUCCESS == ret ? "successful" : "failed");
+      return ret;
+    }
+
     /*
      * expire blocks on dataserver only post expire message to ds, dont care result.
      * @param [in] server dataserver id the one who post to.
      * @param [in] block, the one need expired.
      * @return TFS_SUCCESS success.
      */
-    int TaskManager::remove_block_from_dataserver(const uint64_t server, const uint32_t block, const int64_t seqno, const time_t now)
+    int TaskManager::remove_block_from_dataserver_(const uint64_t server, const uint32_t block, const int64_t seqno, const time_t now)
     {
       RemoveBlockMessage rbmsg;
       rbmsg.set(block);
       rbmsg.set_seqno(seqno);
-      rbmsg.set_response_flag(REMOVE_BLOCK_RESPONSE_FLAG_YES);
+      //rbmsg.set_response_flag(REMOVE_BLOCK_RESPONSE_FLAG_YES);
+      rbmsg.set_response_flag(REMOVE_BLOCK_RESPONSE_FLAG_NO);
       BlockInfo info;
       info.block_id_ = block;
       std::vector<uint32_t> blocks;
@@ -432,9 +428,9 @@ namespace tfs
         if (ret)
         {
           ret = TFS_SUCCESS == task->handle_complete(msg, all_complete_flag);
-          task->dump(TBSYS_LOG_LEVEL_INFO, "handle message complete, show result");
           if (master)
           {
+            task->dump(TBSYS_LOG_LEVEL_INFO, "handle message complete, show result");
             if (all_complete_flag)
               remove(task);
             /*Task* complete[SYSPARAM_NAMESERVER.max_replication_];
@@ -445,6 +441,7 @@ namespace tfs
           }
           else
           {
+            msg->dump();
             tbsys::gDelete(task);
           }
         }
@@ -488,14 +485,6 @@ namespace tfs
         TASKS_ITER titer = tasks_.find(task->seqno_);
         if (tasks_.end() != titer)
           tasks_.erase(titer);
-
-        RUNNING_TASK_ITER iter = running_queue_.find(task);
-        if (running_queue_.end() != iter)
-          running_queue_.erase(iter);
-
-        /*PENDING_TASK_ITER piter = pending_queue_.find(task);
-        if (pending_queue_.end() != piter)
-          pending_queue_.erase(piter);*/
 
         BLOCK_TO_TASK_ITER it = block_to_tasks_.find(task->block_id_);
         if (block_to_tasks_.end() != it)

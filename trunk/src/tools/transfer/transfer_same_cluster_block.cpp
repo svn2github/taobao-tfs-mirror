@@ -113,7 +113,7 @@ int transfer_file(const string& file_path)
     while (fscanf(fp, "%s %s %s %d %d %d\n",rd.name,rd.src,rd.dest,&rd.usize, &rd.size, &rd.flag) != EOF)
     {
       rd.name[18]='\0';
-      TBSYS_LOG(DEBUG, "============================%d", strlen(rd.name));
+      TBSYS_LOG(DEBUG, "============================%zd", strlen(rd.name));
       tbsys::gDelete(info.buf);
       info.buf = new char[rd.usize];
       info.buf_len = rd.usize;

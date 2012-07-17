@@ -26,6 +26,8 @@ AC_CHECK_LIB([m], [main])
 AC_CHECK_LIB([pthread], [main])
 # FIXME: Replace `main' with a function in `-lrt':
 AC_CHECK_LIB([rt], [main])
+# FIXME: Replace `main' with a function in `-ltcmalloc':
+#AC_CHECK_LIB([tcmalloc], [main])
 
 AC_CHECK_LIB([mysqlclient], [main])
 
@@ -183,9 +185,13 @@ AC_TYPE_SIGNAL
 AC_FUNC_STAT
 AC_CHECK_FUNCS([fdatasync ftruncate gethostbyname getpagesize gettimeofday memset mkdir munmap rmdir socket strcasecmp strchr strdup strerror strstr strtoul strtoull tzset])
 
+m4_include([tcmalloc.m4])
+
 m4_include([ax_lib_mysql.m4])
 
 AX_LIB_MYSQL([5.1.40])
+
+TS_CHECK_TCMALLOC
 
 AC_CONFIG_FILES([Makefile
                  conf/Makefile
@@ -218,7 +224,6 @@ AC_CONFIG_FILES([Makefile
                  tests/Makefile
                  tests/batch/Makefile
                  tests/rcserver/Makefile
-                 tests/nameserver/Makefile
                  tests/name_meta_server/Makefile
                  tests/common/Makefile
                  tests/rootserver/Makefile

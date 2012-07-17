@@ -415,7 +415,7 @@ int main(int argc, char* argv[])
       fclose(fp);
     }
   }
-  TBSYS_LOG(INFO, "blockid list size: %d", v_block_id.size());
+  TBSYS_LOG(INFO, "blockid list size: %zd", v_block_id.size());
 
   memset(&g_sync_stat_, 0, sizeof(g_sync_stat_));
 

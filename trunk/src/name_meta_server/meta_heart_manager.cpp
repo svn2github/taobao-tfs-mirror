@@ -97,7 +97,7 @@ namespace tfs
         }
         else
         {
-          TBSYS_LOG(INFO, "lease invalid, now: %"PRI64_PREFIX"d, lease_expired: %"PRI64_PREFIX"d", now.toMilliSeconds(), lease_expired.toMilliSeconds());
+          TBSYS_LOG(INFO, "lease invalid, now: %"PRI64_PREFIX"d, lease_expired: %"PRI64_PREFIX"d", (int64_t)now.toMilliSeconds(), (int64_t)lease_expired.toMilliSeconds());
           uint64_t current_server = MsRuntimeGlobalInformation::instance().server_.base_info_.id_;
           std::set<int64_t> tables;
           bucket_manager_.get_table(tables, current_server);
@@ -169,7 +169,7 @@ namespace tfs
             }
           }
         }
-        TBSYS_LOG(DEBUG, "MAX_TIMEOUT_MS: %ld, cost: %ld, type: %d, iret: %d", MAX_TIMEOUT_MS, (end - start).toMilliSeconds(), type, iret);
+        TBSYS_LOG(DEBUG, "MAX_TIMEOUT_MS: %d, cost: %"PRI64_PREFIX"d, type: %d, iret: %d", MAX_TIMEOUT_MS, (int64_t)(end - start).toMilliSeconds(), type, iret);
         if ((TFS_SUCCESS != iret)
             && (lease_expired != 0))
         {
@@ -203,7 +203,7 @@ namespace tfs
           }
           else
           {
-            TBSYS_LOG(ERROR, "get tables failed: invalid packet", response->getPCode());
+            TBSYS_LOG(ERROR, "get tables failed: invalid packet: %d", response->getPCode());
           }
         }
         else

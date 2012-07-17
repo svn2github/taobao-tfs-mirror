@@ -66,7 +66,7 @@ int verify_file(const string& file_path, const string& out_file_path)
         ret = 1 != ret_nums ? -1 : 0;
         if (0 != ret)
         {
-          TBSYS_LOG(ERROR, "sscanf error, record: %s, nums %d <> 1", record, ret_nums);
+          TBSYS_LOG(ERROR, "sscanf error, record: %s, nums %"PRI64_PREFIX"d <> 1", record, ret_nums);
         }
         else
         {
@@ -74,14 +74,14 @@ int verify_file(const string& file_path, const string& out_file_path)
           ret = fd < 0 ? -1 : 0;
           if (0 != ret)
           {
-            TBSYS_LOG(ERROR, "open %s failed, ret: %d", filename, ret);
+            TBSYS_LOG(ERROR, "open %s failed, ret: %"PRI64_PREFIX"d", filename, ret);
           }
           else
           {
             ret = gclient->fstat(fd, &stat);
             if (ret < 0)
             {
-              TBSYS_LOG(ERROR, "stat %s failed, ret:%d", filename, ret);
+              TBSYS_LOG(ERROR, "stat %s failed, ret:%"PRI64_PREFIX"d", filename, ret);
             }
             else
             {

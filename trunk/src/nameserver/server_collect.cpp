@@ -103,24 +103,26 @@ namespace tfs
 
     bool ServerCollect::add(const BlockCollect* block, const bool master, const bool writable)
     {
+      int return_value = TFS_ERROR;
       bool ret = block != NULL;
       if (ret)
       {
         RWLock::Lock lock(mutex_, WRITE_LOCKER);
         BlockCollect* result = NULL;
-        ret = hold_->insert_unique(result, const_cast<BlockCollect*>(block));
+        return_value = hold_->insert_unique(result, const_cast<BlockCollect*>(block));
         assert(NULL != result);
         //TBSYS_LOG(DEBUG, "id: %u, ret: %d master: %d, writable: %d, %d", block->id(), ret, master, writable, is_equal_group(block->id()));
-        if ((ret)
+        if (((TFS_SUCCESS == return_value)
+             ||(EXIT_ELEMENT_EXIST == return_value))
             && (writable)
             && (master)
             && (is_equal_group(block->id())))
         {
-          ret = writable_->insert_unique(result, const_cast<BlockCollect*>(block));
+          return_value = writable_->insert_unique(result, const_cast<BlockCollect*>(block));
           assert(NULL != result);
         }
       }
-      return ret;
+      return ((TFS_SUCCESS == return_value) || (EXIT_ELEMENT_EXIST == return_value));
     }
 
     bool ServerCollect::remove(BlockCollect* block)
@@ -162,7 +164,9 @@ namespace tfs
         {
           RWLock::Lock lock(mutex_, WRITE_LOCKER);
           BlockCollect* result = NULL;
-          ret = writable_->insert_unique(result, const_cast<BlockCollect*>(block));
+          int return_value = writable_->insert_unique(result, const_cast<BlockCollect*>(block));
+          ret = ((TFS_SUCCESS == return_value) || (EXIT_ELEMENT_EXIST == return_value));
+          assert(result);
         }
       }
       return ret;
@@ -196,14 +200,14 @@ namespace tfs
       if (size > 0)
       {
         BlockCollect* pblock = NULL;
-        ArrayHelper<BlockCollect*> helper(size, blocks);
-        for (int32_t i = 0; helper.get_array_index(); ++i)
+        ArrayHelper<BlockCollect*> helper(size, blocks, size);
+        for (int32_t i = 0; i < helper.get_array_index(); ++i)
         {
           //这里有点问题，如果server刚下线，在上次server结构过期之前又上来了，此时解除了关系是不正确的
           //这里先在这里简单搞下在block解除关系的时候，如果检测ID和指针都一致时才解除关系
           pblock = *helper.at(i);
           assert(NULL != pblock);
-          manager.get_block_manager().relieve_relation(pblock, this, now);
+          manager.get_block_manager().relieve_relation(pblock, this, now, BLOCK_COMPARE_SERVER_BY_ID_POINTER);
         }
         tbsys::gDeleteA(blocks);
       }
@@ -226,8 +230,8 @@ namespace tfs
           continue;
         if (!result->is_writable())
         {
-          if (result->is_full())
-            helper.push_back(result);
+          //if (result->is_full())
+          helper.push_back(result);
           continue;
         }
         if (!is_equal_group(result->id()))
@@ -324,7 +328,7 @@ namespace tfs
 
     bool ServerCollect::touch(bool& promote, int32_t& count, const double average_used_capacity)
     {
-      bool ret = ((is_report_block_complete() || promote) && !is_full() && count > 0);
+      bool ret = ((is_report_block_complete() || promote) /*&& !is_full()*/ && count > 0);
       if (!ret)
       {
         count = 0;
@@ -335,7 +339,7 @@ namespace tfs
         ArrayHelper<BlockCollect*> helper(1024, invalid_blocks);
         RWLock::Lock lock(mutex_, WRITE_LOCKER);
         int32_t current = hold_master_->size();
-        //TBSYS_LOG(DEBUG, "%s touch current %d, writable size: %d", CNetUtil::addrToString(id()).c_str(),current, writable_->size());
+        TBSYS_LOG(DEBUG, "%s touch current %d, writable size: %d", CNetUtil::addrToString(id()).c_str(),current, writable_->size());
         if (current >= SYSPARAM_NAMESERVER.max_write_file_count_)
         {
           count = 0;
@@ -477,24 +481,37 @@ namespace tfs
 
     void ServerCollect::set_next_report_block_time(const time_t now, const int64_t time_seed, const bool ns_switch)
     {
-      int32_t hour = common::SYSPARAM_NAMESERVER.report_block_time_upper_ - common::SYSPARAM_NAMESERVER.report_block_time_lower_;
+      int32_t hour = common::SYSPARAM_NAMESERVER.report_block_time_upper_ - common::SYSPARAM_NAMESERVER.report_block_time_lower_ ;
       time_t current = time(NULL);
-      struct tm* lt = gmtime(&current);
+      time_t next    = current;
       if (ns_switch)
       {
-        lt->tm_hour += time_seed % hour;
-        lt->tm_min  = time_seed % 60;
-        lt->tm_sec  = random() % 60;
+        next += (time_seed % (hour * 3600));
       }
       else
       {
-        lt->tm_mday += common::SYSPARAM_NAMESERVER.report_block_time_interval_;
-        lt->tm_hour = time_seed % hour + common::SYSPARAM_NAMESERVER.report_block_time_lower_;
-        lt->tm_min = time_seed % 60;
-        lt->tm_sec = random() % 60;
+        if (common::SYSPARAM_NAMESERVER.report_block_time_interval_ > 0)
+        {
+          next += (common::SYSPARAM_NAMESERVER.report_block_time_interval_ * 24 * 3600);
+          struct tm lt;
+          localtime_r(&next, &lt);
+          if (hour > 0)
+            lt.tm_hour = time_seed % hour + common::SYSPARAM_NAMESERVER.report_block_time_lower_;
+          else
+            lt.tm_hour = common::SYSPARAM_NAMESERVER.report_block_time_lower_;
+          lt.tm_min  = time_seed % 60;
+          lt.tm_sec =  time_seed % 60;
+          next = mktime(&lt);
+        }
+        else
+        {
+          next += (common::SYSPARAM_NAMESERVER.report_block_time_interval_min_ * 60);
+        }
       }
-      time_t diff_sec = mktime(lt) - current;
+      time_t diff_sec = next - current;
       next_report_block_time_ = now + diff_sec;
+      TBSYS_LOG(DEBUG, "%s next: %"PRI64_PREFIX"d, diff: %"PRI64_PREFIX"d, now: %"PRI64_PREFIX"d, hour: %d",
+        tbsys::CNetUtil::addrToString(id()).c_str(), next_report_block_time_, diff_sec, now, hour);
     }
 
     bool ServerCollect::remove_writable_(const common::ArrayHelper<BlockCollect*>& blocks)
@@ -504,6 +521,8 @@ namespace tfs
       for (int32_t i = 0; i < blocks.get_array_index(); ++i)
       {
         block = *blocks.at(i);
+        TBSYS_LOG(DEBUG, "%s remove_writable: is_full: %d, servers size: %d",
+          tbsys::CNetUtil::addrToString(id()).c_str(), block->is_full(), block->get_servers_size());
         if (!block->is_writable() || !is_equal_group(block->id()))
            hold_master_->erase(block);
         if (block->is_full() || !is_equal_group(block->id()))
@@ -532,6 +551,8 @@ namespace tfs
         hold_->expand_ratio(expand_ratio);
       if (writable_->need_expand(expand_ratio))
         writable_->expand_ratio(expand_ratio);
+      TBSYS_LOG(DEBUG, "%s expand, hold: %d, writable: %d",
+        tbsys::CNetUtil::addrToString(id()).c_str(), hold_->size(), writable_->size());
       return TFS_SUCCESS;
     }
 

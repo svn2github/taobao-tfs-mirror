@@ -66,7 +66,9 @@ namespace tfs
             if (server->is_report_block(rb_expire, now, isnew))
             {
               server->set_report_block_status(REPORT_BLOCK_STATUS_IN_REPORT_QUEUE);
-              manager_.add_report_block_server(server, rb_expire);
+              TBSYS_LOG(DEBUG, "%s add report block server, now: %ld, isnew: %d, rb_expire: %d",
+                tbsys::CNetUtil::addrToString(server->id()).c_str(), now, isnew, rb_expire);
+              manager_.get_server_manager().add_report_block_server(server, now, rb_expire);
             }
           }
         }
@@ -93,7 +95,7 @@ namespace tfs
           {
             pserver->set_report_block_status(REPORT_BLOCK_STATUS_COMPLETE);
             pserver->set_next_report_block_time(now, random() % 0xFFFFFFF, false);
-            manager_.del_report_block_server(pserver);
+            manager_.get_server_manager().del_report_block_server(pserver);
           }
         }
       }
@@ -179,9 +181,17 @@ namespace tfs
       uint32_t block_id = parameter.block_info_.block_id_;
       if (parameter.unlink_flag_ == UNLINK_FLAG_YES)//unlink file
       {
-        std::vector<stat_int_t> stat(6,0);
-        stat[4] = 0x01;
-        GFactory::get_stat_mgr().update_entry(GFactory::tfs_ns_stat_, stat);
+        //这里暂时先这么做， 后面如果我们将Block每一次写操作(包括删除)都加版本的话
+        //这里就可以和普通的写处理方式一样
+        BlockCollect* block = manager_.get_block_manager().get(block_id);
+        ret = (NULL == block) ? EXIT_BLOCK_NOT_FOUND : TFS_SUCCESS;
+        if (TFS_SUCCESS == ret)
+        {
+          block->update(parameter.block_info_);
+          std::vector<stat_int_t> stat(6,0);
+          stat[4] = 0x01;
+          GFactory::get_stat_mgr().update_entry(GFactory::tfs_ns_stat_, stat);
+        }
       }
       else //write file
       {
@@ -197,6 +207,11 @@ namespace tfs
           if (TFS_SUCCESS == ret)//check version
           {
             ret = block->version() >= parameter.block_info_.version_ ? EXIT_COMMIT_ERROR : TFS_SUCCESS;
+            if (TFS_SUCCESS != ret)
+            {
+              snprintf(parameter.error_msg_, 256, "close block: %u failed, version error: %d:%d",
+                block_id, block->version(),parameter.block_info_.version_);
+            }
           }
           else
           {
@@ -264,6 +279,18 @@ namespace tfs
             ret = ngi.in_discard_newblk_safe_mode_time(now) || is_discard() ? EXIT_DISCARD_NEWBLK_ERROR: TFS_SUCCESS;
             if (TFS_SUCCESS == ret)
             {
+              /*block =  manager_.get_block_manager().get(block_id);
+              ret = NULL != block ? TFS_SUCCESS : EXIT_BLOCK_NOT_FOUND;
+              if ((TFS_SUCCESS == ret)
+                  && (block->get_servers_size() <= 0)
+                  && (!block->is_creating())
+                  && (block->get_last_update_time() + SYSPARAM_NAMESERVER.replicate_wait_time_ <= now))
+              {
+                GCObject* pobject = NULL;
+                manager_.get_block_manager().remove(pobject,block_id);
+                if (NULL != pobject)
+                  manager_.get_gc_manager().add(pobject, now);
+              }*/
               //create new block by block_id
               ret = manager_.open_helper_create_new_block_by_id(block_id);
               if (TFS_SUCCESS != ret)
@@ -390,7 +417,7 @@ namespace tfs
           if (block->get_servers_size() <= 0 && new_create_block_collect)
             manager_.get_block_manager().remove(pobject, info.value3_);
           if (NULL != pobject)
-            manager_.get_gc_manager().add(pobject);
+            manager_.get_gc_manager().add(pobject, now);
         }
       }
       return ret;
@@ -398,7 +425,7 @@ namespace tfs
 
     int ClientRequestServer::handle_control_delete_block(const time_t now, const common::ClientCmdInformation& info,const int64_t buf_length, char* buf)
     {
-      TBSYS_LOG(INFO, "handle control delete block: %u, flag: %u, server: %s",
+      TBSYS_LOG(INFO, "handle control remove block: %u, flag: %u, server: %s",
           info.value3_, info.value4_, CNetUtil::addrToString(info.value1_).c_str());
       int32_t ret = ((NULL != buf) && (buf_length > 0)) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
@@ -415,9 +442,22 @@ namespace tfs
           }
           else
           {
-            ret = manager_.get_task_manager().add(info.value3_, runer, PLAN_TYPE_DELETE, now);
+            BlockCollect* block = manager_.get_block_manager().get(info.value3_);
+            ret = NULL == block ? EXIT_BLOCK_NOT_FOUND : TFS_SUCCESS;
             if (TFS_SUCCESS != ret)
-              snprintf(buf, buf_length, " add task(delete) failed, block: %u", info.value3_);
+            {
+              snprintf(buf, buf_length, " block: %u no exist, ret: %d", info.value3_, ret);
+            }
+            else
+            {
+              std::vector<ServerCollect*>::const_iterator iter = runer.begin();
+              for (; iter != runer.end(); ++iter)
+              {
+                manager_.relieve_relation(block, (*iter), now,BLOCK_COMPARE_SERVER_BY_ID);
+                manager_.get_task_manager().remove_block_from_dataserver((*iter)->id(), info.value3_, 0, now);
+              }
+              manager_.get_block_manager().remove(pobject, info.value3_);
+            }
           }
         }
         else if (info.value4_ & HANDLE_DELETE_BLOCK_FLAG_ONLY_RELATION)
@@ -433,7 +473,7 @@ namespace tfs
             ServerCollect* server = manager_.get_server_manager().get(info.value1_);
             ret = NULL != server ? TFS_SUCCESS : EIXT_SERVER_OBJECT_NOT_FOUND;
             if (TFS_SUCCESS == ret)
-              manager_.relieve_relation(block, server, now);
+              manager_.relieve_relation(block, server, now, BLOCK_COMPARE_SERVER_BY_ID);
             if (block->get_servers_size() <= 0)
               manager_.get_block_manager().remove(pobject, info.value3_);
           }
@@ -443,7 +483,7 @@ namespace tfs
           }
         }
         if (NULL != pobject)
-          manager_.get_gc_manager().add(pobject);
+          manager_.get_gc_manager().add(pobject, now);
       }
       return ret;
     }
@@ -512,7 +552,7 @@ namespace tfs
           }
           else
           {
-            if (!helper.find(source))
+            if (!helper.exist(source))
               helper.push_back(source);
             if (0 != info.value2_)
               target = manager_.get_server_manager().get(info.value2_);
@@ -543,7 +583,7 @@ namespace tfs
           if (block->get_servers_size() <= 0 && new_create_block_collect)
             manager_.get_block_manager().remove(pobject, info.value3_);
           if (NULL != pobject)
-            manager_.get_gc_manager().add(pobject);
+            manager_.get_gc_manager().add(pobject, now);
         }
       }
       return ret;
@@ -583,6 +623,27 @@ namespace tfs
       return ret;
     }
 
+    int ClientRequestServer::handle_control_clear_system_table(const common::ClientCmdInformation& info, const int64_t buf_length, char* buf)
+    {
+      int32_t ret = (info.value3_ <= 0) ? EXIT_PARAMETER_ERROR : TFS_SUCCESS;
+      if (TFS_SUCCESS != ret)
+      {
+        snprintf(buf, buf_length, "parameter is invalid, value3: %d", info.value3_);
+      }
+      else
+      {
+        if (info.value3_ & CLEAR_SYSTEM_TABLE_FLAG_TASK)
+            manager_.get_task_manager().clear();
+        if (info.value3_ & CLEAR_SYSTEM_TABLE_FLAG_WRITE_BLOCK)
+            manager_.get_block_manager().clear_write_block();
+        if (info.value3_ & CLEAR_SYSTEM_TABLE_FLAG_REPORT_SERVER)
+            manager_.get_server_manager().clear_report_block_server_table();
+        if (info.value3_ & CLEAR_SYSTEM_TABLE_FLAG_DELETE_QUEUE)
+            manager_.get_block_manager().clear_delete_queue();
+      }
+      return ret;
+    }
+
     int ClientRequestServer::handle_control_cmd(const ClientCmdInformation& info, common::BasePacket* msg, const int64_t buf_length, char* buf)
     {
       time_t now = Func::get_monotonic_time();
@@ -615,6 +676,9 @@ namespace tfs
           break;
         case CLIENT_CMD_SET_BALANCE_PERCENT:
           ret = handle_control_set_balance_percent(info, buf_length, buf);
+          break;
+        case CLIENT_CMD_CLEAR_SYSTEM_TABLE:
+          ret = handle_control_clear_system_table(info, buf_length, buf);
           break;
         default:
           snprintf(buf, buf_length, "unknow client cmd: %d", info.cmd_);

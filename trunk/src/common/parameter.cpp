@@ -44,8 +44,8 @@ namespace tfs
       {
         char *p1, *p2, buffer[64];
         p1 = buffer;
-        p2 = strsep(&p1, "-~ ");
         strncpy(buffer, str, 63);
+        p2 = strsep(&p1, "-~ ");
         if (NULL  != p2 && p2[0] != '\0')
           min = atoi(p2);
         if (NULL != p1 && p1[0] != '\0')
@@ -56,10 +56,9 @@ namespace tfs
 
     int NameServerParameter::initialize(void)
     {
-      dispatch_oplog_ = 0;
       discard_max_count_ = 0;
       report_block_time_interval_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_REPORT_BLOCK_TIME_INTERVAL, 1);
-      report_block_time_interval_ = std::max(1, report_block_time_interval_);
+      report_block_time_interval_min_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_REPORT_BLOCK_TIME_INTERVAL_MIN, 0);
       max_write_timeout_= TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_MAX_WRITE_TIMEOUT, 3);
       max_task_in_machine_nums_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_MAX_TASK_IN_MACHINE_NUMS, 14);
       cleanup_write_timeout_threshold_ =
@@ -176,11 +175,13 @@ namespace tfs
       report_block_queue_size_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_REPORT_BLOCK_MAX_QUEUE_SIZE, report_block_thread_nums * 2);
       if (report_block_queue_size_ < report_block_thread_nums * 2)
          report_block_queue_size_ = report_block_thread_nums * 2;
-      if (report_block_queue_size_ > report_block_thread_nums * 4)
-        report_block_queue_size_ = report_block_thread_nums * 4;
       const char* report_hour_str = TBSYS_CONFIG.getString(CONF_SN_NAMESERVER, CONF_REPORT_BLOCK_HOUR_RANGE, "2~4");
 
-      set_hour_range(report_hour_str, report_block_time_upper_, report_block_time_lower_);
+      set_hour_range(report_hour_str, report_block_time_lower_, report_block_time_upper_);
+
+      choose_target_server_random_max_nums_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER,CONF_CHOOSE_TARGET_SERVER_RANDOM_MAX_NUM, 32);
+
+      keepalive_queue_size_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_HEART_MAX_QUEUE_SIZE, 1024);
       return TFS_SUCCESS;
     }
 
@@ -238,12 +239,14 @@ namespace tfs
         = config.getInt(CONF_SN_DATASERVER, CONF_EXPIRE_CHECKBLOCK_TIME, 86400);
       max_cpu_usage_ = config.getInt(CONF_SN_DATASERVER, CONF_MAX_CPU_USAGE, 60);
       dump_stat_info_interval_ = config.getInt(CONF_SN_DATASERVER, CONF_DUMP_STAT_INFO_INTERVAL, 60000000);
-      object_dead_max_time_ = config.getInt(CONF_SN_DATASERVER, CONF_OBJECT_DEAD_MAX_TIME, 86400);
+      object_dead_max_time_ = config.getInt(CONF_SN_DATASERVER, CONF_OBJECT_DEAD_MAX_TIME, 3600);
       if (object_dead_max_time_ <=  0)
-        object_dead_max_time_ = 86400;
+        object_dead_max_time_ = 3600;
       object_clear_max_time_ = config.getInt(CONF_SN_DATASERVER, CONF_OBJECT_CLEAR_MAX_TIME, 300);
       if (object_clear_max_time_ <= 0)
         object_clear_max_time_ = 300;
+      max_sync_retry_count_ = config.getInt(CONF_SN_DATASERVER, CONF_MAX_SYNC_RETRY_COUNT, 5);
+      max_sync_retry_interval_ = config.getInt(CONF_SN_DATASERVER, CONF_MAX_SYNC_RETRY_INTERVAL, 30);
       return SYSPARAM_FILESYSPARAM.initialize(index);
     }
 

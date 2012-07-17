@@ -156,7 +156,7 @@ int LocalKey::validate(const int64_t total_size)
   }
   else if (static_cast<size_t>(seg_head_.count_) != seg_info_.size())
   {
-    TBSYS_LOG(ERROR, "segment count conflict with head meta info count: %d <> %d",
+    TBSYS_LOG(ERROR, "segment count conflict with head meta info count: %d <> %zd",
               seg_head_.count_, seg_info_.size());
     ret = TFS_ERROR;
   }
@@ -221,12 +221,12 @@ int LocalKey::save()
 
     if ((ret = file_op_->pwrite_file(buf, size, 0)) != TFS_SUCCESS)
     {
-      TBSYS_LOG(ERROR, "save segment info fail, count: %d, raw size: %d, file size: %"PRI64_PREFIX"d, ret: %d",
+      TBSYS_LOG(ERROR, "save segment info fail, count: %zd, raw size: %d, file size: %"PRI64_PREFIX"d, ret: %d",
                 seg_info_.size(), size, seg_head_.size_, ret);
     }
     else
     {
-      TBSYS_LOG(INFO, "save segment info successful, count: %d, raw size: %d, file size: %"PRI64_PREFIX"d",
+      TBSYS_LOG(INFO, "save segment info successful, count: %zd, raw size: %d, file size: %"PRI64_PREFIX"d, ret: %d",
                 seg_info_.size(), size, seg_head_.size_, ret);
       file_op_->flush_file();
 
@@ -467,7 +467,7 @@ int LocalKey::load_head(const char* buf, const int32_t buf_len)
   int ret = TFS_SUCCESS;
   if (buf_len < static_cast<int32_t>(sizeof(SegmentHead)))
   {
-    TBSYS_LOG(ERROR, "buffer length less than base segment head length: %d < %d", buf_len, sizeof(SegmentHead));
+    TBSYS_LOG(ERROR, "buffer length less than base segment head length: %d < %zd", buf_len, sizeof(SegmentHead));
     ret = TFS_ERROR;
   }
   else
@@ -486,7 +486,7 @@ int LocalKey::load_segment(const char* buf, const int32_t buf_len)
 
   if (buf_len < static_cast<int32_t>(sizeof(SegmentInfo)) * count)
   {
-    TBSYS_LOG(ERROR, "buffer length less than required segmentInfo. segment count: %d, %d < %d",
+    TBSYS_LOG(ERROR, "buffer length less than required segmentInfo. segment count: %d, %d < %zd",
               count, buf_len, sizeof(SegmentInfo) * count);
     ret = TFS_ERROR;
   }

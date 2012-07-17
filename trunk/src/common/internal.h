@@ -31,7 +31,6 @@
 #include <assert.h>
 #include <limits.h>
 
-#include "databuffer.h"
 #include "tbnet.h"
 
 #include "define.h"
@@ -265,7 +264,8 @@ namespace tfs
       CLIENT_CMD_FORCE_DATASERVER_REPORT,
       CLIENT_CMD_ROTATE_LOG,
       CLIENT_CMD_GET_BALANCE_PERCENT,
-      CLIENT_CMD_SET_BALANCE_PERCENT
+      CLIENT_CMD_SET_BALANCE_PERCENT,
+      CLIENT_CMD_CLEAR_SYSTEM_TABLE
     };
 
     enum PlanInterruptFlag
@@ -817,13 +817,22 @@ namespace tfs
       MOVE_DIR = 5,
       MOVE_FILE = 6
     };
+
     typedef enum _RemoveBlockResponseFlag
     {
       REMOVE_BLOCK_RESPONSE_FLAG_NO = 0,
       REMOVE_BLOCK_RESPONSE_FLAG_YES = 1
     }RemoveBlockResponseFlag;
 
-    extern const char* dynamic_parameter_str[29];
+    typedef enum _ClearSystemTableFlag
+    {
+      CLEAR_SYSTEM_TABLE_FLAG_TASK = 1,
+      CLEAR_SYSTEM_TABLE_FLAG_WRITE_BLOCK = 1 << 1,
+      CLEAR_SYSTEM_TABLE_FLAG_REPORT_SERVER = 1 << 2,
+      CLEAR_SYSTEM_TABLE_FLAG_DELETE_QUEUE  = 1 << 3
+    }ClearSystemTableFlag;
+
+    extern const char* dynamic_parameter_str[31];
 
     // defined type typedef
     typedef std::vector<BlockInfo> BLOCK_INFO_LIST;

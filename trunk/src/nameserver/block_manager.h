@@ -71,12 +71,20 @@ namespace tfs
 
         bool push_to_delete_queue(const uint32_t block, const uint64_t server);
         bool pop_from_delete_queue(std::pair<uint32_t, uint64_t>& pairs);
+        bool delete_queue_empty() const;
         void clear_delete_queue();
+
+        //emergency replicate method only call by build thread,no lock
+        bool push_to_emergency_replicate_queue(BlockCollect* block);
+        BlockCollect* pop_from_emergency_replicate_queue();
+        bool has_emergency_replicate_in_queue() const;
+        int64_t get_emergency_replicate_queue_size() const;
 
         BlockCollect* get(const uint32_t block) const;
         bool exist(const uint32_t block) const;
         void dump(const int32_t level) const;
         void dump_write_block(const int32_t level) const;
+        void clear_write_block();
         bool scan(common::ArrayHelper<BlockCollect*>& result, uint32_t& begin, const int32_t count) const;
         int scan(common::SSMScanParameter& param, int32_t& next, bool& all_over,
             bool& cutover, const int32_t should) const;
@@ -87,11 +95,12 @@ namespace tfs
 
         int update_relation(ServerCollect* server, const std::set<common::BlockInfo>& blocks, const time_t now);
         int build_relation(BlockCollect* block, bool& writable, bool& master,
-            const ServerCollect* server, const time_t now, const bool set =false);
-        bool relieve_relation(BlockCollect* block, const ServerCollect* server, const time_t now);
+            ServerCollect*& invalid_server, const ServerCollect* server, const time_t now, const bool set =false);
+        bool relieve_relation(BlockCollect* block, const ServerCollect* server, const time_t now, const int8_t flag);
         int update_block_info(BlockCollect*& output, bool& isnew, bool& writable, bool& master,
             const common::BlockInfo& info, const ServerCollect* server, const time_t now, const bool addnew);
 
+        bool need_replicate(const BlockCollect* block) const;
         bool need_replicate(const BlockCollect* block, const time_t now) const;
         bool need_replicate(common::ArrayHelper<ServerCollect*>& servers, common::PlanPriority& priority,
              const BlockCollect* block, const time_t now) const;
@@ -103,7 +112,6 @@ namespace tfs
         int update_block_last_wirte_time(uint32_t& id, const uint32_t block, const time_t now);
         bool has_write(const uint32_t block, const time_t now) const;
         void timeout(const time_t now);
-
       private:
         DISALLOW_COPY_AND_ASSIGN(BlockManager);
         common::RWLock& get_mutex_(const uint32_t block) const;
@@ -114,7 +122,7 @@ namespace tfs
         BlockCollect* remove_(const uint32_t block);
 
         int build_relation_(BlockCollect* block, bool& writable, bool& master,
-            const ServerCollect* server, const time_t now, const bool set = false);
+            ServerCollect*& invalid_server, const ServerCollect* server, const time_t now, const bool set = false);
 
         bool pop_from_delete_queue_(std::pair<uint32_t, uint64_t>& pairs);
 
@@ -133,6 +141,8 @@ namespace tfs
 
         tbutil::Mutex delete_block_queue_muetx_;
         std::deque<std::pair<uint32_t, uint64_t> > delete_block_queue_;
+
+        std::deque<uint32_t> emergency_replicate_queue_;
     };
   }/** nameserver **/
 }/** tfs **/

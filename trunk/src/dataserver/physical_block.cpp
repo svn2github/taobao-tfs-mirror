@@ -15,6 +15,7 @@
  */
 #include "physical_block.h"
 #include "common/error_msg.h"
+#include "blockfile_manager.h"
 #include <tbsys.h>
 #include <Memory.hpp>
 
@@ -67,40 +68,44 @@ namespace tfs
     PhysicalBlock::~PhysicalBlock()
     {
       tbsys::gDelete(file_op_);
-      if (NULL != prefix_op_)
-      {
-        prefix_op_->flush_file();
-        prefix_op_->munmap_file();
-        tbsys::gDelete(prefix_op_);
-      }
     }
 
     int PhysicalBlock::init_prefix_op(std::string& mount_path)
     {
       // map block_prefix file
       int ret = TFS_SUCCESS;
-      if (NULL == prefix_op_)
+      SuperBlock super_block;
+      ret = BlockFileManager::get_instance()->query_super_block(super_block);
+      if (TFS_SUCCESS == ret)
       {
-        std::string block_prefix_file = mount_path + BLOCK_HEADER_PREFIX;
-        if (0 == access(block_prefix_file.c_str(), F_OK))
+        if (FS_SPEEDUP_VERSION == super_block.version_)
         {
-          struct stat st;
-          if (0 != stat(block_prefix_file.c_str(), &st))
+          std::string block_prefix_file = mount_path + BLOCK_HEADER_PREFIX;
+          if (0 != access(block_prefix_file.c_str(), F_OK))  // not exist
           {
-            TBSYS_LOG(ERROR, "stat prefix file fail. ret: %d", errno);
-            ret = EXIT_GENERAL_ERROR;
+            ret = TFS_ERROR;
+            TBSYS_LOG(ERROR, "fs version is 2, but block_prefix file not exist.");
           }
           else
           {
-            prefix_op_ = new MMapFileOperation(block_prefix_file.c_str());
-            MMapOption mmap_option;
-            mmap_option.first_mmap_size_ = st.st_size;
-            mmap_option.max_mmap_size_ = st.st_size;
-            mmap_option.per_mmap_size_= st.st_size;
-            ret = prefix_op_->mmap_file(mmap_option);
-            if (TFS_SUCCESS != ret)
+            struct stat st;
+            if (0 != stat(block_prefix_file.c_str(), &st))
             {
-              TBSYS_LOG(ERROR, "mmap prefix file fail. ret: %d", ret);
+              ret = TFS_ERROR;
+              TBSYS_LOG(ERROR, "stat prefix file fail. ret: %d", errno);
+            }
+            else
+            {
+              prefix_op_ = new MMapFileOperation(block_prefix_file.c_str());
+              MMapOption mmap_option;
+              mmap_option.first_mmap_size_ = st.st_size;
+              mmap_option.max_mmap_size_ = st.st_size;
+              mmap_option.per_mmap_size_= st.st_size;
+              ret = prefix_op_->mmap_file(mmap_option);
+              if (TFS_SUCCESS != ret)
+              {
+                TBSYS_LOG(ERROR, "mmap prefix file fail. ret: %d", ret);
+              }
             }
           }
         }
@@ -162,8 +167,18 @@ namespace tfs
 
     int PhysicalBlock::clear_block_prefix()
     {
+      int ret = TFS_SUCCESS;
       memset(&block_prefix_, 0, sizeof(BlockPrefix));
-      return TFS_SUCCESS;
+      if (NULL != prefix_op_)
+      {
+        ret = prefix_op_->pwrite_file((const char*) (&block_prefix_), sizeof(BlockPrefix),
+                (physical_block_id_ - 1) * sizeof(BlockPrefix));
+        if (TFS_SUCCESS == ret)
+        {
+          prefix_op_->flush_file();  // if fail, it will be flushed in background
+        }
+      }
+      return ret;
     }
 
     int PhysicalBlock::dump_block_prefix()
@@ -184,7 +199,7 @@ namespace tfs
                 (physical_block_id_ - 1) * sizeof(BlockPrefix));
         if (TFS_SUCCESS == ret)
         {
-          file_op_->flush_file();  // if fail, it will be flushed in background
+          prefix_op_->flush_file();  // if fail, it will be flushed in background
         }
       }
 

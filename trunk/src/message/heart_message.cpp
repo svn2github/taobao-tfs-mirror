@@ -284,7 +284,7 @@ namespace tfs
       return common::INT_SIZE;
     }
 
-    OwnerCheckMessage::OwnerCheckMessage() :
+    /*OwnerCheckMessage::OwnerCheckMessage() :
       start_time_(0)
     {
       _packetHeader._pcode = common::OWNER_CHECK_MESSAGE;
@@ -293,6 +293,6 @@ namespace tfs
     OwnerCheckMessage::~OwnerCheckMessage()
     {
 
-    }
+    }*/
   }
 }

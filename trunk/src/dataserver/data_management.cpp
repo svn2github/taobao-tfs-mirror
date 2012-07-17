@@ -156,7 +156,7 @@ namespace tfs
         // control datafile size
         if (data_file_map_.size() >= static_cast<uint32_t> (SYSPARAM_DATASERVER.max_datafile_nums_))
         {
-          TBSYS_LOG(ERROR, "blockid: %u, datafile nums: %u is large than default.", write_info.block_id_,
+          TBSYS_LOG(ERROR, "blockid: %u, datafile nums: %zd is large than default.", write_info.block_id_,
               data_file_map_.size());
           data_file_mutex_.unlock();
           return EXIT_DATAFILE_OVERLOAD;
@@ -571,7 +571,7 @@ namespace tfs
       }
 
       logic_block->get_file_infos(fileinfos);
-      TBSYS_LOG(INFO, "getfilelist. blockid: %u, filenum: %d\n", block_id, fileinfos.size());
+      TBSYS_LOG(INFO, "getfilelist. blockid: %u, filenum: %zd\n", block_id, fileinfos.size());
       return TFS_SUCCESS;
     }
 
@@ -586,7 +586,7 @@ namespace tfs
       }
 
       logic_block->get_meta_infos(meta_list);
-      TBSYS_LOG(INFO, "get meta list. blockid: %u, filenum: %d\n", block_id, meta_list.size());
+      TBSYS_LOG(INFO, "get meta list. blockid: %u, filenum: %zd\n", block_id, meta_list.size());
       return TFS_SUCCESS;
     }
 
@@ -604,7 +604,7 @@ namespace tfs
       return TFS_SUCCESS;
     }
 
-    int DataManagement::new_single_block(const uint32_t block_id)
+    int DataManagement::new_single_block(const uint32_t block_id, const BlockType type)
     {
       int ret = TFS_SUCCESS;
       // delete if exist
@@ -621,7 +621,7 @@ namespace tfs
       }
 
       uint32_t physic_block_id = 0;
-      ret = BlockFileManager::get_instance()->new_block(block_id, physic_block_id);
+      ret = BlockFileManager::get_instance()->new_block(block_id, physic_block_id, type);
       if (TFS_SUCCESS != ret)
       {
         TBSYS_LOG(ERROR, "block create error, blockid: %u, ret: %d", block_id, ret);

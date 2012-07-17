@@ -21,6 +21,7 @@
 #include "common/directory_op.h"
 #include <string.h>
 #include <Memory.hpp>
+#include <strings.h>
 
 namespace tfs
 {
@@ -66,7 +67,7 @@ namespace tfs
       }
     }
 
-    int BlockFileManager::format_block_file_system(const FileSystemParameter& fs_param)
+    int BlockFileManager::format_block_file_system(const FileSystemParameter& fs_param, const bool speedup)
     {
       // 1. initialize super block parameter
       int ret = init_super_blk_param(fs_param);
@@ -94,9 +95,12 @@ namespace tfs
         return ret;
 
       // 6. create block_prefix file
-      ret = create_block_prefix();
-      if (TFS_SUCCESS != ret)
-        return ret;
+      if (speedup)
+      {
+        ret = create_block_prefix();
+        if (TFS_SUCCESS != ret)
+          return ret;
+      }
 
       return TFS_SUCCESS;
     }
@@ -106,6 +110,38 @@ namespace tfs
       bool ret = DirectoryOp::delete_directory_recursively(fs_param.mount_name_.c_str());
       TBSYS_LOG(INFO, "clear block file system end. mount_point: %s, ret: %d", fs_param.mount_name_.c_str(), ret);
       return ret ? TFS_SUCCESS : TFS_ERROR;
+    }
+
+    int BlockFileManager::index_filter(const struct dirent *entry)
+    {
+      int exist = 0;
+      if (index(entry->d_name, '.'))
+      {
+        exist = 1;
+      }
+      return exist;
+    }
+
+    void BlockFileManager::clear_block_tmp_index(const char* mount_path)
+    {
+      TBSYS_LOG(INFO, "clearing temp index file.");
+      int num = 0;
+      struct dirent** namelist = NULL;
+      string index_dir(mount_path);
+      index_dir += INDEX_DIR_PREFIX;
+      num = scandir(index_dir.c_str(), &namelist, index_filter, NULL);
+      for (int i = 0; i < num; i++)
+      {
+        string filename = index_dir + namelist[i]->d_name;
+        unlink(filename.c_str());  // ignore return value
+      }
+
+      for (int i = 0; i < num; i++)
+      {
+        tbsys::gDelete(namelist[i]);
+      }
+
+      tbsys::gDelete(namelist);
     }
 
     int BlockFileManager::bootstrap(const FileSystemParameter& fs_param)
@@ -120,6 +156,7 @@ namespace tfs
       ret = PhysicalBlock::init_prefix_op(mount_path);
       if (TFS_SUCCESS != ret)
         return ret;
+      clear_block_tmp_index(mount_path.c_str());
       return load_block_file();
     }
 
@@ -135,7 +172,7 @@ namespace tfs
       {
         selected_logic_blocks = &compact_logic_blocks_;
       }
-      else //main block
+      else //main block, half block
       {
         selected_logic_blocks = &logic_blocks_;
       }
@@ -665,7 +702,7 @@ namespace tfs
       // use super block recorded count, just log confict
       if (super_block_.used_block_count_ != static_cast<int32_t> (logic_blocks_.size()))
       {
-        TBSYS_LOG(WARN, "conflict! used main block: %u, super main block: %u", logic_blocks_.size(),
+        TBSYS_LOG(WARN, "conflict! used main block: %zd, super main block: %u", logic_blocks_.size(),
                   super_block_.used_block_count_);
       }
 
@@ -981,20 +1018,22 @@ namespace tfs
 
           // 9. load logic block
           ret = t_logic_block->load_block_file(super_block_.hash_slot_size_, super_block_.mmap_option_);
-          // if these error happened when load block, program should exit
-          if (TFS_SUCCESS != ret && EXIT_COMPACT_BLOCK_ERROR != ret && EXIT_BLOCKID_ZERO_ERROR != ret
-              && EXIT_INDEX_CORRUPT_ERROR != ret)
+          if (TFS_SUCCESS != ret)
           {
-            TBSYS_LOG(ERROR, "logicblock load error! logic blockid: %u. ret: %d", logic_block_id, ret);
-            break;
-          }
-          else if (TFS_SUCCESS != ret) // ret == EXIT_COMPACT_BLOCK_ERROR || ret == EXIT_BLOCKID_CONFLICT_ERROR || EXIT_INDEX_CORRUPT_ERROR
-          {
-            // roll back
             // can not make sure the type of this block, so add to confuse type
-            TBSYS_LOG(WARN, "logicblock status abnormal, need delete! logic blockid: %u. ret: %d", logic_block_id, ret);
-            del_block(logic_block_id, C_CONFUSE_BLOCK);
-            ret = TFS_SUCCESS;
+            if (EXIT_COMPACT_BLOCK_ERROR == ret || EXIT_BLOCKID_ZERO_ERROR == ret ||
+                EXIT_INDEX_CORRUPT_ERROR == ret || EXIT_HALF_BLOCK_ERROR == ret)
+            {
+              TBSYS_LOG(WARN, "logicblock status abnormal, need delete! blockid: %u. ret: %d", logic_block_id, ret);
+              del_block(logic_block_id, C_CONFUSE_BLOCK);
+              ret = TFS_SUCCESS;
+            }
+            else
+            {
+              // if these error happened when load block, program should exit
+              TBSYS_LOG(ERROR, "logicblock load error! logic blockid: %u. ret: %d", logic_block_id, ret);
+              break;
+            }
           }
         }
 
@@ -1354,7 +1393,7 @@ namespace tfs
         tbsys::gDelete(file_formater);
         TBSYS_LOG(ERROR, "allocate space error. ret: %d, error: %d, error desc: %s\n", ret, errno, strerror(errno));
         return EXIT_GENERAL_ERROR;
-     }
+      }
       memset(zero_buf, 0, wsize);
 
       while (left > 0)
@@ -1372,10 +1411,27 @@ namespace tfs
         left -= wsize;
       }
 
+      // set fs version to 2: use block_prefix file to start ds
+      SuperBlock super_block;
+      SuperBlockImpl* super_block_impl = new SuperBlockImpl(SYSPARAM_FILESYSPARAM.mount_name_,
+          SYSPARAM_FILESYSPARAM.super_block_reserve_offset_);
+      ret = super_block_impl->read_super_blk(super_block);
+      if (TFS_SUCCESS == ret)
+      {
+        super_block.version_ = FS_SPEEDUP_VERSION;
+        ret = super_block_impl->write_super_blk(super_block);
+        if (TFS_SUCCESS == ret)
+        {
+          super_block_impl->flush_file();
+        }
+      }
+
+      tbsys::gDelete(super_block_impl);
       tbsys::gDelete(zero_buf);
       tbsys::gDelete(file_op);
       tbsys::gDelete(file_formater);
-      return TFS_SUCCESS;
+
+      return ret;
    }
 
     LogicBlock* BlockFileManager::choose_del_block(const uint32_t logic_block_id, BlockType& block_type)
@@ -1439,7 +1495,8 @@ namespace tfs
       return TFS_SUCCESS;
     }
 
-    void BlockFileManager::rollback_superblock(const uint32_t physical_block_id, const bool modify_flag)
+    void BlockFileManager::rollback_superblock(const uint32_t physical_block_id, const bool modify_flag,
+        BlockType type)
     {
       if (normal_bit_map_->test(physical_block_id))
       {
@@ -1450,7 +1507,14 @@ namespace tfs
 
         if (modify_flag)
         {
-          --super_block_.used_extend_block_count_;
+          if (C_MAIN_BLOCK == type)
+          {
+            --super_block_.used_block_count_;
+          }
+          else if (C_EXT_BLOCK == type)
+          {
+            --super_block_.used_extend_block_count_;
+          }
           ret = super_block_impl_->write_super_blk(super_block_);
           if (TFS_SUCCESS != ret)
             TBSYS_LOG(ERROR, "write super block fail. ret: %d", ret);

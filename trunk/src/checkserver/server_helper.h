@@ -100,7 +100,7 @@ namespace tfs
       * @return
       */
       static int check_block(const uint64_t ns_id, const uint32_t block_id,
-            common::CheckBlockInfo& check_result);
+            common::CheckBlockInfoVec& check_result);
    };
 
   }

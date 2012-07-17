@@ -27,6 +27,8 @@ namespace tfs
       manager_(manager),
       servers_(MAX_PROCESS_NUMS, 1024, 0.1),
       dead_servers_(MAX_PROCESS_NUMS, 1024, 0.1),
+      wait_report_block_servers_(MAX_PROCESS_NUMS, 1024, 0.1),
+      current_reporting_block_servers_(MAX_PROCESS_NUMS, 1024, 0.1),
       write_index_(0)
     {
 
@@ -48,58 +50,52 @@ namespace tfs
 
     int ServerManager::add(const DataServerStatInfo& info, const time_t now, bool& isnew)
     {
+      isnew = false;
       bool reset = false;
+      int32_t ret = TFS_SUCCESS;
       ServerCollect query(info.id_);
 
-      rwmutex_.wrlock();
-      ServerCollect* server = NULL;
+      rwmutex_.rdlock();
       SERVER_TABLE_ITER iter = servers_.find(&query);
-      bool alive = iter != servers_.end();
-      if (!alive)
-      {
-        isnew = true;
-        iter  = dead_servers_.find(&query);
-        if (iter != dead_servers_.end())
-        reset = iter != dead_servers_.end();
-        if (reset)
-        {
-          server = (*iter);
-          dead_servers_.erase(&query);
-        }
-        else
-        {
-          server = new (std::nothrow)ServerCollect(info, now);
-        }
-      }
-      else
-      {
-        server = (*iter);
-      }
-      assert(NULL != server);
-      if (isnew)
-      {
-        ServerCollect* result = NULL;
-        bool ret = servers_.insert_unique(result, server);
-        assert(ret);
-        assert(NULL != result);
-      }
+      ServerCollect* server  = servers_.end() != iter ? (*iter) : NULL;
       rwmutex_.unlock();
+      if (NULL == server)
+      {
+        rwmutex_.wrlock();
+        iter = servers_.find(&query);
+        server  = servers_.end() != iter ? (*iter) : NULL;
+        if (NULL == server)
+        {
+          isnew = true;
+          iter  = dead_servers_.find(&query);
+          server = dead_servers_.end() != iter ? (*iter) : NULL;
+          reset = NULL != server;
+          if (reset)
+            dead_servers_.erase(&query);
+          else
+            server = new (std::nothrow)ServerCollect(info, now);
+        }
+        assert(NULL != server);
+        if (isnew)
+        {
+          ServerCollect* result = NULL;
+          ret = servers_.insert_unique(result, server);
+          assert(ret == TFS_SUCCESS);
+          assert(NULL != result);
+        }
+        rwmutex_.unlock();
+      }
 
+      assert(NULL != server);
       if (reset)
         server->reset(manager_, info, now);
       else
         server->update(info, now, isnew);
 
-      if (isnew)
-      {
-        std::vector<stat_int_t> stat(1, server->block_count());
-        GFactory::get_stat_mgr().update_entry(GFactory::tfs_ns_stat_block_count_, stat);
-      }
-
       //update global statistic information
       GFactory::get_global_info().update(info, isnew);
       GFactory::get_global_info().dump(TBSYS_LOG_LEVEL_DEBUG);
-      return TFS_SUCCESS;
+      return ret;
     }
 
     int ServerManager::remove(const uint64_t server, const time_t now)
@@ -121,13 +117,11 @@ namespace tfs
       {
         object->update_status();
         object->set_in_dead_queue_timeout(now);
-        std::vector<stat_int_t> stat(1, object->block_count());
-        GFactory::get_stat_mgr().update_entry(GFactory::tfs_ns_stat_block_count_, stat, false);
 
         //release all relations of blocks belongs to it
         relieve_relation_(object, now);
 
-        manager_.del_report_block_server(object);
+        del_report_block_server(object);
       }
       return TFS_SUCCESS;
     }
@@ -147,27 +141,131 @@ namespace tfs
       return get_(server);
     }
 
-    ServerCollect* ServerManager::pop_from_dead_queue(const time_t now)
+    int ServerManager::pop_from_dead_queue(ArrayHelper<ServerCollect*>& results, const time_t now)
     {
-      ServerCollect* result  = NULL;
-      RWLock::Lock lock(rwmutex_, WRITE_LOCKER);
+      results.clear();
+      ServerCollect* servers[MAX_POP_SERVER_FROM_DEAD_QUEUE_LIMIT];
+      ArrayHelper<ServerCollect*> helper(MAX_POP_SERVER_FROM_DEAD_QUEUE_LIMIT, servers);
+      rwmutex_.rdlock();
       SERVER_TABLE_ITER iter = dead_servers_.begin();
-      while (iter != dead_servers_.end() && NULL == result)
+      for (; iter != dead_servers_.end() && helper.get_array_index() < MAX_POP_SERVER_FROM_DEAD_QUEUE_LIMIT; ++iter)
       {
         if ((*iter)->is_in_dead_queue_timeout(now))
-        {
-          result = (*iter);
-          dead_servers_.erase(result);
-        }
-        ++iter;
+          helper.push_back((*iter));
       }
-      return result;
+      rwmutex_.unlock();
+
+      ServerCollect* server = NULL;
+      ServerCollect* ret = NULL;
+      for (int32_t i = 0; i < helper.get_array_index(); ++i)
+      {
+        server = *helper.at(i);
+        assert(NULL != server);
+        rwmutex_.wrlock();
+        ret = dead_servers_.erase(server);
+        if (NULL != ret)
+          results.push_back(server);
+        rwmutex_.unlock();
+      }
+      return results.get_array_index();
     }
 
     int64_t ServerManager::size() const
     {
-      RWLock::Lock lock(rwmutex_, READ_LOCKER);
       return servers_.size();
+    }
+
+    int ServerManager::add_report_block_server(ServerCollect* server, const time_t now, const bool rb_expire)
+    {
+      int32_t ret = (NULL != server) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+      if (TFS_SUCCESS == ret)
+      {
+        ServerCollect* result = NULL;
+        tbutil::Mutex::Lock lock(wait_report_block_server_mutex_);
+        if (rb_expire)
+          del_report_block_server_(server);
+
+        SERVER_TABLE_ITER iter = wait_report_block_servers_.find(server);
+        SERVER_TABLE_ITER it   = current_reporting_block_servers_.find(server);
+        bool insert = iter == wait_report_block_servers_.end();
+        if (insert)
+        {
+          if (it != current_reporting_block_servers_.end())
+          {
+            result = *it;
+            insert = result->is_report_block_expired(now);
+            if (insert)
+            {
+              current_reporting_block_servers_.erase(result);
+            }
+          }
+        }
+        if (insert)
+        {
+          result = NULL;
+          int insert_ret = wait_report_block_servers_.insert_unique(result, server);
+          assert(TFS_SUCCESS == insert_ret);
+          assert(result);
+        }
+      }
+      return ret;
+    }
+
+    int ServerManager::del_report_block_server(ServerCollect* server)
+    {
+      tbutil::Mutex::Lock lock(wait_report_block_server_mutex_);
+      return del_report_block_server_(server);
+    }
+
+    int ServerManager::del_report_block_server_(ServerCollect* server)
+    {
+      int32_t ret = (NULL != server) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+      if (TFS_SUCCESS == ret)
+      {
+        SERVER_TABLE_ITER iter = current_reporting_block_servers_.find(server);
+        if (iter != current_reporting_block_servers_.end())
+        {
+          current_reporting_block_servers_.erase((*iter));
+        }
+      }
+      return ret;
+    }
+
+    int ServerManager::get_and_move_report_block_server(common::ArrayHelper<ServerCollect*>& helper, const int64_t max_slot_num)
+    {
+      tbutil::Mutex::Lock lock(wait_report_block_server_mutex_);
+      int64_t new_add_nums = SYSPARAM_NAMESERVER.report_block_queue_size_ -  current_reporting_block_servers_.size();
+      new_add_nums = std::min(max_slot_num, new_add_nums);
+      if (!wait_report_block_servers_.empty())
+      {
+        while (new_add_nums-- > 0
+            && !wait_report_block_servers_.empty())
+        {
+          ServerCollect* result = NULL;
+          ServerCollect* server = wait_report_block_servers_.at(0);
+          wait_report_block_servers_.erase(server);
+          current_reporting_block_servers_.insert_unique(result, server);
+          helper.push_back(server);
+        }
+      }
+      return helper.get_array_index();
+    }
+
+    bool ServerManager::report_block_server_queue_empty() const
+    {
+      return wait_report_block_servers_.empty();
+    }
+
+    bool ServerManager::has_report_block_server() const
+    {
+      return !wait_report_block_servers_.empty() || !current_reporting_block_servers_.empty();
+    }
+
+    void ServerManager::clear_report_block_server_table()
+    {
+      tbutil::Mutex::Lock lock(wait_report_block_server_mutex_);
+      wait_report_block_servers_.clear();
+      current_reporting_block_servers_.clear();
     }
 
     ServerCollect* ServerManager::get_(const uint64_t server) const
@@ -483,7 +581,7 @@ namespace tfs
           lans.insert(lan);
         }
       }
-      return result.get_array_index() - count;
+      return news.get_array_index() - count;
     }
 
     //replicate method
@@ -581,11 +679,13 @@ namespace tfs
       }
       else
       {
+        uint32_t nums = 0;
         GROUP_MAP_ITER iter = group.begin();
-        for (; iter != group.end() && NULL == result; ++iter)
+        for (; iter != group.end(); ++iter)
         {
-          if (iter->second.size() > 0)
+          if (iter->second.size() > nums)
           {
+            nums = iter->second.size();
             result = iter->second.rbegin()->second;
           }
         }
@@ -619,14 +719,14 @@ namespace tfs
       bool valid = false;
       result = NULL;
       ServerCollect* pserver = NULL;
-      int32_t size = servers_.size();
+      int32_t size = std::min(servers_.size(), SYSPARAM_NAMESERVER.choose_target_server_random_max_nums_);
       int32_t index = size, random_index = 0;
       while (index-- > 0 && NULL == result)
       {
-        random_index = random() % size;
+        random_index = random() % servers_.size();
         pserver = servers_.at(random_index);
         assert(NULL != pserver);
-        valid  = ((!pserver->is_full()) && (!except.find(pserver)));
+        valid  = ((!pserver->is_full()) && (!except.exist(pserver)));
         if (valid && !lans.empty())
         {
           uint32_t lan =  Func::get_lan(pserver->id(), SYSPARAM_NAMESERVER.group_mask_);
@@ -700,12 +800,13 @@ namespace tfs
           {
             pblock = *helper.at(i);
             assert(NULL != pblock);
-            manager_.get_block_manager().relieve_relation(pblock, server, now);
+            manager_.get_block_manager().relieve_relation(pblock, server, now,BLOCK_COMPARE_SERVER_BY_POINTER);//pointer
+            manager_.get_server_manager().relieve_relation(server, pblock);
           }
-          if (!helper.empty())
+          /*if (!helper.empty())
           {
             begin = pblock->id();
-          }
+          }*/
         }
         while (!complete);
       }

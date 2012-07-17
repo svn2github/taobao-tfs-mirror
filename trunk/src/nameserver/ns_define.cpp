@@ -274,6 +274,18 @@ namespace tfs
       return instance_;
     }
 
+    std::string& print_servers(const common::ArrayHelper<ServerCollect*>&servers, std::string& result)
+    {
+      ServerCollect* server = NULL;
+      for (int32_t i = 0; i < servers.get_array_index(); ++i)
+      {
+        server = *servers.at(i);
+        result += "/";
+        result += tbsys::CNetUtil::addrToString(server->id());
+      }
+      return result;
+    }
+
     void print_servers(const common::ArrayHelper<uint64_t>& servers, std::string& result)
     {
       for (int32_t i = 0; i < servers.get_array_index(); ++i)

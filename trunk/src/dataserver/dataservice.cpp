@@ -53,6 +53,7 @@ namespace tfs
         ns_ip_port_(0),
         repl_block_(NULL),
         compact_block_(NULL),
+        check_block_(NULL),
         sync_mirror_status_(0),
         max_cpu_usage_ (SYSPARAM_DATASERVER.max_cpu_usage_),
         tfs_ds_stat_ ("tfs-ds-stat"),
@@ -347,21 +348,6 @@ namespace tfs
 
         if (TFS_SUCCESS == iret)
         {
-          for (int32_t i = 0; i < 2; i++)
-          {
-            heartbeat_thread_[i] = new HeartBeatThreadHelper(*this, i);
-          }
-          do_check_thread_  = new DoCheckThreadHelper(*this);
-          compact_block_thread_ = new CompactBlockThreadHelper(*this);
-          replicate_block_threads_ =  new ReplicateBlockThreadHelperPtr[SYSPARAM_DATASERVER.replicate_thread_count_];
-          for (int32_t i = 0; i < SYSPARAM_DATASERVER.replicate_thread_count_; ++i)
-          {
-            replicate_block_threads_[i] = new ReplicateBlockThreadHelper(*this);
-          }
-        }
-
-        if (TFS_SUCCESS == iret)
-        {
           //set write and read log
           const char* work_dir = get_work_dir();
           iret = NULL == work_dir ? TFS_ERROR : TFS_SUCCESS;
@@ -380,6 +366,22 @@ namespace tfs
             init_log_file(READ_STAT_LOGGER, read_stat_log_file_);
             init_log_file(WRITE_STAT_LOGGER, write_stat_log_file_);
             TBSYS_LOG(INFO, "dataservice start");
+          }
+        }
+
+        if (TFS_SUCCESS == iret)
+        {
+          data_server_info_.status_ = DATASERVER_STATUS_ALIVE;
+          for (int32_t i = 0; i < 2; i++)
+          {
+            heartbeat_thread_[i] = new HeartBeatThreadHelper(*this, i);
+          }
+          do_check_thread_  = new DoCheckThreadHelper(*this);
+          compact_block_thread_ = new CompactBlockThreadHelper(*this);
+          replicate_block_threads_ =  new ReplicateBlockThreadHelperPtr[SYSPARAM_DATASERVER.replicate_thread_count_];
+          for (int32_t i = 0; i < SYSPARAM_DATASERVER.replicate_thread_count_; ++i)
+          {
+            replicate_block_threads_[i] = new ReplicateBlockThreadHelper(*this);
           }
         }
       }
@@ -518,6 +520,7 @@ namespace tfs
 
     int DataService::destroy_service()
     {
+      data_server_info_.status_ = DATASERVER_STATUS_DEAD;
       //global stat destroy
       stat_mgr_.destroy();
 
@@ -542,8 +545,11 @@ namespace tfs
 
       for (int i = 0; i < 2; i++)
       {
-        heartbeat_thread_[i]->join();
-        heartbeat_thread_[i] = 0;
+        if (0 != heartbeat_thread_[i])
+        {
+          heartbeat_thread_[i]->join();
+          heartbeat_thread_[i] = 0;
+        }
       }
 
       if (0 != do_check_thread_)
@@ -567,6 +573,10 @@ namespace tfs
           }
         }
       }
+
+      // destroy prefix op
+      PhysicalBlock::destroy_prefix_op();
+
       tbsys::gDeleteA(replicate_block_threads_);
       tbsys::gDelete(repl_block_);
       tbsys::gDelete(compact_block_);
@@ -579,8 +589,7 @@ namespace tfs
     int DataService::run_heart(const int32_t who)
     {
       //sleep for a while, waiting for listen port establish
-      int32_t iret = -1, count = 0;
-      time_t start = 0, end = 0, sleep_time_us = 0;
+      int32_t iret = -1;
       int8_t heart_interval = DEFAULT_HEART_INTERVAL;
       sleep(heart_interval);
       while (!stop_)
@@ -594,40 +603,37 @@ namespace tfs
           cpu_metrics_.summary();
         }
 
-        if (DATASERVER_STATUS_DEAD== data_server_info_.status_)
-          break;
+        //if (DATASERVER_STATUS_DEAD== data_server_info_.status_)
+        //  break;
 
-        start = Func::get_monotonic_time_us();
-        do
-        {
           //目前超时时间设置成2s，主要是为了跟以及版本兼容，目前在心跳中还没有删除带Block以及其它的功能
           //这些功能在dataserver换完以后可以想办法将它删除， 然后将超时时间设置短点，失败重试次数多点,
           //同时目前心跳的间隔时间是写死的， 删除以上功能的同时，可以将心跳间隔由nameserver发给dataserver
           //也就是每次心跳时带上dataserver心跳的间隔时间
-          iret = send_blocks_to_ns(heart_interval, who, 2000);//2s
-          end  = Func::get_monotonic_time_us();
-          ++count;
+
+        iret = send_blocks_to_ns(heart_interval, who, 2000);//2s
+        heart_interval = DEFAULT_HEART_INTERVAL;//这一行换成2.2版本的nameserver时可以删除
+        if (TFS_SUCCESS != iret)
+        {
+          usleep(500000);  // if fail, sleep 500ms before retry
         }
-        while (TFS_SUCCESS != iret && count < 2);
-
-        sleep_time_us = TFS_SUCCESS == iret ? heart_interval * 1000000 - (end - start)
-          : heart_interval * 1000000;
-
-        if (sleep_time_us > 0)
-          usleep(sleep_time_us);
+        else
+        {
+          usleep(heart_interval * 1000000);
+        }
       }
       return TFS_SUCCESS;
     }
 
-    int DataService::stop_heart()
+    /*int DataService::stop_heart()
     {
       TBSYS_LOG(INFO, "stop heartbeat...");
-      data_server_info_.status_ = DATASERVER_STATUS_DEAD;
       int8_t heart_interval = DEFAULT_HEART_INTERVAL;
+      data_server_info_.status_ = DATASERVER_STATUS_DEAD;
       send_blocks_to_ns(heart_interval, 0,1500);
       send_blocks_to_ns(heart_interval, 1,1500);
       return TFS_SUCCESS;
-    }
+    }*/
 
     int DataService::run_check()
     {
@@ -681,7 +687,7 @@ namespace tfs
         if (read_stat_buffer_.size() >= READ_STAT_LOG_BUFFER_LEN)
         {
           int64_t time_start = tbsys::CTimeUtil::getTime();
-          TBSYS_LOG(INFO, "---->START DUMP READ INFO. buffer size: %u, start time: %" PRI64_PREFIX "d", read_stat_buffer_.size(), time_start);
+          TBSYS_LOG(INFO, "---->START DUMP READ INFO. buffer size: %zd, start time: %" PRI64_PREFIX "d", read_stat_buffer_.size(), time_start);
           read_stat_mutex_.lock();
           int per_log_size = FILE_NAME_LEN + 2; //two space
           char read_log_buffer[READ_STAT_LOG_BUFFER_LEN * per_log_size + 1];
@@ -944,7 +950,7 @@ namespace tfs
             bpacket->dump();
           }
           // add access control by message type
-          if (!access_deny(bpacket))
+          if ((!access_deny(bpacket)) && (DATASERVER_STATUS_ALIVE == data_server_info_.status_))
           {
             bret = push(bpacket, false);
             if (bret)
@@ -1382,12 +1388,12 @@ namespace tfs
             }
           }
         }
-      }
 
-      // hook to be checked
-      if (TFS_SUCCESS == ret)
-      {
-        check_block_->add_check_task(close_file_info.block_id_);
+        // hook to be checked on write or update
+        if (TFS_SUCCESS == ret && NULL != check_block_)
+        {
+          check_block_->add_check_task(close_file_info.block_id_);
+        }
       }
 
       return ret;
@@ -1650,7 +1656,7 @@ namespace tfs
         {
           tbsys::gDelete(resp_rrd_msg);
           tbsys::gDeleteA(tmp_data_buffer);
-          TBSYS_LOG(ERROR, "allocdata fail, blockid: %u, realreadlen: %" PRI64_PREFIX "d", block_id, real_read_len);
+          TBSYS_LOG(ERROR, "allocdata fail, blockid: %u, realreadlen: %d", block_id, real_read_len);
           return TFS_ERROR;
         }
         else
@@ -1689,7 +1695,7 @@ namespace tfs
       resp_fi_msg->set_file_info(&finfo);
       message->reply(resp_fi_msg);
       TIMER_END();
-      TBSYS_LOG(INFO, "read fileinfo %s. blockid: %u, fileid: %" PRI64_PREFIX "u, mode: %d, cost time: %" PRI64_PREFIX "d",
+      TBSYS_LOG(DEBUG, "read fileinfo %s. blockid: %u, fileid: %" PRI64_PREFIX "u, mode: %d, cost time: %" PRI64_PREFIX "d",
           TFS_SUCCESS == ret ? "success" : "fail", block_id, file_id, mode, TIMER_DURATION());
       return TFS_SUCCESS;
     }
@@ -1700,7 +1706,7 @@ namespace tfs
       uint64_t file_id = message->get_file_id();
       uint64_t new_file_id = message->get_new_file_id();
       TBSYS_LOG(INFO,
-          "renamefile, blockid: %u, fileid: %" PRI64_PREFIX "u, newfileid: %" PRI64_PREFIX "u, ds list size: %u",
+          "renamefile, blockid: %u, fileid: %" PRI64_PREFIX "u, newfileid: %" PRI64_PREFIX "u, ds list size: %zd",
           block_id, file_id, new_file_id, message->get_ds_list().size());
 
       int ret = data_management_.rename_file(block_id, file_id, new_file_id);
@@ -1804,6 +1810,15 @@ namespace tfs
         ds_requester_.req_block_write_complete(block_id, message->get_lease_id(), ret, UNLINK_FLAG_YES);
       }
 
+      // hook to be checked on delete or undelete
+      if (TFS_SUCCESS == ret && NULL != check_block_)
+      {
+        if (DELETE == action || UNDELETE == action)
+        {
+          check_block_->add_check_task(block_id);
+        }
+      }
+
       TIMER_END();
       TBSYS_LOG(INFO, "unlink file %s. blockid: %d, fileid: %" PRI64_PREFIX "u, action: %d, isserver: %s, peer ip: %s, cost time: %" PRI64_PREFIX "d",
           TFS_SUCCESS == ret ? "success" : "fail", block_id, file_id, action, is_master ? "master" : "slave",
@@ -1844,12 +1859,6 @@ namespace tfs
       {
         return message->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret,
             "removeblock error, ret: %d", ret);
-      }
-
-      // remove logic block from Modified block
-      for (uint32_t i = 0; i < remove_blocks.size(); i++)
-      {
-        check_block_->remove_check_task(remove_blocks[i]);
       }
 
       if (common::REMOVE_BLOCK_RESPONSE_FLAG_YES == message->get_response_flag())
@@ -1966,19 +1975,26 @@ namespace tfs
         CheckBlockRequestMessage* message = dynamic_cast<CheckBlockRequestMessage*>(packet);
         CheckBlockResponseMessage* resp_cb_msg = new CheckBlockResponseMessage();
         uint32_t block_id = message->get_block_id();
-        if (0 == block_id)  // check all blocks
+        if (0 == block_id)  // block_id: 0, check all blocks
         {
           ret = check_block_->check_all_blocks(resp_cb_msg->get_result_ref(),
               message->get_check_flag(), message->get_check_time(),
               message->get_last_check_time());
         }
-        else  // check specific block
+        else
         {
-          CheckBlockInfo cbi;
-          ret = check_block_->check_one_block(block_id, cbi, message->get_check_flag());
-          if (TFS_SUCCESS == ret)
+          if (0 == message->get_check_flag())  // flag: 0, check specific block
           {
-            resp_cb_msg->get_result_ref().push_back(cbi);
+            CheckBlockInfo cbi;
+            ret = check_block_->check_one_block(block_id, cbi);
+            if (TFS_SUCCESS == ret)
+            {
+              resp_cb_msg->get_result_ref().push_back(cbi);
+            }
+          }
+          else  // flag: !0, repair block
+          {
+            ret = check_block_->repair_block_info(block_id);
           }
         }
 
@@ -2008,7 +2024,7 @@ namespace tfs
       int ret = block_checker_.add_repair_task(check_file_item);
       TBSYS_LOG(
           INFO,
-          "receive crc error cmd, blockid: %u, fileid: %" PRI64_PREFIX "u, crc: %u, flag: %d, failserver size: %d, ret: %d\n",
+          "receive crc error cmd, blockid: %u, fileid: %" PRI64_PREFIX "u, crc: %u, flag: %d, failserver size: %zd, ret: %d\n",
           check_file_item->block_id_, check_file_item->file_id_, check_file_item->crc_, check_file_item->flag_,
           check_file_item->fail_servers_.size(), ret);
       message->reply(new StatusMessage(STATUS_MESSAGE_OK));
@@ -2241,7 +2257,7 @@ namespace tfs
       int ret = 0;
       if (new_flag)
       {
-        ret = data_management_.new_single_block(block_id);
+        ret = data_management_.new_single_block(block_id, C_HALF_BLOCK);
         if (TFS_SUCCESS != ret)
         {
           return message->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret,
@@ -2295,13 +2311,6 @@ namespace tfs
 
       TBSYS_LOG(DEBUG, "write block fileinfo successful, blockid: %u", block_id);
       message->reply(new StatusMessage(STATUS_MESSAGE_OK));
-
-      // hook to be checked
-      if (TFS_SUCCESS == ret)
-      {
-        check_block_->add_check_task(block_id);
-      }
-
       return TFS_SUCCESS;
     }
 

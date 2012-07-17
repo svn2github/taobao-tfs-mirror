@@ -66,6 +66,9 @@ namespace tfs
       if (C_COMPACT_BLOCK == block_type)
       {
         dirty_flag = C_DATA_COMPACT;
+      } else if (C_HALF_BLOCK == block_type)
+      {
+        dirty_flag = C_DATA_HALF;
       }
 
       // create index handle
@@ -312,7 +315,7 @@ namespace tfs
             ret = index_handle_->update_block_info(C_OPER_DELETE, old_size);
             if (TFS_SUCCESS != ret)
               break;
-            ret = index_handle_->update_block_info(C_OPER_UPDATE, file_meta.get_size());
+            ret = index_handle_->update_block_info(C_OPER_INSERT, file_meta.get_size());
             if (TFS_SUCCESS != ret)
               break;
           }
@@ -390,7 +393,7 @@ namespace tfs
         if ((flag & READ_DATA_OPTION_FLAG_FORCE))
         {
           if ((((FileInfo *) buf)->id_ != inner_file_id)
-              || (((((FileInfo *) buf)->flag_) & (FI_DELETED | FI_INVALID )) != 0))
+              || (((((FileInfo *) buf)->flag_) & FI_INVALID) != 0))
           {
             TBSYS_LOG(WARN,
                 "find FileInfo fail, blockid: %u, fileid: %" PRI64_PREFIX "u, id: %" PRI64_PREFIX "u, flag: %d",
@@ -423,6 +426,11 @@ namespace tfs
       {
         return ret;
       }
+
+      // users probably read after stat, do optimise here
+      // we don't care the result here
+      data_handle_->fadvise_readahead(file_meta.get_offset(), file_meta.get_size());
+
       // 2. get fileinfo data
       ret = data_handle_->read_segment_info(&finfo, file_meta.get_offset());
       if (TFS_SUCCESS != ret)
@@ -519,9 +527,34 @@ namespace tfs
       file_size = finfo.size_ - FILEINFO_SIZE;
 
       int32_t oper_type = 0;
-      // 4. dispatch action
-      switch (action)
+      int tmp_flag = 0;
+      int tmp_action = action;
+
+      // ugly impl
+      if (action > REVEAL)
       {
+        // get the 5-7th bit
+        tmp_flag = (action >> 4) & 0x7;
+        tmp_action = SYNC;
+      }
+
+      // 4. dispatch action
+      switch (tmp_action)
+      {
+      case SYNC:
+        if ((finfo.flag_ & FI_DELETED) != (tmp_flag & FI_DELETED))
+        {
+          if (tmp_flag & FI_DELETED)
+          {
+            oper_type = C_OPER_DELETE;
+          }
+          else
+          {
+            oper_type = C_OPER_UNDELETE;
+          }
+        }
+        finfo.flag_ = tmp_flag;
+        break;
       case DELETE:
         if ((finfo.flag_ & (FI_DELETED | FI_INVALID)) != 0)
         {
@@ -614,7 +647,7 @@ namespace tfs
       }
       if (nbytes < 0)
       {
-        TBSYS_LOG(ERROR, "blockid: %u, batch read data offset: %" PRI64_PREFIX "d, block current offset: %d",
+        TBSYS_LOG(ERROR, "blockid: %u, batch read data offset: %d, block current offset: %d",
             logic_block_id_, offset, index_handle_->get_block_data_offset());
         return EXIT_READ_OFFSET_ERROR;
       }
@@ -623,7 +656,7 @@ namespace tfs
       if (TFS_SUCCESS != ret)
       {
         TBSYS_LOG(ERROR,
-            "blockid: %u read data batch fail, size: %" PRI64_PREFIX "d, offset: %" PRI64_PREFIX "d, ret: %d",
+            "blockid: %u read data batch fail, size: %d, offset: %d, ret: %d",
             logic_block_id_, nbytes, offset, ret);
         return ret;
       }
@@ -681,12 +714,20 @@ namespace tfs
       {
         return ret;
       }
-      TBSYS_LOG(DEBUG, "batch write meta list, blockid: %u, meta size: %d", logic_block_id_, meta_list->size());
+      TBSYS_LOG(DEBUG, "batch write meta list, blockid: %u, meta size: %zd", logic_block_id_, meta_list->size());
       // 3. write file meta info
       ret = index_handle_->batch_override_segment_meta(*meta_list);
       if (TFS_SUCCESS != ret)
       {
         TBSYS_LOG(ERROR, "batch override segment meta fail. blockid: %u, ret: %d", logic_block_id_, ret);
+        return ret;
+      }
+
+      // clear HALF BLOCK flag, it will become a normal block
+      ret = set_block_dirty_type(C_DATA_CLEAN);
+      if (TFS_SUCCESS != ret)
+      {
+        TBSYS_LOG(ERROR, "compact blockid: %u set dirty flag fail. ret: %d\n", get_logic_block_id(), ret);
         return ret;
       }
 
@@ -709,6 +750,29 @@ namespace tfs
         return ret;
       }
       return TFS_SUCCESS;
+    }
+
+    int LogicBlock::get_block_info(BlockInfo* blk_info)
+    {
+      int ret = TFS_SUCCESS;
+      if (NULL == blk_info)
+      {
+        ret = EXIT_POINTER_NULL;
+      }
+      else
+      {
+        BlockInfo* info = index_handle_->block_info();
+        if (NULL == info)
+        {
+          ret = EXIT_POINTER_NULL;
+          TBSYS_LOG(ERROR, "get block info fail. blockid: %u, ret: %d", logic_block_id_, ret);
+        }
+        else
+        {
+          memcpy(blk_info, info, sizeof(BlockInfo));
+        }
+      }
+      return ret;
     }
 
     int LogicBlock::set_block_dirty_type(const DirtyFlag dirty_flag)

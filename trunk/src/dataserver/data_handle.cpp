@@ -140,5 +140,17 @@ namespace tfs
       return TFS_SUCCESS;
     }
 
+    int DataHandle::fadvise_readahead(const int64_t offset, const int64_t size)
+    {
+      std::list<PhysicalBlock*>* physic_block_list = logic_block_->get_physic_block_list();
+      // just consider main block now
+      if (!physic_block_list->empty())
+      {
+        std::list<PhysicalBlock*>::iterator lit = physic_block_list->begin();
+        return posix_fadvise((*lit)->get_block_fd(), offset, size, POSIX_FADV_WILLNEED);
+      }
+      return 0;
+    }
+
   }
 }

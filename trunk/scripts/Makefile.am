@@ -1,5 +1,5 @@
 pkgdata_datadir=${prefix}/scripts
-pkgdata_data_DATA=stfs.sh tfs.sh start_sync_log.sh sync.sh
+pkgdata_data_DATA=stfs.sh tfs.sh start_sync_log.sh sync.sh cs_sync.sh
 
 SUBDIRS = ha
 
@@ -12,9 +12,10 @@ install-data-hook:
 	mv ${DESTDIR}/${prefix}/scripts/tfs.sh ${DESTDIR}/${prefix}/scripts/tfs
 	mv ${DESTDIR}/${prefix}/scripts/sync.sh ${DESTDIR}/${prefix}/scripts/sync
 	mv ${DESTDIR}/${prefix}/scripts/start_sync_log.sh ${DESTDIR}/${prefix}/scripts/start_sync_log
+	mv ${DESTDIR}/${prefix}/scripts/cs_sync.sh ${DESTDIR}/${prefix}/scripts/cs_sync
 	chmod u+x ${DESTDIR}/${prefix}/scripts/stfs
 	chmod u+x ${DESTDIR}/${prefix}/scripts/tfs
 	chmod u+x ${DESTDIR}/${prefix}/scripts/sync
-	chmod u+x ${DESTDIR}/${prefix}/scripts/cs_sync
 	chmod u+x ${DESTDIR}/${prefix}/scripts/start_sync_log
+	chmod u+x ${DESTDIR}/${prefix}/scripts/cs_sync
 	sed -i 's#\(TFS_HOME=\).*$$#\1${prefix}#g' ${DESTDIR}/${prefix}/scripts/stfs ${DESTDIR}/${prefix}/scripts/tfs

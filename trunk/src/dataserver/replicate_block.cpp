@@ -90,7 +90,7 @@ namespace tfs
         int ret = replicate_block_to_server(b);
         int result = send_repl_block_complete_info(ret, b);
         int64_t end_time = Func::curr_time();
-        TBSYS_LOG(INFO, "replicate %s blockid: %u, %s=>%s, cost time: %d (ms), commit: %s", (ret ? "fail" : "success"),
+        TBSYS_LOG(INFO, "replicate %s blockid: %u, %s=>%s, cost time: %"PRI64_PREFIX"d (ms), commit: %s", (ret ? "fail" : "success"),
             b.info_.block_id_, tbsys::CNetUtil::addrToString(b.info_.source_id_).c_str(), tbsys::CNetUtil::addrToString(
                 b.info_.destination_id_).c_str(), (end_time - start_time) / 1000, TFS_SUCCESS == result ? "successful" : "failed");
 
@@ -276,7 +276,7 @@ namespace tfs
         ret = logic_block->get_meta_infos(raw_meta_vec);
         if (TFS_SUCCESS != ret)
         {
-          TBSYS_LOG(ERROR, "replicate get meta info fail, blockid: %u, ret: %d",
+          TBSYS_LOG(ERROR, "replicate get meta info fail, server: %s, blockid: %u, ret: %d",
               tbsys::CNetUtil::addrToString(ds_ip).c_str(), block_id, ret);
           return TFS_ERROR;
         }
@@ -292,7 +292,7 @@ namespace tfs
           req_wib_msg.set_cluster(COPY_BETWEEN_CLUSTER);
         }
 
-        TBSYS_LOG(DEBUG, "replicate get meta info. blockid: %u, meta info size: %u, cluster flag: %d\n", block_id,
+        TBSYS_LOG(DEBUG, "replicate get meta info. blockid: %u, meta info size: %zd, cluster flag: %d\n", block_id,
             raw_meta_vec.size(), req_wib_msg.get_cluster());
 
         ret = TFS_SUCCESS;

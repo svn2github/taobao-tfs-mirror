@@ -249,7 +249,7 @@ namespace tfs
         int32_t flags_;
     };
 
-    class OwnerCheckMessage: public common::BasePacket
+    /*class OwnerCheckMessage: public common::BasePacket
     {
       public:
         OwnerCheckMessage();
@@ -267,7 +267,7 @@ namespace tfs
         }
       private:
         int64_t start_time_;
-    };
+    };*/
   }
 }
 #endif

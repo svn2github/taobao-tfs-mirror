@@ -74,6 +74,7 @@ namespace tfs
         int  handle_control_set_runtime_param(const common::ClientCmdInformation& info, const int64_t buf_length, char* error_buf);
         int  handle_control_get_balance_percent(const int64_t buf_length, char* error_buf);
         int  handle_control_set_balance_percent(const common::ClientCmdInformation& info, const int64_t buf_length, char* error_buf);
+        int  handle_control_clear_system_table(const common::ClientCmdInformation& info, const int64_t buf_length, char* error_buf);
 
         bool is_discard(void);
 

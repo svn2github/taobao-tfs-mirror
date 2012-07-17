@@ -123,6 +123,8 @@ int main(int argc, char* argv[])
     TBSYS_LOG(DEBUG, "change used_extend_block_count to %d\n", ext_used_count);
   }
 
+  super_block.used_block_count_ = main_used_count;
+  super_block.used_extend_block_count_ = ext_used_count;
   ret = super_block_impl_->write_super_blk(super_block);
   if (ret)
   {

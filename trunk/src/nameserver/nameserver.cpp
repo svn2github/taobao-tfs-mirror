@@ -35,7 +35,7 @@ namespace tfs
 {
   namespace nameserver
   {
-    OwnerCheckTimerTask::OwnerCheckTimerTask(NameServer& manager) :
+    /*OwnerCheckTimerTask::OwnerCheckTimerTask(NameServer& manager) :
       manager_(manager),
       MAX_LOOP_TIME(SYSPARAM_NAMESERVER.heart_interval_ * 1000 * 1000 / 2)
     {
@@ -95,7 +95,7 @@ namespace tfs
         }
       }
       return;
-    }
+    }*/
 
     NameServer::NameServer() :
       layout_manager_(*this),
@@ -194,10 +194,8 @@ namespace tfs
       if (TFS_SUCCESS == ret)
       {
         int32_t heart_thread_count = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_HEART_THREAD_COUNT, 1);
-        int32_t heart_max_queue_size = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_HEART_MAX_QUEUE_SIZE, 10240);
         int32_t report_thread_count = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_REPORT_BLOCK_THREAD_COUNT, 2);
-        int32_t report_max_queue_size = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_REPORT_BLOCK_MAX_QUEUE_SIZE, 2);
-        ret = heart_manager_.initialize(heart_thread_count, heart_max_queue_size, report_thread_count, report_max_queue_size);
+        ret = heart_manager_.initialize(heart_thread_count, report_thread_count);
         if (TFS_SUCCESS != ret)
         {
           TBSYS_LOG(ERROR, "initialize heart manager failed, must be exit, ret: %d", ret);
@@ -233,7 +231,7 @@ namespace tfs
       {
         //if we're the master ns or slave ns ,we can start service now.change status to INITIALIZED.
          GFactory::get_runtime_info().owner_status_ = NS_STATUS_INITIALIZED;
-        int32_t percent_size = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_TASK_PRECENT_SEC_SIZE, 1);
+        /*int32_t percent_size = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_TASK_PRECENT_SEC_SIZE, 1);
         int64_t owner_check_interval = get_work_queue_size() * percent_size * 1000;
         OwnerCheckTimerTaskPtr owner_check_task = new OwnerCheckTimerTask(*this);
         ret = get_timer()->scheduleRepeated(owner_check_task, tbutil::Time::microSeconds(owner_check_interval));
@@ -241,7 +239,7 @@ namespace tfs
         {
           TBSYS_LOG(ERROR, "%s", "add timer task(OwnerCheckTimerTask) error, must be exit");
           ret = EXIT_GENERAL_ERROR;
-        }
+        }*/
         TBSYS_LOG(INFO, "nameserver running, listen port: %d", get_port());
       }
       return ret;
@@ -366,9 +364,9 @@ namespace tfs
             case SHOW_SERVER_INFORMATION_MESSAGE:
               ret = show_server_information(msg);
               break;
-            case OWNER_CHECK_MESSAGE:
+            /*case OWNER_CHECK_MESSAGE:
               ret = owner_check(msg);
-              break;
+              break;*/
             case STATUS_MESSAGE:
               ret = ping(msg);
               break;
@@ -385,7 +383,7 @@ namespace tfs
           }
           if (common::TFS_SUCCESS != ret)
           {
-            msg->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret, "execute message failed");
+            msg->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret, "execute message failed, pcode: %d", pcode);
           }
         }
       }
@@ -412,9 +410,16 @@ namespace tfs
               NewClient::RESPONSE_MSG_MAP_ITER iter = sresponse->begin();
               for (; iter != sresponse->end(); ++iter)
               {
-                layout_manager_.get_client_request_server().handle(dynamic_cast<BasePacket*>(iter->second.second));
+                if (iter->second.second->getPCode() == STATUS_MESSAGE)
+                {
+                  RemoveBlockMessage* msg = dynamic_cast<RemoveBlockMessage*>(packet);
+                  StatusMessage* sm = dynamic_cast<StatusMessage*>(iter->second.second);
+                  TBSYS_LOG(INFO, "remove block: %u %s", msg->get(),
+                    STATUS_MESSAGE_OK == sm->get_status() ? "successful" : "failure");
+                }
+                //layout_manager_.get_client_request_server().handle(dynamic_cast<BasePacket*>(iter->second.second));
               }
-            }
+           }
           }
         }
       }
@@ -446,18 +451,18 @@ namespace tfs
           result_msg->free();
           if(EXIT_NO_DATASERVER == ret)
           {
-            ret = message->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), EXIT_NO_DATASERVER,
+            ret = message->reply_error_packet(TBSYS_LOG_LEVEL(INFO), EXIT_NO_DATASERVER,
                   "got error, when get block: %u mode: %d, result: %d information, %s",
                   block_id, mode, ret, tbsys::CNetUtil::addrToString(ipport).c_str());
           }
           else if (EXIT_ACCESS_PERMISSION_ERROR == ret)
           {
-            ret = message->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), EXIT_NAMESERVER_ONLY_READ,
+            ret = message->reply_error_packet(TBSYS_LOG_LEVEL(INFO), EXIT_NAMESERVER_ONLY_READ,
                   "current nameserver only read, %s", tbsys::CNetUtil::addrToString(ipport).c_str());
           }
           else
           {
-            ret = message->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret,
+            ret = message->reply_error_packet(TBSYS_LOG_LEVEL(INFO), ret,
                   "got error, when get block: %u mode: %d, result: %d information, %s",
                   block_id, mode, ret,tbsys::CNetUtil::addrToString(ipport).c_str());
           }
@@ -486,7 +491,7 @@ namespace tfs
         ret = layout_manager_.get_client_request_server().close(param);
         if (TFS_SUCCESS != ret)
         {
-          TBSYS_LOG(INFO, "%s", param.error_msg_);
+          TBSYS_LOG(INFO, "%s, ret: %d", param.error_msg_, ret);
         }
         TBSYS_LOG(DEBUG, "close, block: %u, server: %s, status: %d, lease_id: %u, ret: %d",
           param.block_info_.block_id_, tbsys::CNetUtil::addrToString(param.id_).c_str(), param.status_, param.lease_id_, ret);
@@ -516,17 +521,17 @@ namespace tfs
           reply->free();
           if(EXIT_NO_DATASERVER == ret)
           {
-            ret = message->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), EXIT_NO_DATASERVER,
+            ret = message->reply_error_packet(TBSYS_LOG_LEVEL(INFO), EXIT_NO_DATASERVER,
                 "not found dataserver, dataserver size equal 0");
           }
           else if (EXIT_ACCESS_PERMISSION_ERROR == ret)
           {
-            ret = message->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), EXIT_NAMESERVER_ONLY_READ,
+            ret = message->reply_error_packet(TBSYS_LOG_LEVEL(INFO), EXIT_NAMESERVER_ONLY_READ,
                 "current nameserver only read");
           }
           else
           {
-            ret = message->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret,
+            ret = message->reply_error_packet(TBSYS_LOG_LEVEL(INFO), ret,
                 "batch get get block information error, mode: %d, ret: %d", mode, ret);
           }
         }
@@ -543,7 +548,7 @@ namespace tfs
         uint32_t block = message->get_block_id();
         if (0 == block)
         {
-          ret = msg->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), EXIT_BLOCK_NOT_FOUND,
+          ret = msg->reply_error_packet(TBSYS_LOG_LEVEL(INFO), EXIT_BLOCK_NOT_FOUND,
               "repair block: %u, block object not found", block);
         }
         else
@@ -606,7 +611,7 @@ namespace tfs
       return ret;
     }
 
-    int NameServer::owner_check(common::BasePacket* msg)
+    /*int NameServer::owner_check(common::BasePacket* msg)
     {
       int32_t ret = (NULL != msg) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (common::TFS_SUCCESS == ret)
@@ -615,7 +620,7 @@ namespace tfs
         ngi.last_owner_check_time_ = tbutil::Time::now(tbutil::Time::Monotonic).toMicroSeconds();//us
       }
       return ret;
-    }
+    }*/
 
     int NameServer::ping(common::BasePacket* msg)
     {
@@ -790,8 +795,8 @@ namespace tfs
         if (common::TFS_SUCCESS == ret)
         {
           //receive all owner check message , master and slave heart message, dataserver heart message
-          if (pcode != OWNER_CHECK_MESSAGE
-            && pcode != MASTER_AND_SLAVE_HEART_MESSAGE
+          //if (pcode != OWNER_CHECK_MESSAGE
+            if (pcode != MASTER_AND_SLAVE_HEART_MESSAGE
             && pcode != MASTER_AND_SLAVE_HEART_RESPONSE_MESSAGE
             && pcode != HEARTBEAT_AND_NS_HEART_MESSAGE
             && pcode != SET_DATASERVER_MESSAGE
@@ -816,8 +821,8 @@ namespace tfs
                && ngi.owner_status_ <= NS_STATUS_INITIALIZED ? common::TFS_SUCCESS : common::TFS_ERROR;
         if (common::TFS_SUCCESS == ret)
         {
-          if (pcode != OWNER_CHECK_MESSAGE
-            && pcode != MASTER_AND_SLAVE_HEART_MESSAGE
+          //if (pcode != OWNER_CHECK_MESSAGE
+            if (pcode != MASTER_AND_SLAVE_HEART_MESSAGE
             && pcode != HEARTBEAT_AND_NS_HEART_MESSAGE
             && pcode != MASTER_AND_SLAVE_HEART_RESPONSE_MESSAGE
             && pcode != SET_DATASERVER_MESSAGE

@@ -141,7 +141,7 @@ namespace tfs
         }
       }
       CompactComplete value(INVALID_SERVER_ID, INVALID_SERVER_ID, PLAN_STATUS_NONE);
-      memcpy(&value.block_info_, &block_info_, sizeof(block_info_));
+      value.block_info_ = block_info_;
       VUINT64 servers;
       check_complete(value, servers);
 
@@ -251,7 +251,7 @@ namespace tfs
         CompactBlockCompleteMessage* message = dynamic_cast<CompactBlockCompleteMessage*>(msg);
         PlanStatus status = status_transform_compact_to_plan(static_cast<CompactStatus>(message->get_success()));
         CompactComplete value(message->get_server_id(), message->get_block_id(), status);
-        memcpy(&value.block_info_, &message->get_block_info(), sizeof(block_info_));
+        value.block_info_ = message->get_block_info();
         VUINT64 servers;
         if (GFactory::get_runtime_info().is_master())//master handle
         {
@@ -301,7 +301,7 @@ namespace tfs
           status.second = value.status_;
           if (value.status_ == PLAN_STATUS_END)
           {
-            memcpy(&block_info_, &value.block_info_, sizeof(BlockInfo));
+            block_info_ = value.block_info_;
             value.current_complete_result_ = true;
             ++success_count;
             ++complete_count;
@@ -362,15 +362,15 @@ namespace tfs
           BlockCollect* block = manager_.get_manager().get_block_manager().get(value.block_id_);
           if((server != NULL) && (block != NULL))
           {
-            if (!manager_.get_manager().relieve_relation(block, server, now))
+            if (!manager_.get_manager().relieve_relation(block, server, now, BLOCK_COMPARE_SERVER_BY_ID))
             {
               TBSYS_LOG(INFO, "we'll get failed when relive relation between block: %u and server: %s",
                   value.block_id_, tbsys::CNetUtil::addrToString((*iter)).c_str());
             }
             if ( GFactory::get_runtime_info().is_master())
             {
-              std::vector<stat_int_t> stat(1, 1);
-              GFactory::get_stat_mgr().update_entry(GFactory::tfs_ns_stat_block_count_, stat, false);
+              /*std::vector<stat_int_t> stat(1, 1);
+              GFactory::get_stat_mgr().update_entry(GFactory::tfs_ns_stat_block_count_, stat, false);*/
               manager_.get_manager().get_task_manager().remove_block_from_dataserver((*iter), value.block_id_, 0, now);
             }
           }
@@ -413,6 +413,7 @@ namespace tfs
         bset[1] = value.has_success_;
         bset[2] = value.is_complete_;
         msg.set_flag(bset.to_ulong());
+        msg.set_seqno(seqno_);
         TBSYS_LOG(DEBUG, "check compact complete flag: %d", msg.get_flag());
 
         common::Stream stream(msg.length());
@@ -525,10 +526,11 @@ namespace tfs
             {
               if (blocks.is_move_ == REPLICATE_BLOCK_MOVE_FLAG_YES)
               {
-                if ((NULL != source) && block->exist(source))
-                  manager_.get_manager().relieve_relation(block, source, now);
+                bool result = false;
+                if ((NULL != source) && block->exist(source, false))
+                  result = manager_.get_manager().relieve_relation(block, source, now,BLOCK_COMPARE_SERVER_BY_ID);
                 manager_.get_manager().build_relation(block, dest, now);
-                ret = block->get_servers_size() > 0 ?  STATUS_MESSAGE_REMOVE : STATUS_MESSAGE_OK;
+                ret = block->get_servers_size() > 0 && result ?  STATUS_MESSAGE_REMOVE : STATUS_MESSAGE_OK;
                 if ((block->get_servers_size() <= 0) && (NULL != source))
                 {
                   manager_.get_manager().build_relation(block, source, now, true);
@@ -564,6 +566,8 @@ namespace tfs
                 message->get_command() == PLAN_STATUS_TIMEOUT ? "timeout" :
                 message->get_command() == PLAN_STATUS_BEGIN ? "begin" :
                 message->get_command() == PLAN_STATUS_FAILURE ? "failure" : "unknow");
+            if (GFactory::get_runtime_info().is_master())
+              message->reply(new StatusMessage(STATUS_MESSAGE_OK));
           }
           all_complete_flag = true;
           status_ = PLAN_STATUS_END;
@@ -589,14 +593,14 @@ namespace tfs
         std::vector<ServerCollect*>::iterator iter = runer_.begin();
         for (; iter != runer_.end(); ++iter)
         {
-          manager_.get_manager().relieve_relation(block, (*iter), now);
+          manager_.get_manager().relieve_relation(block, (*iter), now, BLOCK_COMPARE_SERVER_BY_ID);
           ret = manager_.get_manager().get_task_manager().remove_block_from_dataserver((*iter)->id(), block_id_, seqno_, now);
           TBSYS_LOG(INFO, "send remove block: %u command on server : %s %s",
             block_id_, tbsys::CNetUtil::addrToString((*iter)->id()).c_str(), TFS_SUCCESS == ret ? "successful" : "failed");
         }
 
-        std::vector<stat_int_t> stat(1, runer_.size());
-        GFactory::get_stat_mgr().update_entry(GFactory::tfs_ns_stat_block_count_, stat, false);
+        /*std::vector<stat_int_t> stat(1, runer_.size());
+        GFactory::get_stat_mgr().update_entry(GFactory::tfs_ns_stat_block_count_, stat, false);*/
 
         status_ = PLAN_STATUS_BEGIN;
         last_update_time_ = now +  SYSPARAM_NAMESERVER.task_expired_time_;

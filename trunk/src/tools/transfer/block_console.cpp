@@ -378,7 +378,7 @@ int TranBlock::read_index()
         }
         else
         {
-          TBSYS_LOG(ERROR, "read index from ds: %s failed, blockid: %u, offset: %d, unknow msg type: %d",
+          TBSYS_LOG(ERROR, "read index from ds: %s failed, blockid: %u, unknow msg type: %d",
               tbsys::CNetUtil::addrToString(seg_data_.ds_[index]).c_str(), seg_data_.seg_info_.block_id_, rsp->getPCode());
           ret = TFS_ERROR;
         }
@@ -491,7 +491,7 @@ int TranBlock::read_data()
       speed = read_size * 1000 * 1000 / TIMER_DURATION();
     }
 
-    TBSYS_LOG(DEBUG, "read data, cost time: %"PRI64_PREFIX"d, read size: %d, speed: %"PRI64_PREFIX"d, need sleep time: %"PRI64_PREFIX"d",
+    TBSYS_LOG(DEBUG, "read data, cost time: %"PRI64_PREFIX"d, read size: %"PRI64_PREFIX"d, speed: %"PRI64_PREFIX"d, need sleep time: %"PRI64_PREFIX"d",
         TIMER_DURATION(), read_size, speed, d_value);
   }
 
@@ -549,7 +549,7 @@ int TranBlock::recombine_data()
         }
         else if (finfo.modify_time_ != data_finfo->modify_time_)
         {
-          TBSYS_LOG(WARN, "file modify time conflict in same offset, file updated after get meta info. blockid: %u, fileid: %"PRI64_PREFIX"u, info modify time: %d, data modify time: %d",
+          TBSYS_LOG(WARN, "file modify time conflict in same offset, file updated after get meta info. blockid: %u, fileid: %"PRI64_PREFIX"u <> %"PRI64_PREFIX"d, info modify time: %d, data modify time: %d",
               seg_data_.seg_info_.block_id_, finfo.id_, data_finfo->id_, finfo.modify_time_, data_finfo->modify_time_);
         }
         else
@@ -854,7 +854,7 @@ int TranBlock::check_integrity()
           {
             if (crc != (*fit).crc_ || total_size != (*fit).size_ || crc != dest_info.crc_ || total_size != dest_info.size_)
             {
-              TBSYS_LOG(ERROR, "blockid: %u, meta crc: %u, size: %d, data crc: %u, size: %d, dest crc: %u, size: %d\n",
+              TBSYS_LOG(ERROR, "blockid: %u, meta crc: %u, size: %d, data crc: %u, size: %d, dest crc: %u, size: %"PRI64_PREFIX"d\n",
                  seg_data_.seg_info_.block_id_, (*fit).crc_, (*fit).size_, crc, total_size, dest_info.crc_, dest_info.size_);
               ret = TFS_ERROR;
             }

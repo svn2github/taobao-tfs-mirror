@@ -105,7 +105,7 @@ namespace tfs
         return false;
       }
 
-      data_ = mmap(0, size_, flags, MAP_SHARED, fd_, 0);
+      data_ = mmap(0, size_, flags | PROT_EXEC, MAP_SHARED, fd_, 0);
 
       if (MAP_FAILED == data_)
       {

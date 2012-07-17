@@ -56,6 +56,8 @@ namespace tfs
       #endif
       friend class ClientRequestServer;
       friend int OpLogSyncManager::replay_helper_do_oplog(const time_t now, const int32_t type, const char* const data, const int64_t length , int64_t& pos);
+      typedef common::TfsSortedVector<ServerCollect*,ServerIdCompare> SERVER_TABLE;
+      typedef SERVER_TABLE::iterator SERVER_TABLE_ITER;
       public:
       explicit LayoutManager(NameServer& manager);
       virtual ~LayoutManager();
@@ -80,7 +82,7 @@ namespace tfs
 
       int update_relation(ServerCollect* server,const std::set<common::BlockInfo>& blocks, const time_t now);
       bool build_relation(BlockCollect* block, ServerCollect* server, const time_t now, const bool set = false);
-      bool relieve_relation(BlockCollect* block, ServerCollect* server, const time_t now);
+      bool relieve_relation(BlockCollect* block, ServerCollect* server, const time_t now, const int8_t flag);
 
       int update_block_info(const common::BlockInfo& info, const uint64_t server, const time_t now, const bool addnew);
 
@@ -96,9 +98,6 @@ namespace tfs
       int block_oplog_write_helper(const int32_t cmd, const common::BlockInfo& info,
           const std::vector<uint32_t>& blocks, const std::vector<uint64_t>& servers, const time_t now);
 
-      int add_report_block_server(ServerCollect* server, const bool rb_expire = false);
-      int del_report_block_server(ServerCollect* server);
-
       int set_runtime_param(const uint32_t index, const uint32_t value, const int64_t length, char *retstr);
 
       void switch_role(const time_t now = common::Func::get_monotonic_time());
@@ -108,10 +107,10 @@ namespace tfs
       void build_();
       void balance_();
       void timeout_();
+      void redundant_();
       void check_all_server_isalive_();
       void add_block_in_all_server_();
       void check_all_server_report_block_();
-      int del_report_block_server_(ServerCollect* server);
       int touch_(bool& promote, const common::ArrayHelper<ServerCollect*>& servers, const time_t now);
 
       int add_new_block_helper_write_log_(const uint32_t block_id, const common::ArrayHelper<ServerCollect*>& server, const time_t now);
@@ -121,16 +120,14 @@ namespace tfs
       BlockCollect* add_new_block_helper_create_by_id_(const uint32_t block_id, const time_t now);
       BlockCollect* add_new_block_helper_create_by_system_(uint32_t& block_id, ServerCollect* server, const time_t now);
 
-      bool build_emergency_replicate_(int64_t& need, std::deque<BlockCollect*>& queue, const time_t now);
-      bool check_emergency_replicate_(std::deque<BlockCollect*>& queue, common::ArrayHelper<BlockCollect*>& result,
-          const int32_t count, const time_t now);
+      bool build_emergency_replicate_(int64_t& need, const time_t now);
+      bool check_emergency_replicate_(common::ArrayHelper<BlockCollect*>& result,const int32_t count, const time_t now);
       bool build_replicate_task_(int64_t& need, const BlockCollect* block, const time_t now);
       bool build_compact_task_(const BlockCollect* block, const time_t now);
       bool build_balance_task_(int64_t& need, common::TfsSortedVector<ServerCollect*,ServerIdCompare>& targets,
           const ServerCollect* source, const BlockCollect* block, const time_t now);
       bool build_redundant_(int64_t& need, const time_t now);
       int64_t has_space_in_task_queue_() const;
-      bool has_report_block_server_() const;
 
       class BuildPlanThreadHelper: public tbutil::Thread
       {
@@ -222,6 +219,19 @@ namespace tfs
           DISALLOW_COPY_AND_ASSIGN(TimeoutThreadHelper);
       };
       typedef tbutil::Handle<TimeoutThreadHelper> TimeoutThreadHelperPtr;
+
+      class RedundantThreadHelper: public tbutil::Thread
+      {
+        public:
+          explicit RedundantThreadHelper(LayoutManager& manager):
+            manager_(manager) {start(THREAD_STATCK_SIZE);}
+          virtual ~RedundantThreadHelper() {}
+          void run();
+        private:
+          LayoutManager& manager_;
+          DISALLOW_COPY_AND_ASSIGN(RedundantThreadHelper);
+      };
+      typedef tbutil::Handle<RedundantThreadHelper> RedundantThreadHelperPtr;
       private:
       BuildPlanThreadHelperPtr build_plan_thread_;
       RunPlanThreadHelperPtr run_plan_thread_;
@@ -230,14 +240,11 @@ namespace tfs
       CheckDataServerReportBlockThreadHelperPtr check_dataserver_report_block_thread_;
       BuildBalanceThreadHelperPtr balance_thread_;
       TimeoutThreadHelperPtr timeout_thread_;
+      RedundantThreadHelperPtr redundant_thread_;
 
       time_t  zonesec_;
       time_t  last_rotate_log_time_;
       int32_t plan_run_flag_;
-
-      tbutil::Mutex wait_report_block_server_mutex_;
-      std::deque<ServerCollect*> wait_report_block_servers_;
-      std::vector<ServerCollect*> current_reporting_block_servers_;
 
       NameServer& manager_;
       BlockManager block_manager_;

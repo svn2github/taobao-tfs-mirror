@@ -19,6 +19,7 @@
 #include <string>
 
 
+#include "common/directory_op.h"
 #include "common/config_item.h"
 #include "common/parameter.h"
 #include "common/status_message.h"
@@ -42,23 +43,16 @@ namespace tfs
   {
     void CheckThread::run()
     {
-      check_ds_list();
-    }
-
-    int CheckThread::check_ds_list()
-    {
-      int ret = TFS_SUCCESS;
       for (uint32_t i = 0; i < ds_list_.size(); i++)
       {
         CheckBlockInfoVec check_ds_result;
-        ret = ServerHelper::check_ds(ds_list_[i],
-          check_time_, last_check_time_, check_ds_result);
+        int ret = ServerHelper::check_ds(ds_list_[i],
+            check_time_, last_check_time_, check_ds_result);
         if (TFS_SUCCESS == ret)  // error handled in ServerHelper
         {
           add_result_map(check_ds_result);
         }
       }
-      return ret;
     }
 
     void CheckThread::add_result_map(const CheckBlockInfoVec& result_vec)
@@ -83,46 +77,140 @@ namespace tfs
       result_map_lock_->unlock();
     }
 
-
-    int CheckServer::init_meta()
+    void RecheckThread::run()
     {
-      int ret = TFS_SUCCESS;
-
-      // create log dir if not exist
-      if (0 != access(meta_dir_.c_str(), F_OK))
+      uint64_t master_ns_id = check_server_->get_master_nsid();
+      uint64_t slave_ns_id = check_server_->get_slave_nsid();
+      for (uint32_t i = 0; i < block_list_.size(); i++)
       {
-        char tmp[MAX_FILE_NAME_LEN];
-        if (meta_dir_.length() >= (unsigned)MAX_FILE_NAME_LEN)
+        CheckBlockInfoVec m_info_vec;
+        CheckBlockInfoVec s_info_vec;
+        int m_ret = ServerHelper::check_block(master_ns_id, block_list_[i], m_info_vec);
+        int s_ret = ServerHelper::check_block(slave_ns_id, block_list_[i], s_info_vec);
+
+        if (TFS_SUCCESS == m_ret && TFS_SUCCESS == s_ret)
         {
-          ret = TFS_ERROR;
-          TBSYS_LOG(ERROR, "meta directory length exceed.");
+          CheckBlockInfo m_info = check_server_->select_main_block(m_info_vec);
+          CheckBlockInfo s_info = check_server_->select_main_block(s_info_vec);
+          check_server_->compare_block(m_info, s_info);
+        }
+        else if (TFS_SUCCESS == m_ret)
+        {
+          CheckBlockInfo m_info = check_server_->select_main_block(m_info_vec);
+
+          // add to sync_to_slave list
+          if (0 != m_info.file_count_)
+          {
+            TBSYS_LOG(DEBUG, "id: %u, version: %d, count: %u, size: %u",
+                m_info.block_id_, m_info.version_, m_info.file_count_, m_info.total_size_);
+            check_server_->add_m_sync_list(block_list_[i]);
+            TBSYS_LOG(INFO, "block %"PRI64_PREFIX"d NOT_IN_SLAVE, sync to slave", block_list_[i]);
+          }
+        }
+        else if (TFS_SUCCESS == s_ret)
+        {
+          CheckBlockInfo s_info = check_server_->select_main_block(s_info_vec);
+
+          // add to sync_to_master list
+          if (0 != s_info.file_count_)
+          {
+            TBSYS_LOG(DEBUG, "id: %u, version: %d, count: %u, size: %u",
+                s_info.block_id_, s_info.version_, s_info.file_count_, s_info.total_size_);
+            check_server_->add_s_sync_list(block_list_[i]);
+            TBSYS_LOG(INFO, "block %"PRI64_PREFIX"d NOT_IN_MASTER, sync to master", block_list_[i]);
+          }
         }
         else
         {
-          snprintf(tmp, MAX_FILE_NAME_LEN, "%s", meta_dir_.c_str());
-          CFileUtil::mkdirs(tmp);
+          // or block not in both clusters
+          TBSYS_LOG(WARN, "block %"PRI64_PREFIX"d NOT_IN_CLUSTER", block_list_[i]);
+        }
+      }
+    }
+
+    /**
+     * @brief help implementation
+     */
+    void CheckServer::help()
+    {
+      fprintf(stderr, "Usage: %s -f -i [-d] [-h]\n", "checkserver");
+      fprintf(stderr, "       -f config file path\n");
+      fprintf(stderr, "       -i cluster index\n");
+      fprintf(stderr, "       -d daemonize\n");
+      fprintf(stderr, "       -h help\n");
+    }
+
+    /**
+     * @brief version information
+     */
+    void CheckServer::version()
+    {
+      printf("checkserver: version-2.1\n");
+    }
+
+    /**
+     * @brief parse command line
+     *
+     * @param argc: number of args
+     * @param argv[]: arg list
+     * @param errmsg: error message
+     *
+     * @return
+     */
+    int CheckServer::parse_common_line_args(int argc, char* argv[], std::string& errmsg)
+    {
+      // analyze arguments
+      int ret = TFS_SUCCESS;
+      int ch = 0;
+      string index_str;
+      while ((ch = getopt(argc, argv, "i:")) != EOF)
+      {
+        switch (ch)
+        {
+          case 'i':
+            index_str = optarg;
+            index_ = atoi(optarg);
+            break;
+          default:
+            errmsg = "unknown options";
+            ret = TFS_ERROR;
+            help();
         }
       }
 
-      if (TFS_SUCCESS == ret)
+      if (index_ <= 0)
       {
-        string meta_path = meta_dir_ + "cs.meta";
-        meta_fd_ = open(meta_path.c_str(), O_CREAT | O_RDWR, 0644);
-        if (meta_fd_ < 0)
+        ret = TFS_ERROR;
+      }
+      else
+      {
+        snprintf(app_name_, MAX_FILE_NAME_LEN, "%s_%s", argv[0], index_str.c_str());
+        argv[0] = app_name_;  // ugly trick
+      }
+
+      return ret;
+    }
+
+    int CheckServer::init_meta()
+    {
+      // init meta file
+      int ret = TFS_SUCCESS;
+      string meta_path = meta_dir_ + "/cs.meta";
+      meta_fd_ = open(meta_path.c_str(), O_CREAT | O_RDWR, 0644);
+      if (meta_fd_ < 0)
+      {
+        TBSYS_LOG(ERROR, "open meta file %s error, ret: %d",
+            meta_path.c_str(), -errno);
+        ret = TFS_ERROR;
+      }
+      else
+      {
+        // maybe an empty file, but it doesn't matter
+        int rlen = read(meta_fd_, &last_check_time_, sizeof(uint32_t));
+        if (rlen < 0)
         {
-          TBSYS_LOG(ERROR, "open meta file %s error, ret: %d",
-              meta_path.c_str(), -errno);
+          TBSYS_LOG(ERROR, "read mete file %s error", meta_path.c_str());
           ret = TFS_ERROR;
-        }
-        else
-        {
-          // maybe an empty file, but it doesn't matter
-          int rlen = read(meta_fd_, &last_check_time_, sizeof(uint32_t));
-          if (rlen < 0)
-          {
-            TBSYS_LOG(ERROR, "read mete file %s error", meta_path.c_str());
-            ret = TFS_ERROR;
-          }
         }
       }
 
@@ -139,111 +227,29 @@ namespace tfs
       }
     }
 
-    int CheckServer::init_log(const int index)
-    {
-      int ret = TFS_SUCCESS;
-
-      // create log dir if not exist
-      if (0 != access(log_dir_.c_str(), F_OK))
-      {
-        if (log_dir_.length() >= (unsigned)MAX_FILE_NAME_LEN)
-        {
-          ret = TFS_ERROR;
-          TBSYS_LOG(ERROR, "log directory %s length exceed.", log_dir_.c_str());
-        }
-        else
-        {
-          char tmp[MAX_FILE_NAME_LEN];
-          snprintf(tmp, MAX_FILE_NAME_LEN, "%s", log_dir_.c_str());
-          // don't check return val, tbsys bug with trailing slash
-          CFileUtil::mkdirs(tmp);
-        }
-      }
-
-      int log_num = TBSYS_CONFIG.getInt(CONF_SN_PUBLIC, CONF_LOG_NUM, 16);
-      int log_size = TBSYS_CONFIG.getInt(CONF_SN_PUBLIC, CONF_LOG_SIZE, 1024 * 1024 * 1024);
-      string log_level = TBSYS_CONFIG.getString(CONF_SN_PUBLIC, CONF_LOG_LEVEL, "info");
-      string log_file;
-      stringstream tmp_stream;
-      tmp_stream << log_dir_ + "checkserver_" << index << ".log";
-      tmp_stream >> log_file;
-
-      TBSYS_LOGGER.setLogLevel(log_level.c_str());
-      TBSYS_LOGGER.setFileName(log_file.c_str());
-      TBSYS_LOGGER.setMaxFileSize(log_size);
-      TBSYS_LOGGER.setMaxFileIndex(log_num);
-
-      return ret;
-    }
-
-    int CheckServer::init_pid(const int index)
-    {
-      int ret = TFS_SUCCESS;
-
-      // create log dir if not exist
-      if (0 != access(log_dir_.c_str(), F_OK))
-      {
-        if (log_dir_.length() >= (unsigned)MAX_FILE_NAME_LEN)
-        {
-          ret = TFS_ERROR;
-          TBSYS_LOG(ERROR, "log directory %s length exceed.", log_dir_.c_str());
-        }
-        else
-        {
-          char tmp[MAX_FILE_NAME_LEN];
-          snprintf(tmp, MAX_FILE_NAME_LEN, "%s", log_dir_.c_str());
-          CFileUtil::mkdirs(tmp);
-        }
-      }
-
-      if (TFS_SUCCESS == ret)
-      {
-        string pid_file;
-        stringstream tmp_stream;
-        tmp_stream << log_dir_ + "checkserver_" << index << ".pid";
-        tmp_stream >> pid_file;
-
-        if (0 != CProcess::existPid(pid_file.c_str()))
-        {
-          TBSYS_LOG(ERROR, "checkserver %d already running.", index);
-          ret = TFS_ERROR;
-        }
-        else
-        {
-          CProcess::writePidFile(pid_file.c_str());
-        }
-      }
-      return ret;
-    }
-
     int CheckServer::open_file(const uint32_t check_time)
     {
       int ret = TFS_SUCCESS;
       string m_blk, s_blk;
       char time_str[64];
       CTimeUtil::timeToStr(check_time, time_str);
-      stringstream tmp_stream;
-      tmp_stream << meta_dir_ << "sync_to_slave.blk." << time_str;
-      tmp_stream >> m_blk;
-      tmp_stream.clear();
-      tmp_stream << meta_dir_ << "sync_to_master.blk." << time_str;
-      tmp_stream >> s_blk;
-      tmp_stream.clear();
+      m_blk = meta_dir_ + "/sync_to_slave.blk." + time_str;
+      s_blk = meta_dir_ + "/sync_to_master.blk." + time_str;
 
-      if (NULL == master_fp_)
+      if (NULL == mfp_)
       {
-        master_fp_ = fopen(m_blk.c_str(), "w+");
-        if (NULL == master_fp_)
+        mfp_ = fopen(m_blk.c_str(), "a+");
+        if (NULL == mfp_)
         {
           ret = TFS_ERROR;
           TBSYS_LOG(ERROR, "open %s error, ret: %d", m_blk.c_str(), ret);
         }
       }
 
-      if (ret == TFS_SUCCESS && NULL == slave_fp_)
+      if (TFS_SUCCESS == ret && NULL == sfp_)
       {
-        slave_fp_ = fopen(s_blk.c_str(), "w+");
-        if (NULL == slave_fp_)
+        sfp_ = fopen(s_blk.c_str(), "a+");
+        if (NULL == sfp_)
         {
           ret = TFS_ERROR;
           TBSYS_LOG(ERROR, "open %s error, ret: %d", s_blk.c_str(), ret);
@@ -255,136 +261,171 @@ namespace tfs
 
     void CheckServer::close_file()
     {
-      if (NULL != master_fp_)
+      if (NULL != mfp_)
       {
-        fclose(master_fp_);
-        master_fp_ = NULL;
+        fclose(mfp_);
+        mfp_ = NULL;
       }
-      if (NULL != slave_fp_)
+      if (NULL != sfp_)
       {
-        fclose(slave_fp_);
-        slave_fp_ = NULL;
+        fclose(sfp_);
+        sfp_ = NULL;
       }
     }
 
-    int CheckServer::init(const char* config_file, const int index)
+    int CheckServer::initialize()
     {
-      // load public config
-      int ret = TBSYS_CONFIG.load(config_file);
-      if (TFS_SUCCESS == ret)
+      // load check server config
+      int ret = SYSPARAM_CHECKSERVER.initialize(config_file_);
+      if (TFS_SUCCESS != ret)
       {
-        string work_dir = TBSYS_CONFIG.getString(CONF_SN_PUBLIC, CONF_WORK_DIR, "./");
-        stringstream tmp_stream;
-        tmp_stream << work_dir << "/logs/";
-        tmp_stream >> log_dir_;
-        tmp_stream.clear();
-        tmp_stream << work_dir << "/checkserver_" << index << "/";
-        tmp_stream >> meta_dir_;
-        tmp_stream.clear();
+        TBSYS_LOG(ERROR, "load config file fail.");
+      }
+      else
+      {
+        // initialize parameter
+        master_ns_id_ = SYSPARAM_CHECKSERVER.master_ns_id_;
+        slave_ns_id_ = SYSPARAM_CHECKSERVER.slave_ns_id_;
+        thread_count_ = SYSPARAM_CHECKSERVER.thread_count_;
+        check_interval_ = SYSPARAM_CHECKSERVER.check_interval_ * 60;
+        overlap_check_time_ = SYSPARAM_CHECKSERVER.overlap_check_time_ * 60;
+        block_stable_time_ = SYSPARAM_CHECKSERVER.block_stable_time_ * 60;
 
-        // init pid
-        ret = init_pid(index);
-        if (TFS_SUCCESS == ret)
+        // initialize meta direcotry
+        stringstream tmp_stream;
+        tmp_stream << get_work_dir() << "/checkserver_" << index_;
+        tmp_stream >> meta_dir_;
+        if (!DirectoryOp::create_full_path(meta_dir_.c_str()))
         {
-          // init log
-          ret = init_log(index);
+          ret = TFS_ERROR;
+          TBSYS_LOG(ERROR, "create meta path fail");
         }
 
         if (TFS_SUCCESS == ret)
         {
-          // load meta
           ret = init_meta();
         }
 
         if (TFS_SUCCESS == ret)
         {
-          // checkserver's config
-          ret = SYSPARAM_CHECKSERVER.initialize(config_file);
-          if (TFS_SUCCESS != ret)
-          {
-            TBSYS_LOG(ERROR, "init config item fail.");
-          }
-          else
-          {
-            master_ns_id_ = SYSPARAM_CHECKSERVER.master_ns_id_;
-            slave_ns_id_ = SYSPARAM_CHECKSERVER.slave_ns_id_;
-            thread_count_ = SYSPARAM_CHECKSERVER.thread_count_;
-            check_interval_ = SYSPARAM_CHECKSERVER.check_interval_ * 60;
-            overlap_check_time_ = SYSPARAM_CHECKSERVER.overlap_check_time_ * 60;
-            block_stable_time_ = SYSPARAM_CHECKSERVER.block_stable_time_ * 60;
-          }
+          ret = NewClientManager::get_instance().initialize(factory_, streamer_);
         }
       }
       return ret;
     }
 
-    void CheckServer::run_check()
+  int CheckServer::run(int argc, char* argv[])
+  {
+    UNUSED(argc);
+    UNUSED(argv);
+    int ret = initialize();
+    if (TFS_SUCCESS != ret)
     {
-      while (false == stop_)
-      {
-        if (TFS_SUCCESS != check_logic_cluster())
-        {
-          TBSYS_LOG(ERROR, "check cluster fail.");
-        }
-        else
-        {
-          TBSYS_LOG(INFO, "check cluster success.");
-        }
-        sleep(check_interval_);
-      }
+      TBSYS_LOG(ERROR, "initialize error, ret: %d", ret);
+    }
+    else
+    {
+      ret = run_check();
     }
 
-    int CheckServer::check_logic_cluster()
+    return ret;
+  }
+
+  int CheckServer::run_check()
+  {
+    int ret = TFS_SUCCESS;
+    while (false == stop_)
     {
-      TBSYS_LOG(DEBUG, "[check cluster begin]");
-
-      int ret = 0;
-      uint32_t check_time = time(NULL);
-      CheckBlockInfoMap master_check_result;
-      CheckBlockInfoMap slave_check_result;
-
-      ret = open_file(check_time);
+      ret = check_logic_cluster();
       if (TFS_SUCCESS != ret)
       {
-        TBSYS_LOG(ERROR, "open file fail");
+        TBSYS_LOG(ERROR, "check cluster fail.");
       }
       else
       {
-        // check master
-        if (TFS_SUCCESS == ret && 0 != master_ns_id_)
-        {
-          ret = check_physical_cluster(master_ns_id_, check_time, master_check_result);
-        }
+        TBSYS_LOG(INFO, "check cluster success.");
+      }
+      sleep(check_interval_);
+    }
+    return ret;
+  }
 
-        // check slave
-        if (TFS_SUCCESS == ret && 0 != slave_ns_id_)
-        {
-          ret = check_physical_cluster(slave_ns_id_, check_time, slave_check_result);
-        }
+  int CheckServer::check_logic_cluster()
+  {
+    TBSYS_LOG(INFO, "[check cluster begin]");
 
-        // diff master & slave
-        if (TFS_SUCCESS == ret && 0 != master_ns_id_ && 0 != slave_ns_id_)
-        {
-          common::VUINT recheck_list;
-          compare_cluster(master_check_result, slave_check_result, recheck_list);
-          recheck_block(recheck_list);
-        }
+    int ret = 0;
+    uint32_t check_time = time(NULL);
+    CheckBlockInfoMap master_check_result;
+    CheckBlockInfoMap slave_check_result;
+
+    ret = open_file(check_time);
+    if (TFS_SUCCESS != ret)
+    {
+      TBSYS_LOG(ERROR, "open file fail");
+    }
+    else
+    {
+      // check master
+      if (TFS_SUCCESS == ret && 0 != master_ns_id_)
+      {
+        ret = check_physical_cluster(master_ns_id_, check_time, master_check_result);
       }
 
-      // update and save last check time
-      last_check_time_ = check_time;
-      update_meta();
-      close_file();
+      // check slave
+      if (TFS_SUCCESS == ret && 0 != slave_ns_id_)
+      {
+        ret = check_physical_cluster(slave_ns_id_, check_time, slave_check_result);
+      }
 
-      TBSYS_LOG(DEBUG, "[check cluster end]");
-      return ret;
+      // diff master & slave
+      if (TFS_SUCCESS == ret && 0 != master_ns_id_ && 0 != slave_ns_id_)
+      {
+        common::VUINT recheck_list;
+        compare_cluster(master_check_result, slave_check_result, recheck_list);
+        recheck_block(recheck_list);
+      }
+
+      close_file();
     }
 
-    int CheckServer::check_physical_cluster(const uint64_t ns_id, const uint32_t check_time,
-        CheckBlockInfoMap& cluster_result)
+    // update meta on success
+    if (ret == TFS_SUCCESS)
     {
-      int ret = TFS_SUCCESS;
-      VUINT64 ds_list;
+      last_check_time_ = check_time;
+      update_meta();
+    }
+
+    TBSYS_LOG(INFO, "[check cluster end]");
+    return ret;
+  }
+
+  CheckBlockInfo& CheckServer::select_main_block(CheckBlockInfoVec& block_infos)
+  {
+    assert(block_infos.size() > 0);
+    int idx = 0;
+    uint32_t max_count = block_infos[0].file_count_;
+    int max_version = block_infos[0].version_;
+    for (uint32_t i = 1; i < block_infos.size(); i++)
+    {
+      // version, file_count
+      if (block_infos[i].version_ > max_version ||
+          (block_infos[i].version_ == max_version &&
+           block_infos[i].file_count_ > max_count))
+      {
+        max_count = block_infos[i].file_count_;
+        max_version = block_infos[i].version_;
+        idx = i;
+      }
+    }
+    return block_infos[idx];
+  }
+
+  int CheckServer::check_physical_cluster(const uint64_t ns_id, const uint32_t check_time,
+      CheckBlockInfoMap& cluster_result)
+  {
+    int ret = TFS_SUCCESS;
+    VUINT64 ds_list;
       ret = ServerHelper::get_ds_list(ns_id, ds_list);
       if (TFS_SUCCESS != ret)
       {
@@ -436,6 +477,51 @@ namespace tfs
           }
           catch (exception e)
           {
+            TBSYS_LOG(ERROR, "join thread exception: %s", e.what());
+          }
+        }
+
+        tbsys::gDeleteA(work_threads);
+      }
+
+      return ret;
+    }
+
+    void CheckServer::recheck_block(const VUINT& recheck_block)
+    {
+      RecheckThreadPtr* work_threads = new RecheckThreadPtr[thread_count_];
+      for (int i = 0; i < thread_count_; i++)
+      {
+        work_threads[i] = new RecheckThread(this);
+      }
+
+      // dispatch task to multi thread
+      for (uint32_t i = 0; i < recheck_block.size(); i++)
+      {
+        int idx = i % thread_count_;
+        work_threads[idx]->add_block(recheck_block[i]);
+      }
+
+      for (int i = 0; i < thread_count_; i++)
+      {
+        try
+        {
+          work_threads[i]->start();
+        }
+        catch (exception e)
+        {
+          TBSYS_LOG(ERROR, "start thread exception: %s", e.what());
+        }
+      }
+
+      for (int i = 0; i < thread_count_; i++)
+      {
+        try
+        {
+          work_threads[i]->join();
+        }
+        catch (exception e)
+        {
           TBSYS_LOG(ERROR, "join thread exception: %s", e.what());
         }
       }
@@ -443,222 +529,108 @@ namespace tfs
       tbsys::gDeleteA(work_threads);
     }
 
-    return ret;
-  }
+    void CheckServer::compare_block(const CheckBlockInfo& left, const CheckBlockInfo& right)
+    {
+      int ret = 0;
+      uint32_t block_id = left.block_id_;
+      TBSYS_LOG(DEBUG, "id: %u, version: %d, count: %u, size: %u",
+          left.block_id_, left.version_, left.file_count_, left.total_size_);
+      TBSYS_LOG(DEBUG, "id: %u, version: %d, count: %u, size: %u",
+          right.block_id_, right.version_, right.file_count_, right.total_size_);
 
-  void CheckServer::recheck_block(const VUINT& recheck_block)
-  {
-    for (uint32_t i = 0; i < recheck_block.size(); i++)
-    {
-      int m_ret = TFS_SUCCESS;
-      int s_ret = TFS_SUCCESS;
-      CheckBlockInfo m_info;
-      CheckBlockInfo s_info;
-      m_ret = ServerHelper::check_block(master_ns_id_, recheck_block[i], m_info);
-      s_ret = ServerHelper::check_block(slave_ns_id_, recheck_block[i], s_info);
-      if (TFS_SUCCESS == m_ret && TFS_SUCCESS == s_ret)
-      {
-        CompType cmp = compare_block(m_info, s_info);
-        if (BLK_SAME == cmp)
-        {
-          TBSYS_LOG(INFO, "block %u SAME", recheck_block[i]);
-        }
-        else if(BLK_SIZE == cmp || BLK_DIFF == cmp)
-        {
-          // add to sync_to_slave list, TODO: decide who is master
-          fprintf(master_fp_, "%u\n", recheck_block[i]);
-          TBSYS_LOG(WARN, "block %u DIFF", recheck_block[i]);
-        }
-      }
-      else if (TFS_SUCCESS == m_ret && TFS_SUCCESS != s_ret)
-      {
-        // add to sync_to_slave list
-        fprintf(master_fp_, "%u\n", recheck_block[i]);
-        TBSYS_LOG(WARN, "block %u NOT_IN_SLAVE", recheck_block[i]);
-      }
-      else if (TFS_SUCCESS != m_ret && TFS_SUCCESS == s_ret)
-      {
-        // add to sync_to_master list
-        fprintf(slave_fp_, "%u\n", recheck_block[i]);
-        TBSYS_LOG(WARN, "block %u NOT_IN_MASTER", recheck_block[i]);
-      }
-      else
-      {
-        TBSYS_LOG(WARN, "block %u NOT_IN_CLUSTER", recheck_block[i]);
-      }
-    }
-  }
-
-  CompType CheckServer::compare_block(const CheckBlockInfo& left, const CheckBlockInfo& right)
-  {
-    CompType result = BLK_SAME;
-    if (left.block_id_ != right.block_id_)
-    {
-      TBSYS_LOG(WARN, "different block id, won't compare, %d %d",
-          left.block_id_, right.block_id_);
-      result = BLK_ERROR;
-    }
-    else
-    {
-      TBSYS_LOG(DEBUG, "block %u, file count %u, total size %u",
-          left.block_id_, left.file_count_, left.total_size_);
-      TBSYS_LOG(DEBUG, "block %u, file count %u, total size %u",
-          right.block_id_, right.file_count_, right.total_size_);
       if (left.file_count_ == right.file_count_ &&
-          left.total_size_ == right.total_size_)
+            left.total_size_ == right.total_size_)
       {
-        result = BLK_SAME;
-      }
-      else if (left.file_count_ != right.file_count_)
-      {
-        result = BLK_SIZE;
+        ret = 0;
       }
       else
       {
-        result = BLK_DIFF;
+        if (left.version_ > right.version_)
+        {
+          ret = 1;
+        }
+        else if(left.version_ < right.version_)
+        {
+          ret = -1;
+        }
+        else
+        {
+          if (left.file_count_ >= right.file_count_)
+          {
+            ret = 1;
+          }
+          else
+          {
+            ret = -1;
+          }
+        }
       }
-    }
-    return result;
-  }
 
-  void CheckServer::compare_cluster(CheckBlockInfoMap& master_result,
-      CheckBlockInfoMap& slave_result, common::VUINT& recheck_list)
-  {
-    CheckBlockInfoMapIter iter = master_result.begin();
-    for ( ; iter != master_result.end(); iter++)
-    {
-      // TODO, select master block
-      CheckBlockInfo& m_result = *(iter->second.begin());
-      CheckBlockInfoMapIter target = slave_result.find(m_result.block_id_);
-      if (target == slave_result.end())
+      if (ret > 0)
       {
-        // may not in slave, recheck
-        recheck_list.push_back(iter->first);
-        TBSYS_LOG(DEBUG, "block %u, file count %u, total size %u",
-            m_result.block_id_, m_result.file_count_, m_result.total_size_);
-        TBSYS_LOG(DEBUG, "block %u may not in slave, recheck", iter->first);
+        TBSYS_LOG(INFO, "block %u DIFF, sync to slave", block_id);
+        add_m_sync_list(block_id);
+      }
+      else if (ret < 0)
+      {
+        TBSYS_LOG(INFO, "block %u DIFF, sync to master", block_id);
+        add_s_sync_list(block_id);
       }
       else
       {
-        CheckBlockInfo& s_result = *(target->second.begin());
-        CompType cmp = compare_block(m_result, s_result);
-        if (BLK_SAME == cmp)
-        {
-          // ok, same
-          TBSYS_LOG(INFO, "block %u SAME", iter->first);
-        }
-        else if(BLK_SIZE == cmp)  // different size
-        {
-          // compact may happen, recheck
-          recheck_list.push_back(m_result.block_id_);
-          TBSYS_LOG(DEBUG, "block %u may be compacted, recheck", iter->first);
-        }
-        else if(BLK_DIFF == cmp)
-        {
-          // must not same
-          TBSYS_LOG(WARN, "block %u DIFF", iter->first);
-          fprintf(master_fp_, "%u\n", iter->first);
-        }
-        slave_result.erase(target);
+        TBSYS_LOG(INFO, "block %u SAME", block_id);
       }
     }
 
-    // may not exist in master, recheck
-    iter = slave_result.begin();
-    for ( ; iter != slave_result.end(); iter++)
+    void CheckServer::compare_cluster(CheckBlockInfoMap& master_result,
+        CheckBlockInfoMap& slave_result, common::VUINT& recheck_list)
     {
-      recheck_list.push_back(iter->first);
-      // debug info
-      CheckBlockInfo& item = *(iter->second.begin());
-      TBSYS_LOG(DEBUG, "block %u, file count %u, total size %u",
-            item.block_id_, item.file_count_, item.total_size_);
-      TBSYS_LOG(DEBUG, "block %u may not in master, recheck", iter->first);
+      CheckBlockInfoMapIter iter = master_result.begin();
+      for ( ; iter != master_result.end(); iter++)
+      {
+        CheckBlockInfo& m_result = select_main_block(iter->second);
+        CheckBlockInfoMapIter target = slave_result.find(m_result.block_id_);
+        if (target == slave_result.end())
+        {
+          // may not in slave, if block not empty, recheck
+          if (0 != m_result.file_count_)
+          {
+            TBSYS_LOG(DEBUG, "id: %u, version: %d, count: %u, size: %u",
+                m_result.block_id_, m_result.version_, m_result.file_count_, m_result.total_size_);
+            TBSYS_LOG(DEBUG, "may not in slave, recheck");
+            recheck_list.push_back(iter->first);
+          }
+        }
+        else
+        {
+          CheckBlockInfo& s_result = select_main_block(target->second);
+          compare_block(m_result, s_result);
+          slave_result.erase(target);
+        }
+      }
+
+      // may not exist in master
+      iter = slave_result.begin();
+      for ( ; iter != slave_result.end(); iter++)
+      {
+        CheckBlockInfo& item = select_main_block(iter->second);
+        if (0 != item.file_count_)
+        {
+          TBSYS_LOG(DEBUG, "id: %u, version: %d, count: %u, size: %u",
+              item.block_id_, item.version_, item.file_count_, item.total_size_);
+          TBSYS_LOG(DEBUG, "may not in master, recheck");
+          recheck_list.push_back(iter->first);
+        }
+      }
     }
   }
-}
 }
 
 using namespace tfs::checkserver;
 
-void usage(const char* app_name)
-{
-  fprintf(stderr, "Usage: %s -f -i [-d] [-h]\n", app_name);
-  fprintf(stderr, "       -f config file path\n");
-  fprintf(stderr, "       -f cluster index\n");
-  fprintf(stderr, "       -d daemonize\n");
-  fprintf(stderr, "       -h help\n");
-  exit(TFS_ERROR);
-}
-
 int main(int argc, char** argv)
 {
-  int ret = TFS_SUCCESS;
-  std::string config_file;
-  bool daemon_flag = false;
-  int index = 0;
-
-  // analyze arguments
-  int ch = 0;
-  while ((ch = getopt(argc, argv, "i:f:dh")) != EOF)
-  {
-    switch (ch)
-    {
-      case 'i':
-        index = atoi(optarg);
-        break;
-      case 'f':
-        config_file = optarg;
-        break;
-      case 'd':
-        daemon_flag = true;
-        break;
-      case 'h':
-      default:
-        usage(argv[0]);
-    }
-  }
-
-  if (0 == config_file.length() || 0 >= index)
-  {
-    usage(argv[0]);
-  }
-
-  if (true == daemon_flag)
-  {
-    ret = daemon(1, 1);  // will close all the fd
-    if (0 != ret)
-    {
-      ret = TFS_ERROR;
-      TBSYS_LOG(ERROR, "daemonize checkserver error, ret = %d. ", -errno);
-    }
-  }
-
-  if (TFS_SUCCESS == ret)
-  {
-    // init client manager
-    MessageFactory factory;
-    BasePacketStreamer streamer(&factory);
-    ret = NewClientManager::get_instance().initialize(&factory, &streamer);
-    if (TFS_SUCCESS != ret)
-    {
-      TBSYS_LOG(ERROR, "init client manager error.");
-    }
-    else
-    {
-      CheckServer checkserver;
-      ret = checkserver.init(config_file.c_str(), index);
-      if (TFS_SUCCESS != ret)
-      {
-        TBSYS_LOG(ERROR, "init check server error, ret: %d.", ret);
-      }
-      else
-      {
-        checkserver.run_check();
-      }
-      NewClientManager::get_instance().destroy();
-    }
-  }
-
-  return 0;
+  CheckServer check_server;
+  return check_server.main(argc, argv);
 }
 

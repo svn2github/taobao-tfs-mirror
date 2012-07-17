@@ -55,9 +55,6 @@ namespace tfs
       typedef std::set<Task*, TaskCompare> PENDING_TASK;
       typedef PENDING_TASK::iterator PENDING_TASK_ITER;
       typedef PENDING_TASK::const_iterator PENDING_TASK_CONST_ITER;
-      typedef PENDING_TASK RUNNING_TASK;
-      typedef PENDING_TASK_ITER RUNNING_TASK_ITER;
-      typedef PENDING_TASK_CONST_ITER RUNNING_TASK_CONST_ITER;
       struct Machine
       {
         int add(const uint64_t server, Task* task, const bool target = false);
@@ -123,6 +120,7 @@ namespace tfs
       Task* generation_(const uint32_t id, const std::vector<ServerCollect*>& runer,
             const common::PlanType type, const common::PlanPriority priority = common::PLAN_PRIORITY_NORMAL);
 
+      int remove_block_from_dataserver_(const uint64_t server, const uint32_t block, const int64_t seqno, const time_t now);
       private:
       static const int8_t TASK_TYPE_NUMS = 4;
       LayoutManager& manager_;
@@ -130,7 +128,6 @@ namespace tfs
       SERVER_TO_TASK  server_to_tasks_;
       MACHINE_TO_TASK machine_to_tasks_;
       BLOCK_TO_TASK block_to_tasks_;
-      RUNNING_TASK running_queue_;
       PENDING_TASK pending_queue_;
       mutable common::RWLock rwmutex_;
       uint64_t seqno_;

@@ -45,6 +45,15 @@ namespace tfs
         int write_segment_data(const char* buf, const int32_t nbytes, const int32_t offset);
         int read_segment_data(char* buf, const int32_t nbytes, const int32_t offset);
 
+
+        /**
+         * @brief advise prefetch data
+         *
+         * @param offset: offset of file in block
+         * @param size: size of file
+         */
+        int fadvise_readahead(const int64_t offset, const int64_t size);
+
       private:
         int choose_physic_block(PhysicalBlock** tmp_physical_block, const int32_t offset, int32_t& inner_offset,
             int32_t& inner_len);

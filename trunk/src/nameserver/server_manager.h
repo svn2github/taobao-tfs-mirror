@@ -73,8 +73,15 @@ namespace tfs
       void update_last_time(const uint64_t server, const time_t now);
 
       ServerCollect* get(const uint64_t server) const;
-      ServerCollect* pop_from_dead_queue(const time_t now);
+      int pop_from_dead_queue(common::ArrayHelper<ServerCollect*>& results, const time_t now);
       int64_t size() const;
+
+      int add_report_block_server(ServerCollect* server, const time_t now, const bool rb_expire = false);
+      int del_report_block_server(ServerCollect* server);
+      int get_and_move_report_block_server(common::ArrayHelper<ServerCollect*>& servers, const int64_t max_slot_num);
+      bool report_block_server_queue_empty() const;
+      bool has_report_block_server() const;
+      void clear_report_block_server_table();
 
       int get_alive_servers(std::vector<uint64_t>& servers) const;
       int get_dead_servers(common::ArrayHelper<uint64_t>& servers, NsGlobalStatisticsInfo& info, const time_t now) const;
@@ -133,10 +140,15 @@ namespace tfs
           const common::ArrayHelper<ServerCollect*>& except, const std::set<uint32_t>& lans) const;
       int choose_replciate_random_choose_server_extend_lock_(ServerCollect*& result,
           const common::ArrayHelper<ServerCollect*>& except, const std::set<uint32_t>& lans) const;
+
+      int del_report_block_server_(ServerCollect* server);
       private:
       LayoutManager& manager_;
       SERVER_TABLE servers_;
       SERVER_TABLE dead_servers_;
+      SERVER_TABLE wait_report_block_servers_;
+      SERVER_TABLE current_reporting_block_servers_;
+      tbutil::Mutex wait_report_block_server_mutex_;
       mutable common::RWLock rwmutex_;
       int32_t write_index_;
     };

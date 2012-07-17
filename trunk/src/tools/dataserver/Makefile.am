@@ -14,11 +14,13 @@ bin_PROGRAMS = clear_file_system\
 							 convert_name\
                reload_config\
                read_index_tool\
+               read_block_prefix\
                reverse_name\
                modify_super_block\
                tfsping\
                view_local_key\
-							 gen_block_prefix
+							 gen_block_prefix\
+							 verify_block_to_dataserver
 
 LDADD =	$(top_builddir)/src/tools/util/libtfstoolsutil.a\
 				$(top_builddir)/src/dataserver/libdataserver.a\

@@ -480,7 +480,7 @@ namespace tfs
               if ((ret = do_write(meta_server_id, app_id, uid, file_path, frag_info)) != TFS_SUCCESS)
               {
                 TBSYS_LOG(ERROR, "write meta info error, cur_pos: %"PRI64_PREFIX"d, "
-                    "write_length(%"PRI64_PREFIX"d) => real_length(%"PRI64_PREFIX"d), ret: %d",
+                    "write_length(%"PRI64_PREFIX"d) => real_length(%"PRI64_PREFIX"d), ret: %"PRI64_PREFIX"d",
                     cur_pos, write_length, real_write_length, ret);
               }
             }
@@ -1033,7 +1033,7 @@ namespace tfs
 
         if (real_length != write_length)
         {
-          TBSYS_LOG(ERROR, "write segment data failed, cur_pos, write_length, ret_length: %d, ret: %d",
+          TBSYS_LOG(ERROR, "write segment data failed, cur_pos : %"PRI64_PREFIX"d, write_length : %"PRI64_PREFIX"d, ret_length: %"PRI64_PREFIX"d, ret: %"PRI64_PREFIX"d",
               cur_pos, write_length, real_length, ret);
           if (real_length < 0)
           {
@@ -1079,7 +1079,7 @@ namespace tfs
         int64_t table_size = table_length / INT64_SIZE;
         if (table_size != common::MAX_BUCKET_ITEM_DEFAULT)
         {
-          TBSYS_LOG(ERROR, "tables size is not correct. table size: %d", table_size);
+          TBSYS_LOG(ERROR, "tables size is not correct. table size: %"PRI64_PREFIX"d", table_size);
         }
         else
         {

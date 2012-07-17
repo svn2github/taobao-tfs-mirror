@@ -142,6 +142,23 @@ namespace tfs
         ret = rename_file(sf->block_id_, sf->file_id_, sf->old_file_id_);
         break;
       }
+
+      for (int i = 0; i < SYSPARAM_DATASERVER.max_sync_retry_count_ && TFS_SUCCESS != ret; i++)
+      {
+        if (i > 0)
+        {
+          int wait_time = i * i;
+          if (wait_time > SYSPARAM_DATASERVER.max_sync_retry_interval_)
+          {
+            wait_time = SYSPARAM_DATASERVER.max_sync_retry_interval_;
+          }
+          sleep(wait_time);
+        }
+        ret = sync_stat(sf->block_id_, sf->file_id_);
+        TBSYS_LOG(INFO, "sync_stat block_id: %u, file_id: %"PRI64_PREFIX"u, action: %d, ret: %d, retry_count: %d",
+          sf->block_id_, sf->file_id_, sf->cmd_, ret, i + 1);
+      }
+
       return ret;
     }
 
@@ -152,11 +169,11 @@ namespace tfs
       {
         int dest_fd = -1;
         FSName fsname(block_id, file_id);
-        int src_fd = tfs_client_->open(fsname.get_name(), NULL, src_addr_, T_READ);
-        if (src_fd <= 0)
+        int src_fd = tfs_client_->open(fsname.get_name(), NULL, src_addr_, T_READ | T_FORCE);
+        if (src_fd < 0)
         {
           // if the block is missing, need not sync
-          if (EXIT_BLOCK_NOT_FOUND == src_fd)
+          if (file_not_exist(ret))
           {
             ret = TFS_SUCCESS;
             TBSYS_LOG(DEBUG, "tfs file: %s, blockid: %u, fileid: %" PRI64_PREFIX "u not exists in src: %s, ret: %d, need not sync",
@@ -172,13 +189,11 @@ namespace tfs
         else // open src file success
         {
           TfsFileStat file_stat;
-          ret = tfs_client_->fstat(src_fd, &file_stat);
+          ret = tfs_client_->fstat(src_fd, &file_stat, FORCE_STAT);
           if (TFS_SUCCESS != ret) // src file stat fail
           {
             // if block not found or the file is deleted, need not sync
-            if (EXIT_NO_LOGICBLOCK_ERROR != ret &&
-                EXIT_META_NOT_FOUND_ERROR != ret &&
-                EXIT_FILE_STATUS_ERROR != ret)
+            if (file_not_exist(ret))
             {
               TBSYS_LOG(ERROR, "%s stat src file fail. blockid: %u, fileid: %"PRI64_PREFIX"u, ret: %d",
                         fsname.get_name(), block_id, file_id, ret);
@@ -187,11 +202,11 @@ namespace tfs
           else // src file stat ok
           {
             dest_fd = tfs_client_->open(fsname.get_name(), NULL, dest_addr_, T_WRITE|T_NEWBLK);
-            if (dest_fd <= 0)
+            if (dest_fd < 0)
             {
               TBSYS_LOG(ERROR, "%s open dest write fail. blockid: %u, fileid: %" PRI64_PREFIX "u, ret: %d",
                       fsname.get_name(), block_id, file_id, dest_fd);
-              ret = dest_fd;
+              ret = TFS_ERROR;  // maybe ignored if not reset error type
             }
             else // source file stat ok, destination file open ok
             {
@@ -237,7 +252,7 @@ namespace tfs
                   ret = total_length == file_stat.size_ ? TFS_SUCCESS : EXIT_SYNC_FILE_ERROR;//check file size
                   if (TFS_SUCCESS != ret)
                   {
-                    TBSYS_LOG(ERROR, "file size error. %s, blockid: %u, fileid :%" PRI64_PREFIX "u, size: %d <> %d",
+                    TBSYS_LOG(ERROR, "file size error. %s, blockid: %u, fileid :%" PRI64_PREFIX "u, crc: %u <> %u, size: %"PRI64_PREFIX"d <> %"PRI64_PREFIX"d",
                         fsname.get_name(), block_id, file_id, crc, file_stat.crc_, total_length, file_stat.size_);
                   }
                   else
@@ -245,7 +260,7 @@ namespace tfs
                     ret = crc != file_stat.crc_ ? EXIT_CHECK_CRC_ERROR : TFS_SUCCESS;//check crc
                     if (TFS_SUCCESS != ret)
                     {
-                      TBSYS_LOG(ERROR, "crc error. %s, blockid: %u, fileid :%" PRI64_PREFIX "u, crc: %u <> %u, size: %d <> %d",
+                      TBSYS_LOG(ERROR, "crc error. %s, blockid: %u, fileid :%" PRI64_PREFIX "u, crc: %u <> %u, size: %"PRI64_PREFIX"d <> %"PRI64_PREFIX"d",
                           fsname.get_name(), block_id, file_id, crc, file_stat.crc_, total_length, file_stat.size_);
                     }
                   }
@@ -280,10 +295,8 @@ namespace tfs
         }
         else
         {
-          // if block not found or the file is deleted, need not sync
-          if (EXIT_NO_LOGICBLOCK_ERROR == ret ||
-              EXIT_META_NOT_FOUND_ERROR == ret ||
-              EXIT_FILE_STATUS_ERROR == ret)
+          // if the file is deleted, need not sync
+          if (file_not_exist(ret))
           {
             ret = TFS_SUCCESS;
             TBSYS_LOG(DEBUG, "blockid: %u, fileid: %" PRI64_PREFIX "u not exists in src: %s, ret: %d, need not sync",
@@ -324,7 +337,7 @@ namespace tfs
         if (TFS_SUCCESS != ret)
         {
           // if file is local deleted or not exists in local, need not sync
-          if (EXIT_FILE_INFO_ERROR != ret && EXIT_META_NOT_FOUND_ERROR != ret)
+          if (file_not_exist(ret))
           {
             TBSYS_LOG(ERROR, "read file fail. blockid: %u, fileid: %"PRI64_PREFIX"u, offset: %d, ret: %d",
                 block_id, file_id, offset, ret);
@@ -344,7 +357,7 @@ namespace tfs
             memcpy(&finfo, data, FILEINFO_SIZE);
             // open dest tfs file
             int dest_fd = tfs_client_->open(fsname.get_name(), NULL, dest_addr_, T_WRITE|T_NEWBLK);
-            if (dest_fd <= 0)
+            if (dest_fd < 0)
             {
               TBSYS_LOG(ERROR, "open dest tfsfile: %s(block_id: %u, file_id: %"PRI64_PREFIX"u) fail. ret: %d",
                         fsname.get_name(), fsname.get_block_id(), fsname.get_file_id(), dest_fd);
@@ -408,7 +421,7 @@ namespace tfs
                 ret = total_length == finfo.size_ ? TFS_SUCCESS : EXIT_SYNC_FILE_ERROR; // check file size
                 if (TFS_SUCCESS != ret)
                 {
-                   TBSYS_LOG(ERROR, "file size error. %s, blockid: %u, fileid :%" PRI64_PREFIX "u, crc: %u <> %u, size: %d <> %d",
+                   TBSYS_LOG(ERROR, "file size error. %s, blockid: %u, fileid :%" PRI64_PREFIX "u, crc: %u <> %u, size: %"PRI64_PREFIX"d <> %d",
                          fsname.get_name(), block_id, file_id, crc, finfo.crc_, total_length, finfo.size_);
                 }
                 else
@@ -416,7 +429,7 @@ namespace tfs
                   ret = crc != finfo.crc_ ? EXIT_CHECK_CRC_ERROR : TFS_SUCCESS; // check crc
                   if (TFS_SUCCESS != ret)
                   {
-                    TBSYS_LOG(ERROR, "crc error. %s, blockid: %u, fileid :%" PRI64_PREFIX "u, crc: %u <> %u, size: %d <> %d",
+                    TBSYS_LOG(ERROR, "crc error. %s, blockid: %u, fileid :%" PRI64_PREFIX "u, crc: %u <> %u, size: %"PRI64_PREFIX"d <> %d",
                             fsname.get_name(), block_id, file_id, crc, finfo.crc_, total_length, finfo.size_);
                   }
                 }
@@ -436,7 +449,7 @@ namespace tfs
         if (TFS_SUCCESS != ret)
         {
           // if file is local deleted or not exists, need not sync
-          if (EXIT_FILE_INFO_ERROR == ret || EXIT_META_NOT_FOUND_ERROR == ret)
+          if (file_not_exist(ret))
           {
              ret = TFS_SUCCESS;
              TBSYS_LOG(DEBUG, "blockid: %u, fileid: %" PRI64_PREFIX "u not exists in src: %s, ret: %d, need not sync",
@@ -454,6 +467,7 @@ namespace tfs
                     dest_addr_, block_id, file_id);
         }
       }
+
       return ret;
     }
 
@@ -469,44 +483,9 @@ namespace tfs
         ret = tfs_client_->unlink(file_size, fsname.get_name(), NULL, dest_addr_, action, TFS_FILE_NO_SYNC_LOG);
         if (TFS_SUCCESS != ret)
         {
-          // if block not found or the action is done
-          if (EXIT_NO_BLOCK == ret ||
-              EXIT_META_NOT_FOUND_ERROR == ret)
-          {
-            if (CONCEAL == action)
-            {
-              ret = copy_file(block_id, file_id);
-              if (TFS_SUCCESS == ret)
-              {
-                ret = tfs_client_->unlink(file_size, fsname.get_name(), NULL, dest_addr_, action, TFS_FILE_NO_SYNC_LOG);
-                // must be file not found in src
-                if (EXIT_META_NOT_FOUND_ERROR == ret)
-                {
-                  ret = TFS_SUCCESS;
-                }
-              }
-            }
-            else if (REVEAL == action)
-            {
-              ret = copy_file(block_id, file_id);
-            }
-            else // DELETE or UNDELETE
-            {
-              ret = TFS_SUCCESS;
-              TBSYS_LOG(DEBUG, "blockid: %u, fileid: %" PRI64_PREFIX "u not exists in dest: %s, ret: %d, need not sync",
-                        block_id, file_id, dest_addr_, ret);
-            }
-          }
-          else if (EXIT_FILE_STATUS_ERROR == ret)
-          {
-            ret = TFS_SUCCESS;
-          }
-        }
-        if (TFS_SUCCESS != ret)
-        {
           TBSYS_LOG(ERROR, "tfs mirror remove file %s(block_id: %u, file_id: %"PRI64_PREFIX"u) fail to dest: %s.\
-                    blockid: %d, fileid: %"PRI64_PREFIX"u, action: %d, ret: %d",
-                    fsname.get_name(), fsname.get_block_id(), fsname.get_block_id(), dest_addr_, block_id, file_id, action, ret);
+                    blockid: %u, fileid: %"PRI64_PREFIX"u, action: %d, ret: %d",
+                    fsname.get_name(), fsname.get_block_id(), fsname.get_file_id(), dest_addr_, block_id, file_id, action, ret);
         }
         else
         {
@@ -544,5 +523,69 @@ namespace tfs
       sync_base_.run_sync_mirror();
     }
 
+    int TfsMirrorBackup::get_file_info(const char* nsip, const char* file_name, TfsFileStat& buf)
+    {
+      int ret = TFS_SUCCESS;
+
+      int fd = tfs_client_->open(file_name, NULL, nsip, T_READ | T_FORCE);
+      if (fd < 0)
+      {
+        ret = fd;
+        TBSYS_LOG(WARN, "open file(%s) failed, ret: %d", file_name, ret);
+      }
+      else
+      {
+        ret = tfs_client_->fstat(fd, &buf, FORCE_STAT);
+        if (ret != TFS_SUCCESS)
+        {
+          TBSYS_LOG(WARN, "stat file(%s) failed, ret: %d", file_name, ret);
+        }
+        tfs_client_->close(fd);
+      }
+      return ret;
+    }
+
+    bool TfsMirrorBackup::file_not_exist(int ret)
+    {
+      return (EXIT_BLOCK_NOT_FOUND == ret) ||  // ns cannot find block
+         (EXIT_NO_LOGICBLOCK_ERROR == ret) ||  // ds cannot find logic block
+         (EXIT_META_NOT_FOUND_ERROR == ret);   // ds cannot find file in index
+    }
+
+    int TfsMirrorBackup::sync_stat(const uint32_t block_id, const uint64_t file_id)
+    {
+      int ret = TFS_SUCCESS;
+
+      FSName fsname(block_id, file_id);
+      TfsFileStat src_stat;
+      TfsFileStat dest_stat;
+      ret = get_file_info(src_addr_, fsname.get_name(), src_stat);
+      if (file_not_exist(ret))   // not exsit in source, just ignore
+      {
+        ret = TFS_SUCCESS;
+      }
+      else if (TFS_SUCCESS == ret)
+      {
+        dest_stat.flag_ = 0;
+        ret = get_file_info(dest_addr_, fsname.get_name(), dest_stat);
+        if (file_not_exist(ret)) // not exsit in dest
+        {
+          ret = copy_file(block_id, file_id);
+        }
+
+        if (TFS_SUCCESS == ret)  // just sync stat;
+        {
+          if (src_stat.flag_ != dest_stat.flag_)
+          {
+            int64_t file_size = 0;
+            int action = (src_stat.flag_ << 4);  // sync flag
+            ret = tfs_client_->unlink(file_size, fsname.get_name(), NULL, dest_addr_,
+                static_cast<TfsUnlinkType>(action), TFS_FILE_NO_SYNC_LOG);
+          }
+        }
+      }
+
+      return ret;
+    }
   }
 }

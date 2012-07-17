@@ -306,7 +306,7 @@ int TfsLargeFile::write_process()
   // get block info fail, must exit.
   if ((ret = get_block_info(processing_seg_list_, flags_)) != TFS_SUCCESS)
   {
-    TBSYS_LOG(ERROR, "batch get block info error, count: %d, flag: %d", processing_seg_list_.size(), flags_);
+    TBSYS_LOG(ERROR, "batch get block info error, count: %zd, flag: %d", processing_seg_list_.size(), flags_);
   }
   else
   {
@@ -417,7 +417,7 @@ int TfsLargeFile::close_process()
   }
   else if ((ret = upload_key()) != TFS_SUCCESS) // upload key data
   {
-    TBSYS_LOG(ERROR, "close tfs file fail: upload key fail, ret: %d");
+    TBSYS_LOG(ERROR, "close tfs file fail: upload key fail, ret: %d", ret);
   }
   return ret;
 }
@@ -427,7 +427,7 @@ int TfsLargeFile::unlink_process()
   int ret = TFS_SUCCESS;
   if (1 != processing_seg_list_.size())
   {
-    TBSYS_LOG(ERROR, "unlink file fail, processing seg list illegal size: %d", processing_seg_list_.size());
+    TBSYS_LOG(ERROR, "unlink file fail, processing seg list illegal size: %zd", processing_seg_list_.size());
     ret = TFS_ERROR;
   }
   else
@@ -466,7 +466,7 @@ int TfsLargeFile::upload_key()
   int ret = TFS_SUCCESS;
   if ((ret = local_key_.validate(offset_)) != TFS_SUCCESS)
   {
-    TBSYS_LOG(ERROR, "local key validate fail, ret: %d");
+    TBSYS_LOG(ERROR, "local key validate fail, ret: %d", ret);
   }
   else
   {

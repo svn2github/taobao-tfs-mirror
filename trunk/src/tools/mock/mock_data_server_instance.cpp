@@ -558,7 +558,7 @@ namespace tfs
               RWLock::Lock lock(blocks_mutex_, WRITE_LOCKER);
               remove_((*iter));
             }
-            TBSYS_LOG(INFO, "nameserver %s ask for expire block, size: %u\n", tbsys::CNetUtil::addrToString(msg->get_server()).c_str(), msg->get_blocks().size());
+            TBSYS_LOG(INFO, "nameserver %s ask for expire block, size: %zd\n", tbsys::CNetUtil::addrToString(msg->get_server()).c_str(), msg->get_blocks().size());
           }
         }
         NewClientManager::get_instance().destroy_client(client);

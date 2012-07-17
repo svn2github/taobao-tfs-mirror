@@ -74,6 +74,19 @@ namespace tfs
       NS_KEEPALIVE_TYPE_LOGOUT = 2
     };
 
+    enum BlockInReplicateQueueFlag
+    {
+      BLOCK_IN_REPLICATE_QUEUE_NO  = 0,
+      BLOCK_IN_REPLICATE_QUEUE_YES = 1
+    };
+
+    enum BlockCompareServerFlag
+    {
+      BLOCK_COMPARE_SERVER_BY_ID = 0,
+      BLOCK_COMPARE_SERVER_BY_POINTER = 1,
+      BLOCK_COMPARE_SERVER_BY_ID_POINTER = 2
+    };
+
     class LayoutManager;
     class GCObject
     {
@@ -83,6 +96,7 @@ namespace tfs
       virtual ~GCObject() {}
       virtual void callback(LayoutManager& ) {}
       inline void free(){ delete this;}
+      inline time_t get_last_update_time() const { return last_update_time_;}
       inline void update_last_time(const time_t now = common::Func::get_monotonic_time()) { last_update_time_ = now;}
       inline bool can_be_clear(const time_t now) const
       {
@@ -159,8 +173,7 @@ namespace tfs
     static const int32_t THREAD_STATCK_SIZE = 16 * 1024 * 1024;
     static const int32_t MAX_SERVER_NUMS = 3000;
     static const int32_t MAX_PROCESS_NUMS = MAX_SERVER_NUMS * 12;
-    static const int32_t MAX_BLOCK_CHUNK_NUMS = 512;
-    //static const int32_t MAX_BLOCK_CHUNK_NUMS = 10240 * 4;
+    static const int32_t MAX_BLOCK_CHUNK_NUMS = 10240 * 4;
     static const int32_t MAX_REPLICATION = 64;
     static const int32_t MAX_WRITE_FILE_COUNT = 256;
 
@@ -171,10 +184,13 @@ namespace tfs
     static const double PERCENTAGE_MAGIC = 1000000.0;
     double calc_capacity_percentage(const uint64_t capacity, const uint64_t total_capacity);
 
+    static const int32_t MAX_POP_SERVER_FROM_DEAD_QUEUE_LIMIT = 5;
+
     class BlockCollect;
     class ServerCollect;
 
     extern int ns_async_callback(common::NewClient* client);
+    extern std::string& print_servers(const common::ArrayHelper<ServerCollect*>&servers, std::string& result);
     extern void print_servers(const common::ArrayHelper<uint64_t>&servers, std::string& result);
     extern void print_servers(const std::vector<uint64_t>& servers, std::string& result);
     extern void print_blocks(const std::vector<uint32_t>& blocks, std::string& result);

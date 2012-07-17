@@ -11,6 +11,7 @@
  *
  */
 #include "define.h"
+#include "error_msg.h"
 namespace tfs
 {
   namespace common
@@ -242,19 +243,21 @@ namespace tfs
       }
 
     template <typename T, typename Compare>
-      bool TfsSortedVector<T, Compare>::insert_unique(value_type& output, const_value_type value)
+      int TfsSortedVector<T, Compare>::insert_unique(value_type& output, const_value_type value)
       {
-        bool ret = false;
+        int ret = TFS_SUCCESS;
         iterator pos = std::lower_bound(storage_.begin(), storage_.end(), value, comp_);
         if (storage_.end() != pos)
         {
-          output = *pos;
-          ret = (comp_(*pos, value) || comp_(value, *pos)) ? false : true; 
+          ret = (comp_(*pos, value) || comp_(value, *pos)) ? TFS_SUCCESS : EXIT_ELEMENT_EXIST; 
+          if (EXIT_ELEMENT_EXIST == ret)
+            output = *pos;
         }
-        if (!ret)
+        if (TFS_SUCCESS == ret)
         {
-          ret = storage_.insert(pos, value) == TFS_SUCCESS;
-          output = value;
+          ret = storage_.insert(pos, value);
+          if (TFS_SUCCESS == ret)
+            output = value;
         }
         return ret;
       }

@@ -75,7 +75,7 @@ namespace tfs
 
 #define CONF_REPORT_BLOCK_HOUR_RANGE                  "report_block_hour_range"
 #define CONF_REPORT_BLOCK_TIME_INTERVAL               "report_block_time_interval"
-#define CONF_TIME_REPORT_BLOCK_INTERVAL               "timer_report_block_interval" //
+#define CONF_REPORT_BLOCK_TIME_INTERVAL_MIN           "report_block_time_interval_min"
 #define CONF_REPORT_BLOCK_EXPIRED_TIME                "report_block_expired_time"
 #define CONF_REPORT_BLOCK_THREAD_COUNT                "report_block_thread_count"
 #define CONF_REPORT_BLOCK_MAX_QUEUE_SIZE              "report_block_max_queue_size"
@@ -99,6 +99,8 @@ namespace tfs
 #define CONF_CLEANUP_WRITE_TIMEOUT_THRESHOLD          "cleanup_write_timeout_threshold"
 
 #define CONF_DUMP_STAT_INFO_INTERVAL                  "dump_stat_info_interval"
+
+#define CONF_CHOOSE_TARGET_SERVER_RANDOM_MAX_NUM      "choose_target_server_random_max_num"
 
   //dataserver
 #define CONF_OBJECT_CLEAR_MAX_TIME                    "object_clear_max_time"
@@ -131,6 +133,8 @@ namespace tfs
 #define CONF_EXPIRE_CHECKBLOCK_TIME                   "expire_checkblock_time"
 #define CONF_MAX_CPU_USAGE                            "max_cpu_usage"
 #define CONF_REPLICATE_THREADCOUNT                    "replicate_threadcount"
+#define CONF_MAX_SYNC_RETRY_COUNT                     "max_sync_retry_count"
+#define CONF_MAX_SYNC_RETRY_INTERVAL                  "max_sync_retry_interval"
 
 //rc
 #define CONF_RC_MONITOR_INTERVAL                      "rc_monitor_interval"

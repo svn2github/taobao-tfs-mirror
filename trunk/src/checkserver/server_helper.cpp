@@ -178,7 +178,7 @@ namespace tfs
     }
 
     int ServerHelper::check_block(const uint64_t ns_id, const uint32_t block_id,
-        CheckBlockInfo& check_result)
+        CheckBlockInfoVec& check_result)
     {
       int ret =  0;
       if (false == NewClientManager::get_instance().is_init())
@@ -188,23 +188,21 @@ namespace tfs
       }
       else
       {
-        NewClient* client = NewClientManager::get_instance().create_client();
-        if(NULL == client)
+        VUINT64 ds_list;
+        ret = get_block_ds_list(ns_id, block_id, ds_list);
+        if (TFS_SUCCESS == ret)
         {
-          ret = TFS_ERROR;
-          TBSYS_LOG(ERROR, "create client fail, ret: %d", ret);
-        }
-        else
-        {
-          VUINT64 ds_list;
-          ret = get_block_ds_list(ns_id, block_id, ds_list);
-          if (TFS_SUCCESS == ret)
+          for (uint32_t i = 0; i < ds_list.size(); i++)
           {
-            uint32_t i = 0;
-            for (; i < ds_list.size(); i++)
+            NewClient* client = NewClientManager::get_instance().create_client();
+            if(NULL == client)
+            {
+              ret = TFS_ERROR;
+              TBSYS_LOG(ERROR, "create client fail, ret: %d", ret);
+            }
+            else
             {
               CheckBlockRequestMessage req_cb_msg;
-              req_cb_msg.set_check_flag(1);
               req_cb_msg.set_block_id(block_id);
               tbnet::Packet* ret_msg = NULL;
               ret = send_msg_to_server(ds_list[i], client, &req_cb_msg, ret_msg);
@@ -213,32 +211,30 @@ namespace tfs
                 if (ret_msg->getPCode() == RSP_CHECK_BLOCK_MESSAGE)
                 {
                   CheckBlockResponseMessage* resp_cb_msg = dynamic_cast<CheckBlockResponseMessage*>(ret_msg);
-                  check_result = *(resp_cb_msg->get_result_ref().begin()); // only one result
-                  break;  // if success, break;
+                  CheckBlockInfoVec& result = resp_cb_msg->get_result_ref();
+                  if (result.size() > 0)
+                  {
+                    check_result.push_back(result[0]);
+                  }
                 }
                 else
                 {
                   StatusMessage* status_msg = dynamic_cast<StatusMessage*>(ret_msg);
-                  TBSYS_LOG(ERROR, "%s %d", status_msg->get_error(), status_msg->get_status());
+                  TBSYS_LOG(ERROR, "%u %s %d", block_id, status_msg->get_error(), status_msg->get_status());
                 }
               }
               else
               {
-                TBSYS_LOG(WARN, "dataserver %s may down, ret: %d",
-                    Func::addr_to_str(ds_list[i], true).c_str(), ret);
+                TBSYS_LOG(WARN, "check block %u, dataserver %s request fail, ret: %d",
+                    block_id, Func::addr_to_str(ds_list[i], true).c_str(), ret);
               }
-            }
-
-            if (i == ds_list.size()) // all error
-            {
-              ret = TFS_ERROR;
-              TBSYS_LOG(ERROR, "no logic block %u found", block_id);
+              NewClientManager::get_instance().destroy_client(client);
             }
           }
-          NewClientManager::get_instance().destroy_client(client);
         }
       }
-      return ret;
+
+      return check_result.size() > 0? TFS_SUCCESS: ret;
     }
 
     int ServerHelper::get_block_ds_list(const uint64_t server_id, const uint32_t block_id, VUINT64& ds_list)
@@ -252,7 +248,7 @@ namespace tfs
       else if (0 == server_id)
       {
         ret = TFS_ERROR;
-        TBSYS_LOG(ERROR, "server is is invalid: "PRI64_PREFIX"u", server_id);
+        TBSYS_LOG(ERROR, "server is is invalid: %"PRI64_PREFIX"u", server_id);
       }
       else
       {
@@ -285,7 +281,6 @@ namespace tfs
 
       return ret;
     }
-
   }
 }
 

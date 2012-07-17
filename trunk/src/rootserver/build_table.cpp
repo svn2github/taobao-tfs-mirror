@@ -25,13 +25,13 @@
  * ------------------------------------------------------------------
  * |compress active table length(8) | reserve(8)                    |
  * ------------------------------------------------------------------
- * |       active bucket tables                                     | 
+ * |       active bucket tables                                     |
  * ------------------------------------------------------------------
- * |       bucket tables                                            | 
+ * |       bucket tables                                            |
  * ------------------------------------------------------------------
- * |       compress build tables                                    | 
+ * |       compress build tables                                    |
  * ------------------------------------------------------------------
- * |       compress active tables                                   | 
+ * |       compress active tables                                   |
  * ------------------------------------------------------------------
  */
 #include <zlib.h>
@@ -125,7 +125,7 @@ namespace tfs
     {
 
     }
-    
+
     BuildTable::~BuildTable()
     {
       destroy();
@@ -157,7 +157,7 @@ namespace tfs
               else
               {
                 TablesHeader header;
-                size = header.length() + ( BUCKET_TABLES_COUNT * max_bucket_item) * INT64_SIZE 
+                size = header.length() + ( BUCKET_TABLES_COUNT * max_bucket_item) * INT64_SIZE
                   + (max_server_item * INT64_SIZE);
               }
             }
@@ -213,9 +213,9 @@ namespace tfs
             iret = header_->magic_number_ != MAGIC_NUMBER ? TFS_ERROR : TFS_SUCCESS;
             if (TFS_SUCCESS == iret)
             {
-              int64_t size = header_->length() + (BUCKET_TABLES_COUNT * header_->bucket_item_) * INT64_SIZE 
+              int64_t size = header_->length() + (BUCKET_TABLES_COUNT * header_->bucket_item_) * INT64_SIZE
                   + (header_->server_item_ * INT64_SIZE);
-              iret = (header_->bucket_item_ == max_bucket_item 
+              iret = (header_->bucket_item_ == max_bucket_item
                     && header_->server_item_ == max_server_item)
                     && file_size == size ? TFS_SUCCESS : TFS_ERROR;
               if (TFS_SUCCESS == iret)
@@ -300,14 +300,14 @@ namespace tfs
         std::vector<uint64_t>::iterator news_iter = news.begin();
         std::vector<uint64_t>::iterator deads_iter = deads.begin();
         std::vector<uint64_t>::iterator iter;
-        
+
         int32_t diff = news.size() - deads.size();
         if (diff >= 0)
           news_end = news.begin() + deads.size();
         else
           deads_end = deads.begin() + news.size();
         int64_t index = 0;
-        assert((news_end - news_iter) == (deads_end - deads_iter)); 
+        assert((news_end - news_iter) == (deads_end - deads_iter));
         std::map<uint64_t, uint64_t> map_table;
         std::map<uint64_t, uint64_t>::const_iterator it;
         while (news_iter != news_end && deads_iter != deads_end)
@@ -316,7 +316,7 @@ namespace tfs
         }
         news_iter = news.begin();
         deads_iter = deads.begin();
-        
+
         for (index = 0; index < header_->bucket_item_; ++index)
         {
           iter = std::find(deads.begin(), deads_end, tables_[index]);
@@ -366,7 +366,7 @@ namespace tfs
           int32_t diff = servers.size() - news.size();
           int32_t inc_bucket_count = diff <= 0 ? 0 : header_->bucket_item_ / diff - new_min_bucket_count;
           int32_t old_max_bucket_count = diff <= 0 ? 0 : header_->bucket_item_ / diff + 1;
- 
+
           TBSYS_LOG(DEBUG, "new_min_bucket: %d, diff: %d, inc_bucket: %d, old_max_bucket_count: %d",
             new_min_bucket_count, diff, inc_bucket_count, old_max_bucket_count);
           std::map<uint64_t, std::vector<int32_t> > maps;
@@ -416,7 +416,7 @@ namespace tfs
     {
       new_count = 0;
       old_count = 0;
-      int64_t index = 0; 
+      int64_t index = 0;
       for (index = 0; index < header_->bucket_item_; ++index)
       {
         if (tables_[index] == active_tables_[index])
@@ -444,7 +444,7 @@ namespace tfs
         int64_t diff = get_difference(old_servers, servers, news, deads);
         if (diff > 0)
         {
-          TBSYS_LOG(INFO, "total server size: %u, new server size: %u, dead server size: %u", servers.size(), news.size(), deads.size());
+          TBSYS_LOG(INFO, "total server size: %zd, new server size: %zd, dead server size: %zd", servers.size(), news.size(), deads.size());
           memcpy(reinterpret_cast<unsigned char*>(tables_), reinterpret_cast<unsigned char*>(active_tables_),
               header_->bucket_item_ * INT64_SIZE);
           if (!news.empty() && !deads.empty())
@@ -465,7 +465,7 @@ namespace tfs
                 //dump_tables(TBSYS_LOG_LEVEL_DEBUG,DUMP_TABLE_TYPE_TABLE);
                 unsigned char* dest = new unsigned char[MAX_BUCKET_DATA_LENGTH];
                 uint64_t dest_length = MAX_BUCKET_DATA_LENGTH;
-                iret = compress(dest, &dest_length, reinterpret_cast<unsigned char*>(tables_), MAX_BUCKET_DATA_LENGTH); 
+                iret = compress(dest, &dest_length, reinterpret_cast<unsigned char*>(tables_), MAX_BUCKET_DATA_LENGTH);
                 if (Z_OK != iret)
                 {
                   TBSYS_LOG(ERROR, "compress error: %d, build version: %"PRI64_PREFIX"d", iret, header_->build_table_version_);
@@ -489,7 +489,7 @@ namespace tfs
                       res.first->second.status_ = NEW_TABLE_ITEM_UPDATE_STATUS_BEGIN;
                     }
                   }
-                  inc_build_version(); 
+                  inc_build_version();
                   header_->compress_table_length_ = dest_length;
                   memcpy(compress_tables_, dest, dest_length);
                   iret = file_->sync_file() ? TFS_SUCCESS : TFS_ERROR;
@@ -515,7 +515,7 @@ namespace tfs
           NEW_TABLE_ITER iter = tables.find(server);
           if (tables.end() != iter)
           {
-            iret = phase != iter->second.phase_ ? TFS_ERROR : TFS_SUCCESS; 
+            iret = phase != iter->second.phase_ ? TFS_ERROR : TFS_SUCCESS;
             if (TFS_SUCCESS == iret)
             {
               iret = iter->second.status_ >= NEW_TABLE_ITEM_UPDATE_STATUS_RUNNING ?
@@ -542,7 +542,7 @@ namespace tfs
           iter->second.begin_time_ = 0;
           iter->second.send_msg_time_ = 0;
           iter->second.phase_ = UPDATE_TABLE_PHASE_2;
-        } 
+        }
       }
       return check_update_table_complete(phase, tables, update_complete);
     }
@@ -556,7 +556,7 @@ namespace tfs
       if (TFS_SUCCESS == iret)
       {
         tbutil::Time now = tbutil::Time::now();
-        tbutil::Time item_expired_time = 
+        tbutil::Time item_expired_time =
             tbutil::Time::milliSeconds(SYSPARAM_RTSERVER.mts_rts_lease_expired_time_ * 1000);
         tbutil::Time send_msg_expired_time = tbutil::Time::milliSeconds(500);
         NEW_TABLE_ITER iter = tables.begin();
@@ -598,7 +598,7 @@ namespace tfs
           }
         }
       }
-      TBSYS_LOG(DEBUG, "total: %u, success: %"PRI64_PREFIX"u, error: %"PRI64_PREFIX"u",
+      TBSYS_LOG(DEBUG, "total: %zd, success: %"PRI64_PREFIX"u, error: %"PRI64_PREFIX"u",
           tables.size(), success_count, error_count);
       update_complete = (success_count == tables.size() && !tables.empty());
       return iret;
@@ -695,13 +695,13 @@ namespace tfs
         int64_t offset = header_->length()/ INT64_SIZE;
         server_tables_ = data + offset;
         offset += max_server_item ;
-        active_tables_ = data + offset; 
+        active_tables_ = data + offset;
         offset += max_bucket_item ;
-        tables_ = data + offset; 
+        tables_ = data + offset;
         offset += max_bucket_item ;
-        compress_tables_ = reinterpret_cast<unsigned char*>(data + offset); 
+        compress_tables_ = reinterpret_cast<unsigned char*>(data + offset);
         offset += max_bucket_item;
-        compress_active_tables_ = reinterpret_cast<unsigned char*>(data + offset); 
+        compress_active_tables_ = reinterpret_cast<unsigned char*>(data + offset);
       }
       return iret;
     }
@@ -770,7 +770,7 @@ namespace tfs
     {
       header_->active_table_version_ = header_->build_table_version_;
     }
-    
+
     /*void BuildTable::inc_active_version()
     {
       if (INVALID_TABLE_VERSION == header_->active_table_version_

@@ -109,12 +109,21 @@ typedef enum
   FORCE_STAT
 } TfsStatType;
 
+
+/**
+ * @brief
+ *
+ * 0th bit is master flag
+ * 0, 2, 4, 6 denote four unlink type
+ * 5-7th bit for sync stat
+ */
 typedef enum
 {
   DELETE = 0,
   UNDELETE = 2,
   CONCEAL = 4,
-  REVEAL = 6
+  REVEAL = 6,
+  SYNC = 126
 } TfsUnlinkType;
 
 typedef enum

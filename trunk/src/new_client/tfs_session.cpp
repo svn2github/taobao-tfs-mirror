@@ -75,7 +75,7 @@ int TfsSession::initialize()
     ns_addr_ = Func::get_host_ip(ns_addr_str_.c_str());
     if (ns_addr_ <= 0)
     {
-      TBSYS_LOG(ERROR, "nameserver address invalid", ns_addr_str_.c_str());
+      TBSYS_LOG(ERROR, "nameserver address %s invalid", ns_addr_str_.c_str());
       ret = TFS_ERROR;
     }
 
@@ -402,7 +402,7 @@ int TfsSession::get_block_info(SegmentData& seg_data, int32_t flag)
         {
           if (seg_data.ds_.size() <= 0)
           {
-            TBSYS_LOG(ERROR, "get block %u info failed, dataserver size %u <= 0", block_id, seg_data.ds_.size());
+            TBSYS_LOG(ERROR, "get block %u info failed, dataserver size %zd <= 0", block_id, seg_data.ds_.size());
             ret = TFS_ERROR;
           }
           else
@@ -442,7 +442,7 @@ int TfsSession::get_block_info(SEG_DATA_LIST& seg_list, int32_t flag)
   }
   else
   {
-    TBSYS_LOG(DEBUG, "get block info for read. seg size: %d", seg_list.size());
+    TBSYS_LOG(DEBUG, "get block info for read. seg size: %zd", seg_list.size());
     bool all_block_cached = false;
     size_t cached_block_count = 0;
     if (USE_CACHE_FLAG_LOCAL & ClientConfig::use_cache_)
@@ -478,12 +478,12 @@ int TfsSession::get_block_info(SEG_DATA_LIST& seg_list, int32_t flag)
       }
       if (cached_block_count == seg_list.size())
       {
-        TBSYS_LOG(DEBUG, "all block local cached. count: %d", cached_block_count);
+        TBSYS_LOG(DEBUG, "all block local cached. count: %zd", cached_block_count);
         all_block_cached = true;
       }
       else
       {
-        TBSYS_LOG(DEBUG, "partial block local cached. count: %d", cached_block_count);
+        TBSYS_LOG(DEBUG, "partial block local cached. count: %zd", cached_block_count);
       }
     }
 #ifdef WITH_TAIR_CACHE
@@ -498,7 +498,7 @@ int TfsSession::get_block_info(SEG_DATA_LIST& seg_list, int32_t flag)
         cached_block_count += remote_hit_count;
         if (cached_block_count == seg_list.size())
         {
-          TBSYS_LOG(DEBUG, "all block cached. count: %d", cached_block_count);
+          TBSYS_LOG(DEBUG, "all block cached. count: %zd", cached_block_count);
           all_block_cached = true;
         }
       }
@@ -655,7 +655,7 @@ int TfsSession::get_block_info_ex(SEG_DATA_LIST& seg_list, const int32_t flag)
       {
         bgbi_message.add_block_id(seg_list[i]->seg_info_.block_id_);
         block_count++;
-        TBSYS_LOG(DEBUG, "batch get block info, add block: %d, count: %d", seg_list[i]->seg_info_.block_id_, block_count);
+        TBSYS_LOG(DEBUG, "batch get block info, add block: %u, count: %zd", seg_list[i]->seg_info_.block_id_, block_count);
       }
     }
   }
@@ -683,7 +683,7 @@ int TfsSession::get_block_info_ex(SEG_DATA_LIST& seg_list, const int32_t flag)
         {
           if ((it = block_info.find(block_id)) == block_info.end())
           {
-            TBSYS_LOG(ERROR, "get block %u info fail, blockinfo size: %d",
+            TBSYS_LOG(ERROR, "get block %u info fail, blockinfo size: %zd",
                       block_id, block_info.size());
             ret = TFS_ERROR;
             break;
@@ -711,7 +711,7 @@ int TfsSession::get_block_info_ex(SEG_DATA_LIST& seg_list, const int32_t flag)
               seg_list[i]->cache_hit_ = CACHE_HIT_REMOTE;
             }
 #endif
-            TBSYS_LOG(DEBUG, "get block %u info, ds size: %d",
+            TBSYS_LOG(DEBUG, "get block %u info, ds size: %zd",
                       block_id, seg_list[i]->ds_.size());
           }
         }
@@ -721,14 +721,14 @@ int TfsSession::get_block_info_ex(SEG_DATA_LIST& seg_list, const int32_t flag)
     {
       if (block_info.size() != block_count)
       {
-        TBSYS_LOG(ERROR, "batch get write block info fail, get count conflict, request: %d, response: %u",
+        TBSYS_LOG(ERROR, "batch get write block info fail, get count conflict, request: %zd, response: %zd",
                   block_count, block_info.size());
         ret = TFS_ERROR;
       }
       else
       {
         it = block_info.begin();
-        TBSYS_LOG(DEBUG, "get write block block count: %d, seg list size: %d", block_info.size(), seg_list.size());
+        TBSYS_LOG(DEBUG, "get write block block count: %zd, seg list size: %zd", block_info.size(), seg_list.size());
 
         for (size_t i = 0; i < seg_list.size(); i++, it++)
         {
@@ -736,14 +736,14 @@ int TfsSession::get_block_info_ex(SEG_DATA_LIST& seg_list, const int32_t flag)
           seg_list[i]->ds_ = it->second.ds_;
           seg_list[i]->status_ = SEG_STATUS_OPEN_OVER;
 
-          TBSYS_LOG(DEBUG, "get write block %u success, ds list size: %d", seg_list[i]->seg_info_.block_id_, seg_list[i]->ds_.size());
+          TBSYS_LOG(DEBUG, "get write block %u success, ds list size: %zd", seg_list[i]->seg_info_.block_id_, seg_list[i]->ds_.size());
 
           if (it->second.has_lease()) // should have
           {
             seg_list[i]->ds_.push_back(ULONG_LONG_MAX);
             seg_list[i]->ds_.push_back(it->second.version_);
             seg_list[i]->ds_.push_back(it->second.lease_id_);
-            TBSYS_LOG(DEBUG, "get write block %u success, ds list size: %d, version: %d, lease: %d",
+            TBSYS_LOG(DEBUG, "get write block %u success, ds list size: %zd, version: %d, lease: %d",
                       seg_list[i]->seg_info_.block_id_, seg_list[i]->ds_.size(),
                       it->second.version_, it->second.lease_id_);
           }

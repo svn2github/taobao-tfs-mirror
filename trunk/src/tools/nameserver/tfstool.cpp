@@ -1539,7 +1539,7 @@ int cmd_put_file_meta(const VSTRING& param)
     FILE* fp=fopen(local_file,"r");
     if(fp == NULL)
     {
-      TBSYS_LOG(WARN, "open local file failed. local_file: %s, ret: %d", local_file, fp);
+      TBSYS_LOG(WARN, "open local file failed. local_file: %s, ret: %p", local_file, fp);
       ret = TFS_ERROR;
     }
     else
@@ -1570,7 +1570,7 @@ int cmd_put_file_meta(const VSTRING& param)
           char buffer[MAX_READ_SIZE];
           while (true)
           {
-            int rlen = fread(buffer,sizeof(char),MAX_READ_SIZE,fp);
+            int64_t rlen = fread(buffer,sizeof(char),MAX_READ_SIZE,fp);
             if (rlen <= 0)
             {
               break;
@@ -1646,7 +1646,7 @@ int cmd_get_file_meta(const VSTRING& param)
       FILE* fp=fopen(local_file,"w+b");
       if(fp == NULL)
       {
-        TBSYS_LOG(WARN, "open local file failed. local_file: %s, ret: %d", local_file, fp);
+        TBSYS_LOG(WARN, "open local file failed. local_file: %s, ret: %p", local_file, fp);
         ret = TFS_ERROR;
       }
       else
@@ -1655,7 +1655,7 @@ int cmd_get_file_meta(const VSTRING& param)
         char buffer[MAX_READ_SIZE];
         while (true)
         {
-          int64_t rlen = impl.pread(fd, buffer, MAX_READ_SIZE, offset);
+          int rlen = impl.pread(fd, buffer, MAX_READ_SIZE, offset);
           if (rlen <= 0)
           {
             break;

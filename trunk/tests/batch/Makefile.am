@@ -1,6 +1,7 @@
 AM_CPPFLAGS=-I${top_srcdir}/src/new_client \
             -I$(top_srcdir)/src \
 			-I${top_srcdir}/src/common \
+			$(TAIR_CACHE_CPPFLAGS)\
 			-I$(TBLIB_ROOT)/include/tbsys \
 			-I$(TBLIB_ROOT)/include/tbnet
 
@@ -10,6 +11,7 @@ LDADD=$(top_builddir)/src/dataserver/libdataserver.a \
       $(top_builddir)/src/new_client/.libs/libtfsclient.a \
 			$(top_builddir)/src/message/libtfsmessage.a \
       $(top_builddir)/src/common/libtfscommon.a \
+			$(TAIR_CACHE_LDFLAGS)\
 			$(TBLIB_ROOT)/lib/libtbnet.a \
 			$(TBLIB_ROOT)/lib/libtbsys.a
 

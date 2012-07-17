@@ -38,8 +38,6 @@ namespace tfs
   {
     HeartManagement::HeartManagement(NameServer& m) :
       manager_(m),
-      keepalive_queue_size_(10240),
-      report_block_queue_size_(16),
       keepalive_queue_header_(*this),
       report_block_queue_header_(*this)
     {
@@ -51,11 +49,8 @@ namespace tfs
 
     }
 
-    int HeartManagement::initialize(const int32_t keepalive_thread_count, const int32_t keepalive_queue_size,
-                     const int32_t report_block_thread_count, const int32_t report_block_queue_size)
+    int HeartManagement::initialize(const int32_t keepalive_thread_count,const int32_t report_block_thread_count)
     {
-      keepalive_queue_size_ = keepalive_queue_size;
-      report_block_queue_size_ = report_block_queue_size;
       keepalive_threads_.setThreadParameter(keepalive_thread_count, &keepalive_queue_header_, this);
       report_block_threads_.setThreadParameter(report_block_thread_count, &report_block_queue_header_, this);
       keepalive_threads_.start();
@@ -96,14 +91,14 @@ namespace tfs
           SetDataserverMessage* message = dynamic_cast<SetDataserverMessage*>(msg);
           server = message->get_ds().id_;
           status = message->get_ds().status_;
-          handled = keepalive_threads_.push(msg, keepalive_queue_size_, false);
+          handled = keepalive_threads_.push(msg, SYSPARAM_NAMESERVER.keepalive_queue_size_, false);
         }
         else if (pcode == REQ_REPORT_BLOCKS_TO_NS_MESSAGE)
         {
           //dataserver report block heartbeat message, cannot blocking!
           ReportBlocksToNsRequestMessage* message = dynamic_cast<ReportBlocksToNsRequestMessage*>(msg);
           server = message->get_server();
-          handled = report_block_threads_.push(msg, report_block_queue_size_, false);
+          handled = report_block_threads_.push(msg, SYSPARAM_NAMESERVER.report_block_queue_size_, false);
         }
         else
         {
@@ -157,9 +152,7 @@ namespace tfs
       int32_t ret = (NULL != packet && SET_DATASERVER_MESSAGE == packet->getPCode()) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
-        #ifdef TFS_NS_DEBUG
         tbutil::Time begin = tbutil::Time::now();
-        #endif
         SetDataserverMessage* message = dynamic_cast<SetDataserverMessage*> (packet);
         assert(SET_DATASERVER_MESSAGE == packet->getPCode());
         RespHeartMessage *result_msg = new RespHeartMessage();
@@ -176,15 +169,10 @@ namespace tfs
           TBSYS_LOG(INFO, "dataserver: %s exit", CNetUtil::addrToString(ds_info.id_).c_str());
         }
         ret = message->reply(result_msg);
-        TBSYS_LOG(DEBUG, "dataserver: %s %s %s, ret: %d", CNetUtil::addrToString(ds_info.id_).c_str(),
+        time_t consume = (tbutil::Time::now() - begin).toMicroSeconds();
+        TBSYS_LOG(INFO, "dataserver: %s %s %s consume times: %"PRI64_PREFIX"d(us), ret: %d", CNetUtil::addrToString(ds_info.id_).c_str(),
           DATASERVER_STATUS_DEAD == ds_info.status_ ? "exit" : DATASERVER_STATUS_ALIVE  == ds_info.status_ ? "keepalive" :
-          "unknow", TFS_SUCCESS == ret ? "successful" : "failed", ret);
-
-        #ifdef TFS_NS_DEBUG
-        tbutil::Time end = tbutil::Time::now() - begin;
-        TBSYS_LOG(INFO, "dataserver: %s keepalive consume times: %"PRI64_PREFIX"d(us)",
-          CNetUtil::addrToString(ds_info.id_).c_str(), end.toMicroSeconds());
-        #endif
+          "unknow", TFS_SUCCESS == ret ? "successful" : "failed", consume, ret);
       }
       return ret;
     }
@@ -192,7 +180,8 @@ namespace tfs
     int HeartManagement::report_block(tbnet::Packet* packet)
     {
       uint64_t server = 0;
-      int32_t block_nums = 0, expires_block_nums = 0, result = 0;
+      int32_t block_nums = 0, result = 0;
+      time_t  consume = 0;
       int32_t ret = (NULL != packet && REQ_REPORT_BLOCKS_TO_NS_MESSAGE == packet->getPCode()) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
@@ -207,15 +196,12 @@ namespace tfs
 			  result = ret = manager_.get_layout_manager().get_client_request_server().report_block(server, now, message->get_blocks());
         result_msg->set_status(HEART_MESSAGE_OK);
         block_nums = message->get_blocks().size();
-        expires_block_nums = result_msg->get_blocks().size();
-        tbutil::Time end = tbutil::Time::now() - begin;
-        TBSYS_LOG(INFO, "dataserver: %s report block consume times: %"PRI64_PREFIX"d(us)",
-          CNetUtil::addrToString(server).c_str(), end.toMicroSeconds());
+        consume = (tbutil::Time::now() - begin).toMicroSeconds();
 			  ret = message->reply(result_msg);
       }
-      TBSYS_LOG(INFO, "dataserver: %s report block %s, ret: %d, blocks: %d, expires: %d",
+      TBSYS_LOG(DEBUG, "dataserver: %s report block %s, ret: %d, blocks: %d, consume time: %"PRI64_PREFIX"u(us)",
          CNetUtil::addrToString(server).c_str(), TFS_SUCCESS == ret ? "successful" : "failed",
-         result , block_nums, expires_block_nums);
+         result , block_nums, consume);
       return ret;
     }
 
