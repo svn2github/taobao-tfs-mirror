@@ -139,7 +139,7 @@ namespace tfs
                           const bool simple = false);
       int64_t save_file_unique(char* ret_tfs_name, const int32_t ret_tfs_name_len,
                           const char* local_file,
-                          const char* suffix = NULL, const char* ns_addr = NULL
+                          const char* suffix = NULL, const char* ns_addr = NULL,
                           const bool simple = false);
       int64_t save_buf_unique_update(const char* buf, const int64_t count,
                                  const char* file_name, const char* suffix = NULL, const char* ns_addr = NULL);

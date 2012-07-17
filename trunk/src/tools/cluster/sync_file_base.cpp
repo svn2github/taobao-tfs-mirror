@@ -146,7 +146,7 @@ int SyncFileBase::cmp_file_info_ex(const string& file_name, const TfsFileStat& s
     TBSYS_LOG(DEBUG, "get dest file info failed. filename: %s, ret: %d", file_name.c_str(), ret);
   }
 
-  TBSYS_LOG(DEBUG, "file(%s): flag--(%d -> %d), crc--(%d -> %d), size--(%d -> %d), source modify time: %s -> dest modify time: %s",
+  TBSYS_LOG(DEBUG, "file(%s): flag--(%d -> %d), crc--(%d -> %d), size--(%"PRI64_PREFIX"d -> %"PRI64_PREFIX"d), source modify time: %s -> dest modify time: %s",
       file_name.c_str(), source_buf.flag_, ((ret == TFS_SUCCESS)? dest_buf.flag_:-1), source_buf.crc_, dest_buf.crc_, source_buf.size_, dest_buf.size_,
       Func::time_to_str(source_buf.modify_time_).c_str(), Func::time_to_str(dest_buf.modify_time_).c_str());
 
