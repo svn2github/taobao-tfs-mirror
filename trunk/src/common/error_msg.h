@@ -47,6 +47,13 @@ namespace tfs
     const int32_t EXIT_LRU_BUCKET_NOT_EXIST = -1022;//lru bucket not found by key
     const int32_t EXIT_SERVICE_SHUTDOWN = -1023;
     const int32_t EXIT_ELEMENT_EXIST = -1024;
+    const int32_t EXIT_CONNECT_MYSQL_ERROR = -1025;
+    const int32_t EXIT_PREPARE_SQL_ERROR = -1026;
+    const int32_t EXIT_BIND_PARAMETER_ERROR = -1027;
+    const int32_t EXIT_EXECUTE_SQL_ERROR = -1028;
+    const int32_t EXIT_MYSQL_NO_DATA= -1029;
+    const int32_t EXIT_MYSQL_DATA_TRUNCATED = -1030;
+    const int32_t EXIT_MYSQL_FETCH_DATA_ERROR = -1031;
 
     const int32_t EXIT_FILE_OP_ERROR = -2000;
     const int32_t EXIT_OPEN_FILE_ERROR = -2001;

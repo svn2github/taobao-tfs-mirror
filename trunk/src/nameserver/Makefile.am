@@ -1,10 +1,13 @@
 #AM_CPPFLAGS=-fprofile-arcs -ftest-coverage -Wall -I$(top_srcdir)/src
 AM_CPPFLAGS=-I$(top_srcdir)/src\
             -I$(TBLIB_ROOT)/include/tbsys\
-            -I$(TBLIB_ROOT)/include/tbnet
+            -I$(TBLIB_ROOT)/include/tbnet\
+						$(MYSQL_CFLAGS)
 
 #AM_LDFLAGS=-lz -lrt -lpthread -ldl -lgcov
 AM_LDFLAGS=-lz -lrt -lpthread -ldl -rdynamic ${TCMALLOC_LDFLAGS}
+
+AM_LDFLAGS+=$(MYSQL_LDFLAGS)
 
 LDADD=$(top_builddir)/src/message/libtfsmessage.a \
       $(top_builddir)/src/common/libtfscommon.a\
@@ -15,12 +18,13 @@ noinst_LIBRARIES=libnameserver.a
 
 NAMESERVER_SOURCE_LIST_HEADER=block_collect.h block_id_factory.h block_manager.h client_request_server.h gc.h\
 global_factory.h heart_manager.h layout_manager.h nameserver.h ns_define.h\
-oplog.h oplog_sync_manager.h server_collect.h server_manager.h task.h task_manager.h
+oplog.h oplog_sync_manager.h server_collect.h server_manager.h task.h task_manager.h\
+database_helper.h family_collect.h
 
 NAMSERVER_SOURCE_LIST=block_collect.cpp block_manager.cpp  server_collect.cpp\
 	task.cpp task_manager.cpp server_manager.cpp layout_manager.cpp block_id_factory.cpp global_factory.cpp\
 	oplog.cpp oplog_sync_manager.cpp client_request_server.cpp gc.cpp\
-	ns_define.cpp nameserver.cpp heart_manager.cpp\
+	ns_define.cpp nameserver.cpp heart_manager.cpp database_helper.cpp family_collect.cpp\
 	$(NAMESERVER_SOURCE_LIST_HEADER)
 
 

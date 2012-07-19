@@ -1175,6 +1175,7 @@ namespace tfs
       std::cout << "max mmap size " << mmap_option_.max_mmap_size_ << std::endl;
       std::cout << "version " << version_ << std::endl;
     }
+
     const char* dynamic_parameter_str[31] = {
         "log_level",
         "plan_run_flag",
@@ -1208,5 +1209,70 @@ namespace tfs
         "choose_target_server_random_max_nums",
         "max_keepalive_queue_size"
     };
+
+    int FamilyInfo::deserialize(const char* data, const int64_t data_len, int64_t& pos)
+    {
+      int32_t ret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
+      /*if (TFS_SUCCESS == ret)
+        {
+        ret = Serialization::get_int64(data, data_len, pos, &family_id_);
+        }
+        if (TFS_SUCCESS == ret)
+        {
+        ret = Serialization::get_int32(data, data_len, pos, &family_aid_info_);
+        }*/
+      int32_t size = 0;
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::get_int32(data, data_len, pos, &size);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        uint32_t block = 0;
+        int32_t version = 0;
+        for (int32_t i = 0; i < size && TFS_SUCCESS == ret; ++i)
+        {
+          ret = Serialization::get_int32(data, data_len, pos, reinterpret_cast<int32_t*>(&block));
+          if (TFS_SUCCESS == ret)
+            ret = Serialization::get_int32(data, data_len, pos, reinterpret_cast<int32_t*>(&version));
+          if (TFS_SUCCESS == ret)
+            family_member_.push_back(std::make_pair(block, version));
+        }
+      }
+      return ret;
+    }
+
+    int FamilyInfo::serialize(char* data, const int64_t data_len, int64_t& pos) const
+    {
+      int32_t ret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
+      /*if (TFS_SUCCESS == ret)
+        {
+        ret = Serialization::set_int64(data, data_len, pos, family_id_);
+        }
+        if (TFS_SUCCESS == ret)
+        {
+        ret = Serialization::set_int32(data, data_len, pos, family_aid_info_);
+        }*/
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int32(data, data_len, pos, family_member_.size());
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        std::vector<std::pair<uint32_t, int32_t> >::const_iterator iter = family_member_.begin();
+        for (; iter != family_member_.end() && TFS_SUCCESS == ret; ++iter)
+        {
+          ret = Serialization::set_int32(data, data_len, pos, (*iter).first);
+          if (TFS_SUCCESS == ret)
+            ret = Serialization::set_int32(data, data_len, pos, (*iter).second);
+        }
+      }
+      return ret;
+    }
+
+    int64_t FamilyInfo::length() const
+    {
+      return /*INT64_SIZE + INT_SIZE + */(family_member_.size() * INT_SIZE * 2);
+    }
   } /** nameserver **/
 }/** tfs **/

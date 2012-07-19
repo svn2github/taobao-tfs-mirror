@@ -35,7 +35,18 @@
 
 #include "define.h"
 
-//#define TFS_GTEST
+#define GET_DATA_MEMBER_NUM(x) ((x >> 24) & 0xFF)
+#define GET_CHECK_MEMBER_NUM(x) ((x >> 16) & 0xFF)
+#define GET_CODE_TYPE(x) ((x >> 8) & 0xFF)
+#define GET_MASTER_INDEX(x) (x & 0xFF)
+
+#define SET_DATA_MEMBER_NUM(x,y) (x |= ((y << 24) & 0xFF000000))
+#define SET_CHECK_MEMBER_NUM(x,y) ((x |= ((y << 16) & 0xFF0000)))
+#define SET_CODE_TYPE(x,y) (x |= ((y << 8) & 0xFF00))
+#define SET_MASTER_INDEX(x,y) (x |= (y & 0xFF))
+
+#define TFS_GTEST
+
 #if __WORDSIZE == 32
 namespace __gnu_cxx
 {
@@ -134,8 +145,9 @@ namespace tfs
 
     static const int32_t MAX_DEV_TAG_LEN = 8;
 
-
     static const int32_t DEFAULT_HEART_INTERVAL = 2;//2s
+
+    static const int64_t INVALID_FAMILY_ID = 0;
 
     enum OplogFlag
     {
@@ -831,6 +843,16 @@ namespace tfs
       CLEAR_SYSTEM_TABLE_FLAG_REPORT_SERVER = 1 << 2,
       CLEAR_SYSTEM_TABLE_FLAG_DELETE_QUEUE  = 1 << 3
     }ClearSystemTableFlag;
+
+    struct FamilyInfo
+    {
+      int64_t family_id_;
+      int32_t family_aid_info_;
+      std::vector<std::pair<uint32_t, int32_t> > family_member_;
+      int deserialize(const char* data, const int64_t data_len, int64_t& pos);
+      int serialize(char* data, const int64_t data_len, int64_t& pos) const;
+      int64_t length() const;
+    };
 
     extern const char* dynamic_parameter_str[31];
 

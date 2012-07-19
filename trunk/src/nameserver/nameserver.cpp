@@ -35,68 +35,6 @@ namespace tfs
 {
   namespace nameserver
   {
-    /*OwnerCheckTimerTask::OwnerCheckTimerTask(NameServer& manager) :
-      manager_(manager),
-      MAX_LOOP_TIME(SYSPARAM_NAMESERVER.heart_interval_ * 1000 * 1000 / 2)
-    {
-      int32_t percent_size = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_TASK_PRECENT_SEC_SIZE, 200);
-      owner_check_time_ = (manager_.get_work_queue_size() * percent_size) * 1000;//us
-      max_owner_check_time_ = owner_check_time_ * 4;//us
-      TBSYS_LOG(INFO, "owner_check_time: %"PRI64_PREFIX"d(us), max_owner_check_time: %"PRI64_PREFIX"u(us)",
-          owner_check_time_, max_owner_check_time_);
-    }
-
-    OwnerCheckTimerTask::~OwnerCheckTimerTask()
-    {
-
-    }
-
-    void OwnerCheckTimerTask::runTimerTask()
-    {
-      NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
-      if (ngi.owner_status_ >= NS_STATUS_INITIALIZED)
-      {
-        bool bret = false;
-        tbutil::Time now = tbutil::Time::now(tbutil::Time::Monotonic);
-        tbutil::Time end = now + MAX_LOOP_TIME;
-        if (ngi.last_owner_check_time_ >= ngi.last_push_owner_check_packet_time_)
-        {
-          int64_t current = 0;
-          OwnerCheckMessage* message = new OwnerCheckMessage();
-          while(!bret
-              && (ngi.owner_status_ == NS_STATUS_INITIALIZED)
-              && current < end.toMicroSeconds())
-          {
-            bret = manager_.push(message, false);
-            if (!bret)
-            {
-              usleep(500);
-              current = tbutil::Time::now(tbutil::Time::Monotonic).toMicroSeconds();
-            }
-            else
-            {
-              ngi.last_push_owner_check_packet_time_ = now.toMicroSeconds();
-            }
-          }
-          if (!bret)
-          {
-            message->free();
-          }
-        }
-        else
-        {
-          int64_t diff = now.toMicroSeconds() - ngi.last_owner_check_time_;
-          if (diff >= max_owner_check_time_)
-          {
-            TBSYS_LOG(INFO,"last push owner check packet time: %"PRI64_PREFIX"d(us) > max owner check time: %"PRI64_PREFIX"d(us), nameserver dead, modify owner status(uninitialize)",
-                ngi.last_push_owner_check_packet_time_, now.toMicroSeconds());
-            ngi.owner_status_ = NS_STATUS_UNINITIALIZE;//modif owner status
-          }
-        }
-      }
-      return;
-    }*/
-
     NameServer::NameServer() :
       layout_manager_(*this),
       master_slave_heart_manager_(layout_manager_),
@@ -274,7 +212,8 @@ namespace tfs
         if (!packet->isRegularPacket())
         {
           bret = false;
-          TBSYS_LOG(WARN, "control packet, pcode: %d", dynamic_cast<tbnet::ControlPacket*>(packet)->getCommand());
+          TBSYS_LOG(WARN, "control packet, pcode: %d, peer ip: %s", dynamic_cast<tbnet::ControlPacket*>(packet)->getCommand(),
+            tbsys::CNetUtil::addrToString(connection->getPeerId()).c_str());
         }
         if (bret)
         {
@@ -313,7 +252,8 @@ namespace tfs
               if (!main_workers_.push(bpacket, work_queue_size_, false))
               {
                 hret = tbnet::IPacketHandler::FREE_CHANNEL;
-                bpacket->reply_error_packet(TBSYS_LOG_LEVEL(ERROR),STATUS_MESSAGE_ERROR, "%s, task message beyond max queue size, discard", get_ip_addr());
+                bpacket->reply_error_packet(TBSYS_LOG_LEVEL(ERROR),STATUS_MESSAGE_ERROR, "%s, task message beyond max queue size, discard, peer ip: %s", get_ip_addr(),
+                  tbsys::CNetUtil::addrToString(connection->getPeerId()).c_str());
                 bpacket->free();
               }
               break;
@@ -323,7 +263,8 @@ namespace tfs
           {
             bpacket->free();
             GFactory::get_runtime_info().dump(TBSYS_LOG_LEVEL_WARN);
-            TBSYS_LOG(WARN, "the msg: %d will be ignored", pcode);
+            TBSYS_LOG(WARN, "the msg: %d will be ignored, peer ip: %s", pcode,
+               tbsys::CNetUtil::addrToString(connection->getPeerId()).c_str());
           }
         }
       }
