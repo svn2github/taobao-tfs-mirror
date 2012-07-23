@@ -54,6 +54,7 @@ namespace tfs
     const int32_t EXIT_MYSQL_NO_DATA= -1029;
     const int32_t EXIT_MYSQL_DATA_TRUNCATED = -1030;
     const int32_t EXIT_MYSQL_FETCH_DATA_ERROR = -1031;
+    const int32_t EXIT_OUT_OF_RANGE = -1032;
 
     const int32_t EXIT_FILE_OP_ERROR = -2000;
     const int32_t EXIT_OPEN_FILE_ERROR = -2001;
@@ -113,6 +114,8 @@ namespace tfs
     const int32_t EXIT_BLOCK_WRITING_ERROR = -5033;
     const int32_t EXIT_MOVE_OR_REPLICATE_ERROR = -5034;
     const int32_t EXIT_BUILD_RELATION_ERROR = -5035;//build relation error
+    const int32_t EXIT_NO_FAMILY = -5036;
+    const int32_t EXIT_MARSHALLINT_ITEM_QUEUE_EMPTY = -5037;
 
     const int32_t EXIT_WRITE_OFFSET_ERROR = -8001; // write offset error
     const int32_t EXIT_READ_OFFSET_ERROR = -8002; // read offset error

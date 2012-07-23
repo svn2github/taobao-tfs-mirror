@@ -101,6 +101,8 @@ namespace tfs
       int set_runtime_param(const uint32_t index, const uint32_t value, const int64_t length, char *retstr);
 
       void switch_role(const time_t now = common::Func::get_monotonic_time());
+
+      uint32_t get_alive_block_id();
       private:
       void rotate_(const time_t now);
       uint32_t get_alive_block_id_();
@@ -108,6 +110,7 @@ namespace tfs
       void balance_();
       void timeout_();
       void redundant_();
+      void load_family_info();
       void check_all_server_isalive_();
       void add_block_in_all_server_();
       void check_all_server_report_block_();
@@ -232,6 +235,19 @@ namespace tfs
           DISALLOW_COPY_AND_ASSIGN(RedundantThreadHelper);
       };
       typedef tbutil::Handle<RedundantThreadHelper> RedundantThreadHelperPtr;
+      class LoadFamilyInfoThreadHelper: public tbutil::Thread
+      {
+        public:
+          explicit LoadFamilyInfoThreadHelper(LayoutManager& manager):
+            manager_(manager) {start(THREAD_STATCK_SIZE);}
+          virtual ~LoadFamilyInfoThreadHelper() {}
+          void run();
+        private:
+          LayoutManager& manager_;
+          DISALLOW_COPY_AND_ASSIGN(LoadFamilyInfoThreadHelper);
+      };
+      typedef tbutil::Handle<LoadFamilyInfoThreadHelper> LoadFamilyInfoThreadHelperPtr;
+
       private:
       BuildPlanThreadHelperPtr build_plan_thread_;
       RunPlanThreadHelperPtr run_plan_thread_;
@@ -241,6 +257,7 @@ namespace tfs
       BuildBalanceThreadHelperPtr balance_thread_;
       TimeoutThreadHelperPtr timeout_thread_;
       RedundantThreadHelperPtr redundant_thread_;
+      LoadFamilyInfoThreadHelperPtr load_family_info_thread_;
 
       time_t  zonesec_;
       time_t  last_rotate_log_time_;

@@ -113,6 +113,9 @@ namespace tfs
 
     static const uint32_t INVALID_LEASE_ID = 0;
     static const uint32_t INVALID_BLOCK_ID = 0;
+    static const int64_t  INVALID_FAMILY_ID = 0;
+    static const uint32_t INVALID_RACK_ID = 0;
+    static const uint32_t INVALID_SERVER_ID = 0;
 
     static const int32_t SEGMENT_HEAD_RESERVE_SIZE = 64;
 
@@ -147,7 +150,6 @@ namespace tfs
 
     static const int32_t DEFAULT_HEART_INTERVAL = 2;//2s
 
-    static const int64_t INVALID_FAMILY_ID = 0;
 
     enum OplogFlag
     {
@@ -382,8 +384,8 @@ namespace tfs
       int serialize(char* data, const int64_t data_len, int64_t& pos) const;
       int64_t length() const;
       mutable tbnet::DataBuffer data_;
-      uint32_t addition_param1_;
-      uint32_t addition_param2_;
+      int64_t addition_param1_;
+      int64_t addition_param2_;
       uint32_t  start_next_position_;//16~32 bit: start, 0~15 bit: next
       uint32_t  should_actual_count_;//16~32 bit: should_count 0~15: actual_count
       int16_t  child_type_;

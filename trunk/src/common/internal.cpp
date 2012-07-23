@@ -108,11 +108,11 @@ namespace tfs
       int32_t iret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
       if (TFS_SUCCESS == iret)
       {
-        iret = Serialization::set_int32(data, data_len, pos, addition_param1_);
+        iret = Serialization::set_int64(data, data_len, pos, addition_param1_);
       }
       if (TFS_SUCCESS == iret)
       {
-        iret = Serialization::set_int32(data, data_len, pos, addition_param2_);
+        iret = Serialization::set_int64(data, data_len, pos, addition_param2_);
       }
       if (TFS_SUCCESS == iret)
       {
@@ -153,11 +153,11 @@ namespace tfs
       int32_t iret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
       if (TFS_SUCCESS == iret)
       {
-        iret = Serialization::get_int32(data, data_len, pos, reinterpret_cast<int32_t*>(&addition_param1_));
+        iret = Serialization::get_int64(data, data_len, pos, &addition_param1_);
       }
       if (TFS_SUCCESS == iret)
       {
-        iret = Serialization::get_int32(data, data_len, pos, reinterpret_cast<int32_t*>(&addition_param2_));
+        iret = Serialization::get_int64(data, data_len, pos, &addition_param2_);
       }
       if (TFS_SUCCESS == iret)
       {
@@ -198,7 +198,7 @@ namespace tfs
 
     int64_t SSMScanParameter::length() const
     {
-      return INT_SIZE * 6 + data_.getDataLen();
+      return INT_SIZE * 4  + INT64_SIZE * 2 + data_.getDataLen();
     }
 
     int BlockInfo::serialize(char* data, const int64_t data_len, int64_t& pos) const

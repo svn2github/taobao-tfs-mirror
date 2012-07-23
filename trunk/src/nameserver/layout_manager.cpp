@@ -52,6 +52,7 @@ namespace tfs
       balance_thread_(0),
       timeout_thread_(0),
       redundant_thread_(0),
+      load_family_info_thread_(0),
       last_rotate_log_time_(0),
       plan_run_flag_(PLAN_RUN_FLAG_REPLICATE),
       manager_(manager),
@@ -81,6 +82,7 @@ namespace tfs
       balance_thread_ = 0;
       timeout_thread_ = 0;
       redundant_thread_ = 0;
+      load_family_info_thread_ = 0;
     }
 
     int LayoutManager::initialize()
@@ -102,6 +104,7 @@ namespace tfs
         balance_thread_  = new BuildBalanceThreadHelper(*this);
         timeout_thread_  = new TimeoutThreadHelper(*this);
         redundant_thread_= new RedundantThreadHelper(*this);
+        load_family_info_thread_ = new LoadFamilyInfoThreadHelper(*this);
       }
       return ret;
     }
@@ -139,6 +142,10 @@ namespace tfs
       if (redundant_thread_ != 0)
       {
         redundant_thread_->join();
+      }
+      if (load_family_info_thread_ != 0)
+      {
+        load_family_info_thread_->join();
       }
       oplog_sync_mgr_.wait_for_shut_down();
     }
@@ -569,6 +576,11 @@ namespace tfs
       return block_id;
     }
 
+    uint32_t LayoutManager::get_alive_block_id()
+    {
+      return get_alive_block_id_();
+    }
+
     static bool in_hour_range(const time_t now, int32_t& min, int32_t& max)
     {
       struct tm lt;
@@ -780,6 +792,42 @@ namespace tfs
           Func::sleep(SYSPARAM_NAMESERVER.heart_interval_, ngi.destroy_flag_);
         build_redundant_(need, 0);
         usleep(MAX_SLEEP_TIME_US);
+      }
+    }
+
+    void LayoutManager::load_family_info()
+    {
+      time_t now = 0;
+      int64_t family_id = 0;
+      int32_t ret = TFS_SUCCESS;
+      const int32_t MAX_SLEEP_TIME = 10;//10s
+      std::vector<common::FamilyInfo> infos;
+      NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
+      const int32_t SAFE_MODE_TIME = SYSPARAM_NAMESERVER.safe_mode_time_ * 4;
+      while (!ngi.is_destroyed())
+      {
+        now = Func::get_monotonic_time();
+        if (ngi.in_safe_mode_time(now))
+          Func::sleep(SAFE_MODE_TIME, ngi.destroy_flag_);
+        if (!ngi.is_master())
+        {
+          do
+          {
+            infos.clear();
+            ret = get_oplog_sync_mgr().scan_family(infos, family_id);
+            if (TFS_SUCCESS == ret)
+            {
+              std::vector<common::FamilyInfo>::const_iterator iter = infos.begin();
+              for (; iter != infos.end(); ++iter)
+              {
+                //TODO
+                family_id = (*iter).family_id_;
+              }
+            }
+          }
+          while (infos.size() > 0 && TFS_SUCCESS == ret);
+        }
+        sleep(MAX_SLEEP_TIME);
       }
     }
 
@@ -1515,5 +1563,22 @@ namespace tfs
         TBSYS_LOG(ERROR, "%s", "catch exception, unknow message");
       }
     }
+
+    void LayoutManager::LoadFamilyInfoThreadHelper::run()
+    {
+      try
+      {
+        //TODO
+      }
+      catch(std::exception& e)
+      {
+        TBSYS_LOG(ERROR, "catch exception: %s", e.what());
+      }
+      catch(...)
+      {
+        TBSYS_LOG(ERROR, "%s", "catch exception, unknow message");
+      }
+    }
+
   } /** nameserver **/
 }/** tfs **/

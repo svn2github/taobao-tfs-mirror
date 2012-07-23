@@ -31,6 +31,7 @@
 
 #include "oplog.h"
 #include "block_id_factory.h"
+#include "database_helper.h"
 
 namespace tfs
 {
@@ -56,6 +57,10 @@ namespace tfs
       int replay_helper_do_oplog(const time_t now, const int32_t type, const char* const data, const int64_t data_len, int64_t& pos);
 
       inline uint32_t generation(const uint32_t id = 0) { return id_factory_.generation(id);}
+
+      int create_family(common::FamilyInfo& family_info);
+      int del_family(const int64_t family_id);
+      int scan_family(std::vector<common::FamilyInfo>& infos, const int64_t start_family_id = 0);
     private:
       DISALLOW_COPY_AND_ASSIGN( OpLogSyncManager);
       virtual bool handlePacketQueue(tbnet::Packet *packet, void *args);
@@ -71,6 +76,7 @@ namespace tfs
       common::FileQueueThread* file_queue_thread_;
       BlockIdFactory id_factory_;
       tbutil::Mutex mutex_;
+      DataBaseHelper* dbhelper_;
       tbnet::PacketQueueThread work_thread_;
     };
   }//end namespace nameserver
