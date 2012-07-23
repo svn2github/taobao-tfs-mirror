@@ -18,12 +18,14 @@ import org.junit.BeforeClass;
 import com.taobao.common.tfs.DefaultTfsManager;
 import com.taobao.common.tfs.utility.FileUtility;
 
+import com.etao.gaia.exception.OperationException;
+import com.etao.gaia.handler.*;
 public class BaseCase 
 {
 	public static DefaultTfsManager tfsManager = null;
 	public static String resourcesPath = "";
 	public static String key = "1k.jpg";
-
+	public static ProcessHandler PH ;
 	private static ArrayList<String> testFileList = new ArrayList<String>();
 	protected static Log log = LogFactory.getLog(BaseCase.class);
 
@@ -38,7 +40,38 @@ public class BaseCase
 	{
 		return Thread.currentThread().getStackTrace()[2].getMethodName();
 	}
-    
+	
+	
+	
+	public boolean killOneServer(String destServer, String procName) 
+	{
+		boolean bRet = false;
+		OperationResult result = new OperationResult();
+		result = PH.killProcess(destServer,procName);
+		if(result.isSuccess()==false)
+			System.out.print(result.getMsg());
+		else bRet=true;
+		return bRet;
+	}
+	
+	public boolean startOneServer(String destServer, String procName) 
+	{
+		boolean bRet = false;
+		OperationResult result = new OperationResult();
+		try 
+		{
+			result = PH.executeCmdByUser("admin",destServer,procName,false);
+		} 
+		catch (OperationException e)
+		{	
+			e.printStackTrace();
+		}
+		if(result.isSuccess()==false)
+			System.out.print(result.getMsg());
+		else bRet=true;
+		return bRet;
+	}
+	
 	@BeforeClass
 	public static void beforeSetup() 
 	{
@@ -91,6 +124,7 @@ public class BaseCase
 			}
 		}
 	}
+	
 	
 	@After
 	public void tearDown() 

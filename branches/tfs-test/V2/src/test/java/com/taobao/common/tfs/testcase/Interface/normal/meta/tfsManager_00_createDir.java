@@ -128,7 +128,7 @@ public class tfsManager_00_createDir extends metaTfsBaseCase
 	       Assert.assertEquals("Create text should be true", Ret,0);
 	       s="/text"+s;
 	   }
-?	   metaTfsBaseCase.deleteDir("/text", 8, tfsManager);
+	   metaTfsBaseCase.deleteDir("/text", 8, tfsManager);
 	   tfsManager.rmDir(appId, userId, "/text");
     }
 	@Test
@@ -160,7 +160,7 @@ public class tfsManager_00_createDir extends metaTfsBaseCase
 		   tfsManager.rmDir(appId, userId, s+"/text"+i);
 	   }
 	
-?	   metaTfsBaseCase.deleteDir("/text", 7, tfsManager);
+	   metaTfsBaseCase.deleteDir("/text", 7, tfsManager);
 	   tfsManager.rmDir(appId, userId, "/text");
     }
 	@Test
