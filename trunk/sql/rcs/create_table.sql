@@ -41,7 +41,7 @@ CREATE TABLE t_cluster_rack_group (
 
 CREATE TABLE t_cluster_rack_duplicate_server (
   cluster_rack_id INT,
-  dupliate_server_addr VARCHAR(64),
+  dupliate_server_addr VARCHAR(256),
   create_time DATETIME,
   modify_time DATETIME,
   PRIMARY KEY (cluster_rack_id)
