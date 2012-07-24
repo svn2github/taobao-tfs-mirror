@@ -191,6 +191,14 @@ namespace tfs
     const int32_t EXIT_NEW_TABLE_NOT_EXIST= -15005;//new table not exist
     const int32_t EXIT_NEW_TABLE_INVALID = -15005;//new table invalid
 
+    // erasure code related
+    const int32_t EXIT_NO_MEMORY = -16000;
+    const int32_t EXIT_DATA_INVALID = -16001;
+    const int32_t EXIT_SIZE_INVALID = -16002;
+    const int32_t EXIT_MATRIX_INVALID = -16003;
+    const int32_t EXIT_NO_ENOUGH_DATA = -16004;
+    const int32_t EXIT_ENCODE_FAIL = -16005;
+    const int32_t EXIT_DECODE_FAIL = -16006;
   }
 }
 #endif //TFS_COMMON_ERRMSG_H_

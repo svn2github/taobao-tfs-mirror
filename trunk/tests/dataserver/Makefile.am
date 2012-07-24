@@ -22,7 +22,8 @@ check_PROGRAMS=
 
 noinst_PROGRAMS=test_file_op test_bit_map test_mmap_file test_index_handle test_mmap_file_op \
 						 test_logic_block test_meta test_blockfile_format test_logic_block_and_compact \
-						 test_blockfile_manager test_physical_block test_superblock_impl test_data_handle test_sync_mirror
+						 test_blockfile_manager test_physical_block test_superblock_impl test_data_handle \
+						 test_sync_mirror test_erasure_code
 
 TESTS+=test_file_op
 check_PROGRAMS+=test_file_op
@@ -93,3 +94,9 @@ TESTS+=test_sync_mirror
 check_PROGRAMS+=test_sync_mirror
 test_sync_mirror_SOURCES=test_sync_mirror.cpp
 test_sync_mirror_LDFLAGS=${AM_LDFLAGS} -static-libgcc -lgtest
+
+TESTS+=test_erasure_code
+check_PROGRAMS+=test_erasure_code
+test_erasure_code_SOURCES=test_erasure_code.cpp
+test_erasure_code_LDFLAGS=${AM_LDFLAGS} -static-libgcc -lgtest
+

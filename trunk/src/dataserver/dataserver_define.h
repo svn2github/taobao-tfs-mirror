@@ -39,6 +39,7 @@ namespace tfs
     static const int32_t COPY_BETWEEN_CLUSTER = -1;
     static const int32_t BLOCK_VERSION_MAGIC_NUM = 2;
     static const int32_t FS_SPEEDUP_VERSION = 2;
+    static const int32_t EC_DATA_MAX = 14; // 10 data + 4 parity
 
     // fileinfo flag
     enum FileinfoFlag
