@@ -35,6 +35,8 @@ namespace tfs
 
     ErasureCode::ErasureCode()
     {
+      matrix_ = NULL;
+      de_matrix_ = NULL;
       clear();
     }
 
@@ -47,6 +49,9 @@ namespace tfs
     int ErasureCode::config(const int dn, const int pn, int* erased)
     {
       int ret = 0;
+
+      clear();
+
       dn_ = dn;
       pn_ = pn;
 
@@ -123,8 +128,7 @@ namespace tfs
         int n = len < dn_ + pn_ ? len: dn_ + pn_;
         for (int i = 0; i < n; i++)
         {
-          data_[i] = data[i];
-          size_[i] = size;
+          bind(data[i], i, size);
         }
       }
     }
@@ -133,8 +137,8 @@ namespace tfs
     {
       dn_ = -1;
       pn_ = -1;
-      matrix_ = NULL;
-      de_matrix_ = NULL;
+      tbsys::gDelete(matrix_);
+      tbsys::gDelete(de_matrix_);
       for (int i = 0; i < EC_DATA_MAX; i++)
       {
         data_[i] = NULL;
