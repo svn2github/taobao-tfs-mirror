@@ -38,7 +38,7 @@ namespace tfs
   namespace nameserver
   {
     OpLogSyncManager::OpLogSyncManager(LayoutManager& mm) :
-      manager_(mm), oplog_(NULL), file_queue_(NULL), file_queue_thread_(NULL)
+      manager_(mm), oplog_(NULL), file_queue_(NULL), file_queue_thread_(NULL),dbhelper_(NULL)
     {
 
     }
@@ -48,6 +48,7 @@ namespace tfs
       tbsys::gDelete( file_queue_);
       tbsys::gDelete( file_queue_thread_);
       tbsys::gDelete( oplog_);
+      tbsys::gDelete( dbhelper_);
     }
 
     int OpLogSyncManager::initialize()
@@ -114,6 +115,37 @@ namespace tfs
         const int queue_thread_num = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_OPLOGSYNC_THREAD_NUM, 1);
         work_thread_.setThreadParameter(queue_thread_num , this, NULL);
         work_thread_.start();
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        std::string db_info = TBSYS_CONFIG.getString(CONF_SN_NAMESERVER, CONF_META_DB_INFOS, "");
+        std::vector<std::string> items;
+        common::Func::split_string(db_info.c_str(), ',', items);
+        ret = items.size() < 3 ? EXIT_SYSTEM_PARAMETER_ERROR : TFS_SUCCESS;
+        if (TFS_SUCCESS != ret)
+        {
+          TBSYS_LOG(ERROR, "db info: %s is invalid", db_info.c_str());
+        }
+        if (TFS_SUCCESS == ret)
+        {
+          dbhelper_ = new DataBaseHelper(items[0], items[1], items[2]);
+          int64_t family_id = 0;
+          std::vector<common::FamilyInfo> infos;
+          do
+          {
+            ret = dbhelper_->scan(infos, family_id);
+            if (TFS_SUCCESS == ret)
+            {
+              std::vector<common::FamilyInfo>::const_iterator iter = infos.begin();
+              for (; iter != infos.end(); ++iter)
+              {
+                //TODO
+                family_id = (*iter).family_id_;
+              }
+            }
+          }
+          while (infos.size() > 0 && TFS_SUCCESS == ret);
+        }
       }
       return ret;
     }
@@ -578,6 +610,40 @@ namespace tfs
                 && (GFactory::get_runtime_info().destroy_flag_ != NS_DESTROY_FLAGS_YES));
           }
         }
+      }
+      return ret;
+    }
+    int OpLogSyncManager::create_family(common::FamilyInfo& family_info)
+    {
+      int32_t ret = NULL != dbhelper_ ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+      if (TFS_SUCCESS == ret)
+      {
+        int64_t mysql_ret = -14000;
+        ret = dbhelper_->create_family(family_info, mysql_ret);
+        if (TFS_SUCCESS == ret)
+          ret = mysql_ret;
+      }
+      return ret;
+    }
+    int OpLogSyncManager::del_family(const int64_t family_id)
+    {
+      int32_t ret = NULL != dbhelper_ ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+      if (TFS_SUCCESS == ret)
+      {
+        int64_t mysql_ret = -14000;
+        ret = dbhelper_->del_family(mysql_ret, family_id);
+        if (TFS_SUCCESS == ret)
+          ret = mysql_ret;
+      }
+      return ret;
+    }
+
+    int OpLogSyncManager::scan_family(std::vector<common::FamilyInfo>& infos, const int64_t start_family_id)
+    {
+      int32_t ret = NULL != dbhelper_ ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+      if (TFS_SUCCESS == ret)
+      {
+        ret = dbhelper_->scan(infos, start_family_id);
       }
       return ret;
     }
