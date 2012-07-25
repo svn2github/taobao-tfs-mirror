@@ -69,19 +69,7 @@ public class rcTfsBaseCase extends BaseCase
 	public static int RC_NEW_INDEX = 1;
 	public static int RC_INVALID_INDEX = 2;
 
-	/*_____________________________________________________________________*/
-	/*_____________________________________________________________________*/
-	/*_____________________________________________________________________*/
-	/*_____________________________________________________________________*/
-	/*_____________________________________________________________________*/
-	/*_____________________________________________________________________*/
-	/*_____________________________________________________________________*/
-	/*_____________________________________________________________________*/
-	/*_____________________________________________________________________*/
-	/*_____________________________________________________________________*/
-	/*_____________________________________________________________________*/
-	
-	//
+
 	public static String RcIp="10.232.36.208";
 	public static String RcPath="/home/admin/.../";
 	
@@ -384,16 +372,4 @@ public class rcTfsBaseCase extends BaseCase
 		return bRet;
 	}
 
-
-
-//	/*Rc 机器集群控制*/ 这几个函数的需求比较低，需要时在加入
-		
-//	public void addNewTfsCluster(String appKey, int index, String clusterName);
-//	public void removeTfsCluster(String appKey, int index);
-//	public void addOneRc(int index, int status);
-//	public void removeOneRc(int index);
-//	public void modifyRc(int oldIndex, int newIndex);
-//	public void setRcMode(int status);
-//	public void setRcMode(int index, int status);
-		
 }
