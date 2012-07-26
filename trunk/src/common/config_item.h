@@ -102,6 +102,12 @@ namespace tfs
 
 #define CONF_CHOOSE_TARGET_SERVER_RANDOM_MAX_NUM      "choose_target_server_random_max_num"
 
+#define CONF_MARSHALLING_DELETE_RATIO                 "marshalling_delete_ratio"
+#define CONF_MARSHALLING_HOUR_RANGE                   "marshalling_hour_range"
+
+#define CONF_MAX_DATA_MEMBER_NUM                      "max_data_member_num"
+#define CONF_MAX_CHECK_MEMBER_NUM                     "max_check_member_num"
+
   //dataserver
 #define CONF_OBJECT_CLEAR_MAX_TIME                    "object_clear_max_time"
 #define CONF_DATA_THREAD_COUNT                        "data_thread_count"

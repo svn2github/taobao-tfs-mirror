@@ -108,7 +108,7 @@ namespace tfs
         TBSYS_LOGGER.logMessage(level, __FILE__, __LINE__, __FUNCTION__, "%s plan seqno: %"PRI64_PREFIX"d, type: %s ,status: %s, priority: %s , block_id: %u, expired_time: %"PRI64_PREFIX"d,runer: %s",
             format == NULL ? "" : format, seqno_,
             type_ == PLAN_TYPE_REPLICATE ? "replicate" : type_ == PLAN_TYPE_MOVE ? "move" : type_ == PLAN_TYPE_COMPACT
-            ? "compact" : type_ == PLAN_TYPE_DELETE ? "delete" : "unknow",
+            ? "compact" : type_ == PLAN_TYPE_MARSHALLING? "marshalling" : "unknow",
             status_ == PLAN_STATUS_BEGIN ? "begin" : status_ == PLAN_STATUS_TIMEOUT ? "timeout" : status_ == PLAN_STATUS_END
             ? "finish" : status_ == PLAN_STATUS_FAILURE ? "failure": "unknow",
             priority_ == PLAN_PRIORITY_NORMAL ? "normal" : priority_ == PLAN_PRIORITY_EMERGENCY ? "emergency": "unknow",
@@ -193,7 +193,7 @@ namespace tfs
             format == NULL ? "" : format,
             seqno_,
             type_ == PLAN_TYPE_REPLICATE ? "replicate" : type_ == PLAN_TYPE_MOVE ? "move" : type_ == PLAN_TYPE_COMPACT
-            ? "compact" : type_ == PLAN_TYPE_DELETE ? "delete" : "unknow",
+            ? "compact" : type_ == PLAN_TYPE_MARSHALLING ? "marshalling" : "unknow",
             status_ == PLAN_STATUS_BEGIN ? "begin" : status_ == PLAN_STATUS_TIMEOUT ? "timeout" : status_ == PLAN_STATUS_END
             ? "finish" : status_ == PLAN_STATUS_FAILURE ? "failure" : "unknow",
             priority_ == PLAN_PRIORITY_NORMAL ? "normal" : priority_ == PLAN_PRIORITY_EMERGENCY ? "emergency": "unknow",
@@ -574,52 +574,6 @@ namespace tfs
         }
       }
       return (ret == STATUS_MESSAGE_OK || ret == STATUS_MESSAGE_REMOVE) ? TFS_SUCCESS : ret;
-    }
-
-    DeleteTask::DeleteTask(TaskManager& manager,const PlanPriority priority,
-      const uint32_t block_id, const std::vector<ServerCollect*> & runer):
-      Task(manager, PLAN_TYPE_DELETE, priority, block_id, runer)
-    {
-
-    }
-
-    int DeleteTask::handle()
-    {
-      time_t now = Func::get_monotonic_time();
-      BlockCollect* block = manager_.get_manager().get_block_manager().get(block_id_);
-      int32_t ret = NULL != block ? TFS_SUCCESS : EXIT_BLOCK_NOT_FOUND;
-      if (TFS_SUCCESS == ret)
-      {
-        std::vector<ServerCollect*>::iterator iter = runer_.begin();
-        for (; iter != runer_.end(); ++iter)
-        {
-          manager_.get_manager().relieve_relation(block, (*iter), now, BLOCK_COMPARE_SERVER_BY_ID);
-          ret = manager_.get_manager().get_task_manager().remove_block_from_dataserver((*iter)->id(), block_id_, seqno_, now);
-          TBSYS_LOG(INFO, "send remove block: %u command on server : %s %s",
-            block_id_, tbsys::CNetUtil::addrToString((*iter)->id()).c_str(), TFS_SUCCESS == ret ? "successful" : "failed");
-        }
-
-        /*std::vector<stat_int_t> stat(1, runer_.size());
-        GFactory::get_stat_mgr().update_entry(GFactory::tfs_ns_stat_block_count_, stat, false);*/
-
-        status_ = PLAN_STATUS_BEGIN;
-        last_update_time_ = now +  SYSPARAM_NAMESERVER.task_expired_time_;
-      }
-      return ret;
-    }
-
-    int DeleteTask::handle_complete(common::BasePacket* msg, bool& all_complete_flag)
-    {
-      int32_t ret =((NULL != msg) && (msg->getPCode() ==  REMOVE_BLOCK_RESPONSE_MESSAGE))
-                    ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
-      if (TFS_SUCCESS == ret)
-      {
-        RemoveBlockResponseMessage* message = dynamic_cast<RemoveBlockResponseMessage*>(msg);
-        all_complete_flag = true;
-        status_ = PLAN_STATUS_END;
-        TBSYS_LOG(INFO, "block: %u remove complete status end", message->get());
-      }
-      return ret;
     }
 
     MoveTask::MoveTask(TaskManager& manager, const common::PlanPriority priority,

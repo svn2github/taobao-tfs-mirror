@@ -112,6 +112,22 @@ namespace tfs
       return ret;
     }
 
+    bool FamilyCollect::exist(int32_t& current_version, const uint32_t block, const int32_t version) const
+    {
+      bool ret = INVALID_BLOCK_ID != block;
+      if (ret)
+      {
+        const int32_t MEMBER_NUM = get_data_member_num() + get_check_member_num();
+        for (int32_t i = 0; i < MEMBER_NUM && !ret; ++i)
+        {
+          ret = members_[i].first == block && version >= members_[i].second;
+          if (ret)
+            current_version = members_[i].second;
+        }
+      }
+      return ret;
+    }
+
     bool FamilyCollect::clear(LayoutManager& manager, const time_t now)
     {
       UNUSED(manager);

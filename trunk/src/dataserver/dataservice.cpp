@@ -936,7 +936,8 @@ namespace tfs
         if (!packet->isRegularPacket())
         {
           bret = false;
-          TBSYS_LOG(WARN, "control packet, pcode: %d", dynamic_cast<tbnet::ControlPacket*>(packet)->getCommand());
+          TBSYS_LOG(WARN, "control packet, pcode: %d, peer ip: %s", dynamic_cast<tbnet::ControlPacket*>(packet)->getCommand(),
+               tbsys::CNetUtil::addrToString(connection->getPeerId()).c_str());
         }
         if (bret)
         {
@@ -957,7 +958,8 @@ namespace tfs
               hret = tbnet::IPacketHandler::KEEP_CHANNEL;
             else
             {
-              bpacket->reply_error_packet(TBSYS_LOG_LEVEL(ERROR),STATUS_MESSAGE_ERROR, "%s, task message beyond max queue size, discard", get_ip_addr());
+              bpacket->reply_error_packet(TBSYS_LOG_LEVEL(ERROR),STATUS_MESSAGE_ERROR, "%s, task message beyond max queue size, discard, peer ip: %s",
+                get_ip_addr(), tbsys::CNetUtil::addrToString(connection->getPeerId()).c_str());
               bpacket->free();
             }
           }

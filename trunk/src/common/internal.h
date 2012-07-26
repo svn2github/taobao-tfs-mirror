@@ -293,7 +293,7 @@ namespace tfs
       PLAN_TYPE_REPLICATE = 0x00,
       PLAN_TYPE_MOVE,
       PLAN_TYPE_COMPACT,
-      PLAN_TYPE_DELETE
+      PLAN_TYPE_MARSHALLING
     };
 
     enum PlanStatus
@@ -318,7 +318,8 @@ namespace tfs
       PLAN_RUN_FLAG_REPLICATE = 1,
       PLAN_RUN_FLAG_MOVE = 1 << 1,
       PLAN_RUN_FLAG_COMPACT = 1 << 2,
-      PLAN_RUN_FLAG_DELETE = 1 << 3
+      PLAN_RUN_FLAG_DELETE = 1 << 3,
+      PLAN_RUN_FALG_MARSHALLING = 1 << 4,
     };
 
     enum CompactStatus

@@ -104,8 +104,13 @@ namespace tfs
         bool need_replicate(const BlockCollect* block, const time_t now) const;
         bool need_replicate(common::ArrayHelper<ServerCollect*>& servers, common::PlanPriority& priority,
              const BlockCollect* block, const time_t now) const;
+        bool need_compact(const BlockCollect* block, const time_t now) const;
         bool need_compact(common::ArrayHelper<ServerCollect*>& servers, const BlockCollect* block, const time_t now) const;
         bool need_balance(common::ArrayHelper<ServerCollect*>& servers, const BlockCollect* block, const time_t now) const;
+        bool need_marshalling(const uint32_t block, const time_t now);
+        bool need_marshalling(const BlockCollect* block, const time_t now);
+        bool need_marshalling(common::ArrayHelper<ServerCollect*>& servers, const BlockCollect* block, const time_t now) const;
+        bool need_reinstate(const BlockCollect* block, const time_t now) const;
 
         int expand_ratio(int32_t& index, const float expand_ratio = 0.1);
 

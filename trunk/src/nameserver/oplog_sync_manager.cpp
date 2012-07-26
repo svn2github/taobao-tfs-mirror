@@ -136,11 +136,19 @@ namespace tfs
             ret = dbhelper_->scan(infos, family_id);
             if (TFS_SUCCESS == ret)
             {
+              std::pair<uint32_t, int32_t> members[MAX_MARSHLLING_NUM];
+              common::ArrayHelper<std::pair<uint32_t, int32_t> > helper(MAX_MARSHLLING_NUM, members);
               std::vector<common::FamilyInfo>::const_iterator iter = infos.begin();
               for (; iter != infos.end(); ++iter)
               {
-                //TODO
+                helper.clear();
                 family_id = (*iter).family_id_;
+                std::vector<std::pair<uint32_t, int32_t> >::const_iterator it = (*iter).family_member_.begin();
+                for (; it != (*iter).family_member_.end(); ++it)
+                {
+                  helper.push_back(std::make_pair((*it).first, (*it).second));
+                }
+                ret = manager_.get_family_manager().insert(family_id, (*iter).family_aid_info_, helper, Func::get_monotonic_time());
               }
             }
           }

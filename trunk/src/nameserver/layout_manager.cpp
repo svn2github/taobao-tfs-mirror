@@ -61,7 +61,8 @@ namespace tfs
       task_manager_(*this),
       oplog_sync_mgr_(*this),
       client_request_server_(*this),
-      gc_manager_(*this)
+      gc_manager_(*this),
+      family_manager_(*this)
     {
       srand(time(NULL));
       tzset();
@@ -645,22 +646,30 @@ namespace tfs
           {
             now = Func::get_monotonic_time();
             bool ret = false;
-            bool range = in_hour_range(current, SYSPARAM_NAMESERVER.compact_time_lower_, SYSPARAM_NAMESERVER.compact_time_upper_);
+            bool compact_time     = in_hour_range(current, SYSPARAM_NAMESERVER.compact_time_lower_, SYSPARAM_NAMESERVER.compact_time_upper_);
+            bool marshalling_time = in_hour_range(current, SYSPARAM_NAMESERVER.marshalling_time_lower_, SYSPARAM_NAMESERVER.marshalling_time_upper_);
             over = get_block_manager().scan(results, start, MAX_QUERY_BLOCK_NUMS);
             for (index = 0; index < results.get_array_index(); ++index)
             {
               pblock = *results.at(index);
               assert(NULL != pblock);
-              if ((ret = get_block_manager().need_replicate(pblock, now)))
-                get_block_manager().push_to_emergency_replicate_queue(pblock);
-              if (!ret && range)
-                ret = build_compact_task_(pblock, now);
-              if (ret)
+              ret = get_block_manager().need_replicate(pblock, now);
+              if ((ret) && (ret = get_block_manager().push_to_emergency_replicate_queue(pblock)))
                 --need;
+              ret = (!ret && compact_time && (plan_run_flag_ & PLAN_RUN_FLAG_COMPACT)
+                    && get_block_manager().need_compact(pblock,now));
+              if ((ret) && (ret = build_compact_task_(pblock, now)))
+                  --need;
+              ret = (!ret && marshalling_time && (plan_run_flag_ & PLAN_RUN_FALG_MARSHALLING)
+                  && get_block_manager().need_marshalling(pblock, now));
+              if ((ret) && (ret = get_family_manager().push_block_to_marshalling_queues(pblock, now)))
+                  --need;
             }
             if (over)
               start = 0;
           }
+
+          build_marshalling_(need, now);
         }
         ++loop;
         usleep(get_block_manager().has_emergency_replicate_in_queue() ? MAX_SLEEP_TIME_US : MIN_SLEEP_TIME_US);
@@ -763,6 +772,8 @@ namespace tfs
 
         get_block_manager().timeout(now);
 
+        get_family_manager().marshalling_queue_timeout(now);
+
         get_block_manager().expand_ratio(block_expand_index);
 
         get_server_manager().expand_ratio(server_expand_index);
@@ -817,11 +828,23 @@ namespace tfs
             ret = get_oplog_sync_mgr().scan_family(infos, family_id);
             if (TFS_SUCCESS == ret)
             {
+              std::pair<uint32_t, int32_t> members[MAX_MARSHLLING_NUM];
+              common::ArrayHelper<std::pair<uint32_t, int32_t> > helper(MAX_MARSHLLING_NUM, members);
               std::vector<common::FamilyInfo>::const_iterator iter = infos.begin();
               for (; iter != infos.end(); ++iter)
               {
-                //TODO
+                helper.clear();
                 family_id = (*iter).family_id_;
+                std::vector<std::pair<uint32_t, int32_t> >::const_iterator it = (*iter).family_member_.begin();
+                for (; it != (*iter).family_member_.end(); ++it)
+                {
+                  helper.push_back(std::make_pair((*it).first, (*it).second));
+                }
+                ret = get_family_manager().insert(family_id, (*iter).family_aid_info_, helper, Func::get_monotonic_time());
+                if (TFS_SUCCESS != ret)
+                {
+                  TBSYS_LOG(WARN, "load family information error,family id: %"PRI64_PREFIX"d, ret: %d", family_id, ret);
+                }
               }
             }
           }
@@ -1431,6 +1454,54 @@ namespace tfs
       return true;
     }
 
+    bool LayoutManager::build_marshalling_(int64_t& need, const time_t now)
+    {
+      UNUSED(now);
+      int32_t ret = need > 0 ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+      if (TFS_SUCCESS == ret)
+      {
+        ServerCollect* servers[MAX_MARSHLLING_NUM];
+        std::pair<uint64_t, uint32_t> members[MAX_MARSHLLING_NUM];
+        common::ArrayHelper<ServerCollect*> helper(MAX_MARSHLLING_NUM, servers);
+        common::ArrayHelper<std::pair<uint64_t, uint32_t> > member_helper(MAX_MARSHLLING_NUM, members);
+        ret = get_family_manager().create_family_choose_data_members(member_helper, SYSPARAM_NAMESERVER.max_data_member_num_);
+        if (TFS_SUCCESS == ret)
+        {
+          ret = SYSPARAM_NAMESERVER.max_data_member_num_ == member_helper.get_array_index() ?
+              TFS_SUCCESS : EXIT_CHOOSE_TARGET_SERVER_INSUFFICIENT_ERROR;
+          if (TFS_SUCCESS == ret)
+          {
+            for (int64_t index = 0; index < member_helper.get_array_index(); ++index)
+            {
+              std::pair<uint64_t, uint32_t> item = *member_helper.at(index);
+              ServerCollect* server = get_server_manager().get(item.first);
+              if (NULL != server)
+                helper.push_back(server);
+            }
+            ret = helper.get_array_index() == member_helper.get_array_index() ? TFS_SUCCESS :
+              EXIT_CHOOSE_TARGET_SERVER_INSUFFICIENT_ERROR;
+          }
+
+          if (TFS_SUCCESS == ret)
+          {
+            int64_t num = member_helper.get_array_index();
+            ret = get_family_manager().create_family_choose_check_members(member_helper, helper, SYSPARAM_NAMESERVER.max_check_member_num_);
+            if (TFS_SUCCESS == ret)
+            {
+              ret = SYSPARAM_NAMESERVER.max_check_member_num_ == (member_helper.get_array_index() - num) ?
+                TFS_SUCCESS : EXIT_CHOOSE_TARGET_SERVER_INSUFFICIENT_ERROR;
+            }
+          }
+
+          if (TFS_SUCCESS == ret)
+          {
+            //TODO add task to task list
+          }
+        }
+      }
+      return TFS_SUCCESS == ret;
+    }
+
     int64_t LayoutManager::has_space_in_task_queue_() const
     {
       return server_manager_.size() - task_manager_.get_running_server_size();
@@ -1568,7 +1639,7 @@ namespace tfs
     {
       try
       {
-        //TODO
+        manager_.load_family_info();
       }
       catch(std::exception& e)
       {
@@ -1579,6 +1650,5 @@ namespace tfs
         TBSYS_LOG(ERROR, "%s", "catch exception, unknow message");
       }
     }
-
   } /** nameserver **/
 }/** tfs **/

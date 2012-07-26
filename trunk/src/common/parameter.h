@@ -59,6 +59,11 @@ namespace tfs
       int32_t cleanup_write_timeout_threshold_;
       int32_t choose_target_server_random_max_nums_;
       int32_t keepalive_queue_size_;
+      int32_t marshalling_delete_ratio_;
+      int32_t marshalling_time_lower_;
+      int32_t marshalling_time_upper_;
+      int32_t max_data_member_num_;
+      int32_t max_check_member_num_;
       double  balance_percent_;
 
       static NameServerParameter ns_parameter_;

@@ -29,6 +29,7 @@
 #include "task_manager.h"
 #include "server_manager.h"
 #include "block_manager.h"
+#include "family_manager.h"
 #include "common/tfs_vector.h"
 
 #ifdef TFS_GTEST
@@ -80,6 +81,8 @@ namespace tfs
 
       inline GCObjectManager& get_gc_manager() { return gc_manager_;}
 
+      inline FamilyManager& get_family_manager() { return family_manager_;}
+
       int update_relation(ServerCollect* server,const std::set<common::BlockInfo>& blocks, const time_t now);
       bool build_relation(BlockCollect* block, ServerCollect* server, const time_t now, const bool set = false);
       bool relieve_relation(BlockCollect* block, ServerCollect* server, const time_t now, const int8_t flag);
@@ -130,6 +133,7 @@ namespace tfs
       bool build_balance_task_(int64_t& need, common::TfsSortedVector<ServerCollect*,ServerIdCompare>& targets,
           const ServerCollect* source, const BlockCollect* block, const time_t now);
       bool build_redundant_(int64_t& need, const time_t now);
+      bool build_marshalling_(int64_t& need, const time_t now);
       int64_t has_space_in_task_queue_() const;
 
       class BuildPlanThreadHelper: public tbutil::Thread
@@ -270,6 +274,7 @@ namespace tfs
       OpLogSyncManager oplog_sync_mgr_;
       ClientRequestServer client_request_server_;
       GCObjectManager gc_manager_;
+      FamilyManager  family_manager_;
     };
   }/** end namespace nameserver **/
 }/** end namespace tfs **/

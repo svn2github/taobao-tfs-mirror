@@ -152,9 +152,10 @@ namespace tfs
         {
           get_mutex_(output.first).rdlock();
           int8_t size = block->get_servers_size();
-          ret = size >= MIN_REPLICATE && !block->exist(server, false);
+          bool in_family = block->is_in_family();
+          ret = in_family ? !block->exist(server, false) : size >= MIN_REPLICATE && !block->exist(server, false);
           get_mutex_(output.first).unlock();
-          if (!ret && size < MIN_REPLICATE && size > 0)
+          if (!ret && size < MIN_REPLICATE && size > 0 && !in_family)
             push_to_delete_queue(output.first, output.second);
         }
       }
@@ -557,7 +558,7 @@ namespace tfs
     bool BlockManager::need_replicate(const BlockCollect* block) const
     {
       RWLock::Lock lock(get_mutex_(block->id()), READ_LOCKER);
-      return (NULL != block) ? (block->get_servers_size() < SYSPARAM_NAMESERVER.max_replication_) : false;
+      return (NULL != block) ? (block->get_servers_size() < SYSPARAM_NAMESERVER.max_replication_ && !block->is_in_family()) : false;
     }
 
     bool BlockManager::need_replicate(const BlockCollect* block, const time_t now) const
@@ -583,9 +584,15 @@ namespace tfs
       return ret;
     }
 
+    bool BlockManager::need_compact(const BlockCollect* block, const time_t now) const
+    {
+      RWLock::Lock lock(get_mutex_(block->id()), READ_LOCKER);
+      return (NULL != block) ? (block->check_compact() && (!has_write_(block->id(), now))) : false;
+    }
+
     bool BlockManager::need_compact(ArrayHelper<ServerCollect*>& servers, const BlockCollect* block, const time_t now) const
     {
-      bool ret = NULL != block;
+      bool ret = (NULL != block);
       if (ret)
       {
         get_mutex_(block->id()).rdlock();
@@ -601,7 +608,7 @@ namespace tfs
 
     bool BlockManager::need_balance(common::ArrayHelper<ServerCollect*>& servers, const BlockCollect* block, const time_t now) const
     {
-      bool ret = NULL != block;
+      bool ret = (NULL != block);
       if (ret)
       {
         get_mutex_(block->id()).rdlock();
@@ -610,6 +617,45 @@ namespace tfs
           block->get_servers(servers);
         get_mutex_(block->id()).unlock();
         ret = ret && !manager_.get_task_manager().exist(block->id());
+      }
+      return ret;
+    }
+
+    bool BlockManager::need_marshalling(const uint32_t block, const time_t now)
+    {
+      RWLock::Lock lock(get_mutex_(block), READ_LOCKER);
+      BlockCollect* pblock = get_(block);
+      return  (NULL != pblock) ? ((pblock->check_marshalling()) && (!has_write_(pblock->id(), now))) : false;
+    }
+
+    bool BlockManager::need_marshalling(const BlockCollect* block, const time_t now)
+    {
+      RWLock::Lock lock(get_mutex_(block->id()), READ_LOCKER);
+      return  (NULL != block) ? ((block->check_marshalling()) && (!has_write_(block->id(), now))) : false;
+    }
+
+    bool BlockManager::need_marshalling(common::ArrayHelper<ServerCollect*>& servers, const BlockCollect* block, const time_t now) const
+    {
+      bool ret = (NULL != block);
+      if (ret)
+      {
+        get_mutex_(block->id()).rdlock();
+        ret = ((block->check_marshalling()) && (!has_write_(block->id(), now)));
+        if (ret)
+          block->get_servers(servers);
+        get_mutex_(block->id()).unlock();
+        ret = ret && !manager_.get_task_manager().exist(block->id());
+      }
+      return ret;
+    }
+
+    bool BlockManager::need_reinstate(const BlockCollect* block, const time_t now) const
+    {
+      bool ret = (NULL != block && block->is_in_family());
+      if (ret)
+      {
+        RWLock::Lock lock(get_mutex_(block->id()), READ_LOCKER);
+        ret = block->check_reinstate(now);
       }
       return ret;
     }

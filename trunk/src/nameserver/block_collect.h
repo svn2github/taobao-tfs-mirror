@@ -53,7 +53,7 @@ namespace tfs
 
       bool add(bool& writable, bool& master, ServerCollect*& invalid_server, const ServerCollect* server);
       bool remove(const ServerCollect* server, const time_t now, const int8_t flag);
-      bool exist(const ServerCollect* const server, const bool pointer /*= true*/) const;
+      bool exist(const ServerCollect* const server, const bool pointer = true) const;
       bool is_master(const ServerCollect* const server) const;
       bool is_writable() const;
       bool is_creating() const;
@@ -65,7 +65,8 @@ namespace tfs
       common::PlanPriority check_replicate(const time_t now) const;
       bool check_compact() const;
       bool check_balance() const;
-      int check_redundant() const;
+      bool check_reinstate(const time_t now) const;
+      bool check_marshalling() const;
       inline int32_t size() const { return info_.size_;}
       void get_servers(common::ArrayHelper<ServerCollect*>& servers) const;
       void get_servers(std::vector<uint64_t>& servers) const;
@@ -83,6 +84,23 @@ namespace tfs
 
       void callback(LayoutManager& manager);
       bool clear(LayoutManager& manager, const time_t now);
+
+      inline int64_t get_family_id() const { return family_id_;};
+      inline void set_family_id(const int64_t family_id) { family_id_ = family_id;}
+
+      inline bool is_in_family() const { return common::INVALID_FAMILY_ID != family_id_;}
+
+      inline int32_t get_delete_file_num_ratio() const
+      {
+        return info_.file_count_ > 0 ? (static_cast<int32_t>(100 * static_cast<float>(info_.del_file_count_)
+              / static_cast<float>(info_.file_count_))) : 0;
+      }
+
+      inline int32_t get_delete_file_size_ratio() const
+      {
+        return info_.size_ > 0 ? (static_cast<int32_t>(100 * static_cast<float>(info_.del_size_)
+                / static_cast<float>(info_.size_))) : 0;
+      }
       static const int8_t BLOCK_CREATE_FLAG_NO;
       static const int8_t BLOCK_CREATE_FLAG_YES;
       static const int8_t VERSION_AGREED_MASK;
@@ -93,9 +111,9 @@ namespace tfs
       private:
       common::BlockInfo info_; //7 * 4 = 28
       ServerCollect** servers_;
+      int64_t family_id_:56;
       int8_t create_flag_:4;
       int8_t in_replicate_queue_:4;
-      int8_t reserve[7];
     };
   }/** end namespace nameserver **/
 }/** end namespace tfs **/

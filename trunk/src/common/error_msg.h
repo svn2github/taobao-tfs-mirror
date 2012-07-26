@@ -116,6 +116,7 @@ namespace tfs
     const int32_t EXIT_BUILD_RELATION_ERROR = -5035;//build relation error
     const int32_t EXIT_NO_FAMILY = -5036;
     const int32_t EXIT_MARSHALLINT_ITEM_QUEUE_EMPTY = -5037;
+    const int32_t EXIT_CHOOSE_TARGET_SERVER_INSUFFICIENT_ERROR = -5038;
 
     const int32_t EXIT_WRITE_OFFSET_ERROR = -8001; // write offset error
     const int32_t EXIT_READ_OFFSET_ERROR = -8002; // read offset error

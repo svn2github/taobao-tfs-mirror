@@ -31,6 +31,7 @@ namespace tfs
     const int8_t BlockCollect::VERSION_AGREED_MASK = 2;
     BlockCollect::BlockCollect(const uint32_t block_id, const time_t now):
       GCObject(now),
+      family_id_(INVALID_FAMILY_ID),
       create_flag_(BLOCK_CREATE_FLAG_NO),
       in_replicate_queue_(BLOCK_IN_REPLICATE_QUEUE_NO)
     {
@@ -325,29 +326,21 @@ namespace tfs
     PlanPriority BlockCollect::check_replicate(const time_t now) const
     {
       PlanPriority priority = PLAN_PRIORITY_NONE;
-      if (BLOCK_CREATE_FLAG_YES != create_flag_)
+      if (BLOCK_CREATE_FLAG_YES != create_flag_ && !is_in_family())
       {
         int32_t size = get_servers_size();
-        //TBSYS_LOG(DEBUG, "replicate block %u, size: %d, time: %ld, now: %ld",
-        //  id(), size, last_update_time_, now);
         if (size <= 0)
         {
           TBSYS_LOG(WARN, "block: %u has been lost, do not replicate", info_.block_id_);
         }
-        else if (size == 1 && SYSPARAM_NAMESERVER.max_replication_ > 1)
+        else
         {
           if (last_update_time_ + SYSPARAM_NAMESERVER.replicate_wait_time_ <= now)
           {
-            TBSYS_LOG(DEBUG, "emergency replicate block: %u", info_.block_id_);
-            priority = PLAN_PRIORITY_EMERGENCY;
-          }
-        }
-        else if (size < SYSPARAM_NAMESERVER.max_replication_)
-        {
-          if (last_update_time_ + SYSPARAM_NAMESERVER.replicate_wait_time_ <= now)
-          {
-            TBSYS_LOG(DEBUG, "replicate block: %u", info_.block_id_);
-            priority = PLAN_PRIORITY_NORMAL;
+            if (size < SYSPARAM_NAMESERVER.max_replication_)
+              priority = PLAN_PRIORITY_NORMAL;
+            if (1 == size && SYSPARAM_NAMESERVER.max_replication_ > 1)
+              priority = PLAN_PRIORITY_EMERGENCY;
           }
         }
       }
@@ -361,7 +354,7 @@ namespace tfs
     bool BlockCollect::check_compact() const
     {
       bool bret = false;
-      if (BLOCK_CREATE_FLAG_YES != create_flag_)
+      if (BLOCK_CREATE_FLAG_YES != create_flag_ && !is_in_family())
       {
         int32_t size = get_servers_size();
         if ((size == SYSPARAM_NAMESERVER.max_replication_) && is_full())
@@ -371,10 +364,8 @@ namespace tfs
               && (info_.del_file_count_ > 0)
               && (info_.del_size_ > 0))
           {
-            int32_t delete_file_num_ratio =
-              static_cast<int32_t>(100 * static_cast<float>(info_.del_file_count_) / static_cast<float>(info_.file_count_));
-            int32_t delete_size_ratio =
-              static_cast<int32_t>(100 * static_cast<float>(info_.del_size_) / static_cast<float>(info_.size_));
+            int32_t delete_file_num_ratio = get_delete_file_num_ratio();
+            int32_t delete_size_ratio = get_delete_file_size_ratio();
             if ((delete_file_num_ratio >  SYSPARAM_NAMESERVER.compact_delete_ratio_)
                 || (delete_size_ratio > SYSPARAM_NAMESERVER.compact_delete_ratio_))
             {
@@ -390,6 +381,33 @@ namespace tfs
     bool BlockCollect::check_balance() const
     {
       return get_servers_size() >= SYSPARAM_NAMESERVER.max_replication_;
+    }
+
+    bool BlockCollect::check_marshalling() const
+    {
+      bool ret = (BLOCK_CREATE_FLAG_YES != create_flag_ && !is_in_family());
+      if (ret)
+      {
+        ret = (get_servers_size() >= SYSPARAM_NAMESERVER.max_replication_  && is_full());
+        if (ret)
+        {
+          int32_t delete_file_num_ratio = get_delete_file_num_ratio();
+          int32_t delete_size_ratio = get_delete_file_size_ratio();
+          ret = (delete_file_num_ratio <= SYSPARAM_NAMESERVER.marshalling_delete_ratio_
+                && delete_size_ratio <= SYSPARAM_NAMESERVER.marshalling_delete_ratio_);
+        }
+      }
+      return ret;
+    }
+
+    bool BlockCollect::check_reinstate(const time_t now) const
+    {
+      bool ret = (BLOCK_CREATE_FLAG_YES != create_flag_ && is_in_family());
+      if (ret)
+      {
+        ret = ((get_servers_size() <= 0) && (last_update_time_ + SYSPARAM_NAMESERVER.replicate_wait_time_ <= now));
+      }
+      return ret;
     }
 
     int BlockCollect::scan(SSMScanParameter& param) const
@@ -434,8 +452,8 @@ namespace tfs
           }
         }
         TBSYS_LOGGER.logMessage(level, file, line, function,
-            "block_id: %u, version: %d, file_count: %d, size: %d, del_file_count: %d, del_size: %d, seq_no: %d, servers: %s",
-            info_.block_id_, info_.version_, info_.file_count_,
+            "family id: %"PRI64_PREFIX"d,block_id: %u, version: %d, file_count: %d, size: %d, del_file_count: %d, del_size: %d, seq_no: %d, servers: %s",
+            family_id_, info_.block_id_, info_.version_, info_.file_count_,
             info_.size_, info_.del_file_count_, info_.del_size_,
             info_.seq_no_, str.c_str());
       }

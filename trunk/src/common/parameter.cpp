@@ -182,6 +182,14 @@ namespace tfs
       choose_target_server_random_max_nums_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER,CONF_CHOOSE_TARGET_SERVER_RANDOM_MAX_NUM, 32);
 
       keepalive_queue_size_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_HEART_MAX_QUEUE_SIZE, 1024);
+
+      marshalling_delete_ratio_  = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_MARSHALLING_DELETE_RATIO, 5);
+
+      const char* marshalling_time_str = TBSYS_CONFIG.getString(CONF_SN_NAMESERVER, CONF_MARSHALLING_HOUR_RANGE, "6~9");
+      set_hour_range(marshalling_time_str, marshalling_time_lower_, marshalling_time_upper_);
+
+      max_data_member_num_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_MAX_DATA_MEMBER_NUM, 5);
+      max_check_member_num_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_MAX_CHECK_MEMBER_NUM, 2);
       return TFS_SUCCESS;
     }
 

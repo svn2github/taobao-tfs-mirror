@@ -148,18 +148,6 @@ namespace tfs
         DISALLOW_COPY_AND_ASSIGN(ReplicateTask);
     };
 
-    class DeleteTask : public Task
-    {
-      public:
-        DeleteTask(TaskManager& manager, const common::PlanPriority priority,
-          const uint32_t block_id, const std::vector<ServerCollect*>& runer);
-        virtual ~DeleteTask(){}
-        virtual int handle();
-        virtual int handle_complete(common::BasePacket* msg, bool& all_complete_flag);
-      private:
-        DISALLOW_COPY_AND_ASSIGN(DeleteTask);
-    };
-
     class MoveTask : public ReplicateTask
     {
       public:

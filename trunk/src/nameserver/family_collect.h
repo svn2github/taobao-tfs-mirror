@@ -51,8 +51,10 @@ namespace tfs
       int add(const common::ArrayHelper<std::pair<uint32_t, int32_t> >& member);
       int update(const uint32_t block, const int32_t version);
       bool exist(const uint32_t block) const;
+      bool exist(int32_t& current_version, const uint32_t block, const int32_t version) const;
       bool clear(LayoutManager& manager, const time_t now);
       void get_members(common::ArrayHelper<std::pair<uint32_t, int32_t> >& members) const;
+      int get_member_info(int32_t& version, const uint32_t block) const;
       int scan(common::SSMScanParameter& param) const;
       void dump(int32_t level, const char* file = __FILE__,
           const int32_t line = __LINE__, const char* function = __FUNCTION__) const;

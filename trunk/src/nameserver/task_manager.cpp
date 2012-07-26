@@ -601,10 +601,6 @@ namespace tfs
       {
         result = new (std::nothrow)CompactTask(*this, priority, id, runer);
       }
-      else if (type == PLAN_TYPE_DELETE)
-      {
-        result = new (std::nothrow)DeleteTask(*this, priority, id, runer);
-      }
       assert(NULL != result);
       return result;
     }
