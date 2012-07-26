@@ -52,6 +52,9 @@ namespace tfs
           return common::TFS_SUCCESS;
         }
 
+        // load parity block
+        int pload_block_file();
+
         int load_block_file(const int32_t bucket_size, const common::MMapOption mmap_option);
         int init_block_file(const int32_t bucket_size, const common::MMapOption mmap_option, const BlockType block_type);
         int delete_block_file();

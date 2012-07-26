@@ -40,6 +40,7 @@ namespace tfs
     static const int32_t BLOCK_VERSION_MAGIC_NUM = 2;
     static const int32_t FS_SPEEDUP_VERSION = 2;
     static const int32_t EC_DATA_MAX = 14; // 10 data + 4 parity
+    static const int32_t PARITY_INDEX_START = 1024; // index start positioin
 
     // fileinfo flag
     enum FileinfoFlag
@@ -54,7 +55,8 @@ namespace tfs
       C_DATA_CLEAN = 0,
       C_DATA_DIRTY,
       C_DATA_COMPACT,
-      C_DATA_HALF
+      C_DATA_HALF,
+      C_DATA_PARITY
     };
 
     enum BlockType
@@ -63,7 +65,8 @@ namespace tfs
       C_EXT_BLOCK,
       C_COMPACT_BLOCK,
       C_CONFUSE_BLOCK,
-      C_HALF_BLOCK
+      C_REPL_BLOCK,
+      C_PARITY_BLOCK
     };
 
     enum BitMapType
@@ -86,7 +89,15 @@ namespace tfs
       uint32_t logic_blockid_;
       uint32_t prev_physic_blockid_;
       uint32_t next_physic_blockid_;
+      uint32_t flag_;  // just padding 32bit now
+      uint64_t group_id_;
+
+      BlockPrefix()
+      {
+        memset(this, 0, sizeof(BlockPrefix));
+      }
     };
+
     struct MetaInfo
     {
       public:

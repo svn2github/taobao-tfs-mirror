@@ -47,6 +47,184 @@ namespace tfs
       }
     }
 
+    int IndexHandle::pcreate(const uint32_t logic_block_id, const DirtyFlag dirty_flag)
+    {
+      int ret = TFS_SUCCESS;
+      int file_size = file_op_->get_file_size();
+
+      if (is_load_)
+      {
+        ret = EXIT_INDEX_ALREADY_LOADED_ERROR;
+      }
+      else if(file_size < 0)
+      {
+        ret = TFS_ERROR;
+      }
+      else if (file_size > 0)
+      {
+        ret = EXIT_INDEX_UNEXPECT_EXIST_ERROR;
+      }
+      else
+      {
+        ParityIndexHeader i_header;
+        i_header.block_info_.block_id_ = logic_block_id;
+        i_header.magic_ = 0;
+        i_header.flag_ = dirty_flag;
+        i_header.index_num_ = 0;
+
+        // store index header
+        ret = file_op_->pwrite_file((char*)&i_header, sizeof(ParityIndexHeader), 0);
+        if (TFS_SUCCESS != ret)
+        {
+          TBSYS_LOG(ERROR, "write index header fail, ret: %d\n", ret);
+        }
+        else
+        {
+          ret = file_op_->flush_file();
+        }
+      }
+
+      // mmap header, for compatibility
+      if (TFS_SUCCESS == ret)
+      {
+        MMapOption opt;
+        opt.first_mmap_size_ = PARITY_INDEX_START;
+        opt.max_mmap_size_ = PARITY_INDEX_START;
+        opt.per_mmap_size_ = PARITY_INDEX_START;
+        ret = file_op_->mmap_file(opt);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        is_load_ = true;
+        TBSYS_LOG(INFO, "create parity index succeed. block id: %u, dirty flag: %d",
+          logic_block_id, dirty_flag);
+      }
+      else
+      {
+        TBSYS_LOG(ERROR, "create parity index fail. blockid: %u, ret: %d",
+            logic_block_id, ret);
+      }
+
+      return ret;
+    }
+
+    int IndexHandle::pload(const uint32_t logic_block_id)
+    {
+      int ret = TFS_SUCCESS;
+      int file_size = file_op_->get_file_size();
+
+      if (is_load_)
+      {
+        ret = EXIT_INDEX_ALREADY_LOADED_ERROR;
+      }
+      else if (file_size < 0)
+      {
+        ret = TFS_ERROR;
+      }
+      else if (file_size < (int)sizeof(ParityIndexHeader))
+      {
+        ret = EXIT_INDEX_CORRUPT_ERROR;
+      }
+      else
+      {
+        MMapOption opt;
+        opt.first_mmap_size_ = PARITY_INDEX_START;
+        opt.max_mmap_size_ = PARITY_INDEX_START;
+        opt.per_mmap_size_ = PARITY_INDEX_START;
+        ret = file_op_->mmap_file(opt);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        if (0 == block_info()->block_id_)
+        {
+          ret = EXIT_INDEX_CORRUPT_ERROR;
+          TBSYS_LOG(ERROR, "Index corrupt error. blockid: %u", block_info()->block_id_);
+        }
+        else if (logic_block_id != block_info()->block_id_)
+        {
+          ret = EXIT_BLOCKID_CONFLICT_ERROR;
+          TBSYS_LOG(ERROR, "block id conflict. blockid: %u, index blockid: %u",
+              logic_block_id, block_info()->block_id_);
+        }
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        if (C_DATA_COMPACT == index_header()->flag_)
+        {
+          ret = EXIT_COMPACT_BLOCK_ERROR;
+          TBSYS_LOG(ERROR, "It is a unfinish compact block. blockid: %u", logic_block_id);
+        }
+        else if (C_DATA_HALF == index_header()->flag_)
+        {
+          ret = EXIT_HALF_BLOCK_ERROR;
+          TBSYS_LOG(ERROR, "It is a half state block. blockid: %u", logic_block_id);
+        }
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        is_load_ = true;
+        TBSYS_LOG(INFO, "load parity blockid: %u index succeed. dirty flag: %d, index nums: %d",
+            logic_block_id, pindex_header()->flag_, pindex_header()->index_num_);
+      }
+      else
+      {
+        TBSYS_LOG(ERROR, "load parity blockid: %u index fail, ret: %d", logic_block_id, ret);
+      }
+
+      return ret;
+    }
+
+    int IndexHandle::pappend_index(const uint32_t block_id, const char* data, const int32_t size)
+    {
+      int ret = TFS_SUCCESS;
+
+      if (NULL == data)
+      {
+        ret = EXIT_POINTER_NULL;
+      }
+      else if (0 == block_id)
+      {
+        ret = EXIT_INDEX_CORRUPT_ERROR;
+      }
+      else
+      {
+        Position* cur_pos = pindex_position(pindex_header()->index_num_);
+        if (0 == pindex_header()->index_num_)
+        {
+          cur_pos->block_id_ = block_id;
+          cur_pos->offset_ = PARITY_INDEX_START;
+          cur_pos->size_ = size;
+        }
+        else
+        {
+          Position* last_pos = cur_pos - 1;
+          cur_pos->block_id_ = block_id;
+          cur_pos->offset_ = last_pos->offset_ + last_pos->size_;
+          cur_pos->size_ = size;
+        }
+
+        ret = file_op_->pwrite_file(data, cur_pos->size_, cur_pos->offset_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        pindex_header()->index_num_++;
+        TBSYS_LOG(INFO, "append block %u index succeed, size: %d, index_num: %d",
+            block_id, size, pindex_header()->index_num_);
+      }
+      else
+      {
+        TBSYS_LOG(ERROR, "append block %u index failed, size: %d, ret: %d", block_id, size, ret);
+      }
+
+      return ret;
+
+    }
+
     // create index file. inner format:
     // ------------------------------------------------------------------------------------------
     // | index header|   hash bucket: each slot hold     |           file meta info             |
@@ -188,7 +366,8 @@ namespace tfs
         //unfinish compact block
         TBSYS_LOG(ERROR, "It is a unfinish compact block. blockid: %u", logic_block_id);
         return EXIT_COMPACT_BLOCK_ERROR;
-      } else if (C_DATA_HALF == index_header()->flag_)
+      }
+      else if (C_DATA_HALF == index_header()->flag_)
       {
         // unfinish repl block, coding block
         TBSYS_LOG(ERROR, "It is a half state block. blockid: %u", logic_block_id);

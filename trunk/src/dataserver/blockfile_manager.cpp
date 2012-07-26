@@ -172,7 +172,7 @@ namespace tfs
       {
         selected_logic_blocks = &compact_logic_blocks_;
       }
-      else //main block, half block
+      else //main block, half block, parity block
       {
         selected_logic_blocks = &logic_blocks_;
       }
@@ -864,6 +864,8 @@ namespace tfs
 
           BlockPrefix block_prefix;
           t_physical_block->get_block_prefix(block_prefix);
+          uint64_t group_id = block_prefix.group_id_;
+
           // not inited, error
           if (0 == block_prefix.logic_blockid_)
           {
@@ -1017,7 +1019,15 @@ namespace tfs
           }
 
           // 9. load logic block
-          ret = t_logic_block->load_block_file(super_block_.hash_slot_size_, super_block_.mmap_option_);
+          if (0 == group_id)
+          {
+            ret = t_logic_block->load_block_file(super_block_.hash_slot_size_, super_block_.mmap_option_);
+          }
+          else
+          {
+            ret = t_logic_block->pload_block_file();
+          }
+
           if (TFS_SUCCESS != ret)
           {
             // can not make sure the type of this block, so add to confuse type

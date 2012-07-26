@@ -45,6 +45,34 @@ namespace tfs
         DISALLOW_COPY_AND_ASSIGN(IndexHeader);
     };
 
+    // position in a file
+    struct Position
+    {
+      uint32_t block_id_;
+      int32_t size_;
+      int64_t offset_;
+
+      Position(): block_id_(0), size_(0), offset_(0)
+      {
+      }
+
+      Position(const uint32_t block_id, const int32_t size, const int64_t offset)
+      {
+        block_id_ = block_id;
+        size_ = size;
+        offset_ = offset;
+      }
+    };
+
+    // parity index header
+    struct ParityIndexHeader
+    {
+      common::BlockInfo block_info_;
+      int magic_;
+      DirtyFlag flag_;
+      int index_num_;
+    };
+
     class IndexHandle
     {
       public:
@@ -57,6 +85,11 @@ namespace tfs
           is_load_ = false;
         }
         ~IndexHandle();
+
+        //  parity index related ops
+        int pcreate(const uint32_t logic_block_id, const DirtyFlag dirty_flag);
+        int pload(const uint32_t logic_block_id);
+        int pappend_index(const uint32_t block_id, const char* data, const int32_t size);
 
         // create blockfile ,write index header and buckets info into the file
         int create(const uint32_t logic_block_id, const int32_t cfg_bucket_size, const common::MMapOption map_option,
@@ -127,6 +160,54 @@ namespace tfs
             header = reinterpret_cast<IndexHeader*>(data);
           }
           return header;
+        }
+
+        ParityIndexHeader* pindex_header()
+        {
+          ParityIndexHeader* header = NULL;
+          void* data = file_op_->get_map_data();
+          if (NULL != data)
+          {
+            header = reinterpret_cast<ParityIndexHeader*>(data);
+          }
+          return header;
+        }
+
+        Position* pindex_position(const int32_t index)
+        {
+          Position* pos = NULL;
+          ParityIndexHeader* header = pindex_header();
+          if (NULL != header)
+          {
+            pos = reinterpret_cast<Position*>((char*)header +
+                sizeof(ParityIndexHeader) + index * sizeof(Position));
+          }
+          return pos;
+        }
+
+        Position* pindex_position_byid(const uint32_t block_id)
+        {
+          Position* pos = pindex_position(0);
+          if (NULL != pos)
+          {
+            int i = 0;
+            int nums = pindex_header()->index_num_;
+            for (i = 0; i < nums; i++)
+            {
+              if (pos->block_id_ == block_id)
+              {
+                break;
+              }
+              pos++;
+            }
+
+            // not found
+            if (i == nums)
+            {
+              pos = NULL;
+            }
+          }
+          return pos;
         }
 
         int32_t* bucket_slot()

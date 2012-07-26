@@ -57,22 +57,36 @@ namespace tfs
 
     int LogicBlock::init_block_file(const int32_t bucket_size, const MMapOption mmap_option, const BlockType block_type)
     {
+      int ret = TFS_SUCCESS;
+
       if (0 == logic_block_id_)
       {
-        return EXIT_BLOCKID_ZERO_ERROR;
+        ret = EXIT_BLOCKID_ZERO_ERROR;
+      }
+      else
+      {
+        DirtyFlag dirty_flag = C_DATA_CLEAN;
+        if (C_COMPACT_BLOCK == block_type)
+        {
+          dirty_flag = C_DATA_COMPACT;
+        }
+        else if (C_REPL_BLOCK == block_type || C_PARITY_BLOCK == block_type)
+        {
+          dirty_flag = C_DATA_HALF;
+        }
+
+        // create index
+        if (block_type == C_PARITY_BLOCK)
+        {
+          ret = index_handle_->pcreate(logic_block_id_, dirty_flag);
+        }
+        else
+        {
+          ret = index_handle_->create(logic_block_id_, bucket_size, mmap_option, dirty_flag);
+        }
       }
 
-      DirtyFlag dirty_flag = C_DATA_CLEAN;
-      if (C_COMPACT_BLOCK == block_type)
-      {
-        dirty_flag = C_DATA_COMPACT;
-      } else if (C_HALF_BLOCK == block_type)
-      {
-        dirty_flag = C_DATA_HALF;
-      }
-
-      // create index handle
-      return index_handle_->create(logic_block_id_, bucket_size, mmap_option, dirty_flag);
+     return ret;
     }
 
     int LogicBlock::load_block_file(const int32_t bucket_size, const MMapOption mmap_option)
@@ -84,6 +98,17 @@ namespace tfs
 
       // startup, mmap index file
       return index_handle_->load(logic_block_id_, bucket_size, mmap_option);
+    }
+
+    int LogicBlock::pload_block_file()
+    {
+      if (0 == logic_block_id_)
+      {
+        return EXIT_BLOCKID_ZERO_ERROR;
+      }
+
+      // startup, mmap index file
+      return index_handle_->pload(logic_block_id_);
     }
 
     int LogicBlock::delete_block_file()
