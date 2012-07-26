@@ -31,6 +31,9 @@ public class metaTfsBaseCase extends BaseCase
     public static long appId;
     public static long userId=8;
     
+    //功能相关测试参量
+    public static int MAX_STAT_TIME = 10;
+    
 	//MySql 配置
 	protected static String server = "10.232.36.208:3306";
 	protected static String db = "tfs_stat_diqing";

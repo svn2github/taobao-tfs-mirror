@@ -1,4 +1,4 @@
-package com.taobao.common.tfs.Ds_Cache_Test;
+package com.taobao.common.tfs.testcase.function.ds;
 
 import java.io.FileOutputStream;
 import java.io.OutputStream;
@@ -8,13 +8,10 @@ import java.util.List;
 import org.junit.Assert;
 import org.junit.Test;
 
+import com.taobao.common.tfs.testcase.rcTfsBaseCase;
+import com.taobao.common.tfs.utility.FileUtility;
 
-import com.taobao.common.tfs.DefaultTfsManager;
-import com.taobao.common.tfs.ERcBaseCase;
-import com.taobao.common.tfs.RcBaseCase;
-
-
-public class Function_Cache_Test extends ERcBaseCase
+public class Function_Cache_Test extends rcTfsBaseCase
 {
 
     public String localFile = "100k.jpg";
@@ -28,26 +25,26 @@ public class Function_Cache_Test extends ERcBaseCase
     
     public List<Long> dsList = new ArrayList<Long>();
     
-    public void init ()
-    {
-    	System.out.println("start tfsManager init");
-    	tfsManager = new DefaultTfsManager();
-        tfsManager.setRcAddr(rcAddr);
-        tfsManager.setAppKey(appKey);
-        tfsManager.setAppIp(appIp);
-        Assert.assertTrue(tfsManager.init());
-    }
+//    public void init ()
+//    {
+//    	System.out.println("start tfsManager init");
+//    	tfsManager = new DefaultTfsManager();
+////        tfsManager.setRcAddr(rcAddr);
+////        tfsManager.setAppKey(appKey);
+////        tfsManager.setAppIp(appIp);
+//        Assert.assertTrue(tfsManager.init());
+//    }
     
     @Test
     public void Function_01_localcache_samll_file() throws Exception 
     {
         boolean bRet = false;
         OutputStream output = new FileOutputStream("tmp");
-        byte [] data = getByte(localFile);
+        byte [] data = FileUtility.getByte(localFile);
 
         caseName = "Function_01_localcache_samll_file";
         log.info(caseName + "===> start");
-        init();
+       
         
         tfsManager.setRemoteCacheInfo(tairMasterAddr, tairSlaveAddr, tairGroupName, 1);
         
@@ -64,7 +61,7 @@ public class Function_Cache_Test extends ERcBaseCase
         bRet = tfsManager.fetchFile(sRet, null, output);
         Assert.assertTrue(bRet);
         
-        Assert.assertEquals(getCrc(localFile), getCrc("tmp"));
+        Assert.assertEquals(FileUtility.getCrc(localFile), FileUtility.getCrc("tmp"));
         
         output = null;
         output = new FileOutputStream("tmp");
@@ -72,7 +69,7 @@ public class Function_Cache_Test extends ERcBaseCase
         bRet = tfsManager.fetchFile(sRet, null, output);
         Assert.assertTrue(bRet);
         
-        Assert.assertEquals(getCrc(localFile), getCrc("tmp"));
+        Assert.assertEquals(FileUtility.getCrc(localFile), FileUtility.getCrc("tmp"));
         /* Unlink file */
         bRet = tfsManager.unlinkFile(sRet, null);
         Assert.assertTrue(bRet);

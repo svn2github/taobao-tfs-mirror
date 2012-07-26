@@ -67,8 +67,7 @@ public class MySQLConnector
 		catch (IllegalAccessException e) 
 		{
 			e.printStackTrace();
-		}
-		
+		}	
 		return connection;
 	}
 }

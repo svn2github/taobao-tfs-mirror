@@ -25,10 +25,10 @@ public class rcTfsBaseCase extends BaseCase
 	
 
 	//MySql ≈‰÷√
-	protected static String server = "10.232.36.208:3306";
-	protected static String db = "tfs_stat_diqing";
-	protected static String user = "foorbar";
-	protected static String pwd = "foorbar";
+	protected static String server = "10.232.36.205:3306";
+	protected static String db = "tfs_stat";
+	protected static String user = "root";
+	protected static String pwd = "root";
 	protected static Connection tfsSqlCon;
 	
 	

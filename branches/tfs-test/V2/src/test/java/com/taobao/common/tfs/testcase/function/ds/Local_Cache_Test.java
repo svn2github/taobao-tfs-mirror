@@ -1,4 +1,4 @@
-package com.taobao.common.tfs.Ds_Cache_Test;
+package com.taobao.common.tfs.testcase.function.ds;
 
 import static org.junit.Assert.assertTrue;
 
@@ -15,15 +15,14 @@ import org.junit.Before;
 import org.junit.Test;
 
 
-import com.taobao.common.tfs.DefaultTfsManager;
-import com.taobao.common.tfs.ERcBaseCase;
-import com.taobao.common.tfs.RcBaseCase;
 import com.taobao.common.tfs.impl.FSName;
 import com.taobao.common.tfs.impl.LocalKey;
 import com.taobao.common.tfs.impl.SegmentInfo;
+import com.taobao.common.tfs.utility.FileUtility;
+import com.taobao.common.tfs.testcase.rcTfsBaseCase;
 
 
-public class Local_Cache_Test extends ERcBaseCase
+public class Local_Cache_Test extends rcTfsBaseCase
 {
 
     public String localFile = "100k.jpg";
@@ -44,31 +43,17 @@ public class Local_Cache_Test extends ERcBaseCase
         dsList.clear();
     }
     
-    public void init ()
-    {
-    	System.out.println("start tfsManager init");
-    	tfsManager = new DefaultTfsManager();
-        tfsManager.setRcAddr(rcAddr);
-        tfsManager.setAppKey(appKey);
-        tfsManager.setAppIp(appIp);
-        Assert.assertTrue(tfsManager.init());
-    }
+
     @Test
     public void Function_01_localcache_samll_file() throws Exception 
     {
         boolean bRet = false;
         OutputStream output = new FileOutputStream("tmp");
-        byte [] data = getByte(localFile);
+        byte [] data = FileUtility.getByte(localFile);
 
         caseName = "Function_01_localcache_samll_file";
         log.info(caseName + "===> start");
         
-        System.out.println("start tfsManager init");
-    	tfsManager = new DefaultTfsManager();
-        tfsManager.setRcAddr(rcAddr);
-        tfsManager.setAppKey(appKey);
-        tfsManager.setAppIp(appIp);
-        Assert.assertTrue(tfsManager.init());
         
         String sRet;
         /* set local cache */
@@ -84,7 +69,7 @@ public class Local_Cache_Test extends ERcBaseCase
         bRet = tfsManager.fetchFile(sRet, null, output);
         Assert.assertTrue(bRet);
         
-        Assert.assertEquals(getCrc(localFile), getCrc("tmp"));
+        Assert.assertEquals(FileUtility.getCrc(localFile), FileUtility.getCrc("tmp"));
         
         output = null;
         output = new FileOutputStream("tmp");
@@ -93,7 +78,7 @@ public class Local_Cache_Test extends ERcBaseCase
         bRet = tfsManager.fetchFile(sRet, null, output);
         Assert.assertTrue(bRet);
         
-        Assert.assertEquals(getCrc(localFile), getCrc("tmp"));
+        Assert.assertEquals(FileUtility.getCrc(localFile), FileUtility.getCrc("tmp"));
         /* Unlink file */
         bRet = tfsManager.unlinkFile(sRet, null);
         Assert.assertTrue(bRet);
@@ -113,11 +98,7 @@ public class Local_Cache_Test extends ERcBaseCase
 		log.info(caseName + "===> start");
 
 		System.out.println("start tfsManager init");
-    	tfsManager = new DefaultTfsManager();
-        tfsManager.setRcAddr(rcAddr);
-        tfsManager.setAppKey(appKey);
-        tfsManager.setAppIp(appIp);
-        Assert.assertTrue(tfsManager.init());
+
         
 	    tfsManager.setEnableLocalCache(true);
         tfsManager.setEnableRemoteCache(false);
@@ -127,7 +108,7 @@ public class Local_Cache_Test extends ERcBaseCase
 		
 		bRet=tfsManager.fetchFile(sFileName, null, "temp");
 		assertTrue(bRet);
-		Assert.assertEquals(getCrc(localFileL), getCrc("temp"));
+		Assert.assertEquals(FileUtility.getCrc(localFileL), FileUtility.getCrc("temp"));
 		
 		sFileName = "T" + sFileName.substring(1);
 		bRet = tfsManager.fetchFile(sFileName, null, output);
@@ -170,11 +151,7 @@ public class Local_Cache_Test extends ERcBaseCase
 		log.info(caseName + "===> start");
 
 		System.out.println("start tfsManager init");
-    	tfsManager = new DefaultTfsManager();
-        tfsManager.setRcAddr(rcAddr);
-        tfsManager.setAppKey(appKey);
-        tfsManager.setAppIp(appIp);
-        Assert.assertTrue(tfsManager.init());
+
         
 	    tfsManager.setEnableLocalCache(true);
         tfsManager.setEnableRemoteCache(false);
@@ -186,7 +163,7 @@ public class Local_Cache_Test extends ERcBaseCase
 		bRet=tfsManager.fetchFile(sFileName, null, "temp");
 		System.out.println("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@");
 		assertTrue(bRet);
-		Assert.assertEquals(getCrc(localFileL), getCrc("temp"));
+		Assert.assertEquals(FileUtility.getCrc(localFileL), FileUtility.getCrc("temp"));
 		String Tname = sFileName;
 		
 		sFileName = "T" + sFileName.substring(1);
@@ -234,7 +211,7 @@ public class Local_Cache_Test extends ERcBaseCase
 		caseName = "Function_04_localcache_large_file_clean_Block";
 		log.info(caseName + "===> start");
 
-	    init();
+
         
 	    tfsManager.setEnableLocalCache(true);
         tfsManager.setEnableRemoteCache(false);
@@ -267,7 +244,7 @@ public class Local_Cache_Test extends ERcBaseCase
 		System.out.println("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@");
 		bRet=tfsManager.fetchFile(Tname, null, "temp");
 		assertTrue(bRet);
-		Assert.assertEquals(getCrc(localFileL), getCrc("temp"));
+		Assert.assertEquals(FileUtility.getCrc(localFileL), FileUtility.getCrc("temp"));
 		
 		count = 0;
 		System.out.println("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@");
@@ -292,11 +269,11 @@ public class Local_Cache_Test extends ERcBaseCase
     {
         boolean bRet = false;
         OutputStream output = new FileOutputStream("tmp");
-        byte [] data = getByte(localFile);
+        byte [] data = FileUtility.getByte(localFile);
 
         caseName = "Function_05_localcache_samll_file";
         log.info(caseName + "===> start");
-        init();
+
         
         String sRet;
         /* set local cache */
@@ -311,7 +288,7 @@ public class Local_Cache_Test extends ERcBaseCase
         bRet = tfsManager.fetchFile(sRet, null, output);
         Assert.assertTrue(bRet);
         
-        Assert.assertEquals(getCrc(localFile), getCrc("tmp"));
+        Assert.assertEquals(FileUtility.getCrc(localFile), FileUtility.getCrc("tmp"));
         
         tfsManager.removeLocalBlockCache(sRet);
         output = null;
@@ -320,7 +297,7 @@ public class Local_Cache_Test extends ERcBaseCase
         bRet = tfsManager.fetchFile(sRet, null, output);
         Assert.assertTrue(bRet);
         
-        Assert.assertEquals(getCrc(localFile), getCrc("tmp"));
+        Assert.assertEquals(FileUtility.getCrc(localFile), FileUtility.getCrc("tmp"));
         /* Unlink file */
         bRet = tfsManager.unlinkFile(sRet, null);
         Assert.assertTrue(bRet);
@@ -339,7 +316,7 @@ public class Local_Cache_Test extends ERcBaseCase
 		caseName = "Function_06_localcache_large_file_inval_localcache";
 		log.info(caseName + "===> start");
 
-	    init();
+
         
 	    tfsManager.setEnableLocalCache(true);
         tfsManager.setEnableRemoteCache(false);
@@ -349,7 +326,7 @@ public class Local_Cache_Test extends ERcBaseCase
 		tfsManager.removeLocalBlockCache(sFileName);
 		bRet=tfsManager.fetchFile(sFileName, null, "temp");
 		assertTrue(bRet);
-		Assert.assertEquals(getCrc(localFileL), getCrc("temp"));
+		Assert.assertEquals(FileUtility.getCrc(localFileL), FileUtility.getCrc("temp"));
 		String Tname = sFileName;
 		
 		sFileName = "T" + sFileName.substring(1);
@@ -397,7 +374,7 @@ public class Local_Cache_Test extends ERcBaseCase
 		caseName = "Function_07_localcache_large_file_clean_Block";
 		log.info(caseName + "===> start");
 
-	    init();
+
         
 	    tfsManager.setEnableLocalCache(true);
         tfsManager.setEnableRemoteCache(false);
@@ -420,7 +397,7 @@ public class Local_Cache_Test extends ERcBaseCase
 		tfsManager.removeLocalBlockCache(fileName);
 		bRet=tfsManager.fetchFile(Tname, null, "temp");
 		assertTrue(bRet);
-		Assert.assertEquals(getCrc(localFileL), getCrc("temp"));
+		Assert.assertEquals(FileUtility.getCrc(localFileL), FileUtility.getCrc("temp"));
 		
 		int count = 0;
 		for(SegmentInfo segInfo:segmengInfoSet)
@@ -444,11 +421,11 @@ public class Local_Cache_Test extends ERcBaseCase
     {
         boolean bRet = false;
         OutputStream output = new FileOutputStream("tmp");
-        byte [] data = getByte(localFile);
+        byte [] data = FileUtility.getByte(localFile);
 
         caseName = "Function_08_localcache_samll_file_inval_localcache";
         log.info(caseName + "===> start");
-        init();
+
         
         String sRet;
         /* set local cache */
@@ -463,7 +440,7 @@ public class Local_Cache_Test extends ERcBaseCase
         bRet = tfsManager.fetchFile(sRet, null, output);
         Assert.assertTrue(bRet);
         
-        Assert.assertEquals(getCrc(localFile), getCrc("tmp"));
+        Assert.assertEquals(FileUtility.getCrc(localFile), FileUtility.getCrc("tmp"));
         
         tfsManager.insertLocalBlockCache(sRet, dsList);
         output = null;
@@ -472,7 +449,7 @@ public class Local_Cache_Test extends ERcBaseCase
         bRet = tfsManager.fetchFile(sRet, null, output);
         Assert.assertTrue(bRet);
         
-        Assert.assertEquals(getCrc(localFile), getCrc("tmp"));
+        Assert.assertEquals(FileUtility.getCrc(localFile), FileUtility.getCrc("tmp"));
         /* Unlink file */
         bRet = tfsManager.unlinkFile(sRet, null);
         Assert.assertTrue(bRet);

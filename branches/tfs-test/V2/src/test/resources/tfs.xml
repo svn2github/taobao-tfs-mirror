@@ -8,12 +8,12 @@
     <property name="rcAddr">
       <!--  value>10.232.36.206:6261</value>-->
       <!--  <value>10.232.4.8:6269</value>>-->
-       <value>10.232.4.5:6269</value>
+       <value>10.232.36.203:6100</value>
      <!--  <value>10.232.36.203:6100</value>  -->
     </property>
     <!-- 应用注册的App Key (必须配置）-->
     <property name="appKey">
-    	 <value>testKeyYS</value>
+    	 <value>tfscom</value>
     	<!--<value>tfscom</value>--> 
       <!--value>foobarRcAA</value-->
     </property>
