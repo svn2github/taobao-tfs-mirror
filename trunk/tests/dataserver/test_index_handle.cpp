@@ -24,7 +24,7 @@
 
 using namespace tfs::dataserver;
 using namespace tfs::common;
-    
+
 const char* TEST_FILE_NAME = "test";
 const char* TEST_NONEMPTY = "test1";
 const char* TEST_BAD_FILE = "bad_test";
@@ -101,6 +101,173 @@ class TestIndexHandle : public ::testing::Test
     char handle_buf[4096];
     MMapOption op;
 };
+
+TEST_F(TestIndexHandle, testPcreateLoad)
+{
+  int ret = TFS_SUCCESS;
+  const char* base_path = ".";
+  const char* index_dir = "./index";
+  const uint32_t logic_block_id = 100;
+  const uint32_t physical_block_id = 9527;
+
+  // do some prepare work
+  if (0 != access(index_dir, F_OK))
+  {
+    ret = mkdir(index_dir, 0755);
+    ASSERT_EQ(0, ret);
+  }
+
+  char index_name[128];
+  sprintf(index_name, "%s/%d", index_dir, physical_block_id);
+  if (0 == access(index_name, F_OK))
+  {
+    ret = unlink(index_name);
+    ASSERT_EQ(0, ret);
+  }
+
+  // test create
+  IndexHandle test_handle(base_path, physical_block_id);
+
+  ret = test_handle.pcreate(logic_block_id, C_DATA_CLEAN);
+  ASSERT_EQ(TFS_SUCCESS, ret);
+
+  ParityIndexHeader* header = test_handle.pindex_header();
+  ASSERT_TRUE(NULL != header);
+
+  EXPECT_EQ(logic_block_id, header->block_info_.block_id_);
+  EXPECT_EQ(0, header->magic_);
+  EXPECT_EQ(C_DATA_CLEAN, header->flag_);
+  EXPECT_EQ(0, header->index_num_);
+
+  // add index
+  const int index_num = 3;
+  const uint32_t block_ids[index_num] = {101, 102, 103};
+  const char* index_data[index_num] =
+  {
+    "hello world",
+    "stay foolish",
+    "program"
+  };
+
+  for (int i = 0; i < index_num; i++)
+  {
+    ret = test_handle.pappend_index(block_ids[i],
+        index_data[i], strlen(index_data[i]));
+    ASSERT_EQ(TFS_SUCCESS, ret);
+  }
+
+  EXPECT_EQ(index_num, header->index_num_);
+
+  Position* pos[index_num];
+  for (int i = 0; i < index_num; i++)
+  {
+    pos[i] = test_handle.pindex_position(i);
+    ASSERT_TRUE(NULL != pos[i]);
+  }
+
+  for (int i = 0; i < index_num; i++)
+  {
+    ASSERT_EQ(block_ids[i], pos[i]->block_id_);
+    ASSERT_EQ(strlen(index_data[i]), (uint32_t)pos[i]->size_);
+    if (0 == i)
+    {
+      ASSERT_EQ(PARITY_INDEX_START, pos[i]->offset_);
+    }
+    else
+    {
+      ASSERT_EQ(pos[i-1]->offset_ + pos[i-1]->size_, pos[i]->offset_);
+    }
+  }
+
+  int target = 102;
+  Position* tpos = test_handle.pindex_position_byid(target);
+  ASSERT_EQ(tpos, pos[1]);
+
+  int non = 110;
+  Position* npos = test_handle.pindex_position_byid(non);
+  ASSERT_EQ(NULL, npos);
+
+  // test load
+  {
+
+  IndexHandle test_handle(base_path, physical_block_id);
+
+  ret =test_handle.pload(logic_block_id);
+  EXPECT_EQ(TFS_SUCCESS, ret);
+
+  ParityIndexHeader* header = test_handle.pindex_header();
+  ASSERT_TRUE(NULL != header);
+
+  EXPECT_EQ(index_num, header->index_num_);
+
+  Position* pos[index_num];
+  for (int i = 0; i < index_num; i++)
+  {
+    pos[i] = test_handle.pindex_position(i);
+    ASSERT_TRUE(NULL != pos[i]);
+  }
+
+  for (int i = 0; i < index_num; i++)
+  {
+    ASSERT_EQ(block_ids[i], pos[i]->block_id_);
+    ASSERT_EQ(strlen(index_data[i]), (uint32_t)pos[i]->size_);
+    if (0 == i)
+    {
+      ASSERT_EQ(PARITY_INDEX_START, pos[i]->offset_);
+    }
+    else
+    {
+      ASSERT_EQ(pos[i-1]->offset_ + pos[i-1]->size_, pos[i]->offset_);
+    }
+  }
+
+  int target = 102;
+  Position* tpos = test_handle.pindex_position_byid(target);
+  ASSERT_EQ(tpos, pos[1]);
+
+  int non = 110;
+  Position* npos = test_handle.pindex_position_byid(non);
+  ASSERT_EQ(NULL, npos);
+
+  }
+
+  // test exception
+  int bad_block_id = 10086;
+  char bad_index[128];
+  sprintf(bad_index, "%s/%d", index_dir, bad_block_id);
+
+  if (0 == access(bad_index, F_OK))
+  {
+    ret = unlink(bad_index);
+    ASSERT_EQ(0, ret);
+  }
+
+  IndexHandle bad_handle(base_path, bad_block_id);
+
+  // load non exist index
+  ret = bad_handle.pload(logic_block_id);
+  ASSERT_EQ(EXIT_INDEX_CORRUPT_ERROR, ret);
+
+  // normal load
+  ret = bad_handle.pcreate(logic_block_id, C_DATA_CLEAN);
+  ASSERT_EQ(TFS_SUCCESS, ret);
+
+  truncate(bad_index, sizeof(ParityIndexHeader) - 1);
+
+  // already load
+  ret = bad_handle.pload(logic_block_id);
+  ASSERT_EQ(EXIT_INDEX_ALREADY_LOADED_ERROR, ret);
+
+  // pcreate, already exist
+  IndexHandle unexpected(base_path, bad_block_id);
+  ret = unexpected.pcreate(logic_block_id, C_DATA_CLEAN);
+  ASSERT_EQ(EXIT_INDEX_UNEXPECT_EXIST_ERROR, ret);
+
+  // uncomplete index
+  IndexHandle uncomplete(base_path, bad_block_id);
+  ret = uncomplete.pload(logic_block_id);
+  ASSERT_EQ(EXIT_INDEX_CORRUPT_ERROR, ret);
+}
 
 TEST_F(TestIndexHandle, testCreate)
 {
@@ -528,12 +695,12 @@ TEST_F(TestIndexHandle, testMetaRW)
     raw_meta.set_key(keylist[i]);
     empty->write_segment_meta(keylist[i], raw_meta);
   }
-  // read them 
+  // read them
   for(int32_t i = 0; i < 1000; i++)
   {
     RawMeta raw_meta;
     empty->read_segment_meta(keylist[i], raw_meta);
-    EXPECT_EQ(raw_meta.get_key(), keylist[i]); 
+    EXPECT_EQ(raw_meta.get_key(), keylist[i]);
   }
   //del random metainfo
   uint64_t del_elem[1000];
@@ -561,7 +728,7 @@ TEST_F(TestIndexHandle, testMetaRW)
       empty->read_segment_meta(keylist[i], raw_meta);
       EXPECT_EQ(raw_meta.get_key(), keylist[i]);
     }
-  }  
+  }
   // reinsert deled key
   for (int32_t i = 0; i < deled; i++)
   {
