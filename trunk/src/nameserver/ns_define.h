@@ -80,6 +80,12 @@ namespace tfs
       BLOCK_IN_REPLICATE_QUEUE_YES = 1
     };
 
+    enum FamilyInReinstateOrDissolveQueueFlag
+    {
+      FAMILY_IN_REINSTATE_OR_DISSOLVE_QUEUE_NO = 0,
+      FAMILY_IN_REINSTATE_OR_DISSOLVE_QUEUE_YES = 1
+    };
+
     enum BlockCompareServerFlag
     {
       BLOCK_COMPARE_SERVER_BY_ID = 0,

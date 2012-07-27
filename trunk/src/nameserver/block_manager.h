@@ -147,6 +147,7 @@ namespace tfs
         tbutil::Mutex delete_block_queue_muetx_;
         std::deque<std::pair<uint32_t, uint64_t> > delete_block_queue_;
 
+        tbutil::Mutex emergency_replicate_queue_mutex_;
         std::deque<uint32_t> emergency_replicate_queue_;
     };
   }/** nameserver **/

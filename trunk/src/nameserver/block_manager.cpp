@@ -407,6 +407,7 @@ namespace tfs
         NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
         std::set<BlockInfo>::const_iterator iter = blocks.begin();
 
+        //TODO
         for (; iter != blocks.end(); ++iter)
         {
           isnew = false;

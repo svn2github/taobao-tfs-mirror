@@ -54,7 +54,6 @@ namespace tfs
       bool exist(int32_t& current_version, const uint32_t block, const int32_t version) const;
       bool clear(LayoutManager& manager, const time_t now);
       void get_members(common::ArrayHelper<std::pair<uint32_t, int32_t> >& members) const;
-      int get_member_info(int32_t& version, const uint32_t block) const;
       int scan(common::SSMScanParameter& param) const;
       void dump(int32_t level, const char* file = __FILE__,
           const int32_t line = __LINE__, const char* function = __FUNCTION__) const;
@@ -68,10 +67,14 @@ namespace tfs
       inline int get_check_member_num() const { return GET_CHECK_MEMBER_NUM(family_aid_info_);}
       inline int get_code_type() const { return GET_CODE_TYPE(family_aid_info_);}
       inline int get_master_index() const { return GET_MASTER_INDEX(family_aid_info_);}
+      inline bool in_reinstate_or_dissolve_queue() const { return FAMILY_IN_REINSTATE_OR_DISSOLVE_QUEUE_YES == in_reinstate_or_dissolve_queue_;}
+      inline void set_in_reinstate_or_dissolve_queue(const int8_t falg = FAMILY_IN_REINSTATE_OR_DISSOLVE_QUEUE_YES) { in_reinstate_or_dissolve_queue_ = falg;}
     private:
       DISALLOW_COPY_AND_ASSIGN(FamilyCollect);
       int64_t family_id_;//family id
       int32_t family_aid_info_;//family 辅助信息(高8位: 数据成员个数，中8位: 校验块成员个数: 中8位: master所在下标,低8位: 编码方法,eg. rs, rs2)
+      int8_t  in_reinstate_or_dissolve_queue_;
+      int8_t  reserve[3];
       std::pair<uint32_t, int32_t>* members_;//当前family的成员列表 block,version
     };
   }/** end namespace nameserver **/

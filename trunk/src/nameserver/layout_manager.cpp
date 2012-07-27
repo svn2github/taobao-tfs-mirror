@@ -595,17 +595,19 @@ namespace tfs
     {
       bool over = false;
       time_t  now = 0, current = 0;
-      int64_t need = 0, index = 0;
-      uint32_t start = 0;
+      int64_t need = 0, family_start = 0;
+      uint32_t block_start = 0;
       int32_t loop = 0;
+      const int32_t MAX_QUERY_FAMILY_NUMS = 512;
       const int32_t MAX_QUERY_BLOCK_NUMS = 4096;
       const int32_t MIN_SLEEP_TIME_US= 5000;
       const int32_t MAX_SLEEP_TIME_US = 1000000;//1s
       const int32_t MAX_LOOP_NUMS = 1000000 / MIN_SLEEP_TIME_US;
-      BlockCollect* pblock = NULL;
       BlockCollect* blocks[MAX_QUERY_BLOCK_NUMS];
       ArrayHelper<BlockCollect*> results(MAX_QUERY_BLOCK_NUMS, blocks);
-      //std::deque<BlockCollect*> emergency_replicate_queue;
+
+      FamilyCollect* families[MAX_QUERY_FAMILY_NUMS];
+      ArrayHelper<FamilyCollect*> helpers(MAX_QUERY_FAMILY_NUMS, families);
       NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
       while (!ngi.is_destroyed())
       {
@@ -629,7 +631,7 @@ namespace tfs
 
           now = Func::get_monotonic_time();
 
-          check_emergency_replicate_(results, MAX_QUERY_BLOCK_NUMS, now);
+          scan_illegal_block_(results, MAX_QUERY_BLOCK_NUMS, now);
 
           if (loop >= MAX_LOOP_NUMS)
           {
@@ -638,38 +640,39 @@ namespace tfs
               get_block_manager().get_emergency_replicate_queue_size(), need);
           }
 
-          build_emergency_replicate_(need, now);
-
-          results.clear();
+          if (need > 0)
+          {
+            scan_replicate_queue_(need, now);
+          }
 
           if (need > 0)
           {
-            now = Func::get_monotonic_time();
-            bool ret = false;
-            bool compact_time     = in_hour_range(current, SYSPARAM_NAMESERVER.compact_time_lower_, SYSPARAM_NAMESERVER.compact_time_upper_);
-            bool marshalling_time = in_hour_range(current, SYSPARAM_NAMESERVER.marshalling_time_lower_, SYSPARAM_NAMESERVER.marshalling_time_upper_);
-            over = get_block_manager().scan(results, start, MAX_QUERY_BLOCK_NUMS);
-            for (index = 0; index < results.get_array_index(); ++index)
-            {
-              pblock = *results.at(index);
-              assert(NULL != pblock);
-              ret = get_block_manager().need_replicate(pblock, now);
-              if ((ret) && (ret = get_block_manager().push_to_emergency_replicate_queue(pblock)))
-                --need;
-              ret = (!ret && compact_time && (plan_run_flag_ & PLAN_RUN_FLAG_COMPACT)
-                    && get_block_manager().need_compact(pblock,now));
-              if ((ret) && (ret = build_compact_task_(pblock, now)))
-                  --need;
-              ret = (!ret && marshalling_time && (plan_run_flag_ & PLAN_RUN_FALG_MARSHALLING)
-                  && get_block_manager().need_marshalling(pblock, now));
-              if ((ret) && (ret = get_family_manager().push_block_to_marshalling_queues(pblock, now)))
-                  --need;
-            }
-            if (over)
-              start = 0;
+            scan_reinstate_or_dissolve_queue_(need , now);
           }
 
-          build_marshalling_(need, now);
+          results.clear();
+
+          bool compact_time     = in_hour_range(current, SYSPARAM_NAMESERVER.compact_time_lower_, SYSPARAM_NAMESERVER.compact_time_upper_);
+          bool marshalling_time = in_hour_range(current, SYSPARAM_NAMESERVER.marshalling_time_lower_, SYSPARAM_NAMESERVER.marshalling_time_upper_);
+          if (need > 0)
+          {
+            now = Func::get_monotonic_time();
+            over = scan_block_(results, need, block_start, MAX_QUERY_BLOCK_NUMS, now, compact_time, marshalling_time);
+            if (over)
+              block_start = 0;
+          }
+
+          if (need > 0)
+          {
+            over = scan_family_(helpers, need, family_start, MAX_QUERY_FAMILY_NUMS, now, compact_time);
+            if (over)
+              family_start = 0;
+          }
+
+          if (need > 0)
+          {
+            build_marshalling_(need, now);
+          }
         }
         ++loop;
         usleep(get_block_manager().has_emergency_replicate_in_queue() ? MAX_SLEEP_TIME_US : MIN_SLEEP_TIME_US);
@@ -806,7 +809,7 @@ namespace tfs
       }
     }
 
-    void LayoutManager::load_family_info()
+    void LayoutManager::load_family_info_()
     {
       time_t now = 0;
       int64_t family_id = 0;
@@ -1271,7 +1274,7 @@ namespace tfs
       return TFS_SUCCESS == ret ? block : NULL;
     }
 
-    bool LayoutManager::build_emergency_replicate_(int64_t& need, const time_t now)
+    bool LayoutManager::scan_replicate_queue_(int64_t& need, const time_t now)
     {
       BlockCollect* block = NULL;
       int64_t count = get_block_manager().get_emergency_replicate_queue_size();
@@ -1291,7 +1294,42 @@ namespace tfs
       return true;
     }
 
-    bool LayoutManager::check_emergency_replicate_(ArrayHelper<BlockCollect*>& result, const int32_t count, const time_t now)
+    bool LayoutManager::scan_reinstate_or_dissolve_queue_(int64_t& need, const time_t now)
+    {
+      bool ret = need > 0;
+      if (ret)
+      {
+        FamilyCollect* family = NULL;
+        const int64_t MAX_QUERY_FAMILY_NUMS = 8;
+        std::pair<uint32_t, int32_t> members[MAX_MARSHLLING_NUM];
+        ArrayHelper<std::pair<uint32_t, int32_t> > helper(MAX_MARSHLLING_NUM, members);
+        int64_t count = get_family_manager().get_reinstate_or_dissolve_queue_size();
+        count = std::max(count, MAX_QUERY_FAMILY_NUMS);
+        while (need > 0 && count > 0 && (NULL != (family = get_family_manager().pop_from_reinstate_or_dissolve_queue())))
+        {
+          --count;
+          helper.clear();
+          ret = get_family_manager().check_need_reinstate(helper, family, now);
+          if ((ret) && (ret = build_reinstate_task_(need, family, helper, now)))
+            --need;
+          ret = ((!ret) && get_family_manager().check_need_dissolve(family, helper));
+          if ((ret) && (ret = build_dissolve_task_(need, family, helper, now)))
+            --need;
+          if (!ret)
+          {
+            helper.clear();
+            if ((get_family_manager().check_need_reinstate(helper, family, now))
+              || (get_family_manager().check_need_dissolve(family, helper)))
+            {
+              get_family_manager().push_to_reinstate_or_dissolve_queue(family);
+            }
+          }
+        }
+      }
+      return ret;
+    }
+
+    bool LayoutManager::scan_illegal_block_(ArrayHelper<BlockCollect*>& result, const int32_t count, const time_t now)
     {
       ServerCollect* servers[MAX_POP_SERVER_FROM_DEAD_QUEUE_LIMIT];
       ArrayHelper<ServerCollect*> helper(MAX_POP_SERVER_FROM_DEAD_QUEUE_LIMIT, servers);
@@ -1430,6 +1468,32 @@ namespace tfs
       return ret;
     }
 
+    bool LayoutManager::build_reinstate_task_(int64_t& need, const FamilyCollect* family,
+          const common::ArrayHelper<std::pair<uint32_t, int32_t> >& reinstate_members, const time_t now)
+    {
+      bool ret = ((NULL != family) && reinstate_members.get_array_index() > 0
+              && (plan_run_flag_ & PLAN_RUN_FALG_REINSTATE) && need > 0);
+      if (ret)
+      {
+        //TODO create task & add task into tasklist
+        UNUSED(now);
+      }
+      return ret;
+    }
+
+    bool LayoutManager::build_dissolve_task_(int64_t& need, const FamilyCollect* family,
+          const common::ArrayHelper<std::pair<uint32_t, int32_t> >& reinstate_members, const time_t now)
+    {
+      bool ret = ((NULL != family) && reinstate_members.get_array_index() > 0
+              && (plan_run_flag_ & PLAN_RUN_FALG_DISSOLVE) && need > 0);
+      if (ret)
+      {
+        //TODO create task & add task into tasklist
+        UNUSED(now);
+      }
+      return ret;
+    }
+
     bool LayoutManager::build_redundant_(int64_t& need, const time_t now)
     {
       UNUSED(now);
@@ -1505,6 +1569,59 @@ namespace tfs
     int64_t LayoutManager::has_space_in_task_queue_() const
     {
       return server_manager_.size() - task_manager_.get_running_server_size();
+    }
+
+    bool LayoutManager::scan_block_(ArrayHelper<BlockCollect*>& results, int64_t& need, uint32_t& start, const int32_t max_query_block_num,
+          const time_t now, const bool compact_time, const bool marshalling_time)
+    {
+      results.clear();
+      bool ret  = false;
+      BlockCollect* block = NULL;
+      bool over = get_block_manager().scan(results, start, max_query_block_num);
+      for (int64_t index = 0; index < results.get_array_index(); ++index)
+      {
+        block = *results.at(index);
+        assert(NULL != block);
+        ret = get_block_manager().need_replicate(block, now);
+        if ((ret) && (ret = get_block_manager().push_to_emergency_replicate_queue(block)))
+          --need;
+        ret = (!ret && compact_time && (plan_run_flag_ & PLAN_RUN_FLAG_COMPACT)
+            && get_block_manager().need_compact(block,now));
+        if ((ret) && (ret = build_compact_task_(block, now)))
+          --need;
+        ret = (!ret && marshalling_time && (plan_run_flag_ & PLAN_RUN_FALG_MARSHALLING)
+            && get_block_manager().need_marshalling(block, now));
+        if ((ret) && (ret = get_family_manager().push_block_to_marshalling_queues(block, now)))
+          --need;
+      }
+      return over;
+    }
+
+    bool LayoutManager::scan_family_(common::ArrayHelper<FamilyCollect*>& results, int64_t& need, int64_t& start,
+          const int32_t max_query_family_num, const time_t now, const bool compact_time)
+    {
+      //这里其实应该搞一个队列，将需要恢复/解散的Family放入一个队列，暂时先这么做，后期再优化
+      UNUSED(compact_time);
+      results.clear();
+      bool ret  = false;
+      FamilyCollect* family = NULL;
+      std::pair<uint32_t, int32_t> members[MAX_MARSHLLING_NUM];
+      ArrayHelper<std::pair<uint32_t, int32_t> > helper(MAX_MARSHLLING_NUM, members);
+      bool over = get_family_manager().scan(results, start, max_query_family_num);
+      for (int64_t index = 0; index < results.get_array_index(); ++index)
+      {
+        helper.clear();
+        family = *results.at(index);
+        assert(NULL != family);
+        ret = get_family_manager().check_need_reinstate(helper, family, now);
+        if ((ret) && (ret = get_family_manager().push_to_reinstate_or_dissolve_queue(family)))
+          --need;
+        ret = ((!ret) && get_family_manager().check_need_dissolve(family, helper));
+        if ((ret) && (ret = get_family_manager().push_to_reinstate_or_dissolve_queue(family)))
+          --need;
+        //ret = ((!ret) && compact_time && get_family_manager().check_need_compact());
+      }
+      return over;
     }
 
     void LayoutManager::BuildPlanThreadHelper::run()
@@ -1639,7 +1756,7 @@ namespace tfs
     {
       try
       {
-        manager_.load_family_info();
+        manager_.load_family_info_();
       }
       catch(std::exception& e)
       {

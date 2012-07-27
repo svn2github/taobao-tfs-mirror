@@ -141,9 +141,22 @@ namespace tfs
       return insert_(family_id, family_aid_info, members, now);
     }
 
-    int FamilyManager::update(const int64_t family_id, const uint32_t block, const int32_t version)
+    bool FamilyManager::exist(int32_t& version, const int64_t family_id, const uint32_t block, const int32_t new_version)
     {
-      int32_t ret = (INVALID_FAMILY_ID != family_id && INVALID_BLOCK_ID != block && version > 0) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+      version = 0;
+      bool ret = (INVALID_FAMILY_ID != family_id && INVALID_BLOCK_ID != block && new_version > 0);
+      if (TFS_SUCCESS == ret)
+      {
+        RWLock::Lock lock(get_mutex_(family_id), READ_LOCKER);
+        FamilyCollect* family = get_(family_id);
+        ret = family->exist(version, block, new_version);
+      }
+      return ret;
+    }
+
+    int FamilyManager::update(const int64_t family_id, const uint32_t block, const int32_t new_version)
+    {
+      int32_t ret = (INVALID_FAMILY_ID != family_id && INVALID_BLOCK_ID != block && new_version > 0) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
         RWLock::Lock lock(get_mutex_(family_id), WRITE_LOCKER);
@@ -151,7 +164,7 @@ namespace tfs
         ret = (NULL != family) ? TFS_SUCCESS : EXIT_NO_FAMILY;
         if (TFS_SUCCESS == ret)
         {
-          ret = family->update(block, version);
+          ret = family->update(block, new_version);
         }
       }
       return ret;
@@ -323,6 +336,44 @@ namespace tfs
         }
       }
       return ret;
+    }
+
+    bool FamilyManager::push_to_reinstate_or_dissolve_queue(FamilyCollect* family)
+    {
+      bool ret = ((NULL != family) && (!family->in_reinstate_or_dissolve_queue()));
+      if (ret)
+      {
+        TBSYS_LOG(INFO, "family %"PRI64_PREFIX"d mybe lack of backup, we'll reinstate or dissolve", family->get_family_id());
+        family->set_in_reinstate_or_dissolve_queue(FAMILY_IN_REINSTATE_OR_DISSOLVE_QUEUE_YES);
+        reinstate_or_dissolve_queue_.push_back(family->get_family_id());
+      }
+      return ret;
+    }
+
+    FamilyCollect* FamilyManager::pop_from_reinstate_or_dissolve_queue()
+    {
+      FamilyCollect* family = NULL;
+      if (!reinstate_or_dissolve_queue_.empty())
+      {
+        int64_t family_id = reinstate_or_dissolve_queue_.front();
+        reinstate_or_dissolve_queue_.pop_front();
+        family = get(family_id);
+        if (NULL == family)
+          TBSYS_LOG(INFO, "family %"PRI64_PREFIX"d mybe delete, don't reinstate or dissolve", family_id);
+        else
+          family->set_in_reinstate_or_dissolve_queue(FAMILY_IN_REINSTATE_OR_DISSOLVE_QUEUE_NO);
+      }
+      return family;
+    }
+
+    bool FamilyManager::reinstate_or_dissolve_queue_empty() const
+    {
+      return reinstate_or_dissolve_queue_.empty();
+    }
+
+    int64_t FamilyManager::get_reinstate_or_dissolve_queue_size() const
+    {
+      return reinstate_or_dissolve_queue_.size();
     }
 
     bool FamilyManager::has_marshalling(int32_t& current_version, const int64_t family_id, const uint32_t block, const int32_t version) const

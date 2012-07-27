@@ -113,7 +113,7 @@ namespace tfs
       void balance_();
       void timeout_();
       void redundant_();
-      void load_family_info();
+      void load_family_info_();
       void check_all_server_isalive_();
       void add_block_in_all_server_();
       void check_all_server_report_block_();
@@ -126,15 +126,26 @@ namespace tfs
       BlockCollect* add_new_block_helper_create_by_id_(const uint32_t block_id, const time_t now);
       BlockCollect* add_new_block_helper_create_by_system_(uint32_t& block_id, ServerCollect* server, const time_t now);
 
-      bool build_emergency_replicate_(int64_t& need, const time_t now);
-      bool check_emergency_replicate_(common::ArrayHelper<BlockCollect*>& result,const int32_t count, const time_t now);
+      bool scan_replicate_queue_(int64_t& need, const time_t now);
+      bool scan_reinstate_or_dissolve_queue_(int64_t& need, const time_t now);
+      bool scan_illegal_block_(common::ArrayHelper<BlockCollect*>& result, const int32_t count, const time_t now);
       bool build_replicate_task_(int64_t& need, const BlockCollect* block, const time_t now);
       bool build_compact_task_(const BlockCollect* block, const time_t now);
       bool build_balance_task_(int64_t& need, common::TfsSortedVector<ServerCollect*,ServerIdCompare>& targets,
           const ServerCollect* source, const BlockCollect* block, const time_t now);
+      bool build_reinstate_task_(int64_t& need, const FamilyCollect* family,
+          const common::ArrayHelper<std::pair<uint32_t, int32_t> >& reinstate_members, const time_t now);
+      bool build_dissolve_task_(int64_t& need, const FamilyCollect* family,
+          const common::ArrayHelper<std::pair<uint32_t, int32_t> >& reinstate_members, const time_t now);
       bool build_redundant_(int64_t& need, const time_t now);
       bool build_marshalling_(int64_t& need, const time_t now);
       int64_t has_space_in_task_queue_() const;
+
+      bool scan_block_(common::ArrayHelper<BlockCollect*>& results, int64_t& need, uint32_t& start,
+          const int32_t max_query_block_num, const time_t now, const bool compact_time, const bool marshalling_time);
+
+      bool scan_family_(common::ArrayHelper<FamilyCollect*>& results, int64_t& need, int64_t& start,
+          const int32_t max_query_family_num, const time_t now, const bool compact_time);
 
       class BuildPlanThreadHelper: public tbutil::Thread
       {

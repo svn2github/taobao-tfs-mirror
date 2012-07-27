@@ -290,10 +290,12 @@ namespace tfs
 
     enum PlanType
     {
-      PLAN_TYPE_REPLICATE = 0x00,
+      PLAN_TYPE_REPLICATE = 0,
       PLAN_TYPE_MOVE,
       PLAN_TYPE_COMPACT,
-      PLAN_TYPE_MARSHALLING
+      PLAN_TYPE_EC_REINSTATE,
+      PLAN_TYPE_EC_DISSOLVE,
+      PLAN_TYPE_EC_MARSHLLING
     };
 
     enum PlanStatus
@@ -320,6 +322,8 @@ namespace tfs
       PLAN_RUN_FLAG_COMPACT = 1 << 2,
       PLAN_RUN_FLAG_DELETE = 1 << 3,
       PLAN_RUN_FALG_MARSHALLING = 1 << 4,
+      PLAN_RUN_FALG_REINSTATE = 1 << 5,
+      PLAN_RUN_FALG_DISSOLVE  = 1 << 6
     };
 
     enum CompactStatus
@@ -377,6 +381,12 @@ namespace tfs
       INVALID_TFS_FILE_TYPE = 0,
       SMALL_TFS_FILE_TYPE,
       LARGE_TFS_FILE_TYPE
+    };
+
+    enum BlockType
+    {
+      BLOCK_TYPE_DATA_BLOCK = 0,
+      BLOCK_TYPE_CHECK_BLOCK
     };
 
     struct SSMScanParameter

@@ -82,6 +82,7 @@ namespace tfs
       int insert(const int64_t family_id, const int32_t family_aid_info,
           const common::ArrayHelper<std::pair<uint32_t, int32_t> >& member, const time_t now);
       int update(const int64_t family_id, const uint32_t block, const int32_t version);
+      bool exist(int32_t& version, const int64_t family_id, const uint32_t block, const int32_t new_version);
       int remove(GCObject*& object, const int64_t family_id);
       FamilyCollect* get(const int64_t family_id) const;
       bool scan(common::ArrayHelper<FamilyCollect*>& result, int64_t& begin, const int32_t count) const;
@@ -90,6 +91,10 @@ namespace tfs
       int get_members(common::ArrayHelper<std::pair<uint32_t, int32_t> >& members, const int64_t family_id) const;
       int get_members(common::ArrayHelper<BlockCollect*>& members, const int64_t family_id) const;
       int get_members(common::ArrayHelper<std::pair<BlockCollect*, ServerCollect*> >& members, const int64_t family_id) const;
+      bool push_to_reinstate_or_dissolve_queue(FamilyCollect* family);
+      FamilyCollect* pop_from_reinstate_or_dissolve_queue();
+      bool reinstate_or_dissolve_queue_empty() const;
+      int64_t get_reinstate_or_dissolve_queue_size() const;
       bool has_marshalling(int32_t& current_version, const int64_t family_id, const uint32_t block, const int32_t version) const;
       bool push_block_to_marshalling_queues(const BlockCollect* block, const time_t now);
       int push_block_to_marshalling_queues(const uint32_t rack, const uint64_t server, const uint32_t block);
@@ -122,6 +127,8 @@ namespace tfs
       common::RWLock marshallin_queue_mutex_;
       FAMILY_MAP* families_[MAX_FAMILY_CHUNK_NUM];
       mutable common::RWLock mutexs_[MAX_FAMILY_CHUNK_NUM];
+
+      std::deque<int64_t> reinstate_or_dissolve_queue_;
     };
   }/** end namespace nameserver **/
 }/** end namespace tfs **/
