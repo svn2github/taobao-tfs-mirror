@@ -82,6 +82,8 @@ namespace tfs
         int get_block_info(common::BlockInfo* blk_info);
         int copy_block_info(const common::BlockInfo* blk_info);
 
+        uint64_t get_group_id();
+
         //gc callback
         void callback();
         void clear();

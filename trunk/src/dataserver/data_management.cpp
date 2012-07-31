@@ -80,6 +80,11 @@ namespace tfs
       return BlockFileManager::get_instance()->get_all_block_info(blocks);
     }
 
+    int DataManagement::get_all_block_info(std::set<common::BlockInfoExt>& blocks_ext)
+    {
+      return BlockFileManager::get_instance()->get_all_block_info(blocks_ext);
+    }
+
     int64_t DataManagement::get_all_logic_block_size()
     {
       return BlockFileManager::get_instance()->get_all_logic_block_size();

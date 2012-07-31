@@ -273,6 +273,41 @@ namespace tfs
     {
       return INT_SIZE * 7;
     }
+
+    int BlockInfoExt::serialize(char* data, const int64_t data_len, int64_t& pos) const
+    {
+      int32_t iret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
+      if (TFS_SUCCESS == iret)
+      {
+        iret = block_info_.serialize(data, data_len, pos);
+      }
+      if (TFS_SUCCESS == iret)
+      {
+        iret = Serialization::set_int64(data, data_len, pos, group_id_);
+      }
+      return iret;
+    }
+
+    int BlockInfoExt::deserialize(const char* data, const int64_t data_len, int64_t& pos)
+    {
+      int32_t iret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
+      if (TFS_SUCCESS == iret)
+      {
+        iret = block_info_.deserialize(data, data_len, pos);
+      }
+      if (TFS_SUCCESS == iret)
+      {
+        iret = Serialization::get_int64(data, data_len, pos, (int64_t*)group_id_);
+      }
+      return iret;
+    }
+
+    int64_t BlockInfoExt::length() const
+    {
+      BlockInfo info;
+      return info.length() + INT64_SIZE;
+    }
+
     int RawMeta::deserialize(const char* data, const int64_t data_len, int64_t& pos)
     {
 

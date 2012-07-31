@@ -473,6 +473,43 @@ namespace tfs
       }
     };
 
+    struct BlockInfoExt
+    {
+      BlockInfo block_info_;
+      uint64_t group_id_;
+      int deserialize(const char* data, const int64_t data_len, int64_t& pos);
+      int serialize(char* data, const int64_t data_len, int64_t& pos) const;
+      int64_t length() const;
+
+      BlockInfoExt(const BlockInfoExt& info)
+      {
+        block_info_ = info.block_info_;
+        group_id_ = info.group_id_;
+      }
+
+      BlockInfoExt& operator=(const BlockInfoExt& info)
+      {
+        block_info_ = info.block_info_;
+        group_id_ = info.group_id_;
+        return *this;
+      }
+
+      BlockInfoExt()
+      {
+        memset(this, 0, sizeof(BlockInfoExt));
+      }
+
+      bool operator < (const BlockInfoExt& rhs) const
+      {
+        return block_info_.block_id_ < rhs.block_info_.block_id_;
+      }
+      inline bool operator==(const BlockInfoExt& rhs) const
+      {
+        return block_info_ == rhs.block_info_ &&
+           group_id_ == rhs.group_id_;
+      }
+   };
+
     struct RawMeta
     {
       public:

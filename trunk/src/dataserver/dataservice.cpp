@@ -2455,7 +2455,16 @@ namespace tfs
        CallDsReportBlockRequestMessage* msg = dynamic_cast<CallDsReportBlockRequestMessage*>(packet);
        ReportBlocksToNsRequestMessage req_msg;
        req_msg.set_server(data_server_info_.id_);
-       data_management_.get_all_block_info(req_msg.get_blocks());
+       if (0 == msg->get_flag())
+       {
+         data_management_.get_all_block_info(req_msg.get_blocks());
+       }
+       else
+       {
+         data_management_.get_all_block_info(req_msg.get_blocks_ext());
+       }
+       req_msg.set_flag(msg->get_flag());
+
        NewClient* client = NewClientManager::get_instance().create_client();
        tbnet::Packet* message = NULL;
        iret = send_msg_to_server(msg->get_server(), client, &req_msg, message);

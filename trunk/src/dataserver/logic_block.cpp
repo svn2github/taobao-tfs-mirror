@@ -800,6 +800,14 @@ namespace tfs
       return ret;
     }
 
+    uint64_t LogicBlock::get_group_id()
+    {
+      BlockPrefix block_prefix;
+      PhysicalBlock* first = physical_block_list_.front();
+      first->get_block_prefix(block_prefix);
+      return block_prefix.group_id_;
+    }
+
     int LogicBlock::set_block_dirty_type(const DirtyFlag dirty_flag)
     {
       index_handle_->set_block_dirty_type(dirty_flag);
