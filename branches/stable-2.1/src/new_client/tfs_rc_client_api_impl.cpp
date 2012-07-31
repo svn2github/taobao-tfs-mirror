@@ -306,9 +306,10 @@ namespace tfs
         }
         else if (RcClient::READ == mode)
         {
-          if (*file_name == 'L' && false == large)
+          if ((*file_name == 'L' && false == large)
+              || (*file_name == 'T' && true == large))
           {
-            TBSYS_LOG(WARN, "open a tfs large file without large flag");
+            TBSYS_LOG(WARN, "open a tfs file without right flag");
           }
         }
       }
