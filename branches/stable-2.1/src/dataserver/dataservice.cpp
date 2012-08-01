@@ -64,6 +64,7 @@ namespace tfs
       //init dataserver info
       memset(need_send_blockinfo_, 0, sizeof(need_send_blockinfo_));
       memset(&data_server_info_, 0, sizeof(DataServerStatInfo));
+      data_server_info_.status_ = DATASERVER_STATUS_DEAD;
       memset(set_flag_, 0, sizeof(set_flag_));
       memset(hb_ip_port_, 0, sizeof(hb_ip_port_));
     }
