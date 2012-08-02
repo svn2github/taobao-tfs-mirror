@@ -320,5 +320,102 @@ namespace tfs
       }
       return iret;
     }
+
+    WriteRawIndexMessage::WriteRawIndexMessage():
+      block_id_(0), index_op_(common::OP_NOT_INIT)
+    {
+      _packetHeader._pcode = common::WRITE_RAW_INDEX_MESSAGE;
+      index_vec_.clear();
+    }
+
+    WriteRawIndexMessage::~WriteRawIndexMessage()
+    {
+
+    }
+
+    int WriteRawIndexMessage::serialize(common::Stream& output) const
+    {
+      int32_t iret = output.set_int32(block_id_);
+      if (common::TFS_SUCCESS == iret)
+      {
+        iret = output.set_int32(index_op_);
+      }
+
+      if (common::TFS_SUCCESS == iret)
+      {
+        iret = output.set_int32(index_vec_.size());
+      }
+
+      for (uint32_t i = 0; i < index_vec_.size() && common::TFS_SUCCESS == iret; i++)
+      {
+        if (common::TFS_SUCCESS == iret)
+        {
+          iret = output.set_int32(index_vec_[i].block_id_);
+        }
+
+        if (common::TFS_SUCCESS == iret)
+        {
+          iret = output.set_int32(index_vec_[i].size_);
+        }
+
+        if (common::TFS_SUCCESS == iret && index_vec_[i].size_ > 0)
+        {
+          iret = output.set_bytes(index_vec_[i].data_, index_vec_[i].size_);
+        }
+      }
+
+      return iret;
+    }
+
+    int WriteRawIndexMessage::deserialize(common::Stream& input)
+    {
+      uint32_t index_count = 0;
+      int32_t iret = input.get_int32((int32_t*)&block_id_);
+      if (common::TFS_SUCCESS == iret)
+      {
+        iret = input.get_int32((int32_t*)&index_op_);
+      }
+
+      if (common::TFS_SUCCESS == iret)
+      {
+        iret = input.get_int32((int32_t*)&index_count);
+      }
+
+      index_vec_.clear();
+      for (uint32_t i = 0; i < index_count && common::TFS_SUCCESS == iret; i++)
+      {
+        common::RawIndex index;
+        if (common::TFS_SUCCESS == iret)
+        {
+          iret = input.get_int32((int32_t*)&index.block_id_);
+        }
+
+        if (common::TFS_SUCCESS == iret)
+        {
+          iret = input.get_int32((int32_t*)&index.size_);
+        }
+
+        if (index.size_ > 0)
+        {
+          index.data_ = input.get_data();
+          input.drain(index.size_);
+        }
+        index_vec_.push_back(index);
+      }
+
+      return iret;
+    }
+
+    int64_t WriteRawIndexMessage::length() const
+    {
+      int64_t len = common::INT_SIZE * 3;
+      for (uint32_t i = 0; i < index_vec_.size(); i++)
+      {
+        len += common::INT_SIZE;
+        len += index_vec_[i].size_;
+      }
+      return len;
+    }
+
   }
 }

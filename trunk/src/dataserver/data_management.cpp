@@ -700,6 +700,43 @@ namespace tfs
       return TFS_SUCCESS;
     }
 
+    int DataManagement::write_raw_index(const uint32_t block_id, const RawIndexOp index_op, const RawIndexVec* index_vec)
+    {
+      LogicBlock* logic_block = BlockFileManager::get_instance()->get_logic_block(block_id);
+      if (NULL == logic_block)
+      {
+        TBSYS_LOG(ERROR, "blockid: %u is not exist.", block_id);
+        return EXIT_NO_LOGICBLOCK_ERROR;
+      }
+
+      int ret = logic_block->write_raw_index(index_op, index_vec);
+      if (TFS_SUCCESS != ret)
+      {
+        TBSYS_LOG(ERROR, "blockid: %u write raw index error, ret: %d", block_id, ret);
+      }
+
+      return ret;
+    }
+
+    int DataManagement::read_raw_index(const uint32_t block_id, const common::RawIndexOp index_op,
+        const uint32_t index_id, char* & buf, uint32_t& size)
+    {
+      LogicBlock* logic_block = BlockFileManager::get_instance()->get_logic_block(block_id);
+      if (NULL == logic_block)
+      {
+        TBSYS_LOG(ERROR, "blockid: %u is not exist.", block_id);
+        return EXIT_NO_LOGICBLOCK_ERROR;
+      }
+
+      int ret = logic_block->read_raw_index(index_op, index_id, buf, size);
+      if (TFS_SUCCESS != ret)
+      {
+        TBSYS_LOG(ERROR, "blockid: %u read raw index error, ret: %d", block_id, ret);
+      }
+
+      return ret;
+    }
+
     int DataManagement::add_new_expire_block(const VUINT32* expire_block_ids, const VUINT32* remove_block_ids, const VUINT32* new_block_ids)
     {
       // delete expire block

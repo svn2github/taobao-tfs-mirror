@@ -1071,6 +1071,12 @@ namespace tfs
             case REQ_CHECK_BLOCK_MESSAGE:
               ret = check_blocks(dynamic_cast<BasePacket*>(packet));
               break;
+            case WRITE_RAW_INDEX_MESSAGE:
+              ret = write_raw_index(dynamic_cast<WriteRawIndexMessage*>(packet));
+              break;
+            case READ_RAW_INDEX_MESSAGE:
+              ret = read_raw_index(dynamic_cast<ReadRawIndexMessage*>(packet));
+              break;
             default:
               TBSYS_LOG(ERROR, "process packet pcode: %d\n", pcode);
               ret = TFS_ERROR;
@@ -2311,8 +2317,76 @@ namespace tfs
       //clear m_clonedBlockMap
       repl_block_->del_cloned_block_map(block_id);
 
-      TBSYS_LOG(DEBUG, "write block fileinfo successful, blockid: %u", block_id);
+      TBSYS_LOG(INFO, "batch write block fileinfo successful, blockid: %u, peer id: %s",
+          block_id, tbsys::CNetUtil::addrToString(peer_id).c_str());
       message->reply(new StatusMessage(STATUS_MESSAGE_OK));
+      return TFS_SUCCESS;
+    }
+
+    int DataService::write_raw_index(WriteRawIndexMessage* message)
+    {
+      uint32_t block_id = message->get_block_id();
+      RawIndexOp index_op = message->get_index_op();
+      RawIndexVec* index_vec = message->get_index_vec();
+      uint64_t peer_id = message->get_connection()->getPeerId();
+
+      TBSYS_LOG(DEBUG, "write raw index start, blockid: %u, index op: %d, index count: %u, peer id: %s",
+          block_id, (int)index_op, index_vec->size(), tbsys::CNetUtil::addrToString(peer_id).c_str());
+
+      int ret = data_management_.write_raw_index(block_id, index_op, index_vec);
+      if (TFS_SUCCESS != ret)
+      {
+        message->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret,
+            "write raw index fail, blockid: %u, ret: %d", block_id, ret);
+      }
+      else
+      {
+        message->reply(new StatusMessage(STATUS_MESSAGE_OK));
+        TBSYS_LOG(INFO, "write raw index successful, blockid: %u, index op: %d, index count: %u, peer id: %s",
+          block_id, index_op, index_vec->size(), tbsys::CNetUtil::addrToString(peer_id).c_str());
+      }
+      return TFS_SUCCESS;
+    }
+
+    int DataService::read_raw_index(ReadRawIndexMessage* message)
+    {
+      uint32_t block_id = message->get_block_id();
+      uint32_t index_id = message->get_index_id();
+      RawIndexOp index_op = message->get_index_op();
+      uint64_t peer_id = message->get_connection()->getPeerId();
+      uint32_t size = 0;
+      char* tmp_buf = NULL;
+
+      TBSYS_LOG(DEBUG, "read raw index start, blockid: %u, index id: %u, index_op: %d, peer id: %s",
+          block_id, index_id, (int)index_op, tbsys::CNetUtil::addrToString(peer_id).c_str());
+
+      int ret = data_management_.read_raw_index(block_id, index_op, index_id, tmp_buf, size);
+      if (TFS_SUCCESS != ret)
+      {
+        message->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret,
+            "read raw index fail, blockid: %u, index_id: %u, ret: %d", block_id, index_id, ret);
+      }
+      else
+      {
+        RespReadRawIndexMessage resp_msg;
+        char* packet_data = resp_msg.alloc_data(size);
+        if (NULL == packet_data)
+        {
+          TBSYS_LOG(ERROR, "alloc data failed, blockid: %u, real len: %d", block_id, size);
+          ret = TFS_ERROR;
+          message->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret, "dataserver memory insufficient");
+        }
+        else
+        {
+          resp_msg.set_length(size);
+          memcpy(packet_data, tmp_buf, size);
+          message->reply(&resp_msg);
+          TBSYS_LOG(INFO, "read raw index successful, blockid: %u, index id: %u, index_op: %d, peer id: %s",
+            block_id, index_id, (int)index_op, tbsys::CNetUtil::addrToString(peer_id).c_str());
+        }
+      }
+      tbsys::gDelete(tmp_buf);
+
       return TFS_SUCCESS;
     }
 

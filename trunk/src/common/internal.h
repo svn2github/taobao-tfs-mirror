@@ -904,6 +904,33 @@ namespace tfs
       int64_t length() const;
     };
 
+    struct RawIndex
+    {
+      uint32_t block_id_;
+      char* data_;
+      uint32_t size_;
+
+      RawIndex(): block_id_(0), data_(NULL), size_(0)
+      {
+      }
+
+      RawIndex(const uint32_t block_id, char* data, const uint32_t size)
+      {
+        block_id_ = block_id;
+        data_ = data;
+        size_ = size;
+      }
+    };
+
+    enum RawIndexOp
+    {
+      OP_NOT_INIT,
+      WRITE_DATA_INDEX,
+      WRITE_PARITY_INDEX,
+      READ_DATA_INDEX,
+      READ_PARITY_INDEX
+    };
+
     extern const char* dynamic_parameter_str[31];
 
     // defined type typedef
@@ -914,8 +941,11 @@ namespace tfs
 
     typedef std::vector<RawMeta> RawMetaVec;
     typedef std::vector<RawMeta>::iterator RawMetaVecIter;
-
     typedef std::vector<RawMeta>::const_iterator RawMetaVecConstIter;
+
+    typedef std::vector<RawIndex> RawIndexVec;
+    typedef std::vector<RawIndex>::iterator RawIndexVecIter;
+    typedef std::vector<RawIndex>::const_iterator RawIndexVecConstIter;
 
     typedef std::vector<CheckBlockInfo> CheckBlockInfoVec;
     typedef std::vector<CheckBlockInfo>::iterator CheckBlockInfoVecIter;

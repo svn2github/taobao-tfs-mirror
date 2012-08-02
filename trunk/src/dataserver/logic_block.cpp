@@ -760,6 +760,71 @@ namespace tfs
       return index_handle_->flush();
     }
 
+    int LogicBlock::write_raw_index(const RawIndexOp index_op, const RawIndexVec* index_vec)
+    {
+      int ret = TFS_SUCCESS;
+      if (NULL == index_vec)
+      {
+        ret = EXIT_POINTER_NULL;
+      }
+      else
+      {
+        ScopedRWLock scoped_lock(rw_lock_, WRITE_LOCKER);
+        if (WRITE_DATA_INDEX == index_op)
+        {
+          ret = index_handle_->write_data_index(*index_vec);
+        }
+        else if (WRITE_PARITY_INDEX == index_op)
+        {
+          ret = index_handle_->write_parity_index(*index_vec);
+        }
+        else
+        {
+          ret = TFS_ERROR;
+          TBSYS_LOG(ERROR, "raw index op %d invalid.", (int)index_op);
+        }
+
+        if (TFS_SUCCESS != ret)
+        {
+          TBSYS_LOG(ERROR, "write raw index blockid: %u fail. ret: %d", get_logic_block_id(), ret);
+        }
+        else
+        {
+          ret = index_handle_->flush();
+        }
+      }
+
+      return ret;
+    }
+
+    int LogicBlock::read_raw_index(const RawIndexOp index_op, const uint32_t index_id, char* & buf, uint32_t& size)
+    {
+      int ret = TFS_SUCCESS;
+      ScopedRWLock scoped_lock(rw_lock_, WRITE_LOCKER);
+      if (READ_DATA_INDEX == index_op)
+      {
+        ret = index_handle_->read_data_index(buf, size);
+      }
+      else if (READ_PARITY_INDEX == index_op)
+      {
+        ret = index_handle_->read_parity_index(index_id, buf, size);
+      }
+      else
+      {
+        ret = TFS_ERROR;
+        TBSYS_LOG(ERROR, "raw index op %d invalid.", (int)index_op);
+      }
+
+      if (TFS_SUCCESS != ret)
+      {
+        TBSYS_LOG(ERROR, "read raw index blockid: %u fail. ret: %d", get_logic_block_id(), ret);
+      }
+
+      return ret;
+    }
+
+
+
     int LogicBlock::copy_block_info(const BlockInfo* blk_info)
     {
       if (NULL == blk_info)

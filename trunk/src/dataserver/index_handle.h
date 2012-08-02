@@ -90,6 +90,10 @@ namespace tfs
         int pcreate(const uint32_t logic_block_id, const DirtyFlag dirty_flag);
         int pload(const uint32_t logic_block_id);
         int pappend_index(const uint32_t block_id, const char* data, const int32_t size);
+        int write_data_index(const common::RawIndexVec& index_vec);
+        int write_parity_index(const common::RawIndexVec& index_vec);
+        int read_data_index(char* & buf, uint32_t& size);
+        int read_parity_index(const uint32_t index_id, char* & buf, uint32_t& size);
 
         // create blockfile ,write index header and buckets info into the file
         int create(const uint32_t logic_block_id, const int32_t cfg_bucket_size, const common::MMapOption map_option,

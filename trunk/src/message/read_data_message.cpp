@@ -392,5 +392,61 @@ namespace tfs
     {
       return read_data_info_.length() + sizeof(ZoomData);
     }
+
+    ReadRawIndexMessage::ReadRawIndexMessage():
+      block_id_(0), index_id_(0), index_op_(common::OP_NOT_INIT)
+    {
+      _packetHeader._pcode = common::READ_RAW_INDEX_MESSAGE;
+    }
+
+    ReadRawIndexMessage::~ReadRawIndexMessage()
+    {
+
+    }
+
+    int ReadRawIndexMessage::serialize(common::Stream& output) const
+    {
+      int32_t iret = output.set_int32(block_id_);
+      if (common::TFS_SUCCESS == iret)
+      {
+        iret = output.set_int32(index_id_);
+      }
+      if (common::TFS_SUCCESS == iret)
+      {
+        iret = output.set_int32(index_op_);
+      }
+      return iret;
+    }
+
+    int ReadRawIndexMessage::deserialize(common::Stream& input)
+    {
+      int32_t iret = input.get_int32((int32_t*)&block_id_);
+      if (common::TFS_SUCCESS == iret)
+      {
+        iret = input.get_int32((int32_t*)&index_id_);
+      }
+      if (common::TFS_SUCCESS == iret)
+      {
+        iret = input.get_int32((int32_t*)&index_op_);
+      }
+      return iret;
+    }
+
+    int64_t ReadRawIndexMessage::length() const
+    {
+      return 3 * common::INT_SIZE;
+    }
+
+
+    RespReadRawIndexMessage::RespReadRawIndexMessage() :
+      RespReadDataMessage()
+    {
+      _packetHeader._pcode = common::RSP_READ_RAW_INDEX_MESSAGE;
+    }
+
+    RespReadRawIndexMessage::~RespReadRawIndexMessage()
+    {
+
+    }
   }
 }

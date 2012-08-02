@@ -225,6 +225,124 @@ namespace tfs
 
     }
 
+    int IndexHandle::write_data_index(const RawIndexVec& index_vec)
+    {
+      int ret = TFS_SUCCESS;
+      if (0 == index_vec.size())
+      {
+        ret = TFS_ERROR;
+        TBSYS_LOG(ERROR, "no element int index vector");
+      }
+      else
+      {
+        if (NULL == index_vec[0].data_)
+        {
+          ret = EXIT_POINTER_NULL;
+        }
+        else
+        {
+          ret = file_op_->pwrite_file(index_vec[0].data_, index_vec[0].size_, 0);
+        }
+
+        if (TFS_SUCCESS == ret)
+        {
+          ret = file_op_->flush_file();
+        }
+      }
+
+      return ret;
+    }
+
+    int IndexHandle::write_parity_index(const RawIndexVec& index_vec)
+    {
+      int ret = TFS_SUCCESS;
+      if (0 == index_vec.size())
+      {
+        ret = TFS_ERROR;
+        TBSYS_LOG(ERROR, "no element int index vector");
+      }
+      else
+      {
+        uint32_t old_num = pindex_header()->index_num_;
+        for (uint32_t i = 0; i < index_vec.size() && TFS_SUCCESS == ret; i++)
+        {
+          ret = pappend_index(index_vec[i].block_id_, index_vec[i].data_, index_vec[i].size_);
+        }
+
+        // rollback
+        if (TFS_SUCCESS != ret)
+        {
+          pindex_header()->index_num_ = old_num;
+        }
+        else
+        {
+          ret = file_op_->flush_file();
+        }
+      }
+
+      return ret;
+    }
+
+    int IndexHandle::read_data_index(char* & buf, uint32_t& size)
+    {
+      int ret = TFS_SUCCESS;
+      size = file_op_->get_file_size();
+
+      if (size <= 0)
+      {
+        ret = EXIT_INDEX_CORRUPT_ERROR;
+      }
+      else
+      {
+        buf = new (std::nothrow) char[size];
+        if (NULL == buf)
+        {
+          ret = EXIT_NO_MEMORY;
+        }
+        else
+        {
+          ret = file_op_->pread_file(buf, size, 0);
+        }
+      }
+
+      return ret;
+    }
+
+    int IndexHandle::read_parity_index(const uint32_t index_id, char* & buf, uint32_t& size)
+    {
+      int ret = TFS_SUCCESS;
+      int32_t file_size = file_op_->get_file_size();
+
+      if (file_size <= 0)
+      {
+        ret = EXIT_INDEX_CORRUPT_ERROR;
+      }
+      else
+      {
+        Position* pos = pindex_position_byid(index_id);
+        if (NULL == pos)
+        {
+          ret = TFS_ERROR;
+        }
+        else
+        {
+          size = pos->size_;
+          uint64_t offset = pos->offset_;
+          buf = new (std::nothrow) char[size];
+          if (NULL == buf)
+          {
+            ret = EXIT_NO_MEMORY;
+          }
+          else
+          {
+            ret = file_op_->pread_file(buf, size, offset);
+          }
+        }
+      }
+
+      return ret;
+    }
+
     // create index file. inner format:
     // ------------------------------------------------------------------------------------------
     // | index header|   hash bucket: each slot hold     |           file meta info             |

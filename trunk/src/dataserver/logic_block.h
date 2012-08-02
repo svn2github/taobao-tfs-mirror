@@ -103,6 +103,9 @@ namespace tfs
           return &physical_block_list_;
         }
 
+        int write_raw_index(const common::RawIndexOp index_op, const common::RawIndexVec* index_vec);
+        int read_raw_index(const common::RawIndexOp index_op, const uint32_t index_id, char* & buf, uint32_t& size );
+
         int batch_write_meta(const common::BlockInfo* blk_info, const common::RawMetaVec* meta_list);
         int set_block_dirty_type(DirtyFlag dirty_flag);
 

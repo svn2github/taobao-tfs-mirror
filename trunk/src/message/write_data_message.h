@@ -16,6 +16,7 @@
 #ifndef TFS_MESSAGE_WRITEDATAMESSAGE_H_
 #define TFS_MESSAGE_WRITEDATAMESSAGE_H_
 #include "common/base_packet.h"
+#include "common/internal.h"
 
 namespace tfs
 {
@@ -275,6 +276,52 @@ namespace tfs
         common::BlockInfo block_info_;
         common::RawMetaVec meta_list_;
         int32_t cluster_;
+    };
+
+    class WriteRawIndexMessage: public common::BasePacket
+    {
+      public:
+        WriteRawIndexMessage();
+        virtual ~WriteRawIndexMessage();
+        virtual int serialize(common::Stream& output) const ;
+        virtual int deserialize(common::Stream& input);
+        virtual int64_t length() const;
+
+        void set_index_op(const common::RawIndexOp index_op)
+        {
+          index_op_ = index_op;
+        }
+
+        common::RawIndexOp get_index_op()
+        {
+          return index_op_;
+        }
+
+        void set_block_id(const uint32_t block_id)
+        {
+          block_id_ = block_id;
+        }
+
+        uint32_t get_block_id()
+        {
+          return block_id_;
+        }
+
+        void append_index(const uint32_t block_id, char* data, uint32_t size)
+        {
+          common::RawIndex index(block_id, data, size);
+          index_vec_.push_back(index);
+        }
+
+        common::RawIndexVec* get_index_vec()
+        {
+          return &index_vec_;
+        }
+
+      private:
+        uint32_t block_id_;
+        common::RawIndexOp index_op_;
+        common::RawIndexVec index_vec_;
     };
   }
 }
