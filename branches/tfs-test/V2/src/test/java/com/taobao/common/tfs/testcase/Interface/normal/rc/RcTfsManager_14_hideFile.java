@@ -16,7 +16,7 @@ public class RcTfsManager_14_hideFile extends rcTfsBaseCase
 	@Test
     public  void  test_01_saveFile_then_hideFile()
 	{
-		log.info( "test_01_saveFile_then_hideFile" );
+		log.info(new Throwable().getStackTrace()[0].getMethodName());
 		String Ret=null;
 		Ret=tfsManager.saveFile( resourcesPath+"100K.jpg",null,null,false);
 		Assert.assertNotNull(Ret);
@@ -32,7 +32,7 @@ public class RcTfsManager_14_hideFile extends rcTfsBaseCase
 	@Test
     public  void  test_02_saveFile_simpleName_then_hideFile()
 	{
-		log.info( "test_02_saveFile_simpleName_then_hideFile" );
+		log.info(new Throwable().getStackTrace()[0].getMethodName());
 		String Ret=null;
 		Ret=tfsManager.saveFile( resourcesPath+"100K.jpg",null,null,true);
 		Assert.assertNotNull(Ret);
@@ -48,7 +48,7 @@ public class RcTfsManager_14_hideFile extends rcTfsBaseCase
 	@Test
     public  void  test_03_saveFile_byte_then_hideFile() throws IOException
 	{
-		log.info( "test_03_saveFile_byte_then_hideFile" );
+		log.info(new Throwable().getStackTrace()[0].getMethodName());
 		String Ret=null;
 		byte data[]=null;
 		data=FileUtility.getByte(resourcesPath+"100K.jpg");
@@ -66,7 +66,7 @@ public class RcTfsManager_14_hideFile extends rcTfsBaseCase
 	@Test
     public  void  test_04_saveFile_byte_simpleName_then_hideFile() throws IOException
 	{
-		log.info( "test_04_saveFile_byte_simpleName_then_hideFile" );
+		log.info(new Throwable().getStackTrace()[0].getMethodName());
 		String Ret=null;
 		byte data[]=null;
 		data=FileUtility.getByte(resourcesPath+"100K.jpg");
@@ -84,7 +84,7 @@ public class RcTfsManager_14_hideFile extends rcTfsBaseCase
 	@Test
     public  void  test_05_saveLargeFile_then_hideFile()
 	{
-		log.info( "test_05_saveLargeFile_then_hideFile" );
+		log.info(new Throwable().getStackTrace()[0].getMethodName());
 		String Ret=null;
 		Ret=tfsManager.saveLargeFile( resourcesPath+"5M.jpg",null,null);
 		Assert.assertNotNull(Ret);
@@ -100,7 +100,7 @@ public class RcTfsManager_14_hideFile extends rcTfsBaseCase
 	@Test
     public  void  test_06_saveLargeFile_byte_then_hideFile() throws IOException
 	{
-		log.info( "test_06_saveLargeFile_byte_then_hideFile" );
+		log.info(new Throwable().getStackTrace()[0].getMethodName());
 		String Ret=null;
 		byte data[]=null;
 		data=FileUtility.getByte(resourcesPath+"5M.jpg");
@@ -118,7 +118,7 @@ public class RcTfsManager_14_hideFile extends rcTfsBaseCase
 	@Test
     public  void  test_07_hideFile_wrong_tfsFileName()
 	{
-		log.info( "test_07_hideFile_wrong_tfsFileName" );
+		log.info(new Throwable().getStackTrace()[0].getMethodName());
 		
 		boolean Bret;
 		Bret=tfsManager.hideFile("hsakjdhskasjka", null, 1);
@@ -128,7 +128,7 @@ public class RcTfsManager_14_hideFile extends rcTfsBaseCase
 	@Test
     public  void  test_08_hideFile_null_tfsFileName()
 	{
-		log.info( "test_08_hideFile_null_tfsFileName" );
+		log.info(new Throwable().getStackTrace()[0].getMethodName());
 		
 		boolean Bret;
 		Bret=tfsManager.hideFile(null, null, 1);
@@ -138,7 +138,7 @@ public class RcTfsManager_14_hideFile extends rcTfsBaseCase
 	@Test
     public  void  test_09_hideFile_empty_tfsFileName()
 	{
-		log.info( "test_09_hideFile_empty_tfsFileName" );
+		log.info(new Throwable().getStackTrace()[0].getMethodName());
 		
 		boolean Bret;
 		Bret=tfsManager.hideFile("", null, 1);
@@ -148,7 +148,7 @@ public class RcTfsManager_14_hideFile extends rcTfsBaseCase
 	@Test
     public  void  test_10_openReadFile_then_hideFile() throws IOException
 	{
-		log.info( "test_10_openReadFile_then_hideFile" );
+		log.info(new Throwable().getStackTrace()[0].getMethodName());
 	
 		String Ret=null;
 		Ret=tfsManager.saveFile( resourcesPath+"100K.jpg",null,null,false);
@@ -173,7 +173,7 @@ public class RcTfsManager_14_hideFile extends rcTfsBaseCase
 	
     public  void  test_11_openWriteFile_then_hideFile() throws IOException
 	{
-		log.info( "test_11_openWriteFile_then_hideFile" );
+		log.info(new Throwable().getStackTrace()[0].getMethodName());
 	
 		String Ret=null;
 		
@@ -196,7 +196,7 @@ public class RcTfsManager_14_hideFile extends rcTfsBaseCase
 	@Test
     public  void  test_12_saveFile_then_hideFile_wrong_suffix()
 	{
-		log.info( "test_12_saveFile_then_hideFile_wrong_suffix" );
+		log.info(new Throwable().getStackTrace()[0].getMethodName());
 		String Ret=null;
 		Ret=tfsManager.saveFile( resourcesPath+"100K.jpg",null,null,false);
 		Assert.assertNotNull(Ret);
@@ -210,7 +210,7 @@ public class RcTfsManager_14_hideFile extends rcTfsBaseCase
 	@Test
     public  void  test_13_saveFile_then_hideFile_empty_suffix()
 	{
-		log.info( "test_13_saveFile_then_hideFile_empty_suffix" );
+		log.info(new Throwable().getStackTrace()[0].getMethodName());
 		String Ret=null;
 		Ret=tfsManager.saveFile( resourcesPath+"100K.jpg",null,null,false);
 		Assert.assertNotNull(Ret);
@@ -224,7 +224,7 @@ public class RcTfsManager_14_hideFile extends rcTfsBaseCase
 	@Test
     public  void  test_14_saveFile_then_hideFile_double()
 	{
-		log.info( "test_14_saveFile_then_hideFile_double" );
+		log.info(new Throwable().getStackTrace()[0].getMethodName());
 		String Ret=null;
 		Ret=tfsManager.saveFile( resourcesPath+"100K.jpg",null,null,false);
 		Assert.assertNotNull(Ret);
@@ -240,7 +240,7 @@ public class RcTfsManager_14_hideFile extends rcTfsBaseCase
 	@Test
     public  void  test_15_saveFile_then_unhideFile()
 	{
-		log.info( "test_15_saveFile_then_unhideFile" );
+		log.info(new Throwable().getStackTrace()[0].getMethodName());
 		String Ret=null;
 		Ret=tfsManager.saveFile( resourcesPath+"100K.jpg",null,null,false);
 		Assert.assertNotNull(Ret);
@@ -254,7 +254,7 @@ public class RcTfsManager_14_hideFile extends rcTfsBaseCase
 	@Test
     public  void  test_16_saveFile_with_suffix_then_hideFile_with_suffix()
 	{
-		log.info( "test_16_saveFile_with_suffix_then_hideFile_with_suffix" );
+		log.info(new Throwable().getStackTrace()[0].getMethodName());
 		String Ret=null;
 		Ret=tfsManager.saveFile( resourcesPath+"100K.jpg",null,".jpg",false);
 		Assert.assertNotNull(Ret);

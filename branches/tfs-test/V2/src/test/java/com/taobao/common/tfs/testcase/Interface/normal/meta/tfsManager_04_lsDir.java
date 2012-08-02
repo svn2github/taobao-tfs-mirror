@@ -56,7 +56,7 @@ public class tfsManager_04_lsDir extends metaTfsBaseCase
 	 @Test 
 	 public void test_01_lsDir_right_filePath()
 	 {
-		log.info( "test_01_lsDir_right_filePath" );
+		log.info(new Throwable().getStackTrace()[0].getMethodName());
 		List<FileMetaInfo> metaInfoList = new ArrayList<FileMetaInfo>();
 		metaInfoList=null;
 		FileMetaInfo metaInfo;
@@ -75,12 +75,12 @@ public class tfsManager_04_lsDir extends metaTfsBaseCase
 		   log.info( "The length is"+metaInfo.getLength());
 		   log.info( "*****************************************************" );
 		}
-		log.info( "test_01_lsDir_right_filePath" );
+		log.info(new Throwable().getStackTrace()[0].getMethodName());
 	}
 	 @Test 
 	 public void test_02_lsDir_null_filePath()
 	 {
-		log.info( "test_02_lsDir_null_filePath" );
+		log.info(new Throwable().getStackTrace()[0].getMethodName());
 		List<FileMetaInfo> metaInfoList = new ArrayList<FileMetaInfo>();
 		metaInfoList=null;
 		metaInfoList=tfsManager.lsDir(appId, userId, null);
@@ -89,7 +89,7 @@ public class tfsManager_04_lsDir extends metaTfsBaseCase
 	 @Test 
 	 public void test_03_lsDir_empty_filePath()
 	 {
-		log.info( "test_03_lsDir_empty_filePath" );
+		log.info(new Throwable().getStackTrace()[0].getMethodName());
 		List<FileMetaInfo> metaInfoList = new ArrayList<FileMetaInfo>();
 		metaInfoList=null;
 		metaInfoList=tfsManager.lsDir(appId, userId, "");
@@ -98,7 +98,7 @@ public class tfsManager_04_lsDir extends metaTfsBaseCase
 	 @Test 
 	 public void test_04_lsDir_wrong_filePath_1()
 	 {
-		log.info( "test_04_lsDir_wrong_filePath_1" );
+		log.info(new Throwable().getStackTrace()[0].getMethodName());
 		List<FileMetaInfo> metaInfoList = new ArrayList<FileMetaInfo>();
 		metaInfoList=null;
 		metaInfoList=tfsManager.lsDir(appId, userId, "textlsDir1");
@@ -107,7 +107,7 @@ public class tfsManager_04_lsDir extends metaTfsBaseCase
 	 @Test 
 	 public void test_05_lsDir_wrong_filePath_2()
 	 {
-		log.info( "test_05_lsDir_wrong_filePath_2" );
+		log.info(new Throwable().getStackTrace()[0].getMethodName());
 		List<FileMetaInfo> metaInfoList = new ArrayList<FileMetaInfo>();
 		metaInfoList=null;
 		FileMetaInfo metaInfo;
@@ -126,13 +126,13 @@ public class tfsManager_04_lsDir extends metaTfsBaseCase
 		   log.info( "The length is"+metaInfo.getLength());
 		   log.info( "*****************************************************" );
 		}
-		log.info( "test_05_lsDir_wrong_filePath_2" );
+		log.info(new Throwable().getStackTrace()[0].getMethodName());
 	 }
 
 	 @Test 
 	 public void test_06_lsDir_not_exist_filePath()
 	 {
-		log.info( "test_06_lsDir_not_exist_filePath" );
+		log.info(new Throwable().getStackTrace()[0].getMethodName());
 		List<FileMetaInfo> metaInfoList = new ArrayList<FileMetaInfo>();
 		metaInfoList=null;
 		metaInfoList=tfsManager.lsDir(appId, userId, "/textlsDir1/textlsDir");
@@ -142,7 +142,7 @@ public class tfsManager_04_lsDir extends metaTfsBaseCase
 	 @Test 
 	 public void test_08_lsDir_root()
 	 {
-		log.info( "test_08_lsDir_root" );
+		log.info(new Throwable().getStackTrace()[0].getMethodName());
 		List<FileMetaInfo> metaInfoList = new ArrayList<FileMetaInfo>();
 		metaInfoList=null;
 		metaInfoList=tfsManager.lsDir(appId, 73, "/");

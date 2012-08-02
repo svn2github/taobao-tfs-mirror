@@ -16,7 +16,7 @@ public class RcTfsManager_04_saveLargeFile_byte extends rcTfsBaseCase
 	@Test
     public  void  test_01_saveLargeFile_byte() throws IOException
 	{
-    	log.info( "test_01_saveLargeFile_byte" );
+    	log.info(new Throwable().getStackTrace()[0].getMethodName());
 		String Ret=null;
 		byte data[]=null;
 		data=FileUtility.getByte(resourcesPath+"5M.jpg");
@@ -28,7 +28,7 @@ public class RcTfsManager_04_saveLargeFile_byte extends rcTfsBaseCase
 	@Test
     public  void  test_02_saveLargeFile_byte_less_length() throws IOException
 	{
-    	log.info( "test_02_saveLargeFile_byte_less_length" );
+    	log.info(new Throwable().getStackTrace()[0].getMethodName());
 		String Ret=null;
 		byte data[]=null;
 		data=FileUtility.getByte(resourcesPath+"5M.jpg");
@@ -40,7 +40,7 @@ public class RcTfsManager_04_saveLargeFile_byte extends rcTfsBaseCase
 	@Test
     public  void  test_03_saveLargeFile_byte_more_length() throws IOException
 	{
-    	log.info( "test_03_saveLargeFile_byte_more_length" );
+    	log.info(new Throwable().getStackTrace()[0].getMethodName());
 		String Ret=null;
 		byte data[]=null;
 		data=FileUtility.getByte(resourcesPath+"5M.jpg");
@@ -52,7 +52,7 @@ public class RcTfsManager_04_saveLargeFile_byte extends rcTfsBaseCase
 	@Test
     public  void  test_04_saveLargeFile_byte_wrong_offset() throws IOException
 	{
-    	log.info( "test_04_saveLargeFile_byte_wrong_offset" );
+    	log.info(new Throwable().getStackTrace()[0].getMethodName());
 		String Ret=null;
 		byte data[]=null;
 		data=FileUtility.getByte(resourcesPath+"5M.jpg");
@@ -63,7 +63,7 @@ public class RcTfsManager_04_saveLargeFile_byte extends rcTfsBaseCase
 	@Test
     public  void  test_05_saveLargeFile_byte_more_offset() throws IOException
 	{
-    	log.info( "test_05_saveLargeFile_byte_more_offset" );
+    	log.info(new Throwable().getStackTrace()[0].getMethodName());
 		String Ret=null;
 		byte data[]=null;
 		data=FileUtility.getByte(resourcesPath+"5M.jpg");
@@ -74,7 +74,7 @@ public class RcTfsManager_04_saveLargeFile_byte extends rcTfsBaseCase
 	@Test
     public  void  test_06_saveLargeFile_byte_more_offset_and_length() throws IOException
 	{
-    	log.info( "test_06_saveLargeFile_byte_more_offset_and_length" );
+    	log.info(new Throwable().getStackTrace()[0].getMethodName());
 		String Ret=null;
 		byte data[]=null;
 		data=FileUtility.getByte(resourcesPath+"5M.jpg");
@@ -86,7 +86,7 @@ public class RcTfsManager_04_saveLargeFile_byte extends rcTfsBaseCase
 	@Test
     public  void  test_07_saveLargeFile_byte_with_suffix() throws IOException
 	{
-    	log.info( "test_07_saveLargeFile_byte_with_suffix" );
+    	log.info(new Throwable().getStackTrace()[0].getMethodName());
 		String Ret=null;
 		byte data[]=null;
 		data=FileUtility.getByte(resourcesPath+"5M.jpg");
@@ -98,7 +98,7 @@ public class RcTfsManager_04_saveLargeFile_byte extends rcTfsBaseCase
 	@Test
     public  void  test_08_saveLargeFile_byte_with_empty_suffix() throws IOException
 	{
-    	log.info( "test_08_saveLargeFile_byte_with_empty_suffix" );
+    	log.info(new Throwable().getStackTrace()[0].getMethodName());
 		String Ret=null;
 		byte data[]=null;
 		data=FileUtility.getByte(resourcesPath+"5M.jpg");
@@ -110,7 +110,7 @@ public class RcTfsManager_04_saveLargeFile_byte extends rcTfsBaseCase
 	@Test
     public  void  test_09_saveLargeFile_byte_with_empty_data() throws IOException
 	{
-    	log.info( "test_09_saveLargeFile_byte_with_empty_data" );
+    	log.info(new Throwable().getStackTrace()[0].getMethodName());
 		String Ret=null;
 		byte data[]=null;
 		String buf="";
@@ -122,7 +122,7 @@ public class RcTfsManager_04_saveLargeFile_byte extends rcTfsBaseCase
 	@Test
     public  void  test_10_saveLargeFile_byte_with_null_data() throws IOException
 	{
-    	log.info( "test_10_saveLargeFile_byte_with_null_data" );
+    	log.info(new Throwable().getStackTrace()[0].getMethodName());
 		String Ret=null;
 		Ret=tfsManager.saveLargeFile(null,null,null,0,0,key);
 		Assert.assertNull(Ret);
@@ -131,7 +131,7 @@ public class RcTfsManager_04_saveLargeFile_byte extends rcTfsBaseCase
 	@Test
     public  void  test_11_saveLargeFile_byte_with_wrong_length() throws IOException
 	{
-    	log.info( "test_11_saveLargeFile_byte_with_wrong_length" );
+    	log.info(new Throwable().getStackTrace()[0].getMethodName());
 		String Ret=null;
 		byte data[]=null;
 		data=FileUtility.getByte(resourcesPath+"5M.jpg");
@@ -142,7 +142,7 @@ public class RcTfsManager_04_saveLargeFile_byte extends rcTfsBaseCase
 	@Test
     public  void  test_12_saveLargeFile_byte_small() throws IOException
 	{
-    	log.info( "test_12_saveLargeFile_byte_small" );
+    	log.info(new Throwable().getStackTrace()[0].getMethodName());
 		String Ret=null;
 		byte data[]=null;
 		data=FileUtility.getByte(resourcesPath+"10k.jpg");
@@ -154,7 +154,7 @@ public class RcTfsManager_04_saveLargeFile_byte extends rcTfsBaseCase
 	@Test
     public  void  test_13_saveLargeFile_byte_wrong_tfsname() throws IOException
 	{
-    	log.info( "test_13_saveLargeFile_byte_wrong_tfsname" );
+    	log.info(new Throwable().getStackTrace()[0].getMethodName());
 		String Ret=null;
 		byte data[]=null;
 		data=FileUtility.getByte(resourcesPath+"5M.jpg");
@@ -166,7 +166,7 @@ public class RcTfsManager_04_saveLargeFile_byte extends rcTfsBaseCase
 	@Test
     public  void  test_14_saveLargeFile_byte_empty_tfsname() throws IOException
 	{
-    	log.info( "test_14_saveLargeFile_byte_empty_tfsname" );
+    	log.info(new Throwable().getStackTrace()[0].getMethodName());
 		String Ret=null;
 		byte data[]=null;
 		data=FileUtility.getByte(resourcesPath+"5M.jpg");
@@ -178,7 +178,7 @@ public class RcTfsManager_04_saveLargeFile_byte extends rcTfsBaseCase
 	@Test
     public  void  test_15_saveLargeFile_byte_null_key() throws IOException
 	{
-    	log.info( "test_15_saveLargeFile_byte_null_key" );
+    	log.info(new Throwable().getStackTrace()[0].getMethodName());
 		String Ret=null;
 		byte data[]=null;
 		data=FileUtility.getByte(resourcesPath+"5M.jpg");

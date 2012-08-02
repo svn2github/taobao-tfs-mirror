@@ -16,7 +16,7 @@ public class RcTfsManager_09_readFile extends rcTfsBaseCase
 	@Test
     public  void  test_01_openReadFile_then_readFile() throws IOException
 	{
-		log.info( "test_01_openReadFile_then_readFile" );
+		log.info(new Throwable().getStackTrace()[0].getMethodName());
 		String Ret=null;
 		int savecrc;
 		int readcrc;
@@ -44,7 +44,7 @@ public class RcTfsManager_09_readFile extends rcTfsBaseCase
 	@Test
     public  void  test_02_openReadFile_then_readFile_less_length() throws IOException
 	{
-		log.info( "test_02_openReadFile_then_readFile_less_length" );
+		log.info(new Throwable().getStackTrace()[0].getMethodName());
 		String Ret=null;
 		Ret=tfsManager.saveLargeFile( resourcesPath+"5M.jpg",null,null);
 		Assert.assertNotNull(Ret);
@@ -65,7 +65,7 @@ public class RcTfsManager_09_readFile extends rcTfsBaseCase
 	@Test
     public  void  test_03_openReadFile_then_readFile_more_length() throws IOException
 	{
-		log.info( "test_03_openReadFile_then_readFile_more_length" );
+		log.info(new Throwable().getStackTrace()[0].getMethodName());
 		String Ret=null;
 		Ret=tfsManager.saveLargeFile( resourcesPath+"5M.jpg",null,null);
 		Assert.assertNotNull(Ret);
@@ -86,7 +86,7 @@ public class RcTfsManager_09_readFile extends rcTfsBaseCase
 	@Test
     public  void  test_04_openReadFile_then_readFile_with_offset() throws IOException
 	{
-		log.info( "test_04_openReadFile_then_readFile_with_offset" );
+		log.info(new Throwable().getStackTrace()[0].getMethodName());
 		String Ret=null;
 		Ret=tfsManager.saveLargeFile( resourcesPath+"5M.jpg",null,null);
 		Assert.assertNotNull(Ret);
@@ -108,7 +108,7 @@ public class RcTfsManager_09_readFile extends rcTfsBaseCase
 	@Test
     public  void  test_05_openReadFile_then_readFile_more_offset() throws IOException
 	{
-		log.info( "test_05_openReadFile_then_readFile_more_offset" );
+		log.info(new Throwable().getStackTrace()[0].getMethodName());
 		String Ret=null;
 		Ret=tfsManager.saveLargeFile( resourcesPath+"5M.jpg",null,null);
 		Assert.assertNotNull(Ret);
@@ -128,7 +128,7 @@ public class RcTfsManager_09_readFile extends rcTfsBaseCase
 	@Test
     public  void  test_06_openReadFile_then_readFile_wrong_offset() throws IOException
 	{
-		log.info( "test_06_openReadFile_then_readFile_wrong_offset" );
+		log.info(new Throwable().getStackTrace()[0].getMethodName());
 		String Ret=null;
 		Ret=tfsManager.saveLargeFile( resourcesPath+"5M.jpg",null,null);
 		Assert.assertNotNull(Ret);
@@ -148,7 +148,7 @@ public class RcTfsManager_09_readFile extends rcTfsBaseCase
 	@Test
     public  void  test_07_openReadFile_then_readFile_more_offset_and_length() throws IOException
 	{
-		log.info( "test_07_openReadFile_then_readFile_more_offset_and_length" );
+		log.info(new Throwable().getStackTrace()[0].getMethodName());
 		String Ret=null;
 		Ret=tfsManager.saveLargeFile( resourcesPath+"5M.jpg",null,null);
 		Assert.assertNotNull(Ret);
@@ -168,7 +168,7 @@ public class RcTfsManager_09_readFile extends rcTfsBaseCase
 	@Test
     public  void  test_08_openReadFile_then_readFile_with_wrong_fd() throws IOException
 	{
-		log.info( "test_08_openReadFile_then_readFile_with_wrong_fd" );
+		log.info(new Throwable().getStackTrace()[0].getMethodName());
 	
 		int fd=-1;
 		byte[] data=null;
@@ -182,7 +182,7 @@ public class RcTfsManager_09_readFile extends rcTfsBaseCase
 	@Test
     public  void  test_09_openReadFile_then_readFile_with_wrong_fd_2() throws IOException
 	{
-		log.info( "test_09_openReadFile_then_readFile_with_wrong_fd_2" );
+		log.info(new Throwable().getStackTrace()[0].getMethodName());
 	
 		String Ret=null;
 		Ret=tfsManager.saveLargeFile( resourcesPath+"5M.jpg",null,null);
@@ -205,7 +205,7 @@ public class RcTfsManager_09_readFile extends rcTfsBaseCase
 	@Test
     public  void  test_10_openReadFile_then_readFile_with_wrong_fd_3() throws IOException
 	{
-		log.info( "test_10_openReadFile_then_readFile_with_wrong_fd_3" );
+		log.info(new Throwable().getStackTrace()[0].getMethodName());
 	
 		String Ret=null;
 		Ret=tfsManager.saveLargeFile( resourcesPath+"5M.jpg",null,null);
@@ -231,7 +231,7 @@ public class RcTfsManager_09_readFile extends rcTfsBaseCase
 	@Test
     public  void  test_11_openReadFile_then_readFile_null_data() throws IOException
 	{
-		log.info( "test_11_openReadFile_then_readFile_empty_data" );
+		log.info(new Throwable().getStackTrace()[0].getMethodName());
 		String Ret=null;
 		Ret=tfsManager.saveLargeFile( resourcesPath+"5M.jpg",null,null);
 		Assert.assertNotNull(Ret);

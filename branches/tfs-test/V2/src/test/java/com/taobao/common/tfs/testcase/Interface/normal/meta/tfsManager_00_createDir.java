@@ -17,7 +17,7 @@ public class tfsManager_00_createDir extends metaTfsBaseCase
     public  void  test_01_createDir_right_filePath()
     {
     	int Ret;
-	    log.info( "test_01_createDir_right_filePath" );
+	    log.info(new Throwable().getStackTrace()[0].getMethodName());
         Ret=tfsManager.createDir(appId, userId, "/text");
         Assert.assertEquals("Create Dir with right path should be true", Ret,0);
         Ret = tfsManager.rmDir(appId, userId, "/text");
@@ -28,7 +28,7 @@ public class tfsManager_00_createDir extends metaTfsBaseCase
 	public void  test_02_createDir_leap_filePath()
 	{
 	   int Ret;
-	   log.info( "test_02_createDir_leap_filePath" );
+	   log.info(new Throwable().getStackTrace()[0].getMethodName());
 	   Ret=tfsManager.createDir(appId, userId, "/text/test");
 	   Assert.assertEquals("Create Dir with leap path should be false", Ret,-14002);
 	}
@@ -36,7 +36,7 @@ public class tfsManager_00_createDir extends metaTfsBaseCase
 	public void  test_03_createDir_double_time()
 	{
 	   int Ret;
-	   log.info( "test_03_createDir_double_time" );
+	   log.info(new Throwable().getStackTrace()[0].getMethodName());
 
 	   Ret=tfsManager.createDir(appId, userId, "/textcreateDir3dt"); 
 	   Assert.assertEquals("Create Dir with right path should be true", Ret,0);
@@ -50,7 +50,7 @@ public class tfsManager_00_createDir extends metaTfsBaseCase
 	public void  test_04_createDir_null_filePath()
 	{
 	   int Ret;
-	   log.info( "test_04_createDir_null_filePath" );
+	   log.info(new Throwable().getStackTrace()[0].getMethodName());
 	   Ret=tfsManager.createDir(appId, userId, null);
 	   Assert.assertEquals("Create Dir with null path should be false", Ret,-14010);
 	}
@@ -58,7 +58,7 @@ public class tfsManager_00_createDir extends metaTfsBaseCase
 	public void  test_05_createDir_empty_filePath()
 	{
 	   int Ret;
-	   log.info( "test_04_createDir_null_filePath" );
+	   log.info(new Throwable().getStackTrace()[0].getMethodName());
 	   Ret=tfsManager.createDir(appId, userId, "");
 	   Assert.assertEquals("Create Dir with null path should be false", Ret,-14010);
 	}
@@ -66,7 +66,7 @@ public class tfsManager_00_createDir extends metaTfsBaseCase
 	public void  test_06_createDir_with_same_fileName()
 	{
 	   int Ret;
-	   log.info( "test_06_createDir_with_same_fileName" );
+	   log.info(new Throwable().getStackTrace()[0].getMethodName());
 	   tfsManager.createFile(appId, userId, "/textcreateDir6wsfn");
 	   Ret=tfsManager.createDir(appId, userId, "/textcreateDir6wsfn");
 	   Assert.assertEquals("Create Dir with the same File name should be true", Ret,0);
@@ -77,7 +77,7 @@ public class tfsManager_00_createDir extends metaTfsBaseCase
 	public void  test_07_createDir_wrong_filePath_1()
 	{
 	   int Ret;
-	   log.info( "test_07_createDir_wrong_filePath_1" );
+	   log.info(new Throwable().getStackTrace()[0].getMethodName());
 	   Ret=tfsManager.createDir(appId, userId, "textcreateDir7wfp");
 	   Assert.assertEquals("Create Dir with wrong_1 path should be false", Ret,-14010);
 	}
@@ -85,7 +85,7 @@ public class tfsManager_00_createDir extends metaTfsBaseCase
 	public  void  test_08_createDir_wrong_filePath_2()
 	{
 	   int Ret;
-	   log.info( "test_08_createDir_wrong_filePath_2" );
+	   log.info(new Throwable().getStackTrace()[0].getMethodName());
 	   Ret=tfsManager.createDir(appId, userId, "////textcreateDir8wfp////");
 	   Assert.assertEquals("Create Dir with wrong_2 path be true", Ret,0);
 	   tfsManager.rmDir(appId, userId, "/textcreateDir8wfp");
@@ -94,7 +94,7 @@ public class tfsManager_00_createDir extends metaTfsBaseCase
 	public void  test_09_createDir_wrong_filePath_3()
 	{
 	   int Ret;
-	   log.info( "test_09_createDir_wrong_filePath_3" );
+	   log.info(new Throwable().getStackTrace()[0].getMethodName());
 	   Ret=tfsManager.createDir(appId, userId, "/");
 	   Assert.assertEquals("Create Dir with wrong_3 path should be false", Ret,-14010);
 	}
@@ -102,7 +102,7 @@ public class tfsManager_00_createDir extends metaTfsBaseCase
 	public void  test_10_createDir_width_100()
 	{
 	   int Ret;
-	   log.info( "test_10_createDir_width_100" );
+	   log.info(new Throwable().getStackTrace()[0].getMethodName());
 	   int i;
 	   for(i=1;i<=98;i++)
 	   {
@@ -119,7 +119,7 @@ public class tfsManager_00_createDir extends metaTfsBaseCase
 	public void  test_11_createDir_deep_8()
 	{
 	   int Ret;
-	   log.info( "test_11_createDir_deep_8" );
+	   log.info(new Throwable().getStackTrace()[0].getMethodName());
 	   int i;
 	   String s="/text";
 	   for(i=0;i<8;i++)
@@ -135,7 +135,7 @@ public class tfsManager_00_createDir extends metaTfsBaseCase
 	public void  test_12_createDir_width_100_deep_7()
 	{
 	   int Ret;
-	   log.info( "test_12_createDir_width_100_deep_7" );
+	   log.info(new Throwable().getStackTrace()[0].getMethodName());
 	   int i;
 	   String s="/text";
 	   for(i=0;i<7;i++)
@@ -167,7 +167,7 @@ public class tfsManager_00_createDir extends metaTfsBaseCase
 	public void test_13_createDir_length_more_512()
     {
  	    int Ret;
-	    log.info( "test_13_createDir_length_more_512" );
+	    log.info(new Throwable().getStackTrace()[0].getMethodName());
 	    int len = 512;
         String s = new String();  
 	    for(int i=0;i<len;i++)
@@ -184,7 +184,7 @@ public class tfsManager_00_createDir extends metaTfsBaseCase
 	public void test_14_createDir_more_suffix()
     {
  	   int Ret;
-	   log.info( "test_14_createDir_more_suffix" );
+	   log.info(new Throwable().getStackTrace()[0].getMethodName());
 	   Ret=tfsManager.createDir(appId, userId, "///textcreate14ms///");
 	   Assert.assertEquals("Create Dir with right path should be true", Ret,0);
 	   tfsManager.rmDir(appId, userId, "/textcreate14ms");
@@ -193,7 +193,7 @@ public class tfsManager_00_createDir extends metaTfsBaseCase
 	public  void test_15_createDir_empty()
     {
  	   int Ret;
-	   log.info( "test_14_createDir_more_suffix" );
+	   log.info(new Throwable().getStackTrace()[0].getMethodName());
 	   Ret=tfsManager.createDir(appId, userId, "/    ");
 	   Assert.assertEquals("Create Dir with right path should be false", Ret,-14010);
     }

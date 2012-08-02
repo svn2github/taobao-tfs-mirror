@@ -16,7 +16,7 @@ public class tfsManager_14_saveFile_offset extends metaTfsBaseCase
 	@Test
     public  void  test_01_saveFile_byte() throws IOException
 	{
-		log.info( "test_01_saveFile_byte" );
+		log.info(new Throwable().getStackTrace()[0].getMethodName());
 
         String tfsFile = "/test01SFB";
 		boolean bRet = false;
@@ -34,7 +34,7 @@ public class tfsManager_14_saveFile_offset extends metaTfsBaseCase
     @Test
     public  void  test_02_saveFile_byte_with_empty_data_1() throws IOException
     {
-        log.info( "test_02_saveFile_byte_with_empty_data_1" );
+        log.info(new Throwable().getStackTrace()[0].getMethodName());
         boolean bRet = false;
         int Ret;
 
@@ -52,7 +52,7 @@ public class tfsManager_14_saveFile_offset extends metaTfsBaseCase
     @Test
     public  void  test_03_saveFile_byte_with_empty_data_2() throws IOException
     {
-        log.info( "test_03_saveFile_byte_with_empty_data_2" );
+        log.info(new Throwable().getStackTrace()[0].getMethodName());
         boolean bRet = false;
     
         byte data[] = null;
@@ -66,7 +66,7 @@ public class tfsManager_14_saveFile_offset extends metaTfsBaseCase
     @Test
     public  void  test_04_saveFile_byte_with_null_data_1() throws IOException
     {
-        log.info( "test_04_saveFile_byte_with_null_data_1" );
+        log.info(new Throwable().getStackTrace()[0].getMethodName());
 
         boolean bRet = false;
 
@@ -79,7 +79,7 @@ public class tfsManager_14_saveFile_offset extends metaTfsBaseCase
     @Test
     public  void  test_05_saveFile_byte_with_null_data_2() throws IOException
     {
-        log.info( "test_05_saveFile_byte_with_null_data_2" );
+        log.info(new Throwable().getStackTrace()[0].getMethodName());
 
         boolean bRet = false;
 
@@ -92,7 +92,7 @@ public class tfsManager_14_saveFile_offset extends metaTfsBaseCase
     @Test
     public  void  test_06_saveFile_byte_wrong_offset() throws IOException
     {
-        log.info( "test_06_saveFile_byte_wrong_offset" );
+        log.info(new Throwable().getStackTrace()[0].getMethodName());
         boolean bRet = false;
 
         byte data[] = null;
@@ -105,7 +105,7 @@ public class tfsManager_14_saveFile_offset extends metaTfsBaseCase
     @Test
     public  void  test_07_saveFile_byte_with_offset_less_length_and_more_zero() throws IOException
     {
-        log.info( "test_07_saveFile_byte_with_offset_less_length_and_more_zero" );
+        log.info(new Throwable().getStackTrace()[0].getMethodName());
 
         String tfsFile = "/test07SFBWOLLAMZ";
         boolean bRet = false;
@@ -123,7 +123,7 @@ public class tfsManager_14_saveFile_offset extends metaTfsBaseCase
     @Test
     public  void  test_08_saveFile_byte_with_offset_more_length() throws IOException
     {
-        log.info( "test_08_saveFile_byte_with_offset_more_length" );
+        log.info(new Throwable().getStackTrace()[0].getMethodName());
 
         boolean bRet = false;
 
@@ -137,7 +137,7 @@ public class tfsManager_14_saveFile_offset extends metaTfsBaseCase
 	@Test
     public  void  test_09_saveFile_byte_less_length() throws IOException
 	{
-		log.info( "test_09_saveFile_byte_less_length" );
+		log.info(new Throwable().getStackTrace()[0].getMethodName());
 
         String tfsFile = "/test09SFBLL";
 		boolean bRet= false;
@@ -155,7 +155,7 @@ public class tfsManager_14_saveFile_offset extends metaTfsBaseCase
 	@Test
     public  void  test_10_saveFile_byte_more_length() throws IOException
 	{
-		log.info( "test_10_saveFile_byte_more_length" );
+		log.info(new Throwable().getStackTrace()[0].getMethodName());
 		boolean bRet = false;
 
 		byte data[] = null;
@@ -168,7 +168,7 @@ public class tfsManager_14_saveFile_offset extends metaTfsBaseCase
 	@Test
     public  void  test_11_saveFile_byte_with_offset_and_length() throws IOException
 	{
-		log.info( "test_11_saveFile_byte_with_offset_and_length" );
+		log.info(new Throwable().getStackTrace()[0].getMethodName());
 
         String tfsFile = "/test11SFBWOAL";
 		boolean bRet = false;
@@ -188,7 +188,7 @@ public class tfsManager_14_saveFile_offset extends metaTfsBaseCase
 	@Test
     public  void  test_12_saveFile_byte_with_wrong_length() throws IOException
 	{
-		log.info( "test_12_saveFile_byte_with_wrong_length" );
+		log.info(new Throwable().getStackTrace()[0].getMethodName());
 
 		boolean bRet = false;
 
@@ -202,7 +202,7 @@ public class tfsManager_14_saveFile_offset extends metaTfsBaseCase
 	@Test
     public  void  test_13_saveFile_byte_with_file_exist() throws IOException
 	{
-		log.info( "test_13_saveFile_byte_with_file_exist" );
+		log.info(new Throwable().getStackTrace()[0].getMethodName());
 
         String tfsFile = "/test13SFBWFE";
 		boolean bRet = false;
@@ -224,7 +224,7 @@ public class tfsManager_14_saveFile_offset extends metaTfsBaseCase
 	@Test
     public  void  test_14_saveFile_byte_with_wrong_fileName_1() throws IOException
 	{
-		log.info( "test_14_saveFile_byte_with_wrong_fileName_1" );
+		log.info(new Throwable().getStackTrace()[0].getMethodName());
 
 		boolean bRet = false;
 
@@ -238,7 +238,7 @@ public class tfsManager_14_saveFile_offset extends metaTfsBaseCase
 	@Test
     public  void  test_15_saveFile_byte_with_wrong_fileName_2() throws IOException
 	{
-		log.info( "test_15_saveFile_byte_with_wrong_fileName_2" );
+		log.info(new Throwable().getStackTrace()[0].getMethodName());
 
 		boolean bRet = false;
 
@@ -252,7 +252,7 @@ public class tfsManager_14_saveFile_offset extends metaTfsBaseCase
 	@Test
     public  void  test_16_saveFile_byte_with_empty_fileName() throws IOException
 	{
-		log.info( "test_16_saveFile_byte_with_empty_fileName" );
+		log.info(new Throwable().getStackTrace()[0].getMethodName());
 
 		boolean bRet = false;
 
@@ -266,7 +266,7 @@ public class tfsManager_14_saveFile_offset extends metaTfsBaseCase
     @Test
     public  void  test_17_saveFile_byte_with_null_fileName() throws IOException
     {
-        log.info( "test_17_saveFile_byte_with_empty_fileName" );
+        log.info(new Throwable().getStackTrace()[0].getMethodName());
 
         boolean bRet = false;
 

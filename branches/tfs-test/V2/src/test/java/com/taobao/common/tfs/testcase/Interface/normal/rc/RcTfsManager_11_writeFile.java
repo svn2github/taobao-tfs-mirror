@@ -16,7 +16,7 @@ public class RcTfsManager_11_writeFile extends rcTfsBaseCase
 	@Test
     public  void  test_01_openWriteFile_then_writeFile() throws IOException
 	{
-		log.info( "test_01_openWriteFile_then_writeFile" );
+		log.info(new Throwable().getStackTrace()[0].getMethodName());
 		String Ret=null;
 		
 		int fd=-1;
@@ -33,7 +33,7 @@ public class RcTfsManager_11_writeFile extends rcTfsBaseCase
 	@Test
     public  void  test_02_openWriteFile_then_writeFile_less_length() throws IOException
 	{
-		log.info( "test_02_openWriteFile_then_writeFile_less_length" );
+		log.info(new Throwable().getStackTrace()[0].getMethodName());
 		String Ret=null;
 		
 		int fd=-1;
@@ -50,7 +50,7 @@ public class RcTfsManager_11_writeFile extends rcTfsBaseCase
 	@Test
     public  void  test_03_openWriteFile_then_writeFile_more_length() throws IOException
 	{
-		log.info( "test_03_openWriteFile_then_writeFile_more_length" );
+		log.info(new Throwable().getStackTrace()[0].getMethodName());
 		String Ret=null;
 		
 		int fd=-1;
@@ -67,7 +67,7 @@ public class RcTfsManager_11_writeFile extends rcTfsBaseCase
 	@Test
     public  void  test_04_openWriteFile_then_writeFile_with_offset() throws IOException
 	{
-		log.info( "test_04_openWriteFile_then_writeFile_with_offset" );
+		log.info(new Throwable().getStackTrace()[0].getMethodName());
 		String Ret=null;
 		
 		int fd=-1;
@@ -84,7 +84,7 @@ public class RcTfsManager_11_writeFile extends rcTfsBaseCase
 	@Test
     public  void  test_05_openWriteFile_then_writeFile_more_offset() throws IOException
 	{
-		log.info( "test_05_openWriteFile_then_writeFile_more_offset" );
+		log.info(new Throwable().getStackTrace()[0].getMethodName());
 		String Ret=null;
 		
 		int fd=-1;
@@ -101,7 +101,7 @@ public class RcTfsManager_11_writeFile extends rcTfsBaseCase
 	@Test
     public  void  test_06_openWriteFile_then_writeFile_wrong_offset() throws IOException
 	{
-		log.info( "test_06_openWriteFile_then_writeFile_wrong_offset" );
+		log.info(new Throwable().getStackTrace()[0].getMethodName());
 		String Ret=null;
 		
 		int fd=-1;
@@ -118,7 +118,7 @@ public class RcTfsManager_11_writeFile extends rcTfsBaseCase
 	@Test
     public  void  test_07_openWriteFile_then_writeFile_with_wrong_fd() throws IOException
 	{
-		log.info( "test_07_openWriteFile_then_writeFile_with_wrong_fd" );
+		log.info(new Throwable().getStackTrace()[0].getMethodName());
 		
 		int Wret;
 		byte []data=null;
@@ -131,7 +131,7 @@ public class RcTfsManager_11_writeFile extends rcTfsBaseCase
 	@Test
     public  void  test_08_openWriteFile_then_writeFile_with_wrong_fd_2() throws IOException
 	{
-		log.info( "test_08_openWriteFile_then_writeFile_with_wrong_fd_2" );
+		log.info(new Throwable().getStackTrace()[0].getMethodName());
 		String Ret=null;
 		
 		int fd=-1;
@@ -150,7 +150,7 @@ public class RcTfsManager_11_writeFile extends rcTfsBaseCase
 	@Test
     public  void  test_09_openWriteFile_then_writeFile_with_wrong_fd_3() throws IOException
 	{
-		log.info( "test_09_openWriteFile_then_writeFile_with_wrong_fd_3" );
+		log.info(new Throwable().getStackTrace()[0].getMethodName());
 		String Ret=null;
 		
 		int fd=-1;
@@ -169,7 +169,7 @@ public class RcTfsManager_11_writeFile extends rcTfsBaseCase
 	@Test
     public  void  test_10_openReadFile_then_writeFile() throws IOException
 	{
-		log.info( "test_10_openReadFile_then_writeFile" );
+		log.info(new Throwable().getStackTrace()[0].getMethodName());
 		String Ret=null;
 		Ret=tfsManager.saveLargeFile( resourcesPath+"5M.jpg",null,null);
 		Assert.assertNotNull(Ret);
@@ -188,7 +188,7 @@ public class RcTfsManager_11_writeFile extends rcTfsBaseCase
 	
     public  void  test_11_Large_openWriteFile_then_writeFile() throws IOException
 	{
-		log.info( "test_11_Large_openWriteFile_then_writeFile" );
+		log.info(new Throwable().getStackTrace()[0].getMethodName());
 		String Ret=null;
 		
 		int fd=-1;
@@ -205,7 +205,7 @@ public class RcTfsManager_11_writeFile extends rcTfsBaseCase
 	@Test
     public  void  test_12_openWriteFile_then_writeFile_null_data() throws IOException
 	{
-		log.info( "test_12_openWriteFile_then_writeFile_null_data" );
+		log.info(new Throwable().getStackTrace()[0].getMethodName());
 		String Ret=null;
 		
 		int fd=-1;
@@ -222,7 +222,7 @@ public class RcTfsManager_11_writeFile extends rcTfsBaseCase
    
 	public  void  test_13_openWriteFile_then_writeFile_large() throws IOException
 	{
-		log.info( "test_13_openWriteFile_then_writeFile_large" );
+		log.info(new Throwable().getStackTrace()[0].getMethodName());
 		String Ret=null;
 		
 		int fd=-1;

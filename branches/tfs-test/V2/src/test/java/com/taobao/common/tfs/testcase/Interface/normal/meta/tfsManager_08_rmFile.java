@@ -17,7 +17,7 @@ public class tfsManager_08_rmFile extends metaTfsBaseCase
 	public void test_01_rmFile_right_filePath()
 	{	   
 	   int Ret ;
-	   log.info( "test_01_rmFile_right_filePath" );
+	   log.info(new Throwable().getStackTrace()[0].getMethodName());
 	   tfsManager.createFile(appId, userId, "/textrmFile");
 	   Ret=tfsManager.rmFile(appId, userId, "/textrmFile");
 	   Assert.assertEquals("Remove File with right path should be true", Ret,0);
@@ -26,7 +26,7 @@ public class tfsManager_08_rmFile extends metaTfsBaseCase
 	public void test_02_rmFile_double_times()
 	{	   
 	   int Ret ;
-	   log.info( "test_02_rmFile_double-times" );
+	   log.info(new Throwable().getStackTrace()[0].getMethodName());
 	   tfsManager.createFile(appId, userId, "/textrmFile");
 	   Ret=tfsManager.rmFile(appId, userId, "/textrmFile");
 	   Assert.assertEquals("Remove File with right path should be true", Ret,0);
@@ -37,7 +37,7 @@ public class tfsManager_08_rmFile extends metaTfsBaseCase
 	public void test_03_rmFile_not_exist()
 	{	   
 	   int Ret ;
-	   log.info( "test_03_rmFile_not_exist" );
+	   log.info(new Throwable().getStackTrace()[0].getMethodName());
 	   Ret=tfsManager.rmFile(appId, userId, "/textrmFile");
 	   Assert.assertEquals("Remove File not exist should be false", Ret,-14001);
 	}
@@ -45,7 +45,7 @@ public class tfsManager_08_rmFile extends metaTfsBaseCase
 	public void test_04_rmFile_null_filePath()
 	{	   
 	   int Ret ;
-	   log.info( "test_04_rmFile_null_filePath" );
+	   log.info(new Throwable().getStackTrace()[0].getMethodName());
 	   Ret=tfsManager.rmFile(appId, userId, null);
 	   Assert.assertEquals("Remove null File should be false", Ret,-14010);
 	}
@@ -53,7 +53,7 @@ public class tfsManager_08_rmFile extends metaTfsBaseCase
 	public void test_05_rmFile_empty_filePath()
 	{	   
 	   int Ret ;
-	   log.info( "test_05_rmFile_empty_filePath" );
+	   log.info(new Throwable().getStackTrace()[0].getMethodName());
 	   Ret=tfsManager.rmFile(appId, userId, "");
 	   Assert.assertEquals("Remove empty File should be false", Ret,-14010);
 	}
@@ -61,7 +61,7 @@ public class tfsManager_08_rmFile extends metaTfsBaseCase
 	public void test_06_rmFile_wrong_filePath_1()
 	{	   
 	   int Ret ;
-	   log.info( "test_06_rmFile_wrong_filePath_1" );
+	   log.info(new Throwable().getStackTrace()[0].getMethodName());
 	   tfsManager.createFile(appId, userId, "/textrmFile");
 	   Ret=tfsManager.rmFile(appId, userId, "textrmFile");
 	   Assert.assertEquals("Remove wrong-1 File Path should be false", Ret,-14010);
@@ -70,7 +70,7 @@ public class tfsManager_08_rmFile extends metaTfsBaseCase
 	public void test_07_rmFile_wrong_filePath_2()
 	{	   
 	   int Ret ;
-	   log.info( "test_07_rmFile_wrong_filePath_2" );
+	   log.info(new Throwable().getStackTrace()[0].getMethodName());
 	   tfsManager.createFile(appId, userId, "/textrmFile");
 	   Ret=tfsManager.rmFile(appId, userId, "///textrmFile///");
 	   Assert.assertEquals("Remove wrong-2 File Path be true", Ret,0);
@@ -79,7 +79,7 @@ public class tfsManager_08_rmFile extends metaTfsBaseCase
 	public  void test_08_rmFile_wrong_filePath_3()
 	{	   
 	   int Ret ;
-	   log.info( "test_08_rmFile_wrong_filePath_3" );
+	   log.info(new Throwable().getStackTrace()[0].getMethodName());
 	   Ret=tfsManager.rmFile(appId, userId, "/");
 	   Assert.assertEquals("Remove wrong-3 File Path should be false", Ret,1);
 	}
@@ -87,7 +87,7 @@ public class tfsManager_08_rmFile extends metaTfsBaseCase
 	public void test_09_rmFile_small_File()
 	{	   
 	   int Ret ;
-	   log.info( "test_01_rmFile_right_filePath" );
+	   log.info(new Throwable().getStackTrace()[0].getMethodName());
 	   tfsManager.saveFile(appId, userId, resourcesPath+"100K.jpg","/textrmFile");
 	   Ret=tfsManager.rmFile(appId, userId, "/textrmFile");
 	   Assert.assertEquals("Remove File with right path should be true", Ret,0);
@@ -96,7 +96,7 @@ public class tfsManager_08_rmFile extends metaTfsBaseCase
 	public void test_10_rmFile_large_File()
 	{	   
 	   int Ret ;
-	   log.info( "test_10_rmFile_large_File" );
+	   log.info(new Throwable().getStackTrace()[0].getMethodName());
 	   tfsManager.saveFile(appId, userId, resourcesPath+"1G.jpg","/textrmFile");
 	   Ret=tfsManager.rmFile(appId, userId, "/textrmFile");
 	   Assert.assertEquals("Remove File with right path should be true", Ret,0);
@@ -105,7 +105,7 @@ public class tfsManager_08_rmFile extends metaTfsBaseCase
 	public void test_11_rmFile_large_File_inanition()
 	{	   
 	   int Ret ;
-	   log.info( "test_10_rmFile_large_File" );
+	   log.info(new Throwable().getStackTrace()[0].getMethodName());
 	   tfsManager.saveFile(appId, userId, resourcesPath+"3M.jpg","/textrmFile");
 	   int len = 1024*1024*8;
        byte[] data = new byte[len];

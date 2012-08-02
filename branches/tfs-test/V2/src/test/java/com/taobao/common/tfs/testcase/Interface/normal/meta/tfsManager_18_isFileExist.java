@@ -19,7 +19,7 @@ public class tfsManager_18_isFileExist extends metaTfsBaseCase
     {
     	int Ret;
     	boolean bRet = false ;
-	    log.info( "test_01_isFileExist_right_filePath" );
+	    log.info(new Throwable().getStackTrace()[0].getMethodName());
         Ret=tfsManager.createFile(appId, userId, "/test");
         Assert.assertEquals("Create File with right path should be true",Ret, 0);
         
@@ -33,7 +33,7 @@ public class tfsManager_18_isFileExist extends metaTfsBaseCase
     public  void  test_02_isFileExist_null_filePath()
     {
     	boolean bRet = false ; 
-    	log.info( "test_02_isFileExist_null_filePath" );
+    	log.info(new Throwable().getStackTrace()[0].getMethodName());
         bRet=tfsManager.isFileExist(appId, userId, null);
         Assert.assertFalse("Null File should not be exist",bRet);
     }
@@ -42,7 +42,7 @@ public class tfsManager_18_isFileExist extends metaTfsBaseCase
     public  void  test_03_isFileExist_empty_filePath()
     {
     	boolean bRet = false ;        
-    	log.info( "test_03_isFileExist_empty_filePath" );
+    	log.info(new Throwable().getStackTrace()[0].getMethodName());
         bRet=tfsManager.isFileExist(appId, userId, "");
         Assert.assertFalse("empty File should not be exist",bRet);
     }
@@ -51,7 +51,7 @@ public class tfsManager_18_isFileExist extends metaTfsBaseCase
     public  void  test_04_isFileExist_wrong_filePath()
     {
     	boolean bRet = false ;      
-    	log.info( "test_04_isFileExist_wrong_filePath" );
+    	log.info(new Throwable().getStackTrace()[0].getMethodName());
         bRet=tfsManager.isFileExist(appId, userId, "fhsklajfkls");
         Assert.assertFalse("wrong File should not be exist",bRet);
     }
@@ -61,7 +61,7 @@ public class tfsManager_18_isFileExist extends metaTfsBaseCase
     {
     	int Ret;
     	boolean bRet = false ;
-	    log.info( "test_05_isFileExist_dirPath" );
+	    log.info(new Throwable().getStackTrace()[0].getMethodName());
         Ret=tfsManager.createDir(appId, userId, "/test");
         Assert.assertEquals("Create File with right path should be true",Ret, 0);
         
@@ -76,7 +76,7 @@ public class tfsManager_18_isFileExist extends metaTfsBaseCase
     {
     	int Ret;
     	boolean bRet = false ;
-	    log.info( "test_06_isFileExist_dirPath" );
+	    log.info(new Throwable().getStackTrace()[0].getMethodName());
         Ret=tfsManager.createFile(appId, userId, "/test");
         Assert.assertEquals("Create File with right path should be true",Ret, 0);
         tfsManager.rmFile(appId, userId, "/test");
@@ -90,7 +90,7 @@ public class tfsManager_18_isFileExist extends metaTfsBaseCase
     {
     	int Ret;
     	boolean bRet = false ;
-	    log.info( "test_07_isFileExist_wrong_filePath_1" );
+	    log.info(new Throwable().getStackTrace()[0].getMethodName());
         Ret=tfsManager.createFile(appId, userId, "/test");
         Assert.assertEquals("Create File with right path should be true",Ret, 0);
         
@@ -105,7 +105,7 @@ public class tfsManager_18_isFileExist extends metaTfsBaseCase
     {
     	int Ret;
     	boolean bRet = false ;
-	    log.info( "test_08_isFileExist_wrong_filePath_2" );
+	    log.info(new Throwable().getStackTrace()[0].getMethodName());
         Ret=tfsManager.createFile(appId, userId, "/test");
         Assert.assertEquals("Create File with right path should be true",Ret, 0);
         
@@ -119,7 +119,7 @@ public class tfsManager_18_isFileExist extends metaTfsBaseCase
     public  void  test_09_isFileExist_root_dir()
     {
     	boolean bRet = false ; 
-    	log.info( "test_09_isFileExist_root_dir" );
+    	log.info(new Throwable().getStackTrace()[0].getMethodName());
         bRet=tfsManager.isFileExist(appId, userId, "/");
         Assert.assertFalse("root dir can not be find",bRet);
     }
@@ -129,7 +129,7 @@ public class tfsManager_18_isFileExist extends metaTfsBaseCase
     {
     	
     	boolean bRet = false ;
-	    log.info( "test_10_isFileExist_right_filePath_com" );
+	    log.info(new Throwable().getStackTrace()[0].getMethodName());
         
         tfsManager.createDir(appId, userId, "/test1");
         

@@ -18,7 +18,7 @@ public class tfsManager_13_saveFile_data extends metaTfsBaseCase
 	@Test
     public  void  test_01_saveFile_byte() throws IOException
 	{
-		log.info( "test_01_saveFile_byte" );
+		log.info(new Throwable().getStackTrace()[0].getMethodName());
 
         String tfsFile = "/test01SFB";
 		boolean bRet = false;
@@ -37,7 +37,7 @@ public class tfsManager_13_saveFile_data extends metaTfsBaseCase
     @Test
     public  void  test_02_saveFile_byte_with_empty_data() throws IOException
     {
-        log.info( "test_02_saveFile_byte_with_empty_data" );
+        log.info(new Throwable().getStackTrace()[0].getMethodName());
         
         String fileName = "/test02SFBWED";
         boolean bRet = false;
@@ -57,7 +57,7 @@ public class tfsManager_13_saveFile_data extends metaTfsBaseCase
     @Test
     public  void  test_03_saveFile_byte_with_null_data() throws IOException
     {
-        log.info( "test_03_saveFile_byte_with_null_data" );
+        log.info(new Throwable().getStackTrace()[0].getMethodName());
 
         boolean bRet = false;
 
@@ -70,7 +70,7 @@ public class tfsManager_13_saveFile_data extends metaTfsBaseCase
     @Test
     public  void  test_04_saveFile_byte_with_file_exist() throws IOException
     {
-        log.info( "test_04_saveFile_byte_with_file_exist" );
+        log.info(new Throwable().getStackTrace()[0].getMethodName());
 
         String tfsFile = "/test04SFBWFE";
         boolean bRet = false;
@@ -92,7 +92,7 @@ public class tfsManager_13_saveFile_data extends metaTfsBaseCase
 	@Test
     public  void  test_05_saveFile_byte_with_wrong_fileName_1() throws IOException
 	{
-		log.info( "test_05_saveFile_byte_with_wrong_fileName_1" );
+		log.info(new Throwable().getStackTrace()[0].getMethodName());
 
 		boolean bRet = false;
 
@@ -106,7 +106,7 @@ public class tfsManager_13_saveFile_data extends metaTfsBaseCase
 	@Test
     public  void  test_06_saveFile_byte_with_wrong_fileName_2() throws IOException
 	{
-		log.info( "test_06_saveFile_byte_with_wrong_fileName_2" );
+		log.info(new Throwable().getStackTrace()[0].getMethodName());
 
 		boolean bRet = false;
 
@@ -120,7 +120,7 @@ public class tfsManager_13_saveFile_data extends metaTfsBaseCase
 	@Test
     public  void  test_07_saveFile_byte_with_empty_fileName() throws IOException
 	{
-		log.info( "test_07_saveFile_byte_with_empty_fileName" );
+		log.info(new Throwable().getStackTrace()[0].getMethodName());
 
 		boolean bRet = false;
 
@@ -134,7 +134,7 @@ public class tfsManager_13_saveFile_data extends metaTfsBaseCase
     @Test
     public  void  test_08_saveFile_byte_with_null_fileName() throws IOException
     {
-        log.info( "test_08_saveFile_byte_with_empty_fileName" );
+        log.info(new Throwable().getStackTrace()[0].getMethodName());
 
         boolean bRet = false;
 

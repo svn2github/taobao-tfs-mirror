@@ -88,7 +88,7 @@ public class tfsManager_05_lsDir_isRecursive extends metaTfsBaseCase
 	 @Test 
 	 public void test_01_lsDir_right_isRecursive_filePath()
 	 {
-		log.info( "test_01_lsDir_right_isRecursive_filePath" );
+		log.info(new Throwable().getStackTrace()[0].getMethodName());
 		List<FileMetaInfo> metaInfoList = new ArrayList<FileMetaInfo>();
 		metaInfoList=null;
 		FileMetaInfo metaInfo;
@@ -109,6 +109,6 @@ public class tfsManager_05_lsDir_isRecursive extends metaTfsBaseCase
 		   log.info( "The length is "+metaInfo.getLength());
 		   log.info( "*****************************************************" );
 		}
-		log.info( "test_01_lsDir_right_isRecursive_filePath" );
+		log.info(new Throwable().getStackTrace()[0].getMethodName());
 	}
 }

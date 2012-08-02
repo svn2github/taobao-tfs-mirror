@@ -20,7 +20,7 @@ public class RcTfsManager_06_fetchFile_offset extends rcTfsBaseCase
 	@Test
     public  void  test_01_saveFile_then_fetchFile_offset_with_right_suffix() throws FileNotFoundException
 	{
-		log.info( "test_01_saveFile_then_fetchFile_offset_with_right_suffix" );
+		log.info(new Throwable().getStackTrace()[0].getMethodName());
 		String Ret=null;
 		int savecrc;
 		int fetchcrc;
@@ -43,7 +43,7 @@ public class RcTfsManager_06_fetchFile_offset extends rcTfsBaseCase
 	@Test
     public  void  test_02_saveFile_then_fetchFile_offset_with_wrong_suffix() throws FileNotFoundException
 	{
-		log.info( "test_02_saveFile_then_fetchFile_offset_with_wrong_suffix" );
+		log.info(new Throwable().getStackTrace()[0].getMethodName());
 		String Ret=null;
 
 		long count=100*(1<<10);
@@ -62,7 +62,7 @@ public class RcTfsManager_06_fetchFile_offset extends rcTfsBaseCase
 	@Test
     public  void  test_03_saveFile_then_fetchFile_offset_with_empty_suffix() throws FileNotFoundException
 	{
-		log.info( "test_03_saveFile_then_fetchFile_offset_with_empty_suffix" );
+		log.info(new Throwable().getStackTrace()[0].getMethodName());
 		String Ret=null;
 		int savecrc;
 		int fetchcrc;
@@ -85,7 +85,7 @@ public class RcTfsManager_06_fetchFile_offset extends rcTfsBaseCase
 	@Test
     public  void  test_04_saveFile_then_fetchFile_offset_with_wrong_tfsName() throws FileNotFoundException
 	{
-		log.info( "test_04_saveFile_then_fetchFile_offset_with_wrong_tfsName" );
+		log.info(new Throwable().getStackTrace()[0].getMethodName());
 
 		long count=100*(1<<10);
 		OutputStream output = new FileOutputStream(resourcesPath+"empty.jpg");
@@ -98,7 +98,7 @@ public class RcTfsManager_06_fetchFile_offset extends rcTfsBaseCase
 	@Test
     public  void  test_05_saveFile_then_fetchFile_offset_with_empty_tfsName() throws FileNotFoundException
 	{
-		log.info( "test_05_saveFile_then_fetchFile_offset_with_empty_tfsName" );
+		log.info(new Throwable().getStackTrace()[0].getMethodName());
 
 		long count=100*(1<<10);
 		OutputStream output = new FileOutputStream(resourcesPath+"empty.jpg");
@@ -111,7 +111,7 @@ public class RcTfsManager_06_fetchFile_offset extends rcTfsBaseCase
 	@Test
     public  void  test_06_saveFile_then_fetchFile_offset_with_null_tfsName_suffix() throws FileNotFoundException
 	{
-		log.info( "test_06_saveFile_then_fetchFile_offset_with_null_tfsName_suffix" );
+		log.info(new Throwable().getStackTrace()[0].getMethodName());
 
 		long count=100*(1<<10);
 		OutputStream output = new FileOutputStream(resourcesPath+"empty.jpg");
@@ -124,7 +124,7 @@ public class RcTfsManager_06_fetchFile_offset extends rcTfsBaseCase
 	@Test
     public  void  test_07_saveFile_then_fetchFile_offset_with_null_OutputStream() throws FileNotFoundException
 	{
-		log.info( "test_07_saveFile_then_fetchFile_offset_with_null_OutputStream" );
+		log.info(new Throwable().getStackTrace()[0].getMethodName());
 		String Ret=null;
 
 		long count=100*(1<<10);
@@ -142,7 +142,7 @@ public class RcTfsManager_06_fetchFile_offset extends rcTfsBaseCase
 	@Test
     public  void  test_08_saveFile_with_suffix_then_fetchFile_offset() throws FileNotFoundException
 	{
-		log.info( "test_08_saveFile_with_suffix_then_fetchFile_offset" );
+		log.info(new Throwable().getStackTrace()[0].getMethodName());
 		String Ret=null;
 		int savecrc;
 		int fetchcrc;
@@ -165,7 +165,7 @@ public class RcTfsManager_06_fetchFile_offset extends rcTfsBaseCase
 	@Test
     public  void  test_09_saveFile_with_suffix_and_name_then_fetchFile_offset() throws FileNotFoundException
 	{
-		log.info( "test_09_saveFile_with_suffix_and_name_then_fetchFile_offset" );
+		log.info(new Throwable().getStackTrace()[0].getMethodName());
 		String Ret=null;
 		int savecrc;
 		int fetchcrc;
@@ -193,7 +193,7 @@ public class RcTfsManager_06_fetchFile_offset extends rcTfsBaseCase
 	@Test
     public  void  test_10_saveFile_with_name_then_fetchFile_offset() throws FileNotFoundException
 	{
-		log.info( "test_10_saveFile_with_name_then_fetchFile_offset" );
+		log.info(new Throwable().getStackTrace()[0].getMethodName());
 		String Ret=null;
 		int savecrc;
 		int fetchcrc;
@@ -221,7 +221,7 @@ public class RcTfsManager_06_fetchFile_offset extends rcTfsBaseCase
 	@Test
     public  void  test_11_saveFile_simpleName_then_fetchFile_offset_with_right_suffix() throws FileNotFoundException
 	{
-		log.info( "test_11_saveFile_simpleName_then_fetchFile_offset_with_right_suffix" );
+		log.info(new Throwable().getStackTrace()[0].getMethodName());
 		String Ret=null;
 		int savecrc;
 		int fetchcrc;
@@ -244,7 +244,7 @@ public class RcTfsManager_06_fetchFile_offset extends rcTfsBaseCase
 	@Test
     public  void  test_12_saveFile_simpleName_then_fetchFile_offset_with_wrong_suffix() throws FileNotFoundException
 	{
-		log.info( "test_12_saveFile_simpleName_then_fetchFile_offset_with_wrong_suffix" );
+		log.info(new Throwable().getStackTrace()[0].getMethodName());
 		String Ret=null;
 
 		long count=100*(1<<10);
@@ -263,7 +263,7 @@ public class RcTfsManager_06_fetchFile_offset extends rcTfsBaseCase
 	@Test
     public  void  test_13_saveFile_simpleName_then_fetchFile_offset_with_empty_suffix() throws FileNotFoundException
 	{
-		log.info( "test_13_saveFile_simpleName_then_fetchFile_offset_with_empty_suffix" );
+		log.info(new Throwable().getStackTrace()[0].getMethodName());
 		String Ret=null;
 		int savecrc;
 		int fetchcrc;
@@ -286,7 +286,7 @@ public class RcTfsManager_06_fetchFile_offset extends rcTfsBaseCase
 	@Test
     public  void  test_14_saveFile_simpleName_with_suffix_and_name_then_fetchFile_offset() throws FileNotFoundException
 	{
-		log.info( "test_14_saveFile_simpleName_with_suffix_and_name_then_fetchFile_offset" );
+		log.info(new Throwable().getStackTrace()[0].getMethodName());
 		String Ret=null;
 		int savecrc;
 		int fetchcrc;
@@ -314,7 +314,7 @@ public class RcTfsManager_06_fetchFile_offset extends rcTfsBaseCase
 	@Test
     public  void  test_15_saveFile_simpleName_with_suffix_then_fetchFile_offset() throws FileNotFoundException
 	{
-		log.info( "test_15_saveFile_simpleName_with_suffix_then_fetchFile_offset" );
+		log.info(new Throwable().getStackTrace()[0].getMethodName());
 		String Ret=null;
 		int savecrc;
 		int fetchcrc;
@@ -337,7 +337,7 @@ public class RcTfsManager_06_fetchFile_offset extends rcTfsBaseCase
 	@Test
     public  void  test_16_saveFile_simpleName_with_name_then_fetchFile_offset() throws FileNotFoundException
 	{
-		log.info( "test_16_saveFile_simpleName_with_name_then_fetchFile_offset" );
+		log.info(new Throwable().getStackTrace()[0].getMethodName());
 		String Ret=null;
 		int savecrc;
 		int fetchcrc;
@@ -365,7 +365,7 @@ public class RcTfsManager_06_fetchFile_offset extends rcTfsBaseCase
 	@Test
     public  void  test_17_saveFile_byte_then_fetchFile_offset_with_right_suffix() throws IOException
 	{
-		log.info( "test_17_saveFile_byte_then_fetchFile_offset_with_right_suffix" );
+		log.info(new Throwable().getStackTrace()[0].getMethodName());
 		String Ret=null;
 		int savecrc;
 		int fetchcrc;
@@ -390,7 +390,7 @@ public class RcTfsManager_06_fetchFile_offset extends rcTfsBaseCase
 	@Test
     public  void  test_18_saveFile_byte_then_fetchFile_offset_with_wrong_suffix() throws IOException
 	{
-		log.info( "test_18_saveFile_byte_then_fetchFile_offset_with_wrong_suffix" );
+		log.info(new Throwable().getStackTrace()[0].getMethodName());
 		String Ret=null;
 
 		long count=100*(1<<10);
@@ -411,7 +411,7 @@ public class RcTfsManager_06_fetchFile_offset extends rcTfsBaseCase
 	@Test
     public  void  test_19_saveFile_byte_then_fetchFile_offset_with_empty_suffix() throws IOException
 	{
-		log.info( "test_19_saveFile_byte_then_fetchFile_offset_with_empty_suffix" );
+		log.info(new Throwable().getStackTrace()[0].getMethodName());
 		String Ret=null;
 		int savecrc;
 		int fetchcrc;
@@ -436,7 +436,7 @@ public class RcTfsManager_06_fetchFile_offset extends rcTfsBaseCase
 	@Test
     public  void  test_20_saveFile_byte_with_suffix_and_name_then_fetchFile_offset() throws IOException
 	{
-		log.info( "test_20_saveFile_byte_with_suffix_and_name_then_fetchFile_offset" );
+		log.info(new Throwable().getStackTrace()[0].getMethodName());
 		String Ret=null;
 		int savecrc;
 		int fetchcrc;
@@ -468,7 +468,7 @@ public class RcTfsManager_06_fetchFile_offset extends rcTfsBaseCase
 	@Test
     public  void  test_21_saveFile_byte_with_suffix_then_fetchFile_offset() throws IOException
 	{
-		log.info( "test_21_saveFile_byte_with_suffix_then_fetchFile_offset" );
+		log.info(new Throwable().getStackTrace()[0].getMethodName());
 		String Ret=null;
 		int savecrc;
 		int fetchcrc;
@@ -493,7 +493,7 @@ public class RcTfsManager_06_fetchFile_offset extends rcTfsBaseCase
 	@Test
     public  void  test_22_saveFile_byte_with_name_then_fetchFile_offset() throws IOException
 	{
-		log.info( "test_22_saveFile_byte_with_name_then_fetchFile_offset" );
+		log.info(new Throwable().getStackTrace()[0].getMethodName());
 		String Ret=null;
 		int savecrc;
 		int fetchcrc;
@@ -525,7 +525,7 @@ public class RcTfsManager_06_fetchFile_offset extends rcTfsBaseCase
 	@Test
     public  void  test_23_saveFile_byte_simpleName_then_fetchFile_offset_with_right_suffix() throws IOException
 	{
-		log.info( "test_23_saveFile_byte_simpleName_then_fetchFile_offset_with_right_suffix" );
+		log.info(new Throwable().getStackTrace()[0].getMethodName());
 		String Ret=null;
 		int savecrc;
 		int fetchcrc;
@@ -550,7 +550,7 @@ public class RcTfsManager_06_fetchFile_offset extends rcTfsBaseCase
 	@Test
     public  void  test_24_saveFile_byte_simpleName_then_fetchFile_offset_with_wrong_suffix() throws IOException
 	{
-		log.info( "test_24_saveFile_byte_simpleName_then_fetchFile_offset_with_wrong_suffix" );
+		log.info(new Throwable().getStackTrace()[0].getMethodName());
 		String Ret=null;
 
 		long count=100*(1<<10);
@@ -571,7 +571,7 @@ public class RcTfsManager_06_fetchFile_offset extends rcTfsBaseCase
 	@Test
     public  void  test_25_saveFile_byte_simpleName_then_fetchFile_offset_with_empty_suffix() throws IOException
 	{
-		log.info( "test_25_saveFile_byte_simpleName_then_fetchFile_offset_with_empty_suffix" );
+		log.info(new Throwable().getStackTrace()[0].getMethodName());
 		String Ret=null;
 		int savecrc;
 		int fetchcrc;
@@ -596,7 +596,7 @@ public class RcTfsManager_06_fetchFile_offset extends rcTfsBaseCase
 	@Test
     public  void  test_26_saveFile_byte_simpleName_with_suffix_and_name_then_fetchFile_offset() throws IOException
 	{
-		log.info( "test_26_saveFile_byte_simpleName_with_suffix_and_name_then_fetchFile_offset" );
+		log.info(new Throwable().getStackTrace()[0].getMethodName());
 		String Ret=null;
 		int savecrc;
 		int fetchcrc;
@@ -628,7 +628,7 @@ public class RcTfsManager_06_fetchFile_offset extends rcTfsBaseCase
 	@Test
     public  void  test_27_saveFile_byte_simpleName_with_suffix_then_fetchFile_offset() throws IOException
 	{
-		log.info( "test_27_saveFile_byte_simpleName_with_suffix_then_fetchFile_offset" );
+		log.info(new Throwable().getStackTrace()[0].getMethodName());
 		String Ret=null;
 		int savecrc;
 		int fetchcrc;
@@ -653,7 +653,7 @@ public class RcTfsManager_06_fetchFile_offset extends rcTfsBaseCase
 	@Test
     public  void  test_28_saveFile_byte_with_name_then_fetchFile_offset() throws IOException
 	{
-		log.info( "test_28_saveFile_byte_with_name_then_fetchFile_offset" );
+		log.info(new Throwable().getStackTrace()[0].getMethodName());
 		String Ret=null;
 		int savecrc;
 		int fetchcrc;
@@ -685,7 +685,7 @@ public class RcTfsManager_06_fetchFile_offset extends rcTfsBaseCase
 	@Test
     public  void  test_29_saveLargeFile_then_fetchFile_offset_with_right_suffix() throws FileNotFoundException
 	{
-		log.info( "test_29_saveLargeFile_then_fetchFile_offset_with_right_suffix" );
+		log.info(new Throwable().getStackTrace()[0].getMethodName());
 		String Ret=null;
 		int savecrc;
 		int fetchcrc;
@@ -708,7 +708,7 @@ public class RcTfsManager_06_fetchFile_offset extends rcTfsBaseCase
 	@Test
     public  void  test_30_saveLargeFile_then_fetchFile_offset_with_wrong_suffix() throws FileNotFoundException
 	{
-		log.info( "test_30_saveLargeFile_then_fetchFile_offset_with_wrong_suffix" );
+		log.info(new Throwable().getStackTrace()[0].getMethodName());
 		String Ret=null;
 
 		long count=10*(1<<20);
@@ -727,7 +727,7 @@ public class RcTfsManager_06_fetchFile_offset extends rcTfsBaseCase
 	@Test
     public  void  test_31_saveLargeFile_then_fetchFile_offset_with_empty_suffix() throws FileNotFoundException
 	{
-		log.info( "test_31_saveLargeFile_then_fetchFile_offset_with_empty_suffix" );
+		log.info(new Throwable().getStackTrace()[0].getMethodName());
 		String Ret=null;
 		int savecrc;
 		int fetchcrc;
@@ -750,7 +750,7 @@ public class RcTfsManager_06_fetchFile_offset extends rcTfsBaseCase
 	
     public  void  test_32_saveLargeFile_with_suffix_and_name_then_fetchFile_offset() throws FileNotFoundException
 	{
-		log.info( "test_32_saveLargeFile_with_suffix_and_name_then_fetchFile_offset" );
+		log.info(new Throwable().getStackTrace()[0].getMethodName());
 		String Ret=null;
 		int savecrc;
 		int fetchcrc;
@@ -780,7 +780,7 @@ public class RcTfsManager_06_fetchFile_offset extends rcTfsBaseCase
 	@Test
     public  void  test_33_saveLargeFile_with_suffix_then_fetchFile() throws FileNotFoundException
 	{
-		log.info( "test_33_saveLargeFile_with_suffix_then_fetchFile" );
+		log.info(new Throwable().getStackTrace()[0].getMethodName());
 		String Ret=null;
 		int savecrc;
 		int fetchcrc;
@@ -803,7 +803,7 @@ public class RcTfsManager_06_fetchFile_offset extends rcTfsBaseCase
 	
     public  void  test_34_saveLargeFile_with_name_then_fetchFile() throws FileNotFoundException
 	{
-		log.info( "test_34_saveLargeFile_with_name_then_fetchFile" );
+		log.info(new Throwable().getStackTrace()[0].getMethodName());
 		String Ret=null;
 		int savecrc;
 		int fetchcrc;
@@ -833,7 +833,7 @@ public class RcTfsManager_06_fetchFile_offset extends rcTfsBaseCase
 	@Test
     public  void  test_35_saveLargeFile_byte_then_fetchFile_byte_with_right_suffix() throws IOException
 	{
-		log.info( "test_35_saveLargeFile_byte_then_fetchFile_byte_with_right_suffix" );
+		log.info(new Throwable().getStackTrace()[0].getMethodName());
 		String Ret=null;
 		int savecrc;
 		int fetchcrc;
@@ -858,7 +858,7 @@ public class RcTfsManager_06_fetchFile_offset extends rcTfsBaseCase
 	@Test
     public  void  test_36_saveLargeFile_byte_then_fetchFile_byte_with_wrong_suffix() throws IOException
 	{
-		log.info( "test_36_saveLargeFile_byte_then_fetchFile_byte_with_wrong_suffix" );
+		log.info(new Throwable().getStackTrace()[0].getMethodName());
 		String Ret=null;
 
 		long count=10*(1<<20);
@@ -879,7 +879,7 @@ public class RcTfsManager_06_fetchFile_offset extends rcTfsBaseCase
 	@Test
     public  void  test_37_saveLargeFile_byte_then_fetchFile_byte_with_empty_suffix() throws IOException
 	{
-		log.info( "test_37_saveLargeFile_byte_then_fetchFile_byte_with_empty_suffix" );
+		log.info(new Throwable().getStackTrace()[0].getMethodName());
 		String Ret=null;
 		int savecrc;
 		int fetchcrc;
@@ -904,7 +904,7 @@ public class RcTfsManager_06_fetchFile_offset extends rcTfsBaseCase
 	
     public  void  test_38_saveLargeFile_byte_with_suffix_and_name_then_fetchFile_byte() throws IOException
 	{
-		log.info( "test_38_saveLargeFile_byte_with_suffix_and_name_then_fetchFile_byte" );
+		log.info(new Throwable().getStackTrace()[0].getMethodName());
 		String Ret=null;
 		int savecrc;
 		int fetchcrc;
@@ -936,7 +936,7 @@ public class RcTfsManager_06_fetchFile_offset extends rcTfsBaseCase
 	@Test
     public  void  test_39_saveLargeFile_byte_with_suffix_then_fetchFile_byte() throws IOException
 	{
-		log.info( "test_39_saveLargeFile_byte_with_suffix_then_fetchFile_byte" );
+		log.info(new Throwable().getStackTrace()[0].getMethodName());
 		String Ret=null;
 		int savecrc;
 		int fetchcrc;
@@ -961,7 +961,7 @@ public class RcTfsManager_06_fetchFile_offset extends rcTfsBaseCase
 	
     public  void  test_40_saveLargeFile_byte_with_name_then_fetchFile_byte() throws IOException
 	{
-		log.info( "test_40_saveLargeFile_byte_with_name_then_fetchFile_byte" );
+		log.info(new Throwable().getStackTrace()[0].getMethodName());
 		String Ret=null;
 		int savecrc;
 		int fetchcrc;
@@ -993,7 +993,7 @@ public class RcTfsManager_06_fetchFile_offset extends rcTfsBaseCase
 	@Test
     public  void  test_41_saveFile_then_fetchFile_offset_with_wrong_fileOffset() throws FileNotFoundException
 	{
-		log.info( "test_41_saveFile_then_fetchFile_offset_with_wrong_fileOffset" );
+		log.info(new Throwable().getStackTrace()[0].getMethodName());
 		String Ret=null;
 		long count=100*(1<<10);
 		OutputStream output = new FileOutputStream(resourcesPath+"empty.jpg");
@@ -1011,7 +1011,7 @@ public class RcTfsManager_06_fetchFile_offset extends rcTfsBaseCase
 	@Test
     public  void  test_42_saveFile_then_fetchFile_offset_more_fileOffset_and_length() throws FileNotFoundException
 	{
-		log.info( "test_42_saveFile_then_fetchFile_offset_more_fileOffset_and_length" );
+		log.info(new Throwable().getStackTrace()[0].getMethodName());
 		String Ret=null;
 		long count=1;
 		OutputStream output = new FileOutputStream(resourcesPath+"empty.jpg");
@@ -1029,7 +1029,7 @@ public class RcTfsManager_06_fetchFile_offset extends rcTfsBaseCase
 	@Test
     public  void  test_43_saveFile_then_fetchFile_offset_with_more_fileoffset() throws FileNotFoundException
 	{
-		log.info( "test_43_saveFile_then_fetchFile_offset_with_more_fileoffset" );
+		log.info(new Throwable().getStackTrace()[0].getMethodName());
 		String Ret=null;
 		long count=50*(1<<10);
 		OutputStream output = new FileOutputStream(resourcesPath+"empty.jpg");

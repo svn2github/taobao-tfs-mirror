@@ -15,7 +15,7 @@ public class tfsManager_07_mvFile extends metaTfsBaseCase
 	public void test_01_mvFile_right()
 	{
 	   int Ret ;
-	   log.info( "test_01_mvFile_right" );
+	   log.info(new Throwable().getStackTrace()[0].getMethodName());
 	   Ret=tfsManager.createFile(appId, userId, "/textmvFile1src");
        Assert.assertEquals(Ret,0);
 	   Ret=tfsManager.mvFile(appId, userId, "/textmvFile1src", "/textmvFile1tar");
@@ -28,7 +28,7 @@ public class tfsManager_07_mvFile extends metaTfsBaseCase
 	public void test_02_mvFile_null_destFilePath()
 	{
 	   int Ret ;
-	   log.info( "test_02_mvFile_null_destFilePath" );
+	   log.info(new Throwable().getStackTrace()[0].getMethodName());
 	   Ret=tfsManager.createFile(appId, userId, "/textmvFile1src");
        Assert.assertEquals(Ret,0);
 	   Ret=tfsManager.mvFile(appId, userId, "/textmvFile1src",null);
@@ -40,7 +40,7 @@ public class tfsManager_07_mvFile extends metaTfsBaseCase
 	public void test_03_mvFile_empty_destFilePath()
 	{
 	   int Ret ;
-	   log.info( "test_03_mvFile_empty_destFilePath" );
+	   log.info(new Throwable().getStackTrace()[0].getMethodName());
 	   Ret=tfsManager.createFile(appId, userId, "/text1");
 	   Ret=tfsManager.mvFile(appId, userId, "/text1","");
        Assert.assertEquals("mvFile with empty destFilePath should be false", Ret,-14010);
@@ -50,7 +50,7 @@ public class tfsManager_07_mvFile extends metaTfsBaseCase
 	public void test_04_mvFile_wrong_destFilePath_1()
 	{
 	   int Ret ;
-	   log.info( "test_04_mvFile_wrong_destFilePath_1" );
+	   log.info(new Throwable().getStackTrace()[0].getMethodName());
 	   Ret=tfsManager.createFile(appId, userId, "/text1");
 	   Ret=tfsManager.mvFile(appId, userId, "/text1","/");
        Assert.assertEquals("mvFile with wrong_1 destFilePath should be false", Ret,1);
@@ -60,7 +60,7 @@ public class tfsManager_07_mvFile extends metaTfsBaseCase
 	public void test_05_mvFile_wrong_destFilePath_2()
 	{
 	   int Ret ;
-	   log.info( "test_05_mvFile_wrong_destFilePath_2" );
+	   log.info(new Throwable().getStackTrace()[0].getMethodName());
 	   Ret=tfsManager.createFile(appId, userId, "/text1");
 	   Ret=tfsManager.mvFile(appId, userId, "/text1","text2");
        Assert.assertEquals("mvFile with wrong_2 destFilePath should be false", Ret,-14010);
@@ -70,7 +70,7 @@ public class tfsManager_07_mvFile extends metaTfsBaseCase
 	public void test_06_mvFile_wrong_destFilePath_3()
 	{
 	   int Ret ;
-	   log.info( "test_06_mvFile_wrong_destFilePath_3" );
+	   log.info(new Throwable().getStackTrace()[0].getMethodName());
 	   Ret=tfsManager.createFile(appId, userId, "/textmvFile6src");
 	   Ret=tfsManager.mvFile(appId, userId, "/textmvFile6src","///textmvFile6tar///");
        Assert.assertEquals("mvFile with wrong_3 destFilePath be true", Ret,0);
@@ -80,7 +80,7 @@ public class tfsManager_07_mvFile extends metaTfsBaseCase
 	public void test_07_mvFile_leap_Filename()
 	{
 	   int Ret ;
-	   log.info( "test_07_mvFile_leap_Filename" );
+	   log.info(new Throwable().getStackTrace()[0].getMethodName());
 	   Ret=tfsManager.createFile(appId, userId, "/text1");
 	   Ret=tfsManager.mvFile(appId, userId, "/text1","/text2/text");
        Assert.assertEquals("mvFile with leap destFilePath should be false", Ret,-14002);
@@ -90,7 +90,7 @@ public class tfsManager_07_mvFile extends metaTfsBaseCase
 	public void test_08_mvFile_exist_Filename()
 	{
 	   int Ret ;
-	   log.info( "test_08_mvFile_exist_Filename" );
+	   log.info(new Throwable().getStackTrace()[0].getMethodName());
 	   Ret=tfsManager.createFile(appId, userId, "/text1");
 	   Ret=tfsManager.createFile(appId, userId, "/text2");
 	   Ret=tfsManager.mvFile(appId, userId, "/text1","/text2");
@@ -102,7 +102,7 @@ public class tfsManager_07_mvFile extends metaTfsBaseCase
 	public void test_09_mvFile_null_srcFilePath()
 	{
 	   int Ret ;
-	   log.info( "test_09_mvFile_null_srcFilePath" );
+	   log.info(new Throwable().getStackTrace()[0].getMethodName());
 	   Ret=tfsManager.mvFile(appId, userId, null,"/text2");
        Assert.assertEquals("mvFile with null srcFilePath should be false", Ret,-14010);
     }
@@ -110,7 +110,7 @@ public class tfsManager_07_mvFile extends metaTfsBaseCase
 	public void test_10_mvFile_empty_srcFilePath()
 	{
 	   int Ret ;
-	   log.info( "test_10_mvFile_empty_srcFilePath" );
+	   log.info(new Throwable().getStackTrace()[0].getMethodName());
 	   Ret=tfsManager.mvFile(appId, userId, "","/text2");
        Assert.assertEquals("mvFile with empty srcFilePath should be false", Ret,-14010);
     }
@@ -118,7 +118,7 @@ public class tfsManager_07_mvFile extends metaTfsBaseCase
 	public void test_11_mvFile_wrong_srcFilePath_1()
 	{
 	   int Ret ;
-	   log.info( "test_11_mvFile_wrong_srcFilePath_1" );
+	   log.info(new Throwable().getStackTrace()[0].getMethodName());
 	   Ret=tfsManager.mvFile(appId, userId, "/","/text2");
        Assert.assertEquals("mvFile with wrong-1 srcFilePath should be false", Ret,1);
     }
@@ -126,7 +126,7 @@ public class tfsManager_07_mvFile extends metaTfsBaseCase
 	public void test_12_mvFile_wrong_srcFilePath_2()
 	{
 	   int Ret ;
-	   log.info( "test_12_mvFile_wrong_srcFilePath_2" );
+	   log.info(new Throwable().getStackTrace()[0].getMethodName());
 	   Ret=tfsManager.createFile(appId, userId, "/text1");
 	   Ret=tfsManager.mvFile(appId, userId, "text1","/text2");
        Assert.assertEquals("mvFile with wrong-2 srcFilePath should be false", Ret,-14010);
@@ -136,7 +136,7 @@ public class tfsManager_07_mvFile extends metaTfsBaseCase
 	public void test_13_mvFile_with_same_name()
 	{
 	   int Ret ;
-	   log.info( "test_13_mvFile_with_same_name" );
+	   log.info(new Throwable().getStackTrace()[0].getMethodName());
 	   Ret=tfsManager.createFile(appId, userId, "/text1");
 	   Ret=tfsManager.mvFile(appId, userId, "/text1","/text1");
        Assert.assertEquals("mvFile with the same name should be false", Ret,-14010);
@@ -146,7 +146,7 @@ public class tfsManager_07_mvFile extends metaTfsBaseCase
 	public void test_14_mvFile_dif_uid()
 	{
 	   int Ret ;
-	   log.info( "test_14_mvFile_dif_uid" );
+	   log.info(new Throwable().getStackTrace()[0].getMethodName());
 	   Ret=tfsManager.mvFile(appId, 7, "/text1", "/text2");
        Assert.assertEquals("mvFile with different uid should be false", Ret,-14002);
 	}

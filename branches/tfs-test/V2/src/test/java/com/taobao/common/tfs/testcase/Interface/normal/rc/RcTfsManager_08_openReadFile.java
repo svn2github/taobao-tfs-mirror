@@ -17,7 +17,7 @@ public class RcTfsManager_08_openReadFile extends rcTfsBaseCase
 	@Test
     public  void  test_01_saveFile_then_openReadFile()
 	{
-		log.info( "test_01_saveFile_then_openReadFile" );
+		log.info(new Throwable().getStackTrace()[0].getMethodName());
 		String Ret=null;
 		Ret=tfsManager.saveFile( resourcesPath+"100K.jpg",null,null,false);
 		Assert.assertNotNull(Ret);
@@ -31,7 +31,7 @@ public class RcTfsManager_08_openReadFile extends rcTfsBaseCase
 	@Test
     public  void  test_02_saveFile_simpleName_then_openReadFile()
 	{
-		log.info( "test_02_saveFile_simpleName_then_openReadFile" );
+		log.info(new Throwable().getStackTrace()[0].getMethodName());
 		String Ret=null;
 		Ret=tfsManager.saveFile( resourcesPath+"100K.jpg",null,null,true);
 		Assert.assertNotNull(Ret);
@@ -45,7 +45,7 @@ public class RcTfsManager_08_openReadFile extends rcTfsBaseCase
 	@Test
     public  void  test_03_saveFile_then_openReadFile_wrong_suffix()
 	{
-		log.info( "test_03_saveFile_then_openReadFile_wrong_suffix" );
+		log.info(new Throwable().getStackTrace()[0].getMethodName());
 		String Ret=null;
 		Ret=tfsManager.saveFile( resourcesPath+"100K.jpg",null,null,false);
 		Assert.assertNotNull(Ret);
@@ -59,7 +59,7 @@ public class RcTfsManager_08_openReadFile extends rcTfsBaseCase
 	@Test
     public  void  test_04_saveFile_suffix_then_openReadFile_suffix()
 	{
-		log.info( "test_04_saveFile_suffix_then_openReadFile_suffix");
+		log.info(new Throwable().getStackTrace()[0].getMethodName());
 		String Ret=null;
 		Ret=tfsManager.saveFile( resourcesPath+"100K.jpg",null,".jpg",false);
 		Assert.assertNotNull(Ret);
@@ -73,7 +73,7 @@ public class RcTfsManager_08_openReadFile extends rcTfsBaseCase
 	@Test
     public  void  test_05_saveFile_suffix_simpleName_then_openReadFile_suffix()
 	{
-		log.info( "test_05_saveFile_suffix_simpleName_then_openReadFile_suffix");
+		log.info(new Throwable().getStackTrace()[0].getMethodName());
 		String Ret=null;
 		Ret=tfsManager.saveFile( resourcesPath+"100K.jpg",null,".jpg",true);
 		Assert.assertNotNull(Ret);
@@ -87,7 +87,7 @@ public class RcTfsManager_08_openReadFile extends rcTfsBaseCase
 	@Test
     public  void  test_06_saveFile_then_openReadFile_wrong_tfsFileName()
 	{
-		log.info( "test_06_saveFile_then_openReadFile_wrong_tfsFileName" );
+		log.info(new Throwable().getStackTrace()[0].getMethodName());
 		String name="hsadkshadfksafkjsa";
 		
 		int fd=-1;
@@ -98,7 +98,7 @@ public class RcTfsManager_08_openReadFile extends rcTfsBaseCase
 	@Test
     public  void  test_07_saveFile_then_openReadFile_null_tfsFileName()
 	{
-		log.info( "test_07_saveFile_then_openReadFile_null_tfsFileName" );
+		log.info(new Throwable().getStackTrace()[0].getMethodName());
 		String name=null;
 		
 		int fd=-1;
@@ -109,7 +109,7 @@ public class RcTfsManager_08_openReadFile extends rcTfsBaseCase
 	@Test
     public  void  test_08_saveFile_then_openReadFile_empty_tfsFileName()
 	{
-		log.info( "test_08_saveFile_then_openReadFile_empty_tfsFileName" );
+		log.info(new Throwable().getStackTrace()[0].getMethodName());
 		String name="";
 		
 		int fd=-1;
@@ -120,7 +120,7 @@ public class RcTfsManager_08_openReadFile extends rcTfsBaseCase
 	@Test
     public  void  test_09_saveFile_byte_then_openReadFile() throws IOException
 	{
-		log.info( "test_09_saveFile_byte_then_openReadFile" );
+		log.info(new Throwable().getStackTrace()[0].getMethodName());
 		String Ret=null;
 		byte data[]=null;
 		data=FileUtility.getByte(resourcesPath+"100K.jpg");
@@ -136,7 +136,7 @@ public class RcTfsManager_08_openReadFile extends rcTfsBaseCase
 	@Test
     public  void  test_10_saveFile_byte_simpleName_then_openReadFile() throws IOException
 	{
-		log.info( "test_10_saveFile_byte_simpleName_then_openReadFile" );
+		log.info(new Throwable().getStackTrace()[0].getMethodName());
 		String Ret=null;
 		byte data[]=null;
 		data=FileUtility.getByte(resourcesPath+"100K.jpg");
@@ -152,7 +152,7 @@ public class RcTfsManager_08_openReadFile extends rcTfsBaseCase
 	@Test
     public  void  test_11_saveFile_byte_then_openReadFile_wrong_suffix() throws IOException
 	{
-		log.info( "test_11_saveFile_byte_then_openReadFile_wrong_suffix" );
+		log.info(new Throwable().getStackTrace()[0].getMethodName());
 		String Ret=null;
 		byte data[]=null;
 		data=FileUtility.getByte(resourcesPath+"100K.jpg");
@@ -168,7 +168,7 @@ public class RcTfsManager_08_openReadFile extends rcTfsBaseCase
 	@Test
     public  void  test_12_saveFile_byte_suffix_then_openReadFile_suffix() throws IOException
 	{
-		log.info( "test_12_saveFile_byte_suffix_then_openReadFile_suffix" );
+		log.info(new Throwable().getStackTrace()[0].getMethodName());
 		String Ret=null;
 		byte data[]=null;
 		data=FileUtility.getByte(resourcesPath+"100K.jpg");
@@ -184,7 +184,7 @@ public class RcTfsManager_08_openReadFile extends rcTfsBaseCase
 	@Test
     public  void  test_13_saveFile_byte_simpleName_suffix_then_openReadFile_suffix() throws IOException
 	{
-		log.info( "test_13_saveFile_byte_simpleName_suffix_then_openReadFile_suffix" );
+		log.info(new Throwable().getStackTrace()[0].getMethodName());
 		String Ret=null;
 		byte data[]=null;
 		data=FileUtility.getByte(resourcesPath+"100K.jpg");
@@ -200,7 +200,7 @@ public class RcTfsManager_08_openReadFile extends rcTfsBaseCase
 	@Test
     public  void  test_14_saveLargeFile_then_openReadFile()
 	{
-		log.info( "test_14_saveLargeFile_then_openReadFile" );
+		log.info(new Throwable().getStackTrace()[0].getMethodName());
 		String Ret=null;
 		Ret=tfsManager.saveLargeFile( resourcesPath+"5M.jpg",null,null);
 		Assert.assertNotNull(Ret);
@@ -214,7 +214,7 @@ public class RcTfsManager_08_openReadFile extends rcTfsBaseCase
 	@Test
     public  void  test_15_saveLargeFile_then_openReadFile_wrong_suffix()
 	{
-		log.info( "test_15_saveLargeFile_then_openReadFile_wrong_suffix" );
+		log.info(new Throwable().getStackTrace()[0].getMethodName());
 		String Ret=null;
 		Ret=tfsManager.saveLargeFile( resourcesPath+"5M.jpg",null,null);
 		Assert.assertNotNull(Ret);
@@ -228,7 +228,7 @@ public class RcTfsManager_08_openReadFile extends rcTfsBaseCase
 	@Test
     public  void  test_16_saveLargeFile_Suffix_then_openReadFile_Suffix()
 	{
-		log.info( "test_16_saveLargeFile_Suffix_then_openReadFile_Suffix" );
+		log.info(new Throwable().getStackTrace()[0].getMethodName());
 		String Ret=null;
 		Ret=tfsManager.saveLargeFile( resourcesPath+"5M.jpg",null,".jpg");
 		Assert.assertNotNull(Ret);
@@ -242,7 +242,7 @@ public class RcTfsManager_08_openReadFile extends rcTfsBaseCase
 	@Test
     public  void  test_17_saveLargeFile_byte_then_openReadFile() throws IOException
 	{
-		log.info( "test_17_saveLargeFile_byte_then_openReadFile" );
+		log.info(new Throwable().getStackTrace()[0].getMethodName());
 		String Ret=null;
 		byte data[]=null;
 		data=FileUtility.getByte(resourcesPath+"5M.jpg");
@@ -258,7 +258,7 @@ public class RcTfsManager_08_openReadFile extends rcTfsBaseCase
 	@Test
     public  void  test_18_saveLargeFile_byte_then_openReadFile_wrong_suffix() throws IOException
 	{
-		log.info( "test_18_saveLargeFile_byte_then_openReadFile_wrong_suffix" );
+		log.info(new Throwable().getStackTrace()[0].getMethodName());
 		String Ret=null;
 		byte data[]=null;
 		data=FileUtility.getByte(resourcesPath+"5M.jpg");
@@ -274,7 +274,7 @@ public class RcTfsManager_08_openReadFile extends rcTfsBaseCase
 	@Test
     public  void  test_19_saveLargeFile_byte_Suffix_then_openReadFile_Suffix() throws IOException
 	{
-		log.info( "test_19_saveLargeFile_byte_Suffix_then_openReadFile_Suffix" );
+		log.info(new Throwable().getStackTrace()[0].getMethodName());
 		String Ret=null;
 		byte data[]=null;
 		data=FileUtility.getByte(resourcesPath+"5M.jpg");
