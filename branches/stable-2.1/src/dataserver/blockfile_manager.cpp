@@ -481,7 +481,7 @@ namespace tfs
       if (TFS_SUCCESS != ret)   // not arrive step 12
       {
         TBSYS_LOG(ERROR, "new ext block error! logic blockid: %u. ret: %d", logic_block_id, ret);
-        rollback_superblock(ext_physical_block_id, block_count_modify_flag);
+        rollback_superblock(ext_physical_block_id, block_count_modify_flag, C_EXT_BLOCK);
         tbsys::gDelete(tmp_physical_block);
       }
       return ret;
