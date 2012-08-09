@@ -62,8 +62,10 @@ namespace tfs
       int32_t marshalling_delete_ratio_;
       int32_t marshalling_time_lower_;
       int32_t marshalling_time_upper_;
+      int32_t marshalling_type_;
       int32_t max_data_member_num_;
       int32_t max_check_member_num_;
+      int32_t max_marshalling_queue_timeout_;
       double  balance_percent_;
 
       static NameServerParameter ns_parameter_;

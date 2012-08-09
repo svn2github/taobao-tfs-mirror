@@ -188,8 +188,12 @@ namespace tfs
       const char* marshalling_time_str = TBSYS_CONFIG.getString(CONF_SN_NAMESERVER, CONF_MARSHALLING_HOUR_RANGE, "6~9");
       set_hour_range(marshalling_time_str, marshalling_time_lower_, marshalling_time_upper_);
 
+      marshalling_type_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_MARSHALLING_TYPE, 1);
+
       max_data_member_num_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_MAX_DATA_MEMBER_NUM, 5);
       max_check_member_num_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_MAX_CHECK_MEMBER_NUM, 2);
+
+      max_marshalling_queue_timeout_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_MAX_MARSHALLING_QUEUE_TIMEOUT, 3600);
       return TFS_SUCCESS;
     }
 

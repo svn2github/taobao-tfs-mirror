@@ -31,11 +31,11 @@ namespace tfs
         int deserialize(const char* data, const int64_t data_len, int64_t& pos);
         virtual int64_t length() const;
         void dump(void) const;
-        inline void set_command(const int32_t command)
+        inline void set_status(const int32_t command)
         {
           command_ = command;
         }
-        inline int32_t get_command() const
+        inline int32_t get_status() const
         {
           return command_;
         }

@@ -104,9 +104,11 @@ namespace tfs
 
 #define CONF_MARSHALLING_DELETE_RATIO                 "marshalling_delete_ratio"
 #define CONF_MARSHALLING_HOUR_RANGE                   "marshalling_hour_range"
+#define CONF_MARSHALLING_TYPE                         "marshalling_type"
 
 #define CONF_MAX_DATA_MEMBER_NUM                      "max_data_member_num"
 #define CONF_MAX_CHECK_MEMBER_NUM                     "max_check_member_num"
+#define CONF_MAX_MARSHALLING_QUEUE_TIMEOUT            "max_marshalling_queue_timeout"
 
   //dataserver
 #define CONF_OBJECT_CLEAR_MAX_TIME                    "object_clear_max_time"

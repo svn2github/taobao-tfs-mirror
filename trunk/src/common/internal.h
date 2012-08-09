@@ -37,12 +37,12 @@
 
 #define GET_DATA_MEMBER_NUM(x) ((x >> 24) & 0xFF)
 #define GET_CHECK_MEMBER_NUM(x) ((x >> 16) & 0xFF)
-#define GET_CODE_TYPE(x) ((x >> 8) & 0xFF)
+#define GET_MARSHALLING_TYPE(x) ((x >> 8) & 0xFF)
 #define GET_MASTER_INDEX(x) (x & 0xFF)
 
 #define SET_DATA_MEMBER_NUM(x,y) (x |= ((y << 24) & 0xFF000000))
 #define SET_CHECK_MEMBER_NUM(x,y) ((x |= ((y << 16) & 0xFF0000)))
-#define SET_CODE_TYPE(x,y) (x |= ((y << 8) & 0xFF00))
+#define SET_MARSHALLING_TYPE(x,y) (x |= ((y << 8) & 0xFF00))
 #define SET_MASTER_INDEX(x,y) (x |= (y & 0xFF))
 
 #define TFS_GTEST
@@ -150,6 +150,13 @@ namespace tfs
 
     static const int32_t DEFAULT_HEART_INTERVAL = 2;//2s
 
+    static const int32_t MAX_REPLICATION_NUM = 8;
+
+    static const int32_t MAX_MARSHALLING_NUM = 32;//
+    static const int32_t MAX_DATA_MEMBER_NUM = 24;
+    static const int32_t MAX_CHECK_MEMBER_NUM = 8;
+
+    static const int64_t TMP_FAMILY_ID = 0xEFFFFFFFFFFFFFFF;
 
     enum OplogFlag
     {
@@ -295,7 +302,7 @@ namespace tfs
       PLAN_TYPE_COMPACT,
       PLAN_TYPE_EC_REINSTATE,
       PLAN_TYPE_EC_DISSOLVE,
-      PLAN_TYPE_EC_MARSHLLING
+      PLAN_TYPE_EC_MARSHALLING
     };
 
     enum PlanStatus
@@ -894,6 +901,18 @@ namespace tfs
       CLEAR_SYSTEM_TABLE_FLAG_DELETE_QUEUE  = 1 << 3
     }ClearSystemTableFlag;
 
+    typedef enum _FamilyMemberStatus
+    {
+      FAMILY_MEMBER_STATUS_NORMAL = 0,
+      FAMILY_MEMBER_STATUS_ABNORMAL
+    }FamilyMemberStatus;
+
+    typedef enum _RemoveOrReinstateBlockType
+    {
+      REMOVE_OR_REINSTATE_TYPE_DIRECT = 0, //直接删除
+      REMOVE_OR_REINSTATE_TYPE_OTHER       //当前BLOCK有可能会被删除，也有可能需要将FAMILY ID置空，重新汇报上来
+    }RemoveOrReinstateBlockType;
+
     struct FamilyInfo
     {
       int64_t family_id_;
@@ -902,6 +921,18 @@ namespace tfs
       int deserialize(const char* data, const int64_t data_len, int64_t& pos);
       int serialize(char* data, const int64_t data_len, int64_t& pos) const;
       int64_t length() const;
+    };
+
+    struct FamilyMemberInfo
+    {
+      uint64_t server_;
+      uint32_t block_;
+      int32_t  version_;
+      int32_t  status_;
+      int deserialize(const char* data, const int64_t data_len, int64_t& pos);
+      int serialize(char* data, const int64_t data_len, int64_t& pos) const;
+      int64_t length() const;
+      bool operator == (const FamilyMemberInfo& info) const;
     };
 
     struct RawIndex

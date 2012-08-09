@@ -75,13 +75,13 @@ namespace tfs
 
           bool remove(const T value)
           {
-            for (int32_t i = 0; i < index_; i++)
+            for (int64_t i = 0; i < index_; ++i)
             {
               if (p_[i] == value)
               {
                 T* dest = p_ + i;
                 T* start = p_ + i + 1;
-                int32_t n = index_ - i ;
+                int64_t n = index_ - i ;
                 if (n > 0)
                   memmove(dest, start, n * sizeof(T));
                 --index_;
@@ -90,16 +90,25 @@ namespace tfs
             return true;
           }
 
-          bool exist(const T value) const
+          T* get(const T value) const
           {
-            for (int32_t i = 0; i < index_; i++)
+            T* res = NULL;
+            for (int64_t i = 0; i < index_ && NULL != res; ++i)
             {
               if (p_[i] == value)
-              {
-                return true;
-              }
+                res = &p_[i];
             }
-            return false;
+            return res;
+          }
+
+          bool exist(const T value) const
+          {
+            bool ret = false;
+            for (int64_t i = 0; i < index_ && !ret; ++i)
+            {
+              ret = p_[i] == value;
+            }
+            return ret;
           }
 
           T* at(int64_t index) const

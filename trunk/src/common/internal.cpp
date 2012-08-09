@@ -1309,5 +1309,59 @@ namespace tfs
     {
       return /*INT64_SIZE + INT_SIZE + */(family_member_.size() * INT_SIZE * 2);
     }
+
+    bool FamilyMemberInfo::operator ==(const FamilyMemberInfo& rhs) const
+    {
+      return block_ == rhs.block_;
+    }
+
+    int FamilyMemberInfo::deserialize(const char* data, const int64_t data_len, int64_t& pos)
+    {
+      int32_t ret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::get_int64(data, data_len, pos, reinterpret_cast<int64_t*>(&server_));
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::get_int32(data, data_len, pos, reinterpret_cast<int32_t*>(&block_));
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::get_int32(data, data_len, pos, &version_);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::get_int32(data, data_len, pos, &status_);
+      }
+      return ret;
+    }
+
+    int FamilyMemberInfo::serialize(char* data, const int64_t data_len, int64_t& pos) const
+    {
+      int32_t ret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int64(data, data_len, pos, server_);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int32(data, data_len, pos, block_);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int32(data, data_len, pos, version_);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int32(data, data_len, pos, status_);
+      }
+      return ret;
+    }
+
+    int64_t FamilyMemberInfo::length() const
+    {
+      return INT64_SIZE + INT_SIZE * 3;
+    }
   } /** nameserver **/
 }/** tfs **/
