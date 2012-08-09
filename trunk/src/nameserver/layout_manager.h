@@ -48,8 +48,8 @@ namespace tfs
       FRIEND_TEST(LayoutManagerTest, update_relation);
       FRIEND_TEST(LayoutManagerTest, update_block_info);
       FRIEND_TEST(LayoutManagerTest, repair);
-      FRIEND_TEST(LayoutManagerTest, build_emergency_replicate_);
-      FRIEND_TEST(LayoutManagerTest, check_emergency_replicate_);
+      FRIEND_TEST(LayoutManagerTest, scan_replicate_queue_);
+      FRIEND_TEST(LayoutManagerTest, scan_illegal_block_);
       FRIEND_TEST(LayoutManagerTest, build_replicate_task_);
       FRIEND_TEST(LayoutManagerTest, build_compact_task_);
       FRIEND_TEST(LayoutManagerTest, build_balance_task_);
@@ -134,9 +134,9 @@ namespace tfs
       bool build_balance_task_(int64_t& need, common::TfsSortedVector<ServerCollect*,ServerIdCompare>& targets,
           const ServerCollect* source, const BlockCollect* block, const time_t now);
       bool build_reinstate_task_(int64_t& need, const FamilyCollect* family,
-          const common::ArrayHelper<std::pair<uint32_t, int32_t> >& reinstate_members, const time_t now);
+          const common::ArrayHelper<common::FamilyMemberInfo>& reinstate_members, const time_t now);
       bool build_dissolve_task_(int64_t& need, const FamilyCollect* family,
-          const common::ArrayHelper<std::pair<uint32_t, int32_t> >& reinstate_members, const time_t now);
+          const common::ArrayHelper<common::FamilyMemberInfo>& reinstate_members, const time_t now);
       bool build_redundant_(int64_t& need, const time_t now);
       bool build_marshalling_(int64_t& need, const time_t now);
       int64_t has_space_in_task_queue_() const;

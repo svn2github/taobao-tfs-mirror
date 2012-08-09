@@ -58,6 +58,7 @@ namespace tfs
 
       inline uint32_t generation(const uint32_t id = 0) { return id_factory_.generation(id);}
 
+      int create_family_id(int64_t& family_id);
       int create_family(common::FamilyInfo& family_info);
       int del_family(const int64_t family_id);
       int scan_family(std::vector<common::FamilyInfo>& infos, const int64_t start_family_id = 0);

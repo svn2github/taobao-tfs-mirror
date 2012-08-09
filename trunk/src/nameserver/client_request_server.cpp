@@ -494,15 +494,16 @@ namespace tfs
       int32_t ret = ((NULL == buf) || (buf_length <= 0)) ? EXIT_PARAMETER_ERROR : TFS_SUCCESS;
       if (TFS_SUCCESS == ret)
       {
-        std::vector<ServerCollect*> runer;
-        ret = manager_.get_block_manager().get_servers(runer, info.value3_);
+        ServerCollect* servers[SYSPARAM_NAMESERVER.max_replication_];
+        ArrayHelper<ServerCollect*> helper(SYSPARAM_NAMESERVER.max_replication_, servers);
+        ret = manager_.get_block_manager().get_servers(helper, info.value3_);
         if (TFS_SUCCESS != ret)
         {
           snprintf(buf, buf_length, " block: %u no exist or dataserver not found, ret: %d", info.value3_, ret);
         }
         else
         {
-          ret = manager_.get_task_manager().add(info.value3_, runer, PLAN_TYPE_COMPACT, now);
+          ret = manager_.get_task_manager().add(info.value3_, helper, PLAN_TYPE_COMPACT, now);
           if (TFS_SUCCESS != ret)
           {
             snprintf(buf, buf_length, " add task(compact) failed, block: %u", info.value3_);
@@ -567,12 +568,11 @@ namespace tfs
           }
           if (TFS_SUCCESS == ret)//NULL != source && NULL != target
           {
-            std::vector<ServerCollect*> runer;
-            runer.push_back(source);
-            runer.push_back(target);
+            helper.clear();
+            helper.push_back(source);
+            helper.push_back(target);
             PlanType type = (info.value4_ == REPLICATE_BLOCK_MOVE_FLAG_NO) ? PLAN_TYPE_REPLICATE : PLAN_TYPE_MOVE;
-            PlanPriority priority = (info.value4_ == REPLICATE_BLOCK_MOVE_FLAG_NO) ? PLAN_PRIORITY_EMERGENCY : PLAN_PRIORITY_NORMAL;
-            ret = manager_.get_task_manager().add(info.value3_, runer, type, now,priority);
+            ret = manager_.get_task_manager().add(info.value3_, helper, type, now);
             if (TFS_SUCCESS != ret)
             {
               snprintf(buf, buf_length, "add task(%s) failed, block: %u",

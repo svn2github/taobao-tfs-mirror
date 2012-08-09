@@ -195,6 +195,18 @@ namespace tfs
       }
     }
 
+    uint64_t BlockCollect::get_first_server() const
+    {
+      uint64_t server = INVALID_SERVER_ID;
+      for (int8_t i = 0; i < SYSPARAM_NAMESERVER.max_replication_ && INVALID_SERVER_ID != server; ++i)
+      {
+        ServerCollect* pserver = servers_[i];
+        if (NULL != pserver && pserver->is_alive())
+          server = pserver->id();
+      }
+      return server;
+    }
+
     bool BlockCollect::check_version(LayoutManager& manager, common::ArrayHelper<ServerCollect*>& removes,
         bool& expire_self, common::ArrayHelper<ServerCollect*>& other_expires, ServerCollect*& invalid_server,
         const ServerCollect* server,const int8_t role, const bool isnew, const common::BlockInfo& info, const time_t now)

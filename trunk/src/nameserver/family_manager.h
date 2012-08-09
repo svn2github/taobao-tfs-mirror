@@ -91,6 +91,8 @@ namespace tfs
       int get_members(common::ArrayHelper<std::pair<uint32_t, int32_t> >& members, const int64_t family_id) const;
       int get_members(common::ArrayHelper<BlockCollect*>& members, const int64_t family_id) const;
       int get_members(common::ArrayHelper<std::pair<BlockCollect*, ServerCollect*> >& members, const int64_t family_id) const;
+      int get_members(common::ArrayHelper<common::FamilyMemberInfo>& members,
+          const common::ArrayHelper<common::FamilyMemberInfo>& abnormal_members, const int64_t family_id) const;
       bool push_to_reinstate_or_dissolve_queue(FamilyCollect* family);
       FamilyCollect* pop_from_reinstate_or_dissolve_queue();
       bool reinstate_or_dissolve_queue_empty() const;
@@ -107,10 +109,10 @@ namespace tfs
           const int64_t family_id, const int32_t data_member_num);
       int dissolve_family_choose_member_targets_server(common::ArrayHelper<std::pair<uint64_t, uint32_t> >& results,
           const int64_t family_id);
-      bool check_need_reinstate(common::ArrayHelper<std::pair<uint32_t, int32_t> >& reinstate_members,
+      bool check_need_reinstate(common::ArrayHelper<common::FamilyMemberInfo>& reinstate_members,
           const FamilyCollect* family, const time_t now) const;
       bool check_need_dissolve(const FamilyCollect* family,
-          const common::ArrayHelper<std::pair<uint32_t, int32_t> >& need_reinstate_members) const;
+          const common::ArrayHelper<common::FamilyMemberInfo>& need_reinstate_members) const;
       bool check_need_compact() const;//TODO
     private:
       DISALLOW_COPY_AND_ASSIGN(FamilyManager);

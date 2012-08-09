@@ -66,11 +66,10 @@ namespace tfs
         explicit BlockManager(LayoutManager& manager);
         virtual ~BlockManager();
         BlockCollect* insert(const uint32_t block, const time_t now, const bool set = false);
-        //bool remove(std::vector<GCObject*>& rms, const uint32_t block);
         bool remove(GCObject*& gc_object, const uint32_t block);
 
         bool push_to_delete_queue(const uint32_t block, const uint64_t server);
-        bool pop_from_delete_queue(std::pair<uint32_t, uint64_t>& pairs);
+        bool pop_from_delete_queue(std::pair<uint64_t, uint32_t>& output);
         bool delete_queue_empty() const;
         void clear_delete_queue();
 
@@ -92,6 +91,8 @@ namespace tfs
         int get_servers(std::vector<ServerCollect*>& servers, const uint32_t block) const;
         int get_servers(common::ArrayHelper<ServerCollect*>& server, const uint32_t block) const;
         int get_servers(common::ArrayHelper<ServerCollect*>& server, const BlockCollect* block) const;
+        int get_servers_size(const uint32_t block) const;
+        uint64_t get_first_server(const uint32_t block) const;
 
         int update_relation(ServerCollect* server, const std::set<common::BlockInfo>& blocks, const time_t now);
         int build_relation(BlockCollect* block, bool& writable, bool& master,
@@ -99,6 +100,8 @@ namespace tfs
         bool relieve_relation(BlockCollect* block, const ServerCollect* server, const time_t now, const int8_t flag);
         int update_block_info(BlockCollect*& output, bool& isnew, bool& writable, bool& master,
             const common::BlockInfo& info, const ServerCollect* server, const time_t now, const bool addnew);
+
+        int update_family_id(const uint32_t block, const uint64_t family_id);
 
         bool need_replicate(const BlockCollect* block) const;
         bool need_replicate(const BlockCollect* block, const time_t now) const;
@@ -129,7 +132,7 @@ namespace tfs
         int build_relation_(BlockCollect* block, bool& writable, bool& master,
             ServerCollect*& invalid_server, const ServerCollect* server, const time_t now, const bool set = false);
 
-        bool pop_from_delete_queue_(std::pair<uint32_t, uint64_t>& pairs);
+        bool pop_from_delete_queue_(std::pair<uint64_t, uint32_t>& output);
 
         bool has_write_(const uint32_t block, const time_t now) const;
 
@@ -144,8 +147,8 @@ namespace tfs
         LAST_WRITE_BLOCK_MAP last_write_blocks_[MAX_BLOCK_CHUNK_NUMS];
         BLOCK_MAP * blocks_[MAX_BLOCK_CHUNK_NUMS];
 
-        tbutil::Mutex delete_block_queue_muetx_;
-        std::deque<std::pair<uint32_t, uint64_t> > delete_block_queue_;
+        tbutil::Mutex delete_queue_mutex_;
+        std::deque<std::pair<uint64_t, uint32_t> > delete_queue_;
 
         tbutil::Mutex emergency_replicate_queue_mutex_;
         std::deque<uint32_t> emergency_replicate_queue_;

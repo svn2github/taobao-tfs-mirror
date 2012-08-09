@@ -136,8 +136,8 @@ namespace tfs
             ret = dbhelper_->scan(infos, family_id);
             if (TFS_SUCCESS == ret)
             {
-              std::pair<uint32_t, int32_t> members[MAX_MARSHLLING_NUM];
-              common::ArrayHelper<std::pair<uint32_t, int32_t> > helper(MAX_MARSHLLING_NUM, members);
+              std::pair<uint32_t, int32_t> members[MAX_MARSHALLING_NUM];
+              common::ArrayHelper<std::pair<uint32_t, int32_t> > helper(MAX_MARSHALLING_NUM, members);
               std::vector<common::FamilyInfo>::const_iterator iter = infos.begin();
               for (; iter != infos.end(); ++iter)
               {
@@ -373,7 +373,7 @@ namespace tfs
         }
         else
         {
-          CompactBlockCompleteMessage* tmp = new (std::nothrow)CompactBlockCompleteMessage();
+          DsCommitCompactBlockCompleteToNsMessage * tmp = new (std::nothrow)DsCommitCompactBlockCompleteToNsMessage();
           msg = tmp;
           ret = tmp->deserialize(data, data_len, pos);
           assert(NULL != tmp);
@@ -621,6 +621,17 @@ namespace tfs
       }
       return ret;
     }
+
+    int OpLogSyncManager::create_family_id(int64_t& family_id)
+    {
+      int32_t ret = NULL != dbhelper_ ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+      if (TFS_SUCCESS == ret)
+      {
+        ret = dbhelper_->create_family_id(family_id);
+      }
+      return ret;
+    }
+
     int OpLogSyncManager::create_family(common::FamilyInfo& family_info)
     {
       int32_t ret = NULL != dbhelper_ ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
@@ -633,6 +644,7 @@ namespace tfs
       }
       return ret;
     }
+
     int OpLogSyncManager::del_family(const int64_t family_id)
     {
       int32_t ret = NULL != dbhelper_ ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;

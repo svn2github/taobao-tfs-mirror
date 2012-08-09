@@ -566,13 +566,11 @@ namespace tfs
       std::set<uint32_t> lans;
       get_lans_(lans, result);
       ServerCollect* pserver = NULL;
-      int32_t ret = TFS_SUCCESS;
       int32_t index = count;
       while (index-- > 0)
       {
         pserver = NULL;
-        ret = choose_replciate_random_choose_server_base_lock_(pserver, result, lans);
-        if (TFS_SUCCESS == ret)
+        if (TFS_SUCCESS == choose_replciate_random_choose_server_base_lock_(pserver, result, lans))
         {
           assert(NULL != pserver);
           news.push_back(pserver);
@@ -581,7 +579,7 @@ namespace tfs
           lans.insert(lan);
         }
       }
-      return news.get_array_index() - count;
+      return count - news.get_array_index();
     }
 
     //replicate method

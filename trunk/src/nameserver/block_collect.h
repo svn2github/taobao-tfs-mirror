@@ -71,6 +71,7 @@ namespace tfs
       void get_servers(common::ArrayHelper<ServerCollect*>& servers) const;
       void get_servers(std::vector<uint64_t>& servers) const;
       void get_servers(std::vector<ServerCollect*>& servers) const;
+      uint64_t get_first_server() const;
       inline void update(const common::BlockInfo& info) { info_ = info;}
       inline bool is_full() const { return info_.size_ >= common::SYSPARAM_NAMESERVER.max_block_size_; }
       inline uint32_t id() const { return info_.block_id_;}

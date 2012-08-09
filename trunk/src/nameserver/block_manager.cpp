@@ -117,26 +117,24 @@ namespace tfs
 
     bool BlockManager::push_to_delete_queue(const uint32_t block, const uint64_t server)
     {
-      TBSYS_LOG(DEBUG, "push delete queue: block: %u, server: %s", block, tbsys::CNetUtil::addrToString(server).c_str());
-      tbutil::Mutex::Lock lock(delete_block_queue_muetx_);
-      delete_block_queue_.push_back(std::make_pair(block, server));
+      tbutil::Mutex::Lock lock(delete_queue_mutex_);
+      delete_queue_.push_back(std::make_pair(server, block));
       return true;
     }
 
-    bool BlockManager::pop_from_delete_queue_(std::pair<uint32_t, uint64_t>& output)
+    bool BlockManager::pop_from_delete_queue_(std::pair<uint64_t,uint32_t>& output)
     {
-      tbutil::Mutex::Lock lock(delete_block_queue_muetx_);
-      bool ret = !delete_block_queue_.empty();
+      tbutil::Mutex::Lock lock(delete_queue_mutex_);
+      bool ret = !delete_queue_.empty();
       if (ret)
       {
-        output = delete_block_queue_.front();
-        delete_block_queue_.pop_front();
-        TBSYS_LOG(DEBUG, "pop delete queue: block: %u, server: %s", output.first, tbsys::CNetUtil::addrToString(output.second).c_str());
+        output = delete_queue_.front();
+        delete_queue_.pop_front();
       }
       return ret;
     }
 
-    bool BlockManager::pop_from_delete_queue(std::pair<uint32_t, uint64_t>& output)
+    bool BlockManager::pop_from_delete_queue(std::pair<uint64_t,uint32_t>& output)
     {
       //这里有可能会出现遗漏，这种状况可以通过下一次汇报来处理
       bool ret = false;
@@ -164,13 +162,13 @@ namespace tfs
 
     bool BlockManager::delete_queue_empty() const
     {
-      return delete_block_queue_.empty();
+      return delete_queue_.empty();
     }
 
     void BlockManager::clear_delete_queue()
     {
-      tbutil::Mutex::Lock lock(delete_block_queue_muetx_);
-      delete_block_queue_.clear();
+      tbutil::Mutex::Lock lock(delete_queue_mutex_);
+      delete_queue_.clear();
     }
 
     bool BlockManager::push_to_emergency_replicate_queue(BlockCollect* block)
@@ -383,6 +381,20 @@ namespace tfs
       return get_servers_(servers, pblock);
     }
 
+    int BlockManager::get_servers_size(const uint32_t block) const
+    {
+      RWLock::Lock lock(get_mutex_(block), READ_LOCKER);
+      BlockCollect* pblock = get_(block);
+      return (NULL != pblock) ? pblock->get_servers_size() : EXIT_BLOCK_NOT_FOUND;
+    }
+
+    uint64_t BlockManager::get_first_server(const uint32_t block) const
+    {
+      RWLock::Lock lock(get_mutex_(block), READ_LOCKER);
+      BlockCollect* pblock = get_(block);
+      return (NULL != pblock) ? pblock->get_first_server() : INVALID_SERVER_ID;
+    }
+
     RWLock& BlockManager::get_mutex_(const uint32_t block) const
     {
       return rwmutex_[get_chunk_(block)];
@@ -550,6 +562,19 @@ namespace tfs
       return ret;
     }
 
+
+    int BlockManager::update_family_id(const uint32_t block, const uint64_t family_id)
+    {
+      RWLock::Lock lock(get_mutex_(block), READ_LOCKER);
+      BlockCollect* pblock = get_(block);
+      int32_t ret = (NULL != pblock) ? TFS_SUCCESS : EXIT_BLOCK_NOT_FOUND;
+      if (TFS_SUCCESS == ret)
+      {
+        pblock->set_family_id(family_id);
+      }
+      return ret;
+    }
+
     bool BlockManager::relieve_relation(BlockCollect* block, const ServerCollect* server, const time_t now, const int8_t flag)
     {
       RWLock::Lock lock(get_mutex_(block->id()), WRITE_LOCKER);
@@ -602,7 +627,7 @@ namespace tfs
           block->get_servers(servers);
         get_mutex_(block->id()).unlock();
         ret = (ret && !manager_.get_task_manager().exist(block->id())
-            && !manager_.get_task_manager().exist(servers, true));
+            && !manager_.get_task_manager().exist(servers));
       }
       return ret;
     }
