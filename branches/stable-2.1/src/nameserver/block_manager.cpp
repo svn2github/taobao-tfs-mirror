@@ -382,6 +382,18 @@ namespace tfs
       return get_servers_(servers, pblock);
     }
 
+    int64_t BlockManager::get_servers_size(const BlockCollect* block) const
+    {
+      int64_t size = 0;
+      int32_t ret = NULL == block ? EXIT_NO_BLOCK : TFS_SUCCESS;
+      if (TFS_SUCCESS == ret)
+      {
+        RWLock::Lock lock(get_mutex_(block->id()), READ_LOCKER);
+        size = block->get_servers_size();
+      }
+      return size;
+    }
+
     RWLock& BlockManager::get_mutex_(const uint32_t block) const
     {
       return rwmutex_[get_chunk_(block)];

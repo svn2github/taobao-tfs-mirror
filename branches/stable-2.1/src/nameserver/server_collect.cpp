@@ -226,19 +226,10 @@ namespace tfs
       for (int32_t index = 0; index < count && NULL == result; ++index)
       {
         ret = choose_writable_block_(result);
+        if (TFS_SUCCESS == ret)
+          ret = (result->is_writable() && is_equal_group(result->id())) ? TFS_SUCCESS : EXIT_BLOCK_NO_WRITABLE;
         if (TFS_SUCCESS != ret)
-          continue;
-        if (!result->is_writable())
-        {
-          //if (result->is_full())
-          helper.push_back(result);
-          continue;
-        }
-        if (!is_equal_group(result->id()))
-        {
-          helper.push_back(result);
-          continue;
-        }
+          result = NULL;
       }
       remove_writable_(helper);
       return NULL == result ? EXIT_BLOCK_NOT_FOUND : TFS_SUCCESS;
