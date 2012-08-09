@@ -79,6 +79,7 @@ namespace tfs
           SYSPARAM_NAMESERVER.object_dead_max_time_ = 1;
           SYSPARAM_NAMESERVER.group_count_ = 1;
           SYSPARAM_NAMESERVER.group_seq_ = 0;
+          SYSPARAM_NAMESERVER.choose_target_server_random_max_nums_= 10;
           NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
           ngi.destroy_flag_ = NS_DESTROY_FLAGS_NO;
           ngi.owner_role_ = NS_ROLE_MASTER;
@@ -209,7 +210,7 @@ namespace tfs
       EXPECT_EQ(EXIT_DATASERVER_NOT_FOUND, manager_.repair(msg, MSG_LEN, block_id, info.id_, flag, now));
     }
 
-    TEST_F(LayoutManagerTest, build_emergency_replicate_)
+    TEST_F(LayoutManagerTest, scan_replicate_queue_)
     {
       bool isnew = false;
       const int32_t MASK = 5;
@@ -230,9 +231,8 @@ namespace tfs
       info.total_tp_.read_byte_ = 0xffffffff;
       info.total_tp_.read_file_count_ = 0xfffff;
 
-      std::deque<BlockCollect*> queue;
       int64_t need = 0xff;
-      EXPECT_TRUE(manager_.build_emergency_replicate_(need, queue, now));
+      EXPECT_TRUE(manager_.scan_replicate_queue_(need, now));
       EXPECT_EQ(0xff, need);
 
       uint32_t block_id = 100;
@@ -254,17 +254,17 @@ namespace tfs
 
       EXPECT_EQ(PLAN_PRIORITY_EMERGENCY, block->check_replicate(now));
 
-      EXPECT_TRUE(manager_.build_emergency_replicate_(need, queue, now));
+      EXPECT_TRUE(manager_.scan_replicate_queue_(need, now));
       EXPECT_EQ(0xff, need);
+
+      manager_.get_block_manager().push_to_emergency_replicate_queue(block);
 
       snprintf(addr, 32, "172.24.80.%d", 1);
       info.id_ = tbsys::CNetUtil::strToAddr(addr, 3200);
       manager_.get_server_manager().add(info, now, isnew);
 
-      queue.push_back(block);
-      EXPECT_TRUE(manager_.build_emergency_replicate_(need, queue, now));
+      EXPECT_TRUE(manager_.scan_replicate_queue_(need, now));
       EXPECT_EQ(0xff, need);
-      EXPECT_EQ(1U, queue.size());
 
       uint32_t COUNT = random() % 128 + 16;
       for (uint32_t i = 0; i < COUNT + 1; i++)
@@ -276,11 +276,11 @@ namespace tfs
         manager_.get_server_manager().add(info, now, isnew);
       }
 
-      EXPECT_TRUE(manager_.build_emergency_replicate_(need, queue, now));
+      EXPECT_TRUE(manager_.scan_replicate_queue_(need, now));
       EXPECT_EQ(0xff - 1, need);
     }
 
-    TEST_F(LayoutManagerTest, check_emergency_replicate_)
+    TEST_F(LayoutManagerTest, scan_illegal_block_)
     {
 
     }
@@ -334,9 +334,9 @@ namespace tfs
       EXPECT_FALSE(manager_.build_replicate_task_(need, block, now));
 
       uint32_t COUNT = random() % 128 + 16;
-      for (uint32_t i = 0; i < COUNT + 1; i++)
+      for (uint32_t i = MASK; i < COUNT + 1; i++)
       {
-        snprintf(addr, 32, "172.24.80.%d", i % MASK);
+        snprintf(addr, 32, "172.24.80.%d", i);
         info.id_ = tbsys::CNetUtil::strToAddr(addr, 3200);
         manager_.get_server_manager().add(info, now, isnew);
         info.id_ = tbsys::CNetUtil::strToAddr(addr, 3202);
@@ -345,14 +345,12 @@ namespace tfs
       EXPECT_TRUE(manager_.build_replicate_task_(need, block, now));
       Task* task = manager_.get_task_manager().get_(block->id());
       EXPECT_TRUE(NULL != task);
-      EXPECT_EQ(2U, task->runer_.size());
-      std::vector<ServerCollect*>::iterator iter = task->runer_.begin();
+      ReplicateTask* ptask = dynamic_cast<ReplicateTask*>(task);
+      EXPECT_EQ(2, ptask->server_num_);
       uint32_t lan =  Func::get_lan(server->id(), SYSPARAM_NAMESERVER.group_mask_);
-      ++iter;
-      for (; iter != task->runer_.end(); ++iter)
+      for (int32_t i = 1; i < ptask->server_num_; ++i)
       {
-        ServerCollect* pserver = (*iter);
-        uint32_t tmp=  Func::get_lan(pserver->id(), SYSPARAM_NAMESERVER.group_mask_);
+        uint32_t tmp=  Func::get_lan(ptask->servers_[i], SYSPARAM_NAMESERVER.group_mask_);
         EXPECT_TRUE(tmp != lan);
       }
     }
@@ -442,14 +440,12 @@ namespace tfs
       EXPECT_TRUE(manager_.build_balance_task_(need,targets, server1, block,now));
       Task* task = manager_.get_task_manager().get_(block->id());
       EXPECT_TRUE(NULL != task);
-      EXPECT_EQ(2U, task->runer_.size());
-      std::vector<ServerCollect*>::iterator iter = task->runer_.begin();
+      ReplicateTask* ptask = dynamic_cast<ReplicateTask*>(task);
+      EXPECT_EQ(2, ptask->server_num_);
       uint32_t lan =  Func::get_lan(server1->id(), SYSPARAM_NAMESERVER.group_mask_);
-      ++iter;
-      for (; iter != task->runer_.end(); ++iter)
+      for (int32_t i = 1; i < ptask->server_num_; ++i)
       {
-        ServerCollect* pserver = (*iter);
-        uint32_t tmp=  Func::get_lan(pserver->id(), SYSPARAM_NAMESERVER.group_mask_);
+        uint32_t tmp=  Func::get_lan(ptask->servers_[i], SYSPARAM_NAMESERVER.group_mask_);
         EXPECT_TRUE(tmp != lan);
       }
     }

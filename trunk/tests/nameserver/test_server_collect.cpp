@@ -198,6 +198,7 @@ namespace tfs
       ServerCollect server(info, now);
       info.id_++;
       ServerCollect server2(info,now);
+      ServerCollect* invalid_server = NULL;
       const int32_t BLOCK_COUNT = random() % 10000 + 40960;
       BlockCollect* blocks[BLOCK_COUNT];
       int32_t i = 0;
@@ -206,7 +207,7 @@ namespace tfs
 
       for (i = 0; i < BLOCK_COUNT; ++i)
       {
-        blocks[i]->add(writable, master, &server);
+        blocks[i]->add(writable, master, invalid_server, &server);
         EXPECT_TRUE(server.add(blocks[i], writable, master));
       }
 
@@ -220,17 +221,17 @@ namespace tfs
       EXPECT_FALSE(server.touch(promote, count, average_used_capacity));
       count = 3;
       EXPECT_FALSE(server.touch(promote, count, average_used_capacity));
+      count = 3;
       promote = true;
       EXPECT_TRUE(server.touch(promote, count, average_used_capacity));
-      EXPECT_EQ(0, count);
-      count = 3;
+      EXPECT_EQ(3, count);
       average_used_capacity = 0xffffff;
       EXPECT_TRUE(server.touch(promote, count, average_used_capacity));
       EXPECT_EQ(3, count);
 
       for (i = 0; i < BLOCK_COUNT; ++i)
       {
-        blocks[i]->add(writable, master, &server2);
+        blocks[i]->add(writable, master, invalid_server, &server2);
         server2.add(blocks[i], writable, master);
       }
 

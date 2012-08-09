@@ -17,7 +17,8 @@ LDADD=$(top_builddir)/src/nameserver/libnameserver.a \
 			$(MYSQL_LDFLAGS)
 
 noinst_PROGRAMS= test_block_collect test_block_manager test_server_collect test_server_manager\
-test_task test_task_manager test_layout_manager test_gc test_database_helper
+test_task test_task_manager test_layout_manager test_gc test_database_helper test_family_collect\
+test_family_manager
 
 test_block_collect_SOURCES=test_block_collect.cpp
 test_block_collect_LDFLAGS=${AM_LDFLAGS} 
@@ -45,6 +46,12 @@ test_gc_LDFLAGS=${AM_LDFLAGS}
 
 test_database_helper_SOURCES= test_database_helper.cpp
 test_database_helper_LDFLAGS=${AM_LDFLAGS}
+
+test_family_collect_SOURCES= test_family_collect.cpp
+test_family_collect_LDFLAGS=${AM_LDFLAGS}
+
+test_family_manager_SOURCES= test_family_manager.cpp
+test_family_manager_LDFLAGS=${AM_LDFLAGS}
 
 #integration_SOURCES= integration.cpp integration_instance.cpp integration_case.cpp
 #integration_LDFLAGS=${AM_LDFLAGS}

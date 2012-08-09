@@ -6,7 +6,7 @@
  * published by the Free Software Foundation.
  *
  *
- * Version: $Id: test_block_collect.cpp 5 2011-03-20 08:55:56Z
+ * Version: $Id: test_database_helper.cpp 5 2012-07-20 09:55:56Z
  *
  * Authors:
  *  duanfei <duanfei@taobao.com>
@@ -69,7 +69,7 @@ namespace tfs
     {
       DataBaseHelper dbhelper(connstr, username, password);
       FamilyInfo info;
-      info.family_id_ = 0;
+      EXPECT_EQ(TFS_SUCCESS, dbhelper.create_family_id(info.family_id_));
       info.family_aid_info_ = 100;
       for (int32_t i = 0; i < 10; i++)
       {

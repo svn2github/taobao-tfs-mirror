@@ -209,11 +209,15 @@ namespace tfs
 
       int32_t actual = 0;
       now += SYSPARAM_NAMESERVER.replicate_wait_time_ + 1;
+      ServerCollect* servers[MAX_POP_SERVER_FROM_DEAD_QUEUE_LIMIT];
+      common::ArrayHelper<ServerCollect*> helper(MAX_POP_SERVER_FROM_DEAD_QUEUE_LIMIT, servers);
       TBSYS_LOG(DEBUG, "remove count : %d", REMOVE_COUNT);
-      while (NULL != server_manager_.pop_from_dead_queue(now))
+      do
       {
-        actual++;
+        server_manager_.pop_from_dead_queue(helper, now);
+        actual += helper.get_array_index();
       }
+      while (helper.get_array_index() > 0 );
       EXPECT_EQ(REMOVE_COUNT, actual);
       EXPECT_EQ(0, server_manager_.dead_servers_.size());
     }
