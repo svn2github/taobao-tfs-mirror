@@ -146,7 +146,7 @@ namespace tfs
       if (common::TFS_SUCCESS == ret)
       {
         // don't care return value for compaitable
-        input.get_int32(reinterpret_cast<int32_t*>(&flag_));
+        input.get_int32(&flag_);
       }
       return ret;
     }
@@ -181,6 +181,11 @@ namespace tfs
 
     int ReportBlocksToNsRequestMessage::deserialize(common::Stream& input)
     {
+      /*
+       * new ns can't compatible old ds
+       * ns update after all ds finish update
+       * after update, new ns just receive extend block report
+       */
       int32_t iret =input.get_int64(reinterpret_cast<int64_t*>(&server_));
       if (common::TFS_SUCCESS == iret)
       {
@@ -211,16 +216,13 @@ namespace tfs
 
     int64_t ReportBlocksToNsRequestMessage::length() const
     {
-      if (0 == flag_)
-      {
-        common::BlockInfo info;
-        return common::INT64_SIZE + common::INT_SIZE + blocks_.size() * info.length();
-      }
-      else
-      {
-        common::BlockInfoExt info;
-        return common::INT64_SIZE + common::INT_SIZE + blocks_.size() * info.length();
-      }
+      /*
+       * new ns can't compatible old ds
+       * ns update after all ds finish update
+       * after update, new ns just receive extend block report
+       */
+      common::BlockInfoExt info;
+      return common::INT64_SIZE + common::INT_SIZE + blocks_ext_.size() * info.length();
     }
 
     int ReportBlocksToNsRequestMessage::serialize(common::Stream& output) const
@@ -230,38 +232,49 @@ namespace tfs
       if (common::TFS_SUCCESS == iret)
       {
         iret = output.set_int64(server_);
-        if (common::TFS_SUCCESS == iret)
-        {
-          iret = output.set_int32(blocks_.size());
-        }
       }
+
       if (common::TFS_SUCCESS == iret)
       {
-        if (0 == flag_)
+        if (common::REPORT_BLOCK_NORMAL == flag_)
         {
-          std::set<common::BlockInfo>::const_iterator iter = blocks_.begin();
-          for (; iter != blocks_.end(); ++iter)
+          iret = output.set_int32(blocks_.size());
+          if (common::TFS_SUCCESS == iret)
           {
-            pos = 0;
-            iret = const_cast<common::BlockInfo*>((&(*iter)))->serialize(output.get_free(), output.get_free_length(), pos);
-            if (common::TFS_SUCCESS == iret)
-              output.pour((*iter).length());
-            else
-              break;
+            std::set<common::BlockInfo>::const_iterator iter = blocks_.begin();
+            for (; iter != blocks_.end(); ++iter)
+            {
+              pos = 0;
+              iret = const_cast<common::BlockInfo*>((&(*iter)))->serialize(output.get_free(),
+                  output.get_free_length(), pos);
+              if (common::TFS_SUCCESS == iret)
+                output.pour((*iter).length());
+              else
+                break;
+            }
+          }
+        }
+        else if (common::REPORT_BLOCK_EXT == flag_)
+        {
+          iret = output.set_int32(blocks_ext_.size());
+          if (common::TFS_SUCCESS == iret)
+          {
+            std::set<common::BlockInfoExt>::const_iterator iter = blocks_ext_.begin();
+            for (; iter != blocks_ext_.end(); ++iter)
+            {
+              pos = 0;
+              iret = const_cast<common::BlockInfoExt*>((&(*iter)))->serialize(output.get_free(),
+                  output.get_free_length(), pos);
+              if (common::TFS_SUCCESS == iret)
+                output.pour((*iter).length());
+              else
+                break;
+            }
           }
         }
         else
         {
-          std::set<common::BlockInfoExt>::const_iterator iter = blocks_ext_.begin();
-          for (; iter != blocks_ext_.end(); ++iter)
-          {
-            pos = 0;
-            iret = const_cast<common::BlockInfoExt*>((&(*iter)))->serialize(output.get_free(), output.get_free_length(), pos);
-            if (common::TFS_SUCCESS == iret)
-              output.pour((*iter).length());
-            else
-              break;
-          }
+          iret = common::TFS_ERROR;
         }
       }
       return iret;
