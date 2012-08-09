@@ -55,13 +55,12 @@ namespace tfs
       return ret;
     }
 
-    int DataBaseHelper::create_family(FamilyInfo& family_info, int64_t& mysql_ret)
+    int DataBaseHelper::create_family_id(int64_t& family_id)
     {
-      mysql_ret = -1;
-      family_info.family_id_ = -1;
+      family_id = -1;
       int32_t ret = TFS_SUCCESS;
       int32_t retry = 0, mysql_errno = 0;
-      const char* sql = "CALL create_family(?,?)";
+      const char* sql = "CALL erasurecode_seq_nextval();";
       do
       {
         if (!is_connected_)
@@ -70,7 +69,89 @@ namespace tfs
         if (is_connected_)
         {
           MYSQL_STMT* stmt = mysql_stmt_init(&mysql_);
-          int32_t ret = mysql_stmt_prepare(stmt, sql, strlen(sql)) ? EXIT_PREPARE_SQL_ERROR : TFS_SUCCESS;
+          ret = mysql_stmt_prepare(stmt, sql, strlen(sql)) ? EXIT_PREPARE_SQL_ERROR : TFS_SUCCESS;
+          if (TFS_SUCCESS != ret)
+          {
+            mysql_errno = mysql_stmt_errno(stmt);
+            TBSYS_LOG(ERROR, "prepare sql: %s error: %d=>%s",
+                sql, mysql_stmt_errno(stmt), mysql_stmt_error(stmt));
+          }
+          if (TFS_SUCCESS == ret)
+          {
+            ret = excute_stmt_(stmt);
+            if (TFS_SUCCESS == ret)
+            {
+              int32_t num_fields = mysql_stmt_field_count(stmt);
+              ret = 1 == num_fields ? TFS_SUCCESS : EXIT_MYSQL_FETCH_DATA_ERROR;
+              if (TFS_SUCCESS == ret)
+              {
+                my_bool is_null[1];
+                MYSQL_BIND rs_bind[1];
+                memset(rs_bind, 0, sizeof(rs_bind));
+                rs_bind[0].buffer_type = MYSQL_TYPE_LONGLONG;
+                rs_bind[0].is_null = &is_null[0];
+                rs_bind[0].buffer = (char *) &family_id;
+                rs_bind[0].buffer_length = sizeof(family_id);
+
+                ret = mysql_stmt_bind_result(stmt, rs_bind) ?  EXIT_BIND_PARAMETER_ERROR : TFS_SUCCESS;
+                if (TFS_SUCCESS != ret)
+                {
+                  TBSYS_LOG(ERROR, "bind parameter: error: %d=>%s",
+                      mysql_stmt_errno(stmt), mysql_stmt_error(stmt));
+                }
+                if (TFS_SUCCESS == ret)
+                {
+                  ret = mysql_stmt_store_result(stmt) ? EXIT_EXECUTE_SQL_ERROR : TFS_SUCCESS;
+                  if (TFS_SUCCESS != ret)
+                  {
+                    TBSYS_LOG(ERROR, "mysql store result: %s error: %d=>%s", sql,
+                        mysql_stmt_errno(stmt), mysql_stmt_error(stmt));
+                  }
+                }
+
+                int32_t result = 0;
+                while (TFS_SUCCESS == ret && result == 0)
+                {
+                  result = mysql_stmt_fetch(stmt);
+                  if (0 != result && MYSQL_NO_DATA != result)
+                  {
+                    if (MYSQL_DATA_TRUNCATED == result)
+                      ret = EXIT_MYSQL_DATA_TRUNCATED;
+                    else
+                      ret = EXIT_MYSQL_FETCH_DATA_ERROR;
+                  }
+                  TBSYS_LOG(DEBUG, "family_id: %"PRI64_PREFIX"d", family_id);
+                  mysql_next_result(&mysql_);
+                }
+              }
+              mysql_stmt_free_result(stmt);
+            }
+            if (TFS_SUCCESS != ret)
+               disconnect_();
+          }
+          mysql_stmt_close(stmt);
+        }
+      }
+      while (2006 == mysql_errno && retry++ < 3);
+
+      return ret;
+    }
+
+    int DataBaseHelper::create_family(FamilyInfo& family_info, int64_t& mysql_ret)
+    {
+      mysql_ret = -1;
+      int32_t ret = TFS_SUCCESS;
+      int32_t retry = 0, mysql_errno = 0;
+      const char* sql = "CALL create_family(?,?,?)";
+      do
+      {
+        if (!is_connected_)
+          connect_();
+
+        if (is_connected_)
+        {
+          MYSQL_STMT* stmt = mysql_stmt_init(&mysql_);
+          ret = mysql_stmt_prepare(stmt, sql, strlen(sql)) ? EXIT_PREPARE_SQL_ERROR : TFS_SUCCESS;
           if (TFS_SUCCESS != ret)
           {
             mysql_errno = mysql_stmt_errno(stmt);
@@ -85,18 +166,22 @@ namespace tfs
             ret = TFS_SUCCESS != family_info.serialize(value, MAX_VALUE_LENGTH, pos) ? EXIT_SERIALIZE_ERROR : TFS_SUCCESS;
             if (TFS_SUCCESS == ret)
             {
-              MYSQL_BIND bind_paramter[2];
+              MYSQL_BIND bind_paramter[3];
               memset(&bind_paramter, 0, sizeof(bind_paramter));
-
-              bind_paramter[0].buffer_type = MYSQL_TYPE_LONG;
-              bind_paramter[0].buffer = (char *)&family_info.family_aid_info_;
+              bind_paramter[0].buffer_type = MYSQL_TYPE_LONGLONG;
+              bind_paramter[0].buffer = (char *)&family_info.family_id_;
               bind_paramter[0].is_null = 0;
               bind_paramter[0].length = 0;
 
-              bind_paramter[1].buffer_type = MYSQL_TYPE_BLOB;
-              bind_paramter[1].buffer = (char *) value;
-              bind_paramter[1].length = (long unsigned int*)&pos;
+              bind_paramter[1].buffer_type = MYSQL_TYPE_LONG;
+              bind_paramter[1].buffer = (char *)&family_info.family_aid_info_;
               bind_paramter[1].is_null = 0;
+              bind_paramter[1].length = 0;
+
+              bind_paramter[2].buffer_type = MYSQL_TYPE_BLOB;
+              bind_paramter[2].buffer = (char *) value;
+              bind_paramter[2].length = (long unsigned int*)&pos;
+              bind_paramter[2].is_null = 0;
 
               if (mysql_stmt_bind_param(stmt, bind_paramter))
               {
@@ -111,21 +196,16 @@ namespace tfs
                 if (TFS_SUCCESS == ret)
                 {
                   int32_t num_fields = mysql_stmt_field_count(stmt);
-                  ret = 2 == num_fields ? TFS_SUCCESS : EXIT_MYSQL_FETCH_DATA_ERROR;
+                  ret = 1 == num_fields ? TFS_SUCCESS : EXIT_MYSQL_FETCH_DATA_ERROR;
                   if (TFS_SUCCESS == ret)
                   {
-                    my_bool is_null[2];
-                    MYSQL_BIND rs_bind[2];
+                    my_bool is_null[1];
+                    MYSQL_BIND rs_bind[1];
                     memset(rs_bind, 0, sizeof(rs_bind));
                     rs_bind[0].buffer_type = MYSQL_TYPE_LONGLONG;
-                    rs_bind[0].is_null = &is_null[0];
-                    rs_bind[0].buffer = (char *) &family_info.family_id_;
-                    rs_bind[0].buffer_length = sizeof(family_info.family_id_);
-
-                    rs_bind[1].buffer_type = MYSQL_TYPE_LONGLONG;
-                    rs_bind[1].is_null = &is_null[1];
-                    rs_bind[1].buffer = (char *) &mysql_ret;
-                    rs_bind[1].buffer_length = sizeof(mysql_ret);
+                    rs_bind[0].is_null = &is_null[1];
+                    rs_bind[0].buffer = (char *) &mysql_ret;
+                    rs_bind[0].buffer_length = sizeof(mysql_ret);
                     ret = mysql_stmt_bind_result(stmt, rs_bind) ?  EXIT_BIND_PARAMETER_ERROR : TFS_SUCCESS;
                     if (TFS_SUCCESS != ret)
                     {
@@ -134,7 +214,17 @@ namespace tfs
                     }
                     if (TFS_SUCCESS == ret)
                     {
-                      int32_t result = mysql_stmt_fetch(stmt);
+                      ret = mysql_stmt_store_result(stmt) ? EXIT_MYSQL_FETCH_DATA_ERROR : TFS_SUCCESS;
+                      if (TFS_SUCCESS != ret)
+                      {
+                        TBSYS_LOG(ERROR, "mysql store result: error: %d=>%s",
+                            mysql_stmt_errno(stmt), mysql_stmt_error(stmt));
+                      }
+                    }
+                    int32_t result = 0;
+                    while (TFS_SUCCESS == ret && 0 == result)
+                    {
+                      result = mysql_stmt_fetch(stmt);
                       if (0 != result && MYSQL_NO_DATA != result)
                       {
                         if (MYSQL_DATA_TRUNCATED == result)
@@ -142,14 +232,13 @@ namespace tfs
                         else
                           ret = EXIT_MYSQL_FETCH_DATA_ERROR;
                       }
-                      TBSYS_LOG(DEBUG, "family_id: %"PRI64_PREFIX"d, mysql_ret: %"PRI64_PREFIX"d",
-                        family_info.family_id_, mysql_ret);
+                      TBSYS_LOG(DEBUG, "mysql_ret: %"PRI64_PREFIX"d", mysql_ret);
                       mysql_next_result(&mysql_);
                     }
-                    mysql_stmt_free_result(stmt);
                   }
                 }
               }
+              mysql_stmt_free_result(stmt);
             }
             if (TFS_SUCCESS != ret && EXIT_SERIALIZE_ERROR != ret)
                disconnect_();
@@ -223,7 +312,17 @@ namespace tfs
                   }
                   if (TFS_SUCCESS == ret)
                   {
-                    int32_t result = mysql_stmt_fetch(stmt);
+                    ret = mysql_stmt_store_result(stmt) ? EXIT_EXECUTE_SQL_ERROR : TFS_SUCCESS;
+                    if (TFS_SUCCESS != ret)
+                    {
+                      TBSYS_LOG(ERROR, "mysql store result: %s error: %d=>%s", sql,
+                          mysql_stmt_errno(stmt), mysql_stmt_error(stmt));
+                    }
+                  }
+                  int32_t result = 0;
+                  while (TFS_SUCCESS == ret && 0 == result)
+                  {
+                    result = mysql_stmt_fetch(stmt);
                     if (0 != result && MYSQL_NO_DATA != result)
                     {
                       if (MYSQL_DATA_TRUNCATED == result)
@@ -234,9 +333,9 @@ namespace tfs
                     TBSYS_LOG(DEBUG, "mysql_ret: %"PRI64_PREFIX"d", mysql_ret);
                     mysql_next_result(&mysql_);
                   }
-                  mysql_stmt_free_result(stmt);
                 }
               }
+              mysql_stmt_free_result(stmt);
             }
             if (TFS_SUCCESS != ret && EXIT_SERIALIZE_ERROR != ret)
               disconnect_();
@@ -315,6 +414,9 @@ namespace tfs
       if (TFS_SUCCESS == ret)
       {
         ret = mysql_stmt_execute(stmt) ? EXIT_EXECUTE_SQL_ERROR : TFS_SUCCESS;
+
+        TBSYS_LOG(ERROR, "exectue sql error %d=>%s",
+              mysql_stmt_errno(stmt), mysql_stmt_error(stmt));
         if (TFS_SUCCESS != ret)
         {
           TBSYS_LOG(ERROR, "exectue sql error %d=>%s",
@@ -434,11 +536,11 @@ namespace tfs
                 }
               }
               while (0 == result && TFS_SUCCESS == ret);
+              mysql_stmt_free_result(stmt);
             }
             if (TFS_SUCCESS != ret && EXIT_DESERIALIZE_ERROR != ret)
               disconnect_();
           }
-          mysql_stmt_free_result(stmt);
           mysql_stmt_close(stmt);
         }
       }

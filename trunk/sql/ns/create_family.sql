@@ -1,26 +1,20 @@
 drop procedure create_family;
 delimiter $$
 create procedure
-create_family(in i_family_aid_info int,in members_info varbinary(1024))                                                                   
+create_family(in i_family_id bigint, in i_family_aid_info int, in members_info varbinary(1024))                              
 begin
     declare aff_row int;
-    declare id bigint;
-    declare o_family_id bigint;
-    declare ret int;
+    declare ret bigint;
     declare exit handler for sqlexception
-    set id      = 0;
     set aff_row = 0;
     set ret     = -14000;
-    set o_family_id = 0;
 
-    CALL  erasurecode_seq_nextval(id);
-
-    if id > 0 then
+    if i_family_id > 0 then
       start transaction;
-      select count(1) into aff_row from t_family_info where family_id = id;
+      select count(1) into aff_row from t_family_info where family_id = i_family_id;
       if aff_row = 0 then
         insert into t_family_info(family_id, family_aid_info, member_infos, create_time)
-          values(id, i_family_aid_info, members_info, now());
+          values(i_family_id, i_family_aid_info, members_info, now());
         set ret = 0;
       else 
         set ret = -16001;
@@ -29,11 +23,10 @@ begin
         rollback;
       else
         commit;
-        set o_family_id = id;
       end if;
     else
       set ret = -16000;
     end if;
-    select o_family_id, ret;
+    select ret;
 end $$
-delimiter ;  
+delimiter ;

@@ -40,6 +40,7 @@ namespace tfs
     public:
       DataBaseHelper(std::string& connstr, std::string& username, std::string& password);
       virtual ~DataBaseHelper();
+      int create_family_id(int64_t& family_id);
       int create_family(common::FamilyInfo& family_info, int64_t& mysql_ret);
       int del_family(int64_t& mysql_ret, const int64_t family_id);
       int scan(std::vector<common::FamilyInfo>& family_infos, const int64_t start_family_id = 0);
