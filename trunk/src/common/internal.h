@@ -158,6 +158,9 @@ namespace tfs
 
     static const int64_t TMP_FAMILY_ID = 0xEFFFFFFFFFFFFFFF;
 
+    static const int32_t REPORT_BLOCK_NORMAL = 0;
+    static const int32_t REPORT_BLOCK_EXT = 1;
+
     enum OplogFlag
     {
       OPLOG_INSERT = 1,
