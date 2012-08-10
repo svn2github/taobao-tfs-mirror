@@ -871,6 +871,55 @@ namespace tfs
       return ret;
     }
 
+
+    bool RcClientImpl::is_hit_local_cache(const char* tfs_name)
+    {
+      int ret = check_init_stat();
+      bool bret = false;
+      if (TFS_SUCCESS == ret)
+      {
+        int ns_get_index = 0;
+        string ns_addr;
+        do
+        {
+          ns_addr = get_ns_addr(tfs_name, RcClient::READ, ns_get_index++);
+          if (ns_addr.empty())
+          {
+            break;
+          }
+          bret = TfsClientImpl::Instance()->is_hit_local_cache(ns_addr.c_str(), tfs_name);
+        } while(!bret);
+      }
+
+      return bret;
+    }
+
+#ifdef WITH_TAIR_CACHE
+
+    bool RcClientImpl::is_hit_remote_cache(const char* tfs_name)
+    {
+      int ret = check_init_stat();
+      bool bret = false;
+      if (TFS_SUCCESS == ret)
+      {
+        int ns_get_index = 0;
+        string ns_addr;
+        do
+        {
+          ns_addr = get_ns_addr(tfs_name, RcClient::READ, ns_get_index++);
+          if (ns_addr.empty())
+          {
+            break;
+          }
+          bret = TfsClientImpl::Instance()->is_hit_remote_cache(ns_addr.c_str(), tfs_name);
+        } while(!bret);
+      }
+
+      return bret;
+    }
+
+#endif
+
     int64_t RcClientImpl::save_file(const char* ns_addr, const char* local_file, char* tfs_name_buff,
         const int32_t buff_len, const char* suffix, const bool is_large_file)
     {

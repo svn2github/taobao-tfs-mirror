@@ -92,6 +92,12 @@ namespace tfs
         int fetch_buf(int64_t& ret_count, char* buf, const int64_t count,
                      const char* file_name, const char* suffix = NULL);
 
+        bool is_hit_local_cache(const char* tfs_name);
+
+#ifdef WITH_TAIR_CACHE
+        bool is_hit_remote_cache(const char* tfs_name);
+#endif
+
         // for name meta
         TfsRetType create_dir(const int64_t uid, const char* dir_path);
         TfsRetType create_dir_with_parents(const int64_t uid, const char* dir_path);
