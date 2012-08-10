@@ -207,7 +207,7 @@ namespace tfs
       int insert_file(const int fd, TfsFile* tfs_file);
       int erase_file(const int fd);
       bool is_hit_local_cache(const char* ns_addr, const uint32_t block_id) const;
-#ifdef WITH_TARI_CACHE
+#ifdef WITH_TAIR_CACHE
       bool is_hit_remote_cache(const char* ns_addr, const uint32_t block_id) const;
 #endif
 

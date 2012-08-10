@@ -727,7 +727,7 @@ void TfsClientImpl::remove_remote_block_cache(const char* ns_addr, const uint32_
   }
 }
 
-bool TfsClientImpl::is_hit_remote_cache(const char* ns_addr, const uint32_t tfs_name) const
+bool TfsClientImpl::is_hit_remote_cache(const char* ns_addr, const char* tfs_name) const
 {
   bool ret = false;
   if (NULL == tfs_name || tfs_name[0] == '\0')
@@ -736,7 +736,7 @@ bool TfsClientImpl::is_hit_remote_cache(const char* ns_addr, const uint32_t tfs_
   }
   else
   {
-    Fsname fs_name(tfs_name);
+    FSName fs_name(tfs_name);
     uint32_t block_id = fs_name.get_block_id();
     ret = is_hit_remote_cache(ns_addr, block_id);
   }
