@@ -25,9 +25,11 @@ public class RcTfsManager_11_writeFile extends rcTfsBaseCase
 		
 		int Wret;
 		byte []data=null;
-		data=FileUtility.getByte(resourcesPath+"5M.jpg");
+		data=FileUtility.getByte(resourcesPath+"10M.jpg");
 		Wret=tfsManager.writeFile(fd, data, 0, data.length);
 		Assert.assertEquals(Wret, data.length);
+		String name = tfsManager.closeFile(fd);
+		System.out.println(name);
 	}
 	
 	@Test

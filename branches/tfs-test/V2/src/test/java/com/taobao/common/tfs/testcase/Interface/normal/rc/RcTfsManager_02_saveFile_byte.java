@@ -45,7 +45,7 @@ public class RcTfsManager_02_saveFile_byte extends rcTfsBaseCase
 		byte data[]=null;
 		data=FileUtility.getByte(resourcesPath+"100K.jpg");
 		Ret=tfsManager.saveFile(null,null,data,0,200*(1<<10),false);
-		Assert.assertNotNull(Ret);
+		Assert.assertNull(Ret);
 	}
 	
 	@Test
@@ -187,7 +187,7 @@ public class RcTfsManager_02_saveFile_byte extends rcTfsBaseCase
 		log.info(new Throwable().getStackTrace()[0].getMethodName());
 		String Ret=null;
 		byte data[]=null;
-		data=FileUtility.getByte(resourcesPath+"10m.jpg");
+		data=FileUtility.getByte(resourcesPath+"100M.jpg");
 		Ret=tfsManager.saveFile(null,null,data,0,10*(1<<20),false);
 		Assert.assertNull(Ret);
 	}
@@ -224,7 +224,7 @@ public class RcTfsManager_02_saveFile_byte extends rcTfsBaseCase
 		byte data[]=null;
 		data=FileUtility.getByte(resourcesPath+"100K.jpg");
 		Ret=tfsManager.saveFile(null,null,data,0,200*(1<<10),true);
-		Assert.assertNotNull(Ret);
+		Assert.assertNull(Ret);
 	}
 	
 	@Test

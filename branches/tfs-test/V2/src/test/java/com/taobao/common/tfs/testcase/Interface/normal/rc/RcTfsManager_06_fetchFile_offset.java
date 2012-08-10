@@ -650,7 +650,7 @@ public class RcTfsManager_06_fetchFile_offset extends rcTfsBaseCase
 		Assert.assertEquals(savecrc, fetchcrc);
 	}
 	
-	@Test
+	//@Test ªÿπÈ≤‚ ‘≤ª”√≤‚ ‘
     public  void  test_28_saveFile_byte_with_name_then_fetchFile_offset() throws IOException
 	{
 		log.info(new Throwable().getStackTrace()[0].getMethodName());

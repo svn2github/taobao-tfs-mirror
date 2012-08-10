@@ -177,7 +177,7 @@ public class RcTfsManager_05_fetchFile extends rcTfsBaseCase
 		Assert.assertEquals(savecrc, fetchcrc);
 	}
 	
-	@Test
+	//@Test 回归测试不需要该case
     public  void  test_11_saveFile_with_name_then_fetchFile()
 	{
 		log.info(new Throwable().getStackTrace()[0].getMethodName());

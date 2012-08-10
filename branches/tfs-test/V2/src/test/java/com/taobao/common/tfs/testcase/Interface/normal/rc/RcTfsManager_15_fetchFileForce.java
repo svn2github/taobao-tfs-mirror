@@ -197,7 +197,7 @@ public class RcTfsManager_15_fetchFileForce extends rcTfsBaseCase
 		Assert.assertTrue(fileOperationResult);
 		
 		fileOperationResult = tfsManager.fetchFile(tfsName, null, resourcesPath+"TEMP");
-		Assert.assertTrue(fileOperationResult);
+		Assert.assertFalse(fileOperationResult);
 	}
 	
 
