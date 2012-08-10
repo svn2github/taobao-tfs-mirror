@@ -46,6 +46,7 @@
 #include "get_tables_from_rts_message.h"
 #include "update_table_message.h"
 #include "checkserver_message.h"
+#include "dataserver_task_message.h"
 
 namespace tfs
 {

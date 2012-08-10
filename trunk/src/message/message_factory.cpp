@@ -76,7 +76,7 @@ namespace tfs
             packet = new  ReplicateBlockMessage();
             break;
           case common::COMPACT_BLOCK_MESSAGE:
-            packet = new  CompactBlockMessage();
+            packet = new  NsRequestCompactBlockMessage();
             break;
           case common::GET_SERVER_STATUS_MESSAGE:
             packet = new  GetServerStatusMessage();
@@ -130,7 +130,7 @@ namespace tfs
             packet = new  WriteInfoBatchMessage();
             break;
           case common::BLOCK_COMPACT_COMPLETE_MESSAGE:
-            packet = new  CompactBlockCompleteMessage();
+            packet = new  DsCommitCompactBlockCompleteToNsMessage();
             break;
           case common::READ_DATA_MESSAGE_V2:
             packet = new  ReadDataMessageV2();
@@ -266,6 +266,24 @@ namespace tfs
             break;
           case common::RSP_REPORT_BLOCKS_TO_NS_MESSAGE:
             packet = new ReportBlocksToNsResponseMessage();
+            break;
+          case common::READ_RAW_INDEX_MESSAGE:
+            packet = new ReadRawIndexMessage();
+            break;
+          case common::RSP_READ_RAW_INDEX_MESSAGE:
+            packet = new RespReadRawIndexMessage();
+            break;
+          case common::WRITE_RAW_INDEX_MESSAGE:
+            packet = new WriteRawIndexMessage();
+            break;
+          case common::DS_COMPACT_BLOCK_MESSAGE:
+            packet = new DsCompactBlockMessage();
+            break;
+          case common::DS_REPLICATE_BLOCK_MESSAGE:
+            packet = new DsReplicateBlockMessage();
+            break;
+          case common::DS_TASK_RESPONSE_MESSAGE:
+            packet = new DsTaskResponseMessage();
             break;
           case common::REQ_CHECK_BLOCK_MESSAGE:
             packet = new CheckBlockRequestMessage();
