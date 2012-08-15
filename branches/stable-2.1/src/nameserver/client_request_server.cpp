@@ -410,7 +410,7 @@ namespace tfs
             }
             if (TFS_SUCCESS == ret)
             {
-              ret = manager_.build_relation(block, server, now, true);
+              ret = manager_.build_relation(block, server, now, true) ? TFS_SUCCESS : EXIT_BUILD_RELATION_ERROR;
             }
           }
           GCObject* pobject = NULL;
