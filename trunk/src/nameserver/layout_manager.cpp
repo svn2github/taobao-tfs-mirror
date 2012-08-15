@@ -164,7 +164,8 @@ namespace tfs
      * @param [out] expires: need expire blocks
      * @return success or failure
      */
-    int LayoutManager::update_relation(ServerCollect* server,const std::set<BlockInfo>& blocks, const time_t now)
+    int LayoutManager::update_relation(std::vector<uint32_t>& expires, ServerCollect* server,
+        const std::set<BlockInfoExt>& blocks, const time_t now, const int8_t type)
     {
       int32_t ret = ((NULL != server) && (server->is_alive())) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
@@ -172,9 +173,10 @@ namespace tfs
         //release relation//这里每做一次都需要拷贝整个列表，并且要解除与这个server相关block的关系,
         //是否可以考虑其他方式，例如：做一次for将新加入，删除的，不变化的先找出来,然后再建立关系
         //这里可以放到后面来优化
-        server->clear(*this, now);
+        if (REPORT_BLOCK_TYPE_ALL == type)
+          server->clear(*this, now);
         TBSYS_LOG(DEBUG, "%s update relation, block size: %zd", CNetUtil::addrToString(server->id()).c_str(), blocks.size());
-        ret = get_block_manager().update_relation(server, blocks, now);
+        ret = get_block_manager().update_relation(expires, server, blocks, now);
         TBSYS_LOG(DEBUG, "%s update relation end", CNetUtil::addrToString(server->id()).c_str());
       }
       return ret;
@@ -525,7 +527,19 @@ namespace tfs
           &SYSPARAM_NAMESERVER.report_block_time_interval_,
           &SYSPARAM_NAMESERVER.report_block_expired_time_,
           &SYSPARAM_NAMESERVER.choose_target_server_random_max_nums_,
-          &SYSPARAM_NAMESERVER.keepalive_queue_size_
+          &SYSPARAM_NAMESERVER.keepalive_queue_size_,
+          &SYSPARAM_NAMESERVER.marshalling_delete_ratio_,
+          &SYSPARAM_NAMESERVER.marshalling_time_lower_,
+          &SYSPARAM_NAMESERVER.marshalling_time_upper_,
+          &SYSPARAM_NAMESERVER.marshalling_type_,
+          &SYSPARAM_NAMESERVER.max_data_member_num_,
+          &SYSPARAM_NAMESERVER.max_check_member_num_,
+          &SYSPARAM_NAMESERVER.max_marshalling_queue_timeout_,
+          &SYSPARAM_NAMESERVER.move_task_expired_time_,
+          &SYSPARAM_NAMESERVER.compact_task_expired_time_,
+          &SYSPARAM_NAMESERVER.marshalling_task_expired_time_,
+          &SYSPARAM_NAMESERVER.reinstate_task_expired_time_,
+          &SYSPARAM_NAMESERVER.dissolve_task_expired_time_
         };
         int32_t size = sizeof(param) / sizeof(int32_t*);
         ret = (index >= 1 && index <= size) ? TFS_SUCCESS : TFS_ERROR;
@@ -954,6 +968,7 @@ namespace tfs
           assert(NULL != last);
           CallDsReportBlockRequestMessage req;
           req.set_server(ngi.owner_ip_port_);
+          req.set_flag(REPORT_BLOCK_EXT);
           client = NewClientManager::get_instance().create_client();
           if (NULL != client)
             ret = post_msg_to_server(last->id(), client, &req, ns_async_callback);

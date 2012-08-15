@@ -40,12 +40,16 @@ namespace tfs
       {
         ret = input.get_int64(reinterpret_cast<int64_t*> (&source_id_));
       }
+      if (common::TFS_SUCCESS == ret)
+      {
+        ret = input.get_int32(&expire_time_);
+      }
       return ret;
     }
 
     int64_t DsCompactBlockMessage::length() const
     {
-      return common::INT_SIZE + 2 * common::INT64_SIZE;
+      return 2 * common::INT_SIZE + 2 * common::INT64_SIZE;
     }
 
     int DsCompactBlockMessage::serialize(common::Stream& output) const
@@ -58,6 +62,10 @@ namespace tfs
       if (common::TFS_SUCCESS == ret)
       {
         ret = output.set_int64(source_id_);
+      }
+      if (common::TFS_SUCCESS == ret)
+      {
+        ret = output.set_int32(expire_time_);
       }
       return ret;
     }
@@ -89,12 +97,16 @@ namespace tfs
       {
         ret = input.get_int64(reinterpret_cast<int64_t*> (&dest_id_));
       }
+      if (common::TFS_SUCCESS == ret)
+      {
+        ret = input.get_int32(&expire_time_);
+      }
       return ret;
     }
 
     int64_t DsReplicateBlockMessage::length() const
     {
-      return common::INT_SIZE + 3 * common::INT64_SIZE;
+      return 2 * common::INT_SIZE + 3 * common::INT64_SIZE;
     }
 
     int DsReplicateBlockMessage::serialize(common::Stream& output) const
@@ -112,7 +124,10 @@ namespace tfs
       {
         ret = output.set_int64(dest_id_);
       }
-
+      if (common::TFS_SUCCESS == ret)
+      {
+        ret = output.set_int32(expire_time_);
+      }
       return ret;
     }
 

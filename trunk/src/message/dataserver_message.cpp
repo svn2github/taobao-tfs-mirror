@@ -167,7 +167,9 @@ namespace tfs
     }
 
     ReportBlocksToNsRequestMessage::ReportBlocksToNsRequestMessage():
-      server_(0), flag_(0)
+      server_(common::INVALID_SERVER_ID),
+      flag_(common::REPORT_BLOCK_NORMAL),
+      type_(common::REPORT_BLOCK_TYPE_ALL)
     {
       _packetHeader._pcode = common::REQ_REPORT_BLOCKS_TO_NS_MESSAGE;
       blocks_.clear();
@@ -211,6 +213,10 @@ namespace tfs
           }
         }
       }
+      if (common::TFS_SUCCESS == iret)
+      {
+        iret = input.get_int8(&type_);
+      }
       return iret;
     }
 
@@ -222,7 +228,7 @@ namespace tfs
        * after update, new ns just receive extend block report
        */
       common::BlockInfoExt info;
-      return common::INT64_SIZE + common::INT_SIZE + blocks_ext_.size() * info.length();
+      return common::INT64_SIZE + common::INT_SIZE + blocks_ext_.size() * info.length() + common::INT8_SIZE;
     }
 
     int ReportBlocksToNsRequestMessage::serialize(common::Stream& output) const
@@ -276,6 +282,10 @@ namespace tfs
         {
           iret = common::TFS_ERROR;
         }
+      }
+      if (common::TFS_SUCCESS == iret)
+      {
+        iret = output.set_int8(type_);
       }
       return iret;
     }

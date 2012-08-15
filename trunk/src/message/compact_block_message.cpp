@@ -42,12 +42,16 @@ namespace tfs
       {
         ret = input.get_int64(&seqno_);
       }
+      if (common::TFS_SUCCESS == ret)
+      {
+        ret = input.get_int32(&expire_time_);
+      }
       return ret;
     }
 
     int64_t NsRequestCompactBlockMessage::length() const
     {
-      return common::INT_SIZE + common::Serialization::get_vint64_length(servers_);
+      return common::INT_SIZE * 2 + common::Serialization::get_vint64_length(servers_) + common::INT64_SIZE;
     }
 
     int NsRequestCompactBlockMessage::serialize(common::Stream& output) const
@@ -60,6 +64,10 @@ namespace tfs
       if (common::TFS_SUCCESS == ret)
       {
         ret = output.set_int64(seqno_);
+      }
+      if (common::TFS_SUCCESS == ret)
+      {
+        ret = output.set_int32(expire_time_);
       }
       return ret;
     }
@@ -111,7 +119,7 @@ namespace tfs
 
     int64_t DsCommitCompactBlockCompleteToNsMessage::length() const
     {
-      return  common::INT8_SIZE + block_info_.length();
+      return  common::INT8_SIZE + block_info_.length() + common::INT64_SIZE;
     }
 
     int DsCommitCompactBlockCompleteToNsMessage::serialize(common::Stream& output) const

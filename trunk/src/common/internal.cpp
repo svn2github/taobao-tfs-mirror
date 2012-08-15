@@ -297,7 +297,7 @@ namespace tfs
       }
       if (TFS_SUCCESS == iret)
       {
-        iret = Serialization::get_int64(data, data_len, pos, (int64_t*)group_id_);
+        iret = Serialization::get_int64(data, data_len, pos, &group_id_);
       }
       return iret;
     }
@@ -1211,7 +1211,7 @@ namespace tfs
       std::cout << "version " << version_ << std::endl;
     }
 
-    const char* dynamic_parameter_str[31] = {
+    const char* dynamic_parameter_str[43] = {
         "log_level",
         "plan_run_flag",
         "task_expired_time",
@@ -1242,7 +1242,19 @@ namespace tfs
         "report_block_time_interval",
         "report_block_expired_time",
         "choose_target_server_random_max_nums",
-        "max_keepalive_queue_size"
+        "max_keepalive_queue_size",
+        "marshalling_delete_ratio",
+        "marshalling_time_lower",
+        "marshalling_time_upper",
+        "marshalling_type",
+        "max_data_member_num",
+        "max_check_member_num",
+        "max_marshalling_queue_timeout",
+        "move_task_expired_time",
+        "compact_task_expired_time",
+        "marshalling_task_expired_time",
+        "reinstate_task_expired_time",
+        "dissolve_task_expired_time"
     };
 
     int FamilyInfo::deserialize(const char* data, const int64_t data_len, int64_t& pos)

@@ -31,26 +31,19 @@ namespace tfs
         int deserialize(const char* data, const int64_t data_len, int64_t& pos);
         virtual int64_t length() const;
         void dump(void) const;
-        inline void set_status(const int32_t command)
+        inline void set_status(const int32_t status)
         {
-          command_ = command;
+          status_ = status;
         }
         inline int32_t get_status() const
         {
-          return command_;
+          return status_;
         }
         inline common::ReplicateBlockMoveFlag get_move_flag() const
         {
           return static_cast<common::ReplicateBlockMoveFlag>(repl_block_.is_move_);
         }
-        inline void set_expire(const int32_t expire)
-        {
-          expire_ = expire;
-        }
-        inline int32_t get_expire() const
-        {
-          return expire_;
-        }
+
         inline void set_repl_block(const common::ReplBlock* repl_block)
         {
           if (NULL != repl_block)
@@ -63,8 +56,7 @@ namespace tfs
           return &repl_block_;
         }
       protected:
-        int32_t command_;
-        int32_t expire_;
+        int32_t status_;
         common::ReplBlock repl_block_;
     };
   }

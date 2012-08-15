@@ -25,6 +25,14 @@ namespace tfs
       int32_t ret = output.set_int64(family_id_);
       if (common::TFS_SUCCESS == ret)
       {
+        ret = output.set_int64(seqno_);
+      }
+      if (common::TFS_SUCCESS == ret)
+      {
+        ret = output.set_int32(expire_time_);
+      }
+      if (common::TFS_SUCCESS == ret)
+      {
         ret = (NULL != family_members_ && MEMBER_NUM > 0 && MEMBER_NUM <= MAX_MARSHALLING_NUM) ? common::TFS_SUCCESS : common::EXIT_PARAMETER_ERROR;
         if (TFS_SUCCESS == ret)
         {
@@ -41,16 +49,20 @@ namespace tfs
             output.pour(family_members_[index].length());
         }
       }
-      if (common::TFS_SUCCESS == ret)
-      {
-        ret = output.set_int64(seqno_);
-      }
-      return ret;
+     return ret;
     }
 
     int ECMarshallingMessage::deserialize(common::Stream& input)
     {
       int32_t ret = input.get_int64(&family_id_);
+      if (common::TFS_SUCCESS == ret)
+      {
+        ret = input.get_int64(&seqno_);
+      }
+      if (common::TFS_SUCCESS == ret)
+      {
+        ret = input.get_int32(&expire_time_);
+      }
       if (common::TFS_SUCCESS == ret)
       {
         ret = input.get_int32(&family_aid_info_);
@@ -72,10 +84,6 @@ namespace tfs
           }
         }
       }
-      if (common::TFS_SUCCESS == ret)
-      {
-        ret = input.get_int64(&seqno_);
-      }
       return ret;
     }
 
@@ -87,7 +95,7 @@ namespace tfs
       {
         len += family_members_[index].length();
       }
-      return len + INT64_SIZE * 2 + INT_SIZE;
+      return len + INT64_SIZE * 2 + INT_SIZE * 2;
     }
 
     void ECMarshallingMessage::dump(void) const

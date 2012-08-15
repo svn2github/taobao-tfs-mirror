@@ -66,6 +66,11 @@ namespace tfs
       int32_t max_data_member_num_;
       int32_t max_check_member_num_;
       int32_t max_marshalling_queue_timeout_;
+      int32_t move_task_expired_time_;
+      int32_t compact_task_expired_time_;
+      int32_t marshalling_task_expired_time_;
+      int32_t reinstate_task_expired_time_;
+      int32_t dissolve_task_expired_time_;
       double  balance_percent_;
 
       static NameServerParameter ns_parameter_;

@@ -156,8 +156,6 @@ namespace tfs
     static const int32_t MAX_DATA_MEMBER_NUM = 24;
     static const int32_t MAX_CHECK_MEMBER_NUM = 8;
 
-    static const int64_t TMP_FAMILY_ID = 0xEFFFFFFFFFFFFFFF;
-
     static const int32_t REPORT_BLOCK_NORMAL = 0;
     static const int32_t REPORT_BLOCK_EXT = 1;
 
@@ -486,7 +484,7 @@ namespace tfs
     struct BlockInfoExt
     {
       BlockInfo block_info_;
-      uint64_t group_id_;
+      int64_t group_id_;
       int deserialize(const char* data, const int64_t data_len, int64_t& pos);
       int serialize(char* data, const int64_t data_len, int64_t& pos) const;
       int64_t length() const;
@@ -965,7 +963,13 @@ namespace tfs
       READ_PARITY_INDEX
     };
 
-    extern const char* dynamic_parameter_str[31];
+    typedef enum _ReportBlockType
+    {
+      REPORT_BLOCK_TYPE_ALL = 0,
+      REPORT_BLOCK_TYPE_PART
+    }ReportBlockType;
+
+    extern const char* dynamic_parameter_str[43];
 
     // defined type typedef
     typedef std::vector<BlockInfo> BLOCK_INFO_LIST;

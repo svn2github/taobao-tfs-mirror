@@ -106,19 +106,22 @@ namespace tfs
         {
           return blocks_ext_;
         }
-        inline int32_t get_flag() const
+        inline int8_t get_flag() const
         {
           return flag_;
         }
-        inline void set_flag(const int32_t flag)
+        inline void set_flag(const int8_t flag)
         {
           flag_ = flag;
         }
+        inline int8_t get_type() { return type_;}
+        inline void set_type(const int8_t type) { type_ = type;}
       protected:
         std::set<common::BlockInfo> blocks_;
         std::set<common::BlockInfoExt> blocks_ext_;
         uint64_t server_;
-        int32_t flag_;
+        int8_t flag_;
+        int8_t type_;
     };
 
     class ReportBlocksToNsResponseMessage: public common::BasePacket

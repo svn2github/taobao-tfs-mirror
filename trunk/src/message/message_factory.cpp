@@ -85,7 +85,7 @@ namespace tfs
             packet = new  SuspectDataserverMessage();
             break;*/
           case common::RENAME_FILE_MESSAGE:
-            packet = new  RenameFileMessage();
+            //packet = new  RenameFileMessage();
             break;
           case common::CLIENT_CMD_MESSAGE:
             packet = new  ClientCmdMessage();
@@ -266,6 +266,24 @@ namespace tfs
             break;
           case common::RSP_REPORT_BLOCKS_TO_NS_MESSAGE:
             packet = new ReportBlocksToNsResponseMessage();
+            break;
+          case common::REQ_EC_MARSHALLING_MESSAGE:
+            packet = new ECMarshallingMessage();
+            break;
+          case common::REQ_EC_MARSHALLING_COMMIT_MESSAGE:
+            packet = new ECMarshallingCommitMessage();
+            break;
+          case common::REQ_EC_REINSTATE_MESSAGE:
+            packet = new ECReinstateMessage();
+            break;
+          case common::REQ_EC_REINSTATE_COMMIT_MESSAGE:
+            packet = new ECReinstateCommitMessage();
+            break;
+          case common::REQ_EC_DISSOLVE_MESSAGE:
+            packet = new ECDissolveMessage();
+            break;
+          case common::REQ_EC_DISSOLVE_COMMIT_MESSAGE:
+            packet = new ECDissolveCommitMessage();
             break;
           case common::READ_RAW_INDEX_MESSAGE:
             packet = new ReadRawIndexMessage();

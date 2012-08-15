@@ -31,9 +31,12 @@ namespace tfs
         virtual int64_t length() const = 0;
         virtual void dump(void) const {};
         int64_t get_seqno() const { return seqno_;}
+        int32_t get_expire_time() const { return expire_time_;}
+        void set_expire_time(const int32_t expire_time) { expire_time_ = expire_time;}
         void set_seqno(const int64_t seqno) { seqno_ = seqno;}
       protected:
         int64_t seqno_;
+        int32_t expire_time_;
     };
   }
 }

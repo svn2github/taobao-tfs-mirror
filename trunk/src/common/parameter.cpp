@@ -57,6 +57,11 @@ namespace tfs
     int NameServerParameter::initialize(void)
     {
       discard_max_count_ = 0;
+      move_task_expired_time_ = 120;
+      compact_task_expired_time_ = 120;
+      marshalling_task_expired_time_ = 360;
+      reinstate_task_expired_time_ = 240;
+      dissolve_task_expired_time_  = 120;
       report_block_time_interval_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_REPORT_BLOCK_TIME_INTERVAL, 1);
       report_block_time_interval_min_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_REPORT_BLOCK_TIME_INTERVAL_MIN, 0);
       max_write_timeout_= TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_MAX_WRITE_TIMEOUT, 3);

@@ -20,8 +20,9 @@ namespace tfs
   namespace message
   {
     ReplicateBlockMessage::ReplicateBlockMessage() :
-      command_(0), expire_(0)
+      status_(0)
     {
+      expire_time_ = 0;
       _packetHeader._pcode = common::REPLICATE_BLOCK_MESSAGE;
       memset(&repl_block_, 0, sizeof(common::ReplBlock));
     }
@@ -32,45 +33,45 @@ namespace tfs
 
     int ReplicateBlockMessage::deserialize(common::Stream& input)
     {
-      int32_t iret = input.get_int32(&command_);
-      if (common::TFS_SUCCESS == iret)
+      int32_t ret = input.get_int32(&status_);
+      if (common::TFS_SUCCESS == ret)
       {
-        iret =  input.get_int32(&expire_);
+        ret =  input.get_int32(&expire_time_);
       }
-      if (common::TFS_SUCCESS == iret)
+      if (common::TFS_SUCCESS == ret)
       {
         int64_t pos = 0;
-        iret = repl_block_.deserialize(input.get_data(), input.get_data_length(), pos);
-        if (common::TFS_SUCCESS == iret)
+        ret = repl_block_.deserialize(input.get_data(), input.get_data_length(), pos);
+        if (common::TFS_SUCCESS == ret)
         {
           input.drain(repl_block_.length());
         }
       }
-      if (common::TFS_SUCCESS == iret
+      if (common::TFS_SUCCESS == ret
         && input.get_data_length() > 0 )
       {
-        iret = input.get_int64(&seqno_);
+        ret = input.get_int64(&seqno_);
       }
-      return iret;
+      return ret;
     }
 
     int ReplicateBlockMessage::deserialize(const char* data, const int64_t data_len, int64_t& pos)
     {
-      int32_t iret = common::Serialization::get_int32(data, data_len, pos, &command_);
-      if (common::TFS_SUCCESS == iret)
+      int32_t ret = common::Serialization::get_int32(data, data_len, pos, &status_);
+      if (common::TFS_SUCCESS == ret)
       {
-        iret =  common::Serialization::get_int32(data, data_len, pos, &expire_);
+        ret =  common::Serialization::get_int32(data, data_len, pos, &expire_time_);
       }
-      if (common::TFS_SUCCESS == iret)
+      if (common::TFS_SUCCESS == ret)
       {
-        iret = repl_block_.deserialize(data, data_len, pos);
+        ret = repl_block_.deserialize(data, data_len, pos);
       }
-      if (common::TFS_SUCCESS == iret
+      if (common::TFS_SUCCESS == ret
         && pos + common::INT64_SIZE <= data_len)
       {
-        iret = common::Serialization::get_int64(data, data_len, pos, &seqno_);
+        ret = common::Serialization::get_int64(data, data_len, pos, &seqno_);
       }
-      return iret;
+      return ret;
     }
 
     int64_t ReplicateBlockMessage::length() const
@@ -80,31 +81,31 @@ namespace tfs
 
     int ReplicateBlockMessage::serialize(common::Stream& output) const
     {
-      int32_t iret = output.set_int32(command_);
-      if (common::TFS_SUCCESS == iret)
+      int32_t ret = output.set_int32(status_);
+      if (common::TFS_SUCCESS == ret)
       {
-        iret = output.set_int32(expire_);
+        ret = output.set_int32(expire_time_);
       }
-      if (common::TFS_SUCCESS == iret)
+      if (common::TFS_SUCCESS == ret)
       {
         int64_t pos = 0;
-        iret = repl_block_.serialize(output.get_free(), output.get_free_length(), pos);
-        if (common::TFS_SUCCESS == iret)
+        ret = repl_block_.serialize(output.get_free(), output.get_free_length(), pos);
+        if (common::TFS_SUCCESS == ret)
         {
           output.pour(repl_block_.length());
         }
       }
-      if (common::TFS_SUCCESS == iret)
+      if (common::TFS_SUCCESS == ret)
       {
-        iret = output.set_int64(seqno_);
+        ret = output.set_int64(seqno_);
       }
-      return iret;
+      return ret;
     }
 
     void ReplicateBlockMessage::dump(void) const
     {
       TBSYS_LOG(INFO, "seqno: %"PRI64_PREFIX"d, command: %d, expire: %d, block: %u, source: %s, target: %s, start_time: %d, is_move: %s, server_count: %d",
-        seqno_, command_, expire_, repl_block_.block_id_,
+        seqno_, status_, expire_time_, repl_block_.block_id_,
         tbsys::CNetUtil::addrToString(repl_block_.source_id_).c_str(),
         tbsys::CNetUtil::addrToString(repl_block_.destination_id_).c_str(),
         repl_block_.start_time_,
