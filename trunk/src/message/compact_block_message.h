@@ -49,11 +49,10 @@ namespace tfs
         void dump(void) const;
         inline void set_block_info(const common::BlockInfo& block_info) { block_info_ = block_info;}
         inline common::BlockInfo& get_block_info() { return block_info_;}
-        inline int8_t get_status() const { return status_;}
-        inline void set_status(const int8_t status) { status_ = status;}
+        inline std::vector<std::pair<uint64_t, int8_t> >& get_result() { return result_;}
       protected:
         common::BlockInfo block_info_;
-        int8_t status_;
+        std::vector<std::pair<uint64_t, int8_t> > result_;
     };
   }
 }

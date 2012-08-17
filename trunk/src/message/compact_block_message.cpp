@@ -72,9 +72,9 @@ namespace tfs
       return ret;
     }
 
-    DsCommitCompactBlockCompleteToNsMessage::DsCommitCompactBlockCompleteToNsMessage() :
-      status_(common::PLAN_STATUS_FAILURE)
+    DsCommitCompactBlockCompleteToNsMessage::DsCommitCompactBlockCompleteToNsMessage()
     {
+      result_.clear();
       memset(&block_info_, 0, sizeof(block_info_));
       _packetHeader._pcode = common::BLOCK_COMPACT_COMPLETE_MESSAGE;
     }
@@ -86,60 +86,101 @@ namespace tfs
 
     int DsCommitCompactBlockCompleteToNsMessage::deserialize(common::Stream& input)
     {
-      int64_t pos = 0;
-      int32_t ret = block_info_.deserialize(input.get_data(), input.get_data_length(), pos);
+      int32_t ret = input.get_int64(&seqno_);
+      if (common::TFS_SUCCESS == ret)
+      {
+        int64_t pos = 0;
+        ret = block_info_.deserialize(input.get_data(), input.get_data_length(), pos);
+      }
+      int8_t size = 0;
       if (common::TFS_SUCCESS == ret)
       {
         input.drain(block_info_.length());
+        ret = input.get_int8(&size);
       }
       if (common::TFS_SUCCESS == ret)
       {
-        ret = input.get_int8(&status_);
-      }
-      if (common::TFS_SUCCESS == ret)
-      {
-        ret = input.get_int64(&seqno_);
+        for (int8_t index = 0; index < size && common::TFS_SUCCESS == ret; ++index)
+        {
+          std::pair<uint64_t, int8_t> item;
+          ret = input.get_int64(reinterpret_cast<int64_t*>(&item.first));
+          if (common::TFS_SUCCESS == ret)
+          {
+            ret = input.get_int8(&item.second);
+          }
+          if (common::TFS_SUCCESS == ret)
+          {
+            result_.push_back(item);
+          }
+        }
       }
       return ret;
     }
 
     int DsCommitCompactBlockCompleteToNsMessage::deserialize(const char* data, const int64_t data_len, int64_t& pos)
     {
-      int32_t ret = block_info_.deserialize(data, data_len, pos);
+      int32_t ret = common::Serialization::get_int64(data, data_len, pos, &seqno_);
       if (common::TFS_SUCCESS == ret)
       {
-        ret = common::Serialization::get_int8(data, data_len, pos, &status_);
+        ret = block_info_.deserialize(data, data_len, pos);
+      }
+      int8_t size = 0;
+      if (common::TFS_SUCCESS == ret)
+      {
+        ret = common::Serialization::get_int8(data, data_len, pos, &size);
       }
       if (common::TFS_SUCCESS == ret)
       {
-        ret = common::Serialization::get_int64(data, data_len, pos, &seqno_);
+        for (int8_t index = 0; index < size && common::TFS_SUCCESS == ret; ++index)
+        {
+          std::pair<uint64_t, int8_t> item;
+          ret = common::Serialization::get_int64(data, data_len, pos, reinterpret_cast<int64_t*>(&item.first));
+          if (common::TFS_SUCCESS == ret)
+          {
+            ret = common::Serialization::get_int8(data, data_len, pos, &item.second);
+          }
+          if (common::TFS_SUCCESS == ret)
+          {
+            result_.push_back(item);
+          }
+        }
       }
       return ret;
     }
 
     int64_t DsCommitCompactBlockCompleteToNsMessage::length() const
     {
-      return  common::INT8_SIZE + block_info_.length() + common::INT64_SIZE;
+      return  block_info_.length() + common::INT64_SIZE + common::INT8_SIZE + result_.size() * (common::INT64_SIZE + common::INT8_SIZE);
     }
 
     int DsCommitCompactBlockCompleteToNsMessage::serialize(common::Stream& output) const
     {
-      int64_t pos = 0;
-      int32_t ret = block_info_.serialize(output.get_free(), output.get_free_length(), pos);
+      int32_t ret = output.set_int64(seqno_);
+      if (common::TFS_SUCCESS == ret)
+      {
+        int64_t pos = 0;
+        ret = block_info_.serialize(output.get_free(), output.get_free_length(), pos);
+      }
       if (common::TFS_SUCCESS == ret)
       {
         output.pour(block_info_.length());
+        ret = output.set_int8(result_.size());
       }
       if (common::TFS_SUCCESS == ret)
       {
-        ret =  output.set_int8(status_);
-      }
-      if (common::TFS_SUCCESS == ret)
-      {
-        ret = output.set_int64(seqno_);
+        std::vector<std::pair<uint64_t, int8_t> >::const_iterator iter = result_.begin();
+        for (; iter != result_.end() && common::TFS_SUCCESS == ret; ++iter)
+        {
+          ret = output.set_int64(iter->first);
+          if (common::TFS_SUCCESS == ret)
+          {
+            ret = output.set_int8(iter->second);
+          }
+        }
       }
       return ret;
     }
+
     void DsCommitCompactBlockCompleteToNsMessage::dump(void) const
     {
 
