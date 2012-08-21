@@ -760,7 +760,7 @@ namespace tfs
       return index_handle_->flush();
     }
 
-    int LogicBlock::write_raw_index(const RawIndexOp index_op, const RawIndexVec* index_vec)
+    int LogicBlock::write_raw_index(const int64_t family_id, const RawIndexOp index_op, const RawIndexVec* index_vec)
     {
       int ret = TFS_SUCCESS;
       if (NULL == index_vec)
@@ -789,6 +789,11 @@ namespace tfs
           TBSYS_LOG(ERROR, "write raw index blockid: %u fail. ret: %d", get_logic_block_id(), ret);
         }
         else
+        {
+          ret = set_group_id(family_id);
+        }
+
+        if (TFS_SUCCESS == ret)
         {
           ret = index_handle_->flush();
         }
@@ -871,6 +876,17 @@ namespace tfs
       PhysicalBlock* first = physical_block_list_.front();
       first->get_block_prefix(block_prefix);
       return block_prefix.group_id_;
+    }
+
+    int LogicBlock::set_group_id(const int64_t group_id)
+    {
+      BlockPrefix block_prefix;
+      PhysicalBlock* first = physical_block_list_.front();
+      first->get_block_prefix(block_prefix);
+      first->set_block_prefix(block_prefix.logic_blockid_,
+        block_prefix.prev_physic_blockid_,
+        block_prefix.next_physic_blockid_, group_id);
+      return first->dump_block_prefix();
     }
 
     int LogicBlock::set_block_dirty_type(const DirtyFlag dirty_flag)

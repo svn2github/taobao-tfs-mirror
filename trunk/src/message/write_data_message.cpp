@@ -336,6 +336,12 @@ namespace tfs
     int WriteRawIndexMessage::serialize(common::Stream& output) const
     {
       int32_t iret = output.set_int32(block_id_);
+
+      if (common::TFS_SUCCESS == iret)
+      {
+        iret = output.set_int64(family_id_);
+      }
+
       if (common::TFS_SUCCESS == iret)
       {
         iret = output.set_int32(index_op_);
@@ -373,7 +379,12 @@ namespace tfs
       int32_t iret = input.get_int32((int32_t*)&block_id_);
       if (common::TFS_SUCCESS == iret)
       {
-        iret = input.get_int32((int32_t*)&index_op_);
+        iret = input.get_int64(&family_id_);
+      }
+
+      if (common::TFS_SUCCESS == iret)
+      {
+        iret = input.get_int32(reinterpret_cast<int32_t*>(&index_op_));
       }
 
       if (common::TFS_SUCCESS == iret)
@@ -408,7 +419,7 @@ namespace tfs
 
     int64_t WriteRawIndexMessage::length() const
     {
-      int64_t len = common::INT_SIZE * 3;
+      int64_t len = common::INT_SIZE * 3 + common::INT64_SIZE;
       for (uint32_t i = 0; i < index_vec_.size(); i++)
       {
         len += common::INT_SIZE;

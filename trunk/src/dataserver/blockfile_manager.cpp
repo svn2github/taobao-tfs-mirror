@@ -1076,6 +1076,23 @@ namespace tfs
         conflict_flag = false;
       }
 
+      // after compact, server may crash, there will be two valid block local,
+      // just keep one copy, clear compact block map after server start
+      if (TFS_SUCCESS == ret)
+      {
+        LogicBlockMapIter mit = compact_logic_blocks_.begin();
+        for ( ; mit != compact_logic_blocks_.end(); mit++)
+        {
+          ret = BlockFileManager::get_instance()->del_block(mit->first);
+          if (TFS_SUCCESS != ret)
+          {
+            TBSYS_LOG(ERROR, "del blockid: %u error. ret: %d", mit->first, ret);
+          }
+          tbsys::gDelete(mit->second);
+        }
+        compact_logic_blocks_.clear();
+      }
+
       return ret;
     }
 

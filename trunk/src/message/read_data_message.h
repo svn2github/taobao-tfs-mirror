@@ -160,6 +160,15 @@ namespace tfs
       public:
         RespReadRawDataMessage();
         virtual ~RespReadRawDataMessage();
+        virtual int serialize(common::Stream& output) const ;
+        virtual int deserialize(common::Stream& input);
+        virtual int64_t length() const;
+
+        int32_t get_data_file_size() const { return data_file_size_; }
+        void set_data_file_size(const int32_t data_file_size) { data_file_size_ = data_file_size; }
+
+      protected:
+        int32_t data_file_size_;
     };
 
     class ReadScaleImageMessage: public ReadDataMessage

@@ -41,6 +41,7 @@ namespace tfs
     static const int32_t FS_SPEEDUP_VERSION = 2;
     static const int32_t EC_DATA_MAX = 14; // 10 data + 4 parity
     static const int32_t PARITY_INDEX_START = 1024; // index start positioin
+    static const int32_t PARITY_INDEX_MMAP_SIZE = PARITY_INDEX_START;
 
     // fileinfo flag
     enum FileinfoFlag
@@ -253,6 +254,23 @@ namespace tfs
     {
       common::ReplBlock info_;
       int64_t seqno_;
+    };
+
+    struct CompactBlkInfo
+    {
+      int64_t seqno_;
+      uint32_t block_id_;
+      int32_t preserve_time_;
+      int32_t owner_;
+
+      CompactBlkInfo& operator= (const CompactBlkInfo& cpt_blk)
+      {
+        seqno_ = cpt_blk.seqno_;
+        block_id_ = cpt_blk.block_id_;
+        preserve_time_ = cpt_blk.preserve_time_;
+        owner_ = cpt_blk.owner_;
+        return *this;
+      }
     };
 
     static const int32_t META_INFO_SIZE = sizeof(MetaInfo);

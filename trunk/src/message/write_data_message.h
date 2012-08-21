@@ -307,10 +307,19 @@ namespace tfs
           return block_id_;
         }
 
-        void append_index(const uint32_t block_id, char* data, uint32_t size)
+        void set_family_id(const int64_t family_id)
         {
-          common::RawIndex index(block_id, data, size);
-          index_vec_.push_back(index);
+          family_id_ = family_id;
+        }
+
+        int64_t get_family_id()
+        {
+          return family_id_;
+        }
+
+        void set_index_vec(const common::RawIndexVec& index_vec)
+        {
+          index_vec_ = index_vec;
         }
 
         common::RawIndexVec* get_index_vec()
@@ -320,6 +329,7 @@ namespace tfs
 
       private:
         uint32_t block_id_;
+        int64_t family_id_;
         common::RawIndexOp index_op_;
         common::RawIndexVec index_vec_;
     };

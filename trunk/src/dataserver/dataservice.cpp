@@ -51,15 +51,12 @@ namespace tfs
     DataService::DataService():
         server_local_port_(-1),
         ns_ip_port_(0),
-        repl_block_(NULL),
-        compact_block_(NULL),
         check_block_(NULL),
         sync_mirror_status_(0),
         max_cpu_usage_ (SYSPARAM_DATASERVER.max_cpu_usage_),
         tfs_ds_stat_ ("tfs-ds-stat"),
         do_check_thread_(0),
-        replicate_block_threads_(NULL),
-        compact_block_thread_(0)
+        task_thread_(0)
     {
       //init dataserver info
       memset(need_send_blockinfo_, 0, sizeof(need_send_blockinfo_));
@@ -313,8 +310,6 @@ namespace tfs
 
         if (TFS_SUCCESS == iret)
         {
-          repl_block_ = new ReplicateBlock(ns_ip_port_);
-          compact_block_ = new CompactBlock(ns_ip_port_, data_server_info_.id_);
           check_block_ = new CheckBlock();
 
           iret = data_management_.init_block_files(SYSPARAM_FILESYSPARAM);
@@ -348,6 +343,11 @@ namespace tfs
 
         if (TFS_SUCCESS == iret)
         {
+          iret = task_manager_.init(ns_ip_port_, data_server_info_.id_);
+        }
+
+        if (TFS_SUCCESS == iret)
+        {
           //set write and read log
           const char* work_dir = get_work_dir();
           iret = NULL == work_dir ? TFS_ERROR : TFS_SUCCESS;
@@ -377,12 +377,7 @@ namespace tfs
             heartbeat_thread_[i] = new HeartBeatThreadHelper(*this, i);
           }
           do_check_thread_  = new DoCheckThreadHelper(*this);
-          compact_block_thread_ = new CompactBlockThreadHelper(*this);
-          replicate_block_threads_ =  new ReplicateBlockThreadHelperPtr[SYSPARAM_DATASERVER.replicate_thread_count_];
-          for (int32_t i = 0; i < SYSPARAM_DATASERVER.replicate_thread_count_; ++i)
-          {
-            replicate_block_threads_[i] = new ReplicateBlockThreadHelper(*this);
-          }
+          task_thread_ = new TaskThreadHelper(*this);
         }
       }
       return iret;
@@ -533,14 +528,8 @@ namespace tfs
       }
       sync_mirror_.clear();
       sync_mirror_mutex_.unlock();
-      if (NULL != repl_block_)
-      {
-        repl_block_->stop();
-      }
-      if (NULL != compact_block_)
-      {
-        compact_block_->stop();
-      }
+
+      task_manager_.stop();
       block_checker_.stop();
 
       for (int i = 0; i < 2; i++)
@@ -557,30 +546,18 @@ namespace tfs
         do_check_thread_->join();
         do_check_thread_ = 0;
       }
-      if (0 != compact_block_thread_)
+
+      if (0 != task_thread_)
       {
-        compact_block_thread_->join();
-        compact_block_thread_ = 0;
+        task_thread_->join();
+        task_thread_ = 0;
       }
-      if (NULL != replicate_block_threads_)
-      {
-        for (int32_t i = 0; i < SYSPARAM_DATASERVER.replicate_thread_count_; ++i)
-        {
-          if (0 != replicate_block_threads_[i])
-          {
-            replicate_block_threads_[i]->join();
-            replicate_block_threads_[i] = 0;
-          }
-        }
-      }
+
+      tbsys::gDelete(check_block_);
 
       // destroy prefix op
       PhysicalBlock::destroy_prefix_op();
 
-      tbsys::gDeleteA(replicate_block_threads_);
-      tbsys::gDelete(repl_block_);
-      tbsys::gDelete(compact_block_);
-      tbsys::gDelete(check_block_);
       GCObjectManager::instance().destroy();
       GCObjectManager::instance().wait_for_shut_down();
       return TFS_SUCCESS;
@@ -652,13 +629,13 @@ namespace tfs
         if (stop_)
           break;
 
-        //check clonedblock
-        repl_block_->expire_cloned_block_map();
+        //check task
+        task_manager_.expire_task();
         if (stop_)
           break;
 
-        // check compact block
-        compact_block_->expire_compact_block_map();
+        //check clonedblock
+        task_manager_.expire_cloned_block_map();
         if (stop_)
           break;
 
@@ -1036,10 +1013,15 @@ namespace tfs
               ret = query_bit_map(dynamic_cast<ListBitMapMessage*>(packet));
               break;
             case REPLICATE_BLOCK_MESSAGE:
-              ret = replicate_block_cmd(dynamic_cast<ReplicateBlockMessage*>(packet));
-              break;
             case COMPACT_BLOCK_MESSAGE:
-              ret = compact_block_cmd(dynamic_cast<CompactBlockMessage*>(packet));
+            case DS_COMPACT_BLOCK_MESSAGE:
+            case DS_REPLICATE_BLOCK_MESSAGE:
+            case RESP_DS_COMPACT_BLOCK_MESSAGE:
+            case RESP_DS_REPLICATE_BLOCK_MESSAGE:
+            case REQ_EC_MARSHALLING_MESSAGE:
+            case REQ_EC_REINSTATE_MESSAGE:
+            case REQ_EC_DISSOLVE_MESSAGE:
+              ret = task_manager_.handle(dynamic_cast<BaseTaskMessage*>(packet));
               break;
             case CRC_ERROR_MESSAGE:
               ret = crc_error_cmd(dynamic_cast<CrcErrorMessage*>(packet));
@@ -1647,7 +1629,8 @@ namespace tfs
 
       char* tmp_data_buffer = new char[read_len];
       int32_t real_read_len = read_len;
-      int ret = data_management_.read_raw_data(block_id, read_offset, real_read_len, tmp_data_buffer);
+      int32_t data_file_size = 0;
+      int ret = data_management_.read_raw_data(block_id, read_offset, real_read_len, tmp_data_buffer, data_file_size);
       if (TFS_SUCCESS != ret)
       {
         try_add_repair_task(block_id, ret);
@@ -1672,7 +1655,8 @@ namespace tfs
           memcpy(packet_data, tmp_data_buffer, real_read_len);
         }
       }
-      message->set_length(real_read_len);
+      message->set_length(real_read_len);  // ??
+      resp_rrd_msg->set_data_file_size(data_file_size);
       message->reply(resp_rrd_msg);
       tbsys::gDeleteA(tmp_data_buffer);
 
@@ -1880,46 +1864,6 @@ namespace tfs
       {
         message->reply(new StatusMessage(STATUS_MESSAGE_OK));
       }
-      return TFS_SUCCESS;
-    }
-
-    int DataService::replicate_block_cmd(ReplicateBlockMessage* message)
-    {
-      if (message->get_command() != PLAN_STATUS_BEGIN)
-      {
-        return TFS_ERROR;
-      }
-
-      ReplBlockExt b;
-      b.seqno_ = message->get_seqno();
-      memcpy(&b.info_, message->get_repl_block(), sizeof(ReplBlock));
-      uint64_t peer_id = message->get_connection()->getPeerId();
-
-      TBSYS_LOG(
-          INFO,
-          "receive replicate command. blockid: %u, source_id: %s, destination_id: %s, server_count: %u, peer id: %s\n",
-          b.info_.block_id_, tbsys::CNetUtil::addrToString(b.info_.source_id_).c_str(), tbsys::CNetUtil::addrToString(
-              b.info_.destination_id_).c_str(), b.info_.server_count_, tbsys::CNetUtil::addrToString(peer_id).c_str());
-      repl_block_->add_repl_task(b);
-
-      message->reply(new StatusMessage(STATUS_MESSAGE_OK));
-      return TFS_SUCCESS;
-    }
-
-    int DataService::compact_block_cmd(CompactBlockMessage* message)
-    {
-      CompactBlkInfo* cblk = new CompactBlkInfo();
-      cblk->seqno_ = message->get_seqno();
-      cblk->block_id_ = message->get_block_id();
-      cblk->owner_ = message->get_owner();
-      cblk->preserve_time_ = message->get_preserve_time();
-      uint64_t peer_id = message->get_connection()->getPeerId();
-
-      int ret = compact_block_->add_cpt_task(cblk);
-
-      TBSYS_LOG(INFO, "receive compact cmd. blockid: %u, owner: %d, preserve_time: %d, haverb: %d, peer_id: %s\n",
-          cblk->block_id_, cblk->owner_, cblk->preserve_time_, ret, tbsys::CNetUtil::addrToString(peer_id).c_str());
-      message->reply(new StatusMessage(STATUS_MESSAGE_OK));
       return TFS_SUCCESS;
     }
 
@@ -2273,7 +2217,7 @@ namespace tfs
         }
 
         //add to m_clonedBlockMap
-        repl_block_->add_cloned_block_map(block_id);
+        task_manager_.add_cloned_block_map(block_id);
       }
 
       ret = data_management_.write_raw_data(block_id, data_offset, msg_len, data_buffer);
@@ -2315,7 +2259,7 @@ namespace tfs
       }
 
       //clear m_clonedBlockMap
-      repl_block_->del_cloned_block_map(block_id);
+      task_manager_.del_cloned_block_map(block_id);
 
       TBSYS_LOG(INFO, "batch write block fileinfo successful, blockid: %u, peer id: %s",
           block_id, tbsys::CNetUtil::addrToString(peer_id).c_str());
@@ -2328,12 +2272,13 @@ namespace tfs
       uint32_t block_id = message->get_block_id();
       RawIndexOp index_op = message->get_index_op();
       RawIndexVec* index_vec = message->get_index_vec();
+      int64_t family_id = message->get_family_id();
       uint64_t peer_id = message->get_connection()->getPeerId();
 
       TBSYS_LOG(DEBUG, "write raw index start, blockid: %u, index op: %d, index count: %u, peer id: %s",
           block_id, (int)index_op, index_vec->size(), tbsys::CNetUtil::addrToString(peer_id).c_str());
 
-      int ret = data_management_.write_raw_index(block_id, index_op, index_vec);
+      int ret = data_management_.write_raw_index(block_id, family_id, index_op, index_vec);
       if (TFS_SUCCESS != ret)
       {
         message->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret,
@@ -2631,14 +2576,9 @@ namespace tfs
       service_.run_check();
     }
 
-    void DataService::ReplicateBlockThreadHelper::run()
+    void DataService::TaskThreadHelper::run()
     {
-      service_.repl_block_->run_replicate_block();
-    }
-
-    void DataService::CompactBlockThreadHelper::run()
-    {
-      service_.compact_block_->run_compact_block();
+      service_.task_manager_.run_task();
     }
 
     int ds_async_callback(common::NewClient* client)

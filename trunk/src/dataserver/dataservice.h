@@ -27,8 +27,6 @@
 #include "common/statistics.h"
 #include "common/status_message.h"
 #include "message/message_factory.h"
-#include "replicate_block.h"
-#include "compact_block.h"
 #include "check_block.h"
 #include "sync_base.h"
 #include "visit_stat.h"
@@ -37,7 +35,8 @@
 #include "requester.h"
 #include "block_checker.h"
 #include "gc.h"
-
+#include "task.h"
+#include "task_manager.h"
 
 namespace tfs
 {
@@ -139,8 +138,6 @@ namespace tfs
         int new_block(message::NewBlockMessage* message);
         int remove_block(message::RemoveBlockMessage* message);
 
-        int replicate_block_cmd(message::ReplicateBlockMessage* message);
-        int compact_block_cmd(message::CompactBlockMessage* message);
         int crc_error_cmd(message::CrcErrorMessage* message);
 
         //get single blockinfo
@@ -208,37 +205,21 @@ namespace tfs
       };
       typedef tbutil::Handle<DoCheckThreadHelper> DoCheckThreadHelperPtr;
 
-      class ReplicateBlockThreadHelper: public tbutil::Thread
+      class TaskThreadHelper: public tbutil::Thread
       {
         public:
-          explicit ReplicateBlockThreadHelper(DataService& service):
+          explicit TaskThreadHelper(DataService& service):
               service_(service)
           {
             start();
           }
-          virtual ~ReplicateBlockThreadHelper(){}
+          virtual ~TaskThreadHelper(){}
           void run();
         private:
-          DISALLOW_COPY_AND_ASSIGN(ReplicateBlockThreadHelper);
+          DISALLOW_COPY_AND_ASSIGN(TaskThreadHelper);
           DataService& service_;
       };
-      typedef tbutil::Handle<ReplicateBlockThreadHelper> ReplicateBlockThreadHelperPtr;
-
-      class CompactBlockThreadHelper: public tbutil::Thread
-      {
-        public:
-          explicit CompactBlockThreadHelper(DataService& service):
-              service_(service)
-          {
-            start();
-          }
-          virtual ~CompactBlockThreadHelper(){}
-          void run();
-        private:
-          DISALLOW_COPY_AND_ASSIGN(CompactBlockThreadHelper);
-          DataService& service_;
-      };
-      typedef tbutil::Handle<CompactBlockThreadHelper> CompactBlockThreadHelperPtr;
+      typedef tbutil::Handle<TaskThreadHelper> TaskThreadHelperPtr;
 
       private:
         DISALLOW_COPY_AND_ASSIGN(DataService);
@@ -248,6 +229,7 @@ namespace tfs
         DataManagement data_management_;
         Requester ds_requester_;
         BlockChecker block_checker_;
+        TaskManager task_manager_;
 
         int32_t server_local_port_;
         bool need_send_blockinfo_[2];
@@ -255,8 +237,6 @@ namespace tfs
         uint64_t hb_ip_port_[2];
         uint64_t ns_ip_port_; //nameserver ip port;
 
-        ReplicateBlock* repl_block_; //replicate
-        CompactBlock* compact_block_; //compact
         CheckBlock* check_block_;  // check
 #if defined(TFS_GTEST)
       public:
@@ -291,8 +271,7 @@ namespace tfs
 
         HeartBeatThreadHelperPtr heartbeat_thread_[2];
         DoCheckThreadHelperPtr   do_check_thread_;
-        ReplicateBlockThreadHelperPtr* replicate_block_threads_;
-        CompactBlockThreadHelperPtr  compact_block_thread_;
+        TaskThreadHelperPtr task_thread_;
 
         std::string read_stat_log_file_;
         std::string write_stat_log_file_;

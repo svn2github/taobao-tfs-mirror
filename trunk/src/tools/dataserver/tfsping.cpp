@@ -18,43 +18,88 @@
 #include "common/new_client.h"
 #include "common/client_manager.h"
 #include "common/status_message.h"
-using namespace tfs::common;
-//using namespace tfs::message;
+#include "message/message_factory.h"
+#include "message/replicate_block_message.h"
+#include "message/compact_block_message.h"
 
-int ping(const uint64_t ip)
+using namespace std;
+using namespace tfs::common;
+using namespace tfs::message;
+
+int send_simple_request(uint64_t server_id, BasePacket* message)
 {
-  int32_t status_value = 0;
-  StatusMessage ping_message(STATUS_MESSAGE_PING);
-  int ret_status = send_msg_to_server(ip, &ping_message, status_value);
-  if (TFS_SUCCESS == ret_status && STATUS_MESSAGE_PING != status_value)
+  int ret = TFS_SUCCESS;
+  if (0 == server_id || NULL == message)
   {
-    ret_status = TFS_ERROR;
+    ret = EXIT_PARAMETER_ERROR;
   }
-  return ret_status;
+  else
+  {
+    MessageFactory factory;
+    BasePacketStreamer streamer(&factory);
+    int ret = NewClientManager::get_instance().initialize(&factory, &streamer);
+    assert(TFS_SUCCESS == ret);
+    NewClient* client = NewClientManager::get_instance().create_client();
+    if (NULL == client)
+    {
+      TBSYS_LOG(ERROR, "create client error");
+    }
+    else
+    {
+      tbnet::Packet* rsp_msg = NULL;
+      if (TFS_SUCCESS == send_msg_to_server(server_id, client, message, rsp_msg))
+      {
+        if (rsp_msg->getPCode() == STATUS_MESSAGE)
+        {
+          StatusMessage* sm = dynamic_cast<StatusMessage*> (rsp_msg);
+          if (STATUS_MESSAGE_OK != sm->get_status())
+          {
+            ret = TFS_ERROR;
+          }
+        }
+      }
+      else
+      {
+        ret = TFS_ERROR;
+      }
+      NewClientManager::get_instance().destroy_client(client);
+    }
+  }
+  return ret;
 }
 
 int main(int argc, char* argv[])
 {
-  if (argc != 3)
+  if (argc != 7)
   {
-    printf("%s ip port\n\n", argv[0]);
+    printf("%s seqno blockid source dest\n\n", argv[0]);
     return TFS_ERROR;
   }
 
-  int32_t port = strtoul(argv[2], NULL, 10);
-  uint64_t ip;
-  IpAddr* adr = reinterpret_cast<IpAddr*>(&ip);
-  adr->ip_ = Func::get_addr(argv[1]);
-  adr->port_ = port;
+/*
+  ReplicateBlockMessage rb_msg;
+  rb_msg.set_seqno(atoi(argv[1]));
+  ReplBlock repl_block;
+  repl_block.block_id_ = atoi(argv[2]);
+  repl_block.source_id_ = Func::str_to_addr(argv[3], atoi(argv[4]));
+  repl_block.destination_id_= Func::str_to_addr(argv[5], atoi(argv[6]));
+  rb_msg.set_repl_block(&repl_block);
+  rb_msg.set_expire_time(240);
+*/
+  NsRequestCompactBlockMessage cb_msg;
+  cb_msg.set_seqno(atoi(argv[1]));
+  cb_msg.set_block_id(atoi(argv[2]));
+  vector<uint64_t> servers;
+  uint64_t server1 = Func::str_to_addr(argv[3], atoi(argv[4]));
+  uint64_t server2 = Func::str_to_addr(argv[5], atoi(argv[6]));
+  servers.push_back(server1);
+  servers.push_back(server2);
+  cb_msg.set_servers(servers);
+  cb_msg.set_expire_time(240);
 
-  int ret = ping(ip);
-  if (TFS_SUCCESS == ret)
-  {
-    printf("%s SUCCESS.\n", tbsys::CNetUtil::addrToString(ip).c_str());
-  }
-  else
-  {
-    printf("%s FAILURE.\n", tbsys::CNetUtil::addrToString(ip).c_str());
-  }
-  return ret;
+  send_simple_request(server1, &cb_msg);
+
+//  send_simple_request(repl_block.source_id_, &rb_msg);
+
+  return 0;
 }

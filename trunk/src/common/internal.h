@@ -45,7 +45,7 @@
 #define SET_MARSHALLING_TYPE(x,y) (x |= ((y << 8) & 0xFF00))
 #define SET_MASTER_INDEX(x,y) (x |= (y & 0xFF))
 
-#define TFS_GTEST
+// #define TFS_GTEST
 
 #if __WORDSIZE == 32
 namespace __gnu_cxx
@@ -334,13 +334,6 @@ namespace tfs
       PLAN_RUN_FALG_DISSOLVE  = 1 << 6
     };
 
-    enum CompactStatus
-    {
-      COMPACT_STATUS_SUCCESS = 0,
-      COMPACT_STATUS_START,
-      COMPACT_STATUS_FAILED
-    };
-
     enum DeleteExcessBackupStrategy
     {
       DELETE_EXCESS_BACKUP_STRATEGY_NORMAL = 1,
@@ -391,7 +384,7 @@ namespace tfs
       LARGE_TFS_FILE_TYPE
     };
 
-    enum BlockType
+    enum BlkType
     {
       BLOCK_TYPE_DATA_BLOCK = 0,
       BLOCK_TYPE_CHECK_BLOCK

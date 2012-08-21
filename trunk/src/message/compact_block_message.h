@@ -32,6 +32,7 @@ namespace tfs
         inline void set_block_id(const uint32_t block_id) { block_id_ = block_id;}
         inline uint32_t get_block_id() const { return block_id_;}
         inline std::vector<uint64_t>& get_servers() { return servers_;}
+        inline void set_servers(const std::vector<uint64_t>& servers) { servers_ = servers; }
       protected:
         uint32_t block_id_;
         std::vector<uint64_t> servers_;
@@ -49,7 +50,8 @@ namespace tfs
         void dump(void) const;
         inline void set_block_info(const common::BlockInfo& block_info) { block_info_ = block_info;}
         inline common::BlockInfo& get_block_info() { return block_info_;}
-        inline std::vector<std::pair<uint64_t, int8_t> >& get_result() { return result_;}
+        inline std::vector<std::pair<uint64_t, int8_t> > get_result() const { return result_;}
+        inline void set_result(const std::vector<std::pair<uint64_t, int8_t> >& result) { result_ = result;}
       protected:
         common::BlockInfo block_info_;
         std::vector<std::pair<uint64_t, int8_t> > result_;

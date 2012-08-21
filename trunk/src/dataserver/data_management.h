@@ -56,7 +56,8 @@ namespace tfs
         int close_write_file(const common::CloseFileInfo& close_file_info, int32_t& write_file_size);
         int read_data(const uint32_t block_id, const uint64_t file_id, const int32_t read_offset, const int8_t flag,
             int32_t& real_read_len, char* tmpDataBuffer);
-        int read_raw_data(uint32_t block_id, int32_t read_offset, int32_t& real_read_len, char* tmpDataBuffer);
+        int read_raw_data(uint32_t block_id, int32_t read_offset, int32_t& real_read_len,
+            char* tmpDataBuffer, int32_t& data_file_size);
 
         int read_file_info(const uint32_t block_id,
             const uint64_t file_id, const int32_t mode, common::FileInfo& finfo);
@@ -84,8 +85,8 @@ namespace tfs
             const char* data_buffer);
         int batch_write_meta(const uint32_t block_id, const common::BlockInfo* blk,
             const common::RawMetaVec* meta_list);
-        int write_raw_index(const uint32_t block_id, const common::RawIndexOp index_op,
-            const common::RawIndexVec* index_vec);
+        int write_raw_index(const uint32_t block_id, const int64_t family_id,
+            const common::RawIndexOp index_op, const common::RawIndexVec* index_vec);
         int read_raw_index(const uint32_t block_id, const common::RawIndexOp index_op, const uint32_t index_id,
             char* & buf, uint32_t& size);
 

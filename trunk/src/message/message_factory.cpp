@@ -300,8 +300,11 @@ namespace tfs
           case common::DS_REPLICATE_BLOCK_MESSAGE:
             packet = new DsReplicateBlockMessage();
             break;
-          case common::DS_TASK_RESPONSE_MESSAGE:
-            packet = new DsTaskResponseMessage();
+          case common::RESP_DS_REPLICATE_BLOCK_MESSAGE:
+            packet = new RespDsReplicateBlockMessage();
+            break;
+          case common::RESP_DS_COMPACT_BLOCK_MESSAGE:
+            packet = new RespDsCompactBlockMessage();
             break;
           case common::REQ_CHECK_BLOCK_MESSAGE:
             packet = new CheckBlockRequestMessage();

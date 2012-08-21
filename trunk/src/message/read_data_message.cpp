@@ -305,6 +305,31 @@ namespace tfs
 
     }
 
+    int RespReadRawDataMessage::serialize(common::Stream& output) const
+    {
+      int32_t iret = RespReadDataMessage::serialize(output);
+      if (common::TFS_SUCCESS == iret)
+      {
+        iret = output.set_int32(data_file_size_);
+      }
+      return iret;
+    }
+
+    int RespReadRawDataMessage::deserialize(common::Stream& input)
+    {
+      int32_t iret = RespReadDataMessage::deserialize(input);
+      if (common::TFS_SUCCESS == iret)
+      {
+        input.get_int32(&data_file_size_);
+      }
+      return iret;
+    }
+
+    int64_t RespReadRawDataMessage::length() const
+    {
+      return RespReadDataMessage::length() + common::INT_SIZE;
+    }
+
     int ReadScaleImageMessage::ZoomData::deserialize(const char* data, const int64_t data_len, int64_t& pos)
     {
       int32_t iret = NULL != data && data_len - pos >= length() ? common::TFS_SUCCESS : common::TFS_ERROR;

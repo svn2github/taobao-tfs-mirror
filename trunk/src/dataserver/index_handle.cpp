@@ -88,9 +88,9 @@ namespace tfs
       if (TFS_SUCCESS == ret)
       {
         MMapOption opt;
-        opt.first_mmap_size_ = PARITY_INDEX_START;
-        opt.max_mmap_size_ = PARITY_INDEX_START;
-        opt.per_mmap_size_ = PARITY_INDEX_START;
+        opt.first_mmap_size_ = PARITY_INDEX_MMAP_SIZE;
+        opt.max_mmap_size_ = PARITY_INDEX_MMAP_SIZE;
+        opt.per_mmap_size_ = PARITY_INDEX_MMAP_SIZE;
         ret = file_op_->mmap_file(opt);
       }
 
@@ -129,9 +129,9 @@ namespace tfs
       else
       {
         MMapOption opt;
-        opt.first_mmap_size_ = PARITY_INDEX_START;
-        opt.max_mmap_size_ = PARITY_INDEX_START;
-        opt.per_mmap_size_ = PARITY_INDEX_START;
+        opt.first_mmap_size_ = PARITY_INDEX_MMAP_SIZE;
+        opt.max_mmap_size_ = PARITY_INDEX_MMAP_SIZE;
+        opt.per_mmap_size_ = PARITY_INDEX_MMAP_SIZE;
         ret = file_op_->mmap_file(opt);
       }
 
@@ -152,15 +152,20 @@ namespace tfs
 
       if (TFS_SUCCESS == ret)
       {
-        if (C_DATA_COMPACT == index_header()->flag_)
+        if (C_DATA_COMPACT == pindex_header()->flag_)
         {
           ret = EXIT_COMPACT_BLOCK_ERROR;
           TBSYS_LOG(ERROR, "It is a unfinish compact block. blockid: %u", logic_block_id);
         }
-        else if (C_DATA_HALF == index_header()->flag_)
+        else if (C_DATA_HALF == pindex_header()->flag_)
         {
           ret = EXIT_HALF_BLOCK_ERROR;
           TBSYS_LOG(ERROR, "It is a half state block. blockid: %u", logic_block_id);
+        }
+        else if (C_DATA_CLEAN == pindex_header()->flag_)
+        {
+          ret = TFS_ERROR;
+          TBSYS_LOG(ERROR, "It is a data block. should use load() instead");
         }
       }
 
@@ -246,7 +251,8 @@ namespace tfs
 
         if (TFS_SUCCESS == ret)
         {
-          ret = file_op_->flush_file();
+          index_header()->flag_ = C_DATA_CLEAN;
+          ret = flush();
         }
       }
 
@@ -276,7 +282,8 @@ namespace tfs
         }
         else
         {
-          ret = file_op_->flush_file();
+          pindex_header()->flag_ = C_DATA_PARITY;
+          ret = flush();
         }
       }
 
@@ -291,6 +298,10 @@ namespace tfs
       if (size <= 0)
       {
         ret = EXIT_INDEX_CORRUPT_ERROR;
+      }
+      else if (C_DATA_CLEAN != index_header()->flag_)
+      {
+        ret = TFS_ERROR;
       }
       else
       {
@@ -316,6 +327,10 @@ namespace tfs
       if (file_size <= 0)
       {
         ret = EXIT_INDEX_CORRUPT_ERROR;
+      }
+      else if (C_DATA_PARITY != pindex_header()->flag_)
+      {
+        ret = TFS_ERROR;
       }
       else
       {

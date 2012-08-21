@@ -48,6 +48,7 @@
 #include "checkserver_message.h"
 #include "erasure_code_message.h"
 #include "dataserver_task_message.h"
+#include "erasure_code_message.h"
 
 namespace tfs
 {

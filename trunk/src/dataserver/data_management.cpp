@@ -323,7 +323,7 @@ namespace tfs
     }
 
     int DataManagement::read_raw_data(const uint32_t block_id, const int32_t read_offset, int32_t& real_read_len,
-        char* tmp_data_buffer)
+        char* tmp_data_buffer, int32_t& data_file_size)
     {
       LogicBlock* logic_block = BlockFileManager::get_instance()->get_logic_block(block_id);
       if (NULL == logic_block)
@@ -339,6 +339,7 @@ namespace tfs
             real_read_len, ret);
         return ret;
       }
+      data_file_size = logic_block->get_data_file_size();
 
       return TFS_SUCCESS;
     }
@@ -700,7 +701,8 @@ namespace tfs
       return TFS_SUCCESS;
     }
 
-    int DataManagement::write_raw_index(const uint32_t block_id, const RawIndexOp index_op, const RawIndexVec* index_vec)
+    int DataManagement::write_raw_index(const uint32_t block_id, const int64_t family_id,
+        const RawIndexOp index_op, const RawIndexVec* index_vec)
     {
       LogicBlock* logic_block = BlockFileManager::get_instance()->get_logic_block(block_id);
       if (NULL == logic_block)
@@ -709,7 +711,7 @@ namespace tfs
         return EXIT_NO_LOGICBLOCK_ERROR;
       }
 
-      int ret = logic_block->write_raw_index(index_op, index_vec);
+      int ret = logic_block->write_raw_index(family_id, index_op, index_vec);
       if (TFS_SUCCESS != ret)
       {
         TBSYS_LOG(ERROR, "blockid: %u write raw index error, ret: %d", block_id, ret);

@@ -194,9 +194,9 @@ namespace tfs
           Position* pos = pindex_position(0);
           if (NULL != pos)
           {
-            int i = 0;
             int nums = pindex_header()->index_num_;
-            for (i = 0; i < nums; i++)
+            Position* end = pos + nums;
+            while (pos < end)
             {
               if (pos->block_id_ == block_id)
               {
@@ -206,7 +206,7 @@ namespace tfs
             }
 
             // not found
-            if (i == nums)
+            if (pos == end)
             {
               pos = NULL;
             }

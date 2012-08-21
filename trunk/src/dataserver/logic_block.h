@@ -83,6 +83,7 @@ namespace tfs
         int copy_block_info(const common::BlockInfo* blk_info);
 
         uint64_t get_group_id();
+        int set_group_id(const int64_t group_id);
 
         //gc callback
         void callback();
@@ -103,7 +104,7 @@ namespace tfs
           return &physical_block_list_;
         }
 
-        int write_raw_index(const common::RawIndexOp index_op, const common::RawIndexVec* index_vec);
+        int write_raw_index(const int64_t family_id, const common::RawIndexOp index_op, const common::RawIndexVec* index_vec);
         int read_raw_index(const common::RawIndexOp index_op, const uint32_t index_id, char* & buf, uint32_t& size );
 
         int batch_write_meta(const common::BlockInfo* blk_info, const common::RawMetaVec* meta_list);

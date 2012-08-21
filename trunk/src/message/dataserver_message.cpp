@@ -196,20 +196,45 @@ namespace tfs
         iret = input.get_int32(&size);
         if (common::TFS_SUCCESS == iret)
         {
-          common::BlockInfoExt info;
-          for (int32_t i = 0; i < size; ++i)
+          if (common::REPORT_BLOCK_NORMAL == flag_)
           {
-            pos  = 0;
-            iret = info.deserialize(input.get_data(), input.get_data_length(), pos);
-            if (common::TFS_SUCCESS == iret)
+            common::BlockInfo info;
+            for (int32_t i = 0; i < size; ++i)
             {
-              input.drain(info.length());
-              blocks_ext_.insert(info);
+              pos  = 0;
+              iret = info.deserialize(input.get_data(), input.get_data_length(), pos);
+              if (common::TFS_SUCCESS == iret)
+              {
+                input.drain(info.length());
+                blocks_.insert(info);
+              }
+              else
+              {
+                break;
+              }
             }
-            else
+          }
+          else if (common::REPORT_BLOCK_EXT == flag_)
+          {
+            common::BlockInfoExt info;
+            for (int32_t i = 0; i < size; ++i)
             {
-              break;
+              pos  = 0;
+              iret = info.deserialize(input.get_data(), input.get_data_length(), pos);
+              if (common::TFS_SUCCESS == iret)
+              {
+                input.drain(info.length());
+                blocks_ext_.insert(info);
+              }
+              else
+              {
+                break;
+              }
             }
+          }
+          else
+          {
+            iret = common::TFS_ERROR;
           }
         }
       }
@@ -227,8 +252,18 @@ namespace tfs
        * ns update after all ds finish update
        * after update, new ns just receive extend block report
        */
-      common::BlockInfoExt info;
-      return common::INT64_SIZE + common::INT_SIZE + blocks_ext_.size() * info.length() + common::INT8_SIZE;
+      if (common::REPORT_BLOCK_NORMAL == flag_)
+      {
+        common::BlockInfo info;
+        return common::INT64_SIZE + common::INT_SIZE + blocks_.size() * info.length() + common::INT8_SIZE;
+      }
+      else if (common::REPORT_BLOCK_EXT == flag_)
+      {
+        common::BlockInfoExt info;
+        return common::INT64_SIZE + common::INT_SIZE + blocks_ext_.size() * info.length() + common::INT8_SIZE;
+      }
+
+      return common::TFS_ERROR;
     }
 
     int ReportBlocksToNsRequestMessage::serialize(common::Stream& output) const
