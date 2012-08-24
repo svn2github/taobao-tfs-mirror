@@ -228,8 +228,11 @@ namespace tfs
         ret = choose_writable_block_(result);
         if (TFS_SUCCESS == ret)
           ret = (result->is_writable() && is_equal_group(result->id())) ? TFS_SUCCESS : EXIT_BLOCK_NO_WRITABLE;
-        if (TFS_SUCCESS != ret)
+        if (TFS_SUCCESS != ret && NULL != result)
+        {
+          helper.push_back(result);
           result = NULL;
+        }
       }
       remove_writable_(helper);
       return NULL == result ? EXIT_BLOCK_NOT_FOUND : TFS_SUCCESS;
