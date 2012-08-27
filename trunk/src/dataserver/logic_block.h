@@ -63,8 +63,9 @@ namespace tfs
         void add_physic_block(PhysicalBlock* physic_block);
 
         int open_write_file(uint64_t& inner_file_id);
-        int check_block_version(int32_t& remote_version, common::UpdateBlockType &repair);
-        int close_write_file(const uint64_t inner_file_id, DataFile* datafile, const uint32_t crc);
+
+        int check_block_version(common::BlockInfo& info, const int32_t remote_version);
+        int close_write_file(const uint64_t inner_file_id, DataFile& datafile, const uint32_t crc);
 
         int read_file(const uint64_t inner_file_id, char* buf, int32_t& nbytes, const int32_t offset, const int8_t flag);
         int read_file_info(const uint64_t inner_file_id, common::FileInfo& finfo);

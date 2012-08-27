@@ -637,45 +637,11 @@ namespace tfs
       }
     }
 
-    int IndexHandle::check_block_version(int32_t& remote_version)
+    int IndexHandle::check_block_version(common::BlockInfo& info, const int32_t remote_version)
     {
-      TBSYS_LOG(DEBUG, "block version. blockid: %u, remote version: %u, local version: %u", block_info()->block_id_,
-          remote_version, block_info()->version_);
-      if (remote_version != block_info()->version_)
-      {
-        //we assume that the difference between the version number greater than BLOCK_VERSION_MAGIC_NUM is illegal
-        if (remote_version > block_info()->version_ + BLOCK_VERSION_MAGIC_NUM)
-        {
-          TBSYS_LOG(ERROR, "block version error. blockid: %u, remote version: %d, local version: %d",
-              block_info()->block_id_, remote_version, block_info()->version_);
-          return EXIT_BLOCK_DS_VERSION_ERROR;
-        }
-        else if (remote_version < block_info()->version_ - BLOCK_VERSION_MAGIC_NUM)
-        {
-          TBSYS_LOG(ERROR, "block version error. blockid: %u, remote version: %d, local version: %d",
-              block_info()->block_id_, remote_version, block_info()->version_);
-          return EXIT_BLOCK_NS_VERSION_ERROR;
-        }
-
-        //if local version less than ns version, and the difference is little than 2, replace the local version with ns version
-        if (remote_version > block_info()->version_ && remote_version <= (block_info()->version_
-            + BLOCK_VERSION_MAGIC_NUM))
-        {
-          TBSYS_LOG(ERROR,
-              "remote version is larger, set block version. blockid: %u, remote version: %u, local version: %u",
-              block_info()->block_id_, remote_version, block_info()->version_);
-          block_info()->version_ = remote_version;
-        }
-        else
-        {
-          TBSYS_LOG(ERROR,
-              "block version is larger, set remote version. blockid: %u, remote version: %u, local version: %u",
-              block_info()->block_id_, remote_version, block_info()->version_);
-          remote_version = block_info()->version_;
-        }
-      }
-
-      return TFS_SUCCESS;
+      assert(NULL != block_info());
+      info = *block_info();
+      return remote_version == info.version_ ? TFS_SUCCESS : EXIT_VERSION_CONFLICT_ERROR;
     }
 
     int IndexHandle::reset_block_version()
@@ -875,42 +841,49 @@ namespace tfs
       return TFS_SUCCESS;
     }
 
-    int IndexHandle::update_block_info(const OperType oper_type, const uint32_t modify_size)
+    int IndexHandle::update_block_meta(const OperType oper_type, const uint32_t modify_size)
     {
-      if (0 == block_info()->block_id_)
+      BlockInfo* info = block_info();
+      int32_t ret = (NULL != info && info->block_id_ != INVALID_BLOCK_ID) ? TFS_SUCCESS: EXIT_BLOCKID_ZERO_ERROR;
+      if (TFS_SUCCESS == ret)
       {
-        return EXIT_BLOCKID_ZERO_ERROR;
+        ret = update_block_version();
+        if (TFS_SUCCESS == ret)
+        {
+          // to each operate type, update statistics eg, version count size stuff etc
+          if (C_OPER_INSERT == oper_type)
+          {
+            ++info->file_count_;
+            info->size_ += modify_size;
+          }
+          else if (C_OPER_DELETE == oper_type)
+          {
+            ++info->del_file_count_;
+            info->del_size_ += modify_size;
+          }
+          else if (C_OPER_UNDELETE == oper_type)
+          {
+            --info->del_file_count_;
+            info->del_size_ -= modify_size;
+          }
+          else if (C_OPER_UPDATE == oper_type)
+          {
+            info->size_ += modify_size;
+          }
+        }
       }
+      return ret;
+    }
 
-      // to each operate type, update statistics eg, version count size stuff etc
-      if (C_OPER_INSERT == oper_type)
+    int IndexHandle::update_block_version(const int8_t step)
+    {
+      BlockInfo* info = block_info();
+      int32_t ret = (NULL != info && info->block_id_ != INVALID_BLOCK_ID) ? TFS_SUCCESS: EXIT_BLOCK_NOT_FOUND;
+      if (TFS_SUCCESS == ret)
       {
-        ++block_info()->version_;
-        ++block_info()->file_count_;
-        block_info()->size_ += modify_size;
+        info->version_ += step;
       }
-      else if (C_OPER_DELETE == oper_type)
-      {
-        ++block_info()->del_file_count_;
-        block_info()->del_size_ += modify_size;
-      }
-      else if (C_OPER_UNDELETE == oper_type)
-      {
-        --block_info()->del_file_count_;
-        block_info()->del_size_ -= modify_size;
-      }
-      else if (C_OPER_UPDATE == oper_type)
-      {
-        ++block_info()->version_;
-        block_info()->size_ += modify_size;
-      }
-
-      TBSYS_LOG(
-          DEBUG,
-          "update block info. blockid: %u, version: %u, file count: %u, size: %u, del file count: %u, del size: %u, seq no: %u, oper type: %d",
-          block_info()->block_id_, block_info()->version_, block_info()->file_count_, block_info()->size_,
-          block_info()->del_file_count_, block_info()->del_size_, block_info()->seq_no_, oper_type);
-      return TFS_SUCCESS;
+      return ret;
     }
 
     int IndexHandle::copy_block_info(const BlockInfo* blk_info)

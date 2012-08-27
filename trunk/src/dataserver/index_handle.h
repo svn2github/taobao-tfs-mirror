@@ -115,7 +115,7 @@ namespace tfs
         // update next available key
         void reset_avail_key(uint64_t key);
         // merge the version info from ns and local
-        int check_block_version(int32_t& remote_version);
+        int check_block_version(common::BlockInfo& info, const int32_t remote_version);
         int reset_block_version();
 
         // write meta into block, key must not be existed
@@ -134,7 +134,8 @@ namespace tfs
         int traverse_sorted_segment_meta(common::RawMetaVec& meta);
 
         // update block info after operation
-        int update_block_info(const OperType oper_type, const uint32_t modify_size);
+        int update_block_meta(const OperType oper_type, const uint32_t modify_size);
+        int update_block_version(const int8_t step = VERSION_INC_STEP_DEFAULT);
         int copy_block_info(const common::BlockInfo* blk_info);
 
         int get_block_data_offset() const

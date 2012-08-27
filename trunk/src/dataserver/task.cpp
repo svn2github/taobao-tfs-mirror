@@ -273,7 +273,7 @@ namespace tfs
       rri_msg.set_index_id(index_id);
 
       TBSYS_LOG(DEBUG, "read raw index from %s, blockid: %u, index_op: %d",
-          tbsys::CNetUtil::addrToString(server_id).c_str(), index_op);
+          tbsys::CNetUtil::addrToString(server_id).c_str(), block_id, index_op);
 
 
       NewClient* client = NewClientManager::get_instance().create_client();
@@ -306,7 +306,7 @@ namespace tfs
           {
             ret = TFS_ERROR;
             TBSYS_LOG(ERROR, "read raw index from %s fail, blockid: %u, index_op: %d",
-                tbsys::CNetUtil::addrToString(server_id).c_str(), index_op);
+                tbsys::CNetUtil::addrToString(server_id).c_str(), block_id, index_op);
           }
         }
         else

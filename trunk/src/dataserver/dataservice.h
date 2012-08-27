@@ -162,6 +162,7 @@ namespace tfs
         int check_blocks(common::BasePacket* packet);
 
       private:
+        inline DataManagement& get_data_management() { return data_management_;}
         bool access_deny(common::BasePacket* message);
         void do_stat(const uint64_t peer_id,
             const int32_t visit_file_size, const int32_t real_len, const int32_t offset, const int32_t mode);

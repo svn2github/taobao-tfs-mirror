@@ -16,6 +16,7 @@
 #include <Memory.hpp>
 #include "requester.h"
 #include "message/block_info_message.h"
+#include "message/resolve_block_version_conflict_message.h"
 #include "common/new_client.h"
 #include "common/client_manager.h"
 #include "common/status_message.h"
@@ -37,7 +38,7 @@ namespace tfs
 
     int Requester::req_update_block_info(const uint32_t block_id, const UpdateBlockType repair)
     {
-      UpdateBlockType tmp_repair = repair; 
+      UpdateBlockType tmp_repair = repair;
       BlockInfo* blk = NULL;
       if (UPDATE_BLOCK_MISSING != tmp_repair)
       {
@@ -113,8 +114,7 @@ namespace tfs
     int Requester::req_block_write_complete(const uint32_t block_id,
         const int32_t lease_id, const int32_t success, const UnlinkFlag unlink_flag)
     {
-      TBSYS_LOG(DEBUG, "req block write complete begin id: %u, lease_id: %u\n", block_id, lease_id);
-
+      TBSYS_LOG(DEBUG, "request block write complete block: %u, lease_id: %u, status: %d, unlink flag: %d", block_id, lease_id, success, unlink_flag);
       BlockInfo* blk = NULL;
       int visit_count = 0;
       int ret = data_management_->get_block_info(block_id, blk, visit_count);
@@ -177,6 +177,36 @@ namespace tfs
         ret = TFS_ERROR;
       }
       NewClientManager::get_instance().destroy_client(client);
+      return ret;
+    }
+
+    int Requester::resolve_block_version_conflict(Lease* lease, const uint32_t block)
+    {
+      int32_t ret = (NULL != lease && INVALID_BLOCK_ID != block) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+      if (TFS_SUCCESS == ret)
+      {
+        lease->dump(TBSYS_LOG_LEVEL_INFO, "resolve block version conflict, information: ");
+        ResolveBlockVersionConflictMessage req_msg;
+        req_msg.set_block(block);
+        ret = lease->get_member_info(req_msg.get_members());
+        if (TFS_SUCCESS == ret)
+        {
+          NewClient* client = NewClientManager::get_instance().create_client();
+          tbnet::Packet* ret_msg = NULL;
+          ret = send_msg_to_server(ns_ip_port_, client, &req_msg, ret_msg);
+          if (TFS_SUCCESS == ret)
+          {
+            ret = RSP_RESOLVE_BLOCK_VERSION_CONFLICT_MESSAGE == ret_msg->getPCode()
+              ? TFS_SUCCESS : EXIT_RESOLVE_BLOCK_VERSION_CONFLICT_ERROR;
+            if (TFS_SUCCESS == ret)
+            {
+              ResolveBlockVersionConflictResponseMessage* msg = dynamic_cast<ResolveBlockVersionConflictResponseMessage*>(ret_msg);
+              ret = TFS_SUCCESS == msg->get_status() ? TFS_SUCCESS : EXIT_RESOLVE_BLOCK_VERSION_CONFLICT_ERROR;
+            }
+          }
+          NewClientManager::get_instance().destroy_client(client);
+        }
+      }
       return ret;
     }
   }

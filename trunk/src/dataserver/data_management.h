@@ -25,7 +25,7 @@
 #include <list>
 #include "logic_block.h"
 #include "dataserver_define.h"
-#include "data_file.h"
+#include "lease_manager.h"
 #include "common/parameter.h"
 #include <Mutex.h>
 
@@ -50,9 +50,8 @@ namespace tfs
         int64_t get_all_logic_block_size();
 
         int create_file(const uint32_t block_id, uint64_t& file_id, uint64_t& file_number);
-        int write_data(const common::WriteDataInfo& write_info, const int32_t lease_id, int32_t& version,
-            const char* data_buffer, common::UpdateBlockType& repair);
-        int erase_data_file(const uint64_t file_number);
+        int write_data(common::BlockInfo& block_info, WriteLease* lease, const int32_t remote_version, const common::WriteDataInfo& write_info,
+            const char* data_buffer);
         int close_write_file(const common::CloseFileInfo& close_file_info, int32_t& write_file_size);
         int read_data(const uint32_t block_id, const uint64_t file_id, const int32_t read_offset, const int8_t flag,
             int32_t& real_read_len, char* tmpDataBuffer);
@@ -62,7 +61,7 @@ namespace tfs
         int read_file_info(const uint32_t block_id,
             const uint64_t file_id, const int32_t mode, common::FileInfo& finfo);
         int rename_file(const uint32_t block_id, const uint64_t file_id, const uint64_t new_file_id);
-        int unlink_file(const uint32_t block_id, const uint64_t file_id, const int32_t action, int64_t& file_size);
+        int unlink_file(common::BlockInfo& info, int64_t& file_size, const uint32_t block_id, const uint64_t file_id, const int32_t action, const int32_t remote_version);
 
         int batch_new_block(const common::VUINT32* new_blocks);
         int batch_remove_block(const common::VUINT32* remove_blocks);
@@ -93,20 +92,13 @@ namespace tfs
         int add_new_expire_block(const common::VUINT32* expire_block_ids, const common::VUINT32* remove_block_ids,
             const common::VUINT32* new_block_ids);
 
-        //gc thread
-        int gc_data_file();
-        int remove_data_file();
+        inline LeaseManager& get_lease_manager() { return lease_manager_;}
+      private:
+        int create_file_id_(uint64_t& file_id, const uint32_t block_id);
 
       private:
         DISALLOW_COPY_AND_ASSIGN(DataManagement);
-
-        uint64_t file_number_;          // file id
-        tbutil::Mutex data_file_mutex_; // datafile mutex
-        DataFileMap data_file_map_; // datafile map
-
-        //gc datafile
-        int32_t last_gc_data_file_time_; // last datafile gc time
-        common::RWLock block_rw_lock_;   // block layer read-write lock
+        LeaseManager lease_manager_;
     };
 
     struct visit_count_sort

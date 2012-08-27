@@ -31,20 +31,20 @@ namespace tfs
     using namespace common;
     using namespace std;
 
-    DataManagement::DataManagement() :
-      file_number_(0), last_gc_data_file_time_(0)
+    DataManagement::DataManagement()
     {
+
     }
 
     DataManagement::~DataManagement()
     {
     }
 
-    void DataManagement::set_file_number(const uint64_t file_number)
+    /*void DataManagement::set_file_number(const uint64_t file_number)
     {
       file_number_ = file_number;
       TBSYS_LOG(INFO, "set file number. file number: %" PRI64_PREFIX "u\n", file_number_);
-    }
+    }*/
 
     int DataManagement::init_block_files(const FileSystemParameter& fs_param)
     {
@@ -92,6 +92,7 @@ namespace tfs
 
     int DataManagement::create_file(const uint32_t block_id, uint64_t& file_id, uint64_t& file_number)
     {
+      UNUSED(file_number);
       LogicBlock* logic_block = BlockFileManager::get_instance()->get_logic_block(block_id);
       if (NULL == logic_block)
       {
@@ -115,179 +116,120 @@ namespace tfs
         logic_block->reset_seq_id(file_id);
       }
 
-      data_file_mutex_.lock();
+      /*data_file_mutex_.lock();
       file_number = ++file_number_;
-      data_file_mutex_.unlock();
+      data_file_mutex_.unlock();*/
 
-      TBSYS_LOG(DEBUG, "open write file. blockid: %u, fileid: %" PRI64_PREFIX "u, filenumber: %" PRI64_PREFIX "u",
-          block_id, file_id, file_number_);
+      //TBSYS_LOG(DEBUG, "open write file. blockid: %u, fileid: %" PRI64_PREFIX "u, filenumber: %" PRI64_PREFIX "u",
+      //    block_id, file_id, file_number_);
       return TFS_SUCCESS;
     }
 
-    int DataManagement::write_data(const WriteDataInfo& write_info, const int32_t lease_id, int32_t& version,
-        const char* data_buffer, UpdateBlockType& repair)
+
+    int DataManagement::write_data(common::BlockInfo& block_info, WriteLease* lease, const int32_t remote_version, const common::WriteDataInfo& info,
+            const char* data_buffer)
     {
-      TBSYS_LOG(DEBUG,
-          "write data. blockid: %u, fileid: %" PRI64_PREFIX "u, filenumber: %" PRI64_PREFIX "u, lease: %d",
-          write_info.block_id_, write_info.file_id_, write_info.file_number_, lease_id);
-      //if the first fragment, check version
-      if (0 == write_info.offset_)
+      int32_t ret = (NULL != lease && INVALID_VERSION != remote_version && NULL != data_buffer) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+      if (TFS_SUCCESS == ret)
       {
-        LogicBlock* logic_block = BlockFileManager::get_instance()->get_logic_block(write_info.block_id_);
-        if (NULL == logic_block)
+        TBSYS_LOG(DEBUG, "write data: block: %u, fileid: %"PRI64_PREFIX"u, lease_id: %"PRI64_PREFIX"u, remote_version: %d, offset: %d",
+          info.block_id_, info.file_id_, info.file_number_, remote_version, info.offset_);
+        //if the first fragment, check version
+        if (0 == info.offset_)
         {
-          TBSYS_LOG(ERROR, "blockid: %u is not exist.", write_info.block_id_);
-          return EXIT_NO_LOGICBLOCK_ERROR;
+          LogicBlock* logic_block = BlockFileManager::get_instance()->get_logic_block(info.block_id_);
+          ret = NULL == logic_block ? EXIT_NO_LOGICBLOCK_ERROR: TFS_SUCCESS;
+          if (TFS_SUCCESS != ret)
+          {
+            TBSYS_LOG(INFO, "block: %u is not exist.", info.block_id_);
+          }
+          else
+          {
+            ret = logic_block->check_block_version(block_info, remote_version);
+            if (TFS_SUCCESS != ret)
+            {
+              TBSYS_LOG(INFO, "block: %u version error. remote_version: %d, local_version: %d, ret: %d",
+                info.block_id_, remote_version, block_info.version_, ret);
+            }
+          }
         }
-
-        int ret = logic_block->check_block_version(version, repair);
-        if (TFS_SUCCESS != ret)
+        if (TFS_SUCCESS == ret)
         {
-          TBSYS_LOG(DEBUG, "check_block_version error. blockid: %u, ret: %d", write_info.block_id_, ret);
-          return ret;
+          int32_t write_len = lease->get_data_file().set_data(data_buffer, info.length_, info.offset_);
+          ret = write_len != info.length_ ? EXIT_DATA_FILE_ERROR : TFS_SUCCESS;
+          if (TFS_SUCCESS != ret)
+          {
+            TBSYS_LOG(INFO, "write data to datafile error, ret: %d, block: %u, fileid: %"PRI64_PREFIX"u, lease id: %"PRI64_PREFIX"u, length: %d:%d",
+              ret, info.block_id_, info.file_id_, info.file_number_, write_len, info.length_);
+          }
         }
       }
-
-      // write data to DataFile first
-      data_file_mutex_.lock();
-      DataFileMapIter bit = data_file_map_.find(write_info.file_number_);
-      DataFile* datafile = NULL;
-      if (bit != data_file_map_.end())
-      {
-        datafile = bit->second;
-      }
-      else                      // not found
-      {
-        // control datafile size
-        if (data_file_map_.size() >= static_cast<uint32_t> (SYSPARAM_DATASERVER.max_datafile_nums_))
-        {
-          TBSYS_LOG(ERROR, "blockid: %u, datafile nums: %zd is large than default.", write_info.block_id_,
-              data_file_map_.size());
-          data_file_mutex_.unlock();
-          return EXIT_DATAFILE_OVERLOAD;
-        }
-
-        datafile = new DataFile(write_info.file_number_);
-        data_file_map_.insert(DataFileMap::value_type(write_info.file_number_, datafile));
-      }
-
-      if (NULL == datafile)
-      {
-        TBSYS_LOG(ERROR, "datafile is null. blockid: %u, fileid: %" PRI64_PREFIX "u, filenumber: %" PRI64_PREFIX "u",
-            write_info.block_id_, write_info.file_id_, write_info.file_number_);
-        data_file_mutex_.unlock();
-        return EXIT_DATA_FILE_ERROR;
-      }
-      datafile->set_last_update();
-      data_file_mutex_.unlock();
-
-      // write to datafile
-      int32_t write_len = datafile->set_data(data_buffer, write_info.length_, write_info.offset_);
-      if (write_len != write_info.length_)
-      {
-        TBSYS_LOG(
-            ERROR,
-            "Datafile write error. blockid: %u, fileid: %" PRI64_PREFIX "u, filenumber: %" PRI64_PREFIX "u, req writelen: %d, actual writelen: %d",
-            write_info.block_id_, write_info.file_id_, write_info.file_number_, write_info.length_, write_len);
-        // clean dirty data
-        erase_data_file(write_info.file_number_);
-        return EXIT_DATA_FILE_ERROR;
-      }
-
-      return TFS_SUCCESS;
+      return ret;
     }
 
     int DataManagement::close_write_file(const CloseFileInfo& colse_file_info, int32_t& write_file_size)
     {
+      TIMER_START();
       uint32_t block_id = colse_file_info.block_id_;
       uint64_t file_id = colse_file_info.file_id_;
       uint64_t file_number = colse_file_info.file_number_;
       uint32_t crc = colse_file_info.crc_;
       TBSYS_LOG(DEBUG,
-          "close write file, blockid: %u, fileid: %" PRI64_PREFIX "u, filenumber: %" PRI64_PREFIX "u, crc: %u",
+          "close write file, blockid: %u, fileid: %" PRI64_PREFIX "u, lease id: %" PRI64_PREFIX "u, crc: %u",
           block_id, file_id, file_number, crc);
 
-      //find datafile
-      DataFile* datafile = NULL;
-      data_file_mutex_.lock();
-      DataFileMapIter bit = data_file_map_.find(file_number);
-      if (bit != data_file_map_.end())
-      {
-        datafile = bit->second;
-      }
-
-      //lease expire
-      if (NULL == datafile)
-      {
-        TBSYS_LOG(ERROR, "Datafile is null. blockid: %u, fileid: %" PRI64_PREFIX "u, filenumber: %" PRI64_PREFIX "u",
-            block_id, file_id, file_number);
-        data_file_mutex_.unlock();
-        return EXIT_DATAFILE_EXPIRE_ERROR;
-      }
-      datafile->set_last_update();
-      datafile->add_ref();
-      data_file_mutex_.unlock();
-
-      //compare crc
-      uint32_t datafile_crc = datafile->get_crc();
-      if (crc != datafile_crc)
-      {
-        TBSYS_LOG(
-            ERROR,
-            "Datafile crc error. blockid: %u, fileid: %" PRI64_PREFIX "u, filenumber: %" PRI64_PREFIX "u, local crc: %u, msg crc: %u",
-            block_id, file_id, file_number, datafile_crc, crc);
-        datafile->sub_ref();
-        erase_data_file(file_number);
-        return EXIT_DATA_FILE_ERROR;
-      }
-
-      write_file_size = datafile->get_length();
-      //find block
-      LogicBlock* logic_block = BlockFileManager::get_instance()->get_logic_block(block_id);
-      if (NULL == logic_block)
-      {
-        datafile->sub_ref();
-        erase_data_file(file_number);
-        TBSYS_LOG(ERROR, "blockid: %u is not exist.", block_id);
-        return EXIT_NO_LOGICBLOCK_ERROR;
-      }
-
-      TIMER_START();
-      int ret = logic_block->close_write_file(file_id, datafile, datafile_crc);
+      LeaseId lease_id(file_number, file_id, block_id);
+      time_t now = Func::get_monotonic_time();
+      Lease* lease = get_lease_manager().get(lease_id, now);
+      int32_t ret = NULL == lease ? EXIT_DATAFILE_EXPIRE_ERROR : TFS_SUCCESS;
       if (TFS_SUCCESS != ret)
       {
-        datafile->sub_ref();
-        erase_data_file(file_number);
-        return ret;
+        TBSYS_LOG(INFO, "lease is null mybe timeout or not found. block: %u, fileid: %" PRI64_PREFIX "u, lease id: %" PRI64_PREFIX "u",
+            block_id, file_id, file_number);
       }
-
-      TIMER_END();
-      if (TIMER_DURATION() > SYSPARAM_DATASERVER.max_io_warn_time_)
+      if (TFS_SUCCESS == ret)
       {
-        TBSYS_LOG(WARN, "write file cost time: blockid: %u, fileid: %" PRI64_PREFIX "u, cost time: %" PRI64_PREFIX "d",
-            block_id, file_id, TIMER_DURATION());
+        WriteLease* write_lease = dynamic_cast<WriteLease*>(lease);
+        uint32_t datafile_crc = write_lease->get_data_file().get_crc();
+        ret = crc != datafile_crc ? EXIT_DATA_FILE_ERROR : TFS_SUCCESS;
+        if (TFS_SUCCESS != ret)
+        {
+          TBSYS_LOG(INFO, "close file failed, crc error, block: %u, fileid: %"PRI64_PREFIX"u, lease id: %"PRI64_PREFIX"u, crc: %u:%u",
+            block_id, file_id, file_number, datafile_crc, crc);
+        }
+        LogicBlock* logic_block = NULL;
+        if (TFS_SUCCESS == ret)
+        {
+          write_file_size = write_lease->get_data_file().get_length();
+          logic_block = BlockFileManager::get_instance()->get_logic_block(block_id);
+          ret = NULL != logic_block ? TFS_SUCCESS : EXIT_NO_LOGICBLOCK_ERROR;
+          if (TFS_SUCCESS != ret)
+          {
+            TBSYS_LOG(INFO, "close file failed, block: %u is not exist.", block_id);
+          }
+        }
+        if (TFS_SUCCESS == ret)
+        {
+          ret = logic_block->close_write_file(file_id, write_lease->get_data_file(), datafile_crc);
+          if (TFS_SUCCESS != ret)
+          {
+            TBSYS_LOG(INFO, "close file failed, flush data to disk error, ret: %d, block: %u", ret, block_id);
+          }
+        }
+        if (TFS_SUCCESS == ret)
+        {
+          TIMER_END();
+          if (TIMER_DURATION() > SYSPARAM_DATASERVER.max_io_warn_time_)
+          {
+            TBSYS_LOG(INFO, "write file cost time: blockid: %u, fileid: %" PRI64_PREFIX "u, cost time: %" PRI64_PREFIX "d",
+                block_id, file_id, TIMER_DURATION());
+          }
+        }
+        lease->upate_last_time(now);
       }
-
-      // success, gc datafile
-      // close tmp file, release opened file handle
-      // datafile , bit->second point to same thing, once delete
-      // bit->second, datafile will be obseleted immediately.
-      datafile->sub_ref();
-      erase_data_file(file_number);
-      return TFS_SUCCESS;
-    }
-
-    int DataManagement::erase_data_file(const uint64_t file_number)
-    {
-      data_file_mutex_.lock();
-      DataFileMapIter bit = data_file_map_.find(file_number);
-      if (bit != data_file_map_.end() && NULL != bit->second)
-      {
-        tbsys::gDelete(bit->second);
-        data_file_map_.erase(bit);
-      }
-      data_file_mutex_.unlock();
-      return TFS_SUCCESS;
+      get_lease_manager().put(lease);
+      get_lease_manager().remove(lease_id);
+      return ret;
     }
 
     int DataManagement::read_data(const uint32_t block_id, const uint64_t file_id, const int32_t read_offset, const int8_t flag,
@@ -405,23 +347,32 @@ namespace tfs
       return TFS_SUCCESS;
     }
 
-    int DataManagement::unlink_file(const uint32_t block_id, const uint64_t file_id, const int32_t action, int64_t& file_size)
+    int DataManagement::unlink_file(common::BlockInfo& info, int64_t& file_size, const uint32_t block_id, const uint64_t file_id, const int32_t action, const int32_t remote_version)
     {
       LogicBlock* logic_block = BlockFileManager::get_instance()->get_logic_block(block_id);
-      if (NULL == logic_block)
-      {
-        TBSYS_LOG(ERROR, "blockid: %u is not exist.", block_id);
-        return EXIT_NO_LOGICBLOCK_ERROR;
-      }
-
-      int ret = logic_block->unlink_file(file_id, action, file_size);
+      int32_t ret = NULL == logic_block ? EXIT_NO_LOGICBLOCK_ERROR : TFS_SUCCESS;
       if (TFS_SUCCESS != ret)
       {
-        TBSYS_LOG(ERROR, "del file fail, blockid: %u, fileid: %" PRI64_PREFIX "u, ret: %d", block_id, file_id, ret);
-        return ret;
+        TBSYS_LOG(INFO, "block: %u is not exist.", block_id);
       }
-
-      return TFS_SUCCESS;
+      if (TFS_SUCCESS == ret)
+      {
+        ret = logic_block->check_block_version(info, remote_version);
+        if (TFS_SUCCESS != ret)
+        {
+          TBSYS_LOG(INFO, "block: %u version error. remote_version: %d, local_version: %d, ret: %d",
+             block_id, remote_version, info.version_, ret);
+        }
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = logic_block->unlink_file(file_id, action, file_size);
+        if (TFS_SUCCESS != ret)
+        {
+          TBSYS_LOG(ERROR, "del file fail, blockid: %u, fileid: %" PRI64_PREFIX "u, ret: %d", block_id, file_id, ret);
+        }
+      }
+      return ret;
     }
 
     int DataManagement::batch_new_block(const VUINT32* new_blocks)
@@ -790,52 +741,33 @@ namespace tfs
       return EXIT_SUCCESS;
     }
 
-    // gc expired and no referenced datafile
-    int DataManagement::gc_data_file()
+    int DataManagement::create_file_id_(uint64_t& file_id, const uint32_t block_id)
     {
-      int32_t current_time = time(NULL);
-      int32_t diff_time = current_time - SYSPARAM_DATASERVER.expire_data_file_time_;
-
-      if (last_gc_data_file_time_ < diff_time)
+      int32_t ret = INVALID_BLOCK_ID == block_id ? EXIT_PARAMETER_ERROR : TFS_SUCCESS;
+      if (TFS_SUCCESS == ret)
       {
-        data_file_mutex_.lock();
-        int32_t old_data_file_size = data_file_map_.size();
-        for (DataFileMapIter it = data_file_map_.begin(); it != data_file_map_.end();)
+        LogicBlock* block = BlockFileManager::get_instance()->get_logic_block(block_id);
+        ret = NULL != block ? TFS_SUCCESS : EXIT_NO_LOGICBLOCK_ERROR;
+        if (TFS_SUCCESS != ret)
+          TBSYS_LOG(INFO, "block: %u is not exist.", block_id);
+        if (TFS_SUCCESS == ret)
         {
-          // no reference and expire
-          if (it->second && it->second->get_ref() <= 0 && it->second->get_last_update() < diff_time)
+          if (0 == file_id)
           {
-            tbsys::gDelete(it->second);
-            data_file_map_.erase(it++);
+            ret = block->open_write_file(file_id);
+            if (TFS_SUCCESS != ret)
+              TBSYS_LOG(INFO, "create file id failed. blockid: %u, ret: %d.", block_id, ret);
           }
           else
           {
-            ++it;
+            //update seq no over current one to avoid overwrite
+            block->reset_seq_id(file_id);
           }
         }
-
-        int32_t new_data_file_size = data_file_map_.size();
-
-        last_gc_data_file_time_ = current_time;
-        data_file_mutex_.unlock();
-        TBSYS_LOG(INFO, "datafilemap size. old: %d, new: %d", old_data_file_size, new_data_file_size);
       }
-
-      return TFS_SUCCESS;
+      TBSYS_LOG(DEBUG, "create file id %s. blockid: %u, fileid: %" PRI64_PREFIX "u",
+          TFS_SUCCESS == ret ? "successful" : "failed",block_id, file_id);
+      return ret;
     }
-
-    // remove all datafile
-    int DataManagement::remove_data_file()
-    {
-      data_file_mutex_.lock();
-      for (DataFileMapIter it = data_file_map_.begin(); it != data_file_map_.end(); ++it)
-      {
-        tbsys::gDelete(it->second);
-      }
-      data_file_map_.clear();
-      data_file_mutex_.unlock();
-      return TFS_SUCCESS;
-    }
-
   }
 }

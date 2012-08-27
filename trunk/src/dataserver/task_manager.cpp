@@ -100,7 +100,7 @@ namespace tfs
     {
       int64_t seqno = packet->get_seqno();
       // task maybe expired already, ignore response in this case
-      TBSYS_LOG(DEBUG, "handle complete, running task map size %u", running_task_.size());
+      TBSYS_LOG(DEBUG, "handle complete, running task map size %zd", running_task_.size());
 
       running_task_mutex_.lock();
       std::map<int64_t, Task*>::iterator it = running_task_.find(seqno);

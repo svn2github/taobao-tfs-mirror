@@ -96,6 +96,66 @@ namespace tfs
       return iret;
     }
 
+    WriteDataResponseMessage::WriteDataResponseMessage():
+      server_(common::INVALID_SERVER_ID),
+      offset_(-1),
+      status_(common::TFS_ERROR)
+    {
+      _packetHeader._pcode = common::RSP_WRITE_DATA_MESSAGE;
+    }
+
+    WriteDataResponseMessage::~WriteDataResponseMessage()
+    {
+
+    }
+
+    int WriteDataResponseMessage::serialize(common::Stream& output) const
+    {
+      int32_t ret = output.set_int64(server_);
+      if (common::TFS_SUCCESS == ret)
+      {
+        ret = output.set_int64(offset_);
+      }
+      if (common::TFS_SUCCESS == ret)
+      {
+        ret = output.set_int32(status_);
+      }
+      if (common::TFS_SUCCESS == ret)
+      {
+        int64_t pos = 0;
+        ret = info_.serialize(output.get_free(), output.get_free_length(), pos);
+        if (common::TFS_SUCCESS == ret)
+          output.pour(info_.length());
+      }
+      return ret;
+    }
+
+    int WriteDataResponseMessage::deserialize(common::Stream& input)
+    {
+      int32_t ret = input.get_int64(reinterpret_cast<int64_t*>(&server_));
+      if (common::TFS_SUCCESS == ret)
+      {
+        ret = input.get_int64(&offset_);
+      }
+      if (common::TFS_SUCCESS == ret)
+      {
+        ret = input.get_int32(&status_);
+      }
+      if (common::TFS_SUCCESS == ret)
+      {
+        int64_t pos = 0;
+        ret = info_.deserialize(input.get_data(), input.get_data_length(), pos);
+        if (common::TFS_SUCCESS == ret)
+          input.drain(info_.length());
+      }
+      return ret;
+    }
+
+    int64_t WriteDataResponseMessage::length() const
+    {
+      return common::INT64_SIZE * 2 + common::INT_SIZE  + info_.length();
+    }
+
 #ifdef _DEL_001_
     RespWriteDataMessage::RespWriteDataMessage():
       length_(0)

@@ -147,18 +147,13 @@ namespace tfs
       return index_handle_->find_avail_key(inner_file_id);
     }
 
-    int LogicBlock::check_block_version(int32_t& remote_version, UpdateBlockType& repair)
+    int LogicBlock::check_block_version(common::BlockInfo& info, const int32_t remote_version)
     {
-      ScopedRWLock scoped_lock(rw_lock_, WRITE_LOCKER);
-      int ret = index_handle_->check_block_version(remote_version);
-      if (EXIT_BLOCK_DS_VERSION_ERROR == ret)
-      {
-        repair = UPDATE_BLOCK_REPAIR;
-      }
-      return ret;
+      ScopedRWLock scoped_lock(rw_lock_, READ_LOCKER);
+      return index_handle_->check_block_version(info, remote_version);
     }
 
-    int LogicBlock::close_write_file(const uint64_t inner_file_id, DataFile* datafile, const uint32_t crc)
+    int LogicBlock::close_write_file(const uint64_t inner_file_id, DataFile& datafile, const uint32_t crc)
     {
       ScopedRWLock scoped_lock(rw_lock_, WRITE_LOCKER);
 
@@ -173,7 +168,7 @@ namespace tfs
       // save backup for roll back if update meta fail
       RawMeta bak_file_meta(file_meta);
 
-      int32_t file_size = datafile->get_length();
+      int32_t file_size = datafile.get_length();
       FileInfo tfs_file_info, old_file_info;
       tfs_file_info.id_ = inner_file_id;
       tfs_file_info.size_ = file_size + sizeof(FileInfo);
@@ -264,7 +259,7 @@ namespace tfs
           break;
 
         // write data from datafile to block
-        while ((tmp_data_buffer = datafile->get_data(NULL, &read_len, read_offset)) != NULL)
+        while ((tmp_data_buffer = datafile.get_data(NULL, &read_len, read_offset)) != NULL)
         {
           if (read_len < 0 || (read_len + read_offset) > file_size)
           {
@@ -329,7 +324,7 @@ namespace tfs
         // update index handle statistics
         if (oper_type == C_OPER_INSERT)
         {
-          ret = index_handle_->update_block_info(C_OPER_INSERT, file_meta.get_size());
+          ret = index_handle_->update_block_meta(C_OPER_INSERT, file_meta.get_size());
           if (TFS_SUCCESS != ret)
             break;
         }
@@ -337,16 +332,16 @@ namespace tfs
         {
           if (0 != old_size)
           {
-            ret = index_handle_->update_block_info(C_OPER_DELETE, old_size);
+            ret = index_handle_->update_block_meta(C_OPER_DELETE, old_size);
             if (TFS_SUCCESS != ret)
               break;
-            ret = index_handle_->update_block_info(C_OPER_INSERT, file_meta.get_size());
+            ret = index_handle_->update_block_meta(C_OPER_INSERT, file_meta.get_size());
             if (TFS_SUCCESS != ret)
               break;
           }
           else
           {
-            ret = index_handle_->update_block_info(C_OPER_UPDATE, 0);
+            ret = index_handle_->update_block_meta(C_OPER_UPDATE, 0);
             if (TFS_SUCCESS != ret)
               break;
           }
@@ -643,10 +638,10 @@ namespace tfs
       switch (oper_type)
       {
       case C_OPER_DELETE:
-        ret = index_handle_->update_block_info(C_OPER_DELETE, file_meta.get_size());
+        ret = index_handle_->update_block_meta(C_OPER_DELETE, file_meta.get_size());
         break;
       case C_OPER_UNDELETE:
-        ret = index_handle_->update_block_info(C_OPER_UNDELETE, file_meta.get_size());
+        ret = index_handle_->update_block_meta(C_OPER_UNDELETE, file_meta.get_size());
         break;
       default:
         break;

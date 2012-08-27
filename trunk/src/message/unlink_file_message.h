@@ -151,12 +151,39 @@ namespace tfs
           return (lease_id_ != common::INVALID_LEASE_ID);
         }
 
+        inline uint64_t get_lease_id_ext() const { return lease_id_ext_;}
+        inline void set_lease_id_ext(const uint64_t lease_id) { lease_id_ext_ = lease_id;}
+
       protected:
         UnlinkFileInfo unlink_file_info_;
         int32_t option_flag_;
         mutable common::VUINT64 dataservers_;
         mutable int32_t version_;
         mutable uint32_t lease_id_;
+        uint64_t lease_id_ext_;
+    };
+
+    class UnlinkFileResponseMessage : public  common::BasePacket
+    {
+    public:
+      UnlinkFileResponseMessage();
+      virtual ~UnlinkFileResponseMessage(){}
+      virtual int serialize(common::Stream& output) const ;
+      virtual int deserialize(common::Stream& input);
+      virtual int64_t length() const;
+      inline void set_lease_id(const uint64_t lease_id) { lease_id_  = lease_id;}
+      inline uint64_t get_lease_id() const { return lease_id_;}
+      inline void set_server(const uint64_t server) { server_= server;}
+      inline uint64_t get_server() const { return server_;}
+      inline void set_status(const int32_t status) { status_ = status;}
+      inline int32_t get_status() const { return status_;}
+      inline void set_block_info(const common::BlockInfo& info)  { info_= info;}
+      inline const common::BlockInfo& get_block_info() const { return info_;}
+    private:
+      uint64_t lease_id_;
+      uint64_t server_;
+      int32_t  status_;
+      common::BlockInfo info_;
     };
   }
 }

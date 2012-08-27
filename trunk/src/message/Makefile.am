@@ -17,7 +17,7 @@ HEADER=dump_plan_message.h client_cmd_message.h heart_message.h\
 			 meta_nameserver_client_message.h meta_nameserver_client_message.h\
 			 rts_ms_heart_message.h get_tables_from_rts_message.h base_task_message.h\
 			 update_table_message.h rts_rts_heart_message.h checkserver_message.h\
-			 erasure_code_message.h dataserver_task_message.h
+			 erasure_code_message.h dataserver_task_message.h resolve_block_version_conflict_message.h
 libtfsmessage_a_SOURCES = dump_plan_message.cpp client_cmd_message.cpp heart_message.cpp\
 													oplog_sync_message.cpp crc_error_message.cpp reload_message.cpp\
 													unlink_file_message.cpp file_info_message.cpp rollback_message.cpp\
@@ -29,7 +29,7 @@ libtfsmessage_a_SOURCES = dump_plan_message.cpp client_cmd_message.cpp heart_mes
 													meta_nameserver_client_message.cpp rts_ms_heart_message.cpp\
 													get_tables_from_rts_message.cpp update_table_message.cpp\
 													rts_rts_heart_message.cpp checkserver_message.cpp erasure_code_message.cpp \
-													dataserver_task_message.cpp $(HEADER)
+													dataserver_task_message.cpp resolve_block_version_conflict_message.cpp $(HEADER)
 
 libtfsmessage_a_CPPFLAGS = $(AM_CPPFLAGS)
 

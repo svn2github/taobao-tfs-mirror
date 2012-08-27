@@ -111,7 +111,7 @@ namespace tfs
         {
           return lease_id_;
         }
-        inline common::WriteDataInfo get_write_info() const
+        inline common::WriteDataInfo& get_write_info()
         {
           return write_data_info_;
         }
@@ -126,6 +126,29 @@ namespace tfs
         mutable common::VUINT64 ds_;
         mutable int32_t version_;
         mutable uint32_t lease_id_;
+    };
+
+    class WriteDataResponseMessage: public common::BasePacket
+    {
+    public:
+      WriteDataResponseMessage();
+      virtual ~WriteDataResponseMessage();
+      virtual int serialize(common::Stream& output) const ;
+      virtual int deserialize(common::Stream& input);
+      virtual int64_t length() const;
+      inline void set_server(const uint64_t server) { server_ = server;}
+      inline uint64_t get_server() const { return server_;}
+      inline void set_offset(const int64_t offset) { offset_ = offset;}
+      inline int64_t get_offset() const { return offset_;}
+      inline void set_block_info(const common::BlockInfo& info)  { info_= info;}
+      inline const common::BlockInfo& get_block_info() const { return info_;}
+      inline void set_status(const int32_t status) {status_ = status;}
+      inline int32_t get_status() const { return status_;}
+    private:
+      uint64_t server_;
+      int64_t  offset_;
+      int32_t  status_;
+      common::BlockInfo info_;
     };
 
 #ifdef _DEL_001_
