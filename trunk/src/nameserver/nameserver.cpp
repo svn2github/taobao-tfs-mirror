@@ -297,6 +297,9 @@ namespace tfs
             case REPLICATE_BLOCK_MESSAGE:
             case BLOCK_COMPACT_COMPLETE_MESSAGE:
             case REMOVE_BLOCK_RESPONSE_MESSAGE:
+            case REQ_EC_MARSHALLING_COMMIT_MESSAGE:
+            case REQ_EC_REINSTATE_COMMIT_MESSAGE:
+            case REQ_EC_DISSOLVE_COMMIT_MESSAGE:
               ret = layout_manager_.get_client_request_server().handle(msg);
               break;
             case UPDATE_BLOCK_INFO_MESSAGE:
@@ -305,9 +308,6 @@ namespace tfs
             case SHOW_SERVER_INFORMATION_MESSAGE:
               ret = show_server_information(msg);
               break;
-            /*case OWNER_CHECK_MESSAGE:
-              ret = owner_check(msg);
-              break;*/
             case STATUS_MESSAGE:
               ret = ping(msg);
               break;
@@ -316,6 +316,9 @@ namespace tfs
               break;
             case CLIENT_CMD_MESSAGE:
               ret = client_control_cmd(msg);
+              break;
+            case REQ_RESOLVE_BLOCK_VERSION_CONFLICT_MESSAGE:
+              ret = resolve_block_version_conflict(msg);
               break;
             default:
               ret = EXIT_UNKNOWN_MSGTYPE;
@@ -552,16 +555,19 @@ namespace tfs
       return ret;
     }
 
-    /*int NameServer::owner_check(common::BasePacket* msg)
+    int NameServer::resolve_block_version_conflict(common::BasePacket* msg)
     {
-      int32_t ret = (NULL != msg) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
-      if (common::TFS_SUCCESS == ret)
+      int32_t ret = ((NULL != msg) && (msg->getPCode() == REQ_RESOLVE_BLOCK_VERSION_CONFLICT_MESSAGE)) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+      if (TFS_SUCCESS == ret)
       {
-        NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
-        ngi.last_owner_check_time_ = tbutil::Time::now(tbutil::Time::Monotonic).toMicroSeconds();//us
+        ResolveBlockVersionConflictMessage* message = dynamic_cast<ResolveBlockVersionConflictMessage*>(msg);
+        ret = layout_manager_.get_client_request_server().resolve_block_version_conflict(message->get_block(), message->get_members());
+        ResolveBlockVersionConflictResponseMessage* reply_msg = new ResolveBlockVersionConflictResponseMessage();
+        reply_msg->set_status(ret);
+        ret = message->reply(reply_msg);
       }
       return ret;
-    }*/
+    }
 
     int NameServer::ping(common::BasePacket* msg)
     {

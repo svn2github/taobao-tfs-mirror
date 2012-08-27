@@ -177,6 +177,7 @@ namespace tfs
     class BlockBase
     {
       public:
+        int64_t family_id_;
         common::BlockInfo info_;
         std::vector<ServerInfo> server_list_;
 
@@ -201,7 +202,7 @@ namespace tfs
       std::string tmp = ns_ip_port.substr(0, pos);
       return common::Func::str_to_addr(tmp.c_str(), atoi(ns_ip_port.substr(pos + 1).c_str()));
     }
-    static inline int get_addr(const std::string& ns_ip_port, uint32_t& ip, uint32_t& port)
+    static inline int get_addr(const std::string& ns_ip_port, int64_t& ip, int64_t& port)
     {
       int ret = common::TFS_ERROR;
       std::string::size_type pos = ns_ip_port.find_first_of(":");

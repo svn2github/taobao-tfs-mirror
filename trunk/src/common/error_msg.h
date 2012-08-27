@@ -122,6 +122,7 @@ namespace tfs
     const int32_t EXIT_TASK_TYPE_NOT_DEFINED = -5041;
     const int32_t EXIT_CREATE_FAMILY_ID_ERROR = -5042;
     const int32_t EXIT_BLOCK_NO_WRITABLE = -5043;
+    const int32_t EXIT_FAMILY_MEMBER_INFO_ERROR = -5044;
 
     const int32_t EXIT_WRITE_OFFSET_ERROR = -8001; // write offset error
     const int32_t EXIT_READ_OFFSET_ERROR = -8002; // read offset error
@@ -162,6 +163,8 @@ namespace tfs
     const int32_t EXIT_FALLOCATE_NOT_IMPLEMENT = -8037; // fallocate is not implement
     const int32_t EXIT_SYNC_FILE_ERROR = -8038;//sync file failed
     const int32_t EXIT_HALF_BLOCK_ERROR = -8039;  // half state block
+    const int32_t EXIT_INVALID_WRITE_LEASE = -8040;
+    const int32_t EXIT_RESOLVE_BLOCK_VERSION_CONFLICT_ERROR = -8041;
 
     const int32_t EXIT_SESSION_EXIST_ERROR = -9001;
     const int32_t EXIT_SESSIONID_INVALID_ERROR = -9002;

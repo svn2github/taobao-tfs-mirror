@@ -70,10 +70,9 @@ namespace tfs
       last_rotate_log_time_ = 0;
       plan_run_flag_ |= PLAN_RUN_FLAG_MOVE;
       plan_run_flag_ |= PLAN_RUN_FLAG_COMPACT;
-      plan_run_flag_ |= PLAN_RUN_FLAG_DELETE;
       plan_run_flag_ |= PLAN_RUN_FALG_MARSHALLING;
-      //plan_run_flag_ |= PLAN_RUN_FALG_REINSTATE;
-      //plan_run_flag_ |= PLAN_RUN_FALG_DISSOLVE;
+      plan_run_flag_ |= PLAN_RUN_FALG_REINSTATE;
+      plan_run_flag_ |= PLAN_RUN_FALG_DISSOLVE;
     }
 
 
@@ -406,9 +405,12 @@ namespace tfs
       int32_t ret = (NULL != msg) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
-        ret = msg->getPCode() == BLOCK_COMPACT_COMPLETE_MESSAGE
+        ret = (msg->getPCode() == BLOCK_COMPACT_COMPLETE_MESSAGE
           || msg->getPCode() == REPLICATE_BLOCK_MESSAGE
-          || msg->getPCode() == REMOVE_BLOCK_RESPONSE_MESSAGE ? TFS_SUCCESS : EXIT_UNKNOWN_MSGTYPE;
+          || msg->getPCode() == REMOVE_BLOCK_RESPONSE_MESSAGE
+          || msg->getPCode() == REQ_EC_MARSHALLING_COMMIT_MESSAGE
+          || msg->getPCode() == REQ_EC_REINSTATE_COMMIT_MESSAGE
+          || msg->getPCode() == REQ_EC_DISSOLVE_COMMIT_MESSAGE) ? TFS_SUCCESS : EXIT_UNKNOWN_MSGTYPE;
         if (TFS_SUCCESS != ret)
         {
           TBSYS_LOG(INFO, "handle_task_complete unkonw message PCode = %d", msg->getPCode());
@@ -659,7 +661,7 @@ namespace tfs
               get_block_manager().get_emergency_replicate_queue_size(), need);
           }
 
-          /*if (need > 0)
+          if (need > 0)
           {
             scan_replicate_queue_(need, now);
           }
@@ -667,7 +669,7 @@ namespace tfs
           if (need > 0)
           {
             scan_reinstate_or_dissolve_queue_(need , now);
-          }*/
+          }
 
           results.clear();
 
@@ -681,14 +683,12 @@ namespace tfs
               block_start = 0;
           }
 
-          //TODO
-          family_start = 0;
-          /*if (need > 0)
+          if (need > 0)
           {
             over = scan_family_(helpers, need, family_start, MAX_QUERY_FAMILY_NUMS, now, compact_time);
             if (over)
               family_start = 0;
-          }*/
+          }
 
           if (need > 0)
           {
@@ -797,6 +797,7 @@ namespace tfs
         get_block_manager().timeout(now);
 
         get_family_manager().marshalling_queue_timeout(now);
+        get_family_manager().dump_marshalling_queue(TBSYS_LOG_LEVEL_INFO, "timeout dump");
 
         get_block_manager().expand_ratio(block_expand_index);
 
@@ -1615,7 +1616,7 @@ namespace tfs
       {
         get_family_manager().dump_marshalling_queue(TBSYS_LOG_LEVEL_INFO);
         int32_t DATA_MEMBER_NUM  = SYSPARAM_NAMESERVER.max_data_member_num_;
-        int32_t CHECK_MEMBER_NUM = SYSPARAM_NAMESERVER.max_data_member_num_;
+        int32_t CHECK_MEMBER_NUM = SYSPARAM_NAMESERVER.max_check_member_num_;
         ServerCollect* servers[MAX_MARSHALLING_NUM];
         std::pair<uint64_t, uint32_t> members[MAX_MARSHALLING_NUM];
         common::ArrayHelper<ServerCollect*> helper(MAX_MARSHALLING_NUM, servers);
@@ -1640,7 +1641,7 @@ namespace tfs
 
           if (TFS_SUCCESS == ret)
           {
-            ret = get_family_manager().create_family_choose_check_members(member_helper, helper, CHECK_MEMBER_NUM);
+            ret = get_family_manager().create_family_choose_check_members(member_helper, helper, CHECK_MEMBER_NUM * 8);
             if (TFS_SUCCESS == ret)
             {
               ret = CHECK_MEMBER_NUM == (member_helper.get_array_index() - DATA_MEMBER_NUM) ?
@@ -1663,7 +1664,7 @@ namespace tfs
             SET_MASTER_INDEX(family_aid_info, DATA_MEMBER_NUM + 1);
             SET_MARSHALLING_TYPE(family_aid_info, SYSPARAM_NAMESERVER.marshalling_type_);
             FamilyMemberInfo fminfo[MAX_MARSHALLING_NUM];
-            for (int64_t index = 0; member_helper.get_array_index(); ++index)
+            for (int64_t index = 0; index < member_helper.get_array_index(); ++index)
             {
               std::pair<uint64_t, uint32_t>* item = member_helper.at(index);
               fminfo[index].block_ = item->second;
@@ -1689,7 +1690,7 @@ namespace tfs
       bool ret  = false;
       BlockCollect* block = NULL;
       bool over = get_block_manager().scan(results, start, max_query_block_num);
-      for (int64_t index = 0; index < results.get_array_index(); ++index)
+      for (int64_t index = 0; index < results.get_array_index() && need > 0; ++index)
       {
         block = *results.at(index);
         assert(NULL != block);
@@ -1700,10 +1701,15 @@ namespace tfs
             && get_block_manager().need_compact(block,now));
         if ((ret) && (ret = build_compact_task_(block, now)))
           --need;
-        ret = (!ret && marshalling_time && (plan_run_flag_ & PLAN_RUN_FALG_MARSHALLING)
+        //TODO
+        //ret = (!ret && marshalling_time && (plan_run_flag_ & PLAN_RUN_FALG_MARSHALLING)
+        UNUSED(marshalling_time);
+        ret = (!ret /*&& marshalling_time*/ && (plan_run_flag_ & PLAN_RUN_FALG_MARSHALLING)
             && get_block_manager().need_marshalling(block, now));
         if ((ret) && (ret = get_family_manager().push_block_to_marshalling_queues(block, now)))
-          --need;
+        {
+
+        }
       }
       return over;
     }
@@ -1713,6 +1719,7 @@ namespace tfs
     {
       //这里其实应该搞一个队列，将需要恢复/解散的Family放入一个队列，暂时先这么做，后期再优化
       UNUSED(compact_time);
+      UNUSED(need);
       results.clear();
       bool ret  = false;
       FamilyCollect* family = NULL;
@@ -1726,10 +1733,14 @@ namespace tfs
         assert(NULL != family);
         ret = get_family_manager().check_need_reinstate(helper, family, now);
         if ((ret) && (ret = get_family_manager().push_to_reinstate_or_dissolve_queue(family)))
-          --need;
+        {
+
+        }
         ret = ((!ret) && get_family_manager().check_need_dissolve(family, helper));
         if ((ret) && (ret = get_family_manager().push_to_reinstate_or_dissolve_queue(family)))
-          --need;
+        {
+
+        }
         //ret = ((!ret) && compact_time && get_family_manager().check_need_compact());
       }
       return over;

@@ -596,7 +596,7 @@ namespace tfs
         {
           ReplicateBlockMessage rreq;
           rreq.set_repl_block(&info);
-          rreq.set_command(random() % 32 == 0 ? PLAN_STATUS_FAILURE : PLAN_STATUS_END);
+          rreq.set_status(random() % 32 == 0 ? PLAN_STATUS_FAILURE : PLAN_STATUS_END);
           rreq.set_seqno(msg->get_seqno());
           result = NULL;
           client = NewClientManager::get_instance().create_client();
@@ -635,8 +635,8 @@ namespace tfs
       {
         packet->reply(new StatusMessage(STATUS_MESSAGE_OK));
         usleep(200000);
-        CompactBlockMessage* msg = dynamic_cast<CompactBlockMessage*>(packet);
-        CompactBlockCompleteMessage result;
+        /*NsRequestCompactBlockMessage* msg = dynamic_cast<NsRequestCompactBlockMessage*>(packet);
+        DsCommitCompactBlockCompleteToNsMessage result;
         result.set_seqno(msg->get_seqno());
         result.set_block_id(msg->get_block_id());
         CompactStatus status = (random() % 32 == 0) ? COMPACT_STATUS_FAILED : COMPACT_STATUS_SUCCESS;
@@ -654,7 +654,7 @@ namespace tfs
         NewClient* client = NewClientManager::get_instance().create_client();
         tbnet::Packet* tmp = NULL;
         ret = send_msg_to_server(ns_vip_, client, &result, tmp);
-        NewClientManager::get_instance().destroy_client(client);
+        NewClientManager::get_instance().destroy_client(client);*/
       }
       return ret;
     }

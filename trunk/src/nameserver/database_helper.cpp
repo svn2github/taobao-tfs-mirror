@@ -362,8 +362,8 @@ namespace tfs
         ret = NULL != new_conn ? TFS_SUCCESS : EXIT_CONNECT_MYSQL_ERROR;
         if (TFS_SUCCESS != ret)
         {
-          TBSYS_LOG(WARN, "connect mysql database: %s %d %s %s error: %s", hostname_.c_str(), port_,
-              username_.c_str(), password_.c_str(), mysql_error(&mysql_));
+          TBSYS_LOG(WARN, "connect mysql database: %s %d %s %s %s error: %s:%d", hostname_.c_str(), port_,dbname_.c_str(),
+              username_.c_str(), password_.c_str(), mysql_error(&mysql_), mysql_errno(&mysql_));
         }
         else
         {
@@ -414,9 +414,6 @@ namespace tfs
       if (TFS_SUCCESS == ret)
       {
         ret = mysql_stmt_execute(stmt) ? EXIT_EXECUTE_SQL_ERROR : TFS_SUCCESS;
-
-        TBSYS_LOG(ERROR, "exectue sql error %d=>%s",
-              mysql_stmt_errno(stmt), mysql_stmt_error(stmt));
         if (TFS_SUCCESS != ret)
         {
           TBSYS_LOG(ERROR, "exectue sql error %d=>%s",

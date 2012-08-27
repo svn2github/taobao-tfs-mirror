@@ -699,6 +699,9 @@ namespace tfs
           case REPLICATE_BLOCK_MESSAGE:
           case BLOCK_COMPACT_COMPLETE_MESSAGE:
           case REMOVE_BLOCK_RESPONSE_MESSAGE:
+          case REQ_EC_MARSHALLING_COMMIT_MESSAGE:
+          case REQ_EC_REINSTATE_COMMIT_MESSAGE:
+          case REQ_EC_DISSOLVE_COMMIT_MESSAGE:
             ret = manager_.handle_task_complete(msg);
             break;
           default:

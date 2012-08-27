@@ -145,14 +145,15 @@ namespace tfs
         server_list_.push_back(server_info);
         server_size--;
       }
+      family_id_ = input.readInt64();
       offset += (len - input.getDataLen());
       return TFS_SUCCESS;
     }
 
     void BlockBase::dump() const
     {
-      TBSYS_LOG(INFO, "block_id: %u, version: %d, file_count: %d, size: %d, del_file_count: %d, del_size: %d, seq_no: %u, copys: %Zd",
-          info_.block_id_, info_.version_, info_.file_count_, info_.size_, info_.del_file_count_, info_.del_size_, info_.seq_no_, server_list_.size());
+      TBSYS_LOG(INFO, "family_id: %"PRI64_PREFIX"d,block_id: %u, version: %d, file_count: %d, size: %d, del_file_count: %d, del_size: %d, seq_no: %u, copys: %Zd",
+          family_id_, info_.block_id_, info_.version_, info_.file_count_, info_.size_, info_.del_file_count_, info_.del_size_, info_.seq_no_, server_list_.size());
     }
   }
 }

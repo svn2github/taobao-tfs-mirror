@@ -50,7 +50,7 @@ namespace tfs
       virtual int deserialize(common::Stream& input);
       virtual int64_t length() const;
       virtual void dump(void) const;
-      inline int8_t get_status() const { return family_id_;}
+      inline int8_t get_status() const { return status_;}
       inline void set_status(const int8_t status) { status_ = status;}
       private:
       DISALLOW_COPY_AND_ASSIGN(ECMarshallingCommitMessage);

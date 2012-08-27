@@ -24,7 +24,7 @@ namespace tfs
     class BaseTaskMessage: public common::BasePacket
     {
       public:
-        BaseTaskMessage(){}
+        BaseTaskMessage():seqno_(0), expire_time_(0){}
         virtual ~BaseTaskMessage(){}
         virtual int serialize(common::Stream& output) const = 0;
         virtual int deserialize(common::Stream& input) = 0;

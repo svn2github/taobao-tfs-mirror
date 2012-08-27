@@ -195,7 +195,7 @@ void print_block_map(BLOCK_MAP* block_map)
   int64_t total_size = 0;
   int64_t total_delfile_count = 0;
   int64_t total_del_size = 0;
-  printf("BLOCK_ID   VERSION    FILECOUNT  SIZE       DEL_FILE   DEL_SIZE   SEQ_NO   COPIES\n");
+  printf("FAMILY_ID   BLOCK_ID   VERSION    FILECOUNT  SIZE       DEL_FILE   DEL_SIZE   SEQ_NO   COPIES\n");
   printf("---------- ---------- ---------- ---------- ---------- ---------- ------   ------\n");
   BLOCK_MAP_ITER it = block_map->begin();
   for (; it != block_map->end(); it++)

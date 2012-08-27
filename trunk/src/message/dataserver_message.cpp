@@ -195,7 +195,6 @@ namespace tfs
         int32_t size = 0;
         int64_t pos = 0;
         iret = input.get_int32(&size);
-        TBSYS_LOG(DEBUG, "SSSSSSSSSSSSSSSSSSSSSSSSS %d, %d", size, flag_);
         if (common::TFS_SUCCESS == iret)
         {
           if (common::REPORT_BLOCK_NORMAL == flag_)

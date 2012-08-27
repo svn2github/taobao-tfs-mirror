@@ -408,6 +408,7 @@ namespace tfs
             }
           }
         }
+        param.data_.writeInt64(family_id_);
       }
       return has_dump ? TFS_SUCCESS : TFS_ERROR;
     }

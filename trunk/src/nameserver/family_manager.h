@@ -61,6 +61,7 @@ namespace tfs
         int insert(const uint64_t server, const uint32_t block);
         int choose_item_random(std::pair<uint64_t, uint32_t>& pair);
         std::pair<uint64_t, uint32_t> slot_[MAX_SINGLE_RACK_SERVER_NUM];
+        void dump(const int32_t level, const char* format = NULL) const;
         #ifdef TFS_GTEST
         bool get(std::pair<uint64_t, uint32_t>& pair, const uint64_t server, const uint32_t block) const;
         #endif
@@ -108,12 +109,13 @@ namespace tfs
       int reinstate_family_choose_members(common::ArrayHelper<uint64_t>& results,
           const int64_t family_id, const int32_t data_member_num);
       int dissolve_family_choose_member_targets_server(common::ArrayHelper<std::pair<uint64_t, uint32_t> >& results,
-          const int64_t family_id);
+          const int64_t family_id, const int32_t family_aid_info);
       bool check_need_reinstate(common::ArrayHelper<common::FamilyMemberInfo>& reinstate_members,
           const FamilyCollect* family, const time_t now) const;
       bool check_need_dissolve(const FamilyCollect* family,
           const common::ArrayHelper<common::FamilyMemberInfo>& need_reinstate_members) const;
       bool check_need_compact() const;//TODO
+      void dump_marshalling_queue(const int32_t level, const char* format = NULL) const;
     private:
       DISALLOW_COPY_AND_ASSIGN(FamilyManager);
       FamilyCollect* get_(const int64_t family_id) const;
