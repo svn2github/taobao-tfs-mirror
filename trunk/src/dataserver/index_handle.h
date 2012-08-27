@@ -68,9 +68,11 @@ namespace tfs
     struct ParityIndexHeader
     {
       common::BlockInfo block_info_;
-      int magic_;
       DirtyFlag flag_;
-      int index_num_;
+      int32_t magic_;
+      int32_t data_file_offset_; // offset to write next data in block(total data size of block)
+      int32_t index_file_size_; // offset after: index_header + all buckets
+      int32_t index_num_;
     };
 
     class IndexHandle

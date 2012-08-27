@@ -216,12 +216,13 @@ namespace tfs
     }
 
     void PhysicalBlock::set_block_prefix(const uint32_t block_id, const uint32_t prev_physic_blockid,
-        const uint32_t next_physical_blockid, const uint64_t group_id)
+        const uint32_t next_physical_blockid, const uint64_t group_id, const int32_t flag)
     {
       block_prefix_.logic_blockid_ = block_id;
       block_prefix_.prev_physic_blockid_ = prev_physic_blockid;
       block_prefix_.next_physic_blockid_ = next_physical_blockid;
       block_prefix_.group_id_ = group_id;
+      block_prefix_.flag_ = flag;
       return;
     }
 

@@ -40,7 +40,7 @@ namespace tfs
       public:
         int clear_block_prefix();
         void set_block_prefix(const uint32_t block_id, const uint32_t prev_physic_blockid,
-            const uint32_t next_physical_blockid, const uint64_t group_id = 0);
+            const uint32_t next_physical_blockid, const uint64_t group_id = 0, const int32_t flag = 0);
 
         static int init_prefix_op(std::string& mount_path);  // mmap block_prefix file
 

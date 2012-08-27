@@ -66,11 +66,16 @@ namespace tfs
       }
       else
       {
+        char init_data[PARITY_INDEX_MMAP_SIZE];
+        memset(init_data, 0, sizeof(init_data));
+
         ParityIndexHeader i_header;
+        memset(&i_header, 0, sizeof(ParityIndexHeader));
         i_header.block_info_.block_id_ = logic_block_id;
-        i_header.magic_ = 0;
         i_header.flag_ = dirty_flag;
-        i_header.index_num_ = 0;
+        i_header.index_file_size_ = PARITY_INDEX_MMAP_SIZE;
+
+        memcpy(init_data, &i_header, sizeof(ParityIndexHeader));
 
         // store index header
         ret = file_op_->pwrite_file((char*)&i_header, sizeof(ParityIndexHeader), 0);
@@ -98,12 +103,11 @@ namespace tfs
       {
         is_load_ = true;
         TBSYS_LOG(INFO, "create parity index succeed. block id: %u, dirty flag: %d",
-          logic_block_id, dirty_flag);
+            logic_block_id, dirty_flag);
       }
       else
       {
-        TBSYS_LOG(ERROR, "create parity index fail. blockid: %u, ret: %d",
-            logic_block_id, ret);
+        TBSYS_LOG(ERROR, "create parity index fail. blockid: %u, ret: %d", logic_block_id, ret);
       }
 
       return ret;
@@ -233,12 +237,7 @@ namespace tfs
     int IndexHandle::write_data_index(const RawIndexVec& index_vec)
     {
       int ret = TFS_SUCCESS;
-      if (0 == index_vec.size())
-      {
-        ret = TFS_ERROR;
-        TBSYS_LOG(ERROR, "no element int index vector");
-      }
-      else
+      if (index_vec.size() > 0)
       {
         if (NULL == index_vec[0].data_)
         {
@@ -262,14 +261,9 @@ namespace tfs
     int IndexHandle::write_parity_index(const RawIndexVec& index_vec)
     {
       int ret = TFS_SUCCESS;
-      if (0 == index_vec.size())
+      if (index_vec.size() > 0)
       {
-        ret = TFS_ERROR;
-        TBSYS_LOG(ERROR, "no element int index vector");
-      }
-      else
-      {
-        uint32_t old_num = pindex_header()->index_num_;
+        int32_t old_num = pindex_header()->index_num_;
         for (uint32_t i = 0; i < index_vec.size() && TFS_SUCCESS == ret; i++)
         {
           ret = pappend_index(index_vec[i].block_id_, index_vec[i].data_, index_vec[i].size_);
@@ -461,7 +455,7 @@ namespace tfs
 
       // check stored logic block id and bucket size
       // meta info corrupt, may be destroyed when created by unexpect interrupt
-      if (0 == bucket_size() || 0 == block_info()->block_id_)
+      if (0 == block_info()->block_id_)
       {
         TBSYS_LOG(ERROR, "Index corrupt error. blockid: %u, bucket size: %d", block_info()->block_id_,
             bucket_size());
@@ -476,14 +470,6 @@ namespace tfs
         TBSYS_LOG(ERROR, "Index corrupt error. blockid: %u, bucket size: %d, file size: %d, index file size: %d",
             block_info()->block_id_, bucket_size(), file_size, index_file_size);
         return EXIT_INDEX_CORRUPT_ERROR;
-      }
-
-      // check bucket_size
-      if (cfg_bucket_size != bucket_size())
-      {
-        TBSYS_LOG(ERROR, "Index configure error. old bucket size: %d, new bucket size: %d", bucket_size(),
-            cfg_bucket_size);
-        return EXIT_BUCKET_CONFIGURE_ERROR;
       }
 
       // check block_id
@@ -505,6 +491,14 @@ namespace tfs
         // unfinish repl block, coding block
         TBSYS_LOG(ERROR, "It is a half state block. blockid: %u", logic_block_id);
         return EXIT_HALF_BLOCK_ERROR;
+      }
+
+      // check bucket_size
+      if (0 == bucket_size() || cfg_bucket_size != bucket_size())
+      {
+        TBSYS_LOG(ERROR, "Index configure error. old bucket size: %d, new bucket size: %d", bucket_size(),
+            cfg_bucket_size);
+        return EXIT_BUCKET_CONFIGURE_ERROR;
       }
 
       is_load_ = true;

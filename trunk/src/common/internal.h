@@ -956,6 +956,12 @@ namespace tfs
       READ_PARITY_INDEX
     };
 
+    enum RawDataType
+    {
+      NORMAL_DATA = 1,
+      PARITY_DATA
+    };
+
     typedef enum _ReportBlockType
     {
       REPORT_BLOCK_TYPE_ALL = 0,

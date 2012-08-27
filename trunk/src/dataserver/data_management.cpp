@@ -747,8 +747,20 @@ namespace tfs
         TBSYS_LOG(INFO, "expire block list size: %u\n", static_cast<uint32_t>(expire_block_ids->size()));
         for (uint32_t i = 0; i < expire_block_ids->size(); ++i)
         {
+          LogicBlock* logic_block = BlockFileManager::get_instance()->get_logic_block(expire_block_ids->at(i));
+          if (NULL == logic_block)
+          {
+            continue;
+          }
           TBSYS_LOG(INFO, "expire(delete) block. blockid: %u\n", expire_block_ids->at(i));
-          BlockFileManager::get_instance()->del_block(expire_block_ids->at(i));
+          if (0 == logic_block->get_flag())  // data block, clear group id
+          {
+            logic_block->set_group_id(0);
+          }
+          else  // parity block, remove it
+          {
+            BlockFileManager::get_instance()->del_block(expire_block_ids->at(i));
+          }
         }
       }
 

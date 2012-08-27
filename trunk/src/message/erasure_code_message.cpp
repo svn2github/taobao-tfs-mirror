@@ -41,9 +41,9 @@ namespace tfs
       }
       if (common::TFS_SUCCESS == ret)
       {
-        int64_t pos = 0;
         for (int32_t index = 0; index < MEMBER_NUM && TFS_SUCCESS == ret; ++index)
         {
+          int64_t pos = 0;
           ret = family_members_[index].serialize(output.get_free(), output.get_free_length() , pos);
           if (TFS_SUCCESS == ret)
             output.pour(family_members_[index].length());
@@ -75,9 +75,9 @@ namespace tfs
         {
           family_members_ = new (std::nothrow)FamilyMemberInfo[MEMBER_NUM];
           assert(family_members_);
-          int64_t pos = 0;
           for (int32_t index = 0; index < MEMBER_NUM && TFS_SUCCESS == ret; ++index)
           {
+            int64_t pos = 0;
             ret = family_members_[index].deserialize(input.get_data(), input.get_data_length() , pos);
             if (TFS_SUCCESS == ret)
               input.drain(family_members_[index].length());

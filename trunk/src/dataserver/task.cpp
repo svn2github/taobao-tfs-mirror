@@ -35,11 +35,6 @@ namespace tfs
     using namespace tbutil;
     using namespace std;
 
-    bool Task::task_from_ds() const
-    {
-      return source_id_ != manager_.get_ns_id();
-    }
-
     string Task::dump() const
     {
       std::stringstream tmp_stream;
@@ -120,7 +115,7 @@ namespace tfs
     }
 
     int Task::write_raw_data(const uint64_t server_id, const uint32_t block_id,
-        const char* data, const int32_t length, const int32_t offset)
+        const char* data, const int32_t length, const int32_t offset, const RawDataType type)
     {
       int ret = TFS_SUCCESS;
       WriteRawDataMessage req_wrd_msg;
@@ -135,14 +130,14 @@ namespace tfs
       //new block		
       if (0 == offset)
       {
-        req_wrd_msg.set_new_block(1);
+        req_wrd_msg.set_new_block(type);
       }
 
       ret = send_simple_request(server_id, &req_wrd_msg);
       if (TFS_SUCCESS != ret)
       {
-        TBSYS_LOG(ERROR, "write raw data to %s fail, blockid: %u, offset: %u, length: %d",
-            tbsys::CNetUtil::addrToString(server_id).c_str(), block_id, offset, length);
+        TBSYS_LOG(ERROR, "write raw data to %s fail, blockid: %u, offset: %u, length: %d, ret: %d",
+            tbsys::CNetUtil::addrToString(server_id).c_str(), block_id, offset, length, ret);
       }
 
       return ret;
@@ -157,7 +152,7 @@ namespace tfs
       req_rrd_msg.set_offset(offset);
       req_rrd_msg.set_length(length);
 
-      TBSYS_LOG(DEBUG, "read raw data to %s, blockid: %u, offset: %u, length: %d",
+      TBSYS_LOG(DEBUG, "read raw data from %s, blockid: %u, offset: %u, length: %d",
           tbsys::CNetUtil::addrToString(server_id).c_str(), block_id, offset, length);
 
       NewClient* client = NewClientManager::get_instance().create_client();
@@ -174,20 +169,28 @@ namespace tfs
           if (rsp_msg->getPCode() == RESP_READ_RAW_DATA_MESSAGE)
           {
             RespReadRawDataMessage* message = dynamic_cast<RespReadRawDataMessage*> (rsp_msg);
-            memcpy(data, message->get_data(), length);
-            data_file_size = message->get_data_file_size();
+            int read_len = message->get_length();
+            if (read_len >= 0)
+            {
+              memcpy(data, message->get_data(), read_len);
+              data_file_size = message->get_data_file_size();
+            }
+            else
+            {
+              ret = read_len;  // error info stored in length
+            }
           }
           else
           {
             ret = TFS_ERROR;
-            TBSYS_LOG(ERROR, "read raw data to %s fail, blockid: %u, offset: %u, length: %d",
+            TBSYS_LOG(ERROR, "read raw data from %s fail, blockid: %u, offset: %u, length: %d",
                 tbsys::CNetUtil::addrToString(server_id).c_str(), block_id, offset, length);
           }
         }
         else
         {
           ret = TFS_ERROR;
-          TBSYS_LOG(ERROR, "read raw data to %s fail, blockid: %u, offset: %u, length: %d",
+          TBSYS_LOG(ERROR, "read raw data from %s fail, blockid: %u, offset: %u, length: %d",
               tbsys::CNetUtil::addrToString(server_id).c_str(), block_id, offset, length);
         }
         NewClientManager::get_instance().destroy_client(client);
@@ -224,14 +227,14 @@ namespace tfs
           req_wib_msg.set_raw_meta_list(&raw_meta_vec);
           req_wib_msg.set_block_info(logic_block->get_block_info());
 
-          TBSYS_LOG(DEBUG, "get meta info. blockid: %u, meta info size: %zd, cluster flag: %d\n",
+          TBSYS_LOG(DEBUG, "batch write index. blockid: %u, meta info size: %zd, cluster flag: %d\n",
               block_id, raw_meta_vec.size(), req_wib_msg.get_cluster());
 
           ret = send_simple_request(server_id, &req_wib_msg);
           if (TFS_SUCCESS != ret)
           {
-            TBSYS_LOG(ERROR, "write meta info to %s fail, blockid: %u",
-                tbsys::CNetUtil::addrToString(server_id).c_str(), block_id);
+            TBSYS_LOG(ERROR, "write meta info to %s fail, blockid: %u, ret: %d",
+                tbsys::CNetUtil::addrToString(server_id).c_str(), block_id, ret);
           }
         }
       }
@@ -254,8 +257,8 @@ namespace tfs
       ret = send_simple_request(server_id, &wri_msg);
       if (TFS_SUCCESS != ret)
       {
-        TBSYS_LOG(ERROR, "write raw index to %s fail, blockid: %u, index_op: %d",
-            tbsys::CNetUtil::addrToString(server_id).c_str(), block_id, index_op);
+        TBSYS_LOG(ERROR, "write raw index to %s fail, blockid: %u, index_op: %d, ret: %d",
+            tbsys::CNetUtil::addrToString(server_id).c_str(), block_id, index_op, ret);
       }
       return ret;
     }
@@ -269,7 +272,7 @@ namespace tfs
       rri_msg.set_index_op(index_op);
       rri_msg.set_index_id(index_id);
 
-      TBSYS_LOG(DEBUG, "read raw index to %s, blockid: %u, index_op: %d",
+      TBSYS_LOG(DEBUG, "read raw index from %s, blockid: %u, index_op: %d",
           tbsys::CNetUtil::addrToString(server_id).c_str(), index_op);
 
 
@@ -284,31 +287,32 @@ namespace tfs
         tbnet::Packet* rsp_msg = NULL;
         if (TFS_SUCCESS == send_msg_to_server(server_id, client, &rri_msg, rsp_msg))
         {
-          if (rsp_msg->getPCode() == RESP_READ_RAW_DATA_MESSAGE)
+          if (rsp_msg->getPCode() == RSP_READ_RAW_INDEX_MESSAGE)
           {
             RespReadRawIndexMessage* message = dynamic_cast<RespReadRawIndexMessage*> (rsp_msg);
             length = message->get_length();
-            data = (char*)malloc(length * sizeof(char));
-            if (NULL == data)
+            if (length >= 0)
             {
-              ret = TFS_ERROR;
+              data = (char*)malloc(length * sizeof(char));
+              assert (NULL != data);
+              memcpy(data, message->get_data(), length);
             }
             else
             {
-              memcpy(data, message->get_data(), length);
+              ret = length;
             }
           }
           else
           {
             ret = TFS_ERROR;
-            TBSYS_LOG(ERROR, "read raw index to %s fail, blockid: %u, index_op: %d",
+            TBSYS_LOG(ERROR, "read raw index from %s fail, blockid: %u, index_op: %d",
                 tbsys::CNetUtil::addrToString(server_id).c_str(), index_op);
           }
         }
         else
         {
           ret = TFS_ERROR;
-          TBSYS_LOG(ERROR, "read raw index to %s fail, blockid: %u, index_op: %d",
+          TBSYS_LOG(ERROR, "read raw index from %s fail, blockid: %u, index_op: %d",
               tbsys::CNetUtil::addrToString(server_id).c_str(), block_id, index_op);
         }
         NewClientManager::get_instance().destroy_client(client);
@@ -358,6 +362,11 @@ namespace tfs
       }
       else
       {
+        // initialize status
+        for (uint32_t i = 0; i < servers_.size(); i++)
+        {
+          result_.push_back(std::make_pair(servers_[i], common::PLAN_STATUS_TIMEOUT));
+        }
         ret = request_ds_to_compact();
       }
 
@@ -850,8 +859,8 @@ namespace tfs
       uint64_t ds_ip = repl_block.destination_id_;
       uint32_t block_id = repl_block.block_id_;
 
-      TBSYS_LOG(INFO, "replicating now, blockid: %u, %s = >%s\n", block_id,
-          tbsys::CNetUtil::addrToString(repl_block.source_id_).c_str(),
+      TBSYS_LOG(INFO, "replicating now, seqno: %"PRI64_PREFIX"d, blockid: %u, %s = >%s\n",
+          seqno_, block_id, tbsys::CNetUtil::addrToString(repl_block.source_id_).c_str(),
           tbsys::CNetUtil::addrToString(ds_ip).c_str());
 
       LogicBlock* logic_block = BlockFileManager::get_instance()->get_logic_block(block_id);
@@ -945,12 +954,12 @@ namespace tfs
 
       const int32_t MEMBER_NUM = GET_DATA_MEMBER_NUM(family_aid_info_) +
         GET_CHECK_MEMBER_NUM(family_aid_info_);
-      for (int32_t i = 0; MEMBER_NUM; i++)
+      for (int32_t i = 0; i < MEMBER_NUM; i++)
       {
-        tmp_stream << "server: " << tbsys::CNetUtil::addrToString(family_members_[i].server_);
-        tmp_stream << "blockid: " << family_members_[i].block_;
-        tmp_stream << "version: " << family_members_[i].version_;
-        tmp_stream << "status: " << family_members_[i].status_;
+        tmp_stream << " server: " << tbsys::CNetUtil::addrToString(family_members_[i].server_);
+        tmp_stream << " blockid: " << family_members_[i].block_;
+        tmp_stream << " version: " << family_members_[i].version_;
+        tmp_stream << " status: " << family_members_[i].status_;
         tmp_stream << delim;
       }
       return tmp_stream.str();
@@ -969,14 +978,20 @@ namespace tfs
       ECMarshallingCommitMessage cmit_msg;
       cmit_msg.set_seqno(seqno_);
       cmit_msg.set_status(status);
+      cmit_msg.set_family_id(family_id_);
 
-      TBSYS_LOG(DEBUG, "marshalling report to ns. seqno: %"PRI64_PREFIX"d, status: %d, source: %s",
-          seqno_, status, tbsys::CNetUtil::addrToString(source_id_).c_str());
+      ret = cmit_msg.set_family_member_info(family_members_, family_aid_info_);
+      if (TFS_SUCCESS == ret)
+      {
+        NewClient* client = NewClientManager::get_instance().create_client();
+        tbnet::Packet* rsp_msg = NULL;
+        ret = send_msg_to_server(source_id_, client, &cmit_msg, rsp_msg);
+        NewClientManager::get_instance().destroy_client(client);
+      }
 
-      NewClient* client = NewClientManager::get_instance().create_client();
-      tbnet::Packet* rsp_msg = NULL;
-      ret = send_msg_to_server(source_id_, client, &cmit_msg, rsp_msg);
-      NewClientManager::get_instance().destroy_client(client);
+      TBSYS_LOG(DEBUG, "marshalling report to ns. seqno: %"PRI64_PREFIX"d, status: %d, source: %s, ret: %d",
+          seqno_, status, tbsys::CNetUtil::addrToString(source_id_).c_str(), ret);
+
       return ret;
     }
 
@@ -986,6 +1001,18 @@ namespace tfs
       int32_t data_num = GET_DATA_MEMBER_NUM(family_aid_info_);
       int32_t check_num = GET_CHECK_MEMBER_NUM(family_aid_info_);
 
+      ErasureCode encoder;
+      int32_t encode_total_len = -1;
+      int32_t encode_offset = 0;
+      int32_t encode_len = 0;
+      int32_t block_len[EC_DATA_MAX];
+      char* data[EC_DATA_MAX];
+      char* index_data[EC_DATA_MAX];
+      memset(block_len, 0, EC_DATA_MAX * sizeof(int32_t));
+      memset(data, 0, EC_DATA_MAX * sizeof(char*));
+      memset(index_data, 0, EC_DATA_MAX * sizeof(char*));
+
+      // check if all data ok
       for (int32_t i = 0; i < data_num; i++)
       {
         if (family_members_[i].status_ == FAMILY_MEMBER_STATUS_ABNORMAL)
@@ -994,14 +1021,6 @@ namespace tfs
           break;
         }
       }
-
-      ErasureCode encoder;
-      int32_t encode_total_len = -1;
-      int32_t encode_offset = 0;
-      int32_t encode_len = 0;
-      char* data[EC_DATA_MAX];
-      char* index_data[EC_DATA_MAX];
-      memset(data, 0, EC_DATA_MAX * sizeof(char*));
 
       // config encoder parameter, alloc buffer
       if (TFS_SUCCESS == ret)
@@ -1028,22 +1047,35 @@ namespace tfs
           {
             encode_len = encode_total_len - encode_offset;
           }
+
           // read data from data node
           for (int32_t i = 0; i < data_num; i++)
           {
-            memset(data[i], 0, encode_len);
+            memset(data[i], 0, encode_len * sizeof(char));
             uint64_t server_id = family_members_[i].server_;
             uint32_t block_id = family_members_[i].block_;
             int32_t data_file_size = 0;
-            ret = read_raw_data(server_id, block_id, data[i], encode_len, encode_offset, data_file_size);
+
+            if  (0 == encode_offset || encode_offset < block_len[i])
+            {
+              ret = read_raw_data(server_id, block_id, data[i], encode_len, encode_offset, data_file_size);
+            }
+
             if (TFS_SUCCESS == ret)
             {
+              block_len[i] = data_file_size;
               // get total len on first read
               if (0 == encode_offset && data_file_size > encode_total_len)
               {
                 encode_total_len = data_file_size;
+
+                // rollup for encode
+                int unit = ErasureCode::ws_ * ErasureCode::ps_;
+                if (0 != (encode_total_len % unit))
+                {
+                  encode_total_len = (encode_total_len / unit + 1) * unit;
+                }
               }
-              encode_offset += encode_len;
             }
             else
             {
@@ -1056,7 +1088,7 @@ namespace tfs
             break;
           }
 
-          ret = encoder.encode(encode_total_len);
+          ret = encoder.encode(encode_len);
           if (TFS_SUCCESS != ret)
           {
             break;
@@ -1067,7 +1099,7 @@ namespace tfs
           {
             uint64_t server_id = family_members_[i].server_;
             uint32_t block_id = family_members_[i].block_;
-            ret = write_raw_data(server_id, block_id, data[i], encode_len, encode_offset);
+            ret = write_raw_data(server_id, block_id, data[i], encode_len, encode_offset, PARITY_DATA);
             if (TFS_SUCCESS != ret)
             {
               break;
@@ -1078,13 +1110,15 @@ namespace tfs
           {
             break;
           }
+
+          // update offset
+          encode_offset += encode_len;
         } while (encode_offset < encode_total_len);
       }
 
       // process block index
       if (TFS_SUCCESS == ret)
       {
-        memset(index_data, 0, EC_DATA_MAX * sizeof(char*));
         RawIndexVec index_vec;
 
         for (int i = 0; i < data_num; i++)
@@ -1095,6 +1129,8 @@ namespace tfs
           ret = read_raw_index(server_id, block_id, READ_DATA_INDEX, 0, index_data[i], length);
           if (TFS_SUCCESS == ret)
           {
+            TBSYS_LOG(DEBUG, "index info, server_id: %s, block_id: %u, length: %d",
+              tbsys::CNetUtil::addrToString(server_id).c_str(), block_id, length);
             RawIndex raw_index(block_id, index_data[i], length);
             index_vec.push_back(raw_index);
           }
@@ -1104,14 +1140,33 @@ namespace tfs
           }
         }
 
-        for (int i = 0; i < check_num; i++)
+        if (TFS_SUCCESS == ret)
         {
-          uint64_t server_id = family_members_[data_num+i].server_;
-          uint32_t block_id = family_members_[data_num+i].block_;
-          ret = write_raw_index(server_id, block_id, family_id_, WRITE_PARITY_INDEX, index_vec);
-          if (TFS_SUCCESS != ret)
+          for (int i = 0; i < check_num; i++)
           {
-            break;
+            uint64_t server_id = family_members_[data_num+i].server_;
+            uint32_t block_id = family_members_[data_num+i].block_;
+            ret = write_raw_index(server_id, block_id, family_id_, WRITE_PARITY_INDEX, index_vec);
+            if (TFS_SUCCESS != ret)
+            {
+              break;
+            }
+          }
+        }
+
+        // just write family id to data block
+        if (TFS_SUCCESS == ret)
+        {
+          RawIndexVec empty_index_vec;
+          for (int i = 0; i < data_num; i++)
+          {
+            uint64_t server_id = family_members_[i].server_;
+            uint32_t block_id = family_members_[i].block_;
+            ret = write_raw_index(server_id, block_id, family_id_, WRITE_DATA_INDEX, empty_index_vec);
+            if (TFS_SUCCESS != ret)
+            {
+              break;
+            }
           }
         }
       }
@@ -1139,7 +1194,316 @@ namespace tfs
 
     int ReinstateTask::handle()
     {
-      return TFS_SUCCESS;
+      int ret = do_reinstate();
+      int status = translate_status(ret);
+      return report_to_ns(status);
+    }
+
+    int ReinstateTask::do_reinstate()
+    {
+      int ret = TFS_SUCCESS;
+      int32_t data_num = GET_DATA_MEMBER_NUM(family_aid_info_);
+      int32_t check_num = GET_CHECK_MEMBER_NUM(family_aid_info_);
+
+      ErasureCode decoder;
+      int32_t decode_total_len = -1;
+      int32_t decode_offset = 0;
+      int32_t decode_len = 0;
+      int32_t block_len[EC_DATA_MAX];
+      char* data[EC_DATA_MAX];
+      char* index_data[EC_DATA_MAX];
+      int erased[EC_DATA_MAX];
+      memset(block_len, 0, EC_DATA_MAX * sizeof(int32_t));
+      memset(data, 0, EC_DATA_MAX * sizeof(char*));
+      memset(index_data, 0, EC_DATA_MAX * sizeof(char*));
+      memset(erased, 0, EC_DATA_MAX * sizeof(int));
+
+      int data_count = 0;
+      for (int32_t i = 0; i < data_num + check_num; i++)
+      {
+        // just need data_num nodes to recovery
+        if (family_members_[i].status_ == FAMILY_MEMBER_STATUS_NORMAL)
+        {
+          if (data_count < data_num)
+          {
+            erased[i] = 0;  // alive
+            data_count++;
+            TBSYS_LOG(DEBUG, "node %d selected for recovery", i);
+          }
+          else
+          {
+            erased[i] = -1; // normal but not used
+            TBSYS_LOG(DEBUG, "node %d normal but not used", i);
+          }
+        }
+        else
+        {
+          erased[i] = 1;   // need to recovey
+          TBSYS_LOG(DEBUG, "node %d need recovery", i);
+        }
+      }
+
+      if (data_count != data_num)
+      {
+        ret = EXIT_NO_ENOUGH_DATA;
+      }
+
+      // config encoder parameter, alloc buffer
+      if (TFS_SUCCESS == ret)
+      {
+        ret = decoder.config(data_num, check_num, erased);
+        if (TFS_SUCCESS == ret)
+        {
+          for (int32_t i = 0; i < data_num + check_num; i++)
+          {
+            data[i] = (char*)malloc(MAX_READ_SIZE * sizeof(char));
+            assert(NULL != data[i]);
+          }
+          decoder.bind(data, data_num + check_num, MAX_READ_SIZE);
+        }
+      }
+
+      // process block data
+      if (TFS_SUCCESS == ret)
+      {
+        do
+        {
+          decode_len = MAX_READ_SIZE;
+          if (decode_total_len > 0 && decode_total_len - decode_offset < MAX_READ_SIZE)
+          {
+            decode_len = decode_total_len - decode_offset;
+          }
+
+          // read data from data node
+          for (int32_t i = 0; i < data_num + check_num; i++)
+          {
+            if (0 != erased[i])
+            {
+              continue;
+            }
+            memset(data[i], 0, decode_len * sizeof(char));
+            uint64_t server_id = family_members_[i].server_;
+            uint32_t block_id = family_members_[i].block_;
+            int32_t data_file_size = 0;
+
+            if (0 == decode_offset || decode_offset < block_len[i])
+            {
+              ret = read_raw_data(server_id, block_id, data[i], decode_len, decode_offset, data_file_size);
+            }
+
+            if (TFS_SUCCESS == ret)
+            {
+              block_len[i] = data_file_size;
+              // get total len on first read
+              if (0 == decode_offset && data_file_size > decode_total_len)
+              {
+                decode_total_len = data_file_size;
+
+                // rollup for encode
+                int unit = ErasureCode::ws_ * ErasureCode::ps_;
+                if (0 != (decode_total_len % unit))
+                {
+                  decode_total_len = (decode_total_len / unit + 1) * unit;
+                }
+              }
+            }
+            else
+            {
+              break;
+            }
+          }
+
+          if (TFS_SUCCESS != ret)
+          {
+            break;
+          }
+
+          ret = decoder.decode(decode_len);
+          if (TFS_SUCCESS != ret)
+          {
+            break;
+          }
+
+          // write normal data
+          for (int32_t i = 0; i < data_num; i++)
+          {
+            if (1 != erased[i])
+            {
+              continue;
+            }
+            uint64_t server_id = family_members_[i].server_;
+            uint32_t block_id = family_members_[i].block_;
+            ret = write_raw_data(server_id, block_id, data[i], decode_len, decode_offset);
+            if (TFS_SUCCESS != ret)
+            {
+              break;
+            }
+          }
+
+          if (TFS_SUCCESS != ret)
+          {
+            break;
+          }
+
+          // write parity data
+          for (int32_t i = data_num; i < data_num + check_num; i++)
+          {
+            if (1 != erased[i])
+            {
+              continue;
+            }
+            uint64_t server_id = family_members_[i].server_;
+            uint32_t block_id = family_members_[i].block_;
+            ret = write_raw_data(server_id, block_id, data[i], decode_len, decode_offset, PARITY_DATA);
+            if (TFS_SUCCESS != ret)
+            {
+              break;
+            }
+          }
+
+          if (TFS_SUCCESS != ret)
+          {
+            break;
+          }
+
+          // update offset
+          decode_offset += decode_len;
+
+        } while (decode_offset < decode_total_len);
+      }
+
+      // recovery data index
+      if (TFS_SUCCESS == ret)
+      {
+        for (int i = 0; i < data_num; i++)
+        {
+          if (1 != erased[i])
+          {
+            continue;
+          }
+
+          char* target_index = NULL;
+          int32_t length = 0;
+          uint32_t target_block = family_members_[i].block_;
+          uint64_t target_server = family_members_[i].server_;
+
+          for (int j = data_num; j < data_num + check_num; j++)
+          {
+            if (0 == erased[j])
+            {
+              uint64_t server_id = family_members_[j].server_;
+              uint32_t block_id = family_members_[j].block_;
+              ret = read_raw_index(server_id, block_id, READ_PARITY_INDEX, target_block, target_index, length);
+              if (TFS_SUCCESS == ret)
+              {
+                break;
+              }
+            }
+          }
+
+          if (TFS_SUCCESS == ret)
+          {
+            RawIndexVec index_vec;
+            RawIndex raw_index(target_block, target_index, length);
+            index_vec.push_back(raw_index);
+            ret = write_raw_index(target_server, target_block, family_id_, WRITE_DATA_INDEX, index_vec);
+          }
+
+          tbsys::gDelete(target_index);
+
+          if (TFS_SUCCESS != ret)
+          {
+            break;
+          }
+        }
+      }
+
+      // recovery parity index
+      bool miss_parity = false;
+      if (TFS_SUCCESS == ret)
+      {
+        for (int i = data_num; i < data_num + check_num; i++)
+        {
+          if (1 == erased[i])
+          {
+            miss_parity = true;
+            break;
+          }
+        }
+      }
+
+      if (TFS_SUCCESS == ret && miss_parity)
+      {
+        RawIndexVec index_vec;
+        for (int i = 0; i < data_num; i++)
+        {
+          uint64_t server_id = family_members_[i].server_;
+          uint32_t block_id = family_members_[i].block_;
+          int32_t length = 0;
+          ret = read_raw_index(server_id, block_id, READ_DATA_INDEX, 0, index_data[i], length);
+          if (TFS_SUCCESS == ret)
+          {
+            TBSYS_LOG(DEBUG, "index info, server_id: %s, block_id: %u, length: %d",
+                tbsys::CNetUtil::addrToString(server_id).c_str(), block_id, length);
+            RawIndex raw_index(block_id, index_data[i], length);
+            index_vec.push_back(raw_index);
+          }
+          else
+          {
+            break;
+          }
+        }
+
+        if (TFS_SUCCESS == ret)
+        {
+          for (int i = data_num; i < data_num + check_num; i++)
+          {
+            if (1 != erased[i])
+            {
+              continue;
+            }
+
+            uint64_t server_id = family_members_[i].server_;
+            uint32_t block_id = family_members_[i].block_;
+            ret = write_raw_index(server_id, block_id, family_id_, WRITE_PARITY_INDEX, index_vec);
+            if (TFS_SUCCESS != ret)
+            {
+              break;
+            }
+          }
+        }
+      }
+
+      for (int32_t i = 0; i < data_num + check_num; i++)
+      {
+        tbsys::gDelete(data[i]);
+        tbsys::gDelete(index_data[i]);
+      }
+
+      return ret;
+    }
+
+    int ReinstateTask::report_to_ns(const int status)
+    {
+      int ret = TFS_SUCCESS;
+      ECReinstateCommitMessage cmit_msg;
+      cmit_msg.set_seqno(seqno_);
+      cmit_msg.set_status(status);
+      cmit_msg.set_family_id(family_id_);
+
+      ret = cmit_msg.set_family_member_info(family_members_, family_aid_info_);
+      if (TFS_SUCCESS == ret)
+      {
+        NewClient* client = NewClientManager::get_instance().create_client();
+        tbnet::Packet* rsp_msg = NULL;
+        ret = send_msg_to_server(source_id_, client, &cmit_msg, rsp_msg);
+        NewClientManager::get_instance().destroy_client(client);
+      }
+
+      TBSYS_LOG(DEBUG, "reinstate report to ns. seqno: %"PRI64_PREFIX"d, status: %d, source: %s, ret: %d",
+          seqno_, status, tbsys::CNetUtil::addrToString(source_id_).c_str(), ret);
+
+      return ret;
     }
 
     DissolveTask::DissolveTask(TaskManager& manager, const int64_t seqno,
@@ -1156,18 +1520,158 @@ namespace tfs
 
     bool DissolveTask::is_completed() const
     {
-      return true;
+      int ret = true;
+      for (uint32_t i = 0; i < result_.size(); i++)
+      {
+        if (PLAN_STATUS_TIMEOUT == result_[i].second)
+        {
+          ret = false;
+          break;
+        }
+      }
+      return ret;
     }
 
     int DissolveTask::handle()
     {
-      return TFS_SUCCESS;
+      int32_t data_num = GET_DATA_MEMBER_NUM(family_aid_info_) / 2;
+
+      // initialize stutus
+      for (int32_t i = 0; i < data_num; i++)
+      {
+        if (FAMILY_MEMBER_STATUS_NORMAL == family_members_[i].status_)
+        {
+          result_.push_back(make_pair(family_members_[i].server_, PLAN_STATUS_TIMEOUT));
+        }
+      }
+
+      return request_ds_to_replicate();
     }
 
     int DissolveTask::handle_complete(BasePacket* packet)
     {
-      UNUSED(packet);
-      return TFS_SUCCESS;
+      int ret = TFS_SUCCESS;
+      RespDsCompactBlockMessage* resp_msg = dynamic_cast<RespDsCompactBlockMessage*> (packet);
+      int status = resp_msg->get_status();
+      uint64_t server = resp_msg->get_ds_id();
+
+      for (uint32_t i = 0; i < result_.size(); i++)
+      {
+        if (result_[i].first == server)
+        {
+          result_[i].second = status;
+          break;
+        }
+      }
+
+      if (is_completed())
+      {
+        ret = report_to_ns(status); // status is not used here
+        if (TFS_SUCCESS == ret)
+        {
+          ret = request_ds_to_delete();  // success, remove parity blocks
+        }
+      }
+
+      TBSYS_LOG(INFO, "handle complete dissolve task, "
+          "seqno: %"PRI64_PREFIX"d, server: %s, status: %d, ret: %d\n",
+          seqno_, tbsys::CNetUtil::addrToString(resp_msg->get_ds_id()).c_str(), status, ret);
+
+      return ret;
+    }
+
+    int DissolveTask::report_to_ns(const int status)
+    {
+      UNUSED(status);
+      int ret = TFS_SUCCESS;
+      int final_status = PLAN_STATUS_END;
+      for (uint32_t i = 0; i < result_.size(); i++)
+      {
+        if (PLAN_STATUS_END != result_[i].second)
+        {
+          final_status = PLAN_STATUS_FAILURE;
+          break;
+        }
+      }
+
+      ECDissolveCommitMessage cmit_msg;
+      cmit_msg.set_seqno(seqno_);
+      cmit_msg.set_status(final_status);
+      cmit_msg.set_family_id(family_id_);
+
+      ret = cmit_msg.set_family_member_info(family_members_, family_aid_info_);
+      if (TFS_SUCCESS == ret)
+      {
+        NewClient* client = NewClientManager::get_instance().create_client();
+        tbnet::Packet* rsp_msg = NULL;
+        ret = send_msg_to_server(source_id_, client, &cmit_msg, rsp_msg);
+        NewClientManager::get_instance().destroy_client(client);
+      }
+
+      TBSYS_LOG(DEBUG, "dissolve report to ns. seqno: %"PRI64_PREFIX"d, status: %d, source: %s, ret: %d",
+          seqno_, status, tbsys::CNetUtil::addrToString(source_id_).c_str(), ret);
+
+      return ret;
+    }
+
+    int DissolveTask::request_ds_to_replicate()
+    {
+      int ret = TFS_SUCCESS;
+      int32_t data_num = GET_DATA_MEMBER_NUM(family_aid_info_) / 2;
+      int32_t check_num = GET_CHECK_MEMBER_NUM(family_aid_info_) / 2;
+      int32_t total_num = data_num + check_num;
+
+      for (int32_t i = 0; i < data_num; i++)
+      {
+        if (FAMILY_MEMBER_STATUS_NORMAL != family_members_[i].status_)
+        {
+          continue;
+        }
+        ReplicateBlockMessage repl_msg;
+        ReplBlock repl_block;
+        memset(&repl_block, 0, sizeof(ReplBlock));
+        repl_block.block_id_ = family_members_[i].block_;
+        repl_block.source_id_ = family_members_[i].server_;
+        repl_block.destination_id_ = family_members_[i+total_num].server_;
+
+        repl_msg.set_seqno(seqno_);
+        repl_msg.set_expire_time(expire_time_);
+        repl_msg.set_repl_block(&repl_block);
+
+        ret = send_simple_request(family_members_[i].server_, &repl_msg);
+        if (TFS_SUCCESS != ret)
+        {
+          break;
+        }
+      }
+
+      return ret;
+    }
+
+    int DissolveTask::request_ds_to_delete()
+    {
+      int ret = TFS_SUCCESS;
+      int32_t data_num = GET_DATA_MEMBER_NUM(family_aid_info_) / 2;
+      int32_t check_num = GET_CHECK_MEMBER_NUM(family_aid_info_) / 2;
+
+      for (int32_t i = data_num; i < data_num + check_num; i++)
+      {
+        if (FAMILY_MEMBER_STATUS_NORMAL != family_members_[i].status_)
+        {
+          continue;
+        }
+
+        RemoveBlockMessage del_msg;
+        del_msg.set(family_members_[i].block_);
+
+        ret = send_simple_request(family_members_[i].server_, &del_msg);
+        if (TFS_SUCCESS != ret)
+        {
+          break;
+        }
+      }
+
+      return ret;
     }
 
   }

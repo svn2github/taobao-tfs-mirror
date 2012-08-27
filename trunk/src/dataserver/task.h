@@ -40,6 +40,7 @@ namespace tfs
           manager_(manager), seqno_(seqno), source_id_(source_id), expire_time_(expire_time)
         {
           start_time_ = common::Func::get_monotonic_time();
+          task_from_ds_ = false;
         }
         virtual ~Task() {}
 
@@ -74,7 +75,8 @@ namespace tfs
         * @return 0 on success
         */
         static int write_raw_data(const uint64_t server_id, const uint32_t block_id,
-          const char* data, const int32_t length, const int32_t offset);
+          const char* data, const int32_t length, const int32_t offset,
+          const common::RawDataType type = common::NORMAL_DATA);
 
         /**
         * @brief read raw data from block
@@ -145,7 +147,18 @@ namespace tfs
         *
         * @return true if task from ds
         */
-        bool task_from_ds() const;
+        bool task_from_ds() const
+        {
+          return task_from_ds_;
+        }
+
+        /**
+         * @brief set flag, denote a task from ds
+         */
+        void set_task_from_ds()
+        {
+          task_from_ds_ = true;
+        }
 
         /**
         * @brief is a task expired?
@@ -248,6 +261,7 @@ namespace tfs
         uint64_t source_id_;
         int32_t start_time_;
         int32_t expire_time_;
+        bool task_from_ds_;
     };
 
     class CompactTask: public Task
@@ -261,10 +275,6 @@ namespace tfs
         void set_servers(const std::vector<uint64_t>& servers)
         {
           servers_ = servers;
-          for (uint32_t i = 0; i < servers_.size(); i++)
-          {
-            result_.push_back(std::make_pair(servers_[i], common::PLAN_STATUS_TIMEOUT));
-          }
         }
 
         virtual bool is_completed() const ;
@@ -322,7 +332,8 @@ namespace tfs
           const int64_t family_id);
         virtual ~MarshallingTask();
 
-        int set_family_member_info(const common::FamilyMemberInfo* members, const int32_t family_aid_info);
+        int set_family_member_info(const common::FamilyMemberInfo* members,
+            const int32_t family_aid_info);
 
         virtual int handle();
         virtual std::string dump() const;
@@ -348,9 +359,12 @@ namespace tfs
         virtual ~ReinstateTask();
 
         virtual int handle();
+        virtual int report_to_ns(const int status);
 
       private:
         DISALLOW_COPY_AND_ASSIGN(ReinstateTask);
+
+        int do_reinstate();
     };
 
     class DissolveTask: public MarshallingTask
@@ -364,9 +378,16 @@ namespace tfs
         virtual bool is_completed() const;
         virtual int handle();
         virtual int handle_complete(common::BasePacket* packet);
+        virtual int report_to_ns(const int status);
 
       private:
         DISALLOW_COPY_AND_ASSIGN(DissolveTask);
+
+        int request_ds_to_replicate();
+        int request_ds_to_delete();
+
+      private:
+        std::vector<std::pair<uint64_t, int8_t> > result_;
     };
 
   }

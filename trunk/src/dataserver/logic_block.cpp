@@ -870,6 +870,14 @@ namespace tfs
       return ret;
     }
 
+    int32_t LogicBlock::get_flag()
+    {
+      BlockPrefix block_prefix;
+      PhysicalBlock* first = physical_block_list_.front();
+      first->get_block_prefix(block_prefix);
+      return block_prefix.flag_;
+    }
+
     uint64_t LogicBlock::get_group_id()
     {
       BlockPrefix block_prefix;
@@ -885,7 +893,8 @@ namespace tfs
       first->get_block_prefix(block_prefix);
       first->set_block_prefix(block_prefix.logic_blockid_,
         block_prefix.prev_physic_blockid_,
-        block_prefix.next_physic_blockid_, group_id);
+        block_prefix.next_physic_blockid_,
+        group_id, block_prefix.flag_);
       return first->dump_block_prefix();
     }
 

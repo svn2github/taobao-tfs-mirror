@@ -200,7 +200,14 @@ namespace tfs
       // 4. create physical block
       PhysicalBlock* t_physical_block = new PhysicalBlock(physical_block_id, super_block_.mount_point_,
           super_block_.main_block_size_, C_MAIN_BLOCK);
-      t_physical_block->set_block_prefix(logic_block_id, 0, 0);
+      if (C_PARITY_BLOCK == block_type)
+      {
+        t_physical_block->set_block_prefix(logic_block_id, 0, 0, 0, 1);
+      }
+      else
+      {
+        t_physical_block->set_block_prefix(logic_block_id, 0, 0);
+      }
       ret = t_physical_block->dump_block_prefix();
       if (ret)
       {
@@ -890,7 +897,7 @@ namespace tfs
 
           BlockPrefix block_prefix;
           t_physical_block->get_block_prefix(block_prefix);
-          uint64_t group_id = block_prefix.group_id_;
+          int32_t block_type = block_prefix.flag_;
 
           // not inited, error
           if (0 == block_prefix.logic_blockid_)
@@ -1045,7 +1052,7 @@ namespace tfs
           }
 
           // 9. load logic block
-          if (0 == group_id)
+          if (0 == block_type)
           {
             ret = t_logic_block->load_block_file(super_block_.hash_slot_size_, super_block_.mmap_option_);
           }

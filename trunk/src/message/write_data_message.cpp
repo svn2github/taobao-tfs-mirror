@@ -422,7 +422,7 @@ namespace tfs
       int64_t len = common::INT_SIZE * 3 + common::INT64_SIZE;
       for (uint32_t i = 0; i < index_vec_.size(); i++)
       {
-        len += common::INT_SIZE;
+        len += common::INT_SIZE * 2;
         len += index_vec_[i].size_;
       }
       return len;

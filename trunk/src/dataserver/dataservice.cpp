@@ -2209,7 +2209,14 @@ namespace tfs
       int ret = 0;
       if (new_flag)
       {
-        ret = data_management_.new_single_block(block_id, C_REPL_BLOCK);
+        if (NORMAL_DATA == new_flag)
+        {
+          ret = data_management_.new_single_block(block_id, C_REPL_BLOCK);
+        }
+        else if (PARITY_DATA == new_flag)
+        {
+          ret = data_management_.new_single_block(block_id, C_PARITY_BLOCK);
+        }
         if (TFS_SUCCESS != ret)
         {
           return message->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret,
@@ -2290,6 +2297,12 @@ namespace tfs
         TBSYS_LOG(INFO, "write raw index successful, blockid: %u, index op: %d, index count: %u, peer id: %s",
           block_id, index_op, index_vec->size(), tbsys::CNetUtil::addrToString(peer_id).c_str());
       }
+
+      if (TFS_SUCCESS == ret && index_vec->size() > 0)
+      {
+        task_manager_.del_cloned_block_map(block_id);
+      }
+
       return TFS_SUCCESS;
     }
 
@@ -2305,16 +2318,16 @@ namespace tfs
       TBSYS_LOG(DEBUG, "read raw index start, blockid: %u, index id: %u, index_op: %d, peer id: %s",
           block_id, index_id, (int)index_op, tbsys::CNetUtil::addrToString(peer_id).c_str());
 
+      RespReadRawIndexMessage* resp_msg = new RespReadRawIndexMessage();
       int ret = data_management_.read_raw_index(block_id, index_op, index_id, tmp_buf, size);
       if (TFS_SUCCESS != ret)
       {
-        message->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret,
-            "read raw index fail, blockid: %u, index_id: %u, ret: %d", block_id, index_id, ret);
+        resp_msg->set_length(ret);
+        message->reply(resp_msg);
       }
       else
       {
-        RespReadRawIndexMessage resp_msg;
-        char* packet_data = resp_msg.alloc_data(size);
+        char* packet_data = resp_msg->alloc_data(size);
         if (NULL == packet_data)
         {
           TBSYS_LOG(ERROR, "alloc data failed, blockid: %u, real len: %d", block_id, size);
@@ -2323,9 +2336,9 @@ namespace tfs
         }
         else
         {
-          resp_msg.set_length(size);
+          resp_msg->set_length(size);
           memcpy(packet_data, tmp_buf, size);
-          message->reply(&resp_msg);
+          message->reply(resp_msg);
           TBSYS_LOG(INFO, "read raw index successful, blockid: %u, index id: %u, index_op: %d, peer id: %s",
             block_id, index_id, (int)index_op, tbsys::CNetUtil::addrToString(peer_id).c_str());
         }
@@ -2474,7 +2487,7 @@ namespace tfs
        CallDsReportBlockRequestMessage* msg = dynamic_cast<CallDsReportBlockRequestMessage*>(packet);
        ReportBlocksToNsRequestMessage req_msg;
        req_msg.set_server(data_server_info_.id_);
-       if (0 == msg->get_flag())
+       if (REPORT_BLOCK_NORMAL == msg->get_flag())
        {
          data_management_.get_all_block_info(req_msg.get_blocks());
        }

@@ -101,8 +101,12 @@ namespace tfs
       int64_t seqno = packet->get_seqno();
       // task maybe expired already, ignore response in this case
       TBSYS_LOG(DEBUG, "handle complete, running task map size %u", running_task_.size());
+
+      running_task_mutex_.lock();
       std::map<int64_t, Task*>::iterator it = running_task_.find(seqno);
-     if (it != running_task_.end())
+      running_task_mutex_.unlock();
+
+      if (it != running_task_.end())
       {
         Task* task = it->second;
         task->handle_complete(packet);
@@ -124,9 +128,14 @@ namespace tfs
       int32_t expire_time = message->get_expire_time();
       const ReplBlock* repl_info = message->get_repl_block();
 
-      ReplicateTask* task = new ReplicateTask(*this,
-        seqno, ns_id_, expire_time, *repl_info);
-      return add_task_queue(task);
+      int ret = TFS_SUCCESS;
+      ReplicateTask* task = new ReplicateTask(*this, seqno, ns_id_, expire_time, *repl_info);
+      ret = add_task_queue(task);
+      if (TFS_SUCCESS != ret)
+      {
+        tbsys::gDelete(task);
+      }
+      return ret;
     }
 
     int TaskManager::add_compact_task(NsRequestCompactBlockMessage* message)
@@ -135,10 +144,15 @@ namespace tfs
       int32_t expire_time = message->get_expire_time();
       uint32_t block_id = message->get_block_id();
 
-      CompactTask* task = new CompactTask(*this,
-        seqno, ns_id_, expire_time, block_id);
+      int ret = TFS_SUCCESS;
+      CompactTask* task = new CompactTask(*this, seqno, ns_id_, expire_time, block_id);
       task->set_servers(message->get_servers());
-      return add_task_queue(task);
+      ret = add_task_queue(task);
+      if (TFS_SUCCESS != ret)
+      {
+        tbsys::gDelete(task);
+      }
+      return ret;
     }
 
     int TaskManager::add_ds_replicate_task(DsReplicateBlockMessage* message)
@@ -148,9 +162,15 @@ namespace tfs
       int32_t expire_time = message->get_expire_time();
       const ReplBlock* repl_info = message->get_repl_block();
 
-      ReplicateTask* task = new ReplicateTask(*this,
-        seqno, source_id, expire_time, *repl_info);
-      return add_task_queue(task);
+      int ret = TFS_SUCCESS;
+      ReplicateTask* task = new ReplicateTask(*this, seqno, source_id, expire_time, *repl_info);
+      task->set_task_from_ds();
+      ret = add_task_queue(task);
+      if (TFS_SUCCESS != ret)
+      {
+        tbsys::gDelete(task);
+      }
+      return ret;
     }
 
     int TaskManager::add_ds_compact_task(DsCompactBlockMessage* message)
@@ -160,10 +180,15 @@ namespace tfs
       int32_t expire_time = message->get_expire_time();
       uint32_t block_id = message->get_block_id();
 
-      CompactTask* task = new CompactTask(*this,
-        seqno, source_id, expire_time, block_id);
-
-      return add_task_queue(task);
+      int ret = TFS_SUCCESS;
+      CompactTask* task = new CompactTask(*this, seqno, source_id, expire_time, block_id);
+      task->set_task_from_ds();
+      ret = add_task_queue(task);
+      if (TFS_SUCCESS != ret)
+      {
+        tbsys::gDelete(task);
+      }
+      return ret;
     }
 
     int TaskManager::add_marshalling_task(ECMarshallingMessage* message)
@@ -179,6 +204,11 @@ namespace tfs
       if (TFS_SUCCESS == ret)
       {
         ret = add_task_queue(task);
+      }
+
+      if (TFS_SUCCESS != ret)
+      {
+        tbsys::gDelete(task);
       }
       return ret;
     }
@@ -197,6 +227,11 @@ namespace tfs
       {
         ret = add_task_queue(task);
       }
+
+      if (TFS_SUCCESS != ret)
+      {
+        tbsys::gDelete(task);
+      }
       return ret;
     }
 
@@ -214,11 +249,17 @@ namespace tfs
       {
         ret = add_task_queue(task);
       }
+
+      if (TFS_SUCCESS != ret)
+      {
+        tbsys::gDelete(task);
+      }
       return ret;
     }
 
     int TaskManager::add_task_queue(Task* task)
     {
+      int ret = TFS_SUCCESS;
       bool exist = false;
       task_monitor_.lock();
       for (uint32_t i = 0; i < task_queue_.size(); i++)
@@ -235,13 +276,20 @@ namespace tfs
         TBSYS_LOG(INFO, "%s", task->dump().c_str());
         task_queue_.push_back(task);
       }
+      else
+      {
+        ret = TFS_ERROR;
+      }
       task_monitor_.unlock();
 
-      task_monitor_.lock();
-      task_monitor_.notify();
-      task_monitor_.unlock();
+      if (false == exist)
+      {
+        task_monitor_.lock();
+        task_monitor_.notify();
+        task_monitor_.unlock();
+      }
 
-      return TFS_SUCCESS;
+      return ret;
     }
 
     int TaskManager::run_task()
@@ -267,12 +315,13 @@ namespace tfs
         TBSYS_LOG(INFO, "start task, seqno: %"PRI64_PREFIX"d, type: %d", task->get_seqno(), task->get_type());
 
         int ret = TFS_SUCCESS;
-        int64_t start_time = Func::curr_time();
+        int64_t start_time = Func::get_monotonic_time_us();
 
         // handle task here
         ret = task->handle();
 
-        int64_t end_time = Func::curr_time();
+        int64_t end_time = Func::get_monotonic_time_us();
+
         TBSYS_LOG(INFO, "finish task, seqno: %"PRI64_PREFIX"d, type: %d, cost time: %"PRI64_PREFIX"d",
           task->get_seqno(), task->get_type(), end_time - start_time);
 
@@ -303,19 +352,25 @@ namespace tfs
 
     int TaskManager::expire_task()
     {
+      running_task_mutex_.lock();
       map<int64_t, Task*>::iterator iter = running_task_.begin();
       uint32_t old_size = running_task_.size();
-      for ( ; iter != running_task_.end(); iter++)
+      for ( ; iter != running_task_.end(); )
       {
         if (iter->second->is_expired())
         {
           TBSYS_LOG(DEBUG, "task expired, seqno: %"PRI64_PREFIX"d", iter->second->get_seqno());
-          running_task_.erase(iter);
           iter->second->report_to_ns(PLAN_STATUS_TIMEOUT);
           tbsys::gDelete(iter->second);
+          running_task_.erase(iter++);
+        }
+        else
+        {
+          iter++;
         }
       }
       uint32_t new_size = running_task_.size();
+      running_task_mutex_.unlock();
 
       TBSYS_LOG(DEBUG, "task manager expire task, old: %u, new: %u", old_size, new_size);
 
@@ -326,6 +381,7 @@ namespace tfs
     {
       stop_ = true;
       clear_cloned_block_map();
+
       task_monitor_.lock();
       task_monitor_.notifyAll();
       task_monitor_.unlock();
@@ -336,7 +392,7 @@ namespace tfs
       ClonedBlock* cloned_block = new ClonedBlock();
 
       cloned_block->blockid_ = block_id;
-      cloned_block->start_time_ = time(NULL);
+      cloned_block->start_time_ = Func::get_monotonic_time();
       cloned_block_mutex_.lock();
       cloned_block_map_.insert(ClonedBlockMap::value_type(block_id, cloned_block));
       cloned_block_mutex_.unlock();
@@ -362,7 +418,7 @@ namespace tfs
     int TaskManager::expire_cloned_block_map()
     {
       int ret = TFS_SUCCESS;
-      int32_t current_time = time(NULL);
+      int32_t current_time = Func::get_monotonic_time();
       int32_t now_time = current_time - expire_cloned_interval_;
       if (last_expire_cloned_block_time_ < now_time)
       {

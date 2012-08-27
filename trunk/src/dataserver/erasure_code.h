@@ -90,12 +90,14 @@ namespace tfs
          */
         int decode(const int size);
 
+      public:
+        static const int ws_;         // word size, shouldn't change
+        static const int ps_;         // packet_size, shouldn't change
+
       private:
         DISALLOW_COPY_AND_ASSIGN(ErasureCode);
 
-        static const int ws_;         // word size, shouldn't change
-        static const int ps_;         // packet_size, shouldn't change
-        int dn_;                      // data numbers
+       int dn_;                      // data numbers
         int pn_;                      // parity numbers
         int* matrix_;                 // encode matrix
         int* de_matrix_;              // decode matrix
