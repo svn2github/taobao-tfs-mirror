@@ -148,7 +148,7 @@ namespace tfs
 
     bool BlockCollect::is_writable() const
     {
-      //TBSYS_LOG(DEBUG, "is_full: %d, size: %d", is_full(), get_servers_size());
+      //TBSYS_LOG(INFO, "is_full: %s, size: %d", is_full() ? "true" : "false", get_servers_size());
       return ((!is_full()) && (get_servers_size() >= SYSPARAM_NAMESERVER.max_replication_));
     }
 
@@ -208,11 +208,10 @@ namespace tfs
     }
 
     bool BlockCollect::check_version(LayoutManager& manager, common::ArrayHelper<ServerCollect*>& removes,
-        bool& expire_self, common::ArrayHelper<ServerCollect*>& other_expires, ServerCollect*& invalid_server,
-        const ServerCollect* server,const int8_t role, const bool isnew, const common::BlockInfo& info, const time_t now)
+        bool& expire_self, common::ArrayHelper<ServerCollect*>& other_expires, const ServerCollect* server,
+        const int8_t role, const bool isnew, const common::BlockInfo& info, const time_t now)
     {
       expire_self = false;
-      invalid_server = NULL;
       bool ret = NULL != server && info_.block_id_ == info.block_id_;
       if (ret)
       {
@@ -223,23 +222,20 @@ namespace tfs
           result = get_(server, false);
           if (NULL != result)//这里处理方式和add一样
           {
-            invalid_server = *result;
+            removes.push_back(*result);
             *result = NULL;
           }
-          int8_t size = get_servers_size();
-          if (size >= SYSPARAM_NAMESERVER.max_replication_)
+          //check block version
+          ret = info.version_ >= info_.version_;
+          if (!ret)
           {
-            if ((info_.file_count_ > info.file_count_)
-               || (info_.file_count_ == info.file_count_ && info_.size_ != info.size_))
-            {
-              expire_self = (role == NS_ROLE_MASTER);
-              ret = false;
-            }
+            expire_self = (role == NS_ROLE_MASTER);//i'm master, we're going to expire blocks
           }
-          if (ret)
+          else
           {
-            //check block version
-            if (__gnu_cxx::abs(info_.version_ - info.version_) <= VERSION_AGREED_MASK)//version agreed
+            info_ = info;
+            int8_t size = get_servers_size();
+            if (info.version_ == info_.version_)//version argeed
             {
               if (size >= SYSPARAM_NAMESERVER.max_replication_)
               {
@@ -264,62 +260,29 @@ namespace tfs
                     other_expires.push_back(result);
                 }
               }
-              else
-              {
-                if (((info_.version_ > info.version_) && (size <= 0))
-                    || (info_.version_ <= info.version_))
-                {
-                  info_ = info;
-                  //memcpy(&info_, &info, sizeof(info_));
-                }
-              }
             }
-            else
+            else if (info.version_ > info_.version_)
             {
-              if (info_.version_ > info.version_)// nameserver version > dataserver version
+              int32_t old_version = info_.version_;
+              if (!isnew)//release dataserver
               {
-                if (size > 0)//has dataserver hold block, release
+                TBSYS_LOG(INFO, "block: %u in dataserver: %s version error %d:%d,replace ns version, current dataserver size: %u",
+                    info.block_id_, tbsys::CNetUtil::addrToString(server->id()).c_str(),
+                    old_version, info.version_, size);
+                if (role == NS_ROLE_MASTER)
                 {
-                  TBSYS_LOG(INFO, "block: %u in dataserver: %s version error %d:%d",
-                      info.block_id_, tbsys::CNetUtil::addrToString(server->id()).c_str(),
-                      info_.version_, info.version_);
-                  expire_self = (role == NS_ROLE_MASTER);
-                  ret = false;
-                }
-                else //we'll accept current version
-                {
-                  TBSYS_LOG(WARN, "block: %u in dataserver: %s version error %d:%d, but not found dataserver",
-                      info.block_id_, tbsys::CNetUtil::addrToString(server->id()).c_str(),
-                      info_.version_, info.version_);
-                  info_ = info;
-                  //memcpy(&info_,&info, sizeof(info_));
-                }
-              }
-              else if ( info_.version_ < info.version_) // nameserver version < dataserver version , we'll accept new version and release all dataserver
-              {
-                int32_t old_version = info_.version_;
-                info_ = info;
-                //memcpy(&info_, &info, sizeof(info_));
-                if (!isnew)//release dataserver
-                {
-                  TBSYS_LOG(INFO, "block: %u in dataserver: %s version error %d:%d,replace ns version, current dataserver size: %u",
-                      info.block_id_, tbsys::CNetUtil::addrToString(server->id()).c_str(),
-                      old_version, info.version_, size);
-                  if (role == NS_ROLE_MASTER)
+                  update_last_time(now);
+                  ServerCollect* pserver = NULL;
+                  for (int8_t i = 0; i < SYSPARAM_NAMESERVER.max_replication_; ++i)
                   {
-                    update_last_time(now);
-                    ServerCollect* pserver = NULL;
-                    for (int8_t i = 0; i < SYSPARAM_NAMESERVER.max_replication_; ++i)
+                    pserver = servers_[i];
+                    servers_[i] = NULL;
+                    if (NULL != pserver)
                     {
-                      pserver = servers_[i];
-                      servers_[i] = NULL;
-                      if (NULL != pserver)
-                      {
-                        TBSYS_LOG(INFO, "release relation dataserver: %s, block: %u",
-                            tbsys::CNetUtil::addrToString(pserver->id()).c_str(), info_.block_id_);
-                        other_expires.push_back(pserver);
-                        removes.push_back(pserver);
-                      }
+                      TBSYS_LOG(INFO, "release relation dataserver: %s, block: %u",
+                          tbsys::CNetUtil::addrToString(pserver->id()).c_str(), info_.block_id_);
+                      other_expires.push_back(pserver);
+                      removes.push_back(pserver);
                     }
                   }
                 }
@@ -400,14 +363,15 @@ namespace tfs
       bool ret = (BLOCK_CREATE_FLAG_YES != create_flag_ && !is_in_family());
       if (ret)
       {
-        ret = (get_servers_size() >= SYSPARAM_NAMESERVER.max_replication_  && is_full());
+        ret = (get_servers_size() >= SYSPARAM_NAMESERVER.max_replication_);
+        /*ret = (get_servers_size() >= SYSPARAM_NAMESERVER.max_replication_  && is_full());
         if (ret)
         {
           int32_t delete_file_num_ratio = get_delete_file_num_ratio();
           int32_t delete_size_ratio = get_delete_file_size_ratio();
           ret = (delete_file_num_ratio <= SYSPARAM_NAMESERVER.marshalling_delete_ratio_
                 && delete_size_ratio <= SYSPARAM_NAMESERVER.marshalling_delete_ratio_);
-        }
+        }*/
       }
       return ret;
     }
@@ -486,6 +450,14 @@ namespace tfs
           manager.relieve_relation(this, server, now, BLOCK_COMPARE_SERVER_BY_ID);
       }
       return true;
+    }
+
+    void BlockCollect::cleanup()
+    {
+      for (int8_t i = 0; i < common::SYSPARAM_NAMESERVER.max_replication_; ++i)
+      {
+        servers_[i] = NULL;
+      }
     }
 
     int8_t BlockCollect::get_servers_size() const

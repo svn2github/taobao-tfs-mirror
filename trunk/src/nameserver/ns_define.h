@@ -196,9 +196,8 @@ namespace tfs
     static const int32_t MAX_SINGLE_RACK_SERVER_NUM = 64;
     static const int32_t MAX_MARSHLLING_QUEUE_ELEMENT_SIZE = 128;//编组队列大小
     static const int32_t MAX_FAMILY_CHUNK_NUM = 10240;//
-    static const int32_t MAX_MARSHLLING_NUM = 32;//
-    static const int32_t MAX_DATA_MEMBER_NUM = 24;
-    static const int32_t MAX_CHECK_MEMBER_NUM = 8;
+
+    static const int32_t MAX_TASK_RESERVE_TIME = 5;
 
     class BlockCollect;
     class ServerCollect;

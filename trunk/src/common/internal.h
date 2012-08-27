@@ -45,7 +45,7 @@
 #define SET_MARSHALLING_TYPE(x,y) (x |= ((y << 8) & 0xFF00))
 #define SET_MASTER_INDEX(x,y) (x |= (y & 0xFF))
 
-// #define TFS_GTEST
+//#define TFS_GTEST
 
 #if __WORDSIZE == 32
 namespace __gnu_cxx
@@ -116,6 +116,7 @@ namespace tfs
     static const int64_t  INVALID_FAMILY_ID = 0;
     static const uint32_t INVALID_RACK_ID = 0;
     static const uint32_t INVALID_SERVER_ID = 0;
+    static const int32_t  INVALID_VERSION = -1;
 
     static const int32_t SEGMENT_HEAD_RESERVE_SIZE = 64;
 

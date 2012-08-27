@@ -59,9 +59,8 @@ namespace tfs
       bool is_creating() const;
       bool in_replicate_queue() const;
       bool check_version(LayoutManager& manager, common::ArrayHelper<ServerCollect*>& removes,
-          bool& expire_self, common::ArrayHelper<ServerCollect*>& other_expires, ServerCollect*& invalid_server,
-          const ServerCollect* server,const int8_t role, const bool isnew, const common::BlockInfo& block_info,
-          const time_t now);
+          bool& expire_self, common::ArrayHelper<ServerCollect*>& other_expires, const ServerCollect* server,
+          const int8_t role, const bool isnew, const common::BlockInfo& block_info, const time_t now);
       common::PlanPriority check_replicate(const time_t now) const;
       bool check_compact() const;
       bool check_balance() const;
@@ -85,6 +84,7 @@ namespace tfs
 
       void callback(LayoutManager& manager);
       bool clear(LayoutManager& manager, const time_t now);
+      void cleanup();
 
       inline int64_t get_family_id() const { return family_id_;};
       inline void set_family_id(const int64_t family_id) { family_id_ = family_id;}

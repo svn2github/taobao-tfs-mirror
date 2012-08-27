@@ -71,7 +71,11 @@ namespace tfs
       plan_run_flag_ |= PLAN_RUN_FLAG_MOVE;
       plan_run_flag_ |= PLAN_RUN_FLAG_COMPACT;
       plan_run_flag_ |= PLAN_RUN_FLAG_DELETE;
+      plan_run_flag_ |= PLAN_RUN_FALG_MARSHALLING;
+      //plan_run_flag_ |= PLAN_RUN_FALG_REINSTATE;
+      //plan_run_flag_ |= PLAN_RUN_FALG_DISSOLVE;
     }
+
 
     LayoutManager::~LayoutManager()
     {
@@ -616,7 +620,8 @@ namespace tfs
       const int32_t MAX_QUERY_BLOCK_NUMS = 4096;
       const int32_t MIN_SLEEP_TIME_US= 5000;
       const int32_t MAX_SLEEP_TIME_US = 1000000;//1s
-      const int32_t MAX_LOOP_NUMS = 1000000 / MIN_SLEEP_TIME_US;
+      const int32_t MAX_LOOP_NUMS = 5;
+      //const int32_t MAX_LOOP_NUMS = 1000000 / MIN_SLEEP_TIME_US;
       BlockCollect* blocks[MAX_QUERY_BLOCK_NUMS];
       ArrayHelper<BlockCollect*> results(MAX_QUERY_BLOCK_NUMS, blocks);
 
@@ -654,7 +659,7 @@ namespace tfs
               get_block_manager().get_emergency_replicate_queue_size(), need);
           }
 
-          if (need > 0)
+          /*if (need > 0)
           {
             scan_replicate_queue_(need, now);
           }
@@ -662,7 +667,7 @@ namespace tfs
           if (need > 0)
           {
             scan_reinstate_or_dissolve_queue_(need , now);
-          }
+          }*/
 
           results.clear();
 
@@ -676,12 +681,14 @@ namespace tfs
               block_start = 0;
           }
 
-          if (need > 0)
+          //TODO
+          family_start = 0;
+          /*if (need > 0)
           {
             over = scan_family_(helpers, need, family_start, MAX_QUERY_FAMILY_NUMS, now, compact_time);
             if (over)
               family_start = 0;
-          }
+          }*/
 
           if (need > 0)
           {
@@ -867,7 +874,7 @@ namespace tfs
           }
           while (infos.size() > 0 && TFS_SUCCESS == ret);
         }
-        sleep(MAX_SLEEP_TIME);
+        Func::sleep(MAX_SLEEP_TIME, ngi.destroy_flag_);
       }
     }
 
@@ -1497,13 +1504,13 @@ namespace tfs
             ret = get_family_manager().get_members(helper, reinstate_members, family->get_family_id());
             if (TFS_SUCCESS == ret)
             {
-              for (int64_t i = 0; i < helper.get_array_index() && TFS_SUCCESS == ret; ++i)
+              for (int64_t index = 0; index < helper.get_array_index() && TFS_SUCCESS == ret; ++index)
               {
-                FamilyMemberInfo* info = helper.at(i);
+                FamilyMemberInfo* info = helper.at(index);
                 assert(info);
                 if (INVALID_SERVER_ID == info->server_)
                 {
-                  family_aid_info_index = i;
+                  family_aid_info_index = index;
                   ret = !results.empty() ? TFS_SUCCESS : EXIT_CHOOSE_TARGET_SERVER_INSUFFICIENT_ERROR;
                   if (TFS_SUCCESS == ret)
                   {
@@ -1529,45 +1536,47 @@ namespace tfs
           const common::ArrayHelper<FamilyMemberInfo>& reinstate_members, const time_t now)
     {
       bool ret = ((NULL != family) && reinstate_members.get_array_index() > 0
-              && (plan_run_flag_ & PLAN_RUN_FALG_DISSOLVE) && need > 0);
+                  && (plan_run_flag_ & PLAN_RUN_FALG_DISSOLVE) && need > 0);
       if (ret)
       {
-        const int32_t MAX_FAMILY_MEMBER_INFO = MAX_MARSHALLING_NUM * 2;
-        FamilyMemberInfo members[MAX_MARSHALLING_NUM];
+        const int32_t MEMBER_NUM = GET_DATA_MEMBER_NUM(family->get_family_aid_info()) + GET_CHECK_MEMBER_NUM(family->get_family_aid_info());
+        const int32_t MAX_FAMILY_MEMBER_INFO = MEMBER_NUM * 2;
+        FamilyMemberInfo members[MAX_FAMILY_MEMBER_INFO];
         FamilyMemberInfo dissolve_members[MAX_FAMILY_MEMBER_INFO];
-        ArrayHelper<FamilyMemberInfo> dissolve_helper(MAX_MARSHALLING_NUM, members);
-        ArrayHelper<FamilyMemberInfo> helper(MAX_MARSHALLING_NUM, members);
+        ArrayHelper<FamilyMemberInfo> helper(MAX_FAMILY_MEMBER_INFO, members);
         ret = get_family_manager().get_members(helper, reinstate_members, family->get_family_id());
         if (TFS_SUCCESS == ret)
         {
-          std::pair<uint64_t, uint32_t> targets[MAX_MARSHALLING_NUM];
-          ArrayHelper<std::pair<uint64_t, uint32_t> > results(MAX_MARSHALLING_NUM, targets);
-          ret = get_family_manager().dissolve_family_choose_member_targets_server(results, family->get_family_id());
+          ret = MEMBER_NUM == helper.get_array_index() ? TFS_SUCCESS : EXIT_FAMILY_MEMBER_INFO_ERROR;
           if (TFS_SUCCESS == ret)
           {
-            ret = reinstate_members.get_array_index() == results.get_array_index() ? TFS_SUCCESS : EXIT_CHOOSE_TARGET_SERVER_INSUFFICIENT_ERROR;
+            std::pair<uint64_t, uint32_t> targets[MAX_FAMILY_MEMBER_INFO];
+            ArrayHelper<std::pair<uint64_t, uint32_t> > results(MAX_FAMILY_MEMBER_INFO, targets);
+            ret = get_family_manager().dissolve_family_choose_member_targets_server(results, family->get_family_id(), family->get_family_aid_info());
             if (TFS_SUCCESS == ret)
             {
-              int64_t index = 0;
-              FamilyMemberInfo info;
-              for (index = 0; index < helper.get_array_index(); ++index)
+              ret = MEMBER_NUM == results.get_array_index() ? TFS_SUCCESS : EXIT_CHOOSE_TARGET_SERVER_INSUFFICIENT_ERROR;
+              if (TFS_SUCCESS == ret)
               {
-                info = *helper.at(index);
-                if (INVALID_SERVER_ID != info.server_)
-                  dissolve_helper.push_back(info);
+                int32_t next_index = 0;
+                for (int64_t index = 0; index < MEMBER_NUM; ++index)
+                {
+                  std::pair<uint64_t, uint32_t>* item = results.at(index);
+                  next_index = index + MEMBER_NUM;
+                  dissolve_members[index] = members[index];
+                  dissolve_members[next_index].server_ = item->first;
+                  dissolve_members[next_index].block_  = item->second;
+                  dissolve_members[next_index].status_ = members[index].status_;
+                }
+                int32_t family_aid_info = family->get_family_aid_info();
+                const int32_t DATA_MEMBER_NUM = GET_DATA_MEMBER_NUM(family_aid_info) * 2;
+                const int32_t CHECK_MEMBER_NUM = GET_DATA_MEMBER_NUM(family_aid_info) * 2;
+                SET_DATA_MEMBER_NUM(family_aid_info, DATA_MEMBER_NUM);
+                SET_CHECK_MEMBER_NUM(family_aid_info, CHECK_MEMBER_NUM);
+                SET_MASTER_INDEX(family_aid_info, 0);
+                ret = get_task_manager().add(family->get_family_id(), family_aid_info, PLAN_TYPE_EC_DISSOLVE,
+                  MAX_FAMILY_MEMBER_INFO, dissolve_members, now);
               }
-              for (index = 0; index < results.get_array_index(); ++index)
-              {
-                std::pair<uint64_t, uint32_t>* item = results.at(index);
-                assert(item);
-                info.block_ = item->second;
-                info.server_ = item->first;
-                dissolve_helper.push_back(info);
-              }
-              int32_t family_aid_info = family->get_family_aid_info();
-              SET_MASTER_INDEX(family_aid_info, 0);
-              ret = get_task_manager().add(family->get_family_id(), family_aid_info, PLAN_TYPE_EC_DISSOLVE,
-                dissolve_helper.get_array_index(), dissolve_members, now);
             }
           }
         }
@@ -1592,7 +1601,7 @@ namespace tfs
         ret = ((NULL != block) && (NULL != server));
         if (ret)
         {
-          relieve_relation(block, server, now,BLOCK_COMPARE_SERVER_BY_POINTER);
+          relieve_relation(block, server, now, BLOCK_COMPARE_SERVER_BY_POINTER);
           ret = get_task_manager().remove_block_from_dataserver(server->id(), block->id(), 0, now);
         }
       }
@@ -1604,6 +1613,7 @@ namespace tfs
       int32_t ret = need > 0 ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
+        get_family_manager().dump_marshalling_queue(TBSYS_LOG_LEVEL_INFO);
         int32_t DATA_MEMBER_NUM  = SYSPARAM_NAMESERVER.max_data_member_num_;
         int32_t CHECK_MEMBER_NUM = SYSPARAM_NAMESERVER.max_data_member_num_;
         ServerCollect* servers[MAX_MARSHALLING_NUM];

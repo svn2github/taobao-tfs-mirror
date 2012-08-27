@@ -168,7 +168,8 @@ namespace tfs
 
     ReportBlocksToNsRequestMessage::ReportBlocksToNsRequestMessage():
       server_(common::INVALID_SERVER_ID),
-      flag_(common::REPORT_BLOCK_NORMAL),
+      //flag_(common::REPORT_BLOCK_NORMAL),
+      flag_(common::REPORT_BLOCK_EXT),
       type_(common::REPORT_BLOCK_TYPE_ALL)
     {
       _packetHeader._pcode = common::REQ_REPORT_BLOCKS_TO_NS_MESSAGE;
@@ -194,6 +195,7 @@ namespace tfs
         int32_t size = 0;
         int64_t pos = 0;
         iret = input.get_int32(&size);
+        TBSYS_LOG(DEBUG, "SSSSSSSSSSSSSSSSSSSSSSSSS %d, %d", size, flag_);
         if (common::TFS_SUCCESS == iret)
         {
           if (common::REPORT_BLOCK_NORMAL == flag_)

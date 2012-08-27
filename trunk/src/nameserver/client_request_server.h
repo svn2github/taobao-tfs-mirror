@@ -46,7 +46,8 @@ namespace tfs
         virtual ~ClientRequestServer(){}
 
         int keepalive(const common::DataServerStatInfo& info, const time_t now);
-        int report_block(const uint64_t server, const time_t now, std::set<common::BlockInfo>& blocks);
+        int report_block(std::vector<uint32_t>& expires, const uint64_t server, const time_t now,
+            const std::set<common::BlockInfoExt>& blocks, const int8_t type);
         int open(uint32_t& block_id, uint32_t& lease_id, int32_t& version,
             common::VUINT64& servers, const int32_t mode, const time_t now);
         int batch_open(const common::VUINT32& blocks, const int32_t mode, const int32_t block_count, std::map<uint32_t, common::BlockInfoSeg>& out);
@@ -58,6 +59,8 @@ namespace tfs
         int handle_control_cmd(const common::ClientCmdInformation& info, common::BasePacket* msg, const int64_t buf_length, char* buf);
 
         int handle(common::BasePacket* msg);
+
+        int resolve_block_version_conflict(const uint32_t block, const std::vector<std::pair<uint64_t, common::BlockInfo> >& info);
 
       private:
         int open_read_mode_(common::VUINT64& servers, const uint32_t block) const;

@@ -93,8 +93,9 @@ namespace tfs
         int get_servers(common::ArrayHelper<ServerCollect*>& server, const BlockCollect* block) const;
         int get_servers_size(const uint32_t block) const;
         uint64_t get_first_server(const uint32_t block) const;
+        bool exist(const BlockCollect* block, const ServerCollect* server) const;
 
-        int update_relation(ServerCollect* server, const std::set<common::BlockInfo>& blocks, const time_t now);
+        int update_relation(std::vector<uint32_t>& expires, ServerCollect* server, const std::set<common::BlockInfoExt>& blocks, const time_t now);
         int build_relation(BlockCollect* block, bool& writable, bool& master,
             ServerCollect*& invalid_server, const ServerCollect* server, const time_t now, const bool set =false);
         bool relieve_relation(BlockCollect* block, const ServerCollect* server, const time_t now, const int8_t flag);

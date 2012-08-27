@@ -257,6 +257,7 @@ namespace tfs
       bool all_over = next >= MAX_BLOCK_CHUNK_NUMS;
       for (; next < MAX_BLOCK_CHUNK_NUMS && actual < count;)
       {
+        //TBSYS_LOG(INFO, "scan index: %d, %d", next, MAX_BLOCK_CHUNK_NUMS);
         rwmutex_[next].rdlock();
         BLOCK_MAP_ITER iter = ((0 == begin) || end) ? blocks_[next]->begin() : blocks_[next]->lower_bound(&query);
         for (; iter != blocks_[next]->end(); ++iter)
@@ -279,6 +280,7 @@ namespace tfs
           begin = 0;
           while ((0 == begin) && (next < MAX_BLOCK_CHUNK_NUMS))
           {
+            //TBSYS_LOG(INFO, "scan index====>>>>>>>: %d, %d", next, MAX_BLOCK_CHUNK_NUMS);
             rwmutex_[next].rdlock();
             if (!blocks_[next]->empty())
             {
@@ -395,75 +397,101 @@ namespace tfs
       return (NULL != pblock) ? pblock->get_first_server() : INVALID_SERVER_ID;
     }
 
+    bool BlockManager::exist(const BlockCollect* block, const ServerCollect* server) const
+    {
+      bool ret = (NULL != block && NULL != server);
+      if (ret)
+      {
+        RWLock::Lock lock(get_mutex_(block->id()), READ_LOCKER);
+        ret = block->exist(server,false);
+      }
+      return ret;
+    }
+
     RWLock& BlockManager::get_mutex_(const uint32_t block) const
     {
       return rwmutex_[get_chunk_(block)];
     }
 
-    int BlockManager::update_relation(ServerCollect* server, const std::set<common::BlockInfo>& blocks, const time_t now)
+    int BlockManager::update_relation(std::vector<uint32_t>& expires, ServerCollect* server, const std::set<common::BlockInfoExt>& blocks, const time_t now)
     {
       int32_t ret = ((NULL != server) && (server->is_alive())) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
-        int32_t i = 0;
-        bool isnew = false;
-        bool writable = false;
-        bool master  = false;
-        bool expire_self = false;
-        ServerCollect* invalid_server = NULL;
-        ServerCollect* next_invalid_server = NULL;
+        int64_t i = 0;
         ServerCollect* servers[MAX_REPLICATION];
         ArrayHelper<ServerCollect*> helper(MAX_REPLICATION, servers);
         ServerCollect* other_servers[MAX_REPLICATION];
         ArrayHelper<ServerCollect*> other_expires(MAX_REPLICATION, other_servers);
         NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
-        std::set<BlockInfo>::const_iterator iter = blocks.begin();
+        std::set<BlockInfoExt>::const_iterator iter = blocks.begin();
 
-        //TODO
         for (; iter != blocks.end(); ++iter)
         {
-          isnew = false;
-          writable = false;
-          master   = false;
-          expire_self = false;
-          invalid_server = NULL;
-          next_invalid_server = NULL;
+          bool isnew = false;
+          bool writable = false;
+          bool master   = false;
+          bool expire_self = false;
+          ServerCollect* invalid_server = NULL;
           helper.clear();
           other_expires.clear();
-          const BlockInfo& info = (*iter);
+          const BlockInfoExt& info = (*iter);
 
           // check block version, rebuilding relation.
-          get_mutex_(info.block_id_).wrlock();
-          BlockCollect* block = get_(info.block_id_);
+          get_mutex_(info.block_info_.block_id_).wrlock();
+          BlockCollect* block = get_(info.block_info_.block_id_);
           if (NULL == block)
           {
-            block = insert_(info.block_id_, now);
+            block = insert_(info.block_info_.block_id_, now);
             isnew= true;
           }
 
           ret = NULL != block ? TFS_SUCCESS : EXIT_BLOCK_NOT_FOUND;
           if (TFS_SUCCESS == ret)
           {
-            if (block->check_version(manager_, helper, expire_self, other_expires, invalid_server,
-                server, ngi.owner_role_, isnew, info, now))
+            if (INVALID_FAMILY_ID == info.group_id_)
             {
-              //build relation
-              ret = build_relation_(block, writable, master, next_invalid_server, server,now);
+              if (block->check_version(manager_, helper, expire_self, other_expires,
+                  server, ngi.owner_role_, isnew, info.block_info_, now))
+              {
+                //build relation
+                ret = build_relation_(block, writable, master, invalid_server, server,now);
+              }
+            }
+            else
+            {
+              //没有进行编组，需要将BLOCK的familyID进行重置或者删除当前BLOCK
+              if (INVALID_FAMILY_ID == block->get_family_id())
+              {
+                expires.push_back(info.block_info_.block_id_);
+              }
+              else
+              {
+                expire_self = (info.group_id_ != block->get_family_id());
+                if (!expire_self)
+                {
+                  if (block->version() < info.block_info_.version_)
+                    block->update(info.block_info_);
+                  if (!block->exist(server))
+                  {
+                    block->get_servers(helper);
+                    block->cleanup();
+                    ret = build_relation_(block, writable, master, invalid_server, server,now);
+                  }
+                }
+              }
             }
           }
-          get_mutex_(info.block_id_).unlock();
+          get_mutex_(info.block_info_.block_id_).unlock();
 
           if (NULL != invalid_server && NULL != block)
-              manager_.get_server_manager().relieve_relation(invalid_server, block);
-
-          if (NULL != next_invalid_server && NULL != block)
-              manager_.get_server_manager().relieve_relation(next_invalid_server, block);
+            manager_.get_server_manager().relieve_relation(invalid_server, block);
 
           if (TFS_SUCCESS == ret)
           {
             if (expire_self)
             {
-              push_to_delete_queue(info.block_id_, server->id());
+              push_to_delete_queue(info.block_info_.block_id_, server->id());
             }
 
             ServerCollect* pserver = NULL;
@@ -471,7 +499,7 @@ namespace tfs
             {
               pserver = *other_expires.at(i);
               assert(NULL != pserver);
-              push_to_delete_queue(info.block_id_, pserver->id());
+              push_to_delete_queue(info.block_info_.block_id_, pserver->id());
             }
 
             for (i = 0; i < helper.get_array_index(); ++i)

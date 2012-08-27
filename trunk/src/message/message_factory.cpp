@@ -312,6 +312,18 @@ namespace tfs
           case common::RSP_CHECK_BLOCK_MESSAGE:
             packet = new CheckBlockResponseMessage();
             break;
+          case common::RSP_WRITE_DATA_MESSAGE:
+            packet = new WriteDataResponseMessage();
+            break;
+          case common::RSP_UNLINK_FILE_MESSAGE:
+            packet = new UnlinkFileResponseMessage();
+            break;
+          case common::REQ_RESOLVE_BLOCK_VERSION_CONFLICT_MESSAGE:
+            packet = new ResolveBlockVersionConflictMessage();
+            break;
+          case common::RSP_RESOLVE_BLOCK_VERSION_CONFLICT_MESSAGE:
+            packet = new ResolveBlockVersionConflictResponseMessage();
+            break;
           default:
             TBSYS_LOG(ERROR, "pcode: %d not found in message factory", real_pcode);
             break;

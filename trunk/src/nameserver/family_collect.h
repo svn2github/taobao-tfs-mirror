@@ -60,13 +60,14 @@ namespace tfs
       inline void set_family_id(const int64_t family_id){ family_id_ = family_id;}
       inline void set_data_member_num(const int16_t data_member_num){SET_DATA_MEMBER_NUM(family_aid_info_, data_member_num);}
       inline void set_check_member_num(const int16_t check_member_num){ SET_CHECK_MEMBER_NUM(family_aid_info_, check_member_num);}
-      inline void set_code_type(const int8_t code_type) { SET_CODE_TYPE(family_aid_info_, code_type);}
+      inline void set_code_type(const int8_t code_type) { SET_MARSHALLING_TYPE(family_aid_info_, code_type);}
       inline void set_master_index(const int8_t index) { SET_MASTER_INDEX(family_aid_info_, index);}
       inline int64_t get_family_id() const { return family_id_;}
       inline int get_data_member_num() const { return GET_DATA_MEMBER_NUM(family_aid_info_);}
       inline int get_check_member_num() const { return GET_CHECK_MEMBER_NUM(family_aid_info_);}
-      inline int get_code_type() const { return GET_CODE_TYPE(family_aid_info_);}
+      inline int get_code_type() const { return GET_MARSHALLING_TYPE(family_aid_info_);}
       inline int get_master_index() const { return GET_MASTER_INDEX(family_aid_info_);}
+      inline int get_family_aid_info() const { return family_aid_info_;}
       inline bool in_reinstate_or_dissolve_queue() const { return FAMILY_IN_REINSTATE_OR_DISSOLVE_QUEUE_YES == in_reinstate_or_dissolve_queue_;}
       inline void set_in_reinstate_or_dissolve_queue(const int8_t falg = FAMILY_IN_REINSTATE_OR_DISSOLVE_QUEUE_YES) { in_reinstate_or_dissolve_queue_ = falg;}
     private:

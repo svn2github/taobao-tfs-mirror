@@ -76,8 +76,8 @@ namespace tfs
       return ret;
     }
 
-    int ClientRequestServer::report_block(const uint64_t server, const time_t now,
-        std::set<common::BlockInfo>& blocks)
+    int ClientRequestServer::report_block(std::vector<uint32_t>& expires, const uint64_t server, const time_t now,
+        const std::set<common::BlockInfoExt>& blocks, const int8_t type)
     {
       int32_t ret = TFS_ERROR;
       ServerCollect* pserver = manager_.get_server_manager().get(server);
@@ -85,13 +85,13 @@ namespace tfs
       if (TFS_SUCCESS == ret)
       {
         //update all relations of blocks belongs to it
-        ret = manager_.update_relation(pserver, blocks, now);
+        ret = manager_.update_relation(expires, pserver, blocks, now, type);
         ret = TFS_SUCCESS != ret ?  EXIT_UPDATE_RELATION_ERROR : TFS_SUCCESS;
         if (TFS_SUCCESS == ret)
         {
           pserver = manager_.get_server_manager().get(server);
           ret = (NULL == pserver) ? EIXT_SERVER_OBJECT_NOT_FOUND : TFS_SUCCESS;
-          if (TFS_SUCCESS == ret)
+          if (TFS_SUCCESS == ret && REPORT_BLOCK_TYPE_ALL == type)
           {
             pserver->set_report_block_status(REPORT_BLOCK_STATUS_COMPLETE);
             pserver->set_next_report_block_time(now, random() % 0xFFFFFFF, false);
@@ -704,6 +704,66 @@ namespace tfs
           default:
             TBSYS_LOG(WARN, "unkonw message PCode = %d", pcode);
             break;
+        }
+      }
+      return ret;
+    }
+
+
+    int ClientRequestServer::resolve_block_version_conflict(const uint32_t block_id, const std::vector<std::pair<uint64_t, common::BlockInfo> >& members)
+    {
+      int32_t ret = (INVALID_BLOCK_ID != block_id &&  !members.empty()) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+      if (TFS_SUCCESS == ret)
+      {
+        BlockCollect* block = manager_.get_block_manager().get(block_id);
+        ret = (NULL != block) ? TFS_SUCCESS : EXIT_NO_BLOCK;
+        if (TFS_SUCCESS == ret)
+        {
+          bool update_last_time = false;
+          time_t now = Func::get_monotonic_time();
+          ServerCollect* server = NULL;
+          common::BlockInfo info;
+          info.version_ = INVALID_VERSION;
+          uint64_t servers[MAX_REPLICATION_NUM];
+          ArrayHelper<uint64_t> helper(MAX_REPLICATION_NUM, servers);
+          std::vector<std::pair<uint64_t, common::BlockInfo> >::const_iterator iter = members.begin();
+          for (; iter != members.end(); ++iter)
+          {
+            TBSYS_LOG(INFO, "resolve block version conflict: current block: %u, server: %s, version: %d",
+              block->id(), tbsys::CNetUtil::addrToString(iter->first).c_str(), iter->second.version_);
+            if (iter->second.version_ >= info.version_)
+            {
+              server = manager_.get_server_manager().get(iter->first);
+              bool exist = manager_.get_block_manager().exist(block, server);
+              if (iter->second.version_ > info.version_ && exist)
+                helper.clear();
+              if (exist)
+              {
+                info = iter->second;
+                helper.push_back(iter->first);
+              }
+            }
+          }
+          iter = members.begin();
+          for (; iter != members.end(); ++iter)
+          {
+            if (!helper.exist(iter->first)
+                && manager_.get_block_manager().get_servers_size(block->id()) > 1)
+            {
+              //解除关系失败可以暂时不管
+              update_last_time = true;
+              server = manager_.get_server_manager().get(iter->first);
+              manager_.get_block_manager().push_to_delete_queue(block_id, iter->first);
+              manager_.relieve_relation(block, server, now,BLOCK_COMPARE_SERVER_BY_ID_POINTER);
+              TBSYS_LOG(INFO, "resolve block version conflict: relieve relation block: %u, server: %s, version: %d",
+                block->id(), tbsys::CNetUtil::addrToString(iter->first).c_str(), iter->second.version_);
+            }
+          }
+          if (update_last_time)
+          {
+            block->update(info);
+            block->update_last_time(now - SYSPARAM_NAMESERVER.replicate_wait_time_);
+          }
         }
       }
       return ret;
