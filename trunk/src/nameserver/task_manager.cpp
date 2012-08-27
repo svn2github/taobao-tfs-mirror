@@ -99,8 +99,8 @@ namespace tfs
       }
     }
 
-    int TaskManager::add(const uint32_t id, const std::vector<ServerCollect*>& runer,
-            const common::PlanType type, const time_t now, const common::PlanPriority priority)
+    int TaskManager::add(const uint32_t id, const ArrayHelper<ServerCollect*>& servers,
+            const PlanType type, const time_t now)
     {
       //这里只判断Block是否正在写一次的原因: 因为add task到几个列表是不能被打断的，如果打断了处理的逻辑会很复杂
       //这里我们只能尽可能的保证同一个Block不同时做写操作，复制/均衡，因为目前这种做是没有办法完全保证同一个
@@ -111,68 +111,54 @@ namespace tfs
         RWLock::Lock lock(rwmutex_, WRITE_LOCKER);
         std::pair<BLOCK_TO_TASK_ITER, bool> res;
         res.first = block_to_tasks_.find(id);
-        int32_t ret = block_to_tasks_.end() != res.first ? EXIT_TASK_EXIST_ERROR : TFS_SUCCESS;
+        ret = block_to_tasks_.end() != res.first ? EXIT_TASK_EXIST_ERROR : TFS_SUCCESS;
         if (TFS_SUCCESS == ret)
         {
-          Task* task = generation_(id, runer, type, priority);
+          Task* task = generation_(id, servers, type);
           assert(NULL != task);
-          res = block_to_tasks_.insert(BLOCK_TO_TASK::value_type(task->block_id_, task));
+          res = block_to_tasks_.insert(BLOCK_TO_TASK::value_type(id, task));
           std::pair<PENDING_TASK_ITER, bool> rs = pending_queue_.insert(task);
           ret = !rs.second ? EXIT_TASK_EXIST_ERROR : TFS_SUCCESS;
           if (TFS_SUCCESS == ret)
           {
-            std::vector<std::pair<ServerCollect*, bool> > success;
-            if (task->need_add_server_to_map())
+            int64_t index = 0;
+            ServerCollect* server = NULL;
+            std::pair<uint64_t, bool> success[SYSPARAM_NAMESERVER.max_replication_];
+            ArrayHelper<std::pair<uint64_t, bool> > helper(SYSPARAM_NAMESERVER.max_replication_, success);
+            for (index = 0; index < servers.get_array_index() && TFS_SUCCESS == ret; ++index)
             {
-              int8_t index = 0;
-              std::vector<ServerCollect*>::iterator it = task->runer_.begin();
-              for (; it != task->runer_.end() && TFS_SUCCESS == ret; ++it, ++index)
+              server = *servers.at(index);
+              if (task->type_ != PLAN_TYPE_COMPACT)
               {
-                if (task->type_ != PLAN_TYPE_COMPACT)
+                std::pair<MACHINE_TO_TASK_ITER, bool> mrs;
+                uint64_t machine_ip = (server->id() & 0xFFFFFFFF);
+                MACHINE_TO_TASK_ITER mit = machine_to_tasks_.find(machine_ip);
+                if (machine_to_tasks_.end() == mit)
                 {
-                  std::pair<MACHINE_TO_TASK_ITER, bool> mrs;
-                  uint64_t machine_ip = ((*it)->id() & 0xFFFFFFFF);
-                  MACHINE_TO_TASK_ITER mit = machine_to_tasks_.find(machine_ip);
-                  if (machine_to_tasks_.end() == mit)
-                  {
-                    mrs = machine_to_tasks_.insert(MACHINE_TO_TASK::value_type(machine_ip, Machine()));
-                    mit = mrs.first;
-                  }
-                  ret = mit->second.add((*it)->id(), task, is_target(index));
+                  mrs = machine_to_tasks_.insert(MACHINE_TO_TASK::value_type(machine_ip, Machine()));
+                  mit = mrs.first;
                 }
-                else
-                {
-                  SERVER_TO_TASK_ITER mit = server_to_tasks_.find((*it)->id());
-                  ret = server_to_tasks_.end() == mit ? TFS_SUCCESS : EXIT_TASK_EXIST_ERROR;
-                  if (TFS_SUCCESS == ret)
-                    server_to_tasks_.insert(SERVER_TO_TASK::value_type((*it)->id(), task));
-                }
-                if (TFS_SUCCESS == ret)
-                   success.push_back(std::pair<ServerCollect*, bool>((*it), is_target(index)));
+                ret = mit->second.add(server->id(), task, is_target(index));
               }
+              if (TFS_SUCCESS == ret)
+                 helper.push_back(std::make_pair(server->id(), is_target(index)));
             }
 
             //rollback
             if (TFS_SUCCESS != ret)
             {
               pending_queue_.erase(task);
-              if (task->need_add_server_to_map())
+              for (index = 0; index < helper.get_array_index(); ++index)
               {
-                std::vector<std::pair<ServerCollect*, bool> >::iterator it;
-                for (it = success.begin(); it != success.end(); ++it)
-                {
-                  if (task->type_ != PLAN_TYPE_COMPACT)
-                    remove_(it->first->id(), it->second);
-                  else
-                    server_to_tasks_.erase(it->first->id());
-                }
+                std::pair<uint64_t, bool>* item = helper.at(index);
+                if (task->type_ != PLAN_TYPE_COMPACT)
+                  remove_(item->first, item->second);
               }
             }
           }
 
           if (TFS_SUCCESS != ret)
           {
-            TBSYS_LOG(DEBUG, "add task ret: %d, block: %u", ret, id);
             task->dump(TBSYS_LOG_LEVEL_WARN, "add task failed, rollback,");
             block_to_tasks_.erase(res.first);
             manager_.get_gc_manager().add(task, now);
@@ -187,6 +173,65 @@ namespace tfs
       return ret;
     }
 
+    int TaskManager::add(const int64_t family_id, const int32_t family_aid_info, const PlanType type,
+        const int32_t member_num, const FamilyMemberInfo* members, const time_t now)
+    {
+      bool flag = (member_num > 0 && NULL != members);
+      const int32_t DATA_MEMBER_NUM = GET_DATA_MEMBER_NUM(family_aid_info);
+      const int32_t MEMBER_NUM = DATA_MEMBER_NUM + GET_CHECK_MEMBER_NUM(family_aid_info);
+      int32_t ret = (flag && INVALID_FAMILY_ID != family_id && MEMBER_NUM == member_num)? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+      if (TFS_SUCCESS == ret)
+      {
+        Task* task = generation_(family_id, family_aid_info, type, member_num, members);
+        assert(NULL != task);
+
+        task->dump(TBSYS_LOG_LEVEL_INFO, "add new task");
+
+        RWLock::Lock lock(rwmutex_, WRITE_LOCKER);
+        std::pair<PENDING_TASK_ITER, bool> rs = pending_queue_.insert(task);
+        ret = !rs.second ? EXIT_TASK_EXIST_ERROR : TFS_SUCCESS;
+        if (TFS_SUCCESS == ret)
+        {
+          //目前的流控做得简单点，将主控机的流量记1个，后面慢慢优化
+          int64_t index = 0;
+          std::pair<BLOCK_TO_TASK_ITER, bool> res;
+          std::pair<FamilyMemberInfo, bool> success[MAX_MARSHALLING_NUM];
+          const int32_t DATA_MEMBER_NUM = GET_DATA_MEMBER_NUM(family_aid_info);
+          ArrayHelper<std::pair<FamilyMemberInfo, bool> > helper(MAX_MARSHALLING_NUM, success);
+          for (index = 0; index < member_num && TFS_SUCCESS == ret; ++index)
+          {
+            bool insert = PLAN_TYPE_EC_DISSOLVE == type ? (index >= DATA_MEMBER_NUM) : true;
+            bool target = is_target(members[index], index, type, family_aid_info);
+            ret = insert_(helper, task, members[index], target, insert);
+          }
+
+          //we'll rollback
+          if (TFS_SUCCESS != ret)
+          {
+            for (index = 0; index < helper.get_array_index(); ++index)
+            {
+              std::pair<FamilyMemberInfo, bool>* item = helper.at(index);
+              remove_(item->first.server_,item->second);
+              block_to_tasks_.erase(item->first.block_);
+            }
+          }
+        }
+
+        if (TFS_SUCCESS != ret)
+        {
+          task->dump(TBSYS_LOG_LEVEL_WARN, "add task failed, rollback,");
+          pending_queue_.erase(task);
+          manager_.get_gc_manager().add(task, now);
+        }
+        else
+        {
+          task->seqno_ = ++seqno_;
+          tasks_.insert(TASKS::value_type(task->seqno_, task));
+        }
+      }
+      return ret;
+    }
+
     int TaskManager::remove(Task* task)
     {
       RWLock::Lock lock(rwmutex_, WRITE_LOCKER);
@@ -195,38 +240,53 @@ namespace tfs
 
     void TaskManager::clear()
     {
-      RWLock::Lock lock(rwmutex_, WRITE_LOCKER);
-      TASKS_CONST_ITER iter = tasks_.begin();
-      for (; iter != tasks_.end(); ++iter)
+      int32_t count = 0;
+      bool complete = false;
+      const int32_t MAX_QUERY_TASK = 32;
+      Task* tasks[MAX_QUERY_TASK];
+      ArrayHelper<Task*> helper(MAX_QUERY_TASK, tasks);
+      TASKS_ITER iter;
+      while (!complete)
       {
-        assert(NULL != iter->second);
-        manager_.get_gc_manager().add(iter->second);
+        count = 0;
+        rwmutex_.wrlock();
+        complete = (tasks_.end() == (iter = tasks_.begin()));
+        while ((++count < MAX_QUERY_TASK)&& (iter != tasks_.end()))
+        {
+          helper.push_back((iter->second));
+          tasks_.erase(iter++);
+        }
+        rwmutex_.unlock();
+        for (int64_t index = 0; index < helper.get_array_index(); ++index)
+        {
+          Task* task = *helper.at(index);
+          manager_.get_gc_manager().add(task);
+        }
       }
+      RWLock::Lock lock(rwmutex_, WRITE_LOCKER);
       tasks_.clear();
       machine_to_tasks_.clear();
       block_to_tasks_.clear();
       pending_queue_.clear();
-      server_to_tasks_.clear();
    }
 
     void TaskManager::dump(tbnet::DataBuffer& stream) const
     {
       RWLock::Lock lock(rwmutex_, READ_LOCKER);
-      stream.writeInt32(pending_queue_.size());
-      PENDING_TASK_CONST_ITER iter = pending_queue_.begin();
-      for (; iter != pending_queue_.end(); ++iter)
-      {
-        (*iter)->dump(stream);
-      }
+      stream.writeInt32(tasks_.size());
+      TASKS_CONST_ITER it = tasks_.begin();
+      for (; it != tasks_.end(); ++it)
+        it->second->dump(stream);
     }
 
-    void TaskManager::dump(const int32_t level) const
+    void TaskManager::dump(const int32_t level, const char* format) const
     {
-      RWLock::Lock lock(rwmutex_, READ_LOCKER);
-      PENDING_TASK_CONST_ITER iter = pending_queue_.begin();
-      for (; iter != pending_queue_.end(); ++iter)
+      if (level <= TBSYS_LOGGER._level)
       {
-        (*iter)->dump(level);
+        RWLock::Lock lock(rwmutex_, READ_LOCKER);
+        TASKS_CONST_ITER it = tasks_.begin();
+        for (; it != tasks_.end(); ++it)
+          it->second->dump(level, format);
       }
     }
 
@@ -249,13 +309,13 @@ namespace tfs
       return (NULL != get_(block));
     }
 
-    bool TaskManager::exist(const uint64_t server, bool compact) const
+    bool TaskManager::exist(const uint64_t server) const
     {
       RWLock::Lock lock(rwmutex_, READ_LOCKER);
-      return (NULL != get_(server, compact));
+      return (NULL != get_(server));
     }
 
-    bool TaskManager::exist(const common::ArrayHelper<ServerCollect*>& servers, bool compact) const
+    bool TaskManager::exist(const ArrayHelper<ServerCollect*>& servers) const
     {
       bool ret = !servers.empty();
       if (ret)
@@ -265,14 +325,14 @@ namespace tfs
         {
           server = *servers.at(i);
           assert(NULL != server);
-          ret = exist(server->id(), compact);
+          ret = exist(server->id());
         }
       }
       return ret;
     }
 
-    bool TaskManager::get_exist_servers(common::ArrayHelper<ServerCollect*>& result,
-        const common::ArrayHelper<ServerCollect*>& servers) const
+    bool TaskManager::get_exist_servers(ArrayHelper<ServerCollect*>& result,
+        const ArrayHelper<ServerCollect*>& servers) const
     {
       bool ret = !servers.empty();
       if (ret)
@@ -328,7 +388,6 @@ namespace tfs
       RemoveBlockMessage rbmsg;
       rbmsg.set(block);
       rbmsg.set_seqno(seqno);
-      //rbmsg.set_response_flag(REMOVE_BLOCK_RESPONSE_FLAG_YES);
       rbmsg.set_response_flag(REMOVE_BLOCK_RESPONSE_FLAG_NO);
       BlockInfo info;
       info.block_id_ = block;
@@ -351,7 +410,7 @@ namespace tfs
 
     int64_t TaskManager::size_() const
     {
-      int64_t total = server_to_tasks_.size();
+      int64_t total = 0;
       MACHINE_TO_TASK_CONST_ITER iter = machine_to_tasks_.begin();
       for (;iter != machine_to_tasks_.end(); ++iter)
       {
@@ -395,9 +454,8 @@ namespace tfs
       return TFS_SUCCESS;
     }
 
-    bool TaskManager::handle(common::BasePacket* msg, const int64_t seqno)
+    bool TaskManager::handle(BasePacket* msg, const int64_t seqno)
     {
-      bool all_complete_flag = true;
       bool ret = NULL != msg;
       if (ret)
       {
@@ -410,34 +468,48 @@ namespace tfs
         }
         else
         {
-          std::vector<ServerCollect*> runer;
+          const uint32_t block  = 0xfffffffa;
+          const int32_t MAX_NUM = 2;
+          int64_t family_id = 0xfffffffffffffffa;
+          int32_t family_aid_info;
+          SET_DATA_MEMBER_NUM(family_aid_info, 1);
+          SET_CHECK_MEMBER_NUM(family_aid_info, 1);
+          SET_MASTER_INDEX(family_aid_info,1);
+          uint64_t server[MAX_NUM];
+          FamilyMemberInfo info[MAX_NUM];
           if (msg->getPCode() == BLOCK_COMPACT_COMPLETE_MESSAGE)
           {
-            task = new (std::nothrow)CompactTask(*this, PLAN_PRIORITY_NONE, 0, runer);
+            task= new (std::nothrow)CompactTask(*this, block, MAX_NUM, server);
           }
           else if (msg->getPCode() == REPLICATE_BLOCK_MESSAGE)
           {
-            ReplicateBlockMessage* replicate_msg = dynamic_cast<ReplicateBlockMessage*>(msg);
-            task = replicate_msg->get_move_flag() == REPLICATE_BLOCK_MOVE_FLAG_NO
-              ? new (std::nothrow)ReplicateTask(*this, PLAN_PRIORITY_NONE, 0, runer)
-              : new (std::nothrow)MoveTask(*this, PLAN_PRIORITY_NONE, 0, runer);
+            PlanType type = dynamic_cast<ReplicateBlockMessage*>(msg)->get_move_flag() == REPLICATE_BLOCK_MOVE_FLAG_NO ?
+              PLAN_TYPE_REPLICATE : PLAN_TYPE_MOVE;
+            task = type == PLAN_TYPE_MOVE ? new (std::nothrow)MoveTask(*this, block, MAX_NUM, server) :
+                 new (std::nothrow)ReplicateTask(*this, block, MAX_NUM, server, type);
+          }
+          else if (msg->getPCode() == REQ_EC_MARSHALLING_COMMIT_MESSAGE)
+          {
+            task = new (std::nothrow)ECMarshallingTask(*this, family_id, family_aid_info, MAX_NUM, info, PLAN_TYPE_EC_MARSHALLING);
+          }
+          else if (msg->getPCode() == REQ_EC_REINSTATE_COMMIT_MESSAGE)
+          {
+            task = new (std::nothrow)ECReinstateTask(*this, family_id, family_aid_info, MAX_NUM, info);
+          }
+          else if (msg->getPCode() == REQ_EC_DISSOLVE_COMMIT_MESSAGE);
+          {
+            task = new (std::nothrow)ECDissolveTask(*this, family_id, family_aid_info, MAX_NUM, info);
           }
           assert(NULL != task);
         }
-        ret = NULL != task;
+        ret = (NULL != task);
         if (ret)
         {
-          ret = TFS_SUCCESS == task->handle_complete(msg, all_complete_flag);
+          ret = TFS_SUCCESS == task->handle_complete(msg);
           if (master)
           {
             task->dump(TBSYS_LOG_LEVEL_INFO, "handle message complete, show result");
-            if (all_complete_flag)
-              remove(task);
-            /*Task* complete[SYSPARAM_NAMESERVER.max_replication_];
-            ArrayHelper<Task*> helper(SYSPARAM_NAMESERVER.max_replication_, complete);
-            if (all_complete_flag)
-              helper.push_back(task);
-            remove(helper);*/
+            remove(task);
           }
           else
           {
@@ -482,24 +554,33 @@ namespace tfs
       int32_t ret = (NULL != task)? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
-        TASKS_ITER titer = tasks_.find(task->seqno_);
-        if (tasks_.end() != titer)
-          tasks_.erase(titer);
-
-        BLOCK_TO_TASK_ITER it = block_to_tasks_.find(task->block_id_);
-        if (block_to_tasks_.end() != it)
-          block_to_tasks_.erase(it);
-
-        if (task->need_add_server_to_map())
+        tasks_.erase(task->seqno_);
+        const PlanType type = task->type_;
+        if ((PLAN_TYPE_REPLICATE == type)
+            || (PLAN_TYPE_MOVE == type)
+            || (PLAN_TYPE_COMPACT == type))
         {
-          int32_t index = 0;
-          std::vector<ServerCollect*>::iterator rit = task->runer_.begin();
-          for (; rit != task->runer_.end(); ++rit, ++index)
+          ReplicateTask* ptask = dynamic_cast<ReplicateTask*>(task);
+          block_to_tasks_.erase(ptask->block_);
+          for (int8_t index = 0; index < ptask->server_num_; ++index)
           {
-            if (task->type_ != PLAN_TYPE_COMPACT)
-              remove_((*rit)->id(), is_target(index));
-            else
-              server_to_tasks_.erase((*rit)->id());
+            if (PLAN_TYPE_COMPACT != type)
+              remove_(ptask->servers_[index], is_target(index));
+          }
+        }
+
+        if ((PLAN_TYPE_EC_MARSHALLING == type)
+            || (PLAN_TYPE_EC_REINSTATE == type)
+            || (PLAN_TYPE_EC_DISSOLVE == type))
+        {
+          ECMarshallingTask* ptask = dynamic_cast<ECMarshallingTask*>(task);
+          const int32_t MEMBER_NUM = GET_DATA_MEMBER_NUM(ptask->family_aid_info_)
+                + GET_CHECK_MEMBER_NUM(ptask->family_aid_info_);
+          for (int64_t index = 0; index < MEMBER_NUM; ++index)
+          {
+            bool target = is_target(ptask->family_members_[index], index, ptask->type_, ptask->family_aid_info_);
+            remove_(ptask->family_members_[index].server_, target);
+            block_to_tasks_.erase(ptask->family_members_[index].block_);
           }
         }
         manager_.get_gc_manager().add(task);
@@ -522,13 +603,13 @@ namespace tfs
       return TFS_SUCCESS;
     }
 
-    bool TaskManager::remove(const common::ArrayHelper<Task*>& tasks)
+    bool TaskManager::remove(const ArrayHelper<Task*>& tasks)
     {
       RWLock::Lock lock(rwmutex_, WRITE_LOCKER);
       return remove_(tasks);
     }
 
-    bool TaskManager::remove_(const common::ArrayHelper<Task*>& tasks)
+    bool TaskManager::remove_(const ArrayHelper<Task*>& tasks)
     {
       bool all_complete = true;
       Task* task = NULL;
@@ -554,28 +635,19 @@ namespace tfs
       return (NULL != block) ? get_(block->id()) : NULL;
     }
 
-    Task* TaskManager::get_(const uint64_t server, bool compact) const
+    Task* TaskManager::get_(const uint64_t server) const
     {
       Task* task = NULL;
-      if (!compact)
-      {
-        uint64_t machine_ip = server & 0xFFFFFFFF;
-        MACHINE_TO_TASK_CONST_ITER iter = machine_to_tasks_.find(machine_ip);
-        if (machine_to_tasks_.end() != iter)
-          task = iter->second.get(server);
-      }
-      else
-      {
-        SERVER_TO_TASK_CONST_ITER iter = server_to_tasks_.find(server);
-        if (server_to_tasks_.end() != iter)
-          task = iter->second;
-      }
+      uint64_t machine_ip = server & 0xFFFFFFFF;
+      MACHINE_TO_TASK_CONST_ITER iter = machine_to_tasks_.find(machine_ip);
+      if (machine_to_tasks_.end() != iter)
+        task = iter->second.get(server);
       return task;
     }
 
-    Task* TaskManager::get_(const ServerCollect* server, bool compact) const
+    Task* TaskManager::get_(const ServerCollect* server) const
     {
-      return (NULL != server) ? get_(server->id(), compact) : NULL;
+      return (NULL != server) ? get_(server->id()) : NULL;
     }
 
     int64_t TaskManager::get_task_size_in_machine_(int32_t& source_size, int32_t& target_size, const uint64_t server) const
@@ -585,29 +657,89 @@ namespace tfs
       return machine_to_tasks_.end() == iter ? 0 : iter->second.size(source_size, target_size);
     }
 
-    Task* TaskManager::generation_(const uint32_t id, const std::vector<ServerCollect*>& runer,
-            const common::PlanType type, const common::PlanPriority priority)
+    Task* TaskManager::generation_(const uint32_t id, const ArrayHelper<ServerCollect*>& servers, const PlanType type)
     {
       Task* result = NULL;
+      ServerCollect* pserver = NULL;
+      uint64_t array[MAX_REPLICATION_NUM];
+      int64_t index = 0;
+      for (; index < servers.get_array_index(); ++index)
+      {
+        pserver = *servers.at(index);
+        assert(NULL != pserver);
+        array[index] = pserver->id();
+      }
       if (type == PLAN_TYPE_REPLICATE)
-      {
-        result = new (std::nothrow)ReplicateTask(*this, priority, id, runer);
-      }
+        result = new (std::nothrow)ReplicateTask(*this, id, index, array, type);
       else if (type == PLAN_TYPE_MOVE)
-      {
-        result = new (std::nothrow)MoveTask(*this, priority, id, runer);
-      }
+        result = new (std::nothrow)MoveTask(*this, id, index, array);
       else if (type == PLAN_TYPE_COMPACT)
-      {
-        result = new (std::nothrow)CompactTask(*this, priority, id, runer);
-      }
+        result = new (std::nothrow)CompactTask(*this, id, index, array);
       assert(NULL != result);
+      return result;
+    }
+
+    Task* TaskManager::generation_(const int64_t family_id, const int32_t family_aid_info, const PlanType type,
+          const int32_t member_num, const FamilyMemberInfo* members)
+    {
+      Task* result = NULL;
+      if (PLAN_TYPE_EC_REINSTATE == type)
+        result = new (std::nothrow)ECReinstateTask(*this, family_id, family_aid_info,member_num, members);
+      else if (PLAN_TYPE_EC_DISSOLVE == type)
+        result = new (std::nothrow)ECDissolveTask(*this, family_id, family_aid_info,member_num, members);
+      else if (PLAN_TYPE_EC_MARSHALLING == type)
+        result = new (std::nothrow)ECMarshallingTask(*this, family_id, family_aid_info, member_num, members,
+            PLAN_TYPE_EC_MARSHALLING);
       return result;
     }
 
     bool TaskManager::is_target(const int32_t index)
     {
       return index % 2 == 1;
+    }
+
+    bool TaskManager::is_target(const common::FamilyMemberInfo& info, const int32_t index,
+         const PlanType type, const int32_t family_aid_info)
+    {
+      const int32_t DATA_MEMBER_NUM = GET_DATA_MEMBER_NUM(family_aid_info);
+      const int32_t CHECK_MEMBER_NUM = GET_CHECK_MEMBER_NUM(family_aid_info);
+      bool target = false;
+      if (PLAN_TYPE_EC_MARSHALLING == type)
+        target = ((index == GET_MASTER_INDEX(family_aid_info)) || (index >= DATA_MEMBER_NUM));
+      else if (PLAN_TYPE_EC_DISSOLVE == type)
+        target = (index >= ((DATA_MEMBER_NUM + CHECK_MEMBER_NUM)));
+      else if (PLAN_TYPE_EC_REINSTATE == type)
+        target = (FAMILY_MEMBER_STATUS_ABNORMAL == info.status_);
+      return target;
+    }
+
+    int TaskManager::insert_(ArrayHelper<std::pair<FamilyMemberInfo, bool> >& success, Task* task,
+          const FamilyMemberInfo& info, const bool target, const bool insert)
+    {
+      int32_t ret = (NULL != task && success.get_array_size() > 0) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+      if (TFS_SUCCESS == ret)
+      {
+        std::pair<BLOCK_TO_TASK_ITER, bool> res;
+        res.first = block_to_tasks_.find(info.block_);
+        ret = block_to_tasks_.end() != res.first ? EXIT_TASK_EXIST_ERROR : TFS_SUCCESS;
+        if (TFS_SUCCESS == ret)
+        {
+          if (insert)
+            res = block_to_tasks_.insert(BLOCK_TO_TASK::value_type(info.block_, task));
+          std::pair<MACHINE_TO_TASK_ITER, bool> mrs;
+          uint64_t machine_ip = (info.server_ & 0xFFFFFFFF);
+          MACHINE_TO_TASK_ITER mit = machine_to_tasks_.find(machine_ip);
+          if (machine_to_tasks_.end() == mit)
+          {
+            mrs = machine_to_tasks_.insert(MACHINE_TO_TASK::value_type(machine_ip, Machine()));
+            mit = mrs.first;
+          }
+          ret = mit->second.add(info.server_, task, target);
+        }
+        if (TFS_SUCCESS == ret)
+          success.push_back(std::make_pair(info, target));
+      }
+      return ret;
     }
   }/** nameserver **/
 }/** tfs **/

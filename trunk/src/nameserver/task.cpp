@@ -24,7 +24,9 @@
 #include "common/status_message.h"
 #include "message/replicate_block_message.h"
 #include "message/block_info_message.h"
+#include "message/erasure_code_message.h"
 
+#include "task.h"
 #include "task_manager.h"
 #include "global_factory.h"
 #include "server_collect.h"
@@ -40,31 +42,23 @@ namespace tfs
 {
   namespace nameserver
   {
-    const int8_t CompactTask::INVALID_SERVER_ID = 0;
-    const int8_t CompactTask::INVALID_BLOCK_ID = 0;
-    Task::Task(TaskManager& manager, const PlanType type,
-        const PlanPriority priority, uint32_t block_id,
-        const std::vector<ServerCollect*>& runer):
+    Task::Task(TaskManager& manager, const common::PlanType type):
       GCObject(0xFFFFFFFF),
-      runer_(runer),
-      block_id_(block_id),
-      type_(type),
-      status_(PLAN_STATUS_NONE),
-      priority_(priority),
+      manager_(manager),
       seqno_(0),
-      manager_(manager)
+      type_(type),
+      status_(PLAN_STATUS_NONE)
     {
 
     }
 
     bool Task::operator < (const Task& task) const
     {
-      return block_id_ < task.block_id_;
-    }
-
-    bool Task::need_add_server_to_map() const
-    {
-      return type_ == PLAN_TYPE_MOVE || type_ == PLAN_TYPE_REPLICATE || PLAN_TYPE_COMPACT;
+      if (type_ < task.type_)
+        return true;
+      if (type_ > task.type_)
+        return false;
+      return seqno_ < task.seqno_;
     }
 
     bool Task::timeout(const time_t now) const
@@ -72,434 +66,138 @@ namespace tfs
       return now > last_update_time_;
     }
 
-    void Task::runTimerTask()
+    int Task::send_msg_to_server(const uint64_t server, common::BasePacket* msg)
     {
-      dump(TBSYS_LOG_LEVEL_INFO, "task expired");
-      status_ = PLAN_STATUS_TIMEOUT;
+      int32_t ret = (INVALID_SERVER_ID != server && NULL != msg) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+      if (TFS_SUCCESS == ret)
+      {
+        std::stringstream info;
+        dump(info);
+        int32_t status = STATUS_MESSAGE_ERROR;
+        ret = tfs::common::send_msg_to_server(server, msg, status);
+        if ((TFS_SUCCESS == ret) && (STATUS_MESSAGE_OK == status))
+        {
+          TBSYS_LOG(INFO, "send %s command to %s successful, information: %s, ret: %d", transform_type_to_str(), tbsys::CNetUtil::addrToString(server).c_str(), info.str().c_str(), ret);
+        }
+        else
+        {
+          TBSYS_LOG(WARN, "send %s command to %s failed, information: %s, ret: %d", transform_type_to_str(), tbsys::CNetUtil::addrToString(server).c_str(), info.str().c_str(), ret);
+          ret = EXIT_SENDMSG_ERROR;
+        }
+      }
+      return ret;
+    }
+
+    const char* Task::transform_type_to_str() const
+    {
+      return PLAN_TYPE_COMPACT == type_ ? "compact" : PLAN_TYPE_EC_REINSTATE == type_ ? "reinstate" :
+          PLAN_TYPE_EC_DISSOLVE == type_ ? "dissolve" :  PLAN_TYPE_EC_MARSHALLING == type_ ? "marshlling" :
+          PLAN_TYPE_REPLICATE  == type_ ? "replicate" : PLAN_TYPE_MOVE == type_ ? "move" : "unknown";
+    }
+
+    const char* Task::transform_status_to_str(const int8_t status) const
+    {
+      return status == PLAN_STATUS_BEGIN ? "begin" : status == PLAN_STATUS_TIMEOUT ? "timeout" : status == PLAN_STATUS_END
+            ? "finish" : status == PLAN_STATUS_FAILURE ? "failure": "unknow";
     }
 
     void Task::dump(tbnet::DataBuffer& stream)
     {
       stream.writeInt8(type_);
       stream.writeInt8(status_);
-      stream.writeInt8(priority_);
-      stream.writeInt32(block_id_);
       stream.writeInt64(last_update_time_);
       stream.writeInt64(seqno_);
-      stream.writeInt8(runer_.size());
-      std::vector<ServerCollect*>::iterator iter = runer_.begin();
-      for (; iter != runer_.end(); ++iter)
-      {
-        stream.writeInt64((*iter)->id());
-      }
     }
 
-    void Task::dump(int32_t level, const char* const format)
-    {
-      if (level <= TBSYS_LOGGER._level)
-      {
-        std::string runer;
-        std::vector<ServerCollect*>::iterator iter = runer_.begin();
-        for (; iter != runer_.end(); ++iter)
-        {
-          runer += tbsys::CNetUtil::addrToString((*iter)->id());
-          runer += "/";
-        }
-        TBSYS_LOGGER.logMessage(level, __FILE__, __LINE__, __FUNCTION__, "%s plan seqno: %"PRI64_PREFIX"d, type: %s ,status: %s, priority: %s , block_id: %u, expired_time: %"PRI64_PREFIX"d,runer: %s",
-            format == NULL ? "" : format, seqno_,
-            type_ == PLAN_TYPE_REPLICATE ? "replicate" : type_ == PLAN_TYPE_MOVE ? "move" : type_ == PLAN_TYPE_COMPACT
-            ? "compact" : type_ == PLAN_TYPE_MARSHALLING? "marshalling" : "unknow",
-            status_ == PLAN_STATUS_BEGIN ? "begin" : status_ == PLAN_STATUS_TIMEOUT ? "timeout" : status_ == PLAN_STATUS_END
-            ? "finish" : status_ == PLAN_STATUS_FAILURE ? "failure": "unknow",
-            priority_ == PLAN_PRIORITY_NORMAL ? "normal" : priority_ == PLAN_PRIORITY_EMERGENCY ? "emergency": "unknow",
-            block_id_, last_update_time_, runer.c_str());
-      }
-    }
-
-    CompactTask::CompactTask(TaskManager& manager, const PlanPriority priority,
-      uint32_t block_id, const std::vector<ServerCollect*>& runer):
-      Task(manager, PLAN_TYPE_COMPACT, priority, block_id, runer)
-    {
-      complete_status_.clear();
-      memset(&block_info_, 0, sizeof(block_info_));
-    }
-
-    void CompactTask::runTimerTask()
+    void Task::runTimerTask()
     {
       status_ = PLAN_STATUS_TIMEOUT;
-      {
-        tbutil::Mutex::Lock lock(mutex_);
-        std::vector< std::pair <uint64_t, PlanStatus> >::iterator iter = complete_status_.begin();
-        for (; iter != complete_status_.end(); ++iter)
-        {
-          std::pair<uint64_t, PlanStatus>& status = (*iter);
-          if (status.second != PLAN_STATUS_END
-              && (status.second !=  PLAN_STATUS_FAILURE))
-          {
-            status.second = PLAN_STATUS_TIMEOUT;
-          }
-        }
-      }
-      CompactComplete value(INVALID_SERVER_ID, INVALID_SERVER_ID, PLAN_STATUS_NONE);
-      value.block_info_ = block_info_;
-      VUINT64 servers;
-      check_complete(value, servers);
-
-      do_complete(value, servers);
+      dump(TBSYS_LOG_LEVEL_INFO, "task expired");
     }
 
-    void CompactTask::dump(tbnet::DataBuffer& stream)
+    ReplicateTask::ReplicateTask(TaskManager& manager, const uint32_t block, const int8_t server_num, const uint64_t* servers,
+      const common::PlanType type):
+      Task(manager, type),
+      servers_(NULL),
+      block_(block),
+      server_num_(server_num)
     {
-      Task::dump(stream);
-      tbutil::Mutex::Lock lock(mutex_);
-      stream.writeInt8(complete_status_.size());
-      std::vector< std::pair <uint64_t, PlanStatus> >::iterator iter = complete_status_.begin();
-      for (; iter != complete_status_.end(); ++iter)
-      {
-        stream.writeInt64((*iter).first);
-        stream.writeInt8((*iter).second);
-      }
+      assert(server_num_ > 0);
+      servers_ = new (std::nothrow) uint64_t[server_num_];
+      assert(servers_);
+      memcpy(servers_, servers, server_num_ * INT64_SIZE);
     }
 
-    void CompactTask::dump(const int32_t level, const char* const format)
+    ReplicateTask::~ReplicateTask()
     {
-      if (level <= TBSYS_LOGGER._level)
-      {
-        std::string runer;
-        std::vector<ServerCollect*>::iterator iter = runer_.begin();
-        for (; iter != runer_.end(); ++iter)
-        {
-          runer += tbsys::CNetUtil::addrToString((*iter)->id());
-          runer += "/";
-        }
-        PlanStatus plan_status = PLAN_STATUS_NONE;
-        std::string status;
-
-        {
-          tbutil::Mutex::Lock lock(mutex_);
-          std::vector< std::pair <uint64_t, PlanStatus> >::iterator it= complete_status_.begin();
-          for (; it != complete_status_.end(); ++it)
-          {
-            status += tbsys::CNetUtil::addrToString((*it).first);
-            status += ":";
-            plan_status = (*it).second;
-            status += plan_status == PLAN_STATUS_BEGIN ? "begin" : plan_status == PLAN_STATUS_TIMEOUT ? "timeout" : plan_status == PLAN_STATUS_END
-              ? "finish" : plan_status == PLAN_STATUS_FAILURE ? "failure": "unknow",
-              status += "/";
-          }
-        }
-        TBSYS_LOGGER.logMessage(level, __FILE__, __LINE__, __FUNCTION__, "pointer: %p, %s plan seqno: %"PRI64_PREFIX"d, type: %s ,status: %s, priority: %s , block_id: %u, expired_time: %"PRI64_PREFIX"d, runer: %s, complete status: %s",
-            this,
-            format == NULL ? "" : format,
-            seqno_,
-            type_ == PLAN_TYPE_REPLICATE ? "replicate" : type_ == PLAN_TYPE_MOVE ? "move" : type_ == PLAN_TYPE_COMPACT
-            ? "compact" : type_ == PLAN_TYPE_MARSHALLING ? "marshalling" : "unknow",
-            status_ == PLAN_STATUS_BEGIN ? "begin" : status_ == PLAN_STATUS_TIMEOUT ? "timeout" : status_ == PLAN_STATUS_END
-            ? "finish" : status_ == PLAN_STATUS_FAILURE ? "failure" : "unknow",
-            priority_ == PLAN_PRIORITY_NORMAL ? "normal" : priority_ == PLAN_PRIORITY_EMERGENCY ? "emergency": "unknow",
-            block_id_, last_update_time_, runer.c_str(), status.c_str());
-      }
-    }
-
-    int CompactTask::handle()
-    {
-      int32_t ret = TFS_SUCCESS;
-      CompactBlockMessage msg;
-      msg.set_block_id(block_id_);
-      msg.set_seqno(seqno_);
-      msg.set_preserve_time(SYSPARAM_NAMESERVER.task_expired_time_);
-      std::pair<uint64_t, PlanStatus> res;
-      std::vector<ServerCollect*>::iterator iter = runer_.begin();
-      for (int32_t index = 0; iter != runer_.end(); ++iter, ++index)
-      {
-        res.first = (*iter)->id();
-        res.second = PLAN_STATUS_BEGIN;
-        msg.set_owner(index == 0 ? 1 : 0);
-        int32_t status = STATUS_MESSAGE_ERROR;
-        #ifdef TFS_GTEST
-          ret = TFS_SUCCESS;
-          status = STATUS_MESSAGE_OK;
-        #else
-          ret = send_msg_to_server(res.first, &msg, status);
-        #endif
-
-        if ((TFS_SUCCESS != ret)
-          || (STATUS_MESSAGE_OK != status))
-        {
-          res.second = PLAN_STATUS_TIMEOUT;
-          TBSYS_LOG(INFO, "send compact message failed; block : %u owner: %d to server: %s, ret: %d",
-              block_id_, index == 0 ? 1 : 0, tbsys::CNetUtil::addrToString(res.first).c_str(), ret);
-        }
-        else
-        {
-          TBSYS_LOG(INFO, "send compact message successful; block : %u owner: %d to server: %s, ret: %d",
-              block_id_, index == 0 ? 1 : 0, tbsys::CNetUtil::addrToString(res.first).c_str(), ret);
-        }
-        tbutil::Mutex::Lock lock(mutex_);
-        complete_status_.push_back(res);
-      }
-      status_ = PLAN_STATUS_BEGIN;
-      last_update_time_ = Func::get_monotonic_time() +  SYSPARAM_NAMESERVER.task_expired_time_;
-      return ret;
-    }
-
-    int CompactTask::handle_complete(common::BasePacket* msg, bool& all_complete_flag)
-    {
-      int32_t ret = (NULL != msg) && (msg->getPCode() == BLOCK_COMPACT_COMPLETE_MESSAGE) ? TFS_SUCCESS : TFS_ERROR;
-      if (TFS_SUCCESS == ret)
-      {
-        CompactBlockCompleteMessage* message = dynamic_cast<CompactBlockCompleteMessage*>(msg);
-        PlanStatus status = status_transform_compact_to_plan(static_cast<CompactStatus>(message->get_success()));
-        CompactComplete value(message->get_server_id(), message->get_block_id(), status);
-        value.block_info_ = message->get_block_info();
-        VUINT64 servers;
-        if (GFactory::get_runtime_info().is_master())//master handle
-        {
-          check_complete(value, servers);
-          ret = do_complete(value, servers);
-          if (TFS_SUCCESS != ret)
-          {
-            TBSYS_LOG(WARN, "block: %u compact, do compact complete fail: %d", value.block_id_, ret);
-          }
-          ret = message->reply(new StatusMessage(ret));
-          all_complete_flag = value.is_complete_;
-          if (all_complete_flag)
-            status_ = PLAN_STATUS_END;
-        }
-        else
-        {
-          //slave
-          std::bitset < 3 > bset(message->get_flag());
-          value.all_success_ = bset[0];
-          value.has_success_ = bset[1];
-          value.is_complete_ = bset[2];
-          TBSYS_LOG(DEBUG, "check compact complete flag: %u", message->get_flag());
-          servers.clear();
-          servers.assign(message->get_ds_list().begin(), message->get_ds_list().end());
-          ret = do_complete(value, servers);
-          if (TFS_SUCCESS != ret)
-          {
-            TBSYS_LOG(WARN, "block: %u compact, do compact complete fail: %d", value.block_id_, ret);
-          }
-        }
-      }
-      return ret;
-    }
-
-    void CompactTask::check_complete(CompactComplete& value, std::vector<uint64_t> & servers)
-    {
-      int32_t complete_count = 0;
-      int32_t success_count = 0;
-
-      tbutil::Mutex::Lock lock(mutex_);
-      std::vector< std::pair <uint64_t, PlanStatus> >::iterator iter = complete_status_.begin();
-      for (; iter != complete_status_.end(); ++iter)
-      {
-        std::pair<uint64_t, PlanStatus>& status = (*iter);
-        if (status.first == value.id_)
-        {
-          status.second = value.status_;
-          if (value.status_ == PLAN_STATUS_END)
-          {
-            block_info_ = value.block_info_;
-            value.current_complete_result_ = true;
-            ++success_count;
-            ++complete_count;
-          }
-          else
-          {
-            ++complete_count;
-            servers.push_back(status.first);
-          }
-        }
-        else
-        {
-          if (status.second == PLAN_STATUS_END)
-          {
-            ++complete_count;
-            ++success_count;
-          }
-          else if (status.second != PLAN_STATUS_BEGIN)
-          {
-            ++complete_count;
-            if (status.second == PLAN_STATUS_FAILURE)
-              servers.push_back(status.first);
-          }
-        }
-      }
-
-      TBSYS_LOG(DEBUG, "complete_count: %d, success_count: %d, complete_status size: %zd",
-          complete_count, success_count, complete_status_.size());
-
-      value.is_complete_ = complete_count == static_cast<int32_t>(complete_status_.size());
-      value.has_success_ = success_count != 0;
-      value.all_success_ = success_count ==  static_cast<int32_t>(complete_status_.size());
-    }
-
-    int CompactTask::do_complete(CompactComplete& value, common::VUINT64& servers)
-    {
-      if (value.current_complete_result_)
-      {
-        BlockCollect* block = manager_.get_manager().get_block_manager().get(value.block_id_);
-        if (NULL != block)
-        {
-          block->update(block_info_);
-          TBSYS_LOG(DEBUG,"check compacting complete server: %s, block: %u,copy blockinfo into metadata, block size: %d",
-              tbsys::CNetUtil::addrToString(value.id_).c_str(), value.block_id_, block_info_.size_);
-        }
-      }
-
-      time_t now =Func::get_monotonic_time();
-      if (value.is_complete_
-          && value.has_success_
-          && !servers.empty())
-      {
-        //expire block on this failed servers.
-        std::vector<uint64_t>::iterator iter = servers.begin();
-        for (; iter != servers.end(); ++iter)
-        {
-          ServerCollect* server = manager_.get_manager().get_server_manager().get((*iter));
-          BlockCollect* block = manager_.get_manager().get_block_manager().get(value.block_id_);
-          if((server != NULL) && (block != NULL))
-          {
-            if (!manager_.get_manager().relieve_relation(block, server, now, BLOCK_COMPARE_SERVER_BY_ID))
-            {
-              TBSYS_LOG(INFO, "we'll get failed when relive relation between block: %u and server: %s",
-                  value.block_id_, tbsys::CNetUtil::addrToString((*iter)).c_str());
-            }
-            if ( GFactory::get_runtime_info().is_master())
-            {
-              /*std::vector<stat_int_t> stat(1, 1);
-              GFactory::get_stat_mgr().update_entry(GFactory::tfs_ns_stat_block_count_, stat, false);*/
-              manager_.get_manager().get_task_manager().remove_block_from_dataserver((*iter), value.block_id_, 0, now);
-            }
-          }
-        }
-      }
-
-      if ((value.is_complete_)
-          && (value.all_success_))
-      {
-        // rewritable block
-        ServerCollect* servers[MAX_REPLICATION];
-        ArrayHelper<ServerCollect*> helper(MAX_REPLICATION, servers);
-        BlockCollect* block = manager_.get_manager().get_block_manager().get(value.block_id_);
-        if (NULL != block)
-        {
-          manager_.get_manager().get_block_manager().get_servers(helper, block);
-          for (int8_t i = 0; i < helper.get_array_index(); ++i)
-          {
-            ServerCollect* server = *helper.at(i);
-            assert(NULL != server);
-            server->add_writable(block);
-          }
-        }
-      }
-
-      if (((value.is_complete_)
-            || (value.has_success_))
-          && (GFactory::get_runtime_info().is_master()))
-      {
-        //transmit message.
-        CompactBlockCompleteMessage msg;
-        msg.set_block_id(value.block_id_);
-        msg.set_server_id(value.id_);
-        msg.set_block_info(block_info_);
-        msg.set_success(status_transform_plan_to_compact(value.status_));
-        msg.set_ds_list(servers);
-
-        std::bitset < 3 > bset;
-        bset[0] = value.all_success_;
-        bset[1] = value.has_success_;
-        bset[2] = value.is_complete_;
-        msg.set_flag(bset.to_ulong());
-        msg.set_seqno(seqno_);
-        TBSYS_LOG(DEBUG, "check compact complete flag: %d", msg.get_flag());
-
-        common::Stream stream(msg.length());
-        if (TFS_SUCCESS != msg.serialize(stream))
-        {
-          TBSYS_LOG(INFO, "%s", "compact msg serialize error");
-        }
-        else
-        {
-          int32_t ret = manager_.get_manager().get_oplog_sync_mgr().log(
-                OPLOG_TYPE_COMPACT_MSG, stream.get_data(), stream.get_data_length(), now);
-          if (TFS_SUCCESS != ret)
-            TBSYS_LOG(INFO, "write oplog failed, ret: %d", ret);
-        }
-      }
-      return TFS_SUCCESS;
-    }
-
-    CompactStatus CompactTask::status_transform_plan_to_compact(const PlanStatus status)
-    {
-      return status == PLAN_STATUS_END ? COMPACT_STATUS_SUCCESS :
-             status == PLAN_STATUS_BEGIN ? COMPACT_STATUS_START : COMPACT_STATUS_FAILED;
-    }
-
-    PlanStatus CompactTask::status_transform_compact_to_plan(const CompactStatus status)
-    {
-      return status == COMPACT_STATUS_SUCCESS ? PLAN_STATUS_END :
-             status == COMPACT_STATUS_START ? PLAN_STATUS_BEGIN :
-             status == COMPACT_STATUS_FAILED ? PLAN_STATUS_FAILURE : PLAN_STATUS_NONE;
-    }
-
-    ReplicateTask::ReplicateTask(TaskManager& manager, const common::PlanPriority priority,
-      const uint32_t block_id, const std::vector<ServerCollect*>& runer):
-      Task(manager, PLAN_TYPE_REPLICATE, priority, block_id, runer),
-      flag_(REPLICATE_BLOCK_MOVE_FLAG_NO)
-    {
-
+      tbsys::gDeleteA(servers_);
     }
 
     int ReplicateTask::handle()
     {
-      int32_t ret = runer_.size() >= 0x2U ? TFS_SUCCESS : TFS_ERROR;
-      if (TFS_SUCCESS != ret)
-      {
-        TBSYS_LOG(WARN, "task (replicate) block: %u, type: %d, priority: %d, runer size: %zd is invalid", block_id_, type_, priority_, runer_.size());
-      }
-      else
+      int32_t ret = (INVALID_BLOCK_ID != block_ && NULL != servers_) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+      if (TFS_SUCCESS == ret)
       {
         ReplicateBlockMessage msg;
         ReplBlock block;
         memset(&block, 0, sizeof(block));
-        block.block_id_ = block_id_;
-        block.source_id_ = runer_[0]->id();
-        block.destination_id_ = runer_[1]->id();
+        block.block_id_ = block_;
+        block.source_id_ = servers_[0];
+        block.destination_id_ = servers_[1];
         block.start_time_ = Func::get_monotonic_time();
-        block.is_move_ = flag_;
+        block.is_move_ = PLAN_TYPE_MOVE  == type_;
         block.server_count_ = 0;
         msg.set_repl_block(&block);
-        msg.set_command(PLAN_STATUS_BEGIN);
+        msg.set_status(PLAN_STATUS_BEGIN);
         msg.set_seqno(seqno_);
-        int32_t status = STATUS_MESSAGE_ERROR;
-        ret = send_msg_to_server(block.source_id_, &msg, status);
-        if (TFS_SUCCESS != ret
-          || STATUS_MESSAGE_OK != status)
-        {
-          TBSYS_LOG(WARN, "send %s command faild, block: %u, ret: %d %s===>%s",
-              flag_ == REPLICATE_BLOCK_MOVE_FLAG_NO ? "replicate" : "move",
-              block_id_, ret, tbsys::CNetUtil::addrToString(block.source_id_).c_str(),
-              tbsys::CNetUtil::addrToString(block.destination_id_).c_str());
-          ret = TFS_ERROR;
-        }
-        else
-        {
-          TBSYS_LOG(INFO, "send %s command successful, block: %u, : %s===>: %s",
-              flag_ == REPLICATE_BLOCK_MOVE_FLAG_NO ? "replicate" : "move",
-              block_id_, tbsys::CNetUtil::addrToString(block.source_id_).c_str(),
-              tbsys::CNetUtil::addrToString(block.destination_id_).c_str());
-
-          status_ = PLAN_STATUS_BEGIN;
-          last_update_time_ = Func::get_monotonic_time() +  SYSPARAM_NAMESERVER.task_expired_time_;
-        }
+        msg.set_expire_time(SYSPARAM_NAMESERVER.move_task_expired_time_ - MAX_TASK_RESERVE_TIME);
+        ret = send_msg_to_server(block.source_id_, &msg);
+        status_ = PLAN_STATUS_BEGIN;
       }
+      last_update_time_ = Func::get_monotonic_time() +  SYSPARAM_NAMESERVER.move_task_expired_time_;
       return ret;
     }
 
-    int ReplicateTask::handle_complete(common::BasePacket* msg, bool& all_complete_flag)
+    void ReplicateTask::dump(tbnet::DataBuffer& stream)
+    {
+      Task::dump(stream);
+      stream.writeInt32(block_);
+      stream.writeInt32(server_num_);
+      for (int8_t index = 0; index < server_num_ && NULL != servers_; ++index)
+      {
+        stream.writeInt64(servers_[index]);
+      }
+    }
+
+    void ReplicateTask::dump(std::stringstream& stream)
+    {
+      const char* helper_str = PLAN_TYPE_COMPACT == type_ ? " " : " ==> ";
+      stream << "block: " << block_ << " seqno: " << seqno_;
+      for (int8_t index = 0; index < server_num_ && NULL != servers_;)
+      {
+        stream << " " << tbsys::CNetUtil::addrToString(servers_[index]);
+        if (++index < server_num_)
+          stream << helper_str;
+      }
+    }
+
+    void ReplicateTask::dump(const int32_t level, const char* const format)
+    {
+      if (level <= TBSYS_LOGGER._level)
+      {
+        std::string str;
+        for (int8_t index = 0; index < server_num_ && NULL != servers_; ++index)
+        {
+          str += tbsys::CNetUtil::addrToString(servers_[index]);
+          str += "/";
+        }
+        TBSYS_LOGGER.logMessage(level, __FILE__, __LINE__, __FUNCTION__, "%s seqno: %"PRI64_PREFIX"d, type: %s, status: %s, block: %u, expired_time: %"PRI64_PREFIX"d, servers: %s",
+            format == NULL ? "" : format, seqno_, transform_type_to_str(),
+            transform_status_to_str(status_), block_, last_update_time_, str.c_str());
+      }
+    }
+
+    int ReplicateTask::handle_complete(common::BasePacket* msg)
     {
       int32_t ret = (NULL != msg) ? STATUS_MESSAGE_OK : STATUS_MESSAGE_REMOVE;
       if (STATUS_MESSAGE_OK == ret)
@@ -510,14 +208,10 @@ namespace tfs
           time_t now = Func::get_monotonic_time();
           ReplicateBlockMessage* message = dynamic_cast<ReplicateBlockMessage*>(msg);
           const ReplBlock blocks = *message->get_repl_block();
-          ret = message->get_command() == PLAN_STATUS_END ? TFS_SUCCESS : EXIT_MOVE_OR_REPLICATE_ERROR;
           TBSYS_LOG(DEBUG, "block: %u %s complete status: %s", blocks.block_id_,
-              blocks.is_move_ == REPLICATE_BLOCK_MOVE_FLAG_YES ? "move" : "replicate",
-              message->get_command() == PLAN_STATUS_END ? "end" :
-              message->get_command() == PLAN_STATUS_TIMEOUT ? "timeout" :
-              message->get_command() == PLAN_STATUS_BEGIN ? "begin" :
-              message->get_command() == PLAN_STATUS_FAILURE ? "failure" : "unknow");
-          if (TFS_SUCCESS == ret)
+              transform_type_to_str(), transform_status_to_str(message->get_status()));
+          status_ = static_cast<PlanStatus>(message->get_status());
+          if (status_ == PLAN_STATUS_END)
           {
             ServerCollect* dest   = manager_.get_manager().get_server_manager().get(blocks.destination_id_);// find destination dataserver
             ServerCollect* source = manager_.get_manager().get_server_manager().get(blocks.source_id_);// find source dataserver
@@ -548,7 +242,7 @@ namespace tfs
               Stream stream(message->length());
               if (TFS_SUCCESS != message->serialize(stream))
               {
-                TBSYS_LOG(INFO, "%s complete msg serialize error", blocks.is_move_ == REPLICATE_BLOCK_MOVE_FLAG_YES ? "move" : "replicate");
+                TBSYS_LOG(INFO, "%s complete msg serialize error", transform_type_to_str());
               }
               else
               {
@@ -561,27 +255,510 @@ namespace tfs
           else
           {
             TBSYS_LOG(WARN, "block: %u %s complete status: %s", blocks.block_id_,
-                blocks.is_move_ == REPLICATE_BLOCK_MOVE_FLAG_YES ? "move" : "replicate",
-                message->get_command() == PLAN_STATUS_END ? "end" :
-                message->get_command() == PLAN_STATUS_TIMEOUT ? "timeout" :
-                message->get_command() == PLAN_STATUS_BEGIN ? "begin" :
-                message->get_command() == PLAN_STATUS_FAILURE ? "failure" : "unknow");
+                transform_type_to_str(), transform_status_to_str(message->get_status()));
             if (GFactory::get_runtime_info().is_master())
               message->reply(new StatusMessage(STATUS_MESSAGE_OK));
           }
-          all_complete_flag = true;
           status_ = PLAN_STATUS_END;
         }
       }
       return (ret == STATUS_MESSAGE_OK || ret == STATUS_MESSAGE_REMOVE) ? TFS_SUCCESS : ret;
     }
 
-    MoveTask::MoveTask(TaskManager& manager, const common::PlanPriority priority,
-      const uint32_t block_id, const std::vector<ServerCollect*>& runer):
-      ReplicateTask(manager, priority, block_id, runer)
+    MoveTask::MoveTask(TaskManager& manager, const uint32_t block, const int8_t server_num, const uint64_t* servers):
+      ReplicateTask(manager, block, server_num, servers, PLAN_TYPE_MOVE)
     {
-      type_ = PLAN_TYPE_MOVE;
-      flag_ = REPLICATE_BLOCK_MOVE_FLAG_YES;
+
+    }
+
+    CompactTask::CompactTask(TaskManager& manager, const uint32_t block, const int8_t server_num, const uint64_t* servers):
+      ReplicateTask(manager, block, server_num, servers, PLAN_TYPE_COMPACT)
+    {
+
+    }
+
+    int CompactTask::handle()
+    {
+      int32_t ret = (INVALID_BLOCK_ID != block_ && NULL != servers_) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+      if (TFS_SUCCESS == ret)
+      {
+        NsRequestCompactBlockMessage msg;
+        msg.set_seqno(seqno_);
+        msg.set_block_id(block_);
+        msg.set_expire_time(SYSPARAM_NAMESERVER.compact_task_expired_time_ - MAX_TASK_RESERVE_TIME);
+        for (int8_t index = 0; index < server_num_; ++index)
+          msg.get_servers().push_back(servers_[index]);
+        ret = send_msg_to_server(servers_[0], &msg);
+        status_ = PLAN_STATUS_BEGIN;
+      }
+      last_update_time_ = Func::get_monotonic_time() +  SYSPARAM_NAMESERVER.compact_task_expired_time_;
+      return ret;
+    }
+
+
+    int CompactTask::handle_complete(common::BasePacket* msg)
+    {
+      int32_t ret = (NULL != msg) && (msg->getPCode() == BLOCK_COMPACT_COMPLETE_MESSAGE) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+      if (TFS_SUCCESS == ret)
+      {
+        DsCommitCompactBlockCompleteToNsMessage* message = dynamic_cast<DsCommitCompactBlockCompleteToNsMessage*>(msg);
+        BlockInfo info = message->get_block_info();
+        BlockCollect* block = manager_.get_manager().get_block_manager().get(info.block_id_);
+        if (NULL != block)
+        {
+          bool has_successful = false;
+          const std::vector<std::pair<uint64_t, int8_t> >& result = message->get_result();
+          std::vector<std::pair<uint64_t, int8_t> >::const_iterator iter = result.begin();
+          for (; iter != result.end() && !has_successful; ++iter)
+          {
+            has_successful = PLAN_STATUS_END == iter->second;
+          }
+          if (!has_successful)
+          {
+            dump(TBSYS_LOG_LEVEL_INFO, "compact block all failure");
+          }
+          else
+          {
+            time_t now = Func::get_monotonic_time();
+            for (iter = result.begin(); iter != result.end(); ++iter)
+            {
+              ServerCollect* server = manager_.get_manager().get_server_manager().get(iter->first);
+              if (NULL != server)
+              {
+                if (PLAN_STATUS_END == iter->second)
+                {
+                  server->add_writable(block);
+                }
+                else
+                {
+                  if (!manager_.get_manager().relieve_relation(block, server, now, BLOCK_COMPARE_SERVER_BY_ID))
+                  {
+                    TBSYS_LOG(INFO, "we'll get failed when relive relation between block: %u and server: %s",
+                        info.block_id_, tbsys::CNetUtil::addrToString(iter->first).c_str());
+                  }
+                  if ( GFactory::get_runtime_info().is_master())
+                  {
+                    manager_.get_manager().get_block_manager().push_to_delete_queue(info.block_id_, iter->first);
+                  }
+                }
+              }
+            }
+            if (GFactory::get_runtime_info().is_master())
+            {
+              common::Stream stream(message->length());
+              if (TFS_SUCCESS == message->serialize(stream))
+              {
+                if (TFS_SUCCESS != manager_.get_manager().get_oplog_sync_mgr().log(
+                      OPLOG_TYPE_COMPACT_MSG, stream.get_data(), stream.get_data_length(), now))
+                {
+                  dump(TBSYS_LOG_LEVEL_INFO, "write compact oplog failed");
+                }
+              }
+            }
+          }
+        }
+      }
+      return ret;
+    }
+
+    ECMarshallingTask::ECMarshallingTask(TaskManager& manager, const int64_t family_id, const int32_t family_aid_info,
+            const int32_t member_num, const common::FamilyMemberInfo* members, const common::PlanType type):
+      Task(manager, type),
+      family_id_(family_id),
+      family_aid_info_(family_aid_info)
+    {
+      assert(member_num > 0);
+      assert(members);
+      family_members_ = new (std::nothrow) FamilyMemberInfo[member_num];
+      memcpy(family_members_, members, sizeof(FamilyMemberInfo) * member_num);
+    }
+
+    ECMarshallingTask::~ECMarshallingTask()
+    {
+      tbsys::gDeleteA(family_members_);
+    }
+
+    int ECMarshallingTask::handle()
+    {
+      const int32_t index = GET_MASTER_INDEX(family_aid_info_);
+      const int32_t MEMBER_NUM = GET_DATA_MEMBER_NUM(family_aid_info_) + GET_CHECK_MEMBER_NUM(family_aid_info_);
+      int32_t ret = (NULL != family_members_ && MEMBER_NUM > 0 && MEMBER_NUM <= MAX_MARSHALLING_NUM && index >=0 && index <=MAX_MARSHALLING_NUM)
+              ? common::TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+      if (TFS_SUCCESS == ret)
+      {
+        ECMarshallingMessage msg;
+        msg.set_seqno(seqno_);
+        msg.set_family_id(family_id_);
+        msg.set_family_member_info(family_members_, family_aid_info_);
+        msg.set_expire_time(SYSPARAM_NAMESERVER.marshalling_task_expired_time_ - MAX_TASK_RESERVE_TIME);
+        const uint64_t server = family_members_[index].server_;
+        ret = send_msg_to_server(server, &msg);
+        status_ = PLAN_STATUS_BEGIN;
+      }
+      last_update_time_ = Func::get_monotonic_time() +  SYSPARAM_NAMESERVER.marshalling_task_expired_time_;
+      return ret;
+    }
+
+    int ECMarshallingTask::handle_complete(common::BasePacket* msg)
+    {
+      int32_t ret = (NULL != msg) && (msg->getPCode() == REQ_EC_MARSHALLING_COMMIT_MESSAGE) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+      if (TFS_SUCCESS == ret)
+      {
+        ECMarshallingCommitMessage* packet = dynamic_cast<ECMarshallingCommitMessage*>(msg);
+        status_ = static_cast<common::PlanStatus>(packet->get_status());
+        if (PLAN_STATUS_END == status_)
+        {
+          FamilyInfo family_info;
+          family_info.family_id_ = packet->get_family_id();
+          family_info.family_aid_info_ = packet->get_family_aid_info();
+          const int32_t MEMBER_NUM = GET_DATA_MEMBER_NUM(family_info.family_aid_info_) + GET_CHECK_MEMBER_NUM(family_info.family_aid_info_);
+          const FamilyMemberInfo* base_info = packet->get_family_member_info();
+          ret = (MEMBER_NUM > 0 && MEMBER_NUM <= MAX_MARSHALLING_NUM  && NULL != base_info) ? TFS_SUCCESS : EXIT_EXECUTE_TASK_ERROR;
+          if (TFS_SUCCESS == ret)
+          {
+            const time_t now = common::Func::get_monotonic_time();
+            std::pair<uint32_t, int32_t> members[MEMBER_NUM];
+            common::ArrayHelper<std::pair<uint32_t, int32_t> > helper(MEMBER_NUM, members);
+            for (int32_t index = 0; index < MEMBER_NUM; ++index)
+            {
+              family_info.family_member_.push_back(std::make_pair(base_info[index].block_, base_info[index].version_));
+              helper.push_back(std::make_pair(base_info[index].block_, base_info[index].version_));
+            }
+            FamilyCollect* family = manager_.get_manager().get_family_manager().get(family_info.family_id_);
+            ret = NULL == family ? TFS_SUCCESS : EXIT_FAMILY_EXISTED;
+            if (TFS_SUCCESS == ret)
+            {
+              ret = manager_.get_manager().get_family_manager().insert(family_info.family_id_, family_info.family_aid_info_,
+                helper, now);
+              if (TFS_SUCCESS != ret)
+                TBSYS_LOG(INFO, "add new family in memory failed, ret: %d, family id: %"PRI64_PREFIX"d", ret, family_info.family_id_);
+            }
+            if (TFS_SUCCESS == ret)
+            {
+              ret = manager_.get_manager().get_oplog_sync_mgr().create_family(family_info);
+              if (TFS_SUCCESS != ret)
+                TBSYS_LOG(INFO, "add new family in mysql failed, ret: %d, family id: %"PRI64_PREFIX"d", ret, family_info.family_id_);
+            }
+            if (TFS_SUCCESS == ret)//想办法确保BLOCK ID 不会被重用,前期可以不搞
+            {
+              int32_t index = 0, del_index = 0;
+              BlockCollect * pblock  = NULL;
+              ServerCollect* pserver = NULL;
+              const int32_t CHECK_MEMBER_NUM = GET_CHECK_MEMBER_NUM(family_info.family_aid_info_);
+              const int32_t DATA_MEMBER_NUM  = GET_DATA_MEMBER_NUM(family_info.family_aid_info_);
+              const int32_t MEMBER_NUM = CHECK_MEMBER_NUM + DATA_MEMBER_NUM;
+              const int32_t MAX_DELETE_BLOCK_ARRAY_SIZE = MEMBER_NUM * SYSPARAM_NAMESERVER.max_replication_;
+              std::pair<ServerCollect*, BlockCollect*> del_items[MAX_DELETE_BLOCK_ARRAY_SIZE];
+              ServerCollect* servers[SYSPARAM_NAMESERVER.max_replication_];
+              ArrayHelper<ServerCollect*> helper2(SYSPARAM_NAMESERVER.max_replication_, servers);
+              uint32_t success[MAX_MARSHALLING_NUM] = { 0 };
+              for (; index < DATA_MEMBER_NUM && TFS_SUCCESS == ret; ++index)
+              {
+                helper2.clear();
+                ret = (NULL != (pblock = manager_.get_manager().get_block_manager().get(base_info[index].block_))) ? TFS_SUCCESS : EXIT_BLOCK_NOT_FOUND;
+                if (TFS_SUCCESS == ret)
+                  ret = manager_.get_manager().get_block_manager().get_servers(helper2, pblock);
+                if (TFS_SUCCESS == ret)
+                  ret = (NULL != (pserver = manager_.get_manager().get_server_manager().get(base_info[index].server_))) ? TFS_SUCCESS : EIXT_SERVER_OBJECT_NOT_FOUND;
+                if (TFS_SUCCESS == ret)
+                {
+                  ret = manager_.get_manager().get_block_manager().update_family_id(base_info[index].block_, family_info.family_id_);
+                  if (TFS_SUCCESS == ret)
+                  {
+                    success[index] = base_info[index].block_;
+                    helper2.remove(pserver);
+                    for (int64_t i = 0; i < helper2.get_array_index(); ++i)
+                    {
+                      pserver = *helper2.at(i);
+                      assert(pserver);
+                      std::pair<ServerCollect*, BlockCollect*>* item = &del_items[del_index++];
+                      item->first = pserver;
+                      item->second= pblock;
+                    }
+                  }
+                }
+              }
+
+              for (; index < MEMBER_NUM && TFS_SUCCESS == ret; ++index)
+              {
+                pblock = manager_.get_manager().get_block_manager().insert(base_info[index].block_, now);
+                assert(NULL != pblock);
+                ret = manager_.get_manager().get_block_manager().update_family_id(base_info[index].block_, family_info.family_id_);
+                if (TFS_SUCCESS == ret)
+                  success[index] = base_info[index].block_;
+              }
+
+              //build relation failed, we'll rollback
+              if (TFS_SUCCESS != ret)
+              {
+                ret = manager_.get_manager().get_oplog_sync_mgr().del_family(family_info.family_id_);
+                for (index = 0; index < MEMBER_NUM && TFS_SUCCESS == ret; ++index)
+                {
+                  ret = manager_.get_manager().get_block_manager().update_family_id(success[index], INVALID_FAMILY_ID);
+                  assert(TFS_SUCCESS == ret);
+                }
+              }
+              else
+              {
+                for (index = 0; index < del_index; ++index)
+                {
+                  std::pair<ServerCollect*, BlockCollect*>* item = &del_items[index];
+                  manager_.get_manager().relieve_relation(item->second,item->first, now, BLOCK_COMPARE_SERVER_BY_ID);
+                  manager_.get_manager().get_block_manager().push_to_delete_queue(item->second->id(), item->first->id());
+                }
+              }
+            }
+
+            if (TFS_SUCCESS != ret)
+            {
+              GCObject* object = NULL;
+              manager_.get_manager().get_family_manager().remove(object, family_info.family_id_);
+              if (NULL != object)
+                manager_.get_manager().get_gc_manager().add(object);
+            }
+          }
+        }
+        StatusMessage* reply_msg = new StatusMessage((PLAN_STATUS_END == status_ && TFS_SUCCESS == ret)
+                      ? STATUS_MESSAGE_OK : STATUS_MESSAGE_ERROR);
+        ret = msg->reply(reply_msg);
+      }
+      return ret;
+    }
+
+    void ECMarshallingTask::dump(tbnet::DataBuffer& stream)
+    {
+      Task::dump(stream);
+      stream.writeInt32(family_id_);
+      stream.writeInt32(family_aid_info_);
+      const int32_t MEMBER_NUM = GET_DATA_MEMBER_NUM(family_aid_info_) + GET_CHECK_MEMBER_NUM(family_aid_info_);
+      for (int32_t index =  0; index < MEMBER_NUM; ++index)
+      {
+        stream.writeInt64(family_members_[index].server_);
+        stream.writeInt32(family_members_[index].block_);
+        stream.writeInt32(family_members_[index].version_);
+      }
+    }
+
+    void ECMarshallingTask::dump(std::stringstream& stream)
+    {
+      const int32_t MEMBER_NUM = GET_DATA_MEMBER_NUM(family_aid_info_) + GET_CHECK_MEMBER_NUM(family_aid_info_);
+      stream << " seqno: " << seqno_ << " data_member_num: " << GET_DATA_MEMBER_NUM(family_aid_info_) << " check_member_num: " <<  GET_CHECK_MEMBER_NUM(family_aid_info_);
+      for (int32_t index =  0; index < MEMBER_NUM ; ++index)
+      {
+        stream << " server: " << tbsys::CNetUtil::addrToString(family_members_[index].server_) << " block: " << family_members_[index].block_
+               << " version: " << family_members_[index].version_;
+      }
+    }
+
+    void ECMarshallingTask::dump(const int32_t level, const char* const format)
+    {
+      if (level <= TBSYS_LOGGER._level)
+      {
+        std::stringstream str;
+        const int32_t MEMBER_NUM = GET_DATA_MEMBER_NUM(family_aid_info_) + GET_CHECK_MEMBER_NUM(family_aid_info_);
+        for (int32_t index =  0; index < MEMBER_NUM ; ++index)
+        {
+          str << " " << tbsys::CNetUtil::addrToString(family_members_[index].server_) << " " << family_members_[index].block_ << " " <<
+            family_members_[index].version_ << " " << family_members_[index].status_;
+        }
+        TBSYS_LOGGER.logMessage(level, __FILE__, __LINE__, __FUNCTION__, "%s seqno: %"PRI64_PREFIX"d, type: %s, data_member_num: %d, check_member_num: %d, status: %s, expired_time: %"PRI64_PREFIX"d, members: %s",
+          format, seqno_, transform_type_to_str(), GET_DATA_MEMBER_NUM(family_aid_info_), GET_CHECK_MEMBER_NUM(family_aid_info_),
+          transform_status_to_str(status_), last_update_time_, str.str().c_str());
+      }
+    }
+
+    ECReinstateTask::ECReinstateTask(TaskManager& manager, const int64_t family_id, const int32_t family_aid_info,
+      const int32_t all_member_num , const common::FamilyMemberInfo* members):
+      ECMarshallingTask(manager, family_id, family_aid_info, all_member_num, members, PLAN_TYPE_EC_REINSTATE)
+    {
+
+    }
+
+    ECReinstateTask::~ECReinstateTask()
+    {
+
+    }
+
+    int ECReinstateTask::handle()
+    {
+      const int32_t index = GET_MASTER_INDEX(family_aid_info_);
+      const int32_t MEMBER_NUM = GET_DATA_MEMBER_NUM(family_aid_info_) + GET_CHECK_MEMBER_NUM(family_aid_info_);
+      int32_t ret = (NULL != family_members_ && MEMBER_NUM > 0 && MEMBER_NUM <= MAX_MARSHALLING_NUM
+                    && index >= 0 && index < MAX_MARSHALLING_NUM) ? common::TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+      if (TFS_SUCCESS == ret)
+      {
+        ECReinstateMessage msg;
+        msg.set_seqno(seqno_);
+        msg.set_family_id(family_id_);
+        msg.set_family_member_info(family_members_, family_aid_info_);
+        msg.set_expire_time(SYSPARAM_NAMESERVER.reinstate_task_expired_time_ - MAX_TASK_RESERVE_TIME);
+        const uint64_t server = family_members_[index].server_;
+        ret = send_msg_to_server(server, &msg);
+        status_ = PLAN_STATUS_BEGIN;
+      }
+      last_update_time_ = Func::get_monotonic_time() +  SYSPARAM_NAMESERVER.reinstate_task_expired_time_;
+      return ret;
+    }
+
+    int ECReinstateTask::handle_complete(common::BasePacket* msg)
+    {
+      int32_t ret = (NULL != msg) && (msg->getPCode() == REQ_EC_REINSTATE_COMMIT_MESSAGE) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+      if (TFS_SUCCESS == ret)
+      {
+        ECReinstateCommitMessage* packet = dynamic_cast<ECReinstateCommitMessage*>(msg);
+        status_ = static_cast<common::PlanStatus>(packet->get_status());
+        if (PLAN_STATUS_END == status_)
+        {
+          FamilyInfo family_info;
+          family_info.family_id_ = packet->get_family_id();
+          family_info.family_aid_info_ = packet->get_family_aid_info();
+          const int32_t MEMBER_NUM = GET_DATA_MEMBER_NUM(family_info.family_aid_info_)
+                + GET_CHECK_MEMBER_NUM(family_info.family_aid_info_);
+          const FamilyMemberInfo* member_info = packet->get_family_member_info();
+          ret = (INVALID_FAMILY_ID != family_info.family_id_ && MEMBER_NUM > 0 && MEMBER_NUM <= MAX_MARSHALLING_NUM  && NULL != member_info) ? TFS_SUCCESS : EXIT_EXECUTE_TASK_ERROR;
+          if (TFS_SUCCESS == ret)
+          {
+            FamilyCollect* family = manager_.get_manager().get_family_manager().get(family_info.family_id_);
+            ret = (NULL != family) ? TFS_SUCCESS : EXIT_NO_FAMILY;
+          }
+          if (TFS_SUCCESS == ret)
+          {
+            BlockCollect* block = NULL;
+            ServerCollect* server = NULL;
+            const time_t now = Func::get_monotonic_time();
+            for (int32_t index = 0; index < MEMBER_NUM && TFS_SUCCESS == ret; ++index)
+            {
+              if (FAMILY_MEMBER_STATUS_ABNORMAL == member_info[index].status_)
+              {
+                block  = manager_.get_manager().get_block_manager().get(member_info[index].block_);
+                ret = (NULL != block) ? TFS_SUCCESS : EXIT_BLOCK_NOT_FOUND;
+                if (TFS_SUCCESS != ret)
+                {
+                  block = manager_.get_manager().get_block_manager().insert(member_info[index].block_, now);
+                  ret = (NULL != block) ? TFS_SUCCESS : EXIT_BLOCK_NOT_FOUND;
+                  if (TFS_SUCCESS == ret)
+                    ret = manager_.get_manager().get_block_manager().update_family_id(member_info[index].block_, family_info.family_id_);
+                }
+                if (TFS_SUCCESS == ret)
+                {
+                  server = manager_.get_manager().get_server_manager().get(member_info[index].server_);
+                  ret = (NULL != server) ? TFS_SUCCESS : EIXT_SERVER_OBJECT_NOT_FOUND;
+                }
+                if (TFS_SUCCESS == ret)
+                {
+                  if (manager_.get_manager().get_block_manager().get_servers_size(member_info[index].block_) <= 0)
+                    ret = manager_.get_manager().build_relation(block, server, now);
+                }
+              }
+            }
+          }
+        }
+        StatusMessage* reply_msg = new StatusMessage((PLAN_STATUS_END == status_ && TFS_SUCCESS == ret)
+                      ? STATUS_MESSAGE_OK : STATUS_MESSAGE_ERROR);
+        ret = msg->reply(reply_msg);
+      }
+      return ret;
+    }
+
+    ECDissolveTask::ECDissolveTask(TaskManager& manager, const int64_t family_id, const int32_t family_aid_info,
+      const int32_t all_member_num , const common::FamilyMemberInfo* members):
+      ECMarshallingTask(manager, family_id, family_aid_info, all_member_num, members, PLAN_TYPE_EC_DISSOLVE)
+    {
+
+    }
+
+    ECDissolveTask::~ECDissolveTask()
+    {
+
+    }
+
+    int ECDissolveTask::handle()
+    {
+      const int32_t MEMBER_NUM = GET_DATA_MEMBER_NUM(family_aid_info_) + GET_CHECK_MEMBER_NUM(family_aid_info_);
+      int32_t ret = (NULL != family_members_ && MEMBER_NUM > 0 && MEMBER_NUM <= MAX_MARSHALLING_NUM)
+                      ? common::TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+      if (TFS_SUCCESS == ret)
+      {
+        ECDissolveMessage msg;
+        msg.set_seqno(seqno_);
+        msg.set_family_id(family_id_);
+        msg.set_family_member_info(family_members_, family_aid_info_);
+        msg.set_expire_time(SYSPARAM_NAMESERVER.dissolve_task_expired_time_ - MAX_TASK_RESERVE_TIME);
+        uint64_t server = 0;
+        for (int32_t index = 0; index < MEMBER_NUM && 0 != server; ++index)
+          server = family_members_[index].status_ == FAMILY_MEMBER_STATUS_NORMAL ? family_members_[index].server_ : 0;
+        ret = send_msg_to_server(server, &msg);
+        status_ = PLAN_STATUS_BEGIN;
+      }
+      last_update_time_ = Func::get_monotonic_time() +  SYSPARAM_NAMESERVER.dissolve_task_expired_time_;
+      return ret;
+    }
+
+    int ECDissolveTask::handle_complete(common::BasePacket* msg)
+    {
+      int32_t ret = (NULL != msg) && (msg->getPCode() == REQ_EC_DISSOLVE_COMMIT_MESSAGE) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+      if (TFS_SUCCESS == ret)
+      {
+        ECDissolveCommitMessage* packet = dynamic_cast<ECDissolveCommitMessage*>(msg);
+        status_ = static_cast<common::PlanStatus>(packet->get_status());
+        if (PLAN_STATUS_END == status_)
+        {
+          FamilyInfo family_info;
+          family_info.family_id_ = packet->get_family_id();
+          family_info.family_aid_info_ = packet->get_family_aid_info();
+          const int32_t MEMBER_NUM = GET_DATA_MEMBER_NUM(family_info.family_aid_info_) + GET_CHECK_MEMBER_NUM(family_info.family_aid_info_);
+          const FamilyMemberInfo* member_info = packet->get_family_member_info();
+          ret = (INVALID_FAMILY_ID != family_info.family_id_ && MEMBER_NUM > 0 && MEMBER_NUM <= MAX_MARSHALLING_NUM  && NULL != member_info) ? TFS_SUCCESS : EXIT_EXECUTE_TASK_ERROR;
+          if (TFS_SUCCESS == ret)
+          {
+            FamilyCollect* family = manager_.get_manager().get_family_manager().get(family_info.family_id_);
+            ret = (NULL != family) ? TFS_SUCCESS : EXIT_NO_FAMILY;
+          }
+          if (TFS_SUCCESS == ret)
+          {
+            ret = manager_.get_manager().get_oplog_sync_mgr().del_family(family_info.family_id_);
+            if (TFS_SUCCESS == ret)
+            {
+              BlockCollect* block = NULL;
+              ServerCollect* server = NULL;
+              const time_t now = Func::get_monotonic_time();
+              for (int64_t index = MEMBER_NUM / 2; index < MEMBER_NUM && TFS_SUCCESS == ret; ++index)
+              {
+                if (FAMILY_MEMBER_STATUS_NORMAL == member_info[index].status_)
+                {
+                  block  = manager_.get_manager().get_block_manager().get(member_info[index].block_);
+                  ret = (NULL != block) ? TFS_SUCCESS : EXIT_BLOCK_NOT_FOUND;
+                  if (TFS_SUCCESS != ret)
+                  {
+                    block = manager_.get_manager().get_block_manager().insert(member_info[index].block_, now);
+                    ret = (NULL != block) ? TFS_SUCCESS : EXIT_BLOCK_NOT_FOUND;
+                  }
+                  if (TFS_SUCCESS == ret)
+                  {
+                    ret = manager_.get_manager().get_block_manager().update_family_id(member_info[index].block_, INVALID_FAMILY_ID);
+                  }
+                  if (TFS_SUCCESS == ret)
+                  {
+                    server = manager_.get_manager().get_server_manager().get(member_info[index].server_);
+                    ret = (NULL != server) ? TFS_SUCCESS : EIXT_SERVER_OBJECT_NOT_FOUND;
+                  }
+                  //这里如果出现错误可以不用管，由复制线程自己做
+                  if (TFS_SUCCESS == ret)
+                    manager_.get_manager().build_relation(block, server, now);
+                }
+              }
+              GCObject* object = NULL;
+              manager_.get_manager().get_family_manager().remove(object, family_info.family_id_);
+              if (NULL != object)
+                manager_.get_manager().get_gc_manager().add(object, now);
+            }
+          }
+        }
+        StatusMessage* reply_msg = new StatusMessage((PLAN_STATUS_END == status_ && TFS_SUCCESS == ret)
+                      ? STATUS_MESSAGE_OK : STATUS_MESSAGE_ERROR);
+        ret = msg->reply(reply_msg);
+      }
+      return ret;
     }
   }/** end namespace nameserver **/
 }/** end namespace tfs **/
