@@ -129,11 +129,20 @@ namespace tfs
       const ReplBlock* repl_info = message->get_repl_block();
 
       int ret = TFS_SUCCESS;
-      ReplicateTask* task = new ReplicateTask(*this, seqno, ns_id_, expire_time, *repl_info);
-      ret = add_task_queue(task);
-      if (TFS_SUCCESS != ret)
+      if (seqno < 0 || expire_time < 0 || repl_info == NULL ||
+          repl_info->block_id_ == 0 || repl_info->source_id_ == 0 ||
+          repl_info->destination_id_ == 0)
       {
-        tbsys::gDelete(task);
+        ret = EXIT_INVALID_ARGU;
+      }
+      else
+      {
+        ReplicateTask* task = new ReplicateTask(*this, seqno, ns_id_, expire_time, *repl_info);
+        ret = add_task_queue(task);
+        if (TFS_SUCCESS != ret)
+        {
+          tbsys::gDelete(task);
+        }
       }
       return ret;
     }
@@ -145,12 +154,19 @@ namespace tfs
       uint32_t block_id = message->get_block_id();
 
       int ret = TFS_SUCCESS;
-      CompactTask* task = new CompactTask(*this, seqno, ns_id_, expire_time, block_id);
-      task->set_servers(message->get_servers());
-      ret = add_task_queue(task);
-      if (TFS_SUCCESS != ret)
+      if (seqno < 0 || expire_time < 0 || block_id == 0)
       {
-        tbsys::gDelete(task);
+        ret = EXIT_INVALID_ARGU;
+      }
+      else
+      {
+        CompactTask* task = new CompactTask(*this, seqno, ns_id_, expire_time, block_id);
+        task->set_servers(message->get_servers());
+        ret = add_task_queue(task);
+        if (TFS_SUCCESS != ret)
+        {
+          tbsys::gDelete(task);
+        }
       }
       return ret;
     }
@@ -163,12 +179,21 @@ namespace tfs
       const ReplBlock* repl_info = message->get_repl_block();
 
       int ret = TFS_SUCCESS;
-      ReplicateTask* task = new ReplicateTask(*this, seqno, source_id, expire_time, *repl_info);
-      task->set_task_from_ds();
-      ret = add_task_queue(task);
-      if (TFS_SUCCESS != ret)
+      if (seqno < 0 || expire_time < 0 || repl_info == NULL ||
+          repl_info->block_id_ == 0 || repl_info->source_id_ == 0 ||
+          repl_info->destination_id_ == 0)
       {
-        tbsys::gDelete(task);
+        ret = EXIT_INVALID_ARGU;
+      }
+      else
+      {
+        ReplicateTask* task = new ReplicateTask(*this, seqno, source_id, expire_time, *repl_info);
+        task->set_task_from_ds();
+        ret = add_task_queue(task);
+        if (TFS_SUCCESS != ret)
+        {
+          tbsys::gDelete(task);
+        }
       }
       return ret;
     }
@@ -181,12 +206,19 @@ namespace tfs
       uint32_t block_id = message->get_block_id();
 
       int ret = TFS_SUCCESS;
-      CompactTask* task = new CompactTask(*this, seqno, source_id, expire_time, block_id);
-      task->set_task_from_ds();
-      ret = add_task_queue(task);
-      if (TFS_SUCCESS != ret)
+      if (seqno < 0 || expire_time < 0 || block_id == 0)
       {
-        tbsys::gDelete(task);
+        ret = EXIT_INVALID_ARGU;
+      }
+      else
+      {
+        CompactTask* task = new CompactTask(*this, seqno, source_id, expire_time, block_id);
+        task->set_task_from_ds();
+        ret = add_task_queue(task);
+        if (TFS_SUCCESS != ret)
+        {
+          tbsys::gDelete(task);
+        }
       }
       return ret;
     }
@@ -199,16 +231,24 @@ namespace tfs
       int32_t family_aid_info = message->get_family_aid_info();
       FamilyMemberInfo* family_members = message->get_family_member_info();
 
-      MarshallingTask* task = new MarshallingTask(*this, seqno, ns_id_, expire_time, family_id);
-      int ret = task->set_family_member_info(family_members, family_aid_info);
-      if (TFS_SUCCESS == ret)
+      int ret = TFS_SUCCESS;
+      if (seqno < 0 || expire_time < 0 || family_id < 0 || family_members == NULL)
       {
-        ret = add_task_queue(task);
+        ret = EXIT_INVALID_ARGU;
       }
-
-      if (TFS_SUCCESS != ret)
+      else
       {
-        tbsys::gDelete(task);
+        MarshallingTask* task = new MarshallingTask(*this, seqno, ns_id_, expire_time, family_id);
+        ret = task->set_family_member_info(family_members, family_aid_info);
+        if (TFS_SUCCESS == ret)
+        {
+          ret = add_task_queue(task);
+        }
+
+        if (TFS_SUCCESS != ret)
+        {
+          tbsys::gDelete(task);
+        }
       }
       return ret;
     }
@@ -219,18 +259,26 @@ namespace tfs
       int32_t expire_time = message->get_expire_time();
       int64_t family_id = message->get_family_id();
       int32_t family_aid_info = message->get_family_aid_info();
-
       FamilyMemberInfo* family_members = message->get_family_member_info();
-      ReinstateTask* task = new ReinstateTask(*this, seqno, ns_id_, expire_time, family_id);
-      int ret = task->set_family_member_info(family_members, family_aid_info);
-      if (TFS_SUCCESS == ret)
-      {
-        ret = add_task_queue(task);
-      }
 
-      if (TFS_SUCCESS != ret)
+      int ret = TFS_SUCCESS;
+      if (seqno < 0 || expire_time < 0 || family_id < 0 || family_members == NULL)
       {
-        tbsys::gDelete(task);
+        ret = EXIT_INVALID_ARGU;
+      }
+      else
+      {
+        ReinstateTask* task = new ReinstateTask(*this, seqno, ns_id_, expire_time, family_id);
+        ret = task->set_family_member_info(family_members, family_aid_info);
+        if (TFS_SUCCESS == ret)
+        {
+          ret = add_task_queue(task);
+        }
+
+        if (TFS_SUCCESS != ret)
+        {
+          tbsys::gDelete(task);
+        }
       }
       return ret;
     }
@@ -243,16 +291,24 @@ namespace tfs
       int32_t family_aid_info = message->get_family_aid_info();
       FamilyMemberInfo* family_members = message->get_family_member_info();
 
-      DissolveTask* task = new DissolveTask(*this, seqno, ns_id_, expire_time, family_id);
-      int ret = task->set_family_member_info(family_members, family_aid_info);
-      if (TFS_SUCCESS == ret)
+      int ret = TFS_SUCCESS;
+      if (seqno < 0 || expire_time < 0 || family_id < 0 || family_members == NULL)
       {
-        ret = add_task_queue(task);
+        ret = EXIT_INVALID_ARGU;
       }
-
-      if (TFS_SUCCESS != ret)
+      else
       {
-        tbsys::gDelete(task);
+        DissolveTask* task = new DissolveTask(*this, seqno, ns_id_, expire_time, family_id);
+        ret = task->set_family_member_info(family_members, family_aid_info);
+        if (TFS_SUCCESS == ret)
+        {
+          ret = add_task_queue(task);
+        }
+
+        if (TFS_SUCCESS != ret)
+        {
+          tbsys::gDelete(task);
+        }
       }
       return ret;
     }

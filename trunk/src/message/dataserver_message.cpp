@@ -197,6 +197,7 @@ namespace tfs
         iret = input.get_int32(&size);
         if (common::TFS_SUCCESS == iret)
         {
+          /*
           if (common::REPORT_BLOCK_NORMAL == flag_)
           {
             common::BlockInfo info;
@@ -217,6 +218,7 @@ namespace tfs
           }
           else if (common::REPORT_BLOCK_EXT == flag_)
           {
+          */
             common::BlockInfoExt info;
             for (int32_t i = 0; i < size; ++i)
             {
@@ -232,11 +234,13 @@ namespace tfs
                 break;
               }
             }
+          /*
           }
           else
           {
             iret = common::TFS_ERROR;
           }
+          */
         }
       }
       if (common::TFS_SUCCESS == iret)
@@ -253,12 +257,13 @@ namespace tfs
        * ns update after all ds finish update
        * after update, new ns just receive extend block report
        */
+      /*
       if (common::REPORT_BLOCK_NORMAL == flag_)
       {
         common::BlockInfo info;
         return common::INT64_SIZE + common::INT_SIZE + blocks_.size() * info.length() + common::INT8_SIZE;
       }
-      else if (common::REPORT_BLOCK_EXT == flag_)
+      else if (common::REPORT_BLOCK_EXT == flag_) */
       {
         common::BlockInfoExt info;
         return common::INT64_SIZE + common::INT_SIZE + blocks_ext_.size() * info.length() + common::INT8_SIZE;

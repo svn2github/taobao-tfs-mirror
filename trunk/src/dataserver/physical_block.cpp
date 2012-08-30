@@ -203,8 +203,9 @@ namespace tfs
         }
       }
 
-      TBSYS_LOG(DEBUG, "dump block prefix. logic blockid: %u, prev physical blockid: %u, next physical blockid: %u, ret: %d",
-          block_prefix_.logic_blockid_, block_prefix_.prev_physic_blockid_, block_prefix_.next_physic_blockid_, ret);
+      TBSYS_LOG(INFO, "dump block prefix. logic blockid: %u, prev physical blockid: %u, next physical blockid: %u, flag: %d, family_id: %"PRI64_PREFIX"d,  ret: %d",
+          block_prefix_.logic_blockid_, block_prefix_.prev_physic_blockid_, block_prefix_.next_physic_blockid_,
+          block_prefix_.flag_, block_prefix_.group_id_, ret);
 
       return ret;
     }

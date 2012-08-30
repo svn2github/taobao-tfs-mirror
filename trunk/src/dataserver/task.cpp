@@ -66,50 +66,18 @@ namespace tfs
       tmp_stream << "dump " << type << " task. ";
       tmp_stream << "seqno: " << seqno_ << delim;
       tmp_stream << "task source: " << tbsys::CNetUtil::addrToString(source_id_) << delim;
+      tmp_stream << "expire time: " << expire_time_ << delim;
       return tmp_stream.str();
     }
 
     int Task::send_simple_request(uint64_t server_id, common::BasePacket* message)
     {
       int ret = TFS_SUCCESS;
-      if (0 == server_id || NULL == message)
+      int status = 0;
+      ret = send_msg_to_server(server_id, message, status);
+      if (TFS_SUCCESS == ret && STATUS_MESSAGE_OK != status)
       {
-        ret = EXIT_PARAMETER_ERROR;
-      }
-      else
-      {
-        NewClient* client = NewClientManager::get_instance().create_client();
-        if (NULL == client)
-        {
-          TBSYS_LOG(ERROR, "create client error");
-        }
-        else
-        {
-          tbnet::Packet* rsp_msg = NULL;
-          if (TFS_SUCCESS == send_msg_to_server(server_id, client, message, rsp_msg))
-          {
-            if (rsp_msg->getPCode() == STATUS_MESSAGE)
-            {
-              StatusMessage* sm = dynamic_cast<StatusMessage*> (rsp_msg);
-              if (STATUS_MESSAGE_OK != sm->get_status())
-              {
-                TBSYS_LOG(DEBUG, "request execute fail, status: %d", sm->get_status());
-                ret = TFS_ERROR;
-              }
-            }
-            else
-            {
-              TBSYS_LOG(DEBUG, "response type not correct.");
-              ret = TFS_ERROR;
-            }
-          }
-          else
-          {
-            TBSYS_LOG(DEBUG, "send message to server fail.");
-            ret = TFS_ERROR;
-          }
-          NewClientManager::get_instance().destroy_client(client);
-        }
+        ret = TFS_ERROR;
       }
       return ret;
     }
@@ -250,8 +218,8 @@ namespace tfs
       wri_msg.set_index_op(index_op);
       wri_msg.set_index_vec(index_vec);
 
-      TBSYS_LOG(DEBUG, "write raw index to %s, blockid: %u, index_op: %d",
-          tbsys::CNetUtil::addrToString(server_id).c_str(), block_id, index_op);
+      TBSYS_LOG(DEBUG, "write raw index to %s, blockid: %u, index op: %d, vec size: %u",
+          tbsys::CNetUtil::addrToString(server_id).c_str(), block_id, index_op, index_vec.size());
 
       int ret = TFS_SUCCESS;
       ret = send_simple_request(server_id, &wri_msg);
@@ -378,20 +346,22 @@ namespace tfs
     int CompactTask::handle_complete(BasePacket* packet)
     {
       int ret = TFS_SUCCESS;
-      RespDsCompactBlockMessage* resp_cpt_msg = dynamic_cast<RespDsCompactBlockMessage*>(packet);
-      int status = resp_cpt_msg->get_status();
-      add_response(resp_cpt_msg->get_ds_id(), status, *(resp_cpt_msg->get_block_info()));
-
-      if (is_completed())
+      if (RESP_DS_COMPACT_BLOCK_MESSAGE == packet->getPCode())
       {
-        ret = report_to_ns(status); // status is notused here
+        RespDsCompactBlockMessage* resp_cpt_msg = dynamic_cast<RespDsCompactBlockMessage*>(packet);
+        int status = resp_cpt_msg->get_status();
+        add_response(resp_cpt_msg->get_ds_id(), status, *(resp_cpt_msg->get_block_info()));
+
+        if (is_completed())
+        {
+          ret = report_to_ns(status); // status is notused here
+        }
+
+        TBSYS_LOG(INFO, "handle complete compact task, "
+            "seqno: %"PRI64_PREFIX"d, server: %s, status: %d, ret: %d\n",
+            seqno_, tbsys::CNetUtil::addrToString(resp_cpt_msg->get_ds_id()).c_str(), status, ret);
       }
-
-      TBSYS_LOG(INFO, "handle complete compact task, "
-          "seqno: %"PRI64_PREFIX"d, server: %s, status: %d, ret: %d\n",
-          seqno_, tbsys::CNetUtil::addrToString(resp_cpt_msg->get_ds_id()).c_str(), status, ret);
-
-      return TFS_SUCCESS;  // no need return here
+      return ret;  // no need return here
     }
 
     string CompactTask::dump() const
@@ -491,28 +461,16 @@ namespace tfs
     {
       UNUSED(status);
       int ret = TFS_SUCCESS;
-      LogicBlock* LogicBlock = BlockFileManager::get_instance()->get_logic_block(block_id_);
-      if (NULL == LogicBlock)
-      {
-        TBSYS_LOG(ERROR, "get block failed. blockid: %u\n", block_id_);
-        ret = EXIT_NO_LOGICBLOCK_ERROR;
-      }
-      else
-      {
-        DsCommitCompactBlockCompleteToNsMessage cmit_cpt_msg;
-        cmit_cpt_msg.set_seqno(seqno_);
-        BlockInfo* blk = LogicBlock->get_block_info();
-        cmit_cpt_msg.set_block_info(*blk);
-        cmit_cpt_msg.set_result(result_);
+      DsCommitCompactBlockCompleteToNsMessage cmit_cpt_msg;
+      cmit_cpt_msg.set_seqno(seqno_);
+      cmit_cpt_msg.set_block_info(info_);
+      cmit_cpt_msg.set_result(result_);
 
-        TBSYS_LOG(DEBUG, "compact report to ns. seqno: %"PRI64_PREFIX"d, blockid: %u, status: %d, source: %s",
-            seqno_, block_id_, status, tbsys::CNetUtil::addrToString(source_id_).c_str());
+      ret = send_simple_request(source_id_, &cmit_cpt_msg);
 
-        NewClient* client = NewClientManager::get_instance().create_client();
-        tbnet::Packet* rsp_msg = NULL;
-        ret = send_msg_to_server(source_id_, client, &cmit_cpt_msg, rsp_msg);
-        NewClientManager::get_instance().destroy_client(client);
-      }
+      TBSYS_LOG(INFO, "compact report to ns. seqno: %"PRI64_PREFIX"d, blockid: %u, status: %d, source: %s, ret: %d",
+          seqno_, block_id_, status, tbsys::CNetUtil::addrToString(source_id_).c_str(), ret);
+
       return ret;
     }
 
@@ -538,7 +496,7 @@ namespace tfs
         }
       }
 
-      TBSYS_LOG(DEBUG, "compact report to ds. seqno: %"PRI64_PREFIX"d, blockid: %u, status: %d, source: %s",
+      TBSYS_LOG(INFO, "compact report to ds. seqno: %"PRI64_PREFIX"d, blockid: %u, status: %d, source: %s",
         seqno_, block_id_, status, tbsys::CNetUtil::addrToString(source_id_).c_str());
 
       NewClient* client = NewClientManager::get_instance().create_client();
@@ -557,6 +515,13 @@ namespace tfs
         req_cpt_msg.set_block_id(block_id_);
         req_cpt_msg.set_source_id(manager_.get_ds_id());
         ret = send_simple_request(servers_[i], &req_cpt_msg);
+        TBSYS_LOG(DEBUG, "compact task seqno(%d) request %s to compact, ret",
+            seqno_, tbsys::CNetUtil::addrToString(servers_[i]).c_str(), ret);
+
+        if (TFS_SUCCESS != ret)
+        {
+          break;
+        }
       }
 
       return ret;
@@ -787,9 +752,6 @@ namespace tfs
       req_rb_msg.set_repl_block(&repl_info_);
       req_rb_msg.set_status(status);
 
-      TBSYS_LOG(DEBUG, "replicate report to ns. seqno: %"PRI64_PREFIX"d, blockid: %u, status: %d, source: %s",
-          seqno_, repl_info_.block_id_, status, tbsys::CNetUtil::addrToString(source_id_).c_str());
-
       bool need_remove = false;
       NewClient* client = NewClientManager::get_instance().create_client();
       if (NULL != client)
@@ -835,6 +797,10 @@ namespace tfs
         int rm_ret = BlockFileManager::get_instance()->del_block(repl_info_.block_id_);
         TBSYS_LOG(INFO, "send repl block complete info: del blockid: %u, result: %d\n", repl_info_.block_id_, rm_ret);
       }
+
+      TBSYS_LOG(INFO, "replicate report to ns. seqno: %"PRI64_PREFIX"d, blockid: %u, status: %d, source: %s, ret: %d",
+          seqno_, repl_info_.block_id_, status, tbsys::CNetUtil::addrToString(source_id_).c_str(), ret);
+
       return ret;
     }
 
@@ -845,7 +811,7 @@ namespace tfs
       resp_repl_msg.set_ds_id(manager_.get_ds_id());
       resp_repl_msg.set_status(status);
 
-      TBSYS_LOG(DEBUG, "replicate report to ns. seqno: %"PRI64_PREFIX"d, blockid: %u, status: %d, source: %s",
+      TBSYS_LOG(INFO, "replicate report to ds. seqno: %"PRI64_PREFIX"d, blockid: %u, status: %d, source: %s",
           seqno_, repl_info_.block_id_, status, tbsys::CNetUtil::addrToString(source_id_).c_str());
 
       NewClient* client = NewClientManager::get_instance().create_client();
@@ -983,13 +949,10 @@ namespace tfs
       ret = cmit_msg.set_family_member_info(family_members_, family_aid_info_);
       if (TFS_SUCCESS == ret)
       {
-        NewClient* client = NewClientManager::get_instance().create_client();
-        tbnet::Packet* rsp_msg = NULL;
-        ret = send_msg_to_server(source_id_, client, &cmit_msg, rsp_msg);
-        NewClientManager::get_instance().destroy_client(client);
+        ret = send_simple_request(source_id_, &cmit_msg);
       }
 
-      TBSYS_LOG(DEBUG, "marshalling report to ns. seqno: %"PRI64_PREFIX"d, status: %d, source: %s, ret: %d",
+      TBSYS_LOG(INFO, "marshalling report to ns. seqno: %"PRI64_PREFIX"d, status: %d, source: %s, ret: %d",
           seqno_, status, tbsys::CNetUtil::addrToString(source_id_).c_str(), ret);
 
       return ret;
@@ -1013,13 +976,20 @@ namespace tfs
       memset(index_data, 0, EC_DATA_MAX * sizeof(char*));
 
       // check if all data ok
+      int normal_count = 0;
       for (int32_t i = 0; i < data_num; i++)
       {
-        if (family_members_[i].status_ == FAMILY_MEMBER_STATUS_ABNORMAL)
+        // just need data_num nodes to recovery
+        if (family_members_[i].status_ == FAMILY_MEMBER_STATUS_NORMAL)
         {
-          ret = EXIT_NO_ENOUGH_DATA;
-          break;
+          normal_count++;
         }
+      }
+
+      if (normal_count != data_num)
+      {
+        TBSYS_LOG(ERROR, "no enough normal node to recovery, normal count: %d", normal_count);
+        return EXIT_NO_ENOUGH_DATA;
       }
 
       // config encoder parameter, alloc buffer
@@ -1218,16 +1188,17 @@ namespace tfs
       memset(index_data, 0, EC_DATA_MAX * sizeof(char*));
       memset(erased, 0, EC_DATA_MAX * sizeof(int));
 
-      int data_count = 0;
+      bool need_recovery = false;
+      int normal_count = 0;
       for (int32_t i = 0; i < data_num + check_num; i++)
       {
         // just need data_num nodes to recovery
         if (family_members_[i].status_ == FAMILY_MEMBER_STATUS_NORMAL)
         {
-          if (data_count < data_num)
+          if (normal_count < data_num)
           {
             erased[i] = 0;  // alive
-            data_count++;
+            normal_count++;
             TBSYS_LOG(DEBUG, "node %d selected for recovery", i);
           }
           else
@@ -1239,13 +1210,22 @@ namespace tfs
         else
         {
           erased[i] = 1;   // need to recovey
+          need_recovery = true;
           TBSYS_LOG(DEBUG, "node %d need recovery", i);
         }
       }
 
-      if (data_count != data_num)
+      if (normal_count != data_num)
       {
-        ret = EXIT_NO_ENOUGH_DATA;
+        TBSYS_LOG(ERROR, "no enough normal node to recovery, normal count: %d", normal_count);
+        return EXIT_NO_ENOUGH_DATA;
+      }
+
+      // all node ok, no need to recovery, just return
+      if (!need_recovery)
+      {
+        TBSYS_LOG(INFO, "all nodes are normal, no need do recovery");
+        return TFS_SUCCESS;
       }
 
       // config encoder parameter, alloc buffer
@@ -1494,13 +1474,10 @@ namespace tfs
       ret = cmit_msg.set_family_member_info(family_members_, family_aid_info_);
       if (TFS_SUCCESS == ret)
       {
-        NewClient* client = NewClientManager::get_instance().create_client();
-        tbnet::Packet* rsp_msg = NULL;
-        ret = send_msg_to_server(source_id_, client, &cmit_msg, rsp_msg);
-        NewClientManager::get_instance().destroy_client(client);
+        ret = send_simple_request(source_id_, &cmit_msg);
       }
 
-      TBSYS_LOG(DEBUG, "reinstate report to ns. seqno: %"PRI64_PREFIX"d, status: %d, source: %s, ret: %d",
+      TBSYS_LOG(INFO, "reinstate report to ns. seqno: %"PRI64_PREFIX"d, status: %d, source: %s, ret: %d",
           seqno_, status, tbsys::CNetUtil::addrToString(source_id_).c_str(), ret);
 
       return ret;
@@ -1551,46 +1528,51 @@ namespace tfs
     int DissolveTask::handle_complete(BasePacket* packet)
     {
       int ret = TFS_SUCCESS;
-      RespDsCompactBlockMessage* resp_msg = dynamic_cast<RespDsCompactBlockMessage*> (packet);
-      int status = resp_msg->get_status();
-      uint64_t server = resp_msg->get_ds_id();
-
-      for (uint32_t i = 0; i < result_.size(); i++)
+      if (RESP_DS_REPLICATE_BLOCK_MESSAGE == packet->getPCode())
       {
-        if (result_[i].first == server)
+        RespDsReplicateBlockMessage* resp_msg = dynamic_cast<RespDsReplicateBlockMessage*> (packet);
+        int status = resp_msg->get_status();
+        uint64_t server = resp_msg->get_ds_id();
+
+        for (uint32_t i = 0; i < result_.size(); i++)
         {
-          result_[i].second = status;
-          break;
+          if (result_[i].first == server)
+          {
+            result_[i].second = status;
+            break;
+          }
         }
-      }
 
-      if (is_completed())
-      {
-        ret = report_to_ns(status); // status is not used here
-        if (TFS_SUCCESS == ret)
+        if (is_completed())
         {
-          ret = request_ds_to_delete();  // success, remove parity blocks
+          ret = report_to_ns(status); // status is not used here
+          if (TFS_SUCCESS == ret)
+          {
+            ret = request_ds_to_delete();  // success, remove parity blocks
+          }
         }
+
+        TBSYS_LOG(INFO, "handle complete dissolve task, "
+            "seqno: %"PRI64_PREFIX"d, server: %s, status: %d, ret: %d\n",
+            seqno_, tbsys::CNetUtil::addrToString(resp_msg->get_ds_id()).c_str(), status, ret);
       }
-
-      TBSYS_LOG(INFO, "handle complete dissolve task, "
-          "seqno: %"PRI64_PREFIX"d, server: %s, status: %d, ret: %d\n",
-          seqno_, tbsys::CNetUtil::addrToString(resp_msg->get_ds_id()).c_str(), status, ret);
-
       return ret;
     }
 
     int DissolveTask::report_to_ns(const int status)
     {
-      UNUSED(status);
       int ret = TFS_SUCCESS;
-      int final_status = PLAN_STATUS_END;
-      for (uint32_t i = 0; i < result_.size(); i++)
+      int final_status = status;
+      if (PLAN_STATUS_TIMEOUT != final_status) // maybe expired by task manager
       {
-        if (PLAN_STATUS_END != result_[i].second)
+        final_status = PLAN_STATUS_END;
+        for (uint32_t i = 0; i < result_.size(); i++)
         {
-          final_status = PLAN_STATUS_FAILURE;
-          break;
+          if (PLAN_STATUS_END != result_[i].second)
+          {
+            final_status = PLAN_STATUS_FAILURE;
+            break;
+          }
         }
       }
 
@@ -1602,14 +1584,11 @@ namespace tfs
       ret = cmit_msg.set_family_member_info(family_members_, family_aid_info_);
       if (TFS_SUCCESS == ret)
       {
-        NewClient* client = NewClientManager::get_instance().create_client();
-        tbnet::Packet* rsp_msg = NULL;
-        ret = send_msg_to_server(source_id_, client, &cmit_msg, rsp_msg);
-        NewClientManager::get_instance().destroy_client(client);
+        ret = send_simple_request(source_id_, &cmit_msg);
       }
 
-      TBSYS_LOG(DEBUG, "dissolve report to ns. seqno: %"PRI64_PREFIX"d, status: %d, source: %s, ret: %d",
-          seqno_, status, tbsys::CNetUtil::addrToString(source_id_).c_str(), ret);
+      TBSYS_LOG(INFO, "dissolve report to ns. seqno: %"PRI64_PREFIX"d, status: %d, source: %s, ret: %d",
+          seqno_, final_status, tbsys::CNetUtil::addrToString(source_id_).c_str(), ret);
 
       return ret;
     }
@@ -1627,7 +1606,8 @@ namespace tfs
         {
           continue;
         }
-        ReplicateBlockMessage repl_msg;
+
+        DsReplicateBlockMessage repl_msg;
         ReplBlock repl_block;
         memset(&repl_block, 0, sizeof(ReplBlock));
         repl_block.block_id_ = family_members_[i].block_;
@@ -1636,9 +1616,13 @@ namespace tfs
 
         repl_msg.set_seqno(seqno_);
         repl_msg.set_expire_time(expire_time_);
-        repl_msg.set_repl_block(&repl_block);
+        repl_msg.set_source_id(manager_.get_ds_id());
+        repl_msg.set_repl_info(repl_block);
 
         ret = send_simple_request(family_members_[i].server_, &repl_msg);
+        TBSYS_LOG(DEBUG, "dissolve task seqno(%d) request %s to replicate, ret: %d",
+            seqno_, tbsys::CNetUtil::addrToString(family_members_[i].server_).c_str(), ret);
+
         if (TFS_SUCCESS != ret)
         {
           break;
@@ -1665,6 +1649,9 @@ namespace tfs
         del_msg.set(family_members_[i].block_);
 
         ret = send_simple_request(family_members_[i].server_, &del_msg);
+        TBSYS_LOG(DEBUG, "dissolve task seqno(%d) request %s to delete, ret: %d",
+            seqno_, tbsys::CNetUtil::addrToString(family_members_[i].server_).c_str(), ret);
+
         if (TFS_SUCCESS != ret)
         {
           break;
