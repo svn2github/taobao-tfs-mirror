@@ -347,7 +347,7 @@ namespace tfs
       }
       if (common::TFS_SUCCESS == ret)
       {
-        ret = input.set_vint32(expire_blocks_);
+        ret = input.get_vint32(expire_blocks_);
       }
       return ret;
     }
