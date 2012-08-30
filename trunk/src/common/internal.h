@@ -40,10 +40,10 @@
 #define GET_MARSHALLING_TYPE(x) ((x >> 8) & 0xFF)
 #define GET_MASTER_INDEX(x) (x & 0xFF)
 
-#define SET_DATA_MEMBER_NUM(x,y) (x |= ((y << 24) & 0xFF000000))
-#define SET_CHECK_MEMBER_NUM(x,y) ((x |= ((y << 16) & 0xFF0000)))
-#define SET_MARSHALLING_TYPE(x,y) (x |= ((y << 8) & 0xFF00))
-#define SET_MASTER_INDEX(x,y) (x |= (y & 0xFF))
+#define SET_DATA_MEMBER_NUM(x,y) (x = (x & 0x00FFFFFF) | ((y << 24) & 0xFF000000))
+#define SET_CHECK_MEMBER_NUM(x,y) (x = (x & 0xFF00FFFF) | ((y << 16) & 0xFF0000))
+#define SET_MARSHALLING_TYPE(x,y) (x = (x & 0xFFFF00FF) | ((y << 8) & 0xFF00))
+#define SET_MASTER_INDEX(x,y) (x = (x & 0xFFFFFF00) | (y & 0xFF))
 
 //#define TFS_GTEST
 
@@ -898,7 +898,8 @@ namespace tfs
     typedef enum _FamilyMemberStatus
     {
       FAMILY_MEMBER_STATUS_NORMAL = 0,
-      FAMILY_MEMBER_STATUS_ABNORMAL
+      FAMILY_MEMBER_STATUS_ABNORMAL = 1,
+      FAMILY_MEMBER_STATUS_OTHER = 2
     }FamilyMemberStatus;
 
     typedef enum _RemoveOrReinstateBlockType

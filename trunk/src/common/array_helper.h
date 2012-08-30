@@ -93,7 +93,7 @@ namespace tfs
           T* get(const T value) const
           {
             T* res = NULL;
-            for (int64_t i = 0; i < index_ && NULL != res; ++i)
+            for (int64_t i = 0; i < index_ && NULL == res; ++i)
             {
               if (p_[i] == value)
                 res = &p_[i];
