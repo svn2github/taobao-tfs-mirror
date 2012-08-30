@@ -106,7 +106,7 @@ namespace tfs
     int ECMarshallingMessage::set_family_member_info(const FamilyMemberInfo* members, const int32_t family_aid_info)
     {
       const int32_t MEMBER_NUM = GET_DATA_MEMBER_NUM(family_aid_info) + GET_CHECK_MEMBER_NUM(family_aid_info);
-      int32_t ret = (NULL != members && MEMBER_NUM > 0 && MEMBER_NUM <= MAX_MARSHALLING_NUM) ? common::TFS_SUCCESS : common::EXIT_PARAMETER_ERROR;
+      int32_t ret = (NULL != members && MEMBER_NUM > 0 && MEMBER_NUM <= MAX_MARSHALLING_NUM * 2) ? common::TFS_SUCCESS : common::EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
         family_aid_info_ = family_aid_info;
