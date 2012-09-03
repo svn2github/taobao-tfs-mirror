@@ -1209,7 +1209,7 @@ namespace tfs
           }
           else
           {
-            lease = get_data_management().get_lease_manager().generation(lease_id, now, LEASE_TYPE_WRITE, servers);
+            get_data_management().get_lease_manager().generation(lease_id, now, LEASE_TYPE_WRITE, servers);
             lease = get_data_management().get_lease_manager().get(lease_id, now);
             info.file_number_ = lease->lease_id_.lease_id_;
           }
@@ -1273,7 +1273,6 @@ namespace tfs
               stat_mgr_.update_entry(tfs_ds_stat_, "write-failed", 1);
               ret = message->reply(new StatusMessage(STATUS_MESSAGE_ERROR, msg));
             }
-            get_data_management().get_lease_manager().remove(lease_id);
           }
         }
         else
@@ -1843,24 +1842,16 @@ namespace tfs
         if (is_master)
         {
           time_t now = Func::get_monotonic_time();
-          lease = get_data_management().get_lease_manager().generation(lease_id, now, LEASE_TYPE_UNLINK,servers);
-          ret = NULL == lease ? EXIT_INVALID_WRITE_LEASE : TFS_SUCCESS;
+          get_data_management().get_lease_manager().generation(lease_id, now, LEASE_TYPE_UNLINK,servers);
+          lease = get_data_management().get_lease_manager().get(lease_id, now);
+          message->set_lease_id_ext(lease->lease_id_.lease_id_);
+          message->set_server();
+          int32_t result = post_message_to_server(message, servers);
+          ret = (result  == EXIT_POST_MSG_RET_POST_MSG_ERROR) ?  EXIT_SENDMSG_ERROR : TFS_SUCCESS;
           if (TFS_SUCCESS != ret)
           {
-            TBSYS_LOG(INFO, "unlink file failed, generation lease failed, ret: %d", ret);
-          }
-          if (TFS_SUCCESS == ret)
-          {
-            lease = get_data_management().get_lease_manager().get(lease_id, now);
-            message->set_lease_id_ext(lease->lease_id_.lease_id_);
-            message->set_server();
-            int32_t result = post_message_to_server(message, servers);
-            ret = (result  == EXIT_POST_MSG_RET_POST_MSG_ERROR) ?  EXIT_SENDMSG_ERROR : TFS_SUCCESS;
-            if (TFS_SUCCESS != ret)
-            {
-              TBSYS_LOG(INFO, "unlink file forwarding message to other dataserver failed, block: %u, fileid: %"PRI64_PREFIX"u,lease id: %"PRI64_PREFIX"u, role : master, ret: %d",
+            TBSYS_LOG(INFO, "unlink file forwarding message to other dataserver failed, block: %u, fileid: %"PRI64_PREFIX"u,lease id: %"PRI64_PREFIX"u, role : master, ret: %d",
                 block_id, file_id, lease->lease_id_.lease_id_, ret);
-            }
           }
         }
         BlockInfo local_info;
