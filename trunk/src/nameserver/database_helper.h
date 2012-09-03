@@ -51,6 +51,7 @@ namespace tfs
       int excute_stmt_(MYSQL_STMT* stmt);
     private:
       DISALLOW_COPY_AND_ASSIGN(DataBaseHelper);
+      tbutil::Mutex mutex_;
       std::string connstr_;
       std::string username_;
       std::string password_;

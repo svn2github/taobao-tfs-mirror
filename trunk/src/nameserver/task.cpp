@@ -112,7 +112,7 @@ namespace tfs
     void Task::runTimerTask()
     {
       status_ = PLAN_STATUS_TIMEOUT;
-      dump(TBSYS_LOG_LEVEL_INFO, "task expired");
+      dump(TBSYS_LOG_LEVEL(INFO), "task expired");
     }
 
     ReplicateTask::ReplicateTask(TaskManager& manager, const uint32_t block, const int8_t server_num, const uint64_t* servers,
@@ -181,18 +181,24 @@ namespace tfs
       }
     }
 
-    void ReplicateTask::dump(const int32_t level, const char* const format)
+    void ReplicateTask::dump(const int32_t level, const char* file, const int32_t line,
+         const char* function, const char* format, ...)
     {
       if (level <= TBSYS_LOGGER._level)
       {
+        char msgstr[256] = {'\0'};/** include '\0'*/
+        va_list ap;
+        va_start(ap, format);
+        vsnprintf(msgstr, 256, NULL == format ? "" : format, ap);
+        va_end(ap);
         std::string str;
         for (int8_t index = 0; index < server_num_ && NULL != servers_; ++index)
         {
           str += tbsys::CNetUtil::addrToString(servers_[index]);
           str += "/";
         }
-        TBSYS_LOGGER.logMessage(level, __FILE__, __LINE__, __FUNCTION__, "%s seqno: %"PRI64_PREFIX"d, type: %s, status: %s, block: %u, expired_time: %"PRI64_PREFIX"d, servers: %s",
-            format == NULL ? "" : format, seqno_, transform_type_to_str(),
+        TBSYS_LOGGER.logMessage(level, file, line, function, "%s seqno: %"PRI64_PREFIX"d, type: %s, status: %s, block: %u, expired_time: %"PRI64_PREFIX"d, servers: %s",
+            msgstr, seqno_, transform_type_to_str(),
             transform_status_to_str(status_), block_, last_update_time_, str.c_str());
       }
     }
@@ -315,7 +321,7 @@ namespace tfs
           }
           if (!has_successful)
           {
-            dump(TBSYS_LOG_LEVEL_INFO, "compact block all failure");
+            dump(TBSYS_LOG_LEVEL(INFO), "compact block all failure");
           }
           else
           {
@@ -351,7 +357,7 @@ namespace tfs
                 if (TFS_SUCCESS != manager_.get_manager().get_oplog_sync_mgr().log(
                       OPLOG_TYPE_COMPACT_MSG, stream.get_data(), stream.get_data_length(), now))
                 {
-                  dump(TBSYS_LOG_LEVEL_INFO, "write compact oplog failed");
+                  dump(TBSYS_LOG_LEVEL(INFO), "write compact oplog failed");
                 }
               }
             }
@@ -412,7 +418,7 @@ namespace tfs
           family_info.family_id_ = packet->get_family_id();
           family_info.family_aid_info_ = packet->get_family_aid_info();
           const int32_t MEMBER_NUM = GET_DATA_MEMBER_NUM(family_info.family_aid_info_) + GET_CHECK_MEMBER_NUM(family_info.family_aid_info_);
-          const FamilyMemberInfo* base_info = packet->get_family_member_info();
+          FamilyMemberInfo* base_info = packet->get_family_member_info();
           ret = (MEMBER_NUM > 0 && MEMBER_NUM <= MAX_MARSHALLING_NUM  && NULL != base_info) ? TFS_SUCCESS : EXIT_EXECUTE_TASK_ERROR;
           if (TFS_SUCCESS == ret)
           {
@@ -451,7 +457,6 @@ namespace tfs
               std::pair<ServerCollect*, BlockCollect*> del_items[MAX_DELETE_BLOCK_ARRAY_SIZE];
               ServerCollect* servers[SYSPARAM_NAMESERVER.max_replication_];
               ArrayHelper<ServerCollect*> helper2(SYSPARAM_NAMESERVER.max_replication_, servers);
-              uint32_t success[MAX_MARSHALLING_NUM] = { 0 };
               for (; index < DATA_MEMBER_NUM && TFS_SUCCESS == ret; ++index)
               {
                 helper2.clear();
@@ -465,7 +470,7 @@ namespace tfs
                   ret = manager_.get_manager().get_block_manager().update_family_id(base_info[index].block_, family_info.family_id_);
                   if (TFS_SUCCESS == ret)
                   {
-                    success[index] = base_info[index].block_;
+                    base_info[index].status_ = FAMILY_MEMBER_STATUS_OTHER;
                     helper2.remove(pserver);
                     for (int64_t i = 0; i < helper2.get_array_index(); ++i)
                     {
@@ -485,7 +490,11 @@ namespace tfs
                 assert(NULL != pblock);
                 ret = manager_.get_manager().get_block_manager().update_family_id(base_info[index].block_, family_info.family_id_);
                 if (TFS_SUCCESS == ret)
-                  success[index] = base_info[index].block_;
+                  ret = (NULL != (pserver = manager_.get_manager().get_server_manager().get(base_info[index].server_))) ? TFS_SUCCESS : EIXT_SERVER_OBJECT_NOT_FOUND;
+                if (TFS_SUCCESS == ret)
+                 ret =  manager_.get_manager().build_relation(pblock, pserver, now) ? TFS_SUCCESS :EXIT_BUILD_RELATION_ERROR;
+                if (TFS_SUCCESS == ret)
+                  base_info[index].status_ = FAMILY_MEMBER_STATUS_OTHER;
               }
 
               //build relation failed, we'll rollback
@@ -494,8 +503,13 @@ namespace tfs
                 ret = manager_.get_manager().get_oplog_sync_mgr().del_family(family_info.family_id_);
                 for (index = 0; index < MEMBER_NUM && TFS_SUCCESS == ret; ++index)
                 {
-                  ret = manager_.get_manager().get_block_manager().update_family_id(success[index], INVALID_FAMILY_ID);
-                  assert(TFS_SUCCESS == ret);
+                  if (FAMILY_MEMBER_STATUS_OTHER == base_info[index].status_)
+                    ret = manager_.get_manager().get_block_manager().update_family_id(base_info[index].block_, INVALID_FAMILY_ID);
+                }
+                for (index = DATA_MEMBER_NUM; index < MEMBER_NUM && TFS_SUCCESS == ret; ++index)
+                {
+                  if (FAMILY_MEMBER_STATUS_OTHER == base_info[index].status_)
+                    ret = manager_.get_manager().relieve_relation(pblock, pserver, now, BLOCK_COMPARE_SERVER_BY_ID_POINTER) ? TFS_SUCCESS : EXIT_RELIEVE_RELATION_ERROR;
                 }
               }
               else
@@ -518,6 +532,8 @@ namespace tfs
             }
           }
         }
+        if (TFS_SUCCESS != ret)
+          dump(TBSYS_LOG_LEVEL(INFO), "handle marshalling task failed, ret: %d,", ret);
         StatusMessage* reply_msg = new StatusMessage((PLAN_STATUS_END == status_ && TFS_SUCCESS == ret)
                       ? STATUS_MESSAGE_OK : STATUS_MESSAGE_ERROR);
         ret = msg->reply(reply_msg);
@@ -542,28 +558,30 @@ namespace tfs
     void ECMarshallingTask::dump(std::stringstream& stream)
     {
       const int32_t MEMBER_NUM = GET_DATA_MEMBER_NUM(family_aid_info_) + GET_CHECK_MEMBER_NUM(family_aid_info_);
-      stream << " seqno: " << seqno_ << " data_member_num: " << GET_DATA_MEMBER_NUM(family_aid_info_) << " check_member_num: " <<  GET_CHECK_MEMBER_NUM(family_aid_info_);
+      stream << " seqno: " << seqno_ << " family_id: " <<family_id_ <<" master index: " <<GET_MASTER_INDEX(family_aid_info_)
+              << " data_member_num: " << GET_DATA_MEMBER_NUM(family_aid_info_)
+              << " check_member_num: " <<  GET_CHECK_MEMBER_NUM(family_aid_info_);
       for (int32_t index =  0; index < MEMBER_NUM ; ++index)
       {
         stream << " server: " << tbsys::CNetUtil::addrToString(family_members_[index].server_) << " block: " << family_members_[index].block_
-               << " version: " << family_members_[index].version_;
+               << " version: " << family_members_[index].version_ << " status: " << family_members_[index].status_;
       }
     }
 
-    void ECMarshallingTask::dump(const int32_t level, const char* const format)
+    void ECMarshallingTask::dump(const int32_t level, const char* file, const int32_t line,
+         const char* function, const char* format, ...)
     {
       if (level <= TBSYS_LOGGER._level)
       {
+        char msgstr[256] = {'\0'};/** include '\0'*/
+        va_list ap;
+        va_start(ap, format);
+        vsnprintf(msgstr, 256, NULL == format ? "" : format, ap);
+        va_end(ap);
         std::stringstream str;
-        const int32_t MEMBER_NUM = GET_DATA_MEMBER_NUM(family_aid_info_) + GET_CHECK_MEMBER_NUM(family_aid_info_);
-        for (int32_t index =  0; index < MEMBER_NUM ; ++index)
-        {
-          str << " " << tbsys::CNetUtil::addrToString(family_members_[index].server_) << " " << family_members_[index].block_ << " " <<
-            family_members_[index].version_ << " " << family_members_[index].status_;
-        }
-        TBSYS_LOGGER.logMessage(level, __FILE__, __LINE__, __FUNCTION__, "%s seqno: %"PRI64_PREFIX"d, type: %s, data_member_num: %d, check_member_num: %d, status: %s, expired_time: %"PRI64_PREFIX"d, members: %s",
-          format, seqno_, transform_type_to_str(), GET_DATA_MEMBER_NUM(family_aid_info_), GET_CHECK_MEMBER_NUM(family_aid_info_),
-          transform_status_to_str(status_), last_update_time_, str.str().c_str());
+        dump(str);
+        TBSYS_LOGGER.logMessage(level, file, line, function, "%s type: %s, status: %s, expired_time: %"PRI64_PREFIX"d, infomations: %s",
+          msgstr, transform_type_to_str(), transform_status_to_str(status_), last_update_time_, str.str().c_str());
       }
     }
 
@@ -647,12 +665,14 @@ namespace tfs
                 if (TFS_SUCCESS == ret)
                 {
                   if (manager_.get_manager().get_block_manager().get_servers_size(member_info[index].block_) <= 0)
-                    ret = manager_.get_manager().build_relation(block, server, now);
+                    ret = manager_.get_manager().build_relation(block, server, now) ? TFS_SUCCESS : EXIT_BUILD_RELATION_ERROR;
                 }
               }
             }
           }
         }
+        if (TFS_SUCCESS != ret)
+          dump(TBSYS_LOG_LEVEL(INFO), "handle reistate task failed, ret: %d,", ret);
         StatusMessage* reply_msg = new StatusMessage((PLAN_STATUS_END == status_ && TFS_SUCCESS == ret)
                       ? STATUS_MESSAGE_OK : STATUS_MESSAGE_ERROR);
         ret = msg->reply(reply_msg);
@@ -675,7 +695,7 @@ namespace tfs
     int ECDissolveTask::handle()
     {
       const int32_t MEMBER_NUM = GET_DATA_MEMBER_NUM(family_aid_info_) + GET_CHECK_MEMBER_NUM(family_aid_info_);
-      int32_t ret = (NULL != family_members_ && MEMBER_NUM > 0 && MEMBER_NUM <= MAX_MARSHALLING_NUM)
+      int32_t ret = (NULL != family_members_ && MEMBER_NUM > 0 && MEMBER_NUM <= (MAX_MARSHALLING_NUM * 2))
                       ? common::TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
@@ -684,10 +704,8 @@ namespace tfs
         msg.set_family_id(family_id_);
         msg.set_family_member_info(family_members_, family_aid_info_);
         msg.set_expire_time(SYSPARAM_NAMESERVER.dissolve_task_expired_time_ - MAX_TASK_RESERVE_TIME);
-        uint64_t server = 0;
-        for (int32_t index = 0; index < MEMBER_NUM && 0 != server; ++index)
-          server = family_members_[index].status_ == FAMILY_MEMBER_STATUS_NORMAL ? family_members_[index].server_ : 0;
-        ret = send_msg_to_server(server, &msg);
+        const int32_t index = GET_MASTER_INDEX(family_aid_info_);
+        ret = send_msg_to_server(family_members_[index].server_, &msg);
         status_ = PLAN_STATUS_BEGIN;
       }
       last_update_time_ = Func::get_monotonic_time() +  SYSPARAM_NAMESERVER.dissolve_task_expired_time_;
@@ -706,9 +724,11 @@ namespace tfs
           FamilyInfo family_info;
           family_info.family_id_ = packet->get_family_id();
           family_info.family_aid_info_ = packet->get_family_aid_info();
-          const int32_t MEMBER_NUM = GET_DATA_MEMBER_NUM(family_info.family_aid_info_) + GET_CHECK_MEMBER_NUM(family_info.family_aid_info_);
+          const int32_t DATA_MEMBER_NUM  = GET_DATA_MEMBER_NUM(family_info.family_aid_info_);
+          const int32_t CHECK_MEMBER_NUM = GET_CHECK_MEMBER_NUM(family_info.family_aid_info_);
+          const int32_t MEMBER_NUM       = DATA_MEMBER_NUM + CHECK_MEMBER_NUM;
           const FamilyMemberInfo* member_info = packet->get_family_member_info();
-          ret = (INVALID_FAMILY_ID != family_info.family_id_ && MEMBER_NUM > 0 && MEMBER_NUM <= MAX_MARSHALLING_NUM  && NULL != member_info) ? TFS_SUCCESS : EXIT_EXECUTE_TASK_ERROR;
+          ret = (INVALID_FAMILY_ID != family_info.family_id_ && MEMBER_NUM > 0 && MEMBER_NUM <= (MAX_MARSHALLING_NUM * 2) && NULL != member_info) ? TFS_SUCCESS : EXIT_EXECUTE_TASK_ERROR;
           if (TFS_SUCCESS == ret)
           {
             FamilyCollect* family = manager_.get_manager().get_family_manager().get(family_info.family_id_);
@@ -719,12 +739,14 @@ namespace tfs
             ret = manager_.get_manager().get_oplog_sync_mgr().del_family(family_info.family_id_);
             if (TFS_SUCCESS == ret)
             {
+              int32_t index = 0;
               BlockCollect* block = NULL;
               ServerCollect* server = NULL;
               const time_t now = Func::get_monotonic_time();
-              for (int64_t index = MEMBER_NUM / 2; index < MEMBER_NUM && TFS_SUCCESS == ret; ++index)
+              const int32_t MAX_LOOP = MEMBER_NUM - (CHECK_MEMBER_NUM / 2);
+              for (index = MEMBER_NUM / 2; index < MAX_LOOP && TFS_SUCCESS == ret; ++index)
               {
-                if (FAMILY_MEMBER_STATUS_NORMAL == member_info[index].status_)
+                if (INVALID_BLOCK_ID != member_info[index].block_)
                 {
                   block  = manager_.get_manager().get_block_manager().get(member_info[index].block_);
                   ret = (NULL != block) ? TFS_SUCCESS : EXIT_BLOCK_NOT_FOUND;
@@ -739,21 +761,36 @@ namespace tfs
                   }
                   if (TFS_SUCCESS == ret)
                   {
-                    server = manager_.get_manager().get_server_manager().get(member_info[index].server_);
-                    ret = (NULL != server) ? TFS_SUCCESS : EIXT_SERVER_OBJECT_NOT_FOUND;
+                    if (FAMILY_MEMBER_STATUS_NORMAL == member_info[index].status_
+                        && INVALID_SERVER_ID != member_info[index].server_)
+                    {
+                      server = manager_.get_manager().get_server_manager().get(member_info[index].server_);
+                      ret = (NULL != server) ? TFS_SUCCESS : EIXT_SERVER_OBJECT_NOT_FOUND;
+                      if (TFS_SUCCESS == ret)
+                        manager_.get_manager().build_relation(block, server, now);
+                    }
                   }
-                  //这里如果出现错误可以不用管，由复制线程自己做
-                  if (TFS_SUCCESS == ret)
-                    manager_.get_manager().build_relation(block, server, now);
                 }
               }
               GCObject* object = NULL;
+              for (index = DATA_MEMBER_NUM / 2; index <  MEMBER_NUM / 2; ++index, object = NULL)
+              {
+                if (INVALID_BLOCK_ID != member_info[index].block_)
+                {
+                  manager_.get_manager().get_block_manager().remove(object, member_info[index].block_);
+                  if (NULL != object)
+                    manager_.get_manager().get_gc_manager().add(object, now);
+                }
+              }
+              object = NULL;
               manager_.get_manager().get_family_manager().remove(object, family_info.family_id_);
               if (NULL != object)
                 manager_.get_manager().get_gc_manager().add(object, now);
             }
           }
         }
+        if (TFS_SUCCESS != ret)
+          dump(TBSYS_LOG_LEVEL(INFO), "handle dissolve task failed, ret: %d,", ret);
         StatusMessage* reply_msg = new StatusMessage((PLAN_STATUS_END == status_ && TFS_SUCCESS == ret)
                       ? STATUS_MESSAGE_OK : STATUS_MESSAGE_ERROR);
         ret = msg->reply(reply_msg);

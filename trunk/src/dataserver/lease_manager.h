@@ -107,7 +107,7 @@ namespace tfs
       LeaseManager();
       virtual ~LeaseManager();
 
-      Lease* generation(LeaseId& lease_id, const int64_t now, const int8_t type, const std::vector<uint64_t>& servers);
+      void generation(LeaseId& lease_id, const int64_t now, const int8_t type, const std::vector<uint64_t>& servers);
       Lease* get(const LeaseId& lease_id, const int64_t now) const;
       void put(Lease* lease);
       int remove(const LeaseId& lease_id);

@@ -136,6 +136,7 @@ namespace tfs
             ret = dbhelper_->scan(infos, family_id);
             if (TFS_SUCCESS == ret)
             {
+              time_t now = Func::get_monotonic_time();
               std::pair<uint32_t, int32_t> members[MAX_MARSHALLING_NUM];
               common::ArrayHelper<std::pair<uint32_t, int32_t> > helper(MAX_MARSHALLING_NUM, members);
               std::vector<common::FamilyInfo>::const_iterator iter = infos.begin();
@@ -147,8 +148,11 @@ namespace tfs
                 for (; it != (*iter).family_member_.end(); ++it)
                 {
                   helper.push_back(std::make_pair((*it).first, (*it).second));
+                  BlockCollect* block =  manager_.get_block_manager().insert((*it).first, now);
+                  assert(block);
+                  block->set_family_id(family_id);
                 }
-                ret = manager_.get_family_manager().insert(family_id, (*iter).family_aid_info_, helper, Func::get_monotonic_time());
+                ret = manager_.get_family_manager().insert(family_id, (*iter).family_aid_info_, helper, now);
               }
             }
           }

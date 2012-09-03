@@ -152,7 +152,7 @@ namespace tfs
       {
         public:
           explicit BuildPlanThreadHelper(LayoutManager& manager):
-            manager_(manager) {start(THREAD_STATCK_SIZE);}
+            manager_(manager) {start(THREAD_STATCK_SIZE * 2);}
           virtual ~BuildPlanThreadHelper(){}
           void run();
         private:

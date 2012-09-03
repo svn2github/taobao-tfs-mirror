@@ -5,7 +5,8 @@ AM_CPPFLAGS=-I$(top_srcdir)/src\
 						$(MYSQL_CFLAGS)
 
 #AM_LDFLAGS=-lz -lrt -lpthread -ldl -lgcov
-AM_LDFLAGS=-lz -lrt -lpthread -ldl -rdynamic ${TCMALLOC_LDFLAGS}
+#AM_LDFLAGS=-lz -lrt -lpthread -ldl -rdynamic ${TCMALLOC_LDFLAGS}
+AM_LDFLAGS=-lz -lrt -lpthread -ldl -rdynamic
 
 AM_LDFLAGS+=$(MYSQL_LDFLAGS)
 

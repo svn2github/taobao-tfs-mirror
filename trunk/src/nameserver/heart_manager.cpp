@@ -180,7 +180,7 @@ namespace tfs
     int HeartManagement::report_block(tbnet::Packet* packet)
     {
       uint64_t server = 0;
-      int32_t block_nums = 0, result = 0;
+      int32_t block_nums = 0, expire_nums = 0, result = 0;
       time_t  consume = 0;
       int32_t ret = (NULL != packet && REQ_REPORT_BLOCKS_TO_NS_MESSAGE == packet->getPCode()) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
@@ -196,13 +196,14 @@ namespace tfs
 			  result = ret = manager_.get_layout_manager().get_client_request_server().report_block(
             result_msg->get_blocks(), server, now, message->get_blocks_ext(), message->get_type());
         result_msg->set_status(HEART_MESSAGE_OK);
-        block_nums = message->get_blocks().size();
+        block_nums = message->get_blocks_ext().size();
+        expire_nums= result_msg->get_blocks().size();
         consume = (tbutil::Time::now() - begin).toMicroSeconds();
 			  ret = message->reply(result_msg);
       }
-      TBSYS_LOG(DEBUG, "dataserver: %s report block %s, ret: %d, blocks: %d, consume time: %"PRI64_PREFIX"u(us)",
+      TBSYS_LOG(INFO, "dataserver: %s report block %s, ret: %d, blocks: %d, expire blocks: %d,consume time: %"PRI64_PREFIX"u(us)",
          CNetUtil::addrToString(server).c_str(), TFS_SUCCESS == ret ? "successful" : "failed",
-         result , block_nums, consume);
+         result , block_nums, expire_nums, consume);
       return ret;
     }
 

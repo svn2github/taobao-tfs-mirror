@@ -437,6 +437,8 @@ namespace tfs
           other_expires.clear();
           const BlockInfoExt& info = (*iter);
 
+          TBSYS_LOG(INFO, "report block :%u, family_id: %ld", info.block_info_.block_id_, info.group_id_);
+
           // check block version, rebuilding relation.
           get_mutex_(info.block_info_.block_id_).wrlock();
           BlockCollect* block = get_(info.block_info_.block_id_);
@@ -449,35 +451,34 @@ namespace tfs
           ret = NULL != block ? TFS_SUCCESS : EXIT_BLOCK_NOT_FOUND;
           if (TFS_SUCCESS == ret)
           {
-            if (INVALID_FAMILY_ID == info.group_id_)
+            if (INVALID_FAMILY_ID == block->get_family_id())
             {
-              if (block->check_version(manager_, helper, expire_self, other_expires,
-                  server, ngi.owner_role_, isnew, info.block_info_, now))
+              if (INVALID_FAMILY_ID == info.group_id_)
               {
-                //build relation
-                ret = build_relation_(block, writable, master, invalid_server, server,now);
+                if (block->check_version(manager_, helper, expire_self, other_expires,
+                      server, ngi.owner_role_, isnew, info.block_info_, now))
+                {
+                  //build relation
+                  ret = build_relation_(block, writable, master, invalid_server, server,now);
+                }
+              }
+              else
+              {
+                expires.push_back(info.block_info_.block_id_);
               }
             }
             else
             {
-              //没有进行编组，需要将BLOCK的familyID进行重置或者删除当前BLOCK
-              if (INVALID_FAMILY_ID == block->get_family_id())
+              expire_self = (info.group_id_ != block->get_family_id());
+              if (!expire_self)
               {
-                expires.push_back(info.block_info_.block_id_);
-              }
-              else
-              {
-                expire_self = (info.group_id_ != block->get_family_id());
-                if (!expire_self)
+                if (block->version() < info.block_info_.version_)
+                  block->update(info.block_info_);
+                if (!block->exist(server))
                 {
-                  if (block->version() < info.block_info_.version_)
-                    block->update(info.block_info_);
-                  if (!block->exist(server))
-                  {
-                    block->get_servers(helper);
-                    block->cleanup();
-                    ret = build_relation_(block, writable, master, invalid_server, server,now);
-                  }
+                  block->get_servers(helper);
+                  block->cleanup();
+                  ret = build_relation_(block, writable, master, invalid_server, server,now);
                 }
               }
             }

@@ -146,7 +146,7 @@ namespace tfs
       }
     }
 
-    Lease* LeaseManager::generation(LeaseId& lease_id, const int64_t now, const int8_t type, const std::vector<uint64_t>& servers)
+    void LeaseManager::generation(LeaseId& lease_id, const int64_t now, const int8_t type, const std::vector<uint64_t>& servers)
     {
       RWLock::Lock lock(rwmutex_, WRITE_LOCKER);
       Lease* lease = NULL;
@@ -160,7 +160,6 @@ namespace tfs
       std::pair<LEASE_MAP_ITER, bool> res = leases_.insert(LEASE_MAP::value_type(lease->lease_id_, lease));
       if (!res.second)
         tbsys::gDelete(lease);
-      return lease;
     }
 
     Lease* LeaseManager::get(const LeaseId& lease_id, const int64_t now) const

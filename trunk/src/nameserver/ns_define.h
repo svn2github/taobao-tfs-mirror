@@ -179,7 +179,8 @@ namespace tfs
     static const int32_t THREAD_STATCK_SIZE = 16 * 1024 * 1024;
     static const int32_t MAX_SERVER_NUMS = 3000;
     static const int32_t MAX_PROCESS_NUMS = MAX_SERVER_NUMS * 12;
-    static const int32_t MAX_BLOCK_CHUNK_NUMS = 10240 * 4;
+    static const int32_t MAX_BLOCK_CHUNK_NUMS = 512;
+    //static const int32_t MAX_BLOCK_CHUNK_NUMS = 10240 * 4;
     static const int32_t MAX_REPLICATION = 64;
     static const int32_t MAX_WRITE_FILE_COUNT = 256;
 
@@ -195,7 +196,7 @@ namespace tfs
     static const int32_t MAX_RACK_NUM = 512;
     static const int32_t MAX_SINGLE_RACK_SERVER_NUM = 64;
     static const int32_t MAX_MARSHLLING_QUEUE_ELEMENT_SIZE = 128;//编组队列大小
-    static const int32_t MAX_FAMILY_CHUNK_NUM = 10240;//
+    static const int32_t MAX_FAMILY_CHUNK_NUM = 1024;//
 
     static const int32_t MAX_TASK_RESERVE_TIME = 5;
 
