@@ -614,22 +614,22 @@ namespace tfs
     void LayoutManager::build_()
     {
       bool over = false;
+      int32_t loop = 0;
+      uint32_t block_start = 0;
       time_t  now = 0, current = 0;
       int64_t need = 0, family_start = 0;
-      uint32_t block_start = 0;
-      int32_t loop = 0;
-      const int32_t MAX_QUERY_FAMILY_NUMS = 512;
+      const int32_t MAX_QUERY_FAMILY_NUMS = 32;
       const int32_t MAX_QUERY_BLOCK_NUMS = 4096;
       const int32_t MIN_SLEEP_TIME_US= 5000;
       const int32_t MAX_SLEEP_TIME_US = 1000000;//1s
-      const int32_t MAX_LOOP_NUMS = 5;
-      //const int32_t MAX_LOOP_NUMS = 1000000 / MIN_SLEEP_TIME_US;
+      const int32_t MAX_LOOP_NUMS = 1000000 / MIN_SLEEP_TIME_US;
       BlockCollect* blocks[MAX_QUERY_BLOCK_NUMS];
       ArrayHelper<BlockCollect*> results(MAX_QUERY_BLOCK_NUMS, blocks);
 
       FamilyCollect* families[MAX_QUERY_FAMILY_NUMS];
       ArrayHelper<FamilyCollect*> helpers(MAX_QUERY_FAMILY_NUMS, families);
       NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
+
       while (!ngi.is_destroyed())
       {
         current = time(NULL);
@@ -649,40 +649,41 @@ namespace tfs
             usleep(1000);
 
           results.clear();
-
           now = Func::get_monotonic_time();
 
           scan_illegal_block_(results, MAX_QUERY_BLOCK_NUMS, now);
-
-          if (loop >= MAX_LOOP_NUMS)
-          {
-            loop = 0;
-            TBSYS_LOG(INFO, "emergency_replicate_queue: %"PRI64_PREFIX"d, need: %"PRI64_PREFIX"d",
-              get_block_manager().get_emergency_replicate_queue_size(), need);
-          }
-
           if (need > 0)
           {
             scan_replicate_queue_(need, now);
           }
 
+          const int64_t replicate_queue_size = get_block_manager().get_emergency_replicate_queue_size();
           if (need > 0)
           {
             scan_reinstate_or_dissolve_queue_(need , now);
           }
 
           results.clear();
+          const int64_t reinsate_or_dissolve_queue_size = get_family_manager().get_reinstate_or_dissolve_queue_size();
+          if (loop >= MAX_LOOP_NUMS)
+          {
+            loop = 0;
+            TBSYS_LOG(INFO, "need: %"PRI64_PREFIX"d, emergency_replicate_queue: %"PRI64_PREFIX"d, reinsate or dissolve queue: %"PRI64_PREFIX"d",
+              need, replicate_queue_size, reinsate_or_dissolve_queue_size);
+            get_task_manager().dump(TBSYS_LOG_LEVEL_INFO, "task manager all queues information: ");
+            get_family_manager().dump_marshalling_queue(TBSYS_LOG_LEVEL_INFO, "marshalling queue information: ");
+          }
 
           bool compact_time     = in_hour_range(current, SYSPARAM_NAMESERVER.compact_time_lower_, SYSPARAM_NAMESERVER.compact_time_upper_);
           bool marshalling_time = in_hour_range(current, SYSPARAM_NAMESERVER.marshalling_time_lower_, SYSPARAM_NAMESERVER.marshalling_time_upper_);
           if (need > 0)
           {
+            marshalling_time = false;
             now = Func::get_monotonic_time();
             over = scan_block_(results, need, block_start, MAX_QUERY_BLOCK_NUMS, now, compact_time, marshalling_time);
             if (over)
               block_start = 0;
           }
-
           if (need > 0)
           {
             over = scan_family_(helpers, need, family_start, MAX_QUERY_FAMILY_NUMS, now, compact_time);
@@ -690,7 +691,7 @@ namespace tfs
               family_start = 0;
           }
 
-          if (need > 0)
+          if (need > 0 && reinsate_or_dissolve_queue_size <= 0 && replicate_queue_size <= 0)
           {
             build_marshalling_(need, now);
           }
@@ -723,6 +724,9 @@ namespace tfs
             usleep(1000);
 
           while ((get_block_manager().has_emergency_replicate_in_queue()) && (!ngi.is_destroyed()) && sleep_nums++ <= MAX_SLEEP_NUMS)
+            usleep(1000);
+
+          while ((!get_family_manager().reinstate_or_dissolve_queue_empty()) && (!ngi.is_destroyed()) && sleep_nums++ <= MAX_SLEEP_NUMS)
             usleep(1000);
 
           while (((need = has_space_in_task_queue_()) <= 0) && (!ngi.is_destroyed()))
@@ -797,7 +801,7 @@ namespace tfs
         get_block_manager().timeout(now);
 
         get_family_manager().marshalling_queue_timeout(now);
-        get_family_manager().dump_marshalling_queue(TBSYS_LOG_LEVEL_INFO, "timeout dump");
+
 
         get_block_manager().expand_ratio(block_expand_index);
 
@@ -1323,6 +1327,7 @@ namespace tfs
       if (ret)
       {
         FamilyCollect* family = NULL;
+        bool reinstate = false, dissolve = false;
         const int64_t MAX_QUERY_FAMILY_NUMS = 8;
         FamilyMemberInfo members[MAX_MARSHALLING_NUM];
         ArrayHelper<FamilyMemberInfo> helper(MAX_MARSHALLING_NUM, members);
@@ -1332,20 +1337,22 @@ namespace tfs
         {
           --count;
           helper.clear();
-          ret = get_family_manager().check_need_reinstate(helper, family, now);
+          reinstate = get_family_manager().check_need_reinstate(helper, family, now);
+          dissolve  = get_family_manager().check_need_dissolve(family, helper);
+          ret = (reinstate && !dissolve);
           if ((ret) && (ret = build_reinstate_task_(need, family, helper, now)))
-            --need;
-          ret = ((!ret) && get_family_manager().check_need_dissolve(family, helper));
-          if ((ret) && (ret = build_dissolve_task_(need, family, helper, now)))
             --need;
           if (!ret)
           {
-            helper.clear();
-            if ((get_family_manager().check_need_reinstate(helper, family, now))
-              || (get_family_manager().check_need_dissolve(family, helper)))
-            {
-              get_family_manager().push_to_reinstate_or_dissolve_queue(family);
-            }
+            if ((dissolve) && (ret = build_dissolve_task_(need, family, helper, now)))
+              --need;
+          }
+          if (!ret)
+          {
+            if (reinstate && !dissolve)
+              get_family_manager().push_to_reinstate_or_dissolve_queue(family, PLAN_TYPE_EC_REINSTATE);
+            if (dissolve)
+              get_family_manager().push_to_reinstate_or_dissolve_queue(family, PLAN_TYPE_EC_DISSOLVE);
           }
         }
       }
@@ -1486,9 +1493,9 @@ namespace tfs
     bool LayoutManager::build_reinstate_task_(int64_t& need, const FamilyCollect* family,
           const common::ArrayHelper<FamilyMemberInfo>& reinstate_members, const time_t now)
     {
-      bool ret = ((NULL != family) && reinstate_members.get_array_index() > 0
-              && (plan_run_flag_ & PLAN_RUN_FALG_REINSTATE) && need > 0);
-      if (ret)
+      int32_t ret = ((NULL != family) && reinstate_members.get_array_index() > 0
+              && (plan_run_flag_ & PLAN_RUN_FALG_REINSTATE) && need > 0) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+      if (TFS_SUCCESS == ret)
       {
         const int64_t REINSTATE_NUM = reinstate_members.get_array_index();
         uint64_t servers[REINSTATE_NUM];
@@ -1497,7 +1504,7 @@ namespace tfs
         if (TFS_SUCCESS == ret)
         {
           int32_t family_aid_info_index = 0;
-          ret = REINSTATE_NUM == reinstate_members.get_array_index() ? TFS_SUCCESS: EXIT_CHOOSE_TARGET_SERVER_INSUFFICIENT_ERROR;
+          ret = REINSTATE_NUM == results.get_array_index() ? TFS_SUCCESS: EXIT_CHOOSE_TARGET_SERVER_INSUFFICIENT_ERROR;
           if (TFS_SUCCESS == ret)
           {
             FamilyMemberInfo members[MAX_MARSHALLING_NUM];
@@ -1509,16 +1516,39 @@ namespace tfs
               {
                 FamilyMemberInfo* info = helper.at(index);
                 assert(info);
-                if (INVALID_SERVER_ID == info->server_)
+                ret = get_task_manager().exist(info->block_) ? EXIT_TASK_EXIST_ERROR : TFS_SUCCESS;
+                if (TFS_SUCCESS == ret)
                 {
-                  family_aid_info_index = index;
-                  ret = !results.empty() ? TFS_SUCCESS : EXIT_CHOOSE_TARGET_SERVER_INSUFFICIENT_ERROR;
-                  if (TFS_SUCCESS == ret)
+                  bool target = false;
+                  if (INVALID_SERVER_ID == info->server_)
                   {
-                    info->server_ = *results.pop();
+                    if (0 == family_aid_info_index)
+                      family_aid_info_index = index;
+                    ret = !results.empty() ? TFS_SUCCESS : EXIT_CHOOSE_TARGET_SERVER_INSUFFICIENT_ERROR;
+                    if (TFS_SUCCESS == ret)
+                      info->server_ = *results.pop();
+                    ret = INVALID_SERVER_ID == info->server_? EXIT_CHOOSE_TARGET_SERVER_INSUFFICIENT_ERROR : TFS_SUCCESS;
+                    if (TFS_SUCCESS == ret)
+                    {
+                      target = get_task_manager().is_target(*info, index, PLAN_TYPE_EC_REINSTATE, family->get_family_aid_info());
+                      ret = ((!get_task_manager().exist(info->server_))
+                            && (get_task_manager().has_space_do_task_in_machine(info->server_, target))) ? TFS_SUCCESS : EXIT_TASK_EXIST_ERROR;
+                    }
                   }
+                  else
+                  {
+                    target = get_task_manager().is_target(*info, index, PLAN_TYPE_EC_REINSTATE, family->get_family_aid_info());
+                    ret = ((!get_task_manager().exist(info->server_))
+                          &&(get_task_manager().has_space_do_task_in_machine(info->server_, target))) ? TFS_SUCCESS : EXIT_TASK_EXIST_ERROR;
+                  }
+                  if (TFS_SUCCESS != ret)
+                    get_task_manager().dump(TBSYS_LOG_LEVEL_INFO, "REISTATE DUMP TASK INFOMRATION,");
                 }
               }
+            }
+            if (TFS_SUCCESS == ret)
+            {
+              ret = members[family_aid_info_index].server_ == INVALID_SERVER_ID ? EXIT_DATASERVER_NOT_FOUND: TFS_SUCCESS;
             }
             if (TFS_SUCCESS == ret)
             {
@@ -1530,20 +1560,21 @@ namespace tfs
           }
         }
       }
-      return ret;
+      return TFS_SUCCESS == ret;
     }
 
     bool LayoutManager::build_dissolve_task_(int64_t& need, const FamilyCollect* family,
           const common::ArrayHelper<FamilyMemberInfo>& reinstate_members, const time_t now)
     {
-      bool ret = ((NULL != family) && reinstate_members.get_array_index() > 0
-                  && (plan_run_flag_ & PLAN_RUN_FALG_DISSOLVE) && need > 0);
-      if (ret)
+      int32_t ret = ((NULL != family) && reinstate_members.get_array_index() > 0
+                  && (plan_run_flag_ & PLAN_RUN_FALG_DISSOLVE) && need > 0) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+      if (TFS_SUCCESS == ret)
       {
-        const int32_t MEMBER_NUM = GET_DATA_MEMBER_NUM(family->get_family_aid_info()) + GET_CHECK_MEMBER_NUM(family->get_family_aid_info());
+        const int32_t DATA_MEMBER_NUM = GET_DATA_MEMBER_NUM(family->get_family_aid_info());
+        const int32_t CHECK_MEMBER_NUM = GET_CHECK_MEMBER_NUM(family->get_family_aid_info());
+        const int32_t MEMBER_NUM = DATA_MEMBER_NUM + CHECK_MEMBER_NUM;
         const int32_t MAX_FAMILY_MEMBER_INFO = MEMBER_NUM * 2;
         FamilyMemberInfo members[MAX_FAMILY_MEMBER_INFO];
-        FamilyMemberInfo dissolve_members[MAX_FAMILY_MEMBER_INFO];
         ArrayHelper<FamilyMemberInfo> helper(MAX_FAMILY_MEMBER_INFO, members);
         ret = get_family_manager().get_members(helper, reinstate_members, family->get_family_id());
         if (TFS_SUCCESS == ret)
@@ -1551,38 +1582,76 @@ namespace tfs
           ret = MEMBER_NUM == helper.get_array_index() ? TFS_SUCCESS : EXIT_FAMILY_MEMBER_INFO_ERROR;
           if (TFS_SUCCESS == ret)
           {
-            std::pair<uint64_t, uint32_t> targets[MAX_FAMILY_MEMBER_INFO];
-            ArrayHelper<std::pair<uint64_t, uint32_t> > results(MAX_FAMILY_MEMBER_INFO, targets);
+            std::pair<uint64_t, uint32_t> targets[MEMBER_NUM];
+            ArrayHelper<std::pair<uint64_t, uint32_t> > results(MEMBER_NUM, targets);
             ret = get_family_manager().dissolve_family_choose_member_targets_server(results, family->get_family_id(), family->get_family_aid_info());
             if (TFS_SUCCESS == ret)
             {
               ret = MEMBER_NUM == results.get_array_index() ? TFS_SUCCESS : EXIT_CHOOSE_TARGET_SERVER_INSUFFICIENT_ERROR;
               if (TFS_SUCCESS == ret)
               {
+                int32_t index = 0;
+                int32_t master_index = 0;
                 int32_t next_index = 0;
-                for (int64_t index = 0; index < MEMBER_NUM; ++index)
+                for (; index < DATA_MEMBER_NUM && TFS_SUCCESS == ret; ++index)
                 {
                   std::pair<uint64_t, uint32_t>* item = results.at(index);
                   next_index = index + MEMBER_NUM;
-                  dissolve_members[index] = members[index];
-                  dissolve_members[next_index].server_ = item->first;
-                  dissolve_members[next_index].block_  = item->second;
-                  dissolve_members[next_index].status_ = members[index].status_;
+                  members[next_index].server_ = item->first;
+                  members[next_index].block_  = members[index].block_;
+                  members[next_index].status_ = members[index].status_;
+                  members[next_index].version_= members[index].version_;
+                  if (INVALID_SERVER_ID != members[next_index].server_
+                      && INVALID_SERVER_ID != members[index].server_
+                      && INVALID_BLOCK_ID != members[index].block_)
+                  {
+                    bool target = get_task_manager().is_target(members[index], index, PLAN_TYPE_EC_REINSTATE, family->get_family_aid_info());
+                    bool next_target = get_task_manager().is_target(members[next_index], next_index, PLAN_TYPE_EC_REINSTATE, family->get_family_aid_info());
+                    ret = ((!get_task_manager().exist(members[index].block_))
+                          &&(!get_task_manager().exist(members[index].server_))
+                          &&(!get_task_manager().exist(members[next_index].server_))
+                          &&(get_task_manager().has_space_do_task_in_machine(members[index].server_, target))
+                          &&(get_task_manager().has_space_do_task_in_machine(members[next_index].server_, next_target))) ? TFS_SUCCESS : EXIT_TASK_EXIST_ERROR;
+                    if (0 == master_index && INVALID_SERVER_ID != members[index].server_ && FAMILY_MEMBER_STATUS_NORMAL == members[index].status_)
+                      master_index = index;
+                    if (TFS_SUCCESS != ret)
+                      get_task_manager().dump(TBSYS_LOG_LEVEL_DEBUG, "DISOLVE DUMP TASK INFORMATION,");
+                  }
                 }
-                int32_t family_aid_info = family->get_family_aid_info();
-                const int32_t DATA_MEMBER_NUM = GET_DATA_MEMBER_NUM(family_aid_info) * 2;
-                const int32_t CHECK_MEMBER_NUM = GET_DATA_MEMBER_NUM(family_aid_info) * 2;
-                SET_DATA_MEMBER_NUM(family_aid_info, DATA_MEMBER_NUM);
-                SET_CHECK_MEMBER_NUM(family_aid_info, CHECK_MEMBER_NUM);
-                SET_MASTER_INDEX(family_aid_info, 0);
-                ret = get_task_manager().add(family->get_family_id(), family_aid_info, PLAN_TYPE_EC_DISSOLVE,
-                  MAX_FAMILY_MEMBER_INFO, dissolve_members, now);
+                if (TFS_SUCCESS == ret)
+                {
+                  for (; index < MEMBER_NUM; ++index)
+                  {
+                    next_index = index + MEMBER_NUM;
+                    members[index].status_ = FAMILY_MEMBER_STATUS_ABNORMAL;
+                    members[index].version_= INVALID_VERSION;
+                    members[next_index].server_ = INVALID_SERVER_ID;
+                    members[next_index].block_  = members[index].block_;
+                    members[next_index].status_ = members[index].status_;
+                    members[next_index].version_= members[index].version_;
+                    if (0 == master_index && INVALID_SERVER_ID != members[index].server_)
+                      master_index = index;
+                  }
+                }
+                if (TFS_SUCCESS == ret)
+                {
+                  ret = members[master_index].server_ == INVALID_SERVER_ID ? EXIT_DATASERVER_NOT_FOUND: TFS_SUCCESS;
+                }
+                if (TFS_SUCCESS == ret)
+                {
+                  int32_t family_aid_info = family->get_family_aid_info();
+                  SET_DATA_MEMBER_NUM(family_aid_info, DATA_MEMBER_NUM * 2);
+                  SET_CHECK_MEMBER_NUM(family_aid_info, CHECK_MEMBER_NUM * 2);
+                  SET_MASTER_INDEX(family_aid_info, master_index);
+                  ret = get_task_manager().add(family->get_family_id(), family_aid_info, PLAN_TYPE_EC_DISSOLVE,
+                    MAX_FAMILY_MEMBER_INFO, members, now);
+                }
               }
             }
           }
         }
       }
-      return ret;
+      return TFS_SUCCESS == ret;
     }
 
     bool LayoutManager::build_redundant_(int64_t& need, const time_t now)
@@ -1603,7 +1672,7 @@ namespace tfs
         if (ret)
         {
           relieve_relation(block, server, now, BLOCK_COMPARE_SERVER_BY_POINTER);
-          ret = get_task_manager().remove_block_from_dataserver(server->id(), block->id(), 0, now);
+          ret = (TFS_SUCCESS == get_task_manager().remove_block_from_dataserver(server->id(), block->id(), 0, now));
         }
       }
       return true;
@@ -1614,7 +1683,7 @@ namespace tfs
       int32_t ret = need > 0 ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
-        get_family_manager().dump_marshalling_queue(TBSYS_LOG_LEVEL_INFO);
+        //get_family_manager().dump_marshalling_queue(TBSYS_LOG_LEVEL_INFO);
         int32_t DATA_MEMBER_NUM  = SYSPARAM_NAMESERVER.max_data_member_num_;
         int32_t CHECK_MEMBER_NUM = SYSPARAM_NAMESERVER.max_check_member_num_;
         ServerCollect* servers[MAX_MARSHALLING_NUM];
@@ -1625,7 +1694,7 @@ namespace tfs
         if (TFS_SUCCESS == ret)
         {
           ret = DATA_MEMBER_NUM == member_helper.get_array_index() ?
-              TFS_SUCCESS : EXIT_CHOOSE_TARGET_SERVER_INSUFFICIENT_ERROR;
+            TFS_SUCCESS : EXIT_CHOOSE_TARGET_SERVER_INSUFFICIENT_ERROR;
           if (TFS_SUCCESS == ret)
           {
             for (int64_t index = 0; index < member_helper.get_array_index(); ++index)
@@ -1649,29 +1718,48 @@ namespace tfs
             }
           }
 
-          int64_t family_id = INVALID_FAMILY_ID;
-          if (TFS_SUCCESS == ret)
-          {
-            ret = get_oplog_sync_mgr().create_family_id(family_id);
-            ret = (TFS_SUCCESS == ret && INVALID_FAMILY_ID != family_id) ? TFS_SUCCESS : EXIT_CREATE_FAMILY_ID_ERROR;
-          }
-
           if (TFS_SUCCESS == ret)
           {
             int32_t family_aid_info;
+            FamilyMemberInfo fminfo[DATA_MEMBER_NUM + CHECK_MEMBER_NUM];
             SET_DATA_MEMBER_NUM(family_aid_info,DATA_MEMBER_NUM);
             SET_CHECK_MEMBER_NUM(family_aid_info,CHECK_MEMBER_NUM);
-            SET_MASTER_INDEX(family_aid_info, DATA_MEMBER_NUM + 1);
+            SET_MASTER_INDEX(family_aid_info, DATA_MEMBER_NUM);
             SET_MARSHALLING_TYPE(family_aid_info, SYSPARAM_NAMESERVER.marshalling_type_);
-            FamilyMemberInfo fminfo[MAX_MARSHALLING_NUM];
-            for (int64_t index = 0; index < member_helper.get_array_index(); ++index)
+            for (int64_t index = 0; index < member_helper.get_array_index() && TFS_SUCCESS == ret; ++index)
             {
               std::pair<uint64_t, uint32_t>* item = member_helper.at(index);
               fminfo[index].block_ = item->second;
               fminfo[index].server_ = item->first;
+              fminfo[index].status_ = FAMILY_MEMBER_STATUS_NORMAL;
+              fminfo[index].version_= 0;
+              ret = (INVALID_BLOCK_ID != fminfo[index].block_) ? TFS_SUCCESS : EXIT_BLOCK_ID_INVALID_ERROR;
+              if (TFS_SUCCESS == ret)
+                ret = get_task_manager().exist(fminfo[index].block_) ? EXIT_TASK_EXIST_ERROR : TFS_SUCCESS;
+              if (TFS_SUCCESS == ret)
+                ret = (INVALID_SERVER_ID != fminfo[index].server_) ? TFS_SUCCESS : EXIT_SERVER_ID_INVALID_ERROR;
+              if (TFS_SUCCESS == ret)
+              {
+                bool target = get_task_manager().is_target(fminfo[index], index, PLAN_TYPE_EC_MARSHALLING, family_aid_info);
+                ret = ((!get_task_manager().exist(fminfo[index].block_))
+                    && (!get_task_manager().exist(fminfo[index].server_))
+                    && (get_task_manager().has_space_do_task_in_machine(fminfo[index].server_, target))) ? TFS_SUCCESS :  EXIT_TASK_EXIST_ERROR;
+                if (TFS_SUCCESS != ret)
+                   get_task_manager().dump(TBSYS_LOG_LEVEL_DEBUG, "MARSHALLING DUMP TASK INFORMATION,");
+              }
             }
-            ret = get_task_manager().add(family_id, family_aid_info,PLAN_TYPE_EC_MARSHALLING,
-                (DATA_MEMBER_NUM + CHECK_MEMBER_NUM), fminfo, now);
+            int64_t family_id = INVALID_FAMILY_ID;
+            if (TFS_SUCCESS == ret)
+            {
+              ret = get_oplog_sync_mgr().create_family_id(family_id);
+              ret = (TFS_SUCCESS == ret && INVALID_FAMILY_ID != family_id) ? TFS_SUCCESS : EXIT_CREATE_FAMILY_ID_ERROR;
+            }
+
+            if (TFS_SUCCESS == ret)
+            {
+              ret = get_task_manager().add(family_id, family_aid_info,PLAN_TYPE_EC_MARSHALLING,
+                  (DATA_MEMBER_NUM + CHECK_MEMBER_NUM), fminfo, now);
+            }
           }
         }
       }
@@ -1701,15 +1789,10 @@ namespace tfs
             && get_block_manager().need_compact(block,now));
         if ((ret) && (ret = build_compact_task_(block, now)))
           --need;
-        //TODO
-        //ret = (!ret && marshalling_time && (plan_run_flag_ & PLAN_RUN_FALG_MARSHALLING)
-        UNUSED(marshalling_time);
-        ret = (!ret /*&& marshalling_time*/ && (plan_run_flag_ & PLAN_RUN_FALG_MARSHALLING)
+        ret = (!ret && marshalling_time && (plan_run_flag_ & PLAN_RUN_FALG_MARSHALLING)
             && get_block_manager().need_marshalling(block, now));
-        if ((ret) && (ret = get_family_manager().push_block_to_marshalling_queues(block, now)))
-        {
-
-        }
+        if (ret)
+          ret = get_family_manager().push_block_to_marshalling_queues(block, now);
       }
       return over;
     }
@@ -1717,7 +1800,6 @@ namespace tfs
     bool LayoutManager::scan_family_(common::ArrayHelper<FamilyCollect*>& results, int64_t& need, int64_t& start,
           const int32_t max_query_family_num, const time_t now, const bool compact_time)
     {
-      //这里其实应该搞一个队列，将需要恢复/解散的Family放入一个队列，暂时先这么做，后期再优化
       UNUSED(compact_time);
       UNUSED(need);
       results.clear();
@@ -1732,12 +1814,12 @@ namespace tfs
         family = *results.at(index);
         assert(NULL != family);
         ret = get_family_manager().check_need_reinstate(helper, family, now);
-        if ((ret) && (ret = get_family_manager().push_to_reinstate_or_dissolve_queue(family)))
+        if ((ret) && (ret = get_family_manager().push_to_reinstate_or_dissolve_queue(family, PLAN_TYPE_EC_REINSTATE)))
         {
 
         }
         ret = ((!ret) && get_family_manager().check_need_dissolve(family, helper));
-        if ((ret) && (ret = get_family_manager().push_to_reinstate_or_dissolve_queue(family)))
+        if ((ret) && (ret = get_family_manager().push_to_reinstate_or_dissolve_queue(family, PLAN_TYPE_EC_DISSOLVE)))
         {
 
         }

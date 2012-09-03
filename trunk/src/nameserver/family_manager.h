@@ -94,7 +94,7 @@ namespace tfs
       int get_members(common::ArrayHelper<std::pair<BlockCollect*, ServerCollect*> >& members, const int64_t family_id) const;
       int get_members(common::ArrayHelper<common::FamilyMemberInfo>& members,
           const common::ArrayHelper<common::FamilyMemberInfo>& abnormal_members, const int64_t family_id) const;
-      bool push_to_reinstate_or_dissolve_queue(FamilyCollect* family);
+      bool push_to_reinstate_or_dissolve_queue(FamilyCollect* family, const int32_t type);
       FamilyCollect* pop_from_reinstate_or_dissolve_queue();
       bool reinstate_or_dissolve_queue_empty() const;
       int64_t get_reinstate_or_dissolve_queue_size() const;

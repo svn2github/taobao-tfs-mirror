@@ -198,11 +198,14 @@ namespace tfs
     uint64_t BlockCollect::get_first_server() const
     {
       uint64_t server = INVALID_SERVER_ID;
-      for (int8_t i = 0; i < SYSPARAM_NAMESERVER.max_replication_ && INVALID_SERVER_ID != server; ++i)
+      for (int8_t i = 0; i < SYSPARAM_NAMESERVER.max_replication_; ++i)
       {
         ServerCollect* pserver = servers_[i];
         if (NULL != pserver && pserver->is_alive())
+        {
           server = pserver->id();
+          break;
+        }
       }
       return server;
     }
@@ -363,15 +366,14 @@ namespace tfs
       bool ret = (BLOCK_CREATE_FLAG_YES != create_flag_ && !is_in_family());
       if (ret)
       {
-        ret = (get_servers_size() >= SYSPARAM_NAMESERVER.max_replication_);
-        /*ret = (get_servers_size() >= SYSPARAM_NAMESERVER.max_replication_  && is_full());
+        ret = (get_servers_size() >= SYSPARAM_NAMESERVER.max_replication_  && is_full());
         if (ret)
         {
           int32_t delete_file_num_ratio = get_delete_file_num_ratio();
           int32_t delete_size_ratio = get_delete_file_size_ratio();
           ret = (delete_file_num_ratio <= SYSPARAM_NAMESERVER.marshalling_delete_ratio_
                 && delete_size_ratio <= SYSPARAM_NAMESERVER.marshalling_delete_ratio_);
-        }*/
+        }
       }
       return ret;
     }

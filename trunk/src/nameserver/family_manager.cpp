@@ -335,18 +335,13 @@ namespace tfs
         {
           ServerCollect* servers[SYSPARAM_NAMESERVER.max_replication_];
           common::ArrayHelper<ServerCollect*> helper2(SYSPARAM_NAMESERVER.max_replication_, servers);
-          for (int64_t index = 0; index < helper.get_array_index() && TFS_SUCCESS == ret; ++index)
+          for (int64_t index = 0; index < helper.get_array_index(); ++index)
           {
-            BlockCollect* block = *helper.at(index);
-            assert(block);
             helper2.clear();
-            ret = manager_.get_block_manager().get_servers(helper2, block);
-            if (TFS_SUCCESS == ret)
-            {
-              ServerCollect* server = *helper2.at(0);
-              assert(server);
-              members.push_back(std::make_pair(block, server));
-            }
+            BlockCollect* block = *helper.at(index);
+            ServerCollect* server = TFS_SUCCESS == manager_.get_block_manager().get_servers(helper2, block)
+                                    ? *helper2.at(0) : NULL;
+            members.push_back(std::make_pair(block, server));
           }
         }
       }
@@ -367,26 +362,36 @@ namespace tfs
         if (TFS_SUCCESS == ret)
         {
           FamilyMemberInfo info;
-          for (int64_t index = 0; index < helper.get_array_index(); ++index)
+          for (int64_t index = 0; index < helper.get_array_index() && TFS_SUCCESS == ret; ++index)
           {
             std::pair<uint32_t, int32_t>* item = helper.at(index);
             info.block_   = item->first;
             info.version_ = item->second;
+            info.server_  = INVALID_SERVER_ID;
+            info.status_  = FAMILY_MEMBER_STATUS_ABNORMAL;
             FamilyMemberInfo* pbfmi = abnormal_members.get(info);
-            info.server_ = NULL == pbfmi ? manager_.get_block_manager().get_first_server(item->first) : INVALID_SERVER_ID;
-            info.status_ = NULL == pbfmi ? FAMILY_MEMBER_STATUS_NORMAL : FAMILY_MEMBER_STATUS_ABNORMAL;
+            if (NULL == pbfmi)
+            {
+              info.server_ =  manager_.get_block_manager().get_first_server(item->first);
+              ret = (INVALID_SERVER_ID != info.server_) ? TFS_SUCCESS : EXIT_DATASERVER_NOT_FOUND;
+              if (TFS_SUCCESS == ret)
+                info.status_ = FAMILY_MEMBER_STATUS_NORMAL;
+            }
+            if (TFS_SUCCESS == ret)
+              members.push_back(info);
           }
         }
       }
       return ret;
     }
 
-    bool FamilyManager::push_to_reinstate_or_dissolve_queue(FamilyCollect* family)
+    bool FamilyManager::push_to_reinstate_or_dissolve_queue(FamilyCollect* family, const int32_t type)
     {
       bool ret = ((NULL != family) && (!family->in_reinstate_or_dissolve_queue()));
       if (ret)
       {
-        TBSYS_LOG(INFO, "family %"PRI64_PREFIX"d mybe lack of backup, we'll reinstate or dissolve", family->get_family_id());
+        const char* str = type == PLAN_TYPE_EC_DISSOLVE ? "dissolve" : type == PLAN_TYPE_EC_REINSTATE ? "reinstate" : "unknow";
+        TBSYS_LOG(INFO, "family %"PRI64_PREFIX"d mybe lack of backup, we'll %s", family->get_family_id(), str);
         family->set_in_reinstate_or_dissolve_queue(FAMILY_IN_REINSTATE_OR_DISSOLVE_QUEUE_YES);
         reinstate_or_dissolve_queue_.push_back(family->get_family_id());
       }
@@ -618,8 +623,9 @@ namespace tfs
           common::ArrayHelper<ServerCollect*> helper2(MAX_MARSHALLING_NUM, servers);
           for (index = 0; index < helper.get_array_index(); ++index)
           {
-            std::pair<BlockCollect*, ServerCollect*> item = *helper.at(index);
-            helper2.push_back(item.second);
+            std::pair<BlockCollect*, ServerCollect*>* item = helper.at(index);
+            if (NULL != item->second && NULL != item->first)
+              helper2.push_back(item->second);
           }
           ServerCollect* choose_results[member_num];
           ArrayHelper<ServerCollect*> choose_result_helper(member_num, choose_results);
@@ -663,13 +669,18 @@ namespace tfs
             for (; index < DATA_MEMBER_NUM; ++index)
             {
               target = NULL;
-              helper2.clear();
-              std::pair<BlockCollect*, ServerCollect*> item = *helper.at(index);
-              helper2.push_back(item.second);
-              ret = manager_.get_server_manager().choose_replicate_target_server(target, helper2);
-              if (TFS_SUCCESS == ret)
+              std::pair<BlockCollect*, ServerCollect*>* item = helper.at(index);
+              if (NULL != item->first && NULL != item->second)
               {
-                results.push_back(std::make_pair(target->id(), item.first->id()));
+                helper2.clear();
+                helper2.push_back(item->second);
+                ret = manager_.get_server_manager().choose_replicate_target_server(target, helper2);
+                if (TFS_SUCCESS == ret)
+                  results.push_back(std::make_pair(target->id(), item->first->id()));
+              }
+              else
+              {
+                results.push_back(std::make_pair(INVALID_SERVER_ID, INVALID_BLOCK_ID));
               }
             }
             for (; index < MEMBER_NUM; ++index)
@@ -685,25 +696,29 @@ namespace tfs
     bool FamilyManager::check_need_reinstate(ArrayHelper<FamilyMemberInfo>& reinstate_members,
           const FamilyCollect* family, const time_t now) const
     {
+      reinstate_members.clear();
       int32_t ret = (NULL != family && reinstate_members.get_array_size() > 0) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
-        BlockCollect* blocks[MAX_MARSHALLING_NUM];
-        common::ArrayHelper<BlockCollect*> helper(MAX_MARSHALLING_NUM, blocks);
-        ret = get_members(helper, family->get_family_id());
+        ret = manager_.get_task_manager().exist(family->get_family_id()) ? EXIT_FAMILY_EXISTED_IN_TASK_QUEUE_ERROR : TFS_SUCCESS;
         if (TFS_SUCCESS == ret)
         {
-          for (int64_t i = 0; i < helper.get_array_index(); ++i)
+          BlockCollect* blocks[MAX_MARSHALLING_NUM];
+          common::ArrayHelper<BlockCollect*> helper(MAX_MARSHALLING_NUM, blocks);
+          ret = get_members(helper, family->get_family_id());
+          if (TFS_SUCCESS == ret)
           {
-            BlockCollect* block = *helper.at(i);
-            assert(block);
-            if (manager_.get_block_manager().need_reinstate(block, now))
+            for (int64_t index = 0; index < helper.get_array_index(); ++index)
             {
-              FamilyMemberInfo info;
-              info.block_   = block->id();
-              info.version_ = block->version();
-              info.server_  = INVALID_SERVER_ID;
-              reinstate_members.push_back(info);
+              BlockCollect* block = *helper.at(index);
+              if ((NULL != block) && (manager_.get_block_manager().need_reinstate(block, now)))
+              {
+                FamilyMemberInfo info;
+                info.block_   = block->id();
+                info.version_ = block->version();
+                info.server_  = INVALID_SERVER_ID;
+                reinstate_members.push_back(info);
+              }
             }
           }
         }
@@ -713,7 +728,14 @@ namespace tfs
 
     bool FamilyManager::check_need_dissolve(const FamilyCollect* family, const common::ArrayHelper<FamilyMemberInfo>& need_reinstate_members) const
     {
-      return (NULL != family) ? need_reinstate_members.get_array_index() > family->get_check_member_num() : false;
+      bool ret = (NULL != family);
+      if (ret)
+      {
+        ret = !manager_.get_task_manager().exist(family->get_family_id());
+        if (ret)
+          ret = need_reinstate_members.get_array_index() > family->get_check_member_num();
+      }
+      return ret;
     }
 
     bool FamilyManager::check_need_compact() const

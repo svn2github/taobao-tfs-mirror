@@ -68,6 +68,7 @@ namespace tfs
 
         if (is_connected_)
         {
+          tbutil::Mutex::Lock lock(mutex_);
           MYSQL_STMT* stmt = mysql_stmt_init(&mysql_);
           ret = mysql_stmt_prepare(stmt, sql, strlen(sql)) ? EXIT_PREPARE_SQL_ERROR : TFS_SUCCESS;
           if (TFS_SUCCESS != ret)
@@ -150,6 +151,7 @@ namespace tfs
 
         if (is_connected_)
         {
+          tbutil::Mutex::Lock lock(mutex_);
           MYSQL_STMT* stmt = mysql_stmt_init(&mysql_);
           ret = mysql_stmt_prepare(stmt, sql, strlen(sql)) ? EXIT_PREPARE_SQL_ERROR : TFS_SUCCESS;
           if (TFS_SUCCESS != ret)
@@ -263,6 +265,7 @@ namespace tfs
 
         if (is_connected_)
         {
+          tbutil::Mutex::Lock lock(mutex_);
           MYSQL_STMT* stmt = mysql_stmt_init(&mysql_);
           int32_t ret = mysql_stmt_prepare(stmt, sql, strlen(sql)) ? EXIT_PREPARE_SQL_ERROR : TFS_SUCCESS;
           if (TFS_SUCCESS != ret)
@@ -353,6 +356,7 @@ namespace tfs
       if (is_connected_)
         disconnect_();
 
+      tbutil::Mutex::Lock lock(mutex_);
       int32_t ret = initialize_();
       if (TFS_SUCCESS == ret)
       {
@@ -439,6 +443,7 @@ namespace tfs
 
         if (is_connected_)
         {
+          tbutil::Mutex::Lock lock(mutex_);
           family_infos.clear();
           MYSQL_STMT* stmt = mysql_stmt_init(&mysql_);
           int32_t ret = mysql_stmt_prepare(stmt, sql, strlen(sql)) ? EXIT_PREPARE_SQL_ERROR : TFS_SUCCESS;
