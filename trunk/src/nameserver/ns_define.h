@@ -179,8 +179,8 @@ namespace tfs
     static const int32_t THREAD_STATCK_SIZE = 16 * 1024 * 1024;
     static const int32_t MAX_SERVER_NUMS = 3000;
     static const int32_t MAX_PROCESS_NUMS = MAX_SERVER_NUMS * 12;
-    static const int32_t MAX_BLOCK_CHUNK_NUMS = 512;
-    //static const int32_t MAX_BLOCK_CHUNK_NUMS = 10240 * 4;
+    //static const int32_t MAX_BLOCK_CHUNK_NUMS = 512;
+    static const int32_t MAX_BLOCK_CHUNK_NUMS = 10240 * 4;
     static const int32_t MAX_REPLICATION = 64;
     static const int32_t MAX_WRITE_FILE_COUNT = 256;
 
