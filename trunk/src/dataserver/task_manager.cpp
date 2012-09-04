@@ -445,6 +445,7 @@ namespace tfs
 
     int TaskManager::add_cloned_block_map(const uint32_t block_id)
     {
+      TBSYS_LOG(DEBUG, "add cloned block map blockid :%u", block_id);
       ClonedBlock* cloned_block = new ClonedBlock();
 
       cloned_block->blockid_ = block_id;
@@ -487,11 +488,7 @@ namespace tfs
           if (mit->second->start_time_ < now_time)
           {
             ret = BlockFileManager::get_instance()->del_block(mit->first);
-            if (TFS_SUCCESS != ret)
-            {
-              TBSYS_LOG(ERROR, "in check thread: del blockid: %u error. ret: %d", mit->first, ret);
-            }
-
+            TBSYS_LOG(INFO, "expire cloned block: %u, del it, ret: %d", mit->first, ret);
             tbsys::gDelete(mit->second);
             cloned_block_map_.erase(mit++);
           }

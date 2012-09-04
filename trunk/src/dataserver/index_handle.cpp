@@ -276,6 +276,8 @@ namespace tfs
         }
         else
         {
+          // we can see parity block size through nameserver
+          pindex_header()->block_info_.size_ = pindex_header()->data_file_offset_;
           pindex_header()->flag_ = C_DATA_PARITY;
           ret = flush();
         }
@@ -295,7 +297,7 @@ namespace tfs
       }
       else if (C_DATA_CLEAN != index_header()->flag_)
       {
-        ret = TFS_ERROR;
+        ret = EXIT_NOT_DATA_INDEX;
       }
       else
       {
@@ -324,14 +326,14 @@ namespace tfs
       }
       else if (C_DATA_PARITY != pindex_header()->flag_)
       {
-        ret = TFS_ERROR;
+        ret = EXIT_NOT_PARITY_INDEX;
       }
       else
       {
         Position* pos = pindex_position_byid(index_id);
         if (NULL == pos)
         {
-          ret = TFS_ERROR;
+          ret = EXIT_INDEX_CORRUPT_ERROR;
         }
         else
         {

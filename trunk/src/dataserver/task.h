@@ -138,6 +138,7 @@ namespace tfs
         */
         static int ds_task_callback(common::NewClient* new_client)
         {
+          /* new client will be free by ~LocalPacket */
           UNUSED(new_client);
           return common::TFS_SUCCESS;
         }
@@ -385,6 +386,7 @@ namespace tfs
 
         int request_ds_to_replicate();
         int request_ds_to_delete();
+        int request_to_clear_family_id();
 
       private:
         std::vector<std::pair<uint64_t, int8_t> > result_;

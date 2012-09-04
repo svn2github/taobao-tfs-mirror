@@ -168,6 +168,8 @@ namespace tfs
     const int32_t EXIT_HALF_BLOCK_ERROR = -8039;  // half state block
     const int32_t EXIT_INVALID_WRITE_LEASE = -8040;
     const int32_t EXIT_RESOLVE_BLOCK_VERSION_CONFLICT_ERROR = -8041;
+    const int32_t EXIT_NOT_DATA_INDEX = -8042;
+    const int32_t EXIT_NOT_PARITY_INDEX = -8043;
 
     const int32_t EXIT_SESSION_EXIST_ERROR = -9001;
     const int32_t EXIT_SESSIONID_INVALID_ERROR = -9002;
