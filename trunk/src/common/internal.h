@@ -160,6 +160,12 @@ namespace tfs
     static const int32_t REPORT_BLOCK_NORMAL = 0;
     static const int32_t REPORT_BLOCK_EXT = 1;
 
+    enum VersionStep
+    {
+      VERSION_INC_STEP_DEFAULT = 1,
+      VERSION_INC_STEP_REPLICATE = 2
+    };
+
     enum OplogFlag
     {
       OPLOG_INSERT = 1,
