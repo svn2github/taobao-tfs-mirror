@@ -87,6 +87,8 @@ namespace tfs
         uint64_t get_group_id();
         int set_group_id(const int64_t group_id);
 
+        int update_block_version(const int32_t step = 1);
+
         //gc callback
         void callback();
         void clear();

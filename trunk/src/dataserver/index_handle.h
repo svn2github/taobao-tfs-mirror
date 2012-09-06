@@ -135,7 +135,7 @@ namespace tfs
 
         // update block info after operation
         int update_block_meta(const OperType oper_type, const uint32_t modify_size);
-        int update_block_version(const int8_t step = VERSION_INC_STEP_DEFAULT);
+        int update_block_version(const int8_t step = common::VERSION_INC_STEP_DEFAULT);
         int copy_block_info(const common::BlockInfo* blk_info);
 
         int get_block_data_offset() const

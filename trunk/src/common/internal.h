@@ -936,6 +936,23 @@ namespace tfs
       bool operator == (const FamilyMemberInfo& info) const;
     };
 
+    struct FamilyInfoExt
+    {
+      int64_t family_id_;
+      int32_t family_aid_info_;
+      std::vector<std::pair<uint32_t, uint64_t> > members_;
+
+      int deserialize(const char* data, const int64_t data_len, int64_t& pos);
+      int serialize(char* data, const int64_t data_len, int64_t& pos) const;
+      int64_t length() const;
+
+      FamilyInfoExt()
+      {
+        family_id_ = 0;
+        family_aid_info_ = 0;
+      }
+    };
+
     struct RawIndex
     {
       uint32_t block_id_;

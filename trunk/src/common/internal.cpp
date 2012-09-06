@@ -1375,5 +1375,78 @@ namespace tfs
     {
       return INT64_SIZE + INT_SIZE * 3;
     }
+
+
+    int FamilyInfoExt::deserialize(const char* data, const int64_t data_len, int64_t& pos)
+    {
+      int32_t ret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
+      if (common::TFS_SUCCESS == ret)
+      {
+        ret = Serialization::get_int64(data, data_len, pos, &family_id_);
+      }
+      if (common::TFS_SUCCESS == ret)
+      {
+        ret = Serialization::get_int32(data, data_len, pos, &family_aid_info_);
+      }
+      if (common::TFS_SUCCESS == ret)
+      {
+        const uint32_t MEMBER_NUM = GET_DATA_MEMBER_NUM(family_aid_info_) + GET_CHECK_MEMBER_NUM(family_aid_info_);
+        for (uint32_t index = 0; index < MEMBER_NUM && common::TFS_SUCCESS == ret; ++index)
+        {
+          std::pair<uint32_t, uint64_t> item;
+          ret = Serialization::get_int32(data, data_len, pos, reinterpret_cast<int32_t*>(&item.first));
+          if (common::TFS_SUCCESS == ret)
+          {
+            ret = Serialization::get_int64(data, data_len, pos, reinterpret_cast<int64_t*>(&item.second));
+          }
+          if (common::TFS_SUCCESS == ret)
+          {
+            members_.push_back(item);
+          }
+        }
+      }
+      return ret;
+
+    }
+
+    int FamilyInfoExt::serialize(char* data, const int64_t data_len, int64_t& pos) const
+    {
+      int32_t ret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
+      if (common::TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int64(data, data_len, pos, family_id_);
+      }
+      if (common::TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int32(data, data_len, pos, family_aid_info_);
+      }
+
+      if (common::TFS_SUCCESS == ret)
+      {
+        const uint32_t MEMBER_NUM = GET_DATA_MEMBER_NUM(family_aid_info_) + GET_CHECK_MEMBER_NUM(family_aid_info_);
+        ret = members_.size() == MEMBER_NUM ? common::TFS_SUCCESS : common::EXIT_SERIALIZE_ERROR;
+        if (common::TFS_SUCCESS == ret)
+        {
+          std::vector<std::pair<uint32_t, uint64_t> >::const_iterator iter = members_.begin();
+          for (; iter != members_.end() && common::TFS_SUCCESS == ret; ++iter)
+          {
+            ret = Serialization::set_int32(data, data_len, pos, iter->first);
+            if (common::TFS_SUCCESS == ret)
+            {
+              ret = Serialization::set_int64(data, data_len, pos, iter->second);
+            }
+          }
+        }
+      }
+
+      return ret;
+    }
+
+    int64_t FamilyInfoExt::length() const
+    {
+      const uint32_t MEMBER_NUM = GET_DATA_MEMBER_NUM(family_aid_info_) + GET_CHECK_MEMBER_NUM(family_aid_info_);
+      return common::INT64_SIZE + common::INT_SIZE + MEMBER_NUM * (common::INT64_SIZE + common::INT_SIZE);
+    }
+
   } /** nameserver **/
 }/** tfs **/

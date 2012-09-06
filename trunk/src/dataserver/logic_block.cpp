@@ -743,6 +743,13 @@ namespace tfs
         return ret;
       }
 
+      ret = update_block_version(VERSION_INC_STEP_REPLICATE);
+      if (TFS_SUCCESS != ret)
+      {
+        TBSYS_LOG(ERROR, "replicate update version fail. blockid: %u, ret: %d", logic_block_id_, ret);
+        return ret;
+      }
+
       // clear HALF BLOCK flag, it will become a normal block
       ret = set_block_dirty_type(C_DATA_CLEAN);
       if (TFS_SUCCESS != ret)
@@ -897,6 +904,11 @@ namespace tfs
     {
       index_handle_->set_block_dirty_type(dirty_flag);
       return index_handle_->flush();
+    }
+
+    int LogicBlock::update_block_version(const int32_t step)
+    {
+      return index_handle_->update_block_version(step);
     }
 
     int LogicBlock::get_meta_infos(RawMetaVec& raw_metas)

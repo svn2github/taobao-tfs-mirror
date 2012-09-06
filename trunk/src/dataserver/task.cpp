@@ -438,11 +438,15 @@ namespace tfs
           }
           else
           {
-            TBSYS_LOG(DEBUG, "compact blockid : %u, switch compact blk\n", block_id);
-            BlockFileManager::get_instance()->switch_compact_blk(block_id);
-            if (TFS_SUCCESS != ret)
+            ret = dest_logic_block->update_block_version(VERSION_INC_STEP_DEFAULT);
+            if (TFS_SUCCESS == ret)
             {
-              TBSYS_LOG(ERROR, "compact blockid: %u, switch compact blk fail. ret: %d\n", block_id, ret);
+              TBSYS_LOG(DEBUG, "compact blockid : %u, switch compact blk\n", block_id);
+              BlockFileManager::get_instance()->switch_compact_blk(block_id);
+              if (TFS_SUCCESS != ret)
+              {
+                TBSYS_LOG(ERROR, "compact blockid: %u, switch compact blk fail. ret: %d\n", block_id, ret);
+              }
             }
           }
 
@@ -880,6 +884,12 @@ namespace tfs
       if (TFS_SUCCESS == ret)
       {
         ret = batch_write_index(ds_ip, block_id);
+      }
+
+      // update block info local
+      if (TFS_SUCCESS == ret)
+      {
+        ret = logic_block->update_block_version(VERSION_INC_STEP_REPLICATE);
       }
       return ret;
     }
