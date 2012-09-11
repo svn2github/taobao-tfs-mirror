@@ -60,6 +60,9 @@ namespace tfs
             const char* rs_addr = NULL);
 
         int64_t get_app_id() const { return app_id_;}
+#ifdef WITH_TAIR_CACHE
+        void set_remote_cache_info(const char * remote_cache_info);
+#endif
         void set_wait_timeout(const int64_t timeout_ms);
         void set_log_level(const char* level);
         void set_log_file(const char* log_file);
@@ -307,6 +310,7 @@ namespace tfs
         int32_t init_stat_;
         uint64_t active_rc_ip_;
         size_t next_rc_index_;
+        bool ignore_rc_remote_cache_info_;
 
         common::BaseInfo base_info_;
         common::SessionBaseInfo session_base_info_;
