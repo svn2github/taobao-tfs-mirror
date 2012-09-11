@@ -62,6 +62,8 @@ namespace tfs
 
         int resolve_block_version_conflict(const uint32_t block, const std::vector<std::pair<uint64_t, common::BlockInfo> >& info);
 
+        int open(int32_t& family_aid_info, std::vector<std::pair<uint32_t, uint64_t> >& members, const int32_t mode, const int64_t family_id);
+
       private:
         int open_read_mode_(common::VUINT64& servers, const uint32_t block) const;
         int open_write_mode_(uint32_t& block_id, uint32_t& lease_id,

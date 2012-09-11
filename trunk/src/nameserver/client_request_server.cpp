@@ -86,7 +86,6 @@ namespace tfs
       {
         //update all relations of blocks belongs to it
         ret = manager_.update_relation(expires, pserver, blocks, now, type);
-        ret = TFS_SUCCESS != ret ?  EXIT_UPDATE_RELATION_ERROR : TFS_SUCCESS;
         if (TFS_SUCCESS == ret)
         {
           pserver = manager_.get_server_manager().get(server);
@@ -179,53 +178,42 @@ namespace tfs
     {
       int32_t ret = TFS_SUCCESS;
       uint32_t block_id = parameter.block_info_.block_id_;
-      if (parameter.unlink_flag_ == UNLINK_FLAG_YES)//unlink file
+      if (WRITE_COMPLETE_STATUS_YES !=  parameter.status_)
       {
-        //这里暂时先这么做， 后面如果我们将Block每一次写操作(包括删除)都加版本的话
-        //这里就可以和普通的写处理方式一样
+        TBSYS_LOG(INFO, "close block: %u successful, but cleint write operation error,lease: %u",
+            block_id, parameter.lease_id_);
+      }
+      else
+      {
         BlockCollect* block = manager_.get_block_manager().get(block_id);
         ret = (NULL == block) ? EXIT_BLOCK_NOT_FOUND : TFS_SUCCESS;
-        if (TFS_SUCCESS == ret)
+        if (TFS_SUCCESS == ret)//check version
         {
-          block->update(parameter.block_info_);
-          std::vector<stat_int_t> stat(6,0);
-          stat[4] = 0x01;
-          GFactory::get_stat_mgr().update_entry(GFactory::tfs_ns_stat_, stat);
-        }
-      }
-      else //write file
-      {
-        if (WRITE_COMPLETE_STATUS_YES !=  parameter.status_)
-        {
-          TBSYS_LOG(INFO, "close block: %u successful, but cleint write operation error,lease: %u",
-              block_id, parameter.lease_id_);
+          if (parameter.unlink_flag_ == UNLINK_FLAG_YES)//unlink file
+          {
+            std::vector<stat_int_t> stat(6,0);
+            stat[4] = 0x01;
+            GFactory::get_stat_mgr().update_entry(GFactory::tfs_ns_stat_, stat);
+          }
+          ret = block->version() >= parameter.block_info_.version_ ? EXIT_COMMIT_ERROR : TFS_SUCCESS;
+          if (TFS_SUCCESS != ret)
+          {
+            snprintf(parameter.error_msg_, 256, "close block: %u failed, version error: %d:%d",
+                block_id, block->version(),parameter.block_info_.version_);
+          }
         }
         else
         {
-          BlockCollect* block = manager_.get_block_manager().get(block_id);
-          ret = (NULL == block) ? EXIT_BLOCK_NOT_FOUND : TFS_SUCCESS;
-          if (TFS_SUCCESS == ret)//check version
-          {
-            ret = block->version() >= parameter.block_info_.version_ ? EXIT_COMMIT_ERROR : TFS_SUCCESS;
-            if (TFS_SUCCESS != ret)
-            {
-              snprintf(parameter.error_msg_, 256, "close block: %u failed, version error: %d:%d",
-                block_id, block->version(),parameter.block_info_.version_);
-            }
-          }
-          else
-          {
-            snprintf(parameter.error_msg_, 256, "close block: %u failed, block not exist, ret: %d", block_id, ret);
-          }
+          snprintf(parameter.error_msg_, 256, "close block: %u failed, block not exist, ret: %d", block_id, ret);
+        }
 
-          if (TFS_SUCCESS == ret)
+        if (TFS_SUCCESS == ret)
+        {
+          //update block information
+          ret = manager_.update_block_info(parameter.block_info_, parameter.id_, Func::get_monotonic_time(), false);
+          if (TFS_SUCCESS != ret)
           {
-            //update block information
-            ret = manager_.update_block_info(parameter.block_info_, parameter.id_, Func::get_monotonic_time(), false);
-            if (TFS_SUCCESS != ret)
-            {
-              snprintf(parameter.error_msg_,256,"close block: %u successful, but update block information failed, ret: %d", block_id, ret);
-            }
+            snprintf(parameter.error_msg_,256,"close block: %u successful, but update block information failed, ret: %d", block_id, ret);
           }
         }
       }
@@ -264,7 +252,7 @@ namespace tfs
             if (TFS_SUCCESS == ret)
               block_id = block->id();
             else
-              TBSYS_LOG(INFO, "%s", "it's failed when choose a write block");
+              TBSYS_LOG(INFO, "it's failed when choose a write block, ret: %d", ret);
           }
         }
 
@@ -294,7 +282,7 @@ namespace tfs
               //create new block by block_id
               ret = manager_.open_helper_create_new_block_by_id(block_id);
               if (TFS_SUCCESS != ret)
-                TBSYS_LOG(INFO, "create new block by block id: %u failed", block_id);
+                TBSYS_LOG(INFO, "create new block by block id: %u failed, ret: %d", block_id, ret);
             }
           }
         }
@@ -381,32 +369,25 @@ namespace tfs
           new_create_block_collect = true;
           block = manager_.get_block_manager().insert(info.value3_, now, true);
         }
-        else
-        {
-          ret = block->get_servers_size() <= 0 ? TFS_SUCCESS : EXIT_BLOCK_REPLICATE_EXIST;
-        }
         ret  = NULL == block ? EXIT_NO_BLOCK : TFS_SUCCESS;
         if (TFS_SUCCESS != ret)
-        {
-          snprintf(buf, buf_length, " block: %u no exist", info.value3_);
-        }
-        else
+          snprintf(buf, buf_length, " block: %u no exist, ret: %d", info.value3_, ret);
+
+        if (TFS_SUCCESS == ret)
         {
           ServerCollect* server = manager_.get_server_manager().get(info.value1_);
           ret = NULL == server ? EIXT_SERVER_OBJECT_NOT_FOUND : TFS_SUCCESS;
           if (TFS_SUCCESS != ret)
-          {
-            snprintf(buf, buf_length, " server: %s no exist", CNetUtil::addrToString(info.value1_).c_str());
-          }
-          else
+            snprintf(buf, buf_length, " server: %s no exist, ret: %d", CNetUtil::addrToString(info.value1_).c_str(), ret);
+          if (TFS_SUCCESS == ret)
           {
             int32_t status = STATUS_MESSAGE_ERROR;
             ret = send_msg_to_server(info.value1_, message, status);
             if ((STATUS_MESSAGE_OK != status)
                 || (TFS_SUCCESS != ret))
             {
-              snprintf(buf, buf_length, "send load block: %u  message to server: %s failed",
-                  info.value3_, CNetUtil::addrToString(info.value1_).c_str());
+              snprintf(buf, buf_length, "send load block: %u  message to server: %s failed, ret: %d, status: %d",
+                  info.value3_, CNetUtil::addrToString(info.value1_).c_str(), ret, status);
             }
             if (TFS_SUCCESS == ret)
             {
@@ -433,14 +414,15 @@ namespace tfs
         GCObject* pobject = NULL;
         if (info.value4_ & HANDLE_DELETE_BLOCK_FLAG_BOTH)
         {
-          std::vector<ServerCollect*> runer;
-          ret = manager_.get_block_manager().get_servers(runer, info.value3_);
+          uint64_t servers[SYSPARAM_NAMESERVER.max_replication_];
+          ArrayHelper<uint64_t> helper(SYSPARAM_NAMESERVER.max_replication_, servers);
+          ret = manager_.get_block_manager().get_servers(helper, info.value3_);
           if (TFS_SUCCESS != ret)
           {
             manager_.get_block_manager().remove(pobject, info.value3_);
             snprintf(buf, buf_length, " block: %u no exist or dataserver not found, ret: %d", info.value3_, ret);
           }
-          else
+          if (TFS_SUCCESS == ret)
           {
             BlockCollect* block = manager_.get_block_manager().get(info.value3_);
             ret = NULL == block ? EXIT_BLOCK_NOT_FOUND : TFS_SUCCESS;
@@ -448,13 +430,13 @@ namespace tfs
             {
               snprintf(buf, buf_length, " block: %u no exist, ret: %d", info.value3_, ret);
             }
-            else
+            if (TFS_SUCCESS == ret)
             {
-              std::vector<ServerCollect*>::const_iterator iter = runer.begin();
-              for (; iter != runer.end(); ++iter)
+              for (int64_t index = 0; index < helper.get_array_index(); ++index)
               {
-                manager_.relieve_relation(block, (*iter), now,BLOCK_COMPARE_SERVER_BY_ID);
-                manager_.get_task_manager().remove_block_from_dataserver((*iter)->id(), info.value3_, 0, now);
+                uint64_t server = *helper.at(index);
+                manager_.relieve_relation(block, server, now);
+                manager_.get_task_manager().remove_block_from_dataserver(server, info.value3_, 0, now);
               }
               manager_.get_block_manager().remove(pobject, info.value3_);
             }
@@ -468,18 +450,17 @@ namespace tfs
         {
           BlockCollect* block = manager_.get_block_manager().get(info.value3_);
           ret = NULL != block ? TFS_SUCCESS : EXIT_NO_BLOCK;
+          if (TFS_SUCCESS != ret)
+            snprintf(buf, buf_length, " block: %u no exist, ret: %d", info.value3_, ret);
+
           if (TFS_SUCCESS == ret)
           {
             ServerCollect* server = manager_.get_server_manager().get(info.value1_);
             ret = NULL != server ? TFS_SUCCESS : EIXT_SERVER_OBJECT_NOT_FOUND;
             if (TFS_SUCCESS == ret)
-              manager_.relieve_relation(block, server, now, BLOCK_COMPARE_SERVER_BY_ID);
+              manager_.relieve_relation(block, server, now);
             if (block->get_servers_size() <= 0)
               manager_.get_block_manager().remove(pobject, info.value3_);
-          }
-          else
-          {
-            snprintf(buf, buf_length, " block: %u no exist", info.value3_);
           }
         }
         if (NULL != pobject)
@@ -494,20 +475,16 @@ namespace tfs
       int32_t ret = ((NULL == buf) || (buf_length <= 0)) ? EXIT_PARAMETER_ERROR : TFS_SUCCESS;
       if (TFS_SUCCESS == ret)
       {
-        ServerCollect* servers[SYSPARAM_NAMESERVER.max_replication_];
-        ArrayHelper<ServerCollect*> helper(SYSPARAM_NAMESERVER.max_replication_, servers);
+        uint64_t servers[SYSPARAM_NAMESERVER.max_replication_];
+        ArrayHelper<uint64_t> helper(SYSPARAM_NAMESERVER.max_replication_, servers);
         ret = manager_.get_block_manager().get_servers(helper, info.value3_);
         if (TFS_SUCCESS != ret)
-        {
           snprintf(buf, buf_length, " block: %u no exist or dataserver not found, ret: %d", info.value3_, ret);
-        }
-        else
+        if (TFS_SUCCESS == ret)
         {
           ret = manager_.get_task_manager().add(info.value3_, helper, PLAN_TYPE_COMPACT, now);
           if (TFS_SUCCESS != ret)
-          {
-            snprintf(buf, buf_length, " add task(compact) failed, block: %u", info.value3_);
-          }
+            snprintf(buf, buf_length, " add task(compact) failed, block: %u, ret: %d", info.value3_, ret);
         }
       }
       return ret;
@@ -538,8 +515,8 @@ namespace tfs
         {
           ServerCollect* source = NULL;
           ServerCollect* target = NULL;
-          ServerCollect* servers[SYSPARAM_NAMESERVER.max_replication_ + 1];
-          ArrayHelper<ServerCollect*> helper(SYSPARAM_NAMESERVER.max_replication_ + 1, servers);
+          uint64_t servers[SYSPARAM_NAMESERVER.max_replication_ + 1];
+          ArrayHelper<uint64_t> helper(SYSPARAM_NAMESERVER.max_replication_ + 1, servers);
           manager_.get_block_manager().get_servers(helper, info.value3_);
           if (0 != info.value1_)
             source = manager_.get_server_manager().get(info.value1_);
@@ -551,10 +528,10 @@ namespace tfs
             snprintf(buf, buf_length, "immediately %s block: %u fail, cannot found source dataserver",
                 info.value4_ == REPLICATE_BLOCK_MOVE_FLAG_NO ? "replicate" : "move", info.value3_);
           }
-          else
+          if (TFS_SUCCESS == ret)
           {
-            if (!helper.exist(source))
-              helper.push_back(source);
+            if (!helper.exist(source->id()))
+              helper.push_back(source->id());
             if (0 != info.value2_)
               target = manager_.get_server_manager().get(info.value2_);
             else//这里复制和均衡都采用同样的策略，如果迁移时直接采用迁移策略代价太大
@@ -569,8 +546,8 @@ namespace tfs
           if (TFS_SUCCESS == ret)//NULL != source && NULL != target
           {
             helper.clear();
-            helper.push_back(source);
-            helper.push_back(target);
+            helper.push_back(source->id());
+            helper.push_back(target->id());
             PlanType type = (info.value4_ == REPLICATE_BLOCK_MOVE_FLAG_NO) ? PLAN_TYPE_REPLICATE : PLAN_TYPE_MOVE;
             ret = manager_.get_task_manager().add(info.value3_, helper, type, now);
             if (TFS_SUCCESS != ret)
@@ -611,10 +588,8 @@ namespace tfs
     {
       int32_t ret = (info.value3_ > 1 || info.value3_ < 0 || info.value4_ < 0) ? EXIT_PARAMETER_ERROR : TFS_SUCCESS;
       if (TFS_SUCCESS != ret)
-      {
         snprintf(buf, buf_length, "parameter is invalid, value3: %d, value4: %d", info.value3_, info.value4_);
-      }
-      else
+      if (TFS_SUCCESS == ret)
       {
         char data[32] = {'\0'};
         snprintf(data, 32, "%d.%06d", info.value3_, info.value4_);
@@ -627,10 +602,8 @@ namespace tfs
     {
       int32_t ret = (info.value3_ <= 0) ? EXIT_PARAMETER_ERROR : TFS_SUCCESS;
       if (TFS_SUCCESS != ret)
-      {
         snprintf(buf, buf_length, "parameter is invalid, value3: %d", info.value3_);
-      }
-      else
+      if (TFS_SUCCESS == ret)
       {
         if (info.value3_ & CLEAR_SYSTEM_TABLE_FLAG_TASK)
             manager_.get_task_manager().clear();
@@ -757,7 +730,7 @@ namespace tfs
               update_last_time = true;
               server = manager_.get_server_manager().get(iter->first);
               manager_.get_block_manager().push_to_delete_queue(block_id, iter->first);
-              manager_.relieve_relation(block, server, now,BLOCK_COMPARE_SERVER_BY_ID_POINTER);
+              manager_.relieve_relation(block, server, now);
               TBSYS_LOG(INFO, "resolve block version conflict: relieve relation block: %u, server: %s, version: %d",
                 block->id(), tbsys::CNetUtil::addrToString(iter->first).c_str(), iter->second.version_);
             }
@@ -770,6 +743,13 @@ namespace tfs
         }
       }
       return ret;
+    }
+
+
+    int ClientRequestServer::open(int32_t& family_aid_info, std::vector<std::pair<uint32_t, uint64_t> >& members, const int32_t mode, const int64_t family_id)
+    {
+      UNUSED(mode);
+      return manager_.get_family_manager().get_members(members, family_aid_info, family_id);
     }
 
     void ClientRequestServer::dump_plan(tbnet::DataBuffer& output)

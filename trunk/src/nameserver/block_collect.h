@@ -51,15 +51,15 @@ namespace tfs
       BlockCollect(const uint32_t block_id, const time_t now);
       virtual ~BlockCollect();
 
-      bool add(bool& writable, bool& master, ServerCollect*& invalid_server, const ServerCollect* server);
-      bool remove(const ServerCollect* server, const time_t now, const int8_t flag);
-      bool exist(const ServerCollect* const server, const bool pointer = true) const;
-      bool is_master(const ServerCollect* const server) const;
-      bool is_writable() const;
-      bool is_creating() const;
-      bool in_replicate_queue() const;
-      bool check_version(LayoutManager& manager, common::ArrayHelper<ServerCollect*>& removes,
-          bool& expire_self, common::ArrayHelper<ServerCollect*>& other_expires, const ServerCollect* server,
+      int add(bool& writable, bool& master, const uint64_t server, const time_t now);
+      int remove(const uint64_t server, const time_t now);
+      bool exist(const uint64_t server) const;
+      inline bool is_master(const uint64_t server) const { return (NULL != servers_ && common::INVALID_SERVER_ID != server && server_size_ > 0) ? server == servers_[0] : false;}
+      inline bool is_writable() const { return ((!is_full()) && (server_size_ >= common::SYSPARAM_NAMESERVER.max_replication_));}
+      inline bool is_creating() const { return BLOCK_CREATE_FLAG_YES == create_flag_;}
+      inline bool in_replicate_queue() const { return BLOCK_IN_REPLICATE_QUEUE_YES == in_replicate_queue_;}
+      int check_version(LayoutManager& manager, common::ArrayHelper<uint64_t>& removes,
+          bool& expire_self, common::ArrayHelper<uint64_t>& other_expires, const uint64_t server,
           const int8_t role, const bool isnew, const common::BlockInfo& block_info, const time_t now);
       common::PlanPriority check_replicate(const time_t now) const;
       bool check_compact() const;
@@ -67,28 +67,26 @@ namespace tfs
       bool check_reinstate(const time_t now) const;
       bool check_marshalling() const;
       inline int32_t size() const { return info_.size_;}
-      void get_servers(common::ArrayHelper<ServerCollect*>& servers) const;
+      void get_servers(common::ArrayHelper<uint64_t>& servers) const;
       void get_servers(std::vector<uint64_t>& servers) const;
-      void get_servers(std::vector<ServerCollect*>& servers) const;
-      uint64_t get_first_server() const;
+      uint64_t get_server(const int8_t index = 0) const;
       inline void update(const common::BlockInfo& info) { info_ = info;}
       inline bool is_full() const { return info_.size_ >= common::SYSPARAM_NAMESERVER.max_block_size_; }
       inline uint32_t id() const { return info_.block_id_;}
       inline int32_t version() const { return info_.version_;}
+      inline void update_version(const int32_t step) { info_.version_ += step;}
       inline void set_create_flag(const int8_t flag = BLOCK_CREATE_FLAG_NO) { create_flag_ = flag;}
       inline void set_in_replicate_queue(const int8_t flag = BLOCK_IN_REPLICATE_QUEUE_YES) {in_replicate_queue_ = flag;}
-      int8_t get_servers_size() const;
+      inline int8_t get_servers_size() const { return server_size_;}
       int scan(common::SSMScanParameter& param) const;
       void dump(int32_t level, const char* file = __FILE__,
           const int32_t line = __LINE__, const char* function = __FUNCTION__) const;
 
       void callback(LayoutManager& manager);
-      bool clear(LayoutManager& manager, const time_t now);
-      void cleanup();
+      void cleanup(common::ArrayHelper<uint64_t>& removes, common::ArrayHelper<uint64_t>& expires);
 
       inline int64_t get_family_id() const { return family_id_;};
       inline void set_family_id(const int64_t family_id) { family_id_ = family_id;}
-
       inline bool is_in_family() const { return common::INVALID_FAMILY_ID != family_id_;}
 
       inline int32_t get_delete_file_num_ratio() const
@@ -96,7 +94,6 @@ namespace tfs
         return info_.file_count_ > 0 ? (static_cast<int32_t>(100 * static_cast<float>(info_.del_file_count_)
               / static_cast<float>(info_.file_count_))) : 0;
       }
-
       inline int32_t get_delete_file_size_ratio() const
       {
         return info_.size_ > 0 ? (static_cast<int32_t>(100 * static_cast<float>(info_.del_size_)
@@ -104,17 +101,14 @@ namespace tfs
       }
       static const int8_t BLOCK_CREATE_FLAG_NO;
       static const int8_t BLOCK_CREATE_FLAG_YES;
-      static const int8_t VERSION_AGREED_MASK;
       private:
-      ServerCollect** get_(const ServerCollect* const server, const bool pointer = true) const;
       DISALLOW_COPY_AND_ASSIGN(BlockCollect);
-
-      private:
       common::BlockInfo info_; //7 * 4 = 28
-      ServerCollect** servers_;
+      uint64_t* servers_;
       int64_t family_id_:56;
-      int8_t create_flag_:4;
-      int8_t in_replicate_queue_:4;
+      int8_t  server_size_:4;
+      int8_t create_flag_:2;
+      int8_t in_replicate_queue_:2;
     };
   }/** end namespace nameserver **/
 }/** end namespace tfs **/

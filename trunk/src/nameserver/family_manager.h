@@ -90,8 +90,7 @@ namespace tfs
       int scan(common::SSMScanParameter& param, int32_t& next, bool& all_over,
           bool& cutover, const int32_t should) const;
       int get_members(common::ArrayHelper<std::pair<uint32_t, int32_t> >& members, const int64_t family_id) const;
-      int get_members(common::ArrayHelper<BlockCollect*>& members, const int64_t family_id) const;
-      int get_members(common::ArrayHelper<std::pair<BlockCollect*, ServerCollect*> >& members, const int64_t family_id) const;
+      int get_members(std::vector<std::pair<uint32_t, uint64_t> >& members, int32_t& family_aid_info, const int64_t family_id) const;
       int get_members(common::ArrayHelper<common::FamilyMemberInfo>& members,
           const common::ArrayHelper<common::FamilyMemberInfo>& abnormal_members, const int64_t family_id) const;
       bool push_to_reinstate_or_dissolve_queue(FamilyCollect* family, const int32_t type);
@@ -102,10 +101,11 @@ namespace tfs
       bool push_block_to_marshalling_queues(const BlockCollect* block, const time_t now);
       int push_block_to_marshalling_queues(const uint32_t rack, const uint64_t server, const uint32_t block);
       int marshalling_queue_timeout(const time_t now);
+      int64_t get_marshalling_queue_size() const;
       int create_family_choose_data_members(common::ArrayHelper<std::pair<uint64_t, uint32_t> >& members,
           const int32_t data_member_num);
       int create_family_choose_check_members(common::ArrayHelper<std::pair<uint64_t, uint32_t> >& members,
-          common::ArrayHelper<ServerCollect*>& already_exist, const int32_t check_member_num);
+          common::ArrayHelper<uint64_t>& already_exist, const int32_t check_member_num);
       int reinstate_family_choose_members(common::ArrayHelper<uint64_t>& results,
           const int64_t family_id, const int32_t data_member_num);
       int dissolve_family_choose_member_targets_server(common::ArrayHelper<std::pair<uint64_t, uint32_t> >& results,
@@ -122,13 +122,15 @@ namespace tfs
       int insert_(const int64_t family_id, const int32_t family_aid_info,
           const common::ArrayHelper<std::pair<uint32_t, int32_t> >& member, const time_t now);
       int get_members_(common::ArrayHelper<std::pair<uint32_t, int32_t> >& members, const int64_t family_id) const;
+      int get_members_(common::ArrayHelper<BlockCollect*>& members, const int64_t family_id) const;
+      int get_members_(common::ArrayHelper<std::pair<BlockCollect*, ServerCollect*> >& members, const int64_t family_id) const;
       common::RWLock& get_mutex_(const int64_t family_id) const;
       int32_t get_chunk_(const int64_t family_id) const;
       bool has_marshalling_(int32_t& current_version, const int64_t family_id, const uint32_t block, const int32_t version) const;
     private:
       LayoutManager& manager_;
       MARSHALLING_MAP marshalling_queue_;
-      common::RWLock marshallin_queue_mutex_;
+      mutable common::RWLock marshallin_queue_mutex_;
       FAMILY_MAP* families_[MAX_FAMILY_CHUNK_NUM];
       mutable common::RWLock mutexs_[MAX_FAMILY_CHUNK_NUM];
 

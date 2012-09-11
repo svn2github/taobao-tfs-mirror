@@ -99,7 +99,7 @@ namespace tfs
       }
     }
 
-    int TaskManager::add(const uint32_t id, const ArrayHelper<ServerCollect*>& servers,
+    int TaskManager::add(const uint32_t id, const ArrayHelper<uint64_t>& servers,
             const PlanType type, const time_t now)
     {
       //这里只判断Block是否正在写一次的原因: 因为add task到几个列表是不能被打断的，如果打断了处理的逻辑会很复杂
@@ -122,7 +122,7 @@ namespace tfs
           if (TFS_SUCCESS == ret)
           {
             int64_t index = 0;
-            ServerCollect* server = NULL;
+            uint64_t server = INVALID_SERVER_ID;
             std::pair<uint64_t, bool> success[SYSPARAM_NAMESERVER.max_replication_];
             ArrayHelper<std::pair<uint64_t, bool> > helper(SYSPARAM_NAMESERVER.max_replication_, success);
             for (index = 0; index < servers.get_array_index() && TFS_SUCCESS == ret; ++index)
@@ -131,17 +131,17 @@ namespace tfs
               if (task->type_ != PLAN_TYPE_COMPACT)
               {
                 std::pair<MACHINE_TO_TASK_ITER, bool> mrs;
-                uint64_t machine_ip = (server->id() & 0xFFFFFFFF);
+                uint64_t machine_ip = (server & 0xFFFFFFFF);
                 MACHINE_TO_TASK_ITER mit = machine_to_tasks_.find(machine_ip);
                 if (machine_to_tasks_.end() == mit)
                 {
                   mrs = machine_to_tasks_.insert(MACHINE_TO_TASK::value_type(machine_ip, Machine()));
                   mit = mrs.first;
                 }
-                ret = mit->second.add(server->id(), task, is_target(index));
+                ret = mit->second.add(server, task, is_target(index));
               }
               if (TFS_SUCCESS == ret)
-                 helper.push_back(std::make_pair(server->id(), is_target(index)));
+                 helper.push_back(std::make_pair(server, is_target(index)));
             }
 
             //rollback
@@ -182,7 +182,7 @@ namespace tfs
       bool flag = (member_num > 0 && NULL != members);
       const int32_t DATA_MEMBER_NUM = GET_DATA_MEMBER_NUM(family_aid_info);
       const int32_t MEMBER_NUM = DATA_MEMBER_NUM + GET_CHECK_MEMBER_NUM(family_aid_info);
-      int32_t ret = (flag && INVALID_FAMILY_ID != family_id && MEMBER_NUM == member_num)? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+      int32_t ret = (flag && INVALID_FAMILY_ID != family_id && MEMBER_NUM == member_num && CHECK_MEMBER_NUM(MEMBER_NUM))? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
         Task* task = generation_(family_id, family_aid_info, type, member_num, members);
@@ -203,8 +203,8 @@ namespace tfs
             //目前的流控做得简单点，将主控机的流量记1个，后面慢慢优化
             int64_t index = 0;
             std::pair<BLOCK_TO_TASK_ITER, bool> res;
-            std::pair<FamilyMemberInfo, bool> success[MAX_MARSHALLING_NUM];
-            ArrayHelper<std::pair<FamilyMemberInfo, bool> > helper(MAX_MARSHALLING_NUM, success);
+            std::pair<FamilyMemberInfo, bool> success[MEMBER_NUM];
+            ArrayHelper<std::pair<FamilyMemberInfo, bool> > helper(MEMBER_NUM, success);
             for (index = 0; index < member_num && TFS_SUCCESS == ret; ++index)
             {
               if (INVALID_SERVER_ID != members[index].server_ && INVALID_BLOCK_ID != members[index].block_)
@@ -237,7 +237,7 @@ namespace tfs
 
         if (TFS_SUCCESS != ret)
         {
-          task->dump(TBSYS_LOG_LEVEL(WARN), "add task failed, rollback, ret: %d", ret);
+          task->dump(TBSYS_LOG_LEVEL(INFO), "add task failed, rollback, ret: %d", ret);
           pending_queue_.erase(task);
           tbsys::gDelete(task);
         }
@@ -343,17 +343,16 @@ namespace tfs
       return (NULL != get_(family_id));
     }
 
-    bool TaskManager::exist(const ArrayHelper<ServerCollect*>& servers) const
+    bool TaskManager::exist(const ArrayHelper<uint64_t>& servers) const
     {
       bool ret = !servers.empty();
       if (ret)
       {
-        ServerCollect* server = NULL;
-        for (int32_t i = 0; i < servers.get_array_index() && ret; i++)
+        uint64_t server = INVALID_SERVER_ID;
+        for (int64_t index = 0; index < servers.get_array_index() && ret; ++index)
         {
-          server = *servers.at(i);
-          assert(NULL != server);
-          ret = exist(server->id());
+          server = *servers.at(index);
+          ret = exist(server);
         }
       }
       return ret;
@@ -484,13 +483,12 @@ namespace tfs
       return TFS_SUCCESS;
     }
 
-    bool TaskManager::handle(BasePacket* msg, const int64_t seqno)
+    int TaskManager::handle(BasePacket* msg, const int64_t seqno)
     {
-      bool ret = NULL != msg;
-      if (ret)
+      int32_t ret = (NULL != msg) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+      if (TFS_SUCCESS == ret)
       {
         Task* task = NULL;
-        int32_t result = TFS_SUCCESS;
         NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
         bool master = ngi.is_master();
         if (master)
@@ -533,14 +531,13 @@ namespace tfs
           }
           assert(NULL != task);
         }
-        ret = (NULL != task);
-        if (ret)
+        ret = (NULL != task) ? TFS_SUCCESS : EXIT_TASK_NO_EXIST_ERROR;
+        if (TFS_SUCCESS == ret)
         {
-          result = task->handle_complete(msg);
-          ret = TFS_SUCCESS == result;
+          ret = task->handle_complete(msg);
           if (master)
           {
-            task->dump(TBSYS_LOG_LEVEL(INFO), "handle message complete, show result: %d,", result);
+            task->dump(TBSYS_LOG_LEVEL(INFO), "handle message complete, show result: %d,", ret);
             remove(task);
           }
           else
@@ -703,24 +700,15 @@ namespace tfs
       return machine_to_tasks_.end() == iter ? 0 : iter->second.size(source_size, target_size);
     }
 
-    Task* TaskManager::generation_(const uint32_t id, const ArrayHelper<ServerCollect*>& servers, const PlanType type)
+    Task* TaskManager::generation_(const uint32_t id, const ArrayHelper<uint64_t>& servers, const PlanType type)
     {
       Task* result = NULL;
-      ServerCollect* pserver = NULL;
-      uint64_t array[MAX_REPLICATION_NUM];
-      int64_t index = 0;
-      for (; index < servers.get_array_index(); ++index)
-      {
-        pserver = *servers.at(index);
-        assert(NULL != pserver);
-        array[index] = pserver->id();
-      }
       if (type == PLAN_TYPE_REPLICATE)
-        result = new (std::nothrow)ReplicateTask(*this, id, index, array, type);
+        result = new (std::nothrow)ReplicateTask(*this, id, servers.get_array_index(), servers.get_base_address(), type);
       else if (type == PLAN_TYPE_MOVE)
-        result = new (std::nothrow)MoveTask(*this, id, index, array);
+        result = new (std::nothrow)MoveTask(*this, id, servers.get_array_index(), servers.get_base_address());
       else if (type == PLAN_TYPE_COMPACT)
-        result = new (std::nothrow)CompactTask(*this, id, index, array);
+        result = new (std::nothrow)CompactTask(*this, id, servers.get_array_index(), servers.get_base_address());
       assert(NULL != result);
       result->seqno_ = ++seqno_;
       return result;
@@ -791,8 +779,6 @@ namespace tfs
           ret = block_to_tasks_.end() != res.first ? EXIT_TASK_EXIST_ERROR : TFS_SUCCESS;
           if (TFS_SUCCESS == ret)
             res = block_to_tasks_.insert(BLOCK_TO_TASK::value_type(info.block_, task));
-          if (TFS_SUCCESS != ret)
-            TBSYS_LOG(DEBUG, "INSERT BLOCK: %u TO MAP FAILED, ret: %d", info.block_, ret);
         }
         if (insert_server && TFS_SUCCESS == ret && INVALID_SERVER_ID != info.server_)
         {
@@ -805,8 +791,6 @@ namespace tfs
             mit = mrs.first;
           }
           ret = mit->second.add(info.server_, task, target);
-          if (TFS_SUCCESS != ret)
-            TBSYS_LOG(DEBUG, "INSERT SERVER: %s TO MAP FAILED, ret: %d", tbsys::CNetUtil::addrToString(info.server_).c_str(), ret);
         }
         success.push_back(std::make_pair(info, target));
       }

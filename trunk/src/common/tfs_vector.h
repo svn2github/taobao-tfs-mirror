@@ -21,8 +21,14 @@ namespace tfs
 {
   namespace common
   {
-
-    template <typename T> class tfs_vector_traits;
+    template <typename T>
+      struct tfs_vector_traits
+      {
+        typedef T* pointer;
+        typedef T  value_type;
+        typedef T const const_value_type;
+        typedef T* iterator;
+      };
 
     template <typename T>
       struct tfs_vector_traits<T*>

@@ -324,8 +324,14 @@ namespace tfs
           case common::RSP_RESOLVE_BLOCK_VERSION_CONFLICT_MESSAGE:
             packet = new ResolveBlockVersionConflictResponseMessage();
             break;
+          case common::REQ_GET_FAMILY_INFO_MESSAGE:
+            packet = new GetFamilyInfoMessage();
+            break;
+          case common::RSP_GET_FAMILY_INFO_MESSAGE:
+            packet = new GetFamilyInfoResponseMessage();
+            break;
           default:
-            TBSYS_LOG(ERROR, "pcode: %d not found in message factory", real_pcode);
+            TBSYS_LOG(ERROR, "pcode: %d not found in message factory", pcode);
             break;
         }
       }

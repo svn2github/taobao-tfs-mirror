@@ -43,25 +43,33 @@ namespace tfs
         return lhs->id() < rhs->id();
       }
     };
+    struct BlockIdCompareExt
+    {
+      bool operator ()(const uint32_t lhs, const uint32_t rhs) const
+      {
+        return lhs < rhs;
+      }
+    };
     class BlockManager
     {
-      #ifdef TFS_GTEST
-      friend class BlockManagerTest;
-      friend class LayoutManagerTest;
-      FRIEND_TEST(BlockManagerTest, insert_remove_get_exist);
-      FRIEND_TEST(BlockManagerTest, get_servers);
-      FRIEND_TEST(BlockManagerTest, scan);
-      FRIEND_TEST(BlockManagerTest, update_relation);
-      FRIEND_TEST(BlockManagerTest, build_relation);
-      FRIEND_TEST(BlockManagerTest, update_block_info);
-      FRIEND_TEST(BlockManagerTest, scan_ext);
-      void clear_();
-      #endif
-      typedef std::map<uint32_t, int64_t> LAST_WRITE_BLOCK_MAP;
-      typedef LAST_WRITE_BLOCK_MAP::iterator LAST_WRITE_BLOCK_MAP_ITER;
-      typedef LAST_WRITE_BLOCK_MAP::const_iterator LAST_WRITE_BLOCK_MAP_CONST_ITER;
-      typedef common::TfsSortedVector<BlockCollect*, BlockIdCompare> BLOCK_MAP;
-      typedef common::TfsSortedVector<BlockCollect*, BlockIdCompare>::iterator BLOCK_MAP_ITER;
+        #ifdef TFS_GTEST
+        friend class BlockManagerTest;
+        friend class LayoutManagerTest;
+        FRIEND_TEST(BlockManagerTest, insert_remove_get_exist);
+        FRIEND_TEST(BlockManagerTest, get_servers);
+        FRIEND_TEST(BlockManagerTest, scan);
+        FRIEND_TEST(BlockManagerTest, update_relation);
+        FRIEND_TEST(BlockManagerTest, build_relation);
+        FRIEND_TEST(BlockManagerTest, update_block_info);
+        FRIEND_TEST(BlockManagerTest, scan_ext);
+        void clear_();
+        #endif
+        typedef std::map<uint32_t, int64_t> LAST_WRITE_BLOCK_MAP;
+        typedef LAST_WRITE_BLOCK_MAP::iterator LAST_WRITE_BLOCK_MAP_ITER;
+        typedef LAST_WRITE_BLOCK_MAP::const_iterator LAST_WRITE_BLOCK_MAP_CONST_ITER;
+        typedef common::TfsSortedVector<BlockCollect*, BlockIdCompare> BLOCK_MAP;
+        typedef common::TfsSortedVector<BlockCollect*, BlockIdCompare>::iterator BLOCK_MAP_ITER;
+        friend void BlockCollect::callback(LayoutManager& manager);
       public:
         explicit BlockManager(LayoutManager& manager);
         virtual ~BlockManager();
@@ -88,17 +96,16 @@ namespace tfs
         int scan(common::SSMScanParameter& param, int32_t& next, bool& all_over,
             bool& cutover, const int32_t should) const;
         int get_servers(std::vector<uint64_t>& servers, const uint32_t block) const;
-        int get_servers(std::vector<ServerCollect*>& servers, const uint32_t block) const;
-        int get_servers(common::ArrayHelper<ServerCollect*>& server, const uint32_t block) const;
-        int get_servers(common::ArrayHelper<ServerCollect*>& server, const BlockCollect* block) const;
+        int get_servers(common::ArrayHelper<uint64_t>& server, const uint32_t block) const;
+        int get_servers(common::ArrayHelper<uint64_t>& server, const BlockCollect* block) const;
         int get_servers_size(const uint32_t block) const;
-        uint64_t get_first_server(const uint32_t block) const;
+        uint64_t get_server(const uint32_t block, const int8_t index = 0) const;
         bool exist(const BlockCollect* block, const ServerCollect* server) const;
 
-        int update_relation(std::vector<uint32_t>& expires, ServerCollect* server, const std::set<common::BlockInfoExt>& blocks, const time_t now);
-        int build_relation(BlockCollect* block, bool& writable, bool& master,
-            ServerCollect*& invalid_server, const ServerCollect* server, const time_t now, const bool set =false);
-        bool relieve_relation(BlockCollect* block, const ServerCollect* server, const time_t now, const int8_t flag);
+        int update_relation(std::vector<uint32_t>& expires, ServerCollect* server, const std::set<common::BlockInfoExt>& blocks, const time_t now, const int8_t type);
+        int build_relation(BlockCollect* block, bool& writable, bool& master, const uint64_t server,
+            const time_t now, const bool set =false);
+        int relieve_relation(BlockCollect* block, const uint64_t server, const time_t now);
         int update_block_info(BlockCollect*& output, bool& isnew, bool& writable, bool& master,
             const common::BlockInfo& info, const ServerCollect* server, const time_t now, const bool addnew);
 
@@ -106,14 +113,14 @@ namespace tfs
 
         bool need_replicate(const BlockCollect* block) const;
         bool need_replicate(const BlockCollect* block, const time_t now) const;
-        bool need_replicate(common::ArrayHelper<ServerCollect*>& servers, common::PlanPriority& priority,
+        bool need_replicate(common::ArrayHelper<uint64_t>& servers, common::PlanPriority& priority,
              const BlockCollect* block, const time_t now) const;
         bool need_compact(const BlockCollect* block, const time_t now) const;
-        bool need_compact(common::ArrayHelper<ServerCollect*>& servers, const BlockCollect* block, const time_t now) const;
-        bool need_balance(common::ArrayHelper<ServerCollect*>& servers, const BlockCollect* block, const time_t now) const;
+        bool need_compact(common::ArrayHelper<uint64_t>& servers, const BlockCollect* block, const time_t now) const;
+        bool need_balance(common::ArrayHelper<uint64_t>& servers, const BlockCollect* block, const time_t now) const;
         bool need_marshalling(const uint32_t block, const time_t now);
         bool need_marshalling(const BlockCollect* block, const time_t now);
-        bool need_marshalling(common::ArrayHelper<ServerCollect*>& servers, const BlockCollect* block, const time_t now) const;
+        bool need_marshalling(common::ArrayHelper<uint64_t>& servers, const BlockCollect* block, const time_t now) const;
         bool need_reinstate(const BlockCollect* block, const time_t now) const;
 
         int expand_ratio(int32_t& index, const float expand_ratio = 0.1);
@@ -131,7 +138,7 @@ namespace tfs
         BlockCollect* remove_(const uint32_t block);
 
         int build_relation_(BlockCollect* block, bool& writable, bool& master,
-            ServerCollect*& invalid_server, const ServerCollect* server, const time_t now, const bool set = false);
+            const uint64_t server, const time_t now, const bool set = false);
 
         bool pop_from_delete_queue_(std::pair<uint64_t, uint32_t>& output);
 
@@ -139,7 +146,10 @@ namespace tfs
 
         int32_t get_chunk_(const uint32_t block) const;
 
-        int get_servers_(common::ArrayHelper<ServerCollect*>& server, const BlockCollect* block) const;
+        int get_servers_(common::ArrayHelper<uint64_t>& server, const BlockCollect* block) const;
+
+        int update_relation_(std::vector<uint32_t>& expires, ServerCollect* server, const std::set<common::BlockInfoExt>& blocks, const time_t now);
+        int relieve_relation_(ServerCollect* server, const std::set<common::BlockInfoExt>& blocks, const time_t now);
 
       private:
         LayoutManager& manager_;

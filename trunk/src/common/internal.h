@@ -45,6 +45,12 @@
 #define SET_MARSHALLING_TYPE(x,y) (x = (x & 0xFFFF00FF) | ((y << 8) & 0xFF00))
 #define SET_MASTER_INDEX(x,y) (x = (x & 0xFFFFFF00) | (y & 0xFF))
 
+#define CHECK_DATA_MEMBER_NUM(x) (x > 0 && x <= MAX_DATA_MEMBER_NUM)
+#define CHECK_CHECK_MEMBER_NUM(x) (x > 0 && x <= MAX_CHECK_MEMBER_NUM)
+#define CHECK_MEMBER_NUM(x) (x > 0 && x <= MAX_MARSHALLING_NUM)
+#define CHECK_MEMBER_NUM_V2(x, y) ( x > 0 && x <= MAX_DATA_MEMBER_NUM \
+    && y > 0 && y <= MAX_CHECK_MEMBER_NUM && (x+y) > 0 && (x+y) <= MAX_MARSHALLING_NUM)
+
 //#define TFS_GTEST
 
 #if __WORDSIZE == 32
@@ -153,12 +159,13 @@ namespace tfs
 
     static const int32_t MAX_REPLICATION_NUM = 8;
 
-    static const int32_t MAX_MARSHALLING_NUM = 32;//
-    static const int32_t MAX_DATA_MEMBER_NUM = 24;
-    static const int32_t MAX_CHECK_MEMBER_NUM = 8;
-
     static const int32_t REPORT_BLOCK_NORMAL = 0;
     static const int32_t REPORT_BLOCK_EXT = 1;
+
+    static const int32_t MAX_MARSHALLING_NUM = 12;//
+    static const int32_t MAX_DATA_MEMBER_NUM = 8;
+    static const int32_t MAX_CHECK_MEMBER_NUM = 4;
+    static const int32_t MAX_MARSHALLING_BLOCK_SIZE_LIMIT = 128 * 1024 * 1024 * 1024;
 
     enum VersionStep
     {
@@ -989,7 +996,8 @@ namespace tfs
     typedef enum _ReportBlockType
     {
       REPORT_BLOCK_TYPE_ALL = 0,
-      REPORT_BLOCK_TYPE_PART
+      REPORT_BLOCK_TYPE_PART,
+      REPORT_BLOCK_TYPE_RELIEVE
     }ReportBlockType;
 
     extern const char* dynamic_parameter_str[43];

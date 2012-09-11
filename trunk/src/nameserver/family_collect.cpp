@@ -73,9 +73,9 @@ namespace tfs
              ? EXIT_PARAMETER_ERROR : TFS_SUCCESS;
       if (TFS_SUCCESS == ret)
       {
-        for (int32_t i = 0; i < members.get_array_index(); ++i)
+        for (int64_t index = 0; index < members.get_array_index(); ++index)
         {
-          members_[i] = *members.at(i);
+          members_[index] = *members.at(index);
         }
       }
       return ret;

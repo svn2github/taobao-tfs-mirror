@@ -320,6 +320,9 @@ namespace tfs
             case REQ_RESOLVE_BLOCK_VERSION_CONFLICT_MESSAGE:
               ret = resolve_block_version_conflict(msg);
               break;
+            case REQ_GET_FAMILY_INFO_MESSAGE:
+              ret = get_family_info(msg);
+              break;
             default:
               ret = EXIT_UNKNOWN_MSGTYPE;
               TBSYS_LOG(ERROR, "unknown msg type: %d", pcode);
@@ -393,13 +396,7 @@ namespace tfs
         else
         {
           result_msg->free();
-          if(EXIT_NO_DATASERVER == ret)
-          {
-            ret = message->reply_error_packet(TBSYS_LOG_LEVEL(INFO), EXIT_NO_DATASERVER,
-                  "got error, when get block: %u mode: %d, result: %d information, %s",
-                  block_id, mode, ret, tbsys::CNetUtil::addrToString(ipport).c_str());
-          }
-          else if (EXIT_ACCESS_PERMISSION_ERROR == ret)
+          if (EXIT_ACCESS_PERMISSION_ERROR == ret)
           {
             ret = message->reply_error_packet(TBSYS_LOG_LEVEL(INFO), EXIT_NAMESERVER_ONLY_READ,
                   "current nameserver only read, %s", tbsys::CNetUtil::addrToString(ipport).c_str());
@@ -685,51 +682,6 @@ namespace tfs
       return ret;
     }
 
-    /*int NameServer::wait_for_ds_report()
-    {
-      bool complete = false;
-      int32_t ret = TFS_SUCCESS;
-      tbnet::Packet* ret_msg = NULL;
-      NsRuntimeGlobalInformation& ngi = GFactory::get_runtime_info();
-      MasterAndSlaveHeartMessage master_slave_msg;
-      master_slave_msg.set_ip_port(ngi.owner_ip_port_);
-      master_slave_msg.set_role(ngi.owner_role_);
-      master_slave_msg.set_status(ngi.owner_status_);
-      master_slave_msg.set_flags(HEART_GET_DATASERVER_LIST_FLAGS_YES);
-      while (!stop_ && !complete && !ngi.is_destroyed())
-      {
-        ret_msg = NULL;
-        NewClient* client = NewClientManager::get_instance().create_client();
-        ret = send_msg_to_server(ngi.peer_ip_port_, client, &master_slave_msg, ret_msg);
-        if (TFS_SUCCESS == ret)
-        {
-          ret = ret_msg->getPCode() == MASTER_AND_SLAVE_HEART_RESPONSE_MESSAGE ? TFS_SUCCESS : TFS_ERROR;
-          if (TFS_SUCCESS == ret)
-          {
-            MasterAndSlaveHeartResponseMessage *response = NULL;
-            response = dynamic_cast<MasterAndSlaveHeartResponseMessage *> (ret_msg);
-            std::vector<uint64_t>& peer_list = response->get_servers();
-            std::vector<uint64_t> local_list;
-            layout_manager_.get_server_manager().get_alive_servers(local_list);
-            TBSYS_LOG(DEBUG, "local size: %zd, peer size: %zd", local_list.size(), peer_list.size());
-            complete = peer_list.size() == 0U;
-            if (!complete)
-            {
-              time_t now = Func::get_monotonic_time();
-              int32_t percent = (int) (((double) local_list.size() / (double) peer_list.size()) * 100);
-              complete = percent > 90 || !ngi.in_safe_mode_time(now);
-            }
-          }
-        }
-        NewClientManager::get_instance().destroy_client(client);
-        if (!complete)
-        {
-          usleep(500000); //500ms
-        }
-      }
-      return TFS_SUCCESS;
-    }*/
-
     int NameServer::do_master_msg_helper(common::BasePacket* packet)
     {
       int32_t ret = NULL != packet ? common::TFS_SUCCESS : common::TFS_ERROR;
@@ -742,8 +694,7 @@ namespace tfs
         if (common::TFS_SUCCESS == ret)
         {
           //receive all owner check message , master and slave heart message, dataserver heart message
-          //if (pcode != OWNER_CHECK_MESSAGE
-            if (pcode != MASTER_AND_SLAVE_HEART_MESSAGE
+          if (pcode != MASTER_AND_SLAVE_HEART_MESSAGE
             && pcode != MASTER_AND_SLAVE_HEART_RESPONSE_MESSAGE
             && pcode != HEARTBEAT_AND_NS_HEART_MESSAGE
             && pcode != SET_DATASERVER_MESSAGE
@@ -768,8 +719,7 @@ namespace tfs
                && ngi.owner_status_ <= NS_STATUS_INITIALIZED ? common::TFS_SUCCESS : common::TFS_ERROR;
         if (common::TFS_SUCCESS == ret)
         {
-          //if (pcode != OWNER_CHECK_MESSAGE
-            if (pcode != MASTER_AND_SLAVE_HEART_MESSAGE
+          if (pcode != MASTER_AND_SLAVE_HEART_MESSAGE
             && pcode != HEARTBEAT_AND_NS_HEART_MESSAGE
             && pcode != MASTER_AND_SLAVE_HEART_RESPONSE_MESSAGE
             && pcode != SET_DATASERVER_MESSAGE
@@ -786,16 +736,45 @@ namespace tfs
                 && pcode != BLOCK_COMPACT_COMPLETE_MESSAGE
                 && pcode != OPLOG_SYNC_MESSAGE
                 && pcode != GET_BLOCK_INFO_MESSAGE
-                && pcode != GET_BLOCK_INFO_MESSAGE
                 && pcode != SET_DATASERVER_MESSAGE
                 && pcode != REQ_REPORT_BLOCKS_TO_NS_MESSAGE
                 && pcode != BATCH_GET_BLOCK_INFO_MESSAGE
-                && pcode != SHOW_SERVER_INFORMATION_MESSAGE)
+                && pcode != SHOW_SERVER_INFORMATION_MESSAGE
+                && pcode != REQ_GET_FAMILY_INFO_MESSAGE)
               {
                 ret = common::TFS_ERROR;
               }
             }
           }
+        }
+      }
+      return ret;
+    }
+
+    int NameServer::get_family_info(common::BasePacket* msg)
+    {
+      int32_t ret = ((NULL != msg) && (msg->getPCode() == REQ_GET_FAMILY_INFO_MESSAGE)) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+      if (common::TFS_SUCCESS == ret)
+      {
+        GetFamilyInfoMessage* message = dynamic_cast<GetFamilyInfoMessage*>(msg);
+        int32_t mode = message->get_mode();
+        int64_t family_id = message->get_family_id();
+        int32_t family_aid_info = 0;
+        uint64_t ipport = msg->get_connection()->getServerId();
+        GetFamilyInfoResponseMessage* reply_msg = new GetFamilyInfoResponseMessage();
+        ret = layout_manager_.get_client_request_server().open(family_aid_info,reply_msg->get_members(), mode, family_id);
+        if (TFS_SUCCESS == ret)
+        {
+          reply_msg->set_family_id(family_id);
+          reply_msg->set_family_aid_info(family_aid_info);
+          ret = message->reply(reply_msg);
+        }
+        else
+        {
+          reply_msg->free();
+          ret = message->reply_error_packet(TBSYS_LOG_LEVEL(INFO), ret,
+              "got error, when get family: %"PRI64_PREFIX"d mode: %d, result: %d information, %s",
+              family_id, mode, ret, tbsys::CNetUtil::addrToString(ipport).c_str());
         }
       }
       return ret;

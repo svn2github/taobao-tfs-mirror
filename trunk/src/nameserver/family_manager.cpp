@@ -286,7 +286,6 @@ namespace tfs
       return actual;
     }
 
-
     int FamilyManager::get_members(common::ArrayHelper<std::pair<uint32_t, int32_t> >& members, const int64_t family_id) const
     {
       int32_t ret = (INVALID_FAMILY_ID != family_id && members.get_array_size() > 0 ) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
@@ -298,7 +297,7 @@ namespace tfs
       return ret;
     }
 
-    int FamilyManager::get_members(common::ArrayHelper<BlockCollect*>& members, const int64_t family_id) const
+    int FamilyManager::get_members_(common::ArrayHelper<BlockCollect*>& members, const int64_t family_id) const
     {
       int32_t ret = (INVALID_FAMILY_ID != family_id && members.get_array_size() > 0 ) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
@@ -310,9 +309,9 @@ namespace tfs
         get_mutex_(family_id).unlock();
         if (TFS_SUCCESS == ret)
         {
-          for (int32_t i = 0; i < helper.get_array_index(); i++)
+          for (int64_t index = 0; index < helper.get_array_index(); ++index)
           {
-            std::pair<uint32_t, int32_t> item = *helper.at(i);
+            std::pair<uint32_t, int32_t> item = *helper.at(index);
             BlockCollect* block = manager_.get_block_manager().get(item.first);
             if (NULL != block)
               members.push_back(block);
@@ -322,7 +321,7 @@ namespace tfs
       return ret;
     }
 
-    int FamilyManager::get_members(common::ArrayHelper<std::pair<BlockCollect*, ServerCollect*> >& members,
+    int FamilyManager::get_members_(common::ArrayHelper<std::pair<BlockCollect*, ServerCollect*> >& members,
           const int64_t family_id) const
     {
       int32_t ret = (INVALID_FAMILY_ID != family_id && members.get_array_size() > 0 ) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
@@ -330,18 +329,15 @@ namespace tfs
       {
         BlockCollect* result[MAX_MARSHALLING_NUM];
         common::ArrayHelper<BlockCollect*> helper(MAX_MARSHALLING_NUM, result);
-        ret = get_members(helper, family_id);
+        ret = get_members_(helper, family_id);
         if (TFS_SUCCESS == ret)
         {
-          ServerCollect* servers[SYSPARAM_NAMESERVER.max_replication_];
-          common::ArrayHelper<ServerCollect*> helper2(SYSPARAM_NAMESERVER.max_replication_, servers);
           for (int64_t index = 0; index < helper.get_array_index(); ++index)
           {
-            helper2.clear();
             BlockCollect* block = *helper.at(index);
-            ServerCollect* server = TFS_SUCCESS == manager_.get_block_manager().get_servers(helper2, block)
-                                    ? *helper2.at(0) : NULL;
-            members.push_back(std::make_pair(block, server));
+            uint64_t server = manager_.get_block_manager().get_server(block->id());
+            ServerCollect* pserver = manager_.get_server_manager().get(server);
+            members.push_back(std::make_pair(block, pserver));
           }
         }
       }
@@ -372,13 +368,44 @@ namespace tfs
             FamilyMemberInfo* pbfmi = abnormal_members.get(info);
             if (NULL == pbfmi)
             {
-              info.server_ =  manager_.get_block_manager().get_first_server(item->first);
+              info.server_ =  manager_.get_block_manager().get_server(item->first);
               ret = (INVALID_SERVER_ID != info.server_) ? TFS_SUCCESS : EXIT_DATASERVER_NOT_FOUND;
               if (TFS_SUCCESS == ret)
                 info.status_ = FAMILY_MEMBER_STATUS_NORMAL;
             }
             if (TFS_SUCCESS == ret)
               members.push_back(info);
+          }
+        }
+      }
+      return ret;
+    }
+
+    int FamilyManager::get_members(std::vector<std::pair<uint32_t, uint64_t> >& members, int32_t& family_aid_info, const int64_t family_id) const
+    {
+      int32_t ret = (INVALID_FAMILY_ID != family_id) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+      if (TFS_SUCCESS == ret)
+      {
+        FamilyCollect* family = get(family_id);
+        ret = NULL != family ? TFS_SUCCESS : EXIT_NO_FAMILY;
+        if (TFS_SUCCESS == ret)
+        {
+          family_aid_info = family->get_family_aid_info();
+          const int32_t MEMBER_NUM = family->get_data_member_num() + family->get_check_member_num();
+          BlockCollect* result[MEMBER_NUM];
+          common::ArrayHelper<BlockCollect*> helper(MEMBER_NUM, result);
+          ret = get_members_(helper, family_id);
+          if (TFS_SUCCESS == ret)
+          {
+            std::pair<uint32_t, uint64_t> item;
+            for (int64_t index = 0; index < helper.get_array_index(); ++index)
+            {
+              BlockCollect* block = *helper.at(index);
+              assert(block);
+              item.first = block->id();
+              item.second= block->get_server();
+              members.push_back(item);
+            }
           }
         }
       }
@@ -440,25 +467,24 @@ namespace tfs
       bool ret = (NULL != block);
       if (ret)
       {
-        ServerCollect* servers[SYSPARAM_NAMESERVER.max_replication_];
-        common::ArrayHelper<ServerCollect*> helper(SYSPARAM_NAMESERVER.max_replication_, servers);
+        uint64_t servers[SYSPARAM_NAMESERVER.max_replication_];
+        common::ArrayHelper<uint64_t> helper(SYSPARAM_NAMESERVER.max_replication_, servers);
         if (ret = (manager_.get_block_manager().need_marshalling(helper, block, now)
           && !manager_.get_task_manager().exist(block->id())
           && !manager_.get_task_manager().exist(helper)))
         {
           uint32_t rack = 0;
           int64_t  index = 0;
-          ServerCollect* server = NULL;
+          uint64_t server = INVALID_SERVER_ID;
           for (; index < helper.get_array_index() && ret; ++index)
           {
             server = *helper.at(index);
-            assert(server);
-            ret = manager_.get_task_manager().has_space_do_task_in_machine(server->id());
+            ret = manager_.get_task_manager().has_space_do_task_in_machine(server);
             if (ret)
             {
-              rack = SYSPARAM_NAMESERVER.group_mask_ > 0 ? Func::get_lan(server->id(), SYSPARAM_NAMESERVER.group_mask_)
+              rack = SYSPARAM_NAMESERVER.group_mask_ > 0 ? Func::get_lan(server, SYSPARAM_NAMESERVER.group_mask_)
                      : random() % MAX_RACK_NUM;
-              ret = push_block_to_marshalling_queues(rack, server->id(), block->id());
+              ret = push_block_to_marshalling_queues(rack, server, block->id());
             }
           }
           ret = (ret && index == helper.get_array_index());
@@ -524,6 +550,12 @@ namespace tfs
       return helper.get_array_index();
     }
 
+    int64_t FamilyManager::get_marshalling_queue_size() const
+    {
+      RWLock::Lock lock(marshallin_queue_mutex_, READ_LOCKER);
+      return marshalling_queue_.size();
+    }
+
     int FamilyManager::create_family_choose_data_members(common::ArrayHelper<std::pair<uint64_t, uint32_t> >& members,
         const int32_t data_member_num)
     {
@@ -578,27 +610,26 @@ namespace tfs
     }
 
     int FamilyManager::create_family_choose_check_members(common::ArrayHelper<std::pair<uint64_t, uint32_t> >& members,
-        common::ArrayHelper<ServerCollect*>& already_exist, const int32_t check_member_num)
+        common::ArrayHelper<uint64_t>& already_exist, const int32_t check_member_num)
     {
       int32_t ret = (members.get_array_size() > 0 &&  check_member_num > 0 && check_member_num <= MAX_CHECK_MEMBER_NUM)
           ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
         const int32_t MAX_CHOOSE_NUM = check_member_num * 2;
-        ServerCollect* result[MAX_CHOOSE_NUM];
-        ArrayHelper<ServerCollect*> helper(MAX_CHOOSE_NUM, result);
+        uint64_t result[MAX_CHOOSE_NUM];
+        ArrayHelper<uint64_t> helper(MAX_CHOOSE_NUM, result);
         manager_.get_server_manager().choose_create_block_target_server(already_exist, helper, MAX_CHOOSE_NUM);
-        ret = helper.get_array_index() < check_member_num ? TFS_SUCCESS : EXIT_CHOOSE_TARGET_SERVER_INSUFFICIENT_ERROR;
+        ret = helper.get_array_index() < check_member_num ? EXIT_CHOOSE_TARGET_SERVER_INSUFFICIENT_ERROR : TFS_SUCCESS;
         if (TFS_SUCCESS == ret)
         {
           for (int32_t index = 0; index < helper.get_array_index(); ++index)
           {
-            ServerCollect* server = *helper.at(index);
-            assert(server);
-            if (manager_.get_task_manager().has_space_do_task_in_machine(server->id()))
+            uint64_t server = *helper.at(index);
+            if (manager_.get_task_manager().has_space_do_task_in_machine(server))
             {
               uint32_t block = manager_.get_alive_block_id();
-              members.push_back(std::make_pair(server->id(), block));
+              members.push_back(std::make_pair(server, block));
             }
           }
         }
@@ -610,34 +641,33 @@ namespace tfs
         const int64_t family_id, const int32_t member_num)
     {
       int32_t ret = (INVALID_FAMILY_ID != family_id && results.get_array_size() > 0
-                    && member_num > 0 && member_num <= MAX_MARSHALLING_NUM) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+                    && CHECK_MEMBER_NUM(member_num)) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
-        std::pair<BlockCollect*, ServerCollect*> members[MAX_MARSHALLING_NUM];
-        common::ArrayHelper<std::pair<BlockCollect*, ServerCollect*> > helper(MAX_MARSHALLING_NUM, members);
-        ret = get_members(helper, family_id);
+        std::pair<BlockCollect*, ServerCollect*> members[member_num];
+        common::ArrayHelper<std::pair<BlockCollect*, ServerCollect*> > helper(member_num, members);
+        ret = get_members_(helper, family_id);
         if (TFS_SUCCESS == ret)
         {
           int64_t index = 0;
-          ServerCollect* servers[MAX_MARSHALLING_NUM];
-          common::ArrayHelper<ServerCollect*> helper2(MAX_MARSHALLING_NUM, servers);
+          uint64_t servers[member_num];
+          common::ArrayHelper<uint64_t> helper2(member_num, servers);
           for (index = 0; index < helper.get_array_index(); ++index)
           {
             std::pair<BlockCollect*, ServerCollect*>* item = helper.at(index);
             if (NULL != item->second && NULL != item->first)
-              helper2.push_back(item->second);
+              helper2.push_back(item->second->id());
           }
-          ServerCollect* choose_results[member_num];
-          ArrayHelper<ServerCollect*> choose_result_helper(member_num, choose_results);
+          uint64_t choose_results[member_num];
+          ArrayHelper<uint64_t > choose_result_helper(member_num, choose_results);
           manager_.get_server_manager().choose_create_block_target_server(helper2, choose_result_helper, member_num);
           ret = choose_result_helper.get_array_index() == member_num ? TFS_SUCCESS : EXIT_CHOOSE_TARGET_SERVER_INSUFFICIENT_ERROR;
           if (TFS_SUCCESS == ret)
           {
             for (index = 0; index < choose_result_helper.get_array_index(); ++index)
             {
-              ServerCollect* server = *choose_result_helper.at(index);
-              assert(server);
-              results.push_back(server->id());
+              uint64_t server = *choose_result_helper.at(index);
+              results.push_back(server);
             }
           }
         }
@@ -651,21 +681,21 @@ namespace tfs
       int32_t ret = (INVALID_FAMILY_ID != family_id && results.get_array_size() > 0) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
-        std::pair<BlockCollect*, ServerCollect*> members[MAX_MARSHALLING_NUM];
-        common::ArrayHelper<std::pair<BlockCollect*, ServerCollect*> > helper(MAX_MARSHALLING_NUM, members);
-        ret = get_members(helper, family_id);
+        const int32_t DATA_MEMBER_NUM  = GET_DATA_MEMBER_NUM(family_aid_info);
+        const int32_t CHECK_MEMBER_NUM = GET_CHECK_MEMBER_NUM(family_aid_info);
+        const int32_t MEMBER_NUM = DATA_MEMBER_NUM + CHECK_MEMBER_NUM;
+        std::pair<BlockCollect*, ServerCollect*> members[MEMBER_NUM];
+        common::ArrayHelper<std::pair<BlockCollect*, ServerCollect*> > helper(MEMBER_NUM, members);
+        ret = get_members_(helper, family_id);
         if (TFS_SUCCESS == ret)
         {
-          const int32_t DATA_MEMBER_NUM  = GET_DATA_MEMBER_NUM(family_aid_info);
-          const int32_t CHECK_MEMBER_NUM = GET_CHECK_MEMBER_NUM(family_aid_info);
-          const int32_t MEMBER_NUM = DATA_MEMBER_NUM + CHECK_MEMBER_NUM;
           ret = helper.get_array_index() == MEMBER_NUM ? TFS_SUCCESS : EXIT_FAMILY_MEMBER_INFO_ERROR;
           if (TFS_SUCCESS == ret)
           {
             int64_t index = 0;
             ServerCollect* target = NULL;
-            ServerCollect* servers[SYSPARAM_NAMESERVER.max_replication_];
-            common::ArrayHelper<ServerCollect*> helper2(SYSPARAM_NAMESERVER.max_replication_, servers);
+            uint64_t servers[SYSPARAM_NAMESERVER.max_replication_];
+            common::ArrayHelper<uint64_t> helper2(SYSPARAM_NAMESERVER.max_replication_, servers);
             for (; index < DATA_MEMBER_NUM; ++index)
             {
               target = NULL;
@@ -673,7 +703,7 @@ namespace tfs
               if (NULL != item->first && NULL != item->second)
               {
                 helper2.clear();
-                helper2.push_back(item->second);
+                helper2.push_back(item->second->id());
                 ret = manager_.get_server_manager().choose_replicate_target_server(target, helper2);
                 if (TFS_SUCCESS == ret)
                   results.push_back(std::make_pair(target->id(), item->first->id()));
@@ -703,9 +733,10 @@ namespace tfs
         ret = manager_.get_task_manager().exist(family->get_family_id()) ? EXIT_FAMILY_EXISTED_IN_TASK_QUEUE_ERROR : TFS_SUCCESS;
         if (TFS_SUCCESS == ret)
         {
-          BlockCollect* blocks[MAX_MARSHALLING_NUM];
-          common::ArrayHelper<BlockCollect*> helper(MAX_MARSHALLING_NUM, blocks);
-          ret = get_members(helper, family->get_family_id());
+          const int32_t MEMBER_NUM = family->get_data_member_num() + family->get_check_member_num();
+          BlockCollect* blocks[MEMBER_NUM];
+          common::ArrayHelper<BlockCollect*> helper(MEMBER_NUM, blocks);
+          ret = get_members_(helper, family->get_family_id());
           if (TFS_SUCCESS == ret)
           {
             for (int64_t index = 0; index < helper.get_array_index(); ++index)
@@ -746,9 +777,9 @@ namespace tfs
 
     void FamilyManager::dump_marshalling_queue(const int32_t level, const char* format) const
     {
-      TBSYS_LOG(INFO, "marshalling_queue size: %d", marshalling_queue_.size());
       if (level <= TBSYS_LOGGER._level)
       {
+        RWLock::Lock lock(marshallin_queue_mutex_, READ_LOCKER);
         MARSHALLING_MAP_ITER iter = marshalling_queue_.begin();
         for (; iter != marshalling_queue_.end(); ++iter)
         {

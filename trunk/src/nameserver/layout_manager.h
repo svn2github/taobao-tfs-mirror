@@ -85,8 +85,11 @@ namespace tfs
 
       int update_relation(std::vector<uint32_t>& expires, ServerCollect* server,
           const std::set<common::BlockInfoExt>& blocks, const time_t now, const int8_t type);
-      bool build_relation(BlockCollect* block, ServerCollect* server, const time_t now, const bool set = false);
-      bool relieve_relation(BlockCollect* block, ServerCollect* server, const time_t now, const int8_t flag);
+      int build_relation(BlockCollect* block, ServerCollect* server, const time_t now, const bool set = false);
+      bool relieve_relation(BlockCollect* block, ServerCollect* server, const time_t now);
+      bool relieve_relation(BlockCollect* block, const uint64_t server, const time_t now);
+      bool relieve_relation(const uint32_t block, ServerCollect* server, const time_t now);
+      bool relieve_relation(const uint32_t block, const uint64_t server, const time_t now);
 
       int update_block_info(const common::BlockInfo& info, const uint64_t server, const time_t now, const bool addnew);
 
@@ -120,18 +123,18 @@ namespace tfs
       void check_all_server_report_block_();
       int touch_(bool& promote, const common::ArrayHelper<ServerCollect*>& servers, const time_t now);
 
-      int add_new_block_helper_write_log_(const uint32_t block_id, const common::ArrayHelper<ServerCollect*>& server, const time_t now);
-      int add_new_block_helper_send_msg_(const uint32_t block_id, const common::ArrayHelper<ServerCollect*>& servers);
-      int add_new_block_helper_build_relation_(BlockCollect* block, const common::ArrayHelper<ServerCollect*>& server, const time_t now);
+      int add_new_block_helper_write_log_(const uint32_t block_id, const common::ArrayHelper<uint64_t>& server, const time_t now);
+      int add_new_block_helper_send_msg_(const uint32_t block_id, const common::ArrayHelper<uint64_t>& servers);
+      int add_new_block_helper_build_relation_(BlockCollect* block, const common::ArrayHelper<uint64_t>& server, const time_t now);
       BlockCollect* add_new_block_(uint32_t& block_id, ServerCollect* server = NULL, const time_t now = common::Func::get_monotonic_time());
       BlockCollect* add_new_block_helper_create_by_id_(const uint32_t block_id, const time_t now);
       BlockCollect* add_new_block_helper_create_by_system_(uint32_t& block_id, ServerCollect* server, const time_t now);
 
       bool scan_replicate_queue_(int64_t& need, const time_t now);
       bool scan_reinstate_or_dissolve_queue_(int64_t& need, const time_t now);
-      bool scan_illegal_block_(common::ArrayHelper<BlockCollect*>& result, const int32_t count, const time_t now);
+      bool scan_illegal_block_(common::ArrayHelper<uint32_t>& result, const int32_t count, const time_t now);
       bool build_replicate_task_(int64_t& need, const BlockCollect* block, const time_t now);
-      bool build_compact_task_(const BlockCollect* block, const time_t now);
+      int build_compact_task_(const BlockCollect* block, const time_t now);
       bool build_balance_task_(int64_t& need, common::TfsSortedVector<ServerCollect*,ServerIdCompare>& targets,
           const ServerCollect* source, const BlockCollect* block, const time_t now);
       bool build_reinstate_task_(int64_t& need, const FamilyCollect* family,
@@ -139,7 +142,7 @@ namespace tfs
       bool build_dissolve_task_(int64_t& need, const FamilyCollect* family,
           const common::ArrayHelper<common::FamilyMemberInfo>& reinstate_members, const time_t now);
       bool build_redundant_(int64_t& need, const time_t now);
-      bool build_marshalling_(int64_t& need, const time_t now);
+      int build_marshalling_(int64_t& need, const time_t now);
       int64_t has_space_in_task_queue_() const;
 
       bool scan_block_(common::ArrayHelper<BlockCollect*>& results, int64_t& need, uint32_t& start,

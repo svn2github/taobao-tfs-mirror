@@ -489,7 +489,7 @@ namespace tfs
               {
                 ServerCollect* server = manager_.get_server_manager().get((*s_iter));
                 BlockCollect*  block  = manager_.get_block_manager().get((*iter));
-                if (!manager_.relieve_relation(block, server, now, BLOCK_COMPARE_SERVER_BY_ID))//id
+                if (!manager_.relieve_relation(block, server, now))//id
                 {
                   TBSYS_LOG(INFO, "relieve relation between block: %u and server: %s failed",
                       (*iter), CNetUtil::addrToString((*s_iter)).c_str());

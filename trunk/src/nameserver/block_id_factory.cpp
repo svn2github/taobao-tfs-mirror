@@ -165,6 +165,8 @@ namespace tfs
         }
         while (count < 3 && offset < common::INT_SIZE);
         ret = common::INT_SIZE == offset ? common::TFS_SUCCESS : common::TFS_ERROR;
+        if (common::TFS_SUCCESS == ret)
+          fsync(fd_);
       }
       return ret;
     }

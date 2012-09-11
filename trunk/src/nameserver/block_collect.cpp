@@ -28,16 +28,16 @@ namespace tfs
   {
     const int8_t BlockCollect::BLOCK_CREATE_FLAG_NO = 0;
     const int8_t BlockCollect::BLOCK_CREATE_FLAG_YES = 1;
-    const int8_t BlockCollect::VERSION_AGREED_MASK = 2;
     BlockCollect::BlockCollect(const uint32_t block_id, const time_t now):
       GCObject(now),
       family_id_(INVALID_FAMILY_ID),
+      server_size_(0),
       create_flag_(BLOCK_CREATE_FLAG_NO),
       in_replicate_queue_(BLOCK_IN_REPLICATE_QUEUE_NO)
     {
-      servers_ = new (std::nothrow)ServerCollect*[SYSPARAM_NAMESERVER.max_replication_];
+      servers_ = new (std::nothrow)uint64_t[SYSPARAM_NAMESERVER.max_replication_];
       assert(servers_);
-      memset(servers_, 0, sizeof(ServerCollect*) * SYSPARAM_NAMESERVER.max_replication_);
+      memset(servers_, 0, sizeof(uint64_t) * SYSPARAM_NAMESERVER.max_replication_);
       memset(&info_, 0, sizeof(info_));
       info_.block_id_ = block_id;
       info_.seq_no_ = 1;
@@ -45,7 +45,11 @@ namespace tfs
 
     BlockCollect::BlockCollect(const uint32_t block_id):
       GCObject(0),
-      servers_(NULL)
+      servers_(NULL),
+      family_id_(INVALID_FAMILY_ID),
+      server_size_(0),
+      create_flag_(BLOCK_CREATE_FLAG_NO),
+      in_replicate_queue_(BLOCK_IN_REPLICATE_QUEUE_NO)
     {
       info_.block_id_ = block_id;
       //for query
@@ -56,240 +60,188 @@ namespace tfs
       tbsys::gDeleteA(servers_);
     }
 
-    bool BlockCollect::add(bool& writable, bool& master, ServerCollect*& invalid_server, const ServerCollect* server)
+    int BlockCollect::add(bool& writable, bool& master, const uint64_t server, const time_t now)
     {
       master = false;
       writable  = false;
-      invalid_server = NULL;
-      bool complete = false;
-      bool ret = server != NULL;
-      if (ret)
+      int32_t ret = (INVALID_SERVER_ID != server) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+      if (TFS_SUCCESS == ret)
       {
+        update_last_time(now);
         dump(TBSYS_LOG_LEVEL(DEBUG));
         writable = !is_full();
-        ServerCollect** result = get_(server);//get server by pointer
-        if (NULL == result)//not found
+        ret = exist(server) ? EXIT_SERVER_EXISTED : TFS_SUCCESS;
+        if (TFS_SUCCESS == ret)
         {
-          result = get_(server, false);//get server by id
-          //根据ID能查询到Server结构，说明这个Server才下线不久又上线了，Block与这个Server的关系
-          //还没有解除，有可能是遗漏了，需要等待GC进回调清理,这里我们可以解简单的先进行清理
-          if (NULL != result)
-          {
-            invalid_server = *result;
-            *result = NULL;
-          }
           int8_t index = 0;
+          bool   complete = false;
           int8_t random_index = random() % SYSPARAM_NAMESERVER.max_replication_;
           TBSYS_LOG(DEBUG, "random_index : %d, servers_size: %d", random_index, get_servers_size());
-          for (int8_t i = 0; i < SYSPARAM_NAMESERVER.max_replication_; i++, ++random_index)
+          for (int8_t i = 0; index < SYSPARAM_NAMESERVER.max_replication_ && !complete; ++i, ++random_index)
           {
             index = random_index % SYSPARAM_NAMESERVER.max_replication_;
-            if (servers_[index] == NULL)
+            if (INVALID_SERVER_ID == servers_[index])
             {
               complete = true;
-              servers_[index] = const_cast<ServerCollect*>(server);
-              break;
+              servers_[index] = server;
             }
           }
+          ret = complete ? TFS_SUCCESS : EXIT_INSERT_SERVER_ERROR;
+          if (TFS_SUCCESS == ret)
+          {
+            ++server_size_;
+            master = is_master(server);
+          }
         }
-        if (complete)
-          master = is_master(server);
-        else
-          ret = false;
       }
       return ret;
     }
 
-    bool BlockCollect::remove(const ServerCollect* server, const time_t now, const int8_t flag)
+    int BlockCollect::remove(const uint64_t server, const time_t now)
     {
       update_last_time(now);
-      if (NULL != server)
+      int32_t ret = ((NULL != servers_) && (INVALID_SERVER_ID != server) && (server_size_ > 0)) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+      if (TFS_SUCCESS == ret)
       {
-        bool ret = false;
-        ServerCollect* current = NULL;
-        bool comp_id_result = false;
-        bool comp_pointer_result = false;
-        for (int8_t i = 0; i < SYSPARAM_NAMESERVER.max_replication_; ++i)
+        ret = EXIT_DATASERVER_NOT_FOUND;
+        for (int8_t index = 0; index < SYSPARAM_NAMESERVER.max_replication_ && TFS_SUCCESS != ret; ++index)
         {
-          current = servers_[i];
-          comp_id_result = ((NULL != current) && (current->id() == server->id()));
-          comp_pointer_result = (current == server);
-          if (BLOCK_COMPARE_SERVER_BY_ID == flag)
-            ret = comp_id_result;
-          else if (BLOCK_COMPARE_SERVER_BY_POINTER == flag)
-            ret = comp_pointer_result;
-          else if (BLOCK_COMPARE_SERVER_BY_ID_POINTER == flag)
-            ret = (comp_id_result && comp_pointer_result);
-          else
-            ret = false;
-          if (NULL != current && ret)
-            servers_[i] = NULL;
+          ret = servers_[index] == server ? TFS_SUCCESS : EXIT_DATASERVER_NOT_FOUND;
+          if (TFS_SUCCESS == ret)
+          {
+            --server_size_;
+            servers_[index] = INVALID_SERVER_ID;
+          }
         }
-      }
-      return true;
-    }
-
-    bool BlockCollect::exist(const ServerCollect* const server, const bool pointer) const
-    {
-      bool ret = NULL != server;
-      if (ret)
-      {
-        ServerCollect** result = get_(server, pointer);
-        ret = ((NULL != result) && (NULL != *result));
       }
       return ret;
     }
 
-    bool BlockCollect::is_master(const ServerCollect* const server) const
+    bool BlockCollect::exist(const uint64_t server) const
     {
-      ServerCollect* first = servers_[0];
-      return ((NULL != server) && (NULL != first)) ? server->id() == first->id() : false;
-    }
-
-    bool BlockCollect::is_writable() const
-    {
-      //TBSYS_LOG(INFO, "is_full: %s, size: %d", is_full() ? "true" : "false", get_servers_size());
-      return ((!is_full()) && (get_servers_size() >= SYSPARAM_NAMESERVER.max_replication_));
-    }
-
-    bool BlockCollect::is_creating() const
-    {
-      return BLOCK_CREATE_FLAG_YES == create_flag_;
-    }
-
-    bool BlockCollect::in_replicate_queue() const
-    {
-      return BLOCK_IN_REPLICATE_QUEUE_YES == in_replicate_queue_;
-    }
-
-    void BlockCollect::get_servers(ArrayHelper<ServerCollect*>& servers) const
-    {
-      ServerCollect* pserver = NULL;
-      for (int8_t i = 0; i < SYSPARAM_NAMESERVER.max_replication_; ++i)
+      bool exist = (NULL != servers_ && INVALID_SERVER_ID != server && server_size_ > 0);
+      if (exist)
       {
-        pserver = servers_[i];
-        if (NULL != pserver && pserver->is_alive())
-          servers.push_back(pserver);
+        exist = false;
+        for (int8_t index = 0; index < SYSPARAM_NAMESERVER.max_replication_ && !exist; ++index)
+        {
+          exist = servers_[index] == server;
+        }
+      }
+      return exist;
+    }
+
+    void BlockCollect::get_servers(ArrayHelper<uint64_t>& servers) const
+    {
+      if ((servers.get_array_size() >= SYSPARAM_NAMESERVER.max_replication_)
+         && (server_size_ > 0) && (NULL != servers_))
+      {
+        uint64_t server = INVALID_SERVER_ID;
+        for (int8_t index = 0; index < SYSPARAM_NAMESERVER.max_replication_; ++index)
+        {
+          server = servers_[index];
+          if (INVALID_SERVER_ID != server)
+            servers.push_back(server);
+        }
       }
     }
 
     void BlockCollect::get_servers(std::vector<uint64_t>& servers) const
     {
-      ServerCollect* pserver = NULL;
-      for (int8_t i = 0; i < SYSPARAM_NAMESERVER.max_replication_; ++i)
+      if ((server_size_ > 0) && (NULL != servers_))
       {
-        pserver = servers_[i];
-        if (NULL != pserver && pserver->is_alive())
-          servers.push_back(pserver->id());
+        uint64_t server = INVALID_SERVER_ID;
+        for (int8_t index = 0; index < SYSPARAM_NAMESERVER.max_replication_; ++index)
+        {
+          server = servers_[index];
+          if (INVALID_SERVER_ID != server)
+            servers.push_back(server);
+        }
       }
     }
 
-    void BlockCollect::get_servers(std::vector<ServerCollect*>& servers) const
-    {
-      ServerCollect* pserver = NULL;
-      for (int8_t i = 0; i < SYSPARAM_NAMESERVER.max_replication_; ++i)
-      {
-        pserver = servers_[i];
-        if (NULL != pserver && pserver->is_alive())
-          servers.push_back(pserver);
-      }
-    }
-
-    uint64_t BlockCollect::get_first_server() const
+    uint64_t BlockCollect::get_server(const int8_t index) const
     {
       uint64_t server = INVALID_SERVER_ID;
-      for (int8_t i = 0; i < SYSPARAM_NAMESERVER.max_replication_; ++i)
+      if (NULL != servers_ && server_size_ > 0 && index > 0 && index < SYSPARAM_NAMESERVER.max_replication_)
       {
-        ServerCollect* pserver = servers_[i];
-        if (NULL != pserver && pserver->is_alive())
-        {
-          server = pserver->id();
-          break;
-        }
+        for (int8_t i = index; i < SYSPARAM_NAMESERVER.max_replication_ && INVALID_SERVER_ID == server; ++i)
+          server = servers_[i];
       }
       return server;
     }
 
-    bool BlockCollect::check_version(LayoutManager& manager, common::ArrayHelper<ServerCollect*>& removes,
-        bool& expire_self, common::ArrayHelper<ServerCollect*>& other_expires, const ServerCollect* server,
+    int BlockCollect::check_version(LayoutManager& manager, common::ArrayHelper<uint64_t>& removes,
+        bool& expire_self, common::ArrayHelper<uint64_t>& other_expires, const uint64_t server,
         const int8_t role, const bool isnew, const common::BlockInfo& info, const time_t now)
     {
       expire_self = false;
-      bool ret = NULL != server && info_.block_id_ == info.block_id_;
-      if (ret)
+      int32_t ret = (INVALID_SERVER_ID != server && info_.block_id_ == id() && (NULL != servers_)
+                     && removes.get_array_size() > 0 && other_expires.get_array_size() > 0) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+      if (TFS_SUCCESS == ret)
       {
-        ServerCollect** result = get_(server);
-        ret = NULL == result;
-        if (ret)
+        ret = exist(server) ? EXIT_SERVER_EXISTED : TFS_SUCCESS;
+        if (TFS_SUCCESS == ret)
         {
-          result = get_(server, false);
-          if (NULL != result)//这里处理方式和add一样
-          {
-            removes.push_back(*result);
-            *result = NULL;
-          }
           //check block version
-          ret = info.version_ >= info_.version_;
-          if (!ret)
+          ret = (info.version_ >= info_.version_) ? TFS_SUCCESS : EXIT_BLOCK_VERSION_ERROR;
+          if (TFS_SUCCESS != ret)
           {
-            expire_self = (role == NS_ROLE_MASTER);//i'm master, we're going to expire blocks
+            if (server_size_ > 0)
+              expire_self = (role == NS_ROLE_MASTER);//i'm master, we're going to expire blocks
+            else
+              ret = TFS_SUCCESS;
           }
-          else
+          if (TFS_SUCCESS == ret)
           {
-            info_ = info;
-            int8_t size = get_servers_size();
             if (info.version_ == info_.version_)//version argeed
             {
-              if (size >= SYSPARAM_NAMESERVER.max_replication_)
+              if (server_size_ >= SYSPARAM_NAMESERVER.max_replication_)
               {
-                ServerCollect* servers[SYSPARAM_NAMESERVER.max_replication_ + 1];
-                ArrayHelper<ServerCollect*> helper(SYSPARAM_NAMESERVER.max_replication_ + 1, servers);
-
+                uint64_t servers[SYSPARAM_NAMESERVER.max_replication_ + 1];
+                ArrayHelper<uint64_t> helper(SYSPARAM_NAMESERVER.max_replication_ + 1, servers);
                 get_servers(helper);
-                helper.push_back(const_cast<ServerCollect*>(server));
+                helper.push_back(server);
                 ServerCollect* result = NULL;
                 manager.get_server_manager().choose_excess_backup_server(result, helper);
-                //这里不可能出现选不出的情况，也就是reuslt始终不会为NULL
-                if (server == result)
+                ret = server == result->id() ? EXIT_EXPIRE_SELF_ERROR : TFS_SUCCESS;
+                if (TFS_SUCCESS != ret)
                 {
-                  ret = false;
                   expire_self = (role == NS_ROLE_MASTER);//i'm master, we're going to expire blocks
                 }
                 else
                 {
-                  remove(result, now, BLOCK_COMPARE_SERVER_BY_ID_POINTER);//从当前拥有列表中删除
-                  removes.push_back(result);//解除与dataserver的关系
+                  remove(result->id(), now);
+                  removes.push_back(result->id());//解除与dataserver的关系
                   if (role == NS_ROLE_MASTER)
-                    other_expires.push_back(result);
+                    other_expires.push_back(result->id());
                 }
               }
             }
-            else if (info.version_ > info_.version_)
+
+            if (info.version_ > info_.version_)
             {
-              int32_t old_version = info_.version_;
+              info_ = info;
               if (!isnew)//release dataserver
               {
                 TBSYS_LOG(INFO, "block: %u in dataserver: %s version error %d:%d,replace ns version, current dataserver size: %u",
-                    info.block_id_, tbsys::CNetUtil::addrToString(server->id()).c_str(),
-                    old_version, info.version_, size);
+                    info.block_id_, tbsys::CNetUtil::addrToString(server).c_str(),
+                    info_.version_, info.version_, server_size_);
                 if (role == NS_ROLE_MASTER)
                 {
                   update_last_time(now);
-                  ServerCollect* pserver = NULL;
-                  for (int8_t i = 0; i < SYSPARAM_NAMESERVER.max_replication_; ++i)
-                  {
-                    pserver = servers_[i];
-                    servers_[i] = NULL;
-                    if (NULL != pserver)
-                    {
-                      TBSYS_LOG(INFO, "release relation dataserver: %s, block: %u",
-                          tbsys::CNetUtil::addrToString(pserver->id()).c_str(), info_.block_id_);
-                      other_expires.push_back(pserver);
-                      removes.push_back(pserver);
-                    }
-                  }
+                  cleanup(removes, other_expires);
                 }
               }
+            }
+
+            if (info.version_ < info_.version_)
+            {
+              ret = server_size_ <= 0 ? TFS_SUCCESS : EXIT_EXPIRE_SELF_ERROR;
+              if (TFS_SUCCESS != ret)
+                expire_self = (role == NS_ROLE_MASTER);//i'm master, we're going to expire blocks
+              if (TFS_SUCCESS == ret)
+                info_ = info;
             }
           }
         }
@@ -306,8 +258,7 @@ namespace tfs
       PlanPriority priority = PLAN_PRIORITY_NONE;
       if (BLOCK_CREATE_FLAG_YES != create_flag_ && !is_in_family())
       {
-        int32_t size = get_servers_size();
-        if (size <= 0)
+        if (server_size_ <= 0)
         {
           TBSYS_LOG(WARN, "block: %u has been lost, do not replicate", info_.block_id_);
         }
@@ -315,9 +266,9 @@ namespace tfs
         {
           if (last_update_time_ + SYSPARAM_NAMESERVER.replicate_wait_time_ <= now)
           {
-            if (size < SYSPARAM_NAMESERVER.max_replication_)
+            if (server_size_ < SYSPARAM_NAMESERVER.max_replication_)
               priority = PLAN_PRIORITY_NORMAL;
-            if (1 == size && SYSPARAM_NAMESERVER.max_replication_ > 1)
+            if (1 == server_size_ && SYSPARAM_NAMESERVER.max_replication_ > 1)
               priority = PLAN_PRIORITY_EMERGENCY;
           }
         }
@@ -334,8 +285,7 @@ namespace tfs
       bool bret = false;
       if (BLOCK_CREATE_FLAG_YES != create_flag_ && !is_in_family())
       {
-        int32_t size = get_servers_size();
-        if ((size == SYSPARAM_NAMESERVER.max_replication_) && is_full())
+        if ((server_size_ == SYSPARAM_NAMESERVER.max_replication_) && is_full())
         {
           if ((info_.file_count_ > 0)
               && (info_.size_ > 0)
@@ -358,7 +308,7 @@ namespace tfs
 
     bool BlockCollect::check_balance() const
     {
-      return get_servers_size() >= SYSPARAM_NAMESERVER.max_replication_;
+      return server_size_ >= SYSPARAM_NAMESERVER.max_replication_;
     }
 
     bool BlockCollect::check_marshalling() const
@@ -366,7 +316,7 @@ namespace tfs
       bool ret = (BLOCK_CREATE_FLAG_YES != create_flag_ && !is_in_family());
       if (ret)
       {
-        ret = (get_servers_size() >= SYSPARAM_NAMESERVER.max_replication_  && is_full());
+        ret = (server_size_ >= SYSPARAM_NAMESERVER.max_replication_  && is_full() && size() <= MAX_MARSHALLING_BLOCK_SIZE_LIMIT);
         if (ret)
         {
           int32_t delete_file_num_ratio = get_delete_file_num_ratio();
@@ -383,7 +333,7 @@ namespace tfs
       bool ret = (BLOCK_CREATE_FLAG_YES != create_flag_ && is_in_family());
       if (ret)
       {
-        ret = ((get_servers_size() <= 0) && (last_update_time_ + SYSPARAM_NAMESERVER.replicate_wait_time_ <= now));
+        ret = ((server_size_ <= 0) && (last_update_time_ + SYSPARAM_NAMESERVER.replicate_wait_time_ <= now));
       }
       return ret;
     }
@@ -400,14 +350,12 @@ namespace tfs
         }
         if (child_type & SSM_CHILD_BLOCK_TYPE_SERVER)
         {
-          param.data_.writeInt8(get_servers_size());
-          for (int8_t i = 0; i < common::SYSPARAM_NAMESERVER.max_replication_; ++i)
+          param.data_.writeInt8(server_size_);
+          for (int8_t index = 0; index < SYSPARAM_NAMESERVER.max_replication_; ++index)
           {
-            ServerCollect* server = servers_[i];
-            if (NULL != server)
-            {
-              param.data_.writeInt64(server->id());
-            }
+            uint64_t server = servers_[index];
+            if (INVALID_SERVER_ID != server)
+              param.data_.writeInt64(server);
           }
         }
         param.data_.writeInt64(family_id_);
@@ -420,13 +368,13 @@ namespace tfs
       if (level >= TBSYS_LOGGER._level)
       {
         std::string str;
-        ServerCollect* server = NULL;
-        for (int8_t i = 0; i < common::SYSPARAM_NAMESERVER.max_replication_; ++i)
+        uint64_t server;
+        for (int8_t index = 0; index < common::SYSPARAM_NAMESERVER.max_replication_; ++index)
         {
-          server = servers_[i];
-          if (NULL != server)
+          server = servers_[index];
+          if (INVALID_SERVER_ID != server)
           {
-            str += CNetUtil::addrToString(servers_[i]->id());
+            str += CNetUtil::addrToString(server);
             str += "/";
           }
         }
@@ -440,64 +388,40 @@ namespace tfs
 
     void BlockCollect::callback(LayoutManager& manager)
     {
-      clear(manager,Func::get_monotonic_time());
-    }
-
-    bool BlockCollect::clear(LayoutManager& manager, const time_t now)
-    {
-      ServerCollect* server = NULL;
-      for (int8_t i = 0; i < common::SYSPARAM_NAMESERVER.max_replication_; ++i)
+      if (NULL != servers_)
       {
-        server = servers_[i];
-        if (NULL != server)
-          manager.relieve_relation(this, server, now, BLOCK_COMPARE_SERVER_BY_ID);
-      }
-      return true;
-    }
-
-    void BlockCollect::cleanup()
-    {
-      for (int8_t i = 0; i < common::SYSPARAM_NAMESERVER.max_replication_; ++i)
-      {
-        servers_[i] = NULL;
-      }
-    }
-
-    int8_t BlockCollect::get_servers_size() const
-    {
-      int8_t size = 0;
-      ServerCollect* server = NULL;
-      for (int8_t i = 0; i < common::SYSPARAM_NAMESERVER.max_replication_; ++i)
-      {
-        server = servers_[i];
-        if (NULL != server && server->is_alive())
-          ++size;
-      }
-      return size;
-    }
-
-    ServerCollect** BlockCollect::get_(const ServerCollect* const server, const bool pointer) const
-    {
-      ServerCollect** result = NULL;
-      if (NULL != server)
-      {
-        ServerCollect* current = NULL;
-        for (int8_t i = 0; i < SYSPARAM_NAMESERVER.max_replication_ && NULL == result; ++i)
+        uint64_t servers[SYSPARAM_NAMESERVER.max_replication_];
+        ArrayHelper<uint64_t> helper(SYSPARAM_NAMESERVER.max_replication_, servers);
+        uint64_t other[SYSPARAM_NAMESERVER.max_replication_];
+        ArrayHelper<uint64_t> other_helper(SYSPARAM_NAMESERVER.max_replication_, other);
+        manager.get_block_manager().get_mutex_(id()).wrlock();
+        cleanup(helper, other_helper);
+        manager.get_block_manager().get_mutex_(id()).unlock();
+        for (int64_t index = 0; index < helper.get_array_index(); ++index)
         {
-          current = servers_[i];
-          if (pointer)
+          uint64_t server = *helper.at(index);
+          if (INVALID_SERVER_ID != server)
+            manager.get_server_manager().relieve_relation(server, id());
+        }
+      }
+    }
+
+    void BlockCollect::cleanup(ArrayHelper<uint64_t>& removes, ArrayHelper<uint64_t>& expires)
+    {
+      if ((NULL != servers_ && server_size_ > 0))
+      {
+        server_size_ = 0;
+        for (int8_t index = 0; index < common::SYSPARAM_NAMESERVER.max_replication_; ++index)
+        {
+          uint64_t server = servers_[index];
+          servers_[index] = INVALID_SERVER_ID;
+          if (INVALID_SERVER_ID != server)
           {
-            if (NULL != current && current == server)
-              result = &servers_[i];
-          }
-          else
-          {
-            if (NULL != current && current->id() == server->id())
-              result = &servers_[i];
+            removes.push_back(server);
+            expires.push_back(server);
           }
         }
       }
-      return result;
     }
   }/** end namesapce nameserver **/
 }/** end namesapce tfs **/

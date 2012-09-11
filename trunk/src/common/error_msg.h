@@ -126,6 +126,12 @@ namespace tfs
     const int32_t EXIT_RELIEVE_RELATION_ERROR = -5045;
     const int32_t EXIT_FAMILY_EXISTED_IN_TASK_QUEUE_ERROR = -5046;
     const int32_t EXIT_SERVER_ID_INVALID_ERROR = -5047;
+    const int32_t EXIT_SERVER_EXISTED = -5048;
+    const int32_t EXIT_INSERT_SERVER_ERROR = -5049;
+    const int32_t EXIT_BLOCK_FULL = -5050;
+    const int32_t EXIT_BLOCK_VERSION_ERROR = -5051;
+    const int32_t EXIT_EXPIRE_SELF_ERROR = -5052;
+    const int32_t EXIT_FAMILY_MEMBER_NUM_ERROR = -5053;
 
     const int32_t EXIT_WRITE_OFFSET_ERROR = -8001; // write offset error
     const int32_t EXIT_READ_OFFSET_ERROR = -8002; // read offset error

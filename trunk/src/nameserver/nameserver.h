@@ -31,22 +31,6 @@ namespace tfs
   namespace nameserver
   {
     class NameServer;
-    /*class OwnerCheckTimerTask: public tbutil::TimerTask
-    {
-    public:
-      explicit OwnerCheckTimerTask(NameServer& manager);
-      virtual ~OwnerCheckTimerTask();
-      virtual void runTimerTask();
-    private:
-      DISALLOW_COPY_AND_ASSIGN( OwnerCheckTimerTask);
-      NameServer& manager_;
-      const int64_t MAX_LOOP_TIME;
-      int64_t max_owner_check_time_;
-      int64_t owner_check_time_;
-      int32_t main_task_queue_size_;
-    };
-    typedef tbutil::Handle<OwnerCheckTimerTask> OwnerCheckTimerTaskPtr;*/
-
     class NameServer: public common::BaseService
     {
     public:
@@ -117,6 +101,7 @@ namespace tfs
       int client_control_cmd(common::BasePacket* msg);
       int do_master_msg_helper(common::BasePacket* packet);
       int do_slave_msg_helper(common::BasePacket* packet);
+      int get_family_info(common::BasePacket* msg);
 
       int initialize_ns_global_info();
     };

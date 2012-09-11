@@ -49,6 +49,7 @@
 #include "erasure_code_message.h"
 #include "dataserver_task_message.h"
 #include "resolve_block_version_conflict_message.h"
+#include "family_info_message.h"
 
 namespace tfs
 {

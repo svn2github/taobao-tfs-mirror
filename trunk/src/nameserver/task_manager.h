@@ -78,7 +78,7 @@ namespace tfs
       public:
       explicit TaskManager(LayoutManager& manager);
       virtual ~TaskManager();
-      int add(const uint32_t id, const common::ArrayHelper<ServerCollect*>& servers,
+      int add(const uint32_t id, const common::ArrayHelper<uint64_t>& servers,
           const common::PlanType type, const time_t now);
       int add(const int64_t family_id, const int32_t family_aid_info, const common::PlanType type,
           const int32_t member_num, const common::FamilyMemberInfo* members, const time_t now);
@@ -92,13 +92,13 @@ namespace tfs
       bool exist(const uint32_t block) const;
       bool exist(const uint64_t server) const;
       bool exist(const int64_t  family_id) const;
-      bool exist(const common::ArrayHelper<ServerCollect*>& servers) const;
+      bool exist(const common::ArrayHelper<uint64_t>& servers) const;
       bool get_exist_servers(common::ArrayHelper<ServerCollect*>& result, const common::ArrayHelper<ServerCollect*>& servers) const;
       bool has_space_do_task_in_machine(const uint64_t server, const bool target) const;
       bool has_space_do_task_in_machine(const uint64_t server) const;
       int remove_block_from_dataserver(const uint64_t server, const uint32_t block, const int64_t seqno, const time_t now);
       int run();
-      bool handle(common::BasePacket* msg, const int64_t seqno);
+      int handle(common::BasePacket* msg, const int64_t seqno);
       int timeout(const time_t now);
       bool is_target(const int32_t index);
       bool is_target(const common::FamilyMemberInfo& info, const int32_t index,
@@ -117,7 +117,7 @@ namespace tfs
       int64_t size_() const;
       bool is_insert_block_(const int32_t type, const int32_t member_num, const int32_t index) const;
       bool is_insert_server_(const int32_t type, const int32_t data_member_num, const int32_t index) const;
-      Task* generation_(const uint32_t id, const common::ArrayHelper<ServerCollect*>& servers,
+      Task* generation_(const uint32_t id, const common::ArrayHelper<uint64_t>& servers,
           const common::PlanType type);
       Task* generation_(const int64_t family_id, const int32_t family_aid_info, const common::PlanType type,
           const int32_t member_num, const common::FamilyMemberInfo* members);
