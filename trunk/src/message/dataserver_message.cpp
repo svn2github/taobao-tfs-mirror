@@ -168,8 +168,8 @@ namespace tfs
 
     ReportBlocksToNsRequestMessage::ReportBlocksToNsRequestMessage():
       server_(common::INVALID_SERVER_ID),
-      flag_(common::REPORT_BLOCK_NORMAL),
-      //flag_(common::REPORT_BLOCK_EXT),
+      // flag_(common::REPORT_BLOCK_NORMAL),
+      flag_(common::REPORT_BLOCK_EXT),
       type_(common::REPORT_BLOCK_TYPE_ALL)
     {
       _packetHeader._pcode = common::REQ_REPORT_BLOCKS_TO_NS_MESSAGE;

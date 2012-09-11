@@ -41,7 +41,8 @@ namespace tfs
         * @param dn: data numbers
         * @param pn: parity numbers
         * @param erased: which disk is erased
-        *        only used on decode, lenth: dn + pn
+        *        only used on decode, length: dn + pn
+        *        alive: 0, dead: 1, not used: -1
         * @return 0 on succss
         */
         int config(const int dn, const int pn, int* erased = NULL);
@@ -97,14 +98,14 @@ namespace tfs
       private:
         DISALLOW_COPY_AND_ASSIGN(ErasureCode);
 
-       int dn_;                      // data numbers
-        int pn_;                      // parity numbers
-        int* matrix_;                 // encode matrix
-        int* de_matrix_;              // decode matrix
-        char* data_[EC_DATA_MAX];     // data binding
-        int size_[EC_DATA_MAX];       // size of each stripe
-        int dm_ids_[EC_DATA_MAX];     // alive disks
-        int erased_[EC_DATA_MAX];     // erased disk byte map
+        int dn_;                                      // data numbers
+        int pn_;                                      // parity numbers
+        int* matrix_;                                 // encode matrix
+        int* de_matrix_;                              // decode matrix
+        char* data_[common::MAX_MARSHALLING_NUM];     // data binding
+        int size_[common::MAX_MARSHALLING_NUM];       // size of each stripe
+        int dm_ids_[common::MAX_MARSHALLING_NUM];     // alive disks
+        int erased_[common::MAX_MARSHALLING_NUM];     // erased disk byte map
     };
   }
 }

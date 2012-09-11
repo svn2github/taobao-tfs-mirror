@@ -86,6 +86,29 @@ namespace tfs
         int8_t flag_;
     };
 
+    class DegradeReadDataMessage: public ReadDataMessage
+    {
+      public:
+        DegradeReadDataMessage();
+        virtual ~DegradeReadDataMessage();
+        virtual int serialize(common::Stream& output) const ;
+        virtual int deserialize(common::Stream& input);
+        virtual int64_t length() const;
+
+        common::FamilyMemberInfoExt* get_family_info()
+        {
+          return &family_info_;
+        }
+
+        void set_family_info(const common::FamilyMemberInfoExt& family_info)
+        {
+          family_info_ = family_info;
+        }
+
+      protected:
+        common::FamilyMemberInfoExt family_info_;
+    };
+
     class RespReadDataMessage: public common::BasePacket
     {
       public:
@@ -96,9 +119,18 @@ namespace tfs
         virtual int64_t length() const;
 
         char* alloc_data(const int32_t len);
-        inline void set_length(const int32_t len) { length_ = len;}
         inline char* get_data() const { return data_;}
         inline int32_t get_length() const { return length_;}
+        inline void set_length(const int32_t len)
+        {
+          if (length_ <= 0 && alloc_ && data_)
+          {
+            ::free(data_);
+            data_ = NULL;
+            alloc_ = false;
+          }
+          length_ = len;
+        }
       protected:
         char* data_;
         int32_t length_;

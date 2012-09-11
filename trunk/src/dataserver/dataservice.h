@@ -127,6 +127,7 @@ namespace tfs
         int read_raw_index(message::ReadRawIndexMessage* message);
 
         int read_data(message::ReadDataMessage* message);
+        int read_data_degrade(message::DegradeReadDataMessage* message);
         int read_data_extra(message::ReadDataMessageV2* message, int32_t version);
         int read_raw_data(message::ReadRawDataMessage* message);
         int read_file_info(message::FileInfoMessage* message);
@@ -238,7 +239,7 @@ namespace tfs
         uint64_t hb_ip_port_[2];
         uint64_t ns_ip_port_; //nameserver ip port;
 
-        CheckBlock* check_block_;  // check
+        CheckBlock check_block_;  // check
 #if defined(TFS_GTEST)
       public:
 #else

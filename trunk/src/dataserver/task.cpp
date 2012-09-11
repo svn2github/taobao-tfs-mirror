@@ -978,19 +978,15 @@ namespace tfs
     int MarshallingTask::do_marshalling()
     {
       int ret = TFS_SUCCESS;
-      int32_t data_num = GET_DATA_MEMBER_NUM(family_aid_info_);
-      int32_t check_num = GET_CHECK_MEMBER_NUM(family_aid_info_);
+      const int32_t data_num = GET_DATA_MEMBER_NUM(family_aid_info_);
+      const int32_t check_num = GET_CHECK_MEMBER_NUM(family_aid_info_);
+      const int32_t member_num = data_num + check_num;
 
-      ErasureCode encoder;
-      int32_t encode_total_len = -1;
-      int32_t encode_offset = 0;
-      int32_t encode_len = 0;
-      int32_t block_len[EC_DATA_MAX];
-      char* data[EC_DATA_MAX];
-      char* index_data[EC_DATA_MAX];
-      memset(block_len, 0, EC_DATA_MAX * sizeof(int32_t));
-      memset(data, 0, EC_DATA_MAX * sizeof(char*));
-      memset(index_data, 0, EC_DATA_MAX * sizeof(char*));
+      // check if args valid
+      if (data_num > MAX_DATA_MEMBER_NUM || check_num > MAX_CHECK_MEMBER_NUM)
+      {
+        return EXIT_INVALID_ARGU_ERROR;
+      }
 
       // check if all data ok
       int normal_count = 0;
@@ -1009,18 +1005,29 @@ namespace tfs
         return EXIT_NO_ENOUGH_DATA;
       }
 
+      ErasureCode encoder;
+      int32_t encode_total_len = -1;
+      int32_t encode_offset = 0;
+      int32_t encode_len = 0;
+      int32_t block_len[member_num];
+      char* data[member_num];
+      char* index_data[member_num];
+      memset(block_len, 0, member_num * sizeof(int32_t));
+      memset(data, 0, member_num * sizeof(char*));
+      memset(index_data, 0, member_num * sizeof(char*));
+
       // config encoder parameter, alloc buffer
       if (TFS_SUCCESS == ret)
       {
         ret = encoder.config(data_num, check_num);
         if (TFS_SUCCESS == ret)
         {
-          for (int32_t i = 0; i < data_num + check_num; i++)
+          for (int32_t i = 0; i < member_num; i++)
           {
             data[i] = (char*)malloc(MAX_READ_SIZE * sizeof(char));
             assert(NULL != data[i]);
           }
-          encoder.bind(data, data_num + check_num, MAX_READ_SIZE);
+          encoder.bind(data, member_num, MAX_READ_SIZE);
         }
       }
 
@@ -1082,7 +1089,7 @@ namespace tfs
           }
 
           // write data to check node
-          for (int32_t i = data_num; i < data_num + check_num; i++)
+          for (int32_t i = data_num; i < member_num; i++)
           {
             uint64_t server_id = family_members_[i].server_;
             uint32_t block_id = family_members_[i].block_;
@@ -1158,7 +1165,7 @@ namespace tfs
         }
       }
 
-      for (int32_t i = 0; i < data_num + check_num; i++)
+      for (int32_t i = 0; i < member_num; i++)
       {
         tbsys::gDelete(data[i]);
         tbsys::gDelete(index_data[i]);
@@ -1189,25 +1196,32 @@ namespace tfs
     int ReinstateTask::do_reinstate()
     {
       int ret = TFS_SUCCESS;
-      int32_t data_num = GET_DATA_MEMBER_NUM(family_aid_info_);
-      int32_t check_num = GET_CHECK_MEMBER_NUM(family_aid_info_);
+      const int32_t data_num = GET_DATA_MEMBER_NUM(family_aid_info_);
+      const int32_t check_num = GET_CHECK_MEMBER_NUM(family_aid_info_);
+      const int32_t member_num = data_num + check_num;
+
+      // check if args valid
+      if (data_num > MAX_DATA_MEMBER_NUM || check_num > MAX_CHECK_MEMBER_NUM)
+      {
+        return EXIT_INVALID_ARGU_ERROR;
+      }
 
       ErasureCode decoder;
       int32_t decode_total_len = -1;
       int32_t decode_offset = 0;
       int32_t decode_len = 0;
-      int32_t block_len[EC_DATA_MAX];
-      char* data[EC_DATA_MAX];
-      char* index_data[EC_DATA_MAX];
-      int erased[EC_DATA_MAX];
-      memset(block_len, 0, EC_DATA_MAX * sizeof(int32_t));
-      memset(data, 0, EC_DATA_MAX * sizeof(char*));
-      memset(index_data, 0, EC_DATA_MAX * sizeof(char*));
-      memset(erased, 0, EC_DATA_MAX * sizeof(int));
+      int32_t block_len[member_num];
+      char* data[member_num];
+      char* index_data[member_num];
+      int erased[member_num];
+      memset(block_len, 0, member_num * sizeof(int32_t));
+      memset(data, 0, member_num * sizeof(char*));
+      memset(index_data, 0, member_num * sizeof(char*));
+      memset(erased, 0, member_num * sizeof(int));
 
       bool need_recovery = false;
       int normal_count = 0;
-      for (int32_t i = 0; i < data_num + check_num; i++)
+      for (int32_t i = 0; i < member_num; i++)
       {
         // just need data_num nodes to recovery
         if (family_members_[i].status_ == FAMILY_MEMBER_STATUS_NORMAL)
@@ -1216,19 +1230,16 @@ namespace tfs
           {
             erased[i] = 0;  // alive
             normal_count++;
-            TBSYS_LOG(DEBUG, "node %d selected for recovery", i);
           }
           else
           {
             erased[i] = -1; // normal but not used
-            TBSYS_LOG(DEBUG, "node %d normal but not used", i);
           }
         }
         else
         {
           erased[i] = 1;   // need to recovey
           need_recovery = true;
-          TBSYS_LOG(DEBUG, "node %d need recovery", i);
         }
       }
 
@@ -1251,12 +1262,12 @@ namespace tfs
         ret = decoder.config(data_num, check_num, erased);
         if (TFS_SUCCESS == ret)
         {
-          for (int32_t i = 0; i < data_num + check_num; i++)
+          for (int32_t i = 0; i < member_num; i++)
           {
             data[i] = (char*)malloc(MAX_READ_SIZE * sizeof(char));
             assert(NULL != data[i]);
           }
-          decoder.bind(data, data_num + check_num, MAX_READ_SIZE);
+          decoder.bind(data, member_num, MAX_READ_SIZE);
         }
       }
 
@@ -1272,7 +1283,7 @@ namespace tfs
           }
 
           // read data from data node
-          for (int32_t i = 0; i < data_num + check_num; i++)
+          for (int32_t i = 0; i < member_num; i++)
           {
             if (0 != erased[i])
             {
@@ -1343,7 +1354,7 @@ namespace tfs
           }
 
           // write parity data
-          for (int32_t i = data_num; i < data_num + check_num; i++)
+          for (int32_t i = data_num; i < member_num; i++)
           {
             if (1 != erased[i])
             {
@@ -1384,7 +1395,7 @@ namespace tfs
           uint32_t target_block = family_members_[i].block_;
           uint64_t target_server = family_members_[i].server_;
 
-          for (int j = data_num; j < data_num + check_num; j++)
+          for (int j = data_num; j < member_num; j++)
           {
             if (0 == erased[j])
             {
@@ -1419,7 +1430,7 @@ namespace tfs
       bool miss_parity = false;
       if (TFS_SUCCESS == ret)
       {
-        for (int i = data_num; i < data_num + check_num; i++)
+        for (int i = data_num; i < member_num; i++)
         {
           if (1 == erased[i])
           {
@@ -1453,7 +1464,7 @@ namespace tfs
 
         if (TFS_SUCCESS == ret)
         {
-          for (int i = data_num; i < data_num + check_num; i++)
+          for (int i = data_num; i < member_num; i++)
           {
             if (1 != erased[i])
             {
@@ -1471,7 +1482,7 @@ namespace tfs
         }
       }
 
-      for (int32_t i = 0; i < data_num + check_num; i++)
+      for (int32_t i = 0; i < member_num; i++)
       {
         tbsys::gDelete(data[i]);
         tbsys::gDelete(index_data[i]);
@@ -1656,8 +1667,8 @@ namespace tfs
     int DissolveTask::request_ds_to_delete()
     {
       int ret = TFS_SUCCESS;
-      int32_t data_num = GET_DATA_MEMBER_NUM(family_aid_info_) / 2;
-      int32_t check_num = GET_CHECK_MEMBER_NUM(family_aid_info_) / 2;
+      const int32_t data_num = GET_DATA_MEMBER_NUM(family_aid_info_) / 2;
+      const int32_t check_num = GET_CHECK_MEMBER_NUM(family_aid_info_) / 2;
 
       for (int32_t i = data_num; i < data_num + check_num; i++)
       {

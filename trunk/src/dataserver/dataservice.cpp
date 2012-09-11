@@ -51,7 +51,6 @@ namespace tfs
     DataService::DataService():
         server_local_port_(-1),
         ns_ip_port_(0),
-        check_block_(NULL),
         sync_mirror_status_(0),
         max_cpu_usage_ (SYSPARAM_DATASERVER.max_cpu_usage_),
         tfs_ds_stat_ ("tfs-ds-stat"),
@@ -306,8 +305,6 @@ namespace tfs
 
         if (TFS_SUCCESS == iret)
         {
-          check_block_ = new CheckBlock();
-
           iret = data_management_.init_block_files(SYSPARAM_FILESYSPARAM);
           if (TFS_SUCCESS != iret)
           {
@@ -548,8 +545,6 @@ namespace tfs
         task_thread_->join();
         task_thread_ = 0;
       }
-
-      tbsys::gDelete(check_block_);
 
       // destroy prefix op
       PhysicalBlock::destroy_prefix_op();
@@ -1134,6 +1129,9 @@ namespace tfs
             case READ_RAW_INDEX_MESSAGE:
               ret = read_raw_index(dynamic_cast<ReadRawIndexMessage*>(packet));
               break;
+            case DEGRADE_READ_DATA_MESSAGE:
+              ret = read_data_degrade(dynamic_cast<DegradeReadDataMessage*>(packet));
+              break;
             default:
               TBSYS_LOG(ERROR, "process packet pcode: %d\n", pcode);
               ret = TFS_ERROR;
@@ -1458,9 +1456,9 @@ namespace tfs
         }
 
         // hook to be checked on write or update
-        if (TFS_SUCCESS == ret && NULL != check_block_)
+        if (TFS_SUCCESS == ret)
         {
-          check_block_->add_check_task(close_file_info.block_id_);
+          check_block_.add_check_task(close_file_info.block_id_);
         }
       }
 
@@ -1696,6 +1694,97 @@ namespace tfs
       return TFS_SUCCESS;
     }
 
+    int DataService::read_data_degrade(DegradeReadDataMessage* message)
+    {
+      int ret = TFS_SUCCESS;
+      TIMER_START();
+      RespReadDataMessageV2 *resp_rd_msg = new RespReadDataMessageV2();
+      uint32_t block_id = message->get_block_id();
+      uint64_t file_id = message->get_file_id();
+      int32_t read_len = message->get_length();
+      int32_t read_offset = message->get_offset();
+      uint64_t peer_id = message->get_connection()->getPeerId();
+      int8_t flag = message->get_flag();
+      FamilyMemberInfoExt* family_info = message->get_family_info();
+
+      //add FileInfo if the first fragment
+      int32_t visit_file_size = 0;
+      int32_t real_read_len = 0;
+      if (read_offset == 0 && read_len >= 0) // length 0 denotes stat
+      {
+        real_read_len = read_len + FILEINFO_SIZE;
+      }
+      else if (read_offset > 0 && read_len > 0)
+      {
+        real_read_len = read_len;
+        read_offset += FILEINFO_SIZE;
+      }
+      else
+      {
+        ret = EXIT_INVALID_ARGU_ERROR;
+        TBSYS_LOG(ERROR, "read data failed, invalid offset:%d", read_offset);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        char* tmp_data_buffer = resp_rd_msg->alloc_data(real_read_len);
+        if (NULL == tmp_data_buffer)
+        {
+          ret = EXIT_NO_MEMORY;
+          TBSYS_LOG(ERROR, "degrade read data, alloca data fail.");
+        }
+        else
+        {
+          ret = data_management_.read_data_degrade(block_id, file_id, read_offset, flag,
+              real_read_len, tmp_data_buffer, family_info);
+          if (TFS_SUCCESS == ret)
+          {
+            if (0 == read_offset)
+            {
+              real_read_len -= FILEINFO_SIZE;
+            }
+
+            FileInfo* file_info =  reinterpret_cast<FileInfo *>(tmp_data_buffer);
+            visit_file_size = file_info->size_;
+            if (0 == read_offset)
+            {
+              resp_rd_msg->set_file_info(file_info);
+              memmove(tmp_data_buffer, tmp_data_buffer + FILEINFO_SIZE, real_read_len);
+            }
+          }
+        }
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        do_stat(peer_id, visit_file_size, real_read_len, read_offset, AccessStat::READ_BYTES);
+        resp_rd_msg->set_length(real_read_len);
+      }
+      else
+      {
+        try_add_repair_task(block_id, ret);
+        resp_rd_msg->set_length(ret);
+      }
+
+      message->reply(resp_rd_msg);
+
+      TIMER_END();
+      TBSYS_LOG(INFO, "degrade read %s. blockid: %u, fileid: %" PRI64_PREFIX "u, read len: %d, read offset: %d, peer ip: %s, cost time: %" PRI64_PREFIX "d",
+          TFS_SUCCESS == ret ? "success" : "fail", block_id, file_id, real_read_len, read_offset,
+          tbsys::CNetUtil::addrToString(peer_id).c_str(), TIMER_DURATION());
+
+      string sub_key = "";
+      TFS_SUCCESS == ret ? sub_key = "read-success": sub_key = "read-failed";
+      stat_mgr_.update_entry(tfs_ds_stat_, sub_key, 1);
+
+      read_stat_mutex_.lock();
+      read_stat_buffer_.push_back(make_pair(block_id, file_id));
+      read_stat_mutex_.unlock();
+
+      return TFS_SUCCESS;
+
+    }
+
     int DataService::read_raw_data(ReadRawDataMessage* message)
     {
       RespReadRawDataMessage* resp_rrd_msg = new RespReadRawDataMessage();
@@ -1914,11 +2003,11 @@ namespace tfs
           ret = message->reply(reply_msg);
         }
         // hook to be checked on delete or undelete
-        if (TFS_SUCCESS == ret && NULL != check_block_)
+        if (TFS_SUCCESS == ret)
         {
           if (DELETE == action || UNDELETE == action)
           {
-            check_block_->add_check_task(block_id);
+            check_block_.add_check_task(block_id);
           }
         }
 
@@ -2040,7 +2129,7 @@ namespace tfs
         uint32_t block_id = message->get_block_id();
         if (0 == block_id)  // block_id: 0, check all blocks
         {
-          ret = check_block_->check_all_blocks(resp_cb_msg->get_result_ref(),
+          ret = check_block_.check_all_blocks(resp_cb_msg->get_result_ref(),
               message->get_check_flag(), message->get_check_time(),
               message->get_last_check_time());
         }
@@ -2049,7 +2138,7 @@ namespace tfs
           if (0 == message->get_check_flag())  // flag: 0, check specific block
           {
             CheckBlockInfo cbi;
-            ret = check_block_->check_one_block(block_id, cbi);
+            ret = check_block_.check_one_block(block_id, cbi);
             if (TFS_SUCCESS == ret)
             {
               resp_cb_msg->get_result_ref().push_back(cbi);
@@ -2057,7 +2146,7 @@ namespace tfs
           }
           else  // flag: !0, repair block
           {
-            ret = check_block_->repair_block_info(block_id);
+            ret = check_block_.repair_block_info(block_id);
           }
         }
 

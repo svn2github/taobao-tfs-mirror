@@ -162,7 +162,7 @@ namespace tfs
     static const int32_t REPORT_BLOCK_NORMAL = 0;
     static const int32_t REPORT_BLOCK_EXT = 1;
 
-    static const int32_t MAX_MARSHALLING_NUM = 12;//
+    static const int32_t MAX_MARSHALLING_NUM = 12;
     static const int32_t MAX_DATA_MEMBER_NUM = 8;
     static const int32_t MAX_CHECK_MEMBER_NUM = 4;
     static const int32_t MAX_MARSHALLING_BLOCK_SIZE_LIMIT = 128 * 1024 * 1024 * 1024;
@@ -490,7 +490,7 @@ namespace tfs
     struct BlockInfoExt
     {
       BlockInfo block_info_;
-      int64_t group_id_;
+      int64_t family_id_;
       int deserialize(const char* data, const int64_t data_len, int64_t& pos);
       int serialize(char* data, const int64_t data_len, int64_t& pos) const;
       int64_t length() const;
@@ -498,13 +498,13 @@ namespace tfs
       BlockInfoExt(const BlockInfoExt& info)
       {
         block_info_ = info.block_info_;
-        group_id_ = info.group_id_;
+        family_id_ = info.family_id_;
       }
 
       BlockInfoExt& operator=(const BlockInfoExt& info)
       {
         block_info_ = info.block_info_;
-        group_id_ = info.group_id_;
+        family_id_ = info.family_id_;
         return *this;
       }
 
@@ -520,7 +520,7 @@ namespace tfs
       inline bool operator==(const BlockInfoExt& rhs) const
       {
         return block_info_ == rhs.block_info_ &&
-           group_id_ == rhs.group_id_;
+           family_id_ == rhs.family_id_;
       }
    };
 
@@ -943,17 +943,17 @@ namespace tfs
       bool operator == (const FamilyMemberInfo& info) const;
     };
 
-    struct FamilyInfoExt
+    struct FamilyMemberInfoExt
     {
       int64_t family_id_;
       int32_t family_aid_info_;
-      std::vector<std::pair<uint32_t, uint64_t> > members_;
+      std::vector<FamilyMemberInfo> members_;
 
       int deserialize(const char* data, const int64_t data_len, int64_t& pos);
       int serialize(char* data, const int64_t data_len, int64_t& pos) const;
       int64_t length() const;
 
-      FamilyInfoExt()
+      FamilyMemberInfoExt()
       {
         family_id_ = 0;
         family_aid_info_ = 0;

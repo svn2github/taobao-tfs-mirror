@@ -112,6 +112,50 @@ namespace tfs
       return iret;
     }
 
+    DegradeReadDataMessage::DegradeReadDataMessage()
+    {
+      _packetHeader._pcode = common::DEGRADE_READ_DATA_MESSAGE;
+    }
+
+    DegradeReadDataMessage::~DegradeReadDataMessage()
+    {
+    }
+
+    int DegradeReadDataMessage::deserialize(common::Stream& input)
+    {
+      int32_t iret = ReadDataMessage::deserialize(input);
+      if (common::TFS_SUCCESS == iret)
+      {
+        int64_t pos = 0;
+        iret = family_info_.deserialize(input.get_data(), input.get_data_length(), pos);
+        if (common::TFS_SUCCESS == iret)
+        {
+          input.drain(family_info_.length());
+        }
+      }
+      return iret;
+    }
+
+    int64_t DegradeReadDataMessage::length() const
+    {
+      return ReadDataMessage::length() + family_info_.length();
+    }
+
+    int DegradeReadDataMessage::serialize(common::Stream& output) const
+    {
+      int iret = ReadDataMessage::serialize(output);
+      if (common::TFS_SUCCESS == iret)
+      {
+        int64_t pos = 0;
+        iret = family_info_.serialize(output.get_free(), output.get_free_length(), pos);
+        if (common::TFS_SUCCESS == iret)
+        {
+          output.pour(family_info_.length());
+        }
+      }
+      return iret;
+    }
+
     RespReadDataMessage::RespReadDataMessage() :
       data_(NULL), length_(-1), alloc_(false)
     {

@@ -792,7 +792,7 @@ namespace tfs
         }
         else
         {
-          ret = set_group_id(family_id);
+          ret = set_family_id(family_id);
         }
 
         if (TFS_SUCCESS == ret)
@@ -880,15 +880,15 @@ namespace tfs
       return block_prefix.flag_;
     }
 
-    uint64_t LogicBlock::get_group_id()
+    uint64_t LogicBlock::get_family_id()
     {
       BlockPrefix block_prefix;
       PhysicalBlock* first = physical_block_list_.front();
       first->get_block_prefix(block_prefix);
-      return block_prefix.group_id_;
+      return block_prefix.family_id_;
     }
 
-    int LogicBlock::set_group_id(const int64_t group_id)
+    int LogicBlock::set_family_id(const int64_t family_id)
     {
       BlockPrefix block_prefix;
       PhysicalBlock* first = physical_block_list_.front();
@@ -896,7 +896,7 @@ namespace tfs
       first->set_block_prefix(block_prefix.logic_blockid_,
         block_prefix.prev_physic_blockid_,
         block_prefix.next_physic_blockid_,
-        group_id, block_prefix.flag_);
+        family_id, block_prefix.flag_);
       return first->dump_block_prefix();
     }
 

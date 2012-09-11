@@ -84,8 +84,8 @@ namespace tfs
         int copy_block_info(const common::BlockInfo* blk_info);
 
         int32_t get_flag();
-        uint64_t get_group_id();
-        int set_group_id(const int64_t group_id);
+        uint64_t get_family_id();
+        int set_family_id(const int64_t family_id);
 
         int update_block_version(const int32_t step = 1);
 

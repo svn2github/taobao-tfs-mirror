@@ -330,6 +330,9 @@ namespace tfs
           case common::RSP_GET_FAMILY_INFO_MESSAGE:
             packet = new GetFamilyInfoResponseMessage();
             break;
+          case common::DEGRADE_READ_DATA_MESSAGE:
+            packet = new DegradeReadDataMessage();
+            break;
           default:
             TBSYS_LOG(ERROR, "pcode: %d not found in message factory", pcode);
             break;

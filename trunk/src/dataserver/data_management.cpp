@@ -21,6 +21,8 @@
 #include "blockfile_manager.h"
 #include "dataserver_define.h"
 #include "visit_stat.h"
+#include "erasure_code.h"
+#include "task.h"
 #include <Memory.hpp>
 
 namespace tfs
@@ -262,6 +264,216 @@ namespace tfs
       }
 
       return TFS_SUCCESS;
+    }
+
+
+    /**
+     * @brief
+     *
+     * this interface implements readV2 function
+     *
+     * if offset == 0; returned data willbe "FileInfo + realdata"
+     * else returned data willbe just realdata
+     *
+     * real data length is returned back by reference
+     *
+     * @return TFS_SUCCESS on success
+     */
+    int DataManagement::read_data_degrade(const uint32_t block_id, const uint64_t file_id,
+        const int32_t read_offset, const int8_t flag, int32_t& real_read_len,
+        char* tmp_data_buffer, const FamilyMemberInfoExt* family_info)
+    {
+      UNUSED(flag);
+      int ret = TFS_SUCCESS;
+      int32_t family_aid_info = family_info->family_aid_info_;
+      const std::vector<FamilyMemberInfo>& family_members = family_info->members_;
+      const int32_t data_num = GET_DATA_MEMBER_NUM(family_aid_info);
+      const int32_t check_num = GET_CHECK_MEMBER_NUM(family_aid_info);
+      const int32_t member_num = data_num + check_num;
+
+      if (data_num > MAX_DATA_MEMBER_NUM || check_num > MAX_CHECK_MEMBER_NUM)
+      {
+        return EXIT_INVALID_ARGU_ERROR;
+      }
+
+      ErasureCode decoder;
+      char* data[member_num];
+      int erased[member_num];
+      memset(data, 0, member_num * sizeof(char*));
+      memset(erased, 0, member_num * sizeof(int));
+
+      uint32_t target_block_idx = 0;
+      int32_t normal_count = 0;
+      for (int32_t i = 0; i < member_num; i++)
+      {
+        // degrade read this block, just igore this block
+        if (family_members[i].block_ == block_id)
+        {
+          erased[i] = 1;
+          target_block_idx = i;
+          continue;
+        }
+
+        if (INVALID_SERVER_ID != family_members[i].server_)
+        {
+          if (normal_count < data_num)
+          {
+            erased[i] = 0;
+            normal_count++;
+          }
+          else
+          {
+            erased[i] = -1;
+          }
+        }
+      }
+
+      if (normal_count != data_num)
+      {
+        TBSYS_LOG(ERROR, "no enough normal node to recovery, normal count: %d", normal_count);
+        return EXIT_NO_ENOUGH_DATA;
+      }
+
+      // config encoder parameter, alloc buffer
+      if (TFS_SUCCESS == ret)
+      {
+        ret = decoder.config(data_num, check_num, erased);
+        if (TFS_SUCCESS == ret)
+        {
+          for (int32_t i = 0; i < member_num; i++)
+          {
+            data[i] = (char*)malloc(MAX_READ_SIZE * sizeof(char));
+            assert(NULL != data[i]);
+          }
+          decoder.bind(data, member_num, MAX_READ_SIZE);
+        }
+      }
+
+      // read index from parity block
+      char* target_index = NULL;
+      int32_t length = 0;
+      if (TFS_SUCCESS == ret)
+      {
+        for (int32_t i = data_num; i < data_num + check_num; i++)
+        {
+          uint32_t blockid = family_members[i].block_;
+          uint64_t serverid = family_members[i].server_;
+          ret = Task::read_raw_index(serverid, blockid, READ_PARITY_INDEX, block_id, target_index, length);
+          if (TFS_SUCCESS == ret)
+          {
+            break;
+          }
+        }
+      }
+
+      // find file in block
+      int32_t file_size = 0;
+      int64_t file_offset = 0;
+      if (TFS_SUCCESS == ret)
+      {
+        ret = IndexHandle::hash_find(target_index, length, file_id, file_size, file_offset);
+        if (TFS_SUCCESS == ret)
+        {
+          if (file_size - read_offset < real_read_len)
+          {
+            real_read_len = file_size - read_offset;
+          }
+        }
+      }
+      tbsys::gDelete(target_index);
+
+      // calculate decode offset length, real data offset and length
+      int32_t decode_offset = 0;
+      int32_t decode_size = 0;
+      int32_t offset_in_buffer = 0;
+      int32_t size_in_buffer = real_read_len;
+      if (TFS_SUCCESS == ret && 0 != real_read_len)
+      {
+        int32_t decode_unit = ErasureCode::ws_ * ErasureCode::ps_;
+        int32_t start = file_offset + read_offset;
+        int32_t end = start + real_read_len;
+
+        offset_in_buffer = start % decode_unit;
+        if (start % decode_unit != 0)
+        {
+          start = (start / decode_unit) * decode_unit;
+        }
+
+        if (end % decode_unit != 0)
+        {
+          end = (end / decode_unit + 1) * decode_unit;
+        }
+
+        decode_offset = start;
+        decode_size = end - start;
+
+        TBSYS_LOG(DEBUG, "degrade read start: %d, end: %d, size: %d", start, end, end-start);
+      }
+
+      if (TFS_SUCCESS == ret && 0 != real_read_len)
+      {
+        char* data_buffer = (char*)malloc(sizeof(char) * decode_size);
+        assert(NULL != data_buffer);
+        int32_t decode_idx = 0;
+        int32_t decode_len = 0;
+        do
+        {
+          decode_len = MAX_READ_SIZE;
+          if (decode_size - decode_idx < MAX_READ_SIZE)
+          {
+            decode_len = decode_size - decode_idx;
+          }
+
+          for (int32_t i = 0; i < member_num; i++)
+          {
+            if (0 != erased[i])
+            {
+              continue;
+            }
+
+            memset(data[i], 0, decode_len * sizeof(char));
+            uint32_t blockid = family_members[i].block_;
+            uint64_t serverid = family_members[i].server_;
+            int32_t data_file_size = 0;
+            ret = Task::read_raw_data(serverid, blockid, data[i],
+                decode_len, decode_offset + decode_idx, data_file_size);
+            if (TFS_SUCCESS != ret)
+            {
+              break;
+            }
+          }
+
+          if (TFS_SUCCESS == ret)
+          {
+            ret = decoder.decode(decode_len);
+            if (TFS_SUCCESS == ret)
+            {
+              memcpy(data_buffer + decode_idx, data[target_block_idx], decode_len);
+              decode_idx += decode_len;
+            }
+          }
+
+          if (TFS_SUCCESS != ret)
+          {
+            break;
+          }
+        } while (decode_idx < decode_size);
+
+        // extra data from data_buffer
+        if (TFS_SUCCESS == ret)
+        {
+          memcpy(tmp_data_buffer, data_buffer + offset_in_buffer, size_in_buffer);
+        }
+
+        tbsys::gDelete(data_buffer);
+      }
+
+      for (int32_t i = 0; i < data_num + check_num; i++)
+      {
+        tbsys::gDelete(data[i]);
+      }
+
+      return ret;
     }
 
     int DataManagement::read_raw_data(const uint32_t block_id, const int32_t read_offset, int32_t& real_read_len,
@@ -706,7 +918,7 @@ namespace tfs
           TBSYS_LOG(INFO, "expire(delete) block. blockid: %u\n", expire_block_ids->at(i));
           if (0 == logic_block->get_flag())  // data block, clear group id
           {
-            logic_block->set_group_id(0);
+            logic_block->set_family_id(0);
           }
           else  // parity block, remove it
           {

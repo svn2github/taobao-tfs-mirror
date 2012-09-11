@@ -39,7 +39,6 @@ namespace tfs
     static const int32_t COPY_BETWEEN_CLUSTER = -1;
     static const int32_t BLOCK_VERSION_MAGIC_NUM = 2;
     static const int32_t FS_SPEEDUP_VERSION = 2;
-    static const int32_t EC_DATA_MAX = 14; // 10 data + 4 parity
     static const int32_t PARITY_INDEX_START = 1024; // index start positioin
     static const int32_t PARITY_INDEX_MMAP_SIZE = PARITY_INDEX_START;
 
@@ -94,7 +93,7 @@ namespace tfs
       uint32_t prev_physic_blockid_;
       uint32_t next_physic_blockid_;
       uint32_t flag_;  // just padding 32bit now
-      uint64_t group_id_;
+      uint64_t family_id_;
 
       BlockPrefix()
       {

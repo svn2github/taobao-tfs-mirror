@@ -139,7 +139,7 @@ namespace tfs
       pn_ = -1;
       tbsys::gDelete(matrix_);
       tbsys::gDelete(de_matrix_);
-      for (int i = 0; i < EC_DATA_MAX; i++)
+      for (int i = 0; i < MAX_MARSHALLING_NUM; i++)
       {
         data_[i] = NULL;
         size_[i] = -1;
@@ -223,7 +223,7 @@ namespace tfs
         // recovery pairty
         for (int i = 0; i < pn_; i++)
         {
-          if (erased_[dn_+i])
+          if (1 == erased_[dn_+i])
           {
             jerasure_bitmatrix_dotprod(dn_, ws_, matrix_ + i * dn_ * ws_ * ws_,
                 NULL, dn_ + i, data_, data_ + dn_, size, ps_);

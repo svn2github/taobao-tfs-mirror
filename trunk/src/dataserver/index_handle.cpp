@@ -926,6 +926,66 @@ namespace tfs
       return EXIT_META_NOT_FOUND_ERROR;
     }
 
+    // find key in the block by index data
+    int IndexHandle::hash_find(char* data, const int data_size,
+        const uint64_t key, int32_t& file_size, int64_t& file_offset)
+    {
+      int ret = TFS_SUCCESS;
+      if (NULL == data)
+      {
+        ret = EXIT_POINTER_NULL;
+      }
+      else
+      {
+        IndexHeader* index_header = reinterpret_cast<IndexHeader*> (data);
+        int32_t bucket_size = index_header->bucket_size_;
+        int32_t* bucket_slot = reinterpret_cast<int32_t*> (data + sizeof(IndexHeader));
+        int32_t slot = static_cast<uint32_t> (key) % bucket_size;
+
+        // find in the list
+        bool found = false;
+        MetaInfo* meta_info = NULL;
+        for (int32_t pos = bucket_slot[slot]; pos != 0;)
+        {
+          if (pos < data_size)
+          {
+            meta_info = reinterpret_cast<MetaInfo*> (data + pos);
+            if (hash_compare(key, meta_info->get_key()))
+            {
+              found = true;
+              break;
+            }
+            else
+            {
+              pos = meta_info->get_next_meta_offset();
+            }
+          }
+          else
+          {
+            break;
+          }
+       }
+
+        if (TFS_SUCCESS == ret)
+        {
+          if (found)
+          {
+            file_offset = meta_info->get_offset();
+            file_size = meta_info->get_size();
+          }
+          else
+          {
+            ret = EXIT_META_NOT_FOUND_ERROR;
+          }
+        }
+      }
+
+      TBSYS_LOG(DEBUG, "degrade find file id: %"PRI64_PREFIX"d, offset: %"PRI64_PREFIX"d, size: %d, ret: %d",
+          key, file_offset, file_size, ret);
+
+      return ret;
+    }
+
     // insert meta into the tail(the current tail is previous_offset) of bucket(slot)
     int IndexHandle::hash_insert(const int32_t slot, const int32_t previous_offset, const RawMeta& meta)
     {

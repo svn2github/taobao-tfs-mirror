@@ -205,7 +205,7 @@ namespace tfs
 
       TBSYS_LOG(INFO, "dump block prefix. logic blockid: %u, prev physical blockid: %u, next physical blockid: %u, flag: %d, family_id: %"PRI64_PREFIX"d,  ret: %d",
           block_prefix_.logic_blockid_, block_prefix_.prev_physic_blockid_, block_prefix_.next_physic_blockid_,
-          block_prefix_.flag_, block_prefix_.group_id_, ret);
+          block_prefix_.flag_, block_prefix_.family_id_, ret);
 
       return ret;
     }
@@ -217,12 +217,12 @@ namespace tfs
     }
 
     void PhysicalBlock::set_block_prefix(const uint32_t block_id, const uint32_t prev_physic_blockid,
-        const uint32_t next_physical_blockid, const uint64_t group_id, const int32_t flag)
+        const uint32_t next_physical_blockid, const uint64_t family_id, const int32_t flag)
     {
       block_prefix_.logic_blockid_ = block_id;
       block_prefix_.prev_physic_blockid_ = prev_physic_blockid;
       block_prefix_.next_physic_blockid_ = next_physical_blockid;
-      block_prefix_.group_id_ = group_id;
+      block_prefix_.family_id_ = family_id;
       block_prefix_.flag_ = flag;
       return;
     }

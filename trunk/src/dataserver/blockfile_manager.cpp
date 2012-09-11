@@ -649,7 +649,7 @@ namespace tfs
         {
           BlockInfoExt info;
           info.block_info_ = *mit->second->get_block_info();
-          info.group_id_ = mit->second->get_group_id();
+          info.family_id_ = mit->second->get_family_id();
           blocks_ext.insert(info);
         }
       }
@@ -659,7 +659,7 @@ namespace tfs
         {
           BlockInfoExt info;
           info.block_info_ = *mit->second->get_block_info();
-          info.group_id_ = mit->second->get_group_id();
+          info.family_id_ = mit->second->get_family_id();
           blocks_ext.insert(info);
         }
       }
