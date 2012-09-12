@@ -473,6 +473,32 @@ namespace tfs
         tbsys::gDelete(data[i]);
       }
 
+      // check file status
+      if (TFS_SUCCESS == ret)
+      {
+        if (0 == read_offset)      // first fragment
+        {
+          FileInfo* finfo = reinterpret_cast<FileInfo*> (tmp_data_buffer);
+          if (0 == real_read_len)  // degrade stat
+          {
+            if ((0 == finfo->id_) || (finfo->id_ != file_id ) ||
+                ((finfo->flag_ & (FI_DELETED | FI_INVALID | FI_CONCEAL) != 0) && (NORMAL_STAT == flag)))
+            {
+              ret = EXIT_FILE_STATUS_ERROR;
+            }
+          }
+          else                     // degrade read
+          {
+            if ((finfo->id_ != file_id) ||
+                ((finfo->flag_ & (FI_DELETED | FI_INVALID | FI_CONCEAL) != 0) &&
+                 (READ_DATA_OPTION_FLAG_NORMAL == flag)))
+            {
+              ret = EXIT_FILE_INFO_ERROR;
+            }
+          }
+        }
+      }
+
       return ret;
     }
 
@@ -902,6 +928,45 @@ namespace tfs
       return ret;
     }
 
+    int DataManagement::expire_blocks(const VUINT32& expire_blocks,
+        set<BlockInfoExt>& clear_blocks, set<BlockInfoExt>& delete_blocks)
+    {
+      TBSYS_LOG(INFO, "expire block list size: %u\n", static_cast<uint32_t>(expire_blocks.size()));
+      for (uint32_t i = 0; i < expire_blocks.size(); i++)
+      {
+        TBSYS_LOG(DEBUG, "expiring block %u", expire_blocks[i]);
+        LogicBlock* logic_block = BlockFileManager::get_instance()->get_logic_block(expire_blocks[i]);
+        if (NULL != logic_block)
+        {
+          if (0 == logic_block->get_flag())
+          {
+            logic_block->set_family_id(0);
+            BlockInfoExt block_ext;
+            block_ext.block_info_ = *(logic_block->get_block_info());
+            block_ext.family_id_ = 0;
+            clear_blocks.insert(block_ext);
+          }
+          else
+          {
+            int ret = BlockFileManager::get_instance()->del_block(expire_blocks[i]);
+            if (TFS_SUCCESS == ret)
+            {
+              BlockInfoExt block_ext;
+              block_ext.block_info_.block_id_ = expire_blocks[i];
+              delete_blocks.insert(block_ext);
+            }
+          }
+        }
+        else
+        {
+          BlockInfoExt block_ext;
+          block_ext.block_info_.block_id_ = expire_blocks[i];
+          delete_blocks.insert(block_ext);
+        }
+      }
+      return TFS_SUCCESS;
+    }
+
     int DataManagement::add_new_expire_block(const VUINT32* expire_block_ids, const VUINT32* remove_block_ids, const VUINT32* new_block_ids)
     {
       // delete expire block
@@ -910,20 +975,8 @@ namespace tfs
         TBSYS_LOG(INFO, "expire block list size: %u\n", static_cast<uint32_t>(expire_block_ids->size()));
         for (uint32_t i = 0; i < expire_block_ids->size(); ++i)
         {
-          LogicBlock* logic_block = BlockFileManager::get_instance()->get_logic_block(expire_block_ids->at(i));
-          if (NULL == logic_block)
-          {
-            continue;
-          }
           TBSYS_LOG(INFO, "expire(delete) block. blockid: %u\n", expire_block_ids->at(i));
-          if (0 == logic_block->get_flag())  // data block, clear group id
-          {
-            logic_block->set_family_id(0);
-          }
-          else  // parity block, remove it
-          {
-            BlockFileManager::get_instance()->del_block(expire_block_ids->at(i));
-          }
+          BlockFileManager::get_instance()->del_block(expire_block_ids->at(i));
         }
       }
 

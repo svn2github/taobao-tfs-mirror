@@ -95,6 +95,9 @@ namespace tfs
         int add_new_expire_block(const common::VUINT32* expire_block_ids, const common::VUINT32* remove_block_ids,
             const common::VUINT32* new_block_ids);
 
+        int expire_blocks(const common::VUINT32& expire_blocks,
+            std::set<common::BlockInfoExt>& clear_blocks, std::set<common::BlockInfoExt>& delete_blocks);
+
         inline LeaseManager& get_lease_manager() { return lease_manager_;}
       private:
         int create_file_id_(uint64_t& file_id, const uint32_t block_id);

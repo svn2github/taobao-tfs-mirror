@@ -721,9 +721,36 @@ namespace tfs
 
     }
 
+    bool ReplicateTask::can_be_replicate(const uint32_t block_id)
+    {
+      bool repl_ok = true;
+      LogicBlock* logic_block = BlockFileManager::get_instance()->get_logic_block(block_id);
+      if (NULL == logic_block)
+      {
+        repl_ok = false;
+      }
+      else
+      {
+        if (!task_from_ds() && logic_block->get_family_id() != 0)
+        {
+          repl_ok = false;
+        }
+      }
+      return repl_ok;
+    }
+
     int ReplicateTask::handle()
     {
-      int ret = do_replicate(repl_info_);
+      int ret = TFS_SUCCESS;
+      if (!can_be_replicate(repl_info_.block_id_))
+      {
+        ret = EXIT_MOVE_OR_REPLICATE_ERROR;
+      }
+      else
+      {
+        ret = do_replicate(repl_info_);
+      }
+
       int status = translate_status(ret);
       if (task_from_ds())
       {

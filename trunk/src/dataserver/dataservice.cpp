@@ -2686,6 +2686,8 @@ namespace tfs
      {
        CallDsReportBlockRequestMessage* msg = dynamic_cast<CallDsReportBlockRequestMessage*>(packet);
        ReportBlocksToNsRequestMessage req_msg;
+       ReportBlocksToNsRequestMessage clear_req_msg;
+       ReportBlocksToNsRequestMessage delete_req_msg;
        req_msg.set_server(data_server_info_.id_);
        if (REPORT_BLOCK_NORMAL == msg->get_flag())
        {
@@ -2696,7 +2698,8 @@ namespace tfs
          data_management_.get_all_block_info(req_msg.get_blocks_ext());
        }
        req_msg.set_flag(msg->get_flag());
-       TBSYS_LOG(INFO, "report block to ns, blocks size: %zd, ext size: %zd", req_msg.get_blocks().size(), req_msg.get_blocks_ext().size());
+       TBSYS_LOG(INFO, "report block to ns, blocks size: %zd, ext size: %zd",
+           req_msg.get_blocks().size(), req_msg.get_blocks_ext().size());
 
        NewClient* client = NewClientManager::get_instance().create_client();
        tbnet::Packet* message = NULL;
@@ -2707,12 +2710,40 @@ namespace tfs
          if (TFS_SUCCESS == iret)
          {
            ReportBlocksToNsResponseMessage* msg = dynamic_cast<ReportBlocksToNsResponseMessage*>(message);
-           TBSYS_LOG(INFO, "nameserver %s ask for expire block\n", tbsys::CNetUtil::addrToString(msg->get_server()).c_str());
-           data_management_.add_new_expire_block(&msg->get_blocks(), NULL, NULL);
+           TBSYS_LOG(INFO, "nameserver %s ask for expire block\n",
+               tbsys::CNetUtil::addrToString(msg->get_server()).c_str());
+           data_management_.expire_blocks(msg->get_blocks(),
+               clear_req_msg.get_blocks_ext(), delete_req_msg.get_blocks_ext());
          }
        }
        NewClientManager::get_instance().destroy_client(client);
+
+       if (TFS_SUCCESS ==  iret)
+       {
+         if (clear_req_msg.get_blocks_ext().size() != 0)
+         {
+           clear_req_msg.set_flag(msg->get_flag());
+           clear_req_msg.set_server(data_server_info_.id_);
+           clear_req_msg.set_type(REPORT_BLOCK_TYPE_PART);
+           NewClient* client = NewClientManager::get_instance().create_client();
+           tbnet::Packet* message = NULL;
+           send_msg_to_server(msg->get_server(), client, &req_msg, message);
+           NewClientManager::get_instance().destroy_client(client);
+         }
+
+         if (delete_req_msg.get_blocks_ext().size() != 0)
+         {
+           delete_req_msg.set_flag(msg->get_flag());
+           delete_req_msg.set_server(data_server_info_.id_);
+           delete_req_msg.set_type(REPORT_BLOCK_TYPE_RELIEVE);
+           NewClient* client = NewClientManager::get_instance().create_client();
+           tbnet::Packet* message = NULL;
+           send_msg_to_server(msg->get_server(), client, &req_msg, message);
+           NewClientManager::get_instance().destroy_client(client);
+         }
+       }
      }
+
      return iret;
    }
 

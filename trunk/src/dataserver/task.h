@@ -319,6 +319,7 @@ namespace tfs
       private:
         DISALLOW_COPY_AND_ASSIGN(ReplicateTask);
 
+        bool can_be_replicate(const uint32_t block_id);
         int do_replicate(const common::ReplBlock& repl_block);
 
       protected:
