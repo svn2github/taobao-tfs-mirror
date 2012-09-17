@@ -95,9 +95,9 @@ namespace tfs
         virtual int deserialize(common::Stream& input);
         virtual int64_t length() const;
 
-        common::FamilyMemberInfoExt* get_family_info()
+        common::FamilyMemberInfoExt& get_family_info()
         {
-          return &family_info_;
+          return family_info_;
         }
 
         void set_family_info(const common::FamilyMemberInfoExt& family_info)

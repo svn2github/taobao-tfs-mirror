@@ -130,8 +130,8 @@ namespace tfs
 
       int ret = TFS_SUCCESS;
       if (seqno < 0 || expire_time < 0 || repl_info == NULL ||
-          repl_info->block_id_ == 0 || repl_info->source_id_ == 0 ||
-          repl_info->destination_id_ == 0)
+          repl_info->block_id_ == INVALID_BLOCK_ID || repl_info->source_id_ == INVALID_SERVER_ID ||
+          repl_info->destination_id_ == INVALID_SERVER_ID)
       {
         ret = EXIT_INVALID_ARGU;
       }
@@ -154,7 +154,7 @@ namespace tfs
       uint32_t block_id = message->get_block_id();
 
       int ret = TFS_SUCCESS;
-      if (seqno < 0 || expire_time < 0 || block_id == 0)
+      if (seqno < 0 || expire_time < 0 || block_id == INVALID_BLOCK_ID)
       {
         ret = EXIT_INVALID_ARGU;
       }
@@ -180,8 +180,8 @@ namespace tfs
 
       int ret = TFS_SUCCESS;
       if (seqno < 0 || expire_time < 0 || repl_info == NULL ||
-          repl_info->block_id_ == 0 || repl_info->source_id_ == 0 ||
-          repl_info->destination_id_ == 0)
+          repl_info->block_id_ == INVALID_BLOCK_ID || repl_info->source_id_ == INVALID_SERVER_ID ||
+          repl_info->destination_id_ == INVALID_SERVER_ID)
       {
         ret = EXIT_INVALID_ARGU;
       }
@@ -206,7 +206,7 @@ namespace tfs
       uint32_t block_id = message->get_block_id();
 
       int ret = TFS_SUCCESS;
-      if (seqno < 0 || expire_time < 0 || block_id == 0)
+      if (seqno < 0 || expire_time < 0 || block_id == INVALID_BLOCK_ID)
       {
         ret = EXIT_INVALID_ARGU;
       }

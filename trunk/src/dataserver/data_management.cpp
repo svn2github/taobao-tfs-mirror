@@ -283,7 +283,6 @@ namespace tfs
         const int32_t read_offset, const int8_t flag, int32_t& real_read_len,
         char* tmp_data_buffer, const FamilyMemberInfoExt* family_info)
     {
-      UNUSED(flag);
       int ret = TFS_SUCCESS;
       int32_t family_aid_info = family_info->family_aid_info_;
       const std::vector<FamilyMemberInfo>& family_members = family_info->members_;
@@ -291,7 +290,7 @@ namespace tfs
       const int32_t check_num = GET_CHECK_MEMBER_NUM(family_aid_info);
       const int32_t member_num = data_num + check_num;
 
-      if (data_num > MAX_DATA_MEMBER_NUM || check_num > MAX_CHECK_MEMBER_NUM)
+      if (!CHECK_MEMBER_NUM_V2(data_num, check_num))
       {
         return EXIT_INVALID_ARGU_ERROR;
       }
@@ -314,7 +313,7 @@ namespace tfs
           continue;
         }
 
-        if (INVALID_SERVER_ID != family_members[i].server_)
+        if (INVALID_SERVER_ID != family_members[i].server_ && INVALID_BLOCK_ID != family_members[i].block_)
         {
           if (normal_count < data_num)
           {
@@ -328,7 +327,7 @@ namespace tfs
         }
       }
 
-      if (normal_count != data_num)
+      if (normal_count < data_num)
       {
         TBSYS_LOG(ERROR, "no enough normal node to recovery, normal count: %d", normal_count);
         return EXIT_NO_ENOUGH_DATA;
@@ -354,8 +353,12 @@ namespace tfs
       int32_t length = 0;
       if (TFS_SUCCESS == ret)
       {
-        for (int32_t i = data_num; i < data_num + check_num; i++)
+        for (int32_t i = data_num; i < member_num; i++)
         {
+          if (0 != erased[i])
+          {
+            continue;
+          }
           uint32_t blockid = family_members[i].block_;
           uint64_t serverid = family_members[i].server_;
           ret = Task::read_raw_index(serverid, blockid, READ_PARITY_INDEX, block_id, target_index, length);
@@ -468,7 +471,7 @@ namespace tfs
         tbsys::gDelete(data_buffer);
       }
 
-      for (int32_t i = 0; i < data_num + check_num; i++)
+      for (int32_t i = 0; i < member_num; i++)
       {
         tbsys::gDelete(data[i]);
       }
@@ -479,7 +482,7 @@ namespace tfs
         if (0 == read_offset)      // first fragment
         {
           FileInfo* finfo = reinterpret_cast<FileInfo*> (tmp_data_buffer);
-          if (0 == real_read_len)  // degrade stat
+          if (FILEINFO_SIZE == real_read_len)  // degrade stat
           {
             if ((0 == finfo->id_) || (finfo->id_ != file_id ) ||
                 ((finfo->flag_ & (FI_DELETED | FI_INVALID | FI_CONCEAL) != 0) && (NORMAL_STAT == flag)))
@@ -880,7 +883,7 @@ namespace tfs
         return EXIT_NO_LOGICBLOCK_ERROR;
       }
 
-      int ret = logic_block->batch_write_meta(blk, meta_list);
+      int ret = logic_block->batch_write_meta(blk, meta_list, VERSION_INC_STEP_REPLICATE);
       if (TFS_SUCCESS != ret)
       {
         TBSYS_LOG(ERROR, "blockid: %u batch write meta error.", block_id);

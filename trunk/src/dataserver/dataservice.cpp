@@ -1705,9 +1705,10 @@ namespace tfs
       int32_t read_offset = message->get_offset();
       uint64_t peer_id = message->get_connection()->getPeerId();
       int8_t flag = message->get_flag();
-      FamilyMemberInfoExt* family_info = message->get_family_info();
+      FamilyMemberInfoExt family_info = message->get_family_info();
 
-      //add FileInfo if the first fragment
+      // add FileInfo if the first fragment
+      // here we transfer offset&length to comparatively FileInfo
       int32_t visit_file_size = 0;
       int32_t real_read_len = 0;
       if (read_offset == 0 && read_len >= 0) // length 0 denotes stat
@@ -1736,7 +1737,7 @@ namespace tfs
         else
         {
           ret = data_management_.read_data_degrade(block_id, file_id, read_offset, flag,
-              real_read_len, tmp_data_buffer, family_info);
+              real_read_len, tmp_data_buffer, &family_info);
           if (TFS_SUCCESS == ret)
           {
             if (0 == read_offset)

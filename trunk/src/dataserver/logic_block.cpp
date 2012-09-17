@@ -719,7 +719,7 @@ namespace tfs
       return index_handle_->flush();
     }
 
-    int LogicBlock::batch_write_meta(const BlockInfo* blk_info, const RawMetaVec* meta_list)
+    int LogicBlock::batch_write_meta(const BlockInfo* blk_info, const RawMetaVec* meta_list, const VersionStep step)
     {
       if (NULL == meta_list)
       {
@@ -743,10 +743,10 @@ namespace tfs
         return ret;
       }
 
-      ret = update_block_version(VERSION_INC_STEP_REPLICATE);
+      ret = update_block_version(step);
       if (TFS_SUCCESS != ret)
       {
-        TBSYS_LOG(ERROR, "replicate update version fail. blockid: %u, ret: %d", logic_block_id_, ret);
+        TBSYS_LOG(ERROR, "write meta update version fail. blockid: %u, ret: %d", logic_block_id_, ret);
         return ret;
       }
 

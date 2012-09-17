@@ -111,7 +111,7 @@ namespace tfs
         int write_raw_index(const int64_t family_id, const common::RawIndexOp index_op, const common::RawIndexVec* index_vec);
         int read_raw_index(const common::RawIndexOp index_op, const uint32_t index_id, char* & buf, uint32_t& size );
 
-        int batch_write_meta(const common::BlockInfo* blk_info, const common::RawMetaVec* meta_list);
+        int batch_write_meta(const common::BlockInfo* blk_info, const common::RawMetaVec* meta_list, const common::VersionStep step);
         int set_block_dirty_type(DirtyFlag dirty_flag);
 
         uint32_t get_logic_block_id() const

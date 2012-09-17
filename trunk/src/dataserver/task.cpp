@@ -438,15 +438,11 @@ namespace tfs
           }
           else
           {
-            ret = dest_logic_block->update_block_version(VERSION_INC_STEP_DEFAULT);
-            if (TFS_SUCCESS == ret)
+            TBSYS_LOG(DEBUG, "compact blockid : %u, switch compact blk\n", block_id);
+            BlockFileManager::get_instance()->switch_compact_blk(block_id);
+            if (TFS_SUCCESS != ret)
             {
-              TBSYS_LOG(DEBUG, "compact blockid : %u, switch compact blk\n", block_id);
-              BlockFileManager::get_instance()->switch_compact_blk(block_id);
-              if (TFS_SUCCESS != ret)
-              {
-                TBSYS_LOG(ERROR, "compact blockid: %u, switch compact blk fail. ret: %d\n", block_id, ret);
-              }
+              TBSYS_LOG(ERROR, "compact blockid: %u, switch compact blk fail. ret: %d\n", block_id, ret);
             }
           }
 
@@ -649,7 +645,7 @@ namespace tfs
       tbsys::gDelete(fit);
       TBSYS_LOG(DEBUG, "compact write complete. blockid: %u\n", dest->get_logic_block_id());
 
-      ret = dest->batch_write_meta(&dest_blk, &dest_metas);
+      ret = dest->batch_write_meta(&dest_blk, &dest_metas, VERSION_INC_STEP_DEFAULT);
       if (TFS_SUCCESS != ret)
       {
         TBSYS_LOG(ERROR, "compact write segment meta failed. blockid: %u, meta size %zd\n", dest->get_logic_block_id(),
@@ -1010,7 +1006,7 @@ namespace tfs
       const int32_t member_num = data_num + check_num;
 
       // check if args valid
-      if (data_num > MAX_DATA_MEMBER_NUM || check_num > MAX_CHECK_MEMBER_NUM)
+      if (!CHECK_MEMBER_NUM_V2(data_num, check_num))
       {
         return EXIT_INVALID_ARGU_ERROR;
       }
@@ -1026,7 +1022,7 @@ namespace tfs
         }
       }
 
-      if (normal_count != data_num)
+      if (normal_count < data_num)
       {
         TBSYS_LOG(ERROR, "no enough normal node to recovery, normal count: %d", normal_count);
         return EXIT_NO_ENOUGH_DATA;
@@ -1228,7 +1224,7 @@ namespace tfs
       const int32_t member_num = data_num + check_num;
 
       // check if args valid
-      if (data_num > MAX_DATA_MEMBER_NUM || check_num > MAX_CHECK_MEMBER_NUM)
+      if (!CHECK_MEMBER_NUM_V2(data_num, check_num))
       {
         return EXIT_INVALID_ARGU_ERROR;
       }
@@ -1270,7 +1266,7 @@ namespace tfs
         }
       }
 
-      if (normal_count != data_num)
+      if (normal_count < data_num)
       {
         TBSYS_LOG(ERROR, "no enough normal node to recovery, normal count: %d", normal_count);
         return EXIT_NO_ENOUGH_DATA;
