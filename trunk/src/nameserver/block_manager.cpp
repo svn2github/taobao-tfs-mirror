@@ -352,6 +352,18 @@ namespace tfs
       return ret;
     }
 
+    int BlockManager::get_servers(std::vector<uint64_t>& servers, const BlockCollect* block) const
+    {
+      int32_t ret = (NULL == block) ? EXIT_PARAMETER_ERROR : TFS_SUCCESS;
+      if (TFS_SUCCESS == ret)
+      {
+        RWLock::Lock lock(get_mutex_(block->id()), READ_LOCKER);
+        block->get_servers(servers);
+        ret = servers.empty() ? EXIT_NO_DATASERVER : TFS_SUCCESS;
+      }
+      return ret;
+    }
+
     int BlockManager::get_servers(ArrayHelper<uint64_t>& servers, const BlockCollect* block) const
     {
       int32_t ret = NULL == block ? EXIT_NO_BLOCK : TFS_SUCCESS;
@@ -438,9 +450,6 @@ namespace tfs
           other_expires.clear();
           const BlockInfoExt& info = (*iter);
 
-          TBSYS_LOG(INFO, "report block :%u, family_id: %ld version: %d, server: %s",
-            info.block_info_.block_id_, info.group_id_, info.block_info_.version_, tbsys::CNetUtil::addrToString(server->id()).c_str());
-
           // check block version, rebuilding relation.
           get_mutex_(info.block_info_.block_id_).wrlock();
           BlockCollect* block = get_(info.block_info_.block_id_);
@@ -453,11 +462,9 @@ namespace tfs
           ret = NULL != block ? TFS_SUCCESS : EXIT_BLOCK_NOT_FOUND;
           if (TFS_SUCCESS == ret)
           {
-            TBSYS_LOG(INFO, "222222report block :%u, family_id: %ld version: %d:%d, server: %s",
-              info.block_info_.block_id_, info.group_id_, info.block_info_.version_, block->version(),tbsys::CNetUtil::addrToString(server->id()).c_str());
             if (INVALID_FAMILY_ID == block->get_family_id())
             {
-              if (INVALID_FAMILY_ID == info.group_id_)
+              if (INVALID_FAMILY_ID == info.family_id_)
               {
                 ret = block->check_version(manager_, helper, expire_self, other_expires,
                       server->id(), ngi.owner_role_, isnew, info.block_info_, now);
@@ -471,7 +478,7 @@ namespace tfs
             }
             else
             {
-              expire_self = (info.group_id_ != block->get_family_id());
+              expire_self = (info.family_id_ != block->get_family_id());
               if (!expire_self)
               {
                 expire_self = info.block_info_.version_ <= block->version();
@@ -533,14 +540,11 @@ namespace tfs
           const BlockInfoExt& info = (*iter);
           block = get(info.block_info_.block_id_);
           ret = relieve_relation(block, server->id(), now);
-          if (TFS_SUCCESS == ret)
+          if ((NULL != block) && (block->get_servers_size() <= 0))
           {
-            if (block->get_servers_size() <= 0)
-            {
-              ret = remove(object , info.block_info_.block_id_);
-              if (NULL != object)
-                manager_.get_gc_manager().add(object);
-            }
+            ret = remove(object , info.block_info_.block_id_);
+            if (NULL != object)
+              manager_.get_gc_manager().add(object);
           }
           ret = manager_.get_server_manager().relieve_relation(server, info.block_info_.block_id_);
         }

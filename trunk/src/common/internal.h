@@ -165,7 +165,7 @@ namespace tfs
     static const int32_t MAX_MARSHALLING_NUM = 12;
     static const int32_t MAX_DATA_MEMBER_NUM = 8;
     static const int32_t MAX_CHECK_MEMBER_NUM = 4;
-    static const int32_t MAX_MARSHALLING_BLOCK_SIZE_LIMIT = 128 * 1024 * 1024 * 1024;
+    static const int32_t MAX_MARSHALLING_BLOCK_SIZE_LIMIT = 128 * 1024 * 1024;
 
     enum VersionStep
     {
@@ -797,9 +797,14 @@ namespace tfs
       common::VUINT64 ds_;
       uint32_t lease_id_;
       int32_t version_;
+      int64_t family_id_;
+      int32_t family_aid_info_;
+      std::vector<std::pair<uint32_t, uint64_t> > family_members_;
       BlockInfoSeg() : lease_id_(INVALID_LEASE_ID), version_(0)
       {
         ds_.clear();
+        family_id_ = INVALID_FAMILY_ID;
+        family_members_.clear();
       }
       BlockInfoSeg(const common::VUINT64& ds,
           const uint32_t lease_id = INVALID_LEASE_ID, const int32_t version = 0) :

@@ -106,11 +106,17 @@ namespace tfs
         {
           return (lease_id_ != common::INVALID_LEASE_ID);
         }
+        inline int64_t& get_family_id() { return family_id_;}
+        inline int32_t& get_family_aid_info() { return family_aid_info_;}
+        inline std::vector<std::pair<uint32_t, uint64_t> >& get_family_members() { return family_members_;}
       private:
         mutable common::VUINT64 ds_;
         uint32_t block_id_;
         mutable int32_t version_;
         mutable uint32_t lease_id_;
+        int64_t family_id_;
+        int32_t family_aid_info_;
+        std::vector<std::pair<uint32_t, uint64_t> > family_members_;
     };
 
     // batch get the block information in the common::DataServerStatInfo

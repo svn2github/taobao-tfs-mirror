@@ -132,6 +132,7 @@ namespace tfs
     const int32_t EXIT_BLOCK_VERSION_ERROR = -5051;
     const int32_t EXIT_EXPIRE_SELF_ERROR = -5052;
     const int32_t EXIT_FAMILY_MEMBER_NUM_ERROR = -5053;
+    const int32_t EXIT_BLOCK_CANNOT_REINSTATE = -5054;
 
     const int32_t EXIT_WRITE_OFFSET_ERROR = -8001; // write offset error
     const int32_t EXIT_READ_OFFSET_ERROR = -8002; // read offset error

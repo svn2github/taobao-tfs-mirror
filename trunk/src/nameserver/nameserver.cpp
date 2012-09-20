@@ -262,7 +262,7 @@ namespace tfs
           else
           {
             bpacket->free();
-            GFactory::get_runtime_info().dump(TBSYS_LOG_LEVEL_WARN);
+            GFactory::get_runtime_info().dump(TBSYS_LOG_LEVEL(WARN), "the msg : %d will be ignored", ret);
             TBSYS_LOG(WARN, "the msg: %d will be ignored, peer ip: %s", pcode,
                tbsys::CNetUtil::addrToString(connection->getPeerId()).c_str());
           }
@@ -387,7 +387,8 @@ namespace tfs
         time_t now = Func::get_monotonic_time();
         uint64_t ipport = msg->get_connection()->getServerId();
 
-        ret = layout_manager_.get_client_request_server().open(block_id, lease_id, version, result_msg->get_block_ds(), mode, now);
+        ret = layout_manager_.get_client_request_server().open(block_id, lease_id, version, result_msg->get_block_ds(),
+              result_msg->get_family_id(), result_msg->get_family_aid_info(), result_msg->get_family_members(), mode, now);
         if (TFS_SUCCESS == ret)
         {
           result_msg->set(block_id, version, lease_id);

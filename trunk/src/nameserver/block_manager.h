@@ -96,6 +96,7 @@ namespace tfs
         int scan(common::SSMScanParameter& param, int32_t& next, bool& all_over,
             bool& cutover, const int32_t should) const;
         int get_servers(std::vector<uint64_t>& servers, const uint32_t block) const;
+        int get_servers(std::vector<uint64_t>& servers, const BlockCollect* block) const;
         int get_servers(common::ArrayHelper<uint64_t>& server, const uint32_t block) const;
         int get_servers(common::ArrayHelper<uint64_t>& server, const BlockCollect* block) const;
         int get_servers_size(const uint32_t block) const;

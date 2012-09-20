@@ -49,7 +49,8 @@ namespace tfs
         int report_block(std::vector<uint32_t>& expires, const uint64_t server, const time_t now,
             const std::set<common::BlockInfoExt>& blocks, const int8_t type);
         int open(uint32_t& block_id, uint32_t& lease_id, int32_t& version,
-            common::VUINT64& servers, const int32_t mode, const time_t now);
+            common::VUINT64& servers, int64_t& family_id, int32_t family_aid_info, std::vector<std::pair<uint32_t, uint64_t> >& family_member,
+            const int32_t mode, const time_t now);
         int batch_open(const common::VUINT32& blocks, const int32_t mode, const int32_t block_count, std::map<uint32_t, common::BlockInfoSeg>& out);
 
         int close(CloseParameter& param);
@@ -62,10 +63,10 @@ namespace tfs
 
         int resolve_block_version_conflict(const uint32_t block, const std::vector<std::pair<uint64_t, common::BlockInfo> >& info);
 
-        int open(int32_t& family_aid_info, std::vector<std::pair<uint32_t, uint64_t> >& members, const int32_t mode, const int64_t family_id);
+        int open(int32_t& family_aid_info, std::vector<std::pair<uint32_t, uint64_t> >& members, const int32_t mode, const int64_t family_id) const;
 
       private:
-        int open_read_mode_(common::VUINT64& servers, const uint32_t block) const;
+        int open_read_mode_(common::VUINT64& servers, int64_t& family_id, int32_t& family_aid_info, std::vector<std::pair<uint32_t, uint64_t> >& family_member, const uint32_t block) const;
         int open_write_mode_(uint32_t& block_id, uint32_t& lease_id,
             int32_t& version, common::VUINT64& servers, const int32_t mode, const time_t now);
         int batch_open_read_mode_(std::map<uint32_t, common::BlockInfoSeg>& out, const common::VUINT32& blocks) const;

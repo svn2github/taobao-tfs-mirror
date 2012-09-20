@@ -102,13 +102,15 @@ namespace tfs
     }
 
     int ClientRequestServer::open(uint32_t& block_id, uint32_t& lease_id, int32_t& version,
-        common::VUINT64& servers, const int32_t mode, const time_t now)
+        common::VUINT64& servers, int64_t& family_id, int32_t family_aid_info, std::vector<std::pair<uint32_t, uint64_t> >& family_members,
+        const int32_t mode, const time_t now)
     {
       servers.clear();
+      family_id = INVALID_FAMILY_ID;
       int32_t ret = TFS_SUCCESS;
       if (mode & T_READ)//read mode
       {
-        ret = open_read_mode_(servers, block_id);
+        ret = open_read_mode_(servers, family_id, family_aid_info, family_members, block_id);
       }
       else//write mode
       {
@@ -141,10 +143,42 @@ namespace tfs
       return ret;
     }
 
-    int ClientRequestServer::open_read_mode_(common::VUINT64& servers, const uint32_t block) const
+    int ClientRequestServer::open_read_mode_(common::VUINT64& servers, int64_t& family_id, int32_t& family_aid_info, std::vector<std::pair<uint32_t, uint64_t> >& family_members, const uint32_t block) const
     {
-      servers.clear();
-      return 0 == block ? EXIT_BLOCK_NOT_FOUND :  manager_.get_block_manager().get_servers(servers, block);
+      int32_t ret = (INVALID_BLOCK_ID == block) ? EXIT_BLOCK_NOT_FOUND : TFS_SUCCESS;
+      if (TFS_SUCCESS == ret)
+      {
+        servers.clear();
+        family_id = INVALID_FAMILY_ID;
+        BlockCollect* pblock = manager_.get_block_manager().get(block);
+        ret = (NULL != pblock) ? TFS_SUCCESS : EXIT_BLOCK_NOT_FOUND;
+        if (TFS_SUCCESS == ret)
+        {
+          ret = manager_.get_block_manager().get_servers(servers, pblock);
+          int64_t family_id = pblock->get_family_id();
+          if (TFS_SUCCESS != ret && INVALID_FAMILY_ID != family_id)
+          {
+            ret = open(family_aid_info, family_members, T_READ, family_id);
+            if (TFS_SUCCESS == ret)
+            {
+              int32_t index = 0;
+              const int32_t DATA_MEMBER = GET_DATA_MEMBER_NUM(family_aid_info);
+              std::vector<std::pair<uint32_t, uint64_t> >::const_iterator iter = family_members.begin();
+              for (; iter != family_members.end(); ++iter)
+              {
+                if (iter->second != INVALID_SERVER_ID)
+                  ++index;
+              }
+              ret = index >= DATA_MEMBER ? TFS_SUCCESS: EXIT_BLOCK_CANNOT_REINSTATE;
+              if (TFS_SUCCESS != ret)
+              {
+                family_id = INVALID_FAMILY_ID;
+              }
+            }
+          }
+        }
+      }
+      return ret;
     }
 
     int ClientRequestServer::batch_open(const common::VUINT32& blocks, const int32_t mode, const int32_t block_count, std::map<uint32_t, common::BlockInfoSeg>& out)
@@ -330,7 +364,8 @@ namespace tfs
       for (; iter != blocks.end(); ++iter)
       {
         res = out.insert(std::make_pair((*iter), common::BlockInfoSeg()));
-        open_read_mode_(res.first->second.ds_, (*iter));
+        BlockInfoSeg& seg = res.first->second;
+        open_read_mode_(seg.ds_, seg.family_id_, seg.family_aid_info_, seg.family_members_,(*iter));
       }
       return TFS_SUCCESS;
     }
@@ -746,7 +781,7 @@ namespace tfs
     }
 
 
-    int ClientRequestServer::open(int32_t& family_aid_info, std::vector<std::pair<uint32_t, uint64_t> >& members, const int32_t mode, const int64_t family_id)
+    int ClientRequestServer::open(int32_t& family_aid_info, std::vector<std::pair<uint32_t, uint64_t> >& members, const int32_t mode, const int64_t family_id) const
     {
       UNUSED(mode);
       return manager_.get_family_manager().get_members(members, family_aid_info, family_id);
