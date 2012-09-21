@@ -167,18 +167,8 @@ namespace tfs
 
     int PhysicalBlock::clear_block_prefix()
     {
-      int ret = TFS_SUCCESS;
       memset(&block_prefix_, 0, sizeof(BlockPrefix));
-      if (NULL != prefix_op_)
-      {
-        ret = prefix_op_->pwrite_file((const char*) (&block_prefix_), sizeof(BlockPrefix),
-                (physical_block_id_ - 1) * sizeof(BlockPrefix));
-        if (TFS_SUCCESS == ret)
-        {
-          prefix_op_->flush_file();  // if fail, it will be flushed in background
-        }
-      }
-      return ret;
+      return TFS_SUCCESS;
     }
 
     int PhysicalBlock::dump_block_prefix()
