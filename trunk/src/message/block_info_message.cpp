@@ -144,12 +144,9 @@ namespace tfs
     SetBlockInfoMessage::SetBlockInfoMessage() :
       block_id_(0),
       version_(0),
-      lease_id_(common::INVALID_LEASE_ID),
-      family_id_(common::INVALID_FAMILY_ID),
-      family_aid_info_(0)
+      lease_id_(common::INVALID_LEASE_ID)
     {
       ds_.clear();
-      family_members_.clear();
       _packetHeader._pcode = common::SET_BLOCK_INFO_MESSAGE;
     }
 
@@ -171,29 +168,14 @@ namespace tfs
       }
       if (common::TFS_SUCCESS == ret && input.get_data_length() > 0)
       {
-        ret = input.get_int64(&family_id_);
-      }
-      if (common::TFS_SUCCESS == ret && input.get_data_length() > 0)
-      {
-        ret = input.get_int32(&family_aid_info_);
-      }
-      int32_t size = 0;
-      if (common::TFS_SUCCESS == ret && input.get_data_length() > 0)
-      {
-        ret = input.get_int32(&size);
-      }
-      if (common::TFS_SUCCESS == ret && size > 0)
-      {
-        std::pair<uint32_t, uint64_t> item;
-        for (int32_t index = 0; index < size && common::TFS_SUCCESS == ret; ++index)
+        int64_t pos = 0;
+        ret = family_info_.deserialize(input.get_data(), input.get_data_length(), pos);
+        if (common::TFS_SUCCESS == ret)
         {
-          ret = input.get_int32(reinterpret_cast<int32_t*>(&item.first));
-          if (common::TFS_SUCCESS == ret)
-            ret = input.get_int64(reinterpret_cast<int64_t*>(&item.second));
-          if (common::TFS_SUCCESS == ret)
-            family_members_.push_back(item);
+          input.drain(family_info_.length());
         }
       }
+
       return ret;
     }
 
@@ -205,10 +187,10 @@ namespace tfs
       {
         len += common::INT64_SIZE * 3;
       }
-      if (common::INVALID_FAMILY_ID != family_id_)
+
+      if (common::INVALID_FAMILY_ID != family_info_.family_id_)
       {
-        len += common::INT64_SIZE + common::INT_SIZE * 2
-              + family_members_.size() * (common::INT_SIZE + common::INT64_SIZE);
+        len += family_info_.length();
       }
       return len;
     }
@@ -232,28 +214,16 @@ namespace tfs
         // reparse, avoid push verion&lease again when clone twice;
         common::BasePacket::parse_special_ds(ds_, version_, lease_id_);
       }
-      if (common::TFS_SUCCESS == ret && common::INVALID_FAMILY_ID != family_id_)
+      if (common::TFS_SUCCESS == ret && common::INVALID_FAMILY_ID != family_info_.family_id_)
       {
-        ret = output.set_int64(family_id_);
-      }
-      if (common::TFS_SUCCESS == ret && common::INVALID_FAMILY_ID != family_id_)
-      {
-        ret = output.set_int32(family_aid_info_);
-      }
-      if (common::TFS_SUCCESS == ret && common::INVALID_FAMILY_ID != family_id_)
-      {
-        ret = output.set_int32(family_members_.size());
-      }
-      if (common::TFS_SUCCESS == ret && common::INVALID_FAMILY_ID != family_id_)
-      {
-        std::vector<std::pair<uint32_t, uint64_t> >::const_iterator iter = family_members_.begin();
-        for (; iter != family_members_.end() && common::TFS_SUCCESS == ret; ++iter)
+        int64_t pos = 0;
+        ret =  family_info_.serialize(output.get_free(), output.get_free_length(), pos);
+        if (common::TFS_SUCCESS == ret)
         {
-          ret = output.set_int32((*iter).first);
-          if (common::TFS_SUCCESS == ret)
-            ret = output.set_int64((*iter).second);
+          output.pour(family_info_.length());
         }
       }
+
       return ret;
     }
 
@@ -364,25 +334,12 @@ namespace tfs
             ret = block_infos_.end() != iter ? common::TFS_SUCCESS : common::EXIT_DESERIALIZE_ERROR;
             if (common::TFS_SUCCESS == ret)
             {
+              int64_t pos = 0;
               common::BlockInfoSeg& seg = (*iter).second;
-              int32_t size = 0;
+              ret = seg.family_info_.deserialize(input.get_data(), input.get_data_length(), pos);
               if (common::TFS_SUCCESS == ret)
-                ret = input.get_int64(&seg.family_id_);
-              if (common::TFS_SUCCESS == ret)
-                ret = input.get_int32(&seg.family_aid_info_);
-              if (common::TFS_SUCCESS == ret)
-                ret = input.get_int32(&size);
-              if (common::TFS_SUCCESS == ret && size > 0)
               {
-                std::pair<uint32_t, uint64_t> item;
-                for (int32_t i= 0; i< size && common::TFS_SUCCESS == ret; ++i)
-                {
-                  ret = input.get_int32(reinterpret_cast<int32_t*>(&item.first));
-                  if (common::TFS_SUCCESS == ret)
-                    ret = input.get_int64(reinterpret_cast<int64_t*>(&item.second));
-                  if (common::TFS_SUCCESS == ret)
-                    seg.family_members_.push_back(item);
-                }
+                input.drain(seg.family_info_.length());
               }
             }
           }
@@ -393,7 +350,7 @@ namespace tfs
 
     int64_t BatchSetBlockInfoMessage::length() const
     {
-      int64_t len = common::INT_SIZE * block_infos_.size() + common::INT_SIZE;
+      int64_t len = common::INT_SIZE * block_infos_.size() + common::INT_SIZE * 2;
       // just test first has lease, then all has lease, maybe add mode test
       if (!block_infos_.empty())
       {
@@ -401,9 +358,9 @@ namespace tfs
         for (; it != block_infos_.end(); it++)
         {
           len += common::Serialization::get_vint64_length(it->second.ds_);
-          if (common::INVALID_FAMILY_ID != it->second.family_id_)
+          if (common::INVALID_FAMILY_ID != it->second.family_info_.family_id_)
           {
-            len += common::INT64_SIZE + common::INT_SIZE * 3 + it->second.family_members_.size() * (common::INT64_SIZE + common::INT_SIZE);
+            len += common::INT_SIZE + it->second.family_info_.length();
           }
         }
         if (block_infos_.begin()->second.has_lease())
@@ -426,7 +383,7 @@ namespace tfs
         for (; it != block_infos_.end(); it++)
         {
           block_info = const_cast< common::BlockInfoSeg*>(&it->second);
-          if (common::INVALID_FAMILY_ID != block_info->family_id_)
+          if (common::INVALID_FAMILY_ID != block_info->family_info_.family_id_)
             ++count;
 
           if (block_info->has_lease()
@@ -454,30 +411,21 @@ namespace tfs
       }
       if (common::TFS_SUCCESS == ret)
       {
-        int32_t index = 0;
         std::map<uint32_t, common::BlockInfoSeg>::const_iterator it = block_infos_.begin();
         common::BlockInfoSeg* block_info = NULL;
         for (; it != block_infos_.end() && common::TFS_SUCCESS == ret; it++)
         {
           block_info = const_cast< common::BlockInfoSeg*>(&it->second);
-          if (common::INVALID_FAMILY_ID != block_info->family_id_)
+          if (common::INVALID_FAMILY_ID != block_info->family_info_.family_id_)
           {
-            ++index;
             ret = output.set_int32(it->first);
             if (common::TFS_SUCCESS == ret)
-              ret = output.set_int64(block_info->family_id_);
-            if (common::TFS_SUCCESS == ret)
-              ret = output.set_int32(block_info->family_aid_info_);
-            if (common::TFS_SUCCESS == ret)
-              ret = output.set_int32(block_info->family_members_.size());
-            if (common::TFS_SUCCESS == ret)
             {
-              std::vector<std::pair<uint32_t, uint64_t> >::const_iterator iter = block_info->family_members_.begin();
-              for (; iter != block_info->family_members_.end() && common::TFS_SUCCESS == ret; ++iter)
+              int64_t pos = 0;
+              ret = block_info->family_info_.serialize(output.get_free(), output.get_free_length(), pos);
+              if (common::TFS_SUCCESS == ret)
               {
-                ret = output.set_int32((*iter).first);
-                if (common::TFS_SUCCESS == ret)
-                  ret = output.set_int64((*iter).second);
+                output.pour(block_info->family_info_.length());
               }
             }
           }

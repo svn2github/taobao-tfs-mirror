@@ -792,31 +792,6 @@ namespace tfs
       }
     };
 
-    struct BlockInfoSeg
-    {
-      common::VUINT64 ds_;
-      uint32_t lease_id_;
-      int32_t version_;
-      int64_t family_id_;
-      int32_t family_aid_info_;
-      std::vector<std::pair<uint32_t, uint64_t> > family_members_;
-      BlockInfoSeg() : lease_id_(INVALID_LEASE_ID), version_(0)
-      {
-        ds_.clear();
-        family_id_ = INVALID_FAMILY_ID;
-        family_members_.clear();
-      }
-      BlockInfoSeg(const common::VUINT64& ds,
-          const uint32_t lease_id = INVALID_LEASE_ID, const int32_t version = 0) :
-        ds_(ds), lease_id_(lease_id), version_(version)
-      {
-      }
-      bool has_lease() const
-      {
-        return (lease_id_ != INVALID_LEASE_ID);
-      }
-    };
-
     struct DsTask
     {
       DsTask() {}
@@ -960,8 +935,29 @@ namespace tfs
 
       FamilyMemberInfoExt()
       {
-        family_id_ = 0;
+        family_id_ = INVALID_FAMILY_ID;
         family_aid_info_ = 0;
+      }
+    };
+
+    struct BlockInfoSeg
+    {
+      common::VUINT64 ds_;
+      uint32_t lease_id_;
+      int32_t version_;
+      FamilyMemberInfoExt family_info_;
+      BlockInfoSeg() : lease_id_(INVALID_LEASE_ID), version_(0)
+      {
+        ds_.clear();
+      }
+      BlockInfoSeg(const common::VUINT64& ds,
+          const uint32_t lease_id = INVALID_LEASE_ID, const int32_t version = 0) :
+        ds_(ds), lease_id_(lease_id), version_(version)
+      {
+      }
+      bool has_lease() const
+      {
+        return (lease_id_ != INVALID_LEASE_ID);
       }
     };
 
