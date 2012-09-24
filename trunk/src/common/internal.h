@@ -927,7 +927,7 @@ namespace tfs
     {
       int64_t family_id_;
       int32_t family_aid_info_;
-      std::vector<FamilyMemberInfo> members_;
+      std::vector<std::pair<uint32_t, uint64_t> > members_;
 
       int deserialize(const char* data, const int64_t data_len, int64_t& pos);
       int serialize(char* data, const int64_t data_len, int64_t& pos) const;

@@ -1393,9 +1393,13 @@ namespace tfs
         const uint32_t MEMBER_NUM = GET_DATA_MEMBER_NUM(family_aid_info_) + GET_CHECK_MEMBER_NUM(family_aid_info_);
         for (uint32_t index = 0; index < MEMBER_NUM && common::TFS_SUCCESS == ret; ++index)
         {
-          FamilyMemberInfo member;
-          ret = member.deserialize(data, data_len, pos);
-          if (TFS_SUCCESS == ret)
+          std::pair<uint32_t, uint64_t> member;
+          ret = Serialization::get_int32(data, data_len, pos, reinterpret_cast<int32_t*>(member.first));
+          if (common::TFS_SUCCESS == ret)
+          {
+            ret = Serialization::get_int32(data, data_len, pos, reinterpret_cast<int32_t*>(member.second));
+          }
+          if (common::TFS_SUCCESS == ret)
           {
             members_.push_back(member);
           }
@@ -1429,10 +1433,14 @@ namespace tfs
         ret = members_.size() == MEMBER_NUM ? common::TFS_SUCCESS : common::EXIT_SERIALIZE_ERROR;
         if (common::TFS_SUCCESS == ret)
         {
-          std::vector<FamilyMemberInfo>::const_iterator iter = members_.begin();
+          std::vector<std::pair<uint32_t, uint64_t> >::const_iterator iter = members_.begin();
           for (; iter != members_.end() && common::TFS_SUCCESS == ret; ++iter)
           {
-            ret = iter->serialize(data, data_len, pos);
+            ret = Serialization::set_int32(data, data_len, pos, iter->first);
+            if (common::TFS_SUCCESS == ret)
+            {
+              ret = Serialization::set_int64(data, data_len, pos, iter->second);
+            }
           }
         }
       }
@@ -1443,7 +1451,7 @@ namespace tfs
     int64_t FamilyMemberInfoExt::length() const
     {
       const uint32_t MEMBER_NUM = GET_DATA_MEMBER_NUM(family_aid_info_) + GET_CHECK_MEMBER_NUM(family_aid_info_);
-      return common::INT64_SIZE + common::INT_SIZE + MEMBER_NUM * sizeof(FamilyMemberInfo);
+      return common::INT64_SIZE + common::INT_SIZE + MEMBER_NUM * (INT_SIZE + INT64_SIZE);
     }
 
   } /** nameserver **/
