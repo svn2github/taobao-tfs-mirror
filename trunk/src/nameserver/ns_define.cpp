@@ -141,8 +141,6 @@ namespace tfs
 
     void NsRuntimeGlobalInformation::switch_role(const bool startup, const int64_t now)
     {
-      last_owner_check_time_ = tbutil::Time::now(tbutil::Time::Monotonic).toMicroSeconds() + common::SYSPARAM_NAMESERVER.safe_mode_time_ * 1000000;
-      last_push_owner_check_packet_time_ = last_owner_check_time_;
       lease_id_ = common::INVALID_LEASE_ID;
       lease_expired_time_ = 0;
       if (startup)//startup
@@ -244,19 +242,17 @@ namespace tfs
       return true;
     }
 
-    void NsRuntimeGlobalInformation::dump(int32_t level, const char* format)
+    void NsRuntimeGlobalInformation::dump(const int32_t level, const char* file, const int32_t line,
+            const char* function, const char* format, ...)
     {
-      TBSYS_LOGGER.logMessage(
-          level,
-          __FILE__,
-          __LINE__,
-          __FUNCTION__,
-          "%s owner ip port: %s, other side ip port: %s, switch time: %s, vip: %s\
-,destroy flag: %s, owner role: %s, other side role: %s, owner status: %s, other side status: %s\
-, last owner check time: %s, last push owner check packet time: %s",
-          NULL == format ? "" : format,
-          tbsys::CNetUtil::addrToString(owner_ip_port_).c_str(),
-          tbsys::CNetUtil::addrToString(peer_ip_port_).c_str(),
+        char msgstr[256] = {'\0'};/** include '\0'*/
+        va_list ap;
+        va_start(ap, format);
+        vsnprintf(msgstr, 256, NULL == format ? "" : format, ap);
+        va_end(ap);
+        TBSYS_LOGGER.logMessage(level, file, line, function, "%s, owner_ip_port: %s, other_side_ip_port: %s,switch_time: %s, vip: %s \
+          destroy: %s, owner_role: %s, other_side_role: %s, owner_status: %s, other_side_status: %s, leaes_id: %"PRI64_PREFIX"d, lease_expired_time: %"PRI64_PREFIX"d",
+          msgstr, tbsys::CNetUtil::addrToString(owner_ip_port_).c_str(), tbsys::CNetUtil::addrToString(peer_ip_port_).c_str(),
           common::Func::time_to_str(switch_time_).c_str(), tbsys::CNetUtil::addrToString(vip_).c_str(),
           destroy_flag_ ? "yes" : "no", owner_role_
           == NS_ROLE_MASTER ? "master" : owner_role_ == NS_ROLE_SLAVE ? "slave" : "unknow", peer_role_
@@ -265,8 +261,7 @@ namespace tfs
           : owner_status_ == NS_STATUS_INITIALIZED ? "initialize" : "unknow",
           peer_status_ == NS_STATUS_UNINITIALIZE ? "uninitialize"
           : peer_status_ == NS_STATUS_INITIALIZED ? "initialize" : "unknow",
-          common::Func::time_to_str(last_owner_check_time_/1000000).c_str(),
-          common::Func::time_to_str(last_push_owner_check_packet_time_/1000000).c_str());
+          lease_id_, lease_expired_time_);
     }
 
     NsRuntimeGlobalInformation& NsRuntimeGlobalInformation::instance()

@@ -388,7 +388,7 @@ namespace tfs
         uint64_t ipport = msg->get_connection()->getServerId();
 
         ret = layout_manager_.get_client_request_server().open(block_id, lease_id, version, result_msg->get_block_ds(),
-              result_msg->get_family_id(), result_msg->get_family_aid_info(), result_msg->get_family_members(), mode, now);
+              result_msg->get_family_info(), mode, now);
         if (TFS_SUCCESS == ret)
         {
           result_msg->set(block_id, version, lease_id);

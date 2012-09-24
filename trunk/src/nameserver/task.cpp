@@ -38,8 +38,6 @@
 using namespace tfs::common;
 using namespace tfs::message;
 
-const int32_t VERSION_INC_STEP_REPLICATE  = 2;
-
 namespace tfs
 {
   namespace nameserver

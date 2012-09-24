@@ -77,7 +77,7 @@ namespace tfs
           bool   complete = false;
           int8_t random_index = random() % SYSPARAM_NAMESERVER.max_replication_;
           TBSYS_LOG(DEBUG, "random_index : %d, servers_size: %d", random_index, get_servers_size());
-          for (int8_t i = 0; index < SYSPARAM_NAMESERVER.max_replication_ && !complete; ++i, ++random_index)
+          for (int8_t i = 0; i < SYSPARAM_NAMESERVER.max_replication_ && !complete; ++i, ++random_index)
           {
             index = random_index % SYSPARAM_NAMESERVER.max_replication_;
             if (INVALID_SERVER_ID == servers_[index])
@@ -163,7 +163,7 @@ namespace tfs
     uint64_t BlockCollect::get_server(const int8_t index) const
     {
       uint64_t server = INVALID_SERVER_ID;
-      if (NULL != servers_ && server_size_ > 0 && index > 0 && index < SYSPARAM_NAMESERVER.max_replication_)
+      if (NULL != servers_ && server_size_ > 0 && index >= 0 && index < SYSPARAM_NAMESERVER.max_replication_)
       {
         for (int8_t i = index; i < SYSPARAM_NAMESERVER.max_replication_ && INVALID_SERVER_ID == server; ++i)
           server = servers_[i];
@@ -176,7 +176,7 @@ namespace tfs
         const int8_t role, const bool isnew, const common::BlockInfo& info, const time_t now)
     {
       expire_self = false;
-      int32_t ret = (INVALID_SERVER_ID != server && info_.block_id_ == id() && (NULL != servers_)
+      int32_t ret = (INVALID_SERVER_ID != server && info.block_id_ == id() && (NULL != servers_)
                      && removes.get_array_size() > 0 && other_expires.get_array_size() > 0) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {

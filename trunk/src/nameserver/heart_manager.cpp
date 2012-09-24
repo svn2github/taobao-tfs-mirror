@@ -304,6 +304,12 @@ namespace tfs
               }
             }
           }
+          if (TFS_SUCCESS != ret)
+          {
+            ngi.dump(TBSYS_LOG_LEVEL(INFO), "%s %s lease failed, ret: %d, lease_id: %"PRI64_PREFIX"d, status: %d",
+              tbsys::CNetUtil::addrToString(msg->get_ip_port()).c_str(),
+              NS_KEEPALIVE_TYPE_LOGIN == msg->get_type() ? "login" : "renew", ret, msg->get_lease_id(), msg->get_status());
+          }
           ret = msg->reply(reply_msg);
         }
       }
@@ -439,7 +445,7 @@ namespace tfs
             if (conflict)
             {
               ret = EXIT_ROLE_ERROR;
-              ngi.dump(TBSYS_LOG_LEVEL_ERROR, "nameserver role coflict, own role: master, other role: master, must be exit");
+              ngi.dump(TBSYS_LOG_LEVEL(ERROR), "nameserver role coflict, own role: master, other role: master, must be exit");
               NameServer* service = dynamic_cast<NameServer*>(BaseMain::instance());
               if (NULL != service)
               {
@@ -465,8 +471,8 @@ namespace tfs
       interval = std::max(interval, 1);
 
       int32_t ret = TFS_ERROR;
-      int32_t MAX_RETRY_COUNT = interval * 1000;
-      int32_t MAX_TIMEOUT_TIME_MS = 1000;
+      int32_t MAX_RETRY_COUNT = 2;
+      int32_t MAX_TIMEOUT_TIME_MS = 500;
       NewClient* client = NULL;
       tbnet::Packet* response = NULL;
       for (int32_t i = 0; i < MAX_RETRY_COUNT && TFS_SUCCESS != ret; ++i)
@@ -492,7 +498,12 @@ namespace tfs
           }
         }
         NewClientManager::get_instance().destroy_client(client);
-        ngi.dump(TBSYS_LOG_LEVEL_DEBUG);
+        if (TFS_SUCCESS != ret)
+        {
+          ngi.dump(TBSYS_LOG_LEVEL(INFO), "%s %s lease failed, ret: %d, lease_id: %"PRI64_PREFIX"d, lease_expired_time: %"PRI64_PREFIX"d,status: %d",
+            tbsys::CNetUtil::addrToString(ngi.owner_ip_port_).c_str(), NS_KEEPALIVE_TYPE_LOGIN == type ? "login" : "renew",
+            ret, ngi.lease_id_, ngi.lease_expired_time_, ngi.owner_status_);
+        }
       }
       return ret;
     }

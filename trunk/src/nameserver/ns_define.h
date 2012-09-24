@@ -142,8 +142,6 @@ namespace tfs
       uint64_t peer_ip_port_;
       int64_t switch_time_;
       int64_t discard_newblk_safe_mode_time_;
-      int64_t last_owner_check_time_;
-      int64_t last_push_owner_check_packet_time_;
       int64_t lease_id_;
       int64_t lease_expired_time_;
       int64_t startup_time_;
@@ -170,7 +168,8 @@ namespace tfs
       bool own_is_initialize_complete() const;
       void initialize();
       void destroy();
-      void dump(int32_t level, const char* format = NULL);
+      void dump(const int32_t level, const char* file, const int32_t line,
+            const char* function, const char* format, ...);
       NsRuntimeGlobalInformation();
       static NsRuntimeGlobalInformation& instance();
       static NsRuntimeGlobalInformation instance_;

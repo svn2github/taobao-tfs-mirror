@@ -204,7 +204,7 @@ namespace tfs
       int32_t ret = ((NULL != data) && (length > 0)) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
-        ngi.dump(TBSYS_LOG_LEVEL_DEBUG);
+        ngi.dump(TBSYS_LOG_LEVEL(DEBUG), "write oplog");
         if (ngi.is_master()
             && !ngi.is_destroyed()
             && ngi.has_valid_lease(now))
