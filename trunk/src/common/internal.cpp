@@ -1394,10 +1394,10 @@ namespace tfs
         for (uint32_t index = 0; index < MEMBER_NUM && common::TFS_SUCCESS == ret; ++index)
         {
           std::pair<uint32_t, uint64_t> member;
-          ret = Serialization::get_int32(data, data_len, pos, reinterpret_cast<int32_t*>(member.first));
+          ret = Serialization::get_int32(data, data_len, pos, reinterpret_cast<int32_t*>(&member.first));
           if (common::TFS_SUCCESS == ret)
           {
-            ret = Serialization::get_int32(data, data_len, pos, reinterpret_cast<int32_t*>(member.second));
+            ret = Serialization::get_int32(data, data_len, pos, reinterpret_cast<int32_t*>(&member.second));
           }
           if (common::TFS_SUCCESS == ret)
           {
