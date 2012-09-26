@@ -107,7 +107,7 @@ namespace tfs
       int create_family_choose_check_members(common::ArrayHelper<std::pair<uint64_t, uint32_t> >& members,
           common::ArrayHelper<uint64_t>& already_exist, const int32_t check_member_num);
       int reinstate_family_choose_members(common::ArrayHelper<uint64_t>& results,
-          const int64_t family_id, const int32_t data_member_num);
+          const int64_t family_id, const int32_t family_aid_info, const int32_t data_member_num);
       int dissolve_family_choose_member_targets_server(common::ArrayHelper<std::pair<uint64_t, uint32_t> >& results,
           const int64_t family_id, const int32_t family_aid_info);
       bool check_need_reinstate(common::ArrayHelper<common::FamilyMemberInfo>& reinstate_members,

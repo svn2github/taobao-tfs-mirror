@@ -158,7 +158,7 @@ namespace tfs
           int64_t family_id = pblock->get_family_id();
           if (TFS_SUCCESS != ret && INVALID_FAMILY_ID != family_id)
           {
-            ret = open(family_info.family_aid_info_, family_info.members_, T_READ, family_info.family_id_);
+            ret = open(family_info.family_aid_info_, family_info.members_, T_READ, family_id);
             if (TFS_SUCCESS == ret)
             {
               int32_t index = 0;
@@ -170,9 +170,9 @@ namespace tfs
                   ++index;
               }
               ret = index >= DATA_MEMBER ? TFS_SUCCESS: EXIT_BLOCK_CANNOT_REINSTATE;
-              if (TFS_SUCCESS != ret)
+              if (TFS_SUCCESS == ret)
               {
-                family_id = INVALID_FAMILY_ID;
+                family_info.family_id_ = family_id;
               }
             }
           }

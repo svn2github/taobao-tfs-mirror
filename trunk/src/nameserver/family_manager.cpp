@@ -564,8 +564,11 @@ namespace tfs
       if (TFS_SUCCESS == ret && !marshalling_queue_.empty())
       {
         int32_t choose_num = 0;
+        members.clear();
         std::pair<uint64_t, uint32_t> result;
         const int32_t MAX_LOOP_NUM = data_member_num * 2;
+        uint32_t lans[data_member_num];
+        common::ArrayHelper<uint32_t> helper(data_member_num, lans);
         do
         {
           time_t now = Func::get_monotonic_time();
@@ -579,28 +582,24 @@ namespace tfs
           marshallin_queue_mutex_.unlock();
           if (TFS_SUCCESS == ret)
           {
+            uint32_t lan = Func::get_lan(result.first, SYSPARAM_NAMESERVER.group_mask_);
             //这里没办法精确控制1个SERVER只做一个任务，为了保险需要要DS来做保证，NS只是尽量保证
             #ifdef TFS_GTEST
             bool valid = true;
             UNUSED(now);
             #else
             bool valid = (manager_.get_block_manager().need_marshalling(result.second, now)
+                        && !helper.exist(lan)
+                        && !members.exist(result)
                         && !manager_.get_task_manager().exist(result.second)
                         && !manager_.get_task_manager().exist(result.first)
-                        && manager_.get_task_manager().has_space_do_task_in_machine(result.first));
+                        && manager_.get_task_manager().has_space_do_task_in_machine(result.first)
+                        && !helper.exist(lan));
             #endif
             if (valid)
             {
-              bool exist = false;
-              for (int32_t i = 0; i < members.get_array_index() && !exist; ++i)
-              {
-                std::pair<uint64_t, uint32_t> middle = *members.at(i);
-                exist =  middle.first == result.first;
-              }
-              if (!exist)
-              {
-                members.push_back(result);
-              }
+              members.push_back(result);
+              helper.push_back(lan);
             }
           }
         }
@@ -638,20 +637,21 @@ namespace tfs
     }
 
     int FamilyManager::reinstate_family_choose_members(common::ArrayHelper<uint64_t>& results,
-        const int64_t family_id, const int32_t member_num)
+        const int64_t family_id, const int32_t family_aid_info, const int32_t member_num)
     {
       int32_t ret = (INVALID_FAMILY_ID != family_id && results.get_array_size() > 0
                     && CHECK_MEMBER_NUM(member_num)) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
-        std::pair<BlockCollect*, ServerCollect*> members[member_num];
-        common::ArrayHelper<std::pair<BlockCollect*, ServerCollect*> > helper(member_num, members);
+        const int32_t MEMBER_NUM = GET_DATA_MEMBER_NUM(family_aid_info) + GET_CHECK_MEMBER_NUM(family_aid_info);
+        std::pair<BlockCollect*, ServerCollect*> members[MEMBER_NUM];
+        common::ArrayHelper<std::pair<BlockCollect*, ServerCollect*> > helper(MEMBER_NUM, members);
         ret = get_members_(helper, family_id);
         if (TFS_SUCCESS == ret)
         {
           int64_t index = 0;
-          uint64_t servers[member_num];
-          common::ArrayHelper<uint64_t> helper2(member_num, servers);
+          uint64_t servers[MEMBER_NUM];
+          common::ArrayHelper<uint64_t> helper2(MEMBER_NUM, servers);
           for (index = 0; index < helper.get_array_index(); ++index)
           {
             std::pair<BlockCollect*, ServerCollect*>* item = helper.at(index);

@@ -1540,7 +1540,7 @@ namespace tfs
         const int64_t REINSTATE_NUM = reinstate_members.get_array_index();
         uint64_t servers[REINSTATE_NUM];
         common::ArrayHelper<uint64_t> results(REINSTATE_NUM, servers);
-        ret = get_family_manager().reinstate_family_choose_members(results, family->get_family_id(), REINSTATE_NUM);
+        ret = get_family_manager().reinstate_family_choose_members(results, family->get_family_id(), family->get_family_aid_info(), REINSTATE_NUM);
         if (TFS_SUCCESS == ret)
         {
           int32_t family_aid_info_index = 0;
