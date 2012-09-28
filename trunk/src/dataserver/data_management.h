@@ -57,7 +57,7 @@ namespace tfs
             int32_t& real_read_len, char* tmpDataBuffer);
         int read_data_degrade(const uint32_t block_id, const uint64_t file_id,
             const int32_t read_offset, const int8_t flag, int32_t& real_read_len,
-            char* tmpDataBuffer, const common::FamilyMemberInfoExt* family_info);
+            char* tmpDataBuffer, const common::FamilyMemberInfoExt& family_info);
         int read_raw_data(uint32_t block_id, int32_t read_offset, int32_t& real_read_len,
             char* tmpDataBuffer, int32_t& data_file_size);
 

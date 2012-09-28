@@ -81,9 +81,19 @@ namespace tfs
         {
           flag_ = flag;
         }
+
+        common::FamilyMemberInfoExt& get_family_info()
+        {
+          return family_info_;
+        }
+        void set_family_info(common::FamilyMemberInfoExt& family_info)
+        {
+          family_info_ = family_info;
+        }
       protected:
         ReadDataInfo read_data_info_;
         int8_t flag_;
+        common::FamilyMemberInfoExt family_info_;
     };
 
     class DegradeReadDataMessage: public ReadDataMessage

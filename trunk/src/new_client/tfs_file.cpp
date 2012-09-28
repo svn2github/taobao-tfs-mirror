@@ -1092,10 +1092,15 @@ int TfsFile::async_req_read_file(NewClient* client, const uint16_t index,
               seg_data.seg_info_.offset_, seg_data.seg_info_.size_, ds_size);
 
     // need check ?
-    if (0 != seg_data.seg_info_.file_id_ && 0 != ds_size)
+    if (0 != seg_data.seg_info_.file_id_ && (0 != ds_size || INVALID_FAMILY_ID != seg_data.family_info_.family_id_))
     {
       int32_t retry_count = seg_data.get_orig_pri_ds_index() - seg_data.pri_ds_index_;
       retry_count = retry_count <= 0 ? ds_size + retry_count : retry_count;
+
+      if (INVALID_FAMILY_ID != seg_data.family_info_.family_id_)
+      {
+        retry_count = 1;
+      }
 
       bool remove_cache = false;
       // try until post success
@@ -1158,6 +1163,12 @@ int TfsFile::async_req_read_file(NewClient* client, const uint16_t index)
   rd_message.set_offset(seg_data->inner_offset_);
   rd_message.set_length(seg_data->seg_info_.size_);
   rd_message.set_flag(seg_data->read_flag_);
+
+  if (INVALID_FAMILY_ID != seg_data->family_info_.family_id_)
+  {
+    rd_message.set_family_info(seg_data->family_info_);
+    TBSYS_LOG(DEBUG, "send degrade read request, family id: %"PRI64_PREFIX"d", seg_data->family_info_.family_id_);
+  }
 
   int ret = async_req_read_file(client, index, *seg_data, rd_message);
   if (TFS_SUCCESS != ret)
@@ -1286,6 +1297,11 @@ int TfsFile::async_req_read_file_v2(NewClient* client, const uint16_t index)
   rd_message.set_offset(seg_data->inner_offset_);
   rd_message.set_length(seg_data->seg_info_.size_);
   rd_message.set_flag(seg_data->read_flag_);
+
+  if (INVALID_FAMILY_ID != seg_data->family_info_.family_id_)
+  {
+    rd_message.set_family_info(seg_data->family_info_);
+  }
 
   int ret = async_req_read_file(client, index, *seg_data, rd_message);
   if (TFS_SUCCESS != ret)
@@ -1450,6 +1466,11 @@ int TfsFile::async_req_stat_file(NewClient* client, const uint16_t index)
     stat_message.set_file_id(seg_data->seg_info_.file_id_);
     TBSYS_LOG(DEBUG, "req stat file flag: %d", flags_);
     stat_message.set_mode(seg_data->stat_mode_);
+
+    if (INVALID_FAMILY_ID != seg_data->family_info_.family_id_)
+    {
+      stat_message.set_family_info(seg_data->family_info_);
+    }
 
     int32_t ds_size = seg_data->ds_.size();
     if (ds_size > 0)

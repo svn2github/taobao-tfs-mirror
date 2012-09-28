@@ -89,12 +89,22 @@ namespace tfs
       {
         input.get_int8(&flag_);
       }
+      if (common::TFS_SUCCESS == iret && input.get_data_length() > 0)
+      {
+        int64_t pos = 0;
+        iret = family_info_.deserialize(input.get_data(), input.get_data_length(),  pos);
+        if (common::TFS_SUCCESS == iret)
+        {
+          input.drain(family_info_.length());
+        }
+      }
       return iret;
     }
 
     int64_t ReadDataMessage::length() const
     {
-      return read_data_info_.length() + common::INT8_SIZE;
+      const int32_t EXT_SIZE = common::INVALID_FAMILY_ID != family_info_.family_id_ ? family_info_.length(): 0;
+      return read_data_info_.length() + common::INT8_SIZE + EXT_SIZE;
     }
 
     int ReadDataMessage::serialize(common::Stream& output) const
@@ -108,6 +118,15 @@ namespace tfs
       if (common::TFS_SUCCESS == iret)
       {
         output.set_int8(flag_);
+      }
+      if (common::TFS_SUCCESS == iret && common::INVALID_FAMILY_ID != family_info_.family_id_)
+      {
+        int64_t pos = 0;
+        iret = family_info_.serialize(output.get_free(), output.get_free_length(), pos);
+        if (common::TFS_SUCCESS == iret)
+        {
+          output.pour(family_info_.length());
+        }
       }
       return iret;
     }

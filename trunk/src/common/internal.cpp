@@ -1397,7 +1397,7 @@ namespace tfs
           ret = Serialization::get_int32(data, data_len, pos, reinterpret_cast<int32_t*>(&member.first));
           if (common::TFS_SUCCESS == ret)
           {
-            ret = Serialization::get_int32(data, data_len, pos, reinterpret_cast<int32_t*>(&member.second));
+            ret = Serialization::get_int64(data, data_len, pos, reinterpret_cast<int64_t*>(&member.second));
           }
           if (common::TFS_SUCCESS == ret)
           {

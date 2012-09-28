@@ -1490,6 +1490,7 @@ namespace tfs
       int32_t read_offset = message->get_offset();
       uint64_t peer_id = message->get_connection()->getPeerId();
       int8_t flag = message->get_flag();
+      FamilyMemberInfoExt& family_info = message->get_family_info();
 
       TBSYS_LOG(DEBUG, "blockid: %u, fileid: %" PRI64_PREFIX "u, read len: %d, read offset: %d, resp: %p", block_id,
                 file_id, read_len, read_offset, resp_rd_v2_msg);
@@ -1512,7 +1513,15 @@ namespace tfs
       if (real_read_len > 0)
       {
         char* tmp_data_buffer = new char[real_read_len];
-        ret = data_management_.read_data(block_id, file_id, read_offset, flag, real_read_len, tmp_data_buffer);
+        if (INVALID_FAMILY_ID == family_info.family_id_)
+        {
+          ret = data_management_.read_data(block_id, file_id, read_offset, flag, real_read_len, tmp_data_buffer);
+        }
+        else
+        {
+          ret = data_management_.read_data_degrade(block_id, file_id, read_offset, flag, real_read_len,
+              tmp_data_buffer, family_info);
+        }
         if (TFS_SUCCESS != ret)
         {
           try_add_repair_task(block_id, ret);
@@ -1600,6 +1609,7 @@ namespace tfs
       int32_t read_offset = message->get_offset();
       uint64_t peer_id = message->get_connection()->getPeerId();
       int8_t flag = message->get_flag();
+      FamilyMemberInfoExt& family_info = message->get_family_info();
 
       //add FileInfo if the first fragment
       int32_t real_read_len = 0;
@@ -1620,7 +1630,15 @@ namespace tfs
       if (real_read_len > 0)
       {
         char* tmp_data_buffer = new char[real_read_len];
-        ret = data_management_.read_data(block_id, file_id, read_offset, flag, real_read_len, tmp_data_buffer);
+        if (INVALID_FAMILY_ID == family_info.family_id_)
+        {
+          ret = data_management_.read_data(block_id, file_id, read_offset, flag, real_read_len, tmp_data_buffer);
+        }
+        else
+        {
+          ret = data_management_.read_data_degrade(block_id, file_id, read_offset, flag, real_read_len,
+              tmp_data_buffer, family_info);
+        }
         if (TFS_SUCCESS != ret)
         {
           try_add_repair_task(block_id, ret);
@@ -1737,7 +1755,7 @@ namespace tfs
         else
         {
           ret = data_management_.read_data_degrade(block_id, file_id, read_offset, flag,
-              real_read_len, tmp_data_buffer, &family_info);
+              real_read_len, tmp_data_buffer, family_info);
           if (TFS_SUCCESS == ret)
           {
             if (0 == read_offset)
@@ -1839,11 +1857,25 @@ namespace tfs
       uint32_t block_id = message->get_block_id();
       uint64_t file_id = message->get_file_id();
       int32_t mode = message->get_mode();
+      FamilyMemberInfoExt& family_info = message->get_family_info();
 
       TBSYS_LOG(DEBUG, "read file info, blockid: %u, fileid: %" PRI64_PREFIX "u, mode: %d",
           block_id, file_id, mode);
+
+      int ret = TFS_SUCCESS;
       FileInfo finfo;
-      int ret = data_management_.read_file_info(block_id, file_id, mode, finfo);
+      if (INVALID_FAMILY_ID == family_info.family_id_)
+      {
+        ret = data_management_.read_file_info(block_id, file_id, mode, finfo);
+      }
+      else
+      {
+        int8_t stat_flag = mode;
+        int32_t read_len = FILEINFO_SIZE;
+        ret = data_management_.read_data_degrade(block_id, file_id, 0, stat_flag, read_len,
+            reinterpret_cast<char*>(&finfo), family_info);
+      }
+
       if (TFS_SUCCESS != ret)
       {
         try_add_repair_task(block_id, ret);
@@ -1854,6 +1886,7 @@ namespace tfs
       RespFileInfoMessage* resp_fi_msg = new RespFileInfoMessage();
       resp_fi_msg->set_file_info(&finfo);
       message->reply(resp_fi_msg);
+
       TIMER_END();
       TBSYS_LOG(DEBUG, "read fileinfo %s. blockid: %u, fileid: %" PRI64_PREFIX "u, mode: %d, cost time: %" PRI64_PREFIX "d",
           TFS_SUCCESS == ret ? "success" : "fail", block_id, file_id, mode, TIMER_DURATION());

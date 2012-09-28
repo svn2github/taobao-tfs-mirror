@@ -40,15 +40,25 @@ namespace tfs
       {
         iret = input.get_int32(reinterpret_cast<int32_t*> (&mode_));
       }
+      if (common::TFS_SUCCESS == iret && input.get_data_length() > 0)
+      {
+        int64_t pos = 0;
+        iret = family_info_.deserialize(input.get_data(), input.get_data_length(),  pos);
+        if (common::TFS_SUCCESS == iret)
+        {
+          input.drain(family_info_.length());
+        }
+      }
       return iret;
     }
 
     int64_t FileInfoMessage::length() const
     {
-      return common::INT_SIZE * 2 + common::INT64_SIZE;
+      const int32_t EXT_SIZE = common::INVALID_FAMILY_ID != family_info_.family_id_ ? family_info_.length(): 0;
+      return common::INT_SIZE * 2 + common::INT64_SIZE + EXT_SIZE;
     }
 
-    int FileInfoMessage::serialize(common::Stream& output) const 
+    int FileInfoMessage::serialize(common::Stream& output) const
     {
       int32_t iret = output.set_int32(block_id_);
       if (common::TFS_SUCCESS == iret)
@@ -58,6 +68,15 @@ namespace tfs
       if (common::TFS_SUCCESS == iret)
       {
         iret = output.set_int32(mode_);
+      }
+      if (common::TFS_SUCCESS == iret && common::INVALID_FAMILY_ID != family_info_.family_id_)
+      {
+        int64_t pos = 0;
+        iret = family_info_.serialize(output.get_free(), output.get_free_length(), pos);
+        if (common::TFS_SUCCESS == iret)
+        {
+          output.pour(family_info_.length());
+        }
       }
       return iret;
     }
@@ -96,7 +115,7 @@ namespace tfs
       return file_info_ .id_ > 0 ? common::INT_SIZE + file_info_.length() : common::INT_SIZE;
     }
 
-    int RespFileInfoMessage::serialize(common::Stream& output) const 
+    int RespFileInfoMessage::serialize(common::Stream& output) const
     {
       int32_t size = file_info_.id_ > 0 ? file_info_.length() : 0;
       int32_t iret = output.set_int32(size);

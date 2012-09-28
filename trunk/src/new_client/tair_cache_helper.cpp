@@ -114,6 +114,15 @@ namespace tfs
             TBSYS_LOG(DEBUG, "serialize ds: %s", Func::addr_to_str(ds_[i], true).c_str());
           }
         }
+
+        if (TFS_SUCCESS == ret)
+        {
+          if (has_family_info())
+          {
+            ret = family_info_.serialize(data, data_len, pos);
+          }
+        }
+
       }
       return ret;
     }
@@ -139,13 +148,20 @@ namespace tfs
             ds_.push_back(ds_addr);
           }
         }
+
+        if (TFS_SUCCESS == ret)
+        {
+          // don't care return value
+          family_info_.deserialize(data, data_len, pos);
+        }
       }
       return ret;
     }
 
     int64_t BlockCacheValue::length() const
     {
-      return TAIR_TAG_LENGTH + INT_SIZE + INT64_SIZE * ds_.size();
+      int32_t EXT_SIZE = (INVALID_FAMILY_ID == family_info_.family_id_) ? 0: family_info_.length();
+      return TAIR_TAG_LENGTH + INT_SIZE + INT64_SIZE * ds_.size() + EXT_SIZE;
     }
 
     void BlockCacheValue::set_ds_list(const VUINT64& ds)
@@ -302,9 +318,15 @@ namespace tfs
             data_entry* key_entry = new data_entry(key_buf, key_len, false);
             data_entry* value_entry = new data_entry(value_buf, value_len, false);
             int32_t retry_count = TAIR_CLIENT_TRY_COUNT;
+            int32_t expire_time = DEFAULT_EXPIRE_TIME;
+            if (value.has_family_info())
+            {
+              expire_time = DEFALUT_FAMILY_CACHE_TIME;
+            }
+
             do
             {
-              ret = tair_client_->put(area_, *key_entry, *value_entry, DEFAULT_EXPIRE_TIME, value.version_);
+              ret = tair_client_->put(area_, *key_entry, *value_entry, expire_time, value.version_);
             } while (TAIR_RETURN_TIMEOUT == ret && --retry_count > 0);
 
             if (TAIR_RETURN_VERSION_ERROR == ret)

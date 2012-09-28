@@ -281,11 +281,11 @@ namespace tfs
      */
     int DataManagement::read_data_degrade(const uint32_t block_id, const uint64_t file_id,
         const int32_t read_offset, const int8_t flag, int32_t& real_read_len,
-        char* tmp_data_buffer, const FamilyMemberInfoExt* family_info)
+        char* tmp_data_buffer, const FamilyMemberInfoExt& family_info)
     {
       int ret = TFS_SUCCESS;
-      int32_t family_aid_info = family_info->family_aid_info_;
-      const std::vector<FamilyMemberInfo>& family_members = family_info->members_;
+      int32_t family_aid_info = family_info.family_aid_info_;
+      const std::vector<std::pair<uint32_t, uint64_t> >& family_members = family_info.members_;
       const int32_t data_num = GET_DATA_MEMBER_NUM(family_aid_info);
       const int32_t check_num = GET_CHECK_MEMBER_NUM(family_aid_info);
       const int32_t member_num = data_num + check_num;
@@ -293,6 +293,12 @@ namespace tfs
       if (!CHECK_MEMBER_NUM_V2(data_num, check_num))
       {
         return EXIT_INVALID_ARGU_ERROR;
+      }
+
+      for (int32_t i = 0; i < member_num; i++)
+      {
+        TBSYS_LOG(DEBUG, "block: %u, server: %s", family_info.members_[i].first,
+            tbsys::CNetUtil::addrToString(family_info.members_[i].second).c_str());
       }
 
       ErasureCode decoder;
@@ -306,14 +312,14 @@ namespace tfs
       for (int32_t i = 0; i < member_num; i++)
       {
         // degrade read this block, just igore this block
-        if (family_members[i].block_ == block_id)
+        if (family_members[i].first == block_id)
         {
           erased[i] = 1;
           target_block_idx = i;
           continue;
         }
 
-        if (INVALID_SERVER_ID != family_members[i].server_ && INVALID_BLOCK_ID != family_members[i].block_)
+        if (INVALID_SERVER_ID != family_members[i].second && INVALID_BLOCK_ID != family_members[i].first)
         {
           if (normal_count < data_num)
           {
@@ -359,8 +365,8 @@ namespace tfs
           {
             continue;
           }
-          uint32_t blockid = family_members[i].block_;
-          uint64_t serverid = family_members[i].server_;
+          uint32_t blockid = family_members[i].first;
+          uint64_t serverid = family_members[i].second;
           ret = Task::read_raw_index(serverid, blockid, READ_PARITY_INDEX, block_id, target_index, length);
           if (TFS_SUCCESS == ret)
           {
@@ -435,8 +441,8 @@ namespace tfs
             }
 
             memset(data[i], 0, decode_len * sizeof(char));
-            uint32_t blockid = family_members[i].block_;
-            uint64_t serverid = family_members[i].server_;
+            uint32_t blockid = family_members[i].first;
+            uint64_t serverid = family_members[i].second;
             int32_t data_file_size = 0;
             ret = Task::read_raw_data(serverid, blockid, data[i],
                 decode_len, decode_offset + decode_idx, data_file_size);
