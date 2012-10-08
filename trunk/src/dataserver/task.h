@@ -144,6 +144,47 @@ namespace tfs
         }
 
         /**
+        * @brief check if family info valid
+        *
+        *
+        * @return TFS_SUCCESS on success
+        */
+        static int check_family(const int64_t family_id, const int32_t family_aid_info);
+
+        /**
+        * @brief check if family can do marshalling
+        * check before task
+        *
+        * @return TFS_SUCCESS on success
+        */
+        static int check_marshalling(const int64_t family_id, const int32_t family_aid_info,
+            common::FamilyMemberInfo* family_members);
+
+        /**
+        * @brief check if family can do reinstate
+        *
+        * @return TFS_SUCCESS on success
+        */
+        static int check_reinstate(const int64_t family_id, const int32_t family_aid_info,
+            common::FamilyMemberInfo* family_members, int* erased);
+
+        /**
+        * @brief check if family can do reinstate
+        * check in degrade read
+        *
+        * @return TFS_SUCCESS on success
+        */
+        static int check_reinstate(const common::FamilyMemberInfoExt& family_info,  int* erased);
+
+        /**
+        * @brief check if family can do reinstate
+        *
+        * @return TFS_SUCCESS on success
+        */
+        static int check_dissolve(const int64_t family_id, const int32_t family_aid_info,
+            common::FamilyMemberInfo* family_members);
+
+        /**
         * @brief is task from ds??
         *
         * @return true if task from ds
@@ -388,6 +429,8 @@ namespace tfs
         int request_ds_to_replicate();
         int request_ds_to_delete();
         int request_to_clear_family_id();
+
+        int do_dissolve();
 
       private:
         std::vector<std::pair<uint64_t, int8_t> > result_;

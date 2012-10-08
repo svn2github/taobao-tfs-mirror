@@ -283,16 +283,39 @@ namespace tfs
         const int32_t read_offset, const int8_t flag, int32_t& real_read_len,
         char* tmp_data_buffer, const FamilyMemberInfoExt& family_info)
     {
-      int ret = TFS_SUCCESS;
       int32_t family_aid_info = family_info.family_aid_info_;
       const std::vector<std::pair<uint32_t, uint64_t> >& family_members = family_info.members_;
       const int32_t data_num = GET_DATA_MEMBER_NUM(family_aid_info);
       const int32_t check_num = GET_CHECK_MEMBER_NUM(family_aid_info);
       const int32_t member_num = data_num + check_num;
 
-      if (!CHECK_MEMBER_NUM_V2(data_num, check_num))
+      ErasureCode decoder;
+      char* data[member_num];
+      int erased[member_num];
+      memset(data, 0, member_num * sizeof(char*));
+      memset(erased, 0, member_num * sizeof(int));
+
+      int ret = Task::check_reinstate(family_info, erased);
+      if (TFS_SUCCESS != ret)
       {
-        return EXIT_INVALID_ARGU_ERROR;
+        return ret;
+      }
+
+      // get target block index
+      int32_t target_block_idx = -1;
+      for (int32_t i = 0; i < member_num; i++)
+      {
+        if (family_members[i].first == block_id)
+        {
+          target_block_idx = i;
+          break;
+        }
+      }
+
+      if (target_block_idx < 0)
+      {
+        ret = EXIT_BLOCK_NOT_PRESENT;
+        return ret;
       }
 
       for (int32_t i = 0; i < member_num; i++)
@@ -301,57 +324,16 @@ namespace tfs
             tbsys::CNetUtil::addrToString(family_info.members_[i].second).c_str());
       }
 
-      ErasureCode decoder;
-      char* data[member_num];
-      int erased[member_num];
-      memset(data, 0, member_num * sizeof(char*));
-      memset(erased, 0, member_num * sizeof(int));
-
-      uint32_t target_block_idx = 0;
-      int32_t normal_count = 0;
-      for (int32_t i = 0; i < member_num; i++)
-      {
-        // degrade read this block, just igore this block
-        if (family_members[i].first == block_id)
-        {
-          erased[i] = 1;
-          target_block_idx = i;
-          continue;
-        }
-
-        if (INVALID_SERVER_ID != family_members[i].second && INVALID_BLOCK_ID != family_members[i].first)
-        {
-          if (normal_count < data_num)
-          {
-            erased[i] = 0;
-            normal_count++;
-          }
-          else
-          {
-            erased[i] = -1;
-          }
-        }
-      }
-
-      if (normal_count < data_num)
-      {
-        TBSYS_LOG(ERROR, "no enough normal node to recovery, normal count: %d", normal_count);
-        return EXIT_NO_ENOUGH_DATA;
-      }
-
       // config encoder parameter, alloc buffer
+      ret = decoder.config(data_num, check_num, erased);
       if (TFS_SUCCESS == ret)
       {
-        ret = decoder.config(data_num, check_num, erased);
-        if (TFS_SUCCESS == ret)
+        for (int32_t i = 0; i < member_num; i++)
         {
-          for (int32_t i = 0; i < member_num; i++)
-          {
-            data[i] = (char*)malloc(MAX_READ_SIZE * sizeof(char));
-            assert(NULL != data[i]);
-          }
-          decoder.bind(data, member_num, MAX_READ_SIZE);
+          data[i] = (char*)malloc(MAX_READ_SIZE * sizeof(char));
+          assert(NULL != data[i]);
         }
+        decoder.bind(data, member_num, MAX_READ_SIZE);
       }
 
       // read index from parity block
@@ -361,7 +343,7 @@ namespace tfs
       {
         for (int32_t i = data_num; i < member_num; i++)
         {
-          if (0 != erased[i])
+          if (NODE_ALIVE != erased[i])
           {
             continue;
           }
@@ -435,7 +417,7 @@ namespace tfs
 
           for (int32_t i = 0; i < member_num; i++)
           {
-            if (0 != erased[i])
+            if (NODE_ALIVE != erased[i])
             {
               continue;
             }

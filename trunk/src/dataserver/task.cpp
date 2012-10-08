@@ -291,6 +291,183 @@ namespace tfs
       return ret;
     }
 
+    int Task::check_family(const int64_t family_id, const int32_t family_aid_info)
+    {
+      int ret = (INVALID_FAMILY_ID != family_id)? TFS_SUCCESS: EXIT_INVALID_ARGU_ERROR;
+      if (TFS_SUCCESS == ret)
+      {
+        const int32_t data_num = GET_DATA_MEMBER_NUM(family_aid_info);
+        const int32_t check_num = GET_CHECK_MEMBER_NUM(family_aid_info);
+        if (!CHECK_MEMBER_NUM_V2(data_num, check_num))
+        {
+          ret = EXIT_INVALID_ARGU_ERROR;
+        }
+      }
+      return ret;
+    }
+
+    int Task::check_marshalling(const int64_t family_id, const int32_t family_aid_info,
+        common::FamilyMemberInfo* family_members)
+    {
+      int ret = (NULL != family_members)? TFS_SUCCESS: EXIT_INVALID_ARGU_ERROR;
+      if (TFS_SUCCESS == ret)
+      {
+        ret = check_family(family_id, family_aid_info);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        // check if all data ok
+        const int32_t data_num = GET_DATA_MEMBER_NUM(family_aid_info);
+
+        int normal_count = 0;
+        for (int32_t i = 0; i < data_num; i++)
+        {
+          if (INVALID_BLOCK_ID != family_members[i].block_ &&
+              INVALID_SERVER_ID != family_members[i].server_ &&
+              FAMILY_MEMBER_STATUS_NORMAL == family_members[i].status_)
+          {
+            normal_count++;
+          }
+        }
+
+        if (normal_count < data_num)
+        {
+          TBSYS_LOG(ERROR, "no enough normal node to marshalling, normal count: %d", normal_count);
+          ret = EXIT_NO_ENOUGH_DATA;
+        }
+      }
+
+      return ret;
+    }
+
+    int Task::check_reinstate(const int64_t family_id, const int32_t family_aid_info,
+        common::FamilyMemberInfo* family_members, int* erased)
+    {
+      assert(NULL != erased);
+      int ret = (NULL != family_members)? TFS_SUCCESS: EXIT_INVALID_ARGU_ERROR;
+      if (TFS_SUCCESS == ret)
+      {
+        ret = check_family(family_id, family_aid_info);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        const int32_t data_num = GET_DATA_MEMBER_NUM(family_aid_info);
+        const int32_t check_num = GET_CHECK_MEMBER_NUM(family_aid_info);
+        const int32_t member_num = data_num + check_num;
+
+        bool need_recovery = false;
+        int normal_count = 0;
+        for (int32_t i = 0; i < member_num; i++)
+        {
+          // just need data_num nodes to recovery
+          if (INVALID_BLOCK_ID != family_members[i].block_ &&
+              INVALID_SERVER_ID != family_members[i].server_ &&
+              FAMILY_MEMBER_STATUS_NORMAL == family_members[i].status_)
+          {
+            if (normal_count < data_num)
+            {
+              erased[i] = NODE_ALIVE;
+              normal_count++;
+            }
+            else
+            {
+              erased[i] = NODE_UNUSED;
+            }
+          }
+          else
+          {
+            erased[i] = NODE_DEAD;
+            need_recovery = true;
+          }
+        }
+
+        if (normal_count < data_num)
+        {
+          TBSYS_LOG(ERROR, "no enough normal node to recovery, normal count: %d", normal_count);
+          ret = EXIT_NO_ENOUGH_DATA;
+        }
+
+        // all node ok, no need to recovery, just return
+        if (TFS_SUCCESS == ret && !need_recovery)
+        {
+          TBSYS_LOG(INFO, "all nodes are normal, no need do recovery");
+          ret = EXIT_NO_NEED_REINSTATE;
+        }
+      }
+
+      return ret;
+    }
+
+    int Task::check_reinstate(const FamilyMemberInfoExt& family_info,  int* erased)
+    {
+      assert(NULL != erased);
+      int ret = check_family(family_info.family_id_, family_info.family_aid_info_);
+
+      if (TFS_SUCCESS == ret)
+      {
+        const int32_t data_num = GET_DATA_MEMBER_NUM(family_info.family_aid_info_);
+        const int32_t check_num = GET_CHECK_MEMBER_NUM(family_info.family_aid_info_);
+        const int32_t member_num = data_num + check_num;
+
+        int normal_count = 0;
+        for (int32_t i = 0; i < member_num; i++)
+        {
+          // just need data_num nodes to recovery
+          if (INVALID_BLOCK_ID != family_info.members_[i].first &&
+              INVALID_SERVER_ID == family_info.members_[i].second)
+          {
+            if (normal_count < data_num)
+            {
+              erased[i] = NODE_ALIVE;
+              normal_count++;
+            }
+            else
+            {
+              erased[i] = NODE_UNUSED;
+            }
+          }
+          else
+          {
+            erased[i] = NODE_DEAD;
+          }
+       }
+
+        if (normal_count < data_num)
+        {
+          TBSYS_LOG(ERROR, "no enough normal node to recovery, normal count: %d", normal_count);
+          ret = EXIT_NO_ENOUGH_DATA;
+        }
+      }
+
+      return ret;
+
+    }
+
+    int Task::check_dissolve(const int64_t family_id, const int32_t family_aid_info,
+        common::FamilyMemberInfo* family_members)
+    {
+      int ret = (NULL != family_members)? TFS_SUCCESS: EXIT_INVALID_ARGU_ERROR;
+      if (TFS_SUCCESS == ret)
+      {
+        if (INVALID_FAMILY_ID == family_id)
+        {
+          ret = EXIT_INVALID_ARGU_ERROR;
+        }
+        else
+        {
+          const int32_t data_num = GET_DATA_MEMBER_NUM(family_aid_info) / 2;
+          const int32_t check_num = GET_CHECK_MEMBER_NUM(family_aid_info) / 2;
+          if (!CHECK_MEMBER_NUM_V2(data_num, check_num))
+          {
+            ret = EXIT_INVALID_ARGU_ERROR;
+          }
+        }
+      }
+      return ret;
+    }
+
     CompactTask::CompactTask(TaskManager& manager, const int64_t seqno,
         const uint64_t source_id, const int32_t expire_time, const uint32_t block_id):
       Task(manager, seqno, source_id, expire_time)
@@ -1000,33 +1177,9 @@ namespace tfs
 
     int MarshallingTask::do_marshalling()
     {
-      int ret = TFS_SUCCESS;
       const int32_t data_num = GET_DATA_MEMBER_NUM(family_aid_info_);
       const int32_t check_num = GET_CHECK_MEMBER_NUM(family_aid_info_);
       const int32_t member_num = data_num + check_num;
-
-      // check if args valid
-      if (!CHECK_MEMBER_NUM_V2(data_num, check_num))
-      {
-        return EXIT_INVALID_ARGU_ERROR;
-      }
-
-      // check if all data ok
-      int normal_count = 0;
-      for (int32_t i = 0; i < data_num; i++)
-      {
-        // just need data_num nodes to recovery
-        if (family_members_[i].status_ == FAMILY_MEMBER_STATUS_NORMAL)
-        {
-          normal_count++;
-        }
-      }
-
-      if (normal_count < data_num)
-      {
-        TBSYS_LOG(ERROR, "no enough normal node to recovery, normal count: %d", normal_count);
-        return EXIT_NO_ENOUGH_DATA;
-      }
 
       ErasureCode encoder;
       int32_t encode_total_len = -1;
@@ -1039,19 +1192,24 @@ namespace tfs
       memset(data, 0, member_num * sizeof(char*));
       memset(index_data, 0, member_num * sizeof(char*));
 
+      int ret = check_marshalling(family_id_, family_aid_info_, family_members_);
+      if (TFS_SUCCESS != ret)
+      {
+        return ret;
+      }
+
+      /* family info ok, continue marshalling */
+
       // config encoder parameter, alloc buffer
+      ret = encoder.config(data_num, check_num);
       if (TFS_SUCCESS == ret)
       {
-        ret = encoder.config(data_num, check_num);
-        if (TFS_SUCCESS == ret)
+        for (int32_t i = 0; i < member_num; i++)
         {
-          for (int32_t i = 0; i < member_num; i++)
-          {
-            data[i] = (char*)malloc(MAX_READ_SIZE * sizeof(char));
-            assert(NULL != data[i]);
-          }
-          encoder.bind(data, member_num, MAX_READ_SIZE);
+          data[i] = (char*)malloc(MAX_READ_SIZE * sizeof(char));
+          assert(NULL != data[i]);
         }
+        encoder.bind(data, member_num, MAX_READ_SIZE);
       }
 
       // process block data
@@ -1218,16 +1376,9 @@ namespace tfs
 
     int ReinstateTask::do_reinstate()
     {
-      int ret = TFS_SUCCESS;
       const int32_t data_num = GET_DATA_MEMBER_NUM(family_aid_info_);
       const int32_t check_num = GET_CHECK_MEMBER_NUM(family_aid_info_);
       const int32_t member_num = data_num + check_num;
-
-      // check if args valid
-      if (!CHECK_MEMBER_NUM_V2(data_num, check_num))
-      {
-        return EXIT_INVALID_ARGU_ERROR;
-      }
 
       ErasureCode decoder;
       int32_t decode_total_len = -1;
@@ -1242,56 +1393,28 @@ namespace tfs
       memset(index_data, 0, member_num * sizeof(char*));
       memset(erased, 0, member_num * sizeof(int));
 
-      bool need_recovery = false;
-      int normal_count = 0;
-      for (int32_t i = 0; i < member_num; i++)
+      int ret = check_reinstate(family_id_, family_aid_info_, family_members_, erased);
+      if (TFS_SUCCESS != ret)
       {
-        // just need data_num nodes to recovery
-        if (family_members_[i].status_ == FAMILY_MEMBER_STATUS_NORMAL)
+        if (EXIT_NO_NEED_REINSTATE == ret)
         {
-          if (normal_count < data_num)
-          {
-            erased[i] = 0;  // alive
-            normal_count++;
-          }
-          else
-          {
-            erased[i] = -1; // normal but not used
-          }
+          ret = TFS_SUCCESS; // no need recovery
         }
-        else
-        {
-          erased[i] = 1;   // need to recovey
-          need_recovery = true;
-        }
+        return ret;
       }
 
-      if (normal_count < data_num)
-      {
-        TBSYS_LOG(ERROR, "no enough normal node to recovery, normal count: %d", normal_count);
-        return EXIT_NO_ENOUGH_DATA;
-      }
-
-      // all node ok, no need to recovery, just return
-      if (!need_recovery)
-      {
-        TBSYS_LOG(INFO, "all nodes are normal, no need do recovery");
-        return TFS_SUCCESS;
-      }
+      /* family info ok, continue reinstate*/
 
       // config encoder parameter, alloc buffer
+      ret = decoder.config(data_num, check_num, erased);
       if (TFS_SUCCESS == ret)
       {
-        ret = decoder.config(data_num, check_num, erased);
-        if (TFS_SUCCESS == ret)
+        for (int32_t i = 0; i < member_num; i++)
         {
-          for (int32_t i = 0; i < member_num; i++)
-          {
-            data[i] = (char*)malloc(MAX_READ_SIZE * sizeof(char));
-            assert(NULL != data[i]);
-          }
-          decoder.bind(data, member_num, MAX_READ_SIZE);
+          data[i] = (char*)malloc(MAX_READ_SIZE * sizeof(char));
+          assert(NULL != data[i]);
         }
+        decoder.bind(data, member_num, MAX_READ_SIZE);
       }
 
       // process block data
@@ -1308,7 +1431,7 @@ namespace tfs
           // read data from data node
           for (int32_t i = 0; i < member_num; i++)
           {
-            if (0 != erased[i])
+            if (NODE_ALIVE != erased[i])
             {
               continue;
             }
@@ -1358,7 +1481,7 @@ namespace tfs
           // write normal data
           for (int32_t i = 0; i < data_num; i++)
           {
-            if (1 != erased[i])
+            if (NODE_DEAD != erased[i])
             {
               continue;
             }
@@ -1379,7 +1502,7 @@ namespace tfs
           // write parity data
           for (int32_t i = data_num; i < member_num; i++)
           {
-            if (1 != erased[i])
+            if (NODE_DEAD != erased[i])
             {
               continue;
             }
@@ -1408,7 +1531,7 @@ namespace tfs
       {
         for (int i = 0; i < data_num; i++)
         {
-          if (1 != erased[i])
+          if (NODE_DEAD != erased[i])
           {
             continue;
           }
@@ -1420,7 +1543,7 @@ namespace tfs
 
           for (int j = data_num; j < member_num; j++)
           {
-            if (0 == erased[j])
+            if (NODE_ALIVE == erased[j])
             {
               uint64_t server_id = family_members_[j].server_;
               uint32_t block_id = family_members_[j].block_;
@@ -1455,7 +1578,7 @@ namespace tfs
       {
         for (int i = data_num; i < member_num; i++)
         {
-          if (1 == erased[i])
+          if (NODE_DEAD == erased[i])
           {
             miss_parity = true;
             break;
@@ -1489,7 +1612,7 @@ namespace tfs
         {
           for (int i = data_num; i < member_num; i++)
           {
-            if (1 != erased[i])
+            if (NODE_DEAD != erased[i])
             {
               continue;
             }
@@ -1573,7 +1696,17 @@ namespace tfs
         }
       }
 
-      return request_ds_to_replicate();
+      return do_dissolve();
+    }
+
+    int DissolveTask::do_dissolve()
+    {
+      int ret = check_dissolve(family_id_, family_aid_info_, family_members_);
+      if (TFS_SUCCESS == ret)
+      {
+        ret = request_ds_to_replicate();
+      }
+      return ret;
     }
 
     int DissolveTask::handle_complete(BasePacket* packet)
