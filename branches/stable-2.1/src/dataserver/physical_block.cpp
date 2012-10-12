@@ -78,9 +78,26 @@ namespace tfs
       ret = BlockFileManager::get_instance()->query_super_block(super_block);
       if (TFS_SUCCESS == ret)
       {
+        struct stat st;
+        std::string block_prefix_file = mount_path + BLOCK_HEADER_PREFIX;
+        if ((0 == access(block_prefix_file.c_str(), F_OK))
+          && (0 == stat(block_prefix_file.c_str(), &st)))
+        {
+          prefix_op_ = new MMapFileOperation(block_prefix_file.c_str());
+          MMapOption mmap_option;
+          mmap_option.first_mmap_size_ = st.st_size;
+          mmap_option.max_mmap_size_ = st.st_size;
+          mmap_option.per_mmap_size_= st.st_size;
+          ret = prefix_op_->mmap_file(mmap_option);
+          if (TFS_SUCCESS != ret)
+          {
+            TBSYS_LOG(ERROR, "mmap prefix file fail. ret: %d", ret);
+          }
+        }
+
         // if (FS_SPEEDUP_VERSION == super_block.version_), don't compare for
         // upgrade
-        std::string block_prefix_file = mount_path + BLOCK_HEADER_PREFIX;
+        /*std::string block_prefix_file = mount_path + BLOCK_HEADER_PREFIX;
         if (0 != access(block_prefix_file.c_str(), F_OK))  // not exist
         {
           ret = TFS_ERROR;
@@ -107,7 +124,7 @@ namespace tfs
               TBSYS_LOG(ERROR, "mmap prefix file fail. ret: %d", ret);
             }
           }
-        }
+        }*/
       }
       return ret;
     }
