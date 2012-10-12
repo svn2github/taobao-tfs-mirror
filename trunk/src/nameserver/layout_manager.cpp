@@ -1050,7 +1050,7 @@ namespace tfs
       int64_t use_capacity = GFactory::get_global_info().use_capacity_ <= 0
         ? 0 : GFactory::get_global_info().use_capacity_;
       if (total_capacity <= 0)
-        total_capacity = 0;
+        total_capacity = 1;
       double average_used_capacity = use_capacity / total_capacity;
       int32_t count = SYSPARAM_NAMESERVER.add_primary_block_count_;
       for (int64_t i = 0; i < servers.get_array_index(); ++i)

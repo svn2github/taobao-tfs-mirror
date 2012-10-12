@@ -131,7 +131,7 @@ namespace tfs
 
           if (TFS_SUCCESS == ret)
           {
-            ret = open_write_mode_(block_id, lease_id, version, servers, mode, now);
+            ret = open_write_mode_(block_id, lease_id, version, servers, family_info, mode, now);
           }
         }
       }
@@ -264,8 +264,8 @@ namespace tfs
      * @param [out] ds_list: block location of DataServerStatInfos.
      * @return: success or failure
      */
-    int ClientRequestServer::open_write_mode_(uint32_t& block_id, uint32_t& lease_id,
-        int32_t& version, VUINT64& servers, const int32_t mode, const time_t now)
+    int ClientRequestServer::open_write_mode_(uint32_t& block_id, uint32_t& lease_id, int32_t& version, VUINT64& servers,
+        FamilyMemberInfoExt& family_info, const int32_t mode, const time_t now)
     {
       int32_t ret = (mode & T_WRITE) ? TFS_SUCCESS : EXIT_ACCESS_MODE_ERROR;
       if (TFS_SUCCESS != ret)
@@ -274,6 +274,7 @@ namespace tfs
       }
       else
       {
+        family_info.family_id_ = INVALID_FAMILY_ID;
         //nameserver assign a new write block
         BlockCollect* block = NULL;
         if (mode & T_CREATE)
@@ -339,6 +340,34 @@ namespace tfs
           }
         }
 
+        if ((TFS_SUCCESS == ret)
+            && !(mode & T_CREATE)
+            && !(mode & T_NEWBLK)
+            && (NULL != block))
+        {
+          int64_t family_id = block->get_family_id();
+          if (INVALID_FAMILY_ID != family_id)
+          {
+            ret = open(family_info.family_aid_info_, family_info.members_, T_READ, family_id);
+            if (TFS_SUCCESS == ret)
+            {
+              int32_t index = 0;
+              const int32_t DATA_MEMBER = GET_DATA_MEMBER_NUM(family_info.family_aid_info_);
+              std::vector<std::pair<uint32_t, uint64_t> >::const_iterator iter = family_info.members_.begin();
+              for (; iter != family_info.members_.end(); ++iter)
+              {
+                if (iter->second != INVALID_SERVER_ID)
+                  ++index;
+              }
+              ret = index >= DATA_MEMBER ? TFS_SUCCESS: EXIT_BLOCK_CANNOT_REINSTATE;
+              if (TFS_SUCCESS == ret)
+              {
+                family_info.family_id_ = family_id;
+              }
+            }
+          }
+        }
+
         if (TFS_SUCCESS == ret)
         {
           if (!(mode & T_NOLEASE))
@@ -381,7 +410,7 @@ namespace tfs
         for (int32_t i = 0; i < block_count; ++i, block_id = 0)
         {
           seg.ds_.clear();
-          ret = open_write_mode_(block_id, seg.lease_id_, seg.version_, seg.ds_, mode, now);
+          ret = open_write_mode_(block_id, seg.lease_id_, seg.version_, seg.ds_, seg.family_info_, mode, now);
           if (TFS_SUCCESS == ret)
             out.insert(std::make_pair(block_id, seg));
         }

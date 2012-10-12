@@ -589,7 +589,6 @@ namespace tfs
             UNUSED(now);
             #else
             bool valid = (manager_.get_block_manager().need_marshalling(result.second, now)
-                        && !helper.exist(lan)
                         && !members.exist(result)
                         && !manager_.get_task_manager().exist(result.second)
                         && !manager_.get_task_manager().exist(result.first)
