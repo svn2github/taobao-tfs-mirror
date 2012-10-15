@@ -459,11 +459,6 @@ namespace tfs
 
           if (TFS_SUCCESS == ret)
           {
-            if (expire_self)
-            {
-              push_to_delete_queue(info.block_id_, server->id());
-            }
-
             ServerCollect* pserver = NULL;
             for (i = 0; i < other_expires.get_array_index(); ++i)
             {
@@ -478,7 +473,10 @@ namespace tfs
               assert(NULL != pserver);
               manager_.get_server_manager().relieve_relation(*helper.at(i), block);
             }
-            manager_.get_server_manager().build_relation(server, block, writable, master);
+            if (expire_self)
+              push_to_delete_queue(info.block_id_, server->id());
+            else
+              manager_.get_server_manager().build_relation(server, block, writable, master);
           }
         }
       }
