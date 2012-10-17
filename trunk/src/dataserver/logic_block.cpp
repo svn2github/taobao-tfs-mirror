@@ -408,27 +408,28 @@ namespace tfs
           logic_block_id_, inner_file_id, nbytes, offset, ret);
 
       // 3. the first fragment, check fileinfo
+      FileInfo* finfo = reinterpret_cast<FileInfo*>(buf);
+      finfo->flag_ = get_real_flag(file_meta, finfo->flag_);
       if (0 == offset)
       {
         if ((flag & READ_DATA_OPTION_FLAG_FORCE))
         {
-          if ((((FileInfo *) buf)->id_ != inner_file_id)
-              || (((((FileInfo *) buf)->flag_) & FI_INVALID) != 0))
+          if ((finfo->id_ != inner_file_id) || ((finfo->flag_ & FI_INVALID) != 0))
           {
             TBSYS_LOG(WARN,
                 "find FileInfo fail, blockid: %u, fileid: %" PRI64_PREFIX "u, id: %" PRI64_PREFIX "u, flag: %d",
-                logic_block_id_, inner_file_id, ((FileInfo *) buf)->id_, ((FileInfo *) buf)->flag_);
+                logic_block_id_, inner_file_id, finfo->id_, finfo->flag_);
             return EXIT_FILE_INFO_ERROR;
           }
         }
         else
         {
-          if ((((FileInfo *) buf)->id_ != inner_file_id)
-              || (((((FileInfo *) buf)->flag_) & (FI_DELETED | FI_INVALID | FI_CONCEAL)) != 0))
+          if ((finfo->id_ != inner_file_id)
+              || ((finfo->flag_ & (FI_DELETED | FI_INVALID | FI_CONCEAL)) != 0))
           {
             TBSYS_LOG(WARN,
                 "find FileInfo fail, blockid: %u, fileid: %" PRI64_PREFIX "u, id: %" PRI64_PREFIX "u, flag: %d",
-                logic_block_id_, inner_file_id, ((FileInfo *) buf)->id_, ((FileInfo *) buf)->flag_);
+                logic_block_id_, inner_file_id, finfo->id_, finfo->flag_);
             return EXIT_FILE_INFO_ERROR;
           }
         }
@@ -437,7 +438,7 @@ namespace tfs
       return TFS_SUCCESS;
     }
 
-    int LogicBlock::read_file_info(const uint64_t inner_file_id, FileInfo& finfo)
+    int LogicBlock::read_file_info(const uint64_t inner_file_id, FileInfo& finfo, const int32_t mode)
     {
       RawMeta file_meta;
       // 1. get file meta info
@@ -457,6 +458,19 @@ namespace tfs
       {
         return ret;
       }
+
+      // if mode is 0 and file is not in nomal status, return error.
+      finfo.flag_ = get_real_flag(file_meta, finfo.flag_);
+      if ((0 == finfo.id_)
+          || (finfo.id_ != inner_file_id )
+          || ((finfo.flag_ & (FI_DELETED | FI_INVALID | FI_CONCEAL)) != 0 && NORMAL_STAT == mode))
+      {
+        TBSYS_LOG(WARN,
+            "FileInfo parse fail. blockid: %u, fileid: %" PRI64_PREFIX "u, infoid: %" PRI64_PREFIX "u, flag: %d",
+            logic_block_id_, inner_file_id, finfo.id_, finfo.flag_);
+        return EXIT_FILE_STATUS_ERROR;
+      }
+
       TBSYS_LOG(
           DEBUG,
           "read file info, fileid: %" PRI64_PREFIX "u, offset: %d, size: %d, usize: %d, mtime: %d, ctime: %d, flag: %d, crc: %u",
@@ -520,7 +534,47 @@ namespace tfs
       return index_handle_->flush();
     }
 
-    int LogicBlock::unlink_file(const uint64_t inner_file_id, const int32_t action, int64_t& file_size)
+    int LogicBlock::unlink_file_parity(const uint32_t index_id, const int64_t file_id, const int32_t action, int64_t& unlink_file_size)
+    {
+      ScopedRWLock scoped_lock(rw_lock_, WRITE_LOCKER);
+      char* index_buf = NULL;
+      int32_t index_size = 0;
+
+      // step1 get index data
+      int ret = index_handle_->read_parity_index(index_id, index_buf, index_size);
+      if (TFS_SUCCESS != ret)
+      {
+        TBSYS_LOG(ERROR, "unlink file parity step1, blockid: %u, indexid: %u, fileid: %"PRI64_PREFIX"u, ret: %d",
+            logic_block_id_, index_id, file_id, ret);
+      }
+      else
+      {
+        // step2 find file by index data
+        int32_t file_pos = 0;
+        ret = IndexHandle::hash_find(index_buf, index_size, file_id, file_pos);
+        if (TFS_SUCCESS != ret)
+        {
+          TBSYS_LOG(ERROR, "unlink file parity step2, blockid: %u, indexid: %u, fileid: %"PRI64_PREFIX"u, ret: %d",
+              logic_block_id_, index_id, file_id, ret);
+        }
+        else
+        {
+          RawMeta* meta_info = reinterpret_cast<RawMeta*>(index_buf + file_pos);
+          meta_info->set_unlink_flag(action);  // use unlink type to pass unlink flag
+          unlink_file_size = meta_info->get_size() - FILEINFO_SIZE;
+          ret = index_handle_->update_parity_index(index_id, index_buf, index_size);
+
+          TBSYS_LOG(DEBUG, "unlink file parity, indexid: %u, fileid: %"PRI64_PREFIX"u, set flag to %d, ret: %d",
+              index_id, file_id, action, ret);
+        }
+      }
+
+      tbsys::gDeleteA(index_buf);
+
+      return ret;
+    }
+
+    int LogicBlock::unlink_file(const uint64_t inner_file_id, const int32_t action, int64_t& file_size, int32_t&unlink_flag)
     {
       // 1. ...
       ScopedRWLock scoped_lock(rw_lock_, WRITE_LOCKER);
@@ -544,6 +598,7 @@ namespace tfs
         return ret;
       }
 
+      int32_t file_flag = get_real_flag(file_meta, finfo.flag_);
       file_size = finfo.size_ - FILEINFO_SIZE;
 
       int32_t oper_type = 0;
@@ -559,10 +614,9 @@ namespace tfs
       }
 
       // 4. dispatch action
-      switch (tmp_action)
+      if (SYNC == tmp_action)  // special for sync
       {
-      case SYNC:
-        if ((finfo.flag_ & FI_DELETED) != (tmp_flag & FI_DELETED))
+        if ((file_flag & FI_DELETED) != (tmp_flag & FI_DELETED))
         {
           if (tmp_flag & FI_DELETED)
           {
@@ -573,64 +627,43 @@ namespace tfs
             oper_type = C_OPER_UNDELETE;
           }
         }
-        finfo.flag_ = tmp_flag;
-        break;
-      case DELETE:
-        if ((finfo.flag_ & (FI_DELETED | FI_INVALID)) != 0)
-        {
-          TBSYS_LOG(ERROR, "file already deleted, blockid: %u, fileid: %" PRI64_PREFIX "u", logic_block_id_,
-              inner_file_id);
-          return EXIT_FILE_STATUS_ERROR;
-        }
-
-        finfo.flag_ |= FI_DELETED;
-        oper_type = C_OPER_DELETE;
-        break;
-      case UNDELETE:
-        if ((finfo.flag_ & FI_DELETED) == 0)
-        {
-          TBSYS_LOG(ERROR, "file is not deleted, blockid: %u, fileid: %" PRI64_PREFIX "u", logic_block_id_,
-              inner_file_id);
-          return EXIT_FILE_STATUS_ERROR;
-        }
-
-        finfo.flag_ &= (~FI_DELETED);
-        oper_type = C_OPER_UNDELETE;
-        break;
-      case CONCEAL:
-        if ((finfo.flag_ & (FI_DELETED | FI_INVALID | FI_CONCEAL)) != 0)
-        {
-          TBSYS_LOG(ERROR, "file is already deleted or concealed, blockid: %u, fileid: %" PRI64_PREFIX "u",
-              logic_block_id_, inner_file_id);
-          return EXIT_FILE_STATUS_ERROR;
-        }
-
-        finfo.flag_ |= FI_CONCEAL;
-        break;
-      case REVEAL:
-        if ((finfo.flag_ & FI_CONCEAL) == 0 || (finfo.flag_ & (FI_DELETED | FI_INVALID)) != 0)
-        {
-          TBSYS_LOG(ERROR, "file is not deleted or concealed, blockid: %u, fileid: %" PRI64_PREFIX "u",
-              logic_block_id_, inner_file_id);
-          return EXIT_FILE_STATUS_ERROR;
-        }
-        finfo.flag_ &= (~FI_CONCEAL);
-        break;
-      default:
-        TBSYS_LOG(ERROR, "action is illegal. action: %d, blockid: %u, fileid: %" PRI64_PREFIX "u, ret: %d", action,
-            logic_block_id_, inner_file_id, EXIT_FILE_ACTION_ERROR);
-        return EXIT_FILE_ACTION_ERROR;
+        file_flag = tmp_flag;
+      }
+      else
+      {
+        ret = unlink_file_ex(tmp_action, file_flag, oper_type);
       }
 
+      if (TFS_SUCCESS != ret)
+      {
+        TBSYS_LOG(ERROR, "unlink file ex fail. blockid: %u, fileid: %" PRI64_PREFIX "u, ret: %d",
+            logic_block_id_, inner_file_id, ret);
+        return ret;
+      }
+
+      file_meta.set_unlink_flag(file_flag);
+      unlink_flag = file_flag;
+
       finfo.modify_time_ = time(NULL);
+
+      TBSYS_LOG(DEBUG, "unlink file. blockid: %u, fileid: %" PRI64_PREFIX "u, action: %d, flag: %d",
+          logic_block_id_, inner_file_id, action, unlink_flag);
 
       // 5. write updated fileinfo
       // do not delete index immediately, delete it when compact
       ret = data_handle_->write_segment_info((const FileInfo*) &finfo, file_meta.get_offset());
       if (TFS_SUCCESS != ret)
       {
-        TBSYS_LOG(ERROR, "write segment info fail, blockid: %u, fileid: %" PRI64_PREFIX "u, ret: %d", logic_block_id_,
-            inner_file_id, ret);
+        TBSYS_LOG(ERROR, "write segment info fail, blockid: %u, fileid: %" PRI64_PREFIX "u, ret: %d",
+            logic_block_id_, inner_file_id, ret);
+        return ret;
+      }
+
+      ret = index_handle_->override_segment_meta(inner_file_id, file_meta);
+      if (TFS_SUCCESS != ret)
+      {
+         TBSYS_LOG(ERROR, "override segment fail, blockid: %u, fileid: %" PRI64_PREFIX "u, ret: %d",
+             logic_block_id_, inner_file_id, ret);
         return ret;
       }
 
@@ -646,6 +679,7 @@ namespace tfs
       default:
         break;
       }
+
       if (TFS_SUCCESS != ret)
       {
         TBSYS_LOG(ERROR, "update block info fail, blockid: %u, fileid: %" PRI64_PREFIX "u, ret: %d", logic_block_id_,
@@ -655,6 +689,65 @@ namespace tfs
 
       // 7. flush
       return index_handle_->flush();
+    }
+
+    int LogicBlock::unlink_file_ex(const int32_t action, int32_t& file_flag, int32_t& oper_type)
+    {
+      int ret = TFS_SUCCESS;
+      switch (action)
+      {
+        case DELETE:
+          if ((file_flag & (FI_DELETED | FI_INVALID)) != 0)
+          {
+            TBSYS_LOG(ERROR, "file already deleted");
+            ret = EXIT_FILE_STATUS_ERROR;
+          }
+          else
+          {
+            file_flag |= FI_DELETED;
+            oper_type = C_OPER_DELETE;
+          }
+          break;
+        case UNDELETE:
+          if ((file_flag & FI_DELETED) == 0)
+          {
+            TBSYS_LOG(ERROR, "file is not deleted");
+            ret = EXIT_FILE_STATUS_ERROR;
+          }
+          else
+          {
+            file_flag &= (~FI_DELETED);
+            oper_type = C_OPER_UNDELETE;
+          }
+          break;
+        case CONCEAL:
+          if ((file_flag & (FI_DELETED | FI_INVALID | FI_CONCEAL)) != 0)
+          {
+            TBSYS_LOG(ERROR, "file is already deleted or concealed");
+            ret = EXIT_FILE_STATUS_ERROR;
+          }
+          else
+          {
+            file_flag |= FI_CONCEAL;
+          }
+          break;
+        case REVEAL:
+          if ((file_flag & FI_CONCEAL) == 0 || (file_flag & (FI_DELETED | FI_INVALID)) != 0)
+          {
+            TBSYS_LOG(ERROR, "file is not deleted or concealed");
+            ret = EXIT_FILE_STATUS_ERROR;
+          }
+          else
+          {
+            file_flag &= (~FI_CONCEAL);
+          }
+          break;
+        default:
+          TBSYS_LOG(ERROR, "action is illegal. action: %d");
+          ret = EXIT_FILE_ACTION_ERROR;
+      }
+
+      return ret;
     }
 
     // just read data, consider no data type
@@ -804,7 +897,7 @@ namespace tfs
       return ret;
     }
 
-    int LogicBlock::read_raw_index(const RawIndexOp index_op, const uint32_t index_id, char* & buf, uint32_t& size)
+    int LogicBlock::read_raw_index(const RawIndexOp index_op, const uint32_t index_id, char* & buf, int32_t& size)
     {
       int ret = TFS_SUCCESS;
       ScopedRWLock scoped_lock(rw_lock_, WRITE_LOCKER);
@@ -829,8 +922,6 @@ namespace tfs
 
       return ret;
     }
-
-
 
     int LogicBlock::copy_block_info(const BlockInfo* blk_info)
     {
@@ -872,7 +963,7 @@ namespace tfs
       return ret;
     }
 
-    int32_t LogicBlock::get_flag()
+    int32_t LogicBlock::get_prefix_flag()
     {
       BlockPrefix block_prefix;
       PhysicalBlock* first = physical_block_list_.front();
@@ -898,6 +989,21 @@ namespace tfs
         block_prefix.next_physic_blockid_,
         family_id, block_prefix.flag_);
       return first->dump_block_prefix();
+    }
+
+    int32_t LogicBlock::get_real_flag(const RawMeta& file_meta, const int32_t finfo_flag)
+    {
+      int32_t real_flag = 0;
+      if (file_meta.use_index_flag())
+      {
+        real_flag = file_meta.get_unlink_flag();
+      }
+      else
+      {
+        real_flag = finfo_flag;
+      }
+
+      return real_flag;
     }
 
     int LogicBlock::set_block_dirty_type(const DirtyFlag dirty_flag)

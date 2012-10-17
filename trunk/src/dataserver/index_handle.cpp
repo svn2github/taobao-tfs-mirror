@@ -286,7 +286,7 @@ namespace tfs
       return ret;
     }
 
-    int IndexHandle::read_data_index(char* & buf, uint32_t& size)
+    int IndexHandle::read_data_index(char* & buf, int32_t& size)
     {
       int ret = TFS_SUCCESS;
       size = file_op_->get_file_size();
@@ -315,7 +315,7 @@ namespace tfs
       return ret;
     }
 
-    int IndexHandle::read_parity_index(const uint32_t index_id, char* & buf, uint32_t& size)
+    int IndexHandle::read_parity_index(const uint32_t index_id, char* & buf, int32_t& size)
     {
       int ret = TFS_SUCCESS;
       int32_t file_size = file_op_->get_file_size();
@@ -347,6 +347,40 @@ namespace tfs
           else
           {
             ret = file_op_->pread_file(buf, size, offset);
+          }
+        }
+      }
+
+      return ret;
+    }
+
+    int IndexHandle::update_parity_index(const uint32_t index_id, const char* buf, const int32_t size)
+    {
+      int ret = TFS_SUCCESS;
+      int32_t file_size = file_op_->get_file_size();
+
+      if (file_size <= 0)
+      {
+        ret = EXIT_INDEX_CORRUPT_ERROR;
+      }
+      else if (C_DATA_PARITY != pindex_header()->flag_)
+      {
+        ret = EXIT_NOT_PARITY_INDEX;
+      }
+      else
+      {
+        Position* pos = pindex_position_byid(index_id);
+        if (NULL == pos)
+        {
+          ret = EXIT_INDEX_CORRUPT_ERROR;
+        }
+        else
+        {
+          uint64_t offset = pos->offset_;
+          ret = file_op_->pwrite_file(buf, size, offset);
+          if (TFS_SUCCESS == ret)
+          {
+            ret = flush();
           }
         }
       }
@@ -927,10 +961,10 @@ namespace tfs
     }
 
     // find key in the block by index data
-    int IndexHandle::hash_find(char* data, const int data_size,
-        const uint64_t key, int32_t& file_size, int64_t& file_offset)
+    int IndexHandle::hash_find(char* data, const int data_size, const uint64_t key, int32_t& file_pos)
     {
       int ret = TFS_SUCCESS;
+      file_pos = -1;
       if (NULL == data)
       {
         ret = EXIT_POINTER_NULL;
@@ -942,8 +976,7 @@ namespace tfs
         int32_t* bucket_slot = reinterpret_cast<int32_t*> (data + sizeof(IndexHeader));
         int32_t slot = static_cast<uint32_t> (key) % bucket_size;
 
-        // find in the list
-        bool found = false;
+        // find in the hash slot
         MetaInfo* meta_info = NULL;
         for (int32_t pos = bucket_slot[slot]; pos != 0;)
         {
@@ -952,7 +985,7 @@ namespace tfs
             meta_info = reinterpret_cast<MetaInfo*> (data + pos);
             if (hash_compare(key, meta_info->get_key()))
             {
-              found = true;
+              file_pos = pos;
               break;
             }
             else
@@ -964,24 +997,16 @@ namespace tfs
           {
             break;
           }
-       }
-
-        if (TFS_SUCCESS == ret)
-        {
-          if (found)
-          {
-            file_offset = meta_info->get_offset();
-            file_size = meta_info->get_size();
-          }
-          else
-          {
-            ret = EXIT_META_NOT_FOUND_ERROR;
-          }
         }
-      }
 
-      TBSYS_LOG(DEBUG, "degrade find file id: %"PRI64_PREFIX"d, offset: %"PRI64_PREFIX"d, size: %d, ret: %d",
-          key, file_offset, file_size, ret);
+        if (file_pos < 0)
+        {
+          ret = EXIT_META_NOT_FOUND_ERROR;
+        }
+
+        TBSYS_LOG(DEBUG, "degrade find file id: %"PRI64_PREFIX"d, offset: %"PRI64_PREFIX"d, size: %d, ret: %d",
+            key, meta_info->get_offset(), meta_info->get_size(), ret);
+      }
 
       return ret;
     }

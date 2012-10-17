@@ -93,6 +93,17 @@ namespace tfs
       {
         ret = input.get_int64(reinterpret_cast<int64_t*>(&lease_id_ext_));
       }
+
+      if (common::TFS_SUCCESS == ret && input.get_data_length() > 0)
+      {
+        int64_t pos = 0;
+        ret = family_info_.deserialize(input.get_data(), input.get_data_length(), pos);
+        if (common::TFS_SUCCESS == ret)
+        {
+          input.drain(family_info_.length());
+        }
+      }
+
       return ret;
     }
 
@@ -102,6 +113,10 @@ namespace tfs
       if (has_lease())
       {
         len += common::INT64_SIZE * 3;
+      }
+      if (common::INVALID_FAMILY_ID != family_info_.family_id_)
+      {
+        len += family_info_.length();
       }
       return len;
     }
@@ -136,6 +151,18 @@ namespace tfs
       if (common::TFS_SUCCESS == ret)
       {
         ret = output.set_int64(lease_id_ext_);
+      }
+      if (common::TFS_SUCCESS == ret)
+      {
+        if (common::INVALID_FAMILY_ID != family_info_.family_id_)
+        {
+          int64_t pos = 0;
+          ret = family_info_.serialize(output.get_free(), output.get_free_length(), pos);
+          if (common::TFS_SUCCESS == ret)
+          {
+            output.pour(family_info_.length());
+          }
+        }
       }
       return ret;
     }

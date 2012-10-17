@@ -260,7 +260,7 @@ namespace tfs
             length = message->get_length();
             if (length >= 0)
             {
-              data = (char*)malloc(length * sizeof(char));
+              data = new (std::nothrow) char[length];
               assert (NULL != data);
               memcpy(data, message->get_data(), length);
             }
@@ -416,7 +416,7 @@ namespace tfs
         {
           // just need data_num nodes to recovery
           if (INVALID_BLOCK_ID != family_info.members_[i].first &&
-              INVALID_SERVER_ID == family_info.members_[i].second)
+              INVALID_SERVER_ID != family_info.members_[i].second)
           {
             if (normal_count < data_num)
             {
@@ -1206,7 +1206,7 @@ namespace tfs
       {
         for (int32_t i = 0; i < member_num; i++)
         {
-          data[i] = (char*)malloc(MAX_READ_SIZE * sizeof(char));
+          data[i] = new (std::nothrow) char[MAX_READ_SIZE];
           assert(NULL != data[i]);
         }
         encoder.bind(data, member_num, MAX_READ_SIZE);
@@ -1226,7 +1226,11 @@ namespace tfs
           // read data from data node
           for (int32_t i = 0; i < data_num; i++)
           {
-            memset(data[i], 0, encode_len * sizeof(char));
+            // memset for last piece
+            if (block_len[i] != 0 && encode_offset + encode_len > block_len[i])
+            {
+              memset(data[i], 0, encode_len * sizeof(char));
+            }
             uint64_t server_id = family_members_[i].server_;
             uint32_t block_id = family_members_[i].block_;
             int32_t data_file_size = 0;
@@ -1348,8 +1352,8 @@ namespace tfs
 
       for (int32_t i = 0; i < member_num; i++)
       {
-        tbsys::gDelete(data[i]);
-        tbsys::gDelete(index_data[i]);
+        tbsys::gDeleteA(data[i]);
+        tbsys::gDeleteA(index_data[i]);
       }
 
       return ret;
@@ -1411,7 +1415,7 @@ namespace tfs
       {
         for (int32_t i = 0; i < member_num; i++)
         {
-          data[i] = (char*)malloc(MAX_READ_SIZE * sizeof(char));
+          data[i] = new (std::nothrow) char[MAX_READ_SIZE];
           assert(NULL != data[i]);
         }
         decoder.bind(data, member_num, MAX_READ_SIZE);
@@ -1435,7 +1439,11 @@ namespace tfs
             {
               continue;
             }
-            memset(data[i], 0, decode_len * sizeof(char));
+            if (block_len[i] != 0 && decode_offset + decode_len > block_len[i])
+            {
+              memset(data[i], 0, decode_len * sizeof(char));
+            }
+
             uint64_t server_id = family_members_[i].server_;
             uint32_t block_id = family_members_[i].block_;
             int32_t data_file_size = 0;
@@ -1630,8 +1638,8 @@ namespace tfs
 
       for (int32_t i = 0; i < member_num; i++)
       {
-        tbsys::gDelete(data[i]);
-        tbsys::gDelete(index_data[i]);
+        tbsys::gDeleteA(data[i]);
+        tbsys::gDeleteA(index_data[i]);
       }
 
       return ret;

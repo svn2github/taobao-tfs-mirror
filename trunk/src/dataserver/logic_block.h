@@ -68,10 +68,13 @@ namespace tfs
         int close_write_file(const uint64_t inner_file_id, DataFile& datafile, const uint32_t crc);
 
         int read_file(const uint64_t inner_file_id, char* buf, int32_t& nbytes, const int32_t offset, const int8_t flag);
-        int read_file_info(const uint64_t inner_file_id, common::FileInfo& finfo);
+        int read_file_info(const uint64_t inner_file_id, common::FileInfo& finfo, const int32_t mode);
 
         int rename_file(const uint64_t old_inner_file_id, const uint64_t new_inner_file_id);
-        int unlink_file(const uint64_t inner_file_id, const int32_t action, int64_t& file_size);
+        int unlink_file(const uint64_t inner_file_id, const int32_t action, int64_t& file_size, int32_t& unlink_flag);
+        int unlink_file_parity(const uint32_t index_id, const int64_t file_id, const int32_t action, int64_t& unlink_file_size);
+        int unlink_file_ex(const int32_t action, int32_t& file_flag, int32_t& oper_type);
+
         int read_raw_data(char* buf, int32_t& nbyte, const int32_t offset);
         int write_raw_data(const char* buf, const int32_t nbytes, const int32_t offset);
 
@@ -83,9 +86,10 @@ namespace tfs
         int get_block_info(common::BlockInfo* blk_info);
         int copy_block_info(const common::BlockInfo* blk_info);
 
-        int32_t get_flag();
+        int32_t get_prefix_flag();
         uint64_t get_family_id();
         int set_family_id(const int64_t family_id);
+        int32_t get_real_flag(const common::RawMeta& file_meta, const int32_t finfo_flag);
 
         int update_block_version(const int32_t step = 1);
 
@@ -109,7 +113,7 @@ namespace tfs
         }
 
         int write_raw_index(const int64_t family_id, const common::RawIndexOp index_op, const common::RawIndexVec* index_vec);
-        int read_raw_index(const common::RawIndexOp index_op, const uint32_t index_id, char* & buf, uint32_t& size );
+        int read_raw_index(const common::RawIndexOp index_op, const uint32_t index_id, char* & buf, int32_t& size );
 
         int batch_write_meta(const common::BlockInfo* blk_info, const common::RawMetaVec* meta_list, const common::VersionStep step);
         int set_block_dirty_type(DirtyFlag dirty_flag);

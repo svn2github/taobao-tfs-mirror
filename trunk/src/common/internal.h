@@ -167,6 +167,11 @@ namespace tfs
     static const int32_t MAX_CHECK_MEMBER_NUM = 4;
     static const int32_t MAX_MARSHALLING_BLOCK_SIZE_LIMIT = 128 * 1024 * 1024;
 
+    static const int32_t USE_INDEX_FLAG_MASK = 0x08000000; // 27th bit
+    static const int32_t FILE_UNLINK_MASK = 0x70000000;    // 28-30th bit
+    static const int32_t FILE_UNLINK_OFFSET = 28;
+    static const int32_t FILE_SIZE_MASK = 0x07FFFFFF;      // 0~26th bit
+
     enum VersionStep
     {
       VERSION_INC_STEP_DEFAULT = 1,
@@ -479,12 +484,6 @@ namespace tfs
       {
         return block_id_ < rhs.block_id_;
       }
-      inline bool operator==(const BlockInfo& rhs) const
-      {
-        return block_id_ == rhs.block_id_ && version_ == rhs.version_ && file_count_ == rhs.file_count_ && size_
-          == rhs.size_ && del_file_count_ == rhs.del_file_count_ && del_size_ == rhs.del_size_ && seq_no_
-          == rhs.seq_no_;
-      }
     };
 
     struct BlockInfoExt
@@ -517,12 +516,7 @@ namespace tfs
       {
         return block_info_.block_id_ < rhs.block_info_.block_id_;
       }
-      inline bool operator==(const BlockInfoExt& rhs) const
-      {
-        return block_info_ == rhs.block_info_ &&
-           family_id_ == rhs.family_id_;
-      }
-   };
+    };
 
     struct RawMeta
     {
@@ -586,18 +580,43 @@ namespace tfs
 
         int32_t get_size() const
         {
-          return location_.size_;
+          return location_.size_ & FILE_SIZE_MASK;
         }
 
         void set_size(const int32_t file_size)
         {
-          location_.size_ = file_size;
+          location_.size_ = (location_.size_ & ~FILE_SIZE_MASK) | (file_size & FILE_SIZE_MASK);
+        }
+
+        int32_t get_unlink_flag() const
+        {
+          return (location_.size_ & FILE_UNLINK_MASK) >> FILE_UNLINK_OFFSET;
+        }
+
+        void set_unlink_flag(const int32_t flag)
+        {
+          location_.size_ = (location_.size_ & ~FILE_UNLINK_MASK) | ((flag << FILE_UNLINK_OFFSET) & FILE_UNLINK_MASK);
+          set_use_index_flag();
+        }
+
+        bool use_index_flag() const
+        {
+          return location_.size_ & USE_INDEX_FLAG_MASK;
+        }
+
+        void set_use_index_flag()
+        {
+          location_.size_ |= USE_INDEX_FLAG_MASK;
         }
 
         bool operator==(const RawMeta& rhs) const
         {
+          /*
           return fileid_ == rhs.fileid_ && location_.inner_offset_ == rhs.location_.inner_offset_ && location_.size_
             == rhs.location_.size_;
+          */
+          return fileid_ == rhs.fileid_ && location_.inner_offset_ == rhs.location_.inner_offset_ &&
+            get_size() == rhs.get_size();
         }
 
       private:
@@ -1000,6 +1019,13 @@ namespace tfs
       REPORT_BLOCK_TYPE_PART,
       REPORT_BLOCK_TYPE_RELIEVE
     }ReportBlockType;
+
+    typedef enum NodeStatus
+    {
+      NODE_ALIVE = 0,
+      NODE_DEAD = 1,
+      NODE_UNUSED = -1
+    };
 
     extern const char* dynamic_parameter_str[43];
 

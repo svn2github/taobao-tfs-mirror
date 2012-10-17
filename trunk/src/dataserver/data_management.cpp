@@ -330,7 +330,7 @@ namespace tfs
       {
         for (int32_t i = 0; i < member_num; i++)
         {
-          data[i] = (char*)malloc(MAX_READ_SIZE * sizeof(char));
+          data[i] = new (std::nothrow) char[MAX_READ_SIZE];
           assert(NULL != data[i]);
         }
         decoder.bind(data, member_num, MAX_READ_SIZE);
@@ -358,20 +358,24 @@ namespace tfs
       }
 
       // find file in block
+      int32_t file_pos = 0;
       int32_t file_size = 0;
       int64_t file_offset = 0;
       if (TFS_SUCCESS == ret)
       {
-        ret = IndexHandle::hash_find(target_index, length, file_id, file_size, file_offset);
+        ret = IndexHandle::hash_find(target_index, length, file_id, file_pos);
         if (TFS_SUCCESS == ret)
         {
+          RawMeta* meta_info = reinterpret_cast<RawMeta*>(target_index + file_pos);
+          file_size = meta_info->get_size();
+          file_offset = meta_info->get_offset();
           if (file_size - read_offset < real_read_len)
           {
             real_read_len = file_size - read_offset;
           }
         }
       }
-      tbsys::gDelete(target_index);
+      tbsys::gDeleteA(target_index);
 
       // calculate decode offset length, real data offset and length
       int32_t decode_offset = 0;
@@ -403,7 +407,7 @@ namespace tfs
 
       if (TFS_SUCCESS == ret && 0 != real_read_len)
       {
-        char* data_buffer = (char*)malloc(sizeof(char) * decode_size);
+        char* data_buffer = new (std::nothrow) char[decode_size];
         assert(NULL != data_buffer);
         int32_t decode_idx = 0;
         int32_t decode_len = 0;
@@ -422,7 +426,6 @@ namespace tfs
               continue;
             }
 
-            memset(data[i], 0, decode_len * sizeof(char));
             uint32_t blockid = family_members[i].first;
             uint64_t serverid = family_members[i].second;
             int32_t data_file_size = 0;
@@ -456,12 +459,12 @@ namespace tfs
           memcpy(tmp_data_buffer, data_buffer + offset_in_buffer, size_in_buffer);
         }
 
-        tbsys::gDelete(data_buffer);
+        tbsys::gDeleteA(data_buffer);
       }
 
       for (int32_t i = 0; i < member_num; i++)
       {
-        tbsys::gDelete(data[i]);
+        tbsys::gDeleteA(data[i]);
       }
 
       // check file status
@@ -525,21 +528,12 @@ namespace tfs
         return EXIT_NO_LOGICBLOCK_ERROR;
       }
 
-      int ret = logic_block->read_file_info(file_id, finfo);
+      int ret = logic_block->read_file_info(file_id, finfo, mode);
       if (TFS_SUCCESS != ret)
       {
+        TBSYS_LOG(ERROR, "read file info, blockid: %u, fileid: %"PRI64_PREFIX"u, mode: %d",
+            block_id, file_id, mode);
         return ret;
-      }
-
-      // if mode is 0 and file is not in nomal status, return error.
-      if ((0 == finfo.id_)
-          || (finfo.id_ != file_id )
-          || ((finfo.flag_ & (FI_DELETED | FI_INVALID | FI_CONCEAL)) != 0 && NORMAL_STAT == mode))
-      {
-        TBSYS_LOG(WARN,
-            "FileInfo parse fail. blockid: %u, fileid: %" PRI64_PREFIX "u, infoid: %" PRI64_PREFIX "u, flag: %d",
-            block_id, file_id, finfo.id_, finfo.flag_);
-        return EXIT_FILE_STATUS_ERROR;
       }
 
       // minus the header(FileInfo)
@@ -576,7 +570,7 @@ namespace tfs
       return TFS_SUCCESS;
     }
 
-    int DataManagement::unlink_file(common::BlockInfo& info, int64_t& file_size, const uint32_t block_id, const uint64_t file_id, const int32_t action, const int32_t remote_version)
+    int DataManagement::unlink_file(common::BlockInfo& info, int64_t& file_size, const uint32_t block_id, const uint64_t file_id, const int32_t action, const int32_t remote_version, int32_t& unlink_flag)
     {
       LogicBlock* logic_block = BlockFileManager::get_instance()->get_logic_block(block_id);
       int32_t ret = NULL == logic_block ? EXIT_NO_LOGICBLOCK_ERROR : TFS_SUCCESS;
@@ -595,12 +589,31 @@ namespace tfs
       }
       if (TFS_SUCCESS == ret)
       {
-        ret = logic_block->unlink_file(file_id, action, file_size);
+        ret = logic_block->unlink_file(file_id, action, file_size, unlink_flag);
         if (TFS_SUCCESS != ret)
         {
           TBSYS_LOG(ERROR, "del file fail, blockid: %u, fileid: %" PRI64_PREFIX "u, ret: %d", block_id, file_id, ret);
         }
       }
+      return ret;
+    }
+
+    int DataManagement::unlink_file_parity(const uint32_t block_id, const uint32_t index_id, const uint64_t file_id, const int32_t action, int64_t& file_size)
+    {
+      LogicBlock* logic_block = BlockFileManager::get_instance()->get_logic_block(block_id);
+      int32_t ret = NULL == logic_block ? EXIT_NO_LOGICBLOCK_ERROR : TFS_SUCCESS;
+      if (TFS_SUCCESS != ret)
+      {
+        TBSYS_LOG(INFO, "block: %u is not exist.", block_id);
+      }
+      else
+      {
+        ret = logic_block->unlink_file_parity(index_id, file_id, action, file_size);
+      }
+
+      TBSYS_LOG(DEBUG, "unlink file parity, blockid: %u, indexid: %u, %"PRI64_PREFIX"u, action: %d",
+          block_id, index_id, file_id, action);
+
       return ret;
     }
 
@@ -901,7 +914,7 @@ namespace tfs
     }
 
     int DataManagement::read_raw_index(const uint32_t block_id, const common::RawIndexOp index_op,
-        const uint32_t index_id, char* & buf, uint32_t& size)
+        const uint32_t index_id, char* & buf, int32_t& size)
     {
       LogicBlock* logic_block = BlockFileManager::get_instance()->get_logic_block(block_id);
       if (NULL == logic_block)
@@ -929,7 +942,7 @@ namespace tfs
         LogicBlock* logic_block = BlockFileManager::get_instance()->get_logic_block(expire_blocks[i]);
         if (NULL != logic_block)
         {
-          if (0 == logic_block->get_flag())
+          if (0 == logic_block->get_prefix_flag())
           {
             logic_block->set_family_id(0);
             BlockInfoExt block_ext;

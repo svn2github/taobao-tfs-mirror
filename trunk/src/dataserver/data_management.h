@@ -64,7 +64,8 @@ namespace tfs
         int read_file_info(const uint32_t block_id,
             const uint64_t file_id, const int32_t mode, common::FileInfo& finfo);
         int rename_file(const uint32_t block_id, const uint64_t file_id, const uint64_t new_file_id);
-        int unlink_file(common::BlockInfo& info, int64_t& file_size, const uint32_t block_id, const uint64_t file_id, const int32_t action, const int32_t remote_version);
+        int unlink_file(common::BlockInfo& info, int64_t& file_size, const uint32_t block_id, const uint64_t file_id, const int32_t action, const int32_t remote_version, int32_t& unlink_flag);
+        int unlink_file_parity(const uint32_t block_id, const uint32_t index_id, const uint64_t file_id, const int32_t action, int64_t& file_size);
 
         int batch_new_block(const common::VUINT32* new_blocks);
         int batch_remove_block(const common::VUINT32* remove_blocks);
@@ -90,7 +91,7 @@ namespace tfs
         int write_raw_index(const uint32_t block_id, const int64_t family_id,
             const common::RawIndexOp index_op, const common::RawIndexVec* index_vec);
         int read_raw_index(const uint32_t block_id, const common::RawIndexOp index_op, const uint32_t index_id,
-            char* & buf, uint32_t& size);
+            char* & buf, int32_t& size);
 
         int add_new_expire_block(const common::VUINT32* expire_block_ids, const common::VUINT32* remove_block_ids,
             const common::VUINT32* new_block_ids);

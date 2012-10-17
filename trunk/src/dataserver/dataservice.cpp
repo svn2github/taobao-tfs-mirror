@@ -1148,7 +1148,7 @@ namespace tfs
     }
 
     int DataService::create_file_number(CreateFilenameMessage* message)
-    {
+      {
       int32_t ret = NULL == message ? EXIT_PARAMETER_ERROR : TFS_SUCCESS;
       if (TFS_SUCCESS == ret)
       {
@@ -1957,30 +1957,77 @@ namespace tfs
         int32_t remote_version = message->get_block_version();
         bool is_master = (message->get_server() & 1) == 0;
         int64_t file_size = 0;
+        int32_t unlink_flag = 0;
         Lease* lease = NULL;
+        FamilyMemberInfoExt& family_info = message->get_family_info();
+        const int32_t data_num = GET_DATA_MEMBER_NUM(family_info.family_aid_info_);
+        const int32_t check_num = GET_CHECK_MEMBER_NUM(family_info.family_aid_info_);
 
-        TBSYS_LOG(DEBUG, "unlink file. block: %u, file_id: %"PRI64_PREFIX"u, remote_version: %d, lease_id: %u, server size: %zd, master: %s",
-          block_id, file_id, remote_version, message->get_lease_id(), servers.size(), is_master ? "yes" : "no");
+        VUINT64 pservers;
+        if (INVALID_FAMILY_ID == family_info.family_id_)
+        {
+          pservers = servers;
+        }
+        else
+        {
+          pservers.push_back(data_server_info_.id_);
+          for (int32_t i = 0; i < check_num; i++)
+          {
+            pservers.push_back(family_info.members_[i+data_num].second);
+          }
+        }
+
+        TBSYS_LOG(DEBUG, "unlink file. family_id: %"PRI64_PREFIX"d, block: %u, file_id: %"PRI64_PREFIX"u, remote_version: %d, lease_id: %u, server size: %zd, master: %s",
+          family_info.family_id_, block_id, file_id, remote_version, message->get_lease_id(), pservers.size(), is_master ? "yes" : "no");
         LeaseId lease_id(INVALID_LEASE_ID, file_id, block_id);
         if (is_master)
         {
           time_t now = Func::get_monotonic_time();
-          get_data_management().get_lease_manager().generation(lease_id, now, LEASE_TYPE_UNLINK,servers);
+          get_data_management().get_lease_manager().generation(lease_id, now, LEASE_TYPE_UNLINK,pservers);
           lease = get_data_management().get_lease_manager().get(lease_id, now);
           message->set_lease_id_ext(lease->lease_id_.lease_id_);
           message->set_server();
-          int32_t result = post_message_to_server(message, servers);
+
+          int32_t result = post_message_to_server(message, servers);  // just post to real servers
           ret = (result  == EXIT_POST_MSG_RET_POST_MSG_ERROR) ?  EXIT_SENDMSG_ERROR : TFS_SUCCESS;
+
           if (TFS_SUCCESS != ret)
           {
-            TBSYS_LOG(INFO, "unlink file forwarding message to other dataserver failed, block: %u, fileid: %"PRI64_PREFIX"u,lease id: %"PRI64_PREFIX"u, role : master, ret: %d",
+            TBSYS_LOG(INFO, "unlink file forwarding message to other dataserver failed, block: %u,"
+                "fileid: %"PRI64_PREFIX"u,lease id: %"PRI64_PREFIX"u, role : master, ret: %d",
                 block_id, file_id, lease->lease_id_.lease_id_, ret);
           }
         }
+
         BlockInfo local_info;
         if (TFS_SUCCESS == ret)
         {
-          ret = get_data_management().unlink_file(local_info, file_size, block_id, file_id, action, remote_version);
+          if (!is_master && (INVALID_FAMILY_ID != family_info.family_id_))
+          {
+            uint32_t target_block_id = INVALID_BLOCK_ID;
+            for (int32_t i = 0; i < check_num; i++)
+            {
+              if (data_server_info_.id_ == family_info.members_[i+data_num].second)
+              {
+                target_block_id = family_info.members_[i+data_num].first;
+                break;
+              }
+            }
+
+            if (INVALID_BLOCK_ID == target_block_id)
+            {
+              ret = EXIT_INVALID_ARGU_ERROR;
+            }
+            else
+            {
+              ret = get_data_management().unlink_file_parity(target_block_id, block_id, file_id, message->get_unlink_flag(), file_size);
+            }
+          }
+          else
+          {
+            ret = get_data_management().unlink_file(local_info, file_size, block_id, file_id, action, remote_version, unlink_flag);
+          }
+
           if (is_master)
           {
             lease->update_member_info(data_server_info_.id_, local_info, ret);
@@ -2008,7 +2055,16 @@ namespace tfs
         }
         if (is_master)
         {
-          if (servers.size() <= 1U)
+          if (TFS_SUCCESS == ret && INVALID_FAMILY_ID != family_info.family_id_)
+          {
+            message->set_server();
+            message->set_unlink_flag(unlink_flag); // use unlink type to pass unlink flag
+            int32_t result = post_message_to_server(message, pservers);
+            ret = (result  == EXIT_POST_MSG_RET_POST_MSG_ERROR) ?  EXIT_SENDMSG_ERROR : TFS_SUCCESS;
+          }
+
+          // only one copy, or in a erasure group & error occurs
+          if (pservers.size() <= 1U || (TFS_SUCCESS != ret && INVALID_FAMILY_ID != family_info.family_id_))
           {
             if (message->get_lease_id())
               ds_requester_.req_block_write_complete(block_id, message->get_lease_id(), ret, UNLINK_FLAG_YES);
@@ -2036,6 +2092,7 @@ namespace tfs
           reply_msg->set_status(ret);
           ret = message->reply(reply_msg);
         }
+
         // hook to be checked on delete or undelete
         if (TFS_SUCCESS == ret)
         {
@@ -2046,8 +2103,8 @@ namespace tfs
         }
 
         TIMER_END();
-        TBSYS_LOG(INFO, "unlink file %s. blockid: %d, fileid: %" PRI64_PREFIX "u, action: %d, isserver: %s, peer ip: %s, cost time: %" PRI64_PREFIX "d",
-            TFS_SUCCESS == ret ? "success" : "fail", block_id, file_id, action, is_master ? "master" : "slave",
+        TBSYS_LOG(INFO, "unlink file %s. family_id: %"PRI64_PREFIX"d, blockid: %d, fileid: %" PRI64_PREFIX "u, action: %d, isserver: %s, peer ip: %s, cost time: %" PRI64_PREFIX "d",
+            TFS_SUCCESS == ret ? "success" : "fail", family_info.family_id_, block_id, file_id, action, is_master ? "master" : "slave",
             tbsys::CNetUtil::addrToString(peer_id).c_str(), TIMER_DURATION());
 
         string sub_key = "";
@@ -2546,7 +2603,7 @@ namespace tfs
       uint32_t index_id = message->get_index_id();
       RawIndexOp index_op = message->get_index_op();
       uint64_t peer_id = message->get_connection()->getPeerId();
-      uint32_t size = 0;
+      int32_t size = 0;
       char* tmp_buf = NULL;
 
       TBSYS_LOG(DEBUG, "read raw index start, blockid: %u, index id: %u, index_op: %d, peer id: %s",

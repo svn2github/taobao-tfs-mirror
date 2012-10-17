@@ -1657,6 +1657,12 @@ int TfsFile::async_req_unlink_file(NewClient* client, const uint16_t index)
   uf_message.set_unlink_type(static_cast<int32_t>(seg_data->unlink_action_)); // action
   uf_message.set_option_flag(option_flag_);
 
+  if (INVALID_FAMILY_ID != seg_data->family_info_.family_id_)
+  {
+    TBSYS_LOG(DEBUG, "unlink file in a grouped block, family id: %"PRI64_PREFIX"d", seg_data->family_info_.family_id_);
+    uf_message.set_family_info(seg_data->family_info_);
+  }
+
   // no not need to estimate the ds number is zero
   uint8_t send_id;
   int ret = client->post_request(seg_data->get_write_pri_ds(), &uf_message, send_id);

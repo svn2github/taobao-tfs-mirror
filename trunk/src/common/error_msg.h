@@ -220,6 +220,8 @@ namespace tfs
     const int32_t EXIT_NO_ENOUGH_DATA = -16004;
     const int32_t EXIT_ENCODE_FAIL = -16005;
     const int32_t EXIT_DECODE_FAIL = -16006;
+    const int32_t EXIT_NO_NEED_REINSTATE = -16007;
+    const int32_t EXIT_BLOCK_NOT_PRESENT = -16008;
   }
 }
 #endif //TFS_COMMON_ERRMSG_H_

@@ -91,6 +91,16 @@ namespace tfs
           return unlink_file_info_.is_server_ & common::SYNC;
         }
 
+        inline void set_unlink_flag(const int32_t flag)
+        {
+          unlink_file_info_.is_server_ |= (flag << 16);
+        }
+
+        inline int32_t get_unlink_flag()
+        {
+          return unlink_file_info_.is_server_ >> 16;
+        }
+
         inline void set_option_flag(const int32_t flag)
         {
           option_flag_ = flag;
@@ -154,6 +164,15 @@ namespace tfs
         inline uint64_t get_lease_id_ext() const { return lease_id_ext_;}
         inline void set_lease_id_ext(const uint64_t lease_id) { lease_id_ext_ = lease_id;}
 
+        inline common::FamilyMemberInfoExt& get_family_info()
+        {
+          return family_info_;
+        }
+
+        inline void set_family_info(common::FamilyMemberInfoExt& family_info)
+        {
+          family_info_ = family_info;
+        }
       protected:
         UnlinkFileInfo unlink_file_info_;
         int32_t option_flag_;
@@ -161,6 +180,7 @@ namespace tfs
         mutable int32_t version_;
         mutable uint32_t lease_id_;
         uint64_t lease_id_ext_;
+        common::FamilyMemberInfoExt family_info_;
     };
 
     class UnlinkFileResponseMessage : public  common::BasePacket
