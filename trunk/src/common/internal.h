@@ -484,6 +484,13 @@ namespace tfs
       {
         return block_id_ < rhs.block_id_;
       }
+
+      inline bool operator==(const BlockInfo& rhs) const
+      {
+        return block_id_ == rhs.block_id_ && version_ == rhs.version_ && file_count_ == rhs.file_count_ && size_
+          == rhs.size_ && del_file_count_ == rhs.del_file_count_ && del_size_ == rhs.del_size_ && seq_no_
+          == rhs.seq_no_;
+      }
     };
 
     struct BlockInfoExt
@@ -516,7 +523,8 @@ namespace tfs
       {
         return block_info_.block_id_ < rhs.block_info_.block_id_;
       }
-    };
+
+   };
 
     struct RawMeta
     {
