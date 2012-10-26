@@ -1,0 +1,184 @@
+/*
+ * (C) 2007-2010 Alibaba Group Holding Limited.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+ *
+ *
+ * Version: $Id: dataserver_define.h 643 2011-08-02 07:38:33Z duanfei@taobao.com $
+ *
+ * Authors:
+ *   duanfei<duanfei@taobao.com>
+ *      - initial release
+ *
+ */
+#ifndef TFS_DATASERVER_DATASERVERDEFINE_H_
+#define TFS_DATASERVER_DATASERVERDEFINE_H_
+
+#include <string>
+#include <assert.h>
+#include "common/internal.h"
+#include "common/parameter.h"
+#include "common/new_client.h"
+
+namespace tfs
+{
+  namespace dataserver
+  {
+    static const std::string SUPERBLOCK_NAME = "/fs_super";
+    static const std::string MAINBLOCK_DIR_PREFIX = "/";
+    static const std::string INDEX_DIR_PREFIX = "/index/";
+    static const mode_t DIR_MODE = 0755;
+    static const int32_t MAX_COMPACT_READ_SIZE = 8388608;
+    static const char DEV_TAG[common::MAX_DEV_TAG_LEN] = "TAOBAO";
+    static const int32_t COPY_BETWEEN_CLUSTER = -1;
+    static const int32_t BLOCK_VERSION_MAGIC_NUM = 2;
+    static const int32_t FS_SPEEDUP_VERSION = 2;
+    static const int32_t PARITY_INDEX_START = 1024; // index start positioin
+    static const int32_t PARITY_INDEX_MMAP_SIZE = PARITY_INDEX_START;
+
+    static const int32_t EXIT_POST_MSG_RET_NO_OTHER_MEMBER = 0;
+    static const int32_t EXIT_POST_MSG_RET_POST_MSG_ERROR  = -1;
+
+    struct SuperBlockInfo
+    {
+      int32_t version_;
+      char mount_tag_[common::MAX_DEV_TAG_LEN]; // magic tag
+      char mount_point_[common::MAX_DEV_NAME_LEN]; // name of mount point
+      int64_t mount_point_use_space_; // the max space of the mount point
+      int64_t mount_time_;            // mount time
+      int32_t mount_fs_type_;			//file system type,  ext4, ext3,...
+      int32_t superblock_reserve_offset_; // super block start offset.
+      int32_t block_index_offset_;//block index start offset.
+      int32_t max_block_index_element_count_;//block index element count
+      int32_t total_main_block_count_;//total count of main block
+      int32_t used_main_block_count_; //total count of used main block
+      int32_t used_extend_block_count_;//total count of used extend block
+      int32_t max_main_block_size_;//max size of main block
+      int32_t max_extend_block_size_;//max size of extend block
+      int32_t hash_bucket_count_;//total count of hash bucket
+      common::MMapOption mmap_option_;    //mmap option
+      double max_use_block_ratio_;//max use block ratio
+      double hash_bucket_ratio_;//hash slot count / file count ratio
+      double max_use_hash_bucket_ratio_;
+      int64_t reserve_[4];
+      int dump(tbnet::DataBuffer& buf) const;
+      int dump(std::stringstream& stream) const;
+    };
+
+    typedef enum BlockType_
+    {
+      BLOCK_TYPE_MAIN = 0,
+      BLOCK_TYPE_EXT = 1
+    };
+
+    typedef enum BlockDataType_
+    {
+      BLOCK_DATA_TYPE_DATA = 0,
+      BLOCK_DATA_TYPE_CHECK = 1
+    }BlockDataType;
+
+    typedef enum BlockCreateCompleteStatus_
+    {
+      BLOCK_CREATE_COMPLETE_STATUS_UNCOMPLETE = 0,
+      BLOCK_CREATE_COMPLETE_STATUS_COMPLETE = 1
+    }BlockCreateCompleteStatus;
+
+    typedef enum BlockSplitFlag_
+    {
+      BLOCK_SPLIT_FLAG_NO = 0,
+      BLOCK_SPLIT_FLAG_YES = 1
+    }BlockSplitFlag;
+
+    typedef enum BlockSplitStatus_
+    {
+      BLOCK_SPLIT_STATUS_UNCOMPLETE = 0,
+      BLOCK_SPLIT_STATUS_COMPLETE = 1
+    }BlockSplitStatus;
+
+    struct BlockIndex
+    {
+      uint64_t logic_block_id_;
+      int32_t  physical_block_id_:20;//<=1048575
+      int32_t  physical_file_name_id_:20;//<=1048575 number 1~1048575
+      int32_t  next_index_:20;//<=1048575
+      int32_t  prev_index_:20;//<=1048575
+      int8_t   index_:6;// 0 ~36(0: main block, 1~36: ext block)
+      int8_t   status_:2;//0: uncomplete, 1: complete
+      int8_t   split_flag_:2;//0: unsplit, 1:split
+      int8_t   split_status_:2;//0: split uncomplete, 1: split complete
+      int8_t   reserve_:4;//reserve
+      int dump(tbnet::DataBuffer& buf) const;
+      int dump(std::stringstream& stream) const;
+    };
+
+    // fileinfo flag
+    enum FileinfoFlag
+    {
+      FI_DELETED = 1,
+      FI_INVALID = 2,
+      FI_CONCEAL = 4
+    };
+
+    enum OperType
+    {
+      OPER_NONE   = 0,
+      OPER_INSERT = 1,
+      OPER_DELETE = 2,
+      OPER_UNDELETE = 3,
+      OPER_UPDATE = 4
+    };
+
+    class GCObject
+    {
+    public:
+      explicit GCObject(const time_t now):
+        dead_time_(now) {}
+      virtual ~GCObject() {}
+      virtual void callback(){}
+      inline void free(){ delete this;}
+      inline void set_dead_time(const time_t now = time(NULL)) {dead_time_ = now;}
+      inline bool can_be_clear(const time_t now = time(NULL)) const
+      {
+        return now >= (dead_time_ + common::SYSPARAM_DATASERVER.object_clear_max_time_);
+      }
+      inline bool is_dead(const time_t now = time(NULL)) const
+      {
+        return now >= (dead_time_ + common::SYSPARAM_DATASERVER.object_dead_max_time_);
+      }
+    private:
+      time_t dead_time_;
+    };
+
+    struct ReplBlockExt
+    {
+      common::ReplBlock info_;
+      int64_t seqno_;
+    };
+
+    struct CompactBlkInfo
+    {
+      int64_t seqno_;
+      uint32_t block_id_;
+      int32_t preserve_time_;
+      int32_t owner_;
+
+      CompactBlkInfo& operator= (const CompactBlkInfo& cpt_blk)
+      {
+        seqno_ = cpt_blk.seqno_;
+        block_id_ = cpt_blk.block_id_;
+        preserve_time_ = cpt_blk.preserve_time_;
+        owner_ = cpt_blk.owner_;
+        return *this;
+      }
+    };
+
+    typedef __gnu_cxx::hash_map<uint32_t, uint32_t> ChangedBlockMap;   // blockid => last modified time
+    typedef ChangedBlockMap::iterator ChangedBlockMapIter;
+
+    int ds_async_callback(common::NewClient* client);
+  }/** end namespace dataserver **/
+}/** end namespace tfs **/
+
+#endif //TFS_DATASERVER_DATASERVERDEFINE_H_

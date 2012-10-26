@@ -261,8 +261,8 @@ namespace tfs
           return size;
         }
 
-        static int hash_find(char* data, const int data_size,
-            const uint64_t key, int32_t& file_size, int64_t& file_offset);
+        //static int hash_find(char* data, const int data_size,
+        //    const uint64_t key, int32_t& file_size, int64_t& file_offset);
 
       private:
         static bool hash_compare(const uint64_t left_key, const uint64_t right_key)
