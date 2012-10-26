@@ -145,18 +145,18 @@ namespace tfs
       const int8_t MIN_REPLICATE = SYSPARAM_NAMESERVER.max_replication_ > 1 ? 2 : SYSPARAM_NAMESERVER.max_replication_;
       while (loop++ < MAX_LOOP_NUM && !ret && pop_from_delete_queue_(output))
       {
-        block = get(output.first);
-        server = manager_.get_server_manager().get(output.second);
+        block = get(output.second);
+        server = manager_.get_server_manager().get(output.first);
         ret = (NULL != block) && (NULL != server);
         if (ret)
         {
-          get_mutex_(output.first).rdlock();
+          get_mutex_(output.second).rdlock();
           int8_t size = block->get_servers_size();
           bool in_family = block->is_in_family();
           ret = in_family ? !block->exist(server->id()) : size >= MIN_REPLICATE && !block->exist(server->id());
-          get_mutex_(output.first).unlock();
+          get_mutex_(output.second).unlock();
           if (!ret && size < MIN_REPLICATE && size > 0 && !in_family)
-            push_to_delete_queue(output.first, output.second);
+            push_to_delete_queue(output.second, output.first);
         }
       }
       return ret;
@@ -498,10 +498,10 @@ namespace tfs
           }
           get_mutex_(info.block_info_.block_id_).unlock();
 
-          if (EXIT_SERVER_EXISTED == ret)
-            ret = TFS_SUCCESS;
-
-          if (TFS_SUCCESS == ret)
+          if (TFS_SUCCESS == ret
+              || ret == EXIT_EXPIRE_SELF_ERROR
+              || EXIT_SERVER_EXISTED == ret
+              || EXIT_BLOCK_VERSION_ERROR == ret)
           {
             uint64_t id = INVALID_SERVER_ID;
             for (index = 0; index < other_expires.get_array_index(); ++index)
@@ -516,12 +516,10 @@ namespace tfs
             }
             if (expire_self)
               push_to_delete_queue(info.block_info_.block_id_, server->id());
-            else
+            if (TFS_SUCCESS == ret || EXIT_SERVER_EXISTED == ret)
               manager_.get_server_manager().build_relation(server, block->id(), writable, master);
           }
-
-          if (EXIT_BLOCK_VERSION_ERROR == ret)
-            ret = TFS_SUCCESS;
+          ret = TFS_SUCCESS;
         }
       }
       return ret;

@@ -1707,8 +1707,8 @@ namespace tfs
       while (count > 0 && get_block_manager().pop_from_delete_queue(output))
       {
         --count;
-        BlockCollect* block = get_block_manager().get(output.first);
-        ServerCollect* server = get_server_manager().get(output.second);
+        BlockCollect* block = get_block_manager().get(output.second);
+        ServerCollect* server = get_server_manager().get(output.first);
         ret = ((NULL != block) && (NULL != server));
         if (ret)
         {
