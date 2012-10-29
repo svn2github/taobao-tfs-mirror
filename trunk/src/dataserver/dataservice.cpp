@@ -799,8 +799,6 @@ namespace tfs
               ret = bpacket->reply(reply_msg);
             }
             data_management_.get_lease_manager().put(lease);
-            if (TFS_SUCCESS != ret)
-              stat_mgr_.update_entry(tfs_ds_stat_, "write-failed", 1);
           }
           else if (RENAME_FILE_MESSAGE == pcode)
           {
@@ -889,8 +887,6 @@ namespace tfs
               ret = bpacket->reply(reply_msg);
             }
             data_management_.get_lease_manager().put(lease);
-            if (TFS_SUCCESS != ret)
-              stat_mgr_.update_entry(tfs_ds_stat_, "unlink-file", 1);
           }
           else if (CLOSE_FILE_MESSAGE == pcode)
           {
@@ -1490,7 +1486,7 @@ namespace tfs
       int32_t read_offset = message->get_offset();
       uint64_t peer_id = message->get_connection()->getPeerId();
       int8_t flag = message->get_flag();
-      FamilyMemberInfoExt& family_info = message->get_family_info();
+      const FamilyMemberInfoExt& family_info = message->get_family_info();
 
       TBSYS_LOG(DEBUG, "blockid: %u, fileid: %" PRI64_PREFIX "u, read len: %d, read offset: %d, resp: %p", block_id,
                 file_id, read_len, read_offset, resp_rd_v2_msg);
@@ -1609,7 +1605,7 @@ namespace tfs
       int32_t read_offset = message->get_offset();
       uint64_t peer_id = message->get_connection()->getPeerId();
       int8_t flag = message->get_flag();
-      FamilyMemberInfoExt& family_info = message->get_family_info();
+      const FamilyMemberInfoExt& family_info = message->get_family_info();
 
       //add FileInfo if the first fragment
       int32_t real_read_len = 0;
@@ -1723,7 +1719,7 @@ namespace tfs
       int32_t read_offset = message->get_offset();
       uint64_t peer_id = message->get_connection()->getPeerId();
       int8_t flag = message->get_flag();
-      FamilyMemberInfoExt family_info = message->get_family_info();
+      const FamilyMemberInfoExt& family_info = message->get_family_info();
 
       // add FileInfo if the first fragment
       // here we transfer offset&length to comparatively FileInfo
@@ -1857,7 +1853,7 @@ namespace tfs
       uint32_t block_id = message->get_block_id();
       uint64_t file_id = message->get_file_id();
       int32_t mode = message->get_mode();
-      FamilyMemberInfoExt& family_info = message->get_family_info();
+      const FamilyMemberInfoExt& family_info = message->get_family_info();
 
       TBSYS_LOG(DEBUG, "read file info, blockid: %u, fileid: %" PRI64_PREFIX "u, mode: %d",
           block_id, file_id, mode);
@@ -1959,7 +1955,7 @@ namespace tfs
         int64_t file_size = 0;
         int32_t unlink_flag = 0;
         Lease* lease = NULL;
-        FamilyMemberInfoExt& family_info = message->get_family_info();
+        const FamilyMemberInfoExt& family_info = message->get_family_info();
         const int32_t data_num = GET_DATA_MEMBER_NUM(family_info.family_aid_info_);
         const int32_t check_num = GET_CHECK_MEMBER_NUM(family_info.family_aid_info_);
 
@@ -2535,10 +2531,11 @@ namespace tfs
       const BlockInfo* blk = message->get_block_info();
       const RawMetaVec* raw_metas = message->get_raw_meta_list();
       uint64_t peer_id = message->get_connection()->getPeerId();
+      int32_t remove_flag = message->get_remove_flag();
 
       TBSYS_LOG(DEBUG, "write block fileinfo start, blockid: %u, cluster flag: %d, meta size: %d, peer id: %s", block_id,
           message->get_cluster(), static_cast<int32_t>(raw_metas->size()), tbsys::CNetUtil::addrToString(peer_id).c_str());
-      int ret = data_management_.batch_write_meta(block_id, blk, raw_metas);
+      int ret = data_management_.batch_write_meta(block_id, blk, raw_metas, remove_flag);
       if (TFS_SUCCESS != ret)
       {
         return message->reply_error_packet(TBSYS_LOG_LEVEL(ERROR), ret,

@@ -315,6 +315,11 @@ namespace tfs
       {
         iret = input.get_int32(&cluster_);
       }
+
+      if (common::TFS_SUCCESS == iret && input.get_data_length() > 0)
+      {
+        iret = input.get_int32(&remove_flag_);
+      }
       return iret;
     }
 
@@ -325,7 +330,7 @@ namespace tfs
       {
         len += block_info_.length();
       }
-      len += common::INT_SIZE;
+      len += common::INT_SIZE * 2;
       common::RawMeta raw_data;
       len += meta_list_.size() * raw_data.length();
       return len;
@@ -377,6 +382,11 @@ namespace tfs
       if (common::TFS_SUCCESS == iret)
       {
         iret = output.set_int32(cluster_);
+      }
+
+      if (common::TFS_SUCCESS == iret)
+      {
+        iret = output.set_int32(remove_flag_);
       }
       return iret;
     }

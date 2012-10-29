@@ -1006,6 +1006,18 @@ namespace tfs
       return real_flag;
     }
 
+    int32_t LogicBlock::get_real_flag(const uint64_t key, const int32_t finfo_flag)
+    {
+      RawMeta file_meta;
+      int32_t real_flag = finfo_flag;
+      int ret = index_handle_->read_segment_meta(key, file_meta);
+      if (TFS_SUCCESS == ret)
+      {
+        real_flag = get_real_flag(file_meta, finfo_flag);
+      }
+      return real_flag;
+    }
+
     int LogicBlock::set_block_dirty_type(const DirtyFlag dirty_flag)
     {
       index_handle_->set_block_dirty_type(dirty_flag);
@@ -1219,6 +1231,7 @@ namespace tfs
               return ret;
           }
           cur_fileinfo_.size_ -= sizeof(FileInfo);
+          cur_fileinfo_.flag_ = logic_block_->get_real_flag(cur_fileinfo_.id_, cur_fileinfo_.flag_);
           read_offset_ = file_size + file_offset;
           // already get file info, no left data
           data_len_ = 0;
@@ -1256,6 +1269,7 @@ namespace tfs
         data_len_ = left_size;
       }
       cur_fileinfo_.size_ -= sizeof(FileInfo);
+      cur_fileinfo_.flag_ = logic_block_->get_real_flag(cur_fileinfo_.id_, cur_fileinfo_.flag_);
       ++meta_it_;
 
       TBSYS_LOG(DEBUG, "read one file end, blockid: %u, read offset: %u, leftlen: %d\n", logic_block_->logic_block_id_,

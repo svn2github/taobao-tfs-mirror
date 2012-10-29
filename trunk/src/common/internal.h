@@ -174,6 +174,7 @@ namespace tfs
 
     enum VersionStep
     {
+      VERSION_INC_STEP_NONE = 0,
       VERSION_INC_STEP_DEFAULT = 1,
       VERSION_INC_STEP_REPLICATE = 2
     };

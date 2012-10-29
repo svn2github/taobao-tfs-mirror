@@ -943,7 +943,7 @@ void TfsSession::insert_local_block_cache(const uint32_t block_id, const VUINT64
   {
     TBSYS_LOG(DEBUG, "local cache insert, blockid: %u", block_id);
     BlockCache block_cache;
-    block_cache.last_time_ = time(NULL);
+    block_cache.last_time_ =  Func::get_monotonic_time();
     block_cache.ds_ = rds;
     if (NULL != family_info)
     {
@@ -973,6 +973,6 @@ bool TfsSession::is_expired(const BlockCache& block_cache) const
     expire_time = DEFALUT_FAMILY_CACHE_TIME;
   }
 
-  return block_cache.last_time_ < time(NULL) - expire_time;
+  return block_cache.last_time_ < Func::get_monotonic_time() - expire_time;
 }
 

@@ -97,10 +97,12 @@ namespace tfs
         *
         * @param server_id: target ds id
         * @param block_id: block id
+        * @param cluster: is between cluter copy?
+        * @param remove_flag: transfer or replicate??
         *
         * @return 0 on success
         */
-        static int batch_write_index(const uint64_t server_id, const uint32_t block_id);
+        static int batch_write_index(const uint64_t server_id, const uint32_t block_id, const int32_t cluster, const int32_t remove_flag);
 
         /**
         * @brief write raw index to ds

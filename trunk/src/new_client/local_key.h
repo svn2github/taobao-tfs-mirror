@@ -120,7 +120,11 @@ namespace tfs
               break;
             }
           }
-          assert(index != member_num);
+
+          if (index == member_num)
+          {
+            return 0;
+          }
           return family_info_.members_[index].second;
         }
         return ds_[pri_ds_index_];

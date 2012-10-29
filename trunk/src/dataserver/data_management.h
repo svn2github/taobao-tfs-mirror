@@ -87,7 +87,7 @@ namespace tfs
         int write_raw_data(const uint32_t block_id, const int32_t data_offset, const int32_t msg_len,
             const char* data_buffer);
         int batch_write_meta(const uint32_t block_id, const common::BlockInfo* blk,
-            const common::RawMetaVec* meta_list);
+            const common::RawMetaVec* meta_list, const int32_t remove_flag);
         int write_raw_index(const uint32_t block_id, const int64_t family_id,
             const common::RawIndexOp index_op, const common::RawIndexVec* index_vec);
         int read_raw_index(const uint32_t block_id, const common::RawIndexOp index_op, const uint32_t index_id,

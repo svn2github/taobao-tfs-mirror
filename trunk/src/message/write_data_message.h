@@ -276,6 +276,17 @@ namespace tfs
         {
           return cluster_;
         }
+
+        inline void set_remove_flag(const int32_t remove_flag)
+        {
+          remove_flag_ = remove_flag;
+        }
+
+        inline int32_t get_remove_flag()
+        {
+          return remove_flag_;
+        }
+
         inline void set_raw_meta_list(const common::RawMetaVec* list)
         {
           if (NULL != list)
@@ -299,6 +310,7 @@ namespace tfs
         common::BlockInfo block_info_;
         common::RawMetaVec meta_list_;
         int32_t cluster_;
+        int32_t remove_flag_;
     };
 
     class WriteRawIndexMessage: public common::BasePacket

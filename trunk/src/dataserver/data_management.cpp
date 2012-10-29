@@ -875,7 +875,7 @@ namespace tfs
       return TFS_SUCCESS;
     }
 
-    int DataManagement::batch_write_meta(const uint32_t block_id, const BlockInfo* blk, const RawMetaVec* meta_list)
+    int DataManagement::batch_write_meta(const uint32_t block_id, const BlockInfo* blk, const RawMetaVec* meta_list, const int32_t remove_flag)
     {
       LogicBlock* logic_block = BlockFileManager::get_instance()->get_logic_block(block_id);
       if (NULL == logic_block)
@@ -884,7 +884,8 @@ namespace tfs
         return EXIT_NO_LOGICBLOCK_ERROR;
       }
 
-      int ret = logic_block->batch_write_meta(blk, meta_list, VERSION_INC_STEP_REPLICATE);
+      VersionStep step = remove_flag? VERSION_INC_STEP_NONE: VERSION_INC_STEP_REPLICATE;
+      int ret = logic_block->batch_write_meta(blk, meta_list, step);
       if (TFS_SUCCESS != ret)
       {
         TBSYS_LOG(ERROR, "blockid: %u batch write meta error.", block_id);

@@ -168,7 +168,7 @@ namespace tfs
       return ret;
     }
 
-    int Task::batch_write_index(const uint64_t server_id, const uint32_t block_id)
+    int Task::batch_write_index(const uint64_t server_id, const uint32_t block_id, const int32_t cluster, const int32_t remove_flag)
     {
       int ret = TFS_SUCCESS;
       RawMetaVec raw_meta_vec;
@@ -195,6 +195,8 @@ namespace tfs
           req_wib_msg.set_length(raw_meta_vec.size());
           req_wib_msg.set_raw_meta_list(&raw_meta_vec);
           req_wib_msg.set_block_info(logic_block->get_block_info());
+          req_wib_msg.set_cluster(cluster);
+          req_wib_msg.set_remove_flag(remove_flag);
 
           ret = send_simple_request(server_id, &req_wib_msg);
           if (TFS_SUCCESS != ret)
@@ -533,14 +535,14 @@ namespace tfs
 
         resp_cpt_msg->reply(new StatusMessage(STATUS_MESSAGE_OK));
 
+        TBSYS_LOG(INFO, "handle complete compact task, "
+            "seqno: %"PRI64_PREFIX"d, server: %s, status: %d, ret: %d\n",
+            seqno_, tbsys::CNetUtil::addrToString(resp_cpt_msg->get_ds_id()).c_str(), status, ret);
+
         if (is_completed())
         {
           ret = report_to_ns(status); // status is notused here
         }
-
-        TBSYS_LOG(INFO, "handle complete compact task, "
-            "seqno: %"PRI64_PREFIX"d, server: %s, status: %d, ret: %d\n",
-            seqno_, tbsys::CNetUtil::addrToString(resp_cpt_msg->get_ds_id()).c_str(), status, ret);
       }
       return ret;  // no need return here
     }
@@ -1069,7 +1071,7 @@ namespace tfs
         }
         len = read_len;
 
-        TBSYS_LOG(DEBUG, "replicate raw data blockid: %u, offset: %d, read len: %d, total len: %d\n", block_id,
+        TBSYS_LOG(DEBUG, "copy raw data blockid: %u, offset: %d, read len: %d, total len: %d\n", block_id,
             offset, len, total_len);
 
         ret = Task::write_raw_data(ds_ip, block_id, tmp_data_buf, len, offset);
@@ -1083,13 +1085,14 @@ namespace tfs
 
       if (TFS_SUCCESS == ret)
       {
-        ret = batch_write_index(ds_ip, block_id);
+        ret = batch_write_index(ds_ip, block_id, repl_block.server_count_, repl_block.is_move_);
       }
 
       // update block info local
       if (TFS_SUCCESS == ret)
       {
-        ret = logic_block->update_block_version(VERSION_INC_STEP_REPLICATE);
+        VersionStep step = repl_block.is_move_ ? VERSION_INC_STEP_NONE: VERSION_INC_STEP_REPLICATE;
+        ret = logic_block->update_block_version(step);
       }
       return ret;
     }
