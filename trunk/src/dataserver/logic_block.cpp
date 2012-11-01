@@ -843,7 +843,7 @@ namespace tfs
         return ret;
       }
 
-      // clear HALF BLOCK flag, it will become a normal block
+      // clear HALF/COMPACT BLOCK flag, it will become a normal block
       ret = set_block_dirty_type(C_DATA_CLEAN);
       if (TFS_SUCCESS != ret)
       {

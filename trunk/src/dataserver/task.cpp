@@ -832,14 +832,6 @@ namespace tfs
         return ret;
       }
 
-      TBSYS_LOG(DEBUG, "compact set dirty flag. blockid: %u\n", dest->get_logic_block_id());
-      ret = dest->set_block_dirty_type(C_DATA_CLEAN);
-      if (TFS_SUCCESS != ret)
-      {
-        TBSYS_LOG(ERROR, "compact blockid: %u set dirty flag fail. ret: %d\n", dest->get_logic_block_id(), ret);
-        return ret;
-      }
-
       return TFS_SUCCESS;
     }
 
@@ -1682,7 +1674,7 @@ namespace tfs
 
     bool DissolveTask::is_completed() const
     {
-      int ret = true;
+      bool ret = true;
       for (uint32_t i = 0; i < result_.size(); i++)
       {
         if (PLAN_STATUS_TIMEOUT == result_[i].second)
@@ -1696,6 +1688,7 @@ namespace tfs
 
     int DissolveTask::handle()
     {
+      int ret = TFS_SUCCESS;
       int32_t data_num = GET_DATA_MEMBER_NUM(family_aid_info_) / 2;
 
       // initialize stutus
@@ -1707,7 +1700,23 @@ namespace tfs
         }
       }
 
-      return do_dissolve();
+      // no need to replicate, task finished
+      if (0 == result_.size())
+      {
+        ret = report_to_ns(PLAN_STATUS_END);
+        if (TFS_SUCCESS == ret)
+        {
+          // success, do clear work, ignore return value
+          request_to_clear_family_id();
+          request_ds_to_delete();
+        }
+      }
+      else
+      {
+        ret = do_dissolve();
+      }
+
+      return ret;
     }
 
     int DissolveTask::do_dissolve()
