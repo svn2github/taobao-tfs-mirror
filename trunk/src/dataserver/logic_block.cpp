@@ -609,7 +609,7 @@ namespace tfs
       if (action > REVEAL)
       {
         // get the 5-7th bit
-        tmp_flag = (action >> 4) & 0x7;
+        tmp_flag = GET_SYNC_FLAG(action);
         tmp_action = SYNC;
       }
 

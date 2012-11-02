@@ -578,7 +578,8 @@ namespace tfs
           if (src_stat.flag_ != dest_stat.flag_)
           {
             int64_t file_size = 0;
-            int action = (src_stat.flag_ << 4);  // sync flag
+            int32_t action = 0;
+            SET_SYNC_FLAG(action, src_stat.flag_);  // sync flag to dest
             ret = tfs_client_->unlink(file_size, fsname.get_name(), NULL, dest_addr_,
                 static_cast<TfsUnlinkType>(action), TFS_FILE_NO_SYNC_LOG);
           }

@@ -28,6 +28,10 @@ namespace tfs
 {
   namespace dataserver
   {
+    // 4-7bits used to sync flag to dest
+    #define GET_SYNC_FLAG(x) (((x) >> 4))
+    #define SET_SYNC_FLAG(x, y) ((x) = ((y) << 4))
+
     static const std::string SUPERBLOCK_NAME = "/fs_super";
     static const std::string MAINBLOCK_DIR_PREFIX = "/";
     static const std::string EXTENDBLOCK_DIR_PREFIX = "/extend/";
