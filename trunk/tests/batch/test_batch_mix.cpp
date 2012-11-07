@@ -415,7 +415,7 @@ int main(int argc, char* argv[])
   int ret = fetch_input_opt(argc, argv, input_param, thread_count);
   if (ret != TFS_SUCCESS || input_param.ns_ip_port_.empty() || thread_count > THREAD_SIZE)
   {
-    printf("usage: -d ip:port -t thread_count -o ratio(read:write:delete:update) -s random -r range\n");
+    printf("usage: -d ip:port -t thread_count -o ratio(read:write:delete:update) -s random(0/1) -r range\n");
     exit(-1);
   }
 

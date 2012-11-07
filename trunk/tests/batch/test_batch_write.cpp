@@ -121,7 +121,7 @@ void* write_worker(void* arg)
     ret = write_data(tfsclient, fd, data, write_size);
     if (ret < 0)
     {
-      fprintf(stderr, "index:%d, tfswrite failed\n", param.index_); 
+      fprintf(stderr, "index:%d, tfswrite failed\n", param.index_);
       tfsclient->close(fd);
       ++failed_count;
     }
@@ -154,7 +154,7 @@ void* write_worker(void* arg)
 
         if (param.profile_)
         {
-          printf("index:%d, tfs_close (%s) completed, spend (%" PRI64_PREFIX "d)\n", param.index_, 
+          printf("index:%d, tfs_close (%s) completed, spend (%" PRI64_PREFIX "d)\n", param.index_,
               ret_name, time_consumed);
         }
 
@@ -172,7 +172,7 @@ void* write_worker(void* arg)
       }
       else
       {
-        fprintf(stderr, "index:%d, tfsclose failed\n", param.index_); 
+        fprintf(stderr, "index:%d, tfsclose failed\n", param.index_);
         ++failed_count;
       }
     }
@@ -210,7 +210,7 @@ int main(int argc, char** argv)
   int32_t ret = fetch_input_opt(argc, argv, input_param, thread_count);
   if (ret != TFS_SUCCESS || input_param.ns_ip_port_.empty() || input_param.file_count_ == 0 || thread_count > THREAD_SIZE)
   {
-    printf("usage: -d nsip:port -c file_count -r size_range\n");
+    printf("usage: -d nsip:port -c file_count -r size_range(B) -t thread_count\n");
     exit(-1);
   }
 
