@@ -1004,7 +1004,7 @@ namespace tfs
           ret = EXIT_META_NOT_FOUND_ERROR;
         }
 
-        TBSYS_LOG(DEBUG, "degrade find file id: %"PRI64_PREFIX"d, offset: %"PRI64_PREFIX"d, size: %d, ret: %d",
+        TBSYS_LOG(DEBUG, "degrade find file id: %"PRI64_PREFIX"u, offset: %"PRI64_PREFIX"d, size: %d, ret: %d",
             key, meta_info->get_offset(), meta_info->get_size(), ret);
       }
 

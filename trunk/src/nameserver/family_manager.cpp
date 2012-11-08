@@ -569,6 +569,8 @@ namespace tfs
         const int32_t MAX_LOOP_NUM = data_member_num * 2;
         uint32_t lans[data_member_num];
         common::ArrayHelper<uint32_t> helper(data_member_num, lans);
+        uint32_t blocks[data_member_num];
+        common::ArrayHelper<uint32_t> blocks_helper(data_member_num, blocks);
         do
         {
           time_t now = Func::get_monotonic_time();
@@ -590,6 +592,7 @@ namespace tfs
             #else
             bool valid = (manager_.get_block_manager().need_marshalling(result.second, now)
                         && !members.exist(result)
+                        && !blocks_helper.exist(result.second)
                         && !manager_.get_task_manager().exist(result.second)
                         && !manager_.get_task_manager().exist(result.first)
                         && manager_.get_task_manager().has_space_do_task_in_machine(result.first)
@@ -597,6 +600,7 @@ namespace tfs
             #endif
             if (valid)
             {
+              blocks_helper.push_back(result.second);
               members.push_back(result);
               helper.push_back(lan);
             }

@@ -867,10 +867,8 @@ namespace tfs
                     lease->dump(TBSYS_LOG_LEVEL_INFO, "resolve block version conflict failed");
                   }
                   lease->reset_member_info();
-                  data_management_.get_lease_manager().put(lease);
-                  data_management_.get_lease_manager().remove(lease_id);
-                  lease = NULL;
                 }
+
                 TBSYS_LOG(INFO, "unlink file failed, block: %u, fileid: %"PRI64_PREFIX"u, lease id: %"PRI64_PREFIX"u, action: %d, has_version_conflict: %s",
                   message->get_block_id(), message->get_file_id(), message->get_lease_id_ext(), message->get_unlink_type(), has_version_conflict ? "yes" : "no");
                 int32_t status = has_version_conflict ? EXIT_VERSION_CONFLICT_ERROR : TFS_ERROR;
@@ -887,6 +885,7 @@ namespace tfs
               ret = bpacket->reply(reply_msg);
             }
             data_management_.get_lease_manager().put(lease);
+            data_management_.get_lease_manager().remove(lease_id);
           }
           else if (CLOSE_FILE_MESSAGE == pcode)
           {
@@ -1236,7 +1235,7 @@ namespace tfs
           const char* data = message->get_data();
           WriteLease* write_lease = dynamic_cast<WriteLease*>(lease);
           ret = get_data_management().write_data(local_info, write_lease, remote_version, info, data);
-          if (is_master)//第一个分片，记录VERSION检查状态
+          if (is_master)//?????,??VERSION???�
             lease->update_member_info(data_server_info_.id_, local_info, ret);
           if (EXIT_NO_LOGICBLOCK_ERROR == ret)
           {
@@ -2077,6 +2076,7 @@ namespace tfs
               reply_msg = new StatusMessage(STATUS_MESSAGE_ERROR, msg);
             }
             ret = message->reply(reply_msg);
+            get_data_management().get_lease_manager().remove(lease->lease_id_);
           }
         }
         else

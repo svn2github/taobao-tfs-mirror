@@ -70,7 +70,7 @@ namespace tfs
 
       inline uint32_t inc_ref() { return common::atomic_inc(&ref_count_);}
       inline uint32_t dec_ref() { return common::atomic_dec(&ref_count_);}
-      inline void upate_last_time(const int64_t now) { last_update_time_ = now;}
+      inline void update_last_time(const int64_t now) { last_update_time_ = now;}
       inline bool timeout(const int64_t now) { return now > last_update_time_ + common::SYSPARAM_DATASERVER.expire_data_file_time_;}
       bool check_all_successful() const;
       bool check_has_version_conflict() const;

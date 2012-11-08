@@ -1301,6 +1301,7 @@ int TfsFile::async_req_read_file_v2(NewClient* client, const uint16_t index)
   if (INVALID_FAMILY_ID != seg_data->family_info_.family_id_)
   {
     rd_message.set_family_info(seg_data->family_info_);
+    TBSYS_LOG(DEBUG, "send degrade readv2 request, family id: %"PRI64_PREFIX"d", seg_data->family_info_.family_id_);
   }
 
   int ret = async_req_read_file(client, index, *seg_data, rd_message);
@@ -1470,13 +1471,19 @@ int TfsFile::async_req_stat_file(NewClient* client, const uint16_t index)
     if (INVALID_FAMILY_ID != seg_data->family_info_.family_id_)
     {
       stat_message.set_family_info(seg_data->family_info_);
+      TBSYS_LOG(DEBUG, "send degrade stat request, family id: %"PRI64_PREFIX"d", seg_data->family_info_.family_id_);
     }
 
     int32_t ds_size = seg_data->ds_.size();
-    if (ds_size > 0)
+    if (ds_size > 0 || INVALID_FAMILY_ID != seg_data->family_info_.family_id_)
     {
       int32_t retry_count = seg_data->get_orig_pri_ds_index() - seg_data->pri_ds_index_;
       retry_count = retry_count <= 0 ? ds_size + retry_count : retry_count;
+
+      if (INVALID_FAMILY_ID != seg_data->family_info_.family_id_)
+      {
+        retry_count = 1;
+      }
 
       uint8_t send_id = 0;
       bool remove_cache = false;

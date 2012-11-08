@@ -160,6 +160,11 @@ namespace tfs
 
       void set_pri_ds_index(int32_t index)
       {
+        if (ds_.size() == 0)
+        {
+          pri_ds_index_ = 0;
+          return;
+        }
         pri_ds_index_ = index % ds_.size();
       }
 

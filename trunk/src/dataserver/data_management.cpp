@@ -134,6 +134,7 @@ namespace tfs
       int32_t ret = (NULL != lease && INVALID_VERSION != remote_version && NULL != data_buffer) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
+        lease->update_last_time(Func::get_monotonic_time());
         TBSYS_LOG(DEBUG, "write data: block: %u, fileid: %"PRI64_PREFIX"u, lease_id: %"PRI64_PREFIX"u, remote_version: %d, offset: %d",
           info.block_id_, info.file_id_, info.file_number_, remote_version, info.offset_);
         //if the first fragment, check version
@@ -183,6 +184,7 @@ namespace tfs
       LeaseId lease_id(file_number, file_id, block_id);
       time_t now = Func::get_monotonic_time();
       Lease* lease = get_lease_manager().get(lease_id, now);
+      lease->update_last_time(now);
       int32_t ret = NULL == lease ? EXIT_DATAFILE_EXPIRE_ERROR : TFS_SUCCESS;
       if (TFS_SUCCESS != ret)
       {
@@ -227,7 +229,6 @@ namespace tfs
                 block_id, file_id, TIMER_DURATION());
           }
         }
-        lease->upate_last_time(now);
       }
       get_lease_manager().put(lease);
       get_lease_manager().remove(lease_id);
@@ -361,12 +362,13 @@ namespace tfs
       int32_t file_pos = 0;
       int32_t file_size = 0;
       int64_t file_offset = 0;
+      RawMeta* meta_info = NULL;
       if (TFS_SUCCESS == ret)
       {
         ret = IndexHandle::hash_find(target_index, length, file_id, file_pos);
         if (TFS_SUCCESS == ret)
         {
-          RawMeta* meta_info = reinterpret_cast<RawMeta*>(target_index + file_pos);
+          meta_info = reinterpret_cast<RawMeta*>(target_index + file_pos);
           file_size = meta_info->get_size();
           file_offset = meta_info->get_offset();
           if (file_size - read_offset < real_read_len)
@@ -426,6 +428,7 @@ namespace tfs
               continue;
             }
 
+            memset(data[i], 0, decode_len);
             uint32_t blockid = family_members[i].first;
             uint64_t serverid = family_members[i].second;
             int32_t data_file_size = 0;
@@ -479,6 +482,12 @@ namespace tfs
                 ((finfo->flag_ & (FI_DELETED | FI_INVALID | FI_CONCEAL) != 0) && (NORMAL_STAT == flag)))
             {
               ret = EXIT_FILE_STATUS_ERROR;
+            }
+            else
+            {
+              // minus the header(FileInfo)
+              finfo->size_ -= sizeof(FileInfo);
+              finfo->flag_ = LogicBlock::get_real_flag(*meta_info, finfo->flag_);
             }
           }
           else                     // degrade read

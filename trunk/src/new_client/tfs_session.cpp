@@ -181,7 +181,7 @@ int TfsSession::query_remote_block_cache(const uint32_t block_id, VUINT64& rds, 
       ret = remote_cache_helper_->get(block_cache_key, block_cache_value);
       if (TFS_SUCCESS == ret)
       {
-        if (block_cache_value.ds_.size() > 0)
+        if (block_cache_value.ds_.size() > 0 || block_cache_value.has_family_info())
         {
           rds = block_cache_value.ds_;
           family_info = block_cache_value.family_info_;
@@ -239,7 +239,7 @@ int TfsSession::query_remote_block_cache(const SEG_DATA_LIST& seg_list, int& rem
           std::map<uint32_t, size_t>::const_iterator iter = block_list.find(block_id);
           if (block_list.end() != iter)
           {
-            if (value.ds_.size() > 0)
+            if (value.ds_.size() > 0 || value.has_family_info())
             {
               seg_idx = iter->second;
               if (USE_CACHE_FLAG_LOCAL & ClientConfig::use_cache_)
@@ -358,7 +358,7 @@ int TfsSession::get_block_info(SegmentData& seg_data, int32_t flag)
         tbutil::Mutex::Lock lock(mutex_);
         BlockCache* block_cache = block_cache_map_.find(block_id);
         if (block_cache && !is_expired(*block_cache) &&
-            (block_cache->ds_.size() > 0 || INVALID_FAMILY_ID != block_cache->family_info_.family_id_))
+            (block_cache->ds_.size() > 0 || block_cache->has_family_info()))
         {
           TBSYS_LOG(DEBUG, "local cache hit, blockid: %u", block_id);
           BgTask::get_stat_mgr().update_entry(StatItem::client_cache_stat_, StatItem::local_cache_hit_, 1);
@@ -468,7 +468,7 @@ int TfsSession::get_block_info(SEG_DATA_LIST& seg_list, int32_t flag)
         tbutil::Mutex::Lock lock(mutex_);
         BlockCache* block_cache = block_cache_map_.find(block_id);
         if (block_cache && !is_expired(*block_cache) &&
-            (block_cache->ds_.size() > 0 || INVALID_FAMILY_ID != block_cache->family_info_.family_id_))
+            (block_cache->ds_.size() > 0 || block_cache->has_family_info()))
         {
           seg_list[i]->ds_ = block_cache->ds_;
           seg_list[i]->reset_status();

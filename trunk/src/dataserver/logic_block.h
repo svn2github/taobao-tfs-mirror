@@ -89,7 +89,8 @@ namespace tfs
         int32_t get_prefix_flag();
         uint64_t get_family_id();
         int set_family_id(const int64_t family_id);
-        int32_t get_real_flag(const common::RawMeta& file_meta, const int32_t finfo_flag);
+
+        static int32_t get_real_flag(const common::RawMeta& file_meta, const int32_t finfo_flag);
         int32_t get_real_flag(const uint64_t key, const int32_t finfo_flag);
 
         int update_block_version(const int32_t step = 1);
