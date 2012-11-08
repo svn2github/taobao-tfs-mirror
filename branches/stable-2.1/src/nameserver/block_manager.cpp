@@ -143,7 +143,7 @@ namespace tfs
       BlockCollect* block = NULL;
       ServerCollect* server = NULL;
       const int8_t MIN_REPLICATE = SYSPARAM_NAMESERVER.max_replication_ > 1 ? 2 : SYSPARAM_NAMESERVER.max_replication_;
-      while (pop_from_delete_queue_(output) && !ret)
+      while (!ret && pop_from_delete_queue_(output))
       {
         block = get(output.first);
         server = manager_.get_server_manager().get(output.second);
