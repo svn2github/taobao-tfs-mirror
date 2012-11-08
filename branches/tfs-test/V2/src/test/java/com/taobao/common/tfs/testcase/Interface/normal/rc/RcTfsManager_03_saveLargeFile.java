@@ -92,7 +92,7 @@ public class RcTfsManager_03_saveLargeFile extends rcTfsBaseCase
 		Assert.assertTrue(Bret);
 		
 		String name= Ret;
-		Ret=tfsManager.saveFile( resourcesPath+"2m.jpg",name,".jpg");
+		Ret=tfsManager.saveFile( resourcesPath+"2M.jpg",name,".jpg");
 		Assert.assertNotNull(Ret);
 		System.out.println("The tfs file name is "+ Ret);
 	}

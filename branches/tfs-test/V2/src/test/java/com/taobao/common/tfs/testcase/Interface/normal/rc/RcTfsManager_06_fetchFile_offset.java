@@ -34,6 +34,7 @@ public class RcTfsManager_06_fetchFile_offset extends rcTfsBaseCase
 		System.out.println("The tfs file name is "+ Ret);
 		
 		boolean Bret;
+		
 		Bret=tfsManager.fetchFile(Ret, null,0,count,output);
 		Assert.assertTrue(Bret);
 		fetchcrc=FileUtility.getCrc(resourcesPath+"empty.jpg");
