@@ -362,6 +362,7 @@ namespace tfs
       ServerCollect* pserver = NULL;
       ServerCollect* servers[MAX_SLOT_NUMS];
       ArrayHelper<ServerCollect*> helper(MAX_SLOT_NUMS, servers);
+      std::multimap<int64_t, ServerCollect*> outside;
 
       do
       {
@@ -379,17 +380,23 @@ namespace tfs
               && manager_.get_task_manager().has_space_do_task_in_machine(pserver->id());
             if (has_move)
             {
-              move_split_servers_(source, targets, pserver, percent);
+              move_split_servers_(source, outside, targets, pserver, percent);
             }
           }
           server = pserver->id();
         }
       }
       while (!complete);
+
+      if (!targets.empty() && source.empty())
+      {
+        source = outside;
+      }
       return TFS_SUCCESS;
     }
 
     void ServerManager::move_split_servers_(std::multimap<int64_t, ServerCollect*>& source,
+        std::multimap<int64_t, ServerCollect*>& outside,
         SERVER_TABLE& targets, const ServerCollect* server, const double percent) const
     {
       if (NULL != server)
@@ -398,17 +405,22 @@ namespace tfs
         double current_percent = calc_capacity_percentage(server->use_capacity(), current_total_capacity);
         TBSYS_LOG(DEBUG, "move_split_server: %s, current_percent: %e, balance_percent: %e, percent: %e",
            tbsys::CNetUtil::addrToString(server->id()).c_str(), current_percent, SYSPARAM_NAMESERVER.balance_percent_, percent);
-        if ((current_percent > (percent + SYSPARAM_NAMESERVER.balance_percent_))
+        if (current_percent < percent - SYSPARAM_NAMESERVER.balance_percent_)
+        {
+          targets.insert(const_cast<ServerCollect*>(server));
+        }
+        else if ((current_percent > (percent + SYSPARAM_NAMESERVER.balance_percent_))
             || (current_percent >= 1.0))
         {
           source.insert(std::multimap<int64_t, ServerCollect*>::value_type(
                 static_cast<int64_t>(current_percent * PERCENTAGE_MAGIC), const_cast<ServerCollect*>(server)));
-        TBSYS_LOG(DEBUG, "move_split_server: %s, %ld",
+          TBSYS_LOG(DEBUG, "move_split_server: %s, %ld",
            tbsys::CNetUtil::addrToString(server->id()).c_str(), static_cast<int64_t>(current_percent * PERCENTAGE_MAGIC));
         }
-        if (current_percent < percent - SYSPARAM_NAMESERVER.balance_percent_)
+        else
         {
-          targets.insert(const_cast<ServerCollect*>(server));
+          outside.insert(std::multimap<int64_t, ServerCollect*>::value_type(
+                static_cast<int64_t>(current_percent * PERCENTAGE_MAGIC), const_cast<ServerCollect*>(server)));
         }
       }
     }
@@ -801,7 +813,7 @@ namespace tfs
             pblock = *helper.at(i);
             assert(NULL != pblock);
             manager_.get_block_manager().relieve_relation(pblock, server, now,BLOCK_COMPARE_SERVER_BY_POINTER);//pointer
-            manager_.get_server_manager().relieve_relation(server, pblock);
+            //manager_.get_server_manager().relieve_relation(server, pblock);
           }
           /*if (!helper.empty())
           {

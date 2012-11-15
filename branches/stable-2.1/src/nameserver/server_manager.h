@@ -131,6 +131,7 @@ namespace tfs
       bool get_range_servers_(common::ArrayHelper<ServerCollect*>& result, const uint64_t begin, const int32_t count) const;
 
       void move_split_servers_(std::multimap<int64_t, ServerCollect*>& source,
+          std::multimap<int64_t, ServerCollect*>& outside,
           SERVER_TABLE& targets, const ServerCollect* server, const double percent) const;
 
       int choose_writable_server_lock_(ServerCollect*& result);
