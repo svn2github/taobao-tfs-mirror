@@ -1013,6 +1013,7 @@ namespace tfs
           {
             TBSYS_LOG(ERROR, "delete load conflict block. logic blockid: %u", logic_block_id);
             del_block(logic_block_id, C_CONFUSE_BLOCK);
+            conflict_flag = false;
             continue;
           }
 
@@ -1037,7 +1038,6 @@ namespace tfs
           }
         }
 
-        conflict_flag = false;
       }
 
       return ret;
