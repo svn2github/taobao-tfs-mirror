@@ -98,7 +98,6 @@ namespace tfs
         run_plan_thread_ = new RunPlanThreadHelper(*this);
         add_block_in_all_server_thread_ = new AddBlockInAllServerThreadHelper(*this);
         check_dataserver_report_block_thread_ = new CheckDataServerReportBlockThreadHelper(*this);
-        run_plan_thread_ = new RunPlanThreadHelper(*this);
         balance_thread_  = new BuildBalanceThreadHelper(*this);
         timeout_thread_  = new TimeoutThreadHelper(*this);
         redundant_thread_= new RedundantThreadHelper(*this);
