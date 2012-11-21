@@ -102,7 +102,7 @@ namespace tfs
     }
 
     int ClientRequestServer::open(uint32_t& block_id, uint32_t& lease_id, int32_t& version,
-        common::VUINT64& servers, FamilyMemberInfoExt&  family_info,
+        common::VUINT64& servers, FamilyInfoExt&  family_info,
         const int32_t mode, const time_t now)
     {
       servers.clear();
@@ -143,7 +143,7 @@ namespace tfs
       return ret;
     }
 
-    int ClientRequestServer::open_read_mode_(common::VUINT64& servers, FamilyMemberInfoExt& family_info, const uint32_t block) const
+    int ClientRequestServer::open_read_mode_(common::VUINT64& servers, FamilyInfoExt& family_info, const uint32_t block) const
     {
       int32_t ret = (INVALID_BLOCK_ID == block) ? EXIT_BLOCK_NOT_FOUND : TFS_SUCCESS;
       if (TFS_SUCCESS == ret)
@@ -265,7 +265,7 @@ namespace tfs
      * @return: success or failure
      */
     int ClientRequestServer::open_write_mode_(uint32_t& block_id, uint32_t& lease_id, int32_t& version, VUINT64& servers,
-        FamilyMemberInfoExt& family_info, const int32_t mode, const time_t now)
+        FamilyInfoExt& family_info, const int32_t mode, const time_t now)
     {
       int32_t ret = (mode & T_WRITE) ? TFS_SUCCESS : EXIT_ACCESS_MODE_ERROR;
       if (TFS_SUCCESS != ret)

@@ -106,13 +106,13 @@ namespace tfs
         {
           return (lease_id_ != common::INVALID_LEASE_ID);
         }
-        inline common::FamilyMemberInfoExt& get_family_info() { return family_info_;}
+        inline common::FamilyInfoExt& get_family_info() { return family_info_;}
       private:
         mutable common::VUINT64 ds_;
         uint32_t block_id_;
         mutable int32_t version_;
         mutable uint32_t lease_id_;
-        common::FamilyMemberInfoExt family_info_;
+        common::FamilyInfoExt family_info_;
     };
 
     // batch get the block information in the common::DataServerStatInfo

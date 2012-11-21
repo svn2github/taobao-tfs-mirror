@@ -176,7 +176,7 @@ namespace tfs
         *
         * @return TFS_SUCCESS on success
         */
-        static int check_reinstate(const common::FamilyMemberInfoExt& family_info,  int* erased);
+        static int check_reinstate(const common::FamilyInfoExt& family_info,  int* erased);
 
         /**
         * @brief check if family can do reinstate

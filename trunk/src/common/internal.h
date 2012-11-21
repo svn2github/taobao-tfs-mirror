@@ -951,7 +951,7 @@ namespace tfs
       bool operator == (const FamilyMemberInfo& info) const;
     };
 
-    struct FamilyMemberInfoExt
+    struct FamilyInfoExt
     {
       int64_t family_id_;
       int32_t family_aid_info_;
@@ -961,7 +961,7 @@ namespace tfs
       int serialize(char* data, const int64_t data_len, int64_t& pos) const;
       int64_t length() const;
 
-      FamilyMemberInfoExt()
+      FamilyInfoExt()
       {
         family_id_ = INVALID_FAMILY_ID;
         family_aid_info_ = 0;
@@ -973,7 +973,7 @@ namespace tfs
       common::VUINT64 ds_;
       uint32_t lease_id_;
       int32_t version_;
-      FamilyMemberInfoExt family_info_;
+      FamilyInfoExt family_info_;
       BlockInfoSeg() : lease_id_(INVALID_LEASE_ID), version_(0)
       {
         ds_.clear();

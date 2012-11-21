@@ -402,7 +402,7 @@ namespace tfs
       return ret;
     }
 
-    int Task::check_reinstate(const FamilyMemberInfoExt& family_info,  int* erased)
+    int Task::check_reinstate(const FamilyInfoExt& family_info,  int* erased)
     {
       assert(NULL != erased);
       int ret = check_family(family_info.family_id_, family_info.family_aid_info_);

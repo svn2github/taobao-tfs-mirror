@@ -1377,7 +1377,7 @@ namespace tfs
     }
 
 
-    int FamilyMemberInfoExt::deserialize(const char* data, const int64_t data_len, int64_t& pos)
+    int FamilyInfoExt::deserialize(const char* data, const int64_t data_len, int64_t& pos)
     {
       int32_t ret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
       if (common::TFS_SUCCESS == ret)
@@ -1415,7 +1415,7 @@ namespace tfs
 
     }
 
-    int FamilyMemberInfoExt::serialize(char* data, const int64_t data_len, int64_t& pos) const
+    int FamilyInfoExt::serialize(char* data, const int64_t data_len, int64_t& pos) const
     {
       int32_t ret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
       if (common::TFS_SUCCESS == ret)
@@ -1448,7 +1448,7 @@ namespace tfs
       return ret;
     }
 
-    int64_t FamilyMemberInfoExt::length() const
+    int64_t FamilyInfoExt::length() const
     {
       const uint32_t MEMBER_NUM = GET_DATA_MEMBER_NUM(family_aid_info_) + GET_CHECK_MEMBER_NUM(family_aid_info_);
       return common::INT64_SIZE + common::INT_SIZE + MEMBER_NUM * (INT_SIZE + INT64_SIZE);

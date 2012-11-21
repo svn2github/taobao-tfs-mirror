@@ -164,12 +164,12 @@ namespace tfs
         inline uint64_t get_lease_id_ext() const { return lease_id_ext_;}
         inline void set_lease_id_ext(const uint64_t lease_id) { lease_id_ext_ = lease_id;}
 
-        inline common::FamilyMemberInfoExt& get_family_info()
+        inline common::FamilyInfoExt& get_family_info()
         {
           return family_info_;
         }
 
-        inline void set_family_info(common::FamilyMemberInfoExt& family_info)
+        inline void set_family_info(common::FamilyInfoExt& family_info)
         {
           family_info_ = family_info;
         }
@@ -180,7 +180,7 @@ namespace tfs
         mutable int32_t version_;
         mutable uint32_t lease_id_;
         uint64_t lease_id_ext_;
-        common::FamilyMemberInfoExt family_info_;
+        common::FamilyInfoExt family_info_;
     };
 
     class UnlinkFileResponseMessage : public  common::BasePacket

@@ -282,7 +282,7 @@ namespace tfs
      */
     int DataManagement::read_data_degrade(const uint32_t block_id, const uint64_t file_id,
         const int32_t read_offset, const int8_t flag, int32_t& real_read_len,
-        char* tmp_data_buffer, const FamilyMemberInfoExt& family_info)
+        char* tmp_data_buffer, const FamilyInfoExt& family_info)
     {
       int32_t family_aid_info = family_info.family_aid_info_;
       const std::vector<std::pair<uint32_t, uint64_t> >& family_members = family_info.members_;
