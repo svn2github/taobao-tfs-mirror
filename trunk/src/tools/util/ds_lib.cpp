@@ -745,7 +745,7 @@ namespace tfs
         fprintf(stderr, "Get File list in Block failure\n");
       }
 
-      // NewClientManager::get_instance().destroy_client(client);
+      NewClientManager::get_instance().destroy_client(client);
       return ret_status;
 
     }
