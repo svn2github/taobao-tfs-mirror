@@ -25,7 +25,7 @@ namespace tfs
 {
   namespace dataserver
   {
-    DataHandle::DataHandle(LogicBlock& logic_block):
+    DataHandle::DataHandle(BaseLogicBlock& logic_block):
       logic_block_(logic_block)
     {
 

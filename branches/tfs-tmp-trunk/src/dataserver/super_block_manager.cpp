@@ -30,10 +30,12 @@ namespace tfs
     // ------------------------------------------------------------
     const int32_t SuperBlockManager::SUPERBLOCK_RESERVER_LENGTH = 512;
     const int32_t SuperBlockManager::MAX_INITIALIZE_BLOCK_INDEX_SIZE = 1024;
-    const int32_t SuperBlockManager::MAX_BLOCK_INDEX_SIZE = 65535 * 4;
+    const int32_t SuperBlockManager::MAX_BLOCK_INDEX_SIZE = 65535 * (1 + 3);
+    const int32_t SuperBlockManager::PHYSICAL_BLOCK_ID_INIT_VALUE = 1;
     SuperBlockManager::SuperBlockManager(const std::string& path):
       file_op_(path, O_RDWR | O_SYNC),
-      index_(0)
+      index_(PHYSICAL_BLOCK_ID_INIT_VALUE),
+      ext_index_(0)
     {
 
     }
@@ -51,7 +53,7 @@ namespace tfs
       int32_t count    = initialize_block_index_file_size / pagesize + 1;
       int32_t remainder = initialize_block_index_file_size % pagesize;
       opt.first_mmap_size_ = remainder ? (count + 1) * pagesize : count * pagesize;
-      opt.max_mmap_size_ = pagesize + MAX_BLOCK_INDEX_SIZE * sizeof(BlockIndex);
+      opt.max_mmap_size_ = pagesize + info.max_block_index_element_count_ * sizeof(BlockIndex);
       opt.per_mmap_size_ = pagesize;
       int32_t ret = file_op_.mmap(opt);
       if (TFS_SUCCESS != ret)
@@ -79,13 +81,13 @@ namespace tfs
       return ret;
     }
 
-    int SuperBlockManager::get_super_block_info(SuperBlockInfo& info) const
+    int SuperBlockManager::get_super_block_info(SuperBlockInfo*& info) const
     {
       char* data = file_op_.get_data();
       int32_t ret = (NULL != data) ? EXIT_MMAP_DATA_INVALID : TFS_SUCCESS;
       if (TFS_SUCCESS == ret)
       {
-        info = *(reinterpret_cast<SuperBlockInfo*>(data+ SUPERBLOCK_RESERVER_LENGTH));
+        info = (reinterpret_cast<SuperBlockInfo*>(data+ SUPERBLOCK_RESERVER_LENGTH));
       }
       return ret;
     }
@@ -149,28 +151,49 @@ namespace tfs
       return ret;
     }
 
-    int32_t SuperBlockManager::get_legal_physical_block_id() const
+    int SuperBlockManager::get_legal_physical_block_id(int32_t& physical_block_id, const bool extend) const
     {
-      int32_t id = INVALID_PHYSICAL_BLOCK_ID;
+      physical_block_id = INVALID_PHYSICAL_BLOCK_ID;
       char* data = file_op_.get_data();
       int32_t ret = (NULL != data) ? EXIT_MMAP_DATA_INVALID : TFS_SUCCESS;
       if (TFS_SUCCESS == ret)
       {
+        SuperBlockInfo* info = reinterpret_cast<SuperBlockInfo*>(data+ SUPERBLOCK_RESERVER_LENGTH);
+        const int32_t MAX_COUNT = extend ? info->max_block_index_element_count_ : info->total_main_block_count_;
+
+        int32_t retry_times = 2;
         BlockIndex* pstart = reinterpret_cast<BlockIndex*>(data+ SUPERBLOCK_RESERVER_LENGTH + sizeof(SuperBlockInfo));
-        int32_t retry_times = 3;
-        while (retry_times-- > 0)
+        if (extend)
         {
-          if (index_ > MAX_BLOCK_INDEX_SIZE || index_ < 0)
-            index_ = 0;
-          for (; index_ < MAX_BLOCK_INDEX_SIZE && INVALID_PHYSICAL_BLOCK_ID == id; ++index_)
+          const int32_t EXT_PHYSICAL_BLOCK_INIT_VALUE = info->total_main_block_count_ + 1;
+          while (retry_times-- > 0)
           {
-            BlockIndex* current = (pstart + index_);
-            if (INVALID_PHYSICAL_BLOCK_ID == current->physical_block_id_)
-              id = index_;
+            if (ext_index_ < EXT_PHYSICAL_BLOCK_INIT_VALUE || ext_index_ >= MAX_COUNT)
+                ext_index_ = EXT_PHYSICAL_BLOCK_INIT_VALUE;
+            for (; ext_index_ < MAX_COUNT && INVALID_PHYSICAL_BLOCK_ID == physical_block_id; ++ext_index_)
+            {
+              BlockIndex* current = (pstart + ext_index_);
+              if (INVALID_PHYSICAL_BLOCK_ID == current->physical_block_id_)
+                physical_block_id = ext_index_;
+            }
+          }
+        }
+        else
+        {
+          while (retry_times-- > 0)
+          {
+            if (index_ < PHYSICAL_BLOCK_ID_INIT_VALUE || index_ > MAX_COUNT)
+                index_ = PHYSICAL_BLOCK_ID_INIT_VALUE;
+            for (; index_ <= MAX_COUNT && INVALID_PHYSICAL_BLOCK_ID == physical_block_id; ++index_)
+            {
+              BlockIndex* current = (pstart + index_);
+              if (INVALID_PHYSICAL_BLOCK_ID == current->physical_block_id_)
+                physical_block_id = index_;
+            }
           }
         }
       }
-      return id;
+      return INVALID_PHYSICAL_BLOCK_ID != physical_block_id ? TFS_SUCCESS : EXIT_PHYSICAL_ID_INVALID;
     }
 
     int SuperBlockManager::dump(tbnet::DataBuffer& buf) const

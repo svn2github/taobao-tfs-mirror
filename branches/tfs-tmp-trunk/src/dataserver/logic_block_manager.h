@@ -15,29 +15,45 @@
  */
 #ifndef TFS_DATASERVER_LOGIC_BLOCK_MANAGER_H_
 #define TFS_DATASERVER_LOGIC_BLOCK_MANAGER_H_
+#include "common/internal.h"
+#include "common/tfs_vector.h"
+
+#include "logic_blockv2.h"
+
 namespace tfs
 {
   namespace dataserver
   {
     class LogicBlockManager
     {
-      //typedef common::TfsSorteVector<LogicBlock*> LOGIC_BLOCK_MAP;
-      //typedef LOGIC_BLOCK_MAP::iterator LOGIC_BLOCK_MAP_ITER;
+      typedef common::TfsSortedVector<BaseLogicBlock*> LOGIC_BLOCK_MAP;
+      typedef LOGIC_BLOCK_MAP::iterator LOGIC_BLOCK_MAP_ITER;
+      typedef std::map<uint64_t, BaseLogicBlock*> TMP_LOGIC_BLOCK_MAP;
+      typedef TMP_LOGIC_BLOCK_MAP::iterator TMP_LOGIC_BLOCK_MAP_ITER;
+      typedef TMP_LOGIC_BLOCK_MAP::const_iterator TMP_LOGIC_BLOCK_MAP_CONST_ITER;
       public:
-      LogicBlockManager();
+      explicit LogicBlockManager(BlockManager& manager);
       virtual ~LogicBlockManager();
-      int insert(const uint64_t logic_block_id, const std::string& index_path);
-      int remove(const uint64_t logic_block_id);
-      LogicBlock* get(const uint64_t logic_block_id) const;
-      int add_physical_block(const uint64_t logic_block_id, const PhysicalBlock* physical_block);
-      int del_physical_block(const uint64_t logic_block_id, const uint32_t physical_block_id);
-      int switch_block_from_tmp(const uint64_t logic_block_id);
-      int del_logic_block_from_table(const uint64_t logic_block_id);
-      int del_logic_block_from_tmp(const uint64_t logic_block_id);
+      int insert(const uint64_t logic_block_id, const std::string& index_path, const bool tmp = false);
+      int remove(BaseLogicBlock*& object, const uint64_t logic_block_id, const bool tmp = false);
+      BaseLogicBlock* get(const uint64_t logic_block_id, const bool tmp = false) const;
+      int switch_logic_block(const uint64_t logic_block_id, const bool tmp = false);
+      bool exist(const uint64_t logic_block_id, const bool tmp = false) const;
+      int get_all_block_info(std::set<common::BlockInfo>& blocks) const;
+      int get_all_block_info(std::vector<common::BlockInfoV2>& blocks) const;
+      int get_all_block_info(std::set<common::BlockInfoV2>& blocks) const;
+      int get_all_logic_block_to_physical_block(std::map<uint64_t, std::vector<int32_t> >& blocks) const;
+      int32_t size() const;
+      int timeout(std::vector<uint64_t>& expired_blocks, const time_t now);
       private:
-      static const int8_t MAX_TMP_LOGIC_BLOCKS = 16;
+      int insert_(const uint64_t logic_block_id, const std::string& index_path, const bool tmp = false);
+      int remove_(BaseLogicBlock*& object, const uint64_t logic_block_id, const bool tmp = false);
+      BaseLogicBlock* get_(const uint64_t logic_block_id, const bool tmp = false) const;
+      int switch_logic_block_(const uint64_t logic_block_id, const bool tmp = false);
+      private:
+      BlockManager& block_manager_;
       LOGIC_BLOCK_MAP logic_blocks_;
-      LogicBlock* tmp_logic_blocks_[MAX_TMP_LOGIC_BLOCKS];
+      TMP_LOGIC_BLOCK_MAP tmp_logic_blocks_;
       common::RWLock rwmutex_;
     };
   }/** end namespace dataserver**/

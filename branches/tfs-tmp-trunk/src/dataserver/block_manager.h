@@ -16,6 +16,16 @@
 #ifndef TFS_DATASERVER_BLOCK_MANAGER_H_
 #define TFS_DATASERVER_BLOCK_MANAGER_H_
 
+#include "common/internal.h"
+#include "common/parameter.h"
+
+#include "ds_define.h"
+#include "logic_blockv2.h"
+#include "super_block_manager.h"
+#include "logic_block_manager.h"
+#include "super_block_manager.h"
+#include "physical_block_manager.h"
+
 namespace tfs
 {
   namespace dataserver
@@ -23,54 +33,56 @@ namespace tfs
     class BlockManager
     {
       public:
-        BlockManager();
+        explicit BlockManager(const std::string& super_block_path);
         virtual ~BlockManager();
 
-        //static BlockManager& instance() { static BlockManager instance_; return instance_;}
-
         int format(const common::FileSystemParameter& parameter);
-        int cleanup(FileSystemParameter& parameter);
+        int cleanup(const common::FileSystemParameter& parameter);
         int bootstrap(const common::FileSystemParameter& parameter);
 
-        int new_block(const uint64_t logic_block_id);
-        int new_ext_block(const uint64_t logic_block_id);
-        int del_block(const uint64_t logic_block_id);
-        LogicBlock* get(const uint64_t logic_block_id);
-        int get_all_block_info(std::set<BlockInfo>& blocks) const;
-        int get_all_block_info(std::set<common::BlockInfoExt>& blocks) const;
-        int get_all_logic_block_to_physical_block(std::map<uint64, std::vector<uint32_t> >& blocks) const;
-        int get_all_block_id(std::vector<BlockInfoV2>& blocks) const;
-        int get_all_logic_block_count() const;
+        int new_block(const uint64_t logic_block_id, const bool tmp = false);
+        int del_block(const uint64_t logic_block_id, const bool tmp = false);
+        BaseLogicBlock* get(const uint64_t logic_block_id, const bool tmp = false) const;
+        int get_all_block_info(std::set<common::BlockInfo>& blocks) const;
+        int get_all_block_info(std::vector<common::BlockInfoV2>& blocks) const;
+        int get_all_block_info(std::set<common::BlockInfoV2>& blocks) const;
+        int get_all_logic_block_to_physical_block(std::map<uint64_t, std::vector<int32_t> >& blocks) const;
+        int32_t get_all_logic_block_count() const;
         int get_space(int64_t& total_space, int64_t& used_space) const;
-        int get_superblock_info(common::SuperBlockInfo& info) const;
 
-        int switch_block_from_tmp(const uint64_t logic_block_id);
+        int switch_logic_block(const uint64_t logic_block_id, const bool tmp = false);
         int timeout(const time_t now);
 
-        inline SuperBlockManager& get_super_block_manager() { return super_block_manager_;}
-        inline LogicBlockManager& get_logic_block_manager() { return logic_block_manager_;}
-        inline PhysicalBlockManager& get_physical_block_manager() { return physical_block_manager_;}
+        int check_block_version(common::BlockInfoV2& info, const int32_t remote_version, const int8_t index, const uint64_t logic_block_id = common::INVALID_BLOCK_ID);
+        int update_block_info(const common::BlockInfoV2& info, const uint64_t logic_block_id = common::INVALID_BLOCK_ID) const;
+        int update_block_version(const int8_t step = common::VERSION_INC_STEP_DEFAULT, const uint64_t logic_block_id = common::INVALID_BLOCK_ID);
+        int get_block_info(common::BlockInfoV2& info, const uint64_t logic_block_id = common::INVALID_BLOCK_ID) const;
+
+        int pwrite(char* buf, const int32_t nbytes, const int32_t offset, const uint64_t logic_block_id);
+        int pread(char* buf, int32_t& nbytes, const int32_t offset, const uint64_t logic_block_id);
+        int write(uint64_t& fileid, DataFile& datafile, const uint64_t logic_block_id);
+        int read(char* buf, int32_t& nbytes, const int32_t offset, const uint64_t fileid, const int8_t flag, const uint64_t logic_block_id);
+        int stat(common::FileInfoV2& info,const uint64_t logic_block_id) const;
+        int unlink(int64_t& size, const uint64_t fileid, const int32_t action, const uint64_t logic_block_id);
+
+        SuperBlockManager& get_super_block_manager() { return super_block_manager_;}
+        LogicBlockManager& get_logic_block_manager() { return logic_block_manager_;}
+        PhysicalBlockManager& get_physical_block_manager() { return physical_block_manager_;}
 
       private:
-        int load_supber_block_(const common::FileSystemParameter& fs_param);
+        int load_super_block_(const common::FileSystemParameter& fs_param);
         int load_index_(const common::FileSystemParameter& fs_param);
         int cleanup_dirty_index_(const common::FileSystemParameter& fs_param);
 
-        int create_file_system_superblock_(const FileSystemParameter& parameter);
-        int create_file_system_dir_(const FileSystemParameter& parameter);
-        int fallocate_block_(const FileSystemParameter& parameter);
+        int create_file_system_superblock_(const common::FileSystemParameter& parameter);
+        int create_file_system_dir_(const common::FileSystemParameter& parameter);
+        int fallocate_block_(const common::FileSystemParameter& parameter);
 
-        int get_avail_physical_block_id_(uint32_t& physical_block_id);
-        int del_logic_block_from_table_(const uint64_t logic_block_id);
-        int del_logic_block_from_tmp_(const uint64_t logic_block_id);
-
-        int rollback_superblock_(const uint32_t physical_block_id, const int8_t type, const bool modify = false);
-
-        BasePhysicalBlock* insert_physical_block_(const SupberBlockInfo& info, const BlockIndex& index, const int32_t physical_block_id, const std::string& path);
-        LogicBlock* insert_logic_block_(const uint64_t logic_block_id, const std::string& index_path);
+        BasePhysicalBlock* insert_physical_block_(const SuperBlockInfo& info, const BlockIndex& index, const int32_t physical_block_id, const std::string& path);
+        BaseLogicBlock* insert_logic_block_(const uint64_t logic_block_id, const std::string& index_path, const bool tmp = false);
 
       private:
-        SupberBlockManager super_block_manager_;
+        SuperBlockManager super_block_manager_;
         LogicBlockManager logic_block_manager_;
         PhysicalBlockManager physical_block_manager_;
     };

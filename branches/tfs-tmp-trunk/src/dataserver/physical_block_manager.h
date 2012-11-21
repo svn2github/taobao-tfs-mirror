@@ -40,11 +40,11 @@ namespace tfs
       typedef common::TfsSortedVector<BasePhysicalBlock*,PhysicalBlockIdCompare> PHYSICAL_BLOCK_MAP;
       typedef PHYSICAL_BLOCK_MAP::iterator PHYSICAL_BLOCK_MAP_ITER;
       public:
-      PhysicalBlockManager(BlockManager& manager);
+      explicit PhysicalBlockManager(BlockManager& manager);
       virtual ~PhysicalBlockManager();
       int insert(const BlockIndex& index, const int32_t physical_block_id, const std::string& path,
           const int32_t start, const int32_t end);
-      int remove(const int32_t physcical_block_id);
+      int remove(BasePhysicalBlock*& physical_block, const int32_t physcical_block_id);
       bool exist(const int32_t physical_block_id) const;
       int alloc_block(BlockIndex& index, const int8_t split_flag = BLOCK_SPLIT_FLAG_NO);
       int alloc_ext_block(BlockIndex& index, BlockIndex& ext_index);
@@ -66,17 +66,6 @@ namespace tfs
       PHYSICAL_BLOCK_MAP alloc_physical_blocks_;
       mutable common::RWLock rwmutex_;
     };
-    class BlockManager
-    {
-    public:
-        BlockManager(const std::string path) : super_block_manager_(path),physical_block_manager_(*this) {}
-        virtual ~BlockManager() {}
-        SuperBlockManager& get_super_block_manager() { return super_block_manager_;}
-        PhysicalBlockManager& get_physical_block_manager() { return physical_block_manager_;}
-        SuperBlockManager super_block_manager_;
-        PhysicalBlockManager physical_block_manager_;
-    };
-
   }/** end namespace dataserver**/
 }/** end namespace tfs **/
 #endif /* PHYSICAL_BLOCK_MANAGER_H_ */

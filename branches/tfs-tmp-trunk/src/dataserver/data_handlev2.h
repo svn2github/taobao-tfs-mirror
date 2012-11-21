@@ -23,17 +23,17 @@ namespace tfs
 {
   namespace dataserver
   {
-    class LogicBlock;
+    class BaseLogicBlock;
     class DataHandle
     {
       public:
-        explicit DataHandle(LogicBlock& logic_block);
+        explicit DataHandle(BaseLogicBlock& logic_block);
         virtual ~DataHandle();
         int pwrite(const char* buf, const int32_t nbytes, const int32_t offset);
         int pread(char* buf, const int32_t nbytes, const int32_t offset);
       private:
         DISALLOW_COPY_AND_ASSIGN(DataHandle);
-        LogicBlock& logic_block_;
+        BaseLogicBlock& logic_block_;
     };
   }/** end namespace dataserver **/
 }/** end namespace tfs **/

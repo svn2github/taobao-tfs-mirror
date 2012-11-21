@@ -41,6 +41,9 @@ namespace tfs
     static const int32_t EXIT_POST_MSG_RET_NO_OTHER_MEMBER = 0;
     static const int32_t EXIT_POST_MSG_RET_POST_MSG_ERROR  = -1;
 
+    static const int32_t PHYSICAL_BLOCK_ID_INIT_VALUE = 1;
+    static const int32_t INDEXFILE_SAFE_MULT = 4;
+
     struct SuperBlockInfo
     {
       int32_t version_;
@@ -57,27 +60,15 @@ namespace tfs
       int32_t used_extend_block_count_;//total count of used extend block
       int32_t max_main_block_size_;//max size of main block
       int32_t max_extend_block_size_;//max size of extend block
+      int32_t max_index_size_;//max size of index
       int32_t hash_bucket_count_;//total count of hash bucket
       common::MMapOption mmap_option_;    //mmap option
       double max_use_block_ratio_;//max use block ratio
-      double hash_bucket_ratio_;//hash slot count / file count ratio
-      double max_use_hash_bucket_ratio_;
+      double max_use_hash_bucket_ratio_;//hash slot count / file count ratio
       int64_t reserve_[4];
       int dump(tbnet::DataBuffer& buf) const;
       int dump(std::stringstream& stream) const;
     };
-
-    typedef enum BlockType_
-    {
-      BLOCK_TYPE_MAIN = 0,
-      BLOCK_TYPE_EXT = 1
-    };
-
-    typedef enum BlockDataType_
-    {
-      BLOCK_DATA_TYPE_DATA = 0,
-      BLOCK_DATA_TYPE_CHECK = 1
-    }BlockDataType;
 
     typedef enum BlockCreateCompleteStatus_
     {
@@ -113,22 +104,14 @@ namespace tfs
       int dump(std::stringstream& stream) const;
     };
 
-    // fileinfo flag
-    enum FileinfoFlag
-    {
-      FI_DELETED = 1,
-      FI_INVALID = 2,
-      FI_CONCEAL = 4
-    };
-
-    enum OperType
+    typedef enum _OperType
     {
       OPER_NONE   = 0,
       OPER_INSERT = 1,
       OPER_DELETE = 2,
       OPER_UNDELETE = 3,
       OPER_UPDATE = 4
-    };
+    }OperType;
 
     class GCObject
     {

@@ -18,7 +18,7 @@
 #include "ds_define.h"
 #include "super_block_manager.h"
 #include "physical_block_manager.h"
-//#include "block_manager.h"
+#include "block_manager.h"
 
 using namespace tfs::common;
 
@@ -110,8 +110,9 @@ namespace tfs
       return ret;
     }
 
-    int PhysicalBlockManager::remove(const int32_t physcical_block_id)
+    int PhysicalBlockManager::remove(BasePhysicalBlock*& physical_block, const int32_t physcical_block_id)
     {
+      physical_block = NULL;
       int32_t ret = (INVALID_PHYSICAL_BLOCK_ID!= physcical_block_id) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
@@ -122,8 +123,7 @@ namespace tfs
         {
           BasePhysicalBlock query(physcical_block_id);
           RWLock::Lock lock(rwmutex_, WRITE_LOCKER);
-          BasePhysicalBlock* physical_block = physical_blocks_.erase(&query);
-          tbsys::gDelete(physical_block);//TODO
+          physical_block = physical_blocks_.erase(&query);
         }
 
         if ((TFS_SUCCESS == ret)
@@ -147,7 +147,7 @@ namespace tfs
     int PhysicalBlockManager::alloc_block(BlockIndex& index, const int8_t split_flag)
     {
       bool flush = false;
-      SuperBlockInfo info;
+      SuperBlockInfo* info = NULL;
       int32_t retry_times = 3;
       SuperBlockManager& supber_block_manager = get_block_manager().get_super_block_manager();
       int32_t ret = supber_block_manager.get_super_block_info(info);
@@ -155,36 +155,42 @@ namespace tfs
       {
         do
         {
-          index.physical_block_id_ = supber_block_manager.get_legal_physical_block_id();
-          index.physical_file_name_id_ = index.physical_block_id_;
-          index.logic_block_id_ = INVALID_BLOCK_ID;
-          index.index_      = 0;
-          index.next_index_ = 0;
-          index.prev_index_ = 0;
-          index.split_flag_ = split_flag;
-          index.split_status_= BLOCK_SPLIT_STATUS_UNCOMPLETE;
-          index.status_     =  BLOCK_CREATE_COMPLETE_STATUS_COMPLETE;
-          ret = (INVALID_PHYSICAL_BLOCK_ID == index.physical_block_id_) ? EXIT_PHYSICAL_ID_INVALID : TFS_SUCCESS;
+          int32_t physical_block_id = INVALID_PHYSICAL_BLOCK_ID;
+          ret = supber_block_manager.get_legal_physical_block_id(physical_block_id);
           if (TFS_SUCCESS == ret)
           {
-            RWLock::Lock lock(rwmutex_, READ_LOCKER);
-            if (exist_(index.physical_block_id_))
-            {
-              std::stringstream path;
-              path << info.mount_point_ << MAINBLOCK_DIR_PREFIX << index.physical_file_name_id_;
-              const int32_t start = BLOCK_RESERVER_LENGTH;
-              const int32_t end   = info.max_main_block_size_ + BLOCK_RESERVER_LENGTH;
-              ret = insert_(index, index.physical_block_id_, path.str(), start, end);
-              flush = TFS_SUCCESS == ret;
-            }
-          }
-
-          if (TFS_SUCCESS == ret && flush)
-          {
-            ret = supber_block_manager.update_block_index(index, index.physical_block_id_);
+            assert(physical_block_id != INVALID_PHYSICAL_BLOCK_ID);
+            index.physical_block_id_     = physical_block_id;
+            index.physical_file_name_id_ = index.physical_block_id_;
+            index.logic_block_id_ = INVALID_BLOCK_ID;
+            index.index_      = 0;
+            index.next_index_ = 0;
+            index.prev_index_ = 0;
+            index.split_flag_ = split_flag;
+            index.split_status_= BLOCK_SPLIT_STATUS_UNCOMPLETE;
+            index.status_     =  BLOCK_CREATE_COMPLETE_STATUS_COMPLETE;
+            ret = (INVALID_PHYSICAL_BLOCK_ID == index.physical_block_id_) ? EXIT_PHYSICAL_ID_INVALID : TFS_SUCCESS;
             if (TFS_SUCCESS == ret)
             {
-              ret = supber_block_manager.flush();
+              RWLock::Lock lock(rwmutex_, READ_LOCKER);
+              if (exist_(index.physical_block_id_))
+              {
+                std::stringstream path;
+                path << info->mount_point_ << MAINBLOCK_DIR_PREFIX << index.physical_file_name_id_;
+                const int32_t start = BLOCK_RESERVER_LENGTH;
+                const int32_t end   = info->max_main_block_size_ + BLOCK_RESERVER_LENGTH;
+                ret = insert_(index, index.physical_block_id_, path.str(), start, end);
+                flush = TFS_SUCCESS == ret;
+              }
+            }
+
+            if (TFS_SUCCESS == ret && flush)
+            {
+              ret = supber_block_manager.update_block_index(index, index.physical_block_id_);
+              if (TFS_SUCCESS == ret)
+              {
+                ret = supber_block_manager.flush();
+              }
             }
           }
         }
@@ -207,7 +213,7 @@ namespace tfs
 
     int PhysicalBlockManager::alloc_ext_block(BlockIndex& index, BlockIndex& ext_index)
     {
-      SuperBlockInfo info;
+      SuperBlockInfo* info = NULL;
       SuperBlockManager& supber_block_manager = get_block_manager().get_super_block_manager();
       int32_t ret = supber_block_manager.get_super_block_info(info);
       if (TFS_SUCCESS == ret)
@@ -247,22 +253,28 @@ namespace tfs
             int8_t  pos = 0;
             int32_t start = 0;
             int32_t end   = 0;
-            ret = physical_block->alloc(pos, start, end, info.max_extend_block_size_);
+            ret = physical_block->alloc(pos, start, end, info->max_extend_block_size_);
             if (TFS_SUCCESS == ret)
             {
-              ext_index.index_ = pos;
-              ext_index.physical_block_id_ = supber_block_manager.get_legal_physical_block_id();
-              ext_index.logic_block_id_ = index.logic_block_id_;
-              ext_index.physical_file_name_id_ = physical_block->id();
-              ext_index.next_index_ = 0;
-              ext_index.prev_index_ = index.physical_block_id_;
-              ext_index.split_flag_ = BLOCK_SPLIT_FLAG_NO;
-              ext_index.split_status_= BLOCK_SPLIT_STATUS_UNCOMPLETE;
-              ext_index.status_     = BLOCK_CREATE_COMPLETE_STATUS_COMPLETE;
-              index.next_index_     = ext_index.physical_block_id_;
-              std::stringstream path;
-              path << info.mount_point_ << MAINBLOCK_DIR_PREFIX << ext_index.physical_file_name_id_;
-              ret = insert_(ext_index, ext_index.physical_block_id_, path.str(), start, end);
+              int32_t physical_block_id = INVALID_PHYSICAL_BLOCK_ID;
+              ret = supber_block_manager.get_legal_physical_block_id(physical_block_id);
+              if (TFS_SUCCESS == ret)
+              {
+                assert(physical_block_id != INVALID_PHYSICAL_BLOCK_ID);
+                ext_index.index_ = pos;
+                ext_index.physical_block_id_ = physical_block_id;
+                ext_index.logic_block_id_ = index.logic_block_id_;
+                ext_index.physical_file_name_id_ = physical_block->id();
+                ext_index.next_index_ = 0;
+                ext_index.prev_index_ = index.physical_block_id_;
+                ext_index.split_flag_ = BLOCK_SPLIT_FLAG_NO;
+                ext_index.split_status_= BLOCK_SPLIT_STATUS_UNCOMPLETE;
+                ext_index.status_     = BLOCK_CREATE_COMPLETE_STATUS_COMPLETE;
+                index.next_index_     = ext_index.physical_block_id_;
+                std::stringstream path;
+                path << info->mount_point_ << MAINBLOCK_DIR_PREFIX << ext_index.physical_file_name_id_;
+                ret = insert_(ext_index, ext_index.physical_block_id_, path.str(), start, end);
+              }
             }
           }
           if (TFS_SUCCESS == ret)
