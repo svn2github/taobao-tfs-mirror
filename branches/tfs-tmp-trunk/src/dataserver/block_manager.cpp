@@ -93,20 +93,6 @@ namespace tfs
       {
         ret = get_logic_block_manager().exist(logic_block_id, tmp) ? EXIT_BLOCK_EXIST_ERROR : TFS_SUCCESS;
       }
-      int32_t physical_block_id = INVALID_PHYSICAL_BLOCK_ID;
-      if (TFS_SUCCESS == ret)
-      {
-        ret = get_super_block_manager().get_legal_physical_block_id(physical_block_id);
-      }
-      if (TFS_SUCCESS == ret)
-      {
-        ret = get_physical_block_manager().exist(physical_block_id) ? EXIT_PHYSICAL_BLOCK_EXIST_ERROR : TFS_SUCCESS;
-        if (TFS_SUCCESS != ret)
-        {
-          TBSYS_LOG(ERROR, "physical blocks conflict. fatal error! physical blockid: %d", physical_block_id);
-          assert(false);
-        }
-      }
       if (TFS_SUCCESS == ret)
       {
         ret = get_super_block_manager().get_super_block_info(info);
@@ -114,44 +100,26 @@ namespace tfs
       if (TFS_SUCCESS == ret)
       {
         index.logic_block_id_ = logic_block_id;
-        index.next_index_     = 0;
-        index.index_          = 0;
-        index.physical_block_id_ = physical_block_id;
-        index.physical_file_name_id_ = physical_block_id;
-        index.prev_index_     = 0;
-        index.split_flag_     = BLOCK_SPLIT_FLAG_NO;
-        index.split_status_   = BLOCK_SPLIT_STATUS_UNCOMPLETE;
-        index.status_         = BLOCK_CREATE_COMPLETE_STATUS_UNCOMPLETE;
-        std::stringstream physical_block_path;
-        physical_block_path << info->mount_point_ << MAINBLOCK_DIR_PREFIX << index.physical_file_name_id_;
-        physical_block = insert_physical_block_(*info, index, index.physical_block_id_, physical_block_path.str());
-        ret = (NULL != physical_block) ? TFS_SUCCESS : EXIT_ADD_PHYSICAL_BLOCK_ERROR;
+        ret = get_physical_block_manager().alloc_block(index, BLOCK_SPLIT_FLAG_NO);
+        if (TFS_SUCCESS == ret)
+        {
+          physical_block = get_physical_block_manager().get(index.physical_block_id_);
+          ret = (NULL != physical_block) ? TFS_SUCCESS : EXIT_ADD_PHYSICAL_BLOCK_ERROR;
+        }
         if (TFS_SUCCESS == ret)
         {
           std::stringstream index_path;
           index_path << info->mount_point_ << INDEX_DIR_PREFIX << index.physical_block_id_;
           BaseLogicBlock* logic_block = insert_logic_block_(index.logic_block_id_, index_path.str(), tmp);
-          int32_t ret = (NULL != logic_block) ? TFS_SUCCESS : EXIT_ADD_LOGIC_BLOCK_ERROR;
+          ret = (NULL != logic_block) ? TFS_SUCCESS : EXIT_ADD_LOGIC_BLOCK_ERROR;
           if (TFS_SUCCESS != ret)
           {
-            logic_block->add_physical_block(dynamic_cast<PhysicalBlock*>(physical_block));
-            ret = get_super_block_manager().update_block_index(index, physical_block_id);
-            if (TFS_SUCCESS != ret)
-            {
-              //TODO add physical block object to gc object map;
               get_physical_block_manager().remove(physical_block, index.physical_block_id_);
               get_logic_block_manager().remove(logic_block, index.logic_block_id_, tmp);
-            }
-            else
-            {
-              ret = get_super_block_manager().flush();
-              assert(TFS_SUCCESS == ret);
-            }
           }
           else
           {
-            //TODO add physical block object to gc object map;
-            get_physical_block_manager().remove(physical_block, index.physical_block_id_);
+            logic_block->add_physical_block(dynamic_cast<PhysicalBlock*>(physical_block));
           }
         }
       }

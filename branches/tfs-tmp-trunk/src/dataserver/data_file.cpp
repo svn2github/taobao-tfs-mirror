@@ -45,13 +45,13 @@ namespace tfs
 
     int DataFile::pwrite(const FileInfoInDiskExt& info, const char *data, const int32_t nbytes, const int32_t offset)
     {
-      int32_t ret = (NULL != data && nbytes > 0 && offset >= 0 && offset >= length_) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+      int32_t ret = (NULL != data && nbytes > 0 && offset >= 0 && offset >= (length_ - static_cast<int32_t>(sizeof(info)))) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
-        int32_t real_offset = sizeof(info) + offset;
         int32_t real_nbytes = nbytes;
+        int32_t real_offset = sizeof(info) + offset;
         int32_t length = real_offset + nbytes;
-        if (length <= WRITE_DATA_TMPBUF_SIZE && length_ <= WRITE_DATA_TMPBUF_SIZE)
+        if (length <= WRITE_DATA_TMPBUF_SIZE)
         {
           if (0 == offset)
           {
@@ -72,7 +72,7 @@ namespace tfs
             {
               if (length_ <= 0)
               {
-                memcpy(&data_, &info, sizeof(info));
+                memcpy(data_, &info, sizeof(info));
                 length_ += sizeof(info);
               }
               ret = length_ == ::write(fd_, data_, length_) ? TFS_SUCCESS : EXIT_WRITE_FILE_ERROR;
@@ -140,11 +140,7 @@ namespace tfs
           }
         }
       }
-      if (TFS_SUCCESS != ret)
-      {
-        nbytes = -1;
-      }
-      return ret;
+      return (TFS_SUCCESS == ret) ? nbytes : ret;
     }
   }/** end namespace dataserver **/
 }/** end namespace tfs **/

@@ -95,11 +95,11 @@ namespace tfs
       int32_t  physical_file_name_id_:20;//<=1048575 number 1~1048575
       int32_t  next_index_:20;//<=1048575
       int32_t  prev_index_:20;//<=1048575
-      int8_t   index_:6;// 0 ~36(0: main block, 1~36: ext block)
+      int8_t   index_:7;// 0 ~36(0: main block, 1~36: ext block)
       int8_t   status_:2;//0: uncomplete, 1: complete
       int8_t   split_flag_:2;//0: unsplit, 1:split
       int8_t   split_status_:2;//0: split uncomplete, 1: split complete
-      int8_t   reserve_:4;//reserve
+      int8_t   reserve_:3;//reserve
       int dump(tbnet::DataBuffer& buf) const;
       int dump(std::stringstream& stream) const;
     };

@@ -18,12 +18,20 @@
 
 #include "common/internal.h"
 
+#ifdef TFS_GTEST
+#include <gtest/gtest.h>
+#endif
+
 namespace tfs
 {
   namespace dataserver
   {
     class DataFile
     {
+      #ifdef TFS_GTEST
+      friend class TestDataFile;
+      FRIEND_TEST(TestDataFile, write_read);
+      #endif
       public:
         DataFile(const uint64_t fn, const std::string& work_dir);
         virtual ~DataFile();

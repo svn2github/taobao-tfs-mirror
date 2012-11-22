@@ -25,6 +25,9 @@
 #include "common/file_opv2.h"
 #include "ds_define.h"
 
+#ifdef TFS_GTEST
+#include <gtest/gtest.h>
+#endif
 namespace tfs
 {
   namespace dataserver
@@ -48,6 +51,10 @@ namespace tfs
 
     class AllocPhysicalBlock : public BasePhysicalBlock
     {
+      #ifdef TFS_GTEST
+      friend class TestPhysicalBlock;
+      FRIEND_TEST(TestPhysicalBlock, alloc_free);
+      #endif
       friend class PhysicalBlockManager;
       public:
         AllocPhysicalBlock(const int32_t physical_block_id, const std::string& path,

@@ -33,7 +33,7 @@ namespace tfs
     const int32_t SuperBlockManager::MAX_BLOCK_INDEX_SIZE = 65535 * (1 + 3);
     const int32_t SuperBlockManager::PHYSICAL_BLOCK_ID_INIT_VALUE = 1;
     SuperBlockManager::SuperBlockManager(const std::string& path):
-      file_op_(path, O_RDWR | O_SYNC),
+      file_op_(path, O_RDWR | O_SYNC | O_LARGEFILE | O_CREAT),
       index_(PHYSICAL_BLOCK_ID_INIT_VALUE),
       ext_index_(0)
     {
@@ -84,7 +84,7 @@ namespace tfs
     int SuperBlockManager::get_super_block_info(SuperBlockInfo*& info) const
     {
       char* data = file_op_.get_data();
-      int32_t ret = (NULL != data) ? EXIT_MMAP_DATA_INVALID : TFS_SUCCESS;
+      int32_t ret = (NULL == data) ? EXIT_MMAP_DATA_INVALID : TFS_SUCCESS;
       if (TFS_SUCCESS == ret)
       {
         info = (reinterpret_cast<SuperBlockInfo*>(data+ SUPERBLOCK_RESERVER_LENGTH));
@@ -95,7 +95,7 @@ namespace tfs
     int SuperBlockManager::update_super_block_info(const SuperBlockInfo& info)
     {
       char* data = file_op_.get_data();
-      int32_t ret = (NULL != data) ? EXIT_MMAP_DATA_INVALID : TFS_SUCCESS;
+      int32_t ret = (NULL == data) ? EXIT_MMAP_DATA_INVALID : TFS_SUCCESS;
       if (TFS_SUCCESS == ret)
       {
         memcpy((data+ SUPERBLOCK_RESERVER_LENGTH), &info, sizeof(info));
@@ -109,7 +109,7 @@ namespace tfs
       if (TFS_SUCCESS == ret)
       {
         char* data = file_op_.get_data();
-        ret = (NULL != data) ? EXIT_MMAP_DATA_INVALID : TFS_SUCCESS;
+        ret = (NULL == data) ? EXIT_MMAP_DATA_INVALID : TFS_SUCCESS;
         if (TFS_SUCCESS == ret)
         {
           BlockIndex* pstart = reinterpret_cast<BlockIndex*>(data+ SUPERBLOCK_RESERVER_LENGTH + sizeof(SuperBlockInfo));
@@ -125,7 +125,7 @@ namespace tfs
       if (TFS_SUCCESS == ret)
       {
         char* data = file_op_.get_data();
-        ret = (NULL != data) ? EXIT_MMAP_DATA_INVALID : TFS_SUCCESS;
+        ret = (NULL == data) ? EXIT_MMAP_DATA_INVALID : TFS_SUCCESS;
         if (TFS_SUCCESS == ret)
         {
           BlockIndex* pstart = reinterpret_cast<BlockIndex*>(data+ SUPERBLOCK_RESERVER_LENGTH + sizeof(SuperBlockInfo));
@@ -141,7 +141,7 @@ namespace tfs
       if (TFS_SUCCESS == ret)
       {
         char* data = file_op_.get_data();
-        ret = (NULL != data) ? EXIT_MMAP_DATA_INVALID : TFS_SUCCESS;
+        ret = (NULL == data) ? EXIT_MMAP_DATA_INVALID : TFS_SUCCESS;
         if (TFS_SUCCESS == ret)
         {
           BlockIndex* pstart = reinterpret_cast<BlockIndex*>(data+ SUPERBLOCK_RESERVER_LENGTH + sizeof(SuperBlockInfo));
@@ -155,7 +155,7 @@ namespace tfs
     {
       physical_block_id = INVALID_PHYSICAL_BLOCK_ID;
       char* data = file_op_.get_data();
-      int32_t ret = (NULL != data) ? EXIT_MMAP_DATA_INVALID : TFS_SUCCESS;
+      int32_t ret = (NULL == data) ? EXIT_MMAP_DATA_INVALID : TFS_SUCCESS;
       if (TFS_SUCCESS == ret)
       {
         SuperBlockInfo* info = reinterpret_cast<SuperBlockInfo*>(data+ SUPERBLOCK_RESERVER_LENGTH);
@@ -166,7 +166,7 @@ namespace tfs
         if (extend)
         {
           const int32_t EXT_PHYSICAL_BLOCK_INIT_VALUE = info->total_main_block_count_ + 1;
-          while (retry_times-- > 0)
+          while (INVALID_PHYSICAL_BLOCK_ID == physical_block_id && retry_times-- > 0)
           {
             if (ext_index_ < EXT_PHYSICAL_BLOCK_INIT_VALUE || ext_index_ >= MAX_COUNT)
                 ext_index_ = EXT_PHYSICAL_BLOCK_INIT_VALUE;
@@ -180,7 +180,7 @@ namespace tfs
         }
         else
         {
-          while (retry_times-- > 0)
+          while (INVALID_PHYSICAL_BLOCK_ID == physical_block_id && retry_times-- > 0)
           {
             if (index_ < PHYSICAL_BLOCK_ID_INIT_VALUE || index_ > MAX_COUNT)
                 index_ = PHYSICAL_BLOCK_ID_INIT_VALUE;
