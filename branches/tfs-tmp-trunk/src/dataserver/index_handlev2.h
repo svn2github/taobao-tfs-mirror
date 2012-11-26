@@ -21,6 +21,10 @@
 #include "common/error_msg.h"
 #include "common/mmap_file_op.h"
 
+#ifdef TFS_GTEST
+#include <gtest/gtest.h>
+#endif
+
 namespace tfs
 {
   namespace dataserver
@@ -31,12 +35,12 @@ namespace tfs
       public:
         typedef common::FileInfoV2* iterator;
       public:
-        explicit BaseIndexHandle(const std::string& path): is_load_(false), file_op_(path) {}
+        explicit BaseIndexHandle(const std::string& path): is_load_(false), file_op_(path, O_RDWR | O_LARGEFILE | O_CREAT) {}
         virtual ~BaseIndexHandle() {}
         virtual int read_file_info(common::FileInfoV2& info, const double threshold, const uint64_t logic_block_id = common::INVALID_BLOCK_ID) const  = 0;
         virtual int write_file_info(common::FileInfoV2& info,const double threshold, const uint64_t logic_block_id = common::INVALID_BLOCK_ID) = 0;
         virtual int write_file_infos(common::IndexHeaderV2& header, std::vector<common::FileInfoV2>& infos, const double threshold, const uint64_t logic_block_id = common::INVALID_BLOCK_ID) = 0;
-        virtual int traverse(std::vector<common::FileInfoV2>& infos, const bool sort, const uint64_t logic_block_id = common::INVALID_BLOCK_ID) const = 0;
+        virtual int traverse(std::vector<common::FileInfoV2>& infos, const uint64_t logic_block_id = common::INVALID_BLOCK_ID) const = 0;
         virtual int mmap(const uint64_t logic_block_id, const common::MMapOption& map_options) = 0;
         int flush();
         int update_block_info(const common::BlockInfoV2& info) const;
@@ -52,18 +56,19 @@ namespace tfs
         int rename_filename(const uint64_t logic_block_id);
         int remove_self(const uint64_t logic_block_id);
       protected:
+        int check_load_() const;
         virtual int remmap_(const double threshold) const = 0;
         virtual common::FileInfoV2*  get_file_infos_array_() const = 0;
         common::IndexHeaderV2* get_index_header_() const;
-        int update_block_statistic_info_(common::IndexHeaderV2* header, const int32_t oper_type, const int32_t new_size, const int32_t old_size, const bool rollback = false);
+        int update_block_statistic_info_(common::IndexHeaderV2* header, const int32_t oper_type,
+              const int32_t new_size, const int32_t old_size, const bool rollback = false);
         void get_prev_(common::FileInfoV2* prev, common::FileInfoV2* current, bool complete) const;
         int get_slot_(uint16_t& slot, uint64_t& file_id, common::FileInfoV2*& current,
-            common::FileInfoV2*& prev, common::FileInfoV2* finfo, common::IndexHeaderV2* header,
-            const bool override, const bool force) const;
+              common::FileInfoV2*& prev, common::FileInfoV2* finfo, common::IndexHeaderV2* header, const bool override, const bool force) const;
         int get_slot_(uint16_t& slot, uint64_t& file_id, common::FileInfoV2*& current,
-            common::FileInfoV2*& prev, const char* buf, const int32_t nbytes, const bool override, const bool force) const;
+              common::FileInfoV2*& prev, const char* buf, const int32_t nbytes, const bool override, const bool force) const;
         int get_slot_(uint16_t& slot, uint64_t& file_id, common::FileInfoV2*& current,
-            common::FileInfoV2*& prev, const double threshold, const bool override, const bool force) const ;
+              common::FileInfoV2*& prev, const double threshold, const bool override, const bool force) const ;
         int insert_file_info_(common::FileInfoV2& info, const double threshold, const bool override, const bool force);
         int insert_file_info_(common::FileInfoV2& info, char* buf, const int32_t nbytes, const bool override, const bool force);
         bool is_load_;
@@ -80,6 +85,13 @@ namespace tfs
 
     class IndexHandle : public BaseIndexHandle
     {
+        #ifdef TFS_GTEST
+        friend class TestIndexHandle;
+        FRIEND_TEST(TestIndexHandle, get_slot_v1);
+        FRIEND_TEST(TestIndexHandle, insert_file_info);
+        FRIEND_TEST(TestIndexHandle, remmap);
+        FRIEND_TEST(TestIndexHandle, write_read_file_info);
+        #endif
       public:
         explicit IndexHandle(const std::string& path);
         virtual ~IndexHandle();
@@ -89,11 +101,8 @@ namespace tfs
         int read_file_info(common::FileInfoV2& info,  const double threshold, const uint64_t logic_block_id = common::INVALID_BLOCK_ID) const;
         int write_file_info(common::FileInfoV2& info, const double threshold, const uint64_t logic_block_id = common::INVALID_BLOCK_ID);
         int write_file_infos(common::IndexHeaderV2& header, std::vector<common::FileInfoV2>& infos, const double threshold, const uint64_t logic_block_id = common::INVALID_BLOCK_ID);
-        int del_file_info(const uint64_t fileid, const double threshold);
-        int traverse(std::vector<common::FileInfoV2>& infos, const bool sort, const uint64_t logic_block_id = common::INVALID_BLOCK_ID) const;
-        int traverse(std::vector<common::FileInfo>& infos, const bool sort, const uint64_t logic_block_id = common::INVALID_BLOCK_ID) const;
-        int update_write_visit_count(const int8_t step = 1);
-        int update_read_visit_count(const int8_t step = 1);
+        int traverse(std::vector<common::FileInfoV2>& infos, const uint64_t logic_block_id = common::INVALID_BLOCK_ID) const;
+        int traverse(std::vector<common::FileInfo>& infos, const uint64_t logic_block_id = common::INVALID_BLOCK_ID) const;
         int update_block_statistic_info(const int32_t oper_type, const int32_t new_size, const int32_t old_size, const bool rollback = false);
         iterator begin();
         iterator end();
@@ -117,6 +126,10 @@ namespace tfs
     // -------------------------------------------------------------------------------------------------------------------------------------------
     class VerifyIndexHandle: public BaseIndexHandle
     {
+      #ifdef TFS_GTEST
+      friend class TestIndexHandle;
+      FRIEND_TEST(TestIndexHandle, verify_write_read_infos);
+      #endif
       friend class VerifyLogicBlock;
       struct InnerIndex
       {
@@ -132,11 +145,11 @@ namespace tfs
       int write_file_info(common::FileInfoV2& info, const double threshold, const uint64_t logic_block_id = common::INVALID_BLOCK_ID);
       int write_file_infos(common::IndexHeaderV2& header, std::vector<common::FileInfoV2>& infos, const double threshold, const uint64_t logic_block_id = common::INVALID_BLOCK_ID);
       int read_file_info(common::FileInfoV2& info, const double threshold, const uint64_t logic_block_id = common::INVALID_BLOCK_ID) const;
-      int traverse(std::vector<common::FileInfoV2>& infos, const bool sort, const uint64_t logic_block_id = common::INVALID_BLOCK_ID) const;
+      int traverse(std::vector<common::FileInfoV2>& infos, const uint64_t logic_block_id = common::INVALID_BLOCK_ID) const;
 
       private:
       static const int32_t INDEX_DATA_START_OFFSET = sizeof(common::IndexHeaderV2) + common::MAX_MARSHALLING_NUM * sizeof(InnerIndex);
-      InnerIndex* get_inner_index_() const;
+      InnerIndex* get_inner_index_array_() const;
       InnerIndex* get_inner_index_(const uint64_t logic_block_id) const;
       int read_file_info_(common::FileInfoV2*& info, const uint64_t fileid, char* buf, const int32_t nbytes, const bool override, const bool force) const;
       int update_block_statistic_info_(char* data, const int32_t nbytes, const int32_t oper_type, const int32_t new_size, const int32_t old_size, const bool rollback = false);

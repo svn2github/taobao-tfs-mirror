@@ -85,9 +85,7 @@ namespace tfs
 
     int BlockManager::new_block(const uint64_t logic_block_id, const bool tmp)
     {
-      BlockIndex index;
       SuperBlockInfo* info = NULL;
-      BasePhysicalBlock* physical_block = NULL;
       int32_t ret = (INVALID_BLOCK_ID == logic_block_id) ? EXIT_PARAMETER_ERROR : TFS_SUCCESS;
       if (TFS_SUCCESS == ret)
       {
@@ -99,7 +97,10 @@ namespace tfs
       }
       if (TFS_SUCCESS == ret)
       {
+        BlockIndex index;
         index.logic_block_id_ = logic_block_id;
+        BasePhysicalBlock* physical_block = NULL;
+        BaseLogicBlock*    logic_block = NULL;
         ret = get_physical_block_manager().alloc_block(index, BLOCK_SPLIT_FLAG_NO);
         if (TFS_SUCCESS == ret)
         {
@@ -110,16 +111,20 @@ namespace tfs
         {
           std::stringstream index_path;
           index_path << info->mount_point_ << INDEX_DIR_PREFIX << index.physical_block_id_;
-          BaseLogicBlock* logic_block = insert_logic_block_(index.logic_block_id_, index_path.str(), tmp);
+          logic_block = insert_logic_block_(index.logic_block_id_, index_path.str(), tmp);
           ret = (NULL != logic_block) ? TFS_SUCCESS : EXIT_ADD_LOGIC_BLOCK_ERROR;
           if (TFS_SUCCESS != ret)
+            get_physical_block_manager().remove(physical_block, index.physical_block_id_);
+        }
+        if (TFS_SUCCESS == ret)
+        {
+          assert(NULL != logic_block);
+          logic_block->add_physical_block(dynamic_cast<PhysicalBlock*>(physical_block));
+          ret = dynamic_cast<LogicBlock*>(logic_block)->create_index(info->hash_bucket_count_, info->mmap_option_);
+          if (TFS_SUCCESS != ret)
           {
-              get_physical_block_manager().remove(physical_block, index.physical_block_id_);
-              get_logic_block_manager().remove(logic_block, index.logic_block_id_, tmp);
-          }
-          else
-          {
-            logic_block->add_physical_block(dynamic_cast<PhysicalBlock*>(physical_block));
+            get_logic_block_manager().remove(logic_block, index.logic_block_id_, tmp);
+            get_physical_block_manager().remove(physical_block, index.physical_block_id_);
           }
         }
       }
@@ -581,7 +586,6 @@ namespace tfs
       info.max_main_block_size_   = parameter.main_block_size_;
       info.max_extend_block_size_ = parameter.extend_block_size_;
 
-      const int32_t MAX_INITIALIZE_INDEX_SIZE = 512;
       int ret = (EXT4 != info.mount_fs_type_ && EXT3_FULL != info.mount_fs_type_ && EXT3_FTRUN != info.mount_fs_type_)
         ? EXIT_FS_TYPE_ERROR : TFS_SUCCESS;
       if (TFS_SUCCESS == ret)
@@ -600,8 +604,8 @@ namespace tfs
         int64_t avail_data_space = 0;
         if (TFS_SUCCESS == ret)
         {
-          info.max_index_size_ = ((info.max_main_block_size_ / parameter.avg_segment_size_) + 1) * sizeof(FileInfoV2);
-          double ratio = (sizeof(FileInfoV2) * INDEXFILE_SAFE_MULT) / parameter.avg_segment_size_;
+          info.max_index_size_ = ((info.max_main_block_size_ / parameter.avg_segment_size_) + 1) * FILE_INFO_V2_LENGTH;
+          double ratio = (FILE_INFO_V2_LENGTH * INDEXFILE_SAFE_MULT) / parameter.avg_segment_size_;
           avail_data_space = static_cast<int64_t>(info.mount_point_use_space_ * (1.00000000 - ratio));
           ret = avail_data_space > 0 ? TFS_SUCCESS : EXIT_MOUNT_SPACE_SIZE_ERROR;
           if (TFS_SUCCESS != ret)
@@ -613,7 +617,6 @@ namespace tfs
 
         if (TFS_SUCCESS == ret)
         {
-          const int32_t INNERFILE_MAX_MULTIPE = 32;
           const int32_t pagesize = getpagesize();
           const int32_t avg_file_count = info.max_main_block_size_ / parameter.avg_segment_size_;
           info.used_main_block_count_  = 0;
@@ -625,10 +628,10 @@ namespace tfs
           if (TFS_SUCCESS == ret)
           {
             info.hash_bucket_count_      = std::min(MAX_INITIALIZE_INDEX_SIZE, avg_file_count);
-            const int32_t mmap_size = sizeof(IndexHeaderV2) + (info.hash_bucket_count_ + 1) * sizeof(FileInfoV2);
+            const int32_t mmap_size = INDEX_HEADER_V2_LENGTH + (info.hash_bucket_count_ + 1) * FILE_INFO_V2_LENGTH;
             const int32_t count     = mmap_size / pagesize;
             const int32_t remainder = mmap_size % pagesize;
-            const int32_t max_mmap_size = sizeof(IndexHeaderV2) + (avg_file_count + 1) * sizeof(FileInfoV2);
+            const int32_t max_mmap_size = INDEX_HEADER_V2_LENGTH + (avg_file_count + 1) * FILE_INFO_V2_LENGTH;
             const int32_t max_count     = max_mmap_size / pagesize;
             const int32_t max_remainder = max_mmap_size % pagesize;
             info.mmap_option_.first_mmap_size_=  remainder ? (count + 1) * pagesize : count * pagesize;

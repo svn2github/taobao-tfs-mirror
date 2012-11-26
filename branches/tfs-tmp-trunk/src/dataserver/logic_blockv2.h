@@ -53,7 +53,7 @@ namespace tfs
       int get_block_info(common::BlockInfoV2& info, const uint64_t logic_block_id = common::INVALID_BLOCK_ID) const;
       virtual int check_block_intact() { return common::TFS_SUCCESS;}
       int load_index(const common::MMapOption mmap_option);
-      int traverse(std::vector<common::FileInfoV2>& finfos, const bool sort, const uint64_t logic_block_id = common::INVALID_BLOCK_ID) const;
+      int traverse(std::vector<common::FileInfoV2>& finfos, const uint64_t logic_block_id = common::INVALID_BLOCK_ID) const;
       int get_family_id(int64_t& family_id, const uint64_t logic_block_id = common::INVALID_BLOCK_ID) const;
       int set_family_id(const int64_t family_id, const uint64_t logic_block_id = common::INVALID_BLOCK_ID);
       int get_used_size(int32_t& size, const uint64_t logic_block_id = common::INVALID_BLOCK_ID) const;//data file length
@@ -93,7 +93,7 @@ namespace tfs
         int generation_file_id(uint64_t& fileid, const double threshold);
         int write(uint64_t& fileid, DataFile& datafile, const uint64_t logic_block_id = common::INVALID_BLOCK_ID);
         int unlink(int64_t& size, const uint64_t fileid, const int32_t action, const uint64_t logic_block_id = common::INVALID_BLOCK_ID);
-        int traverse(std::vector<common::FileInfo>& finfos, const bool sort, const uint64_t logic_block_id = common::INVALID_BLOCK_ID) const;
+        int traverse(std::vector<common::FileInfo>& finfos, const uint64_t logic_block_id = common::INVALID_BLOCK_ID) const;
         int check_block_intact();
         int inc_write_visit_count(const int32_t step = 1, const int32_t nbytes = 0);
         int inc_read_visit_count(const int32_t step = 1,  const int32_t nbytes = 0);

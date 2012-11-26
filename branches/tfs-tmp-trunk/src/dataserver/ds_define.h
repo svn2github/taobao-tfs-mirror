@@ -44,6 +44,10 @@ namespace tfs
     static const int32_t PHYSICAL_BLOCK_ID_INIT_VALUE = 1;
     static const int32_t INDEXFILE_SAFE_MULT = 4;
 
+    static const int32_t MAX_INITIALIZE_INDEX_SIZE = 2048;
+    static const int32_t INNERFILE_MAX_MULTIPE     = 32;
+
+
     struct SuperBlockInfo
     {
       int32_t version_;

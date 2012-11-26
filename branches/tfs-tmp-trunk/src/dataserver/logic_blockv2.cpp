@@ -165,12 +165,12 @@ namespace tfs
       return ret;
     }
 
-    int BaseLogicBlock::traverse(std::vector<FileInfoV2>& finfos, const bool sort, const uint64_t logic_block_id) const
+    int BaseLogicBlock::traverse(std::vector<FileInfoV2>& finfos, const uint64_t logic_block_id) const
     {
       int32_t ret = (INVALID_BLOCK_ID != logic_block_id) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
-        ret = index_handle_->traverse(finfos, sort, logic_block_id);
+        ret = index_handle_->traverse(finfos, logic_block_id);
       }
       return ret;
     }
@@ -627,12 +627,12 @@ namespace tfs
       return ret;
     }
 
-    int LogicBlock::traverse(std::vector<FileInfo>& finfos, const bool sort, const uint64_t logic_block_id) const
+    int LogicBlock::traverse(std::vector<FileInfo>& finfos, const uint64_t logic_block_id) const
     {
       int32_t ret = (INVALID_BLOCK_ID != logic_block_id) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
-        ret = get_index_handle_()->traverse(finfos, sort, logic_block_id);
+        ret = get_index_handle_()->traverse(finfos, logic_block_id);
       }
       return ret;
     }
