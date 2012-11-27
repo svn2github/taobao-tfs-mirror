@@ -81,7 +81,7 @@ public class tfsManager_08_rmFile extends metaTfsBaseCase
 	   int Ret ;
 	   log.info(new Throwable().getStackTrace()[0].getMethodName());
 	   Ret=tfsManager.rmFile(appId, userId, "/");
-	   Assert.assertEquals("Remove wrong-3 File Path should be false", Ret,1);
+	   Assert.assertEquals("Remove wrong-3 File Path should be false", Ret,-14017);
 	}
 	@Test
 	public void test_09_rmFile_small_File()

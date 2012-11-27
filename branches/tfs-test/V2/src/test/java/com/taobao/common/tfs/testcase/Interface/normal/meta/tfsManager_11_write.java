@@ -269,7 +269,7 @@ public class tfsManager_11_write extends metaTfsBaseCase
 	   long  Ret;
 	   Ret=tfsManager.write(appId, userId, "/", offset,data, dataOffset, len);
 	   //System.out.println("%%%%%%%%%%%%%%%%%%%%%%%%"+Ret);
-	   Assert.assertEquals(Ret,1);
+	   Assert.assertEquals(Ret,-14017);
 	   tfsManager.fetchFile(appId, userId, resourcesPath+"temp", "/textwrite");
 	   //Assert.assertEquals(TfsCrc,localCrc);
 	   tfsManager.rmFile(appId, userId, "/textwrite");

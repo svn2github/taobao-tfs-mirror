@@ -76,7 +76,7 @@ public class tfsManager_02_mvDir extends metaTfsBaseCase
 	   Ret=tfsManager.createDir(appId, userId, "/textmvDir1");
 	   Ret=tfsManager.createDir(appId, userId, "/textmvDir2");
 	   Ret=tfsManager.mvDir(appId, userId, "/textmvDir1", "/textmvDir2");
-       Assert.assertEquals("mvDir with created path should be false", Ret,1);
+       Assert.assertEquals("mvDir with created path should be false", Ret,-14001);
        
        tfsManager.rmDir(appId, userId, "/textmvDir2");
 	   tfsManager.rmDir(appId, userId, "/textmvDir1");
@@ -142,7 +142,7 @@ public class tfsManager_02_mvDir extends metaTfsBaseCase
 	   log.info(new Throwable().getStackTrace()[0].getMethodName());
 	   Ret=tfsManager.createDir(appId, userId, "/textmvDir1");
 	   Ret=tfsManager.mvDir(appId, userId, "/textmvDir1", "/");
-	   Assert.assertEquals("mvDir with wrong destFilePath should be false", Ret,1);
+	   Assert.assertEquals("mvDir with wrong destFilePath should be false", Ret,-14017);
        tfsManager.rmDir(appId, userId, "/textmvDir1");
 	}
 	@Test
@@ -183,7 +183,7 @@ public class tfsManager_02_mvDir extends metaTfsBaseCase
 	   Ret=tfsManager.createDir(appId, userId, "/textmvDir1");
 	   Ret=tfsManager.createFile(appId, userId, "/textmvDir2");
 	   Ret=tfsManager.mvDir(appId, userId, "/textmvDir1", "/textmvDir2");
-	   Assert.assertEquals("mvDir with the same path with File name should be false", Ret,1);
+	   Assert.assertEquals("mvDir with the same path with File name should be false", Ret,-14001);
        tfsManager.rmDir(appId, userId, "/textmvDir1");
        tfsManager.rmFile(appId, userId, "/textmvDir2");
 	}

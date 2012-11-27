@@ -72,7 +72,7 @@ public class tfsManager_03_rmDir extends metaTfsBaseCase
 	   int Ret ;
 	   log.info(new Throwable().getStackTrace()[0].getMethodName());
 	   Ret=tfsManager.rmDir(appId, userId, "/");
-	   Assert.assertEquals("Remove wrong Dir should be falae", Ret,1);
+	   Assert.assertEquals("Remove wrong Dir should be falae", Ret,-14017);
 	}
 	@Test
 	public void test_08_rmDir_wrong_filePath_3()
