@@ -345,7 +345,7 @@ namespace tfs
         }
         else
         {
-          if (length < FILEINFO_SIZE)
+          if (length <= FILEINFO_SIZE)
           {
             ret = EXIT_READ_FILE_SIZE_ERROR;
             TBSYS_LOG(ERROR,

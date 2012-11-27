@@ -78,37 +78,53 @@ namespace tfs
       ret = BlockFileManager::get_instance()->query_super_block(super_block);
       if (TFS_SUCCESS == ret)
       {
-        if (FS_SPEEDUP_VERSION == super_block.version_)
+        struct stat st;
+        std::string block_prefix_file = mount_path + BLOCK_HEADER_PREFIX;
+        if ((0 == access(block_prefix_file.c_str(), F_OK))
+          && (0 == stat(block_prefix_file.c_str(), &st)))
         {
-          std::string block_prefix_file = mount_path + BLOCK_HEADER_PREFIX;
-          if (0 != access(block_prefix_file.c_str(), F_OK))  // not exist
+          prefix_op_ = new MMapFileOperation(block_prefix_file.c_str());
+          MMapOption mmap_option;
+          mmap_option.first_mmap_size_ = st.st_size;
+          mmap_option.max_mmap_size_ = st.st_size;
+          mmap_option.per_mmap_size_= st.st_size;
+          ret = prefix_op_->mmap_file(mmap_option);
+          if (TFS_SUCCESS != ret)
+          {
+            TBSYS_LOG(ERROR, "mmap prefix file fail. ret: %d", ret);
+          }
+        }
+
+        // if (FS_SPEEDUP_VERSION == super_block.version_), don't compare for
+        // upgrade
+        /*std::string block_prefix_file = mount_path + BLOCK_HEADER_PREFIX;
+        if (0 != access(block_prefix_file.c_str(), F_OK))  // not exist
+        {
+          ret = TFS_ERROR;
+          TBSYS_LOG(ERROR, "fs version is 2, but block_prefix file not exist.");
+        }
+        else
+        {
+          struct stat st;
+          if (0 != stat(block_prefix_file.c_str(), &st))
           {
             ret = TFS_ERROR;
-            TBSYS_LOG(ERROR, "fs version is 2, but block_prefix file not exist.");
+            TBSYS_LOG(ERROR, "stat prefix file fail. ret: %d", errno);
           }
           else
           {
-            struct stat st;
-            if (0 != stat(block_prefix_file.c_str(), &st))
+            prefix_op_ = new MMapFileOperation(block_prefix_file.c_str());
+            MMapOption mmap_option;
+            mmap_option.first_mmap_size_ = st.st_size;
+            mmap_option.max_mmap_size_ = st.st_size;
+            mmap_option.per_mmap_size_= st.st_size;
+            ret = prefix_op_->mmap_file(mmap_option);
+            if (TFS_SUCCESS != ret)
             {
-              ret = TFS_ERROR;
-              TBSYS_LOG(ERROR, "stat prefix file fail. ret: %d", errno);
-            }
-            else
-            {
-              prefix_op_ = new MMapFileOperation(block_prefix_file.c_str());
-              MMapOption mmap_option;
-              mmap_option.first_mmap_size_ = st.st_size;
-              mmap_option.max_mmap_size_ = st.st_size;
-              mmap_option.per_mmap_size_= st.st_size;
-              ret = prefix_op_->mmap_file(mmap_option);
-              if (TFS_SUCCESS != ret)
-              {
-                TBSYS_LOG(ERROR, "mmap prefix file fail. ret: %d", ret);
-              }
+              TBSYS_LOG(ERROR, "mmap prefix file fail. ret: %d", ret);
             }
           }
-        }
+        }*/
       }
       return ret;
     }

@@ -42,7 +42,8 @@ namespace tfs
     static const char DEV_TAG[common::MAX_DEV_TAG_LEN] = "TAOBAO";
     static const int32_t COPY_BETWEEN_CLUSTER = -1;
     static const int32_t BLOCK_VERSION_MAGIC_NUM = 2;
-    static const int32_t FS_SPEEDUP_VERSION = 2;
+    // static const int32_t FS_SPEEDUP_VERSION = 2;
+    static const int32_t GC_WORKER_INTERVAL = 1800;  // gc every half an hour
     static const int32_t PARITY_INDEX_START = 1024; // index start positioin
     static const int32_t PARITY_INDEX_MMAP_SIZE = PARITY_INDEX_START;
 

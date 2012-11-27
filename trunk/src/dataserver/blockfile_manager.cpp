@@ -488,7 +488,7 @@ namespace tfs
       if (TFS_SUCCESS != ret)   // not arrive step 12
       {
         TBSYS_LOG(ERROR, "new ext block error! logic blockid: %u. ret: %d", logic_block_id, ret);
-        rollback_superblock(ext_physical_block_id, block_count_modify_flag);
+        rollback_superblock(ext_physical_block_id, block_count_modify_flag, C_EXT_BLOCK);
         tbsys::gDelete(tmp_physical_block);
       }
       return ret;
@@ -1048,6 +1048,7 @@ namespace tfs
           {
             TBSYS_LOG(ERROR, "delete load conflict block. logic blockid: %u", logic_block_id);
             del_block(logic_block_id, C_CONFUSE_BLOCK);
+            conflict_flag = false;
             continue;
           }
 
@@ -1080,7 +1081,6 @@ namespace tfs
           }
         }
 
-        conflict_flag = false;
       }
 
       // after compact, server may crash, there will be two valid block local,
@@ -1471,7 +1471,7 @@ namespace tfs
         left -= wsize;
       }
 
-      // set fs version to 2: use block_prefix file to start ds
+      /* don't set super block version to 2 for upgrade
       SuperBlock super_block;
       SuperBlockImpl* super_block_impl = new SuperBlockImpl(SYSPARAM_FILESYSPARAM.mount_name_,
           SYSPARAM_FILESYSPARAM.super_block_reserve_offset_);
@@ -1485,8 +1485,9 @@ namespace tfs
           super_block_impl->flush_file();
         }
       }
+      */
 
-      tbsys::gDelete(super_block_impl);
+      // tbsys::gDelete(super_block_impl);
       tbsys::gDelete(zero_buf);
       tbsys::gDelete(file_op);
       tbsys::gDelete(file_formater);
