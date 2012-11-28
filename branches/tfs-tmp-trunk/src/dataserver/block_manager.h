@@ -53,17 +53,20 @@ namespace tfs
         int switch_logic_block(const uint64_t logic_block_id, const bool tmp = false);
         int timeout(const time_t now);
 
-        int check_block_version(common::BlockInfoV2& info, const int32_t remote_version, const int8_t index, const uint64_t logic_block_id = common::INVALID_BLOCK_ID);
+        int check_block_version(common::BlockInfoV2& info, const int32_t remote_version, const uint64_t logic_block_id) const;
         int update_block_info(const common::BlockInfoV2& info, const uint64_t logic_block_id = common::INVALID_BLOCK_ID) const;
         int update_block_version(const int8_t step = common::VERSION_INC_STEP_DEFAULT, const uint64_t logic_block_id = common::INVALID_BLOCK_ID);
         int get_block_info(common::BlockInfoV2& info, const uint64_t logic_block_id = common::INVALID_BLOCK_ID) const;
 
         int pwrite(char* buf, const int32_t nbytes, const int32_t offset, const uint64_t logic_block_id);
         int pread(char* buf, int32_t& nbytes, const int32_t offset, const uint64_t logic_block_id);
-        int write(uint64_t& fileid, DataFile& datafile, const uint64_t logic_block_id);
-        int read(char* buf, int32_t& nbytes, const int32_t offset, const uint64_t fileid, const int8_t flag, const uint64_t logic_block_id);
-        int stat(common::FileInfoV2& info,const uint64_t logic_block_id) const;
-        int unlink(int64_t& size, const uint64_t fileid, const int32_t action, const uint64_t logic_block_id);
+        int write(uint64_t& fileid, DataFile& datafile, const uint64_t logic_block_id,
+            const uint64_t attach_logic_block_id);
+        int read(char* buf, int32_t& nbytes, const int32_t offset, const uint64_t fileid,
+            const int8_t flag, const uint64_t logic_block_id, const uint64_t attach_logic_block_id);
+        int stat(common::FileInfoV2& info,const uint64_t logic_block_id, const uint64_t attach_logic_block_id) const;
+        int unlink(int64_t& size, const uint64_t fileid, const int32_t action,
+              const uint64_t logic_block_id, const uint64_t attach_logic_block_id);
 
         SuperBlockManager& get_super_block_manager() { return super_block_manager_;}
         LogicBlockManager& get_logic_block_manager() { return logic_block_manager_;}

@@ -38,23 +38,27 @@ namespace tfs
 
     int DataHandle::pwrite(const char* buf, const int32_t nbytes, const int32_t offset)
     {
-      int32_t ret = (NULL != buf && nbytes >= 0 && offset >= 0) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
-      if (TFS_SUCCESS == ret && nbytes > 0)
+      int32_t ret = (NULL != buf && nbytes > 0 && offset >= 0) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+      if (TFS_SUCCESS == ret)
       {
         PhysicalBlock* physical_block = NULL;
-        int32_t inner_offset = 0, length = nbytes, current_offset = offset, mem_offset = 0;
+        int32_t inner_offset = 0, length = nbytes, current_offset = offset;
+        int32_t inner_length = 0, mem_offset = 0,  total_write_length = 0;
         while ((TFS_SUCCESS == ret) && (current_offset < (offset + nbytes)))
         {
-          ret = logic_block_.choose_physic_block(physical_block, length, inner_offset, current_offset);
+          inner_length = length;
+          ret = logic_block_.choose_physic_block(physical_block, inner_length, inner_offset, current_offset);
           if (TFS_SUCCESS == ret)
           {
+            length = std::min(length, inner_length);
             ret = physical_block->pwrite((buf + mem_offset), length, inner_offset);
-            ret = ret >= 0 ? TFS_SUCCESS : -ret;
+            ret = ret >= 0 ? TFS_SUCCESS : ret;
             if (TFS_SUCCESS == ret)
             {
               current_offset += length;
               mem_offset     += length;
-              length         = (offset + nbytes) - current_offset;
+              total_write_length += length;
+              length         =  nbytes - total_write_length;
             }
           }
         }
@@ -64,23 +68,27 @@ namespace tfs
 
     int DataHandle::pread(char* buf, const int32_t nbytes, const int32_t offset)
     {
-      int32_t ret = (NULL != buf && nbytes >= 0 && offset >= 0) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
-      if (TFS_SUCCESS == ret && nbytes > 0)
+      int32_t ret = (NULL != buf && nbytes > 0 && offset >= 0) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+      if (TFS_SUCCESS == ret)
       {
         PhysicalBlock* physical_block = NULL;
-        int32_t inner_offset = 0, length = nbytes, current_offset = offset, mem_offset = 0;
+        int32_t inner_offset = 0, length = nbytes, current_offset = offset;
+        int32_t inner_length = 0, mem_offset = 0,  total_read_length = 0;
         while ((TFS_SUCCESS == ret) && (current_offset < (offset + nbytes)))
         {
-          ret = logic_block_.choose_physic_block(physical_block, length, inner_offset, current_offset);
+          inner_length  = length;
+          ret = logic_block_.choose_physic_block(physical_block, inner_length, inner_offset, current_offset);
           if (TFS_SUCCESS == ret)
           {
+            length = std::min(length, inner_length);
             ret = physical_block->pread((buf + mem_offset), length, inner_offset);
             ret = ret >= 0 ? TFS_SUCCESS : ret;
             if (TFS_SUCCESS == ret)
             {
               current_offset += length;
               mem_offset     += length;
-              length         = (offset + nbytes) - current_offset;
+              total_read_length += length;
+              length         =  nbytes - total_read_length;
             }
           }
         }

@@ -30,10 +30,22 @@ namespace tfs
     {
 
     }
+
     LogicBlockManager::~LogicBlockManager()
     {
+      LOGIC_BLOCK_MAP_ITER iter = logic_blocks_.begin();
+      for (; iter != logic_blocks_.end(); ++iter)
+      {
+        tbsys::gDelete((*iter));
+      }
 
+      TMP_LOGIC_BLOCK_MAP_ITER it = tmp_logic_blocks_.begin();
+      for (; it != tmp_logic_blocks_.end(); ++it)
+      {
+        tbsys::gDelete(it->second);
+      }
     }
+
     int LogicBlockManager::insert(const uint64_t logic_block_id, const std::string& index_path, const bool tmp)
     {
       return insert_(logic_block_id, index_path, tmp);
@@ -267,7 +279,7 @@ namespace tfs
       TMP_LOGIC_BLOCK_MAP_ITER iter = tmp_logic_blocks_.begin();
       for (; iter != tmp_logic_blocks_.end(); )
       {
-        if (iter->second->get_last_update_time() + EXPIRED_TIME_MS > now)
+        if (iter->second->get_last_update_time() + EXPIRED_TIME_MS >= now)
         {
           expired_blocks.push_back(iter->second->id());
           tmp_logic_blocks_.erase(iter++);

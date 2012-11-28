@@ -54,7 +54,6 @@ namespace tfs
       BlockManager& block_manager_;
       LOGIC_BLOCK_MAP logic_blocks_;
       TMP_LOGIC_BLOCK_MAP tmp_logic_blocks_;
-      common::RWLock rwmutex_;
     };
   }/** end namespace dataserver**/
 }/** end namespace tfs **/

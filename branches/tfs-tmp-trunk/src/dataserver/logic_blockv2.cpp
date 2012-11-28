@@ -51,7 +51,7 @@ namespace tfs
 
     BaseLogicBlock::~BaseLogicBlock()
     {
-      tbsys::gDeleteA(index_handle_);
+      tbsys::gDelete(index_handle_);
     }
 
     int BaseLogicBlock::remove_self_file()
@@ -80,6 +80,7 @@ namespace tfs
       if (TFS_SUCCESS == ret)
       {
         physical_block_list_.push_back(physical_block);
+        ret = index_handle_->update_avail_offset(physical_block->length());
       }
       return ret;
     }
@@ -97,37 +98,35 @@ namespace tfs
 
     int BaseLogicBlock::choose_physic_block(PhysicalBlock*& block, int32_t& length, int32_t& inner_offset, const int32_t offset) const
     {
-      int32_t ret = (offset >= 0 && length >= 0) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+      block = NULL, inner_offset = 0;
+      int32_t ret = (offset >= 0 && length > 0) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
-        bool result = (length == 0);
         int32_t total_length = 0;
         PHYSICAL_BLOCK_LIST_CONST_ITER iter = physical_block_list_.begin();
-        for (; iter != physical_block_list_.end() && !result; ++iter)
+        for (; iter != physical_block_list_.end() && (NULL == block); ++iter)
         {
           total_length += (*iter)->length();
-          result = (offset < total_length);
-          if (result)
+          if (offset < total_length)
           {
             block = (*iter);
-            inner_offset = total_length - offset;
-            length       = (*iter)->length() - inner_offset;
+            length       = total_length - offset;
+            inner_offset = block->length() - length;
           }
         }
-        ret = (result) ? TFS_SUCCESS : EXIT_PHYSIC_BLOCK_OFFSET_ERROR;
+        ret = (NULL != block) ? TFS_SUCCESS : EXIT_PHYSIC_BLOCK_OFFSET_ERROR;
       }
       return ret;
     }
 
-    int BaseLogicBlock::update_block_info(const common::BlockInfoV2& info, const uint64_t logic_block_id) const
+    int BaseLogicBlock::update_block_info(const common::BlockInfoV2& info) const
     {
-      UNUSED(logic_block_id);
       return index_handle_->update_block_info(info);
     }
 
-    int BaseLogicBlock::update_block_version(const int8_t step, const uint64_t logic_block_id)
+    int BaseLogicBlock::update_block_version(const int8_t step)
     {
-      int32_t ret = (INVALID_BLOCK_ID != logic_block_id && step >= 0) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+      int32_t ret = (step >= 0) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
         ret = index_handle_->update_block_version(step);
@@ -135,24 +134,14 @@ namespace tfs
       return ret;
     }
 
-    int BaseLogicBlock::check_block_version(common::BlockInfoV2& info, const int32_t remote_version, const int8_t index, const uint64_t logic_block_id)
+    int BaseLogicBlock::check_block_version(common::BlockInfoV2& info, const int32_t remote_version) const
     {
-      int32_t ret = (INVALID_BLOCK_ID != logic_block_id) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
-      if (TFS_SUCCESS == ret)
-      {
-        ret = index_handle_->check_block_version(info, remote_version, index);
-      }
-      return ret;
+      return index_handle_->check_block_version(info, remote_version);
     }
 
-    int BaseLogicBlock::get_block_info(BlockInfoV2& info, const uint64_t logic_block_id) const
+    int BaseLogicBlock::get_block_info(BlockInfoV2& info) const
     {
-      int32_t ret = (INVALID_BLOCK_ID != logic_block_id) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
-      if (TFS_SUCCESS == ret)
-      {
-        ret = index_handle_->get_block_info(info);
-      }
-      return ret;
+      return index_handle_->get_block_info(info);
     }
 
     int BaseLogicBlock::load_index(const common::MMapOption mmap_option)
@@ -175,56 +164,30 @@ namespace tfs
       return ret;
     }
 
-    int BaseLogicBlock::get_family_id(int64_t& family_id, const uint64_t logic_block_id) const
+    int BaseLogicBlock::get_family_id(int64_t& family_id) const
     {
       family_id = INVALID_FAMILY_ID;
-      int32_t ret = (INVALID_BLOCK_ID != logic_block_id) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
-      if (TFS_SUCCESS == ret)
-      {
-        ret = index_handle_->get_family_id(family_id);
-      }
-      return ret;
+      return index_handle_->get_family_id(family_id);
     }
 
-    int BaseLogicBlock::set_family_id(const int64_t family_id, const uint64_t logic_block_id)
+    int BaseLogicBlock::set_family_id(const int64_t family_id)
     {
-      int32_t ret = (INVALID_BLOCK_ID != logic_block_id) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
-      if (TFS_SUCCESS == ret)
-      {
-        ret = index_handle_->set_family_id(family_id);
-      }
-      return ret;
+      return index_handle_->set_family_id(family_id);
     }
 
-    int BaseLogicBlock::get_used_size(int32_t& size, const uint64_t logic_block_id) const
+    int BaseLogicBlock::get_used_offset(int32_t& size) const
     {
-      int32_t ret = (INVALID_BLOCK_ID != logic_block_id) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
-      if (TFS_SUCCESS == ret)
-      {
-        ret = index_handle_->get_used_offset(size);
-      }
-      return ret;
+      return index_handle_->get_used_offset(size);
     }
 
-    int BaseLogicBlock::get_avail_size(int32_t& size, const uint64_t logic_block_id) const
+    int BaseLogicBlock::get_avail_offset(int32_t& size) const
     {
-      int32_t ret = (INVALID_BLOCK_ID != logic_block_id) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
-      if (TFS_SUCCESS == ret)
-      {
-        ret = index_handle_->get_avail_offset(size);
-      }
-      return ret;
+      return index_handle_->get_avail_offset(size);
     }
 
-    int BaseLogicBlock::write_file_infos(common::IndexHeaderV2& header, std::vector<FileInfoV2>& infos, const double threshold, const bool override, const uint64_t logic_block_id)
+    int BaseLogicBlock::write_file_infos(common::IndexHeaderV2& header, std::vector<FileInfoV2>& infos, const double threshold)
     {
-      UNUSED(override);
-      int32_t ret = (INVALID_BLOCK_ID != logic_block_id) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
-      if (TFS_SUCCESS == ret)
-      {
-        ret = index_handle_->write_file_infos(header, infos, threshold /*override TODO,*/);
-      }
-      return ret;
+      return index_handle_->write_file_infos(header, infos, threshold);
     }
 
     int BaseLogicBlock::write(uint64_t& fileid, DataFile& datafile, const uint64_t logic_block_id)
@@ -235,9 +198,10 @@ namespace tfs
       return TFS_SUCCESS;
     }
 
-    int BaseLogicBlock::read(char* buf, int32_t& nbytes, const int32_t offset, const uint64_t fileid, const int8_t flag, const uint64_t logic_block_id)
+    int BaseLogicBlock::read(char* buf, int32_t& nbytes, const int32_t offset,
+        const uint64_t fileid, const int8_t flag, const uint64_t logic_block_id)
     {
-      int32_t ret = (NULL != buf && nbytes >= 0 && offset >= 0 && INVALID_FILE_ID != fileid && INVALID_BLOCK_ID != logic_block_id) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+      int32_t ret = (NULL != buf && nbytes > 0 && offset >= 0 && INVALID_FILE_ID != fileid && INVALID_BLOCK_ID != logic_block_id) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
         SuperBlockInfo* sbinfo = NULL;
@@ -253,22 +217,20 @@ namespace tfs
             // truncate to right read length
             if (offset + nbytes > finfo.size_)
               nbytes = finfo.size_ - offset;
-            ret = (nbytes >= 0) ? TFS_SUCCESS : EXIT_READ_OFFSET_ERROR;
-            if (TFS_SUCCESS == ret)
-            {
-              if (0 == offset)
-              {
-                if (READ_DATA_OPTION_FLAG_FORCE & flag)
-                  ret = (finfo.id_ == fileid && 0 == finfo.status_ & FILE_STATUS_INVALID) ? TFS_SUCCESS : EXIT_FILE_INFO_ERROR;
-                else
-                  ret = (finfo.id_ == fileid && 0 == finfo.status_ & (FILE_STATUS_DELETE | FILE_STATUS_INVALID | FILE_STATUS_CONCEAL)) ? TFS_SUCCESS : EXIT_FILE_INFO_ERROR;
-              }
-            }
+            ret = (nbytes > 0) ? TFS_SUCCESS : EXIT_READ_OFFSET_ERROR;
+          }
 
-            if (TFS_SUCCESS == ret && nbytes > 0)
-            {
-              ret = data_handle_.pread(buf, nbytes, finfo.offset_ + offset);
-            }
+          if (TFS_SUCCESS == ret)
+          {
+            if (READ_DATA_OPTION_FLAG_FORCE & flag)
+              ret = (finfo.id_ != fileid || 0 != finfo.status_ & FILE_STATUS_INVALID) ? EXIT_FILE_INFO_ERROR : TFS_SUCCESS;
+            else
+              ret = (finfo.id_ != fileid || 0 != finfo.status_ & (FILE_STATUS_DELETE | FILE_STATUS_INVALID | FILE_STATUS_CONCEAL)) ? EXIT_FILE_INFO_ERROR : TFS_SUCCESS;
+          }
+
+          if (TFS_SUCCESS == ret)
+          {
+            ret = data_handle_.pread(buf, nbytes, finfo.offset_ + offset);
           }
         }
       }
@@ -277,14 +239,14 @@ namespace tfs
 
     int BaseLogicBlock::pwrite(const char* buf, const int32_t nbytes, const int32_t offset)
     {
-      int32_t ret = (NULL != buf && nbytes >= 0) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+      int32_t ret = (NULL != buf && nbytes > 0) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
         ret = extend_block_(nbytes, offset);
         if (TFS_SUCCESS == ret)//write data
         {
           int32_t mem_offset = 0;
-          while (nbytes > 0 && mem_offset < nbytes && TFS_SUCCESS == ret)
+          while (TFS_SUCCESS == ret && mem_offset < nbytes)
           {
             int32_t length = nbytes - mem_offset;
             ret = data_handle_.pwrite((buf+ mem_offset), length, (offset + mem_offset));
@@ -301,7 +263,7 @@ namespace tfs
 
     int BaseLogicBlock::pread(char* buf, int32_t& nbytes, const int32_t offset)
     {
-      int32_t ret = (NULL != buf && nbytes >= 0 && offset >= 0) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+      int32_t ret = (NULL != buf && nbytes > 0 && offset >= 0) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
         int32_t inner_offset = 0;
@@ -310,10 +272,10 @@ namespace tfs
         {
           if (offset + nbytes > inner_offset)
             nbytes = inner_offset - offset;
-          ret = (nbytes >= 0) ? TFS_SUCCESS : EXIT_READ_OFFSET_ERROR;
-          if (TFS_SUCCESS == ret && nbytes > 0)
+          ret = (nbytes > 0) ? TFS_SUCCESS : EXIT_READ_OFFSET_ERROR;
+          if (TFS_SUCCESS == ret)
           {
-            ret = data_handle_.pread(buf, nbytes, inner_offset + offset);
+            ret = data_handle_.pread(buf, nbytes, offset);
           }
         }
       }
@@ -404,15 +366,21 @@ namespace tfs
       int32_t ret = (size > 0 && offset >= 0) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
-        std::string path;
-        int32_t avail_offset = 0;
+        int32_t avail_size = 0;
+        SuperBlockInfo* super_info = NULL;
         SuperBlockManager& supber_block_manager = get_block_manager_().get_super_block_manager();
         PhysicalBlockManager&  physical_block_manager = get_block_manager_().get_physical_block_manager();
-        ret = index_handle_->get_avail_offset(avail_offset);
+        ret = supber_block_manager.get_super_block_info(super_info);
         if (TFS_SUCCESS == ret)
         {
-          int32_t retry_times = 30;
-          while (TFS_SUCCESS == ret && (offset + size) > avail_offset && retry_times-- > 0)
+          ret = index_handle_->get_avail_offset(avail_size);
+        }
+        if (TFS_SUCCESS == ret)
+        {
+          const int32_t total_offset      = offset + size;
+          const int32_t total_need_length = (offset + size) - avail_size;
+          int32_t retry_times = (total_need_length / super_info->max_extend_block_size_) + 1;
+          while (TFS_SUCCESS == ret && avail_size < total_offset && retry_times-- > 0)
           {
             BlockIndex index, ext_index;
             ret = (!physical_block_list_.empty()) ? TFS_SUCCESS : EXIT_PHYSICALBLOCK_NUM_ERROR;
@@ -420,13 +388,9 @@ namespace tfs
             {
               PhysicalBlock* last_physical_block = physical_block_list_.back();
               index.physical_block_id_ = last_physical_block->id();
-              ret = (INVALID_PHYSICAL_BLOCK_ID != index.physical_block_id_) ? TFS_SUCCESS : EXIT_PHYSICALBLOCK_NUM_ERROR;
-            }
-            if (TFS_SUCCESS == ret)
-            {
+              assert(INVALID_PHYSICAL_BLOCK_ID != index.physical_block_id_);
               ret = supber_block_manager.get_block_index(index, index.physical_block_id_);
             }
-
             if (TFS_SUCCESS == ret)
             {
               ret = physical_block_manager.alloc_ext_block(index, ext_index);
@@ -438,12 +402,11 @@ namespace tfs
               if (TFS_SUCCESS == ret)
               {
                 PhysicalBlock* physical_block = dynamic_cast<PhysicalBlock*>(new_physical_block);
-                physical_block_list_.push_back(physical_block);
-                ret = index_handle_->update_avail_offset(physical_block->length());
-                if (TFS_SUCCESS == ret)
-                {
-                  avail_offset += physical_block->length();
-                }
+                ret = add_physical_block(physical_block);
+              }
+              if (TFS_SUCCESS == ret)
+              {
+                avail_size += new_physical_block->length();
               }
             }
           }
@@ -472,27 +435,29 @@ namespace tfs
         if (TFS_SUCCESS == ret)//write data
         {
           char* data = NULL;
-          int32_t offset = 0;
-          while (offset < new_finfo.size_  && TFS_SUCCESS == ret)
+          int32_t read_offset = 0, length = 0, write_offset = 0;
+          int32_t write_length = 0, mem_offset = 0;
+          while (read_offset < new_finfo.size_  && TFS_SUCCESS == ret)
           {
-            int32_t length = new_finfo.size_ - offset;
-            ret = datafile.pread(data, length, offset);
+            length = new_finfo.size_ - read_offset;
+            ret = datafile.pread(data, length, read_offset);
             ret = ret >= 0 ? TFS_SUCCESS : ret;
             if (TFS_SUCCESS == ret)
             {
               assert(NULL != data);
-              offset += length;
-              ret = offset > new_finfo.size_  ? EXIT_WRITE_OFFSET_ERROR : TFS_SUCCESS;
+              read_offset += length;
+              ret = read_offset > new_finfo.size_  ? EXIT_WRITE_OFFSET_ERROR : TFS_SUCCESS;
               if (TFS_SUCCESS == ret && length > 0)
               {
-                int32_t write_offset = 0;
-                while (write_offset < length && TFS_SUCCESS == ret)
+                mem_offset = 0;
+                while (mem_offset < length && TFS_SUCCESS == ret)
                 {
-                  int32_t write_length = length - write_offset;
-                  ret = data_handle_.pwrite((data + write_offset), write_length, (new_finfo.offset_ + write_offset));
+                  write_length = length - mem_offset;
+                  ret = data_handle_.pwrite((data + mem_offset), write_length, (new_finfo.offset_ + write_offset));
                   ret = ret >= 0 ? TFS_SUCCESS : ret;
                   if (TFS_SUCCESS == ret)
                   {
+                    mem_offset   += write_length;
                     write_offset += write_length;
                   }
                 }//end while (write_offset < length && TFS_SUCCESS == ret)
@@ -539,7 +504,7 @@ namespace tfs
 
     int LogicBlock::write(uint64_t& fileid, DataFile& datafile, const uint64_t logic_block_id)
     {
-      int32_t ret = (INVALID_FILE_ID != fileid && INVALID_BLOCK_ID != logic_block_id) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+      int32_t ret = (INVALID_BLOCK_ID != logic_block_id) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
         SuperBlockInfo* sbinfo = NULL;
@@ -572,6 +537,7 @@ namespace tfs
                       ret, id(), fileid);
                 }
               }
+              fileid = new_finfo.id_;
               ret = index_handle_->flush();
               if (TFS_SUCCESS != ret)
               {
@@ -662,35 +628,12 @@ namespace tfs
       return get_index_handle_()->statistic_visit(throughput, reset);
     }
 
-    LogicBlockIterator::LogicBlockIterator(LogicBlock& logic_block):
-      logic_block_(logic_block),
-      used_offset_(-1),
-      iter_(logic_block.get_index_handle_()->begin())
+    bool LogicBlock::Iterator::empty() const
     {
-
+      return (iter_ == logic_block_.get_index_handle_()->end());
     }
 
-    LogicBlockIterator::~LogicBlockIterator()
-    {
-
-    }
-
-    bool LogicBlockIterator::empty() const
-    {
-      return (iter_ != logic_block_.get_index_handle_()->end());
-    }
-
-    int LogicBlockIterator::transfer_offet_disk_to_mem_(const int32_t disk_offset) const
-    {
-      return (read_disk_offset_ >= 0
-          && used_offset_ >= 0
-          && disk_offset  >= 0
-          && read_disk_offset_ <= used_offset_
-          && disk_offset >= read_disk_offset_
-          && disk_offset < (read_disk_offset_ + MAX_DATA_SIZE)) ? disk_offset - read_disk_offset_ : -1;
-    }
-
-    int LogicBlockIterator::next(int32_t& mem_offset, FileInfoV2*& info)
+    int LogicBlock::Iterator::next(int32_t& mem_offset, FileInfoV2*& info)
     {
       info = NULL;
       int32_t ret = EXIT_BLOCK_NO_DATA;
@@ -714,14 +657,14 @@ namespace tfs
         for (; iter_ != logic_block_.get_index_handle_()->end() && TFS_SUCCESS != ret; iter_++)
         {
           info = iter_;
-          ret = (info->id_ != INVALID_FILE_ID && info->offset_ > 0 && info->offset_ < used_offset_)? TFS_SUCCESS : EXIT_FILE_EMPTY;
+          ret = (info->id_ != INVALID_FILE_ID && info->offset_ >= 0 && info->offset_ < used_offset_)? TFS_SUCCESS : EXIT_FILE_EMPTY;
         }
       }
 
       //double check
       if (TFS_SUCCESS == ret)
       {
-        ret = (info->id_ != INVALID_FILE_ID && info->offset_ > 0 && info->offset_ < used_offset_)? TFS_SUCCESS : EXIT_FILE_EMPTY;
+        ret = (info->id_ != INVALID_FILE_ID && info->offset_ >= 0 && info->offset_ < used_offset_)? TFS_SUCCESS : EXIT_FILE_EMPTY;
       }
 
       if (TFS_SUCCESS == ret)
@@ -734,8 +677,8 @@ namespace tfs
           const int32_t max_data_size = MAX_DATA_SIZE;
           const int32_t MAX_READ_SIZE = std::min(max_data_size, disk_data_length);
           mem_valid_size_ = MAX_READ_SIZE;
-          read_disk_offset_ = info->offset_;
-          ret = logic_block_.pread(data_, mem_valid_size_, read_disk_offset_);
+          ret = logic_block_.pread(data_, mem_valid_size_, info->offset_);
+          ret = ret >= 0 ? TFS_SUCCESS : ret;
           if (TFS_SUCCESS == ret)
           {
             ret = (mem_valid_size_ >= MAX_READ_SIZE) ? TFS_SUCCESS : EXIT_READ_FILE_ERROR;
@@ -746,16 +689,21 @@ namespace tfs
       return ret;
     }
 
-    const common::FileInfoV2& LogicBlockIterator::get_file_info() const
+    const common::FileInfoV2& LogicBlock::Iterator::get_file_info() const
     {
       return (*iter_);
     }
 
-    const char* LogicBlockIterator::get_data(const int32_t mem_offset) const
+    const char* LogicBlock::Iterator::get_data(int32_t& mem_offset, const int32_t size) const
     {
-      return (mem_valid_size_ > 0 && mem_offset >= 0 && mem_offset < mem_valid_size_) ? (data_ + mem_offset) : NULL;
+      const char* result = NULL;
+      if (mem_valid_size_ > 0 && mem_offset >= 0 && (mem_offset + size) <= mem_valid_size_)
+      {
+        result = (data_ + mem_offset);
+        mem_offset += size;
+      }
+      return result;
     }
-
 
     VerifyLogicBlock::VerifyLogicBlock(BlockManager* manager, const uint64_t logic_block_id, const std::string& index_path):
       BaseLogicBlock(manager, logic_block_id, index_path)

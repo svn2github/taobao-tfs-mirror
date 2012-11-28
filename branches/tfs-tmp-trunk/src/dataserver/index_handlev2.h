@@ -46,7 +46,7 @@ namespace tfs
         int update_block_info(const common::BlockInfoV2& info) const;
         int update_block_version(const int8_t step = common::VERSION_INC_STEP_DEFAULT);
         int get_block_info(common::BlockInfoV2& info) const;
-        int check_block_version(common::BlockInfoV2& info, const int32_t remote_version, const int8_t index) const;
+        int check_block_version(common::BlockInfoV2& info, const int32_t remote_version) const;
         int update_used_offset(const int32_t size);
         int get_used_offset(int32_t& offset) const;
         int update_avail_offset(const int32_t size);

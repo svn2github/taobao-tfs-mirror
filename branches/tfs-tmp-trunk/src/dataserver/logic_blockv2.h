@@ -25,6 +25,10 @@
 #include "index_handlev2.h"
 #include "physical_blockv2.h"
 
+#ifdef TFS_GTEST
+#include <gtest/gtest.h>
+#endif
+
 namespace tfs
 {
   namespace dataserver
@@ -47,23 +51,24 @@ namespace tfs
       int add_physical_block(PhysicalBlock* block);
       int get_all_physical_blocks(std::vector<int32_t>& physical_blocks) const;
       int choose_physic_block(PhysicalBlock*& block, int32_t& length, int32_t& inner_offset, const int32_t offset) const;
-      int check_block_version(common::BlockInfoV2& info, const int32_t remote_version, const int8_t index, const uint64_t logic_block_id = common::INVALID_BLOCK_ID);
-      int update_block_info(const common::BlockInfoV2& info, const uint64_t logic_block_id = common::INVALID_BLOCK_ID) const;
-      int update_block_version(const int8_t step = common::VERSION_INC_STEP_DEFAULT, const uint64_t logic_block_id = common::INVALID_BLOCK_ID);
-      int get_block_info(common::BlockInfoV2& info, const uint64_t logic_block_id = common::INVALID_BLOCK_ID) const;
+      int check_block_version(common::BlockInfoV2& info, const int32_t remote_version) const;
+      int update_block_info(const common::BlockInfoV2& info) const;
+      int update_block_version(const int8_t step = common::VERSION_INC_STEP_DEFAULT);
+      int get_block_info(common::BlockInfoV2& info) const;
       virtual int check_block_intact() { return common::TFS_SUCCESS;}
       int load_index(const common::MMapOption mmap_option);
-      int traverse(std::vector<common::FileInfoV2>& finfos, const uint64_t logic_block_id = common::INVALID_BLOCK_ID) const;
-      int get_family_id(int64_t& family_id, const uint64_t logic_block_id = common::INVALID_BLOCK_ID) const;
-      int set_family_id(const int64_t family_id, const uint64_t logic_block_id = common::INVALID_BLOCK_ID);
-      int get_used_size(int32_t& size, const uint64_t logic_block_id = common::INVALID_BLOCK_ID) const;//data file length
-      int get_avail_size(int32_t& size, const uint64_t logic_block_id = common::INVALID_BLOCK_ID) const;
-      int write_file_infos(common::IndexHeaderV2& header, std::vector<common::FileInfoV2>& infos, const double threshold, const bool override = false, const uint64_t logic_block_id = common::INVALID_BLOCK_ID);
-      virtual int write(uint64_t& fileid, DataFile& datafile, const uint64_t logic_block_id = common::INVALID_BLOCK_ID);
-      int read(char* buf, int32_t& nbytes, const int32_t offset, const uint64_t fileid, const int8_t flag, const uint64_t logic_block_id = common::INVALID_BLOCK_ID);
+      int traverse(std::vector<common::FileInfoV2>& finfos, const uint64_t logic_block_id) const;
+      int get_family_id(int64_t& family_id) const;
+      int set_family_id(const int64_t family_id);
+      int get_used_offset(int32_t& size) const;//data file length
+      int get_avail_offset(int32_t& size) const;
+      int write_file_infos(common::IndexHeaderV2& header, std::vector<common::FileInfoV2>& infos, const double threshold);
+      virtual int write(uint64_t& fileid, DataFile& datafile, const uint64_t logic_block_id);
+      int read(char* buf, int32_t& nbytes, const int32_t offset, const uint64_t fileid,
+          const int8_t flag, const uint64_t logic_block_id);
       int pwrite(const char* buf, const int32_t nbytes, const int32_t offset);
       int pread(char* buf, int32_t& nbytes, const int32_t offset);
-      int stat(common::FileInfoV2& info, const uint64_t logic_block_id = common::INVALID_BLOCK_ID) const;
+      int stat(common::FileInfoV2& info, const uint64_t logic_block_id) const;
       virtual int unlink(int64_t& size, const uint64_t fileid, const int32_t action, const uint64_t logic_block_id = common::INVALID_BLOCK_ID);
 
       int64_t get_last_update_time() const { return 0;}//TODO
@@ -85,7 +90,15 @@ namespace tfs
 
     class LogicBlock : public BaseLogicBlock
     {
-      friend class LogicBlockIterator;
+      #ifdef TFS_GTEST
+        friend class TestLogicBlock;
+        FRIEND_TEST(TestLogicBlock, extend_block_);
+        FRIEND_TEST(TestLogicBlock, choose_physic_block);
+        FRIEND_TEST(TestLogicBlock, write_);
+        FRIEND_TEST(TestLogicBlock, write);
+        FRIEND_TEST(TestLogicBlock, unlink);
+        FRIEND_TEST(TestLogicBlock, scan_file);
+      #endif
       public:
         LogicBlock(BlockManager* manager, const uint64_t logic_block_id, const std::string& index_path);
         virtual ~LogicBlock();
@@ -102,32 +115,38 @@ namespace tfs
         int statistic_visit(common::ThroughputV2& throughput, const bool reset = false);
       private:
         IndexHandle* get_index_handle_() const { return dynamic_cast<IndexHandle*>(index_handle_);}
-    };
 
-    class LogicBlockIterator
-    {
       public:
-        LogicBlockIterator(LogicBlock& logic_block);
-        virtual ~LogicBlockIterator();
-        bool empty() const;
-        int next(int32_t& mem_offset, common::FileInfoV2*& info);
-        const common::FileInfoV2& get_file_info() const;
-        const char* get_data(const int32_t mem_offset) const;
-      private:
-        int32_t transfer_offet_disk_to_mem_(const int32_t disk_offset) const;
-        bool verify_length_(const int32_t mem_offset, const int32_t length) const;
-      private:
-        LogicBlock& logic_block_;
-        static const int32_t MAX_DATA_SIZE = 2 * 1024 * 1024;
-        char data_[MAX_DATA_SIZE];//从磁盘上读出的数据缓存
-        int32_t read_disk_offset_;//当前缓冲区在磁盘数据中的起始位置x
-        int32_t used_offset_;//磁盘文件大小(这里的offset是最后一个文件的起始位置)
-        int32_t mem_valid_size_;
-        BaseIndexHandle::iterator iter_;
+        class Iterator
+        {
+          public:
+            Iterator(LogicBlock& logic_block):
+              logic_block_(logic_block),
+              iter_(logic_block.get_index_handle_()->begin()),
+              used_offset_(0),
+              mem_valid_size_(0){}
+            virtual ~Iterator() {}
+            bool empty() const;
+            int next(int32_t& mem_offset, common::FileInfoV2*& info);
+            const common::FileInfoV2& get_file_info() const;
+            const char* get_data(int32_t& mem_offset, const int32_t size) const;
+          private:
+            LogicBlock& logic_block_;
+            BaseIndexHandle::iterator iter_;
+            int32_t used_offset_;//磁盘文件大小(这里的offset是最后一个文件的起始位置)
+            int32_t mem_valid_size_;
+            static const int32_t MAX_DATA_SIZE = 1 * 1024 * 1024;
+            char data_[MAX_DATA_SIZE];//从磁盘上读出的数据缓存
+        };
     };
 
     class VerifyLogicBlock : public BaseLogicBlock
     {
+      #ifdef TFS_GTEST
+        friend class TestLogicBlock;
+        FRIEND_TEST(TestLogicBlock, verify_write);
+        FRIEND_TEST(TestLogicBlock, verify_unlink);
+      #endif
       public:
         VerifyLogicBlock(BlockManager* manager, const uint64_t logic_block_id, const std::string& index_path);
         virtual ~VerifyLogicBlock();
