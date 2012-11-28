@@ -14,6 +14,9 @@ import org.apache.commons.logging.LogFactory;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.Rule;
+import org.junit.rules.TestWatcher;
+import org.junit.runner.Description;
 
 import com.taobao.common.tfs.DefaultTfsManager;
 import com.taobao.common.tfs.utility.FileUtility;
@@ -72,6 +75,31 @@ public class BaseCase
 		return bRet;
 	}
 	
+	@Rule
+	public TestWatcher watchman = new TestWatcher() {
+		protected String caseIdentifier = "";
+
+		protected void starting(Description d) {
+			caseIdentifier = d.getClassName() + "." + d.getMethodName();
+			System.out.println("starting: " + caseIdentifier);
+		}
+
+		protected void succeeded(Description d) {
+			caseIdentifier = d.getClassName() + " " + d.getMethodName();
+			System.out.println("succeeded: " + caseIdentifier);
+		}
+
+		protected void failed(Throwable e, Description d) {
+			caseIdentifier = d.getClassName() + " " + d.getMethodName();
+			System.out.println("failed: " + caseIdentifier);
+		}
+
+		protected void finished(Description d) {
+			caseIdentifier = d.getClassName() + " " + d.getMethodName();
+			System.out.println("finished: " + caseIdentifier);
+		}
+
+	};
 	@BeforeClass
 	public static void beforeSetup() 
 	{
