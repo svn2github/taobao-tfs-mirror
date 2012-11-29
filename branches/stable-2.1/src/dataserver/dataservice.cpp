@@ -821,7 +821,16 @@ namespace tfs
             {
               if (sync_mirror_.size() > 0)
               {
-                sync_mirror_.at(0)->write_sync_log(OPLOG_RENAME, block_id, new_file_id, file_id);
+                for (uint32_t i = 0; i < sync_mirror_.size(); i++)
+                {
+                  // ignore return value, just print error log for rename
+                  int tmp_ret = sync_mirror_.at(i)->write_sync_log(OPLOG_RENAME, block_id, new_file_id, file_id);
+                  if (TFS_SUCCESS != tmp_ret)
+                  {
+                    TBSYS_LOG(ERROR, " write sync log fail (id:%d), blockid: %u, fileid: %" PRI64_PREFIX "u, ret: %d",
+                      i, block_id, file_id, tmp_ret);
+                  }
+                }
               }
             }
             else if (!all_success)
@@ -868,8 +877,17 @@ namespace tfs
                   {
                     TBSYS_LOG(INFO, " write sync log, blockid: %u, fileid: %" PRI64_PREFIX "u", close_file_info.block_id_,
                         close_file_info.file_id_);
-                    iret = sync_mirror_.at(0)->write_sync_log(OPLOG_INSERT, close_file_info.block_id_,
-                        close_file_info.file_id_);
+                    for (uint32_t i = 0; i < sync_mirror_.size(); i++)
+                    {
+                      iret = sync_mirror_.at(i)->write_sync_log(OPLOG_INSERT, close_file_info.block_id_,
+                          close_file_info.file_id_);
+                      if (TFS_SUCCESS != iret)
+                      {
+                        TBSYS_LOG(ERROR, " write sync log fail (id:%d), blockid: %u, fileid: %" PRI64_PREFIX "u, ret: %d",
+                            i, close_file_info.block_id_, close_file_info.file_id_, iret);
+                        break;
+                      }
+                    }
                   }
                 }
               }
@@ -1331,8 +1349,17 @@ namespace tfs
                     {
                       TBSYS_LOG(INFO, " write sync log, blockid: %u, fileid: %" PRI64_PREFIX "u", close_file_info.block_id_,
                           close_file_info.file_id_);
-                      ret = sync_mirror_.at(0)->write_sync_log(OPLOG_INSERT, close_file_info.block_id_,
+                      for (uint32_t i = 0; i < sync_mirror_.size(); i++)
+                      {
+                        ret = sync_mirror_.at(i)->write_sync_log(OPLOG_INSERT, close_file_info.block_id_,
                           close_file_info.file_id_);
+                        if (TFS_SUCCESS != ret)
+                        {
+                          TBSYS_LOG(ERROR, " write sync log fail (id:%d), blockid: %u, fileid: %" PRI64_PREFIX "u, ret: %d",
+                              i, close_file_info.block_id_, close_file_info.file_id_, ret);
+                          break;
+                        }
+                      }
                     }
                   }
                 }
@@ -1801,7 +1828,18 @@ namespace tfs
           {
             TBSYS_LOG(DEBUG, "master dataserver: delete synclog. blockid: %d, fileid: %" PRI64_PREFIX "u, action: %d\n",
                 block_id, file_id, action);
-            sync_mirror_.at(0)->write_sync_log(OPLOG_REMOVE, block_id, file_id, action);
+            {
+              for (uint32_t i = 0; i < sync_mirror_.size(); i++)
+              {
+                // ignore return value, just print error log for unlink
+                int tmp_ret = sync_mirror_.at(i)->write_sync_log(OPLOG_REMOVE, block_id, file_id, action);
+                if (TFS_SUCCESS != tmp_ret)
+                {
+                  TBSYS_LOG(ERROR, " write sync log fail (id:%d), blockid: %u, fileid: %" PRI64_PREFIX "u, ret: %d",
+                      i, block_id, file_id, tmp_ret);
+                }
+              }
+            }
           }
         }
       }
