@@ -9,9 +9,10 @@ import org.junit.Test;
 
 import com.taobao.common.tfs.config.TfsStatus;
 import com.taobao.common.tfs.testcase.BaseCase;
+import com.taobao.common.tfs.testcase.rcTfsBaseCase;
 import com.taobao.common.tfs.utility.TimeUtility;
 
-public class ClusterPermissionTest extends BaseCase {
+public class ClusterPermissionTest extends rcTfsBaseCase {
 	private int clusterPerssion = 0;
 
 	@Test

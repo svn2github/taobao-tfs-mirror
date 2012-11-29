@@ -13,15 +13,11 @@ public class TfsStatus {
 	private Connection conn;
 
 	public TfsStatus() {
-//		String server = "10.232.36.208:3306";
-//		String dbName = "tfs_stat_diqing";
-//		String user = "foorbar";
-//		String password = "foorbar";
 		
-		String server = "10.232.36.208:3306";
-		String dbName = "tfs_stat_diqing";
-		String user = "foorbar";
-		String password = "foorbar";
+		String server = "10.232.4.6:3306";
+		String dbName = "tfs_stat_db";
+		String user = "root";
+		String password = "123";
 		conn = MySQLConnector.getConnection(server, dbName, user, password);
 		if (conn != null)
 		{
@@ -108,7 +104,6 @@ public class TfsStatus {
 				+ "(select CLUSTER_RACK_ID from t_cluster_rack_group where "
 				+ "CLUSTER_GROUP_ID=(select CLUSTER_GROUP_ID from t_app_info where APP_KEY=\""
 				+ appKey + "\"))";
-
 		Object value = getColumnValue(statement, "cluster_stat");
 
 		return parseInt(value);

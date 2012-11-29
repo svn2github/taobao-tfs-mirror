@@ -6,9 +6,10 @@ import org.junit.Test;
 import com.taobao.common.tfs.DefaultTfsManager;
 import com.taobao.common.tfs.config.TfsStatus;
 import com.taobao.common.tfs.testcase.BaseCase;
+import com.taobao.common.tfs.testcase.rcTfsBaseCase;
 import com.taobao.common.tfs.utility.TimeUtility;
 
-public class LoginOperationTest extends BaseCase {
+public class LoginOperationTest extends rcTfsBaseCase {
 	@Test
 	public void testInitWithClientRestart() {
 		log.info("begin: " + getCurrentFunctionName());

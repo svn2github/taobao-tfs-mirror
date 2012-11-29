@@ -10,9 +10,10 @@ import org.junit.Test;
 
 import com.taobao.common.tfs.config.TfsStatus;
 import com.taobao.common.tfs.testcase.BaseCase;
+import com.taobao.common.tfs.testcase.rcTfsBaseCase;
 import com.taobao.common.tfs.utility.TimeUtility;
 
-public class RcServerChangeTest extends BaseCase {
+public class RcServerChangeTest extends rcTfsBaseCase {
 	private String origRc = "";
 	private String newRc = "";
 	private List<String> addedRcs = new ArrayList<String>();

@@ -7,10 +7,11 @@ import org.junit.Test;
 import com.taobao.common.tfs.DefaultTfsManager;
 import com.taobao.common.tfs.config.TfsStatus;
 import com.taobao.common.tfs.testcase.BaseCase;
+import com.taobao.common.tfs.testcase.rcTfsBaseCase;
 import com.taobao.common.tfs.utility.FileUtility;
 import com.taobao.common.tfs.utility.TimeUtility;
 
-public class SaveFileOperationTest extends BaseCase {
+public class SaveFileOperationTest extends rcTfsBaseCase {
 
 //	@Test
 //	public void testForMysql(){

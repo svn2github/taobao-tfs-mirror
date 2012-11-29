@@ -10,9 +10,10 @@ import org.junit.Test;
 import com.taobao.common.tfs.DefaultTfsManager;
 import com.taobao.common.tfs.config.TfsStatus;
 import com.taobao.common.tfs.testcase.BaseCase;
+import com.taobao.common.tfs.testcase.rcTfsBaseCase;
 import com.taobao.common.tfs.utility.TimeUtility;
 
-public class GroupPermissionTest extends BaseCase {
+public class GroupPermissionTest extends rcTfsBaseCase {
 	private int groupPermission = 0;
 	private int clusterPerssion = 0;
 
