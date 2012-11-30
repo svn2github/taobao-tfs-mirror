@@ -153,4 +153,11 @@ typedef enum
   USE_CACHE_FLAG_REMOTE = 0x02
 } UseCacheFlag;
 
+typedef enum _FileStatus
+{
+  FILE_STATUS_NOMARL = 0,
+  FILE_STATUS_DELETE = 1,
+  FILE_STATUS_INVALID= 2,
+  FILE_STATUS_CONCEAL= 4
+}FileStatus;
 #endif

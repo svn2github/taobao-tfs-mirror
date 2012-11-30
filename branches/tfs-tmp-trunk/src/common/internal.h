@@ -51,7 +51,10 @@
 #define CHECK_MEMBER_NUM_V2(x, y) ( x > 0 && x <= MAX_DATA_MEMBER_NUM \
     && y > 0 && y <= MAX_CHECK_MEMBER_NUM && (x+y) > 0 && (x+y) <= MAX_MARSHALLING_NUM)
 
-//#define TFS_GTEST
+#define CHECK_BLOCK_SIZE(x) (x >= MIN_BLOCK_SIZE && x <= MAX_BLOCK_SIZE)
+#define CHECK_EXT_BLOCK_SIZE(x) (x >= MIN_EXT_BLOCK_SIZE && x <= MAX_EXT_BLOCK_SIZE)
+
+#define IS_VERFIFY_BLOCK(x) (x >> 63)
 
 #if __WORDSIZE == 32
 namespace __gnu_cxx
@@ -123,6 +126,8 @@ namespace tfs
     static const uint32_t INVALID_RACK_ID = 0;
     static const uint32_t INVALID_SERVER_ID = 0;
     static const int32_t  INVALID_VERSION = -1;
+    static const uint64_t INVALID_FILE_ID = 0;
+    static const int32_t  INVALID_PHYSICAL_BLOCK_ID = 0;
 
     static const int32_t SEGMENT_HEAD_RESERVE_SIZE = 64;
 
@@ -162,10 +167,18 @@ namespace tfs
     static const int32_t REPORT_BLOCK_NORMAL = 0;
     static const int32_t REPORT_BLOCK_EXT = 1;
 
-    static const int32_t MAX_MARSHALLING_NUM = 12;
     static const int32_t MAX_DATA_MEMBER_NUM = 8;
     static const int32_t MAX_CHECK_MEMBER_NUM = 4;
+    static const int32_t MAX_MARSHALLING_NUM = MAX_DATA_MEMBER_NUM + MAX_CHECK_MEMBER_NUM;
     static const int32_t MAX_MARSHALLING_BLOCK_SIZE_LIMIT = 128 * 1024 * 1024;
+
+    static const int32_t BLOCK_RESERVER_LENGTH = 512;
+
+    static const int32_t MAX_PHYSICAL_BLOCK_ID = 1048575;
+    static const int32_t MAX_EXT_BLOCK_SIZE    = 8 * 1024 * 1024;
+    static const int32_t MIN_EXT_BLOCK_SIZE    = 2 * 1024 * 1024;
+    static const int32_t MAX_BLOCK_SIZE        = 128 * 1024 * 1024;
+    static const int32_t MIN_BLOCK_SIZE        = 2 * 1024 * 1024;
 
     enum VersionStep
     {
@@ -824,6 +837,8 @@ namespace tfs
       int32_t first_mmap_size_;
       int32_t per_mmap_size_;
 
+      bool check() const;
+
       int serialize(char* data, const int64_t data_len, int64_t& pos) const;
       int deserialize(const char* data, const int64_t data_len, int64_t& pos);
       int64_t length() const;
@@ -1003,6 +1018,80 @@ namespace tfs
 
     extern const char* dynamic_parameter_str[43];
 
+
+    #pragma pack (1)
+    struct FileInfoV2//30
+    {
+    	uint64_t id_;//file id
+    	int32_t  offset_; //offset in block file
+    	int32_t  size_:28;// file size
+    	int8_t   status_:4;//delete flag
+    	uint32_t crc_; // checksum
+    	int32_t  modify_time_;//modify time
+    	int32_t create_time_; // create time
+    	uint16_t next_;      //next index
+    };
+    #pragma pack()
+
+    struct FileInfoInDiskReserve
+    {
+    	uint64_t reserve_[4];
+    };
+
+    struct FileInfoInDiskExt//4
+    {
+    	int32_t  version_;//
+    };
+
+    struct BlockInfoV2
+    {
+      uint64_t block_id_;
+    	int64_t family_id_;
+      int32_t version_;
+      int32_t file_count_;
+      int32_t size_;
+      int32_t del_file_count_;
+      int32_t del_size_;
+      uint32_t seq_no_;
+      bool operator < (const BlockInfoV2& rhs) const
+      {
+        return block_id_ < rhs.block_id_;
+      }
+    };
+
+    struct ThroughputV2
+    {
+    	int64_t write_bytes_;
+    	int64_t read_bytes_;
+    	int64_t update_bytes_;
+      int64_t unlink_bytes_;
+    	int64_t write_visit_count_;
+    	int64_t read_visit_count_;
+    	int64_t update_visit_count_;
+      int64_t unlink_visit_count_;
+      int64_t last_update_time_;
+      int64_t last_statistics_time_;
+    };
+
+    struct IndexHeaderV2
+    {
+    	common::BlockInfoV2 info_;//32 + 7 * 8 + 3 *4 = 100
+      ThroughputV2 throughput_;
+      int32_t used_offset_;
+      int32_t avail_offset_;
+      int32_t marshalling_offset_;
+    	union
+    	{
+    		uint16_t file_info_bucket_size_;
+    		uint16_t index_num_;
+    	};
+    	uint16_t used_file_info_bucket_size_;
+      int8_t  max_index_num_;
+    	int8_t  reserve_[3];
+
+      bool check_need_mremap(const double threshold) const;
+    };
+
     // defined type typedef
     typedef std::vector<BlockInfo> BLOCK_INFO_LIST;
     typedef std::vector<FileInfo> FILE_INFO_LIST;
@@ -1028,6 +1117,8 @@ namespace tfs
     static const int32_t FILEINFO_SIZE = sizeof(FileInfo);
     static const int32_t BLOCKINFO_SIZE = sizeof(BlockInfo);
     static const int32_t RAW_META_SIZE = sizeof(RawMeta);
+    static const int32_t INDEX_HEADER_V2_LENGTH = sizeof(IndexHeaderV2);
+    static const int32_t FILE_INFO_V2_LENGTH    = sizeof(FileInfoV2);
   }/** end namespace common*/
 }/** end namespace tfs **/
 

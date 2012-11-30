@@ -950,6 +950,13 @@ namespace tfs
       return common::INT_SIZE * 3 + common::INT64_SIZE * 2;
     }
 
+
+    bool MMapOption::check() const
+    {
+      return (max_mmap_size_ > 0 && first_mmap_size_ >= 0 && per_mmap_size_ > 0
+             && first_mmap_size_ <= max_mmap_size_ && per_mmap_size_ <= max_mmap_size_);
+    }
+
     int MMapOption::serialize(char* data, const int64_t data_len, int64_t& pos) const
     {
       int32_t iret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
@@ -1454,5 +1461,16 @@ namespace tfs
       return common::INT64_SIZE + common::INT_SIZE + MEMBER_NUM * (INT_SIZE + INT64_SIZE);
     }
 
+    bool IndexHeaderV2::check_need_mremap(const double threshold) const
+    {
+      bool ret = (file_info_bucket_size_ > 0 && used_file_info_bucket_size_ > 0);
+      if (ret)
+      {
+        double ratio = static_cast<double>(used_file_info_bucket_size_) / static_cast<double>(file_info_bucket_size_);
+        ret = ratio >= threshold;
+        //TBSYS_LOG(INFO, "need remap %d, %e, %e", ret, ratio, threshold);
+      }
+      return ret;
+    }
   } /** nameserver **/
 }/** tfs **/

@@ -272,7 +272,7 @@ namespace tfs
     template <typename T, typename Compare>
       typename TfsSortedVector<T, Compare>::value_type TfsSortedVector<T, Compare>::erase(const_value_type value)
       {
-        value_type return_value;
+        value_type return_value = 0;
         iterator pos = find(value);
         if (storage_.end() != pos)
         {

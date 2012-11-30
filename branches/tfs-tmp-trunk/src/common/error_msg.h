@@ -55,6 +55,10 @@ namespace tfs
     const int32_t EXIT_MYSQL_DATA_TRUNCATED = -1030;
     const int32_t EXIT_MYSQL_FETCH_DATA_ERROR = -1031;
     const int32_t EXIT_OUT_OF_RANGE = -1032;
+    const int32_t EXIT_MMAP_DATA_INVALID = -1033;
+    const int32_t EXIT_CREATE_DIR_ERROR = -1034;
+    const int32_t EXIT_RM_DIR_ERROR = -1035;
+    const int32_t EXIT_ALREADY_MMAPPED_ERROR = -1036;
 
     const int32_t EXIT_FILE_OP_ERROR = -2000;
     const int32_t EXIT_OPEN_FILE_ERROR = -2001;
@@ -66,6 +70,7 @@ namespace tfs
     const int32_t EXIT_FILE_FORMAT_ERROR = -2007;
     const int32_t EXIT_SLOTS_OFFSET_SIZE_ERROR = -2008;
     const int32_t EXIT_FILE_BUSY_ERROR = -2009;
+    const int32_t EXIT_UNLINK_FILE_ERROR = -2010;
 
     const int32_t EXIT_NETWORK_ERROR = -3000;
     const int32_t EXIT_IOCTL_ERROR = -3001;
@@ -177,6 +182,32 @@ namespace tfs
     const int32_t EXIT_RESOLVE_BLOCK_VERSION_CONFLICT_ERROR = -8041;
     const int32_t EXIT_NOT_DATA_INDEX = -8042;
     const int32_t EXIT_NOT_PARITY_INDEX = -8043;
+    const int32_t EXIT_PHYSICAL_ID_INVALID = -8044;
+    const int32_t EXIT_FS_TYPE_ERROR = -8045;
+    const int32_t EXIT_BLOCK_SIZE_INVALID = -8046;
+    const int32_t EXIT_ARG_SEGMENT_SIZE_INVALID = -8047;
+    const int32_t EXIT_MOUNT_POINT_ERROR = -8048;
+    const int32_t EXIT_ADD_LOGIC_BLOCK_ERROR = -8049;
+    const int32_t EXIT_ADD_PHYSICAL_BLOCK_ERROR = -8050;
+    const int32_t EXIT_SUPERBLOCK_INVALID_ERROR = -8051;
+    const int32_t EXIT_BLOCK_NO_DATA = -8052;
+    const int32_t EXIT_FILE_EMPTY = -8053;
+    const int32_t EXIT_PHYSICAL_BLOCK_NOT_FOUND = -8054;
+    const int32_t EXIT_READ_ALLOC_BIT_MAP_ERROR = -8055;
+    const int32_t EXIT_BIT_MAP_OUT_OF_RANGE = -8056;
+    const int32_t EXIT_ALLOC_PHYSICAL_BLOCK_ERROR = -8057;
+    const int32_t EXIT_INDEX_NOT_LOAD_ERROR = -8058;
+    const int32_t EXIT_INDEX_HEADER_NOT_FOUND = -8059;
+    const int32_t EXIT_INSERT_INDEX_SLOT_NOT_FOUND_ERROR   = -8060;
+    const int32_t EXIT_INVALID_FILE_ID_ERROR = -8061;
+    const int32_t EXIT_WRITE_ALLOC_BIT_MAP_ERROR = -8062;
+    const int32_t EXIT_LOGIC_BLOCK_NOT_EXIST_ERROR = -8063;
+    const int32_t EXIT_MAX_BLOCK_INDEX_COUNT_INVALID = -8064;
+    const int32_t EXIT_MOUNT_SPACE_SIZE_ERROR = -8065;
+    const int32_t EXIT_PHYSICAL_BLOCK_EXIST_ERROR = -8066;
+    const int32_t EXIT_VERIFY_INDEX_BLOCK_NOT_FOUND_ERROR = -8067;
+    const int32_t EXIT_INDEX_DATA_INVALID_ERROR = -8068;
+    const int32_t EXIT_ALLOC_PHYSICAL_BLOCK_USE_ERROR = -8069;//当前物理BLOCK正在使用
 
     const int32_t EXIT_SESSION_EXIST_ERROR = -9001;
     const int32_t EXIT_SESSIONID_INVALID_ERROR = -9002;
