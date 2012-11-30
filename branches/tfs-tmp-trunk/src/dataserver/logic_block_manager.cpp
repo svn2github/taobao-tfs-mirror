@@ -277,17 +277,10 @@ namespace tfs
       const int32_t EXPIRED_TIME_MS = 5 * 60 * 1000;
       expired_blocks.clear();
       TMP_LOGIC_BLOCK_MAP_ITER iter = tmp_logic_blocks_.begin();
-      for (; iter != tmp_logic_blocks_.end(); )
+      for (; iter != tmp_logic_blocks_.end(); ++iter)
       {
         if (iter->second->get_last_update_time() + EXPIRED_TIME_MS >= now)
-        {
           expired_blocks.push_back(iter->second->id());
-          tmp_logic_blocks_.erase(iter++);
-        }
-        else
-        {
-          ++iter;
-        }
       }
       return TFS_SUCCESS;
     }

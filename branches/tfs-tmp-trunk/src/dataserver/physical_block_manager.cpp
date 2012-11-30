@@ -112,11 +112,11 @@ namespace tfs
 
     int PhysicalBlockManager::remove(BasePhysicalBlock*& physical_block, const int32_t physcical_block_id)
     {
+      BlockIndex index;
       physical_block = NULL;
-      int32_t ret = (INVALID_PHYSICAL_BLOCK_ID!= physcical_block_id) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+      int32_t ret = (INVALID_PHYSICAL_BLOCK_ID != physcical_block_id) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
-        BlockIndex index;
         SuperBlockManager& supber_block_manager = get_block_manager().get_super_block_manager();
         ret = supber_block_manager.get_block_index(index, physcical_block_id);
         if (TFS_SUCCESS == ret)
@@ -139,12 +139,13 @@ namespace tfs
           }
         }
       }
+      TBSYS_LOG(INFO, "free physical block: %d %s %d, logic block id: %"PRI64_PREFIX"u",
+          index.physical_block_id_, TFS_SUCCESS == ret ? "successful" : "failed", ret, index.logic_block_id_);
       return ret;
     }
 
-    int PhysicalBlockManager::alloc_block(BlockIndex& index, const int8_t split_flag)
+    int PhysicalBlockManager::alloc_block(BlockIndex& index, const int8_t split_flag, const bool flush)
     {
-      bool flush = false;
       int32_t retry_times = 3;
       SuperBlockInfo* info = NULL;
       SuperBlockManager& supber_block_manager = get_block_manager().get_super_block_manager();
@@ -177,22 +178,24 @@ namespace tfs
                 const int32_t start = BLOCK_RESERVER_LENGTH;
                 const int32_t end   = info->max_main_block_size_ + BLOCK_RESERVER_LENGTH;
                 ret = insert_(index, index.physical_block_id_, path.str(), start, end);
-                flush = TFS_SUCCESS == ret;
               }
+            }
+
+            if (TFS_SUCCESS == ret)
+            {
+              ret = supber_block_manager.update_block_index(index, index.physical_block_id_);
             }
 
             if (TFS_SUCCESS == ret && flush)
             {
-              ret = supber_block_manager.update_block_index(index, index.physical_block_id_);
-              if (TFS_SUCCESS == ret)
-              {
-                ret = supber_block_manager.flush();
-              }
+              ret = supber_block_manager.flush();
             }
           }
         }
         while (TFS_SUCCESS != ret && retry_times -- > 0);
       }
+      TBSYS_LOG(INFO, "alloc physical block: %d %s %d, logic block id: %"PRI64_PREFIX"u",
+          index.physical_block_id_, TFS_SUCCESS == ret ? "successful" : "failed", ret, index.logic_block_id_);
       return ret;
     }
 
@@ -296,19 +299,21 @@ namespace tfs
         }
         while (TFS_SUCCESS != ret && retry_times-- > 0);
       }
+      TBSYS_LOG(INFO, "alloc physical extend block: %d %s %d, physical block file name id: %d, logic block id: %"PRI64_PREFIX"u",
+          ext_index.physical_block_id_, TFS_SUCCESS == ret ? "successful" : "failed", ret, ext_index.physical_file_name_id_, ext_index.logic_block_id_);
       return ret;
     }
 
     int PhysicalBlockManager::free_ext_block(const BlockIndex& index, bool flush)
     {
-      int32_t ret = (BLOCK_SPLIT_FLAG_YES == index.split_flag_) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+      int32_t ret = (0 == index.index_ &&  BLOCK_SPLIT_FLAG_YES != index.split_flag_) ? EXIT_PARAMETER_ERROR : TFS_SUCCESS;
       if (TFS_SUCCESS == ret)
       {
         bool cleanup = false;
         AllocPhysicalBlock* physical_block = NULL;
         BasePhysicalBlock query(index.physical_file_name_id_);
         PHYSICAL_BLOCK_MAP_ITER iter = physical_blocks_.find(&query);
-        ret = (physical_blocks_.end() != iter) ? TFS_SUCCESS : EXIT_PHYSICAL_BLOCK_NOT_FOUND;
+        int32_t ret = (physical_blocks_.end() != iter) ? TFS_SUCCESS : EXIT_PHYSICAL_BLOCK_NOT_FOUND;
         if (TFS_SUCCESS == ret)
         {
           physical_block = dynamic_cast<AllocPhysicalBlock*>((*iter));
@@ -361,6 +366,8 @@ namespace tfs
           }
         }
       }
+      TBSYS_LOG(INFO, "free physical extend block: %d %s %d, physical block file name id: %d, logic block id: %"PRI64_PREFIX"u",
+          index.physical_block_id_, TFS_SUCCESS == ret ? "successful" : "failed", ret, index.physical_file_name_id_, index.logic_block_id_);
       return ret;
     }
 

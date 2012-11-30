@@ -24,9 +24,16 @@ namespace tfs
 {
   namespace dataserver
   {
+    struct LogicBlockIdCompare
+    {
+      bool operator ()(const BaseLogicBlock* lhs, const BaseLogicBlock* rhs) const
+      {
+        return lhs->id() < rhs->id();
+      }
+    };
     class LogicBlockManager
     {
-      typedef common::TfsSortedVector<BaseLogicBlock*> LOGIC_BLOCK_MAP;
+      typedef common::TfsSortedVector<BaseLogicBlock*, LogicBlockIdCompare> LOGIC_BLOCK_MAP;
       typedef LOGIC_BLOCK_MAP::iterator LOGIC_BLOCK_MAP_ITER;
       typedef std::map<uint64_t, BaseLogicBlock*> TMP_LOGIC_BLOCK_MAP;
       typedef TMP_LOGIC_BLOCK_MAP::iterator TMP_LOGIC_BLOCK_MAP_ITER;

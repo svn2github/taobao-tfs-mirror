@@ -62,6 +62,8 @@ namespace tfs
       int set_family_id(const int64_t family_id);
       int get_used_offset(int32_t& size) const;//data file length
       int get_avail_offset(int32_t& size) const;
+      int get_marshalling_offset(int32_t& offset) const;
+      int set_marshalling_offset(const int32_t size);
       int write_file_infos(common::IndexHeaderV2& header, std::vector<common::FileInfoV2>& infos, const double threshold);
       virtual int write(uint64_t& fileid, DataFile& datafile, const uint64_t logic_block_id);
       int read(char* buf, int32_t& nbytes, const int32_t offset, const uint64_t fileid,

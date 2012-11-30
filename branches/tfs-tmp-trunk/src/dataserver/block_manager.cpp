@@ -83,10 +83,10 @@ namespace tfs
       return ret;
     }
 
-    int BlockManager::new_block(const uint64_t logic_block_id, const bool tmp)
+    int BlockManager::new_block(const uint64_t logic_block_id, const bool tmp, const int64_t family_id, const int8_t index_num)
     {
       SuperBlockInfo* info = NULL;
-      int32_t ret = (INVALID_BLOCK_ID == logic_block_id) ? EXIT_PARAMETER_ERROR : TFS_SUCCESS;
+      int32_t ret = (INVALID_BLOCK_ID != logic_block_id) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
         ret = get_logic_block_manager().exist(logic_block_id, tmp) ? EXIT_BLOCK_EXIST_ERROR : TFS_SUCCESS;
@@ -98,9 +98,10 @@ namespace tfs
       if (TFS_SUCCESS == ret)
       {
         BlockIndex index;
+        memset(&index, 0, sizeof(index));
         index.logic_block_id_ = logic_block_id;
-        BasePhysicalBlock* physical_block = NULL;
         BaseLogicBlock*    logic_block = NULL;
+        BasePhysicalBlock* physical_block = NULL;
         ret = get_physical_block_manager().alloc_block(index, BLOCK_SPLIT_FLAG_NO);
         if (TFS_SUCCESS == ret)
         {
@@ -114,20 +115,41 @@ namespace tfs
           logic_block = insert_logic_block_(index.logic_block_id_, index_path.str(), tmp);
           ret = (NULL != logic_block) ? TFS_SUCCESS : EXIT_ADD_LOGIC_BLOCK_ERROR;
           if (TFS_SUCCESS != ret)
+          {
             get_physical_block_manager().remove(physical_block, index.physical_block_id_);
+            tbsys::gDelete(physical_block);//TODO, add object to gc map
+          }
         }
         if (TFS_SUCCESS == ret)
         {
           assert(NULL != logic_block);
-          logic_block->add_physical_block(dynamic_cast<PhysicalBlock*>(physical_block));
-          ret = dynamic_cast<LogicBlock*>(logic_block)->create_index(info->hash_bucket_count_, info->mmap_option_);
+          if (IS_VERFIFY_BLOCK(logic_block_id))
+          {
+            VerifyLogicBlock* verify_logic_block = dynamic_cast<VerifyLogicBlock*>(logic_block);
+            ret = verify_logic_block->create_index(logic_block_id, family_id, index_num);
+          }
+          else
+          {
+            LogicBlock* data_logic_block = dynamic_cast<LogicBlock*>(logic_block);
+            ret = data_logic_block->create_index(info->hash_bucket_count_, info->mmap_option_);
+          }
+          if (TFS_SUCCESS == ret)
+          {
+            ++info->used_main_block_count_;
+            logic_block->add_physical_block(dynamic_cast<PhysicalBlock*>(physical_block));
+            ret = get_super_block_manager().flush();
+          }
           if (TFS_SUCCESS != ret)
           {
             get_logic_block_manager().remove(logic_block, index.logic_block_id_, tmp);
             get_physical_block_manager().remove(physical_block, index.physical_block_id_);
+            tbsys::gDelete(logic_block);//TODO, add object to gc map
+            tbsys::gDelete(physical_block);//TODO, add object to gc map
           }
         }
       }
+      TBSYS_LOG(INFO, "alloc logic block : %"PRI64_PREFIX"u, %s, ret: %d, tmp: %s, family id: %"PRI64_PREFIX"d, index_num: %d",
+        logic_block_id, TFS_SUCCESS == ret ? "successful" : "failed", ret, tmp ? "true" : "false", family_id, index_num);
       return ret;
     }
 
@@ -135,7 +157,7 @@ namespace tfs
     {
       SuperBlockInfo* info = NULL;
       BaseLogicBlock* logic_block = NULL;
-      int32_t ret = (INVALID_BLOCK_ID == logic_block_id) ? EXIT_PARAMETER_ERROR : TFS_SUCCESS;
+      int32_t ret = (INVALID_BLOCK_ID != logic_block_id) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
         ret = get_super_block_manager().get_super_block_info(info);
@@ -147,16 +169,11 @@ namespace tfs
       }
       if (TFS_SUCCESS == ret)
       {
-        logic_block = NULL;
         ret = get_logic_block_manager().remove(logic_block, logic_block_id);//remove logic block form logic block map, but not free pointer
       }
       if (TFS_SUCCESS == ret)
       {
-        assert(logic_block != NULL);
-        ret = logic_block->rename_index_filename();//rename index file name
-      }
-      if (TFS_SUCCESS == ret)
-      {
+        logic_block->rename_index_filename();//rename index file name
         BasePhysicalBlock* physical_block = NULL;
         std::vector<int32_t> physical_blocks;
         logic_block->get_all_physical_blocks(physical_blocks);
@@ -167,9 +184,9 @@ namespace tfs
           assert(TFS_SUCCESS == ret);
           ret = get_super_block_manager().cleanup_block_index((*iter));//cleanup block index
           assert(TFS_SUCCESS == ret);
-          //TODO, add physical block object to gc object map
+          tbsys::gDelete(physical_block);//TODO, add physical block object to gc object map
         }
-        //TODO, add logic block object to gc object map
+        tbsys::gDelete(logic_block);//TODO, add logic block object to gc object map
 
         if (TFS_SUCCESS == ret)
         {
@@ -178,6 +195,8 @@ namespace tfs
           ret = get_super_block_manager().flush();
         }
       }
+      TBSYS_LOG(INFO, "free logic block : %"PRI64_PREFIX"u, %s, ret: %d, tmp: %s",
+        logic_block_id, TFS_SUCCESS == ret ? "successful" : "failed", ret, tmp ? "true" : "false");
       return ret;
     }
 
@@ -231,7 +250,7 @@ namespace tfs
 
     int BlockManager::switch_logic_block(const uint64_t logic_block_id, const bool tmp)
     {
-      int32_t ret = (INVALID_BLOCK_ID == logic_block_id) ? EXIT_PARAMETER_ERROR : TFS_SUCCESS;
+      int32_t ret = (INVALID_BLOCK_ID != logic_block_id) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
         ret = get_logic_block_manager().switch_logic_block(logic_block_id, tmp);
@@ -250,7 +269,9 @@ namespace tfs
         {
           ret = del_block((*iter), true);
           if (TFS_SUCCESS != ret)
+          {
             TBSYS_LOG(WARN, "delete logic block : %"PRI64_PREFIX"u from tmp logic block map failed, ret: %d",(*iter), ret);
+          }
         }
       }
       return ret;
@@ -261,15 +282,11 @@ namespace tfs
       int32_t ret = (remote_version >= 0 && INVALID_BLOCK_ID != logic_block_id) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
-        int32_t ret = (INVALID_BLOCK_ID != logic_block_id) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+        BaseLogicBlock* logic_block = get(logic_block_id);
+        ret = (NULL != logic_block) ? TFS_SUCCESS  : EXIT_NO_LOGICBLOCK_ERROR;
         if (TFS_SUCCESS == ret)
         {
-          BaseLogicBlock* logic_block = get(logic_block_id);
-          ret = (NULL != logic_block) ? TFS_SUCCESS  : EXIT_NO_LOGICBLOCK_ERROR;
-          if (TFS_SUCCESS == ret)
-          {
-            ret = logic_block->check_block_version(info, remote_version);
-          }
+          ret = logic_block->check_block_version(info, remote_version);
         }
       }
       return ret;
@@ -353,7 +370,8 @@ namespace tfs
     int BlockManager::write(uint64_t& fileid, DataFile& datafile, const uint64_t logic_block_id,
         const uint64_t attach_logic_block_id)
     {
-      int32_t ret = (datafile.length() > 0 && INVALID_BLOCK_ID != logic_block_id) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+      int32_t ret = (datafile.length() > 0 && INVALID_BLOCK_ID != logic_block_id
+                && INVALID_BLOCK_ID != attach_logic_block_id) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
         BaseLogicBlock* logic_block = get(logic_block_id);
@@ -369,8 +387,8 @@ namespace tfs
     int BlockManager::read(char* buf, int32_t& nbytes, const int32_t offset,
         const uint64_t fileid, const int8_t flag, const uint64_t logic_block_id, const uint64_t attach_logic_block_id)
     {
-      int32_t ret = (NULL != buf && nbytes >= 0 && offset >= 0 && INVALID_FILE_ID != fileid && flag >= 0 && INVALID_BLOCK_ID != logic_block_id)
-                    ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+      int32_t ret = (NULL != buf && nbytes > 0 && offset >= 0 && INVALID_FILE_ID != fileid && flag >= 0
+            && INVALID_BLOCK_ID != logic_block_id && INVALID_BLOCK_ID != attach_logic_block_id) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
         BaseLogicBlock* logic_block = get(logic_block_id);
@@ -385,7 +403,8 @@ namespace tfs
 
     int BlockManager::stat(FileInfoV2& info,const uint64_t logic_block_id, const uint64_t attach_logic_block_id) const
     {
-      int32_t ret = (INVALID_FILE_ID != info.id_) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+      int32_t ret = (INVALID_FILE_ID != info.id_ && INVALID_BLOCK_ID != logic_block_id
+                && INVALID_BLOCK_ID != attach_logic_block_id) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
         BaseLogicBlock* logic_block = get(logic_block_id);
@@ -402,7 +421,8 @@ namespace tfs
         const uint64_t logic_block_id, const uint64_t attach_logic_block_id)
     {
       size = 0;
-      int32_t ret = (INVALID_FILE_ID != fileid && INVALID_BLOCK_ID != logic_block_id) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+      int32_t ret = (INVALID_FILE_ID != fileid && INVALID_BLOCK_ID != logic_block_id
+                && INVALID_BLOCK_ID != attach_logic_block_id) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
         BaseLogicBlock* logic_block = get(logic_block_id);
@@ -415,23 +435,34 @@ namespace tfs
       return ret;
     }
 
+    bool BlockManager::exist(const uint64_t logic_block_id, const bool tmp) const
+    {
+      return logic_block_manager_.exist(logic_block_id, tmp);
+    }
+
     int BlockManager::load_super_block_(const common::FileSystemParameter& parameter)
     {
       SuperBlockInfo* info = NULL;
       int32_t ret =  get_super_block_manager().load();
       if (TFS_SUCCESS != ret)
+      {
         TBSYS_LOG(ERROR, "load super block error, ret: %d, errors: %d, %s", ret, errno, strerror(errno));
+      }
       if (TFS_SUCCESS == ret)
       {
         ret = get_super_block_manager().get_super_block_info(info);
         if (TFS_SUCCESS != ret)
+        {
           TBSYS_LOG(ERROR, "read super block information error, ret: %d", ret);
+        }
       }
       if (TFS_SUCCESS == ret)
       {
         ret = 0 == memcmp(DEV_TAG, info->mount_tag_, strlen(DEV_TAG) + 1) ? TFS_SUCCESS : EXIT_FS_NOTINIT_ERROR;
         if (TFS_SUCCESS != ret)
+        {
           TBSYS_LOG(ERROR, "file system not initialized. please format it first, ret: %d", ret);
+        }
       }
       if (TFS_SUCCESS == ret)
       {
@@ -453,99 +484,60 @@ namespace tfs
       if (TFS_SUCCESS == ret)
       {
         BlockIndex index;
-        for (int32_t id = 0; id < info->used_main_block_count_ && TFS_SUCCESS == ret; ++id)
+        for (int32_t id = 1; id <= info->total_main_block_count_ && TFS_SUCCESS == ret; ++id)
         {
           ret = get_super_block_manager().get_block_index(index, id);
           if (TFS_SUCCESS == ret)
           {
-            if (INVALID_BLOCK_ID == index.logic_block_id_)
+            if (INVALID_PHYSICAL_BLOCK_ID != index.physical_block_id_
+                && INVALID_BLOCK_ID == index.logic_block_id_)
             {
-              memset(&index, 0, sizeof(index));
-              ret = get_super_block_manager().update_block_index(index,index.physical_block_id_);
+              TBSYS_LOG(WARN, "physical block %d mybe reuse, physical block file name id : %d", index.physical_block_id_, index.physical_file_name_id_);
+              ret = get_super_block_manager().cleanup_block_index(index.physical_block_id_);
               if (TFS_SUCCESS == ret)
                 ret = get_super_block_manager().flush();
               continue;
             }
 
-            if ((index.physical_block_id_ == index.physical_file_name_id_ )
-                && (BLOCK_SPLIT_FLAG_NO == index.split_flag_))
+            if (INVALID_PHYSICAL_BLOCK_ID == index.physical_block_id_)
+              continue;
+
+            if (get_physical_block_manager().exist(index.physical_block_id_))
+              continue;
+
+            std::stringstream physical_block_path;
+            bool complete = (BLOCK_CREATE_COMPLETE_STATUS_COMPLETE == index.status_);
+            physical_block_path << info->mount_point_ << MAINBLOCK_DIR_PREFIX << index.physical_file_name_id_;
+            BasePhysicalBlock* physical_block = insert_physical_block_(*info, index, index.physical_block_id_, physical_block_path.str());
+            ret = (NULL != physical_block) ? TFS_SUCCESS : EXIT_ADD_PHYSICAL_BLOCK_ERROR;
+            BaseLogicBlock* logic_block = NULL;
+            if (TFS_SUCCESS == ret)
             {
-              bool complete = (BLOCK_CREATE_COMPLETE_STATUS_COMPLETE == index.status_);
-
-              BasePhysicalBlock* physical_block = NULL;
-              std::stringstream index_path;
-              index_path << info->mount_point_ << INDEX_DIR_PREFIX << index.physical_block_id_;
-              BaseLogicBlock* logic_block = insert_logic_block_(index.logic_block_id_, index_path.str());
-              ret = (NULL != logic_block) ? TFS_SUCCESS : EXIT_ADD_LOGIC_BLOCK_ERROR;
-              if (TFS_SUCCESS == ret)
+              if (get_logic_block_manager().exist(index.logic_block_id_))
               {
-                std::stringstream physical_block_path;
-                physical_block_path << info->mount_point_ << MAINBLOCK_DIR_PREFIX << index.physical_file_name_id_;
-                physical_block = insert_physical_block_(*info, index, index.physical_block_id_, physical_block_path.str());
-                ret = (NULL != physical_block) ? TFS_SUCCESS : EXIT_ADD_PHYSICAL_BLOCK_ERROR;
+                logic_block = get_logic_block_manager().get(index.logic_block_id_);
               }
-
-              if (TFS_SUCCESS == ret)
+              else
               {
-                if (BLOCK_SPLIT_FLAG_NO == index.split_flag_)
-                  ret = logic_block->add_physical_block(dynamic_cast<PhysicalBlock*>(physical_block));
+                std::stringstream index_path;
+                index_path << info->mount_point_ << INDEX_DIR_PREFIX << index.physical_block_id_;
+                logic_block = insert_logic_block_(index.logic_block_id_, index_path.str());
               }
+            }
 
-              if (TFS_SUCCESS == ret)
-              {
-                BlockIndex ext_index = index;
-                while (0 != ext_index.next_index_ && TFS_SUCCESS == ret)
-                {
-                  ret = get_super_block_manager().get_block_index(ext_index, ext_index.next_index_);
-                  if (TFS_SUCCESS == ret)
-                  {
-                    if (!complete)
-                      complete = (BLOCK_CREATE_COMPLETE_STATUS_COMPLETE == ext_index.status_);
-                    if (INVALID_BLOCK_ID == ext_index.logic_block_id_
-                        || index.logic_block_id_ != ext_index.logic_block_id_
-                        || id != ext_index.prev_index_)
-                    {
-                      memset(&ext_index, 0, sizeof(ext_index));
-                      ret = get_super_block_manager().update_block_index(ext_index, ext_index.physical_block_id_);
-                      if (TFS_SUCCESS == ret)
-                        ret = get_super_block_manager().flush();
-                      continue;
-                    }
+            if (!complete && TFS_SUCCESS == ret)
+            {
+              ret = del_block(index.logic_block_id_);
+            }
 
-                    std::stringstream ext_physical_block_path;
-                    ext_physical_block_path << info->mount_point_ << MAINBLOCK_DIR_PREFIX << ext_index.physical_file_name_id_;
-                    physical_block = insert_physical_block_(*info, ext_index, ext_index.physical_block_id_, ext_physical_block_path.str());
-                    ret = (NULL != physical_block) ? TFS_SUCCESS : EXIT_ADD_PHYSICAL_BLOCK_ERROR;
-                    if (TFS_SUCCESS == ret)
-                    {
-                      if (BLOCK_SPLIT_FLAG_NO == index.split_flag_)
-                        ret = logic_block->add_physical_block(dynamic_cast<PhysicalBlock*>(physical_block));
-                    }
-                  }
-                }//end while
-              }//end if (TFS_SUCCESS == ret)
+            if (complete && TFS_SUCCESS == ret)
+            {
+              ret = logic_block->load_index(info->mmap_option_);
+            }
 
-              if (TFS_SUCCESS == ret)
-              {
-                if (!complete)
-                {
-                  ret = del_block(index.logic_block_id_);
-                }
-                if (complete && TFS_SUCCESS == ret)
-                {
-                  ret = logic_block->load_index(info->mmap_option_);
-                }
-                if (complete && TFS_SUCCESS == ret)
-                {
-                  //检测LOGICBLOCK是否完整
-                  ret = logic_block->check_block_intact();
-                  if (TFS_SUCCESS != ret)
-                  {
-                    //TODO,不完整的BLOCK是否需要直接删除？？？
-                    ret = del_block(index.logic_block_id_);
-                  }
-                }
-              }
+            if (complete && TFS_SUCCESS == ret && BLOCK_SPLIT_FLAG_NO == index.split_flag_ )
+            {
+              ret = logic_block->add_physical_block(dynamic_cast<PhysicalBlock*>(physical_block));
             }
           }
         }//end for
@@ -574,8 +566,7 @@ namespace tfs
       return TFS_SUCCESS;
     }
 
-#define CHECK_VALUE_RANGE(current, max, min) (current >= min && current <= max)
-
+    #define CHECK_VALUE_RANGE(current, max, min) (current >= min && current <= max)
     int BlockManager::create_file_system_superblock_(const FileSystemParameter& parameter)
     {
       SuperBlockInfo info;
@@ -588,6 +579,9 @@ namespace tfs
       info.mount_fs_type_ = parameter.base_fs_type_;
       info.max_main_block_size_   = parameter.main_block_size_;
       info.max_extend_block_size_ = parameter.extend_block_size_;
+      info.max_use_hash_bucket_ratio_ = parameter.hash_slot_ratio_;
+      info.max_use_block_ratio_   = parameter.block_type_ratio_;
+      info.superblock_reserve_offset_ = parameter.super_block_reserve_offset_;
 
       int ret = (EXT4 != info.mount_fs_type_ && EXT3_FULL != info.mount_fs_type_ && EXT3_FTRUN != info.mount_fs_type_)
         ? EXIT_FS_TYPE_ERROR : TFS_SUCCESS;
@@ -604,17 +598,12 @@ namespace tfs
           ret = parameter.avg_segment_size_ > 0 ? TFS_SUCCESS : EXIT_ARG_SEGMENT_SIZE_INVALID;
         }
 
-        int64_t avail_data_space = 0;
         if (TFS_SUCCESS == ret)
         {
-          info.max_index_size_ = ((info.max_main_block_size_ / parameter.avg_segment_size_) + 1) * FILE_INFO_V2_LENGTH;
-          double ratio = (FILE_INFO_V2_LENGTH * INDEXFILE_SAFE_MULT) / parameter.avg_segment_size_;
-          avail_data_space = static_cast<int64_t>(info.mount_point_use_space_ * (1.00000000 - ratio));
-          ret = avail_data_space > 0 ? TFS_SUCCESS : EXIT_MOUNT_SPACE_SIZE_ERROR;
+          ret = info.mount_point_use_space_ > 0 ? TFS_SUCCESS : EXIT_MOUNT_SPACE_SIZE_ERROR;
           if (TFS_SUCCESS != ret)
           {
-            TBSYS_LOG(ERROR, "format filesystem superblock fail, avail_data_space <= 0, mount_point_use_space: %"PRI64_PREFIX"d, index use space ratio : %e",
-                info.mount_point_use_space_, ratio);
+            TBSYS_LOG(ERROR, "format filesystem superblock fail, mount_point_use_space: %"PRI64_PREFIX"d",info.mount_point_use_space_);
           }
         }
 
@@ -622,28 +611,26 @@ namespace tfs
         {
           const int32_t pagesize = getpagesize();
           const int32_t avg_file_count = info.max_main_block_size_ / parameter.avg_segment_size_;
+          info.hash_bucket_count_      = std::min(MAX_INITIALIZE_INDEX_SIZE, avg_file_count);
+          const int32_t mmap_size = INDEX_HEADER_V2_LENGTH + (info.hash_bucket_count_ + 1) * FILE_INFO_V2_LENGTH;
+          const int32_t count     = mmap_size / pagesize;
+          const int32_t remainder = mmap_size % pagesize;
+          const int32_t max_mmap_size = INDEX_HEADER_V2_LENGTH + (avg_file_count + 1) * FILE_INFO_V2_LENGTH;
+          const int32_t max_count     = max_mmap_size / pagesize;
+          const int32_t max_remainder = max_mmap_size % pagesize;
+          info.mmap_option_.first_mmap_size_=  remainder ? (count + 1) * pagesize : count * pagesize;
+          info.mmap_option_.per_mmap_size_  =  pagesize;
+          if (max_remainder)
+            info.mmap_option_.max_mmap_size_ = (max_count + 1) * pagesize * INDEXFILE_SAFE_MULT;
+          else
+            info.mmap_option_.max_mmap_size_ = max_count * pagesize * INDEXFILE_SAFE_MULT;
+
           info.used_main_block_count_  = 0;
           info.used_extend_block_count_ = 0;
-          info.total_main_block_count_ = info.mount_point_use_space_ / info.max_main_block_size_;
+          info.total_main_block_count_ = (info.mount_point_use_space_ / (info.max_main_block_size_ + info.mmap_option_.max_mmap_size_)) - 2;
           info.max_block_index_element_count_ = static_cast<int32_t>(info.total_main_block_count_ / parameter.block_type_ratio_) +
             info.total_main_block_count_ + 1;
           ret = info.max_block_index_element_count_ > SuperBlockManager::MAX_BLOCK_INDEX_SIZE ? EXIT_MAX_BLOCK_INDEX_COUNT_INVALID : TFS_SUCCESS;
-          if (TFS_SUCCESS == ret)
-          {
-            info.hash_bucket_count_      = std::min(MAX_INITIALIZE_INDEX_SIZE, avg_file_count);
-            const int32_t mmap_size = INDEX_HEADER_V2_LENGTH + (info.hash_bucket_count_ + 1) * FILE_INFO_V2_LENGTH;
-            const int32_t count     = mmap_size / pagesize;
-            const int32_t remainder = mmap_size % pagesize;
-            const int32_t max_mmap_size = INDEX_HEADER_V2_LENGTH + (avg_file_count + 1) * FILE_INFO_V2_LENGTH;
-            const int32_t max_count     = max_mmap_size / pagesize;
-            const int32_t max_remainder = max_mmap_size % pagesize;
-            info.mmap_option_.first_mmap_size_=  remainder ? (count + 1) * pagesize : count * pagesize;
-            info.mmap_option_.per_mmap_size_  =  pagesize;
-            if (max_remainder)
-              info.mmap_option_.max_mmap_size_ = (max_count + 1) * pagesize * INNERFILE_MAX_MULTIPE;
-            else
-              info.mmap_option_.max_mmap_size_ = max_count * pagesize * INNERFILE_MAX_MULTIPE;
-          }
         }
 
         if (TFS_SUCCESS == ret)
@@ -659,12 +646,12 @@ namespace tfs
       UNUSED(parameter);
       SuperBlockInfo* info = NULL;
       int32_t ret = get_super_block_manager().get_super_block_info(info);
-      //main block directory
+      //main directory
       if (TFS_SUCCESS == ret)
       {
         ret = DirectoryOp::create_full_path(info->mount_point_, false, DIR_MODE) ? TFS_SUCCESS : EXIT_CREATE_DIR_ERROR;
         if (TFS_SUCCESS != ret)
-          TBSYS_LOG(ERROR, "mkdir main block directory error, errno: %d,%s", errno, strerror(errno));
+          TBSYS_LOG(ERROR, "create file system directory: %s error, errno: %d,%s", info->mount_point_, errno, strerror(errno));
       }
 
       //index directroy
@@ -673,7 +660,7 @@ namespace tfs
         std::string index_dir(info->mount_point_ + INDEX_DIR_PREFIX);
         ret = DirectoryOp::create_full_path(index_dir.c_str(), false, DIR_MODE) ? TFS_SUCCESS : EXIT_CREATE_DIR_ERROR;
         if (TFS_SUCCESS != ret)
-          TBSYS_LOG(ERROR, "mkdir index block directory error, errno: %d,%s", errno, strerror(errno));
+          TBSYS_LOG(ERROR, "create file system index directory: %s error, errno: %d,%s", index_dir.c_str(), errno, strerror(errno));
       }
       return ret;
     }
@@ -699,36 +686,26 @@ namespace tfs
 
       if (TFS_SUCCESS == ret)
       {
-        for (int32_t index = 0; index < info->total_main_block_count_ && TFS_SUCCESS == ret; ++index)
+        std::stringstream str;
+        info->dump(str);
+        TBSYS_LOG(INFO, "SUPER BLOCK INFORMATION: %s", str.str().c_str());
+        for (int32_t index = 1; index <= info->total_main_block_count_ && TFS_SUCCESS == ret; ++index)
         {
           std::stringstream path;
           path << info->mount_point_ << MAINBLOCK_DIR_PREFIX << index;
           FileOperation file_op(path.str(), O_RDWR | O_CREAT);
+          TBSYS_LOG(INFO, "File================ %d", index);
           ret = file_op.open() < 0 ? EXIT_OPEN_FILE_ERROR : TFS_SUCCESS;
           if (TFS_SUCCESS != ret)
+          {
             TBSYS_LOG(ERROR, "allocate space error, open file failed, errno: %d, %s", errno, strerror(errno));
+          }
           if (TFS_SUCCESS == ret)
           {
             ret = file_formater->block_file_format(file_op.get_fd(), info->max_main_block_size_);
             if (TFS_SUCCESS != ret)
-              TBSYS_LOG(ERROR, "allocate space error, allocate failed, errno: %d, %s", errno, strerror(errno));
-          }
-        }
-        if (TFS_SUCCESS == ret)
-        {
-          for (int32_t index = 0; index < info->total_main_block_count_ && TFS_SUCCESS == ret; ++index)
-          {
-            std::stringstream index_path;
-            index_path << info->mount_point_ << INDEX_DIR_PREFIX << index;
-            FileOperation index_file_op(index_path.str(), O_RDWR | O_CREAT);
-            ret = index_file_op.open() < 0 ? EXIT_OPEN_FILE_ERROR : TFS_SUCCESS;
-            if (TFS_SUCCESS != ret)
-              TBSYS_LOG(ERROR, "allocate space error, open file failed, errno: %d, %s", errno, strerror(errno));
-            if (TFS_SUCCESS == ret)
             {
-              ret = file_formater->block_file_format(index_file_op.get_fd(), info->mmap_option_.max_mmap_size_);
-              if (TFS_SUCCESS != ret)
-                TBSYS_LOG(ERROR, "allocate space error, allocate failed, errno: %d, %s", errno, strerror(errno));
+              TBSYS_LOG(ERROR, "allocate space error, allocate failed, errno: %d, %s", errno, strerror(errno));
             }
           }
         }
@@ -740,7 +717,7 @@ namespace tfs
     BasePhysicalBlock* BlockManager::insert_physical_block_(const SuperBlockInfo& info, const BlockIndex& index, const int32_t physical_block_id, const std::string& path)
     {
       BasePhysicalBlock* physical_block = NULL;
-      int32_t ret = (INVALID_PHYSICAL_BLOCK_ID == physical_block_id || path.empty()) ? EXIT_PARAMETER_ERROR : TFS_SUCCESS;
+      int32_t ret = (INVALID_PHYSICAL_BLOCK_ID != physical_block_id && !path.empty()) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
         //0 == index.index_完整的大数据块(主块，分割的块)
@@ -758,7 +735,7 @@ namespace tfs
     BaseLogicBlock* BlockManager::insert_logic_block_(const uint64_t logic_block_id, const std::string& index_path, const bool tmp)
     {
       BaseLogicBlock* logic_block = NULL;
-      int32_t ret = (INVALID_BLOCK_ID == logic_block_id || index_path.empty()) ? EXIT_PARAMETER_ERROR : TFS_SUCCESS;
+      int32_t ret = (INVALID_BLOCK_ID != logic_block_id && !index_path.empty()) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret && !get_logic_block_manager().exist(logic_block_id))
       {
         ret = get_logic_block_manager().insert(logic_block_id, index_path, tmp);

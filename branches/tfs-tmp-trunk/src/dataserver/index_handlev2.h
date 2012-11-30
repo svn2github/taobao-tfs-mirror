@@ -51,12 +51,14 @@ namespace tfs
         int get_used_offset(int32_t& offset) const;
         int update_avail_offset(const int32_t size);
         int get_avail_offset(int32_t& offset) const;
+        int get_marshalling_offset(int32_t& offset) const;
+        int set_marshalling_offset(const int32_t size);
         int get_family_id(int64_t& family_id) const;
         int set_family_id(const int64_t family_id);
         int rename_filename(const uint64_t logic_block_id);
         int remove_self(const uint64_t logic_block_id);
+        int check_load() const;
       protected:
-        int check_load_() const;
         virtual int remmap_(const double threshold) const = 0;
         virtual common::FileInfoV2*  get_file_infos_array_() const = 0;
         common::IndexHeaderV2* get_index_header_() const;

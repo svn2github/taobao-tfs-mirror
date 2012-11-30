@@ -26,12 +26,21 @@
 #include "super_block_manager.h"
 #include "physical_block_manager.h"
 
+#ifdef TFS_GTEST
+#include <gtest/gtest.h>
+#endif
+
 namespace tfs
 {
   namespace dataserver
   {
     class BlockManager
     {
+        #ifdef TFS_GTEST
+          friend class TestBlockManager;
+          FRIEND_TEST(TestBlockManager, format);
+          FRIEND_TEST(TestBlockManager, bootstrap);
+        #endif
       public:
         explicit BlockManager(const std::string& super_block_path);
         virtual ~BlockManager();
@@ -40,7 +49,7 @@ namespace tfs
         int cleanup(const common::FileSystemParameter& parameter);
         int bootstrap(const common::FileSystemParameter& parameter);
 
-        int new_block(const uint64_t logic_block_id, const bool tmp = false);
+        int new_block(const uint64_t logic_block_id, const bool tmp = false, const int64_t family_id = common::INVALID_FAMILY_ID, const int8_t index_num = 0);
         int del_block(const uint64_t logic_block_id, const bool tmp = false);
         BaseLogicBlock* get(const uint64_t logic_block_id, const bool tmp = false) const;
         int get_all_block_info(std::set<common::BlockInfo>& blocks) const;
@@ -67,6 +76,8 @@ namespace tfs
         int stat(common::FileInfoV2& info,const uint64_t logic_block_id, const uint64_t attach_logic_block_id) const;
         int unlink(int64_t& size, const uint64_t fileid, const int32_t action,
               const uint64_t logic_block_id, const uint64_t attach_logic_block_id);
+
+        bool exist(const uint64_t logic_block_id, const bool tmp = false) const;
 
         SuperBlockManager& get_super_block_manager() { return super_block_manager_;}
         LogicBlockManager& get_logic_block_manager() { return logic_block_manager_;}

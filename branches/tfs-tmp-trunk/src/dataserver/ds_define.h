@@ -43,10 +43,7 @@ namespace tfs
 
     static const int32_t PHYSICAL_BLOCK_ID_INIT_VALUE = 1;
     static const int32_t INDEXFILE_SAFE_MULT = 4;
-
     static const int32_t MAX_INITIALIZE_INDEX_SIZE = 2048;
-    static const int32_t INNERFILE_MAX_MULTIPE     = 32;
-
 
     struct SuperBlockInfo
     {
@@ -64,7 +61,6 @@ namespace tfs
       int32_t used_extend_block_count_;//total count of used extend block
       int32_t max_main_block_size_;//max size of main block
       int32_t max_extend_block_size_;//max size of extend block
-      int32_t max_index_size_;//max size of index
       int32_t hash_bucket_count_;//total count of hash bucket
       common::MMapOption mmap_option_;    //mmap option
       double max_use_block_ratio_;//max use block ratio

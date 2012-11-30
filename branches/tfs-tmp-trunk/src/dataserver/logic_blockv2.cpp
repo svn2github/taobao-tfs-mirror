@@ -149,7 +149,8 @@ namespace tfs
       int32_t ret = (mmap_option.check()) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
-        ret = index_handle_->mmap(id(), mmap_option);
+        if (TFS_SUCCESS != index_handle_->check_load())
+          ret = index_handle_->mmap(id(), mmap_option);
       }
       return ret;
     }
@@ -183,6 +184,16 @@ namespace tfs
     int BaseLogicBlock::get_avail_offset(int32_t& size) const
     {
       return index_handle_->get_avail_offset(size);
+    }
+
+    int BaseLogicBlock::get_marshalling_offset(int32_t& offset) const
+    {
+      return index_handle_->get_marshalling_offset(offset);
+    }
+
+    int BaseLogicBlock::set_marshalling_offset(const int32_t size)
+    {
+      return index_handle_->set_marshalling_offset(size);
     }
 
     int BaseLogicBlock::write_file_infos(common::IndexHeaderV2& header, std::vector<FileInfoV2>& infos, const double threshold)
@@ -382,6 +393,8 @@ namespace tfs
           int32_t retry_times = (total_need_length / super_info->max_extend_block_size_) + 1;
           while (TFS_SUCCESS == ret && avail_size < total_offset && retry_times-- > 0)
           {
+            TBSYS_LOG(INFO, "logic block: %"PRI64_PREFIX"u,avail_size: %d, total_offset: %d",
+              id(), avail_size, total_offset);
             BlockIndex index, ext_index;
             ret = (!physical_block_list_.empty()) ? TFS_SUCCESS : EXIT_PHYSICALBLOCK_NUM_ERROR;
             if (TFS_SUCCESS == ret)
