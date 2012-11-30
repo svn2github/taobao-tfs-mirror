@@ -132,7 +132,7 @@ bool TfsSession::check_init()
   return (NULL != remote_cache_helper_);
 }
 
-void TfsSession::insert_remote_block_cache(const uint32_t block_id, const VUINT64& rds, const FamilyMemberInfoExt* family_info)
+void TfsSession::insert_remote_block_cache(const uint32_t block_id, const VUINT64& rds, const FamilyInfoExt* family_info)
 {
   if (USE_CACHE_FLAG_REMOTE & ClientConfig::use_cache_)
   {
@@ -164,7 +164,7 @@ void TfsSession::insert_remote_block_cache(const uint32_t block_id, const VUINT6
   }
 }
 
-int TfsSession::query_remote_block_cache(const uint32_t block_id, VUINT64& rds, FamilyMemberInfoExt& family_info)
+int TfsSession::query_remote_block_cache(const uint32_t block_id, VUINT64& rds, FamilyInfoExt& family_info)
 {
   int ret = TFS_SUCCESS;
   if (USE_CACHE_FLAG_REMOTE & ClientConfig::use_cache_)
@@ -524,7 +524,7 @@ int TfsSession::get_block_info(SEG_DATA_LIST& seg_list, int32_t flag)
   return ret;
 }
 
-int TfsSession::get_block_info_ex(uint32_t& block_id, VUINT64& rds, FamilyMemberInfoExt& family_info, const int32_t flag)
+int TfsSession::get_block_info_ex(uint32_t& block_id, VUINT64& rds, FamilyInfoExt& family_info, const int32_t flag)
 {
   int ret = TFS_ERROR;
 #ifdef TFS_TEST
@@ -726,7 +726,7 @@ int TfsSession::get_block_info_ex(SEG_DATA_LIST& seg_list, const int32_t flag)
 
             if (INVALID_FAMILY_ID != seg_list[i]->family_info_.family_id_)
             {
-              FamilyMemberInfoExt& family_info = seg_list[i]->family_info_;
+              FamilyInfoExt& family_info = seg_list[i]->family_info_;
               TBSYS_LOG(DEBUG, "got family info: %"PRI64_PREFIX"d", family_info.family_id_);
               const int32_t MEMBER_NUM = GET_DATA_MEMBER_NUM(family_info.family_aid_info_) +
                 GET_CHECK_MEMBER_NUM(family_info.family_aid_info_);
@@ -937,7 +937,7 @@ int TfsSession::get_cluster_group_seq_from_ns()
   return ret;
 }
 
-void TfsSession::insert_local_block_cache(const uint32_t block_id, const VUINT64& rds, const FamilyMemberInfoExt* family_info)
+void TfsSession::insert_local_block_cache(const uint32_t block_id, const VUINT64& rds, const FamilyInfoExt* family_info)
 {
   if (USE_CACHE_FLAG_LOCAL & ClientConfig::use_cache_)
   {

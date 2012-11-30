@@ -71,7 +71,7 @@ namespace tfs
       int32_t pri_ds_index_;
       int32_t status_;
       TfsFileEofFlag eof_;
-      common::FamilyMemberInfoExt family_info_;
+      common::FamilyInfoExt family_info_;
 
       SegmentData() : cache_hit_(CACHE_HIT_NONE), delete_flag_(true), buf_(NULL),
                       inner_offset_(0), file_info_(NULL), pri_ds_index_(PRI_DS_NOT_INIT),
