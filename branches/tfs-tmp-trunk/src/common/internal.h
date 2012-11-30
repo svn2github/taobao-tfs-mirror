@@ -126,6 +126,7 @@ namespace tfs
     static const uint32_t INVALID_RACK_ID = 0;
     static const uint32_t INVALID_SERVER_ID = 0;
     static const int32_t  INVALID_VERSION = -1;
+    static const int32_t INVALID_FLAG = 0;
     static const uint64_t INVALID_FILE_ID = 0;
     static const int32_t  INVALID_PHYSICAL_BLOCK_ID = 0;
 
@@ -938,7 +939,7 @@ namespace tfs
       bool operator == (const FamilyMemberInfo& info) const;
     };
 
-    struct FamilyMemberInfoExt
+    struct FamilyInfoExt
     {
       int64_t family_id_;
       int32_t family_aid_info_;
@@ -948,7 +949,7 @@ namespace tfs
       int serialize(char* data, const int64_t data_len, int64_t& pos) const;
       int64_t length() const;
 
-      FamilyMemberInfoExt()
+      FamilyInfoExt()
       {
         family_id_ = INVALID_FAMILY_ID;
         family_aid_info_ = 0;
@@ -960,7 +961,7 @@ namespace tfs
       common::VUINT64 ds_;
       uint32_t lease_id_;
       int32_t version_;
-      FamilyMemberInfoExt family_info_;
+      FamilyInfoExt family_info_;
       BlockInfoSeg() : lease_id_(INVALID_LEASE_ID), version_(0)
       {
         ds_.clear();
@@ -1015,6 +1016,71 @@ namespace tfs
       REPORT_BLOCK_TYPE_PART,
       REPORT_BLOCK_TYPE_RELIEVE
     }ReportBlockType;
+
+    enum BlockOper
+    {
+      B_OP_WRITE,
+      B_OP_UNLINK,
+      B_OP_REPL
+    };
+
+    enum MessageFlag
+    {
+      MF_IS_MASTER = 0x1,
+      MF_WITH_FAMILY = 0x2,
+      MF_READ_FORCE = 0x4
+    };
+
+    struct BlockMeta
+    {
+      VUINT64 ds_;
+      int32_t version_;
+      int32_t flag_;
+      FamilyInfoExt family_info_;
+
+      int deserialize(const char* data, const int64_t data_len, int64_t& pos);
+      int serialize(char* data, const int64_t data_len, int64_t& pos) const;
+      int64_t length() const;
+
+      BlockMeta():
+        version_(INVALID_VERSION), flag_(INVALID_FLAG)
+      {
+      }
+    };
+
+    struct FileSegment
+    {
+      uint64_t block_id_;
+      uint64_t file_id_;
+      int32_t offset_;
+      int32_t length_;
+
+      int deserialize(const char* data, const int64_t data_len, int64_t& pos);
+      int serialize(char* data, const int64_t data_len, int64_t& pos) const;
+      int64_t length() const;
+
+      FileSegment():
+        block_id_(INVALID_BLOCK_ID), file_id_(0), offset_(-1), length_(-1)
+      {
+      }
+    };
+
+    struct BlockSegment
+    {
+      uint64_t block_id_;
+      int32_t offset_;
+      int32_t length_;
+
+      int deserialize(const char* data, const int64_t data_len, int64_t& pos);
+      int serialize(char* data, const int64_t data_len, int64_t& pos) const;
+      int64_t length() const;
+
+      BlockSegment():
+        block_id_(INVALID_BLOCK_ID), offset_(-1), length_(-1)
+      {
+      }
+    };
+
 
     extern const char* dynamic_parameter_str[43];
 

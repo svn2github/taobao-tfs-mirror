@@ -1490,7 +1490,7 @@ namespace tfs
       int32_t read_offset = message->get_offset();
       uint64_t peer_id = message->get_connection()->getPeerId();
       int8_t flag = message->get_flag();
-      FamilyMemberInfoExt& family_info = message->get_family_info();
+      FamilyInfoExt& family_info = message->get_family_info();
 
       TBSYS_LOG(DEBUG, "blockid: %u, fileid: %" PRI64_PREFIX "u, read len: %d, read offset: %d, resp: %p", block_id,
                 file_id, read_len, read_offset, resp_rd_v2_msg);
@@ -1609,7 +1609,7 @@ namespace tfs
       int32_t read_offset = message->get_offset();
       uint64_t peer_id = message->get_connection()->getPeerId();
       int8_t flag = message->get_flag();
-      FamilyMemberInfoExt& family_info = message->get_family_info();
+      FamilyInfoExt& family_info = message->get_family_info();
 
       //add FileInfo if the first fragment
       int32_t real_read_len = 0;
@@ -1723,7 +1723,7 @@ namespace tfs
       int32_t read_offset = message->get_offset();
       uint64_t peer_id = message->get_connection()->getPeerId();
       int8_t flag = message->get_flag();
-      FamilyMemberInfoExt family_info = message->get_family_info();
+      FamilyInfoExt family_info = message->get_family_info();
 
       // add FileInfo if the first fragment
       // here we transfer offset&length to comparatively FileInfo
@@ -1857,7 +1857,7 @@ namespace tfs
       uint32_t block_id = message->get_block_id();
       uint64_t file_id = message->get_file_id();
       int32_t mode = message->get_mode();
-      FamilyMemberInfoExt& family_info = message->get_family_info();
+      FamilyInfoExt& family_info = message->get_family_info();
 
       TBSYS_LOG(DEBUG, "read file info, blockid: %u, fileid: %" PRI64_PREFIX "u, mode: %d",
           block_id, file_id, mode);

@@ -19,9 +19,9 @@
 
 namespace tfs
 {
-  namespace common 
+  namespace common
   {
-    class StatusMessage: public BasePacket 
+    class StatusMessage: public BasePacket
     {
     public:
       StatusMessage();
@@ -35,7 +35,7 @@ namespace tfs
       inline int64_t get_error_msg_length() const { return length_;}
       inline int32_t get_status() const { return status_;}
 
-    private:
+    protected:
       char msg_[MAX_ERROR_MSG_LENGTH + 1];/** include '\0'*/
       int64_t length_;
       int32_t status_;

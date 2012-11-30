@@ -30,7 +30,7 @@ public:
 	int read(int32_t& real_len, char* buf, const uint64_t block_id, const uint64_t fileid,
 			const int32_t offset, const int8_t flag) const;
 	int read_degrade(int32_t& real_len, char* buf, const const uint64_t block_id, const uint64_t fileid,
-			const int32_t offset, const int8_t flag, const common::FamilyMemberInfoExt& family_info) const;
+			const int32_t offset, const int8_t flag, const common::FamilyInfoExt& family_info) const;
 	int stat(common::FileInfoV2& info, const uint64_t block_id, const uint64_t fileid, const int32_t mode) const;
 	int unlink(common::BlockInfoV2& info, int32_t& file_size, const uint64_t block_id, const uint64_t fileid,
 			const int32_t action, const int32_t remote_version);

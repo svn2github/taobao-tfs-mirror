@@ -50,6 +50,12 @@
 #include "dataserver_task_message.h"
 #include "resolve_block_version_conflict_message.h"
 #include "family_info_message.h"
+#include "open_file_message.h"
+#include "write_file_message.h"
+#include "commit_file_message.h"
+#include "read_file_message.h"
+#include "delete_file_message.h"
+#include "block_operation_message.h"
 
 namespace tfs
 {

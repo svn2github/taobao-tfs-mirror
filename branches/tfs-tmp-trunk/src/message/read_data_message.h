@@ -82,18 +82,18 @@ namespace tfs
           flag_ = flag;
         }
 
-        common::FamilyMemberInfoExt& get_family_info()
+        common::FamilyInfoExt& get_family_info()
         {
           return family_info_;
         }
-        void set_family_info(common::FamilyMemberInfoExt& family_info)
+        void set_family_info(common::FamilyInfoExt& family_info)
         {
           family_info_ = family_info;
         }
       protected:
         ReadDataInfo read_data_info_;
         int8_t flag_;
-        common::FamilyMemberInfoExt family_info_;
+        common::FamilyInfoExt family_info_;
     };
 
     class DegradeReadDataMessage: public ReadDataMessage
@@ -105,18 +105,18 @@ namespace tfs
         virtual int deserialize(common::Stream& input);
         virtual int64_t length() const;
 
-        common::FamilyMemberInfoExt& get_family_info()
+        common::FamilyInfoExt& get_family_info()
         {
           return family_info_;
         }
 
-        void set_family_info(const common::FamilyMemberInfoExt& family_info)
+        void set_family_info(const common::FamilyInfoExt& family_info)
         {
           family_info_ = family_info;
         }
 
       protected:
-        common::FamilyMemberInfoExt family_info_;
+        common::FamilyInfoExt family_info_;
     };
 
     class RespReadDataMessage: public common::BasePacket
