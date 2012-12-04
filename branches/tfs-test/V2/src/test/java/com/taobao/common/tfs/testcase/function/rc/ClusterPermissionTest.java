@@ -16,6 +16,16 @@ public class ClusterPermissionTest extends rcTfsBaseCase {
 	private int clusterPerssion = 0;
 
 	@Test
+	public void test1(){
+		
+		TfsStatus tfsStatus = new TfsStatus();
+		System.out.println("111111111111");
+		long a=tfsStatus.getCurrentQuote("tappkey");
+		System.out.println("222222222222");
+		System.out.println(a);
+		
+	}
+	@Test
 	public void testClusterInvalid() {
 		log.info("begin: " + getCurrentFunctionName());
 

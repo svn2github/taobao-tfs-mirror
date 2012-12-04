@@ -44,11 +44,48 @@ public class GroupPermissionTest extends rcTfsBaseCase {
 		log.info("end: " + getCurrentFunctionName());
 	}
 
+	
 	@Test
 	public void testGroupRClusterRW() {
 		log.info("begin: " + getCurrentFunctionName());
+		int clusterPermission = R_MODE;
+		int groupPermission = RW_MODE;
+		boolean result = false;
+		String tfsname = "";
+		String localfile = "10K.jpg";
+		TfsStatus tfsStatus = new TfsStatus();
+		DefaultTfsManager tfsManager = createTfsManager();
+		ArrayList<String> nameList = new ArrayList<String>();
 
-		testClusterGroupPermission(R_MODE, RW_MODE);
+		for (int i = 0; i < 2; i++) {
+			tfsname = tfsManager.saveFile(localfile, null, null);
+			Assert.assertNotNull(tfsname);
+			log.debug("@@ tfsname: " + tfsname);
+			nameList.add(tfsname);
+		}
+
+		tfsStatus.setGroupPermission(appKey, clusterPermission);
+		tfsStatus.setClusterPermissionByAppKey(appKey, groupPermission);
+		TimeUtility.sleep(MAX_UPDATE_TIME);
+
+		long startTime = System.currentTimeMillis();
+		while (tfsname != null) {
+			tfsname = tfsManager.saveFile(localfile, null, null);
+		}
+		long endTime = System.currentTimeMillis();
+		log.debug("change time: " + (endTime - startTime));
+		Assert.assertTrue((endTime - startTime) / 1000 < MAX_UPDATE_TIME);
+
+		for (int i = 0; i < 2; i++) {
+			tfsname = tfsManager.saveFile(localfile, null, null);
+			Assert.assertNull(tfsname);
+			result = tfsManager.fetchFile(nameList.get(i), null, "localfile");
+			Assert.assertTrue(result);
+
+			result = tfsManager.unlinkFile(nameList.get(i), null);
+	
+			Assert.assertTrue(result);
+		}
 
 		log.info("end: " + getCurrentFunctionName());
 	}
@@ -66,7 +103,7 @@ public class GroupPermissionTest extends rcTfsBaseCase {
 	public void testGroupRWClusterR() {
 		log.info("begin: " + getCurrentFunctionName());
 
-		testClusterGroupPermission(RW_MODE, R_MODE);
+		testClusterGroupPermissionR(RW_MODE, R_MODE);
 
 		log.info("end: " + getCurrentFunctionName());
 	}
@@ -102,7 +139,6 @@ public class GroupPermissionTest extends rcTfsBaseCase {
 		for (int i = 0; i < 10; i++) {
 			tfsname = tfsManager.saveFile(localfile, null, null);
 			Assert.assertNull(tfsname);
-
 			result = tfsManager.fetchFile(nameList.get(i), null, "localfile");
 			Assert.assertFalse(result);
 
@@ -111,6 +147,46 @@ public class GroupPermissionTest extends rcTfsBaseCase {
 		}
 	}
 
+	public void testClusterGroupPermissionR(int clusterPermission , int groupPermission) {
+
+		boolean result = false;
+		String tfsname = "";
+		String localfile = "10K.jpg";
+		TfsStatus tfsStatus = new TfsStatus();
+		DefaultTfsManager tfsManager = createTfsManager();
+		ArrayList<String> nameList = new ArrayList<String>();
+
+		for (int i = 0; i < 2; i++) {
+			tfsname = tfsManager.saveFile(localfile, null, null);
+			Assert.assertNotNull(tfsname);
+			log.debug("@@ tfsname: " + tfsname);
+			nameList.add(tfsname);
+		}
+
+		tfsStatus.setGroupPermission(appKey, clusterPermission);
+		tfsStatus.setClusterPermissionByAppKey(appKey, groupPermission);
+		TimeUtility.sleep(MAX_UPDATE_TIME);
+
+		long startTime = System.currentTimeMillis();
+		while (tfsname != null) {
+			tfsname = tfsManager.saveFile(localfile, null, null);
+		}
+		long endTime = System.currentTimeMillis();
+		log.debug("change time: " + (endTime - startTime));
+		Assert.assertTrue((endTime - startTime) / 1000 < MAX_UPDATE_TIME);
+
+		for (int i = 0; i < 2; i++) {
+			tfsname = tfsManager.saveFile(localfile, null, null);
+			Assert.assertNull(tfsname);
+			result = tfsManager.fetchFile(nameList.get(i), null, "localfile");
+			Assert.assertTrue(result);
+
+			result = tfsManager.unlinkFile(nameList.get(i), null);
+	
+			Assert.assertFalse(result);
+		}
+		
+	}
 	private void backPermission() {
 		TfsStatus tfsStatus = new TfsStatus();
 		clusterPerssion = tfsStatus.getClusterPermission(appKey);
