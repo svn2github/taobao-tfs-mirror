@@ -10,7 +10,7 @@ import java.sql.Statement;
 import com.taobao.common.tfs.utility.MySQLConnector;
 
 public class TfsStatus {
-	private Connection conn;
+	public Connection conn;
 
 	public TfsStatus() {
 		
@@ -19,7 +19,7 @@ public class TfsStatus {
 		String user = "root";
 		String password = "123";
 		conn = MySQLConnector.getConnection(server, dbName, user, password);
-		if (conn != null)
+		if (conn == null)
 		{
 			System.out.println("can not connect db server: " + server);
 		}
@@ -30,7 +30,7 @@ public class TfsStatus {
 				+ "where t_app_stat.APP_ID=t_app_info.ID and APP_KEY='"
 				+ appKey + "'";
 		Object value = getColumnValue(statement, "USED_CAPACITY");
-
+    System.out.println(statement);
 		return parseLong(value);
 	}
 
@@ -312,30 +312,7 @@ public class TfsStatus {
 		return null;
 	}
 
-	//@Test
-	public void testGetGroupPermission() {
 
-	}
-
-	//@Test
-	public void testGetClusterPermission() {
-
-	}
-
-	//@Test
-	public void testRefreshLastUpdateTime() {
-		refreshLastUpdateTime();
-	}
-
-	//@Test
-	public void testGetUsedCapacity() {
-		System.out.println(getUsedCapacity("foobarRcAA"));
-	}
-
-	//@Test
-	public void testSetClusterPermission() {
-		setClusterPermissionByAppKey("foobarRcAA", 2);
-	}
 
 	/*
 	 * @Test public void testGetMaxQuote(){

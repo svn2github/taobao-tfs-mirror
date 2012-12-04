@@ -360,19 +360,22 @@ public class Remote_Cache_Test extends rcTfsBaseCase
 		TreeSet<SegmentInfo> segmengInfoSet = localKey.getSegmentInfos();
 		FSName fsName = new FSName(segmengInfoSet.first().getBlockId(), segmengInfoSet.first().getFileId());
 		String fileName = fsName.get();
+		
 		tfsManager.removeRemoteBlockCache(fileName);
 		bRet=tfsManager.fetchFile(Tname, null, "temp");
 		assertTrue(bRet);
 		Assert.assertEquals(FileUtility.getCrc(localFileL), FileUtility.getCrc("temp"));
 		
 		int count = 0;
-		for(SegmentInfo segInfo:segmengInfoSet)
+		segmengInfoSet.size();
+		for(int i=0;i< segmengInfoSet.size();i++ )
 		{
-			fsName = new FSName(segInfo.getBlockId(), segInfo.getFileId());
+			fsName = new FSName(segmengInfoSet..getBlockId(), segInfo.getFileId());
 		    fileName = fsName.get();
 			try
 			{
-			    assertTrue(tfsManager.fetchFile(fileName, null, "10M_part_" + count + ".jpg"));
+			   //assertTrue(tfsManager.fetchFile(fileName, null, "10M_part_" + count + ".jpg"));
+			  tfsManager.removeLocalBlockCache(fileName)
 			}
 			catch(Exception e)
 			{

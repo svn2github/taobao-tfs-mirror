@@ -47,10 +47,10 @@ public class rcTfsBaseCase extends BaseCase
     public static String tairGroupName = "group_1";
 
 	//MySql 配置
-	protected static String server = "10.232.36.208:3306";
-	protected static String db = "tfs_stat_diqing";
-	protected static String user = "foorbar";
-	protected static String pwd = "foorbar";
+//	protected static String server = "10.232.36.208:3306";
+//	protected static String db = "tfs_stat_diqing";
+//	protected static String user = "foorbar";
+//	protected static String pwd = "foorbar";
 	protected static Connection tfsSqlCon;
 	
 
@@ -68,8 +68,8 @@ public class rcTfsBaseCase extends BaseCase
 
 	//RcServer的一些配置量
 	
-	public static long userId = 8;
-	public static String appKey = "testKeyYS";
+	public static long userId = 1;
+	public static String appKey = "tappkey";
 	public static int MAX_UPDATE_TIME = 20;
 	public static int MAX_STAT_TIME = 40;
 	public static int INVALID_MODE = 0;

@@ -107,7 +107,10 @@ public class RcTfsManager_15_fetchFileForce extends rcTfsBaseCase
 		Assert.assertEquals(savecrc, fetchcrc);
 		
 	}
-	
+	/*
+	 * modify by diqing
+	 * hide 的文件 强制读，可以读出来
+	 */
 	@Test
 	public void saveSmallFileUnlinkFetchForceTest_05(){
 		String caseTitle = Thread.currentThread().getStackTrace()[1].getMethodName();
@@ -124,10 +127,13 @@ public class RcTfsManager_15_fetchFileForce extends rcTfsBaseCase
 		Assert.assertTrue(fileOperationResult);
 		fileOperationResult = tfsManager.fetchFileForce(tfsName, null, resourcesPath+"TEMP");
 		System.out.println(resourcesPath+"TEMP");
-		Assert.assertFalse(fileOperationResult);
+		Assert.assertTrue(fileOperationResult);
 		
 	}
-	
+	/*
+	 * modify by diqing
+	 * hide 的文件 强制读，可以读出来
+	 */
 	@Test
 	public void saveLargeFileUnlinkFetchForceTest_06(){
 		String caseTitle = Thread.currentThread().getStackTrace()[1].getMethodName();
@@ -147,6 +153,10 @@ public class RcTfsManager_15_fetchFileForce extends rcTfsBaseCase
 		Assert.assertFalse(fileOperationResult);
 	}
 	
+	/*
+	 * modify by diqing
+	 * hide 的文件 强制读，可以读出来
+	 */
 	@Test
 	public void saveFileHideUnlinkFetchForceTest_07(){
 		String caseTitle = Thread.currentThread().getStackTrace()[1].getMethodName();
@@ -166,9 +176,12 @@ public class RcTfsManager_15_fetchFileForce extends rcTfsBaseCase
 		Assert.assertTrue(fileOperationResult);
 		
 		fileOperationResult = tfsManager.fetchFileForce(tfsName, null, resourcesPath+"TEMP");
-		Assert.assertFalse(fileOperationResult);
+		Assert.assertTrue(fileOperationResult);
 	}
-	
+	/*
+	 * modify by diqing
+	 * hide 的文件 强制读，可以读出来
+	 */
 	@Test
 	public void saveFileHideUnlinkLinkFetchForceTest_08(){
 		String caseTitle = Thread.currentThread().getStackTrace()[1].getMethodName();
@@ -188,7 +201,7 @@ public class RcTfsManager_15_fetchFileForce extends rcTfsBaseCase
 		Assert.assertTrue(fileOperationResult);
 		
 		fileOperationResult = tfsManager.fetchFileForce(tfsName, null, resourcesPath+"TEMP");
-		Assert.assertFalse(fileOperationResult);
+		Assert.assertTrue(fileOperationResult);
 		
 		fileOperationResult = tfsManager.unlinkFile(tfsName, null,UNDELETE);
 		Assert.assertTrue(fileOperationResult);
