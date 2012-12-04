@@ -60,6 +60,10 @@ namespace tfs
             const char* rs_addr = NULL);
 
         int64_t get_app_id() const { return app_id_;}
+        void set_client_retry_count(const int64_t count);
+        int64_t get_client_retry_count() const;
+        void set_client_retry_flag(bool retry_flag);
+
         void set_wait_timeout(const int64_t timeout_ms);
         void set_log_level(const char* level);
         void set_log_file(const char* log_file);

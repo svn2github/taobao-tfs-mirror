@@ -54,6 +54,21 @@ namespace tfs
       return impl_->get_app_id();
     }
 
+    void RcClient::set_client_retry_count(const int64_t count)
+    {
+      impl_->set_client_retry_count(count);
+    }
+
+    int64_t RcClient::get_client_retry_count() const
+    {
+      return impl_->get_client_retry_count();
+    }
+
+    void RcClient::set_client_retry_flag(bool retry_flag)
+    {
+      impl_->set_client_retry_flag(retry_flag);
+    }
+
     void RcClient::set_wait_timeout(const int64_t timeout_ms)
     {
       impl_->set_wait_timeout(timeout_ms);
