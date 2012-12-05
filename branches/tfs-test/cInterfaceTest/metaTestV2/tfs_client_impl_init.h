@@ -11,18 +11,18 @@
 #include <time.h>
 #include <stdio.h>
 #include <string.h>
+#include <tbsys.h>
 
 
 
-
-#define a1G       "/home/chenzewei.pt/testrcmeta/resource/1g.jpg"
-#define a100M     "/home/chenzewei.pt/testrcmeta/resource/100m.jpg"
-#define a6M       "/home/chenzewei.pt/testrcmeta/resource/6m.jpg"
-#define a3M       "/home/chenzewei.pt/testrcmeta/resource/3m.jpg"
-#define a2M       "/home/chenzewei.pt/testrcmeta/resource/2m.jpg"
-#define a100K     "/home/chenzewei.pt/testrcmeta/resource/100k.jpg"
-#define a10K      "/home/chenzewei.pt/testrcmeta/resource/10k.jpg"
-#define a1B       "/home/chenzewei.pt/testrcmeta/resource/1b.jpg"
+#define a1G       "/home/admin/hudson/workspace/TFS_C++_CLIENT_TEST/metaTestV2/resource/1g.jpg"
+#define a100M     "/home/admin/hudson/workspace/TFS_C++_CLIENT_TEST/metaTestV2/resource/100m.jpg"
+#define a6M       "/home/admin/hudson/workspace/TFS_C++_CLIENT_TEST/metaTestV2/resource/6m.jpg"
+#define a3M       "/home/admin/hudson/workspace/TFS_C++_CLIENT_TEST/metaTestV2/resource/3m.jpg"
+#define a2M       "/home/admin/hudson/workspace/TFS_C++_CLIENT_TEST/metaTestV2/resource/2m.jpg"
+#define a100K     "/home/admin/hudson/workspace/TFS_C++_CLIENT_TEST/metaTestV2/resource/100k.jpg"
+#define a10K      "/home/admin/hudson/workspace/TFS_C++_CLIENT_TEST/metaTestV2/resource/10k.jpg"
+#define a1B       "/home/admin/hudson/workspace/TFS_C++_CLIENT_TEST/metaTestV2/resource/1b.jpg"
 
 
 using namespace std;
@@ -42,18 +42,22 @@ class TfsInit: public testing::Test
      RcClient* tfsclient;
      int32_t cache_time;
      int32_t cache_items;
-	
-     static const int64_t appId = 1;
+      	
+     static const int64_t appId = 3;
      static const int64_t uid = 103;
 
+     
      virtual void SetUp()
      {
+
+        std::string config_file_="/home/admin/hudson/workspace/TFS_C++_CLIENT_TEST/conf/test.conf";
+        TBSYS_CONFIG.load(config_file_.c_str());
         cache_time = 1800;
         cache_items = 50000;
-        const char* str_rc_ip = "10.232.36.203:6100";
-        const char* app_key = "tfscom";
+        const char* str_rc_ip = TBSYS_CONFIG.getString("public","Rc_Ip","");
+        const char* app_key = TBSYS_CONFIG.getString("public","App_Key","");
         const char* str_app_ip = "10.232.36.206";
-
+        
         tfsclient = new RcClient();
 
         ret = tfsclient->initialize(str_rc_ip, app_key, str_app_ip, cache_time, cache_items);
