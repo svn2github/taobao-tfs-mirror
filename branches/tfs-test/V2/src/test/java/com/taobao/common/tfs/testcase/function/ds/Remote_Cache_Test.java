@@ -358,6 +358,7 @@ public class Remote_Cache_Test extends rcTfsBaseCase
 		LocalKey localKey = new LocalKey();
 		localKey.loadFile(segmentFile);
 		TreeSet<SegmentInfo> segmengInfoSet = localKey.getSegmentInfos();
+	
 		FSName fsName = new FSName(segmengInfoSet.first().getBlockId(), segmengInfoSet.first().getFileId());
 		String fileName = fsName.get();
 		
@@ -368,14 +369,14 @@ public class Remote_Cache_Test extends rcTfsBaseCase
 		
 		int count = 0;
 		segmengInfoSet.size();
-		for(int i=0;i< segmengInfoSet.size();i++ )
+		for(SegmentInfo segInfo:segmengInfoSet )
 		{
-			fsName = new FSName(segmengInfoSet..getBlockId(), segInfo.getFileId());
+			fsName = new FSName(segmengInfoSet.first().getBlockId(), segInfo.getFileId());
 		    fileName = fsName.get();
 			try
 			{
 			   //assertTrue(tfsManager.fetchFile(fileName, null, "10M_part_" + count + ".jpg"));
-			  tfsManager.removeLocalBlockCache(fileName)
+			  tfsManager.removeLocalBlockCache(fileName);
 			}
 			catch(Exception e)
 			{
