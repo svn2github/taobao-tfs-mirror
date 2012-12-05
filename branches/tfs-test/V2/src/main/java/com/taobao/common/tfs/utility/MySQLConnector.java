@@ -17,7 +17,7 @@ public class MySQLConnector
 	public static synchronized Connection getConnection(String server,String db,String user,String pwd)
 	{
 		user = (user==null?"":user);
-		pwd = (pwd==null?"":user);
+		pwd = (pwd==null?"":pwd);
 		
 		String key = server+":"+db+":"+user+":"+":"+pwd;
 		if(connections.containsKey(key))
