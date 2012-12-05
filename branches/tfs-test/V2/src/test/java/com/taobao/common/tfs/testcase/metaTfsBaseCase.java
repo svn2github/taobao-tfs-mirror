@@ -29,16 +29,20 @@ public class metaTfsBaseCase extends BaseCase
 	protected static Log log = LogFactory.getLog(metaTfsBaseCase.class);
 	protected static MySQLConnector tfsSqlConnector = new MySQLConnector();
     public static long appId;
+    public static String appKey;
+    public static String rcAddr;
     public static long userId=8;
+    public static String appIp;
+    public static DefaultTfsManager tfsManagerM=null;
     
     //功能相关测试参量
-    public static int MAX_STAT_TIME = 10;
+    public static int MAX_STAT_TIME = 40;
     
 	//MySql 配置
-	protected static String server = "10.232.36.208:3306";
-	protected static String db = "tfs_stat_diqing";
-	protected static String user = "foorbar";
-	protected static String pwd = "foorbar";
+	protected static String server = "10.232.4.6:3306";
+	protected static String db = "tfs_stat_db";
+	protected static String user = "root";
+	protected static String pwd = "123";
 	protected static Connection tfsSqlCon;
     
     static 
@@ -46,7 +50,11 @@ public class metaTfsBaseCase extends BaseCase
         ClassPathXmlApplicationContext appContext = new ClassPathXmlApplicationContext(new String[] { "tfs.xml" });
         tfsManager = (DefaultTfsManager) appContext.getBean("tfsManager");
         appId = tfsManager.getAppId();
-        tfsSqlCon = tfsSqlConnector.getConnection(server, db, user, pwd);
+        appKey = tfsManager.getAppKey();
+        System.out.println(appKey);
+        rcAddr = tfsManager.getRcAddr();
+        //tfsSqlCon = tfsSqlConnector.getConnection(server, db, user, pwd);
+        
     }
     
     //测试辅助函数
@@ -63,7 +71,18 @@ public class metaTfsBaseCase extends BaseCase
     	}  
     }
     
-    
+    public  DefaultTfsManager createtfsManager()
+    {
+    	boolean bRet;
+    	DefaultTfsManager tfsManagerMeta = new DefaultTfsManager();
+    	tfsManagerMeta.setRcAddr(rcAddr);
+    	tfsManagerMeta.setAppKey(appKey);
+    	tfsManagerMeta.setAppIp(appIp);
+    	tfsManagerMeta.setUseNameMeta(true);
+        bRet = tfsManagerMeta.init();
+        Assert.assertTrue(bRet);
+        return tfsManagerMeta;
+    }
     
     
     //MetaServer 控制函数
