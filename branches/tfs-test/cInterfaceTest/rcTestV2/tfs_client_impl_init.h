@@ -8,16 +8,17 @@
 
 #include<gtest/gtest.h>
 #include<limits.h>
+#include<tbsys.h>
 
 
-
-
-#define a1G    "/home/chenzewei.pt/testrc/resource/1g.jpg"
-#define a100M    "/home/chenzewei.pt/testrc/resource/100m.jpg"
-#define a100K      "/home/chenzewei.pt/testrc/resource/100k.jpg"
-
-
-
+#define a1G       "/home/admin/hudson/workspace/TFS_C++_CLIENT_TEST/metaTestV2/resource/1g.jpg"
+#define a100M     "/home/admin/hudson/workspace/TFS_C++_CLIENT_TEST/metaTestV2/resource/100m.jpg"
+#define a6M       "/home/admin/hudson/workspace/TFS_C++_CLIENT_TEST/metaTestV2/resource/6m.jpg"
+#define a3M       "/home/admin/hudson/workspace/TFS_C++_CLIENT_TEST/metaTestV2/resource/3m.jpg"
+#define a2M       "/home/admin/hudson/workspace/TFS_C++_CLIENT_TEST/metaTestV2/resource/2m.jpg"
+#define a100K     "/home/admin/hudson/workspace/TFS_C++_CLIENT_TEST/metaTestV2/resource/100k.jpg"
+#define a10K      "/home/admin/hudson/workspace/TFS_C++_CLIENT_TEST/metaTestV2/resource/10k.jpg"
+#define a1B       "/home/admin/hudson/workspace/TFS_C++_CLIENT_TEST/metaTestV2/resource/1b.jpg"
 
 using namespace std;
 using namespace tfs::client;
@@ -45,8 +46,11 @@ class TfsInit: public testing::Test
          
          cache_items=500000;
          
-         const   char*str_rc_ip = "10.232.36.206:6261";
-         const   char*app_key="foobarRcAA";
+         std::string config_file_="/home/admin/hudson/workspace/TFS_C++_CLIENT_TEST/conf/test.conf";
+         TBSYS_CONFIG.load(config_file_.c_str());
+         
+         const   char*str_rc_ip = TBSYS_CONFIG.getString("public","Rc_Ip","");
+         const   char*app_key= TBSYS_CONFIG.getString("public","App_Key","") ;
          const   char*str_app_ip="10.13.116.135";
          
          tfsclient=new RcClient();
