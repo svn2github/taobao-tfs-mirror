@@ -124,7 +124,7 @@ public class BaseCase
 				put("50M.jpg", 50 * (1 << 20));
 				put("100M.jpg", 100 * (1 << 20));
 				put("1G.jpg", 1 << 30);
-				put("6G.jpg", 6 * (1 << 30));
+				put("6G.jpg", 6 * (1L<< 30));
 			}
 		};
 		
