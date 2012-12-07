@@ -5,7 +5,7 @@ TEST_F(TfsInitTest,01_initialize_uint64_wrong_rc_ip)
 {
    int Ret;
    const uint64_t rc_ip=-1;
-   const char* app_key="tfscom";
+   const char* app_key="appkey";
    const uint64_t app_ip=Func::str_to_addr("10.13.116.135", 0);
    const int32_t cache_times = -1;
    const int32_t cache_items = -1;

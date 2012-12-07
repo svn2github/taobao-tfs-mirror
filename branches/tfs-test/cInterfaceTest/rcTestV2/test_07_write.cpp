@@ -115,7 +115,7 @@ TEST_F(TfsInit,05_write_samll_large_true)
    const char* file_name=NULL;
    const char* suffix=NULL;
    const bool large = true;
-   const char* local_key = NULL;
+   const char* local_key = "/home/admin/a";
 
    ret=tfsclient->open(file_name, suffix, tfsclient->CREATE, large,local_key);
    EXPECT_GT(ret,0);
@@ -138,7 +138,7 @@ TEST_F(TfsInit,06_write_large)
    const char* file_name=NULL;
    const char* suffix=NULL;
    const bool large = true;
-   const char* local_key = "/home/chenzewei.pt/testrc/resource/100k.jpg";
+   const char* local_key = "/home/admin/a";
 
    ret=tfsclient->open(file_name, suffix, tfsclient->CREATE, large,local_key);
    EXPECT_GT(ret,0);
@@ -166,7 +166,7 @@ TEST_F(TfsInit,07_write_large_large_false)
    const char* file_name=NULL;
    const char* suffix=NULL;
    const bool large = false;
-   const char* local_key = "/home/chenzewei.pt/testrc/resource/100k.jpg";
+   const char* local_key = "/home/admin/a";
 
    ret=tfsclient->open(file_name, suffix, tfsclient->CREATE, large,local_key);
    EXPECT_GT(ret,0);
@@ -179,8 +179,7 @@ TEST_F(TfsInit,07_write_large_large_false)
 
    EXPECT_EQ(100*(1<<20),Ret);
    ret=tfsclient->close(fd,tfs_name,tfs_name_len);
-   EXPECT_GT(ret,0);
-   cout<<"the file name is "<<tfs_name<<endl;	
+   EXPECT_GT(0,ret);
 }
 
 TEST_F(TfsInit,08_write_wrong_count)

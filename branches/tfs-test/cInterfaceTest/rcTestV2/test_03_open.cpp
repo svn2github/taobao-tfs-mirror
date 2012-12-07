@@ -125,7 +125,7 @@ TEST_F(TfsInit,08_open_samll_with_large_true_READ)
    const char* local_key = NULL;
 
    ret=tfsclient->open(file_name, suffix,tfsclient->READ, large,local_key);
-   EXPECT_GT(0,ret);
+   EXPECT_GT(ret,0);
 }
 
 TEST_F(TfsInit,09_open_large_with_large_false_READ)

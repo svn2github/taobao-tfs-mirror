@@ -93,13 +93,14 @@ TEST_F(TfsInit,05_fetch_file_empty_suffix)
 
 TEST_F(TfsInit,06_fetch_file_wrong_file_name)
 {
-   int iRet;
+   int iRet = 9;
 
    char * local_file = "TEMP";
-   char * file_name = "T1hgtyuioplkjhnmbg";
+   char * file_name = "T2hgt7uioplkjhnmbg";
    char * suffix = NULL;
 
    iRet =tfsclient->fetch_file(local_file, file_name, suffix);
+   printf("!!!!!%d",iRet);
    EXPECT_EQ(1,iRet);
 }
 
