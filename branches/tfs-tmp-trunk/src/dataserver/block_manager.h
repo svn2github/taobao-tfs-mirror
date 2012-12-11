@@ -16,6 +16,7 @@
 #ifndef TFS_DATASERVER_BLOCK_MANAGER_H_
 #define TFS_DATASERVER_BLOCK_MANAGER_H_
 
+#include "common/lock.h"
 #include "common/internal.h"
 #include "common/parameter.h"
 
@@ -41,6 +42,7 @@ namespace tfs
           FRIEND_TEST(TestBlockManager, format);
           FRIEND_TEST(TestBlockManager, bootstrap);
         #endif
+        friend class BaseLogicBlock;
       public:
         explicit BlockManager(const std::string& super_block_path);
         virtual ~BlockManager();
@@ -79,6 +81,8 @@ namespace tfs
 
         bool exist(const uint64_t logic_block_id, const bool tmp = false) const;
 
+        int generation_file_id(uint64_t& fileid, const uint64_t logic_block_id, const double threshold);
+
         SuperBlockManager& get_super_block_manager() { return super_block_manager_;}
         LogicBlockManager& get_logic_block_manager() { return logic_block_manager_;}
         PhysicalBlockManager& get_physical_block_manager() { return physical_block_manager_;}
@@ -94,11 +98,15 @@ namespace tfs
 
         BasePhysicalBlock* insert_physical_block_(const SuperBlockInfo& info, const BlockIndex& index, const int32_t physical_block_id, const std::string& path);
         BaseLogicBlock* insert_logic_block_(const uint64_t logic_block_id, const std::string& index_path, const bool tmp = false);
+        BaseLogicBlock* get_(const uint64_t logic_block_id, const bool tmp = false) const;
+        bool exist_(const uint64_t logic_block_id, const bool tmp = false) const;
+        int del_block_(const uint64_t logic_block_id, const bool tmp = false);
 
       private:
         SuperBlockManager super_block_manager_;
         LogicBlockManager logic_block_manager_;
         PhysicalBlockManager physical_block_manager_;
+        mutable common::RWLock mutex_;
     };
   }/** end namespace dataserver **/
 }/** end namespace tfs **/

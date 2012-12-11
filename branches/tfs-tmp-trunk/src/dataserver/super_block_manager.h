@@ -16,6 +16,7 @@
 #ifndef TFS_DATASERVER_SUPER_BLOCK_MANAGER_H_
 #define TFS_DATASERVER_SUPER_BLOCK_MANAGER_H_
 
+#include "common/lock.h"
 #include "common/internal.h"
 #include "common/mmap_file_op.h"
 #include "ds_define.h"
@@ -63,6 +64,7 @@ namespace tfs
         common::MMapFileOperation file_op_;
         mutable int32_t index_;
         mutable int32_t ext_index_;
+        mutable common::RWLock mutex_;
     };
   }/** end namespace dataserver **/
 }/** end namespace tfs **/

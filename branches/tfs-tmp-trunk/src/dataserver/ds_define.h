@@ -13,14 +13,16 @@
  *      - initial release
  *
  */
-#ifndef TFS_DATASERVER_DATASERVERDEFINE_H_
-#define TFS_DATASERVER_DATASERVERDEFINE_H_
+#ifndef TFS_DATASERVER_DEFINE_H_
+#define TFS_DATASERVER_DEFINE_H_
 
 #include <string>
 #include <assert.h>
 #include "common/internal.h"
 #include "common/parameter.h"
 #include "common/new_client.h"
+
+#define TFS_GTEST
 
 namespace tfs
 {
@@ -164,4 +166,4 @@ namespace tfs
   }/** end namespace dataserver **/
 }/** end namespace tfs **/
 
-#endif //TFS_DATASERVER_DATASERVERDEFINE_H_
+#endif //TFS_DATASERVER_DEFINE_H_

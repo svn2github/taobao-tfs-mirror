@@ -85,6 +85,7 @@ namespace tfs
 
     int BlockManager::new_block(const uint64_t logic_block_id, const bool tmp, const int64_t family_id, const int8_t index_num)
     {
+      RWLock::Lock lock(mutex_, WRITE_LOCKER);
       SuperBlockInfo* info = NULL;
       int32_t ret = (INVALID_BLOCK_ID != logic_block_id) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
@@ -155,82 +156,52 @@ namespace tfs
 
     int BlockManager::del_block(const uint64_t logic_block_id, const bool tmp)
     {
-      SuperBlockInfo* info = NULL;
-      BaseLogicBlock* logic_block = NULL;
       int32_t ret = (INVALID_BLOCK_ID != logic_block_id) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
-        ret = get_super_block_manager().get_super_block_info(info);
+        RWLock::Lock lock(mutex_, WRITE_LOCKER);
+        ret = del_block_(logic_block_id, tmp);
       }
-      if (TFS_SUCCESS == ret)
-      {
-        logic_block = get(logic_block_id, tmp);
-        ret = (NULL != logic_block) ? TFS_SUCCESS : EXIT_NO_LOGICBLOCK_ERROR;
-      }
-      if (TFS_SUCCESS == ret)
-      {
-        ret = get_logic_block_manager().remove(logic_block, logic_block_id);//remove logic block form logic block map, but not free pointer
-      }
-      if (TFS_SUCCESS == ret)
-      {
-        logic_block->rename_index_filename();//rename index file name
-        BasePhysicalBlock* physical_block = NULL;
-        std::vector<int32_t> physical_blocks;
-        logic_block->get_all_physical_blocks(physical_blocks);
-        std::vector<int32_t>::const_iterator iter = physical_blocks.begin();
-        for (; iter != physical_blocks.end(); ++iter)
-        {
-          ret = get_physical_block_manager().remove(physical_block, (*iter));//remove physical block form physical block map, but not free pointer
-          assert(TFS_SUCCESS == ret);
-          ret = get_super_block_manager().cleanup_block_index((*iter));//cleanup block index
-          assert(TFS_SUCCESS == ret);
-          tbsys::gDelete(physical_block);//TODO, add physical block object to gc object map
-        }
-        tbsys::gDelete(logic_block);//TODO, add logic block object to gc object map
-
-        if (TFS_SUCCESS == ret)
-        {
-          info->used_main_block_count_ -= 1;
-          info->used_extend_block_count_ -= (physical_blocks.size() - 1);
-          ret = get_super_block_manager().flush();
-        }
-      }
-      TBSYS_LOG(INFO, "free logic block : %"PRI64_PREFIX"u, %s, ret: %d, tmp: %s",
-        logic_block_id, TFS_SUCCESS == ret ? "successful" : "failed", ret, tmp ? "true" : "false");
       return ret;
     }
 
     BaseLogicBlock* BlockManager::get(const uint64_t logic_block_id, const bool tmp) const
     {
+      RWLock::Lock lock(mutex_, READ_LOCKER);
       return logic_block_manager_.get(logic_block_id, tmp);
     }
 
     int BlockManager::get_all_block_info(std::set<BlockInfo>& blocks) const
     {
       blocks.clear();
+      RWLock::Lock lock(mutex_, READ_LOCKER);
       return logic_block_manager_.get_all_block_info(blocks);
     }
 
     int BlockManager::get_all_block_info(std::vector<BlockInfoV2>& blocks) const
     {
       blocks.clear();
+      RWLock::Lock lock(mutex_, READ_LOCKER);
       return logic_block_manager_.get_all_block_info(blocks);
     }
 
     int BlockManager::get_all_block_info(std::set<common::BlockInfoV2>& blocks) const
     {
       blocks.clear();
+      RWLock::Lock lock(mutex_, READ_LOCKER);
       return logic_block_manager_.get_all_block_info(blocks);
     }
 
     int BlockManager::get_all_logic_block_to_physical_block(std::map<uint64_t, std::vector<int32_t> >& blocks) const
     {
       blocks.clear();
+      RWLock::Lock lock(mutex_, READ_LOCKER);
       return logic_block_manager_.get_all_logic_block_to_physical_block(blocks);
     }
 
     int32_t BlockManager::get_all_logic_block_count() const
     {
+      RWLock::Lock lock(mutex_, READ_LOCKER);
       return logic_block_manager_.size();
     }
 
@@ -253,6 +224,7 @@ namespace tfs
       int32_t ret = (INVALID_BLOCK_ID != logic_block_id) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
+        RWLock::Lock lock(mutex_, WRITE_LOCKER);
         ret = get_logic_block_manager().switch_logic_block(logic_block_id, tmp);
       }
       return ret;
@@ -260,6 +232,7 @@ namespace tfs
 
     int BlockManager::timeout(const time_t now)
     {
+      RWLock::Lock lock(mutex_, WRITE_LOCKER);
       std::vector<uint64_t> expired_blocks;
       int32_t ret = get_logic_block_manager().timeout(expired_blocks, now);
       if (TFS_SUCCESS == ret)
@@ -267,7 +240,7 @@ namespace tfs
         std::vector<uint64_t>::const_iterator iter = expired_blocks.begin();
         for (; iter != expired_blocks.end(); ++iter)
         {
-          ret = del_block((*iter), true);
+          ret = del_block_((*iter), true);
           if (TFS_SUCCESS != ret)
           {
             TBSYS_LOG(WARN, "delete logic block : %"PRI64_PREFIX"u from tmp logic block map failed, ret: %d",(*iter), ret);
@@ -438,6 +411,21 @@ namespace tfs
     bool BlockManager::exist(const uint64_t logic_block_id, const bool tmp) const
     {
       return logic_block_manager_.exist(logic_block_id, tmp);
+    }
+
+    int BlockManager::generation_file_id(uint64_t& fileid, const uint64_t logic_block_id, const double threshold)
+    {
+      int32_t ret = (INVALID_FILE_ID != fileid && INVALID_BLOCK_ID != logic_block_id) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+      if (TFS_SUCCESS == ret)
+      {
+        BaseLogicBlock* logic_block = get(logic_block_id);
+        ret = (NULL != logic_block) ? TFS_SUCCESS  : EXIT_NO_LOGICBLOCK_ERROR;
+        if (TFS_SUCCESS == ret)
+        {
+          ret = dynamic_cast<LogicBlock*>(logic_block)->generation_file_id(fileid, threshold);
+        }
+      }
+      return ret;
     }
 
     int BlockManager::load_super_block_(const common::FileSystemParameter& parameter)
@@ -746,5 +734,64 @@ namespace tfs
       }
       return logic_block;
     }
+
+    BaseLogicBlock* BlockManager::get_(const uint64_t logic_block_id, const bool tmp) const
+    {
+      return logic_block_manager_.get(logic_block_id, tmp);
+    }
+
+    bool BlockManager::exist_(const uint64_t logic_block_id, const bool tmp) const
+    {
+      return logic_block_manager_.exist(logic_block_id, tmp);
+    }
+
+    int BlockManager::del_block_(const uint64_t logic_block_id, const bool tmp)
+    {
+      SuperBlockInfo* info = NULL;
+      BaseLogicBlock* logic_block = NULL;
+      int32_t ret = (INVALID_BLOCK_ID != logic_block_id) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+      if (TFS_SUCCESS == ret)
+      {
+        ret = get_super_block_manager().get_super_block_info(info);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        logic_block = get_(logic_block_id, tmp);
+        ret = (NULL != logic_block) ? TFS_SUCCESS : EXIT_NO_LOGICBLOCK_ERROR;
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = get_logic_block_manager().remove(logic_block, logic_block_id);//remove logic block form logic block map, but not free pointer
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        BasePhysicalBlock* physical_block = NULL;
+        std::vector<int32_t> physical_blocks;
+        logic_block->rename_index_filename();//rename index file name
+        logic_block->get_all_physical_blocks(physical_blocks);
+        std::vector<int32_t>::const_iterator iter = physical_blocks.begin();
+        for (; iter != physical_blocks.end(); ++iter)
+        {
+          ret = get_physical_block_manager().remove(physical_block, (*iter));//remove physical block form physical block map, but not free pointer
+          assert(TFS_SUCCESS == ret);
+          ret = get_super_block_manager().cleanup_block_index((*iter));//cleanup block index
+          assert(TFS_SUCCESS == ret);
+          tbsys::gDelete(physical_block);//TODO, add physical block object to gc object map
+        }
+        tbsys::gDelete(logic_block);//TODO, add logic block object to gc object map
+
+        if (TFS_SUCCESS == ret)
+        {
+          info->used_main_block_count_ -= 1;
+          info->used_extend_block_count_ -= (physical_blocks.size() - 1);
+          ret = get_super_block_manager().flush();
+        }
+      }
+      TBSYS_LOG(INFO, "free logic block : %"PRI64_PREFIX"u, %s, ret: %d, tmp: %s",
+        logic_block_id, TFS_SUCCESS == ret ? "successful" : "failed", ret, tmp ? "true" : "false");
+      return ret;
+    }
+
+
   }/** end namespace dataserver **/
 }/** end namespace tfs **/

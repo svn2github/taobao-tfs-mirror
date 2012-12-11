@@ -83,6 +83,7 @@ namespace tfs
 
     int SuperBlockManager::get_super_block_info(SuperBlockInfo*& info) const
     {
+      RWLock::Lock lock(mutex_, READ_LOCKER);
       char* data = file_op_.get_data();
       int32_t ret = (NULL == data) ? EXIT_MMAP_DATA_INVALID : TFS_SUCCESS;
       if (TFS_SUCCESS == ret)
@@ -94,6 +95,7 @@ namespace tfs
 
     int SuperBlockManager::update_super_block_info(const SuperBlockInfo& info)
     {
+      RWLock::Lock lock(mutex_, WRITE_LOCKER);
       char* data = file_op_.get_data();
       int32_t ret = (NULL == data) ? EXIT_MMAP_DATA_INVALID : TFS_SUCCESS;
       if (TFS_SUCCESS == ret)
@@ -108,6 +110,7 @@ namespace tfs
       int32_t ret = (physical_block_id > 0 && physical_block_id < MAX_PHYSICAL_BLOCK_ID) ? TFS_SUCCESS : EXIT_PHYSICAL_ID_INVALID;
       if (TFS_SUCCESS == ret)
       {
+        RWLock::Lock lock(mutex_, READ_LOCKER);
         char* data = file_op_.get_data();
         ret = (NULL == data) ? EXIT_MMAP_DATA_INVALID : TFS_SUCCESS;
         if (TFS_SUCCESS == ret)
@@ -124,6 +127,7 @@ namespace tfs
       int32_t ret = (physical_block_id > 0 && physical_block_id < MAX_PHYSICAL_BLOCK_ID) ? TFS_SUCCESS : EXIT_PHYSICAL_ID_INVALID;
       if (TFS_SUCCESS == ret)
       {
+        RWLock::Lock lock(mutex_, WRITE_LOCKER);
         char* data = file_op_.get_data();
         ret = (NULL == data) ? EXIT_MMAP_DATA_INVALID : TFS_SUCCESS;
         if (TFS_SUCCESS == ret)
@@ -140,6 +144,7 @@ namespace tfs
       int32_t ret = (physical_block_id > 0 && physical_block_id < MAX_PHYSICAL_BLOCK_ID) ? TFS_SUCCESS : EXIT_PHYSICAL_ID_INVALID;
       if (TFS_SUCCESS == ret)
       {
+        RWLock::Lock lock(mutex_, WRITE_LOCKER);
         char* data = file_op_.get_data();
         ret = (NULL == data) ? EXIT_MMAP_DATA_INVALID : TFS_SUCCESS;
         if (TFS_SUCCESS == ret)
@@ -153,6 +158,7 @@ namespace tfs
 
     int SuperBlockManager::get_legal_physical_block_id(int32_t& physical_block_id, const bool extend) const
     {
+      RWLock::Lock lock(mutex_, WRITE_LOCKER);
       physical_block_id = INVALID_PHYSICAL_BLOCK_ID;
       char* data = file_op_.get_data();
       int32_t ret = (NULL == data) ? EXIT_MMAP_DATA_INVALID : TFS_SUCCESS;

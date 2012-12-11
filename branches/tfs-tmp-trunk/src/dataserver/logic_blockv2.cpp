@@ -56,6 +56,7 @@ namespace tfs
 
     int BaseLogicBlock::remove_self_file()
     {
+      RWLock::Lock lock(mutex_, WRITE_LOCKER);
       int32_t ret = index_handle_->remove_self(id());
       if (TFS_SUCCESS == ret)
       {
@@ -71,6 +72,7 @@ namespace tfs
 
     int BaseLogicBlock::rename_index_filename()
     {
+      RWLock::Lock lock(mutex_, WRITE_LOCKER);
       return index_handle_->rename_filename(id());
     }
 
@@ -88,6 +90,7 @@ namespace tfs
     int BaseLogicBlock::get_all_physical_blocks(std::vector<int32_t>& physical_blocks) const
     {
       physical_blocks.clear();
+      RWLock::Lock lock(mutex_, READ_LOCKER);
       PHYSICAL_BLOCK_LIST_CONST_ITER iter = physical_block_list_.begin();
       for (; iter != physical_block_list_.end(); ++iter)
       {
@@ -121,6 +124,7 @@ namespace tfs
 
     int BaseLogicBlock::update_block_info(const common::BlockInfoV2& info) const
     {
+      RWLock::Lock lock(mutex_, WRITE_LOCKER);
       return index_handle_->update_block_info(info);
     }
 
@@ -129,6 +133,7 @@ namespace tfs
       int32_t ret = (step >= 0) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
+        RWLock::Lock lock(mutex_, WRITE_LOCKER);
         ret = index_handle_->update_block_version(step);
       }
       return ret;
@@ -136,11 +141,13 @@ namespace tfs
 
     int BaseLogicBlock::check_block_version(common::BlockInfoV2& info, const int32_t remote_version) const
     {
+      RWLock::Lock lock(mutex_, READ_LOCKER);
       return index_handle_->check_block_version(info, remote_version);
     }
 
     int BaseLogicBlock::get_block_info(BlockInfoV2& info) const
     {
+      RWLock::Lock lock(mutex_, READ_LOCKER);
       return index_handle_->get_block_info(info);
     }
 
@@ -160,6 +167,7 @@ namespace tfs
       int32_t ret = (INVALID_BLOCK_ID != logic_block_id) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
+        RWLock::Lock lock(mutex_, READ_LOCKER);
         ret = index_handle_->traverse(finfos, logic_block_id);
       }
       return ret;
@@ -168,36 +176,43 @@ namespace tfs
     int BaseLogicBlock::get_family_id(int64_t& family_id) const
     {
       family_id = INVALID_FAMILY_ID;
+      RWLock::Lock lock(mutex_, READ_LOCKER);
       return index_handle_->get_family_id(family_id);
     }
 
     int BaseLogicBlock::set_family_id(const int64_t family_id)
     {
+      RWLock::Lock lock(mutex_, WRITE_LOCKER);
       return index_handle_->set_family_id(family_id);
     }
 
     int BaseLogicBlock::get_used_offset(int32_t& size) const
     {
+      RWLock::Lock lock(mutex_, READ_LOCKER);
       return index_handle_->get_used_offset(size);
     }
 
     int BaseLogicBlock::get_avail_offset(int32_t& size) const
     {
+      RWLock::Lock lock(mutex_, READ_LOCKER);
       return index_handle_->get_avail_offset(size);
     }
 
     int BaseLogicBlock::get_marshalling_offset(int32_t& offset) const
     {
+      RWLock::Lock lock(mutex_, READ_LOCKER);
       return index_handle_->get_marshalling_offset(offset);
     }
 
     int BaseLogicBlock::set_marshalling_offset(const int32_t size)
     {
+      RWLock::Lock lock(mutex_, WRITE_LOCKER);
       return index_handle_->set_marshalling_offset(size);
     }
 
     int BaseLogicBlock::write_file_infos(common::IndexHeaderV2& header, std::vector<FileInfoV2>& infos, const double threshold)
     {
+      RWLock::Lock lock(mutex_, WRITE_LOCKER);
       return index_handle_->write_file_infos(header, infos, threshold);
     }
 
@@ -215,6 +230,7 @@ namespace tfs
       int32_t ret = (NULL != buf && nbytes > 0 && offset >= 0 && INVALID_FILE_ID != fileid && INVALID_BLOCK_ID != logic_block_id) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
+        RWLock::Lock lock(mutex_, READ_LOCKER);
         SuperBlockInfo* sbinfo = NULL;
         SuperBlockManager& supber_block_manager = get_block_manager_().get_super_block_manager();
         ret = supber_block_manager.get_super_block_info(sbinfo);
@@ -253,6 +269,7 @@ namespace tfs
       int32_t ret = (NULL != buf && nbytes > 0) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
+        mutex_.wrlock();
         ret = extend_block_(nbytes, offset);
         if (TFS_SUCCESS == ret)//write data
         {
@@ -268,6 +285,7 @@ namespace tfs
             }
           }
         }
+        mutex_.unlock();
       }
       return TFS_SUCCESS == ret ? nbytes : ret;
     }
@@ -277,6 +295,7 @@ namespace tfs
       int32_t ret = (NULL != buf && nbytes > 0 && offset >= 0) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
+        RWLock::Lock lock(mutex_, READ_LOCKER);
         int32_t inner_offset = 0;
         ret = index_handle_->get_used_offset(inner_offset);
         if (TFS_SUCCESS == ret)
@@ -298,6 +317,7 @@ namespace tfs
       int32_t ret = (INVALID_FILE_ID != info.id_ && INVALID_BLOCK_ID != logic_block_id) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
+        RWLock::Lock lock(mutex_, READ_LOCKER);
         SuperBlockInfo* sbinfo = NULL;
         SuperBlockManager& supber_block_manager = manager_->get_super_block_manager();
         ret = supber_block_manager.get_super_block_info(sbinfo);
@@ -406,7 +426,17 @@ namespace tfs
             }
             if (TFS_SUCCESS == ret)
             {
-              ret = physical_block_manager.alloc_ext_block(index, ext_index);
+              # ifdef TFS_GTEST
+                ret = physical_block_manager.alloc_ext_block(index, ext_index);
+                TBSYS_LOG(INFO, "ssssssssssssssssssssssKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKK");
+              # else
+                mutex_.unlock();
+                TBSYS_LOG(INFO, "KKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKK");
+                get_block_manager_().mutex_.wrlock();
+                ret = physical_block_manager.alloc_ext_block(index, ext_index);
+                get_block_manager_().mutex_.unlock();
+                mutex_.wrlock();
+              # endif
             }
             if (TFS_SUCCESS == ret)
             {
@@ -506,6 +536,7 @@ namespace tfs
 
     int LogicBlock::generation_file_id(uint64_t& fileid, const double threshold)
     {
+      RWLock::Lock lock(mutex_, WRITE_LOCKER);
       return get_index_handle_()->generation_file_id(fileid, threshold);
     }
 
@@ -520,6 +551,7 @@ namespace tfs
       int32_t ret = (INVALID_BLOCK_ID != logic_block_id) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
+        mutex_.wrlock();
         SuperBlockInfo* sbinfo = NULL;
         SuperBlockManager& supber_block_manager = get_block_manager_().get_super_block_manager();
         ret = supber_block_manager.get_super_block_info(sbinfo);
@@ -560,6 +592,7 @@ namespace tfs
             }
           }
         }
+        mutex_.unlock();
       }
       return TFS_SUCCESS == ret ? datafile.length() : ret;
     }
@@ -571,6 +604,7 @@ namespace tfs
       int32_t ret = (INVALID_FILE_ID != fileid) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
+        RWLock::Lock lock(mutex_, WRITE_LOCKER);
         SuperBlockInfo* sbinfo = NULL;
         SuperBlockManager& supber_block_manager = get_block_manager_().get_super_block_manager();
         ret = supber_block_manager.get_super_block_info(sbinfo);
@@ -611,6 +645,7 @@ namespace tfs
       int32_t ret = (INVALID_BLOCK_ID != logic_block_id) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
+        RWLock::Lock lock(mutex_, READ_LOCKER);
         ret = get_index_handle_()->traverse(finfos, logic_block_id);
       }
       return ret;
@@ -744,6 +779,7 @@ namespace tfs
       int32_t ret = (INVALID_FILE_ID != fileid && INVALID_BLOCK_ID != logic_block_id) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
+        mutex_.wrlock();
         char* data = NULL;
         FileInfoV2* pold_finfo = NULL;
         FileInfoV2  new_finfo, old_finfo;
@@ -794,6 +830,7 @@ namespace tfs
                 ret, logic_block_id, fileid);
           }
         }
+        mutex_.unlock();
       }
       return TFS_SUCCESS == ret ? datafile.length() : ret;
     }
@@ -808,6 +845,7 @@ namespace tfs
         FileInfoV2* finfo = NULL;
         VerifyIndexHandle::InnerIndex index;
         index.logic_block_id_ = logic_block_id;
+        RWLock::Lock lock(mutex_, WRITE_LOCKER);
         ret = get_index_handle_()->malloc_index_mem_(data, index);
         if (TFS_SUCCESS == ret)
         {

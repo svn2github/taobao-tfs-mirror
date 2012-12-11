@@ -88,6 +88,7 @@ namespace tfs
       DataHandle data_handle_;  //data operation handle
       BaseIndexHandle* index_handle_;//index operation handle
       PHYSICAL_BLOCK_LIST physical_block_list_;//the physical block list of this logic block
+      mutable common::RWLock mutex_;
     };
 
     class LogicBlock : public BaseLogicBlock
