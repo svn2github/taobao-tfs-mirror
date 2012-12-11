@@ -24,7 +24,7 @@ public class NameMetaManager_05_large_file_operation extends  metaTfsBaseCase
     public static String filepath3 = filepath2 + "/3";
     public static String filename = filepath3 + "/largefile";
     public static String localFile = resourcesPath + "1G.jpg";
-    public static String savedFile = resourcesPath + "/saved";
+    public static String savedFile = resourcesPath + "saved";
     public static File large_file = new File(localFile);
 
     public static RandomAccessFile randomFile = null;
