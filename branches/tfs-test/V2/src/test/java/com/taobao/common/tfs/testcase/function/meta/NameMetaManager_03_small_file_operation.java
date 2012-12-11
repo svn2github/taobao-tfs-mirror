@@ -23,7 +23,7 @@ public class NameMetaManager_03_small_file_operation extends  metaTfsBaseCase
     public static String filepath3 = filepath2 + "/3";
     public static String filename = filepath3 + "/smallfile";
     public static String localFile = resourcesPath + "2M.jpg";
-    public static String savedFile = resourcesPath + "/saved";
+    public static String savedFile = resourcesPath + "saved";
     public static File small_file = new File(localFile);
     public static long file_len = 1<<21, write_len = (1<<15)+1;
 
@@ -128,7 +128,7 @@ public class NameMetaManager_03_small_file_operation extends  metaTfsBaseCase
         Assert.assertTrue(iRet==TfsConstant.TFS_SUCCESS);
     }
 
-    @Test
+   @Test
     public void test_02_write_small_file_backwards_by_parts() 
     {
     	log.info(new Throwable().getStackTrace()[0].getMethodName());
