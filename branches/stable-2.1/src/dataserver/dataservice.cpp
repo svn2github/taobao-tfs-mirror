@@ -759,20 +759,61 @@ namespace tfs
       return iret;
     }
 
+    bool DataService::check_response(common::NewClient* client)
+    {
+      bool all_success = (NULL != client);
+      NewClient::RESPONSE_MSG_MAP* sresponse = NULL;
+      NewClient::RESPONSE_MSG_MAP* fresponse = NULL;
+      if (all_success)
+      {
+        sresponse = client->get_success_response();
+        fresponse = client->get_fail_response();
+        all_success = ((NULL != sresponse) && (NULL != fresponse));
+      }
+
+      if (all_success)
+      {
+        all_success = (sresponse->size() == client->get_send_id_sign().size());
+        NewClient::RESPONSE_MSG_MAP::iterator iter = sresponse->begin();
+        for ( ; all_success && (iter != sresponse->end()); iter++)
+        {
+          tbnet::Packet* rmsg = iter->second.second;
+          if (NULL == rmsg)
+          {
+            all_success = false;
+          }
+          else
+          {
+            if (STATUS_MESSAGE != rmsg->getPCode())
+            {
+              all_success = false;
+            }
+            else
+            {
+              StatusMessage* smsg = dynamic_cast<StatusMessage*>(rmsg);
+              if (STATUS_MESSAGE_OK != smsg->get_status())
+              {
+                all_success = false;
+              }
+            }
+          }
+        }
+      }
+
+      return all_success;
+    }
+
     int DataService::callback(common::NewClient* client)
     {
       int32_t iret = NULL != client ? TFS_SUCCESS : TFS_ERROR;
       if (TFS_SUCCESS == iret)
       {
-        NewClient::RESPONSE_MSG_MAP* sresponse = client->get_success_response();
-        NewClient::RESPONSE_MSG_MAP* fresponse = client->get_fail_response();
-        iret = NULL != sresponse && fresponse != NULL ? TFS_SUCCESS : TFS_ERROR;
+        tbnet::Packet* packet = client->get_source_msg();
+        iret = (NULL != packet)? TFS_SUCCESS: TFS_ERROR;
         if (TFS_SUCCESS == iret)
         {
-          tbnet::Packet* packet = client->get_source_msg();
-          assert(NULL != packet);
+          bool all_success = check_response(client);
           int32_t pcode = packet->getPCode();
-          bool all_success = sresponse->size() == client->get_send_id_sign().size();
           common::BasePacket* bpacket= dynamic_cast<BasePacket*>(packet);
           if (WRITE_DATA_MESSAGE == pcode)
           {
@@ -1136,7 +1177,7 @@ namespace tfs
 
       TIMER_END();
       TBSYS_LOG(INFO,
-          "create file %s. filenumber: %" PRI64_PREFIX "u, blockid: %u, fileid: %" PRI64_PREFIX "u, cost time: %" PRI64_PREFIX "d",
+          "create file %s. filenumber: %" PRI64_PREFIX "u, blockid: %u, fileid: %"PRI64_PREFIX"u, cost: %"PRI64_PREFIX"d",
           TFS_SUCCESS == ret ? "success" : "fail", file_number, block_id, file_id, TIMER_DURATION());
 
       if (TFS_SUCCESS != ret)
