@@ -815,10 +815,12 @@ namespace tfs
             manager_.get_block_manager().relieve_relation(pblock, server, now,BLOCK_COMPARE_SERVER_BY_POINTER);//pointer
             //manager_.get_server_manager().relieve_relation(server, pblock);
           }
-          /*if (!helper.empty())
+          if (!helper.empty())
           {
+            pblock = *helper.at(helper.get_array_index() - 1);
+            assert(NULL != pblock);
             begin = pblock->id();
-          }*/
+          }
         }
         while (!complete);
       }
