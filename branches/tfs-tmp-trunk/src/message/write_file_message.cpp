@@ -120,40 +120,27 @@ namespace tfs
 
     int WriteFileRespMessage::serialize(Stream& output) const
     {
-      int ret = StatusMessage::serialize(output);
-      if (TFS_SUCCESS == ret && STATUS_MESSAGE_OK == status_)
+      int ret = output.set_int64(file_id_);
+      if (TFS_SUCCESS == ret)
       {
-        ret = output.set_int64(file_id_);
-        if (TFS_SUCCESS == ret)
-        {
-          ret = output.set_int64(lease_id_);
-        }
+        ret = output.set_int64(lease_id_);
       }
       return ret;
     }
 
     int WriteFileRespMessage::deserialize(Stream& input)
     {
-      int ret = StatusMessage::deserialize(input);
-      if (TFS_SUCCESS == ret && STATUS_MESSAGE_OK == status_)
+      int ret = input.get_int64(reinterpret_cast<int64_t *>(&file_id_));
+      if (TFS_SUCCESS == ret)
       {
-        ret = input.get_int64(reinterpret_cast<int64_t *>(&file_id_));
-        if (TFS_SUCCESS == ret)
-        {
-          ret = input.get_int64(reinterpret_cast<int64_t *>(&lease_id_));
-        }
+        ret = input.get_int64(reinterpret_cast<int64_t *>(&lease_id_));
       }
       return ret;
     }
 
     int64_t WriteFileRespMessage::length() const
     {
-      int64_t len = StatusMessage::length();
-      if  (STATUS_MESSAGE_OK == status_)
-      {
-        len += (2 * INT64_SIZE);
-      }
-      return len;
+      return 2 * INT64_SIZE;
     }
 
     SlaveDsRespMessage::SlaveDsRespMessage():
@@ -168,38 +155,29 @@ namespace tfs
 
     int SlaveDsRespMessage::serialize(Stream& output) const
     {
-      int ret = StatusMessage::serialize(output);
-      if ((TFS_SUCCESS == ret) && (STATUS_MESSAGE_OK == status_))
+      int ret = output.set_int64(server_id_);
+      if (TFS_SUCCESS == ret)
       {
-        ret = output.set_int64(server_id_);
+        int64_t pos = 0;
+        ret = block_info_.serialize(output.get_free(), output.get_free_length(), pos);
         if (TFS_SUCCESS == ret)
         {
-          int64_t pos = 0;
-          ret = block_info_.serialize(output.get_free(), output.get_free_length(), pos);
-          if (TFS_SUCCESS == ret)
-          {
-            output.pour(block_info_.length());
-          }
+          output.pour(block_info_.length());
         }
       }
       return ret;
-
     }
 
     int SlaveDsRespMessage::deserialize(Stream& input)
     {
-      int ret = StatusMessage::deserialize(input);
-      if ((TFS_SUCCESS == ret) && (STATUS_MESSAGE_OK == status_))
+      int ret = input.get_int64(reinterpret_cast<int64_t *>(server_id_));
+      if (TFS_SUCCESS == ret)
       {
-        ret = input.get_int64(reinterpret_cast<int64_t *>(server_id_));
+        int64_t pos = 0;
+        ret = block_info_.deserialize(input.get_data(), input.get_data_length(), pos);
         if (TFS_SUCCESS == ret)
         {
-          int64_t pos = 0;
-          ret = block_info_.deserialize(input.get_data(), input.get_data_length(), pos);
-          if (TFS_SUCCESS == ret)
-          {
-            input.drain(block_info_.length());
-          }
+          input.drain(block_info_.length());
         }
       }
       return ret;
@@ -207,12 +185,7 @@ namespace tfs
 
     int64_t SlaveDsRespMessage::length() const
     {
-      int64_t len = StatusMessage::length();
-      if (STATUS_MESSAGE_OK == status_)
-      {
-        len += (INT64_SIZE + block_info_.length());
-      }
-      return len;
+      return (INT64_SIZE + block_info_.length());
     }
 
   }

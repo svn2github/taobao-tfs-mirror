@@ -89,7 +89,7 @@ namespace tfs
         common::FamilyInfoExt family_info_;
     };
 
-    class StatFileRespMessage: public common::StatusMessage
+    class StatFileRespMessage: public common::BasePacket
     {
       public:
         StatFileRespMessage();
@@ -98,18 +98,18 @@ namespace tfs
         virtual int deserialize(common::Stream& input);
         virtual int64_t length() const;
 
-        void set_file_info(const common::FileInfo& file_info)
+        void set_file_info(const common::FileInfoV2& file_info)
         {
           file_info_ = file_info;
         }
 
-        const common::FileInfo& get_file_info() const
+        const common::FileInfoV2& get_file_info() const
         {
           return file_info_;
         }
 
       private:
-        common::FileInfo file_info_;
+        common::FileInfoV2 file_info_;
     };
 
     class ReadFileMessage: public common::BasePacket
@@ -207,7 +207,7 @@ namespace tfs
         common::FamilyInfoExt family_info_;
     };
 
-    class ReadFileRespMessage: public common::StatusMessage
+    class ReadFileRespMessage: public common::BasePacket
     {
       public:
         ReadFileRespMessage();
@@ -216,28 +216,10 @@ namespace tfs
         virtual int deserialize(common::Stream& input);
         virtual int64_t length() const;
 
-        /** reply is different with post */
-        void set_data(const char* data, const int32_t length)
-        {
-          if ((data != NULL) && (length > 0))
-          {
-            length_ = 0;
-            tbsys::gDeleteA(data_);
-          }
-          data_ = new (std::nothrow) char[length];
-          assert(NULL != data_);
-          length_ = length;
-          memcpy(data_, data, length);
-        }
-
+        char* alloc_data(const int32_t len);
         char* get_data() const
         {
           return data_;
-        }
-
-        void set_length(const int32_t length)
-        {
-          length_ = length;
         }
 
         int32_t get_length() const
@@ -245,42 +227,32 @@ namespace tfs
           return length_;
         }
 
-      protected:
-        char* data_;
-        int32_t length_;
-    };
+        void set_length(const int32_t len)
+        {
+          if (length_ <= 0 && alloc_ && data_)
+          {
+            ::free(data_);
+            data_ = NULL;
+            alloc_ = false;
+          }
+          length_ = len;
+        }
 
-    class ReadFileV2Message: public ReadFileMessage
-    {
-      public:
-        ReadFileV2Message();
-        virtual ~ReadFileV2Message();
-        virtual int serialize(common::Stream& output) const ;
-        virtual int deserialize(common::Stream& input);
-        virtual int64_t length() const;
-    };
-
-    class ReadFileV2RespMessage: public ReadFileRespMessage
-    {
-      public:
-        ReadFileV2RespMessage();
-        virtual ~ReadFileV2RespMessage();
-        virtual int serialize(common::Stream& output) const ;
-        virtual int deserialize(common::Stream& input);
-        virtual int64_t length() const;
-
-        void set_file_info(const common::FileInfo& file_info)
+        void set_file_info(const common::FileInfoV2& file_info)
         {
           file_info_ = file_info;
         }
 
-        const common::FileInfo& get_file_info() const
+        const common::FileInfoV2& get_file_info() const
         {
           return file_info_;
         }
 
-      private:
-        common::FileInfo file_info_;
+      protected:
+        char* data_;
+        int32_t length_;
+        bool alloc_;
+        common::FileInfoV2 file_info_;
     };
 
   }

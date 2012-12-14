@@ -144,7 +144,7 @@ namespace tfs
         int32_t flag_;
     };
 
-    class WriteFileRespMessage: public common::StatusMessage
+    class WriteFileRespMessage: public common::BasePacket
     {
       public:
         WriteFileRespMessage();
@@ -178,7 +178,7 @@ namespace tfs
         uint64_t lease_id_;
     };
 
-    class SlaveDsRespMessage: public common::StatusMessage
+    class SlaveDsRespMessage: public common::BasePacket
     {
       public:
         SlaveDsRespMessage();
@@ -197,19 +197,19 @@ namespace tfs
           return server_id_;
         }
 
-        void set_block_info(const common::BlockInfo& block_info)
+        void set_block_info(const common::BlockInfoV2& block_info)
         {
           block_info_ = block_info;
         }
 
-        const common::BlockInfo& get_block_info() const
+        const common::BlockInfoV2& get_block_info() const
         {
           return block_info_;
         }
 
       private:
         uint64_t server_id_;
-        common::BlockInfo block_info_;
+        common::BlockInfoV2 block_info_;
     };
 
   }

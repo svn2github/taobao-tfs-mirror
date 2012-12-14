@@ -109,42 +109,29 @@ namespace tfs
 
     int StatFileRespMessage::serialize(Stream& output) const
     {
-      int ret = StatusMessage::serialize(output);
-      if ((TFS_SUCCESS == ret) && (STATUS_MESSAGE_OK == status_))
+      int64_t pos = 0;
+      int ret = file_info_.serialize(output.get_free(), output.get_free_length(), pos);
+      if (TFS_SUCCESS == ret)
       {
-        int64_t pos = 0;
-        ret = file_info_.serialize(output.get_free(), output.get_free_length(), pos);
-        if (TFS_SUCCESS == ret)
-        {
-          output.pour(file_info_.length());
-        }
+        output.pour(file_info_.length());
       }
       return ret;
     }
 
     int StatFileRespMessage::deserialize(Stream& input)
     {
-      int ret = StatusMessage::deserialize(input);
-      if ((TFS_SUCCESS == ret) && (STATUS_MESSAGE_OK == status_))
+      int64_t pos = 0;
+      int ret = file_info_.deserialize(input.get_data(), input.get_data_length(), pos);
+      if (TFS_SUCCESS == ret)
       {
-        int64_t pos = 0;
-        ret = file_info_.deserialize(input.get_data(), input.get_data_length(), pos);
-        if (TFS_SUCCESS == ret)
-        {
-          input.drain(file_info_.length());
-        }
+        input.drain(file_info_.length());
       }
       return ret;
     }
 
     int64_t StatFileRespMessage::length() const
     {
-      int64_t len = StatusMessage::length();
-      if (STATUS_MESSAGE_OK == status_)
-      {
-        len += file_info_.length();
-      }
-      return len;
+      return file_info_.length();
     }
 
     ReadFileMessage::ReadFileMessage():
@@ -226,100 +213,55 @@ namespace tfs
       return len;
     }
 
-    ReadFileRespMessage::ReadFileRespMessage():
-      data_(NULL), length_(0)
+    ReadFileRespMessage::ReadFileRespMessage() :
+      data_(NULL), length_(-1), alloc_(false)
     {
       _packetHeader._pcode = READ_FILE_RESP_MESSAGE;
     }
 
     ReadFileRespMessage::~ReadFileRespMessage()
     {
-      if (NULL != data_)
+      if ((NULL != data_ ) && (alloc_))
       {
-        tbsys::gDeleteA(data_);
+        ::free(data_);
+        data_ = NULL;
       }
     }
 
-    int ReadFileRespMessage::serialize(Stream& output) const
+    char* ReadFileRespMessage::alloc_data(const int32_t len)
     {
-      int ret = StatusMessage::serialize(output);
-      if ((TFS_SUCCESS == ret) && (STATUS_MESSAGE_OK == status_))
+      if (len < 0)
       {
-        ret = output.set_int32(length_);
-        if (TFS_SUCCESS == ret)
+        return NULL;
+      }
+      if (len == 0)
+      {
+        length_ = len;
+        return NULL;
+      }
+      if (data_ != NULL)
+      {
+        ::free(data_);
+        data_ = NULL;
+      }
+      length_ = len;
+      data_ = (char*) malloc(len);
+      alloc_ = true;
+      return data_;
+    }
+
+    int ReadFileRespMessage::serialize(common::Stream& output) const
+    {
+      int32_t ret = output.set_int32(length_);
+      if (TFS_SUCCESS == ret)
+      {
+        if ((length_ > 0) && (NULL != data_))
         {
-          if ((data_ != NULL) && (length_ > 0))
-          {
-            ret = output.set_bytes(data_, length_);
-          }
+          ret = output.set_bytes(data_, length_);
         }
       }
-      return ret;
-    }
 
-    int ReadFileRespMessage::deserialize(Stream& input)
-    {
-      int ret = StatusMessage::deserialize(input);
-      if ((TFS_SUCCESS == ret) && (STATUS_MESSAGE_OK == status_))
-      {
-        ret = input.get_int32(&length_);
-        if (TFS_SUCCESS == ret && length_ > 0)
-        {
-          data_ = input.get_data();
-          input.drain(length_);
-        }
-      }
-      return ret;
-    }
-
-    int64_t ReadFileRespMessage::length() const
-    {
-      int64_t len = StatusMessage::length();
-      if (STATUS_MESSAGE_OK == status_)
-      {
-        len += (INT_SIZE + length_);
-      }
-      return len;
-    }
-
-    ReadFileV2Message::ReadFileV2Message()
-    {
-      _packetHeader._pcode = READ_FILE_V2_MESSAGE;
-    }
-
-    ReadFileV2Message::~ReadFileV2Message()
-    {
-    }
-
-    int ReadFileV2Message::serialize(Stream& output) const
-    {
-      return ReadFileMessage::serialize(output);
-    }
-
-    int ReadFileV2Message::deserialize(Stream& input)
-    {
-      return ReadFileMessage::deserialize(input);
-    }
-
-    int64_t ReadFileV2Message::length() const
-    {
-      return ReadFileMessage::length();
-    }
-
-    ReadFileV2RespMessage::ReadFileV2RespMessage()
-    {
-      _packetHeader._pcode = READ_FILE_V2_RESP_MESSAGE;
-    }
-
-    ReadFileV2RespMessage::~ReadFileV2RespMessage()
-    {
-
-    }
-
-    int ReadFileV2RespMessage::serialize(Stream& output) const
-    {
-      int ret = ReadFileRespMessage::serialize(output);
-      if ((TFS_SUCCESS == ret) && (STATUS_MESSAGE_OK == status_))
+      if (TFS_SUCCESS == ret)
       {
         int64_t pos = 0;
         ret = file_info_.serialize(output.get_free(), output.get_free_length(), pos);
@@ -328,13 +270,23 @@ namespace tfs
           output.pour(file_info_.length());
         }
       }
+
       return ret;
     }
 
-    int ReadFileV2RespMessage::deserialize(Stream& input)
+    int ReadFileRespMessage::deserialize(common::Stream& input)
     {
-      int ret = ReadFileRespMessage::deserialize(input);
-      if ((TFS_SUCCESS == ret) && (STATUS_MESSAGE_OK == status_))
+      int32_t ret = input.get_int32(&length_);
+      if (TFS_SUCCESS == ret)
+      {
+        if (length_ > 0)
+        {
+          data_ = input.get_data();
+          input.drain(length_);
+        }
+      }
+
+      if (TFS_SUCCESS == ret)
       {
         int64_t pos = 0;
         ret = file_info_.serialize(input.get_data(), input.get_data_length(), pos);
@@ -343,15 +295,16 @@ namespace tfs
           input.drain(file_info_.length());
         }
       }
+
       return ret;
     }
 
-    int64_t ReadFileV2RespMessage::length() const
+    int64_t ReadFileRespMessage::length() const
     {
-      int64_t len = ReadFileRespMessage::length();
-      if (STATUS_MESSAGE_OK == status_)
+      int64_t len = common::INT_SIZE + file_info_.length();
+      if ((length_ > 0) && (NULL != data_))
       {
-        len += file_info_.length();
+        len += length_;
       }
       return len;
     }

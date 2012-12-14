@@ -372,12 +372,6 @@ namespace tfs
           case common::READ_FILE_RESP_MESSAGE:
             packet = new ReadFileRespMessage();
             break;
-          case common::READ_FILE_V2_MESSAGE:
-            packet = new ReadFileV2Message();
-            break;
-          case common::READ_FILE_V2_RESP_MESSAGE:
-            packet = new ReadFileV2RespMessage();
-            break;
           case common::DELETE_FILE_MESSAGE:
             packet = new DeleteFileMessage();
             break;

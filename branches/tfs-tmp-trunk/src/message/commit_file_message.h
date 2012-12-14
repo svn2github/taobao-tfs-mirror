@@ -124,12 +124,12 @@ namespace tfs
         virtual int deserialize(common::Stream& input);
         virtual int64_t length() const;
 
-        void set_block_info(const common::BlockInfo& block_info)
+        void set_block_info(const common::BlockInfoV2& block_info)
         {
           block_info_ = block_info;
         }
 
-        const common::BlockInfo& get_block_info() const
+        const common::BlockInfoV2& get_block_info() const
         {
           return block_info_;
         }
@@ -155,7 +155,7 @@ namespace tfs
         }
 
       private:
-        common::BlockInfo block_info_;
+        common::BlockInfoV2 block_info_;
         uint64_t server_id_;
         common::BlockOper oper_;
     };

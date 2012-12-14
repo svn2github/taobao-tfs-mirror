@@ -66,42 +66,29 @@ namespace tfs
 
     int OpenFileRespMessage::serialize(Stream& output) const
     {
-      int ret = StatusMessage::serialize(output);
-      if ((TFS_SUCCESS == ret) && (STATUS_MESSAGE_OK == status_))
+      int64_t pos = 0;
+      int ret = block_meta_.serialize(output.get_free(), output.get_free_length(), pos);
+      if (TFS_SUCCESS == ret)
       {
-        int64_t pos = 0;
-        ret = block_meta_.serialize(output.get_free(), output.get_free_length(), pos);
-        if (TFS_SUCCESS == ret)
-        {
-          output.pour(block_meta_.length());
-        }
+        output.pour(block_meta_.length());
       }
       return ret;
     }
 
     int OpenFileRespMessage::deserialize(Stream& input)
     {
-      int ret = StatusMessage::deserialize(input);
-      if ((TFS_SUCCESS == ret) && (STATUS_MESSAGE_OK == status_))
+      int64_t pos = 0;
+      int ret = block_meta_.deserialize(input.get_data(), input.get_data_length(), pos);
+      if (TFS_SUCCESS == ret)
       {
-        int64_t pos = 0;
-        ret = block_meta_.deserialize(input.get_data(), input.get_data_length(), pos);
-        if (TFS_SUCCESS == ret)
-        {
-          input.drain(block_meta_.length());
-        }
+        input.drain(block_meta_.length());
       }
       return ret;
     }
 
     int64_t OpenFileRespMessage::length() const
     {
-      int64_t len = StatusMessage::length();
-      if (STATUS_MESSAGE_OK == status_)
-      {
-        len += block_meta_.length();
-      }
-      return len;
+      return block_meta_.length();
     }
 
     BatchOpenFileMessage::BatchOpenFileMessage()
@@ -149,24 +136,20 @@ namespace tfs
 
     int BatchOpenFileRespMessage::serialize(Stream& output) const
     {
-      int ret = StatusMessage::serialize(output);
-      if ((TFS_SUCCESS == ret) && (STATUS_MESSAGE_OK == status_))
+      int ret = output.set_int32(block_metas_.size());
+      if (TFS_SUCCESS == ret)
       {
-        ret = output.set_int32(block_metas_.size());
-        if (TFS_SUCCESS == ret)
+        std::map<uint64_t, BlockMeta>::const_iterator iter = block_metas_.begin();
+        for ( ; iter != block_metas_.end() && TFS_SUCCESS == ret; iter++)
         {
-          std::map<uint64_t, BlockMeta>::const_iterator iter = block_metas_.begin();
-          for ( ; iter != block_metas_.end() && TFS_SUCCESS == ret; iter++)
+          ret = output.set_int64(iter->first);
+          if (TFS_SUCCESS == ret)
           {
-            ret = output.set_int64(iter->first);
+            int64_t pos = 0;
+            ret = iter->second.serialize(output.get_free(), output.get_free_length(), pos);
             if (TFS_SUCCESS == ret)
             {
-              int64_t pos = 0;
-              ret = iter->second.serialize(output.get_free(), output.get_free_length(), pos);
-              if (TFS_SUCCESS == ret)
-              {
-                output.pour(iter->second.length());
-              }
+              output.pour(iter->second.length());
             }
           }
         }
@@ -176,25 +159,21 @@ namespace tfs
 
     int BatchOpenFileRespMessage::deserialize(Stream& input)
     {
-      int ret = StatusMessage::deserialize(input);
-      if ((TFS_SUCCESS == ret) && (STATUS_MESSAGE_OK == status_))
+      int32_t map_size = 0;
+      int ret = input.get_int32(&map_size);
+      for (int i = 0; i < map_size && TFS_SUCCESS == ret; i++)
       {
-        int32_t map_size = 0;
-        int ret = input.get_int32(&map_size);
-        for (int i = 0; i < map_size && TFS_SUCCESS == ret; i++)
+        uint64_t block_id;
+        BlockMeta block_meta;
+        ret = input.get_int64(reinterpret_cast<int64_t *>(block_id));
+        if (TFS_SUCCESS == ret)
         {
-          uint64_t block_id;
-          BlockMeta block_meta;
-          ret = input.get_int64(reinterpret_cast<int64_t *>(block_id));
+          int64_t pos = 0;
+          ret = block_meta.deserialize(input.get_data(), input.get_data_length(), pos);
           if (TFS_SUCCESS == ret)
           {
-            int64_t pos = 0;
-            ret = block_meta.deserialize(input.get_data(), input.get_data_length(), pos);
-            if (TFS_SUCCESS == ret)
-            {
-              input.drain(block_meta.length());
-              block_metas_.insert(std::make_pair(block_id, block_meta));
-            }
+            input.drain(block_meta.length());
+            block_metas_.insert(std::make_pair(block_id, block_meta));
           }
         }
       }
@@ -203,15 +182,11 @@ namespace tfs
 
     int64_t BatchOpenFileRespMessage::length() const
     {
-      int64_t len = StatusMessage::length();
-      if (STATUS_MESSAGE_OK == status_)
+      int64_t len = INT_SIZE;
+      std::map<uint64_t, BlockMeta>::const_iterator iter = block_metas_.begin();
+      for ( ; iter != block_metas_.end(); iter++)
       {
-        len += INT_SIZE;
-        std::map<uint64_t, BlockMeta>::const_iterator iter = block_metas_.begin();
-        for ( ; iter != block_metas_.end(); iter++)
-        {
-          len += (INT64_SIZE + iter->second.length());
-        }
+        len += (INT64_SIZE + iter->second.length());
       }
       return len;
     }

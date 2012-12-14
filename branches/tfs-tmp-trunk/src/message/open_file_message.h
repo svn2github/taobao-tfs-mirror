@@ -56,7 +56,7 @@ namespace tfs
         int32_t mode_;
     };
 
-    class OpenFileRespMessage: public common::StatusMessage
+    class OpenFileRespMessage: public common::BasePacket
     {
       public:
         OpenFileRespMessage();
@@ -118,7 +118,7 @@ namespace tfs
         int32_t mode_;
     };
 
-    class BatchOpenFileRespMessage: public common::StatusMessage
+    class BatchOpenFileRespMessage: public common::BasePacket
     {
       public:
         BatchOpenFileRespMessage();
