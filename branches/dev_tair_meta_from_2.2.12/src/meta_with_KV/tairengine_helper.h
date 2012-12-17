@@ -17,8 +17,7 @@
 #ifndef TFS_METAWITHKV_Tair_ENGINE_HELPER_H_
 #define TFS_METAWITHKV_Tair_ENGINE_HELPER_H_
 
-#include <string>
-#include <vector>
+#include "kvengine_helper.h"
 
 namespace tfs
 {
@@ -26,12 +25,12 @@ namespace tfs
   {
     //different key type will use different namespace in tair
 
-    class TairEngineHelper
+    class TairEngineHelper : public KvEngineHelper
     {
     public:
       TairEngineHelper();
       virtual ~TairEngineHelper();
-      virtual int put_key(const KvKey& key, const char* value, const int64_t version);
+      virtual int put_key(const KvKey& key, const std::string& value, const int64_t version);
       virtual int get_key(const KvKey& key, std::string* value, int64_t* version);
       virtual int delete_key(const KvKey& key);
       virtual int delete_keys(const std::vector<KvKey>& vec_keys);

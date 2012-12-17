@@ -20,6 +20,7 @@
 #include "common/parameter.h"
 #include "common/base_service.h"
 #include "common/status_message.h"
+#include "common/meta_kv_define.h"
 #include "message/message_factory.h"
 #include "kvengine_helper.h"
 
@@ -32,15 +33,15 @@ namespace tfs
     public:
       MetaInfoHelper();
       virtual ~MetaInfoHelper();
-      int put_meta(const BucketInfo& bucket_name, const string& file_name,
-          const int64_t offset, const TfsFileInfo& tfs_file_info
-          /* const taglist */
+      int put_meta(const std::string& bucket_name, const std::string& file_name,
+          /*const int64_t offset,*/ const common::TfsFileInfo* tfs_file_info
+          /* const taglist , versioning*/
           );
-      int get_meta(const BucketInfo& bucket_name, const string& file_name,
-          const int64_t offset, /*const get_tag_list*/ TfsFileInfo* tfs_file_info,
+      int get_meta(const std::string& bucket_name, const std::string& file_name,
+          /*const int64_t offset,*/ /*const get_tag_list*/ common::TfsFileInfo* tfs_file_info
           /*taglist* */);
-      int scan_meta();
-      int delete_metas();
+      //int scan_metas();
+      //int delete_metas();
 
 
     private:

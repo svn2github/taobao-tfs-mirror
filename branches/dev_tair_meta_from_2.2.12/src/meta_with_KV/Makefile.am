@@ -16,7 +16,8 @@ noinst_LIBRARIES=libmetakvserver.a
 
 metakvserver_INCLUDE=meta_kv_service.h
 
-libmetakvserver_a_SOURCES=meta_kv_service.cpp $(metakvserver_INCLUDE)
+libmetakvserver_a_SOURCES=meta_kv_service.cpp meta_info_helper.cpp \
+													tairengine_helper.cpp $(metakvserver_INCLUDE)
 
 bin_PROGRAMS = metakvserver 
 

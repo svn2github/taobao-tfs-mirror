@@ -22,6 +22,7 @@
 #include "common/status_message.h"
 #include "message/message_factory.h"
 
+#include "meta_info_helper.h"
 namespace tfs
 {
   namespace metawithkv

@@ -20,6 +20,8 @@
 #include <string>
 #include <vector>
 
+#include "common/define.h"
+
 namespace tfs
 {
   namespace metawithkv
@@ -27,7 +29,8 @@ namespace tfs
     //key of object is like this
     //  bucketname\filename\offset\version_id
     //key of bucket is like this
-    //  bucketname\
+    //  bucketname
+    //
 
     struct KvKey
     {
@@ -39,9 +42,9 @@ namespace tfs
     class KvEngineHelper
     {
     public:
-      KvEngineHelper();
-      virtual ~KvEngineHelper();
-      virtual int put_key(const KvKey& key, const char* value, const int64_t version) = 0;
+      KvEngineHelper(){};
+      virtual ~KvEngineHelper(){};
+      virtual int put_key(const KvKey& key, const std::string& value, const int64_t version) = 0;
       virtual int get_key(const KvKey& key, std::string* value, int64_t* version) = 0;
       virtual int delete_key(const KvKey& key) = 0;
       virtual int delete_keys(const std::vector<KvKey>& vec_keys) = 0;
