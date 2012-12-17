@@ -210,6 +210,7 @@ AC_CONFIG_FILES([Makefile
                  src/nameserver/Makefile
                  src/rcserver/Makefile
                  src/name_meta_server/Makefile
+                 src/meta_with_KV/Makefile
                  src/rootserver/Makefile
                  src/checkserver/Makefile
                  src/tools/Makefile
