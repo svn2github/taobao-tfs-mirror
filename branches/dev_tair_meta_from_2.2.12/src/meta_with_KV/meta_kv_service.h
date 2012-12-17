@@ -21,8 +21,6 @@
 #include "common/base_service.h"
 #include "common/status_message.h"
 #include "message/message_factory.h"
-#include "message/meta_nameserver_client_message.h"
-
 
 namespace tfs
 {
@@ -53,7 +51,7 @@ namespace tfs
     private:
       DISALLOW_COPY_AND_ASSIGN(MetaKvService);
 
-      //MetaInfoHelper meta_info_helper_;
+      MetaInfoHelper meta_info_helper_;
       //TODO add stat
       //StatInfoHelper stat_info_helper_;
     };
