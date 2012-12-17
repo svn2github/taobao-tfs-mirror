@@ -208,6 +208,7 @@ namespace tfs
     const int32_t EXIT_VERIFY_INDEX_BLOCK_NOT_FOUND_ERROR = -8067;
     const int32_t EXIT_INDEX_DATA_INVALID_ERROR = -8068;
     const int32_t EXIT_ALLOC_PHYSICAL_BLOCK_USE_ERROR = -8069;//当前物理BLOCK正在使用
+    const int32_t EXIT_NOT_SUPPORT_ERROR = -8070; // a clue to old clients
 
     const int32_t EXIT_SESSION_EXIST_ERROR = -9001;
     const int32_t EXIT_SESSIONID_INVALID_ERROR = -9002;

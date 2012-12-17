@@ -1065,25 +1065,7 @@ namespace tfs
       }
     };
 
-    struct BlockSegment
-    {
-      uint64_t block_id_;
-      int32_t offset_;
-      int32_t length_;
-
-      int deserialize(const char* data, const int64_t data_len, int64_t& pos);
-      int serialize(char* data, const int64_t data_len, int64_t& pos) const;
-      int64_t length() const;
-
-      BlockSegment():
-        block_id_(INVALID_BLOCK_ID), offset_(-1), length_(-1)
-      {
-      }
-    };
-
-
     extern const char* dynamic_parameter_str[43];
-
 
     #pragma pack (1)
     struct FileInfoV2//30
@@ -1096,6 +1078,10 @@ namespace tfs
     	int32_t  modify_time_;//modify time
     	int32_t create_time_; // create time
     	uint16_t next_;      //next index
+
+      int deserialize(const char* data, const int64_t data_len, int64_t& pos);
+      int serialize(char* data, const int64_t data_len, int64_t& pos) const;
+      int64_t length() const;
     };
     #pragma pack()
 
@@ -1123,6 +1109,10 @@ namespace tfs
       {
         return block_id_ < rhs.block_id_;
       }
+
+      int deserialize(const char* data, const int64_t data_len, int64_t& pos);
+      int serialize(char* data, const int64_t data_len, int64_t& pos) const;
+      int64_t length() const;
     };
 
     struct ThroughputV2
