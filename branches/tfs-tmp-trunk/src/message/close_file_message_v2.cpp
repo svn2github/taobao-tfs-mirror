@@ -12,7 +12,7 @@
 *
 */
 
-#include <commit_file_message.h>
+#include <close_file_message_v2.h>
 
 using namespace tfs::common;
 
@@ -20,16 +20,16 @@ namespace tfs
 {
   namespace message
   {
-    CommitFileMessage::CommitFileMessage()
+    CloseFileMessageV2::CloseFileMessageV2()
     {
-      _packetHeader._pcode = COMMIT_FILE_MESSAGE;
+      _packetHeader._pcode = CLOSE_FILE_MESSAGE_V2;
     }
 
-    CommitFileMessage::~CommitFileMessage()
+    CloseFileMessageV2::~CloseFileMessageV2()
     {
     }
 
-    int CommitFileMessage::serialize(Stream& output) const
+    int CloseFileMessageV2::serialize(Stream& output) const
     {
       int ret = output.set_int64(block_id_);
       if (TFS_SUCCESS == ret)
@@ -60,7 +60,7 @@ namespace tfs
       return ret;
     }
 
-    int CommitFileMessage::deserialize(Stream& input)
+    int CloseFileMessageV2::deserialize(Stream& input)
     {
       int ret = input.get_int64(reinterpret_cast<int64_t *>(&block_id_));
       if (TFS_SUCCESS == ret)
@@ -92,7 +92,7 @@ namespace tfs
 
     }
 
-    int64_t CommitFileMessage::length() const
+    int64_t CloseFileMessageV2::length() const
     {
       return 3 * INT64_SIZE + 2 * INT_SIZE +
              Serialization::get_vint64_length(ds_);

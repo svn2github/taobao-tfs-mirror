@@ -12,7 +12,7 @@
 *
 */
 
-#include <write_file_message.h>
+#include <write_file_message_v2.h>
 
 using namespace tfs::common;
 
@@ -20,17 +20,17 @@ namespace tfs
 {
   namespace message
   {
-    WriteFileMessage::WriteFileMessage():
+    WriteFileMessageV2::WriteFileMessageV2():
       lease_id_(INVALID_LEASE_ID), data_(NULL), flag_(INVALID_FLAG)
     {
-      _packetHeader._pcode = WRITE_FILE_MESSAGE;
+      _packetHeader._pcode = WRITE_FILE_MESSAGE_V2;
     }
 
-    WriteFileMessage::~WriteFileMessage()
+    WriteFileMessageV2::~WriteFileMessageV2()
     {
     }
 
-    int WriteFileMessage::serialize(Stream& output) const
+    int WriteFileMessageV2::serialize(Stream& output) const
     {
       int64_t pos = 0;
       int ret = file_seg_.serialize(output.get_free(), output.get_free_length(), pos);
@@ -62,7 +62,7 @@ namespace tfs
       return ret;
     }
 
-    int WriteFileMessage::deserialize(Stream& input)
+    int WriteFileMessageV2::deserialize(Stream& input)
     {
       int64_t pos = 0;
       int ret = file_seg_.deserialize(input.get_data(), input.get_data_length(), pos);
@@ -95,7 +95,7 @@ namespace tfs
       return ret;
     }
 
-    int64_t WriteFileMessage::length() const
+    int64_t WriteFileMessageV2::length() const
     {
       int64_t len = file_seg_.length() +
                     Serialization::get_vint64_length(ds_) +
@@ -108,17 +108,17 @@ namespace tfs
       return len;
     }
 
-    WriteFileRespMessage::WriteFileRespMessage():
+    WriteFileRespMessageV2::WriteFileRespMessageV2():
       file_id_(0), lease_id_(INVALID_LEASE_ID)
     {
-      _packetHeader._pcode = WRITE_FILE_RESP_MESSAGE;
+      _packetHeader._pcode = WRITE_FILE_RESP_MESSAGE_V2;
     }
 
-    WriteFileRespMessage::~WriteFileRespMessage()
+    WriteFileRespMessageV2::~WriteFileRespMessageV2()
     {
     }
 
-    int WriteFileRespMessage::serialize(Stream& output) const
+    int WriteFileRespMessageV2::serialize(Stream& output) const
     {
       int ret = output.set_int64(file_id_);
       if (TFS_SUCCESS == ret)
@@ -128,7 +128,7 @@ namespace tfs
       return ret;
     }
 
-    int WriteFileRespMessage::deserialize(Stream& input)
+    int WriteFileRespMessageV2::deserialize(Stream& input)
     {
       int ret = input.get_int64(reinterpret_cast<int64_t *>(&file_id_));
       if (TFS_SUCCESS == ret)
@@ -138,7 +138,7 @@ namespace tfs
       return ret;
     }
 
-    int64_t WriteFileRespMessage::length() const
+    int64_t WriteFileRespMessageV2::length() const
     {
       return 2 * INT64_SIZE;
     }
@@ -165,6 +165,11 @@ namespace tfs
           output.pour(block_info_.length());
         }
       }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = output.set_int32(status_);
+      }
       return ret;
     }
 
@@ -180,12 +185,18 @@ namespace tfs
           input.drain(block_info_.length());
         }
       }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = input.get_int32(&status_);
+      }
+
       return ret;
     }
 
     int64_t SlaveDsRespMessage::length() const
     {
-      return (INT64_SIZE + block_info_.length());
+      return (INT64_SIZE + INT_SIZE + block_info_.length());
     }
 
   }

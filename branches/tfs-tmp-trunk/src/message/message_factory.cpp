@@ -333,53 +333,53 @@ namespace tfs
           case common::DEGRADE_READ_DATA_MESSAGE:
             packet = new DegradeReadDataMessage();
             break;
-          case common::OPEN_FILE_MESSAGE:
-            packet = new OpenFileMessage();
+          case common::GET_BLOCK_INFO_MESSAGE_V2:
+            packet = new GetBlockInfoMessageV2();
             break;
-          case common::OPEN_FILE_RESP_MESSAGE:
-            packet = new OpenFileRespMessage();
+          case common::GET_BLOCK_INFO_RESP_MESSAGE_V2:
+            packet = new GetBlockInfoRespMessageV2();
             break;
-          case common::BATCH_OPEN_FILE_MESSAGE:
-            packet = new BatchOpenFileMessage();
+          case common::BATCH_GET_BLOCK_INFO_MESSAGE_V2:
+            packet = new BatchGetBlockInfoMessageV2();
             break;
-          case common::BATCH_OPEN_FILE_RESP_MESSAGE:
-            packet = new BatchOpenFileRespMessage();
+          case common::BATCH_GET_BLOCK_INFO_RESP_MESSAGE_V2:
+            packet = new BatchGetBlockInfoRespMessageV2();
             break;
-          case common::WRITE_FILE_MESSAGE:
-            packet = new WriteFileMessage();
+          case common::WRITE_FILE_MESSAGE_V2:
+            packet = new WriteFileMessageV2();
             break;
-          case common::WRITE_FILE_RESP_MESSAGE:
-            packet = new WriteFileRespMessage();
+          case common::WRITE_FILE_RESP_MESSAGE_V2:
+            packet = new WriteFileRespMessageV2();
             break;
           case common::SLAVE_DS_RESP_MESSAGE:
             packet = new SlaveDsRespMessage();
             break;
-          case common::COMMIT_FILE_MESSAGE:
-            packet = new CommitFileMessage();
+          case common::CLOSE_FILE_MESSAGE_V2:
+            packet = new CloseFileMessageV2();
             break;
           case common::COMMIT_BLOCK_UPDATE_MESSAGE:
             packet = new CommitBlockUpdateMessage();
             break;
-          case common::STAT_FILE_MESSAGE:
-            packet = new StatFileMessage();
+          case common::STAT_FILE_MESSAGE_V2:
+            packet = new StatFileMessageV2();
             break;
-          case common::STAT_FILE_RESP_MESSAGE:
-            packet = new StatFileRespMessage();
+          case common::STAT_FILE_RESP_MESSAGE_V2:
+            packet = new StatFileRespMessageV2();
             break;
-          case common::READ_FILE_MESSAGE:
-            packet = new ReadFileMessage();
+          case common::READ_FILE_MESSAGE_V2:
+            packet = new ReadFileMessageV2();
             break;
-          case common::READ_FILE_RESP_MESSAGE:
-            packet = new ReadFileRespMessage();
+          case common::READ_FILE_RESP_MESSAGE_V2:
+            packet = new ReadFileRespMessageV2();
             break;
-          case common::DELETE_FILE_MESSAGE:
-            packet = new DeleteFileMessage();
+          case common::UNLINK_FILE_MESSAGE_V2:
+            packet = new UnlinkFileMessageV2();
             break;
-          case common::CREATE_BLOCK_MESSAGE:
-            packet = new CreateBlockMessage();
+          case common::NEW_BLOCK_MESSAGE_V2:
+            packet = new NewBlockMessageV2();
             break;
-          case common::DELETE_BLOCK_MESSAGE:
-            packet = new DeleteBlockMessage();
+          case common::REMOVE_BLOCK_MESSAGE_V2:
+            packet = new RemoveBlockMessageV2();
             break;
           default:
             TBSYS_LOG(ERROR, "pcode: %d not found in message factory", pcode);

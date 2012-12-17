@@ -12,7 +12,7 @@
 *
 */
 
-#include <open_file_message.h>
+#include "block_info_message_v2.h"
 
 using namespace tfs::common;
 
@@ -20,17 +20,17 @@ namespace tfs
 {
   namespace message
   {
-    OpenFileMessage::OpenFileMessage():
+    GetBlockInfoMessageV2::GetBlockInfoMessageV2():
       block_id_(INVALID_BLOCK_ID), mode_(0)
     {
-      _packetHeader._pcode = OPEN_FILE_MESSAGE;
+      _packetHeader._pcode = GET_BLOCK_INFO_MESSAGE_V2;
     }
 
-    OpenFileMessage::~OpenFileMessage()
+    GetBlockInfoMessageV2::~GetBlockInfoMessageV2()
     {
     }
 
-    int OpenFileMessage::serialize(Stream& output) const
+    int GetBlockInfoMessageV2::serialize(Stream& output) const
     {
       int ret = output.set_int64(block_id_);
       if (TFS_SUCCESS == ret)
@@ -40,7 +40,7 @@ namespace tfs
       return ret;
     }
 
-    int OpenFileMessage::deserialize(Stream& input)
+    int GetBlockInfoMessageV2::deserialize(Stream& input)
     {
       int ret = input.get_int64(reinterpret_cast<int64_t* >(block_id_));
       if (TFS_SUCCESS == ret)
@@ -50,21 +50,21 @@ namespace tfs
       return ret;
     }
 
-    int64_t OpenFileMessage::length() const
+    int64_t GetBlockInfoMessageV2::length() const
     {
       return INT_SIZE + INT64_SIZE;
     }
 
-    OpenFileRespMessage::OpenFileRespMessage()
+    GetBlockInfoRespMessageV2::GetBlockInfoRespMessageV2()
     {
-      _packetHeader._pcode = OPEN_FILE_RESP_MESSAGE;
+      _packetHeader._pcode = GET_BLOCK_INFO_RESP_MESSAGE_V2;
     }
 
-    OpenFileRespMessage::~OpenFileRespMessage()
+    GetBlockInfoRespMessageV2::~GetBlockInfoRespMessageV2()
     {
     }
 
-    int OpenFileRespMessage::serialize(Stream& output) const
+    int GetBlockInfoRespMessageV2::serialize(Stream& output) const
     {
       int64_t pos = 0;
       int ret = block_meta_.serialize(output.get_free(), output.get_free_length(), pos);
@@ -75,7 +75,7 @@ namespace tfs
       return ret;
     }
 
-    int OpenFileRespMessage::deserialize(Stream& input)
+    int GetBlockInfoRespMessageV2::deserialize(Stream& input)
     {
       int64_t pos = 0;
       int ret = block_meta_.deserialize(input.get_data(), input.get_data_length(), pos);
@@ -86,21 +86,21 @@ namespace tfs
       return ret;
     }
 
-    int64_t OpenFileRespMessage::length() const
+    int64_t GetBlockInfoRespMessageV2::length() const
     {
       return block_meta_.length();
     }
 
-    BatchOpenFileMessage::BatchOpenFileMessage()
+    BatchGetBlockInfoMessageV2::BatchGetBlockInfoMessageV2()
     {
-      _packetHeader._pcode = BATCH_OPEN_FILE_MESSAGE;
+      _packetHeader._pcode = BATCH_GET_BLOCK_INFO_MESSAGE_V2;
     }
 
-    BatchOpenFileMessage::~BatchOpenFileMessage()
+    BatchGetBlockInfoMessageV2::~BatchGetBlockInfoMessageV2()
     {
     }
 
-    int BatchOpenFileMessage::serialize(Stream& output) const
+    int BatchGetBlockInfoMessageV2::serialize(Stream& output) const
     {
       int ret = output.set_vint64(block_ids_);
       if (TFS_SUCCESS == ret)
@@ -110,7 +110,7 @@ namespace tfs
       return ret;
     }
 
-    int BatchOpenFileMessage::deserialize(Stream& input)
+    int BatchGetBlockInfoMessageV2::deserialize(Stream& input)
     {
       int ret = input.get_vint64(block_ids_);
       if (TFS_SUCCESS == ret)
@@ -120,21 +120,21 @@ namespace tfs
       return ret;
     }
 
-    int64_t BatchOpenFileMessage::length() const
+    int64_t BatchGetBlockInfoMessageV2::length() const
     {
       return Serialization::get_vint64_length(block_ids_) + INT_SIZE;
     }
 
-    BatchOpenFileRespMessage::BatchOpenFileRespMessage()
+    BatchGetBlockInfoRespMessageV2::BatchGetBlockInfoRespMessageV2()
     {
-      _packetHeader._pcode = BATCH_OPEN_FILE_RESP_MESSAGE;
+      _packetHeader._pcode = BATCH_GET_BLOCK_INFO_RESP_MESSAGE_V2;
     }
 
-    BatchOpenFileRespMessage::~BatchOpenFileRespMessage()
+    BatchGetBlockInfoRespMessageV2::~BatchGetBlockInfoRespMessageV2()
     {
     }
 
-    int BatchOpenFileRespMessage::serialize(Stream& output) const
+    int BatchGetBlockInfoRespMessageV2::serialize(Stream& output) const
     {
       int ret = output.set_int32(block_metas_.size());
       if (TFS_SUCCESS == ret)
@@ -157,7 +157,7 @@ namespace tfs
       return ret;
     }
 
-    int BatchOpenFileRespMessage::deserialize(Stream& input)
+    int BatchGetBlockInfoRespMessageV2::deserialize(Stream& input)
     {
       int32_t map_size = 0;
       int ret = input.get_int32(&map_size);
@@ -180,7 +180,7 @@ namespace tfs
       return ret;
     }
 
-    int64_t BatchOpenFileRespMessage::length() const
+    int64_t BatchGetBlockInfoRespMessageV2::length() const
     {
       int64_t len = INT_SIZE;
       std::map<uint64_t, BlockMeta>::const_iterator iter = block_metas_.begin();
@@ -190,6 +190,57 @@ namespace tfs
       }
       return len;
     }
+
+    NewBlockMessageV2::NewBlockMessageV2()
+    {
+      _packetHeader._pcode = NEW_BLOCK_MESSAGE_V2;
+    }
+
+    NewBlockMessageV2::~NewBlockMessageV2()
+    {
+    }
+
+    int NewBlockMessageV2::serialize(Stream& output) const
+    {
+      return output.set_vint64(block_ids_);
+    }
+
+    int NewBlockMessageV2::deserialize(Stream& input)
+    {
+      return input.get_vint64(block_ids_);
+    }
+
+    int64_t NewBlockMessageV2::length() const
+    {
+      return Serialization::get_vint64_length(block_ids_);
+    }
+
+    RemoveBlockMessageV2::RemoveBlockMessageV2():
+      block_id_(INVALID_BLOCK_ID)
+    {
+      _packetHeader._pcode = REMOVE_BLOCK_MESSAGE_V2;
+    }
+
+    RemoveBlockMessageV2::~RemoveBlockMessageV2()
+    {
+    }
+
+    int RemoveBlockMessageV2::serialize(Stream& output) const
+    {
+      return output.set_int64(block_id_);
+    }
+
+    int RemoveBlockMessageV2::deserialize(Stream& input)
+    {
+      return input.get_int64(reinterpret_cast<int64_t *>(&block_id_));
+    }
+
+    int64_t RemoveBlockMessageV2::length() const
+    {
+      return INT64_SIZE;
+    }
+
+
 
   }
 }

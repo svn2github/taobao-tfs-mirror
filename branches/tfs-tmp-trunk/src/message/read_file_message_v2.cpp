@@ -12,7 +12,7 @@
 *
 */
 
-#include <read_file_message.h>
+#include <read_file_message_v2.h>
 
 using namespace tfs::common;
 
@@ -20,17 +20,17 @@ namespace tfs
 {
   namespace message
   {
-    StatFileMessage::StatFileMessage():
+    StatFileMessageV2::StatFileMessageV2():
       block_id_(INVALID_BLOCK_ID), file_id_(0), flag_(INVALID_FLAG)
     {
-      _packetHeader._pcode = STAT_FILE_MESSAGE;
+      _packetHeader._pcode = STAT_FILE_MESSAGE_V2;
     }
 
-    StatFileMessage::~StatFileMessage()
+    StatFileMessageV2::~StatFileMessageV2()
     {
     }
 
-    int StatFileMessage::serialize(Stream& output) const
+    int StatFileMessageV2::serialize(Stream& output) const
     {
       int ret = output.set_int64(block_id_);
       if (TFS_SUCCESS == ret)
@@ -61,7 +61,7 @@ namespace tfs
       return ret;
     }
 
-    int StatFileMessage::deserialize(Stream& input)
+    int StatFileMessageV2::deserialize(Stream& input)
     {
       int ret = input.get_int64(reinterpret_cast<int64_t *>(&block_id_));
       if (TFS_SUCCESS == ret)
@@ -88,7 +88,7 @@ namespace tfs
 
     }
 
-    int64_t StatFileMessage::length() const
+    int64_t StatFileMessageV2::length() const
     {
       int64_t len = 2 * INT64_SIZE + INT_SIZE;
       if (INVALID_FAMILY_ID != family_info_.family_id_)
@@ -98,16 +98,16 @@ namespace tfs
       return len;
     }
 
-    StatFileRespMessage::StatFileRespMessage()
+    StatFileRespMessageV2::StatFileRespMessageV2()
     {
-      _packetHeader._pcode = STAT_FILE_RESP_MESSAGE;
+      _packetHeader._pcode = STAT_FILE_RESP_MESSAGE_V2;
     }
 
-    StatFileRespMessage::~StatFileRespMessage()
+    StatFileRespMessageV2::~StatFileRespMessageV2()
     {
     }
 
-    int StatFileRespMessage::serialize(Stream& output) const
+    int StatFileRespMessageV2::serialize(Stream& output) const
     {
       int64_t pos = 0;
       int ret = file_info_.serialize(output.get_free(), output.get_free_length(), pos);
@@ -118,7 +118,7 @@ namespace tfs
       return ret;
     }
 
-    int StatFileRespMessage::deserialize(Stream& input)
+    int StatFileRespMessageV2::deserialize(Stream& input)
     {
       int64_t pos = 0;
       int ret = file_info_.deserialize(input.get_data(), input.get_data_length(), pos);
@@ -129,22 +129,22 @@ namespace tfs
       return ret;
     }
 
-    int64_t StatFileRespMessage::length() const
+    int64_t StatFileRespMessageV2::length() const
     {
       return file_info_.length();
     }
 
-    ReadFileMessage::ReadFileMessage():
+    ReadFileMessageV2::ReadFileMessageV2():
       flag_(INVALID_FLAG)
     {
-      _packetHeader._pcode = READ_FILE_MESSAGE;
+      _packetHeader._pcode = READ_FILE_MESSAGE_V2;
     }
 
-    ReadFileMessage::~ReadFileMessage()
+    ReadFileMessageV2::~ReadFileMessageV2()
     {
     }
 
-    int ReadFileMessage::serialize(Stream& output) const
+    int ReadFileMessageV2::serialize(Stream& output) const
     {
       int64_t pos = 0;
       int ret = file_seg_.serialize(output.get_free(), output.get_free_length(), pos);
@@ -175,7 +175,7 @@ namespace tfs
       return ret;
     }
 
-    int ReadFileMessage::deserialize(Stream& input)
+    int ReadFileMessageV2::deserialize(Stream& input)
     {
       int64_t pos = 0;
       int ret = file_seg_.deserialize(input.get_data(), input.get_data_length(), pos);
@@ -203,7 +203,7 @@ namespace tfs
     }
 
 
-    int64_t ReadFileMessage::length() const
+    int64_t ReadFileMessageV2::length() const
     {
       int64_t len = file_seg_.length() + INT_SIZE;
       if (INVALID_FAMILY_ID != family_info_.family_id_)
@@ -213,13 +213,13 @@ namespace tfs
       return len;
     }
 
-    ReadFileRespMessage::ReadFileRespMessage() :
+    ReadFileRespMessageV2::ReadFileRespMessageV2() :
       data_(NULL), length_(-1), alloc_(false)
     {
-      _packetHeader._pcode = READ_FILE_RESP_MESSAGE;
+      _packetHeader._pcode = READ_FILE_RESP_MESSAGE_V2;
     }
 
-    ReadFileRespMessage::~ReadFileRespMessage()
+    ReadFileRespMessageV2::~ReadFileRespMessageV2()
     {
       if ((NULL != data_ ) && (alloc_))
       {
@@ -228,7 +228,7 @@ namespace tfs
       }
     }
 
-    char* ReadFileRespMessage::alloc_data(const int32_t len)
+    char* ReadFileRespMessageV2::alloc_data(const int32_t len)
     {
       if (len < 0)
       {
@@ -250,7 +250,7 @@ namespace tfs
       return data_;
     }
 
-    int ReadFileRespMessage::serialize(common::Stream& output) const
+    int ReadFileRespMessageV2::serialize(common::Stream& output) const
     {
       int32_t ret = output.set_int32(length_);
       if (TFS_SUCCESS == ret)
@@ -274,7 +274,7 @@ namespace tfs
       return ret;
     }
 
-    int ReadFileRespMessage::deserialize(common::Stream& input)
+    int ReadFileRespMessageV2::deserialize(common::Stream& input)
     {
       int32_t ret = input.get_int32(&length_);
       if (TFS_SUCCESS == ret)
@@ -299,7 +299,7 @@ namespace tfs
       return ret;
     }
 
-    int64_t ReadFileRespMessage::length() const
+    int64_t ReadFileRespMessageV2::length() const
     {
       int64_t len = common::INT_SIZE + file_info_.length();
       if ((length_ > 0) && (NULL != data_))

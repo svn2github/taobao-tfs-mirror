@@ -22,11 +22,11 @@ namespace tfs
 {
   namespace message
   {
-    class CommitFileMessage: public common::BasePacket
+    class CloseFileMessageV2: public common::BasePacket
     {
       public:
-        CommitFileMessage();
-        virtual ~CommitFileMessage();
+        CloseFileMessageV2();
+        virtual ~CloseFileMessageV2();
         virtual int serialize(common::Stream& output) const ;
         virtual int deserialize(common::Stream& input);
         virtual int64_t length() const;
@@ -129,7 +129,7 @@ namespace tfs
           block_info_ = block_info;
         }
 
-        const common::BlockInfoV2& get_block_info() const
+        common::BlockInfoV2& get_block_info()
         {
           return block_info_;
         }

@@ -36,14 +36,14 @@ namespace tfs
     int ResolveBlockVersionConflictMessage::deserialize(common::Stream& input)
     {
       int32_t size = 0;
-      int32_t ret = input.get_int32(reinterpret_cast<int32_t*>(&block_));
+      int32_t ret = input.get_int64(reinterpret_cast<int64_t*>(&block_));
       if (common::TFS_SUCCESS == ret)
       {
         ret = input.get_int32(&size);
       }
       if (common::TFS_SUCCESS == ret)
       {
-        std::pair<uint64_t, common::BlockInfo> item;
+        std::pair<uint64_t, common::BlockInfoV2> item;
         for (int32_t index = 0; index < size && common::TFS_SUCCESS == ret; ++index)
         {
           ret = input.get_int64(reinterpret_cast<int64_t*>(&item.first));
@@ -65,14 +65,14 @@ namespace tfs
 
     int ResolveBlockVersionConflictMessage::serialize(common::Stream& output) const
     {
-      int32_t ret = output.set_int32(block_);
+      int32_t ret = output.set_int64(block_);
       if (common::TFS_SUCCESS == ret)
       {
         ret = output.set_int32(members_.size());
       }
       if (common::TFS_SUCCESS == ret)
       {
-        std::vector<std::pair<uint64_t, common::BlockInfo> >::const_iterator iter = members_.begin();
+        std::vector<std::pair<uint64_t, common::BlockInfoV2> >::const_iterator iter = members_.begin();
         for (; iter != members_.end() && common::TFS_SUCCESS == ret; ++iter)
         {
           ret = output.set_int64(iter->first);
@@ -90,7 +90,7 @@ namespace tfs
 
     int64_t ResolveBlockVersionConflictMessage::length() const
     {
-      int64_t length = common::INT_SIZE * 2;
+      int64_t length = common::INT_SIZE + common::INT64_SIZE;
       if (!members_.empty())
       {
         common::BlockInfo info;

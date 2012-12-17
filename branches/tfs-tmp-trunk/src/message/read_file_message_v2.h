@@ -23,11 +23,11 @@ namespace tfs
 {
   namespace message
   {
-    class StatFileMessage: public common::BasePacket
+    class StatFileMessageV2: public common::BasePacket
     {
       public:
-        StatFileMessage();
-        virtual ~StatFileMessage();
+        StatFileMessageV2();
+        virtual ~StatFileMessageV2();
         virtual int serialize(common::Stream& output) const ;
         virtual int deserialize(common::Stream& input);
         virtual int64_t length() const;
@@ -89,11 +89,11 @@ namespace tfs
         common::FamilyInfoExt family_info_;
     };
 
-    class StatFileRespMessage: public common::BasePacket
+    class StatFileRespMessageV2: public common::BasePacket
     {
       public:
-        StatFileRespMessage();
-        virtual ~StatFileRespMessage();
+        StatFileRespMessageV2();
+        virtual ~StatFileRespMessageV2();
         virtual int serialize(common::Stream& output) const ;
         virtual int deserialize(common::Stream& input);
         virtual int64_t length() const;
@@ -112,11 +112,11 @@ namespace tfs
         common::FileInfoV2 file_info_;
     };
 
-    class ReadFileMessage: public common::BasePacket
+    class ReadFileMessageV2: public common::BasePacket
     {
       public:
-        ReadFileMessage();
-        virtual ~ReadFileMessage();
+        ReadFileMessageV2();
+        virtual ~ReadFileMessageV2();
         virtual int serialize(common::Stream& output) const ;
         virtual int deserialize(common::Stream& input);
         virtual int64_t length() const;
@@ -207,11 +207,11 @@ namespace tfs
         common::FamilyInfoExt family_info_;
     };
 
-    class ReadFileRespMessage: public common::BasePacket
+    class ReadFileRespMessageV2: public common::BasePacket
     {
       public:
-        ReadFileRespMessage();
-        virtual ~ReadFileRespMessage();
+        ReadFileRespMessageV2();
+        virtual ~ReadFileRespMessageV2();
         virtual int serialize(common::Stream& output) const ;
         virtual int deserialize(common::Stream& input);
         virtual int64_t length() const;

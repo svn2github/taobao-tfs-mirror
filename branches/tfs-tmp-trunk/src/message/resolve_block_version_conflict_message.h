@@ -30,12 +30,12 @@ namespace tfs
         virtual int serialize(common::Stream& output) const ;
         virtual int deserialize(common::Stream& input);
         virtual int64_t length() const;
-        inline std::vector<std::pair<uint64_t, common::BlockInfo> >& get_members() { return members_;}
-        inline void set_block(const uint32_t block) { block_ = block;}
-        inline uint32_t get_block() const { return block_;}
+        inline std::vector<std::pair<uint64_t, common::BlockInfoV2> >& get_members() { return members_;}
+        inline void set_block(const uint64_t block) { block_ = block;}
+        inline uint64_t get_block() const { return block_;}
       private:
         uint32_t block_;
-        std::vector<std::pair<uint64_t, common::BlockInfo> > members_;
+        std::vector<std::pair<uint64_t, common::BlockInfoV2> > members_;
     };
 
     class ResolveBlockVersionConflictResponseMessage: public common::BasePacket

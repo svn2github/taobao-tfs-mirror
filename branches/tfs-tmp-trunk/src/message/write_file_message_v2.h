@@ -22,11 +22,11 @@ namespace tfs
 {
   namespace message
   {
-    class WriteFileMessage: public common::BasePacket
+    class WriteFileMessageV2: public common::BasePacket
     {
       public:
-        WriteFileMessage();
-        virtual ~WriteFileMessage();
+        WriteFileMessageV2();
+        virtual ~WriteFileMessageV2();
         virtual int serialize(common::Stream& output) const ;
         virtual int deserialize(common::Stream& input);
         virtual int64_t length() const;
@@ -144,11 +144,11 @@ namespace tfs
         int32_t flag_;
     };
 
-    class WriteFileRespMessage: public common::BasePacket
+    class WriteFileRespMessageV2: public common::BasePacket
     {
       public:
-        WriteFileRespMessage();
-        virtual ~WriteFileRespMessage();
+        WriteFileRespMessageV2();
+        virtual ~WriteFileRespMessageV2();
         virtual int serialize(common::Stream& output) const ;
         virtual int deserialize(common::Stream& input);
         virtual int64_t length() const;
@@ -197,12 +197,22 @@ namespace tfs
           return server_id_;
         }
 
+        void set_status(const int32_t status)
+        {
+          status_ = status;
+        }
+
+        int32_t get_status() const
+        {
+          return status_;
+        }
+
         void set_block_info(const common::BlockInfoV2& block_info)
         {
           block_info_ = block_info;
         }
 
-        const common::BlockInfoV2& get_block_info() const
+        common::BlockInfoV2& get_block_info()
         {
           return block_info_;
         }
@@ -210,6 +220,7 @@ namespace tfs
       private:
         uint64_t server_id_;
         common::BlockInfoV2 block_info_;
+        int32_t status_;
     };
 
   }

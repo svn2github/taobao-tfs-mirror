@@ -12,7 +12,7 @@
 *
 */
 
-#include <delete_file_message.h>
+#include <unlink_file_message_v2.h>
 
 using namespace tfs::common;
 
@@ -20,23 +20,40 @@ namespace tfs
 {
   namespace message
   {
-    DeleteFileMessage::DeleteFileMessage():
+    UnlinkFileMessageV2::UnlinkFileMessageV2():
       block_id_(INVALID_BLOCK_ID), file_id_(0),
       action_(0), flag_(INVALID_FLAG)
     {
-      _packetHeader._pcode = DELETE_FILE_MESSAGE;
+      _packetHeader._pcode = UNLINK_FILE_MESSAGE_V2;
     }
 
-    DeleteFileMessage::~DeleteFileMessage()
+    UnlinkFileMessageV2::~UnlinkFileMessageV2()
     {
     }
 
-    int DeleteFileMessage::serialize(Stream& output) const
+    int UnlinkFileMessageV2::serialize(Stream& output) const
     {
       int ret = output.set_int64(block_id_);
       if (TFS_SUCCESS == ret)
       {
         ret = output.set_int64(file_id_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = output.set_int64(lease_id_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = output.set_vint64(ds_);
+      }
+
+      if (TFS_SUCCESS == ret)
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = output.set_int32(version_);
       }
 
       if (TFS_SUCCESS == ret)
@@ -67,12 +84,27 @@ namespace tfs
       return ret;
     }
 
-    int DeleteFileMessage::deserialize(Stream& input)
+    int UnlinkFileMessageV2::deserialize(Stream& input)
     {
       int ret = input.get_int64(reinterpret_cast<int64_t *>(&block_id_));
       if (TFS_SUCCESS == ret)
       {
         ret = input.get_int64(reinterpret_cast<int64_t *>(&file_id_));
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = input.get_int64(reinterpret_cast<int64_t *>(&lease_id_));
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = input.get_vint64(ds_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = input.get_int32(&version_);
       }
 
       if (TFS_SUCCESS == ret)
@@ -98,9 +130,9 @@ namespace tfs
       return ret;
     }
 
-    int64_t DeleteFileMessage::length() const
+    int64_t UnlinkFileMessageV2::length() const
     {
-      int64_t len = 2 * INT64_SIZE + 2 * INT_SIZE +
+      int64_t len = 3 * INT64_SIZE + 3 * INT_SIZE +
         Serialization::get_vint64_length(ds_);
       if (INVALID_FAMILY_ID != family_info_.family_id_)
       {

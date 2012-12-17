@@ -22,11 +22,11 @@ namespace tfs
 {
   namespace message
   {
-    class OpenFileMessage: public common::BasePacket
+    class GetBlockInfoMessageV2: public common::BasePacket
     {
       public:
-        OpenFileMessage();
-        virtual ~OpenFileMessage();
+        GetBlockInfoMessageV2();
+        virtual ~GetBlockInfoMessageV2();
         virtual int serialize(common::Stream& output) const ;
         virtual int deserialize(common::Stream& input);
         virtual int64_t length() const;
@@ -56,11 +56,11 @@ namespace tfs
         int32_t mode_;
     };
 
-    class OpenFileRespMessage: public common::BasePacket
+    class GetBlockInfoRespMessageV2: public common::BasePacket
     {
       public:
-        OpenFileRespMessage();
-        virtual ~OpenFileRespMessage();
+        GetBlockInfoRespMessageV2();
+        virtual ~GetBlockInfoRespMessageV2();
         virtual int serialize(common::Stream& output) const ;
         virtual int deserialize(common::Stream& input);
         virtual int64_t length() const;
@@ -70,7 +70,7 @@ namespace tfs
           block_meta_ = block_meta;
         }
 
-        const common::BlockMeta& get_block_meta() const
+        common::BlockMeta& get_block_meta()
         {
           return block_meta_;
         }
@@ -79,11 +79,11 @@ namespace tfs
         common::BlockMeta block_meta_;
     };
 
-    class BatchOpenFileMessage: public common::BasePacket
+    class BatchGetBlockInfoMessageV2: public common::BasePacket
     {
       public:
-        BatchOpenFileMessage();
-        virtual ~BatchOpenFileMessage();
+        BatchGetBlockInfoMessageV2();
+        virtual ~BatchGetBlockInfoMessageV2();
         virtual int serialize(common::Stream& output) const ;
         virtual int deserialize(common::Stream& input);
         virtual int64_t length() const;
@@ -118,11 +118,11 @@ namespace tfs
         int32_t mode_;
     };
 
-    class BatchOpenFileRespMessage: public common::BasePacket
+    class BatchGetBlockInfoRespMessageV2: public common::BasePacket
     {
       public:
-        BatchOpenFileRespMessage();
-        virtual ~BatchOpenFileRespMessage();
+        BatchGetBlockInfoRespMessageV2();
+        virtual ~BatchGetBlockInfoRespMessageV2();
         virtual int serialize(common::Stream& output) const ;
         virtual int deserialize(common::Stream& input);
         virtual int64_t length() const;
@@ -132,18 +132,64 @@ namespace tfs
           block_metas_.insert(std::make_pair(block_id, meta));
         }
 
-        void set_block_metas(const std::map<uint64_t, common::BlockMeta>& block_metas)
-        {
-          block_metas_ = block_metas;
-        }
-
-        const std::map<uint64_t, common::BlockMeta>& get_block_metas() const
+        std::map<uint64_t, common::BlockMeta>& get_block_metas()
         {
           return block_metas_;
         }
 
       private:
         std::map<uint64_t, common::BlockMeta> block_metas_;
+    };
+
+    class NewBlockMessageV2: public common::BasePacket
+    {
+      public:
+        NewBlockMessageV2();
+        virtual ~NewBlockMessageV2();
+        virtual int serialize(common::Stream& output) const ;
+        virtual int deserialize(common::Stream& input);
+        virtual int64_t length() const;
+
+        void set_block_ids(const common::VUINT64& block_ids)
+        {
+          block_ids_ = block_ids;
+        }
+
+        void add_block(const uint64_t block_id)
+        {
+          block_ids_.push_back(block_id);
+        }
+
+        common::VUINT64& get_block_ids()
+        {
+          return block_ids_;
+        }
+
+      private:
+        common::VUINT64 block_ids_;
+    };
+
+    class RemoveBlockMessageV2: public common::BasePacket
+    {
+      public:
+        RemoveBlockMessageV2();
+        virtual ~RemoveBlockMessageV2();
+        virtual int serialize(common::Stream& output) const ;
+        virtual int deserialize(common::Stream& input);
+        virtual int64_t length() const;
+
+        void set_block_id(const uint64_t block_id)
+        {
+          block_id_ = block_id;
+        }
+
+        uint64_t get_block_id() const
+        {
+          return block_id_;
+        }
+
+      private:
+        uint64_t block_id_;
     };
 
   }

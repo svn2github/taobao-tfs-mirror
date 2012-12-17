@@ -22,11 +22,11 @@ namespace tfs
 {
   namespace message
   {
-    class DeleteFileMessage: public common::BasePacket
+    class UnlinkFileMessageV2: public common::BasePacket
     {
       public:
-        DeleteFileMessage();
-        virtual ~DeleteFileMessage();
+        UnlinkFileMessageV2();
+        virtual ~UnlinkFileMessageV2();
         virtual int serialize(common::Stream& output) const ;
         virtual int deserialize(common::Stream& input);
         virtual int64_t length() const;
@@ -51,6 +51,16 @@ namespace tfs
           return file_id_;
         }
 
+        void set_lease_id(const uint64_t lease_id)
+        {
+          lease_id_ = lease_id;
+        }
+
+        uint64_t get_lease_id() const
+        {
+          return lease_id_;
+        }
+
         void set_ds(const common::VUINT64& ds)
         {
           ds_ = ds;
@@ -71,6 +81,16 @@ namespace tfs
           return action_;
         }
 
+        void set_version(const int32_t version)
+        {
+          version_ = version;
+        }
+
+        int32_t get_version() const
+        {
+          return version_;
+        }
+
         void set_flag(const int32_t flag)
         {
           flag_ = flag;
@@ -79,6 +99,21 @@ namespace tfs
         int32_t get_flag() const
         {
           return flag_;
+        }
+
+        void set_master()
+        {
+          flag_ |= common::MF_IS_MASTER;
+        }
+
+        void set_slave()
+        {
+          flag_ &= (~common::MF_IS_MASTER);
+        }
+
+        bool is_master()
+        {
+          return flag_ & common::MF_IS_MASTER;
         }
 
         void set_family_info(const common::FamilyInfoExt& family_info)
@@ -94,7 +129,9 @@ namespace tfs
       private:
         uint64_t block_id_;
         uint64_t file_id_;
+        uint64_t lease_id_;
         common::VUINT64 ds_;
+        int32_t version_;
         int32_t action_;
         int32_t flag_;
         common::FamilyInfoExt family_info_;
