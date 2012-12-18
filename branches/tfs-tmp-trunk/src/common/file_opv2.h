@@ -13,8 +13,8 @@
  *      - initial release
  *
  */
-#ifndef TFS_DATASERVER_FILE_OP_H_
-#define TFS_DATASERVER_FILE_OP_H_
+#ifndef TFS_DATASERVER_FILE_OPV2_H_
+#define TFS_DATASERVER_FILE_OPV2_H_
 
 #include <sys/types.h>
 #include <sys/stat.h>
