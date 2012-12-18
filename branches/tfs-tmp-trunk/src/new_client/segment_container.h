@@ -58,7 +58,7 @@ namespace tfs
 
     protected:
       common::SegmentHead seg_head_;
-      common::FileOperation* file_op_;
+      common::FileOps* file_op_;
       V seg_info_;
     };
 
@@ -178,7 +178,7 @@ namespace tfs
           tbsys::gDelete(file_op_);
         }
 
-        file_op_ = new common::FileOperation(name, mode);
+        file_op_ = new common::FileOps(name, mode);
         if ((ret = file_op_->open_file()) < 0)
         {
           TBSYS_LOG(WARN, "open file fail: %s, %s", name, strerror(errno));
