@@ -203,17 +203,17 @@ namespace tfs
 
     int NewBlockMessageV2::serialize(Stream& output) const
     {
-      return output.set_vint64(block_ids_);
+      return output.set_int64(block_id_);
     }
 
     int NewBlockMessageV2::deserialize(Stream& input)
     {
-      return input.get_vint64(block_ids_);
+      return input.get_int64(reinterpret_cast<int64_t *>(&block_id_));
     }
 
     int64_t NewBlockMessageV2::length() const
     {
-      return Serialization::get_vint64_length(block_ids_);
+      return INT64_SIZE;
     }
 
     RemoveBlockMessageV2::RemoveBlockMessageV2():

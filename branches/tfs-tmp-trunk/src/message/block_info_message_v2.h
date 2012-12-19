@@ -132,6 +132,16 @@ namespace tfs
           return block_metas_;
         }
 
+        void set_size(const int32_t size)
+        {
+          size_ = size;
+        }
+
+        int32_t get_size() const
+        {
+          return size_;
+        }
+
       private:
         common::BlockMeta block_metas_[common::MAX_BATCH_SIZE];
         int32_t size_;
@@ -146,23 +156,18 @@ namespace tfs
         virtual int deserialize(common::Stream& input);
         virtual int64_t length() const;
 
-        void set_block_ids(const common::VUINT64& block_ids)
+        void set_block_id(const uint64_t block_id)
         {
-          block_ids_ = block_ids;
+          block_id_ = block_id;
         }
 
-        void add_block(const uint64_t block_id)
+        uint64_t get_block_id() const
         {
-          block_ids_.push_back(block_id);
-        }
-
-        common::VUINT64& get_block_ids()
-        {
-          return block_ids_;
+          return block_id_;
         }
 
       private:
-        common::VUINT64 block_ids_;
+        uint64_t block_id_;
     };
 
     class RemoveBlockMessageV2: public common::BasePacket

@@ -119,6 +119,7 @@ namespace tfs
     static const int32_t MAX_ADDRESS_LENGTH = 64;
     static const int64_t TFS_MALLOC_MAX_SIZE = 0x00A00000;//10M
     static const int64_t MAX_CMD_SIZE = 1024;
+    static const int32_t MAX_BATCH_SIZE = 8;
 
     static const uint32_t INVALID_LEASE_ID = 0;
     static const uint32_t INVALID_BLOCK_ID = 0;
@@ -1170,6 +1171,7 @@ namespace tfs
     typedef __gnu_cxx::hash_map<uint32_t, CheckBlockInfoVec>::iterator CheckBlockInfoMapIter;
     typedef __gnu_cxx::hash_map<uint32_t, CheckBlockInfoVec>::const_iterator CheckBlockInfoMapConstIter;
 
+    static const int32_t FILEINFO_EXT_SIZE = sizeof(FileInfoInDiskExt);
     static const int32_t FILEINFO_SIZE = sizeof(FileInfo);
     static const int32_t BLOCKINFO_SIZE = sizeof(BlockInfo);
     static const int32_t RAW_META_SIZE = sizeof(RawMeta);
