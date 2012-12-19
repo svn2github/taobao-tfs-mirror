@@ -252,7 +252,18 @@ namespace tfs
 
     int ReadFileRespMessageV2::serialize(common::Stream& output) const
     {
-      int32_t ret = output.set_int32(length_);
+      int64_t pos = 0;
+      int ret = file_info_.serialize(output.get_free(), output.get_free_length(), pos);
+      if (TFS_SUCCESS == ret)
+      {
+        output.pour(file_info_.length());
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = output.set_int32(length_);
+      }
+
       if (TFS_SUCCESS == ret)
       {
         if ((length_ > 0) && (NULL != data_))
@@ -261,38 +272,29 @@ namespace tfs
         }
       }
 
-      if (TFS_SUCCESS == ret)
-      {
-        int64_t pos = 0;
-        ret = file_info_.serialize(output.get_free(), output.get_free_length(), pos);
-        if (TFS_SUCCESS == ret)
-        {
-          output.pour(file_info_.length());
-        }
-      }
-
       return ret;
     }
 
     int ReadFileRespMessageV2::deserialize(common::Stream& input)
     {
-      int32_t ret = input.get_int32(&length_);
+      int64_t pos = 0;
+      int ret = file_info_.serialize(input.get_data(), input.get_data_length(), pos);
+      if (TFS_SUCCESS == ret)
+      {
+        input.drain(file_info_.length());
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = input.get_int32(&length_);
+      }
+
       if (TFS_SUCCESS == ret)
       {
         if (length_ > 0)
         {
           data_ = input.get_data();
           input.drain(length_);
-        }
-      }
-
-      if (TFS_SUCCESS == ret)
-      {
-        int64_t pos = 0;
-        ret = file_info_.serialize(input.get_data(), input.get_data_length(), pos);
-        if (TFS_SUCCESS == ret)
-        {
-          input.drain(file_info_.length());
         }
       }
 

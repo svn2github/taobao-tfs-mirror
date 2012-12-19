@@ -98,63 +98,6 @@ namespace tfs
              Serialization::get_vint64_length(ds_);
     }
 
-    CommitBlockUpdateMessage::CommitBlockUpdateMessage()
-    {
-      _packetHeader._pcode = COMMIT_BLOCK_UPDATE_MESSAGE;
-    }
-
-    CommitBlockUpdateMessage::~CommitBlockUpdateMessage()
-    {
-    }
-
-    int CommitBlockUpdateMessage::serialize(Stream& output) const
-    {
-      int64_t pos = 0;
-      int ret = block_info_.serialize(output.get_free(), output.get_free_length(), pos);
-      if (TFS_SUCCESS == ret)
-      {
-        output.pour(block_info_.length());
-      }
-
-      if (TFS_SUCCESS == ret)
-      {
-        ret = output.set_int64(server_id_);
-      }
-
-      if (TFS_SUCCESS == ret)
-      {
-        ret = output.set_int32(oper_);
-      }
-
-      return ret;
-    }
-
-    int CommitBlockUpdateMessage::deserialize(Stream& input)
-    {
-      int64_t pos = 0;
-      int ret = block_info_.deserialize(input.get_data(), input.get_data_length(), pos);
-      if (TFS_SUCCESS == ret)
-      {
-        input.drain(block_info_.length());
-      }
-
-      if (TFS_SUCCESS == ret)
-      {
-        ret = input.get_int64(reinterpret_cast<int64_t *>(&server_id_));
-      }
-
-      if (TFS_SUCCESS == ret)
-      {
-        ret = input.get_int32(reinterpret_cast<int32_t *>(&oper_));
-      }
-
-      return ret;
-    }
-
-    int64_t CommitBlockUpdateMessage::length() const
-    {
-      return block_info_.length() + INT64_SIZE + INT_SIZE;
-    }
 
   }
 }

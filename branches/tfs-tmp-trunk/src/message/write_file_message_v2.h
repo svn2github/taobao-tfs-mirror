@@ -140,8 +140,8 @@ namespace tfs
         common::FileSegment file_seg_;
         common::VUINT64 ds_;
         uint64_t lease_id_;
-        char* data_;
         int32_t flag_;
+        char* data_;
     };
 
     class WriteFileRespMessageV2: public common::BasePacket

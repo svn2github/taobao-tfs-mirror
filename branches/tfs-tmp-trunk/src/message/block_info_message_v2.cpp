@@ -139,18 +139,14 @@ namespace tfs
       int ret = output.set_int32(block_metas_.size());
       if (TFS_SUCCESS == ret)
       {
-        std::map<uint64_t, BlockMeta>::const_iterator iter = block_metas_.begin();
+        std::vector<BlockMeta>::const_iterator iter = block_metas_.begin();
         for ( ; iter != block_metas_.end() && TFS_SUCCESS == ret; iter++)
         {
-          ret = output.set_int64(iter->first);
+          int64_t pos = 0;
+          ret = iter->serialize(output.get_free(), output.get_free_length(), pos);
           if (TFS_SUCCESS == ret)
           {
-            int64_t pos = 0;
-            ret = iter->second.serialize(output.get_free(), output.get_free_length(), pos);
-            if (TFS_SUCCESS == ret)
-            {
-              output.pour(iter->second.length());
-            }
+            output.pour(iter->length());
           }
         }
       }
@@ -163,18 +159,13 @@ namespace tfs
       int ret = input.get_int32(&map_size);
       for (int i = 0; i < map_size && TFS_SUCCESS == ret; i++)
       {
-        uint64_t block_id;
         BlockMeta block_meta;
-        ret = input.get_int64(reinterpret_cast<int64_t *>(block_id));
+        int64_t pos = 0;
+        ret = block_meta.deserialize(input.get_data(), input.get_data_length(), pos);
         if (TFS_SUCCESS == ret)
         {
-          int64_t pos = 0;
-          ret = block_meta.deserialize(input.get_data(), input.get_data_length(), pos);
-          if (TFS_SUCCESS == ret)
-          {
-            input.drain(block_meta.length());
-            block_metas_.insert(std::make_pair(block_id, block_meta));
-          }
+          input.drain(block_meta.length());
+          block_metas_.push_back(block_meta);
         }
       }
       return ret;
@@ -183,10 +174,10 @@ namespace tfs
     int64_t BatchGetBlockInfoRespMessageV2::length() const
     {
       int64_t len = INT_SIZE;
-      std::map<uint64_t, BlockMeta>::const_iterator iter = block_metas_.begin();
+      std::vector<BlockMeta>::const_iterator iter = block_metas_.begin();
       for ( ; iter != block_metas_.end(); iter++)
       {
-        len += (INT64_SIZE + iter->second.length());
+        len += iter->length();
       }
       return len;
     }
@@ -240,7 +231,122 @@ namespace tfs
       return INT64_SIZE;
     }
 
+    UpdateBlockInfoMessageV2::UpdateBlockInfoMessageV2():
+      server_id_(INVALID_SERVER_ID), unlink_flag_(UNLINK_FLAG_NO)
+    {
+      _packetHeader._pcode = UPDATE_BLOCK_INFO_MESSAGE_V2;
+    }
 
+    UpdateBlockInfoMessageV2::~UpdateBlockInfoMessageV2()
+    {
+    }
+
+    int UpdateBlockInfoMessageV2::serialize(Stream& output) const
+    {
+      int64_t pos = 0;
+      int ret = block_info_.serialize(output.get_free(), output.get_free_length(), pos);
+      if (TFS_SUCCESS == ret)
+      {
+        output.pour(block_info_.length());
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = output.set_int64(server_id_);
+      }
+
+      if (common::TFS_SUCCESS == ret)
+      {
+        ret = output.set_int32(unlink_flag_);
+      }
+
+      return ret;
+    }
+
+    int UpdateBlockInfoMessageV2::deserialize(Stream& input)
+    {
+      int64_t pos = 0;
+      int ret = block_info_.deserialize(input.get_data(), input.get_data_length(), pos);
+      if (TFS_SUCCESS == ret)
+      {
+        input.drain(block_info_.length());
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = input.get_int64(reinterpret_cast<int64_t *>(&server_id_));
+      }
+
+      if (common::TFS_SUCCESS == ret)
+      {
+        ret = input.get_int32(reinterpret_cast<int32_t*> (&unlink_flag_));
+      }
+
+      return ret;
+    }
+
+    int64_t UpdateBlockInfoMessageV2::length() const
+    {
+      return block_info_.length() + INT64_SIZE + INT_SIZE;
+    }
+
+    RepairBlockMessageV2::RepairBlockMessageV2():
+      block_id_(INVALID_BLOCK_ID), server_id_(INVALID_SERVER_ID),
+      family_id_(INVALID_FAMILY_ID)
+    {
+      _packetHeader._pcode = REPAIR_BLOCK_MESSAGE_V2;
+    }
+
+    RepairBlockMessageV2::~RepairBlockMessageV2()
+    {
+    }
+
+    int RepairBlockMessageV2::serialize(Stream& output) const
+    {
+      int ret = output.set_int32(type_);
+      if (TFS_SUCCESS == ret)
+      {
+        ret = output.set_int64(block_id_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = output.set_int64(server_id_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = output.set_int64(family_id_);
+      }
+
+      return ret;
+    }
+
+    int RepairBlockMessageV2::deserialize(Stream& input)
+    {
+      int ret = input.get_int32(reinterpret_cast<int32_t *>(&type_));
+      if (TFS_SUCCESS == ret)
+      {
+        ret = input.get_int64(reinterpret_cast<int64_t *>(&block_id_));
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = input.get_int64(reinterpret_cast<int64_t *>(&server_id_));
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = input.get_int64(reinterpret_cast<int64_t *>(&family_id_));
+      }
+
+      return ret;
+    }
+
+    int64_t RepairBlockMessageV2::length() const
+    {
+      return INT_SIZE + 3 * INT64_SIZE;
+    }
 
   }
 }

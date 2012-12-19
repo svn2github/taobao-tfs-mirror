@@ -21,7 +21,7 @@ namespace tfs
   namespace message
   {
     WriteFileMessageV2::WriteFileMessageV2():
-      lease_id_(INVALID_LEASE_ID), data_(NULL), flag_(INVALID_FLAG)
+      lease_id_(INVALID_LEASE_ID), flag_(INVALID_FLAG), data_(NULL)
     {
       _packetHeader._pcode = WRITE_FILE_MESSAGE_V2;
     }
@@ -49,14 +49,14 @@ namespace tfs
         ret = output.set_int64(lease_id_);
       }
 
-      if (TFS_SUCCESS == ret && file_seg_.length_ > 0)
-      {
-        ret = output.set_bytes(data_, file_seg_.length_);
-      }
-
       if (TFS_SUCCESS == ret)
       {
         ret = output.set_int32(flag_);
+      }
+
+      if (TFS_SUCCESS == ret && file_seg_.length_ > 0)
+      {
+        ret = output.set_bytes(data_, file_seg_.length_);
       }
 
       return ret;
@@ -81,15 +81,15 @@ namespace tfs
         ret = input.get_int64(reinterpret_cast<int64_t *>(&lease_id_));
       }
 
+      if (TFS_SUCCESS == ret)
+      {
+        input.get_int32(&flag_);
+      }
+
       if (TFS_SUCCESS == ret && file_seg_.length_ > 0)
       {
         data_ = input.get_data();
         input.drain(file_seg_.length_);
-      }
-
-      if (TFS_SUCCESS == ret)
-      {
-        input.get_int32(&flag_);
       }
 
       return ret;

@@ -217,7 +217,7 @@ namespace tfs
           }
           else if (common::REPORT_BLOCK_EXT == flag_)
           {
-            common::BlockInfoExt info;
+            common::BlockInfoV2 info;
             for (int32_t i = 0; i < size; ++i)
             {
               pos  = 0;
@@ -260,7 +260,7 @@ namespace tfs
       }
       else if (common::REPORT_BLOCK_EXT == flag_)
       {
-        common::BlockInfoExt info;
+        common::BlockInfoV2 info;
         return common::INT64_SIZE + common::INT_SIZE + blocks_ext_.size() * info.length() + common::INT8_SIZE;
       }
 
@@ -301,11 +301,11 @@ namespace tfs
           ret = output.set_int32(blocks_ext_.size());
           if (common::TFS_SUCCESS == ret)
           {
-            std::set<common::BlockInfoExt>::const_iterator iter = blocks_ext_.begin();
+            std::set<common::BlockInfoV2>::const_iterator iter = blocks_ext_.begin();
             for (; iter != blocks_ext_.end(); ++iter)
             {
               pos = 0;
-              ret = const_cast<common::BlockInfoExt*>((&(*iter)))->serialize(output.get_free(),
+              ret = const_cast<common::BlockInfoV2*>((&(*iter)))->serialize(output.get_free(),
                   output.get_free_length(), pos);
               if (common::TFS_SUCCESS == ret)
                 output.pour((*iter).length());
@@ -347,14 +347,14 @@ namespace tfs
       }
       if (common::TFS_SUCCESS == ret)
       {
-        ret = input.get_vint32(expire_blocks_);
+        ret = input.get_vint64(expire_blocks_);
       }
       return ret;
     }
 
     int64_t ReportBlocksToNsResponseMessage::length() const
     {
-      return common::INT64_SIZE + common::INT8_SIZE + common::Serialization::get_vint32_length(expire_blocks_);
+      return common::INT64_SIZE + common::INT8_SIZE + common::Serialization::get_vint64_length(expire_blocks_);
     }
 
     int ReportBlocksToNsResponseMessage::serialize(common::Stream& output) const
@@ -370,7 +370,7 @@ namespace tfs
       }
       if (common::TFS_SUCCESS == ret)
       {
-        ret = output.set_vint32(expire_blocks_);
+        ret = output.set_vint64(expire_blocks_);
       }
       return ret;
     }

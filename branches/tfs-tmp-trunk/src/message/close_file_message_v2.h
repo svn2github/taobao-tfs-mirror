@@ -115,51 +115,6 @@ namespace tfs
         int32_t flag_;
     };
 
-    class CommitBlockUpdateMessage: public common::BasePacket
-    {
-      public:
-        CommitBlockUpdateMessage();
-        virtual ~CommitBlockUpdateMessage();
-        virtual int serialize(common::Stream& output) const ;
-        virtual int deserialize(common::Stream& input);
-        virtual int64_t length() const;
-
-        void set_block_info(const common::BlockInfoV2& block_info)
-        {
-          block_info_ = block_info;
-        }
-
-        common::BlockInfoV2& get_block_info()
-        {
-          return block_info_;
-        }
-
-        void set_server_id(const uint64_t server_id)
-        {
-          server_id_ = server_id;
-        }
-
-        uint64_t get_server_id() const
-        {
-          return server_id_;
-        }
-
-        void set_oper(const common::BlockOper oper)
-        {
-          oper_ = oper;
-        }
-
-        common::BlockOper get_oper() const
-        {
-          return oper_;
-        }
-
-      private:
-        common::BlockInfoV2 block_info_;
-        uint64_t server_id_;
-        common::BlockOper oper_;
-    };
-
   }
 }
 #endif

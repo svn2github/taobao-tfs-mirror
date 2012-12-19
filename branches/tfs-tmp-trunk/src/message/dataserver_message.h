@@ -102,7 +102,7 @@ namespace tfs
         {
           return blocks_;
         }
-        inline std::set<common::BlockInfoExt>& get_blocks_ext()
+        inline std::set<common::BlockInfoV2>& get_blocks_ext()
         {
           return blocks_ext_;
         }
@@ -118,7 +118,7 @@ namespace tfs
         inline void set_type(const int8_t type) { type_ = type;}
       protected:
         std::set<common::BlockInfo> blocks_;
-        std::set<common::BlockInfoExt> blocks_ext_;
+        std::set<common::BlockInfoV2> blocks_ext_;
         uint64_t server_;
         int8_t flag_;
         int8_t type_;
@@ -132,7 +132,7 @@ namespace tfs
         virtual int serialize(common::Stream& output) const ;
         virtual int deserialize(common::Stream& input);
         virtual int64_t length() const;
-        inline std::vector<uint32_t>& get_blocks()
+        inline std::vector<uint64_t>& get_blocks()
         {
           return expire_blocks_;
         }
@@ -153,7 +153,7 @@ namespace tfs
           return status_;
         }
       protected:
-        std::vector<uint32_t> expire_blocks_;
+        std::vector<uint64_t> expire_blocks_;
         uint64_t server_;
         int8_t status_;
     };

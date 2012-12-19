@@ -357,8 +357,11 @@ namespace tfs
           case common::CLOSE_FILE_MESSAGE_V2:
             packet = new CloseFileMessageV2();
             break;
-          case common::COMMIT_BLOCK_UPDATE_MESSAGE:
-            packet = new CommitBlockUpdateMessage();
+          case common::UPDATE_BLOCK_INFO_MESSAGE_V2:
+            packet = new UpdateBlockInfoMessageV2();
+            break;
+          case common::REPAIR_BLOCK_MESSAGE_V2:
+            packet = new RepairBlockMessageV2();
             break;
           case common::STAT_FILE_MESSAGE_V2:
             packet = new StatFileMessageV2();

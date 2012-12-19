@@ -127,18 +127,18 @@ namespace tfs
         virtual int deserialize(common::Stream& input);
         virtual int64_t length() const;
 
-        void add_block_meta(const uint64_t block_id, const common::BlockMeta& meta)
+        void add_block_meta(const common::BlockMeta& meta)
         {
-          block_metas_.insert(std::make_pair(block_id, meta));
+          block_metas_.push_back(meta);
         }
 
-        std::map<uint64_t, common::BlockMeta>& get_block_metas()
+        std::vector<common::BlockMeta>& get_block_metas()
         {
           return block_metas_;
         }
 
       private:
-        std::map<uint64_t, common::BlockMeta> block_metas_;
+        std::vector<common::BlockMeta> block_metas_;
     };
 
     class NewBlockMessageV2: public common::BasePacket
@@ -192,6 +192,106 @@ namespace tfs
         uint64_t block_id_;
     };
 
+    class UpdateBlockInfoMessageV2: public common::BasePacket
+    {
+      public:
+        UpdateBlockInfoMessageV2();
+        virtual ~UpdateBlockInfoMessageV2();
+        virtual int serialize(common::Stream& output) const ;
+        virtual int deserialize(common::Stream& input);
+        virtual int64_t length() const;
+
+        void set_block_info(const common::BlockInfoV2& block_info)
+        {
+          block_info_ = block_info;
+        }
+
+        common::BlockInfoV2& get_block_info()
+        {
+          return block_info_;
+        }
+
+        void set_server_id(const uint64_t server_id)
+        {
+          server_id_ = server_id;
+        }
+
+        uint64_t get_server_id() const
+        {
+          return server_id_;
+        }
+
+        inline void set_unlink_flag(const common::UnlinkFlag flag)
+        {
+          unlink_flag_ = flag;
+        }
+
+        inline common::UnlinkFlag get_unlink_flag() const
+        {
+          return unlink_flag_;
+        }
+
+      private:
+        common::BlockInfoV2 block_info_;
+        uint64_t server_id_;
+        common::UnlinkFlag unlink_flag_;
+    };
+
+    class RepairBlockMessageV2: public common::BasePacket
+    {
+      public:
+        RepairBlockMessageV2();
+        virtual ~RepairBlockMessageV2();
+        virtual int serialize(common::Stream& output) const ;
+        virtual int deserialize(common::Stream& input);
+        virtual int64_t length() const;
+
+        void set_repair_type(common::RepairType type)
+        {
+          type_ = type;
+        }
+
+        common::RepairType get_repair_type() const
+        {
+          return type_;
+        }
+
+        void set_block_id(const uint64_t block_id)
+        {
+          block_id_ = block_id;
+        }
+
+        uint64_t get_block_id() const
+        {
+          return block_id_;
+        }
+
+        void set_server_id(const uint64_t server_id)
+        {
+          server_id_ = server_id;
+        }
+
+        uint64_t get_server_id() const
+        {
+          return server_id_;
+        }
+
+        void set_family_id(const uint64_t family_id)
+        {
+          family_id_ = family_id;
+        }
+
+        uint64_t get_family_id() const
+        {
+          return family_id_;
+        }
+
+      private:
+        common::RepairType type_;
+        uint64_t block_id_;
+        uint64_t server_id_;
+        uint64_t family_id_;
+    };
   }
 }
 #endif
