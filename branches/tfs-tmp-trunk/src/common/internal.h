@@ -1017,13 +1017,6 @@ namespace tfs
       REPORT_BLOCK_TYPE_RELIEVE
     }ReportBlockType;
 
-    enum BlockOper
-    {
-      B_OP_WRITE,
-      B_OP_UNLINK,
-      B_OP_REPL
-    };
-
     enum MessageFlag
     {
       MF_IS_MASTER = 0x1,
@@ -1031,8 +1024,15 @@ namespace tfs
       MF_READ_FORCE = 0x4
     };
 
+    enum RepairType
+    {
+      REAPIR_BLOCK_NOT_EXIST,
+      REPAIR_FAMILY_ID_CONFLICT
+    };
+
     struct BlockMeta
     {
+      uint64_t block_id_;
       VUINT64 ds_;
       int32_t version_;
       int32_t flag_;

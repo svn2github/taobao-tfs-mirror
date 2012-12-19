@@ -1467,6 +1467,11 @@ namespace tfs
 
       if (TFS_SUCCESS == ret)
       {
+        ret = Serialization::set_int64(data, data_len, pos, block_id_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
         ret = Serialization::set_vint64(data, data_len, pos, ds_);
       }
 
@@ -1499,6 +1504,11 @@ namespace tfs
 
       if (TFS_SUCCESS == ret)
       {
+        ret = Serialization::get_int64(data, data_len, pos, reinterpret_cast<int64_t* >(&block_id_));
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
         ret = Serialization::get_vint64(data, data_len, pos, ds_);
       }
 
@@ -1522,7 +1532,7 @@ namespace tfs
 
     int64_t BlockMeta::length() const
     {
-      int64_t len = Serialization::get_vint64_length(ds_) + INT_SIZE * 2;
+      int64_t len = INT64_SIZE + Serialization::get_vint64_length(ds_) + INT_SIZE * 2;
       if (INVALID_FAMILY_ID != family_info_.family_id_)
       {
         len += family_info_.length();
