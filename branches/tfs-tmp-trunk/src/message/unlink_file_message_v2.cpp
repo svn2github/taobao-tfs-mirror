@@ -46,13 +46,6 @@ namespace tfs
 
       if (TFS_SUCCESS == ret)
       {
-        ret = output.set_vint64(ds_);
-      }
-
-      if (TFS_SUCCESS == ret)
-
-      if (TFS_SUCCESS == ret)
-      {
         ret = output.set_int32(version_);
       }
 
@@ -69,6 +62,11 @@ namespace tfs
           tmp_flag = (flag_ | MF_WITH_FAMILY);
         }
         ret = output.set_int32(tmp_flag);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = output.set_vint64(ds_);
       }
 
       if ((TFS_SUCCESS == ret) && (tmp_flag & MF_WITH_FAMILY))
@@ -99,11 +97,6 @@ namespace tfs
 
       if (TFS_SUCCESS == ret)
       {
-        ret = input.get_vint64(ds_);
-      }
-
-      if (TFS_SUCCESS == ret)
-      {
         ret = input.get_int32(&version_);
       }
 
@@ -115,6 +108,11 @@ namespace tfs
       if (TFS_SUCCESS == ret)
       {
         ret = input.get_int32(&flag_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = input.get_vint64(ds_);
       }
 
       if ((TFS_SUCCESS == ret) && (flag_ & MF_WITH_FAMILY))

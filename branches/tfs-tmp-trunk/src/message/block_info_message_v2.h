@@ -127,18 +127,14 @@ namespace tfs
         virtual int deserialize(common::Stream& input);
         virtual int64_t length() const;
 
-        void add_block_meta(const common::BlockMeta& meta)
-        {
-          block_metas_.push_back(meta);
-        }
-
-        std::vector<common::BlockMeta>& get_block_metas()
+        common::BlockMeta* get_block_metas()
         {
           return block_metas_;
         }
 
       private:
-        std::vector<common::BlockMeta> block_metas_;
+        common::BlockMeta block_metas_[common::MAX_BATCH_SIZE];
+        int32_t size_;
     };
 
     class NewBlockMessageV2: public common::BasePacket

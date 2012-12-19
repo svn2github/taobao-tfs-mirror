@@ -44,17 +44,17 @@ namespace tfs
 
       if (TFS_SUCCESS == ret)
       {
-        ret = output.set_vint64(ds_);
-      }
-
-      if (TFS_SUCCESS == ret)
-      {
         ret = output.set_int32(crc_);
       }
 
       if (TFS_SUCCESS == ret)
       {
         ret = output.set_int32(flag_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = output.set_vint64(ds_);
       }
 
       return ret;
@@ -75,17 +75,17 @@ namespace tfs
 
       if (TFS_SUCCESS == ret)
       {
-        ret = input.get_vint64(ds_);
-      }
-
-      if (TFS_SUCCESS == ret)
-      {
         ret = input.get_int32(reinterpret_cast<int32_t *>(&crc_));
       }
 
       if (TFS_SUCCESS == ret)
       {
         ret = input.get_int32(&flag_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = input.get_vint64(ds_);
       }
 
       return ret;

@@ -125,7 +125,8 @@ namespace tfs
       return Serialization::get_vint64_length(block_ids_) + INT_SIZE;
     }
 
-    BatchGetBlockInfoRespMessageV2::BatchGetBlockInfoRespMessageV2()
+    BatchGetBlockInfoRespMessageV2::BatchGetBlockInfoRespMessageV2():
+      size_(0)
     {
       _packetHeader._pcode = BATCH_GET_BLOCK_INFO_RESP_MESSAGE_V2;
     }
@@ -136,36 +137,46 @@ namespace tfs
 
     int BatchGetBlockInfoRespMessageV2::serialize(Stream& output) const
     {
-      int ret = output.set_int32(block_metas_.size());
+      int ret = ((size_ >= 0) && (size_ <= MAX_BATCH_SIZE)) ? TFS_SUCCESS: TFS_ERROR;
       if (TFS_SUCCESS == ret)
       {
-        std::vector<BlockMeta>::const_iterator iter = block_metas_.begin();
-        for ( ; iter != block_metas_.end() && TFS_SUCCESS == ret; iter++)
+        ret = output.set_int32(size_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        for (int32_t i = 0; i < size_; i++)
         {
           int64_t pos = 0;
-          ret = iter->serialize(output.get_free(), output.get_free_length(), pos);
+          ret = block_metas_[i].serialize(output.get_free(), output.get_free_length(), pos);
           if (TFS_SUCCESS == ret)
           {
-            output.pour(iter->length());
+            output.pour(block_metas_[i].length());
           }
         }
+
       }
       return ret;
     }
 
     int BatchGetBlockInfoRespMessageV2::deserialize(Stream& input)
     {
-      int32_t map_size = 0;
-      int ret = input.get_int32(&map_size);
-      for (int i = 0; i < map_size && TFS_SUCCESS == ret; i++)
+      int ret = input.get_int32(&size_);
+      if (TFS_SUCCESS == ret)
       {
-        BlockMeta block_meta;
-        int64_t pos = 0;
-        ret = block_meta.deserialize(input.get_data(), input.get_data_length(), pos);
-        if (TFS_SUCCESS == ret)
+        ret = ((size_ >= 0) && (size_ <= MAX_BATCH_SIZE)) ? TFS_SUCCESS: TFS_ERROR;
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        for (int i = 0; i < size_ && TFS_SUCCESS == ret; i++)
         {
-          input.drain(block_meta.length());
-          block_metas_.push_back(block_meta);
+          int64_t pos = 0;
+          ret = block_metas_[i].deserialize(input.get_data(), input.get_data_length(), pos);
+          if (TFS_SUCCESS == ret)
+          {
+            input.drain(block_metas_[i].length());
+          }
         }
       }
       return ret;
@@ -174,10 +185,9 @@ namespace tfs
     int64_t BatchGetBlockInfoRespMessageV2::length() const
     {
       int64_t len = INT_SIZE;
-      std::vector<BlockMeta>::const_iterator iter = block_metas_.begin();
-      for ( ; iter != block_metas_.end(); iter++)
+      for (int32_t i = 0; i < size_; i++)
       {
-        len += iter->length();
+        len +=  block_metas_[i].length();
       }
       return len;
     }

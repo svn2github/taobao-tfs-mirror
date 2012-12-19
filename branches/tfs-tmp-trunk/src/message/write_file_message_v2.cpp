@@ -41,17 +41,17 @@ namespace tfs
 
       if (TFS_SUCCESS == ret)
       {
-        ret = output.set_vint64(ds_);
-      }
-
-      if (TFS_SUCCESS == ret)
-      {
         ret = output.set_int64(lease_id_);
       }
 
       if (TFS_SUCCESS == ret)
       {
         ret = output.set_int32(flag_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = output.set_vint64(ds_);
       }
 
       if (TFS_SUCCESS == ret && file_seg_.length_ > 0)
@@ -73,17 +73,17 @@ namespace tfs
 
       if (TFS_SUCCESS == ret)
       {
-        ret = input.get_vint64(ds_);
-      }
-
-      if (TFS_SUCCESS == ret)
-      {
         ret = input.get_int64(reinterpret_cast<int64_t *>(&lease_id_));
       }
 
       if (TFS_SUCCESS == ret)
       {
         input.get_int32(&flag_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = input.get_vint64(ds_);
       }
 
       if (TFS_SUCCESS == ret && file_seg_.length_ > 0)
