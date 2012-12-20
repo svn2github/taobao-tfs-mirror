@@ -35,15 +35,25 @@ namespace tfs
     struct KvKey
     {
       KvKey();
-      const char* key;
-      int32_t key_size;
-      int32_t key_type;
+
+      static const char DELIMITER;
+
+      const char* key_; //no malloc no free
+      int32_t key_size_;
+      int32_t key_type_;
+      enum
+      {
+        KEY_TYPE_USER = 1,
+        KEY_TYPE_BUCKET = 2,
+        KEY_TYPE_OBJECT = 3,
+      };
     };
     class KvEngineHelper
     {
     public:
       KvEngineHelper(){};
       virtual ~KvEngineHelper(){};
+      virtual int init() = 0;
       virtual int put_key(const KvKey& key, const std::string& value, const int64_t version) = 0;
       virtual int get_key(const KvKey& key, std::string* value, int64_t* version) = 0;
       virtual int delete_key(const KvKey& key) = 0;

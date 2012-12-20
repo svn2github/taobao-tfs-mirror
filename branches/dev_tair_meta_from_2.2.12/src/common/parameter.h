@@ -212,6 +212,22 @@ namespace tfs
       }
     };
 
+    struct KvMetaParameter
+    {
+      std::string tair_master_;
+      std::string tair_slave_;
+      std::string tair_group_;
+      int tair_object_area_;
+
+      int initialize(const std::string& config_file);
+
+      static KvMetaParameter kv_meta_parameter_;
+      static KvMetaParameter& instance()
+      {
+        return kv_meta_parameter_;
+      }
+    };
+
 #define SYSPARAM_NAMESERVER NameServerParameter::instance()
 #define SYSPARAM_DATASERVER DataServerParameter::instance()
 #define SYSPARAM_FILESYSPARAM FileSystemParameter::instance()
@@ -219,6 +235,7 @@ namespace tfs
 #define SYSPARAM_NAMEMETASERVER NameMetaServerParameter::instance()
 #define SYSPARAM_RTSERVER RtServerParameter::instance()
 #define SYSPARAM_CHECKSERVER CheckServerParameter::instance()
+#define SYSPARAM_KVMETA KvMetaParameter::instance()
   }/** common **/
 }/** tfs **/
 #endif //TFS_COMMON_SYSPARAM_H_

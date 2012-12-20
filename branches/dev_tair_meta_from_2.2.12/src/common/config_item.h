@@ -31,6 +31,7 @@ namespace tfs
 #define CONF_SN_NAMEMETASERVER                        "metaserver"
 #define CONF_SN_ROOTSERVER                            "rootserver"
 #define CONF_SN_CHECKSERVER                           "checkserver"
+#define CONF_SN_KVMEAT                                "kvmetaserver"
 
 #define CONF_CLUSTER_ID                               "cluster_id"
 #define CONF_LOCK_FILE                                "lock_file"
@@ -179,6 +180,12 @@ namespace tfs
 #define CONF_MASTER_NS_PORT                           "master_ns_port"
 #define CONF_SLAVE_NS_IP                              "slave_ns_ip"
 #define CONF_SLAVE_NS_PORT                            "slave_ns_port"
+
+//kv meta server
+#define CONF_TAIR_MASTER                             "tair_master"
+#define CONF_TAIR_SLAVE                              "tair_slave"
+#define CONF_TAIR_GROUP                              "tair_group"
+#define CONF_TAIR_OBJECT_AREA                        "tair_object_area"
   }
 }
 #endif //TFS_COMMON_CONFDEFINE_H_

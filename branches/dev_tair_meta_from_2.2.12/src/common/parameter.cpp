@@ -37,6 +37,7 @@ namespace tfs
     NameMetaServerParameter NameMetaServerParameter::meta_parameter_;
     RtServerParameter RtServerParameter::rt_parameter_;
     CheckServerParameter CheckServerParameter::cs_parameter_;
+    KvMetaParameter KvMetaParameter::kv_meta_parameter_;
 
     static void set_hour_range(const char *str, int32_t& min, int32_t& max)
     {
@@ -520,6 +521,24 @@ namespace tfs
       }
 
       return ret;
+    }
+
+    int KvMetaParameter::initialize(const std::string& config_file)
+    {
+      tbsys::CConfig config;
+      int32_t ret = config.load(config_file.c_str());
+      if (EXIT_SUCCESS != ret)
+      {
+        TBSYS_LOG(ERROR, "load config file erro.");
+        return TFS_ERROR;
+      }
+
+      tair_master_ = config.getString(CONF_SN_KVMEAT, CONF_TAIR_MASTER, "");
+      tair_slave_ = config.getString(CONF_SN_KVMEAT, CONF_TAIR_SLAVE, "");
+      tair_group_ = config.getString(CONF_SN_KVMEAT, CONF_TAIR_GROUP, "");
+      tair_object_area_ = config.getInt(CONF_SN_KVMEAT, CONF_TAIR_OBJECT_AREA, -1);
+
+      return TFS_SUCCESS;
     }
   }/** common **/
 }/** tfs **/
