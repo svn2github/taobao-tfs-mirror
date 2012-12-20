@@ -12,8 +12,8 @@
 *
 */
 
-#ifndef TFS_MESSAGE_DELETEFILEMESSAGE_H_
-#define TFS_MESSAGE_DELETEFILEMESSAGE_H_
+#ifndef TFS_MESSAGE_UNLINKFILEMESSAGEV2_H_
+#define TFS_MESSAGE_UNLINKFILEMESSAGEV2_H_
 
 #include <common/base_packet.h>
 #include <common/status_message.h>

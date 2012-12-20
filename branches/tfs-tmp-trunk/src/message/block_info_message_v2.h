@@ -12,8 +12,8 @@
 *
 */
 
-#ifndef TFS_MESSAGE_OPENFILEMESSAGE_H_
-#define TFS_MESSAGE_OPENFILEMESSAGE_H_
+#ifndef TFS_MESSAGE_BLOCKINFOMESSAGEV2_H_
+#define TFS_MESSAGE_BLOCKINFOMESSAGEV2_H_
 
 #include <common/base_packet.h>
 #include <common/status_message.h>
@@ -88,17 +88,7 @@ namespace tfs
         virtual int deserialize(common::Stream& input);
         virtual int64_t length() const;
 
-        void add_block(const uint64_t block_id)
-        {
-          block_ids_.push_back(block_id);
-        }
-
-        void set_block_ids(const common::VUINT64& block_ids)
-        {
-          block_ids_ = block_ids;
-        }
-
-        const common::VUINT64& get_block_ids() const
+        uint64_t* get_block_ids()
         {
           return block_ids_;
         }
@@ -113,9 +103,20 @@ namespace tfs
           return mode_;
         }
 
+        void set_size(const int32_t size)
+        {
+          size_ = size;
+        }
+
+        int32_t get_size() const
+        {
+          return size_;
+        }
+
       private:
-        common::VUINT64 block_ids_;
         int32_t mode_;
+        int32_t size_;
+        uint64_t block_ids_[common::MAX_BATCH_SIZE];
     };
 
     class BatchGetBlockInfoRespMessageV2: public common::BasePacket

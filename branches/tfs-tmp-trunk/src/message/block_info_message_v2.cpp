@@ -102,7 +102,12 @@ namespace tfs
 
     int BatchGetBlockInfoMessageV2::serialize(Stream& output) const
     {
-      int ret = output.set_vint64(block_ids_);
+      int ret = output.set_int32(size_);
+      for (int32_t i = 0; i < size_; i++)
+      {
+        output.set_int64(block_ids_[i]);
+      }
+
       if (TFS_SUCCESS == ret)
       {
         ret = output.set_int32(mode_);
@@ -112,7 +117,12 @@ namespace tfs
 
     int BatchGetBlockInfoMessageV2::deserialize(Stream& input)
     {
-      int ret = input.get_vint64(block_ids_);
+      int ret = input.get_int32(&size_);
+      for (int32_t i = 0; i < size_; i++)
+      {
+        input.get_int64(reinterpret_cast<int64_t* >(&block_ids_[i]));
+      }
+
       if (TFS_SUCCESS == ret)
       {
         ret = input.get_int32(&mode_);
@@ -122,7 +132,7 @@ namespace tfs
 
     int64_t BatchGetBlockInfoMessageV2::length() const
     {
-      return Serialization::get_vint64_length(block_ids_) + INT_SIZE;
+      return INT_SIZE * 2 + size_ * INT64_SIZE;
     }
 
     BatchGetBlockInfoRespMessageV2::BatchGetBlockInfoRespMessageV2():

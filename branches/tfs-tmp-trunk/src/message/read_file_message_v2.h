@@ -12,8 +12,8 @@
 *
 */
 
-#ifndef TFS_MESSAGE_READFILEMESSAGE_H_
-#define TFS_MESSAGE_READFILEMESSAGE_H_
+#ifndef TFS_MESSAGE_READFILEMESSAGEV2_H_
+#define TFS_MESSAGE_READFILEMESSAGEV2_H_
 
 #include <tbsys.h>
 #include <common/base_packet.h>
