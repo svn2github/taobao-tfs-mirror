@@ -69,7 +69,8 @@ namespace tfs
         int update_block_version(const int8_t step = common::VERSION_INC_STEP_DEFAULT, const uint64_t logic_block_id = common::INVALID_BLOCK_ID);
         int get_block_info(common::BlockInfoV2& info, const uint64_t logic_block_id = common::INVALID_BLOCK_ID) const;
 
-        int pwrite(char* buf, const int32_t nbytes, const int32_t offset, const uint64_t logic_block_id);
+        int generation_file_id(uint64_t& fileid, const double threshold, const uint64_t logic_block_id);
+        int pwrite(const char* buf, const int32_t nbytes, const int32_t offset, const uint64_t logic_block_id);
         int pread(char* buf, int32_t& nbytes, const int32_t offset, const uint64_t logic_block_id);
         int write(uint64_t& fileid, DataFile& datafile, const uint64_t logic_block_id,
             const uint64_t attach_logic_block_id);

@@ -33,7 +33,7 @@ namespace tfs
       FRIEND_TEST(TestDataFile, write_read);
       #endif
       public:
-        DataFile(const uint64_t fn, const std::string& work_dir);
+        DataFile(const uint64_t fn, const std::string& work_dir = "hello");
         virtual ~DataFile();
 
         int pwrite(const common::FileInfoInDiskExt& info, const char* data, const int32_t nbytes, const int32_t offset);
@@ -41,8 +41,36 @@ namespace tfs
 
         inline int32_t length() const { return length_;}
         inline uint32_t crc() const { return crc_;}
+
+        inline int32_t get_last_update() const
+        {
+          return last_update_;
+        }
+
+        inline void set_last_update()
+        {
+          last_update_ = time(NULL);
+        }
+
+        inline int add_ref()
+        {
+          return atomic_add_return(1, &ref_count_);
+        }
+
+        inline void sub_ref()
+        {
+          atomic_dec(&ref_count_);
+        }
+
+        inline int get_ref() const
+        {
+          return atomic_read(&ref_count_);
+        }
+
       private:
-        int32_t fd_;
+        atomic_t ref_count_;    // reference count
+        int32_t last_update_;   // last update time
+        int32_t fd_;            // temp file descriptor
         int32_t length_;        // current max buffer write length
         uint32_t crc_;          // crc checksum
         std::stringstream path_;// file path
@@ -51,6 +79,9 @@ namespace tfs
         DataFile();
         DISALLOW_COPY_AND_ASSIGN(DataFile);
     };
+
+       typedef __gnu_cxx::hash_map<uint64_t, DataFile*, __gnu_cxx::hash<int> > DataFileMap;
+       typedef DataFileMap::iterator DataFileMapIter;
   }/** end namespace dataserver **/
 }/** end namespace tfs **/
 #endif //TFS_DATASERVER_DATAFILE_H_

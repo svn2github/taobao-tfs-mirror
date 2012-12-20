@@ -39,6 +39,7 @@ namespace tfs
     static const int32_t FS_SPEEDUP_VERSION = 2;
     static const int32_t PARITY_INDEX_START = 1024; // index start positioin
     static const int32_t PARITY_INDEX_MMAP_SIZE = PARITY_INDEX_START;
+    static const int32_t FILE_INFO_EXT_INIT_VERSION = 1;
 
     static const int32_t EXIT_POST_MSG_RET_NO_OTHER_MEMBER = 0;
     static const int32_t EXIT_POST_MSG_RET_POST_MSG_ERROR  = -1;
@@ -46,6 +47,13 @@ namespace tfs
     static const int32_t PHYSICAL_BLOCK_ID_INIT_VALUE = 1;
     static const int32_t INDEXFILE_SAFE_MULT = 4;
     static const int32_t MAX_INITIALIZE_INDEX_SIZE = 2048;
+
+    enum FileinfoFlag
+    {
+      FI_DELETED = 1,
+      FI_INVALID = 2,
+      FI_CONCEAL = 4
+    };
 
     struct SuperBlockInfo
     {

@@ -20,14 +20,11 @@
 #include <exception>
 #include <tbsys.h>
 #include <Memory.hpp>
-//#include "dataservice.h"
+#include "dataservice.h"
 
 int main(int argc, char* argv[])
 {
-  UNUSED(argc);
-  UNUSED(argv);
-  return 0;
-  //tfs::dataserver::DataService service;
-  //return service.main(argc, argv);
+  tfs::dataserver::DataService service;
+  return service.main(argc, argv);
 }
 

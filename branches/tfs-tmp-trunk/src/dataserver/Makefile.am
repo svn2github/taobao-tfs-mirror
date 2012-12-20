@@ -14,13 +14,19 @@ LDADD=$(top_builddir)/src/new_client/.libs/libtfsclient.a\
 
 noinst_LIBRARIES = libdataserver.a
 
-DATASERVER_SOURCE_LIST_HEADER=ds_define.h super_block_manager.h physical_blockv2.h\
+DATASERVER_SOURCE_LIST_HEADER=version.h ds_define.h super_block_manager.h physical_blockv2.h\
 physical_block_manager.h index_handlev2.h data_handlev2.h data_file.h\
-logic_blockv2.h logic_block_manager.h block_manager.h
+logic_blockv2.h logic_block_manager.h block_manager.h data_manager.h \
+lease_manager.h gc.h visit_stat.h requester.h cpu_metrics.h \
+client_request_server.h sync_base.h sync_backup.h \
+data_management.h dataservice.h 
 
-DATASERVER_SOURCE_LIST=ds_define.cpp super_block_manager.cpp physical_blockv2.cpp\
+DATASERVER_SOURCE_LIST=version.cpp ds_define.cpp super_block_manager.cpp physical_blockv2.cpp\
 physical_block_manager.cpp index_handlev2.cpp data_handlev2.cpp data_file.cpp \
-logic_blockv2.cpp logic_block_manager.cpp block_manager.cpp
+logic_blockv2.cpp logic_block_manager.cpp block_manager.cpp data_manager.cpp \
+lease_manager.cpp gc.cpp visit_stat.cpp requester.cpp cpu_metrics.cpp \
+client_request_server.cpp sync_base.cpp sync_backup.cpp \
+data_management.cpp dataservice.cpp 
 
 libdataserver_a_SOURCES=$(DATASERVER_SOURCE_LIST) $(DATASERVER_SOURCE_LIST_HEADER)
 

@@ -96,6 +96,7 @@ namespace tfs
       int32_t ret = (NULL == data) ? EXIT_MMAP_DATA_INVALID : TFS_SUCCESS;
       if (TFS_SUCCESS == ret)
       {
+        memset(data, 0, file_op_.size());
         memcpy((data+ SUPERBLOCK_RESERVER_LENGTH), &info, sizeof(info));
       }
       return ret;

@@ -23,12 +23,12 @@
 #include "tbsys.h"
 
 #include "common/func.h"
+#include "common/parameter.h"
 #include "common/directory_op.h"
 #include "new_client/fsname.h"
-#include "logic_block.h"
-#include "blockfile_manager.h"
 #include "sync_base.h"
 #include "sync_backup.h"
+#include "data_manager.h"
 
 namespace tfs
 {
@@ -317,8 +317,9 @@ namespace tfs
       int32_t ret = block_id > 0 ? TFS_SUCCESS : EXIT_BLOCKID_ZERO_ERROR;
       if (TFS_SUCCESS == ret)
       {
-        LogicBlock* logic_block = BlockFileManager::get_instance()->get_logic_block(block_id);
-        if (NULL == logic_block)
+        BlockInfoV2 block_info;
+        ret = DataManager::instance().get_block_info(block_id, block_info);
+        if (TFS_SUCCESS != ret)
         {
           return remote_copy_file(block_id, file_id);
         }
@@ -333,7 +334,8 @@ namespace tfs
         int64_t total_length = 0;
         FileInfo finfo;
 
-        ret = logic_block->read_file(file_id, data, length, offset, READ_DATA_OPTION_FLAG_FORCE/*READ_DATA_OPTION_FLAG_NORMAL*/);//read first data & fileinfo
+        /*READ_DATA_OPTION_FLAG_NORMAL*/ //read first data & fileinfo
+        ret = DataManager::instance().read_file(block_id, file_id, data, length, offset, READ_DATA_OPTION_FLAG_FORCE);
         if (TFS_SUCCESS != ret)
         {
           // if file is local deleted or not exists in local, need not sync
@@ -389,7 +391,8 @@ namespace tfs
                       && TFS_SUCCESS == ret)
                 {
                   length = ((finfo.size_ - total_length) > MAX_READ_SIZE) ? MAX_READ_SIZE : finfo.size_ - total_length;
-                  ret = logic_block->read_file(file_id, data, length, offset, READ_DATA_OPTION_FLAG_NORMAL);//read data
+
+                  ret = DataManager::instance().read_file(block_id, file_id, data, length, offset, READ_DATA_OPTION_FLAG_FORCE);
                   if (TFS_SUCCESS != ret)
                   {
                     TBSYS_LOG(ERROR, "read file fail. blockid: %u, fileid: %"PRI64_PREFIX"u, offset: %d, ret: %d",

@@ -213,8 +213,8 @@ namespace tfs
       int32_t ret = super_block_manager_.get_super_block_info(info);
       if (TFS_SUCCESS == ret)
       {
-        total_space = info->total_main_block_count_ * info->max_main_block_size_;
-        used_space  = info->used_main_block_count_  * info->max_main_block_size_;
+        total_space = static_cast<int64_t>(info->total_main_block_count_) * info->max_main_block_size_;
+        used_space  = static_cast<int64_t>(info->used_main_block_count_) * info->max_main_block_size_;
       }
       return ret;
     }
@@ -310,7 +310,22 @@ namespace tfs
       return ret;
     }
 
-    int BlockManager::pwrite(char* buf, const int32_t nbytes, const int32_t offset, const uint64_t logic_block_id)
+    int BlockManager::generation_file_id(uint64_t& fileid, const double threshold, const uint64_t logic_block_id)
+    {
+      int32_t ret = (INVALID_BLOCK_ID != logic_block_id) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+      if (TFS_SUCCESS == ret)
+      {
+        LogicBlock* logic_block = dynamic_cast<LogicBlock*>(get(logic_block_id));
+        ret = (NULL != logic_block) ? TFS_SUCCESS  : EXIT_NO_LOGICBLOCK_ERROR;
+        if (TFS_SUCCESS == ret)
+        {
+          ret = logic_block->generation_file_id(fileid, threshold);
+        }
+      }
+      return ret;
+    }
+
+    int BlockManager::pwrite(const char* buf, const int32_t nbytes, const int32_t offset, const uint64_t logic_block_id)
     {
       int32_t ret = (NULL != buf && nbytes > 0 && INVALID_BLOCK_ID != logic_block_id) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
@@ -497,6 +512,8 @@ namespace tfs
             bool complete = (BLOCK_CREATE_COMPLETE_STATUS_COMPLETE == index.status_);
             physical_block_path << info->mount_point_ << MAINBLOCK_DIR_PREFIX << index.physical_file_name_id_;
             BasePhysicalBlock* physical_block = insert_physical_block_(*info, index, index.physical_block_id_, physical_block_path.str());
+            TBSYS_LOG(INFO, "physical id: %u, logic id: %"PRI64_PREFIX"u",
+                index.physical_block_id_, index.logic_block_id_);
             ret = (NULL != physical_block) ? TFS_SUCCESS : EXIT_ADD_PHYSICAL_BLOCK_ERROR;
             BaseLogicBlock* logic_block = NULL;
             if (TFS_SUCCESS == ret)

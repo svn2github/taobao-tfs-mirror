@@ -22,7 +22,7 @@
 #include "common/internal.h"
 #include "common/lock.h"
 #include "data_file.h"
-#include "dataserver_define.h"
+#include "ds_define.h"
 
 namespace tfs
 {
@@ -38,7 +38,7 @@ namespace tfs
     {
       uint64_t server_;
       int32_t  status_;
-      common::BlockInfo info_;
+      common::BlockInfoV2 info_;
     };
 
     struct LeaseId
@@ -65,17 +65,17 @@ namespace tfs
     class Lease
     {
     public:
-      Lease(const LeaseId& lease_id, const int64_t now, const std::vector<uint64_t>& servers);
+      Lease(const LeaseId& lease_id, const int64_t now, const common::VUINT64& servers);
       virtual ~Lease() {}
 
       inline uint32_t inc_ref() { return common::atomic_inc(&ref_count_);}
       inline uint32_t dec_ref() { return common::atomic_dec(&ref_count_);}
-      inline void upate_last_time(const int64_t now) { last_update_time_ = now;}
+      inline void update_last_time(const int64_t now) { last_update_time_ = now;}
       inline bool timeout(const int64_t now) { return now > last_update_time_ + common::SYSPARAM_DATASERVER.expire_data_file_time_;}
       bool check_all_successful() const;
       bool check_has_version_conflict() const;
-      int get_member_info(std::vector<std::pair<uint64_t, common::BlockInfo> >& members) const;
-      int update_member_info(const uint64_t server, const common::BlockInfo& info, const int32_t status);
+      int get_member_info(std::vector<std::pair<uint64_t, common::BlockInfoV2> >& members) const;
+      int update_member_info(const uint64_t server, const common::BlockInfoV2& info, const int32_t status);
       void reset_member_info();
       void dump(const int32_t level, const char* const format = NULL);
 
@@ -90,11 +90,11 @@ namespace tfs
     class WriteLease: public Lease
     {
     public:
-      WriteLease(const LeaseId& lease_id, const int64_t now, const std::vector<uint64_t>& servers);
+      WriteLease(const LeaseId& lease_id, const int64_t now, const common::VUINT64& servers);
       virtual ~WriteLease() {}
-      DataFile& get_data_file() { return data_file_;}
+      DataFile& get_data_file() { return *data_file_;}
     private:
-      DataFile data_file_;
+      DataFile* data_file_;
       DISALLOW_COPY_AND_ASSIGN(WriteLease);
     };
 
@@ -107,8 +107,9 @@ namespace tfs
       LeaseManager();
       virtual ~LeaseManager();
 
-      void generation(LeaseId& lease_id, const int64_t now, const int8_t type, const std::vector<uint64_t>& servers);
+      void generation(LeaseId& lease_id, const int64_t now, const int8_t type, const common::VUINT64& servers);
       Lease* get(const LeaseId& lease_id, const int64_t now) const;
+      Lease* get(LeaseId& lease_id, const int64_t now, const int8_t type, const common::VUINT64& servers);
       void put(Lease* lease);
       int remove(const LeaseId& lease_id);
       int timeout(const int64_t now);

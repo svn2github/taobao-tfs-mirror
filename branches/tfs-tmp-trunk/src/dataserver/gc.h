@@ -18,7 +18,8 @@
 
 #include <Timer.h>
 #include <Mutex.h>
-#include "dataserver_define.h"
+
+#include "ds_define.h"
 
 namespace tfs
 {

@@ -13,6 +13,8 @@
  *      - initial release
  *   qushan<qushan@taobao.com>
  *      - modify 2009-03-27
+ *   linqing <linqing.zyd@taobao.com>
+ *      - modify 2012-12-12
  *
  */
 #ifndef TFS_DATASERVER_DATASERVICE_H_
@@ -27,16 +29,14 @@
 #include "common/statistics.h"
 #include "common/status_message.h"
 #include "message/message_factory.h"
-#include "check_block.h"
 #include "sync_base.h"
 #include "visit_stat.h"
 #include "cpu_metrics.h"
 #include "data_management.h"
 #include "requester.h"
-#include "block_checker.h"
 #include "gc.h"
-#include "task.h"
-#include "task_manager.h"
+#include "client_request_server.h"
+#include "data_manager.h"
 
 namespace tfs
 {
@@ -101,6 +101,7 @@ namespace tfs
         /** handle packet*/
         virtual bool handlePacketQueue(tbnet::Packet *packet, void *args);
 
+        bool check_response(common::NewClient* client);
         int callback(common::NewClient* client);
 
         int post_message_to_server(common::BasePacket* message, const common::VUINT64& ds_list);
@@ -123,11 +124,8 @@ namespace tfs
 
         int write_raw_data(message::WriteRawDataMessage* message);
         int batch_write_info(message::WriteInfoBatchMessage* message);
-        int write_raw_index(message::WriteRawIndexMessage* message);
-        int read_raw_index(message::ReadRawIndexMessage* message);
 
         int read_data(message::ReadDataMessage* message);
-        int read_data_degrade(message::DegradeReadDataMessage* message);
         int read_data_extra(message::ReadDataMessageV2* message, int32_t version);
         int read_raw_data(message::ReadRawDataMessage* message);
         int read_file_info(message::FileInfoMessage* message);
@@ -163,12 +161,10 @@ namespace tfs
         int check_blocks(common::BasePacket* packet);
 
       private:
-        inline DataManagement& get_data_management() { return data_management_;}
         bool access_deny(common::BasePacket* message);
         void do_stat(const uint64_t peer_id,
             const int32_t visit_file_size, const int32_t real_len, const int32_t offset, const int32_t mode);
         int set_ns_ip();
-        void try_add_repair_task(const uint32_t block_id, const int ret);
         int init_log_file(tbsys::CLogger& LOGGER, const std::string& log_file);
         int init_sync_mirror();
 
@@ -207,21 +203,37 @@ namespace tfs
       };
       typedef tbutil::Handle<DoCheckThreadHelper> DoCheckThreadHelperPtr;
 
-      class TaskThreadHelper: public tbutil::Thread
+      class ReplicateBlockThreadHelper: public tbutil::Thread
       {
         public:
-          explicit TaskThreadHelper(DataService& service):
+          explicit ReplicateBlockThreadHelper(DataService& service):
               service_(service)
           {
             start();
           }
-          virtual ~TaskThreadHelper(){}
+          virtual ~ReplicateBlockThreadHelper(){}
           void run();
         private:
-          DISALLOW_COPY_AND_ASSIGN(TaskThreadHelper);
+          DISALLOW_COPY_AND_ASSIGN(ReplicateBlockThreadHelper);
           DataService& service_;
       };
-      typedef tbutil::Handle<TaskThreadHelper> TaskThreadHelperPtr;
+      typedef tbutil::Handle<ReplicateBlockThreadHelper> ReplicateBlockThreadHelperPtr;
+
+      class CompactBlockThreadHelper: public tbutil::Thread
+      {
+        public:
+          explicit CompactBlockThreadHelper(DataService& service):
+              service_(service)
+          {
+            start();
+          }
+          virtual ~CompactBlockThreadHelper(){}
+          void run();
+        private:
+          DISALLOW_COPY_AND_ASSIGN(CompactBlockThreadHelper);
+          DataService& service_;
+      };
+      typedef tbutil::Handle<CompactBlockThreadHelper> CompactBlockThreadHelperPtr;
 
       private:
         DISALLOW_COPY_AND_ASSIGN(DataService);
@@ -230,8 +242,8 @@ namespace tfs
         std::string server_index_;
         DataManagement data_management_;
         Requester ds_requester_;
-        BlockChecker block_checker_;
-        TaskManager task_manager_;
+        ClientRequestServer client_request_server_;
+        DataManager data_manager_;
 
         int32_t server_local_port_;
         bool need_send_blockinfo_[2];
@@ -239,7 +251,6 @@ namespace tfs
         uint64_t hb_ip_port_[2];
         uint64_t ns_ip_port_; //nameserver ip port;
 
-        CheckBlock check_block_;  // check
 #if defined(TFS_GTEST)
       public:
 #else
@@ -249,7 +260,6 @@ namespace tfs
 
         tbutil::Mutex stop_mutex_;
         tbutil::Mutex client_mutex_;
-        tbutil::Mutex compact_mutext_;
         tbutil::Mutex count_mutex_;
         tbutil::Mutex read_stat_mutex_;
         tbutil::Mutex sync_mirror_mutex_;
@@ -273,7 +283,6 @@ namespace tfs
 
         HeartBeatThreadHelperPtr heartbeat_thread_[2];
         DoCheckThreadHelperPtr   do_check_thread_;
-        TaskThreadHelperPtr task_thread_;
 
         std::string read_stat_log_file_;
         std::string write_stat_log_file_;

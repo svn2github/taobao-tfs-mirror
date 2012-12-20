@@ -17,20 +17,21 @@
 #include "lease_manager.h"
 #include "common/error_msg.h"
 #include "common/config_item.h"
+#include "dataservice.h"
 
 using namespace tfs::common;
 namespace tfs
 {
   namespace dataserver
   {
-    Lease::Lease(const LeaseId& lease_id, const int64_t now, const std::vector<uint64_t>& servers):
+    Lease::Lease(const LeaseId& lease_id, const int64_t now, const VUINT64& servers):
       lease_id_(lease_id),
       last_update_time_(now),
       ref_count_(0)
     {
       int32_t index = 0;
       memset(members_, 0, sizeof(members_));
-      std::vector<uint64_t>::const_iterator iter = servers.begin();
+      VUINT64::const_iterator iter = servers.begin();
       for (; iter != servers.end(); ++iter, ++index)
       {
         members_[index].server_ = (*iter);
@@ -39,13 +40,13 @@ namespace tfs
       }
     }
 
-    int Lease::get_member_info(std::vector<std::pair<uint64_t, common::BlockInfo> >& members) const
+    int Lease::get_member_info(std::vector<std::pair<uint64_t, common::BlockInfoV2> >& members) const
     {
       for (int32_t index = 0; index <MAX_REPLICATION_NUM; ++index)
       {
         if (members_[index].server_ != INVALID_SERVER_ID)
         {
-          std::pair<uint64_t, common::BlockInfo> item;
+          std::pair<uint64_t, common::BlockInfoV2> item;
           item.first = members_[index].server_;
           item.second = members_[index].info_;
           members.push_back(item);
@@ -54,7 +55,7 @@ namespace tfs
       return TFS_SUCCESS;
     }
 
-    int Lease::update_member_info(const uint64_t server, const common::BlockInfo& info, const int32_t status)
+    int Lease::update_member_info(const uint64_t server, const common::BlockInfoV2& info, const int32_t status)
     {
       int32_t ret = (INVALID_SERVER_ID != server) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
@@ -125,11 +126,11 @@ namespace tfs
       return has_version_error;
     }
 
-    WriteLease::WriteLease(const LeaseId& lease_id, const int64_t now, const std::vector<uint64_t>& servers):
-      Lease(lease_id, now, servers),
-      data_file_(lease_id.lease_id_)
+    WriteLease::WriteLease(const LeaseId& lease_id, const int64_t now, const VUINT64& servers):
+      Lease(lease_id, now, servers)
     {
-
+      data_file_ = new DataFile(lease_id.lease_id_,
+          dynamic_cast<DataService*>(DataService::instance())->get_real_work_dir().c_str());
     }
 
     LeaseManager::LeaseManager():
@@ -146,7 +147,7 @@ namespace tfs
       }
     }
 
-    void LeaseManager::generation(LeaseId& lease_id, const int64_t now, const int8_t type, const std::vector<uint64_t>& servers)
+    void LeaseManager::generation(LeaseId& lease_id, const int64_t now, const int8_t type, const VUINT64& servers)
     {
       RWLock::Lock lock(rwmutex_, WRITE_LOCKER);
       Lease* lease = NULL;
@@ -168,7 +169,26 @@ namespace tfs
       LEASE_MAP_CONST_ITER iter = leases_.find(lease_id);
       Lease* lease = (leases_.end() != iter && !iter->second->timeout(now)) ? iter->second : NULL;
       if (NULL != lease)
+      {
         lease->inc_ref();
+      }
+      return lease;
+    }
+
+    Lease* LeaseManager::get(LeaseId& lease_id, const int64_t now, const int8_t type, const VUINT64& servers)
+    {
+      Lease* lease = get(lease_id, now);
+      if (NULL == lease)
+      {
+        //control lease size
+        int ret = has_out_of_limit() ? EXIT_DATAFILE_OVERLOAD : TFS_SUCCESS;
+        if (TFS_SUCCESS == ret)
+        {
+          generation(lease_id, now, type, servers);
+          lease = get(lease_id, now);
+        }
+      }
+
       return lease;
     }
 

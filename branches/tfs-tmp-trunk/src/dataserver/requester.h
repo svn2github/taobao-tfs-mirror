@@ -16,7 +16,6 @@
 #ifndef TFS_DATASERVER_REQUESTER_H_
 #define TFS_DATASERVER_REQUESTER_H_
 
-#include "logic_block.h"
 #include "data_management.h"
 
 namespace tfs
@@ -39,8 +38,6 @@ namespace tfs
         int req_update_block_info(const uint32_t block_id, const common::UpdateBlockType repair = common::UPDATE_BLOCK_NORMAL);
         int req_block_write_complete(const uint32_t block_id,
             const int32_t lease_id, const int32_t success, const common::UnlinkFlag unlink_flag = common::UNLINK_FLAG_NO);
-
-        int resolve_block_version_conflict(Lease* lease, const uint32_t block);
 
       private:
         DISALLOW_COPY_AND_ASSIGN(Requester);
