@@ -906,11 +906,11 @@ namespace tfs
       }
       if (common::TFS_SUCCESS == iret)
       {
-        iret = common::Serialization::set_int32(data, data_len, pos, value3_);
+        iret = common::Serialization::set_int64(data, data_len, pos, value3_);
       }
       if (common::TFS_SUCCESS == iret)
       {
-        iret = common::Serialization::set_int32(data, data_len, pos, value4_);
+        iret = common::Serialization::set_int64(data, data_len, pos, value4_);
       }
       if (common::TFS_SUCCESS == iret)
       {
@@ -932,11 +932,11 @@ namespace tfs
       }
       if (common::TFS_SUCCESS == iret)
       {
-        iret = common::Serialization::get_int32(data, data_len, pos, reinterpret_cast<int32_t*>(&value3_));
+        iret = common::Serialization::get_int64(data, data_len, pos, reinterpret_cast<int64_t*>(&value3_));
       }
       if (common::TFS_SUCCESS == iret)
       {
-        iret = common::Serialization::get_int32(data, data_len, pos, reinterpret_cast<int32_t*>(&value4_));
+        iret = common::Serialization::get_int64(data, data_len, pos, reinterpret_cast<int64_t*>(&value4_));
       }
       if (common::TFS_SUCCESS == iret)
       {
@@ -947,7 +947,7 @@ namespace tfs
 
     int64_t ClientCmdInformation::length() const
     {
-      return common::INT_SIZE * 3 + common::INT64_SIZE * 2;
+      return common::INT_SIZE + common::INT64_SIZE * 4;
     }
 
 
@@ -1286,7 +1286,7 @@ namespace tfs
         int32_t version = 0;
         for (int32_t i = 0; i < size && TFS_SUCCESS == ret; ++i)
         {
-          ret = Serialization::get_int32(data, data_len, pos, reinterpret_cast<int32_t*>(&block));
+          ret = Serialization::get_int64(data, data_len, pos, reinterpret_cast<int64_t*>(&block));
           if (TFS_SUCCESS == ret)
             ret = Serialization::get_int32(data, data_len, pos, reinterpret_cast<int32_t*>(&version));
           if (TFS_SUCCESS == ret)
@@ -1313,10 +1313,10 @@ namespace tfs
       }
       if (TFS_SUCCESS == ret)
       {
-        std::vector<std::pair<uint32_t, int32_t> >::const_iterator iter = family_member_.begin();
+        std::vector<std::pair<uint64_t, int32_t> >::const_iterator iter = family_member_.begin();
         for (; iter != family_member_.end() && TFS_SUCCESS == ret; ++iter)
         {
-          ret = Serialization::set_int32(data, data_len, pos, (*iter).first);
+          ret = Serialization::set_int64(data, data_len, pos, (*iter).first);
           if (TFS_SUCCESS == ret)
             ret = Serialization::set_int32(data, data_len, pos, (*iter).second);
         }
@@ -1343,7 +1343,7 @@ namespace tfs
       }
       if (TFS_SUCCESS == ret)
       {
-        ret = Serialization::get_int32(data, data_len, pos, reinterpret_cast<int32_t*>(&block_));
+        ret = Serialization::get_int64(data, data_len, pos, reinterpret_cast<int64_t*>(&block_));
       }
       if (TFS_SUCCESS == ret)
       {
@@ -1365,7 +1365,7 @@ namespace tfs
       }
       if (TFS_SUCCESS == ret)
       {
-        ret = Serialization::set_int32(data, data_len, pos, block_);
+        ret = Serialization::set_int64(data, data_len, pos, block_);
       }
       if (TFS_SUCCESS == ret)
       {
@@ -1380,7 +1380,7 @@ namespace tfs
 
     int64_t FamilyMemberInfo::length() const
     {
-      return INT64_SIZE + INT_SIZE * 3;
+      return INT64_SIZE * 2 + INT_SIZE * 2;
     }
 
 
@@ -1400,8 +1400,8 @@ namespace tfs
         const uint32_t MEMBER_NUM = GET_DATA_MEMBER_NUM(family_aid_info_) + GET_CHECK_MEMBER_NUM(family_aid_info_);
         for (uint32_t index = 0; index < MEMBER_NUM && TFS_SUCCESS == ret; ++index)
         {
-          std::pair<uint32_t, uint64_t> member;
-          ret = Serialization::get_int32(data, data_len, pos, reinterpret_cast<int32_t*>(&member.first));
+          std::pair<uint64_t, uint64_t> member;
+          ret = Serialization::get_int64(data, data_len, pos, reinterpret_cast<int64_t*>(&member.first));
           if (TFS_SUCCESS == ret)
           {
             ret = Serialization::get_int64(data, data_len, pos, reinterpret_cast<int64_t*>(&member.second));
@@ -1440,10 +1440,10 @@ namespace tfs
         ret = members_.size() == MEMBER_NUM ? TFS_SUCCESS : EXIT_SERIALIZE_ERROR;
         if (TFS_SUCCESS == ret)
         {
-          std::vector<std::pair<uint32_t, uint64_t> >::const_iterator iter = members_.begin();
+          std::vector<std::pair<uint64_t, uint64_t> >::const_iterator iter = members_.begin();
           for (; iter != members_.end() && TFS_SUCCESS == ret; ++iter)
           {
-            ret = Serialization::set_int32(data, data_len, pos, iter->first);
+            ret = Serialization::set_int64(data, data_len, pos, iter->first);
             if (TFS_SUCCESS == ret)
             {
               ret = Serialization::set_int64(data, data_len, pos, iter->second);
@@ -1458,7 +1458,7 @@ namespace tfs
     int64_t FamilyInfoExt::length() const
     {
       const uint32_t MEMBER_NUM = GET_DATA_MEMBER_NUM(family_aid_info_) + GET_CHECK_MEMBER_NUM(family_aid_info_);
-      return INT64_SIZE + INT_SIZE + MEMBER_NUM * (INT_SIZE + INT64_SIZE);
+      return INT64_SIZE + INT_SIZE + MEMBER_NUM * (INT64_SIZE + INT64_SIZE);
     }
 
     int BlockMeta::serialize(char* data, const int64_t data_len, int64_t& pos) const
@@ -1755,7 +1755,12 @@ namespace tfs
 
       if (TFS_SUCCESS == ret)
       {
-        ret = Serialization::set_int32(data, data_len, pos, seq_no_);
+        ret = Serialization::set_int32(data, data_len, pos, update_size_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int32(data, data_len, pos, update_file_count_);
       }
 
       return ret;
@@ -1797,16 +1802,19 @@ namespace tfs
 
       if (TFS_SUCCESS == ret)
       {
-        ret = Serialization::get_int32(data, data_len, pos, reinterpret_cast<int32_t *>(&seq_no_));
+        ret = Serialization::get_int32(data, data_len, pos, &update_size_);
       }
 
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::get_int32(data, data_len, pos, &update_file_count_);
+      }
       return ret;
     }
 
     int64_t BlockInfoV2::length() const
     {
-      return 6 * INT_SIZE + 2 * INT64_SIZE;
+      return 7 * INT_SIZE + 2 * INT64_SIZE;
     }
-
   } /** nameserver **/
 }/** tfs **/

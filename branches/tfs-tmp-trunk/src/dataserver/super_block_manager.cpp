@@ -29,7 +29,6 @@ namespace tfs
     // | reserve         | SuperBlock| {BlockIndex|...|BlockIndex}|
     // ------------------------------------------------------------
     const int32_t SuperBlockManager::SUPERBLOCK_RESERVER_LENGTH = 512;
-    const int32_t SuperBlockManager::MAX_INITIALIZE_BLOCK_INDEX_SIZE = 1024;
     const int32_t SuperBlockManager::MAX_BLOCK_INDEX_SIZE = 65535 * (1 + 3);
     const int32_t SuperBlockManager::PHYSICAL_BLOCK_ID_INIT_VALUE = 1;
     SuperBlockManager::SuperBlockManager(const std::string& path):
@@ -48,13 +47,10 @@ namespace tfs
     int SuperBlockManager::format(SuperBlockInfo& info)
     {
       MMapOption opt;
-      const int32_t initialize_block_index_file_size =  MAX_INITIALIZE_BLOCK_INDEX_SIZE * sizeof(BlockIndex);
       int32_t pagesize = getpagesize();
-      int32_t count    = initialize_block_index_file_size / pagesize + 1;
-      int32_t remainder = initialize_block_index_file_size % pagesize;
-      opt.first_mmap_size_ = remainder ? (count + 1) * pagesize : count * pagesize;
       opt.max_mmap_size_ = pagesize + info.max_block_index_element_count_ * sizeof(BlockIndex);
       opt.per_mmap_size_ = pagesize;
+      opt.first_mmap_size_ = opt.max_mmap_size_;
       int32_t ret = file_op_.mmap(opt);
       if (TFS_SUCCESS != ret)
         TBSYS_LOG(ERROR, "format super block error: %d, %s", errno, strerror(errno));

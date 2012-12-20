@@ -338,20 +338,20 @@ namespace tfs
         }
         else
         {
-          slot = ++header->info_.seq_no_ % header->file_info_bucket_size_;
+          slot = ++header->seq_no_ % header->file_info_bucket_size_;
           current =  (finfos + slot);
           ret = (0 == current->offset_ && INVALID_FILE_ID == current->id_) ? TFS_SUCCESS : EXIT_INSERT_INDEX_SLOT_NOT_FOUND_ERROR;
           get_prev_(prev, current, TFS_SUCCESS != ret);
           while (TFS_SUCCESS != ret && header->used_file_info_bucket_size_ < header->file_info_bucket_size_)
           {
-            slot = (0 == current->next_) ? ++header->info_.seq_no_ % header->file_info_bucket_size_ : current->next_;
+            slot = (0 == current->next_) ? ++header->seq_no_ % header->file_info_bucket_size_ : current->next_;
             current =  (finfos + slot);
             ret = (0 == current->offset_ && INVALID_FILE_ID == current->id_) ? TFS_SUCCESS : EXIT_INSERT_INDEX_SLOT_NOT_FOUND_ERROR;
             get_prev_(prev, current, TFS_SUCCESS != ret);
           }
           if (TFS_SUCCESS == ret)
           {
-            file_id = header->info_.seq_no_;
+            file_id = header->seq_no_;
             ++header->used_file_info_bucket_size_;
           }
         }
@@ -486,7 +486,6 @@ namespace tfs
             IndexHeaderV2 header;
             memset(&header, 0, sizeof(header));
             header.info_.block_id_ = logic_block_id;
-            header.info_.version_  = 1;
             header.info_.family_id_  = INVALID_FAMILY_ID;
             header.throughput_.last_update_time_ = time(NULL);
             header.throughput_.last_statistics_time_ = header.throughput_.last_update_time_;
@@ -894,8 +893,7 @@ namespace tfs
             IndexHeaderV2 header;
             memset(&header, 0, sizeof(header));
             header.info_.block_id_ = logic_block_id;
-            header.info_.version_  = 1;
-            header.info_.seq_no_   = 0;
+            header.seq_no_   = 0;
             header.info_.family_id_ = family_id;
             header.throughput_.last_update_time_ = time(NULL);
             header.throughput_.last_statistics_time_ = header.throughput_.last_update_time_;

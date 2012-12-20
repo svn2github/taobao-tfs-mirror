@@ -776,8 +776,8 @@ namespace tfs
     {
       int64_t value1_;
       int64_t value2_;
-      int32_t value3_;
-      int32_t value4_;
+      uint64_t value3_;
+      int64_t value4_;
       int32_t  cmd_;
       int serialize(char* data, const int64_t data_len, int64_t& pos) const;
       int deserialize(const char* data, const int64_t data_len, int64_t& pos);
@@ -922,7 +922,7 @@ namespace tfs
     {
       int64_t family_id_;
       int32_t family_aid_info_;
-      std::vector<std::pair<uint32_t, int32_t> > family_member_;
+      std::vector<std::pair<uint64_t, int32_t> > family_member_;
       int deserialize(const char* data, const int64_t data_len, int64_t& pos);
       int serialize(char* data, const int64_t data_len, int64_t& pos) const;
       int64_t length() const;
@@ -931,7 +931,7 @@ namespace tfs
     struct FamilyMemberInfo
     {
       uint64_t server_;
-      uint32_t block_;
+      uint64_t block_;
       int32_t  version_;
       int32_t  status_;
       int deserialize(const char* data, const int64_t data_len, int64_t& pos);
@@ -944,7 +944,7 @@ namespace tfs
     {
       int64_t family_id_;
       int32_t family_aid_info_;
-      std::vector<std::pair<uint32_t, uint64_t> > members_;
+      std::vector<std::pair<uint64_t, uint64_t> > members_;
 
       int deserialize(const char* data, const int64_t data_len, int64_t& pos);
       int serialize(char* data, const int64_t data_len, int64_t& pos) const;
@@ -1101,11 +1101,13 @@ namespace tfs
       uint64_t block_id_;
     	int64_t family_id_;
       int32_t version_;
-      int32_t file_count_;
       int32_t size_;
-      int32_t del_file_count_;
+      int32_t file_count_;
       int32_t del_size_;
-      uint32_t seq_no_;
+      int32_t del_file_count_;
+      int32_t update_size_;
+      int32_t update_file_count_;
+      //uint32_t seq_no_;
       bool operator < (const BlockInfoV2& rhs) const
       {
         return block_id_ < rhs.block_id_;
@@ -1137,6 +1139,7 @@ namespace tfs
       int32_t used_offset_;
       int32_t avail_offset_;
       int32_t marshalling_offset_;
+      uint32_t seq_no_;
     	union
     	{
     		uint16_t file_info_bucket_size_;

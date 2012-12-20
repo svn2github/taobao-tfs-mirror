@@ -211,7 +211,7 @@ namespace tfs
           old_info.size_     = info.size_;
           old_info.del_file_count_ = info.del_file_count_;
           old_info.del_size_ = info.del_size_;
-          old_info.seq_no_   = info.seq_no_;
+          old_info.seq_no_   = 0;
           std::pair<std::set<common::BlockInfo>::iterator, bool> res =
             blocks.insert(old_info);
         }
