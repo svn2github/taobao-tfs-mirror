@@ -26,7 +26,7 @@ namespace tfs
       :key_(NULL), key_size_(0), key_type_(0)
     {
     }
-    const char KvKey::DELIMITER = '/';
+    const char KvKey::DELIMITER = 7;
 
   }
 }

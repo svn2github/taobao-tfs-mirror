@@ -46,9 +46,16 @@ namespace tfs
       static int split_key_for_tair(const KvKey& key, tair::data_entry* prefix_key, tair::data_entry* second_key);
 
     private:
+      int prefix_put_to_tair(const int area, const tair::data_entry &pkey,
+          const tair::data_entry &skey, const tair::data_entry &value, const int version);
+      int prefix_get_from_tair(const int area, const tair::data_entry &pkey,
+        const tair::data_entry &skey, tair::data_entry* &value);
+
+    private:
       DISALLOW_COPY_AND_ASSIGN(TairEngineHelper);
       tair::tair_client_api* tair_client_;
       int32_t object_area_;
+      static const int TAIR_RETRY_COUNT;
 
     };
   }

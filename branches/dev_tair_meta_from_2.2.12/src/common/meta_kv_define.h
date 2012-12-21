@@ -15,14 +15,22 @@
  */
 #ifndef TFS_COMMON_META_KV_DEFINE_H_
 #define TFS_COMMON_META_KV_DEFINE_H_
-
+#include "define.h"
 namespace tfs
 {
   namespace common
   {
     struct TfsFileInfo
     {
-      TfsFileInfo():block_id(0), file_id(0) { }
+      enum
+      {
+        TFS_INFO_SIZE = 32,
+      };
+      TfsFileInfo();
+      int64_t length() const;
+      int serialize(char* data, const int64_t data_len, int64_t& pos) const;
+      int deserialize(const char* data, const int64_t data_len, int64_t& pos);
+
       int64_t block_id;
       int64_t file_id;
     };
