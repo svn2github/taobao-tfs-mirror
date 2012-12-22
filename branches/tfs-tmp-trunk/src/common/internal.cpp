@@ -1398,23 +1398,13 @@ namespace tfs
       if (TFS_SUCCESS == ret)
       {
         const uint32_t MEMBER_NUM = GET_DATA_MEMBER_NUM(family_aid_info_) + GET_CHECK_MEMBER_NUM(family_aid_info_);
-        for (uint32_t index = 0; index < MEMBER_NUM && TFS_SUCCESS == ret; ++index)
+        for (uint32_t i = 0; (i < MEMBER_NUM) && (TFS_SUCCESS == ret); i++)
         {
-          std::pair<uint64_t, uint64_t> member;
-          ret = Serialization::get_int64(data, data_len, pos, reinterpret_cast<int64_t*>(&member.first));
+          ret = Serialization::get_int64(data, data_len, pos, reinterpret_cast<int64_t*>(&members_[i].first));
           if (TFS_SUCCESS == ret)
           {
-            ret = Serialization::get_int64(data, data_len, pos, reinterpret_cast<int64_t*>(&member.second));
+            ret = Serialization::get_int64(data, data_len, pos, reinterpret_cast<int64_t*>(&members_[i].second));
           }
-          if (TFS_SUCCESS == ret)
-          {
-            members_.push_back(member);
-          }
-        }
-
-        if (members_.size() != MEMBER_NUM)
-        {
-          ret = EXIT_SERIALIZE_ERROR;
         }
       }
 
@@ -1437,17 +1427,12 @@ namespace tfs
       if (TFS_SUCCESS == ret)
       {
         const uint32_t MEMBER_NUM = GET_DATA_MEMBER_NUM(family_aid_info_) + GET_CHECK_MEMBER_NUM(family_aid_info_);
-        ret = members_.size() == MEMBER_NUM ? TFS_SUCCESS : EXIT_SERIALIZE_ERROR;
-        if (TFS_SUCCESS == ret)
+        for (uint32_t i = 0; (i < MEMBER_NUM) && (TFS_SUCCESS == ret); i++)
         {
-          std::vector<std::pair<uint64_t, uint64_t> >::const_iterator iter = members_.begin();
-          for (; iter != members_.end() && TFS_SUCCESS == ret; ++iter)
+          ret = Serialization::set_int64(data, data_len, pos, members_[i].first);
+          if (TFS_SUCCESS == ret)
           {
-            ret = Serialization::set_int64(data, data_len, pos, iter->first);
-            if (TFS_SUCCESS == ret)
-            {
-              ret = Serialization::set_int64(data, data_len, pos, iter->second);
-            }
+            ret = Serialization::set_int64(data, data_len, pos, members_[i].second);
           }
         }
       }
@@ -1467,12 +1452,25 @@ namespace tfs
 
       if (TFS_SUCCESS == ret)
       {
+        ret = ((size_ >= 0) && (size_ <= MAX_REPLICATION_NUM)) ? TFS_SUCCESS: TFS_ERROR;
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
         ret = Serialization::set_int64(data, data_len, pos, block_id_);
       }
 
       if (TFS_SUCCESS == ret)
       {
-        ret = Serialization::set_vint64(data, data_len, pos, ds_);
+        ret = Serialization::set_int32(data, data_len, pos, size_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        for (int32_t i = 0; i < size_; i++)
+        {
+          ret = Serialization::set_int64(data, data_len, pos, ds_[i]);
+        }
       }
 
       if (TFS_SUCCESS == ret)
@@ -1509,12 +1507,19 @@ namespace tfs
 
       if (TFS_SUCCESS == ret)
       {
-        ret = Serialization::get_vint64(data, data_len, pos, ds_);
+        ret = Serialization::get_int32(data, data_len, pos, &size_);
+        if (TFS_SUCCESS == ret)
+        {
+          ret = ((size_ >= 0) && (size_ <= MAX_REPLICATION_NUM)) ? TFS_SUCCESS: TFS_ERROR;
+        }
       }
 
       if (TFS_SUCCESS == ret)
       {
-        ret = Serialization::get_int32(data, data_len, pos, &version_);
+        for (int32_t i = 0; i < size_; i++)
+        {
+          ret = Serialization::get_int64(data, data_len, pos, reinterpret_cast<int64_t* >(&ds_[i]));
+        }
       }
 
       if (TFS_SUCCESS == ret)
@@ -1532,7 +1537,7 @@ namespace tfs
 
     int64_t BlockMeta::length() const
     {
-      int64_t len = INT64_SIZE + Serialization::get_vint64_length(ds_) + INT_SIZE * 2;
+      int64_t len = INT64_SIZE + INT_SIZE * 3 + size_ * INT64_SIZE;
       if (INVALID_FAMILY_ID != family_info_.family_id_)
       {
         len += family_info_.length();

@@ -159,6 +159,7 @@ namespace tfs
     static const int64_t MIN_GC_EXPIRED_TIME = 21600000; // 6h
     static const int64_t MAX_SEGMENT_SIZE = 1 << 21; // 2M
     static const int64_t MAX_BATCH_COUNT = 16;
+    static const int64_t MAX_REPLICATION = 16;
 
     static const int32_t MAX_DEV_TAG_LEN = 8;
 
@@ -942,9 +943,10 @@ namespace tfs
 
     struct FamilyInfoExt
     {
+      typedef std::pair<uint64_t, uint64_t> FamilyMember;
       int64_t family_id_;
       int32_t family_aid_info_;
-      std::vector<std::pair<uint64_t, uint64_t> > members_;
+      FamilyMember members_[MAX_MARSHALLING_NUM];
 
       int deserialize(const char* data, const int64_t data_len, int64_t& pos);
       int serialize(char* data, const int64_t data_len, int64_t& pos) const;
@@ -1034,7 +1036,8 @@ namespace tfs
     struct BlockMeta
     {
       uint64_t block_id_;
-      VUINT64 ds_;
+      int32_t size_;
+      uint64_t ds_[MAX_REPLICATION_NUM];
       int32_t version_;
       int32_t flag_;
       FamilyInfoExt family_info_;
