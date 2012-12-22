@@ -29,25 +29,26 @@
 #include "ds_define.h"
 #include "data_file.h"
 #include "common/parameter.h"
-#include "data_manager.h"
 #include <Mutex.h>
+#include "block_manager.h"
 
 namespace tfs
 {
   namespace dataserver
   {
 
+    class DataService;
     class DataManagement
     {
       public:
-        DataManagement();
+        explicit DataManagement(DataService& service);
         ~DataManagement();
 
       public:
+        inline BlockManager& block_manager();
         void set_file_number(const uint64_t file_number);
         int init_block_files(const common::FileSystemParameter& fs_param);
         void get_ds_filesystem_info(int32_t& block_count, int64_t& use_capacity, int64_t& total_capacity);
-        int get_all_logic_block(std::list<LogicBlock*>& logic_block_list);
         int get_all_block_info(std::set<common::BlockInfo>& blocks);
         int64_t get_all_logic_block_size();
 
@@ -97,6 +98,7 @@ namespace tfs
       private:
         DISALLOW_COPY_AND_ASSIGN(DataManagement);
 
+        DataService& service_;
         uint64_t file_number_;          // file id
         tbutil::Mutex data_file_mutex_; // datafile mutex
         DataFileMap data_file_map_; // datafile map

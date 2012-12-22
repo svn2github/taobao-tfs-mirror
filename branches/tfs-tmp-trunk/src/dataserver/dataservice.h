@@ -160,6 +160,28 @@ namespace tfs
         // check modified blocks
         int check_blocks(common::BasePacket* packet);
 
+      public:
+        // common interfaces
+        uint64_t get_ds_ipport() const
+        {
+          return data_server_info_.id_;
+        }
+
+        uint64_t get_ns_ipport() const
+        {
+          return ns_ip_port_;
+        }
+
+        BlockManager& block_manager()
+        {
+          return *block_manager_;
+        }
+
+        DataManager& data_manager()
+        {
+          return data_manager_;
+        }
+
       private:
         bool access_deny(common::BasePacket* message);
         void do_stat(const uint64_t peer_id,
@@ -244,6 +266,7 @@ namespace tfs
         Requester ds_requester_;
         ClientRequestServer client_request_server_;
         DataManager data_manager_;
+        BlockManager *block_manager_;
 
         int32_t server_local_port_;
         bool need_send_blockinfo_[2];

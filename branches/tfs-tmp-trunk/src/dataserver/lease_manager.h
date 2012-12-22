@@ -109,7 +109,6 @@ namespace tfs
 
       void generation(LeaseId& lease_id, const int64_t now, const int8_t type, const common::VUINT64& servers);
       Lease* get(const LeaseId& lease_id, const int64_t now) const;
-      Lease* get(LeaseId& lease_id, const int64_t now, const int8_t type, const common::VUINT64& servers);
       void put(Lease* lease);
       int remove(const LeaseId& lease_id);
       int timeout(const int64_t now);

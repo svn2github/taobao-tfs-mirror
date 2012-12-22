@@ -39,15 +39,10 @@ namespace tfs
     class ClientRequestServer
     {
       public:
-        ClientRequestServer() {}
-        virtual ~ClientRequestServer() {}
-
-        int initialize(const uint64_t ns_ip_port, const uint64_t ds_ip_port)
-        {
-          ns_ip_port_ = ns_ip_port;
-          ds_ip_port_ = ds_ip_port;
-          return common::TFS_SUCCESS;
-        }
+        explicit ClientRequestServer(DataService& service);
+        virtual ~ClientRequestServer();
+        inline BlockManager& block_manager();
+        inline DataManager& data_manager();
 
         /** main entrance, dispatch task */
         int handle(tbnet::Packet* packet);
@@ -67,20 +62,12 @@ namespace tfs
         /** tool support interface */
 
       private:
-        int create_file_id_(const uint64_t block_id, uint64_t& file_id, uint64_t& lease_id);
-        int resolve_block_version_conflict_(uint64_t block_id, Lease& lease);
-        int update_block_info_(const uint64_t block_id, const common::UnlinkFlag unlink_flag);
-        int check_write_response_(tbnet::Packet* msg);
-        int check_close_response_(tbnet::Packet* msg);
-        int check_unlink_response(tbnet::Packet* msg);
-        int write_file_callback_(message::WriteFileMessageV2* message, Lease* lease);
-        int close_file_callback_(message::CloseFileMessageV2* message, Lease* lease);
-        int unlink_file_callback_(message::UnlinkFileMessageV2* message, Lease* lease);
+        int write_file_callback_(message::WriteFileMessageV2* message, const int32_t status);
+        int close_file_callback_(message::CloseFileMessageV2* message, const int32_t status);
+        int unlink_file_callback_(message::UnlinkFileMessageV2* message, const int32_t status);
 
       private:
-        LeaseManager lease_manager_;
-        uint64_t ns_ip_port_;
-        uint64_t ds_ip_port_;
+        DataService& service_;
     };
 
   }

@@ -52,6 +52,9 @@ namespace tfs
     }
 
     DataService::DataService():
+        data_management_(*this),
+        client_request_server_(*this),
+        data_manager_(*this),
         server_local_port_(-1),
         ns_ip_port_(0),
         sync_mirror_status_(0),
@@ -281,9 +284,9 @@ namespace tfs
           if (TFS_SUCCESS == iret)
           {
             string sb_path = string(SYSPARAM_FILESYSPARAM.mount_name_) + SUPERBLOCK_NAME;
-            iret = DataManager::instance().initialize(sb_path);
+            block_manager_ = new (std::nothrow) BlockManager(sb_path);
+            assert(NULL != block_manager_);
           }
-          iret = client_request_server_.initialize(ns_ip_port_, data_server_info_.id_);
         }
       }
 
@@ -2303,11 +2306,11 @@ namespace tfs
        req_msg.set_server(data_server_info_.id_);
        if (REPORT_BLOCK_NORMAL == msg->get_flag())
        {
-         DataManager::instance().get_all_block_info(req_msg.get_blocks());
+         block_manager_->get_all_block_info(req_msg.get_blocks());
        }
        else
        {
-         DataManager::instance().get_all_block_info(req_msg.get_blocks_ext());
+         block_manager_->get_all_block_info(req_msg.get_blocks_ext());
        }
        req_msg.set_flag(msg->get_flag());
        TBSYS_LOG(INFO, "report block to ns, blocks size: %zd, ext size: %zd",

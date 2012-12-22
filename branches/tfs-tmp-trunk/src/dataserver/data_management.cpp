@@ -23,22 +23,27 @@
 #include "ds_define.h"
 #include "visit_stat.h"
 #include <Memory.hpp>
+#include "dataservice.h"
 
 namespace tfs
 {
   namespace dataserver
   {
-
     using namespace common;
     using namespace std;
 
-    DataManagement::DataManagement() :
-      file_number_(0), last_gc_data_file_time_(0)
+    DataManagement::DataManagement(DataService& service):
+      service_(service), file_number_(0), last_gc_data_file_time_(0)
     {
     }
 
     DataManagement::~DataManagement()
     {
+    }
+
+    inline BlockManager& DataManagement::block_manager()
+    {
+      return service_.block_manager();
     }
 
     void DataManagement::set_file_number(const uint64_t file_number)
@@ -49,29 +54,23 @@ namespace tfs
 
     int DataManagement::init_block_files(const FileSystemParameter& fs_param)
     {
-      return DataManager::instance().init_block_files(fs_param);
+      return block_manager().bootstrap(fs_param);
     }
 
     void DataManagement::get_ds_filesystem_info(int32_t& block_count, int64_t& use_capacity, int64_t& total_capacity)
     {
-      return DataManager::instance().get_ds_filesystem_info(block_count, use_capacity, total_capacity);
-    }
-
-    // this interface won't be called
-    int DataManagement::get_all_logic_block(std::list<LogicBlock*>& logic_block_list)
-    {
-      UNUSED(logic_block_list);
-      return EXIT_NOT_SUPPORT_ERROR;
+      block_count = block_manager().get_all_logic_block_count();
+      block_manager().get_space(total_capacity, use_capacity);
     }
 
     int DataManagement::get_all_block_info(std::set<common::BlockInfo>& blocks)
     {
-      return DataManager::instance().get_all_block_info(blocks);
+      return block_manager().get_all_block_info(blocks);
     }
 
     int64_t DataManagement::get_all_logic_block_size()
     {
-      return DataManager::instance().get_all_logic_block_size();
+      return block_manager().get_all_logic_block_count();
     }
 
     int DataManagement::create_file(const uint32_t block_id, uint64_t& file_id, uint64_t& file_number)
@@ -79,11 +78,8 @@ namespace tfs
       int ret = TFS_SUCCESS;
       if (0 == file_id)
       {
-        ret = DataManager::instance().create_file_id(block_id, file_id);
-      }
-      else  // update seq no over current one to avoid overwrite
-      {
-        // TODO reset seq id
+        double threshold = 0.8;
+        ret = block_manager().generation_file_id(file_id, threshold, block_id);
       }
 
       data_file_mutex_.lock();
@@ -107,7 +103,7 @@ namespace tfs
       if (0 == write_info.offset_)
       {
         BlockInfoV2 none;  // not used in old version
-        ret = DataManager::instance().check_block_version(write_info.block_id_, version, none);
+        ret = block_manager().check_block_version(none, version, write_info.block_id_);
         if (TFS_SUCCESS != ret)
         {
           TBSYS_LOG(DEBUG, "check_block_version error. blockid: %u, ret: %d", write_info.block_id_, ret);
@@ -211,7 +207,8 @@ namespace tfs
 
       write_file_size = datafile->length();
       TIMER_START();
-      int ret = DataManager::instance().close_file(block_id, file_id, *datafile);
+      int ret = block_manager().write(file_id, *datafile, block_id, block_id);
+      ret = (ret < 0) ? ret : TFS_SUCCESS;
       if (TFS_SUCCESS != ret)
       {
         datafile->sub_ref();
@@ -252,7 +249,8 @@ namespace tfs
         int32_t& real_read_len, char* tmp_data_buffer)
     {
       int64_t start = tbsys::CTimeUtil::getTime();
-      int ret = DataManager::instance().read_file(block_id, file_id, tmp_data_buffer, real_read_len, read_offset, flag);
+      int ret = block_manager().read(tmp_data_buffer, real_read_len, read_offset, file_id, flag, block_id, block_id);
+      ret = (ret < 0) ? ret : TFS_SUCCESS;
       if (TFS_SUCCESS != ret)
       {
         TBSYS_LOG(ERROR, "blockid: %u read data error, fileid: %" PRI64_PREFIX "u, size: %d, offset: %d, ret: %d",
@@ -276,8 +274,10 @@ namespace tfs
     int DataManagement::read_file_info(const uint32_t block_id, const uint64_t file_id, const int32_t mode,
         FileInfo& finfo)
     {
+      UNUSED(mode); // TODO: compatible work
       FileInfoV2 finfo_v2;
-      int ret = DataManager::instance().stat_file(block_id, file_id, mode, finfo_v2);
+      finfo_v2.id_ = file_id;
+      int ret = block_manager().stat(finfo_v2, block_id, block_id);
       if (TFS_SUCCESS == ret)
       {
         // transform FileInfoV2 to FileInfo for compatible
@@ -303,9 +303,7 @@ namespace tfs
 
     int DataManagement::unlink_file(const uint32_t block_id, const uint64_t file_id, const int32_t action, int64_t& file_size)
     {
-      BlockInfoV2 none;
-      // -1 denotes not check version
-      return DataManager::instance().unlink_file(block_id, file_id, action, -1, file_size, none);
+      return block_manager().unlink(file_size, file_id, action, block_id, block_id);
     }
 
     int DataManagement::batch_new_block(const VUINT32* new_blocks)
@@ -317,7 +315,7 @@ namespace tfs
         VUINT32::const_iterator iter = new_blocks->begin();
         for ( ; (TFS_SUCCESS == ret) && (iter != new_blocks->end()); iter++)
         {
-          ret = DataManager::instance().new_block(*iter, false);
+          ret = block_manager().new_block(*iter, false);
         }
       }
       return ret;
@@ -332,7 +330,7 @@ namespace tfs
         VUINT32::const_iterator iter = remove_blocks->begin();
         for ( ; (TFS_SUCCESS == ret) && (iter != remove_blocks->end()); iter++)
         {
-          ret = DataManager::instance().remove_block(*iter, false);
+          ret = block_manager().del_block(*iter, false);
         }
       }
       return ret;
@@ -409,7 +407,7 @@ namespace tfs
     {
       visit_count = 0;  // TODO
       BlockInfoV2 blk_v2;
-      int ret = DataManager::instance().get_block_info(block_id, blk_v2);
+      int ret = block_manager().get_block_info(blk_v2, block_id);
       if (TFS_SUCCESS == ret)
       {
         blk.block_id_ = blk_v2.block_id_;
@@ -507,13 +505,13 @@ namespace tfs
     int DataManagement::new_single_block(const uint32_t block_id, const bool tmp)
     {
       TBSYS_LOG(INFO, "new single block, blockid: %u", block_id);
-      return DataManager::instance().new_block(block_id, tmp);
+      return block_manager().new_block(block_id, tmp);
     }
 
     int DataManagement::del_single_block(const uint32_t block_id, const bool tmp)
     {
       TBSYS_LOG(INFO, "remove single block, blockid: %u", block_id);
-      return DataManager::instance().remove_block(block_id, tmp);
+      return block_manager().del_block(block_id, tmp);
     }
 
     int DataManagement::get_block_curr_size(const uint32_t block_id, int32_t& size)
@@ -539,7 +537,8 @@ namespace tfs
     int DataManagement::read_raw_data(const uint32_t block_id, const int32_t read_offset, int32_t& real_read_len,
         char* tmp_data_buffer)
     {
-      return DataManager::instance().read_raw_data(tmp_data_buffer, block_id, real_read_len, read_offset);
+      int ret = block_manager().pread(tmp_data_buffer, real_read_len, read_offset, block_id);
+      return (ret < 0) ? ret : TFS_SUCCESS;
     }
 
     int DataManagement::write_raw_data(const uint32_t block_id, const int32_t data_offset, const int32_t msg_len,
@@ -551,7 +550,8 @@ namespace tfs
         return TFS_SUCCESS;
       }
 
-      return DataManager::instance().write_raw_data(data_buffer, block_id, msg_len, data_offset);
+      int ret = block_manager().pwrite(data_buffer, msg_len, data_offset, block_id);
+      return (ret < 0) ? ret : TFS_SUCCESS;
     }
 
     int DataManagement::batch_write_meta(const uint32_t block_id, const BlockInfo* blk, const RawMetaVec* meta_list)

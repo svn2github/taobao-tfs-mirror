@@ -22,6 +22,7 @@
 #include "new_client/tfs_client_impl.h"
 #include <Memory.hpp>
 #include <TbThread.h>
+#include "block_manager.h"
 
 namespace tfs
 {
@@ -70,6 +71,8 @@ namespace tfs
       public:
         TfsMirrorBackup(SyncBase& sync_base, const char* src_addr, const char* dest_addr);
         virtual ~TfsMirrorBackup();
+
+        BlockManager& block_manager();
 
         bool init();
         void destroy();

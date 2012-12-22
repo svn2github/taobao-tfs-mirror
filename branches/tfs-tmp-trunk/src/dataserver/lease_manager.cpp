@@ -175,23 +175,6 @@ namespace tfs
       return lease;
     }
 
-    Lease* LeaseManager::get(LeaseId& lease_id, const int64_t now, const int8_t type, const VUINT64& servers)
-    {
-      Lease* lease = get(lease_id, now);
-      if (NULL == lease)
-      {
-        //control lease size
-        int ret = has_out_of_limit() ? EXIT_DATAFILE_OVERLOAD : TFS_SUCCESS;
-        if (TFS_SUCCESS == ret)
-        {
-          generation(lease_id, now, type, servers);
-          lease = get(lease_id, now);
-        }
-      }
-
-      return lease;
-    }
-
     void LeaseManager::put(Lease* lease)
     {
       int32_t ret = (NULL != lease) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
