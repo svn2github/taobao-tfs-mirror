@@ -1,0 +1,138 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE beans PUBLIC "-//SPRING//DTD BEAN//EN" "http://www.springframework.org/dtd/spring-beans.dtd">
+<beans default-autowire="byName">
+
+	<bean id="nginxServer" class="com.taobao.gulu.server.NginxServer">
+		<property name="host" value="10.232.4.35" />
+		<property name="port" value="8032" />
+		<property name="root_url_adress" value="http://10.232.4.35:8032/" />		
+		
+		<!-- <property name="host" value="10.232.35.41" />
+		<property name="port" value="3900" />
+		<property name="root_url_adress" value="http://10.232.35.41:3900/" /> -->
+		
+		<property name="conf_file_directory"
+			value="/home/admin/.hudson/jobs/TFS_Restful/workspace/tfs_restful/conf/" />
+		<property name="execute_cmd"
+			value="/home/admin/.hudson/jobs/TFS_Restful/workspace/tfs_restful/sbin/nginx" />
+		<property name="server_file_directory"
+			value="/home/admin/.hudson/jobs/TFS_Restful/workspace/tfs_restful/" />
+		<property name="action_start" value="start" />
+		<property name="action_stop" value="stop" />
+		<property name="action_restart" value="restart" />
+		<property name="default_conf" value="nginx.conf" />
+		<property name="username" value="admin" />
+		<property name="password" value="nginxadmin" />
+	</bean>
+
+	<bean id="shellServer" class="com.taobao.gulu.server.ShellServer">
+		<property name="host" value="10.232.4.35" />
+		<property name="username" value="admin" />
+		<property name="password" value="nginxadmin" />
+	</bean>
+
+	<bean id="shellServer0429" class="com.taobao.gulu.server.ShellServer">
+		<property name="host" value="10.232.4.29" />
+		<property name="username" value="admin" />
+		<property name="password" value="nginxadmin" />
+	</bean>
+
+	<bean id="shellServer036202" class="com.taobao.gulu.server.ShellServer">
+		<property name="host" value="10.232.36.202" />
+		<property name="username" value="gongyuan.cz" />
+		<property name="password" value="taobao1985" />
+	</bean>
+
+	<bean id="shellServer036209" class="com.taobao.gulu.server.ShellServer">
+		<property name="host" value="10.232.36.209" />
+		<property name="username" value="gongyuan.cz" />
+		<property name="password" value="taobao1985" />
+	</bean>
+
+	<bean id="shellServer036210" class="com.taobao.gulu.server.ShellServer">
+		<property name="host" value="10.232.36.210" />
+		<property name="username" value="gongyuan.cz" />
+		<property name="password" value="taobao1985" />
+	</bean>
+
+	<bean id="tfs_NginxA01" class="com.taobao.gulu.database.TFS">
+		<property name="tfs_rc_server_address" value="10.232.36.202:9202" />
+		<property name="tfs_app_key" value="tfsNginxA01" />
+		<property name="appid" value="1" />
+		<property name="userId" value="1" />
+
+	</bean>
+
+	<bean id="tfs_NginxA02" class="com.taobao.gulu.database.TFS">
+		<property name="tfs_rc_server_address" value="10.232.36.202:9202" />
+		<property name="tfs_app_key" value="tfsNginxA02" />
+		<property name="appid" value="4" />
+		<property name="userId" value="1" />
+
+	</bean>
+
+	<bean id="tfs_NginxA03" class="com.taobao.gulu.database.TFS">
+		<property name="tfs_rc_server_address" value="10.232.36.202:9202" />
+		<property name="tfs_app_key" value="tfsNginxA03" />
+		<property name="appid" value="6" />
+		<property name="userId" value="1" />
+	</bean>
+
+	<bean id="tfs_NginxB01" class="com.taobao.gulu.database.TFS">
+		<property name="tfs_rc_server_address" value="10.232.36.202:9202" />
+		<property name="tfs_app_key" value="tfsNginxB01" />
+		<property name="appid" value="2" />
+		<property name="userId" value="1" />
+	</bean>
+
+	<bean id="tfs_NginxB02" class="com.taobao.gulu.database.TFS">
+		<property name="tfs_rc_server_address" value="10.232.36.202:9202" />
+		<property name="tfs_app_key" value="tfsNginxB02" />
+		<property name="appid" value="3" />
+		<property name="userId" value="1" />
+	</bean>
+
+	<bean id="tfs_NginxB03" class="com.taobao.gulu.database.TFS">
+		<property name="tfs_rc_server_address" value="10.232.36.202:9202" />
+		<property name="tfs_app_key" value="tfsNginxB03" />
+		<property name="appid" value="5" />
+		<property name="userId" value="1" />
+	</bean>
+
+	<bean id="tfs_NginxC01" class="com.taobao.gulu.database.TFS">
+		<property name="tfs_rc_server_address" value="10.232.36.202:9202" />
+		<property name="tfs_app_key" value="tfsNginxC01" />
+		<property name="appid" value="9" />
+		<property name="userId" value="1" />
+	</bean>
+
+	<bean id="tfs_NginxD01" class="com.taobao.gulu.database.TFS">
+		<property name="tfs_rc_server_address" value="10.232.36.202:9202" />
+		<property name="tfs_app_key" value="tfsNginxD01" />
+		<property name="appid" value="10" />
+		<property name="userId" value="1" />
+	</bean>
+
+	<bean id="tfs_NginxIPMap01" class="com.taobao.gulu.database.TFS">
+		<property name="tfs_rc_server_address" value="10.232.36.202:9202" />
+		<property name="tfs_app_key" value="tfsNginxIPMap01" />
+		<property name="appid" value="7" />
+		<property name="userId" value="1" />
+	</bean>
+
+	<bean id="tfs_NginxIPMap02" class="com.taobao.gulu.database.TFS">
+		<property name="tfs_rc_server_address" value="10.232.36.202:9202" />
+		<property name="tfs_app_key" value="tfsNginxIPMap02" />
+		<property name="appid" value="8" />
+		<property name="userId" value="1" />
+	</bean>
+	<bean id="tfs_Tair" class="com.taobao.gulu.database.Tair">
+		<property name="master_address" value="10.232.4.9:5168" />
+		<property name="slave_address" value="10.232.4.9:5168" />
+	</bean>
+	<!-- <bean id="tfs_mysql" class="com.taobao.gulu.database.MySQLConnector"> 
+		<property name="server" value="10.232.4.29:3306" /> <property name="user" 
+		value="root" /> <property name="db" value="tfs_stat" /> <property name="pwd" 
+		value="123" /> </bean> -->
+
+</beans>
