@@ -37,6 +37,12 @@
 		<property name="password" value="nginxadmin" />
 	</bean>
 
+	<bean id="shellServer0435" class="com.taobao.gulu.server.ShellServer">
+		<property name="host" value="10.232.4.35" />
+		<property name="username" value="admin" />
+		<property name="password" value="nginxadmin" />
+	</bean>
+	
 	<bean id="shellServer036202" class="com.taobao.gulu.server.ShellServer">
 		<property name="host" value="10.232.36.202" />
 		<property name="username" value="gongyuan.cz" />

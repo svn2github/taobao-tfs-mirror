@@ -47,6 +47,9 @@ public class BaseCase {
 
 	protected static final ShellServer SERVER0429 = (ShellServer) BEANFACTORY
 			.getBean("shellServer0429");
+	
+	protected static final ShellServer SERVER0435 = (ShellServer) BEANFACTORY
+	.getBean("shellServer0435");
 
 	protected static final ShellServer SERVER036202 = (ShellServer) BEANFACTORY
 			.getBean("shellServer036202");

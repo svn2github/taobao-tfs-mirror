@@ -57,9 +57,9 @@ public class TFS_Restful_RcServer_Test_Authentication_Test extends BaseCase {
 		expectGetMessageAfterDelete.put("status", "404");
 
 		/* nginx log direct */
-		String errorLog = "/" + NGINX.getServer_file_directory() + "/logs/error.log";
-		String accessLog = "/" + NGINX.getServer_file_directory() + "/logs/access.log";
-		String pid = "/" + NGINX.getServer_file_directory() + "/logs/nginx.pid";
+		String errorLog = NGINX.getServer_file_directory() + "logs/error.log";
+		String accessLog = NGINX.getServer_file_directory() + "logs/access.log";
+		String pid = NGINX.getServer_file_directory() + "logs/nginx.pid";
 		
 //		String readRetry202 = "read/stat retry: [0-9], select nameserver: 10.232.36.202:5202";
 //		String writeRetry209 = "write retry: [0-9], select nameserver: 10.232.36.209:6209";
@@ -77,14 +77,14 @@ public class TFS_Restful_RcServer_Test_Authentication_Test extends BaseCase {
 		String read = "read/stat";
 		String write = "write";
 		
-		String Retry202_1 = "select nameserver: 10.232.36.202:5202";
-		String Retry209_1 = "select nameserver: 10.232.36.209:6209";
+		String Retry202_1 = "nameserver: 10.232.36.202:5202";
+		String Retry209_1 = "nameserver: 10.232.36.209:6209";
 		
 		try {
 			/* clean the nginx log */
-			tools.verifyCMD(SERVER0432, "rm -fr " + errorLog, "", "");
-			tools.verifyCMD(SERVER0432, "rm -fr " + accessLog, "", "");
-			tools.verifyCMD(SERVER0432, "kill -USR1 `cat " + pid + "`", "", "");
+			tools.verifyCMD(SERVER0435, "rm -fr " + errorLog, "", "");
+			tools.verifyCMD(SERVER0435, "rm -fr " + accessLog, "", "");
+			tools.verifyCMD(SERVER0435, "kill -USR1 `cat " + pid + "`", "", "");
 			
 			/* set post method request */
 			// setting request info
@@ -96,13 +96,13 @@ public class TFS_Restful_RcServer_Test_Authentication_Test extends BaseCase {
 			System.out.println("the tfs file name with suffix is  : " + tfsFileNameWithSuffix);
 			
 			/* verify log info */
-			tools.verifyCMD(SERVER0432, "cat " + errorLog + "| grep '" + write + "'|grep '"+Retry202_1+"' -c", "1", "");
-			tools.verifyCMD(SERVER0432, "cat " + errorLog + "| grep '" + write + "'|grep '"+Retry209_1+"' -c", "0", "");
+			tools.verifyCMD(SERVER0435, "cat " + errorLog + "| grep '" + write + "'|grep '"+Retry202_1+"' -c", "1", "");
+			tools.verifyCMD(SERVER0435, "cat " + errorLog + "| grep '" + write + "'|grep '"+Retry209_1+"' -c", "0", "");
 
 			/* clean the nginx log */
-			tools.verifyCMD(SERVER0432, "rm -fr " + errorLog, "", "");
-			tools.verifyCMD(SERVER0432, "rm -fr " + accessLog, "", "");
-			tools.verifyCMD(SERVER0432, "kill -USR1 `cat " + pid + "`", "", "");	
+			tools.verifyCMD(SERVER0435, "rm -fr " + errorLog, "", "");
+			tools.verifyCMD(SERVER0435, "rm -fr " + accessLog, "", "");
+			tools.verifyCMD(SERVER0435, "kill -USR1 `cat " + pid + "`", "", "");	
 
 			/* set post method request */
 			// setting request info
@@ -114,17 +114,17 @@ public class TFS_Restful_RcServer_Test_Authentication_Test extends BaseCase {
 			System.out.println("the tfs file name without suffix is  : " + tfsFileNameWithOutSuffix);
 			
 			/* verify log info */
-			tools.verifyCMD(SERVER0432, "cat " + errorLog + "| grep '" + write + "'|grep '"+Retry202_1+"' -c", "1", "");
-			tools.verifyCMD(SERVER0432, "cat " + errorLog + "| grep '" + write + "'|grep '"+Retry209_1+"' -c", "0", "");
+			tools.verifyCMD(SERVER0435, "cat " + errorLog + "| grep '" + write + "'|grep '"+Retry202_1+"' -c", "1", "");
+			tools.verifyCMD(SERVER0435, "cat " + errorLog + "| grep '" + write + "'|grep '"+Retry209_1+"' -c", "0", "");
 
 			/* clean the nginx log */
-			tools.verifyCMD(SERVER0432, "rm -fr " + errorLog, "", "");
-			tools.verifyCMD(SERVER0432, "rm -fr " + accessLog, "", "");
-			tools.verifyCMD(SERVER0432, "kill -USR1 `cat " + pid + "`", "", "");	
+			tools.verifyCMD(SERVER0435, "rm -fr " + errorLog, "", "");
+			tools.verifyCMD(SERVER0435, "rm -fr " + accessLog, "", "");
+			tools.verifyCMD(SERVER0435, "kill -USR1 `cat " + pid + "`", "", "");	
 			
 			
 			/* modify mysql */
-			tools.verifyCMD(SERVER0429, UPDATE_LOGIC_A_READ, "", "");
+			tools.verifyCMD(SERVER0435, UPDATE_LOGIC_A_READ, "", "");
 			
 			
 			NGINX.restart();
@@ -138,13 +138,13 @@ public class TFS_Restful_RcServer_Test_Authentication_Test extends BaseCase {
 			tools.verifyResponse(setPostMethod(postUrl, localFile), expectErrorMessage);
 			
 			/* verify log info */
-			tools.verifyCMD(SERVER0432, "cat " + errorLog + "| grep '" + write + "'|grep '"+Retry202_1+"' -c", "0", "");
-			tools.verifyCMD(SERVER0432, "cat " + errorLog + "| grep '" + write + "'|grep '"+Retry209_1+"' -c", "0", "");
+			tools.verifyCMD(SERVER0435, "cat " + errorLog + "| grep '" + write + "'|grep '"+Retry202_1+"' -c", "0", "");
+			tools.verifyCMD(SERVER0435, "cat " + errorLog + "| grep '" + write + "'|grep '"+Retry209_1+"' -c", "0", "");
 
 			/* clean the nginx log */
-			tools.verifyCMD(SERVER0432, "rm -fr " + errorLog, "", "");
-			tools.verifyCMD(SERVER0432, "rm -fr " + accessLog, "", "");
-			tools.verifyCMD(SERVER0432, "kill -USR1 `cat " + pid + "`", "", "");	
+			tools.verifyCMD(SERVER0435, "rm -fr " + errorLog, "", "");
+			tools.verifyCMD(SERVER0435, "rm -fr " + accessLog, "", "");
+			tools.verifyCMD(SERVER0435, "kill -USR1 `cat " + pid + "`", "", "");	
 			
 			/* set get method request */
 			// setting request info
@@ -156,15 +156,15 @@ public class TFS_Restful_RcServer_Test_Authentication_Test extends BaseCase {
 			
 			/* verify log info */
 			
-			tools.verifyCMD(SERVER0432, "cat " + errorLog + "| grep '" + read + "'|grep '"+Retry202_1+"' -c", "1", "");
-			tools.verifyCMD(SERVER0432, "cat " + errorLog + "| grep '" + read + "'|grep '"+Retry209_1+"' -c", "0", "");
-			tools.verifyCMD(SERVER0432, "cat " + errorLog + "| grep -m 1 '" + read + "'", Retry202_1, "");
+			tools.verifyCMD(SERVER0435, "cat " + errorLog + "| grep '" + read + "'|grep '"+Retry202_1+"' -c", "1", "");
+			tools.verifyCMD(SERVER0435, "cat " + errorLog + "| grep '" + read + "'|grep '"+Retry209_1+"' -c", "0", "");
+			tools.verifyCMD(SERVER0435, "cat " + errorLog + "| grep -m 1 '" + read + "'", Retry202_1, "");
 			
 			
 			/* clean the nginx log */
-			tools.verifyCMD(SERVER0432, "rm -fr " + errorLog, "", "");
-			tools.verifyCMD(SERVER0432, "rm -fr " + accessLog, "", "");
-			tools.verifyCMD(SERVER0432, "kill -USR1 `cat " + pid + "`", "", "");
+			tools.verifyCMD(SERVER0435, "rm -fr " + errorLog, "", "");
+			tools.verifyCMD(SERVER0435, "rm -fr " + accessLog, "", "");
+			tools.verifyCMD(SERVER0435, "kill -USR1 `cat " + pid + "`", "", "");
 			
 			/* set delete method request */
 			// setting request info
@@ -176,11 +176,11 @@ public class TFS_Restful_RcServer_Test_Authentication_Test extends BaseCase {
 			
 			
 			// ÑéÖ¤É¾³ý¼°É¾³ýË³Ðò
-			tools.verifyCMD(SERVER0432, "cat " + errorLog + "| grep '" + delete202 + "' -c", "0", "");
+			tools.verifyCMD(SERVER0435, "cat " + errorLog + "| grep '" + delete202 + "' -c", "0", "");
 			/* clean the nginx log */
-			tools.verifyCMD(SERVER0432, "rm -fr " + errorLog, "", "");
-			tools.verifyCMD(SERVER0432, "rm -fr " + accessLog, "", "");
-			tools.verifyCMD(SERVER0432, "kill -USR1 `cat " + pid + "`", "", "");	
+			tools.verifyCMD(SERVER0435, "rm -fr " + errorLog, "", "");
+			tools.verifyCMD(SERVER0435, "rm -fr " + accessLog, "", "");
+			tools.verifyCMD(SERVER0435, "kill -USR1 `cat " + pid + "`", "", "");	
 
 			
 			/* set get method request */
@@ -192,15 +192,15 @@ public class TFS_Restful_RcServer_Test_Authentication_Test extends BaseCase {
 			tools.verifyResponseBodyWithLocalFile(setGetMethod(getUrl), expectGetMessage);
 			/* verify log info */
 			
-			tools.verifyCMD(SERVER0432, "cat " + errorLog + "| grep '" + read + "'|grep '"+Retry202_1+"' -c", "1", "");
-			tools.verifyCMD(SERVER0432, "cat " + errorLog + "| grep '" + read + "'|grep '"+Retry209_1+"' -c", "0", "");
-			tools.verifyCMD(SERVER0432, "cat " + errorLog + "| grep -m 1 '" + read + "'", Retry202_1, "");
+			tools.verifyCMD(SERVER0435, "cat " + errorLog + "| grep '" + read + "'|grep '"+Retry202_1+"' -c", "1", "");
+			tools.verifyCMD(SERVER0435, "cat " + errorLog + "| grep '" + read + "'|grep '"+Retry209_1+"' -c", "0", "");
+			tools.verifyCMD(SERVER0435, "cat " + errorLog + "| grep -m 1 '" + read + "'", Retry202_1, "");
 			
 			
 			/* clean the nginx log */
-			tools.verifyCMD(SERVER0432, "rm -fr " + errorLog, "", "");
-			tools.verifyCMD(SERVER0432, "rm -fr " + accessLog, "", "");
-			tools.verifyCMD(SERVER0432, "kill -USR1 `cat " + pid + "`", "", "");
+			tools.verifyCMD(SERVER0435, "rm -fr " + errorLog, "", "");
+			tools.verifyCMD(SERVER0435, "rm -fr " + accessLog, "", "");
+			tools.verifyCMD(SERVER0435, "kill -USR1 `cat " + pid + "`", "", "");
 			
 			
 			/* set post method request */
@@ -220,14 +220,14 @@ public class TFS_Restful_RcServer_Test_Authentication_Test extends BaseCase {
 			tools.verifyResponseBodyWithLocalFile(setGetMethod(getUrl), expectGetMessage);
 			
 			/* verify log info */
-			tools.verifyCMD(SERVER0432, "cat " + errorLog + "| grep '" + read + "'|grep '"+Retry202_1+"' -c", "1", "");
+			tools.verifyCMD(SERVER0435, "cat " + errorLog + "| grep '" + read + "'|grep '"+Retry202_1+"' -c", "1", "");
 //			tools.verifyCMD(SERVER0432, "cat " + errorLog + "| grep '" + read + "'|grep '"+Retry209_1+"' -c", "0", "");
-			tools.verifyCMD(SERVER0432, "cat " + errorLog + "| grep -m 1 '" + read + "'", Retry202_1, "");
+			tools.verifyCMD(SERVER0435, "cat " + errorLog + "| grep -m 1 '" + read + "'", Retry202_1, "");
 			
 			/* clean the nginx log */
-			tools.verifyCMD(SERVER0432, "rm -fr " + errorLog, "", "");
-			tools.verifyCMD(SERVER0432, "rm -fr " + accessLog, "", "");
-			tools.verifyCMD(SERVER0432, "kill -USR1 `cat " + pid + "`", "", "");
+			tools.verifyCMD(SERVER0435, "rm -fr " + errorLog, "", "");
+			tools.verifyCMD(SERVER0435, "rm -fr " + accessLog, "", "");
+			tools.verifyCMD(SERVER0435, "kill -USR1 `cat " + pid + "`", "", "");
 			
 			/* set delete method request */
 			// setting request info
@@ -238,11 +238,11 @@ public class TFS_Restful_RcServer_Test_Authentication_Test extends BaseCase {
 			tools.verifyResponse(setDeleteMethod(deleteUrl), expectErrorMessage);
 		
 			// ÑéÖ¤É¾³ý¼°É¾³ýË³Ðò
-			tools.verifyCMD(SERVER0432, "cat " + errorLog + "| grep '" + delete202 + "' -c", "0", "");
+			tools.verifyCMD(SERVER0435, "cat " + errorLog + "| grep '" + delete202 + "' -c", "0", "");
 			/* clean the nginx log */
-			tools.verifyCMD(SERVER0432, "rm -fr " + errorLog, "", "");
-			tools.verifyCMD(SERVER0432, "rm -fr " + accessLog, "", "");
-			tools.verifyCMD(SERVER0432, "kill -USR1 `cat " + pid + "`", "", "");	
+			tools.verifyCMD(SERVER0435, "rm -fr " + errorLog, "", "");
+			tools.verifyCMD(SERVER0435, "rm -fr " + accessLog, "", "");
+			tools.verifyCMD(SERVER0435, "kill -USR1 `cat " + pid + "`", "", "");	
 
 			
 			/* set get method request */
@@ -254,14 +254,14 @@ public class TFS_Restful_RcServer_Test_Authentication_Test extends BaseCase {
 			
 			tools.verifyResponseBodyWithLocalFile(setGetMethod(getUrl), expectGetMessage);
 			/* verify log info */
-			tools.verifyCMD(SERVER0432, "cat " + errorLog + "| grep '" + read + "'|grep '"+Retry202_1+"' -c", "1", "");
+			tools.verifyCMD(SERVER0435, "cat " + errorLog + "| grep '" + read + "'|grep '"+Retry202_1+"' -c", "1", "");
 //			tools.verifyCMD(SERVER0432, "cat " + errorLog + "| grep '" + read + "'|grep '"+Retry209_1+"' -c", "0", "");
-			tools.verifyCMD(SERVER0432, "cat " + errorLog + "| grep -m 1 '" + read + "'", Retry202_1, "");
+			tools.verifyCMD(SERVER0435, "cat " + errorLog + "| grep -m 1 '" + read + "'", Retry202_1, "");
 			
 			/* clean the nginx log */
-			tools.verifyCMD(SERVER0432, "rm -fr " + errorLog, "", "");
-			tools.verifyCMD(SERVER0432, "rm -fr " + accessLog, "", "");
-			tools.verifyCMD(SERVER0432, "kill -USR1 `cat " + pid + "`", "", "");
+			tools.verifyCMD(SERVER0435, "rm -fr " + errorLog, "", "");
+			tools.verifyCMD(SERVER0435, "rm -fr " + accessLog, "", "");
+			tools.verifyCMD(SERVER0435, "kill -USR1 `cat " + pid + "`", "", "");
 			
 			
 		} catch (Exception e) {
@@ -270,10 +270,10 @@ public class TFS_Restful_RcServer_Test_Authentication_Test extends BaseCase {
 		}finally{
 			/* recover mysql */
 			try {
-				tools.verifyCMD(SERVER0429, DROPMYSQLTABLES, "", "");
-				tools.verifyCMD(SERVER0429, CREATEMYSQLTABLES, "", "");
-				tools.verifyCMD(SERVER0429, INITMYSQLTABLES, "", "");
-				tools.verifyCMD(SERVER0429, INITMYSQLTABLES_META_ROOT_INFO, "", "");
+				tools.verifyCMD(SERVER0435, DROPMYSQLTABLES, "", "");
+				tools.verifyCMD(SERVER0435, CREATEMYSQLTABLES, "", "");
+				tools.verifyCMD(SERVER0435, INITMYSQLTABLES, "", "");
+				tools.verifyCMD(SERVER0435, INITMYSQLTABLES_META_ROOT_INFO, "", "");
 				NGINX.restart();
 			} catch (Exception e) {
 				// TODO Auto-generated catch block
