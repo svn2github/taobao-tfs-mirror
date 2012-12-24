@@ -268,6 +268,11 @@ namespace tfs
       current_reporting_block_servers_.clear();
     }
 
+    int64_t ServerManager::get_report_block_server_queue_size() const
+    {
+      return current_reporting_block_servers_.size() + wait_report_block_servers_.size();
+    }
+
     ServerCollect* ServerManager::get_(const uint64_t server) const
     {
       ServerCollect query(server);
