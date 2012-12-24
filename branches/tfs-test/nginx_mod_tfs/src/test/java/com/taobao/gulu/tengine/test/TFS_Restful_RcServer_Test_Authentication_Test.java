@@ -60,17 +60,25 @@ public class TFS_Restful_RcServer_Test_Authentication_Test extends BaseCase {
 		String errorLog = "/" + NGINX.getServer_file_directory() + "/logs/error.log";
 		String accessLog = "/" + NGINX.getServer_file_directory() + "/logs/access.log";
 		String pid = "/" + NGINX.getServer_file_directory() + "/logs/nginx.pid";
-		String readRetry202 = "read/stat retry: [0-9], select nameserver: 10.232.36.202:5202";
-		String writeRetry209 = "write retry: [0-9], select nameserver: 10.232.36.209:6209";
-		String writeRetry202 = "write retry: [0-9], select nameserver: 10.232.36.202:5202";
-		String Retry202_1 = "select nameserver: 10.232.36.202:5202";
-		String readRetry209 = "read/stat retry: [0-9], select nameserver: 10.232.36.209:6209";
-		String Retry209_1 = "select nameserver: 10.232.36.209:6209";
-		String readRetry = "read/stat retry:";
-		String writeRetry = "write retry:";
+		
+//		String readRetry202 = "read/stat retry: [0-9], select nameserver: 10.232.36.202:5202";
+//		String writeRetry209 = "write retry: [0-9], select nameserver: 10.232.36.209:6209";
+//		String writeRetry202 = "write retry: [0-9], select nameserver: 10.232.36.202:5202";
+//		String readRetry209 = "read/stat retry: [0-9], select nameserver: 10.232.36.209:6209";
+//		String readRetry = "read/stat retry:";
+//		String writeRetry = "write retry:";
+		
+		
+		
 		String delete202 = "unlink, select nameserver: 10.232.36.202:5202";
 		String delete209 = "unlink, select nameserver: 10.232.36.202:6209";
 		String deleteRetry = "unlink, select";
+		
+		String read = "read/stat";
+		String write = "write";
+		
+		String Retry202_1 = "select nameserver: 10.232.36.202:5202";
+		String Retry209_1 = "select nameserver: 10.232.36.209:6209";
 		
 		try {
 			/* clean the nginx log */
@@ -88,8 +96,8 @@ public class TFS_Restful_RcServer_Test_Authentication_Test extends BaseCase {
 			System.out.println("the tfs file name with suffix is  : " + tfsFileNameWithSuffix);
 			
 			/* verify log info */
-			tools.verifyCMD(SERVER0432, "cat " + errorLog + "| grep '" + writeRetry202 + "' -c", "1", "");
-			tools.verifyCMD(SERVER0432, "cat " + errorLog + "| grep '" + writeRetry209 + "' -c", "0", "");
+			tools.verifyCMD(SERVER0432, "cat " + errorLog + "| grep '" + write + "'|grep '"+Retry202_1+"' -c", "1", "");
+			tools.verifyCMD(SERVER0432, "cat " + errorLog + "| grep '" + write + "'|grep '"+Retry209_1+"' -c", "0", "");
 
 			/* clean the nginx log */
 			tools.verifyCMD(SERVER0432, "rm -fr " + errorLog, "", "");
@@ -106,8 +114,8 @@ public class TFS_Restful_RcServer_Test_Authentication_Test extends BaseCase {
 			System.out.println("the tfs file name without suffix is  : " + tfsFileNameWithOutSuffix);
 			
 			/* verify log info */
-			tools.verifyCMD(SERVER0432, "cat " + errorLog + "| grep '" + writeRetry202 + "' -c", "1", "");
-			tools.verifyCMD(SERVER0432, "cat " + errorLog + "| grep '" + writeRetry209 + "' -c", "0", "");
+			tools.verifyCMD(SERVER0432, "cat " + errorLog + "| grep '" + write + "'|grep '"+Retry202_1+"' -c", "1", "");
+			tools.verifyCMD(SERVER0432, "cat " + errorLog + "| grep '" + write + "'|grep '"+Retry209_1+"' -c", "0", "");
 
 			/* clean the nginx log */
 			tools.verifyCMD(SERVER0432, "rm -fr " + errorLog, "", "");
@@ -130,8 +138,8 @@ public class TFS_Restful_RcServer_Test_Authentication_Test extends BaseCase {
 			tools.verifyResponse(setPostMethod(postUrl, localFile), expectErrorMessage);
 			
 			/* verify log info */
-			tools.verifyCMD(SERVER0432, "cat " + errorLog + "| grep '" + writeRetry202 + "' -c", "0", "");
-			tools.verifyCMD(SERVER0432, "cat " + errorLog + "| grep '" + writeRetry209 + "' -c", "0", "");
+			tools.verifyCMD(SERVER0432, "cat " + errorLog + "| grep '" + write + "'|grep '"+Retry202_1+"' -c", "0", "");
+			tools.verifyCMD(SERVER0432, "cat " + errorLog + "| grep '" + write + "'|grep '"+Retry209_1+"' -c", "0", "");
 
 			/* clean the nginx log */
 			tools.verifyCMD(SERVER0432, "rm -fr " + errorLog, "", "");
@@ -147,9 +155,11 @@ public class TFS_Restful_RcServer_Test_Authentication_Test extends BaseCase {
 			tools.verifyResponseBodyWithLocalFile(setGetMethod(getUrl), expectGetMessage);
 			
 			/* verify log info */
-			tools.verifyCMD(SERVER0432, "cat " + errorLog + "| grep '" + readRetry202 + "' -c", "1", "");
-			tools.verifyCMD(SERVER0432, "cat " + errorLog + "| grep '" + readRetry209 + "' -c", "0", "");
-			tools.verifyCMD(SERVER0432, "cat " + errorLog + "| grep -m 1 '" + readRetry + "'", Retry202_1, "");
+			
+			tools.verifyCMD(SERVER0432, "cat " + errorLog + "| grep '" + read + "'|grep '"+Retry202_1+"' -c", "1", "");
+			tools.verifyCMD(SERVER0432, "cat " + errorLog + "| grep '" + read + "'|grep '"+Retry209_1+"' -c", "0", "");
+			tools.verifyCMD(SERVER0432, "cat " + errorLog + "| grep -m 1 '" + read + "'", Retry202_1, "");
+			
 			
 			/* clean the nginx log */
 			tools.verifyCMD(SERVER0432, "rm -fr " + errorLog, "", "");
@@ -181,9 +191,11 @@ public class TFS_Restful_RcServer_Test_Authentication_Test extends BaseCase {
 			/* do get file action */
 			tools.verifyResponseBodyWithLocalFile(setGetMethod(getUrl), expectGetMessage);
 			/* verify log info */
-			tools.verifyCMD(SERVER0432, "cat " + errorLog + "| grep '" + readRetry202 + "' -c", "1", "");
-			tools.verifyCMD(SERVER0432, "cat " + errorLog + "| grep '" + readRetry209 + "' -c", "0", "");
-			tools.verifyCMD(SERVER0432, "cat " + errorLog + "| grep -m 1 '" + readRetry + "'", Retry202_1, "");
+			
+			tools.verifyCMD(SERVER0432, "cat " + errorLog + "| grep '" + read + "'|grep '"+Retry202_1+"' -c", "1", "");
+			tools.verifyCMD(SERVER0432, "cat " + errorLog + "| grep '" + read + "'|grep '"+Retry209_1+"' -c", "0", "");
+			tools.verifyCMD(SERVER0432, "cat " + errorLog + "| grep -m 1 '" + read + "'", Retry202_1, "");
+			
 			
 			/* clean the nginx log */
 			tools.verifyCMD(SERVER0432, "rm -fr " + errorLog, "", "");
@@ -208,9 +220,9 @@ public class TFS_Restful_RcServer_Test_Authentication_Test extends BaseCase {
 			tools.verifyResponseBodyWithLocalFile(setGetMethod(getUrl), expectGetMessage);
 			
 			/* verify log info */
-			tools.verifyCMD(SERVER0432, "cat " + errorLog + "| grep '" + readRetry202 + "' -c", "1", "");
-	//		tools.verifyCMD(SERVER0432, "cat " + errorLog + "| grep '" + readRetry209 + "' -c", "1", "");
-			tools.verifyCMD(SERVER0432, "cat " + errorLog + "| grep -m 1 '" + readRetry + "'", Retry202_1, "");
+			tools.verifyCMD(SERVER0432, "cat " + errorLog + "| grep '" + read + "'|grep '"+Retry202_1+"' -c", "1", "");
+//			tools.verifyCMD(SERVER0432, "cat " + errorLog + "| grep '" + read + "'|grep '"+Retry209_1+"' -c", "0", "");
+			tools.verifyCMD(SERVER0432, "cat " + errorLog + "| grep -m 1 '" + read + "'", Retry202_1, "");
 			
 			/* clean the nginx log */
 			tools.verifyCMD(SERVER0432, "rm -fr " + errorLog, "", "");
@@ -242,9 +254,9 @@ public class TFS_Restful_RcServer_Test_Authentication_Test extends BaseCase {
 			
 			tools.verifyResponseBodyWithLocalFile(setGetMethod(getUrl), expectGetMessage);
 			/* verify log info */
-			tools.verifyCMD(SERVER0432, "cat " + errorLog + "| grep '" + readRetry202 + "' -c", "1", "");
-	//		tools.verifyCMD(SERVER0432, "cat " + errorLog + "| grep '" + readRetry209 + "' -c", "1", "");
-			tools.verifyCMD(SERVER0432, "cat " + errorLog + "| grep -m 1 '" + readRetry + "'", Retry202_1, "");
+			tools.verifyCMD(SERVER0432, "cat " + errorLog + "| grep '" + read + "'|grep '"+Retry202_1+"' -c", "1", "");
+//			tools.verifyCMD(SERVER0432, "cat " + errorLog + "| grep '" + read + "'|grep '"+Retry209_1+"' -c", "0", "");
+			tools.verifyCMD(SERVER0432, "cat " + errorLog + "| grep -m 1 '" + read + "'", Retry202_1, "");
 			
 			/* clean the nginx log */
 			tools.verifyCMD(SERVER0432, "rm -fr " + errorLog, "", "");
@@ -274,7 +286,7 @@ public class TFS_Restful_RcServer_Test_Authentication_Test extends BaseCase {
 	 * 逻辑集群A:不可访问；物理集群A:T1M写，T1B读，T2M读；
 	 * 访问集群A不可访问，不可删除
 	 */
-	@Test
+	//@Test
 	public void test_TFS_Restful_RcServer_Test_Authentication_Test_02() {
 
 		VerifyTool tools = new VerifyTool();
@@ -537,7 +549,7 @@ public class TFS_Restful_RcServer_Test_Authentication_Test extends BaseCase {
 	 * 物理集群A都只读；逻辑集群A为可写
 	 * 都只可读，可删除，不可写
 	 */
-	@Test
+	//@Test
 	public void test_TFS_Restful_RcServer_Test_Authentication_Test_03() {
 
 		VerifyTool tools = new VerifyTool();
@@ -792,7 +804,7 @@ public class TFS_Restful_RcServer_Test_Authentication_Test extends BaseCase {
 	 * 物理集群A不可用；逻辑集群A为可写
 	 * 不可读，不可删除，不可写
 	 */
-	@Test
+	//@Test
 	public void test_TFS_Restful_RcServer_Test_Authentication_Test_04() {
 
 		VerifyTool tools = new VerifyTool();

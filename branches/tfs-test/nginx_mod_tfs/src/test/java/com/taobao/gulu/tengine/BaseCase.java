@@ -105,19 +105,19 @@ public class BaseCase {
 
 	public List<String> put2TfsKeys = new ArrayList<String>();
 		
-	protected static final String CREATEMYSQLTABLES = "mysql -h 10.232.4.29 -u root -p123 < /home/diqing/sql_for_restful/mysql/create_table.sql";
-	protected static final String INITMYSQLTABLES = "mysql -h 10.232.4.29 -u root -p123 < /home/diqing/sql_for_restful/mysql/init_table.sql";
+	protected static final String CREATEMYSQLTABLES = "mysql -h 10.232.4.29 -u root -p123 < /home/gongyuan.cz/sql_for_restful/mysql/create_table.sql";
+	protected static final String INITMYSQLTABLES = "mysql -h 10.232.4.29 -u root -p123 < /home/gongyuan.cz/sql_for_restful/mysql/init_table.sql";
 	protected static final String INITMYSQLTABLES_META_ROOT_INFO = "mysql -h 10.232.4.29 -u root -p123 < /home/gongyuan.cz/sql_for_restful/mysql/init_table_meta_root_info.sql";
-	protected static final String DROPMYSQLTABLES = "mysql -h 10.232.4.29 -u root -p123 < /home/diqing/sql_for_restful/mysql/drop_database.sql";
+	protected static final String DROPMYSQLTABLES = "mysql -h 10.232.4.29 -u root -p123 < /home/gongyuan.cz/sql_for_restful/mysql/drop_database.sql";
 
-	protected static final String UPDATE_LOGIC_A_READ = "mysql -h 10.232.4.29 -u root -p123 < /home/diqing/sql_for_restful/mysql/update_logic_a_read.sql";
-	protected static final String UPDATE_LOGIC_A_UNUSE = "mysql -h 10.232.4.29 -u root -p123 < /home/diqing/sql_for_restful/mysql/update_logic_a_unuse.sql";
-	protected static final String UPDATE_PHYSICS_READ = "mysql -h 10.232.4.29 -u root -p123 < /home/diqing/sql_for_restful/mysql/update_physics_read.sql";
-	protected static final String UPDATE_PHYSICS_UNUSE = "mysql -h 10.232.4.29 -u root -p123 < /home/diqing/sql_for_restful/mysql/update_physics_unuse.sql";
-	protected static final String UPDATE_PHYSICS_WRITE = "mysql -h 10.232.4.29 -u root -p123 < /home/diqing/sql_for_restful/mysql/update_physics_write.sql";
-	protected static final String UPDATE_PHYSICS_T1B_WRITE_T1M_READ = "mysql -h 10.232.4.29 -u root -p123 < /home/diqing/sql_for_restful/mysql/update_physics_T1B_write_T1M_read.sql";
-	protected static final String UPDATE_PHYSICS_T1B_WRITE_T1M_WRITE = "mysql -h 10.232.4.29 -u root -p123 < /home/diqing/sql_for_restful/mysql/update_physics_T1B_write_T1M_write.sql";
-	protected static final String UPDATE_PHYSICS_T1B_READ_T1M_READ = "mysql -h 10.232.4.29 -u root -p123 < /home/diqing/sql_for_restful/mysql/update_physics_T1B_read_T1M_read.sql";
+	protected static final String UPDATE_LOGIC_A_READ = "mysql -h 10.232.4.29 -u root -p123 < /home/gongyuan.cz/sql_for_restful/mysql/update_logic_a_read.sql";
+	protected static final String UPDATE_LOGIC_A_UNUSE = "mysql -h 10.232.4.29 -u root -p123 < /home/gongyuan.cz/sql_for_restful/mysql/update_logic_a_unuse.sql";
+	protected static final String UPDATE_PHYSICS_READ = "mysql -h 10.232.4.29 -u root -p123 < /home/gongyuan.cz/sql_for_restful/mysql/update_physics_read.sql";
+	protected static final String UPDATE_PHYSICS_UNUSE = "mysql -h 10.232.4.29 -u root -p123 < /home/gongyuan.cz/sql_for_restful/mysql/update_physics_unuse.sql";
+	protected static final String UPDATE_PHYSICS_WRITE = "mysql -h 10.232.4.29 -u root -p123 < /home/gongyuan.cz/sql_for_restful/mysql/update_physics_write.sql";
+	protected static final String UPDATE_PHYSICS_T1B_WRITE_T1M_READ = "mysql -h 10.232.4.29 -u root -p123 < /home/gongyuan.cz/sql_for_restful/mysql/update_physics_T1B_write_T1M_read.sql";
+	protected static final String UPDATE_PHYSICS_T1B_WRITE_T1M_WRITE = "mysql -h 10.232.4.29 -u root -p123 < /home/gongyuan.cz/sql_for_restful/mysql/update_physics_T1B_write_T1M_write.sql";
+	protected static final String UPDATE_PHYSICS_T1B_READ_T1M_READ = "mysql -h 10.232.4.29 -u root -p123 < /home/gongyuan.cz/sql_for_restful/mysql/update_physics_T1B_read_T1M_read.sql";
 	protected static final String STOP_NS_DS_036202 = "sh /home/gongyuan.cz/stopTFS.sh";
 	protected static final String STOP_NS_DS_036209 = "sh /home/gongyuan.cz/stopTFS.sh";
 	protected static final String STOP_NS_DS_036210 = "sh /home/gongyuan.cz/stopTFS.sh";
