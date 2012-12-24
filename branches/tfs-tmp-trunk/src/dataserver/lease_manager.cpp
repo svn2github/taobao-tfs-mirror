@@ -40,19 +40,24 @@ namespace tfs
       }
     }
 
-    int Lease::get_member_info(std::vector<std::pair<uint64_t, common::BlockInfoV2> >& members) const
+    int Lease::get_member_info(std::pair<uint64_t, common::BlockInfoV2>* members, int32_t& size) const
     {
-      for (int32_t index = 0; index <MAX_REPLICATION_NUM; ++index)
+      int ret = (NULL != members) ? TFS_SUCCESS: EXIT_PARAMETER_ERROR;
+      if (TFS_SUCCESS == ret)
       {
-        if (members_[index].server_ != INVALID_SERVER_ID)
+        size = 0;
+        for (int32_t index = 0; index <MAX_REPLICATION_NUM; ++index)
         {
-          std::pair<uint64_t, common::BlockInfoV2> item;
-          item.first = members_[index].server_;
-          item.second = members_[index].info_;
-          members.push_back(item);
+          if (members_[index].server_ == INVALID_SERVER_ID)
+          {
+            break;
+          }
+          members[index].first = members_[index].server_;
+          members[index].second = members_[index].info_;
+          size++;
         }
       }
-      return TFS_SUCCESS;
+      return ret;
     }
 
     int Lease::update_member_info(const uint64_t server, const common::BlockInfoV2& info, const int32_t status)

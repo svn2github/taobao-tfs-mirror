@@ -330,8 +330,14 @@ namespace tfs
       {
         lease->dump(TBSYS_LOG_LEVEL_INFO, "resolve block version conflict, information: ");
         ResolveBlockVersionConflictMessage req_msg;
+        int32_t member_size = 0;
         req_msg.set_block(block_id);
-        ret = lease->get_member_info(req_msg.get_members());
+        ret = lease->get_member_info(req_msg.get_members(), member_size);
+        if (TFS_SUCCESS == ret)
+        {
+          req_msg.set_size(member_size);
+        }
+
         NewClient* client = NULL;
         if (TFS_SUCCESS == ret)
         {

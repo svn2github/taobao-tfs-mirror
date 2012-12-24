@@ -74,7 +74,7 @@ namespace tfs
       inline bool timeout(const int64_t now) { return now > last_update_time_ + common::SYSPARAM_DATASERVER.expire_data_file_time_;}
       bool check_all_successful() const;
       bool check_has_version_conflict() const;
-      int get_member_info(std::vector<std::pair<uint64_t, common::BlockInfoV2> >& members) const;
+      int get_member_info(std::pair<uint64_t, common::BlockInfoV2>* members, int32_t& size) const;
       int update_member_info(const uint64_t server, const common::BlockInfoV2& info, const int32_t status);
       void reset_member_info();
       void dump(const int32_t level, const char* const format = NULL);
