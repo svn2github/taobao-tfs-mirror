@@ -1036,8 +1036,9 @@ namespace tfs
     struct BlockMeta
     {
       uint64_t block_id_;
-      int32_t size_;
+      uint64_t lease_id_;
       uint64_t ds_[MAX_REPLICATION_NUM];
+      int32_t size_;
       int32_t version_;
       int32_t flag_;
       FamilyInfoExt family_info_;
