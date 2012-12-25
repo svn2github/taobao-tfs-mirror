@@ -121,6 +121,11 @@ public class BaseCase {
 	protected static final String UPDATE_PHYSICS_T1B_WRITE_T1M_READ = "mysql -h 10.232.4.29 -u root -p123 < /home/gongyuan.cz/sql_for_restful/mysql/update_physics_T1B_write_T1M_read.sql";
 	protected static final String UPDATE_PHYSICS_T1B_WRITE_T1M_WRITE = "mysql -h 10.232.4.29 -u root -p123 < /home/gongyuan.cz/sql_for_restful/mysql/update_physics_T1B_write_T1M_write.sql";
 	protected static final String UPDATE_PHYSICS_T1B_READ_T1M_READ = "mysql -h 10.232.4.29 -u root -p123 < /home/gongyuan.cz/sql_for_restful/mysql/update_physics_T1B_read_T1M_read.sql";
+	
+	protected static final String UPDATE_DUPLICATE_SERVER = "mysql -h 10.232.4.29 -u root -p123 < /home/gongyuan.cz/sql_for_restful/mysql/update_duplicate_server.sql";
+	protected static final String UPDATE_DUPLICATE_SERVER_UNUSE = "mysql -h 10.232.4.29 -u root -p123 < /home/gongyuan.cz/sql_for_restful/mysql/update_duplicate_server_unuse.sql";
+	
+	
 	protected static final String STOP_NS_DS_036202 = "sh /home/gongyuan.cz/stopTFS.sh";
 	protected static final String STOP_NS_DS_036209 = "sh /home/gongyuan.cz/stopTFS.sh";
 	protected static final String STOP_NS_DS_036210 = "sh /home/gongyuan.cz/stopTFS.sh";
@@ -150,7 +155,7 @@ public class BaseCase {
 		tfs_NginxB02.init();
 		tfs_NginxB03.init();
 		tfs_NginxIPMap01.init();
-		//tfs_NginxIPMap02.init();
+		tfs_NginxIPMap02.init();
 		//init tair
 		tair_01.init();
 	}
