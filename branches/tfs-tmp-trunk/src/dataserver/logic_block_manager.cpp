@@ -236,20 +236,15 @@ namespace tfs
       return TFS_SUCCESS;
     }
 
-    int LogicBlockManager::get_all_block_info(std::set<common::BlockInfoV2>& blocks) const
+    int LogicBlockManager::get_all_block_info(common::ArrayHelper<common::BlockInfoV2*>& blocks) const
     {
       blocks.clear();
-      BlockInfoV2 info;
-      int32_t ret = TFS_SUCCESS;
+      int32_t ret = TFS_SUCCESS, index = 0;
       LOGIC_BLOCK_MAP_ITER iter = logic_blocks_.begin();
-      for (; iter != logic_blocks_.end() && TFS_SUCCESS == ret; ++iter)
+      for (; iter != logic_blocks_.end() && TFS_SUCCESS == ret; ++iter, ++index)
       {
+        common::BlockInfoV2& info = *(*blocks.at(index));
         ret = (*iter)->get_block_info(info);
-        if (TFS_SUCCESS == ret)
-        {
-          std::pair<std::set<common::BlockInfoV2>::iterator, bool> res =
-            blocks.insert(info);
-        }
       }
       return TFS_SUCCESS;
     }

@@ -82,6 +82,7 @@ namespace tfs
         int32_t flag_;
     };
 
+    //TODO 采用set存储BLOCKINFO的相关代码后期我们会删除
     class ReportBlocksToNsRequestMessage: public common::BasePacket
     {
       public:
@@ -102,9 +103,20 @@ namespace tfs
         {
           return blocks_;
         }
-        inline std::set<common::BlockInfoV2>& get_blocks_ext()
+        inline common::BlockInfoV2* alloc_blocks_ext(const int32_t count)
+        {
+          block_count_ = count;
+          tbsys::gDeleteA(blocks_ext_);
+          blocks_ext_ = new (std::nothrow)common::BlockInfoV2[count];
+          assert(blocks_ext_);
+        }
+        inline common::BlockInfoV2* get_blocks_ext()
         {
           return blocks_ext_;
+        }
+        inline int32_t get_block_count() const
+        {
+          return block_count_;
         }
         inline int8_t get_flag() const
         {
@@ -118,8 +130,9 @@ namespace tfs
         inline void set_type(const int8_t type) { type_ = type;}
       protected:
         std::set<common::BlockInfo> blocks_;
-        std::set<common::BlockInfoV2> blocks_ext_;
+        common::BlockInfoV2* blocks_ext_;
         uint64_t server_;
+        int32_t  block_count_;
         int8_t flag_;
         int8_t type_;
     };

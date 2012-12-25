@@ -167,19 +167,20 @@ namespace tfs
     }
 
     ReportBlocksToNsRequestMessage::ReportBlocksToNsRequestMessage():
+      blocks_ext_(NULL),
       server_(common::INVALID_SERVER_ID),
+      block_count_(0),
       // flag_(common::REPORT_BLOCK_NORMAL),
       flag_(common::REPORT_BLOCK_EXT),
       type_(common::REPORT_BLOCK_TYPE_ALL)
     {
       _packetHeader._pcode = common::REQ_REPORT_BLOCKS_TO_NS_MESSAGE;
       blocks_.clear();
-      blocks_ext_.clear();
     }
 
     ReportBlocksToNsRequestMessage::~ReportBlocksToNsRequestMessage()
     {
-
+      tbsys::gDeleteA(blocks_ext_);
     }
 
     int ReportBlocksToNsRequestMessage::deserialize(common::Stream& input)
@@ -194,7 +195,7 @@ namespace tfs
       {
         int32_t size = 0;
         int64_t pos = 0;
-        ret = input.get_int32(&size);
+        ret = input.get_int32(&block_count_);
         if (common::TFS_SUCCESS == ret)
         {
           if (common::REPORT_BLOCK_NORMAL == flag_)
@@ -217,15 +218,14 @@ namespace tfs
           }
           else if (common::REPORT_BLOCK_EXT == flag_)
           {
-            common::BlockInfoV2 info;
-            for (int32_t i = 0; i < size; ++i)
+            blocks_ext_ = new (std::nothrow)common::BlockInfoV2[block_count_];
+            for (int32_t index = 0; index < block_count_; ++index)
             {
               pos  = 0;
-              ret = info.deserialize(input.get_data(), input.get_data_length(), pos);
+              blocks_ext_[index].deserialize(input.get_data(), input.get_data_length(), pos);
               if (common::TFS_SUCCESS == ret)
               {
-                input.drain(info.length());
-                blocks_ext_.insert(info);
+                input.drain(blocks_ext_[index].length());
               }
               else
               {
@@ -261,7 +261,7 @@ namespace tfs
       else if (common::REPORT_BLOCK_EXT == flag_)
       {
         common::BlockInfoV2 info;
-        return common::INT64_SIZE + common::INT_SIZE + blocks_ext_.size() * info.length() + common::INT8_SIZE;
+        return common::INT64_SIZE + common::INT_SIZE + block_count_ * info.length() + common::INT8_SIZE;
       }
 
       return common::TFS_ERROR;
@@ -298,17 +298,15 @@ namespace tfs
         }
         else if (common::REPORT_BLOCK_EXT == flag_)
         {
-          ret = output.set_int32(blocks_ext_.size());
+          ret = output.set_int32(block_count_);
           if (common::TFS_SUCCESS == ret)
           {
-            std::set<common::BlockInfoV2>::const_iterator iter = blocks_ext_.begin();
-            for (; iter != blocks_ext_.end(); ++iter)
+            for (int32_t index = 0; index < block_count_; ++index)
             {
               pos = 0;
-              ret = const_cast<common::BlockInfoV2*>((&(*iter)))->serialize(output.get_free(),
-                  output.get_free_length(), pos);
+              ret = blocks_ext_[index].serialize(output.get_free(),output.get_free_length(), pos);
               if (common::TFS_SUCCESS == ret)
-                output.pour((*iter).length());
+                output.pour(blocks_ext_[index].length());
               else
                 break;
             }

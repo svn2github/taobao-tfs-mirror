@@ -185,7 +185,7 @@ namespace tfs
       return logic_block_manager_.get_all_block_info(blocks);
     }
 
-    int BlockManager::get_all_block_info(std::set<common::BlockInfoV2>& blocks) const
+    int BlockManager::get_all_block_info(common::ArrayHelper<common::BlockInfoV2*>& blocks) const
     {
       blocks.clear();
       RWLock::Lock lock(mutex_, READ_LOCKER);
@@ -213,8 +213,10 @@ namespace tfs
       int32_t ret = super_block_manager_.get_super_block_info(info);
       if (TFS_SUCCESS == ret)
       {
-        total_space = static_cast<int64_t>(info->total_main_block_count_) * info->max_main_block_size_;
-        used_space  = static_cast<int64_t>(info->used_main_block_count_) * info->max_main_block_size_;
+        total_space =  info->total_main_block_count_;
+        total_space *= info->max_main_block_size_;
+        used_space  = info->used_main_block_count_;
+        used_space  *= info->max_main_block_size_;
       }
       return ret;
     }
