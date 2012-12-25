@@ -193,10 +193,11 @@ namespace tfs
         ReportBlocksToNsResponseMessage* result_msg = new ReportBlocksToNsResponseMessage();
         result_msg->set_server(ngi.owner_ip_port_);
         time_t now = Func::get_monotonic_time();
+        ArrayHelper<BlockInfoV2> blocks(message->get_block_count(), message->get_blocks_ext());
 			  result = ret = manager_.get_layout_manager().get_client_request_server().report_block(
-            result_msg->get_blocks(), server, now, message->get_blocks_ext(), message->get_type());
+          result_msg->get_blocks(), server, now, blocks, message->get_type());
         result_msg->set_status(HEART_MESSAGE_OK);
-        block_nums = message->get_blocks_ext().size();
+        block_nums = message->get_block_count();
         expire_nums= result_msg->get_blocks().size();
         consume = (tbutil::Time::now() - begin).toMicroSeconds();
 			  ret = message->reply(result_msg);

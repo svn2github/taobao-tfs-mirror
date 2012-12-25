@@ -175,7 +175,7 @@ namespace tfs
     static const int32_t MAX_MARSHALLING_NUM = MAX_DATA_MEMBER_NUM + MAX_CHECK_MEMBER_NUM;
     static const int32_t MAX_MARSHALLING_BLOCK_SIZE_LIMIT = 128 * 1024 * 1024;
 
-    static const int32_t BLOCK_RESERVER_LENGTH = 512;
+    static const int32_t BLOCK_RESERVER_LENGTH = 256;
 
     static const int32_t MAX_PHYSICAL_BLOCK_ID = 1048575;
     static const int32_t MAX_EXT_BLOCK_SIZE    = 8 * 1024 * 1024;
@@ -503,7 +503,7 @@ namespace tfs
       }
     };
 
-    struct BlockInfoExt
+    /*struct BlockInfoExt
     {
       BlockInfo block_info_;
       int64_t family_id_;
@@ -538,7 +538,7 @@ namespace tfs
         return block_info_ == rhs.block_info_ &&
            family_id_ == rhs.family_id_;
       }
-   };
+   };*/
 
     struct RawMeta
     {
@@ -1070,7 +1070,7 @@ namespace tfs
       }
     };
 
-    extern const char* dynamic_parameter_str[43];
+    extern const char* dynamic_parameter_str[44];
 
     #pragma pack (1)
     struct FileInfoV2//30
@@ -1111,7 +1111,6 @@ namespace tfs
       int32_t del_file_count_;
       int32_t update_size_;
       int32_t update_file_count_;
-      //uint32_t seq_no_;
       bool operator < (const BlockInfoV2& rhs) const
       {
         return block_id_ < rhs.block_id_;

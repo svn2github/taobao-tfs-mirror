@@ -85,7 +85,7 @@ namespace tfs
       FRIEND_TEST(LayoutManagerTest, build_redundant_);
       #endif
       public:
-        ReplicateTask(TaskManager& manager, const uint32_t block, const int8_t server_num, const uint64_t* servers,
+        ReplicateTask(TaskManager& manager, const uint64_t block, const int8_t server_num, const uint64_t* servers,
           const common::PlanType type);
         virtual ~ReplicateTask();
         virtual int handle();
@@ -97,14 +97,14 @@ namespace tfs
       protected:
         DISALLOW_COPY_AND_ASSIGN(ReplicateTask);
         uint64_t* servers_;
-        uint32_t  block_;
+        uint64_t  block_;
         int8_t    server_num_;
     };
 
     class MoveTask : public ReplicateTask
     {
       public:
-        MoveTask(TaskManager& manager, const uint32_t block, const int8_t server_num, const uint64_t* servers);
+        MoveTask(TaskManager& manager, const uint64_t block, const int8_t server_num, const uint64_t* servers);
         virtual ~MoveTask(){}
       private:
         DISALLOW_COPY_AND_ASSIGN(MoveTask);
@@ -114,7 +114,7 @@ namespace tfs
     {
         friend class TaskManager;
       public:
-        CompactTask(TaskManager& manager, const uint32_t block, const int8_t server_num, const uint64_t* servers);
+        CompactTask(TaskManager& manager, const uint64_t block, const int8_t server_num, const uint64_t* servers);
         virtual ~CompactTask(){};
         virtual int handle();
         virtual int handle_complete(common::BasePacket* msg);

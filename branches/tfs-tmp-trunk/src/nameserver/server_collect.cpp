@@ -76,10 +76,10 @@ namespace tfs
       rb_expired_time_(0xFFFFFFFF),
       next_report_block_time_(0xFFFFFFFF),
       in_dead_queue_timeout_(0xFFFFFFFF),
+      scan_writable_block_id_(0),
       current_load_(info.current_load_ <= 0 ? 1 : info.current_load_),
       block_count_(info.block_count_),
       write_index_(0),
-      scan_writable_block_id_(0),
       status_(common::DATASERVER_STATUS_ALIVE),
       rb_status_(REPORT_BLOCK_STATUS_NONE),
       manager_(manager)
@@ -88,9 +88,9 @@ namespace tfs
         int32_t min_expand_size = 0;
         float   expand_ratio = 0.0;
         calculate_server_init_block_parameter(block_nums, min_expand_size, expand_ratio, total_capacity_);
-        hold_     = new (std::nothrow)TfsSortedVector<uint32_t, BlockIdCompareExt>(block_nums, min_expand_size, expand_ratio);
-        writable_ = new (std::nothrow)TfsSortedVector<uint32_t, BlockIdCompareExt>(block_nums / 4, min_expand_size / 4, expand_ratio);
-        hold_master_ = new (std::nothrow)TfsVector<uint32_t>(MAX_WRITE_FILE_COUNT, 16, 0.1);
+        hold_     = new (std::nothrow)TfsSortedVector<uint64_t, BlockIdCompareExt>(block_nums, min_expand_size, expand_ratio);
+        writable_ = new (std::nothrow)TfsSortedVector<uint64_t, BlockIdCompareExt>(block_nums / 4, min_expand_size / 4, expand_ratio);
+        hold_master_ = new (std::nothrow)TfsVector<uint64_t>(MAX_WRITE_FILE_COUNT, 16, 0.1);
         assert(NULL != hold_);
         assert(NULL != writable_);
         assert(NULL != hold_master_);
@@ -103,15 +103,15 @@ namespace tfs
       tbsys::gDelete(hold_master_);
     }
 
-    int ServerCollect::add(const uint32_t block, const bool master, const bool writable)
+    int ServerCollect::add(const uint64_t block, const bool master, const bool writable)
     {
-      int32_t ret = INVALID_BLOCK_ID != block ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+      int32_t ret = (INVALID_BLOCK_ID != block) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
         RWLock::Lock lock(mutex_, WRITE_LOCKER);
-        uint32_t result;
+        uint64_t result;
         ret = hold_->insert_unique(result, block);
-        //TBSYS_LOG(DEBUG, "id: %u, ret: %d master: %d, writable: %d, %d", block->id(), ret, master, writable, is_equal_group(block->id()));
+        //TBSYS_LOG(DEBUG, "id: %"PRI64_PREFIX"u, ret: %d master: %d, writable: %d, %d", block->id(), ret, master, writable, is_equal_group(block->id()));
         if (((TFS_SUCCESS == ret)
              ||(EXIT_ELEMENT_EXIST == ret))
             && (writable)
@@ -124,13 +124,13 @@ namespace tfs
       return ret;
     }
 
-    int ServerCollect::remove(const uint32_t block)
+    int ServerCollect::remove(const uint64_t block)
     {
       RWLock::Lock lock(mutex_, WRITE_LOCKER);
       return (INVALID_BLOCK_ID != block) ? remove_(block) : EXIT_PARAMETER_ERROR;
     }
 
-    int ServerCollect::remove_(const uint32_t block)
+    int ServerCollect::remove_(const uint64_t block)
     {
       int32_t ret = (INVALID_BLOCK_ID != block) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
@@ -142,18 +142,25 @@ namespace tfs
       return ret;
     }
 
-    int ServerCollect::remove(const common::ArrayHelper<uint32_t>& blocks)
+    int ServerCollect::remove(const common::ArrayHelper<uint64_t>& blocks)
     {
       int32_t ret = TFS_SUCCESS;
+      uint64_t block = INVALID_BLOCK_ID;
       RWLock::Lock lock(mutex_, WRITE_LOCKER);
       for (int64_t index = 0; index < blocks.get_array_index(); ++index)
       {
-        ret = remove_(*blocks.at(index));
+        block = *blocks.at(index);
+        ret = remove_(block);
+        if (TFS_SUCCESS != ret)
+        {
+          TBSYS_LOG(WARN, "remove block : %"PRI64_PREFIX"u, form %s error, ret: %d", block,
+            tbsys::CNetUtil::addrToString(id()).c_str(),ret);
+        }
       }
       return TFS_SUCCESS;
     }
 
-    int ServerCollect::add_writable(const uint32_t block, const bool isfull)
+    int ServerCollect::add_writable(const uint64_t block, const bool isfull)
     {
       int32_t ret = (INVALID_BLOCK_ID != block) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
@@ -164,7 +171,7 @@ namespace tfs
           if (is_equal_group(block))
           {
             RWLock::Lock lock(mutex_, WRITE_LOCKER);
-            uint32_t result = INVALID_SERVER_ID;
+            uint64_t result = INVALID_SERVER_ID;
             ret = writable_->insert_unique(result, block);
           }
         }
@@ -185,10 +192,10 @@ namespace tfs
       mutex_.wrlock();
       int32_t index= 0;
       int32_t size = hold_->size();
-      uint32_t* blocks = NULL;
+      uint64_t* blocks = NULL;
       if (size > 0)//这里size大部份情况下都为0,所以拷贝的代价是能接受的
       {
-        blocks = new (std::nothrow)uint32_t[size];
+        blocks = new (std::nothrow)uint64_t[size];
         assert(NULL != blocks);
         for (BLOCK_TABLE_ITER iter = hold_->begin(); iter != hold_->end(); iter++)
         {
@@ -215,7 +222,7 @@ namespace tfs
       int32_t count = hold_master_->size();
       mutex_.unlock();
       int32_t ret = TFS_SUCCESS;
-      uint32_t block = INVALID_BLOCK_ID;
+      uint64_t block = INVALID_BLOCK_ID;
       BlockCollect* blocks[MAX_WRITE_FILE_COUNT];
       ArrayHelper<BlockCollect*> helper(MAX_WRITE_FILE_COUNT, blocks);
       for (int32_t index = 0; index < count && NULL == result; ++index)
@@ -240,7 +247,7 @@ namespace tfs
       return NULL == result ? EXIT_BLOCK_NOT_FOUND : TFS_SUCCESS;
     }
 
-    int ServerCollect::choose_writable_block_(uint32_t& result) const
+    int ServerCollect::choose_writable_block_(uint64_t& result) const
     {
       result = INVALID_BLOCK_ID;
       RWLock::Lock lock(mutex_, READ_LOCKER);
@@ -333,10 +340,10 @@ namespace tfs
             int32_t actual = 0;
             int64_t index  = 0;
             const int32_t MAX_QUERY_NUM = 64;
-            uint32_t blocks[MAX_QUERY_NUM];
-            uint32_t invalid_blocks[MAX_QUERY_NUM];
-            ArrayHelper<uint32_t> helper(MAX_QUERY_NUM, blocks);
-            ArrayHelper<uint32_t> invalid(MAX_QUERY_NUM,invalid_blocks);
+            uint64_t blocks[MAX_QUERY_NUM];
+            uint64_t invalid_blocks[MAX_QUERY_NUM];
+            ArrayHelper<uint64_t> helper(MAX_QUERY_NUM, blocks);
+            ArrayHelper<uint64_t> invalid(MAX_QUERY_NUM,invalid_blocks);
             mutex_.rdlock();
             get_range_writable_blocks_(over, helper, scan_writable_block_id_, MAX_QUERY_NUM);
             mutex_.unlock();
@@ -380,7 +387,7 @@ namespace tfs
               scan_writable_block_id_ = 0;
 
             RWLock::Lock lock(mutex_, WRITE_LOCKER);
-            uint32_t id = INVALID_BLOCK_ID;
+            uint64_t id = INVALID_BLOCK_ID;
             for (index = 0; index < invalid.get_array_index(); ++index)
             {
               id = *invalid.at(index);
@@ -398,7 +405,7 @@ namespace tfs
       return ret;
     }
 
-    bool ServerCollect::get_range_blocks_(common::ArrayHelper<uint32_t>& blocks, const uint32_t begin, const int32_t count) const
+    bool ServerCollect::get_range_blocks_(common::ArrayHelper<uint64_t>& blocks, const uint64_t begin, const int32_t count) const
     {
       blocks.clear();
       int32_t actual = 0;
@@ -412,13 +419,13 @@ namespace tfs
       return actual < count;
     }
 
-    bool ServerCollect::get_range_blocks(common::ArrayHelper<uint32_t>& blocks, const uint32_t begin, const int32_t count) const
+    bool ServerCollect::get_range_blocks(common::ArrayHelper<uint64_t>& blocks, const uint64_t begin, const int32_t count) const
     {
       RWLock::Lock lock(mutex_, READ_LOCKER);
       return get_range_blocks_(blocks, begin, count);
     }
 
-    int ServerCollect::get_range_writable_blocks_(bool& over, common::ArrayHelper<uint32_t>& blocks, const uint32_t begin, const int32_t count) const
+    int ServerCollect::get_range_writable_blocks_(bool& over, common::ArrayHelper<uint64_t>& blocks, const uint64_t begin, const int32_t count) const
     {
       over = false;
       blocks.clear();
@@ -436,21 +443,21 @@ namespace tfs
       return ret;
     }
 
-    bool ServerCollect::exist_in_hold_(const uint32_t block) const
+    bool ServerCollect::exist_in_hold_(const uint64_t block) const
     {
       BLOCK_TABLE_ITER iter = hold_->find(block);
       return (hold_->end() != iter);
     }
 
-    bool ServerCollect::exist_in_writable_(const uint32_t block) const
+    bool ServerCollect::exist_in_writable_(const uint64_t block) const
     {
       BLOCK_TABLE_ITER iter = writable_->find(block);
       return (writable_->end() != iter);
     }
 
-    bool ServerCollect::exist_in_master_(const uint32_t block) const
+    bool ServerCollect::exist_in_master_(const uint64_t block) const
     {
-      TfsVector<uint32_t>::iterator iter = hold_master_->find(block);
+      TfsVector<uint64_t>::iterator iter = hold_master_->find(block);
       return (hold_master_->end() != iter);
     }
 
@@ -470,7 +477,7 @@ namespace tfs
 
     void ServerCollect::update(const common::DataServerStatInfo& info, const time_t now, const bool is_new)
     {
-      id_ = info.id_;
+      //id_ = info.id_;
       use_capacity_ = info.use_capacity_;
       total_capacity_ = info.total_capacity_;
       current_load_ = info.current_load_;
@@ -554,7 +561,7 @@ namespace tfs
       return true;
     }
 
-    int ServerCollect::choose_move_block_random(uint32_t& result) const
+    int ServerCollect::choose_move_block_random(uint64_t& result) const
     {
       result = INVALID_BLOCK_ID;
       RWLock::Lock lock(mutex_, READ_LOCKER);

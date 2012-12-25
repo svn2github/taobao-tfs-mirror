@@ -19,8 +19,6 @@
 
 #include <map>
 #include <stdint.h>
-#include <Shared.h>
-#include <Handle.h>
 #include "gc.h"
 #include "ns_define.h"
 #include "common/lock.h"
@@ -96,11 +94,11 @@ namespace tfs
 
       void set_all_server_next_report_time(const time_t now = common::Func::get_monotonic_time());
 
-      int build_relation(ServerCollect* server, const uint32_t block,
+      int build_relation(ServerCollect* server, const uint64_t block,
           const bool writable, const bool master);
 
-      int relieve_relation(ServerCollect* server, const uint32_t block);
-      int relieve_relation(const uint64_t server, const uint32_t block);
+      int relieve_relation(ServerCollect* server, const uint64_t block);
+      int relieve_relation(const uint64_t server, const uint64_t block);
 
       int choose_writable_block(BlockCollect*& result);
 
@@ -132,6 +130,7 @@ namespace tfs
       bool get_range_servers_(common::ArrayHelper<ServerCollect*>& result, const uint64_t begin, const int32_t count) const;
 
       void move_split_servers_(std::multimap<int64_t, ServerCollect*>& source,
+          std::multimap<int64_t, ServerCollect*>& outside,
           SERVER_TABLE& targets, const ServerCollect* server, const double percent) const;
 
       int choose_writable_server_lock_(ServerCollect*& result);

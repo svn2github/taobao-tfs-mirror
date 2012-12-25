@@ -137,14 +137,14 @@ namespace tfs
             if (TFS_SUCCESS == ret)
             {
               time_t now = Func::get_monotonic_time();
-              std::pair<uint32_t, int32_t> members[MAX_MARSHALLING_NUM];
-              common::ArrayHelper<std::pair<uint32_t, int32_t> > helper(MAX_MARSHALLING_NUM, members);
+              std::pair<uint64_t, int32_t> members[MAX_MARSHALLING_NUM];
+              common::ArrayHelper<std::pair<uint64_t, int32_t> > helper(MAX_MARSHALLING_NUM, members);
               std::vector<common::FamilyInfo>::const_iterator iter = infos.begin();
               for (; iter != infos.end(); ++iter)
               {
                 helper.clear();
                 family_id = (*iter).family_id_;
-                std::vector<std::pair<uint32_t, int32_t> >::const_iterator it = (*iter).family_member_.begin();
+                std::vector<std::pair<uint64_t, int32_t> >::const_iterator it = (*iter).family_member_.begin();
                 for (; it != (*iter).family_member_.end(); ++it)
                 {
                   helper.push_back(std::make_pair((*it).first, (*it).second));
@@ -414,7 +414,7 @@ namespace tfs
         }
         if (TFS_SUCCESS == ret)
         {
-          if (oplog.servers_.empty() || (oplog.blocks_.empty()))
+          if (oplog.server_num_ <= 0)
           {
             TBSYS_LOG(INFO, "play log error, data: %s, length: %"PRI64_PREFIX"d, offset: %"PRI64_PREFIX"d", data, data_len, pos);
             ret = EXIT_PLAY_LOG_ERROR;
@@ -422,35 +422,31 @@ namespace tfs
         }
         if (TFS_SUCCESS == ret)
         {
-          std::vector<uint32_t>::const_iterator iter = oplog.blocks_.begin();
           if (OPLOG_UPDATE == oplog.cmd_)
           {
             bool addnew = false;
             ret = manager_.update_block_info(oplog.info_, oplog.servers_[0], now, addnew);
             if (TFS_SUCCESS != ret)
             {
-              TBSYS_LOG(INFO, "update block information error, block: %u, server: %s",
+              TBSYS_LOG(INFO, "update block information error, block: %"PRI64_PREFIX"u, server: %s",
                   oplog.info_.block_id_, CNetUtil::addrToString(oplog.servers_[0]).c_str());
             }
           }
           else if (OPLOG_INSERT == oplog.cmd_)
           {
-            for (; iter != oplog.blocks_.end(); ++iter)
-            {
-              uint32_t block_id = (*iter);
               BlockCollect* block = NULL;
-              uint32_t tmp_block_id = id_factory_.generation(block_id);
+              uint64_t tmp_block_id = id_factory_.generation(oplog.info_.block_id_);
               ret = INVALID_BLOCK_ID != tmp_block_id ? TFS_SUCCESS : TFS_ERROR;
               if (TFS_SUCCESS != ret)
               {
-                TBSYS_LOG(INFO, "generation block id: %u failed, ret: %d", block_id, ret);
+                TBSYS_LOG(INFO, "generation block id: %"PRI64_PREFIX"u failed, ret: %d", oplog.info_.block_id_, ret);
               }
               else
               {
-                block = manager_.get_block_manager().get(block_id);
+                block = manager_.get_block_manager().get(oplog.info_.block_id_);
                 if (NULL == block)
                 {
-                  block = manager_.get_block_manager().insert(block_id, now);
+                  block = manager_.get_block_manager().insert(oplog.info_.block_id_, now);
                   ret = NULL == block ? EXIT_PLAY_LOG_ERROR : TFS_SUCCESS;
                 }
                 if (TFS_SUCCESS == ret)
@@ -462,38 +458,29 @@ namespace tfs
               if (TFS_SUCCESS == ret)
               {
                 ServerCollect* server = NULL;
-                std::vector<uint64_t>::iterator s_iter = oplog.servers_.begin();
-                for (; s_iter != oplog.servers_.end(); ++s_iter)
+                for (int8_t index = 0; index < oplog.server_num_; ++index)
                 {
-                  server = manager_.get_server_manager().get((*s_iter));
+                  server = manager_.get_server_manager().get(oplog.servers_[index]);
                   manager_.build_relation(block, server, now);
                 }
               }
-            }
           }
           else if (OPLOG_REMOVE== oplog.cmd_)
           {
             GCObject* pgcobject = NULL;
-            for (; iter != oplog.blocks_.end(); ++iter)
-            {
-              manager_.get_block_manager().remove(pgcobject, (*iter));
-              manager_.get_gc_manager().add(pgcobject);
-            }
+            manager_.get_block_manager().remove(pgcobject, oplog.info_.block_id_);
+            manager_.get_gc_manager().add(pgcobject);
           }
           else if (OPLOG_RELIEVE_RELATION == oplog.cmd_)
           {
-            for (; iter != oplog.blocks_.end(); ++iter)
+            for (int8_t index = 0; index < oplog.server_num_; ++index)
             {
-              std::vector<uint64_t>::iterator s_iter = oplog.servers_.begin();
-              for (; s_iter != oplog.servers_.end(); ++s_iter)
+              ServerCollect* server = manager_.get_server_manager().get(oplog.servers_[index]);
+              BlockCollect*  block  = manager_.get_block_manager().get(oplog.info_.block_id_);
+              if (!manager_.relieve_relation(block, server, now))//id
               {
-                ServerCollect* server = manager_.get_server_manager().get((*s_iter));
-                BlockCollect*  block  = manager_.get_block_manager().get((*iter));
-                if (!manager_.relieve_relation(block, server, now))//id
-                {
-                  TBSYS_LOG(INFO, "relieve relation between block: %u and server: %s failed",
-                      (*iter), CNetUtil::addrToString((*s_iter)).c_str());
-                }
+                TBSYS_LOG(INFO, "relieve relation between block: %"PRI64_PREFIX"u and server: %s failed",
+                    oplog.info_.block_id_, CNetUtil::addrToString(oplog.servers_[index]).c_str());
               }
             }
           }

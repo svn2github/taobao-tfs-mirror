@@ -115,7 +115,7 @@ namespace tfs
       dump(TBSYS_LOG_LEVEL(INFO), "task expired");
     }
 
-    ReplicateTask::ReplicateTask(TaskManager& manager, const uint32_t block, const int8_t server_num, const uint64_t* servers,
+    ReplicateTask::ReplicateTask(TaskManager& manager, const uint64_t block, const int8_t server_num, const uint64_t* servers,
       const common::PlanType type):
       Task(manager, type),
       servers_(NULL),
@@ -196,7 +196,7 @@ namespace tfs
         {
           str << " " << tbsys::CNetUtil::addrToString(servers_[index]) << "/";
         }
-        TBSYS_LOGGER.logMessage(level, file, line, function, "%s seqno: %"PRI64_PREFIX"d, type: %s, status: %s, block: %u, expired_time: %"PRI64_PREFIX"d, servers: %s",
+        TBSYS_LOGGER.logMessage(level, file, line, function, "%s seqno: %"PRI64_PREFIX"d, type: %s, status: %s, block: %"PRI64_PREFIX"u, expired_time: %"PRI64_PREFIX"d, servers: %s",
             msgstr, seqno_, transform_type_to_str(),
             transform_status_to_str(status_), block_, last_update_time_, str.str().c_str());
       }
@@ -230,7 +230,7 @@ namespace tfs
                 ret = (block->get_servers_size() > 0 && result) ?  STATUS_MESSAGE_REMOVE : STATUS_MESSAGE_OK;
                 if ((block->get_servers_size() <= 0) && (NULL != source))
                 {
-                  int32_t rt = manager_.get_manager().build_relation(block, source, now, true);
+                  int32_t rt = manager_.get_manager().build_relation(block, source, now);
                   if (TFS_SUCCESS != rt && STATUS_MESSAGE_REMOVE == ret)
                     ret = STATUS_MESSAGE_OK;
                 }
@@ -268,13 +268,13 @@ namespace tfs
       return (ret == STATUS_MESSAGE_OK || ret == STATUS_MESSAGE_REMOVE) ? TFS_SUCCESS : ret;
     }
 
-    MoveTask::MoveTask(TaskManager& manager, const uint32_t block, const int8_t server_num, const uint64_t* servers):
+    MoveTask::MoveTask(TaskManager& manager, const uint64_t block, const int8_t server_num, const uint64_t* servers):
       ReplicateTask(manager, block, server_num, servers, PLAN_TYPE_MOVE)
     {
 
     }
 
-    CompactTask::CompactTask(TaskManager& manager, const uint32_t block, const int8_t server_num, const uint64_t* servers):
+    CompactTask::CompactTask(TaskManager& manager, const uint64_t block, const int8_t server_num, const uint64_t* servers):
       ReplicateTask(manager, block, server_num, servers, PLAN_TYPE_COMPACT)
     {
 
@@ -323,7 +323,7 @@ namespace tfs
           }
           else
           {
-            block->update(info);
+            //block->update(info);//TODO
             time_t now = Func::get_monotonic_time();
             for (iter = result.begin(); iter != result.end(); ++iter)
             {
@@ -426,8 +426,8 @@ namespace tfs
           if (TFS_SUCCESS == ret)
           {
             const time_t now = common::Func::get_monotonic_time();
-            std::pair<uint32_t, int32_t> members[MEMBER_NUM];
-            common::ArrayHelper<std::pair<uint32_t, int32_t> > helper(MEMBER_NUM, members);
+            std::pair<uint64_t, int32_t> members[MEMBER_NUM];
+            common::ArrayHelper<std::pair<uint64_t, int32_t> > helper(MEMBER_NUM, members);
             for (int32_t index = 0; index < MEMBER_NUM; ++index)
             {
               family_info.family_member_.push_back(std::make_pair(base_info[index].block_, base_info[index].version_));

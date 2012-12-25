@@ -360,6 +360,7 @@ namespace tfs
       ServerCollect* pserver = NULL;
       ServerCollect* servers[MAX_SLOT_NUMS];
       ArrayHelper<ServerCollect*> helper(MAX_SLOT_NUMS, servers);
+      std::multimap<int64_t, ServerCollect*> outside;
 
       do
       {
@@ -373,21 +374,27 @@ namespace tfs
             pserver = *helper.at(i);
             assert(NULL != pserver);
             has_move = pserver->is_alive()
-              && !manager_.get_task_manager().exist(pserver->id())
+              && !manager_.get_task_manager().exist_server(pserver->id())
               && manager_.get_task_manager().has_space_do_task_in_machine(pserver->id());
             if (has_move)
             {
-              move_split_servers_(source, targets, pserver, percent);
+              move_split_servers_(source, outside,targets, pserver, percent);
             }
           }
           server = pserver->id();
         }
       }
       while (!complete);
+
+      if (!targets.empty() && source.empty())
+      {
+        source = outside;
+      }
       return TFS_SUCCESS;
     }
 
     void ServerManager::move_split_servers_(std::multimap<int64_t, ServerCollect*>& source,
+        std::multimap<int64_t, ServerCollect*>& outside,
         SERVER_TABLE& targets, const ServerCollect* server, const double percent) const
     {
       if (NULL != server)
@@ -396,7 +403,11 @@ namespace tfs
         double current_percent = calc_capacity_percentage(server->use_capacity(), current_total_capacity);
         TBSYS_LOG(DEBUG, "move_split_server: %s, current_percent: %e, balance_percent: %e, percent: %e",
            tbsys::CNetUtil::addrToString(server->id()).c_str(), current_percent, SYSPARAM_NAMESERVER.balance_percent_, percent);
-        if ((current_percent > (percent + SYSPARAM_NAMESERVER.balance_percent_))
+        if (current_percent < percent - SYSPARAM_NAMESERVER.balance_percent_)
+        {
+          targets.insert(const_cast<ServerCollect*>(server));
+        }
+        else if ((current_percent > (percent + SYSPARAM_NAMESERVER.balance_percent_))
             || (current_percent >= 1.0))
         {
           source.insert(std::multimap<int64_t, ServerCollect*>::value_type(
@@ -404,9 +415,10 @@ namespace tfs
         TBSYS_LOG(DEBUG, "move_split_server: %s, %ld",
            tbsys::CNetUtil::addrToString(server->id()).c_str(), static_cast<int64_t>(current_percent * PERCENTAGE_MAGIC));
         }
-        if (current_percent < percent - SYSPARAM_NAMESERVER.balance_percent_)
+        else
         {
-          targets.insert(const_cast<ServerCollect*>(server));
+          outside.insert(std::multimap<int64_t, ServerCollect*>::value_type(
+                static_cast<int64_t>(current_percent * PERCENTAGE_MAGIC), const_cast<ServerCollect*>(server)));
         }
       }
     }
@@ -467,7 +479,7 @@ namespace tfs
       }
     }
 
-    int ServerManager::build_relation(ServerCollect* server, const uint32_t block,
+    int ServerManager::build_relation(ServerCollect* server, const uint64_t block,
         const bool writable, const bool master)
     {
       int32_t ret = ((NULL != server) && (INVALID_BLOCK_ID != block)) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
@@ -480,12 +492,12 @@ namespace tfs
       return ret;
     }
 
-    int ServerManager::relieve_relation(ServerCollect* server, const uint32_t block)
+    int ServerManager::relieve_relation(ServerCollect* server, const uint64_t block)
     {
       return ((NULL != server) && (INVALID_SERVER_ID != block)) ? server->remove(block) : EXIT_PARAMETER_ERROR;
     }
 
-    int ServerManager::relieve_relation(const uint64_t server, const uint32_t block)
+    int ServerManager::relieve_relation(const uint64_t server, const uint64_t block)
     {
       int32_t ret = ((INVALID_SERVER_ID != server) && (INVALID_BLOCK_ID != block)) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
@@ -601,7 +613,7 @@ namespace tfs
           uint64_t server = *source.at(random_index);
           assert(INVALID_SERVER_ID != server);
           ServerCollect* pserver = get(server);
-          if ((NULL != pserver) && !manager_.get_task_manager().exist(server)
+          if ((NULL != pserver) && !manager_.get_task_manager().exist_server(server)
               && (manager_.get_task_manager().has_space_do_task_in_machine(server, false)))
           {
             result = pserver;
@@ -639,7 +651,7 @@ namespace tfs
         uint32_t lan =  Func::get_lan(pserver->id(), SYSPARAM_NAMESERVER.group_mask_);
         TBSYS_LOG(DEBUG, "==============addr: %s, lans : %u", tbsys::CNetUtil::addrToString(pserver->id()).c_str(), lan);
         if (manager_.get_task_manager().has_space_do_task_in_machine(pserver->id(), true)
-            && !manager_.get_task_manager().exist(pserver->id())
+            && !manager_.get_task_manager().exist_server(pserver->id())
             && lans.find(lan) == lans.end())
         {
           lans.insert(lan);
@@ -757,7 +769,7 @@ namespace tfs
           continue;
 
         assert(NULL != server);
-        if (!manager_.get_task_manager().exist(server->id())
+        if (!manager_.get_task_manager().exist_server(server->id())
             && manager_.get_task_manager().has_space_do_task_in_machine(server->id(), true))
         {
           result = server;
@@ -784,10 +796,10 @@ namespace tfs
       bool ret = (NULL != server);
       if (ret)
       {
-        uint32_t begin = 0;
+        uint64_t begin = 0;
         const int32_t MAX_SLOT_NUMS = 1024;
-        uint32_t blocks[MAX_SLOT_NUMS];
-        common::ArrayHelper<uint32_t> helper(MAX_SLOT_NUMS, blocks);
+        uint64_t blocks[MAX_SLOT_NUMS];
+        common::ArrayHelper<uint64_t> helper(MAX_SLOT_NUMS, blocks);
         bool complete = false;
         do
         {
@@ -796,7 +808,7 @@ namespace tfs
           for (int64_t index = 0; index < helper.get_array_index(); ++index)
           {
             begin = *helper.at(index);
-            manager_.relieve_relation(begin, server, now);
+            manager_.get_block_manager().relieve_relation(begin, server->id(), now);
           }
         }
         while (!complete);

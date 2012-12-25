@@ -126,6 +126,11 @@ namespace tfs
       if (compact_delete_ratio_ <= 0)
         compact_delete_ratio_ = 15;
       compact_delete_ratio_ = std::min(compact_delete_ratio_, 100);
+
+      compact_update_ratio_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_COMPACT_UPDATE_RATIO, 10);
+      if (compact_update_ratio_ <= 0)
+        compact_update_ratio_ = 10;
+      compact_update_ratio_  = std::min(compact_update_ratio_, 100);
       const char* compact_time_str = TBSYS_CONFIG.getString(CONF_SN_NAMESERVER, CONF_COMPACT_HOUR_RANGE, "2~6");
       set_hour_range(compact_time_str, compact_time_lower_, compact_time_upper_);
       compact_max_load_ = TBSYS_CONFIG.getInt(CONF_SN_NAMESERVER, CONF_COMPACT_MAX_LOAD, 100);

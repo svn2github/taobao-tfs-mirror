@@ -43,7 +43,7 @@ namespace tfs
       {
         if (!common::DirectoryOp::create_full_path(path.c_str()))
         {
-          TBSYS_LOG(ERROR, "create directory: %s fail...", path.c_str());
+          TBSYS_LOG(ERROR, "create directory: %s errors : %s", path.c_str(), strerror(errno));
           ret = common::EXIT_GENERAL_ERROR;
         }
         if (common::TFS_SUCCESS == ret)
@@ -58,12 +58,12 @@ namespace tfs
         }
         if (common::TFS_SUCCESS == ret)
         {
-          char data[common::INT_SIZE];
-          int32_t length = ::read(fd_, data, common::INT_SIZE);
-          if (length == common::INT_SIZE)//read successful
+          char data[common::INT64_SIZE];
+          int32_t length = ::read(fd_, data, common::INT64_SIZE);
+          if (length == common::INT64_SIZE)//read successful
           {
             int64_t pos = 0;
-            ret = common::Serialization::get_int32(data, common::INT_SIZE, pos, reinterpret_cast<int32_t*>(&global_id_));
+            ret = common::Serialization::get_int64(data, common::INT64_SIZE, pos, reinterpret_cast<int64_t*>(&global_id_));
             if (common::TFS_SUCCESS != ret)
             {
               TBSYS_LOG(ERROR, "serialize global block id error, ret: %d", ret);
@@ -94,10 +94,10 @@ namespace tfs
       return ret;
     }
 
-    uint32_t BlockIdFactory::generation(const uint32_t id)
+    uint64_t BlockIdFactory::generation(const uint64_t id)
     {
       bool update_flag = false;
-      uint32_t ret_id = common::INVALID_BLOCK_ID;
+      uint64_t ret_id = common::INVALID_BLOCK_ID;
       {
         tbutil::Mutex::Lock lock(mutex_);
         ++count_;
@@ -121,33 +121,33 @@ namespace tfs
         int32_t ret = update(ret_id);
         if (common::TFS_SUCCESS != ret)
         {
-          TBSYS_LOG(WARN, "update global block id failed, id: %u, ret: %d", ret_id, ret);
+          TBSYS_LOG(WARN, "update global block id failed, id: %"PRI64_PREFIX"u, ret: %d", ret_id, ret);
           ret_id = common::INVALID_BLOCK_ID;
         }
       }
       return ret_id;
     }
 
-    uint32_t BlockIdFactory::skip(const int32_t num)
+    uint64_t BlockIdFactory::skip(const int32_t num)
     {
       mutex_.lock();
       global_id_ += num;
-      uint32_t id = global_id_;
+      uint64_t id = global_id_;
       mutex_.unlock();
       int32_t ret = update(id);
       if (common::TFS_SUCCESS != ret)
       {
-        TBSYS_LOG(WARN, "update global block id failed, id: %u, ret: %d", id, ret);
+        TBSYS_LOG(WARN, "update global block id failed, id: %"PRI64_PREFIX"u, ret: %d", id, ret);
       }
       return id;
     }
 
-    int BlockIdFactory::update(const uint32_t id) const
+    int BlockIdFactory::update(const uint64_t id) const
     {
       assert(fd_ != -1);
-      char data[common::INT_SIZE];
+      char data[common::INT64_SIZE];
       int64_t pos = 0;
-      int32_t ret = common::Serialization::set_int32(data, common::INT_SIZE, pos, id);
+      int32_t ret = common::Serialization::set_int64(data, common::INT64_SIZE, pos, id);
       if (common::TFS_SUCCESS == ret)
       {
         int32_t offset = 0;
@@ -157,14 +157,14 @@ namespace tfs
         do
         {
           ++count;
-          length = ::write(fd_, (data + offset), (common::INT_SIZE - offset));
+          length = ::write(fd_, (data + offset), (common::INT64_SIZE - offset));
           if (length > 0)
           {
             offset += length;
           }
         }
-        while (count < 3 && offset < common::INT_SIZE);
-        ret = common::INT_SIZE == offset ? common::TFS_SUCCESS : common::TFS_ERROR;
+        while (count < 3 && offset < common::INT64_SIZE);
+        ret = common::INT64_SIZE == offset ? common::TFS_SUCCESS : common::TFS_ERROR;
         if (common::TFS_SUCCESS == ret)
           fsync(fd_);
       }

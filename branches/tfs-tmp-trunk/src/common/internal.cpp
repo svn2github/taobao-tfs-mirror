@@ -274,7 +274,7 @@ namespace tfs
       return INT_SIZE * 7;
     }
 
-    int BlockInfoExt::serialize(char* data, const int64_t data_len, int64_t& pos) const
+    /*int BlockInfoExt::serialize(char* data, const int64_t data_len, int64_t& pos) const
     {
       int32_t iret = NULL != data && data_len - pos >= length() ? TFS_SUCCESS : TFS_ERROR;
       if (TFS_SUCCESS == iret)
@@ -306,7 +306,7 @@ namespace tfs
     {
       BlockInfo info;
       return info.length() + INT64_SIZE;
-    }
+    }*/
 
     int RawMeta::deserialize(const char* data, const int64_t data_len, int64_t& pos)
     {
@@ -1218,7 +1218,7 @@ namespace tfs
       std::cout << "version " << version_ << std::endl;
     }
 
-    const char* dynamic_parameter_str[43] = {
+    const char* dynamic_parameter_str[44] = {
         "log_level",
         "plan_run_flag",
         "task_expired_time",
@@ -1261,7 +1261,8 @@ namespace tfs
         "compact_task_expired_time",
         "marshalling_task_expired_time",
         "reinstate_task_expired_time",
-        "dissolve_task_expired_time"
+        "dissolve_task_expired_time",
+        "compact_update_ratio"
     };
 
     int FamilyInfo::deserialize(const char* data, const int64_t data_len, int64_t& pos)

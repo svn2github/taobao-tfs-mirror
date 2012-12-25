@@ -36,8 +36,8 @@ namespace tfs
       members_(NULL)
     {
       const int32_t MEMBER_NUM = get_data_member_num() + get_check_member_num();
-      members_ = new (std::nothrow)std::pair<uint32_t, int32_t>[MEMBER_NUM];
-      memset(members_, 0, (sizeof(std::pair<uint32_t, int32_t>) * MEMBER_NUM));
+      members_ = new (std::nothrow)std::pair<uint64_t, int32_t>[MEMBER_NUM];
+      memset(members_, 0, (sizeof(std::pair<uint64_t, int32_t>) * MEMBER_NUM));
       assert(members_);
     }
 
@@ -46,7 +46,7 @@ namespace tfs
       tbsys::gDeleteA(members_);
     }
 
-    int FamilyCollect::add(const uint32_t block, const int32_t version)
+    int FamilyCollect::add(const uint64_t block, const int32_t version)
     {
       bool complete = false;
       int32_t ret = INVALID_BLOCK_ID != block && version > 0 ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
@@ -66,7 +66,7 @@ namespace tfs
       return TFS_SUCCESS == ret ? complete ? TFS_SUCCESS: EXIT_OUT_OF_RANGE : ret;
     }
 
-    int FamilyCollect::add(const common::ArrayHelper<std::pair<uint32_t, int32_t> >& members)
+    int FamilyCollect::add(const common::ArrayHelper<std::pair<uint64_t, int32_t> >& members)
     {
       const int32_t MEMBER_NUM = get_data_member_num() + get_check_member_num();
       int32_t ret = (members.get_array_index() > MEMBER_NUM || members.get_array_index() <= 0)
@@ -81,7 +81,7 @@ namespace tfs
       return ret;
     }
 
-    int FamilyCollect::update(const uint32_t block, const int32_t version)
+    int FamilyCollect::update(const uint64_t block, const int32_t version)
     {
       bool complete = false;
       int32_t ret = INVALID_BLOCK_ID != block && version > 0 ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
@@ -98,7 +98,7 @@ namespace tfs
       return TFS_SUCCESS == ret ? complete ? TFS_SUCCESS : EXIT_NO_BLOCK : ret;
     }
 
-    bool FamilyCollect::exist(const uint32_t block) const
+    bool FamilyCollect::exist(const uint64_t block) const
     {
       bool ret = INVALID_BLOCK_ID != block;
       if (ret)
@@ -112,7 +112,7 @@ namespace tfs
       return ret;
     }
 
-    bool FamilyCollect::exist(int32_t& current_version, const uint32_t block, const int32_t version) const
+    bool FamilyCollect::exist(int32_t& current_version, const uint64_t block, const int32_t version) const
     {
       bool ret = INVALID_BLOCK_ID != block;
       if (ret)
@@ -135,7 +135,7 @@ namespace tfs
       return true;
     }
 
-    void FamilyCollect::get_members(ArrayHelper<std::pair<uint32_t, int32_t> >& members) const
+    void FamilyCollect::get_members(ArrayHelper<std::pair<uint64_t, int32_t> >& members) const
     {
       const int32_t MEMBER_NUM = get_data_member_num() + get_check_member_num();
       for (int32_t i = 0; i < MEMBER_NUM; ++i)
@@ -153,7 +153,7 @@ namespace tfs
       {
         if (INVALID_BLOCK_ID != members_[i].first)
         {
-          param.data_.writeInt32(members_[i].first);
+          param.data_.writeInt64(members_[i].first);
           param.data_.writeInt32(members_[i].second);
         }
       }
@@ -184,7 +184,7 @@ namespace tfs
     }
 
     #ifdef TFS_GTEST
-    int FamilyCollect::get_version(int32_t& version, const uint32_t block) const
+    int FamilyCollect::get_version(int32_t& version, const uint64_t block) const
     {
       version = -1;
       bool complete = false;

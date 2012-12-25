@@ -41,19 +41,19 @@ namespace tfs
       FRIEND_TEST(FamilyCollectTest, update);
       FRIEND_TEST(FamilyCollectTest, exist);
       FRIEND_TEST(FamilyCollectTest, get_members);
-      int get_version(int32_t& version, const uint32_t block) const;
+      int get_version(int32_t& version, const uint64_t block) const;
       #endif
     public:
       explicit FamilyCollect(const int64_t family_id);
       FamilyCollect(const int64_t family_id, const int32_t family_aid_info,const time_t now);
       virtual ~FamilyCollect();
-      int add(const uint32_t block, const int32_t version);
-      int add(const common::ArrayHelper<std::pair<uint32_t, int32_t> >& member);
-      int update(const uint32_t block, const int32_t version);
-      bool exist(const uint32_t block) const;
-      bool exist(int32_t& current_version, const uint32_t block, const int32_t version) const;
+      int add(const uint64_t block, const int32_t version);
+      int add(const common::ArrayHelper<std::pair<uint64_t, int32_t> >& member);
+      int update(const uint64_t block, const int32_t version);
+      bool exist(const uint64_t block) const;
+      bool exist(int32_t& current_version, const uint64_t block, const int32_t version) const;
       bool clear(LayoutManager& manager, const time_t now);
-      void get_members(common::ArrayHelper<std::pair<uint32_t, int32_t> >& members) const;
+      void get_members(common::ArrayHelper<std::pair<uint64_t, int32_t> >& members) const;
       int scan(common::SSMScanParameter& param) const;
       void dump(int32_t level, const char* file = __FILE__,
           const int32_t line = __LINE__, const char* function = __FUNCTION__) const;
@@ -76,7 +76,7 @@ namespace tfs
       int32_t family_aid_info_;//family 辅助信息(高8位: 数据成员个数，中8位: 校验块成员个数: 中8位: master所在下标,低8位: 编码方法,eg. rs, rs2)
       int8_t  in_reinstate_or_dissolve_queue_;
       int8_t  reserve[3];
-      std::pair<uint32_t, int32_t>* members_;//当前family的成员列表 block,version
+      std::pair<uint64_t, int32_t>* members_;//当前family的成员列表 block,version
     };
   }/** end namespace nameserver **/
 }/** end namespace tfs **/

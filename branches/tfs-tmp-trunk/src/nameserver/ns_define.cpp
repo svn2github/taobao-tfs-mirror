@@ -281,7 +281,7 @@ namespace tfs
       return result;
     }
 
-    void print_servers(const common::ArrayHelper<uint64_t>& servers, std::string& result)
+    void print_int64(const common::ArrayHelper<uint64_t>& servers, std::string& result)
     {
       for (int32_t i = 0; i < servers.get_array_index(); ++i)
       {
@@ -290,25 +290,13 @@ namespace tfs
       }
     }
 
-    void print_servers(const std::vector<uint64_t>& servers, std::string& result)
+    void print_int64(const std::vector<uint64_t>& servers, std::string& result)
     {
       std::vector<uint64_t>::const_iterator iter = servers.begin();
       for (; iter != servers.end(); ++iter)
       {
         result += "/";
         result += tbsys::CNetUtil::addrToString((*iter));
-      }
-    }
-
-    void print_blocks(const std::vector<uint32_t>& blocks, std::string& result)
-    {
-      char data[32]={'\0'};
-      std::vector<uint32_t>::const_iterator iter = blocks.begin();
-      for (; iter != blocks.end(); ++iter)
-      {
-        result += "/";
-        snprintf(data, 32, "%d", (*iter));
-        result.append(data);
       }
     }
 

@@ -85,6 +85,7 @@ namespace tfs
 
 #define CONF_COMPACT_HOUR_RANGE                       "compact_hour_range"
 #define CONF_COMPACT_DELETE_RATIO                     "compact_delete_ratio"
+#define CONF_COMPACT_UPDATE_RATIO                     "compact_update_ratio"
 #define CONF_COMPACT_MAX_LOAD                         "compact_max_load"
 #define CONF_REPLICATE_RATIO                          "replicate_ratio"
 #define CONF_REPL_WAIT_TIME                           "repl_wait_time"
