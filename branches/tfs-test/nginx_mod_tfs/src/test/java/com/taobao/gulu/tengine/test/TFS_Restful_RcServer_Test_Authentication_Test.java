@@ -736,7 +736,7 @@ public class TFS_Restful_RcServer_Test_Authentication_Test extends BaseCase {
 			/* do delete file aciton */
 			tools.verifyResponse(setDeleteMethod(deleteUrl), expectDeleteMessage);
 			// ÑéÖ¤É¾³ý¼°É¾³ýË³Ðò
-			tools.verifyCMD(SERVER0435, "cat " + errorLog + "| grep '" + unlink + "'|grep '"+Retry209_1+"' -c", "0", "");
+			tools.verifyCMD(SERVER0435, "cat " + errorLog + "| grep '" + unlink + "'|grep '"+Retry209_1+"' -c", "1", "");
 			/* clean the nginx log */
 			tools.verifyCMD(SERVER0435, "rm -fr " + errorLog, "", "");
 			tools.verifyCMD(SERVER0435, "rm -fr " + accessLog, "", "");
