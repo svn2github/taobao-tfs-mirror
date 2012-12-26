@@ -50,6 +50,7 @@ namespace tfs
           const tair::data_entry &skey, const tair::data_entry &value, const int version);
       int prefix_get_from_tair(const int area, const tair::data_entry &pkey,
         const tair::data_entry &skey, tair::data_entry* &value);
+      int prefix_remove_from_tair(const int area, const tair::data_entry &pkey, const tair::data_entry &skey);
 
     private:
       DISALLOW_COPY_AND_ASSIGN(TairEngineHelper);

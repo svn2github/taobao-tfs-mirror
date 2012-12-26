@@ -139,8 +139,25 @@ namespace tfs
 
     int TairEngineHelper::delete_key(const KvKey& key)
     {
-      UNUSED(key);
-      return TFS_SUCCESS;
+      int ret = TFS_SUCCESS;
+      switch (key.key_type_)
+      {
+        case KvKey::KEY_TYPE_OBJECT:
+        {
+          tair::data_entry pkey;
+          tair::data_entry skey;
+          ret = split_key_for_tair(key, &pkey, &skey);
+          if (TFS_SUCCESS == ret)
+          {
+            ret = prefix_remove_from_tair(object_area_, pkey, skey);
+          }
+        }
+          break;
+        default:
+         TBSYS_LOG(ERROR, "not support");
+         break;
+      }
+      return ret;
     }
 
     int TairEngineHelper::delete_keys(const std::vector<KvKey>& vec_keys)
@@ -172,25 +189,32 @@ namespace tfs
         TBSYS_LOG(ERROR, "parameters error");
         ret = TFS_ERROR;
       }
-      const char* pos = NULL;
-      const char* p = key.key_;
-      do
-      {
-        if (KvKey::DELIMITER == *p)
-        {
-          pos = p;
-          break;
-        }
-        p++;
-      } while(p - key.key_ < key.key_size_);
 
-      int64_t prefix_key_size = pos - key.key_;
-      int64_t second_key_size = key.key_size_ - 1 - prefix_key_size;
-      if (NULL == pos || 0 >= prefix_key_size || 0 >= second_key_size)
+      const char* pos = NULL;
+      int64_t prefix_key_size = -1;
+      int64_t second_key_size = -1;
+      if (TFS_SUCCESS == ret)
       {
-        TBSYS_LOG(ERROR, "invalid key is %s", key.key_);
-        ret = TFS_ERROR;
+        const char* p = key.key_;
+        do
+        {
+          if (KvKey::DELIMITER == *p)
+          {
+            pos = p;
+            break;
+          }
+          p++;
+        } while(p - key.key_ < key.key_size_);
+
+        prefix_key_size = pos - key.key_;
+        second_key_size = key.key_size_ - 1 - prefix_key_size;
+        if (NULL == pos || 0 >= prefix_key_size || 0 >= second_key_size)
+        {
+          TBSYS_LOG(ERROR, "invalid key is %s", key.key_);
+          ret = TFS_ERROR;
+        }
       }
+
       if (TFS_SUCCESS == ret)
       {
         prefix_key->set_data(key.key_, prefix_key_size);
@@ -246,5 +270,24 @@ namespace tfs
       return ret;
     }
 
+    int TairEngineHelper::prefix_remove_from_tair(const int area, const tair::data_entry &pkey,
+        const tair::data_entry &skey)
+    {
+      int retry_count = TAIR_RETRY_COUNT;
+      int ret = TFS_SUCCESS;
+      int tair_ret = 0;
+      do
+      {
+        tair_ret = tair_client_->prefix_remove(area, pkey, skey);
+      } while (TAIR_RETURN_TIMEOUT == tair_ret && --retry_count > 0);
+
+      if (TAIR_RETURN_SUCCESS != tair_ret)
+      {
+        //TODO change tair errno to TFS errno
+        ret = TFS_ERROR;
+      }
+
+      return ret;
+    }
   }
 }

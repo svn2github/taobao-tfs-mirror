@@ -19,6 +19,8 @@
 #include "internal.h"
 #include "buffer.h"
 #include "serialization.h"
+
+#include "meta_kv_define.h"
 namespace tfs
 {
   namespace common
@@ -50,6 +52,7 @@ namespace tfs
       int set_bytes(const void* data, const int64_t length);
       int set_string(const char* str);
       int set_string(const std::string& str);
+
       template <typename T>
       int set_vint8(const T& value)
       {

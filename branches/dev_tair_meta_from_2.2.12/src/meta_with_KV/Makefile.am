@@ -21,6 +21,7 @@ endif
 libmetakvserver_a_SOURCES=kvengine_helper.cpp meta_kv_service.cpp meta_info_helper.cpp \
 													$(tair_kv_source)  $(metakvserver_INCLUDE)
 
-bin_PROGRAMS = metakvserver 
+bin_PROGRAMS = metakvserver #tool_client 
 
 metakvserver_SOURCES=$(libmetakvserver_a_SOURCES) main.cpp
+#tool_client_SOURCES=tool_client.cpp

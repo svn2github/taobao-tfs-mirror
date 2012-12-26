@@ -70,7 +70,21 @@ namespace tfs
       int ret = TFS_SUCCESS;
       UNUSED(argc);
       UNUSED(argv);
-      //TODO init stuff
+
+      if ((ret = SYSPARAM_KVMETA.initialize(config_file_)) != TFS_SUCCESS)
+      {
+        TBSYS_LOG(ERROR, "call SYSPARAM_METAKVSERVER::initialize fail. ret: %d", ret);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = meta_info_helper_.init();
+        if (TFS_SUCCESS != ret)
+        {
+          TBSYS_LOG(ERROR, "MetaKv server initial fail: %d", ret);
+        }
+      }
+
       return ret;
     }
 
@@ -90,13 +104,22 @@ namespace tfs
       else
       {
         base_packet = dynamic_cast<BasePacket*>(packet);
+        KvReqPutMetaMessage* kv_req_put_meta_msg = NULL;
+        KvReqGetMetaMessage* kv_req_get_meta_msg = NULL;
         switch (base_packet->getPCode())
         {
-          //TODO add message dealer;
-        default:
-          ret = EXIT_UNKNOWN_MSGTYPE;
-          TBSYS_LOG(ERROR, "unknown msg type: %d", base_packet->getPCode());
-          break;
+          case KV_REQ_PUT_META_MESSAGE:
+            kv_req_put_meta_msg = dynamic_cast<KvReqPutMetaMessage*>(base_packet);
+            ret = put_meta(kv_req_put_meta_msg);
+            break;
+          case KV_REQ_GET_META_MESSAGE:
+            kv_req_get_meta_msg = dynamic_cast<KvReqGetMetaMessage*>(base_packet);
+            ret = get_meta(kv_req_get_meta_msg);
+            break;
+          default:
+            ret = EXIT_UNKNOWN_MSGTYPE;
+            TBSYS_LOG(ERROR, "unknown msg type: %d", base_packet->getPCode());
+            break;
         }
       }
 
@@ -109,22 +132,58 @@ namespace tfs
       return true;
     }
 
-    int MetaKvService::put_meta(/*put_meta_message* */)
+    int MetaKvService::put_meta(KvReqPutMetaMessage* kv_req_put_meta_msg)
     {
       int ret = TFS_SUCCESS;
-      //TODO  put meta
-      //meta_info_helper_.put_meta()
+
+      if (NULL == kv_req_put_meta_msg)
+      {
+        ret = EXIT_INVALID_ARGU;
+        TBSYS_LOG(ERROR, "MetaKvService::put_meta fail, ret: %d", ret);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
+        ret = meta_info_helper_.put_meta(kv_req_put_meta_msg->get_bucket_name(), kv_req_put_meta_msg->get_file_name(), kv_req_put_meta_msg->get_file_info());
+      }
+
+      if (TFS_SUCCESS != ret)
+      {
+        ret = kv_req_put_meta_msg->reply_error_packet(TBSYS_LOG_LEVEL(INFO), ret, "execute message fail");
+      }
+      else
+      {
+        ret = kv_req_put_meta_msg->reply(new StatusMessage(STATUS_MESSAGE_OK));
+      }
       //stat_info_helper_.put_meta()
       return ret;
-
     }
 
-    int MetaKvService::get_meta(/*put_meta_message* */)
+    int MetaKvService::get_meta(KvReqGetMetaMessage* kv_req_get_meta_msg)
     {
       int ret = TFS_SUCCESS;
-      //meta_info_helper_.get_meta()
-      //stat_info_helper_.get_meta()
-      //TODO get stuff
+
+      if (NULL == kv_req_get_meta_msg)
+      {
+        ret = EXIT_INVALID_ARGU;
+        TBSYS_LOG(ERROR, "MetaKvService::get_meta fail, ret: %d", ret);
+      }
+
+      KvRspGetMetaMessage* kv_rsp_get_meta_msg = new KvRspGetMetaMessage();
+      if (TFS_SUCCESS == ret)
+      {
+        ret = meta_info_helper_.get_meta(kv_req_get_meta_msg->get_bucket_name(), kv_req_get_meta_msg->get_file_name(), kv_rsp_get_meta_msg->get_file_info());
+      }
+
+      if (TFS_SUCCESS != ret)
+      {
+        ret = kv_req_get_meta_msg->reply_error_packet(TBSYS_LOG_LEVEL(INFO), ret, "execute message fail");
+      }
+      else
+      {
+        ret = kv_req_get_meta_msg->reply(kv_rsp_get_meta_msg);
+      }
+      //stat_info_helper_.put_meta()
       return ret;
     }
 
