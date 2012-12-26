@@ -23,6 +23,7 @@ namespace tfs
   using namespace common;
   namespace metawithkv
   {
+    const int TFS_INFO_BUFF_SIZE = 128;
     MetaInfoHelper::MetaInfoHelper()
     {
       kv_engine_helper_ = new TairEngineHelper();
@@ -50,10 +51,10 @@ namespace tfs
       key.key_ = real_key.c_str();
       key.key_size_ = real_key.length();
       key.key_type_ = KvKey::KEY_TYPE_OBJECT;
-      char tfs_info_buff[common::TfsFileInfo::TFS_INFO_SIZE];
+      char tfs_info_buff[TFS_INFO_BUFF_SIZE];
       int64_t pos = 0;
       assert(TFS_SUCCESS == tfs_file_info.serialize(tfs_info_buff,
-            common::TfsFileInfo::TFS_INFO_SIZE, pos));
+            TFS_INFO_BUFF_SIZE, pos));
       string value(tfs_info_buff, pos);
       ret = kv_engine_helper_->put_key(key, value, 0);
       return ret;

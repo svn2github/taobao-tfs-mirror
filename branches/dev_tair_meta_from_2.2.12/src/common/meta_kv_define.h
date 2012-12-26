@@ -22,10 +22,6 @@ namespace tfs
   {
     struct TfsFileInfo
     {
-      enum
-      {
-        TFS_INFO_SIZE = 32,
-      };
       TfsFileInfo();
       int64_t length() const;
       int serialize(char* data, const int64_t data_len, int64_t& pos) const;
@@ -33,6 +29,7 @@ namespace tfs
 
       int64_t block_id;
       int64_t file_id;
+      int32_t cluster_id;
     };
 
   }

@@ -26,7 +26,7 @@ namespace tfs
 
     int64_t TfsFileInfo::length() const
     {
-      return INT64_SIZE + INT64_SIZE;
+      return INT64_SIZE + INT64_SIZE + INT_SIZE;
     }
     int TfsFileInfo::serialize(char* data, const int64_t data_len, int64_t& pos) const
     {
@@ -38,6 +38,10 @@ namespace tfs
       if (TFS_SUCCESS == ret)
       {
         ret = Serialization::set_int64(data, data_len, pos, file_id);
+      }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::set_int32(data, data_len, pos, cluster_id);
       }
       return ret;
     }
@@ -53,11 +57,12 @@ namespace tfs
       {
         ret = Serialization::get_int64(data, data_len, pos, &file_id);
       }
+      if (TFS_SUCCESS == ret)
+      {
+        ret = Serialization::get_int32(data, data_len, pos, &cluster_id);
+      }
       return ret;
     }
-
-    int64_t block_id;
-    int64_t file_id;
 
   }
 }
