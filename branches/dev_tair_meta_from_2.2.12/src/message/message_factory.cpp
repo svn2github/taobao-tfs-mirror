@@ -273,27 +273,15 @@ namespace tfs
           case common::RSP_CHECK_BLOCK_MESSAGE:
             packet = new CheckBlockResponseMessage();
             break;
-          case common::KV_REQ_PUT_META_MESSAGE:
-            packet = new KvReqPutMetaMessage();
+          case common::REQ_KVMETA_GET_OBJECT_MESSAGE:
+            packet = new ReqKvMetaGetObjectMessage();
             break;
-          case common::KV_REQ_GET_META_MESSAGE:
-            packet = new KvReqGetMetaMessage();
+          case common::RSP_KVMETA_GET_OBJECT_MESSAGE:
+            packet = new RspKvMetaGetObjectMessage();
             break;
-          case common::KV_RSP_GET_META_MESSAGE:
-            packet = new KvRspGetMetaMessage();
+          case common::REQ_KVMETA_PUT_OBJECT_MESSAGE:
+            packet = new ReqKvMetaPutObjectMessage();
             break;
-          case common::KV_REQ_PUT_BUCKET_MESSAGE:
-            packet = new KvReqPutBucketMessage();
-            break;
-          /*case common::KV_REQ_GET_BUCKET_MESSAGE:
-            packet = new KvReqGetBucketMessage();
-            break;
-          case common::KV_RSP_GET_BUCKET_MESSAGE:
-            packet = new KvRspGetBucketMessage();
-            break;
-          case common::KV_REQ_DELETE_BUCKET_MESSAGE:
-            packet = new KvReqDeleteBucketMessage();
-            break;*/
           default:
             TBSYS_LOG(ERROR, "pcode: %d not found in message factory", real_pcode);
             break;

@@ -35,6 +35,16 @@ namespace tfs
       kv_engine_helper_ = NULL;
     }
 
+    int MetaInfoHelper::init()
+    {
+      int ret = TFS_ERROR;
+      if (NULL != kv_engine_helper_)
+      {
+        ret = kv_engine_helper_->init();
+      }
+      return ret;
+    }
+
     int MetaInfoHelper::put_meta(const std::string& bucket_name, const std::string& file_name,
          const common::TfsFileInfo& tfs_file_info)
     {

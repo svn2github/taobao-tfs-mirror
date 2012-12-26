@@ -20,9 +20,11 @@
 #include "common/config_item.h"
 #include "common/parameter.h"
 #include "common/base_packet.h"
+
 using namespace tfs::common;
 using namespace tfs::message;
 using namespace std;
+
 namespace tfs
 {
   namespace metawithkv
@@ -104,17 +106,13 @@ namespace tfs
       else
       {
         base_packet = dynamic_cast<BasePacket*>(packet);
-        KvReqPutMetaMessage* kv_req_put_meta_msg = NULL;
-        KvReqGetMetaMessage* kv_req_get_meta_msg = NULL;
         switch (base_packet->getPCode())
         {
-          case KV_REQ_PUT_META_MESSAGE:
-            kv_req_put_meta_msg = dynamic_cast<KvReqPutMetaMessage*>(base_packet);
-            ret = put_meta(kv_req_put_meta_msg);
+          case REQ_KVMETA_PUT_OBJECT_MESSAGE:
+            ret = put_object(dynamic_cast<ReqKvMetaPutObjectMessage*>(base_packet));
             break;
-          case KV_REQ_GET_META_MESSAGE:
-            kv_req_get_meta_msg = dynamic_cast<KvReqGetMetaMessage*>(base_packet);
-            ret = get_meta(kv_req_get_meta_msg);
+          case REQ_KVMETA_GET_OBJECT_MESSAGE:
+            ret = get_object(dynamic_cast<ReqKvMetaGetObjectMessage*>(base_packet));
             break;
           default:
             ret = EXIT_UNKNOWN_MSGTYPE;
@@ -132,11 +130,11 @@ namespace tfs
       return true;
     }
 
-    int MetaKvService::put_meta(KvReqPutMetaMessage* kv_req_put_meta_msg)
+    int MetaKvService::put_object(ReqKvMetaPutObjectMessage* put_object_msg)
     {
       int ret = TFS_SUCCESS;
 
-      if (NULL == kv_req_put_meta_msg)
+      if (NULL == put_object_msg)
       {
         ret = EXIT_INVALID_ARGU;
         TBSYS_LOG(ERROR, "MetaKvService::put_meta fail, ret: %d", ret);
@@ -144,45 +142,49 @@ namespace tfs
 
       if (TFS_SUCCESS == ret)
       {
-        ret = meta_info_helper_.put_meta(kv_req_put_meta_msg->get_bucket_name(), kv_req_put_meta_msg->get_file_name(), kv_req_put_meta_msg->get_file_info());
+        ret = meta_info_helper_.put_meta(put_object_msg->get_bucket_name(), put_object_msg->get_file_name(), put_object_msg->get_file_info());
       }
 
       if (TFS_SUCCESS != ret)
       {
-        ret = kv_req_put_meta_msg->reply_error_packet(TBSYS_LOG_LEVEL(INFO), ret, "execute message fail");
+        ret = put_object_msg->reply_error_packet(TBSYS_LOG_LEVEL(INFO), ret, "execute message fail");
       }
       else
       {
-        ret = kv_req_put_meta_msg->reply(new StatusMessage(STATUS_MESSAGE_OK));
+        ret = put_object_msg->reply(new StatusMessage(STATUS_MESSAGE_OK));
       }
       //stat_info_helper_.put_meta()
       return ret;
     }
 
-    int MetaKvService::get_meta(KvReqGetMetaMessage* kv_req_get_meta_msg)
+    int MetaKvService::get_object(ReqKvMetaGetObjectMessage* get_meta_msg)
     {
       int ret = TFS_SUCCESS;
 
-      if (NULL == kv_req_get_meta_msg)
+      if (NULL == get_meta_msg)
       {
         ret = EXIT_INVALID_ARGU;
-        TBSYS_LOG(ERROR, "MetaKvService::get_meta fail, ret: %d", ret);
+        TBSYS_LOG(ERROR, "MetaKvService::get_object fail, ret: %d", ret);
       }
-
-      KvRspGetMetaMessage* kv_rsp_get_meta_msg = new KvRspGetMetaMessage();
       if (TFS_SUCCESS == ret)
       {
-        ret = meta_info_helper_.get_meta(kv_req_get_meta_msg->get_bucket_name(), kv_req_get_meta_msg->get_file_name(), kv_rsp_get_meta_msg->get_file_info());
+        common::TfsFileInfo tfs_file_info;
+        ret = meta_info_helper_.get_meta(get_meta_msg->get_bucket_name(), get_meta_msg->get_file_name(), &tfs_file_info);
+        if (TFS_SUCCESS == ret)
+        {
+          RspKvMetaGetObjectMessage* rsp_get_object_msg =
+            new(std::nothrow) RspKvMetaGetObjectMessage();
+          assert(NULL != rsp_get_object_msg);
+          rsp_get_object_msg->set_tfs_file_info(tfs_file_info);
+          get_meta_msg->reply(rsp_get_object_msg);
+        }
+        else
+        {
+          get_meta_msg->reply_error_packet(TBSYS_LOG_LEVEL(INFO),
+               ret,  "get object error ret %d", ret);
+        }
       }
 
-      if (TFS_SUCCESS != ret)
-      {
-        ret = kv_req_get_meta_msg->reply_error_packet(TBSYS_LOG_LEVEL(INFO), ret, "execute message fail");
-      }
-      else
-      {
-        ret = kv_req_get_meta_msg->reply(kv_rsp_get_meta_msg);
-      }
       //stat_info_helper_.put_meta()
       return ret;
     }

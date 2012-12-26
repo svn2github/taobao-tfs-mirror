@@ -15,6 +15,7 @@
 */
 
 #include "kv_meta_message.h"
+
 #include "common/stream.h"
 
 namespace tfs
@@ -22,14 +23,14 @@ namespace tfs
   namespace message
   {
     // req_put_meta_msg
-    KvReqPutMetaMessage::KvReqPutMetaMessage()
+    ReqKvMetaPutObjectMessage::ReqKvMetaPutObjectMessage()
     {
-      _packetHeader._pcode = common::KV_REQ_PUT_META_MESSAGE;
+      _packetHeader._pcode = common::REQ_KVMETA_PUT_OBJECT_MESSAGE;
     }
 
-    KvReqPutMetaMessage::~KvReqPutMetaMessage(){}
+    ReqKvMetaPutObjectMessage::~ReqKvMetaPutObjectMessage(){}
 
-    int KvReqPutMetaMessage::serialize(common::Stream& output) const
+    int ReqKvMetaPutObjectMessage::serialize(common::Stream& output) const
     {
       int32_t iret = output.set_string(bucket_name_);
 
@@ -41,10 +42,6 @@ namespace tfs
       if (common::TFS_SUCCESS == iret)
       {
         int64_t pos = 0;
-        /*if (output.get_free_length() < tfs_file_info_.length())
-        {
-          output.expand(tfs_file_info_.length());
-        }*/
         iret = tfs_file_info_.serialize(output.get_free(), output.get_free_length(), pos);
         if (common::TFS_SUCCESS == iret)
         {
@@ -55,7 +52,7 @@ namespace tfs
       return iret;
     }
 
-    int KvReqPutMetaMessage::deserialize(common::Stream& input)
+    int ReqKvMetaPutObjectMessage::deserialize(common::Stream& input)
     {
       int32_t iret = input.get_string(bucket_name_);
 
@@ -77,19 +74,19 @@ namespace tfs
       return iret;
     }
 
-    int64_t KvReqPutMetaMessage::length() const
+    int64_t ReqKvMetaPutObjectMessage::length() const
     {
       return common::Serialization::get_string_length(bucket_name_) + common::Serialization::get_string_length(file_name_) + tfs_file_info_.length();
     }
 
     //req_get_meta_msg
-    KvReqGetMetaMessage::KvReqGetMetaMessage()
+    ReqKvMetaGetObjectMessage::ReqKvMetaGetObjectMessage()
     {
-      _packetHeader._pcode = common::KV_REQ_GET_META_MESSAGE;
+      _packetHeader._pcode = common::REQ_KVMETA_GET_OBJECT_MESSAGE;
     }
-    KvReqGetMetaMessage::~KvReqGetMetaMessage(){}
+    ReqKvMetaGetObjectMessage::~ReqKvMetaGetObjectMessage(){}
 
-    int KvReqGetMetaMessage::serialize(common::Stream& output) const
+    int ReqKvMetaGetObjectMessage::serialize(common::Stream& output) const
     {
       int32_t iret = output.set_string(bucket_name_);
 
@@ -101,7 +98,7 @@ namespace tfs
       return iret;
     }
 
-    int KvReqGetMetaMessage::deserialize(common::Stream& input)
+    int ReqKvMetaGetObjectMessage::deserialize(common::Stream& input)
     {
       int32_t iret = input.get_string(bucket_name_);
 
@@ -113,25 +110,21 @@ namespace tfs
       return iret;
     }
 
-    int64_t KvReqGetMetaMessage::length() const
+    int64_t ReqKvMetaGetObjectMessage::length() const
     {
       return common::Serialization::get_string_length(bucket_name_) + common::Serialization::get_string_length(file_name_);
     }
 
     // rsp_get_meta_msg
-    KvRspGetMetaMessage::KvRspGetMetaMessage()
+    RspKvMetaGetObjectMessage::RspKvMetaGetObjectMessage()
     {
-      _packetHeader._pcode = common::KV_RSP_GET_META_MESSAGE;
+      _packetHeader._pcode = common::RSP_KVMETA_GET_OBJECT_MESSAGE;
     }
-    KvRspGetMetaMessage::~KvRspGetMetaMessage(){}
+    RspKvMetaGetObjectMessage::~RspKvMetaGetObjectMessage(){}
 
-    int KvRspGetMetaMessage::serialize(common::Stream& output) const
+    int RspKvMetaGetObjectMessage::serialize(common::Stream& output) const
     {
       int64_t pos = 0;
-      /*if (output.get_free_length() < tfs_file_info_.length())
-      {
-        output.expand(tfs_file_info_.length());
-      }*/
       int32_t iret = tfs_file_info_.serialize(output.get_free(), output.get_free_length(), pos);
       if (common::TFS_SUCCESS == iret)
       {
@@ -141,7 +134,7 @@ namespace tfs
       return iret;
     }
 
-    int KvRspGetMetaMessage::deserialize(common::Stream& input)
+    int RspKvMetaGetObjectMessage::deserialize(common::Stream& input)
     {
       int64_t pos = 0;
       int32_t iret = tfs_file_info_.deserialize(input.get_data(), input.get_data_length(), pos);
@@ -153,46 +146,9 @@ namespace tfs
       return iret;
     }
 
-    int64_t KvRspGetMetaMessage::length() const
+    int64_t RspKvMetaGetObjectMessage::length() const
     {
       return tfs_file_info_.length();
-    }
-
-    //req_put_bucket_msg
-    KvReqPutBucketMessage::KvReqPutBucketMessage()
-    {
-      _packetHeader._pcode = common::KV_REQ_PUT_BUCKET_MESSAGE;
-    }
-
-    KvReqPutBucketMessage::~KvReqPutBucketMessage(){}
-
-    int KvReqPutBucketMessage::serialize(common::Stream& output) const
-    {
-      int32_t iret = output.set_string(bucket_name_);
-
-      if (common::TFS_SUCCESS == iret)
-      {
-        iret = output.set_int64(create_time_);
-      }
-
-      return iret;
-    }
-
-    int KvReqPutBucketMessage::deserialize(common::Stream& input)
-    {
-      int32_t iret = input.get_string(bucket_name_);
-
-      if (common::TFS_SUCCESS == iret)
-      {
-        iret = input.get_int64(&create_time_);
-      }
-
-      return iret;
-    }
-
-    int64_t KvReqPutBucketMessage::length() const
-    {
-      return common::Serialization::get_string_length(bucket_name_) + common::INT64_SIZE;
     }
 
   }

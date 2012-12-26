@@ -19,8 +19,6 @@
 #include "internal.h"
 #include "buffer.h"
 #include "serialization.h"
-
-#include "meta_kv_define.h"
 namespace tfs
 {
   namespace common

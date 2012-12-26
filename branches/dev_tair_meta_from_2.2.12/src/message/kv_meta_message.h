@@ -24,26 +24,26 @@ namespace tfs
 {
   namespace message
   {
-    class KvReqPutMetaMessage : public common::BasePacket
+    class ReqKvMetaPutObjectMessage : public common::BasePacket
     {
       public:
-        KvReqPutMetaMessage();
-        virtual ~KvReqPutMetaMessage();
+        ReqKvMetaPutObjectMessage();
+        virtual ~ReqKvMetaPutObjectMessage();
         virtual int serialize(common::Stream& output) const;
         virtual int deserialize(common::Stream& input);
         virtual int64_t length() const;
 
-        std::string& get_bucket_name()
+        const std::string& get_bucket_name() const
         {
           return bucket_name_;
         }
 
-        std::string& get_file_name()
+        const std::string& get_file_name() const
         {
           return file_name_;
         }
 
-        common::TfsFileInfo& get_file_info()
+        const common::TfsFileInfo& get_file_info() const
         {
           return tfs_file_info_;
         }
@@ -69,21 +69,21 @@ namespace tfs
         common::TfsFileInfo tfs_file_info_;
     };
 
-    class KvReqGetMetaMessage : public common::BasePacket
+    class ReqKvMetaGetObjectMessage : public common::BasePacket
     {
       public:
-        KvReqGetMetaMessage();
-        virtual ~KvReqGetMetaMessage();
+        ReqKvMetaGetObjectMessage();
+        virtual ~ReqKvMetaGetObjectMessage();
         virtual int serialize(common::Stream& output) const;
         virtual int deserialize(common::Stream& input);
         virtual int64_t length() const;
 
-        std::string& get_bucket_name()
+        const std::string& get_bucket_name() const
         {
           return bucket_name_;
         }
 
-        std::string& get_file_name()
+        const std::string& get_file_name() const
         {
           return file_name_;
         }
@@ -103,114 +103,27 @@ namespace tfs
         std::string file_name_;
     };
 
-    class KvRspGetMetaMessage : public common::BasePacket
+    class RspKvMetaGetObjectMessage : public common::BasePacket
     {
       public:
-        KvRspGetMetaMessage();
-        virtual ~KvRspGetMetaMessage();
+        RspKvMetaGetObjectMessage();
+        virtual ~RspKvMetaGetObjectMessage();
         virtual int serialize(common::Stream& output) const;
         virtual int deserialize(common::Stream& input);
         virtual int64_t length() const;
 
-        common::TfsFileInfo* get_file_info()
+        const common::TfsFileInfo& get_file_info() const
         {
-          return &tfs_file_info_;
+          return tfs_file_info_;
+        }
+        void set_tfs_file_info(const common::TfsFileInfo& tfs_file_info)
+        {
+          tfs_file_info_ = tfs_file_info;
         }
       private:
-        mutable common::TfsFileInfo tfs_file_info_;
+        common::TfsFileInfo tfs_file_info_;
     };
 
-    class KvReqPutBucketMessage : public common::BasePacket
-    {
-      public:
-        KvReqPutBucketMessage();
-        virtual ~KvReqPutBucketMessage();
-        virtual int serialize(common::Stream& output) const;
-        virtual int deserialize(common::Stream& input);
-        virtual int64_t length() const;
-
-        void set_bucket_name(std::string& bucket_name)
-        {
-          bucket_name_ = bucket_name;
-        }
-
-        void set_create_time(int64_t create_time)
-        {
-          create_time_ = create_time;
-        }
-
-        std::string& get_bucket_name()
-        {
-          return bucket_name_;
-        }
-
-        int64_t get_create_time() const
-        {
-          return create_time_;
-        }
-
-      private:
-        std::string bucket_name_;
-        int64_t create_time_;
-    };
-
-    /*class KvReqGetBucketMessage : public common::BasePacket
-    {
-      public:
-        KvReqGetBucketMessage();
-        virtual ~KvReqGetBucketMessage();
-        virtual int serialize(common::Stream& output) const;
-        virtual int deserialize(common::Stream& input);
-        virtual int64_t length() const;
-
-        void set_bucket_name(std::string& bucket_name)
-        {
-          bucket_name_ = bucket_name;
-        }
-
-        std::string& get_bucket_name()
-        {
-          return bucket_name_;
-        }
-
-      private:
-        std::string bucket_name_;
-    };
-
-    class KvRspGetBucketMessage : public common::BasePacket
-    {
-      public:
-        KvRspGetBucketMessage();
-        virtual ~KvRspGetBucketMessage();
-        virtual int serialize(common::Stream& output) const;
-        virtual int deserialize(common::Stream& input);
-        virtual int64_t length() const;
-
-        std::vector<std::string>& get_v_object_name()
-        {
-          return v_object_name_;
-        }
-      private:
-        mutable std::vector<std::string> v_object_name_;
-    };
-
-    class KvReqDeleteBucketMessage : public common::BasePacket
-    {
-      public:
-        KvReqDeleteBucketMessage();
-        virtual ~KvReqDeleteBucketMessage();
-        virtual int serialize(common::Stream& output) const;
-        virtual int deserialize(common::Stream& input);
-        virtual int64_t length() const;
-
-        void set_bucket_name(std::string& bucket_name)
-        {
-          bucket_name_ = bucket_name;
-        }
-
-      private:
-        std::string bucket_name_;
-    };*/
   }
 }
 

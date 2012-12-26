@@ -45,8 +45,8 @@ namespace tfs
       virtual int initialize(int argc, char* argv[]);
       virtual int destroy_service();
 
-      int put_meta(message::KvReqPutMetaMessage* kv_req_put_meta_msg);
-      int get_meta(message::KvReqGetMetaMessage* kv_req_get_meta_msg);
+      int put_object(message::ReqKvMetaPutObjectMessage* );
+      int get_object(message::ReqKvMetaGetObjectMessage* );
 
 
     private:
