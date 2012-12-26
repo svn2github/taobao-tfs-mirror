@@ -127,12 +127,11 @@ namespace tfs
       static const int8_t AVERAGE_USED_CAPACITY_MULTIPLE;
       private:
       DISALLOW_COPY_AND_ASSIGN(ServerCollect);
-      bool clear_();
       int remove_(const uint64_t block);
       int choose_writable_block_(uint64_t& result) const;
       bool remove_writable_(const common::ArrayHelper<BlockCollect*>& blocks);
       bool get_range_blocks_(common::ArrayHelper<uint64_t>& blocks, const uint64_t begin, const int32_t count) const;
-      int get_range_writable_blocks_(bool& over, common::ArrayHelper<uint64_t>& blocks, const uint64_t begin, const int32_t count) const;
+      bool get_range_writable_blocks_(common::ArrayHelper<uint64_t>& blocks, uint64_t& begin, const int32_t count) const;
       bool exist_in_hold_(const uint64_t block) const;
       bool exist_in_writable_(const uint64_t block) const;
       bool exist_in_master_(const uint64_t block) const;

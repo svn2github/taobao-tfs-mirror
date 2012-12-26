@@ -281,7 +281,7 @@ namespace tfs
         BlockCollect* block = NULL;
         if (mode & T_CREATE)
         {
-          if (0 == block_id)
+          if (INVALID_BLOCK_ID == block_id)
           {
             //choolse a writable block
             manager_.get_server_manager().choose_writable_block(block);
@@ -296,7 +296,7 @@ namespace tfs
         if ((mode & T_NEWBLK)
             && (NULL == block))
         {
-          ret = 0 == block_id ? EXIT_BLOCK_ID_INVALID_ERROR: TFS_SUCCESS;
+          ret = INVALID_BLOCK_ID == block_id ? EXIT_BLOCK_ID_INVALID_ERROR: TFS_SUCCESS;
           if (TFS_SUCCESS == ret)
           {
             time_t now = Func::get_monotonic_time();
@@ -304,22 +304,28 @@ namespace tfs
             ret = ngi.in_discard_newblk_safe_mode_time(now) || is_discard() ? EXIT_DISCARD_NEWBLK_ERROR: TFS_SUCCESS;
             if (TFS_SUCCESS == ret)
             {
-              /*block =  manager_.get_block_manager().get(block_id);
-              ret = NULL != block ? TFS_SUCCESS : EXIT_BLOCK_NOT_FOUND;
-              if ((TFS_SUCCESS == ret)
-                  && (block->get_servers_size() <= 0)
-                  && (!block->is_creating())
-                  && (block->get_last_update_time() + SYSPARAM_NAMESERVER.replicate_wait_time_ <= now))
+              block =  manager_.get_block_manager().get(block_id);
+              ret = (NULL != block) ? TFS_SUCCESS : EXIT_BLOCK_NOT_FOUND;
+              if (TFS_SUCCESS == ret)
               {
-                GCObject* pobject = NULL;
-                manager_.get_block_manager().remove(pobject,block_id);
-                if (NULL != pobject)
-                  manager_.get_gc_manager().add(pobject, now);
-              }*/
-              //create new block by block_id
-              ret = manager_.open_helper_create_new_block_by_id(block_id);
-              if (TFS_SUCCESS != ret)
-                TBSYS_LOG(INFO, "create new block by block id: %"PRI64_PREFIX"u failed, ret: %d", block_id, ret);
+                ret = ((block->get_servers_size() <= 0)
+                      && (!block->is_creating())
+                      && (block->get_last_update_time() + SYSPARAM_NAMESERVER.replicate_wait_time_ <= now)) ? TFS_SUCCESS : EXIT_BLOCK_ALREADY_EXIST;
+                if (TFS_SUCCESS == ret)
+                {
+                  GCObject* pobject = NULL;
+                  manager_.get_block_manager().remove(pobject,block_id);
+                  if (NULL != pobject)
+                    manager_.get_gc_manager().add(pobject, now);
+                }
+              }
+              if (TFS_SUCCESS == ret)
+              {
+                //create new block by block_id
+                ret = manager_.open_helper_create_new_block_by_id(block_id);
+                if (TFS_SUCCESS != ret)
+                  TBSYS_LOG(INFO, "create new block by block id: %"PRI64_PREFIX"u failed, ret: %d", block_id, ret);
+              }
             }
           }
         }

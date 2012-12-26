@@ -20,6 +20,7 @@
 #include "common/internal.h"
 #include "common/error_msg.h"
 #include "common/array_helper.h"
+#include "server_collect.h"
 #include "task.h"
 
 #ifdef TFS_GTEST

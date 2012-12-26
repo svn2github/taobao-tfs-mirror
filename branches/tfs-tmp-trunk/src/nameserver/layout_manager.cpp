@@ -173,9 +173,6 @@ namespace tfs
       int32_t ret = ((NULL != server) && (server->is_alive())) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
-        //release relation//这里每做一次都需要拷贝整个列表，并且要解除与这个server相关block的关系,
-        //是否可以考虑其他方式，例如：做一次for将新加入，删除的，不变化的先找出来,然后再建立关系
-        //这里可以放到后面来优化
         ret = get_block_manager().update_relation(expires, server, blocks, now, type);
       }
       return ret;
@@ -594,7 +591,7 @@ namespace tfs
             *current_value = (int32_t)(value2 & 0xFFFFFFFF);
           else
             snprintf(retstr, 256, "%d", *current_value);
-          TBSYS_LOG(DEBUG, "index: %d %s name: %s value: %d", index, set ? "set" : "get", dynamic_parameter_str[index - 1], *current_value);
+          TBSYS_LOG(INFO, "index: %d %s name: %s value: %d", index, set ? "set" : "get", dynamic_parameter_str[index - 1], *current_value);
         }
       }
       return ret;
@@ -1010,22 +1007,24 @@ namespace tfs
           usleep(SLEEP_TIME_US);
 
         get_server_manager().get_and_move_report_block_server(helper, MAX_SLOT_NUMS);
-
-        int32_t index = helper.get_array_index();
-        while (index-- > 0)
+        for (int64_t index = 0; index < helper.get_array_index(); ++index)
         {
           last = *helper.at(index);
           assert(NULL != last);
-          CallDsReportBlockRequestMessage req;
-          req.set_server(ngi.owner_ip_port_);
-          req.set_flag(REPORT_BLOCK_EXT);
-          client = NewClientManager::get_instance().create_client();
-          if (NULL != client)
-            ret = post_msg_to_server(last->id(), client, &req, ns_async_callback);
-          if (TFS_SUCCESS != ret)
-            NewClientManager::get_instance().destroy_client(client);
           now = Func::get_monotonic_time();
-          last->set_report_block_info(now, REPORT_BLOCK_STATUS_REPORTING);
+          if (!last->is_report_block_expired(now))
+          {
+            CallDsReportBlockRequestMessage req;
+            req.set_server(ngi.owner_ip_port_);
+            req.set_flag(REPORT_BLOCK_EXT);
+            client = NewClientManager::get_instance().create_client();
+            if (NULL != client)
+              ret = post_msg_to_server(last->id(), client, &req, ns_async_callback);
+            if (TFS_SUCCESS != ret)
+              NewClientManager::get_instance().destroy_client(client);
+            now = Func::get_monotonic_time();
+            last->set_report_block_info(now, REPORT_BLOCK_STATUS_REPORTING);
+          }
         }
         usleep(100);
       }
@@ -1397,27 +1396,30 @@ namespace tfs
       for (int64_t j = 0; j < helper.get_array_index(); ++j)
       {
         bool complete = false;
-        uint64_t start = 0;
-        BlockCollect* pblock = NULL;
-        ServerCollect* server = *helper.at(j);
-        assert(NULL != server);
+        ServerCollect* pserver = *helper.at(j);
+        assert(NULL != pserver);
+        uint64_t start = 0, id = pserver->id();
+
         do
         {
           result.clear();
-          complete = server->get_range_blocks(result, start, count);
+          complete = pserver->get_range_blocks(result, start, count);
           for (int64_t i = 0; i < result.get_array_index(); ++i)
           {
             start = *result.at(i);
-            pblock = get_block_manager().get(start);
+            BlockCollect* pblock = get_block_manager().get(start);
             if (NULL != pblock)
             {
+              if (pblock->exist(id) && (NULL == get_server_manager().get(id)))
+                get_block_manager().relieve_relation(pblock, id, now);
               if (get_block_manager().need_replicate(pblock))
                 get_block_manager().push_to_emergency_replicate_queue(pblock);
             }
           }
         }
         while (!complete);
-        get_gc_manager().add(server, now);
+
+        get_gc_manager().add(pserver, now);
       }
       return true;
     }

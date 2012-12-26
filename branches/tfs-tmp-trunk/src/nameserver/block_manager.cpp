@@ -341,7 +341,7 @@ namespace tfs
 
     int BlockManager::get_servers(ArrayHelper<uint64_t>& servers, const BlockCollect* block) const
     {
-      int32_t ret = NULL == block ? EXIT_NO_BLOCK : TFS_SUCCESS;
+      int32_t ret = (NULL == block) ? EXIT_NO_BLOCK : TFS_SUCCESS;
       if (TFS_SUCCESS == ret)
       {
         RWLock::Lock lock(get_mutex_(block->id()), READ_LOCKER);
@@ -490,7 +490,7 @@ namespace tfs
       {
         GCObject* object = NULL;
         BlockCollect* block = NULL;
-        for (int64_t index; index < blocks.get_array_index(); ++index)
+        for (int64_t index = 0; index < blocks.get_array_index(); ++index)
         {
           const BlockInfoV2& info = (*blocks.at(index));
           block = get(info.block_id_);
@@ -550,10 +550,10 @@ namespace tfs
         BlockCollect* block = get(info.block_id_);
         if ((NULL == block && addnew))
         {
+          isnew = true;
           RWLock::Lock lock(get_mutex_(info.block_id_), WRITE_LOCKER);
           block = insert_(info.block_id_, now);
           assert(NULL != block);
-          isnew = true;
           ret = build_relation_(block, writable, master, server->id(), now);
         }
         if (TFS_SUCCESS == ret)

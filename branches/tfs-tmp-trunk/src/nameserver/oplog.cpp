@@ -33,7 +33,7 @@ namespace tfs
       int32_t ret = NULL != data && data_len - pos >= length() ? common::TFS_SUCCESS : common::TFS_ERROR;
       if (common::TFS_SUCCESS == ret)
       {
-        ret = common::Serialization::set_int32(data, data_len, pos, seqno_);
+        ret = common::Serialization::set_int64(data, data_len, pos, seqno_);
       }
       if (common::TFS_SUCCESS == ret)
       {
@@ -63,7 +63,7 @@ namespace tfs
       int32_t ret = NULL != data && data_len - pos >= length() ? common::TFS_SUCCESS : common::TFS_ERROR;
       if (common::TFS_SUCCESS == ret)
       {
-        ret = common::Serialization::get_int32(data, data_len, pos, reinterpret_cast<int32_t*>(&seqno_));
+        ret = common::Serialization::get_int64(data, data_len, pos, reinterpret_cast<int64_t*>(&seqno_));
       }
       if (common::TFS_SUCCESS == ret)
       {
@@ -89,14 +89,14 @@ namespace tfs
     }
     int64_t OpLogHeader::length() const
     {
-      return common::INT_SIZE * 4;
+      return common::INT_SIZE * 3 + common::INT64_SIZE;
     }
     int OpLogRotateHeader::serialize(char* data, const int64_t data_len, int64_t& pos) const
     {
       int32_t ret = NULL != data && data_len - pos >= length() ? common::TFS_SUCCESS : common::TFS_ERROR;
       if (common::TFS_SUCCESS == ret)
       {
-        ret = common::Serialization::set_int32(data, data_len, pos, seqno_);
+        ret = common::Serialization::set_int64(data, data_len, pos, seqno_);
       }
       if (common::TFS_SUCCESS == ret)
       {
@@ -113,7 +113,7 @@ namespace tfs
       int32_t ret = NULL != data && data_len - pos >= length() ? common::TFS_SUCCESS : common::TFS_ERROR;
       if (common::TFS_SUCCESS == ret)
       {
-        ret = common::Serialization::get_int32(data, data_len, pos, reinterpret_cast<int32_t*>(&seqno_));
+        ret = common::Serialization::get_int64(data, data_len, pos, reinterpret_cast<int64_t*>(&seqno_));
       }
       if (common::TFS_SUCCESS == ret)
       {
@@ -127,7 +127,7 @@ namespace tfs
     }
     int64_t OpLogRotateHeader::length() const
     {
-      return common::INT_SIZE * 3;
+      return common::INT_SIZE * 2  + common::INT64_SIZE;
     }
 
     void BlockOpLog::dump(const int32_t level) const
@@ -197,7 +197,7 @@ namespace tfs
 
     int64_t BlockOpLog::length(void) const
     {
-      return common::INT8_SIZE + info_.length() + common::INT8_SIZE + server_num_ * common::INT64_SIZE;
+      return common::INT8_SIZE * 2 + info_.length() + server_num_ * common::INT64_SIZE;
     }
 
     OpLog::OpLog(const std::string& logname, const int32_t max_log_slot_size) :
