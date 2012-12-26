@@ -2,6 +2,8 @@ package com.taobao.gulu.server;
 
 import java.net.InetSocketAddress;
 import java.nio.channels.SocketChannel;
+import java.util.concurrent.TimeUnit;
+
 import com.taobao.gulu.help.proc.HelpProc;
 
 /**
@@ -181,9 +183,11 @@ public class NginxServer extends HelpProc implements Server {
 	@Override
 	public boolean restart() {
 		String conf = conf_file_directory + default_conf;
-		try {
+		try 
+		{
 			doServerCtl(conf, action_stop);
 			doServerCtl(conf, action_start);
+			TimeUnit.SECONDS.sleep(15);
 			return detectServerStatus();
 		} 
 		catch (Exception e) 
