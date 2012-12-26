@@ -45,20 +45,20 @@
 	
 	<bean id="shellServer036202" class="com.taobao.gulu.server.ShellServer">
 		<property name="host" value="10.232.36.202" />
-		<property name="username" value="gongyuan.cz" />
-		<property name="password" value="taobao1985" />
+		<property name="username" value="yiming.czw" />
+		<property name="password" value="727150240" />
 	</bean>
 
 	<bean id="shellServer036209" class="com.taobao.gulu.server.ShellServer">
 		<property name="host" value="10.232.36.209" />
-		<property name="username" value="gongyuan.cz" />
-		<property name="password" value="taobao1985" />
+		<property name="username" value="yiming.czw" />
+		<property name="password" value="727150240" />
 	</bean>
 
 	<bean id="shellServer036210" class="com.taobao.gulu.server.ShellServer">
 		<property name="host" value="10.232.36.210" />
-		<property name="username" value="gongyuan.cz" />
-		<property name="password" value="taobao1985" />
+		<property name="username" value="yiming.czw" />
+		<property name="password" value="727150240" />
 	</bean>
 
 	<bean id="tfs_NginxA01" class="com.taobao.gulu.database.TFS">
