@@ -185,7 +185,7 @@ namespace tfs
       return logic_block_manager_.get_all_block_info(blocks);
     }
 
-    int BlockManager::get_all_block_info(common::ArrayHelper<common::BlockInfoV2*>& blocks) const
+    int BlockManager::get_all_block_info(common::ArrayHelper<common::BlockInfoV2>& blocks) const
     {
       blocks.clear();
       RWLock::Lock lock(mutex_, READ_LOCKER);

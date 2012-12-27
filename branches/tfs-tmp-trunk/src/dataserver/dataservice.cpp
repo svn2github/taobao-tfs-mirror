@@ -1087,6 +1087,8 @@ namespace tfs
             case WRITE_FILE_MESSAGE_V2:
             case CLOSE_FILE_MESSAGE_V2:
             case UNLINK_FILE_MESSAGE_V2:
+            case NEW_BLOCK_MESSAGE_V2:
+            case REMOVE_BLOCK_MESSAGE_V2:
               ret = client_request_server_.handle(packet);
               break;
             default:
@@ -2310,11 +2312,15 @@ namespace tfs
        }
        else
        {
-         block_manager_->get_all_block_info(req_msg.get_blocks_ext());
+         int32_t block_count = block_manager_->get_all_logic_block_count();
+         BlockInfoV2* blocks_ext = req_msg.alloc_blocks_ext(block_count);
+         assert(NULL != blocks_ext);
+         ArrayHelper<BlockInfoV2> blocks_helper(block_count, blocks_ext);
+         block_manager_->get_all_block_info(blocks_helper);
        }
        req_msg.set_flag(msg->get_flag());
        TBSYS_LOG(INFO, "report block to ns, blocks size: %zd, ext size: %zd",
-           req_msg.get_blocks().size(), req_msg.get_blocks_ext().size());
+           req_msg.get_blocks().size(), req_msg.get_block_count());
 
        NewClient* client = NewClientManager::get_instance().create_client();
        tbnet::Packet* message = NULL;

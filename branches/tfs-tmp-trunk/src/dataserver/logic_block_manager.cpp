@@ -236,14 +236,15 @@ namespace tfs
       return TFS_SUCCESS;
     }
 
-    int LogicBlockManager::get_all_block_info(common::ArrayHelper<common::BlockInfoV2*>& blocks) const
+    int LogicBlockManager::get_all_block_info(common::ArrayHelper<common::BlockInfoV2>& blocks) const
     {
       blocks.clear();
       int32_t ret = TFS_SUCCESS, index = 0;
+      int32_t array_size = blocks.get_array_size();
       LOGIC_BLOCK_MAP_ITER iter = logic_blocks_.begin();
-      for (; iter != logic_blocks_.end() && TFS_SUCCESS == ret; ++iter, ++index)
+      for (; iter != logic_blocks_.end() && index < array_size && TFS_SUCCESS == ret; ++iter, ++index)
       {
-        common::BlockInfoV2& info = *(*blocks.at(index));
+        common::BlockInfoV2& info = *(blocks.get_base_address() + index);
         ret = (*iter)->get_block_info(info);
       }
       return TFS_SUCCESS;

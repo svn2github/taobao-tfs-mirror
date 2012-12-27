@@ -46,7 +46,7 @@ namespace tfs
 
     int ClientRequestServer::handle(tbnet::Packet* packet)
     {
-      int ret = (NULL == packet) ? EXIT_POINTER_NULL: TFS_SUCCESS;
+      int ret = (NULL == packet) ? EXIT_POINTER_NULL : TFS_SUCCESS;
       if (TFS_SUCCESS == ret)
       {
         int32_t pcode = packet->getPCode();
@@ -136,7 +136,7 @@ namespace tfs
       uint64_t peer_id = message->get_connection()->getPeerId();
 
       int ret = ((INVALID_BLOCK_ID == block_id) || (INVALID_FILE_ID == file_id) ||
-          (offset < 0) || (length <= 0)) ? EXIT_PARAMETER_ERROR: TFS_SUCCESS;
+          (offset < 0) || (length <= 0)) ? EXIT_PARAMETER_ERROR : TFS_SUCCESS;
 
       if (TFS_SUCCESS == ret)
       {
@@ -222,7 +222,7 @@ namespace tfs
         message->set_file_id(file_id);
         message->set_lease_id(lease_id);
         int32_t result = service_.post_message_to_server(message, servers);
-        ret = (result == EXIT_POST_MSG_RET_POST_MSG_ERROR) ? EXIT_SENDMSG_ERROR: TFS_SUCCESS;
+        ret = (result == EXIT_POST_MSG_RET_POST_MSG_ERROR) ? EXIT_SENDMSG_ERROR : TFS_SUCCESS;
         if (TFS_SUCCESS != ret)
         {
           TBSYS_LOG(ERROR, "write data to slave fail. blockid: %"PRI64_PREFIX"u, "
@@ -271,7 +271,7 @@ namespace tfs
         TBSYS_LOG(INFO, "write data %s, block: %"PRI64_PREFIX"d, fileid: %"PRI64_PREFIX"u, "
             "leaseid: %"PRI64_PREFIX"u, length: %d, offset: %d, role: slave, "
             "peer ip: %s, cost: %"PRI64_PREFIX"d",
-            (TFS_SUCCESS == ret) ? "success": "fail",
+            (TFS_SUCCESS == ret) ? "success" : "fail",
             block_id, file_id, lease_id, length, offset,
             tbsys::CNetUtil::addrToString(peer_id).c_str(), TIMER_DURATION());
       }
@@ -290,7 +290,7 @@ namespace tfs
       uint64_t peer_id = message->get_connection()->getPeerId();
 
       int ret = (INVALID_BLOCK_ID == block_id || INVALID_FILE_ID == file_id)?
-        EXIT_PARAMETER_ERROR: TFS_SUCCESS;
+        EXIT_PARAMETER_ERROR : TFS_SUCCESS;
 
       // close file
       if (TFS_SUCCESS == ret)
@@ -300,7 +300,7 @@ namespace tfs
         {
           TBSYS_LOG(ERROR, "close file fail. blockid: %"PRI64_PREFIX"u, "
               "fileid: %"PRI64_PREFIX"u, role: %s, ret: %d",
-              block_id, file_id, is_master? "master": "slave", ret);
+              block_id, file_id, is_master ? "master" : "slave", ret);
         }
       }
 
@@ -327,7 +327,7 @@ namespace tfs
           TBSYS_LOG(ERROR, "close file fail. block: %u, fileid: %"PRI64_PREFIX"u, "
               "lease id: %"PRI64_PREFIX"u, role: %s, ret: %d",
               block_id, file_id, lease_id,
-              is_master? "master": "slave", ret);
+              is_master? "master" : "slave", ret);
         }
       }
 
@@ -376,8 +376,8 @@ namespace tfs
       bool is_master = message->is_master();
       int64_t file_size = 0;
 
-      int ret = (INVALID_BLOCK_ID == block_id || INVALID_FILE_ID == file_id)?
-        EXIT_PARAMETER_ERROR: TFS_SUCCESS;
+      int ret = (INVALID_BLOCK_ID == block_id || INVALID_FILE_ID == file_id) ?
+        EXIT_PARAMETER_ERROR : TFS_SUCCESS;
 
       if (TFS_SUCCESS == ret)
       {
@@ -457,8 +457,7 @@ namespace tfs
       {
         TBSYS_LOG(ERROR, "new block %"PRI64_PREFIX"u fail, ret: %d", block_id, ret);
       }
-
-      if (TFS_SUCCESS == ret);
+      else
       {
         message->reply(new StatusMessage(STATUS_MESSAGE_OK));
       }
@@ -485,7 +484,7 @@ namespace tfs
 
     int ClientRequestServer::callback(NewClient* client)
     {
-      int ret = (NULL == client)? EXIT_PARAMETER_ERROR: TFS_SUCCESS;
+      int ret = (NULL == client) ? EXIT_PARAMETER_ERROR: TFS_SUCCESS;
       NewClient::RESPONSE_MSG_MAP* sresponse = NULL;
       NewClient::RESPONSE_MSG_MAP* fresponse = NULL;
       tbnet::Packet* source = NULL;

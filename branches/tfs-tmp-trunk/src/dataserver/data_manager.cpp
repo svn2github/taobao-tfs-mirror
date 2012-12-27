@@ -47,7 +47,7 @@ namespace tfs
     int DataManager::prepare_lease(const uint64_t block_id, uint64_t& file_id, uint64_t& lease_id,
         const LeaseType type, const VUINT64 servers)
     {
-      int ret = (INVALID_BLOCK_ID == block_id) ? EXIT_PARAMETER_ERROR: TFS_SUCCESS;
+      int ret = (INVALID_BLOCK_ID == block_id) ? EXIT_PARAMETER_ERROR : TFS_SUCCESS;
       if ((TFS_SUCCESS == ret) && (0 == (file_id & 0xFFFFFFFF)))
       {
         // TODO: add config item
@@ -202,7 +202,7 @@ namespace tfs
     int DataManager::close_file(const uint64_t block_id, uint64_t& file_id, const uint64_t lease_id)
     {
       int ret = ((INVALID_BLOCK_ID == block_id) || (INVALID_FILE_ID == file_id) ||
-          (INVALID_LEASE_ID == lease_id)) ? EXIT_PARAMETER_ERROR: TFS_SUCCESS;
+          (INVALID_LEASE_ID == lease_id)) ? EXIT_PARAMETER_ERROR : TFS_SUCCESS;
 
       Lease* lease = NULL;
       if (TFS_SUCCESS == ret)
@@ -210,7 +210,7 @@ namespace tfs
         LeaseId lid(block_id, file_id, lease_id);
         int64_t now = Func::get_monotonic_time();
         Lease* lease = lease_manager_.get(lid, now);
-        ret = (NULL == lease)? EXIT_DATA_FILE_ERROR: TFS_SUCCESS;
+        ret = (NULL == lease)? EXIT_DATA_FILE_ERROR : TFS_SUCCESS;
       }
 
       if (TFS_SUCCESS == ret)
@@ -259,7 +259,7 @@ namespace tfs
         LeaseId lid(block_id, file_id, lease_id);
         int64_t now = Func::get_monotonic_time();
         Lease* lease = lease_manager_.get(lid, now);
-        ret = (NULL == lease)? EXIT_DATA_FILE_ERROR: TFS_SUCCESS;
+        ret = (NULL == lease)? EXIT_DATA_FILE_ERROR : TFS_SUCCESS;
         if (TFS_SUCCESS == ret)
         {
           lease->update_member_info(service_.get_ds_ipport(), local, ret);
@@ -315,7 +315,7 @@ namespace tfs
        const uint64_t file_id, const uint64_t lease_id)
     {
       int ret = ((INVALID_BLOCK_ID == block_id) || (INVALID_FILE_ID == file_id) ||
-          (INVALID_LEASE_ID == lease_id)) ? EXIT_PARAMETER_ERROR: TFS_SUCCESS;
+          (INVALID_LEASE_ID == lease_id)) ? EXIT_PARAMETER_ERROR : TFS_SUCCESS;
 
       Lease* lease = NULL;
       if (TFS_SUCCESS == ret)
