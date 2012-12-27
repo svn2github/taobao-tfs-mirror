@@ -26,20 +26,23 @@ public class TFS_Restful_RcServer_Test_Retry_Test extends BaseCase {
 		String tfsFileNameWithOutSuffix = null;
 		
 		/* nginx log direct */
-		String errorLog = "/" + NGINX.getServer_file_directory() + "/logs/error.log";
-		String accessLog = "/" + NGINX.getServer_file_directory() + "/logs/access.log";
-		String pid = "/" + NGINX.getServer_file_directory() + "/logs/nginx.pid";
-		String readRetry202 = "read/stat retry: [0-9], select nameserver: 10.232.36.202:5202";
-		String readRetry202_1 = "select nameserver: 10.232.36.202:5202";
-		String readRetry209 = "read/stat retry: [0-9], select nameserver: 10.232.36.209:6209";
-		String readRetry209_1 = "select nameserver: 10.232.36.209:6209";
-		String readRetry = "read/stat retry:";
-		String writeRetry209 = "write retry: [0-9], select nameserver: 10.232.36.209:6209";
-		String writeRetry202 = "write retry: [0-9], select nameserver: 10.232.36.202:5202";
+		String errorLog = NGINX.getServer_file_directory() + "logs/error.log";
+		String accessLog = NGINX.getServer_file_directory() + "logs/access.log";
+		String pid = NGINX.getServer_file_directory() + "logs/nginx.pid";
+		
 		
 		String delete202 = "unlink, select nameserver: 10.232.36.202:5202";
-		String delete209_D = "unlink, no master found, select nameserver: 10.232.36.209:6209";
+		String delete209 = "unlink, select nameserver: 10.232.36.202:6209";
+		String deleteT2M = "unlink, select nameserver: 10.232.36.202:7202";
 		String deleteRetry = "unlink, select";
+		
+		String read = "read/stat";
+		String write = "write";
+		String unlink = "unlink";
+		
+		String Retry202_1 = "nameserver: 10.232.36.202:5202";
+		String Retry209_1 = "nameserver: 10.232.36.209:6209";
+		String RetryT2M = "nameserver: 10.232.36.202:7202";
 
 		/* set base url */
 		TFS tfsServer_D = tfs_NginxD01;
@@ -81,9 +84,9 @@ public class TFS_Restful_RcServer_Test_Retry_Test extends BaseCase {
 
 		try {
 			/* clean the nginx log */
-			tools.verifyCMD(SERVER0432, "rm -fr " + errorLog, "", "");
-			tools.verifyCMD(SERVER0432, "rm -fr " + accessLog, "", "");
-			tools.verifyCMD(SERVER0432, "kill -USR1 `cat " + pid + "`", "", "");
+			tools.verifyCMD(SERVER0435, "rm -fr " + errorLog, "", "");
+			tools.verifyCMD(SERVER0435, "rm -fr " + accessLog, "", "");
+			tools.verifyCMD(SERVER0435, "kill -USR1 `cat " + pid + "`", "", "");
 
 			/* set post method request */ // 单独写入T1B
 			// setting request info
@@ -95,14 +98,14 @@ public class TFS_Restful_RcServer_Test_Retry_Test extends BaseCase {
 			System.out.println("the tfs file name with suffix is  : " + tfsFileNameWithSuffix);
 			
 			/* verify log info */
-			tools.verifyCMD(SERVER0432, "cat " + errorLog + "| grep '" + writeRetry209 + "' -c", "1", "");
-	//		tools.verifyCMD(SERVER0432, "cat " + errorLog + "| grep '" + readRetry209 + "' -c", "1", "");
+			tools.verifyCMD(SERVER0435, "cat " + errorLog + "| grep '" + write + "'|grep '"+Retry209_1+"' -c", "1", "");
+	//		tools.verifyCMD(SERVER0435, "cat " + errorLog + "| grep '" + readRetry209 + "' -c", "1", "");
 
 			
 			/* clean the nginx log */
-			tools.verifyCMD(SERVER0432, "rm -fr " + errorLog, "", "");
-			tools.verifyCMD(SERVER0432, "rm -fr " + accessLog, "", "");
-			tools.verifyCMD(SERVER0432, "kill -USR1 `cat " + pid + "`", "", "");
+			tools.verifyCMD(SERVER0435, "rm -fr " + errorLog, "", "");
+			tools.verifyCMD(SERVER0435, "rm -fr " + accessLog, "", "");
+			tools.verifyCMD(SERVER0435, "kill -USR1 `cat " + pid + "`", "", "");
 			
 			/* set get method request */ // 就近访问T1M, 查看重试日志
 			// setting request info
@@ -112,13 +115,13 @@ public class TFS_Restful_RcServer_Test_Retry_Test extends BaseCase {
 	//		tools.showResponse(setGetMethod(getUrl));
 			tools.verifyResponseBodyWithLocalFile(setGetMethod(getUrl), expectGetMessage);
 			/* verify log info */
-			tools.verifyCMD(SERVER0432, "cat " + errorLog + "| grep '" + readRetry202 + "' -c", "1", "");
-			tools.verifyCMD(SERVER0432, "cat " + errorLog + "| grep '" + readRetry209 + "' -c", "1", "");
-			tools.verifyCMD(SERVER0432, "cat " + errorLog + "| grep -m 1 '" + readRetry + "'", readRetry202_1, "");
+			tools.verifyCMD(SERVER0435, "cat " + errorLog + "| grep '" + read + "'|grep '"+Retry202_1+"' -c", "1", "");
+			tools.verifyCMD(SERVER0435, "cat " + errorLog + "| grep '" + read + "'|grep '"+Retry209_1+"' -c", "1", "");
+			tools.verifyCMD(SERVER0435, "cat " + errorLog + "| grep -m 1 '" + read + "'", Retry202_1, "");
 			/* clean the nginx log */
-			tools.verifyCMD(SERVER0432, "rm -fr " + errorLog, "", "");
-			tools.verifyCMD(SERVER0432, "rm -fr " + accessLog, "", "");
-			tools.verifyCMD(SERVER0432, "kill -USR1 `cat " + pid + "`", "", "");
+			tools.verifyCMD(SERVER0435, "rm -fr " + errorLog, "", "");
+			tools.verifyCMD(SERVER0435, "rm -fr " + accessLog, "", "");
+			tools.verifyCMD(SERVER0435, "kill -USR1 `cat " + pid + "`", "", "");
 			
 			/* set get method request */ // 就近访问T1B, 查看重试日志
 			// setting request info
@@ -127,13 +130,13 @@ public class TFS_Restful_RcServer_Test_Retry_Test extends BaseCase {
 			/* do get file action */
 			tools.verifyResponseBodyWithLocalFile(setGetMethod(getUrl), expectGetMessage);
 			/* verify log info */
-	//		tools.verifyCMD(SERVER0432, "cat " + errorLog + "| grep '" + readRetry202 + "' -c", "1", "");
-			tools.verifyCMD(SERVER0432, "cat " + errorLog + "| grep '" + readRetry209 + "' -c", "1", "");
-			tools.verifyCMD(SERVER0432, "cat " + errorLog + "| grep -m 1 '" + readRetry + "'", readRetry209_1, "");
+	//		tools.verifyCMD(SERVER0435, "cat " + errorLog + "| grep '" + readRetry202 + "' -c", "1", "");
+			tools.verifyCMD(SERVER0435, "cat " + errorLog + "| grep '" + read + "'|grep '"+Retry209_1+"' -c", "1", "");
+			tools.verifyCMD(SERVER0435, "cat " + errorLog + "| grep -m 1 '" + read + "'", Retry209_1, "");
 			/* clean the nginx log */
-			tools.verifyCMD(SERVER0432, "rm -fr " + errorLog, "", "");
-			tools.verifyCMD(SERVER0432, "rm -fr " + accessLog, "", "");
-			tools.verifyCMD(SERVER0432, "kill -USR1 `cat " + pid + "`", "", "");
+			tools.verifyCMD(SERVER0435, "rm -fr " + errorLog, "", "");
+			tools.verifyCMD(SERVER0435, "rm -fr " + accessLog, "", "");
+			tools.verifyCMD(SERVER0435, "kill -USR1 `cat " + pid + "`", "", "");
 			
 			
 			/* set delete method request */ // 删除数据
@@ -144,11 +147,11 @@ public class TFS_Restful_RcServer_Test_Retry_Test extends BaseCase {
 			/* do delete file aciton */
 			tools.verifyResponse(setDeleteMethod(deleteUrl), expectDeleteMessage);
 			// 验证删除及删除顺序
-			tools.verifyCMD(SERVER0432, "cat " + errorLog + "| grep '" + delete209_D + "' -c", "1", "");
+			tools.verifyCMD(SERVER0435, "cat " + errorLog + "| grep '" + Retry209_1 + "' -c", "1", "");
 			/* clean the nginx log */
-			tools.verifyCMD(SERVER0432, "rm -fr " + errorLog, "", "");
-			tools.verifyCMD(SERVER0432, "rm -fr " + accessLog, "", "");
-			tools.verifyCMD(SERVER0432, "kill -USR1 `cat " + pid + "`", "", "");	
+			tools.verifyCMD(SERVER0435, "rm -fr " + errorLog, "", "");
+			tools.verifyCMD(SERVER0435, "rm -fr " + accessLog, "", "");
+			tools.verifyCMD(SERVER0435, "kill -USR1 `cat " + pid + "`", "", "");	
 
 			
 			
@@ -159,13 +162,13 @@ public class TFS_Restful_RcServer_Test_Retry_Test extends BaseCase {
 			/* do get file action */
 			tools.verifyResponse(setGetMethod(getUrl), expectGetMessageAfterDelete);
 			/* verify log info */
-			tools.verifyCMD(SERVER0432, "cat " + errorLog + "| grep '" + readRetry202 + "' -c", "1", "");
-			tools.verifyCMD(SERVER0432, "cat " + errorLog + "| grep '" + readRetry209 + "' -c", "1", "");
-			tools.verifyCMD(SERVER0432, "cat " + errorLog + "| grep -m 1 '" + readRetry + "'", readRetry202_1, "");
+			tools.verifyCMD(SERVER0435, "cat " + errorLog + "| grep '" + read + "'|grep '"+Retry202_1+"' -c", "1", "");
+			tools.verifyCMD(SERVER0435, "cat " + errorLog + "| grep '" + read + "'|grep '"+Retry209_1+"' -c", "1", "");
+			tools.verifyCMD(SERVER0435, "cat " + errorLog + "| grep -m 1 '" + read + "'", Retry202_1, "");
 			/* clean the nginx log */
-			tools.verifyCMD(SERVER0432, "rm -fr " + errorLog, "", "");
-			tools.verifyCMD(SERVER0432, "rm -fr " + accessLog, "", "");
-			tools.verifyCMD(SERVER0432, "kill -USR1 `cat " + pid + "`", "", "");
+			tools.verifyCMD(SERVER0435, "rm -fr " + errorLog, "", "");
+			tools.verifyCMD(SERVER0435, "rm -fr " + accessLog, "", "");
+			tools.verifyCMD(SERVER0435, "kill -USR1 `cat " + pid + "`", "", "");
 			
 			/* set get method request */ // 就近访问T1B, 查看重试日志
 			// setting request info
@@ -174,13 +177,13 @@ public class TFS_Restful_RcServer_Test_Retry_Test extends BaseCase {
 			/* do get file action */
 			tools.verifyResponse(setGetMethod(getUrl), expectGetMessageAfterDelete);
 			/* verify log info */
-			tools.verifyCMD(SERVER0432, "cat " + errorLog + "| grep '" + readRetry202 + "' -c", "1", "");
-			tools.verifyCMD(SERVER0432, "cat " + errorLog + "| grep '" + readRetry209 + "' -c", "1", "");
-			tools.verifyCMD(SERVER0432, "cat " + errorLog + "| grep -m 1 '" + readRetry + "'", readRetry209_1, "");
+			tools.verifyCMD(SERVER0435, "cat " + errorLog + "| grep '" + read + "'|grep '"+Retry202_1+"' -c", "1", "");
+			tools.verifyCMD(SERVER0435, "cat " + errorLog + "| grep '" + read + "'|grep '"+Retry209_1+"' -c", "1", "");
+			tools.verifyCMD(SERVER0435, "cat " + errorLog + "| grep -m 1 '" + read + "'", Retry209_1, "");
 			/* clean the nginx log */
-			tools.verifyCMD(SERVER0432, "rm -fr " + errorLog, "", "");
-			tools.verifyCMD(SERVER0432, "rm -fr " + accessLog, "", "");
-			tools.verifyCMD(SERVER0432, "kill -USR1 `cat " + pid + "`", "", "");
+			tools.verifyCMD(SERVER0435, "rm -fr " + errorLog, "", "");
+			tools.verifyCMD(SERVER0435, "rm -fr " + accessLog, "", "");
+			tools.verifyCMD(SERVER0435, "kill -USR1 `cat " + pid + "`", "", "");
 			
 			/* set post method request */ // 单独写T1B
 			// setting request info
@@ -192,11 +195,11 @@ public class TFS_Restful_RcServer_Test_Retry_Test extends BaseCase {
 			System.out.println("the tfs file name without suffix is  : " + tfsFileNameWithOutSuffix);
 			
 			/* verify log info */
-			tools.verifyCMD(SERVER0432, "cat " + errorLog + "| grep '" + writeRetry209 + "' -c", "1", "");
+			tools.verifyCMD(SERVER0435, "cat " + errorLog + "| grep '" + write + "'|grep '"+Retry209_1+"' -c", "1", "");
 			/* clean the nginx log */
-			tools.verifyCMD(SERVER0432, "rm -fr " + errorLog, "", "");
-			tools.verifyCMD(SERVER0432, "rm -fr " + accessLog, "", "");
-			tools.verifyCMD(SERVER0432, "kill -USR1 `cat " + pid + "`", "", "");
+			tools.verifyCMD(SERVER0435, "rm -fr " + errorLog, "", "");
+			tools.verifyCMD(SERVER0435, "rm -fr " + accessLog, "", "");
+			tools.verifyCMD(SERVER0435, "kill -USR1 `cat " + pid + "`", "", "");
 			
 			/* set get method request */ // 就近访问T1M 查看重试日志
 			// setting request info
@@ -205,13 +208,13 @@ public class TFS_Restful_RcServer_Test_Retry_Test extends BaseCase {
 			/* do get file action */
 			tools.verifyResponseBodyWithLocalFile(setGetMethod(getUrl), expectGetMessage);
 			/* verify log info */
-			tools.verifyCMD(SERVER0432, "cat " + errorLog + "| grep '" + readRetry202 + "' -c", "1", "");
-			tools.verifyCMD(SERVER0432, "cat " + errorLog + "| grep '" + readRetry209 + "' -c", "1", "");
-			tools.verifyCMD(SERVER0432, "cat " + errorLog + "| grep -m 1 '" + readRetry + "'", readRetry202_1, "");
+			tools.verifyCMD(SERVER0435, "cat " + errorLog + "| grep '" + read + "'|grep '"+Retry202_1+"' -c", "1", "");
+			tools.verifyCMD(SERVER0435, "cat " + errorLog + "| grep '" + read + "'|grep '"+Retry209_1+"' -c", "1", "");
+			tools.verifyCMD(SERVER0435, "cat " + errorLog + "| grep -m 1 '" + read + "'", Retry202_1, "");
 			/* clean the nginx log */
-			tools.verifyCMD(SERVER0432, "rm -fr " + errorLog, "", "");
-			tools.verifyCMD(SERVER0432, "rm -fr " + accessLog, "", "");
-			tools.verifyCMD(SERVER0432, "kill -USR1 `cat " + pid + "`", "", "");
+			tools.verifyCMD(SERVER0435, "rm -fr " + errorLog, "", "");
+			tools.verifyCMD(SERVER0435, "rm -fr " + accessLog, "", "");
+			tools.verifyCMD(SERVER0435, "kill -USR1 `cat " + pid + "`", "", "");
 			
 			/* set get method request */ // 就近访问T1B, 查看重试日志
 			// setting request info
@@ -220,13 +223,13 @@ public class TFS_Restful_RcServer_Test_Retry_Test extends BaseCase {
 			/* do get file action */
 			tools.verifyResponseBodyWithLocalFile(setGetMethod(getUrl), expectGetMessage);
 			/* verify log info */
-	//		tools.verifyCMD(SERVER0432, "cat " + errorLog + "| grep '" + readRetry202 + "' -c", "1", "");
-			tools.verifyCMD(SERVER0432, "cat " + errorLog + "| grep '" + readRetry209 + "' -c", "1", "");
-			tools.verifyCMD(SERVER0432, "cat " + errorLog + "| grep -m 1 '" + readRetry + "'", readRetry209_1, "");
+	//		tools.verifyCMD(SERVER0435, "cat " + errorLog + "| grep '" + readRetry202 + "' -c", "1", "");
+			tools.verifyCMD(SERVER0435, "cat " + errorLog + "| grep '" + read + "'|grep '"+Retry209_1+"' -c", "1", "");
+			tools.verifyCMD(SERVER0435, "cat " + errorLog + "| grep -m 1 '" + read + "'", Retry209_1, "");
 			/* clean the nginx log */
-			tools.verifyCMD(SERVER0432, "rm -fr " + errorLog, "", "");
-			tools.verifyCMD(SERVER0432, "rm -fr " + accessLog, "", "");
-			tools.verifyCMD(SERVER0432, "kill -USR1 `cat " + pid + "`", "", "");
+			tools.verifyCMD(SERVER0435, "rm -fr " + errorLog, "", "");
+			tools.verifyCMD(SERVER0435, "rm -fr " + accessLog, "", "");
+			tools.verifyCMD(SERVER0435, "kill -USR1 `cat " + pid + "`", "", "");
 			
 			/* set delete method request */ // 删除数据
 			// setting request info
@@ -236,11 +239,11 @@ public class TFS_Restful_RcServer_Test_Retry_Test extends BaseCase {
 			/* do delete file aciton */
 			tools.verifyResponse(setDeleteMethod(deleteUrl), expectDeleteMessage);
 			// 验证删除及删除顺序
-			tools.verifyCMD(SERVER0432, "cat " + errorLog + "| grep '" + delete209_D + "' -c", "1", "");
+			tools.verifyCMD(SERVER0435, "cat " + errorLog + "| grep '" + Retry209_1 + "' -c", "1", "");
 			/* clean the nginx log */
-			tools.verifyCMD(SERVER0432, "rm -fr " + errorLog, "", "");
-			tools.verifyCMD(SERVER0432, "rm -fr " + accessLog, "", "");
-			tools.verifyCMD(SERVER0432, "kill -USR1 `cat " + pid + "`", "", "");
+			tools.verifyCMD(SERVER0435, "rm -fr " + errorLog, "", "");
+			tools.verifyCMD(SERVER0435, "rm -fr " + accessLog, "", "");
+			tools.verifyCMD(SERVER0435, "kill -USR1 `cat " + pid + "`", "", "");
 			
 			/* set get method request */ // 就近访问T1M  查看重试日志
 			// setting request info
@@ -251,13 +254,13 @@ public class TFS_Restful_RcServer_Test_Retry_Test extends BaseCase {
 			tools.verifyResponse(setGetMethod(getUrl), expectGetMessageAfterDelete);
 			
 			/* verify log info */
-			tools.verifyCMD(SERVER0432, "cat " + errorLog + "| grep '" + readRetry202 + "' -c", "1", "");
-			tools.verifyCMD(SERVER0432, "cat " + errorLog + "| grep '" + readRetry209 + "' -c", "1", "");
-			tools.verifyCMD(SERVER0432, "cat " + errorLog + "| grep -m 1 '" + readRetry + "'", readRetry202_1, "");
+			tools.verifyCMD(SERVER0435, "cat " + errorLog + "| grep '" + read + "'|grep '"+Retry202_1+"' -c", "1", "");
+			tools.verifyCMD(SERVER0435, "cat " + errorLog + "| grep '" + read + "'|grep '"+Retry209_1+"' -c", "1", "");
+			tools.verifyCMD(SERVER0435, "cat " + errorLog + "| grep -m 1 '" + read + "'", Retry202_1, "");
 			/* clean the nginx log */
-			tools.verifyCMD(SERVER0432, "rm -fr " + errorLog, "", "");
-			tools.verifyCMD(SERVER0432, "rm -fr " + accessLog, "", "");
-			tools.verifyCMD(SERVER0432, "kill -USR1 `cat " + pid + "`", "", "");
+			tools.verifyCMD(SERVER0435, "rm -fr " + errorLog, "", "");
+			tools.verifyCMD(SERVER0435, "rm -fr " + accessLog, "", "");
+			tools.verifyCMD(SERVER0435, "kill -USR1 `cat " + pid + "`", "", "");
 			
 			/* set get method request */ // 就近访问T1B  查看重试日志
 			// setting request info
@@ -266,13 +269,13 @@ public class TFS_Restful_RcServer_Test_Retry_Test extends BaseCase {
 			/* do get file action */
 			tools.verifyResponse(setGetMethod(getUrl), expectGetMessageAfterDelete);
 			/* verify log info */
-			tools.verifyCMD(SERVER0432, "cat " + errorLog + "| grep '" + readRetry202 + "' -c", "1", "");
-			tools.verifyCMD(SERVER0432, "cat " + errorLog + "| grep '" + readRetry209 + "' -c", "1", "");
-			tools.verifyCMD(SERVER0432, "cat " + errorLog + "| grep -m 1 '" + readRetry + "'", readRetry209_1, "");
+			tools.verifyCMD(SERVER0435, "cat " + errorLog + "| grep '" + read + "'|grep '"+Retry202_1+"' -c", "1", "");
+			tools.verifyCMD(SERVER0435, "cat " + errorLog + "| grep '" + read + "'|grep '"+Retry209_1+"' -c", "1", "");
+			tools.verifyCMD(SERVER0435, "cat " + errorLog + "| grep -m 1 '" + read + "'", Retry209_1, "");
 			/* clean the nginx log */
-			tools.verifyCMD(SERVER0432, "rm -fr " + errorLog, "", "");
-			tools.verifyCMD(SERVER0432, "rm -fr " + accessLog, "", "");
-			tools.verifyCMD(SERVER0432, "kill -USR1 `cat " + pid + "`", "", "");
+			tools.verifyCMD(SERVER0435, "rm -fr " + errorLog, "", "");
+			tools.verifyCMD(SERVER0435, "rm -fr " + accessLog, "", "");
+			tools.verifyCMD(SERVER0435, "kill -USR1 `cat " + pid + "`", "", "");
 			
 			
 		} catch (Exception e) {
@@ -298,17 +301,23 @@ public class TFS_Restful_RcServer_Test_Retry_Test extends BaseCase {
 		String tfsFileNameWithOutSuffix = null;
 
 		/* nginx log direct */
-		String errorLog = "/" + NGINX.getServer_file_directory() + "/logs/error.log";
-		String accessLog = "/" + NGINX.getServer_file_directory() + "/logs/access.log";
-		String pid = "/" + NGINX.getServer_file_directory() + "/logs/nginx.pid";
-		String readRetry202 = "read/stat retry: [0-9], select nameserver: 10.232.36.202:5202";
-		String readRetry202_1 = "select nameserver: 10.232.36.202:5202";
-		String readRetry209 = "read/stat retry: [0-9], select nameserver: 10.232.36.209:6209";
-		String readRetry209_1 = "select nameserver: 10.232.36.209:6209";
-		String readRetry = "read/stat retry:";
+		String errorLog = NGINX.getServer_file_directory() + "logs/error.log";
+		String accessLog = NGINX.getServer_file_directory() + "logs/access.log";
+		String pid = NGINX.getServer_file_directory() + "logs/nginx.pid";
+		
+		
 		String delete202 = "unlink, select nameserver: 10.232.36.202:5202";
 		String delete209 = "unlink, select nameserver: 10.232.36.202:6209";
+		String deleteT2M = "unlink, select nameserver: 10.232.36.202:7202";
 		String deleteRetry = "unlink, select";
+		
+		String read = "read/stat";
+		String write = "write";
+		String unlink = "unlink";
+		
+		String Retry202_1 = "nameserver: 10.232.36.202:5202";
+		String Retry209_1 = "nameserver: 10.232.36.209:6209";
+		String RetryT2M = "nameserver: 10.232.36.202:7202";
 		
 		/* set base url */
 		TFS tfsServer_A = tfs_NginxA01;
@@ -346,9 +355,9 @@ public class TFS_Restful_RcServer_Test_Retry_Test extends BaseCase {
 
 		try {
 			/* clean the nginx log */
-			tools.verifyCMD(SERVER0432, "rm -fr /" + NGINX.getServer_file_directory() + "/logs/error.log", "", "");
-			tools.verifyCMD(SERVER0432, "rm -fr /" + NGINX.getServer_file_directory() + "/logs/access.log", "", "");
-			tools.verifyCMD(SERVER0432, "kill -USR1 `cat /" + NGINX.getServer_file_directory() + "/logs/nginx.pid`", "", "");
+			tools.verifyCMD(SERVER0435, "rm -fr /" + NGINX.getServer_file_directory() + "/logs/error.log", "", "");
+			tools.verifyCMD(SERVER0435, "rm -fr /" + NGINX.getServer_file_directory() + "/logs/access.log", "", "");
+			tools.verifyCMD(SERVER0435, "kill -USR1 `cat /" + NGINX.getServer_file_directory() + "/logs/nginx.pid`", "", "");
 
 			/* set post method request */ // 单独写入T1M
 			// setting request info
@@ -366,13 +375,13 @@ public class TFS_Restful_RcServer_Test_Retry_Test extends BaseCase {
 			/* do get file action */
 			tools.verifyResponseBodyWithLocalFile(setGetMethod(getUrl), expectGetMessage);
 			/* verify log info */
-			tools.verifyCMD(SERVER0432, "cat " + errorLog + "| grep '" + readRetry202 + "' -c", "1", "");
-	//		tools.verifyCMD(SERVER0432, "cat " + errorLog + "| grep '" + readRetry209 + "' -c", "1", "");
-			tools.verifyCMD(SERVER0432, "cat " + errorLog + "| grep -m 1 '" + readRetry + "'", readRetry202_1, "");
+			tools.verifyCMD(SERVER0435, "cat " + errorLog + "| grep '" + readRetry202 + "' -c", "1", "");
+	//		tools.verifyCMD(SERVER0435, "cat " + errorLog + "| grep '" + readRetry209 + "' -c", "1", "");
+			tools.verifyCMD(SERVER0435, "cat " + errorLog + "| grep -m 1 '" + readRetry + "'", readRetry202_1, "");
 			/* clean the nginx log */
-			tools.verifyCMD(SERVER0432, "rm -fr " + errorLog, "", "");
-			tools.verifyCMD(SERVER0432, "rm -fr " + accessLog, "", "");
-			tools.verifyCMD(SERVER0432, "kill -USR1 `cat " + pid + "`", "", "");
+			tools.verifyCMD(SERVER0435, "rm -fr " + errorLog, "", "");
+			tools.verifyCMD(SERVER0435, "rm -fr " + accessLog, "", "");
+			tools.verifyCMD(SERVER0435, "kill -USR1 `cat " + pid + "`", "", "");
 			
 			
 			getUrl = url_IP02 + "/" + tfsFileNameWithSuffix + "?suffix=" + suffix;
@@ -382,13 +391,13 @@ public class TFS_Restful_RcServer_Test_Retry_Test extends BaseCase {
 			tools.verifyResponseBodyWithLocalFile(setGetMethod(getUrl), expectGetMessage);
 			
 			/* verify log info */
-		//	tools.verifyCMD(SERVER0432, "cat " + errorLog + "| grep '" + readRetry202 + "' -c", "1", "");
-			tools.verifyCMD(SERVER0432, "cat " + errorLog + "| grep '" + readRetry209 + "' -c", "1", "");
-			tools.verifyCMD(SERVER0432, "cat " + errorLog + "| grep -m 1 '" + readRetry + "'", readRetry209_1, "");
+		//	tools.verifyCMD(SERVER0435, "cat " + errorLog + "| grep '" + readRetry202 + "' -c", "1", "");
+			tools.verifyCMD(SERVER0435, "cat " + errorLog + "| grep '" + readRetry209 + "' -c", "1", "");
+			tools.verifyCMD(SERVER0435, "cat " + errorLog + "| grep -m 1 '" + readRetry + "'", readRetry209_1, "");
 			/* clean the nginx log */
-			tools.verifyCMD(SERVER0432, "rm -fr " + errorLog, "", "");
-			tools.verifyCMD(SERVER0432, "rm -fr " + accessLog, "", "");
-			tools.verifyCMD(SERVER0432, "kill -USR1 `cat " + pid + "`", "", "");
+			tools.verifyCMD(SERVER0435, "rm -fr " + errorLog, "", "");
+			tools.verifyCMD(SERVER0435, "rm -fr " + accessLog, "", "");
+			tools.verifyCMD(SERVER0435, "kill -USR1 `cat " + pid + "`", "", "");
 			
 			
 			/* set delete method request */ // 删除数据
@@ -398,11 +407,11 @@ public class TFS_Restful_RcServer_Test_Retry_Test extends BaseCase {
 			/* do delete file aciton */
 			tools.verifyResponse(setDeleteMethod(deleteUrl), expectDeleteMessage);
 			// 验证删除及删除顺序
-			tools.verifyCMD(SERVER0432, "cat " + errorLog + "| grep '" + delete202 + "' -c", "1", "");
+			tools.verifyCMD(SERVER0435, "cat " + errorLog + "| grep '" + delete202 + "' -c", "1", "");
 			/* clean the nginx log */
-			tools.verifyCMD(SERVER0432, "rm -fr " + errorLog, "", "");
-			tools.verifyCMD(SERVER0432, "rm -fr " + accessLog, "", "");
-			tools.verifyCMD(SERVER0432, "kill -USR1 `cat " + pid + "`", "", "");	
+			tools.verifyCMD(SERVER0435, "rm -fr " + errorLog, "", "");
+			tools.verifyCMD(SERVER0435, "rm -fr " + accessLog, "", "");
+			tools.verifyCMD(SERVER0435, "kill -USR1 `cat " + pid + "`", "", "");	
 
 			
 			// use java client verify the status info 
@@ -415,13 +424,13 @@ public class TFS_Restful_RcServer_Test_Retry_Test extends BaseCase {
 			/* do get file action */
 			tools.verifyResponse(setGetMethod(getUrl), expectGetMessageAfterDelete);
 			/* verify log info */
-			tools.verifyCMD(SERVER0432, "cat " + errorLog + "| grep '" + readRetry202 + "' -c", "1", "");
-			tools.verifyCMD(SERVER0432, "cat " + errorLog + "| grep '" + readRetry209 + "' -c", "1", "");
-			tools.verifyCMD(SERVER0432, "cat " + errorLog + "| grep -m 1 '" + readRetry + "'", readRetry202_1, "");
+			tools.verifyCMD(SERVER0435, "cat " + errorLog + "| grep '" + readRetry202 + "' -c", "1", "");
+			tools.verifyCMD(SERVER0435, "cat " + errorLog + "| grep '" + readRetry209 + "' -c", "1", "");
+			tools.verifyCMD(SERVER0435, "cat " + errorLog + "| grep -m 1 '" + readRetry + "'", readRetry202_1, "");
 			/* clean the nginx log */
-			tools.verifyCMD(SERVER0432, "rm -fr " + errorLog, "", "");
-			tools.verifyCMD(SERVER0432, "rm -fr " + accessLog, "", "");
-			tools.verifyCMD(SERVER0432, "kill -USR1 `cat " + pid + "`", "", "");
+			tools.verifyCMD(SERVER0435, "rm -fr " + errorLog, "", "");
+			tools.verifyCMD(SERVER0435, "rm -fr " + accessLog, "", "");
+			tools.verifyCMD(SERVER0435, "kill -USR1 `cat " + pid + "`", "", "");
 			
 			
 			/* set get method request */ // 从逻辑集群A T1B访问删除数据,验证重试及重试顺序
@@ -431,13 +440,13 @@ public class TFS_Restful_RcServer_Test_Retry_Test extends BaseCase {
 			/* do get file action */
 			tools.verifyResponse(setGetMethod(getUrl), expectGetMessageAfterDelete);
 			/* verify log info */
-			tools.verifyCMD(SERVER0432, "cat " + errorLog + "| grep '" + readRetry202 + "' -c", "1", "");
-			tools.verifyCMD(SERVER0432, "cat " + errorLog + "| grep '" + readRetry209 + "' -c", "1", "");
-			tools.verifyCMD(SERVER0432, "cat " + errorLog + "| grep -m 1 '" + readRetry + "'", readRetry209_1, "");
+			tools.verifyCMD(SERVER0435, "cat " + errorLog + "| grep '" + readRetry202 + "' -c", "1", "");
+			tools.verifyCMD(SERVER0435, "cat " + errorLog + "| grep '" + readRetry209 + "' -c", "1", "");
+			tools.verifyCMD(SERVER0435, "cat " + errorLog + "| grep -m 1 '" + readRetry + "'", readRetry209_1, "");
 			/* clean the nginx log */
-			tools.verifyCMD(SERVER0432, "rm -fr " + errorLog, "", "");
-			tools.verifyCMD(SERVER0432, "rm -fr " + accessLog, "", "");
-			tools.verifyCMD(SERVER0432, "kill -USR1 `cat " + pid + "`", "", "");
+			tools.verifyCMD(SERVER0435, "rm -fr " + errorLog, "", "");
+			tools.verifyCMD(SERVER0435, "rm -fr " + accessLog, "", "");
+			tools.verifyCMD(SERVER0435, "kill -USR1 `cat " + pid + "`", "", "");
 			
 			
 			
@@ -457,26 +466,26 @@ public class TFS_Restful_RcServer_Test_Retry_Test extends BaseCase {
 			/* do get file action */
 			tools.verifyResponseBodyWithLocalFile(setGetMethod(getUrl), expectGetMessage);
 			/* verify log info */
-			tools.verifyCMD(SERVER0432, "cat " + errorLog + "| grep '" + readRetry202 + "' -c", "1", "");
-	//		tools.verifyCMD(SERVER0432, "cat " + errorLog + "| grep '" + readRetry209 + "' -c", "1", "");
-			tools.verifyCMD(SERVER0432, "cat " + errorLog + "| grep -m 1 '" + readRetry + "'", readRetry202_1, "");
+			tools.verifyCMD(SERVER0435, "cat " + errorLog + "| grep '" + readRetry202 + "' -c", "1", "");
+	//		tools.verifyCMD(SERVER0435, "cat " + errorLog + "| grep '" + readRetry209 + "' -c", "1", "");
+			tools.verifyCMD(SERVER0435, "cat " + errorLog + "| grep -m 1 '" + readRetry + "'", readRetry202_1, "");
 			/* clean the nginx log */
-			tools.verifyCMD(SERVER0432, "rm -fr " + errorLog, "", "");
-			tools.verifyCMD(SERVER0432, "rm -fr " + accessLog, "", "");
-			tools.verifyCMD(SERVER0432, "kill -USR1 `cat " + pid + "`", "", "");
+			tools.verifyCMD(SERVER0435, "rm -fr " + errorLog, "", "");
+			tools.verifyCMD(SERVER0435, "rm -fr " + accessLog, "", "");
+			tools.verifyCMD(SERVER0435, "kill -USR1 `cat " + pid + "`", "", "");
 			
 			getUrl = url_IP02 + "/" + tfsFileNameWithOutSuffix ;
 			System.out.println("the getUrl : " + getUrl);
 			/* do get file action */
 			tools.verifyResponseBodyWithLocalFile(setGetMethod(getUrl), expectGetMessage);
 			/* verify log info */
-	//		tools.verifyCMD(SERVER0432, "cat " + errorLog + "| grep '" + readRetry202 + "' -c", "1", "");
-			tools.verifyCMD(SERVER0432, "cat " + errorLog + "| grep '" + readRetry209 + "' -c", "1", "");
-			tools.verifyCMD(SERVER0432, "cat " + errorLog + "| grep -m 1 '" + readRetry + "'", readRetry209_1, "");
+	//		tools.verifyCMD(SERVER0435, "cat " + errorLog + "| grep '" + readRetry202 + "' -c", "1", "");
+			tools.verifyCMD(SERVER0435, "cat " + errorLog + "| grep '" + readRetry209 + "' -c", "1", "");
+			tools.verifyCMD(SERVER0435, "cat " + errorLog + "| grep -m 1 '" + readRetry + "'", readRetry209_1, "");
 			/* clean the nginx log */
-			tools.verifyCMD(SERVER0432, "rm -fr " + errorLog, "", "");
-			tools.verifyCMD(SERVER0432, "rm -fr " + accessLog, "", "");
-			tools.verifyCMD(SERVER0432, "kill -USR1 `cat " + pid + "`", "", "");
+			tools.verifyCMD(SERVER0435, "rm -fr " + errorLog, "", "");
+			tools.verifyCMD(SERVER0435, "rm -fr " + accessLog, "", "");
+			tools.verifyCMD(SERVER0435, "kill -USR1 `cat " + pid + "`", "", "");
 			
 			/* set delete method request */ // 删除数据
 			// setting request info
@@ -485,11 +494,11 @@ public class TFS_Restful_RcServer_Test_Retry_Test extends BaseCase {
 			/* do delete file aciton */
 			tools.verifyResponse(setDeleteMethod(deleteUrl), expectDeleteMessage);
 			// 验证删除及删除顺序
-			tools.verifyCMD(SERVER0432, "cat " + errorLog + "| grep '" + delete202 + "' -c", "1", "");
+			tools.verifyCMD(SERVER0435, "cat " + errorLog + "| grep '" + delete202 + "' -c", "1", "");
 			/* clean the nginx log */
-			tools.verifyCMD(SERVER0432, "rm -fr " + errorLog, "", "");
-			tools.verifyCMD(SERVER0432, "rm -fr " + accessLog, "", "");
-			tools.verifyCMD(SERVER0432, "kill -USR1 `cat " + pid + "`", "", "");
+			tools.verifyCMD(SERVER0435, "rm -fr " + errorLog, "", "");
+			tools.verifyCMD(SERVER0435, "rm -fr " + accessLog, "", "");
+			tools.verifyCMD(SERVER0435, "kill -USR1 `cat " + pid + "`", "", "");
 			
 
 			
@@ -503,13 +512,13 @@ public class TFS_Restful_RcServer_Test_Retry_Test extends BaseCase {
 			/* do get file action */
 			tools.verifyResponse(setGetMethod(getUrl), expectGetMessageAfterDelete);
 			/* verify log info */
-			tools.verifyCMD(SERVER0432, "cat " + errorLog + "| grep '" + readRetry202 + "' -c", "1", "");
-			tools.verifyCMD(SERVER0432, "cat " + errorLog + "| grep '" + readRetry209 + "' -c", "1", "");
-			tools.verifyCMD(SERVER0432, "cat " + errorLog + "| grep -m 1 '" + readRetry + "'", readRetry202_1, "");
+			tools.verifyCMD(SERVER0435, "cat " + errorLog + "| grep '" + readRetry202 + "' -c", "1", "");
+			tools.verifyCMD(SERVER0435, "cat " + errorLog + "| grep '" + readRetry209 + "' -c", "1", "");
+			tools.verifyCMD(SERVER0435, "cat " + errorLog + "| grep -m 1 '" + readRetry + "'", readRetry202_1, "");
 			/* clean the nginx log */
-			tools.verifyCMD(SERVER0432, "rm -fr " + errorLog, "", "");
-			tools.verifyCMD(SERVER0432, "rm -fr " + accessLog, "", "");
-			tools.verifyCMD(SERVER0432, "kill -USR1 `cat " + pid + "`", "", "");
+			tools.verifyCMD(SERVER0435, "rm -fr " + errorLog, "", "");
+			tools.verifyCMD(SERVER0435, "rm -fr " + accessLog, "", "");
+			tools.verifyCMD(SERVER0435, "kill -USR1 `cat " + pid + "`", "", "");
 			
 			/* set get method request */ // 从逻辑集群A T1B访问删除数据,验证重试及重试顺序
 			// setting request info
@@ -518,13 +527,13 @@ public class TFS_Restful_RcServer_Test_Retry_Test extends BaseCase {
 			/* do get file action */
 			tools.verifyResponse(setGetMethod(getUrl), expectGetMessageAfterDelete);
 			/* verify log info */
-			tools.verifyCMD(SERVER0432, "cat " + errorLog + "| grep '" + readRetry202 + "' -c", "1", "");
-			tools.verifyCMD(SERVER0432, "cat " + errorLog + "| grep '" + readRetry209 + "' -c", "1", "");
-			tools.verifyCMD(SERVER0432, "cat " + errorLog + "| grep -m 1 '" + readRetry + "'", readRetry209_1, "");
+			tools.verifyCMD(SERVER0435, "cat " + errorLog + "| grep '" + readRetry202 + "' -c", "1", "");
+			tools.verifyCMD(SERVER0435, "cat " + errorLog + "| grep '" + readRetry209 + "' -c", "1", "");
+			tools.verifyCMD(SERVER0435, "cat " + errorLog + "| grep -m 1 '" + readRetry + "'", readRetry209_1, "");
 			/* clean the nginx log */
-			tools.verifyCMD(SERVER0432, "rm -fr " + errorLog, "", "");
-			tools.verifyCMD(SERVER0432, "rm -fr " + accessLog, "", "");
-			tools.verifyCMD(SERVER0432, "kill -USR1 `cat " + pid + "`", "", "");
+			tools.verifyCMD(SERVER0435, "rm -fr " + errorLog, "", "");
+			tools.verifyCMD(SERVER0435, "rm -fr " + accessLog, "", "");
+			tools.verifyCMD(SERVER0435, "kill -USR1 `cat " + pid + "`", "", "");
 			
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
