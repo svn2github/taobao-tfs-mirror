@@ -89,7 +89,7 @@ public class TFS_Restful_RcServer_Test_Distance_Test extends BaseCase {
 			/* verify log info */
 			tools.verifyCMD(SERVER0435, "cat " + errorLog + "| grep '" + write + "'|grep '"+Retry202_1+"' -c", "1", "");
 			tools.verifyCMD(SERVER0435, "cat " + errorLog + "| grep '" + write + "'|grep '"+Retry209_1+"' -c", "0", "");
-			tools.verifyCMD(SERVER0435, "cat " + errorLog + "| grep -m 1 '" + write + "'", Retry202_1, "");
+//			tools.verifyCMD(SERVER0435, "cat " + errorLog + "| grep -m 1 '" + write + "'", Retry202_1, "");
 			/* clean the nginx log */
 			tools.verifyCMD(SERVER0435, "rm -fr " + errorLog, "", "");
 			tools.verifyCMD(SERVER0435, "rm -fr " + accessLog, "", "");
@@ -177,9 +177,9 @@ public class TFS_Restful_RcServer_Test_Distance_Test extends BaseCase {
 			tools.verifyResponseBodyWithLocalFile(setGetMethod(getUrl), expectGetMessage);
 			
 			/* verify log info */
-			tools.verifyCMD(SERVER0435, "cat " + errorLog + "| grep '" + write + "'|grep '"+Retry202_1+"' -c", "1", "");
-			tools.verifyCMD(SERVER0435, "cat " + errorLog + "| grep '" + write + "'|grep '"+Retry209_1+"' -c", "0", "");
-			tools.verifyCMD(SERVER0435, "cat " + errorLog + "| grep -m 1 '" + read + "'", Retry202_1, "");
+			tools.verifyCMD(SERVER0435, "cat " + errorLog + "| grep '" + read + "'|grep '"+Retry202_1+"' -c", "1", "");
+			tools.verifyCMD(SERVER0435, "cat " + errorLog + "| grep '" + read + "'|grep '"+Retry209_1+"' -c", "0", "");
+	//		tools.verifyCMD(SERVER0435, "cat " + errorLog + "| grep -m 1 '" + read + "'", Retry202_1, "");
 			/* clean the nginx log */
 			tools.verifyCMD(SERVER0435, "rm -fr " + errorLog, "", "");
 			tools.verifyCMD(SERVER0435, "rm -fr " + accessLog, "", "");
@@ -295,7 +295,7 @@ public class TFS_Restful_RcServer_Test_Distance_Test extends BaseCase {
 			/* clean the nginx log */
 			tools.verifyCMD(SERVER0435, "rm -fr " + errorLog, "", "");
 			tools.verifyCMD(SERVER0435, "rm -fr " + accessLog, "", "");
-
+			tools.verifyCMD(SERVER0435, "kill -USR1 `cat " + pid + "`", "", "");
 			
 			/* set post method request */
 			// setting request info
@@ -382,7 +382,7 @@ public class TFS_Restful_RcServer_Test_Distance_Test extends BaseCase {
 			/* verify log info */
 			tools.verifyCMD(SERVER0435, "cat " + errorLog + "| grep '" + write + "'|grep '"+Retry202_1+"' -c", "1", "");
 			tools.verifyCMD(SERVER0435, "cat " + errorLog + "| grep '" + write + "'|grep '"+Retry209_1+"' -c", "0", "");
-			tools.verifyCMD(SERVER0435, "cat " + errorLog + "| grep -m 1 '" + write + "'", Retry202_1, "");
+		//	tools.verifyCMD(SERVER0435, "cat " + errorLog + "| grep -m 1 '" + write + "'", Retry202_1, "");
 			/* clean the nginx log */
 			tools.verifyCMD(SERVER0435, "rm -fr " + errorLog, "", "");
 			tools.verifyCMD(SERVER0435, "rm -fr " + accessLog, "", "");
