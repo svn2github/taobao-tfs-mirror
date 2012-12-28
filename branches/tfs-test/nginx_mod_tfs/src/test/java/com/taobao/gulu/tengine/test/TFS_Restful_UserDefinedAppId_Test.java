@@ -63,8 +63,7 @@ public class TFS_Restful_UserDefinedAppId_Test extends BaseCase {
 			//InputStream  getMethod =setGetMethod(getUrl).getResponseBodyAsStream();
 			
 			//System.out.println(getMethod.toString());
-			tools.verifyResponse(setGetMethod(getUrl),
-					expectGetMessage);
+			tools.verifyResponse(setGetMethod(getUrl),expectGetMessage);
 			
 
 		} catch (Exception e) {

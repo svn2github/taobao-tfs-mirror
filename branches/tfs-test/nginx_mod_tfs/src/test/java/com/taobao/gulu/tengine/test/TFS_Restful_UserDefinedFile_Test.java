@@ -1,27 +1,17 @@
 package com.taobao.gulu.tengine.test;
 
-import java.io.IOException;
-import java.io.InputStream;
+
 import java.util.HashMap;
-import java.util.List;
+
 import java.util.Map;
-import java.util.concurrent.TimeUnit;
+
 
 import net.sf.json.JSONArray;
-import org.json.*;
 
-import org.apache.commons.httpclient.Header;
-import org.apache.commons.httpclient.HttpException;
-import org.apache.commons.httpclient.methods.GetMethod;
-import org.apache.commons.httpclient.methods.PostMethod;
-import org.junit.Assert;
 import org.junit.Test;
 
-import com.taobao.common.tfs.namemeta.FileMetaInfo;
-import com.taobao.common.tfs.unique.UniqueStore;
-import com.taobao.common.tfs.unique.UniqueValue;
 import com.taobao.gulu.database.TFS;
-import com.taobao.gulu.database.Tair;
+
 import com.taobao.gulu.tengine.BaseCase;
 import com.taobao.gulu.tools.VerifyTool;
 
@@ -29,7 +19,8 @@ import com.taobao.gulu.tools.VerifyTool;
  * 
  * 
  */
-public class TFS_Restful_UserDefinedFile_Test extends BaseCase {
+public class TFS_Restful_UserDefinedFile_Test extends BaseCase 
+{
 	/*
 	 * 
 	 * 
@@ -38,9 +29,12 @@ public class TFS_Restful_UserDefinedFile_Test extends BaseCase {
 
 	/*
 	 * create file ·µ»Ø201
+	 * 
 	 */
+
 	@Test
-	public void test_TFS_RestfulUserDefinedCreateFileReturn201Test() {
+	public void test_TFS_RestfulUserDefinedCreateFileReturn201Test() 
+	{
 
 		VerifyTool tools = new VerifyTool();
 
@@ -1387,9 +1381,8 @@ public class TFS_Restful_UserDefinedFile_Test extends BaseCase {
 	 * @return
 	 */
 
-	@Test
-	public void test_TFS_RestfulUserDefinedWriteFileReturn200Test(int offset,
-			int size,String methodName) {
+	public void test_TFS_RestfulUserDefinedWriteFileReturn200Test(int offset, int size,String methodName)
+	{
 
 		VerifyTool tools = new VerifyTool();
 
@@ -1400,7 +1393,8 @@ public class TFS_Restful_UserDefinedFile_Test extends BaseCase {
 				+ "/1" + "/file" + "/"+ methodName;
 		String urlFile = urlDelFile + "?offset=" + offset + "&size=" + size;
 		String localFile = _2kFile;
-		try {
+		try 
+		{
 
 			// set expect response message
 			Map<String, String> expectPostMessage201 = new HashMap<String, String>();
@@ -1416,20 +1410,26 @@ public class TFS_Restful_UserDefinedFile_Test extends BaseCase {
 			System.out.println("creat dir  begin");
 
 			// create file
-			tools.verifyResponse(setPostMethod(urlDelFile),
-					expectPostMessage201);
+			tools.verifyResponse(setDeleteMethod(urlDelFile));
+			
+			tools.verifyResponse(setPostMethod(urlDelFile),expectPostMessage201);
 			// write file
-			tools.verifyResponse(setPutMethod(postFileUrl, localFile),
-					expecMessage200);
+			tools.verifyResponse(setPutMethod(postFileUrl, localFile),expecMessage200);
 
 			tools.verifyResponse(setDeleteMethod(urlDelFile), expecMessage200);
-		} catch (Exception e) {
+		} 
+		catch (Exception e) 
+		{
 			// TODO Auto-generated catch block
 			e.printStackTrace();
-		} finally {
+		} 
+		finally 
+		{
 			/* do delete tfs file */
-			if (put2TfsKeys.size() > 0) {
-				for (String key : put2TfsKeys) {
+			if (put2TfsKeys.size() > 0) 
+			{
+				for (String key : put2TfsKeys) 
+				{
 					System.out.println("tfsFileName for delete is " + key);
 					tfsServer.delete(key, null);
 				}
@@ -1448,7 +1448,7 @@ public class TFS_Restful_UserDefinedFile_Test extends BaseCase {
 		int offset = 0;
 		int size = 0;
 		String methodName = Thread.currentThread().getStackTrace()[1].getMethodName()+"5";
-		test_TFS_RestfulUserDefinedWriteFileReturn200Test(offset, size,methodName);
+		test_TFS_RestfulUserDefinedWriteFileReturn200Test(offset, size, methodName);
 	}
 
 	public void test_TFS_RestfulUserDefinedWriteFileReturn200Offset0Size2000Test() {
@@ -1694,7 +1694,7 @@ public class TFS_Restful_UserDefinedFile_Test extends BaseCase {
 	 * @return
 	 */
 
-	@Test
+
 	public void test_TFS_RestfulUserDefinedReadFileReturn200Test(int offset,
 			int size) {
 
@@ -1778,11 +1778,13 @@ public class TFS_Restful_UserDefinedFile_Test extends BaseCase {
 		/* set base url */
 		TFS tfsServer = tfs_NginxA01;
 		String url = NGINX.getRoot_url_adress();
-		String urlDelFile = url + "v2/" + tfsServer.getTfs_app_key() + "/1"
-				+ "/1" + "/file" + "/file_201";
+		
+		String urlDelFile = url + "v2/" + tfsServer.getTfs_app_key() + "/1" + "/1" + "/file" + "/file_201";
+		
 		String urlFile = urlDelFile + "?offset=" + offset + "&size=" + size;
-		String urlReadFile = url + "v2/" + tfsServer.getTfs_app_key() + "/x"
-				+ "/1" + "/file" + "/file_201";
+		
+		String urlReadFile = url + "v2/" + tfsServer.getTfs_app_key() + "/x" + "/1" + "/file" + "/file_201";
+		
 		String localFile = _2kFile;
 		try {
 
@@ -1802,11 +1804,11 @@ public class TFS_Restful_UserDefinedFile_Test extends BaseCase {
 			System.out.println("key point  begin");
 
 			// create file
-			tools.verifyResponse(setPostMethod(urlDelFile),
-					expectPostMessage201);
+			tools.verifyResponse(setDeleteMethod(urlDelFile));
+			
+			tools.verifyResponse(setPostMethod(urlDelFile),expectPostMessage201);
 			// write file
-			tools.verifyResponse(setPutMethod(postFileUrl, localFile),
-					expecMessage200);
+			tools.verifyResponse(setPutMethod(postFileUrl, localFile),expecMessage200);
 
 			// read file
 			tools.verifyResponse(setGetMethod(urlReadFile), expecMessage400);
@@ -1860,18 +1862,9 @@ public class TFS_Restful_UserDefinedFile_Test extends BaseCase {
 			System.out.println("the postUrl   is : " + postFileUrl);
 			/* do post file action */
 			System.out.println("key point  begin");
-
-			// create file
-//			tools.verifyResponse(setPostMethod(urlDelFile),
-//					expectPostMessage201);
-//			// write file
-//			tools.verifyResponse(setPutMethod(postFileUrl, localFile),
-//					expecMessage200);
-
 			// read file
 			tools.verifyResponse(setGetMethod(urlReadFile), expecMessage404);
-			//delete  file
-			tools.verifyResponse(setDeleteMethod(urlDelFile), expecMessage200);
+
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -1886,4 +1879,5 @@ public class TFS_Restful_UserDefinedFile_Test extends BaseCase {
 			put2TfsKeys.clear();
 		}
 	}
+
 }
