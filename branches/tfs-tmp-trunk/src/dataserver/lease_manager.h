@@ -68,6 +68,7 @@ namespace tfs
       Lease(const LeaseId& lease_id, const int64_t now, const common::VUINT64& servers);
       virtual ~Lease() {}
 
+      void reset_member_status();
       inline uint32_t inc_ref() { return common::atomic_inc(&ref_count_);}
       inline uint32_t dec_ref() { return common::atomic_dec(&ref_count_);}
       inline void update_last_time(const int64_t now) { last_update_time_ = now;}
@@ -78,6 +79,7 @@ namespace tfs
       int update_member_info(const uint64_t server, const common::BlockInfoV2& info, const int32_t status);
       void reset_member_info();
       void dump(const int32_t level, const char* const format = NULL);
+      void dump(std::stringstream& desp);
 
       LeaseId lease_id_;
       int64_t  last_update_time_;

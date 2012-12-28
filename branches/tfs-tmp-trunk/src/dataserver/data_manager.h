@@ -17,6 +17,7 @@
 #include <vector>
 #include <map>
 #include <list>
+#include <sstream>
 #include "common/parameter.h"
 #include "data_file.h"
 #include "lease_manager.h"
@@ -37,10 +38,11 @@ namespace tfs
         /** lease management */
         inline BlockManager& block_manager();
         int prepare_lease(const uint64_t block_id, uint64_t& file_id, uint64_t& lease_id,
-            const LeaseType type, const common::VUINT64 servers);
+            const LeaseType type, const common::VUINT64& servers);
         int update_lease(const uint64_t block_id, const uint64_t file_id, const uint64_t lease_id,
             tbnet::Packet* packet);
-        int check_lease(const uint64_t block_id, const uint64_t file_id, const uint64_t lease_id);
+        int check_lease(const uint64_t block_id, const uint64_t file_id, const uint64_t lease_id,
+            std::stringstream& err_msg);
         int remove_lease(const uint64_t block_id, const uint64_t file_id, const uint64_t lease_id);
 
         /** update & unlink operations */

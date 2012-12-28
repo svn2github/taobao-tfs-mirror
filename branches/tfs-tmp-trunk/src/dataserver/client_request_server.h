@@ -47,24 +47,27 @@ namespace tfs
         /** main entrance, dispatch task */
         int handle(tbnet::Packet* packet);
 
+        /** main callback, used in write, close, unlink */
+        int callback(common::NewClient* client);
+
+      private:
         /** file service interface */
         int stat_file(message::StatFileMessageV2* message);
         int read_file(message::ReadFileMessageV2* message);
         int write_file(message::WriteFileMessageV2* message);
         int close_file(message::CloseFileMessageV2* message);
         int unlink_file(message::UnlinkFileMessageV2* messsage);
-        int callback(common::NewClient* client);
+
+        /** write, close, unlink callback */
+        int write_file_callback(message::WriteFileMessageV2* message);
+        int close_file_callback(message::CloseFileMessageV2* message);
+        int unlink_file_callback(message::UnlinkFileMessageV2* message);
 
         /** block service interface */
         int new_block(message::NewBlockMessageV2* message);
         int remove_block(message::RemoveBlockMessageV2* message);
 
         /** tool support interface */
-
-      private:
-        int write_file_callback_(message::WriteFileMessageV2* message, const int32_t status);
-        int close_file_callback_(message::CloseFileMessageV2* message, const int32_t status);
-        int unlink_file_callback_(message::UnlinkFileMessageV2* message, const int32_t status);
 
       private:
         DataService& service_;

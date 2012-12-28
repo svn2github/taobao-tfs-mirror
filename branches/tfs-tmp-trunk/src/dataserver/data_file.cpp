@@ -45,7 +45,7 @@ namespace tfs
 
     int DataFile::pwrite(const FileInfoInDiskExt& info, const char *data, const int32_t nbytes, const int32_t offset)
     {
-      int32_t ret = (NULL != data && nbytes > 0 && offset >= 0 && offset >= (length_ - static_cast<int32_t>(sizeof(info)))) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
+      int32_t ret = (NULL != data && nbytes > 0 && offset >= 0) ? TFS_SUCCESS : EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
         int32_t real_nbytes = nbytes;

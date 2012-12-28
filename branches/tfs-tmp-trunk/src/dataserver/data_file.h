@@ -33,7 +33,7 @@ namespace tfs
       FRIEND_TEST(TestDataFile, write_read);
       #endif
       public:
-        DataFile(const uint64_t fn, const std::string& work_dir = "hello");
+        DataFile(const uint64_t fn, const std::string& work_dir);
         virtual ~DataFile();
 
         int pwrite(const common::FileInfoInDiskExt& info, const char* data, const int32_t nbytes, const int32_t offset);
@@ -68,8 +68,8 @@ namespace tfs
         }
 
       private:
-        atomic_t ref_count_;    // reference count
-        int32_t last_update_;   // last update time
+        atomic_t ref_count_;    // reference count, only for compatible
+        int32_t last_update_;   // last update time, only for compatible
         int32_t fd_;            // temp file descriptor
         int32_t length_;        // current max buffer write length
         uint32_t crc_;          // crc checksum

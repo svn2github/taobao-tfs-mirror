@@ -31,10 +31,24 @@ namespace tfs
     {
       int32_t index = 0;
       memset(members_, 0, sizeof(members_));
+      reset_member_status();
       VUINT64::const_iterator iter = servers.begin();
       for (; iter != servers.end(); ++iter, ++index)
       {
         members_[index].server_ = (*iter);
+        members_[index].info_.version_= INVALID_VERSION;
+        members_[index].status_ = TFS_ERROR;
+      }
+    }
+
+    void Lease::reset_member_status()
+    {
+      for (int index = 0; index < MAX_REPLICATION_NUM; index++)
+      {
+        if (members_[index].server_ == INVALID_SERVER_ID)
+        {
+          break;
+        }
         members_[index].info_.version_= INVALID_VERSION;
         members_[index].status_ = TFS_ERROR;
       }
@@ -45,8 +59,8 @@ namespace tfs
       int ret = (NULL != members) ? TFS_SUCCESS: EXIT_PARAMETER_ERROR;
       if (TFS_SUCCESS == ret)
       {
-        size = 0;
-        for (int32_t index = 0; index <MAX_REPLICATION_NUM; ++index)
+        int32_t index = 0;
+        for (index = 0; index <MAX_REPLICATION_NUM; ++index)
         {
           if (members_[index].server_ == INVALID_SERVER_ID)
           {
@@ -54,8 +68,8 @@ namespace tfs
           }
           members[index].first = members_[index].server_;
           members[index].second = members_[index].info_;
-          size++;
         }
+        size = index;
       }
       return ret;
     }
@@ -103,6 +117,18 @@ namespace tfs
       }
     }
 
+    void Lease::dump(std::stringstream& desp)
+    {
+      for (int32_t index = 0; index < MAX_REPLICATION_NUM ; ++index)
+      {
+        if (members_[index].server_ != INVALID_SERVER_ID)
+        {
+          desp << " server: " << tbsys::CNetUtil::addrToString(members_[index].server_) <<
+                  " status: " << members_[index].status_;
+        }
+      }
+    }
+
     bool Lease::check_all_successful() const
     {
       int32_t count = 0;
@@ -134,8 +160,9 @@ namespace tfs
     WriteLease::WriteLease(const LeaseId& lease_id, const int64_t now, const VUINT64& servers):
       Lease(lease_id, now, servers)
     {
-      data_file_ = new DataFile(lease_id.lease_id_,
-          dynamic_cast<DataService*>(DataService::instance())->get_real_work_dir().c_str());
+      data_file_ = new (std::nothrow) DataFile(lease_id.lease_id_,
+          dynamic_cast<DataService*>(DataService::instance())->get_real_work_dir());
+      assert(NULL != data_file_);
     }
 
     LeaseManager::LeaseManager():

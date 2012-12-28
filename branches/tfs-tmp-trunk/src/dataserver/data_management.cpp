@@ -130,7 +130,7 @@ namespace tfs
           return EXIT_DATAFILE_OVERLOAD;
         }
 
-        datafile = new DataFile(write_info.file_number_);
+        datafile = new DataFile(write_info.file_number_, service_.get_work_dir());
         data_file_map_.insert(DataFileMap::value_type(write_info.file_number_, datafile));
       }
 
