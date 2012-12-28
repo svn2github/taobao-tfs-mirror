@@ -54,7 +54,7 @@ namespace tfs
 
         void set_flag(const int32_t flag)
         {
-          flag_ = flag;
+          flag_ |= flag;
         }
 
         int32_t get_flag() const
@@ -173,7 +173,7 @@ namespace tfs
 
         void set_flag(const int32_t flag)
         {
-          flag_ = flag;
+          flag_ |= flag;
         }
 
         int32_t get_flag() const

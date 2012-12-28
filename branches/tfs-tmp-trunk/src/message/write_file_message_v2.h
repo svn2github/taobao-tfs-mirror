@@ -101,19 +101,29 @@ namespace tfs
           return lease_id_;
         }
 
-        void set_data(char* data)
+        void set_data(const char* data)
         {
           data_ = data;
         }
 
-        char* get_data() const
+        const char* get_data() const
         {
           return data_;
         }
 
+        void set_version(const int32_t version)
+        {
+          version_ = version;
+        }
+
+        int32_t get_version() const
+        {
+          return version_;
+        }
+
         void set_flag(const int32_t flag)
         {
-          flag_ = flag;
+          flag_ |= flag;
         }
 
         int32_t get_flag() const
@@ -140,8 +150,9 @@ namespace tfs
         common::FileSegment file_seg_;
         common::VUINT64 ds_;
         uint64_t lease_id_;
+        int32_t version_;
         int32_t flag_;
-        char* data_;
+        const char* data_;
     };
 
     class WriteFileRespMessageV2: public common::BasePacket
@@ -218,8 +229,8 @@ namespace tfs
         }
 
       private:
-        uint64_t server_id_;
         common::BlockInfoV2 block_info_;
+        uint64_t server_id_;
         int32_t status_;
     };
 

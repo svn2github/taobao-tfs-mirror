@@ -46,6 +46,11 @@ namespace tfs
 
       if (TFS_SUCCESS == ret)
       {
+        ret = output.set_int32(version_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
         ret = output.set_int32(flag_);
       }
 
@@ -78,6 +83,11 @@ namespace tfs
 
       if (TFS_SUCCESS == ret)
       {
+        input.get_int32(&version_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
         input.get_int32(&flag_);
       }
 
@@ -99,10 +109,10 @@ namespace tfs
     {
       int64_t len = file_seg_.length() +
                     Serialization::get_vint64_length(ds_) +
-                    INT64_SIZE + INT_SIZE;
+                    INT64_SIZE + INT_SIZE * 2;
       if (file_seg_.length_ > 0)
       {
-        len += (INT_SIZE + file_seg_.length_);
+        len += file_seg_.length_;
       }
 
       return len;

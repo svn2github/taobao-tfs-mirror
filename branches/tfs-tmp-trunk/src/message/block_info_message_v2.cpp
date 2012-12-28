@@ -42,7 +42,7 @@ namespace tfs
 
     int GetBlockInfoMessageV2::deserialize(Stream& input)
     {
-      int ret = input.get_int64(reinterpret_cast<int64_t* >(block_id_));
+      int ret = input.get_int64(reinterpret_cast<int64_t* >(&block_id_));
       if (TFS_SUCCESS == ret)
       {
         ret = input.get_int32(&mode_);

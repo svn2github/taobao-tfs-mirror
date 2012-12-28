@@ -109,6 +109,7 @@ namespace tfs
           tbsys::gDeleteA(blocks_ext_);
           blocks_ext_ = new (std::nothrow)common::BlockInfoV2[count];
           assert(blocks_ext_);
+          return blocks_ext_;
         }
         inline common::BlockInfoV2* get_blocks_ext()
         {
