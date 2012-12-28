@@ -906,11 +906,11 @@ namespace tfs
       }
       if (common::TFS_SUCCESS == iret)
       {
-        iret = common::Serialization::set_int64(data, data_len, pos, value3_);
+        iret = common::Serialization::set_int32(data, data_len, pos, value3_);
       }
       if (common::TFS_SUCCESS == iret)
       {
-        iret = common::Serialization::set_int64(data, data_len, pos, value4_);
+        iret = common::Serialization::set_int32(data, data_len, pos, value4_);
       }
       if (common::TFS_SUCCESS == iret)
       {
@@ -932,11 +932,11 @@ namespace tfs
       }
       if (common::TFS_SUCCESS == iret)
       {
-        iret = common::Serialization::get_int64(data, data_len, pos, reinterpret_cast<int64_t*>(&value3_));
+        iret = common::Serialization::get_int32(data, data_len, pos, &value3_);
       }
       if (common::TFS_SUCCESS == iret)
       {
-        iret = common::Serialization::get_int64(data, data_len, pos, reinterpret_cast<int64_t*>(&value4_));
+        iret = common::Serialization::get_int32(data, data_len, pos, &value4_);
       }
       if (common::TFS_SUCCESS == iret)
       {
@@ -947,7 +947,7 @@ namespace tfs
 
     int64_t ClientCmdInformation::length() const
     {
-      return common::INT_SIZE + common::INT64_SIZE * 4;
+      return common::INT_SIZE * 3 + common::INT64_SIZE * 2;
     }
 
 
@@ -1525,6 +1525,11 @@ namespace tfs
 
       if (TFS_SUCCESS == ret)
       {
+        ret = Serialization::get_int32(data, data_len, pos, &version_);
+      }
+
+      if (TFS_SUCCESS == ret)
+      {
         ret = Serialization::get_int32(data, data_len, pos, &flag_);
       }
 
@@ -1734,7 +1739,7 @@ namespace tfs
         ret = Serialization::set_int64(data, data_len, pos, family_id_);
       }
 
-     if (TFS_SUCCESS == ret)
+      if (TFS_SUCCESS == ret)
       {
         ret = Serialization::set_int32(data, data_len, pos, version_);
       }
@@ -1746,7 +1751,7 @@ namespace tfs
 
       if (TFS_SUCCESS == ret)
       {
-        ret = Serialization::set_int8(data, data_len, pos, size_);
+        ret = Serialization::set_int32(data, data_len, pos, size_);
       }
 
       if (TFS_SUCCESS == ret)

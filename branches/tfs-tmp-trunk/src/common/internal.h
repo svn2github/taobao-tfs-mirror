@@ -777,8 +777,8 @@ namespace tfs
     {
       int64_t value1_;
       int64_t value2_;
-      uint64_t value3_;
-      int64_t value4_;
+      int32_t value3_;
+      int32_t value4_;
       int32_t  cmd_;
       int serialize(char* data, const int64_t data_len, int64_t& pos) const;
       int deserialize(const char* data, const int64_t data_len, int64_t& pos);
@@ -1024,7 +1024,10 @@ namespace tfs
     {
       MF_IS_MASTER = 0x1,
       MF_WITH_FAMILY = 0x2,
-      MF_READ_FORCE = 0x4
+      MF_READ_FORCE = 0x4,
+      MF_STAT_FORCE = 0x8,
+      MF_WITH_FINFO = 0x10,
+      MF_NO_SYNC_LOG = 0x20
     };
 
     enum RepairType
@@ -1036,7 +1039,7 @@ namespace tfs
     struct BlockMeta
     {
       uint64_t block_id_;
-      uint64_t lease_id_;
+      uint64_t lease_id_;  // won't encoded
       uint64_t ds_[MAX_REPLICATION_NUM];
       int32_t size_;
       int32_t version_;
@@ -1048,7 +1051,7 @@ namespace tfs
       int64_t length() const;
 
       BlockMeta():
-        version_(INVALID_VERSION), flag_(INVALID_FLAG)
+        size_(0), version_(INVALID_VERSION), flag_(INVALID_FLAG)
       {
       }
     };
